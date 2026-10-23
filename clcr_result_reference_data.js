@@ -16,8 +16,8 @@
   // Presentation data for the already implemented clinical profiles. These data
   // do not qualify a specimen or classify a patient; the clinical engines do.
   const PROFILE = freeze({
-    id: "CLIRENS_RESULT_REFERENCE_2026_10_V5",
-    version: 5,
+    id: "CLIRENS_RESULT_REFERENCE_2026_10_V6",
+    version: 6,
     sources: {
       kdigo: {
         id: "KDIGO_CKD_2024",
@@ -87,6 +87,18 @@
     populationNotes: {
       ckid_u25_cys: "Wzór do oceny czynności nerek u osób z PChN; nie służy do przesiewu zdrowych, bezobjawowych osób.",
       ckid_u25_cr_cys: "Wzór opracowano dla osób w wieku 1–25 lat z łagodną lub umiarkowaną PChN.",
+    },
+    cgIndexed: {
+      formulaId: "cg_norm",
+      referenceComment: "Dla tego oszacowania nie stosujemy uniwersalnej normy ani kategorii G.",
+      sources: [
+        { label: "Cockcroft i Gault, 1976", url: "https://doi.org/10.1159/000180580" },
+        { label: "Du Bois, 1916", url: "https://doi.org/10.1001/archinte.1916.00080130010002" },
+      ],
+      limitationSource: {
+        label: "NKF",
+        url: "https://www.kidney.org/professionals/kdoqi/cockcroft-gault-equation-estimating-creatinine-clearance",
+      },
     },
     neonatal: {
       formulaId: "neonatal_egfr",

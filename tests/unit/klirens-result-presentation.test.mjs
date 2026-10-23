@@ -190,6 +190,75 @@ describe('Klirens B — jedna karta wyniku i jawny profil odniesienia', () => {
     expect(presentation.render(input, profile)).not.toContain('data-clcr-category-control');
   });
 
+  it.each([20, 66, 100])('dla indeksowanego CG %s łączy jeden neutralny wynik z komentarzem zamiast kolumny normy', value => {
+    const input = {
+      formulaId: 'cg_norm', series: 'cg_norm', value, displayValue: String(value),
+      unit: 'mL/min/1,73 m²', ageYears: 60,
+      presentation: {
+        label: 'Oszacowany klirens kreatyniny',
+        category: { code: 'G3a' }, tone: 'danger',
+        referenceComparison: true, boundary: '<90',
+      },
+    };
+    expect(presentation.createModel(input, profile)).toMatchObject({
+      category: null, tone: 'neutral', boundary: '', referenceComparison: false,
+      reference: { kind: 'none', value: 'Brak uniwersalnej normy' },
+    });
+    const html = presentation.render(input, profile);
+    expect(html.match(/class="clcr-result-value"/g)).toHaveLength(1);
+    expect(html.match(/data-clcr-reference-note="cg_norm"/g)).toHaveLength(1);
+    expect(html).toContain('clcr-result-main--single');
+    expect(html).toContain(`data-clcr-tone="neutral"`);
+    expect(html).toContain(`data-clcr-reference-note="cg_norm">${profile.cgIndexed.referenceComment}</p></div>`);
+    expect(html).not.toContain('class="clcr-result-reference');
+    expect(html).not.toContain('data-clcr-category-control');
+    expect(html).not.toContain('data-clcr-category-row');
+    expect(html).not.toContain('≥90');
+    expect(html).not.toContain('out-of-range');
+    expect(html).toContain('https://doi.org/10.1159/000180580');
+    expect(html).toContain('https://doi.org/10.1001/archinte.1916.00080130010002');
+  });
+
+  it('używa przekazanego komentarza indeksowanego CG i nie zmienia układu zwykłego CG', () => {
+    const alternateProfile = {
+      ...profile,
+      cgIndexed: { ...profile.cgIndexed, referenceComment: 'TEST <opis>' },
+    };
+    const input = { formulaId: 'cg_norm', value: 66, unit: 'mL/min/1,73 m²' };
+    expect(presentation.render(input, alternateProfile)).toContain('TEST &lt;opis&gt;');
+    const absolute = presentation.render({ ...input, formulaId: 'cg', unit: 'mL/min' }, profile);
+    expect(absolute).toContain('class="clcr-result-reference clcr-result-reference--text');
+    expect(absolute).not.toContain('data-clcr-reference-note');
+    expect(absolute).not.toContain('clcr-result-main--single');
+  });
+
+  it.each([18, 60, 120])('oznacza wiek %s użyty w indeksowanym CG, bez odczytywania miesięcy', ageYears => {
+    const input = { formulaId: 'cg_norm', series: 'cg_norm', value: 66, unit: 'mL/min/1,73 m²', ageYears: ageYears === 120 ? 120 : ageYears + 0.5, calculationAgeYears: ageYears };
+    expect(presentation.createModel(input, profile)).toMatchObject({ ageUsedYears: ageYears, agePolicy: 'completed-years' });
+    const html = presentation.render(input, profile);
+    expect(html).toContain(`data-clcr-age-used-years="${ageYears}" data-clcr-age-policy="completed-years"`);
+    expect(presentation.render({ ...input, formulaId: 'cg' }, profile)).not.toContain('data-clcr-age-policy');
+  });
+
+  it.each([null, undefined, '', 17, 60.5, Infinity, 'bad'])('nie przypisuje ukończonych lat do nieprawidłowego wieku obliczenia %s', calculationAgeYears => {
+    const input = { formulaId: 'cg_norm', series: 'cg_norm', value: 66, unit: 'mL/min/1,73 m²', ageYears: 60, calculationAgeYears };
+    expect(presentation.createModel(input, profile)).toMatchObject({ ageUsedYears: null, agePolicy: '' });
+    expect(presentation.render(input, profile)).not.toContain('data-clcr-age-used-years');
+  });
+
+  it('nie dubluje metody i powodów, gdy indeksowany CG przekazuje pełne Szczegóły', () => {
+    const input = {
+      formulaId: 'cg_norm', value: 66, unit: 'mL/min/1,73 m²',
+      method: 'Domyślna metoda', presentation: { reasons: ['Powtórzony opis'] },
+      detailHtml: '<p data-cg-indexed-details>Wiek użyty we wzorze: 60 ukończonych lat.</p>',
+    };
+    const html = presentation.render(input, profile);
+    expect(html.match(/data-cg-indexed-details/g)).toHaveLength(1);
+    expect(html).not.toContain('Domyślna metoda');
+    expect(html).not.toContain('Powtórzony opis');
+    expect(presentation.render({ ...input, detailHtml: '' }, profile)).toContain('Domyślna metoda');
+  });
+
   it('nie nadaje eKt/V celu 1,2 ani celu spKt/V, choć wylicza go z rzeczywistego silnika', () => {
     const dialysis = browser.ClcrDialysisSafety.computeDialysisAdequacy({
       ageYears: 50, ageMonths: 0, modality: 'IHD', sessionsPerWeek: 3, pidiDays: 2,

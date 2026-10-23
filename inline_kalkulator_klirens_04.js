@@ -5,6 +5,16 @@ function clCrCG(e, n, t, o) {
   const a = e === "F" ? 0.85 : 1;
   return ((140 - n) * t * a) / (72 * o);
 }
+// The indexed variant intentionally uses completed years. Keep the original
+// CG helper and the shared patient age unchanged for the other equations.
+function clCrCGNormalized(sex, ageYears, weight, scr, bsaM2) {
+  if (
+    !["M", "F"].includes(sex) ||
+    !Number.isFinite(ageYears) || ageYears < 18 ||
+    ![weight, scr, bsaM2].every((value) => Number.isFinite(value) && value > 0)
+  ) return null;
+  return clCrCG(sex, Math.floor(ageYears), weight, scr) * 1.73 / bsaM2;
+}
 function eGFR_CKD_EPI_2021_cr(e, n, t) {
   if (
     window.ClcrClinicalSafety &&
@@ -429,7 +439,7 @@ function canComputeFormula(e) {
     window.ClcrClinicalSafety &&
     typeof window.ClcrClinicalSafety.formulaSafety == "function"
   ) {
-    const t = window.ClcrClinicalSafety.readAgeFromDocument(document),
+    const t = readClcrFormulaAge(e),
       resolution = resolveClcrCalculationAssumptions(e),
       o = resolution.calculationContext.markerPolicy,
       a = {
@@ -471,6 +481,24 @@ function canComputeFormula(e) {
         ]);
         return !Number.isNaN(s) && (p.has(t) ? s >= 0 : s > 0);
       });
+}
+function readClcrFormulaAge(formulaId) {
+  const clinical = window.ClcrClinicalSafety;
+  if (!clinical || typeof clinical.readAgeFromDocument !== "function") return null;
+  // Ignore months for this calculation, without overwriting the canonical
+  // patient input (including restored months used by the other formulas).
+  return formulaId === "cg_norm" && typeof clinical.parseAge === "function"
+    ? clinical.parseAge(document.getElementById("age")?.value || "", 0)
+    : clinical.readAgeFromDocument(document);
+}
+function clcrCgNormalizedDetails(ageYears, bsaM2, sources = []) {
+  const ageUsed = Math.floor(ageYears);
+  const sourceLinks = sources.map((source) => `<a href="${clcrEscapeHtml(source.url)}" target="_blank" rel="noopener noreferrer">${clcrEscapeHtml(source.label)}</a>`).join(" · ");
+  return `<p><strong>Jak obliczono:</strong> użyto rzeczywistej masy ciała. Wiek użyty we wzorze: ${clcrEscapeHtml(ageUsed)} ukończonych lat. Wynik Cockcrofta–Gaulta przeliczono na 1,73 m²: CG × 1,73 / powierzchnia ciała.</p>
+<p><strong>Powierzchnia ciała (Du Bois):</strong> ${clcrEscapeHtml(bsaM2.toFixed(2).replace(".", ","))} m².</p>
+<p><strong>Ograniczenia:</strong> otyłość, niedowaga, obrzęki lub nietypowa masa mięśniowa mogą zmniejszać wiarygodność oszacowania. Przeliczenie na 1,73 m² nie usuwa tych ograniczeń.</p>
+<p>To klirens kreatyniny (eCrCl), a nie eGFR. Wzór CG opracowano przed współczesną standaryzacją oznaczeń kreatyniny.</p>
+${sourceLinks ? `<p><strong>Źródła:</strong> ${sourceLinks}.</p>` : ""}`;
 }
 function isFiniteNum(e) {
   return e != null && Number.isFinite(e);
@@ -563,11 +591,7 @@ function resolveClcrCalculationAssumptions(formulaId) {
 function update() {
   const e = $("fullName").value.trim();
   $("patientName").textContent = e || "";
-  const ageContext =
-      window.ClcrClinicalSafety &&
-      typeof window.ClcrClinicalSafety.readAgeFromDocument == "function"
-        ? window.ClcrClinicalSafety.readAgeFromDocument(document)
-        : null,
+  const ageContext = readClcrFormulaAge($("formulaPicker")?.value || ""),
     n = $("age") ? String($("age").value || "").trim() : "",
     t = ageContext && ageContext.valid ? ageContext.exactYears : NaN,
     o = !!(ageContext && ageContext.valid),
@@ -961,7 +985,8 @@ function update() {
     }
     le += `<div class="result-box${z ? "" : " out-of-range"}"><strong>${i}:</strong> ${l.toFixed(0)}${u}${m}</div>`;
   }
-  let ne = null;
+  let ne = null,
+    normalizedCg = null;
   if (
     (o &&
       t >= 18 &&
@@ -973,10 +998,10 @@ function update() {
       me("Cockcroft\u2013Gault", ne, "\u202Fml/min", "cg")),
     W && ne != null)
   ) {
-    const i = (ne * 1.73) / W;
+    normalizedCg = clCrCGNormalized(a, t, s, d, W);
     me(
       "Cockcroft\u2013Gault\xA0(1,73\u202Fm\xB2)",
-      i,
+      normalizedCg,
       "\u202Fml/min/1.73\u202Fm\xB2",
       "cg",
     );
@@ -1203,6 +1228,13 @@ function update() {
         const card = renderResultCard({
           formulaId: Vt || de || Sk, code: de, series: Sk,
           value: w, displayValue, unit: Z, label: r,
+          calculationAgeYears: Sk === "cg_norm" ? Math.floor(t) : undefined,
+          detailHtml: Sk === "cg_norm"
+            ? clcrCgNormalizedDetails(t, W, [
+                ...(window.ClcrResultReferenceData?.PROFILE?.cgIndexed?.sources || []),
+                window.ClcrResultReferenceData?.PROFILE?.cgIndexed?.limitationSource,
+              ].filter(Boolean))
+            : undefined,
           calculationComponents: Sk === "ckid_u25_cr_cys" && ckidU25CrCysResult?.ok ? {
             egfrCreatinine: ckidU25CrCysResult.details.egfrCreatinine,
             egfrCystatin: ckidU25CrCysResult.details.egfrCystatin,
@@ -1383,6 +1415,8 @@ function update() {
     }
     let cgContextRendered = !1;
     function appendCgContext() {
+      // The indexed result supplies its own concise, correctly owned Details.
+      if (l === "cg_norm") return;
       if (cgContextRendered) return;
       cgContextRendered = !0;
       if (l === "cg") {
@@ -1484,7 +1518,7 @@ function update() {
       (m.neonatal_egfr = isFiniteNum(neonatalGfr) ? neonatalGfr : null),
       (m.cg = u && s > 0 && isFiniteNum(ne) ? ne : null),
       (m.cg_norm =
-        u && W && s > 0 && isFiniteNum(ne) ? (ne * 1.73) / W : null));
+        u && W && s > 0 && isFiniteNum(normalizedCg) ? normalizedCg : null));
     const V =
       timedCrCl &&
       timedCrCl.ok &&
@@ -1857,7 +1891,7 @@ function update() {
         z();
         appendSpotRatioGuidance();
       }
-      else z();
+      else if (l !== "cg_norm") z();
     } else {
       if (!o) {
         S +=
@@ -3311,13 +3345,10 @@ function showClcrDependencyNotice(e, n) {
   } catch {}
 }
 function getClcrFormattedAge() {
-  const e =
-    window.ClcrClinicalSafety &&
-    typeof window.ClcrClinicalSafety.readAgeFromDocument == "function"
-      ? window.ClcrClinicalSafety.readAgeFromDocument(document)
-      : null;
+  const formulaId = document.getElementById("formulaPicker")?.value || "";
+  const e = readClcrFormulaAge(formulaId);
   return e && e.valid
-    ? window.ClcrClinicalSafety.formatAge(e)
+    ? window.ClcrClinicalSafety.formatAge(e) + (formulaId === "cg_norm" ? " (ukończone lata użyte we wzorze)" : "")
     : "wiek nieokreślony";
 }
 function getClcrCreatinineContextText() {

@@ -1,0 +1,266 @@
+{
+  "schema_version": 1,
+  "module": "Klirens / cg_norm",
+  "reviewed_on": "2026-10-23",
+  "policy_id": "P-KLIRENS-CG-NORM-2026-10-23",
+  "approval": {
+    "basis": "Owner accepted the desktop/mobile before-after proposal and explicitly instructed implementation on 2026-10-23",
+    "proposal_url": "https://chatgpt.com/space/page_d1e1a9aebb8c8191b5c310097afc471d"
+  },
+  "source_review_base": "f5183458e1333266d875a561a01e7b7236f0f991",
+  "implementation_base": "5f11ab7ca44e7b803b3c465a67e7c3225d372ebb",
+  "scope": {
+    "population": "Existing adult pathway, age >=18 years; no new upper-age threshold",
+    "required_biological_data": [
+      "age in completed years",
+      "sex used by CG",
+      "actual body weight in kg",
+      "height in cm",
+      "serum creatinine with mg/dL or µmol/L"
+    ],
+    "age_policy": "cg_norm only uses floor(exact age in years); no rounding to nearest year; canonical months/DOB/exact age and historical results are preserved",
+    "clinical_impact": "New cg_norm results with nonzero stored months may change; this is explicit input precision policy, not correction of a demonstrated fractional-age equation error",
+    "equations_unchanged": [
+      "Cockcroft-Gault coefficients including female factor 0.85",
+      "Du Bois coefficient 0.007184 with kg^0.425 and cm^0.725",
+      "CG times 1.73 divided by unrounded adult BSA",
+      "Scr in µmol/L divided by 88.4",
+      "Final display rounding to integer only after indexing"
+    ],
+    "interpretation": "eCrCl remains distinct from eGFR; no universal numeric norm, category G or >=90 threshold added",
+    "assumptions": "Stable kidney function and no suspected AKI remain stated assumptions when no contrary facts are known; known AKI or rapid creatinine change still block; no new IDMS/IFCC question for CG",
+    "exclusions": [
+      "No dosing or ChPL hint",
+      "No empirical creatinine calibration correction",
+      "No automatic ideal/adjusted body weight substitution",
+      "No new clinical validation claim",
+      "No retrospective recomputation of stored results"
+    ]
+  },
+  "synthetic_regression": {
+    "input": {
+      "sex": "M",
+      "completed_years": 60,
+      "canonical_months": 6,
+      "weight_kg": 80,
+      "height_cm": 175,
+      "scr_mg_dl": 1.2,
+      "equivalent_scr_umol_l": 106.08
+    },
+    "before": {
+      "age_used_years": 60.5,
+      "absolute_cg_ml_min": 73.61111111111111,
+      "indexed_cg_ml_min_1_73m2": 65.10394758647057,
+      "display": 65
+    },
+    "after": {
+      "age_used_years": 60,
+      "absolute_cg_ml_min": 74.07407407407408,
+      "bsa_du_bois_m2": 1.9560599156154184,
+      "indexed_cg_ml_min_1_73m2": 65.51340637632258,
+      "display": 66
+    },
+    "contracts": "No source-free copied formula test; regression calls actual production calculation/adapter/UI. Test results are recorded in PR verification rather than inferred from this source review."
+  },
+  "sources": [
+    {
+      "id": "S1",
+      "type": "primary publication, official publisher abstract",
+      "citation": "Cockcroft DW, Gault MH. Prediction of creatinine clearance from serum creatinine. Nephron. 1976;16(1):31–41.",
+      "doi": "10.1159/000180580",
+      "pmid": "1244564",
+      "url": "https://karger.com/nef/article-abstract/16/1/31/212046/Prediction-of-Creatinine-Clearance-from-Serum?redirectedFrom=fulltext",
+      "alternate_url": "https://pubmed.ncbi.nlm.nih.gov/1244564/",
+      "verified_sections": [
+        "Abstract equation",
+        "Abstract cohort age and size",
+        "Abstract comparator"
+      ],
+      "supports": [
+        "CG equation using age, kg and Scr in mg/100 mL",
+        "15% female adjustment",
+        "Derivation cohort 249 patients aged 18–92; comparison 236 patients"
+      ],
+      "access_limit": "Official abstract read; full paper behind publisher access, not claimed as read.",
+      "does_not_establish": [
+        "A universal normal interval for indexed CG",
+        "Equivalence of CrCl and GFR",
+        "Contemporary validation across all body compositions"
+      ]
+    },
+    {
+      "id": "S2",
+      "type": "official NKF professional guidance page",
+      "title": "Cockcroft-Gault Equation for Estimating Creatinine Clearance",
+      "url": "https://www.kidney.org/professionals/kdoqi/cockcroft-gault-equation-estimating-creatinine-clearance",
+      "verified_sections": [
+        "Why is there a need to move away from eCrCl?",
+        "What are the differences between eCrCl and eGFR?"
+      ],
+      "supports": [
+        "CG and eGFR have different validation targets",
+        "Prestandardization creatinine and body weight limitations",
+        "Do not empirically inflate low serum creatinine"
+      ],
+      "access_limit": "Current official page read; publication or update date not explicitly stated on fetched page.",
+      "does_not_establish": [
+        "A universal numeric normal interval for CG indexed to 1.73 m²",
+        "A universal correction of historic to IDMS creatinine"
+      ]
+    },
+    {
+      "id": "S3",
+      "type": "primary publication, official metadata plus public scan hosted by third party",
+      "citation": "Du Bois D, Du Bois EF. Clinical calorimetry: tenth paper. A formula to estimate the approximate surface area if height and weight be known. Arch Intern Med (Chic). 1916;XVII(6_2):863–871.",
+      "doi": "10.1001/archinte.1916.00080130010002",
+      "url": "https://jamanetwork.com/journals/jamainternalmedicine/article-abstract/654069",
+      "full_text_scan_url": "https://scispace.com/pdf/clinical-calorimetry-tenth-paper-a-formula-to-estimate-the-4hwwu48t5w.pdf",
+      "verified_sections": [
+        "Printed page 870, final power equation",
+        "Printed page 871, summary with units"
+      ],
+      "supports": [
+        "A in cm² equals 71.84 × weight kg^0.425 × height cm^0.725",
+        "Conversion to m² gives coefficient 0.007184"
+      ],
+      "access_limit": "Publisher metadata verified; full-text scan read from third-party host, not current publisher full-text access. OCR equations were cross-checked against official CHP implementation.",
+      "does_not_establish": [
+        "Modern accuracy in every adult population",
+        "A normal range for indexed CG",
+        "Clinical validation of CG indexing"
+      ]
+    },
+    {
+      "id": "S4",
+      "type": "official government calculator",
+      "title": "Hong Kong Centre for Health Protection IMPACT — Body Surface Area Calculator",
+      "url": "https://impact.chp.gov.hk/calculator_10_1.php",
+      "verified_sections": [
+        "Equation and unit statement"
+      ],
+      "supports": [
+        "BSA m² = 0.007184 × weight kg^0.425 × height cm^0.725"
+      ],
+      "access_limit": "Official operational equation read; not a primary validation study. Original publication citation checked separately rather than copying this page's issue formatting.",
+      "does_not_establish": [
+        "A clinical threshold for CG",
+        "Validation of a new kidney function equation"
+      ]
+    },
+    {
+      "id": "S5",
+      "type": "official NIDDK professional guidance page",
+      "title": "Determining Drug Dosing in Adults with Chronic Kidney Disease",
+      "last_reviewed": "2024-10",
+      "url": "https://www.niddk.nih.gov/research-funding/research-programs/kidney-clinical-research-epidemiology/laboratory/ckd-drug-dosing-providers",
+      "verified_sections": [
+        "Selecting Estimating Equations to Determine Kidney Function",
+        "Considerations for Body Surface Area",
+        "Limitations of Serum Creatinine-based Estimating Equations"
+      ],
+      "supports": [
+        "Removal of GFR BSA indexing by multiplication by BSA/1.73",
+        "Creatinine depends on muscle mass, body size, diet and tubular secretion",
+        "Distinction between eGFR and eCrCl"
+      ],
+      "access_limit": "Full relevant official page sections read. Its discussion of BSA and normal values concerns GFR; it is not validation of CG as GFR.",
+      "does_not_establish": [
+        "Normal CG is ≥90",
+        "G categories for indexed CG",
+        "Need to add dosing advice to this UI"
+      ]
+    },
+    {
+      "id": "S6",
+      "type": "final official clinical practice guideline",
+      "title": "KDIGO 2024 Clinical Practice Guideline for the Evaluation and Management of Chronic Kidney Disease",
+      "citation": "Kidney International. 2024;105(Suppl 4S):S117–S314.",
+      "url": "https://kdigo.org/wp-content/uploads/2026/04/KDIGO-2024-CKD-Guideline.pdf",
+      "landing_page": "https://kdigo.org/guidelines/ckd-evaluation-and-management/",
+      "verified_sections": [
+        "S137 Table 2, PDF page 22",
+        "S171 recommendation 1.1.2.1, PDF page 56",
+        "S176 section 1.2.2, PDF page 61",
+        "S249 section 4.2, PDF page 134"
+      ],
+      "supports": [
+        "G categories are GFR categories",
+        "Adult GFR evaluation uses eGFRcr/eGFRcr-cys",
+        "Nonsteady marker state is an estimation limitation",
+        "CG prestandardization and body size limitations"
+      ],
+      "access_limit": "Final 2024 document verified on current official host. URL storage path 2026/04 is not an edition change. No draft 2027 guideline used.",
+      "does_not_establish": [
+        "A literal blanket prohibition on every possible CrCl interpretation",
+        "A universal numerical reference interval for indexed CG"
+      ]
+    },
+    {
+      "id": "S7",
+      "type": "official national clinical guideline hosted by UNAIDS",
+      "author": "National AIDS Control Organisation, Ministry of Health and Family Welfare, Government of India",
+      "title": "National Technical Guidelines for Pre-Exposure Prophylaxis",
+      "url": "https://files-hivpreventioncoalition.unaids.org/gpc/attachments/national-technical-guidelines-for-pre-exposure-prophylaxis.pdf",
+      "original_host_url": "https://naco.gov.in/sites/default/files/National_Technical_Guidelines_(Web).pdf",
+      "verified_sections": [
+        "Printed page 15, PDF page 30, note under Cockcroft-Gault equation"
+      ],
+      "supports": [
+        "Explicit completed-years age policy is used for CG in an official clinical program"
+      ],
+      "brief_quote": "For age, use completed years",
+      "access_limit": "Official primary guideline document read from UNAIDS host; original NACO URL timed out. Publication year not inferred from mirror filename.",
+      "does_not_establish": [
+        "Fractional age is incorrect",
+        "Completed age is more accurate in a comparative validation",
+        "Every application must use the same age policy",
+        "PrEP thresholds apply to indexed CG"
+      ]
+    },
+    {
+      "id": "S8",
+      "type": "official NHS clinical consensus statement",
+      "author": "NHS North West Coast Strategic Clinical Networks",
+      "title": "Consensus Statement on how to calculate the Creatinine Clearance (CrCl) which is necessary when assessing the Dose of Direct-Acting Oral Anticoagulants (DOACs)",
+      "published": "2018-08",
+      "url": "https://www.england.nhs.uk/north/wp-content/uploads/sites/5/2019/01/consensus-statement-on-CrCl-calculation-for-DOACs-final.pdf",
+      "verified_sections": [
+        "Page 1, Cockcroft and Gault formula, age unit"
+      ],
+      "supports": [
+        "CG age is expressed in years"
+      ],
+      "access_limit": "Whole official one-page statement read. Does not specify fractional versus completed years; no requirement to request months found here.",
+      "does_not_establish": [
+        "Mandatory completed-years age policy",
+        "A new dosing recommendation for this application",
+        "Clinical equivalence of indexed CG and eGFR"
+      ]
+    },
+    {
+      "id": "S9",
+      "type": "official NIDDK equation and unit reference",
+      "title": "eGFR Equations for Adults",
+      "url": "https://www.niddk.nih.gov/research-funding/research-programs/kidney-clinical-research-epidemiology/laboratory/glomerular-filtration-rate-equations/adults",
+      "verified_sections": [
+        "2021 CKD-EPI Creatinine Equation, GFR conversion factors"
+      ],
+      "supports": [
+        "Scr in µmol/L is divided by 88.4 to obtain mg/dL"
+      ],
+      "access_limit": "Relevant official page opened and verified by independent reference subreviewer; unit conversion applies to creatinine regardless of equation.",
+      "does_not_establish": [
+        "CG normal threshold",
+        "CG age precision policy"
+      ]
+    }
+  ],
+  "inference_limits": [
+    "Indexing CG changes scale and unit, not its target or validation.",
+    "Current sources do not justify automatic G categories or a universal ≥90 normal threshold for this application output.",
+    "No source found for a universal reference interval is not proof that no local or population-specific CrCl range can exist.",
+    "Height remains necessary for this selected Du Bois indexed output; dropping it would change the output or require an unsupported assumption.",
+    "Completed years are a defensible explicit age policy for a minimal adult CG form, supported by an official contextual precedent; it is not a correction of a demonstrated medical error in fractional age.",
+    "Removing optional months requires changing actual cg_norm age use, preserving months for other equations and historical records, and disclosing that new numerical results may change."
+  ]
+}

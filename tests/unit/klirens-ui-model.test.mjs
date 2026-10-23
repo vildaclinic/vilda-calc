@@ -117,10 +117,25 @@ function clinicalReadinessHarness(formulaId, values) {
     id,
     { control, labelText: id },
   ]));
-  return { controls, formula, workflow };
+  return { controls, formula, workflow, browserGlobal };
 }
 
 describe('Klirens — centralny model przepływu UI', () => {
+  it.each(['6', '12', 'bad'])('kwalifikuje indeksowany CG z ukończonych lat bez odczytywania zapisanych miesięcy %s', ageMonths => {
+    const values = { age: '60', ageMonths, sex: 'M', weight: '80', height: '175', Scr: '1.2', ScrUnit: 'mg/dl' };
+    const indexed = clinicalReadinessHarness('cg_norm', values);
+    loadBrowserScript('clcr_calculation_assumptions.js', indexed.browserGlobal);
+    expect(indexed.workflow.getFormulaReadiness('cg_norm')).toMatchObject({
+      valueReady: true, interpretationReady: true, blockers: [],
+    });
+    expect(indexed.controls.get('ageMonths').value).toBe(ageMonths);
+
+    const absolute = clinicalReadinessHarness('cg', values);
+    loadBrowserScript('clcr_calculation_assumptions.js', absolute.browserGlobal);
+    expect(absolute.workflow.getFormulaReadiness('cg').valueReady).toBe(ageMonths === '6');
+    expect(absolute.controls.get('ageMonths').value).toBe(ageMonths);
+  });
+
   it('mapuje wszystkie 42 formuły dokładnie raz, z jawnym wyjątkiem historycznym', () => {
     expect(formulas).toHaveLength(42);
     expect(new Set(formulas.map(formula => formula.id)).size).toBe(42);
@@ -595,23 +610,23 @@ describe('Klirens — centralny model przepływu UI', () => {
       'utf8'
     );
 
-    expect(html).toContain('clcr_ui_workflow.css?v=14');
-    expect(html).toContain('clcr_ui_workflow.js?v=13');
-    expect(html).toContain('inline_kalkulator_klirens_02.js?v=9');
-    expect(html).toContain('inline_kalkulator_klirens_04.js?v=14');
+    expect(html).toContain('clcr_ui_workflow.css?v=15');
+    expect(html).toContain('clcr_ui_workflow.js?v=14');
+    expect(html).toContain('inline_kalkulator_klirens_02.js?v=10');
+    expect(html).toContain('inline_kalkulator_klirens_04.js?v=15');
     expect(html).toContain('inline_kalkulator_klirens_07.js?v=4');
-    expect(html).toContain('clcr_result_reference_data.js?v=5');
-    expect(html).toContain('clcr_result_presentation.js?v=5');
-    expect(serviceWorker).toContain("const SW_VERSION = '1.1.349'");
+    expect(html).toContain('clcr_result_reference_data.js?v=6');
+    expect(html).toContain('clcr_result_presentation.js?v=6');
+    expect(serviceWorker).toContain("const SW_VERSION = '1.1.350'");
     expect(html).toContain('clcr_calculation_assumptions.js?v=2');
     expect(serviceWorker).toContain("'/clcr_calculation_assumptions.js?v=2'");
     expect(serviceWorker).toContain("'/clcr_clinical_safety.js?v=8'");
-    expect(serviceWorker).toContain("'/clcr_result_reference_data.js?v=5'");
-    expect(serviceWorker).toContain("'/clcr_result_presentation.js?v=5'");
-    expect(serviceWorker).toContain("'/clcr_ui_workflow.css?v=14'");
-    expect(serviceWorker).toContain("'/clcr_ui_workflow.js?v=13'");
-    expect(serviceWorker).toContain("'/inline_kalkulator_klirens_02.js?v=9'");
-    expect(serviceWorker).toContain("'/inline_kalkulator_klirens_04.js?v=14'");
+    expect(serviceWorker).toContain("'/clcr_result_reference_data.js?v=6'");
+    expect(serviceWorker).toContain("'/clcr_result_presentation.js?v=6'");
+    expect(serviceWorker).toContain("'/clcr_ui_workflow.css?v=15'");
+    expect(serviceWorker).toContain("'/clcr_ui_workflow.js?v=14'");
+    expect(serviceWorker).toContain("'/inline_kalkulator_klirens_02.js?v=10'");
+    expect(serviceWorker).toContain("'/inline_kalkulator_klirens_04.js?v=15'");
     expect(serviceWorker).toContain("'/clcr_result_reference_data.js?v=1'");
     expect(serviceWorker).toContain("'/clcr_result_presentation.js?v=1'");
     expect(serviceWorker).toContain("'/clcr_result_reference_data.js?v=2'");

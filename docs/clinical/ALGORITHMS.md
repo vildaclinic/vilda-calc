@@ -5485,6 +5485,124 @@ Regresje mają wywoływać produkcyjne obliczenie, warstwę założeń, kwalifik
 prezenter i formularz, zamiast kopii równania. Akceptacja makiety, przegląd
 źródeł i testy techniczne nie nadają statusu walidacji klinicznej.
 
+#### P-KLIRENS-CG-NORM-2026-10-23 — Cockcroft–Gault na 1,73 m² i ukończone lata
+
+**Decyzja właściciela:** wdrożyć zaakceptowane
+[makiety desktop/mobile przed–po](https://chatgpt.com/space/page_d1e1a9aebb8c8191b5c310097afc471d)
+po audycie `cg_norm`, wraz z jawną polityką wieku w ukończonych latach.
+Zakres obejmuje wybrany wariant indeksowany do 1,73 m². Nie zmienia równania
+nieindeksowanego `cg`, jego dokładności wieku ani reguł pozostałych obliczeń.
+
+**Wpływ kliniczny:** usunięcie opcjonalnego pytania o miesiące jest zmianą
+dokładności wejścia, nie tylko ukryciem kontrolki. Do `cg_norm` przekazuje się
+liczbę ukończonych lat, czyli `floor(wiek dokładny w latach)`, bez zaokrąglania
+do najbliższego roku. Przy zapisanych niezerowych miesiącach nowy wynik może się
+zmienić. Użyty wiek jest jawny w etykiecie i Szczegółach. Nie stwierdzono błędu
+arytmetycznego dotychczasowego CG z wiekiem ułamkowym; nie twierdzi się, że
+ukończone lata dają dokładniejsze oszacowanie. NACO stosuje je wprost w swoim
+programie PrEP, co jest kontekstowym precedensem tej zaakceptowanej polityki,
+a nie uniwersalnym wymogiem ani walidacją jej wyższości.
+
+**Populacja, równania i jednostki:** zachowana ścieżka aplikacji jest dostępna
+od 18 lat i wymaga wieku, płci używanej we wzorze, rzeczywistej masy ciała w kg,
+wzrostu w cm oraz Scr z jednostką mg/dL albo µmol/L. Jednostka jest parametrem
+odczytu badania, nie szóstą daną biologiczną. Wzrost jest potrzebny do BSA;
+nie przyjmuje się domyślnie powierzchni 1,73 m² ani masy należnej/skorygowanej.
+Zachowane równania to:
+
+```text
+CG [mL/min] = (140 − ukończone lata) × masa rzeczywista [kg] / (72 × Scr [mg/dL])
+dla kobiety: × 0,85
+BSA Du Bois [m²] = 0,007184 × masa [kg]^0,425 × wzrost [cm]^0,725
+cg_norm [mL/min/1,73 m²] = CG [mL/min] × 1,73 / BSA [m²]
+Scr [mg/dL] = Scr [µmol/L] / 88,4
+```
+
+Współczynniki, konwersja, rzeczywista masa, dorosłe BSA Du Bois i kierunek
+przeliczenia pozostają bez zmian. Indeksowanie jest wykonywane raz z wartości
+niezaokrąglonych; liczba na karcie jest zaokrąglana dopiero na końcu do pełnej
+jednostki. Granica wieku nadal kwalifikuje dorosłego pacjenta; usunięcie pytania
+o miesiące nie może kwalifikować dziecka ani usuwać błędu danych.
+
+**Dane pacjenta i historia:** kanoniczne miesiące, dokładny wiek i data urodzenia
+nie są zerowane, usuwane ani przepisywane przy wyborze `cg_norm`. Pozostają
+dostępne dla innych wzorów. Powrót do nieindeksowanego `cg` zachowuje jego
+dotychczasowy wiek dokładny. Nowy zapis i raport powinny odzwierciedlać liczbę,
+metodę, jednostkę oraz wiek faktycznie użyty w tym obliczeniu. Nowa notatka
+`cg_norm` zawiera w treści „Wiek użyty we wzorze: … ukończonych lat”, pobrany
+z jawnych metadanych obliczenia, a nie z ponownego odczytu wieku pacjenta.
+Schemat `labResult` pozostaje bez zmian. Historyczne
+liczby i ich metadane nie są przeliczane ani ponownie klasyfikowane.
+
+**Jedna karta i ograniczenia:** tytuł „Cockcroft–Gault (1,73 m²)” odróżnia wariant
+indeksowany od mL/min. Wynik pozostaje neutralnym „Oszacowanym klirensem
+kreatyniny”. W tej samej karcie, na pełnej szerokości, pojawia się zdanie:
+„Dla tego oszacowania nie stosujemy uniwersalnej normy ani kategorii G.”
+Nie dodano progu ≥90, skali z arbitralną normą ani oceny prawidłowości. Samo
+indeksowanie nie zmienia eCrCl w eGFR; zgodność jednostek nie upoważnia do
+przeniesienia progów GFR. Brak uniwersalnej normy nie oznacza brakujących
+danych do dodatkowej „pełnej interpretacji”. To wniosek o zakresie obecnej
+interpretacji aplikacji, nie zakaz istnienia każdego lokalnego zakresu CrCl.
+
+Audyt rzeczywistego UI wykazał, że ograniczenia masy były generowane z właścicielem
+`cg` i usuwane przez filtrowanie wyniku `cg_norm`. Są przywracane do właściwych
+Szczegółów: otyłość, niedowaga, obrzęki lub nietypowa masa mięśniowa mogą
+zmniejszać wiarygodność; indeksowanie tego nie usuwa. CG powstał przed
+współczesną standaryzacją kreatyniny. Nie dodaje się pytania IDMS/IFCC,
+empirycznej korekty Scr ani porady o ChPL/dawkowaniu. BSA już wcześniej było
+w Szczegółach; teraz pozostaje krótkim krokiem obliczenia, bez konkurującej karty.
+
+Obowiązuje P-KLIRENS-ZALOZENIA: stabilna czynność nerek i brak podejrzenia AKI
+są jawnymi założeniami przy braku przeciwnych danych, bez rutynowych pytań.
+Znane AKI i szybka zmiana kreatyniny nadal blokują liczbę. Założenie nie staje
+się faktem pacjenta. Oryginalny CG nie otrzymuje nowego wymogu IDMS ani IFCC.
+
+**Źródła odczytane 2026-10-23 i zakres dowodu:** pełne adresy, sekcje i granice
+odczytu zapisano w [rejestrze źródeł](klirens-cg-normalized/source-review-2026-10-23.json).
+
+- Cockcroft DW, Gault MH. *Prediction of creatinine clearance from serum
+  creatinine*. Nephron. 1976;16(1):31–41,
+  [DOI 10.1159/000180580](https://doi.org/10.1159/000180580): zweryfikowany
+  abstrakt wydawcy, równanie i współczynnik dla kobiet; pełny tekst nie był
+  dostępny. Kohorta 18–92 lata nie jest tu podstawą nowej blokady wieku >92.
+- Du Bois D, Du Bois EF. *Clinical calorimetry: tenth paper. A formula to
+  estimate the approximate surface area if height and weight be known*.
+  Arch Intern Med (Chic). 1916;XVII(6_2):863–871,
+  [DOI 10.1001/archinte.1916.00080130010002](https://doi.org/10.1001/archinte.1916.00080130010002):
+  skan tekstu pierwotnego s. 870–871, wzór i przeliczenie cm² na m².
+- NACO, Ministry of Health and Family Welfare, Government of India.
+  *National Technical Guidelines for Pre-Exposure Prophylaxis*,
+  [pełny dokument na serwerze UNAIDS](https://files-hivpreventioncoalition.unaids.org/gpc/attachments/national-technical-guidelines-for-pre-exposure-prophylaxis.pdf),
+  s. 15 / PDF 30: „For age, use completed years”. Rok wydania nie jest
+  dopowiadany z nazwy pliku; z programu PrEP nie przenosi się wskazań,
+  progów ani dawkowania do indeksowanego CG.
+- [NKF — Cockcroft–Gault](https://www.kidney.org/professionals/kdoqi/cockcroft-gault-equation-estimating-creatinine-clearance)
+  oraz [NIDDK — ograniczenia Scr i indeksowanie BSA](https://www.niddk.nih.gov/research-funding/research-programs/kidney-clinical-research-epidemiology/laboratory/ckd-drug-dosing-providers),
+  (przegląd NIDDK: październik 2024): historyczna standaryzacja i wpływ budowy ciała;
+  tekst NIDDK o GFR nie stanowi nowej normy CG.
+- [KDIGO 2024](https://kdigo.org/wp-content/uploads/2026/04/KDIGO-2024-CKD-Guideline.pdf),
+  Kidney Int. 2024;105(Suppl 4S):S117–S314, tabela 2, zal. 1.1.2.1, §1.2.2
+  i §4.2: kategorie G dotyczą GFR; omówiono stan niestacjonarny, historyczny
+  charakter CG i ograniczenia masy. Ścieżka hosta `2026/04` nie zmienia
+  finalnej edycji 2024; nie użyto projektu KDIGO 2027.
+
+**Syntetyczne kontrakty rzeczywistego kodu produkcyjnego:**
+
+| Wejście / stan | Oczekiwany wynik i zachowany kontrakt |
+|---|---|
+| Mężczyzna, 60 lat, 80 kg, 175 cm, Scr 1,2 mg/dL | CG 74,07407407407408 mL/min; BSA Du Bois 1,9560599156154184 m²; `cg_norm` 65,51340637632258 → 66 mL/min/1,73 m², jedna neutralna karta. |
+| Ten sam profil, kanoniczny wiek 60 lat i 6 miesięcy | `cg_norm` świadomie używa 60 ukończonych lat i daje to samo 66. Przed tą polityką wiek 60,5 dawał 65,10394758647057 → 65. Kanoniczne 6 miesięcy pozostaje zachowane. |
+| Powrót do `cg` przy 60 latach i 6 miesiącach | Zachowany wiek 60,5 i nieindeksowane 73,61111111111111 → 74 mL/min; brak przeniesienia polityki pełnych lat do innego wzoru. |
+| Ten sam profil bez miesięcy, kobieta | Zastosowanie współczynnika 0,85: `cg_norm` 55,68639541987419 → 56 mL/min/1,73 m². |
+| Scr 106,08 µmol/L zamiast 1,2 mg/dL | Ta sama liczba; bez zmiany jednostki wyniku i bez wcześniejszego zaokrąglenia CG/BSA. |
+| Brak wzrostu lub innej wymaganej danej; wiek <18; jawne AKI/szybka zmiana | Brak pozornej gotowości i wyniku. Nie podstawia się BSA 1,73 ani nie pomija przeciwnych faktów. |
+| Mobile 390 i 320 px; przełączenie wzoru; raport i nowy zapis | Pięć potrzebnych danych, brak pytania o miesiące w `cg_norm`, jeden wynik i właściwy wiek użyty; miesiące pozostają dla innych wzorów. Zachowane pola 16 px / 48 px i odstęp 20 px pod czyszczeniem; źródła i ograniczenia w Szczegółach. |
+
+Regresje w `tests/unit/klirens-cg-normalized.test.mjs` i
+`tests/e2e/klirens-cg-normalized.spec.mjs` mają wywoływać rzeczywiste funkcje,
+adapter i formularz zamiast kopii wzoru. Akceptacja właściciela, przegląd
+źródeł i zielone testy nie są nową walidacją kliniczną CG.
+
 #### Zakres i ograniczenia
 
 | Obszar | Wdrożona reguła | Najważniejsze ograniczenia |
@@ -5492,7 +5610,7 @@ prezenter i formularz, zamiast kopii równania. Akceptacja makiety, przegląd
 | eGFR z kreatyniny | CKiD U25 eGFRcr dla wieku 1–25 lat; 2021 CKD-EPI eGFRcr od 18 lat; w wieku 18–25 lat oba oszacowania pozostają dostępne w ramach jednego wyniku i jego Szczegółów. Bedside Schwartz 2009 pozostaje wzorem porównawczym w wieku 1–16 lat. | Jawnie znane AKI lub szybko zmieniająca się Scr blokują wynik. Przy braku przeciwnych danych stabilność/brak AKI i IDMS są opisanymi założeniami obliczenia, umożliwiającymi zakres oszacowania G we właściwym wieku; nie są potwierdzeniem faktów pacjenta ani techniki oznaczenia. Odrębny opis i ograniczenia neonatal zawiera następny wiersz. CKiD U25cr opracowano głównie w łagodnej lub umiarkowanej CKD; NIDDK opisuje także potwierdzoną użyteczność przy eGFR ≥75 w europejskiej kohorcie zdrowych dzieci i młodych dorosłych. Nie przenosi się tu szczególnego ograniczenia przesiewowego wariantu cystatynowego. |
 | eGFR z cystatyny C | 2021 CKD-EPI eGFRcr-cys od 18 lat; CKiD U25 eGFRcys i średnia eGFRcr-cys w wieku 1–25 lat. | Źródłowo wymagana identyfikowalność ERM-DA471/IFCC oraz stabilność/brak AKI mogą być opisanymi założeniami przy braku przeciwnych danych; nie wymagają rutynowego ręcznego potwierdzenia. Znana sprzeczność zachowuje blokadę. Rzeczywista technika oznaczenia nie jest dopisywana; nefelometria jest zalecana dla U25cys. Wariant U25 ma ograniczoną możliwość uogólnienia poza profilem CKiD i nie otrzymuje normy przesiewowej dla zdrowej populacji. |
 | Noworodek | Oszacowanie `0,31 × długość [cm] / Scr [mg/dL]` dla donoszonego noworodka w 0.–28. dniu życia. Aktualna masa >2,5 kg pozostaje konserwatywną bramką aplikacji powiązaną z kryteriami HERO, nie członem równania. Podanie techniki jest opcjonalne, a IDMS może być jawnym założeniem obliczenia; nie dopisuje się metody enzymatycznej. | Wcześniactwo, masa ≤2,5 kg, 29. dzień życia, znane AKI/szybka zmiana, jednoznaczny non-IDMS lub znany Jaffe blokują wynik. JASN zawiera meta-analizę i sprawdzenie k w 43 noworodkach HERO, opisanych następnie w Pediatr Nephrol jako ta sama kohorta; większa walidacja pozostaje potrzebna. Wynik jest neutralny, bez kategorii G, normy 90 i pobocznego BSA. Istniejąca uwaga dla wieku <3 dni jest widoczna przy liczbie; ocena wymaga dnia życia i trendu Scr. |
-| CrCl i BSA | Klirens ze zbiórki czasowej wymaga rzeczywistego czasu, kompletnego protokołu i próbki surowicy pobranej w trakcie zbiórki. Indeksowanie używa Haycocka przed 18. rokiem życia i Du Bois od 18 lat. | Błędy zbiórki pozostają głównym źródłem błędu. Cockcroft-Gault jest dostępny wyłącznie od 18 lat: surowy eCrCl używa podanej masy rzeczywistej i jest nieindeksowany, a opcjonalny `cg_norm` przelicza go przez BSA do 1,73 m². Oba pozostają eCrCl, nie eGFR. |
+| CrCl i BSA | Klirens ze zbiórki czasowej wymaga rzeczywistego czasu, kompletnego protokołu i próbki surowicy pobranej w trakcie zbiórki. Indeksowanie używa Haycocka przed 18. rokiem życia i Du Bois od 18 lat. | Błędy zbiórki pozostają głównym źródłem błędu. Cockcroft-Gault jest dostępny wyłącznie od 18 lat i używa podanej masy rzeczywistej. Nieindeksowany `cg` zachowuje wiek dokładny; `cg_norm` po P-KLIRENS-CG-NORM używa jawnie ukończonych lat i przelicza CG przez BSA do 1,73 m². Kanoniczne miesiące i historia pozostają zachowane. Oba wyniki nadal są eCrCl, nie eGFR; bez automatycznej normy ani kategorii G. |
 | KDIGO G/A, ACR i PCR | Kategorie są wyznaczane z wartości niezaokrąglonej. Obliczenie ACR/PCR wymaga zgodnych jednostek i potwierdzenia wspólnej próbki; kategoria A i automatyczna interpretacja pediatryczna wymagają pierwszego porannego moczu bez zaznaczonych konfunderów. Kategorie G i A są wstrzymane przed 2. rokiem życia. W wieku 6 mies.–<2 lat automatyczny próg pediatryczny dotyczy wyłącznie PCR <500 mg/g; od 2 do <18 lat stosowane są odrębne progi ACR/PCR. | Kategoria zakresu G nie jest pokazywana przy znanym AKI, znanej niestabilności lub jednoznacznie niezgodnym standardzie używanego markera. Przy braku przeciwnych danych może opierać się na jawnych założeniach aplikacji. Sama kategoria nie rozpoznaje PChN bez kryterium przewlekłości i innych właściwych kryteriów. |
 | Frakcje wydalane i TmP/GFR | Analit i kreatynina muszą pochodzić z tej samej próbki moczu, a próbka krwi być równoczesna. TmP/GFR używa drugiego porannego moczu po nocy na czczo; przed 19. rokiem stosowana jest ścieżka pediatryczna, od 19. roku algorytm Waltona–Bijvoeta/Payne’a z gałęzią dla TRP >0,86. | TmP/GFR nie jest liczone z DZM. Automatyczne zakresy laboratoryjne pozostają wyłączone do czasu wersjonowanego profilu metody i lokalnej walidacji. |
 | Kamica | Profil EAU Urolithiasis 2026 rozdziela dorosłe mmol/24 h od pediatrycznej interpretacji wapnia w mmol/kg/24 h i wiekowego Ca/Cr w próbce punktowej; konwencja masowa szczawianu jest jawna. Pozostałe pediatryczne anality są pokazywane liczbowo bez automatycznych progów. Progi DZM wymagają dokładnie 24-godzinnej bieżącej zbiórki i właściwego kontekstu. | EAU zaleca dwie kolejne zbiórki w swoistej ocenie metabolicznej. Komunikaty są przesiewowe, nie stawiają rozpoznania i nie są samodzielnym zaleceniem leczenia. |

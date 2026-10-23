@@ -255,7 +255,8 @@ test('CG zachowuje dolną granicę wieku, a CG indeksowany wymaga wzrostu i zach
   const indexed = page.locator('[data-clcr-series="cg_norm"]');
   await expect(indexed).toBeVisible();
   await expect(indexed.locator('[data-clcr-category-control]')).toHaveCount(0);
-  await expect(indexed.locator('.clcr-result-reference-value')).toHaveText('Brak uniwersalnej normy');
+  await expect(indexed.locator('.clcr-result-reference')).toHaveCount(0);
+  await expect(indexed.locator('[data-clcr-reference-note="cg_norm"]')).toHaveText('Dla tego oszacowania nie stosujemy uniwersalnej normy ani kategorii G.');
   expect(Number(await indexed.getAttribute('data-clcr-value'))).toBeCloseTo(72.6547866225, 8);
   await expect(indexed).toContainText('73');
 });

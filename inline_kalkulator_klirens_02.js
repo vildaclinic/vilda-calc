@@ -95,7 +95,7 @@
         label: "eCrCl Cockcroft\u2013Gault (1,73\xA0m\xB2; masa rzeczywista)",
         version: "basic",
         requires: ["sex", "age", "weight", "height", "Scr", "ScrUnit"],
-        note: "Do przeliczenia na 1,73\xA0m\xB2 potrzebny jest wzrost. Indeksowanie nie usuwa błędu doboru masy; dawkowanie należy odnieść do informacji o konkretnym leku.",
+        note: "Do przeliczenia na 1,73\xA0m\xB2 potrzebny jest wzrost. W tym wariancie używamy wieku w ukończonych latach i rzeczywistej masy ciała.",
       },
       {
         id: "cl24",
