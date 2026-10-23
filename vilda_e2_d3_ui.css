@@ -1,0 +1,482 @@
+/* Scoped presentation of the approved, independent E2 Day-3 source panel. */
+#labE2D3 {
+  container: e2-d3 / inline-size;
+}
+
+#labE2D3[hidden],
+.vilda-e2-d3 [hidden] {
+  display: none !important;
+}
+
+.vilda-e2-d3 {
+  --ved3-paper: var(--card-bg, #fff);
+  --ved3-ink: var(--text-color, #183c48);
+  --ved3-muted: var(--text-muted, #5a7274);
+  --ved3-border: var(--border-color, #d4e4e7);
+  --ved3-subtle: #f3f8f8;
+  --ved3-grid: #e3ecee;
+  --ved3-teal: var(--primary, #00838d);
+  --ved3-patient: #b45b48;
+  --ved3-connector: #ac7467;
+  margin: var(--space-20px) 0 0;
+  background: var(--ved3-paper);
+  border: var(--border-hairline) solid var(--ved3-border);
+  border-radius: 15px;
+  overflow: hidden;
+  color: var(--ved3-ink);
+  font-family: inherit;
+  min-width: 0;
+}
+
+.vilda-e2-d3 *,
+.vilda-e2-d3 *::before,
+.vilda-e2-d3 *::after {
+  box-sizing: border-box;
+}
+
+.vilda-e2-d3 .ved3-heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: var(--space-12px);
+  padding: var(--space-20px) 22px 0;
+}
+
+.vilda-e2-d3 .ved3-heading > div {
+  min-width: 0;
+}
+
+.vilda-e2-d3 h3 {
+  font: inherit;
+  font-size: 16px;
+  line-height: 1.4;
+  font-weight: 600;
+  margin: 0;
+  letter-spacing: -.01em;
+  color: inherit;
+  text-align: left;
+  text-transform: none;
+}
+
+.vilda-e2-d3 .ved3-heading p {
+  font-size: 12px;
+  color: var(--ved3-muted);
+  line-height: 1.6;
+  margin: 5px 0 0;
+  text-align: left;
+}
+
+.vilda-e2-d3 .ved3-source-tag {
+  font-size: 11px;
+  border: var(--border-hairline) solid var(--ved3-border);
+  border-radius: var(--radius-6);
+  color: var(--ved3-muted);
+  padding: 5px var(--space-8px);
+  white-space: nowrap;
+}
+
+.vilda-e2-d3 .ved3-median {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--space-14px);
+  margin: 17px 22px;
+  padding: var(--space-14px) var(--space-16px);
+  background: var(--ved3-subtle);
+  border-radius: var(--radius-10);
+  min-width: 0;
+}
+
+.vilda-e2-d3 .ved3-median > div {
+  min-width: 0;
+}
+
+.vilda-e2-d3 .ved3-median > div > span {
+  color: var(--ved3-muted);
+  font-size: 12px;
+}
+
+.vilda-e2-d3 .ved3-median p {
+  margin: var(--space-6px) 0 0;
+  display: flex;
+  align-items: baseline;
+  gap: 7px;
+  flex-wrap: wrap;
+}
+
+.vilda-e2-d3 .ved3-median strong {
+  font-size: 29px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -.025em;
+}
+
+.vilda-e2-d3 .ved3-median p > span {
+  font-size: 15px;
+  color: var(--ved3-muted);
+}
+
+.vilda-e2-d3 .ved3-median .ved3-information {
+  margin: 0;
+  color: var(--ved3-muted);
+  font-size: 11px;
+  display: block;
+  max-width: 120px;
+  text-align: right;
+  line-height: 1.6;
+}
+
+.vilda-e2-d3 .ved3-context {
+  margin: 0 22px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 15px;
+}
+
+.vilda-e2-d3 label {
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1.6;
+}
+
+.vilda-e2-d3 label small {
+  font-weight: 400;
+  color: var(--ved3-muted);
+  display: block;
+  font-size: 11px;
+}
+
+.vilda-e2-d3 select {
+  font: inherit;
+  font-size: 12px;
+  min-height: 44px;
+  min-width: 170px;
+  width: auto;
+  max-width: 100%;
+  border: var(--border-hairline) solid var(--ved3-border);
+  border-radius: var(--radius-8);
+  padding: var(--space-10px) 30px var(--space-10px) 11px;
+  color: var(--ved3-ink);
+  background: var(--ved3-paper);
+  margin: 0;
+}
+
+.vilda-e2-d3 .ved3-state,
+.vilda-e2-d3 .ved3-age-note {
+  margin: var(--space-10px) 22px 17px;
+  font-size: 12px;
+  line-height: 1.65;
+  color: var(--ved3-muted);
+}
+
+.vilda-e2-d3 details {
+  border-top: var(--border-hairline) solid var(--ved3-border);
+}
+
+.vilda-e2-d3 summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-12px);
+  padding: var(--space-14px) 22px;
+  min-height: 48px;
+  font-size: 12px;
+  list-style: none;
+  line-height: 1.5;
+  cursor: pointer;
+}
+
+.vilda-e2-d3 summary::-webkit-details-marker {
+  display: none;
+}
+
+.vilda-e2-d3 summary > span:last-child {
+  color: var(--ved3-teal);
+}
+
+.vilda-e2-d3 details[open] > summary > span:last-child {
+  transform: rotate(180deg);
+}
+
+.vilda-e2-d3 .ved3-sources[open] > summary > span:last-child {
+  transform: rotate(45deg);
+}
+
+.vilda-e2-d3 summary:focus-visible,
+.vilda-e2-d3 select:focus-visible,
+.vilda-e2-d3 a:focus-visible {
+  outline: var(--border-emphasis) solid var(--ved3-teal);
+  outline-offset: var(--space-4px);
+}
+
+.vilda-e2-d3 .ved3-plot-body {
+  padding: 0 var(--space-14px) 15px;
+  max-width: 850px;
+  margin: 0 auto;
+}
+
+.vilda-e2-d3 svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  overflow: visible;
+}
+
+.vilda-e2-d3 .ved3-axis-text,
+.vilda-e2-d3 .ved3-axis-title {
+  font-family: inherit;
+  fill: var(--ved3-muted);
+  font-size: 12px;
+}
+
+.vilda-e2-d3 .ved3-grid {
+  stroke: var(--ved3-grid);
+}
+
+.vilda-e2-d3 .ved3-source-curve {
+  fill: none;
+  stroke: var(--ved3-teal);
+  stroke-width: 2.8;
+  stroke-linejoin: round;
+}
+
+.vilda-e2-d3 .ved3-age-guide {
+  stroke: var(--ved3-border);
+  stroke-dasharray: 4 5;
+}
+
+.vilda-e2-d3 .ved3-source-marker {
+  fill: var(--ved3-paper);
+  stroke: var(--ved3-teal);
+  stroke-width: 2.5;
+}
+
+.vilda-e2-d3 .ved3-connector {
+  stroke: var(--ved3-connector);
+  stroke-width: 1.5;
+  stroke-dasharray: 3 4;
+}
+
+.vilda-e2-d3 .ved3-patient-marker {
+  fill: var(--ved3-patient);
+  stroke: var(--ved3-paper);
+  stroke-width: 2;
+}
+
+.vilda-e2-d3 .ved3-overflow-marker {
+  fill: none;
+  stroke: var(--ved3-patient);
+  stroke-width: 2.5;
+}
+
+.vilda-e2-d3 .ved3-overflow-text {
+  fill: var(--ved3-patient);
+  font-family: inherit;
+  font-size: 12px;
+}
+
+.vilda-e2-d3 .ved3-legend {
+  display: flex;
+  justify-content: center;
+  gap: var(--space-20px);
+  flex-wrap: wrap;
+  color: var(--ved3-muted);
+  font-size: 11px;
+  margin: 7px 0 15px;
+}
+
+.vilda-e2-d3 .ved3-legend > span {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.vilda-e2-d3 .ved3-legend i {
+  width: 10px;
+  height: 10px;
+  display: inline-block;
+  border-radius: var(--radius-circle);
+}
+
+.vilda-e2-d3 .ved3-median-key {
+  border: var(--border-emphasis) solid var(--ved3-teal);
+  background: var(--ved3-paper);
+}
+
+.vilda-e2-d3 .ved3-patient-key {
+  background: var(--ved3-patient);
+}
+
+.vilda-e2-d3 .ved3-comparison {
+  padding: var(--space-12px) 5px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  border-top: var(--border-hairline) solid var(--ved3-border);
+  gap: var(--space-14px);
+}
+
+.vilda-e2-d3 .ved3-comparison p {
+  display: grid;
+  gap: 5px;
+  margin: 0;
+  text-align: center;
+  overflow-wrap: anywhere;
+}
+
+.vilda-e2-d3 .ved3-comparison span {
+  font-size: 11px;
+  color: var(--ved3-muted);
+}
+
+.vilda-e2-d3 .ved3-comparison strong {
+  font-weight: 550;
+  font-size: 16px;
+  color: var(--ved3-ink);
+  font-variant-numeric: tabular-nums;
+}
+
+.vilda-e2-d3 .ved3-chart-note {
+  color: var(--ved3-muted);
+  text-align: center;
+  font-size: 11px;
+  line-height: 1.65;
+  max-width: 500px;
+  margin: var(--space-8px) auto 0;
+  padding: 0 var(--space-10px);
+}
+
+.vilda-e2-d3 .ved3-source-copy {
+  padding: 0 22px var(--space-8px);
+  font-size: 12px;
+  color: var(--ved3-muted);
+  line-height: 1.8;
+  overflow-wrap: anywhere;
+}
+
+.vilda-e2-d3 .ved3-source-copy p {
+  margin: 0 0 var(--space-12px);
+}
+
+.vilda-e2-d3 .ved3-source-copy strong {
+  font-weight: 600;
+}
+
+.vilda-e2-d3 a {
+  color: var(--ved3-teal);
+  text-underline-offset: 3px;
+}
+
+@container e2-d3 (max-width: 639px) {
+  .vilda-e2-d3 {
+    border-radius: var(--radius-12);
+    margin-top: var(--space-16px);
+  }
+  .vilda-e2-d3 .ved3-heading {
+    padding: var(--space-16px) var(--space-14px) 0;
+  }
+  .vilda-e2-d3 h3 {
+    font-size: 15px;
+  }
+  .vilda-e2-d3 .ved3-median {
+    display: block;
+    margin: var(--space-14px);
+    padding: 13px;
+  }
+  .vilda-e2-d3 .ved3-median strong {
+    font-size: 26px;
+  }
+  .vilda-e2-d3 .ved3-median .ved3-information {
+    max-width: none;
+    margin-top: var(--space-8px);
+    text-align: left;
+  }
+  .vilda-e2-d3 .ved3-context {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    margin: 0 var(--space-14px);
+    gap: var(--space-10px);
+  }
+  .vilda-e2-d3 select {
+    min-width: 0;
+    width: 100%;
+    flex-shrink: 0;
+    padding-right: var(--space-20px);
+  }
+  .vilda-e2-d3 .ved3-state,
+  .vilda-e2-d3 .ved3-age-note {
+    margin-left: var(--space-14px);
+    margin-right: var(--space-14px);
+  }
+  .vilda-e2-d3 summary {
+    padding: var(--space-14px);
+  }
+  .vilda-e2-d3 .ved3-plot-body {
+    padding: 0 5px 13px;
+  }
+  .vilda-e2-d3 .ved3-axis-text,
+  .vilda-e2-d3 .ved3-axis-title {
+    font-size: 15px;
+  }
+  .vilda-e2-d3 .ved3-legend {
+    gap: var(--space-12px);
+    margin-top: var(--space-10px);
+  }
+  .vilda-e2-d3 .ved3-source-copy {
+    padding: 0 var(--space-14px) var(--space-4px);
+  }
+  .vilda-e2-d3 .ved3-comparison {
+    padding: 13px var(--space-8px);
+  }
+  .vilda-e2-d3 .ved3-comparison strong {
+    font-size: 15px;
+  }
+}
+
+body.dark-bg-level-1 .vilda-e2-d3 {
+  --ved3-border: rgba(0,131,141,.22);
+}
+
+body.dark-bg-level-2 .vilda-e2-d3 {
+  --ved3-border: rgba(0,131,141,.28);
+}
+
+body.liquid-ios26:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3) .vilda-e2-d3 {
+  --ved3-paper: var(--hc-surface);
+  --ved3-ink: var(--hc-text);
+  --ved3-muted: var(--hc-muted);
+  --ved3-border: var(--hc-border);
+  --ved3-subtle: var(--hc-input-bg);
+  --ved3-grid: var(--hc-border);
+  --ved3-teal: var(--hc-text);
+  --ved3-patient: var(--hc-text);
+  --ved3-connector: var(--hc-muted);
+  border-width: var(--hc-card-border-width);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .vilda-e2-d3 * {
+    animation: none !important;
+    transition: none !important;
+  }
+}
+
+@media print {
+  .vilda-e2-d3 {
+    break-inside: avoid;
+    background: white;
+    color: black;
+    border-color: #777;
+    --ved3-paper: white;
+    --ved3-ink: black;
+    --ved3-muted: #333;
+    --ved3-teal: black;
+    --ved3-patient: black;
+    --ved3-connector: #555;
+  }
+  .vilda-e2-d3 select {
+    color: black;
+    background: white;
+    border-color: #777;
+  }
+}
