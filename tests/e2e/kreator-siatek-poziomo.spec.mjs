@@ -61,7 +61,10 @@ const generujZKreatora = () => [...document.querySelectorAll('#vilda-pub-creator
 
 const kreatorUi = (page) => page.locator('#vilda-pub-creator-overlay');
 
-const magazyn = (page) => page.evaluate(() => JSON.parse(JSON.stringify(window.chartCreatorData.palRegular)));
+const magazyn = (page) => page.evaluate(() => JSON.parse(JSON.stringify({
+  ...window.chartCreatorData.growth,
+  posL: window.chartCreatorData.palRegular?.posL,
+})));
 
 test.describe('Kreator siatek PRO — strona A4 poziomo', () => {
   test('podgląd = strona PDF: cała strona poziomo, ramki w tych samych miejscach co w wygenerowanym PDF', async ({ page }) => {

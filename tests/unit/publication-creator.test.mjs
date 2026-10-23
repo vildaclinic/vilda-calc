@@ -486,7 +486,7 @@ describe('VildaPublicationCreator — geometria adnotacji (parytet z generatorem
     // pomiar a120 ma arrowEnabled=true, ale w kontekście zwykłym liczy się magazyn shared
     expect(PC._collectArrows(advReg, 'height')).toHaveLength(0);
     // wpis w shared włącza adnotację na OBU siatkach ze wspólną treścią
-    win.chartCreatorData.palRegular.shared.a120 = { on: 1, txt: 'Diagnoza' };
+    win.chartCreatorData.growth.shared.a120 = { on: 1, txt: 'Diagnoza' };
     const h = PC._collectArrows(advReg, 'height');
     const w2 = PC._collectArrows(advReg, 'weight');
     expect(h.map((a) => a.key)).toEqual(['a120']);
@@ -509,14 +509,14 @@ describe('VildaPublicationCreator — geometria adnotacji (parytet z generatorem
     const freeId = PC._addFree('height', { ageMonths: 100, value: 120, txt: 'Notatka', arrow: false });
     PC._setContext('pub');
     // zapisy trafiły do chartCreatorData, nie do danych karty
-    expect(win.chartCreatorData.palRegular.layout.height.a120).toEqual({ dx: 70, dy: -40 });
-    expect(win.chartCreatorData.palRegular.free.height[0].txt).toBe('Notatka');
+    expect(win.chartCreatorData.growth.layout.height.a120).toEqual({ dx: 70, dy: -40, positionContext: 'palRegular' });
+    expect(win.chartCreatorData.growth.free.height[0].txt).toBe('Notatka');
     expect(win.advancedGrowthData.pubLayout).toBeUndefined();
     expect(win.advancedGrowthData.pubFree).toBeUndefined();
     // a zapisy publikacyjne nie widzą wpisów kontekstu zwykłego
     PC._updateOverride('height', 'cur', { dx: 5, dy: 5 });
     expect(win.advancedGrowthData.pubLayout.height.cur).toEqual({ dx: 5, dy: 5 });
-    expect(win.chartCreatorData.palRegular.layout.height.cur).toBeUndefined();
+    expect(win.chartCreatorData.growth.layout.height.cur).toBeUndefined();
     expect(freeId).toBe(1);
   });
 
@@ -536,7 +536,7 @@ describe('VildaPublicationCreator — geometria adnotacji (parytet z generatorem
     expect(itemsPal.find((i) => i.key === 'a120').px).toBeCloseTo(GEOM.plotX + (120 - 12) * (GEOM.plotW / 204), 6);
   });
 
-  it('drawAnnotations: ctxId z generatora stron — olaf czyta magazyn OLAF, null nic nie rysuje', () => {
+  it('drawAnnotations: OLAF i Palczewska czytają wspólne adnotacje, ctxId null nic nie rysuje', () => {
     const win = {};
     const PC = loadCreator(win);
     win.advancedGrowthData = sampleAdv();
@@ -546,7 +546,7 @@ describe('VildaPublicationCreator — geometria adnotacji (parytet z generatorem
     PC._addFree('height', { ageMonths: 100, value: 120, txt: 'OLAF-notka', arrow: false });
     PC._setContext('pub');
     const geomBase = { chartType: 'height', ...GEOM, ageMin: 36, ageMax: 216 };
-    // strona OLAF: ctxId 'olaf' → etykieta z magazynu OLAF (mimo braku flagi publikacji)
+    // strona OLAF: ctxId 'olaf' → etykieta ze wspólnego magazynu (mimo braku flagi publikacji)
     let calls = [];
     PC.drawAnnotations(fakeCtx(calls), { ...geomBase, ctxId: 'olaf' });
     expect(calls.some((c) => c[0] === 'fillText' && c[1] === 'OLAF-notka')).toBe(true);
@@ -558,9 +558,12 @@ describe('VildaPublicationCreator — geometria adnotacji (parytet z generatorem
     PC.drawAnnotations(fakeCtx(calls), { ...geomBase, ageMin: 0, ageMax: 35, ctxId: null });
     expect(calls).toHaveLength(0);
     expect(PC._geomStore.height.ageMin).toBe(36);
-    // magazyny OLAF i Palczewskiej zwykłej są rozdzielne
-    expect(win.chartCreatorData.olaf.free.height).toHaveLength(1);
-    expect(win.chartCreatorData.palRegular ? (win.chartCreatorData.palRegular.free?.height || []).length : 0).toBe(0);
+    // przełączenie źródła zachowuje etykietę i jej kotwicę w danych
+    expect(win.chartCreatorData.growth.free.height).toHaveLength(1);
+    calls = [];
+    PC.drawAnnotations(fakeCtx(calls), { chartType: 'height', ...GEOM });
+    expect(calls.some((c) => c[0] === 'fillText' && c[1] === 'OLAF-notka')).toBe(true);
+    expect(win.chartCreatorData.growth.free.height[0]).toMatchObject({ ageMonths: 100, value: 120 });
     // ctxId wygrywa z flagą publikacji (strony OLAF nigdy nie są publikacyjne)
     win.publicationCharts = true;
     calls = [];
@@ -907,7 +910,9 @@ describe('P-KREATOR-POZIOM — położenia ramek strony A4 poziomo', () => {
     const PC = loadCreator(win);
     win.advancedGrowthData = sampleAdv();
     win.chartCreatorData = {
-      palRegular: {
+      palRegular: {},
+      growth: {
+        version: 1,
         shared: { a120: { txt: 'Start' }, cur: { txt: 'Kontrola' } },
         layout: { height: { cur: { dx: 330, dy: -420 } }, weight: {} },
         free: {
@@ -990,16 +995,17 @@ describe('P-KREATOR-POZIOM — położenia ramek strony A4 poziomo', () => {
     PC._setContext('palRegular');
     PC._setEditLayout('landscape');
     const reg = win.chartCreatorData.palRegular;
+    const growth = win.chartCreatorData.growth;
     PC._setOffset('height', 'cur', 10.4, 20.6);
     expect(reg.posL.height.cur).toEqual({ dx: 10, dy: 21 });
-    expect(reg.layout.height.cur, 'położenie pionu bez zmian').toEqual({ dx: 330, dy: -420 });
+    expect(growth.layout.height.cur, 'położenie pionu bez zmian').toEqual({ dx: 330, dy: -420 });
     // przeciągnięcie samej poprzeczki klamry nie przestawia jej ramki
     PC._updateFree('height', 2, { bdy: -50 });
     expect(reg.posL.height.f2).toEqual({ dx: Math.round(100 * SKALA.x), bdy: -50 });
-    expect(reg.free.height[1]).toMatchObject({ dx: 100, bdy: -120 });
+    expect(growth.free.height[1]).toMatchObject({ dx: 100, bdy: -120 });
     // treść jest wspólna dla obu układów — trafia do wpisu, nie do posL
     PC._updateFree('height', 1, { txt: 'Nowa', fs: 52 });
-    expect(reg.free.height[0]).toMatchObject({ txt: 'Nowa', fs: 52, dx: 40, dy: -30 });
+    expect(growth.free.height[0]).toMatchObject({ txt: 'Nowa', fs: 52, dx: 40, dy: -30 });
     expect(reg.posL.height.f1).toBeUndefined();
     // usunięta wolna adnotacja nie zostawia położenia dla następnej z tym samym id
     PC._removeFree('height', 2);
@@ -1007,7 +1013,7 @@ describe('P-KREATOR-POZIOM — położenia ramek strony A4 poziomo', () => {
     // w pionie zapis wraca do magazynu pionu
     PC._setEditLayout('portrait');
     PC._setOffset('height', 'cur', 1, 2);
-    expect(reg.layout.height.cur).toEqual({ dx: 1, dy: 2 });
+    expect(growth.layout.height.cur).toEqual({ dx: 1, dy: 2, positionContext: 'palRegular' });
     expect(reg.posL.height.cur).toEqual({ dx: 10, dy: 21 });
     PC._setContext('pub');
   });
@@ -1016,18 +1022,19 @@ describe('P-KREATOR-POZIOM — położenia ramek strony A4 poziomo', () => {
     const { win, PC } = przygotuj();
     PC._setContext('palRegular');
     const reg = win.chartCreatorData.palRegular;
+    const growth = win.chartCreatorData.growth;
     reg.posL = { height: { cur: { dx: 10 }, a120: { dx: 5 } }, weight: { cur: { dy: 7 } } };
     PC._setEditLayout('landscape');
     PC._resetLayout('height');
     // ramki przesunięte w pionie dostają zerowe własne położenie (automatyczne w poziomie)
     expect(reg.posL.height).toEqual({ cur: {}, f1: {}, f2: {} });
     expect(reg.posL.weight, 'druga siatka bez zmian').toEqual({ cur: { dy: 7 } });
-    expect(reg.layout.height.cur).toEqual({ dx: 330, dy: -420 });
-    expect(reg.free.height[0]).toMatchObject({ dx: 40, dy: -30 });
+    expect(growth.layout.height.cur).toEqual({ dx: 330, dy: -420 });
+    expect(growth.free.height[0]).toMatchObject({ dx: 40, dy: -30 });
     PC._setEditLayout('portrait');
     PC._resetLayout('height');
-    expect(reg.layout.height.cur).toBeUndefined();
-    expect(reg.free.height[0].dx).toBeUndefined();
+    expect(growth.layout.height.cur).toBeUndefined();
+    expect(growth.free.height[0].dx).toBeUndefined();
     expect(reg.posL.height, 'reset pionu nie dotyka poziomu').toEqual({ cur: {}, f1: {}, f2: {} });
     PC._setContext('pub');
   });
@@ -1083,7 +1090,7 @@ describe('Integracja: generator siatek deleguje adnotacje do modułu', () => {
 
   it('index.html ładuje moduł kreatora i zawiera przycisk otwierający (PRO)', () => {
     const indexHtml = fs.readFileSync(path.join(repositoryRoot, 'index.html'), 'utf8');
-    expect(indexHtml).toContain('vilda_publication_creator.js?v=22');
+    expect(indexHtml).toContain('vilda_publication_creator.js?v=23');
     expect(indexHtml).toContain('id="openPublicationCreatorBtn"');
     expect(indexHtml).toContain('Kreator adnotacji<sup class="pro-superscript">PRO</sup>');
   });

@@ -53,7 +53,16 @@ async function odtworzZOpóźnieniem(frame, patientId) {
     window.VildaAuthUI.showPatientCard(id, (record) => { if (record) window.applyLoadedData(record); }, null);
   }, patientId);
   await frame.getByRole('button', { name: 'Wczytaj tego pacjenta' }).click();
-  await expect(frame.locator('#vildaLoadChoiceModal')).toBeVisible();
+  const wybor = frame.locator('#vildaLoadChoiceModal');
+  const straznik = frame.getByRole('dialog', { name: /^Zapisać (wpisane dane|zmiany) przed wczytaniem\?$/ });
+  // Odtworzenie sesji ramki może uzupełnić fikcyjne pola po clearAllData().
+  // Jeśli strażnik pyta przed wczytaniem, lekarz jawnie odrzuca te dane.
+  await expect(wybor.or(straznik)).toBeVisible();
+  if (await straznik.isVisible()) {
+    await straznik.getByRole('button', { name: /^Odrzuć (dane|zmiany) i wczytaj$/ }).click();
+    await expect(straznik).toHaveCount(0);
+  }
+  await expect(wybor).toBeVisible();
   await frame.locator('#vildaLcmRestore').click();
   await expect(frame.locator('#vildaLoadChoiceModal')).toHaveCount(0);
   await centyleISchowek(frame);
@@ -98,6 +107,10 @@ test('opóźnione DOB z rekordu: Start w powłoce i DocPro pokazują aktualne ce
 
   await page.evaluate(() => window.VildaShell.navigate('docpro'));
   const docpro = await ramka(page, 'DocPro');
+  // DocPro mógł wystartować w tle podczas pauzy Startu i zachować własną
+  // pauzę testową. Kończymy ją przed sprawdzeniem startowego widoku;
+  // właściwe odtworzenie poniżej ponownie wykonuje clear + pause.
+  await docpro.evaluate(() => window.__vildaDobRestoreGate.release());
   await expect(docpro.locator('#results')).toContainText('Wzrost: 29 centyl');
   await odtworzZOpóźnieniem(docpro, pid);
 });
