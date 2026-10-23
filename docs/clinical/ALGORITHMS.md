@@ -6157,6 +6157,138 @@ i `klirens-pcr-offline.spec.mjs` wywołują rzeczywisty kod. Wyniki wykonań
 podaje PR. Przegląd źródeł, akceptacja właściciela i zielone testy nie są
 nową walidacją kliniczną.
 
+#### P-KLIRENS-CACR-2026-10-24 — prosty Ca/Cr, dwustronne normy Mayo i wierna historia
+
+Właściciel zaakceptował audyt, zmianę profilu i makietę desktop/mobile:
+[porównanie przed/po](https://vilda-cacr-audyt-20261023.maciej-flader.chatgpt.site),
+źródło makiety `c30414ccdae3766929b24cc8cc7c8a8e8aa68665`.
+Zakres obejmuje `CaCr_spot`, także w szerokim widoku starszego panelu.
+Ca/Cr ze zbiórki dobowej i inne profile kamicy są odrębnymi obliczeniami.
+
+**Zmiana kliniczna:** dotychczasowe pediatryczne górne progi EAU w osi molowej
+zastępuje jeden dwustronny zakres laboratoryjny **Mayo CACR3 dla losowej
+próbki moczu**, od 1 miesiąca do jawnie zdefiniowanej granicy 83 lat.
+Nie jest to wyłącznie zmiana prezentacji ani samodzielne kryterium
+hiperkalciurii, niedoboru wapnia lub kamicy. Ocena jest orientacyjna:
+metoda pacjenta i zgodność populacji z laboratorium Mayo nie są potwierdzone.
+Niski wynik jest teraz porównywany także z dolnym końcem zakresu.
+
+**Pełne źródło i zakres:** Mayo Clinic Laboratories, Rochester Main Campus,
+[CACR3 — Calcium/Creatinine Ratio, Random, Urine](https://www.mayocliniclabs.com/test-catalog/Overview/CACR3),
+katalog i [pełna czterostronicowa definicja badania PDF](https://www.mayocliniclabs.com/test-catalog/download-setup?format=pdf&unit_code=610594),
+odczyt 23.10.2026 UTC. PDF: próbka s. 1; zakresy s. 2;
+interpretacja, ograniczenia i metody s. 3–4. Metody źródła: wapń fotometrycznie
+NM-BAPTA, kreatynina enzymatyczna z odczytem barwnym. Przeczytano pełny opis
+katalogu, nie niezależnie cytowane przez niego ulotki Roche CA2 08/2023
+i Creatinine plus ver. 2 07/2024. Nie dopisuje się tych metod do próbki
+pacjenta i nie dodaje obowiązkowego pytania o metodę.
+
+Profil `MAYO_CACR3_RANDOM_2026_10`, wersja 1, znajduje się w osobnych,
+niezmiennych danych `clcr_cacr_reference_data.js`. Silnik `clcr_cacr.js`
+przyjmuje profil jako argument; wynik zachowuje źródło, populację,
+rodzaj zakresu, wersję i ograniczenia. Źródłowa jednostka to **mg/mg**.
+
+| Wiek źródłowy | Dolny koniec mg/mg | Górny koniec mg/mg |
+|---|---:|---:|
+| 1 miesiąc–<12 miesięcy | 0,03 | 0,81 |
+| 12 miesięcy–<24 miesięcy | 0,03 | 0,56 |
+| 24 miesiące–<3 lata | 0,02 | 0,50 |
+| 3 lata–<5 lat | 0,02 | 0,41 |
+| 5 lat–<7 lat | 0,01 | 0,30 |
+| 7 lat–<10 lat | 0,01 | 0,25 |
+| 10 lat–<18 lat | 0,01 | 0,24 |
+| 18 lat–83 lata | 0,05 | 0,27 |
+
+Oba końce zakresu wyniku są włączone. Przy 5 latach **0,30 mg/mg mieści się
+w zakresie**, a 0,30001 go przekracza. Katalog nie ustala zakresów poniżej
+1 miesiąca ani powyżej 83 lat. Ostatnia grupa ma literalny zapis
+`18 years–83 years`, bez definicji ukończonych lat lub `<84`.
+Jawna, ostrożna polityka aplikacji to **18 ≤ dokładny wiek ≤83 lat**;
+nie rozszerza się jej do 83 lat i 11 miesięcy. Bez wieku, przed miesiącem
+lub po tej granicy pozostaje liczba z konkretną przyczyną braku normy,
+bez zastępczej normy dorosłych i bez pozytywnego werdyktu.
+Nie utworzono profilu aktualnego okresu wcześniaczego ani reguły wieku
+skorygowanego. Sam dawny wywiad wcześniactwa starszego dziecka nie jest
+automatycznym powodem wyłączenia zakresu. Nie dodaje się ankiety wcześniactwa.
+
+**Jednostki i porównanie:** iloraz stężeń wapnia i kreatyniny po przeliczeniu
+obu do mg/L daje mg/mg. Wapń: mg/dL, mg/L, mmol/L; kreatynina w formularzu:
+mg/dL, µmol/L, mmol/L. Deklarowane stałe Ca/Cr to MCa=40,078 mg/mmol
+i MCr=113,12 mg/mmol, stosowane spójnie w obrębie tego wskaźnika.
+Nie miesza się tej osi z oddzielnym zaokrąglonym współczynnikiem 88,4.
+W stężeniach molowych ostatnie cyfry mogą więc różnić się od historycznego
+przeliczenia; nie jest to zmiana skali ilorazu.
+
+Gotowy wskaźnik przyjmuje mg/mg, g/g, mg/g, mol/mol, mmol/mmol, mmol/mol
+lub mg/mmol. Do jednej natywnej osi mg/mg: mg/mg i g/g ×1; mg/g ÷1000;
+mol/mol i mmol/mmol ×40,078/113,12; mmol/mol ×40,078/(113,12×1000);
+mg/mmol ÷113,12. Przeliczone granice na karcie oznacza się ≈, jeśli są
+zaokrąglone. Dokładne porównanie poprzedza zaokrąglenie i nie używa tolerancji
+przesuwającej rzeczywiście przekroczony próg. Znaki `<`, `≤`, `>` i `≥`
+dotyczą całego możliwego przedziału; nie tworzą punktu równego końcowi.
+
+**Minimalny formularz:** pierwsze i domyślne „Oblicz ze stężeń” wymaga dwóch
+wartości z jednostkami; drugie „Gotowy wynik Ca/Cr” jednego wskaźnika
+z jednostką. Wiek wykorzystuje się z danych pacjenta tylko do normy.
+Wspólna próbka jest opisanym założeniem przy braku przeciwnych danych;
+znane różne próbki blokują iloraz stężeń, a nie niezależny raport laboratorium.
+Nie wymaga się płci, masy, wzrostu, BSA, krwi, zbiórki dobowej, pobrania na
+czczo lub porannego pobrania. Znane informacje o próbce, lekach i czynnikach
+nie znikają, ale nie dopisuje się ich nieobecności ani reguł blokowania ACR/PCR.
+Mayo opisuje m.in. interferencje gadolinowych Omniscan/Optimark i znaczenie
+tiazydów; brak danych nie staje się przeczącym wywiadem. Pojedynczy niski
+wynik nie rozpoznaje niedoboru wapnia, a wysoki wymaga potwierdzenia i oceny
+klinicznej, w odpowiednim kontekście dobowej ilościowej oceny.
+
+**Prezentacja i poprawki techniczne:** jedna karta łączy większy wynik
+pacjenta z neutralną „Normą dla wieku”, a opis jest poniżej. Odchylenie
+w dół lub w górę jest bursztynowe. Długie przeliczone zakresy zajmują dwa
+wiersze „od/do” wewnątrz tej samej stałej kolumny. Walidacja dopuszcza
+Ca=0 przy Cr>0 i usuwa jednostkowo niespójny limit surowego Ca=30 tylko
+w nowej ścieżce Ca/Cr. Puste pole nie staje się zerem.
+
+Zapis zachowuje niezaokrąglony wynik, oryginalną jednostkę i znak,
+stężenia źródłowe, wiek, pełny zakres, źródło i ocenę z chwili zapisu.
+Nie gubi widocznej granicy i nie zaokrągla ponownie tekstu do dwóch miejsc.
+Brak oceny ma `outOfRange:null`, a nie `false`. Najnowszy wynik bez normy
+nie przejmuje starszej. Historia odtwarza utrwaloną ocenę bez przeliczania
+dzisiejszym wiekiem lub profilem. Edycja wartości, jednostki, prezentacji
+lub normy unieważnia dawny snapshot; znaki nierówności nie tworzą dokładnych
+punktów lub trendów. Starszym notatkom nie dopisuje się nieznanych faktów
+ani utraconej wcześniej precyzji. Nie zmienia się danych prawdziwego sejfu.
+
+**Oddzielenie od EAU:** pełne EAU Urolithiasis 2026, aktualizacja marzec,
+s. 46–47, §4.1.2–4.1.4, tabela 4.3 publikuje oddzielne zaokrąglone osie
+mol/mol i mg/mg. Historyczna aplikacja ściśle przeliczała oś molową
+(np. 0,8 mol/mol →0,28344 mg/mg), zamiast używać opublikowanego `<0,3 mg/mg`.
+To różnica polityki źródłowej, a nie dowód błędu dzielenia stężeń.
+Nie łączy się górnych granic EAU z dolnymi Mayo. Dawne wstrzymanie na
+1/3/5/7 latach obejmowało także 1 rok i 7 lat mimo zapisów `<12 miesięcy`,
+`1–3`, `5–7`, `>7`; Mayo rozstrzyga granice rozłącznymi pasmami.
+Pozostałe reguły EAU dotyczą innych obliczeń kamicy.
+
+**Syntetyczne kontrakty rzeczywistych funkcji produkcyjnych:**
+
+| Wejście / stan | Oczekiwany wynik |
+|---|---|
+| 5 lat; Ca 20 mg/dL, Cr 50 mg/dL | 0,400 mg/mg, powyżej zakresu 0,01–0,30; jawne założenie wspólnej próbki. |
+| Ca 40 mg/dL i równoważne stężenie mmol/L; Cr 100 mg/dL | Obie jednostki są dopuszczone i dają około 0,4 mg/mg, bez jednostkowej blokady limitu 30. |
+| 5 lat; gotowe 0,01 / 0,30 / 0,30001 / 0,00999 mg/mg | W zakresie / w zakresie / powyżej / poniżej; ocena z pełnej wartości. |
+| 5 lat; Ca 0, Cr 50 / wapń pusty / Cr 0 | Liczba 0 poniżej zakresu / brak liczby / błąd mianownika. |
+| 5 lat; stężenia dające 0,30001 lub 0,00996 mg/mg | Pokazane 0,300 lub 0,010 z ochroną granicy; zapis zachowuje raw i rzeczywistą ocenę. |
+| Dokładnie 1, 3, 5 i 7 lat | Odpowiednio zakresy 0,03–0,56; 0,02–0,41; 0,01–0,30; 0,01–0,25, bez luk. |
+| 1 miesiąc / dokładnie 83 lata / <1 miesiąca / >83 / wiek nieznany | Odpowiedni zakres / zakres dorosły / liczba bez normy / liczba bez normy / liczba bez normy. |
+| 5 lat; <0,01 / ≤0,01 / >0,30 / ≥0,30 mg/mg | Poniżej / nierozstrzygnięte / powyżej / nierozstrzygnięte; znak zachowany, bez punktu trendu. |
+| Znane różne próbki / gotowy raport | Iloraz stężeń zablokowany / gotowy wskaźnik dostępny niezależnie. |
+| Zapis i odczyt po zmianie wieku lub nowym wyniku bez normy | Dawna ocena pozostaje dawna; nowszy wynik nie pożycza starszej normy. |
+
+Regresje `klirens-cacr.test.mjs`, `klirens-cacr-save.test.mjs`,
+`klirens-cacr-session.test.mjs` oraz E2E `klirens-cacr-audit.spec.mjs`
+i `klirens-cacr-offline.spec.mjs` wywołują kod produkcyjny, także rzeczywiste
+sanitizery i historię na fikcyjnym adapterze. Wyniki wykonań podaje PR.
+Akceptacja właściciela, przegląd źródła i zielone testy nie nadają statusu
+nowej walidacji klinicznej.
+
 #### Zakres i ograniczenia
 
 | Obszar | Wdrożona reguła | Najważniejsze ograniczenia |
@@ -6167,7 +6299,7 @@ nową walidacją kliniczną.
 | CrCl i BSA | `cl24` po P-KLIRENS-CL24 wymaga Scr, Ucr, objętości i rzeczywistego czasu; prawidłowa pełna zbiórka jest jawnym założeniem przy braku przeciwnych danych. Nazwany profil PathWest obejmuje 3–<120 lat, od 19 lat zależy od płci. Granice źródłowe na 1,73 m² są przeliczane przez BSA/1,73 do jednostki wyniku mL/min. BSA używa Haycocka przed 18. rokiem i Du Bois od 18 lat. | Znany błąd zbiórki lub inne przeciwwskazanie nie jest usuwane przez założenie. Porównanie z dobowym profilem przy innym czasie jest jawnie orientacyjne, bez twierdzenia o walidacji krótkich protokołów. Brak normy nie blokuje liczby. Nie nadaje się G ani nie wyklucza PChN. Cockcroft–Gault nadal jest eCrCl od 18 lat z masą rzeczywistą, bez automatycznej normy/G; `cg` zachowuje wiek dokładny, `cg_norm` używa ukończonych lat. Kanoniczny wiek i historia nie są przepisywane. |
 | KDIGO G/A, ACR i PCR | Kategorie są wyznaczane z wartości niezaokrąglonej. ACR po P-KLIRENS-ACR przyjmuje iloraz stężeń ze wspólnej próbki (jawne założenie, znana sprzeczność blokuje) albo gotowy raport; kategorię nadaje w natywnej osi od 2 lat według jawnej polityki aplikacji, także dla próbki losowej z zaleceniem potwierdzenia podwyższenia. Znane czynniki przejściowe wstrzymują kategorię ACR; brak wieku lub wiek <2 nie blokuje liczby, ale wyklucza dorosłą normę. PCR po P-KLIRENS-PCR wymaga dwóch stężeń albo gotowego raportu; wspólna próbka jest jawnym założeniem, znana sprzeczność blokuje iloraz. Orientacyjne odniesienia: 6–<24 m <500 mg/g, 24 m–<18 lat <200, dorośli <150; natywne progi SI pozostają odrębne. Znane czynniki przejściowe zachowują ograniczenia i sygnał liczbowego przekroczenia. Poniżej 6 m lub bez wieku nie stosuje się zastępczej normy. | Kategorie G i A są wstrzymane przed 2. rokiem życia. Kategoria zakresu G nie jest pokazywana przy znanym AKI, znanej niestabilności lub jednoznacznie niezgodnym standardzie używanego markera; przy braku przeciwnych danych może opierać się na jawnych założeniach aplikacji. Sama kategoria nie rozpoznaje PChN bez kryterium przewlekłości i innych właściwych kryteriów. ACR nie otrzymuje obowiązkowej ankiety o AKI/IDMS/IFCC. |
 | Frakcje wydalane i TmP/GFR | Analit i kreatynina muszą pochodzić z tej samej próbki moczu, a próbka krwi być równoczesna. TmP/GFR używa drugiego porannego moczu po nocy na czczo; przed 19. rokiem stosowana jest ścieżka pediatryczna, od 19. roku algorytm Waltona–Bijvoeta/Payne’a z gałęzią dla TRP >0,86. | TmP/GFR nie jest liczone z DZM. Automatyczne zakresy laboratoryjne pozostają wyłączone do czasu wersjonowanego profilu metody i lokalnej walidacji. |
-| Kamica | Profil EAU Urolithiasis 2026 rozdziela dorosłe mmol/24 h od pediatrycznej interpretacji wapnia w mmol/kg/24 h i wiekowego Ca/Cr w próbce punktowej; konwencja masowa szczawianu jest jawna. Pozostałe pediatryczne anality są pokazywane liczbowo bez automatycznych progów. Progi DZM wymagają dokładnie 24-godzinnej bieżącej zbiórki i właściwego kontekstu. | EAU zaleca dwie kolejne zbiórki w swoistej ocenie metabolicznej. Komunikaty są przesiewowe, nie stawiają rozpoznania i nie są samodzielnym zaleceniem leczenia. |
+| Kamica i Ca/Cr w próbce moczu | EAU Urolithiasis 2026 rozdziela dorosłe mmol/24 h od pediatrycznej interpretacji wapnia w mmol/kg/24 h; konwencja masowa szczawianu jest jawna. `CaCr_spot` po P-KLIRENS-CACR stosuje osobny dwustronny profil Mayo CACR3 dla losowej próbki: od 1 miesiąca do dokładnego wieku 83 lat, z zamkniętymi końcami zakresu. Pozostałe pediatryczne anality są pokazywane liczbowo bez automatycznych progów. Progi DZM wymagają dokładnie 24-godzinnej bieżącej zbiórki i właściwego kontekstu. | Zakres Mayo jest orientacyjny, nie potwierdza metody pacjenta, nie jest kryterium rozpoznania hiperkalciurii lub kamicy i nie zastępuje normy lokalnego laboratorium. Nie łączy się go z progami EAU. EAU zaleca dwie kolejne zbiórki w swoistej ocenie metabolicznej; komunikaty nie stanowią samodzielnego zalecenia leczenia. |
 | Hemodializa | Moduł dotyczy wyłącznie pojedynczej sesji IHD. spKt/Vurea Daugirdasa II używa źródłowych par GFAC dla 2–7 sesji/tydz. i rzeczywistego PIDI; URR i eKt/V są liczone z niezaokrąglonych danych, z uwzględnieniem dostępu AV/CVC, protokołu próbek i aktualności Kru. | Moduł jest niedostępny przed 2. rokiem życia, a w wieku 2–17 lat wymaga protokołu slow-flow. Dla 5–7 sesji/tydz. sesja >300 min jest blokowana i wymaga formalnego modelowania mocznika. Pary GFAC 2–7 pochodzą z symulacji, a walidację FHN opisano dla schematów 3, 4 i 6×/tydz. Progi 1,2/1,4 są stosowane tylko w opisanym profilu dorosłej IHD 3×/tydz.; poza nim oraz w pediatrii wynik techniczny nie otrzymuje dorosłej kategorii adekwatności. |
 
 EKFC pozostaje wyłączone za bramką lokalnej walidacji. Historyczny Schwartz z dobieranym współczynnikiem (k) jest wyłączony z rutynowego użycia.
