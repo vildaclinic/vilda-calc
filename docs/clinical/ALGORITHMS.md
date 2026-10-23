@@ -9520,6 +9520,14 @@ Migotanie jest **starsze** od obu zmian, a numer kolejny wersji je złagodził. 
 
 **Regresje.** `tests/unit/save-status-import-order.test.mjs` wykonuje rzeczywisty importer i wskaźnik z deterministyczną kolejnością zdarzeń: powiadomienie późniejsze niż 500 ms, kolejny prawdziwy import, stare zdarzenia, sesja, zapis, clear, lock, unlock i zmiana PID. `tests/e2e/tozsamosc-pacjenta-duplikaty.spec.mjs` zachowuje wszystkie dotychczasowe asercje.
 
+### P-KREATOR-ZAPIS-PAUZA — rzeczywista edycja po opublikowaniu referencji zapisu, 2026-10-23
+
+**Problem wykryty przy weryfikacji Kreatora.** Wskaźnik pomijał zdarzenie edycji podczas krótkiej pauzy odtwarzania oraz sytuację, gdy pauza zaczynała się pomiędzy zdarzeniem a jego odroczonym sprawdzeniem. Zmiana masy 60 → 63 kg mogła pozostawić „zapisano” mimo zmienionych danych. Błąd odtworzono na rzeczywistym importerze i wskaźniku także w bazie `8658bb75`; nowy test przeglądarkowy wymusza tę sytuację po ustaleniu zapisanej wersji. Istniejące asercje odtwarzania DOB pozostają bez zmian.
+
+**Ograniczona poprawka.** Po opublikowaniu referencji dla bieżącego pacjenta rzeczywista edycja użytkownika jest przypisana do PID, numeru operacji wczytania, generacji wskaźnika i referencji. Sprawdzenie czeka na koniec aktualnej pauzy; jej przedłużenie odracza je dalej. Przed odczytem stanu weryfikuje aktualność kontekstu i odblokowanie. Aktualizacja sesji poprzedza porównanie z dotychczasową referencją, bez przyjmowania edytowanego formularza jako nowej zapisanej wersji. Ponowne wpisanie tej samej wartości pozostawia „zapisano”. Kolejny import, zapis, zmiana pacjenta, clear lub blokada unieważniają oczekującą edycję. Syntetyczne zdarzenia odtwarzania nie trafiają do kolejki. Nie przebudowano granicy ustanawiania referencji przed jej publikacją.
+
+**Zakres i regresje.** Zmienia się wyłącznie śledzenie rzeczywistej edycji po ustaleniu referencji. Bez zmiany pomiarów, norm, centyli, formatu pacjenta i zapisu do sejfu. `tests/unit/save-status-paused-edit.test.mjs` rozdziela formularz od zapisanej migawki sesji i sprawdza koniec/przedłużenie pauzy oraz unieważnienie kolejki. `tests/e2e/odtworzenie-wiek-pomiaru.spec.mjs` zawiera dodatkowy scenariusz: zapisany pacjent → pauza → ta sama masa (nadal zapisano) → pauza → nowa masa (niezapisane zmiany).
+
 ### P-PASEK-STATUSU — stały pasek zamiast dymka gasnącego po 2,5 s (SW 1.0.934, 2026-09-14, decyzja właściciela)
 
 **Stan przed zmianą.** Wszystkie komunikaty zapisu — **piętnaście** różnych zdań, od „Nie zapisano — uzupełnij…" po „Nie udało się zapisać pacjenta" — szły przez `showTooltip()`: dymek przy przycisku, gasnący po **2500 ms** i znikający z DOM bez śladu. Trzy wady naraz:
