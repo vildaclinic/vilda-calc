@@ -1060,6 +1060,7 @@
       badge,
       infoButton,
       helpPanel,
+      defaultHelpText: helpDetails.text,
       answerSelect: null,
       originalParent: label.parentNode,
     };
@@ -1711,6 +1712,7 @@
   function renderCompactCgLabels() {
     const compact = !state.legacyBroad && Boolean(state.activeFormulaId);
     const neonatal = compact && state.activeFormulaId === "neonatal_egfr";
+    const cgIndexed = compact && state.activeFormulaId === "cg_norm";
     const labels = {
       weight: "Aktualna masa ciała (kg)",
       Scr: "Kreatynina",
@@ -1719,7 +1721,7 @@
       neonatalTermStatus: "Urodzenie o czasie",
       height: "Długość ciała (cm)",
       ScrAssay: "Metoda oznaczenia kreatyniny",
-      age: "Zapisany wiek (lata)",
+      age: cgIndexed ? "Wiek (ukończone lata)" : "Zapisany wiek (lata)",
       ageMonths: "Zapisany wiek (miesiące)",
     };
     Object.entries(labels).forEach(([fieldId, label]) => {
@@ -1727,11 +1729,31 @@
       if (!view) return;
       const useCompact = ["Scr", "ScrUnit"].includes(fieldId) ? compact
         : fieldId === "weight" ? neonatal || compact && ["cg", "cg_norm"].includes(state.activeFormulaId)
+          : fieldId === "age" ? neonatal || cgIndexed
           : neonatal;
       view.labelText = useCompact ? label : view.defaultLabelText;
       view.wrapper.querySelector(".clcr-field__name").textContent = view.labelText;
       view.infoButton.setAttribute("aria-label", `Informacja: ${view.labelText}`);
+      if (fieldId === "age") {
+        view.helpPanel.textContent = cgIndexed
+          ? "W tym wariancie używamy ukończonych lat, bez dodatkowych miesięcy."
+          : view.defaultHelpText;
+      }
     });
+    const height = state.fieldViews.get("height");
+    if (height) {
+      if (!height.cgIndexedNote) {
+        height.cgIndexedNote = createElement("span", "clcr-field__note", "Do przeliczenia wyniku na 1,73 m².");
+        height.cgIndexedNote.id = "clcr-cg-indexed-height-note";
+        height.wrapper.appendChild(height.cgIndexedNote);
+      }
+      height.cgIndexedNote.hidden = !cgIndexed;
+      const descriptions = new Set((height.control.getAttribute("aria-describedby") || "").split(/\s+/).filter(Boolean));
+      if (cgIndexed) descriptions.add(height.cgIndexedNote.id);
+      else descriptions.delete(height.cgIndexedNote.id);
+      if (descriptions.size) height.control.setAttribute("aria-describedby", [...descriptions].join(" "));
+      else height.control.removeAttribute("aria-describedby");
+    }
   }
 
   function activeSetsForFormula(formula) {
@@ -1751,8 +1773,11 @@
       CaCr_spot: ["age", "ageMonths"], CitCr_spot: ["age", "ageMonths"],
     };
     (referenceFields[formula.id] || []).forEach((fieldId) => optional.add(fieldId));
-    if (required.has("age") && formula.id !== "neonatal_egfr") optional.add("ageMonths");
+    if (required.has("age") && !["neonatal_egfr", "cg_norm"].includes(formula.id)) optional.add("ageMonths");
     getSharedModuleFieldIds(formula.id).forEach((fieldId) => optional.add(fieldId));
+    // The indexed CG variant uses completed years. Keep the canonical month
+    // value for other formulas, but do not ask for it or let it qualify this one.
+    if (formula.id === "cg_norm") optional.delete("ageMonths");
     if (formula.id === "egfr_cr_cys") {
       ["height", "weight", "CystatinCAssayMethod", "ScrAssay", "CystatinCStandardization"].forEach((fieldId) => optional.delete(fieldId));
     }
@@ -2066,8 +2091,9 @@
 
   function currentClinicalContext(formulaId = state.activeFormulaId) {
     const clinical = global.ClcrClinicalSafety;
-    const age =
-      clinical && typeof clinical.readAgeFromDocument === "function"
+    const age = formulaId === "cg_norm" && typeof clinical?.parseAge === "function"
+      ? clinical.parseAge(fieldValue("age"), 0)
+      : clinical && typeof clinical.readAgeFromDocument === "function"
         ? clinical.readAgeFromDocument(documentRef)
         : null;
     const resolved = calculationAssumptions(formulaId);
@@ -2174,7 +2200,7 @@
     };
   }
 
-  function safetyFieldForReason(reason) {
+  function safetyFieldForReason(reason, formulaId = state.activeFormulaId) {
     const text = String(reason || "");
     if (/AKI|niestacjonarn|zmieniając/i.test(text)) return "creatinineState";
     if (/IDMS|enzymatyczn|metod.*kreatynin/i.test(text)) return "ScrAssay";
@@ -2182,7 +2208,7 @@
     if (/wcześniak|urodził.*czas|donoszon/i.test(text)) return "neonatalTermStatus";
     if (/dni.*życia|dzień.*życia|28.*dni/.test(text)) return "ageDays";
     const months = fieldNumber("ageMonths");
-    if (months !== null && (!Number.isInteger(months) || months < 0 || months > 11)) return "ageMonths";
+    if (formulaId !== "cg_norm" && months !== null && (!Number.isInteger(months) || months < 0 || months > 11)) return "ageMonths";
     return "age";
   }
 
@@ -2226,7 +2252,7 @@
         return semanticBlock(
           "FORMULA_INELIGIBLE",
           safety.reason,
-          safetyFieldForReason(safety.reason),
+          safetyFieldForReason(safety.reason, formula.id),
           safety,
         );
       }
@@ -2768,10 +2794,12 @@
     eyebrow.append(step, documentRef.createTextNode("Dane do obliczenia"));
     state.activePanel.appendChild(eyebrow);
     const heading = createElement("h2", "clcr-active-panel__title", formula
-      ? ["cg", "cg_norm"].includes(formula.id) ? "Cockcroft–Gault" : formula.label
+      ? formula.id === "cg_norm" ? "Cockcroft–Gault (1,73 m²)" : formula.id === "cg" ? "Cockcroft–Gault" : formula.label
       : legacy ? "Obliczenia" : "Wybierz obliczenie");
     state.activePanel.appendChild(heading);
-    if (formula && formula.id !== "neonatal_egfr" && CREATININE_VALUE_FORMULAS.has(formula.id)) {
+    if (formula?.id === "cg_norm") {
+      state.activePanel.appendChild(createElement("p", "clcr-active-panel__note", "Dorośli · rzeczywista masa ciała"));
+    } else if (formula && formula.id !== "neonatal_egfr" && CREATININE_VALUE_FORMULAS.has(formula.id)) {
       state.activePanel.appendChild(createElement("p", "clcr-active-panel__note", "Do oceny stabilnej czynności nerek"));
     }
   }
@@ -3546,6 +3574,13 @@
           if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) dp.assumptionProvenance = parsed;
         } catch (_) { /* Stare wyniki bez poprawnego opisu zachowują dotychczasową postać. */ }
       }
+      if (dp.sourceFormulaId === "cg_norm" && el.getAttribute("data-clcr-age-policy") === "completed-years") {
+        const ageUsedYears = toNumber(el.getAttribute("data-clcr-age-used-years"));
+        if (Number.isInteger(ageUsedYears) && ageUsedYears >= 18) {
+          dp.ageUsedYears = ageUsedYears;
+          dp.agePolicy = "completed-years";
+        }
+      }
       seen.add(series);
       out.push(dp);
     }
@@ -3610,7 +3645,9 @@
         "Kalkulator klirensu · " +
         dp.testKey +
         (dp.outOfRange ? " · wynik poza zakresem" : "") +
-        (typeof dp.assumptions === "string" && dp.assumptions.trim() ? "\n\n" + dp.assumptions.trim() : "");
+        (typeof dp.assumptions === "string" && dp.assumptions.trim() ? "\n\n" + dp.assumptions.trim() : "") +
+        (dp.sourceFormulaId === "cg_norm" && dp.agePolicy === "completed-years" && Number.isInteger(dp.ageUsedYears) && dp.ageUsedYears >= 18
+          ? "\n\nWiek użyty we wzorze: " + dp.ageUsedYears + " ukończonych lat." : "");
       try {
         await v.savePatientNote({
           patientId: patientId,

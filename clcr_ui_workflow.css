@@ -2021,6 +2021,29 @@ html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .clcr-result-c
   gap: var(--space-20px);
   align-items: start;
 }
+html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport [data-clcr-formula="cg_norm"] .clcr-result-main--single {
+  grid-template-columns: minmax(0, 1fr);
+}
+html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .clcr-cg-indexed-reference-note {
+  margin-top: var(--space-12px);
+  color: var(--clcr-text);
+  font-size: 14px;
+  line-height: 1.55;
+  overflow-wrap: normal;
+  word-break: normal;
+}
+html[data-clcr-workflow-ui="1"] [data-clcr-field-id="height"] > .clcr-field__note:not([hidden]) {
+  display: block;
+  margin-top: var(--space-8px);
+  color: var(--clcr-muted);
+  font-size: 12px;
+  line-height: 1.5;
+}
+html[data-clcr-workflow-ui="1"] .clcr-result-details[data-clcr-formula="cg_norm"] a {
+  color: inherit;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
 .clcr-result-patient,
 .clcr-result-reference {
   min-width: 0;

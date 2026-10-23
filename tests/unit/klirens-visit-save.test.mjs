@@ -63,6 +63,8 @@ function resultCard(model, { legacyRange = '' } = {}) {
       'data-clcr-value': String(model.rawValue),
       'data-clcr-display-value': model.displayValue,
       'data-clcr-category': model.category?.code || '',
+      'data-clcr-age-used-years': model.ageUsedYears == null ? null : String(model.ageUsedYears),
+      'data-clcr-age-policy': model.agePolicy || null,
     })[name] ?? null,
     classList: { contains: name => name === 'out-of-range' && ['warning', 'danger'].includes(model.tone) },
     querySelector: selector => selector === '.clcr-result-reference' ? reference
@@ -167,6 +169,67 @@ describe('Klirens — ClcrVisitSave (Faza 1: zapis do karty)', () => {
       test: datapoints[0].label, value: '79', valueNum: 79, unit: 'mL/min/1,73 m²',
     });
     expect(JSON.stringify(datapoints)).toBe(before);
+  });
+
+  it('zapis indeksowanego CG utrwala użyty wiek w treści nowej notatki, bez zmiany badania i dawnych wyników', async () => {
+    for (const file of ['clcr_result_reference_data.js', 'clcr_result_presentation.js']) loadBrowserScript(file, g);
+    const model = g.ClcrResultPresentation.createModel({
+      formulaId: 'cg_norm', series: 'cg_norm', value: 65.51340637632258, displayValue: '66',
+      unit: 'mL/min/1,73 m²', ageYears: 60.5, calculationAgeYears: 60,
+      calculationAssumptions: { assumptionsText: 'Założenia: stabilna czynność nerek oraz brak podejrzenia AKI.' },
+    }, g.ClcrResultReferenceData.PROFILE);
+    const card = resultCard(model);
+    const element = { ...card, getAttribute: name => name === 'data-clcr-assumptions' ? model.assumptions : card.getAttribute(name) };
+    const datapoints = g.ClcrVisitSave.collectActiveDatapoints(fakeRoot([element]), { formulaId: 'cg_norm' });
+    expect(datapoints).toHaveLength(1);
+    expect(datapoints[0]).toMatchObject({ valueNum: 66, ageUsedYears: 60, agePolicy: 'completed-years', norm: '', outOfRange: false });
+    const previousNotes = [{
+      id: 'synthetic-old-cg-indexed', category: 'wynik-klirens', clinicalDateISO: '2026-10-01',
+      body: 'Kalkulator klirensu · clcr:cg_norm',
+      labResult: { test: datapoints[0].label, value: '65', valueNum: 65, unit: 'mL/min/1,73 m²' },
+    }];
+    const oldBefore = JSON.stringify(previousNotes);
+    const datapointsBefore = JSON.stringify(datapoints);
+    const saved = [];
+    g.VildaVault = { isUnlocked: () => true, savePatientNote: async note => saved.push(note) };
+    const result = await g.ClcrVisitSave.saveActiveResultToCard({
+      patientId: 'synthetic-cg-indexed-age', clinicalDateISO: '2026-10-23', datapoints,
+    });
+    expect(result).toMatchObject({ ok: true, saved: 1, total: 1 });
+    expect(saved[0].body).toBe('Kalkulator klirensu · clcr:cg_norm\n\nZałożenia: stabilna czynność nerek oraz brak podejrzenia AKI.\n\nWiek użyty we wzorze: 60 ukończonych lat.');
+    expect(saved[0].labResult).toEqual({ test: datapoints[0].label, value: '66', valueNum: 66, unit: 'mL/min/1,73 m²' });
+    expect(JSON.stringify(datapoints)).toBe(datapointsBefore);
+    expect(g.ClcrVisitSave.buildSeriesFromNotes(previousNotes, { formulaId: 'cg_norm' })[0].points[0]).toMatchObject({ valueNum: 65, norm: '', outOfRange: false });
+    expect(JSON.stringify(previousNotes)).toBe(oldBefore);
+  });
+
+  it.each([
+    ['cg_norm', '60', 'fractional-years'],
+    ['cg_norm', '', 'completed-years'],
+    ['cg_norm', 'bad', 'completed-years'],
+    ['cg_norm', 'Infinity', 'completed-years'],
+    ['cg_norm', '17', 'completed-years'],
+    ['cg_norm', '60.5', 'completed-years'],
+    ['cg', '60', 'completed-years'],
+    ['egfr', '60', 'completed-years'],
+  ])('nie utrwala metadanych wieku dla serii %s, wieku %s i polityki %s', async (series, age, policy) => {
+    const element = fakeEl(series, '66', { attributes: {
+      'data-clcr-age-used-years': age, 'data-clcr-age-policy': policy,
+    } });
+    const datapoints = g.ClcrVisitSave.collectActiveDatapoints(fakeRoot([element]), { formulaId: series });
+    expect(datapoints).toHaveLength(1);
+    expect(datapoints[0]).not.toHaveProperty('ageUsedYears');
+    expect(datapoints[0]).not.toHaveProperty('agePolicy');
+    const saved = [];
+    g.VildaVault = { isUnlocked: () => true, savePatientNote: async note => saved.push(note) };
+    const result = await g.ClcrVisitSave.saveActiveResultToCard({
+      patientId: 'synthetic-no-cg-age-policy', clinicalDateISO: '2026-10-23',
+      datapoints: [{ ...datapoints[0], ageUsedYears: Number(age), agePolicy: policy }],
+    });
+    expect(result).toMatchObject({ ok: true, saved: 1 });
+    expect(saved[0].body).not.toContain('Wiek użyty we wzorze');
+    expect(saved[0].labResult).not.toHaveProperty('agePolicy');
+    expect(saved[0].labResult).not.toHaveProperty('ageUsedYears');
   });
 
   it('collectActiveDatapoints: filtr po module wybranej formuły — wyklucza porównania z innych modułów', () => {
