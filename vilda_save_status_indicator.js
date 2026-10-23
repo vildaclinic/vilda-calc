@@ -32,8 +32,11 @@ function statusPauseRemaining(){
   try{return Math.max(0,Number(n.__vildaPersistPauseUntil||0)-Date.now())}catch{return 0}
 }
 function canDeferStatusEdit(scope){
-  return sameStatusScope(scope,readyStatusScope)&&sameStatusScope(scope,captureStatusScope())&&
-    scope.fingerprint===f&&readyStatusScope.fingerprint===f&&!statusEditBlocked();
+  // Gotowość identyfikuje opublikowaną referencję przez pacjenta, generację i odcisk.
+  // Odtworzenie sesji może zwiększyć sekwencję; pełny token samej edycji nadal musi zgadzać się z bieżącym przed i po zapisie.
+  return !!(scope&&readyStatusScope&&Number.isSafeInteger(scope.applySequence)&&scope.applySequence>=0&&
+    scope.patientId===readyStatusScope.patientId&&scope.generation===readyStatusScope.generation)&&
+    sameStatusScope(scope,captureStatusScope())&&scope.fingerprint===f&&readyStatusScope.fingerprint===f&&!statusEditBlocked();
 }
 function runPausedStatusEdit(){
   var scope=pausedStatusEdit;

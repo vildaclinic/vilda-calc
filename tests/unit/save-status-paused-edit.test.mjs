@@ -308,3 +308,56 @@ describe('P-KREATOR-ZAPIS-PAUZA — sesja opóźniona względem zwykłej edycji'
     expect(env.session().user.weight).toBe(62);
   });
 });
+
+describe('P-KREATOR-ZAPIS-PAUZA — gotowa referencja przed odtworzeniem sesji po F5', () => {
+  it.each([false, true])('nowa edycja po zwiększeniu sekwencji sesji (pauza=%s) zachowuje gotową referencję', paused => {
+    const env = environment();
+    const reference = env.indicator.getReferenceFingerprint();
+    // Jak przy F5: j() przyjmuje zapisany odcisk, potem applyLoadedData sesji
+    // zwiększa sekwencję bez nowej publikacji G/Z/W.
+    env.changeSequence();
+    if (paused) env.pause(900);
+    env.edit(63);
+    vi.advanceTimersByTime(paused ? 900 : 400);
+    expect(env.save).toHaveBeenCalledWith({ force: true });
+    expect(env.session().user.weight).toBe(63);
+    expect(env.indicator.getReferenceFingerprint()).toBe(reference);
+    expect(env.indicator.getState()).toBe('dirty');
+  });
+
+  it.each([false, true])('ten sam pomiar po zwiększeniu sekwencji sesji (pauza=%s) pozostaje saved', paused => {
+    const env = environment();
+    env.changeSequence();
+    if (paused) env.pause(900);
+    env.edit(62);
+    vi.advanceTimersByTime(paused ? 900 : 400);
+    expect(env.save).toHaveBeenCalledTimes(1);
+    expect(env.indicator.getState()).toBe('saved');
+  });
+
+  it('G nowej operacji nadal nie pożycza gotowości poprzedniej referencji przed publikacją', () => {
+    const env = environment();
+    env.changeSequence();
+    env.indicator._onPatientLoaded({ patientId: 'fictional-first', applySequence: 2 });
+    env.pause(900);
+    env.edit(63);
+    vi.advanceTimersByTime(149);
+    expect(env.save).not.toHaveBeenCalled();
+    vi.advanceTimersByTime(1);
+    expect(env.save).toHaveBeenCalledTimes(1);
+    const reference = env.indicator.getReferenceFingerprint();
+    vi.advanceTimersByTime(900);
+    expect(env.save).toHaveBeenCalledTimes(1);
+    expect(env.indicator.getReferenceFingerprint()).toBe(reference);
+    expect(env.indicator.getState()).toBe('saved');
+  });
+
+  it('nieznana bieżąca sekwencja nie pozwala wymusić zapisu mimo gotowej referencji', () => {
+    const env = environment();
+    env.win.VildaDataImportExport.getApplyLoadedDataSequence = () => null;
+    env.edit(63);
+    vi.advanceTimersByTime(400);
+    expect(env.save).not.toHaveBeenCalled();
+    expect(env.session().user.weight).toBe(62);
+  });
+});
