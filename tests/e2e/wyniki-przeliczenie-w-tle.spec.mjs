@@ -79,6 +79,17 @@ async function wynikiGotowe(start) {
   await start.waitForTimeout(1500);
 }
 
+async function odtworzWczytanyPomiar(start) {
+  // Okno jest otwierane asynchronicznie po patient-loaded. Stałe odczekanie
+  // i warunkowe kliknięcie mogły pominąć wybór przy wolniejszym wykonaniu CI.
+  await expect(start.locator('#vildaLoadChoiceModal')).toBeVisible();
+  await start.locator('#vildaLcmRestore').click();
+  await expect(start.locator('#vildaLoadChoiceModal')).toHaveCount(0);
+  await expect(start.locator('#age')).toHaveValue('9');
+  await expect(start.locator('#height')).toHaveValue('135');
+  await expect(start.locator('#weight')).toHaveValue('40');
+}
+
 // Rejestrator w ramce Start. Wszystko, co zapisuje, powstaje w obserwatorach mutacji albo w zdarzeniach animacji,
 // więc wynik nie zależy od tego, ile klatek zdążyła narysować obciążona maszyna.
 const wlaczRejestrator = (fr) => fr.evaluate(async (pulsy) => {
@@ -228,10 +239,7 @@ test('synchronizacja w tle u pacjenta wczytanego z sejfu: karta „Centyle i BMI
     }));
   }, patientId);
   await expect(start.locator('#lastName')).toHaveValue('Probny', { timeout: 15000 });
-  await start.waitForTimeout(1500); // kaskada zerowania pól i modal „Co chcesz zrobić?”
-  if (await start.evaluate(() => Boolean(document.getElementById('vildaLcmRestore')))) {
-    await start.evaluate(() => document.getElementById('vildaLcmRestore').click());
-  }
+  await odtworzWczytanyPomiar(start);
   await trybProfesjonalny(start);
   await wynikiGotowe(start);
 

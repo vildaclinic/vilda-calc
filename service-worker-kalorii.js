@@ -19,7 +19,7 @@
  *   bo i tak chcemy zwracać HTML z cache natychmiast.
  */
 
-const SW_VERSION = '1.1.350';
+const SW_VERSION = '1.1.351';
 const CACHE_PREFIX = 'pwa-kalorii';
 const SHELL_CACHE = `${CACHE_PREFIX}-shell-v${SW_VERSION}`;
 const RUNTIME_CACHE = `${CACHE_PREFIX}-runtime`;
@@ -1683,6 +1683,7 @@ const CORE_SHELL_URLS = [
   '/vilda_save_status_indicator.js?v=27',
   '/vilda_save_status_indicator.js?v=28',
   '/vilda_save_status_indicator.js?v=29',
+  '/vilda_save_status_indicator.js?v=30',
   '/vilda_unsaved_guard.js?v=1',
   '/vilda_unsaved_guard.js?v=2',
   '/vilda_unsaved_guard.js?v=3',
@@ -2376,6 +2377,7 @@ const OPTIONAL_ASSETS = [
   '/vilda_publication_creator.js?v=20',
   '/vilda_publication_creator.js?v=21',
   '/vilda_publication_creator.js?v=22',
+  '/vilda_publication_creator.js?v=23',
   '/vilda_centile_interpolation.js',
   '/vilda_centile_interpolation.js?v=1',
   '/app.js?v=192',
@@ -2844,6 +2846,7 @@ const OPTIONAL_ASSETS = [
   '/vilda_data_import_export.js?v=104',
   '/vilda_data_import_export.js?v=105',
   '/vilda_data_import_export.js?v=106',
+  '/vilda_data_import_export.js?v=107',
   '/vilda_baseline_pacjenta.js?v=1',
   '/vilda_baseline_pacjenta.js?v=2',
   '/vilda_baseline_pacjenta.js?v=3',

@@ -14,6 +14,14 @@
  *     edycję treści w miejscu oraz dodawanie/usuwanie strzałek kliknięciem
  *     w punkt pomiaru — dla siatki wzrostu i masy ciała.
  *
+ * Zwykłe siatki OLAF i Palczewskiej 1–18 lat współdzielą jeden zapis:
+ *     chartCreatorData.growth = { version: 1, layout, free, shared, legacy }
+ * Ręcznie ustawiony środek ramki to frame:{ageMonths,value}, a wysokość
+ * poprzeczki klamry to bracketValue (cm/kg). Piksele oblicza aktualna siatka.
+ * Starsze osobne zapisy migrują raz; legacy przechowuje oryginalne układy
+ * potrzebne do przeliczenia dawnych przesunięć pikselowych. Opcje dokumentu
+ * i własne położenia poziomego PDF pozostają w magazynie danego kontekstu.
+ *
  * Układ adnotacji i nadpisania per siatka są zapisywane w danych karty:
  *     advancedGrowthData.pubLayout = {
  *       height: { "a<wiekMies>": {dx,dy,en,txt}, cur: {...} },
@@ -141,35 +149,162 @@
   /* Konteksty stron „dwa wykresy na jednej kanwie A4" (wspólny budowniczy). */
   var PAGE_CONTEXTS = { olaf: 1, palInfant: 1, who: 1 };
 
-  function ctxRoot(ctxId) {
-    var root = w.chartCreatorData;
-    if (!root || typeof root !== 'object') root = w.chartCreatorData = {};
-    var s = root[ctxId];
-    if (!s || typeof s !== 'object') s = root[ctxId] = {};
+  /* Adnotacje są własnością pacjenta, a nie populacji odniesienia.
+     Opcje dokumentu i własny układ poziomy pozostają per kontekst. */
+  function sharesGrowth(ctxId) {
+    return ctxId === 'olaf' || ctxId === 'palRegular';
+  }
+
+  function copyData(value) {
+    return JSON.parse(JSON.stringify(value));
+  }
+
+  function initAnnotations(s) {
     if (!s.layout || typeof s.layout !== 'object') s.layout = {};
-    if (!s.layout.height || typeof s.layout.height !== 'object') s.layout.height = {};
-    if (!s.layout.weight || typeof s.layout.weight !== 'object') s.layout.weight = {};
     if (!s.free || typeof s.free !== 'object') s.free = {};
-    if (!Array.isArray(s.free.height)) s.free.height = [];
-    if (!Array.isArray(s.free.weight)) s.free.weight = [];
+    ['height', 'weight'].forEach(function (c) {
+      if (!s.layout[c] || typeof s.layout[c] !== 'object') s.layout[c] = {};
+      if (!Array.isArray(s.free[c])) s.free[c] = [];
+    });
     if (!s.shared || typeof s.shared !== 'object') s.shared = {};
     return s;
   }
 
+  function growthRoot() {
+    var root = w.chartCreatorData;
+    if (!root || typeof root !== 'object') root = w.chartCreatorData = {};
+    if (root.growth && root.growth.version === 1) return initAnnotations(root.growth);
+    var g = initAnnotations({ version: 1, legacy: {} });
+    var used = {};
+    var nextId = 1;
+    function idFor(oldId) {
+      var id = Number(oldId);
+      if (!(id > 0) || used[id]) {
+        while (used[nextId]) nextId++;
+        id = nextId++;
+      }
+      used[id] = true;
+      return id;
+    }
+    function legacyPosition(item, context, key, original) {
+      if (original && (original.dx || original.dy || original.bdy)) {
+        item.legacyPos = { context: context, key: key };
+      }
+    }
+    ['palRegular', 'olaf'].forEach(function (context) {
+      var old = root[context];
+      if (!old || typeof old !== 'object') return;
+      var snapshot = initAnnotations(copyData({ layout: old.layout, free: old.free, shared: old.shared }));
+      var oldPositions = old.posL && copyData(old.posL);
+      var newPositions = oldPositions && copyData(oldPositions);
+      if (newPositions) ['height', 'weight'].forEach(function (c) {
+        snapshot.free[c].forEach(function (f) {
+          if (f && newPositions[c]) delete newPositions[c]['f' + String(f.id)];
+        });
+      });
+      g.legacy[context] = snapshot;
+      Object.keys(snapshot.shared).forEach(function (key) {
+        var sh = snapshot.shared[key];
+        if (!sh || typeof sh !== 'object') return;
+        if (!g.shared[key]) {
+          g.shared[key] = copyData(sh);
+          ['height', 'weight'].forEach(function (c) {
+            var ov = snapshot.layout[c][key];
+            if (!ov) return;
+            g.layout[c][key] = copyData(ov);
+            legacyPosition(g.layout[c][key], context, key, ov);
+          });
+          return;
+        }
+        /* Dwa różne komentarze tego samego pomiaru: zachowaj drugi jako
+           dodatkową adnotację nadal podążającą za tym pomiarem. */
+        ['height', 'weight'].forEach(function (c) {
+          var ov = snapshot.layout[c][key] || {};
+          var primary = g.layout[c][key] || {};
+          var text = typeof ov.txt === 'string' ? ov.txt : sh.txt || '';
+          var primaryText = typeof primary.txt === 'string' ? primary.txt : g.shared[key].txt || '';
+          /* Nawet równe piksele na różnych siatkach mogą oznaczać inne
+             współrzędne danych. Zachowaj oba ręczne układy. */
+          var samePosition = !(ov.dx || ov.dy || primary.dx || primary.dy);
+          if (ov.en === 0 || (primary.en !== 0 && text === primaryText && samePosition && (Number(ov.fs) || FONT_PX) === (Number(primary.fs) || FONT_PX))) return;
+          var alternate = { id: idFor(null), pointKey: key, txt: text, arrow: true, fs: Number(ov.fs) || FONT_PX };
+          if (ov.dx) alternate.dx = ov.dx;
+          if (ov.dy) alternate.dy = ov.dy;
+          legacyPosition(alternate, context, key, ov);
+          g.free[c].push(alternate);
+        });
+      });
+      /* Zachowaj również nadpisania punktów chwilowo nieobecnych w karcie. */
+      ['height', 'weight'].forEach(function (c) {
+        Object.keys(snapshot.layout[c]).forEach(function (key) {
+          if (g.layout[c][key] || snapshot.shared[key]) return;
+          g.layout[c][key] = copyData(snapshot.layout[c][key]);
+          legacyPosition(g.layout[c][key], context, key, snapshot.layout[c][key]);
+        });
+        snapshot.free[c].forEach(function (original) {
+          if (!original || typeof original !== 'object') return;
+          var item = copyData(original);
+          item.id = idFor(original.id);
+          legacyPosition(item, context, 'f' + String(original.id), original);
+          g.free[c].push(item);
+          if (context === 'palRegular' && oldPositions && oldPositions[c]) {
+            var pos = oldPositions[c]['f' + String(original.id)];
+            if (pos) newPositions[c]['f' + String(item.id)] = copyData(pos);
+          }
+        });
+      });
+      if (newPositions) old.posL = newPositions;
+      delete old.layout;
+      delete old.free;
+      delete old.shared;
+    });
+    root.growth = g;
+    return g;
+  }
+
+  function annotationRoot(ctxId) {
+    return sharesGrowth(ctxId) ? growthRoot() : ctxRoot(ctxId);
+  }
+
+  function documentRoot(ctxId) {
+    var root = w.chartCreatorData;
+    if (!root || typeof root !== 'object') root = w.chartCreatorData = {};
+    var s = root[ctxId];
+    if (!s || typeof s !== 'object') s = root[ctxId] = {};
+    return s;
+  }
+
+  function ctxRoot(ctxId) {
+    return initAnnotations(documentRoot(ctxId));
+  }
+
   function regRoot() {
-    return ctxRoot(creatorContext !== 'pub' ? creatorContext : 'palRegular');
+    return annotationRoot(creatorContext !== 'pub' ? creatorContext : 'palRegular');
   }
 
   function advForContext(adv, ctxId) {
     if (!STORE_CONTEXTS[ctxId] || !adv || typeof adv !== 'object') return adv;
-    var s = ctxRoot(ctxId);
+    /* OLAF może korzystać z historii podstawowej przy pustej zaawansowanej.
+       Te same adnotacje muszą dostać te same pomiary w obu źródłach. Zmienia
+       to wyłącznie wejście nakładki, nie dane ani generator krzywych. */
+    if (sharesGrowth(ctxId) && adv === w.advancedGrowthData && typeof w.getEffectiveCentileGrowthDataState === 'function') {
+      try {
+        var effective = w.getEffectiveCentileGrowthDataState();
+        if (effective && typeof effective === 'object') adv = effective;
+      } catch (e) { /* ignore */ }
+    }
+    var s = annotationRoot(ctxId);
     var v = Object.create(adv);
     v.__ctxRegular = true;
     v.pubLayout = s.layout;
     v.pubFree = s.free;
     v.pubShared = s.shared;
+    v.__creatorContext = ctxId;
+    v.__sharedGrowth = sharesGrowth(ctxId);
+    v.__growthRoot = v.__sharedGrowth ? s : null;
     /* położenia strony poziomej — czytane bez tworzenia magazynu */
-    v.pubPosL = s.posL && typeof s.posL === 'object' ? s.posL : null;
+    var presentation = w.chartCreatorData && w.chartCreatorData[ctxId];
+    v.pubPosL = presentation && presentation.posL && typeof presentation.posL === 'object' ? presentation.posL : null;
     return v;
   }
 
@@ -308,8 +443,10 @@
         });
         return;
       }
-      var a = toNum(f.ageMonths);
-      var v = toNum(f.value);
+      var a = f.pointKey === 'cur' ? toNum(adv.currentAgeMonths)
+        : f.pointKey ? toNum(String(f.pointKey).slice(1)) : toNum(f.ageMonths);
+      var v = f.pointKey === 'cur' ? toNum(chartType === 'height' ? adv.currentHeight : adv.currentWeight)
+        : f.pointKey ? toNum(measurementPointValue(adv, chartType, a)) : toNum(f.value);
       if (!Number.isFinite(a) || !Number.isFinite(v)) return;
       out.push({
         kind: 'free',
@@ -422,6 +559,9 @@
     if (!arrows.length && !free.length) return items;
     ctx.save();
     var placed = [];
+    function inRange(age, value) {
+      return !adv.__sharedGrowth || (age >= ageMinOf(geom) && age <= ageMaxOf(geom) && value >= geom.minY && value <= geom.maxY);
+    }
 
     function measureBox(lines, fs) {
       ctx.font = 'normal ' + fs + 'px sans-serif';
@@ -440,6 +580,7 @@
        generatorem (ramka wyśrodkowana pod punktem, kolizje rozwiązywane
        opuszczaniem o krok). */
     arrows.forEach(function (ar) {
+      if (!inRange(ar.ageMonths, ar.value)) return;
       var px = geom.plotX + (ar.ageMonths - ageMinOf(geom)) * pxPerMonth;
       var py = geom.plotY + geom.plotH - (ar.value - geom.minY) * pxPerUnit;
       var lines = wrapComment(ar.comment);
@@ -521,6 +662,7 @@
         var val1 = measurementPointValue(adv, chartType, fr.a1);
         var val2 = measurementPointValue(adv, chartType, fr.a2);
         if (val1 === null || val2 === null) return;
+        if (!inRange(fr.a1, val1) || !inRange(fr.a2, val2)) return;
         var ax1 = geom.plotX + (Math.min(fr.a1, fr.a2) - ageMinOf(geom)) * pxPerMonth;
         var ax2 = geom.plotX + (Math.max(fr.a1, fr.a2) - ageMinOf(geom)) * pxPerMonth;
         var ay1 = geom.plotY + geom.plotH - ((fr.a1 <= fr.a2 ? val1 : val2) - geom.minY) * pxPerUnit;
@@ -571,6 +713,7 @@
         });
         return;
       }
+      if (!inRange(fr.ageMonths, fr.value)) return;
       var px = geom.plotX + (fr.ageMonths - ageMinOf(geom)) * pxPerMonth;
       var py = geom.plotY + geom.plotH - (fr.value - geom.minY) * pxPerUnit;
       var lines = wrapComment(fr.comment);
@@ -618,7 +761,159 @@
       });
     });
     ctx.restore();
+    if (adv.__sharedGrowth) applyDataPositions(ctx, adv, chartType, geom, items);
     return items;
+  }
+
+  var geomByContext = {};
+  var layoutCache = {};
+  var preparingGeometry = false;
+  var geometryOwner = null;
+  var geometryStamp = '';
+
+  function checkGeometryOwner() {
+    if (preparingGeometry) return;
+    var adv = w.advancedGrowthData || {};
+    var basic = w.basicGrowthData || {};
+    var sex = typeof document !== 'undefined' && document.getElementById('sex');
+    var stamp = JSON.stringify([adv.measurements, adv.currentAgeMonths, adv.currentHeight, adv.currentWeight,
+      adv.motherHeight, adv.fatherHeight, adv.targetHeight,
+      basic.measurements, basic.currentAgeMonths, basic.currentHeight, basic.currentWeight, sex && sex.value]);
+    if (geometryOwner === w.chartCreatorData && geometryStamp === stamp) return;
+    Object.keys(geomByContext).forEach(function (key) { delete geomByContext[key]; });
+    geometryOwner = w.chartCreatorData;
+    geometryStamp = stamp;
+  }
+
+  function positionEntry(adv, chartType, key) {
+    if (key.charAt(0) !== 'f') return adv.pubLayout && adv.pubLayout[chartType] && adv.pubLayout[chartType][key];
+    var list = adv.pubFree && adv.pubFree[chartType] || [];
+    for (var i = 0; i < list.length; i++) if (list[i] && 'f' + String(list[i].id) === key) return list[i];
+    return null;
+  }
+
+  function dataAt(geom, x, y) {
+    return {
+      ageMonths: ageMinOf(geom) + (x - geom.plotX) * ageSpanOf(geom) / geom.plotW,
+      value: geom.minY + (geom.plotY + geom.plotH - y) * (geom.maxY - geom.minY) / geom.plotH
+    };
+  }
+
+  /* Starszy zapis zawiera piksele. Geometria pochodzi zawsze z prawdziwego
+     generatora źródła, również gdy jako pierwszy otwarto drugi rodzaj siatki. */
+  function sourceGeometry(context, chartType, adv, currentGeom) {
+    checkGeometryOwner();
+    if (context === adv.__creatorContext && !currentGeom.posScale) return currentGeom;
+    if (geomByContext[context] && geomByContext[context][chartType]) return geomByContext[context][chartType];
+    if (preparingGeometry || typeof document === 'undefined') return null;
+    var previousContext = creatorContext;
+    var previousSuppress = suppressPainting;
+    var previousRenderContext = renderContextId;
+    var previousRegularRender = regularRenderActive;
+    var previousGeom = { height: geomStore.height, weight: geomStore.weight };
+    preparingGeometry = true;
+    try {
+      creatorContext = context;
+      buildPreviewCanvases('portrait');
+    } finally {
+      creatorContext = previousContext;
+      suppressPainting = previousSuppress;
+      renderContextId = previousRenderContext;
+      regularRenderActive = previousRegularRender;
+      geomStore.height = previousGeom.height;
+      geomStore.weight = previousGeom.weight;
+      preparingGeometry = false;
+    }
+    return geomByContext[context] && geomByContext[context][chartType] || null;
+  }
+
+  function applyDataPositions(ctx, adv, chartType, geom, items) {
+    var g = adv.__growthRoot;
+    var ownMap = geom.posScale && adv.pubPosL && adv.pubPosL[chartType];
+    items.forEach(function (item) {
+      var entry = positionEntry(adv, chartType, item.key);
+      if (!entry) return;
+      if (entry.legacyPos || entry.positionContext) {
+        var legacy = entry.legacyPos;
+        var context = legacy ? legacy.context : entry.positionContext;
+        var sourceGeom = sourceGeometry(context, chartType, adv, geom);
+        if (sourceGeom) {
+          var original = legacy && g.legacy && g.legacy[context];
+          var sourceAdv = Object.create(adv);
+          sourceAdv.__sharedGrowth = false;
+          sourceAdv.pubLayout = original ? original.layout : adv.pubLayout;
+          sourceAdv.pubFree = original ? original.free : adv.pubFree;
+          sourceAdv.pubShared = original ? original.shared : adv.pubShared;
+          sourceAdv.pubPosL = null;
+          var oldKey = legacy ? legacy.key : item.key;
+          var originalItems = computeLayout(ctx, sourceAdv, chartType, sourceGeom);
+          var originalItem = originalItems.filter(function (it) { return it.key === oldKey; })[0];
+          if (originalItem) {
+            if (entry.dx || entry.dy) entry.frame = dataAt(sourceGeom, originalItem.x + originalItem.w / 2, originalItem.y + originalItem.h / 2);
+            if (originalItem.bracket && entry.bdy) entry.bracketValue = dataAt(sourceGeom, sourceGeom.plotX, originalItem.yb).value;
+            delete entry.legacyPos;
+            delete entry.positionContext;
+          }
+        }
+      }
+      /* Własny układ poziomy nadal jest świadomym nadpisaniem układu strony. */
+      if (ownMap && ownMap[item.key] && typeof ownMap[item.key] === 'object') return;
+      if (item.bracket && Number.isFinite(entry.bracketValue)) {
+        item.yb = geom.plotY + geom.plotH - (entry.bracketValue - geom.minY) * geom.plotH / (geom.maxY - geom.minY);
+        item.bdy = item.yb - item.ybAuto;
+        item.py = item.tipY = item.yb;
+        item.autoY = item.yb > (item.y1 + item.y2) / 2 ? item.yb + BRACKET_STUB : item.yb - BRACKET_STUB - item.h;
+        item.y = item.autoY;
+      }
+      var frame = entry.frame;
+      if (frame && Number.isFinite(frame.ageMonths) && Number.isFinite(frame.value)) {
+        item.x = geom.plotX + (frame.ageMonths - ageMinOf(geom)) * geom.plotW / ageSpanOf(geom) - item.w / 2;
+        item.y = geom.plotY + geom.plotH - (frame.value - geom.minY) * geom.plotH / (geom.maxY - geom.minY) - item.h / 2;
+        item.moved = Math.abs(item.x - item.autoX) > 0.001 || Math.abs(item.y - item.autoY) > 0.001;
+      }
+    });
+    if (!geom.posScale) {
+      checkGeometryOwner();
+      if (!geomByContext[adv.__creatorContext]) geomByContext[adv.__creatorContext] = {};
+      geomByContext[adv.__creatorContext][chartType] = geom;
+    }
+    if (!layoutCache[adv.__creatorContext]) layoutCache[adv.__creatorContext] = {};
+    layoutCache[adv.__creatorContext][chartType] = { root: g, geom: geom, items: items };
+  }
+
+  function capturePosition(chartType, key, entry, patch) {
+    if (!sharesGrowth(creatorContext) || editingLandscape()) return;
+    var movedFrame = Object.prototype.hasOwnProperty.call(patch, 'dx') || Object.prototype.hasOwnProperty.call(patch, 'dy');
+    var movedBar = Object.prototype.hasOwnProperty.call(patch, 'bdy');
+    if (!movedFrame && !movedBar) return;
+    if (movedFrame && patch.dx === undefined && patch.dy === undefined) {
+      delete entry.frame;
+      delete entry.legacyPos;
+      delete entry.positionContext;
+      return;
+    }
+    var cache = layoutCache[creatorContext] && layoutCache[creatorContext][chartType];
+    var item = cache && cache.root === regRoot() && cache.items.filter(function (it) { return it.key === key; })[0];
+    if (!item) {
+      delete entry.frame;
+      delete entry.bracketValue;
+      delete entry.legacyPos;
+      entry.positionContext = creatorContext;
+      return;
+    }
+    if (movedFrame) {
+      var dx = Object.prototype.hasOwnProperty.call(patch, 'dx') ? Number(patch.dx) || 0 : item.x - item.autoX;
+      var dy = Object.prototype.hasOwnProperty.call(patch, 'dy') ? Number(patch.dy) || 0 : item.y - item.autoY;
+      if (!dx && !dy) delete entry.frame;
+      else entry.frame = dataAt(cache.geom, item.autoX + dx + item.w / 2, item.autoY + dy + item.h / 2);
+    }
+    if (movedBar && item.bracket) {
+      if (!patch.bdy) delete entry.bracketValue;
+      else entry.bracketValue = dataAt(cache.geom, cache.geom.plotX,
+        Math.max(cache.geom.plotY, Math.min(cache.geom.plotY + cache.geom.plotH, item.ybAuto + Number(patch.bdy)))).value;
+    }
+    delete entry.legacyPos;
+    delete entry.positionContext;
   }
 
   /*
@@ -784,6 +1079,11 @@
        ramek czyta z położeń poziomu (framePos). */
     if (geom.layout && geom.layout.format === 'landscape') landscapeGeom(plotGeom, geom.chartType, geom.layout);
     if (!geom.transient) geomStore[geom.chartType] = plotGeom;
+    if (sharesGrowth(renderCtx) && !plotGeom.posScale) {
+      checkGeometryOwner();
+      if (!geomByContext[renderCtx]) geomByContext[renderCtx] = {};
+      geomByContext[renderCtx][geom.chartType] = plotGeom;
+    }
     if (suppressPainting) return;
     var adv = advForContext(w.advancedGrowthData || null, renderCtx);
     if (!adv) return;
@@ -904,6 +1204,7 @@
       if (patch[k] === undefined) delete ov[k];
       else ov[k] = patch[k];
     });
+    capturePosition(chartType, key, ov, patch);
     if (!ov.dx) delete ov.dx;
     if (!ov.dy) delete ov.dy;
     if (ov.en !== 0) delete ov.en;
@@ -923,7 +1224,7 @@
   }
 
   function posLStore() {
-    var s = regRoot();
+    var s = documentRoot(creatorContext);
     if (!s.posL || typeof s.posL !== 'object') s.posL = {};
     if (!s.posL.height || typeof s.posL.height !== 'object') s.posL.height = {};
     if (!s.posL.weight || typeof s.posL.weight !== 'object') s.posL.weight = {};
@@ -969,10 +1270,13 @@
     if (!cur || typeof cur !== 'object') {
       var p = portraitPos(chartType, key);
       var s = landscapeScale(chartType);
+      var cache = layoutCache[creatorContext] && layoutCache[creatorContext][chartType];
+      var item = cache && cache.root === regRoot() && cache.geom.posScale
+        && cache.items.filter(function (it) { return it.key === key; })[0];
       cur = store[chartType][key] = {
-        dx: Math.round(p.dx * s.x),
-        dy: Math.round(p.dy * s.y),
-        bdy: Math.round(p.bdy * s.y)
+        dx: item ? item.x - item.autoX : Math.round(p.dx * s.x),
+        dy: item ? item.y - item.autoY : Math.round(p.dy * s.y),
+        bdy: item ? item.bdy || 0 : Math.round(p.bdy * s.y)
       };
     }
     Object.keys(patch).forEach(function (k) { cur[k] = patch[k]; });
@@ -1084,7 +1388,7 @@
 
   function setOption(name, value) {
     if (creatorContext !== 'pub') {
-      var s = regRoot();
+      var s = documentRoot(creatorContext);
       if (!s.options || typeof s.options !== 'object') {
         s.options = {};
         PUB_OPTION_DEFS.forEach(function (d) { s.options[d.key] = defaultOptionValue(d.key, creatorContext); });
@@ -1168,6 +1472,7 @@
       if (patch[k] === undefined) delete item[k];
       else item[k] = patch[k];
     });
+    if (!posPatch) capturePosition(chartType, 'f' + String(item.id), item, patch);
     if (!item.dx) delete item.dx;
     if (!item.dy) delete item.dy;
     if (!item.bdy) delete item.bdy;
@@ -1181,7 +1486,9 @@
     /* identyfikator wolnej adnotacji może wrócić przy następnym dodaniu —
        jej położenie w poziomie nie może przejść na nową adnotację */
     if (creatorContext !== 'pub') {
-      var posL = regRoot().posL;
+      var root = w.chartCreatorData;
+      var presentation = root && root[sharesGrowth(creatorContext) ? 'palRegular' : creatorContext];
+      var posL = presentation && presentation.posL;
       if (posL && posL[chartType] && typeof posL[chartType] === 'object') delete posL[chartType]['f' + String(id)];
     }
   }
@@ -1197,23 +1504,26 @@
       var lay = layoutStore();
       Object.keys((lay && lay[chartType]) || {}).forEach(function (key) {
         var ov = lay[chartType][key];
-        if (ov && (ov.dx || ov.dy)) pos[chartType][key] = {};
+        if (ov && (ov.dx || ov.dy || ov.frame)) pos[chartType][key] = {};
       });
       var fr = freeStore();
       ((fr && fr[chartType]) || []).forEach(function (f) {
-        if (f && (f.dx || f.dy || f.bdy)) pos[chartType]['f' + String(f.id)] = {};
+        if (f && (f.dx || f.dy || f.bdy || f.frame || Number.isFinite(f.bracketValue))) pos[chartType]['f' + String(f.id)] = {};
       });
       return;
     }
     var store = layoutStore();
     if (!store) return;
     Object.keys(store[chartType]).forEach(function (key) {
-      updateOverride(chartType, key, { dx: undefined, dy: undefined });
+      updateOverride(chartType, key, { dx: undefined, dy: undefined, frame: undefined, legacyPos: undefined, positionContext: undefined });
     });
     var free = freeStore();
     if (free) {
       free[chartType].forEach(function (f) {
-        if (f) { delete f.dx; delete f.dy; delete f.bdy; }
+        if (f) {
+          delete f.dx; delete f.dy; delete f.bdy;
+          delete f.frame; delete f.bracketValue; delete f.legacyPos; delete f.positionContext;
+        }
       });
     }
   }
@@ -1698,7 +2008,7 @@
      OLAF" (generateCentileChart podstawia go na czas renderu). */
   function activeAdv() {
     var base = w.advancedGrowthData || null;
-    if ((creatorContext === 'olaf' || creatorContext === 'who') && typeof w.getEffectiveCentileGrowthDataState === 'function') {
+    if ((sharesGrowth(creatorContext) || creatorContext === 'who') && typeof w.getEffectiveCentileGrowthDataState === 'function') {
       try {
         var eff = w.getEffectiveCentileGrowthDataState();
         if (eff && typeof eff === 'object') base = eff;
@@ -2957,6 +3267,8 @@
     _setContext: function (c) { creatorContext = STORE_CONTEXTS[c] ? c : 'pub'; },
     _advForContext: advForContext,
     _regRoot: regRoot,
+    _growthRoot: growthRoot,
+    _geomByContext: geomByContext,
     _setRegularRender: function (v) { regularRenderActive = !!v; },
     _setRenderContext: function (c) { renderContextId = STORE_CONTEXTS[c] ? c : null; }
   };
