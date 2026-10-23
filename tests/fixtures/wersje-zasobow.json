@@ -588,8 +588,8 @@
   "sha256": "93104c7afce5beeb1e48c586bcfe22b857d05c0ca75fbbd2c98d260bb69148a7"
  },
  "vilda_data_import_export.js": {
-  "v": 106,
-  "sha256": "bc0223ee263e649096ce30f8b2fe224e11589a7d7b23dc4dc4389a3e35d5ae18"
+  "v": 107,
+  "sha256": "597f2640ec9e4e09b561ac93919ff18e26785f24074829f0b83b40fefaa3e7c1"
  },
  "vilda_data_safety_explainer.js": {
   "v": 5,
@@ -1036,8 +1036,8 @@
   "sha256": "a48d9761a71a29d0ff9862e7638eb0a95485fc042dcb1d1901886b0dab72608e"
  },
  "vilda_publication_creator.js": {
-  "v": 22,
-  "sha256": "26ae76c4ac9ac0e68f975e274ee2cb5322290726726637355c68f0f57bf8c5e4"
+  "v": 23,
+  "sha256": "2b5b02bb4b3bbf24267bbda4d4dd6492232610430e813ff3ba89b5ee63c2db35"
  },
  "vilda_raport_naglowek.js": {
   "v": 10,

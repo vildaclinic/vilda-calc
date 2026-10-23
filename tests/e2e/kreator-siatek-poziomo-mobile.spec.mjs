@@ -67,5 +67,5 @@ test('telefon: Kreator strony poziomej — aktywny wykres na całą szerokość,
   await page.touchscreen.tap(ekran.x, ekran.y);
   await expect(ui.getByRole('tab', { name: 'Wzrost' })).toHaveAttribute('aria-selected', 'true');
   await expect(page.getByLabel('Treść komentarza')).toBeVisible();
-  expect(await page.evaluate(() => Boolean(window.chartCreatorData.palRegular.shared.a60))).toBe(true);
+  expect(await page.evaluate(() => Boolean(window.chartCreatorData.growth.shared.a60))).toBe(true);
 });
