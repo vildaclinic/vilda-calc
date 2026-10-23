@@ -915,8 +915,14 @@ dokładnie w 22. roku. [EMAS 2022](https://doi.org/10.1111/andr.13220)
 i [FAMAS 2006](https://doi.org/10.1111/j.1365-2605.2006.00714.x)
 uzasadniają kierunek późniejszego spadku, bez kalibracji LC-MS/MS i TRFIA.
 
-Brak liczbowych tooltipów stężenia, profilu odniesienia i punktu pacjenta
-dla INSL3. Niskie odczyty i ograniczenia oznaczenia zmniejszają pewność
+Brak liczbowych tooltipów stężenia, profilu punktu pacjenta i konwertera
+dla INSL3. Od 24.10.2026 istniejące rozwijane źródła zawierają odrębny
+edukacyjny odczyt P50 według wieku z ryc. 1A Albrethsena: tylko czytelne
+fragmenty w domenie `[10,27.6] ∪ [31.4,60.9]`, z pełną obsługą niepewnego
+wieku. Nie kalibruje on względnej linii i nie tworzy normy lub punktu.
+Źródło, statystyka P50/Mean, pochodzenie, braki i nota LOQ:
+[INSL3_AGE_SOURCE.md](hormone-lifespan/INSL3_AGE_SOURCE.md).
+Niskie odczyty i ograniczenia oznaczenia zmniejszają pewność
 dokładnych liczb; wynik mediany poniżej LOQ nie dowodzi braku biologicznej
 fali ani nie unieważnia automatycznie estymacji populacyjnej. Normy
 laboratoryjne i liczbowe profile innych hormonów pozostają odrębne.
