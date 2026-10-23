@@ -5603,6 +5603,112 @@ Regresje w `tests/unit/klirens-cg-normalized.test.mjs` i
 adapter i formularz zamiast kopii wzoru. Akceptacja właściciela, przegląd
 źródeł i zielone testy nie są nową walidacją kliniczną CG.
 
+#### P-KLIRENS-CL24-2026-10-23 — zbiórka czasowa, cztery dane i nazwany zakres
+
+**Decyzja właściciela:** wdrożyć zaakceptowane
+[makiety desktop/mobile](https://chatgpt.com/space/page_983746180154819187d502dac321405a),
+potwierdzone poleceniem „ok jest dobrze koduj to” 23.10.2026. Pełna
+[polityka kliniczna i przypadki](klirens-measured-clearance/REFERENCE_POLICY.md)
+oraz [przegląd źródeł](klirens-measured-clearance/SOURCE_REVIEW.md)
+rozróżniają dane katalogowe, decyzje interfejsu i niewykazane uogólnienia.
+
+**Wpływ kliniczny:** równanie `CrCl = (Ucr/Scr) × V/t` pozostaje bez zmian;
+zmieniają się wymagania wejścia i porównanie z normą. Cztery dodatnie wartości
+— Scr, Ucr, całkowita objętość w mL i rzeczywisty czas w godzinach — dają
+jedną główną liczbę w mL/min. Stężenia mają jawne jednostki, uzgodnione przed
+dzieleniem; `1 mg/dL = 88,4 µmol/L = 0,0884 mmol/L`. Czas w godzinach jest
+mnożony przez 60, bez domyślnego 24 h przy pustym polu. Przycisk „24 h”
+świadomie uzupełnia czas. Gotowość 4/4 dotyczy wyniku, nie obowiązku
+uzupełnienia normy. Dodatkowe przeliczenia nie tworzą konkurującej karty.
+
+**Założenia i zgodność:** przy braku przeciwnych danych opisuje się stabilność,
+brak podejrzenia AKI, kompletną poprawną zbiórkę i IDMS dla kreatyniny.
+Nie zapisuje się tych założeń jako potwierdzonych faktów pacjenta. Rutynowe
+checkboxy i daty zbiórki/krwi nie są wymagane w uproszczonej ścieżce;
+znane błędy zbiórki, AKI i szybka zmiana zachowują znaczenie.
+IDMS pozostaje opisanym założeniem dla `cl24`, nie nową obowiązkową bramką:
+znane non-IDMS zachowuje komentarz i nie jest samo powodem automatycznej
+blokady ilorazu Ucr/Scr. Nie dopisuje się potwierdzonego IDMS ani metody
+enzymatycznej, nie koryguje stężeń i nie twierdzi, że wpływy analityczne
+zawsze znoszą się w ilorazie. PathWest nie dokumentuje swojej metody;
+ta polityka nie zmienia wymagań innych równań.
+Stare niezaznaczenie nie jest automatycznie rozpoznanym błędem ani zgodą
+na nadpisanie flag jako `true`. Nowa ścieżka produkcyjnego
+`computeTimedCreatinineClearance` jawnie wybiera `protocolMode: 'assumed-complete'`,
+rzeczywiste `durationMinutes` i `collectionProblem`; dotychczasowy ścisły
+kontrakt starszych wywołań pozostaje dostępny. Nie dopisuje się czasu do
+historycznych rekordów i nie przelicza dawnych ocen.
+
+**Norma:** nowy, osobny moduł danych
+`clcr_measured_clearance_reference_data.js` zawiera profil PathWest CCL,
+aktualizacja źródła 20.03.2026. Silnik
+`clcr_measured_clearance_reference.js` przyjmuje profil i zwraca pochodzenie
+oraz użyte granice. Pełny katalog odczytano 23.10.2026. Zakres obejmuje
+`3 ≤ wiek <120 lat`; w wieku 3–<19 obie płcie mają 75–125 mL/min/1,73 m²,
+więc płeć nie jest potrzebna. Od 19 lat źródło podaje osobne przedziały
+kobiet i mężczyzn, także dla seniorów. Nie stosuje się cichego dołączenia
+innego źródła ani progu `>77 mL/min` bez określonej populacji. Poniżej 3 lat
+normy istnieją w katalogach pediatrycznych, lecz automatyczny profil PathWest
+ich nie obejmuje; nie oznacza to braku wszystkich dostępnych norm.
+
+**Przeliczenie i prezentacja:** wiek, wzrost, masa i od 19 lat płeć służą
+doborowi normy, nie równaniu liczby podstawowej. Dane znane aplikacji są
+wykorzystywane automatycznie, brakujące można uzupełnić opcjonalnie.
+Źródłowe granice `[L,U]` w mL/min/1,73 m² mnoży się przez `BSA/1,73`,
+aby obok wyniku mL/min pokazać normę w tej samej jednostce. To równoważne
+porównanie, nie nowa walidacja normy bezwzględnej. BSA pozostaje Haycockiem
+przed 18. rokiem i Du Bois od 18 lat; PathWest nie podaje swojej formuły BSA.
+Granica BSA 18 lat nie zmienia granicy płci 19 lat. Porównuje się liczby
+niezaokrąglone, z włączeniem obu końców zakresu. Granice na karcie są
+przybliżone, kierunek odchylenia jawny, wynik poza zakresem bursztynowy.
+
+**Zakres znaczenia:** jest to nazwane porównanie źródłowe (w danych obliczenia `referencePreview: true`,
+`patientLaboratoryMatched: false`), nie potwierdzona klasyfikacja laboratorium
+pacjenta. Zakres właściwego laboratorium ma pierwszeństwo. Źródło jest
+widoczne przy normie, a Szczegóły podają wybraną źródłową grupę wieku/płci,
+oryginalny przedział, BSA i metodę, czas, założenia i ograniczenia.
+Publiczny katalog nie opisuje kohorty,
+liczebności ani metody oznaczenia. Wynik w zakresie nie wyklucza PChN,
+wysoki nie rozpoznaje hiperfiltracji, a CrCl nie otrzymuje kategorii G.
+
+**Czas inny niż 24 h:** zaakceptowana polityka porównania pozwala zachować
+liczbowe odniesienie do zakresu dobowego przy podanym innym rzeczywistym
+czasie, z jawnym czasem i ograniczeniem źródła. PathWest używa UR24,
+ale nie publikuje tolerancji ani walidacji krótszych protokołów. Nie tworzy
+się bramki `czas === 24` lub okna 22–26 h; zbiórka 23,5 h używa 1410 min.
+To decyzja aplikacji, nie nowy fakt kliniczny przypisany PathWest; warunek
+24 h w innych modułach pozostaje bez zmian. Karta mówi „Porównanie z normą
+dla zbiórki dobowej.” oraz „W zakresie dobowym”, „Poniżej zakresu dobowego”
+lub „Powyżej zakresu dobowego”; rzeczywisty czas trafia także do Szczegółów,
+raportu i zapisu.
+
+**Trwałość zapisu:** istniejąca treść notatki i `labResult.norm` utrwalają
+czytelną migawkę: wynik i wejścia, jednostki, rzeczywisty czas, wiek/płeć,
+wzrost/masę, BSA i metodę, oryginalne/przeliczone granice, źródło z URL
+i wersją/datą oraz założenia i ograniczenia. To pola zachowywane przez
+rzeczywisty sanitizer vaulta. `measuredClearanceReference` pozostaje
+wewnętrzną metadaną punktu wyniku/prezentacji, nie nowym utrwalanym polem
+schematu `labResult`. Nie rozszerza się wspólnego transportu ani schematu
+vaulta; nie przypisuje się sanitizerowi zachowania dowolnych dodatkowych
+metadanych. Historia odtwarza zapisany tekst i normę bez ponownej oceny.
+
+**Syntetyczne kontrakty:** Scr 1 mg/dL, V 1440 mL, 24 h, a Ucr odpowiednio
+100/50/160 mg/dL daje 100/50/160 mL/min. U mężczyzny 45 lat, 70 kg, 175 cm
+BSA wynosi 1,8481430181213463 m², źródłowe 81–127 daje
+86,53155171550813–135,67292676382138 mL/min, wyświetlane ≈86,5–135,7:
+wyniki są kolejno w zakresie/poniżej/powyżej. Dziecko 8 lat, 25 kg, 125 cm,
+bez płci, Ucr 50 daje 50 w zakresie ≈40,3–67,1; mężczyzna 82 lata,
+70 kg, 175 cm, Ucr 70 daje 70 w zakresie ≈58,8–107,9. Bez danych do normy
+liczba nadal pozostaje kompletna; jawny błąd zbiórki nie może zniknąć pod
+domyślnym założeniem. Przypadki SI, granic wieku/BSA, zaokrąglenia, czasu
+i historii zawiera pełna polityka.
+
+Regresje `tests/unit/klirens-measured-clearance-reference.test.mjs`, testy
+prezentacji i `tests/e2e/klirens-measured-clearance.spec.mjs` mają wywoływać
+rzeczywiste funkcje produkcyjne i formularz, nie kopię równania. Wyniki
+bieżących kontroli zapisuje PR. Akceptacja właściciela, przegląd źródeł
+i testy techniczne nie nadają statusu walidacji klinicznej.
+
 #### Zakres i ograniczenia
 
 | Obszar | Wdrożona reguła | Najważniejsze ograniczenia |
@@ -5610,7 +5716,7 @@ adapter i formularz zamiast kopii wzoru. Akceptacja właściciela, przegląd
 | eGFR z kreatyniny | CKiD U25 eGFRcr dla wieku 1–25 lat; 2021 CKD-EPI eGFRcr od 18 lat; w wieku 18–25 lat oba oszacowania pozostają dostępne w ramach jednego wyniku i jego Szczegółów. Bedside Schwartz 2009 pozostaje wzorem porównawczym w wieku 1–16 lat. | Jawnie znane AKI lub szybko zmieniająca się Scr blokują wynik. Przy braku przeciwnych danych stabilność/brak AKI i IDMS są opisanymi założeniami obliczenia, umożliwiającymi zakres oszacowania G we właściwym wieku; nie są potwierdzeniem faktów pacjenta ani techniki oznaczenia. Odrębny opis i ograniczenia neonatal zawiera następny wiersz. CKiD U25cr opracowano głównie w łagodnej lub umiarkowanej CKD; NIDDK opisuje także potwierdzoną użyteczność przy eGFR ≥75 w europejskiej kohorcie zdrowych dzieci i młodych dorosłych. Nie przenosi się tu szczególnego ograniczenia przesiewowego wariantu cystatynowego. |
 | eGFR z cystatyny C | 2021 CKD-EPI eGFRcr-cys od 18 lat; CKiD U25 eGFRcys i średnia eGFRcr-cys w wieku 1–25 lat. | Źródłowo wymagana identyfikowalność ERM-DA471/IFCC oraz stabilność/brak AKI mogą być opisanymi założeniami przy braku przeciwnych danych; nie wymagają rutynowego ręcznego potwierdzenia. Znana sprzeczność zachowuje blokadę. Rzeczywista technika oznaczenia nie jest dopisywana; nefelometria jest zalecana dla U25cys. Wariant U25 ma ograniczoną możliwość uogólnienia poza profilem CKiD i nie otrzymuje normy przesiewowej dla zdrowej populacji. |
 | Noworodek | Oszacowanie `0,31 × długość [cm] / Scr [mg/dL]` dla donoszonego noworodka w 0.–28. dniu życia. Aktualna masa >2,5 kg pozostaje konserwatywną bramką aplikacji powiązaną z kryteriami HERO, nie członem równania. Podanie techniki jest opcjonalne, a IDMS może być jawnym założeniem obliczenia; nie dopisuje się metody enzymatycznej. | Wcześniactwo, masa ≤2,5 kg, 29. dzień życia, znane AKI/szybka zmiana, jednoznaczny non-IDMS lub znany Jaffe blokują wynik. JASN zawiera meta-analizę i sprawdzenie k w 43 noworodkach HERO, opisanych następnie w Pediatr Nephrol jako ta sama kohorta; większa walidacja pozostaje potrzebna. Wynik jest neutralny, bez kategorii G, normy 90 i pobocznego BSA. Istniejąca uwaga dla wieku <3 dni jest widoczna przy liczbie; ocena wymaga dnia życia i trendu Scr. |
-| CrCl i BSA | Klirens ze zbiórki czasowej wymaga rzeczywistego czasu, kompletnego protokołu i próbki surowicy pobranej w trakcie zbiórki. Indeksowanie używa Haycocka przed 18. rokiem życia i Du Bois od 18 lat. | Błędy zbiórki pozostają głównym źródłem błędu. Cockcroft-Gault jest dostępny wyłącznie od 18 lat i używa podanej masy rzeczywistej. Nieindeksowany `cg` zachowuje wiek dokładny; `cg_norm` po P-KLIRENS-CG-NORM używa jawnie ukończonych lat i przelicza CG przez BSA do 1,73 m². Kanoniczne miesiące i historia pozostają zachowane. Oba wyniki nadal są eCrCl, nie eGFR; bez automatycznej normy ani kategorii G. |
+| CrCl i BSA | `cl24` po P-KLIRENS-CL24 wymaga Scr, Ucr, objętości i rzeczywistego czasu; prawidłowa pełna zbiórka jest jawnym założeniem przy braku przeciwnych danych. Nazwany profil PathWest obejmuje 3–<120 lat, od 19 lat zależy od płci. Granice źródłowe na 1,73 m² są przeliczane przez BSA/1,73 do jednostki wyniku mL/min. BSA używa Haycocka przed 18. rokiem i Du Bois od 18 lat. | Znany błąd zbiórki lub inne przeciwwskazanie nie jest usuwane przez założenie. Porównanie z dobowym profilem przy innym czasie jest jawnie orientacyjne, bez twierdzenia o walidacji krótkich protokołów. Brak normy nie blokuje liczby. Nie nadaje się G ani nie wyklucza PChN. Cockcroft–Gault nadal jest eCrCl od 18 lat z masą rzeczywistą, bez automatycznej normy/G; `cg` zachowuje wiek dokładny, `cg_norm` używa ukończonych lat. Kanoniczny wiek i historia nie są przepisywane. |
 | KDIGO G/A, ACR i PCR | Kategorie są wyznaczane z wartości niezaokrąglonej. Obliczenie ACR/PCR wymaga zgodnych jednostek i potwierdzenia wspólnej próbki; kategoria A i automatyczna interpretacja pediatryczna wymagają pierwszego porannego moczu bez zaznaczonych konfunderów. Kategorie G i A są wstrzymane przed 2. rokiem życia. W wieku 6 mies.–<2 lat automatyczny próg pediatryczny dotyczy wyłącznie PCR <500 mg/g; od 2 do <18 lat stosowane są odrębne progi ACR/PCR. | Kategoria zakresu G nie jest pokazywana przy znanym AKI, znanej niestabilności lub jednoznacznie niezgodnym standardzie używanego markera. Przy braku przeciwnych danych może opierać się na jawnych założeniach aplikacji. Sama kategoria nie rozpoznaje PChN bez kryterium przewlekłości i innych właściwych kryteriów. |
 | Frakcje wydalane i TmP/GFR | Analit i kreatynina muszą pochodzić z tej samej próbki moczu, a próbka krwi być równoczesna. TmP/GFR używa drugiego porannego moczu po nocy na czczo; przed 19. rokiem stosowana jest ścieżka pediatryczna, od 19. roku algorytm Waltona–Bijvoeta/Payne’a z gałęzią dla TRP >0,86. | TmP/GFR nie jest liczone z DZM. Automatyczne zakresy laboratoryjne pozostają wyłączone do czasu wersjonowanego profilu metody i lokalnej walidacji. |
 | Kamica | Profil EAU Urolithiasis 2026 rozdziela dorosłe mmol/24 h od pediatrycznej interpretacji wapnia w mmol/kg/24 h i wiekowego Ca/Cr w próbce punktowej; konwencja masowa szczawianu jest jawna. Pozostałe pediatryczne anality są pokazywane liczbowo bez automatycznych progów. Progi DZM wymagają dokładnie 24-godzinnej bieżącej zbiórki i właściwego kontekstu. | EAU zaleca dwie kolejne zbiórki w swoistej ocenie metabolicznej. Komunikaty są przesiewowe, nie stawiają rozpoznania i nie są samodzielnym zaleceniem leczenia. |

@@ -16,8 +16,8 @@
   // Presentation data for the already implemented clinical profiles. These data
   // do not qualify a specimen or classify a patient; the clinical engines do.
   const PROFILE = freeze({
-    id: "CLIRENS_RESULT_REFERENCE_2026_10_V6",
-    version: 6,
+    id: "CLIRENS_RESULT_REFERENCE_2026_10_V7",
+    version: 7,
     sources: {
       kdigo: {
         id: "KDIGO_CKD_2024",
@@ -99,6 +99,31 @@
         label: "NKF",
         url: "https://www.kidney.org/professionals/kdoqi/cockcroft-gault-equation-estimating-creatinine-clearance",
       },
+    },
+    measuredClearance: {
+      formulaId: "cl24",
+      resultLabel: "Klirens kreatyniny",
+      referenceLabel: "Norma",
+      statusLabels: {
+        below: "Poniżej normy",
+        within: "W zakresie normy",
+        above: "Powyżej normy",
+      },
+      dailyProtocolStatusLabels: {
+        below: "Poniżej zakresu dobowego",
+        within: "W zakresie dobowym",
+        above: "Powyżej zakresu dobowego",
+      },
+      dailyProtocolNote: "Porównanie z normą dla zbiórki dobowej.",
+      missingPrefix: "Do dobrania normy podaj",
+      fieldLabels: { age: "wiek", sex: "płeć", height: "wzrost", weight: "masę ciała" },
+      completeLabel: "Uzupełnij dane",
+      underAgeMessage: "Poniżej {age} lat dobierz normę z laboratorium pediatrycznego.",
+      outsideAgeMessage: "Dla tego wieku dobierz normę z laboratorium.",
+      unavailableMessage: "Nie dobrano normy dla tego wyniku.",
+      incompatibleUnitMessage: "Nie dobrano normy dla tej jednostki.",
+      roundingMessage: "Ocena według wyniku i granic normy przed zaokrągleniem.",
+      detailsSummary: "Szczegóły i źródła",
     },
     neonatal: {
       formulaId: "neonatal_egfr",
@@ -204,7 +229,7 @@
     neutral: {
       cg: "Brak uniwersalnej normy",
       cg_norm: "Brak uniwersalnej normy",
-      cl24: "Brak uniwersalnej normy",
+      cl24: "Nie dobrano normy dla tego wyniku",
       neonatal_egfr: "Nie dobrano normy dla tego wieku",
       AGs: "Nie dobrano normy laboratoryjnej",
       TMP_GFR: "Nie dobrano normy dla wieku i metody",

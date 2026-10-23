@@ -114,6 +114,109 @@ function readClcrCollectionDurationMinutes() {
   const a = (o - t) / 6e4;
   return Number.isFinite(a) && a > 0 ? a : null;
 }
+// This adapter is shared by the cl24 readiness check and actual calculation.
+// It deliberately leaves the dated collection used by other formulas intact.
+function readCl24CalculationInput() {
+  function number(id) {
+    const raw = String($(id)?.value ?? "").trim();
+    if (!raw) return null;
+    const value = Number(raw.replace(",", "."));
+    return Number.isFinite(value) ? value : null;
+  }
+  const hoursRaw = String($("Cl24DurationHours")?.value ?? "").trim();
+  const hours = /^(?:\d+(?:[.,]\d*)?|[.,]\d+)$/.test(hoursRaw)
+    ? number("Cl24DurationHours") : null;
+  const age = readClcrFormulaAge("cl24");
+  // Completed age 0 already excludes this reference source (which starts at
+  // age 3). Missing months must not turn that fact into an unknown age. This
+  // fallback is only for source eligibility, never an invented exact age/BSA.
+  const ageEligibilityOnly = !age?.valid && number("age") === 0 &&
+    String($("ageMonths")?.value ?? "").trim() === "";
+  const ageYears = age?.valid ? age.exactYears : ageEligibilityOnly ? 0 : null;
+  const weightKg = number("weight"), heightCm = number("height");
+  let bsaM2 = null, bsaMethod = "";
+  if (!ageEligibilityOnly && ageYears !== null && weightKg > 0 && heightCm > 0) {
+    if (ageYears < 18) {
+      const bsa = window.ClcrExtendedEgfr?.computeHaycockBsa({
+        ageYears, heightValue: heightCm, heightUnit: "cm", weightValue: weightKg, weightUnit: "kg",
+      });
+      if (bsa?.ok) { bsaM2 = bsa.value; bsaMethod = "Haycock"; }
+    } else {
+      bsaM2 = BSA_DuBois(weightKg, heightCm);
+      bsaMethod = "Du Bois";
+    }
+  }
+  const collectionFields = {
+    startVoidDiscarded: "collectionStartVoidDiscarded", finalVoidIncluded: "collectionFinalVoidIncluded",
+    noMissedVoids: "collectionNoMissedVoids", noSpillage: "collectionNoSpillage",
+    noExtraVoids: "collectionNoExtraVoids", storageFollowed: "collectionStorageFollowed",
+  };
+  const protocol = {}, knownProblems = [];
+  Object.entries(collectionFields).forEach(([key, id]) => {
+    // A false legacy checkbox alone means unconfirmed, not an observed error.
+    const answer = document.getElementById(`ui_${id}_answer`)?.value
+      ?? window.__vildaClcrVersionValueVault?.[`ui_${id}_answer`] ?? "";
+    protocol[key] = answer !== "no";
+    if (answer === "no") knownProblems.push(id);
+  });
+  const collectionProblem = !!$("Cl24CollectionProblem")?.checked || knownProblems.length > 0;
+  const scr = number("Scr"), scrUnit = $("ScrUnit")?.value;
+  const serumCreatinineMgDl = scrUnit === "umol" && scr !== null ? scr / 88.4
+    : scrUnit === "mg/dl" ? scr : null;
+  return {
+    urineCreatinineMgDl: number("Ucr"), serumCreatinineMgDl, volumeMl: number("V24"),
+    durationMinutes: hours !== null && hours > 0 ? hours * 60 : null,
+    durationSource: hours !== null && hours > 0
+      ? ($("Cl24DurationSource")?.value === "legacy-dates" ? "legacy-dates" : "hours") : "missing",
+    bsaM2, bsaMethod, weightKg, heightCm, ageYears, ageEligibilityOnly, sex: $("sex")?.value || "",
+    protocolMode: "assumed-complete", protocol, collectionProblem, knownProblems,
+    collectionAssumptions: {
+      collectionCompleteness: collectionProblem ? "known-problem" : "assumed",
+      serumSampling: "assumed-compatible",
+    },
+  };
+}
+function clcrMeasuredReferenceContext(input, result) {
+  const profile = window.ClcrMeasuredClearanceReferenceData?.PROFILES?.PATHWEST_CCL_2026_03_20;
+  const reference = window.ClcrMeasuredClearanceReference?.evaluate({
+    value: result?.absoluteMlMin, unit: "mL/min", ageYears: input.ageYears, sex: input.sex,
+    bsa: input.bsaM2, bsaMethod: input.bsaMethod, durationHours: result?.durationHours,
+  }, profile);
+  if (!reference) return null;
+  const missingFieldIds = [];
+  for (const key of reference.missingFields || []) {
+    if (key === "ageYears") missingFieldIds.push("age");
+    if (key === "sex") missingFieldIds.push("sex");
+    if (key === "bsa") {
+      if (!(input.weightKg > 0)) missingFieldIds.push("weight");
+      if (!(input.heightCm > 0)) missingFieldIds.push("height");
+    }
+  }
+  return { ...reference, missingFieldIds, durationSource: input.durationSource,
+    collectionAssumptions: input.collectionAssumptions,
+    inputs: { serumCreatinineMgDl: input.serumCreatinineMgDl, urineCreatinineMgDl: input.urineCreatinineMgDl,
+      volumeMl: input.volumeMl, durationMinutes: input.durationMinutes,
+      ageYears: input.ageYears, sex: input.sex, weightKg: input.weightKg, heightCm: input.heightCm } };
+}
+function clcrMeasuredClearanceDetails(input, result, reference) {
+  const text = (value, digits = 2) => Number.isFinite(value)
+    ? String(Number(value.toFixed(digits))).replace(".", ",") : "";
+  const original = reference?.indexedRange;
+  const converted = reference?.absoluteRange;
+  const source = reference?.source;
+  const band = reference?.selectedBand;
+  const bandLabel = band ? `${band.sexRequired ? band.sex === "M" ? "mężczyźni" : "kobiety" : "obie płcie"}, od ${band.minimumAgeInclusive} do poniżej ${band.maximumAgeExclusive} lat` : "";
+  return `<p><strong>Jak obliczono:</strong> kreatynina w moczu ÷ kreatynina w surowicy × objętość moczu ÷ rzeczywisty czas w minutach.</p>
+<p><strong>Czas użyty:</strong> ${text(result.durationHours, 6)} h = ${text(result.durationMinutes, 6)} min.${input.durationSource === "legacy-dates" ? " Odtworzono z zapisanych dat początku i końca zbiórki." : ""}</p>
+<p><strong>Wydalanie kreatyniny:</strong> ${text(result.creatinineMgDay)} mg/24 h${result.creatinineMgKgDay !== null ? ` (${text(result.creatinineMgKgDay)} mg/kg/24 h)` : ""}. Samo wydalanie nie potwierdza kompletności zbiórki.</p>
+${original ? `<p><strong>Zakres źródłowy:</strong> ${text(original.lower, 1)}–${text(original.upper, 1)} ${clcrEscapeHtml(original.unit)} (${clcrEscapeHtml(bandLabel)}). ${clcrEscapeHtml(reference.population?.label || "")}</p>` : ""}
+${converted ? `<p><strong>Powierzchnia ciała:</strong> ${text(input.bsaM2, 3)} m² (${clcrEscapeHtml(input.bsaMethod)}). Norma w jednostce wyniku = zakres źródłowy × powierzchnia ciała / 1,73: ${text(converted.lower, 1)}–${text(converted.upper, 1)} mL/min. Granice zaokrąglono do jednego miejsca po przecinku; ocena wykorzystuje pełne wartości. W katalogu PathWest nie podano wzoru BSA.</p>` : ""}
+<p><strong>Założenia zbiórki:</strong> pełna, prawidłowa zbiórka; kreatynina w surowicy odpowiadająca okresowi zbiórki. Dopuszczalny odstęp pobrania określa laboratorium.</p>
+<p><strong>Interpretacja:</strong> klirens kreatyniny zwykle zawyża GFR. Wynik w zakresie nie wyklucza choroby nerek; nie przypisujemy kategorii G ani nie rozpoznajemy hiperfiltracji na podstawie przekroczenia górnej granicy.</p>
+<p>Zakres według PathWest dla zbiórki dobowej.${reference?.protocolNote ? ` ${clcrEscapeHtml(reference.protocolNote)}` : ""} Jeśli laboratorium wykonujące badanie podało własną normę, preferuj ten zakres.</p>
+${input.ageYears !== null && input.ageYears < 3 ? "<p>Wybrany zakres PathWest obejmuje wiek od 3 lat. Dla młodszych dzieci dostępne są odrębne normy pediatryczne.</p>" : ""}
+<p><strong>Źródła:</strong> ${source?.url ? `<a href="${clcrEscapeHtml(source.url)}" target="_blank" rel="noopener noreferrer">${clcrEscapeHtml(source.label || source.title || "PathWest")}</a> · ` : ""}<a href="https://renal.testcatalog.org/show/CRCL" target="_blank" rel="noopener noreferrer">Mayo Clinic Laboratories</a>.</p>`;
+}
 (document
   .querySelectorAll("#clcrForm input, #clcrForm select")
   .forEach((e) => e.addEventListener("input", update)),
@@ -452,6 +555,9 @@ function canComputeFormula(e) {
       };
     if (!resolution.allowed || !window.ClcrClinicalSafety.formulaSafety(e, t, o, a).eligible) return !1;
   }
+  if (e === "cl24") {
+    return window.ClcrClinicalSafety?.computeTimedCreatinineClearance(readCl24CalculationInput()).ok === true;
+  }
   return n.requires.every((t) => {
         const o = document.getElementById(t);
         if (!o) return !1;
@@ -541,6 +647,12 @@ function packClcrSupplementaryMarkup(markup, formulaId) {
   if (!primary) return markup;
   const details = nodes.find((node) => node.classList.contains("clcr-result-details") && node.dataset.clcrFormula === formulaId);
   if (!details) return markup;
+  if (formulaId === "cl24") {
+    // All measured-clearance context is already included in its own Details.
+    // Generic dated-collection output belongs to the other urine modules.
+    nodes.filter((node) => node !== primary && node !== details).forEach((node) => node.remove());
+    return staging.innerHTML;
+  }
   const source = nodes.find((node) => node.classList.contains("clcr-result-source") && node.dataset.clcrFormula === formulaId);
   const assumptions = nodes.find((node) => node.classList.contains("clcr-result-assumptions") && node.dataset.clcrFormula === formulaId);
   const earlyCaution = formulaId === "neonatal_egfr"
@@ -578,6 +690,17 @@ function consolidateClcrEngineOutputs(formulaId) {
   });
 }
 // Effective calculation assumptions never write back to specimen/patient inputs.
+function clcrMeasuredAssayAssumption(scrAssay) {
+  const assay = String(scrAssay || "").trim().toLowerCase().replace(/[\s/-]+/g, "_");
+  if (["non_idms", "enzymatic_non_idms", "jaffe_non_idms"].includes(assay)) {
+    return { provenance: "provided", standardization: "non_IDMS",
+      text: "Zapisano oznaczenie kreatyniny bez standaryzacji IDMS; wpływ metody oceń zgodnie z laboratorium." };
+  }
+  const provided = ["enzymatic_idms", "jaffe_idms"].includes(assay);
+  return { provenance: provided ? "provided" : "assumed", standardization: "IDMS",
+    text: provided ? "Zapisane oznaczenie kreatyniny jest standaryzowane do IDMS."
+      : "Przyjęto oznaczenie kreatyniny standaryzowane do IDMS." };
+}
 function resolveClcrCalculationAssumptions(formulaId) {
   const context = {
     creatinineState: $("creatinineState")?.value || "unknown",
@@ -586,7 +709,16 @@ function resolveClcrCalculationAssumptions(formulaId) {
     cystatinCStandardization: $("CystatinCStandardization")?.value || "",
     crCysStandardizationConfirmed: !!$("CrCysStandardizationConfirmed")?.checked,
   };
-  return window.VildaClcrCalculationAssumptions.resolve(formulaId, context);
+  const resolution = window.VildaClcrCalculationAssumptions.resolve(formulaId, context);
+  if (formulaId !== "cl24") return resolution;
+  // Method is a disclosed assumption here, not an IDMS eligibility gate for
+  // the urine/plasma ratio. Never replace a recorded contrary method.
+  const assay = clcrMeasuredAssayAssumption(context.scrAssay);
+  return { ...resolution,
+    assumptionsText: resolution.allowed ? `${resolution.assumptionsText} ${assay.text}`.trim() : "",
+    provenance: { ...resolution.provenance, creatinineStandardization: assay.provenance },
+    calculationContext: { ...resolution.calculationContext, creatinineStandardization: assay.standardization },
+  };
 }
 function update() {
   const e = $("fullName").value.trim();
@@ -619,8 +751,7 @@ function update() {
     : h
       ? (d = A === "umol" ? h / 88.4 : h)
       : (d = null);
-  const x = +$("Ucr").value,
-    N = readClcrOptionalNumber("Ucr_spot"),
+  const N = readClcrOptionalNumber("Ucr_spot"),
     _ = $("Ucr_spot_unit") ? $("Ucr_spot_unit").value : "mg/dl";
   const c =
     _ && _ !== "" && N !== null && N > 0
@@ -795,12 +926,6 @@ function update() {
     urineCollectionProtocolComplete = Object.values(
       urineCollectionProtocol,
     ).every(Boolean),
-    collectionProtocol = {
-      ...urineCollectionProtocol,
-      serumSampleDuringCollection: !!$(
-        "serumSampleDuringCollection",
-      )?.checked,
-    },
     collectionDailyVolume =
       R > 0 &&
       collectionDurationMinutes &&
@@ -876,29 +1001,27 @@ function update() {
     W = BSA_DuBois(s, p);
     bsaMethod = "Du Bois";
   }
+  const measuredInput = readCl24CalculationInput();
   const timedCrCl =
     window.ClcrClinicalSafety &&
     typeof window.ClcrClinicalSafety.computeTimedCreatinineClearance ==
       "function"
-      ? window.ClcrClinicalSafety.computeTimedCreatinineClearance({
-          urineCreatinineMgDl: x,
-          serumCreatinineMgDl: d,
-          volumeMl: R,
-          collectionStartAt: $("collectionStartAt")?.value || "",
-          collectionEndAt: $("collectionEndAt")?.value || "",
-          serumSampleAt: $("serumSampleAt")?.value || "",
-          bsaM2: W,
-          weightKg: s,
-          protocol: collectionProtocol,
-        })
+      ? window.ClcrClinicalSafety.computeTimedCreatinineClearance(measuredInput)
       : null;
+  const measuredReference = timedCrCl?.ok ? clcrMeasuredReferenceContext(measuredInput, timedCrCl) : null;
   function renderResultCard(input) {
     const presenter = window.ClcrResultPresentation;
     const referenceProfile = window.ClcrResultReferenceData?.PROFILE;
     if (!presenter || !referenceProfile) return null;
     const formulaId = input.formulaId || input.series || "";
     const ageYears = o ? t : null;
-    const assumptions = resolveClcrCalculationAssumptions(formulaId);
+    let assumptions = resolveClcrCalculationAssumptions(formulaId);
+    if (formulaId === "cl24") {
+      assumptions = { ...assumptions,
+        assumptionsText: `${assumptions.assumptionsText || ""} Założenia zbiórki: pełna, prawidłowa zbiórka; kreatynina w surowicy odpowiadająca okresowi zbiórki.`.trim(),
+        provenance: { ...assumptions.provenance, ...measuredInput.collectionAssumptions, durationSource: measuredInput.durationSource },
+      };
+    }
     const effective = assumptions.calculationContext;
     let presentation = input.presentation || null;
     if (!presentation && referenceProfile.gfrFormulaIds.includes(formulaId)) {
@@ -1229,7 +1352,10 @@ function update() {
           formulaId: Vt || de || Sk, code: de, series: Sk,
           value: w, displayValue, unit: Z, label: r,
           calculationAgeYears: Sk === "cg_norm" ? Math.floor(t) : undefined,
-          detailHtml: Sk === "cg_norm"
+          referenceContext: Sk === "cl24" ? { measuredClearance: measuredReference } : undefined,
+          detailHtml: Sk === "cl24" && timedCrCl?.ok
+            ? clcrMeasuredClearanceDetails(measuredInput, timedCrCl, measuredReference) + `<p>${clcrEscapeHtml(resolveClcrCalculationAssumptions("cl24").assumptionsText || "")}</p>`
+            : Sk === "cg_norm"
             ? clcrCgNormalizedDetails(t, W, [
                 ...(window.ClcrResultReferenceData?.PROFILE?.cgIndexed?.sources || []),
                 window.ClcrResultReferenceData?.PROFILE?.cgIndexed?.limitationSource,
@@ -1673,43 +1799,13 @@ function update() {
         case "cl24":
           if (m.cl24 != null) {
             q(
-              "Zmierzony klirens kreatyniny (bezwzględny)",
+              "Klirens kreatyniny",
               m.cl24.absoluteMlMin,
               "\u202FmL/min",
               "cl24",
               r,
               "cl24",
             );
-            q(
-              `Zmierzony klirens kreatyniny (1,73\u202Fm\xB2; ${bsaMethod})`,
-              m.cl24.indexedMlMin173,
-              "\u202FmL/min/1,73\u202Fm\xB2",
-              "cl24",
-              r,
-            );
-            q(
-              "Rzeczywisty czas zbiórki",
-              m.cl24.durationHours,
-              "\u202Fh",
-              "collection_duration",
-              r,
-            );
-            q(
-              "Wydalanie kreatyniny przeliczone na dobę",
-              m.cl24.creatinineMgDay,
-              "\u202Fmg/24 h",
-              "cer",
-              r,
-            );
-            q(
-              "Wydalanie kreatyniny przeliczone na masę ciała",
-              m.cl24.creatinineMgKgDay,
-              "\u202Fmg/kg/24 h",
-              "cer",
-              r,
-            );
-            S +=
-              '<div class="result-box warn-yellow" data-clcr-formula="cl24"><strong>Ograniczenie:</strong> to zmierzony klirens kreatyniny, nie zmierzony GFR. Wydzielanie cewkowe kreatyniny zwykle zawyża GFR, a wynik jest bardzo wrażliwy na kompletność zbiórki. CER pokazano bez automatycznej oceny kompletności.</div>';
           } else if (l === "cl24" && timedCrCl && !timedCrCl.ok) {
             S += `<div class="result-box warn-yellow" data-clcr-formula="cl24"><strong>Nie obliczono:</strong> ${clcrEscapeHtml(timedCrCl.error)}</div>`;
           }
