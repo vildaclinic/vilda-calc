@@ -53,7 +53,22 @@ async function odtworzZOpóźnieniem(frame, patientId) {
     window.VildaAuthUI.showPatientCard(id, (record) => { if (record) window.applyLoadedData(record); }, null);
   }, patientId);
   await frame.getByRole('button', { name: 'Wczytaj tego pacjenta' }).click();
-  await expect(frame.locator('#vildaLoadChoiceModal')).toBeVisible();
+  const wyborWczytania = frame.locator('#vildaLoadChoiceModal');
+  const niezapisanyPacjent = frame.getByRole('dialog', {
+    name: 'Zapisać wpisane dane przed wczytaniem?', exact: true,
+  });
+  // W powłoce DocPro może najpierw pokazać strażnika niezapisanych danych.
+  // Przechodzimy przez jego zwykłą akcję UI, zanim sprawdzimy odtworzenie daty i centyli.
+  await expect(wyborWczytania.or(niezapisanyPacjent)).toBeVisible();
+  if (await niezapisanyPacjent.isVisible()) {
+    test.info().annotations.push({
+      type: 'strażnik niezapisanego pacjenta',
+      description: 'Przed wyborem odtworzenia potwierdzono odrzucenie fikcyjnych danych formularza.',
+    });
+    await niezapisanyPacjent.getByRole('button', { name: 'Odrzuć dane i wczytaj', exact: true }).click();
+    await expect(niezapisanyPacjent).toHaveCount(0);
+  }
+  await expect(wyborWczytania).toBeVisible();
   await frame.locator('#vildaLcmRestore').click();
   await expect(frame.locator('#vildaLoadChoiceModal')).toHaveCount(0);
   await centyleISchowek(frame);
