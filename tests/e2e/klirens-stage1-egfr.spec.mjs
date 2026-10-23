@@ -121,7 +121,6 @@ test('wzór noworodkowy wymaga wieku w dniach i potwierdzenia urodzenia o czasie
 
   await page.locator('#formulaPicker').selectOption('neonatal_egfr');
   await page.waitForFunction(() => window.clcrIsResetting !== true);
-  await page.locator('#sex').selectOption('M');
   await page.locator('#weight').fill('3.5');
   await page.locator('#height').fill('50');
   await page.locator('#Scr').fill('0.5');
@@ -135,9 +134,17 @@ test('wzór noworodkowy wymaga wieku w dniach i potwierdzenia urodzenia o czasie
   await page.locator('#neonatalTermStatus').selectOption('term');
   await page.evaluate(() => window.clcrUpdate());
   expect(await page.evaluate(() => window.canComputeFormula('neonatal_egfr'))).toBe(true);
-  await expect(page.locator('#clcrInfo')).toContainText('eGFR noworodka donoszonego');
-  await expect(page.locator('#clcrInfo')).toContainText('31');
-  await expect(page.locator('#clcrInfo')).toContainText('P30 wynosi 74,4%');
+  const result = page.locator('.clcr-result-card[data-clcr-series="neonatal_egfr"]');
+  await expect(result.locator('.clcr-result-value')).toHaveText('31');
+  await expect(result).toHaveAttribute('data-clcr-tone', 'neutral');
+  await expect(result.locator('.clcr-result-unit')).toHaveText('mL/min/1,73 m²');
+  await expect(result.locator('.clcr-result-interpretation')).toHaveText('Szacowany eGFR');
+  await expect(result.locator('.clcr-result-reference-label')).toHaveText('Ocena dla wieku');
+  await expect(result.locator('.clcr-result-reference-value')).toHaveText('Zależy od dnia życia');
+  const sourceLinks = page.locator('.clcr-result-details[data-clcr-formula="neonatal_egfr"] [data-clcr-neonatal-sources] a');
+  await expect(sourceLinks).toHaveCount(3);
+  await expect(sourceLinks.filter({ hasText: 'NIDDK' })).toHaveCount(1);
+  await expect(page.locator('#ScrAssay')).toHaveValue('enzymatic_idms');
   await expect(page.locator('#clcrInfo')).not.toContainText('Kategoria GFR');
 });
 

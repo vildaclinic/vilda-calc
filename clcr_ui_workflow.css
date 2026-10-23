@@ -1038,6 +1038,42 @@ html[data-clcr-workflow-ui="1"][data-clcr-active-module="child-cystatin"] .clcr-
   width: 100%;
 }
 
+html[data-clcr-workflow-ui="1"] .clcr-context-details__body > .clcr-field[data-clcr-field-id="ScrAssay"] {
+  grid-column: 1 / -1;
+  width: 100%;
+}
+
+html[data-clcr-workflow-ui="1"] .clcr-neonatal-age-correction {
+  grid-column: 1 / -1;
+  padding: var(--space-12px);
+  background: var(--clcr-warning-bg);
+  border: var(--border-hairline) solid var(--clcr-warning);
+  border-radius: var(--radius-13);
+}
+html[data-clcr-workflow-ui="1"] .clcr-neonatal-age-correction[hidden] {
+  display: none !important;
+}
+html[data-clcr-workflow-ui="1"] .clcr-neonatal-age-correction h3 {
+  margin: 0 0 var(--space-10px);
+  color: var(--clcr-warning);
+  font-size: 14px;
+  line-height: 1.5;
+}
+html[data-clcr-workflow-ui="1"] .clcr-neonatal-age-correction__messages p {
+  margin: 0 0 var(--space-12px);
+  font-size: 13px;
+  line-height: 1.5;
+}
+html[data-clcr-workflow-ui="1"] .clcr-neonatal-age-correction__fields {
+  display: grid;
+  gap: var(--space-12px);
+}
+html[data-clcr-workflow-ui="1"] .clcr-neonatal-age-correction .clcr-field {
+  width: 100%;
+  background: transparent;
+  border-color: var(--clcr-warning);
+}
+
 html[data-clcr-workflow-ui="1"] .clcr-field:has(> .error) {
   background: var(--clcr-error-bg);
   border-color: #e4aeb3;
@@ -1581,8 +1617,9 @@ html.clcr-card-open, html.clcr-card-open body { overflow: hidden; }
 /* ——— Układ B (U1): dwie kolumny + przyklejony panel „Wynik" ———
    Warstwa PREZENTACJI: #clcrForm (wejścia) do lewej kolumny, prawy rail
    przyklejony. Wyniki szczegółowe zostają pełną szerokością POD workspace.
-   Relayout tylko na dużych ekranach — mobile bez zmian (chroni testy 320px). */
-.clcr-workspace { min-width: 0; }
+   Pionowy flex na mobile zachowuje rzeczywisty gap bez narzucania formularzowi
+   wysokości wiersza siatki; desktop pozostaje siatką dwóch kolumn. */
+.clcr-workspace { display: flex; flex-direction: column; min-width: 0; }
 /* #clcrForm ma klasę .flex (row-wrap) → w kolumnie workspace stackujemy pionowo,
    żeby karta pacjenta i parametry miały jednakową, pełną szerokość kolumny. */
 .clcr-workspace > #clcrForm {
@@ -1723,6 +1760,10 @@ html[data-clcr-workflow-ui="1"] .clcr-result-report #elecInfo > .result-box.warn
 html[data-clcr-workflow-ui="1"] .clcr-result-report #stoneInfo > .result-box.warn-yellow {
   background: var(--clcr-warning-bg) !important; border-color: #ead6a8 !important;
   box-shadow: inset 3px 0 0 var(--clcr-warning) !important;
+}
+html[data-clcr-workflow-ui="1"] .clcr-result-report #clcrInfo > .result-box.clcr-neonatal-early-note {
+  margin-top: var(--space-12px) !important;
+  color: var(--clcr-warning) !important;
 }
 html[data-clcr-workflow-ui="1"] .clcr-result-report .result-box.warn-yellow strong {
   color: var(--clcr-warning) !important;

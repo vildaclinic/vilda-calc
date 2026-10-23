@@ -16,8 +16,8 @@
   // Presentation data for the already implemented clinical profiles. These data
   // do not qualify a specimen or classify a patient; the clinical engines do.
   const PROFILE = freeze({
-    id: "CLIRENS_RESULT_REFERENCE_2026_10_V4",
-    version: 4,
+    id: "CLIRENS_RESULT_REFERENCE_2026_10_V5",
+    version: 5,
     sources: {
       kdigo: {
         id: "KDIGO_CKD_2024",
@@ -87,6 +87,31 @@
     populationNotes: {
       ckid_u25_cys: "Wzór do oceny czynności nerek u osób z PChN; nie służy do przesiewu zdrowych, bezobjawowych osób.",
       ckid_u25_cr_cys: "Wzór opracowano dla osób w wieku 1–25 lat z łagodną lub umiarkowaną PChN.",
+    },
+    neonatal: {
+      formulaId: "neonatal_egfr",
+      resultLabel: "Szacowany eGFR",
+      ageContextLabel: "Ocena dla wieku",
+      ageContextValue: "Zależy od dnia życia",
+      ageContextComment: "U noworodka nie stosuje się progu ≥90 ani kategorii G. Wynik oceniaj z uwzględnieniem dnia życia i zmian kreatyniny.",
+      // This retains the existing early-life caution; it is not a GFR cutoff.
+      earlyCautionBeforeDay: 3,
+      earlyCaution: "W pierwszych dniach kreatynina może odzwierciedlać stężenie matki — oceń także jej trend.",
+      detailsSummary: "Szczegóły — obliczenie i ograniczenia",
+      details: [
+        { label: "Jak obliczono", text: "0,31 × długość ciała [cm] / kreatynina [mg/dL]." },
+        { label: "Zakres stosowania", text: "noworodki donoszone, 0–28 ukończonych dni życia, aktualna masa >2,5 kg." },
+        { label: "Oznaczenie", text: "zalecana metoda enzymatyczna zgodna z IDMS." },
+        { label: "Ograniczenia", text: "w pierwszych dniach kreatynina może odzwierciedlać stężenie matki. Znane AKI lub szybko zmieniająca się kreatynina wykluczają to oszacowanie." },
+      ],
+      sources: [
+        {
+          label: "NIDDK",
+          url: "https://www.niddk.nih.gov/research-funding/research-programs/kidney-clinical-research-epidemiology/laboratory/glomerular-filtration-rate-equations/children-adolescents-young-adults",
+        },
+        { label: "Smeets 2022", url: "https://doi.org/10.1681/ASN.2021101326" },
+        { label: "HERO 2023", url: "https://doi.org/10.1007/s00467-022-05651-w" },
+      ],
     },
     u25Average: {
       formulaId: "ckid_u25_cr_cys",

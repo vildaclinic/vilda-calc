@@ -29,6 +29,10 @@
       unit: "", population: "", source: null, educational: false, kind: "none", rows: [],
     };
     if (!profile) return noReference;
+    if (profile.neonatal?.formulaId === formulaId) {
+      // A description of age-dependent assessment, not a numeric reference.
+      return { ...noReference, label: profile.neonatal.ageContextLabel, value: profile.neonatal.ageContextValue };
+    }
     if (profile.gfrFormulaIds.includes(formulaId)) {
       if (age === null || age < profile.gfr.minimumCategoryAgeYears) {
         return { ...noReference, value: "Nie dobrano normy dla tego wieku" };
@@ -147,16 +151,18 @@
   }
   function createModel(input, profile) {
     const source = input || {};
+    const neonatalConfig = profile?.neonatal?.formulaId === source.formulaId ? profile.neonatal : null;
     const rawValue = finite(source.value);
     const presentation = u25EstimatePresentation(source, profile) || source.presentation || {};
     const markerBlocked = profile?.markerSensitiveFormulaIds?.includes(source.formulaId) && source.markerPolicy?.calculationAllowed === false;
     const valueVisible = rawValue !== null && !markerBlocked && presentation.valueVisible !== false;
     const reference = referenceFor({ ...source, presentation }, profile);
-    const category = valueVisible && presentation.category ? presentation.category : null;
+    const category = !neonatalConfig && valueVisible && presentation.category ? presentation.category : null;
     const currentRow = reference.rows.find((entry) => entry.code === category?.code);
-    const tone = valueVisible && ["success", "warning", "danger"].includes(presentation.tone) ? presentation.tone : "neutral";
-    const reasons = Array.isArray(presentation.reasons) ? presentation.reasons.filter(Boolean) : [];
-    const interpretation = presentation.label || currentRow?.meaning || source.label || "Wynik obliczenia";
+    const tone = !neonatalConfig && valueVisible && ["success", "warning", "danger"].includes(presentation.tone) ? presentation.tone : "neutral";
+    const reasons = !neonatalConfig && Array.isArray(presentation.reasons) ? presentation.reasons.filter(Boolean) : [];
+    const interpretation = neonatalConfig?.resultLabel || presentation.label || currentRow?.meaning || source.label || "Wynik obliczenia";
+    const ageDays = finite(source.ageDays);
     const averageConfig = profile?.u25Average && profile.u25Average.formulaId === source.formulaId ? profile.u25Average : null;
     const rawComponents = source.calculationComponents || {};
     const creatinineComponent = finite(rawComponents.egfrCreatinine);
@@ -184,15 +190,18 @@
     return Object.freeze({
       formulaId: source.formulaId || "", series: source.series || "", code: source.code || "",
       rawValue, valueVisible, displayValue: source.displayValue == null ? String(rawValue) : String(source.displayValue),
-      unit: normalizeUnit(source.unit), label: source.label || "Wynik obliczenia",
-      boundary: presentation.referenceComparison ? presentation.boundary : profile?.gfrFormulaIds?.includes(source.formulaId) && !category ? "" : source.boundary || "",
+      unit: normalizeUnit(source.unit), label: neonatalConfig?.resultLabel || source.label || "Wynik obliczenia",
+      boundary: neonatalConfig ? "" : presentation.referenceComparison ? presentation.boundary : profile?.gfrFormulaIds?.includes(source.formulaId) && !category ? "" : source.boundary || "",
       tone, category, interpretation, reference, categories: reference.rows, reasons,
-      referenceComparison: presentation.referenceComparison === true,
+      referenceComparison: !neonatalConfig && presentation.referenceComparison === true,
       assumptions: valueVisible ? source.calculationAssumptions?.assumptionsText || presentation.assumptions || "" : "",
       assumptionProvenance: source.calculationAssumptions?.provenance || null,
       populationNote: valueVisible ? profile?.populationNotes?.[source.formulaId] || "" : "",
       categoryRange: category && reference.kind === "gfr" ? currentRow?.range || "" : "",
       averageComponents,
+      ageContextComment: valueVisible ? neonatalConfig?.ageContextComment || "" : "",
+      earlyLifeCaution: valueVisible && neonatalConfig && ageDays !== null && Number.isInteger(ageDays) &&
+        ageDays >= 0 && ageDays < neonatalConfig.earlyCautionBeforeDay ? neonatalConfig.earlyCaution : "",
       detailHtml: source.detailHtml || "", method: source.method || source.label || "", profileId: profile?.id || "",
     });
   }
@@ -229,12 +238,18 @@ ${referenceMarkup}
     if (!sources.length) return "";
     return `<p data-clcr-average-sources>Źródła: ${sources.map((source) => `<a href="${escape(source.url)}" target="_blank" rel="noopener noreferrer">${escape(source.label)}</a>`).join(" · ")}</p>`;
   }
+  function neonatalDetailsMarkup(config) {
+    const paragraphs = config.details.map((entry) => `<p><strong>${escape(entry.label)}:</strong> ${escape(entry.text)}</p>`);
+    const sources = config.sources.map((source) => `<a href="${escape(source.url)}" target="_blank" rel="noopener noreferrer">${escape(source.label)}</a>`).join(" · ");
+    return `${paragraphs.join("\n")}\n<p data-clcr-neonatal-sources>Źródła: ${sources}</p>\n`;
+  }
   function render(input, profile) {
     const model = createModel(input, profile);
     if (!model.valueVisible) return "";
     const suffix = `${model.formulaId}-${model.series || model.code || "value"}`.replace(/[^a-zA-Z0-9_-]/g, "-");
     const detailsId = `clcr-result-details-${suffix}`;
     const reference = model.reference;
+    const neonatalConfig = profile?.neonatal?.formulaId === model.formulaId ? profile.neonatal : null;
     const averageConfig = profile?.u25Average && profile.u25Average.formulaId === model.formulaId ? profile.u25Average : null;
     const categoryButton = model.category && model.categories.length
       ? `<button type="button" class="clcr-result-category" data-clcr-category-control aria-controls="${detailsId}" aria-expanded="false" aria-label="${escape(model.category.code)} — pokaż wszystkie kategorie">${escape(model.category.code)}</button>`
@@ -245,7 +260,7 @@ ${referenceMarkup}
       : "";
     const populationSource = [escape(reference.population), sourceMarkup].filter(Boolean).join(" · ");
     const resultLimitation = reference.limitation || (averageConfig ? profile.gfr?.limitation : "");
-    const details = [
+    const details = neonatalConfig ? neonatalDetailsMarkup(neonatalConfig) + model.detailHtml : [
       averageComponentsMarkup(model, averageConfig),
       tableMarkup(model),
       model.method ? `<p><strong>Metoda:</strong> ${escape(model.method)}</p>` : "",
@@ -256,7 +271,7 @@ ${referenceMarkup}
       averageConfig ? `<p><strong>${escape(averageConfig.methodRecommendationLabel)}:</strong> ${escape(averageConfig.methodRecommendation)}</p><p>${escape(averageConfig.discrepancyDescription)}</p>${averageSourcesMarkup(averageConfig)}` : "",
       model.detailHtml,
     ].join("");
-    return `<div class="result-box clcr-result-card${["warning", "danger"].includes(model.tone) ? " out-of-range" : ""}" data-clcr-formula="${escape(model.formulaId)}" data-clcr-code="${escape(model.code)}"${seriesAttributes} data-clcr-tone="${model.tone}" data-clcr-display-value="${escape(model.displayValue)}" data-clcr-value-length="${model.displayValue.length}" data-clcr-display-unit="${escape(model.unit)}" data-clcr-display-label="${escape(model.label)}" data-clcr-status="${escape(model.interpretation)}" data-clcr-category="${escape(model.category?.code || "")}" data-clcr-boundary="${escape(model.boundary)}" data-clcr-reference-profile="${escape(model.profileId)}" data-clcr-reference-comparison="${model.referenceComparison}" data-clcr-assumptions="${escape(model.assumptions)}" data-clcr-assumption-provenance="${escape(JSON.stringify(model.assumptionProvenance))}"><div class="clcr-result-main"><div class="clcr-result-patient"><p class="clcr-result-patient-label">Wynik pacjenta ${categoryButton}</p><strong class="clcr-result-value">${escape(model.displayValue.replace(".", ","))}</strong><span class="clcr-result-unit">${escape(model.unit)}</span>${model.boundary ? `<small class="clcr-result-boundary">Przed zaokrągleniem: ${escape(model.boundary)}</small>` : ""}</div><div class="clcr-result-reference${reference.kind === "none" ? " clcr-result-reference--text clcr-result-reference--unavailable" : ""}" data-clcr-reference="${escape(reference.kind)}" data-clcr-reference-kind="${escape(reference.kind)}" data-clcr-reference-length="${reference.value.length}"><p class="clcr-result-reference-label">${escape(reference.label)}</p><strong class="clcr-result-reference-value">${escape(reference.value)}</strong>${reference.unit ? `<span class="clcr-result-reference-unit">${escape(reference.unit)}</span>` : ""}${reference.minimum ? `<small class="clcr-result-reference-minimum">Minimum: ${escape(reference.minimum)}${reference.unit ? " " + escape(reference.unit) : ""}</small>` : ""}</div></div><p class="clcr-result-interpretation">${escape(model.interpretation)}</p>${model.categoryRange ? `<p class="clcr-result-category-summary">Zakres oszacowania: ${escape(model.category.code)} · ${escape(model.categoryRange)}</p>` : ""}</div>${model.assumptions ? `<p class="clcr-result-assumptions" data-clcr-formula="${escape(model.formulaId)}">${escape(model.assumptions)}</p>` : ""}${model.populationNote ? `<p class="clcr-result-population-note clcr-result-source" data-clcr-formula="${escape(model.formulaId)}">${escape(model.populationNote)}</p>` : ""}${!averageConfig && populationSource ? `<p class="clcr-result-source" data-clcr-formula="${escape(model.formulaId)}">${populationSource}</p>` : ""}<details class="clcr-result-details" id="${detailsId}" data-clcr-formula="${escape(model.formulaId)}" tabindex="-1"><summary>${averageConfig ? escape(model.categories.length ? averageConfig.detailsSummary : averageConfig.detailsSummaryWithoutCategories) : model.reference.kind === "acr" ? "Szczegóły — kategorie A1–A3" : model.reference.kind === "gfr" ? "Szczegóły — kategorie G1–G5" : "Szczegóły i źródła"}</summary>${details}</details>`;
+    return `<div class="result-box clcr-result-card${["warning", "danger"].includes(model.tone) ? " out-of-range" : ""}" data-clcr-formula="${escape(model.formulaId)}" data-clcr-code="${escape(model.code)}"${seriesAttributes} data-clcr-tone="${model.tone}" data-clcr-display-value="${escape(model.displayValue)}" data-clcr-value-length="${model.displayValue.length}" data-clcr-display-unit="${escape(model.unit)}" data-clcr-display-label="${escape(model.label)}" data-clcr-status="${escape(model.interpretation)}" data-clcr-category="${escape(model.category?.code || "")}" data-clcr-boundary="${escape(model.boundary)}" data-clcr-reference-profile="${escape(model.profileId)}" data-clcr-reference-comparison="${model.referenceComparison}" data-clcr-assumptions="${escape(model.assumptions)}" data-clcr-assumption-provenance="${escape(JSON.stringify(model.assumptionProvenance))}"><div class="clcr-result-main"><div class="clcr-result-patient"><p class="clcr-result-patient-label">Wynik pacjenta ${categoryButton}</p><strong class="clcr-result-value">${escape(model.displayValue.replace(".", ","))}</strong><span class="clcr-result-unit">${escape(model.unit)}</span>${model.boundary ? `<small class="clcr-result-boundary">Przed zaokrągleniem: ${escape(model.boundary)}</small>` : ""}</div><div class="clcr-result-reference${reference.kind === "none" ? " clcr-result-reference--text clcr-result-reference--unavailable" : ""}" data-clcr-reference="${escape(reference.kind)}" data-clcr-reference-kind="${escape(reference.kind)}" data-clcr-reference-length="${reference.value.length}"><p class="clcr-result-reference-label">${escape(reference.label)}</p><strong class="clcr-result-reference-value">${escape(reference.value)}</strong>${reference.unit ? `<span class="clcr-result-reference-unit">${escape(reference.unit)}</span>` : ""}${reference.minimum ? `<small class="clcr-result-reference-minimum">Minimum: ${escape(reference.minimum)}${reference.unit ? " " + escape(reference.unit) : ""}</small>` : ""}</div></div><p class="clcr-result-interpretation">${escape(model.interpretation)}</p>${model.categoryRange ? `<p class="clcr-result-category-summary">Zakres oszacowania: ${escape(model.category.code)} · ${escape(model.categoryRange)}</p>` : ""}${model.ageContextComment ? `<p class="clcr-result-category-summary clcr-neonatal-reference-note">${escape(model.ageContextComment)}</p>` : ""}</div>${model.assumptions ? `<p class="clcr-result-assumptions" data-clcr-formula="${escape(model.formulaId)}">${escape(model.assumptions)}</p>` : ""}${model.earlyLifeCaution ? `<div class="result-box warn-yellow clcr-neonatal-early-note" data-clcr-formula="${escape(model.formulaId)}" data-neonatal-early-note="true">${escape(model.earlyLifeCaution)}</div>` : ""}${model.populationNote ? `<p class="clcr-result-population-note clcr-result-source" data-clcr-formula="${escape(model.formulaId)}">${escape(model.populationNote)}</p>` : ""}${!averageConfig && populationSource ? `<p class="clcr-result-source" data-clcr-formula="${escape(model.formulaId)}">${populationSource}</p>` : ""}<details class="clcr-result-details" id="${detailsId}" data-clcr-formula="${escape(model.formulaId)}" tabindex="-1"><summary>${neonatalConfig ? escape(neonatalConfig.detailsSummary) : averageConfig ? escape(model.categories.length ? averageConfig.detailsSummary : averageConfig.detailsSummaryWithoutCategories) : model.reference.kind === "acr" ? "Szczegóły — kategorie A1–A3" : model.reference.kind === "gfr" ? "Szczegóły — kategorie G1–G5" : "Szczegóły i źródła"}</summary>${details}</details>`;
   }
   function bindCategoryControls(scope) {
     const target = scope || (typeof document !== "undefined" ? document : null);
