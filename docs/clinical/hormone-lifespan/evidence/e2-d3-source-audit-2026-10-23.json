@@ -1,0 +1,319 @@
+{
+  "schemaVersion": 1,
+  "status": "accepted educational E2 D3 implementation; not clinically validated reference",
+  "reviewedAt": "2026-10-23",
+  "repositoryContext": {
+    "baseAudytCommit": "ca25d8821e2c7f02137edb814228a4b806247b65"
+  },
+  "analyte": {
+    "id": "e2",
+    "name": "Estradiol",
+    "sourceUnit": "pg/mL"
+  },
+  "source": {
+    "id": "grisendi2014-e2-day3-literal-p50-19to44",
+    "authors": "Grisendi V, Spada E, Argento C, Plebani M, Milani S, Seracchioli R, Volpe A, La Marca A",
+    "title": "Age-specific reference values for serum FSH and estradiol levels throughout the reproductive period",
+    "journal": "Gynecological Endocrinology 2014;30(6):451–455",
+    "doi": "10.3109/09513590.2014.893572",
+    "url": "https://doi.org/10.3109/09513590.2014.893572",
+    "pmid": "24805832",
+    "fullSourceInspected": true,
+    "inspection": "User-supplied published full PDF, methods p452 and original Table2 p454/PDFpage5; both complete M column and anomalies visually inspected. CSV checked literally against extracted PDF text.",
+    "table": "Table2, age(years) and 50th(M) columns only",
+    "statistic": "Published modeled age-dependent median P50(M), CG-LMS; not an empirical median for each yearly subgroup, arithmetic mean, laboratory RI or individual longitudinal trajectory.",
+    "printedPrecisionPgMl": "0.001",
+    "sourceFiles": [
+      {
+        "sha256": "52ded459bb2b2b943e9f70dc739a0d070d757f60f1deb68da21df0b009f3602d",
+        "name": "grisendi-2014-user-fulltext.pdf"
+      },
+      {
+        "sha256": "be9a1722e9e3cf3a2f3ffd458a6a8d0d54ef95abaa2695cec3e8b5f6516b88e6",
+        "name": "T0002-10.3109_09513590.2014.893572.csv"
+      },
+      {
+        "sha256": "6f2087e7382e8c3b8589150416e8a4bdbf21fbfe570a3470f1421100f5392190",
+        "name": "statistical-fulltext-audit.json"
+      }
+    ],
+    "canonicalAgeP50PairsSha256": "a5ff5c1c5d3c836f9855e896f8d6e760793f825ca188856f7a5faca24aea50ae",
+    "canonicalEncoding": "UTF-8 compact JSON of numeric [ageYears,p50PgMl] pairs, ascending age, no final newline",
+    "noTrendEquationUsed": true,
+    "numericalVerification": {
+      "selectedNodes": 26,
+      "selectedMCellsCompatibleWithQuartilePairs": 26,
+      "literalCsvToPdfSelectedP50Matches": 26,
+      "linearCoherence": "Source-table coherence was checked in the prior audit only; no fitted trend equation or diagnostic witness coefficients are exported here.",
+      "notExternalValidation": true
+    },
+    "excludedSourceCells": {
+      "age18M": "Excluded due to printed P50 inconsistency; no substitution or interpolation through age18.",
+      "otherCentilesAndParameters": "Do not import P5/P25/P75/P95, L, S, SDS or RI. P5 at19/20 has separate anomalies that do not invalidate the selected M cells."
+    }
+  },
+  "population": {
+    "nWomen": 192,
+    "design": "Single-center cross-sectional selected clinical cohort, University of Modena, Italy; not a representative random population sample or independently validated fertility cohort.",
+    "reasonsForAttendance": {
+      "preconceptionCounselling": 103,
+      "contraceptionCounselling": 67,
+      "tubalSterilization": 22
+    },
+    "cycleLengthDays": [
+      25,
+      35
+    ],
+    "betweenCycleDifferenceDaysUpperExclusive": 5,
+    "bothOvariesRequired": true,
+    "exclusionsReported": [
+      "Sex hormone administration in the previous 6 months",
+      "Previous pelvic inflammatory disease or ovarian surgery",
+      "Known chronic systemic, metabolic or endocrine disease including hyperandrogenism"
+    ],
+    "ageMedianYears": 36,
+    "ageQuartilesYears": [
+      31.5,
+      39.8
+    ],
+    "yearlySampleCountsReported": false,
+    "notEstablished": "Individual ovulation confirmation, detailed pregnancy/lactation screening, sample counts per age, ethnic distribution and general assay transferability were not reported.",
+    "unknownHistoryPolicy": "Missing information does not establish absence of study exclusions. Do not reconstruct an obligatory full research eligibility questionnaire."
+  },
+  "samplingAndAssay": {
+    "sampleCycleDay": 3,
+    "specimen": "serum",
+    "assay": "Competitive chemiluminescent immunoassay",
+    "platform": "ADVIA Centaur",
+    "manufacturer": "Siemens Healthcare Diagnostics, Italy",
+    "sourceReportedSensitivityPgMl": 10,
+    "sensitivityTerminology": "Reported sensitivity only; formal LOD/LOQ definitions, derivation and reagent version were not provided.",
+    "lod": null,
+    "loq": null,
+    "intraAssayCvPercent": 3.1,
+    "interAssayCvPercent": 5,
+    "cvConcentrationsReported": false,
+    "sampleHandling": "Centrifugation at 2000 g for 10 minutes; serum stored at −80°C.",
+    "sourceCensoring": "Counts and handling of measurements below sensitivity/LOD/LOQ, imputation or exclusion were not reported. Do not infer no censoring.",
+    "patientMethodPolicy": "Source assay does not establish the patient specimen or method; no proven equivalence to LC-MS/MS or every modern immunoassay."
+  },
+  "nodes": [
+    {
+      "ageYears": 19,
+      "p50PgMl": 39.984,
+      "sourceLiteral": "39.984"
+    },
+    {
+      "ageYears": 20,
+      "p50PgMl": 41.47,
+      "sourceLiteral": "41.470"
+    },
+    {
+      "ageYears": 21,
+      "p50PgMl": 42.957,
+      "sourceLiteral": "42.957"
+    },
+    {
+      "ageYears": 22,
+      "p50PgMl": 44.444,
+      "sourceLiteral": "44.444"
+    },
+    {
+      "ageYears": 23,
+      "p50PgMl": 45.93,
+      "sourceLiteral": "45.930"
+    },
+    {
+      "ageYears": 24,
+      "p50PgMl": 47.417,
+      "sourceLiteral": "47.417"
+    },
+    {
+      "ageYears": 25,
+      "p50PgMl": 48.903,
+      "sourceLiteral": "48.903"
+    },
+    {
+      "ageYears": 26,
+      "p50PgMl": 50.39,
+      "sourceLiteral": "50.390"
+    },
+    {
+      "ageYears": 27,
+      "p50PgMl": 51.877,
+      "sourceLiteral": "51.877"
+    },
+    {
+      "ageYears": 28,
+      "p50PgMl": 53.363,
+      "sourceLiteral": "53.363"
+    },
+    {
+      "ageYears": 29,
+      "p50PgMl": 54.85,
+      "sourceLiteral": "54.850"
+    },
+    {
+      "ageYears": 30,
+      "p50PgMl": 56.336,
+      "sourceLiteral": "56.336"
+    },
+    {
+      "ageYears": 31,
+      "p50PgMl": 57.823,
+      "sourceLiteral": "57.823"
+    },
+    {
+      "ageYears": 32,
+      "p50PgMl": 59.31,
+      "sourceLiteral": "59.310"
+    },
+    {
+      "ageYears": 33,
+      "p50PgMl": 60.796,
+      "sourceLiteral": "60.796"
+    },
+    {
+      "ageYears": 34,
+      "p50PgMl": 62.283,
+      "sourceLiteral": "62.283"
+    },
+    {
+      "ageYears": 35,
+      "p50PgMl": 63.769,
+      "sourceLiteral": "63.769"
+    },
+    {
+      "ageYears": 36,
+      "p50PgMl": 65.256,
+      "sourceLiteral": "65.256"
+    },
+    {
+      "ageYears": 37,
+      "p50PgMl": 66.743,
+      "sourceLiteral": "66.743"
+    },
+    {
+      "ageYears": 38,
+      "p50PgMl": 68.229,
+      "sourceLiteral": "68.229"
+    },
+    {
+      "ageYears": 39,
+      "p50PgMl": 69.716,
+      "sourceLiteral": "69.716"
+    },
+    {
+      "ageYears": 40,
+      "p50PgMl": 71.202,
+      "sourceLiteral": "71.202"
+    },
+    {
+      "ageYears": 41,
+      "p50PgMl": 72.689,
+      "sourceLiteral": "72.689"
+    },
+    {
+      "ageYears": 42,
+      "p50PgMl": 74.176,
+      "sourceLiteral": "74.176"
+    },
+    {
+      "ageYears": 43,
+      "p50PgMl": 75.662,
+      "sourceLiteral": "75.662"
+    },
+    {
+      "ageYears": 44,
+      "p50PgMl": 77.149,
+      "sourceLiteral": "77.149"
+    }
+  ],
+  "authorization": {
+    "date": "2026-10-23",
+    "decision": "Owner accepted the private desktop/mobile E2 D3 mockup and instructed implementation: jest ok, koduj.",
+    "scope": "Selected literal P50 ages19–44; separate optional current-E2 D3 educational block only. No new laboratory RI, SDS, percentile, ovarian-reserve interpretation or historical reassessment.",
+    "mockupUrl": "https://vilda-e2-d3-makieta.maciej-flader.chatgpt.site"
+  },
+  "acceptedApplicationPolicy": {
+    "ageDomain": {
+      "minYears": 19,
+      "maxYears": 44,
+      "minInclusive": true,
+      "maxInclusive": true,
+      "wholePossibleAgeIntervalMustFit": true,
+      "endpointRule": "Exact44 is eligible. [44,45) is not. [43,44) is eligible. No extrapolation or terminal plateau after44. Age18 and intervals extending below19 are excluded.",
+      "ageMeaning": "Published table knots, not proof that numerical recruitment/observed extrema equal these endpoints; source inclusion16–45 and discussion<45 differ from table16–44."
+    },
+    "referenceAtEnteredAge": {
+      "basis": "entered-age-lower-bound",
+      "exactIntegerAge": "Return literal published M at its knot.",
+      "fractionalAge": "Linear interpolation only between adjacent selected literal M nodes inside[19,44], labeled interpolated; application policy, not a recovered author equation.",
+      "uncertainAge": "Display for entered lower boundary only after the complete age interval qualifies; do not invent date of birth or choose interval midpoint."
+    },
+    "defaultState": "Display clearly named source median for qualifying age without requiring day3; do not draw a patient point or imply matched sampling.",
+    "sampleDayAnswer": {
+      "scope": "Current E2 result for the same person only",
+      "values": [
+        "unknown",
+        "day3",
+        "other"
+      ],
+      "promptPl": "Czy ten wynik E2 pochodzi z 3. dnia cyklu?",
+      "mandatory": false,
+      "inheritFromFsh": false,
+      "sameDrawRule": "A shared D3 fact requires explicit confirmation of same person and same blood draw. Merely switching FSH→E2 does not confirm this; for this block clear the local D3 answer on analyte/result/person/context change."
+    },
+    "patientPoint": "Optional educational juxtaposition only after explicit D3 confirmation for the current E2 result, a qualifying whole age interval, an exact numerical result and otherwise compatible current context. No ratio, SDS, centile position, laboratory verdict or ovarian-reserve diagnosis.",
+    "phaseRule": "Known follicular or unknown broad phase cannot itself prove D3. Explicit D3 with known ovulation/luteal phase is conflicting; no patient point and do not silently change the phase.",
+    "knownIncompatibilities": "Known pregnancy, menopause, hormonal treatment/GnRHa, stimulation, incompatible specimen/method or unavailable/historical context withhold this block; these are conservative application gates, not all literal paper exclusions.",
+    "unknownMethodOrHistory": "Unknown remains unknown. It may allow limited source information under the accepted educational contract; it never confirms assay match or negative history.",
+    "censoredPatientResults": {
+      "inequalities": "Preserve<,>,≤,≥ and laboratory threshold with proper unit conversion; do not turn threshold into exact concentration or plot a precise patient point.",
+      "symbolicLodLoq": "Preserve<LOD/<LOQ with unknown numerical boundary; do not substitute historical assay sensitivity10pg/mL.",
+      "imputation": "Never replace with0, half threshold, threshold or10pg/mL.",
+      "sourceMedianMayRemainVisible": true
+    },
+    "presentation": {
+      "titlePl": "Estradiol — mediana w 3. dniu cyklu",
+      "referenceLabelPl": "Opublikowana mediana E2 dla wpisanego wieku (dzień 3)",
+      "statisticExplanationPl": "Mediana modelu wieku z badania Grisendi2014; nie jest zakresem referencyjnym ani oceną rezerwy jajnikowej.",
+      "noDay3MessagePl": "Nie potwierdzono 3. dnia cyklu dla tego wyniku E2 — pokazujemy wyłącznie dane badania.",
+      "censoredMessagePl": "Dokładne stężenie nie jest znane; wynik zachowuje znak nierówności.",
+      "forbiddenClaims": [
+        "norma E2",
+        "prawidłowa/nieprawidłowa rezerwa",
+        "dobry/zły wynik na podstawie mediany",
+        "wiek jajników",
+        "szansa ciąży",
+        "procent pozostałych komórek jajowych",
+        "validated clinical reference"
+      ]
+    },
+    "history": "No proposal to persist day3 answer or new E2 reference in lab.hormoneReference, pinned assessment or historical schema. No reassessment of saved results with current age/context.",
+    "preserveExisting": "Existing E2 phase information, laboratory ranges/result conversion and lifespan educational geometry remain separate contracts.",
+    "measurementUnitPolicy": {
+      "basis": "All five units already supported by the production E2 converter; no new conversion coefficient.",
+      "canonicalUnit": "pg/mL",
+      "conversion": "sourceValue = measurement.value / divisorToSource",
+      "divisorsToSource": {
+        "pg/mL": 1,
+        "pmol/L": 3.671,
+        "nmol/L": 0.003671,
+        "ng/L": 1,
+        "ng/dL": 0.1
+      },
+      "verifiedProductionFactorsToSi": {
+        "pmol/L": 1,
+        "nmol/L": 1000,
+        "pg/mL": 3.671,
+        "ng/L": 3.671,
+        "ng/dL": 36.71
+      },
+      "inequalities": "Apply the same positive scaling to a numerical limit, retaining the operator. Symbolic LOD/LOQ remain unquantified."
+    }
+  },
+  "productionDataFile": "docs/clinical/hormone-lifespan/e2-d3-data.json",
+  "runtimeField": "VildaHormoneLifespanData.e2D3Data",
+  "verificationStatus": "Source audit complete; production-function, browser, PWA and final-SHA GitHub validation are reported by the integrating PR, not asserted here."
+}

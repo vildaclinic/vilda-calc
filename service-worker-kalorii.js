@@ -19,7 +19,7 @@
  *   bo i tak chcemy zwracać HTML z cache natychmiast.
  */
 
-const SW_VERSION = '1.1.353';
+const SW_VERSION = '1.1.354';
 const CACHE_PREFIX = 'pwa-kalorii';
 const SHELL_CACHE = `${CACHE_PREFIX}-shell-v${SW_VERSION}`;
 const RUNTIME_CACHE = `${CACHE_PREFIX}-runtime`;
@@ -1987,6 +1987,7 @@ const OPTIONAL_ASSETS = [
   '/vilda_hormone_lifespan_data.js?v=37',
   '/vilda_hormone_lifespan_data.js?v=38',
   '/vilda_hormone_lifespan_data.js?v=39',
+  '/vilda_hormone_lifespan_data.js?v=40',
   '/vilda_hormone_lifespan_reference.js?v=1',
   '/vilda_hormone_lifespan_reference.js?v=2',
   '/vilda_hormone_lifespan_reference.js?v=3',
@@ -2010,6 +2011,9 @@ const OPTIONAL_ASSETS = [
   '/vilda_fsh_d3.js?v=1',
   '/vilda_fsh_d3_ui.js?v=1',
   '/vilda_fsh_d3_ui.css?v=1',
+  '/vilda_e2_d3.js?v=1',
+  '/vilda_e2_d3_ui.js?v=1',
+  '/vilda_e2_d3_ui.css?v=1',
   '/vilda_hormone_lifespan_display.js?v=1',
   '/vilda_hormone_lifespan_display.js?v=2',
   '/vilda_hormone_lifespan_display.js?v=3',

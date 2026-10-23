@@ -39815,6 +39815,292 @@ const fshD3Data = {
     }
   }
 };
+const e2D3Data = {
+  "version": "2026-10-23.1",
+  "kind": "published-age-median-information",
+  "analyte": "estradiol",
+  "sex": "female",
+  "unit": "pg/mL",
+  "ageDomain": {
+    "min": 19,
+    "max": 44,
+    "minimumInclusive": true,
+    "maximumInclusive": true
+  },
+  "placement": {
+    "kind": "application-adult-placement",
+    "minimumAgeYearsExclusive": 18,
+    "description": "Reguła umieszczenia przy dorosłej kobiecie nie poszerza źródła. Wybrana, sprawdzona kolumna E2 obejmuje wyłącznie wiek 19–44 lata; cały możliwy przedział musi pasować."
+  },
+  "knots": [
+    {
+      "ageYears": 19,
+      "median": 39.984,
+      "sourceLiteral": "39.984"
+    },
+    {
+      "ageYears": 20,
+      "median": 41.47,
+      "sourceLiteral": "41.470"
+    },
+    {
+      "ageYears": 21,
+      "median": 42.957,
+      "sourceLiteral": "42.957"
+    },
+    {
+      "ageYears": 22,
+      "median": 44.444,
+      "sourceLiteral": "44.444"
+    },
+    {
+      "ageYears": 23,
+      "median": 45.93,
+      "sourceLiteral": "45.930"
+    },
+    {
+      "ageYears": 24,
+      "median": 47.417,
+      "sourceLiteral": "47.417"
+    },
+    {
+      "ageYears": 25,
+      "median": 48.903,
+      "sourceLiteral": "48.903"
+    },
+    {
+      "ageYears": 26,
+      "median": 50.39,
+      "sourceLiteral": "50.390"
+    },
+    {
+      "ageYears": 27,
+      "median": 51.877,
+      "sourceLiteral": "51.877"
+    },
+    {
+      "ageYears": 28,
+      "median": 53.363,
+      "sourceLiteral": "53.363"
+    },
+    {
+      "ageYears": 29,
+      "median": 54.85,
+      "sourceLiteral": "54.850"
+    },
+    {
+      "ageYears": 30,
+      "median": 56.336,
+      "sourceLiteral": "56.336"
+    },
+    {
+      "ageYears": 31,
+      "median": 57.823,
+      "sourceLiteral": "57.823"
+    },
+    {
+      "ageYears": 32,
+      "median": 59.31,
+      "sourceLiteral": "59.310"
+    },
+    {
+      "ageYears": 33,
+      "median": 60.796,
+      "sourceLiteral": "60.796"
+    },
+    {
+      "ageYears": 34,
+      "median": 62.283,
+      "sourceLiteral": "62.283"
+    },
+    {
+      "ageYears": 35,
+      "median": 63.769,
+      "sourceLiteral": "63.769"
+    },
+    {
+      "ageYears": 36,
+      "median": 65.256,
+      "sourceLiteral": "65.256"
+    },
+    {
+      "ageYears": 37,
+      "median": 66.743,
+      "sourceLiteral": "66.743"
+    },
+    {
+      "ageYears": 38,
+      "median": 68.229,
+      "sourceLiteral": "68.229"
+    },
+    {
+      "ageYears": 39,
+      "median": 69.716,
+      "sourceLiteral": "69.716"
+    },
+    {
+      "ageYears": 40,
+      "median": 71.202,
+      "sourceLiteral": "71.202"
+    },
+    {
+      "ageYears": 41,
+      "median": 72.689,
+      "sourceLiteral": "72.689"
+    },
+    {
+      "ageYears": 42,
+      "median": 74.176,
+      "sourceLiteral": "74.176"
+    },
+    {
+      "ageYears": 43,
+      "median": 75.662,
+      "sourceLiteral": "75.662"
+    },
+    {
+      "ageYears": 44,
+      "median": 77.149,
+      "sourceLiteral": "77.149"
+    }
+  ],
+  "source": {
+    "id": "grisendi2014-e2-day3-literal-p50-19to44",
+    "label": "Grisendi 2014 · E2 D3",
+    "citation": "Grisendi V, Spada E, Argento C, Plebani M, Milani S, Seracchioli R, Volpe A, La Marca A. Age-specific reference values for serum FSH and estradiol levels throughout the reproductive period. Gynecological Endocrinology. 2014;30(6):451–455. DOI: 10.3109/09513590.2014.893572. Tabela 2, s. 454, kolumna 50th (M); metody s. 452.",
+    "url": "https://doi.org/10.3109/09513590.2014.893572",
+    "population": "192 regularnie miesiączkujące pacjentki jednego ośrodka w Modenie: 103 porady przedkoncepcyjne, 67 antykoncepcyjnych i 22 zgłoszenia w sprawie sterylizacji jajowodowej. Cykle 25–35 dni ze zmiennością <5 dni, oba jajniki. Wyłączano podawanie hormonów płciowych w poprzednich 6 miesiącach, przebyte zapalenie narządów miednicy lub operację jajników oraz znane przewlekłe choroby układowe, metaboliczne i endokrynne, w tym hiperandrogenizm.",
+    "method": "Estradiol: kompetycyjny test chemiluminescencyjny ADVIA Centaur, Siemens Healthcare Diagnostics, Italy. Podana czułość 10 pg/mL; CV wewnątrz- i międzyseryjny 3,1% i 5,0%. Metoda źródła nie ustala metody próbki pacjentki.",
+    "specimen": "Surowica pobrana w 3. dniu cyklu. W badaniu FSH i estradiol oznaczano z jednego pobrania; nie potwierdza to wspólnego pobrania wyników wpisanych przez użytkownika.",
+    "statistic": "Opublikowana mediana P50 (M) estradiolu dla wieku w 3. dniu cyklu z przekrojowego modelu CG-LMS. Import obejmuje wyłącznie 26 literalnych wartości kolumny 50th (M), wiek 19–44 lata. Między sąsiednimi węzłami aplikacja stosuje jawną interpolację liniową; nie odtwarza równania autorów ani parametrów L/S.",
+    "phaseDefinition": "Dokładnie 3. dzień cyklu; wybrana faza folikularna nie potwierdza sama dnia 3 dla danego pobrania.",
+    "limitsDescription": "Autorzy podają sensitivity 10 pg/mL, bez formalnej definicji LOD/LOQ oraz bez opisu cenzurowania, imputacji lub wykluczania niskich wyników. Ta historyczna czułość nie jest domniemaną granicą rzeczywistego wyniku. Wynik z nierównością nie otrzymuje dokładnego punktu.",
+    "ageDescription": "Kryteria włączenia mówią 16–45 lat, dyskusja o kobietach poniżej 45 lat, a tabela zawiera węzły 16–44. Dla E2 wybrano spójne P50 wieku 19–44; rozbieżny węzeł 18 pominięto. Bez ekstrapolacji lub interpolacji przez 18. Mediana odnosi się do wprowadzonej dolnej granicy wieku, przy zachowaniu całego możliwego przedziału w granicach źródła.",
+    "limitations": [
+      "Badanie przekrojowe jednej wybranej grupy; brak obserwacji indywidualnego tempa zmian i niezależnej walidacji prognozy ciąży lub menopauzy.",
+      "P50 jest medianą modelu wieku w badaniu, nie empiryczną medianą rocznej podgrupy, granicą normy laboratoryjnej ani miarą rezerwy jajnikowej. Nie ustala płodności lub wieku jajników.",
+      "W tabeli 2 P50 dla 18 lat jest niespójna z sąsiednimi węzłami i innymi kwartylami. Wykluczamy ją bez poprawiania druku. Osobne rozbieżności P5 wieku 19/20 nie są importowane.",
+      "Import obejmuje tylko wybrane M. Nie importujemy parametrów L/S, P5/P25/P75/P95, SDS, percentyla wyniku ani zakresu referencyjnego. Zgodność 26 komórek jest kontrolą wewnętrzną, nie walidacją kliniczną.",
+      "Liniowa interpolacja sąsiednich opublikowanych median jest jawną polityką aplikacji. Nie dopasowujemy współczynników do całej kolumny; nie wyznaczamy domniemanej daty urodzenia ani środka niepewnego wieku.",
+      "Nieznany kontekst pozostaje nieznany. D3 potwierdza wyłącznie dzień ocenianego wyniku E2, nie zgodność z metodą i całą kohortą. Nie dziedziczymy D3 z FSH ani z innego wyniku bez potwierdzenia tego samego pobrania.",
+      "Surowica i historyczny ADVIA Centaur nie otrzymują kalibracji do innych oznaczeń przez samą zgodność jednostek. Znane niezgodności ograniczają prezentację; nie dodajemy obowiązkowej ankiety o wyłączenia."
+    ],
+    "printedUnit": "pg/ml",
+    "displayUnit": "pg/mL",
+    "verifiedOn": "2026-10-23",
+    "fullTextSha256": "52ded459bb2b2b943e9f70dc739a0d070d757f60f1deb68da21df0b009f3602d"
+  },
+  "policy": {
+    "notClinicalReference": true,
+    "noClinicalClassification": true,
+    "medianOnly": true,
+    "fullAgeIntervalRequired": true,
+    "ordinaryOnly": true,
+    "chartSelectionKey": "e2",
+    "interpolation": "linear-between-published-knots",
+    "ageReferenceBasis": "entered-age-lower-bound",
+    "cycleDayValues": [
+      "unknown",
+      "day3",
+      "other"
+    ],
+    "comparisonCyclePhases": [
+      "unknown",
+      "follicular"
+    ],
+    "measurementUnits": [
+      "pg/mL",
+      "pmol/L",
+      "nmol/L",
+      "ng/L",
+      "ng/dL"
+    ],
+    "allowedAssayMethodIds": [
+      "advia-centaur-e2",
+      "siemens-advia-centaur-e2",
+      "siemens-advia-centaur-e2-clia",
+      "siemens-advia-centaur",
+      "advia-centaur"
+    ],
+    "allowedSpecimens": [
+      "serum",
+      "surowica"
+    ],
+    "excludedCyclePhases": [
+      "pregnancy",
+      "pregnancy_t1",
+      "pregnancy_t2",
+      "pregnancy_t3",
+      "postmenopause"
+    ],
+    "excludedPositiveFlags": [
+      "pregnancy",
+      "hormonalTreatment",
+      "stimulation",
+      "gnrha"
+    ],
+    "excludedTreatmentContexts": [
+      "hormonal",
+      "stimulation",
+      "gnrh-stimulation",
+      "hcg-stimulation"
+    ],
+    "excludedTreatmentFlags": [
+      "gnrha",
+      "sexSteroids",
+      "cocp",
+      "exogenousTestosterone"
+    ],
+    "allowedMeasurementKinds": [
+      "basal"
+    ],
+    "plot": {
+      "ageMin": 19,
+      "ageMax": 44,
+      "ageTicks": [
+        19,
+        25,
+        30,
+        35,
+        40,
+        44
+      ],
+      "valueMin": 0,
+      "valueMax": 100,
+      "valueTicks": [
+        0,
+        25,
+        50,
+        75,
+        100
+      ],
+      "unit": "pg/mL",
+      "independentOfPatient": true
+    },
+    "measurementConversions": [
+      {
+        "unit": "pg/mL",
+        "divisorToSource": 1
+      },
+      {
+        "unit": "pmol/L",
+        "divisorToSource": 3.671
+      },
+      {
+        "unit": "nmol/L",
+        "divisorToSource": 0.003671
+      },
+      {
+        "unit": "ng/L",
+        "divisorToSource": 1
+      },
+      {
+        "unit": "ng/dL",
+        "divisorToSource": 0.1
+      }
+    ]
+  }
+};
 const fshCycleDisplayPolicy = {
   "id": "female-fsh-cycle-axis-v1",
   "version": "2026-10-22.1",
@@ -42181,6 +42467,7 @@ return {
   e2PhaseSourceData: e2PhaseSourceData,
   fshSourceData: fshSourceData,
   fshD3Data: fshD3Data,
+  e2D3Data: e2D3Data,
   fshCycleDisplayPolicy: fshCycleDisplayPolicy,
   insl3DisplayPolicy: insl3DisplayPolicy,
   femaleGonadotropinPolicy: femaleGonadotropinPolicy,
