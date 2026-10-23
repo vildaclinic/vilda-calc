@@ -92,12 +92,12 @@ test('opóźnione odtworzenie eGFR → ACR synchronizuje aktywną ścieżkę i p
   await expect(page.locator('#U_Alb')).toHaveValue('42');
   await expect(page.locator('#Ucr_spot')).toBeVisible();
   await expect(page.locator('#Ucr_spot')).toHaveValue('100');
-  await expect(page.locator('#ui_spotSameSpecimen_answer')).toHaveValue(
-    'unknown'
-  );
-  await expect(page.locator('#clcrReadiness')).toContainText(
-    'wymaga potwierdzenia'
-  );
+  await expect(page.locator('#ACR_same_specimen')).toHaveValue('');
+  expect(await page.evaluate(() => window.buildClcrSessionSnapshot().inputs.ui_spotSameSpecimen_answer)).toBe('unknown');
+  // Nieznane wspólne pochodzenie jest opisanym założeniem ACR, nie pytaniem blokującym liczbę.
+  await expect(page.locator('#ACR_entry_mode')).toHaveValue('concentration');
+  await expect(page.locator('[data-clcr-series="ACR"]')).toHaveAttribute('data-clcr-value', '42');
+  await expect(page.locator('#clcrReadiness')).toBeHidden();
 
   await applySnapshot(page, {
     version: 1,
@@ -113,7 +113,9 @@ test('opóźnione odtworzenie eGFR → ACR synchronizuje aktywną ścieżkę i p
       spotSameSpecimen: true,
     },
   });
-  await expect(page.locator('#ui_spotSameSpecimen_answer')).toHaveValue('yes');
+  await expect(page.locator('#spotSameSpecimen')).toBeChecked();
+  const restoredAcr = await page.locator('[data-clcr-series="ACR"]').getAttribute('data-clcr-acr-snapshot');
+  expect(JSON.parse(restoredAcr).context.sameSpecimen).toBe('confirmed');
   await expect(page.locator('#Scr')).toBeHidden();
 });
 

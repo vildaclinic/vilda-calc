@@ -1,6 +1,10 @@
 import { expect, test } from '@playwright/test';
 
 async function openFieldDetails(page, selector) {
+  if (['#age', '#ageMonths'].includes(selector)) {
+    const ageEdit = page.locator('.acr-patient-age__edit');
+    if (await ageEdit.isVisible() && await ageEdit.getAttribute('aria-expanded') === 'false') await ageEdit.click();
+  }
   for (const details of await page.locator(selector).locator('xpath=ancestor::details').all()) {
     if (await details.getAttribute('open') === null) {
       await details.locator(':scope > summary').click();
@@ -73,13 +77,12 @@ test('globalna wyszukiwarka ACR otwiera osobną ścieżkę próbki moczu', async
   await expect(
     page.locator('.clcr-field[data-clcr-field-id="U_Alb"]')
   ).toHaveAttribute('data-clcr-status', 'required');
-  await expect(
-    page.locator('.clcr-field[data-clcr-field-id="U_Prot_spot"]')
-  ).toHaveAttribute('data-clcr-status', 'optional');
-  await expect(page.locator('#ui_spotSameSpecimen_answer')).toBeVisible();
+  await expect(page.locator('#ui_spotSameSpecimen_answer')).toBeHidden();
+  await expect(page.locator('#ACR_entry_mode')).toHaveValue('concentration');
+  await expect(page.locator('#U_Alb_unit')).toBeVisible();
   await expect(page.locator('#spotSampleKind')).toBeHidden();
-  await openFieldDetails(page, '#U_Prot_spot');
-  await expect(page.locator('#U_Prot_spot')).toBeVisible();
+  await openFieldDetails(page, '#spotSampleKind');
+  await expect(page.locator('#U_Prot_spot')).toBeHidden();
   await expect(page.locator('#spotSampleKind')).toBeVisible();
   await expect(page.locator('#U_ACR')).toBeHidden();
   await expect(page.locator('#U_PCR')).toBeHidden();
@@ -105,7 +108,7 @@ test('czynniki zakłócające i opcjonalny kontekst ograniczają tylko interpret
   await selectFromSearch(page, 'ACR', 'ACR');
   await page.locator('#U_Alb').fill('42');
   await page.locator('#Ucr_spot').fill('100');
-  await page.locator('#ui_spotSameSpecimen_answer').selectOption('yes');
+  await expect(page.locator('#ACR_entry_mode')).toHaveValue('concentration');
   await openFieldDetails(page, '#spotSampleKind');
   await page.locator('#spotSampleKind').selectOption('firstMorning');
   await openFieldDetails(page, '#age');

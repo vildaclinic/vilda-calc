@@ -73,6 +73,7 @@ Przed zmianą danych, łączenia źródeł, wygładzania, skal lub punktu pacjen
   - `vilda_estimated_intake_dom_mount.js` — montowanie w DOM.
 - `calcEstimatedIntake()` pozostaje orkiestratorem. Nie łącz ponownie tych warstw i nie zmieniaj przy refaktoryzacji JSON, persistence, autosave ani synchronizacji.
 - Większe zmiany UI najpierw przedstaw jako makietę desktopową i mobilną, jeżeli właściciel nie poleci inaczej.
+- Przy kolejnych poprawkach Klirensu stosuj [ustalone zasady interfejsu](docs/clinical/KLIRENS_UI_GUIDE.md): stałe szerokości, wyrównanie, równe odstępy, symetrię i jeden wynik z czytelną normą. Dokument utrwala decyzje właściciela z audytu.
 
 ## 6. PWA i wersjonowanie
 

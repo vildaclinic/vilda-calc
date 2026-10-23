@@ -86,7 +86,7 @@ test('opisuje Cockcrofta–Gaulta jako eCrCl z jawną polityką masy', async ({ 
   await expect(page.locator('#clcrInfo')).not.toContainText('Kategoria GFR');
 });
 
-test('liczy pediatryczne ACR i PCR tylko ze wspólnej próbki i stosuje właściwy próg wieku', async ({ page }) => {
+test('liczy pediatryczne ACR i PCR, zachowuje warunek wspólnej próbki i próg wieku', async ({ page }) => {
   await openCalculator(page, 'spot');
   await setPatient(page, { age: 3, weight: 15, height: 98 });
   await page.locator('#spotSampleKind').selectOption('firstMorning');
@@ -108,11 +108,20 @@ test('liczy pediatryczne ACR i PCR tylko ze wspólnej próbki i stosuje właści
   await expect(page.locator('#clcrInfo')).not.toContainText('wymaga powtórnego potwierdzenia');
 
   await page.locator('#spotSameSpecimen').uncheck();
-  await expect(page.locator('#U_ACR')).toHaveValue('');
+  // ACR zakłada wspólną próbkę przy braku odpowiedzi; PCR zachowuje swój protokół.
+  await expect(page.locator('#U_ACR')).toHaveValue('30.0');
   await expect(page.locator('#U_PCR')).toHaveValue('');
+  // Jawna informacja o różnych próbkach musi nadal blokować iloraz ACR.
+  await page.evaluate(() => {
+    const specimen = document.getElementById('ACR_same_specimen');
+    specimen.value = 'different';
+    specimen.dispatchEvent(new Event('change', { bubbles: true }));
+    window.clcrUpdate();
+  });
+  await expect(page.locator('#U_ACR')).toHaveValue('');
 });
 
-test('wstrzymuje kategorię A dla losowego ACR dorosłego', async ({ page }) => {
+test('porównuje losowy ACR dorosłego z kategorią A2 i wskazuje potrzebę potwierdzenia', async ({ page }) => {
   await openCalculator(page, 'spot');
   await setPatient(page, { age: 50 });
   await page.locator('#spotSampleKind').selectOption('random');
@@ -121,9 +130,10 @@ test('wstrzymuje kategorię A dla losowego ACR dorosłego', async ({ page }) => 
   await page.locator('#U_Alb').fill('100');
 
   await expect(page.locator('#clcrInfo')).toContainText(/100[.,]0/);
-  await expect(page.locator('#clcrInfo')).toContainText('kategoria A jest wstrzymana');
-  await expect(page.locator('[data-clcr-series="ACR"]')).toHaveAttribute('data-clcr-category', '');
-  await expect(page.locator('.clcr-result-details[data-clcr-formula="ACR"] [aria-current="true"]')).toHaveCount(0);
+  await expect(page.locator('[data-clcr-series="ACR"]')).toHaveAttribute('data-clcr-category', 'A2');
+  await expect(page.locator('[data-clcr-series="ACR"]')).toHaveAttribute('data-clcr-tone', 'warning');
+  await expect(page.locator('#clcrInfo')).toContainText(/potwierdzeni/i);
+  await expect(page.locator('.clcr-result-details[data-clcr-formula="ACR"] [aria-current="true"]')).toHaveCount(1);
 });
 
 test('nie przypisuje kategorii A KDIGO dziecku przed 2. rokiem życia', async ({ page }) => {

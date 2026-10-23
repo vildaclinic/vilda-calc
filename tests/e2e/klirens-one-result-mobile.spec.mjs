@@ -39,9 +39,12 @@ for (const width of [320, 390]) {
     for (const [selector, value, kind] of [
       ['#age', '50', 'fill'],
       ['#spotSampleKind', 'firstMorning', 'selectOption'],
-      ['#ui_spotSameSpecimen_answer', 'yes', 'selectOption'],
     ]) {
       const field = page.locator(selector);
+      if (['#age', '#ageMonths'].includes(selector)) {
+        const ageEdit = page.locator('.acr-patient-age__edit');
+        if (await ageEdit.isVisible() && await ageEdit.getAttribute('aria-expanded') === 'false') await ageEdit.click();
+      }
       for (const details of await field.locator('xpath=ancestor::details').all()) {
         if (await details.getAttribute('open') === null) await details.locator(':scope > summary').click();
       }

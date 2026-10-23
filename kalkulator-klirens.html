@@ -177,6 +177,7 @@
     <script defer src="https://cdn.jsdelivr.net/npm/docx@7.7.0/build/index.js" integrity="sha384-w/LllGhZ3w+q1yFNKaoeSozJlt4DKDgPzR/QqsYJ/de7QdUKPayy2iETdCFxEscy" crossorigin="anonymous"></script>
 <script defer src="vilda_chrome.js?v=170"></script>
 <link href="clcr_ui_workflow.css?v=16" rel="stylesheet" />
+<link href="clcr_acr_ui.css?v=1" rel="stylesheet" />
 <link href="vilda_lab_assessment_ui.css?v=12" rel="stylesheet">
 <link href="vilda_lab_history_tab.css?v=4" rel="stylesheet">
 </head>
@@ -398,6 +399,20 @@
 
         <!-- Parametry z próbki moczu (nowa sekcja) -->
         <fieldset id="spotSet" class="advanced-field pro-field"><legend>Parametry z próbki moczu</legend>
+          <input type="hidden" id="ACR_entry_mode" value="concentration" />
+          <label>ACR z laboratorium:
+            <input type="text" inputmode="decimal" id="ACR_reported" autocomplete="off" />
+          </label>
+          <label>Jednostka ACR:
+            <select id="ACR_reported_unit"><option value="mg/g">mg/g</option><option value="mg/mmol">mg/mmol</option></select>
+          </label>
+          <label>Pochodzenie oznaczeń:
+            <select id="ACR_same_specimen">
+              <option value="">Z tej samej próbki — założenie</option>
+              <option value="confirmed">Potwierdzono tę samą próbkę</option>
+              <option value="different">Wyniki z różnych próbek</option>
+            </select>
+          </label>
           <label>Rodzaj próbki moczu:
             <select id="spotSampleKind">
               <option value="" selected>— nie określono —</option>
@@ -420,10 +435,14 @@
             <select id="Ucr_spot_unit">
               <option value="mg/dl" selected>mg/dl</option>
               <option value="umol">µmol/L</option>
+              <option value="mmol/L">mmol/L</option>
             </select>
           </label>
           <label>Albumina w próbce moczu (mg/L):
             <input type="number" step="0.1" id="U_Alb" />
+          </label>
+          <label>Jednostka albuminy w moczu:
+            <select id="U_Alb_unit"><option value="mg/L">mg/L</option><option value="mg/dL">mg/dL</option></select>
           </label>
           <label>Albumina/kreatynina (ACR, mg/g):
             <input type="number" step="0.1" id="U_ACR" readonly />
@@ -875,10 +894,13 @@
     <script defer src="clcr_extended_egfr.js?v=1"></script>
     <script defer src="clcr_calculation_assumptions.js?v=2"></script>
     <script defer src="clcr_result_reference_data.js?v=7"></script>
+    <script defer src="clcr_acr_reference_data.js?v=1"></script>
+    <script defer src="clcr_acr.js?v=1"></script>
+    <script defer src="clcr_acr_ui.js?v=1"></script>
     <script defer src="clcr_measured_clearance_reference_data.js?v=1"></script>
     <script defer src="clcr_measured_clearance_reference.js?v=1"></script>
     <script defer src="clcr_result_presentation.js?v=7"></script>
-    <script defer src="inline_kalkulator_klirens_02.js?v=11"></script>
+    <script defer src="inline_kalkulator_klirens_02.js?v=12"></script>
     <!-- Ujednolicona obsługa wyboru formuły w kalkulatorze klirensu/eGFR. -->
     <script defer src="inline_kalkulator_klirens_03.js?v=1"></script>
 <!-- Sekcja interpretacji AI z opisem i przyciskiem.  Umieszczamy ją w kontenerze
@@ -945,7 +967,7 @@
 </footer>
 
 <!-- 5. LOGIKA JS -->
-<script defer src="inline_kalkulator_klirens_04.js?v=16"></script>
+<script defer src="inline_kalkulator_klirens_04.js?v=17"></script>
 
 <!-- Moduł obsługi kliknięć listy dynamicznych wyników wyszukiwania -->
 <script defer src="inline_kalkulator_klirens_05.js?v=1"></script>
@@ -1541,7 +1563,7 @@ document.addEventListener('DOMContentLoaded', () => {
          wczytywane w tym formularzu. Plik userData.js korzysta z localStorage. -->
         <script src="userData.js?v=6" defer></script>
 <script src="ios26-ui.js?v=45" defer></script>
-<script defer src="inline_kalkulator_klirens_07.js?v=5"></script>
+<script defer src="inline_kalkulator_klirens_07.js?v=6"></script>
 <script defer src="vilda_down_syndrome.js?v=5"></script>
 <script defer src="vilda_anorexia_risk.js?v=4"></script>
 <!-- Tablice siatek zespolu Downa przed app.js: app.js przekazuje je silnikowi BMI (P-DS-1). -->
@@ -1799,6 +1821,6 @@ document.addEventListener('DOMContentLoaded', () => {
 </script>
 <script defer src="inline_kalkulator_klirens_08.js?v=1"></script>
   <script defer src="inline_kalkulator_klirens_09.js?v=1"></script>
-  <script defer src="clcr_ui_workflow.js?v=15"></script>
+  <script defer src="clcr_ui_workflow.js?v=16"></script>
 </body>
 </html>

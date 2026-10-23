@@ -514,6 +514,10 @@ function validateField(e) {
         e.classList.add("error"),
         !1
       );
+  } else if (n === "U_Alb" && $("U_Alb_unit")?.value === "mg/dL" && t * 10 > maxValues.U_Alb) {
+    if (o) o.textContent = "Wartość wydaje się zbyt wysoka";
+    e.classList.add("error");
+    return false;
   } else if (maxValues[n] !== void 0 && t > maxValues[n])
     return (
       o && (o.textContent = "Warto\u015B\u0107 wydaje si\u0119 zbyt wysoka"),
@@ -538,6 +542,7 @@ function validateClcrAgeContext(e) {
 function canComputeFormula(e) {
   const n = typeof FORMULAS < "u" ? FORMULAS.find((t) => t.id === e) : null;
   if (!n) return !1;
+  if (e === "ACR") return evaluateClcrAcr().valid === true;
   if (
     window.ClcrClinicalSafety &&
     typeof window.ClcrClinicalSafety.formulaSafety == "function"
@@ -596,6 +601,35 @@ function readClcrFormulaAge(formulaId) {
   return formulaId === "cg_norm" && typeof clinical.parseAge === "function"
     ? clinical.parseAge(document.getElementById("age")?.value || "", 0)
     : clinical.readAgeFromDocument(document);
+}
+// ACR has its own input source. A laboratory ratio never fabricates urine
+// concentrations, and an unchecked legacy checkbox is not a negative fact.
+function readClcrAcrInput({ concentrationOnly = false } = {}) {
+  const age = readClcrFormulaAge("ACR");
+  const specimen = $("ACR_same_specimen")?.value || "";
+  const legacyAnswer = $("ui_spotSameSpecimen_answer")?.value || "";
+  const legacyNo = legacyAnswer === "no";
+  return {
+    mode: !concentrationOnly && $("ACR_entry_mode")?.value === "direct" ? "direct" : "concentration",
+    albuminValue: $("U_Alb")?.value ?? "",
+    albuminUnit: $("U_Alb_unit") ? $("U_Alb_unit").value : "mg/L",
+    creatinineValue: $("Ucr_spot")?.value ?? "",
+    creatinineUnit: $("Ucr_spot_unit") ? $("Ucr_spot_unit").value : "mg/dl",
+    reportedValue: $("ACR_reported")?.value ?? "",
+    reportedUnit: $("ACR_reported_unit") ? $("ACR_reported_unit").value : "mg/g",
+    ageYears: age?.valid ? age.exactYears : null,
+    sameSpecimen: specimen === "different" ? "different" : specimen === "confirmed" ? "confirmed"
+      : legacyNo ? "different" : legacyAnswer === "unknown" ? "assumed"
+        : $("spotSameSpecimen")?.checked || legacyAnswer === "yes" ? "confirmed" : "assumed",
+    sampleType: $("spotSampleKind")?.value || "",
+    confounders: [["spotMenstruation", "menstruation"], ["spotHematuria", "hematuria"],
+      ["spotInfection", "infection"], ["spotExercise", "exercise"], ["spotAcuteIllness", "acuteIllness"]]
+      .filter(([id]) => !!$(id)?.checked).map(([, key]) => key),
+  };
+}
+function evaluateClcrAcr(options) {
+  return window.VildaClcrAcr?.evaluate(readClcrAcrInput(options), window.VildaClcrAcrReferenceData?.getProfile("KDIGO_ACR_2024"))
+    || { valid: false, reasonCode: "ACR_UNAVAILABLE" };
 }
 function clcrCgNormalizedDetails(ageYears, bsaM2, sources = []) {
   const ageUsed = Math.floor(ageYears);
@@ -757,10 +791,9 @@ function update() {
     _ && _ !== "" && N !== null && N > 0
       ? _ === "umol"
         ? N / 88.4
-        : N
+        : _ === "mmol/L" ? N * 1000 / 88.4 : _ === "mg/dl" ? N : null
       : null;
-  const f = +$("U_Alb").value,
-    spotProtein = +$("U_Prot_spot").value,
+  const spotProtein = +$("U_Prot_spot").value,
     F = readClcrOptionalNumber("Ca_spot"),
     g = $("Ca_spot_unit") ? $("Ca_spot_unit").value : "mg/dl";
   let E = null;
@@ -784,6 +817,7 @@ function update() {
         ? null
         : _ === "umol"
           ? N / 1000
+          : _ === "mmol/L" ? N
           : _ === "mg/dl"
             ? (N * 10) / 113.1179
             : null;
@@ -797,12 +831,9 @@ function update() {
     K = document.getElementById("Scr_spot_unit"),
     I = K ? K.value : "mg/dl";
   let j = null,
-    acrMgMmol = null,
     pcrValue = null,
     pcrMgMmol = null;
-  const albuminProvided =
-      $("U_Alb") && String($("U_Alb").value || "").trim() !== "",
-    proteinSpotProvided =
+  const proteinSpotProvided =
       $("U_Prot_spot") &&
       String($("U_Prot_spot").value || "").trim() !== "",
     sameSpotSpecimen = !!(
@@ -820,18 +851,9 @@ function update() {
     ]
       .filter(([id]) => !!$(id)?.checked)
       .map(([, label]) => label),
-    acrRatio =
-      sameSpotSpecimen &&
-      albuminProvided &&
-      window.ClcrClinicalSafety &&
-      typeof window.ClcrClinicalSafety.computeUrineAnalyteCreatinineRatio ==
-        "function"
-        ? window.ClcrClinicalSafety.computeUrineAnalyteCreatinineRatio({
-            analyteMgL: f,
-            urineCreatinine: N,
-            urineCreatinineUnit: _,
-          })
-        : null,
+    acrEvaluation = evaluateClcrAcr({ concentrationOnly: $("formulaPicker")?.value !== "ACR" }),
+    acrRatio = acrEvaluation.valid && acrEvaluation.mode === "concentration"
+      ? { mgG: acrEvaluation.rawValue, mgMmol: acrEvaluation.convertedValue } : null,
     pcrRatio =
       sameSpotSpecimen &&
       proteinSpotProvided &&
@@ -846,7 +868,6 @@ function update() {
         : null;
   acrRatio
     ? ((j = acrRatio.mgG),
-      (acrMgMmol = acrRatio.mgMmol),
       ($("U_ACR").value = j.toFixed(1)))
     : ($("U_ACR").value = "");
   pcrRatio
@@ -966,7 +987,7 @@ function update() {
   }
   const rt = o && d,
     dt = [...document.querySelectorAll("#clcrForm input")].some((i) =>
-      i.type === "checkbox" ? i.checked : (i.value || "").trim() !== "",
+      i.type === "hidden" ? false : i.type === "checkbox" ? i.checked : (i.value || "").trim() !== "",
     );
   let Ne = !1;
   {
@@ -1829,26 +1850,7 @@ function update() {
           }
           break;
         case "ACR":
-          if (isFiniteNum(j)) {
-            q(
-              "Albumina/kreatynina (ACR; próbka moczu)",
-              j,
-              "\u202Fmg/g",
-              "acr",
-              r,
-              "ACR",
-            );
-            q(
-              "Albumina/kreatynina (ACR; jednostka alternatywna)",
-              acrMgMmol,
-              "\u202Fmg/mmol",
-              "acr_mmol",
-              r,
-            );
-          } else if (l === "ACR" && !sameSpotSpecimen) {
-            S +=
-              '<div class="result-box warn-yellow" data-clcr-formula="ACR"><strong>Nie obliczono:</strong> potwierdź, że albumina i kreatynina pochodzą z tej samej próbki.</div>';
-          }
+          if (acrEvaluation.valid && window.ClcrAcrUi) S += window.ClcrAcrUi.renderResult(acrEvaluation);
           break;
         case "PCR":
           if (isFiniteNum(pcrValue)) {
@@ -1981,8 +1983,8 @@ function update() {
       else if (l === "neonatal_egfr" && selectedSafety.eligible)
         T({ includeG: !1, includeA: !1, includeBsa: !1 });
       else if (l === "ACR") {
-        T({ includeG: !1, includeA: !0 });
-        appendSpotRatioGuidance();
+        // Its single result already contains the category, confirmation advice
+        // and source context. PCR guidance belongs to the separate calculation.
       } else if (l === "PCR") {
         z();
         appendSpotRatioGuidance();

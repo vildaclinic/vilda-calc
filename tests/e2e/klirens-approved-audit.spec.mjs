@@ -35,6 +35,10 @@ async function selectFormula(page, formulaId) {
 }
 
 async function openFieldDetails(page, selector) {
+  if (['#age', '#ageMonths'].includes(selector)) {
+    const ageEdit = page.locator('.acr-patient-age__edit');
+    if (await ageEdit.isVisible() && await ageEdit.getAttribute('aria-expanded') === 'false') await ageEdit.click();
+  }
   for (const details of await page.locator(selector).locator('xpath=ancestor::details').all()) {
     if (await details.getAttribute('open') === null) {
       await details.locator(':scope > summary').click();
@@ -410,7 +414,7 @@ test('dorosły eGFR ma G4, Cockcroft pozostaje bez kategorii G, a ACR zachowuje 
   await page.locator('#U_Alb').fill('45');
   await page.locator('#Ucr_spot').fill('100');
   await selectField(page, '#spotSampleKind', 'firstMorning');
-  await selectField(page, '#ui_spotSameSpecimen_answer', 'yes');
+  await expect(page.locator('#ACR_entry_mode')).toHaveValue('concentration');
   const acr = await expectSingleResult(page, 'ACR', '45,0', 45);
   await expect(acr).toHaveAttribute('data-clcr-category', 'A2');
   await expect(acr).toHaveAttribute('data-clcr-tone', 'warning');

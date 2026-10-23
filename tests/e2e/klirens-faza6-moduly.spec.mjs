@@ -137,7 +137,7 @@ test('Faza 6 (spot): ACR — albumina/kreatynina zapisuje się do karty', async 
       Ucr_spot: '100',
       Ucr_spot_unit: 'mg/dl',
     },
-    ['spotSameSpecimen'],
+    [],
   );
 
   await expect(page.locator('[data-clcr-series="ACR"]')).toHaveCount(1);
