@@ -948,3 +948,21 @@ test('P-ODTWORZ-WIEK-4 (przegląd): ukryty DocPro ze starszą bazą nie nadpisuj
   expect(await start.evaluate(async (id) => { const u = (await window.VildaVault.getPatient(id)).snapshots[0].payload.user; return [u.age, u.ageMonths]; }, pid))
     .toEqual([16, 9]);
 });
+
+test('rzeczywista edycja po ustaleniu zapisanej wersji w pauzie odtwarzania kończy się niezapisanymi zmianami', async ({ page }) => {
+  test.setTimeout(120_000);
+  await otworz(page);
+  await zapiszPacjenta(page, NASTOLATEK);
+  // Publikacja referencji ma 150 ms. Najpierw kończymy ten etap życia zapisu,
+  // a następnie symulujemy krótką pauzę, którą może przedłużyć odtwarzanie.
+  await page.clock.runFor(300);
+  await expect.poll(() => stanZapisu(page)).toBe('saved');
+  await page.evaluate(() => { window.__vildaPersistPauseUntil = Date.now() + 1200; });
+  await page.locator('#weight').fill('60');
+  await page.clock.runFor(1600);
+  await expect.poll(() => stanZapisu(page)).toBe('saved');
+  await page.evaluate(() => { window.__vildaPersistPauseUntil = Date.now() + 1200; });
+  await page.locator('#weight').fill('63');
+  await expect.poll(() => stanZapisu(page)).toBe('dirty');
+  expect(await page.evaluate(() => window.collectUserData().user.weight)).toBe(63);
+});
