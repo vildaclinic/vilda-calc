@@ -178,6 +178,7 @@
 <script defer src="vilda_chrome.js?v=170"></script>
 <link href="clcr_ui_workflow.css?v=16" rel="stylesheet" />
 <link href="clcr_acr_ui.css?v=1" rel="stylesheet" />
+<link href="clcr_pcr_ui.css?v=1" rel="stylesheet" />
 <link href="vilda_lab_assessment_ui.css?v=12" rel="stylesheet">
 <link href="vilda_lab_history_tab.css?v=4" rel="stylesheet">
 </head>
@@ -413,6 +414,20 @@
               <option value="different">Wyniki z różnych próbek</option>
             </select>
           </label>
+          <input type="hidden" id="PCR_entry_mode" value="concentration" />
+          <label>PCR z laboratorium:
+            <input type="text" inputmode="decimal" id="PCR_reported" autocomplete="off" />
+          </label>
+          <label>Jednostka PCR:
+            <select id="PCR_reported_unit"><option value="mg/g">mg/g</option><option value="mg/mmol">mg/mmol</option><option value="mg/mg">mg/mg</option><option value="g/g">g/g</option></select>
+          </label>
+          <label>Pochodzenie oznaczeń PCR:
+            <select id="PCR_same_specimen">
+              <option value="">Z tej samej próbki — założenie</option>
+              <option value="confirmed">Potwierdzono tę samą próbkę</option>
+              <option value="different">Wyniki z różnych próbek</option>
+            </select>
+          </label>
           <label>Rodzaj próbki moczu:
             <select id="spotSampleKind">
               <option value="" selected>— nie określono —</option>
@@ -449,6 +464,9 @@
           </label>
           <label>Białko całkowite w próbce moczu (mg/L):
             <input type="number" step="0.1" id="U_Prot_spot" />
+          </label>
+          <label>Jednostka białka całkowitego w moczu:
+            <select id="U_Prot_spot_unit"><option value="mg/L">mg/L</option><option value="mg/dL">mg/dL</option><option value="g/L">g/L</option></select>
           </label>
           <label>Białko/kreatynina (PCR, mg/g):
             <input type="number" step="0.1" id="U_PCR" readonly />
@@ -897,10 +915,13 @@
     <script defer src="clcr_acr_reference_data.js?v=1"></script>
     <script defer src="clcr_acr.js?v=1"></script>
     <script defer src="clcr_acr_ui.js?v=1"></script>
+    <script defer src="clcr_pcr_reference_data.js?v=1"></script>
+    <script defer src="clcr_pcr.js?v=1"></script>
+    <script defer src="clcr_pcr_ui.js?v=1"></script>
     <script defer src="clcr_measured_clearance_reference_data.js?v=1"></script>
     <script defer src="clcr_measured_clearance_reference.js?v=1"></script>
     <script defer src="clcr_result_presentation.js?v=7"></script>
-    <script defer src="inline_kalkulator_klirens_02.js?v=12"></script>
+    <script defer src="inline_kalkulator_klirens_02.js?v=13"></script>
     <!-- Ujednolicona obsługa wyboru formuły w kalkulatorze klirensu/eGFR. -->
     <script defer src="inline_kalkulator_klirens_03.js?v=1"></script>
 <!-- Sekcja interpretacji AI z opisem i przyciskiem.  Umieszczamy ją w kontenerze
@@ -967,7 +988,7 @@
 </footer>
 
 <!-- 5. LOGIKA JS -->
-<script defer src="inline_kalkulator_klirens_04.js?v=17"></script>
+<script defer src="inline_kalkulator_klirens_04.js?v=18"></script>
 
 <!-- Moduł obsługi kliknięć listy dynamicznych wyników wyszukiwania -->
 <script defer src="inline_kalkulator_klirens_05.js?v=1"></script>
@@ -1137,7 +1158,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!leftFs) return;
         const fullOrder = [
           'spotSampleKind','spotSameSpecimen','Ucr_spot','Ucr_spot_unit',
-          'U_Alb','U_ACR','U_Prot_spot','U_PCR',
+          'U_Alb','U_ACR','U_Prot_spot','U_Prot_spot_unit','U_PCR',
           'spotMenstruation','spotHematuria','spotInfection','spotExercise','spotAcuteIllness',
           'Ca_spot','Ca_spot_unit','U_pH',
           'Ox_Cr_spot','oxalateSpotReportingEntity','Cit_Cr_spot',
@@ -1563,7 +1584,7 @@ document.addEventListener('DOMContentLoaded', () => {
          wczytywane w tym formularzu. Plik userData.js korzysta z localStorage. -->
         <script src="userData.js?v=6" defer></script>
 <script src="ios26-ui.js?v=45" defer></script>
-<script defer src="inline_kalkulator_klirens_07.js?v=6"></script>
+<script defer src="inline_kalkulator_klirens_07.js?v=7"></script>
 <script defer src="vilda_down_syndrome.js?v=5"></script>
 <script defer src="vilda_anorexia_risk.js?v=4"></script>
 <!-- Tablice siatek zespolu Downa przed app.js: app.js przekazuje je silnikowi BMI (P-DS-1). -->
@@ -1624,6 +1645,7 @@ document.addEventListener('DOMContentLoaded', () => {
       'stoneMetabolicEvaluationContext','stoneCollectionPlausibilityReviewed',
       'stoneTwoCollectionsConfirmed',
       'spotSampleKind','spotSameSpecimen','U_Prot_spot',
+      'U_Prot_spot_unit','PCR_entry_mode','PCR_reported','PCR_reported_unit','PCR_same_specimen',
       'CystatinC','CystatinCStandardization','CystatinCAssayMethod','CrCysStandardizationConfirmed',
       'oxalateSpotReportingEntity',
       'spotMenstruation','spotHematuria','spotInfection','spotExercise','spotAcuteIllness',
@@ -1821,6 +1843,6 @@ document.addEventListener('DOMContentLoaded', () => {
 </script>
 <script defer src="inline_kalkulator_klirens_08.js?v=1"></script>
   <script defer src="inline_kalkulator_klirens_09.js?v=1"></script>
-  <script defer src="clcr_ui_workflow.js?v=16"></script>
+  <script defer src="clcr_ui_workflow.js?v=17"></script>
 </body>
 </html>

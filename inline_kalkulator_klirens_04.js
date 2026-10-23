@@ -518,6 +518,10 @@ function validateField(e) {
     if (o) o.textContent = "Wartość wydaje się zbyt wysoka";
     e.classList.add("error");
     return false;
+  } else if (n === "U_Prot_spot" && t * ({ "mg/L": 1, "mg/dL": 10, "g/L": 1000 }[$("U_Prot_spot_unit")?.value || "mg/L"] || 1) > maxValues.U_Prot_spot) {
+    if (o) o.textContent = "Wartość wydaje się zbyt wysoka";
+    e.classList.add("error");
+    return false;
   } else if (maxValues[n] !== void 0 && t > maxValues[n])
     return (
       o && (o.textContent = "Warto\u015B\u0107 wydaje si\u0119 zbyt wysoka"),
@@ -543,6 +547,7 @@ function canComputeFormula(e) {
   const n = typeof FORMULAS < "u" ? FORMULAS.find((t) => t.id === e) : null;
   if (!n) return !1;
   if (e === "ACR") return evaluateClcrAcr().valid === true;
+  if (e === "PCR") return evaluateClcrPcr().valid === true;
   if (
     window.ClcrClinicalSafety &&
     typeof window.ClcrClinicalSafety.formulaSafety == "function"
@@ -630,6 +635,11 @@ function readClcrAcrInput({ concentrationOnly = false } = {}) {
 function evaluateClcrAcr(options) {
   return window.VildaClcrAcr?.evaluate(readClcrAcrInput(options), window.VildaClcrAcrReferenceData?.getProfile("KDIGO_ACR_2024"))
     || { valid: false, reasonCode: "ACR_UNAVAILABLE" };
+}
+function evaluateClcrPcr(options) {
+  const engine = window.VildaClcrPcr;
+  return engine?.evaluate(engine.readInputFromDocument(document, options), window.VildaClcrPcrReferenceData?.getProfile("KDIGO_PCR_2024_2025"))
+    || { valid: false, reasonCode: "PCR_UNAVAILABLE", message: "Nie można obliczyć PCR. Odśwież aplikację." };
 }
 function clcrCgNormalizedDetails(ageYears, bsaM2, sources = []) {
   const ageUsed = Math.floor(ageYears);
@@ -793,8 +803,7 @@ function update() {
         ? N / 88.4
         : _ === "mmol/L" ? N * 1000 / 88.4 : _ === "mg/dl" ? N : null
       : null;
-  const spotProtein = +$("U_Prot_spot").value,
-    F = readClcrOptionalNumber("Ca_spot"),
+  const F = readClcrOptionalNumber("Ca_spot"),
     g = $("Ca_spot_unit") ? $("Ca_spot_unit").value : "mg/dl";
   let E = null;
   F !== null &&
@@ -830,13 +839,8 @@ function update() {
   const P = +$("Scr_spot").value,
     K = document.getElementById("Scr_spot_unit"),
     I = K ? K.value : "mg/dl";
-  let j = null,
-    pcrValue = null,
-    pcrMgMmol = null;
-  const proteinSpotProvided =
-      $("U_Prot_spot") &&
-      String($("U_Prot_spot").value || "").trim() !== "",
-    sameSpotSpecimen = !!(
+  let j = null;
+  const sameSpotSpecimen = !!(
       $("spotSameSpecimen") && $("spotSameSpecimen").checked
     ),
     spotSampleKind = $("spotSampleKind")
@@ -854,27 +858,13 @@ function update() {
     acrEvaluation = evaluateClcrAcr({ concentrationOnly: $("formulaPicker")?.value !== "ACR" }),
     acrRatio = acrEvaluation.valid && acrEvaluation.mode === "concentration"
       ? { mgG: acrEvaluation.rawValue, mgMmol: acrEvaluation.convertedValue } : null,
-    pcrRatio =
-      sameSpotSpecimen &&
-      proteinSpotProvided &&
-      window.ClcrClinicalSafety &&
-      typeof window.ClcrClinicalSafety.computeUrineAnalyteCreatinineRatio ==
-        "function"
-        ? window.ClcrClinicalSafety.computeUrineAnalyteCreatinineRatio({
-            analyteMgL: spotProtein,
-            urineCreatinine: N,
-            urineCreatinineUnit: _,
-          })
-        : null;
+    pcrEvaluation = evaluateClcrPcr({ concentrationOnly: $("formulaPicker")?.value !== "PCR" });
   acrRatio
     ? ((j = acrRatio.mgG),
       ($("U_ACR").value = j.toFixed(1)))
     : ($("U_ACR").value = "");
-  pcrRatio
-    ? ((pcrValue = pcrRatio.mgG),
-      (pcrMgMmol = pcrRatio.mgMmol),
-      ($("U_PCR").value = pcrValue.toFixed(1)))
-    : ($("U_PCR").value = "");
+  $("U_PCR").value = pcrEvaluation.valid && pcrEvaluation.mode === "concentration"
+    ? pcrEvaluation.rawValue.toFixed(1) : "";
   const spotPairedChemistry = !!$("spotPairedChemistry")?.checked,
     spotUrineSodium = readClcrOptionalNumber("U_Na_spot"),
     spotSerumSodium = readClcrOptionalNumber("S_Na_spot"),
@@ -1075,16 +1065,6 @@ function update() {
         category, tone: row?.tone || "neutral",
         label: row?.meaning || "Wskaźnik albumina/kreatynina — ocena ograniczona",
         reasons: eligible ? [] : ["Do klasyfikacji ACR potrzebny jest właściwy wiek, pierwsza poranna próbka i brak czynników przejściowych. Nie nadano kategorii A."],
-      };
-    } else if (!presentation && formulaId === "PCR") {
-      const thresholds = window.ClcrClinicalSafety.pediatricUrineRatioThresholds(ageYears);
-      const eligible = thresholds?.pcrMgG != null && spotSampleKind === "firstMorning" && spotConfounders.length === 0;
-      const raised = eligible && input.value >= thresholds.pcrMgG;
-      const nephrotic = eligible && thresholds.nephroticPcrMgG != null && input.value >= thresholds.nephroticPcrMgG;
-      presentation = {
-        classified: !!eligible, tone: eligible ? (nephrotic ? "danger" : raised ? "warning" : "success") : "neutral",
-        label: eligible ? (nephrotic ? "Białkomocz w zakresie nerczycowym" : raised ? "Zwiększony dla wieku" : "Poniżej progu dla wieku") : "Wskaźnik białko/kreatynina",
-        reasons: eligible ? ["Sam PCR nie rozpoznaje zespołu nerczycowego ani przyczyny białkomoczu."] : ["Nie zastosowano pediatrycznego progu bez właściwego wieku i pierwszej porannej próbki."],
       };
     } else if (!presentation && ["cg", "cg_norm", "cl24"].includes(formulaId)) {
       presentation = {
@@ -1573,80 +1553,6 @@ function update() {
       S +=
         '<div class="result-box warn-yellow" data-clcr-formula="cg"><strong>Założenie Cockcrofta–Gaulta:</strong> użyto podanej rzeczywistej masy ciała. W otyłości, niedowadze, obrzękach lub przy nietypowej masie mięśniowej potrzebna jest jawna polityka masy. To eCrCl, nie eGFR; dawkowanie należy sprawdzić w informacji o konkretnym leku i jego badanej populacji.</div>';
     }
-    function appendSpotRatioGuidance() {
-      if (!isFiniteNum(j) && !isFiniteNum(pcrValue)) return;
-      if (spotConfounders.length) {
-        S += `<div class="result-box warn-yellow" data-clcr-formula="${isFiniteNum(j) ? "ACR" : "PCR"}"><strong>Interpretacja wstrzymana:</strong> zaznaczono czynnik mogący przejściowo zmienić ACR/PCR (${clcrEscapeHtml(spotConfounders.join(", "))}). Powtórz badanie po jego ustąpieniu.</div>`;
-      }
-      if (o && t < 18) {
-        if (!isFiniteNum(j) || !isFiniteNum(pcrValue)) {
-          S +=
-            '<div class="result-box warn-yellow" data-clcr-formula="PCR"><strong>Panel pediatryczny niekompletny:</strong> KDIGO zaleca u dzieci oznaczenie zarówno ACR, jak i PCR w tej samej pierwszej porannej próbce.</div>';
-        }
-        if (spotSampleKind !== "firstMorning") {
-          S +=
-            '<div class="result-box warn-yellow" data-clcr-formula="PCR"><strong>Próbka pediatryczna:</strong> wynik liczbowy jest prowizoryczny. Do początkowej oceny albuminurii/białkomoczu użyj pierwszego porannego moczu; dodatni wynik losowy wymaga takiego potwierdzenia.</div>';
-          return;
-        }
-        if (spotConfounders.length) return;
-        const thresholds =
-          window.ClcrClinicalSafety &&
-          typeof window.ClcrClinicalSafety.pediatricUrineRatioThresholds ==
-            "function"
-            ? window.ClcrClinicalSafety.pediatricUrineRatioThresholds(t)
-            : null;
-        if (!thresholds || thresholds.ageBand === "under6Months") {
-          S +=
-            '<div class="result-box" data-clcr-formula="PCR"><strong>Wiek &lt;6 miesięcy:</strong> pokazano wyłącznie wartości liczbowe; kalkulator nie stosuje automatycznych progów ACR/PCR w tej grupie.</div>';
-          return;
-        }
-        if (thresholds.ageBand === "sixMonthsToUnder2") {
-          if (isFiniteNum(pcrValue)) {
-            const comparison =
-              pcrValue < thresholds.pcrMgG ? "poniżej" : "równe lub powyżej";
-            S += `<div class="result-box" data-clcr-formula="PCR"><strong>PCR 6 mies.–&lt;2 lata:</strong> ${comparison} ${thresholds.pcrMgG}\u202Fmg/g; KDIGO opisuje wartość &lt;${thresholds.pcrMgG}\u202Fmg/g w pierwszym porannym moczu jako zwykle prawidłową. Wynik graniczny lub wyższy wymaga potwierdzenia klinicznego.</div>`;
-          }
-          if (
-            isFiniteNum(pcrValue) &&
-            thresholds.nephroticPcrMgG &&
-            pcrValue >= thresholds.nephroticPcrMgG
-          ) {
-            S +=
-              '<div class="result-box warn-yellow" data-clcr-formula="PCR"><strong>PCR w zakresie nerczycowym:</strong> sam PCR nie rozpoznaje zespołu nerczycowego; potrzebne są albumina w surowicy, obrzęki i pełna ocena kliniczna.</div>';
-          }
-          return;
-        }
-        const findings = [];
-        isFiniteNum(j) &&
-          j >= thresholds.acrMgG &&
-          findings.push(`ACR \u2265${thresholds.acrMgG}\u202Fmg/g`);
-        isFiniteNum(pcrValue) &&
-          pcrValue >= thresholds.pcrMgG &&
-          findings.push(`PCR \u2265${thresholds.pcrMgG}\u202Fmg/g`);
-        if (findings.length) {
-          S += `<div class="result-box warn-yellow" data-clcr-formula="PCR"><strong>Pierwszy poranny mocz:</strong> ${clcrEscapeHtml(findings.join(" oraz "))}. Wynik wymaga powtórnego potwierdzenia, gdy dziecko jest zdrowe i nie miesiączkuje; sam wynik nie rozpoznaje PChN.</div>`;
-        } else if (isFiniteNum(j) && isFiniteNum(pcrValue)) {
-          S +=
-            '<div class="result-box" data-clcr-formula="PCR"><strong>Pierwszy poranny mocz:</strong> ACR jest &lt;30\u202Fmg/g, a PCR &lt;200\u202Fmg/g; KDIGO opisuje te wartości jako zwykle prawidłowe u dzieci od 2. roku życia.</div>';
-        }
-        if (
-          isFiniteNum(pcrValue) &&
-          thresholds.nephroticPcrMgG &&
-          pcrValue >= thresholds.nephroticPcrMgG
-        ) {
-          S +=
-            '<div class="result-box warn-yellow" data-clcr-formula="PCR"><strong>PCR w zakresie nerczycowym:</strong> sam PCR nie rozpoznaje zespołu nerczycowego; potrzebne są albumina w surowicy, obrzęki i pełna ocena kliniczna.</div>';
-        }
-      } else if (o) {
-        if (spotSampleKind !== "firstMorning") {
-          const confirmation =
-            isFiniteNum(j) && j >= 30
-              ? " ACR \u226530\u202Fmg/g z próbki losowej należy potwierdzić kolejną pierwszą poranną próbką."
-              : "";
-          S += `<div class="result-box warn-yellow" data-clcr-formula="ACR"><strong>Rodzaj próbki:</strong> pierwszy poranny mocz jest preferowany; do czasu takiego pobrania kategoria A jest wstrzymana.${confirmation}</div>`;
-        }
-      }
-    }
     const m = {};
     ((m.egfr = isFiniteNum(X) ? X : null),
       (m.ckid_u25 = isFiniteNum(ckidU25Gfr) ? ckidU25Gfr : null),
@@ -1853,26 +1759,7 @@ function update() {
           if (acrEvaluation.valid && window.ClcrAcrUi) S += window.ClcrAcrUi.renderResult(acrEvaluation);
           break;
         case "PCR":
-          if (isFiniteNum(pcrValue)) {
-            q(
-              "Białko/kreatynina (PCR; próbka moczu)",
-              pcrValue,
-              "\u202Fmg/g",
-              "pcr",
-              r,
-              "PCR",
-            );
-            q(
-              "Białko/kreatynina (PCR; jednostka alternatywna)",
-              pcrMgMmol,
-              "\u202Fmg/mmol",
-              "pcr_mmol",
-              r,
-            );
-          } else if (l === "PCR" && !sameSpotSpecimen) {
-            S +=
-              '<div class="result-box warn-yellow" data-clcr-formula="PCR"><strong>Nie obliczono:</strong> potwierdź, że białko całkowite i kreatynina pochodzą z tej samej próbki.</div>';
-          }
+          if (pcrEvaluation.valid && window.ClcrPcrUi) S += window.ClcrPcrUi.renderResult(pcrEvaluation);
           break;
       }
     }
@@ -1983,11 +1870,9 @@ function update() {
       else if (l === "neonatal_egfr" && selectedSafety.eligible)
         T({ includeG: !1, includeA: !1, includeBsa: !1 });
       else if (l === "ACR") {
-        // Its single result already contains the category, confirmation advice
-        // and source context. PCR guidance belongs to the separate calculation.
+        // Its single result already contains the category and source context.
       } else if (l === "PCR") {
-        z();
-        appendSpotRatioGuidance();
+        // PCR owns its one result, applicable limits and specimen qualification.
       }
       else if (l !== "cg_norm") z();
     } else {
@@ -2009,7 +1894,6 @@ function update() {
         L("cl24");
         L("ACR");
         L("PCR");
-        appendSpotRatioGuidance();
         if (ageContext.totalMonths === 0 && ageContext.daysOfLife === null) {
           S +=
             '<div class="result-box warn-yellow" data-clcr-formula="neonatal_egfr"><strong>Wiek noworodkowy:</strong> podaj ukończone dni życia (0–28) i potwierdź urodzenie o czasie, aby ocenić dostępność wzoru.</div>';

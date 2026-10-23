@@ -158,8 +158,8 @@ describe('ACR — zachowanie surowego wyniku i oceny w karcie pacjenta', () => {
       expect(points[0]).not.toHaveProperty('acrSnapshot');
       expect(points[0].valueNum).toBe(29.96);
     }
-    const other = card(snapshot, { 'data-clcr-series': 'PCR', 'data-clcr-value': '29.96', 'data-clcr-display-value': '30.0' });
-    const points = browser.ClcrVisitSave.collectActiveDatapoints({ querySelectorAll: () => [other] }, { formulaId: 'PCR' });
+    const other = card(snapshot, { 'data-clcr-series': 'egfr', 'data-clcr-value': '29.96', 'data-clcr-display-value': '30.0' });
+    const points = browser.ClcrVisitSave.collectActiveDatapoints({ querySelectorAll: () => [other] }, { formulaId: 'egfr' });
     expect(points[0].valueNum).toBe(30);
     expect(points[0]).not.toHaveProperty('acrSnapshot');
   });

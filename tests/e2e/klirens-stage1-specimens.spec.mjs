@@ -100,17 +100,30 @@ test('liczy pediatryczne ACR i PCR, zachowuje warunek wspólnej próbki i próg 
   await expect(page.locator('#U_PCR')).toHaveValue('300.0');
   await expect(page.locator('#clcrInfo')).toContainText(/30[.,]0/);
   await expect(page.locator('#clcrInfo')).toContainText(/300[.,]0/);
-  await expect(page.locator('#clcrInfo')).toContainText('wymaga powtórnego potwierdzenia');
-  await expect(page.locator('#clcrInfo')).toContainText('sam wynik nie rozpoznaje PChN');
+  const pcr = page.locator('[data-clcr-series="PCR"]');
+  await expect(pcr).toHaveAttribute('data-clcr-tone', 'warning');
+  await expect(pcr.locator('.clcr-result-reference-value')).toHaveText('<200');
+  await expect(pcr).toContainText(/potwierd/i);
+  await expect(page.locator('.clcr-result-details[data-clcr-formula="PCR"]')).toContainText(/nie rozpoznaje.*(?:choroby nerek|PChN)/i);
 
   await page.locator('#spotExercise').check();
-  await expect(page.locator('#clcrInfo')).toContainText('Interpretacja wstrzymana');
-  await expect(page.locator('#clcrInfo')).not.toContainText('wymaga powtórnego potwierdzenia');
+  // Znany czynnik wymaga zastrzeżenia; nie ukrywa podwyższonego PCR.
+  await expect(pcr).toHaveAttribute('data-clcr-tone', 'warning');
+  await expect(pcr).toContainText(/wysił|przejściow/i);
+  await expect(page.locator('[data-clcr-series="ACR"]')).toHaveAttribute('data-clcr-tone', 'neutral');
 
   await page.locator('#spotSameSpecimen').uncheck();
-  // ACR zakłada wspólną próbkę przy braku odpowiedzi; PCR zachowuje swój protokół.
+  // Oba ilorazy przyjmują jawne założenie wspólnej próbki przy braku odpowiedzi.
   await expect(page.locator('#U_ACR')).toHaveValue('30.0');
+  await expect(page.locator('#U_PCR')).toHaveValue('300.0');
+  await page.evaluate(() => {
+    const specimen = document.getElementById('PCR_same_specimen');
+    specimen.value = 'different';
+    specimen.dispatchEvent(new Event('change', { bubbles: true }));
+    window.clcrUpdate();
+  });
   await expect(page.locator('#U_PCR')).toHaveValue('');
+  await expect(page.locator('#U_ACR')).toHaveValue('30.0');
   // Jawna informacja o różnych próbkach musi nadal blokować iloraz ACR.
   await page.evaluate(() => {
     const specimen = document.getElementById('ACR_same_specimen');
@@ -151,7 +164,9 @@ test('nie przypisuje kategorii A KDIGO dziecku przed 2. rokiem życia', async ({
   await page.locator('#U_Prot_spot').fill('300');
 
   await expect(page.locator('#U_ACR')).toHaveValue('30.0');
-  await expect(page.locator('#clcrInfo')).toContainText('PCR 6 mies.–<2 lata');
+  const pcr = page.locator('[data-clcr-series="PCR"]');
+  await expect(pcr.locator('.clcr-result-reference-value')).toHaveText('<500');
+  await expect(pcr).toHaveAttribute('data-clcr-tone', 'success');
   await expect(page.locator('#clcrInfo')).not.toContainText('Kategoria albuminurii wg KDIGO');
 });
 
@@ -169,9 +184,11 @@ test('ujawnia pediatryczny PCR w zakresie nerczycowym także przed 2. rokiem ży
   await page.locator('#U_Alb').fill('30');
   await page.locator('#U_Prot_spot').fill('2500');
 
-  await expect(page.locator('#clcrInfo')).toContainText('PCR 6 mies.–<2 lata');
-  await expect(page.locator('#clcrInfo')).toContainText('PCR w zakresie nerczycowym');
-  await expect(page.locator('#clcrInfo')).toContainText('sam PCR nie rozpoznaje zespołu nerczycowego');
+  const pcr = page.locator('[data-clcr-series="PCR"]');
+  await expect(pcr.locator('.clcr-result-reference-value')).toHaveText('<500');
+  await expect(pcr).toHaveAttribute('data-clcr-tone', 'danger');
+  await expect(pcr).toContainText('Białkomocz w zakresie nerczycowym');
+  await expect(page.locator('.clcr-result-details[data-clcr-formula="PCR"]')).toContainText(/sam PCR nie rozpoznaje zespołu nerczycowego/i);
 });
 
 test('traktuje zerowy PCR jako wynik liczbowy, nie brak danych', async ({ page }) => {

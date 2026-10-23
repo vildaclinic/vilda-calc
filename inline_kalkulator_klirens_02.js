@@ -272,15 +272,15 @@
       },
       {
         id: "PCR",
-        label: "PCR \u2013 białko/kreatynina (spot) [mg/g]",
+        label: "PCR — białko/kreatynina (próbka moczu)",
         version: "spot",
         requires: [
-          "spotSameSpecimen",
           "U_Prot_spot",
+          "U_Prot_spot_unit",
           "Ucr_spot",
           "Ucr_spot_unit",
         ],
-        note: "Białko całkowite i kreatynina muszą pochodzić z tej samej próbki; u dzieci oznaczaj PCR razem z ACR.",
+        note: "Wpisz stężenia białka i kreatyniny z tej samej próbki lub gotowy wynik PCR. Pierwszy poranny mocz jest preferowany; podwyższony wynik wymaga potwierdzenia. U dzieci interpretuj łącznie z ACR.",
       },
       {
         id: "CaCr_spot",
