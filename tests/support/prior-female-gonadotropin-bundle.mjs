@@ -45,11 +45,18 @@ export function beforeMaleLhCaliperBundle(data) {
     .filter(profile => profile.id !== 'wilson2023-male-lh-age-over16-under18') };
 }
 
+// The later D3 block is separate from every previously frozen runtime bundle.
+// Removing precisely that addition preserves all earlier evidence and hashes.
+export function beforeFshD3Runtime(runtime) {
+  const { fshD3Data: _fshD3, ...prior } = runtime;
+  return prior;
+}
+
 // The FSH source card and its cycle-display policy add exactly two separate
 // runtime blocks. Remove only those additions when checking preceding eras;
 // never rewrite earlier data, versions, source knots or hash expectations.
 export function beforeFshSourceRuntime(runtime) {
-  const { fshSourceData: _fshSourceInfo, fshCycleDisplayPolicy: _fshCycleDisplay, ...prior } = runtime;
+  const { fshSourceData: _fshSourceInfo, fshCycleDisplayPolicy: _fshCycleDisplay, ...prior } = beforeFshD3Runtime(runtime);
   return prior;
 }
 

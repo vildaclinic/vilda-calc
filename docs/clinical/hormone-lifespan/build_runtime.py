@@ -30,6 +30,7 @@ def build():
     amh_lilacs_source_data = json.loads((ROOT / 'amh-lilacs-source-data.json').read_text(encoding='utf-8'))
     e2_phase_source_data = json.loads((ROOT / 'e2-phase-source-data.json').read_text(encoding='utf-8'))
     fsh_source_data = json.loads((ROOT / 'fsh-source-data.json').read_text(encoding='utf-8'))
+    fsh_d3_data = json.loads((ROOT / 'fsh-d3-data.json').read_text(encoding='utf-8'))
     fsh_cycle_display_policy = json.loads((ROOT / 'fsh-cycle-display-policy.json').read_text(encoding='utf-8'))
     insl3_display_policy = json.loads((ROOT / 'insl3-display-policy.json').read_text(encoding='utf-8'))
     female_gonadotropin_policy = json.loads((ROOT / 'female-gonadotropin-display-policy.json').read_text(encoding='utf-8'))
@@ -65,6 +66,7 @@ def build():
     amh_lilacs_source_data_js = json.dumps(amh_lilacs_source_data, ensure_ascii=False, indent=2)
     e2_phase_source_data_js = json.dumps(e2_phase_source_data, ensure_ascii=False, indent=2)
     fsh_source_data_js = json.dumps(fsh_source_data, ensure_ascii=False, indent=2)
+    fsh_d3_data_js = json.dumps(fsh_d3_data, ensure_ascii=False, indent=2)
     fsh_cycle_display_policy_js = json.dumps(fsh_cycle_display_policy, ensure_ascii=False, indent=2)
     insl3_display_policy_js = json.dumps(insl3_display_policy, ensure_ascii=False, indent=2)
     female_gonadotropin_policy_js = json.dumps(female_gonadotropin_policy, ensure_ascii=False, indent=2)
@@ -104,6 +106,7 @@ def build():
         f'const amhLilacsSourceData = {amh_lilacs_source_data_js};\n'
         f'const e2PhaseSourceData = {e2_phase_source_data_js};\n'
         f'const fshSourceData = {fsh_source_data_js};\n'
+        f'const fshD3Data = {fsh_d3_data_js};\n'
         f'const fshCycleDisplayPolicy = {fsh_cycle_display_policy_js};\n'
         f'const insl3DisplayPolicy = {insl3_display_policy_js};\n'
         f'const femaleGonadotropinPolicy = {female_gonadotropin_policy_js};\n'
@@ -135,6 +138,7 @@ def build():
         '  amhLilacsSourceData: amhLilacsSourceData,\n'
         '  e2PhaseSourceData: e2PhaseSourceData,\n'
         '  fshSourceData: fshSourceData,\n'
+        '  fshD3Data: fshD3Data,\n'
         '  fshCycleDisplayPolicy: fshCycleDisplayPolicy,\n'
         '  insl3DisplayPolicy: insl3DisplayPolicy,\n'
         '  femaleGonadotropinPolicy: femaleGonadotropinPolicy,\n'

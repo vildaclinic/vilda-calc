@@ -276,8 +276,8 @@
   "sha256": "22c5b3ec86177c574023351c8d5a0576a49652efbc28df0df99288778cfc526d"
  },
  "inline_przelicznik_jednostek_00.css": {
-  "v": 4,
-  "sha256": "0f3ff9c5df74afb73ff8f795f4397c12a3f9fb26e7455021c701ff2f773be9cd"
+  "v": 5,
+  "sha256": "9ec0d30f7e2986da4d5f4378d2ee4f08aa1a5d65bba609a3947117c58977a70c"
  },
  "inline_regulamin_00.css": {
   "v": 1,
@@ -687,6 +687,18 @@
   "v": 2,
   "sha256": "c944a5eadc91aa3a4e4628edb8b693d06633527b9cb4a7380f39ae61a64ad14e"
  },
+ "vilda_fsh_d3.js": {
+  "v": 1,
+  "sha256": "1b057317cf2cf1ffb296944ba02866ad22b562c2c1ec3edee83982d4d1965203"
+ },
+ "vilda_fsh_d3_ui.css": {
+  "v": 1,
+  "sha256": "8a17251f5bced8a04f6600fc3b6258c94d45043854c669b6d9fc8ca9c1e3902a"
+ },
+ "vilda_fsh_d3_ui.js": {
+  "v": 1,
+  "sha256": "86a30708d8d03546f9ddb3525615044ce48b33b21c50406058d60e08efed760f"
+ },
  "vilda_fsh_source.js": {
   "v": 1,
   "sha256": "d7a6bf2f9218168fc76f2af1af01a3c4aa228997cd9e731abd69707b33e7838b"
@@ -776,8 +788,8 @@
   "sha256": "474b5acb51d66aa41337da02e442a60d45e6ee1e41acd975af68ef616e6ba12f"
  },
  "vilda_hormone_lifespan_data.js": {
-  "v": 38,
-  "sha256": "785bffdcde9b3dfeb11dfa0542fcae94323b6c3749168ccdee649a0c95581f7b"
+  "v": 39,
+  "sha256": "d775d2cc3e6e88a7c230c49a7b7411d074af687b8c8debd7d808d86e573d8a43"
  },
  "vilda_hormone_lifespan_display.js": {
   "v": 15,

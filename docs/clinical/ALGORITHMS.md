@@ -3065,6 +3065,78 @@ PR; testy nie ustanawiają walidacji klinicznej.
 [Kontrakt źródła](hormone-lifespan/FSH_SOURCE.md),
 [ekstrakt i hash pełnego IFU](hormone-lifespan/evidence/fsh-source-audit-2026-10-22.json).
 
+### HORMONE-FSH-D3 — mediana wieku w 3. dniu cyklu, 2026-10-23
+
+**Problem i decyzja:** właściciel zaakceptował makietę i implementację
+osobnego bloku bieżącego FSH z medianą dla wpisanego wieku i opcjonalnym
+pytaniem, czy ten wynik pochodzi z 3. dnia cyklu. Zakres obejmuje wyłącznie
+literalną P50 tabeli Grisendi, bez naprawy pełnego LMS. Akceptacja źródła,
+ograniczeń i kodu nie nadaje mu statusu walidacji klinicznej.
+
+**Pełne źródło:** Grisendi 2014, DOI `10.3109/09513590.2014.893572`,
+*Gynecological Endocrinology* 30(6):451–455. Dostarczony przez użytkownika
+pełny opublikowany PDF, metody s. 452 i tabela 1 s. 454 sprawdzone również
+na obrazie; CSV jest odwzorowaniem tabeli, nie danymi uczestniczek. 192
+kobiety z jednego ośrodka w Modenie; cykle 25–35 dni z różnicą <5 dni,
+oba jajniki, wyłączenie m.in. hormonów płciowych przez poprzednie 6 miesięcy
+i znanych chorób endokrynnych. Surowica pobrana w **dniu 3**, ADVIA Centaur,
+Siemens; raportowana czułość 0,1 IU/L nie jest formalnie zdefiniowanym
+LOD/LOQ. Nie opisano cenzury niskich wyników. Nieznana metoda próbki
+pacjentki pozostaje nieznana; dodatnia niezgodność nie znika.
+
+**Co importujemy:** 29 literalnych median modelu P50(M) w IU/L dla wieku
+16–44; nie średnie lub empiryczne mediany osobnych roczników. Wszystkie
+29 są zgodne z parą kwartylów niezależnie od S i z trendem liniowym przy
+precyzji druku. To kontrola wewnętrzna. **116/116** pozostałych centyli nie
+odtwarza się z drukowanego S/L/M: błąd sięga 11,312757 IU/L przy tolerancji
+druku do około 0,004178. Nie poprawiamy S35/S44/P95, nie importujemy
+odwróconego S, globalnie dopasowanych współczynników, SDS, percentyli,
+RI ani progów rezerwy jajnikowej. Hashe i ekstrakt:
+[audyt](hormone-lifespan/evidence/fsh-d3-source-audit-2026-10-23.json).
+
+**Dane i wiek:** odrębne `fsh-d3-data.json` zasila bezpaństwowy
+`VildaFshD3.evaluate(data, context)`. Źródłowe węzły to 16–44; kryterium
+rekrutacji drukuje 16–45, a dyskusja mówi o wieku <45. Nie dodajemy wiersza
+45 lub ekstrapolacji. Aplikacyjnie cały możliwy wiek musi być **>18 i ≤44**.
+Zachowujemy kontrakt ciągłego wieku: odniesienie przy dolnej granicy
+**wpisanego** wieku, bez środka przedziału lub wymyślonej daty urodzenia.
+`ageContext` niesie `lowerYears`, `upperYears`, `upperInclusive` i
+`basis: 'entered-age-lower-bound'`. Literalne M obowiązuje na węzłach;
+ułamkowy wiek otrzymuje jawną interpolację **liniową między sąsiadami**
+z flagą `interpolated`. To polityka aplikacji, nie rekonstrukcja LMS.
+Własna linia źródłowa jest liniową łamaną przez opublikowane mediany.
+
+**Porównanie i stan:** mediana opisana „dla wpisanego wieku” jest informacją
+źródłową także przy `cycleDay: unknown/other`. Punkt pacjentki wymaga
+`day3`, dokładnego wyniku oraz wszystkich bramek bieżącego kontekstu;
+wynik nierównościowy nie staje się dokładną liczbą. Jedno lokalne pytanie
+dotyczy tylko tego wyniku. Zmiana osoby/analitu/wieku/fazy/kontekstu źródła
+lub pomiaru usuwa odpowiedź; zwykłe odświeżenie tego samego pomiaru może ją
+zachować. Nie dodajemy ankiety o metodę, materiał lub wywiad. Znane dodatnie
+wyłączenia pozostają wiążące, a brak wywiadu nie potwierdza ich nieobecności.
+Jawne D3 może współistnieć z fazą nieznaną/niepodaną lub folikularną bez
+drugiego pytania o fazę. Jawna owulacyjna/lutealna pozostawia source-only,
+ale blokuje punkt; znana ciąża/menopauza wstrzymuje cały blok Grisendi.
+
+Blok jest poza 85 zwykłymi profilami i poza utrwalanym odniesieniem historii.
+To jawna polityka bieżącej edukacyjnej prezentacji: brak nowego snapshotu,
+zapisu odpowiedzi D3 i ponownej oceny dawnych wyników. Istniejące RI FSH,
+werdykt, przeliczenia, karta Roche, geometria Stricker, profile pediatryczne
+i pozostałe hormony zachowują odrębne kontrakty. Pozycja wobec mediany nie
+oznacza wyniku prawidłowego, płodności lub procentu pozostałych oocytów.
+
+**Przypadki syntetyczne:** F30, FSH 10 IU/L, jawny dzień 3 i zgodny
+kontekst → źródłowa P50 **5,941**, osobno punkt 10; nieznany/inny dzień
+→ ta sama mediana bez punktu pacjentki. Wiek `[30,31)` → **5,941** przy
+dolnej granicy; 30,5 lub `[30,5;30,5+1/12)` → **5,9975** interpolowane.
+`[43,44)` kwalifikuje, `[44,45)` nie, dokładne 44 → **7,533**.
+`<5`, `<LOD` i `<LOQ` → brak dokładnego punktu i imputacji. To przypadki
+do kontroli rzeczywistych funkcji; wyniki testów adaptera, historii,
+desktop/mobile, PWA i GitHub raportuje integrujący PR dla finalnego SHA.
+Testy nie są walidacją kliniczną.
+
+[Kontrakt źródła i ograniczenia](hormone-lifespan/FSH_D3_SOURCE.md).
+
 ### HORMONE-FEMALE-E2-STABLE-CURVE — stała linia estradiolu, 2026-10-12
 
 **Problem i decyzja:** wpisanie E2 zmieniało skalę i krzywą odniesienia;
