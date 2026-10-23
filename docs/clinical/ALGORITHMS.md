@@ -5993,6 +5993,170 @@ formularz i zapis, bez kopii równania. Bieżące wyniki uruchomień podaje PR;
 przegląd źródeł, akceptacja właściciela i testy nie nadają statusu nowej
 walidacji klinicznej.
 
+#### P-KLIRENS-PCR-2026-10-24 — prosty PCR, normy dla wieku i wierna historia
+
+**Decyzja właściciela:** akceptacja makiety PCR desktop/mobile oraz poprawienia
+wszystkich potwierdzonych błędów w tym samym PR. Zaakceptowany
+[podgląd przed/po](https://vilda-pcr-audyt-20261023.maciej-flader.chatgpt.site)
+ma pierwszą, domyślną opcję „Oblicz ze stężeń”, drugą „Gotowy wynik PCR”,
+stałe szerokości i jedną kartę z liczbą, normą i interpretacją. Wiek pochodzi
+z danych pacjenta; można go lokalnie skorygować. Obowiązują
+[zasady interfejsu Klirensu](KLIRENS_UI_GUIDE.md). Ten wpis aktualizuje
+wcześniejsze wymagania PCR dotyczące obowiązkowego potwierdzania próbki
+i ograniczenia oceny wyłącznie do pierwszego porannego moczu.
+
+**Wpływ kliniczny i funkcjonalny: tak.** Sam iloraz pozostaje
+`PCR [mg/g] = białko całkowite moczu [mg/L] / kreatynina moczu [g/L]`.
+Białko przyjmuje mg/L, mg/dL albo g/L; kreatynina mg/dL, µmol/L lub mmol/L.
+Konwersje: białko mg/dL ×10 i g/L ×1000 do mg/L; kreatynina
+`1 mg/dL = 88,4 µmol/L = 0,0884 mmol/L`. Białko zero jest poprawne,
+pusta wartość nie jest zerem, a kreatynina musi być skończona i dodatnia.
+Nie potrzeba płci, masy, wzrostu, BSA, kreatyniny surowicy ani zbiórki.
+Gotowy ilościowy PCR wymaga jednej wartości i oryginalnej jednostki:
+mg/g, mg/mmol, mg/mg albo g/g. Nie zastępuje go stężenie białka lub wynik
+paska. `1 mg/mg = 1 g/g = 1000 mg/g` to dokładne przeskalowanie masowe.
+
+**Osobny profil danych:** `clcr_pcr_reference_data.js`,
+`KDIGO_PCR_2024_2025`, wersja 1, oraz czytelny silnik `clcr_pcr.js`:
+`VildaClcrPcr.evaluate(input, profile)`. Normy, źródła, populacja, granice wieku
+i ograniczenia są przekazywanymi danymi, a nie stałymi zaszytymi w rendererze.
+Tabela opisuje zaakceptowaną politykę aplikacji:
+
+| Grupa aplikacji | Poniżej progu, mg/g | Natywny próg, mg/mmol | Odpowiednik mg/mg lub g/g |
+|---|---|---|---|
+| 6–<24 miesięcy | <500 | <50 | <0,5 |
+| 24 miesiące–<18 lat | <200 | <20 | <0,2 |
+| ≥18 lat | <150 | <15 | <0,15 |
+
+Dla dorosłych są to ogólne odniesienia KDIGO, nie potwierdzenie zakresu
+każdego laboratorium lub metody. Poziomy dorosłe to 150–500 włącznie
+oraz >500 mg/g, odpowiednio 15–50 włącznie i >50 mg/mmol.
+Dla dzieci `1 ≤ wiek <18 lat` zakres nerczycowy zaczyna się od
+**≥2000 mg/g / ≥200 mg/mmol / ≥2 mg/mg lub g/g**. Nie przenosi się tego
+progu na młodsze niemowlęta ani dorosłych. Źródło pediatryczne obejmuje
+1–18 lat; aplikacja jawnie przechodzi do profilu dorosłego od 18. urodzin.
+PCR w zakresie nerczycowym nie stanowi rozpoznania zespołu nerczycowego:
+brakuje dodatkowych kryteriów klinicznych. Nie ocenia się remisji z jednego
+PCR; źródłowe ≤200 mg/g przez co najmniej trzy dni nie jest normą <200.
+PCR nie otrzymuje kategorii zmierzonej albuminurii A1–A3 ani obliczonego ACR.
+
+**Dokładnie 2 lata:** zachowano granicę od ukończenia 24 miesięcy jako jawną
+politykę PCR. KDIGO 2024 literalnie podaje „6 months to 2 years” oraz
+„over 2 years”; opracowanie Francis opisuje spadek do <200 „by 2 years”,
+a katalog UVM rozpoczyna drugą grupę w 24 miesiącach. To uzasadnienie
+polityki, nie twierdzenie, że sam tekst KDIGO zawiera znak ≥. Katalog ma
+wspólny punkt graniczny grup i nie staje się potwierdzeniem metody próbki.
+Bez wiarygodnego wieku lub poniżej 6 miesięcy pozostaje neutralna liczba
+z konkretnym powodem braku automatycznej normy. Istnieją wąskie zakresy
+noworodkowe; nie zastąpiono nimi pełnego profilu całego pierwszego półrocza.
+
+**Próbka i czynniki:** wspólna próbka jest warunkiem ilorazu, ale przy braku
+przeciwnych informacji opisanym założeniem (`assumed`), bez obowiązkowego
+checkboxa. Znane różne próbki, także z wcześniejszego zapisu, blokują
+obliczenie ze stężeń. Późniejsza jawna korekta jest możliwa. Gotowy iloraz
+laboratoryjny nie wymaga pary zastępczych oznaczeń. Pierwszy poranny mocz
+jest preferowany, zwłaszcza w pediatrii i ocenie białkomoczu ortostatycznego;
+nieznana pora albo próbka losowa nie stają się potwierdzonym pobraniem
+porannym i nie usuwają orientacyjnego porównania. Podwyższenie wymaga
+potwierdzenia, najlepiej w pierwszej porannej próbce. W monitorowaniu
+rozpoznanego GN znaczenie standaryzacji pory i aktywności pozostaje opisane
+w ograniczeniach; losowa próbka nie dowodzi utrwalonego białkomoczu.
+
+Znane miesiączka, krwiomocz, infekcja, wysiłek lub ostra choroba zachowują
+znaczenie. Zaakceptowana polityka prezentacji PCR zachowuje bursztynowy
+lub czerwony sygnał liczbowego przekroczenia i informację o możliwym wpływie
+czynnika oraz potwierdzeniu po jego ustąpieniu. Przy liczbie poniżej progu
+znany czynnik daje neutralne „Poniżej progu” z ograniczeniem, bez ogólnego
+werdyktu „prawidłowy”. Źródła wymagają uwzględnienia wpływu i powtórzenia,
+nie konkretnego koloru; to jawna decyzja interfejsu PCR. Nie zmienia ona
+polityki istniejącego ACR. Nieznane odpowiedzi nie stają się pięcioma
+potwierdzonymi odpowiedziami „nie”; jeden opcjonalny wybór nie kasuje
+innych przywróconych faktów. Informacja o infekcji PCR nie znika po
+wprowadzeniu równoległej albuminy/ACR. Pojedynczy PCR nie rozpoznaje PChN.
+
+**Jednostki, zaokrąglenie, zapis:** gotowy wynik jest oceniany w natywnej osi,
+iloraz stężeń w mg/g. Progi mg/g i mg/mmol są pragmatycznie zaokrąglonymi
+odpowiednikami KDIGO, a nie ścisłymi konwersjami granic. Przykładowo
+20 mg/mmol u dziecka nie spełnia <20 mimo przeliczenia około 176,8 mg/g;
+200 mg/mmol należy do zakresu nerczycowego mimo przeliczenia około
+1768 mg/g. Nie wyznacza się drugiej kategorii z przeliczenia pomocniczego.
+Porównanie używa wartości przed zaokrągleniem. 199,96 mg/g może być
+wyświetlone jako 200, lecz pozostaje <200; 1999,96 pozostaje <2000,
+a >500 u dorosłego nie zamienia się w ≤500 wskutek prezentacji.
+Gotowy raport zachowuje precyzję wpisu oraz `<`, `≤`, `>` lub `≥`.
+Granica wyniku cenzorowanego nie jest dokładnym pomiarem; jedna kategoria
+wymaga przynależności całego dopuszczalnego przedziału.
+
+Migawka wyniku zachowuje surową liczbę, prezentację, operator, oryginalną
+oś jednostki, status/porównanie i kwalifikację, normę, źródło, profil, wersję,
+wiek oraz znane fakty próbki i oryginalne dane wejściowe. Wykorzystywane
+są istniejące pola laboratoryjne i czytelna polska notatka, bez technicznego
+JSON w opisie dla lekarza i bez arbitralnego rozszerzenia schematu sejfu.
+Historia odczytuje utrwaloną ocenę; nie przelicza starych wyników według
+dzisiejszego wieku/profilu. Wynik bez oceny ma `outOfRange:null`, nie false.
+Najnowszy wynik bez normy nie dziedziczy starszej dziecięcej normy.
+Wyników z nierównością nie rysuje się jako dokładnych punktów ani trendów;
+natywne jednostki pozostają odrębne. Ręcznie zmieniona liczba/jednostka
+nie jest zastępowana nieaktualną migawką. Starym notatkom bez migawki nie
+dopisuje się wymyślonego wieku, próbki lub normy. Nowy pacjent nie dziedziczy
+nieobecnego kontekstu poprzedniego; jawnie pusta/nieznana jednostka nie
+jest poprawiana automatycznie na mg/g. Zmiana wzoru zachowuje wspólne wejścia.
+
+**Pełne źródła** — odczyt w audycie 23–24.10.2026:
+
+1. [KDIGO 2024 CKD](https://kdigo.org/wp-content/uploads/2024/03/KDIGO-2024-CKD-Guideline.pdf),
+   PP 1.3.1.1–1.3.1.4 i tabela 16, S190–S193 / PDF 75–78:
+   losowa/poranna próbka, czynniki przejściowe i pediatryczne <500/<200.
+2. [KDIGO 2025 Nephrotic Syndrome in Children](https://kdigo.org/wp-content/uploads/2025/04/KDIGO-2025-Guideline-for-Nephrotic-Syndrome-in-Children.pdf),
+   S250 / PDF 11, tabela relacji miar i przypis zaokrąglenia; S261–S262 /
+   PDF 22–23, rycina 1: pediatryczne ≥2000/≥200, dodatkowe kryteria NS
+   i odrębne kryterium remisji. Nie zaimportowano dorosłej etykiety nerczycowej.
+3. [Francis i wsp., JAMA Pediatrics 2024](https://kdigo.org/wp-content/uploads/2024/12/KDIGO-CKD-Guideline-Summary_Francis_2024_JAMAPediatrics.pdf),
+   DOI 10.1001/jamapediatrics.2024.5274, pełne E1–E2: tekst „by 2 years”
+   i diagram używający >2 y; nie jest to literalna tabela ≥2.
+4. [UVM LAB3650](https://uvmlabs.testcatalog.org/show/LAB3650-1), pełny katalog:
+   kolorymetria Ortho Vitros 7600; <0,50 mg/mg w 6–24 m, <0,20 od 24 m,
+   <0,15 dla dorosłych. Katalog wspiera granicę wieku, a nie zgodność
+   analizatora pacjenta. [Mayo RPTU1](https://www.mayocliniclabs.com/test-catalog/Overview/614004)
+   ma własny dorosły zakres <0,18 mg/mg; nie nadpisuje profilu KDIGO.
+5. [KDIGO 2021 Glomerular Diseases, aktualizacja LN 2024](https://kdigo.org/wp-content/uploads/2017/02/KDIGO-2021-Glomerular-Diseases-Guideline_English_LN-2024-Update.pdf),
+   S91 / PDF 96, rycina 4 i PP 1.2.1–1.2.2: ograniczenia losowego PCR
+   w monitorowaniu GN oraz odrębna kwalifikacja dorosłych.
+
+**Konkretna luka <6 miesięcy:** pełny tekst Saxena 2016
+([DOI 10.7860/JCDR/2016/18651.7442](https://doi.org/10.7860/JCDR/2016/18651.7442))
+obejmuje 37 donoszonych noworodków wyłącznie w 0.–3. dniu; nie użyto go
+jako normy całego półrocza. Pełny Slagle 2026
+([DOI 10.1038/s41372-026-02597-x](https://doi.org/10.1038/s41372-026-02597-x)),
+s.503 / PDF 6, dotyczy obserwacji wcześniaków <34 tygodni; wzmianka 0,81
+mg/mg nie zapewnia kompletnego profilu, metody i inkluzywności dla wszystkich
+niemowląt. El Hamel 2017, DOI 10.1007/s00467-016-3427-0, i Houser 1984,
+PMID 6726514, były dostępne jako abstrakty/podglądy, nie pełne tabele.
+Nie twierdzimy, że normy nie istnieją; nie zastosowano ogólnego profilu.
+
+**Syntetyczne kontrakty funkcji produkcyjnych:**
+
+| Wejście / stan | Oczekiwany wynik |
+|---|---|
+| 10 lat; białko 300 mg/L; Cr 100 mg/dL; pora nieznana | 300 mg/g, podwyższony, norma <200, wspólna próbka jako założenie, do potwierdzenia. |
+| Białko 30 mg/dL lub 0,3 g/L; Cr 8840 µmol/L lub 8,84 mmol/L | Ten sam 300 mg/g i ta sama ocena, bez artefaktu zmiany jednostki. |
+| 10 lat; surowe 199,96 / 200 / 1999,96 / 2000 mg/g | Poniżej progu / podwyższony / podwyższony jeszcze <2000 / zakres nerczycowy. Zapis zachowuje wartości surowe; granice <200 i <2000 pozostają widoczne. |
+| 10 lat; gotowy 20 / 200 mg/mmol | Podwyższony / zakres nerczycowy w natywnej osi, bez przeklasyfikowania z przeliczenia mg/g. |
+| 10 lat; gotowy 0,19996 / 0,2 mg/mg lub g/g | Poniżej progu / podwyższony; dokładna jednostka i precyzja raportu zachowane. |
+| 10 lat; <200 / ≤200 / ≥2000 mg/g | Poniżej progu / brak jednej kategorii / zakres nerczycowy. Znaki pozostają, brak dokładnych punktów dla końców przedziałów. |
+| 18 miesięcy / 24 miesiące / 18 lat; 300 mg/g | Odpowiednio normy <500 / <200 / <150; bez przejmowania zakresu z innej grupy. |
+| Dorosły; 15 mg/mmol lub 150 mg/g; 500 / >500 mg/g | Nie spełnia normy; na drugim progu odpowiednio umiarkowanie / znacznie zwiększony PCR, bez dziecięcej etykiety nerczycowej. |
+| Wiek nieznany lub <6 m; PCR 300 | Liczba, konkretny powód braku normy, neutralny stan i brak dorosłego zakresu. |
+| Znana infekcja; 10 lat; PCR 300 / 100 | Wysoki wynik nadal bursztynowy z ograniczeniem / neutralne poniżej progu z ograniczeniem; znana informacja nie znika przy równoległym ACR. |
+| Znane różne próbki / gotowy PCR z laboratorium | Blokada ilorazu stężeń / brak wymogu pary zastępczych oznaczeń. |
+| Zapis i odczyt po zmianie wieku, profilu lub nowszym PCR bez normy | Starsza ocena i surowa liczba zachowane; najnowsza norma nie jest pożyczana ze starszej wizyty. |
+
+Regresje `tests/unit/klirens-pcr.test.mjs`, `klirens-pcr-save.test.mjs`,
+`klirens-pcr-session.test.mjs` oraz E2E `klirens-pcr-audit.spec.mjs`
+i `klirens-pcr-offline.spec.mjs` wywołują rzeczywisty kod. Wyniki wykonań
+podaje PR. Przegląd źródeł, akceptacja właściciela i zielone testy nie są
+nową walidacją kliniczną.
+
 #### Zakres i ograniczenia
 
 | Obszar | Wdrożona reguła | Najważniejsze ograniczenia |
@@ -6001,7 +6165,7 @@ walidacji klinicznej.
 | eGFR z cystatyny C | 2021 CKD-EPI eGFRcr-cys od 18 lat; CKiD U25 eGFRcys i średnia eGFRcr-cys w wieku 1–25 lat. | Źródłowo wymagana identyfikowalność ERM-DA471/IFCC oraz stabilność/brak AKI mogą być opisanymi założeniami przy braku przeciwnych danych; nie wymagają rutynowego ręcznego potwierdzenia. Znana sprzeczność zachowuje blokadę. Rzeczywista technika oznaczenia nie jest dopisywana; nefelometria jest zalecana dla U25cys. Wariant U25 ma ograniczoną możliwość uogólnienia poza profilem CKiD i nie otrzymuje normy przesiewowej dla zdrowej populacji. |
 | Noworodek | Oszacowanie `0,31 × długość [cm] / Scr [mg/dL]` dla donoszonego noworodka w 0.–28. dniu życia. Aktualna masa >2,5 kg pozostaje konserwatywną bramką aplikacji powiązaną z kryteriami HERO, nie członem równania. Podanie techniki jest opcjonalne, a IDMS może być jawnym założeniem obliczenia; nie dopisuje się metody enzymatycznej. | Wcześniactwo, masa ≤2,5 kg, 29. dzień życia, znane AKI/szybka zmiana, jednoznaczny non-IDMS lub znany Jaffe blokują wynik. JASN zawiera meta-analizę i sprawdzenie k w 43 noworodkach HERO, opisanych następnie w Pediatr Nephrol jako ta sama kohorta; większa walidacja pozostaje potrzebna. Wynik jest neutralny, bez kategorii G, normy 90 i pobocznego BSA. Istniejąca uwaga dla wieku <3 dni jest widoczna przy liczbie; ocena wymaga dnia życia i trendu Scr. |
 | CrCl i BSA | `cl24` po P-KLIRENS-CL24 wymaga Scr, Ucr, objętości i rzeczywistego czasu; prawidłowa pełna zbiórka jest jawnym założeniem przy braku przeciwnych danych. Nazwany profil PathWest obejmuje 3–<120 lat, od 19 lat zależy od płci. Granice źródłowe na 1,73 m² są przeliczane przez BSA/1,73 do jednostki wyniku mL/min. BSA używa Haycocka przed 18. rokiem i Du Bois od 18 lat. | Znany błąd zbiórki lub inne przeciwwskazanie nie jest usuwane przez założenie. Porównanie z dobowym profilem przy innym czasie jest jawnie orientacyjne, bez twierdzenia o walidacji krótkich protokołów. Brak normy nie blokuje liczby. Nie nadaje się G ani nie wyklucza PChN. Cockcroft–Gault nadal jest eCrCl od 18 lat z masą rzeczywistą, bez automatycznej normy/G; `cg` zachowuje wiek dokładny, `cg_norm` używa ukończonych lat. Kanoniczny wiek i historia nie są przepisywane. |
-| KDIGO G/A, ACR i PCR | Kategorie są wyznaczane z wartości niezaokrąglonej. ACR po P-KLIRENS-ACR przyjmuje iloraz stężeń ze wspólnej próbki (jawne założenie, znana sprzeczność blokuje) albo gotowy raport; kategorię nadaje w natywnej osi od 2 lat według jawnej polityki aplikacji, także dla próbki losowej z zaleceniem potwierdzenia podwyższenia. Znane czynniki przejściowe wstrzymują kategorię ACR; brak wieku lub wiek <2 nie blokuje liczby, ale wyklucza dorosłą normę. PCR zachowuje potwierdzenie wspólnej próbki i warunki porannej interpretacji pediatrycznej: 6 mies.–<2 lata <500 mg/g, od 2 do <18 lat odrębny próg PCR. | Kategorie G i A są wstrzymane przed 2. rokiem życia. Kategoria zakresu G nie jest pokazywana przy znanym AKI, znanej niestabilności lub jednoznacznie niezgodnym standardzie używanego markera; przy braku przeciwnych danych może opierać się na jawnych założeniach aplikacji. Sama kategoria nie rozpoznaje PChN bez kryterium przewlekłości i innych właściwych kryteriów. ACR nie otrzymuje obowiązkowej ankiety o AKI/IDMS/IFCC. |
+| KDIGO G/A, ACR i PCR | Kategorie są wyznaczane z wartości niezaokrąglonej. ACR po P-KLIRENS-ACR przyjmuje iloraz stężeń ze wspólnej próbki (jawne założenie, znana sprzeczność blokuje) albo gotowy raport; kategorię nadaje w natywnej osi od 2 lat według jawnej polityki aplikacji, także dla próbki losowej z zaleceniem potwierdzenia podwyższenia. Znane czynniki przejściowe wstrzymują kategorię ACR; brak wieku lub wiek <2 nie blokuje liczby, ale wyklucza dorosłą normę. PCR po P-KLIRENS-PCR wymaga dwóch stężeń albo gotowego raportu; wspólna próbka jest jawnym założeniem, znana sprzeczność blokuje iloraz. Orientacyjne odniesienia: 6–<24 m <500 mg/g, 24 m–<18 lat <200, dorośli <150; natywne progi SI pozostają odrębne. Znane czynniki przejściowe zachowują ograniczenia i sygnał liczbowego przekroczenia. Poniżej 6 m lub bez wieku nie stosuje się zastępczej normy. | Kategorie G i A są wstrzymane przed 2. rokiem życia. Kategoria zakresu G nie jest pokazywana przy znanym AKI, znanej niestabilności lub jednoznacznie niezgodnym standardzie używanego markera; przy braku przeciwnych danych może opierać się na jawnych założeniach aplikacji. Sama kategoria nie rozpoznaje PChN bez kryterium przewlekłości i innych właściwych kryteriów. ACR nie otrzymuje obowiązkowej ankiety o AKI/IDMS/IFCC. |
 | Frakcje wydalane i TmP/GFR | Analit i kreatynina muszą pochodzić z tej samej próbki moczu, a próbka krwi być równoczesna. TmP/GFR używa drugiego porannego moczu po nocy na czczo; przed 19. rokiem stosowana jest ścieżka pediatryczna, od 19. roku algorytm Waltona–Bijvoeta/Payne’a z gałęzią dla TRP >0,86. | TmP/GFR nie jest liczone z DZM. Automatyczne zakresy laboratoryjne pozostają wyłączone do czasu wersjonowanego profilu metody i lokalnej walidacji. |
 | Kamica | Profil EAU Urolithiasis 2026 rozdziela dorosłe mmol/24 h od pediatrycznej interpretacji wapnia w mmol/kg/24 h i wiekowego Ca/Cr w próbce punktowej; konwencja masowa szczawianu jest jawna. Pozostałe pediatryczne anality są pokazywane liczbowo bez automatycznych progów. Progi DZM wymagają dokładnie 24-godzinnej bieżącej zbiórki i właściwego kontekstu. | EAU zaleca dwie kolejne zbiórki w swoistej ocenie metabolicznej. Komunikaty są przesiewowe, nie stawiają rozpoznania i nie są samodzielnym zaleceniem leczenia. |
 | Hemodializa | Moduł dotyczy wyłącznie pojedynczej sesji IHD. spKt/Vurea Daugirdasa II używa źródłowych par GFAC dla 2–7 sesji/tydz. i rzeczywistego PIDI; URR i eKt/V są liczone z niezaokrąglonych danych, z uwzględnieniem dostępu AV/CVC, protokołu próbek i aktualności Kru. | Moduł jest niedostępny przed 2. rokiem życia, a w wieku 2–17 lat wymaga protokołu slow-flow. Dla 5–7 sesji/tydz. sesja >300 min jest blokowana i wymaga formalnego modelowania mocznika. Pary GFAC 2–7 pochodzą z symulacji, a walidację FHN opisano dla schematów 3, 4 i 6×/tydz. Progi 1,2/1,4 są stosowane tylko w opisanym profilu dorosłej IHD 3×/tydz.; poza nim oraz w pediatrii wynik techniczny nie otrzymuje dorosłej kategorii adekwatności. |
