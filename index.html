@@ -232,7 +232,7 @@
 <script defer src="vilda_sga_catchup.js?v=2"></script>
 <script defer src="vilda_patient_narrative.js?v=22"></script>
 <script defer src="vilda_patient_narrative_ui.js?v=12"></script>
-<script defer src="vilda_advanced_growth.js?v=79"></script>
+<script defer src="vilda_advanced_growth.js?v=80"></script>
 <script defer src="vilda_adv_history_collapse.js?v=2"></script>
 <script defer src="vilda_growth_method_ledger.js?v=2"></script>
 <script defer src="vilda_growth_prediction_validation_model.js?v=4"></script>
@@ -274,7 +274,7 @@
 </script>
 <script defer src="vilda_epicrisis.js?v=27"></script>
 <script defer src="vilda_epicrisis_ui.js?v=30"></script>
-<script defer src="vilda_publication_creator.js?v=23"></script>
+<script defer src="vilda_publication_creator.js?v=24"></script>
 <script defer src="vilda_estimated_intake.js?v=3"></script>
 <script src="vilda_update_prep.js?v=98" defer></script>
 
@@ -371,6 +371,7 @@
 <script defer src="vilda_chrome.js?v=170"></script>
 <link href="vilda_lab_assessment_ui.css?v=12" rel="stylesheet">
 <link href="vilda_lab_history_tab.css?v=4" rel="stylesheet">
+  <link rel="stylesheet" href="vilda_centile_live_panel.css?v=1">
 </head>
 <!-- Dodajemy klasę "liquid-ios26" bezpośrednio na element <body>,
      aby motyw Liquid Glass był stosowany od samego początku ładowania strony.
@@ -670,6 +671,7 @@
     <!-- Faza 2: kompaktowa karta „Przypomnienia" (tylko PRO) — wypełniacz prawej kolumny
          w miejsce #errorBox. Montaż, treść i widoczność: vilda_auth_ui.js (syncRemindersInline);
          chowa się gdy pojawi się „Podsumowanie wyników". Domyślnie ukryta. -->
+    <div id="vildaCentileLiveMount" hidden aria-label="Podgląd siatki centylowej"></div>
     <div id="remindersInline" class="vild-rem-inline" role="region" aria-label="Przypomnienia" style="display:none;"></div>
     <!-- Komunikaty po prawej stronie: błąd braku danych oraz instrukcja zapisu/wczytania
          Przenosimy komunikat „Podaj jednocześnie wiek, wagę i wzrost” do prawej kolumny formularza
@@ -2075,11 +2077,11 @@
      łączy je na jednej stronie A4 i wyświetla jako PDF w nowym oknie. -->
 <!-- Wspólne prymitywy rysowania siatek (style linii, motyw, metryki, drawCentileGrid) —
      wyodrębnione z inline_index_03.js, współdzielone z docpro.html (etap 1 konsolidacji). -->
-<script defer src="vilda_centile_charts.js?v=1"></script>
-<script defer src="inline_index_03.js?v=15"></script>
+<script defer src="vilda_centile_charts.js?v=2"></script>
+<script defer src="inline_index_03.js?v=16"></script>
 
 <!-- Now override the default growth chart implementation to support infants (0–<3 lata) and older children (3–18 lat).  -->
-<script defer src="inline_index_04.js?v=27"></script>
+<script defer src="inline_index_04.js?v=28"></script>
 
 <!-- Skrypt generujący siatkę centylową DS (wzrost i waga) w formacie PDF -->
 <script defer src="inline_index_05.js?v=5"></script>
@@ -2183,9 +2185,14 @@
   <!--  dynamiczne rozszerzanie zakresów osi Y w zależności od         -->
   <!--  wprowadzonych pomiarów.  Przycisk generujący jest ukryty na    -->
   <!--  stronie i może zostać włączony w późniejszej aktualizacji UI.  -->
-  <script defer src="inline_index_07.js?v=14"></script>
+  <script defer src="inline_index_07.js?v=15"></script>
   <!-- P-PAL-POZIOM: siatka 1–18 lat na jednej stronie A4 poziomo (składanie strony, przełącznik „Układ PDF”). -->
   <script defer src="vilda_centile_landscape.js?v=2"></script>
+  <script defer src="vilda_centile_live_data.js?v=1"></script>
+  <script defer src="vilda_centile_live_render.js?v=1"></script>
+  <script defer src="vilda_centile_live_view.js?v=1"></script>
+  <script defer src="vilda_centile_live_host.js?v=1"></script>
+  <script defer src="vilda_centile_live_panel.js?v=1"></script>
 
   <!-- Skrypt do zapisywania stanu rozwinięcia/zwinięcia kart w localStorage i jego przywracania.  
        Dzięki temu sekcje, takie jak „Zaawansowane obliczenia wzrostowe” czy „Obwód głowy i klatki piersiowej”,
