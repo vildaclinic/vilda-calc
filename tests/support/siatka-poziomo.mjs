@@ -105,7 +105,9 @@ export async function otworzKreator(page, { uklad = 'landscape' } = {}) {
       ],
     };
     window.chartCreatorData = {
-      palRegular: {
+      palRegular: {},
+      growth: {
+        version: 1,
         shared: { a84: { txt: 'Start terapii GH' }, cur: { txt: 'Kontrola' } },
         layout: { height: { cur: { dx: 330, dy: -420 } }, weight: {} },
         free: {
