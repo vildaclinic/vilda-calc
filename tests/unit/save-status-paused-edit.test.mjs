@@ -253,3 +253,58 @@ describe('P-KREATOR-ZAPIS-PAUZA — świadoma edycja po opublikowaniu bazy', () 
     expect(env.indicator.getState()).toBe('saved');
   });
 });
+
+describe('P-KREATOR-ZAPIS-PAUZA — sesja opóźniona względem zwykłej edycji', () => {
+  it('trusted input bez pauzy porównuje aktualny formularz zamiast starszej kopii sesji', () => {
+    const env = environment();
+    const reference = env.indicator.getReferenceFingerprint();
+    env.edit(63);
+    vi.advanceTimersByTime(399);
+    expect(env.session().user.weight).toBe(62);
+    expect(env.indicator._computeCanonicalFingerprint()).toBe(reference);
+    vi.advanceTimersByTime(1);
+    expect(env.save).toHaveBeenCalledWith({ force: true });
+    expect(env.session().user.weight).toBe(63);
+    expect(env.indicator.getReferenceFingerprint()).toBe(reference);
+    expect(env.indicator.getState()).toBe('dirty');
+  });
+
+  it('ta sama masa bez pauzy pozostaje saved po utrwaleniu kopii sesji', () => {
+    const env = environment();
+    env.edit(62);
+    vi.advanceTimersByTime(400);
+    expect(env.save).toHaveBeenCalledTimes(1);
+    expect(env.indicator.getState()).toBe('saved');
+  });
+
+  it('powrót do zapisanej masy przywraca saved bez zmiany referencji', () => {
+    const env = environment();
+    const reference = env.indicator.getReferenceFingerprint();
+    env.edit(63);
+    vi.advanceTimersByTime(400);
+    expect(env.indicator.getState()).toBe('dirty');
+    env.edit(62);
+    vi.advanceTimersByTime(400);
+    expect(env.session().user.weight).toBe(62);
+    expect(env.save).toHaveBeenCalledTimes(2);
+    expect(env.indicator.getReferenceFingerprint()).toBe(reference);
+    expect(env.indicator.getState()).toBe('saved');
+  });
+
+  it.each(['patient', 'sequence', 'generation', 'lock', 'clear', 'stale-panel', 'mirror', 'restoring'])('%s między input i J400 blokuje wymuszony zapis obcego/starego formularza', guard => {
+    const env = environment();
+    env.edit(63);
+    vi.advanceTimersByTime(200);
+    if (guard === 'patient') env.changePatient();
+    if (guard === 'sequence') env.changeSequence();
+    if (guard === 'generation') env.indicator._onUnlock();
+    if (guard === 'lock') { env.lock(); env.indicator._onLock(); }
+    if (guard === 'clear') env.indicator._onUserStateCleared();
+    if (guard === 'stale-panel') env.stalePanel();
+    if (guard === 'mirror') env.win.__vildaLustroWpis = true;
+    if (guard === 'restoring') env.win.__vildaPersistRestoring = true;
+    vi.advanceTimersByTime(200);
+    expect(env.save).not.toHaveBeenCalled();
+    expect(env.session().user.weight).toBe(62);
+  });
+});

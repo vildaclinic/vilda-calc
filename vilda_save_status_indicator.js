@@ -44,6 +44,10 @@ function runPausedStatusEdit(){
   pausedStatusEdit=null;
   // Sesja może nadal zawierać stary pomiar. Najpierw utrwalamy aktualny
   // formularz, potem porównujemy go z zachowaną bazą; f pozostaje bez zmian.
+  compareStatusAfterPersist(scope);
+}
+function compareStatusAfterPersist(scope){
+  if(!canDeferStatusEdit(scope))return;
   C();
   if(canDeferStatusEdit(scope))B();
 }
@@ -83,6 +87,7 @@ function Q(){if(typeof n.collectUserData!="function")return null;try{var e=n.col
   if(scope&&(!sameStatusScope(scope,captureStatusScope())||statusEditBlocked()))return;
   try{if(n.__vildaPersistRestoring===!0)return}catch{}
   if(statusPauseRemaining()>0){deferStatusEdit(scope);return}
+  if(canDeferStatusEdit(scope)){compareStatusAfterPersist(scope);return}
   B();
 }
 function w(e){
