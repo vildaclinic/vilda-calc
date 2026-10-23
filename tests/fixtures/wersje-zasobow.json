@@ -57,7 +57,7 @@
  },
  "clcr_result_presentation.js": {
   "v": 7,
-  "sha256": "e7916c207dbdecacc408eedc8ac76ad8fce23bbd511a56a7a6f9e11e61622d94"
+  "sha256": "3ea5764fcf0254848571ddd8d814f26cb31e7d1d8207e74e009963f7804c5c07"
  },
  "clcr_result_reference_data.js": {
   "v": 7,
@@ -69,7 +69,7 @@
  },
  "clcr_ui_workflow.css": {
   "v": 16,
-  "sha256": "a780aacda4b3308bded2884b23920d8cc63b571fa11cb945c073bf1b1fe064ac"
+  "sha256": "49e0c3713735271498b9e52baa22b4cc1e9d8faa292ac4f93858cd7688e5220d"
  },
  "clcr_ui_workflow.js": {
   "v": 15,

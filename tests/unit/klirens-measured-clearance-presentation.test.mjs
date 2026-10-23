@@ -88,7 +88,30 @@ describe('Zmierzony klirens — jeden wynik i przeliczony zakres źródłowy', (
     expect(html.match(/class="clcr-measured-reference-boundary"/g)).toHaveLength(2);
     expect(html).toContain('class="clcr-measured-reference-band-label"');
     expect(html).toContain('class="clcr-measured-reference-marker"');
+    const scale = Math.max(snapshot.absoluteRange.upper * 1.4, input.value * 1.15);
+    const lower = snapshot.absoluteRange.lower / scale * 100;
+    const upper = snapshot.absoluteRange.upper / scale * 100;
+    const position = input.value / scale * 100;
+    expect(html).toContain(`<svg class="clcr-measured-reference-gauge" width="100%" height="47"`);
+    expect(html).toContain(`<rect class="clcr-measured-reference-band" x="${lower.toFixed(4)}%" y="23" width="${(upper - lower).toFixed(4)}%" height="9"`);
+    expect(html).toContain(`<line class="clcr-measured-reference-boundary" x1="${lower.toFixed(4)}%" x2="${lower.toFixed(4)}%"`);
+    expect(html).toContain(`<line class="clcr-measured-reference-boundary" x1="${upper.toFixed(4)}%" x2="${upper.toFixed(4)}%"`);
+    expect(html).toContain(`<svg class="clcr-measured-reference-marker" x="${position.toFixed(4)}%"`);
+    expect(html).toContain(`<text class="clcr-measured-reference-band-label" x="${((lower + upper) / 2).toFixed(4)}%"`);
+    expect(html).not.toMatch(/\sstyle=/);
     expect(snapshot).toMatchObject({ profileId: referenceProfile.id, bsa: 1.848, durationHours: 24, referencePreview: true });
+  });
+
+  it('znacznik korzysta z wartości surowej także wtedy, gdy dwie liczby wyświetlają się identycznie', () => {
+    const markerPositions = [80.9, 81.1].map(value => {
+      const input = measuredInput({ value, bsa: 1.73 });
+      const html = presenter.render(input, presentationProfile);
+      expect(html).toContain('data-clcr-display-value="81"');
+      const position = Number(html.match(/class="clcr-measured-reference-marker" x="([\d.]+)%"/)?.[1]);
+      expect(position).toBeCloseTo(value / (127 * 1.4) * 100, 4);
+      return position;
+    });
+    expect(markerPositions[0]).toBeLessThan(markerPositions[1]);
   });
 
   it.each([

@@ -147,6 +147,40 @@ async function attachLoadedAssets(page, testInfo) {
   await testInfo.attach('cl24-loaded-assets.json', { body: JSON.stringify(assets, null, 2), contentType: 'application/json' });
 }
 
+async function expectPaintedGauge(page) {
+  const gauge = card(page).locator('svg.clcr-measured-reference-gauge');
+  await expect(gauge).toBeVisible();
+  await expect(gauge.locator('.clcr-measured-reference-marker text')).toHaveText('Wynik');
+  await expect(gauge.locator('.clcr-measured-reference-band-label')).toHaveText('Norma');
+  const painted = await gauge.evaluate(element => {
+    const shape = selector => {
+      const node = element.querySelector(selector);
+      const box = node.getBBox();
+      const style = getComputedStyle(node);
+      return { width: box.width, height: box.height, fill: style.fill, opacity: Number(style.opacity), visibility: style.visibility };
+    };
+    const track = element.querySelector('.clcr-measured-reference-track').getBoundingClientRect();
+    const band = element.querySelector('.clcr-measured-reference-band').getBoundingClientRect();
+    // Nested SVG bbox also includes the overflowing label. The triangle tip
+    // represents the value; the label may extend beyond a reference boundary.
+    const marker = element.querySelector('.clcr-measured-reference-marker path').getBoundingClientRect();
+    const markerX = marker.left + marker.width / 2;
+    return { shapes: [shape('.clcr-measured-reference-track'), shape('.clcr-measured-reference-band'),
+      shape('.clcr-measured-reference-marker path'), shape('.clcr-measured-reference-marker text'), shape('.clcr-measured-reference-band-label')],
+      bandInsideTrack: band.left >= track.left - 1 && band.right <= track.right + 1 && band.width < track.width,
+      resultInsideNormalBand: markerX >= band.left - 1 && markerX <= band.right + 1 };
+  });
+  for (const shape of painted.shapes) {
+    expect(shape.width).toBeGreaterThan(0);
+    expect(shape.height).toBeGreaterThan(0);
+    expect(shape.fill).not.toMatch(/^(?:none|transparent|rgba\(0, 0, 0, 0\))$/);
+    expect(shape.opacity).toBeGreaterThan(0);
+    expect(shape.visibility).toBe('visible');
+  }
+  expect(painted.bandInsideTrack).toBe(true);
+  expect(painted.resultInsideNormalBand).toBe(true);
+}
+
 for (const width of [1440, 390, 320]) {
   test(`cl24 ${width}px: cztery dane, jawne 24 h i jeden wynik z normą pacjenta`, async ({ page }, testInfo) => {
     const errors = [];
@@ -172,6 +206,7 @@ for (const width of [1440, 390, 320]) {
     await expect(card(page).locator('.clcr-measured-reference-source a')).toHaveAttribute('href', sourceUrl);
     await expect(card(page).locator('.clcr-measured-reference-gauge')).toHaveAttribute('role', 'img');
     await expect(card(page).locator('.clcr-measured-reference-gauge')).toHaveAttribute('aria-label', /100.*86,5.*135,7/);
+    await expectPaintedGauge(page);
     const snapshot = await reference(page);
     expect(snapshot).toMatchObject({ available: true, status: 'within', profileId, value: 100, unit: 'mL/min', durationHours: 24, durationSource: 'hours', bsaMethod: 'Du Bois', referencePreview: true });
     expect(snapshot.absoluteRange.lower).toBeCloseTo(adultBounds[0], 8);
