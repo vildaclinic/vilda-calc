@@ -19,7 +19,7 @@
  *   bo i tak chcemy zwracać HTML z cache natychmiast.
  */
 
-const SW_VERSION = '1.1.347';
+const SW_VERSION = '1.1.348';
 const CACHE_PREFIX = 'pwa-kalorii';
 const SHELL_CACHE = `${CACHE_PREFIX}-shell-v${SW_VERSION}`;
 const RUNTIME_CACHE = `${CACHE_PREFIX}-runtime`;
@@ -89,7 +89,10 @@ const SW_FETCH_CACHE_STRATEGY_AUDIT = Object.freeze({
   // w tablicach, ale nie jest pobierana), wpis z ?v= obecny w poprzedniej pamięci powłoki jest kopiowany zamiast
   // pobierany, a historia w starszych pamięciach powłoki jest przycinana przed instalacją.
   precacheInstall: 'current-entries-only-copy-immutable-from-previous-shell-prune-previous-history',
-  precacheHistoryInstalled: false
+  precacheHistoryInstalled: false,
+  // P-SW-PUSTA-KOPIA (2026-10-20): każdy zapis kopii dokumentu HTML w pamięci powłoki jest czytany z powrotem
+  // i porównywany z bajtami z sieci; niezgodny wpis nie zostaje (wraca poprzednia kopia albo wpis znika).
+  documentCopyWrite: 'read-back-compare-restore-previous-or-delete'
 });
 
 // Minimalny shell wymagany do natychmiastowego startu aplikacji z cache.
@@ -3831,6 +3834,84 @@ async function cacheResponse(cacheName, key, response) {
   return response;
 }
 
+// P-SW-PUSTA-KOPIA (2026-10-20): kopia dokumentu HTML zapisywana z odczytem kontrolnym.
+// Zmierzone w Firefoksie (151 z Playwright i 158.0.1 bez automatyzacji, limit źródła obniżony w profilu): gdy źródło
+// jest kilka bajtów do ok. 12 KB od limitu pamięci, cache.put treści mniejszej niż 64 KiB zwykle KOŃCZY SIĘ SUKCESEM,
+// ale zapisuje 0 B — dla każdego rodzaju treści (w serii 2400 zapisów: 2383 × 0 B, 7 × 1 B, 10 odrzuconych); treść od
+// 64 KiB jest odrzucana zwykłym obiektem {name: 'NS_ERROR_FILE_NO_DEVICE_SPACE'}, nie DOMException. Odświeżenie w tle
+// nadpisywało więc dobrą kopię pustą treścią, a następna wizyta (cache-first) dostawała pustą stronę; catch nie
+// działał, bo put się nie odrzucał. Nie rozstrzygamy po nazwie błędu (silniki się różnią): po zapisie czytamy wpis
+// z powrotem i porównujemy z bajtami, które przyszły z sieci. Przy niezgodności wpis jest usuwany i wraca poprzednia
+// kopia — przeczytana do pamięci PRZED nadpisaniem i też sprawdzona; gdy i to się nie uda, wpis znika (online strona
+// przyjdzie z sieci, offline błąd sieci zamiast pustej strony). Zapis odrzucony w całości (Chromium:
+// QuotaExceededError) zostawia poprzednią kopię nietkniętą — wtedy jej nie ruszamy. Błąd zapisu nie przerywa
+// odpowiedzi z sieci: zwraca false, a nie wyjątek.
+async function readCachedBody(cache, key) {
+  try {
+    const cached = await cache.match(key);
+    return cached ? { response: cached, body: await cached.arrayBuffer() } : null;
+  } catch (_) {
+    return null;
+  }
+}
+
+function hasSameBytes(a, b) {
+  if (!a || !b || a.byteLength !== b.byteLength) return false;
+  const left = new Uint8Array(a);
+  const right = new Uint8Array(b);
+  for (let i = 0; i < left.length; i += 1) {
+    if (left[i] !== right[i]) return false;
+  }
+  return true;
+}
+
+async function deleteCacheEntryQuietly(cache, key) {
+  try {
+    await cache.delete(key);
+  } catch (_) {
+    void _;
+  }
+}
+
+async function storeDocumentCopyVerified(cache, key, response) {
+  let received;
+  try {
+    received = await response.clone().arrayBuffer();
+  } catch (_) {
+    return false;
+  }
+
+  const previous = await readCachedBody(cache, key);
+
+  try {
+    await cache.put(key, response.clone());
+  } catch (_) {
+    void _;
+  }
+
+  const stored = await readCachedBody(cache, key);
+  if (stored && hasSameBytes(stored.body, received)) return true;
+  if (stored && previous && hasSameBytes(stored.body, previous.body)) return false;
+
+  await deleteCacheEntryQuietly(cache, key);
+  if (!previous) return false;
+
+  try {
+    await cache.put(key, new Response(previous.body, {
+      status: previous.response.status,
+      statusText: previous.response.statusText,
+      headers: copyHeadersForSyntheticResponse(previous.response)
+    }));
+    const restored = await readCachedBody(cache, key);
+    if (restored && hasSameBytes(restored.body, previous.body)) return false;
+  } catch (_) {
+    void _;
+  }
+
+  await deleteCacheEntryQuietly(cache, key);
+  return false;
+}
+
 function getRuntimeCacheNowMs() {
   try {
     return Date.now();
@@ -4039,8 +4120,9 @@ async function updateShellFromNetwork(request) {
     const cacheKey = getNavigationCacheKeyFromResponse(request, networkResponse);
     const safeResponse = await makeNavigationResponseSafe(networkResponse);
 
+    // P-SW-PUSTA-KOPIA: zapis z odczytem kontrolnym — pusta kopia nie zastępuje dobrej.
     if (cacheKey && isCacheableResponse(safeResponse)) {
-      await cacheResponse(SHELL_CACHE, cacheKey, safeResponse);
+      await storeDocumentCopyVerified(await caches.open(SHELL_CACHE), cacheKey, safeResponse);
     }
 
     return safeResponse;
@@ -4051,7 +4133,12 @@ async function updateShellFromNetwork(request) {
   // Zasobów innych niż dokumenty nie zapisujemy do shell cache, jeśli po drodze
   // wydarzył się redirect — to zwykle sygnał, że adres URL nie jest kanoniczny.
   if (cacheKey && isCacheableResponse(networkResponse) && !networkResponse.redirected) {
-    await cacheResponse(SHELL_CACHE, cacheKey, networkResponse);
+    // P-SW-PUSTA-KOPIA: dokument pobrany poza nawigacją trafia pod ten sam klucz co kopia z nawigacji.
+    if (DOCUMENT_PATHS.has(cacheKey)) {
+      await storeDocumentCopyVerified(await caches.open(SHELL_CACHE), cacheKey, networkResponse);
+    } else {
+      await cacheResponse(SHELL_CACHE, cacheKey, networkResponse);
+    }
   }
 
   return networkResponse;
@@ -4164,6 +4251,15 @@ async function fetchAndStorePrecacheUrl(url, { required = false, previousShellCa
   if (!cacheKey || !isCacheableResponse(safeResponse)) {
     if (required) {
       throw new Error(`Nie udało się precache'ować wymaganego pliku: ${url}`);
+    }
+    return;
+  }
+
+  // P-SW-PUSTA-KOPIA: dokument z odczytem kontrolnym. Pusta kopia nie wchodzi do nowej pamięci powłoki — wpis
+  // opcjonalny zostaje bez kopii (online z sieci), a wymagany przerywa instalację, więc zostaje poprzednia wersja SW.
+  if (DOCUMENT_PATHS.has(cacheKey)) {
+    if (!(await storeDocumentCopyVerified(cache, cacheKey, safeResponse)) && required) {
+      throw new Error(`Nie udało się zapisać wymaganego dokumentu: ${url}`);
     }
     return;
   }
