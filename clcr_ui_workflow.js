@@ -399,7 +399,7 @@
       optional: SPOT_INTERFERENCE_FIELDS,
     },
     PCR: {
-      interpretation: ["spotSampleKind", "age", "ageMonths", "sex"],
+      interpretation: ["age", "ageMonths"],
       optional: SPOT_INTERFERENCE_FIELDS,
     },
     CaCr_spot: {
@@ -553,6 +553,10 @@
     ACR_reported_unit: "Zachowaj jednostkę podaną przez laboratorium. Kategorie KDIGO w mg/g i mg/mmol mają zaokrąglone progi i są oceniane w oryginalnej jednostce.",
     U_Alb_unit: "Wybierz jednostkę stężenia albuminy zgodną z wynikiem: mg/L albo mg/dL.",
     ACR_same_specimen: "Iloraz stężeń jest poprawny wyłącznie dla oznaczeń z tej samej próbki. Domyślnie jest to jawne założenie; znane różne próbki wykluczają obliczenie.",
+    PCR_reported: "Wpisz ilościowy wynik PCR z laboratorium, zachowując znak <, ≤, > lub ≥. Nie wpisuj tu samego stężenia białka.",
+    PCR_reported_unit: "Zachowaj jednostkę raportu. mg/mg i g/g odpowiadają wartości w mg/g podzielonej przez 1000; mg/mmol ma własne progi źródłowe.",
+    U_Prot_spot_unit: "Wybierz jednostkę stężenia białka całkowitego zgodną z wynikiem: mg/L, mg/dL albo g/L.",
+    PCR_same_specimen: "Dla obliczenia ze stężeń przyjmujemy wspólną próbkę. Znane różne próbki blokują ten tryb; gotowy PCR z laboratorium jest oceniany niezależnie.",
     spotPairedChemistry: "Potwierdź równoczesne pobranie krwi oraz moczu i wspólne pochodzenie analitów moczowych.",
     tmpOvernightFasting: "TmP/GFR wymaga próbki po nocnym pozostawaniu na czczo.",
     tmpPairedSameTime: "Potwierdź równoczesne pobranie sparowanych próbek krwi i drugiego porannego moczu.",
@@ -610,6 +614,8 @@
     Ucr_spot: "Ucr_spot_unit",
     U_Alb: "U_Alb_unit",
     ACR_reported: "ACR_reported_unit",
+    U_Prot_spot: "U_Prot_spot_unit",
+    PCR_reported: "PCR_reported_unit",
     Ca_spot: "Ca_spot_unit",
     U_PO4_spot: "U_PO4_spot_unit",
     S_PO4_spot: "S_PO4_spot_unit",
@@ -1677,7 +1683,7 @@
   }
 
   function groupCollapsibleContextFields() {
-    if (["cl24", "ACR"].includes(state.activeFormulaId) && !state.legacyBroad) return;
+    if (["cl24", "ACR", "PCR"].includes(state.activeFormulaId) && !state.legacyBroad) return;
     const groups = new Map();
     const sharedFieldset = ["egfr_cr_cys", "ckid_u25_cys", "ckid_u25_cr_cys"].includes(state.activeFormulaId)
       ? documentRef.getElementById("serumSet") : null;
@@ -1979,7 +1985,7 @@
     };
     (referenceFields[formula.id] || []).forEach((fieldId) => optional.add(fieldId));
     if (required.has("age") && !["neonatal_egfr", "cg_norm"].includes(formula.id)) optional.add("ageMonths");
-    if (formula.id !== "ACR") getSharedModuleFieldIds(formula.id).forEach((fieldId) => optional.add(fieldId));
+    if (!["ACR", "PCR"].includes(formula.id)) getSharedModuleFieldIds(formula.id).forEach((fieldId) => optional.add(fieldId));
     if (formula.id === "ACR") {
       optional.add("ACR_same_specimen");
       if (fieldValue("ACR_entry_mode") === "direct") {
@@ -1987,6 +1993,21 @@
         required.add("ACR_reported");
         required.add("ACR_reported_unit");
       }
+    }
+    if (formula.id === "PCR") {
+      required.delete("spotSameSpecimen");
+      optional.delete("spotSameSpecimen");
+      optional.add("PCR_same_specimen");
+      if (fieldValue("PCR_entry_mode") === "direct") {
+        ["U_Prot_spot", "U_Prot_spot_unit", "Ucr_spot", "Ucr_spot_unit"].forEach((id) => required.delete(id));
+        required.add("PCR_reported");
+        required.add("PCR_reported_unit");
+      }
+    } else {
+      ["PCR_reported", "PCR_reported_unit", "PCR_same_specimen", "U_Prot_spot_unit"].forEach((id) => {
+        required.delete(id);
+        optional.delete(id);
+      });
     }
     // The indexed CG variant uses completed years. Keep the canonical month
     // value for other formulas, but do not ask for it or let it qualify this one.
@@ -2009,7 +2030,8 @@
       optional.delete("ScrAssay");
     }
     const module = getModuleForFormula(formula.id);
-    if (module?.path === "spot" && !required.has("spotSampleKind")) optional.add("spotSampleKind");
+    if (module?.path === "spot" && !required.has("spotSampleKind") && formula.id !== "PCR") optional.add("spotSampleKind");
+    if (formula.id === "PCR" && fieldValue("spotSampleKind")) optional.add("spotSampleKind");
     if (formula.id === "KTV") {
       documentRef.getElementById("ktvFields")?.querySelectorAll("input[id], select[id]").forEach((control) => {
         if (control.id !== "ktvToggle") optional.add(control.id);
@@ -2030,6 +2052,7 @@
     const formula = formulaById(state.activeFormulaId);
     state.activeFormulaId = formula ? formula.id : "";
     if (state.legacyBroad || formula?.id !== "ACR") global.ClcrAcrUi?.sync({ document: documentRef, active: false, fieldViews: state.fieldViews });
+    if (state.legacyBroad || formula?.id !== "PCR") global.ClcrPcrUi?.sync(documentRef, { active: false, fieldViews: state.fieldViews });
     // Same-formula refresh must not reparent a focused correction control.
     // syncNeonatalAgeCorrection releases it once the correction loses focus.
     if (state.legacyBroad || formula?.id !== "neonatal_egfr") restoreNeonatalAgeCorrection();
@@ -2097,6 +2120,7 @@
     syncFieldsetVisibility();
     renderActiveHeading(formula);
     global.ClcrAcrUi?.sync({ document: documentRef, active: formula?.id === "ACR", fieldViews: state.fieldViews });
+    global.ClcrPcrUi?.sync(documentRef, { active: formula?.id === "PCR", fieldViews: state.fieldViews });
     syncFieldsetVisibility();
     renderReadiness();
   }
@@ -2112,6 +2136,7 @@
 
   function renderLegacyBroad(level) {
     global.ClcrAcrUi?.sync({ document: documentRef, active: false, fieldViews: state.fieldViews });
+    global.ClcrPcrUi?.sync(documentRef, { active: false, fieldViews: state.fieldViews });
     restoreMeasuredFields();
     restoreNeonatalAgeCorrection();
     restoreCollapsibleContextFields();
@@ -2121,7 +2146,7 @@
     delete documentRef.documentElement.dataset.clcrActiveModule;
     const active = new Set();
     state.fieldViews.forEach((_view, id) => {
-      if (!["Cl24DurationHours", "Cl24CollectionProblem", "ACR_reported", "ACR_reported_unit", "ACR_same_specimen"].includes(id)) active.add(id);
+      if (!["Cl24DurationHours", "Cl24CollectionProblem", "ACR_reported", "ACR_reported_unit", "ACR_same_specimen", "PCR_reported", "PCR_reported_unit", "PCR_same_specimen", "U_Prot_spot_unit"].includes(id)) active.add(id);
     });
     state.activeFieldIds = active;
     state.requiredFieldIds = new Set();
@@ -2437,6 +2462,12 @@
   }
 
   function evaluateFormulaOutcome(formula) {
+    if (formula?.id === "PCR" && typeof global.evaluateClcrPcr === "function") {
+      const outcome = global.evaluateClcrPcr();
+      return outcome.valid
+        ? { ok: true, outcome, blockers: [], limitations: [] }
+        : semanticBlock(outcome.reasonCode || "PCR_INVALID", outcome.message || outcome.statusText || "Sprawdź wartość PCR, jednostkę i pochodzenie oznaczeń.", "", outcome);
+    }
     if (formula?.id === "ACR" && typeof global.evaluateClcrAcr === "function") {
       const outcome = global.evaluateClcrAcr();
       return outcome.valid
@@ -2875,6 +2906,7 @@
   function renderReadiness() {
     if (!state.readiness) return;
     if (state.activeFormulaId === "ACR") global.ClcrAcrUi?.refresh(documentRef);
+    if (state.activeFormulaId === "PCR") global.ClcrPcrUi?.refresh(documentRef);
     syncAssayOptions();
     syncNeonatalAgeCorrection();
     syncMeasuredProblem();
@@ -2948,7 +2980,7 @@
   }
 
   function renderDataCompletion() {
-    if (state.activeFormulaId === "ACR") return;
+    if (["ACR", "PCR"].includes(state.activeFormulaId)) return;
     const questions = new Set();
     state.requiredFieldIds.forEach((fieldId) => {
       if (DZM_QUALITY_FIELDS.includes(fieldId)) questions.add(DZM_QUALITY_GROUP_FOCUS_ID);
@@ -2995,7 +3027,7 @@
     eyebrow.append(step, documentRef.createTextNode("Dane do obliczenia"));
     state.activePanel.appendChild(eyebrow);
     const heading = createElement("h2", "clcr-active-panel__title", formula
-      ? formula.id === "ACR" ? "ACR — albumina/kreatynina" : formula.id === "cl24" ? "Klirens kreatyniny ze zbiórki moczu" : formula.id === "cg_norm" ? "Cockcroft–Gault (1,73 m²)" : formula.id === "cg" ? "Cockcroft–Gault" : formula.label
+      ? formula.id === "PCR" ? "Białko/kreatynina — PCR" : formula.id === "ACR" ? "ACR — albumina/kreatynina" : formula.id === "cl24" ? "Klirens kreatyniny ze zbiórki moczu" : formula.id === "cg_norm" ? "Cockcroft–Gault (1,73 m²)" : formula.id === "cg" ? "Cockcroft–Gault" : formula.label
       : legacy ? "Obliczenia" : "Wybierz obliczenie");
     state.activePanel.appendChild(heading);
     if (formula?.id === "cl24") {
@@ -3165,7 +3197,7 @@
     const formula = formulaById(formulaId);
     const module = getModuleForFormula(formulaId);
     if (!formula || !module || HISTORICAL_FORMULA_IDS.includes(formulaId)) return false;
-    const preserveCalculationInputs = ["cl24", "ACR"].includes(state.activeFormulaId) || ["cl24", "ACR"].includes(formulaId);
+    const preserveCalculationInputs = ["cl24", "ACR", "PCR"].includes(state.activeFormulaId) || ["cl24", "ACR", "PCR"].includes(formulaId);
     state.legacyBroad = false;
     state.mobileModulesExpanded = false;
     documentRef.documentElement.classList.remove("clcr-mobile-modules-expanded");
@@ -3180,7 +3212,7 @@
     if (preserveCalculationInputs) {
       // The workflow already sets the level, picker and active fields above.
       // The legacy picker additionally resets the entire form: skip that reset
-      // when opening/leaving a measured collection or ACR. Shared specimen
+      // when opening/leaving a measured collection, ACR or PCR. Shared specimen
       // values and their units survive switching methods, including a blank.
       global.clearFormulaMustFill?.();
       global.highlightFields?.(formula, false);
@@ -3437,6 +3469,7 @@
             "U_PCR",
             "Cl24DurationSource",
             "ACR_entry_mode",
+            "PCR_entry_mode",
           ].includes(control.id)
         ) {
           if (["U_ACR", "U_PCR"].includes(control.id)) {
@@ -3485,7 +3518,7 @@
     }, true);
     form.addEventListener("change", scheduleReadiness, true);
     form.addEventListener("change", (event) => {
-      if (event.target?.id === "ACR_entry_mode") {
+      if (["ACR_entry_mode", "PCR_entry_mode"].includes(event.target?.id)) {
         syncFromPicker();
         if (typeof global.clcrUpdate === "function") global.clcrUpdate();
       }
@@ -3806,9 +3839,9 @@
       const dp = mapDatapoint(series, el.getAttribute("data-clcr-value"));
       if (!dp) continue;
       if (target && !target.has(dp.sourceFormulaId)) continue;
-      // ACR preserves the unrounded measurement: rounding can cross A1/A2/A3
-      // thresholds. The clinician's display and any inequality are kept apart.
-      if (dp.sourceFormulaId !== "ACR") dp.valueNum = displayedNumber(el, dp.valueNum);
+      // Urine ratios preserve the unrounded measurement: rounding can cross a
+      // clinical threshold. The display and any inequality are kept apart.
+      if (!["ACR", "PCR"].includes(dp.sourceFormulaId)) dp.valueNum = displayedNumber(el, dp.valueNum);
       dp.norm = readRangeText(el);
       dp.outOfRange = elementOutOfRange(el);
       if (dp.sourceFormulaId === "ACR") {
@@ -3821,6 +3854,19 @@
           dp.displayValue = String(snapshot.display?.text || acrDisplayText(snapshot)).replace(".", ",");
           dp.norm = snapshot.referenceAvailable && snapshot.reference
             ? `${snapshot.reference.limit} ${snapshot.unit}` : "";
+          dp.outOfRange = snapshot.status === "unassessed" ? null : snapshot.status === "above";
+        }
+      }
+      if (dp.sourceFormulaId === "PCR") {
+        const snapshot = readPcrSnapshot(el.getAttribute("data-clcr-pcr-snapshot"));
+        if (snapshot) {
+          dp.pcrSnapshot = snapshot;
+          dp.valueNum = snapshot.rawValue;
+          dp.unit = snapshot.unit;
+          dp.comparator = snapshot.comparator || "";
+          dp.displayValue = String(snapshot.display?.text || acrDisplayText(snapshot)).replace(".", ",");
+          dp.norm = snapshot.referenceAvailable && snapshot.reference
+            ? `${String(snapshot.reference.limit).replace(".", ",")} ${snapshot.unit}` : "";
           dp.outOfRange = snapshot.status === "unassessed" ? null : snapshot.status === "above";
         }
       }
@@ -3978,6 +4024,110 @@
     };
   }
 
+  function readPcrSnapshot(encoded) {
+    if (typeof encoded !== "string" || encoded.length > 40000) return null;
+    try {
+      const snapshot = JSON.parse(encoded);
+      if (!snapshot || typeof snapshot !== "object" || Array.isArray(snapshot)) return null;
+      if (snapshot.schema !== "clcr-pcr" || snapshot.version !== 1) return null;
+      if (!Number.isFinite(snapshot.rawValue) || snapshot.rawValue < 0) return null;
+      if (!["mg/g", "mg/mmol", "mg/mg", "g/g"].includes(snapshot.unit)) return null;
+      if (!["", "<", ">", "≤", "≥"].includes(snapshot.comparator || "")) return null;
+      if (!["within", "above", "unassessed"].includes(snapshot.status)) return null;
+      return snapshot;
+    } catch (_) { return null; }
+  }
+
+  const PCR_NOTE_HEADER = "PCR — ocena w chwili zapisu:";
+  const PCR_LEVEL_LABELS = { normal: "poniżej progu", raised: "podwyższony", marked: "znacznie podwyższony", nephrotic: "zakres nerczycowy" };
+  const PCR_COMPARISON_LABELS = { below: "poniżej progu", above: "próg osiągnięty lub przekroczony", ambiguous: "przedział obejmuje różne poziomy" };
+
+  function pcrReferenceNote(datapoint) {
+    const snapshot = datapoint?.pcrSnapshot;
+    if (datapoint?.sourceFormulaId !== "PCR" || !snapshot) return "";
+    const number = value => Number.isFinite(value) ? String(value).replace(".", ",") : "";
+    const string = value => typeof value === "string" ? value.trim() : "";
+    const comparator = snapshot.comparator || "";
+    const lines = [PCR_NOTE_HEADER,
+      `Tryb: ${snapshot.mode === "direct" ? "wynik PCR z laboratorium" : "obliczono ze stężeń"}.`,
+      `Wynik przed zaokrągleniem: ${comparator}${number(snapshot.rawValue)} ${snapshot.unit}.`,
+      `Wynik pokazany: ${datapoint.displayValue || acrDisplayText(snapshot)} ${snapshot.unit}.`,
+      `Ocena: ${{ within: "w zakresie", above: "powyżej normy", unassessed: "nie oceniono" }[snapshot.status] || "nie oceniono"}.`,
+      `Poziom PCR: ${PCR_LEVEL_LABELS[snapshot.category] || "nie nadano"}.`,
+      `Porównanie z progiem: ${PCR_COMPARISON_LABELS[snapshot.comparison] || "nie wykonano"}.`,
+    ];
+    if (datapoint.norm) lines.push(`Norma pokazana przy wyniku: ${datapoint.norm}.`);
+    if (string(snapshot.display?.boundary || snapshot.boundary)) lines.push(`Granica przed zaokrągleniem: ${String(snapshot.display?.boundary || snapshot.boundary).replace(".", ",")}.`);
+    if (snapshot.classificationUnit) lines.push(`Oś porównania: ${snapshot.classificationUnit}${Number.isFinite(snapshot.classificationValue) ? `; wartość ${number(snapshot.classificationValue)}` : ""}.`);
+    if (Number.isFinite(snapshot.reference?.nephroticThreshold)) lines.push(`Próg zakresu nerczycowego dla użytej grupy wieku: ≥${number(snapshot.reference.nephroticThreshold)} ${snapshot.unit}.`);
+    const band = snapshot.reference?.band;
+    if (band) lines.push(`Grupa wieku źródła: od ${number(band.minimumAgeYearsInclusive)} lat${Number.isFinite(band.maximumAgeYearsExclusive) ? ` do poniżej ${number(band.maximumAgeYearsExclusive)} lat` : ""}${band.populationLabel ? `; ${band.populationLabel}` : ""}.`);
+    if (string(band?.agePolicy)) lines.push(`Dobór przedziału wieku: ${band.agePolicy}`);
+    if (string(snapshot.statusText)) lines.push(snapshot.statusText);
+    if (string(snapshot.qualification?.note)) lines.push(snapshot.qualification.note);
+    const age = snapshot.context?.ageYears;
+    lines.push(Number.isFinite(age) ? `Wiek użyty przy ocenie: ${number(age)} lat.` : "Wiek użyty przy ocenie: nieznany.");
+    const input = snapshot.input || {};
+    if (snapshot.mode === "direct") {
+      lines.push(`Wynik wpisany z laboratorium: ${String(input.reportedValue ?? "")} ${string(input.reportedUnit) || snapshot.unit}.`);
+    } else {
+      if (input.proteinValue != null) lines.push(`Białko całkowite w moczu: ${String(input.proteinValue).replace(".", ",")} ${string(input.proteinUnit)}.`);
+      if (input.creatinineValue != null) lines.push(`Kreatynina w moczu: ${String(input.creatinineValue).replace(".", ",")} ${string(input.creatinineUnit)}.`);
+      lines.push(snapshot.context?.sameSpecimen === "confirmed"
+        ? "Potwierdzono, że oznaczenia pochodzą z tej samej próbki moczu."
+        : "Założono, że oznaczenia pochodzą z tej samej próbki moczu.");
+    }
+    const sample = { firstMorning: "pierwszy poranny mocz", secondMorning: "drugi poranny mocz", random: "próbka losowa", timed: "próbka ze zbiórki czasowej" }[snapshot.context?.sampleType];
+    lines.push(`Rodzaj próbki: ${sample || "nie podano"}.`);
+    const knownFactors = { menstruation: "miesiączka", hematuria: "krwiomocz", infection: "infekcja", exercise: "intensywny wysiłek", acuteIllness: "ostra choroba" };
+    const factors = Array.isArray(snapshot.context?.confounders) ? snapshot.context.confounders : [];
+    if (factors.length) lines.push(`Zgłoszone czynniki wpływające na ocenę: ${factors.map(key => knownFactors[key] || String(key)).join(", ")}.`);
+    const source = snapshot.source || snapshot.reference?.source || {};
+    if (string(source.label)) lines.push(`Źródło normy: ${source.label}${source.version ? `; ${source.version}` : ""}${source.accessedAt ? `; dostęp ${source.accessedAt}` : ""}.`);
+    if (string(source.url)) lines.push(`Adres źródła: ${source.url}`);
+    if (string(source.section)) lines.push(`Miejsce w źródle: ${source.section}.`);
+    const nephroticSource = snapshot.reference?.nephroticSource;
+    if (nephroticSource?.label) lines.push(`Źródło progu nerczycowego: ${nephroticSource.label}${nephroticSource.version ? `; ${nephroticSource.version}` : ""}.`);
+    if (nephroticSource?.url) lines.push(`Adres źródła progu nerczycowego: ${nephroticSource.url}`);
+    if (snapshot.profileId) lines.push(`Profil odniesienia: ${snapshot.profileId}; wersja ${snapshot.profileVersion ?? "niepodana"}.`);
+    const population = typeof snapshot.population === "string" ? snapshot.population : snapshot.population?.label;
+    if (string(population)) lines.push(`Populacja odniesienia: ${population}.`);
+    lines.push("Pojedynczy wynik PCR nie ustala rozpoznania przewlekłej choroby nerek ani zespołu nerczycowego.");
+    return lines.join("\n");
+  }
+
+  function savedPcrAssessment(note) {
+    const body = typeof note?.body === "string" ? note.body : "";
+    const start = body.indexOf(PCR_NOTE_HEADER);
+    if (start < 0 || body.length > 50000) return null;
+    const text = body.slice(start);
+    const raw = /^Wynik przed zaokrągleniem: ([<>≤≥]?)([\d.,eE+-]+) (mg\/g|mg\/mmol|mg\/mg|g\/g)\.$/m.exec(text);
+    if (!raw) return null;
+    const rawValue = Number(raw[2].replace(",", "."));
+    if (!Number.isFinite(rawValue) || rawValue < 0) return null;
+    const display = /^Wynik pokazany: (.+) (mg\/g|mg\/mmol|mg\/mg|g\/g)\.$/m.exec(text);
+    const lab = note.labResult || {};
+    const normalizeDisplay = value => String(value ?? "").replace(/\s+/g, "").replace(",", ".");
+    if (lab.unit && lab.unit !== raw[3]) return null;
+    if (Number.isFinite(lab.valueNum) && lab.valueNum !== rawValue) return null;
+    if (display && lab.value != null && normalizeDisplay(lab.value) !== normalizeDisplay(display[1])) return null;
+    const level = /^Poziom PCR: ([^\n]+)\.$/m.exec(text)?.[1];
+    const savedNorm = /^Norma pokazana przy wyniku: ([^\n]+)\.$/m.exec(text)?.[1] || "";
+    if (normalizeDisplay(lab.norm) !== normalizeDisplay(savedNorm)) return null;
+    const category = Object.keys(PCR_LEVEL_LABELS).find(key => PCR_LEVEL_LABELS[key] === level) || null;
+    const comparisonLabel = /^Porównanie z progiem: ([^\n]+)\.$/m.exec(text)?.[1];
+    const comparison = Object.keys(PCR_COMPARISON_LABELS).find(key => PCR_COMPARISON_LABELS[key] === comparisonLabel) || null;
+    const status = /^Ocena: (w zakresie|powyżej normy|nie oceniono)\.$/m.exec(text)?.[1];
+    const age = /^Wiek użyty przy ocenie: ([\d.,]+) lat\.$/m.exec(text);
+    const profile = /^Profil odniesienia: ([^;\n]+); wersja ([^\n]+)\.$/m.exec(text);
+    return {
+      rawValue, unit: raw[3], comparator: raw[1], displayValue: display ? display[1] : raw[1] + raw[2],
+      category, comparison, status: status === "w zakresie" ? "within" : status === "powyżej normy" ? "above" : "unassessed",
+      ageYears: age ? Number(age[1].replace(",", ".")) : null,
+      profileId: profile?.[1] || null, profileVersion: profile?.[2] || null, contextNote: text,
+    };
+  }
+
   function measuredReferenceNote(datapoint) {
     const reference = datapoint?.measuredClearanceReference;
     if (datapoint?.sourceFormulaId !== "cl24" || !reference || typeof reference !== "object" || Array.isArray(reference)) return "";
@@ -4054,8 +4204,9 @@
       const dp = datapoints[i];
       const labResult = {
         test: dp.label,
-        value: dp.sourceFormulaId === "ACR" && dp.acrSnapshot
-          ? dp.displayValue || acrDisplayText(dp.acrSnapshot) : formatValueString(dp.valueNum),
+        value: dp.sourceFormulaId === "PCR" && dp.pcrSnapshot
+          ? dp.displayValue || acrDisplayText(dp.pcrSnapshot) : dp.sourceFormulaId === "ACR" && dp.acrSnapshot
+            ? dp.displayValue || acrDisplayText(dp.acrSnapshot) : formatValueString(dp.valueNum),
         valueNum: dp.valueNum,
         unit: dp.unit,
       };
@@ -4063,6 +4214,7 @@
       // detection limit stays textual there; the signed endpoint is retained
       // in the ACR snapshot note and understood by this history adapter.
       if (dp.sourceFormulaId === "ACR" && dp.acrSnapshot?.comparator) delete labResult.valueNum;
+      if (dp.sourceFormulaId === "PCR" && dp.pcrSnapshot?.comparator) delete labResult.valueNum;
       // Zakres referencyjny (jeśli silnik go pokazał) — do kolumny „Zakres".
       if (dp.norm) labResult.norm = String(dp.norm).slice(0, 200);
       // Znacznik „poza zakresem" w treści (magazyn nie ma pola boolean) —
@@ -4073,6 +4225,7 @@
         (dp.outOfRange ? " · wynik poza zakresem" : "") +
         (typeof dp.assumptions === "string" && dp.assumptions.trim() ? "\n\n" + dp.assumptions.trim() : "") +
         (dp.sourceFormulaId === "ACR" && dp.acrSnapshot ? "\n\n" + acrReferenceNote(dp) : "") +
+        (dp.sourceFormulaId === "PCR" && dp.pcrSnapshot ? "\n\n" + pcrReferenceNote(dp) : "") +
         (dp.sourceFormulaId === "cl24" && dp.measuredClearanceReference ? "\n\n" + measuredReferenceNote(dp) : "") +
         (dp.sourceFormulaId === "cg_norm" && dp.agePolicy === "completed-years" && Number.isInteger(dp.ageUsedYears) && dp.ageUsedYears >= 18
           ? "\n\nWiek użyty we wzorze: " + dp.ageUsedYears + " ukończonych lat." : "");
@@ -4134,15 +4287,17 @@
       const sourceFormulaId = entry ? entry.sourceFormulaId : null;
       if (target && (!sourceFormulaId || !target.has(sourceFormulaId))) continue;
       const acr = sourceFormulaId === "ACR" ? savedAcrAssessment(note) : null;
-      const valueNum = acr ? acr.rawValue :
+      const pcr = sourceFormulaId === "PCR" ? savedPcrAssessment(note) : null;
+      const ratio = acr || pcr;
+      const valueNum = ratio ? ratio.rawValue :
         typeof lab.valueNum === "number" && isFinite(lab.valueNum)
           ? lab.valueNum
           : toNumber(lab.value);
       if (!Number.isFinite(valueNum)) continue;
-      const unit = (acr?.unit || lab.unit || (entry ? entry.unit : "") || "").trim();
+      const unit = (ratio?.unit || lab.unit || (entry ? entry.unit : "") || "").trim();
       // Native mg/g and mg/mmol thresholds are deliberately different axes.
       // Never draw a trend through values stored in different native units.
-      const seriesKey = sourceFormulaId === "ACR" ? `${label}\n${unit}` : label;
+      const seriesKey = ["ACR", "PCR"].includes(sourceFormulaId) ? `${label}\n${unit}` : label;
       const dateISO =
         normalizeDateISO(note.clinicalDateISO) ||
         (typeof note.clinicalDateISO === "string"
@@ -4160,13 +4315,15 @@
       }
       const staleAcrSnapshot = sourceFormulaId === "ACR" && !acr &&
         typeof note.body === "string" && note.body.includes(ACR_NOTE_HEADER);
-      const outOfRange = acr ? acr.status === "unassessed" ? null : acr.status === "above" : staleAcrSnapshot ? null :
+      const stalePcrSnapshot = sourceFormulaId === "PCR" && !pcr &&
+        typeof note.body === "string" && note.body.includes(PCR_NOTE_HEADER);
+      const outOfRange = ratio ? ratio.status === "unassessed" ? null : ratio.status === "above" : staleAcrSnapshot || stalePcrSnapshot ? null :
         typeof note.body === "string" &&
         note.body.indexOf("poza zakresem") >= 0;
       const norm = typeof lab.norm === "string" ? lab.norm.trim() : "";
       const point = {
         dateISO: dateISO,
-        valueNum: acr ? acr.rawValue : valueNum,
+        valueNum: valueNum,
         outOfRange: outOfRange,
         norm: norm,
         noteId: note.id || null,
@@ -4176,12 +4333,17 @@
         category: acr.category, assessment: acr.status, unit: acr.unit,
         acrAssessment: acr,
       });
+      if (pcr) Object.assign(point, {
+        displayValue: pcr.displayValue, comparator: pcr.comparator,
+        category: pcr.category, assessment: pcr.status, comparison: pcr.comparison,
+        unit: pcr.unit, pcrAssessment: pcr,
+      });
       byLabel.get(seriesKey).points.push(point);
     }
     const series = Array.from(byLabel.values());
     series.forEach((s) => {
       s.points.sort((a, b) => String(a.dateISO).localeCompare(String(b.dateISO)));
-      if (s.sourceFormulaId === "ACR") {
+      if (["ACR", "PCR"].includes(s.sourceFormulaId)) {
         s.norm = s.points[s.points.length - 1]?.norm || "";
         return;
       }
@@ -4242,11 +4404,15 @@
         s.points.forEach((p) => {
           byDate[p.dateISO] = {
             valueNum: p.valueNum,
-            outOfRange: s.sourceFormulaId === "ACR" ? p.outOfRange : !!p.outOfRange,
+            outOfRange: ["ACR", "PCR"].includes(s.sourceFormulaId) ? p.outOfRange : !!p.outOfRange,
           };
           if (s.sourceFormulaId === "ACR") Object.assign(byDate[p.dateISO], {
             displayValue: p.displayValue, comparator: p.comparator,
             assessment: p.assessment, acrAssessment: p.acrAssessment,
+          });
+          if (s.sourceFormulaId === "PCR") Object.assign(byDate[p.dateISO], {
+            displayValue: p.displayValue, comparator: p.comparator,
+            assessment: p.assessment, comparison: p.comparison, pcrAssessment: p.pcrAssessment,
           });
         });
         return {
