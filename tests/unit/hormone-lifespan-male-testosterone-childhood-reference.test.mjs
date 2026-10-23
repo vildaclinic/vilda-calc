@@ -4,7 +4,7 @@ import { readFileSync } from 'node:fs';
 import vm from 'node:vm';
 import { describe, expect, it } from 'vitest';
 import { loadBrowserScript } from '../support/load-browser-script.mjs';
-import { beforeFemaleE2ChildhoodBundle, beforeTestosteroneBoysBundle } from '../support/prior-female-gonadotropin-bundle.mjs';
+import { beforeFemaleE2ChildhoodBundle, beforeFshSourceRuntime, beforeTestosteroneBoysBundle } from '../support/prior-female-gonadotropin-bundle.mjs';
 
 const require = createRequire(import.meta.url);
 const runtime = require('../../vilda_hormone_lifespan_data.js');
@@ -39,7 +39,7 @@ describe('Testosteron chłopców 1–<3 — przybliżone mediany grup Kushnir 20
     // earlier number, source boundary, assay/material gate and provenance.
     expect(digest(prior.profiles)).toBe('8900802bb979f8663a3b2904c89e025feb5324ef8b6fb6c83bb5236a4f0f6a74');
     expect(digest(prior)).toBe('11905045ada04596a294491dce3d9986cd027b4882aa50f3bc5697b43d61da4f');
-    const otherRuntime = Object.fromEntries(Object.entries(runtime).filter(([key]) =>
+    const otherRuntime = Object.fromEntries(Object.entries(beforeFshSourceRuntime(runtime)).filter(([key]) =>
       key !== 'patientPointData' && key !== 'amhLilacsSourceData' && key !== 'e2PhaseSourceData'));
     expect(digest(otherRuntime)).toBe('47fda226dc893be4f94578a53c75d91d8a0c98fece580b7c6f46525a77f2def0');
     expect(policy).toMatchObject({ kind: 'educational-source-selection', ordinaryOnly: true });

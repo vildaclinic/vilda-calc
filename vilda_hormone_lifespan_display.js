@@ -1115,6 +1115,42 @@
     return [buildMaleLh(data, engine), buildMaleFsh(data, engine)].filter(Boolean);
   }
 
+  function fshCycleProjection(data, cycle) {
+    var policy = data && data.fshCycleDisplayPolicy;
+    var scale = policy && policy.scale, selection = policy && policy.selection;
+    var fsh = cycle.curves.find(function (curve) { return curve.id === 'fsh'; });
+    var valid = !!(policy && policy.kind === 'single-hormone-cycle-display' &&
+      typeof policy.id === 'string' && policy.id && typeof policy.version === 'string' && policy.version &&
+      policy.sex === 'female' && policy.analyte === 'fsh' && policy.view === 'cycle' &&
+      policy.sourceStatistic === cycle.statistic && policy.numericPatientProfilesChanged === false &&
+      policy.clinicalNormsChanged === false && selection &&
+      Array.isArray(selection.required) && selection.required.join(',') === 'fsh' &&
+      Array.isArray(selection.excluded) && selection.excluded.join(',') === 'lh' &&
+      scale && scale.kind === 'linear' && scale.unit === cycle.scale.unit && scale.min === 0 &&
+      finite(scale.max) && scale.max > 0 && scale.max <= cycle.scale.max && scale.independentOfPatient === true &&
+      Array.isArray(scale.ticks) && scale.ticks.length >= 2 && scale.ticks[0] === 0 &&
+      scale.ticks[scale.ticks.length - 1] === scale.max &&
+      !scale.ticks.some(function (tick, index, ticks) {
+        return !finite(tick) || tick < 0 || tick > scale.max || index > 0 && tick <= ticks[index - 1];
+      }) && fsh && [fsh.sourcePoints, fsh.points].every(function (points) {
+        return Array.isArray(points) && points.length > 0 && points.every(function (point) {
+          return finite(point.value) && point.value >= 0 && point.value <= scale.max;
+        });
+      }));
+    // Optional projection only: old bundles and malformed/too-small policies
+    // retain the valid shared axis. They must never clip FSH or hide other
+    // periods. The original cycle scale, curves, source nodes and X stay intact.
+    var fshScale = valid ? Object.assign({}, scale, { ticks: scale.ticks.slice() }) : null;
+    return function (activeIds) {
+      var ids = Array.isArray(activeIds) ? activeIds : [];
+      var chosen = fshScale && ids.indexOf('fsh') >= 0 && ids.indexOf('lh') < 0 ? fshScale : cycle.scale;
+      var selectedScale = Object.assign({}, chosen, { ticks: chosen.ticks.slice() });
+      return { scale: selectedScale, valueFraction: function (value) {
+        return finite(value) ? value / selectedScale.max : null;
+      } };
+    };
+  }
+
   function femaleGonadotropins(data) {
     var policy = data && data.femaleGonadotropinPolicy;
     var source = data && data.femaleGonadotropinData;
@@ -1301,6 +1337,7 @@
         patientPointPolicy: p.patientPointPolicy || 'unchanged-reference-engine',
         firstDrawAgeYears: period === 'life' ? p.firstDrawAgeYears : undefined };
     });
+    result.cycle.projectionFor = fshCycleProjection(data, result.cycle);
     return result;
   }
 

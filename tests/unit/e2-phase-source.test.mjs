@@ -3,6 +3,7 @@ import { createHash } from 'node:crypto';
 import { createRequire } from 'node:module';
 import vm from 'node:vm';
 import { describe, expect, it } from 'vitest';
+import { beforeFshSourceRuntime } from '../support/prior-female-gonadotropin-bundle.mjs';
 
 const require = createRequire(import.meta.url);
 const engine = require('../../vilda_e2_phase_source.js');
@@ -25,7 +26,7 @@ function freeze(value) {
 
 describe('E2 phase-group information — Anckaert 2021, Table 1 and supplementary S3', () => {
   it('adds only the separate source block and preserves every prior profile, curve, scale and policy', () => {
-    const { e2PhaseSourceData, ...priorRuntime } = runtime;
+    const { e2PhaseSourceData, ...priorRuntime } = beforeFshSourceRuntime(runtime);
     expect(e2PhaseSourceData).toEqual(data);
     expect(createHash('sha256').update(JSON.stringify(priorRuntime)).digest('hex'))
       .toBe('59440bf9bea232989d835355fc18aedaea5a7be1ef7ee92475e8f331b28f4850');

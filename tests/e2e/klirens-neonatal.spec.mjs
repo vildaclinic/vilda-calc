@@ -332,6 +332,41 @@ test('neonatal: sprzeczne zapisane lata i miesiące odsłaniają właściwe pole
   }
 });
 
+test('neonatal: odświeżenie układu zachowuje fokus i niedokończoną korektę lat lub miesięcy', async ({ page }) => {
+  await openCalculator(page, 390);
+  for (const [field, other] of [['age', 'ageMonths'], ['ageMonths', 'age']]) {
+    await restoreNeonatal(page, { [field]: '1', [other]: '0' });
+    const control = page.locator(`#${field}`);
+    await expect(page.locator('#clcrNeonatalAgeCorrection')).toBeVisible();
+    await control.focus();
+    await expect(control).toBeFocused();
+    await page.evaluate(() => window.ClcrUiWorkflow.refresh());
+    await expect(control).toBeVisible();
+    await expect(control).toBeFocused();
+
+    await control.press('ControlOrMeta+A');
+    await control.press('Backspace');
+    await expect(control).toHaveValue('');
+    await page.evaluate(() => window.ClcrUiWorkflow.refresh());
+    await expect(control).toBeVisible();
+    await expect(control).toBeFocused();
+    await control.press('2');
+    await expect(control).toHaveValue('2');
+    await expect(card(page)).toHaveCount(0);
+    expect(await sourceInputs(page)).toMatchObject({ [field]: '2', [other]: '0', ageDays: '14' });
+
+    await control.fill('0');
+    await page.evaluate(() => window.ClcrUiWorkflow.refresh());
+    await expect(control).toBeVisible();
+    await expect(control).toBeFocused();
+    await control.blur();
+    await expectNeonatal(page);
+    await expect(control).toBeHidden();
+    await expect(page.locator('#clcrNeonatalAgeCorrection')).toBeHidden();
+    expect(await sourceInputs(page)).toMatchObject({ age: '0', ageMonths: '0', ageDays: '14' });
+  }
+});
+
 test('neonatal: założenie IDMS nie tworzy faktów, znane AKI/Jaffe/non-IDMS blokują, a zmiana formuły zachowuje źródłowe dane', async ({ page }) => {
   await openCalculator(page);
   await fillNeonatal(page);

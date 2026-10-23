@@ -45,11 +45,19 @@ export function beforeMaleLhCaliperBundle(data) {
     .filter(profile => profile.id !== 'wilson2023-male-lh-age-over16-under18') };
 }
 
+// The FSH source card and its cycle-display policy add exactly two separate
+// runtime blocks. Remove only those additions when checking preceding eras;
+// never rewrite earlier data, versions, source knots or hash expectations.
+export function beforeFshSourceRuntime(runtime) {
+  const { fshSourceData: _fshSourceInfo, fshCycleDisplayPolicy: _fshCycleDisplay, ...prior } = runtime;
+  return prior;
+}
+
 // The 2026-10-22 E2 phase card adds source information outside the ordinary
 // profiles. Restore the preceding runtime by removing exactly its new block;
 // preserve every earlier value and every frozen historical hash expectation.
 export function beforeE2PhaseSourceRuntime(runtime) {
-  const { e2PhaseSourceData: _e2PhaseSourceInfo, ...prior } = runtime;
+  const { e2PhaseSourceData: _e2PhaseSourceInfo, ...prior } = beforeFshSourceRuntime(runtime);
   return prior;
 }
 
