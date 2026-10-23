@@ -70,7 +70,7 @@ function environment({ embedded = true, reduced = true, nativeDialog = true } = 
     }
   }
   function makeWindow(pathname) {
-    const doc = events({});
+    const doc = events({ visibilityState: 'visible' });
     doc.createElement = (tag) => new Element(tag, doc);
     doc.documentElement = doc.createElement('html');
     doc.body = doc.createElement('body');
@@ -95,6 +95,7 @@ function environment({ embedded = true, reduced = true, nativeDialog = true } = 
         disconnect() { this.connected = false; }
       },
       VildaVault: { onLock: (fn) => locks.push(fn) },
+      VildaAuthUI: { recordActivity: vi.fn() },
       lock: () => locks.forEach((fn) => fn()),
     });
     Object.defineProperty(win, 'localStorage', { get() { throw new Error('Host must not access storage'); } });
@@ -416,5 +417,80 @@ describe('centile live fullscreen host — animation and keyboard', () => {
     await second.close('dispose');
     expect(secondClose).toHaveBeenCalledOnce();
     expect(e.rafs.size).toBe(0);
+  });
+});
+
+describe('centile live fullscreen host — authenticated activity across documents', () => {
+  it.each(['pointerdown', 'mousedown', 'keydown', 'touchstart', 'touchmove', 'wheel'])('forwards trusted %s to the source and display authentication sessions', (type) => {
+    const e = environment();
+    const handle = e.api.open(e.options);
+    handle.dialog.dispatchEvent({ type, isTrusted: true, key: 'ArrowRight' });
+    expect(e.source.VildaAuthUI.recordActivity).toHaveBeenCalledTimes(1);
+    expect(e.host.VildaAuthUI.recordActivity).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not prolong either session for synthetic input, hover, scroll or automatic refresh/resize/resume', () => {
+    const e = environment();
+    const handle = e.api.open(e.options);
+    for (const type of ['pointerdown', 'mousedown', 'keydown', 'touchstart', 'touchmove', 'wheel']) {
+      handle.dialog.dispatchEvent({ type, isTrusted: false });
+      handle.dialog.dispatchEvent({ type });
+    }
+    for (const type of ['pointermove', 'mousemove', 'scroll', 'resize', 'visibilitychange', 'pageshow', 'vilda:session-changed']) {
+      handle.dialog.dispatchEvent({ type, isTrusted: true });
+    }
+    e.nextFrame();
+    expect(e.source.VildaAuthUI.recordActivity).not.toHaveBeenCalled();
+    expect(e.host.VildaAuthUI.recordActivity).not.toHaveBeenCalled();
+  });
+
+  it.each(['stale-token', 'source-hidden', 'display-hidden', 'card-hidden', 'dialog-hidden', 'dialog-closed',
+    'dialog-removed', 'inline-mount-removed', 'frame-hidden', 'frame-aria-hidden', 'frame-css-hidden'])(
+    'does not forward an otherwise trusted action from %s', (scenario) => {
+    const e = environment();
+    const handle = e.api.open(e.options);
+    if (scenario === 'stale-token') e.invalidate();
+    if (scenario === 'source-hidden') e.source.document.visibilityState = 'hidden';
+    if (scenario === 'display-hidden') e.host.document.visibilityState = 'hidden';
+    if (scenario === 'card-hidden') e.element.hidden = true;
+    if (scenario === 'dialog-hidden') handle.dialog.hidden = true;
+    if (scenario === 'dialog-closed') handle.dialog.open = false;
+    if (scenario === 'dialog-removed') handle.dialog.remove();
+    if (scenario === 'inline-mount-removed') e.inline.remove();
+    if (scenario === 'frame-hidden') e.frame().hidden = true;
+    if (scenario === 'frame-aria-hidden') e.frame().setAttribute('aria-hidden', 'true');
+    if (scenario === 'frame-css-hidden') e.frame().style.visibility = 'hidden';
+    handle.dialog.dispatchEvent({ type: 'pointerdown', isTrusted: true });
+    expect(e.source.VildaAuthUI.recordActivity).not.toHaveBeenCalled();
+    expect(e.host.VildaAuthUI.recordActivity).not.toHaveBeenCalled();
+    });
+
+  it.each([false, true])('notifies a shared authentication API only once (standalone=%s)', (standalone) => {
+    const e = environment({ embedded: !standalone });
+    e.host.VildaAuthUI = e.source.VildaAuthUI;
+    const handle = e.api.open(e.options);
+    handle.dialog.dispatchEvent({ type: 'keydown', key: 'ArrowRight', isTrusted: true });
+    expect(e.source.VildaAuthUI.recordActivity).toHaveBeenCalledTimes(1);
+  });
+
+  it('keeps the other session responsive when one AuthUI callback throws', () => {
+    const e = environment();
+    e.source.VildaAuthUI.recordActivity.mockImplementation(() => { throw new Error('Closing source UI'); });
+    const handle = e.api.open(e.options);
+    expect(() => handle.dialog.dispatchEvent({ type: 'pointerdown', isTrusted: true })).not.toThrow();
+    expect(e.host.VildaAuthUI.recordActivity).toHaveBeenCalledTimes(1);
+  });
+
+  it('stops forwarding at fadeout start and removes every activity listener on teardown', async () => {
+    const e = environment({ reduced: false });
+    const handle = e.api.open(e.options);
+    handle.close('user');
+    handle.dialog.dispatchEvent({ type: 'pointerdown', isTrusted: true });
+    expect(e.source.VildaAuthUI.recordActivity).not.toHaveBeenCalled();
+    await handle.close('dispose');
+    expect(handle.dialog.listenerCount()).toBe(0);
+    handle.dialog.dispatchEvent({ type: 'keydown', key: 'ArrowRight', isTrusted: true });
+    expect(e.source.VildaAuthUI.recordActivity).not.toHaveBeenCalled();
+    expect(e.host.VildaAuthUI.recordActivity).not.toHaveBeenCalled();
   });
 });

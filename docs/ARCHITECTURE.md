@@ -149,6 +149,8 @@ Nie wolno przenosić pola między pamięcią sesji, pamięcią trwałą i danymi
 - `host` jest też w `app.html`. Przenosi tę samą kartę DOM do modalnego dialogu
   powłoki, zachowując położenie iframe. Po zamknięciu przywraca kartę i fokus.
   Zmiana pacjenta, blokada lub ukrycie ramki natychmiast usuwa stary podgląd.
+  Rzeczywista aktywność w dialogu korzysta z `VildaAuthUI.recordActivity` obu
+  dokumentów. Automatyczny render, resize i scroll nie podtrzymują sesji.
 
 Moduły nie wywołują kolektora/zapisu pacjenta, nie uruchamiają przeliczenia i nie
 przechowują podglądu w magazynach przeglądarki. Odświeżenie po obliczeniu korzysta

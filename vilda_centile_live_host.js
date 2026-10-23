@@ -9,6 +9,7 @@
   var watchedVaults = new WeakSet();
   var userReasons = ['user', 'button', 'escape', 'backdrop'];
   var invalidatingReasons = ['lock', 'patient-change', 'pagehide', 'stale', 'route-change'];
+  var activityEvents = ['pointerdown', 'mousedown', 'keydown', 'touchstart', 'touchmove', 'wheel'];
 
   function safely(callback) {
     try { return callback(); } catch (_) { return undefined; }
@@ -182,8 +183,37 @@
     });
   }
 
+  function recordActivity(record, event) {
+    try {
+      if (!event || event.isTrusted !== true || !activityEvents.includes(event.type) ||
+        active !== record || record.done || record.closing || !current(record) ||
+        !record.dialog.open || record.dialog.hidden || !record.dialog.isConnected ||
+        !record.dialog.getClientRects().length || !record.element.isConnected || record.element.hidden ||
+        !record.placeholder.isConnected || record.sourceDocument.visibilityState !== 'visible' ||
+        w.document.visibilityState !== 'visible' || record.frame &&
+        (record.frame.getAttribute('aria-hidden') === 'true' || sourceFrame(record.source) !== record.frame)) return;
+    } catch (_) { return; }
+    // The adopted card lives in the shell, while its authentication session
+    // still belongs to the source frame. Reuse AuthUI's complete activity API
+    // so both idle timers and return-from-background checks see real input.
+    var notified = new Set();
+    [record.source, w].forEach(function (view) {
+      safely(function () {
+        var auth = view.VildaAuthUI;
+        if (auth && !notified.has(auth) && typeof auth.recordActivity === 'function') {
+          notified.add(auth);
+          auth.recordActivity();
+        }
+      });
+    });
+  }
+
   function watch(record) {
     var invalidate = function () { close(record, 'patient-change'); };
+    activityEvents.forEach(function (type) {
+      listen(record, record.dialog, type, function (event) { recordActivity(record, event); },
+        { capture: true, passive: true });
+    });
     listen(record, record.sourceDocument, 'vilda:patient-loaded', function (event) {
       // Saving the same patient republishes patient-loaded without replacing the
       // editing context. The data adapter keeps that token current as well.
