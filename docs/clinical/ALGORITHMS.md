@@ -9703,6 +9703,99 @@ Stąd kumulacja: pierwszy błąd tworzył warunki dla wszystkich następnych. Da
 
 **Do decyzji właściciela.** (1) Akceptacja kliniczna. (2) Znacznik „wizyta zapisana w tej karcie": po zapisie „Nowego pomiaru" formularz zostaje tą wizytą także następnego dnia, aż do nowej masy lub wzrostu, nowego wczytania albo „Wyczyść" (wiek na dziś daje „Nowy pomiar"). (3) Moduł linii bazowej po raz pierwszy wpisuje do formularza pola wizyty (masa, wzrost, wiek) — wyłącznie przy poprawce w miejscu zapisanej, niezmienionej wizyty. (4) Moduł daty urodzenia ładowany na stronie klirensu (jako samo API; wcześniej ta strona go nie miała). (5) `timestampISO` ponownie zapisanej wizyty bez pewnej daty zostaje z pierwszego zapisu; „Data zapisu" ostatniego pomiaru klirensu z `clcr.savedAtISO`. *(Aktualizacja: P-ODTWORZ-WIEK-3 — punkt (3) obejmuje też usunięcie bieżącego pomiaru: formularz przechodzi wtedy na awansowaną, starszą wizytę.)*
 
+### P-DOB-WYNIK-ODTWORZENIE — główny wynik po zakończeniu odtwarzania dokładnego wieku, 2026-10-23
+
+**Potwierdzone zgłoszenie, odrębne od audytu klirensu.** W dwóch nieudanych próbach
+R1/G4 w [CI 39855225607](https://github.com/vildaclinic/vilda-calc/actions/runs/39855225607)
+(artefakt 12460957294) przed F5 widoczny był 29. centyl wzrostu, po F5 — 30.,
+choć świeże wywołanie produkcyjnego `calcPercentileStats(…, 'HT')` po F5 dawało
+29,2082. Data urodzenia, data pomiaru i dokładny wiek były prawidłowe. To dowód
+niezgodności końcowego DOM z aktualnym obliczeniem; same trace nie dowodzą
+dokładnej kolejności wszystkich callbacków. Późniejsze lokalne PASS na `ab89795`
+i `7e380f77` oraz PASS końcowego CI `7e380f77` nie dowodzą usunięcia wyścigu.
+
+**Mechanizm potwierdzony regresją deterministyczną.**
+Przyjęcie DOB po `vilda:patient-loaded`, `vilda:state-restored` i
+`vilda:persist-restored` jest odroczone w `vilda_dob_age.js`.
+`setFromRecord()` wpisuje datę bez zdarzenia pola, a `ustawZPowiadomieniem()`
+pomija `input` i `change`, gdy lata i miesiące już mają ten sam tekst.
+Główny wynik może więc powstać bez dokładnego wieku i pozostać w DOM po jego
+przywróceniu. Końcowe `vilda:dob-restored` ogłasza gotowy kontekst po ostatnim
+przyjęciu; istniejąca karta Porównanie korzysta już z tego sygnału
+(P-POROWNANIE-DATA).
+
+**Poprawka i wpływ kliniczny.** Nasłuch głównego kalkulatora w `app.js`
+po końcowym `vilda:dob-restored` wykonuje pełne `update()`. Przeliczenie
+odświeża jednocześnie tekst, `lastHeightPercentile`, `lastWeightPercentile` i
+wyniki pochodne, bez sztucznego `input`/`change` i bez oznaczania formularza jako
+zmienionego. Zmienia się wyświetlany wynik w błędnym stanie odtworzenia: wraca
+do wartości, którą już daje produkcyjny silnik dla tej wizyty. Tablice, wzory,
+interpolacja, jednostki, wybór siatki i zaokrąglanie pozostają bez zmian.
+Data urodzenia, wiek i data pomiaru oraz historyczne rekordy pozostają
+niezmienione. Pakowanie: `app.js` 237 → 238, SW 1.1.347 → 1.1.348;
+wersje i wpis precache wylicza `npm run podbij-wersje`.
+
+**Źródła i ograniczenia odziedziczone.** Kontrakt wieku pozostaje taki jak w
+P-ODTWORZ-WIEK, P-WIEK-POMIARU i DOB-AGE-4: dokładny wiek z dnia pomiaru,
+w skali dób / 30,4375 miesiąca. Źródło tej skali zapisane w rejestrze to
+WHO Multicentre Growth Reference Study Group, *WHO Child Growth Standards based
+on length/height, weight and age*, Acta Paediatr Suppl 2006;450:76–85,
+[DOI 10.1111/j.1651-2227.2006.tb02378.x](https://doi.org/10.1111/j.1651-2227.2006.tb02378.x).
+Siatki i populacje pozostają z P-SDS-1 i tabeli GROWTH-LMS-BMI: OLAF/OLA,
+WHO 2006/2007 i Palczewska. Dla OLAF rejestr cytuje Kułaga i wsp.,
+*Polish 2010 growth references for school-aged children and adolescents*,
+Eur J Pediatr 2011;170(5):599–609,
+[DOI 10.1007/s00431-010-1329-x](https://doi.org/10.1007/s00431-010-1329-x).
+P-SDS-1 zachowuje osobno lukę mapowania źródła istniejącej tabeli OLAF wzrostu
+(19 węzłów co 6–12 miesięcy, decyzja właściciela nr 3); ten wpis jej nie uzupełnia
+ani nie zastępuje tabeli nowymi normami. Przykład niżej sprawdza zgodność z
+istniejącym kodem i danymi, nie stanowi nowej walidacji medycznej tablic.
+
+**Przypadek wyłącznie fikcyjny i oczekiwany kontrakt.** Chłopiec ur. 20-07-2009,
+OLAF; pierwszy zapis 17-06-2026: 172 cm / 60 kg. „Nowy pomiar” 19-07-2026
+o 23:55 Europe/Warsaw: 174 cm / 62 kg, zapis wizyty. O 00:03 dnia 20-07-2026
+ponowne wpisanie 62 kg zachowuje tę wizytę, także po F5:
+
+| Wejście / stan | Oczekiwany wynik |
+|---|---|
+| Wiek pomiaru 16 lat 11 mies., `measuredAtISO: 2026-07-19` | `totalMonths: 203`, `days: 6208`, `exactMonths: 203.95893223819303` |
+| Wzrost 174 cm, dokładny wiek powyżej | produkcyjny HT około 29,208191 → DOM 29. centyl |
+| Ten sam wzrost przy 203 pełnych miesiącach, kontrola mechanizmu | produkcyjny HT około 30,067758 → 30. centyl |
+| Masa 62 kg | produkcyjny WT około 32,5085 → DOM 33. centyl |
+| Opóźnione przyjęcie DOB przy niezmienionym tekście `16/11` | po zakończeniu DOM i globals zgodne ze świeżym obliczeniem; stan `saved`, ta sama data wizyty |
+| Odtworzenie rekordu oraz odtworzenie sesji po F5 | ten sam końcowy kontrakt; dotychczasowe asercje R1/G4 zachowane |
+| Rzeczywista zmiana masy na 63 kg dnia 20-07-2026 | nowy pomiar: 17 lat 0 mies., data 2026-07-20 |
+
+**Zapis i wyjścia.** Kolektor `collectUserData()` zapisuje surowe dane, DOB i
+datę pomiaru; nie utrwala `lastHeightPercentile` ani `lastWeightPercentile`.
+Naprawa odświeżania nie jest migracją zapisów. Nieaktualne globals mogą wpływać
+na ton podsumowania profesjonalnego. Dawny handler PDF BMI/metabolizmu czyta
+`#bmrInfo`, ale `#downloadPDF` nie występuje już na Start ani DocPro — nie jest
+to dostępna ścieżka eksportu na tych stronach.
+
+**Odrębna, zastana rozbieżność raportu po wizycie.** W rzeczywistym
+`patientReportBuildPdfPackage()` po naprawie głównego DOM (29. centyl) karta
+wzrostu nadal pokazuje 30. centyl. Raport oblicza ją na świeżo przez
+`patientReportBuildMetricCards()` → `advHistoryResolveMetric('HT', …)`,
+przekazując 203 pełne miesiące z pól, bez dokładnego wieku z DOB. To inny
+kontrakt obliczeń, a nie nieodświeżony DOM lub globals. Reguły raportu i tablice
+nie są zmieniane w tej naprawie Start; ujednolicenie wieku raportu wymaga
+odrębnej decyzji właściciela. Zapis `.wiw`/JSON przenosi dane wejściowe;
+schowek Karty Pacjenta ma własną ścieżkę wieku zapisanego pomiaru
+(`VildaPatientSummaryCopy.buildSummaryTextFromPayload`, P-WIEK-POMIARU).
+Audyt klirensu pozostaje w osobnym wątku.
+
+**Regresja i weryfikacja.** Nowy test zatrzymuje wyłącznie rzeczywisty odroczony
+callback `przyjmijIOglos`, bez atrapy wieku, obliczeń ani zdarzenia zakończenia.
+Na niezmienionym `audyt` `f5183458` po zwolnieniu callbacku odtworzono
+`Waga: 33 centyl Wzrost: 30 centyl`, przy świeżym HT 29,2082.
+Test po zwolnieniu nie wywołuje `update()` ani zdarzeń pól: wymaga od produkcji
+zgodnego DOM i globals. Obejmuje też normalne synchroniczne `setFromSession()`
+po F5, zachowanie historii i stanu `saved` oraz nowy pomiar po wpisaniu 63 kg.
+Dotychczasowe asercje R1/G4 zachowane. Wyniki pełnych kontroli i przykładów
+przed/po desktop i mobile są raportowane w PR. Akceptacja kliniczna, scalenie
+i wdrożenie pozostają decyzją właściciela.
+
 ### P-ODTWORZ-WIEK-3 — poprawka z Karty dochodzi do paneli powłoki, wpis pole po polu; ścieżka usunięcia opisana, brakujące testy (SW 1.1.235, `vilda_baseline_pacjenta.js` 3, 2026-10-12, przegląd po P-ODTWORZ-WIEK-2)
 
 **Skąd.** Czwarta runda przeglądu adwersaryjnego, tym razem kodu P-ODTWORZ-WIEK-2 (#592): 30 agentów, każde znalezisko sprawdzali dwaj niezależni weryfikatorzy, większość na prawdziwej stronie z przesuniętym zegarem. Błąd tygodni (porównanie liczby miesięcy z kluczem wiersza) wykryli równolegle Codex i przegląd; poprawiony przed scaleniem #592. Tu reszta potwierdzonych znalezisk, zgodnie z decyzją właściciela („Nowy PR, wszystko").

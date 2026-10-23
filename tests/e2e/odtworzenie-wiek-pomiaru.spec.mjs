@@ -1,4 +1,5 @@
 import { expect, test } from '../support/test-czas.mjs';
+import { prepareDobRestoreGate } from '../support/dob-restore-gate.mjs';
 
 // P-ODTWORZ-WIEK (zgłoszenie właściciela 2026-10-08). Pacjent z datą urodzenia zapisany w wieku
 // 16 lat 10 mies. i wczytany miesiąc później przez „Odtwórz zapis": formularz główny pokazywał
@@ -443,6 +444,84 @@ test('powłoka: „Odtwórz zapis" na Start i przejście na DocPro — DocPro te
  * ---------------------------------------------------------------------------------------- */
 
 const stanZapisu = (page) => page.evaluate(() => window.VildaSaveStatusIndicator.getState());
+
+async function zgodneCentylePoPrzyjeciuDob(page, pomiar) {
+  await expect.poll(() => page.evaluate(() => window.VildaDobAge.restorePending())).toBe(false);
+  const wynik = await stan(page, pomiar);
+  expect(wynik.dokladny).toMatchObject({ totalMonths: 203, days: 6208, exactMonths: 203.95893223819303 });
+  expect(wynik.wzrostHT).toBe(29.2082);
+  expect(wynik.masaWT).toBe(32.5085);
+  expect(wynik.centyle, 'DOM po odtworzeniu DOB zgadza się ze świeżą funkcją produkcyjną')
+    .toBe(`Waga: ${Math.round(wynik.masaWT)} centyl Wzrost: ${Math.round(wynik.wzrostHT)} centyl`);
+  const globals = await page.evaluate(() => [window.lastWeightPercentile, window.lastHeightPercentile]);
+  expect(globals[0]).toBeCloseTo(wynik.masaWT, 3);
+  expect(globals[1]).toBeCloseTo(wynik.wzrostHT, 3);
+  expect([wynik.age, wynik.ageMonths]).toEqual(['16', '11']);
+  expect(await page.evaluate(() => { const u = window.collectUserData().user; return [u.dobISO, u.age, u.ageMonths, u.measuredAtISO]; }))
+    .toEqual(['2009-07-20', 16, 11, '2026-07-19']);
+  expect(await stanZapisu(page), 'przyjęcie kontekstu DOB nie jest edycją pomiaru').toBe('saved');
+}
+
+for (const odtworzenie of ['rekord', 'sesja po F5']) {
+  test(`regresja: opóźnione przyjęcie DOB odświeża centyle przy niezmienionych latach/miesiącach — ${odtworzenie}`, async ({ page }) => {
+    test.setTimeout(240_000);
+    await page.addInitScript(prepareDobRestoreGate);
+    await page.clock.setSystemTime(new Date(ZAPIS));
+    await otworz(page);
+    const pid = await zapiszPacjenta(page, NASTOLATEK);
+    await page.evaluate(() => window.clearAllData());
+    await page.clock.setSystemTime(new Date('2026-07-19T21:55:00Z'));
+    await wczytaj(page, pid, 'nowy');
+    await page.locator('#height').fill('174');
+    await page.locator('#weight').fill('62');
+    await page.waitForTimeout(1000);
+    expect(await page.evaluate(async () => Boolean(await window.saveUserData()))).toBe(true);
+    await expect.poll(() => stanZapisu(page)).toBe('saved');
+    const pomiar = { wzrost: 174, masa: 62, plec: 'M' };
+    await zgodneCentylePoPrzyjeciuDob(page, pomiar);
+
+    await page.clock.setSystemTime(new Date('2026-07-19T22:03:00Z'));
+    await page.locator('#weight').fill('62');
+    await expect.poll(() => stanZapisu(page)).toBe('saved');
+    const zapisPrzed = await page.evaluate(async (id) => window.VildaVault.getPatient(id), pid);
+
+    if (odtworzenie === 'rekord') {
+      // Gotowe lata/miesiące, ale przyjęcie DOB zatrzymane przed rzeczywistym
+      // przyjmijIOglos. Normalny render używa 203 mies., co daje 30. centyl.
+      await page.evaluate(() => {
+        window.clearAllData();
+        window.__vildaDobRestoreGate.pause();
+      });
+      await wczytaj(page, pid, 'odtworz');
+      await expect.poll(() => page.evaluate(() => window.__vildaDobRestoreGate.pending())).toBeGreaterThan(0);
+      const bezDob = await stan(page, pomiar);
+      expect([bezDob.age, bezDob.ageMonths, bezDob.dokladny]).toEqual(['16', '11', null]);
+      expect(bezDob.wzrostHT).toBe(30.0678);
+      expect(bezDob.centyle).toContain('Wzrost: 30 centyl');
+    } else {
+      // Dokładnie ścieżka R1/G4: zapisana wizyta „Nowy pomiar”, ta sama masa po
+      // północy i F5. Bramka opóźnia produkcyjne callbacki; synchroniczne
+      // setFromSession/session-recalc zachowują swój zwykły kontrakt.
+      await page.evaluate(() => window.__vildaDobRestoreGate.pause());
+      await page.reload({ waitUntil: 'load' });
+      await gotowa(page);
+      await expect.poll(() => page.evaluate(() => window.__vildaDobRestoreGate.pending())).toBeGreaterThan(0);
+      const sesjaPrzedCallbackiem = await stan(page, pomiar);
+      expect([sesjaPrzedCallbackiem.age, sesjaPrzedCallbackiem.ageMonths]).toEqual(['16', '11']);
+    }
+    expect(await page.evaluate(() => window.__vildaDobRestoreGate.release())).toBeGreaterThan(0);
+    // Nie wywołujemy update ani input po zwolnieniu: widok musi odświeżyć produkcja.
+    await zgodneCentylePoPrzyjeciuDob(page, pomiar);
+    expect(await page.evaluate(async (id) => window.VildaVault.getPatient(id), pid), 'samo przeliczenie nie zmienia zapisanej historii')
+      .toEqual(zapisPrzed);
+
+    // Rzeczywiście nowa masa kończy odtworzoną wizytę i rozpoczyna pomiar po urodzinach.
+    await page.locator('#weight').fill('63');
+    await expect.poll(() => page.evaluate(() => { const u = window.collectUserData().user; return [u.age, u.ageMonths, u.measuredAtISO]; }))
+      .toEqual([17, 0, '2026-07-20']);
+    await expect.poll(() => stanZapisu(page)).toBe('dirty');
+  });
+}
 
 test('R1/G4: wizyta „Nowy pomiar" zapisana przed północą — po północy i po F5 nadal ta sama wizyta, bez „Niezapisanych zmian"', async ({ page }) => {
   test.setTimeout(240_000);
