@@ -1308,7 +1308,7 @@
         lastAmhSourceContext = amhContext;
         refreshAmhLilacsSource();
       }
-      if (e2PhaseSourceUI || e2D3UI) {
+      if (e2PhaseSourceUI || typeof e2D3UI !== 'undefined' && e2D3UI) {
         // Reuse this calculation's context and existing optional phase. The
         // statistic is outside the ordinary profile registry and history.
         var e2Context = Object.assign({}, context);
@@ -1320,29 +1320,31 @@
         refreshE2PhaseSource();
         // This fact belongs only to the current E2 measurement. Never copy a
         // day answer, historical sample or another analyte's collection facts.
-        var e2D3Context = Object.assign({}, e2Context, {
-          contraindicated: context.contraindicated || lifespanAnonymousMainTreatment(source, {
-            sex: patient && patient.sex, contextBasis: 'current-patient'
-          }),
-          // Keep the actual source value when the existing lexer accepts it.
-          // A pg/mL -> pmol/L -> pg/mL round trip would add floating noise to
-          // the patient's label; the E2 evaluator owns the one conversion.
-          measurement: parsedE2 && parsedE2.status === 'valid' ? parsedE2 : e2Context.measurement,
-          measurementValid: !!e2Context.measurement,
-          contextBasis: 'current-patient',
-          sampleDateISO: null,
-          treatment: patient && patient.treatment || null,
-          measurementKind: patient && patient.test_protocol || null,
-          specimen: context.specimen,
-          // Raw text and source unit also bind D3 when the legacy converter's
-          // exact measurement is already expressed in canonical pmol/L.
-          sourceRaw: valueEl.value,
-          sourceUnit: unitEl.value
-        });
-        lastE2D3Context = Object.assign({}, e2D3Context, {
-          measurementKey: e2D3MeasurementKey(e2D3Context)
-        });
-        refreshE2D3();
+        if (typeof e2D3UI !== 'undefined' && e2D3UI) {
+          var e2D3Context = Object.assign({}, e2Context, {
+            contraindicated: context.contraindicated || lifespanAnonymousMainTreatment(source, {
+              sex: patient && patient.sex, contextBasis: 'current-patient'
+            }),
+            // Keep the actual source value when the existing lexer accepts it.
+            // A pg/mL -> pmol/L -> pg/mL round trip would add floating noise to
+            // the patient's label; the E2 evaluator owns the one conversion.
+            measurement: parsedE2 && parsedE2.status === 'valid' ? parsedE2 : e2Context.measurement,
+            measurementValid: !!e2Context.measurement,
+            contextBasis: 'current-patient',
+            sampleDateISO: null,
+            treatment: patient && patient.treatment || null,
+            measurementKind: patient && patient.test_protocol || null,
+            specimen: context.specimen,
+            // Raw text and source unit also bind D3 when the legacy converter's
+            // exact measurement is already expressed in canonical pmol/L.
+            sourceRaw: valueEl.value,
+            sourceUnit: unitEl.value
+          });
+          lastE2D3Context = Object.assign({}, e2D3Context, {
+            measurementKey: e2D3MeasurementKey(e2D3Context)
+          });
+          refreshE2D3();
+        }
       }
       if (typeof fshSourceUI !== 'undefined' && fshSourceUI || typeof fshD3UI !== 'undefined' && fshD3UI) {
         // This visible FSH editor owns its current cycle/menopause context.

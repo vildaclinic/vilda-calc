@@ -45,10 +45,17 @@ export function beforeMaleLhCaliperBundle(data) {
     .filter(profile => profile.id !== 'wilson2023-male-lh-age-over16-under18') };
 }
 
+// E2 D3 adds exactly one source block. Remove only that later addition when
+// checking earlier bundles; every existing field and frozen hash stays intact.
+export function beforeE2D3Runtime(runtime) {
+  const { e2D3Data: _e2D3, ...prior } = runtime;
+  return prior;
+}
+
 // The later D3 block is separate from every previously frozen runtime bundle.
 // Removing precisely that addition preserves all earlier evidence and hashes.
 export function beforeFshD3Runtime(runtime) {
-  const { fshD3Data: _fshD3, ...prior } = runtime;
+  const { fshD3Data: _fshD3, ...prior } = beforeE2D3Runtime(runtime);
   return prior;
 }
 

@@ -1,7 +1,9 @@
 import { readFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
+import { createHash } from 'node:crypto';
 import { describe, expect, it } from 'vitest';
 import { loadBrowserScript } from '../support/load-browser-script.mjs';
+import { beforeE2D3Runtime } from '../support/prior-female-gonadotropin-bundle.mjs';
 
 const require = createRequire(import.meta.url);
 const engine = require('../../vilda_e2_d3.js');
@@ -30,6 +32,16 @@ function converter() {
 }
 
 describe('Grisendi 2014 E2 D3 — selected literal P50, not a new laboratory norm', () => {
+  it('adds exactly its own source block while preserving all 31 fields of merged audyt ca25d882', () => {
+    const runtime = require('../../vilda_hormone_lifespan_data.js');
+    const prior = beforeE2D3Runtime(runtime);
+    expect(runtime.e2D3Data).toEqual(data);
+    expect(Object.keys(runtime)).toHaveLength(32);
+    expect(Object.keys(prior)).toHaveLength(31);
+    expect(createHash('sha256').update(JSON.stringify(prior)).digest('hex'))
+      .toBe('03ba3c56ba558290929a162af3eaa60dea50dc3cf3d9cbeabb0f10b316d68ef6');
+  });
+
   it('preserves the 26 independently checked Table 2 P50 values and excludes the inconsistent age18 cell', () => {
     // User-supplied final PDF p454, 50th(M); literal CSV is only a transcription.
     const published = ['39.984', '41.470', '42.957', '44.444', '45.930', '47.417', '48.903', '50.390',
