@@ -19,7 +19,7 @@
  *   bo i tak chcemy zwracać HTML z cache natychmiast.
  */
 
-const SW_VERSION = '1.1.350';
+const SW_VERSION = '1.1.351';
 const CACHE_PREFIX = 'pwa-kalorii';
 const SHELL_CACHE = `${CACHE_PREFIX}-shell-v${SW_VERSION}`;
 const RUNTIME_CACHE = `${CACHE_PREFIX}-runtime`;
@@ -1975,6 +1975,7 @@ const OPTIONAL_ASSETS = [
   '/vilda_hormone_lifespan_data.js?v=36',
   '/vilda_hormone_lifespan_data.js?v=37',
   '/vilda_hormone_lifespan_data.js?v=38',
+  '/vilda_hormone_lifespan_data.js?v=39',
   '/vilda_hormone_lifespan_reference.js?v=1',
   '/vilda_hormone_lifespan_reference.js?v=2',
   '/vilda_hormone_lifespan_reference.js?v=3',
@@ -1995,6 +1996,9 @@ const OPTIONAL_ASSETS = [
   '/vilda_fsh_source.js?v=1',
   '/vilda_fsh_source_ui.js?v=1',
   '/vilda_fsh_source_ui.css?v=1',
+  '/vilda_fsh_d3.js?v=1',
+  '/vilda_fsh_d3_ui.js?v=1',
+  '/vilda_fsh_d3_ui.css?v=1',
   '/vilda_hormone_lifespan_display.js?v=1',
   '/vilda_hormone_lifespan_display.js?v=2',
   '/vilda_hormone_lifespan_display.js?v=3',
@@ -3535,6 +3539,7 @@ const OPTIONAL_ASSETS = [
   '/inline_przelicznik_jednostek_00.css?v=2',
   '/inline_przelicznik_jednostek_00.css?v=3',
   '/inline_przelicznik_jednostek_00.css?v=4',
+  '/inline_przelicznik_jednostek_00.css?v=5',
   '/inline_regulamin_00.css?v=1',
   '/inline_steroidy_00.css?v=1',
   '/inline_subskrypcja_00.css?v=1',

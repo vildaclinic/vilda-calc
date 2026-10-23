@@ -1,0 +1,482 @@
+/* Scoped presentation of the approved, independent FSH Day-3 source panel. */
+#labFshD3 {
+  container: fsh-d3 / inline-size;
+}
+
+#labFshD3[hidden],
+.vilda-fsh-d3 [hidden] {
+  display: none !important;
+}
+
+.vilda-fsh-d3 {
+  --vfd3-paper: var(--card-bg, #fff);
+  --vfd3-ink: var(--text-color, #183c48);
+  --vfd3-muted: var(--text-muted, #5a7274);
+  --vfd3-border: var(--border-color, #d4e4e7);
+  --vfd3-subtle: #f3f8f8;
+  --vfd3-grid: #e3ecee;
+  --vfd3-teal: var(--primary, #00838d);
+  --vfd3-patient: #b45b48;
+  --vfd3-connector: #ac7467;
+  margin: var(--space-20px) 0 0;
+  background: var(--vfd3-paper);
+  border: var(--border-hairline) solid var(--vfd3-border);
+  border-radius: 15px;
+  overflow: hidden;
+  color: var(--vfd3-ink);
+  font-family: inherit;
+  min-width: 0;
+}
+
+.vilda-fsh-d3 *,
+.vilda-fsh-d3 *::before,
+.vilda-fsh-d3 *::after {
+  box-sizing: border-box;
+}
+
+.vilda-fsh-d3 .vfd3-heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: var(--space-12px);
+  padding: var(--space-20px) 22px 0;
+}
+
+.vilda-fsh-d3 .vfd3-heading > div {
+  min-width: 0;
+}
+
+.vilda-fsh-d3 h3 {
+  font: inherit;
+  font-size: 16px;
+  line-height: 1.4;
+  font-weight: 600;
+  margin: 0;
+  letter-spacing: -.01em;
+  color: inherit;
+  text-align: left;
+  text-transform: none;
+}
+
+.vilda-fsh-d3 .vfd3-heading p {
+  font-size: 12px;
+  color: var(--vfd3-muted);
+  line-height: 1.6;
+  margin: 5px 0 0;
+  text-align: left;
+}
+
+.vilda-fsh-d3 .vfd3-source-tag {
+  font-size: 11px;
+  border: var(--border-hairline) solid var(--vfd3-border);
+  border-radius: var(--radius-6);
+  color: var(--vfd3-muted);
+  padding: 5px var(--space-8px);
+  white-space: nowrap;
+}
+
+.vilda-fsh-d3 .vfd3-median {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--space-14px);
+  margin: 17px 22px;
+  padding: var(--space-14px) var(--space-16px);
+  background: var(--vfd3-subtle);
+  border-radius: var(--radius-10);
+  min-width: 0;
+}
+
+.vilda-fsh-d3 .vfd3-median > div {
+  min-width: 0;
+}
+
+.vilda-fsh-d3 .vfd3-median > div > span {
+  color: var(--vfd3-muted);
+  font-size: 12px;
+}
+
+.vilda-fsh-d3 .vfd3-median p {
+  margin: var(--space-6px) 0 0;
+  display: flex;
+  align-items: baseline;
+  gap: 7px;
+  flex-wrap: wrap;
+}
+
+.vilda-fsh-d3 .vfd3-median strong {
+  font-size: 29px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -.025em;
+}
+
+.vilda-fsh-d3 .vfd3-median p > span {
+  font-size: 15px;
+  color: var(--vfd3-muted);
+}
+
+.vilda-fsh-d3 .vfd3-median .vfd3-information {
+  margin: 0;
+  color: var(--vfd3-muted);
+  font-size: 11px;
+  display: block;
+  max-width: 120px;
+  text-align: right;
+  line-height: 1.6;
+}
+
+.vilda-fsh-d3 .vfd3-context {
+  margin: 0 22px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 15px;
+}
+
+.vilda-fsh-d3 label {
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1.6;
+}
+
+.vilda-fsh-d3 label small {
+  font-weight: 400;
+  color: var(--vfd3-muted);
+  display: block;
+  font-size: 11px;
+}
+
+.vilda-fsh-d3 select {
+  font: inherit;
+  font-size: 12px;
+  min-height: 44px;
+  min-width: 170px;
+  width: auto;
+  max-width: 100%;
+  border: var(--border-hairline) solid var(--vfd3-border);
+  border-radius: var(--radius-8);
+  padding: var(--space-10px) 30px var(--space-10px) 11px;
+  color: var(--vfd3-ink);
+  background: var(--vfd3-paper);
+  margin: 0;
+}
+
+.vilda-fsh-d3 .vfd3-state,
+.vilda-fsh-d3 .vfd3-age-note {
+  margin: var(--space-10px) 22px 17px;
+  font-size: 12px;
+  line-height: 1.65;
+  color: var(--vfd3-muted);
+}
+
+.vilda-fsh-d3 details {
+  border-top: var(--border-hairline) solid var(--vfd3-border);
+}
+
+.vilda-fsh-d3 summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-12px);
+  padding: var(--space-14px) 22px;
+  min-height: 48px;
+  font-size: 12px;
+  list-style: none;
+  line-height: 1.5;
+  cursor: pointer;
+}
+
+.vilda-fsh-d3 summary::-webkit-details-marker {
+  display: none;
+}
+
+.vilda-fsh-d3 summary > span:last-child {
+  color: var(--vfd3-teal);
+}
+
+.vilda-fsh-d3 details[open] > summary > span:last-child {
+  transform: rotate(180deg);
+}
+
+.vilda-fsh-d3 .vfd3-sources[open] > summary > span:last-child {
+  transform: rotate(45deg);
+}
+
+.vilda-fsh-d3 summary:focus-visible,
+.vilda-fsh-d3 select:focus-visible,
+.vilda-fsh-d3 a:focus-visible {
+  outline: var(--border-emphasis) solid var(--vfd3-teal);
+  outline-offset: var(--space-4px);
+}
+
+.vilda-fsh-d3 .vfd3-plot-body {
+  padding: 0 var(--space-14px) 15px;
+  max-width: 850px;
+  margin: 0 auto;
+}
+
+.vilda-fsh-d3 svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  overflow: visible;
+}
+
+.vilda-fsh-d3 .vfd3-axis-text,
+.vilda-fsh-d3 .vfd3-axis-title {
+  font-family: inherit;
+  fill: var(--vfd3-muted);
+  font-size: 12px;
+}
+
+.vilda-fsh-d3 .vfd3-grid {
+  stroke: var(--vfd3-grid);
+}
+
+.vilda-fsh-d3 .vfd3-source-curve {
+  fill: none;
+  stroke: var(--vfd3-teal);
+  stroke-width: 2.8;
+  stroke-linejoin: round;
+}
+
+.vilda-fsh-d3 .vfd3-age-guide {
+  stroke: var(--vfd3-border);
+  stroke-dasharray: 4 5;
+}
+
+.vilda-fsh-d3 .vfd3-source-marker {
+  fill: var(--vfd3-paper);
+  stroke: var(--vfd3-teal);
+  stroke-width: 2.5;
+}
+
+.vilda-fsh-d3 .vfd3-connector {
+  stroke: var(--vfd3-connector);
+  stroke-width: 1.5;
+  stroke-dasharray: 3 4;
+}
+
+.vilda-fsh-d3 .vfd3-patient-marker {
+  fill: var(--vfd3-patient);
+  stroke: var(--vfd3-paper);
+  stroke-width: 2;
+}
+
+.vilda-fsh-d3 .vfd3-overflow-marker {
+  fill: none;
+  stroke: var(--vfd3-patient);
+  stroke-width: 2.5;
+}
+
+.vilda-fsh-d3 .vfd3-overflow-text {
+  fill: var(--vfd3-patient);
+  font-family: inherit;
+  font-size: 12px;
+}
+
+.vilda-fsh-d3 .vfd3-legend {
+  display: flex;
+  justify-content: center;
+  gap: var(--space-20px);
+  flex-wrap: wrap;
+  color: var(--vfd3-muted);
+  font-size: 11px;
+  margin: 7px 0 15px;
+}
+
+.vilda-fsh-d3 .vfd3-legend > span {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.vilda-fsh-d3 .vfd3-legend i {
+  width: 10px;
+  height: 10px;
+  display: inline-block;
+  border-radius: var(--radius-circle);
+}
+
+.vilda-fsh-d3 .vfd3-median-key {
+  border: var(--border-emphasis) solid var(--vfd3-teal);
+  background: var(--vfd3-paper);
+}
+
+.vilda-fsh-d3 .vfd3-patient-key {
+  background: var(--vfd3-patient);
+}
+
+.vilda-fsh-d3 .vfd3-comparison {
+  padding: var(--space-12px) 5px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  border-top: var(--border-hairline) solid var(--vfd3-border);
+  gap: var(--space-14px);
+}
+
+.vilda-fsh-d3 .vfd3-comparison p {
+  display: grid;
+  gap: 5px;
+  margin: 0;
+  text-align: center;
+  overflow-wrap: anywhere;
+}
+
+.vilda-fsh-d3 .vfd3-comparison span {
+  font-size: 11px;
+  color: var(--vfd3-muted);
+}
+
+.vilda-fsh-d3 .vfd3-comparison strong {
+  font-weight: 550;
+  font-size: 16px;
+  color: var(--vfd3-ink);
+  font-variant-numeric: tabular-nums;
+}
+
+.vilda-fsh-d3 .vfd3-chart-note {
+  color: var(--vfd3-muted);
+  text-align: center;
+  font-size: 11px;
+  line-height: 1.65;
+  max-width: 500px;
+  margin: var(--space-8px) auto 0;
+  padding: 0 var(--space-10px);
+}
+
+.vilda-fsh-d3 .vfd3-source-copy {
+  padding: 0 22px var(--space-8px);
+  font-size: 12px;
+  color: var(--vfd3-muted);
+  line-height: 1.8;
+  overflow-wrap: anywhere;
+}
+
+.vilda-fsh-d3 .vfd3-source-copy p {
+  margin: 0 0 var(--space-12px);
+}
+
+.vilda-fsh-d3 .vfd3-source-copy strong {
+  font-weight: 600;
+}
+
+.vilda-fsh-d3 a {
+  color: var(--vfd3-teal);
+  text-underline-offset: 3px;
+}
+
+@container fsh-d3 (max-width: 639px) {
+  .vilda-fsh-d3 {
+    border-radius: var(--radius-12);
+    margin-top: var(--space-16px);
+  }
+  .vilda-fsh-d3 .vfd3-heading {
+    padding: var(--space-16px) var(--space-14px) 0;
+  }
+  .vilda-fsh-d3 h3 {
+    font-size: 15px;
+  }
+  .vilda-fsh-d3 .vfd3-median {
+    display: block;
+    margin: var(--space-14px);
+    padding: 13px;
+  }
+  .vilda-fsh-d3 .vfd3-median strong {
+    font-size: 26px;
+  }
+  .vilda-fsh-d3 .vfd3-median .vfd3-information {
+    max-width: none;
+    margin-top: var(--space-8px);
+    text-align: left;
+  }
+  .vilda-fsh-d3 .vfd3-context {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    margin: 0 var(--space-14px);
+    gap: var(--space-10px);
+  }
+  .vilda-fsh-d3 select {
+    min-width: 0;
+    width: 100%;
+    flex-shrink: 0;
+    padding-right: var(--space-20px);
+  }
+  .vilda-fsh-d3 .vfd3-state,
+  .vilda-fsh-d3 .vfd3-age-note {
+    margin-left: var(--space-14px);
+    margin-right: var(--space-14px);
+  }
+  .vilda-fsh-d3 summary {
+    padding: var(--space-14px);
+  }
+  .vilda-fsh-d3 .vfd3-plot-body {
+    padding: 0 5px 13px;
+  }
+  .vilda-fsh-d3 .vfd3-axis-text,
+  .vilda-fsh-d3 .vfd3-axis-title {
+    font-size: 15px;
+  }
+  .vilda-fsh-d3 .vfd3-legend {
+    gap: var(--space-12px);
+    margin-top: var(--space-10px);
+  }
+  .vilda-fsh-d3 .vfd3-source-copy {
+    padding: 0 var(--space-14px) var(--space-4px);
+  }
+  .vilda-fsh-d3 .vfd3-comparison {
+    padding: 13px var(--space-8px);
+  }
+  .vilda-fsh-d3 .vfd3-comparison strong {
+    font-size: 15px;
+  }
+}
+
+body.dark-bg-level-1 .vilda-fsh-d3 {
+  --vfd3-border: rgba(0,131,141,.22);
+}
+
+body.dark-bg-level-2 .vilda-fsh-d3 {
+  --vfd3-border: rgba(0,131,141,.28);
+}
+
+body.liquid-ios26:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3) .vilda-fsh-d3 {
+  --vfd3-paper: var(--hc-surface);
+  --vfd3-ink: var(--hc-text);
+  --vfd3-muted: var(--hc-muted);
+  --vfd3-border: var(--hc-border);
+  --vfd3-subtle: var(--hc-input-bg);
+  --vfd3-grid: var(--hc-border);
+  --vfd3-teal: var(--hc-text);
+  --vfd3-patient: var(--hc-text);
+  --vfd3-connector: var(--hc-muted);
+  border-width: var(--hc-card-border-width);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .vilda-fsh-d3 * {
+    animation: none !important;
+    transition: none !important;
+  }
+}
+
+@media print {
+  .vilda-fsh-d3 {
+    break-inside: avoid;
+    background: white;
+    color: black;
+    border-color: #777;
+    --vfd3-paper: white;
+    --vfd3-ink: black;
+    --vfd3-muted: #333;
+    --vfd3-teal: black;
+    --vfd3-patient: black;
+    --vfd3-connector: #555;
+  }
+  .vilda-fsh-d3 select {
+    color: black;
+    background: white;
+    border-color: #777;
+  }
+}

@@ -77,6 +77,22 @@ historii; nie zamyka zwykłej luki FSH kobiet ≥19. Źródło i granice:
 zaakceptowano wyłącznie skalę podwykresu cyklu Stricker: sam FSH 0–20,
 LH lub oba 0–50; źródłowe węzły i pozostałe skale pozostają zachowane.
 
+Uzupełnienie FSH D3 23.10.2026: właściciel dostarczył pełny artykuł
+Grisendi 2014 i tabele CSV, a po audycie zaakceptował makietę oraz
+implementację osobnego bloku **literalnej P50 FSH dnia 3**. W tabeli 1
+spójne jest 29 median wieku 16–44; drukowane S/L/M nie odtwarza 116/116
+pozostałych centyli. Nie naprawiamy tabeli i nie importujemy pełnego LMS,
+SDS, percentyli lub RI. Cały możliwy wiek aplikacyjny musi być **>18 i ≤44**;
+mediana odpowiada dolnej granicy wpisanego wieku, z jawną interpolacją
+liniową między sąsiednimi M dla wieku ułamkowego. Brak wiersza 45 pozostaje
+granicą danych. Źródłowa mediana jest informacją także bez potwierdzonego
+dnia 3; dokładny punkt pacjentki wymaga osobnej lokalnej odpowiedzi D3
+i zgodnego kontekstu. To blok poza 85 zwykłymi profilami, bez zapisu nowego
+odniesienia do historii; nie usuwa całej zwykłej luki FSH kobiet ≥19.
+Zgoda na ten ograniczony zakres nie jest walidacją medyczną.
+[Kontrakt źródła i granice](FSH_D3_SOURCE.md),
+[audyt pełnego tekstu, liczb i hashy](evidence/fsh-d3-source-audit-2026-10-23.json).
+
 ## Co oznacza „luka”
 
 Rozróżniamy zwykły liczbowy punkt na osi wieku, osobne zestawienie
@@ -200,7 +216,7 @@ z jawnymi, nadal nierozstrzygniętymi ograniczeniami opisanymi poniżej.
 | 3. Inhibina B F >47 — [Borelli-Kjær](https://doi.org/10.1210/clinem/dgae439), ponowne wykorzystanie znanego źródła | Po kontroli odczytu i akceptacji 21.10 zwykły profil ma trzy nowe węzły 47,25/47,5/47,75 → ≈10/8/7 pg/mL. Publikacja obejmuje 149 dorosłych kobiet 20–69 lat, ale nie dostarcza liczbowego eksportu modelu. | Granica aplikacji 47,75 jest konserwatywnym końcem odczytu, nie granicą kohorty lub menopauzy. Gen II, surowica, LOD 3 pg/mL, bez osobnego LOQ. ±2 pg/mL to tolerancja digitalizacji, nie CI/RI/LOQ; przy 48 tolerancja przecina LOD. Nie ekstrapolujemy do 48/69, nie używamy plateau ani LOD/2 za wynik pacjentki. |
 | 4. AMH M >70 — [Chong 2013](https://doi.org/10.1371/journal.pone.0070967), pełny tekst i tabela 1 | LiLACS: N=257, 80–90 lat, mediana całej grupy 12,1 pmol/L. Po akceptacji 22.10 osobna karta informacji o publikacji, bez porównania z pacjentem. | Nie jest medianą dokładnego wieku ani rozwiązaniem zwykłej luki >70, zwłaszcza >70–<80. Zróżnicowane zdrowie; dwa historyczne testy globalnie, przydział do LiLACS nierozstrzygnięty, brak opisanej cenzury i LOQ tej grupy. Rycina średniej geometrycznej z CI nie dostarcza p50. Sprostowanie dotyczy nazwiska autora. [Kontrakt](AMH_LILACS_SOURCE.md). |
 | 5. E2 F >1–<6 — [Kulle 2024](https://doi.org/10.1093/ejendo/lvae046), pełny tekst, tabela 3 | Po akceptacji 22.10 jeden profil `ordinaryOnly`: „B1 1–8 years”, N=213, estymowany P50 Harrella–Davisa 15,0 pmol/L. Stała mediana całej grupy, nie model dokładnego wieku. | Cały możliwy wiek `(1,6)` i aktualne typowane Th1; zachowane źródła przy 1 i 6. LC-MS/MS, kontekst surowicy; znane osocze blokuje przy nieznanym przydziale materiału do B1. LOD 4/LLOQ 11, reguła cenzury nieopisana; N1753/1724, błąd B4 oraz niejasność osoby/próbki nierozstrzygnięte. Nie poprawiamy liczb, nie importujemy RI i nie imputujemy niskich wyników. |
-| 6. Dorosłe FSH/E2 kobiet — [Grisendi 2014](https://doi.org/10.3109/09513590.2014.893572) | Abstrakt: N=192, regularne miesiączki, pobranie w 3. dniu cyklu i centyle wieku. | Brak uzyskanego pełnego tekstu/tabel/współczynników; samo nachylenie nie wyznacza mediany. Aplikacja zna fazę, lecz nie dokładny dzień cyklu. Nie można automatycznie dopasować każdej fazy folikularnej do dnia 3. |
+| 6. FSH dnia 3 — [Grisendi 2014](https://doi.org/10.3109/09513590.2014.893572), pełny tekst i tabela 1 dostarczone 23.10 | N=192; surowica, ADVIA Centaur, regularne cykle, pobranie w dniu 3. Wszystkie 29 literalnych P50(M) 16–44 zgodne wewnętrznie z kwartylami i liniowością; 116/116 pozostałych centyli nie odtwarza się z drukowanego S/L/M. | Po akceptacji makiety i implementacji osobny blok P50 FSH przy całym wieku >18 i ≤44; odniesienie przy dolnej granicy wpisanego wieku, jawna interpolacja liniowa między M. Opcjonalna odpowiedź D3 dotyczy tylko bieżącego wyniku; bez niej mediana źródła bez punktu pacjentki. Nie ekstrapolujemy po 44, nie naprawiamy S/P95 i nie importujemy LMS/SDS/RI ani E2. Nieznana metoda/wywiad pozostają nieznane. [Kontrakt](FSH_D3_SOURCE.md). |
 
 Źródła, których obecnie **nie należy używać do wypełnienia punktu**:
 

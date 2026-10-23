@@ -1,0 +1,425 @@
+{
+  "schemaVersion": 1,
+  "auditedOn": "2026-10-23",
+  "scope": "FSH day-3 source only; published literal P50 column. No E2 implementation.",
+  "source": {
+    "authors": "Grisendi V, Spada E, Argento C, Plebani M, Milani S, Seracchioli R, Volpe A, La Marca A",
+    "title": "Age-specific reference values for serum FSH and estradiol levels throughout the reproductive period",
+    "journal": "Gynecological Endocrinology",
+    "year": 2014,
+    "volume": 30,
+    "issue": 6,
+    "pages": "451–455",
+    "doi": "10.3109/09513590.2014.893572",
+    "pmid": "24805832",
+    "url": "https://doi.org/10.3109/09513590.2014.893572",
+    "publicationVersion": "Published typeset journal article, not a preprint; user-supplied PDF includes publisher cover plus all five article pages.",
+    "verification": "Full article and Table 1 inspected; methods page 452 and printed table page 454 checked visually at full page and enlarged PDF render. CSV is auxiliary table rendering, not participant-level data or independent validation."
+  },
+  "originalFileManifest": [
+    {
+      "kind": "Full published article PDF",
+      "originalFilename": "Age-specific reference values for serum FSH and estradiol levels throughout the reproductive period.pdf",
+      "retainedCopyName": "grisendi-2014-user-fulltext.pdf",
+      "origin": "User-supplied attachment",
+      "bytes": 706114,
+      "sha256": "52ded459bb2b2b943e9f70dc739a0d070d757f60f1deb68da21df0b009f3602d",
+      "committed": false
+    },
+    {
+      "kind": "FSH Table 1 CSV rendering",
+      "originalFilename": "T0001-10.3109_09513590.2014.893572.csv",
+      "origin": "User-supplied attachment; matches printed table and PDF text",
+      "bytes": 1640,
+      "sha256": "e9d31e53c643877a0a9bc25b96a829103d36a6d7bc481427342bb24361a9f786",
+      "committed": false
+    }
+  ],
+  "quoteAndExtractionProvenance": {
+    "medianDefinition": {
+      "journalPage": 452,
+      "section": "Statistical Analysis",
+      "quote": "The M and S curves correspond to the median and coefficient of variation of FSH and E2"
+    },
+    "column": {
+      "journalPage": 454,
+      "table": 1,
+      "heading": "50th (M)",
+      "unit": "IU/L",
+      "precision": "0.001 IU/L",
+      "kind": "Literal published model-estimated age-specific median; not empirical separate-year group medians, a mean or a reconstructed centile."
+    },
+    "sourceAgeGlyph": {
+      "literal": "I9",
+      "betweenPrintedRows": [
+        18,
+        20
+      ],
+      "extractedAgeYears": 19,
+      "decision": "Explicit letter/digit interpretation for the ordered age row, visually verified; all P50 concentration cells are preserved exactly."
+    },
+    "csvVsPdfText": {
+      "comparedFSHCells": 203,
+      "literalMismatches": 0,
+      "limitation": "Machine text comparison supplemented by visual inspection; not accepted from OCR alone."
+    },
+    "canonicalP50Pairs": {
+      "encoding": "UTF-8 compact JSON of numeric [ageYears,P50] pairs in ascending age, no final newline",
+      "sha256": "fc51d10aa2d312e9a54cfebfaa183be881953ff65d65ff6818fda20fa7643c4e",
+      "pairs": [
+        [
+          16,
+          4.349
+        ],
+        [
+          17,
+          4.462
+        ],
+        [
+          18,
+          4.576
+        ],
+        [
+          19,
+          4.69
+        ],
+        [
+          20,
+          4.803
+        ],
+        [
+          21,
+          4.917
+        ],
+        [
+          22,
+          5.031
+        ],
+        [
+          23,
+          5.145
+        ],
+        [
+          24,
+          5.258
+        ],
+        [
+          25,
+          5.372
+        ],
+        [
+          26,
+          5.486
+        ],
+        [
+          27,
+          5.6
+        ],
+        [
+          28,
+          5.713
+        ],
+        [
+          29,
+          5.827
+        ],
+        [
+          30,
+          5.941
+        ],
+        [
+          31,
+          6.054
+        ],
+        [
+          32,
+          6.168
+        ],
+        [
+          33,
+          6.282
+        ],
+        [
+          34,
+          6.396
+        ],
+        [
+          35,
+          6.509
+        ],
+        [
+          36,
+          6.623
+        ],
+        [
+          37,
+          6.737
+        ],
+        [
+          38,
+          6.851
+        ],
+        [
+          39,
+          6.964
+        ],
+        [
+          40,
+          7.078
+        ],
+        [
+          41,
+          7.192
+        ],
+        [
+          42,
+          7.305
+        ],
+        [
+          43,
+          7.419
+        ],
+        [
+          44,
+          7.533
+        ]
+      ]
+    }
+  },
+  "cohort": {
+    "studyDesign": "Cross-sectional single-centre clinic sample, Modena, Italy",
+    "nWomen": 192,
+    "recruitmentReasons": [
+      {
+        "reason": "Preconception counselling",
+        "n": 103
+      },
+      {
+        "reason": "Contraception counselling",
+        "n": 67
+      },
+      {
+        "reason": "Tubal sterilization request",
+        "n": 22
+      }
+    ],
+    "cycleLengthDays": [
+      25,
+      35
+    ],
+    "betweenCycleVariation": "<5 days",
+    "bothOvariesRequired": true,
+    "exclusions": [
+      "Sex hormone administration in previous 6 months",
+      "History of pelvic inflammatory disease or ovarian surgery",
+      "Known chronic, systemic, metabolic or endocrine disease including hyperandrogenism"
+    ],
+    "medianAgeYears": 36,
+    "ageQuartilesYears": [
+      31.5,
+      39.8
+    ],
+    "notReported": [
+      "Numbers of women near each age or endpoint",
+      "Exact observed minimum and maximum age distinct from recruitment criteria",
+      "Method for calculating fractional age",
+      "BMI and ethnicity distribution",
+      "Independent validation cohort",
+      "Confirmed ovulation and fertility outcomes for every participant",
+      "Detailed pregnancy/lactation screening",
+      "Formal low-result censoring or imputation protocol"
+    ],
+    "transportLimit": "Not a random population sample or an independently validated fertility/ovarian-reserve test."
+  },
+  "ageStatements": {
+    "eligibilityTextYears": "16–45",
+    "discussionTextYears": "Younger than 45",
+    "publishedNumericTableYears": [
+      16,
+      44
+    ],
+    "applicationPlacement": "Whole possible entered age interval must be >18 and <=44; >18 is application policy, not an author-defined cohort boundary.",
+    "noExtrapolation": "No age45 row, post44 plateau or extension from rounded slope."
+  },
+  "assay": {
+    "specimen": "Serum",
+    "sampling": "Menstrual cycle day3 for all blood samples",
+    "preparation": "2000g for10min; serum stored in polypropylene tubes at -80C",
+    "method": "Chemiluminescent FSH assay, ADVIA Centaur, Siemens Healthcare Diagnostics, Italy",
+    "unit": "IU/L",
+    "reportedSensitivity": 0.1,
+    "sensitivityUnit": "IU/L",
+    "sensitivityMeaning": "Reported sensitivity; source does not formally define or verify this as LOD or LOQ.",
+    "intraAssayCVPercent": 2.7,
+    "interAssayCVPercent": 3.1,
+    "notReported": [
+      "Reagent version and lot",
+      "Calibration material",
+      "Concentration levels for reported precision",
+      "Formal LOD/LOQ definitions",
+      "Number and handling of low or out-of-range results"
+    ],
+    "censoring": "Unknown; no inference that low values did not occur, and no replacement of patient inequalities by a concentration."
+  },
+  "statisticalAudit": {
+    "method": "CG-LMS, LMS Program1.29; M is median. Source L=0.186472. Literal M alone is the accepted extraction.",
+    "publishedMCount": 29,
+    "publishedL": 0.186472,
+    "MLinearRoundingFeasibility": {
+      "allRowsCompatible": true,
+      "ageYears": [
+        16,
+        44
+      ],
+      "printedHalfUnit": 0.0005,
+      "diagnosticWitnessMaxAbsResidual_IU_L": 0.0004615384615389573,
+      "interpretation": "A line can intersect all printed rounding intervals; its fitted coefficients are not imported or attributed to authors."
+    },
+    "medianFromQuartiles": {
+      "formula": "((P25^L+P75^L)/2)^(1/L)",
+      "compatibleRows": 29,
+      "totalRows": 29,
+      "maxAbsPointDifference_IU_L": 0.00041295263425666917,
+      "interpretation": "Internal algebraic cross-check independent of printed S; same source table, not external population validation."
+    },
+    "fullLMS": {
+      "formula": "M*(1+z*L*S)^(1/L)",
+      "normalQuantiles": {
+        "P5": -1.6448536269514729,
+        "P25": -0.6744897501960817,
+        "P75": 0.6744897501960817,
+        "P95": 1.6448536269514715
+      },
+      "compatibleNonmedianCells": 0,
+      "testedNonmedianCells": 116,
+      "maxAbsDifference_IU_L": 11.312756849083687,
+      "maxPrintedRoundingTolerance_IU_L": 0.00417776712803547,
+      "roundingMethod": "Half-unit intervals: M/y +/-0.0005, S +/-0.00005, L +/-0.0000005; exact8-corner envelope plus cell rounding.",
+      "conclusion": "Printed S is systematically inconsistent with the centiles; not a ready full LMS model. No inferred S or correction is imported."
+    },
+    "additionalPrintedAnomalies": [
+      {
+        "ageYears": 35,
+        "column": "S",
+        "literal": "0.7336"
+      },
+      {
+        "ageYears": 44,
+        "column": "S",
+        "literal": "0.9056"
+      },
+      {
+        "ageYears": 23,
+        "column": "95th",
+        "literal": "8.008"
+      },
+      {
+        "ageYears": 25,
+        "column": "95th",
+        "literal": "9.736"
+      }
+    ],
+    "age30Example": {
+      "M": 5.941,
+      "S": 0.7129,
+      "predictedP5": 1.581936,
+      "publishedP5": 3.139,
+      "predictedP95": 17.156359,
+      "publishedP95": 10.506
+    },
+    "excludedProducts": [
+      "S and inferred S",
+      "Nonmedian centiles",
+      "Full LMS reconstruction",
+      "SDS and patient percentile",
+      "P5–P95 as laboratory RI or CI",
+      "Diagnostic or fertility/ovarian-reserve thresholds",
+      "Global fitted coefficients attributed to authors"
+    ]
+  },
+  "acceptedApplicationScope": {
+    "ownerDecisionOn": "2026-10-23",
+    "ownerDecision": "Mockup and implementation accepted after full-text/numerical review and disclosure of LMS errors. This is authorization for the limited product scope, not independent clinical validation.",
+    "dataFile": "docs/clinical/hormone-lifespan/fsh-d3-data.json",
+    "evaluator": "VildaFshD3.evaluate(data,context)",
+    "separateFromOrdinaryProfileRegistry": true,
+    "ordinaryProfilesPreserved": 85,
+    "dayContext": "One optional local question for this current FSH result: unknown/day3/other. Source information and median remain available without day3; patient point requires day3 and all comparison gates.",
+    "ageContext": {
+      "wholeIntervalRequired": true,
+      "applicationMinExclusive": 18,
+      "sourceMaxInclusive": 44,
+      "referenceAt": "Entered lower age bound",
+      "returnedFields": [
+        "lowerYears",
+        "upperYears",
+        "upperInclusive"
+      ],
+      "basis": "entered-age-lower-bound",
+      "noMidpointOrInventedDOB": true
+    },
+    "interpolation": {
+      "kind": "Linear interpolation between adjacent literal published M values only",
+      "scope": "Fractional age within source knots; explicit application policy, not author coefficients or reconstructed LMS",
+      "sourceLine": "Linear polyline through literal age/M pairs",
+      "returnedFlag": "interpolated"
+    },
+    "examples": [
+      {
+        "enteredAgeInterval": "[30,31)",
+        "referenceAgeYears": 30,
+        "median_IU_L": 5.941
+      },
+      {
+        "enteredAgeYears": 30.5,
+        "median_IU_L": 5.9975,
+        "interpolated": true
+      },
+      {
+        "enteredAgeInterval": "[30.5,30.5+1/12)",
+        "referenceAgeYears": 30.5,
+        "median_IU_L": 5.9975
+      },
+      {
+        "enteredAgeInterval": "[43,44)",
+        "eligible": true
+      },
+      {
+        "enteredAgeInterval": "[44,45)",
+        "eligible": false
+      },
+      {
+        "enteredAgeYears": 44,
+        "median_IU_L": 7.533
+      }
+    ],
+    "knownContraindications": "Known incompatible reproductive/therapy context and explicit assay/specimen mismatch remain gates. No new history/assay/specimen questionnaire; unknown is not negative.",
+    "inequalities": "No exact patient point, percentile or concentration imputation for inequality/LOD/LOQ results; source median is not a patient measurement.",
+    "historyPolicy": "This educational read-only block adds no persisted day3 answer, hormoneReference snapshot, pinned assessment or history schema. Existing historical results are not re-evaluated.",
+    "statePolicy": "Day3 choice belongs to the current result; change of patient, analyte, age, phase/source context or measurement clears it; ordinary refresh of same result can preserve it; clear/reset wipes state.",
+    "phasePolicy": {
+      "day3WithUnknownOrAbsentOrFollicular": "May satisfy collection-timing gate; all other comparison gates still required",
+      "knownOvulationOrLuteal": "Source information stays ready; no patient point due to incompatible cycle phase",
+      "pregnancyOrPostmenopause": "Whole Grisendi block unavailable; existing laboratory and Roche contracts remain separate",
+      "noInference": "Do not infer cycle day from age, concentration or phase; do not rewrite phase to match day3"
+    }
+  },
+  "unchangedLayers": [
+    "Existing laboratory FSH RI/status/unit conversion",
+    "Ordinary pediatric and other85 profiles",
+    "Roche phase-group source-information card",
+    "Stricker cycle geometry and source knots",
+    "Other analytes including E2",
+    "Stored historical assessments and schema"
+  ],
+  "validationMeaning": "Source integrity and internal statistical checks completed. Production evaluator/UI/PWA tests and current-SHA GitHub checks are reported by the integrating PR; no assertion here of completed runtime checks or independent clinical validation.",
+  "completedSourceChecks": {
+    "checkedOn": "2026-10-23",
+    "originalPdfAndFshCsvBytesAndSha256": "Matched original retained user files",
+    "runtimeLiteralP50": "All29 [ageYears,median] runtime knots exactly match quoted Table1 M pairs",
+    "canonicalP50Digest": "fc51d10aa2d312e9a54cfebfaa183be881953ff65d65ff6818fda20fa7643c4e",
+    "interpolationExample": "30.5 ->5.9975 from adjacent30/31 literal values",
+    "documentation": "New source links resolve locally; single HORMONE-FSH-D3 entry in ALGORITHMS",
+    "runtimeTestClaim": "No production-test or CI pass is asserted by this source audit; integrating agent reports actual validation."
+  }
+}

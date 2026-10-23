@@ -39568,6 +39568,253 @@ const fshSourceData = {
     "exclusionBasis": "Conservative application presentation policy; reference-cohort exclusion criteria are not reported. Postmenopause is a supported table group, not an exclusion."
   }
 };
+const fshD3Data = {
+  "version": "2026-10-23.1",
+  "kind": "published-age-median-information",
+  "analyte": "fsh",
+  "sex": "female",
+  "unit": "IU/L",
+  "ageDomain": {
+    "min": 16,
+    "max": 44,
+    "minimumInclusive": true,
+    "maximumInclusive": true
+  },
+  "placement": {
+    "kind": "application-adult-placement",
+    "minimumAgeYearsExclusive": 18,
+    "description": "Umieszczenie informacji tylko przy całym możliwym wieku powyżej 18 lat jest polityką aplikacji. Tabela źródłowa zawiera węzły 16–44 lata."
+  },
+  "knots": [
+    {
+      "ageYears": 16,
+      "median": 4.349
+    },
+    {
+      "ageYears": 17,
+      "median": 4.462
+    },
+    {
+      "ageYears": 18,
+      "median": 4.576
+    },
+    {
+      "ageYears": 19,
+      "median": 4.69
+    },
+    {
+      "ageYears": 20,
+      "median": 4.803
+    },
+    {
+      "ageYears": 21,
+      "median": 4.917
+    },
+    {
+      "ageYears": 22,
+      "median": 5.031
+    },
+    {
+      "ageYears": 23,
+      "median": 5.145
+    },
+    {
+      "ageYears": 24,
+      "median": 5.258
+    },
+    {
+      "ageYears": 25,
+      "median": 5.372
+    },
+    {
+      "ageYears": 26,
+      "median": 5.486
+    },
+    {
+      "ageYears": 27,
+      "median": 5.6
+    },
+    {
+      "ageYears": 28,
+      "median": 5.713
+    },
+    {
+      "ageYears": 29,
+      "median": 5.827
+    },
+    {
+      "ageYears": 30,
+      "median": 5.941
+    },
+    {
+      "ageYears": 31,
+      "median": 6.054
+    },
+    {
+      "ageYears": 32,
+      "median": 6.168
+    },
+    {
+      "ageYears": 33,
+      "median": 6.282
+    },
+    {
+      "ageYears": 34,
+      "median": 6.396
+    },
+    {
+      "ageYears": 35,
+      "median": 6.509
+    },
+    {
+      "ageYears": 36,
+      "median": 6.623
+    },
+    {
+      "ageYears": 37,
+      "median": 6.737
+    },
+    {
+      "ageYears": 38,
+      "median": 6.851
+    },
+    {
+      "ageYears": 39,
+      "median": 6.964
+    },
+    {
+      "ageYears": 40,
+      "median": 7.078
+    },
+    {
+      "ageYears": 41,
+      "median": 7.192
+    },
+    {
+      "ageYears": 42,
+      "median": 7.305
+    },
+    {
+      "ageYears": 43,
+      "median": 7.419
+    },
+    {
+      "ageYears": 44,
+      "median": 7.533
+    }
+  ],
+  "source": {
+    "id": "grisendi2014-fsh-day3-p50",
+    "label": "Grisendi 2014 · FSH D3",
+    "citation": "Grisendi V, Spada E, Argento C, Plebani M, Milani S, Seracchioli R, Volpe A, La Marca A. Age-specific reference values for serum FSH and estradiol levels throughout the reproductive period. Gynecological Endocrinology. 2014;30(6):451–455. DOI: 10.3109/09513590.2014.893572. Tabela 1, s. 454, kolumna 50th (M); metody s. 452.",
+    "url": "https://doi.org/10.3109/09513590.2014.893572",
+    "population": "192 regularnie miesiączkujące pacjentki jednego ośrodka w Modenie: 103 porady przedkoncepcyjne, 67 antykoncepcyjnych i 22 zgłoszenia w sprawie sterylizacji jajowodowej. Cykle 25–35 dni ze zmiennością <5 dni, oba jajniki. Wyłączano podawanie hormonów płciowych w poprzednich 6 miesiącach, przebyte zapalenie narządów miednicy lub operację jajników oraz znane przewlekłe choroby układowe, metaboliczne i endokrynne, w tym hiperandrogenizm.",
+    "method": "FSH: test chemiluminescencyjny ADVIA Centaur, Siemens Healthcare Diagnostics, Italy. Podana czułość 0,1 IU/L; CV wewnątrz- i międzyseryjny 2,7% i 3,1%. Metoda źródła nie ustala metody próbki pacjentki.",
+    "specimen": "Surowica pobrana w 3. dniu cyklu. FSH i estradiol oznaczano z jednego pobrania.",
+    "statistic": "Opublikowana mediana P50 (M) FSH dla wieku w 3. dniu cyklu z przekrojowego modelu CG-LMS. Import obejmuje wyłącznie 29 literalnych wartości kolumny 50th (M). Między sąsiednimi węzłami aplikacja stosuje jawną interpolację liniową; nie odtwarza równania autorów ani parametrów L/S.",
+    "phaseDefinition": "Dokładnie 3. dzień cyklu; wybrana faza folikularna nie potwierdza sama dnia 3 dla danego pobrania.",
+    "limitsDescription": "Autorzy podają sensitivity 0,1 IU/L, bez formalnej definicji LOD/LOQ oraz bez opisu cenzurowania, imputacji lub wykluczania niskich wyników. Wynik z nierównością nie otrzymuje dokładnego punktu.",
+    "ageDescription": "Kryteria włączenia mówią 16–45 lat, dyskusja o kobietach poniżej 45 lat, a tabela zawiera węzły 16–44. Bez ekstrapolacji poza te węzły. Mediana odnosi się do wprowadzonej dolnej granicy wieku, przy zachowaniu całego możliwego przedziału w granicach źródła.",
+    "limitations": [
+      "Badanie przekrojowe jednej wybranej grupy; brak obserwacji indywidualnego tempa zmian i niezależnej walidacji prognozy ciąży lub menopauzy.",
+      "P50 jest medianą w badaniu, nie granicą normy laboratoryjnej ani miarą rezerwy jajnikowej. Nie ustala płodności lub wieku jajników.",
+      "Autorzy wskazują na wspólną interpretację FSH i E2; wysokie E2 może utrudniać interpretację pozornie prawidłowego FSH. Samo zestawienie z P50 nie ocenia rezerwy.",
+      "Pełna tabela wykazuje niespójność L/S/M z pozostałymi centylami. Nie importujemy L, S, SDS, pozostałych centyli ani zakresu referencyjnego.",
+      "Liniowa interpolacja sąsiednich opublikowanych median jest jawną polityką aplikacji. Nie dopasowujemy współczynników do całej kolumny; nie wyznaczamy domniemanej daty urodzenia ani środka niepewnego wieku.",
+      "Nieznany kontekst pozostaje nieznany. D3 potwierdza wyłącznie dzień ocenianego pobrania, nie zgodność z metodą i całą kohortą. Znane niezgodności ograniczają prezentację."
+    ],
+    "printedUnit": "IU/l",
+    "displayUnit": "IU/L",
+    "verifiedOn": "2026-10-23",
+    "fullTextSha256": "52ded459bb2b2b943e9f70dc739a0d070d757f60f1deb68da21df0b009f3602d"
+  },
+  "policy": {
+    "notClinicalReference": true,
+    "noClinicalClassification": true,
+    "medianOnly": true,
+    "fullAgeIntervalRequired": true,
+    "ordinaryOnly": true,
+    "chartSelectionKey": "fsh",
+    "interpolation": "linear-between-published-knots",
+    "ageReferenceBasis": "entered-age-lower-bound",
+    "cycleDayValues": [
+      "unknown",
+      "day3",
+      "other"
+    ],
+    "comparisonCyclePhases": [
+      "unknown",
+      "follicular"
+    ],
+    "measurementUnits": [
+      "IU/L",
+      "mIU/mL"
+    ],
+    "allowedAssayMethodIds": [
+      "advia-centaur-fsh",
+      "siemens-advia-centaur-fsh",
+      "siemens-advia-centaur-fsh-clia",
+      "siemens-advia-centaur",
+      "advia-centaur"
+    ],
+    "allowedSpecimens": [
+      "serum",
+      "surowica"
+    ],
+    "excludedCyclePhases": [
+      "pregnancy",
+      "pregnancy_t1",
+      "pregnancy_t2",
+      "pregnancy_t3",
+      "postmenopause"
+    ],
+    "excludedPositiveFlags": [
+      "pregnancy",
+      "hormonalTreatment",
+      "stimulation",
+      "gnrha"
+    ],
+    "excludedTreatmentContexts": [
+      "hormonal",
+      "stimulation",
+      "gnrh-stimulation",
+      "hcg-stimulation"
+    ],
+    "excludedTreatmentFlags": [
+      "gnrha",
+      "sexSteroids",
+      "cocp",
+      "exogenousTestosterone"
+    ],
+    "allowedMeasurementKinds": [
+      "basal"
+    ],
+    "plot": {
+      "ageMin": 16,
+      "ageMax": 44,
+      "ageTicks": [
+        16,
+        20,
+        25,
+        30,
+        35,
+        40,
+        44
+      ],
+      "valueMin": 0,
+      "valueMax": 12,
+      "valueTicks": [
+        0,
+        3,
+        6,
+        9,
+        12
+      ],
+      "unit": "IU/L",
+      "independentOfPatient": true
+    }
+  }
+};
 const fshCycleDisplayPolicy = {
   "id": "female-fsh-cycle-axis-v1",
   "version": "2026-10-22.1",
@@ -41933,6 +42180,7 @@ return {
   amhLilacsSourceData: amhLilacsSourceData,
   e2PhaseSourceData: e2PhaseSourceData,
   fshSourceData: fshSourceData,
+  fshD3Data: fshD3Data,
   fshCycleDisplayPolicy: fshCycleDisplayPolicy,
   insl3DisplayPolicy: insl3DisplayPolicy,
   femaleGonadotropinPolicy: femaleGonadotropinPolicy,
