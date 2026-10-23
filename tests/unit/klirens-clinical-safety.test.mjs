@@ -322,7 +322,7 @@ describe('Klirens — równania eGFR i kontekst kreatyniny', () => {
       age,
       creatinine,
       { termStatus: 'term', bodyWeightKg: 3.4, scrAssay: 'jaffe_idms' }
-    ).reason).toContain('enzymatycznego');
+    ).reason).toContain('metody Jaffego');
   });
 
   it('rozróżnia pełną interpretację, oszacowanie i blokadę AKI', () => {

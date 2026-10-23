@@ -479,12 +479,8 @@ test('odpowiedź dyskwalifikująca wzór daje blocker zamiast fałszywej gotowo�
 }) => {
   await openCalculator(page);
   await selectFromSearch(page, 'noworodek', 'neonatal_egfr');
-
-  await openFieldDetails(page, '#age');
-
-  await page.locator('#age').fill('0');
-  await openFieldDetails(page, '#ageMonths');
-  await page.locator('#ageMonths').fill('0');
+  await expect(page.locator('#age')).toBeHidden();
+  await expect(page.locator('#ageMonths')).toBeHidden();
   await page.locator('#ageDays').fill('14');
   await page.locator('#neonatalTermStatus').selectOption('preterm');
   await page.locator('#weight').fill('3.4');
