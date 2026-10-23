@@ -13,7 +13,7 @@ const assumptions = browser.VildaClcrCalculationAssumptions;
 const safety = browser.ClcrClinicalSafety;
 const extended = browser.ClcrExtendedEgfr;
 const markerIds = ['egfr', 'ckid_u25', 'egfr_cr_cys', 'ckid_u25_cys', 'ckid_u25_cr_cys', 'neonatal_egfr', 'sch_idms', 'cg', 'cg_norm', 'cl24', 'TMP_GFR'];
-const idmsIds = ['egfr', 'ckid_u25', 'egfr_cr_cys', 'ckid_u25_cr_cys', 'sch_idms'];
+const idmsIds = ['egfr', 'ckid_u25', 'egfr_cr_cys', 'ckid_u25_cr_cys', 'neonatal_egfr', 'sch_idms'];
 const ifccIds = ['egfr_cr_cys', 'ckid_u25_cys', 'ckid_u25_cr_cys'];
 
 describe('Klirens — jawne założenia obliczenia, odrębne od faktów', () => {
@@ -34,15 +34,17 @@ describe('Klirens — jawne założenia obliczenia, odrębne od faktów', () => 
     };
     const before = structuredClone(context);
     const result = assumptions.resolve(formulaId, context);
+    const neonatal = formulaId === 'neonatal_egfr';
     expect(result).toMatchObject({
       formulaId, allowed: true, blockers: [],
       calculationContext: {
-        creatinineState: 'stable', suspectedAKI: false, scrAssay: '',
-        markerPolicy: { calculationAllowed: true, categoryAllowed: true, status: 'stable' },
+        creatinineState: neonatal ? 'unknown' : 'stable', suspectedAKI: false, scrAssay: '',
+        markerPolicy: { calculationAllowed: true, categoryAllowed: !neonatal, status: neonatal ? 'unknown' : 'stable' },
       },
-      provenance: { creatinineState: 'assumed', suspectedAKI: 'assumed' },
+      provenance: { creatinineState: neonatal ? 'not_applicable' : 'assumed', suspectedAKI: 'assumed' },
     });
-    expect(result.assumptions.map(item => item.id)).toContain('stableKidneyFunction');
+    if (neonatal) expect(result.assumptions.map(item => item.id)).not.toContain('stableKidneyFunction');
+    else expect(result.assumptions.map(item => item.id)).toContain('stableKidneyFunction');
     expect(result.assumptions.map(item => item.id)).toContain('noSuspectedAKI');
     expect(context).toEqual(before);
     expect(result.calculationContext.markerPolicy).not.toBe(context.markerPolicy);
@@ -203,14 +205,15 @@ describe('Klirens — jawne założenia obliczenia, odrębne od faktów', () => 
     expect(result.provenance.creatinineState).toBe('not_applicable');
   });
 
-  it('założenie IDMS nie zastępuje rzeczywistej metody enzymatycznej noworodka', () => {
+  it('założenie IDMS noworodka nie wymyśla techniki enzymatycznej i nie uchyla znanego Jaffego', () => {
     const age = safety.parseAge(0, 0, 7);
     for (const scrAssay of ['', 'not_idms', 'jaffe_idms', 'enzymatic_idms']) {
       const result = assumptions.resolve('neonatal_egfr', { scrAssay });
       expect(result.calculationContext.scrAssay).toBe(scrAssay);
-      expect(result.provenance.creatinineStandardization).toBe('not_applicable');
+      expect(result.provenance.creatinineStandardization).toBe(['jaffe_idms', 'enzymatic_idms'].includes(scrAssay) ? 'provided' : 'assumed');
       const eligibility = safety.formulaSafety('neonatal_egfr', age, result.calculationContext.markerPolicy, { termStatus: 'term', bodyWeightKg: 3, scrAssay: result.calculationContext.scrAssay });
-      expect(eligibility.eligible).toBe(scrAssay === 'enzymatic_idms');
+      expect(eligibility.eligible).toBe(scrAssay !== 'jaffe_idms');
+      expect(result.allowed).toBe(scrAssay !== 'jaffe_idms');
     }
   });
 

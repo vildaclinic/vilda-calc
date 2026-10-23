@@ -884,24 +884,30 @@
         return Object.freeze({
           eligible: false,
           reason:
-            "Podaj aktualną masę ciała. Prospektywna walidacja obejmowała donoszone noworodki o bieżącej masie >2,5 kg.",
+            "Podaj aktualną masę ciała. Zakres tego kalkulatora: >2,5 kg.",
         });
       }
       if (!(bodyWeightKg > 2.5)) {
         return Object.freeze({
           eligible: false,
           reason:
-            "Wzór noworodkowy nie został zwalidowany dla bieżącej masy ciała ≤2,5 kg. Nie obliczono eGFR.",
+            "Dla bieżącej masy ciała ≤2,5 kg nie obliczono eGFR. Zakres tego kalkulatora: >2,5 kg.",
         });
       }
-      if (
-        !populationContext ||
-        populationContext.scrAssay !== "enzymatic_idms"
-      ) {
+      const assay = String(populationContext?.scrAssay || "").trim().toLowerCase().replace(/[\s/-]+/g, "_");
+      const standard = String(populationContext?.creatinineStandardization || "").trim().toLowerCase().replace(/[\s/-]+/g, "_");
+      if (["non_idms", "enzymatic_non_idms", "jaffe_non_idms"].includes(assay) || ["non_idms", "not_standardized_to_idms"].includes(standard)) {
         return Object.freeze({
           eligible: false,
           reason:
-            "Ścieżka noworodkowa wymaga potwierdzenia enzymatycznego oznaczenia kreatyniny standaryzowanego do IDMS.",
+            "Zapisane oznaczenie kreatyniny jest jawnie niezgodne z IDMS wymaganym przez wzór noworodkowy.",
+        });
+      }
+      if (["jaffe", "jaffe_idms", "jaffe_non_idms"].includes(assay)) {
+        return Object.freeze({
+          eligible: false,
+          reason:
+            "Dla zapisanej metody Jaffego nie obliczono eGFR noworodkowego. Zalecane jest oznaczenie enzymatyczne.",
         });
       }
     }
@@ -988,8 +994,7 @@
       reasons.push("Nie potwierdzono stabilności kreatyniny i braku podejrzenia AKI.");
     }
     // IDMS describes traceability alone, without inventing an assay technique.
-    // The assumptions adapter may supply it; neonatal qualification still
-    // requires the actual enzymatic_idms specimen metadata above.
+    // The assumptions adapter may supply it without claiming an assay technique.
     if (!["enzymatic_idms", "jaffe_idms", "idms"].includes(source.assay)) {
       reasons.push("Nie potwierdzono standaryzacji do IDMS dla oznaczenia kreatyniny.");
     }

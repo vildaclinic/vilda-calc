@@ -4825,7 +4825,10 @@ znaczenie wymagane przez odpowiednią metodę.
 - `neonatal_egfr`: jawny dzień życia 0–28 w wybranej ścieżce neonatalnej
   wystarcza bez powtarzania 0 lat/0 miesięcy. Wyprowadzony wiek nie nadpisuje
   sprzecznego wieku ani danych kanonicznych. Donoszenie, konserwatywna bramka
-  masy >2,5 kg, wzrost i enzymatyczne IDMS pozostają wymagane.
+  masy >2,5 kg i wzrost pozostają wymagane. W tym etapie wymagano także
+  enzymatycznego IDMS; późniejszy P-KLIRENS-NEONATAL-2026-10-22 zastępuje
+  rutynowe pytanie o technikę jawnym założeniem standardu przy braku
+  przeciwnych danych, bez dopisywania metody enzymatycznej.
 
 **Korekta opisu U25:** usunięto z wariantu kreatyninowego kierunkowe ostrzeżenie
 o zaniżaniu prawidłowego/wysokiego GFR. Aktualny pełny NIDDK potwierdza jego
@@ -5092,15 +5095,17 @@ się wstecznie; założenie nowego wyniku nie potwierdza wymagań innych narzęd
 
 **Macierz zakresu:** katalog obejmuje 42 wpisy, z których 41 jest aktywnych;
 `sch_var` pozostaje wyłączony. Założenia markerowe dotyczą 11 aktywnych
-obliczeń. IFCC dotyczy tylko trzech cystatynowych, a ogólne założenie IDMS —
-pięciu współczesnych kreatyninowych; noworodek ma odrębny warunek techniki.
+obliczeń. IFCC dotyczy tylko trzech cystatynowych. W etapie
+P-KLIRENS-ZALOZENIA ogólne założenie IDMS obejmowało pięć współczesnych
+kreatyninowych; P-KLIRENS-NEONATAL-2026-10-22 dodaje szósty,
+`neonatal_egfr`, zachowując odrębne ograniczenia znanej techniki.
 
 | Wzory / ID | Założenie i zachowana logika |
 |---|---|
 | `egfr`, `ckid_u25`, `sch_idms` | Stabilność/brak AKI i IDMS; pozostają wymagane rzeczywiste dane równania oraz dotychczasowy zakres wieku. U25cr i Schwartz nadal wymagają wzrostu. |
 | `egfr_cr_cys`, `ckid_u25_cr_cys` | Stabilność/brak AKI oraz odrębne standardy IDMS i IFCC. Dorosły cr-cys nie wymaga masy/wzrostu; średnia U25 nadal wymaga wzrostu do składowej kreatyninowej. |
 | `ckid_u25_cys` | Stabilność/brak AKI i IFCC. Wiek, płeć i cystatyna C w mg/L wystarczają; usuwa się pomocnicze pytania o masę, wzrost i technikę cystatyny. Nefelometria jest zalecana, lecz nie jest dopisywana jako fakt. |
-| `neonatal_egfr` | Założenie stabilności/braku AKI nie zastępuje donoszenia, 0.–28. dnia życia, aktualnej masy >2,5 kg, wzrostu, Scr/jednostki i odrębnego wymagania metody enzymatycznej. Sam IDMS nie dowodzi tej techniki. Pozostaje ograniczenie pierwszych 72 godzin; bez G i normy 90. |
+| `neonatal_egfr` | Po P-KLIRENS-NEONATAL: jawne założenia braku podejrzenia AKI i zgodności IDMS nie zastępują donoszenia, 0.–28. dnia życia, aktualnej masy >2,5 kg, wzrostu i Scr/jednostki. Nieznana technika nie blokuje liczby, lecz nie staje się enzymatyczną; sam IDMS nie dowodzi tej techniki. Zachowano blokadę znanego Jaffego, jednoznacznego non-IDMS, AKI i szybkiej zmiany. Ograniczenie pierwszych dni jest widoczne dla istniejącego warunku wieku <3 dni; bez G i normy 90. |
 | `cg`, `cg_norm` | Założenie stabilności/braku AKI; nie dodaje się IDMS jako wymogu oryginalnego wzoru. Pozostają wiek ≥18, płeć, rzeczywista masa, Scr/jednostka i wzrost przy wybranym indeksowaniu BSA. Bez G i uniwersalnej normy eGFR, także po indeksowaniu. |
 | `cl24` | Założenie stabilności/braku AKI nie zastępuje Ucr, Scr/jednostki, objętości, rzeczywistego czasu i protokołu zbiórki oraz pobrania Scr w jej okresie. Dane BSA/masy pozostają potrzebne tylko odpowiednim dodatkowym przeliczeniom. Bez G. |
 | `TMP_GFR` | Założenia nie zastępują sparowanych fosforanów/kreatynin z jednostkami, drugiego porannego moczu po nocy na czczo i równoczesnego pobrania. To nie eGFR; brak IFCC i zapożyczonej normy GFR. |
@@ -5320,13 +5325,173 @@ formularz, sprawdzać źródło surowych składowych oraz dane po zapisaniu/
 odtworzeniu, a nie kopię równania lub średnią tekstów. Akceptacja makiety,
 przegląd źródeł i testy techniczne nie nadają statusu walidacji klinicznej.
 
+#### P-KLIRENS-NEONATAL-2026-10-22 — pięć danych i jeden wynik noworodkowy
+
+**Decyzja właściciela:** wdrożyć zaakceptowane
+[makiety przed/po dla desktopu i telefonu](https://chatgpt.com/space/page_41cfd1bc8dfc8191ba7d4176722be9d0)
+dla `neonatal_egfr`, po przeglądzie źródeł i poleceniu kodowania.
+Uwzględniono także zgłoszony mały odstęp między czyszczeniem formularza
+a wynikiem. Ta rata nie przywraca rutynowych pytań o stabilność lub AKI.
+
+**Wpływ kliniczny i funkcjonalny:** nieznana technika oznaczenia kreatyniny
+przestaje blokować liczbę. To zmiana dostępności oszacowania i jego opisu,
+nie wyłącznie poprawka CSS. Enzymatyczna technika pozostaje zalecana,
+a IDMS jest jawnym założeniem obliczenia przy braku przeciwnych danych.
+Nieznane metadane nie stają się potwierdzeniem metody. Zachowano
+dotychczasowe równanie, jednostki, konwersję Scr, granice wieku, bramkę
+donoszenia i aktualnej masy >2,5 kg oraz reguły zaokrąglania. Dla tego
+samego kwalifikowanego zestawu danych wartość liczbowa nie zmienia się.
+Historyczne wyniki i ich metadane nie są przeliczane wstecznie.
+
+**Populacja i jednostki:** NIDDK opisuje oszacowanie dla noworodków
+donoszonych do 4 tygodni życia. Aplikacja zachowuje jawne ukończone dni
+0–28 i potwierdzone donoszenie; nie rozszerza wzoru na wcześniaki.
+Produkcja nadal liczy `eGFR = 0,31 × długość [cm] / Scr [mg/dL]`,
+w mL/min/1,73 m². Kreatynina w µmol/L jest przeliczana przez dzielenie
+przez 88,4. Nie podstawia się stałej długości 50 cm zamiast rzeczywistego
+pomiaru pacjenta i nie przelicza już indeksowanego wyniku ponownie przez BSA.
+
+**Masa i zakres dowodów:** aktualna masa >2,5 kg pozostaje świadomie
+zachowaną konserwatywną bramką aplikacji, powiązaną z kryteriami badania
+HERO, a nie członem równania lub uniwersalną granicą źródłowej populacji.
+Pierwotna praca JASN obejmuje zarówno metaanalizę referencyjnego mGFR,
+jak i sprawdzenie nowego współczynnika w 43 krytycznie chorych noworodkach
+HERO. Późniejszy artykuł w Pediatric Nephrology opisuje tę samą kohortę,
+nie drugą niezależną walidację. Nie wolno przedstawiać wzoru jako nigdy
+prospektywnie niesprawdzonego ani traktować 43 osób jako dowodu pełnej
+walidacji we wszystkich podgrupach. Szersza walidacja pozostaje potrzebna.
+
+**Minimalny formularz:** pięć pytań to dni życia, donoszenie, aktualna masa
+w kg, długość/wzrost w cm i kreatynina z jednostką. Dostępne właściwe dane
+karty lub sesji są wykorzystywane bez ponownego wymagania wpisu. Masa
+kwalifikuje do zachowanej ścieżki; nie służy obliczeniu BSA dla tej liczby.
+Płeć, imię/nazwisko oraz rutynowe pytania o lata i miesiące nie są
+potrzebnymi składnikami tego widoku. Technika oznaczenia pozostaje
+w jedynym opcjonalnym rozwinięciu. Komplet tych pięciu danych daje 5/5
+i jeden wynik, bez dodatkowego etapu „pełnej interpretacji”.
+
+Ukrycie rutynowych lat/miesięcy nie kasuje istniejącego wieku ani daty
+urodzenia. Jeżeli zapisane lata lub miesiące przeczą podanym dniom,
+formularz odsłania właściwe pole i kieruje do świadomej korekty przez
+lekarza. Nie zeruje sprzecznych wartości, nie zmienia DOB i nie produkuje
+kwalifikacji neonatalnej przez samą zmianę widoczności. Ukryte pole nie
+może pozostawić pozornego stanu 5/5 przy rzeczywistej blokadzie gotowości.
+Ujawniona, skupiona kontrolka pozostaje edytowalna także po Backspace,
+aby lekarz mógł wpisać inną wartość. Sam fokus nie tworzy nowego kryterium
+klinicznego; zgodna lub pusta kontrolka wraca do ukrycia po zakończeniu edycji.
+Jawny wybór w nowym workflow jest zachowany także wtedy, gdy starszy,
+ukryty picker odfiltrowuje go według bieżącego wieku. Nie zmienia to
+kwalifikacji: `formulaEligibility` i właściwe bramki nadal rozstrzygają,
+czy wolno pokazać liczbę. Tryb zbiorczy i historyczne wzory Schwartza
+(`sch_var`, `sch_idms`) nie dostają tej reguły zachowania wyboru.
+`sch_idms` zachowuje dotychczasowe usuwanie wyboru po ukończeniu 17 lat.
+
+**Założenia i pierwszeństwo faktów:** opis neonatalny unika deklarowania
+stałego fizjologicznego GFR/Scr u dojrzewającego noworodka. Komentarz
+przedstawia założenia braku podejrzenia AKI i zgodności oznaczenia
+kreatyniny z IDMS oraz przypomina ocenę z dniem życia i trendem kreatyniny.
+Nie wymaga rutynowego potwierdzenia i nie tworzy laboratoryjnego faktu.
+Założenie IDMS jest przekazywane istniejącą warstwą kontekstu obliczenia
+z pochodzeniem `provenance`; nie zapisuje `enzymatic_idms` ani innej
+techniki do kanonicznego `ScrAssay`. Puste pole pozostaje puste.
+Dla neonatal nie zamienia się również źródłowego `unknown` stanu
+kreatyniny w `stable` w efektywnym kontekście. `not_applicable` w jego
+pochodzeniu oznacza brak założenia stanu stacjonarnego, nie pominięcie
+kontroli bezpieczeństwa. Przy braku sprzeczności kontekst pozwala na
+liczbę, zachowując brak kategorii G; jawne `stable` pozostaje dostarczonym
+stanem, a znane AKI lub szybka zmiana nadal mają pierwszeństwo.
+
+Znane AKI, szybka zmiana kreatyniny, jednoznaczny `non_idms` i znana
+technika Jaffego nadal blokują ten wynik. Ogólne założenie nie usuwa
+przeciwnych danych. Blokada znanego Jaffego jest zachowaną ostrożną
+polityką tej aplikacji; NIDDK określa enzymatyczną technikę jako zalecaną,
+nie ustanawia obowiązku odpowiedzi w formularzu. Znane IDMS nie oznacza
+znanej techniki enzymatycznej. Niejednoznaczne historyczne `not_*`
+zachowują reguły P-KLIRENS-ZALOZENIA: oryginał nie jest zamieniany
+w udowodnioną zgodność lub jednoznaczny dowód niezgodności.
+W nowym wyborze neonatal nie łączy się braku wiedzy z brakiem
+standaryzacji: „Bez standaryzacji IDMS” ma jawny token `non_idms`,
+odrębny od pustego pola. Historyczne `not_idms` może być odtworzone
+jako niejednoznaczny wpis wyłącznie wtedy, gdy rzeczywiście zapisano
+tę wartość. Zmiana listy opcji lub przełączenie formuły nie może zmienić
+`non_idms` w pustą wartość albo w niejednoznaczne `not_idms`; znany fakt
+pozostaje zachowany również po powrocie do innych obliczeń.
+
+**Jedna neutralna karta:** wynik ma opis „Szacowany eGFR”, po prawej
+„Ocena dla wieku — Zależy od dnia życia”, z przypomnieniem o trendzie.
+Nie dodano G1–G5, progu ≥90, nowej normy liczbowej ani automatycznego
+werdyktu prawidłowości. Nieznana technika nie wywołuje powrotu dwóch
+poziomów wyniku. Szczegóły zawierają metodę, zakres zastosowania,
+zalecenie enzymatycznej Scr, ograniczenia i źródła. Znika poboczna liczba
+BSA Haycocka, bez zmiany zachowanej masy i przeliczeń innych formuł.
+
+Pierwotny Smeets raportuje oddzielnie średnie referencyjnego mGFR z 95% CI
+średniej i modelowane percentyle. CI średniej nie jest indywidualnym
+przedziałem prawidłowości, a rozkładu mGFR nie podstawia się automatycznie
+za zwalidowaną normę indywidualnego eGFR. P30 74,4% opisuje odsetek
+oszacowań w odległości 30% od mGFR w badanej grupie; nie jest gwarancją
+błędu ±30% u każdego pacjenta ani prawdopodobieństwem prawidłowego wyniku.
+Nowsze krzywe dla hipotermii po niedotlenieniu również nie stanowią normy
+dla wszystkich donoszonych noworodków 0–28 dni.
+
+**Pierwsze dni:** zachowano istniejący warunek ukończonego wieku <3 dni,
+ale jego uwagę wyprowadzono z zamkniętych Szczegółów w pobliże wyniku.
+Bursztynowa informacja dotyczy ograniczenia matczynej kreatyniny i oceny
+trendu, nie oceny liczby jako niskiej lub nieprawidłowej. Nie dodano nowego
+cutoff 72 h i nie deklaruje się, że od 3. dnia stan jest ustalony.
+Znane `rapid_change` nadal blokuje; nie jest automatycznie uznawane
+za niewinną zmianę fizjologiczną. Nie dodano pytania o matczyną Scr.
+
+**Źródła, pełne teksty odczytane 2026-10-22:**
+
+- [NIDDK — równania dla dzieci, młodzieży i młodych dorosłych](https://www.niddk.nih.gov/research-funding/research-programs/kidney-clinical-research-epidemiology/laboratory/glomerular-filtration-rate-equations/children-adolescents-young-adults),
+  Last Reviewed May 2025, sekcje Neonatal eGFR Equation i Serum Creatinine
+  Measurement Considerations: wzór, populacja, jednostki, IDMS i zalecana
+  technika enzymatyczna; brak źródłowego wymogu rutynowej odpowiedzi o technice.
+- Smeets NJL et al., *J Am Soc Nephrol.* 2022;33:1277–1292,
+  [DOI 10.1681/ASN.2021101326](https://doi.org/10.1681/ASN.2021101326),
+  pełny [tekst PMC9257816](https://pmc.ncbi.nlm.nih.gov/articles/PMC9257816/):
+  Methods, tabele 1 i 4, Discussion. Rozwój współczynnika na enzymatycznej
+  Scr, meta-analiza referencyjnego mGFR, HERO 43, P30 i dalsza niepewność.
+- Smeets NJL et al., *Pediatr Nephrol.* 2023;38:1087–1097, online 2022-08-02,
+  [DOI 10.1007/s00467-022-05651-w](https://link.springer.com/article/10.1007/s00467-022-05651-w),
+  Methods/Patients, Analytical procedures, Results i Limitations:
+  kryteria HERO obejmowały donoszenie i bieżącą masę >2500 g; to ta sama
+  kohorta 43 noworodków. Pozwala odróżnić zakres badania od członów równania.
+- [KDIGO 2024](https://kdigo.org/wp-content/uploads/2024/03/KDIGO-2024-CKD-Guideline.pdf),
+  PP 1.2.3.4/5, S186 (PDF s. 71): zalecenie techniki enzymatycznej u dzieci,
+  interferencje Jaffego i wiekowy zakres pediatrycznej flagi <90.
+- Allegaert K et al., *Pediatr Nephrol.* 2026;41:233–238, online 2025-09-18,
+  [DOI 10.1007/s00467-025-06957-1](https://link.springer.com/article/10.1007/s00467-025-06957-1),
+  pełne Methods, Discussion i ograniczenia: specyficzna populacja TH,
+  arbitralna długość 50 cm i trend zamiast uniwersalnej normy.
+  [Korekta z 2026-08-03, DOI 10.1007/s00467-026-07474-5](https://link.springer.com/article/10.1007/s00467-026-07474-5)
+  poprawia brakujące mnożniki wieku w równaniach trendów; nie zmienia k=0,31.
+
+**Syntetyczne kontrakty regresyjne rzeczywistego kodu i formularza:**
+
+| Wejście / stan | Oczekiwany wynik i zachowany kontrakt |
+|---|---|
+| Donoszony, 14 dni, 3,5 kg, 50 cm, Scr 0,5 mg/dL; technika nieznana | 31 mL/min/1,73 m², jedna neutralna karta, komplet 5/5, bez G/normy 90/BSA. Technika kanoniczna pozostaje nieznana; IDMS ma pochodzenie założeniowe. |
+| Ten sam profil, Scr 44,2 µmol/L albo jawne enzymatyczne IDMS | To samo 31; konwersja i liczba nie zmieniają się z powodu ukrycia pytania. |
+| Wiek 0 lub 2 dni; następnie 3 lub 28 dni | Wszystkie mieszczą się w zachowanym zakresie. Dla <3 dni widoczna uwaga przy neutralnej liczbie; brak nowej gwarancji wiarygodności po 72 h. |
+| 29 dni, wcześniactwo lub nieznane donoszenie | Zachowana blokada właściwej kwalifikacji, bez pozornego wyniku. |
+| Masa 2,5 kg, następnie 2,5001 kg | Zachowana ścisła bramka; poniżej lub na granicy blokada, powyżej dopuszczenie przy pozostałym komplecie. Masa nie zmienia liczby. |
+| Podane dni oraz sprzeczne zapisane lata/miesiące | Odsłonięcie właściwego pola i prawidłowy fokus; brak cichego zerowania, zmiany DOB i pozornej gotowości. Ctrl+A/Backspace nie ukrywa pola przed dokończeniem wpisu; po wpisaniu 2 konflikt pozostaje, świadome 0 i blur przywracają właściwy stan. |
+| Jawne AKI, szybka zmiana, non-IDMS albo znany Jaffe | Zachowana blokada mimo ogólnych założeń; dane źródłowe nie są zmieniane. |
+| Zapis do karty, PDF/DOCX/AI, odtworzenie i zmiana formuły | Jeden nowy wynik neonatalny, spójna treść liczby, założeń i ograniczeń. Brak pobocznego BSA; dane pacjenta i wymagania innych obliczeń pozostają zachowane. |
+
+Regresje mają wywoływać produkcyjne obliczenie, warstwę założeń, kwalifikację,
+prezenter i formularz, zamiast kopii równania. Akceptacja makiety, przegląd
+źródeł i testy techniczne nie nadają statusu walidacji klinicznej.
+
 #### Zakres i ograniczenia
 
 | Obszar | Wdrożona reguła | Najważniejsze ograniczenia |
 |---|---|---|
-| eGFR z kreatyniny | CKiD U25 eGFRcr dla wieku 1–25 lat; 2021 CKD-EPI eGFRcr od 18 lat; w wieku 18–25 lat oba oszacowania pozostają dostępne w ramach jednego wyniku i jego Szczegółów. Bedside Schwartz 2009 pozostaje wzorem porównawczym w wieku 1–16 lat. | Jawnie znane AKI lub szybko zmieniająca się Scr blokują wynik. Przy braku przeciwnych danych stabilność/brak AKI i IDMS są opisanymi założeniami obliczenia, umożliwiającymi zakres oszacowania G we właściwym wieku; nie są potwierdzeniem faktów pacjenta. Wyjątkiem pozostaje neonatalny warunek metody enzymatycznej. CKiD U25cr opracowano głównie w łagodnej lub umiarkowanej CKD; NIDDK opisuje także potwierdzoną użyteczność przy eGFR ≥75 w europejskiej kohorcie zdrowych dzieci i młodych dorosłych. Nie przenosi się tu szczególnego ograniczenia przesiewowego wariantu cystatynowego. |
+| eGFR z kreatyniny | CKiD U25 eGFRcr dla wieku 1–25 lat; 2021 CKD-EPI eGFRcr od 18 lat; w wieku 18–25 lat oba oszacowania pozostają dostępne w ramach jednego wyniku i jego Szczegółów. Bedside Schwartz 2009 pozostaje wzorem porównawczym w wieku 1–16 lat. | Jawnie znane AKI lub szybko zmieniająca się Scr blokują wynik. Przy braku przeciwnych danych stabilność/brak AKI i IDMS są opisanymi założeniami obliczenia, umożliwiającymi zakres oszacowania G we właściwym wieku; nie są potwierdzeniem faktów pacjenta ani techniki oznaczenia. Odrębny opis i ograniczenia neonatal zawiera następny wiersz. CKiD U25cr opracowano głównie w łagodnej lub umiarkowanej CKD; NIDDK opisuje także potwierdzoną użyteczność przy eGFR ≥75 w europejskiej kohorcie zdrowych dzieci i młodych dorosłych. Nie przenosi się tu szczególnego ograniczenia przesiewowego wariantu cystatynowego. |
 | eGFR z cystatyny C | 2021 CKD-EPI eGFRcr-cys od 18 lat; CKiD U25 eGFRcys i średnia eGFRcr-cys w wieku 1–25 lat. | Źródłowo wymagana identyfikowalność ERM-DA471/IFCC oraz stabilność/brak AKI mogą być opisanymi założeniami przy braku przeciwnych danych; nie wymagają rutynowego ręcznego potwierdzenia. Znana sprzeczność zachowuje blokadę. Rzeczywista technika oznaczenia nie jest dopisywana; nefelometria jest zalecana dla U25cys. Wariant U25 ma ograniczoną możliwość uogólnienia poza profilem CKiD i nie otrzymuje normy przesiewowej dla zdrowej populacji. |
-| Noworodek | Ograniczone oszacowanie `0,31 × wzrost [cm] / Scr [mg/dL]` dla donoszonego noworodka w 0.–28. dniu życia. Aplikacja dodatkowo wymaga bieżącej masy ciała >2,5 kg jako konserwatywnej bramki bezpieczeństwa, a nie granicy zwalidowanej populacji. | Wcześniactwo, masa ≤2,5 kg, 29. dzień życia, AKI lub niestabilna Scr blokują wynik. Równanie wyprowadzono w metaanalizie indywidualnych danych pacjentów; autorzy wskazali potrzebę walidacji w dużej kohorcie noworodkowej. Wynik nie otrzymuje kategorii G KDIGO. |
+| Noworodek | Oszacowanie `0,31 × długość [cm] / Scr [mg/dL]` dla donoszonego noworodka w 0.–28. dniu życia. Aktualna masa >2,5 kg pozostaje konserwatywną bramką aplikacji powiązaną z kryteriami HERO, nie członem równania. Podanie techniki jest opcjonalne, a IDMS może być jawnym założeniem obliczenia; nie dopisuje się metody enzymatycznej. | Wcześniactwo, masa ≤2,5 kg, 29. dzień życia, znane AKI/szybka zmiana, jednoznaczny non-IDMS lub znany Jaffe blokują wynik. JASN zawiera meta-analizę i sprawdzenie k w 43 noworodkach HERO, opisanych następnie w Pediatr Nephrol jako ta sama kohorta; większa walidacja pozostaje potrzebna. Wynik jest neutralny, bez kategorii G, normy 90 i pobocznego BSA. Istniejąca uwaga dla wieku <3 dni jest widoczna przy liczbie; ocena wymaga dnia życia i trendu Scr. |
 | CrCl i BSA | Klirens ze zbiórki czasowej wymaga rzeczywistego czasu, kompletnego protokołu i próbki surowicy pobranej w trakcie zbiórki. Indeksowanie używa Haycocka przed 18. rokiem życia i Du Bois od 18 lat. | Błędy zbiórki pozostają głównym źródłem błędu. Cockcroft-Gault jest dostępny wyłącznie od 18 lat: surowy eCrCl używa podanej masy rzeczywistej i jest nieindeksowany, a opcjonalny `cg_norm` przelicza go przez BSA do 1,73 m². Oba pozostają eCrCl, nie eGFR. |
 | KDIGO G/A, ACR i PCR | Kategorie są wyznaczane z wartości niezaokrąglonej. Obliczenie ACR/PCR wymaga zgodnych jednostek i potwierdzenia wspólnej próbki; kategoria A i automatyczna interpretacja pediatryczna wymagają pierwszego porannego moczu bez zaznaczonych konfunderów. Kategorie G i A są wstrzymane przed 2. rokiem życia. W wieku 6 mies.–<2 lat automatyczny próg pediatryczny dotyczy wyłącznie PCR <500 mg/g; od 2 do <18 lat stosowane są odrębne progi ACR/PCR. | Kategoria zakresu G nie jest pokazywana przy znanym AKI, znanej niestabilności lub jednoznacznie niezgodnym standardzie używanego markera. Przy braku przeciwnych danych może opierać się na jawnych założeniach aplikacji. Sama kategoria nie rozpoznaje PChN bez kryterium przewlekłości i innych właściwych kryteriów. |
 | Frakcje wydalane i TmP/GFR | Analit i kreatynina muszą pochodzić z tej samej próbki moczu, a próbka krwi być równoczesna. TmP/GFR używa drugiego porannego moczu po nocy na czczo; przed 19. rokiem stosowana jest ścieżka pediatryczna, od 19. roku algorytm Waltona–Bijvoeta/Payne’a z gałęzią dla TRP >0,86. | TmP/GFR nie jest liczone z DZM. Automatyczne zakresy laboratoryjne pozostają wyłączone do czasu wersjonowanego profilu metody i lokalnej walidacji. |
@@ -5341,7 +5506,7 @@ EKFC pozostaje wyłączone za bramką lokalnej walidacji. Historyczny Schwartz z
 2. [NIDDK — eGFR Equations for Children, Adolescents, & Young Adults](https://www.niddk.nih.gov/research-funding/research-programs/kidney-clinical-research-epidemiology/laboratory/glomerular-filtration-rate-equations/children-adolescents-young-adults) oraz [kalkulatory dla dorosłych i pediatrii](https://www.niddk.nih.gov/health-information/professionals/clinical-tools-patient-management/kidney-disease/laboratory-evaluation/estimated-gfr-calculators/adults-pediatrics) — CKiD U25, Bedside Schwartz, ścieżka neonatalna i porównanie w wieku 18–25 lat.
 3. Inker LA et al., 2021 CKD-EPI bez zmiennej rasy, [DOI 10.1056/NEJMoa2102953](https://doi.org/10.1056/NEJMoa2102953).
 4. Pierce CB et al., CKiD U25, [DOI 10.1016/j.kint.2020.10.047](https://doi.org/10.1016/j.kint.2020.10.047); Schwartz GJ et al., Bedside Schwartz, [DOI 10.1681/ASN.2008030287](https://doi.org/10.1681/ASN.2008030287).
-5. Smeets NJL et al., równanie eGFR `0,31 × wzrost / Scr` dla noworodków, [DOI 10.1681/ASN.2021101326](https://doi.org/10.1681/ASN.2021101326) — metaanaliza indywidualnych danych pacjentów; wymagana dalsza walidacja w dużej kohorcie noworodkowej.
+5. Smeets NJL et al., równanie eGFR `0,31 × długość / Scr` dla noworodków, [DOI 10.1681/ASN.2021101326](https://doi.org/10.1681/ASN.2021101326) — metaanaliza indywidualnych danych i sprawdzenie k w 43 noworodkach HERO; [DOI 10.1007/s00467-022-05651-w](https://link.springer.com/article/10.1007/s00467-022-05651-w) opisuje tę samą kohortę, nie drugą niezależną walidację. Większa walidacja pozostaje potrzebna.
 6. Derain Dubourg L et al., TmP/GFR od dzieciństwa do dorosłości, [DOI 10.1093/ndt/gfab331](https://doi.org/10.1093/ndt/gfab331); Barth JH et al., algorytm Waltona–Bijvoeta/Payne’a, [DOI 10.1258/0004563001901371](https://doi.org/10.1258/0004563001901371).
 7. [EAU Guidelines on Urolithiasis 2026](https://uroweb.org/guidelines/urolithiasis/chapter/metabolic-evaluation-and-recurrence-prevention) — próbki, jednostki, progi i cele kamicowe.
 8. Daugirdas JT, równanie II, [DOI 10.1681/ASN.V451205](https://doi.org/10.1681/ASN.V451205); Daugirdas JT, eKt/V, [DOI 10.1016/S1073-4449(12)80028-8](https://doi.org/10.1016/S1073-4449(12)80028-8); Daugirdas JT et al., GFAC zależny od częstości/PIDI, [DOI 10.1093/ndt/gfs115](https://doi.org/10.1093/ndt/gfs115); KDOQI 2006 — protokół pobrania, [DOI 10.1053/j.ajkd.2006.03.051](https://doi.org/10.1053/j.ajkd.2006.03.051); [KDOQI 2015](https://doi.org/10.1053/j.ajkd.2015.07.015).
@@ -5354,7 +5519,7 @@ EKFC pozostaje wyłączone za bramką lokalnej walidacji. Historyczny Schwartz z
 |---|---|---|
 | CKD-EPI-CR | mężczyzna, 50 lat, Scr 1,0 mg/dL, marker stabilny, bez AKI | 2021 CKD-EPI eGFRcr ≈91,6915 mL/min/1,73 m²; przy AKI wynik i kategoria G są blokowane |
 | U25-CR | dziewczynka, 10 lat, 140 cm, Scr 0,6 mg/dL, IDMS | CKiD U25 eGFRcr ≈82,9016 mL/min/1,73 m²; od 26. urodzin wzór jest niedostępny |
-| NEONATAL | donoszony noworodek, 14. dzień, 3,4 kg, 50 cm, Scr 0,5 mg/dL oznaczona enzymatycznie i zgodna z IDMS | ograniczone eGFR 31 mL/min/1,73 m²; wcześniactwo albo 29. dzień blokuje wynik |
+| NEONATAL | donoszony noworodek, 14. dzień, 3,4 kg, 50 cm, Scr 0,5 mg/dL; technika enzymatyczna zgodna z IDMS albo brak przeciwnych danych przy opisanym założeniu IDMS | eGFR 31 mL/min/1,73 m², jedna neutralna karta i komplet 5/5; Scr 44,2 µmol/L daje tę samą liczbę. Wcześniactwo albo 29. dzień blokuje wynik; nieznana technika nie staje się potwierdzoną metodą. |
 | BEDSIDE | dziecko 10-letnie, 140 cm, Scr 0,6 mg/dL, IDMS | Bedside Schwartz ≈96,3667 mL/min/1,73 m² jako wynik porównawczy |
 | STONE-CA | Ca 4,0078 mg/dL, kompletna zbiórka 1000 mL przez 1440 min | 40,078 mg/24 h = 1,000 mmol/24 h; próg uruchamia się tylko w zgodnym profilu |
 | HD-KTV | dorosły, IHD 3×/tydz., PIDI 2 dni, BUN 120→36 mg/dL w tej samej sesji; próbka pre-HD bez rozcieńczenia, próbka post slow-flow 100 mL/min przez 15 s; 240 min, UF 2 L, masa po HD 70 kg, AVF/AVG, Kru 1,5 mL/min/1,73 m² zmierzone <3 mies. wcześniej, regularne pełne sesje potwierdzone | spKt/V ≈1,401054; eKt/V ≈1,222738; URR 70%; klasyfikacja z wartości niezaokrąglonych |

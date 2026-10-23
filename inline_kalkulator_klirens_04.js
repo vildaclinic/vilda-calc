@@ -515,13 +515,16 @@ function packClcrSupplementaryMarkup(markup, formulaId) {
   if (!details) return markup;
   const source = nodes.find((node) => node.classList.contains("clcr-result-source") && node.dataset.clcrFormula === formulaId);
   const assumptions = nodes.find((node) => node.classList.contains("clcr-result-assumptions") && node.dataset.clcrFormula === formulaId);
+  const earlyCaution = formulaId === "neonatal_egfr"
+    ? nodes.find((node) => node.matches(".clcr-neonatal-early-note[data-neonatal-early-note]") && node.dataset.clcrFormula === formulaId)
+    : null;
   const extras = document.createElement("div");
   extras.className = "clcr-result-extra";
   nodes.forEach((node) => {
     const owner = node.dataset.clcrFormula;
     if (owner && owner !== formulaId && node.dataset.clcrComparisonFor !== formulaId) {
       node.remove();
-    } else if (node !== primary && node !== details && node !== source && node !== assumptions) extras.appendChild(node);
+    } else if (node !== primary && node !== details && node !== source && node !== assumptions && node !== earlyCaution) extras.appendChild(node);
   });
   if (extras.childElementCount) details.appendChild(extras);
   return staging.innerHTML;
@@ -932,7 +935,8 @@ function update() {
     }
     return presenter.render({
       ...input, formulaId, presentation: presentation || { label: input.label, tone: "neutral" },
-      ageYears, markerPolicy: effective.markerPolicy, assay: effective.presentationAssay,
+      ageYears, ageDays: ageContext?.daysOfLife ?? null,
+      markerPolicy: effective.markerPolicy, assay: effective.presentationAssay,
       calculationAssumptions: assumptions,
       creatinineStandardization: effective.creatinineStandardization,
       cystatinStandardization: effective.cystatinCStandardization,
@@ -985,6 +989,22 @@ function update() {
     creatinineContext.calculationAllowed
       ? eGFR_CKD_EPI_2021_cr(a, t, d)
       : null;
+  const neonatalAssumptions = resolveClcrCalculationAssumptions("neonatal_egfr");
+  const neonatalEffective = neonatalAssumptions.calculationContext;
+  const neonatalSafety = !neonatalAssumptions.allowed
+    ? { eligible: false, reason: neonatalAssumptions.blockers.map((entry) => entry.message).join(" ") }
+    : typeof window.ClcrClinicalSafety?.formulaSafety === "function"
+      ? window.ClcrClinicalSafety.formulaSafety(
+          "neonatal_egfr",
+          ageContext,
+          neonatalEffective.markerPolicy,
+          {
+            ...populationContext,
+            scrAssay: neonatalEffective.presentationAssay,
+            creatinineStandardization: neonatalEffective.creatinineStandardization,
+          },
+        )
+      : { eligible: false, reason: "Wzór jest niedostępny." };
   const ckidU25Gfr =
       o &&
       t >= 1 &&
@@ -997,14 +1017,9 @@ function update() {
         : null,
     neonatalGfr =
       o &&
-      ageContext.totalMonths === 0 &&
-      ageContext.daysOfLife !== null &&
-      populationContext.termStatus === "term" &&
-      s > 2.5 &&
-      populationContext.scrAssay === "enzymatic_idms" &&
+      neonatalSafety.eligible &&
       p > 0 &&
-      d > 0 &&
-      creatinineContext.calculationAllowed
+      d > 0
         ? eGFR_neonatal_term(
             !0,
             ageContext.daysOfLife,
@@ -1122,7 +1137,7 @@ function update() {
       selectedAssumptions = resolveClcrCalculationAssumptions(l),
       selectedSafety = !selectedAssumptions.allowed
         ? { eligible: false, reason: selectedAssumptions.blockers.map((entry) => entry.message).join(" ") }
-        :
+        : l === "neonatal_egfr" ? neonatalSafety :
         l &&
         window.ClcrClinicalSafety &&
         typeof window.ClcrClinicalSafety.formulaSafety == "function"
@@ -1587,21 +1602,13 @@ function update() {
         case "neonatal_egfr":
           m.neonatal_egfr != null &&
             q(
-              "eGFR noworodka donoszonego (0,31 \xD7 wzrost/Scr)",
+              window.ClcrResultReferenceData?.PROFILE?.neonatal?.resultLabel || "Szacowany eGFR",
               m.neonatal_egfr,
               "\u202FmL/min/1,73\u202Fm\xB2",
               "neonatal_egfr",
               r,
               "neonatal_egfr",
             );
-          if (m.neonatal_egfr != null) {
-            S +=
-              '<div class="result-box warn-yellow" data-clcr-formula="neonatal_egfr"><strong>Ograniczenie:</strong> wzór służy do identyfikacji zmienionej filtracji u noworodków donoszonych do 28. dnia życia; P30 wynosi 74,4%, dlatego wynik wymaga ostrożnej oceny klinicznej i nie otrzymuje kategorii G KDIGO.</div>';
-            if (ageContext.daysOfLife < 3) {
-              S +=
-                '<div class="result-box warn-yellow" data-clcr-formula="neonatal_egfr"><strong>Pierwsze 72 godziny życia:</strong> kreatynina noworodka może nadal odzwierciedlać kreatyninę matczyną i szybko się zmieniać; wynik ma szczególnie wysoką niepewność.</div>';
-            }
-          }
           break;
         case "cg":
           if (m.cg != null) {
@@ -1842,7 +1849,7 @@ function update() {
         });
       }
       else if (l === "neonatal_egfr" && selectedSafety.eligible)
-        T({ includeG: !1, includeA: !1 });
+        T({ includeG: !1, includeA: !1, includeBsa: !1 });
       else if (l === "ACR") {
         T({ includeG: !1, includeA: !0 });
         appendSpotRatioGuidance();
@@ -1877,20 +1884,9 @@ function update() {
         } else if (
           ageContext.totalMonths === 0 &&
           ageContext.daysOfLife !== null &&
-          (populationContext.termStatus !== "term" ||
-            !(Number(populationContext.bodyWeightKg) > 2.5) ||
-            populationContext.scrAssay !== "enzymatic_idms")
+          !neonatalSafety.eligible
         ) {
-          const r =
-            window.ClcrClinicalSafety &&
-            typeof window.ClcrClinicalSafety.formulaSafety == "function"
-              ? window.ClcrClinicalSafety.formulaSafety(
-                  "neonatal_egfr",
-                  ageContext,
-                  creatinineContext,
-                  populationContext,
-                )
-              : null;
+          const r = neonatalSafety;
           S += `<div class="result-box warn-yellow" data-clcr-formula="neonatal_egfr"><strong>Nie obliczono eGFR noworodka:</strong> ${clcrEscapeHtml(r && r.reason ? r.reason : "nie potwierdzono populacji wzoru.")}</div>`;
         } else if (t < 1 && ageContext.totalMonths > 0) {
           S +=
