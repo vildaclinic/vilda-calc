@@ -64,13 +64,15 @@ describe('CL24 — rzeczywisty czas i jawne założenie pełnej zbiórki', () =>
 });
 
 // Execute the actual readable migration functions preceding the existing IIFE.
-const migrationSource = readFileSync(new URL('../../inline_kalkulator_klirens_07.js', import.meta.url), 'utf8').split('(function(){const b=')[0];
+const sessionSource = readFileSync(new URL('../../inline_kalkulator_klirens_07.js', import.meta.url), 'utf8');
+const migrationSource = sessionSource.split('(function(){const b=')[0];
 function migration() {
   const controls = {};
   const context = { window: {}, document: { getElementById: id => controls[id] || null } };
   vm.createContext(context);
   vm.runInContext(migrationSource, context);
-  return { normalize: context.normalizeCl24SessionInputs, clear: context.clearCl24InputContext, controls };
+  return { normalize: context.normalizeCl24SessionInputs, clear: context.clearCl24InputContext,
+    clearMissingAnswers: context.clearMissingCl24ProtocolAnswers, controls };
 }
 const dates = { collectionStartAt: '2026-10-20T08:00', collectionEndAt: '2026-10-20T20:30' };
 describe('CL24 — jawne założenie metody nie zastępuje zapisanych faktów', () => {
@@ -124,13 +126,38 @@ describe('CL24 — zgodność zapisów i izolacja czasu między pacjentami', () 
     const session = { inputs: { collectionNoMissedVoids: false } };
     migration().normalize(session);
     expect(session.inputs.Cl24CollectionProblem).toBe(false);
-    expect(session.inputs.ui_collectionNoMissedVoids_answer).toBe('');
+    expect(session.inputs).not.toHaveProperty('ui_collectionNoMissedVoids_answer');
   });
-  it('brak nowego pola w następnej karcie usuwa stan poprzedniego problemu', () => {
+  it('brak odpowiedzi w następnej karcie usuwa poprzedni problem z DOM bez dopisywania danych', () => {
+    const { normalize, clearMissingAnswers, controls } = migration();
+    controls.ui_collectionNoMissedVoids_answer = { value: 'no' };
+    controls.collectionNoMissedVoids = { checked: true };
     const session = { inputs: { Scr: '1' } };
-    migration().normalize(session);
+    normalize(session);
+    clearMissingAnswers(session);
     expect(session.inputs.Cl24CollectionProblem).toBe(false);
+    expect(session.inputs).not.toHaveProperty('ui_collectionNoMissedVoids_answer');
+    expect(controls.ui_collectionNoMissedVoids_answer.value).toBe('');
+    expect(controls.collectionNoMissedVoids.checked).toBe(false);
+  });
+  it.each(['no', 'yes', 'unknown', ''])(
+    'zachowuje zapisaną odpowiedź %s, również z preservedInputs', answer => {
+      const { normalize, clearMissingAnswers, controls } = migration();
+      const key = 'ui_collectionNoMissedVoids_answer';
+      controls[key] = { value: answer };
+      const session = { preservedInputs: { [key]: answer }, inputs: { collectionNoMissedVoids: true } };
+      normalize(session);
+      clearMissingAnswers(session);
+      expect(session.inputs[key]).toBe(answer);
+      expect(controls[key].value).toBe(answer);
+    },
+  );
+  it('jawnie pusta odpowiedź wygrywa z preservedInputs, a dawne true pozostaje potwierdzeniem', () => {
+    const session = { preservedInputs: { ui_collectionNoMissedVoids_answer: 'no' },
+      inputs: { ui_collectionNoMissedVoids_answer: '', collectionFinalVoidIncluded: true } };
+    migration().normalize(session);
     expect(session.inputs.ui_collectionNoMissedVoids_answer).toBe('');
+    expect(session.inputs.ui_collectionFinalVoidIncluded_answer).toBe('yes');
   });
   it('brak sesji czyści czas, pochodzenie i znane problemy poprzedniej osoby', () => {
     const { clear, controls } = migration();
@@ -143,5 +170,70 @@ describe('CL24 — zgodność zapisów i izolacja czasu między pacjentami', () 
     expect(controls.Cl24DurationSource.value).toBe('');
     expect(controls.Cl24CollectionProblem.checked).toBe(false);
     expect(controls.ui_collectionNoMissedVoids_answer.value).toBe('');
+  });
+});
+
+// Exercise the production snapshot + restore API, including its value vault.
+// U25 never renders the legacy urine-collection answer controls.
+function sessionRuntime() {
+  const controls = Object.fromEntries(Object.entries({
+    formulaPicker: 'ckid_u25', Scr: '0.4', age: '4', ageMonths: '6', height: '140', weight: '17', sex: 'M',
+    Cl24DurationHours: '', Cl24DurationSource: '', Cl24CollectionProblem: false,
+    collectionStartVoidDiscarded: false, collectionFinalVoidIncluded: false,
+    collectionNoMissedVoids: false, collectionNoSpillage: false,
+    collectionNoExtraVoids: false, collectionStorageFollowed: false,
+  }).map(([id, value]) => [id, typeof value === 'boolean'
+    ? { id, type: 'checkbox', checked: value } : { id, type: 'text', value }]));
+  const form = { querySelectorAll: () => Object.values(controls) };
+  const context = {
+    window: { currentVersion: 'basic', addEventListener() {} },
+    document: { getElementById: id => id === 'clcrForm' ? form : controls[id] || null,
+      querySelector: () => null, addEventListener() {} },
+  };
+  vm.createContext(context);
+  vm.runInContext(sessionSource, context);
+  return { runtime: context.window, controls };
+}
+describe('Klirens — odtworzenie sesji innego wzoru nie dodaje danych CL24', () => {
+  it('zapis → odtworzenie → zapis U25 zachowuje wszystkie wejścia bez sześciu sztucznych odpowiedzi', () => {
+    const { runtime } = sessionRuntime();
+    let saved = runtime.buildClcrSessionSnapshot();
+    expect(Object.keys(saved.inputs).filter(key => /^ui_collection.*_answer$/.test(key))).toEqual([]);
+    for (let round = 0; round < 2; round += 1) {
+      const { runtime: reopened } = sessionRuntime();
+      expect(reopened.applyClcrSessionSnapshot(saved, { update: false })).toBe(true);
+      const restored = reopened.buildClcrSessionSnapshot();
+      expect(restored.inputs).toEqual(saved.inputs);
+      saved = restored;
+    }
+  });
+  it.each(['', 'unknown', 'no', 'yes'])(
+    'odpowiedź %s bez dawnego checkboxa nie dziedziczy potwierdzenia poprzedniej osoby', answer => {
+      const { runtime, controls } = sessionRuntime();
+      const saved = runtime.buildClcrSessionSnapshot();
+      const key = 'ui_collectionNoMissedVoids_answer';
+      saved.inputs[key] = answer;
+      delete saved.inputs.collectionNoMissedVoids;
+      controls[key] = { id: key, type: 'text', value: 'yes' };
+      controls.collectionNoMissedVoids.checked = true;
+      expect(runtime.applyClcrSessionSnapshot(saved, { update: false })).toBe(true);
+      const restored = runtime.buildClcrSessionSnapshot();
+      expect(restored.inputs[key]).toBe(answer);
+      expect(restored.inputs.collectionNoMissedVoids).toBe(answer === 'yes');
+      expect(saved.inputs).not.toHaveProperty('collectionNoMissedVoids');
+    },
+  );
+  it('odtworzenie U25 usuwa stare odpowiedzi z DOM, a zapisany problem CL24 jest odtwarzany', () => {
+    const { runtime, controls } = sessionRuntime();
+    const saved = runtime.buildClcrSessionSnapshot();
+    const key = 'ui_collectionNoMissedVoids_answer';
+    controls[key] = { id: key, type: 'text', value: 'no' };
+    controls.collectionNoMissedVoids.checked = true;
+    expect(runtime.applyClcrSessionSnapshot(saved, { update: false })).toBe(true);
+    expect(controls[key].value).toBe('');
+    expect(controls.collectionNoMissedVoids.checked).toBe(false);
+    const adverse = { ...saved, preservedInputs: { [key]: 'no' } };
+    expect(runtime.applyClcrSessionSnapshot(adverse, { update: false })).toBe(true);
+    expect(runtime.buildClcrSessionSnapshot().inputs[key]).toBe('no');
   });
 });
