@@ -241,7 +241,7 @@ for (const width of [1440, 390]) {
       await selectFormula(page, 'ACR');
       await page.locator('#U_Alb').fill('45');
       await page.locator('#Ucr_spot').fill('100');
-      await page.locator('#ui_spotSameSpecimen_answer').selectOption('yes');
+      await expect(page.locator('#ACR_entry_mode')).toHaveValue('concentration');
       await expect(card(page, 'ACR')).toBeVisible();
       await expectMobileResultGap(page);
     }

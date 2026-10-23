@@ -104,7 +104,7 @@ test.describe('etykiety pól Klirensu wskazują pole, nie przycisk „i"', () =>
   });
 
   test('pole z listą odpowiedzi: klik w nazwę daje fokus liście i niczego nie potwierdza', async ({ page }) => {
-    await otworzKalkulator(page, { tryb: 'ACR' });
+    await otworzKalkulator(page, { tryb: 'PCR' });
     const lista = page.locator('#ui_spotSameSpecimen_answer');
     await expect(lista).toBeVisible();
     await expect(lista).toHaveValue('');

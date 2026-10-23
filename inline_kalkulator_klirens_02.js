@@ -260,15 +260,15 @@
       },
       {
         id: "ACR",
-        label: "ACR \u2013 albumina/kreatynina (spot) [mg/g]",
+        label: "ACR — albumina/kreatynina (próbka moczu)",
         version: "spot",
         requires: [
-          "spotSameSpecimen",
           "U_Alb",
+          "U_Alb_unit",
           "Ucr_spot",
           "Ucr_spot_unit",
         ],
-        note: "Albumina i kreatynina muszą pochodzić z tej samej próbki; u dzieci preferowany jest pierwszy poranny mocz oraz równoległy PCR.",
+        note: "Wpisz stężenia z tej samej próbki lub gotowy wynik ACR. Pierwszy poranny mocz jest preferowany; podwyższony wynik wymaga potwierdzenia.",
       },
       {
         id: "PCR",

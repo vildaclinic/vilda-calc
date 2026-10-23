@@ -30,6 +30,10 @@ async function selectFormula(page, id) {
 }
 
 async function openFieldDetails(page, selector) {
+  if (['#age', '#ageMonths'].includes(selector)) {
+    const ageEdit = page.locator('.acr-patient-age__edit');
+    if (await ageEdit.isVisible() && await ageEdit.getAttribute('aria-expanded') === 'false') await ageEdit.click();
+  }
   for (const details of await page.locator(selector).locator('xpath=ancestor::details').all()) {
     if (await details.getAttribute('open') === null) {
       await details.locator(':scope > summary').click();
@@ -69,7 +73,7 @@ async function fillAcr(page) {
   await page.locator('#Ucr_spot').fill('100');
   await fillField(page, '#age', '50');
   await selectField(page, '#spotSampleKind', 'firstMorning');
-  await selectField(page, '#ui_spotSameSpecimen_answer', 'yes');
+  await expect(page.locator('#ACR_entry_mode')).toHaveValue('concentration');
 }
 
 for (const width of [320, 390, 1440]) {

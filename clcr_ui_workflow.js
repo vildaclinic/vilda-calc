@@ -549,6 +549,10 @@
     CystatinCStandardization: "Potwierdź identyfikowalność oznaczenia do ERM‑DA471/IFCC.",
     spotSampleKind: "Rodzaj i pora pobrania próbki wpływają na dobór odniesienia i porównywalność wyniku.",
     spotSameSpecimen: "Potwierdź, że wszystkie używane anality moczu pochodzą z dokładnie tej samej próbki.",
+    ACR_reported: "Wpisz ilościowy wynik ACR z laboratorium wraz ze znakiem <, ≤, > lub ≥, jeśli znajduje się na wydruku. Nie wpisuj tu samego stężenia albuminy.",
+    ACR_reported_unit: "Zachowaj jednostkę podaną przez laboratorium. Kategorie KDIGO w mg/g i mg/mmol mają zaokrąglone progi i są oceniane w oryginalnej jednostce.",
+    U_Alb_unit: "Wybierz jednostkę stężenia albuminy zgodną z wynikiem: mg/L albo mg/dL.",
+    ACR_same_specimen: "Iloraz stężeń jest poprawny wyłącznie dla oznaczeń z tej samej próbki. Domyślnie jest to jawne założenie; znane różne próbki wykluczają obliczenie.",
     spotPairedChemistry: "Potwierdź równoczesne pobranie krwi oraz moczu i wspólne pochodzenie analitów moczowych.",
     tmpOvernightFasting: "TmP/GFR wymaga próbki po nocnym pozostawaniu na czczo.",
     tmpPairedSameTime: "Potwierdź równoczesne pobranie sparowanych próbek krwi i drugiego porannego moczu.",
@@ -604,6 +608,8 @@
     S_PO4: "S_PO4_unit",
     S_Ca: "S_Ca_unit",
     Ucr_spot: "Ucr_spot_unit",
+    U_Alb: "U_Alb_unit",
+    ACR_reported: "ACR_reported_unit",
     Ca_spot: "Ca_spot_unit",
     U_PO4_spot: "U_PO4_spot_unit",
     S_PO4_spot: "S_PO4_spot_unit",
@@ -1671,7 +1677,7 @@
   }
 
   function groupCollapsibleContextFields() {
-    if (state.activeFormulaId === "cl24" && !state.legacyBroad) return;
+    if (["cl24", "ACR"].includes(state.activeFormulaId) && !state.legacyBroad) return;
     const groups = new Map();
     const sharedFieldset = ["egfr_cr_cys", "ckid_u25_cys", "ckid_u25_cr_cys"].includes(state.activeFormulaId)
       ? documentRef.getElementById("serumSet") : null;
@@ -1973,7 +1979,15 @@
     };
     (referenceFields[formula.id] || []).forEach((fieldId) => optional.add(fieldId));
     if (required.has("age") && !["neonatal_egfr", "cg_norm"].includes(formula.id)) optional.add("ageMonths");
-    getSharedModuleFieldIds(formula.id).forEach((fieldId) => optional.add(fieldId));
+    if (formula.id !== "ACR") getSharedModuleFieldIds(formula.id).forEach((fieldId) => optional.add(fieldId));
+    if (formula.id === "ACR") {
+      optional.add("ACR_same_specimen");
+      if (fieldValue("ACR_entry_mode") === "direct") {
+        ["U_Alb", "U_Alb_unit", "Ucr_spot", "Ucr_spot_unit"].forEach((id) => required.delete(id));
+        required.add("ACR_reported");
+        required.add("ACR_reported_unit");
+      }
+    }
     // The indexed CG variant uses completed years. Keep the canonical month
     // value for other formulas, but do not ask for it or let it qualify this one.
     if (formula.id === "cg_norm") optional.delete("ageMonths");
@@ -2015,6 +2029,7 @@
   function renderActiveFields() {
     const formula = formulaById(state.activeFormulaId);
     state.activeFormulaId = formula ? formula.id : "";
+    if (state.legacyBroad || formula?.id !== "ACR") global.ClcrAcrUi?.sync({ document: documentRef, active: false, fieldViews: state.fieldViews });
     // Same-formula refresh must not reparent a focused correction control.
     // syncNeonatalAgeCorrection releases it once the correction loses focus.
     if (state.legacyBroad || formula?.id !== "neonatal_egfr") restoreNeonatalAgeCorrection();
@@ -2081,6 +2096,8 @@
     }
     syncFieldsetVisibility();
     renderActiveHeading(formula);
+    global.ClcrAcrUi?.sync({ document: documentRef, active: formula?.id === "ACR", fieldViews: state.fieldViews });
+    syncFieldsetVisibility();
     renderReadiness();
   }
 
@@ -2094,6 +2111,7 @@
   }
 
   function renderLegacyBroad(level) {
+    global.ClcrAcrUi?.sync({ document: documentRef, active: false, fieldViews: state.fieldViews });
     restoreMeasuredFields();
     restoreNeonatalAgeCorrection();
     restoreCollapsibleContextFields();
@@ -2103,7 +2121,7 @@
     delete documentRef.documentElement.dataset.clcrActiveModule;
     const active = new Set();
     state.fieldViews.forEach((_view, id) => {
-      if (!["Cl24DurationHours", "Cl24CollectionProblem"].includes(id)) active.add(id);
+      if (!["Cl24DurationHours", "Cl24CollectionProblem", "ACR_reported", "ACR_reported_unit", "ACR_same_specimen"].includes(id)) active.add(id);
     });
     state.activeFieldIds = active;
     state.requiredFieldIds = new Set();
@@ -2419,6 +2437,12 @@
   }
 
   function evaluateFormulaOutcome(formula) {
+    if (formula?.id === "ACR" && typeof global.evaluateClcrAcr === "function") {
+      const outcome = global.evaluateClcrAcr();
+      return outcome.valid
+        ? { ok: true, outcome, blockers: [], limitations: [] }
+        : semanticBlock(outcome.reasonCode || "ACR_INVALID", outcome.message || "Sprawdź wartość ACR, jednostkę i pochodzenie oznaczeń.", "", outcome);
+    }
     if (!formula) {
       return semanticBlock(
         "FORMULA_MISSING",
@@ -2850,6 +2874,7 @@
 
   function renderReadiness() {
     if (!state.readiness) return;
+    if (state.activeFormulaId === "ACR") global.ClcrAcrUi?.refresh(documentRef);
     syncAssayOptions();
     syncNeonatalAgeCorrection();
     syncMeasuredProblem();
@@ -2923,6 +2948,7 @@
   }
 
   function renderDataCompletion() {
+    if (state.activeFormulaId === "ACR") return;
     const questions = new Set();
     state.requiredFieldIds.forEach((fieldId) => {
       if (DZM_QUALITY_FIELDS.includes(fieldId)) questions.add(DZM_QUALITY_GROUP_FOCUS_ID);
@@ -2969,7 +2995,7 @@
     eyebrow.append(step, documentRef.createTextNode("Dane do obliczenia"));
     state.activePanel.appendChild(eyebrow);
     const heading = createElement("h2", "clcr-active-panel__title", formula
-      ? formula.id === "cl24" ? "Klirens kreatyniny ze zbiórki moczu" : formula.id === "cg_norm" ? "Cockcroft–Gault (1,73 m²)" : formula.id === "cg" ? "Cockcroft–Gault" : formula.label
+      ? formula.id === "ACR" ? "ACR — albumina/kreatynina" : formula.id === "cl24" ? "Klirens kreatyniny ze zbiórki moczu" : formula.id === "cg_norm" ? "Cockcroft–Gault (1,73 m²)" : formula.id === "cg" ? "Cockcroft–Gault" : formula.label
       : legacy ? "Obliczenia" : "Wybierz obliczenie");
     state.activePanel.appendChild(heading);
     if (formula?.id === "cl24") {
@@ -3139,7 +3165,7 @@
     const formula = formulaById(formulaId);
     const module = getModuleForFormula(formulaId);
     if (!formula || !module || HISTORICAL_FORMULA_IDS.includes(formulaId)) return false;
-    const preserveMeasuredCollection = state.activeFormulaId === "cl24" || formulaId === "cl24";
+    const preserveCalculationInputs = ["cl24", "ACR"].includes(state.activeFormulaId) || ["cl24", "ACR"].includes(formulaId);
     state.legacyBroad = false;
     state.mobileModulesExpanded = false;
     documentRef.documentElement.classList.remove("clcr-mobile-modules-expanded");
@@ -3151,11 +3177,11 @@
     renderActiveFields();
     const picker = documentRef.getElementById("formulaPicker");
     if (picker) picker.value = formulaId;
-    if (preserveMeasuredCollection) {
+    if (preserveCalculationInputs) {
       // The workflow already sets the level, picker and active fields above.
       // The legacy picker additionally resets the entire form: skip that reset
-      // when opening/leaving a measured collection so its actual time and
-      // specimen values survive switching methods, including an explicit blank.
+      // when opening/leaving a measured collection or ACR. Shared specimen
+      // values and their units survive switching methods, including a blank.
       global.clearFormulaMustFill?.();
       global.highlightFields?.(formula, false);
       if (typeof global.clcrUpdate === "function") global.clcrUpdate();
@@ -3410,6 +3436,7 @@
             "U_ACR",
             "U_PCR",
             "Cl24DurationSource",
+            "ACR_entry_mode",
           ].includes(control.id)
         ) {
           if (["U_ACR", "U_PCR"].includes(control.id)) {
@@ -3457,6 +3484,12 @@
       }
     }, true);
     form.addEventListener("change", scheduleReadiness, true);
+    form.addEventListener("change", (event) => {
+      if (event.target?.id === "ACR_entry_mode") {
+        syncFromPicker();
+        if (typeof global.clcrUpdate === "function") global.clcrUpdate();
+      }
+    });
     form.addEventListener("focusout", (event) => {
       if (["age", "ageMonths"].includes(event.target?.id)) scheduleReadiness();
     }, true);
@@ -3773,10 +3806,24 @@
       const dp = mapDatapoint(series, el.getAttribute("data-clcr-value"));
       if (!dp) continue;
       if (target && !target.has(dp.sourceFormulaId)) continue;
-      // Historia/karta = to samo zaokrąglenie co kalkulator (wyświetlona wartość).
-      dp.valueNum = displayedNumber(el, dp.valueNum);
+      // ACR preserves the unrounded measurement: rounding can cross A1/A2/A3
+      // thresholds. The clinician's display and any inequality are kept apart.
+      if (dp.sourceFormulaId !== "ACR") dp.valueNum = displayedNumber(el, dp.valueNum);
       dp.norm = readRangeText(el);
       dp.outOfRange = elementOutOfRange(el);
+      if (dp.sourceFormulaId === "ACR") {
+        const snapshot = readAcrSnapshot(el.getAttribute("data-clcr-acr-snapshot"));
+        if (snapshot) {
+          dp.acrSnapshot = snapshot;
+          dp.valueNum = snapshot.rawValue;
+          dp.unit = snapshot.unit;
+          dp.comparator = snapshot.comparator || "";
+          dp.displayValue = String(snapshot.display?.text || acrDisplayText(snapshot)).replace(".", ",");
+          dp.norm = snapshot.referenceAvailable && snapshot.reference
+            ? `${snapshot.reference.limit} ${snapshot.unit}` : "";
+          dp.outOfRange = snapshot.status === "unassessed" ? null : snapshot.status === "above";
+        }
+      }
       const assumptions = el.getAttribute("data-clcr-assumptions");
       if (typeof assumptions === "string" && assumptions.trim()) dp.assumptions = assumptions.trim();
       const provenance = el.getAttribute("data-clcr-assumption-provenance");
@@ -3830,6 +3877,105 @@
     if (typeof value !== "string") return null;
     const trimmed = value.trim();
     return /^(\d{4})-(\d{1,2})-(\d{1,2})$/.test(trimmed) ? trimmed : null;
+  }
+
+  function readAcrSnapshot(encoded) {
+    if (typeof encoded !== "string" || encoded.length > 40000) return null;
+    try {
+      const snapshot = JSON.parse(encoded);
+      if (!snapshot || typeof snapshot !== "object" || Array.isArray(snapshot)) return null;
+      if (snapshot.schema !== "clcr-acr" || snapshot.version !== 1) return null;
+      if (!Number.isFinite(snapshot.rawValue) || snapshot.rawValue < 0) return null;
+      if (!["mg/g", "mg/mmol"].includes(snapshot.unit)) return null;
+      if (!["", "=", "<", ">", "≤", "≥"].includes(snapshot.comparator || "")) return null;
+      if (!["within", "above", "unassessed"].includes(snapshot.status)) return null;
+      return snapshot;
+    } catch (_) { return null; }
+  }
+
+  function acrDisplayText(snapshot) {
+    const value = snapshot?.display?.value;
+    const numeric = value == null ? formatValueString(snapshot?.rawValue) : String(value);
+    return ((snapshot?.comparator === "=" ? "" : snapshot?.comparator || "") + numeric).replace(".", ",");
+  }
+
+  const ACR_NOTE_HEADER = "ACR — ocena w chwili zapisu:";
+
+  function acrReferenceNote(datapoint) {
+    const snapshot = datapoint?.acrSnapshot;
+    if (datapoint?.sourceFormulaId !== "ACR" || !snapshot) return "";
+    const number = value => Number.isFinite(value) ? String(value).replace(".", ",") : "";
+    const string = value => typeof value === "string" ? value.trim() : "";
+    const comparator = snapshot.comparator === "=" ? "" : snapshot.comparator || "";
+    const lines = [ACR_NOTE_HEADER,
+      `Tryb: ${snapshot.mode === "direct" ? "wynik ACR z laboratorium" : "obliczono ze stężeń"}.`,
+      `Wynik przed zaokrągleniem: ${comparator}${number(snapshot.rawValue)} ${snapshot.unit}.`,
+      `Wynik pokazany: ${datapoint.displayValue || acrDisplayText(snapshot)} ${snapshot.unit}.`,
+      `Ocena: ${{ within: "w zakresie", above: "powyżej normy", unassessed: "nie oceniono" }[snapshot.status] || "nie oceniono"}.`,
+      `Kategoria: ${snapshot.category || "nie nadano"}${snapshot.categoryDescription ? ` — ${snapshot.categoryDescription}` : ""}.`,
+    ];
+    if (datapoint.norm) lines.push(`Norma pokazana przy wyniku: ${datapoint.norm}.`);
+    if (string(snapshot.display?.boundary || snapshot.boundary)) lines.push(`Granica przed zaokrągleniem: ${snapshot.display?.boundary || snapshot.boundary}.`);
+    if (string(snapshot.statusText)) lines.push(snapshot.statusText);
+    if (string(snapshot.qualification?.note)) lines.push(snapshot.qualification.note);
+    const age = snapshot.context?.ageYears;
+    lines.push(Number.isFinite(age) ? `Wiek użyty przy ocenie: ${number(age)} lat.` : "Wiek użyty przy ocenie: nieznany.");
+    const input = snapshot.input || {};
+    if (snapshot.mode === "direct") {
+      lines.push(`Wynik wpisany z laboratorium: ${String(input.reportedValue ?? "")} ${string(input.reportedUnit) || snapshot.unit}.`);
+    } else {
+      if (input.albuminValue != null) lines.push(`Albumina w moczu: ${String(input.albuminValue).replace(".", ",")} ${string(input.albuminUnit)}.`);
+      if (input.creatinineValue != null) lines.push(`Kreatynina w moczu: ${String(input.creatinineValue).replace(".", ",")} ${string(input.creatinineUnit)}.`);
+      lines.push(snapshot.context?.sameSpecimen === "confirmed"
+        ? "Potwierdzono, że oznaczenia pochodzą z tej samej próbki moczu."
+        : "Założono, że oznaczenia pochodzą z tej samej próbki moczu.");
+    }
+    const sample = { firstMorning: "pierwszy poranny mocz", secondMorning: "drugi poranny mocz", random: "próbka losowa", timed: "próbka ze zbiórki czasowej" }[snapshot.context?.sampleType];
+    lines.push(`Rodzaj próbki: ${sample || "nie podano"}.`);
+    const knownFactors = { menstruation: "miesiączka", hematuria: "krwiomocz", infection: "infekcja", exercise: "intensywny wysiłek", acuteIllness: "ostra choroba" };
+    const factors = Array.isArray(snapshot.context?.confounders) ? snapshot.context.confounders : [];
+    if (factors.length) lines.push(`Zgłoszone czynniki wpływające na ocenę: ${factors.map(key => knownFactors[key] || String(key)).join(", ")}.`);
+    const source = snapshot.source || snapshot.reference?.source || {};
+    if (string(source.label)) lines.push(`Źródło normy: ${source.label}${source.version ? `; ${source.version}` : ""}${source.accessedAt ? `; dostęp ${source.accessedAt}` : ""}.`);
+    if (string(source.url)) lines.push(`Adres źródła: ${source.url}`);
+    if (snapshot.profileId) lines.push(`Profil odniesienia: ${snapshot.profileId}; wersja ${snapshot.profileVersion ?? "niepodana"}.`);
+    const population = typeof snapshot.population === "string" ? snapshot.population : snapshot.population?.label;
+    if (string(population)) lines.push(`Populacja odniesienia: ${population}.`);
+    lines.push("Pojedynczy wynik ACR nie ustala rozpoznania przewlekłej choroby nerek.");
+    return lines.join("\n");
+  }
+
+  // Read only the original assessment from the saved, human-readable note.
+  // Do not consult today's patient or reference data when building history.
+  function savedAcrAssessment(note) {
+    const body = typeof note?.body === "string" ? note.body : "";
+    const start = body.indexOf(ACR_NOTE_HEADER);
+    if (start < 0 || body.length > 50000) return null;
+    const text = body.slice(start);
+    const raw = /^Wynik przed zaokrągleniem: ([<>≤≥]?)([\d.,eE+-]+) (mg\/g|mg\/mmol)\.$/m.exec(text);
+    if (!raw) return null;
+    const rawValue = Number(raw[2].replace(",", "."));
+    if (!Number.isFinite(rawValue) || rawValue < 0) return null;
+    const display = /^Wynik pokazany: (.+) (mg\/g|mg\/mmol)\.$/m.exec(text);
+    const lab = note.labResult || {};
+    const normalizeDisplay = value => String(value ?? "").replace(/\s+/g, "").replace(",", ".");
+    // A clinician can edit the laboratory note later. Never let an unchanged
+    // old snapshot replace that edited value or attach its original category.
+    if (lab.unit && lab.unit !== raw[3]) return null;
+    if (Number.isFinite(lab.valueNum) && lab.valueNum !== rawValue) return null;
+    if (display && lab.value != null && normalizeDisplay(lab.value) !== normalizeDisplay(display[1])) return null;
+    const category = /^Kategoria: (A[123])(?:\s|\.)/m.exec(text)?.[1] || null;
+    const status = /^Ocena: (w zakresie|powyżej normy|nie oceniono)\.$/m.exec(text)?.[1];
+    const age = /^Wiek użyty przy ocenie: ([\d.,]+) lat\.$/m.exec(text);
+    const profile = /^Profil odniesienia: ([^;\n]+); wersja ([^\n]+)\.$/m.exec(text);
+    return {
+      rawValue, unit: raw[3], comparator: raw[1],
+      displayValue: display ? display[1] : raw[1] + raw[2], category,
+      status: status === "w zakresie" ? "within" : status === "powyżej normy" ? "above" : "unassessed",
+      ageYears: age ? Number(age[1].replace(",", ".")) : null,
+      profileId: profile?.[1] || null, profileVersion: profile?.[2] || null,
+      contextNote: text,
+    };
   }
 
   function measuredReferenceNote(datapoint) {
@@ -3908,10 +4054,15 @@
       const dp = datapoints[i];
       const labResult = {
         test: dp.label,
-        value: formatValueString(dp.valueNum),
+        value: dp.sourceFormulaId === "ACR" && dp.acrSnapshot
+          ? dp.displayValue || acrDisplayText(dp.acrSnapshot) : formatValueString(dp.valueNum),
         valueNum: dp.valueNum,
         unit: dp.unit,
       };
+      // Generic vault charts consume valueNum as an exact measurement. A
+      // detection limit stays textual there; the signed endpoint is retained
+      // in the ACR snapshot note and understood by this history adapter.
+      if (dp.sourceFormulaId === "ACR" && dp.acrSnapshot?.comparator) delete labResult.valueNum;
       // Zakres referencyjny (jeśli silnik go pokazał) — do kolumny „Zakres".
       if (dp.norm) labResult.norm = String(dp.norm).slice(0, 200);
       // Znacznik „poza zakresem" w treści (magazyn nie ma pola boolean) —
@@ -3921,6 +4072,7 @@
         dp.testKey +
         (dp.outOfRange ? " · wynik poza zakresem" : "") +
         (typeof dp.assumptions === "string" && dp.assumptions.trim() ? "\n\n" + dp.assumptions.trim() : "") +
+        (dp.sourceFormulaId === "ACR" && dp.acrSnapshot ? "\n\n" + acrReferenceNote(dp) : "") +
         (dp.sourceFormulaId === "cl24" && dp.measuredClearanceReference ? "\n\n" + measuredReferenceNote(dp) : "") +
         (dp.sourceFormulaId === "cg_norm" && dp.agePolicy === "completed-years" && Number.isInteger(dp.ageUsedYears) && dp.ageUsedYears >= 18
           ? "\n\nWiek użyty we wzorze: " + dp.ageUsedYears + " ukończonych lat." : "");
@@ -3974,11 +4126,6 @@
       if (!note || note.category !== CATEGORY) continue;
       const lab = note.labResult;
       if (!lab || typeof lab.test !== "string" || !lab.test) continue;
-      const valueNum =
-        typeof lab.valueNum === "number" && isFinite(lab.valueNum)
-          ? lab.valueNum
-          : toNumber(lab.value);
-      if (!Number.isFinite(valueNum)) continue;
       const label = lab.test;
       const entry =
         m && typeof m.getParamByLabel === "function"
@@ -3986,36 +4133,58 @@
           : null;
       const sourceFormulaId = entry ? entry.sourceFormulaId : null;
       if (target && (!sourceFormulaId || !target.has(sourceFormulaId))) continue;
+      const acr = sourceFormulaId === "ACR" ? savedAcrAssessment(note) : null;
+      const valueNum = acr ? acr.rawValue :
+        typeof lab.valueNum === "number" && isFinite(lab.valueNum)
+          ? lab.valueNum
+          : toNumber(lab.value);
+      if (!Number.isFinite(valueNum)) continue;
+      const unit = (acr?.unit || lab.unit || (entry ? entry.unit : "") || "").trim();
+      // Native mg/g and mg/mmol thresholds are deliberately different axes.
+      // Never draw a trend through values stored in different native units.
+      const seriesKey = sourceFormulaId === "ACR" ? `${label}\n${unit}` : label;
       const dateISO =
         normalizeDateISO(note.clinicalDateISO) ||
         (typeof note.clinicalDateISO === "string"
           ? note.clinicalDateISO.slice(0, 10)
           : "");
-      if (!byLabel.has(label)) {
-        byLabel.set(label, {
+      if (!byLabel.has(seriesKey)) {
+        byLabel.set(seriesKey, {
           label: label,
-          unit: (lab.unit || (entry ? entry.unit : "") || "").trim(),
+          unit: unit,
           id: entry ? entry.id : null,
           group: entry ? entry.group : null,
           sourceFormulaId: sourceFormulaId,
           points: [],
         });
       }
-      const outOfRange =
+      const staleAcrSnapshot = sourceFormulaId === "ACR" && !acr &&
+        typeof note.body === "string" && note.body.includes(ACR_NOTE_HEADER);
+      const outOfRange = acr ? acr.status === "unassessed" ? null : acr.status === "above" : staleAcrSnapshot ? null :
         typeof note.body === "string" &&
         note.body.indexOf("poza zakresem") >= 0;
       const norm = typeof lab.norm === "string" ? lab.norm.trim() : "";
-      byLabel.get(label).points.push({
+      const point = {
         dateISO: dateISO,
-        valueNum: valueNum,
+        valueNum: acr ? acr.rawValue : valueNum,
         outOfRange: outOfRange,
         norm: norm,
         noteId: note.id || null,
+      };
+      if (acr) Object.assign(point, {
+        displayValue: acr.displayValue, comparator: acr.comparator,
+        category: acr.category, assessment: acr.status, unit: acr.unit,
+        acrAssessment: acr,
       });
+      byLabel.get(seriesKey).points.push(point);
     }
     const series = Array.from(byLabel.values());
     series.forEach((s) => {
       s.points.sort((a, b) => String(a.dateISO).localeCompare(String(b.dateISO)));
+      if (s.sourceFormulaId === "ACR") {
+        s.norm = s.points[s.points.length - 1]?.norm || "";
+        return;
+      }
       // Zakres serii = z najnowszego punktu, który go niesie.
       s.norm = "";
       for (let k = s.points.length - 1; k >= 0; k -= 1) {
@@ -4073,8 +4242,12 @@
         s.points.forEach((p) => {
           byDate[p.dateISO] = {
             valueNum: p.valueNum,
-            outOfRange: !!p.outOfRange,
+            outOfRange: s.sourceFormulaId === "ACR" ? p.outOfRange : !!p.outOfRange,
           };
+          if (s.sourceFormulaId === "ACR") Object.assign(byDate[p.dateISO], {
+            displayValue: p.displayValue, comparator: p.comparator,
+            assessment: p.assessment, acrAssessment: p.acrAssessment,
+          });
         });
         return {
           label: s.label,
@@ -4103,6 +4276,7 @@
     if (!Array.isArray(points) || points.length < 2) return null;
     const latest = points[points.length - 1];
     const prev = points[points.length - 2];
+    if (latest.comparator || prev.comparator) return null;
     const delta = latest.valueNum - prev.valueNum;
     const eps = 1e-9;
     const direction = delta > eps ? "up" : delta < -eps ? "down" : "flat";
@@ -4280,6 +4454,9 @@
   }
 
   function buildSparkline(points) {
+    // A reported detection limit is a bound, not a measured point. Retain the
+    // signed value in the table and suppress an exact-looking mini-chart.
+    if (points.some(point => point.comparator)) return "";
     const w = 128;
     const h = 30;
     const pad = 4;
@@ -4365,14 +4542,16 @@
             escapeHtml(fmtNum(trend.latest)) +
             escapeHtml(unit) +
             ")</span>"
-          : '<span class="cvs-trend cvs-trend-flat">pojedynczy pomiar</span>';
+          : pts.some(point => point.comparator)
+            ? '<span class="cvs-trend cvs-trend-flat">wynik z granicą oznaczenia — bez trendu liczbowego</span>'
+            : '<span class="cvs-trend cvs-trend-flat">pojedynczy pomiar</span>';
         const dots = pts
           .map(function (p) {
             return (
               '<li><span class="cvs-date">' +
               escapeHtml(p.dateISO || "—") +
               '</span><span class="cvs-num">' +
-              escapeHtml(fmtNum(p.valueNum)) +
+              escapeHtml(p.displayValue || fmtNum(p.valueNum)) +
               escapeHtml(unit) +
               "</span></li>"
             );
@@ -4537,7 +4716,7 @@
             const cls =
               "val" + (cell.outOfRange ? " hi" : "") + (isNow ? " now" : "");
             return (
-              '<td class="' + cls + '">' + escapeHtml(fmtNum(cell.valueNum)) + "</td>"
+              '<td class="' + cls + '">' + escapeHtml(cell.displayValue || fmtNum(cell.valueNum)) + "</td>"
             );
           })
           .join("");
