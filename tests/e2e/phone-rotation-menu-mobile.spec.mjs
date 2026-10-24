@@ -41,7 +41,12 @@ async function frames(page, count = 4) {
   }), count);
 }
 
-async function prepare(page, { shell = false, docpro = false } = {}) {
+async function prepare(page, { shell = false, docpro = false, pwa = false } = {}) {
+  if (pwa) await page.addInitScript(() => {
+    // iOS reports launch from the home-screen icon through this real runtime input.
+    // This exercises the production PWA classes, not a test-only stylesheet.
+    Object.defineProperty(navigator, 'standalone', { configurable: true, get: () => true });
+  });
   await instrumentMotion(page);
   const cdp = await emulatePhone(page, { width: 440, height: 956 });
   let { frame } = await createFictionalVault(page, { shell });
@@ -54,6 +59,10 @@ async function prepare(page, { shell = false, docpro = false } = {}) {
   }
   await expect(page.locator(TRIGGER)).toBeVisible();
   await expect(page.locator('html')).toHaveClass(/\bvilda-phone\b/);
+  if (pwa) {
+    await expect(page.locator('html')).toHaveClass(/\bdisplay-mode-standalone\b/);
+    await expect(page.locator('body')).toHaveClass(/\bdisplay-mode-standalone\b/);
+  }
   await expect(frame.locator('#height')).toBeVisible();
   await frame.locator('#weight').fill('43');
   await frame.locator('#height').fill('156');
@@ -109,6 +118,9 @@ async function startFrameTrace(page) {
       const user = doc.querySelector('#userSection');
       const header = document.querySelector('body > header');
       const panel = document.querySelector('.app-shell-main');
+      const content = panel || document.querySelector('.main-content');
+      const drawer = document.querySelector('.chrome-drawer:not([hidden])[aria-hidden="false"] .chrome-drawer-panel');
+      const opacity = element => element ? Number(getComputedStyle(element).opacity) : null;
       window.__rotationFrames.push({
         width: innerWidth, height: innerHeight, physical: screen.orientation.type,
         rafTimestamp: raf.timestamp, taskTimestamp: task.timestamp,
@@ -119,9 +131,15 @@ async function startFrameTrace(page) {
         form: form?.getBoundingClientRect().width,
         column: user?.getBoundingClientRect().width,
         header: header?.getBoundingClientRect().height,
+        headerOpacity: opacity(header),
+        contentOpacity: opacity(content),
+        iframeOpacity: opacity(iframe),
+        drawerOpacity: opacity(drawer),
+        rotationAnimations: document.getAnimations().filter(animation => animation.id === 'vilda-phone-rotation').length,
         panelBottom: panel?.getBoundingClientRect().bottom ?? null,
         hostOverflow: document.documentElement.scrollWidth - innerWidth,
         childOverflow: doc.documentElement.scrollWidth - (iframe?.contentWindow.innerWidth || innerWidth),
+        childScrollY: iframe?.contentWindow.scrollY ?? scrollY,
       });
       next();
     };
@@ -171,6 +189,13 @@ async function rotateSplit(page, cdp, { width, height, order, safeArea = width >
     expect(sample.hostOverflow, 'no horizontal overflow in the host while rotating').toBeLessThanOrEqual(1);
     expect(sample.childOverflow, 'no horizontal overflow in the active frame while rotating').toBeLessThanOrEqual(1);
     if (sample.panelBottom !== null) expect(sample.panelBottom, `the measured shell panel ends at the viewport on every rendered target-size frame: ${JSON.stringify(sample)}`).toBeCloseTo(height, 0);
+    expect(sample.headerOpacity, 'the structural header remains opaque in both directions').toBe(1);
+    if (!landscape) {
+      for (const layer of ['contentOpacity', 'iframeOpacity', 'drawerOpacity']) {
+        if (sample[layer] !== null) expect(sample[layer], `portrait ${layer} must not expose an underlying layer: ${JSON.stringify(sample)}`).toBe(1);
+      }
+      expect(sample.rotationAnimations, 'returning to portrait creates no rotation fade and cancels any previous one').toBe(0);
+    }
   }
   if (landscape && safeArea.left === 62 && safeArea.right === 62) {
     expect(finalWidth).toBe(width - 136);
@@ -232,7 +257,7 @@ async function assertMenu(page, { width, height, left, right, top, bottom, lands
 for (const scenario of [
   { label: 'Start standalone', shell: false, docpro: false },
   { label: 'DocPro standalone', shell: false, docpro: true },
-  { label: 'Start in the shell', shell: true, docpro: false },
+  { label: 'Start PWA in the shell', shell: true, docpro: false, pwa: true },
 ]) {
   test(`${scenario.label}: open B menu and final column widths survive both orientation event orders`, async ({ page }) => {
     test.setTimeout(150_000);
@@ -266,7 +291,7 @@ for (const scenario of [
     expect(first[0].frames.every(item => item.transform === undefined)).toBe(true);
     await rotateSplit(page, cdp, { width: 440, height: 956, order: 'physical-first' });
     await assertMenu(page, { width: 440, height: 956, ...PORTRAIT_SAFE_AREA, landscape: false });
-    expect(await motion(page), 'one additional appearance on the return to portrait').toHaveLength(2);
+    expect(await motion(page), 'return to portrait does not create another translucent surface').toHaveLength(1);
     if (hiddenDocpro) await expect(hiddenDocpro.locator('html')).not.toHaveClass(/\bvilda-phone-landscape\b/);
     expect(await page.evaluate(selector => window.__rotationMenu === document.querySelector(selector), PANEL), 'rotation keeps the mounted menu').toBe(true);
     await expect(page.locator(CLOSE)).toBeFocused();
@@ -274,6 +299,39 @@ for (const scenario of [
     await expect(page.locator(MENU)).toBeHidden();
     await expect(page.locator(TRIGGER)).toBeFocused();
     expect(await frame.evaluate(() => window.__rotationFields.every(node => node === document.getElementById(node.id))), 'form inputs are not remounted').toBe(true);
+    await expect(frame.locator('#height')).toHaveValue('156');
+    await expect(frame.locator('#weight')).toHaveValue('43');
+
+    await frame.evaluate(() => window.scrollTo(0, 0));
+    if (scenario.pwa) expect(await frame.evaluate(() => scrollY), 'PWA reproduces the report at the very top of the form').toBe(0);
+    // A real, deliberately paused WAAPI effect makes a reversal before its end
+    // deterministic. This checks rendered opacity and cancellation, not just an
+    // animate() spy, while the existing geometry assertions still cover every frame.
+    await page.evaluate(() => {
+      document.addEventListener('vilda:phone-layout-changed', () => {
+        window.__pendingRotation = document.getAnimations().filter(animation => animation.id === 'vilda-phone-rotation');
+        for (const animation of window.__pendingRotation) {
+          animation.pause();
+          animation.currentTime = 60;
+        }
+      }, { once: true });
+    });
+    await rotateSplit(page, cdp, { width: 956, height: 440, order: 'physical-first' });
+    const pausedAppearance = await page.evaluate(() => window.__pendingRotation.map(animation => ({
+      target: animation.effect.target.className,
+      opacity: Number(getComputedStyle(animation.effect.target).opacity),
+      duration: animation.effect.getTiming().duration,
+      time: animation.currentTime,
+      state: animation.playState,
+    })));
+    expect(pausedAppearance, 'only the content surface fades when the menu is closed').toHaveLength(1);
+    expect(pausedAppearance[0]).toMatchObject({ target: scenario.shell ? 'app-shell-main' : 'main-content', duration: 120, time: 60, state: 'paused' });
+    expect(pausedAppearance[0].opacity, 'landscape still has a real subtle appearance').toBeGreaterThan(0.55);
+    expect(pausedAppearance[0].opacity).toBeLessThan(1);
+    const returnSamples = await rotateSplit(page, cdp, { width: 440, height: 956, order: 'viewport-first' });
+    if (scenario.pwa) for (const sample of returnSamples) expect(sample.childScrollY, 'PWA return stays at the top while every content frame remains opaque').toBe(0);
+    expect(await page.evaluate(() => window.__pendingRotation.map(animation => ({ state: animation.playState, time: animation.currentTime }))),
+      'return cancels the unfinished landscape effect instead of finishing or replacing it').toEqual([{ state: 'idle', time: null }]);
     await expect(frame.locator('#height')).toHaveValue('156');
     await expect(frame.locator('#weight')).toHaveValue('43');
     if (scenario.shell) {

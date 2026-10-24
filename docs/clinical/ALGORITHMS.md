@@ -8732,6 +8732,18 @@ Właściciel zaakceptował regułę: dymek czeka, dopóki dopisanie cyfr może j
 
 **Weryfikacja.** Testy wykonują rzeczywiste moduły telefonu, menu i powłoki. Scenariusze przeglądarkowe sprawdzają klatki przy różnych kolejnościach resize/orientacji, bezpieczne krawędzie i dostęp do całego menu, aktywne pole, zachowanie danych i fokusu, ograniczenie ruchu oraz zimny restart offline z bajtami aktualnych zasobów. Pozostają regresje istniejących ścieżek klawiatury i powrotu do panelu. Fizycznego obrotu Safari/PWA nie można potwierdzić emulacją Chromium; tę granicę należy podać przy przekazaniu.
 
+### P-OBROT-BLYSK — stała przezroczystość przy powrocie telefonu do pionu (2026-10-24)
+
+**Zgłoszenie.** Po scaleniu P-MENU-OBROT właściciel widział krótkie ciemne, być może fioletowe przebicie pod nagłówkiem pod koniec obrotu z poziomu do pionu. Dotyczyło aplikacji PWA uruchomionej z ikony na iPhonie, także przy formularzu na samej górze. Pozostały układ i obrót zostały zaakceptowane.
+
+**Klasyfikacja: brak wpływu klinicznego.** Poprawka dotyczy wyłącznie dodatkowej animacji prezentacji. Nie zmienia geometrii formularza, wyników, interpretacji, danych ani ich zapisu.
+
+**Ustalenia i granica dowodu.** Na kodzie bazy `801ba91a`, w Chromium oraz Linux WPE WebKit 26.5, rzeczywista przezroczystość `.app-shell-main` z iframe (i `.main-content` strony samodzielnej) wynosiła `0.858089` przy zatrzymaniu animacji w 60 ms, po czym wracała do `1`. Nagłówek pozostawał przy `1`, ponieważ `header._enter` ma `opacity:1!important`. Animacja zatem zmieniała grupowanie warstw całej treści względem nieruchomego nagłówka. Karty w ramce korzystają z `backdrop-filter`; fioletowe obrysy i odznaki należą do zawartości. Ciemna dekoracja safe-area `body::before` jest wyłączona w iframe. Nie odtworzono dokładnego sprzętowego błysku Safari: Chromium potwierdza geometrię z natywnymi insetami, WPE nie odtwarza iOS ani jego kompozytora. Usuwamy konkretną dodatkową zmianę przezroczystości w zgłoszonym kierunku, a nie deklarujemy dowodu przyczyny sprzętowej.
+
+**Poprawka.** `vilda_phone_landscape.js` zachowuje 120 ms delikatnego pojawienia treści lub menu przy wejściu w poziom. Powrót do pionu wywołuje wyłącznie anulowanie trwającej animacji, również przy szybkim odwróceniu obrotu i otwartym menu. Nagłówek usunięto z celów animacji, która i tak nie zmieniała jego rzeczywistej przezroczystości. Nie dodano masek, opóźnień, nowych warstw ani zmian w pomiarze układu.
+
+**Weryfikacja.** Regresje wywołują rzeczywisty runtime: sprawdzają anulowanie i brak nowej animacji w pionie, zachowanie pojawienia w poziomie, ograniczenie ruchu i zdarzenia klawiatury. Testy przeglądarkowe sprawdzają rzeczywistą `getComputedStyle(...).opacity` w prawidłowo przypisanych klatkach, obie kolejności zdarzeń obrotu, menu, szybki powrót, geometrię, fokus oraz wartości pól. Potwierdzenie ustąpienia zgłoszonego błysku pozostaje testem na fizycznym iPhonie.
+
 ### P-WYNIKI-SPOKOJ — przeliczenie w tle bez zmiany danych nie rusza wyników (SW 1.1.247, 2026-10-12, zgłoszenie właściciela)
 
 **Zgłoszenie właściciela.** Po P-PANEL-POWROT i P-PANEL-PRZEWINIECIE: „to migotanie/skakanie nadal jest, nawet jak strona »nic« nie robi i nie jest na pierwszym planie na macOS/Windows”. Zmiana niekliniczna: nie zmienia wyników, jednostek, progów, kategorii, ostrzeżeń, zapisu ani synchronizacji.

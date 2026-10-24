@@ -1968,6 +1968,7 @@ const CORE_SHELL_URLS = [
   // Wspólny układ telefonu w poziomie jest potrzebny przed pierwszym malowaniem.
   '/vilda_phone_landscape.js?v=1',
   '/vilda_phone_landscape.js?v=2',
+  '/vilda_phone_landscape.js?v=3',
   '/vilda_phone_landscape.css?v=1',
   '/vilda_phone_landscape.css?v=2'
 ];
