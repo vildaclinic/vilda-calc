@@ -284,15 +284,15 @@
       },
       {
         id: "CaCr_spot",
-        label: "Ca/Cr (spot) [mg/mg]",
+        label: "Ca/Cr — wapń/kreatynina (próbka moczu)",
         version: "spot",
         requires: [
-          "spotSameSpecimen",
           "Ca_spot",
           "Ca_spot_unit",
           "Ucr_spot",
           "Ucr_spot_unit",
         ],
+        note: "Wpisz stężenia wapnia i kreatyniny z tej samej próbki albo gotowy wskaźnik Ca/Cr. Norma Mayo dla wieku dotyczy losowej próbki moczu i służy orientacyjnemu porównaniu.",
       },
       {
         id: "OxCr_spot",
