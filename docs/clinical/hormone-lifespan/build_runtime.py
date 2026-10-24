@@ -36,6 +36,8 @@ def build():
     insl3_display_policy = json.loads((ROOT / 'insl3-display-policy.json').read_text(encoding='utf-8'))
     insl3_age_source_data = json.loads((ROOT / 'insl3-age-source-data.json').read_text(encoding='utf-8'))
     insl3_age_source_policy = json.loads((ROOT / 'insl3-age-source-policy.json').read_text(encoding='utf-8'))
+    female_tt_age_data = json.loads((ROOT / 'female-tt-age-data.json').read_text(encoding='utf-8'))
+    female_tt_age_policy = json.loads((ROOT / 'female-tt-age-policy.json').read_text(encoding='utf-8'))
     female_gonadotropin_policy = json.loads((ROOT / 'female-gonadotropin-display-policy.json').read_text(encoding='utf-8'))
     female_gonadotropin_data = json.loads((ROOT / 'female-gonadotropin-display-data.json').read_text(encoding='utf-8'))
     female_gonadotropin_reference_policy = json.loads((ROOT / 'female-gonadotropin-reference-policy.json').read_text(encoding='utf-8'))
@@ -81,6 +83,8 @@ def build():
     # Preserve readable per-column source tuples without rounding or repacking.
     insl3_age_source_data_js = (ROOT / 'insl3-age-source-data.json').read_text(encoding='utf-8').strip()
     insl3_age_source_policy_js = json.dumps(insl3_age_source_policy, ensure_ascii=False, indent=2)
+    female_tt_age_data_js = json.dumps(female_tt_age_data, ensure_ascii=False, indent=2)
+    female_tt_age_policy_js = json.dumps(female_tt_age_policy, ensure_ascii=False, indent=2)
     female_gonadotropin_policy_js = json.dumps(female_gonadotropin_policy, ensure_ascii=False, indent=2)
     female_gonadotropin_data_js = json.dumps(female_gonadotropin_data, ensure_ascii=False, indent=2)
     female_gonadotropin_reference_policy_js = json.dumps(female_gonadotropin_reference_policy, ensure_ascii=False, indent=2)
@@ -124,6 +128,8 @@ def build():
         f'const insl3DisplayPolicy = {insl3_display_policy_js};\n'
         f'const insl3AgeSourceData = {insl3_age_source_data_js};\n'
         f'const insl3AgeSourcePolicy = {insl3_age_source_policy_js};\n'
+        f'const femaleTtAgeData = {female_tt_age_data_js};\n'
+        f'const femaleTtAgePolicy = {female_tt_age_policy_js};\n'
         f'const femaleGonadotropinPolicy = {female_gonadotropin_policy_js};\n'
         f'const femaleGonadotropinData = {female_gonadotropin_data_js};\n'
         f'const femaleGonadotropinReferencePolicy = {female_gonadotropin_reference_policy_js};\n'
@@ -159,6 +165,8 @@ def build():
         '  insl3DisplayPolicy: insl3DisplayPolicy,\n'
         '  insl3AgeSourceData: insl3AgeSourceData,\n'
         '  insl3AgeSourcePolicy: insl3AgeSourcePolicy,\n'
+        '  femaleTtAgeData: femaleTtAgeData,\n'
+        '  femaleTtAgePolicy: femaleTtAgePolicy,\n'
         '  femaleGonadotropinPolicy: femaleGonadotropinPolicy,\n'
         '  femaleGonadotropinData: femaleGonadotropinData,\n'
         '  femaleGonadotropinReferencePolicy: femaleGonadotropinReferencePolicy,\n'

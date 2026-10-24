@@ -879,6 +879,44 @@ porównania; nie wnioskuj G1 z wieku i nie dodawaj pytań.
 [kontrakt punktu](hormone-lifespan/PATIENT_POINT.md#testosteron-chłopców--przybliżone-mediany-dwóch-grup-21-października-2026).
 Akceptacja porównania edukacyjnego nie jest walidacją kliniczną.
 
+## TT dziewcząt — zaakceptowana karta 6–18, 24 października 2026
+
+Właściciel zaakceptował makietę desktop/mobile i polecił wdrożenie.
+Jedna osobna karta dla bieżącego żeńskiego TT używa istniejącego wieku
+i płci. Nie dopisuj nowych pól Th/P, cyklu, metody lub wyboru publikacji.
+Nie przenoś 13 węzłów do zwykłego rejestru 85 profili ani do porównania
+płci. Dotychczasowe męskie TT i inne żeńskie hormony zachowują kontrakty.
+
+- Madsen 2022, pełny tekst i Supplemental Table 1 v1, arkusz
+  `LCMSMS hormones!AF3:AI15`, P50 = `exp(M)/1e6` nmol/L, nie samo M.
+  PCHIP używa 13 rocznych przekształconych P50, tej samej interpolacji
+  dla linii i jasnego odczytu. To jawna polityka aplikacji, nie odzyskany
+  ciągły fit LMS/GAMLSS. Nie kopiuj błędnego mianownika przykładu L37
+  ani pełnego z-score/SDS.
+- Cały znany przedział wieku musi mieścić się w [6,18]. Odczyt przy
+  dolnej granicy ma podpis „dla wpisanego wieku”; nie nazywaj szerokiego
+  wieku dokładnym. Dokładne 18 kwalifikuje; `[18,19)` nie. 3/75 lat,
+  brak wieku i niepełne pokrycie nie otrzymują najbliższej mediany.
+- Stała oś 0–1,2 nmol/L i jej równoważna konwersja nie zależą od wyniku,
+  wieku lub szerokości. Nie rysuj danych poza 6–18. Wysoki wynik ma
+  strzałkę i prawdziwą liczbę, zero pozostaje na osi. Nierówność nie
+  tworzy dokładnego punktu. Mediana i norma są oddzielne.
+- Surowica LC-MS/MS, norweskie kohorty przekrojowe, pobrania 08–14,
+  wyłączone OCP. F601/F319 to liczby dostępnych próbek kohort, nie
+  wykazane N dopasowania TT. LLOQ 0,02, wszystkie P50 ponad nią; reguła
+  cenzury niepodana. CV 4% dla 1,5–37 nie opisuje niskich P50 dziewcząt.
+- Znana OCP/GnRHa/terapia/stymulacja, ciąża lub niezgodny materiał/metoda
+  wstrzymują to zestawienie. Nieznany wywiad nie potwierdza jego braku.
+  Nie zmieniaj niezależnych Mayo RI lub statusu `indeterminate` dolnego
+  krańca `<7 ng/dL` na werdykt z mediany Madsena.
+- Bieżący kontekst nie przechodzi na dawny wynik lub inną osobę.
+  Źródła są domyślnie zwinięte, stan bez zapisu. PWA ma działać po
+  aktualizacji i zimnym restarcie bez sieci. Wykonane wyniki raportuje PR.
+
+Pełny kontrakt i przypadki:
+[FEMALE_TT_AGE.md](hormone-lifespan/FEMALE_TT_AGE.md).
+Akceptacja makiety i wdrożenia nie nadaje modelowi walidacji klinicznej.
+
 ## Co sprawdzić przed oddaniem zmiany
 
 - Osobno porównaj dane źródłowe, wynik funkcji odniesienia i geometrię.

@@ -6,6 +6,13 @@ krzywych lub interpretacji. Nie jest systematycznym przeglądem całego
 piśmiennictwa ani walidacją kliniczną. Najpierw ponownie wykorzystano
 posiadane pełne publikacje i suplementy.
 
+**Późniejsza decyzja z 24.10.2026:** właściciel zaakceptował osobną
+makietę TT dziewcząt 6–18 i polecił wdrożenie. Bieżący kontrakt tej karty
+opisuje [FEMALE_TT_AGE.md](FEMALE_TT_AGE.md). Poniższy przegląd oraz jego
+JSON pozostają zapisem etapu audytu przed tą decyzją; nie zmieniają
+historycznych hashy i nie są polityką uruchamiającą męski E2 lub inne
+pozostałe propozycje.
+
 ## Wynik i rekomendowana kolejność
 
 Wspólny silnik nadal ma **85 profili**, dane `2026-10-22.2`, API `1.4.0`.
