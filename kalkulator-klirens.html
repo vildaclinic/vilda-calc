@@ -180,6 +180,7 @@
 <link href="clcr_acr_ui.css?v=1" rel="stylesheet" />
 <link href="clcr_pcr_ui.css?v=1" rel="stylesheet" />
 <link href="clcr_cacr_ui.css?v=1" rel="stylesheet" />
+<link href="clcr_oxcr_ui.css?v=1" rel="stylesheet" />
 <link href="vilda_lab_assessment_ui.css?v=12" rel="stylesheet">
 <link href="vilda_lab_history_tab.css?v=4" rel="stylesheet">
   <link rel="stylesheet" href="vilda_phone_landscape.css?v=1">
@@ -445,6 +446,20 @@
               <option value="different">Wyniki z różnych próbek</option>
             </select>
           </label>
+          <input type="hidden" id="OxCr_entry_mode" value="concentration" />
+          <label>Ox/Cr z laboratorium:
+            <input type="text" inputmode="decimal" id="OxCr_reported" autocomplete="off" />
+          </label>
+          <label>Jednostka Ox/Cr:
+            <select id="OxCr_reported_unit"><optgroup label="Jednostki molowe"><option value="umol/mmol" aria-label="µmol/mmol · Jednostki molowe">µmol/mmol</option><option value="mmol/mol" aria-label="mmol/mol · Jednostki molowe">mmol/mol</option><option value="mmol/mmol" aria-label="mmol/mmol · Jednostki molowe">mmol/mmol</option><option value="mol/mol" aria-label="mol/mol · Jednostki molowe">mol/mol</option></optgroup><optgroup label="Jon szczawianowy (C₂O₄)"><option value="mg/mg:ion" aria-label="mg/mg · Jon szczawianowy (C₂O₄)">mg/mg</option><option value="mg/g:ion" aria-label="mg/g · Jon szczawianowy (C₂O₄)">mg/g</option><option value="mg/mmol:ion" aria-label="mg/mmol · Jon szczawianowy (C₂O₄)">mg/mmol</option></optgroup><optgroup label="Kwas szczawiowy bezwodny"><option value="mg/mg:acid" aria-label="mg/mg · Kwas szczawiowy bezwodny">mg/mg</option><option value="mg/g:acid" aria-label="mg/g · Kwas szczawiowy bezwodny">mg/g</option><option value="mg/mmol:acid" aria-label="mg/mmol · Kwas szczawiowy bezwodny">mg/mmol</option></optgroup><optgroup label="Nie podano postaci analitu"><option value="mg/mg:unknown" aria-label="mg/mg · Nie podano postaci analitu">mg/mg</option><option value="mg/g:unknown" aria-label="mg/g · Nie podano postaci analitu">mg/g</option><option value="mg/mmol:unknown" aria-label="mg/mmol · Nie podano postaci analitu">mg/mmol</option></optgroup></select>
+          </label>
+          <label>Pochodzenie oznaczeń Ox/Cr:
+            <select id="OxCr_same_specimen">
+              <option value="">Z tej samej próbki — założenie</option>
+              <option value="confirmed">Potwierdzono tę samą próbkę</option>
+              <option value="different">Wyniki z różnych próbek</option>
+            </select>
+          </label>
           <label>Rodzaj próbki moczu:
             <select id="spotSampleKind">
               <option value="" selected>— nie określono —</option>
@@ -585,8 +600,11 @@
             <input type="checkbox" id="stoneUtiExcluded" class="white-checkbox" style="margin:0;">
             <span>Wykluczono zakażenie dróg moczowych</span>
           </label>
-          <label class="advanced-field pro-field">Szczawiany w próbce moczu (Ox, mg/dl):
-            <input type="number" id="Ox_Cr_spot" step="0.1" />
+          <label class="advanced-field pro-field">Szczawiany w próbce moczu:
+            <input type="number" inputmode="decimal" id="Ox_Cr_spot" step="any" min="0" />
+          </label>
+          <label class="advanced-field pro-field">Jednostka szczawianów:
+            <select id="Ox_Cr_spot_unit"><optgroup label="Jednostki molowe"><option value="umol/L" aria-label="µmol/L · Jednostki molowe">µmol/L</option><option value="mmol/L" aria-label="mmol/L · Jednostki molowe">mmol/L</option></optgroup><optgroup label="Jon szczawianowy (C₂O₄)"><option value="mg/L:ion" aria-label="mg/L · Jon szczawianowy (C₂O₄)">mg/L</option><option value="mg/dL:ion" aria-label="mg/dL · Jon szczawianowy (C₂O₄)">mg/dL</option></optgroup><optgroup label="Kwas szczawiowy bezwodny"><option value="mg/L:acid" aria-label="mg/L · Kwas szczawiowy bezwodny">mg/L</option><option value="mg/dL:acid" aria-label="mg/dL · Kwas szczawiowy bezwodny">mg/dL</option></optgroup><optgroup label="Nie podano postaci analitu"><option value="mg/L:unknown" aria-label="mg/L · Nie podano postaci analitu">mg/L</option><option value="mg/dL:unknown" aria-label="mg/dL · Nie podano postaci analitu">mg/dL</option></optgroup></select>
           </label>
           <label class="advanced-field pro-field">Sposób raportowania szczawianów w próbce punktowej:
             <select id="oxalateSpotReportingEntity">
@@ -935,10 +953,14 @@
     <script defer src="clcr_cacr_reference_data.js?v=1"></script>
     <script defer src="clcr_cacr.js?v=1"></script>
     <script defer src="clcr_cacr_ui.js?v=1"></script>
+    <script defer src="clcr_oxcr_reference_data.js?v=1"></script>
+    <script defer src="clcr_oxcr.js?v=1"></script>
+    <script defer src="clcr_oxcr_ui.js?v=1"></script>
+    <script defer src="clcr_oxcr_persistence.js?v=1"></script>
     <script defer src="clcr_measured_clearance_reference_data.js?v=1"></script>
     <script defer src="clcr_measured_clearance_reference.js?v=1"></script>
     <script defer src="clcr_result_presentation.js?v=7"></script>
-    <script defer src="inline_kalkulator_klirens_02.js?v=14"></script>
+    <script defer src="inline_kalkulator_klirens_02.js?v=15"></script>
     <!-- Ujednolicona obsługa wyboru formuły w kalkulatorze klirensu/eGFR. -->
     <script defer src="inline_kalkulator_klirens_03.js?v=1"></script>
 <!-- Sekcja interpretacji AI z opisem i przyciskiem.  Umieszczamy ją w kontenerze
@@ -1005,7 +1027,7 @@
 </footer>
 
 <!-- 5. LOGIKA JS -->
-<script defer src="inline_kalkulator_klirens_04.js?v=19"></script>
+<script defer src="inline_kalkulator_klirens_04.js?v=20"></script>
 
 <!-- Moduł obsługi kliknięć listy dynamicznych wyników wyszukiwania -->
 <script defer src="inline_kalkulator_klirens_05.js?v=1"></script>
@@ -1601,7 +1623,7 @@ document.addEventListener('DOMContentLoaded', () => {
          wczytywane w tym formularzu. Plik userData.js korzysta z localStorage. -->
         <script src="userData.js?v=6" defer></script>
 <script src="ios26-ui.js?v=45" defer></script>
-<script defer src="inline_kalkulator_klirens_07.js?v=8"></script>
+<script defer src="inline_kalkulator_klirens_07.js?v=9"></script>
 <script defer src="vilda_down_syndrome.js?v=5"></script>
 <script defer src="vilda_anorexia_risk.js?v=4"></script>
 <!-- Tablice siatek zespolu Downa przed app.js: app.js przekazuje je silnikowi BMI (P-DS-1). -->
@@ -1665,7 +1687,7 @@ document.addEventListener('DOMContentLoaded', () => {
       'U_Prot_spot_unit','PCR_entry_mode','PCR_reported','PCR_reported_unit','PCR_same_specimen',
       'Ca_spot','Ca_spot_unit','CaCr_entry_mode','CaCr_reported','CaCr_reported_unit','CaCr_same_specimen',
       'CystatinC','CystatinCStandardization','CystatinCAssayMethod','CrCysStandardizationConfirmed',
-      'oxalateSpotReportingEntity',
+      'oxalateSpotReportingEntity','Ox_Cr_spot_unit','OxCr_entry_mode','OxCr_reported','OxCr_reported_unit','OxCr_same_specimen',
       'spotMenstruation','spotHematuria','spotInfection','spotExercise','spotAcuteIllness',
       'spotPairedChemistry',
       'U_Na_spot','S_Na_spot','U_K_spot','S_K_spot',
@@ -1861,6 +1883,6 @@ document.addEventListener('DOMContentLoaded', () => {
 </script>
 <script defer src="inline_kalkulator_klirens_08.js?v=1"></script>
   <script defer src="inline_kalkulator_klirens_09.js?v=1"></script>
-  <script defer src="clcr_ui_workflow.js?v=18"></script>
+  <script defer src="clcr_ui_workflow.js?v=19"></script>
 </body>
 </html>

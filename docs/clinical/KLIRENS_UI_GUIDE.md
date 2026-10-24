@@ -16,8 +16,8 @@ określa [AGENTS.md](../../AGENTS.md), a reguły kliniczne
   sam wzór. Krótko nazwij przyczynę braku porównania przy wyniku.
 - Uproszczenie ankiety nie zmienia nieznanego faktu w potwierdzony.
   Założenia opisuj jako założenia; zachowuj znaczenie znanych sprzeczności.
-- Dla ACR, PCR i Ca/Cr pierwszą, domyślną opcją jest **„Oblicz ze stężeń”**;
-  **„Gotowy wynik ACR”**, **„Gotowy wynik PCR”** lub **„Gotowy wynik Ca/Cr”**
+- Dla ACR, PCR, Ca/Cr i Ox/Cr pierwszą, domyślną opcją jest **„Oblicz ze stężeń”**;
+  **„Gotowy wynik ACR”**, **„Gotowy wynik PCR”**, **„Gotowy wynik Ca/Cr”** lub **„Gotowy wynik Ox/Cr”**
   jest drugą opcją.
 
 ## Wyrównanie, porządek i symetria
