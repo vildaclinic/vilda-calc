@@ -133,7 +133,12 @@ async function captureSave(page, date) {
 for (const width of [1440, 390, 320]) {
   test(`Ox/Cr ${width}px: dwa stężenia domyślnie, jeden wynik i stały układ wszystkich jednostek`, async ({ page }, testInfo) => {
     const errors = []; page.on('pageerror', e => errors.push(e.message));
-    await openCalculator(page, width); await restore(page);
+    await openCalculator(page, width);
+    await page.evaluate(() => window.ClcrUiWorkflow.selectFormula('OxCr_spot'));
+    await page.waitForFunction(() => window.ClcrUiWorkflow.state.activeFormulaId === 'OxCr_spot' && window.clcrIsResetting !== true);
+    await expect(page.locator('#Ox_Cr_spot_unit')).toHaveValue('umol/L');
+    await expect(page.locator('#Ucr_spot_unit')).toHaveValue('mmol/L');
+    await restore(page);
     await expect(mode(page)).toHaveAttribute('aria-pressed', 'true');
     expect(await mode(page).evaluate(b => b.nextElementSibling?.textContent.trim())).toBe('Gotowy wynik Ox/Cr');
     await expect(page.locator('#Ox_Cr_spot')).toBeVisible(); await expect(page.locator('#Ucr_spot')).toBeVisible();
@@ -179,6 +184,7 @@ for (const width of [1440, 390, 320]) {
     await page.waitForFunction(() => window.ClcrUiWorkflow.state.activeFormulaId === 'OxCr_spot' && window.clcrIsResetting !== true);
     await expect(mode(page)).toHaveAttribute('aria-pressed', 'true'); await expect(page.locator('#Ox_Cr_spot')).toHaveValue('');
     await expect(page.locator('#OxCr_reported')).toHaveValue(''); await expect(page.locator('#Ox_Cr_spot_unit')).toHaveValue('umol/L');
+    await expect(page.locator('#Ucr_spot_unit')).toHaveValue('mmol/L');
     await expect(card(page)).toHaveCount(0); sameWidths(initial, await geometry(page, width)); expect(errors).toEqual([]);
   });
 }

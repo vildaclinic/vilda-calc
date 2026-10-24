@@ -572,11 +572,11 @@ html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .oxcr-proposal
 
 @media (max-width: 360px) {
   html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .oxcr-proposal-card[data-clcr-value-length] .clcr-result-value {
-    min-height: 38px;
+    min-height: var(--brand-logo-size);
     font-size: clamp(20px, calc(160px / var(--oxcr-value-length, 5)), 36px) !important;
   }
   html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .oxcr-proposal-card .clcr-result-reference-value {
-    min-height: 38px;
+    min-height: var(--brand-logo-size);
     font-size: 17px !important;
   }
   html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .oxcr-proposal-card .clcr-result-reference-value[data-reference-split="1"] {

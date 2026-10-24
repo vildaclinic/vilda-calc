@@ -7,6 +7,7 @@
 
   const layouts = new WeakMap();
   const initializedDocuments = new WeakSet();
+  const defaultsResetBound = new WeakSet();
   const CONTEXT_FIELDS = ["OxCr_same_specimen"];
   const KNOWN_FACTS = Object.freeze([
     ["spotInfection", "Infekcja"], ["spotHematuria", "Krwiomocz"],
@@ -334,6 +335,15 @@
     if (!options?.active) {
       restore(documentRef);
       return;
+    }
+    if (!defaultsResetBound.has(documentRef)) {
+      const form = documentRef.getElementById("clcrForm");
+      if (form) {
+        defaultsResetBound.add(documentRef);
+        // A native reset restores the shared creatinine select to its legacy
+        // HTML default. The next empty Ox/Cr pathway must start in SI again.
+        form.addEventListener("reset", () => initializedDocuments.delete(documentRef));
+      }
     }
     if (!initializedDocuments.has(documentRef)) {
       initializedDocuments.add(documentRef);
