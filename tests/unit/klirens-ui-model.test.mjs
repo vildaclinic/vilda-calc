@@ -308,12 +308,11 @@ describe('Klirens — centralny model przepływu UI', () => {
     ]);
     expect(byId('CaCr_spot')?.requires).not.toContain('spotSameSpecimen');
     expect(byId('CitCr_spot')?.requires).toContain('spotSameSpecimen');
-    expect(byId('OxCr_spot')?.requires).toEqual(
-      expect.arrayContaining([
-        'spotSameSpecimen',
-        'oxalateSpotReportingEntity',
-      ])
-    );
+    expect(byId('OxCr_spot')?.requires).toEqual([
+      'Ox_Cr_spot', 'Ox_Cr_spot_unit', 'Ucr_spot', 'Ucr_spot_unit',
+    ]);
+    expect(byId('OxCr_spot')?.requires).not.toContain('spotSameSpecimen');
+    expect(byId('OxCr_spot')?.requires).not.toContain('oxalateSpotReportingEntity');
     expect(byId('KTV')?.requires).toEqual(
       expect.arrayContaining([
         'ktvPostMethod',
@@ -656,22 +655,22 @@ describe('Klirens — centralny model przepływu UI', () => {
     );
 
     expect(html).toContain('clcr_ui_workflow.css?v=16');
-    expect(html).toContain('clcr_ui_workflow.js?v=18');
-    expect(html).toContain('inline_kalkulator_klirens_02.js?v=14');
-    expect(html).toContain('inline_kalkulator_klirens_04.js?v=19');
-    expect(html).toContain('inline_kalkulator_klirens_07.js?v=8');
+    expect(html).toContain('clcr_ui_workflow.js?v=19');
+    expect(html).toContain('inline_kalkulator_klirens_02.js?v=15');
+    expect(html).toContain('inline_kalkulator_klirens_04.js?v=20');
+    expect(html).toContain('inline_kalkulator_klirens_07.js?v=9');
     expect(html).toContain('clcr_result_reference_data.js?v=7');
     expect(html).toContain('clcr_result_presentation.js?v=7');
-    expect(serviceWorker).toContain("const SW_VERSION = '1.1.360'");
+    expect(serviceWorker).toContain("const SW_VERSION = '1.1.361'");
     expect(html).toContain('clcr_calculation_assumptions.js?v=2');
     expect(serviceWorker).toContain("'/clcr_calculation_assumptions.js?v=2'");
     expect(serviceWorker).toContain("'/clcr_clinical_safety.js?v=9'");
     expect(serviceWorker).toContain("'/clcr_result_reference_data.js?v=7'");
     expect(serviceWorker).toContain("'/clcr_result_presentation.js?v=7'");
     expect(serviceWorker).toContain("'/clcr_ui_workflow.css?v=16'");
-    expect(serviceWorker).toContain("'/clcr_ui_workflow.js?v=18'");
-    expect(serviceWorker).toContain("'/inline_kalkulator_klirens_02.js?v=14'");
-    expect(serviceWorker).toContain("'/inline_kalkulator_klirens_04.js?v=19'");
+    expect(serviceWorker).toContain("'/clcr_ui_workflow.js?v=19'");
+    expect(serviceWorker).toContain("'/inline_kalkulator_klirens_02.js?v=15'");
+    expect(serviceWorker).toContain("'/inline_kalkulator_klirens_04.js?v=20'");
     for (const file of [
       'clcr_measured_clearance_reference_data.js', 'clcr_measured_clearance_reference.js',
       'clcr_acr_reference_data.js', 'clcr_acr.js', 'clcr_acr_ui.js', 'clcr_acr_ui.css',

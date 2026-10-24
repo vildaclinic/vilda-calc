@@ -225,6 +225,8 @@ describe('Ca/Cr — rzeczywisty adapter formularza i jednostkowa walidacja', () 
     expect(validate(field('Ca_spot', '40'))).toBe(true); expect(validate(field('Ca_spot', '0'))).toBe(true); expect(validate(field('Ca_spot', '-1'))).toBe(false);
     expect(validate(field('Ucr_spot', '60000'))).toBe(true);
     controls.formulaPicker.value = 'OxCr_spot';
+    expect(validate(field('Ca_spot', '40'))).toBe(false); expect(validate(field('Ucr_spot', '60000'))).toBe(true);
+    controls.formulaPicker.value = 'CitCr_spot';
     expect(validate(field('Ca_spot', '40'))).toBe(false); expect(validate(field('Ucr_spot', '60000'))).toBe(false);
   });
 });

@@ -6386,6 +6386,154 @@ sanitizery i historię na fikcyjnym adapterze. Wyniki wykonań podaje PR.
 Akceptacja właściciela, przegląd źródła i zielone testy nie nadają statusu
 nowej walidacji klinicznej.
 
+#### P-KLIRENS-OXCR-2026-10-24 — prosty Ox/Cr, jawna postać analitu i orientacyjne normy wieku
+
+Właściciel zaakceptował 24.10.2026
+[makietę przed/po na desktopie i telefonie](https://vilda-oxcr-audyt-20261024.maciej-flader.chatgpt.site)
+oraz proponowany dobór źródeł. Źródło makiety:
+`d7f1a3cd560c48a4f7df55a4d34e263a9c2a4131`.
+Zakres: `OxCr_spot`, również w szerokim starszym panelu; DZM i pozostałe
+anality kamicy pozostają odrębnymi obliczeniami.
+
+**Wpływ kliniczny:** poprawny dotychczas iloraz masowych stężeń otrzymuje
+orientacyjne porównanie z nazwanym źródłem zależnym od wieku. Wdrożenie
+obejmuje jednostki molowe i masowe z jawną podstawą analitu, obsługę
+nierówności gotowego raportu oraz zachowanie precyzji i dawnej oceny w zapisie.
+Nie jest to sama zmiana wyglądu ani nowa walidacja kliniczna. Pojedynczy
+wysoki iloraz nie rozpoznaje PH lub kamicy; niski nie rozpoznaje niedoboru
+szczawianów, a niepodwyższony nie wyklucza choroby.
+
+**Źródła, populacja i ograniczenia:**
+
+- [Fimlab, OKSALAATTI](https://tutkimusohjekirja.fimlab.fi/ohjekirja/nayta.tmpl?setid=6533&sivu_id=322),
+  pełny katalog v2.1 z 6.03.2025, odczyt 24.10.2026: HPLC, punktowy mocz
+  dzieci i młodzieży, górne granice **P95** przypisane Matos 1999.
+  Nie jest to dwustronny RI ani dolna granica 0.
+- [Newcastle Hospitals NHS, Oxalate, urine](https://laboratories.newcastle-hospitals.nhs.uk/test-directory/oxalate-urine/),
+  pełny katalog z aktualizacją 24.12.2024, odczyt 24.10.2026: losowy mocz
+  dorosłych i dzieci, źródłowo **>12 lat, 0,002–0,083 mmol/mmol**.
+  Metoda i populacja RI nie są ujawnione; zgodności metody próbki pacjenta
+  nie potwierdza się ani nie dopisuje.
+- Matos 1999, [DOI 10.1053/AJKD034000e6](https://doi.org/10.1053/AJKD034000e6),
+  [rekord CHUV/SONAR z abstraktem](https://sonar.rero.ch/global/documents/189469):
+  384 zdrowych dzieci, 1 miesiąc–17 lat, 627 drugich porannych próbek.
+  **Nie odczytano pełnego artykułu.** Minimum kohorty wspiera ostrożną
+  politykę aplikacji, a wdrażana tabela pochodzi z pełnego katalogu Fimlab.
+- [ERKNet/OxalEurope 2023](https://doi.org/10.1038/s41581-022-00661-1),
+  pełny główny tekst, s. 196–197, tabela 1 s. 199 i s. 201: spot nie jest
+  równoważny DZM, wymaga wieku, a rozpoznanie hiperoksalurii wymaga
+  potwierdzenia powtarzanymi oznaczeniami. Suplementów 2/3 nie uzyskano
+  i nie przejęto z nich nieodczytanych norm.
+
+Normy są w osobnych danych `clcr_oxcr_reference_data.js`: polityka
+`OXCR_FIMLAB_NEWCASTLE_2026_10`, wersja 1, profile
+`FIMLAB_OXCR_P95_2025` i `NEWCASTLE_OXCR_RANDOM_2024`, wersje 1.
+`VildaClcrOxcr.evaluate(input, policy)` przyjmuje politykę jako argument;
+wynik zachowuje źródło, populację i zakres. Oś porównania to **µmol/mmol**.
+
+| Wiek aplikacji | Źródło i odniesienie w µmol/mmol |
+|---|---|
+| 1–<6 miesięcy | Fimlab P95 ≤220 |
+| 6–<12 miesięcy | Fimlab P95 ≤170 |
+| 1–<2 lat | Fimlab P95 ≤130 |
+| 2–<3 lat | Fimlab P95 ≤100 |
+| 3–<5 lat | Fimlab P95 ≤80 |
+| 5–<7 lat | Fimlab P95 ≤70 |
+| 7–dokładnie 17 lat | Fimlab P95 ≤60 |
+| Dokładny wiek >17 lat | Newcastle, 2–83; oba końce włączone |
+
+Minimum **1 miesiąca** i maksimum **dokładnego wieku 17 lat włącznie**
+to jawna konserwatywna polityka aplikacji: Fimlab drukuje `<6 mies.`
+i końcowe `7–17 lat`, nie definicję `<18`. Newcastle stosuje się >17,
+w całości wewnątrz źródłowego >12, bez luki 17–18 i bez wymyślonego
+maksymalnego wieku. Zamknięte końce 2 i 83 są konwencją aplikacji, ponieważ
+katalog drukuje myślnik. Przejście ≤60 →2–83 jest **zmianą źródła**,
+nie fizjologicznym skokiem lub ciągłą krzywą wieku. Oba porównania pozostają
+orientacyjne; właściwy zakres laboratorium wykonującego badanie ma pierwszeństwo.
+Brak wieku, wiek <1 miesiąca albo jawny bieżący kontekst wcześniaczy
+pozostawia liczbę bez zastępczej normy. Dawny wywiad wcześniactwa starszego
+dziecka nie oznacza bieżącej populacji wcześniaczej; nie dodano ankiety.
+Jawnie znana zbiórka czasowa lub DZM (`sampleType:timed`) pozostawia
+poprawny iloraz liczbowy bez normy próbki punktowej, z powodem
+`unsupported-sample-type`; dotyczy również gotowego raportu o znanym
+rodzaju próbki. Wykorzystuje się istniejący kontekst, bez nowego pytania.
+
+**Jednostki i minimalny formularz:** domyślne „Oblicz ze stężeń” wymaga
+tylko Ox i Cr w moczu z jednostkami; drugie „Gotowy wynik Ox/Cr” wymaga
+jednego ilorazu z jednostką i ewentualnym znakiem z raportu. Wiek pobiera
+się ze znanych danych pacjenta tylko do normy. Wspólna próbka jest opisanym
+założeniem; znane różne próbki blokują dzielenie stężeń, a nie gotowy raport.
+Nie wymaga się płci, krwi, masy, wzrostu, objętości/czasu DZM, porannego
+pobrania, bycia na czczo, ankiety IFCC/AKI, metody ani zakwaszenia.
+Znane fakty nie znikają; nieznane nie stają się potwierdzonym brakiem.
+
+Jednostki molowe nie wymagają wyboru jonu/kwasu. W masowych jednostka
+i podstawa masowa są jednym wyborem: jon szczawianowy, kwas szczawiowy
+bezwodny lub nie podano. Deklarowane stałe to **88,019**, **90,0349**
+i **113,12 mg/mmol** dla Cr. Pierwsza jest przybliżeniem aplikacji;
+bieżący ChEBI podaje 88,018. Kwas: [NIST](https://webbook.nist.gov/cgi/cbook.cgi?ID=C144627),
+Cr: [ChEBI:16737](https://www.ebi.ac.uk/chebi/CHEBI:16737).
+Nie miesza się ich ze starszym przelicznikiem Cr 88,4 ani katalogowym
+Fimlab 11,11. Nieznana podstawa pozwala na iloraz masowy, ale nie na
+zgadniętą konwersję SI/normę. Jeśli laboratorium podaje jednostkę molową,
+należy przepisać również **oryginalną liczbę**. Zmiana samej jednostki
+bez zmiany liczby nie jest przeliczeniem raportu.
+
+Oś `r` w µmol/mmol: µmol/mmol i mmol/mol ×1; mol/mol i mmol/mmol ×1000;
+mg/mg ×1000×113,12/MOx; mg/g ×113,12/MOx; mg/mmol ×1000/MOx.
+Ze stężeń: Ox µmol/L ÷ Cr mmol/L; dla masy najpierw wspólna objętość
+mg/L, następnie Ox/Cr w mg/mg. Norma jest pokazywana w jednostce wyniku,
+z `≈` dla zaokrąglonych przeliczeń, lecz porównanie dotyczy pełnej osi SI.
+
+**Precyzja, prezentacja i historia:** dopuszczono Ox=0 przy Cr>0;
+jednostkowo niespójny surowy limit kreatyniny nie blokuje równoważnych
+wartości. Mały dodatni wynik nie staje się 0. Ocena używa dokładnych
+ułamków dziesiętnych przed formatowaniem, bez epsilona. Gotowe `<`, `≤`,
+`>` i `≥` ocenia się jako cały przedział, bez dokładnego punktu na granicy.
+Stężenia z nierównością nie są dzielone jak dokładne liczby.
+
+Jedna karta B łączy większą wartość pacjenta, neutralną „Normę dla wieku”
+i jeden opis, z widocznym źródłem i zwiniętymi Szczegółami. Odchylenie
+w górę/dół jest bursztynowe; brak oceny neutralny. Niski Newcastle nie
+oznacza niedoboru: [pełna monografia ACB 2012/2013](https://www.acb.org.uk/static/bcc8d575-025f-4051-a663c44fc50ea343/oxalate.pdf),
+s. 4, nie przypisuje niskim wynikom moczu znaczenia klinicznego.
+
+Snapshot utrwala niezaokrągloną liczbę, oryginalny zapis i znak, jednostkę
+z podstawą analitu, stężenia, wiek, stałe, źródło, normę i ocenę z chwili
+zapisu. Brak porównania ma `outOfRange:null`, a nie `false`. Historia nie
+przelicza dawnych ocen nowym wiekiem/profilem, nie pożycza starszej normy
+do nowszego wpisu i rozdziela serie według jednostki **oraz podstawy masowej**.
+Także wspólna historia sejfu otrzymuje nazwę `labResult.test` z czytelnym
+dopiskiem podstawy masowej oraz odrębny `testKey` dla postaci i jednostki;
+wynik SI nie otrzymuje takiego dopisku. Pomocnik kanonicznej nazwy zachowuje
+zgodność rozpoznawania badania przez istniejące widoki.
+Niepełna lub nowa sesja nie dziedziczy starej postaci analitu. Starszym
+wpisom nie dopisuje się utraconej precyzji, postaci, normy ani nowych faktów.
+
+**Syntetyczne kontrakty rzeczywistych funkcji produkcyjnych:**
+
+| Wejście / stan | Oczekiwany wynik |
+|---|---|
+| 8 lat; Ox jako kwas 1 mg/dL; Cr 10 mg/dL | 0,100 mg/mg; 125,64016842358… µmol/mmol, ponad P95 ≤60; masowa granica ≈0,0478 mg/mg. |
+| 5 lat; Ox 0,350 mmol/L; Cr 5 mmol/L | 70 µmol/mmol, niepodwyższony na włączonej granicy. |
+| 5 lat; gotowy 70,001 µmol/mmol | Podwyższony; formatowanie nie sugeruje dokładnego 70. |
+| Nieznana postać Ox 20 mg/L; Cr 100 mg/dL | 0,020 mg/mg bez SI i normy, bez zgadnięcia kwasu/jonu. |
+| Ox 0 / pusty / mały dodatni; Cr dodatnia | Odpowiednio 0 / brak liczby / dodatnia liczba zachowana. |
+| 8 lat; ≤60 / >60 / ≥60 µmol/mmol | Niepodwyższony / podwyższony / niejednoznaczny; bez dokładnego punktu trendu. |
+| >17 lat; 2 / 83 / <2 / ≤2 / >83 / ≥83 µmol/mmol | W zakresie / w zakresie / poniżej / niejednoznaczny / powyżej / niejednoznaczny. |
+| Brak wieku / <1 miesiąca / jawna bieżąca populacja wcześniacza | Liczba bez normy, neutralny stan i konkretny powód. |
+| Jawnie znana próbka czasowa/DZM; stężenia lub gotowy raport | Liczba bez normy random, neutralne `unsupported-sample-type`; bez nowego pytania. |
+| Dokładnie 17 lat / >17 lat | Fimlab ≤60 / Newcastle 2–83, jawna zmiana źródła bez luki. |
+| Zapis różnych podstaw masowych; późniejsza zmiana wieku/profilu | Oddzielne serie; zachowana pierwotna precyzja i dawna ocena bez przeliczania. |
+
+Regresje `klirens-oxcr.test.mjs`, `klirens-oxcr-save.test.mjs`,
+`klirens-oxcr-session.test.mjs` oraz E2E `klirens-oxcr-audit.spec.mjs`
+i `klirens-oxcr-offline.spec.mjs` korzystają z kodu produkcyjnego.
+Wyniki wykonań i kontroli CI podaje PR. Pełne uzasadnienie doboru źródeł,
+odrzucone alternatywy i konwersje:
+[przegląd źródeł](klirens-oxcr/SOURCE_REVIEW.md),
+[polityka odniesień](klirens-oxcr/REFERENCE_POLICY.md).
+
 #### Zakres i ograniczenia
 
 | Obszar | Wdrożona reguła | Najważniejsze ograniczenia |
@@ -6396,7 +6544,7 @@ nowej walidacji klinicznej.
 | CrCl i BSA | `cl24` po P-KLIRENS-CL24 wymaga Scr, Ucr, objętości i rzeczywistego czasu; prawidłowa pełna zbiórka jest jawnym założeniem przy braku przeciwnych danych. Nazwany profil PathWest obejmuje 3–<120 lat, od 19 lat zależy od płci. Granice źródłowe na 1,73 m² są przeliczane przez BSA/1,73 do jednostki wyniku mL/min. BSA używa Haycocka przed 18. rokiem i Du Bois od 18 lat. | Znany błąd zbiórki lub inne przeciwwskazanie nie jest usuwane przez założenie. Porównanie z dobowym profilem przy innym czasie jest jawnie orientacyjne, bez twierdzenia o walidacji krótkich protokołów. Brak normy nie blokuje liczby. Nie nadaje się G ani nie wyklucza PChN. Cockcroft–Gault nadal jest eCrCl od 18 lat z masą rzeczywistą, bez automatycznej normy/G; `cg` zachowuje wiek dokładny, `cg_norm` używa ukończonych lat. Kanoniczny wiek i historia nie są przepisywane. |
 | KDIGO G/A, ACR i PCR | Kategorie są wyznaczane z wartości niezaokrąglonej. ACR po P-KLIRENS-ACR przyjmuje iloraz stężeń ze wspólnej próbki (jawne założenie, znana sprzeczność blokuje) albo gotowy raport; kategorię nadaje w natywnej osi od 2 lat według jawnej polityki aplikacji, także dla próbki losowej z zaleceniem potwierdzenia podwyższenia. Znane czynniki przejściowe wstrzymują kategorię ACR; brak wieku lub wiek <2 nie blokuje liczby, ale wyklucza dorosłą normę. PCR po P-KLIRENS-PCR wymaga dwóch stężeń albo gotowego raportu; wspólna próbka jest jawnym założeniem, znana sprzeczność blokuje iloraz. Orientacyjne odniesienia: 6–<24 m <500 mg/g, 24 m–<18 lat <200, dorośli <150; natywne progi SI pozostają odrębne. Znane czynniki przejściowe zachowują ograniczenia i sygnał liczbowego przekroczenia. Poniżej 6 m lub bez wieku nie stosuje się zastępczej normy. | Kategorie G i A są wstrzymane przed 2. rokiem życia. Kategoria zakresu G nie jest pokazywana przy znanym AKI, znanej niestabilności lub jednoznacznie niezgodnym standardzie używanego markera; przy braku przeciwnych danych może opierać się na jawnych założeniach aplikacji. Sama kategoria nie rozpoznaje PChN bez kryterium przewlekłości i innych właściwych kryteriów. ACR nie otrzymuje obowiązkowej ankiety o AKI/IDMS/IFCC. |
 | Frakcje wydalane i TmP/GFR | Analit i kreatynina muszą pochodzić z tej samej próbki moczu, a próbka krwi być równoczesna. TmP/GFR używa drugiego porannego moczu po nocy na czczo; przed 19. rokiem stosowana jest ścieżka pediatryczna, od 19. roku algorytm Waltona–Bijvoeta/Payne’a z gałęzią dla TRP >0,86. | TmP/GFR nie jest liczone z DZM. Automatyczne zakresy laboratoryjne pozostają wyłączone do czasu wersjonowanego profilu metody i lokalnej walidacji. |
-| Kamica i Ca/Cr w próbce moczu | EAU Urolithiasis 2026 rozdziela dorosłe mmol/24 h od pediatrycznej interpretacji wapnia w mmol/kg/24 h; konwencja masowa szczawianu jest jawna. `CaCr_spot` po P-KLIRENS-CACR stosuje osobny dwustronny profil Mayo CACR3 dla losowej próbki: od 1 miesiąca do dokładnego wieku 83 lat, z zamkniętymi końcami zakresu. Pozostałe pediatryczne anality są pokazywane liczbowo bez automatycznych progów. Progi DZM wymagają dokładnie 24-godzinnej bieżącej zbiórki i właściwego kontekstu. | Zakres Mayo jest orientacyjny, nie potwierdza metody pacjenta, nie jest kryterium rozpoznania hiperkalciurii lub kamicy i nie zastępuje normy lokalnego laboratorium. Nie łączy się go z progami EAU. EAU zaleca dwie kolejne zbiórki w swoistej ocenie metabolicznej; komunikaty nie stanowią samodzielnego zalecenia leczenia. |
+| Kamica, Ca/Cr i Ox/Cr w próbce moczu | EAU Urolithiasis 2026 rozdziela dorosłe mmol/24 h od pediatrycznej interpretacji wapnia w mmol/kg/24 h. `CaCr_spot` po P-KLIRENS-CACR stosuje osobny dwustronny profil Mayo CACR3 od 1 miesiąca do dokładnego wieku 83 lat. `OxCr_spot` po P-KLIRENS-OXCR stosuje Fimlab P95 od 1 miesiąca do dokładnie 17 lat i osobny Newcastle 2–83 µmol/mmol dla >17 lat, z jawną podstawą masową przy konwersji. Pozostałe pediatryczne anality pozostają liczbowe. Progi DZM wymagają dokładnie 24-godzinnej bieżącej zbiórki i właściwego kontekstu. | Nazwane zakresy laboratoryjne są orientacyjne, nie potwierdzają metody pacjenta i nie rozpoznają samodzielnie hiperkalciurii, PH lub kamicy. W Ox/Cr zmiana źródła po 17 latach nie jest fizjologiczną krzywą; brak wieku, nieobjęta populacja lub nieznana podstawa masowa nie otrzymują zastępczej normy. Nie miesza się progów tych profili z EAU ani z DZM. EAU zaleca dwie kolejne zbiórki w swoistej ocenie metabolicznej. |
 | Hemodializa | Moduł dotyczy wyłącznie pojedynczej sesji IHD. spKt/Vurea Daugirdasa II używa źródłowych par GFAC dla 2–7 sesji/tydz. i rzeczywistego PIDI; URR i eKt/V są liczone z niezaokrąglonych danych, z uwzględnieniem dostępu AV/CVC, protokołu próbek i aktualności Kru. | Moduł jest niedostępny przed 2. rokiem życia, a w wieku 2–17 lat wymaga protokołu slow-flow. Dla 5–7 sesji/tydz. sesja >300 min jest blokowana i wymaga formalnego modelowania mocznika. Pary GFAC 2–7 pochodzą z symulacji, a walidację FHN opisano dla schematów 3, 4 i 6×/tydz. Progi 1,2/1,4 są stosowane tylko w opisanym profilu dorosłej IHD 3×/tydz.; poza nim oraz w pediatrii wynik techniczny nie otrzymuje dorosłej kategorii adekwatności. |
 
 EKFC pozostaje wyłączone za bramką lokalnej walidacji. Historyczny Schwartz z dobieranym współczynnikiem (k) jest wyłączony z rutynowego użycia.

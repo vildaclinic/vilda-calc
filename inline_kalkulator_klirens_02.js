@@ -296,12 +296,11 @@
       },
       {
         id: "OxCr_spot",
-        label: "Ox/Cr (spot) [mg/mg]",
+        label: "Ox/Cr — szczawiany/kreatynina",
         version: "spot",
         requires: [
-          "spotSameSpecimen",
-          "oxalateSpotReportingEntity",
           "Ox_Cr_spot",
+          "Ox_Cr_spot_unit",
           "Ucr_spot",
           "Ucr_spot_unit",
         ],

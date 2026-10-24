@@ -374,7 +374,7 @@ const maxValues = {
       "Interpretacja utrwalonego profilu pH wymaga powtarzanych pomiarów, a nie pojedynczej wartości.",
     stoneUtiExcluded:
       "Wykluczenie zakażenia jest konieczne przed interpretacją zasadowego pH jako profilu wspierającego dRTA.",
-    Ox_Cr_spot: "St\u0119\u017Cenie szczawian\xF3w w pr\xF3bce moczu (mg/dl).",
+    Ox_Cr_spot: "Stężenie szczawianów w tej samej próbce moczu. Jednostkę i postać masową przepisz z raportu.",
     oxalateSpotReportingEntity:
       "Wskaż, czy masa szczawianów w próbce punktowej oznacza kwas szczawiowy, czy jon szczawianowy; tych konwencji nie wolno mieszać.",
     Cit_Cr_spot:
@@ -526,6 +526,8 @@ function validateField(e) {
     // Ca/Cr validates finite, nonnegative concentrations in its own engine.
     // A unitless legacy ceiling (Ca=30) cannot reject equivalent mg/dL and
     // mmol/L values differently; other formulas retain their existing limits.
+  } else if ($("formulaPicker")?.value === "OxCr_spot" && ["Ox_Cr_spot", "Ucr_spot"].includes(n)) {
+    // The Ox/Cr engine validates finite concentrations consistently across units.
   } else if (maxValues[n] !== void 0 && t > maxValues[n])
     return (
       o && (o.textContent = "Warto\u015B\u0107 wydaje si\u0119 zbyt wysoka"),
@@ -553,6 +555,7 @@ function canComputeFormula(e) {
   if (e === "ACR") return evaluateClcrAcr().valid === true;
   if (e === "PCR") return evaluateClcrPcr().valid === true;
   if (e === "CaCr_spot") return evaluateClcrCacr().valid === true;
+  if (e === "OxCr_spot") return evaluateClcrOxcr().valid === true;
   if (
     window.ClcrClinicalSafety &&
     typeof window.ClcrClinicalSafety.formulaSafety == "function"
@@ -651,6 +654,11 @@ function evaluateClcrCacr(options) {
   return engine?.evaluate(engine.readInputFromDocument(document, options), window.VildaClcrCacrReferenceData?.getProfile("MAYO_CACR3_RANDOM_2026_10"))
     || { valid: false, reasonCode: "CACR_UNAVAILABLE", message: "Nie można obliczyć Ca/Cr. Odśwież aplikację." };
 }
+function evaluateClcrOxcr(options) {
+  const engine = window.VildaClcrOxcr;
+  return engine?.evaluate(engine.readInputFromDocument(document, options), window.VildaClcrOxcrReferenceData?.DEFAULT_POLICY)
+    || { valid: false, reasonCode: "OXCR_UNAVAILABLE", message: "Nie można obliczyć Ox/Cr. Odśwież aplikację." };
+}
 function clcrCgNormalizedDetails(ageYears, bsaM2, sources = []) {
   const ageUsed = Math.floor(ageYears);
   const sourceLinks = sources.map((source) => `<a href="${clcrEscapeHtml(source.url)}" target="_blank" rel="noopener noreferrer">${clcrEscapeHtml(source.label)}</a>`).join(" · ");
@@ -701,6 +709,13 @@ function packClcrSupplementaryMarkup(markup, formulaId) {
   if (!primary) return markup;
   const details = nodes.find((node) => node.classList.contains("clcr-result-details") && node.dataset.clcrFormula === formulaId);
   if (!details) return markup;
+  if (formulaId === "OxCr_spot") {
+    // This card already carries its complete source and specimen context.
+    // Unrelated stone-panel EAU notes must not label a Fimlab/NHS reference.
+    nodes.filter((node) => node !== primary && node !== details &&
+      !(node.classList.contains("clcr-result-source") && node.dataset.clcrFormula === formulaId)).forEach((node) => node.remove());
+    return staging.innerHTML;
+  }
   if (formulaId === "cl24") {
     // All measured-clearance context is already included in its own Details.
     // Generic dated-collection output belongs to the other urine modules.
@@ -842,7 +857,8 @@ function update() {
     acrRatio = acrEvaluation.valid && acrEvaluation.mode === "concentration"
       ? { mgG: acrEvaluation.rawValue, mgMmol: acrEvaluation.convertedValue } : null,
     pcrEvaluation = evaluateClcrPcr({ concentrationOnly: $("formulaPicker")?.value !== "PCR" }),
-    cacrEvaluation = evaluateClcrCacr({ concentrationOnly: $("formulaPicker")?.value !== "CaCr_spot" });
+    cacrEvaluation = evaluateClcrCacr({ concentrationOnly: $("formulaPicker")?.value !== "CaCr_spot" }),
+    oxcrEvaluation = evaluateClcrOxcr({ concentrationOnly: $("formulaPicker")?.value !== "OxCr_spot" });
   acrRatio
     ? ((j = acrRatio.mgG),
       ($("U_ACR").value = j.toFixed(1)))
@@ -1268,7 +1284,7 @@ function update() {
       l = (i && i.value) || "",
       u = o && t >= 18,
       selectedAssumptions = resolveClcrCalculationAssumptions(l),
-      selectedSafety = l === "CaCr_spot" ? { eligible: true, reason: "" } : !selectedAssumptions.allowed
+      selectedSafety = ["CaCr_spot", "OxCr_spot"].includes(l) ? { eligible: true, reason: "" } : !selectedAssumptions.allowed
         ? { eligible: false, reason: selectedAssumptions.blockers.map((entry) => entry.message).join(" ") }
         : l === "neonatal_egfr" ? neonatalSafety :
         l &&
@@ -1857,7 +1873,7 @@ function update() {
         // Its single result already contains the category and source context.
       } else if (l === "PCR") {
         // PCR owns its one result, applicable limits and specimen qualification.
-      } else if (l === "CaCr_spot") {
+      } else if (["CaCr_spot", "OxCr_spot"].includes(l)) {
         // Its Mayo card below owns the number, two-sided norm and limitations.
       }
       else if (l !== "cg_norm") z();
@@ -2424,12 +2440,6 @@ function update() {
         : $("oxalateReportingEntity")?.value === "oxalate_ion"
           ? "oxalateIon"
           : "",
-    spotOxalateReportingEntity =
-      $("oxalateSpotReportingEntity")?.value === "oxalic_acid"
-        ? "oxalicAcid"
-        : $("oxalateSpotReportingEntity")?.value === "oxalate_ion"
-          ? "oxalateIon"
-          : "",
     convertStoneDzm = (id, analyte, concentrationUnit, reportingEntity) => {
       if (!stoneVersionActive || !stoneFieldProvided(id)) return null;
       if (
@@ -2768,17 +2778,10 @@ function update() {
       // Mayo interpretation. Never add a second EAU Ca/Cr interpretation.
       he += window.ClcrCacrUi.renderResult(cacrEvaluation);
     }
-    const spotOxalate = readClcrOptionalNumber("Ox_Cr_spot"),
-      spotCitrate = readClcrOptionalNumber("Cit_Cr_spot"),
-      spotOxCr =
-        sameSpotSpecimen &&
-        !!spotOxalateReportingEntity &&
-        spotOxalate !== null &&
-        spotOxalate >= 0 &&
-        c !== null &&
-        c > 0
-          ? spotOxalate / c
-          : null,
+    if (window.ClcrOxcrUi && (oxcrEvaluation.valid || $("formulaPicker")?.value === "OxCr_spot")) {
+      he += window.ClcrOxcrUi.renderResult(oxcrEvaluation);
+    }
+    const spotCitrate = readClcrOptionalNumber("Cit_Cr_spot"),
       spotCitCr =
         sameSpotSpecimen &&
         spotCitrate !== null &&
@@ -2787,35 +2790,14 @@ function update() {
         c > 0
           ? spotCitrate / c
           : null;
-    spotOxCr !== null &&
-      appendStoneValue(
-        "Ox/Cr (ta sama próbka punktowa)",
-        `${spotOxCr.toFixed(3)} ${
-          spotOxalateReportingEntity === "oxalicAcid"
-            ? "mg kwasu szczawiowego/mg kreatyniny"
-            : "mg jonu szczawianowego/mg kreatyniny"
-        } \u2014 bez automatycznego progu dla wieku`, "", "OxCr_spot", spotOxCr,
-      );
     spotCitCr !== null &&
       appendStoneValue(
         "Cit/Cr (ta sama próbka punktowa)",
         `${spotCitCr.toFixed(3)} mg kwasu cytrynowego/mg kreatyniny \u2014 bez automatycznego progu dla wieku i płci`, "", "CitCr_spot", spotCitCr,
       );
     if (
-      stoneFieldProvided("Ox_Cr_spot") &&
-      !spotOxalateReportingEntity
-    ) {
-      appendStoneValue(
-        "Ox/Cr \u2014 nie obliczono",
-        "Wybierz z wyniku laboratorium, czy masa oznacza kwas szczawiowy, czy jon szczawianowy.",
-        "warn-yellow",
-        null, null, { formulaId: "OxCr_spot" },
-      );
-    }
-    if (
       !sameSpotSpecimen &&
-      (stoneFieldProvided("Ox_Cr_spot") ||
-        stoneFieldProvided("Cit_Cr_spot"))
+      stoneFieldProvided("Cit_Cr_spot")
     ) {
       appendStoneValue(
         "Wskaźniki punktowe \u2014 nie obliczono",
@@ -2929,12 +2911,11 @@ function update() {
         stoneDzm.oxalate ||
         stoneDzm.citrate ||
         stoneDzm.cystine ||
-        spotOxCr !== null ||
         spotCitCr !== null
       ) {
         appendStoneValue(
           "Pozostałe parametry pediatryczne",
-          "Pokazano wartości liczbowe bez automatycznych progów. Wiekowe tabele Ox/Cr, Cit/Cr, Mg/Cr, moczanów i wyników /1,73 m\u00B2 wymagają osobno wersjonowanego profilu referencyjnego.",
+          "Pokazano wartości liczbowe bez automatycznych progów. Wiekowe tabele Cit/Cr, Mg/Cr, moczanów i wyników /1,73 m\u00B2 wymagają osobno wersjonowanego profilu referencyjnego.",
           "warn-yellow",
         );
       }
