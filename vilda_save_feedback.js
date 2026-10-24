@@ -6,7 +6,7 @@
   'use strict';
   if (!w || !w.document || w.VildaSaveFeedback) return;
 
-  var d = w.document, epoch = 0, active = null, serial = 0, frameObserver = null;
+  var d = w.document, epoch = 0, editRevision = 0, active = null, serial = 0, frameObserver = null;
   var watchedVaults = new WeakSet();
   var tones = { ok: true, nowy: true, uwaga: true, blad: true, info: true };
 
@@ -45,9 +45,10 @@
       return frames.length === 1 && frames[0].contentWindow === source;
     } catch (_) { return false; }
   }
-  function isCurrent(scope, options) {
+  function scopeCurrent(scope, options, checkEdits) {
     if (!scope || scope.document !== d || scope.epoch !== epoch || scope.route !== route()
-      || scope.applySequence !== sequence() || scope.patientId === undefined) return false;
+      || scope.applySequence !== sequence() || scope.patientId === undefined
+      || checkEdits && scope.editRevision !== editRevision) return false;
     var expected = options && Object.prototype.hasOwnProperty.call(options, 'patientId') ? options.patientId : scope.patientId;
     if (patientId() !== expected || scope.unlocked && !unlocked()) return false;
     if (safely(function () { return w.VildaPanelPacjent && w.VildaPanelPacjent.nieaktualny(); }) === true) return false;
@@ -57,6 +58,10 @@
         && host.VildaSaveFeedback._visibleSource(w);
     }) === true;
   }
+  function isCurrent(scope, options) { return scopeCurrent(scope, options, true); }
+  // An already displayed error stays available for reading and retry after an
+  // edit. That does not make the old save operation current for a later outcome.
+  function ownsScope(scope, options) { return scopeCurrent(scope, options, false); }
   function watchVault() {
     var vault = w.VildaVault;
     if (!vault || typeof vault !== 'object' || watchedVaults.has(vault) || typeof vault.onLock !== 'function') return;
@@ -78,14 +83,16 @@
     watchVault();
     watchSourceFrame();
     var host = owner();
-    return Object.freeze({ document: d, route: route(), epoch: epoch, patientId: patientId(),
+    return Object.freeze({ document: d, route: route(), epoch: epoch, editRevision: editRevision, patientId: patientId(),
       applySequence: sequence(), unlocked: unlocked(), hostEpoch: host === w ? epoch
         : safely(function () { return host.VildaSaveFeedback._getEpoch(); }) });
   }
   function current(record) {
     return safely(function () {
+      var api = record.source.VildaSaveFeedback;
+      var provisional = record.element.dataset.state === 'saving' || record.element.dataset.state === 'saved';
       return record.source.document === record.sourceDocument && visibleSource(record.source)
-        && record.source.VildaSaveFeedback.isCurrent(record.scope, record.options);
+        && (provisional ? api.isCurrent(record.scope, record.options) : api._ownsScope(record.scope, record.options));
     }) === true;
   }
   function listen(record, target, event, callback, options) {
@@ -106,6 +113,9 @@
     if (active === record) active = null;
   }
   function clearSource(source) { if (active && active.source === source) remove(active); }
+  function clearEditedSource(source) {
+    if (active && active.source === source && (active.element.dataset.state === 'saved' || active.element.dataset.state === 'saving')) remove(active);
+  }
   function clear() {
     var host = owner();
     if (host !== w && host.VildaSaveFeedback) host.VildaSaveFeedback._clearSource(w);
@@ -113,6 +123,13 @@
     else clearSource(w);
   }
   function invalidate() { epoch += 1; clear(); }
+  function edited() {
+    editRevision += 1;
+    var host = owner();
+    if (host !== w && host.VildaSaveFeedback) host.VildaSaveFeedback._clearEditedSource(w);
+    else clearEditedSource(w);
+  }
+  function trustedEdit(event) { if (event && event.isTrusted === true) edited(); }
   function viewport() {
     var vv = w.visualViewport;
     var left = vv && Number.isFinite(vv.offsetLeft) ? vv.offsetLeft : 0;
@@ -270,16 +287,6 @@
     var announcement = ++serial;
     w.setTimeout(function () { if (active === record && !record.removed && announcement === serial && current(record)) record.live.textContent = text; }, 0);
     if (success) record.timer = w.setTimeout(function () { remove(record); }, 5000);
-    if (success) {
-      // The acknowledgement describes the saved form. A newer intentional edit
-      // ends only this message; programmatic DOB/restore events are not edits.
-      var edited = function (event) { if (event && event.isTrusted === true) remove(record); };
-      listen(record, source.document, 'input', edited, true);
-      listen(record, source.document, 'change', edited, true);
-      listen(record, source.document, 'vilda:puberty-assessment-changed', function (event) {
-        if (event && event.detail && event.detail.reason === 'edit') remove(record);
-      });
-    }
     var update = function () { schedulePosition(record); };
     listen(record, w, 'resize', update); listen(record, w, 'scroll', update, { passive: true });
     listen(record, w.visualViewport, 'resize', update); listen(record, w.visualViewport, 'scroll', update, { passive: true });
@@ -311,6 +318,7 @@
   }
   w.VildaSaveFeedback = Object.freeze({ VERSION: '1', capture: capture, isCurrent: isCurrent,
     pokaz: show, clear: clear, wyczysc: clear, _showFrom: showFrom, _clearSource: clearSource,
+    _clearEditedSource: clearEditedSource, _ownsScope: ownsScope,
     _visibleSource: visibleSource, _getEpoch: function () { return epoch; },
     getState: function () { return active ? { visible: true, state: active.element.dataset.state } : { visible: false }; } });
   w.addEventListener('vilda:user-state-cleared', invalidate);
@@ -318,5 +326,13 @@
   w.addEventListener('pagehide', function () { if (frameObserver) { frameObserver.disconnect(); frameObserver = null; } });
   d.addEventListener('vilda:patient-loaded', function (event) { if (!event.detail || event.detail.source !== 'save') invalidate(); });
   d.addEventListener('vilda:json-imported', invalidate);
+  // A newer intentional edit cannot be acknowledged by an older slow save.
+  // Programmatic DOB adoption and restoration emit untrusted events and do not
+  // advance this revision or cancel a legitimate save of a newly created patient.
+  d.addEventListener('input', trustedEdit, true);
+  d.addEventListener('change', trustedEdit, true);
+  d.addEventListener('vilda:puberty-assessment-changed', function (event) {
+    if (event && event.detail && event.detail.reason === 'edit') edited();
+  });
   watchVault();
 })(typeof window !== 'undefined' ? window : undefined);

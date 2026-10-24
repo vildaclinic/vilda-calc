@@ -154,15 +154,19 @@ describe('Save feedback: truthful outcomes and unchanged form', () => {
     expect(e.element('vildaSaveFeedback').dataset.state).toBe('error');
   });
 
-  it.each(['input', 'change'])('a trusted %s ends success only, without invalidating its save scope', event => {
+  it.each(['input', 'change'])('a trusted %s ends success and makes its older save scope stale; an existing error stays readable', event => {
     const e = environment({ embedded: true }); const scope = e.api.capture();
     e.api.pokaz({ scope, tekst: 'Zapisano pomiar.', ton: 'ok', success: true });
     e.source.document.dispatch(event, null, { isTrusted: true });
     expect(e.element('vildaSaveFeedback')).toBeNull();
-    expect(e.api.isCurrent(scope)).toBe(true);
-    e.api.pokaz({ scope, tekst: 'Nie zapisano pomiaru.', ton: 'blad' });
+    expect(e.api.isCurrent(scope)).toBe(false);
+    const current = e.api.capture();
+    expect(e.api.isCurrent(current)).toBe(true);
+    e.api.pokaz({ scope: current, tekst: 'Nie zapisano pomiaru.', ton: 'blad' });
     e.source.document.dispatch(event, null, { isTrusted: true });
+    e.tick();
     expect(e.element('vildaSaveFeedback').dataset.state).toBe('error');
+    expect(e.api.isCurrent(current)).toBe(false);
   });
 
   it('programmatic input/change and puberty restore preserve success; explicit puberty editing ends it', () => {
@@ -172,9 +176,35 @@ describe('Save feedback: truthful outcomes and unchanged form', () => {
     e.source.document.dispatch('change', null, { isTrusted: false });
     e.source.document.dispatch('vilda:puberty-assessment-changed', { reason: 'restore' });
     expect(e.element('vildaSaveFeedback').dataset.state).toBe('saved');
+    expect(e.api.isCurrent(scope)).toBe(true);
     e.source.document.dispatch('vilda:puberty-assessment-changed', { reason: 'edit' });
     expect(e.element('vildaSaveFeedback')).toBeNull();
-    expect(e.api.isCurrent(scope)).toBe(true);
+    expect(e.api.isCurrent(scope)).toBe(false);
+  });
+
+  it('an edit during a slow save removes its pending message and a late outcome cannot replace the newer save', () => {
+    const e = environment({ embedded: true }); const first = e.api.capture();
+    e.api.pokaz({ scope: first, tekst: 'Zapisywanie pierwszego pomiaru.', ton: 'info', pending: true });
+    e.source.document.dispatch('input', null, { isTrusted: true });
+    expect(e.element('vildaSaveFeedback')).toBeNull();
+    expect(e.api.isCurrent(first)).toBe(false);
+    const second = e.api.capture();
+    expect(e.api.isCurrent(second)).toBe(true);
+    e.api.pokaz({ scope: second, tekst: 'Zapisywanie poprawionego pomiaru.', ton: 'info', pending: true });
+    expect(e.api.pokaz({ scope: first, tekst: 'Zapisano pierwszy pomiar.', ton: 'ok', success: true })).toBe(true);
+    expect(e.element('vildaSaveFeedback').dataset.state).toBe('saving');
+    expect(e.api.pokaz({ scope: first, tekst: 'Błąd pierwszego zapisu.', ton: 'blad' })).toBe(true);
+    expect(e.element('vildaSaveFeedback').dataset.state).toBe('saving');
+    e.api.pokaz({ scope: second, tekst: 'Zapisano poprawiony pomiar.', ton: 'ok', success: true });
+    expect(e.element('vildaSaveFeedback').dataset.state).toBe('saved');
+  });
+
+  it('assigning a new-patient ID cannot make a save from before the newer edit current again', () => {
+    const e = environment(); e.source.setPatient(null); const first = e.api.capture();
+    e.source.document.dispatch('input', null, { isTrusted: true });
+    e.source.setPatient('synthetic-new');
+    e.source.document.dispatch('vilda:patient-loaded', { source: 'save' });
+    expect(e.api.isCurrent(first, { patientId: 'synthetic-new' })).toBe(false);
   });
 });
 

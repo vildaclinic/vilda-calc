@@ -193,7 +193,6 @@ test.describe('C1 na telefonie', () => {
       await owner.locator('#height').blur();
       const scrollBefore = await owner.evaluate(() => scrollY);
       await clickSave(page, owner, { mobile: true });
-      await page.screenshot({ path: test.info().outputPath('save-success-mobile.png') });
       await expect.poll(() => owner.evaluate(() => scrollY)).toBeCloseTo(scrollBefore, 0);
       const geometry = await page.locator(TOAST).evaluate(toast => {
         const rect = element => {
@@ -214,6 +213,9 @@ test.describe('C1 na telefonie', () => {
       if (scenario.shell) await expect(owner.locator(TOAST)).toHaveCount(0);
       await expect(page.locator(TOAST)).toContainText('Zapisano');
       await expect(page.locator(TOAST).locator('.vilda-save-feedback__time')).toHaveText(/\d{2}:\d{2}/);
+      // Screenshot capture can change emulated scrollbar gutters in Chromium;
+      // collect the visual artifact after the behavioral assertions.
+      await page.screenshot({ path: test.info().outputPath('save-success-mobile.png') });
     });
   }
 
@@ -284,4 +286,67 @@ test('SPA: spóźniony błąd ukrytej ramki nie trafia do nowej strony ani na je
   await owner.evaluate(async () => { window.__rejectOldSave(new Error('Fikcyjny spóźniony błąd E2E')); await window.__oldSave; });
   await expect(page.locator(TOAST)).toBeHidden();
   expect(await docpro.evaluate(() => window.VildaSaveStatusIndicator.getState())).not.toBe('error');
+});
+
+test('edycja podczas wolnego zapisu zachowuje oba pomiary w sejfie i potwierdza tylko nowszy zapis', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  const { owner, ids } = await openMeasurement(page);
+  const snapshotCount = await owner.evaluate(async id => (await window.VildaVault.getPatient(id)).snapshots.length, ids.a);
+  await owner.evaluate(() => {
+    const original = window.VildaVault.savePatient;
+    window.__editedSaveCalls = [];
+    window.__editedSaveRelease = [];
+    window.__editedSaveOutcomes = [];
+    window.__editedSaveAcknowledgements = 0;
+    window.VildaVault.savePatient = async function (...args) {
+      const index = window.__editedSaveCalls.length;
+      window.__editedSaveCalls.push(JSON.parse(JSON.stringify(args[0])));
+      await new Promise(resolve => { window.__editedSaveRelease[index] = resolve; });
+      // Only delay the call; encryption, merge and storage are the real vault.
+      const result = await original.apply(this, args);
+      window.__editedSaveOutcomes[index] = result;
+      return result;
+    };
+    window.__editedSaveObserver = new MutationObserver(records => {
+      for (const record of records) for (const added of record.addedNodes) {
+        if (added.nodeType === Node.ELEMENT_NODE && added.id === 'vildaSaveFeedback'
+          && added.dataset.state === 'saved') window.__editedSaveAcknowledgements++;
+      }
+    });
+    window.__editedSaveObserver.observe(document.body, { childList: true });
+  });
+
+  await page.locator('#saveDataBtnSidebar').click();
+  await expect.poll(() => owner.evaluate(() => window.__editedSaveCalls.length)).toBe(1);
+  await expect(page.locator(TOAST)).toHaveAttribute('data-state', 'saving');
+  const firstEditRevision = await owner.evaluate(() => window.VildaSaveFeedback.capture().editRevision);
+  await owner.locator('#height').fill('160');
+  await owner.locator('#height').blur();
+  expect(await owner.evaluate(() => window.VildaSaveFeedback.capture().editRevision)).toBeGreaterThan(firstEditRevision);
+  await expect(page.locator(TOAST)).toBeHidden();
+  await page.locator('#saveDataBtnSidebar').click();
+  await expect.poll(() => owner.evaluate(() => window.__editedSaveCalls.length)).toBe(2);
+  expect(await owner.evaluate(() => window.__editedSaveCalls.map(data => data.user.height))).toEqual([159, 160]);
+  await expect(page.locator(TOAST)).toHaveAttribute('data-state', 'saving');
+
+  await owner.evaluate(() => { window.__editedSaveRelease[0](); });
+  await expect.poll(() => owner.evaluate(() => window.__feedbackSaveSettled)).toBe(1);
+  await expect.poll(() => owner.evaluate(() => Boolean(window.__editedSaveOutcomes[0]))).toBe(true);
+  await expect(page.locator(TOAST)).toHaveAttribute('data-state', 'saving');
+  expect(await owner.evaluate(() => window.__editedSaveAcknowledgements)).toBe(0);
+  await expect(owner.locator('#height')).toHaveValue('160');
+  expect(await owner.evaluate(async id => (await window.VildaVault.getPatient(id)).snapshots[0].payload.user.height, ids.a)).toBe(159);
+
+  await owner.evaluate(() => { window.__editedSaveRelease[1](); });
+  await expect.poll(() => owner.evaluate(() => window.__feedbackSaveSettled)).toBe(2);
+  await expect(page.locator(TOAST)).toHaveAttribute('data-state', 'saved');
+  await expect.poll(() => owner.evaluate(() => window.__editedSaveAcknowledgements)).toBe(1);
+  const saved = await owner.evaluate(async id => {
+    const record = await window.VildaVault.getPatient(id);
+    return { count: record.snapshots.length, heights: record.snapshots.slice(0, 2).map(snapshot => snapshot.payload.user.height) };
+  }, ids.a);
+  expect(saved).toEqual({ count: snapshotCount + 2, heights: [160, 159] });
+  await expect.poll(() => owner.evaluate(() => window.VildaSaveStatusIndicator.getState())).toBe('saved');
+  expect(await owner.evaluate(() => window.__editedSaveOutcomes.map(result => result.patientId))).toEqual([ids.a, ids.a]);
+  await owner.evaluate(() => { window.__editedSaveObserver.disconnect(); });
 });

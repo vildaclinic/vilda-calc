@@ -6522,8 +6522,13 @@ kolumn nadal usuwają podgląd. Nie zmieniono reguł obliczania wieku ani norm.
 W powłoce nakładkę tworzy dokument nadrzędny, który zna widoczny Dock, przyciski
 pływające i `visualViewport` klawiatury. Tożsamość operacji jest wyłącznie w RAM:
 późny wynik nie wyświetla komunikatu ani błędu chipa przy innej osobie lub trasie.
-Ponowne wywołanie zapisu tej samej aktywnej wizyty w trakcie operacji zwraca jej
-istniejącą obietnicę. Zapis kolejnej wizyty, dobór pacjenta w sejfie, serializacja,
+Ponowne wywołanie zapisu identycznych danych tej samej aktywnej wizyty w trakcie
+operacji zwraca jej istniejącą obietnicę. Klucz porównuje pełny payload poza
+odświeżanym `timestampISO` i jest utrwalony przed scalaniem danych przez sejf.
+Nowsze dane uruchamiają osobny zapis. Świadoma edycja unieważnia zakres starego
+komunikatu, także przed zakończeniem zapisu; programowe zdarzenia DOB/restore
+nie są edycją. Już pokazany błąd pozostaje czytelny do ponowienia lub zamknięcia.
+Zapis kolejnej wizyty, dobór pacjenta w sejfie, serializacja,
 synchronizacja i format payloadu pozostają dotychczasowe.
 
 **Wpływ kliniczny.** Brak zmiany wyników, interpretacji, źródeł odniesienia i danych

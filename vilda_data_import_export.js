@@ -113,6 +113,12 @@ function BpotwierdzStanPoZapisie(){
 // The overlay scope is UI-only and RAM-only. It must never replace BdupId's
 // backend target, including a warm panel that still owns its previous form.
 let BsaveInFlight=null;
+function BsavePayloadKey(payload){
+  // The collector refreshes this transport timestamp on every invocation.
+  // Keep every other field, and capture the key before the vault merges into
+  // the payload. New form/history data must reach the vault's existing queue.
+  try{const comparable=Object.assign({},payload);delete comparable.timestampISO;return JSON.stringify(comparable)}catch{return null}
+}
 function BsaveFeedbackCurrent(options,result){
   const feedback=r.VildaSaveFeedback,scope=options&&options.__vildaSaveFeedbackScope;
   if(!scope||!feedback||typeof feedback.isCurrent!=="function")return!0;
@@ -126,9 +132,10 @@ function BsaveNotifyFailed(options,message){
 function qe(e){
 const saveApplySequence=vildaApplyLoadedDataSequence,t=Object.assign({},e&&typeof e==="object"?e:{});
 try{const feedback=r.VildaSaveFeedback;if(feedback&&typeof feedback.capture==="function")t.__vildaSaveFeedbackScope=feedback.capture()}catch{}
-if(t.__vildaSaveFeedbackScope&&BsaveInFlight&&BsaveFeedbackCurrent(BsaveInFlight.options))return BsaveInFlight.promise;
 t.__vildaSaveFeedbackRetry=function(){return qe(e)};
-const a=typeof t.collectUserData=="function"?t.collectUserData():Ee(t),o=Bkotw();const Bb=Bbraki(a);if(Bb.length)return O(o,Bkomunikat(Bb),t,{ton:"blad",pola:Bb}),Bwskaz(Bb),null;const n=r.VildaVault;if(r.VildaGuestMode===!0)return O(o,"Zaloguj si\u0119, aby zapisywa\u0107 dane pacjent\xF3w.",t,{ton:"uwaga"}),null;if(!n||typeof n.isUnlocked!="function")return O(o,"Brak modu\u0142u zapisu \u2014 od\u015Bwie\u017C stron\u0119.",t,{ton:"blad"}),null;if(!n.isUnlocked())return O(o,"Zaloguj si\u0119, aby zapisa\u0107 dane pacjent\xF3w.",t,{ton:"uwaga"}),null;try{et(a)}catch(s){typeof globalThis<"u"&&typeof globalThis.vildaLogSwallowedCatch=="function"&&globalThis.vildaLogSwallowedCatch("vilda_data_import_export",s,{module:"saveUserData:k1v2-strip"})}if(t.__vildaSaveFeedbackScope)O(o,"Zapisywanie danych…",t,{ton:"info",pending:!0});
+const a=typeof t.collectUserData=="function"?t.collectUserData():Ee(t),o=Bkotw(),savePayloadKey=BsavePayloadKey(a);
+if(t.__vildaSaveFeedbackScope&&savePayloadKey!==null&&BsaveInFlight&&BsaveInFlight.payloadKey===savePayloadKey&&BsaveFeedbackCurrent(BsaveInFlight.options))return BsaveInFlight.promise;
+const Bb=Bbraki(a);if(Bb.length)return O(o,Bkomunikat(Bb),t,{ton:"blad",pola:Bb}),Bwskaz(Bb),null;const n=r.VildaVault;if(r.VildaGuestMode===!0)return O(o,"Zaloguj si\u0119, aby zapisywa\u0107 dane pacjent\xF3w.",t,{ton:"uwaga"}),null;if(!n||typeof n.isUnlocked!="function")return O(o,"Brak modu\u0142u zapisu \u2014 od\u015Bwie\u017C stron\u0119.",t,{ton:"blad"}),null;if(!n.isUnlocked())return O(o,"Zaloguj si\u0119, aby zapisa\u0107 dane pacjent\xF3w.",t,{ton:"uwaga"}),null;try{et(a)}catch(s){typeof globalThis<"u"&&typeof globalThis.vildaLogSwallowedCatch=="function"&&globalThis.vildaLogSwallowedCatch("vilda_data_import_export",s,{module:"saveUserData:k1v2-strip"})}if(t.__vildaSaveFeedbackScope)O(o,"Zapisywanie danych…",t,{ton:"info",pending:!0});
 const saveOperation=Promise.resolve().then(function(){var Bb0={};
 // P14. Glowny „Zapisz" nie zna wersji rekordu, na ktorej pracuje lekarz — zna za to
 // TRESC wczytana do formularza. Sejf porownuje ja z glowa rekordu i pyta tylko wtedy,
@@ -174,7 +181,7 @@ l("vilda_data_import_export:saveUserData:vault",s),function(){try{BsaveNotifyFai
 // radzi sobie z jednym i z drugim, wiec wolajacy ma jednolity sposob uzycia.
 .then(function(){return a},function(){return a});
 if(t.__vildaSaveFeedbackScope){
-  const operation={options:t,promise:saveOperation};BsaveInFlight=operation;
+  const operation={options:t,payloadKey:savePayloadKey,promise:saveOperation};BsaveInFlight=operation;
   saveOperation.then(function(){if(BsaveInFlight===operation)BsaveInFlight=null});
 }
 return saveOperation;
