@@ -16,7 +16,9 @@ html.vilda-shell-host body {
   .vilda-shell-host .main-content {
     margin-top: var(--space-14px)!important
   }
-  .vilda-shell-host .app-shell-main {
+  /* Telefon w poziomie korzysta z istniejącego pomiaru JS również powyżej 992 px.
+     Nie zastępuj wysokości ramki dvh podczas edycji pola i wysuwania klawiatury. */
+  html.vilda-shell-host:not(.vilda-phone-landscape) .app-shell-main {
     height: calc(100dvh - 80px)!important
   }
 }

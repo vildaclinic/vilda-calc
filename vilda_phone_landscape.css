@@ -1,0 +1,260 @@
+/* Telefon w poziomie: klasę na powłoce i jej ramkach ustawia
+ * vilda_phone_landscape.js. Wymiary ramki ani otwarcie klawiatury nie są
+ * podstawą kwalifikacji. Poza tą klasą obowiązuje dotychczasowy układ.
+ */
+html.vilda-phone-landscape {
+  --chrome-strip-height: 52px;
+  --mobile-dock-height: 52px;
+  --vilda-phone-safe-left: env(safe-area-inset-left, 0px);
+  --vilda-phone-safe-right: env(safe-area-inset-right, 0px);
+  --vilda-phone-gutter-left: max(6px, calc(16px - var(--vilda-phone-safe-left)));
+  --vilda-phone-gutter-right: max(6px, calc(16px - var(--vilda-phone-safe-right)));
+}
+
+/* Safe-area należy do zewnętrznego dokumentu. Przy wycięciu zostaje po
+ * 6 px odstępu na treść; bez wycięcia margines ma 16 px. Dla 956/62 daje
+ * to 956 - 2 * (62 + 6) = 820 px formularza, także w powłoce z iframe.
+ */
+html.vilda-phone-landscape:not(.vilda-embedded) body.liquid-ios26 {
+  padding-left: var(--vilda-phone-safe-left);
+  padding-right: var(--vilda-phone-safe-right);
+}
+
+html.vilda-phone-landscape.vilda-embedded body.liquid-ios26,
+html.vilda-phone-landscape.vilda-embedded .vilda-auth-root {
+  padding-left: 0;
+  padding-right: 0;
+}
+
+html.vilda-phone-landscape.vilda-embedded .vilda-auth-root {
+  bottom: var(--vilda-shell-dock-h, calc(env(safe-area-inset-bottom, 0px) + 56px));
+}
+
+/* Szeroki telefon zachowuje mobilną nawigację również powyżej starego
+ * breakpointu desktopowego 992 px. Nie zmieniamy progów kolumn formularzy.
+ */
+html.vilda-phone-landscape .has-sidebar .desktop-layout {
+  display: block;
+  padding: 0;
+  min-width: 0;
+}
+
+html.vilda-phone-landscape .has-sidebar .desktop-layout > .sidebar,
+html.vilda-phone-landscape .has-sidebar .desktop-layout > .decor-sidebar {
+  display: none !important;
+}
+
+html.vilda-phone-landscape .has-sidebar .main-content {
+  margin: 0 !important;
+  padding: 0 !important;
+  min-width: 0;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+html.vilda-phone-landscape .main-content > .container,
+html.vilda-phone-landscape .main-content > .calc-container,
+html.vilda-phone-landscape body > .container {
+  width: 100%;
+  max-width: none;
+  padding-left: var(--vilda-phone-gutter-left);
+  padding-right: var(--vilda-phone-gutter-right);
+}
+
+/* Markę i jej działający link już montuje VildaChrome. Pokazujemy nazwę
+ * w tym samym rzędzie, bez duplikowania elementów lub obsługi kliknięć.
+ */
+html.vilda-phone-landscape .has-vilda-chrome > header {
+  height: var(--chrome-strip-height);
+  min-height: var(--chrome-strip-height);
+  padding: 0;
+  position: relative !important;
+  top: auto !important;
+}
+
+html.vilda-phone-landscape .has-vilda-chrome > header > [data-vilda-chrome-wrap] {
+  height: 100%;
+}
+
+html.vilda-phone-landscape .chrome-strip {
+  height: 100%;
+  max-width: none;
+  gap: var(--space-10px);
+  padding: 0 var(--space-6px);
+}
+
+html.vilda-phone-landscape .chrome-mobile-menu-btn {
+  display: inline-flex !important;
+  width: 44px !important;
+  height: 44px !important;
+  min-height: 44px !important;
+  max-height: 44px !important;
+}
+
+html.vilda-phone-landscape .chrome-brand {
+  display: inline-flex !important;
+  min-height: 44px;
+}
+
+html.vilda-phone-landscape .chrome-brand-logo,
+html.vilda-phone-landscape .chrome-brand-tagline,
+html.vilda-phone-landscape .chrome-mobile-brand-bar {
+  display: none !important;
+}
+
+html.vilda-phone-landscape .chrome-brand-name {
+  font-size: 15px;
+  white-space: nowrap;
+}
+
+html.vilda-phone-landscape .chrome-chips {
+  gap: var(--space-8px);
+}
+
+html.vilda-phone-landscape .chrome-pro-badge,
+html.vilda-phone-landscape .chrome-sync-btn,
+html.vilda-phone-landscape .chrome-reminders-btn {
+  min-width: 44px;
+  height: 44px !important;
+}
+
+html.vilda-phone-landscape .chrome-sync-btn,
+html.vilda-phone-landscape .chrome-reminders-btn {
+  width: 44px !important;
+}
+
+html.vilda-phone-landscape .chrome-reminders-badge {
+  top: 0;
+  right: 0;
+}
+
+html.vilda-phone-landscape .chrome-patient-chip {
+  height: 44px;
+  min-width: 44px;
+  padding: 3px var(--space-6px);
+}
+
+html.vilda-phone-landscape .chrome-patient-chip .chip-content {
+  display: inline-flex;
+}
+
+/* Awatar zachowuje istniejący link do konta. Wylogowanie nadal jest
+ * dostępne w menu VildaChrome; przycisk logowania gościa zostaje w pasku.
+ */
+html.vilda-phone-landscape .chrome-user-chip {
+  height: 44px;
+  padding: 0;
+  gap: 0;
+  flex: 0 0 auto;
+}
+
+html.vilda-phone-landscape .chrome-user-chip .chip-content,
+html.vilda-phone-landscape .chrome-user-chip.is-logged-in .chip-action,
+html.vilda-phone-landscape .chrome-user-chip.is-guest .chip-avatar {
+  display: none;
+}
+
+html.vilda-phone-landscape .chrome-user-chip.is-logged-in {
+  width: 44px;
+  border: 0;
+}
+
+html.vilda-phone-landscape .chrome-user-chip.is-logged-in .chip-avatar,
+html.vilda-phone-landscape .chrome-user-chip.is-guest .chip-action {
+  width: 44px;
+  height: 44px;
+}
+
+html.vilda-phone-landscape .chrome-user-chip.is-guest .chip-action {
+  display: inline-flex;
+  margin: 0;
+}
+
+/* Centrowanie nie używa transform: dotychczasowy runtime steruje nim
+ * przy ukrywaniu Docka, klawiaturze i przełączaniu paneli. Zachowujemy
+ * display, visibility, opacity, bottom oraz wszystkie klasy stanu.
+ */
+html.vilda-phone-landscape #mobileBottomDock {
+  width: 552px;
+  max-width: calc(100% - max(10px, var(--vilda-phone-safe-left)) - max(10px, var(--vilda-phone-safe-right)) - 12px);
+  left: calc(max(10px, var(--vilda-phone-safe-left)) + 6px);
+  right: calc(max(10px, var(--vilda-phone-safe-right)) + 6px);
+  margin-left: auto;
+  margin-right: auto;
+}
+
+html.vilda-phone-landscape #mobileBottomDock .mobile-bottom-dock__list {
+  min-height: var(--mobile-dock-height);
+  padding: 3px;
+  gap: 2px;
+  border-radius: var(--radius-18);
+}
+
+html.vilda-phone-landscape #mobileBottomDock .mobile-bottom-dock__item {
+  flex-direction: row;
+  min-height: 44px;
+  gap: 7px;
+  padding: 0 9px;
+  border-radius: var(--radius-14);
+}
+
+html.vilda-phone-landscape #mobileBottomDock .mobile-bottom-dock__icon {
+  width: 20px;
+  height: 20px;
+  flex: 0 0 20px;
+}
+
+html.vilda-phone-landscape #mobileBottomDock .mobile-bottom-dock__label {
+  width: auto;
+  min-width: 0;
+  font-size: 12px;
+}
+
+html.vilda-phone-landscape #appShellScrollTop,
+html.vilda-phone-landscape #appShellTermFab,
+html.vilda-phone-landscape #scrollTopBtn {
+  right: calc(max(10px, var(--vilda-phone-safe-right)) + 6px);
+}
+
+/* Obok Docka jest miejsce na strzałkę od 780 px: przy bocznych strefach
+ * 62 px jej cel 44 px nie przecina Docka 552 px. Przycisk nowego terminu
+ * zachowuje dotychczasowe położenie nad Dockiem.
+ */
+@media (min-width: 780px) {
+  html.vilda-phone-landscape #appShellScrollTop,
+  html.vilda-phone-landscape body.has-mobile-bottom-dock #scrollTopBtn {
+    width: 44px;
+    height: 44px;
+    bottom: calc(var(--mobile-dock-anchor-bottom) + 4px) !important;
+  }
+}
+
+/* Mniejszy telefon redukuje odstępy nagłówka, a kolumny pozostają zależne
+ * od szerokości dokumentu funkcjonalnego, zgodnie z jego własnym CSS.
+ */
+@media (max-width: 760px) {
+  html.vilda-phone-landscape .chrome-strip,
+  html.vilda-phone-landscape .chrome-chips {
+    gap: 5px;
+  }
+
+  html.vilda-phone-landscape .chrome-brand-name {
+    font-size: 13px;
+  }
+
+  html.vilda-phone-landscape #mobileBottomDock .mobile-bottom-dock__item {
+    padding-left: 5px;
+    padding-right: 5px;
+    gap: 5px;
+  }
+
+  html.vilda-phone-landscape #mobileBottomDock .mobile-bottom-dock__label {
+    font-size: 11px;
+  }
+}
+
+@media (max-width: 700px) {
+  html.vilda-phone-landscape .chrome-brand {
+    display: none !important;
+  }
+}

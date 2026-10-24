@@ -1043,6 +1043,14 @@
   "v": 32,
   "sha256": "86d51cd5cf86ec841dc76c2246814a29e23f7b1a75dc90c5fe68e6e18669b49d"
  },
+ "vilda_phone_landscape.css": {
+  "v": 1,
+  "sha256": "bb3e6bda21aa75d0fd43a6345a9d423c37ffda9b3d91a5a460eb8463e49b408e"
+ },
+ "vilda_phone_landscape.js": {
+  "v": 1,
+  "sha256": "1f3ac65d5a5844c33db18e68834b7dec1012c3da9bb414b97248a58d5df72e3a"
+ },
  "vilda_plec_z_imienia.js": {
   "v": 2,
   "sha256": "e09c34f29766f5f6a7e1db664a3846a53b7ade54e0aaefa4f538d3420b8b349e"
@@ -1168,8 +1176,8 @@
   "sha256": "88df01a254e7e660ef2f0394df67320ab93dda66a265b706d99d10fc04a191f8"
  },
  "vilda_shell.css": {
-  "v": 21,
-  "sha256": "78673bb3f79d8ac341c90e64d43c2472222e8940fb046bda324bc2b38871e62d"
+  "v": 22,
+  "sha256": "7305098b3b3bc523a7ffa424c6caae24375fb6807be47a9be0ebf0c711d36210"
  },
  "vilda_shell.js": {
   "v": 67,
