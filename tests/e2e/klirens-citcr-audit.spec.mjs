@@ -125,6 +125,20 @@ async function expectReferenceFits(page) {
   expect(fit.patient.right).toBeLessThanOrEqual(fit.reference.left + 0.5); expect(fit.valueFont).toBeGreaterThan(fit.normFont);
 }
 
+async function expectTableCellTextFits(page) {
+  const measured = await details(page).evaluate(node => {
+    const cells = [...node.querySelectorAll('th,td')].filter(cell => cell.checkVisibility());
+    return { cellCount: cells.length, clipped: cells.flatMap(cell => {
+      const boundary = cell.getBoundingClientRect();
+      const range = document.createRange(); range.selectNodeContents(cell);
+      return [...range.getClientRects()].filter(rect => rect.left < boundary.left - 0.5 || rect.right > boundary.right + 0.5)
+        .map(rect => ({ text: cell.textContent, glyphLeft: rect.left, glyphRight: rect.right, cellLeft: boundary.left, cellRight: boundary.right }));
+    }) };
+  });
+  expect(measured.cellCount).toBeGreaterThanOrEqual(12);
+  expect(measured.clipped, 'Tekst każdej widocznej komórki mieści się wewnątrz niej, także przy overflow:hidden').toEqual([]);
+}
+
 async function captureSave(page, date) {
   return page.evaluate(async clinicalDateISO => {
     const api = window.ClcrVisitSave, originalVault = window.VildaVault, rawNotes = [], notes = [];
@@ -174,6 +188,11 @@ for (const width of [1440, 390, 320]) {
     }
     await openDetails(page); await expect(details(page)).toContainText('PathWest'); await expect(details(page)).toContainText('Newcastle');
     await expect(details(page)).not.toContainText('Źródło progów: EAU'); sameWidths(initial, await geometry(page, width));
+    if (width === 320) {
+      await restore(page, { age: '30', sex: 'F', CitCr_entry_mode: 'direct', CitCr_reported: '50', CitCr_reported_unit: 'mg/mmol', CitCr_reported_basis: 'acid' });
+      await expectResult(page, { raw: 50, unit: 'mg/mmol', tone: 'success', status: 'within' });
+      await openDetails(page); await expectTableCellTextFits(page); sameWidths(initial, await geometry(page, width));
+    }
     await kliknij(page.locator('#clearBtn')); await page.waitForFunction(() => window.clcrIsResetting !== true);
     await expect(page.locator('#Cit_Cr_spot_unit')).toHaveValue('umol/L'); await expect(page.locator('#Ucr_spot_unit')).toHaveValue('mmol/L');
     await expect(page.locator('#citrateSpotReportingEntity')).toHaveValue('unknown'); await expect(page.locator('#CitCr_reported_basis')).toHaveValue('unknown');
@@ -352,13 +371,21 @@ test('Cit/Cr: otwarty edytor wieku oddaje tę samą płeć szerokiemu panelowi, 
   await expect(page.locator('#sex')).toHaveValue('F');
   expect(await page.evaluate(() => document.getElementById('sex') === window.__citcrOriginalSexControl)).toBe(true);
   const blocked = await page.evaluate(() => {
+    // Nowy formularz nie tworzy rutynowego pytania o wspólną próbkę.
+    // Starszą jawną odpowiedź odtwarza rzeczywisty importer sesji.
+    const session = window.buildClcrSessionSnapshot();
+    session.selectedFormula = ''; session.inputs.formulaPicker = '';
+    session.inputs.spotSameSpecimen = true; session.inputs.ui_spotSameSpecimen_answer = 'no';
+    session.inputs.CitCr_same_specimen = '';
+    const applied = window.applyClcrSessionSnapshot(session, {
+      source: 'e2e-citcr-legacy-broad-fictional', update: true, dispatchEvents: false, preserveAcrossVersions: true,
+    });
     document.getElementById('spotSameSpecimen').checked = true;
-    document.getElementById('ui_spotSameSpecimen_answer').value = 'no';
-    document.getElementById('CitCr_same_specimen').value = '';
     window.clcrUpdate();
-    return window.evaluateClcrCitcr({ concentrationOnly: true });
+    return { applied, legacyBroad: window.ClcrUiWorkflow.state.legacyBroad,
+      evaluation: window.evaluateClcrCitcr({ concentrationOnly: true }) };
   });
-  expect(blocked).toMatchObject({ valid: false, reasonCode: 'different-specimens' });
+  expect(blocked).toMatchObject({ applied: true, legacyBroad: true, evaluation: { valid: false, reasonCode: 'different-specimens' } });
   await expect(page.locator('[data-clcr-series="CitCr_spot"]')).toHaveCount(0);
   await expect(page.locator('#Cit_Cr_spot')).toHaveValue('10'); await expect(page.locator('#Ucr_spot')).toHaveValue('100');
   const direct = await page.evaluate(() => {

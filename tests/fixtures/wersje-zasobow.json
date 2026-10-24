@@ -81,11 +81,11 @@
  },
  "clcr_citcr_ui.css": {
   "v": 1,
-  "sha256": "f778e685185804f820fd51b587f9e33209486453919c5a7ad14ac08dadc7084b"
+  "sha256": "0cb121682cabade72c4c2335924ad8896acfd829f4cb951810af53a31aa7d021"
  },
  "clcr_citcr_ui.js": {
   "v": 1,
-  "sha256": "e0b0269905d60c824b2244eb645296332f2c8d91ade0a2725728344b6d797c2d"
+  "sha256": "dbbc7b245a693d87807cf8a01c299d687b7d3c8604cc6d0529670fe5c1472432"
  },
  "clcr_clinical_safety.js": {
   "v": 9,
@@ -161,7 +161,7 @@
  },
  "clcr_ui_workflow.js": {
   "v": 20,
-  "sha256": "70a34804c9d7be36e3db774db49eb494dc075f1a9ce481c6fa4223d7f72559c8"
+  "sha256": "7386821bb78ea75a63f657d3be8fc5265fb85492aca6a2e948136acd44d5998e"
  },
  "cukrzyca.js": {
   "v": 30,
@@ -317,7 +317,7 @@
  },
  "inline_kalkulator_klirens_04.js": {
   "v": 21,
-  "sha256": "b04d70550c75ef3df04dfe96df4baca5717d2cfec79663d94231fb9106eb87c8"
+  "sha256": "663382f175b30c2393fb782c6a05bcbd98ddf22b7fe515c8da1c9ff30f4ab618"
  },
  "inline_kalkulator_klirens_05.js": {
   "v": 1,

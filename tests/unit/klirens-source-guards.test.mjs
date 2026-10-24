@@ -146,7 +146,7 @@ describe('Klirens — blokady źródłowe etapu 0', () => {
     expect(stoneSafety).toContain('interpretPediatricCalciumCreatinineSpot');
     expect(html).toContain('id="oxalateSpotReportingEntity"');
     expect(html).toContain(
-      'Cytryniany w moczu'
+      'Cytryniany w próbce moczu'
     );
     expect(html).toContain('id="citrateSpotReportingEntity"');
     expect(html).toContain('clcr_citcr_reference_data.js?v=1');
