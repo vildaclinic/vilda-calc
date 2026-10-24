@@ -19,7 +19,7 @@
  *   bo i tak chcemy zwracać HTML z cache natychmiast.
  */
 
-const SW_VERSION = '1.1.356';
+const SW_VERSION = '1.1.357';
 const CACHE_PREFIX = 'pwa-kalorii';
 const SHELL_CACHE = `${CACHE_PREFIX}-shell-v${SW_VERSION}`;
 const RUNTIME_CACHE = `${CACHE_PREFIX}-runtime`;
@@ -1964,6 +1964,14 @@ const OPTIONAL_DOCUMENTS = [
 ];
 
 const OPTIONAL_ASSETS = [
+  // Read-only new-measurement preview (Start / DocPro / fullscreen shell).
+  '/vilda_centile_live_panel.css?v=1',
+  '/vilda_centile_live_data.js?v=1',
+  '/vilda_centile_live_render.js?v=1',
+  '/vilda_centile_live_view.js?v=1',
+  '/vilda_centile_live_host.js?v=1',
+  '/vilda_centile_live_panel.js?v=1',
+
   '/vilda_hormone_lifespan_data.js?v=1',
   '/vilda_hormone_lifespan_data.js?v=2',
   '/vilda_hormone_lifespan_data.js?v=3',
@@ -2412,6 +2420,7 @@ const OPTIONAL_ASSETS = [
   '/vilda_publication_creator.js?v=21',
   '/vilda_publication_creator.js?v=22',
   '/vilda_publication_creator.js?v=23',
+  '/vilda_publication_creator.js?v=24',
   '/vilda_centile_interpolation.js',
   '/vilda_centile_interpolation.js?v=1',
   '/app.js?v=192',
@@ -2423,18 +2432,22 @@ const OPTIONAL_ASSETS = [
   '/inline_index_07.js?v=12',
   '/inline_index_07.js?v=13',
   '/inline_index_07.js?v=14',
+  '/inline_index_07.js?v=15',
   '/inline_docpro_05.js?v=2',
   '/vilda_centile_interpolation.js?v=2',
   '/inline_index_03.js?v=12',
   '/inline_index_04.js?v=25',
   '/inline_index_04.js?v=26',
   '/inline_index_04.js?v=27',
+  '/inline_index_04.js?v=28',
   '/inline_index_05.js?v=3',
   '/vilda_centile_charts.js',
   '/vilda_centile_charts.js?v=1',
+  '/vilda_centile_charts.js?v=2',
   '/inline_index_03.js?v=13',
   '/inline_index_03.js?v=14',
   '/inline_index_03.js?v=15',
+  '/inline_index_03.js?v=16',
   '/vilda_diet_recommendations.js?v=5',
   '/vilda_diet_recommendations.js?v=6',
   '/vilda_diet_recommendations.js?v=7',
@@ -3378,6 +3391,7 @@ const OPTIONAL_ASSETS = [
   '/vilda_advanced_growth.js?v=77',
   '/vilda_advanced_growth.js?v=78',
   '/vilda_advanced_growth.js?v=79',
+  '/vilda_advanced_growth.js?v=80',
   '/vilda_adv_history_collapse.js?v=1',
   '/vilda_adv_history_collapse.js?v=2',
   '/vilda_spojnosc_zapisow.js?v=1',

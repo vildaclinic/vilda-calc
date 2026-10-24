@@ -190,7 +190,7 @@
      isElementEnabled i adnotacje per pacjent, dzięki czemu wydruki siatek na
      docpro respektują te same ustawienia „Elementy siatki" co index.html
      (m.in. domyślnie wyłączoną ramkę podsumowania na siatce WHO). -->
-<script defer src="vilda_publication_creator.js?v=23"></script>
+<script defer src="vilda_publication_creator.js?v=24"></script>
 <script src="vilda_gh_therapy_resource_audit.js?v=35" defer></script>
 <script defer src="vilda_dymek.js?v=1"></script>
 <script defer src="vilda_app_helpers.js?v=3"></script>
@@ -237,7 +237,7 @@
 <script defer src="vilda_sga_catchup.js?v=2"></script>
 <script defer src="vilda_patient_narrative.js?v=22"></script>
 <script defer src="vilda_patient_narrative_ui.js?v=12"></script>
-<script defer src="vilda_advanced_growth.js?v=79"></script>
+<script defer src="vilda_advanced_growth.js?v=80"></script>
 <script defer src="vilda_growth_method_ledger.js?v=2"></script>
 <script defer src="vilda_growth_prediction_validation_model.js?v=4"></script>
 <script defer src="vilda_growth_prediction_validation.js?v=14"></script>
@@ -337,6 +337,7 @@
 <script defer src="vilda_chrome.js?v=170"></script>
 <link href="vilda_lab_assessment_ui.css?v=12" rel="stylesheet">
 <link href="vilda_lab_history_tab.css?v=4" rel="stylesheet">
+  <link rel="stylesheet" href="vilda_centile_live_panel.css?v=1">
 </head>
 <!-- Dodajemy klasę "liquid-ios26" bezpośrednio na element <body>,
      aby motyw Liquid Glass był stosowany od samego początku ładowania strony.
@@ -659,6 +660,7 @@
 
       <!-- Sekcja testów stymulacyjnych GH została przeniesiona poza moduł profesjonalny. -->
     </div>
+    <div id="vildaCentileLiveMount" hidden aria-label="Podgląd siatki centylowej"></div>
   </div>
 
   <!-- Główne przyciski modułu lekarskiego – pojawiają się po pozytywnej weryfikacji numeru PWZ.
@@ -3005,18 +3007,18 @@
      łączy je na jednej stronie A4 i wyświetla jako PDF w nowym oknie. -->
 <!-- Wspólne prymitywy rysowania siatek (style linii, motyw, metryki, drawCentileGrid) —
      ten sam moduł co na index.html; zastępuje starszą kopię z inline_docpro_01.js (etap 1 konsolidacji). -->
-<script defer src="vilda_centile_charts.js?v=1"></script>
+<script defer src="vilda_centile_charts.js?v=2"></script>
 <!-- Etap 3 konsolidacji: docpro ładuje TEN SAM plik co index.html (LMS, nagłówek
      imienia, legacy generator, strona standardUser) — inline_docpro_01.js było
      starszą kopią i nie jest już ładowane; plik pozostaje w repo dla precache SW. -->
-<script defer src="inline_index_03.js?v=15"></script>
+<script defer src="inline_index_03.js?v=16"></script>
 
 <!-- Now override the default growth chart implementation to support infants (0–<3 lata) and older children (3–18 lat).  -->
 <!-- Etap 3 konsolidacji: docpro ładuje TEN SAM plik co index.html
      (buildCentilePageCanvas + stan siatek + generateCentileChart) —
      inline_docpro_02.js było ręcznie utrzymywaną, starszą kopią i nie jest
      już ładowane; plik pozostaje w repo dla zgodności precache SW. -->
-<script defer src="inline_index_04.js?v=27"></script>
+<script defer src="inline_index_04.js?v=28"></script>
 
 <!-- Skrypt generujący siatkę centylową DS (wzrost i waga) w formacie PDF -->
 <script defer src="inline_docpro_03.js?v=3"></script>
@@ -3160,9 +3162,14 @@
   <!--  (z martwymi gałęziami trybu publikacyjnego) i nie jest już        -->
   <!--  ładowane; plik pozostaje w repo wyłącznie dla zgodności           -->
   <!--  wymaganego precache Service Workera (append-only).               -->
-  <script defer src="inline_index_07.js?v=14"></script>
+  <script defer src="inline_index_07.js?v=15"></script>
   <!-- P-PAL-POZIOM: siatka 1–18 lat na jednej stronie A4 poziomo (składanie strony, przełącznik „Układ PDF”). -->
   <script defer src="vilda_centile_landscape.js?v=2"></script>
+  <script defer src="vilda_centile_live_data.js?v=1"></script>
+  <script defer src="vilda_centile_live_render.js?v=1"></script>
+  <script defer src="vilda_centile_live_view.js?v=1"></script>
+  <script defer src="vilda_centile_live_host.js?v=1"></script>
+  <script defer src="vilda_centile_live_panel.js?v=1"></script>
 
   <!-- Skrypt aktywujący moduł lekarski na stronie DocPro. Po załadowaniu
        strony automatycznie zaznacza ukryty checkbox #isDoctor i wywołuje
