@@ -82,15 +82,27 @@ async function physicalSignal(page, landscape) {
 async function startFrameTrace(page) {
   await page.evaluate(() => {
     window.__rotationFrames = [];
+    window.__rotationDiscardedFrames = [];
     window.__rotationTraceActive = true;
     // A rAF registered before rotation may run before the shell's own rAF. Post a
     // task from rAF, so the measurement sees the complete rendering update rather
     // than an earlier callback inside the same frame that has not painted yet.
     const channel = new MessageChannel();
     window.__rotationTraceChannel = channel;
-    const next = () => requestAnimationFrame(() => channel.port2.postMessage(null));
-    const sample = () => {
+    const next = () => requestAnimationFrame(timestamp => channel.port2.postMessage({
+      width: innerWidth, height: innerHeight, timestamp,
+    }));
+    const sample = ({ data: raf }) => {
       if (!window.__rotationTraceActive) return;
+      const task = { width: innerWidth, height: innerHeight, timestamp: performance.now() };
+      // CDP can resize between this rAF and its posted task. Such a task belongs
+      // to the old rendering update: its new dimensions have not painted yet.
+      // Keep its provenance in the report, then sample the next actual frame.
+      if (raf.width !== task.width || raf.height !== task.height) {
+        window.__rotationDiscardedFrames.push({ raf, task });
+        next();
+        return;
+      }
       const iframe = document.querySelector('iframe.app-pane:not([hidden])');
       const doc = iframe?.contentDocument || document;
       const form = doc.querySelector('#calcForm');
@@ -99,6 +111,7 @@ async function startFrameTrace(page) {
       const panel = document.querySelector('.app-shell-main');
       window.__rotationFrames.push({
         width: innerWidth, height: innerHeight, physical: screen.orientation.type,
+        rafTimestamp: raf.timestamp, taskTimestamp: task.timestamp,
         clientHeight: document.documentElement.clientHeight,
         visualHeight: visualViewport?.height ?? null,
         panelStyleHeight: panel?.style.height ?? null,
@@ -122,7 +135,7 @@ async function stopFrameTrace(page) {
     window.__rotationTraceActive = false;
     window.__rotationTraceChannel.port1.close();
     window.__rotationTraceChannel.port2.close();
-    return window.__rotationFrames;
+    return { frames: window.__rotationFrames, discarded: window.__rotationDiscardedFrames };
   });
 }
 
@@ -144,8 +157,12 @@ async function rotateSplit(page, cdp, { width, height, order, safeArea = width >
   await frames(page, 5);
   if (order === 'viewport-first') await physicalSignal(page, landscape);
   await frames(page, 12); // includes completion of the real 120 ms appearance
-  const samples = (await stopFrameTrace(page)).filter(item => item.width === width && item.height === height);
+  const trace = await stopFrameTrace(page);
+  const samples = trace.frames.filter(item => item.width === width && item.height === height);
   await test.info().attach(`rotation-${width}-${height}-${order}`, { body: JSON.stringify(samples, null, 2), contentType: 'application/json' });
+  await test.info().attach(`rotation-${width}-${height}-${order}-discarded-cross-viewport-tasks`, {
+    body: JSON.stringify(trace.discarded, null, 2), contentType: 'application/json',
+  });
   expect(samples.length, 'the trace contains painted target-size frames, not only a final poll').toBeGreaterThanOrEqual(5);
   if (order === 'viewport-first') expect(samples.some(item => item.physical.startsWith(landscape ? 'portrait' : 'landscape'))).toBe(true);
   const finalWidth = samples.at(-1).form;
