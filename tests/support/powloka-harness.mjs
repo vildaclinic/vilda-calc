@@ -20,7 +20,7 @@ function klasy(el) {
     toggle(x, sila) { const on = sila ?? !this.contains(x); this[on ? 'add' : 'remove'](x); return on; },
   };
 }
-export function powloka(chrome) {
+export function powloka(chrome, beforeBoot) {
   let teraz = 0, kolejny = 0;
   const timery = new Map(), ramki = new Map();
   const timer = (fn, ms = 0) => { const id = ++kolejny; timery.set(id, { fn, at: teraz + ms, ms }); return id; };
@@ -86,6 +86,7 @@ export function powloka(chrome) {
     Object.defineProperty(el, 'src', { get: () => el._src, set(v) { el._src = v; ramki.set(v.split('?')[0], el); } });
     return el;
   };
+  if (beforeBoot) beforeBoot(okno, doc);
   vm.runInNewContext(kod, { window: okno, document: doc, navigator: okno.navigator, console, URL, Date, setTimeout: timer, clearTimeout, setInterval: okno.setInterval, clearInterval: okno.clearInterval }, { filename: 'vilda_shell.js' });
   doc.dispatchEvent({ type: 'DOMContentLoaded' });
   function load(route) { const frame = ramki.get(okno.VildaShell.routes[route].src.split('?')[0]); expect(frame).toBeTruthy(); frame.dispatchEvent({ type: 'load' }); return frame; }
