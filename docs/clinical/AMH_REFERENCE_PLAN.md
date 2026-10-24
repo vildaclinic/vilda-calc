@@ -1,7 +1,9 @@
-# AMH i inhibina B — stan planu na 22.10.2026
+# AMH i inhibina B — stan planu na 24.10.2026
 
 Aktualna [macierz pokrycia i luk](hormone-lifespan/REFERENCE_COVERAGE_AUDIT.md)
 jest wspólnym zestawieniem dostępności odniesień wszystkich hormonów.
+[Przegląd po #766 i #770](hormone-lifespan/REFERENCE_COVERAGE_REVIEW_2026_10_24.md)
+oddziela ukończone bloki źródłowe od pozostałych luk i nowych kandydatów.
 Poniżej zapisano zakończone etapy AMH i inhibiny B oraz ograniczenia
 pozostałych prac. Zwykły punkt pacjenta, osobna informacja o źródle,
 ilustracja edukacyjna i norma laboratoryjna mają odrębne kontrakty.
@@ -128,6 +130,13 @@ w 80–90; karta nie wypełnia przedziału >70–<80 ani nie przedłuża Tehrani
   Borelli. Cały możliwy wiek musi pasować, bez interpolacji między grupami
   i harmonizacji z Gen II. Znana niezgodność metody/materiału blokuje
   porównanie; brak danych nie wymaga nowego formularza.
+- **PR #744 — dalszy odczyt zwykłej żeńskiej inhibiny B do 47,75 roku:**
+  trzy węzły 47,25/47,5/47,75 → ≈10/8/7 pg/mL z tego samego modelu
+  Borelli-Kjær, po osobnej kontroli i akceptacji. Sąsiedztwo nowych
+  węzłów jawnie zmienia PCHIP w `(46,47)`; nie przelicza historii.
+  Granica 47,75 jest końcem zaakceptowanego odczytu, nie kohorty,
+  menopauzy, LOD lub LOQ. Rejestr pozostaje przy 85 profilach po
+  synchronizacji z E2/Th1. Nie jest to zadanie ponownie do wdrożenia.
 
 Męskie źródła: Busch 7 dni–<1 roku, Kelsey 1–<6,1 i Borelli 6,1–80 lat.
 Osobne średnie grup Senior do 101 lat nie uzupełniają zwykłego modelu
