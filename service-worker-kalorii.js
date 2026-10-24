@@ -19,7 +19,7 @@
  *   bo i tak chcemy zwracać HTML z cache natychmiast.
  */
 
-const SW_VERSION = '1.1.361';
+const SW_VERSION = '1.1.362';
 const CACHE_PREFIX = 'pwa-kalorii';
 const SHELL_CACHE = `${CACHE_PREFIX}-shell-v${SW_VERSION}`;
 const RUNTIME_CACHE = `${CACHE_PREFIX}-runtime`;
@@ -1987,10 +1987,12 @@ const OPTIONAL_ASSETS = [
   // Read-only new-measurement preview (Start / DocPro / fullscreen shell).
   '/vilda_centile_live_panel.css?v=1',
   '/vilda_centile_live_data.js?v=1',
+  '/vilda_centile_live_data.js?v=2',
   '/vilda_centile_live_render.js?v=1',
   '/vilda_centile_live_view.js?v=1',
   '/vilda_centile_live_host.js?v=1',
   '/vilda_centile_live_panel.js?v=1',
+  '/vilda_centile_live_panel.js?v=2',
 
   '/vilda_hormone_lifespan_data.js?v=1',
   '/vilda_hormone_lifespan_data.js?v=2',
@@ -2595,6 +2597,7 @@ const OPTIONAL_ASSETS = [
   '/custom-fixes.js?v=73',
   '/custom-fixes.js?v=74',
   '/custom-fixes.js?v=75',
+  '/custom-fixes.js?v=76',
   '/reposition.js?v=7',
   '/vilda_klawiatura.js?v=1',
   '/vilda_klawiatura.js?v=2',
@@ -2918,6 +2921,7 @@ const OPTIONAL_ASSETS = [
   '/vilda_data_import_export.js?v=105',
   '/vilda_data_import_export.js?v=106',
   '/vilda_data_import_export.js?v=107',
+  '/vilda_data_import_export.js?v=108',
   '/vilda_baseline_pacjenta.js?v=1',
   '/vilda_baseline_pacjenta.js?v=2',
   '/vilda_baseline_pacjenta.js?v=3',
@@ -3453,6 +3457,8 @@ const OPTIONAL_ASSETS = [
   '/vilda_diet_recommendations.js?v=24',
   '/vilda_diet_recommendations.js?v=25',
   '/vilda_diet_recommendations.js?v=26',
+  '/vilda_save_feedback.js?v=1',
+  '/vilda_save_feedback.css?v=1',
   '/vilda_status_bar.js?v=1',
   '/vilda_status_bar.css?v=1',
   '/vilda_status_bar.css?v=2',

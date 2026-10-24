@@ -155,7 +155,23 @@
     try { next = await data.getSnapshot(); }
     catch (_) { next = null; }
     if (revision !== request) return;
-    if (!next || !data.isCurrent(next) || !twoColumns()) { clear('stale'); return; }
+    if (!twoColumns()) { clear('stale'); return; }
+    if (!next && view && snapshot && data.isCurrent(snapshot)) {
+      var refreshState = typeof data.getRefreshState === 'function' ? data.getRefreshState(snapshot) : null;
+      // A same-visit save can supersede an in-flight read or temporarily defer
+      // DOB. Keep the mounted view (including fullscreen/metric/range) until the
+      // adapter publishes a ready snapshot or a concrete read failure.
+      if (refreshState === 'pending') { inlineSize(); return; }
+      if (refreshState === 'error') {
+        rendered = null;
+        renderKey = '';
+        status = 'unavailable';
+        view.setStatus('Nie udało się odświeżyć siatki po zapisie. Spróbuj ponownie po zmianie danych.');
+        inlineSize();
+        return;
+      }
+    }
+    if (!next || !data.isCurrent(next)) { clear('stale'); return; }
     if (snapshot && snapshot.patientToken !== next.patientToken) clear('patient-change');
     var nextKey = JSON.stringify(next);
     snapshot = next;
