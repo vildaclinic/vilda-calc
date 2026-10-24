@@ -247,7 +247,7 @@ describe('one host owns embedded app layout', () => {
   });
 });
 
-describe('rotation has one geometry decision and one short appearance', () => {
+describe('rotation has one geometry decision and appearance only when entering landscape', () => {
   it.each(['viewport-first', 'orientation-first'])('keeps phone ownership and synchronizes children in %s order', order => {
     const host = environment({ orientationType: 'portrait-primary' }); host.run();
     const child = environment(); embed(host, child); child.run();
@@ -288,7 +288,7 @@ describe('rotation has one geometry decision and one short appearance', () => {
     h.screen.width = height; h.screen.height = width; h.win.dispatch('orientationchange'); expect(h.active()).toBe(true);
   });
 
-  it('animates opacity once per rotation, not initial load, repeated events or keyboard resize', () => {
+  it('animates once on entering landscape and never on return, late signals or keyboard resize', () => {
     const h = environment({ orientationType: 'portrait-primary' });
     const surface = animatedSurface(); h.surfaces.push(surface); h.run();
     expect(surface.animate).not.toHaveBeenCalled();
@@ -300,8 +300,52 @@ describe('rotation has one geometry decision and one short appearance', () => {
     expect(surface.animate).toHaveBeenCalledTimes(1);
     h.win.innerWidth = 440; h.win.dispatch('resize');
     expect(surface.animate.mock.results[0].value.cancel).toHaveBeenCalledTimes(1);
-    expect(surface.animate).toHaveBeenCalledTimes(2);
+    expect(surface.animate).toHaveBeenCalledTimes(1);
+    h.screen.orientation.type = 'portrait-primary'; h.screen.orientation.dispatch('change'); h.win.dispatch('orientationchange');
+    h.win.innerHeight = 300; h.win.visualViewport.height = 250; h.win.dispatch('resize'); h.win.visualViewport.dispatch('resize');
+    h.win.innerHeight = 956; h.win.visualViewport.height = 956; h.win.dispatch('resize');
+    expect(surface.animate).toHaveBeenCalledTimes(1);
     expect(h.storageRead).not.toHaveBeenCalled(); expect(h.styleWrite).not.toHaveBeenCalled();
+  });
+
+  it.each(['content', 'drawer'])('cancels a rapid reversal synchronously for %s before the portrait layout event', target => {
+    const h = environment({ orientationType: 'portrait-primary' });
+    const content = animatedSurface(), drawer = animatedSurface();
+    h.surfaces.push(content);
+    if (target === 'drawer') h.doc.drawer = drawer;
+    const surface = target === 'drawer' ? drawer : content;
+    h.run();
+    h.win.innerWidth = 956; h.win.dispatch('resize');
+    const pending = surface.animate.mock.results[0].value;
+    const portraitEvents = [];
+    h.doc.addEventListener('vilda:phone-layout-changed', event => {
+      if (!event.detail.landscape) portraitEvents.push({
+        active: h.active(), calls: surface.animate.mock.calls.length, cancellations: pending.cancel.mock.calls.length
+      });
+    });
+    // Reverse in the same task, before an animation frame or onfinish can run.
+    h.win.innerWidth = 440; h.win.dispatch('resize');
+    expect(portraitEvents).toEqual([{ active: false, calls: 1, cancellations: 1 }]);
+    h.win.dispatch('orientationchange'); h.win.visualViewport.dispatch('resize');
+    expect(surface.animate).toHaveBeenCalledTimes(1);
+    expect(pending.cancel).toHaveBeenCalledTimes(1);
+    if (target === 'drawer') expect(content.animate).not.toHaveBeenCalled();
+  });
+
+  it('keeps the header outside the appearance even if its opacity is not protected by CSS', () => {
+    const h = environment({ orientationType: 'portrait-primary' });
+    const header = animatedSurface(), content = animatedSurface();
+    const select = h.doc.querySelectorAll;
+    h.doc.querySelectorAll = selector => {
+      if (selector === '#appPanes > iframe.app-pane') return select(selector);
+      return selector.includes('header') ? [content, header] : [content];
+    };
+    h.run(); h.win.innerWidth = 956; h.win.dispatch('resize');
+    expect(content.animate).toHaveBeenCalledTimes(1);
+    expect(header.animate).not.toHaveBeenCalled();
+    h.win.innerWidth = 440; h.win.dispatch('resize');
+    expect(content.animate).toHaveBeenCalledTimes(1);
+    expect(header.animate).not.toHaveBeenCalled();
   });
 
   it('animates the open drawer only and never an embedded pane independently', () => {
@@ -328,7 +372,7 @@ describe('rotation has one geometry decision and one short appearance', () => {
     expect(dock.animate).not.toHaveBeenCalled();
     dock.computedStyle = { opacity: '0' };
     h.win.innerWidth = 440; h.win.dispatch('resize');
-    expect(content.animate).toHaveBeenCalledTimes(2);
+    expect(content.animate).toHaveBeenCalledTimes(1);
     expect(dock.animate).not.toHaveBeenCalled();
   });
 
@@ -356,7 +400,8 @@ describe('rotation has one geometry decision and one short appearance', () => {
     const surface = animatedSurface(); h.surfaces.push(surface); h.run();
     h.win.innerWidth = 956; h.win.dispatch('resize'); expect(surface.animate).not.toHaveBeenCalled();
     h.motionMedia.matches = false; h.motionMedia.dispatch('change');
-    h.win.innerWidth = 440; h.win.dispatch('resize'); expect(surface.animate).toHaveBeenCalledTimes(1);
+    h.win.innerWidth = 440; h.win.dispatch('resize'); expect(surface.animate).not.toHaveBeenCalled();
+    h.win.innerWidth = 956; h.win.dispatch('resize'); expect(surface.animate).toHaveBeenCalledTimes(1);
     h.motionMedia.matches = true; h.motionMedia.dispatch('change');
     expect(surface.animate.mock.results[0].value.cancel).toHaveBeenCalledTimes(1);
   });
@@ -367,8 +412,11 @@ describe('rotation has one geometry decision and one short appearance', () => {
     h.surfaces.push(surface, hidden); h.run(); h.doc.hidden = true;
     h.win.innerWidth = 956; h.win.dispatch('resize'); expect(surface.animate).not.toHaveBeenCalled();
     h.doc.hidden = false; h.win.innerWidth = 440; h.win.dispatch('resize');
+    expect(surface.animate).not.toHaveBeenCalled();
+    h.win.innerWidth = 956; h.win.dispatch('resize');
     expect(surface.animate).toHaveBeenCalledTimes(1); expect(hidden.animate).not.toHaveBeenCalled();
     const first = surface.animate.mock.results[0].value; first.onfinish();
+    h.win.innerWidth = 440; h.win.dispatch('resize'); expect(first.cancel).not.toHaveBeenCalled();
     h.win.innerWidth = 956; h.win.dispatch('resize'); expect(first.cancel).not.toHaveBeenCalled();
     h.win.dispatch('pagehide'); expect(surface.animate.mock.results[1].value.cancel).toHaveBeenCalledTimes(1);
   });
