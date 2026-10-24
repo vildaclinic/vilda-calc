@@ -1243,6 +1243,7 @@ const CORE_SHELL_URLS = [
   '/vilda_chrome.js?v=168',
   '/vilda_chrome.js?v=169',
   '/vilda_chrome.js?v=170',
+  '/vilda_chrome.js?v=171',
   '/vilda_realtime.js?v=1',
   '/vilda_realtime.js?v=2',
   '/vilda_realtime.js?v=3',
@@ -1442,6 +1443,7 @@ const CORE_SHELL_URLS = [
   '/vilda_chrome.css?v=42',
   '/vilda_chrome.css?v=43',
   '/vilda_chrome.css?v=44',
+  '/vilda_chrome.css?v=45',
   '/vilda_auth_ui.css',
   '/vilda_auth_ui.css?v=9',
   '/vilda_auth_ui.css?v=10',
@@ -1965,7 +1967,9 @@ const CORE_SHELL_URLS = [
   '/vilda_puberty_assessment_ui.css?v=1',
   // Wspólny układ telefonu w poziomie jest potrzebny przed pierwszym malowaniem.
   '/vilda_phone_landscape.js?v=1',
-  '/vilda_phone_landscape.css?v=1'
+  '/vilda_phone_landscape.js?v=2',
+  '/vilda_phone_landscape.css?v=1',
+  '/vilda_phone_landscape.css?v=2'
 ];
 
 // Dodatkowe strony i zasoby próbujemy dociągnąć w tle podczas instalacji,
@@ -2388,6 +2392,7 @@ const OPTIONAL_ASSETS = [
   '/vilda_shell.js?v=65',
   '/vilda_shell.js?v=66',
   '/vilda_shell.js?v=67',
+  '/vilda_shell.js?v=68',
   '/vilda_shell.css',
   '/vilda_shell.css?v=1',
   '/vilda_shell.css?v=2',
