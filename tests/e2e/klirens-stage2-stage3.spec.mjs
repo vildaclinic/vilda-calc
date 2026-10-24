@@ -253,7 +253,7 @@ test('Ca/Cr poniżej dolnej granicy Mayo zachowuje odchylenie mimo zaokrąglenia
   await expect(stone).toContainText('Mayo');
 });
 
-test('próbka punktowa wymaga własnej postaci chemicznej szczawianu i nazywa kwas cytrynowy', async ({ page }) => {
+test('próbka punktowa zachowuje nieznaną postać masową Ox/Cr i nazywa kwas cytrynowy', async ({ page }) => {
   await openCalculator(page, 'spot');
   await setPatient(page, {
     age: 8,
@@ -264,16 +264,19 @@ test('próbka punktowa wymaga własnej postaci chemicznej szczawianu i nazywa kw
   await page.locator('#Ucr_spot').fill('10');
   await page.locator('#Ucr_spot_unit').selectOption('mg/dl');
   await page.locator('#Ox_Cr_spot').fill('1');
+  await page.locator('#Ox_Cr_spot_unit').selectOption('mg/dL:unknown');
   await page.locator('#Cit_Cr_spot').fill('2');
 
   const stone = page.locator('#stoneInfo');
-  await expect(stone).toContainText('Ox/Cr — nie obliczono');
-  await page.locator('#oxalateSpotReportingEntity').selectOption(
-    'oxalic_acid'
-  );
-  await expect(stone).toContainText(
-    'mg kwasu szczawiowego/mg kreatyniny'
-  );
+  const oxcr = stone.locator('[data-clcr-series="OxCr_spot"]');
+  await expect(oxcr).toHaveAttribute('data-clcr-assessment', 'unassessed');
+  await expect(oxcr).toContainText('Nie podano postaci analitu');
+  await page.locator('#Ox_Cr_spot_unit').selectOption('mg/dL:acid');
+  await expect(oxcr).toContainText('kwas szczawiowy');
+  await expect(page.locator('#Ox_Cr_spot_unit')).toHaveValue('mg/dL:acid');
+  expect(JSON.parse(await oxcr.getAttribute('data-clcr-oxcr-snapshot')).basis).toBe('acid');
+  await expect(oxcr).toHaveAttribute('data-clcr-assessment', 'above');
+  await expect.poll(async () => Number(await oxcr.getAttribute('data-clcr-value'))).toBe(0.1);
   await expect(stone).toContainText(
     'mg kwasu cytrynowego/mg kreatyniny'
   );
