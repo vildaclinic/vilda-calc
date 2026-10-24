@@ -1,0 +1,513 @@
+{
+  "schemaVersion": 1,
+  "reviewDate": "2026-10-24",
+  "baseAudyt": "7ff480c21129dcb006443ca9c929e508eeea55e2",
+  "classification": "Source audit and candidate recommendation only. Not runtime data, an executable reference policy, clinical validation, or approval to implement.",
+  "runtimeChanged": false,
+  "clinicalReferenceActivation": false,
+  "source": {
+    "title": "Reference Curves for Pediatric Endocrinology: Leveraging Biomarker Z-Scores for Clinical Classifications",
+    "doi": "10.1210/clinem/dgac155",
+    "pmid": "35299255",
+    "fullText": "https://pmc.ncbi.nlm.nih.gov/articles/PMC9202734/",
+    "fullTextRead": true,
+    "locations": [
+      "Methods: Study cohorts, Biomarker analyses, Statistical analyses",
+      "Table 1 and footnotes",
+      "Results/Figure 1",
+      "Discussion",
+      "Supplemental Table 1, sheet LCMSMS hormones",
+      "Supplemental Table 2, sheet Ark2"
+    ],
+    "supplementDoi": "10.6084/m9.figshare.17153336.v1"
+  },
+  "statistic": {
+    "kind": "source-model P50 at annual age nodes, not an empirical group median or arithmetic mean",
+    "sourceCaption": "mean-for-age (p50)",
+    "sourceTransform": "LN(SI concentration * 1000000)",
+    "inverseAtZ0": "exp(M) / 1000000",
+    "transformEvidence": [
+      "LCMSMS hormones!K36 = LN(I36*1000000)",
+      "LCMSMS hormones!K37 = LN(I37*1000000)"
+    ],
+    "exampleZScoreCaution": "L37 uses AB13 instead of AG25 in the denominator. It does not move the zero numerator/P50, but the example must not be imported as a clinical SDS function.",
+    "betweenNodeInterpolation": "Not decided or activated by this audit. Any future interpolation is an explicit product policy.",
+    "continuousModelObjectRecovered": false
+  },
+  "population": {
+    "country": "Norway",
+    "design": "cross-sectional",
+    "BGS2AgeYears": "6 to <16",
+    "FitFuturesAgeYears": "15 to 18",
+    "viableCohortCountsTable1": {
+      "BGS2Male": 414,
+      "FitFuturesMale": 491,
+      "BGS2Female": 601,
+      "FitFuturesFemale": 319
+    },
+    "analyteSpecificFitN": null,
+    "nCaution": "General cohort counts and nonparametric RI partition counts are not established N for either fitted analyte or each annual P50.",
+    "samplingHours": "08:00–14:00",
+    "specimen": "serum",
+    "method": "LC-MS/MS; E2 uses two methods with different quantification limits",
+    "exclusions": "Self-reported chronic disease/cancer. Table 1 explicitly excludes oral contraceptive users from all female biomarker references. Glucocorticoid exclusions are hormone-specific and are not assigned to TT/E2 by inference.",
+    "oralContraceptiveExclusionCounts": {
+      "BGS2": 12,
+      "FitFutures": 167
+    },
+    "oralContraceptiveCaution": "Separate Ethinylestradiol rows in Supplemental Table 2 are not imported into the age-P50 model; wording about any reference intervals is imprecise. Unknown history does not mean absent treatment.",
+    "pubertyAndCycle": "Chronological age models pool stages. They are not G/Th/P medians or an early-follicular model. No stage is inferred from age or result.",
+    "diurnalCaution": "Pubertal TT is higher before 10:00 in the source; age model does not stratify sampling time."
+  },
+  "candidates": {
+    "maleE2": {
+      "sex": "male",
+      "analyte": "estradiol",
+      "unit": "pmol/L",
+      "sourceRange": "AA19:AD31",
+      "points": [
+        {
+          "ageYears": 6,
+          "M_logSIx1e6": 12.4171846379267,
+          "p50": 0.24701013272002922,
+          "sourceCells": [
+            "LCMSMS hormones!AA19",
+            "LCMSMS hormones!AB19",
+            "LCMSMS hormones!AC19",
+            "LCMSMS hormones!AD19"
+          ]
+        },
+        {
+          "ageYears": 7,
+          "M_logSIx1e6": 12.8461094133448,
+          "p50": 0.37931012200885605,
+          "sourceCells": [
+            "LCMSMS hormones!AA20",
+            "LCMSMS hormones!AB20",
+            "LCMSMS hormones!AC20",
+            "LCMSMS hormones!AD20"
+          ]
+        },
+        {
+          "ageYears": 8,
+          "M_logSIx1e6": 13.2884606820581,
+          "p50": 0.5903439912846601,
+          "sourceCells": [
+            "LCMSMS hormones!AA21",
+            "LCMSMS hormones!AB21",
+            "LCMSMS hormones!AC21",
+            "LCMSMS hormones!AD21"
+          ]
+        },
+        {
+          "ageYears": 9,
+          "M_logSIx1e6": 13.7719355786107,
+          "p50": 0.9573607691081997,
+          "sourceCells": [
+            "LCMSMS hormones!AA22",
+            "LCMSMS hormones!AB22",
+            "LCMSMS hormones!AC22",
+            "LCMSMS hormones!AD22"
+          ]
+        },
+        {
+          "ageYears": 10,
+          "M_logSIx1e6": 14.3210325048193,
+          "p50": 1.6578506045864085,
+          "sourceCells": [
+            "LCMSMS hormones!AA23",
+            "LCMSMS hormones!AB23",
+            "LCMSMS hormones!AC23",
+            "LCMSMS hormones!AD23"
+          ]
+        },
+        {
+          "ageYears": 11,
+          "M_logSIx1e6": 14.9460822247681,
+          "p50": 3.097426690113098,
+          "sourceCells": [
+            "LCMSMS hormones!AA24",
+            "LCMSMS hormones!AB24",
+            "LCMSMS hormones!AC24",
+            "LCMSMS hormones!AD24"
+          ]
+        },
+        {
+          "ageYears": 12,
+          "M_logSIx1e6": 15.6285503318678,
+          "p50": 6.129050070456699,
+          "sourceCells": [
+            "LCMSMS hormones!AA25",
+            "LCMSMS hormones!AB25",
+            "LCMSMS hormones!AC25",
+            "LCMSMS hormones!AD25"
+          ]
+        },
+        {
+          "ageYears": 13,
+          "M_logSIx1e6": 16.3154005350549,
+          "p50": 12.181153681006554,
+          "sourceCells": [
+            "LCMSMS hormones!AA26",
+            "LCMSMS hormones!AB26",
+            "LCMSMS hormones!AC26",
+            "LCMSMS hormones!AD26"
+          ]
+        },
+        {
+          "ageYears": 14,
+          "M_logSIx1e6": 16.9385227711165,
+          "p50": 22.714698209171413,
+          "sourceCells": [
+            "LCMSMS hormones!AA27",
+            "LCMSMS hormones!AB27",
+            "LCMSMS hormones!AC27",
+            "LCMSMS hormones!AD27"
+          ]
+        },
+        {
+          "ageYears": 15,
+          "M_logSIx1e6": 17.434106748281,
+          "p50": 37.28518975581513,
+          "sourceCells": [
+            "LCMSMS hormones!AA28",
+            "LCMSMS hormones!AB28",
+            "LCMSMS hormones!AC28",
+            "LCMSMS hormones!AD28"
+          ]
+        },
+        {
+          "ageYears": 16,
+          "M_logSIx1e6": 17.7768843853159,
+          "p50": 52.52944278497907,
+          "sourceCells": [
+            "LCMSMS hormones!AA29",
+            "LCMSMS hormones!AB29",
+            "LCMSMS hormones!AC29",
+            "LCMSMS hormones!AD29"
+          ]
+        },
+        {
+          "ageYears": 17,
+          "M_logSIx1e6": 17.9892464726668,
+          "p50": 64.95767569802108,
+          "sourceCells": [
+            "LCMSMS hormones!AA30",
+            "LCMSMS hormones!AB30",
+            "LCMSMS hormones!AC30",
+            "LCMSMS hormones!AD30"
+          ]
+        },
+        {
+          "ageYears": 18,
+          "M_logSIx1e6": 18.1175030477201,
+          "p50": 73.8467861754196,
+          "sourceCells": [
+            "LCMSMS hormones!AA31",
+            "LCMSMS hormones!AB31",
+            "LCMSMS hormones!AC31",
+            "LCMSMS hormones!AD31"
+          ]
+        }
+      ],
+      "quantification": {
+        "BGS2LloqPmolL": 0.58,
+        "FitFuturesLloqPmolL": 13,
+        "belowBGS2LloqAtAges": [
+          6,
+          7
+        ],
+        "nearBGS2LloqAtAge8": true,
+        "reportedCensoringRule": null,
+        "note": "Sample LLOQ is not a biological floor for a model P50. A lower product domain or low-value note needs a separate explicit policy; no clipping or imputation."
+      }
+    },
+    "femaleTotalTestosterone": {
+      "sex": "female",
+      "analyte": "total-testosterone",
+      "unit": "nmol/L",
+      "sourceRange": "AF3:AI15",
+      "points": [
+        {
+          "ageYears": 6,
+          "M_logSIx1e6": 10.9224507552166,
+          "p50": 0.055406420261450574,
+          "sourceCells": [
+            "LCMSMS hormones!AF3",
+            "LCMSMS hormones!AG3",
+            "LCMSMS hormones!AH3",
+            "LCMSMS hormones!AI3"
+          ]
+        },
+        {
+          "ageYears": 7,
+          "M_logSIx1e6": 11.26830980935,
+          "p50": 0.07830054241503637,
+          "sourceCells": [
+            "LCMSMS hormones!AF4",
+            "LCMSMS hormones!AG4",
+            "LCMSMS hormones!AH4",
+            "LCMSMS hormones!AI4"
+          ]
+        },
+        {
+          "ageYears": 8,
+          "M_logSIx1e6": 11.610927998869,
+          "p50": 0.11029655799080951,
+          "sourceCells": [
+            "LCMSMS hormones!AF5",
+            "LCMSMS hormones!AG5",
+            "LCMSMS hormones!AH5",
+            "LCMSMS hormones!AI5"
+          ]
+        },
+        {
+          "ageYears": 9,
+          "M_logSIx1e6": 11.9541423080156,
+          "p50": 0.15545977695103175,
+          "sourceCells": [
+            "LCMSMS hormones!AF6",
+            "LCMSMS hormones!AG6",
+            "LCMSMS hormones!AH6",
+            "LCMSMS hormones!AI6"
+          ]
+        },
+        {
+          "ageYears": 10,
+          "M_logSIx1e6": 12.3021466450402,
+          "p50": 0.2201681045278567,
+          "sourceCells": [
+            "LCMSMS hormones!AF7",
+            "LCMSMS hormones!AG7",
+            "LCMSMS hormones!AH7",
+            "LCMSMS hormones!AI7"
+          ]
+        },
+        {
+          "ageYears": 11,
+          "M_logSIx1e6": 12.6455254116421,
+          "p50": 0.3103715513902767,
+          "sourceCells": [
+            "LCMSMS hormones!AF8",
+            "LCMSMS hormones!AG8",
+            "LCMSMS hormones!AH8",
+            "LCMSMS hormones!AI8"
+          ]
+        },
+        {
+          "ageYears": 12,
+          "M_logSIx1e6": 12.9599106985563,
+          "p50": 0.42502815745885664,
+          "sourceCells": [
+            "LCMSMS hormones!AF9",
+            "LCMSMS hormones!AG9",
+            "LCMSMS hormones!AH9",
+            "LCMSMS hormones!AI9"
+          ]
+        },
+        {
+          "ageYears": 13,
+          "M_logSIx1e6": 13.2159908682181,
+          "p50": 0.5490752992652548,
+          "sourceCells": [
+            "LCMSMS hormones!AF10",
+            "LCMSMS hormones!AG10",
+            "LCMSMS hormones!AH10",
+            "LCMSMS hormones!AI10"
+          ]
+        },
+        {
+          "ageYears": 14,
+          "M_logSIx1e6": 13.3976884892424,
+          "p50": 0.6584793820799414,
+          "sourceCells": [
+            "LCMSMS hormones!AF11",
+            "LCMSMS hormones!AG11",
+            "LCMSMS hormones!AH11",
+            "LCMSMS hormones!AI11"
+          ]
+        },
+        {
+          "ageYears": 15,
+          "M_logSIx1e6": 13.5143766843054,
+          "p50": 0.7399787024590178,
+          "sourceCells": [
+            "LCMSMS hormones!AF12",
+            "LCMSMS hormones!AG12",
+            "LCMSMS hormones!AH12",
+            "LCMSMS hormones!AI12"
+          ]
+        },
+        {
+          "ageYears": 16,
+          "M_logSIx1e6": 13.5840229920118,
+          "p50": 0.7933525600252321,
+          "sourceCells": [
+            "LCMSMS hormones!AF13",
+            "LCMSMS hormones!AG13",
+            "LCMSMS hormones!AH13",
+            "LCMSMS hormones!AI13"
+          ]
+        },
+        {
+          "ageYears": 17,
+          "M_logSIx1e6": 13.6308163635169,
+          "p50": 0.8313584790221047,
+          "sourceCells": [
+            "LCMSMS hormones!AF14",
+            "LCMSMS hormones!AG14",
+            "LCMSMS hormones!AH14",
+            "LCMSMS hormones!AI14"
+          ]
+        },
+        {
+          "ageYears": 18,
+          "M_logSIx1e6": 13.6751533926744,
+          "p50": 0.869047786256784,
+          "sourceCells": [
+            "LCMSMS hormones!AF15",
+            "LCMSMS hormones!AG15",
+            "LCMSMS hormones!AH15",
+            "LCMSMS hormones!AI15"
+          ]
+        }
+      ],
+      "quantification": {
+        "lloqNmolL": 0.02,
+        "all13P50AboveLloq": true,
+        "reportedInterassayCvPercent": 4,
+        "cvAppliesOnlyToNmolL": [
+          1.5,
+          37
+        ],
+        "cvConfirmedForFemaleP50": false,
+        "reportedLodNmolL": null,
+        "reportedCensoringRule": null
+      }
+    }
+  },
+  "independentExtraction": {
+    "annualNodesCompared": 26,
+    "cellLabelsAndSexCompared": true,
+    "exactMAndDerivedP50Matches": 26,
+    "mismatches": 0,
+    "interpretation": "Independent readings of the same source are technical checks, not independent population replication or clinical validation."
+  },
+  "otherSources": [
+    {
+      "doi": "10.1210/clinem/dgz196",
+      "fullTextAndSupplementRead": true,
+      "analyte": "male total E2",
+      "location": "Figure 3a p.760; supplement Table 5 p.7 and log Figure 4a p.12",
+      "adultCohortN": 157,
+      "adultCohortAgeYears": [
+        31.4,
+        60.9
+      ],
+      "specimen": "serum",
+      "method": "in-house TurboFlow LC-MS/MS",
+      "lodPmolL": 4.04,
+      "loqPmolL": 12.1,
+      "status": "Actual P50 curve in vector PDF; no verified numeric export. Controlled digitization is a future task, not performed in this review.",
+      "censoring": "<LOD replaced by 1 pmol/L for graphic illustration; effect on model fitting not established.",
+      "fullPdfSha256": "4f07600af51fa35fcc83a2599f5733d77f528768bde6e82d987063e17cc42cf6",
+      "supplementSha256": "d061a335bd42a0d7607c20abd96611529d73f225f11d0e27856c3913b549ee19"
+    },
+    {
+      "doi": "10.1373/clinchem.2010.143222",
+      "fullTextRead": true,
+      "analyte": "female total testosterone",
+      "location": "p.1143; Figure 4A/B p.1146",
+      "adultGroups": [
+        {
+          "group": "premenopausal",
+          "n": 104,
+          "medianNgL": 270
+        },
+        {
+          "group": "postmenopausal",
+          "n": 86,
+          "medianNgL": 180
+        }
+      ],
+      "specimen": "serum",
+      "method": "derivatization 2D LC-MS/MS",
+      "lodNgL": 5,
+      "loqNgL": 10,
+      "status": "Whole-group adult medians, not an exact-age model. Mean/median participant ages do not establish a routing domain. Pediatric group medians require a separate controlled figure reading."
+    },
+    {
+      "doi": "10.1093/ejendo/lvae046",
+      "fullTextAndSupplementRead": true,
+      "analyte": "male E2",
+      "status": "P50 graphical in Figure 1B; Table 2 gives RI, Table 3 female breast-stage medians, not male G-stage P50. No ready numeric male age export verified."
+    },
+    {
+      "doi": "10.1210/jc.2009-1670",
+      "fullTextRead": true,
+      "analyte": "female total testosterone",
+      "status": "Plasma, small pediatric groups near LLOQ0.1nmol/L; Methods/Table3 N8/9 discrepancy for girls1–3. Not a serum exact-age substitute. Estradiol not assayed."
+    },
+    {
+      "doi": "10.1016/j.jmsacl.2021.10.005",
+      "fullTextAndAuthorDataRead": true,
+      "analyte": "female total testosterone",
+      "femaleRawSampleN": 195,
+      "valuesBelow0_05NmolL": 18,
+      "valuesExactly0_05NmolL": 32,
+      "status": "0.05 is a lower calibration/reporting bound, not established LOD/LOQ or proven imputation. Table 2 gives model predictions at bin centers; sparse oldest bins, no confirmed OCP/stage/censoring policy. No E2 assays."
+    }
+  ],
+  "sourceFiles": {
+    "madsen2022_full_xml": {
+      "fileName": "madsen2022-full.xml",
+      "sha256": "ae2410f0b9998b64c7bc3074455338dbd539300582a92337bf00d3c63cb029ff",
+      "bytes": 116268
+    },
+    "madsen2022_lms_xlsx": {
+      "fileName": "madsen-Supplemental_Table_1_LMS_entries.xlsx",
+      "sha256": "45cd1b63284c9f53a5936abee7ab8d8e6fce13a19025d4e2cbed0e5b3468897e",
+      "bytes": 53908
+    },
+    "madsen2022_ri_xlsx": {
+      "fileName": "Supplemental_Table_2_Nonparametric_RI.xlsx",
+      "sha256": "9457d3179d1287d746f7fc8a26f1caa6dde12d38a6405a1f0436f63d8a37b3b9",
+      "bytes": 33198
+    },
+    "kushnir2010_final_author_pdf": {
+      "fileName": "kushnir2010-author.pdf",
+      "sha256": "25132120d7379f5d1e94dc6a6381e4de6550d901121afcd70b3bd987d457442d",
+      "bytes": 196612
+    },
+    "kulle2010_final_pdf": {
+      "fileName": "kulle2010-author.pdf",
+      "sha256": "338f4ae59c84fc76c7104ca7a2241e83eb59409c65fdc39f10345224a19e160d",
+      "bytes": 191756
+    },
+    "holmes2021_author_pdf": {
+      "fileName": "holmes-author.pdf",
+      "sha256": "ebdd5e568198a049d41c2aaad1432a25fd85741b19cf0a3a4201dacb5dbd8fb6",
+      "bytes": 469099
+    },
+    "holmes2021_raw_data": {
+      "fileName": "raw_data.xlsx",
+      "sha256": "d2e567d93dab72e61bd8825c84dda92eb75785d35d449708e20bfb7f58acead4",
+      "bytes": 18613
+    }
+  },
+  "recommendation": [
+    "First prepare a separately approved mockup/proposal for female TT annual P50 ages6–18, using existing age/sex and unchanged laboratory RI.",
+    "Then resolve low-value male E2 presentation and whole-age/interpolation policy; do not silently discard P50 below sample LOQ or activate all6–18 as equally certain.",
+    "Adult male E2 requires controlled vector curve reading before any numerical implementation."
+  ],
+  "notActivated": [
+    "ordinary age profile",
+    "sex-specific curve or selector",
+    "laboratory RI",
+    "stage RI",
+    "SDS/percentile",
+    "interpolation policy",
+    "patient concentration point",
+    "history or synchronization"
+  ]
+}
