@@ -13,6 +13,9 @@ export async function emulatePhone(page, { width, height, safeArea = width > hei
     cdp = await page.context().newCDPSession(page);
     sessions.set(page, cdp);
   }
+  // Apply insets before resizing: the shell must see the new safe area in its
+  // resize callback, as it does during a real device rotation.
+  await cdp.send('Emulation.setSafeAreaInsetsOverride', { insets: safeArea });
   // Keep Playwright's own viewport bookkeeping aligned (screenshots may restore it).
   await page.setViewportSize({ width, height });
   await cdp.send('Emulation.setDeviceMetricsOverride', {
@@ -20,7 +23,6 @@ export async function emulatePhone(page, { width, height, safeArea = width > hei
     screenWidth: width, screenHeight: height,
     screenOrientation: { type: width > height ? 'landscapePrimary' : 'portraitPrimary', angle: width > height ? 90 : 0 },
   });
-  await cdp.send('Emulation.setSafeAreaInsetsOverride', { insets: safeArea });
   return cdp;
 }
 

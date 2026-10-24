@@ -21,6 +21,9 @@ async function assertLandscapeGeometry(page, frame, width, height) {
   await expect.poll(async () => (await layoutGeometry(page, frame)).host.header.height).toBe(52);
   await expect.poll(async () => (await layoutGeometry(page, frame)).host.dock.height).toBe(52);
   await expect.poll(async () => (await layoutGeometry(page, frame)).content.container.width).toBe(width - 124);
+  // The shell recomputes its measured height on the next ResizeObserver frame
+  // after the physical orientation and safe-area change have both arrived.
+  if (frame !== page) await expect.poll(async () => (await layoutGeometry(page, frame)).host.panel.bottom).toBe(height);
   const { host, content } = await layoutGeometry(page, frame);
   expect(host.viewport).toEqual({ width, height });
   expect(host.dock.width).toBe(552);
