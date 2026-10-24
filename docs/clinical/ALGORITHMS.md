@@ -6397,6 +6397,45 @@ Wpływ na dotychczasowe wyniki: dodanie KR **nie zmienia** prognoz Bayley–Pinn
 
 **Wpływ kliniczny**: zmiana dotyczy wyłącznie przypadków, w których równanie zwraca wynik poniżej zmierzonego wzrostu (pacjenci tuż przy końcu wzrastania); prognoza punktowa może wzrosnąć maksymalnie o wielkość artefaktu (tu 0,8 cm, zawsze wewnątrz błędu metody), a górne granice przedziałów pozostają niezmienione. Status: wdrożenie zaakceptowane kierunkowo przez właściciela (rozmowa 2026-08-13); nie nadaje metodom statusu „zwalidowane klinicznie".
 
+### GROWTH-LIVE-PANEL — podgląd siatki w ścieżce „Nowy pomiar” (2026-10-23)
+
+**Zakres.** Po zatwierdzeniu makiety przez właściciela: Start i DocPro, istniejący
+pacjent z bazy, jawny wybór „Nowy pomiar”, wiek bieżącej wizyty poniżej 18 lat,
+dwukolumnowy formularz. Domyślnie wzrost, przełączenie na masę, a po powiększeniu
+także obie siatki obok siebie. Karta ma wysokość formularza ze zwiniętym
+pokwitaniem. Pełny ekran obejmuje również powłokę `app.html`.
+
+**Źródła i obliczenia.** Panel używa modeli istniejących generatorów OLAF/OLA,
+WHO i Palczewskiej oraz `getCentilePercentileStatsForSource`. Nie dodaje norm,
+wzorów, progów, ekstrapolacji ani alternatywnego doboru źródła. Zachowuje
+dostępność eksportu (m.in. OLAF od 36 miesięcy, WHO poniżej 36 miesięcy, tryb
+profesjonalny dla Palczewskiej) i natywny plan zakresów Palczewskiej; jeżeli
+potrzebne są obie strony wieku, oferuje przełącznik zakresu. Zachowuje przebieg
+pomiarów, informacje o wieku kostnym oraz widoczne w Kreatorze boksy, komentarze,
+strzałki i nawiasy. Rozmieszczenie adnotacji używa współrzędnych wieku/wartości;
+stare przesunięcia pikselowe są odczytywane z geometrią oryginalnej strony PDF.
+
+**Odczyt.** Punkt pomiaru ma statystykę z produkcyjnej funkcji dla wieku i płci.
+Pomiędzy pomiarami wskaźnik odczytuje odcinek faktycznie widocznej linii eksportu;
+jest to odczyt położenia na wykresie, nie nowy pomiar ani prognoza. Niczego nie
+zapisuje. Dymek ma tekst `#111111` i białe tło o kryciu 85% (przezroczystość 15%),
+bez rozmycia. Kursor na siatce pozostaje zwykłą strzałką. W pełnym ekranie
+dostępne dane rodziców są w nagłówku; MPH ma znacznik 6×6 px i etykietę poza
+polem siatki wzrostu. Zachowane są ustawienia widoczności Kreatora.
+
+**Granica danych.** Zamrożona migawka i token operacji zastępują podmienianie
+globalnego stanu na czas renderowania. Pusta robocza historia nie przywraca
+usuniętych wpisów z wcześniejszych zapisów. Zmiana osoby, odtworzenie zapisu,
+blokada, przejście do innej ramki i utrata układu dwukolumnowego usuwają podgląd.
+Wskaźnik, zmiana rodzaju siatki i pełny ekran nie oznaczają pacjenta jako
+zmienionego i nie uruchamiają autosave.
+
+**Wpływ kliniczny.** Zmiana prezentacji i dostępu do istniejącej siatki;
+dotychczasowe wyniki, interpretacje i eksport pozostają bez zmian. Opcjonalne
+argumenty generatorów kończą odczyt modelu przed tworzeniem strony i efektami
+ubocznymi Kreatora. Testy adaptera, hosta, renderera i scenariusze przeglądarkowe
+używają wyłącznie fikcyjnych pacjentów i rzeczywistych funkcji produkcyjnych.
+
 ### GROWTH-TRAJ — automatyczna analiza trajektorii na siatce centylowej, wdrożenie do testów 2026-08-08
 
 Moduł `vilda_trajectory_analysis.js` (`window.VildaTrajectoryAnalysis`) analizuje wszystkie kolejne odcinki między pomiarami (wzrost, masa, BMI) i podsumowuje całą trajektorię. Renderowany w karcie „Zaawansowane obliczenia wzrostowe" pod tabelą tempa wg okresów.

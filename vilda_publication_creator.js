@@ -170,9 +170,12 @@
     return s;
   }
 
-  function growthRoot() {
-    var root = w.chartCreatorData;
-    if (!root || typeof root !== 'object') root = w.chartCreatorData = {};
+  function growthRoot(rootOverride) {
+    var root = rootOverride === undefined ? w.chartCreatorData : rootOverride;
+    if (!root || typeof root !== 'object') {
+      root = {};
+      if (rootOverride === undefined) w.chartCreatorData = root;
+    }
     if (root.growth && root.growth.version === 1) return initAnnotations(root.growth);
     var g = initAnnotations({ version: 1, legacy: {} });
     var used = {};
@@ -262,38 +265,43 @@
     return g;
   }
 
-  function annotationRoot(ctxId) {
-    return sharesGrowth(ctxId) ? growthRoot() : ctxRoot(ctxId);
+  function annotationRoot(ctxId, rootOverride) {
+    return sharesGrowth(ctxId) ? growthRoot(rootOverride) : ctxRoot(ctxId, rootOverride);
   }
 
-  function documentRoot(ctxId) {
-    var root = w.chartCreatorData;
-    if (!root || typeof root !== 'object') root = w.chartCreatorData = {};
+  function documentRoot(ctxId, rootOverride) {
+    var root = rootOverride === undefined ? w.chartCreatorData : rootOverride;
+    if (!root || typeof root !== 'object') {
+      root = {};
+      if (rootOverride === undefined) w.chartCreatorData = root;
+    }
     var s = root[ctxId];
     if (!s || typeof s !== 'object') s = root[ctxId] = {};
     return s;
   }
 
-  function ctxRoot(ctxId) {
-    return initAnnotations(documentRoot(ctxId));
+  function ctxRoot(ctxId, rootOverride) {
+    return initAnnotations(documentRoot(ctxId, rootOverride));
   }
 
   function regRoot() {
     return annotationRoot(creatorContext !== 'pub' ? creatorContext : 'palRegular');
   }
 
-  function advForContext(adv, ctxId) {
+  function advForContext(adv, ctxId, snapshotOptions) {
     if (!STORE_CONTEXTS[ctxId] || !adv || typeof adv !== 'object') return adv;
+    var readOnly = snapshotOptions && snapshotOptions.readOnly === true;
     /* OLAF może korzystać z historii podstawowej przy pustej zaawansowanej.
        Te same adnotacje muszą dostać te same pomiary w obu źródłach. Zmienia
        to wyłącznie wejście nakładki, nie dane ani generator krzywych. */
-    if (sharesGrowth(ctxId) && adv === w.advancedGrowthData && typeof w.getEffectiveCentileGrowthDataState === 'function') {
+    if (!readOnly && sharesGrowth(ctxId) && adv === w.advancedGrowthData && typeof w.getEffectiveCentileGrowthDataState === 'function') {
       try {
         var effective = w.getEffectiveCentileGrowthDataState();
         if (effective && typeof effective === 'object') adv = effective;
       } catch (e) { /* ignore */ }
     }
-    var s = annotationRoot(ctxId);
+    var explicitRoot = readOnly ? snapshotOptions.root : undefined;
+    var s = annotationRoot(ctxId, explicitRoot);
     var v = Object.create(adv);
     v.__ctxRegular = true;
     v.pubLayout = s.layout;
@@ -303,9 +311,29 @@
     v.__sharedGrowth = sharesGrowth(ctxId);
     v.__growthRoot = v.__sharedGrowth ? s : null;
     /* położenia strony poziomej — czytane bez tworzenia magazynu */
-    var presentation = w.chartCreatorData && w.chartCreatorData[ctxId];
+    var presentationRoot = readOnly ? explicitRoot : w.chartCreatorData;
+    var presentation = presentationRoot && presentationRoot[ctxId];
     v.pubPosL = presentation && presentation.posL && typeof presentation.posL === 'object' ? presentation.posL : null;
+    if (readOnly) {
+      v.__readOnlySnapshot = true;
+      v.__sourceGeometries = snapshotOptions.sourceGeometries || {};
+    }
     return v;
+  }
+
+  /* Read-only panel: migration and position resolution run on a private copy.
+     Explicit original PDF geometries preserve legacy dx/dy semantics without
+     consulting the active patient's data, Creator UI, or geometry caches. */
+  function computeSnapshotLayout(ctx, advanced, root, ctxId, chartType, geom, options) {
+    if (!STORE_CONTEXTS[ctxId]) return [];
+    var privateRoot = copyData(root && typeof root === 'object' ? root : {});
+    var privateAdvanced = Object.assign({}, advanced || {});
+    var adv = advForContext(privateAdvanced, ctxId, {
+      readOnly: true,
+      root: privateRoot,
+      sourceGeometries: options && options.sourceGeometries
+    });
+    return computeLayout(ctx, adv, chartType, geom);
   }
 
   /*
@@ -802,6 +830,12 @@
   /* Starszy zapis zawiera piksele. Geometria pochodzi zawsze z prawdziwego
      generatora źródła, również gdy jako pierwszy otwarto drugi rodzaj siatki. */
   function sourceGeometry(context, chartType, adv, currentGeom) {
+    if (adv.__readOnlySnapshot) {
+      var geometries = adv.__sourceGeometries;
+      var source = geometries && geometries[context] && geometries[context][chartType];
+      if (!source) throw new Error('Missing source geometry for ' + context + '/' + chartType);
+      return source;
+    }
     checkGeometryOwner();
     if (context === adv.__creatorContext && !currentGeom.posScale) return currentGeom;
     if (geomByContext[context] && geomByContext[context][chartType]) return geomByContext[context][chartType];
@@ -872,6 +906,7 @@
         item.moved = Math.abs(item.x - item.autoX) > 0.001 || Math.abs(item.y - item.autoY) > 0.001;
       }
     });
+    if (adv.__readOnlySnapshot) return;
     if (!geom.posScale) {
       checkGeometryOwner();
       if (!geomByContext[adv.__creatorContext]) geomByContext[adv.__creatorContext] = {};
@@ -1119,8 +1154,22 @@
     try { if (typeof w.calculateGrowthAdvanced === 'function') w.calculateGrowthAdvanced(); } catch (e) { /* ignore */ }
   }
 
+  var lastCreatorSaveSignature = null;
+
+  function creatorSaveSignature() {
+    var adv = w.advancedGrowthData || {};
+    try {
+      return JSON.stringify([w.chartCreatorData || null, adv.pubLayout, adv.pubFree, adv.pubOptions]);
+    } catch (e) { return null; }
+  }
+
   function scheduleSave() {
     try { if (typeof w.vildaPersistScheduleSave === 'function') w.vildaPersistScheduleSave(); } catch (e) { /* ignore */ }
+    var signature = creatorSaveSignature();
+    if (signature !== null && signature !== lastCreatorSaveSignature) {
+      lastCreatorSaveSignature = signature;
+      try { document.dispatchEvent(new w.CustomEvent('vilda:centile-creator-changed')); } catch (e2) { /* ignore */ }
+    }
   }
 
   function setArrowEnabled(point, enabled) {
@@ -1384,6 +1433,12 @@
       return defaultOptionValue(name, 'pub');
     }
     return defaultOptionValue(name, 'default');
+  }
+
+  function snapshotElementEnabled(name, ctxId, root) {
+    var options = root && root[ctxId] && root[ctxId].options;
+    if (options && Object.prototype.hasOwnProperty.call(options, name)) return options[name] !== false;
+    return defaultOptionValue(name, ctxId);
   }
 
   function setOption(name, value) {
@@ -2832,6 +2887,7 @@
   function openCreator(opts) {
     if (typeof document === 'undefined') return;
     if (ui) { closeCreator(); return; }
+    lastCreatorSaveSignature = creatorSaveSignature();
     var ctxId = opts && STORE_CONTEXTS[opts.context] ? opts.context : 'pub';
     /* Odśwież dane karty PRZED bramkami i budową podglądu — bez tego na
        podglądzie mogłoby zabraknąć np. świeżo wpisanego wieku kostnego
@@ -3239,6 +3295,8 @@
   w.VildaPublicationCreator = {
     __vildaPublicationCreator: true,
     drawAnnotations: drawAnnotations,
+    computeSnapshotLayout: computeSnapshotLayout,
+    snapshotElementEnabled: snapshotElementEnabled,
     open: openCreator,
     close: closeCreator,
     /* Eksport wewnętrznych funkcji geometrii na potrzeby testów jednostkowych
