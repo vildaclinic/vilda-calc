@@ -1,4 +1,15 @@
-# Pokrycie odniesień hormonalnych — audyt 18 października 2026
+# Pokrycie odniesień hormonalnych — stan 24 października 2026
+
+**Aktualny przegląd po scaleniu E2 D3 #766 i INSL3 #770:**
+[wyniki i rekomendowana kolejność](REFERENCE_COVERAGE_REVIEW_2026_10_24.md),
+[zapis kontroli rzeczywistych funkcji](evidence/reference-coverage-audit-2026-10-24.json).
+Baza `7ff480c2`, **85 profili / `2026-10-22.2`, silnik `1.4.0`**.
+Odrębne bloki źródłowe nie zwiększają liczby zwykłych profili. Madsen
+2022 ma niewykorzystane roczne P50 męskiego E2 i żeńskiego TT 6–18;
+nie są jeszcze wdrożone. Audyt nie aktywuje kandydatów.
+
+Poniżej zachowano historię i jej pierwotne hashe. Sekcja „Kolejność
+pracy” opisuje wcześniejsze decyzje, a nie zadania ponownie do wykonania.
 
 Pierwotny stan po scaleniu PR [#716](https://github.com/vildaclinic/vilda-calc/pull/716),
 sprawdzony na `audyt` `d3a64f232556fec6068385da00f5139b8ec17cfb`.
@@ -93,6 +104,29 @@ Zgoda na ten ograniczony zakres nie jest walidacją medyczną.
 [Kontrakt źródła i granice](FSH_D3_SOURCE.md),
 [audyt pełnego tekstu, liczb i hashy](evidence/fsh-d3-source-audit-2026-10-23.json).
 
+Uzupełnienie 24.10.2026 po scaleniu **E2 D3 #766**: osobny blok ma
+26 literalnych P50 wieku **19–44**, z wyłączeniem rozbieżnego węzła 18.
+Cały możliwy wiek musi pasować; mediana źródła nie wymaga odpowiedzi D3,
+lecz punkt pacjentki wymaga jawnego D3 bieżącego wyniku i pozostałych
+warunków. To odrębna warstwa poza 85 profilami, bez nowych RI i migawki
+historii. [Kontrakt E2 D3](E2_D3_SOURCE.md).
+
+Uzupełnienie 24.10.2026 po scaleniu **INSL3 #770**: w istniejącym
+„O wykresie i źródła” działa odczyt przybliżonej modelowanej P50
+Albrethsen 2020 według Methods, przy zachowanym podpisie Mean figury.
+Domeny `[10;27,6] ∪ [31,4;60,9]` dodatkowo ograniczają bezpośrednio
+czytelne fragmenty. Cały przedział wieku musi pasować do jednego
+fragmentu; 18–19 lat pozostaje zasłonięte. Nie uruchomiono punktu,
+konwertera, RI, SDS lub zapisu. [Kontrakt INSL3](INSL3_AGE_SOURCE.md).
+
+Aktualny ponowny odczyt posiadanych pełnych źródeł wskazuje dwa realne
+kandydaty: **13 rocznych P50 TT dziewcząt i 13 E2 chłopców, 6–18**,
+Madsen 2022. Obecnie nie ma odpowiednich krzywych/punktów tych płci;
+to luka implementacji, nie pełny brak źródła. Rekomendowany pierwszy
+zakres to propozycja/makieta TT dziewcząt; niski E2 6–7 wymaga osobnej
+polityki wobec LLOQ i nieznanej cenzury. To rekomendacja, nie akceptacja
+wdrożenia. [Pełny przegląd i ograniczenia](REFERENCE_COVERAGE_REVIEW_2026_10_24.md#madsen-2022--dwa-niewykorzystane-eksporty).
+
 ## Co oznacza „luka”
 
 Rozróżniamy zwykły liczbowy punkt na osi wieku, osobne zestawienie
@@ -126,9 +160,9 @@ metoda lub kontekst kliniczny mogą wyłączyć punkt również w tych zakresach
 | FSH | [7 dni,80 lat] | [0,02;19) lat | M >80; F ≥19. Wiek 1–<6 wymaga odpowiednio G1/Th1. Dorosłe kobiety mają osobne odniesienia fazowe/menopauzalne. |
 | AMH | [7 dni,70 lat] | [0,02;46) lat | M >70; F ≥46 nie ma zwykłej mediany wieku. LiLACS ma osobną informację o medianie całej grupy M80–90, bez porównania z pacjentem. Xu udostępnia odrębne punkty P50 35/40/45/50/55. |
 | Inhibina B | [7 dni,80 lat] | [0,02;47,75] lat | M >80 ma do 101 lat osobny aktywny panel średnich Baccarelli. F >47,75 pozostaje poza zatwierdzonym odczytem; nie jest to granica kohorty, LOD/LOQ ani rozpoznanie menopauzy. |
-| Testosteron całkowity | [7,212] dni; [1,86] lat | Brak zwykłego profilu | M po 212. dniu do <1 roku; >86. W 1–<3 są dwie odrębne przybliżone mediany grup Kushnir, nie ciągły model. Po 212. dniu do 1 roku nadal działa blokada jakości/rozdzielczości obecnego odczytu. F ma niezależną interpretację laboratoryjną; nie dopisujemy p50 na podstawie RI. |
-| Estradiol | Brak zwykłego profilu | [0,02;1] roku; `(1,6)` przy aktualnym Th1; [6,18] lat | W `(1,6)` wyłącznie stała mediana całej grupy B1 1–8 lat, nie model wieku; przy braku Th1 luka pozostaje. F >18 bez zwykłej mediany wieku. Dorosła faza cyklu ma własne odniesienia. M ma niezależne odniesienia laboratoryjne. |
-| INSL3 | UI nie pokazuje liczbowego punktu | Brak zwykłego profilu | Niemowlęcy profil M istnieje wewnątrz silnika, ale UI świadomie go nie aktywuje. Względna linia nie jest stężeniem. Potrzebny osobny projekt ilościowego odniesienia. |
+| Testosteron całkowity | [7,212] dni; [1,86] lat | Brak zwykłego profilu | M po 212. dniu do <1 roku: bramka jakości/rozdzielczości odczytu, nie automatycznie P50 <LOD; >86: koniec źródła. W 1–<3 już działają dwie mediany grup Kushnir. F ma niezależną interpretację laboratoryjną oraz niewykorzystane 13 P50 Madsen 6–18, nie pochodzące z RI. |
+| Estradiol | Brak zwykłego profilu | [0,02;1] roku; `(1,6)` przy aktualnym Th1; [6,18] lat | W `(1,6)` stała mediana całej grupy B1 1–8, nie model wieku; brak Th1 pozostawia lukę. F >18 bez zwykłej mediany wieku, lecz faza i E2 D3 19–44 są dostępne osobno. M ma RI oraz niewykorzystane 13 P50 Madsen 6–18; dorośli Frederiksen wymagają kontrolowanego odczytu. |
+| INSL3 | UI nie pokazuje liczbowego punktu | Brak zwykłego profilu | Niemowlęcy profil M pozostaje nieaktywny w UI; względna linia nie jest stężeniem. #770 dodał odrębny odczyt wieku w źródłach, bez punktu, konwertera lub norm. Zasłonięcia i granice jego polityki nie są brakiem całej publikacji. |
 
 Ponadto zwykłe profile niemowlęce nie pokrywają pierwszych dni życia przed
 podanym początkiem. Nie rozszerzamy ich na wcześniaków ani na starszy wiek.
@@ -166,6 +200,13 @@ znane przeciwwskazanie i niedostępny kontekst nie dostają zastępczego punktu.
 - **AMH Xu:** działa osobna informacja z pięcioma źródłowymi P50 i sąsiednimi
   punktami wieku. Nie tworzy ciągłej mediany, punktu pacjentki ani
   ekstrapolacji między grupami. Szczegóły: [plan AMH](../AMH_REFERENCE_PLAN.md).
+- **FSH/E2 dnia 3:** literalne P50 wieku i opcjonalne porównanie bieżącego
+  wyniku działają w osobnych blokach. FSH ma domenę `(18,44]`, E2 `[19,44]`;
+  nie jest to uniwersalna mediana wieku niezależnie od cyklu. Nie trzeba
+  ponownie wdrażać #766 lub rozszerzać norm laboratoryjnych.
+- **INSL3 według wieku:** odczyt źródłowy #770 jest zakończonym etapem;
+  ocena wyniku/konwerter pozostają osobnym projektem, nie automatyczną
+  kontynuacją odczytu ryciny.
 - **Inhibina B seniorów:** istnieje aktywne porównanie ze średnią grupy
   Baccarelli [80,90) i [90,101]. Nie zastępujemy go medianą i nie
   przedłużamy zwykłego modelu Borelli ponad 80.
@@ -232,13 +273,15 @@ z jawnymi, nadal nierozstrzygniętymi ograniczeniami opisanymi poniżej.
 - [Moya-Salazar 2022](https://doi.org/10.1016/j.heliyon.2022.e10592):
   przedstawiono średnie i RI, nie potrzebne p50; jednostki i wybrane liczby
   są niespójne między częściami artykułu. Nie liczymy mediany ze średniej/RI.
-- [Albrethsen 2020, INSL3](https://doi.org/10.1210/clinem/dgaa145): istnieją
-  ilościowe dane dojrzewających i dorosłych mężczyzn, ale oznaczenie
-  statystyki środkowej i eksport liczbowy wymagają wyjaśnienia. Nie
-  przeskalowujemy względnej ilustracji do stężenia i nie nazywamy jej p50.
-  [Tulumcu 2025](https://doi.org/10.3389/fendo.2025.1574760) także podaje
-  mediany grupowe, ale przypisanie wieku wizyt i materiału wymaga osobnej
-  polityki. Nie jest to brak wszelkich źródeł INSL3.
+- [Albrethsen 2020, INSL3](https://doi.org/10.1210/clinem/dgaa145):
+  **aktualizacja 24.10 po #770** — Methods uzasadnia modelowaną P50 przy
+  zachowanej rozbieżności podpisu Mean. Kontrolowany odczyt jest już
+  prezentowany w źródłach, bez dopasowanego zastępczego fitu. Nadal nie
+  zasila punktu pacjenta lub skali względnej linii. Zasłonięcia, w tym
+  18–19, nie są rozstrzygnięte przez PDF/PPTX.
+  [Tulumcu 2025](https://doi.org/10.3389/fendo.2025.1574760) nie zastępuje
+  brakującego odczytu medianą jednej z wizyt. Szczegóły:
+  [kontrakt INSL3](INSL3_AGE_SOURCE.md).
 
 ## Poszerzenie przeglądu LH dziewcząt — decyzja 20.10.2026
 
@@ -326,7 +369,10 @@ menopauzę i dawne zapisane oceny. Dorosły Tanner nie zastępuje kontekstu
 cyklu. Nie dodaje pytania do formularza, liczb ani profili median wieku.
 Dokładny zakres, przypadki i ograniczenia: [E2_CYCLE_CONTEXT.md](../E2_CYCLE_CONTEXT.md).
 
-## Kolejność pracy
+## Kolejność pracy — zapis decyzji 18–22.10.2026
+
+Aktualna rekomendacja po ukończeniu tych etapów:
+[przegląd 24.10](REFERENCE_COVERAGE_REVIEW_2026_10_24.md#wynik-i-rekomendowana-kolejność).
 
 1. Decyzja o żeńskim LH została podjęta 20.10: dla `(16,18)` wdrożyć
    punkt samego wyniku bez domyślnej mediany, nowego profilu i dodatkowych
@@ -353,9 +399,10 @@ Dokładny zakres, przypadki i ograniczenia: [E2_CYCLE_CONTEXT.md](../E2_CYCLE_CO
 
 Przegląd publikacji był ukierunkowany na LH F16–18 oraz wymienione
 priorytetowe luki. Nie jest systematycznym przeglądem całego piśmiennictwa.
-Pozostałe końce wieku (m.in. FSH M>80, LH M>89, T M>86), męski E2
-i żeński T pozostają odrębnymi zadaniami źródłowymi; wykrycie braku
-wdrożonego profilu nie oznacza dowodu braku publikacji.
+Pozostałe końce wieku (m.in. FSH M>80, LH M>89, T M>86) pozostają
+odrębnymi zadaniami źródłowymi. **Męski E2 i żeński T ponownie oceniono
+24.10: Madsen ma liczby 6–18, wymagające osobnego projektu wdrożenia.**
+Wykrycie braku wdrożonego profilu nie oznacza dowodu braku publikacji.
 
 Sam audyt z 18.10 nie zmieniał generatorów, danych runtime, norm, krzywych,
 zapisu pacjenta ani zasobów PWA. Osobna poprawka E2 zmienia kwalifikację
