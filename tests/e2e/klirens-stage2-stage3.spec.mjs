@@ -272,7 +272,9 @@ test('próbka punktowa zachowuje nieznaną postać masową Ox/Cr i nazywa kwas c
   await expect(oxcr).toHaveAttribute('data-clcr-assessment', 'unassessed');
   await expect(oxcr).toContainText('Nie podano postaci analitu');
   await page.locator('#Ox_Cr_spot_unit').selectOption('mg/dL:acid');
-  await expect(oxcr).toContainText('kwas szczawiowy bezwodny');
+  await expect(oxcr).toContainText('kwas szczawiowy');
+  await expect(page.locator('#Ox_Cr_spot_unit')).toHaveValue('mg/dL:acid');
+  expect(JSON.parse(await oxcr.getAttribute('data-clcr-oxcr-snapshot')).basis).toBe('acid');
   await expect(oxcr).toHaveAttribute('data-clcr-assessment', 'above');
   await expect.poll(async () => Number(await oxcr.getAttribute('data-clcr-value'))).toBe(0.1);
   await expect(stone).toContainText(
