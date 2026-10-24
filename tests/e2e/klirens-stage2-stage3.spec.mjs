@@ -164,7 +164,7 @@ test('dorosły panel kamicy przelicza masę i mmol oraz stosuje profile EAU 2026
   await expect(stone).not.toContainText('mg/kg/24 h');
 });
 
-test('pediatryczny Ca w DZM i Ca/Cr używają odrębnych jednostek oraz wstrzymują nakładającą się granicę wieku', async ({ page }) => {
+test('pediatryczny Ca w DZM zachowuje EAU, a Ca/Cr ma odrębny zakres Mayo także na granicy wieku', async ({ page }) => {
   await openCalculator(page);
   await setPatient(page, {
     age: 2,
@@ -188,19 +188,25 @@ test('pediatryczny Ca w DZM i Ca/Cr używają odrębnych jednostek oraz wstrzymu
   await page.locator('#Ucr_spot_unit').selectOption('mg/dl');
 
   const stone = page.locator('#stoneInfo');
+  const spot = page.locator('[data-clcr-series="CaCr_spot"]');
   await expect(stone).toContainText('Wapń w DZM — pediatria');
   await expect(stone).toContainText('poniżej opublikowanego przez EAU progu 0,1 mmol/kg/24 h');
-  await expect(stone).toContainText(/Ca\/Cr\s*jest\s*poniżej\s*opublikowanego\s*progu\s*1[.,]5\s*mol\/mol/);
+  await expect(spot).toHaveCount(1);
+  await expect(spot).toHaveAttribute('data-clcr-tone', 'success');
+  await expect(spot.locator('.clcr-result-reference-value')).toHaveText('0,02–0,50');
+  await expect(stone).toContainText('Mayo');
 
   await page.locator('#age').fill('3');
   await openOptionalDetails(page, '#ageMonths');
   await page.locator('#ageMonths').fill('0');
-  await expect(stone).toContainText('interpretacja wstrzymana');
-  await expect(stone).toContainText('dokładnej granicy 1., 3., 5. lub 7. roku życia');
+  await expect(spot.locator('.clcr-result-reference-value')).toHaveText('0,02–0,41');
+  await expect(spot).toHaveAttribute('data-clcr-tone', 'success');
+  await expect(stone).toContainText('poniżej opublikowanego przez EAU progu 0,1 mmol/kg/24 h');
+  await expect(stone).not.toContainText('dokładnej granicy 1., 3., 5. lub 7. roku życia');
   await expect(stone.locator('.out-of-range')).toHaveCount(0);
 });
 
-test('graniczny pediatryczny Ca/Cr używa dokładnych mas molowych zamiast przybliżenia ×4', async ({ page }) => {
+test('pediatryczny Ca/Cr używa dokładnych mas molowych i odrębnego zakresu Mayo', async ({ page }) => {
   await openCalculator(page, 'spot');
   await setPatient(page, {
     age: 8,
@@ -214,13 +220,15 @@ test('graniczny pediatryczny Ca/Cr używa dokładnych mas molowych zamiast przyb
   await page.locator('#Ucr_spot_unit').selectOption('umol');
 
   const stone = page.locator('#stoneInfo');
-  await expect(stone).toContainText(/0[.,]600\s*mol\/mol/);
-  await expect(stone).toContainText(
-    'nie mieści się w opublikowanym przedziale <0.6 mol/mol'
-  );
+  const spot = page.locator('[data-clcr-series="CaCr_spot"]');
+  await expect(spot).toHaveCount(1);
+  await expect.poll(async () => Number(await spot.getAttribute('data-clcr-value'))).toBeCloseTo(0.212577793493635, 12);
+  await expect(spot).toHaveAttribute('data-clcr-tone', 'success');
+  await expect(spot.locator('.clcr-result-reference-value')).toHaveText('0,01–0,25');
+  await expect(stone).toContainText('Mayo');
 });
 
-test('wynik poniżej progu Ca/Cr nie jest zaokrąglany do wartości granicznej', async ({ page }) => {
+test('Ca/Cr poniżej dolnej granicy Mayo zachowuje odchylenie mimo zaokrąglenia do granicy', async ({ page }) => {
   await openCalculator(page, 'spot');
   await setPatient(page, {
     age: 8,
@@ -228,16 +236,21 @@ test('wynik poniżej progu Ca/Cr nie jest zaokrąglany do wartości granicznej',
     height: 125
   });
   await zaznacz(page.locator('#spotSameSpecimen'));
-  await page.locator('#Ca_spot').fill('0.5996');
-  await page.locator('#Ca_spot_unit').selectOption('mmol/L');
-  await page.locator('#Ucr_spot').fill('1000');
-  await page.locator('#Ucr_spot_unit').selectOption('umol');
+  await page.locator('#Ca_spot').fill('0.996');
+  await page.locator('#Ca_spot_unit').selectOption('mg/dl');
+  await page.locator('#Ucr_spot').fill('100');
+  await page.locator('#Ucr_spot_unit').selectOption('mg/dl');
 
   const stone = page.locator('#stoneInfo');
-  await expect(stone).toContainText(/<0[.,]600\s*mol\/mol/);
-  await expect(stone).toContainText(
-    'Ca/Cr jest poniżej opublikowanego progu 0.6 mol/mol'
-  );
+  const spot = page.locator('[data-clcr-series="CaCr_spot"]');
+  await expect(spot).toHaveCount(1);
+  await expect.poll(async () => Number(await spot.getAttribute('data-clcr-value'))).toBeCloseTo(0.00996, 12);
+  await expect(spot).toHaveAttribute('data-clcr-tone', 'warning');
+  await expect(spot).toContainText('Poniżej normy dla wieku');
+  await expect(spot.locator('.clcr-result-reference-value')).toHaveText('0,01–0,25');
+  await expect(spot).toHaveAttribute('data-clcr-boundary', '<0,01');
+  await expect(spot).toContainText('Przed zaokrągleniem: <0,01 mg/mg');
+  await expect(stone).toContainText('Mayo');
 });
 
 test('próbka punktowa wymaga własnej postaci chemicznej szczawianu i nazywa kwas cytrynowy', async ({ page }) => {

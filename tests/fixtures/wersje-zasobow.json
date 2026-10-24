@@ -47,6 +47,22 @@
   "v": 1,
   "sha256": "24cd61e77a8801469982426e07ea95e318f42535f0a67b4c7f92a675a224eaff"
  },
+ "clcr_cacr.js": {
+  "v": 1,
+  "sha256": "5c13ce10c01eda53c31d790875064b15c7713bf478d64e7622589acfdbac81f9"
+ },
+ "clcr_cacr_reference_data.js": {
+  "v": 1,
+  "sha256": "9b0163b5428f24ba83fb55ec82871ac41635018ec3520a35cc907bbd8641870d"
+ },
+ "clcr_cacr_ui.css": {
+  "v": 1,
+  "sha256": "bdb499d315f00ac1a09969daef7ec671db5053650739b470437ab06cf00ef9c9"
+ },
+ "clcr_cacr_ui.js": {
+  "v": 1,
+  "sha256": "d6681b6a2ee207830ddb09c0c943c8cae1e22217e0c08fe5c9eb32da1b877358"
+ },
  "clcr_calculation_assumptions.js": {
   "v": 2,
   "sha256": "51c28e7eba0bfb9d6f901923032b7a83d7f38af0cdcc4ba294bd16cae291023f"
@@ -104,8 +120,8 @@
   "sha256": "49e0c3713735271498b9e52baa22b4cc1e9d8faa292ac4f93858cd7688e5220d"
  },
  "clcr_ui_workflow.js": {
-  "v": 17,
-  "sha256": "4790669cfcce4184ff20490eebf56d20621e2fa1f06d5611267ad448ab779c88"
+  "v": 18,
+  "sha256": "1fa4c8ffd1cc324b17bc6b7d03e2258db6654b0888667ddfbcdaa1b3dbd6ff7b"
  },
  "cukrzyca.js": {
   "v": 30,
@@ -252,16 +268,16 @@
   "sha256": "1f7f4555b11c7bc28a7e1cb47e01a7c19dfe9184e706dbb462a5145543d29a19"
  },
  "inline_kalkulator_klirens_02.js": {
-  "v": 13,
-  "sha256": "00ed5bc446eb54b87667354010226c0f303a024a1a9280b398bf754a67d27eb1"
+  "v": 14,
+  "sha256": "53ef9543220533be8cf05568b34b1d136d565e29b4151f08f93bdd9785e94b72"
  },
  "inline_kalkulator_klirens_03.js": {
   "v": 1,
   "sha256": "e001befeb185ae42780ecb51a5046c463b1691adea99292fd911b62e090919d6"
  },
  "inline_kalkulator_klirens_04.js": {
-  "v": 18,
-  "sha256": "4f90e104fb41509ba905d989c00389a0ec97b3a1043bb150aaf244c70ee7560c"
+  "v": 19,
+  "sha256": "326277dd645ccc31cf3ff37505c8868da83a2d4148860b29e289bdc7306c3e33"
  },
  "inline_kalkulator_klirens_05.js": {
   "v": 1,
@@ -272,8 +288,8 @@
   "sha256": "555ca77dae012c28f79c6cd419963ab20f651a77ab20d04b49640b6fc4214abf"
  },
  "inline_kalkulator_klirens_07.js": {
-  "v": 7,
-  "sha256": "0cbd6ac891a21aee4319c66c9cf442d87c0270ebc01c6f4b61c4308fcba027de"
+  "v": 8,
+  "sha256": "e0f444b79850449d24956c97451bed890647b3a598007f1f809e3d912c9f50c3"
  },
  "inline_kalkulator_klirens_08.js": {
   "v": 1,
