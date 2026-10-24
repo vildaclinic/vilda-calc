@@ -19,7 +19,7 @@
  *   bo i tak chcemy zwracać HTML z cache natychmiast.
  */
 
-const SW_VERSION = '1.1.359';
+const SW_VERSION = '1.1.360';
 const CACHE_PREFIX = 'pwa-kalorii';
 const SHELL_CACHE = `${CACHE_PREFIX}-shell-v${SW_VERSION}`;
 const RUNTIME_CACHE = `${CACHE_PREFIX}-runtime`;
@@ -1944,7 +1944,10 @@ const CORE_SHELL_URLS = [
   '/vilda_puberty_assessment_state.js?v=3',
   '/vilda_puberty_assessment_context.js?v=1',
   '/vilda_puberty_assessment_ui.js?v=1',
-  '/vilda_puberty_assessment_ui.css?v=1'
+  '/vilda_puberty_assessment_ui.css?v=1',
+  // Wspólny układ telefonu w poziomie jest potrzebny przed pierwszym malowaniem.
+  '/vilda_phone_landscape.js?v=1',
+  '/vilda_phone_landscape.css?v=1'
 ];
 
 // Dodatkowe strony i zasoby próbujemy dociągnąć w tle podczas instalacji,
@@ -2385,6 +2388,7 @@ const OPTIONAL_ASSETS = [
   '/vilda_shell.css?v=19',
   '/vilda_shell.css?v=20',
   '/vilda_shell.css?v=21',
+  '/vilda_shell.css?v=22',
   '/vilda_save_status_indicator.css?v=4',
   '/vilda_save_status_indicator.css?v=5',
   '/vilda_save_status_indicator.css?v=6',

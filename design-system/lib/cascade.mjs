@@ -14,7 +14,9 @@ export const THEMES = {
 };
 
 const VIEWPORT = 1200;
-const ABSENT_CLASSES = new Set(['vilda-embedded', 'display-mode-standalone', 'professional-bg', 'js-loading']);
+// Podgląd tokenów jest desktopowy, więc wariant fizycznie obróconego telefonu
+// nie może zastępować podstawowych wysokości nagłówka i Docka.
+const ABSENT_CLASSES = new Set(['vilda-embedded', 'vilda-phone-landscape', 'display-mode-standalone', 'professional-bg', 'js-loading']);
 const STATE_PSEUDO = /:(hover|focus|focus-visible|focus-within|active|checked|disabled|visited|target|open|empty|placeholder-shown)\b/;
 
 function mediaApplies(contexts) {

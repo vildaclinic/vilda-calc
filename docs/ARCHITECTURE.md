@@ -58,6 +58,10 @@ Skrypty są globalne i zależne od kolejności ładowania. Publiczne obiekty `wi
 
 Od P-KLAWIATURA-2 (2026-10-17) otwartą klawiaturę rozpoznaje się względem wysokości bazowej okna powłoki, nie bieżącego `innerHeight`. Wysokość bazowa to największa wysokość widziana przy tej szerokości; visualViewport podnosi ją tylko bez aktywnego pola. Robią tak `St()` w `vilda_shell.js` (`Kb_podstawa`), `vilda_klawiatura.js` (`nowaPodstawa`) i wcześniej `ios26-ui.js`. Nowy kod, który rozpoznaje klawiaturę, korzysta z tego samego wzorca.
 
+**Telefon w poziomie (2026-10-24).** `vilda_phone_landscape.js` ustawia na `<html>` klasę `vilda-phone-landscape` wyłącznie dla urządzenia dotykowego z grubym wskaźnikiem, krótszym bokiem fizycznego ekranu do 540 px CSS oraz poziomą orientacją `screen.orientation` (z rezerwowym `window.orientation` dla Safari). Wysokość okna i klawiatura nie decydują o tym wariancie. Dokument powłoki jest właścicielem klasy; przekazuje ją także ukrytym i nowo wczytanym panelom, a strona samodzielna rozpoznaje orientację sama. Publiczne `VildaPhoneLandscape.isActive()` i `refresh()` dotyczą wyłącznie prezentacji, bez zapisu stanu pacjenta lub konta.
+
+`vilda_phone_landscape.css`, ładowany na końcu `<head>` wspólnych stron, ogranicza nagłówek i Dock do 52 px oraz usuwa wielokrotne naliczanie bocznego `safe-area`: w powłoce nalicza je tylko host, w stronie samodzielnej jej `body`. Pozostają istniejące progi liczby kolumn formularza i pola dotykowe co najmniej 44 px. Moduł nie steruje widocznością Docka ani klawiaturą; nadal robią to `ios26-ui.js` i `vilda_shell.js`. Także przy szerokości telefonu od 992 px wysokość ramki wylicza istniejący mechanizm JS z ochroną aktywnej edycji, zamiast desktopowej reguły `100dvh`. Oba nowe zasoby są w podstawowym precache SW. Testy `phone-landscape`, `telefon-poziomo-mobile` i `telefon-poziomo-offline` sprawdzają klasyfikację, rzeczywiste wcięcia ekranu, geometrię, obrót, stan pacjenta, klawiaturę i zimny start offline.
+
 Moduł klawiatury:
 - trzyma 40 px nad zmierzoną klawiaturą;
 - przez 1,5 s po fokusie tylko podnosi pole, które coś zostawiło pod klawiaturą;
