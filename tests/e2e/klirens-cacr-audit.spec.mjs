@@ -196,6 +196,11 @@ for (const width of [1440, 390, 320]) {
     expect(colors.status).toBe(colors.patient);
     for (const color of colors.reference) expect(color, 'Norma i etykiety są neutralne').not.toBe(colors.patient);
     await expectReferenceFits(page);
+    const concentrationLines = await card(page).locator('.clcr-result-value').evaluate(node => {
+      const range = document.createRange(); range.selectNodeContents(node);
+      return [...new Set([...range.getClientRects()].map(rect => rect.top))];
+    });
+    expect(concentrationLines, 'Krótki wynik 0,400 pozostaje w jednym wierszu').toHaveLength(1);
     sameWidths(initial, await geometry(page, width));
     await kliknij(page.locator('#cacrSampleInfo > summary'));
     await expect(page.locator('#ui_cacr_known_problem')).toBeVisible();
@@ -252,6 +257,31 @@ for (const width of [1440, 390, 320]) {
     expect(errors).toEqual([]);
   });
 }
+
+test('Ca/Cr 361/375/381px: krótki wynik i pełna norma niemowlęcia mieszczą się przy szerszym kroju pisma', async ({ page }) => {
+  await openCalculator(page, 361);
+  await page.addStyleTag({ content: `
+    html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .cacr-proposal-card :is(.clcr-result-value, .clcr-result-reference-value) {
+      font-family: "DejaVu Sans", sans-serif !important;
+    }
+  ` });
+  for (const width of [361, 375, 381]) {
+    await page.setViewportSize({ width, height: 1000 });
+    await restore(page, { Ca_spot: '40', Ucr_spot: '100' });
+    await expectResult(page, { raw: 0.4, norm: [0.01, 0.3] });
+    await expectReferenceFits(page);
+    const lines = await card(page).locator('.clcr-result-value').evaluate(node => {
+      const range = document.createRange(); range.selectNodeContents(node);
+      return [...new Set([...range.getClientRects()].map(rect => rect.top))];
+    });
+    expect(lines, `${width}px: wynik 0,400 pozostaje w jednym wierszu`).toHaveLength(1);
+    await restore(page, { age: '0', ageMonths: '1', CaCr_entry_mode: 'direct',
+      CaCr_reported: '1129', CaCr_reported_unit: 'mmol/mol' });
+    await expectResult(page, { raw: 1129, unit: 'mmol/mol', tone: 'success', status: 'within', category: 'within' });
+    expect(await normNumbers(page), 'Obie granice normy niemowlęcia pozostają widoczne').toHaveLength(2);
+    await expectReferenceFits(page);
+  }
+});
 
 test('Ca/Cr: wapń 40 mg/dL jest dopuszczalny, jednostki są równoważne, zero różni się od braku danych', async ({ page }) => {
   await openCalculator(page);

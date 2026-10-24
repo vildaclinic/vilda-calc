@@ -449,7 +449,7 @@ html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .cacr-proposal
   html[data-clcr-workflow-ui="1"] #clcrForm .cacr-value-row { gap: var(--space-6px); }
   html[data-clcr-workflow-ui="1"] #clcrForm .cacr-value-row select { padding-inline: var(--space-4px); }
   html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .cacr-proposal-card { padding: var(--space-16px) !important; }
-  html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .cacr-proposal-main { gap: var(--space-8px); grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr); }
+  html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .cacr-proposal-main { gap: var(--space-8px); grid-template-columns: repeat(2, minmax(0, 1fr)); }
   html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .cacr-proposal-main--single { grid-template-columns: minmax(0, 1fr); }
   html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .cacr-proposal-card :is(.clcr-result-patient-label, .clcr-result-reference-label) { gap: var(--space-4px); font-size: 10px; }
   html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .cacr-proposal-card .clcr-result-patient-label { flex-wrap: nowrap; font-size: 9.5px; }
@@ -640,21 +640,28 @@ html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .cacr-proposal
 
 html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .cacr-proposal-card .clcr-result-reference-value {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   align-content: center;
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
   min-height: 53px;
-  font-size: 26px !important;
+  /* Leave room for wider platform fallback fonts, including DejaVu Sans. */
+  font-size: 24px !important;
   line-height: 1.12;
   letter-spacing: -.7px;
   white-space: nowrap;
 }
 
 html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .cacr-proposal-card .clcr-result-reference-value[data-reference-split="1"] {
-  font-size: 21px !important;
+  font-size: 19px !important;
   letter-spacing: -.3px;
 }
 
 .cacr-proposal-card .clcr-result-reference-value[data-reference-split="1"] > span {
   display: block;
+  min-width: 0;
+  max-width: 100%;
   white-space: nowrap;
 }
 
@@ -669,28 +676,40 @@ html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .cacr-proposal
 @media (max-width: 700px) {
   html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .cacr-proposal-card[data-clcr-value-length] .clcr-result-value {
     min-height: 47px;
-    font-size: clamp(24px, calc(220px / var(--cacr-value-length, 5)), 44px) !important;
+    font-size: clamp(24px, calc(210px / var(--cacr-value-length, 5)), 44px) !important;
   }
   html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .cacr-proposal-card .clcr-result-reference-value {
     min-height: 47px;
-    font-size: 23px !important;
+    font-size: 21px !important;
   }
   html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .cacr-proposal-card .clcr-result-reference-value[data-reference-split="1"] {
+    font-size: 16px !important;
+  }
+}
+
+@media (max-width: 380px) {
+  html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .cacr-proposal-card[data-clcr-value-length] .clcr-result-value {
+    font-size: clamp(24px, calc(190px / var(--cacr-value-length, 5)), 44px) !important;
+  }
+  html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .cacr-proposal-card .clcr-result-reference-value {
     font-size: 19px !important;
+  }
+  html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .cacr-proposal-card .clcr-result-reference-value[data-reference-split="1"] {
+    font-size: 14px !important;
   }
 }
 
 @media (max-width: 360px) {
   html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .cacr-proposal-card[data-clcr-value-length] .clcr-result-value {
     min-height: var(--brand-logo-size);
-    font-size: clamp(20px, calc(180px / var(--cacr-value-length, 5)), 36px) !important;
+    font-size: clamp(20px, calc(160px / var(--cacr-value-length, 5)), 36px) !important;
   }
   html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .cacr-proposal-card .clcr-result-reference-value {
     min-height: var(--brand-logo-size);
-    font-size: 19px !important;
+    font-size: 17px !important;
   }
   html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .cacr-proposal-card .clcr-result-reference-value[data-reference-split="1"] {
-    font-size: 15px !important;
+    font-size: 13px !important;
     letter-spacing: -.15px;
   }
 }
