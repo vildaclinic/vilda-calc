@@ -1,0 +1,1608 @@
+{
+  "schemaVersion": 1,
+  "reviewDate": "2026-10-24",
+  "baseAudyt": "7ff480c21129dcb006443ca9c929e508eeea55e2",
+  "classification": "Read-only technical coverage audit of already merged production behavior; no runtime, norm, clinical-reference activation, or clinical validation.",
+  "engineVersion": "1.4.0",
+  "runtimeVersion": "2026-10-09.5",
+  "dataVersion": "2026-10-22.2",
+  "profileCount": 85,
+  "inputSha256": {
+    "vilda_hormone_lifespan_reference.js": "efa9bf8764c2c6c3089ff97523ee55f205332c7ec893b53989f80120568c9540",
+    "vilda_hormone_lifespan_data.js": "6863a0682516f68cb59e85b8466b4038f1001d12215e4cd90780bd27b42f6207",
+    "vilda_hormone_lifespan_display.js": "d9d921af5f6952727c578c948e0267aa488af52fd9cc0ee3e1424964beff034a",
+    "vilda_hormone_lifespan.js": "cd95e7b0f615db232e39d73a643d57d06e66a7ae2927b44a6e9d5b7ad8eba649",
+    "vilda_hormone_lifespan_observations.js": "0ce37df26b1e38e416fc7c02072e9664ad890f924c9aad95851607b5c01b84ba",
+    "vilda_amh_age_reference_data.js": "faef362c7854fc86dd7721fed6b152de7f5f6eda9b33b698dceeae9dbe7b04dc",
+    "vilda_amh_age_reference.js": "67d868f70c4f5483093c9838a95a7e7e4d798504f764f128326247df5603c479",
+    "vilda_lab_puberty_data.js": "b3a8ff6f9883a707240dc337848533ed1c64d58c2bfe16b24b95db33ba223923",
+    "vilda_lab_puberty.js": "819794c1126f04f5986d584bd8b1b44d7e0d7458af4ce4cc66f70224bf259198",
+    "lab_units_data.js": "7a098c02661413cb333894590a84c0e67cd51251d4643d4145c0a4d7bbbc675f",
+    "lab_unit_converter.js": "717e938c3509affb065307638cd5f84b68aa10d5cb22caefc3bd55a6c7ccfc4c",
+    "vilda_lab_testosterone.js": "6e45385675aff950ce370f0d5b314f147dd7d4a1abfed45d400c298f1d1b42f7",
+    "vilda_lab_testosterone_data.js": "3d1acaf742a1772665080818e4549a048e0c717b154f9c39afd9c82b9498889f",
+    "vilda_lab_testosterone_units.js": "e67b907745a2097af9d03927ee591f7f520c2c3e61a6f4ce92841cbaa17a95d4",
+    "docs/clinical/hormone-lifespan/population-reference-data.json": "6eae1389acb85f6e508524ff1bfadab5d064bb80340b8d432aab4a3be6d4ea96",
+    "vilda_fsh_source.js": "d7a6bf2f9218168fc76f2af1af01a3c4aa228997cd9e731abd69707b33e7838b",
+    "vilda_e2_phase_source.js": "930dd0726e2da73de15216749f96b04675c7e81bf30296ed612f0af7ffdfe0b9",
+    "vilda_fsh_d3.js": "1b057317cf2cf1ffb296944ba02866ad22b562c2c1ec3edee83982d4d1965203",
+    "vilda_e2_d3.js": "279058ec600a7a7a4248812fedfa5f099177ef9188f32e871753f91da230cc45",
+    "vilda_amh_lilacs_source_ui.js": "174ca9702d4bb79f3190cffc29199f0bcc56b748f92579b4736d58f53187ea8a",
+    "vilda_insl3_age_source.js": "9ded5a3720c42e6fac1c9e71a310bd4af74ecc1318ff29930d68dcc570615a9c",
+    "docs/clinical/hormone-lifespan/fsh-source-data.json": "7fa61c1e3dd1fba702aee8eb09b2b8486be683098e3c1b27c4f960bd7ffdc0b0",
+    "docs/clinical/hormone-lifespan/e2-phase-source-data.json": "d39f1948c72e93a0f0b01416f10f6fc53b3872a8ceb5abc51839f0fab19a2214",
+    "docs/clinical/hormone-lifespan/fsh-d3-data.json": "6e4797e094ff191dafa53211c85f7bb32cd27dac462aea3a466ac02396f4a618",
+    "docs/clinical/hormone-lifespan/e2-d3-data.json": "4149332767a6a905935da64631ff965a569fd864d439f220f0664bcba368b533",
+    "docs/clinical/hormone-lifespan/amh-lilacs-source-data.json": "24de9dd58f056fff5388f370818951984a194c23de079263f1495a8bae80e54d",
+    "docs/clinical/hormone-lifespan/insl3-age-source-data.json": "27fd9c89ec63f661d5e47c77bbb133f7f55346c50a1f2a4ec1cb523738b5e83b",
+    "docs/clinical/hormone-lifespan/insl3-age-source-policy.json": "27f59b525cb6c5db3590fdc625b979867ae8c0ae838d42fe1661c4bd5c356289"
+  },
+  "probeCounts": {
+    "ordinary": 63492,
+    "gate": 1738,
+    "ageUncertainty": 392,
+    "comparisons": 196,
+    "senior": 22,
+    "xu": 44,
+    "labPhase": 15,
+    "otherLaboratory": 8,
+    "sourceLayers": {
+      "fshD3": 113,
+      "e2D3": 113,
+      "fshPhaseSource": 75,
+      "e2PhaseSource": 75,
+      "amhLilacsSource": 75
+    },
+    "insl3AgeSource": 1663,
+    "resultOnly": 54,
+    "total": 68075
+  },
+  "probeCountMeaning": "Recorded synthetic probe cases; these are not unique patients or independent clinical observations. VM parity includes additional coverage-atom evaluations and searches for a ready age in each existing profile.",
+  "vmParity": {
+    "ordinaryFullResults": 63492,
+    "allMainEngineFullResults": 91217,
+    "separateSourceLayers": true,
+    "insl3SourceReader": true,
+    "resultOnly": true,
+    "mismatches": 0,
+    "note": "Separate VM browser exports were executed; no DOM/browser rendering or PWA claim is made by this script."
+  },
+  "reproduction": {
+    "script": "docs/clinical/hormone-lifespan/audit_reference_coverage.mjs",
+    "invocation": "node docs/clinical/hormone-lifespan/audit_reference_coverage.mjs . <output-directory-outside-repository>",
+    "dependencies": "Node built-ins and git only; no npm package or browser installation is used by this inventory.",
+    "writesOnlyOutsideRepository": true,
+    "confirmsProductionInputHashesUnchanged": true,
+    "browserUiOrPwaExecutedByThisAuditScript": false
+  },
+  "scope": {
+    "ageDomainYears": [
+      0,
+      120
+    ],
+    "coarseScan": "0–90 every 0.25 years plus 91–120 yearly",
+    "exhaustiveBreakpoints": "Every published source knot, all profile endpoints, exact endpoints and midpoints of every adjacent open interval; endpoint neighbours ±1e-9 additionally probed.",
+    "qualification": "Actual production evaluate, not an interval union. Each main-engine outcome is compared with the browser VM export.",
+    "conditionalContext": "Term birth and G1/Th1 are explicitly hypothetical supplied facts. No Tanner stage, cycle phase, pregnancy, menopause, assay or specimen is inferred from age.",
+    "scope": "No clinical validation, no new source data, no patient records, no browser/no changes to app or tests.",
+    "ordinaryUiExceptions": [
+      "INSL3: engine profile exists but UI explicitly bypasses evaluation and concentration point; source engine readiness is latent only.",
+      "Female LH/FSH mini view: relative longitudinal means suppress the concentration point; ordinary life view uses a different contract.",
+      "ordinaryOnly profiles cannot be used by the sex-comparison renderer.",
+      "Baccarelli senior inset is an active independent group-mean comparison outside the 85-profile registry.",
+      "INSL3 now has a separate source-age reading, not an ordinary reference, converter or concentration point.",
+      "FSH D3 and E2 D3 have separate age-source curves and optional exact D3 patient points, outside the 85 ordinary profiles.",
+      "Age-profile gaps do not imply absence of existing cycle-phase laboratory RI or inset source statistics."
+    ]
+  },
+  "profileIds": [
+    "busch2022-male-fsh",
+    "busch2022-male-lh",
+    "busch2022-male-inhb",
+    "busch2022-male-amh",
+    "busch2022-male-t",
+    "busch2022-male-insl3",
+    "madsen2022-male-lh",
+    "madsen2022-male-fsh",
+    "zec2012-female-fsh-age-1-4",
+    "zec2012-female-fsh-age-4-8",
+    "zec2012-male-fsh-age-1-8",
+    "madsen2022-female-lh-age-6-16",
+    "madsen2022-female-fsh-age-6-16",
+    "madsen2022-female-e2-age-6-18",
+    "kelsey2014-male-t-childhood",
+    "madsen2022-male-t",
+    "walravens2025-male-t-18-29",
+    "walravens2025-male-t-30-39",
+    "walravens2025-male-t-40-49",
+    "walravens2025-male-t-50-59",
+    "walravens2025-male-t-60-69",
+    "walravens2025-male-t-70-79",
+    "walravens2025-male-t-80-plus",
+    "kelsey2016-male-inhb",
+    "borelli2025-male-inhb",
+    "wang2020-male-amh-age-1",
+    "wang2020-male-amh-age-2",
+    "wang2020-male-amh-age-3",
+    "wang2020-male-amh-age-4",
+    "wang2020-male-amh-age-5",
+    "wang2020-male-amh-age-6",
+    "wang2020-male-amh-age-7",
+    "wang2020-male-amh-age-8",
+    "wang2020-male-amh-age-9",
+    "wang2020-male-amh-age-10",
+    "wang2020-male-amh-age-11",
+    "wang2020-male-amh-age-13",
+    "wang2020-male-amh-age-14",
+    "tehrani2017-male-amh",
+    "jopling2018-male-amh-age-12-under13",
+    "jopling2018-male-amh-age-15-under18",
+    "benderradji2022-male-amh-age-20-under30",
+    "ljubicic2022-female-lh",
+    "ljubicic2022-female-fsh",
+    "ljubicic2022-female-inhb",
+    "ljubicic2022-female-amh",
+    "ljubicic2022-female-e2",
+    "jopling2018-female-amh-age-1-under5",
+    "jopling2018-female-amh-age-5-under8",
+    "jopling2018-female-amh-age-8-under12",
+    "jopling2018-female-amh-age-12-under15",
+    "jopling2018-female-amh-age-15-under18",
+    "fda2017-female-amh-age-18-under26",
+    "fda2017-female-amh-age-26-under31",
+    "fda2017-female-amh-age-31-under36",
+    "fda2017-female-amh-age-36-under41",
+    "fda2017-female-amh-age-41-under46",
+    "borelli2025-female-inhb-age-5p6-47p75",
+    "zhou2025-female-inhb-age-over1-under5",
+    "zhou2025-female-inhb-age-5-under5p6",
+    "laurentino2020-male-lh-18-under25",
+    "perheentupa2013-male-lh-25-29",
+    "perheentupa2013-male-lh-30-39",
+    "perheentupa2013-male-lh-40-49",
+    "perheentupa2013-male-lh-50-59",
+    "perheentupa2013-male-lh-60-69",
+    "perheentupa2013-male-lh-70-74",
+    "laurentino2020-male-fsh-18-under25",
+    "perheentupa2013-male-fsh-25-29",
+    "perheentupa2013-male-fsh-30-39",
+    "perheentupa2013-male-fsh-40-49",
+    "perheentupa2013-male-fsh-50-59",
+    "perheentupa2013-male-fsh-60-69",
+    "perheentupa2013-male-fsh-70-74",
+    "yeap2007-male-lh-75-79",
+    "yeap2007-male-lh-80-84",
+    "yeap2007-male-lh-85-89",
+    "ljubicic2020-male-fsh-75-80-approximate",
+    "wilson2023-male-fsh-age-16-18",
+    "wilson2023-female-fsh-age-16-19",
+    "woloszynek2015-male-amh-age-18-20",
+    "wilson2023-male-lh-age-over16-under18",
+    "kushnir2010-male-t-1-2-group",
+    "kushnir2010-male-t-2-3-group",
+    "kulle2024-female-e2-th1-age-over1-under6"
+  ],
+  "changesSinceHistoricalScan": {
+    "historicalEvidence": "docs/clinical/hormone-lifespan/evidence/reference-coverage-audit-2026-10-18.json",
+    "historicalEvidenceSha256": "93b43939184150b0a6ad4681e1b1095f0e7b2825148dd6ba36c1677e5122f6a8",
+    "historicalBase": "d3a64f232556fec6068385da00f5139b8ec17cfb",
+    "historicalDataVersion": "2026-10-18.3",
+    "historicalProfileCount": 82,
+    "addedIds": [
+      "borelli2025-female-inhb-age-5p6-47p75",
+      "kushnir2010-male-t-1-2-group",
+      "kushnir2010-male-t-2-3-group",
+      "kulle2024-female-e2-th1-age-over1-under6"
+    ],
+    "replacedIds": [
+      "borelli2025-female-inhb-age-5p6-47"
+    ],
+    "interpretation": "Three additional profiles (two male testosterone groups and female E2/Th1); one female inhibin-B profile replaced by an extended profile. Later source-only layers are outside the 85-profile ordinary registry.",
+    "completedSeparateSteps": [
+      "Female LH (16,18): result-only point, no median (evaluateResultOnly).",
+      "Adult female E2 with unknown cycle: four neutral laboratory RI variants, no default follicular status.",
+      "LiLACS male AMH, FSH/E2 phase information and FSH D3: separate source layers.",
+      "PR #766: E2 D3, literal P50 age19–44 in a separate source block.",
+      "PR #770: INSL3 age-source reader, direct visible segments only; no converter or patient-point activation."
+    ]
+  },
+  "qualifiedOrdinaryCoverage": [
+    {
+      "analyte": "lh",
+      "sex": "male",
+      "ready": [
+        "[0.01916495550992, 0.6652977412731]",
+        "[6, 89]"
+      ],
+      "unsupportedAge": [
+        "[0, 0.01916495550992)",
+        "[1, 6)",
+        "(89, 120]"
+      ],
+      "sourceQuality": [
+        "(0.6652977412731, 1)"
+      ]
+    },
+    {
+      "analyte": "lh",
+      "sex": "female",
+      "ready": [
+        "[0.02, 1]",
+        "[6, 16]"
+      ],
+      "unsupportedAge": [
+        "[0, 0.02)",
+        "(1, 6)",
+        "(16, 120]"
+      ],
+      "sourceQuality": []
+    },
+    {
+      "analyte": "fsh",
+      "sex": "male",
+      "ready": [
+        "[0.01916495550992, 80]"
+      ],
+      "unsupportedAge": [
+        "[0, 0.01916495550992)",
+        "(80, 120]"
+      ],
+      "sourceQuality": []
+    },
+    {
+      "analyte": "fsh",
+      "sex": "female",
+      "ready": [
+        "[0.02, 19)"
+      ],
+      "unsupportedAge": [
+        "[0, 0.02)",
+        "[19, 120]"
+      ],
+      "sourceQuality": []
+    },
+    {
+      "analyte": "amh",
+      "sex": "male",
+      "ready": [
+        "[0.01916495550992, 70]"
+      ],
+      "unsupportedAge": [
+        "[0, 0.01916495550992)",
+        "(70, 120]"
+      ],
+      "sourceQuality": []
+    },
+    {
+      "analyte": "amh",
+      "sex": "female",
+      "ready": [
+        "[0.02, 46)"
+      ],
+      "unsupportedAge": [
+        "[0, 0.02)",
+        "[46, 120]"
+      ],
+      "sourceQuality": []
+    },
+    {
+      "analyte": "inhb",
+      "sex": "male",
+      "ready": [
+        "[0.01916495550992, 80]"
+      ],
+      "unsupportedAge": [
+        "[0, 0.01916495550992)",
+        "(80, 120]"
+      ],
+      "sourceQuality": []
+    },
+    {
+      "analyte": "inhb",
+      "sex": "female",
+      "ready": [
+        "[0.02, 47.75]"
+      ],
+      "unsupportedAge": [
+        "[0, 0.02)",
+        "(47.75, 120]"
+      ],
+      "sourceQuality": []
+    },
+    {
+      "analyte": "t",
+      "sex": "male",
+      "ready": [
+        "[0.01916495550992, 0.580424366872]",
+        "[1, 86]"
+      ],
+      "unsupportedAge": [
+        "[0, 0.01916495550992)",
+        "(86, 120]"
+      ],
+      "sourceQuality": [
+        "(0.580424366872, 1)"
+      ]
+    },
+    {
+      "analyte": "t",
+      "sex": "female",
+      "ready": [],
+      "unsupportedAge": [
+        "[0, 120]"
+      ],
+      "sourceQuality": []
+    },
+    {
+      "analyte": "e2",
+      "sex": "male",
+      "ready": [],
+      "unsupportedAge": [
+        "[0, 120]"
+      ],
+      "sourceQuality": []
+    },
+    {
+      "analyte": "e2",
+      "sex": "female",
+      "ready": [
+        "[0.02, 18]"
+      ],
+      "unsupportedAge": [
+        "[0, 0.02)",
+        "(18, 120]"
+      ],
+      "sourceQuality": []
+    },
+    {
+      "analyte": "insl3",
+      "sex": "male",
+      "ready": [
+        "[0.01916495550992, 0.2600958247775]"
+      ],
+      "unsupportedAge": [
+        "[0, 0.01916495550992)",
+        "[1, 120]"
+      ],
+      "sourceQuality": [
+        "(0.2600958247775, 1)"
+      ]
+    },
+    {
+      "analyte": "insl3",
+      "sex": "female",
+      "ready": [],
+      "unsupportedAge": [
+        "[0, 120]"
+      ],
+      "sourceQuality": []
+    }
+  ],
+  "requiredContext": {
+    "termBirth": "Explicit synthetic term-birth context for profiles that require it; no preterm-to-term extrapolation.",
+    "fshChildhood": "The 1–<6 part requires explicit sex-appropriate G1/Th1.",
+    "femaleE2Childhood": "The (1,6) part requires explicit Th1; it is a fixed median of the complete B1 age1–8 source group, not a continuous exact-age model.",
+    "allPossibleAges": "A whole supplied age interval must qualify; no inferred date, midpoint, Tanner stage or cycle phase.",
+    "latentInsl3": "The male infant reference engine is ready7–95days, but UI does not activate a concentration dot. The newer age-source reader is a different source-only API."
+  },
+  "closedGapChecks": [
+    {
+      "analyte": "fsh",
+      "sex": "male",
+      "ageYears": 16,
+      "result": {
+        "status": "ready",
+        "profileId": "wilson2023-male-fsh-age-16-18",
+        "groupId": null,
+        "referenceValue": 2.4066234448145565,
+        "statistic": "median",
+        "unit": "IU/L",
+        "category": "ordinary-age-numeric-reference"
+      }
+    },
+    {
+      "analyte": "fsh",
+      "sex": "female",
+      "ageYears": 18,
+      "result": {
+        "status": "ready",
+        "profileId": "wilson2023-female-fsh-age-16-19",
+        "groupId": null,
+        "referenceValue": 4.399647684355955,
+        "statistic": "median",
+        "unit": "IU/L",
+        "category": "ordinary-age-numeric-reference"
+      }
+    },
+    {
+      "analyte": "amh",
+      "sex": "male",
+      "ageYears": 18,
+      "result": {
+        "status": "ready",
+        "profileId": "woloszynek2015-male-amh-age-18-20",
+        "groupId": null,
+        "referenceValue": 44.9678800856531,
+        "statistic": "group-median",
+        "unit": "pmol/L",
+        "category": "ordinary-age-numeric-reference"
+      }
+    },
+    {
+      "analyte": "amh",
+      "sex": "male",
+      "ageYears": 19.916666666666668,
+      "result": {
+        "status": "ready",
+        "profileId": "woloszynek2015-male-amh-age-18-20",
+        "groupId": null,
+        "referenceValue": 44.9678800856531,
+        "statistic": "group-median",
+        "unit": "pmol/L",
+        "category": "ordinary-age-numeric-reference"
+      }
+    },
+    {
+      "analyte": "lh",
+      "sex": "male",
+      "ageYears": 16,
+      "result": {
+        "status": "ready",
+        "profileId": "madsen2022-male-lh",
+        "groupId": null,
+        "referenceValue": 3.5142066372549756,
+        "statistic": "median",
+        "unit": "IU/L",
+        "category": "ordinary-age-numeric-reference"
+      }
+    },
+    {
+      "analyte": "lh",
+      "sex": "male",
+      "ageYears": 17,
+      "result": {
+        "status": "ready",
+        "profileId": "wilson2023-male-lh-age-over16-under18",
+        "groupId": null,
+        "referenceValue": 2.603196549069626,
+        "statistic": "median",
+        "unit": "IU/L",
+        "category": "ordinary-age-numeric-reference"
+      }
+    },
+    {
+      "analyte": "lh",
+      "sex": "male",
+      "ageYears": 18,
+      "result": {
+        "status": "ready",
+        "profileId": "laurentino2020-male-lh-18-under25",
+        "groupId": null,
+        "referenceValue": 3,
+        "statistic": "group-mean",
+        "unit": "IU/L",
+        "category": "ordinary-age-numeric-reference"
+      }
+    },
+    {
+      "analyte": "t",
+      "sex": "male",
+      "ageYears": 1.5,
+      "result": {
+        "status": "ready",
+        "profileId": "kushnir2010-male-t-1-2-group",
+        "groupId": null,
+        "referenceValue": 0.10401,
+        "statistic": "group-median",
+        "unit": "nmol/L",
+        "category": "ordinary-age-numeric-reference"
+      }
+    },
+    {
+      "analyte": "t",
+      "sex": "male",
+      "ageYears": 2.5,
+      "result": {
+        "status": "ready",
+        "profileId": "kushnir2010-male-t-2-3-group",
+        "groupId": null,
+        "referenceValue": 0.06934,
+        "statistic": "group-median",
+        "unit": "nmol/L",
+        "category": "ordinary-age-numeric-reference"
+      }
+    },
+    {
+      "analyte": "inhb",
+      "sex": "female",
+      "ageYears": 47.75,
+      "result": {
+        "status": "ready",
+        "profileId": "borelli2025-female-inhb-age-5p6-47p75",
+        "groupId": null,
+        "referenceValue": 7,
+        "statistic": "median",
+        "unit": "pg/mL",
+        "category": "ordinary-age-numeric-reference"
+      }
+    },
+    {
+      "analyte": "e2",
+      "sex": "female",
+      "ageYears": 2,
+      "result": {
+        "status": "ready",
+        "profileId": "kulle2024-female-e2-th1-age-over1-under6",
+        "groupId": null,
+        "referenceValue": 15,
+        "statistic": "group-median",
+        "unit": "pmol/L",
+        "category": "ordinary-age-numeric-reference"
+      }
+    }
+  ],
+  "separateLayers": {
+    "fshD3": {
+      "version": "2026-10-23.1",
+      "function": "vilda_fsh_d3.js:evaluate",
+      "domain": "(18,44]",
+      "notAnOrdinaryProfile": true,
+      "exampleWithoutDay3": {
+        "context": {
+          "sourceStatus": "ready",
+          "identityKey": "fictional-coverage-audit-person",
+          "analyte": "fsh",
+          "sex": "female",
+          "selected": [
+            "fsh"
+          ],
+          "compare": false,
+          "view": "life",
+          "contextBasis": "current-patient",
+          "sampleDateISO": null,
+          "ageYears": 30,
+          "ageUpperYears": 30,
+          "ageUpperInclusive": true,
+          "cyclePhase": "follicular",
+          "cycleDay": "unknown",
+          "measurement": {
+            "status": "valid",
+            "value": 7,
+            "unit": "IU/L",
+            "operator": "=",
+            "isExact": true
+          }
+        },
+        "result": {
+          "status": "ready",
+          "median": {
+            "value": 5.941,
+            "unit": "IU/L",
+            "ageYears": 30,
+            "interpolated": false
+          },
+          "comparison": {
+            "status": "unavailable",
+            "reason": "unknown-cycle-day",
+            "patientPoint": null
+          },
+          "ageContext": {
+            "lowerYears": 30,
+            "upperYears": 30,
+            "upperInclusive": true,
+            "basis": "entered-age-lower-bound"
+          },
+          "ageDomain": {
+            "min": 16,
+            "max": 44,
+            "minimumInclusive": true,
+            "maximumInclusive": true
+          }
+        }
+      },
+      "exampleWithDay3": {
+        "context": {
+          "sourceStatus": "ready",
+          "identityKey": "fictional-coverage-audit-person",
+          "analyte": "fsh",
+          "sex": "female",
+          "selected": [
+            "fsh"
+          ],
+          "compare": false,
+          "view": "life",
+          "contextBasis": "current-patient",
+          "sampleDateISO": null,
+          "ageYears": 30,
+          "ageUpperYears": 31,
+          "ageUpperInclusive": false,
+          "cyclePhase": "follicular",
+          "cycleDay": "day3",
+          "measurement": {
+            "status": "valid",
+            "value": 7,
+            "unit": "IU/L",
+            "operator": "=",
+            "isExact": true
+          }
+        },
+        "result": {
+          "status": "ready",
+          "median": {
+            "value": 5.941,
+            "unit": "IU/L",
+            "ageYears": 30,
+            "interpolated": false
+          },
+          "comparison": {
+            "status": "ready",
+            "reason": null,
+            "patientPoint": {
+              "ageYears": 30,
+              "value": 7,
+              "unit": "IU/L"
+            }
+          },
+          "ageContext": {
+            "lowerYears": 30,
+            "upperYears": 31,
+            "upperInclusive": false,
+            "basis": "entered-age-lower-bound"
+          },
+          "ageDomain": {
+            "min": 16,
+            "max": 44,
+            "minimumInclusive": true,
+            "maximumInclusive": true
+          }
+        }
+      },
+      "completed44NotCovered": {
+        "context": {
+          "sourceStatus": "ready",
+          "identityKey": "fictional-coverage-audit-person",
+          "analyte": "fsh",
+          "sex": "female",
+          "selected": [
+            "fsh"
+          ],
+          "compare": false,
+          "view": "life",
+          "contextBasis": "current-patient",
+          "sampleDateISO": null,
+          "ageYears": 44,
+          "ageUpperYears": 45,
+          "ageUpperInclusive": false,
+          "cyclePhase": "follicular",
+          "cycleDay": "unknown",
+          "measurement": {
+            "status": "valid",
+            "value": 7,
+            "unit": "IU/L",
+            "operator": "=",
+            "isExact": true
+          }
+        },
+        "result": {
+          "status": "unavailable",
+          "reason": "unsupported-source-age"
+        }
+      }
+    },
+    "e2D3": {
+      "version": "2026-10-23.1",
+      "function": "vilda_e2_d3.js:evaluate",
+      "domain": "[19,44]",
+      "notAnOrdinaryProfile": true,
+      "excludedSourceNode": 18,
+      "exampleWithoutDay3": {
+        "context": {
+          "sourceStatus": "ready",
+          "identityKey": "fictional-coverage-audit-person",
+          "analyte": "estradiol",
+          "sex": "female",
+          "selected": [
+            "e2"
+          ],
+          "compare": false,
+          "view": "life",
+          "contextBasis": "current-patient",
+          "sampleDateISO": null,
+          "ageYears": 30,
+          "ageUpperYears": 30,
+          "ageUpperInclusive": true,
+          "cyclePhase": "follicular",
+          "cycleDay": "unknown",
+          "measurement": {
+            "status": "valid",
+            "value": 7,
+            "unit": "pg/mL",
+            "operator": "=",
+            "isExact": true
+          }
+        },
+        "result": {
+          "status": "ready",
+          "median": {
+            "value": 56.336,
+            "unit": "pg/mL",
+            "ageYears": 30,
+            "interpolated": false
+          },
+          "comparison": {
+            "status": "unavailable",
+            "reason": "unknown-cycle-day",
+            "patientPoint": null
+          },
+          "ageContext": {
+            "lowerYears": 30,
+            "upperYears": 30,
+            "upperInclusive": true,
+            "basis": "entered-age-lower-bound"
+          },
+          "ageDomain": {
+            "min": 19,
+            "max": 44,
+            "minimumInclusive": true,
+            "maximumInclusive": true
+          }
+        }
+      },
+      "exampleWithDay3": {
+        "context": {
+          "sourceStatus": "ready",
+          "identityKey": "fictional-coverage-audit-person",
+          "analyte": "estradiol",
+          "sex": "female",
+          "selected": [
+            "e2"
+          ],
+          "compare": false,
+          "view": "life",
+          "contextBasis": "current-patient",
+          "sampleDateISO": null,
+          "ageYears": 30,
+          "ageUpperYears": 31,
+          "ageUpperInclusive": false,
+          "cyclePhase": "follicular",
+          "cycleDay": "day3",
+          "measurement": {
+            "status": "valid",
+            "value": 7,
+            "unit": "pg/mL",
+            "operator": "=",
+            "isExact": true
+          }
+        },
+        "result": {
+          "status": "ready",
+          "median": {
+            "value": 56.336,
+            "unit": "pg/mL",
+            "ageYears": 30,
+            "interpolated": false
+          },
+          "comparison": {
+            "status": "ready",
+            "reason": null,
+            "patientPoint": {
+              "ageYears": 30,
+              "value": 7,
+              "unit": "pg/mL"
+            }
+          },
+          "ageContext": {
+            "lowerYears": 30,
+            "upperYears": 31,
+            "upperInclusive": false,
+            "basis": "entered-age-lower-bound"
+          },
+          "ageDomain": {
+            "min": 19,
+            "max": 44,
+            "minimumInclusive": true,
+            "maximumInclusive": true
+          }
+        }
+      },
+      "exact18NotCovered": {
+        "context": {
+          "sourceStatus": "ready",
+          "identityKey": "fictional-coverage-audit-person",
+          "analyte": "estradiol",
+          "sex": "female",
+          "selected": [
+            "e2"
+          ],
+          "compare": false,
+          "view": "life",
+          "contextBasis": "current-patient",
+          "sampleDateISO": null,
+          "ageYears": 18,
+          "ageUpperYears": 18,
+          "ageUpperInclusive": true,
+          "cyclePhase": "follicular",
+          "cycleDay": "unknown",
+          "measurement": {
+            "status": "valid",
+            "value": 7,
+            "unit": "pg/mL",
+            "operator": "=",
+            "isExact": true
+          }
+        },
+        "result": {
+          "status": "unavailable",
+          "reason": "unsupported-placement-age"
+        }
+      },
+      "completed44NotCovered": {
+        "context": {
+          "sourceStatus": "ready",
+          "identityKey": "fictional-coverage-audit-person",
+          "analyte": "estradiol",
+          "sex": "female",
+          "selected": [
+            "e2"
+          ],
+          "compare": false,
+          "view": "life",
+          "contextBasis": "current-patient",
+          "sampleDateISO": null,
+          "ageYears": 44,
+          "ageUpperYears": 45,
+          "ageUpperInclusive": false,
+          "cyclePhase": "follicular",
+          "cycleDay": "unknown",
+          "measurement": {
+            "status": "valid",
+            "value": 7,
+            "unit": "pg/mL",
+            "operator": "=",
+            "isExact": true
+          }
+        },
+        "result": {
+          "status": "unavailable",
+          "reason": "unsupported-source-age"
+        }
+      },
+      "censoredResultDoesNotBecomeExactPoint": {
+        "context": {
+          "sourceStatus": "ready",
+          "identityKey": "fictional-coverage-audit-person",
+          "analyte": "estradiol",
+          "sex": "female",
+          "selected": [
+            "e2"
+          ],
+          "compare": false,
+          "view": "life",
+          "contextBasis": "current-patient",
+          "sampleDateISO": null,
+          "ageYears": 30,
+          "ageUpperYears": 31,
+          "ageUpperInclusive": false,
+          "cyclePhase": "follicular",
+          "cycleDay": "day3",
+          "measurement": {
+            "status": "valid",
+            "value": 7,
+            "unit": "pg/mL",
+            "operator": "<",
+            "isExact": false
+          }
+        },
+        "result": {
+          "status": "ready",
+          "median": {
+            "value": 56.336,
+            "unit": "pg/mL",
+            "ageYears": 30,
+            "interpolated": false
+          },
+          "comparison": {
+            "status": "unavailable",
+            "reason": "non-exact-measurement",
+            "patientPoint": null
+          },
+          "ageContext": {
+            "lowerYears": 30,
+            "upperYears": 31,
+            "upperInclusive": false,
+            "basis": "entered-age-lower-bound"
+          },
+          "ageDomain": {
+            "min": 19,
+            "max": 44,
+            "minimumInclusive": true,
+            "maximumInclusive": true
+          }
+        }
+      }
+    },
+    "insl3AgeSource": {
+      "dataVersion": "2026-10-24.1",
+      "policyVersion": "2026-10-24.1",
+      "function": "vilda_insl3_age_source.js:read",
+      "allowedAgeDomains": [
+        [
+          10,
+          27.6
+        ],
+        [
+          31.4,
+          60.9
+        ]
+      ],
+      "directSegmentCount": 17,
+      "directColumnCount": 732,
+      "noPatientComparison": true,
+      "noNormsOrConverterActivation": true,
+      "examples": [
+        {
+          "context": {
+            "sourceStatus": "ready",
+            "sex": "male",
+            "ageYears": 12,
+            "ageUpperYears": 12,
+            "ageUpperInclusive": true,
+            "contextBasis": "current-form"
+          },
+          "result": {
+            "status": "ready",
+            "kind": "educational-age-source-reading",
+            "valueKind": "approximate-value",
+            "sourceId": "albrethsen2020-insl3-age-direct",
+            "sourceVersion": "2026-10-24.1",
+            "policyVersion": "2026-10-24.1",
+            "clinicalActivation": false,
+            "unit": "ng/mL",
+            "valueMin": 0.18,
+            "valueMax": 0.18,
+            "ageLower": 12,
+            "ageUpper": 12,
+            "ageUpperInclusive": true,
+            "sourceLoqCrossing": true,
+            "sourceLodCrossing": false
+          }
+        },
+        {
+          "context": {
+            "sourceStatus": "ready",
+            "sex": "male",
+            "ageYears": 12,
+            "ageUpperYears": 13,
+            "ageUpperInclusive": false,
+            "contextBasis": "current-form"
+          },
+          "result": {
+            "status": "unavailable",
+            "reason": "age-interval-not-fully-readable",
+            "kind": "educational-age-source-reading",
+            "clinicalActivation": false
+          }
+        },
+        {
+          "context": {
+            "sourceStatus": "ready",
+            "sex": "male",
+            "ageYears": 18,
+            "ageUpperYears": 18,
+            "ageUpperInclusive": true,
+            "contextBasis": "current-form"
+          },
+          "result": {
+            "status": "unavailable",
+            "reason": "stroke-occluded",
+            "kind": "educational-age-source-reading",
+            "clinicalActivation": false
+          }
+        },
+        {
+          "context": {
+            "sourceStatus": "ready",
+            "sex": "male",
+            "ageYears": 25,
+            "ageUpperYears": 25,
+            "ageUpperInclusive": true,
+            "contextBasis": "current-form"
+          },
+          "result": {
+            "status": "ready",
+            "kind": "educational-age-source-reading",
+            "valueKind": "approximate-value",
+            "sourceId": "albrethsen2020-insl3-age-direct",
+            "sourceVersion": "2026-10-24.1",
+            "policyVersion": "2026-10-24.1",
+            "clinicalActivation": false,
+            "unit": "ng/mL",
+            "valueMin": 1.27,
+            "valueMax": 1.27,
+            "ageLower": 25,
+            "ageUpper": 25,
+            "ageUpperInclusive": true,
+            "sourceLoqCrossing": false,
+            "sourceLodCrossing": false
+          }
+        },
+        {
+          "context": {
+            "sourceStatus": "ready",
+            "sex": "male",
+            "ageYears": 40,
+            "ageUpperYears": 41,
+            "ageUpperInclusive": false,
+            "contextBasis": "current-form"
+          },
+          "result": {
+            "status": "ready",
+            "kind": "educational-age-source-reading",
+            "valueKind": "approximate-value",
+            "sourceId": "albrethsen2020-insl3-age-direct",
+            "sourceVersion": "2026-10-24.1",
+            "policyVersion": "2026-10-24.1",
+            "clinicalActivation": false,
+            "unit": "ng/mL",
+            "valueMin": 1.25,
+            "valueMax": 1.25,
+            "ageLower": 40,
+            "ageUpper": 41,
+            "ageUpperInclusive": false,
+            "sourceLoqCrossing": false,
+            "sourceLodCrossing": false
+          }
+        },
+        {
+          "context": {
+            "sourceStatus": "ready",
+            "sex": "male",
+            "ageYears": 75,
+            "ageUpperYears": 75,
+            "ageUpperInclusive": true,
+            "contextBasis": "current-form"
+          },
+          "result": {
+            "status": "unavailable",
+            "reason": "outside-proposed-age-domain",
+            "kind": "educational-age-source-reading",
+            "clinicalActivation": false
+          }
+        }
+      ],
+      "historicalContextDoesNotBorrowCurrentAge": {
+        "context": {
+          "sourceStatus": "ready",
+          "sex": "male",
+          "ageYears": 25,
+          "ageUpperYears": 25,
+          "ageUpperInclusive": true,
+          "contextBasis": "sample",
+          "sampleDateISO": "2020-01-02"
+        },
+        "result": {
+          "status": "unavailable",
+          "reason": "context-basis-not-supported",
+          "kind": "educational-age-source-reading",
+          "clinicalActivation": false
+        }
+      }
+    },
+    "amhLilacs": {
+      "noPatientComparison": true,
+      "noOrdinaryAgeMedian": true,
+      "example": {
+        "context": {
+          "sourceStatus": "ready",
+          "identityKey": "fictional-coverage-audit-person",
+          "analyte": "amh",
+          "sex": "male",
+          "selected": [
+            "amh"
+          ],
+          "compare": false,
+          "view": "life",
+          "contextBasis": "current-patient",
+          "sampleDateISO": null,
+          "ageYears": 85,
+          "ageUpperYears": 85,
+          "ageUpperInclusive": true,
+          "cyclePhase": "follicular",
+          "cycleDay": "unknown",
+          "measurement": {
+            "status": "valid",
+            "value": 2,
+            "unit": "ng/mL",
+            "operator": "=",
+            "isExact": true
+          }
+        },
+        "result": {
+          "status": "ready",
+          "median": {
+            "value": 12.1,
+            "unit": "pmol/L",
+            "approxNgMl": 1.7
+          },
+          "ageDomain": {
+            "minYears": 80,
+            "maxYears": 90
+          }
+        }
+      },
+      "completed90NotCovered": {
+        "context": {
+          "sourceStatus": "ready",
+          "identityKey": "fictional-coverage-audit-person",
+          "analyte": "amh",
+          "sex": "male",
+          "selected": [
+            "amh"
+          ],
+          "compare": false,
+          "view": "life",
+          "contextBasis": "current-patient",
+          "sampleDateISO": null,
+          "ageYears": 90,
+          "ageUpperYears": 91,
+          "ageUpperInclusive": false,
+          "cyclePhase": "follicular",
+          "cycleDay": "unknown",
+          "measurement": {
+            "status": "valid",
+            "value": 2,
+            "unit": "ng/mL",
+            "operator": "=",
+            "isExact": true
+          }
+        },
+        "result": {
+          "status": "unavailable",
+          "reason": "ambiguous-age"
+        }
+      }
+    },
+    "manufacturerFshPhase": {
+      "noPatientComparison": true,
+      "sourceAgeDomainUnknown": true,
+      "example": {
+        "context": {
+          "sourceStatus": "ready",
+          "identityKey": "fictional-coverage-audit-person",
+          "analyte": "fsh",
+          "sex": "female",
+          "selected": [
+            "fsh"
+          ],
+          "compare": false,
+          "view": "life",
+          "contextBasis": "current-patient",
+          "sampleDateISO": null,
+          "ageYears": 30,
+          "ageUpperYears": 31,
+          "ageUpperInclusive": false,
+          "cyclePhase": "follicular",
+          "cycleDay": "unknown",
+          "measurement": {
+            "status": "valid",
+            "value": 7,
+            "unit": "IU/L",
+            "operator": "=",
+            "isExact": true
+          }
+        },
+        "result": {
+          "status": "ready",
+          "median": {
+            "value": 6.9,
+            "unit": "IU/L"
+          },
+          "ageDomain": null,
+          "group": {
+            "id": "follicular",
+            "label": "Faza folikularna",
+            "sourceLabel": "Follicular phase",
+            "printedN": 376,
+            "definition": "Nazwa grupy z tabeli producenta; dokładnych dni fazy nie podano."
+          }
+        }
+      }
+    },
+    "anckaertE2Phase": {
+      "noPatientComparison": true,
+      "example": {
+        "context": {
+          "sourceStatus": "ready",
+          "identityKey": "fictional-coverage-audit-person",
+          "analyte": "estradiol",
+          "sex": "female",
+          "selected": [
+            "e2"
+          ],
+          "compare": false,
+          "view": "life",
+          "contextBasis": "current-patient",
+          "sampleDateISO": null,
+          "ageYears": 30,
+          "ageUpperYears": 31,
+          "ageUpperInclusive": false,
+          "cyclePhase": "follicular",
+          "cycleDay": "unknown",
+          "measurement": {
+            "status": "valid",
+            "value": 7,
+            "unit": "pg/mL",
+            "operator": "=",
+            "isExact": true
+          }
+        },
+        "result": {
+          "status": "ready",
+          "median": {
+            "value": 198,
+            "unit": "pmol/L",
+            "approxPgMl": 53.9
+          },
+          "ageDomain": {
+            "minYears": 18,
+            "maxYears": 37,
+            "label": "18–37 lat",
+            "boundaryPolicy": "The whole possible age interval must fit [18,37]. This is a conservative application policy; the paper does not supply more precise endpoint ages. This separate information block does not select or replace an ordinary age-reference profile, including Madsen at exact age 18."
+          },
+          "phase": {
+            "id": "follicular",
+            "label": "Faza folikularna",
+            "participants": 85,
+            "definition": "Od pierwszego dnia krwawienia do 2. dnia przed owulacją."
+          }
+        }
+      }
+    },
+    "xu": {
+      "ordinaryAgeProfile": false,
+      "noPatientComparison": true,
+      "continuousInterpolation": false,
+      "selectedExamples": [
+        {
+          "ageYears": 40,
+          "cyclePhase": "unknown",
+          "result": {
+            "status": "ready",
+            "mode": "exact",
+            "points": [
+              {
+                "ageYears": 40,
+                "canonicalValue": 1.479539998,
+                "value": 1.479539998,
+                "unit": "ng/mL",
+                "statistic": "P50"
+              }
+            ],
+            "completeAgeCoverage": true,
+            "coverageReason": null
+          }
+        },
+        {
+          "ageYears": 46,
+          "cyclePhase": "unknown",
+          "result": {
+            "status": "ready",
+            "mode": "adjacent",
+            "points": [
+              {
+                "ageYears": 45,
+                "canonicalValue": 0.365121103,
+                "value": 0.365121103,
+                "unit": "ng/mL",
+                "statistic": "P50"
+              },
+              {
+                "ageYears": 50,
+                "canonicalValue": 0.045923937,
+                "value": 0.045923937,
+                "unit": "ng/mL",
+                "statistic": "P50"
+              }
+            ],
+            "completeAgeCoverage": true,
+            "coverageReason": null
+          }
+        },
+        {
+          "ageYears": 55,
+          "cyclePhase": "unknown",
+          "result": {
+            "status": "ready",
+            "mode": "exact",
+            "points": [
+              {
+                "ageYears": 55,
+                "canonicalValue": 0.005234022,
+                "value": 0.005234022,
+                "unit": "ng/mL",
+                "statistic": "P50"
+              }
+            ],
+            "completeAgeCoverage": true,
+            "coverageReason": null
+          }
+        }
+      ]
+    },
+    "inhibinSenior": {
+      "ordinaryProfile": false,
+      "statistic": "group-mean",
+      "groups": [
+        {
+          "id": "30-50",
+          "ageLabel": "30–50 lat",
+          "sourceAgeLabel": "30–50 years",
+          "minAge": 30,
+          "maxAge": 50,
+          "n": 20,
+          "mean": 198,
+          "sd": 60,
+          "active": false,
+          "applicationMaxAgeExclusive": true
+        },
+        {
+          "id": "50-65",
+          "ageLabel": "50–65 lat",
+          "sourceAgeLabel": "50–65 years",
+          "minAge": 50,
+          "maxAge": 65,
+          "n": 14,
+          "mean": 209,
+          "sd": 66,
+          "active": false,
+          "applicationMaxAgeExclusive": true
+        },
+        {
+          "id": "65-80",
+          "ageLabel": "65–80 lat",
+          "sourceAgeLabel": "65–80 years",
+          "minAge": 65,
+          "maxAge": 80,
+          "n": 12,
+          "mean": 165,
+          "sd": 121,
+          "active": false,
+          "applicationMaxAgeExclusive": true
+        },
+        {
+          "id": "80-90",
+          "ageLabel": "80–90 lat",
+          "sourceAgeLabel": "80–90 years",
+          "minAge": 80,
+          "maxAge": 90,
+          "n": 18,
+          "mean": 129,
+          "sd": 101,
+          "active": true,
+          "applicationMaxAgeExclusive": true
+        },
+        {
+          "id": "90-101",
+          "ageLabel": "90–101 lat",
+          "sourceAgeLabel": "90–101 years",
+          "minAge": 90,
+          "maxAge": 101,
+          "n": 9,
+          "mean": 78,
+          "sd": 45,
+          "active": true,
+          "applicationMaxAgeExclusive": false
+        }
+      ],
+      "selectedExamples": [
+        {
+          "sex": "male",
+          "ageYears": 80,
+          "result": {
+            "status": "ready",
+            "profileId": null,
+            "groupId": "80-90",
+            "referenceValue": 129,
+            "statistic": "group-mean",
+            "unit": "pg/mL"
+          }
+        },
+        {
+          "sex": "male",
+          "ageYears": 85,
+          "result": {
+            "status": "ready",
+            "profileId": null,
+            "groupId": "80-90",
+            "referenceValue": 129,
+            "statistic": "group-mean",
+            "unit": "pg/mL"
+          }
+        },
+        {
+          "sex": "male",
+          "ageYears": 90,
+          "result": {
+            "status": "ready",
+            "profileId": null,
+            "groupId": "90-101",
+            "referenceValue": 78,
+            "statistic": "group-mean",
+            "unit": "pg/mL"
+          }
+        },
+        {
+          "sex": "male",
+          "ageYears": 101,
+          "result": {
+            "status": "ready",
+            "profileId": null,
+            "groupId": "90-101",
+            "referenceValue": 78,
+            "statistic": "group-mean",
+            "unit": "pg/mL"
+          }
+        },
+        {
+          "sex": "male",
+          "ageYears": 120,
+          "result": {
+            "status": "unavailable",
+            "reason": "unsupported-age"
+          }
+        }
+      ]
+    },
+    "femaleLhResultOnly": {
+      "noMedian": true,
+      "selectedExamples": [
+        {
+          "context": {
+            "analyte": "lh",
+            "sex": "female",
+            "ageYears": 16,
+            "ageUpperYears": 16,
+            "ageUpperInclusive": true,
+            "preterm": "no",
+            "measurement": {
+              "value": 5,
+              "unit": "IU/L",
+              "operator": "="
+            },
+            "puberty": {
+              "kind": "Th",
+              "stage": 1
+            }
+          },
+          "result": {
+            "status": "unavailable",
+            "reason": "reference-available"
+          }
+        },
+        {
+          "context": {
+            "analyte": "lh",
+            "sex": "female",
+            "ageYears": 17,
+            "ageUpperYears": 17,
+            "ageUpperInclusive": true,
+            "preterm": "no",
+            "measurement": {
+              "value": 5,
+              "unit": "IU/L",
+              "operator": "="
+            },
+            "puberty": {
+              "kind": "Th",
+              "stage": 1
+            }
+          },
+          "result": {
+            "status": "result-only",
+            "value": 5,
+            "unit": "IU/L"
+          }
+        },
+        {
+          "context": {
+            "analyte": "lh",
+            "sex": "female",
+            "ageYears": 18,
+            "ageUpperYears": 18,
+            "ageUpperInclusive": true,
+            "preterm": "no",
+            "measurement": {
+              "value": 5,
+              "unit": "IU/L",
+              "operator": "="
+            },
+            "puberty": {
+              "kind": "Th",
+              "stage": 1
+            }
+          },
+          "result": {
+            "status": "unavailable",
+            "reason": "unsupported-age"
+          }
+        }
+      ]
+    },
+    "adultFemaleE2UnknownCycle": {
+      "analyte": "e2",
+      "ageYears": 30,
+      "phase": "unknown",
+      "result": {
+        "ok": true,
+        "substanceId": "estradiol",
+        "label": "Estradiol (E2)",
+        "value": 50,
+        "unit": "pmol/L",
+        "siValue": 50,
+        "siUnit": "pmol/L",
+        "precision": 3,
+        "low": null,
+        "high": null,
+        "lowInUnit": null,
+        "highInUnit": null,
+        "context_pl": "Zakres estradiolu zależy od fazy cyklu lub menopauzy. Poniżej dostępne warianty odniesienia.",
+        "source_ids": [],
+        "matched": false,
+        "is_default": false,
+        "status": "no_interpretation",
+        "reference_context_required": true,
+        "reference_variants": [
+          {
+            "id": "e2_female_follicular",
+            "cycle_phase": "follicular",
+            "label": "Faza folikularna wczesna",
+            "low": 70,
+            "high": 290,
+            "context_pl": "Kobiety, faza folikularna",
+            "source_ids": [
+              "tietz_2018"
+            ]
+          },
+          {
+            "id": "e2_female_ovulation",
+            "cycle_phase": "ovulation",
+            "label": "Pik owulacyjny",
+            "low": 380,
+            "high": 1460,
+            "context_pl": "Kobiety, pik owulacyjny",
+            "source_ids": [
+              "tietz_2018"
+            ]
+          },
+          {
+            "id": "e2_female_luteal",
+            "cycle_phase": "luteal",
+            "label": "Faza lutealna",
+            "low": 200,
+            "high": 770,
+            "context_pl": "Kobiety, faza lutealna",
+            "source_ids": [
+              "tietz_2018"
+            ]
+          },
+          {
+            "id": "e2_female_postmeno",
+            "cycle_phase": "postmenopause",
+            "label": "Po menopauzie",
+            "low": 0,
+            "high": 110,
+            "context_pl": "Kobiety, postmenopauza — kryterium menopauzy w PL: E2 < 30 pg/mL (~110 pmol/L) + FSH > 30 IU/L (PTMRiE/PTG, ESHRE 2016)",
+            "source_ids": [
+              "tietz_2018",
+              "ptmrie_ptgp_2018"
+            ]
+          }
+        ]
+      }
+    }
+  },
+  "runtimeChanged": false,
+  "clinicalReferenceActivation": false,
+  "patientDataUsed": "Only explicitly fictional synthetic contexts.",
+  "limitation": "An absent ordinary profile is not proof that no publication exists; laboratory RI, group statistics, phases, source-only readers and educational geometry remain separate contracts."
+}

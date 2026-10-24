@@ -4822,6 +4822,42 @@ testy rzeczywistych funkcji, UI i PWA nie są walidacją kliniczną modelu.
 Regresje: `insl3-age-source.test.mjs`, `insl3-age-source.spec.mjs`
 i `insl3-age-source-offline.spec.mjs`; ich wyniki raportuje PR.
 
+### HORMONE-REFERENCE-COVERAGE-REVIEW — audyt po E2 D3 i INSL3, 2026-10-24
+
+**Zakres:** aktualizacja wspólnego rejestru i odtwarzalna kontrola
+pokrycia na `audyt` `7ff480c2`, po #766 oraz #770. To dokumentacja
+i narzędzie audytu poza runtime; bez aktywacji kandydatów, zmiany norm,
+interpolacji produkcyjnej, krzywych, zapisów, konwersji lub PWA.
+
+Rzeczywisty silnik ma 85 profili, dane `2026-10-22.2`, API `1.4.0`.
+Osobne E2 D3 19–44 oraz INSL3 w czytelnych fragmentach zaakceptowanej
+domeny są ukończone, lecz nie rozszerzają zwykłego rejestru punktu.
+Ponowny odczyt pełnego Madsen 2022 i suplementu v1 potwierdził po
+13 niewykorzystanych rocznych P50 TT dziewcząt i E2 chłopców 6–18.
+Odwrotność jawnego `LN(SI*1e6)` to `exp(M)/1e6`; nie importowano SDS,
+RI lub autorskiego przykładu z błędną referencją mianownika.
+
+**Rekomendacja, nie zgoda na wdrożenie:** najpierw osobna makieta TT
+dziewcząt (wszystkie P50 ponad źródłową LLOQ 0,02 nmol/L), następnie
+polityka niskiego E2 chłopców (6/7 poniżej LLOQ 0,58; cenzura nieznana).
+LOQ obserwacji nie jest podłogą mediany modelu. Braku nowych krzywych
+tych płci nie należy utożsamiać z brakiem liczb. Dorosły męski E2
+Frederiksen pozostaje etapem kontrolowanego odczytu wektorowego.
+
+**Kontrola:** 63 492 zwykłe wywołania eksportu CommonJS i browser-VM
+bez rozbieżności; osobno bramki, niepewny wiek i nowsze źródła.
+Nie są to testy DOM, offline lub dowód poprawności medycznej.
+Przykłady obecnej produkcji: E2 D3 F30 → P50 56,336 pg/mL;
+INSL3 M `[25,26)` → ≈1,27 ng/mL w źródłach, bez punktu stężenia.
+Kandydackie Madsen F/TT12 → 0,425028… nmol/L i M/E2 12 → 6,129050…
+pmol/L są wyłącznie odczytami źródła, nie nowymi wynikami aplikacji.
+Pozostawiono wszystkie dotychczasowe bramki i historyczne hashe 18.10.
+
+[Przegląd, populacje i ograniczenia](hormone-lifespan/REFERENCE_COVERAGE_REVIEW_2026_10_24.md),
+[aktualny zapis kontroli](hormone-lifespan/evidence/reference-coverage-audit-2026-10-24.json),
+[ekstrakt Madsen](hormone-lifespan/evidence/madsen2022-unused-sex-analytes-audit-2026-10-24.json).
+Kolejna implementacja wymaga osobnego zakresu i akceptacji właściciela.
+
 ### ANTIBIOTIC-RX — mapowanie cytowań
 
 W `antibiotic_therapy.js` występują powtarzające się klucze w mapie źródeł i liczne stłumienia `no-dupe-keys`. Obliczenia przechodzą obecne testy, ale nie dowodzi to poprawnego przypisania każdej rekomendacji do cytowania.
