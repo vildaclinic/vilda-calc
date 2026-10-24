@@ -9,6 +9,7 @@
   var d = w.document;
   var generation = 0;
   var token = null;
+  var saveRefresh = null;
   var recordRequest = null;
   var timelineRequest = null;
   var historyRevision = 0;
@@ -76,7 +77,7 @@
     return Number.isFinite(result) && result >= 0 && result < 216 ? result : null;
   }
 
-  function context() {
+  function context(allowPendingDob) {
     try {
       var vault = w.VildaVault, panel = w.VildaPanelPacjent, dob = w.VildaDobAge;
       var id = patientId(), route = activeRoute(), age = activeAge();
@@ -89,7 +90,7 @@
         || typeof vault.getPatient !== 'function'
         || w.__vildaPersistRestoring === true || w.__vildaLustroWpis === true
         || Number(w.__vildaPersistClearUntil || 0) > Date.now()
-        || dob && typeof dob.restorePending === 'function' && dob.restorePending()
+        || !allowPendingDob && dob && typeof dob.restorePending === 'function' && dob.restorePending()
         || panel && typeof panel.nieaktualny === 'function' && panel.nieaktualny()
         || panel && typeof panel.wlasciciel === 'function' && panel.wlasciciel() !== id) return null;
       return { patientId: id, route: route, applySequence: sequence };
@@ -103,8 +104,26 @@
 
   function isCurrent(snapshotOrToken) {
     var candidate = snapshotOrToken && (snapshotOrToken.patientToken || snapshotOrToken);
+    // A save acknowledgement re-adopts DOB asynchronously for the same visit.
+    // The existing drawing still belongs to that visit, but new snapshots must
+    // continue to wait for DOB. No other restore/ownership gate is relaxed.
+    var pendingSave = saveRefresh && saveRefresh.token === candidate && saveRefresh.phase === 'pending';
     return !!(candidate && candidate === token && candidate.generation === generation
-      && sameContext(candidate, context()));
+      && sameContext(candidate, context(!!pendingSave)));
+  }
+
+  function ready(scope) { return isCurrent(scope) && sameContext(scope, context()); }
+
+  function getRefreshState(snapshotOrToken) {
+    var candidate = snapshotOrToken && (snapshotOrToken.patientToken || snapshotOrToken);
+    return saveRefresh && saveRefresh.token === candidate && isCurrent(candidate) ? saveRefresh.phase : null;
+  }
+
+  function finishSaveRefresh(scope, revision, failed) {
+    if (revision === historyRevision && ready(scope) && saveRefresh && saveRefresh.token === scope) {
+      if (failed) saveRefresh.phase = 'error';
+      else saveRefresh = null;
+    }
   }
 
   function notify(reason, identityChanged) {
@@ -115,7 +134,7 @@
   }
 
   function invalidate(reason, identityChanged, refreshHistory) {
-    if (identityChanged) { generation += 1; token = null; }
+    if (identityChanged) { generation += 1; token = null; saveRefresh = null; }
     if (identityChanged || refreshHistory) {
       historyRevision += 1;
       recordRequest = null;
@@ -156,6 +175,7 @@
     var current = context();
     if (!current) return null;
     if (!sameContext(token, current) || token.generation !== generation) {
+      saveRefresh = null;
       token = Object.freeze({ patientId: current.patientId, route: current.route,
         applySequence: current.applySequence, generation: generation });
       recordRequest = null;
@@ -266,23 +286,27 @@
     if (!scope) return null;
     var revision = historyRevision;
     var record = await readRecord(scope);
-    if (!record || revision !== historyRevision || !isCurrent(scope)) return null;
+    if (revision !== historyRevision || !ready(scope)) return null;
+    if (!record) { finishSaveRefresh(scope, revision, true); return null; }
     try {
       var growth = workingGrowth(), measurements = growth && growth.measurements;
       if (!growth) {
         measurements = await readTimeline(scope);
-        if (measurements === null || revision !== historyRevision || !isCurrent(scope)) return null;
+        if (revision !== historyRevision || !ready(scope)) return null;
+        if (measurements === null) { finishSaveRefresh(scope, revision, true); return null; }
         // A form restoration may have supplied an explicit working history meanwhile.
         growth = workingGrowth();
         if (growth) measurements = growth.measurements;
       }
       var snapshot = makeSnapshot(scope, record, growth, measurements);
-      return revision === historyRevision && isCurrent(scope) ? snapshot : null;
-    } catch (_) { return null; }
+      if (revision !== historyRevision || !ready(scope)) return null;
+      finishSaveRefresh(scope, revision, false);
+      return snapshot;
+    } catch (_) { finishSaveRefresh(scope, revision, true); return null; }
   }
 
-  function listen(target, event, callback) {
-    if (target && typeof target.addEventListener === 'function') target.addEventListener(event, callback);
+  function listen(target, event, callback, options) {
+    if (target && typeof target.addEventListener === 'function') target.addEventListener(event, callback, options);
   }
 
   listen(d, 'input', function () { invalidate('input', false); });
@@ -294,6 +318,16 @@
       invalidate('history-edit', false);
     }
   });
+  listen(d, 'vilda:patient-loaded', function (event) {
+    var detail = event && event.detail;
+    // Earlier bubble listeners can synchronously publish a source change after
+    // DOB has entered its pending state. Arm ownership retention in capture,
+    // before those nested notifications reach the panel.
+    if (detail && detail.source === 'save' && token && detail.patientId === token.patientId
+      && detail.applySequence === token.applySequence && sameContext(token, context(true))) {
+      saveRefresh = { token: token, phase: 'pending' };
+    }
+  }, true);
   listen(d, 'vilda:patient-loaded', function (event) {
     invalidate('patient-loaded', !(event && event.detail && event.detail.source === 'save'), true);
   });
@@ -325,6 +359,7 @@
   w.VildaCentileLiveData = Object.freeze({
     getSnapshot: getSnapshot,
     isCurrent: isCurrent,
+    getRefreshState: getRefreshState,
     subscribe: function (callback) {
       if (typeof callback !== 'function') return function () {};
       listeners.add(callback);

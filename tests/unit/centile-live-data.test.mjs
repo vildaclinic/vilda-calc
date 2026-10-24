@@ -5,12 +5,13 @@ import { loadBrowserScript } from '../support/load-browser-script.mjs';
 function events() {
   const handlers = new Map();
   return {
-    addEventListener(type, callback) {
+    addEventListener(type, callback, options) {
       if (!handlers.has(type)) handlers.set(type, new Set());
-      handlers.get(type).add(callback);
+      handlers.get(type).add({ callback, capture: options === true || !!(options && options.capture) });
     },
     emit(type, detail = {}) {
-      for (const callback of handlers.get(type) || []) callback({ type, detail, ...detail });
+      const ordered = [...handlers.get(type) || []].sort((a, b) => Number(b.capture) - Number(a.capture));
+      for (const { callback } of ordered) callback({ type, detail, ...detail });
     },
   };
 }
@@ -31,7 +32,7 @@ function patient(id = 'fikcyjny-a') {
   };
 }
 
-function setup({ working = true, framed = false } = {}) {
+function setup({ working = true, framed = false, nestedSourceOnSave = false } = {}) {
   const values = new Map([['vildaCurrentPatientId', 'fikcyjny-a'], ['vildaLoadChoiceV1', 'new']]);
   const writes = vi.fn();
   const fields = Object.fromEntries(Object.entries({
@@ -88,6 +89,11 @@ function setup({ working = true, framed = false } = {}) {
       motherHeight: 165, fatherHeight: 180, currentArrowComment: 'Fikcyjny punkt' };
     win.getEffectiveCentileGrowthDataState = () => win.advancedGrowthData;
   }
+  if (nestedSourceOnSave) docEvents.addEventListener('vilda:patient-loaded', event => {
+    if (event.detail.source !== 'save') return;
+    state.pending = true;
+    docEvents.emit('vilda:zrodlo-pacjenta-zmienione');
+  });
   loadBrowserScript('vilda_update_hooks.js', win);
   loadBrowserScript('vilda_centile_live_data.js', win);
   return { win, api: win.VildaCentileLiveData, fields, values, state, vault, hooks, writes,
@@ -500,5 +506,117 @@ describe('Panel nowego pomiaru — odrzucanie spóźnionych odczytów', () => {
     expect(h.win.getCentilePercentileStatsForSource).toHaveBeenLastCalledWith(158, 'M', 158.2, 'HT', 'OLAF', { population: 'DS' });
     expect(next.patientToken).toBe(first.patientToken);
     expect(h.writes).not.toHaveBeenCalled();
+  });
+});
+
+describe('Panel nowego pomiaru — zapis nie zmienia właściciela wykresu', () => {
+  const saved = (h, overrides = {}) => h.doc.emit('vilda:patient-loaded', {
+    source: 'save', patientId: 'fikcyjny-a', applySequence: h.state.sequence, ...overrides,
+  });
+
+  it('uzbraja zachowanie widoku przed zagnieżdżoną zmianą źródła wcześniejszego listenera zapisu', async () => {
+    const h = setup({ nestedSourceOnSave: true }), before = await h.api.getSnapshot();
+    const observed = [];
+    h.api.subscribe(event => observed.push({ reason: event.reason, current: h.api.isCurrent(before),
+      refresh: h.api.getRefreshState(before), pending: h.state.pending }));
+    saved(h);
+    expect(observed).toEqual([
+      { reason: 'vilda:zrodlo-pacjenta-zmienione', current: true, refresh: 'pending', pending: true },
+      { reason: 'patient-loaded', current: true, refresh: 'pending', pending: true },
+    ]);
+    expect(await h.api.getSnapshot()).toBeNull();
+    h.state.pending = false; h.doc.emit('vilda:dob-restored');
+    expect((await h.api.getSnapshot()).patientToken).toBe(before.patientToken);
+  });
+
+  it('zachowuje narysowaną wizytę podczas przyjmowania DOB, lecz nie publikuje niegotowej migawki', async () => {
+    const h = setup(), before = await h.api.getSnapshot();
+    h.state.pending = true;
+    saved(h);
+    expect(h.api.isCurrent(before)).toBe(true);
+    expect(h.api.getRefreshState(before)).toBe('pending');
+    expect(await h.api.getSnapshot()).toBeNull();
+    expect(h.vault.getPatient).toHaveBeenCalledTimes(1);
+    h.state.pending = false;
+    h.state.source = 'PALCZEWSKA'; h.fields.height.value = '159';
+    h.doc.emit('vilda:dob-restored');
+    const after = await h.api.getSnapshot();
+    expect(after.patientToken).toBe(before.patientToken);
+    expect(after.currentHeight).toBe(159);
+    expect(after.source).toBe('PALCZEWSKA');
+    expect(before.currentHeight).toBe(158);
+    expect(h.api.getRefreshState(after)).toBeNull();
+    expect(h.writes).not.toHaveBeenCalled();
+    // Przyjęcie zakończone: kolejny zwykły restore nie dziedziczy wyjątku zapisu.
+    h.state.pending = true;
+    expect(h.api.isCurrent(after)).toBe(false);
+  });
+
+  it.each([
+    ['brak potwierdzenia', null],
+    ['inny pacjent', { patientId: 'fikcyjny-b' }],
+    ['inna operacja', { applySequence: 99 }],
+    ['brak operacji', { applySequence: undefined }],
+    ['wczytanie zamiast zapisu', { source: 'pick' }],
+  ])('%s nie pozwala ominąć oczekującego DOB', async (_, detail) => {
+    const h = setup(), before = await h.api.getSnapshot();
+    h.state.pending = true;
+    if (detail) saved(h, detail);
+    expect(h.api.isCurrent(before)).toBe(false);
+    expect(h.api.getRefreshState(before)).toBeNull();
+    expect(await h.api.getSnapshot()).toBeNull();
+  });
+
+  it.each([
+    ['inny ID', h => { h.values.set('vildaCurrentPatientId', 'fikcyjny-b'); }],
+    ['nowy apply', h => { h.state.sequence++; }],
+    ['blokada', h => { h.state.unlocked = false; h.hooks.lock(); }],
+    ['usunięcie', h => { h.hooks.remove({ patientId: 'fikcyjny-a' }); }],
+    ['wyczyszczenie', h => { h.emit('vilda:user-state-cleared'); }],
+    ['odtworzenie', h => { h.values.set('vildaLoadChoiceV1', 'restore'); }],
+    ['pełnoletność', h => { h.fields.age.value = '18'; h.fields.ageMonths.value = '0'; }],
+    ['inna strona', h => { h.win.location.pathname = '/terminarz.html'; }],
+    ['ukryta ramka', h => { h.win.frameElement.hidden = true; h.frameChanged(); }],
+    ['nieaktualny panel', h => { h.state.stale = true; }],
+    ['obcy właściciel panelu', h => { h.state.owner = 'fikcyjny-b'; }],
+    ['odtwarzanie persistence', h => { h.win.__vildaPersistRestoring = true; }],
+    ['zapis lustra', h => { h.win.__vildaLustroWpis = true; }],
+    ['zapora clear', h => { h.win.__vildaPersistClearUntil = Date.now() + 10000; }],
+  ])('%s natychmiast unieważnia także rysunek czekający na odświeżenie po zapisie', async (_, change) => {
+    const h = setup({ framed: true }), before = await h.api.getSnapshot();
+    h.state.pending = true; saved(h);
+    expect(h.api.isCurrent(before)).toBe(true);
+    change(h);
+    expect(h.api.isCurrent(before)).toBe(false);
+    expect(h.api.getRefreshState(before)).toBeNull();
+    expect(await h.api.getSnapshot()).toBeNull();
+  });
+
+  it('błąd aktualnego odczytu kończy oczekiwanie i pozwala ponowić odświeżenie', async () => {
+    const h = setup(), before = await h.api.getSnapshot();
+    saved(h);
+    h.vault.getPatient.mockRejectedValueOnce(new Error('Fikcyjna odmowa odczytu'));
+    expect(await h.api.getSnapshot()).toBeNull();
+    expect(h.api.isCurrent(before)).toBe(true);
+    expect(h.api.getRefreshState(before)).toBe('error');
+    const after = await h.api.getSnapshot();
+    expect(after.patientToken).toBe(before.patientToken);
+    expect(h.api.getRefreshState(after)).toBeNull();
+  });
+
+  it('starsza odpowiedź odrzucona przez kolejny zapis nie kończy nowszego odświeżenia', async () => {
+    const h = setup(), before = await h.api.getSnapshot(), older = deferred();
+    h.hooks.save({ patientId: 'fikcyjny-a' });
+    h.vault.getPatient.mockReturnValueOnce(older.promise);
+    const request = h.api.getSnapshot();
+    await Promise.resolve();
+    h.state.pending = true; saved(h);
+    older.resolve(null);
+    expect(await request).toBeNull();
+    expect(h.api.getRefreshState(before)).toBe('pending');
+    h.state.pending = false; h.doc.emit('vilda:dob-restored');
+    const after = await h.api.getSnapshot();
+    expect(after.patientToken).toBe(before.patientToken);
+    expect(h.api.getRefreshState(after)).toBeNull();
   });
 });

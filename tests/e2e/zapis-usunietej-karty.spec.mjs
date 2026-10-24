@@ -100,7 +100,7 @@ async function dopiszPomiar(page, { lat, mies, wzrost, masa }) {
 }
 
 const zapisz = (page) => page.locator('#saveDataBtnSidebar').click();
-const pasek = (page) => page.locator('#vildaStatusSide');
+const pasek = (page) => page.locator('#vildaSaveFeedback');
 
 /* Pomiary bieżącej wersji: wiersze historii (obie sekcje — formularz dzieli je między „podstawowe” i „zaawansowane”)
    oraz bieżąca wizyta z pól pacjenta. */
@@ -142,7 +142,7 @@ test.describe('P-ZAPIS-USUNIETEJ — zapis do karty scalonej albo usuniętej w i
     expect(await liczbaKart(page), 'bez duplikatu').toBe(1);
 
     await zapisz(page);
-    await expect(pasek(page)).toContainText('Zapisano');
+    await expect(pasek(page)).toHaveAttribute('data-state', 'saved');
     expect(await wiekiGlowy(page, y), 'pomiary Y zostają, nowy pomiar trafia do Y')
       .toEqual(['48:98', '54:101', '60:105', '66:108', '72:112'].sort());
     expect(await page.evaluate(async (id) => {

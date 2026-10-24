@@ -52,17 +52,13 @@ async function probujZapisac(page, pola) {
   await page.evaluate(async () => { await window.saveUserData(); });
   await page.waitForTimeout(600);
   return page.evaluate(() => {
-    // P-PASEK-STATUSU (2026-09-14): komunikat stoi teraz w STAŁYM pasku, a nie w dymku.
-    // Czytamy stamtąd, gdzie naprawdę jest — z widocznego paska, a gdy go nie ma, z dymka.
-    // Twierdzenia poniżej zostają bez zmian: to samo zdanie i ten sam kursor, inny nośnik.
-    const paski = Array.prototype.slice.call(document.querySelectorAll('[data-vilda-status]'));
-    const widoczny = paski.filter((el) => !el.hidden && el.offsetParent !== null)[0] || null;
-    const wPasku = widoczny && widoczny.querySelector('.vilda-status-tekst');
+    // Pełna przyczyna pozostaje w nowym powiadomieniu C/C1. Sam tekst i fokus
+    // zachowują kontrakt poprzedniego paska; zamiana nośnika nie skraca błędów.
+    const powiadomienie = document.getElementById('vildaSaveFeedback');
+    const tekst = powiadomienie && powiadomienie.querySelector('.vilda-save-feedback__text');
     return {
-      komunikat: wPasku
-        ? wPasku.textContent
-        : ((document.querySelector('.menu-tooltip') || {}).textContent || null),
-      nosnik: wPasku ? 'pasek' : 'dymek',
+      komunikat: tekst ? tekst.textContent : null,
+      nosnik: powiadomienie ? 'powiadomienie' : 'brak',
       fokus: document.activeElement ? document.activeElement.id : null,
     };
   });
@@ -78,7 +74,7 @@ test.describe('Zapis, który nie doszedł do skutku, mówi dlaczego', () => {
     const bezWiekuIWagi = await probujZapisac(page,
       { firstName: 'Sonda', lastName: 'Fikcyjna', height: '130' });
     expect(bezWiekuIWagi.komunikat).toBe('Nie zapisano — uzupełnij: wiek i masę ciała.');
-    expect(bezWiekuIWagi.nosnik, 'na index.html nosnikiem jest staly pasek').toBe('pasek');
+    expect(bezWiekuIWagi.nosnik, 'na index.html pełny błąd pokazuje powiadomienie C').toBe('powiadomienie');
     expect(bezWiekuIWagi.fokus).toBe('age');
 
     const bezWagi = await probujZapisac(page,

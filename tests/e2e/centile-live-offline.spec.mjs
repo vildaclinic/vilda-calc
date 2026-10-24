@@ -12,6 +12,7 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..')
 const resourceNames = [
   'vilda_centile_live_data.js', 'vilda_centile_live_render.js', 'vilda_centile_live_view.js',
   'vilda_centile_live_host.js', 'vilda_centile_live_panel.js', 'vilda_centile_live_panel.css',
+  'vilda_save_feedback.js', 'vilda_save_feedback.css',
 ];
 
 function resourcesFor(documentName) {
@@ -106,6 +107,10 @@ async function assertPanelAndFullscreen(page, frame, patientId) {
   await dialog.locator('.vilda-centile-live-close').click();
   await expect(dialog).toHaveCount(0);
   await expect(frame.locator('.vilda-centile-live-card')).toBeVisible();
+  await frame.evaluate(() => window.saveUserData());
+  await expect(page.locator('#vildaSaveFeedback[data-state="saved"]')).toBeVisible();
+  await expect(frame.locator('.vilda-centile-live-card')).toBeVisible();
+  if (frame !== page) await expect(frame.locator('#vildaSaveFeedback')).toHaveCount(0);
 }
 
 // Real installation + cold browser restart + stopped origin. The first visits to
@@ -156,7 +161,7 @@ test('new centile modules, annotated canvases and parent fullscreen survive a co
     await readyForPatient(frame);
     const shellResources = resourcesFor('app.html');
     expect(shellResources.map((entry) => entry.url.split('?')[0].slice(1)).sort())
-      .toEqual(['vilda_centile_live_host.js', 'vilda_centile_live_panel.css']);
+      .toEqual(['vilda_centile_live_host.js', 'vilda_centile_live_panel.css', 'vilda_save_feedback.css', 'vilda_save_feedback.js']);
     await assertOfflineResources(page, shellResources, responses);
     await test.step('app shell offline: fullscreen covers the parent viewport', () => assertPanelAndFullscreen(page, frame, ids.a));
     expect(await page.evaluate(() => new URL(navigator.serviceWorker.controller.scriptURL).pathname)).toBe('/service-worker-kalorii.js');

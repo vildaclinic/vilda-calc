@@ -6497,6 +6497,40 @@ argumenty generatorów kończą odczyt modelu przed tworzeniem strony i efektami
 ubocznymi Kreatora. Testy adaptera, hosta, renderera i scenariusze przeglądarkowe
 używają wyłącznie fikcyjnych pacjentów i rzeczywistych funkcji produkcyjnych.
 
+### P-ZAPIS-SIATKA — zapis bez zmiany układu siatki, komunikaty C/C1 (2026-10-24)
+
+**Decyzja właściciela.** Po makiecie desktopowej wybrano C (powiadomienie w lewym
+dolnym rogu), a po makiecie mobilnej C1 (mała kapsuła nad widocznym Dockiem).
+Dotyczy zapisu na Start i DocPro, zarówno samodzielnie, jak i w `app.html`.
+Powiadomienie jest nakładką poza układem formularza. Sukces pokazuje się przez
+5 sekund; istniejący wskaźnik przy pacjencie nadal przechowuje stan i czas zapisu.
+Błędy, braki pól, anulowanie oraz ostrzeżenie o imienniku zachowują pełną treść
+i nie znikają automatycznie. Błąd umożliwia ponowienie, a odnośniki brakujących pól
+prowadzą do formularza. Podpowiedzi nieaktywnego przycisku i komunikaty importu
+zachowują dotychczasowe miejsca wyświetlania.
+
+**Przyczyna przeskoku siatki.** `source:save` ponownie przyjmuje DOB w następnym
+zadaniu; chwilowe `restorePending` unieważniało kartę, pokazywało Przypomnienia
+i resetowało wybraną metrykę. Adapter odróżnia teraz gotowość nowej migawki od
+własności istniejącego widoku. Wyłącznie zgodny zapis tej samej osoby, trasy
+i `applySequence` zachowuje widok podczas odświeżenia. Nowa migawka nadal wymaga
+gotowego DOB. Błąd odczytu pokazuje stan niedostępności w tej samej karcie.
+Zmiana osoby, import, odtworzenie, blokada, czyszczenie, wiek 18+ i utrata dwóch
+kolumn nadal usuwają podgląd. Nie zmieniono reguł obliczania wieku ani norm.
+
+**Granice.** `vilda_save_feedback.js/css` odpowiada tylko za prezentację.
+W powłoce nakładkę tworzy dokument nadrzędny, który zna widoczny Dock, przyciski
+pływające i `visualViewport` klawiatury. Tożsamość operacji jest wyłącznie w RAM:
+późny wynik nie wyświetla komunikatu ani błędu chipa przy innej osobie lub trasie.
+Ponowne wywołanie zapisu tej samej aktywnej wizyty w trakcie operacji zwraca jej
+istniejącą obietnicę. Zapis kolejnej wizyty, dobór pacjenta w sejfie, serializacja,
+synchronizacja i format payloadu pozostają dotychczasowe.
+
+**Wpływ kliniczny.** Brak zmiany wyników, interpretacji, źródeł odniesienia i danych
+siatki. Regresje wykonują produkcyjny adapter, panel i kolektor z fikcyjnymi
+pacjentami: wielokrotny zapis bez przeskoku, zachowana Waga/zakres/pełny ekran,
+błąd i ponowienie, granice osoby/operacji, desktop, telefon i powłoka.
+
 ### GROWTH-TRAJ — automatyczna analiza trajektorii na siatce centylowej, wdrożenie do testów 2026-08-08
 
 Moduł `vilda_trajectory_analysis.js` (`window.VildaTrajectoryAnalysis`) analizuje wszystkie kolejne odcinki między pomiarami (wzrost, masa, BMI) i podsumowuje całą trajektorię. Renderowany w karcie „Zaawansowane obliczenia wzrostowe" pod tabelą tempa wg okresów.
@@ -10315,6 +10349,10 @@ Migotanie jest **starsze** od obu zmian, a numer kolejny wersji je złagodził. 
 **Zakres i regresje.** Zmienia się wyłącznie śledzenie rzeczywistej edycji po ustaleniu referencji. Bez zmiany pomiarów, norm, centyli, formatu pacjenta i zapisu do sejfu. `tests/unit/save-status-paused-edit.test.mjs` rozdziela formularz od zapisanej migawki sesji i sprawdza starą migawkę przy zwykłej edycji, koniec/przedłużenie pauzy oraz unieważnienie kontekstu przed aktualizacją sesji. `tests/e2e/odtworzenie-wiek-pomiaru.spec.mjs` zawiera dodatkowy scenariusz: zapisany pacjent → pauza → ta sama masa (nadal zapisano) → pauza → nowa masa (niezapisane zmiany).
 
 ### P-PASEK-STATUSU — stały pasek zamiast dymka gasnącego po 2,5 s (SW 1.0.934, 2026-09-14, decyzja właściciela)
+
+**Aktualizacja 2026-10-24:** zapisy Start/DocPro korzystają z zatwierdzonych nakładek
+C/C1 opisanych w P-ZAPIS-SIATKA. Poniższy wpis dokumentuje poprzedni układ;
+moduł paska pozostaje dostępny dla komunikatów importu i jako fallback.
 
 **Stan przed zmianą.** Wszystkie komunikaty zapisu — **piętnaście** różnych zdań, od „Nie zapisano — uzupełnij…" po „Nie udało się zapisać pacjenta" — szły przez `showTooltip()`: dymek przy przycisku, gasnący po **2500 ms** i znikający z DOM bez śladu. Trzy wady naraz:
 
