@@ -64,13 +64,24 @@ html.vilda-phone-landscape.vilda-embedded .vilda-auth-root {
   }
 }
 
-html.vilda-phone .main-content > .container,
-html.vilda-phone .main-content > .calc-container,
-html.vilda-phone body > .container {
+/* W pionie zachowujemy pierwszeństwo odstępów poszczególnych modułów.
+ * Reguła ogólna nadal usuwa ponowne safe-area ze zwykłych kontenerów. */
+html.vilda-phone :where(.main-content > .container, .main-content > .calc-container, body > .container) {
   width: 100%;
   max-width: none;
   padding-left: var(--vilda-phone-gutter-left);
   padding-right: var(--vilda-phone-gutter-right);
+}
+
+@media (min-width: 541px) {
+  html.vilda-phone .main-content > .container,
+  html.vilda-phone .main-content > .calc-container,
+  html.vilda-phone body > .container {
+    width: 100%;
+    max-width: none;
+    padding-left: var(--vilda-phone-gutter-left);
+    padding-right: var(--vilda-phone-gutter-right);
+  }
 }
 
 /* Markę i jej działający link już montuje VildaChrome. Pokazujemy nazwę
