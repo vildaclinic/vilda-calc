@@ -9,7 +9,7 @@ function telefon({ phone = true } = {}) {
   let main, header, dock;
   const p = powloka(null, (win, doc) => {
     if (phone) doc.documentElement.classList.add('vilda-phone');
-    win.innerWidth = 440; win.innerHeight = 956;
+    win.innerWidth = 440; win.innerHeight = 956; win.cancelAnimationFrame = win.clearTimeout;
     Object.defineProperty(doc.documentElement, 'clientHeight', { get: () => geometry.layout });
     win.visualViewport = nasluchy({ get height() { return geometry.viewport; } });
     main = doc.createElement('main'); header = doc.createElement('header'); dock = doc.createElement('nav');
@@ -40,9 +40,9 @@ function telefon({ phone = true } = {}) {
   });
   const frame = p.load('docpro');
   p.tick(100); writes.length = 0;
-  function resize({ width = 956, height = 440, mode = true, focused = false, keyboard = 0 } = {}) {
+  function resize({ width = 956, height = 440, mode = true, focused = false, keyboard = 0, visualHeight = height - keyboard } = {}) {
     p.win.innerWidth = width; p.win.innerHeight = height - keyboard;
-    geometry.layout = height; geometry.viewport = height - keyboard;
+    geometry.layout = height; geometry.viewport = visualHeight;
     geometry.top = mode ? 0 : 59; geometry.header = mode ? 52 : 91; geometry.dock = mode ? 77 : 105;
     if (focused) frame.contentDocument.activeElement = { tagName: 'INPUT', getAttribute: () => 'text' };
     p.doc.documentElement.classList.toggle('vilda-phone-landscape', mode);
@@ -55,13 +55,25 @@ function telefon({ phone = true } = {}) {
 }
 
 describe('powłoka — spójny pomiar przy obrocie telefonu', () => {
-  it('grupa zdarzeń mierzy raz przed kolejną klatką, bez poprawki po 200 ms', () => {
+  it('zmiana trybu uzgadnia wysokość od razu, a reszta zdarzeń nie dodaje zapisu ani poprawki po 200 ms', () => {
     const h = telefon(); h.resize();
-    expect(h.writes).toEqual([]);
-    h.p.tick(15); expect(h.writes).toEqual([]);
+    expect(h.writes).toEqual(['388px']);
+    h.p.tick(15); expect(h.writes).toEqual(['388px']);
     h.p.tick(1); expect(h.writes).toEqual(['388px']);
     expect([...h.p.timery.values()].some(timer => timer.ms === 200)).toBe(false);
     h.p.tick(250); expect(h.writes).toEqual(['388px']);
+  });
+
+  it('safe-area-first nie pozostawia wysokości portretu w pierwszej docelowej klatce poziomej', () => {
+    const h = telefon();
+    h.geometry.top = 0; // Nowe insets, lecz dokument i nagłówek nadal pionowe.
+    h.observers[0].callback([{ target: h.p.doc.body }]); h.p.tick(16);
+    expect(h.writes).toEqual(['865px']);
+    // Kolejny observer zdążył już zamówić następne rAF przed zmianą trybu.
+    h.observers[0].callback([{ target: h.p.doc.body }]);
+    h.resize();
+    expect(h.writes.at(-1), 'nie czekamy na kolejną klatkę z 865px + 52px = 917px').toBe('388px');
+    h.p.tick(16); expect(h.writes).toEqual(['865px', '388px']);
   });
 
   it('wczesna fizyczna orientacja nie wymusza nieaktualnego rozmiaru', () => {
@@ -81,7 +93,8 @@ describe('powłoka — spójny pomiar przy obrocie telefonu', () => {
     expect(observer.nodes.has(h.main), 'nie obserwujemy wysokości, którą sami zapisujemy').toBe(false);
     h.geometry.header = 56;
     observer.callback([{ target: h.header }]); observer.callback([{ target: h.header }]);
-    h.p.tick(16); expect(h.writes).toEqual(['388px', '384px']);
+    expect(h.writes, 'RO uzgadnia wysokość jeszcze przed malowaniem').toEqual(['388px', '384px']);
+    h.p.tick(250); expect(h.writes, 'echo observera nie powoduje pętli ani kolejnych zapisów').toEqual(['388px', '384px']);
   });
 
   it('późny safe-area przesuwa nagłówek bez zmiany jego wysokości — content-box body uruchamia pomiar', () => {
@@ -90,6 +103,7 @@ describe('powłoka — spójny pomiar przy obrocie telefonu', () => {
     expect(observer).toBeTruthy();
     h.geometry.top = 6;
     observer.callback([{ target: h.p.doc.body }]);
+    expect(h.writes, 'sam inset nie wymaga oczekiwania na kolejne rAF').toEqual(['388px', '382px']);
     h.p.tick(16); expect(h.writes).toEqual(['388px', '382px']);
   });
 
@@ -137,16 +151,45 @@ describe('powłoka — spójny pomiar przy obrocie telefonu', () => {
   });
 
   it('spóźniony visualViewport poprzedniej orientacji nie zatruwa zamrożonej bazy aktywnego pola', () => {
-    const h = telefon(); h.resize({ focused: true, keyboard: 200 });
-    h.geometry.viewport = 956; // VV jeszcze portretowy, layout viewport już poziomy.
+    const h = telefon(); h.resize({ focused: true, keyboard: 200, visualHeight: 956 });
+    // VV jeszcze portretowy PRZED synchronicznym sygnałem nowego trybu.
     h.p.tick(16); expect(h.writes).toEqual(['388px']);
     h.geometry.viewport = 240; h.p.win.visualViewport.dispatchEvent({ type: 'resize' });
     h.p.tick(16); expect(h.writes).toEqual(['388px']);
-    h.resize({ width: 440, height: 956, mode: false, focused: true, keyboard: 336 });
-    h.geometry.viewport = 240; // odwrotna kolejność przy powrocie do pionu.
+    h.resize({ width: 440, height: 956, mode: false, focused: true, keyboard: 336, visualHeight: 240 });
+    // Odwrotna kolejność przy powrocie do pionu.
     h.p.tick(16); expect(h.writes).toEqual(['388px', '806px']);
     h.geometry.viewport = 620; h.p.win.visualViewport.dispatchEvent({ type: 'resize' });
     h.p.tick(16); expect(h.writes).toEqual(['388px', '806px']);
+  });
+
+  it('bez aktywnego pola opóźniony VV nie cofa już uzgodnionego panelu ani rezerwy Docka', () => {
+    const h = telefon(); h.resize({ visualHeight: 956 });
+    const spacer = () => h.frame.contentDocument.body.children.find(el => el.id === 'vilda-shell-dock-spacer');
+    expect(h.writes).toEqual(['388px']); expect(spacer().style.height).toBe('77px');
+    h.p.tick(16);
+    expect(h.writes).toEqual(['388px']); expect(spacer().style.height).toBe('77px');
+    h.geometry.viewport = 440; h.p.win.visualViewport.dispatchEvent({ type: 'resize' }); h.p.tick(16);
+    expect(h.writes).toEqual(['388px']); expect(spacer().style.height).toBe('77px');
+    // Późniejsza zwykła zmiana wysokości paska przeglądarki znowu korzysta z VV.
+    h.geometry.viewport = 430; h.p.win.visualViewport.dispatchEvent({ type: 'resize' }); h.p.tick(16);
+    expect(h.writes).toEqual(['388px', '378px']);
+  });
+
+  it.each([1, 1.25])('już świeży VV przy zmianie trybu nie jest uznawany za stary pomiar (scale=%s)', scale => {
+    const h = telefon();
+    h.p.win.visualViewport.scale = scale;
+    h.resize({ visualHeight: 350 });
+    expect(h.writes, 'aktualny pas 350px minus nagłówek 52px, nie pełny layout440').toEqual(['298px']);
+    h.p.tick(250); expect(h.writes).toEqual(['298px']);
+  });
+
+  it('zoom kończy ochronę starego VV także gdy jego wysokość przypadkowo jest taka sama', () => {
+    const h = telefon(); h.resize({ visualHeight: 956 });
+    h.p.tick(16); expect(h.writes).toEqual(['388px']);
+    h.p.win.visualViewport.scale = 1.25;
+    h.p.win.visualViewport.dispatchEvent({ type: 'resize' }); h.p.tick(16);
+    expect(h.writes).toEqual(['388px', '904px']);
   });
 
   it('po obrocie z fokusem późny chrome i safe-area korygują geometrię, ale sama klawiatura jej nie zmienia', () => {

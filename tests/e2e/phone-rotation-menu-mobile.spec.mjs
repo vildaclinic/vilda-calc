@@ -99,6 +99,10 @@ async function startFrameTrace(page) {
       const panel = document.querySelector('.app-shell-main');
       window.__rotationFrames.push({
         width: innerWidth, height: innerHeight, physical: screen.orientation.type,
+        clientHeight: document.documentElement.clientHeight,
+        visualHeight: visualViewport?.height ?? null,
+        panelStyleHeight: panel?.style.height ?? null,
+        focus: document.activeElement?.id || document.activeElement?.tagName,
         form: form?.getBoundingClientRect().width,
         column: user?.getBoundingClientRect().width,
         header: header?.getBoundingClientRect().height,
@@ -287,7 +291,9 @@ test('smaller landscape, either safe edge, keyboard and reduced motion retain me
   for (const safeArea of [{ top: 0, bottom: 21, left: 62, right: 0 }, { top: 0, bottom: 21, left: 0, right: 62 }]) {
     await rotateSplit(page, cdp, { width: 844, height: 390, order: 'physical-first', safeArea });
     await assertMenu(page, { width: 844, height: 390, ...safeArea, landscape: true });
-    await page.locator(`${MENU} [data-drawer-btn="saveDataBtnSidebar"]`).click();
+    const disabledSave = page.locator(`${MENU} [data-drawer-btn="saveDataBtnSidebar"]`);
+    await disabledSave.scrollIntoViewIfNeeded();
+    await disabledSave.click({ force: true }); // aria-disabled deliberately exposes its explanation
     const explanation = page.locator(`${MENU} > .vilda-tip`).last();
     await expect(explanation).toBeVisible();
     const tip = await explanation.boundingBox();
@@ -319,15 +325,20 @@ test('smaller landscape, either safe edge, keyboard and reduced motion retain me
   await expect(frame.locator('#height')).toBeFocused();
   await expect(frame.locator('#height')).toHaveValue('156');
   expect(await motion(page), 'both visual-viewport and layout-viewport keyboard contraction remain motionless').toHaveLength(1);
+  await expect(page.locator('#mobileBottomDock')).toHaveClass(/\bis-keyboard-hidden\b/);
+  await page.evaluate(() => { delete visualViewport.height; });
+  await rotateSplit(page, cdp, { width: 844, height: 390, order: 'physical-first' });
+  const focusedRotation = (await motion(page)).slice(1);
+  expect(focusedRotation.length).toBeGreaterThan(0);
+  expect(focusedRotation.some(item => item.target === 'mobileBottomDock'),
+    'appearance does not override a dock hidden by the real standalone input-focus handler').toBe(false);
+  await expect(frame.locator('#height')).toBeFocused();
 });
 
 test('focused shell rotation uses current layout height despite stale visualViewport and late safe-area insets', async ({ page }) => {
   test.setTimeout(150_000);
   const { frame, cdp } = await prepare(page, { shell: true });
   await frame.locator('#height').focus();
-  await expect.poll(() => page.locator('#mobileBottomDock').evaluate(element =>
-    element.classList.contains('is-keyboard-hidden') || element.classList.contains('is-hidden')),
-  { message: 'focusing the iframe input hides the dock before rotating' }).toBe(true);
   await page.evaluate(() => {
     window.__rotationViewportHeight = 956;
     Object.defineProperty(visualViewport, 'height', { configurable: true, get: () => window.__rotationViewportHeight });
@@ -337,8 +348,6 @@ test('focused shell rotation uses current layout height despite stale visualView
   expect(landscapePanel.y + landscapePanel.height).toBe(440);
   const rotationAnimations = await motion(page);
   expect(rotationAnimations.length).toBeGreaterThan(0);
-  expect(rotationAnimations.some(item => item.target === 'mobileBottomDock'),
-    'appearance must not override the hidden dock while the keyboard owns focus').toBe(false);
   await expect(frame.locator('#height')).toBeFocused();
   await page.evaluate(() => {
     window.__rotationViewportHeight = 440;

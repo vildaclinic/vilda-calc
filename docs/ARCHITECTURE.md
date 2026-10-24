@@ -64,6 +64,8 @@ Od P-KLAWIATURA-2 (2026-10-17) otwartą klawiaturę rozpoznaje się względem wy
 
 Zatwierdzony wariant B menu jest prezentacją istniejącego DOM i wszystkich jego działań: bezpieczny panel o szerokości do 620 px w poziomie, dwie kolumny sekcji, kompaktowy blok konta, stałe zamknięcie i przewijana treść. W pionie sekcje wracają do jednej kolumny. `vilda_chrome.css` uwzględnia cztery bezpieczne krawędzie panelu; padding `body` nie chroni nakładki `position:fixed`. Obrót nie przebudowuje ani nie zamyka menu i nie zmienia jego kontraktu fokusu.
 
+Próg `min-width: 541px` jest dopełnieniem istniejącej granicy telefonu 540 px: uruchamia poziome marginesy i reset kontenera bez naruszania pionowego odstępu nad formularzem. Nie zmienia progów liczby kolumn. Został ujęty w inwentarzu `tests/fixtures/breakpointy.json`.
+
 Delikatne pojawienie trwa 120 ms i zmienia tylko przezroczystość, bez animacji szerokości, wysokości lub skali. Uruchamia się wyłącznie po zmianie trybu telefonu, raz w dokumencie nadrzędnym, z pominięciem pierwszego ładowania i `prefers-reduced-motion`. Dock pozostaje pod wyłączną kontrolą istniejącego runtime klawiatury i nie dostaje animacji opacity. Powłoka uzgadnia pomiar nagłówka, panelu i Docka z rzeczywistą geometrią. Zasoby pozostają w precache SW; scenariusze `phone-rotation-menu-mobile` oraz `telefon-poziomo-offline` obejmują rozdzielone sygnały obrotu i zimny start. Automatyczna emulacja Chromium nie zastępuje oceny fizycznego Safari/PWA.
 
 Moduł klawiatury:
