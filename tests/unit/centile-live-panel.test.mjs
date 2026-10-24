@@ -14,6 +14,7 @@ function emitter(target) {
 function setup({ columns = '400px 400px', rects = true } = {}) {
   const pending = [], subscribers = [], views = [], hosts = [], frames = new Map(), timers = new Map(), resizeObservers = [];
   let id = 0, currentToken = Object.freeze({ fictional: 'patient-a', revision: 1 });
+  let refreshState = null;
   function element(rect = {}) {
     return {
       hidden: false, style: { setProperty(name, value) { this[name] = value; } }, children: [], parentNode: null,
@@ -38,10 +39,11 @@ function setup({ columns = '400px 400px', rects = true } = {}) {
   const data = {
     getSnapshot: vi.fn(() => new Promise((resolve, reject) => { pending.push({ resolve, reject }); })),
     isCurrent: vi.fn((candidate) => Boolean(candidate && (candidate.patientToken || candidate) === currentToken)),
+    getRefreshState: vi.fn(() => refreshState),
     subscribe: (fn) => { subscribers.push(fn); return () => {}; },
   };
   const render = vi.fn((snapshot) => ({ status: 'ready', source: snapshot.source, height: {}, weight: {} }));
-  const win = emitter({ document: doc, VildaCentileLiveData: data,
+  const win = emitter({ document: doc, VildaCentileLiveData: data, __vildaRemindersResync: vi.fn(),
     getComputedStyle: (node) => node.computedStyle || (node === form ? { gridTemplateColumns: style.columns } : {
       display: node === puberty ? style.pubertyDisplay : 'block', marginTop: style.pubertyMarginTop, marginBottom: style.pubertyMarginBottom,
     }),
@@ -56,6 +58,7 @@ function setup({ columns = '400px 400px', rects = true } = {}) {
         options, element: element(), expandButton: element(),
         fit: vi.fn(), update: vi.fn(), setStatus: vi.fn(),
         setFullscreen: vi.fn((value) => { state.fullscreen = value; }),
+        setMetric: (value) => { state.metric = value; },
         destroy: vi.fn(() => view.element.remove()), getState: () => ({ ...state }),
       };
       views.push(view); return view;
@@ -82,6 +85,7 @@ function setup({ columns = '400px 400px', rects = true } = {}) {
     emit: (event) => subscribers.forEach((fn) => fn(event)),
     replacePatient: (name = 'patient-b') => { currentToken = Object.freeze({ fictional: name, revision: 2 }); },
     invalidate: () => { currentToken = null; },
+    setRefreshState: (value) => { refreshState = value; },
     nextFrame: () => { const callbacks = [...frames.values()]; frames.clear(); callbacks.forEach((fn) => fn()); },
     runTimers: () => { const callbacks = [...timers.values()]; timers.clear(); callbacks.forEach((fn) => fn()); },
     resize: () => resizeObservers.forEach((fn) => fn()),
@@ -92,6 +96,57 @@ const flush = async () => { for (let index = 0; index < 6; index++) await Promis
 async function ready(e) { e.pending[0].resolve(e.snapshot()); await flush(); return e.views[0]; }
 
 describe('live panel controller — async ownership and invalidation', () => {
+  it('keeps the mounted weight chart and fullscreen while a same-visit save defers its next snapshot', async () => {
+    const e = setup(); const view = await ready(e);
+    view.setMetric('weight'); view.options.onExpand();
+    const height = e.mount.style['--vilda-centile-live-inline-height'];
+    e.setRefreshState('pending');
+    e.emit({ identityChanged: false, reason: 'patient-loaded' });
+    expect(view.destroy).not.toHaveBeenCalled();
+    e.runTimers(); e.pending[1].resolve(null); await flush();
+    expect(e.api.getState()).toMatchObject({ eligible: true, fullscreen: true, metric: 'weight' });
+    expect(e.hosts[0].options.isCurrent(e.hosts[0].options.patientToken)).toBe(true);
+    expect(e.hosts[0].close).not.toHaveBeenCalled();
+    expect(e.mount.hidden).toBe(false);
+    expect(e.mount.style['--vilda-centile-live-inline-height']).toBe(height);
+    expect(e.win.__vildaRemindersResync).not.toHaveBeenCalled();
+    e.setRefreshState(null);
+    e.emit({ identityChanged: false, reason: 'vilda:dob-restored' });
+    e.runTimers(); e.pending[2].resolve(e.snapshot({ currentHeight: 159 })); await flush();
+    expect(e.views).toHaveLength(1);
+    expect(view.update).toHaveBeenCalledTimes(2);
+    expect(e.api.getState()).toMatchObject({ eligible: true, fullscreen: true, metric: 'weight' });
+    expect(view.destroy).not.toHaveBeenCalled();
+  });
+
+  it('shows a concrete refresh failure in the same view and recovers without resetting its metric', async () => {
+    const e = setup(); const view = await ready(e);
+    view.setMetric('weight');
+    e.setRefreshState('error');
+    const failed = e.api.refresh(); e.pending[1].resolve(null); await failed;
+    expect(e.api.getState()).toMatchObject({ status: 'unavailable', metric: 'weight', eligible: true });
+    expect(view.setStatus).toHaveBeenCalledWith(expect.stringContaining('odświeżyć siatki po zapisie'));
+    expect(e.win.__vildaRemindersResync).not.toHaveBeenCalled();
+    e.setRefreshState(null);
+    const recovered = e.api.refresh(); e.pending[2].resolve(e.snapshot()); await recovered;
+    expect(e.api.getState()).toMatchObject({ status: 'ready', metric: 'weight' });
+    expect(e.views).toHaveLength(1);
+    expect(view.update).toHaveBeenCalledTimes(2);
+  });
+
+  it.each(['owner', 'columns'])('a pending save never keeps a chart after %s invalidation', async kind => {
+    const e = setup(); const view = await ready(e);
+    view.options.onExpand(); e.setRefreshState('pending');
+    const refresh = e.api.refresh();
+    if (kind === 'owner') e.invalidate();
+    else e.style.columns = '800px';
+    e.pending[1].resolve(null); await refresh;
+    expect(view.destroy).toHaveBeenCalledOnce();
+    expect(e.hosts[0].close).toHaveBeenCalledWith('stale');
+    expect(e.mount.hidden).toBe(true);
+    expect(e.api.getState().eligible).toBe(false);
+  });
+
   it('ignores an older snapshot that resolves after a newer refresh', async () => {
     const e = setup();
     const old = e.snapshot({ source: 'OLAF' });

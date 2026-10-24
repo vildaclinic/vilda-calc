@@ -130,7 +130,7 @@ async function dopiszPomiar(page, { lat, mies, wzrost, masa }) {
 }
 
 const zapisz = (page) => page.locator('#saveDataBtnSidebar').click();
-const pasek = (page) => page.locator('#vildaStatusSide');
+const pasek = (page) => page.locator('#vildaSaveFeedback');
 
 /* Bieżąca wersja rekordu — to, co Karta Pacjenta pokazuje jako aktualne dane. */
 const glowa = (page, patientId) => page.evaluate(async (id) => {
@@ -170,7 +170,7 @@ test.describe('Ten sam pacjent zapisywany z dwóch kart', () => {
     await kartaB.bringToFront();
     await dopiszPomiar(kartaB, { lat: 6, mies: 8, wzrost: 116, masa: 21 });
     await zapisz(kartaB);
-    await expect(pasek(kartaB)).toContainText('Zapisano');
+    await expect(pasek(kartaB)).toHaveAttribute('data-state', 'saved');
     await expect.poll(async () => (await glowa(kartaB, patientId)).liczbaWersji).toBe(2);
 
     // 3. Karta A dopisuje pomiar z 6 lat 2 mies. i zapisuje. Sejf słusznie pyta
@@ -207,7 +207,12 @@ test.describe('Ten sam pacjent zapisywany z dwóch kart', () => {
     }, { timeout: 20_000, message: 'wczytany rekord + trzy zapisy = cztery wersje' }).toBe(4);
     // Karta B potwierdziła także drugi zapis (pierwszy dał wersję 2).
     await expect(pasek(kartaB), 'karta B potwierdziła zapis pomiaru z 7 lat 8 mies.')
-      .toContainText(/Zapisano \(snapshot [34]\)/);
+      .toHaveAttribute('data-state', 'saved');
+    // Nowy komunikat nie pokazuje technicznego numeru zapisu. Nadal weryfikujemy,
+    // że trwały stan chipa potwierdza drugi zapis B, a nie wcześniejszy snapshot 2.
+    await expect.poll(() => kartaB.evaluate(() => [3, 4].includes(
+      window.VildaSaveStatusIndicator.getLastSnapshotCount())),
+    { message: 'potwierdzenie odpowiada zapisowi numer 3 albo 4' }).toBe(true);
     await expect(kartaA.getByRole('alertdialog')).toHaveCount(0);
     await expect(kartaB.getByRole('alertdialog')).toHaveCount(0);
 
@@ -241,7 +246,7 @@ test.describe('Ten sam pacjent zapisywany z dwóch kart', () => {
     await kartaB.bringToFront();
     await dopiszPomiar(kartaB, { lat: 6, mies: 8, wzrost: 116, masa: 21 });
     await zapisz(kartaB);
-    await expect(pasek(kartaB)).toContainText('Zapisano');
+    await expect(pasek(kartaB)).toHaveAttribute('data-state', 'saved');
     await expect.poll(async () => (await glowa(kartaB, patientId)).liczbaWersji).toBe(2);
 
     await kartaA.bringToFront();

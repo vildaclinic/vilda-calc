@@ -260,6 +260,18 @@ Workflow `.github/workflows/wyglad.yml` („Wygląd”, P-STYLE rata 1, decyzja 
 
 **Wyjątek dla dynamicznej geometrii osi LH/FSH (2026-10-04).** Zatwierdzona prezentacja wymaga ciągłego położenia granic i wyniku, zależnego od utrwalonych liczb. `vilda_lab_assessment_ui.js` ma jedno jawne miejsce ustawienia stylu: wyłącznie liczbowe zmienne `--low`, `--high`, `--value` i `--label-edge`. Kolory, typografia, układ i animacje pozostają w arkuszu komponentu. Skończone wartości i dozwolony zestaw zmiennych sprawdza test produkcyjnego renderera `lab-assessment-axes.test.mjs`; nie używamy klas zaokrąglających wynik do dyskretnych pozycji. Inwentarz świadomie odświeżono o ten jeden wpis skryptem `style-elementow.mjs --zapisz`; strażnik pozostałych miejsc pozostaje bez zmian.
 
+**Dynamiczna geometria powiadomienia C/C1 (2026-10-24, zatwierdzona makieta).**
+`vilda_save_feedback.js` ma cztery jawne zapisy stylu: `maxWidth`, `maxHeight`,
+`left` i `top`, wyłącznie skończone liczby pikseli obliczone z widocznego viewportu,
+safe area, aktualnego Docka i pływających przycisków. Stałe klasy nie odwzorowałyby
+płynnej zmiany klawiatury ani zmiennego położenia Docka. Kolory, typografia,
+obramowanie i animacje pozostają w arkuszu komponentu z istniejącymi tokenami.
+Testy `save-feedback.test.mjs` oraz `centile-save-feedback.spec.mjs` wykonują
+produkcyjne pozycjonowanie, w tym viewport powłoki i omijanie przeszkód.
+Inwentarz odświeżono wyłącznie o te cztery miejsca; pozostałe limity pozostają
+bez zmian. To część implementacji zatwierdzonych wariantów, bez refaktoryzacji
+istniejących stylów inline.
+
 ### Równoległość zestawu przeglądarkowego (decyzja właściciela 2026-09-11)
 
 Zestaw e2e szedł jednym wątkiem i urósł do 19 minut na CI, aż przestał się mieścić w limicie joba. Teraz **workery biorą po całym pliku**: `workers` w `playwright.config.mjs` to 4 na CI (tyle rdzeni ma runner `ubuntu-latest`), lokalnie decyduje Playwright. Zmienna `PLAYWRIGHT_WORKERS` nadpisuje jedno i drugie — do porównań A/B bez edytowania konfiguracji.

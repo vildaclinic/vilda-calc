@@ -1,12 +1,9 @@
 import { expect, test } from '../support/test-czas.mjs';
 
-// P-PASEK-STATUSU (decyzja właściciela 2026-09-14) — „wariant D na desktop i B na telefonie,
-// tylko na index.html".
-//
-// Test jednostkowy mierzy samą warstwę wyświetlania. Tutaj mierzymy to, czego on nie dosięga:
-// czy pasek jest wpięty w prawdziwy zapis, czy właściwy z dwóch jest widoczny przy danej
-// szerokości ekranu i — najważniejsze — czy komunikat NIE GAŚNIE. Dymek znikał po 2,5 s
-// i to była główna przyczyna całej zmiany, więc jest tu osobny pomiar zegarem.
+// P-ZAPIS-SIATKA: zatwierdzony wariant C/C1 przenosi wynik zapisu poza układ
+// formularza. Poprzedni kontrakt P-PASEK-STATUSU zachowujemy dla błędów:
+// pełny powód nie gaśnie, odnośniki prowadzą do brakujących pól, chip pokazuje błąd.
+// Sukces ma teraz osobny, zatwierdzony kontrakt: 5 s i trwały stan przy pacjencie.
 //
 // Wszystkie dane są jednoznacznie fikcyjne; test nie dotyka żadnego prawdziwego sejfu.
 test.use({ serviceWorkers: 'block' });
@@ -25,7 +22,7 @@ async function otworz(page, rozmiar) {
   });
   await page.goto('/index.html', { waitUntil: 'load' });
   await page.waitForFunction(() => typeof window.saveUserData === 'function'
-    && typeof window.collectUserData === 'function' && Boolean(window.VildaStatusBar));
+    && typeof window.collectUserData === 'function' && Boolean(window.VildaSaveFeedback));
 }
 
 /* Ta sama strona, ale za odblokowaną bramą logowania.
@@ -41,7 +38,7 @@ async function otworzZKontem(page, rozmiar) {
   );
   await page.reload({ waitUntil: 'load' });
   await page.waitForFunction(() => Boolean(window.VildaVault) && window.VildaVault.isUnlocked()
-    && typeof window.saveUserData === 'function' && Boolean(window.VildaStatusBar));
+    && typeof window.saveUserData === 'function' && Boolean(window.VildaSaveFeedback));
   await page.waitForFunction(
     () => !document.documentElement.classList.contains('vilda-auth-locked'),
   );
@@ -67,20 +64,24 @@ async function niepelnyFormularz(page) {
 
 const widoczny = (page, id) => page.locator('#' + id);
 
-test.describe('Pasek statusu zapisu', () => {
-  test('na szerokim ekranie stoi w prawej kolumnie, na wąskim — na górze formularza', async ({ page }) => {
+test.describe('Powiadomienie o wyniku zapisu', () => {
+  test('na obu szerokościach wynik jest nakładką, a formularzowe paski pozostają ukryte', async ({ page }) => {
     test.setTimeout(120_000);
 
     await otworzZKontem(page, DESKTOP);
     await niepelnyFormularz(page);
     await page.evaluate(() => window.saveUserData());
-    await expect(widoczny(page, 'vildaStatusSide'), 'wariant D — prawa kolumna').toBeVisible();
-    await expect(widoczny(page, 'vildaStatusForm'), 'wariant B ustępuje miejsca').toBeHidden();
+    await expect(widoczny(page, 'vildaSaveFeedback'), 'wynik poza przepływem formularza').toBeVisible();
+    await expect(widoczny(page, 'vildaSaveFeedback')).toHaveCSS('position', 'fixed');
+    await expect(widoczny(page, 'vildaStatusSide'), 'prawa kolumna nie traci miejsca').toBeHidden();
+    await expect(widoczny(page, 'vildaStatusForm'), 'formularz nie dostaje dodatkowego wiersza').toBeHidden();
 
-    // Ta sama strona, węższe okno — o wyborze rozstrzyga CSS, nie przeładowanie.
+    // Ta sama strona, węższe okno — zmienia się położenie nakładki, nie układ formularza.
     await page.setViewportSize(TELEFON);
-    await expect(widoczny(page, 'vildaStatusForm'), 'wariant B — góra formularza').toBeVisible();
-    await expect(widoczny(page, 'vildaStatusSide'), 'wariant D ustępuje miejsca').toBeHidden();
+    await expect(widoczny(page, 'vildaSaveFeedback')).toBeVisible();
+    await expect(widoczny(page, 'vildaSaveFeedback')).toHaveClass(/is-mobile/);
+    await expect(widoczny(page, 'vildaStatusForm')).toBeHidden();
+    await expect(widoczny(page, 'vildaStatusSide')).toBeHidden();
   });
 
   test('nazywa braki, oznacza je czerwienią i prowadzi do pola', async ({ page }) => {
@@ -89,30 +90,30 @@ test.describe('Pasek statusu zapisu', () => {
     await niepelnyFormularz(page);
     await page.evaluate(() => window.saveUserData());
 
-    const pasek = widoczny(page, 'vildaStatusSide');
+    const pasek = widoczny(page, 'vildaSaveFeedback');
     await expect(pasek).toBeVisible();
     await expect(pasek).toContainText('Nie zapisano');
     await expect(pasek).toContainText('masę ciała');
     await expect(pasek).toContainText('wzrost');
-    expect(await pasek.getAttribute('data-ton')).toBe('blad');
+    expect(await pasek.getAttribute('data-tone')).toBe('blad');
 
     await pasek.getByRole('button', { name: 'wzrost' }).click();
     const wKtorym = await page.evaluate(() => document.activeElement && document.activeElement.id);
     expect(wKtorym, 'odnośnik prowadzi wprost do pola').toBe('height');
   });
 
-  test('komunikat NIE GAŚNIE — to jest cała przyczyna tej zmiany', async ({ page }) => {
+  test('błąd NIE GAŚNIE — przyczyna odmowy pozostaje do przeczytania', async ({ page }) => {
     test.setTimeout(120_000);
     await otworz(page, DESKTOP);
     await niepelnyFormularz(page);
     await page.evaluate(() => window.saveUserData());
 
-    const pasek = widoczny(page, 'vildaStatusSide');
+    const pasek = widoczny(page, 'vildaSaveFeedback');
     await expect(pasek).toContainText('Nie zapisano');
     // Dymek gasł po 2,5 s. Czekamy dłużej i sprawdzamy, że treść stoi.
     await page.waitForTimeout(4000);
     await expect(pasek, 'po 4 s pasek nadal mówi to samo').toContainText('Nie zapisano');
-    expect(await pasek.getAttribute('data-ton')).toBe('blad');
+    expect(await pasek.getAttribute('data-tone')).toBe('blad');
   });
 
   test('brak zalogowania to ostrzeżenie, a nie błąd', async ({ page }) => {
@@ -133,12 +134,12 @@ test.describe('Pasek statusu zapisu', () => {
     });
     await page.evaluate(() => window.saveUserData());
 
-    const pasek = widoczny(page, 'vildaStatusSide');
+    const pasek = widoczny(page, 'vildaSaveFeedback');
     await expect(pasek).toContainText('Zaloguj się');
-    expect(await pasek.getAttribute('data-ton'), 'to nie jest awaria, tylko brak sesji').toBe('uwaga');
+    expect(await pasek.getAttribute('data-tone'), 'to nie jest awaria, tylko brak sesji').toBe('uwaga');
   });
 
-  test('nieudany zapis maluje pasek i chip na czerwono', async ({ page }) => {
+  test('nieudany zapis oznacza komunikat i chip jako błąd', async ({ page }) => {
     test.setTimeout(120_000);
     await otworzZKontem(page, DESKTOP);
 
@@ -160,10 +161,10 @@ test.describe('Pasek statusu zapisu', () => {
     });
     await page.evaluate(async () => { await window.saveUserData(); });
 
-    const pasek = widoczny(page, 'vildaStatusSide');
+    const pasek = widoczny(page, 'vildaSaveFeedback');
     await expect(pasek).toContainText('Nie udało się zapisać pacjenta');
     await expect(pasek).toContainText('sejf odmówił');
-    expect(await pasek.getAttribute('data-ton')).toBe('blad');
+    expect(await pasek.getAttribute('data-tone')).toBe('blad');
 
     // Stan „błąd" na chipie był dotąd martwy — `c(i.ERROR)` nie było wołane ani razu.
     await expect.poll(
@@ -173,11 +174,12 @@ test.describe('Pasek statusu zapisu', () => {
     ).toBe('error');
   });
 
-  test('podpowiedź wygaszonego przycisku zostaje dymkiem, nie trafia na pasek', async ({ page }) => {
+  test('podpowiedź wygaszonego przycisku zostaje dymkiem, nie staje się wynikiem zapisu', async ({ page }) => {
     test.setTimeout(120_000);
     await otworzZKontem(page, DESKTOP);
 
-    // Kontrola pozytywna: pasek startuje pusty i ukryty.
+    // Kontrola pozytywna: bez próby zapisu nie ma komunikatu ani paska w formularzu.
+    await expect(widoczny(page, 'vildaSaveFeedback')).toHaveCount(0);
     await expect(widoczny(page, 'vildaStatusSide')).toBeHidden();
 
     const pokazano = await page.evaluate(() => {
@@ -191,6 +193,7 @@ test.describe('Pasek statusu zapisu', () => {
     // Niezależnie od tego, czy dymek się pokazał, pasek ma zostać pusty: to podpowiedź
     // przy przycisku, a nie wynik zapisu.
     expect(['dymek', 'nic', 'brak przycisku']).toContain(pokazano);
-    await expect(widoczny(page, 'vildaStatusSide'), 'pasek jest dla wyników zapisu').toBeHidden();
+    await expect(widoczny(page, 'vildaSaveFeedback'), 'tooltip nie tworzy wyniku zapisu').toHaveCount(0);
+    await expect(widoczny(page, 'vildaStatusSide')).toBeHidden();
   });
 });
