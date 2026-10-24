@@ -63,6 +63,8 @@
     "vilda_app_helpers.js": 2,
     "vilda_auth_ui.js": 367,
     "vilda_b64_checklist_ui.js": 3,
+    "vilda_centile_live_host.js": 1,
+    "vilda_centile_live_panel.js": 1,
     "vilda_chrome.js": 58,
     "vilda_crypto_strength_explainer.js": 11,
     "vilda_data_import_export.js": 25,

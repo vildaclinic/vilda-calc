@@ -86,6 +86,19 @@ async function pierwszaWizytaIWczytanie(page, pierwszy) {
 const DZIECKO_1 = { sex: 'M', age: '8', ageMonths: '2', weight: '26', height: '126', waistCm: '58', hipCm: '66' };
 const DZIECKO_2 = { age: '8', ageMonths: '9', weight: '29.5', height: '129', waistCm: '61', hipCm: '68' };
 
+async function dodajPrzypomnienieNaDzis(page, patientId) {
+  await page.evaluate(async (id) => {
+    const V = window.VildaVault, d = new Date(), p = (n) => String(n).padStart(2, '0');
+    await V.savePatientNote({ patientId: id, title: 'Fikcyjna kontrola', body: '', category: 'followup', dueDateISO: `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}` });
+    window.VildaProAccess.hasAccess = () => true;
+    window.dispatchEvent(new CustomEvent('vildaProAccessChanged', { detail: { plan: 'pro' } }));
+  }, patientId);
+}
+
+async function odczytajPrzypomnienia(page) {
+  return page.evaluate(async () => (await window.VildaVault.listPatientNotesDueByDate()).flatMap(group => group.notes || []));
+}
+
 // P-OSTATNI-3: rytm pionowy kart to 1rem — karta porównania ma mieć TEN SAM odstęp od karty
 // formularza (i od karty „Przypomnienia") u góry, co od kart Centyle/BMI i przycisku Podsumowania u dołu,
 // równy odstępowi między innymi kartami wyników. Do SW 1.0.983 było 2rem u góry i 0 u dołu (desktop)
@@ -93,12 +106,12 @@ const DZIECKO_2 = { age: '8', ageMonths: '9', weight: '29.5', height: '129', wai
 async function odstepy(page) {
   return page.evaluate(() => {
     const r = (sel) => { const el = document.querySelector(sel); if (!el) return null; const cs = getComputedStyle(el); const b = el.getBoundingClientRect(); return cs.display === 'none' || b.height === 0 ? null : { top: b.top + scrollY, bottom: b.bottom + scrollY }; };
-    const f = r('#userSection fieldset.user-card'), k = r('#prevSummaryCard'), rem = r('#remindersInline');
+    const f = r('#userSection fieldset.user-card'), k = r('#prevSummaryCard'), rem = r('#remindersInline'), siatka = r('#vildaCentileLivePanel');
     const nizej = ['#metabolicSummarySection', '#results', '#bmiCard'].map(r).filter(Boolean).map((x) => x.top);
     // wzorzec: odstęp między dwiema kolejnymi WIDOCZNYMI kartami lewej kolumny wyników (rytm 1rem)
     const dzieci = Array.from(document.querySelectorAll('#leftColumnWrap > *')).map((el) => { const cs = getComputedStyle(el); const b = el.getBoundingClientRect(); return cs.display === 'none' || b.height === 0 ? null : { top: b.top + scrollY, bottom: b.bottom + scrollY }; }).filter(Boolean);
     const wzorzec = dzieci.length >= 2 ? dzieci[1].top - dzieci[0].bottom : null;
-    return { gora: k.top - f.bottom, dol: Math.min(...nizej) - k.bottom, przypomnienia: rem ? k.top - rem.bottom : null, wzorzec };
+    return { gora: k.top - f.bottom, dol: Math.min(...nizej) - k.bottom, przypomnienia: rem ? k.top - rem.bottom : null, siatka: siatka ? k.top - siatka.bottom : null, wzorzec };
   });
 }
 
@@ -203,23 +216,56 @@ test.describe('desktop', () => {
     await zrzut(page.locator('#prevSummaryCard'), 'porownanie-karta-desktop-bez-pro.png');
   });
 
-  test('z kartą „Przypomnienia" w prawej kolumnie: ten sam odstęp od niej, co od formularza', async ({ page }) => {
+  test('dorosły z kartą „Przypomnienia" w prawej kolumnie: ten sam odstęp od niej, co od formularza', async ({ page }) => {
     test.setTimeout(150_000);
-    const pid = await pierwszaWizytaIWczytanie(page, DZIECKO_1);
-    await wpisz(page, DZIECKO_2);
-    // wpis „na dziś" + PRO (jak w przypomnienia-karta.spec) → karta Przypomnienia w prawej kolumnie
-    await page.evaluate(async (id) => {
-      const V = window.VildaVault, d = new Date(), p = (n) => String(n).padStart(2, '0');
-      await V.savePatientNote({ patientId: id, title: 'Kontrola wzrostu', body: '', category: 'followup', dueDateISO: `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}` });
-      window.VildaProAccess.hasAccess = () => true;
-      window.dispatchEvent(new CustomEvent('vildaProAccessChanged', { detail: { plan: 'pro' } }));
-    }, pid);
-    await page.waitForFunction(() => { const el = document.getElementById('remindersInline'); return !!el && el.style.display !== 'none' && el.textContent.includes('Przypomnienia'); }, null, { timeout: 20000 });
+    // Pełnoletni pozostaje poza zakresem podglądu siatki. Zachowujemy tutaj
+    // dotychczasową regresję geometrii Przypomnień, bez zmiany jej asercji.
+    const pid = await pierwszaWizytaIWczytanie(page, { sex: 'F', age: '25', ageMonths: '0', weight: '60', height: '165', waistCm: '70', hipCm: '95' });
+    await wpisz(page, { age: '26', ageMonths: '0', weight: '66', height: '165', waistCm: '75', hipCm: '96' });
+    await dodajPrzypomnienieNaDzis(page, pid);
+    await expect(page.locator('#remindersInline')).toBeVisible({ timeout: 20000 });
+    await expect(page.locator('#remindersInline')).toContainText('Przypomnienia');
+    await expect(page.locator('#vildaCentileLiveMount')).toBeHidden();
+    await expect(page.locator('#vildaCentileLivePanel')).toHaveCount(0);
     await expect(page.locator('#prevSummaryCard')).toBeVisible();
     const o = await sprawdzOdstepy(page);
     expect(o.przypomnienia, 'karta Przypomnienia jest widoczna').not.toBeNull();
     expect(Math.abs(o.przypomnienia - o.wzorzec), `odstęp od Przypomnień (${o.przypomnienia}) = wzorzec (${o.wzorzec})`).toBeLessThanOrEqual(1);
     await zrzut(page, 'porownanie-strona-desktop-przypomnienia.png');
+  });
+
+  test('dziecko: siatka zastępuje Przypomnienia z odstępem 1rem; po ukończeniu 18 lat wraca ta sama notatka', async ({ page }) => {
+    test.setTimeout(150_000);
+    const pid = await pierwszaWizytaIWczytanie(page, DZIECKO_1);
+    await wpisz(page, DZIECKO_2);
+    await dodajPrzypomnienieNaDzis(page, pid);
+    const notatki = await odczytajPrzypomnienia(page);
+    expect(notatki.map(note => note.title)).toEqual(['Fikcyjna kontrola']);
+    const siatka = page.locator('#vildaCentileLivePanel');
+    const przypomnienia = page.locator('#remindersInline');
+    await expect.poll(() => page.evaluate(() => window.VildaCentileLivePanel.getState()), { timeout: 30000 })
+      .toMatchObject({ eligible: true, status: 'ready', patientId: pid });
+    await expect(siatka).toBeVisible();
+    await expect(przypomnienia).toBeHidden();
+    await expect(page.locator('#prevSummaryCard')).toBeVisible();
+    const o = await sprawdzOdstepy(page);
+    expect(o.przypomnienia, 'Przypomnienia ustępują miejsca siatce dziecka').toBeNull();
+    expect(o.siatka, 'siatka jest widoczna nad kartą porównania').not.toBeNull();
+    expect(Math.abs(o.siatka - o.wzorzec), `odstęp od siatki (${o.siatka}) = wzorzec (${o.wzorzec})`).toBeLessThanOrEqual(1);
+    await zrzut(page, 'porownanie-strona-desktop-siatka.png');
+
+    // To ten sam zapisany pacjent i ta sama notatka; zmienia się wyłącznie
+    // wiek bieżącego, fikcyjnego pomiaru na granicę zakresu nowego panelu.
+    await wpisz(page, { age: '18', ageMonths: '0' });
+    await expect(siatka).toHaveCount(0);
+    await expect(page.locator('#vildaCentileLiveMount')).toBeHidden();
+    await expect(przypomnienia).toBeVisible({ timeout: 20000 });
+    await expect(przypomnienia).toContainText('Przypomnienia');
+    await expect(przypomnienia.locator('.vild-rem-row')).toHaveCount(1);
+    expect(await odczytajPrzypomnienia(page)).toEqual(notatki);
+    const fallback = await sprawdzOdstepy(page);
+    expect(fallback.przypomnienia, 'Przypomnienia wracają poza zakresem siatki').not.toBeNull();
+    expect(Math.abs(fallback.przypomnienia - fallback.wzorzec), `odstęp po powrocie Przypomnień (${fallback.przypomnienia}) = wzorzec (${fallback.wzorzec})`).toBeLessThanOrEqual(1);
   });
 
   test('dorosły: różnice i kategoria BMI, bez paska tempa', async ({ page }) => {

@@ -128,6 +128,43 @@ Granice te są częścią kontraktu regresyjnego. Łączenie ich ponownie zwięk
 
 Nie wolno przenosić pola między pamięcią sesji, pamięcią trwałą i danymi pochodnymi bez analizy cyklu życia, zachowania wielu kart, czyszczenia oraz odtworzenia pacjenta. Samo zachowanie jednego widoku po odświeżeniu nie wystarcza jako test.
 
+### Podgląd siatki podczas nowego pomiaru
+
+`index.html` i `docpro.html` wczytują czytelne moduły `vilda_centile_live_*`:
+
+- `data` buduje zamrożoną migawkę zapisanej osoby i bieżącej wizyty. Jawny wybór
+  „Nowy pomiar”, wiek poniżej 216 miesięcy, właściciel ramki i odblokowany vault
+  są warunkami odczytu. Token w RAM obejmuje pacjenta, sekwencję wczytania i cykl
+  życia; spóźnione odpowiedzi nie trafiają do widoku. Robocza historia, także
+  celowo pusta, ma pierwszeństwo przed osią pomiarów vaulta.
+- `render` pobiera modele rzeczywistych generatorów przez opcje `modelOnly` oraz
+  `growthData`. Krzywe, zakresy, deduplikacja pomiarów i statystyki pozostają
+  odpowiedzialnością istniejących funkcji. `computeSnapshotLayout` Kreatora
+  pracuje na kopii adnotacji, bez podmiany globalnego pacjenta i zapisu geometrii.
+- `view` rysuje oba płótna z jednolitą skalą, obsługuje odczyt, przypięcie i
+  klawiaturę. Wybór widoku i przesuwanie wskaźnika nie są danymi pacjenta.
+- `panel` montuje kartę tylko przy rzeczywistych dwóch kolumnach formularza.
+  Zastępuje Przypomnienia na Start; w DocPro wypełnia wolne miejsce. Wysokość
+  odpowiada formularzowi ze zwiniętym pokwitaniem, z uwzględnieniem paska statusu.
+- `host` jest też w `app.html`. Przenosi tę samą kartę DOM do modalnego dialogu
+  powłoki, zachowując położenie iframe. Po zamknięciu przywraca kartę i fokus.
+  Zmiana pacjenta, blokada lub ukrycie ramki natychmiast usuwa stary podgląd.
+  Rzeczywista aktywność w dialogu korzysta z `VildaAuthUI.recordActivity` obu
+  dokumentów. Automatyczny render, resize i scroll nie podtrzymują sesji.
+
+Moduły nie wywołują kolektora/zapisu pacjenta, nie uruchamiają przeliczenia i nie
+przechowują podglądu w magazynach przeglądarki. Odświeżenie po obliczeniu korzysta
+z `VildaUpdateHooks`; zmiana adnotacji ogłasza `vilda:centile-creator-changed`.
+Eksport bez nowych opcji zachowuje dotychczasową ścieżkę. Szczegóły prezentacji
+i zakresu: wpis `GROWTH-LIVE-PANEL` w `docs/clinical/ALGORITHMS.md`.
+
+Rozszerzenia zminifikowanych generatorów odtwarza idempotentny
+`node tools/apply_centile_live_models.mjs` (`--check` sprawdza unikalne kotwice).
+Statyczne style panelu należą do arkusza komponentu. Dwa nowe wpisy inwentarza
+`style-elementow.json` dotyczą wyłącznie zmiennych CSS z mierzoną w pikselach
+wysokością formularza i miejsca karty podczas przenoszenia do dialogu. Pozostałe
+przełączenia wyglądu hosta używają klas, zachowując zastane style dokumentu.
+
 ### 5. Synchronizacja
 
 Publiczne moduły `vilda_sync.js`, `vilda_sync_integration.js` i `vilda_realtime.js` integrują aplikację z opcjonalną usługą synchronizacji. Szczegóły infrastruktury i kod usługi nie powinny być kopiowane do publicznych zgłoszeń.
