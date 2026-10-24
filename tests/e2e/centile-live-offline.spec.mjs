@@ -107,6 +107,10 @@ async function assertPanelAndFullscreen(page, frame, patientId) {
   await dialog.locator('.vilda-centile-live-close').click();
   await expect(dialog).toHaveCount(0);
   await expect(frame.locator('.vilda-centile-live-card')).toBeVisible();
+  // New measurement deliberately starts with empty weight/height. Supply the
+  // synthetic visit before testing a successful offline save of that visit.
+  await frame.locator('#weight').fill('47');
+  await frame.locator('#height').fill('159');
   await frame.evaluate(() => window.saveUserData());
   await expect(page.locator('#vildaSaveFeedback[data-state="saved"]')).toBeVisible();
   await expect(frame.locator('.vilda-centile-live-card')).toBeVisible();
