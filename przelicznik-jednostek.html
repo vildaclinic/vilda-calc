@@ -70,6 +70,7 @@
   <link href="vilda_fsh_source_ui.css?v=1" rel="stylesheet">
   <link href="vilda_fsh_d3_ui.css?v=1" rel="stylesheet">
   <link href="vilda_e2_d3_ui.css?v=1" rel="stylesheet">
+  <link href="vilda_female_tt_age_ui.css?v=1" rel="stylesheet">
   <link href="lab_history_strip.css?v=2" rel="stylesheet">
 
   <script src="vilda_logger.js?v=2"></script>
@@ -111,7 +112,7 @@
   <link rel="icon" type="image/png" sizes="48x48" href="/pwa-icons/icon-48x48.png">
   <link rel="icon" type="image/png" sizes="96x96" href="/pwa-icons/icon-96x96.png">
 
-  <link href="inline_przelicznik_jednostek_00.css?v=5" rel="stylesheet">
+  <link href="inline_przelicznik_jednostek_00.css?v=6" rel="stylesheet">
 
   <script src="vilda_chrome.js?v=171"></script>
   <script src="lucide.min.js?v=1" defer></script>
@@ -355,6 +356,7 @@
            <div class="lab-pane lab-pane--chart" id="labChartPane">
             <div id="labFshD3" hidden></div>
             <div id="labE2D3" hidden></div>
+            <div id="labFemaleTtAge" hidden></div>
             <div id="labAmhAgeReference" hidden></div>
             <section id="labHormoneLifespan" hidden aria-label="Hormony w ciągu życia"></section>
             <div id="labAmhLilacsSource" hidden></div>
@@ -492,7 +494,7 @@
   <script src="vilda_zrodla_pacjenta.js?v=1"></script>
   <script src="vilda_puberty_source.js?v=13"></script>
   <script src="vilda_lab_neonatal_context.js?v=2"></script>
-  <script src="vilda_hormone_lifespan_data.js?v=41"></script>
+  <script src="vilda_hormone_lifespan_data.js?v=42"></script>
   <script src="vilda_hormone_lifespan_reference.js?v=7"></script>
   <script src="vilda_hormone_lifespan_observations.js?v=1"></script>
   <script src="vilda_hormone_lifespan_display.js?v=15"></script>
@@ -510,6 +512,8 @@
   <script src="vilda_fsh_d3_ui.js?v=1"></script>
   <script src="vilda_e2_d3.js?v=1"></script>
   <script src="vilda_e2_d3_ui.js?v=1"></script>
+  <script src="vilda_female_tt_age.js?v=1"></script>
+  <script src="vilda_female_tt_age_ui.js?v=1"></script>
   <script src="lab_pin_result.js?v=11"></script>
   <script src="vilda_lab_history.js?v=4"></script>
   <script src="lab_history_strip.js?v=4"></script>
@@ -849,6 +853,17 @@
       }
     });
     window.VildaE2D3Runtime = e2D3UI || null;
+    var femaleTtAgeUI = window.VildaFemaleTTAgeUI && window.VildaFemaleTTAgeUI.mount({
+      host: document.getElementById('labFemaleTtAge'),
+      onActivity: function () {
+        try {
+          var auth = window.VildaAuthUI;
+          if (auth && typeof auth.recordActivity === 'function') auth.recordActivity();
+        } catch (_) { /* A source comparison cannot interrupt frame closing. */ }
+      }
+    });
+    window.VildaFemaleTTAgeRuntime = femaleTtAgeUI || null;
+
     var lifespanVault = null;
     var lastLifespanContext = null;
     var lifespanCurrentSex = null;
@@ -871,6 +886,12 @@
     function currentPatientIdentity() {
       try { return sessionStorage.getItem('vildaCurrentPatientId') || ''; }
       catch (_) { return window._vildaCurrentPatientId || ''; }
+    }
+    function resetFemaleTtAge() {
+      if (typeof femaleTtAgeUI === 'undefined' || !femaleTtAgeUI) return;
+      femaleTtAgeUI.clear();
+      var host = document.getElementById('labHormoneLifespan');
+      if (host) host.hidden = false;
     }
     var lastAmhSourceContext = null;
     var lastE2SourceContext = null;
@@ -1006,6 +1027,7 @@
       if (typeof fshSourceUI !== 'undefined' && fshSourceUI) fshSourceUI.clear();
       resetFshD3Context();
       resetE2D3Context();
+      resetFemaleTtAge();
       return true;
     }
     function bindLifespanVault() {
@@ -1025,6 +1047,7 @@
         if (typeof fshSourceUI !== 'undefined' && fshSourceUI) fshSourceUI.clear();
         resetFshD3Context();
         resetE2D3Context();
+        resetFemaleTtAge();
       });
     }
     function lifespanAgeLabel(age, input) {
@@ -1086,7 +1109,7 @@
         || ![undefined, null, '', 'unknown', 'serum'].includes(specimen);
     }
     function lifespanFemaleHormoneContraindicated(substance, source, input, patient) {
-      if (!substance || !['lh', 'fsh', 'estradiol'].includes(substance.id)) return false;
+      if (!substance || !['lh', 'fsh', 'estradiol', 'testosterone_total'].includes(substance.id)) return false;
       // E2 uses the current converter context; its legacy input carries age
       // only. Do not manufacture a sample sex/date or borrow historical facts.
       var currentEstradiol = substance.id === 'estradiol';
@@ -1188,6 +1211,7 @@
         if (typeof fshSourceUI !== 'undefined' && fshSourceUI) fshSourceUI.clear();
         resetFshD3Context();
         resetE2D3Context();
+        resetFemaleTtAge();
         return;
       }
       var source = readPubertyPatientContext();
@@ -1299,7 +1323,28 @@
         identityKey: source.identityKey || ''
       };
       lastLifespanContext = context;
-      lifespanUI.update(context);
+      // The approved female TT card has its own source-limited 6–18 axis.
+      // It does not borrow a missing lifetime curve, register a new ordinary
+      // profile or modify the independent laboratory assessment.
+      var femaleTtMode = !!(typeof femaleTtAgeUI !== 'undefined' && femaleTtAgeUI && context.analyte === 'testosterone_total'
+        && context.sex === 'female' && context.sourceStatus === 'ready'
+        && context.contextBasis === 'current-patient' && !context.sampleDateISO);
+      if (femaleTtMode) {
+        lifespanUI.clear();
+        document.getElementById('labHormoneLifespan').hidden = true;
+        femaleTtAgeUI.update(Object.assign({}, context, {
+          displayUnit: unitTargetEl.value || unitEl.value,
+          measurement: evaluation && evaluation.measurement || null,
+          treatment: input && input.treatment || null,
+          pregnancy: input && input.pregnancy || null,
+          reproductiveContext: input && input.reproductiveContext || null,
+          measurementKind: input && input.measurementKind || null,
+          contraindicated: context.contraindicated || lifespanAnonymousMainTreatment(source, input)
+        }));
+      } else {
+        resetFemaleTtAge();
+        lifespanUI.update(context);
+      }
       if (amhAgeReferenceUI || typeof amhLilacsSourceUI !== 'undefined' && amhLilacsSourceUI) {
         // Both read-only AMH source cards receive the same current context.
         // Their source facts stay separate from the chart and saved reference.
@@ -4614,6 +4659,7 @@
       if (!substance || !currentSubstance || currentSubstance.id !== substance.id) {
         resetFshD3Context();
         resetE2D3Context();
+        resetFemaleTtAge();
       }
       if (pubertyUI) pubertyUI.setAnalyte(isPubertySubstance(substance) ? substance.id : null);
       renderSubstanceHint(substance, rawText || (substance ? substance.label_pl : ''));
@@ -5168,6 +5214,7 @@
       if (typeof fshSourceUI !== 'undefined' && fshSourceUI) fshSourceUI.clear();
       resetFshD3Context();
       resetE2D3Context();
+      resetFemaleTtAge();
       // Świeża sesja = puste formularze. Pole „Substancja" mogło zostać
       // wypełnione przy inicjalizacji podstrony ze starej preferencji
       // LAB_CONV_SUBSTANCE (gdy user logował się będąc już na przeliczniku,
@@ -5194,6 +5241,7 @@
     document.addEventListener('vilda:patient-loaded', function () {
       resetFshD3Context();
       resetE2D3Context();
+      resetFemaleTtAge();
       if (pubertyUI) pubertyUI.reset();
       if (isLifespanSubstance(currentSubstance)) { valueEl.value = ''; showError(''); }
       refreshPatientContext();
@@ -5201,11 +5249,13 @@
     document.addEventListener('vilda:session-changed', function () {
       resetFshD3Context();
       resetE2D3Context();
+      resetFemaleTtAge();
       refreshPatientContext();
     });
     document.addEventListener('vilda:zrodlo-pacjenta-zmienione', function () {
       resetFshD3Context();
       resetE2D3Context();
+      resetFemaleTtAge();
       refreshPatientContext();
     });
     document.addEventListener('vilda:auth-loaded', bindLifespanVault);

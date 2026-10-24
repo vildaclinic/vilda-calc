@@ -41373,6 +41373,311 @@ const insl3AgeSourcePolicy = {
     "newConcentrationAxis": false
   }
 };
+const femaleTtAgeData = {
+  "schemaVersion": 1,
+  "kind": "published-age-p50-data",
+  "id": "madsen2022-female-total-testosterone-age",
+  "version": "2026-10-24.1",
+  "analyte": "testosterone_total",
+  "sex": "female",
+  "unit": "nmol/L",
+  "ageDomain": {
+    "min": 6,
+    "max": 18,
+    "minimumInclusive": true,
+    "maximumInclusive": true
+  },
+  "source": {
+    "id": "madsen2022-female-total-testosterone-age",
+    "label": "Madsen 2022 · dziewczęta",
+    "citation": "Madsen A i wsp. Reference Curves for Pediatric Endocrinology: Leveraging Biomarker Z-Scores for Clinical Classifications. JCEM 2022. DOI 10.1210/clinem/dgac155.",
+    "url": "https://doi.org/10.1210/clinem/dgac155",
+    "fullText": "https://pmc.ncbi.nlm.nih.gov/articles/PMC9202734/",
+    "supplementUrl": "https://doi.org/10.6084/m9.figshare.17153336.v1",
+    "population": "Dziewczęta z norweskich przekrojowych kohort Bergen Growth Study 2 (6–<16 lat) i Fit Futures (15–18 lat).",
+    "method": "LC-MS/MS multiplex steroid method; Haukeland Hormone Laboratory",
+    "specimen": "serum",
+    "unit": "nmol/L",
+    "statistic": "model-p50",
+    "limits": {
+      "lloq": 0.02,
+      "lod": null,
+      "unit": "nmol/L",
+      "censoringRule": null
+    },
+    "limitsDescription": "LLOQ TT 0,02 nmol/L; wszystkie 13 P50 ponad LLOQ. Reguła cenzury niskich wyników niepodana. CVA 4% dotyczy 1,5–37 nmol/L, nie niskich median dziewcząt.",
+    "limitations": [
+      "To modelowane P50 wieku, nie średnie arytmetyczne, mediany osobnych roczników lub trajektoria jednej pacjentki. Artykuł używa określenia mean-for-age (p50).",
+      "Przekrojowe kohorty norweskie, głównie biała populacja; BGS2 udział 43%, Fit Futures 93%. Sumy Table 1 nie są ustalonym N dopasowania konkretnego analitu lub każdego rocznika.",
+      "Surowica LC-MS/MS, pobrania 08–14. Model wieku nie stratyfikuje pory dnia, fazy cyklu lub stadium pokwitania. Th i P nie są wyprowadzane z wieku.",
+      "Doustną antykoncepcję wykluczono z żeńskich odniesień biomarkerów. Osobne wiersze etynyloestradiolu w tabeli RI nie są węzłami tego modelu. Nieznany wywiad nie potwierdza braku terapii.",
+      "LLOQ 0,02 nmol/L dotyczy metody źródłowej; nie jest granicą metody pacjentki. Reguła cenzury niepodana. CVA 4% nie opisuje precyzji median poniżej 1,5 nmol/L.",
+      "13 rocznych węzłów po exp(M)/1e6 nie odzyskuje ciągłego fitu autora. PCHIP między nimi to jawna polityka aplikacji; bez SDS, centyli pacjenta lub RI.",
+      "Cały możliwy wiek musi mieścić się w [6,18]. Dokładny węzeł 18 nie tworzy grupy 18–<19. Bez ekstrapolacji, najbliższej mediany lub sztucznego plateau.",
+      "Normy laboratoryjne Mayo, wynik i historia pozostają osobnymi warstwami; odległość od mediany nie określa prawidłowości.",
+      "Przykładowy z-score L37 w arkuszu ma obcy mianownik. Nie jest importowany; nie zmienia położenia P50 z odwrotnej transformacji M."
+    ]
+  },
+  "points": [
+    {
+      "ageYears": 6,
+      "value": 0.055406420261450574,
+      "sourceM": 10.9224507552166,
+      "sourceCells": [
+        "LCMSMS hormones!AF3",
+        "LCMSMS hormones!AG3",
+        "LCMSMS hormones!AH3",
+        "LCMSMS hormones!AI3"
+      ]
+    },
+    {
+      "ageYears": 7,
+      "value": 0.07830054241503637,
+      "sourceM": 11.26830980935,
+      "sourceCells": [
+        "LCMSMS hormones!AF4",
+        "LCMSMS hormones!AG4",
+        "LCMSMS hormones!AH4",
+        "LCMSMS hormones!AI4"
+      ]
+    },
+    {
+      "ageYears": 8,
+      "value": 0.11029655799080951,
+      "sourceM": 11.610927998869,
+      "sourceCells": [
+        "LCMSMS hormones!AF5",
+        "LCMSMS hormones!AG5",
+        "LCMSMS hormones!AH5",
+        "LCMSMS hormones!AI5"
+      ]
+    },
+    {
+      "ageYears": 9,
+      "value": 0.15545977695103175,
+      "sourceM": 11.9541423080156,
+      "sourceCells": [
+        "LCMSMS hormones!AF6",
+        "LCMSMS hormones!AG6",
+        "LCMSMS hormones!AH6",
+        "LCMSMS hormones!AI6"
+      ]
+    },
+    {
+      "ageYears": 10,
+      "value": 0.2201681045278567,
+      "sourceM": 12.3021466450402,
+      "sourceCells": [
+        "LCMSMS hormones!AF7",
+        "LCMSMS hormones!AG7",
+        "LCMSMS hormones!AH7",
+        "LCMSMS hormones!AI7"
+      ]
+    },
+    {
+      "ageYears": 11,
+      "value": 0.3103715513902767,
+      "sourceM": 12.6455254116421,
+      "sourceCells": [
+        "LCMSMS hormones!AF8",
+        "LCMSMS hormones!AG8",
+        "LCMSMS hormones!AH8",
+        "LCMSMS hormones!AI8"
+      ]
+    },
+    {
+      "ageYears": 12,
+      "value": 0.42502815745885664,
+      "sourceM": 12.9599106985563,
+      "sourceCells": [
+        "LCMSMS hormones!AF9",
+        "LCMSMS hormones!AG9",
+        "LCMSMS hormones!AH9",
+        "LCMSMS hormones!AI9"
+      ]
+    },
+    {
+      "ageYears": 13,
+      "value": 0.5490752992652548,
+      "sourceM": 13.2159908682181,
+      "sourceCells": [
+        "LCMSMS hormones!AF10",
+        "LCMSMS hormones!AG10",
+        "LCMSMS hormones!AH10",
+        "LCMSMS hormones!AI10"
+      ]
+    },
+    {
+      "ageYears": 14,
+      "value": 0.6584793820799414,
+      "sourceM": 13.3976884892424,
+      "sourceCells": [
+        "LCMSMS hormones!AF11",
+        "LCMSMS hormones!AG11",
+        "LCMSMS hormones!AH11",
+        "LCMSMS hormones!AI11"
+      ]
+    },
+    {
+      "ageYears": 15,
+      "value": 0.7399787024590178,
+      "sourceM": 13.5143766843054,
+      "sourceCells": [
+        "LCMSMS hormones!AF12",
+        "LCMSMS hormones!AG12",
+        "LCMSMS hormones!AH12",
+        "LCMSMS hormones!AI12"
+      ]
+    },
+    {
+      "ageYears": 16,
+      "value": 0.7933525600252321,
+      "sourceM": 13.5840229920118,
+      "sourceCells": [
+        "LCMSMS hormones!AF13",
+        "LCMSMS hormones!AG13",
+        "LCMSMS hormones!AH13",
+        "LCMSMS hormones!AI13"
+      ]
+    },
+    {
+      "ageYears": 17,
+      "value": 0.8313584790221047,
+      "sourceM": 13.6308163635169,
+      "sourceCells": [
+        "LCMSMS hormones!AF14",
+        "LCMSMS hormones!AG14",
+        "LCMSMS hormones!AH14",
+        "LCMSMS hormones!AI14"
+      ]
+    },
+    {
+      "ageYears": 18,
+      "value": 0.869047786256784,
+      "sourceM": 13.6751533926744,
+      "sourceCells": [
+        "LCMSMS hormones!AF15",
+        "LCMSMS hormones!AG15",
+        "LCMSMS hormones!AH15",
+        "LCMSMS hormones!AI15"
+      ]
+    }
+  ],
+  "provenance": {
+    "doi": "10.1210/clinem/dgac155",
+    "supplementDoi": "10.6084/m9.figshare.17153336.v1",
+    "sourceWorksheet": "LCMSMS hormones",
+    "sourceRange": "AF3:AI15",
+    "sourceSha256": "45cd1b63284c9f53a5936abee7ab8d8e6fce13a19025d4e2cbed0e5b3468897e",
+    "articleSha256": "ae2410f0b9998b64c7bc3074455338dbd539300582a92337bf00d3c63cb029ff",
+    "sourceStatistic": "model P50 at z=0; figure caption mean-for-age (p50)",
+    "transform": "exp(M) / 1000000",
+    "transformEvidence": [
+      "LCMSMS hormones!K36 = LN(I36*1000000)",
+      "LCMSMS hormones!K37 = LN(I37*1000000)"
+    ],
+    "dataLicense": "CC BY 4.0 (Figshare dataset; distinct article license)",
+    "sourceAudit": "evidence/madsen2022-unused-sex-analytes-audit-2026-10-24.json",
+    "ownerApproval": "Makieta TT dziewcząt 6–18 zaakceptowana 24.10.2026; polecenie wdrożenia: jest ok, koduj. Nie jest to walidacja kliniczna."
+  }
+};
+const femaleTtAgePolicy = {
+  "schemaVersion": 1,
+  "kind": "educational-female-tt-age-comparison",
+  "version": "2026-10-24.1",
+  "sourceId": "madsen2022-female-total-testosterone-age",
+  "analyte": "testosterone_total",
+  "sex": "female",
+  "contextBasis": "current-patient",
+  "clinicalReferenceActivation": false,
+  "patientComparisonEnabled": true,
+  "notLaboratoryReference": true,
+  "noClinicalClassification": true,
+  "noHistoryWrite": true,
+  "fullAgeIntervalRequired": true,
+  "ordinaryOnly": true,
+  "interpolation": "pchip-between-published-p50",
+  "ageReferenceBasis": "entered-age-lower-bound",
+  "chartSelectionKey": "t",
+  "allowedViews": [
+    "life",
+    "age"
+  ],
+  "displayUnits": [
+    "nmol/L",
+    "ng/dL",
+    "ng/mL",
+    "pg/mL"
+  ],
+  "allowedAssayMethodIds": [
+    "lc-ms/ms",
+    "lc-ms-ms",
+    "lcmsms"
+  ],
+  "allowedSpecimens": [
+    "serum",
+    "surowica"
+  ],
+  "excludedCyclePhases": [
+    "pregnancy",
+    "pregnancy_t1",
+    "pregnancy_t2",
+    "pregnancy_t3",
+    "postmenopause"
+  ],
+  "excludedReproductiveContexts": [
+    "pregnancy",
+    "postmenopause"
+  ],
+  "excludedPositiveFlags": [
+    "pregnancy",
+    "hormonalTreatment",
+    "stimulation",
+    "gnrha"
+  ],
+  "excludedTreatmentContexts": [
+    "hormonal",
+    "stimulation",
+    "gnrh-stimulation",
+    "hcg-stimulation"
+  ],
+  "excludedTreatmentFlags": [
+    "gnrha",
+    "sexSteroids",
+    "cocp",
+    "exogenousTestosterone"
+  ],
+  "allowedMeasurementKinds": [
+    "basal"
+  ],
+  "plot": {
+    "ageMin": 6,
+    "ageMax": 18,
+    "ageTicks": [
+      6,
+      9,
+      12,
+      15,
+      18
+    ],
+    "valueMin": 0,
+    "valueMax": 1.2,
+    "valueTicks": [
+      0,
+      0.3,
+      0.6,
+      0.9,
+      1.2
+    ],
+    "unit": "nmol/L",
+    "independentOfPatient": true,
+    "sampleCount": 241
+  },
+  "knownExclusionPolicy": "OCP is an explicit female-source exclusion; other known therapies, pregnancy, stimulation or method/material mismatch conservatively withhold the educational comparison. Unknown facts do not become absence.",
+  "allowedTreatmentContexts": [
+    "none"
+  ]
+};
 const femaleGonadotropinPolicy = {
   "id": "female-gonadotropin-display-v1",
   "version": "2026-10-12.1",
@@ -43430,6 +43735,8 @@ return {
   insl3DisplayPolicy: insl3DisplayPolicy,
   insl3AgeSourceData: insl3AgeSourceData,
   insl3AgeSourcePolicy: insl3AgeSourcePolicy,
+  femaleTtAgeData: femaleTtAgeData,
+  femaleTtAgePolicy: femaleTtAgePolicy,
   femaleGonadotropinPolicy: femaleGonadotropinPolicy,
   femaleGonadotropinData: femaleGonadotropinData,
   femaleGonadotropinReferencePolicy: femaleGonadotropinReferencePolicy,

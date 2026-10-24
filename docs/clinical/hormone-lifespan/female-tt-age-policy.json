@@ -1,0 +1,97 @@
+{
+  "schemaVersion": 1,
+  "kind": "educational-female-tt-age-comparison",
+  "version": "2026-10-24.1",
+  "sourceId": "madsen2022-female-total-testosterone-age",
+  "analyte": "testosterone_total",
+  "sex": "female",
+  "contextBasis": "current-patient",
+  "clinicalReferenceActivation": false,
+  "patientComparisonEnabled": true,
+  "notLaboratoryReference": true,
+  "noClinicalClassification": true,
+  "noHistoryWrite": true,
+  "fullAgeIntervalRequired": true,
+  "ordinaryOnly": true,
+  "interpolation": "pchip-between-published-p50",
+  "ageReferenceBasis": "entered-age-lower-bound",
+  "chartSelectionKey": "t",
+  "allowedViews": [
+    "life",
+    "age"
+  ],
+  "displayUnits": [
+    "nmol/L",
+    "ng/dL",
+    "ng/mL",
+    "pg/mL"
+  ],
+  "allowedAssayMethodIds": [
+    "lc-ms/ms",
+    "lc-ms-ms",
+    "lcmsms"
+  ],
+  "allowedSpecimens": [
+    "serum",
+    "surowica"
+  ],
+  "excludedCyclePhases": [
+    "pregnancy",
+    "pregnancy_t1",
+    "pregnancy_t2",
+    "pregnancy_t3",
+    "postmenopause"
+  ],
+  "excludedReproductiveContexts": [
+    "pregnancy",
+    "postmenopause"
+  ],
+  "excludedPositiveFlags": [
+    "pregnancy",
+    "hormonalTreatment",
+    "stimulation",
+    "gnrha"
+  ],
+  "excludedTreatmentContexts": [
+    "hormonal",
+    "stimulation",
+    "gnrh-stimulation",
+    "hcg-stimulation"
+  ],
+  "excludedTreatmentFlags": [
+    "gnrha",
+    "sexSteroids",
+    "cocp",
+    "exogenousTestosterone"
+  ],
+  "allowedMeasurementKinds": [
+    "basal"
+  ],
+  "plot": {
+    "ageMin": 6,
+    "ageMax": 18,
+    "ageTicks": [
+      6,
+      9,
+      12,
+      15,
+      18
+    ],
+    "valueMin": 0,
+    "valueMax": 1.2,
+    "valueTicks": [
+      0,
+      0.3,
+      0.6,
+      0.9,
+      1.2
+    ],
+    "unit": "nmol/L",
+    "independentOfPatient": true,
+    "sampleCount": 241
+  },
+  "knownExclusionPolicy": "OCP is an explicit female-source exclusion; other known therapies, pregnancy, stimulation or method/material mismatch conservatively withhold the educational comparison. Unknown facts do not become absence.",
+  "allowedTreatmentContexts": [
+    "none"
+  ]
+}

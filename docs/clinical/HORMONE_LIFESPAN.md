@@ -1127,6 +1127,41 @@ innego hormonu zachowuje własne kwalifikowanie, jednostkę i skalę.
 Porównania płci pozostają osobnymi trybami; ta zmiana nie przenosi do
 nich źródeł Madsen lub względnej średniej COPENHAGEN.
 
+## TT dziewcząt — osobna karta 6–18 lat, 24 października 2026
+
+Po audycie niewykorzystanych danych Madsena właściciel zaakceptował
+makietę desktopową i mobilną oraz polecił jej wdrożenie. Przy bieżącym
+żeńskim TT osobna karta pokazuje źródłową medianę wieku 6–18 i dokładny
+wynik, bez nowych pytań. Wiek i płeć są pobierane z formularza; model
+wieku nie wymaga oceny Th/P i nie wyprowadza jej z wieku lub stężenia.
+Dotychczasowy wynik, konwersje i niezależne zakresy Mayo zachowują własne
+reguły. Nie klasyfikujemy prawidłowości z odległości od mediany.
+
+Madsen 2022, DOI [10.1210/clinem/dgac155](https://doi.org/10.1210/clinem/dgac155),
+oryginalny `LCMSMS hormones!AF3:AI15`: 13 rocznych P50 po `exp(M)/1e6`
+w nmol/L. To norweskie przekrojowe kohorty BGS2/Fit Futures, surowica
+LC-MS/MS, pobrania 08–14, bez użytkowniczek OCP w żeńskich referencjach.
+LLOQ 0,02, wszystkie P50 ponad nią, reguła cenzury niepodana. PCHIP
+między rocznymi P50 jest polityką aplikacji, nie odzyskanym ciągłym
+fitem autorów. Dane i polityka są osobne, pakowane jako `femaleTtAgeData`
+i `femaleTtAgePolicy`, poza niezmienionym rejestrem **85 profili**.
+
+Cały możliwy wiek musi mieścić się w [6,18]. Odczyt jest przy dolnej
+granicy wpisanego wieku, z odpowiednim podpisem. Dokładne 18 jest
+ostatnim węzłem; pełne `[18,19)` nie otrzymuje liczby. Dla 3/75 lat,
+braku wieku i znanych wyłączeń nie ma krzywej/mediany tej pacjentki
+lub wartości zastępczej. Zmiana osoby, płci, analitu, blokada i dawna
+próbka nie mogą zachować poprzedniego odczytu. Stan nie trafia do historii.
+
+Krzywa obejmuje tylko 6–18 lat, bez niemowlęcego lub dorosłego ogona.
+Oś 0–1,2 nmol/L jest stała; zmiana jednostki zachowuje równoważną skalę.
+Jasny znacznik to P50, czerwony dokładny pomiar. Nierówności nie tworzą
+kropki; wysoki wynik ma strzałkę i rzeczywistą liczbę. Źródła są początkowo
+zwinięte. Nowa karta nie rozszerza porównania płci, RI, SDS lub diagnoz.
+F12/0,65 ma P50 około 0,425, a niezależne Mayo nadal może wskazywać
+`within`. Źródło, wartości, ograniczenia i kontrakt:
+[FEMALE_TT_AGE.md](hormone-lifespan/FEMALE_TT_AGE.md).
+
 ## Żeński E2 — zwykły punkt mediany wieku, 17 października 2026
 
 Po odrębnym przeglądzie źródeł właściciel polecił uruchomić profil
