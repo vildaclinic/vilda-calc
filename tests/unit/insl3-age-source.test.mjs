@@ -3,6 +3,7 @@ import { readFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import vm from 'node:vm';
 import { describe, expect, it } from 'vitest';
+import { beforeFemaleTtAgeRuntime } from '../support/prior-female-gonadotropin-bundle.mjs';
 
 const require = createRequire(import.meta.url);
 const reader = require('../../vilda_insl3_age_source.js');
@@ -55,7 +56,7 @@ describe('INSL3 — direct educational age-source reading, without clinical acti
   });
 
   it('leaves every preceding runtime field identical to the approved audyt base', () => {
-    const preceding = Object.fromEntries(Object.entries(runtime).filter(([key]) =>
+    const preceding = Object.fromEntries(Object.entries(beforeFemaleTtAgeRuntime(runtime)).filter(([key]) =>
       !['insl3AgeSourceData', 'insl3AgeSourcePolicy'].includes(key)));
     expect(createHash('sha256').update(JSON.stringify(preceding)).digest('hex'))
       .toBe('07f049f7661bda7997001cc3c7b595f5a9bde3baaf02cc4807ba46a4a54e2d87');

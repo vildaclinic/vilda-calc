@@ -21,6 +21,7 @@ Rejestr jest inwentaryzacją techniczną. Nie nadaje opisanym modułom statusu w
 | LAB-PUBERTY | LH/FSH: niezależna ocena zakresu i czasu dojrzewania | `vilda_lab_puberty_data.js`, `vilda_lab_puberty.js`, `vilda_lab_snapshot.js`, `vilda_lab_puberty_ui.js`, `vilda_lab_assessment_ui.js` | `lab-puberty*.test.mjs`, `lab-snapshot*.test.mjs`, `lab-assessment*.test.mjs`, E2E `lab-snapshot.spec.mjs`, `lab-puberty-ui.spec.mjs` | PR3: aktywacja LH/FSH w dotychczasowym układzie i odczyt utrwalonych ocen; szczegóły w `LH_FSH.md` |
 | LAB-INHIBIN-B | Inhibina B: wiek, minipuberty i kontekst dorosłych | `vilda_lab_inhibin_b_data.js`, `vilda_lab_inhibin_b.js`, wspólne UI i snapshot | `lab-inhibin*.test.mjs`, E2E `lab-inhibin-b.spec.mjs` | orientacyjne zakresy źródłowe; ograniczenia i polityki w `INHIBIN_B.md`; akceptacja kliniczna właściciela przed scaleniem |
 | LAB-TT-MAYO | Testosteron całkowity: M według wieku/G, F według wieku od 6 miesięcy | `vilda_lab_testosterone_data.js`, `vilda_lab_testosterone.js`, `vilda_lab_testosterone_units.js`, wspólne UI i snapshot | `lab-testosterone*.test.mjs`, E2E `lab-testosterone*.spec.mjs`; wyniki uruchomień w PR | etap 3 M i pierwsza partia F; źródła, luki i polityki w `TESTOSTERONE.md`; końcowy przegląd kliniczny właściciela przed scaleniem |
+| HORMONE-FEMALE-TT-AGE | TT dziewcząt 6–18: osobna mediana modelu i punkt wyniku | `vilda_female_tt_age.js`, `vilda_female_tt_age_ui.js`, osobne dane/polityka pakowane do runtime | `female-tt-age.test.mjs`, E2E `lab-female-tt-age*.spec.mjs`; wyniki w PR | zakres zaakceptowanej makiety 24.10.2026; poza 85 zwykłymi profilami, bez nowych RI/SDS/historii; [kontrakt](hormone-lifespan/FEMALE_TT_AGE.md) |
 | LAB-HISTORY | Historia i porównanie zapisanych wyników badań (model bez UI) | `vilda_lab_history.js` | `lab-history-view.test.mjs`, `lab-history-vault.test.mjs` | test regresyjny modelu; moduł jeszcze nieładowany przez strony (PR1 planu historii) |
 | LAB-PANELS | Panele i interpretacje laboratoryjne | `lab_clinical_panels.js`, `lab_pin_result.js` | kontrola składni; brak dedykowanej regresji interpretacji klinicznych | wysoki priorytet; brak pełnego pokrycia klinicznego |
 | GH-IGF | Dawkowanie i monitorowanie GH/IGF-1 | `gh_igf_therapy.js`, `gh_therapy_monitor.js`, `gh_therapy_segments.js`, `vilda_gh_opakowania_dane.js`, `vilda_gh_opakowania.js`, `vilda_gh_dawka_dane.js`, `vilda_gh_dawka.js` | kontrola składni; testy PRO dotyczą uprawnień, nie dawkowania ani terapii; liczba wkładów, wstrzykiwaczy i fiolek: `gh-opakowania-waznosc` (Vitest + E2E, P-GH-WAZNOSC); dawka podawana, krok i limit jednego wstrzyknięcia: `gh-dawka-podawana` (Vitest + E2E, P-GH-DAWKA-PODAWANA); Increlex — dawka na podanie, krok 0,1 mg, nie więcej niż 0,12 mg/kg: `gh-dawka-podawana` (Vitest + E2E, P-GH-INCRELEX-PODANIE); „Aktualna dawka” Increlex w Karcie pacjenta: `karta-gh-increlex-dawka` (E2E, P-GH-INCRELEX-KARTA); pozostałe widoki dawki Increlex w Karcie pacjenta: `karta-gh-increlex-widoki` (E2E, P-GH-INCRELEX-WIDOKI); tytuł wpisów Increlex: `karta-pacjenta-historia-automat` (Vitest) i `gh-dawka-podawana` (E2E, P-GH-INCRELEX-TYTUL); zalecenia dla pacjenta i liczba iniekcji z podziałem dawki: `gh-dawka-podawana` (Vitest) i `gh-iniekcje-zalecenia` (E2E, P-GH-INIEKCJE-ZALECENIA) | wysoki priorytet przeglądu klinicznego |
@@ -2564,6 +2565,66 @@ silnik/adapter w
 Weryfikacja obejmuje stałość geometrii, desktop/telefon, granice,
 jednostki i rzeczywisty scenariusz świeżej instalacji/aktualizacji PWA
 oraz zimnego restartu offline; wyniki wykonania podaje opis PR.
+
+### HORMONE-FEMALE-TT-AGE — osobna mediana TT dziewcząt 6–18, 2026-10-24
+
+**Decyzja i wpływ kliniczny:** właściciel zaakceptował makietę desktopową
+i mobilną i polecił wdrożenie („jest ok, koduj”). Nowa osobna karta TT
+dziewcząt 6–18 podaje medianę modelu Madsen oraz orientacyjne zestawienie
+dokładnego bieżącego wyniku. To zmiana informacji i porównania klinicznego,
+bez nowych RI, SDS, diagnoz, selektorów Tannera, historii lub synchronizacji.
+Dotychczasowe Mayo i 85 zwykłych profili pozostają odrębne i niezmienione;
+nowa karta nie jest 86. profilem `patientPointData`.
+
+**Pełne źródło:** Madsen i wsp. 2022, DOI
+[10.1210/clinem/dgac155](https://doi.org/10.1210/clinem/dgac155),
+Methods, tabela 1 i przypisy, Results/ryc. 1 oraz oryginalny suplement LMS
+v1, DOI [10.6084/m9.figshare.17153336.v1](https://doi.org/10.6084/m9.figshare.17153336.v1).
+`LCMSMS hormones!AF3:AI15` zawiera 13 węzłów 6–18; M w AH3:AH15.
+Jawne `LN(SI*1e6)` w przykładach K36/K37 odwracamy jako `exp(M)/1e6`.
+To modelowa P50, mimo podpisu „mean-for-age (p50)”, nie średnia
+arytmetyczna lub empiryczna mediana każdego rocznika. Nie kopiujemy
+błędnego mianownika przykładu z-score L37 ani pełnego LMS/SDS.
+
+**Populacja i oznaczenie:** norweskie przekrojowe BGS2 6–<16 i Fit Futures
+15–18, surowica LC-MS/MS, pobrania 08–14. F601/F319 to dostępne próbki
+kohort, nie potwierdzony N dopasowania TT. Doustna antykoncepcja była
+wyłączona z żeńskich referencji. Model łączy stadia i fazy, nie jest
+medianą Th/P. LLOQ 0,02 nmol/L; wszystkie P50 0,0554–0,8690 są ponad nią.
+Reguła cenzury jest niepodana, a CV 4% dla 1,5–37 nie opisuje precyzji
+tych niskich P50. Metoda źródła nie potwierdza metody próbki pacjentki.
+
+**Kontrakt:** osobne `female-tt-age-data.json` i
+`female-tt-age-policy.json`, `VildaFemaleTTAge.evaluate(data, policy,
+context)`, UI `VildaFemaleTTAgeUI`; runtime pakuje `femaleTtAgeData`
+i `femaleTtAgePolicy`. PCHIP na 13 przekształconych P50 korzysta
+z rzeczywistych `referenceAt`/`sampleProfile`, nie kopii wzoru.
+To polityka interpolacji aplikacji, nie odzyskany ciągły fit autorów.
+Cały znany przedział musi pasować do [6,18]; odczyt przy dolnej granicy
+ma podpis „dla wpisanego wieku”. Dokładne 18 kwalifikuje, `[18,19)` nie.
+Brak wieku, 3/75 lat i granice przekraczające model nie dostają fallbacku.
+
+Stała oś 0–1,2 nmol/L i jej równoważne konwersje nie zależą od wyniku.
+Jasny znacznik jest P50, czerwony pomiarem; zero jest na osi, a wartość
+ponad nią ma strzałkę i prawdziwą liczbę. Nierówność nie staje się
+dokładnym punktem. Znana OCP, ciąża, leczenie/stymulacja i niezgodność
+metody/materiału blokują to zestawienie; nieznany wywiad nie jest
+ujemnym wywiadem. Bieżące fakty nie są przenoszone na historię lub inną
+osobę. Brak dodatkowej ankiety i zapisu mediany.
+
+**Przypadki rzeczywistych funkcji i UI:** F12/0,65 nmol/L → P50
+0,42502815745885664 i punkt 0,65, bez zmiany niezależnego Mayo `within`;
+F12,5 → P50 0,4874143269614546; F18 dokładnie → 0,869047786256784;
+`[17,18)` kwalifikuje, `[18,19)`/F3/F75 bez mediany. `<0,1` zachowuje
+operator bez punktu, także po konwersji. Puste → zero → wysokie →
+wyczyszczenie zachowuje tę samą krzywą i usuwa stary punkt.
+Weryfikacja obejmuje wszystkie 13 węzłów, kontekst/tożsamość, znane
+wyłączenia, niezmienione RI, desktop/telefon, pełny ekran i prawdziwy
+zimny restart PWA offline. Wykonane wyniki podaje PR; akceptacja
+zakresu i zielone testy nie są walidacją kliniczną.
+
+Pełne źródła, SHA-256, liczby i ograniczenia:
+[FEMALE_TT_AGE.md](hormone-lifespan/FEMALE_TT_AGE.md).
 
 ### HORMONE-LH-FSH-STABLE-CURVES — stałe krzywe i dorosłe odniesienia, 2026-10-11
 
