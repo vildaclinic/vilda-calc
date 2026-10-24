@@ -14,8 +14,8 @@ describe('P-STYLE rata 4a: martwe deklaracje bazowe nie wracają do arkuszy', ()
   const arkusze = arkuszeZeStronami();
   const wynik = martweWKaskadzie(arkusze, wiedzaDom());
 
-  it('cztery arkusze są globalne (ładowane na każdej stronie): ios26-v2, style, sidebar, vilda_chrome', () => {
-    expect(arkusze.filter((a) => a.globalny).map((a) => a.nazwa)).toEqual(['ios26-v2.css', 'sidebar.css', 'style.css', 'vilda_chrome.css']);
+  it('pięć arkuszy jest ładowanych na każdej stronie, także wariant telefonu ograniczony klasą html', () => {
+    expect(arkusze.filter((a) => a.globalny).map((a) => a.nazwa)).toEqual(['ios26-v2.css', 'sidebar.css', 'style.css', 'vilda_chrome.css', 'vilda_phone_landscape.css']);
   });
 
   for (const a of arkusze) {
