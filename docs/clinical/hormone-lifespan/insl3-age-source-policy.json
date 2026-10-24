@@ -1,0 +1,45 @@
+{
+  "schemaVersion": 1,
+  "id": "insl3-age-source-education",
+  "version": "2026-10-24.1",
+  "kind": "educational-age-source-reading",
+  "sourceId": "albrethsen2020-insl3-age-direct",
+  "sex": "male",
+  "contextBasis": "current-form",
+  "clinicalActivation": false,
+  "clinicalActivationMeaning": "Brak aktywacji profilu norm lub oceny klinicznej. Edukacyjny odczyt źródła jest osobną funkcją opisaną przez kind.",
+  "notClinicalReference": true,
+  "noPatientComparison": true,
+  "allowedAgeDomains": [
+    [
+      10,
+      27.6
+    ],
+    [
+      31.4,
+      60.9
+    ]
+  ],
+  "ageDomainChoice": "Konserwatywna polityka na podstawie deklarowanych przedziałów kohort; nie jest dowodem braku uczestników poza nimi lub w opisanej luce.",
+  "onlyDirectVisibleStroke": true,
+  "bridgesAllowed": false,
+  "ageIntervalMustBeWhollyCovered": true,
+  "loqCrossingBlocksModeledMedian": false,
+  "displayDecimalPlaces": 2,
+  "singleValueRounding": "nearest only when the whole supported interval rounds to one value",
+  "rangeRounding": "outward",
+  "graphicalBounds": "envelope of every intersected adjacent native-column edge using the larger endpoint allowance",
+  "forbiddenFallbacks": [
+    "nearest-age",
+    "graphical-bridge",
+    "lifespan-illustration",
+    "new-model-fit",
+    "other-study"
+  ],
+  "presentation": {
+    "location": "existing-collapsed-sources",
+    "newRequiredFields": 0,
+    "patientConcentrationPoint": false,
+    "newConcentrationAxis": false
+  }
+}

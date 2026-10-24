@@ -3167,13 +3167,83 @@
         }),
       );
     }
+    function insl3AgeSourceReading() {
+      if (!stableInsl3Visible() || !patientContext ||
+          patientContext.contextBasis !== "current-patient" || patientContext.sampleDateISO) return null;
+      const reader = window.VildaInsl3AgeSource;
+      if (!reader || typeof reader.read !== "function") return null;
+      return reader.read(data.insl3AgeSourceData, data.insl3AgeSourcePolicy, {
+        sourceStatus, sex, ageYears: patientAgeYears,
+        ageUpperYears: patientContext.ageUpperYears,
+        ageUpperInclusive: patientContext.ageUpperInclusive,
+        contextBasis: "current-form",
+      });
+    }
+    function appendInsl3AgeSource(target, reading) {
+      if (!reading) return;
+      const section = document.createElement("section");
+      section.dataset.lifespan = "insl3-age-source";
+      section.dataset.readStatus = reading.status;
+      const paragraph = (text, key) => {
+        const node = document.createElement("p");
+        node.textContent = text;
+        if (key) node.dataset.insl3Age = key;
+        section.append(node);
+        return node;
+      };
+      const heading = paragraph("");
+      const title = document.createElement("strong");
+      title.textContent = "INSL3 · odczyt źródłowy dla wieku";
+      heading.append(title);
+      if (reading.status === "ready") {
+        const format = (value) => value.toLocaleString("pl-PL", {
+          minimumFractionDigits: 2, maximumFractionDigits: 2, useGrouping: false,
+        });
+        const ageFormat = (value) => value.toLocaleString("pl-PL", {
+          maximumFractionDigits: 3, useGrouping: false,
+        });
+        const age = reading.ageLower === reading.ageUpper
+          ? `${ageFormat(reading.ageLower)} lat`
+          : `${ageFormat(reading.ageLower)}–${reading.ageUpperInclusive ? "" : "<"}${ageFormat(reading.ageUpper)} lat`;
+        paragraph(`Wiek z formularza głównego: ${age}.`, "age");
+        const value = paragraph("", "value");
+        const valueText = document.createElement("strong");
+        valueText.textContent = reading.valueKind === "approximate-median-range"
+          ? `Mediana modelu w tym przedziale wieku: ≈ ${format(reading.valueMin)}–${format(reading.valueMax)} ng/mL`
+          : `Mediana modelu: ≈ ${format(reading.valueMin)} ng/mL`;
+        value.append(valueText);
+        paragraph("Przybliżony odczyt z ryc. 1A Albrethsen 2020. To wartość źródłowa dla wieku; nie jest normą laboratoryjną ani oceną wyniku pacjenta.");
+        if (reading.sourceLoqCrossing) paragraph("Niski odczyt: błąd odczytu grafiki obejmuje wartości poniżej LOQ metody źródłowej (0,15 ng/mL). Nie określa to oznaczalności wyniku pacjenta.", "limit-note");
+      } else {
+        section.dataset.reason = reading.reason;
+        const reasons = {
+          "outside-proposed-age-domain": "Dla tego wieku nie pokazujemy liczbowego odniesienia z tej publikacji.",
+          "age-domain-documentation-conflict": "Opis zakresów wieku w publikacji jest niespójny z ryciną. Dla tego przedziału pozostawiamy brak liczbowego odniesienia.",
+          "unresolved-low-stroke": "Dla tego wieku nie można jednoznacznie odczytać środkowej linii ryciny.",
+          "stroke-occluded": "Dla tego wieku środkowa linia jest zasłonięta na rycinie. Nie podajemy przybliżenia z mostu graficznego.",
+          "age-interval-not-fully-readable": "Zapisany przedział wieku obejmuje nieczytelny fragment ryciny. Nie podajemy jednej liczby.",
+          "age-unknown": "Brak wieku w formularzu głównym — bez liczbowego odniesienia.",
+          "age-precision-unknown": "Nie znamy dokładności zapisanego wieku — bez liczbowego odniesienia.",
+        };
+        paragraph(reasons[reading.reason] || "Brak odczytu źródłowego dla tego kontekstu.", "reason");
+      }
+      paragraph("Modelowana mediana według opisu Metod; na rycinie podpisana „Mean”. Surowica, in-house LC-MS/MS, µg/L = ng/mL. Przyjęty zakres wieku: 10–27,6 i 31,4–60,9 lat, wyłącznie w czytelnych fragmentach. Ograniczenie wieku jest ostrożną polityką aplikacji, nie dowodem braku obserwacji poza nią.");
+      paragraph("Błąd graficzny: ±0,05 ng/mL przed 20 lat i ±0,02 później; przy granicy wieku zachowujemy większy błąd sąsiednich odczytów. To nie przedział ufności modelu ani niepewność oznaczenia laboratoryjnego.");
+      target.append(section);
+    }
     function updateSources() {
       if (femaleGonadotropinsActive()) {
         updateFemaleGonadotropinSources();
         return;
       }
+      const insl3Reading = insl3AgeSourceReading();
+      const insl3ContextKey = stableInsl3Visible() ? [identityKey, patientAgeYears,
+        patientContext?.ageUpperYears, patientContext?.ageUpperInclusive,
+        patientContext?.contextBasis, patientContext?.sampleDateISO,
+        data.insl3AgeSourceData?.version, data.insl3AgeSourcePolicy?.version, insl3Reading] : null;
       const nextKey = JSON.stringify([sex, view, compare, compareHormone, [...selected].sort(),
-        renderedPoint?.profile.id, renderedPoint?.curves.map((curve) => curve.profile.id), renderedObservation?.kind]);
+        renderedPoint?.profile.id, renderedPoint?.curves.map((curve) => curve.profile.id), renderedObservation?.kind,
+        insl3ContextKey]);
       if (nextKey === sourcesKey) return;
       sourcesKey = nextKey;
       const target = byId("source-copy");
@@ -3242,6 +3312,7 @@
         }
       }
       if (stableInsl3Visible()) {
+        appendInsl3AgeSource(target, insl3Reading);
         paragraph("Linia pokazuje poglądowy przebieg INSL3. Nie jest krzywą mediany ani zakresem referencyjnym. Hormony mają odrębne skale.");
         paragraph("Niemowlęctwo: Busch 2022, rycina 2, pokazuje modelowaną średnią trajektorię z niewielkim wzrostem do około 27. dnia i późniejszym spadkiem. Rycina 3 opisuje inną statystykę: medianę modelu. Jej opadający kształt nie wyklucza wczesnej fali pokazanej w modelu podłużnym.");
         paragraph("Mała wysokość niemowlęcego odcinka względem dorosłości jest ilustracyjna. Bay 2007 i Bay 2005 wspierają niższe centralne stężenia u niemowląt niż u dorosłych, ale nie ustalają dokładnej wysokości miesięcznego szczytu na wspólnej krzywej. Wyników z różnych metod i populacji nie zharmonizowano.");
@@ -3747,6 +3818,8 @@
         analyte: currentAnalyte, sex, ageYears: patientAgeYears,
         ageUpperYears: next.ageUpperYears, preterm,
         ageUpperInclusive: next.ageUpperInclusive,
+        contextBasis: typeof next.contextBasis === "string" ? next.contextBasis : null,
+        sampleDateISO: typeof next.sampleDateISO === "string" && next.sampleDateISO ? next.sampleDateISO : null,
         measurement: next.measurement ? { ...next.measurement } : null,
         displayUnit: next.displayUnit,
         contraindicated: next.contraindicated === true,

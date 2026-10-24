@@ -492,11 +492,12 @@
   <script src="vilda_zrodla_pacjenta.js?v=1"></script>
   <script src="vilda_puberty_source.js?v=13"></script>
   <script src="vilda_lab_neonatal_context.js?v=2"></script>
-  <script src="vilda_hormone_lifespan_data.js?v=40"></script>
+  <script src="vilda_hormone_lifespan_data.js?v=41"></script>
   <script src="vilda_hormone_lifespan_reference.js?v=7"></script>
   <script src="vilda_hormone_lifespan_observations.js?v=1"></script>
   <script src="vilda_hormone_lifespan_display.js?v=15"></script>
-  <script src="vilda_hormone_lifespan.js?v=43"></script>
+  <script src="vilda_insl3_age_source.js?v=1"></script>
+  <script src="vilda_hormone_lifespan.js?v=44"></script>
   <script src="vilda_amh_age_reference_data.js?v=1"></script>
   <script src="vilda_amh_age_reference.js?v=1"></script>
   <script src="vilda_amh_age_reference_ui.js?v=1"></script>
@@ -1268,6 +1269,10 @@
         ageUpperYears: Number.isFinite(upperYears) && upperYears >= years ? upperYears : null,
         ageUpperInclusive: !!resolved && resolved.upperInclusive === true,
         ageLabel: label,
+        // Source-only INSL3 follows the same confirmed current-form age;
+        // a dated assessment must not gain today's population reading.
+        contextBasis: currentContext ? 'current-patient' : input && input.contextBasis || null,
+        sampleDateISO: input && input.sampleDateISO || null,
         preterm: premature,
         measurement: status === 'ready' && resolved && resolved.status === 'known'
           ? lifespanMeasurement(evaluation, conversion) : null,

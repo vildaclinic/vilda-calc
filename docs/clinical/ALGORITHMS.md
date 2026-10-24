@@ -4761,6 +4761,67 @@ i testy techniczne nie nadają jej statusu walidacji klinicznej.
 Źródła, dostępność pełnych tekstów, statystyki i rozstrzygnięcia audytu:
 [`insl3-lifespan-display-audit-2026-10-11.json`](hormone-lifespan/evidence/insl3-lifespan-display-audit-2026-10-11.json).
 
+### HORMONE-INSL3-AGE-SOURCE — odczyt wieku w źródłach, 2026-10-24
+
+**Zakres zaakceptowany przez właściciela 24.10.2026:** automatyczny
+edukacyjny odczyt modelowanej mediany INSL3 dla wieku aktualnego formularza,
+wyłącznie w istniejącym rozwijanym „O wykresie i źródła”. Nie jest częścią
+silnika punktu pacjenta, kalkulatorem lub laboratoryjną normą. Nie zmienia
+względnej geometrii `buildMaleInsl3`, skali, tooltipów stężenia i historii.
+
+**Pełne źródło:** [Albrethsen 2020, DOI 10.1210/clinem/dgaa145](https://doi.org/10.1210/clinem/dgaa145),
+Methods s. 1869–1870, ryc. 1A s. 1870, oznaczenie s. 1872–1874;
+końcowy skład 23.04.2020. Methods definiuje M jako medianę i opisuje
+50. percentyl po odwrotnej transformacji Boxa–Coxa. Rycina nazywa centrum
+Mean; zachowujemy tę rozbieżność, podpisując przybliżoną P50 według Methods.
+To kontrolowany odczyt grafiki, nie odzyskane współczynniki GAMLSS lub
+średnia arytmetyczna. Źródło: N=1073 chłopców/mężczyzn z trzech duńskich
+kohort, surowica in-house LC-MS/MS, µg/L=ng/mL. Szczegółowe pochodzenie,
+SHA-256 PDF/PPTX/śladu, populacja i ograniczenia:
+[INSL3_AGE_SOURCE.md](hormone-lifespan/INSL3_AGE_SOURCE.md).
+
+**Polityka odrębna od domeny rysunku:** `[10,27.6] ∪ [31.4,60.9]`, końce
+włącznie, oraz wyłącznie bezpośrednio czytelny odcinek. Subjects podaje
+zakresy 10,0–21,8; 17,8–27,6; 31,4–60,9, ale rycina zawiera punkty
+poniżej 10 i w deklarowanej przerwie. Wyłączenie tej przerwy jest jawną
+konserwatywną polityką; nie twierdzimy, że na pewno nie było tam obserwacji.
+Zlanie niskiej linii do około 11,806 oraz zasłonięcie po 17,50 do około
+19,916 oznaczają brak czytelności grafiki, nie brak kohorty. Odczyty
+rastra ponad 60,9 i krótkie mosty pozostają w audycie, bez routingu.
+
+**Czytnik:** dane źródłowe są odrębne od polityki i względnej ilustracji.
+`vilda_insl3_age_source.js` udostępnia `VildaInsl3AgeSource.read(data,
+policy, context)`; runtime przyjmuje `insl3AgeSourceData` z
+`insl3-age-source-data.json` i `insl3AgeSourcePolicy` z
+`insl3-age-source-policy.json`. `valueKind` odróżnia `approximate-value`
+od `approximate-median-range`; nie dodano profilu `evaluate()` punktu pacjenta.
+Liniowy resampling tylko między sąsiednimi natywnymi kolumnami jednego
+czytelnego fragmentu. Bez mostów, ekstrapolacji, najbliższego wieku
+i zastępczych median Tulumcu. Cały niepewny wiek musi leżeć w jednej
+domenie i jednym fragmencie. Min/max obejmuje wszystkie wewnętrzne węzły;
+jedno `≈` tylko przy wspólnym zaokrągleniu 0,01, inaczej zakres median
+zaokrąglony na zewnątrz. To nie zakres normy lub CI.
+
+**Granice jakości:** LOD źródła 0,03 i LOQ 0,15 ng/mL; reguła cenzury
+niepodana. Błąd graficzny ±0,05 przed 20 latami / ±0,02 później, z większą
+obwiednią każdej przecinanej pary kolumn, nie jest CI ani błędem analitycznym. Przecięcie LOQ jest
+notą, nie automatycznym odrzuceniem modelowanej mediany; bez przycinania
+do LOQ, imputacji zera lub przypisywania granicy metodzie pacjenta.
+
+**Przypadki syntetyczne rzeczywistego czytnika:** M/25 jako `[25,26)`
+→ `≈1,27 ng/mL`; M/40 dokładnie lub `[40,41)` → `≈1,25`; M/18 → brak przez
+zasłonięcie; dokładnie M/12 → `≈0,18` z notą LOQ; pełne `[12,13)` → brak
+przez przerwę w odczycie. Nieznana dokładność wieku, dawna próbka,
+zablokowany kontekst i niewłaściwa płeć nie uruchamiają liczby. Korekta
+wieku tej samej osoby odświeża lub usuwa treść w źródłach.
+
+**Wpływ kliniczny:** nowa edukacyjna informacja źródłowa o stężeniu;
+bez oceny wyniku pacjenta, norm, SDS, przelicznika, punktu stężenia
+i nowych pól. Akceptacja ograniczonego zakresu przez właściciela oraz
+testy rzeczywistych funkcji, UI i PWA nie są walidacją kliniczną modelu.
+Regresje: `insl3-age-source.test.mjs`, `insl3-age-source.spec.mjs`
+i `insl3-age-source-offline.spec.mjs`; ich wyniki raportuje PR.
+
 ### ANTIBIOTIC-RX — mapowanie cytowań
 
 W `antibiotic_therapy.js` występują powtarzające się klucze w mapie źródeł i liczne stłumienia `no-dupe-keys`. Obliczenia przechodzą obecne testy, ale nie dowodzi to poprawnego przypisania każdej rekomendacji do cytowania.

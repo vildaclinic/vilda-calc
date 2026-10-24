@@ -868,12 +868,12 @@
   "sha256": "bcb1febb3098914cf475549a97ebaec2078b4bd4cfc07d1e0a19922f760be3b3"
  },
  "vilda_hormone_lifespan.js": {
-  "v": 43,
-  "sha256": "474b5acb51d66aa41337da02e442a60d45e6ee1e41acd975af68ef616e6ba12f"
+  "v": 44,
+  "sha256": "cd95e7b0f615db232e39d73a643d57d06e66a7ae2927b44a6e9d5b7ad8eba649"
  },
  "vilda_hormone_lifespan_data.js": {
-  "v": 40,
-  "sha256": "91932b3d6c115659164b9f17a9f36588769a2666ce3b1f4fe868935e79cda48e"
+  "v": 41,
+  "sha256": "6863a0682516f68cb59e85b8466b4038f1001d12215e4cd90780bd27b42f6207"
  },
  "vilda_hormone_lifespan_display.js": {
   "v": 15,
@@ -906,6 +906,10 @@
  "vilda_init.js": {
   "v": 4,
   "sha256": "d51b02c744bddf1af79086a3a1bdec9ba0caa98bb00ff50d279f1ef9703a9e07"
+ },
+ "vilda_insl3_age_source.js": {
+  "v": 1,
+  "sha256": "9ded5a3720c42e6fac1c9e71a310bd4af74ecc1318ff29930d68dcc570615a9c"
  },
  "vilda_khamis_roche.js": {
   "v": 2,

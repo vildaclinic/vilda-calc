@@ -3,7 +3,7 @@ import { createRequire } from 'node:module';
 import { createHash } from 'node:crypto';
 import { describe, expect, it } from 'vitest';
 import { loadBrowserScript } from '../support/load-browser-script.mjs';
-import { beforeE2D3Runtime } from '../support/prior-female-gonadotropin-bundle.mjs';
+import { beforeE2D3Runtime, beforeInsl3AgeSourceRuntime } from '../support/prior-female-gonadotropin-bundle.mjs';
 
 const require = createRequire(import.meta.url);
 const engine = require('../../vilda_e2_d3.js');
@@ -33,7 +33,7 @@ function converter() {
 
 describe('Grisendi 2014 E2 D3 — selected literal P50, not a new laboratory norm', () => {
   it('adds exactly its own source block while preserving all 31 fields of merged audyt ca25d882', () => {
-    const runtime = require('../../vilda_hormone_lifespan_data.js');
+    const runtime = beforeInsl3AgeSourceRuntime(require('../../vilda_hormone_lifespan_data.js'));
     const prior = beforeE2D3Runtime(runtime);
     expect(runtime.e2D3Data).toEqual(data);
     expect(Object.keys(runtime)).toHaveLength(32);

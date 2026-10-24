@@ -45,10 +45,17 @@ export function beforeMaleLhCaliperBundle(data) {
     .filter(profile => profile.id !== 'wilson2023-male-lh-age-over16-under18') };
 }
 
+// INSL3 age reading adds exactly two independent source-information blocks.
+// Remove only those blocks to preserve all earlier runtime data and hashes.
+export function beforeInsl3AgeSourceRuntime(runtime) {
+  const { insl3AgeSourceData: _insl3Data, insl3AgeSourcePolicy: _insl3Policy, ...prior } = runtime;
+  return prior;
+}
+
 // E2 D3 adds exactly one source block. Remove only that later addition when
 // checking earlier bundles; every existing field and frozen hash stays intact.
 export function beforeE2D3Runtime(runtime) {
-  const { e2D3Data: _e2D3, ...prior } = runtime;
+  const { e2D3Data: _e2D3, ...prior } = beforeInsl3AgeSourceRuntime(runtime);
   return prior;
 }
 

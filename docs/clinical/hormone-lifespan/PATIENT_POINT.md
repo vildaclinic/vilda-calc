@@ -468,7 +468,11 @@ INSL3 pozostaje zadaniem przyszłego kalkulatora. Zatwierdzona
 11 października 2026 przerywana linia ma osobną względną politykę
 `insl3-display-policy.json`; jej wysokości nie mają jednostki stężenia.
 Ani geometria, ani zachowane wartości niemowlęce z Busch nie uruchamiają
-nowego analitu, profilu odniesienia lub punktu pacjenta. Dorosłe LH/FSH opisuje
+nowego analitu, profilu odniesienia lub punktu pacjenta. Od 24.10.2026
+odrębny [odczyt wieku w źródłach INSL3](INSL3_AGE_SOURCE.md) prezentuje
+przybliżoną P50 Albrethsena bez pomiaru i punktu stężenia. Nie jest
+profilem tego silnika i nie zmienia opisanych tu bezpieczników.
+Dorosłe LH/FSH opisuje
 poniższe uzupełnienie zatwierdzone 11 października 2026. Dziecięce
 AMH poza wymienionymi grupami, pozaniemowlęce profile żeńskie poza FSH Zec,
 AMH Jopling/FDA, E2 Kulle `(1,6)`/Th1 i Madsen 6–18, inhibiną B Zhou >1–<5,6/Borelli 5,6–47,75 i LH/FSH Madsen 6–16 oraz niepokryte fragmenty
@@ -926,6 +930,13 @@ Pochodzenie i mediany z obu tabel:
 reguły zastosowania: [polityka dorosłych kobiet](female-adult-amh-reference-policy.json).
 
 ### INSL3: ilustracja bez liczbowego odniesienia — 11 października 2026
+
+Poniżej pozostaje opis zatwierdzonej wówczas polityki względnej linii.
+Od 24.10.2026 istniejące rozwijane źródła mają osobny edukacyjny odczyt
+wieku, opisany w [INSL3_AGE_SOURCE.md](INSL3_AGE_SOURCE.md): przybliżona
+P50 według Methods ryc. 1A Albrethsena, bez czerwonego wyniku, jasnego
+punktu stężenia, laboratoryjnej normy, konwertera lub zapisu historii.
+Nie jest to wyjątek dopuszczający punkt z geometrii ilustracyjnej.
 
 Mały wzrost do około 27. dnia korzysta jakościowo z modelowanej średniej
 trajektorii podłużnej Busch, ryc. 2, znormalizowanej do własnego
