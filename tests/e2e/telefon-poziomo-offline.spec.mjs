@@ -11,13 +11,15 @@ import { emulatePhone } from '../support/telefon-poziomo.mjs';
 test.use({ serviceWorkers: 'allow' });
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
-const resourceNames = ['vilda_phone_landscape.js', 'vilda_phone_landscape.css'];
+const sharedResourceNames = ['vilda_phone_landscape.js', 'vilda_phone_landscape.css', 'vilda_chrome.js', 'vilda_chrome.css'];
 
 function resourcesFor(documentName) {
+  const resourceNames = documentName === 'app.html'
+    ? [...sharedResourceNames, 'vilda_shell.js', 'vilda_shell.css'] : sharedResourceNames;
   const html = fs.readFileSync(path.join(root, documentName), 'utf8');
   const urls = [...html.matchAll(/<(?:script|link)\b[^>]*\b(?:src|href)="([^"]+)"[^>]*>/g)]
     .map((match) => match[1]).filter((url) => resourceNames.includes(url.split('?')[0]));
-  expect(urls.map((url) => url.split('?')[0]).sort(), `${documentName}: both new assets are loaded`)
+  expect(urls.map((url) => url.split('?')[0]).sort(), `${documentName}: all changed layout/menu assets are loaded`)
     .toEqual([...resourceNames].sort());
   return urls.map((url) => ({
     url: '/' + url,
@@ -83,6 +85,25 @@ async function assertCompactChrome(page) {
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth), 'no horizontal overflow offline').toBe(true);
 }
 
+async function assertWideMenuOffline(page) {
+  await page.locator('[data-vilda-chrome-menu-btn]').click();
+  const panel = page.locator('[data-vilda-chrome-drawer] .chrome-drawer-panel');
+  await expect(panel).toBeVisible();
+  const geometry = await panel.evaluate(element => {
+    const box = element.getBoundingClientRect();
+    const sections = [...element.querySelectorAll('.chrome-drawer-section')].map(section => section.getBoundingClientRect());
+    return { width: box.width, left: box.left, right: box.right, bottom: box.bottom,
+      first: sections[0].x, tools: sections[1].x };
+  });
+  expect(geometry.width, 'approved B menu is cached, not the previous narrow drawer').toBe(620);
+  expect(geometry.left).toBeGreaterThanOrEqual(70);
+  expect(geometry.right).toBeLessThanOrEqual(956 - 70);
+  expect(geometry.bottom).toBeLessThanOrEqual(440 - 29);
+  expect(geometry.tools, 'tools occupy the second column offline').toBeGreaterThan(geometry.first);
+  await page.keyboard.press('Escape');
+  await expect(panel).toBeHidden();
+}
+
 // A real cold start: persistent Chromium exits, the origin is stopped, and only
 // then do app/index/DocPro load. CDP emulates physical orientation and native CSS
 // safe-area env(); this does not emulate Safari's virtual keyboard or device UI.
@@ -125,6 +146,7 @@ test('phone landscape assets and shell orientation survive a cold PWA restart wi
     await assertOfflineResources(page, 'index.html', responses);
     await assertCompactChrome(page);
     await expect(start.locator('html')).toHaveClass(/\bvilda-phone-landscape\b/);
+    await assertWideMenuOffline(page);
 
     await test.step('portrait removes the compact state from host and mounted frame; landscape restores it', async () => {
       await emulatePhone(page, { width: 440, height: 956, safeArea: { top: 62, right: 0, bottom: 34, left: 0 } });
@@ -133,6 +155,7 @@ test('phone landscape assets and shell orientation survive a cold PWA restart wi
       await emulatePhone(page, { width: 956, height: 440 });
       await assertCompactChrome(page);
       await expect(start.locator('html')).toHaveClass(/\bvilda-phone-landscape\b/);
+      await assertWideMenuOffline(page);
     });
 
     await test.step('the first DocPro frame loads offline and receives the current host orientation', async () => {
@@ -158,6 +181,7 @@ test('phone landscape assets and shell orientation survive a cold PWA restart wi
       expect(responses.get('/index.html'), 'standalone document came from the SW').toBe(true);
       await assertOfflineResources(page, 'index.html', responses);
       await assertCompactChrome(page);
+      await assertWideMenuOffline(page);
     });
     expect(await page.evaluate(() => new URL(navigator.serviceWorker.controller.scriptURL).pathname)).toBe('/service-worker-kalorii.js');
   } finally {

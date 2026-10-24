@@ -8714,6 +8714,24 @@ Właściciel zaakceptował regułę: dymek czeka, dopóki dopisanie cyfr może j
 
 **Wersje.** `vilda_klawiatura.js` 2, `vilda_shell.js` 67, `vilda_shell.css` 20; SW 1.1.304 → 1.1.305.
 
+### P-MENU-OBROT — bezpieczne menu B i spokojny obrót telefonu (2026-10-24, decyzja właściciela po makiecie)
+
+**Zgłoszenie.** Boczne menu na iPhonie w poziomie wchodziło w obszar Dynamic Island, a duży pionowy blok konta ograniczał dostępne miejsce. Po obrocie kolumny pojawiały się węższe i dopiero następnie rosły; powrót do pionu powodował kolejną korektę viewportu. Właściciel wybrał szeroki wariant B menu oraz delikatne pojawienie treści po obrocie.
+
+**Klasyfikacja: brak wpływu klinicznego.** Zmiana dotyczy geometrii i prezentacji. Nie zmienia danych, obliczeń, norm, interpretacji, zapisu, synchronizacji ani działań poszczególnych pozycji menu.
+
+**Przyczyna i dowód przed zmianą.** Menu było nakładką `position:fixed` przy lewej krawędzi; istniejący safe-area chronił tylko górę. Padding `body` nie zabezpiecza takiej nakładki. Szerokość treści zależała jednocześnie od insetów hosta, insetów ramki i jej kontenera. Ich nadmiar znikał dopiero po klasie zależnej od fizycznego `screen.orientation`, podczas gdy CSS kolumn reagował już na viewport. Kontrolowana sekwencja na produkcyjnych CSS/JS bazy `9e98c207` odtworzyła formularz 572,8 → 820 px i kolumnę 278,4 → 402 px przy ekranie 956 × 440, a w pionie formularz 408 → 416 px. To dowód podatności na rozdzielenie sygnałów, nie zapis kolejności zdarzeń fizycznego Safari. Osobne pomiary wysokości shell po resize, visualViewport i timerze orientacji dawały dodatkowe okazje do korekty układu.
+
+**Rozwiązanie.**
+
+- Kwalifikacja telefonu jest trwała dla obu orientacji (`vilda-phone`). Poziomy tryb korzysta z szerokości viewportu układu względem rozmiarów ekranu, zamiast czekać na fizyczne zdarzenie orientacji. Klawiatura zmieniająca wysokość nie przełącza trybu. Ramki, także ukryte, dziedziczą stan z powłoki.
+- Safe-area treści ma jednego właściciela także między sygnałami obrotu. Szerokość kolumn nie przechodzi przez stan z potrójnym bocznym marginesem.
+- Menu B zachowuje istniejące działania i elementy DOM. W poziomie telefon dostaje panel do 620 px z dwiema kolumnami sekcji; w pionie jedną kolumnę. Cztery bezpieczne krawędzie chronią panel i zamknięcie, konto jest zwarte, pozostałe opcje przewijane, a cele dotykowe mają co najmniej 44 px.
+- Powłoka koordynuje pomiary nagłówka, wysokości panelu i Docka na rzeczywiste zmiany geometrii. Aktywne pole nadal chroni ramkę przed skracaniem przez klawiaturę; prawdziwa zmiana orientacji pozwala dopasować ramkę do nowego układu. Kod nie odtwarza formularza ani nie przewija jego dokumentu przy samym obrocie.
+- Pojawienie 120 ms dotyczy wyłącznie przezroczystości. Bez animacji wymiarów, pierwszego startu, kolejnych sygnałów tej samej orientacji, zdarzeń klawiatury i przy ograniczeniu ruchu. Widoczna powierzchnia jest animowana raz przez właściciela układu.
+
+**Weryfikacja.** Testy wykonują rzeczywiste moduły telefonu, menu i powłoki. Scenariusze przeglądarkowe sprawdzają klatki przy różnych kolejnościach resize/orientacji, bezpieczne krawędzie i dostęp do całego menu, aktywne pole, zachowanie danych i fokusu, ograniczenie ruchu oraz zimny restart offline z bajtami aktualnych zasobów. Pozostają regresje istniejących ścieżek klawiatury i powrotu do panelu. Fizycznego obrotu Safari/PWA nie można potwierdzić emulacją Chromium; tę granicę należy podać przy przekazaniu.
+
 ### P-WYNIKI-SPOKOJ — przeliczenie w tle bez zmiany danych nie rusza wyników (SW 1.1.247, 2026-10-12, zgłoszenie właściciela)
 
 **Zgłoszenie właściciela.** Po P-PANEL-POWROT i P-PANEL-PRZEWINIECIE: „to migotanie/skakanie nadal jest, nawet jak strona »nic« nie robi i nie jest na pierwszym planie na macOS/Windows”. Zmiana niekliniczna: nie zmienia wyników, jednostek, progów, kategorii, ostrzeżeń, zapisu ani synchronizacji.

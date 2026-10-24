@@ -1,27 +1,37 @@
-/* Telefon w poziomie: klasę na powłoce i jej ramkach ustawia
- * vilda_phone_landscape.js. Wymiary ramki ani otwarcie klawiatury nie są
- * podstawą kwalifikacji. Poza tą klasą obowiązuje dotychczasowy układ.
+/* Kwalifikacja telefonu jest trwała w obu orientacjach. Host jest jedynym
+ * właścicielem safe-area również między zmianą viewportu a orientationchange.
+ * Klasa landscape steruje nawigacją; nie zmienia szerokości kontenera.
  */
+html.vilda-phone {
+  --vilda-phone-safe-left: env(safe-area-inset-left, 0px);
+  --vilda-phone-safe-right: env(safe-area-inset-right, 0px);
+  --vilda-phone-gutter-left: max(6px, calc(12px - var(--vilda-phone-safe-left)));
+  --vilda-phone-gutter-right: max(6px, calc(12px - var(--vilda-phone-safe-right)));
+}
+
+@media (min-width: 541px) {
+  html.vilda-phone {
+    --vilda-phone-gutter-left: max(6px, calc(16px - var(--vilda-phone-safe-left)));
+    --vilda-phone-gutter-right: max(6px, calc(16px - var(--vilda-phone-safe-right)));
+  }
+}
+
 html.vilda-phone-landscape {
   --chrome-strip-height: 52px;
   --mobile-dock-height: 52px;
-  --vilda-phone-safe-left: env(safe-area-inset-left, 0px);
-  --vilda-phone-safe-right: env(safe-area-inset-right, 0px);
-  --vilda-phone-gutter-left: max(6px, calc(16px - var(--vilda-phone-safe-left)));
-  --vilda-phone-gutter-right: max(6px, calc(16px - var(--vilda-phone-safe-right)));
 }
 
 /* Safe-area należy do zewnętrznego dokumentu. Przy wycięciu zostaje po
  * 6 px odstępu na treść; bez wycięcia margines ma 16 px. Dla 956/62 daje
  * to 956 - 2 * (62 + 6) = 820 px formularza, także w powłoce z iframe.
  */
-html.vilda-phone-landscape:not(.vilda-embedded) body.liquid-ios26 {
+html.vilda-phone:not(.vilda-embedded) body.liquid-ios26 {
   padding-left: var(--vilda-phone-safe-left);
   padding-right: var(--vilda-phone-safe-right);
 }
 
-html.vilda-phone-landscape.vilda-embedded body.liquid-ios26,
-html.vilda-phone-landscape.vilda-embedded .vilda-auth-root {
+html.vilda-phone.vilda-embedded body.liquid-ios26,
+html.vilda-phone.vilda-embedded .vilda-auth-root {
   padding-left: 0;
   padding-right: 0;
 }
@@ -33,32 +43,45 @@ html.vilda-phone-landscape.vilda-embedded .vilda-auth-root {
 /* Szeroki telefon zachowuje mobilną nawigację również powyżej starego
  * breakpointu desktopowego 992 px. Nie zmieniamy progów kolumn formularzy.
  */
-html.vilda-phone-landscape .has-sidebar .desktop-layout {
-  display: block;
-  padding: 0;
-  min-width: 0;
+@media (min-width: 541px) {
+  html.vilda-phone .has-sidebar .desktop-layout {
+    display: block;
+    padding: 0;
+    min-width: 0;
+  }
+
+  html.vilda-phone .has-sidebar .desktop-layout > .sidebar,
+  html.vilda-phone .has-sidebar .desktop-layout > .decor-sidebar {
+    display: none !important;
+  }
+
+  html.vilda-phone .has-sidebar .main-content {
+    margin: 0 !important;
+    padding: 0 !important;
+    min-width: 0;
+    border-radius: 0;
+    box-shadow: none;
+  }
 }
 
-html.vilda-phone-landscape .has-sidebar .desktop-layout > .sidebar,
-html.vilda-phone-landscape .has-sidebar .desktop-layout > .decor-sidebar {
-  display: none !important;
-}
-
-html.vilda-phone-landscape .has-sidebar .main-content {
-  margin: 0 !important;
-  padding: 0 !important;
-  min-width: 0;
-  border-radius: 0;
-  box-shadow: none;
-}
-
-html.vilda-phone-landscape .main-content > .container,
-html.vilda-phone-landscape .main-content > .calc-container,
-html.vilda-phone-landscape body > .container {
+/* W pionie zachowujemy pierwszeństwo odstępów poszczególnych modułów.
+ * Reguła ogólna nadal usuwa ponowne safe-area ze zwykłych kontenerów. */
+html.vilda-phone :where(.main-content > .container, .main-content > .calc-container, body > .container) {
   width: 100%;
   max-width: none;
   padding-left: var(--vilda-phone-gutter-left);
   padding-right: var(--vilda-phone-gutter-right);
+}
+
+@media (min-width: 541px) {
+  html.vilda-phone .main-content > .container,
+  html.vilda-phone .main-content > .calc-container,
+  html.vilda-phone body > .container {
+    width: 100%;
+    max-width: none;
+    padding-left: var(--vilda-phone-gutter-left);
+    padding-right: var(--vilda-phone-gutter-right);
+  }
 }
 
 /* Markę i jej działający link już montuje VildaChrome. Pokazujemy nazwę
