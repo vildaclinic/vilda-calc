@@ -45,10 +45,17 @@ export function beforeMaleLhCaliperBundle(data) {
     .filter(profile => profile.id !== 'wilson2023-male-lh-age-over16-under18') };
 }
 
+// Female TT adds only its isolated source and policy; earlier bundles retain
+// their exact values and historical hash expectations.
+export function beforeFemaleTtAgeRuntime(runtime) {
+  const { femaleTtAgeData: _femaleTtData, femaleTtAgePolicy: _femaleTtPolicy, ...prior } = runtime;
+  return prior;
+}
+
 // INSL3 age reading adds exactly two independent source-information blocks.
 // Remove only those blocks to preserve all earlier runtime data and hashes.
 export function beforeInsl3AgeSourceRuntime(runtime) {
-  const { insl3AgeSourceData: _insl3Data, insl3AgeSourcePolicy: _insl3Policy, ...prior } = runtime;
+  const { insl3AgeSourceData: _insl3Data, insl3AgeSourcePolicy: _insl3Policy, ...prior } = beforeFemaleTtAgeRuntime(runtime);
   return prior;
 }
 
