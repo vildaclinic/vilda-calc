@@ -522,6 +522,10 @@ function validateField(e) {
     if (o) o.textContent = "Wartość wydaje się zbyt wysoka";
     e.classList.add("error");
     return false;
+  } else if ($("formulaPicker")?.value === "CaCr_spot" && ["Ca_spot", "Ucr_spot"].includes(n)) {
+    // Ca/Cr validates finite, nonnegative concentrations in its own engine.
+    // A unitless legacy ceiling (Ca=30) cannot reject equivalent mg/dL and
+    // mmol/L values differently; other formulas retain their existing limits.
   } else if (maxValues[n] !== void 0 && t > maxValues[n])
     return (
       o && (o.textContent = "Warto\u015B\u0107 wydaje si\u0119 zbyt wysoka"),
@@ -548,6 +552,7 @@ function canComputeFormula(e) {
   if (!n) return !1;
   if (e === "ACR") return evaluateClcrAcr().valid === true;
   if (e === "PCR") return evaluateClcrPcr().valid === true;
+  if (e === "CaCr_spot") return evaluateClcrCacr().valid === true;
   if (
     window.ClcrClinicalSafety &&
     typeof window.ClcrClinicalSafety.formulaSafety == "function"
@@ -640,6 +645,11 @@ function evaluateClcrPcr(options) {
   const engine = window.VildaClcrPcr;
   return engine?.evaluate(engine.readInputFromDocument(document, options), window.VildaClcrPcrReferenceData?.getProfile("KDIGO_PCR_2024_2025"))
     || { valid: false, reasonCode: "PCR_UNAVAILABLE", message: "Nie można obliczyć PCR. Odśwież aplikację." };
+}
+function evaluateClcrCacr(options) {
+  const engine = window.VildaClcrCacr;
+  return engine?.evaluate(engine.readInputFromDocument(document, options), window.VildaClcrCacrReferenceData?.getProfile("MAYO_CACR3_RANDOM_2026_10"))
+    || { valid: false, reasonCode: "CACR_UNAVAILABLE", message: "Nie można obliczyć Ca/Cr. Odśwież aplikację." };
 }
 function clcrCgNormalizedDetails(ageYears, bsaM2, sources = []) {
   const ageUsed = Math.floor(ageYears);
@@ -803,33 +813,6 @@ function update() {
         ? N / 88.4
         : _ === "mmol/L" ? N * 1000 / 88.4 : _ === "mg/dl" ? N : null
       : null;
-  const F = readClcrOptionalNumber("Ca_spot"),
-    g = $("Ca_spot_unit") ? $("Ca_spot_unit").value : "mg/dl";
-  let E = null;
-  F !== null &&
-    F >= 0 &&
-    g &&
-    g !== "" &&
-    (g === "mmol/L"
-      ? (E = (F * 40.078) / 10)
-      : g === "mg/dl" && (E = F));
-  const spotCalciumMmolL =
-      F === null || F < 0
-        ? null
-        : g === "mmol/L"
-          ? F
-          : g === "mg/dl"
-            ? (F * 10) / 40.078
-            : null,
-    spotCreatinineMmolL =
-      N === null || N <= 0
-        ? null
-        : _ === "umol"
-          ? N / 1000
-          : _ === "mmol/L" ? N
-          : _ === "mg/dl"
-            ? (N * 10) / 113.1179
-            : null;
   const O = +$("U_PO4_spot").value,
     D = document.getElementById("U_PO4_spot_unit"),
     te = D ? D.value : "mg/dl";
@@ -858,7 +841,8 @@ function update() {
     acrEvaluation = evaluateClcrAcr({ concentrationOnly: $("formulaPicker")?.value !== "ACR" }),
     acrRatio = acrEvaluation.valid && acrEvaluation.mode === "concentration"
       ? { mgG: acrEvaluation.rawValue, mgMmol: acrEvaluation.convertedValue } : null,
-    pcrEvaluation = evaluateClcrPcr({ concentrationOnly: $("formulaPicker")?.value !== "PCR" });
+    pcrEvaluation = evaluateClcrPcr({ concentrationOnly: $("formulaPicker")?.value !== "PCR" }),
+    cacrEvaluation = evaluateClcrCacr({ concentrationOnly: $("formulaPicker")?.value !== "CaCr_spot" });
   acrRatio
     ? ((j = acrRatio.mgG),
       ($("U_ACR").value = j.toFixed(1)))
@@ -1284,7 +1268,7 @@ function update() {
       l = (i && i.value) || "",
       u = o && t >= 18,
       selectedAssumptions = resolveClcrCalculationAssumptions(l),
-      selectedSafety = !selectedAssumptions.allowed
+      selectedSafety = l === "CaCr_spot" ? { eligible: true, reason: "" } : !selectedAssumptions.allowed
         ? { eligible: false, reason: selectedAssumptions.blockers.map((entry) => entry.message).join(" ") }
         : l === "neonatal_egfr" ? neonatalSafety :
         l &&
@@ -1873,6 +1857,8 @@ function update() {
         // Its single result already contains the category and source context.
       } else if (l === "PCR") {
         // PCR owns its one result, applicable limits and specimen qualification.
+      } else if (l === "CaCr_spot") {
+        // Its Mayo card below owns the number, two-sided norm and limitations.
       }
       else if (l !== "cg_norm") z();
     } else {
@@ -2093,7 +2079,6 @@ function update() {
     yt = pe && Fe ? pe / Fe : null,
     wt = ratio(ft, c),
     ht = ratio(pt, c),
-    _t = ratio(E, c),
     kt = excr_mgkg(De, collectionDailyVolume, ie),
     Te = excr_mgkg(pe, collectionDailyVolume, ie),
     xt = excr_mgkg(Ue, collectionDailyVolume, ie),
@@ -2727,34 +2712,6 @@ function update() {
               totalMmol24: stoneDzm.calcium.totalMmol24,
               weightKg: s,
             })
-          : null,
-      spotCalciumCreatinineMolMol =
-        sameSpotSpecimen &&
-        spotCalciumMmolL !== null &&
-        spotCalciumMmolL >= 0 &&
-        spotCreatinineMmolL !== null &&
-        spotCreatinineMmolL > 0
-          ? spotCalciumMmolL / spotCreatinineMmolL
-          : null,
-      spotCalciumCreatinineMgMg =
-        spotCalciumCreatinineMolMol === null
-          ? null
-          : (spotCalciumCreatinineMolMol * 40.078) / 113.1179,
-      pediatricCaCr =
-        o &&
-        t < 18 &&
-        spotCalciumCreatinineMolMol !== null &&
-        stoneEngine &&
-        typeof stoneEngine.interpretPediatricCalciumCreatinineSpot ===
-          "function"
-          ? stoneEngine.interpretPediatricCalciumCreatinineSpot({
-              ageYears: ageContext.years,
-              ageMonths: ageContext.months,
-              ageDays: ageContext.daysOfLife || 0,
-              ratioMolMol: spotCalciumCreatinineMolMol,
-              ratioMgMg: spotCalciumCreatinineMgMg,
-              sameSpecimen: sameSpotSpecimen,
-            })
           : null;
 
     const adultInterpretationByKey = adultStone
@@ -2806,26 +2763,10 @@ function update() {
         )} L/24 h`,
       );
     }
-    if (spotCalciumCreatinineMgMg !== null) {
-      appendStoneValue(
-        "Ca/Cr (ta sama próbka punktowa)",
-        `${spotCalciumCreatinineMgMg.toFixed(3)} mg/mg (${formatStoneThresholdSafe(
-          spotCalciumCreatinineMolMol,
-          3,
-          pediatricCaCr,
-        )} mol/mol)`, "", "CaCr_spot", spotCalciumCreatinineMgMg,
-        { interpretation: pediatricCaCr },
-      );
-    } else if (
-      stoneFieldProvided("Ca_spot") ||
-      stoneFieldProvided("Ucr_spot")
-    ) {
-      appendStoneValue(
-        "Ca/Cr \u2014 nie obliczono",
-        "Wapń i kreatynina muszą pochodzić z tej samej próbki, a kreatynina musi być większa od 0.",
-        "warn-yellow",
-        null, null, { formulaId: "CaCr_spot" },
-      );
+    if (window.ClcrCacrUi && (cacrEvaluation.valid || $("formulaPicker")?.value === "CaCr_spot")) {
+      // The selected view and legacy broad view share the same source-native
+      // Mayo interpretation. Never add a second EAU Ca/Cr interpretation.
+      he += window.ClcrCacrUi.renderResult(cacrEvaluation);
     }
     const spotOxalate = readClcrOptionalNumber("Ox_Cr_spot"),
       spotCitrate = readClcrOptionalNumber("Cit_Cr_spot"),
@@ -2981,7 +2922,6 @@ function update() {
       );
     } else if (o && t < 18) {
       appendStoneInterpretation("Wapń w DZM \u2014 pediatria", pediatricCa24, "Ca_mgkg");
-      appendStoneInterpretation("Ca/Cr \u2014 pediatria", pediatricCaCr, "CaCr_spot");
       if (
         stoneDzm.magnesium ||
         stoneDzm.uricAcid ||

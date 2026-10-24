@@ -179,6 +179,7 @@
 <link href="clcr_ui_workflow.css?v=16" rel="stylesheet" />
 <link href="clcr_acr_ui.css?v=1" rel="stylesheet" />
 <link href="clcr_pcr_ui.css?v=1" rel="stylesheet" />
+<link href="clcr_cacr_ui.css?v=1" rel="stylesheet" />
 <link href="vilda_lab_assessment_ui.css?v=12" rel="stylesheet">
 <link href="vilda_lab_history_tab.css?v=4" rel="stylesheet">
 </head>
@@ -428,6 +429,20 @@
               <option value="different">Wyniki z różnych próbek</option>
             </select>
           </label>
+          <input type="hidden" id="CaCr_entry_mode" value="concentration" />
+          <label>Ca/Cr z laboratorium:
+            <input type="text" inputmode="decimal" id="CaCr_reported" autocomplete="off" />
+          </label>
+          <label>Jednostka Ca/Cr:
+            <select id="CaCr_reported_unit"><option value="mg/mg">mg/mg</option><option value="mg/g">mg/g</option><option value="g/g">g/g</option><option value="mol/mol">mol/mol</option><option value="mmol/mmol">mmol/mmol</option><option value="mmol/mol">mmol/mol</option><option value="mg/mmol">mg/mmol</option></select>
+          </label>
+          <label>Pochodzenie oznaczeń Ca/Cr:
+            <select id="CaCr_same_specimen">
+              <option value="">Z tej samej próbki — założenie</option>
+              <option value="confirmed">Potwierdzono tę samą próbkę</option>
+              <option value="different">Wyniki z różnych próbek</option>
+            </select>
+          </label>
           <label>Rodzaj próbki moczu:
             <select id="spotSampleKind">
               <option value="" selected>— nie określono —</option>
@@ -537,12 +552,8 @@
             <span>UAG oceniany w potwierdzonej kwasicy metabolicznej z prawidłową luką surowicy</span>
           </label>
           <!-- === Frakcje wydalnicze i UAG ze sparowanej próbki — END === -->
-        <!-- Wapń w próbce moczu wraz z wyborem jednostki (mg/dl lub mmol/L).  
-             Użytkownik może podać stężenie wapnia w dowolnej z tych jednostek,
-             a skrypt automatycznie przeliczy je do mg/dl podczas obliczeń
-             wskaźnika Ca/Cr (spot).  
-             Pola są oznaczone jako zaawansowane i profesjonalne, aby były
-             widoczne w trybie „Obliczenia z próbki moczu” oraz „Profesjonalnym”. -->
+        <!-- Ca/Cr sprowadza oba stężenia do mg/L, korzystając z zapisanych
+             jednostek wapnia i kreatyniny z tej samej próbki moczu. -->
         <label class="advanced-field pro-field">Wapń w próbce moczu:
           <input type="number" step="0.1" id="Ca_spot" />
         </label>
@@ -551,7 +562,8 @@
             <!-- Domyślnie ustawiamy jednostkę wapnia na mmol/L.  Dzięki temu użytkownik
                  ma wybraną jednostkę od razu po wejściu w sekcję próbki moczu.  Jeśli
                  później zmieni wersję kalkulatora, wybrana jednostka zostanie zachowana. -->
-            <option value="mg/dl">mg/dl</option>
+            <option value="mg/dl">mg/dL</option>
+            <option value="mg/L">mg/L</option>
             <option value="mmol/L" selected>mmol/L</option>
           </select>
         </label>
@@ -918,10 +930,13 @@
     <script defer src="clcr_pcr_reference_data.js?v=1"></script>
     <script defer src="clcr_pcr.js?v=1"></script>
     <script defer src="clcr_pcr_ui.js?v=1"></script>
+    <script defer src="clcr_cacr_reference_data.js?v=1"></script>
+    <script defer src="clcr_cacr.js?v=1"></script>
+    <script defer src="clcr_cacr_ui.js?v=1"></script>
     <script defer src="clcr_measured_clearance_reference_data.js?v=1"></script>
     <script defer src="clcr_measured_clearance_reference.js?v=1"></script>
     <script defer src="clcr_result_presentation.js?v=7"></script>
-    <script defer src="inline_kalkulator_klirens_02.js?v=13"></script>
+    <script defer src="inline_kalkulator_klirens_02.js?v=14"></script>
     <!-- Ujednolicona obsługa wyboru formuły w kalkulatorze klirensu/eGFR. -->
     <script defer src="inline_kalkulator_klirens_03.js?v=1"></script>
 <!-- Sekcja interpretacji AI z opisem i przyciskiem.  Umieszczamy ją w kontenerze
@@ -988,7 +1003,7 @@
 </footer>
 
 <!-- 5. LOGIKA JS -->
-<script defer src="inline_kalkulator_klirens_04.js?v=18"></script>
+<script defer src="inline_kalkulator_klirens_04.js?v=19"></script>
 
 <!-- Moduł obsługi kliknięć listy dynamicznych wyników wyszukiwania -->
 <script defer src="inline_kalkulator_klirens_05.js?v=1"></script>
@@ -1584,7 +1599,7 @@ document.addEventListener('DOMContentLoaded', () => {
          wczytywane w tym formularzu. Plik userData.js korzysta z localStorage. -->
         <script src="userData.js?v=6" defer></script>
 <script src="ios26-ui.js?v=45" defer></script>
-<script defer src="inline_kalkulator_klirens_07.js?v=7"></script>
+<script defer src="inline_kalkulator_klirens_07.js?v=8"></script>
 <script defer src="vilda_down_syndrome.js?v=5"></script>
 <script defer src="vilda_anorexia_risk.js?v=4"></script>
 <!-- Tablice siatek zespolu Downa przed app.js: app.js przekazuje je silnikowi BMI (P-DS-1). -->
@@ -1646,6 +1661,7 @@ document.addEventListener('DOMContentLoaded', () => {
       'stoneTwoCollectionsConfirmed',
       'spotSampleKind','spotSameSpecimen','U_Prot_spot',
       'U_Prot_spot_unit','PCR_entry_mode','PCR_reported','PCR_reported_unit','PCR_same_specimen',
+      'Ca_spot','Ca_spot_unit','CaCr_entry_mode','CaCr_reported','CaCr_reported_unit','CaCr_same_specimen',
       'CystatinC','CystatinCStandardization','CystatinCAssayMethod','CrCysStandardizationConfirmed',
       'oxalateSpotReportingEntity',
       'spotMenstruation','spotHematuria','spotInfection','spotExercise','spotAcuteIllness',
@@ -1843,6 +1859,6 @@ document.addEventListener('DOMContentLoaded', () => {
 </script>
 <script defer src="inline_kalkulator_klirens_08.js?v=1"></script>
   <script defer src="inline_kalkulator_klirens_09.js?v=1"></script>
-  <script defer src="clcr_ui_workflow.js?v=17"></script>
+  <script defer src="clcr_ui_workflow.js?v=18"></script>
 </body>
 </html>
