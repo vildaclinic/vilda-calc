@@ -1,0 +1,660 @@
+/* Ox/Cr: accepted desktop/mobile layout. Keep the column widths identical
+   across modes, units, context and result states; scope changes to Ox/Cr. */
+html[data-clcr-workflow-ui="1"][data-clcr-oxcr-active="1"] {
+  --oxcr-unit-width: 144px;
+  scrollbar-gutter: stable;
+}
+
+html[data-clcr-oxcr-active="1"] #clcrWorkspace,
+html[data-clcr-oxcr-active="1"] #clcrWorkspace *,
+html[data-clcr-oxcr-active="1"] #clcrWorkspace *::before,
+html[data-clcr-oxcr-active="1"] #clcrWorkspace *::after {
+  box-sizing: border-box;
+}
+
+html[data-clcr-workflow-ui="1"][data-clcr-oxcr-active="1"] #clcrWorkspace {
+  width: 100%;
+  min-width: 0;
+  gap: var(--space-20px);
+  align-items: start;
+}
+
+html[data-clcr-workflow-ui="1"][data-clcr-oxcr-active="1"] #clcrForm.flex {
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  align-items: stretch;
+  flex-wrap: nowrap;
+  gap: var(--space-16px);
+}
+
+html[data-clcr-workflow-ui="1"][data-clcr-oxcr-active="1"] #clcrForm.flex > *,
+html[data-clcr-workflow-ui="1"][data-clcr-oxcr-active="1"] #clcrResultRail,
+html[data-clcr-workflow-ui="1"][data-clcr-oxcr-active="1"] #clcrResultReport {
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+}
+
+html[data-clcr-workflow-ui="1"][data-clcr-oxcr-active="1"] #clcrForm > .clcr-workflow__utilities:empty {
+  display: none;
+}
+
+html[data-clcr-workflow-ui="1"][data-clcr-oxcr-active="1"] #clcrForm .clcr-active-panel {
+  padding: var(--space-16px);
+}
+
+.oxcr-patient-age {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--space-8px) var(--space-12px);
+  width: 100%;
+  min-width: 0;
+  margin-top: var(--space-12px);
+  color: var(--clcr-muted);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+html[data-clcr-workflow-ui="1"] #clcrForm .oxcr-patient-age__edit {
+  flex: 0 0 auto;
+  width: auto;
+  min-height: 36px;
+  margin: 0;
+  padding: var(--space-6px) var(--space-8px);
+  border: var(--border-hairline) solid var(--clcr-border) !important;
+  border-radius: var(--radius-8) !important;
+  background: var(--clcr-surface) !important;
+  color: var(--clcr-primary-dark) !important;
+  font: 650 12px/1.5 Inter, system-ui, sans-serif;
+  box-shadow: none !important;
+}
+
+.oxcr-age-fields {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-12px);
+  width: 100%;
+  min-width: 0;
+  margin-top: var(--space-12px);
+}
+
+html[data-clcr-workflow-ui="1"] #clcrForm .oxcr-age-fields .clcr-field {
+  width: 100%;
+  min-width: 0;
+  min-height: 0;
+  margin: 0;
+  padding: var(--space-12px);
+}
+
+html[data-clcr-workflow-ui="1"] #clcrForm .oxcr-age-fields input {
+  width: 100%;
+  min-height: 48px;
+  height: 48px;
+  margin: 0;
+  font-size: 16px;
+}
+
+html[data-clcr-workflow-ui="1"] #clcrForm .oxcr-age-fields :is(.clcr-field__status, .clcr-info-button) {
+  display: none;
+}
+
+html[data-clcr-workflow-ui="1"][data-clcr-oxcr-active="1"] #clcrResultReport {
+  margin: 0;
+  padding: var(--space-20px);
+}
+
+html[data-clcr-oxcr-active="1"] #clcrWorkspace :is(button, input, select),
+html[data-clcr-oxcr-active="1"] :is(.oxcr-input-card, .oxcr-proposal-card, #clcrVisitSaveCard) {
+  transform: none !important;
+}
+
+.oxcr-input-card {
+  padding: var(--space-16px);
+  background: var(--clcr-surface);
+  border: var(--border-hairline) solid var(--clcr-border-soft);
+  border-radius: var(--clcr-radius-card);
+  box-shadow: var(--clcr-shadow-card);
+}
+
+html[data-clcr-workflow-ui="1"] #clcrForm .oxcr-mode-switch {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: stretch;
+  gap: var(--space-4px);
+  width: 100%;
+  min-width: 0;
+  margin: 0 0 var(--space-16px);
+  padding: var(--space-4px);
+  background: var(--clcr-surface-soft);
+  border: var(--border-hairline) solid var(--clcr-border);
+  border-radius: var(--radius-12);
+}
+
+html[data-clcr-workflow-ui="1"] #clcrForm .oxcr-mode-switch button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  min-width: 0;
+  min-height: 48px;
+  height: 100%;
+  margin: 0;
+  padding: var(--space-8px);
+  border: var(--border-hairline) solid transparent !important;
+  border-radius: var(--radius-9) !important;
+  box-shadow: none !important;
+  background: transparent !important;
+  color: var(--clcr-muted) !important;
+  font: 650 13px/1.3 Inter, system-ui, sans-serif;
+}
+
+html[data-clcr-workflow-ui="1"] #clcrForm .oxcr-mode-switch button[aria-pressed="true"] {
+  background: var(--clcr-surface) !important;
+  border-color: var(--clcr-primary) !important;
+  color: var(--clcr-primary-dark) !important;
+  box-shadow: var(--clcr-shadow-small) !important;
+}
+
+html[data-clcr-workflow-ui="1"] #clcrForm .oxcr-entry-fields {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-12px);
+  width: 100%;
+  min-width: 0;
+}
+
+html[data-clcr-workflow-ui="1"] #clcrForm .oxcr-entry-fields .oxcr-entry-field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-8px);
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  min-height: 0;
+  margin: 0;
+  padding: var(--space-12px);
+  background: var(--clcr-surface-soft);
+  border: var(--border-hairline) solid var(--clcr-border-soft);
+  border-radius: var(--radius-13);
+  box-shadow: none;
+}
+
+html[data-clcr-workflow-ui="1"] #clcrForm .oxcr-entry-fields .clcr-field__heading {
+  display: block;
+  margin: 0;
+  padding: 0;
+}
+
+html[data-clcr-workflow-ui="1"] #clcrForm .oxcr-entry-fields .clcr-field__name {
+  font-size: 13px;
+  line-height: 1.4;
+  font-weight: 700;
+  color: var(--clcr-text);
+}
+
+html[data-clcr-workflow-ui="1"] #clcrForm .oxcr-input-card :is(.clcr-field__status, .clcr-info-button) {
+  display: none;
+}
+
+html[data-clcr-workflow-ui="1"] #clcrForm .oxcr-value-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) var(--oxcr-unit-width, 124px);
+  align-items: stretch;
+  gap: var(--space-8px);
+  width: 100%;
+  min-width: 0;
+}
+
+html[data-clcr-workflow-ui="1"] #clcrForm .oxcr-value-row :is(input, select) {
+  display: block;
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  height: 48px;
+  min-height: 48px;
+  margin: 0;
+  padding: var(--space-10px) var(--space-12px);
+  border: var(--border-hairline) solid var(--clcr-border);
+  border-radius: var(--radius-12);
+  background: var(--clcr-surface);
+  color: var(--clcr-text);
+  font: 400 16px/24px Inter, system-ui, sans-serif;
+  box-shadow: none;
+}
+
+html[data-clcr-workflow-ui="1"] #clcrForm .oxcr-value-row select {
+  padding-inline: var(--space-6px);
+}
+
+.oxcr-assumption,
+.oxcr-sample-info {
+  margin: var(--space-12px) 0 0;
+  color: var(--clcr-muted);
+  font-size: 12px;
+  line-height: 1.55;
+}
+
+.oxcr-sample-info > summary {
+  cursor: pointer;
+  min-height: 36px;
+  display: flex;
+  align-items: center;
+  color: var(--clcr-primary-dark);
+  font-size: 12px;
+  font-weight: 650;
+}
+
+.oxcr-sample-info > summary::before { content: "▸"; margin-right: var(--space-6px); }
+.oxcr-sample-info[open] > summary::before { content: "▾"; }
+.oxcr-sample-info__fields { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--space-12px); padding-top: var(--space-8px); }
+
+html[data-clcr-workflow-ui="1"] #clcrForm .oxcr-sample-info .clcr-field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6px);
+  width: 100%;
+  min-width: 0;
+  min-height: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  box-shadow: none;
+  background: none;
+}
+
+html[data-clcr-workflow-ui="1"] #clcrForm .oxcr-sample-info .clcr-field__name {
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+html[data-clcr-workflow-ui="1"] #clcrForm .oxcr-sample-info select {
+  width: 100%;
+  min-width: 0;
+  min-height: 48px;
+  margin: 0;
+  padding: var(--space-10px);
+  border: var(--border-hairline) solid var(--clcr-border);
+  border-radius: var(--radius-10);
+  background: var(--clcr-surface);
+  color: var(--clcr-text);
+  font: 400 16px/1.4 Inter, system-ui, sans-serif;
+}
+
+html[data-clcr-workflow-ui="1"][data-clcr-oxcr-active="1"] #clearContainer {
+  margin: 0 !important;
+  padding: 0;
+  border: 0;
+  background: none;
+  box-shadow: none;
+}
+
+html[data-clcr-workflow-ui="1"][data-clcr-oxcr-active="1"] #clearBtn {
+  display: block;
+  width: 100%;
+  min-height: 48px;
+  margin: 0;
+  padding: var(--space-10px) var(--space-12px);
+  font: 400 16px/24px Inter, system-ui, sans-serif
+}
+
+html[data-clcr-workflow-ui="1"][data-clcr-oxcr-active="1"] #clcrVisitSaveCard :is(h2, .cvs-hint) {
+  text-align: center;
+}
+
+html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .oxcr-proposal-card {
+  --clcr-result-color: var(--clcr-heading);
+  --oxcr-result-background: var(--clcr-surface-soft);
+  --oxcr-result-border: var(--clcr-border);
+  margin: 0 !important;
+  padding: var(--space-20px) !important;
+  border: var(--border-hairline) solid var(--oxcr-result-border) !important;
+  border-radius: var(--radius-14) !important;
+  background: var(--oxcr-result-background) !important;
+  color: var(--clcr-result-color) !important;
+  box-shadow: inset 5px 0 0 var(--clcr-result-color) !important;
+}
+
+html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .oxcr-proposal-card[data-clcr-tone="success"] {
+  --clcr-result-color: var(--clcr-success);
+  --oxcr-result-background: var(--clcr-success-bg);
+  --oxcr-result-border: #b6dacd;
+}
+
+html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .oxcr-proposal-card[data-clcr-tone="warning"] {
+  --clcr-result-color: var(--clcr-warning);
+  --oxcr-result-background: var(--clcr-warning-bg);
+  --oxcr-result-border: #edd59d;
+}
+
+html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .oxcr-proposal-card[data-clcr-tone="danger"] {
+  --clcr-result-color: var(--clcr-error);
+  --oxcr-result-background: var(--clcr-error-bg);
+  --oxcr-result-border: #efb9b9;
+}
+
+html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .oxcr-proposal-main {
+  display: grid;
+  grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr);
+  align-items: start;
+  gap: var(--space-16px);
+}
+
+html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .oxcr-proposal-main--single {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .oxcr-proposal-card :is(.clcr-result-patient-label, .clcr-result-reference-label) {
+  display: flex;
+  align-items: center;
+  gap: var(--space-8px);
+  min-height: 31px;
+  margin: 0 0 var(--space-12px);
+  color: var(--clcr-text);
+  font-size: 12px;
+  font-weight: 650;
+  line-height: 1.4;
+}
+
+html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .oxcr-proposal-card[data-clcr-value-length] .clcr-result-value {
+  font-size: clamp(16px, calc(250px / var(--oxcr-value-length, 4)), 60px) !important;
+  overflow-wrap: anywhere;
+  white-space: normal;
+}
+
+html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .oxcr-proposal-card .oxcr-proposal-reference {
+  display: block;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  box-shadow: none;
+  background: none;
+  color: var(--clcr-text);
+}
+
+html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .oxcr-proposal-card .clcr-result-reference-value {
+  display: block;
+  margin: 0;
+  padding: 0;
+  color: inherit !important;
+  font-size: 42px !important;
+  font-weight: 750;
+  line-height: 1.12;
+  letter-spacing: -1px;
+}
+
+html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .oxcr-proposal-card :is(.clcr-result-unit, .clcr-result-reference-unit) {
+  display: block;
+  margin: var(--space-8px) 0 0;
+  color: inherit !important;
+  font-size: 14px;
+  font-weight: 650;
+  line-height: 1.5;
+}
+
+html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .oxcr-proposal-card .oxcr-proposal-status {
+  margin: var(--space-20px) 0 0;
+  color: inherit !important;
+  font-size: 17px;
+  line-height: 1.45;
+  font-weight: 700;
+}
+
+.oxcr-confirmation { margin: var(--space-12px) 0 0; color: var(--clcr-text); font-size: 12px; line-height: 1.55; }
+.oxcr-source { margin-top: var(--space-12px); }
+.oxcr-proposal-details { margin-top: var(--space-12px); }
+.oxcr-proposal-details p { margin: var(--space-12px) 0 0; font-size: 12px; line-height: 1.6; }
+.oxcr-proposal-details .clcr-result-category-table { width: 100%; table-layout: fixed; font-size: 11px; }
+.oxcr-proposal-details .clcr-result-category-table th:first-child { width: 62%; }
+.oxcr-proposal-details .clcr-result-category-table th:nth-child(2) { width: 38%; }
+.oxcr-proposal-details .clcr-result-category-table :is(th, td) { overflow-wrap: anywhere; }
+
+.oxcr-result-empty,
+.oxcr-result-error {
+  padding: var(--space-20px);
+  border: var(--border-hairline) dashed var(--clcr-border);
+  border-radius: var(--radius-14);
+  background: var(--clcr-surface-soft);
+  color: var(--clcr-muted);
+  font-size: 14px;
+  line-height: 1.6;
+}
+.oxcr-result-empty strong,
+.oxcr-result-error strong { display: block; color: var(--clcr-heading); font-size: 17px; margin-bottom: var(--space-8px); }
+.oxcr-result-empty p,
+.oxcr-result-error p { margin: 0; }
+.oxcr-result-error { border: var(--border-hairline) solid #edd59d; border-left: 5px solid var(--clcr-warning); background: var(--clcr-warning-bg); color: var(--clcr-warning); }
+.oxcr-result-error strong { color: inherit; }
+
+@media (max-width: 700px) {
+  html[data-clcr-workflow-ui="1"][data-clcr-oxcr-active="1"] { --oxcr-unit-width: 136px; }
+  html[data-clcr-workflow-ui="1"][data-clcr-oxcr-active="1"] #clcrForm .clcr-active-panel { padding: var(--space-14px) var(--space-12px); }
+  .oxcr-input-card { padding: var(--space-12px); }
+  html[data-clcr-workflow-ui="1"] #clcrForm .oxcr-entry-fields .oxcr-entry-field { padding: var(--space-10px); }
+  html[data-clcr-workflow-ui="1"] #clcrForm .oxcr-mode-switch button { padding: var(--space-8px) 5px; font-size: 12px; }
+  html[data-clcr-workflow-ui="1"][data-clcr-oxcr-active="1"] #clcrResultReport { padding: var(--space-16px); }
+  html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .oxcr-proposal-card { padding: var(--space-18px) !important; }
+  html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .oxcr-proposal-main { gap: var(--space-12px); }
+  html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .oxcr-proposal-card :is(.clcr-result-patient-label, .clcr-result-reference-label) { font-size: 11px; }
+  html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .oxcr-proposal-card[data-clcr-value-length] .clcr-result-value { font-size: clamp(16px, calc(190px / var(--oxcr-value-length, 4)), 52px) !important; }
+  html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .oxcr-proposal-card .clcr-result-reference-value { font-size: 36px !important; }
+  html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .oxcr-proposal-card .oxcr-proposal-status { font-size: 16px; }
+}
+
+@media (max-width: 360px) {
+  html[data-clcr-workflow-ui="1"][data-clcr-oxcr-active="1"] { --oxcr-unit-width: 128px; }
+  html[data-clcr-workflow-ui="1"] #clcrForm .oxcr-value-row { gap: var(--space-6px); }
+  html[data-clcr-workflow-ui="1"] #clcrForm .oxcr-value-row select { padding-inline: var(--space-4px); }
+  html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .oxcr-proposal-card { padding: var(--space-16px) !important; }
+  html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .oxcr-proposal-main { gap: var(--space-8px); grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .oxcr-proposal-main--single { grid-template-columns: minmax(0, 1fr); }
+  html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .oxcr-proposal-card :is(.clcr-result-patient-label, .clcr-result-reference-label) { gap: var(--space-4px); font-size: 10px; }
+  html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .oxcr-proposal-card .clcr-result-patient-label { flex-wrap: nowrap; font-size: 9.5px; }
+  html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .oxcr-proposal-card[data-clcr-value-length] .clcr-result-value { font-size: clamp(16px, calc(155px / var(--oxcr-value-length, 4)), 40px) !important; }
+  html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .oxcr-proposal-card .clcr-result-reference-value { font-size: 30px !important; }
+  html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .oxcr-proposal-card .oxcr-proposal-status { font-size: 15px; }
+}
+
+html[data-clcr-workflow-ui="1"] #clcrForm .oxcr-sample-info .oxcr-known-problem-label {
+  display: block;
+  margin: var(--space-8px) 0 var(--space-4px);
+  font-size: 12px;
+  line-height: 1.5;
+}
+.oxcr-known-facts-summary,
+.oxcr-known-facts-hint {
+  margin: var(--space-8px) 0 0;
+  color: var(--clcr-muted);
+  font-size: 12px;
+  line-height: 1.55;
+  overflow-wrap: anywhere;
+}
+.oxcr-fact-corrections { margin-top: var(--space-8px); }
+.oxcr-fact-corrections > summary {
+  display: flex;
+  align-items: center;
+  min-height: 36px;
+  color: var(--clcr-primary-dark);
+  font-size: 12px;
+  line-height: 1.5;
+  cursor: pointer;
+}
+.oxcr-fact-corrections > summary::before { content: "▸"; margin-right: var(--space-6px); }
+.oxcr-fact-corrections[open] > summary::before { content: "▾"; }
+.oxcr-proposal-details .clcr-result-current-label { color: inherit; }
+.oxcr-proposal-details .clcr-result-category-table tr[aria-current="true"][data-clcr-tone="neutral"] {
+  background: var(--clcr-surface-soft);
+  color: var(--clcr-heading);
+  box-shadow: inset 3px 0 0 var(--clcr-border);
+}
+.oxcr-proposal-details .clcr-result-category-table tr[aria-current="true"][data-clcr-tone="warning"] {
+  background: var(--clcr-warning-bg);
+  color: var(--clcr-warning);
+}
+.oxcr-proposal-details .clcr-result-category-table tr[aria-current="true"][data-clcr-tone="danger"] {
+  background: var(--clcr-error-bg);
+  color: var(--clcr-error);
+}
+
+/* The accepted Ox/Cr card shows a complete range beside the patient result.
+   Longer converted ranges use two rows inside the same fixed column. */
+html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .oxcr-proposal-card[data-clcr-value-length] .clcr-result-value {
+  display: grid;
+  align-content: center;
+  min-height: 53px;
+  font-size: clamp(28px, calc(250px / var(--oxcr-value-length, 5)), 50px) !important;
+  line-height: 1.06;
+}
+
+html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .oxcr-proposal-card .clcr-result-reference-value {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  align-content: center;
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  min-height: 53px;
+  /* Leave room for wider platform fallback fonts, including DejaVu Sans. */
+  font-size: 24px !important;
+  line-height: 1.12;
+  letter-spacing: -.7px;
+  white-space: nowrap;
+}
+
+html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .oxcr-proposal-card .clcr-result-reference-value[data-reference-split="1"] {
+  font-size: 19px !important;
+  letter-spacing: -.3px;
+}
+
+.oxcr-proposal-card .clcr-result-reference-value[data-reference-split="1"] > span {
+  display: block;
+  min-width: 0;
+  max-width: 100%;
+  white-space: nowrap;
+}
+
+.oxcr-proposal-details .clcr-result-category-table th:first-child { width: 40%; }
+.oxcr-proposal-details .clcr-result-category-table th:nth-child(2) { width: 60%; }
+.oxcr-proposal-details .clcr-result-category-table caption {
+  margin-top: var(--space-12px);
+  text-align: left;
+  font-weight: 650;
+}
+
+@media (max-width: 700px) {
+  html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .oxcr-proposal-card[data-clcr-value-length] .clcr-result-value {
+    min-height: 47px;
+    font-size: clamp(24px, calc(210px / var(--oxcr-value-length, 5)), 44px) !important;
+  }
+  html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .oxcr-proposal-card .clcr-result-reference-value {
+    min-height: 47px;
+    font-size: 21px !important;
+  }
+  html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .oxcr-proposal-card .clcr-result-reference-value[data-reference-split="1"] {
+    font-size: 16px !important;
+  }
+}
+
+@media (max-width: 380px) {
+  html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .oxcr-proposal-card[data-clcr-value-length] .clcr-result-value {
+    font-size: clamp(24px, calc(190px / var(--oxcr-value-length, 5)), 44px) !important;
+  }
+  html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .oxcr-proposal-card .clcr-result-reference-value {
+    font-size: 19px !important;
+  }
+  html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .oxcr-proposal-card .clcr-result-reference-value[data-reference-split="1"] {
+    font-size: 14px !important;
+  }
+}
+
+@media (max-width: 360px) {
+  html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .oxcr-proposal-card[data-clcr-value-length] .clcr-result-value {
+    min-height: 38px;
+    font-size: clamp(20px, calc(160px / var(--oxcr-value-length, 5)), 36px) !important;
+  }
+  html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .oxcr-proposal-card .clcr-result-reference-value {
+    min-height: 38px;
+    font-size: 17px !important;
+  }
+  html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .oxcr-proposal-card .clcr-result-reference-value[data-reference-split="1"] {
+    font-size: 13px !important;
+    letter-spacing: -.15px;
+  }
+}
+
+/* Combined unit and mass-basis choice keeps one short unit control; the
+   unambiguous report basis is read back directly below that value row. */
+.oxcr-unit-help {
+  display: block;
+  margin: 0;
+  color: var(--clcr-muted);
+  font-size: 11px;
+  font-weight: 400;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+.oxcr-basis-note {
+  display: block;
+  margin-top: var(--space-4px);
+  color: var(--clcr-muted) !important;
+  font-size: 11px;
+  font-weight: 400;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+html[data-clcr-workflow-ui="1"][data-clcr-oxcr-active="1"] #clcrForm .clcr-active-panel__title {
+  overflow-wrap: normal;
+  word-break: normal;
+}
+html[data-clcr-workflow-ui="1"] #clcrForm .oxcr-patient-age__edit {
+  min-height: 48px;
+}
+.oxcr-age-fields {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: start;
+}
+html[data-clcr-workflow-ui="1"] #clcrForm .oxcr-age-fields .clcr-field {
+  display: grid;
+  grid-template-rows: 36px 48px;
+  align-content: start;
+  gap: var(--space-6px);
+}
+html[data-clcr-workflow-ui="1"] #clcrForm .oxcr-age-fields .clcr-field__heading {
+  align-items: start;
+  margin: 0;
+}
+html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .oxcr-proposal-card {
+  --oxcr-value-length: 5;
+}
+html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .oxcr-proposal-card[data-clcr-number-size="medium"] {
+  --oxcr-value-length: 8;
+}
+html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .oxcr-proposal-card[data-clcr-number-size="long"] {
+  --oxcr-value-length: 12;
+}
+html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .oxcr-proposal-card[data-clcr-number-size="very-long"] {
+  --oxcr-value-length: 18;
+}
+html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .oxcr-proposal-card .clcr-result-reference-value[data-reference-converted="1"] {
+  font-size: 19px !important;
+  letter-spacing: -.3px;
+}
+@media (max-width: 700px) {
+  html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .oxcr-proposal-card .clcr-result-reference-value[data-reference-converted="1"] {
+    font-size: 16px !important;
+  }
+}
+@media (max-width: 380px) {
+  html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .oxcr-proposal-card .clcr-result-reference-value[data-reference-converted="1"] {
+    font-size: 14px !important;
+  }
+}
+@media (max-width: 360px) {
+  html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .oxcr-proposal-card .clcr-result-reference-value[data-reference-converted="1"] {
+    font-size: 13px !important;
+    letter-spacing: -.15px;
+  }
+}
