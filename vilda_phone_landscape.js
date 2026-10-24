@@ -129,8 +129,9 @@
     // animate independently, including a hidden/preloaded pane becoming visible.
     // Dock opacity belongs to its keyboard runtime, including changes that can
     // begin after this appearance starts, so the Dock is never a motion target.
+    // Keep the header outside this compositing change during viewport rotation.
     var surfaces = drawer ? [drawer] : doc.querySelectorAll(
-      '.app-shell-main, html:not(.vilda-shell-host) .main-content, body.has-vilda-chrome > header'
+      '.app-shell-main, html:not(.vilda-shell-host) .main-content'
     );
     for (var index = 0; index < surfaces.length; index += 1) {
       var element = surfaces[index];
@@ -155,7 +156,10 @@
     // or subscribe to their patient/authentication lifecycle.
     syncFrames();
     if (!owner && initialized && (wasActive !== active || wasPhone !== phone)) {
-      if (wasPhone && phone && wasActive !== active) appear();
+      // Portrait restores the taller header and top safe-area. Keep its content
+      // fully opaque and cancel any unfinished landscape appearance immediately,
+      // avoiding an extra compositing change at the end of the native rotation.
+      if (wasPhone && phone && !wasActive && active) appear();
       else cancelMotion();
       if (typeof win.CustomEvent === "function") {
         doc.dispatchEvent(new win.CustomEvent("vilda:phone-layout-changed", { detail: { phone: phone, landscape: active } }));

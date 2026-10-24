@@ -19,7 +19,7 @@
  *   bo i tak chcemy zwracać HTML z cache natychmiast.
  */
 
-const SW_VERSION = '1.1.363';
+const SW_VERSION = '1.1.364';
 const CACHE_PREFIX = 'pwa-kalorii';
 const SHELL_CACHE = `${CACHE_PREFIX}-shell-v${SW_VERSION}`;
 const RUNTIME_CACHE = `${CACHE_PREFIX}-runtime`;
@@ -1959,6 +1959,7 @@ const CORE_SHELL_URLS = [
   // Wspólny układ telefonu w poziomie jest potrzebny przed pierwszym malowaniem.
   '/vilda_phone_landscape.js?v=1',
   '/vilda_phone_landscape.js?v=2',
+  '/vilda_phone_landscape.js?v=3',
   '/vilda_phone_landscape.css?v=1',
   '/vilda_phone_landscape.css?v=2'
 ];
