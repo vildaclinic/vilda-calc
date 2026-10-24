@@ -165,6 +165,14 @@ Nie wolno przenosić pola między pamięcią sesji, pamięcią trwałą i danymi
 Moduły nie wywołują kolektora/zapisu pacjenta, nie uruchamiają przeliczenia i nie
 przechowują podglądu w magazynach przeglądarki. Odświeżenie po obliczeniu korzysta
 z `VildaUpdateHooks`; zmiana adnotacji ogłasza `vilda:centile-creator-changed`.
+Podczas edycji głównych pól `height` i `weight` podgląd zachowuje zatwierdzoną
+migawkę. Opuszczenie pola lub Enter zatwierdza wyłącznie to pole; następne
+pisanie znów czeka na zakończenie edycji. Bramka obejmuje także `after-update`
+i odczyty asynchroniczne, aby pośrednie wyniki kalkulatora nie rysowały siatki
+przy każdej cyfrze. Stan edycji należy do tokenu wizyty i istnieje tylko w RAM;
+unieważnienie pacjenta nadal działa natychmiast. Zwykłe liczenie, zapis oraz
+programowe odtworzenie formularza zachowują własny cykl życia. Autozoom nie
+jest częścią tej zmiany. Szczegóły: `P-SIATKA-PO-EDYCJI` w dokumentacji klinicznej.
 Eksport bez nowych opcji zachowuje dotychczasową ścieżkę. Szczegóły prezentacji
 i zakresu: wpis `GROWTH-LIVE-PANEL` w `docs/clinical/ALGORITHMS.md`.
 

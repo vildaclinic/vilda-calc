@@ -16,6 +16,10 @@
   var listeners = new Set();
   var boundVault = null;
   var updateHookRegistered = false;
+  var measurementEdit = null;
+  var measurementCommit = null;
+  var measurementRevision = 0;
+  var lastSnapshot = null;
 
   function copy(value) {
     try { return value == null ? null : JSON.parse(JSON.stringify(value)); }
@@ -134,12 +138,20 @@
   }
 
   function invalidate(reason, identityChanged, refreshHistory) {
-    if (identityChanged) { generation += 1; token = null; saveRefresh = null; }
+    if (identityChanged) {
+      generation += 1; token = null; saveRefresh = null;
+      measurementEdit = null; measurementCommit = null; lastSnapshot = null;
+    }
     if (identityChanged || refreshHistory) {
       historyRevision += 1;
       recordRequest = null;
       timelineRequest = null;
     }
+    // Blur precedes a click/change on source, history or another control. Until
+    // the accepted state is rendered, keep it current with those later changes,
+    // but never recapture a new draft typed in this or the next measurement field.
+    if (!identityChanged && reason !== 'measurement-commit' && measurementCommit
+      && !editing(token) && isCurrent(token)) captureMeasurementCommit(token);
     notify(reason, identityChanged);
   }
 
@@ -176,6 +188,9 @@
     if (!current) return null;
     if (!sameContext(token, current) || token.generation !== generation) {
       saveRefresh = null;
+      measurementEdit = null;
+      measurementCommit = null;
+      lastSnapshot = null;
       token = Object.freeze({ patientId: current.patientId, route: current.route,
         applySequence: current.applySequence, generation: generation });
       recordRequest = null;
@@ -229,15 +244,14 @@
     return timelineRequest;
   }
 
-  function parentHeight(id, advanced, key) {
+  function capturedField(id) {
     var input = field(id);
-    return positive(input ? input.value : advanced[key]);
+    return input ? { value: input.value } : null;
   }
 
-  function makeSnapshot(scope, record, growth, measurements) {
-    var head = record.snapshots[0] && record.snapshots[0].payload || {};
-    var advanced = Object.assign({}, copy(head.advanced && head.advanced.data) || {},
-      copy(w.advancedGrowthData) || {}, copy(growth) || {});
+  // Capture the accepted form state synchronously. A subsequent keystroke may
+  // arrive before the debounced render or asynchronous record/timeline read.
+  function captureSnapshotInput() {
     var age = activeAge(), dob = w.VildaDobAge;
     var exact = dob && typeof dob.readExactAge === 'function' ? dob.readExactAge() : null;
     var exactAge = exact && exact.totalMonths === age && Number.isFinite(exact.exactMonths)
@@ -246,11 +260,34 @@
     var source = String(sourceInput && sourceInput.value || 'OLAF').toUpperCase();
     var population = typeof w.VildaPopulacjaPacjenta === 'function' ? w.VildaPopulacjaPacjenta() : 'OGOLNA';
     var sexInput = field('sex');
-    var sex = String(sexInput && sexInput.value || advanced.sex || head.user && head.user.sex || 'M');
     var height = positive(field('height') && field('height').value);
     var weight = positive(field('weight') && field('weight').value);
-    var parents = { motherHeight: parentHeight('advMotherHeight', advanced, 'motherHeight'),
-      fatherHeight: parentHeight('advFatherHeight', advanced, 'fatherHeight') };
+    var proToggle = field('resultsModeToggle');
+    var professionalMode = typeof w.isGrowthResultsProfessionalMode === 'function'
+      ? !!w.isGrowthResultsProfessionalMode() : !!(proToggle && proToggle.checked);
+    var headerState = typeof w.getCentileChartHeaderNameState === 'function'
+      ? w.getCentileChartHeaderNameState() : null;
+    return { age: age, exactAge: exactAge, source: source, population: population,
+      sex: sexInput && sexInput.value, height: height, weight: weight,
+      mother: capturedField('advMotherHeight'), father: capturedField('advFatherHeight'),
+      advanced: copy(w.advancedGrowthData) || {}, growth: copy(workingGrowth()),
+      chartCreatorData: copy(w.chartCreatorData) || {}, professionalMode: professionalMode,
+      standardChartStyle: !!w.forceStandardCentileChartStyle || !professionalMode,
+      hasHeaderName: !!(headerState && headerState.name),
+      measuredAtISO: dob && typeof dob.readMeasuredAtISO === 'function' ? dob.readMeasuredAtISO() : null,
+      savedMeasurement: !!(dob && typeof dob.showsSavedMeasurement === 'function' && dob.showsSavedMeasurement()) };
+  }
+
+  function makeSnapshot(scope, record, input, measurements) {
+    var head = record.snapshots[0] && record.snapshots[0].payload || {};
+    var growth = input.growth;
+    var advanced = Object.assign({}, copy(head.advanced && head.advanced.data) || {},
+      copy(input.advanced) || {}, copy(growth) || {});
+    var age = input.age, exactAge = input.exactAge, source = input.source, population = input.population;
+    var sex = String(input.sex || advanced.sex || head.user && head.user.sex || 'M');
+    var height = input.height, weight = input.weight;
+    var parents = { motherHeight: positive(input.mother ? input.mother.value : advanced.motherHeight),
+      fatherHeight: positive(input.father ? input.father.value : advanced.fatherHeight) };
     Object.assign(advanced, { measurements: copy(measurements) || [], currentAgeMonths: age,
       currentHeight: height, currentWeight: weight, sex: sex,
       motherHeight: parents.motherHeight, fatherHeight: parents.fatherHeight });
@@ -260,46 +297,60 @@
         { population: population });
       if (stats && typeof stats.siatka === 'string') effectiveSource.height = stats.siatka;
     }
-    var proToggle = field('resultsModeToggle');
-    var professionalMode = typeof w.isGrowthResultsProfessionalMode === 'function'
-      ? !!w.isGrowthResultsProfessionalMode() : !!(proToggle && proToggle.checked);
-    var headerState = typeof w.getCentileChartHeaderNameState === 'function'
-      ? w.getCentileChartHeaderNameState() : null;
     return freeze({ patientId: scope.patientId, patientToken: scope, sex: sex, ageMonths: age,
       exactAgeMonths: exactAge, currentHeight: height, currentWeight: weight,
       source: source, requestedSource: source, population: population, effectiveSourceByMetric: effectiveSource,
       measurements: copy(measurements) || [], advanced: advanced, parents: parents,
-      chartCreatorData: copy(w.chartCreatorData) || {},
-      professionalMode: professionalMode,
-      standardChartStyle: !!w.forceStandardCentileChartStyle || !professionalMode,
-      hasHeaderName: !!(headerState && headerState.name),
+      chartCreatorData: copy(input.chartCreatorData) || {},
+      professionalMode: input.professionalMode,
+      standardChartStyle: input.standardChartStyle,
+      hasHeaderName: input.hasHeaderName,
       eligibility: { savedPatient: true, choice: 'new', route: scope.route,
         activeDocument: true, under18: true },
       meta: { historySource: growth ? 'working' : 'vault',
-        measuredAtISO: dob && typeof dob.readMeasuredAtISO === 'function' ? dob.readMeasuredAtISO() : null,
-        savedMeasurement: !!(dob && typeof dob.showsSavedMeasurement === 'function' && dob.showsSavedMeasurement()) }
+        measuredAtISO: input.measuredAtISO, savedMeasurement: input.savedMeasurement }
     });
+  }
+
+  function editing(scope) {
+    return !!(measurementEdit && measurementEdit.scope === scope && measurementEdit.dirty);
+  }
+
+  function heldSnapshot(scope) {
+    return lastSnapshot && lastSnapshot.patientToken === scope ? lastSnapshot : null;
   }
 
   async function getSnapshot() {
     var scope = currentToken();
     if (!scope) return null;
+    var commit = measurementCommit;
+    var acceptedRevision = measurementRevision;
+    if (!commit && editing(scope)) return heldSnapshot(scope);
     var revision = historyRevision;
     var record = await readRecord(scope);
     if (revision !== historyRevision || !ready(scope)) return null;
+    if (acceptedRevision !== measurementRevision) return heldSnapshot(scope);
+    if (!commit && editing(scope)) return heldSnapshot(scope);
     if (!record) { finishSaveRefresh(scope, revision, true); return null; }
     try {
-      var growth = workingGrowth(), measurements = growth && growth.measurements;
+      var input = commit ? commit.input : captureSnapshotInput();
+      var growth = input.growth, measurements = growth && growth.measurements;
       if (!growth) {
         measurements = await readTimeline(scope);
         if (revision !== historyRevision || !ready(scope)) return null;
+        if (acceptedRevision !== measurementRevision) return heldSnapshot(scope);
+        if (!commit && editing(scope)) return heldSnapshot(scope);
         if (measurements === null) { finishSaveRefresh(scope, revision, true); return null; }
         // A form restoration may have supplied an explicit working history meanwhile.
-        growth = workingGrowth();
+        if (!commit) input = captureSnapshotInput();
+        growth = input.growth;
         if (growth) measurements = growth.measurements;
       }
-      var snapshot = makeSnapshot(scope, record, growth, measurements);
+      var snapshot = makeSnapshot(scope, record, input, measurements);
       if (revision !== historyRevision || !ready(scope)) return null;
+      if (acceptedRevision !== measurementRevision) return heldSnapshot(scope);
+      lastSnapshot = snapshot;
+      measurementCommit = null;
       finishSaveRefresh(scope, revision, false);
       return snapshot;
     } catch (_) { finishSaveRefresh(scope, revision, true); return null; }
@@ -309,7 +360,58 @@
     if (target && typeof target.addEventListener === 'function') target.addEventListener(event, callback, options);
   }
 
-  listen(d, 'input', function () { invalidate('input', false); });
+  function measurementField(target) {
+    return target && (target.id === 'height' || target.id === 'weight') && field(target.id) === target;
+  }
+
+  function beginMeasurementEdit(target) {
+    if (!measurementField(target)) return;
+    var scope = currentToken();
+    if (!scope) return;
+    if (measurementEdit && measurementEdit.scope === scope && measurementEdit.input === target) return;
+    measurementEdit = { scope: scope, input: target, dirty: false };
+  }
+
+  function captureMeasurementCommit(scope) {
+    try {
+      measurementCommit = { scope: scope, input: captureSnapshotInput() };
+      measurementRevision += 1;
+      return true;
+    } catch (_) { return false; }
+  }
+
+  function commitMeasurementEdit(target, finished) {
+    if (!measurementEdit || measurementEdit.input !== target) return false;
+    var scope = measurementEdit.scope;
+    if (!isCurrent(scope)) { measurementEdit = null; return false; }
+    if (!captureMeasurementCommit(scope)) return false;
+    if (finished) measurementEdit = null;
+    else measurementEdit.dirty = false;
+    invalidate('measurement-commit', false);
+    return true;
+  }
+
+  listen(d, 'focusin', function (event) { beginMeasurementEdit(event && event.target); }, true);
+  listen(d, 'input', function (event) {
+    var target = event && event.target;
+    if (measurementField(target) && d.activeElement === target) {
+      beginMeasurementEdit(target);
+      if (measurementEdit && measurementEdit.input === target) measurementEdit.dirty = true;
+    }
+    invalidate('input', false);
+  }, true);
+  function measurementBlur(event) { commitMeasurementEdit(event && event.target, true); }
+  listen(d, 'blur', measurementBlur, true);
+  listen(d, 'focusout', measurementBlur, true);
+  listen(d, 'keydown', function (event) {
+    if (!event || event.key !== 'Enter' || event.isComposing || event.keyCode === 229
+      || !measurementField(event.target) || !measurementEdit || measurementEdit.input !== event.target
+      || !isCurrent(measurementEdit.scope)) return;
+    // Only the visible two-column preview owns Enter. Native mobile Done and
+    // other calculator contexts keep their existing default keyboard behavior.
+    if (d.documentElement && d.documentElement.classList.contains('vilda-centile-live-active')) event.preventDefault();
+    if (!event.repeat) commitMeasurementEdit(event.target, false);
+  }, true);
   listen(d, 'change', function () { invalidate('change', false); });
   listen(d, 'click', function (event) {
     var target = event && event.target;
