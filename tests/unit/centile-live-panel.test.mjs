@@ -20,7 +20,7 @@ function setup({ columns = '400px 400px', rects = true, lifecycle = false, eligi
       attributes: {}, setAttribute(name, value) { this.attributes[name] = value; },
       hidden: false, style: { setProperty(name, value) { this[name] = value; } }, children: [], parentNode: null,
       rect: { left: 0, right: 400, top: 0, bottom: 800, width: 400, height: 800, ...rect },
-      getBoundingClientRect() { return this.rect; },
+      getBoundingClientRect: vi.fn(function () { return this.rect; }),
       getClientRects() { return this.hidden ? [] : [{}]; },
       appendChild(child) { if (child.parentNode) child.remove(); this.children.push(child); child.parentNode = this; },
       remove() { if (this.parentNode) this.parentNode.children.splice(this.parentNode.children.indexOf(this), 1); this.parentNode = null; },
@@ -30,7 +30,7 @@ function setup({ columns = '400px 400px', rects = true, lifecycle = false, eligi
   const notice = element(), noticeMessage = element(), retryButton = emitter(element());
   notice.appendChild(noticeMessage); notice.appendChild(retryButton); mount.appendChild(notice);
   mount.hidden = true;
-  form.getClientRects = () => rects ? [{}] : [];
+  form.getClientRects = vi.fn(() => rects ? [{}] : []);
   const classes = new Set();
   const doc = emitter({ readyState: 'complete', documentElement: { classList: {
     toggle: (name, value) => value ? classes.add(name) : classes.delete(name),
@@ -104,7 +104,13 @@ function setup({ columns = '400px 400px', rects = true, lifecycle = false, eligi
     replacePatient: (name = 'patient-b') => { currentToken = Object.freeze({ fictional: name, revision: 2 }); },
     invalidate: () => { currentToken = null; eligibility = 'ineligible'; data.getEligibility = () => ({ status: eligibility }); },
     setRefreshState: (value) => { refreshState = value; },
-    nextFrame: () => { const callbacks = [...frames.values()]; frames.clear(); callbacks.forEach((fn) => fn()); },
+    nextFrame: () => {
+      // A callback may cancel a later callback in the same browser frame.
+      for (const [key, fn] of [...frames]) {
+        if (!frames.delete(key)) continue;
+        fn();
+      }
+    },
     runTimers: (maxDelay = 1000) => { const callbacks = [...timers].filter(([, task]) => task.delay <= maxDelay); callbacks.forEach(([key, task]) => { timers.delete(key); task.fn(); }); },
     resize: () => resizeObservers.forEach((fn) => fn()),
   };
@@ -121,7 +127,7 @@ describe('live panel controller — async ownership and invalidation', () => {
     e.setRefreshState('pending');
     e.emit({ identityChanged: false, reason: 'patient-loaded' });
     expect(view.destroy).not.toHaveBeenCalled();
-    e.runTimers(); e.pending[1].resolve(null); await flush();
+    e.nextFrame(); e.runTimers(); e.pending[1].resolve(null); await flush();
     expect(e.api.getState()).toMatchObject({ eligible: true, fullscreen: true, metric: 'weight' });
     expect(e.hosts[0].options.isCurrent(e.hosts[0].options.patientToken)).toBe(true);
     expect(e.hosts[0].close).not.toHaveBeenCalled();
@@ -130,7 +136,7 @@ describe('live panel controller — async ownership and invalidation', () => {
     expect(e.win.__vildaRemindersResync).not.toHaveBeenCalled();
     e.setRefreshState(null);
     e.emit({ identityChanged: false, reason: 'vilda:dob-restored' });
-    e.runTimers(); e.pending[2].resolve(e.snapshot({ currentHeight: 159 })); await flush();
+    e.nextFrame(); e.runTimers(); e.pending[2].resolve(e.snapshot({ currentHeight: 159 })); await flush();
     expect(e.views).toHaveLength(1);
     expect(view.update).toHaveBeenCalledTimes(2);
     expect(e.api.getState()).toMatchObject({ eligible: true, fullscreen: true, metric: 'weight' });
@@ -187,7 +193,7 @@ describe('live panel controller — async ownership and invalidation', () => {
     expect(e.views).toHaveLength(0);
     expect(e.mount.hidden).toBe(false);
     expect(e.notice.hidden).toBe(false);
-    e.runTimers();
+    e.nextFrame(); e.runTimers();
     const next = e.snapshot(); e.pending[1].resolve(next); await flush();
     expect(e.render).toHaveBeenCalledWith(next);
     expect(e.api.getState().patientId).toBe('patient-b');
@@ -230,7 +236,7 @@ describe('live panel controller — async ownership and invalidation', () => {
     expect(options.isCurrent(options.patientToken)).toBe(true);
     e.replacePatient(); e.emit({ identityChanged: true, reason: 'patient-loaded' });
     expect(options.isCurrent(options.patientToken)).toBe(false);
-    e.runTimers(); e.pending[1].resolve(e.snapshot()); await flush();
+    e.nextFrame(); e.runTimers(); e.pending[1].resolve(e.snapshot()); await flush();
     expect(e.views).toHaveLength(2);
     expect(options.isCurrent(options.patientToken)).toBe(false);
     expect(e.views[1].destroy).not.toHaveBeenCalled();
@@ -391,7 +397,7 @@ describe('live panel controller — explicit slot lifecycle', () => {
     expect(e.mount.hidden).toBe(false);
     expect(e.views[0].destroy).not.toHaveBeenCalled();
     expect(e.win.__vildaRemindersResync).not.toHaveBeenCalled();
-    e.runTimers(); await resolveReady(e, 2);
+    e.nextFrame(); e.runTimers(); await resolveReady(e, 2);
     expect(e.api.getState().slotStatus).toBe('ready');
   });
 
@@ -404,7 +410,7 @@ describe('live panel controller — explicit slot lifecycle', () => {
     expect(e.mount.hidden).toBe(false);
     expect(e.notice.hidden).toBe(false);
     expect(e.api.getState()).toMatchObject({ patientId: null, eligible: false, slotStatus: 'pending' });
-    e.runTimers(); await resolveReady(e, 1);
+    e.nextFrame(); e.runTimers(); await resolveReady(e, 1);
     expect(e.api.getState().patientId).toBe('patient-b');
   });
 
@@ -459,11 +465,13 @@ describe('live panel controller — explicit slot lifecycle', () => {
     const e = setup({ lifecycle: true }); await resolveReady(e);
     e.style.columns = '800px'; e.resize(); e.nextFrame();
     expect(e.mount.hidden).toBe(true);
+    e.fieldset.rect.height = 900;
     e.style.columns = '400px 400px'; e.resize(); e.nextFrame();
     expect(e.mount.hidden).toBe(false);
     expect(e.notice.hidden).toBe(false);
     expect(e.api.getState().slotStatus).toBe('pending');
-    e.runTimers(); await resolveReady(e, 1);
+    expect(e.mount.style['--vilda-centile-live-inline-height']).toBe('870px');
+    e.nextFrame(); e.runTimers(); await resolveReady(e, 1);
     expect(e.api.getState().slotStatus).toBe('ready');
   });
 
@@ -476,7 +484,7 @@ describe('live panel controller — explicit slot lifecycle', () => {
     expect(e.api.getState().slotStatus).toBe('pending');
     expect(e.retryButton.hidden).toBe(true);
     e.emit({ reason: 'measurement-commit', identityChanged: false });
-    e.runTimers(); await resolveReady(e, 1);
+    e.nextFrame(); e.runTimers(); await resolveReady(e, 1);
     expect(e.api.getState().slotStatus).toBe('ready');
   });
 
@@ -620,7 +628,7 @@ describe('live panel controller — deferred fullscreen preparation', () => {
     const changed = e.api.refresh(); e.pending[1].resolve(e.snapshot({ currentHeight: 161 })); await flush();
     const obsolete = e.boundsJobs[1];
     e.emit({ reason: 'after-update', identityChanged: false });
-    e.runTimers(); e.pending[2].resolve(e.snapshot()); await flush();
+    e.nextFrame(); e.runTimers(); e.pending[2].resolve(e.snapshot()); await flush();
     await changed;
     expect(obsolete.cancel).toHaveBeenCalledOnce();
     expect(view.update).toHaveBeenCalledOnce();
@@ -651,7 +659,22 @@ describe('live panel controller — deferred fullscreen preparation', () => {
 });
 
 describe('live panel controller — prompt readiness signals', () => {
-  it.each(['startup-settled', 'vilda:dob-restored', 'vilda:auth-hidden', 'vilda:auth-state-settled'])('refreshes %s at the next frame despite following ordinary updates', async reason => {
+  it('the completed main-session identity starts its replacement on the next frame without the ordinary debounce', async () => {
+    const e = setup({ lifecycle: true, eligibility: 'pending' });
+    e.pending[0].resolve({ status: 'pending', reason: 'restoring' }); await flush();
+    e.setEligibility('eligible');
+    e.emit({ reason: 'vilda:main-session-restored', identityChanged: true });
+    e.emit({ reason: 'after-update', identityChanged: false });
+    expect(e.pending).toHaveLength(1);
+    e.nextFrame(); e.runTimers(0);
+    expect(e.pending).toHaveLength(2);
+    e.pending[1].resolve({ status: 'ready', snapshot: e.snapshot() }); await flush();
+    expect(e.api.getState().slotStatus).toBe('ready');
+    expect(e.win.__vildaRemindersResync).not.toHaveBeenCalled();
+  });
+
+  it.each(['startup-settled', 'vilda:dob-restored', 'vilda:auth-hidden', 'vilda:auth-state-settled',
+    'vilda:auth-boot-settled', 'vilda:main-session-restored'])('refreshes %s at the next frame despite following ordinary updates', async reason => {
     const e = setup({ lifecycle: true, eligibility: 'pending' });
     e.pending[0].resolve({ status: 'pending' }); await flush();
     e.setEligibility('eligible');
@@ -679,5 +702,158 @@ describe('live panel controller — prompt readiness signals', () => {
     e.nextFrame(); e.runTimers(100);
     expect(e.pending).toHaveLength(2);
     expect(e.api.getState().eligible).toBe(false);
+  });
+});
+
+describe('live panel controller — coalesced restoration geometry', () => {
+  it.each(['pending', 'eligible'])('the first patient reserves a previously ineligible slot synchronously when %s', async eligibility => {
+    const e = setup({ lifecycle: true, eligibility: 'ineligible' });
+    expect(e.mount.hidden).toBe(true);
+    expect(e.data.getResult).not.toHaveBeenCalled();
+    e.fieldset.rect.height = 900;
+    e.setEligibility(eligibility);
+    e.emit({ reason: 'patient-loaded', identityChanged: true });
+    // No animation frame or timer has run: the first applicable notification
+    // must already hide Reminders and size the neutral slot for this paint.
+    expect(e.mount.hidden).toBe(false);
+    expect(e.notice.hidden).toBe(false);
+    expect(e.classes.has('vilda-centile-live-reserved')).toBe(true);
+    expect(e.classes.has('vilda-centile-live-active')).toBe(false);
+    expect(e.mount.style['--vilda-centile-live-inline-height']).toBe('870px');
+    expect(e.api.getState()).toMatchObject({ slotStatus: 'pending', eligible: false });
+    expect(e.data.getResult).not.toHaveBeenCalled();
+    e.form.getClientRects.mockClear();
+    e.fieldset.getBoundingClientRect.mockClear();
+    for (let index = 0; index < 40; index++) e.emit({ reason: 'change', identityChanged: false });
+    expect(e.form.getClientRects).not.toHaveBeenCalled();
+    expect(e.fieldset.getBoundingClientRect).not.toHaveBeenCalled();
+    e.nextFrame(); e.runTimers(0);
+    expect(e.data.getResult).toHaveBeenCalledOnce();
+    e.pending[0].resolve({ status: 'ready', snapshot: e.snapshot() }); await flush();
+    expect(e.api.getState().slotStatus).toBe('ready');
+  });
+
+  it('a first patient notification still does not reserve the slot in one column', () => {
+    const e = setup({ lifecycle: true, eligibility: 'ineligible', columns: '800px' });
+    e.setEligibility('eligible');
+    e.emit({ reason: 'patient-loaded', identityChanged: true });
+    expect(e.mount.hidden).toBe(true);
+    expect(e.classes.has('vilda-centile-live-reserved')).toBe(false);
+    e.nextFrame(); e.runTimers();
+    expect(e.data.getResult).not.toHaveBeenCalled();
+  });
+
+  async function mounted() {
+    const e = setup({ lifecycle: true });
+    e.pending[0].resolve({ status: 'ready', snapshot: e.snapshot() }); await flush();
+    e.nextFrame();
+    e.form.getClientRects.mockClear();
+    e.fieldset.getBoundingClientRect.mockClear();
+    e.views[0].fit.mockClear();
+    return e;
+  }
+
+  it('does not measure the form between restoration writes and starts one replacement read for the burst', async () => {
+    const e = await mounted();
+    const view = e.views[0];
+    for (let index = 0; index < 40; index++) {
+      e.fieldset.rect.height = 800 + index;
+      e.emit({ reason: index % 2 ? 'change' : 'after-update', identityChanged: false });
+    }
+    expect(e.form.getClientRects).not.toHaveBeenCalled();
+    expect(e.fieldset.getBoundingClientRect).not.toHaveBeenCalled();
+    expect(view.fit).not.toHaveBeenCalled();
+    expect(e.data.getResult).toHaveBeenCalledOnce();
+    expect(view.destroy).not.toHaveBeenCalled();
+    e.nextFrame();
+    expect(e.form.getClientRects).toHaveBeenCalledOnce();
+    expect(e.fieldset.getBoundingClientRect).toHaveBeenCalledOnce();
+    expect(e.data.getResult).toHaveBeenCalledOnce();
+    e.runTimers();
+    expect(e.data.getResult).toHaveBeenCalledTimes(2);
+    const current = e.snapshot({ currentHeight: 159 });
+    e.pending[1].resolve({ status: 'ready', snapshot: current }); await flush();
+    expect(view.update).toHaveBeenLastCalledWith(expect.anything(), current);
+    expect(e.mount.style['--vilda-centile-live-inline-height']).toBe('809px');
+    expect(e.win.__vildaRemindersResync).not.toHaveBeenCalled();
+  });
+
+  it('erases another patient synchronously without a geometry read or a released slot', async () => {
+    const e = await mounted();
+    const old = e.views[0], height = e.mount.style['--vilda-centile-live-inline-height'];
+    e.emit({ reason: 'after-update', identityChanged: false });
+    e.replacePatient(); e.emit({ reason: 'patient-loaded', identityChanged: true });
+    e.emit({ reason: 'change', identityChanged: false });
+    expect(old.element.hidden).toBe(true);
+    expect(old.destroy).toHaveBeenCalledOnce();
+    expect(e.form.getClientRects).not.toHaveBeenCalled();
+    expect(e.fieldset.getBoundingClientRect).not.toHaveBeenCalled();
+    expect(e.mount.hidden).toBe(false);
+    expect(e.notice.hidden).toBe(false);
+    expect(e.mount.style['--vilda-centile-live-inline-height']).toBe(height);
+    expect(e.api.getState()).toMatchObject({ patientId: null, slotStatus: 'pending' });
+    expect(e.win.__vildaRemindersResync).not.toHaveBeenCalled();
+    e.nextFrame(); e.runTimers(0);
+    expect(e.data.getResult).toHaveBeenCalledTimes(2);
+    e.pending[1].resolve({ status: 'ready', snapshot: e.snapshot() }); await flush();
+    expect(e.api.getState().patientId).toBe('patient-b');
+  });
+
+  it.each(['hidden', 'one-column'])('checks the current %s layout before a queued refresh can fetch', async mode => {
+    const e = await mounted();
+    e.emit({ reason: 'startup-settled', identityChanged: false });
+    if (mode === 'hidden') e.form.getClientRects.mockReturnValue([]);
+    else e.style.columns = '800px';
+    e.nextFrame(); e.runTimers();
+    expect(e.data.getResult).toHaveBeenCalledOnce();
+    expect(e.mount.hidden).toBe(true);
+    expect(e.views[0].destroy).toHaveBeenCalledOnce();
+  });
+
+  it('pagehide cancels geometry and refresh queues, while pageshow can reserve the card again', async () => {
+    const e = await mounted();
+    e.emit({ reason: 'startup-settled', identityChanged: false });
+    e.resize();
+    e.win.dispatchEvent({ type: 'pagehide' });
+    expect(e.mount.hidden).toBe(true);
+    e.nextFrame(); e.runTimers();
+    expect(e.form.getClientRects).not.toHaveBeenCalled();
+    expect(e.data.getResult).toHaveBeenCalledOnce();
+    expect(e.mount.hidden).toBe(true);
+    e.win.dispatchEvent({ type: 'pageshow' });
+    e.fieldset.rect.height = 900;
+    e.nextFrame();
+    expect(e.mount.hidden).toBe(false);
+    expect(e.api.getState().slotStatus).toBe('pending');
+    expect(e.mount.style['--vilda-centile-live-inline-height']).toBe('870px');
+    e.runTimers();
+    expect(e.data.getResult).toHaveBeenCalledTimes(2);
+  });
+
+  it('an explicit retry replaces queued event work instead of starting a duplicate read', async () => {
+    const e = await mounted();
+    e.emit({ reason: 'after-update', identityChanged: false });
+    const retry = e.api.retry();
+    e.nextFrame(); e.runTimers();
+    expect(e.data.retry).toHaveBeenCalledOnce();
+    expect(e.data.getResult).toHaveBeenCalledTimes(2);
+    e.pending[1].resolve({ status: 'ready', snapshot: e.snapshot() }); await retry;
+    expect(e.api.getState().slotStatus).toBe('ready');
+  });
+
+  it.each(['startup-settled', 'vilda:auth-boot-settled', 'vilda:main-session-restored'])('%s cannot bypass restoration that becomes pending before the frame', async reason => {
+    const e = await mounted();
+    e.emit({ reason, identityChanged: false });
+    e.setEligibility('pending');
+    e.nextFrame();
+    expect(e.data.getResult).toHaveBeenCalledOnce();
+    expect(e.api.getState().slotStatus).toBe('pending');
+    expect(e.views[0].destroy).not.toHaveBeenCalled();
+    e.runTimers(100);
+    expect(e.data.getResult).toHaveBeenCalledTimes(2);
+    e.pending[1].resolve({ status: 'pending', reason: 'restore' }); await flush();
+    expect(e.render).toHaveBeenCalledOnce();
+    expect(e.api.getState().slotStatus).toBe('pending');
+    expect(e.win.__vildaRemindersResync).not.toHaveBeenCalled();
   });
 });

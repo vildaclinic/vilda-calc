@@ -84,6 +84,12 @@
     return Number.isFinite(result) && result >= 0 && result < 216 ? result : null;
   }
 
+  function mainSessionRestorePending() {
+    var api = w.VildaDataImportExport;
+    return !!(api && typeof api.isMainSessionRestorePending === 'function'
+      && api.isMainSessionRestorePending());
+  }
+
   function context(allowPendingDob) {
     try {
       var vault = w.VildaVault, panel = w.VildaPanelPacjent, dob = w.VildaDobAge;
@@ -95,6 +101,7 @@
         || !Number.isSafeInteger(sequence) || sequence < 0
         || !vault || typeof vault.isUnlocked !== 'function' || !vault.isUnlocked()
         || typeof vault.getPatient !== 'function'
+        || mainSessionRestorePending()
         || w.__vildaPersistRestoring === true || w.__vildaLustroWpis === true
         || Number(w.__vildaPersistClearUntil || 0) > Date.now()
         || !allowPendingDob && dob && typeof dob.restorePending === 'function' && dob.restorePending()
@@ -137,7 +144,8 @@
       // does not grant permission to retain a snapshot.
       if (!id && !hadSelectedPatient) return eligibility('ineligible', 'no-patient');
       var dob = w.VildaDobAge;
-      var restoring = w.__vildaPersistRestoring === true || w.__vildaLustroWpis === true
+      var pendingSessionRestore = mainSessionRestorePending();
+      var restoring = pendingSessionRestore || w.__vildaPersistRestoring === true || w.__vildaLustroWpis === true
         || Number(w.__vildaPersistClearUntil || 0) > Date.now();
       var pendingDob = dob && typeof dob.restorePending === 'function' && dob.restorePending();
       // Session restoration does not create a patient ID. A settled empty
@@ -149,6 +157,10 @@
       if (auth && typeof auth.isBootReady === 'function' && !auth.isBootReady()) {
         return eligibility('pending', 'authentication');
       }
+      // Auth can finish before its deferred main-session restoration resumes.
+      // Shared persistence may already expose plausible fields here; they must
+      // not become a chart until the complete saved session has been applied.
+      if (pendingSessionRestore) return eligibility('pending', 'restoring');
       var vault = w.VildaVault, panel = w.VildaPanelPacjent;
       if (vault && typeof vault.isUnlocked === 'function' && !vault.isUnlocked()) {
         return eligibility('ineligible', 'locked');
@@ -533,13 +545,13 @@
   listen(d, 'vilda:patient-loaded', function (event) {
     invalidate('patient-loaded', !(event && event.detail && event.detail.source === 'save'), true);
   });
-  ['vilda:state-restored', 'vilda:persist-restored', 'vilda:json-imported'].forEach(function (event) {
+  ['vilda:state-restored', 'vilda:persist-restored', 'vilda:main-session-restored', 'vilda:json-imported'].forEach(function (event) {
     listen(d, event, function () { invalidate(event, true); });
   });
   ['vilda:dob-restored', 'vilda:centile-creator-changed', 'vilda:zrodlo-pacjenta-zmienione'].forEach(function (event) {
     listen(d, event, function () { invalidate(event, false); });
   });
-  ['vilda:auth-hidden', 'vilda:auth-state-settled', 'vilda:sync-status-changed'].forEach(function (event) {
+  ['vilda:auth-hidden', 'vilda:auth-state-settled', 'vilda:auth-boot-settled', 'vilda:sync-status-changed'].forEach(function (event) {
     listen(d, event, function () { invalidate(event, false, true); });
   });
   function cleared() { invalidate('clear', true); }
