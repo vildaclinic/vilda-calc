@@ -238,4 +238,3 @@ sprawdzane na desktopie i telefonach, a PWA po instalacji i offline.
 Wyniki wykonań oraz aktualny commit/PR podaje opis PR. Ponowny przegląd
 źródeł jest potrzebny po publikacji końcowej aktualizacji KDIGO AKI/AKD
 lub zmianie przyjętej polityki, populacji, jednostek lub progów.
-
