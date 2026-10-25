@@ -70,8 +70,10 @@
         document.documentElement.classList.add('vilda-centile-live-booting');
         window.__vildaCentileLiveBootTimer = window.setTimeout(function () {
           if (!document.documentElement.classList.contains('vilda-centile-live-booting')) return;
+          var mount = document.getElementById('vildaCentileLiveMount');
           var message = document.getElementById('vildaCentileLiveLoadingMessage');
           var retry = document.getElementById('vildaCentileLiveRetry');
+          if (mount) mount.setAttribute('data-centile-live-state', 'error');
           if (message) message.textContent = 'Nie udało się uruchomić siatki. Spróbuj ponownie.';
           if (retry) {
             retry.textContent = 'Odśwież stronę';
@@ -363,7 +365,7 @@
 <script defer src="vilda_chrome.js?v=172"></script>
 <link href="vilda_lab_assessment_ui.css?v=12" rel="stylesheet">
 <link href="vilda_lab_history_tab.css?v=4" rel="stylesheet">
-  <link rel="stylesheet" href="vilda_centile_live_panel.css?v=2">
+  <link rel="stylesheet" href="vilda_centile_live_panel.css?v=3">
   <link rel="stylesheet" href="vilda_phone_landscape.css?v=2">
   <script src="vilda_phone_landscape.js?v=3"></script>
 </head>
@@ -639,6 +641,15 @@
     </div>
   </div>
   <div id="doctorSection" class="half">
+    <!-- Keep the chart first: a summary awaiting its comparison must never
+         displace the chart. A valid standalone summary remains below it. -->
+    <div id="vildaCentileLiveMount" hidden aria-label="Podgląd siatki centylowej">
+      <article id="vildaCentileLiveLoading" class="vilda-centile-live-loading" role="status" aria-live="polite">
+        <h2 class="vilda-centile-live-title">Siatka centylowa</h2>
+        <p id="vildaCentileLiveLoadingMessage">Wczytywanie siatki…</p>
+        <button id="vildaCentileLiveRetry" class="vilda-centile-live-retry" type="button" hidden>Spróbuj ponownie</button>
+      </article>
+    </div>
     <!-- Karta „Podsumowanie wyników” – generowana dynamicznie w JS. W ścieżce bez poprzedniego
          pomiaru stoi tutaj; gdy widać „Porównanie z poprzednim pomiarem” (P-OSTATNI-2a), jest ukryta,
          a jej treść idzie do tabeli porównania i sekcji „Pozostałe wyniki”. Plakietka PRO jak na index. -->
@@ -687,13 +698,6 @@
       <p class="professional-message">Informacje prezentowane w tym module mają charakter wyłącznie edukacyjny i są przeznaczone dla lekarzy. Nie powinny one stanowić podstawy do podejmowania decyzji diagnostycznych ani terapeutycznych.</p>
 
       <!-- Sekcja testów stymulacyjnych GH została przeniesiona poza moduł profesjonalny. -->
-    </div>
-    <div id="vildaCentileLiveMount" hidden aria-label="Podgląd siatki centylowej">
-      <article id="vildaCentileLiveLoading" class="vilda-centile-live-loading" role="status" aria-live="polite">
-        <h2 class="vilda-centile-live-title">Siatka centylowa</h2>
-        <p id="vildaCentileLiveLoadingMessage">Wczytywanie siatki…</p>
-        <button id="vildaCentileLiveRetry" class="vilda-centile-live-retry" type="button" hidden>Spróbuj ponownie</button>
-      </article>
     </div>
   </div>
 
