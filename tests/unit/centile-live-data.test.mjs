@@ -926,11 +926,38 @@ describe('Panel nowego pomiaru — zapis nie zmienia właściciela wykresu', () 
 
 
 describe('Panel nowego pomiaru — jawny stan miejsca siatki', () => {
+  it('gość bez wybranego pacjenta nie rezerwuje siatki podczas startu ani oczekiwania na logowanie', async () => {
+    const h = setup({ startup: true });
+    h.values.delete('vildaCurrentPatientId');
+    expect(h.api.getEligibility()).toEqual({ status: 'ineligible', reason: 'no-patient' });
+    expect(await h.api.getResult()).toEqual({ status: 'ineligible', reason: 'no-patient' });
+    h.state.restoreRegistered = true;
+    expect(h.api.getEligibility()).toEqual({ status: 'ineligible', reason: 'no-patient' });
+    h.frame(); h.frame();
+    expect(h.api.getEligibility()).toEqual({ status: 'ineligible', reason: 'no-patient' });
+    expect(h.vault.getPatient).not.toHaveBeenCalled();
+    expect(h.writes).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ['restore', h => { h.win.__vildaPersistRestoring = true; }],
+    ['mirror', h => { h.win.__vildaLustroWpis = true; }],
+    ['clear grace', h => { h.win.__vildaPersistClearUntil = Date.now() + 10000; }],
+    ['DOB', h => { h.state.pending = true; }],
+  ])('chwilowy brak ID podczas %s nie zostaje uznany za gościa przy starcie', async (_, change) => {
+    const h = setup({ startup: true });
+    h.values.delete('vildaCurrentPatientId');
+    change(h);
+    expect(h.api.getEligibility().status).toBe('pending');
+    expect((await h.api.getResult()).status).toBe('pending');
+    expect(h.vault.getPatient).not.toHaveBeenCalled();
+    expect(h.writes).not.toHaveBeenCalled();
+  });
+
   it('start czeka na rejestrację, dwie klatki odtworzenia i koniec restore zamiast ujawniać domyślny wiek', async () => {
     const h = setup({ startup: true }), listener = vi.fn();
     h.api.subscribe(listener);
     h.fields.age.value = '30';
-    h.values.delete('vildaCurrentPatientId');
     expect(h.api.getEligibility()).toEqual({ status: 'pending', reason: 'startup' });
     expect(await h.api.getResult()).toEqual({ status: 'pending', reason: 'startup' });
     h.state.restoreRegistered = true;
@@ -938,6 +965,7 @@ describe('Panel nowego pomiaru — jawny stan miejsca siatki', () => {
     h.frame();
     expect(h.api.getEligibility().status).toBe('pending');
     h.win.__vildaPersistRestoring = true;
+    h.values.delete('vildaCurrentPatientId');
     h.frame();
     expect(listener).toHaveBeenCalledWith({ reason: 'startup-settled', identityChanged: false });
     expect(h.api.getEligibility()).toEqual({ status: 'pending', reason: 'authentication' });

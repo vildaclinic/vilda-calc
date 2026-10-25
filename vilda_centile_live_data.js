@@ -129,19 +129,25 @@
   function getEligibility() {
     try {
       if (!activeRoute()) return eligibility('ineligible', 'inactive-document');
+      var id = patientId(), dob = w.VildaDobAge;
+      var restoring = w.__vildaPersistRestoring === true || w.__vildaLustroWpis === true
+        || Number(w.__vildaPersistClearUntil || 0) > Date.now();
+      var pendingDob = dob && typeof dob.restorePending === 'function' && dob.restorePending();
+      // Session restoration does not create a patient ID. A settled empty
+      // identity therefore needs no chart slot, even before startup finishes.
+      // During adoption, however, an empty ID may only be an intermediate state.
+      if (!id && !restoring && !pendingDob) return eligibility('ineligible', 'no-patient');
       if (startupPending()) return eligibility('pending', 'startup');
       var auth = w.VildaAuthUI;
       if (auth && typeof auth.isBootReady === 'function' && !auth.isBootReady()) {
         return eligibility('pending', 'authentication');
       }
-      var id = patientId(), vault = w.VildaVault, panel = w.VildaPanelPacjent;
+      var vault = w.VildaVault, panel = w.VildaPanelPacjent;
       if (vault && typeof vault.isUnlocked === 'function' && !vault.isUnlocked()) {
         return eligibility('ineligible', 'locked');
       }
-      if (w.__vildaPersistRestoring === true || w.__vildaLustroWpis === true
-        || Number(w.__vildaPersistClearUntil || 0) > Date.now()) return eligibility('pending', 'restoring');
-      var dob = w.VildaDobAge;
-      if (dob && typeof dob.restorePending === 'function' && dob.restorePending()) return eligibility('pending', 'dob');
+      if (restoring) return eligibility('pending', 'restoring');
+      if (pendingDob) return eligibility('pending', 'dob');
       if (!id) return eligibility('ineligible', 'no-patient');
       if (sessionValue('vildaLoadChoiceV1') !== 'new') return eligibility('ineligible', 'measurement-mode');
       if (!vault || typeof vault.isUnlocked !== 'function' || typeof vault.getPatient !== 'function') {

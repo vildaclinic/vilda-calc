@@ -10,6 +10,7 @@ html.vilda-centile-live-reserved #remindersInline{display:none!important}
 .vilda-centile-live-card .vilda-centile-live-retry,.vilda-centile-live-loading .vilda-centile-live-retry{align-self:center;position:absolute;bottom:36px;padding:var(--space-10px) var(--space-16px);border:var(--border-hairline) solid #bfd8d0!important;border-radius:var(--radius-6)!important;background:#f0f7f3!important;color:#28746d!important;font-size:12px;line-height:1.4}
 .vilda-centile-live-loading .vilda-centile-live-retry{position:static;width:auto;min-height:0;font:inherit;font-size:12px;text-transform:none;cursor:pointer}
 .vilda-centile-live-loading [hidden]{display:none!important}
+@media(min-width:700px) and (max-height:600px){.vilda-centile-live-loading{justify-content:flex-start}}
 .vilda-centile-live-scroll-locked{overflow:hidden!important}
 .vilda-centile-live-transferring{visibility:hidden!important}
 .vilda-centile-live-placeholder{height:var(--vilda-centile-live-placeholder-height,0px);pointer-events:none}
