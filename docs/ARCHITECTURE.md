@@ -191,6 +191,12 @@ ważnym tokenie tej samej osoby i wizyty. Unieważnienie właściciela natychmia
 usuwa obraz i zamyka powiększenie; neutralna karta nie zawiera danych pacjenta.
 Spóźniona odpowiedź odczytu nie może przywrócić starego obrazu ani Przypomnień.
 
+Podczas serii programowych zmian pól panel grupuje pomiary układu w jednej
+klatce. Unieważnienie operacji i usunięcie obrazu innego pacjenta pozostają
+synchroniczne. Pierwsze zarezerwowanie miejsca od razu ustala wysokość neutralnej
+karty; kolejne komunikaty nie wymuszają ponownego układu po każdym polu.
+Przed publikacją obrazu i powiększeniem nadal sprawdzany jest bieżący układ.
+
 Moduły nie wywołują kolektora/zapisu pacjenta, nie uruchamiają przeliczenia i nie
 przechowują podglądu w magazynach przeglądarki. Odświeżenie po obliczeniu korzysta
 z `VildaUpdateHooks`; zmiana adnotacji ogłasza `vilda:centile-creator-changed`.
@@ -211,6 +217,48 @@ Statyczne style panelu należą do arkusza komponentu. Dwa nowe wpisy inwentarza
 `style-elementow.json` dotyczą wyłącznie zmiennych CSS z mierzoną w pikselach
 wysokością formularza i miejsca karty podczas przenoszenia do dialogu. Pozostałe
 przełączenia wyglądu hosta używają klas, zachowując zastane style dokumentu.
+
+### Grupowanie prezentacji wyników podczas odtwarzania
+
+`VildaHtml.withResultRefreshBatch` wyznacza wyłącznie synchroniczny zakres
+odtworzenia wspólnego stanu albo głównej sesji. Wewnątrz niego
+`refreshResult` zachowuje ostatnie żądanie prezentacji każdej karty wzrastania.
+Po wyjściu z zewnętrznego zakresu wykonuje cały blok: budowę HTML, podmianę
+wyniku, przypięcie obsługi elementów i oznaczenie wyniku. Żądanie wyczyszczenia
+zastępuje wcześniejszy wynik tak samo jak następny poprawny wynik. Poza
+odtwarzaniem prezentacja pozostaje natychmiastowa.
+
+Obliczenia, przypisania modeli, obie fazy odtwarzania historii, identyfikatory
+wierszy, synchronizacja i blokady zapisu zachowują swoją kolejność. Dotyczy to
+także funkcji, które pozornie tylko odświeżają kontrolki, ale zmieniają zapisany
+stan wiersza (`analysisOpen`). Kolejka prezentacji kończy się przed powrotem
+z funkcji odtwarzającej; nie zawiera timerów ani zadań przenoszonych do kolejnej
+wizyty. Wyjątek nie pozostawia aktywnego zakresu, a odłączony kontener nie jest
+ponownie montowany. Rozszerzenia artefaktów odtwarza idempotentny
+`node tools/apply_restore_result_batching.mjs`; `--check` weryfikuje jednoznaczne
+kotwice. Nie zmieniają wzorów ani danych referencyjnych.
+
+Przy starcie z wybranym zapisanym pacjentem pełne odtworzenie sesji czeka,
+jeżeli vault jest jeszcze zamknięty i pierwsza próba przywrócenia konta trwa.
+Zapobiega to odtworzeniu, a następnie wyczyszczeniu oceny pokwitania przez
+prawidłową ochronę danych zamkniętego konta. Oczekiwanie zachowuje istniejącą
+blokadę zapisu sesji. Przechowuje wyłącznie token operacji (właściciel, vault,
+sekwencja wczytania); po wznowieniu czyta aktualny zapis. Nowe wczytanie,
+czyszczenie lub zmiana właściciela unieważniają oczekiwanie. Gotowe konto
+i formularz gościa nie dostają dodatkowej bariery.
+
+`vilda:auth-boot-settled` jest wysyłane po ustawieniu gotowości AuthUI, a
+`vilda:main-session-restored` po dotychczasowej finalizacji głównej sesji.
+Panel siatki obserwuje te granice, zachowując pozostałe warunki gotowości.
+`isMainSessionRestorePending()` blokuje także publikację obrazu w krótkim
+odstępie między gotowością konta a wznowieniem odtwarzania formularza.
+
+Samo odtworzenie sesji (`isSessionRestore`) nie rozsyła sygnału nowego wczytania
+`vilda:sharedLoadSeq`. Powłoka odpowiada na ten sygnał odtwarzaniem wspólnego
+stanu w załadowanych panelach innych niż Start, także w panelu nadawcy. Echo
+z DocPro mogło więc zastąpić nowsze pola pełnej sesji starszą kopią wspólną.
+Jawne wczytanie pacjenta i przywrócenie zapisu nadal rozsyłają dotychczasowy
+sygnał; lokalne zdarzenia zakończenia odtwarzania sesji pozostają aktywne.
 
 ### 5. Synchronizacja
 

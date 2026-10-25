@@ -7,7 +7,8 @@
   var d = w.document;
   var mount, form, fieldset, doctor, view, snapshot, rendered, fullscreen;
   var request = 0, timer = 0, pendingTimer = 0, layoutFrame = 0, started = false;
-  var readyFrame = 0, boundsFrame = 0, boundsOwner = null, expansion = null;
+  var boundsFrame = 0, boundsOwner = null, expansion = null;
+  var scheduleFrame = 0, scheduledIdentity = false, scheduledReady = false;
   var notice, noticeMessage, retryButton, slotStatus = 'ineligible', awaitingEdit = false;
   var status = 'hidden', lastWidth = 0, collapsedHeight = 0, lastHeight = 0, renderKey = '';
   var data = w.VildaCentileLiveData;
@@ -45,8 +46,10 @@
   function stopRefresh() {
     w.clearTimeout(timer);
     timer = 0;
-    if (readyFrame) w.cancelAnimationFrame(readyFrame);
-    readyFrame = 0;
+    if (scheduleFrame) w.cancelAnimationFrame(scheduleFrame);
+    scheduleFrame = 0;
+    scheduledIdentity = false;
+    scheduledReady = false;
   }
 
   function expandState(target, state) {
@@ -154,6 +157,8 @@
     request += 1;
     stopRefresh();
     stopPending();
+    if (layoutFrame) w.cancelAnimationFrame(layoutFrame);
+    layoutFrame = 0;
     discardView(reason);
     status = 'hidden';
     if (notice) notice.hidden = true;
@@ -184,7 +189,7 @@
     }
     if (retryButton) { retryButton.textContent = 'Spróbuj ponownie'; retryButton.hidden = false; }
     slot('error');
-    inlineSize();
+    scheduleLayout();
   }
 
   function showPending(waitForEdit) {
@@ -206,7 +211,7 @@
       if (!twoColumns() || eligibility().status === 'ineligible') { clear('stale'); return; }
       showError('Wczytywanie siatki trwa zbyt długo. Spróbuj ponownie.');
     }, 10000);
-    inlineSize();
+    scheduleLayout();
   }
 
   function eligibility() {
@@ -217,12 +222,18 @@
     if (!twoColumns()) { clear('stale'); return false; }
     var state = eligibility();
     if (state.status === 'ineligible') { clear('stale'); return false; }
+    var firstReservation = slotStatus === 'ineligible';
     if (snapshot && !data.isCurrent(snapshot)) discardView('stale');
     if (state.status === 'error') {
       showError('Nie udało się wczytać siatki. Spróbuj ponownie.');
+      if (firstReservation) inlineSize();
       return false;
     }
     showPending(awaitingEdit);
+    // A newly reserved slot needs its final height before this paint (startup,
+    // new patient or return to two columns). Later updates keep that height and
+    // share the layout queue rather than measuring during each field write.
+    if (firstReservation) inlineSize();
     return true;
   }
 
@@ -271,7 +282,12 @@
       return;
     }
     if (snapshot && !data.isCurrent(snapshot)) { discardView('stale'); schedule(); return; }
-    if (slotStatus === 'ineligible') { schedule(); return; }
+    if (slotStatus === 'ineligible') {
+      // We are already in the layout frame: reserve the neutral card before
+      // this paint when returning from a single-column/hidden form.
+      if (prepare()) schedule();
+      return;
+    }
     inlineSize();
   }
 
@@ -442,29 +458,56 @@
     inlineSize();
   }
 
-  function schedule(event) {
-    // Cancel old promises immediately, before the debounced replacement starts.
-    request += 1;
-    if (event && event.reason === 'measurement-commit') awaitingEdit = false;
-    if (event && event.identityChanged) {
-      stopPending();
-      discardView(event.reason === 'lock' ? 'lock' : 'patient-change');
-    } else if (snapshot && !data.isCurrent(snapshot)) discardView('stale');
-    w.clearTimeout(timer);
-    timer = 0;
+  function readySignal(event) {
+    return event && ['startup-settled', 'vilda:dob-restored', 'vilda:auth-hidden', 'vilda:auth-state-settled',
+      'vilda:auth-boot-settled', 'vilda:main-session-restored'].includes(event.reason);
+  }
+
+  function finishScheduledRefresh() {
+    scheduleFrame = 0;
+    var identityChanged = scheduledIdentity, ready = scheduledReady;
+    scheduledIdentity = false;
+    scheduledReady = false;
     if (!started || !prepare()) return;
-    if (event && event.identityChanged) {
+    if (identityChanged) {
       stopRefresh();
       timer = w.setTimeout(refresh, 0);
       return;
     }
-    var readySignal = event && ['startup-settled', 'vilda:dob-restored', 'vilda:auth-hidden', 'vilda:auth-state-settled'].includes(event.reason);
-    if (readyFrame) return;
-    if (readySignal && typeof data.getEligibility === 'function' && eligibility().status === 'eligible') {
-      readyFrame = w.requestAnimationFrame(function () { readyFrame = 0; refresh(); });
+    if (ready && typeof data.getEligibility === 'function' && eligibility().status === 'eligible') {
+      // This callback already runs at the next frame. Do not add another frame
+      // of latency to the final startup/DOB/auth completion signal.
+      refresh();
       return;
     }
     timer = w.setTimeout(refresh, 100);
+  }
+
+  function schedule(event) {
+    // Cancel old promises immediately, before the debounced replacement starts.
+    request += 1;
+    if (event && event.reason === 'measurement-commit') awaitingEdit = false;
+    var discarded = false;
+    if (event && event.identityChanged) {
+      stopRefresh();
+      stopPending();
+      discardView(event.reason === 'lock' ? 'lock' : 'patient-change');
+      discarded = true;
+    } else if (snapshot && !data.isCurrent(snapshot)) {
+      discardView('stale');
+      discarded = true;
+    }
+    w.clearTimeout(timer);
+    timer = 0;
+    if (!started) return;
+    if (eligibility().status === 'ineligible') { clear('stale'); return; }
+    // Invalidation and erasing another patient's chart stay synchronous. Reads
+    // of form geometry wait until the restoration's input/change burst ends,
+    // rather than forcing layout between every pair of field/HTML writes.
+    if (discarded && slotStatus !== 'ineligible') showPending(awaitingEdit);
+    scheduledIdentity = scheduledIdentity || !!(event && event.identityChanged);
+    scheduledReady = scheduledReady || !!readySignal(event);
+    if (!scheduleFrame) scheduleFrame = w.requestAnimationFrame(finishScheduledRefresh);
   }
 
   function retry() {

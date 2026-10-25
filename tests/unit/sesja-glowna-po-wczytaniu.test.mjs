@@ -198,8 +198,8 @@ describe('P-POWLOKA-PANELE — sesja główna po wczytaniu nie czeka na zdarzeni
   it('strażnicy źródła: wymuszony zapis po wczytaniu i odtworzeniu, Pe jak w audyt, powłoka zapisuje przed przełączeniem i odtwarza docelowy panel', () => {
     const ie = czytaj('vilda_data_import_export.js');
     expect(ie).toContain('P-POWLOKA-PANELE (zgloszenie wlasciciela 2026-09-28)');
-    // applyLoadedData: zapis PRZED pingiem vilda:sharedLoadSeq, pominięty przy odtwarzaniu sesji
-    expect(ie).toContain('if(Gp_a(a),tt(),a.isSessionRestore!==!0)try{');
+    // applyLoadedData: zapis PRZED pingiem vilda:sharedLoadSeq; oba pomijane przy odtwarzaniu istniejącej sesji
+    expect(ie).toContain('if(Gp_a(a),a.isSessionRestore!==!0&&tt(),a.isSessionRestore!==!0)try{');
     expect(ie).toContain('function Gp_a(e){const t=pe(e);if(t&&t.isSessionRestore)return!1;let a=!1;try{a=!!oe(Object.assign({},t,{force:!0}))}');
     // wczytanie/odtworzenie kończy okno blokady po czyszczeniu (adapter odmawiał w nim każdego zapisu)
     expect(ie).toContain('function Gp_b(){try{const e=Number(r.__vildaPersistClearUntil||0);if(e>Date.now())return r.__vildaPersistClearUntil=0,!0}');
@@ -217,7 +217,7 @@ describe('P-POWLOKA-PANELE — sesja główna po wczytaniu nie czeka na zdarzeni
     expect(ie).toContain('return $&&clearTimeout($),$=setTimeout(()=>{$=null,!Be(a)&&oe(a)},300),!0}');
     expect(ie).not.toContain('Gp_t');
     // finalizacja odtworzenia sesji odświeża kartę podsumowania po zapisie
-    expect(ie).toContain('try{oe(a)}catch(i){l("vilda_data_import_export:finalizeMainSessionRestore:saveNow",i)}Gp_o()};');
+    expect(ie).toContain('try{oe(a)}catch(i){l("vilda_data_import_export:finalizeMainSessionRestore:saveNow",i)}Gp_o(),dispatchMainSessionRestored()};');
     expect(ie).toContain('function Gp_o(){try{typeof r.updateProfessionalSummaryCard=="function"&&r.updateProfessionalSummaryCard()}');
     const sh = czytaj('vilda_shell.js');
     expect(sh).toContain('P-POWLOKA-PANELE (zgloszenie wlasciciela 2026-09-28)');
