@@ -920,9 +920,34 @@
       const [minAge, maxAge] = visibleAgeDomain();
       return patientAgeYears < minAge || patientAgeYears > maxAge;
     }
+    function childhoodLhContextReady() {
+      return sourceStatus === "ready" && typeof identityKey === "string" &&
+        patientContext?.childhoodLhContextAvailable === true &&
+        patientContext.contextBasis === "current-patient" && !patientContext.sampleDateISO &&
+        (patientContext.currentIdentityKey == null || patientContext.currentIdentityKey === identityKey);
+    }
     function resultOnlyVisible() {
       return !compare && resultOnlyPoint?.status === "result-only" &&
-        canShowAgeMarker() && selected.has(analyteHormones[currentAnalyte]);
+        canShowAgeMarker() && selected.has(analyteHormones[currentAnalyte]) &&
+        (!resultOnlyPoint.policy.currentPatientOnly || childhoodLhContextReady());
+    }
+    function childhoodLhSourceNote() {
+      return !compare && currentAnalyte === "lh" && selected.has("lh") &&
+        canShowAgeMarker() && childhoodLhContextReady() ? resultOnlyPoint?.sourceNote : null;
+    }
+    function appendChildhoodLhSourceNote(target, addLink) {
+      const note = childhoodLhSourceNote();
+      if (!note) return;
+      const section = document.createElement("section");
+      section.setAttribute("data-lh-childhood-source-note", note.id);
+      section.setAttribute("data-source-note-kind", note.kind);
+      for (const copy of [note.label, ...(note.details || [])]) {
+        const paragraph = document.createElement("p");
+        paragraph.textContent = copy;
+        section.append(paragraph);
+      }
+      target.append(section);
+      if (note.source?.url) addLink(note.source.label, note.source.url);
     }
     function patientDotModel() {
       const engine = pointEngine();
@@ -1223,7 +1248,7 @@
       const offscale = model.value > period.scale.max;
       const py = offscale ? top + 5 : y(period.valueFraction(model.value));
       const a11y = (offscale ? "Wynik powyżej skali; strzałka nie oznacza dokładnego położenia stężenia. " : "") +
-        `Wynik pacjentki: ${pointNumber(labelValue)} ${unit}. ` + model.policy.patientNote +
+        `${model.policy.currentPatientOnly ? "Wynik" : "Wynik pacjentki"}: ${pointNumber(labelValue)} ${unit}. ` + model.policy.patientNote +
         " Czerwony punkt oznacza wynik, nie jego klasyfikację.";
       const dot = el("g", {
         "data-patient-concentration": model.policy.analyte, "data-result-only": "true",
@@ -1343,7 +1368,7 @@
       if (renderedResultOnlyPoint) return;
       if (resultOnlyVisible() && view === "puberty" &&
           (patientAgeYears < minAge || patientAgeYears > maxAge)) {
-        const message = `Wiek pacjentki jest poza wybranym okresem (${fmt(minAge)}–${fmt(maxAge)} lat). Sam wynik zobaczysz w „Całym życiu”, bez mediany.`;
+        const message = `${resultOnlyPoint.policy.currentPatientOnly ? "Wiek z formularza" : "Wiek pacjentki"} jest poza wybranym okresem (${fmt(minAge)}–${fmt(maxAge)} lat). Sam wynik zobaczysz w „Całym życiu”, bez mediany.`;
         byId("scale-note").textContent = message;
         byId("chart-desc").textContent += " " + message;
         return;
@@ -1742,8 +1767,9 @@
     }
     function updateFemaleGonadotropinSources() {
       const resultPolicy = resultOnlyVisible() ? resultOnlyPoint.policy : null;
+      const childhoodSourceNote = childhoodLhSourceNote();
       const nextKey = JSON.stringify(["female-gonadotropins", view, [...selected].sort(), renderedPoint?.profile.id,
-        resultPolicy?.id, renderedObservation?.kind]);
+        resultPolicy?.id, renderedObservation?.kind, childhoodSourceNote?.id]);
       if (sourcesKey === nextKey) return;
       sourcesKey = nextKey;
       const target = byId("source-copy"), period = femaleGonadotropins[view];
@@ -1786,6 +1812,7 @@
       const links = [...(period.sources || []), ...(view === "life" ? femaleGonadotropins.cycle.sources || [] : [])];
       appendGroupReferenceSource(paragraph, (label, url) => links.push({ label, url }));
       if (resultPolicy) links.push(...(resultPolicy.sources || []));
+      appendChildhoodLhSourceNote(target, (label, url) => links.push({ label, url }));
       if ([...selected].some((id) => id !== "lh" && id !== "fsh")) {
         paragraph("Pozostałe hormony w minipuberty: mediany GAMLSS z suplementu Ljubicic 2022, około 7,3 dnia–1 rok, donoszone dziewczynki. To odrębna statystyka od dwufazowej średniej LH/FSH. Zachowują dotychczasową normalizację całego życia.");
         links.push({ label: "Ljubicic 2022 · mediany pozostałych hormonów", url: infant.source.url },
@@ -2177,6 +2204,18 @@
       if (dotModel) drawPatientDot(g, dotModel, {
         W, mobile, left, right, top, bottom, px: x(patientAgeYears), y,
       });
+      // A scoped permission supplies only the patient's exact concentration;
+      // it does not alter this approved geometry or create a source median.
+      if (sex === "male" && full && resultOnlyVisible()) {
+        const display = stableCurves.get("lh")?.display;
+        if (display?.unit === "IU/L" && display.divisor > 0 && display.ceiling > 0) {
+          drawResultOnlyDot(g, resultOnlyPoint, {
+            W, mobile, left, right, top, bottom, px: x(patientAgeYears), y,
+            period: { scale: { max: display.divisor * display.ceiling, kind: "linear" },
+              valueFraction: value => value / display.divisor / display.ceiling },
+          });
+        }
+      }
       panel.querySelector(".vhl-axis-label").textContent = "Przebieg zmian";
       byId("scale-note").textContent =
         sex === "female" && view === "mini"
@@ -2216,6 +2255,12 @@
           "Wysokości są ilustracyjne, nie oznaczają stężeń. Odcinek po 80 latach jest wygaszonym przedłużeniem poglądowym.";
       }
       pointDescription(dotModel);
+      if (renderedResultOnlyPoint) {
+        byId("scale-note").textContent = "Kropka: wynik. " + renderedResultOnlyPoint.policy.patientNote +
+          (renderedResultOnlyPoint.offscale ? " ↑ Wynik powyżej skali." : "") +
+          (patientContext.ageUpperYears > patientAgeYears ? " Pozycja wieku przybliżona." : "");
+        byId("chart-desc").textContent += " " + renderedResultOnlyPoint.a11y;
+      }
     }
     function renderAmhInfantComparison() {
       const model = amhInfantComparison;
@@ -3237,13 +3282,15 @@
         return;
       }
       const insl3Reading = insl3AgeSourceReading();
+      const resultPolicy = resultOnlyVisible() ? resultOnlyPoint.policy : null;
+      const childhoodSourceNote = childhoodLhSourceNote();
       const insl3ContextKey = stableInsl3Visible() ? [identityKey, patientAgeYears,
         patientContext?.ageUpperYears, patientContext?.ageUpperInclusive,
         patientContext?.contextBasis, patientContext?.sampleDateISO,
         data.insl3AgeSourceData?.version, data.insl3AgeSourcePolicy?.version, insl3Reading] : null;
       const nextKey = JSON.stringify([sex, view, compare, compareHormone, [...selected].sort(),
         renderedPoint?.profile.id, renderedPoint?.curves.map((curve) => curve.profile.id), renderedObservation?.kind,
-        insl3ContextKey]);
+        insl3ContextKey, resultPolicy?.id, childhoodSourceNote?.id]);
       if (nextKey === sourcesKey) return;
       sourcesKey = nextKey;
       const target = byId("source-copy");
@@ -3254,6 +3301,11 @@
         target.append(p);
       };
       const links = [];
+      if (resultPolicy) {
+        for (const copy of resultPolicy.discussion || []) paragraph(copy);
+        for (const source of resultPolicy.sources || []) links.push([source.label, source.url]);
+      }
+      appendChildhoodLhSourceNote(target, (label, url) => links.push([label, url]));
       if (stableInhibinVisible()) {
         paragraph("Linia inhibiny B jest poglądową syntezą badań, nie jedną medianą ani granicą normy. Zachowuje ten sam przebieg i skalę przed wpisaniem wyniku i po nim. Pozostałe hormony mają własne skale.");
         paragraph("Łagodne przejścia między źródłami (około 9–24 miesięcy, 4,5–7 i 18–25 lat), okres płodowy oraz odcinek po 80. roku są ilustracyjne. Nie służą do wyznaczania mediany, norm ani wyniku pacjenta. Niemowlęcy przebieg źródłowy dotyczy chłopców urodzonych o czasie.");
@@ -3820,6 +3872,8 @@
         ageUpperInclusive: next.ageUpperInclusive,
         contextBasis: typeof next.contextBasis === "string" ? next.contextBasis : null,
         sampleDateISO: typeof next.sampleDateISO === "string" && next.sampleDateISO ? next.sampleDateISO : null,
+        childhoodLhContextAvailable: next.childhoodLhContextAvailable === true,
+        currentIdentityKey: typeof next.currentIdentityKey === "string" ? next.currentIdentityKey : null,
         measurement: next.measurement ? { ...next.measurement } : null,
         displayUnit: next.displayUnit,
         contraindicated: next.contraindicated === true,

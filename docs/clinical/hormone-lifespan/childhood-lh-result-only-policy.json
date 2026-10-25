@@ -1,0 +1,148 @@
+[
+  {
+    "version": "2026-10-25.1",
+    "id": "childhood-male-lh-result-only",
+    "kind": "educational-result-only",
+    "ordinaryOnly": true,
+    "analyte": "lh",
+    "sex": "male",
+    "unit": "IU/L",
+    "minAge": 1,
+    "minAgeExclusive": false,
+    "maxAge": 6,
+    "maxAgeExclusive": true,
+    "fullAgeIntervalRequired": true,
+    "currentPatientOnly": true,
+    "contextAvailabilityKey": "childhoodLhContextAvailable",
+    "compatibleSpecimenIds": [
+      "serum",
+      "surowica"
+    ],
+    "excludedCyclePhases": [
+      "pregnancy",
+      "pregnancy_t1",
+      "pregnancy_t2",
+      "pregnancy_t3",
+      "postmenopause",
+      "postmenopausal",
+      "menopause"
+    ],
+    "selectionPolicy": "Wyłącznie rzeczywisty wynik LH w luce dzieciństwa na istniejącej stałej osi stężeń. Bez nowego profilu, mediany, normy lub klasyfikacji. Nie zastępuje dostępnego profilu i nie działa jako fallback po jego odrzuceniu.",
+    "agePolicy": "Cały jawny przedział wieku musi pasować do zakresu tej polityki. Bez brakującej górnej granicy lub domykania nieznanego przedziału. Dokładny żeński wiek 1 zachowuje dotychczasowy profil, od 6 lat zachowujemy Madsen.",
+    "contextPolicy": "Wymaga jawnego potwierdzenia bieżącego kontekstu przez adapter aplikacji: ten sam pacjent, gotowe źródło, brak przygotowywania, blokady, odtwarzania lub czyszczenia. Nie używa dzisiejszego kontekstu historycznej próbki. Znane leczenie i stymulacja zachowują wyłączenia; brak informacji pozostaje nieznany.",
+    "assayPolicy": "Sam wynik nie porównuje metody oznaczenia z metodą publikacji. Znana metoda nie potwierdza zgodności z medianą i nie obchodzi odrzucenia dostępnego profilu. Znany materiał inny niż surowica blokuje zachowawczą politykę; nieznany pozostaje nieznany.",
+    "measurementPolicy": "Dokładny skończony nieujemny wynik w obsługiwanej jednostce. Zero pozostaje zerem. Nierówności i LOD/LOQ nie tworzą dokładnego punktu. Ponad niezmienną skalą strzałka zachowuje rzeczywistą liczbę.",
+    "patientNote": "Brak dokładnej mediany dla tego wieku. Linia jest poglądowa.",
+    "discussion": [
+      "Kropka przedstawia wyłącznie wpisany wynik, bez jasnego znacznika mediany, łącznika lub ilorazu. Nie wyznacza normy ani stadium pokwitania. Odrębna ocena laboratoryjna pozostaje bez zmian."
+    ],
+    "sources": [],
+    "sourceNote": {
+      "id": "wiedemann1993-table4-lh-pooled-2-11",
+      "kind": "censored-group-median",
+      "minAge": 2,
+      "minAgeExclusive": false,
+      "maxAge": 6,
+      "maxAgeExclusive": true,
+      "label": "Mediana całej grupy 2–11 lat, obie płcie: <0,07 IU/L — Wiedemann 1993",
+      "literalP50": "<0,07 U/L",
+      "displayP50": "<0,07 IU/L",
+      "sourceAgeGroup": {
+        "label": "2–11 lat, obie płcie razem",
+        "n": 282,
+        "notAgeSpecific": true,
+        "notSeparateSexCounts": true
+      },
+      "details": [
+        "To zapis dla całej grupy 282 dzieci, nie mediana konkretnego wieku ani osobne odniesienie dla chłopca lub dziewczynki.",
+        "Publikacja podaje <0,07 U/L; zachowujemy nierówność. Nie znamy dokładnej wartości mediany.",
+        "Surowica, Abbott IMx MEIA, WHO 68/40; metoda z 1993 roku nie potwierdza zgodności oznaczenia pacjenta. Nie udokumentowano osobnego G1/Th1 całej grupy.",
+        "Autorzy zastępowali wartości poniżej czułości granicą metody i oznaczali je znakiem <. Nie podstawiamy tej granicy jako wyniku lub mediany na wykresie.",
+        "Informacja źródłowa nie określa normy, centyla wyniku lub ilorazu do mediany. Nie pokrywa wieku 1–<2 lat."
+      ],
+      "source": {
+        "label": "Wiedemann 1993 · tabela 4, cała grupa 2–11 lat",
+        "url": "https://doi.org/10.1515/cclm.1993.31.6.395",
+        "printedPage": 398,
+        "pdfSha256": "b312c8ee0bece47100d2a179413488da282d81febb9f77bde9f0f61bf9d723d0",
+        "fullTextUrl": "https://edoc.hu-berlin.de/bitstreams/b786c46e-00db-447b-9c33-9cee50d62758/download"
+      },
+      "notNumericReference": true,
+      "notClinicalReference": true,
+      "closedSourcesOnly": true
+    }
+  },
+  {
+    "version": "2026-10-25.1",
+    "id": "childhood-female-lh-result-only",
+    "kind": "educational-result-only",
+    "ordinaryOnly": true,
+    "analyte": "lh",
+    "sex": "female",
+    "unit": "IU/L",
+    "minAge": 1,
+    "minAgeExclusive": true,
+    "maxAge": 6,
+    "maxAgeExclusive": true,
+    "fullAgeIntervalRequired": true,
+    "currentPatientOnly": true,
+    "contextAvailabilityKey": "childhoodLhContextAvailable",
+    "compatibleSpecimenIds": [
+      "serum",
+      "surowica"
+    ],
+    "excludedCyclePhases": [
+      "pregnancy",
+      "pregnancy_t1",
+      "pregnancy_t2",
+      "pregnancy_t3",
+      "postmenopause",
+      "postmenopausal",
+      "menopause"
+    ],
+    "selectionPolicy": "Wyłącznie rzeczywisty wynik LH w luce dzieciństwa na istniejącej stałej osi stężeń. Bez nowego profilu, mediany, normy lub klasyfikacji. Nie zastępuje dostępnego profilu i nie działa jako fallback po jego odrzuceniu.",
+    "agePolicy": "Cały jawny przedział wieku musi pasować do zakresu tej polityki. Bez brakującej górnej granicy lub domykania nieznanego przedziału. Dokładny żeński wiek 1 zachowuje dotychczasowy profil, od 6 lat zachowujemy Madsen.",
+    "contextPolicy": "Wymaga jawnego potwierdzenia bieżącego kontekstu przez adapter aplikacji: ten sam pacjent, gotowe źródło, brak przygotowywania, blokady, odtwarzania lub czyszczenia. Nie używa dzisiejszego kontekstu historycznej próbki. Znane leczenie i stymulacja zachowują wyłączenia; brak informacji pozostaje nieznany.",
+    "assayPolicy": "Sam wynik nie porównuje metody oznaczenia z metodą publikacji. Znana metoda nie potwierdza zgodności z medianą i nie obchodzi odrzucenia dostępnego profilu. Znany materiał inny niż surowica blokuje zachowawczą politykę; nieznany pozostaje nieznany.",
+    "measurementPolicy": "Dokładny skończony nieujemny wynik w obsługiwanej jednostce. Zero pozostaje zerem. Nierówności i LOD/LOQ nie tworzą dokładnego punktu. Ponad niezmienną skalą strzałka zachowuje rzeczywistą liczbę.",
+    "patientNote": "Brak dokładnej mediany dla tego wieku. Linia jest poglądowa.",
+    "discussion": [
+      "Kropka przedstawia wyłącznie wpisany wynik, bez jasnego znacznika mediany, łącznika lub ilorazu. Nie wyznacza normy ani stadium pokwitania. Odrębna ocena laboratoryjna pozostaje bez zmian."
+    ],
+    "sources": [],
+    "sourceNote": {
+      "id": "wiedemann1993-table4-lh-pooled-2-11",
+      "kind": "censored-group-median",
+      "minAge": 2,
+      "minAgeExclusive": false,
+      "maxAge": 6,
+      "maxAgeExclusive": true,
+      "label": "Mediana całej grupy 2–11 lat, obie płcie: <0,07 IU/L — Wiedemann 1993",
+      "literalP50": "<0,07 U/L",
+      "displayP50": "<0,07 IU/L",
+      "sourceAgeGroup": {
+        "label": "2–11 lat, obie płcie razem",
+        "n": 282,
+        "notAgeSpecific": true,
+        "notSeparateSexCounts": true
+      },
+      "details": [
+        "To zapis dla całej grupy 282 dzieci, nie mediana konkretnego wieku ani osobne odniesienie dla chłopca lub dziewczynki.",
+        "Publikacja podaje <0,07 U/L; zachowujemy nierówność. Nie znamy dokładnej wartości mediany.",
+        "Surowica, Abbott IMx MEIA, WHO 68/40; metoda z 1993 roku nie potwierdza zgodności oznaczenia pacjenta. Nie udokumentowano osobnego G1/Th1 całej grupy.",
+        "Autorzy zastępowali wartości poniżej czułości granicą metody i oznaczali je znakiem <. Nie podstawiamy tej granicy jako wyniku lub mediany na wykresie.",
+        "Informacja źródłowa nie określa normy, centyla wyniku lub ilorazu do mediany. Nie pokrywa wieku 1–<2 lat."
+      ],
+      "source": {
+        "label": "Wiedemann 1993 · tabela 4, cała grupa 2–11 lat",
+        "url": "https://doi.org/10.1515/cclm.1993.31.6.395",
+        "printedPage": 398,
+        "pdfSha256": "b312c8ee0bece47100d2a179413488da282d81febb9f77bde9f0f61bf9d723d0",
+        "fullTextUrl": "https://edoc.hu-berlin.de/bitstreams/b786c46e-00db-447b-9c33-9cee50d62758/download"
+      },
+      "notNumericReference": true,
+      "notClinicalReference": true,
+      "closedSourcesOnly": true
+    }
+  }
+]

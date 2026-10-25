@@ -62,6 +62,23 @@ def build():
             result_only_policy['maxAge'], result_only_policy['maxAgeExclusive']) == (16, True, 18, True)
     assert not any(key in result_only_policy for key in ('points', 'statistic', 'referenceValue'))
     result_only_policies_js = json.dumps([result_only_policy], ensure_ascii=False, indent=2)
+    childhood_lh_result_only_policies = json.loads((ROOT / 'childhood-lh-result-only-policy.json').read_text(encoding='utf-8'))
+    assert len(childhood_lh_result_only_policies) == 2
+    assert [policy['sex'] for policy in childhood_lh_result_only_policies] == ['male', 'female']
+    for policy in childhood_lh_result_only_policies:
+        assert (policy['kind'], policy['ordinaryOnly'], policy['analyte'], policy['unit']) == (
+            'educational-result-only', True, 'lh', 'IU/L')
+        assert (policy['minAge'], policy['minAgeExclusive'], policy['maxAge'], policy['maxAgeExclusive']) == (
+            1, policy['sex'] == 'female', 6, True)
+        assert policy['fullAgeIntervalRequired'] is True and policy['currentPatientOnly'] is True
+        assert policy['contextAvailabilityKey'] == 'childhoodLhContextAvailable'
+        assert not any(key in policy for key in ('points', 'statistic', 'referenceValue'))
+        note = policy['sourceNote']
+        assert (note['kind'], note['minAge'], note['maxAge'], note['maxAgeExclusive']) == (
+            'censored-group-median', 2, 6, True)
+        assert note['closedSourcesOnly'] is True and note['notNumericReference'] is True
+        assert note['literalP50'] == '<0,07 U/L' and note['sourceAgeGroup']['n'] == 282
+    childhood_lh_result_only_policies_js = json.dumps(childhood_lh_result_only_policies, ensure_ascii=False, indent=2)
     # Preserve this unchanged readable JSON's layout in the generated module.
     # Parsing above still verifies JSON; repacking other data must not reformat it.
     inhibin_evidence_js = (ROOT / 'inhibin-observational-data.json').read_text(encoding='utf-8').strip()
@@ -119,6 +136,7 @@ def build():
         f'const lifespanData = {lifespan_js};\n'
         f'const patientPointData = {patient_points_js};\n'
         f'const resultOnlyPolicies = {result_only_policies_js};\n'
+        f'const childhoodLhResultOnlyPolicies = {childhood_lh_result_only_policies_js};\n'
         f'const inhibinEvidence = {inhibin_evidence_js};\n'
         f'const inhibinDisplayPolicy = {inhibin_display_policy_js};\n'
         f'const inhibinComparisonPolicy = {inhibin_comparison_policy_js};\n'
@@ -191,7 +209,8 @@ def build():
         '  maleAmhYoungAdultReferencePolicy: maleAmhYoungAdultReferencePolicy,\n'
         '  maleLhCaliperReferencePolicy: maleLhCaliperReferencePolicy,\n'
         '  gonadotropinComparisonPolicy: gonadotropinComparisonPolicy,\n'
-        '  gonadotropinComparisonReferenceData: gonadotropinComparisonReferenceData\n'
+        '  gonadotropinComparisonReferenceData: gonadotropinComparisonReferenceData,\n'
+        '  childhoodLhResultOnlyPolicies: childhoodLhResultOnlyPolicies\n'
         '};\n'
         '});\n'
     )

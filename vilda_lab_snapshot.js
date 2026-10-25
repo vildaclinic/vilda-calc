@@ -57,6 +57,25 @@
     age: ageBounds, stage: { kind: 'text', value: 'number', sourceText: 'text' }, bounds: rangeBounds, basis: 'text'
   };
   var comparison = { status: 'text', reasonCodes: ['text'], range: selectedRange };
+  // Optional prospective clinical reference. It is transported as recorded,
+  // without consulting today's policy, engine, patient or laboratory method.
+  var prepubertalSource = {
+    id: 'text', version: 'text', kind: 'text', organization: 'text', label: 'text',
+    title: 'text', url: 'url', supportingSourceNote: 'text', knownLimitations: ['text']
+  };
+  var prepubertalRange = {
+    id: 'text', profileId: 'text', profileVersion: 'text', dataVersion: 'text', sourceId: 'text',
+    source: prepubertalSource, population: population, method: method, material: 'text', unit: 'text', sex: 'text',
+    age: ageBounds, stage: { kind: 'text', value: 'number' }, bounds: rangeBounds, basis: 'text',
+    orientingOnly: 'boolean', assayMatched: 'boolean'
+  };
+  var prepubertalLh = {
+    status: 'text', kind: 'text', policyId: 'text', policyVersion: 'text', orientingOnly: 'boolean', assayMatched: 'boolean',
+    reasonCodes: ['text'], range: prepubertalRange, comparison: { status: 'text', reasonCodes: ['text'] },
+    interpretation: { visible: 'boolean', tone: 'text', title: 'text', text: 'text' },
+    stageContext: { kind: 'text', stage: 'number' }, applicabilityText: 'text',
+    methodHelp: { title: 'text', paragraphs: ['text'], sources: [{ label: 'text', url: 'url' }] }, limitations: ['text']
+  };
   var input = {
     analyte: 'text', value: 'measurementInput', unit: 'text', sex: 'text', sampleDateISO: 'text', birthDateISO: 'text', age: age,
     contextBasis: 'text', neonatalAge: neonatalAgeInput, referenceSelection: 'text', reproductiveContext: 'text', pregnancy: 'text',
@@ -103,6 +122,7 @@
     reportedRange: { status: 'text', raw: 'text', unit: 'text', lower: bound, upper: bound, reasonCodes: ['text'] },
     // Older readers discard this extension and retain unavailable biochemical
     // comparisons; losing the qualifier can never turn a preview into a RI.
+    prepubertalLh: prepubertalLh,
     referencePreview: {
       kind: 'text', reasonCodes: ['text'], byAge: comparison, byStage: comparison, applicabilityText: 'text',
       censoredLowerNote: 'text', censoredLowerIndeterminateNote: 'text',
@@ -358,8 +378,48 @@
     if (known ? value.lowerMonths < 0 || value.upperMonths < value.lowerMonths : value.lowerMonths !== null || value.upperMonths !== null) return false;
     return value.status !== 'eligible' || known && !!value.source && !!value.policyId && !!value.policyVersion;
   }
+  function validPrepubertalLh(evaluation) {
+    if (!own(evaluation, 'prepubertalLh')) return true;
+    var value = evaluation.prepubertalLh;
+    if (!required(value, ['status', 'kind', 'policyId', 'policyVersion', 'orientingOnly', 'assayMatched',
+      'reasonCodes', 'range', 'comparison', 'interpretation', 'stageContext']) ||
+      !contains(value.status, ['available', 'unavailable']) || value.kind !== 'clinical-orienting-reference' ||
+      value.orientingOnly !== true || value.assayMatched !== false || !Array.isArray(value.reasonCodes) ||
+      !required(value.comparison, ['status', 'reasonCodes']) || !Array.isArray(value.comparison.reasonCodes) ||
+      !required(value.interpretation, ['visible']) || typeof value.interpretation.visible !== 'boolean') return false;
+    if (value.status === 'unavailable') return value.range === null && value.stageContext === null &&
+      value.comparison.status === 'unavailable' && value.interpretation.visible === false;
+    if (evaluation.analyte !== 'lh' || !value.policyId || !value.policyVersion ||
+      !contains(value.comparison.status, ['within', 'above', 'indeterminate', 'unavailable'])) return false;
+    var range = value.range;
+    if (!required(range, Object.keys(prepubertalRange)) || !range.id || range.profileId !== value.policyId ||
+      range.profileVersion !== value.policyVersion || range.sourceId !== (range.source && range.source.id) ||
+      !range.sourceId || !required(range.source, ['id', 'version', 'kind', 'label', 'title', 'url', 'knownLimitations']) ||
+      range.source.kind !== 'application-clinical-policy' || !(range.source.label || range.source.title) ||
+      !Array.isArray(range.source.knownLimitations) || range.material !== 'serum' || range.unit !== 'IU/L' ||
+      !contains(range.sex, ['M', 'F']) || range.sex !== evaluation.input.sex || range.method !== null ||
+      range.basis !== 'prepubertal-orienting' || range.orientingOnly !== true || range.assayMatched !== false ||
+      !record(range.population) || !range.population.label || !record(range.age) ||
+      range.age.axis !== 'chronologicalYears' || !validBound(range.age.lower, ['>', '>='], false) ||
+      !validBound(range.age.upper, ['<', '<='], false) || range.age.lower.value < 0 ||
+      range.age.upper.value <= range.age.lower.value) return false;
+    var bounds = range.bounds;
+    if (!required(bounds, ['lower', 'upper', 'censoredLower']) || bounds.lower !== null || bounds.censoredLower !== null ||
+      !validBound(bounds.upper, ['<='], false) || bounds.upper.value <= 0) return false;
+    var stage = value.stageContext;
+    if (stage === null ? range.stage !== null : !required(stage, ['kind', 'stage']) || stage.stage !== 1 ||
+      stage.kind !== (range.sex === 'M' ? 'G' : 'Th') || !required(range.stage, ['kind', 'value']) ||
+      range.stage.kind !== stage.kind || range.stage.value !== stage.stage) return false;
+    if (!required(value, ['applicabilityText', 'methodHelp', 'limitations']) || typeof value.applicabilityText !== 'string' ||
+      !Array.isArray(value.limitations) || !required(value.methodHelp, ['title', 'paragraphs', 'sources']) ||
+      !value.methodHelp.title || !Array.isArray(value.methodHelp.paragraphs) || !Array.isArray(value.methodHelp.sources)) return false;
+    if (value.comparison.status === 'unavailable') return value.interpretation.visible === false;
+    return value.interpretation.visible === true && required(value.interpretation, ['tone', 'title', 'text']) &&
+      contains(value.interpretation.tone, ['info', 'attention', 'neutral']) && !!value.interpretation.title && !!value.interpretation.text;
+  }
   function validEvaluation(value) {
-    if (!required(value, Object.keys(evaluationSchema).filter(function (key) { return !contains(key, ['reportedRange', 'referencePreview', 'neonatalAge', 'referenceSelection', 'referenceAge']); })) || value.schemaVersion !== 1 || !value.engineVersion || !own(analytes, value.analyte)) return false;
+    if (!required(value, Object.keys(evaluationSchema).filter(function (key) { return !contains(key, ['reportedRange', 'referencePreview', 'neonatalAge', 'referenceSelection', 'referenceAge', 'prepubertalLh']); })) || value.schemaVersion !== 1 || !value.engineVersion || !own(analytes, value.analyte)) return false;
+    if (!validPrepubertalLh(value)) return false;
     if (own(value, 'referenceAge') && !validReferenceAge(value.referenceAge)) return false;
     if ((value.analyte === 'inhibin_b' || isTestosterone(value)) && (!value.input || value.input.referenceSelection !== 'automatic')) return false;
     if (!required(value.input, Object.keys(input).filter(function (key) { return !contains(key, optionalInput); })) || value.input.analyte !== value.analyte) return false;

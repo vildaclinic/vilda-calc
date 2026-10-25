@@ -60,7 +60,9 @@ async function prepareMinimalResult(page, { withStage = true } = {}) {
   await expect(page.locator('#labPubertyAgeMonths')).toHaveValue('9');
   await expect(page.locator('#labPubertyContext, #labPubertyOpenContext, #labPubertyEditContext, #labPubertySectionContext, #labPubertyContextSummary')).toHaveCount(0);
   await expect(page.locator('#labPubertyOpenDate, #labPubertySectionDate, #labPubertySampleDate, #labPubertyBirthDate, #labPubertyClearDate, #labPubertyOpenExtra, #labPubertySectionExtra, #labPubertyCnsSymptoms, #labPubertyRegression, #labPubertyTesticularVolume, #labPubertyVolumeMethod')).toHaveCount(0);
-  await expectVisibleConditions(assessment(page));
+  await expectVisibleConditions(assessment(page), withStage ? {} : {
+    mode: 'clinical-orienting-reference', untreatedText: /poza terapią hormonalną/i,
+  });
   if (withStage) {
     await expect(page.locator('#labPubertyStage')).toHaveValue('3');
     await expect(page.locator('#labPubertyKind')).toHaveValue('unspecified');
@@ -72,17 +74,17 @@ async function prepareMinimalResult(page, { withStage = true } = {}) {
 }
 const assessment = (page) => page.locator('#labPubertyAssessment .vilda-lab-assessment');
 const comparison = (host, kind) => host.locator(`[data-comparison="${kind}"]`);
-const conditions = (host) => host.locator('[data-reference-conditions="automatic-source-reference"]');
+const conditions = (host, mode = 'automatic-source-reference') => host.locator(`[data-reference-conditions="${mode}"]`);
 const snapshot = (page) => page.evaluate(() => window.VildaLabPubertyRuntime.getAssessment({
   testKey: 'lh', raw: document.getElementById('labValue').value, unit: document.getElementById('labUnit').value,
 }));
 
-async function expectVisibleConditions(host) {
-  const note = conditions(host);
+async function expectVisibleConditions(host, { mode = 'automatic-source-reference', untreatedText = /bez leczenia hormonalnego/i } = {}) {
+  const note = conditions(host, mode);
   await expect(note).toHaveCount(1);
   await expect(note).toBeVisible();
   await expect(note).toContainText(/bazaln/i);
-  await expect(note).toContainText(/bez leczenia hormonalnego/i);
+  await expect(note).toContainText(untreatedText);
   expect(await note.locator('xpath=ancestor::details').count()).toBe(0);
 }
 async function expectConditionalResult(host, { withStage = true } = {}) {
@@ -126,16 +128,27 @@ test('M2y9 G3 LH2 gives automatic source comparisons with a visible basal-only s
   expect(await page.evaluate(() => window.VildaPersistence.readShared())).toEqual(sharedBefore);
 });
 
-test('age alone gives the automatic age comparison without inventing a Tanner stage', async ({ page }) => {
+test('age alone gives the clinical upper-only LH reference without inventing a Tanner stage', async ({ page }) => {
   await open(page);
   await seedGuest(page, '');
   await prepareMinimalResult(page, { withStage: false });
-  await expectConditionalResult(assessment(page), { withStage: false });
+  const cap = comparison(assessment(page), 'prepubertal');
+  await expect(cap).toHaveAttribute('data-status', 'above');
+  await expect(cap).toHaveAttribute('data-applicability', 'source-reference');
+  await expect(cap.getByRole('img')).toHaveAccessibleName(/Powyżej górnej granicy/);
+  await expect(cap.locator('[data-range-upper]')).toHaveAttribute('data-range-upper', '0.3');
+  await expect(comparison(assessment(page), 'age')).toHaveCount(0);
+  const scope = assessment(page).locator('[data-reference-conditions]');
+  await expect(scope).toBeVisible();
+  await expect(scope).toContainText(/bazaln/i);
+  await expect(scope).toContainText(/poza terapią hormonalną/i);
   await expect(comparison(assessment(page), 'stage')).toHaveCount(0);
   const saved = await snapshot(page);
   expectUnknownInputAndStrictComparison(saved);
   expect(saved.evaluation.input.puberty).toMatchObject({ kind: 'unspecified', stage: null });
   expect(saved.evaluation.referencePreview).toMatchObject({ byAge: { status: 'above' }, byStage: { status: 'unavailable' } });
+  expect(saved.evaluation.prepubertalLh).toMatchObject({ status: 'available', stageContext: null,
+    comparison: { status: 'above' }, range: { bounds: { lower: null, censoredLower: null, upper: { operator: '<=', value: .3 } } } });
 });
 
 // Older clients could record an explicit protocol and treatment answer. Build
