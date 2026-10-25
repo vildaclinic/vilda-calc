@@ -307,11 +307,11 @@
       },
       {
         id: "CitCr_spot",
-        label: "Cit/Cr (spot) [mg/mg]",
+        label: "Cit/Cr — cytryniany/kreatynina",
         version: "spot",
         requires: [
-          "spotSameSpecimen",
           "Cit_Cr_spot",
+          "Cit_Cr_spot_unit",
           "Ucr_spot",
           "Ucr_spot_unit",
         ],

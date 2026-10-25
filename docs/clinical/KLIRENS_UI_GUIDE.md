@@ -16,9 +16,14 @@ określa [AGENTS.md](../../AGENTS.md), a reguły kliniczne
   sam wzór. Krótko nazwij przyczynę braku porównania przy wyniku.
 - Uproszczenie ankiety nie zmienia nieznanego faktu w potwierdzony.
   Założenia opisuj jako założenia; zachowuj znaczenie znanych sprzeczności.
-- Dla ACR, PCR, Ca/Cr i Ox/Cr pierwszą, domyślną opcją jest **„Oblicz ze stężeń”**;
-  **„Gotowy wynik ACR”**, **„Gotowy wynik PCR”**, **„Gotowy wynik Ca/Cr”** lub **„Gotowy wynik Ox/Cr”**
+- Dla ACR, PCR, Ca/Cr, Ox/Cr i Cit/Cr pierwszą, domyślną opcją jest **„Oblicz ze stężeń”**;
+  **„Gotowy wynik ACR”**, **„Gotowy wynik PCR”**, **„Gotowy wynik Ca/Cr”**, **„Gotowy wynik Ox/Cr”** lub **„Gotowy wynik Cit/Cr”**
   jest drugą opcją.
+- Dla Cit/Cr (decyzja 24.10.2026) lista stężenia cytrynianów ma cztery
+  unikalne jednostki: **µmol/L, mmol/L, mg/L, mg/dL**. Postać masowa jest
+  krótkim opisem z opcją **„Zmień”**, widocznym tylko przy mg; nie powiela
+  jednostek w długich grupach. Nieznana postać nie staje się domyślnie
+  kwasem lub jonem. Przy jednostkach molowych nie ma tego dodatkowego wyboru.
 
 ## Wyrównanie, porządek i symetria
 

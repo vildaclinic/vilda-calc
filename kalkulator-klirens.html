@@ -181,6 +181,7 @@
 <link href="clcr_pcr_ui.css?v=1" rel="stylesheet" />
 <link href="clcr_cacr_ui.css?v=1" rel="stylesheet" />
 <link href="clcr_oxcr_ui.css?v=1" rel="stylesheet" />
+<link href="clcr_citcr_ui.css?v=1" rel="stylesheet" />
 <link href="vilda_lab_assessment_ui.css?v=12" rel="stylesheet">
 <link href="vilda_lab_history_tab.css?v=4" rel="stylesheet">
   <link rel="stylesheet" href="vilda_phone_landscape.css?v=2">
@@ -460,6 +461,35 @@
               <option value="different">Wyniki z różnych próbek</option>
             </select>
           </label>
+          <input type="hidden" id="CitCr_entry_mode" value="concentration" />
+          <label>Cit/Cr z laboratorium:
+            <input type="text" inputmode="decimal" id="CitCr_reported" autocomplete="off" />
+          </label>
+          <label>Jednostka Cit/Cr:
+            <select id="CitCr_reported_unit">
+              <option value="umol/mmol">µmol/mmol</option>
+              <option value="mmol/mol">mmol/mol</option>
+              <option value="mmol/mmol">mmol/mmol</option>
+              <option value="mol/mol">mol/mol</option>
+              <option value="mg/mg">mg/mg</option>
+              <option value="mg/g">mg/g</option>
+              <option value="mg/mmol">mg/mmol</option>
+            </select>
+          </label>
+          <label>Postać cytrynianów z raportu:
+            <select id="CitCr_reported_basis">
+              <option value="unknown">Nie podano</option>
+              <option value="acid" aria-label="Kwas cytrynowy bezwodny">Kwas cytrynowy</option>
+              <option value="ion">Jon cytrynianowy</option>
+            </select>
+          </label>
+          <label>Pochodzenie oznaczeń Cit/Cr:
+            <select id="CitCr_same_specimen">
+              <option value="">Z tej samej próbki — założenie</option>
+              <option value="confirmed">Potwierdzono tę samą próbkę</option>
+              <option value="different">Wyniki z różnych próbek</option>
+            </select>
+          </label>
           <label>Rodzaj próbki moczu:
             <select id="spotSampleKind">
               <option value="" selected>— nie określono —</option>
@@ -613,8 +643,23 @@
               <option value="oxalate_ion">mg jonu szczawianowego/dl</option>
             </select>
           </label>
-          <label class="advanced-field pro-field">Cytryniany jako kwas cytrynowy w próbce moczu (Cit, mg/dl):
-            <input type="number" id="Cit_Cr_spot" step="1" />
+          <label class="advanced-field pro-field">Cytryniany w próbce moczu:
+            <input type="number" inputmode="decimal" id="Cit_Cr_spot" step="any" min="0" />
+          </label>
+          <label class="advanced-field pro-field">Jednostka cytrynianów:
+            <select id="Cit_Cr_spot_unit">
+              <option value="umol/L">µmol/L</option>
+              <option value="mmol/L">mmol/L</option>
+              <option value="mg/L">mg/L</option>
+              <option value="mg/dL">mg/dL</option>
+            </select>
+          </label>
+          <label class="advanced-field pro-field">Postać cytrynianów z raportu:
+            <select id="citrateSpotReportingEntity">
+              <option value="unknown">Nie podano</option>
+              <option value="acid" aria-label="Kwas cytrynowy bezwodny">Kwas cytrynowy</option>
+              <option value="ion">Jon cytrynianowy</option>
+            </select>
           </label>
           <!-- === KAMICA (próbka moczu) — END === -->
 
@@ -957,10 +1002,14 @@
     <script defer src="clcr_oxcr.js?v=1"></script>
     <script defer src="clcr_oxcr_ui.js?v=1"></script>
     <script defer src="clcr_oxcr_persistence.js?v=1"></script>
+    <script defer src="clcr_citcr_reference_data.js?v=1"></script>
+    <script defer src="clcr_citcr.js?v=1"></script>
+    <script defer src="clcr_citcr_ui.js?v=1"></script>
+    <script defer src="clcr_citcr_persistence.js?v=1"></script>
     <script defer src="clcr_measured_clearance_reference_data.js?v=1"></script>
     <script defer src="clcr_measured_clearance_reference.js?v=1"></script>
     <script defer src="clcr_result_presentation.js?v=7"></script>
-    <script defer src="inline_kalkulator_klirens_02.js?v=15"></script>
+    <script defer src="inline_kalkulator_klirens_02.js?v=16"></script>
     <!-- Ujednolicona obsługa wyboru formuły w kalkulatorze klirensu/eGFR. -->
     <script defer src="inline_kalkulator_klirens_03.js?v=1"></script>
 <!-- Sekcja interpretacji AI z opisem i przyciskiem.  Umieszczamy ją w kontenerze
@@ -1027,7 +1076,7 @@
 </footer>
 
 <!-- 5. LOGIKA JS -->
-<script defer src="inline_kalkulator_klirens_04.js?v=20"></script>
+<script defer src="inline_kalkulator_klirens_04.js?v=21"></script>
 
 <!-- Moduł obsługi kliknięć listy dynamicznych wyników wyszukiwania -->
 <script defer src="inline_kalkulator_klirens_05.js?v=1"></script>
@@ -1179,7 +1228,8 @@ document.addEventListener('DOMContentLoaded', () => {
         const rightFs = ensureSpotSetRight();
         if (!leftFs || !rightFs) return;
         const rightIds = [
-          'Ox_Cr_spot','oxalateSpotReportingEntity','Cit_Cr_spot',
+          'Ox_Cr_spot','oxalateSpotReportingEntity','Cit_Cr_spot','Cit_Cr_spot_unit','citrateSpotReportingEntity',
+          'CitCr_entry_mode','CitCr_reported','CitCr_reported_unit','CitCr_reported_basis','CitCr_same_specimen',
           'spotPairedChemistry',
           'U_Na_spot','S_Na_spot','U_K_spot','S_K_spot',
           'U_Cl_spot','S_Cl_spot','U_HCO3_spot','S_HCO3_spot',
@@ -1200,7 +1250,8 @@ document.addEventListener('DOMContentLoaded', () => {
           'U_Alb','U_ACR','U_Prot_spot','U_Prot_spot_unit','U_PCR',
           'spotMenstruation','spotHematuria','spotInfection','spotExercise','spotAcuteIllness',
           'Ca_spot','Ca_spot_unit','U_pH',
-          'Ox_Cr_spot','oxalateSpotReportingEntity','Cit_Cr_spot',
+          'Ox_Cr_spot','oxalateSpotReportingEntity','Cit_Cr_spot','Cit_Cr_spot_unit','citrateSpotReportingEntity',
+          'CitCr_entry_mode','CitCr_reported','CitCr_reported_unit','CitCr_reported_basis','CitCr_same_specimen',
           'spotPairedChemistry',
           'U_Na_spot','S_Na_spot','U_K_spot','S_K_spot',
           'U_Cl_spot','S_Cl_spot','U_HCO3_spot','S_HCO3_spot',
@@ -1623,7 +1674,7 @@ document.addEventListener('DOMContentLoaded', () => {
          wczytywane w tym formularzu. Plik userData.js korzysta z localStorage. -->
         <script src="userData.js?v=6" defer></script>
 <script src="ios26-ui.js?v=45" defer></script>
-<script defer src="inline_kalkulator_klirens_07.js?v=9"></script>
+<script defer src="inline_kalkulator_klirens_07.js?v=10"></script>
 <script defer src="vilda_down_syndrome.js?v=5"></script>
 <script defer src="vilda_anorexia_risk.js?v=4"></script>
 <!-- Tablice siatek zespolu Downa przed app.js: app.js przekazuje je silnikowi BMI (P-DS-1). -->
@@ -1688,6 +1739,7 @@ document.addEventListener('DOMContentLoaded', () => {
       'Ca_spot','Ca_spot_unit','CaCr_entry_mode','CaCr_reported','CaCr_reported_unit','CaCr_same_specimen',
       'CystatinC','CystatinCStandardization','CystatinCAssayMethod','CrCysStandardizationConfirmed',
       'oxalateSpotReportingEntity','Ox_Cr_spot_unit','OxCr_entry_mode','OxCr_reported','OxCr_reported_unit','OxCr_same_specimen',
+      'Cit_Cr_spot_unit','citrateSpotReportingEntity','CitCr_entry_mode','CitCr_reported','CitCr_reported_unit','CitCr_reported_basis','CitCr_same_specimen',
       'spotMenstruation','spotHematuria','spotInfection','spotExercise','spotAcuteIllness',
       'spotPairedChemistry',
       'U_Na_spot','S_Na_spot','U_K_spot','S_K_spot',
@@ -1883,6 +1935,6 @@ document.addEventListener('DOMContentLoaded', () => {
 </script>
 <script defer src="inline_kalkulator_klirens_08.js?v=1"></script>
   <script defer src="inline_kalkulator_klirens_09.js?v=1"></script>
-  <script defer src="clcr_ui_workflow.js?v=19"></script>
+  <script defer src="clcr_ui_workflow.js?v=20"></script>
 </body>
 </html>
