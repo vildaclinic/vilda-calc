@@ -83,6 +83,19 @@ obcą wizualnie kartą i nie dodawaj kilku podobnych wierszy „odniesienia”.
   jest wyłącznie neutralnym **„Zakresem w badaniu dorosłych”**, nie normą
   całego życia. Brak właściwego profilu nie blokuje liczby i nie tworzy
   pytania do „pełnej interpretacji”. Granice i źródła: [FEK.md](FEK.md).
+- Dla FECl formularz ma cztery stężenia w grupach **„Mocz”** i **„Krew”**,
+  bez obowiązkowej ankiety o próbki, wiek, stabilność, AKI lub leczenie.
+  Wspólna próbka moczu i równoczesna krew są opisanym założeniem;
+  znana sprzeczność blokuje liczbę i zachowuje wpisane stężenia.
+  Karta B pokazuje **„Norma dla wieku / Brak normy do porównania”**
+  i krótki komentarz o kontekście. Brak odpowiednio zweryfikowanego
+  przedziału dla punktowego FECl oznacza neutralną kartę i brak
+  klasyfikacji, nie dowód nieistnienia wszystkich norm. Znane PChN,
+  AKI, diuretyk lub szybka zmiana kreatyniny pozostają czytelną uwagą,
+  także po zapisie. **>0,5%** z KDIGO to warunkowe kryterium podejrzenia
+  Gitelmana, opisane wyłącznie w Szczegółach; nie jest normą lub
+  automatyczną diagnozą. Małe dodatnie wyniki nie stają się zerem,
+  a brak normy nie tworzy kolejnego pytania. Źródła: [FECL.md](FECL.md).
 - Pełne poziomy, np. A1–A3 albuminurii, opisuj w zwiniętych
   **„Szczegółach i źródłach”**. Wyróżnij wyłącznie rzeczywiście nadaną
   kategorię pacjenta. Przycisk kategorii powinien otwierać właściwe Szczegóły.

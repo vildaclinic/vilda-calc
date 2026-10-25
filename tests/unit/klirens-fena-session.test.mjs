@@ -139,7 +139,7 @@ describe('FENa — actual session runtime never completes a thin sample with pre
     expect(controls.spotPairedChemistry.checked).toBe(false);
   });
   it.each(['FEK_spot', 'FECl_spot'])('a full %s session keeps all supplied shared creatinine and sample facts', formulaPicker => {
-    const { api } = runtime({ formulaPicker, U_Na_spot: '', S_Na_spot: '', Ucr_spot: '10.00', Ucr_spot_unit: 'mmol/L', Scr_spot: '77.00', Scr_spot_unit: 'umol/L',
+    const { api } = runtime({ formulaPicker, U_Na_spot: '', S_Na_spot: '', Ucr_spot: '10.00', Ucr_spot_unit: 'mmol/L', Scr_spot: '77.00', Scr_spot_unit: formulaPicker === 'FECl_spot' ? 'umol' : 'umol/L',
       U_K_spot: '25', S_K_spot: '4', U_Cl_spot: '35', S_Cl_spot: '100', FENa_sample_status: '',
       spotSameSpecimen: true, ui_spotSameSpecimen_answer: 'yes', spotPairedChemistry: true, ui_spotPairedChemistry_answer: 'yes',
       spotDiureticUse: false, ui_spotDiureticUse_answer: 'no', spotKnownCKD: false, ui_spotKnownCKD_answer: 'unknown' });
@@ -157,7 +157,7 @@ describe('FENa — actual session runtime never completes a thin sample with pre
       expect(api.buildClcrSessionSnapshot().preservedInputs[key]).toBe('no');
     });
 
-  it.each(['FENa_spot', 'FEK_spot'])('canonical known sample issues invalidate stale shared pairing in restored %s', selectedFormula => {
+  it.each(['FENa_spot', 'FEK_spot', 'FECl_spot'])('canonical known sample issues invalidate stale shared pairing in restored %s', selectedFormula => {
     for (const issue of ['different-time', 'different-urine']) {
       const incoming = { selectedFormula, inputs: { U_Na_spot: '20', S_Na_spot: '140', U_K_spot: '25', S_K_spot: '4',
         Ucr_spot: '100', Ucr_spot_unit: 'mg/dl', Scr_spot: '1', Scr_spot_unit: 'mg/dl', FENa_sample_status: issue,
@@ -188,7 +188,7 @@ describe('FENa — actual session runtime never completes a thin sample with pre
     expect(controls.ui_spotSameSpecimen_answer.value).toBe('no');
   });
 
-  it.each(['FENa_spot', 'TMP_GFR'])('restored known problems in %s invalidate stale TmP/GFR pairing without erasing its other protocol', selectedFormula => {
+  it.each(['FENa_spot', 'FECl_spot', 'TMP_GFR'])('restored known problems in %s invalidate stale TmP/GFR pairing without erasing its other protocol', selectedFormula => {
     for (const issue of ['different-time', 'different-urine']) {
       const incoming = { selectedFormula, inputs: { FENa_sample_status: issue, spotPairedChemistry: true, ui_spotPairedChemistry_answer: 'yes',
         spotSameSpecimen: true, ui_spotSameSpecimen_answer: 'yes', tmpPairedSameTime: true, ui_tmpPairedSameTime_answer: 'yes',

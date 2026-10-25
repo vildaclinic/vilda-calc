@@ -536,6 +536,9 @@ function validateField(e) {
   } else if ($("formulaPicker")?.value === "FEK_spot" && ["U_K_spot", "S_K_spot", "Ucr_spot", "Scr_spot"].includes(n)) {
     // FEK validates its four finite concentrations in their declared units.
     // No source supports a unitless ceiling on these concentration controls.
+  } else if ($("formulaPicker")?.value === "FECl_spot" && ["U_Cl_spot", "S_Cl_spot", "Ucr_spot", "Scr_spot"].includes(n)) {
+    // The FECl engine validates finite concentrations in their declared units.
+    // A unitless legacy maximum must not reject an equivalent unit choice.
   } else if (maxValues[n] !== void 0 && t > maxValues[n])
     return (
       o && (o.textContent = "Warto\u015B\u0107 wydaje si\u0119 zbyt wysoka"),
@@ -547,7 +550,7 @@ function validateField(e) {
 function validateClcrAgeContext(e) {
   // Cit/Cr reference bands use completed years; zero years needs no extra
   // months or days to select the source's birth–<3-years interval.
-  if (["CitCr_spot", "FENa_spot", "FEK_spot"].includes($("formulaPicker")?.value)) return;
+  if (["CitCr_spot", "FENa_spot", "FEK_spot", "FECl_spot"].includes($("formulaPicker")?.value)) return;
   const n = document.getElementById("age"),
     t = document.getElementById("ageMonths");
   if (!n || (n.value || "").trim() === "") return;
@@ -570,6 +573,7 @@ function canComputeFormula(e) {
   if (e === "CitCr_spot") return evaluateClcrCitcr().valid === true;
   if (e === "FENa_spot") return evaluateClcrFena().valid === true;
   if (e === "FEK_spot") return evaluateClcrFek().valid === true;
+  if (e === "FECl_spot") return evaluateClcrFecl().valid === true;
   if (
     window.ClcrClinicalSafety &&
     typeof window.ClcrClinicalSafety.formulaSafety == "function"
@@ -688,6 +692,11 @@ function evaluateClcrFek() {
   return engine?.evaluate(engine.readInputFromDocument(document), window.VildaClcrFekReferenceData?.DEFAULT_POLICY)
     || { valid: false, errorCode: "FEK_UNAVAILABLE", error: "Nie można obliczyć FEK. Odśwież aplikację." };
 }
+function evaluateClcrFecl() {
+  const engine = window.VildaClcrFecl;
+  return engine?.evaluate(engine.readInputFromDocument(document), window.VildaClcrFeclReferenceData?.DEFAULT_POLICY)
+    || { valid: false, errorCode: "FECL_UNAVAILABLE", error: "Nie można obliczyć FECl. Odśwież aplikację." };
+}
 function clcrCgNormalizedDetails(ageYears, bsaM2, sources = []) {
   const ageUsed = Math.floor(ageYears);
   const sourceLinks = sources.map((source) => `<a href="${clcrEscapeHtml(source.url)}" target="_blank" rel="noopener noreferrer">${clcrEscapeHtml(source.label)}</a>`).join(" · ");
@@ -735,14 +744,14 @@ function packClcrSupplementaryMarkup(markup, formulaId) {
   clcrSetTrustedMarkup(staging, markup, "clcr-result-presentation-staging");
   const nodes = [...staging.children];
   const primary = nodes.find((node) => node.classList.contains("clcr-result-card") && node.dataset.clcrFormula === formulaId);
-  if (!primary && ["CitCr_spot", "FENa_spot", "FEK_spot"].includes(formulaId)) {
-    const pending = nodes.filter((node) => node.dataset.clcrFormula === formulaId && node.matches(".citcr-result-empty, .citcr-result-error, .fena-result-empty, .fena-result-error, .fek-result-empty, .fek-result-error"));
+  if (!primary && ["CitCr_spot", "FENa_spot", "FEK_spot", "FECl_spot"].includes(formulaId)) {
+    const pending = nodes.filter((node) => node.dataset.clcrFormula === formulaId && node.matches(".citcr-result-empty, .citcr-result-error, .fena-result-empty, .fena-result-error, .fek-result-empty, .fek-result-error, .fecl-result-empty, .fecl-result-error"));
     if (pending.length) return pending.map((node) => node.outerHTML).join("");
   }
   if (!primary) return markup;
   const details = nodes.find((node) => node.classList.contains("clcr-result-details") && node.dataset.clcrFormula === formulaId);
   if (!details) return markup;
-  if (["OxCr_spot", "CitCr_spot", "FENa_spot", "FEK_spot"].includes(formulaId)) {
+  if (["OxCr_spot", "CitCr_spot", "FENa_spot", "FEK_spot", "FECl_spot"].includes(formulaId)) {
     // This card already carries its complete source and specimen context.
     // Unrelated stone-panel EAU notes must not label a Fimlab/NHS reference.
     nodes.filter((node) => node !== primary && node !== details &&
@@ -894,7 +903,8 @@ function update() {
     oxcrEvaluation = evaluateClcrOxcr({ concentrationOnly: $("formulaPicker")?.value !== "OxCr_spot" }),
     citcrEvaluation = evaluateClcrCitcr({ concentrationOnly: $("formulaPicker")?.value !== "CitCr_spot" }),
     fenaEvaluation = evaluateClcrFena(),
-    fekEvaluation = evaluateClcrFek();
+    fekEvaluation = evaluateClcrFek(),
+    feclEvaluation = evaluateClcrFecl();
   acrRatio
     ? ((j = acrRatio.mgG),
       ($("U_ACR").value = j.toFixed(1)))
@@ -929,10 +939,7 @@ function update() {
       spotSerumSodium,
     ),
     spotFeK = { ok: fekEvaluation.valid === true, valuePct: fekEvaluation.rawValue, error: fekEvaluation.error },
-    spotFeCl = computeSpotFractionalExcretion(
-      spotUrineChloride,
-      spotSerumChloride,
-    ),
+    spotFeCl = { ok: feclEvaluation.valid === true, valuePct: feclEvaluation.rawValue, error: feclEvaluation.error },
     spotFeHco3 = computeSpotFractionalExcretion(
       spotUrineBicarbonate,
       spotSerumBicarbonate,
@@ -2329,8 +2336,12 @@ function update() {
   } else if (_e === "FEK_spot") {
     ve += '<div class="fek-result-error" data-clcr-formula="FEK_spot"><strong>Nie można wyświetlić FEK</strong><p>Odśwież aplikację, aby wczytać moduł wyniku FEK.</p></div>';
   }
+  if (window.ClcrFeclUi && (feclEvaluation.valid || _e === "FECl_spot")) {
+    ve += window.ClcrFeclUi.renderResult(feclEvaluation);
+  } else if (_e === "FECl_spot") {
+    ve += '<div class="fecl-result-error" data-clcr-formula="FECl_spot"><strong>Nie można wyświetlić FECl</strong><p>Odśwież aplikację, aby wczytać moduł wyniku FECl.</p></div>';
+  }
   [
-    ["FECl", spotFeCl, "FECl_spot"],
     ["FEHCO\u2083", spotFeHco3, "FEHCO3_spot"],
   ].forEach(([label, result, seriesKey]) => {
     if (!result || !result.ok) return;
@@ -2371,7 +2382,7 @@ function update() {
       }[_e] || "FE/UAG";
   if (_e === "AGu_spot" && !uagSpecimenConfirmed) {
     ve += '<div class="result-box warn-yellow" data-clcr-formula="AGu_spot"><strong>Nie obliczono UAG:</strong> potwierdź, że sód, potas i chlorki pochodzą z tej samej próbki moczu.</div>';
-  } else if (["FENa_spot", "FEK_spot"].includes(_e)) {
+  } else if (["FENa_spot", "FEK_spot", "FECl_spot"].includes(_e)) {
     // The selected audited FE has one result/error card from its own engine.
   } else if (spotChemistryRequested && _e !== "AGu_spot" && !spotPairedChemistry) {
     ve +=
@@ -2463,8 +2474,10 @@ function update() {
         '<div class="result-box warn-yellow" data-clcr-formula="TMP_GFR"><strong>Interpretacja:</strong> wynik należy oceniać łącznie z fosforem w surowicy, wiekiem, funkcją nerek i metodą laboratoryjną. Kalkulator nie stosuje automatycznych zakresów ani rozpoznania nerkowej utraty fosforanów.</div>';
     }
   }
+  const feclDetailsOpen = _e === "FECl_spot" && $("clcr-fecl-details")?.open === true;
   (clcrSetTrustedMarkup($("elecInfo"), packClcrSupplementaryMarkup(ve, _e), "electrolyte result html"),
     ($("elecCard").style.display = ve ? "block" : "none"));
+  if (feclDetailsOpen && $("clcr-fecl-details")) $("clcr-fecl-details").open = true;
   let he = "";
   const stoneEngine = window.ClcrStoneSafety,
     stoneVersionActive =
@@ -3893,5 +3906,22 @@ const clearBtn = document.getElementById("clearBtn");
 clearBtn &&
   clearBtn.addEventListener("click", (event) => {
     event.clcrClearedFormula = $("formulaPicker")?.value || "";
+    if (event.clcrClearedFormula === "FECl_spot") {
+      // Clear the concentrations, not an explicitly known problem with their
+      // sampling or the patient's context. The session clear listener restores
+      // this typed map after the generic reset, before workflow recalculation.
+      const vault = window.__vildaClcrVersionValueVault;
+      const contextIds = ["age", "ageMonths", "ageDays", "Ucr_spot_unit", "Scr_spot_unit", "FENa_sample_status",
+        "spotSameSpecimen", "ui_spotSameSpecimen_answer", "spotPairedChemistry", "ui_spotPairedChemistry_answer",
+        "spotDiureticUse", "ui_spotDiureticUse_answer", "spotKnownCKD", "ui_spotKnownCKD_answer",
+        "suspectedAKI", "ui_suspectedAKI_answer", "creatinineState", "spotSampleKind",
+        "tmpPairedSameTime", "ui_tmpPairedSameTime_answer", "tmpOvernightFasting", "ui_tmpOvernightFasting_answer",
+        "spotBicarbonateLoad", "ui_spotBicarbonateLoad_answer"];
+      event.clcrPreservedFeclContext = Object.fromEntries(contextIds.flatMap(id => {
+        const control = $(id);
+        if (control) return [[id, control.type === "checkbox" ? control.checked : control.value]];
+        return vault && Object.hasOwn(vault, id) ? [[id, vault[id]]] : [];
+      }));
+    }
     resetApp(!1);
   });

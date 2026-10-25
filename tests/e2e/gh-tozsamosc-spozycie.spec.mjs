@@ -117,6 +117,10 @@ test('po „Wyczyść wszystkie pola" flagi zawieszenia opadają, a nowy wiersz 
     return [!!window.__vildaSuspendAdvIntakeSync, !!window.__vildaSuspendGrowthHistoryCrossSync, !!window.__vildaSuspendIntakeUserReset];
   });
   expect(wTrakcie, 'w trakcie czyszczenia synchronizacja stoi (synchronicznie)').toEqual([true, true, true]);
+  // Ten test używa zainstalowanego zegara Playwright. W CI poprawna
+  // odpowiedź po następnym ticku docierała po rzeczywistym limicie oczekiwania.
+  // Przesuń zegar o 1 ms; brak resetu nadal oblewa te same asercje.
+  await page.clock.runFor(1);
   await expect.poll(() => flagi(page), { timeout: 1000, message: 'zdjęte w następnym ticku, nie po przeładowaniu' }).toEqual([false, false, false]);
 
   await wpiszPodstawy(page);

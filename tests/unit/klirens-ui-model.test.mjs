@@ -658,22 +658,22 @@ describe('Klirens — centralny model przepływu UI', () => {
     );
 
     expect(html).toContain('clcr_ui_workflow.css?v=16');
-    expect(html).toContain('clcr_ui_workflow.js?v=22');
-    expect(html).toContain('inline_kalkulator_klirens_02.js?v=18');
-    expect(html).toContain('inline_kalkulator_klirens_04.js?v=23');
-    expect(html).toContain('inline_kalkulator_klirens_07.js?v=12');
+    expect(html).toContain('clcr_ui_workflow.js?v=23');
+    expect(html).toContain('inline_kalkulator_klirens_02.js?v=19');
+    expect(html).toContain('inline_kalkulator_klirens_04.js?v=24');
+    expect(html).toContain('inline_kalkulator_klirens_07.js?v=13');
     expect(html).toContain('clcr_result_reference_data.js?v=7');
     expect(html).toContain('clcr_result_presentation.js?v=7');
-    expect(serviceWorker).toContain("const SW_VERSION = '1.1.373'");
+    expect(serviceWorker).toContain("const SW_VERSION = '1.1.374'");
     expect(html).toContain('clcr_calculation_assumptions.js?v=2');
     expect(serviceWorker).toContain("'/clcr_calculation_assumptions.js?v=2'");
-    expect(serviceWorker).toContain("'/clcr_clinical_safety.js?v=10'");
+    expect(serviceWorker).toContain("'/clcr_clinical_safety.js?v=11'");
     expect(serviceWorker).toContain("'/clcr_result_reference_data.js?v=7'");
     expect(serviceWorker).toContain("'/clcr_result_presentation.js?v=7'");
     expect(serviceWorker).toContain("'/clcr_ui_workflow.css?v=16'");
-    expect(serviceWorker).toContain("'/clcr_ui_workflow.js?v=22'");
-    expect(serviceWorker).toContain("'/inline_kalkulator_klirens_02.js?v=18'");
-    expect(serviceWorker).toContain("'/inline_kalkulator_klirens_04.js?v=23'");
+    expect(serviceWorker).toContain("'/clcr_ui_workflow.js?v=23'");
+    expect(serviceWorker).toContain("'/inline_kalkulator_klirens_02.js?v=19'");
+    expect(serviceWorker).toContain("'/inline_kalkulator_klirens_04.js?v=24'");
     for (const file of [
       'clcr_measured_clearance_reference_data.js', 'clcr_measured_clearance_reference.js',
       'clcr_acr_reference_data.js', 'clcr_acr.js', 'clcr_acr_ui.js', 'clcr_acr_ui.css',
@@ -681,6 +681,7 @@ describe('Klirens — centralny model przepływu UI', () => {
       'clcr_cacr_reference_data.js', 'clcr_cacr.js', 'clcr_cacr_ui.js', 'clcr_cacr_ui.css',
       'clcr_citcr_reference_data.js', 'clcr_citcr.js', 'clcr_citcr_ui.js', 'clcr_citcr_ui.css', 'clcr_citcr_persistence.js',
       'clcr_fena_reference_data.js', 'clcr_fena.js', 'clcr_fena_ui.js', 'clcr_fena_ui.css', 'clcr_fena_persistence.js',
+      'clcr_fecl_reference_data.js', 'clcr_fecl.js', 'clcr_fecl_ui.js', 'clcr_fecl_ui.css', 'clcr_fecl_persistence.js',
     ]) {
       expect(html).toContain(`${file}?v=1`);
       expect(serviceWorker).toContain(`'/${file}?v=1'`);
