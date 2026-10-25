@@ -66,6 +66,12 @@ obcą wizualnie kartą i nie dodawaj kilku podobnych wierszy „odniesienia”.
 - Brak kwalifikującego wieku lub odpowiedniego profilu nie otrzymuje normy
   dorosłych ani zielonego werdyktu. Nie wymyślaj ciągłej krzywej wieku,
   jeśli źródło zawiera jedynie kategorie lub przedziały wieku.
+- Dla FENa (decyzja 25.10.2026) karta pozostaje neutralna także >2%:
+  **„Progi pomocnicze w AKI (dorośli)”** nie są normą zdrowej populacji.
+  Dziecko lub nieznany wiek otrzymuje liczbę bez zastępczej normy i bez
+  pytania o wiek do „pełnej interpretacji”. Znane PChN/diuretyki mają
+  czytelną uwagę, a pochodzenie próbek jest opisanym założeniem; znana
+  sprzeczność nadal blokuje obliczenie. Szczegóły polityki: [FENA.md](FENA.md).
 - Pełne poziomy, np. A1–A3 albuminurii, opisuj w zwiniętych
   **„Szczegółach i źródłach”**. Wyróżnij wyłącznie rzeczywiście nadaną
   kategorię pacjenta. Przycisk kategorii powinien otwierać właściwe Szczegóły.

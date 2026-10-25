@@ -530,6 +530,9 @@ function validateField(e) {
     // The Ox/Cr engine validates finite concentrations consistently across units.
   } else if ($("formulaPicker")?.value === "CitCr_spot" && ["Cit_Cr_spot", "Ucr_spot"].includes(n)) {
     // The Cit/Cr engine validates concentrations in their declared units.
+  } else if ($("formulaPicker")?.value === "FENa_spot" && ["U_Na_spot", "S_Na_spot", "Ucr_spot", "Scr_spot"].includes(n)) {
+    // FENa validates its four finite concentrations in their declared units.
+    // A unitless ceiling must not reject equivalent creatinine concentrations.
   } else if (maxValues[n] !== void 0 && t > maxValues[n])
     return (
       o && (o.textContent = "Warto\u015B\u0107 wydaje si\u0119 zbyt wysoka"),
@@ -541,7 +544,7 @@ function validateField(e) {
 function validateClcrAgeContext(e) {
   // Cit/Cr reference bands use completed years; zero years needs no extra
   // months or days to select the source's birth–<3-years interval.
-  if ($("formulaPicker")?.value === "CitCr_spot") return;
+  if (["CitCr_spot", "FENa_spot"].includes($("formulaPicker")?.value)) return;
   const n = document.getElementById("age"),
     t = document.getElementById("ageMonths");
   if (!n || (n.value || "").trim() === "") return;
@@ -562,6 +565,7 @@ function canComputeFormula(e) {
   if (e === "CaCr_spot") return evaluateClcrCacr().valid === true;
   if (e === "OxCr_spot") return evaluateClcrOxcr().valid === true;
   if (e === "CitCr_spot") return evaluateClcrCitcr().valid === true;
+  if (e === "FENa_spot") return evaluateClcrFena().valid === true;
   if (
     window.ClcrClinicalSafety &&
     typeof window.ClcrClinicalSafety.formulaSafety == "function"
@@ -670,6 +674,11 @@ function evaluateClcrCitcr(options) {
   return engine?.evaluate(engine.readInputFromDocument(document, options), window.VildaClcrCitcrReferenceData?.DEFAULT_POLICY)
     || { valid: false, reasonCode: "CITCR_UNAVAILABLE", message: "Nie można obliczyć Cit/Cr. Odśwież aplikację." };
 }
+function evaluateClcrFena() {
+  const engine = window.VildaClcrFena;
+  return engine?.evaluate(engine.readInputFromDocument(document), window.VildaClcrFenaReferenceData?.DEFAULT_POLICY)
+    || { valid: false, errorCode: "FENA_UNAVAILABLE", error: "Nie można obliczyć FENa. Odśwież aplikację." };
+}
 function clcrCgNormalizedDetails(ageYears, bsaM2, sources = []) {
   const ageUsed = Math.floor(ageYears);
   const sourceLinks = sources.map((source) => `<a href="${clcrEscapeHtml(source.url)}" target="_blank" rel="noopener noreferrer">${clcrEscapeHtml(source.label)}</a>`).join(" · ");
@@ -717,14 +726,14 @@ function packClcrSupplementaryMarkup(markup, formulaId) {
   clcrSetTrustedMarkup(staging, markup, "clcr-result-presentation-staging");
   const nodes = [...staging.children];
   const primary = nodes.find((node) => node.classList.contains("clcr-result-card") && node.dataset.clcrFormula === formulaId);
-  if (!primary && formulaId === "CitCr_spot") {
-    const pending = nodes.filter((node) => node.dataset.clcrFormula === formulaId && node.matches(".citcr-result-empty, .citcr-result-error"));
+  if (!primary && ["CitCr_spot", "FENa_spot"].includes(formulaId)) {
+    const pending = nodes.filter((node) => node.dataset.clcrFormula === formulaId && node.matches(".citcr-result-empty, .citcr-result-error, .fena-result-empty, .fena-result-error"));
     if (pending.length) return pending.map((node) => node.outerHTML).join("");
   }
   if (!primary) return markup;
   const details = nodes.find((node) => node.classList.contains("clcr-result-details") && node.dataset.clcrFormula === formulaId);
   if (!details) return markup;
-  if (["OxCr_spot", "CitCr_spot"].includes(formulaId)) {
+  if (["OxCr_spot", "CitCr_spot", "FENa_spot"].includes(formulaId)) {
     // This card already carries its complete source and specimen context.
     // Unrelated stone-panel EAU notes must not label a Fimlab/NHS reference.
     nodes.filter((node) => node !== primary && node !== details &&
@@ -874,7 +883,8 @@ function update() {
     pcrEvaluation = evaluateClcrPcr({ concentrationOnly: $("formulaPicker")?.value !== "PCR" }),
     cacrEvaluation = evaluateClcrCacr({ concentrationOnly: $("formulaPicker")?.value !== "CaCr_spot" }),
     oxcrEvaluation = evaluateClcrOxcr({ concentrationOnly: $("formulaPicker")?.value !== "OxCr_spot" }),
-    citcrEvaluation = evaluateClcrCitcr({ concentrationOnly: $("formulaPicker")?.value !== "CitCr_spot" });
+    citcrEvaluation = evaluateClcrCitcr({ concentrationOnly: $("formulaPicker")?.value !== "CitCr_spot" }),
+    fenaEvaluation = evaluateClcrFena();
   acrRatio
     ? ((j = acrRatio.mgG),
       ($("U_ACR").value = j.toFixed(1)))
@@ -2304,8 +2314,10 @@ function update() {
         spotSerumBicarbonate,
       ].some((value) => value !== null);
   let renderedSpotFractionalExcretion = !1;
+  if (window.ClcrFenaUi && (fenaEvaluation.valid || _e === "FENa_spot")) {
+    ve += window.ClcrFenaUi.renderResult(fenaEvaluation);
+  }
   [
-    ["FENa", spotFeNa, "FENa_spot"],
     ["FEK", spotFeK, "FEK_spot"],
     ["FECl", spotFeCl, "FECl_spot"],
     ["FEHCO\u2083", spotFeHco3, "FEHCO3_spot"],
@@ -2348,6 +2360,8 @@ function update() {
       }[_e] || "FE/UAG";
   if (_e === "AGu_spot" && !uagSpecimenConfirmed) {
     ve += '<div class="result-box warn-yellow" data-clcr-formula="AGu_spot"><strong>Nie obliczono UAG:</strong> potwierdź, że sód, potas i chlorki pochodzą z tej samej próbki moczu.</div>';
+  } else if (_e === "FENa_spot") {
+    // The selected FENa has one result/error card from its production engine.
   } else if (spotChemistryRequested && _e !== "AGu_spot" && !spotPairedChemistry) {
     ve +=
       '<div class="result-box warn-yellow"><strong>Nie obliczono FE/UAG:</strong> potwierdź, że anality i kreatynina pochodzą z tej samej próbki moczu, a krew pobrano równocześnie.</div>';

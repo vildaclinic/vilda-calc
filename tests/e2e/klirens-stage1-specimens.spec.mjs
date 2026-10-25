@@ -232,7 +232,7 @@ test('TmP/GFR dobiera metodę na granicy 19 lat i nie korzysta z DZM', async ({ 
   await expect(page.locator('#elecInfo')).not.toContainText('TmP/GFR (dobowa');
 });
 
-test('liczy FE i UAG wyłącznie ze sparowanej próbki punktowej', async ({ page }) => {
+test('FENa zakłada sparowane próbki, pozostałe FE i UAG zachowują potwierdzenie', async ({ page }) => {
   await openCalculator(page, 'spot');
   await setPatient(page, { age: 50 });
   await page.locator('#Ucr_spot').fill('100');
@@ -244,10 +244,14 @@ test('liczy FE i UAG wyłącznie ze sparowanej próbki punktowej', async ({ page
   await page.locator('#U_Cl_spot').fill('80');
 
   await expect(page.locator('#elecInfo')).toContainText('Nie obliczono FE/UAG');
-  await expect(page.locator('#elecInfo')).not.toContainText('FENa (sparowana');
+  const fena = page.locator('#elecInfo .clcr-result-card[data-clcr-series="FENa_spot"]');
+  await expect(fena).toBeVisible();
+  await expect(fena).toHaveAttribute('data-clcr-tone', 'neutral');
+  expect(Number(await fena.getAttribute('data-clcr-value'))).toBeCloseTo(1 / 7, 12);
+  await expect(page.locator('#elecInfo')).not.toContainText('FEK (sparowana');
 
   await page.locator('#spotPairedChemistry').check();
-  await expect(page.locator('#elecInfo')).toContainText('FENa (sparowana próbka punktowa)');
+  await expect(fena).toBeVisible();
   await expect(page.locator('#elecInfo')).toContainText('FEK (sparowana próbka punktowa)');
   await expect(page.locator('#elecInfo')).toContainText('UAG; próbka punktowa');
   await expect(page.locator('#elecInfo')).toContainText('bez potwierdzonej kwasicy metabolicznej');
