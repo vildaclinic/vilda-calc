@@ -20,6 +20,7 @@
   var measurementCommit = null;
   var measurementRevision = 0;
   var lastSnapshot = null;
+  var hadSelectedPatient = !!patientId();
   var startupSettled = !(d && typeof d.readyState === 'string' && w.VildaInit);
   var startupScheduled = false;
 
@@ -129,7 +130,13 @@
   function getEligibility() {
     try {
       if (!activeRoute()) return eligibility('ineligible', 'inactive-document');
-      var id = patientId(), dob = w.VildaDobAge;
+      var id = patientId();
+      if (id) hadSelectedPatient = true;
+      // An initial guest has never owned a chart. Guest form/DOB restoration
+      // must not reserve a chart slot; this flag carries no patient data and
+      // does not grant permission to retain a snapshot.
+      if (!id && !hadSelectedPatient) return eligibility('ineligible', 'no-patient');
+      var dob = w.VildaDobAge;
       var restoring = w.__vildaPersistRestoring === true || w.__vildaLustroWpis === true
         || Number(w.__vildaPersistClearUntil || 0) > Date.now();
       var pendingDob = dob && typeof dob.restorePending === 'function' && dob.restorePending();

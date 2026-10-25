@@ -54,6 +54,7 @@ function installPaintProbe() {
         if (result.frames.length < 10_000) result.frames.push({
           at: Math.round(now), path: owner.location.pathname, patientId,
           mode: owner.sessionStorage.getItem('vildaLoadChoiceV1'), columns,
+          form: visible(form, owner),
           reminder, hittable, card: visible(card, owner), mount: visible(mount, owner), image,
           status: state?.status || 'uninitialized', slotStatus: state?.slotStatus || 'uninitialized',
           chartPatientId: state?.patientId || null,
@@ -107,6 +108,90 @@ async function filledMeasurement(owner) {
   await owner.locator('#weight').fill('47');
   await owner.locator('#weight').blur();
 }
+
+test('gość bez wybranego pacjenta nie dostaje miejsca siatki podczas startu, edycji ani odtwarzania DOB', async ({ page }) => {
+  await page.addInitScript(() => {
+    localStorage.setItem('vilda-terms-accepted-v1', JSON.stringify({ version: 1, acceptedAtISO: new Date().toISOString() }));
+    localStorage.setItem('analyticsConsent', 'denied');
+    const samples = [];
+    window.__centileGuestSlotTransitions = samples;
+    function sample(reason, oldValue = '') {
+      samples.push({
+        reason, oldValue, patientId: sessionStorage.getItem('vildaCurrentPatientId'),
+        mode: sessionStorage.getItem('vildaLoadChoiceV1'),
+        classes: document.documentElement?.className || '',
+        slotStatus: document.getElementById('vildaCentileLiveMount')?.getAttribute('data-centile-live-state'),
+        pendingDob: Boolean(window.VildaDobAge?.restorePending?.()),
+      });
+    }
+    // Przejście może zmieścić się między dwiema klatkami. Zapis oldValue
+    // wykrywa również chwilowe dodanie i cofnięcie rezerwacji w tym samym tasku.
+    new MutationObserver(records => {
+      for (const record of records) {
+        if (record.target === document.documentElement && record.attributeName === 'class'
+          || record.target.id === 'vildaCentileLiveMount' && record.attributeName === 'data-centile-live-state') {
+          sample(record.attributeName, record.oldValue);
+        }
+      }
+    }).observe(document, { attributes: true, attributeOldValue: true, subtree: true, attributeFilter: ['class', 'data-centile-live-state'] });
+    for (const name of ['vilda:state-restored', 'vilda:persist-restored']) {
+      document.addEventListener(name, () => {
+        // Po wszystkich produkcyjnych listenerach, przed setTimeout przyjęcia
+        // DOB: obserwujemy prawdziwy stan przejściowy, nie ustawiamy jego flag.
+        queueMicrotask(() => { sample(name); });
+      });
+    }
+  });
+  async function guest() {
+    const button = page.getByRole('button', { name: 'Korzystaj bez logowania', exact: true });
+    if (await button.isVisible()) await button.click();
+    await page.waitForFunction(() => !document.documentElement.classList.contains('vilda-auth-locked')
+      && typeof window.update === 'function');
+  }
+  async function fillGuestForm() {
+    // Ta sama rzeczywista ścieżka pól i update co w regresji wyglądu aplikacji.
+    await page.evaluate(() => {
+      for (const [id, value] of Object.entries({ age: 10, ageMonths: 3, sex: 'F', weight: 32, height: 138 })) {
+        const element = document.getElementById(id);
+        element.value = String(value);
+        element.dispatchEvent(new Event('input', { bubbles: true }));
+        element.dispatchEvent(new Event('change', { bubbles: true }));
+      }
+      window.update();
+    });
+    await expect(page.locator('#bmiResult')).toContainText('BMI');
+  }
+  async function assertGuestSlotAbsent(label) {
+    await paintedFrames(page, 20);
+    const observed = await page.evaluate(() => ({ paint: window.__centileSlotPaint, transitions: window.__centileGuestSlotTransitions }));
+    await test.info().attach(label, { body: JSON.stringify(observed, null, 2), contentType: 'application/json' });
+    expect(observed.paint.errors).toEqual([]);
+    expect(observed.paint.frames.filter(frame => frame.form).length, 'próbnik widział rzeczywiście wyświetlony formularz gościa').toBeGreaterThan(5);
+    expect(observed.paint.frames.filter(frame => frame.patientId || frame.mode), 'gość ani przez chwilę nie wybierał zapisanego pacjenta').toEqual([]);
+    expect(observed.paint.frames.filter(frame => frame.mount || frame.loading || frame.card
+      || /vilda-centile-live-(?:reserved|booting)/u.test(frame.classes)), 'brak neutralnej karty gościa w każdej klatce').toEqual([]);
+    expect(observed.transitions.some(sample => sample.pendingDob), 'wykonano prawdziwe odroczone przyjęcie DOB').toBe(true);
+    expect(observed.transitions.filter(sample => sample.patientId || sample.mode
+      || /vilda-centile-live-(?:reserved|booting)/u.test(`${sample.classes} ${sample.oldValue}`)
+      || ['pending', 'ready', 'error'].includes(sample.slotStatus)
+      || sample.reason === 'data-centile-live-state' && ['pending', 'ready', 'error'].includes(sample.oldValue)),
+    'gość nie rezerwuje miejsca także pomiędzy klatkami').toEqual([]);
+    await expect(page.locator(MOUNT)).toBeHidden();
+  }
+  await page.goto('/index.html', { waitUntil: 'load' });
+  await guest();
+  await fillGuestForm();
+  await assertGuestSlotAbsent('gosc-pierwszy-start-edycja.json');
+  await page.evaluate(() => {
+    window.VildaPersistence.writePreferenceRaw('highContrastEnabled', 'true', { force: true });
+    window.VildaPersistence.writePreferenceRaw('highContrastLevel', '2', { force: true });
+  });
+  await page.reload({ waitUntil: 'load' });
+  await guest();
+  await expect(page.locator('body')).toHaveClass(/high-contrast-level-2/u);
+  await fillGuestForm();
+  await assertGuestSlotAbsent('gosc-reload-odtworzenie-dob.json');
+});
 
 test('Start: pierwszy Nowy pomiar, przeładowanie i zmiana pacjenta bez klatki Przypomnień', async ({ page }) => {
   const { ids } = await createFictionalVault(page);

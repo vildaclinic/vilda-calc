@@ -32,8 +32,9 @@ function patient(id = 'fikcyjny-a') {
   };
 }
 
-function setup({ working = true, framed = false, nestedSourceOnSave = false, startup = false } = {}) {
+function setup({ working = true, framed = false, nestedSourceOnSave = false, startup = false, initialNoPatient = false } = {}) {
   const values = new Map([['vildaCurrentPatientId', 'fikcyjny-a'], ['vildaLoadChoiceV1', 'new']]);
+  if (initialNoPatient) values.delete('vildaCurrentPatientId');
   const writes = vi.fn();
   const fields = Object.fromEntries(Object.entries({
     age: '13', ageMonths: '2', height: '158', weight: '46', sex: 'M',
@@ -927,8 +928,7 @@ describe('Panel nowego pomiaru — zapis nie zmienia właściciela wykresu', () 
 
 describe('Panel nowego pomiaru — jawny stan miejsca siatki', () => {
   it('gość bez wybranego pacjenta nie rezerwuje siatki podczas startu ani oczekiwania na logowanie', async () => {
-    const h = setup({ startup: true });
-    h.values.delete('vildaCurrentPatientId');
+    const h = setup({ startup: true, initialNoPatient: true });
     expect(h.api.getEligibility()).toEqual({ status: 'ineligible', reason: 'no-patient' });
     expect(await h.api.getResult()).toEqual({ status: 'ineligible', reason: 'no-patient' });
     h.state.restoreRegistered = true;
@@ -936,6 +936,38 @@ describe('Panel nowego pomiaru — jawny stan miejsca siatki', () => {
     h.frame(); h.frame();
     expect(h.api.getEligibility()).toEqual({ status: 'ineligible', reason: 'no-patient' });
     expect(h.vault.getPatient).not.toHaveBeenCalled();
+    expect(h.writes).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ['restore', h => { h.win.__vildaPersistRestoring = true; }],
+    ['mirror', h => { h.win.__vildaLustroWpis = true; }],
+    ['clear grace', h => { h.win.__vildaPersistClearUntil = Date.now() + 10000; }],
+    ['DOB', h => { h.state.pending = true; }],
+  ])('gość nigdy niewybierający pacjenta nie rezerwuje siatki również podczas %s', async (_, change) => {
+    const h = setup({ startup: true, initialNoPatient: true });
+    change(h);
+    h.win.VildaDobAge.restorePending = vi.fn(() => h.state.pending);
+    expect(h.api.getEligibility()).toEqual({ status: 'ineligible', reason: 'no-patient' });
+    expect(await h.api.getResult()).toEqual({ status: 'ineligible', reason: 'no-patient' });
+    expect(h.win.VildaDobAge.restorePending).not.toHaveBeenCalled();
+    expect(h.vault.getPatient).not.toHaveBeenCalled();
+    expect(h.writes).not.toHaveBeenCalled();
+  });
+
+  it('pierwszy wybór pacjenta kończy stan gościa i chroni późniejsze przejściowe zniknięcie ID', async () => {
+    const h = setup({ initialNoPatient: true });
+    expect(h.api.getEligibility()).toEqual({ status: 'ineligible', reason: 'no-patient' });
+    h.values.set('vildaCurrentPatientId', 'fikcyjny-a');
+    const result = await h.api.getResult();
+    expect(result.status).toBe('ready');
+    h.win.__vildaLustroWpis = true;
+    h.values.delete('vildaCurrentPatientId');
+    expect(h.api.getEligibility()).toEqual({ status: 'pending', reason: 'restoring' });
+    expect(h.api.isCurrent(result.snapshot)).toBe(false);
+    expect((await h.api.getResult()).status).toBe('pending');
+    h.win.__vildaLustroWpis = false;
+    expect(h.api.getEligibility()).toEqual({ status: 'ineligible', reason: 'no-patient' });
     expect(h.writes).not.toHaveBeenCalled();
   });
 
