@@ -2583,3 +2583,68 @@ html[data-clcr-workflow-ui="1"] #cl24MinimalFields .must-fill:not(.error) {
   background: var(--clcr-surface) !important; border-color: var(--clcr-border) !important; box-shadow: none !important;
 }
 html[data-clcr-workflow-ui="1"] #cl24MinimalFields .must-fill-group { border-color: var(--clcr-border-soft) !important; box-shadow: none !important; }
+
+/* Klirens → wspólne Badania: jeden cel zapisu i wspólna historia. */
+html[data-clcr-workflow-ui="1"] #clcrVisitSaveCard .cvs-patient {
+  display: grid;
+  gap: var(--space-4px);
+  min-width: 0;
+  padding: var(--space-12px) var(--space-14px);
+  margin: 0 0 var(--space-16px);
+  border: var(--border-hairline) solid var(--clcr-border-soft, var(--line));
+  border-radius: var(--radius-10);
+  background: var(--clcr-surface-soft, var(--card));
+  line-height: 1.6;
+}
+.cvs-patient > span, .cvs-patient > small { color: var(--text-muted); font-size: 12px; }
+.cvs-patient > strong { color: var(--text-heading); font-size: 14px; overflow-wrap: anywhere; }
+html[data-clcr-workflow-ui="1"] #clcrVisitSaveCard .cvs-open-row {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: stretch;
+  gap: var(--space-8px);
+  margin-top: var(--space-12px);
+}
+html[data-clcr-workflow-ui="1"] #clcrVisitSaveCard .cvs-open-row .cvs-link {
+  min-width: 0;
+  min-height: 48px;
+  padding: var(--space-8px) var(--space-4px);
+  font-size: 12px;
+  line-height: 1.5;
+  white-space: normal;
+  text-align: center;
+}
+html[data-clcr-workflow-ui="1"] #clcrVisitSaveCard .cvs-open-badania {
+  width: 100%;
+  min-height: 48px;
+  margin-top: var(--space-14px);
+}
+html[data-clcr-workflow-ui="1"] #clcrVisitSaveCard .cvs-status {
+  text-align: left;
+  line-height: 1.6;
+  font-size: 13px;
+  margin-top: var(--space-12px);
+}
+dialog.clcr-patient-card { width: 100%; max-width: none; height: 100%; max-height: none; margin: 0; border: 0; }
+dialog.clcr-patient-card::backdrop { background: transparent; }
+.clcr-patient-card .cpc-name { display: block; margin: var(--space-8px) 0; }
+.clcr-patient-card .cpc-head h2 { margin: 0; font-size: 22px; line-height: 1.4; }
+.clcr-patient-card .cpc-btn { min-height: 48px; }
+.clcr-patient-card .cpc-flow thead th,
+.clcr-patient-card .cpc-flow thead th.nowcol { color: #fff; }
+.clcr-patient-card .cpc-body { min-width: 0; }
+@media (max-width: 700px) {
+  .clcr-patient-card .cpc-inner { padding: var(--space-20px) var(--space-14px); }
+  .clcr-patient-card .cpc-head { display: block; }
+  .clcr-patient-card .cpc-acts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); margin-top: var(--space-16px); gap: var(--space-10px); }
+  .clcr-patient-card .cpc-acts .cpc-btn { min-width: 0; min-height: 48px; padding: var(--space-10px) var(--space-6px); font-size: 13px; }
+  .clcr-patient-card input, .clcr-patient-card select { min-height: 48px; font-size: 16px; }
+}
+/* Audited formula skins also style this shared footer; keep one alignment. */
+html[data-clcr-workflow-ui="1"] #clcrVisitSaveCard :is(h2, .cvs-hint) { text-align: left!important; }
+html[data-clcr-workflow-ui="1"] #clcrVisitSaveCard .cvs-hint[hidden] { display: none; }
+html[data-clcr-workflow-ui="1"] #clcrVisitSaveBtn:not([disabled]) {
+  background: var(--primary)!important;
+  color: #fff!important;
+  border: var(--border-hairline) solid var(--primary)!important;
+}

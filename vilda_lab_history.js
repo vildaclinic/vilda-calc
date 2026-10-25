@@ -524,10 +524,17 @@
     // Bez notatek nie da się ustalić kategorii, daty badania ani komentarza — błąd wołającego, nie pusty widok.
     if (!record(options.notesById)) throw new TypeError('VildaLabHistory.buildHistoryView: wymagane notesById (listPatientNotesForPatient).');
     var converter = options.converter, notesById = options.notesById, missingNotes = 0;
+    // Klirens ma własne zamrożone zapisy, jednostki i wartości ze znakiem. Czytamy
+    // pełne notatki, nie ich stratną projekcję listPatientLabSeries. Tylko główna
+    // zakładka prosi o tę kompozycję; pasek przelicznika zachowuje swój kontrakt.
+    var clcr = options.clcrSavedResults && typeof options.clcrSavedResults.projectPatientNotes === 'function'
+      ? options.clcrSavedResults.projectPatientNotes(Object.keys(notesById).map(function (id) { return notesById[id]; }), { patientId: options.patientId }) : null;
+    var handled = Object.create(null);
+    if (clcr) (clcr.handledNoteIds || []).forEach(function (id) { handled[id] = true; });
     var filter = Array.isArray(options.categoryFilter) ? options.categoryFilter : ['wynik-badania'];
     var nowISO = isoDate(options.nowISO);
     var ctx = Object.assign({}, options, { nowDay: nowISO ? dayNumber(nowISO) : null });
-    var accepted = function (note) { return !!note && filter.indexOf(noteCategory(note)) !== -1; };
+    var accepted = function (note) { return !!note && !handled[note.id] && filter.indexOf(noteCategory(note)) !== -1; };
     var byKey = {}, order = [], seen = {};
     function seriesFor(key, test) {
       if (!own(byKey, key)) {
@@ -633,13 +640,22 @@
       resultCount += view.entries.length;
       if (view.last && view.last.dateISO && (!lastDateISO || view.last.dateISO > lastDateISO)) lastDateISO = view.last.dateISO;
     });
+    if (clcr) {
+      resultCount += clcr.measurements.length;
+      clcr.measurements.forEach(function (entry) {
+        var date = isoDate(entry.dateISO);
+        if (date && (!lastDateISO || date > lastDateISO)) lastDateISO = date;
+      });
+    }
     var currentKey = record(options.current) ? text(options.current.testKey) : '';
-    return {
-      summary: { results: resultCount, analytes: views.filter(function (view) { return view.entries.length; }).length, lastDateISO: lastDateISO, pending: pending.length, missingNotes: missingNotes },
+    var result = {
+      summary: { results: resultCount, analytes: views.filter(function (view) { return view.entries.length; }).length + (clcr ? clcr.series.length : 0), lastDateISO: lastDateISO, pending: pending.length, missingNotes: missingNotes },
       panels: panels, pending: pending, treatment: treatmentRows,
       ghIgf1: { shown: gh.length - ghDuplicates, duplicates: ghDuplicates },
       preview: previewView(options.current, currentKey && own(viewByKey, currentKey) ? viewByKey[currentKey] : null, ctx)
     };
+    if (clcr) result.clcr = clcr;
+    return result;
   }
 
   // Tabela panelu: wiersze = daty malejąco (data badania lub kontroli GH przed datą wpisu tego samego dnia),

@@ -47,6 +47,20 @@ function acrInput(value) {
 }
 
 describe('Klirens B — jedna karta wyniku i jawny profil odniesienia', () => {
+  it('carries the exact displayed reference as inert metadata for saving, without reselecting it', () => {
+    const input = u25Input({ state: 'stable', assay: 'enzymatic_idms' });
+    const model = presentation.createModel(input, profile);
+    const html = presentation.render(input, profile);
+    const encoded = html.match(/data-clcr-reference-record="([^"]+)"/)?.[1];
+    expect(encoded).toBeTruthy();
+    const decoded = encoded.replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&amp;/g, '&');
+    expect(JSON.parse(decoded)).toEqual(model.reference);
+    const resultEncoded = html.match(/data-clcr-result-record="([^"]+)"/)?.[1];
+    const resultDecoded = resultEncoded.replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&amp;/g, '&');
+    expect(JSON.parse(resultDecoded)).toEqual(model);
+    expect(html).toContain(`data-clcr-reference-profile-version="${profile.version}"`);
+    expect(JSON.parse(decoded).population).toBe('Dzieci i młodzież od 2 lat');
+  });
   it('pokazuje jedną liczbę 83 dla U25 bez obowiązkowego kontekstu markera', () => {
     const input = u25Input();
     const model = presentation.createModel(input, profile);
