@@ -72,6 +72,17 @@ obcą wizualnie kartą i nie dodawaj kilku podobnych wierszy „odniesienia”.
   pytania o wiek do „pełnej interpretacji”. Znane PChN/diuretyki mają
   czytelną uwagę, a pochodzenie próbek jest opisanym założeniem; znana
   sprzeczność nadal blokuje obliczenie. Szczegóły polityki: [FENA.md](FENA.md).
+- Dla FEK (decyzja 25.10.2026) formularz ma cztery stężenia w grupach
+  **„Mocz”** i **„Krew”**, bez dodatkowej obowiązkowej ankiety. Właściwy
+  wiek pobiera się z istniejących danych z zachowaniem ich dokładności.
+  Orientacyjne pediatryczne P3–P97 opisuje się jako **„Norma dla wieku”**
+  i zdrową populację; odchylenia są bursztynowe. Na granicy 12 miesięcy
+  pokazuje się dwa nazwane zakresy bez jednej wspólnej oceny. Hipokaliemia
+  oraz znane PChN/AKI/diuretyki mają pierwszeństwo przed uspokajającym
+  statusem, nawet gdy liczba mieści się w zdrowym zakresie. Dorosłe 4–16%
+  jest wyłącznie neutralnym **„Zakresem w badaniu dorosłych”**, nie normą
+  całego życia. Brak właściwego profilu nie blokuje liczby i nie tworzy
+  pytania do „pełnej interpretacji”. Granice i źródła: [FEK.md](FEK.md).
 - Pełne poziomy, np. A1–A3 albuminurii, opisuj w zwiniętych
   **„Szczegółach i źródłach”**. Wyróżnij wyłącznie rzeczywiście nadaną
   kategorię pacjenta. Przycisk kategorii powinien otwierać właściwe Szczegóły.

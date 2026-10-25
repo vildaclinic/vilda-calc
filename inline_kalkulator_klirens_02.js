@@ -220,10 +220,10 @@
       },
       {
         id: "FEK_spot",
-        label: "FEK \u2013 sparowana próbka punktowa (%)",
+        label: "FEK — frakcja wydalania potasu (%)",
         version: "spot",
-        requires: ["spotPairedChemistry", "U_K_spot", "S_K_spot", "Ucr_spot", "Ucr_spot_unit", "Scr_spot", "Scr_spot_unit"],
-        note: "Wynik surowy bez uniwersalnego zakresu; wymaga kontekstu klinicznego.",
+        requires: ["U_K_spot", "S_K_spot", "Ucr_spot", "Ucr_spot_unit", "Scr_spot", "Scr_spot_unit"],
+        note: "Cztery stężenia; porównanie dla wieku, gdy dostępne. Znana niezgodność próbek nadal blokuje obliczenie.",
       },
       {
         id: "FECl_spot",
