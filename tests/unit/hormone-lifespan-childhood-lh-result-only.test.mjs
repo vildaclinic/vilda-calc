@@ -35,7 +35,8 @@ describe('LH dzieci — rzeczywisty wynik, bez nowej mediany', () => {
     policies.forEach(policy => {
       expect(policy).toMatchObject({ version: '2026-10-25.1', kind: 'educational-result-only',
         ordinaryOnly: true, analyte: 'lh', unit: 'IU/L', fullAgeIntervalRequired: true,
-        currentPatientOnly: true, contextAvailabilityKey: 'childhoodLhContextAvailable' });
+        currentPatientOnly: true, contextAvailabilityKey: 'childhoodLhContextAvailable',
+        wholeLifeResultNote: 'Sam wynik zobaczysz w „Całym życiu”, bez mediany.' });
       for (const key of ['points', 'statistic', 'referenceValue']) expect(policy).not.toHaveProperty(key);
     });
   });
@@ -187,6 +188,7 @@ describe('LH dzieci — rzeczywisty wynik, bez nowej mediany', () => {
   });
 
   it('zachowuje dawny tryb LH dziewcząt >16–<18 wraz z jego dotychczasową kwalifikacją', () => {
+    expect(oldPolicy).not.toHaveProperty('wholeLifeResultNote');
     const legacy = { analyte: 'lh', sex: 'female', ageYears: 17,
       measurement: { value: 5, unit: 'IU/L', operator: '=' } };
     expect(engine.evaluateResultOnly(runtime, legacy)).toEqual({ status: 'result-only', policy: oldPolicy, value: 5, unit: 'IU/L' });

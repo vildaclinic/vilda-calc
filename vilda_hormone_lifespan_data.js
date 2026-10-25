@@ -37968,7 +37968,8 @@ const childhoodLhResultOnlyPolicies = [
       "notNumericReference": true,
       "notClinicalReference": true,
       "closedSourcesOnly": true
-    }
+    },
+    "wholeLifeResultNote": "Sam wynik zobaczysz w „Całym życiu”, bez mediany."
   },
   {
     "version": "2026-10-25.1",
@@ -38041,7 +38042,8 @@ const childhoodLhResultOnlyPolicies = [
       "notNumericReference": true,
       "notClinicalReference": true,
       "closedSourcesOnly": true
-    }
+    },
+    "wholeLifeResultNote": "Sam wynik zobaczysz w „Całym życiu”, bez mediany."
   }
 ];
 const inhibinEvidence = {

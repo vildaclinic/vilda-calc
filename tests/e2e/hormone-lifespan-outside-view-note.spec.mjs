@@ -192,7 +192,6 @@ test('M44 testosterone preserves its source mean and renders one explanation thr
 
 for (const example of [
   { name: 'incompatible LH method', data: context({ assayMethodId: 'anshlite-lh' }), reason: 'incompatible-assay', message: 'Brak wartości odniesienia dla potwierdzonej metody tej próbki.' },
-  { name: 'ordinary female LH source gap', data: context({ sex: 'female', ageYears: 3, ageUpperYears: 3 }), reason: 'unsupported-age', message: 'Dla tego wieku brak wartości odniesienia pozwalającej nanieść wynik.' },
   { name: 'testosterone senior source gap', data: context({ analyte: 'testosterone_total', ageYears: 87, ageUpperYears: 87, measurement: { value: 1, unit: 'nmol/L' } }), reason: 'unsupported-age', message: 'Dla tego wieku brak wartości odniesienia pozwalającej nanieść wynik.' },
 ]) {
   test(`${example.name} keeps the qualification reason outside the view without promising a point`, async ({ page, diagramOrigin }) => {
@@ -207,6 +206,59 @@ for (const example of [
     await expect(caption(page)).toContainText(example.message);
     await expect(chart(page).locator('[data-patient-concentration]')).toHaveCount(0);
     await expectNoNote(page);
+  });
+}
+
+for (const sex of ['male', 'female']) {
+  test(`childhood ${sex} LH keeps the exact result only in whole life and explains both other views`, async ({ page, diagramOrigin }) => {
+    const data = context({ sex, ageYears: 3, ageUpperYears: 3,
+      contextBasis: 'current-patient', childhoodLhContextAvailable: true });
+    expect(await openComponent(page, diagramOrigin, data)).toEqual({ status: 'unavailable', reason: 'unsupported-age' });
+    const resultPolicy = `childhood-${sex}-lh-result-only`;
+    const expectResultWithoutMedian = async () => {
+      await expect(point(page)).toHaveCount(1);
+      await expect(point(page)).toHaveAttribute('data-result-only', 'true');
+      await expect(point(page)).toHaveAttribute('data-result-only-policy', resultPolicy);
+      await expect(point(page)).toHaveAttribute('data-value', '2');
+      expect(await point(page).getAttribute('data-reference-value')).toBeNull();
+      expect(await point(page).getAttribute('data-median')).toBeNull();
+      await expect(chart(page).locator('[data-median-point], [data-dot-label="median"]')).toHaveCount(0);
+    };
+    await expectResultWithoutMedian();
+    for (const [view, range] of [['puberty', sex === 'female' ? '6–16 lat' : '8–20 lat'], ['mini', '0–12 mies.']]) {
+      await period(page, view).click();
+      const message = `Wiek z formularza jest poza wybranym okresem (${range}). Sam wynik zobaczysz w „Całym życiu”, bez mediany.`;
+      await expect(caption(page)).toBeVisible();
+      await expect(caption(page)).toHaveText(message);
+      await expect(description(page)).toContainText(message);
+      expect((await description(page).textContent()).split(message)).toHaveLength(2);
+      await expect(chart(page).locator('[data-patient-concentration]')).toHaveCount(0);
+      await period(page, 'life').click();
+      await expectResultWithoutMedian();
+      await expect(caption(page)).not.toContainText('Sam wynik zobaczysz');
+      await expect(description(page)).not.toContainText(message);
+    }
+    // A display permission cannot promise a point after its current-context
+    // gate is lost; restoring the same valid input restores only its result.
+    await update(page, { ...data, childhoodLhContextAvailable: false });
+    await expect(chart(page).locator('[data-patient-concentration]')).toHaveCount(0);
+    await period(page, 'puberty').click();
+    await expect(caption(page)).not.toContainText('Sam wynik zobaczysz');
+    await expect(description(page)).not.toContainText('Sam wynik zobaczysz');
+    await update(page, data);
+    await period(page, 'life').click();
+    await expectResultWithoutMedian();
+
+    if (sex === 'male') {
+      // Exactly one year lies on the mini axis but that view still cannot
+      // display the new childhood concentration-only point.
+      await update(page, { ...data, ageYears: 1, ageUpperYears: 1 });
+      await period(page, 'mini').click();
+      await expect(caption(page)).toHaveText('Sam wynik zobaczysz w „Całym życiu”, bez mediany.');
+      await expect(chart(page).locator('[data-patient-concentration]')).toHaveCount(0);
+      await period(page, 'life').click();
+      await expectResultWithoutMedian();
+    }
   });
 }
 

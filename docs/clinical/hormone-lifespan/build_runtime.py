@@ -72,6 +72,7 @@ def build():
             1, policy['sex'] == 'female', 6, True)
         assert policy['fullAgeIntervalRequired'] is True and policy['currentPatientOnly'] is True
         assert policy['contextAvailabilityKey'] == 'childhoodLhContextAvailable'
+        assert policy['wholeLifeResultNote'] == 'Sam wynik zobaczysz w „Całym życiu”, bez mediany.'
         assert not any(key in policy for key in ('points', 'statistic', 'referenceValue'))
         note = policy['sourceNote']
         assert (note['kind'], note['minAge'], note['maxAge'], note['maxAgeExclusive']) == (

@@ -1360,12 +1360,23 @@
     }
     function explainUnavailablePoint() {
       if (amhInfantComparisonActive() || inhibinComparisonActive() || gonadotropinComparisonActive()) return;
-      if (femaleGonadotropinsActive() && view === "mini" && ["lh", "fsh"].includes(analyteHormones[currentAnalyte])) return;
       if (renderedObservation?.patientPoint?.status === "ready") return;
       const measurement = patientContext?.measurement;
       const id = analyteHormones[currentAnalyte];
       const [minAge, maxAge] = visibleAgeDomain();
       if (renderedResultOnlyPoint) return;
+      const wholeLifeNote = resultOnlyVisible() && resultOnlyPoint.policy.wholeLifeResultNote;
+      if (view !== "life" && typeof wholeLifeNote === "string" && wholeLifeNote) {
+        const period = view === "mini"
+          ? `${fmt(minAge * 12)}–${fmt(maxAge * 12)} mies.`
+          : `${fmt(minAge)}–${fmt(maxAge)} lat`;
+        const outside = patientAgeYears < minAge || patientAgeYears > maxAge;
+        const message = (outside ? `Wiek z formularza jest poza wybranym okresem (${period}). ` : "") + wholeLifeNote;
+        byId("scale-note").textContent = message;
+        byId("chart-desc").textContent += " " + message;
+        return;
+      }
+      if (femaleGonadotropinsActive() && view === "mini" && ["lh", "fsh"].includes(id)) return;
       if (resultOnlyVisible() && view === "puberty" &&
           (patientAgeYears < minAge || patientAgeYears > maxAge)) {
         const message = `${resultOnlyPoint.policy.currentPatientOnly ? "Wiek z formularza" : "Wiek pacjentki"} jest poza wybranym okresem (${fmt(minAge)}–${fmt(maxAge)} lat). Sam wynik zobaczysz w „Całym życiu”, bez mediany.`;
