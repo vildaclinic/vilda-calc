@@ -3009,6 +3009,7 @@ const OPTIONAL_ASSETS = [
   '/vilda_data_import_export.js?v=107',
   '/vilda_data_import_export.js?v=108',
   '/vilda_data_import_export.js?v=109',
+  '/vilda_data_import_export.js?v=110',
   '/vilda_baseline_pacjenta.js?v=1',
   '/vilda_baseline_pacjenta.js?v=2',
   '/vilda_baseline_pacjenta.js?v=3',
