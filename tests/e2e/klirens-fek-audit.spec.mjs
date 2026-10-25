@@ -6,7 +6,6 @@ import { czekajNaUstabilizowanyUklad, kliknij } from '../support/uklad-czekanie.
 // the production collector and sanitizers with an isolated in-memory adapter.
 const card = page => page.locator('#clcrResultReport .clcr-result-card[data-clcr-series="FEK_spot"]');
 const details = page => page.locator('#clcr-fek-details');
-const snapshot = async page => JSON.parse(await card(page).getAttribute('data-clcr-fek-snapshot'));
 const base = {
   currentVersion: 'spot', formulaPicker: 'FEK_spot', age: '8', ageMonths: '', ageDays: '',
   sex: '', weight: '', height: '', Scr: '', U_K_spot: '20', S_K_spot: '4',
@@ -49,23 +48,45 @@ async function choose(page, formulaId) {
 }
 
 async function expectResult(page, { raw, status, tone, outOfRange } = {}) {
-  await expect(card(page)).toBeVisible();
-  await expect(page.locator('#clcrResultReport .clcr-result-card:visible')).toHaveCount(1);
-  await expect(card(page).locator('.clcr-result-value')).toHaveCount(1);
-  await expect(card(page).locator('.clcr-result-unit')).toHaveText('%');
-  if (raw !== undefined) await expect.poll(async () => Number(await card(page).getAttribute('data-clcr-value'))).toBeCloseTo(raw, 12);
-  const result = await snapshot(page);
+  // Read one coherent DOM observation per poll. This retains the same browser
+  // assertions while avoiding a dozen cross-process round trips for every
+  // intermediate result in the mobile/unit-switch scenarios.
+  let observed;
+  await expect.poll(async () => {
+    observed = await page.evaluate(() => {
+      const node = document.querySelector('#clcrResultReport .clcr-result-card[data-clcr-series="FEK_spot"]');
+      return {
+        visible: node?.checkVisibility() === true,
+        visibleCards: [...document.querySelectorAll('#clcrResultReport .clcr-result-card')].filter(item => item.checkVisibility()).length,
+        valueCount: node?.querySelectorAll('.clcr-result-value').length ?? 0,
+        unit: node?.querySelector('.clcr-result-unit')?.textContent.trim(),
+        shown: node?.querySelector('.clcr-result-value')?.textContent.trim(),
+        displayAttribute: node?.getAttribute('data-clcr-display-value'),
+        toneAttribute: node?.getAttribute('data-clcr-tone'),
+        rawAttribute: Number(node?.getAttribute('data-clcr-value')),
+        result: node ? JSON.parse(node.getAttribute('data-clcr-fek-snapshot')) : null,
+        vaultLocked: !window.VildaVault.isUnlocked(),
+        saveDisabled: document.getElementById('clcrVisitSaveBtn')?.disabled === true,
+      };
+    });
+    const model = observed.result;
+    const rawMatches = raw === undefined || (raw === 0 ? observed.rawAttribute === 0
+      : Number.isFinite(observed.rawAttribute) && Math.abs((observed.rawAttribute - raw) / raw) <= 1e-12);
+    return {
+      visible: observed.visible, visibleCards: observed.visibleCards, valueCount: observed.valueCount, unit: observed.unit,
+      sameDisplay: Boolean(model && observed.shown === model.display.text && observed.displayAttribute === model.display.text),
+      sameRaw: rawMatches && model?.rawValue === observed.rawAttribute,
+      sameStatus: status === undefined || model?.status === status,
+      sameTone: tone === undefined || model?.tone === tone && observed.toneAttribute === tone,
+      vaultLocked: observed.vaultLocked, saveDisabled: observed.saveDisabled,
+    };
+  }).toEqual({ visible: true, visibleCards: 1, valueCount: 1, unit: '%', sameDisplay: true,
+    sameRaw: true, sameStatus: true, sameTone: true, vaultLocked: true, saveDisabled: true });
+  const result = observed.result;
   expect(result).toMatchObject({ schema: 'clcr-fek', version: 1, valid: true, unit: '%' });
   if (status !== undefined) expect(result.status).toBe(status);
-  if (tone !== undefined) {
-    expect(result.tone).toBe(tone);
-    await expect(card(page)).toHaveAttribute('data-clcr-tone', tone);
-  }
+  if (tone !== undefined) expect(result.tone).toBe(tone);
   if (outOfRange !== undefined) expect(result.outOfRange).toBe(outOfRange);
-  await expect(card(page).locator('.clcr-result-value')).toHaveText(result.display.text);
-  await expect(card(page)).toHaveAttribute('data-clcr-display-value', result.display.text);
-  expect(await page.evaluate(() => window.VildaVault.isUnlocked())).toBe(false);
-  await expect(page.locator('#clcrVisitSaveBtn')).toBeDisabled();
   return result;
 }
 
