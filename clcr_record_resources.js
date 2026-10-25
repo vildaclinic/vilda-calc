@@ -51,7 +51,7 @@
     ["clcr_fehco3.js?v=1", "VildaClcrFehco3"],
     ["clcr_measured_clearance_reference_data.js?v=1", "ClcrMeasuredClearanceReferenceData"],
     ["clcr_measured_clearance_reference.js?v=1", "ClcrMeasuredClearanceReference"],
-    ["clcr_result_presentation.js?v=7", "ClcrResultPresentation"],
+    ["clcr_result_presentation.js?v=8", "ClcrResultPresentation"],
     ["clcr_saved_legacy_calculator.js?v=1", "ClcrSavedLegacyCalculator"],
     ["clcr_result_details.js?v=1", "ClcrResultDetails"],
   ];
