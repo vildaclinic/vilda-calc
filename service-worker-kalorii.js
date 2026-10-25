@@ -2050,6 +2050,7 @@ const OPTIONAL_ASSETS = [
   // Read-only new-measurement preview (Start / DocPro / fullscreen shell).
   '/vilda_centile_live_panel.css?v=1',
   '/vilda_centile_live_panel.css?v=2',
+  '/vilda_centile_live_panel.css?v=3',
   '/vilda_centile_live_data.js?v=1',
   '/vilda_centile_live_data.js?v=2',
   '/vilda_centile_live_data.js?v=3',

@@ -191,6 +191,14 @@ ważnym tokenie tej samej osoby i wizyty. Unieważnienie właściciela natychmia
 usuwa obraz i zamyka powiększenie; neutralna karta nie zawiera danych pacjenta.
 Spóźniona odpowiedź odczytu nie może przywrócić starego obrazu ani Przypomnień.
 
+Początkowa osłona miejsca siatki obejmuje także „Podsumowanie wyników”, które
+może odtworzyć się przed niezależnym odczytem porównania pomiarów. Ukrywa je
+tylko podczas startu i pierwszego oczekiwania bez aktywnej siatki; gotowość,
+błąd lub brak zastosowania przywracają zwykłe reguły widoczności podsumowania.
+W DocPro kontener siatki poprzedza podsumowanie w DOM. Prawidłowe podsumowanie
+bez wcześniejszego pomiaru pozostaje pod siatką, a spóźnione porównanie nie
+przesuwa jej ani nie zmniejsza dostępnej wysokości.
+
 Podczas serii programowych zmian pól panel grupuje pomiary układu w jednej
 klatce. Unieważnienie operacji i usunięcie obrazu innego pacjenta pozostają
 synchroniczne. Pierwsze zarezerwowanie miejsca od razu ustala wysokość neutralnej
