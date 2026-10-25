@@ -193,6 +193,17 @@
       if (!currentBounds(owner)) return;
       boundsFrame = w.requestAnimationFrame(function () {
         boundsFrame = 0;
+        if (!currentBounds(owner)) return;
+        // WAAPI can present the first fade frame at opacity zero. Leave the
+        // following frame visible before background pixel readback competes
+        // with painting. Normal updates and reduced motion keep two frames.
+        if (revealAnimation) {
+          boundsFrame = w.requestAnimationFrame(function () {
+            boundsFrame = 0;
+            prepareBounds(owner, false);
+          });
+          return;
+        }
         prepareBounds(owner, false);
       });
     });

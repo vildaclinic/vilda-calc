@@ -1,7 +1,7 @@
 import { expect, test } from '@playwright/test';
 import { createFictionalVault, loadPatient, readyForPatient, shellFrame } from '../support/centile-live-fixture.mjs';
 
-test.use({ serviceWorkers: 'block', reducedMotion: 'no-preference' });
+test.use({ serviceWorkers: 'block', contextOptions: { reducedMotion: 'no-preference' } });
 test.setTimeout(120_000);
 
 function installProbe() {

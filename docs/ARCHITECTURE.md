@@ -200,6 +200,9 @@ obraz pojawia się przez zmianę przezroczystości w ciągu 300 ms, po ustaleniu
 geometrii, bez opóźniania obliczeń. Animacja występuje raz na dokument i jest
 pomijana przy `prefers-reduced-motion`. Kolejne odświeżenia zachowują bieżący
 obraz; przeniesienie do pełnego ekranu kończy ewentualną animację pojawiania.
+Gdy trwa pierwsze pojawianie, skanowanie marginesów otrzymuje dodatkową klatkę
+odroczenia: pierwsza klatka animacji może być jeszcze całkowicie przezroczysta.
+Sam gotowy obraz i jego animacja nie czekają na skanowanie.
 
 Początkowa osłona miejsca siatki obejmuje także „Podsumowanie wyników”, które
 może odtworzyć się przed niezależnym odczytem porównania pomiarów. Ukrywa je

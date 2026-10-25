@@ -547,6 +547,77 @@ describe('live panel controller — deferred fullscreen preparation', () => {
     expect(view.fit).toHaveBeenCalledTimes(fits);
   });
 
+  it('leaves a visible fade frame before background readback without postponing the ready drawing', async () => {
+    const e = setup({ deferredBounds: true, animated: true }); const view = await ready(e);
+    expect(e.api.getState()).toMatchObject({ status: 'ready', slotStatus: 'ready' });
+    expect(view.update).toHaveBeenCalledOnce();
+    expect(e.animations).toHaveLength(1);
+    e.nextFrame();
+    expect(e.prepareContentBounds).not.toHaveBeenCalled();
+    e.nextFrame();
+    expect(e.prepareContentBounds).not.toHaveBeenCalled();
+    e.nextFrame();
+    expect(e.prepareContentBounds).toHaveBeenCalledOnce();
+    expect(view.update).toHaveBeenCalledOnce();
+    expect(e.animations).toHaveLength(1);
+  });
+
+  it.each(['reduced-motion', 'without-WAAPI', 'finished-fade'])('%s preserves the existing two-frame readback boundary', async mode => {
+    const e = setup({ deferredBounds: true, animated: mode !== 'without-WAAPI', reducedMotion: mode === 'reduced-motion' });
+    await ready(e);
+    e.nextFrame();
+    expect(e.prepareContentBounds).not.toHaveBeenCalled();
+    if (mode === 'finished-fade') e.animations[0].onfinish();
+    else expect(e.animations).toHaveLength(0);
+    e.nextFrame();
+    expect(e.prepareContentBounds).toHaveBeenCalledOnce();
+  });
+
+  it.each(['lock', 'clear', 'patient-change', 'pagehide'])('%s during the additional fade frame prevents stale readback', async reason => {
+    const e = setup({ deferredBounds: true, animated: true }); const view = await ready(e);
+    e.nextFrame(); e.nextFrame();
+    expect(e.prepareContentBounds).not.toHaveBeenCalled();
+    if (reason === 'pagehide') e.win.dispatchEvent({ type: 'pagehide' });
+    else {
+      if (reason === 'patient-change') e.replacePatient();
+      else e.invalidate();
+      e.emit({ reason, identityChanged: true });
+    }
+    expect(view.destroy).toHaveBeenCalledOnce();
+    expect(e.animations[0].cancel).toHaveBeenCalledOnce();
+    e.nextFrame();
+    expect(e.prepareContentBounds).not.toHaveBeenCalled();
+  });
+
+  it('a changed measurement cancels the additional first-reveal frame and prepares its new image after two frames', async () => {
+    const e = setup({ deferredBounds: true, animated: true }); const view = await ready(e);
+    e.nextFrame(); e.nextFrame();
+    const refresh = e.api.refresh();
+    e.pending[1].resolve(e.snapshot({ source: 'PALCZEWSKA', currentHeight: 161 })); await refresh;
+    expect(view.update).toHaveBeenCalledTimes(2);
+    expect(e.animations[0].cancel).toHaveBeenCalledOnce();
+    e.nextFrame();
+    expect(e.prepareContentBounds).not.toHaveBeenCalled();
+    e.nextFrame();
+    expect(e.prepareContentBounds).toHaveBeenCalledOnce();
+    expect(e.boundsJobs[0].rendered.source).toBe('PALCZEWSKA');
+    expect(e.animations).toHaveLength(1);
+  });
+
+  it('fullscreen priority cancels the additional fade frame and starts one immediate preparation', async () => {
+    const e = setup({ deferredBounds: true, animated: true }); const view = await ready(e);
+    e.nextFrame(); e.nextFrame();
+    expect(e.prepareContentBounds).not.toHaveBeenCalled();
+    view.options.onExpand();
+    expect(e.animations[0].cancel).toHaveBeenCalledOnce();
+    expect(e.prepareContentBounds).toHaveBeenCalledOnce();
+    expect(e.boundsJobs[0].prioritize).toHaveBeenCalledOnce();
+    e.nextFrame();
+    expect(e.prepareContentBounds).toHaveBeenCalledOnce();
+    e.boundsJobs[0].resolve({ status: 'ready' }); await flush();
+    expect(e.open).toHaveBeenCalledOnce();
+  });
+
   it('coalesces early expand clicks and opens only after exact bounds are ready', async () => {
     const e = setup({ deferredBounds: true }); const view = await ready(e);
     view.options.onExpand(); view.options.onExpand();
