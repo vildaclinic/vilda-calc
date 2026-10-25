@@ -227,10 +227,10 @@
       },
       {
         id: "FECl_spot",
-        label: "FECl \u2013 sparowana próbka punktowa (%)",
+        label: "FECl — frakcja wydalania chlorków (%)",
         version: "spot",
-        requires: ["spotPairedChemistry", "U_Cl_spot", "S_Cl_spot", "Ucr_spot", "Ucr_spot_unit", "Scr_spot", "Scr_spot_unit"],
-        note: "Wynik surowy bez uniwersalnego zakresu; wymaga kontekstu klinicznego.",
+        requires: ["U_Cl_spot", "S_Cl_spot", "Ucr_spot", "Ucr_spot_unit", "Scr_spot", "Scr_spot_unit"],
+        note: "Cztery stężenia. Wynik wymaga kontekstu klinicznego; znana niezgodność próbek blokuje obliczenie.",
       },
       {
         id: "FEHCO3_spot",

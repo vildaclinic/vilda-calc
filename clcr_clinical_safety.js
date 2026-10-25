@@ -486,6 +486,13 @@
   }
 
   function computeFractionalExcretion(input) {
+    // FECl has its own audited exact arithmetic. Only this explicit marker
+    // opts into its disclosed sample assumption; other FE protocols retain
+    // their independent, required confirmations below.
+    if (input && input.formulaId === "FECl_spot") {
+      if (typeof root?.VildaClcrFecl?.compute === "function") return root.VildaClcrFecl.compute(input);
+      return Object.freeze({ ok: false, valuePct: null, error: "Nie można obliczyć FECl: moduł obliczeniowy jest niedostępny." });
+    }
     // FENa has its separately audited exact arithmetic and disclosed pairing
     // assumption. The explicit marker leaves all other FE contracts unchanged.
     if (input && input.formulaId === "FENa_spot") {
