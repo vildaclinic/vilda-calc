@@ -23,6 +23,7 @@ Rejestr jest inwentaryzacją techniczną. Nie nadaje opisanym modułom statusu w
 | LAB-TT-MAYO | Testosteron całkowity: M według wieku/G, F według wieku od 6 miesięcy | `vilda_lab_testosterone_data.js`, `vilda_lab_testosterone.js`, `vilda_lab_testosterone_units.js`, wspólne UI i snapshot | `lab-testosterone*.test.mjs`, E2E `lab-testosterone*.spec.mjs`; wyniki uruchomień w PR | etap 3 M i pierwsza partia F; źródła, luki i polityki w `TESTOSTERONE.md`; końcowy przegląd kliniczny właściciela przed scaleniem |
 | HORMONE-FEMALE-TT-AGE | TT dziewcząt 6–18: osobna mediana modelu i punkt wyniku | `vilda_female_tt_age.js`, `vilda_female_tt_age_ui.js`, osobne dane/polityka pakowane do runtime | `female-tt-age.test.mjs`, E2E `lab-female-tt-age*.spec.mjs`; wyniki w PR | zakres zaakceptowanej makiety 24.10.2026; poza 85 zwykłymi profilami, bez nowych RI/SDS/historii; [kontrakt](hormone-lifespan/FEMALE_TT_AGE.md) |
 | HORMONE-MALE-E2-AGE | E2 chłopców 6–18: osobna mediana modelu i punkt wyniku, z ograniczeniem niskiego końca | `vilda_male_e2_age.js`, `vilda_male_e2_age_ui.js`, osobne dane/polityka pakowane do runtime | `male-e2-age.test.mjs` oraz regresje adaptera/UI/PWA; wykonane wyniki w PR | zaakceptowana makieta 25.10.2026; pełne [6,18], bez podłogi LLOQ i nowych RI/SDS/historii; [kontrakt](hormone-lifespan/MALE_E2_AGE.md) |
+| HORMONE-MALE-E2-ADULT-AGE | E2 mężczyzn 31,4–60,9: przybliżona mediana z ryciny i punkt wyniku w tej samej karcie | `vilda_male_e2_age.js`, `vilda_male_e2_age_ui.js`, odrębne dane/polityka Frederiksen pakowane do runtime | `male-e2-adult-age.test.mjs`, rzeczywisty adapter, UI i zimny start PWA; wykonane wyniki w PR | makieta i wdrożenie zaakceptowane 25.10.2026; 296 wierzchołków odczytu, liniowo po ścieżce, stała oś 0–200, bez mostu wieku i nowych RI/SDS/historii; [kontrakt](hormone-lifespan/MALE_E2_ADULT_AGE.md) |
 | LAB-HISTORY | Historia i porównanie zapisanych wyników badań (model bez UI) | `vilda_lab_history.js` | `lab-history-view.test.mjs`, `lab-history-vault.test.mjs` | test regresyjny modelu; moduł jeszcze nieładowany przez strony (PR1 planu historii) |
 | LAB-PANELS | Panele i interpretacje laboratoryjne | `lab_clinical_panels.js`, `lab_pin_result.js` | kontrola składni; brak dedykowanej regresji interpretacji klinicznych | wysoki priorytet; brak pełnego pokrycia klinicznego |
 | GH-IGF | Dawkowanie i monitorowanie GH/IGF-1 | `gh_igf_therapy.js`, `gh_therapy_monitor.js`, `gh_therapy_segments.js`, `vilda_gh_opakowania_dane.js`, `vilda_gh_opakowania.js`, `vilda_gh_dawka_dane.js`, `vilda_gh_dawka.js` | kontrola składni; testy PRO dotyczą uprawnień, nie dawkowania ani terapii; liczba wkładów, wstrzykiwaczy i fiolek: `gh-opakowania-waznosc` (Vitest + E2E, P-GH-WAZNOSC); dawka podawana, krok i limit jednego wstrzyknięcia: `gh-dawka-podawana` (Vitest + E2E, P-GH-DAWKA-PODAWANA); Increlex — dawka na podanie, krok 0,1 mg, nie więcej niż 0,12 mg/kg: `gh-dawka-podawana` (Vitest + E2E, P-GH-INCRELEX-PODANIE); „Aktualna dawka” Increlex w Karcie pacjenta: `karta-gh-increlex-dawka` (E2E, P-GH-INCRELEX-KARTA); pozostałe widoki dawki Increlex w Karcie pacjenta: `karta-gh-increlex-widoki` (E2E, P-GH-INCRELEX-WIDOKI); tytuł wpisów Increlex: `karta-pacjenta-historia-automat` (Vitest) i `gh-dawka-podawana` (E2E, P-GH-INCRELEX-TYTUL); zalecenia dla pacjenta i liczba iniekcji z podziałem dawki: `gh-dawka-podawana` (Vitest) i `gh-iniekcje-zalecenia` (E2E, P-GH-INIEKCJE-ZALECENIA) | wysoki priorytet przeglądu klinicznego |
@@ -2693,6 +2694,80 @@ oczekiwań. Akceptacja zakresu i zielone testy nie są walidacją kliniczną.
 
 Pełne źródła, SHA-256 i ograniczenia:
 [MALE_E2_AGE.md](hormone-lifespan/MALE_E2_AGE.md).
+
+### HORMONE-MALE-E2-ADULT-AGE — wariant Frederiksen w jednej karcie E2, 2026-10-25
+
+**Decyzja właściciela:** po kontrolowanym odczycie pełnego artykułu,
+suplementu i ocenie prywatnej makiety desktop/mobile właściciel
+zaakceptował zakres i polecił wdrożenie („ok, akceptuję, koduj”).
+To zamierzona nowa informacja edukacyjna: zestawienie wyniku z przybliżoną
+P50 wieku. Nie jest nowym RI, SDS, centylem, ilorazem do mediany,
+rozpoznaniem lub walidacją kliniczną.
+
+**Źródło:** Frederiksen 2020, DOI `10.1210/clinem/dgz196`, końcowy pełny
+tekst; ryc. 3a, s. 760/PDF 7. Suplement **v1**, DOI
+`10.6084/m9.figshare.10084145.v1`, ryc. 4a/PDF 12. Health2008: **157
+mężczyzn 31,4–60,9 lat**, surowica, in-house isotope-dilution TurboFlow
+LC-MS/MS. N=772 dotyczy wszystkich chłopców/mężczyzn, nie dorosłych lub
+rocznika; 5,9–23,4 młodszej kohorty jest zakresem obu płci łącznie.
+
+**Odczyt i ograniczenia:** 547 wektorowych wierzchołków ryciny głównej,
+296 po wycięciu okna dorosłego, z dwoma interpolowanymi końcami. Są to
+punkty grafiki, nie roczna tabela LMS lub odzyskany GAMLSS. Łączenie
+liniowe po oryginalnych odcinkach zachowuje tę ścieżkę; PCHIP Madsen
+pozostaje osobny. Logarytmiczna ryc. 4a jest rastrem tego samego modelu.
+Kontrola 2951 wieków dała maksymalną różnicę 1,4232 pmol/L, mieszczącą
+się w łącznych budżetach grafiki, bez estymacji klinicznego CI/CV P50.
+Mediana jest niemal płaska, około 87–89 pmol/L; różnica 2,087 pmol/L
+i kwantyzacja nie uzasadniają prezentacji dokładnego efektu starzenia.
+
+Źródłowe LOD 4,04/LOQ 12,1 nie są granicami pacjenta. Podstawienie
+1 pmol/L za <LOD opisano dla ilustracji; wpływ na dopasowanie niejasny.
+Tekst Qlow interday ≤11% i 20 partii różni się od suplementu E2 12,3%
+przy 31,2 pmol/L i 18 partii. Te QC nie są błędem mediany lub korektą
+rysunku. Nie ustalono dorosłej pory pobrania/postu i szczegółowych
+wyłączeń lekowych/BMI. Narracyjne 50–150 nie jest nową normą.
+
+**Kontrakt:** odrębne `maleE2AdultAgeData/Policy`, poza 85 zwykłymi
+profilami; 38 wcześniejszych pól runtime pozostaje bez zmian.
+`evaluateSources([{data,policy}], context)` wybiera jedno źródło tylko
+według całego jawnego wieku. Jedna karta automatycznie pokazuje Madsen
+6–18 albo Frederiksen 31,4–60,9, bez ankiety i wyboru publikacji.
+Odczyt przy wpisanej dolnej granicy ma ≈ i dwie cyfry znaczące.
+Stała oś dorosła 0–200 pmol/L i równoważne pięć jednostek, brak 296
+kropek udających roczne obserwacje. Luka 18–31,4 i wiek po 60,9 nie
+dostają mostu, mediany najbliższej grupy lub ekstrapolacji.
+
+Normy Mayo/Tietz, przypięcie i historia pozostają niezależne; P50 nie
+jest zapisywana. M40 / 125 → P50 88,16623312463493, punkt 125 i nadal
+`within` wobec istniejącego Tietz 40–160. Dokładne 0/0,4 mają rzeczywiste
+punkty, 300 strzałkę z liczbą przy stałej osi; nierówności/LOD/LOQ bez
+dokładnej kropki lub imputacji. Znane wyłączenia/niezgodna metoda lub
+materiał nie uruchamiają próby z innym źródłem. Nieznane fakty pozostają
+nieznane; dodatnie dane leczenia zachowują osobę i bieżący kontekst.
+Nie przenosimy metody/materiału/protokołu z innej próbki TT.
+
+**Poprawka integracji wieku.** E2E ujawniło błąd odczytu pustych miesięcy: przy
+`shared.ageMonths === ''` adapter sesji mógł zwrócić `NaN` po parsowaniu
+pustego pola, co wybierało nieprawidłową precyzję miesięczną i usuwało
+znany wiek 40 lat. Wąska normalizacja tylko tego fallbacku do `null`
+zachowuje precyzję ukończonych lat. Poprawne miesiące sesji pozostają,
+jawnie błędne lub poza zakresem zgłoszone miesiące nadal są odrzucane,
+a `activeAssessment` zachowuje nadrzędną precyzję bez imputacji DOB/dni.
+Regresja rzeczywistego czytnika/adaptera ma zabezpieczać ten przypadek;
+normy i historia nie zmieniają się. Końcowe wyniki podaje PR.
+
+**Przypadki rzeczywistych funkcji do weryfikacji:** `[40,41)` kwalifikuje;
+31 lat 5 mies. /60 lat 9 mies. → około 89/87. `[31,32)`, `[60,61)`, 31 lat 4 mies.,
+60 lat 10 mies. przecinają źródło; 25/75/brak lub niepełny wiek bez P50.
+Dokładne 31,4/60,9 są brzegami API, nie wymyśloną precyzją legacy UI.
+Zmiana osoby/płci/analitu, lock/restore, spóźniony kontekst i historia
+czyszczą stare liczby i pełny ekran. Weryfikacja obejmuje rzeczywisty
+silnik/adapter, 296 punktów, liniowe odcinki, jednostki, stałą geometrię,
+RI i wcześniejsze dane, mobile 320/390, pełny ekran/fokus i zimny start
+PWA po zamknięciu przeglądarki/wyłączeniu serwera. Wykonane wyniki i CI
+dla końcowego SHA podaje PR. Pełny kontrakt, hashe i źródłowe ograniczenia:
+[MALE_E2_ADULT_AGE.md](hormone-lifespan/MALE_E2_ADULT_AGE.md).
 
 ### HORMONE-LH-FSH-STABLE-CURVES — stałe krzywe i dorosłe odniesienia, 2026-10-11
 

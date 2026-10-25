@@ -496,7 +496,7 @@
   <script src="vilda_zrodla_pacjenta.js?v=1"></script>
   <script src="vilda_puberty_source.js?v=13"></script>
   <script src="vilda_lab_neonatal_context.js?v=2"></script>
-  <script src="vilda_hormone_lifespan_data.js?v=43"></script>
+  <script src="vilda_hormone_lifespan_data.js?v=44"></script>
   <script src="vilda_hormone_lifespan_reference.js?v=7"></script>
   <script src="vilda_hormone_lifespan_observations.js?v=1"></script>
   <script src="vilda_hormone_lifespan_display.js?v=15"></script>
@@ -516,8 +516,8 @@
   <script src="vilda_e2_d3_ui.js?v=1"></script>
   <script src="vilda_female_tt_age.js?v=1"></script>
   <script src="vilda_female_tt_age_ui.js?v=1"></script>
-  <script src="vilda_male_e2_age.js?v=1"></script>
-  <script src="vilda_male_e2_age_ui.js?v=1"></script>
+  <script src="vilda_male_e2_age.js?v=2"></script>
+  <script src="vilda_male_e2_age_ui.js?v=2"></script>
   <script src="lab_pin_result.js?v=11"></script>
   <script src="vilda_lab_history.js?v=4"></script>
   <script src="lab_history_strip.js?v=4"></script>
@@ -669,6 +669,9 @@
       var sex = shared.sex || patient.sex || null;
       var ageYears = shared.age != null && shared.age !== '' ? shared.age : patient.age;
       var ageMonths = shared.ageMonths != null && shared.ageMonths !== '' ? shared.ageMonths : patient.ageMonths;
+      // The legacy session bridge parses a reported blank month as NaN.
+      // Keep that known blank as year precision, without accepting bad input.
+      if (shared.ageMonths === '' && Number.isNaN(ageMonths)) ageMonths = null;
       var activeAssessment = null;
       try {
         var assessmentRuntime = window.VildaPubertyAssessmentContext;

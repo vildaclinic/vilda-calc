@@ -3,6 +3,7 @@ import { readFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import vm from 'node:vm';
 import { describe, expect, it } from 'vitest';
+import { beforeMaleE2AdultAgeRuntime } from '../support/prior-female-gonadotropin-bundle.mjs';
 
 const require = createRequire(import.meta.url);
 const runtime = require('../../vilda_hormone_lifespan_data.js');
@@ -43,7 +44,7 @@ describe('male E2 age — actual source P50, production converter/parser and PCH
     expect(runtime.maleE2AgeData).toEqual(data);
     expect(runtime.maleE2AgePolicy).toEqual(policy);
     expect(runtime.patientPointData.profiles).toHaveLength(85);
-    const preceding = Object.fromEntries(Object.entries(runtime).filter(([key]) =>
+    const preceding = Object.fromEntries(Object.entries(beforeMaleE2AdultAgeRuntime(runtime)).filter(([key]) =>
       !['maleE2AgeData', 'maleE2AgePolicy'].includes(key)));
     expect(Object.keys(preceding)).toHaveLength(36);
     expect(createHash('sha256').update(JSON.stringify(preceding)).digest('hex'))

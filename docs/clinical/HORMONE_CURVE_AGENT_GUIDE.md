@@ -961,6 +961,65 @@ ankiety. Nie dodawaj zwykłego profilu do rejestru 85, nie podmieniaj
 Pełny kontrakt i przypadki: [MALE_E2_AGE.md](hormone-lifespan/MALE_E2_AGE.md).
 Akceptacja wdrożenia nie nadaje modelowi statusu walidacji klinicznej.
 
+## E2 dorosłych — zaakceptowany wariant Frederiksen, 25 października 2026
+
+Właściciel zaakceptował prywatną makietę jednej karty E2 i polecił
+wdrożenie („ok, akceptuję, koduj”). Dotyczy nowej edukacyjnej informacji
+o przybliżonej medianie wieku. Zachowaj normy Mayo/Tietz, historię,
+żeńskie E2/TT, porównanie płci i dotychczasowy Madsen 6–18.
+
+- Frederiksen 2020, DOI `10.1210/clinem/dgz196`, pełny końcowy tekst,
+  ryc. 3a/s. 760; suplement **v1**, DOI `10.6084/m9.figshare.10084145.v1`,
+  ryc. 4a/PDF 12. Health2008: 157 mężczyzn 31,4–60,9, surowica, in-house
+  TurboFlow LC-MS/MS. N=772 to wszystkie męskie grupy, nie N dorosłych.
+  Młodsze 5,9–23,4 opisano łącznie dla obu płci; nie dopisuj męskiego
+  końca lub pokrycia luki na podstawie ciągłości kreski.
+- Import obejmuje 296 wierzchołków wyciętej ścieżki, z dwoma odciętymi
+  liniowo końcami. Łącz je liniowo po oryginalnych odcinkach. Nie używaj
+  PCHIP odziedziczonego po Madsen i nie nazywaj tych punktów opublikowaną
+  roczną tabelą LMS. Brak oryginalnego GAMLSS/L/M/S; to odczyt grafiki.
+  `knots` dorosłego wariantu jest puste, bez 296 kropek udających roczniki.
+- Główna rycina jest wektorowa, suplement rastrowy/logarytmiczny i
+  pokazuje ten sam model. Kontrola 2951 wieków daje maksymalną różnicę
+  1,4232 pmol/L w łącznych budżetach graficznych. To kontrola ekstrakcji,
+  nie CI, CV metody, niepewność fitu lub kliniczna walidacja. P50 ≈87–89
+  i zmiana ≈2,087 nie uzasadniają mocnego trendu lub nadmiaru cyfr.
+- Stosuj tylko **[31,4;60,9]**, mimo linii sięgającej ≈64,98. Bez
+  ilościowego mostu 18–31,4, mediany najbliższej grupy i seniorów.
+  Cały jawny przedział wieku musi pasować; odczyt przy dolnej granicy.
+  31 lat 5 mies./60 lat 9 mies. kwalifikują; ukończone 31 lub 60 lat oraz 31 lat 4 mies./60 lat 10 mies. nie.
+  Prawdziwe dokładne brzegi API nie są dodatkową precyzją legacy UI.
+- Oś dorosła **0–200 pmol/L** i równoważne pięć jednostek pozostają
+  niezależne od wyniku i aktualnego wieku. Wiek osi 31,4–60,9 z tickami
+  35/40/45/50/55/60. Nie zwężaj Y, aby eksponować drobne schodki.
+  Jasny znacznik ma ≈ i dwie cyfry znaczące; czerwony rzeczywisty exact
+  wynik, w tym 0/0,4. Ponad osią strzałka z liczbą; cenzura bez kropki.
+- Źródłowe LOD 4,04/LOQ 12,1 dotyczą metody autorów. Zamianę <LOD na 1
+  opisano dla ilustracji, wpływ na fit niejasny. Nie twórz podłogi lub
+  granicy pacjenta. Rozbieżności QC ≤11%/12,3% i 20/18 partii nie korygują
+  P50. Nie dopisuj porannego pobrania, postu lub braku terapii.
+- Jedna istniejąca karta wybiera źródło automatycznie według całego
+  wieku, bez ankiety/selekcji publikacji. Dorosły opis nie dziedziczy
+  13 rocznych/PCHIP/LMS/BGS2 i jego niskiej adnotacji. W luce/noage
+  `source:null`, brak liczb i neutralny powód; `availableSources`
+  opisuje dostępność bez przypisania źródła pacjentowi. Zła płeć/analit,
+  historia lub utrata bieżącego kontekstu czyszczą/ukrywają kartę.
+- Zachowaj dodatnie aktualne fakty terapii tej samej osoby, znaną
+  niezgodność metody/materiału i brak fallbacku do innego źródła.
+  Nieznane pozostaje unknown; metoda/materiał/protokół próbki TT nie
+  przechodzą do E2. Reset źródła/osoby, lock, restore i spóźniony odczyt
+  usuwają stare P50, punkt, rozwinięcie źródeł i pełny ekran.
+- P50 nie jest RI: 125 pmol/L może być powyżej mediany ≈88 i nadal w
+  istniejącym Tietz 40–160. Bez nowego RI, SDS, centyla, ilorazu lub
+  zapisu mediany. Dwa nowe bloki runtime nie zmieniają 85 profili i 38
+  wcześniejszych pól; nie dodają zwykłego 86. profilu.
+
+Pełny kontrakt i źródłowe hashe:
+[MALE_E2_ADULT_AGE.md](hormone-lifespan/MALE_E2_ADULT_AGE.md).
+Wykonane wyniki regresji silnika/adaptera, mobile/fullscreen i zimnego
+startu PWA oraz komplet CI dla końcowego SHA podaje PR. Nie przedstawiaj
+tej listy warunków jako już zaliczonych testów lub walidacji klinicznej.
+
 ## Co sprawdzić przed oddaniem zmiany
 
 - Osobno porównaj dane źródłowe, wynik funkcji odniesienia i geometrię.

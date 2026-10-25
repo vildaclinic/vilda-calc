@@ -33,12 +33,20 @@
     var bundle = root.VildaHormoneLifespanData;
     var data = Object.prototype.hasOwnProperty.call(opts, 'data') ? opts.data : bundle && bundle.maleE2AgeData;
     var policy = Object.prototype.hasOwnProperty.call(opts, 'policy') ? opts.policy : bundle && bundle.maleE2AgePolicy;
+    // Explicit single-source callers retain their existing contract. The
+    // ordinary mounted card reads both separately versioned source/policy pairs.
+    var explicitSingle = Object.prototype.hasOwnProperty.call(opts, 'data') || Object.prototype.hasOwnProperty.call(opts, 'policy');
+    var explicitAdult = Object.prototype.hasOwnProperty.call(opts, 'adultData') || Object.prototype.hasOwnProperty.call(opts, 'adultPolicy');
+    var adultData = Object.prototype.hasOwnProperty.call(opts, 'adultData') ? opts.adultData
+      : !explicitSingle && bundle && bundle.maleE2AdultAgeData;
+    var adultPolicy = Object.prototype.hasOwnProperty.call(opts, 'adultPolicy') ? opts.adultPolicy
+      : !explicitSingle && bundle && bundle.maleE2AdultAgePolicy;
     var engine = opts.engine || root.VildaMaleE2Age;
     var current = null, rendered = null, sourceKey = null, destroyed = false, resizeFrame = null;
     var dialog = null, placeholder = null, fullscreenIntent = 0, nativeIntent = null, fullscreenFocus = null;
     host.innerHTML = '<section class="vilda-male-e2-age" aria-labelledby="' + id + '-heading">' +
       '<div class="vmea-heading"><div><h3 id="' + id + '-heading">Estradiol</h3>' +
-      '<p>Chłopcy · 6–18 lat</p></div><button type="button" class="vmea-expand" data-male-e2-age="expand" ' +
+      '<p data-male-e2-age="source-subtitle">Mediana wieku</p></div><button type="button" class="vmea-expand" data-male-e2-age="expand" ' +
       'aria-label="Powiększ wykres" title="Powiększ wykres">' +
       '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true">' +
       '<path d="M9 3H3v6M15 3h6v6M21 15v6h-6M9 21H3v-6"/></svg></button></div>' +
@@ -67,6 +75,9 @@
       if (label) { var strong = doc.createElement('strong'); strong.textContent = label + ' '; p.append(strong); }
       p.append(doc.createTextNode(text || ''));
       return p;
+    }
+    function chartTitle(result) {
+      return result && result.source ? sourceText(result.source.chartTitle) || 'Estradiol chłopców 6–18 lat' : 'Estradiol — mediana wieku';
     }
     function notify(event) {
       if (event && event.isTrusted && typeof opts.onActivity === 'function') opts.onActivity(event, view);
@@ -105,7 +116,7 @@
       var candidate = doc.createElement('dialog');
       if (typeof candidate.showModal !== 'function') return;
       dialog = candidate; dialog.className = 'vmea-fullscreen-dialog';
-      dialog.setAttribute('aria-label', 'Estradiol chłopców — pełny ekran');
+      dialog.setAttribute('aria-label', chartTitle(rendered) + ' — pełny ekran');
       placeholder = doc.createComment('male-e2-age fullscreen location');
       panel.replaceWith(placeholder); dialog.append(panel); doc.body.append(dialog);
       dialog.addEventListener('cancel', function (event) { event.preventDefault(); closeFullscreen(true); });
@@ -140,6 +151,7 @@
       closeFullscreen();
       current = null; rendered = null; sourceKey = null;
       emptyNumbers(); host.hidden = true;
+      expand.hidden = true; node('source-subtitle').textContent = 'Mediana wieku';
       sources.open = false; node('source-copy').replaceChildren();
       ['data-source-id', 'data-status', 'data-reason', 'data-display-unit'].forEach(function (key) { panel.removeAttribute(key); });
     }
@@ -187,8 +199,8 @@
       if (point && point.unit !== p.unit) return false;
       var canonicalPlot = result.policy && result.policy.plot;
       svg.setAttribute('viewBox', '0 0 ' + width + ' ' + height);
-      svg.replaceChildren(element('title', { id: id + '-title' }, 'Estradiol chłopców 6–18 lat'),
-        element('desc', { id: id + '-description' }, 'Mediana modelu Madsen 2022 dla wpisanego wieku: ' + format(median.value, 2) + ' ' + p.unit +
+      svg.replaceChildren(element('title', { id: id + '-title' }, chartTitle(result)),
+        element('desc', { id: id + '-description' }, 'Przybliżona mediana modelu ' + sourceText(result.source.label) + ' dla wpisanego wieku: ' + format(median.value, 2) + ' ' + p.unit +
           (point ? '. Czerwony znacznik przedstawia wynik pacjenta, bez oceny normy z krzywej.' : '. Dokładny punkt wyniku nie został przypisany.')));
       p.valueTicks.forEach(function (value, index) {
         var attrs = { x: left - 9, y: y(value) + 4, 'text-anchor': 'end', class: 'vmea-axis-text',
@@ -260,33 +272,55 @@
         if (!destroyed && rendered && rendered.status === 'ready' && !host.hidden) draw(rendered);
       });
     }
-    function renderSource(result) {
-      var source = result.source || {}, age = result.ageContext;
-      var next = JSON.stringify([source, age]);
-      if (next === sourceKey) return;
-      sourceKey = next;
-      var statistic = sourceText(source.statistic);
-      if (!statistic || statistic === 'model-p50') statistic = 'Modelowana mediana zależna od wieku, a nie granica normy lub rozpoznanie.';
-      var specimen = sourceText(source.specimen);
-      if (specimen === 'serum') specimen = 'surowica';
-      var paragraphs = [paragraph(source.label || 'Madsen i wsp. 2022.', sourceText(source.population)),
-        paragraph('Co przedstawia mediana?', statistic),
-        paragraph('Metoda i materiał.', [sourceText(source.method), specimen].filter(Boolean).join(' '))];
-      if (source.limitsDescription) paragraphs.push(paragraph('Granice oznaczenia.', sourceText(source.limitsDescription)));
-      if (age) paragraphs.push(paragraph('Wiek.', 'Cały podany przedział musi mieścić się w zakresie publikacji. Odczyt dotyczy wpisanej dolnej granicy wieku; nie wybieramy środka przedziału.'));
-      paragraphs.push(paragraph('Interpolacja.', '13 rocznych węzłów P50 połączono metodą PCHIP. To interpolacja aplikacji, a nie odzyskany ciągły model autorów.'),
-        paragraph('Pokwitanie.', 'Model wieku łączy różne stadia. Nie wyznaczamy stadium G lub P z wieku ani wyniku.'));
-      (source.limitations || []).forEach(function (limitation) { paragraphs.push(paragraph('', sourceText(limitation))); });
-      paragraphs.push(paragraph('Zakres danych.', 'Nie przedłużamy modelu poniżej 6 lub powyżej 18 lat. Zapis „18 lat” w pełnych latach obejmuje także wiek poza końcem modelu.'));
-      if (source.citation) paragraphs.push(paragraph('', source.citation));
+    function sourceLinks(source) {
       var links = doc.createElement('p');
-      [['url', 'Publikacja źródłowa'], ['supplementUrl', 'Suplement LMS']].forEach(function (entry) {
+      [['url', 'Publikacja źródłowa'], ['supplementUrl', sourceText(source.supplementLabel) || 'Suplement LMS']].forEach(function (entry) {
         if (typeof source[entry[0]] !== 'string' || !/^https:\/\//.test(source[entry[0]])) return;
         if (links.childNodes.length) links.append(doc.createTextNode(' · '));
         var link = doc.createElement('a'); link.href = source[entry[0]]; link.textContent = entry[1] + ' ↗';
         link.target = '_blank'; link.rel = 'noopener noreferrer'; links.append(link);
       });
-      if (links.childNodes.length) paragraphs.push(links);
+      return links;
+    }
+    function renderSource(result) {
+      var source = result.source, age = result.ageContext, available = result.availableSources || [];
+      var next = JSON.stringify([source, age, available]);
+      if (next === sourceKey) return;
+      sourceKey = next;
+      var paragraphs = [];
+      if (!source) {
+        paragraphs.push(paragraph('Dostępne źródła.', 'Mediana jest dobierana automatycznie dla całego podanego przedziału wieku. Źródła mają odrębne zakresy; w luce wieku nie podajemy zastępczej mediany. Norma przy wyniku pozostaje niezależna.'));
+        available.forEach(function (entry) {
+          if (!entry || !entry.source) return;
+          var item = entry.source, domain = entry.ageDomain;
+          var range = domain && finite(domain.min) && finite(domain.max)
+            ? 'Zakres odniesienia: ' + format(domain.min) + '–' + format(domain.max) + ' lat. ' : '';
+          paragraphs.push(paragraph(sourceText(item.label), range + sourceText(item.population)));
+          var links = sourceLinks(item);
+          if (links.childNodes.length) paragraphs.push(links);
+        });
+        node('source-copy').replaceChildren.apply(node('source-copy'), paragraphs);
+        return;
+      }
+      var statistic = sourceText(source.statisticDescription) || sourceText(source.statistic);
+      if (!statistic || statistic === 'model-p50') statistic = 'Modelowana mediana zależna od wieku, a nie granica normy lub rozpoznanie.';
+      var specimen = sourceText(source.specimen);
+      if (specimen === 'serum') specimen = 'surowica';
+      paragraphs.push(paragraph(source.label || 'Źródło.', sourceText(source.population)),
+        paragraph('Co przedstawia mediana?', statistic),
+        paragraph('Metoda i materiał.', [sourceText(source.method), specimen].filter(Boolean).join(' ')));
+      if (source.limitsDescription) paragraphs.push(paragraph('Granice oznaczenia.', sourceText(source.limitsDescription)));
+      if (age) paragraphs.push(paragraph('Wiek.', 'Cały podany przedział musi mieścić się w zakresie publikacji. Odczyt dotyczy wpisanej dolnej granicy wieku; nie wybieramy środka przedziału.'));
+      var interpolation = sourceText(source.interpolationDescription);
+      paragraphs.push(paragraph('Interpolacja.', interpolation || '13 rocznych węzłów P50 połączono metodą PCHIP. To interpolacja aplikacji, a nie odzyskany ciągły model autorów.'));
+      if (source.stageDescription) paragraphs.push(paragraph('Pokwitanie.', sourceText(source.stageDescription)));
+      else if (!interpolation) paragraphs.push(paragraph('Pokwitanie.', 'Model wieku łączy różne stadia. Nie wyznaczamy stadium G lub P z wieku ani wyniku.'));
+      (source.limitations || []).forEach(function (limitation) { paragraphs.push(paragraph('', sourceText(limitation))); });
+      paragraphs.push(paragraph('Zakres danych.', sourceText(source.domainDescription) ||
+        'Nie przedłużamy modelu poniżej 6 lub powyżej 18 lat. Zapis „18 lat” w pełnych latach obejmuje także wiek poza końcem modelu.'));
+      if (source.citation) paragraphs.push(paragraph('', source.citation));
+      var sourceLinkList = sourceLinks(source);
+      if (sourceLinkList.childNodes.length) paragraphs.push(sourceLinkList);
       node('source-copy').replaceChildren.apply(node('source-copy'), paragraphs);
     }
     function emptyText(reason) {
@@ -294,18 +328,22 @@
       if (reason === 'contraindicated' || reason === 'incompatible-reproductive-context') return ['Brak porównania z modelem wieku', 'Znany kontekst kliniczny wyklucza porównanie z tą populacją źródłową.'];
       if (reason === 'incompatible-assay' || reason === 'incompatible-specimen') return ['Brak porównania z tą publikacją', 'Znana metoda lub materiał wyniku nie odpowiada temu źródłu.'];
       if (reason === 'unsupported-display-unit') return ['Brak wykresu w tej jednostce', 'Wybrana jednostka nie pozwala przedstawić tego modelu. Wynik pozostaje dostępny w przeliczniku.'];
-      if (reason === 'invalid-context') return ['Brak jednoznacznego odniesienia', 'Dostępne dane nie pozwalają na porównanie z tym modelem wieku.'];
+      if (reason === 'invalid-context' || reason === 'ambiguous-source-age') return ['Brak jednoznacznego odniesienia', 'Dostępne dane nie pozwalają na porównanie z jednym modelem wieku.'];
+      if (reason === 'unsupported-source-age' && rendered && !rendered.source) return ['Brak mediany dla tego wieku', 'Podany wiek nie mieści się w dostępnych zakresach danych. Wynik i dostępna norma pozostają w przeliczniku.'];
       if (current && current.ageYears === 18 && finite(current.ageUpperYears) && current.ageUpperYears > 18) return ['Brak odniesienia dla tego wieku', 'Zapis „18 lat” obejmuje także wiek poza końcem danych. Nie przedłużamy modelu.'];
       return ['Brak odniesienia dla tego wieku', 'Publikacja obejmuje wiek 6–18 lat. Dla tego pacjenta nie podajemy zastępczej mediany.'];
     }
     function render(result) {
-      if (!result || !result.visible || !result.source) { clear(); return false; }
+      if (!result || !result.visible || result.status === 'ready' && !result.source) { clear(); return false; }
       emptyNumbers(); rendered = result; host.hidden = false;
-      panel.setAttribute('data-source-id', result.source.id || '');
+      if (result.source && result.source.id) panel.setAttribute('data-source-id', result.source.id);
+      else panel.removeAttribute('data-source-id');
       panel.setAttribute('data-status', result.status); panel.setAttribute('data-reason', result.reason || '');
       panel.setAttribute('data-display-unit', result.unit || '');
+      node('source-subtitle').textContent = result.source ? sourceText(result.source.ageLabel) || 'Chłopcy · 6–18 lat' : 'Mediana wieku';
       renderSource(result);
       var ready = result.status === 'ready' && geometry(result) && result.median;
+      expand.hidden = !ready;
       node('content').hidden = !ready; node('empty').hidden = !!ready;
       if (!ready) {
         var state = emptyText(result.reason);
@@ -326,8 +364,9 @@
       var lowNote = annotation && median.belowSourceLloq === true && sourceText(annotation.note);
       node('low-source-note').hidden = !lowNote;
       if (lowNote) node('low-source-note').textContent = lowNote;
-      node('state').textContent = point ? 'Wynik: ' + format(point.value, 6) + ' ' + point.unit + ' · Madsen 2022'
+      node('state').textContent = point ? 'Wynik: ' + format(point.value, 6) + ' ' + point.unit + ' · ' + sourceText(result.source.label)
         : comparison.reason === 'non-exact-measurement' ? 'Wynik z nierównością nie wyznacza pojedynczego punktu.'
+        : comparison.reason === 'invalid-measurement' ? 'Sprawdź zapis wyniku. Mediana dotyczy wieku z formularza.'
         : 'Wpisz wynik, aby zobaczyć jego położenie.';
       if (!draw(result)) { clear(); return false; }
       return true;
@@ -340,7 +379,14 @@
       }
       current = next;
       if (!engine || typeof engine.evaluate !== 'function') { clear(); return null; }
-      var result = engine.evaluate(data, policy, current);
+      var multiple = (!explicitSingle || explicitAdult) && typeof engine.evaluateSources === 'function';
+      var result = multiple ? engine.evaluateSources([{ data: data, policy: policy }, { data: adultData, policy: adultPolicy }], current)
+        : engine.evaluate(data, policy, current);
+      var oldSource = rendered && rendered.source && rendered.source.id;
+      var newSource = result && result.source && result.source.id;
+      if (oldSource !== newSource || rendered && rendered.status === 'ready' && (!result || result.status !== 'ready')) {
+        closeFullscreen(); sources.open = false; sourceKey = null; emptyNumbers();
+      }
       render(result);
       return copy(result);
     }

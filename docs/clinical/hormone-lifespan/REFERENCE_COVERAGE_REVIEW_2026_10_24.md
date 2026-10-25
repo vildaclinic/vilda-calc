@@ -22,6 +22,13 @@ Numerowana rekomendacja i liczby poniżej pozostają zapisem audytu
 24.10 sprzed obu decyzji; nie są samodzielną polityką wykonawczą,
 nie zmieniają historycznych hashy i nie uruchamiają dorosłego E2.
 
+**Późniejsza decyzja 25.10.2026 — dorośli mężczyźni:** po kontrolowanym
+odczycie Frederiksen 2020, pełnym sprawdzeniu ograniczeń i akceptacji
+prywatnej makiety właściciel polecił wdrożenie wariantu 31,4–60,9 w jednej
+karcie E2. [MALE_E2_ADULT_AGE.md](MALE_E2_ADULT_AGE.md) opisuje bieżący
+zakres. Punkt 3 historycznej kolejności poniżej został zrealizowany jako
+odczyt i osobna decyzja; nie jest ponownym zadaniem lub zgodą na inne luki.
+
 ## Wynik i rekomendowana kolejność
 
 Wspólny silnik nadal ma **85 profili**, dane `2026-10-22.2`, API `1.4.0`.
@@ -227,3 +234,29 @@ node docs/clinical/hormone-lifespan/audit_reference_coverage.mjs . /tmp/vilda-ho
 Zmiany dokumentacji nie aktywują kandydatów, nie przeliczają starych ocen,
 nie zmieniają PWA lub zasad zapisu. Następne wdrożenie wymaga konkretnej
 makiety i akceptacji zakresu przez właściciela.
+
+## Późniejszy odczyt i decyzja: dorosły męski E2, 25.10.2026
+
+Po tym historycznym przeglądzie zakończono kontrolowany odczyt ryc. 3a
+Frederiksen 2020/s. 760. Wycięto 296 wierzchołków w domenie dorosłej kohorty
+Health2008: 157 mężczyzn 31,4–60,9. Odczyt jest przybliżoną P50 grafiki,
+z liniową interpolacją po odcinkach; brak eksportu GAMLSS/L/M/S pozostaje
+prawdziwy. Ryc. 4a suplementu jest rastrowa/logarytmiczna i pokazuje ten
+sam model. Niezależna kalibracja 2951 wieków daje maksymalną różnicę
+1,4232 pmol/L w łącznych budżetach grafiki; nie jest walidacją kliniczną.
+
+Właściciel zaakceptował makietę desktop/mobile i wdrożenie („ok,
+akceptuję, koduj”). Jedna karta E2 automatycznie dobiera Madsen 6–18
+albo Frederiksen 31,4–60,9 według całego jawnego wieku. Nowy wariant
+ma stałą oś 0–200 pmol/L, ≈/dwie cyfry znaczące i rzeczywisty dokładny
+punkt wyniku. Nie rysuje ilościowego mostu 18–31,4 lub rozszerzenia do
+seniorów. Pozostają ograniczenia cenzury, źródłowe LOD/LOQ, nieustalone
+pobranie/post/wyłączenia i rozbieżności QC opisane w kontrakcie.
+
+P50 około 87–89 nie zastępuje norm Mayo/Tietz i nie dodaje RI, SDS,
+centyla, zapisu historii lub 86. profilu. M40 / 125 nadal może być w normie
+40–160, mimo położenia powyżej mediany ≈88. Pozostałe dziecięce LH,
+końce niemowlęcego LH/T i pozostałe zakresy wieku zachowują swoje
+dotychczasowe ograniczenia; ich wdrożenie nie wynika z tej decyzji.
+Kontrakt i wymagane przypadki:
+[MALE_E2_ADULT_AGE.md](MALE_E2_ADULT_AGE.md).
