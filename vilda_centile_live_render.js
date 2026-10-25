@@ -189,6 +189,124 @@
     return { x: left, y: top, width: right - left, height: bottom - top };
   }
 
+  // The inline view uses the full canvas. Only fullscreen needs the exact
+  // non-white bounds, so its readback/scan may run after the first painted view.
+  // Keep each read small too: a row may be very wide after an annotation moves
+  // outside the original canvas. No partial bounds are published to the view.
+  function prepareContentBounds(rendered, options) {
+    var cfg = options || {};
+    var assets = [], scans = [], completed = [], index = 0;
+    var settled = false, priority = false, channel = null, timer = null;
+    var resolve;
+    var promise = new Promise(function (done) { resolve = done; });
+
+    function add(asset) {
+      if (asset && asset.canvas && !asset.contentBounds && assets.indexOf(asset) < 0) assets.push(asset);
+    }
+    (rendered && rendered.ranges || []).forEach(function (range) {
+      METRICS.forEach(function (metric) { add(range[metric]); });
+    });
+    METRICS.forEach(function (metric) { add(rendered && rendered[metric]); });
+    rendered = null;
+
+    function finish(status, error) {
+      if (settled) return;
+      settled = true;
+      if (timer !== null) { w.clearTimeout(timer); timer = null; }
+      if (channel) {
+        channel.port1.onmessage = null;
+        channel.port1.close(); channel.port2.close(); channel = null;
+      }
+      assets = []; scans = []; completed = [];
+      cfg = {};
+      resolve(error ? { status: status, error: error } : { status: status });
+    }
+    function current() {
+      if (typeof cfg.isCurrent !== 'function' || cfg.isCurrent()) return true;
+      finish('cancelled');
+      return false;
+    }
+    function now() {
+      return w.performance && typeof w.performance.now === 'function' ? w.performance.now() : Date.now();
+    }
+    function bounds(scan) {
+      if (scan.right < scan.left) return { x: 0, y: 0, width: scan.width, height: scan.height };
+      var left = Math.max(0, scan.left - 12), top = Math.max(0, scan.top - 12);
+      var right = Math.min(scan.width, scan.right + 13), bottom = Math.min(scan.height, scan.bottom + 13);
+      return { x: left, y: top, width: right - left, height: bottom - top };
+    }
+    function readTile(scan) {
+      var canvas = scan.canvas;
+      if (canvas.width !== scan.width || canvas.height !== scan.height) throw new Error('Centile canvas changed during preparation');
+      var width = Math.min(4096, scan.width - scan.x);
+      var height = Math.min(scan.rows, scan.height - scan.y);
+      var pixels = canvas.getContext('2d').getImageData(scan.x, scan.y, width, height).data;
+      for (var y = 0; y < height; y++) {
+        for (var x = 0; x < width; x++) {
+          var pixel = (y * width + x) * 4;
+          if (pixels[pixel] < 255 || pixels[pixel + 1] < 255 || pixels[pixel + 2] < 255) {
+            var atX = scan.x + x, atY = scan.y + y;
+            if (atX < scan.left) scan.left = atX;
+            if (atX > scan.right) scan.right = atX;
+            if (atY < scan.top) scan.top = atY;
+            if (atY > scan.bottom) scan.bottom = atY;
+          }
+        }
+      }
+      scan.x += width;
+      if (scan.x === scan.width) { scan.x = 0; scan.y += height; }
+      return scan.y === scan.height;
+    }
+    function enqueue() {
+      if (settled) return;
+      if (channel) channel.port2.postMessage(null);
+      else timer = w.setTimeout(run, 0);
+    }
+    function run() {
+      timer = null;
+      if (settled) return;
+      try {
+        if (!current()) return;
+        var started = now(), tiles = 0;
+        // Time is checked between bounded reads. A browser may still need to
+        // flush earlier canvas drawing on a read; the budget is not a hard
+        // guarantee about GPU work. Never scan a whole image in one task.
+        while (index < scans.length && tiles < 4) {
+          if (readTile(scans[index])) { completed.push(bounds(scans[index])); index += 1; }
+          if (settled) return;
+          tiles += 1;
+          if (now() - started >= (priority ? 8 : 4)) break;
+        }
+        if (!current()) return;
+        if (index === scans.length) {
+          assets.forEach(function (asset, position) { asset.contentBounds = completed[position]; });
+          finish('ready');
+        } else enqueue();
+      } catch (error) { finish('error', error); }
+    }
+    try {
+      if (current()) {
+        scans = assets.map(function (asset) {
+          var canvas = asset.canvas, width = canvas.width, height = canvas.height;
+          if (!(width > 0 && height > 0)) throw new Error('Invalid centile canvas size');
+          return { canvas: canvas, width: width, height: height, x: 0, y: 0,
+            rows: Math.max(1, Math.min(32, Math.floor(32768 / Math.min(4096, width)))),
+            left: width, right: -1, top: height, bottom: -1 };
+        });
+        if (!scans.length) finish('ready');
+        else {
+          if (typeof w.MessageChannel === 'function') {
+            channel = new w.MessageChannel();
+            channel.port1.onmessage = run;
+          }
+          enqueue();
+        }
+      }
+    } catch (error) { finish('error', error); }
+    return { promise: promise, cancel: function () { finish('cancelled'); },
+      prioritize: function () { priority = true; } };
+  }
+
   function mphFor(snapshot, advanced, plot, enabled) {
     if (!enabled || !positive(advanced.motherHeight) || !positive(advanced.fatherHeight) || !positive(advanced.targetHeight)) return null;
     if (216 < plot.ageMin || 216 > plot.ageMax || advanced.targetHeight < plot.minY || advanced.targetHeight > plot.maxY) return null;
@@ -198,7 +316,7 @@
       : statsFor('height', advanced.targetHeight, 216, snapshot.sex, snapshot.source, snapshot.population), mappedPoint(plot, 216, advanced.targetHeight));
   }
 
-  function renderMetric(model, metric, snapshot, advanced, context, sourceGeometries) {
+  function renderMetric(model, metric, snapshot, advanced, context, sourceGeometries, deferBounds) {
     var pc = w.VildaPublicationCreator;
     var root = snapshot.chartCreatorData || {};
     function enabled(name) { return pc.snapshotElementEnabled(name, context, root); }
@@ -237,7 +355,7 @@
     ctx.restore();
     var result = { canvas: canvas, width: canvas.width, height: canvas.height, plot: plot, metric: metric,
       source: snapshot.source, sex: snapshot.sex, population: snapshot.population, annotations: items, points: pointsFor(model, metric, snapshot, plot),
-      contentBounds: contentBounds(canvas), mph: metric === 'height' ? mphFor(snapshot, advanced, plot, enabled('mph')) : null };
+      contentBounds: deferBounds ? null : contentBounds(canvas), mph: metric === 'height' ? mphFor(snapshot, advanced, plot, enabled('mph')) : null };
     result.probe = function (age) { return probe(result, age); };
     return result;
   }
@@ -247,7 +365,7 @@
       ranges: [], rangePlan: null, activeRangeId: null };
   }
 
-  function render(snapshot) {
+  function render(snapshot, options) {
     if (!snapshot || !finite(snapshot.ageMonths) || !['M', 'F', 'K'].includes(snapshot.sex)) return empty(null, 'Uzupełnij wiek i płeć pacjenta.');
     var source = String(snapshot.source || snapshot.requestedSource || '').toUpperCase();
     var age = snapshot.ageMonths;
@@ -277,7 +395,10 @@
       if (plan.mode !== 'INFANT_ONLY') ranges.push({ id: 'palRegular', label: '1–18 lat', models: pal });
     } else ranges.push({ id: source === 'OLAF' ? 'olaf' : 'who', label: source === 'OLAF' ? '3–18 lat' : '0–3 lata', models: source === 'OLAF' ? olaf : pageModels(args, source) });
     ranges.forEach(function (range) {
-      METRICS.forEach(function (metric) { range[metric] = renderMetric(range.models[metric], metric, input, advanced, range.id, sourceGeometries); });
+      METRICS.forEach(function (metric) {
+        range[metric] = renderMetric(range.models[metric], metric, input, advanced, range.id, sourceGeometries,
+          !!(options && options.deferContentBounds));
+      });
       delete range.models;
     });
     var active = ranges.find(function (range) { return range.id === (age < 36 ? 'palInfant' : 'palRegular'); }) || ranges[0];
@@ -299,5 +420,5 @@
       statsFor(data.metric, value, age, data.sex, data.source, data.population), mappedPoint(data.plot, age, value));
   }
 
-  w.VildaCentileLiveRender = { render: render, probe: probe };
+  w.VildaCentileLiveRender = { render: render, probe: probe, prepareContentBounds: prepareContentBounds };
 })(typeof window !== 'undefined' ? window : globalThis);
