@@ -528,6 +528,8 @@ function validateField(e) {
     // mmol/L values differently; other formulas retain their existing limits.
   } else if ($("formulaPicker")?.value === "OxCr_spot" && ["Ox_Cr_spot", "Ucr_spot"].includes(n)) {
     // The Ox/Cr engine validates finite concentrations consistently across units.
+  } else if ($("formulaPicker")?.value === "CitCr_spot" && ["Cit_Cr_spot", "Ucr_spot"].includes(n)) {
+    // The Cit/Cr engine validates concentrations in their declared units.
   } else if (maxValues[n] !== void 0 && t > maxValues[n])
     return (
       o && (o.textContent = "Warto\u015B\u0107 wydaje si\u0119 zbyt wysoka"),
@@ -537,6 +539,9 @@ function validateField(e) {
   return (o && (o.textContent = ""), e.classList.remove("error"), !0);
 }
 function validateClcrAgeContext(e) {
+  // Cit/Cr reference bands use completed years; zero years needs no extra
+  // months or days to select the source's birth–<3-years interval.
+  if ($("formulaPicker")?.value === "CitCr_spot") return;
   const n = document.getElementById("age"),
     t = document.getElementById("ageMonths");
   if (!n || (n.value || "").trim() === "") return;
@@ -556,6 +561,7 @@ function canComputeFormula(e) {
   if (e === "PCR") return evaluateClcrPcr().valid === true;
   if (e === "CaCr_spot") return evaluateClcrCacr().valid === true;
   if (e === "OxCr_spot") return evaluateClcrOxcr().valid === true;
+  if (e === "CitCr_spot") return evaluateClcrCitcr().valid === true;
   if (
     window.ClcrClinicalSafety &&
     typeof window.ClcrClinicalSafety.formulaSafety == "function"
@@ -659,6 +665,11 @@ function evaluateClcrOxcr(options) {
   return engine?.evaluate(engine.readInputFromDocument(document, options), window.VildaClcrOxcrReferenceData?.DEFAULT_POLICY)
     || { valid: false, reasonCode: "OXCR_UNAVAILABLE", message: "Nie można obliczyć Ox/Cr. Odśwież aplikację." };
 }
+function evaluateClcrCitcr(options) {
+  const engine = window.VildaClcrCitcr;
+  return engine?.evaluate(engine.readInputFromDocument(document, options), window.VildaClcrCitcrReferenceData?.DEFAULT_POLICY)
+    || { valid: false, reasonCode: "CITCR_UNAVAILABLE", message: "Nie można obliczyć Cit/Cr. Odśwież aplikację." };
+}
 function clcrCgNormalizedDetails(ageYears, bsaM2, sources = []) {
   const ageUsed = Math.floor(ageYears);
   const sourceLinks = sources.map((source) => `<a href="${clcrEscapeHtml(source.url)}" target="_blank" rel="noopener noreferrer">${clcrEscapeHtml(source.label)}</a>`).join(" · ");
@@ -706,10 +717,14 @@ function packClcrSupplementaryMarkup(markup, formulaId) {
   clcrSetTrustedMarkup(staging, markup, "clcr-result-presentation-staging");
   const nodes = [...staging.children];
   const primary = nodes.find((node) => node.classList.contains("clcr-result-card") && node.dataset.clcrFormula === formulaId);
+  if (!primary && formulaId === "CitCr_spot") {
+    const pending = nodes.filter((node) => node.dataset.clcrFormula === formulaId && node.matches(".citcr-result-empty, .citcr-result-error"));
+    if (pending.length) return pending.map((node) => node.outerHTML).join("");
+  }
   if (!primary) return markup;
   const details = nodes.find((node) => node.classList.contains("clcr-result-details") && node.dataset.clcrFormula === formulaId);
   if (!details) return markup;
-  if (formulaId === "OxCr_spot") {
+  if (["OxCr_spot", "CitCr_spot"].includes(formulaId)) {
     // This card already carries its complete source and specimen context.
     // Unrelated stone-panel EAU notes must not label a Fimlab/NHS reference.
     nodes.filter((node) => node !== primary && node !== details &&
@@ -858,7 +873,8 @@ function update() {
       ? { mgG: acrEvaluation.rawValue, mgMmol: acrEvaluation.convertedValue } : null,
     pcrEvaluation = evaluateClcrPcr({ concentrationOnly: $("formulaPicker")?.value !== "PCR" }),
     cacrEvaluation = evaluateClcrCacr({ concentrationOnly: $("formulaPicker")?.value !== "CaCr_spot" }),
-    oxcrEvaluation = evaluateClcrOxcr({ concentrationOnly: $("formulaPicker")?.value !== "OxCr_spot" });
+    oxcrEvaluation = evaluateClcrOxcr({ concentrationOnly: $("formulaPicker")?.value !== "OxCr_spot" }),
+    citcrEvaluation = evaluateClcrCitcr({ concentrationOnly: $("formulaPicker")?.value !== "CitCr_spot" });
   acrRatio
     ? ((j = acrRatio.mgG),
       ($("U_ACR").value = j.toFixed(1)))
@@ -1284,7 +1300,7 @@ function update() {
       l = (i && i.value) || "",
       u = o && t >= 18,
       selectedAssumptions = resolveClcrCalculationAssumptions(l),
-      selectedSafety = ["CaCr_spot", "OxCr_spot"].includes(l) ? { eligible: true, reason: "" } : !selectedAssumptions.allowed
+      selectedSafety = ["CaCr_spot", "OxCr_spot", "CitCr_spot"].includes(l) ? { eligible: true, reason: "" } : !selectedAssumptions.allowed
         ? { eligible: false, reason: selectedAssumptions.blockers.map((entry) => entry.message).join(" ") }
         : l === "neonatal_egfr" ? neonatalSafety :
         l &&
@@ -1873,7 +1889,7 @@ function update() {
         // Its single result already contains the category and source context.
       } else if (l === "PCR") {
         // PCR owns its one result, applicable limits and specimen qualification.
-      } else if (["CaCr_spot", "OxCr_spot"].includes(l)) {
+      } else if (["CaCr_spot", "OxCr_spot", "CitCr_spot"].includes(l)) {
         // Its Mayo card below owns the number, two-sided norm and limitations.
       }
       else if (l !== "cg_norm") z();
@@ -2781,29 +2797,8 @@ function update() {
     if (window.ClcrOxcrUi && (oxcrEvaluation.valid || $("formulaPicker")?.value === "OxCr_spot")) {
       he += window.ClcrOxcrUi.renderResult(oxcrEvaluation);
     }
-    const spotCitrate = readClcrOptionalNumber("Cit_Cr_spot"),
-      spotCitCr =
-        sameSpotSpecimen &&
-        spotCitrate !== null &&
-        spotCitrate >= 0 &&
-        c !== null &&
-        c > 0
-          ? spotCitrate / c
-          : null;
-    spotCitCr !== null &&
-      appendStoneValue(
-        "Cit/Cr (ta sama próbka punktowa)",
-        `${spotCitCr.toFixed(3)} mg kwasu cytrynowego/mg kreatyniny \u2014 bez automatycznego progu dla wieku i płci`, "", "CitCr_spot", spotCitCr,
-      );
-    if (
-      !sameSpotSpecimen &&
-      stoneFieldProvided("Cit_Cr_spot")
-    ) {
-      appendStoneValue(
-        "Wskaźniki punktowe \u2014 nie obliczono",
-        "Potwierdź, że analit i kreatynina pochodzą z tej samej próbki moczu.",
-        "warn-yellow",
-      );
+    if (window.ClcrCitcrUi && (citcrEvaluation.valid || $("formulaPicker")?.value === "CitCr_spot")) {
+      he += window.ClcrCitcrUi.renderResult(citcrEvaluation);
     }
     isFiniteNum(ye) &&
       appendStoneValue(
@@ -2910,12 +2905,11 @@ function update() {
         stoneDzm.phosphorus ||
         stoneDzm.oxalate ||
         stoneDzm.citrate ||
-        stoneDzm.cystine ||
-        spotCitCr !== null
+        stoneDzm.cystine
       ) {
         appendStoneValue(
           "Pozostałe parametry pediatryczne",
-          "Pokazano wartości liczbowe bez automatycznych progów. Wiekowe tabele Cit/Cr, Mg/Cr, moczanów i wyników /1,73 m\u00B2 wymagają osobno wersjonowanego profilu referencyjnego.",
+          "Pokazano wartości liczbowe bez automatycznych progów. Wiekowe tabele Mg/Cr, moczanów i wyników /1,73 m\u00B2 wymagają osobno wersjonowanego profilu referencyjnego.",
           "warn-yellow",
         );
       }
@@ -3872,6 +3866,7 @@ function resetApp(e = !0) {
 }
 const clearBtn = document.getElementById("clearBtn");
 clearBtn &&
-  clearBtn.addEventListener("click", () => {
+  clearBtn.addEventListener("click", (event) => {
+    event.clcrClearedFormula = $("formulaPicker")?.value || "";
     resetApp(!1);
   });

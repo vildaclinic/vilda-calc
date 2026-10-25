@@ -253,7 +253,7 @@ test('Ca/Cr poniżej dolnej granicy Mayo zachowuje odchylenie mimo zaokrąglenia
   await expect(stone).toContainText('Mayo');
 });
 
-test('próbka punktowa zachowuje nieznaną postać masową Ox/Cr i nazywa kwas cytrynowy', async ({ page }) => {
+test('próbka punktowa zachowuje nieznaną postać Ox/Cr i nie zakłada postaci masowej Cit/Cr', async ({ page }) => {
   await openCalculator(page, 'spot');
   await setPatient(page, {
     age: 8,
@@ -277,9 +277,24 @@ test('próbka punktowa zachowuje nieznaną postać masową Ox/Cr i nazywa kwas c
   expect(JSON.parse(await oxcr.getAttribute('data-clcr-oxcr-snapshot')).basis).toBe('acid');
   await expect(oxcr).toHaveAttribute('data-clcr-assessment', 'above');
   await expect.poll(async () => Number(await oxcr.getAttribute('data-clcr-value'))).toBe(0.1);
-  await expect(stone).toContainText(
-    'mg kwasu cytrynowego/mg kreatyniny'
-  );
+  const citcr = stone.locator('[data-clcr-series="CitCr_spot"]');
+  await expect(page.locator('#Cit_Cr_spot_unit')).toHaveValue('umol/L');
+  await expect(citcr.locator('.clcr-result-unit')).toHaveText('µmol/mmol');
+  let citrateSnapshot = JSON.parse(await citcr.getAttribute('data-clcr-citcr-snapshot'));
+  expect(citrateSnapshot.basis).toBe('');
+  expect(citrateSnapshot.rawValue).toBeCloseTo(2.2624, 10);
+  expect(citrateSnapshot.referenceAvailable).toBe(true);
+  expect(citrateSnapshot.source.id).toBe('PATHWEST_CITCR_SPOT_2025');
+
+  await page.locator('#Cit_Cr_spot_unit').selectOption('mg/dL');
+  await expect(citcr.locator('.clcr-result-unit')).toHaveText('mg/mg');
+  await expect(citcr).toHaveAttribute('data-clcr-assessment', 'unassessed');
+  citrateSnapshot = JSON.parse(await citcr.getAttribute('data-clcr-citcr-snapshot'));
+  expect(citrateSnapshot.rawValue).toBe(0.2);
+  expect(citrateSnapshot.basis).toBe('unknown');
+  expect(citrateSnapshot.referenceAvailable).toBe(false);
+  await expect(citcr.locator('.clcr-result-reference')).toHaveCount(0);
+  await expect(citcr).toContainText('Nie podano postaci analitu');
 });
 
 test('progi DZM pozostają wstrzymane, gdy bieżąca zbiórka nie trwa dokładnie 24 godzin', async ({ page }) => {

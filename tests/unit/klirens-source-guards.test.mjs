@@ -146,8 +146,10 @@ describe('Klirens — blokady źródłowe etapu 0', () => {
     expect(stoneSafety).toContain('interpretPediatricCalciumCreatinineSpot');
     expect(html).toContain('id="oxalateSpotReportingEntity"');
     expect(html).toContain(
-      'Cytryniany jako kwas cytrynowy w próbce moczu'
+      'Cytryniany w próbce moczu'
     );
+    expect(html).toContain('id="citrateSpotReportingEntity"');
+    expect(html).toContain('clcr_citcr_reference_data.js?v=1');
     expect(engine).toContain('stoneCurrentCollectionExactly24h');
     expect(engine).toContain(
       'bieżąca zbiórka trwająca dokładnie 24 godziny'

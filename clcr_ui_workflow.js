@@ -411,8 +411,8 @@
       optional: [],
     },
     CitCr_spot: {
-      interpretation: ["spotSampleKind", "ageMonths", "sex"],
-      optional: SPOT_INTERFERENCE_FIELDS,
+      interpretation: ["age", "ageMonths"],
+      optional: [],
     },
     FENa_spot: {
       interpretation: ["spotSampleKind"],
@@ -558,6 +558,12 @@
     U_Prot_spot_unit: "Wybierz jednostkę stężenia białka całkowitego zgodną z wynikiem: mg/L, mg/dL albo g/L.",
     PCR_same_specimen: "Dla obliczenia ze stężeń przyjmujemy wspólną próbkę. Znane różne próbki blokują ten tryb; gotowy PCR z laboratorium jest oceniany niezależnie.",
     CaCr_reported: "Wpisz ilościowy wskaźnik wapń/kreatynina z laboratorium z oryginalnym znakiem <, ≤, > lub ≥. Nie wpisuj tu samego stężenia wapnia ani ilorazu klirensów wapnia i kreatyniny.",
+    CitCr_reported: "Przepisz gotowy Cit/Cr z laboratorium, zachowując jednostkę i znak <, ≤, > lub ≥.",
+    Cit_Cr_spot_unit: "Zachowaj jednostkę stężenia cytrynianów z raportu. Postać masowa jest opisana osobno pod polem.",
+    CitCr_reported_unit: "Zachowaj jednostkę gotowego wskaźnika z raportu laboratoryjnego.",
+    citrateSpotReportingEntity: "Postać podana w raporcie. Nieznana postać nie blokuje ilorazu masowego, ale uniemożliwia porównanie z normą molową.",
+    CitCr_reported_basis: "Postać podana w raporcie laboratoryjnym dla jednostki masowej.",
+    CitCr_same_specimen: "Zakładamy wspólną próbkę. Znane różne próbki blokują obliczenie ze stężeń; gotowy wynik jest oceniany niezależnie.",
     OxCr_reported: "Przepisz gotowy wskaźnik szczawiany/kreatynina z laboratorium wraz ze znakiem <, ≤, > lub ≥. Stężenia szczawianów nie wpisuj jako gotowego ilorazu.",
     OxCr_reported_unit: "Zachowaj jednostkę i postać analitu z raportu. Jednostki masowe wymagają wskazania jonu szczawianowego albo kwasu szczawiowego bezwodnego, aby porównać wynik z normą molową.",
     Ox_Cr_spot_unit: "Wybierz jednostkę szczawianów zgodną z raportem. Postać masowa jest częścią wyboru jednostki; bez niej można obliczyć iloraz masowy, lecz nie porównać go z normą molową.",
@@ -626,6 +632,8 @@
     CaCr_reported: "CaCr_reported_unit",
     OxCr_reported: "OxCr_reported_unit",
     Ox_Cr_spot: "Ox_Cr_spot_unit",
+    Cit_Cr_spot: "Cit_Cr_spot_unit",
+    CitCr_reported: "CitCr_reported_unit",
     Ca_spot: "Ca_spot_unit",
     U_PO4_spot: "U_PO4_spot_unit",
     S_PO4_spot: "S_PO4_spot_unit",
@@ -1693,7 +1701,7 @@
   }
 
   function groupCollapsibleContextFields() {
-    if (["cl24", "ACR", "PCR", "CaCr_spot", "OxCr_spot"].includes(state.activeFormulaId) && !state.legacyBroad) return;
+    if (["cl24", "ACR", "PCR", "CaCr_spot", "OxCr_spot", "CitCr_spot"].includes(state.activeFormulaId) && !state.legacyBroad) return;
     const groups = new Map();
     const sharedFieldset = ["egfr_cr_cys", "ckid_u25_cys", "ckid_u25_cr_cys"].includes(state.activeFormulaId)
       ? documentRef.getElementById("serumSet") : null;
@@ -1995,7 +2003,7 @@
     };
     (referenceFields[formula.id] || []).forEach((fieldId) => optional.add(fieldId));
     if (required.has("age") && !["neonatal_egfr", "cg_norm"].includes(formula.id)) optional.add("ageMonths");
-    if (!["ACR", "PCR", "CaCr_spot", "OxCr_spot"].includes(formula.id)) getSharedModuleFieldIds(formula.id).forEach((fieldId) => optional.add(fieldId));
+    if (!["ACR", "PCR", "CaCr_spot", "OxCr_spot", "CitCr_spot"].includes(formula.id)) getSharedModuleFieldIds(formula.id).forEach((fieldId) => optional.add(fieldId));
     if (formula.id === "ACR") {
       optional.add("ACR_same_specimen");
       if (fieldValue("ACR_entry_mode") === "direct") {
@@ -2047,6 +2055,21 @@
         required.delete(id); optional.delete(id);
       });
     }
+    if (formula.id === "CitCr_spot") {
+      required.delete("spotSameSpecimen"); optional.delete("spotSameSpecimen");
+      optional.add("CitCr_same_specimen");
+      optional.add("citrateSpotReportingEntity");
+      optional.add("CitCr_reported_basis");
+      if (fieldNumber("age") !== null && fieldNumber("age") >= 18) optional.add("sex");
+      if (fieldValue("CitCr_entry_mode") === "direct") {
+        ["Cit_Cr_spot", "Cit_Cr_spot_unit", "Ucr_spot", "Ucr_spot_unit"].forEach(id => required.delete(id));
+        required.add("CitCr_reported"); required.add("CitCr_reported_unit");
+      }
+    } else {
+      ["CitCr_reported", "CitCr_reported_unit", "CitCr_reported_basis", "CitCr_same_specimen", "Cit_Cr_spot_unit", "citrateSpotReportingEntity"].forEach(id => {
+        required.delete(id); optional.delete(id);
+      });
+    }
     // The indexed CG variant uses completed years. Keep the canonical month
     // value for other formulas, but do not ask for it or let it qualify this one.
     if (formula.id === "cg_norm") optional.delete("ageMonths");
@@ -2068,7 +2091,7 @@
       optional.delete("ScrAssay");
     }
     const module = getModuleForFormula(formula.id);
-    if (module?.path === "spot" && !required.has("spotSampleKind") && !["PCR", "CaCr_spot", "OxCr_spot"].includes(formula.id)) optional.add("spotSampleKind");
+    if (module?.path === "spot" && !required.has("spotSampleKind") && !["PCR", "CaCr_spot", "OxCr_spot", "CitCr_spot"].includes(formula.id)) optional.add("spotSampleKind");
     if (formula.id === "PCR" && fieldValue("spotSampleKind")) optional.add("spotSampleKind");
     if (formula.id === "KTV") {
       documentRef.getElementById("ktvFields")?.querySelectorAll("input[id], select[id]").forEach((control) => {
@@ -2093,6 +2116,7 @@
     if (state.legacyBroad || formula?.id !== "PCR") global.ClcrPcrUi?.sync(documentRef, { active: false, fieldViews: state.fieldViews });
     if (state.legacyBroad || formula?.id !== "CaCr_spot") global.ClcrCacrUi?.sync(documentRef, { active: false, fieldViews: state.fieldViews });
     if (state.legacyBroad || formula?.id !== "OxCr_spot") global.ClcrOxcrUi?.sync(documentRef, { active: false, fieldViews: state.fieldViews });
+    if (state.legacyBroad || formula?.id !== "CitCr_spot") global.ClcrCitcrUi?.sync(documentRef, { active: false, fieldViews: state.fieldViews });
     // Same-formula refresh must not reparent a focused correction control.
     // syncNeonatalAgeCorrection releases it once the correction loses focus.
     if (state.legacyBroad || formula?.id !== "neonatal_egfr") restoreNeonatalAgeCorrection();
@@ -2163,6 +2187,7 @@
     global.ClcrPcrUi?.sync(documentRef, { active: formula?.id === "PCR", fieldViews: state.fieldViews });
     global.ClcrCacrUi?.sync(documentRef, { active: formula?.id === "CaCr_spot", fieldViews: state.fieldViews });
     global.ClcrOxcrUi?.sync(documentRef, { active: formula?.id === "OxCr_spot", fieldViews: state.fieldViews });
+    global.ClcrCitcrUi?.sync(documentRef, { active: formula?.id === "CitCr_spot", fieldViews: state.fieldViews });
     syncFieldsetVisibility();
     renderReadiness();
   }
@@ -2181,6 +2206,7 @@
     global.ClcrPcrUi?.sync(documentRef, { active: false, fieldViews: state.fieldViews });
     global.ClcrCacrUi?.sync(documentRef, { active: false, fieldViews: state.fieldViews });
     global.ClcrOxcrUi?.sync(documentRef, { active: false, fieldViews: state.fieldViews });
+    global.ClcrCitcrUi?.sync(documentRef, { active: false, fieldViews: state.fieldViews });
     restoreMeasuredFields();
     restoreNeonatalAgeCorrection();
     restoreCollapsibleContextFields();
@@ -2190,7 +2216,7 @@
     delete documentRef.documentElement.dataset.clcrActiveModule;
     const active = new Set();
     state.fieldViews.forEach((_view, id) => {
-      if (!["Cl24DurationHours", "Cl24CollectionProblem", "ACR_reported", "ACR_reported_unit", "ACR_same_specimen", "PCR_reported", "PCR_reported_unit", "PCR_same_specimen", "U_Prot_spot_unit", "CaCr_reported", "CaCr_reported_unit", "CaCr_same_specimen", "OxCr_reported", "OxCr_reported_unit", "OxCr_same_specimen", "oxalateSpotReportingEntity"].includes(id)) active.add(id);
+      if (!["Cl24DurationHours", "Cl24CollectionProblem", "ACR_reported", "ACR_reported_unit", "ACR_same_specimen", "PCR_reported", "PCR_reported_unit", "PCR_same_specimen", "U_Prot_spot_unit", "CaCr_reported", "CaCr_reported_unit", "CaCr_same_specimen", "OxCr_reported", "OxCr_reported_unit", "OxCr_same_specimen", "oxalateSpotReportingEntity", "CitCr_reported", "CitCr_reported_unit", "CitCr_reported_basis", "CitCr_same_specimen", "citrateSpotReportingEntity"].includes(id)) active.add(id);
     });
     state.activeFieldIds = active;
     state.requiredFieldIds = new Set();
@@ -2506,6 +2532,12 @@
   }
 
   function evaluateFormulaOutcome(formula) {
+    if (formula?.id === "CitCr_spot" && typeof global.evaluateClcrCitcr === "function") {
+      const outcome = global.evaluateClcrCitcr();
+      return outcome.valid
+        ? { ok: true, outcome, blockers: [], limitations: [] }
+        : semanticBlock(outcome.reasonCode || "CITCR_INVALID", outcome.message || "Sprawdź wartość Cit/Cr, jednostkę i pochodzenie oznaczeń.", "", outcome);
+    }
     if (formula?.id === "OxCr_spot" && typeof global.evaluateClcrOxcr === "function") {
       const outcome = global.evaluateClcrOxcr();
       return outcome.valid
@@ -2766,7 +2798,7 @@
     }
     // These ratios use the same production reader as their result card.
     // Legacy generic maxima and >0 analyte checks do not qualify this model.
-    const ratioEvaluator = { CaCr_spot: global.evaluateClcrCacr, OxCr_spot: global.evaluateClcrOxcr }[formula.id];
+    const ratioEvaluator = { CaCr_spot: global.evaluateClcrCacr, OxCr_spot: global.evaluateClcrOxcr, CitCr_spot: global.evaluateClcrCitcr }[formula.id];
     if (typeof ratioEvaluator === "function") {
       const semantic = evaluateFormulaOutcome(formula);
       const outcome = semantic.outcome;
@@ -2981,6 +3013,7 @@
     if (state.activeFormulaId === "PCR") global.ClcrPcrUi?.refresh(documentRef);
     if (state.activeFormulaId === "CaCr_spot") global.ClcrCacrUi?.refresh(documentRef);
     if (state.activeFormulaId === "OxCr_spot") global.ClcrOxcrUi?.refresh(documentRef);
+    if (state.activeFormulaId === "CitCr_spot") global.ClcrCitcrUi?.refresh(documentRef);
     syncAssayOptions();
     syncNeonatalAgeCorrection();
     syncMeasuredProblem();
@@ -3010,7 +3043,7 @@
     }
     const readiness = getFormulaReadiness(formula.id);
     documentRef.documentElement.dataset.clcrReady = String(readiness.valueReady);
-    if (["CaCr_spot", "OxCr_spot"].includes(formula.id)) {
+    if (["CaCr_spot", "OxCr_spot", "CitCr_spot"].includes(formula.id)) {
       // Empty, invalid and qualified states belong to the single result card.
       state.readiness.hidden = true;
       global.ClcrLayout?.refresh?.();
@@ -3060,7 +3093,7 @@
   }
 
   function renderDataCompletion() {
-    if (["ACR", "PCR", "CaCr_spot", "OxCr_spot"].includes(state.activeFormulaId)) return;
+    if (["ACR", "PCR", "CaCr_spot", "OxCr_spot", "CitCr_spot"].includes(state.activeFormulaId)) return;
     const questions = new Set();
     state.requiredFieldIds.forEach((fieldId) => {
       if (DZM_QUALITY_FIELDS.includes(fieldId)) questions.add(DZM_QUALITY_GROUP_FOCUS_ID);
@@ -3107,7 +3140,7 @@
     eyebrow.append(step, documentRef.createTextNode("Dane do obliczenia"));
     state.activePanel.appendChild(eyebrow);
     const heading = createElement("h2", "clcr-active-panel__title", formula
-      ? formula.id === "OxCr_spot" ? "Szczawiany/kreatynina — Ox/Cr" : formula.id === "CaCr_spot" ? "Wapń/kreatynina — Ca/Cr" : formula.id === "PCR" ? "Białko/kreatynina — PCR" : formula.id === "ACR" ? "ACR — albumina/kreatynina" : formula.id === "cl24" ? "Klirens kreatyniny ze zbiórki moczu" : formula.id === "cg_norm" ? "Cockcroft–Gault (1,73 m²)" : formula.id === "cg" ? "Cockcroft–Gault" : formula.label
+      ? formula.id === "CitCr_spot" ? "Cytryniany/kreatynina — Cit/Cr" : formula.id === "OxCr_spot" ? "Szczawiany/kreatynina — Ox/Cr" : formula.id === "CaCr_spot" ? "Wapń/kreatynina — Ca/Cr" : formula.id === "PCR" ? "Białko/kreatynina — PCR" : formula.id === "ACR" ? "ACR — albumina/kreatynina" : formula.id === "cl24" ? "Klirens kreatyniny ze zbiórki moczu" : formula.id === "cg_norm" ? "Cockcroft–Gault (1,73 m²)" : formula.id === "cg" ? "Cockcroft–Gault" : formula.label
       : legacy ? "Obliczenia" : "Wybierz obliczenie");
     state.activePanel.appendChild(heading);
     if (formula?.id === "cl24") {
@@ -3277,7 +3310,7 @@
     const formula = formulaById(formulaId);
     const module = getModuleForFormula(formulaId);
     if (!formula || !module || HISTORICAL_FORMULA_IDS.includes(formulaId)) return false;
-    const preserveCalculationInputs = ["cl24", "ACR", "PCR", "CaCr_spot", "OxCr_spot"].includes(state.activeFormulaId) || ["cl24", "ACR", "PCR", "CaCr_spot", "OxCr_spot"].includes(formulaId);
+    const preserveCalculationInputs = ["cl24", "ACR", "PCR", "CaCr_spot", "OxCr_spot", "CitCr_spot"].includes(state.activeFormulaId) || ["cl24", "ACR", "PCR", "CaCr_spot", "OxCr_spot", "CitCr_spot"].includes(formulaId);
     state.legacyBroad = false;
     state.mobileModulesExpanded = false;
     documentRef.documentElement.classList.remove("clcr-mobile-modules-expanded");
@@ -3552,6 +3585,7 @@
             "PCR_entry_mode",
             "CaCr_entry_mode",
             "OxCr_entry_mode",
+            "CitCr_entry_mode",
           ].includes(control.id)
         ) {
           if (["U_ACR", "U_PCR"].includes(control.id)) {
@@ -3600,7 +3634,7 @@
     }, true);
     form.addEventListener("change", scheduleReadiness, true);
     form.addEventListener("change", (event) => {
-      if (["ACR_entry_mode", "PCR_entry_mode", "CaCr_entry_mode", "OxCr_entry_mode"].includes(event.target?.id)) {
+      if (["ACR_entry_mode", "PCR_entry_mode", "CaCr_entry_mode", "OxCr_entry_mode", "CitCr_entry_mode"].includes(event.target?.id)) {
         syncFromPicker();
         if (typeof global.clcrUpdate === "function") global.clcrUpdate();
       }
@@ -3665,8 +3699,13 @@
     global.addEventListener("resize", trackOpenHelp);
     const clear = documentRef.getElementById("clearBtn");
     if (clear) {
-      clear.addEventListener("click", () => {
+      clear.addEventListener("click", (event) => {
+        const resumeCitcr = event.clcrClearedFormula === "CitCr_spot";
         global.setTimeout(() => {
+          if (resumeCitcr) {
+            selectFormula("CitCr_spot");
+            return;
+          }
           state.activeFormulaId = "";
           state.legacyBroad = false;
           const search = documentRef.getElementById("formulaSearch");
@@ -3923,7 +3962,7 @@
       if (target && !target.has(dp.sourceFormulaId)) continue;
       // Urine ratios preserve the unrounded measurement: rounding can cross a
       // clinical threshold. The display and any inequality are kept apart.
-      if (!["ACR", "PCR", "CaCr_spot", "OxCr_spot"].includes(dp.sourceFormulaId)) dp.valueNum = displayedNumber(el, dp.valueNum);
+      if (!["ACR", "PCR", "CaCr_spot", "OxCr_spot", "CitCr_spot"].includes(dp.sourceFormulaId)) dp.valueNum = displayedNumber(el, dp.valueNum);
       dp.norm = readRangeText(el);
       dp.outOfRange = elementOutOfRange(el);
       if (dp.sourceFormulaId === "ACR") {
@@ -3966,6 +4005,7 @@
         }
       }
       if (dp.sourceFormulaId === "OxCr_spot") global.ClcrOxcrPersistence?.augmentDatapoint(el, dp);
+      if (dp.sourceFormulaId === "CitCr_spot") global.ClcrCitcrPersistence?.augmentDatapoint(el, dp);
       const assumptions = el.getAttribute("data-clcr-assumptions");
       if (typeof assumptions === "string" && assumptions.trim()) dp.assumptions = assumptions.trim();
       const provenance = el.getAttribute("data-clcr-assumption-provenance");
@@ -4433,6 +4473,7 @@
         unit: dp.unit,
       };
       if (dp.sourceFormulaId === "OxCr_spot") global.ClcrOxcrPersistence?.applyLabResult(dp, labResult);
+      if (dp.sourceFormulaId === "CitCr_spot") global.ClcrCitcrPersistence?.applyLabResult(dp, labResult);
       // Generic vault charts consume valueNum as an exact measurement. A
       // detection limit stays textual there; the signed endpoint is retained
       // in the ACR snapshot note and understood by this history adapter.
@@ -4452,6 +4493,7 @@
         (dp.sourceFormulaId === "PCR" && dp.pcrSnapshot ? "\n\n" + pcrReferenceNote(dp) : "") +
         (dp.sourceFormulaId === "CaCr_spot" && dp.cacrSnapshot ? "\n\n" + cacrReferenceNote(dp) : "") +
         (dp.sourceFormulaId === "OxCr_spot" && dp.oxcrSnapshot ? "\n\n" + global.ClcrOxcrPersistence.referenceNote(dp) : "") +
+        (dp.sourceFormulaId === "CitCr_spot" && dp.citcrSnapshot ? "\n\n" + global.ClcrCitcrPersistence.referenceNote(dp) : "") +
         (dp.sourceFormulaId === "cl24" && dp.measuredClearanceReference ? "\n\n" + measuredReferenceNote(dp) : "") +
         (dp.sourceFormulaId === "cg_norm" && dp.agePolicy === "completed-years" && Number.isInteger(dp.ageUsedYears) && dp.ageUsedYears >= 18
           ? "\n\nWiek użyty we wzorze: " + dp.ageUsedYears + " ukończonych lat." : "");
@@ -4505,7 +4547,8 @@
       if (!note || note.category !== CATEGORY) continue;
       const lab = note.labResult;
       if (!lab || typeof lab.test !== "string" || !lab.test) continue;
-      const label = global.ClcrOxcrPersistence?.canonicalLabel(lab.test) || lab.test;
+      const oxcrLabel = global.ClcrOxcrPersistence?.canonicalLabel(lab.test) || lab.test;
+      const label = global.ClcrCitcrPersistence?.canonicalLabel(oxcrLabel) || oxcrLabel;
       const entry =
         m && typeof m.getParamByLabel === "function"
           ? m.getParamByLabel(label)
@@ -4517,14 +4560,16 @@
       const cacr = sourceFormulaId === "CaCr_spot" ? savedCacrAssessment(note) : null;
       const oxcr = sourceFormulaId === "OxCr_spot" ? global.ClcrOxcrPersistence?.savedAssessment(note) : null;
       const legacyOxcr = sourceFormulaId === "OxCr_spot" && !oxcr ? global.ClcrOxcrPersistence?.legacyPoint(note) : null;
-      const ratio = acr || pcr || cacr || oxcr;
+      const citcr = sourceFormulaId === "CitCr_spot" ? global.ClcrCitcrPersistence?.savedAssessment(note) : null;
+      const legacyCitcr = sourceFormulaId === "CitCr_spot" && !citcr ? global.ClcrCitcrPersistence?.legacyPoint(note) : null;
+      const ratio = acr || pcr || cacr || oxcr || citcr;
       // A later edit can invalidate the old assessment while leaving a valid
       // censored laboratory result. Keep that current text without restoring
       // the original norm/category or turning its endpoint into a point.
       const signedCacrText = sourceFormulaId === "CaCr_spot" && !cacr && typeof lab.value === "string" && lab.value.length <= 256
         ? /^\s*([<>≤≥])\s*((?:\d+(?:[.,]\d*)?|[.,]\d+)(?:[eE][+-]?\d+)?)\s*$/.exec(lab.value) : null;
       const signedCacrValue = signedCacrText ? Number(signedCacrText[2].replace(",", ".")) : NaN;
-      const valueNum = ratio ? ratio.rawValue : legacyOxcr ? legacyOxcr.rawValue :
+      const valueNum = ratio ? ratio.rawValue : legacyCitcr ? legacyCitcr.rawValue : legacyOxcr ? legacyOxcr.rawValue :
         Number.isFinite(signedCacrValue) ? signedCacrValue : typeof lab.valueNum === "number" && isFinite(lab.valueNum)
           ? lab.valueNum
           : toNumber(lab.value);
@@ -4532,7 +4577,7 @@
       const unit = (ratio?.unit || lab.unit || (entry ? entry.unit : "") || "").trim();
       // Native mg/g and mg/mmol thresholds are deliberately different axes.
       // Never draw a trend through values stored in different native units.
-      const seriesKey = sourceFormulaId === "OxCr_spot" ? global.ClcrOxcrPersistence?.seriesKey(label, unit, oxcr, note) || `${label}\n${unit}\nlegacy-unknown` : ["ACR", "PCR", "CaCr_spot"].includes(sourceFormulaId) ? `${label}\n${unit}` : label;
+      const seriesKey = sourceFormulaId === "CitCr_spot" ? global.ClcrCitcrPersistence?.seriesKey(label, unit, citcr, note) || `${label}\n${unit}\nlegacy-unknown` : sourceFormulaId === "OxCr_spot" ? global.ClcrOxcrPersistence?.seriesKey(label, unit, oxcr, note) || `${label}\n${unit}\nlegacy-unknown` : ["ACR", "PCR", "CaCr_spot"].includes(sourceFormulaId) ? `${label}\n${unit}` : label;
       const dateISO =
         normalizeDateISO(note.clinicalDateISO) ||
         (typeof note.clinicalDateISO === "string"
@@ -4541,7 +4586,7 @@
       if (!byLabel.has(seriesKey)) {
         byLabel.set(seriesKey, {
           label: label,
-          displayLabel: sourceFormulaId === "OxCr_spot" ? global.ClcrOxcrPersistence?.displayLabel(label, unit, oxcr?.basis ?? global.ClcrOxcrPersistence?.savedBasis(note, unit) ?? "unknown") || lab.test : label,
+          displayLabel: sourceFormulaId === "CitCr_spot" ? global.ClcrCitcrPersistence?.displayLabel(label, unit, citcr?.basis ?? global.ClcrCitcrPersistence?.savedBasis(note, unit) ?? "unknown") || lab.test : sourceFormulaId === "OxCr_spot" ? global.ClcrOxcrPersistence?.displayLabel(label, unit, oxcr?.basis ?? global.ClcrOxcrPersistence?.savedBasis(note, unit) ?? "unknown") || lab.test : label,
           unit: unit,
           id: entry ? entry.id : null,
           group: entry ? entry.group : null,
@@ -4556,7 +4601,8 @@
       const staleCacrSnapshot = sourceFormulaId === "CaCr_spot" && !cacr &&
         typeof note.body === "string" && note.body.includes(CACR_NOTE_HEADER);
       const staleOxcrSnapshot = sourceFormulaId === "OxCr_spot" && !oxcr && global.ClcrOxcrPersistence?.hasSavedAssessment(note);
-      const outOfRange = ratio ? ratio.status === "unassessed" ? null : ["below", "above"].includes(ratio.status) : staleAcrSnapshot || stalePcrSnapshot || staleCacrSnapshot || staleOxcrSnapshot ? null : sourceFormulaId === "OxCr_spot" ? typeof note.body === "string" && note.body.includes("wynik poza zakresem") ? true : null :
+      const staleCitcrSnapshot = sourceFormulaId === "CitCr_spot" && !citcr && global.ClcrCitcrPersistence?.hasSavedAssessment(note);
+      const outOfRange = ratio ? ratio.status === "unassessed" ? null : ["below", "above"].includes(ratio.status) : staleAcrSnapshot || stalePcrSnapshot || staleCacrSnapshot || staleOxcrSnapshot || staleCitcrSnapshot ? null : ["OxCr_spot", "CitCr_spot"].includes(sourceFormulaId) ? typeof note.body === "string" && note.body.includes("wynik poza zakresem") ? true : null :
         typeof note.body === "string" &&
         note.body.indexOf("poza zakresem") >= 0;
       const norm = typeof lab.norm === "string" ? lab.norm.trim() : "";
@@ -4593,12 +4639,19 @@
         unit: oxcr.unit, basis: oxcr.basis, originalUnit: oxcr.originalUnit, oxcrAssessment: oxcr,
       });
       if (legacyOxcr) Object.assign(point, legacyOxcr, { outOfRange });
+      if (citcr) Object.assign(point, {
+        valueNum: citcr.comparator ? null : citcr.rawValue,
+        displayValue: citcr.displayValue, comparator: citcr.comparator,
+        category: citcr.category, assessment: citcr.status, comparison: citcr.comparison,
+        unit: citcr.unit, basis: citcr.basis, originalUnit: citcr.originalUnit, citcrAssessment: citcr,
+      });
+      if (legacyCitcr) Object.assign(point, legacyCitcr, { outOfRange });
       byLabel.get(seriesKey).points.push(point);
     }
     const series = Array.from(byLabel.values());
     series.forEach((s) => {
       s.points.sort((a, b) => String(a.dateISO).localeCompare(String(b.dateISO)));
-      if (["ACR", "PCR", "CaCr_spot", "OxCr_spot"].includes(s.sourceFormulaId)) {
+      if (["ACR", "PCR", "CaCr_spot", "OxCr_spot", "CitCr_spot"].includes(s.sourceFormulaId)) {
         s.norm = s.points[s.points.length - 1]?.norm || "";
         return;
       }
@@ -4659,7 +4712,7 @@
         s.points.forEach((p) => {
           byDate[p.dateISO] = {
             valueNum: p.valueNum,
-            outOfRange: ["ACR", "PCR", "CaCr_spot", "OxCr_spot"].includes(s.sourceFormulaId) ? p.outOfRange : !!p.outOfRange,
+            outOfRange: ["ACR", "PCR", "CaCr_spot", "OxCr_spot", "CitCr_spot"].includes(s.sourceFormulaId) ? p.outOfRange : !!p.outOfRange,
           };
           if (s.sourceFormulaId === "ACR") Object.assign(byDate[p.dateISO], {
             displayValue: p.displayValue, comparator: p.comparator,
@@ -4676,6 +4729,10 @@
           if (s.sourceFormulaId === "OxCr_spot") Object.assign(byDate[p.dateISO], {
             displayValue: p.displayValue, comparator: p.comparator, basis: p.basis, originalUnit: p.originalUnit,
             assessment: p.assessment, comparison: p.comparison, oxcrAssessment: p.oxcrAssessment,
+          });
+          if (s.sourceFormulaId === "CitCr_spot") Object.assign(byDate[p.dateISO], {
+            displayValue: p.displayValue, comparator: p.comparator, basis: p.basis, originalUnit: p.originalUnit,
+            assessment: p.assessment, comparison: p.comparison, citcrAssessment: p.citcrAssessment,
           });
         });
         return {
@@ -5892,7 +5949,7 @@
     rail.dataset.clcrHasResult = String(hasResult);
     reportActions.hidden = !hasResult;
     const resultBody = reportSection.querySelector(".clcr-result-extra");
-    if (resultBody) resultBody.hidden = Boolean(readiness && !readiness.valueReady);
+    if (resultBody) resultBody.hidden = formulaId !== "CitCr_spot" && Boolean(readiness && !readiness.valueReady);
   }
 
   function scheduleRefresh() {
