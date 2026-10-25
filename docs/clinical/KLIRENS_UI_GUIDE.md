@@ -96,6 +96,21 @@ obcą wizualnie kartą i nie dodawaj kilku podobnych wierszy „odniesienia”.
   Gitelmana, opisane wyłącznie w Szczegółach; nie jest normą lub
   automatyczną diagnozą. Małe dodatnie wyniki nie stają się zerem,
   a brak normy nie tworzy kolejnego pytania. Źródła: [FECL.md](FECL.md).
+- Dla FEHCO₃ (decyzja 25.10.2026) wystarczają cztery stężenia w grupach
+  **„Mocz”** i **„Krew”**, bez pytań o porę/rodzaj moczu, obciążenie,
+  metodę lub dane do „pełnej interpretacji”. Wspólna próbka moczu
+  i równoczesna krew są opisanym założeniem; znana sprzeczność blokuje
+  liczbę i zapis. Nie zakłada się wykonania lub zakończenia obciążenia.
+  Jedna neutralna karta B pokazuje **„Norma dla wieku / Brak normy do
+  porównania”** i krótki komentarz; brak odpowiednio zweryfikowanej
+  normy nie jest dowodem nieistnienia wszystkich publikacji.
+  **<5 / 5–15 / >15%** według Yaxley 2016 opisuje się wyłącznie
+  w Szczegółach jako warunkowe progi testu, z uwagą o niemowlętach;
+  nie klasyfikują zwykłej próbki ani samego faktu podania zasad.
+  Z gazometrii wpisuje się aktualne, nie standardowe HCO₃; tCO₂ krwi
+  jest opisanym przybliżeniem bez dodatkowego przeliczenia. Małe wyniki,
+  znane fakty i znaczenie nierówności pozostają w zapisie i historii.
+  Źródła i ograniczenia: [FEHCO3.md](FEHCO3.md).
 - Pełne poziomy, np. A1–A3 albuminurii, opisuj w zwiniętych
   **„Szczegółach i źródłach”**. Wyróżnij wyłącznie rzeczywiście nadaną
   kategorię pacjenta. Przycisk kategorii powinien otwierać właściwe Szczegóły.

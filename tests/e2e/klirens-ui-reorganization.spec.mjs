@@ -132,41 +132,48 @@ test('czynniki zakłócające i opcjonalny kontekst ograniczają tylko interpret
   await page.locator('#S_HCO3_spot').fill('24');
   await page.locator('#Ucr_spot').fill('100');
   await page.locator('#Scr_spot').fill('1');
-  await openFieldDetails(page, '#ui_spotPairedChemistry_answer');
-  await page.locator('#ui_spotPairedChemistry_answer').selectOption('yes');
-  await openFieldDetails(page, '#spotSampleKind');
-  await page.locator('#spotSampleKind').selectOption('firstMorning');
-
-  const interpretationAnswer = page.locator(
-    '#spotBicarbonateLoad'
-  );
-  await openFieldDetails(page, '#spotBicarbonateLoad');
-  await expect(interpretationAnswer).toBeVisible();
-  await expect(interpretationAnswer).not.toBeChecked();
+  // FEHCO₃ needs the four concentrations, without a second interpretation
+  // questionnaire. A known loading fact must not certify its protocol.
+  for (const selector of ['#ui_spotPairedChemistry_answer', '#spotSampleKind', '#spotBicarbonateLoad']) {
+    await expect(page.locator(selector)).toBeHidden();
+  }
+  await expect(page.locator('#spotBicarbonateLoad')).not.toBeChecked();
   await expect.poll(async () =>
     page.evaluate(() => window.getClcrFormulaReadiness('FEHCO3_spot'))
   ).toMatchObject({
     valueReady: true,
     missingFieldIds: [],
-  });
-  await expect(page.locator('#clcrReadiness')).toBeHidden();
-  await expect(page.locator('#elecInfo')).toContainText(
-    'bez udokumentowanego testu obciążenia wodorowęglanem'
-  );
-  await expect(page.locator('#clcrResultReport [data-clcr-series="FEHCO3_spot"]')).toBeVisible();
-
-  await interpretationAnswer.check();
-  await expect.poll(async () =>
-    page.evaluate(() => window.getClcrFormulaReadiness('FEHCO3_spot'))
-  ).toMatchObject({
-    valueReady: true,
-    interpretationReady: true,
     interpretationMissingFieldIds: [],
     limitations: [],
   });
-  await expect(page.locator('#elecInfo')).not.toContainText(
-    'bez udokumentowanego testu obciążenia wodorowęglanem'
-  );
+  await expect(page.locator('#clcrReadiness')).toBeHidden();
+  const fehco3 = page.locator('#clcrResultReport [data-clcr-series="FEHCO3_spot"]');
+  await expect(fehco3).toBeVisible();
+  await expect(fehco3).toHaveAttribute('data-clcr-tone', 'neutral');
+  await expect(fehco3).toContainText('Brak normy do porównania');
+  await expect(fehco3).toContainText('Sam wynik nie potwierdza ani nie wyklucza');
+  const initial = JSON.parse(await fehco3.getAttribute('data-clcr-fehco3-snapshot'));
+  expect(initial.rawValue).toBeCloseTo(5 / 6, 12);
+  expect(initial).toMatchObject({
+    exactValue: { numerator: '5', denominator: '6' }, outOfRange: null,
+    protocol: { bicarbonateLoad: null, completion: 'not-assessed', comparisonActive: false },
+  });
+
+  await page.evaluate(() => {
+    const session = window.buildClcrSessionSnapshot();
+    session.inputs.spotBicarbonateLoad = true;
+    session.inputs.ui_spotBicarbonateLoad_answer = 'yes';
+    window.applyClcrSessionSnapshot(session, { update: true, dispatchEvents: false, preserveAcrossVersions: true });
+  });
+  await expect.poll(async () =>
+    JSON.parse(await fehco3.getAttribute('data-clcr-fehco3-snapshot'))
+  ).toMatchObject({
+    rawValue: initial.rawValue,
+    outOfRange: null,
+    protocol: { bicarbonateLoad: true, completion: 'not-assessed', comparisonActive: false },
+  });
+  await expect(page.locator('#spotBicarbonateLoad')).toBeHidden();
+  await expect(page.locator('#clcrReadiness')).toBeHidden();
 });
 
 test('wyszukanie KT/V otwiera formularz PRO bez widocznego przełącznika', async ({
