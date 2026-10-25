@@ -16,7 +16,7 @@
   const valueLabel = record => record?.displayValue ?? record?.display ?? record?.rawValue ?? record?.valueNum ?? "—";
   function editableInput(field, formulaId, unitIds) {
     if (["age", "ageMonths", "sex"].includes(field.id) || field.id === "ageDays" && formulaId !== "neonatal_egfr" || unitIds.has(field.id)) return false;
-    if (/unit|Assay|Standardization|creatinineState|suspectedAKI|_entry_mode$/i.test(field.id)) return false;
+    if (/unit|Assay|Standardization|creatinineState|suspectedAKI/i.test(field.id) || /_entry_mode$/i.test(field.id)) return false;
     // Routine assumptions and optional specimen/therapy facts stay exactly as
     // recorded. Correcting a value does not ask the clinician to certify them.
     if (["checkbox", "select", "radio"].includes(field.type) && !field.required) return false;

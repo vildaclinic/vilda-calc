@@ -229,11 +229,11 @@
  },
  "clcr_result_details.css": {
   "v": 1,
-  "sha256": "6b06c23286163fd309c7b559c97a9359b06516a060f6753f4f6cde4693057e4b"
+  "sha256": "ec79b3e26d27a6a0268bd9435dce230bbcdedf78a53e3ceaf672b2f8123bdd2e"
  },
  "clcr_result_details.js": {
   "v": 1,
-  "sha256": "6df780f4338cab65f2d428f5f511d9aec7bf4f6cbc983db032529d2b320e5b12"
+  "sha256": "0064a4ea88975d3ff9d25c0e3e7945e0eb8a365fb816e98b8f1730c02814a9dc"
  },
  "clcr_result_presentation.js": {
   "v": 8,
