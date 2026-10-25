@@ -41678,6 +41678,352 @@ const femaleTtAgePolicy = {
     "none"
   ]
 };
+const maleE2AgeData = {
+  "schemaVersion": 1,
+  "kind": "published-age-p50-data",
+  "id": "madsen2022-male-estradiol-age",
+  "version": "2026-10-25.1",
+  "analyte": "estradiol",
+  "sex": "male",
+  "unit": "pmol/L",
+  "ageDomain": {
+    "min": 6,
+    "max": 18,
+    "minimumInclusive": true,
+    "maximumInclusive": true
+  },
+  "source": {
+    "id": "madsen2022-male-estradiol-age",
+    "label": "Madsen 2022 · chłopcy",
+    "citation": "Madsen A i wsp. Reference Curves for Pediatric Endocrinology: Leveraging Biomarker Z-Scores for Clinical Classifications. JCEM 2022. DOI 10.1210/clinem/dgac155.",
+    "url": "https://doi.org/10.1210/clinem/dgac155",
+    "fullText": "https://pmc.ncbi.nlm.nih.gov/articles/PMC9202734/",
+    "supplementUrl": "https://doi.org/10.6084/m9.figshare.17153336.v1",
+    "population": "Chłopcy z norweskich przekrojowych kohort Bergen Growth Study 2 (6–<16 lat) i Fit Futures (15–18 lat).",
+    "method": "Dwie metody oznaczania E2 przez LC-MS/MS: ultraczuła w BGS2 i o pośredniej czułości w Fit Futures; laboratorium hormonalne Haukeland.",
+    "specimen": "serum",
+    "unit": "pmol/L",
+    "statistic": "model-p50",
+    "limits": {
+      "unit": "pmol/L",
+      "censoringRule": null,
+      "methods": [
+        {
+          "id": "bgs2-ultrasensitive",
+          "cohort": "BGS2",
+          "lloq": 0.58,
+          "lod": {
+            "operator": "<",
+            "value": 0.28
+          },
+          "precision": {
+            "atLloqCvPercent": 15,
+            "qcConcentration": 1.7,
+            "qcTotalCvPercent": 9.1
+          },
+          "methodSource": "https://doi.org/10.1210/jendso/bvaa047"
+        },
+        {
+          "id": "fit-futures-intermediate",
+          "cohort": "Fit Futures",
+          "lloq": 13,
+          "lod": null,
+          "precision": {
+            "qcConcentration": 57,
+            "qcTotalCvPercent": 13
+          }
+        }
+      ]
+    },
+    "limitsDescription": "Dwie metody źródłowe E2: BGS2 LLOQ 0,58 pmol/L, Fit Futures LLOQ 13 pmol/L. P50 wieku 6–7 lat poniżej pierwszej LLOQ, wieku 8 blisko niej. Reguła cenzury danych LMS nieopisana; granice nie są przypisywane próbce pacjenta.",
+    "limitations": [
+      "To modelowane P50 wieku, nie średnie arytmetyczne, mediany osobnych roczników, model G/P ani trajektoria jednego pacjenta. Artykuł używa określenia mean-for-age (p50).",
+      "Przekrojowe kohorty norweskie, głównie biała populacja; BGS2 udział 43%, Fit Futures 93%. Liczby M414/M491 z Table 1 to próbki kohort, nie ustalone N dopasowania E2 lub każdego rocznika.",
+      "Surowica LC-MS/MS, pobrania 08–14. Model wieku łączy stadia pokwitania; G i P nie są wyprowadzane z wieku. Nieznany wywiad nie potwierdza braku terapii.",
+      "Źródłowe LLOQ 0,58 i 13 pmol/L dotyczą dwóch metod. Nie są podłogą P50 ani granicą próbki pacjenta. Nie zastosowano bramki wieku 8/9 lat lub zastępowania median przez zero, LLOQ albo LLOQ/2.",
+      "Nie opisano jednoznacznie reguły cenzury/imputacji obserwacji E2 poniżej LLOQ ani ich liczby według wieku/płci. Przekroczenie LLOQ przez P50 nie jest zwalidowanym progiem jakości modelu.",
+      "Bertelsen 2020, tabela 3: końcowy LOD E2 <0,28 pmol/L, nie dokładnie 0,28; nie rozstrzyga położenia P50 sześciolatka wobec LOD. CV 15% przy LOQ i 9,1% przy QC 1,7 nie są niepewnością modelowej mediany. Fit Futures podaje CV 13% przy 57, nie przy LLOQ 13.",
+      "Madsen połączył metody bez korekty matematycznej (R² 0,96, różnica 1,7%, P 0,053). Nie wykazuje to zgodności dowolnego oznaczenia pacjenta ani precyzji bardzo niskich estymat; nie utożsamiamy tego z osobnym porównaniem 62 próbek Bertelsen.",
+      "13 rocznych węzłów po exp(M)/1e6 nie odzyskuje ciągłego fitu autora. PCHIP między nimi to jawna polityka aplikacji, bez SDS, centyli, ilorazów wyniku do P50 lub RI.",
+      "Cały jawny możliwy wiek musi mieścić się w [6,18]. Dokładne 18 nie tworzy grupy 18–<19. Bez ekstrapolacji, najbliższej mediany lub połączenia z dorosłymi.",
+      "Dotychczasowe normy laboratoryjne Mayo/Tietz, wynik i historia pozostają odrębnymi warstwami. Odległość od mediany nie określa prawidłowości.",
+      "Przykładowy z-score L37 w arkuszu ma obcy mianownik; nie importujemy go. Nie zmienia to położenia P50 z odwrotnej transformacji M."
+    ]
+  },
+  "points": [
+    {
+      "ageYears": 6,
+      "value": 0.24701013272002922,
+      "sourceM": 12.4171846379267,
+      "sourceCells": [
+        "LCMSMS hormones!AA19",
+        "LCMSMS hormones!AB19",
+        "LCMSMS hormones!AC19",
+        "LCMSMS hormones!AD19"
+      ]
+    },
+    {
+      "ageYears": 7,
+      "value": 0.37931012200885605,
+      "sourceM": 12.8461094133448,
+      "sourceCells": [
+        "LCMSMS hormones!AA20",
+        "LCMSMS hormones!AB20",
+        "LCMSMS hormones!AC20",
+        "LCMSMS hormones!AD20"
+      ]
+    },
+    {
+      "ageYears": 8,
+      "value": 0.5903439912846601,
+      "sourceM": 13.2884606820581,
+      "sourceCells": [
+        "LCMSMS hormones!AA21",
+        "LCMSMS hormones!AB21",
+        "LCMSMS hormones!AC21",
+        "LCMSMS hormones!AD21"
+      ]
+    },
+    {
+      "ageYears": 9,
+      "value": 0.9573607691081997,
+      "sourceM": 13.7719355786107,
+      "sourceCells": [
+        "LCMSMS hormones!AA22",
+        "LCMSMS hormones!AB22",
+        "LCMSMS hormones!AC22",
+        "LCMSMS hormones!AD22"
+      ]
+    },
+    {
+      "ageYears": 10,
+      "value": 1.6578506045864085,
+      "sourceM": 14.3210325048193,
+      "sourceCells": [
+        "LCMSMS hormones!AA23",
+        "LCMSMS hormones!AB23",
+        "LCMSMS hormones!AC23",
+        "LCMSMS hormones!AD23"
+      ]
+    },
+    {
+      "ageYears": 11,
+      "value": 3.097426690113098,
+      "sourceM": 14.9460822247681,
+      "sourceCells": [
+        "LCMSMS hormones!AA24",
+        "LCMSMS hormones!AB24",
+        "LCMSMS hormones!AC24",
+        "LCMSMS hormones!AD24"
+      ]
+    },
+    {
+      "ageYears": 12,
+      "value": 6.129050070456699,
+      "sourceM": 15.6285503318678,
+      "sourceCells": [
+        "LCMSMS hormones!AA25",
+        "LCMSMS hormones!AB25",
+        "LCMSMS hormones!AC25",
+        "LCMSMS hormones!AD25"
+      ]
+    },
+    {
+      "ageYears": 13,
+      "value": 12.181153681006554,
+      "sourceM": 16.3154005350549,
+      "sourceCells": [
+        "LCMSMS hormones!AA26",
+        "LCMSMS hormones!AB26",
+        "LCMSMS hormones!AC26",
+        "LCMSMS hormones!AD26"
+      ]
+    },
+    {
+      "ageYears": 14,
+      "value": 22.714698209171413,
+      "sourceM": 16.9385227711165,
+      "sourceCells": [
+        "LCMSMS hormones!AA27",
+        "LCMSMS hormones!AB27",
+        "LCMSMS hormones!AC27",
+        "LCMSMS hormones!AD27"
+      ]
+    },
+    {
+      "ageYears": 15,
+      "value": 37.28518975581513,
+      "sourceM": 17.434106748281,
+      "sourceCells": [
+        "LCMSMS hormones!AA28",
+        "LCMSMS hormones!AB28",
+        "LCMSMS hormones!AC28",
+        "LCMSMS hormones!AD28"
+      ]
+    },
+    {
+      "ageYears": 16,
+      "value": 52.52944278497907,
+      "sourceM": 17.7768843853159,
+      "sourceCells": [
+        "LCMSMS hormones!AA29",
+        "LCMSMS hormones!AB29",
+        "LCMSMS hormones!AC29",
+        "LCMSMS hormones!AD29"
+      ]
+    },
+    {
+      "ageYears": 17,
+      "value": 64.95767569802108,
+      "sourceM": 17.9892464726668,
+      "sourceCells": [
+        "LCMSMS hormones!AA30",
+        "LCMSMS hormones!AB30",
+        "LCMSMS hormones!AC30",
+        "LCMSMS hormones!AD30"
+      ]
+    },
+    {
+      "ageYears": 18,
+      "value": 73.8467861754196,
+      "sourceM": 18.1175030477201,
+      "sourceCells": [
+        "LCMSMS hormones!AA31",
+        "LCMSMS hormones!AB31",
+        "LCMSMS hormones!AC31",
+        "LCMSMS hormones!AD31"
+      ]
+    }
+  ],
+  "provenance": {
+    "doi": "10.1210/clinem/dgac155",
+    "supplementDoi": "10.6084/m9.figshare.17153336.v1",
+    "sourceWorksheet": "LCMSMS hormones",
+    "sourceRange": "AA19:AD31",
+    "sourceSha256": "45cd1b63284c9f53a5936abee7ab8d8e6fce13a19025d4e2cbed0e5b3468897e",
+    "articleSha256": "ae2410f0b9998b64c7bc3074455338dbd539300582a92337bf00d3c63cb029ff",
+    "sourceStatistic": "model P50 at z=0; figure caption mean-for-age (p50)",
+    "transform": "exp(M) / 1000000",
+    "transformEvidence": [
+      "LCMSMS hormones!K36 = LN(I36*1000000)",
+      "LCMSMS hormones!K37 = LN(I37*1000000)"
+    ],
+    "dataLicense": "CC BY 4.0 (Figshare dataset; distinct article license)",
+    "sourceAudit": "evidence/madsen2022-unused-sex-analytes-audit-2026-10-24.json",
+    "ownerApproval": "Prywatna makieta E2 chłopców 6–18 oraz pełny model z ograniczeniem niskiego końca zaakceptowane 25.10.2026; polecenie wdrożenia: jest ok, koduj. Nie jest to walidacja kliniczna.",
+    "methodReference": "https://doi.org/10.1210/jendso/bvaa047"
+  }
+};
+const maleE2AgePolicy = {
+  "schemaVersion": 1,
+  "kind": "educational-male-e2-age-comparison",
+  "version": "2026-10-25.1",
+  "sourceId": "madsen2022-male-estradiol-age",
+  "analyte": "estradiol",
+  "sex": "male",
+  "contextBasis": "current-patient",
+  "clinicalReferenceActivation": false,
+  "patientComparisonEnabled": true,
+  "notLaboratoryReference": true,
+  "noClinicalClassification": true,
+  "noHistoryWrite": true,
+  "fullAgeIntervalRequired": true,
+  "ordinaryOnly": true,
+  "interpolation": "pchip-between-published-p50",
+  "ageReferenceBasis": "entered-age-lower-bound",
+  "chartSelectionKey": "e2",
+  "allowedViews": [
+    "life",
+    "age"
+  ],
+  "displayUnits": [
+    "pmol/L",
+    "nmol/L",
+    "pg/mL",
+    "ng/L",
+    "ng/dL"
+  ],
+  "allowedAssayMethodIds": [
+    "lc-ms/ms",
+    "lc-ms-ms",
+    "lcmsms"
+  ],
+  "allowedSpecimens": [
+    "serum",
+    "surowica"
+  ],
+  "excludedCyclePhases": [
+    "follicular",
+    "midcycle",
+    "luteal",
+    "pregnancy",
+    "pregnancy_t1",
+    "pregnancy_t2",
+    "pregnancy_t3",
+    "postmenopause"
+  ],
+  "excludedReproductiveContexts": [
+    "pregnancy",
+    "postmenopause"
+  ],
+  "excludedPositiveFlags": [
+    "pregnancy",
+    "hormonalTreatment",
+    "stimulation",
+    "gnrha"
+  ],
+  "excludedTreatmentContexts": [
+    "hormonal",
+    "stimulation",
+    "gnrh-stimulation",
+    "hcg-stimulation"
+  ],
+  "excludedTreatmentFlags": [
+    "gnrha",
+    "sexSteroids",
+    "cocp",
+    "exogenousTestosterone"
+  ],
+  "allowedMeasurementKinds": [
+    "basal"
+  ],
+  "plot": {
+    "ageMin": 6,
+    "ageMax": 18,
+    "ageTicks": [
+      6,
+      9,
+      12,
+      15,
+      18
+    ],
+    "valueMin": 0,
+    "valueMax": 100,
+    "valueTicks": [
+      0,
+      20,
+      40,
+      60,
+      80,
+      100
+    ],
+    "unit": "pmol/L",
+    "independentOfPatient": true,
+    "sampleCount": 241
+  },
+  "knownExclusionPolicy": "Known hormonal therapy, GnRHa, stimulation, incompatible reported sample assay or material conservatively withhold this educational model comparison. Unknown facts do not become absence; no new laboratory RI or treatment-adjusted norms.",
+  "allowedTreatmentContexts": [
+    "none"
+  ],
+  "lowSourceAnnotation": {
+    "sourceValueThreshold": 0.58,
+    "sourceUnit": "pmol/L",
+    "sourceMethodId": "bgs2-ultrasensitive",
+    "note": "Ta część modelu leży poniżej oznaczalności metody użytej w publikacji.",
+    "notPatientLimit": true,
+    "notClinicalGate": true
+  }
+};
 const femaleGonadotropinPolicy = {
   "id": "female-gonadotropin-display-v1",
   "version": "2026-10-12.1",
@@ -43737,6 +44083,8 @@ return {
   insl3AgeSourcePolicy: insl3AgeSourcePolicy,
   femaleTtAgeData: femaleTtAgeData,
   femaleTtAgePolicy: femaleTtAgePolicy,
+  maleE2AgeData: maleE2AgeData,
+  maleE2AgePolicy: maleE2AgePolicy,
   femaleGonadotropinPolicy: femaleGonadotropinPolicy,
   femaleGonadotropinData: femaleGonadotropinData,
   femaleGonadotropinReferencePolicy: femaleGonadotropinReferencePolicy,

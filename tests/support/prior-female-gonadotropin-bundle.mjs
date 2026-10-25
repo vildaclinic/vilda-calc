@@ -45,10 +45,17 @@ export function beforeMaleLhCaliperBundle(data) {
     .filter(profile => profile.id !== 'wilson2023-male-lh-age-over16-under18') };
 }
 
+// Male E2 adds exactly its separate source and policy. Removing only these
+// additions preserves every earlier field and frozen hash expectation.
+export function beforeMaleE2AgeRuntime(runtime) {
+  const { maleE2AgeData: _maleE2Data, maleE2AgePolicy: _maleE2Policy, ...prior } = runtime;
+  return prior;
+}
+
 // Female TT adds only its isolated source and policy; earlier bundles retain
 // their exact values and historical hash expectations.
 export function beforeFemaleTtAgeRuntime(runtime) {
-  const { femaleTtAgeData: _femaleTtData, femaleTtAgePolicy: _femaleTtPolicy, ...prior } = runtime;
+  const { femaleTtAgeData: _femaleTtData, femaleTtAgePolicy: _femaleTtPolicy, ...prior } = beforeMaleE2AgeRuntime(runtime);
   return prior;
 }
 

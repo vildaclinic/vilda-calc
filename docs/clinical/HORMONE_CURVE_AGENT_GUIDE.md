@@ -917,6 +917,50 @@ Pełny kontrakt i przypadki:
 [FEMALE_TT_AGE.md](hormone-lifespan/FEMALE_TT_AGE.md).
 Akceptacja makiety i wdrożenia nie nadaje modelowi walidacji klinicznej.
 
+## E2 chłopców — zaakceptowana karta 6–18, 25 października 2026
+
+Właściciel zaakceptował osobną prywatną makietę i polecił wdrożenie.
+Dotyczy bieżącego męskiego E2, z wiekiem/płcią z formularza, bez nowej
+ankiety. Nie dodawaj zwykłego profilu do rejestru 85, nie podmieniaj
+żeńskiego E2/TT, norm Mayo/Tietz, historii lub porównania płci.
+
+- Madsen 2022, Supplemental Table 1 **v1**, arkusz
+  `LCMSMS hormones!AA19:AD31`: 13 modelowych P50 po `exp(M)/1e6` pmol/L.
+  Nie są empirycznymi medianami roczników, RI lub samym M. PCHIP
+  produkcyjnych `referenceAt/sampleProfile` jest jawną interpolacją
+  aplikacji, nie odzyskanym ciągłym fitem autora. Nie kopiuj L37/SDS.
+- Model łączy BGS2/Fit Futures i stadia. Surowica LC-MS/MS, pobrania
+  08–14. M414/M491 to dostępne próbki kohort, nie N dopasowania E2.
+  Metody źródłowe mają LLOQ 0,58 i 13; reguła cenzury jest niepodana.
+  U Bertelsen LOD to **<0,28**, nie dokładnie 0,28. CV 15% przy LOQ
+  i 9,1% przy QC 1,7 nie opisują błędu P50 lub każdego niskiego pomiaru.
+- Zachowaj pełne **[6,18]**, bez progu 8/9 lat, podłogi 0,58/13,
+  zera lub LOQ/2. P50 6/7 są poniżej LLOQ BGS2, 8 blisko; nie dowodzi
+  to błędu modelu ani jego ilościowej pewności. Niski kreskowany fragment
+  i notka są adnotacją ograniczenia źródła, nie CI, zakazem punktu lub
+  klinicznym progiem jakości. Przekroczenie LLOQ nie waliduje reszty linii.
+- Cały jawny przedział wieku musi pasować do [6,18]. Odczyt przy jego
+  dolnej granicy ma podpis „Mediana modelu dla wpisanego wieku”, ≈ i dwie
+  cyfry znaczące. Dokładne 18 kwalifikuje; `[18,19)` nie. Brak upper lub
+  boolean closure nie staje się dokładnym wiekiem. 3/75/brak wieku bez P50.
+- Stała oś 0–100 pmol/L i równoważne konwersje nie zależą od wyniku.
+  Jasny znacznik jest P50, czerwony rzeczywistym exact wynikiem; również
+  0 i 0,4 pozostają na prawdziwej wysokości. Źródłowa LOQ nie określa
+  granicy laboratorium pacjenta. Ponad osią strzałka z liczbą; wynik
+  z nierównością/LOD/LOQ nie otrzymuje dokładnego punktu lub imputacji.
+- Znane GnRHa/leczenie/stymulacja lub niezgodna metoda/materiał blokują
+  nowe zestawienie. Uwzględnij także chłopca i bieżący anonimowy formularz;
+  nie zakładaj, że żeńskie helpery obsługują te dane. Przenoś tylko dodatni
+  fakt aktualnego leczenia tej samej osoby, nie metodę/materiał/datę innej
+  próbki TT. Brak wywiadu pozostaje unknown; bez nowego badge lub pytania.
+- Tożsamość, płeć, analit, lock, przygotowanie/spóźniony kontekst i historia
+  czyszczą stare liczby oraz pełny ekran. Bez zapisu mediany. Zachowaj
+  pełny ekran/Escape, poprawną pułapkę fokusu, źródła zwinięte, mobile
+  320/390 i prawdziwy zimny start PWA offline. Wykonane wyniki raportuje PR.
+
+Pełny kontrakt i przypadki: [MALE_E2_AGE.md](hormone-lifespan/MALE_E2_AGE.md).
+Akceptacja wdrożenia nie nadaje modelowi statusu walidacji klinicznej.
+
 ## Co sprawdzić przed oddaniem zmiany
 
 - Osobno porównaj dane źródłowe, wynik funkcji odniesienia i geometrię.

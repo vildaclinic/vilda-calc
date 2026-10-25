@@ -3,6 +3,7 @@ import { readFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import vm from 'node:vm';
 import { describe, expect, it } from 'vitest';
+import { beforeMaleE2AgeRuntime } from '../support/prior-female-gonadotropin-bundle.mjs';
 
 const require = createRequire(import.meta.url);
 const engine = require('../../vilda_female_tt_age.js');
@@ -28,7 +29,7 @@ describe('female TT age — separate current educational P50 comparison', () => 
     expect(runtime.femaleTtAgeData).toEqual(data);
     expect(runtime.femaleTtAgePolicy).toEqual(policy);
     expect(runtime.patientPointData.profiles).toHaveLength(85);
-    const preceding = Object.fromEntries(Object.entries(runtime).filter(([key]) =>
+    const preceding = Object.fromEntries(Object.entries(beforeMaleE2AgeRuntime(runtime)).filter(([key]) =>
       !['femaleTtAgeData', 'femaleTtAgePolicy'].includes(key)));
     expect(createHash('sha256').update(JSON.stringify(preceding)).digest('hex'))
       .toBe('8aeba187d043b184150ca50f008295bd6f1b491db6706226efedf9e335aebb87');
