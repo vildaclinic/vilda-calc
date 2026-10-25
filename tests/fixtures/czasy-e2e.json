@@ -1,6 +1,6 @@
 {
   "opis": "E2E-ODŁAMKI: sekundy na plik e2e (pierwsza próba każdego testu, wszystkie projekty razem). Źródło podziału na odłamki CI — tests/support/odlamki-e2e.mjs. Odświeżenie: node tests/scripts/odlamki-e2e.mjs --pomoc.",
-  "zrodlo": "1 raport(y) JSON pełnego przebiegu, Playwright 1.61.1, 2026-10-18; uzupełnienie 2026-10-25: 2 pełne pliki LH z lokalnego przebiegu 22/22 oraz startup-restore-batching z lokalnego przebiegu 5/5, Playwright 1.61.1, sumy pierwszych prób bez powtórek; dotychczasowe 364 wagi zachowane",
+  "zrodlo": "1 raport(y) JSON pełnego przebiegu, Playwright 1.61.1, 2026-10-18; uzupełnienie 2026-10-25: 2 pełne pliki LH z lokalnego przebiegu 22/22; startup-restore-batching (5 testów) i centile-summary-flash (6 testów) z lokalnego przebiegu 45/45, Playwright 1.61.1, sumy pierwszych prób bez powtórek; dotychczasowe 364 wagi i 2 pomiary LH zachowane",
   "pliki": {
     "application.spec.mjs": 14.6,
     "arkusz-przypomnien-pisanie-mobile.spec.mjs": 34.9,
@@ -19,6 +19,7 @@
     "cel-wlasny-zapis.spec.mjs": 96,
     "cel-wlasny.spec.mjs": 18.2,
     "centile-chart-parity.spec.mjs": 21.4,
+    "centile-summary-flash.spec.mjs": 156,
     "centyle-niemowlece-interpolacja.spec.mjs": 7.8,
     "centyle-reset-pacjent.spec.mjs": 59.8,
     "chip-karta-pacjenta.spec.mjs": 74,
@@ -328,7 +329,7 @@
     "spozycie-powrot-powloka.spec.mjs": 14.6,
     "spozycie-utrzymanie.spec.mjs": 24.8,
     "stan-pacjenta-bez-falszywego-odtworzenia.spec.mjs": 87.1,
-    "startup-restore-batching.spec.mjs": 92.4,
+    "startup-restore-batching.spec.mjs": 105.4,
     "status-doroslego.spec.mjs": 40.3,
     "sync-kompresja-most.spec.mjs": 7.4,
     "sync-nieaktualne-urzadzenie.spec.mjs": 11.7,

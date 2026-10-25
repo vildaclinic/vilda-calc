@@ -107,6 +107,12 @@ async function settled(owner) {
   await czekajNaOdtworzenieSesji(owner);
   await owner.waitForFunction(() => !window.__vildaPersistRestoring
     && !window.VildaDobAge?.restorePending?.());
+  // DocPro odtwarza też stan własnych kontrolek i details. Ta osobna
+  // transakcja musi skończyć się przed sprawdzaniem reakcji na kliknięcie.
+  // Bramka tylko obserwuje gotowość; nie przelicza ani nie otwiera karty.
+  await owner.waitForFunction(() => !/\/docpro\.html$/u.test(location.pathname)
+    || (window.VildaDocproStatePersistence?.isReady?.() === true
+      && window.VildaDocproStatePersistence.isRestoring() === false));
   await owner.evaluate(() => new Promise(resolve => { requestAnimationFrame(() => requestAnimationFrame(resolve)); }));
 }
 

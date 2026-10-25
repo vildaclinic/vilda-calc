@@ -273,6 +273,15 @@ Panel siatki obserwuje te granice, zachowując pozostałe warunki gotowości.
 `isMainSessionRestorePending()` blokuje także publikację obrazu w krótkim
 odstępie między gotowością konta a wznowieniem odtwarzania formularza.
 
+DocPro odtwarza osobno stan własnych kontrolek, w tym `details`; gotowość
+konta i głównej sesji nie oznacza zakończenia tego kroku.
+`docpro_state_persist.js` udostępnia zamrożony interfejs tylko do odczytu
+`window.VildaDocproStatePersistence`: `isReady()` jest prawdziwe po
+inicjalizacji i poza własnym odtwarzaniem, a `isRestoring()` wskazuje jego
+trwanie. Integracje i testy stabilnego UI DocPro obserwują także tę granicę.
+To stan wyłącznie runtime; interfejs nie dodaje zapisów ani timerów
+i nie steruje odtwarzaniem.
+
 Samo odtworzenie sesji (`isSessionRestore`) nie rozsyła sygnału nowego wczytania
 `vilda:sharedLoadSeq`. Powłoka odpowiada na ten sygnał odtwarzaniem wspólnego
 stanu w załadowanych panelach innych niż Start, także w panelu nadawcy. Echo
