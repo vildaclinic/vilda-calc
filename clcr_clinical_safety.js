@@ -1,8 +1,8 @@
 (function (root, factory) {
-  const api = factory();
+  const api = factory(root);
   if (root) root.ClcrClinicalSafety = api;
   if (typeof module === "object" && module.exports) module.exports = api;
-})(typeof window !== "undefined" ? window : globalThis, function () {
+})(typeof window !== "undefined" ? window : globalThis, function (root) {
   "use strict";
 
   const KNOWLEDGE_PROFILE = Object.freeze({
@@ -486,6 +486,12 @@
   }
 
   function computeFractionalExcretion(input) {
+    // FENa has its separately audited exact arithmetic and disclosed pairing
+    // assumption. The explicit marker leaves all other FE contracts unchanged.
+    if (input && input.formulaId === "FENa_spot") {
+      if (typeof root?.VildaClcrFena?.compute === "function") return root.VildaClcrFena.compute(input);
+      return Object.freeze({ ok: false, valuePct: null, error: "Nie można obliczyć FENa: moduł obliczeniowy jest niedostępny." });
+    }
     if (
       !input ||
       input.pairedSameTime !== true ||

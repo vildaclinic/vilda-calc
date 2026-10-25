@@ -171,7 +171,7 @@ test('Faza 6 (elektrolity): FENa — frakcja wydalania sodu zapisuje się do kar
       Scr_spot: '1.0',
       Scr_spot_unit: 'mg/dl',
     },
-    ['spotPairedChemistry'],
+    [],
   );
 
   await expect(page.locator('[data-clcr-series="FENa_spot"]')).toHaveCount(1);
@@ -182,9 +182,8 @@ test('Faza 6 (elektrolity): FENa — frakcja wydalania sodu zapisuje się do kar
   expect(fena).toBeTruthy();
   expect(fena.test).toBe('Frakcja wydalania sodu (FENa)');
   expect(fena.unit).toBe('%');
-  // wzór daje ~0,29% → wynik prerenalny (<1%); zapis = wartość wyświetlona
-  expect(fena.val).toBeLessThan(1);
-  expect(fena.val).toBeCloseTo(0.3, 1);
+  // Surowa FENa 2/7%; sam wynik nie ustala etiologii AKI.
+  expect(fena.val).toBeCloseTo(0.2857142857142857, 12);
 });
 
 test('Faza 6 (DZM): cl24 — klirens kreatyniny z dobowej zbiórki zapisuje się do karty', async ({

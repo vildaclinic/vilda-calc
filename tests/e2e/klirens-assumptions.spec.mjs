@@ -281,7 +281,7 @@ test('Cockcroft i zmierzony klirens DZM zachowują własne jednostki bez kategor
   await expect(measured.locator('[data-clcr-category-control]')).toHaveCount(0);
 });
 
-test('FE i dializa zachowują wymagane potwierdzenia próbek, bez założeń eGFR lub IFCC', async ({ page }) => {
+test('FENa przyjmuje sparowanie jako założenie, dializa zachowuje potwierdzenia, bez założeń eGFR lub IFCC', async ({ page }) => {
   await openCalculator(page);
   await selectFormula(page, 'FENa_spot');
   expect(await page.evaluate(() => {
@@ -295,11 +295,13 @@ test('FE i dializa zachowują wymagane potwierdzenia próbek, bez założeń eGF
   for (const [selector, value] of [['#U_Na_spot', '40'], ['#S_Na_spot', '140'], ['#Ucr_spot', '100'], ['#Scr_spot', '1']]) {
     await fillField(page, selector, value);
   }
-  await expect(card(page, 'FENa_spot')).toHaveCount(0);
-  await selectField(page, '#ui_spotPairedChemistry_answer', 'yes');
   const fena = card(page, 'FENa_spot');
   await expect(fena).toBeVisible();
   expect(Number(await fena.getAttribute('data-clcr-value'))).toBeCloseTo(0.2857142857142857, 10);
+  await expect(fena).toHaveAttribute('data-clcr-tone', 'neutral');
+  const fenaAssessment = JSON.parse(await fena.getAttribute('data-clcr-fena-snapshot'));
+  expect(fenaAssessment.sample).toMatchObject({ sameUrineSpecimen: 'assumed', pairedSameTime: 'assumed' });
+  await expect(page.locator('#fenaInputCard')).toContainText(/Zakładamy.*próbkę moczu.*krew/);
   await expect(page.locator('#clcrResultReport .clcr-result-assumptions')).toHaveCount(0);
   await expect(page.locator('#clcrResultReport')).not.toContainText(/standaryzowane do IFCC|brak podejrzenia AKI/);
   expect(await snapshotInputs(page)).toMatchObject({ creatinineState: 'rapidlyChanging', suspectedAKI: true });

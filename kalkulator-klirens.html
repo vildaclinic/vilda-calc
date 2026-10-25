@@ -182,6 +182,7 @@
 <link href="clcr_cacr_ui.css?v=1" rel="stylesheet" />
 <link href="clcr_oxcr_ui.css?v=1" rel="stylesheet" />
 <link href="clcr_citcr_ui.css?v=1" rel="stylesheet" />
+<link href="clcr_fena_ui.css?v=1" rel="stylesheet" />
 <link href="vilda_lab_assessment_ui.css?v=12" rel="stylesheet">
 <link href="vilda_lab_history_tab.css?v=4" rel="stylesheet">
   <link rel="stylesheet" href="vilda_phone_landscape.css?v=2">
@@ -553,6 +554,7 @@
             <input type="checkbox" id="spotAcuteIllness" class="white-checkbox" style="margin:0;">
             <span>Ostra choroba / stan przejściowy</span>
           </label>
+          <input type="hidden" id="FENa_sample_status" value="" />
           <!-- === Frakcje wydalnicze i UAG ze sparowanej próbki — START === -->
           <label class="advanced-field pro-field inline-checkbox-label" style="display:flex;align-items:center;gap:.45rem;">
             <input type="checkbox" id="spotPairedChemistry" class="white-checkbox" style="margin:0;">
@@ -691,8 +693,9 @@
           </label>
           <label class="advanced-field pro-field">Jednostka kreatyniny w surowicy:
             <select id="Scr_spot_unit">
-              <option value="mg/dl" selected>mg/dl</option>
+              <option value="mg/dl" selected>mg/dL</option>
               <option value="umol">µmol/L</option>
+              <option value="mmol/L">mmol/L</option>
             </select>
           </label>
           <label class="advanced-field pro-field inline-checkbox-label" style="display:flex;align-items:center;gap:.45rem;">
@@ -983,7 +986,7 @@
     <!-- === Rozszerzony moduł wyboru formuł === -->
     <script defer src="inline_kalkulator_klirens_01.js?v=1"></script>
 
-    <script defer src="clcr_clinical_safety.js?v=9"></script>
+    <script defer src="clcr_clinical_safety.js?v=10"></script>
     <script defer src="clcr_stone_safety.js?v=1"></script>
     <script defer src="clcr_dialysis_safety.js?v=1"></script>
     <script defer src="clcr_extended_egfr.js?v=1"></script>
@@ -1006,10 +1009,14 @@
     <script defer src="clcr_citcr.js?v=1"></script>
     <script defer src="clcr_citcr_ui.js?v=1"></script>
     <script defer src="clcr_citcr_persistence.js?v=1"></script>
+    <script defer src="clcr_fena_reference_data.js?v=1"></script>
+    <script defer src="clcr_fena.js?v=1"></script>
+    <script defer src="clcr_fena_ui.js?v=1"></script>
+    <script defer src="clcr_fena_persistence.js?v=1"></script>
     <script defer src="clcr_measured_clearance_reference_data.js?v=1"></script>
     <script defer src="clcr_measured_clearance_reference.js?v=1"></script>
     <script defer src="clcr_result_presentation.js?v=7"></script>
-    <script defer src="inline_kalkulator_klirens_02.js?v=16"></script>
+    <script defer src="inline_kalkulator_klirens_02.js?v=17"></script>
     <!-- Ujednolicona obsługa wyboru formuły w kalkulatorze klirensu/eGFR. -->
     <script defer src="inline_kalkulator_klirens_03.js?v=1"></script>
 <!-- Sekcja interpretacji AI z opisem i przyciskiem.  Umieszczamy ją w kontenerze
@@ -1076,7 +1083,7 @@
 </footer>
 
 <!-- 5. LOGIKA JS -->
-<script defer src="inline_kalkulator_klirens_04.js?v=21"></script>
+<script defer src="inline_kalkulator_klirens_04.js?v=22"></script>
 
 <!-- Moduł obsługi kliknięć listy dynamicznych wyników wyszukiwania -->
 <script defer src="inline_kalkulator_klirens_05.js?v=1"></script>
@@ -1230,7 +1237,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const rightIds = [
           'Ox_Cr_spot','oxalateSpotReportingEntity','Cit_Cr_spot','Cit_Cr_spot_unit','citrateSpotReportingEntity',
           'CitCr_entry_mode','CitCr_reported','CitCr_reported_unit','CitCr_reported_basis','CitCr_same_specimen',
-          'spotPairedChemistry',
+          'FENa_sample_status','spotPairedChemistry',
           'U_Na_spot','S_Na_spot','U_K_spot','S_K_spot',
           'U_Cl_spot','S_Cl_spot','U_HCO3_spot','S_HCO3_spot',
           'spotDiureticUse','spotKnownCKD','spotBicarbonateLoad','spotNagmaContext',
@@ -1252,7 +1259,7 @@ document.addEventListener('DOMContentLoaded', () => {
           'Ca_spot','Ca_spot_unit','U_pH',
           'Ox_Cr_spot','oxalateSpotReportingEntity','Cit_Cr_spot','Cit_Cr_spot_unit','citrateSpotReportingEntity',
           'CitCr_entry_mode','CitCr_reported','CitCr_reported_unit','CitCr_reported_basis','CitCr_same_specimen',
-          'spotPairedChemistry',
+          'FENa_sample_status','spotPairedChemistry',
           'U_Na_spot','S_Na_spot','U_K_spot','S_K_spot',
           'U_Cl_spot','S_Cl_spot','U_HCO3_spot','S_HCO3_spot',
           'spotDiureticUse','spotKnownCKD','spotBicarbonateLoad','spotNagmaContext',
@@ -1674,7 +1681,7 @@ document.addEventListener('DOMContentLoaded', () => {
          wczytywane w tym formularzu. Plik userData.js korzysta z localStorage. -->
         <script src="userData.js?v=6" defer></script>
 <script src="ios26-ui.js?v=45" defer></script>
-<script defer src="inline_kalkulator_klirens_07.js?v=10"></script>
+<script defer src="inline_kalkulator_klirens_07.js?v=11"></script>
 <script defer src="vilda_down_syndrome.js?v=5"></script>
 <script defer src="vilda_anorexia_risk.js?v=4"></script>
 <!-- Tablice siatek zespolu Downa przed app.js: app.js przekazuje je silnikowi BMI (P-DS-1). -->
@@ -1741,7 +1748,7 @@ document.addEventListener('DOMContentLoaded', () => {
       'oxalateSpotReportingEntity','Ox_Cr_spot_unit','OxCr_entry_mode','OxCr_reported','OxCr_reported_unit','OxCr_same_specimen',
       'Cit_Cr_spot_unit','citrateSpotReportingEntity','CitCr_entry_mode','CitCr_reported','CitCr_reported_unit','CitCr_reported_basis','CitCr_same_specimen',
       'spotMenstruation','spotHematuria','spotInfection','spotExercise','spotAcuteIllness',
-      'spotPairedChemistry',
+      'FENa_sample_status','spotPairedChemistry',
       'U_Na_spot','S_Na_spot','U_K_spot','S_K_spot',
       'U_Cl_spot','S_Cl_spot','U_HCO3_spot','S_HCO3_spot',
       'spotDiureticUse','spotKnownCKD','spotBicarbonateLoad','spotNagmaContext',
@@ -1935,6 +1942,6 @@ document.addEventListener('DOMContentLoaded', () => {
 </script>
 <script defer src="inline_kalkulator_klirens_08.js?v=1"></script>
   <script defer src="inline_kalkulator_klirens_09.js?v=1"></script>
-  <script defer src="clcr_ui_workflow.js?v=20"></script>
+  <script defer src="clcr_ui_workflow.js?v=21"></script>
 </body>
 </html>
