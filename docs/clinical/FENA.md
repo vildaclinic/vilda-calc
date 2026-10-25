@@ -42,6 +42,14 @@ nie oznacza sam w sobie potwierdzonej sprzeczności; jawna odpowiedź „Nie”
 ma pierwszeństwo przed dawnym zaznaczeniem „Tak”. Znanej kreatyniny z
 innego terminu nie wolno automatycznie uznać za równoczesną próbkę.
 
+Zgłoszona niezgodność unieważnia również dawne wspólne potwierdzenie
+sparowania używane przez pozostałe FE oraz potwierdzenie TmP/GFR
+korzystającego z tych samych stężeń kreatyniny. Dla różnego czasu krwi
+nie kasuje się potwierdzenia wspólnej próbki moczu: sam UAG może nadal
+korzystać z prawidłowych oznaczeń moczowych. Różne próbki moczu blokują
+także UAG. Reguła obowiązuje po zmianie wzoru i odtworzeniu sesji;
+przywrócenie potwierdzeń wymaga świadomej korekty informacji o próbkach.
+
 U_Na = 0 jest prawidłową wartością wejściową i daje FENa = 0. Pozostałe
 trzy stężenia muszą być dodatnie; wszystkie cztery skończone. Puste pole
 nie jest zerem. Ujemne wartości, nierówności zamiast dokładnego stężenia

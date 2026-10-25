@@ -157,4 +157,64 @@ describe('FENa — actual session runtime never completes a thin sample with pre
       expect(api.buildClcrSessionSnapshot().preservedInputs[key]).toBe('no');
     });
 
+  it.each(['FENa_spot', 'FEK_spot'])('canonical known sample issues invalidate stale shared pairing in restored %s', selectedFormula => {
+    for (const issue of ['different-time', 'different-urine']) {
+      const incoming = { selectedFormula, inputs: { U_Na_spot: '20', S_Na_spot: '140', U_K_spot: '25', S_K_spot: '4',
+        Ucr_spot: '100', Ucr_spot_unit: 'mg/dl', Scr_spot: '1', Scr_spot_unit: 'mg/dl', FENa_sample_status: issue,
+        spotPairedChemistry: true, ui_spotPairedChemistry_answer: 'yes', spotSameSpecimen: true, ui_spotSameSpecimen_answer: 'yes' } };
+      const { api, controls, context } = restore(incoming, { U_K_spot: '25', S_K_spot: '4' });
+      controls.formulaPicker.value = 'FEK_spot';
+      expect(controls.FENa_sample_status.value).toBe(issue);
+      expect(controls.spotPairedChemistry.checked).toBe(false);
+      expect(controls.ui_spotPairedChemistry_answer.value).toBe('no');
+      expect(controls.spotSameSpecimen.checked).toBe(issue === 'different-time');
+      expect(controls.ui_spotSameSpecimen_answer.value).toBe(issue === 'different-time' ? 'yes' : 'no');
+      vm.runInContext(readFileSync(new URL('../../clcr_clinical_safety.js', import.meta.url), 'utf8'), context);
+      expect(context.window.ClcrClinicalSafety.computeFractionalExcretion({ urineAnalyte: controls.U_K_spot.value, serumAnalyte: controls.S_K_spot.value,
+        urineCreatinine: controls.Ucr_spot.value, urineCreatinineUnit: controls.Ucr_spot_unit.value,
+        serumCreatinine: controls.Scr_spot.value, serumCreatinineUnit: controls.Scr_spot_unit.value,
+        pairedSameTime: controls.spotPairedChemistry.checked, sameUrineSpecimen: controls.spotPairedChemistry.checked })).toMatchObject({ ok: false, valuePct: null });
+      const saved = api.buildClcrSessionSnapshot();
+      const restoredAgain = restore(saved);
+      expect(restoredAgain.controls.FENa_sample_status.value).toBe(issue);
+      expect(restoredAgain.controls.spotPairedChemistry.checked).toBe(false);
+    }
+  });
+  it('a canonical different-urine cause survives its own combined paired no on another restore', () => {
+    const { controls } = restore({ selectedFormula: 'FEK_spot', inputs: { FENa_sample_status: 'different-urine',
+      spotPairedChemistry: false, ui_spotPairedChemistry_answer: 'no', spotSameSpecimen: true, ui_spotSameSpecimen_answer: 'yes' } });
+    expect(controls.FENa_sample_status.value).toBe('different-urine');
+    expect(controls.spotSameSpecimen.checked).toBe(false);
+    expect(controls.ui_spotSameSpecimen_answer.value).toBe('no');
+  });
+
+  it.each(['FENa_spot', 'TMP_GFR'])('restored known problems in %s invalidate stale TmP/GFR pairing without erasing its other protocol', selectedFormula => {
+    for (const issue of ['different-time', 'different-urine']) {
+      const incoming = { selectedFormula, inputs: { FENa_sample_status: issue, spotPairedChemistry: true, ui_spotPairedChemistry_answer: 'yes',
+        spotSameSpecimen: true, ui_spotSameSpecimen_answer: 'yes', tmpPairedSameTime: true, ui_tmpPairedSameTime_answer: 'yes',
+        tmpOvernightFasting: true, ui_tmpOvernightFasting_answer: 'yes', spotSampleKind: 'secondMorning',
+        Ucr_spot: '100', Ucr_spot_unit: 'mg/dl', Scr_spot: '1', Scr_spot_unit: 'mg/dl', U_P_spot: '30', S_P_spot: '3' } };
+      const { api, controls, context } = restore(incoming, { tmpPairedSameTime: true, ui_tmpPairedSameTime_answer: 'yes',
+        tmpOvernightFasting: true, ui_tmpOvernightFasting_answer: 'yes', spotSampleKind: 'secondMorning', U_P_spot: '30', S_P_spot: '3' });
+      expect(controls.tmpPairedSameTime.checked).toBe(false);
+      expect(controls.ui_tmpPairedSameTime_answer.value).toBe(issue === 'different-time' ? 'no' : 'unknown');
+      expect(controls.tmpOvernightFasting.checked).toBe(true);
+      expect(controls.ui_tmpOvernightFasting_answer.value).toBe('yes');
+      expect(controls.spotSampleKind.value).toBe('secondMorning');
+      vm.runInContext(readFileSync(new URL('../../clcr_clinical_safety.js', import.meta.url), 'utf8'), context);
+      expect(context.window.ClcrClinicalSafety.computeTmpGfr({ ageYears: 45, sampleKind: controls.spotSampleKind.value,
+        pairedSameTime: controls.tmpPairedSameTime.checked, overnightFasting: controls.tmpOvernightFasting.checked,
+        serumPhosphate: controls.S_P_spot.value, serumPhosphateUnit: 'mg/dL', urinePhosphate: controls.U_P_spot.value, urinePhosphateUnit: 'mg/dL',
+        serumCreatinine: controls.Scr_spot.value, serumCreatinineUnit: controls.Scr_spot_unit.value,
+        urineCreatinine: controls.Ucr_spot.value, urineCreatinineUnit: controls.Ucr_spot_unit.value })).toMatchObject({ ok: false });
+      expect(api.buildClcrSessionSnapshot().inputs.ui_tmpPairedSameTime_answer).toBe(issue === 'different-time' ? 'no' : 'unknown');
+    }
+  });
+  it('a urine-only mismatch preserves an independently known negative TmP/GFR blood-timing answer', () => {
+    const { controls } = restore({ selectedFormula: 'TMP_GFR', inputs: { FENa_sample_status: 'different-urine',
+      tmpPairedSameTime: false, ui_tmpPairedSameTime_answer: 'no' } }, { tmpPairedSameTime: true, ui_tmpPairedSameTime_answer: 'yes' });
+    expect(controls.tmpPairedSameTime.checked).toBe(false);
+    expect(controls.ui_tmpPairedSameTime_answer.value).toBe('no');
+  });
+
 });

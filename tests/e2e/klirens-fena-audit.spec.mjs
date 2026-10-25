@@ -407,3 +407,118 @@ test('FENa → FEK → FENa: pola mają jeden DOM, a nowa sesja FEK nie uzupełn
   for (const id of ['Ucr_spot', 'Scr_spot']) await expect(page.locator('#' + id)).toHaveCount(1);
   await expect(card(page)).toHaveCount(0); await expect(page.locator('#fenaRequiredCount')).toHaveText('2/4');
 });
+
+for (const issue of ['different-time', 'different-urine']) {
+  test(`FENa: znany problem ${issue} unieważnia wspólne potwierdzenie FEK i zachowuje właściwy kontekst UAG`, async ({ page }) => {
+    const errors = []; page.on('pageerror', error => errors.push(error.message));
+    await openCalculator(page);
+    await restore(page, { U_K_spot: '25', S_K_spot: '4', U_Cl_spot: '30', FENa_sample_status: issue });
+    await expect(card(page)).toHaveCount(0);
+    await openSampleDetails(page); await kliknij(page.locator('#fenaCorrectSampleIssue'));
+    expect((await expectResult(page, { raw: 1 / 7 })).sample)
+      .toMatchObject({ sameUrineSpecimen: 'confirmed', pairedSameTime: 'confirmed' });
+    await page.locator('#ui_fena_sample_issue').selectOption(issue);
+    await expect(card(page)).toHaveCount(0);
+    const shared = await page.evaluate(() => ({
+      paired: document.getElementById('spotPairedChemistry').checked,
+      same: document.getElementById('spotSameSpecimen').checked,
+      vault: { ...window.__vildaClcrVersionValueVault },
+    }));
+    expect(shared.paired).toBe(false);
+    expect(shared.vault).toMatchObject({ spotPairedChemistry: false, ui_spotPairedChemistry_answer: 'no' });
+    expect(shared.same).toBe(issue === 'different-time');
+    expect(shared.vault.ui_spotSameSpecimen_answer).toBe(issue === 'different-time' ? 'yes' : 'no');
+    const choose = async formulaId => {
+      expect(await page.evaluate(id => window.ClcrUiWorkflow.selectFormula(id), formulaId)).toBe(true);
+      await page.waitForFunction(id => window.ClcrUiWorkflow.state.activeFormulaId === id && window.clcrIsResetting !== true, formulaId);
+    };
+    await choose('FEK_spot');
+    await expect(page.locator('#clcrResultReport [data-clcr-series="FEK_spot"]')).toHaveCount(0);
+    expect(await page.evaluate(() => window.canComputeFormula('FEK_spot'))).toBe(false);
+    expect(await page.evaluate(() => window.ClcrUiWorkflow.getFormulaReadiness('FEK_spot').valueReady)).toBe(false);
+    expect(await page.evaluate(() => window.ClcrVisitSave.collectActiveDatapoints(document, { formulaId: 'FEK_spot' }))).toEqual([]);
+    await choose('FENa_spot'); await expect(card(page)).toHaveCount(0);
+    await choose('AGu_spot');
+    const uag = page.locator('#clcrResultReport [data-clcr-series="AGu_spot"]');
+    if (issue === 'different-time') {
+      await expect(uag).toBeVisible();
+      expect(Number(await uag.getAttribute('data-clcr-value'))).toBe(15);
+      expect(await page.evaluate(() => window.canComputeFormula('AGu_spot'))).toBe(true);
+    } else {
+      await expect(uag).toHaveCount(0);
+      expect(await page.evaluate(() => window.canComputeFormula('AGu_spot'))).toBe(false);
+    }
+    await choose('FENa_spot'); await expect(card(page)).toHaveCount(0);
+    await openSampleDetails(page); await kliknij(page.locator('#fenaCorrectSampleIssue'));
+    await expectResult(page, { raw: 1 / 7 });
+    await choose('FEK_spot');
+    const corrected = page.locator('#clcrResultReport [data-clcr-series="FEK_spot"]');
+    await expect(corrected).toBeVisible();
+    expect(Number(await corrected.getAttribute('data-clcr-value'))).toBe(6.25);
+    expect(errors).toEqual([]);
+  });
+}
+
+test('FENa: odtworzona niezgodność próbek unieważnia stare potwierdzenie także przy otwieraniu FEK', async ({ page }) => {
+  await openCalculator(page);
+  for (const issue of ['different-time', 'different-urine']) {
+    expect(await page.evaluate(({ issue, inputs }) => window.applyClcrSessionSnapshot({
+      version: 2, currentVersion: 'spot', selectedFormula: 'FEK_spot', inputs: {
+        ...inputs, formulaPicker: 'FEK_spot', FENa_sample_status: issue,
+        U_K_spot: '25', S_K_spot: '4', U_Cl_spot: '30',
+        spotPairedChemistry: true, ui_spotPairedChemistry_answer: 'yes',
+        spotSameSpecimen: true, ui_spotSameSpecimen_answer: 'yes',
+      },
+    }, { source: 'e2e-fena-known-issue-fictional-only', update: true, dispatchEvents: false, preserveAcrossVersions: true }), { issue, inputs: base })).toBe(true);
+    await page.waitForFunction(() => window.ClcrUiWorkflow.state.activeFormulaId === 'FEK_spot' && window.clcrIsResetting !== true);
+    await expect(page.locator('#clcrResultReport [data-clcr-series="FEK_spot"]')).toHaveCount(0);
+    await expect(page.locator('#ui_spotPairedChemistry_answer')).toHaveValue('no');
+    expect(await page.evaluate(() => window.canComputeFormula('FEK_spot'))).toBe(false);
+    expect(await page.evaluate(() => window.ClcrUiWorkflow.getFormulaReadiness('FEK_spot').valueReady)).toBe(false);
+    expect(await page.evaluate(() => window.ClcrVisitSave.collectActiveDatapoints(document, { formulaId: 'FEK_spot' }))).toEqual([]);
+  }
+});
+
+for (const issue of ['different-time', 'different-urine']) {
+  test(`FENa: problem ${issue} unieważnia dawne potwierdzenie protokołu TmP/GFR`, async ({ page }) => {
+    await openCalculator(page);
+    expect(await page.evaluate(inputs => window.applyClcrSessionSnapshot({
+      version: 2, currentVersion: 'spot', selectedFormula: 'TMP_GFR', inputs: {
+        ...inputs, formulaPicker: 'TMP_GFR', spotSampleKind: 'secondMorning',
+        tmpOvernightFasting: true, ui_tmpOvernightFasting_answer: 'yes',
+        tmpPairedSameTime: true, ui_tmpPairedSameTime_answer: 'yes',
+        U_PO4_spot: '10', U_PO4_spot_unit: 'mmol/L', S_PO4_spot: '1', S_PO4_spot_unit: 'mmol/L',
+      },
+    }, { source: 'e2e-fena-tmp-shared-sample-fictional-only', update: true, dispatchEvents: false, preserveAcrossVersions: true }), base)).toBe(true);
+    await page.waitForFunction(() => window.ClcrUiWorkflow.state.activeFormulaId === 'TMP_GFR' && window.clcrIsResetting !== true);
+    const tmpCard = page.locator('#clcrResultReport [data-clcr-series="TMP_GFR"]');
+    await expect(tmpCard).toBeVisible();
+    expect(await page.evaluate(() => window.canComputeFormula('TMP_GFR'))).toBe(true);
+    const choose = async formulaId => {
+      expect(await page.evaluate(id => window.ClcrUiWorkflow.selectFormula(id), formulaId)).toBe(true);
+      await page.waitForFunction(id => window.ClcrUiWorkflow.state.activeFormulaId === id && window.clcrIsResetting !== true, formulaId);
+    };
+    await choose('FENa_spot'); await expectResult(page, { raw: 1 / 7 });
+    await openSampleDetails(page); await page.locator('#ui_fena_sample_issue').selectOption(issue);
+    await expect(card(page)).toHaveCount(0);
+    const knownTmp = await page.evaluate(() => ({
+      paired: document.getElementById('tmpPairedSameTime').checked,
+      answer: document.getElementById('ui_tmpPairedSameTime_answer')?.value,
+      vaultAnswer: window.__vildaClcrVersionValueVault?.ui_tmpPairedSameTime_answer,
+    }));
+    expect(knownTmp).toEqual({ paired: false, answer: issue === 'different-time' ? 'no' : 'unknown', vaultAnswer: issue === 'different-time' ? 'no' : 'unknown' });
+    await choose('TMP_GFR'); await expect(tmpCard).toHaveCount(0);
+    expect(await page.evaluate(() => window.canComputeFormula('TMP_GFR'))).toBe(false);
+    expect(await page.evaluate(() => window.ClcrUiWorkflow.getFormulaReadiness('TMP_GFR').valueReady)).toBe(false);
+    expect(await page.evaluate(() => window.ClcrVisitSave.collectActiveDatapoints(document, { formulaId: 'TMP_GFR' }))).toEqual([]);
+    await choose('FENa_spot'); await openSampleDetails(page);
+    await kliknij(page.locator('#fenaCorrectSampleIssue')); await expectResult(page, { raw: 1 / 7 });
+    // Correcting Na/Cr pairing does not silently re-confirm the independent
+    // TmP/GFR phosphate sampling protocol that was invalidated above.
+    await choose('TMP_GFR'); await expect(tmpCard).toHaveCount(0);
+    await expect(page.locator('#tmpPairedSameTime')).not.toBeChecked();
+    await page.locator('#ui_tmpPairedSameTime_answer').selectOption('yes');
+    await expect(tmpCard).toBeVisible();
+    expect(await page.evaluate(() => window.canComputeFormula('TMP_GFR'))).toBe(true);
+  });
+}

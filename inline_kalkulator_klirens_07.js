@@ -303,9 +303,9 @@ function normalizeFenaSessionInputs(session) {
     // Explicit blank/unknown units stay unknown rather than acquiring a default.
     fields[id] = has(id) ? ["mg/dl", "mg/dL", "umol/L", "µmol/L", "umol", "µmol", "mmol/L", "mmol"].includes(input[id]) ? input[id] : "" : "mg/dl";
   }
-  fields.FENa_sample_status = input.ui_spotSameSpecimen_answer === "no" ? "different-urine"
+  fields.FENa_sample_status = input.ui_spotSameSpecimen_answer === "no" || input.FENa_sample_status === "different-urine" ? "different-urine"
     : input.ui_spotPairedChemistry_answer === "no" ? "different-time"
-      : ["different-urine", "different-time", "confirmed"].includes(input.FENa_sample_status) ? input.FENa_sample_status : "";
+      : ["different-time", "confirmed"].includes(input.FENa_sample_status) ? input.FENa_sample_status : "";
   for (const id of ["spotSameSpecimen", "spotPairedChemistry", "spotDiureticUse", "spotKnownCKD"]) {
     const key = `ui_${id}_answer`;
     fields[id] = input[id] === true;
@@ -314,9 +314,33 @@ function normalizeFenaSessionInputs(session) {
     // not turn into a negative clinical fact, but it does clear an old true.
     if (has(key)) fields[id] = fields[key] === "yes";
   }
-  // Clear existing controls, but do not invent persisted keys for controls
-  // absent from an older/minimal runtime. Provided source values still survive.
-  const applicable = Object.fromEntries(Object.entries(fields).filter(([key]) => has(key) || document.getElementById(key)));
+  // A reported FENa problem also invalidates the shared paired-chemistry
+  // confirmation used by FEK/FECl/FEHCO3/TRP. It is the same clinical fact even
+  // when another formula is selected or an old snapshot still contains yes.
+  const sharedIssueFields = [];
+  if (["different-time", "different-urine"].includes(fields.FENa_sample_status)) {
+    fields.spotPairedChemistry = false;
+    fields.ui_spotPairedChemistry_answer = "no";
+    sharedIssueFields.push("spotPairedChemistry", "ui_spotPairedChemistry_answer");
+    // A time-only problem does not invalidate an otherwise confirmed urine
+    // sample; urine-only calculations such as UAG may still use that sample.
+    if (fields.FENa_sample_status === "different-urine") {
+      fields.spotSameSpecimen = false;
+      fields.ui_spotSameSpecimen_answer = "no";
+      sharedIssueFields.push("spotSameSpecimen", "ui_spotSameSpecimen_answer");
+    }
+    // TmP/GFR shares these creatinine samples but carries its own time-only
+    // confirmation. A urine mismatch withdraws confirmation without inventing
+    // a wrong blood time; an independently reported no remains a known fact.
+    if (has("tmpPairedSameTime") || has("ui_tmpPairedSameTime_answer") || document.getElementById("tmpPairedSameTime") || document.getElementById("ui_tmpPairedSameTime_answer")) {
+      fields.tmpPairedSameTime = false;
+      fields.ui_tmpPairedSameTime_answer = fields.FENa_sample_status === "different-time" || input.ui_tmpPairedSameTime_answer === "no" ? "no" : "unknown";
+      sharedIssueFields.push("tmpPairedSameTime", "ui_tmpPairedSameTime_answer");
+    }
+  }
+  // Clear existing controls, but do not invent unknown persisted keys for
+  // absent controls. Explicit known issues remain facts even without a widget.
+  const applicable = Object.fromEntries(Object.entries(fields).filter(([key]) => has(key) || document.getElementById(key) || sharedIssueFields.includes(key)));
   session.inputs = { ...session.inputs, ...applicable };
 }
 function clearFenaInputContext(options = {}) {

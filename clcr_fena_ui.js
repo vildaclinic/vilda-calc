@@ -118,6 +118,15 @@
     else form.append(card);
     const layout = { document: documentRef, form, card, groups, count, progress, progressTrack, age, details, problemSelect, fact, correction,
       moves: new Map(), names: new Map(), attributes: new Map(), rows: new Map(), optionLabels: new Map(), fieldViews: options.fieldViews };
+    const writeSampleFact = (id, checked, answerValue = checked ? "yes" : "no") => {
+      const checkbox = documentRef.getElementById(id);
+      const answer = documentRef.getElementById(`ui_${id}_answer`);
+      if (checkbox) checkbox.checked = checked;
+      if (answer) answer.value = answerValue;
+      const vault = documentRef.defaultView?.__vildaClcrVersionValueVault;
+      if (vault) { vault[id] = checked; vault[`ui_${id}_answer`] = answerValue; }
+      return answer || checkbox;
+    };
     const commitSampleProblem = () => {
       const control = documentRef.getElementById("FENa_sample_status");
       const selected = problemSelect.value;
@@ -126,7 +135,24 @@
         control.value = selected;
         const vault = documentRef.defaultView?.__vildaClcrVersionValueVault;
         if (vault) vault.FENa_sample_status = selected;
-        if (changed) emit(layout, control);
+        // The legacy paired confirmation means BOTH common urine and timely
+        // blood. A new contradiction invalidates that shared fact for every FE.
+        // A blood timing problem does not negate a known common urine sample.
+        const tmpAnswer = documentRef.getElementById("ui_tmpPairedSameTime_answer")?.value
+          ?? vault?.ui_tmpPairedSameTime_answer;
+        const changedControls = [
+          writeSampleFact("spotPairedChemistry", false),
+          // TmP/GFR shares these creatinine samples but has its own protocol.
+          // A urine mismatch does not establish a blood timing mismatch.
+          writeSampleFact("tmpPairedSameTime", false, selected === "different-time" || tmpAnswer === "no" ? "no" : "unknown"),
+        ];
+        if (selected === "different-urine") changedControls.push(writeSampleFact("spotSameSpecimen", false));
+        // All canonical controls and the authoritative vault are updated before
+        // any event can recompute FENa or another urine calculation.
+        if (changed) {
+          changedControls.forEach(node => emit(layout, node));
+          emit(layout, control);
+        }
       } else {
         // An unanswered choice cannot erase an explicit known contradiction.
         refreshLayout(layout);
@@ -140,19 +166,10 @@
     correction.addEventListener("click", () => {
       const control = documentRef.getElementById("FENa_sample_status");
       control.value = "confirmed";
-      const sampleVault = documentRef.defaultView?.__vildaClcrVersionValueVault;
-      if (sampleVault) sampleVault.FENa_sample_status = "confirmed";
-      ["spotPairedChemistry", "spotSameSpecimen"].forEach(id => {
-        const view = layout.fieldViews.get(id);
-        const checkbox = documentRef.getElementById(id);
-        const answer = documentRef.getElementById(`ui_${id}_answer`);
-        if (answer) answer.value = "yes";
-        if (checkbox) checkbox.checked = true;
-        const vault = documentRef.defaultView?.__vildaClcrVersionValueVault;
-        if (vault) { vault[id] = true; vault[`ui_${id}_answer`] = "yes"; }
-        if (answer) emit(layout, answer);
-        else if (view?.control || checkbox) emit(layout, view?.control || checkbox);
-      });
+      const vault = documentRef.defaultView?.__vildaClcrVersionValueVault;
+      if (vault) vault.FENa_sample_status = "confirmed";
+      const changedControls = [writeSampleFact("spotPairedChemistry", true), writeSampleFact("spotSameSpecimen", true)];
+      changedControls.forEach(node => emit(layout, node));
       emit(layout, control);
       refreshLayout(layout);
     });

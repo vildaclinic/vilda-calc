@@ -6790,6 +6790,10 @@ bez rutynowego checkboxu. Znana sprzeczność nadal blokuje obliczenie;
 założenia nie zapisuje się jako potwierdzonej odpowiedzi. Nie dodano
 ankiety AKI, stabilności, IFCC/IDMS, PChN lub diuretyków. FENa nadal
 jest logicznym wyjątkiem od ogólnego założenia „stabilnie, bez AKI”.
+Zgłoszona niezgodność unieważnia także stare potwierdzenia sparowania
+innych FE i TmP/GFR, które korzystają ze wspólnych stężeń kreatyniny,
+również po zmianie wzoru lub odtworzeniu sesji. UAG zależy od zgodności
+próbek moczu; sam inny czas pobrania krwi nie blokuje UAG.
 
 **Jedna karta i interpretacja:** główna karta jest neutralna także >2%,
 bez werdyktu „prawidłowy/nieprawidłowy”, kategorii G, diagnozy AKI,
