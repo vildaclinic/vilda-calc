@@ -533,6 +533,9 @@ function validateField(e) {
   } else if ($("formulaPicker")?.value === "FENa_spot" && ["U_Na_spot", "S_Na_spot", "Ucr_spot", "Scr_spot"].includes(n)) {
     // FENa validates its four finite concentrations in their declared units.
     // A unitless ceiling must not reject equivalent creatinine concentrations.
+  } else if ($("formulaPicker")?.value === "FEK_spot" && ["U_K_spot", "S_K_spot", "Ucr_spot", "Scr_spot"].includes(n)) {
+    // FEK validates its four finite concentrations in their declared units.
+    // No source supports a unitless ceiling on these concentration controls.
   } else if (maxValues[n] !== void 0 && t > maxValues[n])
     return (
       o && (o.textContent = "Warto\u015B\u0107 wydaje si\u0119 zbyt wysoka"),
@@ -544,7 +547,7 @@ function validateField(e) {
 function validateClcrAgeContext(e) {
   // Cit/Cr reference bands use completed years; zero years needs no extra
   // months or days to select the source's birth–<3-years interval.
-  if (["CitCr_spot", "FENa_spot"].includes($("formulaPicker")?.value)) return;
+  if (["CitCr_spot", "FENa_spot", "FEK_spot"].includes($("formulaPicker")?.value)) return;
   const n = document.getElementById("age"),
     t = document.getElementById("ageMonths");
   if (!n || (n.value || "").trim() === "") return;
@@ -566,6 +569,7 @@ function canComputeFormula(e) {
   if (e === "OxCr_spot") return evaluateClcrOxcr().valid === true;
   if (e === "CitCr_spot") return evaluateClcrCitcr().valid === true;
   if (e === "FENa_spot") return evaluateClcrFena().valid === true;
+  if (e === "FEK_spot") return evaluateClcrFek().valid === true;
   if (
     window.ClcrClinicalSafety &&
     typeof window.ClcrClinicalSafety.formulaSafety == "function"
@@ -679,6 +683,11 @@ function evaluateClcrFena() {
   return engine?.evaluate(engine.readInputFromDocument(document), window.VildaClcrFenaReferenceData?.DEFAULT_POLICY)
     || { valid: false, errorCode: "FENA_UNAVAILABLE", error: "Nie można obliczyć FENa. Odśwież aplikację." };
 }
+function evaluateClcrFek() {
+  const engine = window.VildaClcrFek;
+  return engine?.evaluate(engine.readInputFromDocument(document), window.VildaClcrFekReferenceData?.DEFAULT_POLICY)
+    || { valid: false, errorCode: "FEK_UNAVAILABLE", error: "Nie można obliczyć FEK. Odśwież aplikację." };
+}
 function clcrCgNormalizedDetails(ageYears, bsaM2, sources = []) {
   const ageUsed = Math.floor(ageYears);
   const sourceLinks = sources.map((source) => `<a href="${clcrEscapeHtml(source.url)}" target="_blank" rel="noopener noreferrer">${clcrEscapeHtml(source.label)}</a>`).join(" · ");
@@ -726,14 +735,14 @@ function packClcrSupplementaryMarkup(markup, formulaId) {
   clcrSetTrustedMarkup(staging, markup, "clcr-result-presentation-staging");
   const nodes = [...staging.children];
   const primary = nodes.find((node) => node.classList.contains("clcr-result-card") && node.dataset.clcrFormula === formulaId);
-  if (!primary && ["CitCr_spot", "FENa_spot"].includes(formulaId)) {
-    const pending = nodes.filter((node) => node.dataset.clcrFormula === formulaId && node.matches(".citcr-result-empty, .citcr-result-error, .fena-result-empty, .fena-result-error"));
+  if (!primary && ["CitCr_spot", "FENa_spot", "FEK_spot"].includes(formulaId)) {
+    const pending = nodes.filter((node) => node.dataset.clcrFormula === formulaId && node.matches(".citcr-result-empty, .citcr-result-error, .fena-result-empty, .fena-result-error, .fek-result-empty, .fek-result-error"));
     if (pending.length) return pending.map((node) => node.outerHTML).join("");
   }
   if (!primary) return markup;
   const details = nodes.find((node) => node.classList.contains("clcr-result-details") && node.dataset.clcrFormula === formulaId);
   if (!details) return markup;
-  if (["OxCr_spot", "CitCr_spot", "FENa_spot"].includes(formulaId)) {
+  if (["OxCr_spot", "CitCr_spot", "FENa_spot", "FEK_spot"].includes(formulaId)) {
     // This card already carries its complete source and specimen context.
     // Unrelated stone-panel EAU notes must not label a Fimlab/NHS reference.
     nodes.filter((node) => node !== primary && node !== details &&
@@ -884,7 +893,8 @@ function update() {
     cacrEvaluation = evaluateClcrCacr({ concentrationOnly: $("formulaPicker")?.value !== "CaCr_spot" }),
     oxcrEvaluation = evaluateClcrOxcr({ concentrationOnly: $("formulaPicker")?.value !== "OxCr_spot" }),
     citcrEvaluation = evaluateClcrCitcr({ concentrationOnly: $("formulaPicker")?.value !== "CitCr_spot" }),
-    fenaEvaluation = evaluateClcrFena();
+    fenaEvaluation = evaluateClcrFena(),
+    fekEvaluation = evaluateClcrFek();
   acrRatio
     ? ((j = acrRatio.mgG),
       ($("U_ACR").value = j.toFixed(1)))
@@ -918,10 +928,7 @@ function update() {
       spotUrineSodium,
       spotSerumSodium,
     ),
-    spotFeK = computeSpotFractionalExcretion(
-      spotUrinePotassium,
-      spotSerumPotassium,
-    ),
+    spotFeK = { ok: fekEvaluation.valid === true, valuePct: fekEvaluation.rawValue, error: fekEvaluation.error },
     spotFeCl = computeSpotFractionalExcretion(
       spotUrineChloride,
       spotSerumChloride,
@@ -2317,8 +2324,12 @@ function update() {
   if (window.ClcrFenaUi && (fenaEvaluation.valid || _e === "FENa_spot")) {
     ve += window.ClcrFenaUi.renderResult(fenaEvaluation);
   }
+  if (window.ClcrFekUi && (fekEvaluation.valid || _e === "FEK_spot")) {
+    ve += window.ClcrFekUi.renderResult(fekEvaluation);
+  } else if (_e === "FEK_spot") {
+    ve += '<div class="fek-result-error" data-clcr-formula="FEK_spot"><strong>Nie można wyświetlić FEK</strong><p>Odśwież aplikację, aby wczytać moduł wyniku FEK.</p></div>';
+  }
   [
-    ["FEK", spotFeK, "FEK_spot"],
     ["FECl", spotFeCl, "FECl_spot"],
     ["FEHCO\u2083", spotFeHco3, "FEHCO3_spot"],
   ].forEach(([label, result, seriesKey]) => {
@@ -2360,8 +2371,8 @@ function update() {
       }[_e] || "FE/UAG";
   if (_e === "AGu_spot" && !uagSpecimenConfirmed) {
     ve += '<div class="result-box warn-yellow" data-clcr-formula="AGu_spot"><strong>Nie obliczono UAG:</strong> potwierdź, że sód, potas i chlorki pochodzą z tej samej próbki moczu.</div>';
-  } else if (_e === "FENa_spot") {
-    // The selected FENa has one result/error card from its production engine.
+  } else if (["FENa_spot", "FEK_spot"].includes(_e)) {
+    // The selected audited FE has one result/error card from its own engine.
   } else if (spotChemistryRequested && _e !== "AGu_spot" && !spotPairedChemistry) {
     ve +=
       '<div class="result-box warn-yellow"><strong>Nie obliczono FE/UAG:</strong> potwierdź, że anality i kreatynina pochodzą z tej samej próbki moczu, a krew pobrano równocześnie.</div>';

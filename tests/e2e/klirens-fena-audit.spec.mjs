@@ -394,13 +394,13 @@ test('FENa → FEK → FENa: pola mają jeden DOM, a nowa sesja FEK nie uzupełn
   }, { source: 'e2e-fena-new-fictional-feK-sample', update: true, dispatchEvents: false, preserveAcrossVersions: true }))).toBe(true);
   await page.waitForFunction(() => window.ClcrUiWorkflow.state.activeFormulaId === 'FEK_spot' && window.clcrIsResetting !== true);
   const fek = page.locator('#clcrResultReport [data-clcr-series="FEK_spot"]');
-  await expect(fek).toHaveCount(0);
-  const paired = page.locator('#ui_spotPairedChemistry_answer');
-  for (const parent of await paired.locator('xpath=ancestor::details').all()) {
-    if (await parent.getAttribute('open') === null) await kliknij(parent.locator(':scope > summary'));
-  }
-  await paired.selectOption('yes'); await expect(fek).toBeVisible();
+  // FEK now follows the accepted four-concentration workflow. Missing pairing
+  // confirmation is a disclosed assumption; the negative-fact cases below
+  // continue to block calculation and saving.
+  await expect(fek).toBeVisible();
   expect(Number(await fek.getAttribute('data-clcr-value'))).toBeCloseTo(5, 12);
+  expect(JSON.parse(await fek.getAttribute('data-clcr-fek-snapshot')).sample)
+    .toMatchObject({ sameUrineSpecimen: 'assumed', pairedSameTime: 'assumed' });
   await page.evaluate(() => window.ClcrUiWorkflow.selectFormula('FENa_spot'));
   await page.waitForFunction(() => window.ClcrUiWorkflow.state.activeFormulaId === 'FENa_spot' && window.clcrIsResetting !== true);
   for (const id of ['U_Na_spot', 'S_Na_spot']) await expect(page.locator('#' + id)).toHaveValue('');
@@ -472,7 +472,10 @@ test('FENa: odtworzona niezgodność próbek unieważnia stare potwierdzenie tak
     }, { source: 'e2e-fena-known-issue-fictional-only', update: true, dispatchEvents: false, preserveAcrossVersions: true }), { issue, inputs: base })).toBe(true);
     await page.waitForFunction(() => window.ClcrUiWorkflow.state.activeFormulaId === 'FEK_spot' && window.clcrIsResetting !== true);
     await expect(page.locator('#clcrResultReport [data-clcr-series="FEK_spot"]')).toHaveCount(0);
-    await expect(page.locator('#ui_spotPairedChemistry_answer')).toHaveValue('no');
+    // The simplified FEK form does not mount the old routine questionnaire.
+    // Its explicit negative fact must still survive in the canonical context.
+    expect(await page.evaluate(() => window.__vildaClcrVersionValueVault.ui_spotPairedChemistry_answer)).toBe('no');
+    expect(await page.evaluate(() => window.VildaClcrFek.readInputFromDocument(document).pairedSameTime)).toBe('different');
     expect(await page.evaluate(() => window.canComputeFormula('FEK_spot'))).toBe(false);
     expect(await page.evaluate(() => window.ClcrUiWorkflow.getFormulaReadiness('FEK_spot').valueReady)).toBe(false);
     expect(await page.evaluate(() => window.ClcrVisitSave.collectActiveDatapoints(document, { formulaId: 'FEK_spot' }))).toEqual([]);

@@ -232,7 +232,7 @@ test('TmP/GFR dobiera metodę na granicy 19 lat i nie korzysta z DZM', async ({ 
   await expect(page.locator('#elecInfo')).not.toContainText('TmP/GFR (dobowa');
 });
 
-test('FENa zakłada sparowane próbki, pozostałe FE i UAG zachowują potwierdzenie', async ({ page }) => {
+test('FENa i FEK zakładają sparowane próbki, FECl i UAG zachowują potwierdzenie', async ({ page }) => {
   await openCalculator(page, 'spot');
   await setPatient(page, { age: 50 });
   await page.locator('#Ucr_spot').fill('100');
@@ -242,17 +242,36 @@ test('FENa zakłada sparowane próbki, pozostałe FE i UAG zachowują potwierdze
   await page.locator('#U_K_spot').fill('20');
   await page.locator('#S_K_spot').fill('4');
   await page.locator('#U_Cl_spot').fill('80');
+  await page.locator('#S_Cl_spot').fill('100');
 
   await expect(page.locator('#elecInfo')).toContainText('Nie obliczono FE/UAG');
   const fena = page.locator('#elecInfo .clcr-result-card[data-clcr-series="FENa_spot"]');
   await expect(fena).toBeVisible();
   await expect(fena).toHaveAttribute('data-clcr-tone', 'neutral');
   expect(Number(await fena.getAttribute('data-clcr-value'))).toBeCloseTo(1 / 7, 12);
-  await expect(page.locator('#elecInfo')).not.toContainText('FEK (sparowana');
+  const fek = page.locator('#elecInfo .clcr-result-card[data-clcr-series="FEK_spot"]');
+  await expect(fek).toBeVisible();
+  await expect(fek).toHaveAttribute('data-clcr-tone', 'neutral');
+  expect(Number(await fek.getAttribute('data-clcr-value'))).toBe(5);
+  expect(JSON.parse(await fek.getAttribute('data-clcr-fek-snapshot')).sample)
+    .toEqual({ sameUrineSpecimen: 'assumed', pairedSameTime: 'assumed' });
+  const fecl = page.locator('#elecInfo .clcr-result-card[data-clcr-series="FECl_spot"]');
+  const uag = page.locator('#elecInfo .clcr-result-card[data-clcr-series="AGu_spot"]');
+  await expect(fecl).toHaveCount(0);
+  await expect(uag).toHaveCount(0);
+  expect(await page.evaluate(() => window.canComputeFormula('FEK_spot'))).toBe(true);
+  expect(await page.evaluate(() => window.canComputeFormula('FECl_spot'))).toBe(false);
 
   await page.locator('#spotPairedChemistry').check();
   await expect(fena).toBeVisible();
-  await expect(page.locator('#elecInfo')).toContainText('FEK (sparowana próbka punktowa)');
+  await expect(fek).toBeVisible();
+  expect(Number(await fek.getAttribute('data-clcr-value'))).toBe(5);
+  expect(JSON.parse(await fek.getAttribute('data-clcr-fek-snapshot')).sample)
+    .toEqual({ sameUrineSpecimen: 'assumed', pairedSameTime: 'confirmed' });
+  await expect(fecl).toBeVisible();
+  expect(Number(await fecl.getAttribute('data-clcr-value'))).toBeCloseTo(0.8, 12);
+  await expect(uag).toBeVisible();
+  expect(Number(await uag.getAttribute('data-clcr-value'))).toBe(-40);
   await expect(page.locator('#elecInfo')).toContainText('UAG; próbka punktowa');
   await expect(page.locator('#elecInfo')).toContainText('bez potwierdzonej kwasicy metabolicznej');
   await expect(page.locator('#elecInfo .out-of-range')).toHaveCount(0);
