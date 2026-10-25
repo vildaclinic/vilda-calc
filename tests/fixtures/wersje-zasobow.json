@@ -704,12 +704,12 @@
   "sha256": "66f5945f42c4c5414a6a7b0d2e78879b39a606f556175b28259fec1863c35af4"
  },
  "vilda_centile_live_panel.js": {
-  "v": 3,
-  "sha256": "2784cbc98535403b2388cfec8edf3fb9f60c3c4b83547c95635459c72c878c08"
+  "v": 4,
+  "sha256": "0509d11674bf1c9666df42d33c13bad79fbc70d7ea12d0003a0430aa163c6703"
  },
  "vilda_centile_live_render.js": {
-  "v": 1,
-  "sha256": "4f2c822585dd81a88beea3e73f71a0f544a2948556fd39ebfd945f64e985d717"
+  "v": 2,
+  "sha256": "4639be22c5cebf8ccfb9166716078177788566a3426c147d032831223f1969b7"
  },
  "vilda_centile_live_view.js": {
   "v": 1,

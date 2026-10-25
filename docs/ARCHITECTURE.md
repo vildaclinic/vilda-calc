@@ -162,6 +162,21 @@ Nie wolno przenosić pola między pamięcią sesji, pamięcią trwałą i danymi
   Rzeczywista aktywność w dialogu korzysta z `VildaAuthUI.recordActivity` obu
   dokumentów. Automatyczny render, resize i scroll nie podtrzymują sesji.
 
+Pierwszy obraz podglądu nie czeka na odczyt pikseli służący przycinaniu białych
+marginesów w pełnym ekranie. Opcja `deferContentBounds` renderera zachowuje
+rozdzielczość, obie metryki, wszystkie zakresy i adnotacje; odracza wyłącznie
+wyznaczenie `contentBounds`. Panel pozwala przeglądarce najpierw pokazać obraz,
+a następnie `prepareContentBounds` odczytuje niewielkie fragmenty płócien
+w oddzielnych zadaniach. Publikuje dokładne granice całego zestawu dopiero po
+zakończeniu i ponownym potwierdzeniu aktualności kontekstu. Zadanie można
+anulować, a obliczenia nie podtrzymują sesji ani nie zapisują danych.
+Powiększenie czeka na gotowe granice, aby siatka nie zmieniała skali w trakcie
+animacji. Odświeżenie już powiększonej siatki podmienia komplet przygotowanych
+obrazów jednocześnie. Wywołanie renderera bez tej opcji zachowuje dotychczasowy
+synchroniczny kontrakt. Sygnały zakończenia odtwarzania uruchamiają odświeżenie
+w najbliższej klatce; zwykłe zdarzenia nadal są scalane, a wszystkie bramki
+właściciela, odtwarzania i zatwierdzenia pomiaru pozostają obowiązujące.
+
 Miejsce podglądu ma osobny cykl życia: oczekiwanie, gotowa siatka, potwierdzony
 brak zastosowania i błąd odczytu. Oczekiwanie na odtworzenie sesji, dane pacjenta
 lub zakończenie odświeżania nie oznacza braku zastosowania. W dwóch kolumnach

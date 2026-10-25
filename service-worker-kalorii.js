@@ -2025,11 +2025,13 @@ const OPTIONAL_ASSETS = [
   '/vilda_centile_live_data.js?v=3',
   '/vilda_centile_live_data.js?v=4',
   '/vilda_centile_live_render.js?v=1',
+  '/vilda_centile_live_render.js?v=2',
   '/vilda_centile_live_view.js?v=1',
   '/vilda_centile_live_host.js?v=1',
   '/vilda_centile_live_panel.js?v=1',
   '/vilda_centile_live_panel.js?v=2',
   '/vilda_centile_live_panel.js?v=3',
+  '/vilda_centile_live_panel.js?v=4',
 
   '/vilda_hormone_lifespan_data.js?v=1',
   '/vilda_hormone_lifespan_data.js?v=2',
