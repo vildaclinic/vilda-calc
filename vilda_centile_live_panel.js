@@ -6,7 +6,8 @@
   if (!w || w.VildaCentileLivePanel) return;
   var d = w.document;
   var mount, form, fieldset, doctor, view, snapshot, rendered, fullscreen;
-  var request = 0, timer = 0, layoutFrame = 0, started = false;
+  var request = 0, timer = 0, pendingTimer = 0, layoutFrame = 0, started = false;
+  var notice, noticeMessage, retryButton, slotStatus = 'ineligible', awaitingEdit = false;
   var status = 'hidden', lastWidth = 0, collapsedHeight = 0, lastHeight = 0, renderKey = '';
   var data = w.VildaCentileLiveData;
 
@@ -18,38 +19,125 @@
       && right.left >= left.right - 1 && right.top < left.bottom;
   }
 
-  function activeClass(active) {
-    d.documentElement.classList.toggle('vilda-centile-live-active', active);
-    if (mount) mount.hidden = !active;
+  function slot(state) {
+    var wasReserved = slotStatus !== 'ineligible';
+    slotStatus = state;
+    var reserved = state !== 'ineligible';
+    d.documentElement.classList.toggle('vilda-centile-live-booting', false);
+    d.documentElement.classList.toggle('vilda-centile-live-reserved', reserved);
+    d.documentElement.classList.toggle('vilda-centile-live-active', !!view);
+    if (mount) {
+      mount.hidden = !reserved;
+      mount.setAttribute('data-centile-live-state', state);
+      mount.setAttribute('aria-busy', state === 'pending' ? 'true' : 'false');
+    }
+    if (!reserved && wasReserved && typeof w.__vildaRemindersResync === 'function') {
+      w.__vildaRemindersResync();
+    }
   }
 
-  function clear(reason) {
-    var wasVisible = !!view;
-    request += 1;
+  function stopPending() {
+    w.clearTimeout(pendingTimer);
+    pendingTimer = 0;
+  }
+
+  function discardView(reason) {
+    awaitingEdit = false;
     snapshot = null;
     rendered = null;
     renderKey = '';
-    status = 'hidden';
     if (view) view.element.hidden = true;
     var oldView = view;
     view = null;
     var oldFullscreen = fullscreen;
     fullscreen = null;
-    // Invalidating closes are immediate. Erase the old patient's card before a
-    // subsequent async snapshot or a restored source document can become visible.
+    // Erase the old patient's image synchronously. The neutral slot can remain
+    // reserved while the next patient's ownership and data are being checked.
     if (oldFullscreen) oldFullscreen.close(reason || 'stale');
+    if (retryButton && notice) notice.appendChild(retryButton);
     if (oldView) oldView.destroy();
-    activeClass(false);
-    if (wasVisible && typeof w.__vildaRemindersResync === 'function') {
-      w.__vildaRemindersResync();
-    }
+    d.documentElement.classList.toggle('vilda-centile-live-active', false);
+  }
+
+  function clear(reason) {
+    request += 1;
+    w.clearTimeout(timer);
+    timer = 0;
+    stopPending();
+    discardView(reason);
+    status = 'hidden';
+    if (notice) notice.hidden = true;
+    if (retryButton) retryButton.hidden = true;
+    slot('ineligible');
     lastHeight = 0;
     collapsedHeight = 0;
     lastWidth = 0;
   }
 
+  function showError(message) {
+    awaitingEdit = false;
+    stopPending();
+    status = 'unavailable';
+    rendered = null;
+    renderKey = '';
+    if (view && snapshot && data.isCurrent(snapshot)) {
+      try { view.setStatus(message); }
+      catch (_) { discardView('view-error'); }
+    } else discardView('stale');
+    if (view) {
+      if (notice) notice.hidden = true;
+      if (retryButton) view.element.appendChild(retryButton);
+    } else {
+      if (notice) notice.hidden = false;
+      if (noticeMessage) noticeMessage.textContent = message;
+    }
+    if (retryButton) retryButton.hidden = false;
+    slot('error');
+    inlineSize();
+  }
+
+  function showPending(waitForEdit) {
+    awaitingEdit = !!waitForEdit;
+    if (view && snapshot && !data.isCurrent(snapshot)) discardView('stale');
+    if (!view) status = 'pending';
+    if (notice) notice.hidden = !!view;
+    if (noticeMessage) noticeMessage.textContent = awaitingEdit
+      ? 'Siatka pojawi się po zakończeniu edycji pola.' : 'Wczytywanie siatki…';
+    if (retryButton) retryButton.hidden = true;
+    slot('pending');
+    // A lost completion event or a hung read must become a recoverable error,
+    // never an endless placeholder or a time-based return to Reminders.
+    if (awaitingEdit) stopPending();
+    else if (!pendingTimer) pendingTimer = w.setTimeout(function () {
+      pendingTimer = 0;
+      request += 1;
+      w.clearTimeout(timer);
+      timer = 0;
+      if (!twoColumns() || eligibility().status === 'ineligible') { clear('stale'); return; }
+      showError('Wczytywanie siatki trwa zbyt długo. Spróbuj ponownie.');
+    }, 10000);
+    inlineSize();
+  }
+
+  function eligibility() {
+    return typeof data.getEligibility === 'function' ? data.getEligibility() : { status: 'eligible' };
+  }
+
+  function prepare() {
+    if (!twoColumns()) { clear('stale'); return false; }
+    var state = eligibility();
+    if (state.status === 'ineligible') { clear('stale'); return false; }
+    if (snapshot && !data.isCurrent(snapshot)) discardView('stale');
+    if (state.status === 'error') {
+      showError('Nie udało się wczytać siatki. Spróbuj ponownie.');
+      return false;
+    }
+    showPending(awaitingEdit);
+    return true;
+  }
+
   function inlineSize() {
-    if (!view || !mount || mount.hidden || !twoColumns()) return;
+    if (!mount || mount.hidden || !twoColumns()) return;
     var bounds = fieldset.getBoundingClientRect();
     var puberty = d.getElementById('tannerStageWrap');
     var expanded = puberty && puberty.getClientRects().length
@@ -83,17 +171,17 @@
       mount.style.setProperty('--vilda-centile-live-inline-height', height + 'px');
       lastHeight = height;
     }
-    view.fit();
+    if (view) view.fit();
   }
 
   function layout() {
     layoutFrame = 0;
     if (!twoColumns()) {
-      if (view || snapshot) clear('stale');
+      if (slotStatus !== 'ineligible') clear('stale');
       return;
     }
-    if (snapshot && !data.isCurrent(snapshot)) { clear('stale'); schedule(); return; }
-    if (!view) { schedule(); return; }
+    if (snapshot && !data.isCurrent(snapshot)) { discardView('stale'); schedule(); return; }
+    if (slotStatus === 'ineligible') { schedule(); return; }
     inlineSize();
   }
 
@@ -148,56 +236,78 @@
     if (!started || !data) return;
     w.clearTimeout(timer);
     timer = 0;
-    if (!twoColumns()) { clear('stale'); return; }
-    if (snapshot && !data.isCurrent(snapshot)) clear('stale');
+    if (!prepare()) return;
     var revision = ++request;
-    var next;
-    try { next = await data.getSnapshot(); }
-    catch (_) { next = null; }
+    var result;
+    try {
+      if (typeof data.getResult === 'function') result = await data.getResult();
+      else {
+        // Compatibility for existing independent consumers of the controller.
+        var legacy = await data.getSnapshot();
+        var refreshState = typeof data.getRefreshState === 'function' ? data.getRefreshState(snapshot) : null;
+        result = legacy ? { status: 'ready', snapshot: legacy }
+          : { status: refreshState || 'ineligible' };
+      }
+    } catch (_) { result = { status: 'error' }; }
     if (revision !== request) return;
     if (!twoColumns()) { clear('stale'); return; }
-    if (!next && view && snapshot && data.isCurrent(snapshot)) {
-      var refreshState = typeof data.getRefreshState === 'function' ? data.getRefreshState(snapshot) : null;
-      // A same-visit save can supersede an in-flight read or temporarily defer
-      // DOB. Keep the mounted view (including fullscreen/metric/range) until the
-      // adapter publishes a ready snapshot or a concrete read failure.
-      if (refreshState === 'pending') { inlineSize(); return; }
-      if (refreshState === 'error') {
-        rendered = null;
-        renderKey = '';
-        status = 'unavailable';
-        view.setStatus('Nie udało się odświeżyć siatki po zapisie. Spróbuj ponownie po zmianie danych.');
-        inlineSize();
-        return;
-      }
+    if (!result || result.status === 'error') {
+      showError('Nie udało się wczytać siatki. Spróbuj ponownie.');
+      return;
     }
-    if (!next || !data.isCurrent(next)) { clear('stale'); return; }
-    if (snapshot && snapshot.patientToken !== next.patientToken) clear('patient-change');
-    var nextKey = JSON.stringify(next);
-    snapshot = next;
-    if (view && rendered && nextKey === renderKey) { inlineSize(); return; }
-    if (!view) createView();
-    activeClass(true);
-    view.element.hidden = false;
+    if (result.status === 'ineligible') { clear('stale'); return; }
+    var next = result.snapshot;
+    if (result.status === 'pending' || !next || !data.isCurrent(next)) {
+      // A superseded read or temporary restore has no authority to show the
+      // fallback card. Retry even when no further application event arrives.
+      if (!prepare()) return;
+      if (result.reason === 'measurement-edit') { showPending(true); return; }
+      awaitingEdit = false;
+      showPending();
+      timer = w.setTimeout(refresh, 150);
+      return;
+    }
+    awaitingEdit = false;
+    stopPending();
+    if (snapshot && snapshot.patientToken !== next.patientToken) discardView('patient-change');
     try {
+      var nextKey = JSON.stringify(next);
+      snapshot = next;
+      if (!view) createView();
+      slot('ready');
+      if (notice) notice.hidden = true;
+      if (retryButton) retryButton.hidden = true;
+      view.element.hidden = false;
+      if (rendered && nextKey === renderKey) { inlineSize(); return; }
       rendered = w.VildaCentileLiveRender.render(next);
-      if (!data.isCurrent(next)) { clear('stale'); return; }
+      if (!data.isCurrent(next)) { discardView('stale'); schedule(); return; }
       status = rendered && rendered.status || 'ready';
       view.update(rendered, next);
       renderKey = nextKey;
     } catch (_) {
-      rendered = null;
-      status = 'unavailable';
-      view.setStatus('Nie udało się wyświetlić siatki. Spróbuj ponownie po zmianie danych.');
+      showError('Nie udało się wyświetlić siatki. Spróbuj ponownie.');
+      return;
     }
     inlineSize();
   }
 
   function schedule(event) {
-    if (event && event.identityChanged) clear(event.reason === 'lock' ? 'lock' : 'patient-change');
-    else if (snapshot && !data.isCurrent(snapshot)) clear('stale');
+    // Cancel old promises immediately, before the debounced replacement starts.
+    request += 1;
+    if (event && event.reason === 'measurement-commit') awaitingEdit = false;
+    if (event && event.identityChanged) {
+      stopPending();
+      discardView(event.reason === 'lock' ? 'lock' : 'patient-change');
+    } else if (snapshot && !data.isCurrent(snapshot)) discardView('stale');
     w.clearTimeout(timer);
+    timer = 0;
+    if (!started || !prepare()) return;
     timer = w.setTimeout(refresh, event && event.identityChanged ? 0 : 100);
+  }
+
+  function retry() {
+    if (typeof data.retry === 'function') data.retry();
+    return refresh();
   }
 
   function start() {
@@ -208,6 +318,14 @@
     mount = d.getElementById('vildaCentileLiveMount');
     if (!form || !fieldset || !doctor || !mount) return;
     started = true;
+    notice = d.getElementById('vildaCentileLiveLoading');
+    noticeMessage = d.getElementById('vildaCentileLiveLoadingMessage');
+    retryButton = d.getElementById('vildaCentileLiveRetry');
+    w.clearTimeout(w.__vildaCentileLiveBootTimer);
+    if (retryButton) {
+      retryButton.textContent = 'Spróbuj ponownie';
+      retryButton.addEventListener('click', retry);
+    }
     data.subscribe(schedule);
     if (typeof w.ResizeObserver === 'function') {
       var resize = new w.ResizeObserver(scheduleLayout);
@@ -223,9 +341,9 @@
   }
 
   w.VildaCentileLivePanel = Object.freeze({
-    refresh: refresh,
+    refresh: refresh, retry: retry,
     getState: function () {
-      return Object.assign({ eligible: !!snapshot, status: status,
+      return Object.assign({ eligible: !!snapshot, status: status, slotStatus: slotStatus,
         patientId: snapshot ? snapshot.patientId : null,
         source: rendered ? rendered.source : null, fullscreen: !!fullscreen },
       view ? view.getState() : {});

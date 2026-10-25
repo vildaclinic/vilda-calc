@@ -20,6 +20,8 @@
   var measurementCommit = null;
   var measurementRevision = 0;
   var lastSnapshot = null;
+  var startupSettled = !(d && typeof d.readyState === 'string' && w.VildaInit);
+  var startupScheduled = false;
 
   function copy(value) {
     try { return value == null ? null : JSON.parse(JSON.stringify(value)); }
@@ -99,6 +101,63 @@
         || panel && typeof panel.wlasciciel === 'function' && panel.wlasciciel() !== id) return null;
       return { patientId: id, route: route, applySequence: sequence };
     } catch (_) { return null; }
+  }
+
+  // This is a presentation gate, not permission to reuse a patient's drawing.
+  // isCurrent() below remains the stricter ownership check for every snapshot.
+  function eligibility(status, reason) { return { status: status, reason: reason }; }
+
+  function startupPending() {
+    if (startupSettled) return false;
+    var init = w.VildaInit;
+    if (!init || typeof init.isInitialized !== 'function'
+      || !init.isInitialized('app:main-session-restore-init')) return true;
+    if (!startupScheduled && typeof w.requestAnimationFrame === 'function') {
+      startupScheduled = true;
+      // The registered restore itself runs two frames later. Its completion
+      // flag/DOB gates are checked separately after this scheduling boundary.
+      w.requestAnimationFrame(function () {
+        w.requestAnimationFrame(function () {
+          startupSettled = true;
+          notify('startup-settled', false);
+        });
+      });
+    }
+    return true;
+  }
+
+  function getEligibility() {
+    try {
+      if (!activeRoute()) return eligibility('ineligible', 'inactive-document');
+      if (startupPending()) return eligibility('pending', 'startup');
+      var auth = w.VildaAuthUI;
+      if (auth && typeof auth.isBootReady === 'function' && !auth.isBootReady()) {
+        return eligibility('pending', 'authentication');
+      }
+      var id = patientId(), vault = w.VildaVault, panel = w.VildaPanelPacjent;
+      if (vault && typeof vault.isUnlocked === 'function' && !vault.isUnlocked()) {
+        return eligibility('ineligible', 'locked');
+      }
+      if (w.__vildaPersistRestoring === true || w.__vildaLustroWpis === true
+        || Number(w.__vildaPersistClearUntil || 0) > Date.now()) return eligibility('pending', 'restoring');
+      var dob = w.VildaDobAge;
+      if (dob && typeof dob.restorePending === 'function' && dob.restorePending()) return eligibility('pending', 'dob');
+      if (!id) return eligibility('ineligible', 'no-patient');
+      if (sessionValue('vildaLoadChoiceV1') !== 'new') return eligibility('ineligible', 'measurement-mode');
+      if (!vault || typeof vault.isUnlocked !== 'function' || typeof vault.getPatient !== 'function') {
+        return eligibility('pending', 'dependencies');
+      }
+      if (panel && typeof panel.nieaktualny === 'function' && panel.nieaktualny()
+        || panel && typeof panel.wlasciciel === 'function' && panel.wlasciciel() !== id) {
+        return eligibility('pending', 'ownership');
+      }
+      var api = w.VildaDataImportExport;
+      var sequence = api && typeof api.getApplyLoadedDataSequence === 'function'
+        ? api.getApplyLoadedDataSequence() : null;
+      if (!Number.isSafeInteger(sequence) || sequence < 0) return eligibility('pending', 'apply-sequence');
+      if (activeAge() === null) return eligibility('ineligible', 'age');
+      return eligibility('eligible', 'new-measurement');
+    } catch (_) { return eligibility('error', 'context'); }
   }
 
   function sameContext(a, b) {
@@ -320,41 +379,69 @@
     return lastSnapshot && lastSnapshot.patientToken === scope ? lastSnapshot : null;
   }
 
-  async function getSnapshot() {
+  function snapshotResult(snapshot, reason) {
+    return snapshot ? { status: 'ready', snapshot: snapshot } : eligibility('pending', reason);
+  }
+
+  function interruptedResult(scope, revision) {
+    // A superseded response never decides whether the *next* visit owns the
+    // slot. Its caller must retry against that newer context.
+    if (scope !== token || scope.generation !== generation || revision !== historyRevision) {
+      return eligibility('pending', 'superseded');
+    }
+    var state = getEligibility();
+    return state.status === 'eligible' ? eligibility('pending', 'context-changed') : state;
+  }
+
+  async function getResult() {
+    var state = getEligibility();
+    if (state.status !== 'eligible') return state;
     var scope = currentToken();
-    if (!scope) return null;
+    if (!scope) return eligibility('pending', 'context-changed');
     var commit = measurementCommit;
     var acceptedRevision = measurementRevision;
-    if (!commit && editing(scope)) return heldSnapshot(scope);
+    if (!commit && editing(scope)) return snapshotResult(heldSnapshot(scope), 'measurement-edit');
     var revision = historyRevision;
     var record = await readRecord(scope);
-    if (revision !== historyRevision || !ready(scope)) return null;
-    if (acceptedRevision !== measurementRevision) return heldSnapshot(scope);
-    if (!commit && editing(scope)) return heldSnapshot(scope);
-    if (!record) { finishSaveRefresh(scope, revision, true); return null; }
+    if (revision !== historyRevision || !ready(scope)) return interruptedResult(scope, revision);
+    if (acceptedRevision !== measurementRevision) return snapshotResult(heldSnapshot(scope), 'measurement-commit');
+    if (!commit && editing(scope)) return snapshotResult(heldSnapshot(scope), 'measurement-edit');
+    if (!record) { finishSaveRefresh(scope, revision, true); return eligibility('error', 'patient-read'); }
     try {
       var input = commit ? commit.input : captureSnapshotInput();
       var growth = input.growth, measurements = growth && growth.measurements;
       if (!growth) {
         measurements = await readTimeline(scope);
-        if (revision !== historyRevision || !ready(scope)) return null;
-        if (acceptedRevision !== measurementRevision) return heldSnapshot(scope);
-        if (!commit && editing(scope)) return heldSnapshot(scope);
-        if (measurements === null) { finishSaveRefresh(scope, revision, true); return null; }
+        if (revision !== historyRevision || !ready(scope)) return interruptedResult(scope, revision);
+        if (acceptedRevision !== measurementRevision) return snapshotResult(heldSnapshot(scope), 'measurement-commit');
+        if (!commit && editing(scope)) return snapshotResult(heldSnapshot(scope), 'measurement-edit');
+        if (measurements === null) { finishSaveRefresh(scope, revision, true); return eligibility('error', 'timeline-read'); }
         // A form restoration may have supplied an explicit working history meanwhile.
         if (!commit) input = captureSnapshotInput();
         growth = input.growth;
         if (growth) measurements = growth.measurements;
       }
       var snapshot = makeSnapshot(scope, record, input, measurements);
-      if (revision !== historyRevision || !ready(scope)) return null;
-      if (acceptedRevision !== measurementRevision) return heldSnapshot(scope);
+      if (revision !== historyRevision || !ready(scope)) return interruptedResult(scope, revision);
+      if (acceptedRevision !== measurementRevision) return snapshotResult(heldSnapshot(scope), 'measurement-commit');
       lastSnapshot = snapshot;
       measurementCommit = null;
       finishSaveRefresh(scope, revision, false);
-      return snapshot;
-    } catch (_) { finishSaveRefresh(scope, revision, true); return null; }
+      return snapshotResult(snapshot);
+    } catch (_) {
+      if (revision !== historyRevision || !ready(scope)) return interruptedResult(scope, revision);
+      finishSaveRefresh(scope, revision, true);
+      return eligibility('error', 'snapshot');
+    }
   }
+
+  // Existing consumers still receive the original snapshot-or-null contract.
+  async function getSnapshot() {
+    var result = await getResult();
+    return result.status === 'ready' ? result.snapshot : null;
+  }
+
+  function retry() { invalidate('retry', false, true); }
 
   function listen(target, event, callback, options) {
     if (target && typeof target.addEventListener === 'function') target.addEventListener(event, callback, options);
@@ -439,7 +526,7 @@
   ['vilda:dob-restored', 'vilda:centile-creator-changed', 'vilda:zrodlo-pacjenta-zmienione'].forEach(function (event) {
     listen(d, event, function () { invalidate(event, false); });
   });
-  ['vilda:auth-hidden', 'vilda:sync-status-changed'].forEach(function (event) {
+  ['vilda:auth-hidden', 'vilda:auth-state-settled', 'vilda:sync-status-changed'].forEach(function (event) {
     listen(d, event, function () { invalidate(event, false, true); });
   });
   function cleared() { invalidate('clear', true); }
@@ -460,6 +547,9 @@
 
   w.VildaCentileLiveData = Object.freeze({
     getSnapshot: getSnapshot,
+    getEligibility: getEligibility,
+    getResult: getResult,
+    retry: retry,
     isCurrent: isCurrent,
     getRefreshState: getRefreshState,
     subscribe: function (callback) {
