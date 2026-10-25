@@ -672,20 +672,20 @@
   "sha256": "800f51ac799f73a73360c76eabb0c9aba1e5a2a59c3676c5c01fb2e583c74882"
  },
  "vilda_centile_live_data.js": {
-  "v": 3,
-  "sha256": "ff912bb7c00bb27b6f0f9038364e597b8b9331c9c0e24200d7aaea24b76c2679"
+  "v": 4,
+  "sha256": "cd2589dc82175fad6ff83b525c00c95176e264f80e0dce4140b787e74841b75e"
  },
  "vilda_centile_live_host.js": {
   "v": 1,
   "sha256": "829ca071b952af19b843089212d626172072038d8667942d8d2416c87d5467f7"
  },
  "vilda_centile_live_panel.css": {
-  "v": 1,
-  "sha256": "60bf5467e3c458be40e8ecf6705aef05743d1baf5b4d854f87dfb73403ba1f86"
+  "v": 2,
+  "sha256": "66f5945f42c4c5414a6a7b0d2e78879b39a606f556175b28259fec1863c35af4"
  },
  "vilda_centile_live_panel.js": {
-  "v": 2,
-  "sha256": "3399e2aadb5fb182e6d38847b8a89a2d6cb8f55596435fcf3994ced09dcd3711"
+  "v": 3,
+  "sha256": "2784cbc98535403b2388cfec8edf3fb9f60c3c4b83547c95635459c72c878c08"
  },
  "vilda_centile_live_render.js": {
   "v": 1,

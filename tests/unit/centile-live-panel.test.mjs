@@ -11,28 +11,31 @@ function emitter(target) {
   return target;
 }
 
-function setup({ columns = '400px 400px', rects = true } = {}) {
+function setup({ columns = '400px 400px', rects = true, lifecycle = false, eligibility = 'eligible', beforeStart } = {}) {
   const pending = [], subscribers = [], views = [], hosts = [], frames = new Map(), timers = new Map(), resizeObservers = [];
   let id = 0, currentToken = Object.freeze({ fictional: 'patient-a', revision: 1 });
   let refreshState = null;
   function element(rect = {}) {
     return {
+      attributes: {}, setAttribute(name, value) { this.attributes[name] = value; },
       hidden: false, style: { setProperty(name, value) { this[name] = value; } }, children: [], parentNode: null,
       rect: { left: 0, right: 400, top: 0, bottom: 800, width: 400, height: 800, ...rect },
       getBoundingClientRect() { return this.rect; },
       getClientRects() { return this.hidden ? [] : [{}]; },
-      appendChild(child) { this.children.push(child); child.parentNode = this; },
+      appendChild(child) { if (child.parentNode) child.remove(); this.children.push(child); child.parentNode = this; },
       remove() { if (this.parentNode) this.parentNode.children.splice(this.parentNode.children.indexOf(this), 1); this.parentNode = null; },
     };
   }
   const form = element(), fieldset = element(), doctor = element({ left: 420, right: 820 }), mount = element({ left: 420, right: 820, top: 30 }), puberty = element({ height: 320 }), strip = element();
+  const notice = element(), noticeMessage = element(), retryButton = emitter(element());
+  notice.appendChild(noticeMessage); notice.appendChild(retryButton); mount.appendChild(notice);
   mount.hidden = true;
   form.getClientRects = () => rects ? [{}] : [];
   const classes = new Set();
   const doc = emitter({ readyState: 'complete', documentElement: { classList: {
     toggle: (name, value) => value ? classes.add(name) : classes.delete(name),
   } },
-  getElementById: (name) => ({ calcForm: form, doctorSection: doctor, vildaCentileLiveMount: mount, tannerStageWrap: puberty, vildaStatusSide: strip })[name] || null,
+  getElementById: (name) => ({ calcForm: form, doctorSection: doctor, vildaCentileLiveMount: mount, tannerStageWrap: puberty, vildaStatusSide: strip, vildaCentileLiveLoading: notice, vildaCentileLiveLoadingMessage: noticeMessage, vildaCentileLiveRetry: retryButton })[name] || null,
   querySelector: (selector) => selector === '#userSection fieldset.user-card' ? fieldset : null,
   });
   const style = { columns, pubertyDisplay: 'none', pubertyMarginTop: '12px', pubertyMarginBottom: '12px' };
@@ -42,13 +45,18 @@ function setup({ columns = '400px 400px', rects = true } = {}) {
     getRefreshState: vi.fn(() => refreshState),
     subscribe: (fn) => { subscribers.push(fn); return () => {}; },
   };
+  if (lifecycle) {
+    data.getEligibility = vi.fn(() => ({ status: eligibility }));
+    data.getResult = vi.fn(() => new Promise((resolve, reject) => { pending.push({ resolve, reject }); }));
+    data.retry = vi.fn();
+  }
   const render = vi.fn((snapshot) => ({ status: 'ready', source: snapshot.source, height: {}, weight: {} }));
   const win = emitter({ document: doc, VildaCentileLiveData: data, __vildaRemindersResync: vi.fn(),
     getComputedStyle: (node) => node.computedStyle || (node === form ? { gridTemplateColumns: style.columns } : {
       display: node === puberty ? style.pubertyDisplay : 'block', marginTop: style.pubertyMarginTop, marginBottom: style.pubertyMarginBottom,
     }),
     requestAnimationFrame: (fn) => { const key = ++id; frames.set(key, fn); return key; },
-    setTimeout: (fn) => { const key = ++id; timers.set(key, fn); return key; },
+    setTimeout: (fn, delay) => { const key = ++id; timers.set(key, { fn, delay }); return key; },
     clearTimeout: (key) => timers.delete(key),
     ResizeObserver: class { constructor(fn) { resizeObservers.push(fn); } observe() {} },
     VildaCentileLiveRender: { render, probe: vi.fn() },
@@ -77,17 +85,19 @@ function setup({ columns = '400px 400px', rects = true } = {}) {
     return handle;
   });
   win.VildaCentileLiveHost = { open };
+  if (beforeStart) beforeStart({ fieldset, doctor, mount, puberty, style, element });
   loadBrowserScript('vilda_centile_live_panel.js', win);
   const snapshot = (extra = {}) => ({ patientToken: currentToken, patientId: currentToken?.fictional || null,
     source: 'OLAF', ageMonths: 158, measurements: [], ...extra });
   return { win, doc, data, pending, views, hosts, open, render, snapshot, style, classes, mount, fieldset, doctor, form, puberty,
-    api: win.VildaCentileLivePanel, element,
+    api: win.VildaCentileLivePanel, element, notice, noticeMessage, retryButton,
+    setEligibility: value => { eligibility = value; },
     emit: (event) => subscribers.forEach((fn) => fn(event)),
     replacePatient: (name = 'patient-b') => { currentToken = Object.freeze({ fictional: name, revision: 2 }); },
-    invalidate: () => { currentToken = null; },
+    invalidate: () => { currentToken = null; eligibility = 'ineligible'; data.getEligibility = () => ({ status: eligibility }); },
     setRefreshState: (value) => { refreshState = value; },
     nextFrame: () => { const callbacks = [...frames.values()]; frames.clear(); callbacks.forEach((fn) => fn()); },
-    runTimers: () => { const callbacks = [...timers.values()]; timers.clear(); callbacks.forEach((fn) => fn()); },
+    runTimers: (maxDelay = 1000) => { const callbacks = [...timers].filter(([, task]) => task.delay <= maxDelay); callbacks.forEach(([key, task]) => { timers.delete(key); task.fn(); }); },
     resize: () => resizeObservers.forEach((fn) => fn()),
   };
 }
@@ -125,7 +135,7 @@ describe('live panel controller — async ownership and invalidation', () => {
     e.setRefreshState('error');
     const failed = e.api.refresh(); e.pending[1].resolve(null); await failed;
     expect(e.api.getState()).toMatchObject({ status: 'unavailable', metric: 'weight', eligible: true });
-    expect(view.setStatus).toHaveBeenCalledWith(expect.stringContaining('odświeżyć siatki po zapisie'));
+    expect(view.setStatus).toHaveBeenCalledWith(expect.stringContaining('Nie udało się wczytać siatki'));
     expect(e.win.__vildaRemindersResync).not.toHaveBeenCalled();
     e.setRefreshState(null);
     const recovered = e.api.refresh(); e.pending[2].resolve(e.snapshot()); await recovered;
@@ -167,7 +177,8 @@ describe('live panel controller — async ownership and invalidation', () => {
     e.emit({ identityChanged: true, reason: 'patient-loaded' });
     e.pending[0].resolve(old); await flush();
     expect(e.views).toHaveLength(0);
-    expect(e.mount.hidden).toBe(true);
+    expect(e.mount.hidden).toBe(false);
+    expect(e.notice.hidden).toBe(false);
     e.runTimers();
     const next = e.snapshot(); e.pending[1].resolve(next); await flush();
     expect(e.render).toHaveBeenCalledWith(next);
@@ -289,16 +300,7 @@ describe('live panel controller — actual form layout and collapsed height', ()
   });
 
   it('retains the neighbours’ collapsed margin when measuring an already-open puberty panel at startup or after resize', async () => {
-    for (const mode of ['startup-open', 'resize-open']) {
-      const e = setup();
-      e.mount.rect.top = 0;
-      if (mode === 'resize-open') {
-        await ready(e);
-        expect(e.mount.style['--vilda-centile-live-inline-height']).toBe('800px');
-        e.fieldset.rect.width = 420; e.fieldset.rect.right = 420;
-        e.doctor.rect.left = 440;
-        e.style.columns = '420px 420px';
-      }
+    function openPuberty(e) {
       e.style.pubertyDisplay = 'block';
       e.fieldset.rect.height = 1090.9375;
       e.puberty.rect.height = 329.859;
@@ -308,8 +310,21 @@ describe('live panel controller — actual form layout and collapsed height', ()
       after.computedStyle = { marginTop: '11.2px' };
       e.puberty.previousElementSibling = before;
       e.puberty.nextElementSibling = after;
-      if (mode === 'startup-open') await ready(e);
-      else { e.resize(); e.nextFrame(); }
+    }
+    for (const mode of ['startup-open', 'resize-open']) {
+      const e = setup({ beforeStart: initial => {
+        initial.mount.rect.top = 0;
+        if (mode === 'startup-open') openPuberty(initial);
+      } });
+      await ready(e);
+      if (mode === 'resize-open') {
+        expect(e.mount.style['--vilda-centile-live-inline-height']).toBe('800px');
+        e.fieldset.rect.width = 420; e.fieldset.rect.right = 420;
+        e.doctor.rect.left = 440;
+        e.style.columns = '420px 420px';
+        openPuberty(e);
+        e.resize(); e.nextFrame();
+      }
       // 1090.9375 - (981.234 - 627.375 - 11.2) = 748.2785.
       expect(e.mount.style['--vilda-centile-live-inline-height'], mode).toBe('748px');
     }
@@ -324,4 +339,151 @@ describe('live panel controller — actual form layout and collapsed height', ()
     expect(e.api.getState().eligible).toBe(false);
     expect(e.classes.has('vilda-centile-live-active')).toBe(false);
   });
+});
+
+
+describe('live panel controller — explicit slot lifecycle', () => {
+  async function resolveReady(e, index = 0) {
+    e.pending[index].resolve({ status: 'ready', snapshot: e.snapshot() });
+    await flush();
+    return e.views[e.views.length - 1];
+  }
+
+  it('reserves a measured neutral card before the first read without marking a chart active', async () => {
+    const e = setup({ lifecycle: true });
+    expect(e.mount.hidden).toBe(false);
+    expect(e.notice.hidden).toBe(false);
+    expect(e.mount.style['--vilda-centile-live-inline-height']).toBe('770px');
+    expect(e.classes.has('vilda-centile-live-reserved')).toBe(true);
+    expect(e.classes.has('vilda-centile-live-active')).toBe(false);
+    expect(e.api.getState()).toMatchObject({ slotStatus: 'pending', eligible: false, patientId: null });
+    await resolveReady(e);
+    expect(e.notice.hidden).toBe(true);
+    expect(e.api.getState()).toMatchObject({ slotStatus: 'ready', eligible: true });
+    expect(e.win.__vildaRemindersResync).not.toHaveBeenCalled();
+  });
+
+  it('retries a transient result without exposing Reminders, even without another event', async () => {
+    const e = setup({ lifecycle: true, eligibility: 'pending' });
+    e.pending[0].resolve({ status: 'pending', reason: 'restore' }); await flush();
+    expect(e.api.getState().slotStatus).toBe('pending');
+    expect(e.mount.hidden).toBe(false);
+    expect(e.win.__vildaRemindersResync).not.toHaveBeenCalled();
+    e.setEligibility('eligible'); e.runTimers();
+    expect(e.pending).toHaveLength(2);
+    await resolveReady(e, 1);
+    expect(e.api.getState().slotStatus).toBe('ready');
+  });
+
+  it('invalidates an older same-patient read synchronously, before the debounce', async () => {
+    const e = setup({ lifecycle: true }); await resolveReady(e);
+    const stale = e.api.refresh();
+    e.emit({ identityChanged: false, reason: 'sync-status-changed' });
+    e.pending[1].resolve({ status: 'ineligible' }); await stale;
+    expect(e.mount.hidden).toBe(false);
+    expect(e.views[0].destroy).not.toHaveBeenCalled();
+    expect(e.win.__vildaRemindersResync).not.toHaveBeenCalled();
+    e.runTimers(); await resolveReady(e, 2);
+    expect(e.api.getState().slotStatus).toBe('ready');
+  });
+
+  it('removes the old patient and fullscreen immediately but keeps the neutral slot', async () => {
+    const e = setup({ lifecycle: true }); const old = await resolveReady(e);
+    old.options.onExpand();
+    e.replacePatient(); e.emit({ identityChanged: true, reason: 'patient-loaded' });
+    expect(old.destroy).toHaveBeenCalledOnce();
+    expect(e.hosts[0].close).toHaveBeenCalledWith('patient-change');
+    expect(e.mount.hidden).toBe(false);
+    expect(e.notice.hidden).toBe(false);
+    expect(e.api.getState()).toMatchObject({ patientId: null, eligible: false, slotStatus: 'pending' });
+    e.runTimers(); await resolveReady(e, 1);
+    expect(e.api.getState().patientId).toBe('patient-b');
+  });
+
+  it('releases Reminders only after a confirmed ineligible result', async () => {
+    const e = setup({ lifecycle: true });
+    e.pending[0].resolve({ status: 'ineligible', reason: 'adult' }); await flush();
+    expect(e.api.getState().slotStatus).toBe('ineligible');
+    expect(e.mount.hidden).toBe(true);
+    expect(e.classes.has('vilda-centile-live-reserved')).toBe(false);
+    expect(e.win.__vildaRemindersResync).toHaveBeenCalledOnce();
+  });
+
+  it('shows a read error and retries inside the same slot, never falling back to Reminders', async () => {
+    const e = setup({ lifecycle: true });
+    e.pending[0].resolve({ status: 'error', reason: 'record-read' }); await flush();
+    expect(e.api.getState().slotStatus).toBe('error');
+    expect(e.retryButton.hidden).toBe(false);
+    expect(e.noticeMessage.textContent).toContain('Nie udało się');
+    expect(e.mount.hidden).toBe(false);
+    e.retryButton.dispatchEvent({ type: 'click' });
+    expect(e.data.retry).toHaveBeenCalledOnce();
+    await resolveReady(e, 1);
+    expect(e.retryButton.hidden).toBe(true);
+    expect(e.win.__vildaRemindersResync).not.toHaveBeenCalled();
+  });
+
+  it('ends a stalled read with retry and ignores its late completion', async () => {
+    const e = setup({ lifecycle: true });
+    e.runTimers(10000);
+    expect(e.api.getState().slotStatus).toBe('error');
+    expect(e.retryButton.hidden).toBe(false);
+    e.pending[0].resolve({ status: 'ready', snapshot: e.snapshot() }); await flush();
+    expect(e.render).not.toHaveBeenCalled();
+    expect(e.api.getState().slotStatus).toBe('error');
+    const retried = e.api.retry(); await resolveReady(e, 1); await retried;
+    expect(e.api.getState().slotStatus).toBe('ready');
+  });
+
+  it('retains verified view state while a refresh is pending, including weight and fullscreen', async () => {
+    const e = setup({ lifecycle: true }); const view = await resolveReady(e);
+    view.setMetric('weight'); view.options.onExpand();
+    const refresh = e.api.refresh(); e.pending[1].resolve({ status: 'pending' }); await refresh;
+    expect(e.api.getState()).toMatchObject({ metric: 'weight', fullscreen: true, slotStatus: 'pending' });
+    expect(e.notice.hidden).toBe(true);
+    expect(view.destroy).not.toHaveBeenCalled();
+    e.runTimers(); await resolveReady(e, 2);
+    expect(e.views).toHaveLength(1);
+    expect(e.api.getState()).toMatchObject({ metric: 'weight', fullscreen: true, slotStatus: 'ready' });
+  });
+
+  it('reserves the slot synchronously when returning to two columns', async () => {
+    const e = setup({ lifecycle: true }); await resolveReady(e);
+    e.style.columns = '800px'; e.resize(); e.nextFrame();
+    expect(e.mount.hidden).toBe(true);
+    e.style.columns = '400px 400px'; e.resize(); e.nextFrame();
+    expect(e.mount.hidden).toBe(false);
+    expect(e.notice.hidden).toBe(false);
+    expect(e.api.getState().slotStatus).toBe('pending');
+    e.runTimers(); await resolveReady(e, 1);
+    expect(e.api.getState().slotStatus).toBe('ready');
+  });
+
+  it('waits for an intentional field edit without a read timeout or background polling', async () => {
+    const e = setup({ lifecycle: true });
+    e.pending[0].resolve({ status: 'pending', reason: 'measurement-edit' }); await flush();
+    expect(e.noticeMessage.textContent).toContain('zakończeniu edycji');
+    e.runTimers(10000);
+    expect(e.pending).toHaveLength(1);
+    expect(e.api.getState().slotStatus).toBe('pending');
+    expect(e.retryButton.hidden).toBe(true);
+    e.emit({ reason: 'measurement-commit', identityChanged: false });
+    e.runTimers(); await resolveReady(e, 1);
+    expect(e.api.getState().slotStatus).toBe('ready');
+  });
+
+
+  it('offers retry in the neutral card if the view itself cannot be created', async () => {
+    const e = setup({ lifecycle: true });
+    e.win.VildaCentileLiveView.create.mockImplementationOnce(() => { throw new Error('Synthetic view failure'); });
+    e.pending[0].resolve({ status: 'ready', snapshot: e.snapshot() }); await flush();
+    expect(e.api.getState().slotStatus).toBe('error');
+    expect(e.notice.hidden).toBe(false);
+    expect(e.retryButton.hidden).toBe(false);
+    expect(e.mount.hidden).toBe(false);
+    expect(e.win.__vildaRemindersResync).not.toHaveBeenCalled();
+    const refresh = e.api.retry(); await resolveReady(e, 1); await refresh;
+    expect(e.api.getState().slotStatus).toBe('ready');
+  });
+
 });

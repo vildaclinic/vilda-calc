@@ -32,8 +32,9 @@ function patient(id = 'fikcyjny-a') {
   };
 }
 
-function setup({ working = true, framed = false, nestedSourceOnSave = false } = {}) {
+function setup({ working = true, framed = false, nestedSourceOnSave = false, startup = false, initialNoPatient = false } = {}) {
   const values = new Map([['vildaCurrentPatientId', 'fikcyjny-a'], ['vildaLoadChoiceV1', 'new']]);
+  if (initialNoPatient) values.delete('vildaCurrentPatientId');
   const writes = vi.fn();
   const fields = Object.fromEntries(Object.entries({
     age: '13', ageMonths: '2', height: '158', weight: '46', sex: 'M',
@@ -95,10 +96,18 @@ function setup({ working = true, framed = false, nestedSourceOnSave = false } = 
     state.pending = true;
     docEvents.emit('vilda:zrodlo-pacjenta-zmienione');
   });
+  const frames = [];
+  if (startup) {
+    win.document.readyState = 'interactive';
+    win.VildaInit = { isInitialized: () => !!state.restoreRegistered };
+    win.VildaAuthUI = { isBootReady: () => !!state.authBootReady };
+    win.requestAnimationFrame = (callback) => { frames.push(callback); return frames.length; };
+  }
   loadBrowserScript('vilda_update_hooks.js', win);
   loadBrowserScript('vilda_centile_live_data.js', win);
   return { win, api: win.VildaCentileLiveData, fields, values, state, vault, hooks, writes,
-    doc: docEvents, emit: winEvents.emit, frameChanged: () => frameObserver() };
+    doc: docEvents, emit: winEvents.emit, frameChanged: () => frameObserver(),
+    frame: () => { const pending = frames.splice(0); pending.forEach(callback => callback()); } };
 }
 
 function focusMeasurement(h, id) {
@@ -913,5 +922,194 @@ describe('Panel nowego pomiaru — zapis nie zmienia właściciela wykresu', () 
     const after = await h.api.getSnapshot();
     expect(after.patientToken).toBe(before.patientToken);
     expect(h.api.getRefreshState(after)).toBeNull();
+  });
+});
+
+
+describe('Panel nowego pomiaru — jawny stan miejsca siatki', () => {
+  it('gość bez wybranego pacjenta nie rezerwuje siatki podczas startu ani oczekiwania na logowanie', async () => {
+    const h = setup({ startup: true, initialNoPatient: true });
+    expect(h.api.getEligibility()).toEqual({ status: 'ineligible', reason: 'no-patient' });
+    expect(await h.api.getResult()).toEqual({ status: 'ineligible', reason: 'no-patient' });
+    h.state.restoreRegistered = true;
+    expect(h.api.getEligibility()).toEqual({ status: 'ineligible', reason: 'no-patient' });
+    h.frame(); h.frame();
+    expect(h.api.getEligibility()).toEqual({ status: 'ineligible', reason: 'no-patient' });
+    expect(h.vault.getPatient).not.toHaveBeenCalled();
+    expect(h.writes).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ['restore', h => { h.win.__vildaPersistRestoring = true; }],
+    ['mirror', h => { h.win.__vildaLustroWpis = true; }],
+    ['clear grace', h => { h.win.__vildaPersistClearUntil = Date.now() + 10000; }],
+    ['DOB', h => { h.state.pending = true; }],
+  ])('gość nigdy niewybierający pacjenta nie rezerwuje siatki również podczas %s', async (_, change) => {
+    const h = setup({ startup: true, initialNoPatient: true });
+    change(h);
+    h.win.VildaDobAge.restorePending = vi.fn(() => h.state.pending);
+    expect(h.api.getEligibility()).toEqual({ status: 'ineligible', reason: 'no-patient' });
+    expect(await h.api.getResult()).toEqual({ status: 'ineligible', reason: 'no-patient' });
+    expect(h.win.VildaDobAge.restorePending).not.toHaveBeenCalled();
+    expect(h.vault.getPatient).not.toHaveBeenCalled();
+    expect(h.writes).not.toHaveBeenCalled();
+  });
+
+  it('pierwszy wybór pacjenta kończy stan gościa i chroni późniejsze przejściowe zniknięcie ID', async () => {
+    const h = setup({ initialNoPatient: true });
+    expect(h.api.getEligibility()).toEqual({ status: 'ineligible', reason: 'no-patient' });
+    h.values.set('vildaCurrentPatientId', 'fikcyjny-a');
+    const result = await h.api.getResult();
+    expect(result.status).toBe('ready');
+    h.win.__vildaLustroWpis = true;
+    h.values.delete('vildaCurrentPatientId');
+    expect(h.api.getEligibility()).toEqual({ status: 'pending', reason: 'restoring' });
+    expect(h.api.isCurrent(result.snapshot)).toBe(false);
+    expect((await h.api.getResult()).status).toBe('pending');
+    h.win.__vildaLustroWpis = false;
+    expect(h.api.getEligibility()).toEqual({ status: 'ineligible', reason: 'no-patient' });
+    expect(h.writes).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ['restore', h => { h.win.__vildaPersistRestoring = true; }],
+    ['mirror', h => { h.win.__vildaLustroWpis = true; }],
+    ['clear grace', h => { h.win.__vildaPersistClearUntil = Date.now() + 10000; }],
+    ['DOB', h => { h.state.pending = true; }],
+  ])('chwilowy brak ID podczas %s nie zostaje uznany za gościa przy starcie', async (_, change) => {
+    const h = setup({ startup: true });
+    h.values.delete('vildaCurrentPatientId');
+    change(h);
+    expect(h.api.getEligibility().status).toBe('pending');
+    expect((await h.api.getResult()).status).toBe('pending');
+    expect(h.vault.getPatient).not.toHaveBeenCalled();
+    expect(h.writes).not.toHaveBeenCalled();
+  });
+
+  it('start czeka na rejestrację, dwie klatki odtworzenia i koniec restore zamiast ujawniać domyślny wiek', async () => {
+    const h = setup({ startup: true }), listener = vi.fn();
+    h.api.subscribe(listener);
+    h.fields.age.value = '30';
+    expect(h.api.getEligibility()).toEqual({ status: 'pending', reason: 'startup' });
+    expect(await h.api.getResult()).toEqual({ status: 'pending', reason: 'startup' });
+    h.state.restoreRegistered = true;
+    expect(h.api.getEligibility().status).toBe('pending');
+    h.frame();
+    expect(h.api.getEligibility().status).toBe('pending');
+    h.win.__vildaPersistRestoring = true;
+    h.values.delete('vildaCurrentPatientId');
+    h.frame();
+    expect(listener).toHaveBeenCalledWith({ reason: 'startup-settled', identityChanged: false });
+    expect(h.api.getEligibility()).toEqual({ status: 'pending', reason: 'authentication' });
+    h.state.authBootReady = true;
+    expect(h.api.getEligibility()).toEqual({ status: 'pending', reason: 'restoring' });
+    expect(h.vault.getPatient).not.toHaveBeenCalled();
+    h.values.set('vildaCurrentPatientId', 'fikcyjny-a'); h.fields.age.value = '13';
+    h.win.__vildaPersistRestoring = false;
+    expect(h.api.getEligibility().status).toBe('eligible');
+    expect((await h.api.getResult()).status).toBe('ready');
+    expect(h.writes).not.toHaveBeenCalled();
+  });
+
+  it('zakończony start z dorosłym albo pustą sesją zwalnia miejsce bez odczytu pacjenta', async () => {
+    const h = setup({ startup: true });
+    h.state.restoreRegistered = true; h.state.authBootReady = true;
+    h.fields.age.value = '18'; h.fields.ageMonths.value = '0';
+    expect(h.api.getEligibility().status).toBe('pending');
+    h.frame(); h.frame();
+    expect(await h.api.getResult()).toEqual({ status: 'ineligible', reason: 'age' });
+    h.values.delete('vildaCurrentPatientId');
+    expect(await h.api.getResult()).toEqual({ status: 'ineligible', reason: 'no-patient' });
+    expect(h.vault.getPatient).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ['DOB', h => { h.state.pending = true; }, 'dob'],
+    ['mirror', h => { h.win.__vildaLustroWpis = true; }, 'restoring'],
+    ['restore', h => { h.win.__vildaPersistRestoring = true; }, 'restoring'],
+    ['owner', h => { h.state.owner = 'fikcyjny-b'; }, 'ownership'],
+    ['sequence', h => { h.state.sequence = null; }, 'apply-sequence'],
+  ])('%s jest oczekiwaniem bez dostępu do starego obrazu, a nie brakiem kwalifikacji', async (_, change, reason) => {
+    const h = setup(), snapshot = await h.api.getSnapshot();
+    change(h);
+    expect(h.api.getEligibility()).toEqual({ status: 'pending', reason });
+    expect(await h.api.getResult()).toEqual({ status: 'pending', reason });
+    expect(h.api.isCurrent(snapshot)).toBe(false);
+    expect(h.vault.getPatient).toHaveBeenCalledOnce();
+  });
+
+  it.each([
+    ['brak pacjenta', h => h.values.delete('vildaCurrentPatientId'), 'no-patient'],
+    ['restore', h => h.values.set('vildaLoadChoiceV1', 'restore'), 'measurement-mode'],
+    ['18 lat', h => { h.fields.age.value = '18'; }, 'age'],
+    ['blokada', h => { h.state.unlocked = false; }, 'locked'],
+    ['ukryty dokument', h => { h.win.frameElement.hidden = true; }, 'inactive-document'],
+  ])('%s po ustaleniu kontekstu jawnie oddaje miejsce zwykłej zawartości', async (_, change, reason) => {
+    const h = setup({ framed: true }), snapshot = await h.api.getSnapshot();
+    change(h);
+    expect(h.api.getEligibility()).toEqual({ status: 'ineligible', reason });
+    expect(await h.api.getResult()).toEqual({ status: 'ineligible', reason });
+    expect(h.api.isCurrent(snapshot)).toBe(false);
+  });
+
+  it.each(['record', 'timeline'])('błąd odczytu %s pozostaje błędem i Retry ponawia odczyt bez zmiany danych', async kind => {
+    const h = setup({ working: kind === 'record' });
+    const method = kind === 'record' ? 'getPatient' : 'listPatientTimelineEvents';
+    const result = kind === 'record' ? patient() : [];
+    h.vault[method] = vi.fn().mockRejectedValueOnce(new Error('Fikcyjna odmowa')).mockResolvedValue(result);
+    expect(await h.api.getResult()).toEqual({ status: 'error', reason: kind === 'record' ? 'patient-read' : 'timeline-read' });
+    expect(h.api.getEligibility().status).toBe('eligible');
+    const listener = vi.fn(); h.api.subscribe(listener); h.api.retry();
+    expect(listener).toHaveBeenCalledWith({ reason: 'retry', identityChanged: false });
+    expect((await h.api.getResult()).status).toBe('ready');
+    expect(h.vault[method]).toHaveBeenCalledTimes(2);
+    expect(h.writes).not.toHaveBeenCalled();
+  });
+
+  it('brak lub obcy rekord jest błędem w slocie, a pusta historia nadal daje gotową siatkę', async () => {
+    const h = setup();
+    h.vault.getPatient.mockResolvedValueOnce(null).mockResolvedValueOnce(patient('fikcyjny-b')).mockResolvedValue(patient());
+    expect(await h.api.getResult()).toEqual({ status: 'error', reason: 'patient-read' });
+    expect(await h.api.getResult()).toEqual({ status: 'error', reason: 'patient-read' });
+    h.win.advancedGrowthData.measurements = [];
+    const result = await h.api.getResult();
+    expect(result.status).toBe('ready');
+    expect(result.snapshot.measurements).toEqual([]);
+  });
+
+  it('spóźniony błąd odczytu sprzed sync nie zastępuje gotowego wyniku błędem lub fallbackiem', async () => {
+    const h = setup(), pending = deferred();
+    h.vault.getPatient.mockReturnValueOnce(pending.promise).mockResolvedValue(patient());
+    const older = h.api.getResult(); await Promise.resolve();
+    h.doc.emit('vilda:sync-status-changed');
+    const newer = await h.api.getResult();
+    expect(newer.status).toBe('ready');
+    pending.resolve(null);
+    expect(await older).toEqual({ status: 'pending', reason: 'superseded' });
+    expect(h.api.isCurrent(newer.snapshot)).toBe(true);
+  });
+
+  it('stary odczyt po A → B → A nie publikuje starej migawki ani stanu ineligible', async () => {
+    const h = setup(), pending = deferred();
+    h.vault.getPatient = () => pending.promise;
+    const old = h.api.getResult(); await Promise.resolve();
+    h.values.set('vildaCurrentPatientId', 'fikcyjny-b');
+    h.emit('storage', { key: 'vildaCurrentPatientId' });
+    h.values.set('vildaCurrentPatientId', 'fikcyjny-a');
+    h.emit('storage', { key: 'vildaCurrentPatientId' });
+    pending.resolve(patient());
+    expect(await old).toEqual({ status: 'pending', reason: 'superseded' });
+    expect((await h.api.getResult()).status).toBe('ready');
+  });
+
+  it('Retry nie zatwierdza draftu i zachowuje ostatni zaakceptowany pomiar', async () => {
+    const h = setup(), before = await h.api.getSnapshot();
+    focusMeasurement(h, 'height'); typeMeasurement(h, 'height', '189');
+    h.api.retry();
+    expect((await h.api.getResult()).snapshot).toBe(before);
+    expect(h.api.isCurrent(before)).toBe(true);
+    blurMeasurement(h, 'height');
+    expect((await h.api.getResult()).snapshot.currentHeight).toBe(189);
+    expect(h.writes).not.toHaveBeenCalled();
   });
 });
