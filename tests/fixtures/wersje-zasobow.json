@@ -88,8 +88,8 @@
   "sha256": "dbbc7b245a693d87807cf8a01c299d687b7d3c8604cc6d0529670fe5c1472432"
  },
  "clcr_clinical_safety.js": {
-  "v": 9,
-  "sha256": "2070ab5803760537395571a58a7f63b124dc9ee20414b806187b8359d0a8d0c0"
+  "v": 10,
+  "sha256": "306b46451d562fbf25e23596724b442a987a043a2f541d2cfef2044740bc9b3f"
  },
  "clcr_dialysis_safety.js": {
   "v": 1,
@@ -98,6 +98,26 @@
  "clcr_extended_egfr.js": {
   "v": 1,
   "sha256": "00ed51bfddbece54a45acbe16236e1eba6fa54e1d051e4ea6d3015d54489a030"
+ },
+ "clcr_fena.js": {
+  "v": 1,
+  "sha256": "1bae50dca24cce90687aa54e31fabed49af35bf1d1a30d2781835e5e430a9e6b"
+ },
+ "clcr_fena_persistence.js": {
+  "v": 1,
+  "sha256": "f709669dc809f50bb394f84ca25d7e2de695d2eb6ad0571f5f84e4cc682d065e"
+ },
+ "clcr_fena_reference_data.js": {
+  "v": 1,
+  "sha256": "038ec95a17c83d40ea24cc4dab8fcabcf9ce1c1cac1c748946cb7c3544bbf240"
+ },
+ "clcr_fena_ui.css": {
+  "v": 1,
+  "sha256": "166dcce793cf1a0fad14cb9b71f5154d1202aae611d337306a570e6a56ae49e5"
+ },
+ "clcr_fena_ui.js": {
+  "v": 1,
+  "sha256": "099bca236083e16baf76eeeba6085f0ac0fa5852fff5b0401c02ebf44c3f5320"
  },
  "clcr_measured_clearance_reference.js": {
   "v": 1,
@@ -160,8 +180,8 @@
   "sha256": "49e0c3713735271498b9e52baa22b4cc1e9d8faa292ac4f93858cd7688e5220d"
  },
  "clcr_ui_workflow.js": {
-  "v": 20,
-  "sha256": "7386821bb78ea75a63f657d3be8fc5265fb85492aca6a2e948136acd44d5998e"
+  "v": 21,
+  "sha256": "b453334c476de2a0eef4f4da9ba2f790cfce51e3d10820b2141cebecd44673e7"
  },
  "cukrzyca.js": {
   "v": 30,
@@ -308,16 +328,16 @@
   "sha256": "1f7f4555b11c7bc28a7e1cb47e01a7c19dfe9184e706dbb462a5145543d29a19"
  },
  "inline_kalkulator_klirens_02.js": {
-  "v": 16,
-  "sha256": "aeb5f0fd145f6f637d99489cd97c83919b3ebc9bab078d2f87e7e2dbdb1f07c6"
+  "v": 17,
+  "sha256": "665f140e41095dfe1c15fcd3509fcbc93d305e4fec7367f1501e4770278ecfb9"
  },
  "inline_kalkulator_klirens_03.js": {
   "v": 1,
   "sha256": "e001befeb185ae42780ecb51a5046c463b1691adea99292fd911b62e090919d6"
  },
  "inline_kalkulator_klirens_04.js": {
-  "v": 21,
-  "sha256": "663382f175b30c2393fb782c6a05bcbd98ddf22b7fe515c8da1c9ff30f4ab618"
+  "v": 22,
+  "sha256": "d1bf4a5b71739a41069e8f95124fce30af448f6ea08b552485f9b13e85b02b79"
  },
  "inline_kalkulator_klirens_05.js": {
   "v": 1,
@@ -328,8 +348,8 @@
   "sha256": "555ca77dae012c28f79c6cd419963ab20f651a77ab20d04b49640b6fc4214abf"
  },
  "inline_kalkulator_klirens_07.js": {
-  "v": 10,
-  "sha256": "440fdd65c08d80f3ac9a12dbacae603772026d25a36f9eccee61a11320d5a39a"
+  "v": 11,
+  "sha256": "e5b9b606617f455f207efe38698264cdbcac37cf2acea3630122ce7209a38cfe"
  },
  "inline_kalkulator_klirens_08.js": {
   "v": 1,

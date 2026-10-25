@@ -215,7 +215,7 @@ describe('Ca/Cr — rzeczywisty adapter formularza i jednostkowa walidacja', () 
     expect(canCompute('CaCr_spot')).toBe(expected);
   });
 
-  it('rzeczywisty walidator zachowuje jednostkową ocenę Ca/Cr, Ox/Cr i Cit/Cr oraz limity pozostałych wzorów', () => {
+  it('rzeczywisty walidator zachowuje ocenę Ca/Cr, Ox/Cr, Cit/Cr i FENa oraz limity pozostałych wzorów', () => {
     const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
     const source = fs.readFileSync(path.join(root, 'inline_kalkulator_klirens_04.js'), 'utf8');
     const start = source.indexOf('function validateField('), end = source.indexOf('function validateClcrAgeContext(', start);
@@ -229,6 +229,8 @@ describe('Ca/Cr — rzeczywisty adapter formularza i jednostkowa walidacja', () 
     controls.formulaPicker.value = 'CitCr_spot';
     expect(validate(field('Ca_spot', '40'))).toBe(false); expect(validate(field('Ucr_spot', '60000'))).toBe(true);
     controls.formulaPicker.value = 'FENa_spot';
+    expect(validate(field('Ucr_spot', '60000'))).toBe(true);
+    controls.formulaPicker.value = 'FEK_spot';
     expect(validate(field('Ucr_spot', '60000'))).toBe(false);
   });
 });

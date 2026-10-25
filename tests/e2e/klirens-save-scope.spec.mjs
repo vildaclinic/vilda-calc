@@ -80,9 +80,9 @@ test('pełny zestaw badań zapisuje tylko wybrane FENa, zachowując pozostałe p
   const collected = await page.evaluate(() => window.ClcrVisitSave.collectActiveDatapoints(document, { formulaId: 'FENa_spot' }));
   expect(collected).toHaveLength(1);
   expect(collected.map(point => point.sourceFormulaId)).toEqual(['FENa_spot']);
-  // Historia zachowuje dotychczasowe jedno miejsce po przecinku widoku;
-  // surowa wartość pozostaje sprawdzona osobno powyżej.
-  expect(collected[0]).toMatchObject({ valueNum: 0.3, unit: '%' });
+  // Zapis i historia zachowują surowy wynik, niezależnie od formatowania karty.
+  expect(collected[0]).toMatchObject({ unit: '%' });
+  expect(collected[0].valueNum).toBeCloseTo(0.2857142857142857, 12);
 
   await page.locator('#clcrVisitDate').fill('2026-10-20');
   await expect(page.locator('#clcrVisitSaveBtn')).toBeEnabled();
@@ -93,7 +93,8 @@ test('pełny zestaw badań zapisuje tylko wybrane FENa, zachowując pozostałe p
   expect(notes.find(note => note.id === setup.noteId)).toEqual(setup.previous);
   const added = notes.filter(note => note.id !== setup.noteId);
   expect(added).toHaveLength(1);
-  expect(added[0].labResult).toMatchObject({ test: 'Frakcja wydalania sodu (FENa)', valueNum: 0.3, unit: '%' });
+  expect(added[0].labResult).toMatchObject({ test: 'Frakcja wydalania sodu (FENa)', unit: '%' });
+  expect(added[0].labResult.valueNum).toBeCloseTo(0.2857142857142857, 12);
   expect(added[0].body).toContain('clcr:FENa_spot');
   expect(await readCanonicalInputs()).toEqual(canonicalInputs);
 });

@@ -215,7 +215,7 @@
         id: "FENa_spot",
         label: "FENa \u2013 sparowana próbka punktowa (%)",
         version: "spot",
-        requires: ["spotPairedChemistry", "U_Na_spot", "S_Na_spot", "Ucr_spot", "Ucr_spot_unit", "Scr_spot", "Scr_spot_unit"],
+        requires: ["U_Na_spot", "S_Na_spot", "Ucr_spot", "Ucr_spot_unit", "Scr_spot", "Scr_spot_unit"],
         note: "Wynik surowy bez uniwersalnego zakresu. Interpretacja zależy m.in. od AKI, CKD, diuretyków i czasu pobrania.",
       },
       {
