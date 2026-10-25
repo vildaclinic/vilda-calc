@@ -7,6 +7,7 @@
   var d = w.document;
   var mount, form, fieldset, doctor, view, snapshot, rendered, fullscreen;
   var request = 0, timer = 0, pendingTimer = 0, layoutFrame = 0, started = false;
+  var readyFrame = 0, boundsFrame = 0, boundsOwner = null, expansion = null;
   var notice, noticeMessage, retryButton, slotStatus = 'ineligible', awaitingEdit = false;
   var status = 'hidden', lastWidth = 0, collapsedHeight = 0, lastHeight = 0, renderKey = '';
   var data = w.VildaCentileLiveData;
@@ -41,7 +42,97 @@
     pendingTimer = 0;
   }
 
+  function stopRefresh() {
+    w.clearTimeout(timer);
+    timer = 0;
+    if (readyFrame) w.cancelAnimationFrame(readyFrame);
+    readyFrame = 0;
+  }
+
+  function expandState(target, state) {
+    if (!target || !target.expandButton) return;
+    var label = state === 'pending' ? 'Przygotowywanie pełnego ekranu…'
+      : state === 'error' ? 'Nie udało się powiększyć siatki. Kliknij, aby spróbować ponownie.'
+        : 'Powiększ siatkę na pełny ekran';
+    target.expandButton.setAttribute('aria-busy', state === 'pending' ? 'true' : 'false');
+    target.expandButton.setAttribute('aria-label', label);
+    target.expandButton.title = label;
+  }
+
+  function cancelExpansion() {
+    if (expansion) expandState(expansion.view);
+    expansion = null;
+  }
+
+  function stopBounds() {
+    cancelExpansion();
+    if (boundsFrame) w.cancelAnimationFrame(boundsFrame);
+    boundsFrame = 0;
+    var old = boundsOwner;
+    boundsOwner = null;
+    if (old && old.job) old.job.cancel();
+  }
+
+  function hideRetry() {
+    if (!retryButton) return;
+    retryButton.hidden = true;
+    retryButton.textContent = 'Spróbuj ponownie';
+  }
+
+  function showBoundsError(message) {
+    // A failed crop must not erase a still-current complete inline/fullscreen
+    // drawing. Make the stale refresh explicit and offer the existing retry.
+    status = 'unavailable';
+    renderKey = '';
+    if (retryButton && view) {
+      retryButton.textContent = message;
+      view.element.appendChild(retryButton);
+      retryButton.hidden = false;
+    }
+    slot('error');
+  }
+
+  function currentBounds(owner) {
+    return boundsOwner === owner && view === owner.view && data.isCurrent(owner.snapshot)
+      && (owner.revision === undefined || owner.revision === request);
+  }
+
+  function prepareBounds(owner, priority) {
+    if (!owner || !currentBounds(owner)) return null;
+    if (boundsFrame) w.cancelAnimationFrame(boundsFrame);
+    boundsFrame = 0;
+    if (!owner.job || owner.result && owner.result.status === 'error') {
+      owner.result = null;
+      try {
+        owner.job = w.VildaCentileLiveRender.prepareContentBounds(owner.rendered, {
+          isCurrent: function () { return currentBounds(owner); }
+        });
+      } catch (_) {
+        owner.job = { promise: Promise.resolve({ status: 'error' }), cancel: function () {}, prioritize: function () {} };
+      }
+      owner.job.promise.then(function (result) {
+        if (currentBounds(owner)) owner.result = result;
+      });
+    }
+    if (priority) owner.job.prioritize();
+    return owner.job;
+  }
+
+  function scheduleBounds(owner) {
+    // Leave one actual paint opportunity before the first readback. A resolved
+    // Promise alone would still run before the browser can present the chart.
+    boundsFrame = w.requestAnimationFrame(function () {
+      boundsFrame = 0;
+      if (!currentBounds(owner)) return;
+      boundsFrame = w.requestAnimationFrame(function () {
+        boundsFrame = 0;
+        prepareBounds(owner, false);
+      });
+    });
+  }
+
   function discardView(reason) {
+    stopBounds();
     awaitingEdit = false;
     snapshot = null;
     rendered = null;
@@ -61,8 +152,7 @@
 
   function clear(reason) {
     request += 1;
-    w.clearTimeout(timer);
-    timer = 0;
+    stopRefresh();
     stopPending();
     discardView(reason);
     status = 'hidden';
@@ -75,6 +165,7 @@
   }
 
   function showError(message) {
+    stopBounds();
     awaitingEdit = false;
     stopPending();
     status = 'unavailable';
@@ -91,7 +182,7 @@
       if (notice) notice.hidden = false;
       if (noticeMessage) noticeMessage.textContent = message;
     }
-    if (retryButton) retryButton.hidden = false;
+    if (retryButton) { retryButton.textContent = 'Spróbuj ponownie'; retryButton.hidden = false; }
     slot('error');
     inlineSize();
   }
@@ -111,8 +202,7 @@
     else if (!pendingTimer) pendingTimer = w.setTimeout(function () {
       pendingTimer = 0;
       request += 1;
-      w.clearTimeout(timer);
-      timer = 0;
+      stopRefresh();
       if (!twoColumns() || eligibility().status === 'ineligible') { clear('stale'); return; }
       showError('Wczytywanie siatki trwa zbyt długo. Spróbuj ponownie.');
     }, 10000);
@@ -189,9 +279,8 @@
     if (!layoutFrame) layoutFrame = w.requestAnimationFrame(layout);
   }
 
-  function expand() {
-    if (!view || !snapshot || fullscreen || !data.isCurrent(snapshot) || !twoColumns()) return;
-    var currentView = view, currentSnapshot = snapshot;
+  function openFullscreen(currentView, currentSnapshot) {
+    if (view !== currentView || fullscreen || !data.isCurrent(currentSnapshot) || !twoColumns()) return;
     var host = w.VildaCentileLiveHost;
     if (!host) return;
     var closedDuringOpen = false;
@@ -222,6 +311,35 @@
     fullscreen = closedDuringOpen ? null : handle;
   }
 
+  function expand() {
+    if (!view || !snapshot || fullscreen || expansion || !data.isCurrent(snapshot) || !twoColumns()) return;
+    var currentView = view, currentSnapshot = snapshot;
+    var owner = boundsOwner;
+    if (!owner || owner.result && owner.result.status === 'ready') {
+      openFullscreen(currentView, currentSnapshot);
+      return;
+    }
+    var intent = { view: currentView };
+    expansion = intent;
+    expandState(currentView, 'pending');
+    var job = prepareBounds(owner, true);
+    if (!job) { cancelExpansion(); return; }
+    job.promise.then(function (result) {
+      if (expansion !== intent) return;
+      cancelExpansion();
+      if (!currentBounds(owner) || !twoColumns()) return;
+      if (result && result.status === 'ready') {
+        status = rendered && rendered.status || 'ready';
+        slot('ready');
+        hideRetry();
+        openFullscreen(currentView, currentSnapshot);
+      } else if (result && result.status === 'error') {
+        expandState(currentView, 'error');
+        showBoundsError('Nie udało się przygotować pełnego ekranu. Spróbuj ponownie.');
+      }
+    });
+  }
+
   function createView() {
     view = w.VildaCentileLiveView.create({
       document: d,
@@ -234,8 +352,7 @@
 
   async function refresh() {
     if (!started || !data) return;
-    w.clearTimeout(timer);
-    timer = 0;
+    stopRefresh();
     if (!prepare()) return;
     var revision = ++request;
     var result;
@@ -272,18 +389,52 @@
     if (snapshot && snapshot.patientToken !== next.patientToken) discardView('patient-change');
     try {
       var nextKey = JSON.stringify(next);
-      snapshot = next;
+      if (!snapshot) snapshot = next;
       if (!view) createView();
+      if (rendered && nextKey === renderKey) {
+        if (boundsOwner && boundsOwner.rendered !== rendered) stopBounds();
+        snapshot = next;
+        slot('ready');
+        if (notice) notice.hidden = true;
+        hideRetry();
+        inlineSize();
+        return;
+      }
+      stopBounds();
+      var renderer = w.VildaCentileLiveRender;
+      var deferredBounds = typeof renderer.prepareContentBounds === 'function';
+      var nextRendered = deferredBounds ? renderer.render(next, { deferContentBounds: true }) : renderer.render(next);
+      if (!data.isCurrent(next)) { discardView('stale'); schedule(); return; }
+      var owner = deferredBounds && nextRendered && nextRendered.status === 'ready'
+        ? { view: view, snapshot: next, rendered: nextRendered, job: null, result: null } : null;
+      boundsOwner = owner;
+      if (fullscreen && owner) {
+        // Keep the already verified fullscreen image until the replacement has
+        // its exact crop. Publishing null bounds would briefly shrink the grid.
+        owner.revision = revision;
+        var cropResult = await prepareBounds(owner, true).promise;
+        if (revision !== request || !currentBounds(owner)) {
+          if (boundsOwner === owner) stopBounds();
+          return;
+        }
+        if (!cropResult || cropResult.status === 'cancelled') return;
+        if (cropResult.status !== 'ready') {
+          stopBounds();
+          showBoundsError('Nie udało się odświeżyć siatki. Spróbuj ponownie.');
+          return;
+        }
+        owner.revision = undefined;
+      }
+      snapshot = next;
+      rendered = nextRendered;
       slot('ready');
       if (notice) notice.hidden = true;
-      if (retryButton) retryButton.hidden = true;
+      hideRetry();
       view.element.hidden = false;
-      if (rendered && nextKey === renderKey) { inlineSize(); return; }
-      rendered = w.VildaCentileLiveRender.render(next);
-      if (!data.isCurrent(next)) { discardView('stale'); schedule(); return; }
       status = rendered && rendered.status || 'ready';
       view.update(rendered, next);
       renderKey = nextKey;
+      if (owner && !owner.job) scheduleBounds(owner);
     } catch (_) {
       showError('Nie udało się wyświetlić siatki. Spróbuj ponownie.');
       return;
@@ -302,7 +453,18 @@
     w.clearTimeout(timer);
     timer = 0;
     if (!started || !prepare()) return;
-    timer = w.setTimeout(refresh, event && event.identityChanged ? 0 : 100);
+    if (event && event.identityChanged) {
+      stopRefresh();
+      timer = w.setTimeout(refresh, 0);
+      return;
+    }
+    var readySignal = event && ['startup-settled', 'vilda:dob-restored', 'vilda:auth-hidden', 'vilda:auth-state-settled'].includes(event.reason);
+    if (readyFrame) return;
+    if (readySignal && typeof data.getEligibility === 'function' && eligibility().status === 'eligible') {
+      readyFrame = w.requestAnimationFrame(function () { readyFrame = 0; refresh(); });
+      return;
+    }
+    timer = w.setTimeout(refresh, 100);
   }
 
   function retry() {
@@ -337,6 +499,12 @@
     w.addEventListener('resize', scheduleLayout);
     w.addEventListener('pageshow', schedule);
     w.addEventListener('pagehide', function () { clear('pagehide'); });
+    d.addEventListener('keydown', function (event) {
+      if (event.key === 'Escape' && expansion) {
+        event.preventDefault();
+        cancelExpansion();
+      }
+    });
     refresh();
   }
 
@@ -345,7 +513,7 @@
     getState: function () {
       return Object.assign({ eligible: !!snapshot, status: status, slotStatus: slotStatus,
         patientId: snapshot ? snapshot.patientId : null,
-        source: rendered ? rendered.source : null, fullscreen: !!fullscreen },
+        source: rendered ? rendered.source : null, fullscreen: !!fullscreen, preparingFullscreen: !!expansion },
       view ? view.getState() : {});
     }
   });

@@ -11,8 +11,8 @@ function emitter(target) {
   return target;
 }
 
-function setup({ columns = '400px 400px', rects = true, lifecycle = false, eligibility = 'eligible', beforeStart } = {}) {
-  const pending = [], subscribers = [], views = [], hosts = [], frames = new Map(), timers = new Map(), resizeObservers = [];
+function setup({ columns = '400px 400px', rects = true, lifecycle = false, eligibility = 'eligible', deferredBounds = false, beforeStart } = {}) {
+  const pending = [], subscribers = [], views = [], hosts = [], frames = new Map(), timers = new Map(), resizeObservers = [], boundsJobs = [];
   let id = 0, currentToken = Object.freeze({ fictional: 'patient-a', revision: 1 });
   let refreshState = null;
   function element(rect = {}) {
@@ -51,15 +51,23 @@ function setup({ columns = '400px 400px', rects = true, lifecycle = false, eligi
     data.retry = vi.fn();
   }
   const render = vi.fn((snapshot) => ({ status: 'ready', source: snapshot.source, height: {}, weight: {} }));
+  const prepareContentBounds = vi.fn((rendered, options) => {
+    let resolve;
+    const job = { rendered, options, promise: new Promise(done => { resolve = done; }),
+      resolve: result => resolve(result), cancel: vi.fn(() => resolve({ status: 'cancelled' })), prioritize: vi.fn() };
+    boundsJobs.push(job);
+    return job;
+  });
   const win = emitter({ document: doc, VildaCentileLiveData: data, __vildaRemindersResync: vi.fn(),
     getComputedStyle: (node) => node.computedStyle || (node === form ? { gridTemplateColumns: style.columns } : {
       display: node === puberty ? style.pubertyDisplay : 'block', marginTop: style.pubertyMarginTop, marginBottom: style.pubertyMarginBottom,
     }),
     requestAnimationFrame: (fn) => { const key = ++id; frames.set(key, fn); return key; },
+    cancelAnimationFrame: (key) => frames.delete(key),
     setTimeout: (fn, delay) => { const key = ++id; timers.set(key, { fn, delay }); return key; },
     clearTimeout: (key) => timers.delete(key),
     ResizeObserver: class { constructor(fn) { resizeObservers.push(fn); } observe() {} },
-    VildaCentileLiveRender: { render, probe: vi.fn() },
+    VildaCentileLiveRender: { render, probe: vi.fn(), ...(deferredBounds ? { prepareContentBounds } : {}) },
     VildaCentileLiveView: { create: vi.fn((options) => {
       const state = { metric: 'height', fullscreen: false };
       const view = {
@@ -90,7 +98,7 @@ function setup({ columns = '400px 400px', rects = true, lifecycle = false, eligi
   const snapshot = (extra = {}) => ({ patientToken: currentToken, patientId: currentToken?.fictional || null,
     source: 'OLAF', ageMonths: 158, measurements: [], ...extra });
   return { win, doc, data, pending, views, hosts, open, render, snapshot, style, classes, mount, fieldset, doctor, form, puberty,
-    api: win.VildaCentileLivePanel, element, notice, noticeMessage, retryButton,
+    api: win.VildaCentileLivePanel, element, notice, noticeMessage, retryButton, boundsJobs, prepareContentBounds,
     setEligibility: value => { eligibility = value; },
     emit: (event) => subscribers.forEach((fn) => fn(event)),
     replacePatient: (name = 'patient-b') => { currentToken = Object.freeze({ fictional: name, revision: 2 }); },
@@ -486,4 +494,190 @@ describe('live panel controller — explicit slot lifecycle', () => {
     expect(e.api.getState().slotStatus).toBe('ready');
   });
 
+});
+
+describe('live panel controller — deferred fullscreen preparation', () => {
+  async function prepared(e) {
+    const view = await ready(e);
+    e.nextFrame(); e.nextFrame();
+    e.boundsJobs[0].resolve({ status: 'ready' }); await flush();
+    return view;
+  }
+
+  it('publishes both complete metrics before starting bounds work after a paint opportunity', async () => {
+    const e = setup({ deferredBounds: true }); const view = await ready(e);
+    expect(e.render).toHaveBeenCalledWith(e.snapshot(), { deferContentBounds: true });
+    expect(view.update).toHaveBeenCalledWith(expect.objectContaining({ height: {}, weight: {} }), e.snapshot());
+    expect(e.api.getState()).toMatchObject({ status: 'ready', slotStatus: 'ready', preparingFullscreen: false });
+    expect(e.prepareContentBounds).not.toHaveBeenCalled();
+    e.nextFrame();
+    expect(e.prepareContentBounds).not.toHaveBeenCalled();
+    e.nextFrame();
+    expect(e.prepareContentBounds).toHaveBeenCalledOnce();
+    const fits = view.fit.mock.calls.length;
+    e.boundsJobs[0].resolve({ status: 'ready' }); await flush();
+    expect(view.update).toHaveBeenCalledOnce();
+    expect(view.fit).toHaveBeenCalledTimes(fits);
+  });
+
+  it('coalesces early expand clicks and opens only after exact bounds are ready', async () => {
+    const e = setup({ deferredBounds: true }); const view = await ready(e);
+    view.options.onExpand(); view.options.onExpand();
+    expect(e.boundsJobs).toHaveLength(1);
+    expect(e.boundsJobs[0].prioritize).toHaveBeenCalledOnce();
+    expect(view.expandButton.attributes['aria-busy']).toBe('true');
+    expect(e.api.getState().preparingFullscreen).toBe(true);
+    expect(e.open).not.toHaveBeenCalled();
+    e.nextFrame(); e.nextFrame();
+    expect(e.boundsJobs).toHaveLength(1);
+    e.boundsJobs[0].resolve({ status: 'ready' }); await flush();
+    expect(e.open).toHaveBeenCalledOnce();
+    expect(view.expandButton.attributes['aria-busy']).toBe('false');
+    expect(e.api.getState()).toMatchObject({ fullscreen: true, preparingFullscreen: false });
+  });
+
+  it('Escape cancels the pending opening but allows the background preparation to finish', async () => {
+    const e = setup({ deferredBounds: true }); const view = await ready(e);
+    view.options.onExpand();
+    const preventDefault = vi.fn();
+    e.doc.dispatchEvent({ type: 'keydown', key: 'Escape', preventDefault });
+    expect(preventDefault).toHaveBeenCalledOnce();
+    expect(view.expandButton.attributes['aria-busy']).toBe('false');
+    expect(e.boundsJobs[0].cancel).not.toHaveBeenCalled();
+    e.boundsJobs[0].resolve({ status: 'ready' }); await flush();
+    expect(e.open).not.toHaveBeenCalled();
+    view.options.onExpand();
+    expect(e.open).toHaveBeenCalledOnce();
+  });
+
+  it.each(['lock', 'clear', 'columns'])('cancels preparation and late opening when %s invalidates the image', async reason => {
+    const e = setup({ deferredBounds: true }); const view = await ready(e);
+    view.options.onExpand(); const job = e.boundsJobs[0];
+    if (reason === 'columns') { e.style.columns = '800px'; e.resize(); e.nextFrame(); }
+    else { e.invalidate(); e.emit({ identityChanged: true, reason }); }
+    expect(job.cancel).toHaveBeenCalledOnce();
+    expect(job.options.isCurrent()).toBe(false);
+    expect(view.expandButton.attributes['aria-busy']).toBe('false');
+    expect(view.destroy).toHaveBeenCalledOnce();
+    job.resolve({ status: 'ready' }); await flush();
+    expect(e.open).not.toHaveBeenCalled();
+    expect(e.api.getState().preparingFullscreen).toBe(false);
+  });
+
+  it('keeps preparation for identical data but cancels it before a changed render replaces the image', async () => {
+    const e = setup({ deferredBounds: true }); await ready(e);
+    e.nextFrame(); e.nextFrame(); const old = e.boundsJobs[0];
+    let refresh = e.api.refresh(); e.pending[1].resolve(e.snapshot()); await refresh;
+    expect(old.cancel).not.toHaveBeenCalled();
+    expect(old.options.isCurrent()).toBe(true);
+    refresh = e.api.refresh(); e.pending[2].resolve(e.snapshot({ currentHeight: 161 })); await refresh;
+    expect(old.cancel).toHaveBeenCalledOnce();
+    expect(old.options.isCurrent()).toBe(false);
+    e.nextFrame(); e.nextFrame();
+    expect(e.boundsJobs).toHaveLength(2);
+  });
+
+  it('holds the existing fullscreen canvas until the replacement has its final crop', async () => {
+    const e = setup({ deferredBounds: true }); const view = await prepared(e);
+    view.options.onExpand();
+    const original = view.update.mock.calls[0][0];
+    const refresh = e.api.refresh(); e.pending[1].resolve(e.snapshot({ currentHeight: 161 })); await flush();
+    expect(e.boundsJobs).toHaveLength(2);
+    expect(e.boundsJobs[1].rendered).not.toBe(original);
+    expect(view.update).toHaveBeenCalledOnce();
+    expect(e.api.getState().fullscreen).toBe(true);
+    e.boundsJobs[1].resolve({ status: 'ready' }); await refresh;
+    expect(view.update).toHaveBeenCalledTimes(2);
+    expect(view.update.mock.calls[1][0]).toBe(e.boundsJobs[1].rendered);
+    expect(e.hosts[0].close).not.toHaveBeenCalled();
+  });
+
+  it('reports a fullscreen refresh crop failure while retaining the image, then retries successfully', async () => {
+    const e = setup({ deferredBounds: true, lifecycle: true });
+    e.pending[0].resolve({ status: 'ready', snapshot: e.snapshot() }); await flush();
+    e.nextFrame(); e.nextFrame(); e.boundsJobs[0].resolve({ status: 'ready' }); await flush();
+    const view = e.views[0]; view.options.onExpand();
+    let refresh = e.api.refresh();
+    e.pending[1].resolve({ status: 'ready', snapshot: e.snapshot({ currentHeight: 161 }) }); await flush();
+    e.boundsJobs[1].resolve({ status: 'error' }); await refresh;
+    expect(view.update).toHaveBeenCalledOnce();
+    expect(view.setStatus).not.toHaveBeenCalled();
+    expect(e.api.getState()).toMatchObject({ fullscreen: true, status: 'unavailable', slotStatus: 'error' });
+    expect(e.retryButton.hidden).toBe(false);
+    expect(e.retryButton.textContent).toContain('Nie udało się odświeżyć');
+    refresh = e.api.retry();
+    e.pending[2].resolve({ status: 'ready', snapshot: e.snapshot({ currentHeight: 161 }) }); await flush();
+    e.boundsJobs[2].resolve({ status: 'ready' }); await refresh;
+    expect(view.update).toHaveBeenCalledTimes(2);
+    expect(e.retryButton.hidden).toBe(true);
+    expect(e.retryButton.textContent).toBe('Spróbuj ponownie');
+    expect(e.api.getState()).toMatchObject({ fullscreen: true, status: 'ready', slotStatus: 'ready' });
+  });
+
+  it('can reopen prepared data after an intervening fullscreen replacement is superseded', async () => {
+    const e = setup({ deferredBounds: true }); const view = await prepared(e);
+    view.options.onExpand();
+    const changed = e.api.refresh(); e.pending[1].resolve(e.snapshot({ currentHeight: 161 })); await flush();
+    const obsolete = e.boundsJobs[1];
+    e.emit({ reason: 'after-update', identityChanged: false });
+    e.runTimers(); e.pending[2].resolve(e.snapshot()); await flush();
+    await changed;
+    expect(obsolete.cancel).toHaveBeenCalledOnce();
+    expect(view.update).toHaveBeenCalledOnce();
+    e.hosts[0].close();
+    view.options.onExpand();
+    expect(e.open).toHaveBeenCalledTimes(2);
+    expect(e.api.getState().preparingFullscreen).toBe(false);
+  });
+
+  it('keeps a valid inline image after background failure and retries crop preparation on expand', async () => {
+    const e = setup({ deferredBounds: true }); const view = await ready(e);
+    e.nextFrame(); e.nextFrame(); e.boundsJobs[0].resolve({ status: 'error' }); await flush();
+    expect(e.api.getState()).toMatchObject({ status: 'ready', slotStatus: 'ready' });
+    expect(view.setStatus).not.toHaveBeenCalled();
+    view.options.onExpand();
+    expect(e.boundsJobs).toHaveLength(2);
+    e.boundsJobs[1].resolve({ status: 'error' }); await flush();
+    expect(e.retryButton.hidden).toBe(false);
+    expect(e.retryButton.textContent).toContain('Nie udało się przygotować');
+    expect(view.update).toHaveBeenCalledOnce();
+    expect(view.setStatus).not.toHaveBeenCalled();
+    expect(view.expandButton.attributes['aria-busy']).toBe('false');
+    view.options.onExpand(); e.boundsJobs[2].resolve({ status: 'ready' }); await flush();
+    expect(e.open).toHaveBeenCalledOnce();
+    expect(e.retryButton.hidden).toBe(true);
+    expect(e.api.getState()).toMatchObject({ status: 'ready', slotStatus: 'ready' });
+  });
+});
+
+describe('live panel controller — prompt readiness signals', () => {
+  it.each(['startup-settled', 'vilda:dob-restored', 'vilda:auth-hidden', 'vilda:auth-state-settled'])('refreshes %s at the next frame despite following ordinary updates', async reason => {
+    const e = setup({ lifecycle: true, eligibility: 'pending' });
+    e.pending[0].resolve({ status: 'pending' }); await flush();
+    e.setEligibility('eligible');
+    e.emit({ reason, identityChanged: false });
+    e.emit({ reason: 'after-update', identityChanged: false });
+    e.emit({ reason: 'change', identityChanged: false });
+    expect(e.pending).toHaveLength(1);
+    e.nextFrame();
+    expect(e.pending).toHaveLength(2);
+    e.runTimers(150);
+    expect(e.pending).toHaveLength(2);
+    e.pending[1].resolve({ status: 'ready', snapshot: e.snapshot() }); await flush();
+    expect(e.api.getState().status).toBe('ready');
+  });
+
+  it('keeps ordinary updates debounced and readiness cannot bypass an identity change', async () => {
+    const e = setup({ lifecycle: true });
+    e.pending[0].resolve({ status: 'ready', snapshot: e.snapshot() }); await flush();
+    e.emit({ reason: 'after-update', identityChanged: false });
+    e.nextFrame(); e.runTimers(99);
+    expect(e.pending).toHaveLength(1);
+    e.runTimers(100); expect(e.pending).toHaveLength(2);
+    e.emit({ reason: 'startup-settled', identityChanged: false });
+    e.invalidate(); e.emit({ reason: 'lock', identityChanged: true });
+    e.nextFrame(); e.runTimers(100);
+    expect(e.pending).toHaveLength(2);
+    expect(e.api.getState().eligible).toBe(false);
+  });
 });
