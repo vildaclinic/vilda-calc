@@ -12,7 +12,14 @@
   const clone = value => JSON.parse(JSON.stringify(value));
   const decimal = value => text(value).replace(".", ",");
   const dateLabel = value => /^\d{4}-\d{2}-\d{2}/.test(value || "") ? value.slice(0, 10).split("-").reverse().join(".") : "Brak daty badania";
-  const isDate = value => { try { return /^\d{4}-\d{2}-\d{2}$/.test(value) && new Date(value + "T12:00:00Z").toISOString().slice(0, 10) === value; } catch (_) { return false; } };
+  function isDate(value) {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
+    // Validate a calendar date by its explicit UTC components. This is not a
+    // conversion of a local date or of today's date into a different zone.
+    const [year, month, day] = value.split("-").map(Number);
+    const parsed = new Date(value + "T12:00:00Z");
+    return parsed.getUTCFullYear() === year && parsed.getUTCMonth() + 1 === month && parsed.getUTCDate() === day;
+  }
   const valueLabel = record => record?.displayValue ?? record?.display ?? record?.rawValue ?? record?.valueNum ?? "—";
   function editableInput(field, formulaId, unitIds) {
     if (["age", "ageMonths", "sex"].includes(field.id) || field.id === "ageDays" && formulaId !== "neonatal_egfr" || unitIds.has(field.id)) return false;
