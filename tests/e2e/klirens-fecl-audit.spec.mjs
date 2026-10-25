@@ -315,6 +315,18 @@ for (const issue of ['different-time', 'different-urine']) {
     const uag = page.locator('#clcrResultReport [data-clcr-series="AGu_spot"]');
     if (issue === 'different-time') await expect(uag).toBeVisible();
     else await expect(uag).toHaveCount(0);
+    await choose(page, 'FECl_spot');
+    await expectBlocked(page);
+    await kliknij(page.locator('#clearBtn'));
+    await page.waitForFunction(() => window.clcrIsResetting !== true);
+    for (const id of ['U_Cl_spot', 'S_Cl_spot', 'Ucr_spot', 'Scr_spot']) await expect(page.locator('#' + id)).toHaveValue('');
+    // Clearing concentrations is not a correction of an explicitly reported
+    // collection problem. Refilling all four values must remain blocked.
+    await expect(page.locator('#FENa_sample_status')).toHaveValue(issue);
+    for (const id of ['U_Cl_spot', 'Ucr_spot', 'S_Cl_spot', 'Scr_spot']) await page.locator('#' + id).fill(base[id]);
+    await expectBlocked(page);
+    await openSampleDetails(page);
+    await expect(page.locator('#ui_fecl_sample_issue')).toHaveValue(issue);
   });
 }
 

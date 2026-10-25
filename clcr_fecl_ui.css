@@ -137,19 +137,6 @@ html[data-clcr-workflow-ui="1"] #clcrForm .fecl-sample-info select {
   font: 400 16px/24px Inter, system-ui, sans-serif;
 }
 .fecl-sample-info p { margin: var(--space-8px) 0; }
-html[data-clcr-workflow-ui="1"] #clcrForm .fecl-correct-sample {
-  width: 100%;
-  min-width: 0;
-  min-height: 48px;
-  margin: var(--space-8px) 0 0;
-  padding: var(--space-8px);
-  border: var(--border-hairline) solid var(--clcr-border);
-  border-radius: var(--radius-10);
-  background: var(--clcr-surface);
-  color: var(--clcr-primary-dark);
-  font-size: 13px;
-  line-height: 1.5;
-}
 html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .fecl-proposal-card {
   --clcr-result-color: #566f77;
   --clcr-result-bg: #f4f7f8;
@@ -290,15 +277,11 @@ html[data-clcr-workflow-ui="1"][data-clcr-fecl-active="1"] #feclInputCard {
   box-shadow: none;
 }
 
-.fecl-result-status { margin: 0 0 var(--space-14px); color: var(--clcr-heading); font-size: 14px; font-weight: 750; line-height: 1.5; }
 .fecl-reference-hint { display: block; margin-top: var(--space-8px); color: var(--clcr-muted); font-size: 10px; font-weight: 400; line-height: 1.5; }
-.fecl-reference-band { display: block; margin-bottom: var(--space-10px); }
-.fecl-reference-band small { display: block; color: var(--clcr-muted); font-size: 10px; font-weight: 650; line-height: 1.5; }
-.fecl-reference-band strong { display: block; font-size: 16px; line-height: 1.5; }
 .fecl-source-links small { display: block; color: var(--clcr-muted); font-size: 11px; line-height: 1.6; }
 
 html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .fecl-proposal-card .fecl-reference-value { overflow-wrap: normal; word-break: normal; hyphens: none; }
-html[data-clcr-workflow-ui="1"][data-clcr-fecl-active="1"] #clcrWorkspace { row-gap: 24px; }
+html[data-clcr-workflow-ui="1"][data-clcr-fecl-active="1"] #clcrWorkspace { row-gap: var(--space-24px); }
 html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .fecl-proposal-card .clcr-result-value[data-dense="true"] { font-size: 23px !important; }
 @media (max-width: 360px) {
   html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .fecl-proposal-card .clcr-result-value[data-dense="true"] { font-size: 17px !important; }
