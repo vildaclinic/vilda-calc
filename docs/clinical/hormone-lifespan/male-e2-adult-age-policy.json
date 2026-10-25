@@ -1,0 +1,104 @@
+{
+  "schemaVersion": 1,
+  "kind": "educational-male-e2-age-comparison",
+  "version": "2026-10-25.1",
+  "sourceId": "frederiksen2020-male-estradiol-age",
+  "analyte": "estradiol",
+  "sex": "male",
+  "contextBasis": "current-patient",
+  "clinicalReferenceActivation": false,
+  "patientComparisonEnabled": true,
+  "notLaboratoryReference": true,
+  "noClinicalClassification": true,
+  "noHistoryWrite": true,
+  "fullAgeIntervalRequired": true,
+  "ordinaryOnly": true,
+  "interpolation": "linear-on-extracted-graphic-path",
+  "ageReferenceBasis": "entered-age-lower-bound",
+  "chartSelectionKey": "e2",
+  "allowedViews": [
+    "life",
+    "age"
+  ],
+  "displayUnits": [
+    "pmol/L",
+    "nmol/L",
+    "pg/mL",
+    "ng/L",
+    "ng/dL"
+  ],
+  "allowedAssayMethodIds": [
+    "lc-ms/ms",
+    "lc-ms-ms",
+    "lcmsms",
+    "turboflow-lc-ms/ms"
+  ],
+  "allowedSpecimens": [
+    "serum",
+    "surowica"
+  ],
+  "excludedCyclePhases": [
+    "follicular",
+    "midcycle",
+    "luteal",
+    "pregnancy",
+    "pregnancy_t1",
+    "pregnancy_t2",
+    "pregnancy_t3",
+    "postmenopause"
+  ],
+  "excludedReproductiveContexts": [
+    "pregnancy",
+    "postmenopause"
+  ],
+  "excludedPositiveFlags": [
+    "pregnancy",
+    "hormonalTreatment",
+    "stimulation",
+    "gnrha"
+  ],
+  "excludedTreatmentContexts": [
+    "hormonal",
+    "stimulation",
+    "gnrh-stimulation",
+    "hcg-stimulation"
+  ],
+  "excludedTreatmentFlags": [
+    "gnrha",
+    "sexSteroids",
+    "cocp",
+    "exogenousTestosterone"
+  ],
+  "allowedMeasurementKinds": [
+    "basal"
+  ],
+  "plot": {
+    "ageMin": 31.4,
+    "ageMax": 60.9,
+    "ageTicks": [
+      35,
+      40,
+      45,
+      50,
+      55,
+      60
+    ],
+    "valueMin": 0,
+    "valueMax": 200,
+    "valueTicks": [
+      0,
+      50,
+      100,
+      150,
+      200
+    ],
+    "unit": "pmol/L",
+    "independentOfPatient": true,
+    "sampleCount": 296
+  },
+  "knownExclusionPolicy": "Known positive current hormonal therapy/GnRHa/stimulation or an incompatible reported assay/material conservatively withhold this educational graphical P50 comparison. These are application choices, not newly inferred exclusions of Frederiksen. Unknown facts remain unknown; LC-MS/MS class labels do not establish inter-assay equivalence.",
+  "allowedTreatmentContexts": [
+    "none"
+  ],
+  "lowSourceAnnotation": null
+}

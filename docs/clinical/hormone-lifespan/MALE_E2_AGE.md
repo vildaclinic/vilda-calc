@@ -1,5 +1,14 @@
 # Estradiol chłopców — mediana modelu wieku 6–18 lat
 
+**Późniejsza decyzja 25.10.2026 — jedna karta z wariantem dorosłym:**
+po akceptacji kolejnej makiety ta sama karta automatycznie dobiera także
+Frederiksen 31,4–60,9 lat. Poniższy tekst zachowuje kontrakt pediatrycznego
+źródła Madsen: jego dane, politykę, 13 P50, PCHIP i skalę 0–100 bez zmian.
+Opisy zakresu 6–18 dotyczą tego wariantu, a nie całego zakresu wspólnej
+karty. Bieżący automatyczny dobór `evaluateSources` i odrębny wariant
+dorosły opisuje [MALE_E2_ADULT_AGE.md](MALE_E2_ADULT_AGE.md); nie tworzy
+on ilościowego mostu między źródłami ani nowych norm.
+
 Właściciel zaakceptował prywatną makietę desktopową i mobilną oraz
 polecił wdrożenie 25.10.2026, Europe/Warsaw („jest ok, koduj”). Zakres
 obejmuje osobną kartę **E2 chłopców 6–18 lat**, z P50 modelu Madsen 2022

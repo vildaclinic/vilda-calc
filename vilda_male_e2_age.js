@@ -1,6 +1,7 @@
 /* Source-age P50 comparison for male estradiol, independently of RI.
- * Source data and product policy are arguments. PCHIP, E2 parsing and unit conversion use
- * the existing production modules; no new scoring formula or storage is added. */
+ * Source data and product policy are arguments. Published P50 use the existing
+ * PCHIP; graphical P50 preserve their extracted linear path. The production E2
+ * parser/converter are shared; no scoring formula or storage is added. */
 (function (root, factory) {
   'use strict';
   var common = typeof module === 'object' && module.exports;
@@ -31,10 +32,33 @@
     return Array.isArray(values) && values.length >= 2 && values[0] === low && values[values.length - 1] === high &&
       values.every(function (value, index) { return finite(value) && (!index || value > values[index - 1]); });
   }
+  function interiorTicks(values, low, high) {
+    return Array.isArray(values) && values.length >= 2 && values.every(function (value, index) {
+      return finite(value) && value >= low && value <= high && (!index || value > values[index - 1]);
+    });
+  }
+  function validSourceType(data, policy) {
+    var source = data.source, limits = source.limits, low = policy.lowSourceAnnotation;
+    if (data.kind === 'controlled-graphic-p50-data') {
+      return policy.interpolation === 'linear-on-extracted-graphic-path' && low === null &&
+        source.kind === data.kind && source.approximate === true && source.graphicalRead === true &&
+        ['chartTitle', 'ageLabel', 'statisticDescription', 'interpolationDescription', 'domainDescription', 'supplementLabel']
+          .every(function (key) { return nonempty(source[key]); }) &&
+        record(limits) && limits.unit === data.unit && Array.isArray(limits.methods) && limits.methods.length > 0 &&
+        limits.methods.every(function (method) { return record(method) && nonempty(method.id) &&
+          finite(method.lod) && finite(method.loq) && method.lod >= 0 && method.loq >= method.lod; });
+    }
+    return data.kind === 'published-age-p50-data' && policy.interpolation === 'pchip-between-published-p50' &&
+      record(low) && finite(low.sourceValueThreshold) && low.sourceValueThreshold >= 0 &&
+      low.sourceUnit === data.unit && low.notPatientLimit === true && low.notClinicalGate === true && nonempty(low.note) &&
+      record(limits) && limits.unit === data.unit && Array.isArray(limits.methods) && limits.methods.some(function (method) {
+        return record(method) && method.id === low.sourceMethodId && finite(method.lloq) && method.lloq === low.sourceValueThreshold;
+      });
+  }
   function validData(data, policy) {
     var domain = data && data.ageDomain, source = data && data.source, p = policy && policy.plot;
-    var low = policy && policy.lowSourceAnnotation, limits = source && source.limits;
-    return !!(record(data) && data.kind === 'published-age-p50-data' && nonempty(data.id) && nonempty(data.version) &&
+    var graphic = data && data.kind === 'controlled-graphic-p50-data';
+    return !!(record(data) && ['published-age-p50-data', 'controlled-graphic-p50-data'].indexOf(data.kind) >= 0 && nonempty(data.id) && nonempty(data.version) &&
       data.analyte === 'estradiol' && data.sex === 'male' && data.unit === 'pmol/L' &&
       record(domain) && finite(domain.min) && finite(domain.max) && domain.min >= 0 && domain.max > domain.min &&
       domain.minimumInclusive === true && domain.maximumInclusive === true &&
@@ -52,20 +76,16 @@
       policy.patientComparisonEnabled === true && policy.notLaboratoryReference === true &&
       policy.noClinicalClassification === true && policy.noHistoryWrite === true &&
       policy.fullAgeIntervalRequired === true && policy.ordinaryOnly === true &&
-      policy.interpolation === 'pchip-between-published-p50' && policy.ageReferenceBasis === 'entered-age-lower-bound' &&
+      policy.ageReferenceBasis === 'entered-age-lower-bound' &&
       nonempty(policy.chartSelectionKey) && ['allowedViews', 'displayUnits', 'allowedAssayMethodIds', 'allowedSpecimens',
         'excludedCyclePhases', 'excludedReproductiveContexts', 'excludedPositiveFlags', 'excludedTreatmentContexts', 'allowedTreatmentContexts',
         'excludedTreatmentFlags', 'allowedMeasurementKinds'].every(function (key) { return list(policy[key]); }) &&
-      policy.displayUnits.indexOf(data.unit) >= 0 && record(policy.lowSourceAnnotation) &&
-      finite(policy.lowSourceAnnotation.sourceValueThreshold) && policy.lowSourceAnnotation.sourceValueThreshold >= 0 &&
-      policy.lowSourceAnnotation.sourceUnit === data.unit && policy.lowSourceAnnotation.notPatientLimit === true &&
-      policy.lowSourceAnnotation.notClinicalGate === true && nonempty(policy.lowSourceAnnotation.note) &&
-      record(limits) && limits.unit === data.unit && Array.isArray(limits.methods) && limits.methods.some(function (method) {
-        return record(method) && method.id === low.sourceMethodId && finite(method.lloq) && method.lloq === low.sourceValueThreshold;
-      }) && record(p) && p.ageMin === domain.min && p.ageMax === domain.max &&
+      policy.displayUnits.indexOf(data.unit) >= 0 && validSourceType(data, policy) &&
+      record(p) && p.ageMin === domain.min && p.ageMax === domain.max &&
       finite(p.valueMin) && finite(p.valueMax) && p.valueMin >= 0 && p.valueMax > p.valueMin &&
       p.unit === data.unit && p.independentOfPatient === true && Number.isInteger(p.sampleCount) &&
-      p.sampleCount >= data.points.length && p.sampleCount <= 2000 && ticks(p.ageTicks, p.ageMin, p.ageMax) &&
+      p.sampleCount >= data.points.length && p.sampleCount <= 2000 &&
+      (graphic ? interiorTicks(p.ageTicks, p.ageMin, p.ageMax) : ticks(p.ageTicks, p.ageMin, p.ageMax)) &&
       ticks(p.valueTicks, p.valueMin, p.valueMax) && data.points.every(function (point) { return point.value <= p.valueMax; }) &&
       policy.displayUnits.every(function (unit) { return finite(convert(p.valueMax, data.unit, unit)); }));
   }
@@ -136,24 +156,45 @@
     return { status: 'ready', reason: null, patientPoint: { ageYears: age, value: value, unit: displayUnit,
       sourceValue: convert(parsed.value, parsed.unit, data.unit), sourceUnit: data.unit } };
   }
+  function hasDependencies() {
+    return !!(reference && typeof reference.referenceAt === 'function' && typeof reference.sampleProfile === 'function' &&
+      parser && typeof parser.parseMeasurement === 'function' && converter &&
+      typeof converter.convert === 'function' && typeof converter.find === 'function');
+  }
+  function globalReason(data, policy, c) {
+    if (c.sourceStatus !== 'ready') return 'patient-context-unavailable';
+    if (c.analyte !== data.analyte) return 'unsupported-analyte';
+    if (c.sex !== data.sex) return 'unsupported-sex';
+    if (c.contextBasis !== policy.contextBasis || c.sampleDateISO) return 'historical-context';
+    if (c.compare !== undefined && c.compare !== false || c.view !== undefined && policy.allowedViews.indexOf(c.view) < 0) return 'unsupported-view';
+    if (c.selected !== undefined && (!Array.isArray(c.selected) || c.selected.indexOf(policy.chartSelectionKey) < 0)) return 'unselected-analyte';
+    return null;
+  }
+  function ageReason(c) {
+    if (!finite(c.ageYears) || c.ageYears < 0) return 'missing-age';
+    if (!finite(c.ageUpperYears) || typeof c.ageUpperInclusive !== 'boolean' || c.ageUpperYears < c.ageYears ||
+      c.ageUpperYears === c.ageYears && c.ageUpperInclusive !== true) return 'ambiguous-age';
+    return null;
+  }
+  function linearAt(points, age) {
+    var low = 0, high = points.length - 1;
+    if (age < points[low].ageYears || age > points[high].ageYears) return null;
+    while (high - low > 1) {
+      var middle = Math.floor((low + high) / 2);
+      if (points[middle].ageYears <= age) low = middle;
+      else high = middle;
+    }
+    if (points[low].ageYears === age) return points[low].value;
+    if (points[high].ageYears === age) return points[high].value;
+    var lower = points[low], upper = points[high];
+    return lower.value + (upper.value - lower.value) * (age - lower.ageYears) / (upper.ageYears - lower.ageYears);
+  }
   function evaluate(data, policy, context) {
     var c = context || {};
-    if (!reference || typeof reference.referenceAt !== 'function' || typeof reference.sampleProfile !== 'function' ||
-      !parser || typeof parser.parseMeasurement !== 'function' || !converter ||
-      typeof converter.convert !== 'function' || typeof converter.find !== 'function') {
-      return unavailable('dependency-unavailable', false);
-    }
+    if (!hasDependencies()) return unavailable('dependency-unavailable', false);
     if (!validData(data, policy)) return unavailable('source-unavailable', false);
-    if (c.sourceStatus !== 'ready') return unavailable('patient-context-unavailable', false);
-    if (c.analyte !== data.analyte) return unavailable('unsupported-analyte', false);
-    if (c.sex !== data.sex) return unavailable('unsupported-sex', false);
-    if (c.contextBasis !== policy.contextBasis || c.sampleDateISO) return unavailable('historical-context', false);
-    if (c.compare !== undefined && c.compare !== false || c.view !== undefined && policy.allowedViews.indexOf(c.view) < 0) {
-      return unavailable('unsupported-view', false);
-    }
-    if (c.selected !== undefined && (!Array.isArray(c.selected) || c.selected.indexOf(policy.chartSelectionKey) < 0)) {
-      return unavailable('unselected-analyte', false);
-    }
+    var reason = globalReason(data, policy, c);
+    if (reason) return unavailable(reason, false);
     var displayUnit = c.displayUnit == null || c.displayUnit === '' ? data.unit : c.displayUnit;
     var base = { kind: policy.kind, source: copy(data.source), policy: copy(policy), sourceVersion: data.version,
       policyVersion: policy.version, unit: displayUnit, sourceUnit: data.unit,
@@ -164,19 +205,20 @@
       valueMin: convert(plot.valueMin, data.unit, displayUnit), valueMax: convert(plot.valueMax, data.unit, displayUnit),
       valueTicks: plot.valueTicks.map(function (value) { return convert(value, data.unit, displayUnit); }),
       unit: displayUnit, sourceUnit: data.unit, independentOfPatient: true };
-    var reason = contextExclusion(policy, c);
+    reason = contextExclusion(policy, c);
     if (reason) return unavailable(reason, true, base);
-    if (!finite(c.ageYears) || c.ageYears < 0) return unavailable('missing-age', true, base);
     // Precision is supplied by the current form. Missing upper bounds or an
     // unknown end closure cannot silently turn reported years into a point.
-    if (!finite(c.ageUpperYears) || typeof c.ageUpperInclusive !== 'boolean' || c.ageUpperYears < c.ageYears ||
-      c.ageUpperYears === c.ageYears && c.ageUpperInclusive !== true) return unavailable('ambiguous-age', true, base);
+    reason = ageReason(c);
+    if (reason) return unavailable(reason, true, base);
     if (c.ageYears < data.ageDomain.min || c.ageUpperYears > data.ageDomain.max) {
       return unavailable('unsupported-source-age', true, base);
     }
     var profile = { minAge: data.ageDomain.min, maxAge: data.ageDomain.max,
       interpolation: 'pchip', points: data.points.map(function (p) { return { ageYears: p.ageYears, value: p.value }; }) };
-    var median = reference.referenceAt(profile, c.ageYears), curve = reference.sampleProfile(profile, plot.sampleCount);
+    var graphic = data.kind === 'controlled-graphic-p50-data';
+    var median = graphic ? linearAt(profile.points, c.ageYears) : reference.referenceAt(profile, c.ageYears);
+    var curve = graphic ? profile.points : reference.sampleProfile(profile, plot.sampleCount);
     if (!finite(median) || !curve.length || !curve.every(function (p) { return finite(p.value) && p.value >= 0; })) {
       return unavailable('source-unavailable', false);
     }
@@ -184,14 +226,39 @@
       return { ageYears: point.ageYears, value: convert(point.value, data.unit, displayUnit),
         sourceValue: point.value, sourceUnit: data.unit, unit: displayUnit };
     }
-    return Object.assign({}, base, { status: 'ready', visible: true, reason: null,
-      knots: profile.points.map(function (point) { var p = displayPoint(point); p.median = p.value; return p; }),
+    var result = Object.assign({}, base, { status: 'ready', visible: true, reason: null,
+      knots: graphic ? [] : profile.points.map(function (point) { var p = displayPoint(point); p.median = p.value; return p; }),
       curve: curve.map(displayPoint),
       median: { ageYears: c.ageYears, value: convert(median, data.unit, displayUnit), unit: displayUnit,
-        sourceValue: median, sourceUnit: data.unit, belowSourceLloq: median < policy.lowSourceAnnotation.sourceValueThreshold, interpolated: !data.points.some(function (p) { return p.ageYears === c.ageYears; }) },
+        sourceValue: median, sourceUnit: data.unit, belowSourceLloq: !!(policy.lowSourceAnnotation && median < policy.lowSourceAnnotation.sourceValueThreshold), interpolated: !data.points.some(function (p) { return p.ageYears === c.ageYears; }) },
       ageContext: { lowerYears: c.ageYears, upperYears: c.ageUpperYears, upperInclusive: c.ageUpperInclusive,
         basis: policy.ageReferenceBasis },
       comparison: measuredPoint(data, policy, c, c.ageYears, displayUnit) });
+    if (graphic) result.median.approximate = true;
+    return result;
   }
-  return Object.freeze({ evaluate: evaluate });
+  function evaluateSources(sources, context) {
+    var c = context || {};
+    if (!hasDependencies()) return unavailable('dependency-unavailable', false);
+    if (!Array.isArray(sources)) return unavailable('source-unavailable', false);
+    var valid = sources.filter(function (entry) { return record(entry) && validData(entry.data, entry.policy); });
+    if (!valid.length) return unavailable('source-unavailable', false);
+    var reason = globalReason(valid[0].data, valid[0].policy, c);
+    if (reason) return unavailable(reason, false);
+    var base = { kind: valid[0].policy.kind, source: null, policy: null, plot: null,
+      sourceVersion: null, policyVersion: null,
+      sourceUnit: valid[0].data.unit, unit: c.displayUnit || valid[0].data.unit,
+      clinicalReferenceActivation: false, identityKey: typeof c.identityKey === 'string' ? c.identityKey : '',
+      availableSources: valid.map(function (entry) { return { source: copy(entry.data.source), ageDomain: copy(entry.data.ageDomain) }; }) };
+    reason = ageReason(c);
+    if (reason) return unavailable(reason, true, base);
+    var matches = valid.filter(function (entry) {
+      return c.ageYears >= entry.data.ageDomain.min && c.ageUpperYears <= entry.data.ageDomain.max;
+    });
+    if (matches.length !== 1) return unavailable(matches.length ? 'ambiguous-source-age' : 'unsupported-source-age', true, base);
+    // The age-selected source owns all subsequent clinical/method guards.
+    // Incompatibility never falls through to another publication.
+    return evaluate(matches[0].data, matches[0].policy, c);
+  }
+  return Object.freeze({ evaluate: evaluate, evaluateSources: evaluateSources });
 });

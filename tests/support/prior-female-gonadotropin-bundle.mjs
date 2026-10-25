@@ -45,10 +45,17 @@ export function beforeMaleLhCaliperBundle(data) {
     .filter(profile => profile.id !== 'wilson2023-male-lh-age-over16-under18') };
 }
 
+// Adult male E2 adds exactly its graphical source and separate product policy.
+// Removing only those fields restores the complete 38-field preceding runtime.
+export function beforeMaleE2AdultAgeRuntime(runtime) {
+  const { maleE2AdultAgeData: _adultE2Data, maleE2AdultAgePolicy: _adultE2Policy, ...prior } = runtime;
+  return prior;
+}
+
 // Male E2 adds exactly its separate source and policy. Removing only these
 // additions preserves every earlier field and frozen hash expectation.
 export function beforeMaleE2AgeRuntime(runtime) {
-  const { maleE2AgeData: _maleE2Data, maleE2AgePolicy: _maleE2Policy, ...prior } = runtime;
+  const { maleE2AgeData: _maleE2Data, maleE2AgePolicy: _maleE2Policy, ...prior } = beforeMaleE2AdultAgeRuntime(runtime);
   return prior;
 }
 

@@ -1203,6 +1203,52 @@ ilorazu do P50, diagnoz lub zapisu. Źródła są początkowo zwinięte.
 M12/20 daje P50 około 6,129; M12,5 około 8,699.
 Pełne źródła i kontrakt: [MALE_E2_AGE.md](hormone-lifespan/MALE_E2_AGE.md).
 
+## E2 dorosłych — zaakceptowany wariant jednej karty, 25 października 2026
+
+Po kontrolowanym odczycie pełnego Frederiksen 2020, suplementu v1
+i ocenie prywatnej makiety właściciel zaakceptował wdrożenie.
+Ta sama karta męskiego E2 dobiera według całego znanego wieku Madsen
+6–18 albo przybliżony odczyt P50 Frederiksen **31,4–60,9 lat**.
+Wiek/płeć i wynik pochodzą z istniejącego formularza, bez nowych pytań.
+Luka pomiędzy źródłami, seniorzy i brak wieku mają neutralny brak mediany.
+
+Health2008 obejmuje **157 mężczyzn**; N=772 z ryciny to wszystkie męskie
+grupy łącznie. Oznaczenie: surowica, in-house TurboFlow LC-MS/MS.
+Rycina 3a/s. 760 jest wektorowa, logarytmiczna 4a suplementu rastrowa.
+Odczyt zachowuje 296 punktów dorosłej ścieżki i łączy je liniowo.
+To przybliżenie grafiki modelu P50, bez eksportu L/M/S lub odzyskania
+GAMLSS. Porównanie 2951 wieków dało maksymalnie 1,4232 pmol/L różnicy;
+zgodność tego samego modelu w dwóch skalach nie waliduje go klinicznie.
+
+Mediana około 87–89 pmol/L jest niemal stała. Dorosła oś **0–200 pmol/L**
+i jej równoważne konwersje nie zależą od wyniku, wieku bieżącej osoby
+lub szerokości. Nie wyolbrzymiamy różnicy około 2,087 pmol/L wąską skalą.
+Odczyt przy dolnej granicy wpisanego wieku ma ≈ i dwie cyfry znaczące.
+Dorosłe wierzchołki nie są pokazywane jako 296 rocznych kropek.
+Źródła, tytuł i opis osi są właściwe dla aktualnie dobranego źródła;
+Madsen zachowuje 13 węzłów/PCHIP, oś 0–100 i własną adnotację niskiego końca.
+
+Źródłowe LOD 4,04/LOQ 12,1 i graficzne zastąpienie <LOD przez 1 pmol/L
+nie są limitami lub wartościami pacjenta. Wpływ zastąpienia na fit jest
+niejasny. Rozbieżność precyzji niskiego QC w tekście/suplemencie oraz
+nieustalone pobranie/post/wyłączenia pozostają w rozwijanych źródłach.
+Normy Mayo/Tietz nie pochodzą z P50: M40 / 125 może być powyżej mediany ≈88
+i nadal w istniejącym RI 40–160. Brak nowych RI/SDS/centyli lub zapisu
+mediany do wizyty, historii albo synchronizacji.
+
+Cały przedział wieku musi pasować: 31 lat 5 mies. i 60 lat 9 mies. kwalifikują;
+ukończone 31 lub 60 lat oraz 31 lat 4 mies./60 lat 10 mies. przecinają granice. Dokładne brzegi
+API nie są wymyślane z legacy lat/miesięcy. Dokładne 0/0,4 mają punkty,
+300 strzałkę z liczbą, nierówności/LOD/LOQ bez dokładnego punktu.
+Znane wyłączenia/metoda/materiał nie pozwalają wybrać innego źródła;
+nieznane fakty nie stają się potwierdzonym brakiem leczenia. Zachowano
+bieżącą tożsamość, reset/lock i odrębność datowanych zapisów.
+
+Nowe `maleE2AdultAgeData/Policy` nie dodają 86. profilu: 85 profili i 38
+wcześniejszych pól runtime mają pozostać niezmienione. Wykonane kontrole
+produkcji/UI/PWA i CI podaje PR. Pełny kontrakt:
+[MALE_E2_ADULT_AGE.md](hormone-lifespan/MALE_E2_ADULT_AGE.md).
+
 ## Żeński E2 — zwykły punkt mediany wieku, 17 października 2026
 
 Po odrębnym przeglądzie źródeł właściciel polecił uruchomić profil

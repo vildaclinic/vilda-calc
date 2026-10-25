@@ -16,6 +16,12 @@ osobnej karty pełnego modelu [6,18]. Bieżący kontrakt:
 [MALE_E2_AGE.md](MALE_E2_AGE.md). Nie zmienia to historycznych hashy,
 liczby 85 zwykłych profili ani ustaleń audytu sprzed tej decyzji.
 
+**Następna decyzja 25.10.2026 — E2 dorosłych:** po kontrolowanym odczycie
+ryciny Frederiksen 2020 i akceptacji prywatnej makiety właściciel polecił
+wdrożenie wariantu 31,4–60,9 w tej samej karcie. Bieżący kontrakt:
+[MALE_E2_ADULT_AGE.md](MALE_E2_ADULT_AGE.md). Zastępuje wcześniejszy
+status „odczyt do wykonania”; historyczne tabele i JSON nie są zmieniane.
+
 Poniżej zachowano historię i jej pierwotne hashe. Sekcja „Kolejność
 pracy” opisuje wcześniejsze decyzje, a nie zadania ponownie do wykonania.
 
@@ -460,3 +466,31 @@ blokują nowe zestawienie. Nie dopisano ankiety lub danych do historii.
 [Źródła, liczby i kontrakt](MALE_E2_AGE.md) opisują tę późniejszą decyzję;
 powyższy przegląd oraz JSON z 24.10 nadal opisują wcześniejszy etap.
 Dorosły męski E2 Frederiksen pozostaje osobnym kontrolowanym odczytem.
+
+## Późniejsza decyzja: E2 mężczyzn 31,4–60,9, 25.10.2026
+
+Kontrolowany odczyt pełnego końcowego Frederiksen 2020 i suplementu v1
+zakończono po historycznym przeglądzie. Właściciel ocenił prywatną
+makietę desktop/mobile i polecił wdrożenie („ok, akceptuję, koduj”).
+Powyższe stwierdzenia o odczycie do wykonania opisują wcześniejszy etap.
+Nowy kontrakt: [MALE_E2_ADULT_AGE.md](MALE_E2_ADULT_AGE.md).
+
+Health2008: 157 mężczyzn 31,4–60,9; N=772 jest łączną męską serią.
+296 punktów to wycinek wektorowej P50 z ryc. 3a/s. 760, z liniową
+interpolacją po odcinkach. Nie odzyskano modelu GAMLSS/L/M/S i nie
+zamieniono punktów na roczne obserwacje lub normy. Kontrola rastrowej
+logarytmicznej 4a obejmuje 2951 wieków; maksymalna różnica 1,4232 pmol/L
+kontroluje ekstrakcję tego samego modelu, bez walidacji klinicznej.
+
+Jedna karta dobiera Madsen 6–18 albo Frederiksen 31,4–60,9 według całego
+znanego wieku, bez nowych pytań. Dorosła skala 0–200 jest stała; P50 ≈87–89
+ma ≈ i dwie cyfry znaczące. W luce 18–31,4, po 60,9 i bez wieku nie ma
+zastępczej mediany, mostu lub ekstrapolacji. Źródłowe LOD/LOQ i niejasna
+cenzura pozostają ograniczeniami źródła; nie stają się limitami pacjenta.
+
+Normy Mayo/Tietz, historia i konwersje są odrębne. Dokładne 0/0,4 mają
+punkty, wynik ponad osią strzałkę z liczbą, nierówności/LOD/LOQ nie
+tworzą dokładnej kropki. To nowe edukacyjne odniesienie bez RI/SDS,
+nowego zapisu lub 86. profilu;85 profili i 38 wcześniejszych pól runtime
+mają pozostać niezmienione. Wykonane kontrole silnika, adaptera, UI,
+PWA offline i CI dla końcowego SHA raportuje PR.

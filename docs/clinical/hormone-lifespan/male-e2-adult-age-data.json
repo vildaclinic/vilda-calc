@@ -1,0 +1,1353 @@
+{
+  "schemaVersion": 1,
+  "kind": "controlled-graphic-p50-data",
+  "id": "frederiksen2020-male-estradiol-age",
+  "version": "2026-10-25.1",
+  "analyte": "estradiol",
+  "sex": "male",
+  "unit": "pmol/L",
+  "ageDomain": {
+    "min": 31.4,
+    "max": 60.9,
+    "minimumInclusive": true,
+    "maximumInclusive": true
+  },
+  "source": {
+    "id": "frederiksen2020-male-estradiol-age",
+    "kind": "controlled-graphic-p50-data",
+    "label": "Frederiksen 2020 · mężczyźni",
+    "citation": "Frederiksen H i wsp. Sex-specific Estrogen Levels and Reference Intervals from Infancy to Late Adulthood Determined by LC-MS/MS. JCEM 2020;105(3):754–768. DOI 10.1210/clinem/dgz196.",
+    "url": "https://doi.org/10.1210/clinem/dgz196",
+    "supplementUrl": "https://doi.org/10.6084/m9.figshare.10084145.v1",
+    "population": "Health2008, Dania: 157 mężczyzn w wieku 31,4–60,9 lat; populacyjne badanie przekrojowe.",
+    "method": "In-house isotope-dilution online TurboFlow LC-MS/MS, Rigshospitalet, Kopenhaga.",
+    "specimen": "serum",
+    "unit": "pmol/L",
+    "statistic": "model-p50",
+    "approximate": true,
+    "graphicalRead": true,
+    "chartTitle": "Estradiol mężczyzn 31,4–60,9 lat",
+    "ageLabel": "Dorosły · 31,4–60,9 lat",
+    "statisticDescription": "Przybliżony odczyt modelowanej mediany wieku (P50) z ryciny 3a. Wartości nie są średnimi arytmetycznymi, normami lub medianami osobnych roczników.",
+    "interpolationDescription": "Punkty odczytanej ścieżki ryciny 3a łączymy liniowo. Jest to przybliżenie opublikowanej grafiki, nie odzyskany ciągły model GAMLSS ani roczny eksport LMS autorów.",
+    "domainDescription": "Cały znany przedział wieku musi mieścić się w 31,4–60,9 lat. Odczyt dotyczy wpisanej dolnej granicy. Nie wyznaczamy mediany w luce od 18 do 31,4 lat ani po końcu kohorty.",
+    "supplementLabel": "Suplement, wersja 1",
+    "limits": {
+      "unit": "pmol/L",
+      "censoringRule": null,
+      "methods": [
+        {
+          "id": "turboflow-lcmsms",
+          "lod": 4.04,
+          "loq": 12.1
+        }
+      ]
+    },
+    "limitsDescription": "Metoda źródłowa: LOD 4,04 i LOQ 12,1 pmol/L. Podstawienie 1 pmol/L za wartości <LOD opisano dla ilustracji; wpływu na dopasowanie nie wyjaśniono. Granice nie są przypisywane próbce pacjenta.",
+    "limitations": [
+      "To przybliżony odczyt graficznej P50 modelu wieku, nie średnia arytmetyczna, empiryczna mediana rocznika, norma laboratoryjna ani trajektoria jednej osoby.",
+      "Dorosła kohorta Health2008 obejmuje 157 mężczyzn 31,4–60,9 lat. N=772 z podpisu ryciny obejmuje chłopców i mężczyzn łącznie; nie jest liczbą dorosłych, liczebnością rocznika ani eksportem liczebności dopasowania w wieku.",
+      "Zakres 5,9–23,4 lat młodszej kohorty podano łącznie dla obu płci. Nie ustalono osobnego męskiego końca ani pokrycia 23,4–31,4. Ciągłość narysowanej linii nie uprawnia do mostu po 18 roku życia.",
+      "Ścieżka ryciny sięga około 64,98 roku, ale okno aplikacji kończy się na 60,9 zgodnie z dorosłą kohortą. Nie ekstrapolujemy do seniorów i nie dobieramy mediany najbliższej grupy.",
+      "Nie udostępniono liczbowego eksportu męskiego modelu GAMLSS, L/M/S ani obiektu dopasowania. 296 punktów to wierzchołki kontrolowanego odczytu z dwoma interpolowanymi końcami, nie opublikowane roczne obserwacje.",
+      "Rycina 3a jest wektorowa, rycina 4a suplementu rastrowa i logarytmiczna. Pokazują ten sam model. Zgodność odczytów sprawdza ekstrakcję grafiki, nie stanowi niezależnej walidacji klinicznej lub harmonizacji metod.",
+      "W kontrolach 2951 wieków największa różnica pomiędzy odczytami rycin wyniosła około 1,42 pmol/L. Budżety geometryczne uwzględniają grubość kreski i kalibrację, nie niepewność biologiczną, dopasowania lub metody.",
+      "P50 zmienia się w tym zakresie tylko o około 2,09 pmol/L. Drobne schodki odpowiadają kwantyzacji współrzędnych rysunku, a niewielkich różnic wieku nie należy interpretować jako dokładnego klinicznego spadku.",
+      "Źródłowe LOD 4,04 i LOQ 12,1 pmol/L dotyczą in-house TurboFlow LC-MS/MS. Nie są granicami próbki pacjenta ani podłogą mediany lub wyniku.",
+      "Wartości E2 poniżej LOD zastąpiono przez 1 pmol/L dla ilustracji. Wpływu tej operacji na wejście GAMLSS nie wyjaśniono jednoznacznie. Nie przypisujemy 1 pmol/L jako mediany, wyniku pacjenta lub progu klinicznego.",
+      "Tekst podaje precyzję niskiego QC interday ≤11%, suplement dla E2 12,3% przy 31,2 pmol/L; opis liczby partii różni się 20 wobec 18. Te CV nie są niepewnością mediany lub korektą odczytu rysunku.",
+      "W sprawdzonych dokumentach nie podano dorosłej pory pobrania, reguły postu ani szczegółowych wyłączeń lekowych/BMI. Nieznany wywiad lub metoda pozostają nieznane. Sama klasa LC-MS/MS nie dowodzi zgodności oznaczeń.",
+      "Narracyjne 50–150 pmol/L z dyskusji nie jest nową tabelą norm. Dotychczasowe Mayo/Tietz, konwersje i historia pozostają odrębne; odległość od P50 nie nadaje statusu prawidłowości."
+    ]
+  },
+  "points": [
+    {
+      "ageYears": 31.4,
+      "value": 89.47239229264481
+    },
+    {
+      "ageYears": 31.502426041766043,
+      "value": 89.47239229264481
+    },
+    {
+      "ageYears": 31.588051825907243,
+      "value": 89.47239229264481
+    },
+    {
+      "ageYears": 31.67406717230568,
+      "value": 89.47239229264481
+    },
+    {
+      "ageYears": 31.80250884515023,
+      "value": 89.47239229264481
+    },
+    {
+      "ageYears": 31.888524191548665,
+      "value": 89.47239229264481
+    },
+    {
+      "ageYears": 31.974149975689865,
+      "value": 89.47239229264481
+    },
+    {
+      "ageYears": 32.10297521752615,
+      "value": 89.47239229264481
+    },
+    {
+      "ageYears": 32.18899655719009,
+      "value": 89.20976131510031
+    },
+    {
+      "ageYears": 32.27462234133129,
+      "value": 89.20976131510031
+    },
+    {
+      "ageYears": 32.40345357643307,
+      "value": 89.20976131510031
+    },
+    {
+      "ageYears": 32.48907336730878,
+      "value": 89.20976131510031
+    },
+    {
+      "ageYears": 32.575094706972706,
+      "value": 89.20976131510031
+    },
+    {
+      "ageYears": 32.703919948808995,
+      "value": 89.20976131510031
+    },
+    {
+      "ageYears": 32.78994128847293,
+      "value": 89.20976131510031
+    },
+    {
+      "ageYears": 32.87556707261413,
+      "value": 89.20976131510031
+    },
+    {
+      "ageYears": 33.00439830771592,
+      "value": 89.20976131510031
+    },
+    {
+      "ageYears": 33.09041365411436,
+      "value": 89.20976131510031
+    },
+    {
+      "ageYears": 33.17603943825555,
+      "value": 89.20976131510031
+    },
+    {
+      "ageYears": 33.304864680091846,
+      "value": 88.94946224412668
+    },
+    {
+      "ageYears": 33.390496457498536,
+      "value": 88.94946224412668
+    },
+    {
+      "ageYears": 33.476511803896976,
+      "value": 88.94946224412668
+    },
+    {
+      "ageYears": 33.60534303899876,
+      "value": 88.94946224412668
+    },
+    {
+      "ageYears": 33.690962829874465,
+      "value": 88.94946224412668
+    },
+    {
+      "ageYears": 33.7769841695384,
+      "value": 88.94946224412668
+    },
+    {
+      "ageYears": 33.90541984911745,
+      "value": 88.94946224412668
+    },
+    {
+      "ageYears": 33.99144118878138,
+      "value": 88.94946224412668
+    },
+    {
+      "ageYears": 34.07745653517982,
+      "value": 88.94946224412668
+    },
+    {
+      "ageYears": 34.16308231932102,
+      "value": 88.94946224412668
+    },
+    {
+      "ageYears": 34.29190756115731,
+      "value": 88.94946224412668
+    },
+    {
+      "ageYears": 34.377539338564006,
+      "value": 88.94946224412668
+    },
+    {
+      "ageYears": 34.46355468496244,
+      "value": 88.68916317315305
+    },
+    {
+      "ageYears": 34.592385920064224,
+      "value": 88.68916317315305
+    },
+    {
+      "ageYears": 34.678401266462664,
+      "value": 88.68916317315305
+    },
+    {
+      "ageYears": 34.764027050603865,
+      "value": 88.68916317315305
+    },
+    {
+      "ageYears": 34.89285828570565,
+      "value": 88.68916317315305
+    },
+    {
+      "ageYears": 34.97848406984685,
+      "value": 88.68916317315305
+    },
+    {
+      "ageYears": 35.06449941624528,
+      "value": 88.68916317315305
+    },
+    {
+      "ageYears": 35.193330651347075,
+      "value": 88.68916317315305
+    },
+    {
+      "ageYears": 35.27895044222277,
+      "value": 88.68916317315305
+    },
+    {
+      "ageYears": 35.36497178188671,
+      "value": 88.68916317315305
+    },
+    {
+      "ageYears": 35.493803016988494,
+      "value": 88.68916317315305
+    },
+    {
+      "ageYears": 35.579428801129694,
+      "value": 88.68916317315305
+    },
+    {
+      "ageYears": 35.665444147528135,
+      "value": 88.68916317315305
+    },
+    {
+      "ageYears": 35.79387982710718,
+      "value": 88.68916317315305
+    },
+    {
+      "ageYears": 35.879895173505616,
+      "value": 88.68916317315305
+    },
+    {
+      "ageYears": 35.96552695091231,
+      "value": 88.42653219560856
+    },
+    {
+      "ageYears": 36.0943581860141,
+      "value": 88.42653219560856
+    },
+    {
+      "ageYears": 36.18037353241254,
+      "value": 88.42653219560856
+    },
+    {
+      "ageYears": 36.26638887881098,
+      "value": 88.42653219560856
+    },
+    {
+      "ageYears": 36.395220113912764,
+      "value": 88.42653219560856
+    },
+    {
+      "ageYears": 36.48083990478847,
+      "value": 88.42653219560856
+    },
+    {
+      "ageYears": 36.5668612444524,
+      "value": 88.42653219560856
+    },
+    {
+      "ageYears": 36.69530291729694,
+      "value": 88.42653219560856
+    },
+    {
+      "ageYears": 36.78131826369538,
+      "value": 88.42653219560856
+    },
+    {
+      "ageYears": 36.86693805457109,
+      "value": 88.42653219560856
+    },
+    {
+      "ageYears": 36.99576928967287,
+      "value": 88.42653219560856
+    },
+    {
+      "ageYears": 37.08179062933681,
+      "value": 88.42653219560856
+    },
+    {
+      "ageYears": 37.167416413478,
+      "value": 88.42653219560856
+    },
+    {
+      "ageYears": 37.29624764857979,
+      "value": 88.42653219560856
+    },
+    {
+      "ageYears": 37.38186743945549,
+      "value": 88.42653219560856
+    },
+    {
+      "ageYears": 37.46788278585393,
+      "value": 88.42653219560856
+    },
+    {
+      "ageYears": 37.596714020955716,
+      "value": 88.42653219560856
+    },
+    {
+      "ageYears": 37.68234579836241,
+      "value": 88.42653219560856
+    },
+    {
+      "ageYears": 37.768361144760846,
+      "value": 88.42653219560856
+    },
+    {
+      "ageYears": 37.89719237986264,
+      "value": 88.42653219560856
+    },
+    {
+      "ageYears": 37.98320772626107,
+      "value": 88.16623312463493
+    },
+    {
+      "ageYears": 38.068827517136775,
+      "value": 88.16623312463493
+    },
+    {
+      "ageYears": 38.19765875223856,
+      "value": 88.16623312463493
+    },
+    {
+      "ageYears": 38.28329052964526,
+      "value": 88.16623312463493
+    },
+    {
+      "ageYears": 38.3693058760437,
+      "value": 88.16623312463493
+    },
+    {
+      "ageYears": 38.49813711114548,
+      "value": 88.16623312463493
+    },
+    {
+      "ageYears": 38.58375690202118,
+      "value": 88.16623312463493
+    },
+    {
+      "ageYears": 38.669778241685115,
+      "value": 88.16623312463493
+    },
+    {
+      "ageYears": 38.798213921264164,
+      "value": 88.16623312463493
+    },
+    {
+      "ageYears": 38.8842352609281,
+      "value": 88.16623312463493
+    },
+    {
+      "ageYears": 38.969855051803805,
+      "value": 88.16623312463493
+    },
+    {
+      "ageYears": 39.09868628690559,
+      "value": 88.16623312463493
+    },
+    {
+      "ageYears": 39.18470163330403,
+      "value": 88.16623312463493
+    },
+    {
+      "ageYears": 39.27033341071072,
+      "value": 88.16623312463493
+    },
+    {
+      "ageYears": 39.39915865254701,
+      "value": 88.16623312463493
+    },
+    {
+      "ageYears": 39.48478443668821,
+      "value": 88.16623312463493
+    },
+    {
+      "ageYears": 39.57079978308665,
+      "value": 88.16623312463493
+    },
+    {
+      "ageYears": 39.699631018188434,
+      "value": 88.16623312463493
+    },
+    {
+      "ageYears": 39.785646364586874,
+      "value": 88.16623312463493
+    },
+    {
+      "ageYears": 39.871278141993564,
+      "value": 88.16623312463493
+    },
+    {
+      "ageYears": 40.00010937709535,
+      "value": 88.16623312463493
+    },
+    {
+      "ageYears": 40.08612472349379,
+      "value": 88.16623312463493
+    },
+    {
+      "ageYears": 40.17174451436949,
+      "value": 88.16623312463493
+    },
+    {
+      "ageYears": 40.30057574947128,
+      "value": 88.16623312463493
+    },
+    {
+      "ageYears": 40.38620153361248,
+      "value": 88.16623312463493
+    },
+    {
+      "ageYears": 40.47222287327641,
+      "value": 88.16623312463493
+    },
+    {
+      "ageYears": 40.6010541083782,
+      "value": 88.16623312463493
+    },
+    {
+      "ageYears": 40.6866738992539,
+      "value": 88.16623312463493
+    },
+    {
+      "ageYears": 40.77268924565234,
+      "value": 87.90597048970147
+    },
+    {
+      "ageYears": 40.90113091849688,
+      "value": 87.90597048970147
+    },
+    {
+      "ageYears": 40.98714626489532,
+      "value": 87.90597048970147
+    },
+    {
+      "ageYears": 41.07277204903652,
+      "value": 87.90597048970147
+    },
+    {
+      "ageYears": 41.201998839661044,
+      "value": 87.90597048970147
+    },
+    {
+      "ageYears": 41.28761863053674,
+      "value": 87.90597048970147
+    },
+    {
+      "ageYears": 41.37363397693518,
+      "value": 87.90597048970147
+    },
+    {
+      "ageYears": 41.50246521203697,
+      "value": 87.90597048970147
+    },
+    {
+      "ageYears": 41.58809698944366,
+      "value": 87.90597048970147
+    },
+    {
+      "ageYears": 41.6741123358421,
+      "value": 87.90597048970147
+    },
+    {
+      "ageYears": 41.80254801542115,
+      "value": 87.90597048970147
+    },
+    {
+      "ageYears": 41.88856336181959,
+      "value": 87.90597048970147
+    },
+    {
+      "ageYears": 41.974189145960786,
+      "value": 87.90597048970147
+    },
+    {
+      "ageYears": 42.10302038106257,
+      "value": 87.90597048970147
+    },
+    {
+      "ageYears": 42.18904172072651,
+      "value": 87.90597048970147
+    },
+    {
+      "ageYears": 42.27466151160221,
+      "value": 87.90597048970147
+    },
+    {
+      "ageYears": 42.403492746703996,
+      "value": 87.90597048970147
+    },
+    {
+      "ageYears": 42.4891185308452,
+      "value": 87.90597048970147
+    },
+    {
+      "ageYears": 42.575139870509126,
+      "value": 87.90597048970147
+    },
+    {
+      "ageYears": 42.703965112345415,
+      "value": 87.90597048970147
+    },
+    {
+      "ageYears": 42.789590896486615,
+      "value": 87.90597048970147
+    },
+    {
+      "ageYears": 42.875606242885056,
+      "value": 87.90597048970147
+    },
+    {
+      "ageYears": 43.00443747798684,
+      "value": 87.90597048970147
+    },
+    {
+      "ageYears": 43.09045282438528,
+      "value": 87.90597048970147
+    },
+    {
+      "ageYears": 43.17608460179197,
+      "value": 87.90597048970147
+    },
+    {
+      "ageYears": 43.304909843628266,
+      "value": 87.90597048970147
+    },
+    {
+      "ageYears": 43.39053562776946,
+      "value": 87.90597048970147
+    },
+    {
+      "ageYears": 43.4765509741679,
+      "value": 87.90597048970147
+    },
+    {
+      "ageYears": 43.605382209269685,
+      "value": 87.90597048970147
+    },
+    {
+      "ageYears": 43.691007993410885,
+      "value": 87.90597048970147
+    },
+    {
+      "ageYears": 43.77702933307482,
+      "value": 87.90597048970147
+    },
+    {
+      "ageYears": 43.90585457491111,
+      "value": 87.90597048970147
+    },
+    {
+      "ageYears": 43.991480359052304,
+      "value": 87.90597048970147
+    },
+    {
+      "ageYears": 44.077495705450744,
+      "value": 87.90597048970147
+    },
+    {
+      "ageYears": 44.16312748285744,
+      "value": 87.90597048970147
+    },
+    {
+      "ageYears": 44.29195272469373,
+      "value": 87.90597048970147
+    },
+    {
+      "ageYears": 44.37757850883493,
+      "value": 87.90597048970147
+    },
+    {
+      "ageYears": 44.46359385523336,
+      "value": 87.90597048970147
+    },
+    {
+      "ageYears": 44.592425090335155,
+      "value": 87.90597048970147
+    },
+    {
+      "ageYears": 44.67805087447635,
+      "value": 87.90597048970147
+    },
+    {
+      "ageYears": 44.764072214140285,
+      "value": 87.90597048970147
+    },
+    {
+      "ageYears": 44.89289745597657,
+      "value": 87.90597048970147
+    },
+    {
+      "ageYears": 44.97891879564051,
+      "value": 87.90597048970147
+    },
+    {
+      "ageYears": 45.064538586516214,
+      "value": 87.90597048970147
+    },
+    {
+      "ageYears": 45.193369821618,
+      "value": 87.64567141872784
+    },
+    {
+      "ageYears": 45.27899560575919,
+      "value": 87.64567141872784
+    },
+    {
+      "ageYears": 45.36501694542313,
+      "value": 87.64567141872784
+    },
+    {
+      "ageYears": 45.493848180524914,
+      "value": 87.64567141872784
+    },
+    {
+      "ageYears": 45.57946797140062,
+      "value": 87.64567141872784
+    },
+    {
+      "ageYears": 45.66548331779906,
+      "value": 87.64567141872784
+    },
+    {
+      "ageYears": 45.7939249906436,
+      "value": 87.64567141872784
+    },
+    {
+      "ageYears": 45.87994033704204,
+      "value": 87.64567141872784
+    },
+    {
+      "ageYears": 45.96556612118324,
+      "value": 87.64567141872784
+    },
+    {
+      "ageYears": 46.09439735628502,
+      "value": 87.64567141872784
+    },
+    {
+      "ageYears": 46.18041270268346,
+      "value": 87.64567141872784
+    },
+    {
+      "ageYears": 46.26603848682466,
+      "value": 87.64567141872784
+    },
+    {
+      "ageYears": 46.39486972192645,
+      "value": 87.64567141872784
+    },
+    {
+      "ageYears": 46.48049550606765,
+      "value": 87.64567141872784
+    },
+    {
+      "ageYears": 46.56651085246608,
+      "value": 87.64567141872784
+    },
+    {
+      "ageYears": 46.695342087567866,
+      "value": 87.64567141872784
+    },
+    {
+      "ageYears": 46.781357433966306,
+      "value": 87.64567141872784
+    },
+    {
+      "ageYears": 46.86698321810751,
+      "value": 87.64567141872784
+    },
+    {
+      "ageYears": 46.99581445320929,
+      "value": 87.64567141872784
+    },
+    {
+      "ageYears": 47.08183579287323,
+      "value": 87.64567141872784
+    },
+    {
+      "ageYears": 47.167455583748925,
+      "value": 87.64567141872784
+    },
+    {
+      "ageYears": 47.29628681885072,
+      "value": 87.64567141872784
+    },
+    {
+      "ageYears": 47.38191260299191,
+      "value": 87.64567141872784
+    },
+    {
+      "ageYears": 47.46792794939035,
+      "value": 87.64567141872784
+    },
+    {
+      "ageYears": 47.596759184492136,
+      "value": 87.64567141872784
+    },
+    {
+      "ageYears": 47.682384968633336,
+      "value": 87.64567141872784
+    },
+    {
+      "ageYears": 47.768400315031776,
+      "value": 87.64567141872784
+    },
+    {
+      "ageYears": 47.896835994610825,
+      "value": 87.64567141872784
+    },
+    {
+      "ageYears": 47.982857334274755,
+      "value": 87.64567141872784
+    },
+    {
+      "ageYears": 48.068483118415955,
+      "value": 87.64567141872784
+    },
+    {
+      "ageYears": 48.19770391577498,
+      "value": 87.64567141872784
+    },
+    {
+      "ageYears": 48.28332969991618,
+      "value": 87.64567141872784
+    },
+    {
+      "ageYears": 48.36934504631462,
+      "value": 87.64567141872784
+    },
+    {
+      "ageYears": 48.498176281416406,
+      "value": 87.64567141872784
+    },
+    {
+      "ageYears": 48.5838020655576,
+      "value": 87.64567141872784
+    },
+    {
+      "ageYears": 48.669823405221535,
+      "value": 87.64567141872784
+    },
+    {
+      "ageYears": 48.798259084800584,
+      "value": 87.64567141872784
+    },
+    {
+      "ageYears": 48.884274431199024,
+      "value": 87.64567141872784
+    },
+    {
+      "ageYears": 48.969900215340225,
+      "value": 87.64567141872784
+    },
+    {
+      "ageYears": 49.09872545717651,
+      "value": 87.64567141872784
+    },
+    {
+      "ageYears": 49.18474679684045,
+      "value": 87.64567141872784
+    },
+    {
+      "ageYears": 49.27037258098164,
+      "value": 87.64567141872784
+    },
+    {
+      "ageYears": 49.39920381608343,
+      "value": 87.64567141872784
+    },
+    {
+      "ageYears": 49.48482360695913,
+      "value": 87.64567141872784
+    },
+    {
+      "ageYears": 49.57084494662307,
+      "value": 87.64567141872784
+    },
+    {
+      "ageYears": 49.699676181724854,
+      "value": 87.64567141872784
+    },
+    {
+      "ageYears": 49.785691528123294,
+      "value": 87.64567141872784
+    },
+    {
+      "ageYears": 49.87131731226449,
+      "value": 87.64567141872784
+    },
+    {
+      "ageYears": 50.00014854736628,
+      "value": 87.64567141872784
+    },
+    {
+      "ageYears": 50.08616389376471,
+      "value": 87.64567141872784
+    },
+    {
+      "ageYears": 50.17178967790591,
+      "value": 87.64567141872784
+    },
+    {
+      "ageYears": 50.30062091300769,
+      "value": 87.64567141872784
+    },
+    {
+      "ageYears": 50.38624669714889,
+      "value": 87.64567141872784
+    },
+    {
+      "ageYears": 50.47226204354733,
+      "value": 87.64567141872784
+    },
+    {
+      "ageYears": 50.60109327864912,
+      "value": 87.64567141872784
+    },
+    {
+      "ageYears": 50.68671306952482,
+      "value": 87.64567141872784
+    },
+    {
+      "ageYears": 50.77273440918875,
+      "value": 87.64567141872784
+    },
+    {
+      "ageYears": 50.901176082033295,
+      "value": 87.64567141872784
+    },
+    {
+      "ageYears": 50.987191428431736,
+      "value": 87.64567141872784
+    },
+    {
+      "ageYears": 51.07281121930744,
+      "value": 87.64567141872784
+    },
+    {
+      "ageYears": 51.201642454409225,
+      "value": 87.64567141872784
+    },
+    {
+      "ageYears": 51.28766379407316,
+      "value": 87.64567141872784
+    },
+    {
+      "ageYears": 51.373289578214354,
+      "value": 87.64567141872784
+    },
+    {
+      "ageYears": 51.50212081331615,
+      "value": 87.64567141872784
+    },
+    {
+      "ageYears": 51.58813615971458,
+      "value": 87.64567141872784
+    },
+    {
+      "ageYears": 51.673755950590284,
+      "value": 87.64567141872784
+    },
+    {
+      "ageYears": 51.80258718569207,
+      "value": 87.64567141872784
+    },
+    {
+      "ageYears": 51.888608525356005,
+      "value": 87.64567141872784
+    },
+    {
+      "ageYears": 51.974234309497206,
+      "value": 87.64567141872784
+    },
+    {
+      "ageYears": 52.10306554459899,
+      "value": 87.64567141872784
+    },
+    {
+      "ageYears": 52.189080890997424,
+      "value": 87.64567141872784
+    },
+    {
+      "ageYears": 52.274706675138624,
+      "value": 87.64567141872784
+    },
+    {
+      "ageYears": 52.40353191697491,
+      "value": 87.64567141872784
+    },
+    {
+      "ageYears": 52.48955325663885,
+      "value": 87.64567141872784
+    },
+    {
+      "ageYears": 52.57517904078005,
+      "value": 87.64567141872784
+    },
+    {
+      "ageYears": 52.704010275881835,
+      "value": 87.64567141872784
+    },
+    {
+      "ageYears": 52.78963006675754,
+      "value": 87.64567141872784
+    },
+    {
+      "ageYears": 52.87565140642147,
+      "value": 87.38540878379439
+    },
+    {
+      "ageYears": 53.00447664825776,
+      "value": 87.38540878379439
+    },
+    {
+      "ageYears": 53.090108425664454,
+      "value": 87.38540878379439
+    },
+    {
+      "ageYears": 53.176123772062894,
+      "value": 87.38540878379439
+    },
+    {
+      "ageYears": 53.30455945164194,
+      "value": 87.38540878379439
+    },
+    {
+      "ageYears": 53.39057479804038,
+      "value": 87.38540878379439
+    },
+    {
+      "ageYears": 53.47659613770431,
+      "value": 87.38540878379439
+    },
+    {
+      "ageYears": 53.6054273728061,
+      "value": 87.38540878379439
+    },
+    {
+      "ageYears": 53.6910531569473,
+      "value": 87.38540878379439
+    },
+    {
+      "ageYears": 53.77706850334574,
+      "value": 87.38540878379439
+    },
+    {
+      "ageYears": 53.90589973844752,
+      "value": 87.38540878379439
+    },
+    {
+      "ageYears": 53.99151952932323,
+      "value": 87.38540878379439
+    },
+    {
+      "ageYears": 54.07754086898716,
+      "value": 87.38540878379439
+    },
+    {
+      "ageYears": 54.16316665312836,
+      "value": 87.38540878379439
+    },
+    {
+      "ageYears": 54.29199788823014,
+      "value": 87.38540878379439
+    },
+    {
+      "ageYears": 54.377617679105846,
+      "value": 87.38540878379439
+    },
+    {
+      "ageYears": 54.46363901876978,
+      "value": 87.38540878379439
+    },
+    {
+      "ageYears": 54.59246426060607,
+      "value": 87.38540878379439
+    },
+    {
+      "ageYears": 54.67809603801277,
+      "value": 87.38540878379439
+    },
+    {
+      "ageYears": 54.7641113844112,
+      "value": 87.38540878379439
+    },
+    {
+      "ageYears": 54.89254706399025,
+      "value": 87.38540878379439
+    },
+    {
+      "ageYears": 54.97856241038869,
+      "value": 87.38540878379439
+    },
+    {
+      "ageYears": 55.06419418779539,
+      "value": 87.38540878379439
+    },
+    {
+      "ageYears": 55.19341498515441,
+      "value": 87.38540878379439
+    },
+    {
+      "ageYears": 55.27904076929561,
+      "value": 87.38540878379439
+    },
+    {
+      "ageYears": 55.365056115694046,
+      "value": 87.38540878379439
+    },
+    {
+      "ageYears": 55.49388735079583,
+      "value": 87.38540878379439
+    },
+    {
+      "ageYears": 55.579507141671534,
+      "value": 87.38540878379439
+    },
+    {
+      "ageYears": 55.66552848133547,
+      "value": 87.38540878379439
+    },
+    {
+      "ageYears": 55.793970154180016,
+      "value": 87.38540878379439
+    },
+    {
+      "ageYears": 55.87998550057846,
+      "value": 87.38540878379439
+    },
+    {
+      "ageYears": 55.96560529145416,
+      "value": 87.38540878379439
+    },
+    {
+      "ageYears": 56.094436526555945,
+      "value": 87.38540878379439
+    },
+    {
+      "ageYears": 56.18046385948537,
+      "value": 87.38540878379439
+    },
+    {
+      "ageYears": 56.266083650361075,
+      "value": 87.38540878379439
+    },
+    {
+      "ageYears": 56.39491488546286,
+      "value": 87.38540878379439
+    },
+    {
+      "ageYears": 56.480534676338564,
+      "value": 87.38540878379439
+    },
+    {
+      "ageYears": 56.566550022737005,
+      "value": 87.38540878379439
+    },
+    {
+      "ageYears": 56.69538125783879,
+      "value": 87.38540878379439
+    },
+    {
+      "ageYears": 56.78139660423722,
+      "value": 87.38540878379439
+    },
+    {
+      "ageYears": 56.86702838164392,
+      "value": 87.38540878379439
+    },
+    {
+      "ageYears": 56.995859616745705,
+      "value": 87.38540878379439
+    },
+    {
+      "ageYears": 57.081874963144145,
+      "value": 87.38540878379439
+    },
+    {
+      "ageYears": 57.16749475401985,
+      "value": 87.38540878379439
+    },
+    {
+      "ageYears": 57.296325989121634,
+      "value": 87.38540878379439
+    },
+    {
+      "ageYears": 57.38195776652833,
+      "value": 87.38540878379439
+    },
+    {
+      "ageYears": 57.467973112926764,
+      "value": 87.38540878379439
+    },
+    {
+      "ageYears": 57.59680434802855,
+      "value": 87.38540878379439
+    },
+    {
+      "ageYears": 57.68242413890425,
+      "value": 87.38540878379439
+    },
+    {
+      "ageYears": 57.76843948530269,
+      "value": 87.38540878379439
+    },
+    {
+      "ageYears": 57.896887151412734,
+      "value": 87.38540878379439
+    },
+    {
+      "ageYears": 57.982902497811175,
+      "value": 87.38540878379439
+    },
+    {
+      "ageYears": 58.06852228868687,
+      "value": 87.38540878379439
+    },
+    {
+      "ageYears": 58.197353523788664,
+      "value": 87.38540878379439
+    },
+    {
+      "ageYears": 58.2833688701871,
+      "value": 87.38540878379439
+    },
+    {
+      "ageYears": 58.36939620311653,
+      "value": 87.38540878379439
+    },
+    {
+      "ageYears": 58.497819896164586,
+      "value": 87.38540878379439
+    },
+    {
+      "ageYears": 58.58384722909402,
+      "value": 87.38540878379439
+    },
+    {
+      "ageYears": 58.66986257549245,
+      "value": 87.38540878379439
+    },
+    {
+      "ageYears": 58.79829825507151,
+      "value": 87.38540878379439
+    },
+    {
+      "ageYears": 58.88431360146994,
+      "value": 87.38540878379439
+    },
+    {
+      "ageYears": 58.96994537887664,
+      "value": 87.38540878379439
+    },
+    {
+      "ageYears": 59.09877661397842,
+      "value": 87.38540878379439
+    },
+    {
+      "ageYears": 59.18479196037686,
+      "value": 87.38540878379439
+    },
+    {
+      "ageYears": 59.27041175125257,
+      "value": 87.38540878379439
+    },
+    {
+      "ageYears": 59.39924298635435,
+      "value": 87.38540878379439
+    },
+    {
+      "ageYears": 59.484862777230056,
+      "value": 87.38540878379439
+    },
+    {
+      "ageYears": 59.57089011015948,
+      "value": 87.38540878379439
+    },
+    {
+      "ageYears": 59.69972134526127,
+      "value": 87.38540878379439
+    },
+    {
+      "ageYears": 59.78534113613697,
+      "value": 87.38540878379439
+    },
+    {
+      "ageYears": 59.87135648253541,
+      "value": 87.38540878379439
+    },
+    {
+      "ageYears": 60.000187717637196,
+      "value": 87.38540878379439
+    },
+    {
+      "ageYears": 60.08581949504389,
+      "value": 87.38540878379439
+    },
+    {
+      "ageYears": 60.171834841442326,
+      "value": 87.38540878379439
+    },
+    {
+      "ageYears": 60.30066607654411,
+      "value": 87.38540878379439
+    },
+    {
+      "ageYears": 60.386285867419815,
+      "value": 87.38540878379439
+    },
+    {
+      "ageYears": 60.472301213818255,
+      "value": 87.38540878379439
+    },
+    {
+      "ageYears": 60.60113244892004,
+      "value": 87.38540878379439
+    },
+    {
+      "ageYears": 60.686752239795744,
+      "value": 87.38540878379439
+    },
+    {
+      "ageYears": 60.77277957272517,
+      "value": 87.38540878379439
+    },
+    {
+      "ageYears": 60.9,
+      "value": 87.38540878379439
+    }
+  ],
+  "provenance": {
+    "doi": "10.1210/clinem/dgz196",
+    "supplementDoi": "10.6084/m9.figshare.10084145.v1",
+    "supplementVersion": 1,
+    "articleSha256": "4f07600af51fa35fcc83a2599f5733d77f528768bde6e82d987063e17cc42cf6",
+    "supplementSha256": "d061a335bd42a0d7607c20abd96611529d73f225f11d0e27856c3913b549ee19",
+    "articlePanel": {
+      "figure": "3a",
+      "printedPage": 760,
+      "pdfPage": 7,
+      "analyte": "measured total E2",
+      "statistic": "solid model P50"
+    },
+    "crossCheckPanel": {
+      "figure": "4a",
+      "pdfPage": 12,
+      "scale": "logarithmic",
+      "format": "raster",
+      "sameModel": true
+    },
+    "adultCohort": {
+      "name": "Health2008",
+      "participants": 157,
+      "minAgeYears": 31.4,
+      "maxAgeYears": 60.9,
+      "ageSpecificFitCountsPublished": false
+    },
+    "fullMaleFigureN": 772,
+    "vectorRead": {
+      "drawingIndexZeroBased": 16,
+      "seqno": 42,
+      "segments": 546,
+      "vertices": 547,
+      "strokeWidthPt": 0.8740000128746033,
+      "adultVerticesIncludingInterpolatedCuts": 296,
+      "originalPathMinAgeYears": 10.386467591791448,
+      "originalPathMaxAgeYears": 64.97860158065961,
+      "fullPathExtentIsNotEligibility": true,
+      "calibration": {
+        "xPdfFromAge": [
+          2.5459891727992456,
+          113.6632674080984
+        ],
+        "yPdfFromPmolL": [
+          -0.4187828587123326,
+          175.54402814592632
+        ],
+        "xTickAges": [
+          0.0,
+          10.0,
+          20.0,
+          30.0,
+          40.0,
+          50.0,
+          60.0
+        ],
+        "xTickPositionsPt": [
+          "113.6638031005859375",
+          "139.122802734375",
+          "164.582794189453125",
+          "190.0428009033203125",
+          "215.5028076171875",
+          "240.962799072265625",
+          "266.42279052734375"
+        ],
+        "yTickValues": [
+          0.0,
+          50.0,
+          100.0,
+          150.0,
+          200.0,
+          250.0
+        ],
+        "yTickPositionsPt": [
+          "175.55450439453125",
+          "154.5745086669921875",
+          "133.704498291015625",
+          "112.7245025634765625",
+          "91.7445068359375",
+          "70.87450408935546875"
+        ],
+        "maxXResidualPt": 0.0005356924875314917,
+        "maxYResidualPt": 0.0429495675222995,
+        "endpointsOnlySensitivityMaxPmolL": 0.038451133711177476,
+        "tickPositionEncoding": "exact-decimal-strings-from-original-PDF-binary64-coordinates",
+        "tickPositionNote": "Dokładny zapis dziesiętny źródłowych współrzędnych binarnych PDF. Metadane odczytu; nie są wejściem obliczenia mediany lub wyniku pacjenta."
+      }
+    },
+    "graphicalReadQuality": {
+      "primaryGeometricBudgetPmolL": 1.1845094404798524,
+      "independentMainGeometricBudgetPmolL": 1.1484461790972482,
+      "denseCrossFigureAgeChecks": 2951,
+      "denseCrossFigureNativeRasterColumns": 173,
+      "maxCrossFigureDifferencePmolL": 1.4231769012068725,
+      "maxAdultP50ChangePmolL": 2.086983508850423,
+      "notStatisticalConfidenceInterval": true,
+      "notAssayOrModelUncertainty": true,
+      "notClinicalValidation": true
+    },
+    "numericGamlssExportRecovered": false,
+    "interpolation": "linear-on-extracted-graphic-path",
+    "metadataCheckedDate": "2026-10-25",
+    "ownerApproval": "Prywatna makieta jednej karty E2 z odrębnym wariantem Frederiksen 31,4–60,9 i stałą osią 0–200 pmol/L zaakceptowana 25.10.2026; polecenie wdrożenia: ok, akceptuję, koduj. Akceptacja nie jest walidacją kliniczną."
+  }
+}
