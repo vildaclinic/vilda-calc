@@ -6876,6 +6876,40 @@ argumenty generatorów kończą odczyt modelu przed tworzeniem strony i efektami
 ubocznymi Kreatora. Testy adaptera, hosta, renderera i scenariusze przeglądarkowe
 używają wyłącznie fikcyjnych pacjentów i rzeczywistych funkcji produkcyjnych.
 
+### P-SIATKA-PO-EDYCJI — aktualizacja podglądu po zakończeniu pola (2026-10-25)
+
+**Decyzja właściciela.** Z makiety autozoomu wybrano tylko wariant A: interaktywna
+siatka obok formularza Start/DocPro aktualizuje pomiar po opuszczeniu pola wagi
+lub wzrostu albo po Enter. Autozoom odłożono; pełny zakres, wygląd, adnotacje
+Kreatora, źródła i powiększenie pozostają dotychczasowe.
+
+**Przyczyna.** Adapter czytał bieżący tekst pola na `input`, `change` oraz
+`after-update`. Opóźnienie 100 ms nie oznacza końca edycji: przy wpisywaniu
+„189” mogły powstawać punkty dla 1 i 18 cm. Samo odpięcie `input` nie wystarcza,
+ponieważ normalne przeliczenie formularza także ogłasza odświeżenie, a jego
+pochodne zmieniają klucz rysowania.
+
+**Kontrakt.** Wyłącznie podgląd zachowuje zatwierdzony stan na czas pisania.
+Blur lub Enter zatwierdza pojedyncze pole; szybkie przejście do drugiego pola
+nie cofa już zatwierdzonego pomiaru. Enter pozostawia fokus i ustanawia nową
+bazę dla dalszego pisania. Nie wywołuje zapisu, submitu ani dodatkowego
+przeliczenia. Puste pole po zatwierdzeniu usuwa bieżący punkt tej metryki,
+zachowując historię. Parsowanie i reguły dopuszczalności wartości są istniejące.
+
+**Granica danych.** Stan edycji jest wyłącznie w RAM i należy do tokenu osoby,
+trasy oraz sekwencji wczytania. Zmiana osoby, import/restore, czyszczenie,
+blokada i ukrycie ramki unieważniają go wraz z podglądem. Ochrona obejmuje
+także odczyt rozpoczęty przed edycją i zakończony w jej trakcie. Zachowanie
+siatki przy zapisie tej samej wizyty nadal podlega `P-ZAPIS-SIATKA`.
+
+**Wpływ kliniczny: brak zmiany obliczeń i danych.** Zmienia się moment
+prezentacji bieżącego punktu. Kalkulator nadal otrzymuje normalne zdarzenia
+formularza; kolektor, zapis, synchronizacja, normy i eksport pozostają
+dotychczasowe. Przypadki regresyjne używają rzeczywistego adaptera i renderera
+oraz wyłącznie fikcyjnych pacjentów, w tym sekwencji 1 → 18 → 189, Enter
+i dalszej edycji, obu metryk, granic pacjenta oraz Start/DocPro w powłoce
+i samodzielnie.
+
 ### P-ZAPIS-SIATKA — zapis bez zmiany układu siatki, komunikaty C/C1 (2026-10-24)
 
 **Decyzja właściciela.** Po makiecie desktopowej wybrano C (powiadomienie w lewym

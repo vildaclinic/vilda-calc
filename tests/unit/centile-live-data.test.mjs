@@ -41,7 +41,7 @@ function setup({ working = true, framed = false, nestedSourceOnSave = false } = 
   }).map(([id, value]) => [id, { id, value, checked: id === 'resultsModeToggle' }]));
   const docEvents = events(), winEvents = events();
   const hooks = {};
-  const state = { sequence: 4, unlocked: true, stale: false, pending: false, source: 'OLAF', population: 'OGOLNA', headerName: '',
+  const state = { sequence: 4, unlocked: true, stale: false, pending: false, panelVisible: true, source: 'OLAF', population: 'OGOLNA', headerName: '',
     exactAge: { totalMonths: 158, exactMonths: 158.2 }, owner: 'fikcyjny-a', record: patient() };
   const vault = {
     isUnlocked: () => state.unlocked,
@@ -65,6 +65,7 @@ function setup({ working = true, framed = false, nestedSourceOnSave = false } = 
       setItem: writes, removeItem: writes,
     },
     document: { ...docEvents, getElementById: (id) => fields[id] || null,
+      documentElement: { classList: { contains: name => name === 'vilda-centile-live-active' && state.panelVisible } },
       querySelector: () => ({ value: state.source }) },
     VildaVault: vault,
     VildaDataImportExport: { getApplyLoadedDataSequence: () => state.sequence },
@@ -99,6 +100,300 @@ function setup({ working = true, framed = false, nestedSourceOnSave = false } = 
   return { win, api: win.VildaCentileLiveData, fields, values, state, vault, hooks, writes,
     doc: docEvents, emit: winEvents.emit, frameChanged: () => frameObserver() };
 }
+
+function focusMeasurement(h, id) {
+  h.win.document.activeElement = h.fields[id];
+  h.doc.emit('focusin', { target: h.fields[id] });
+}
+
+function typeMeasurement(h, id, value) {
+  h.fields[id].value = value;
+  h.doc.emit('input', { target: h.fields[id] });
+}
+
+function blurMeasurement(h, id) {
+  h.win.document.activeElement = null;
+  h.doc.emit('blur', { target: h.fields[id] });
+  h.doc.emit('focusout', { target: h.fields[id] });
+}
+
+function enterMeasurement(h, id, overrides = {}) {
+  const preventDefault = vi.fn();
+  h.doc.emit('keydown', { target: h.fields[id], key: 'Enter', preventDefault, ...overrides });
+  return preventDefault;
+}
+
+describe('Panel nowego pomiaru — zatwierdzenie pola po blur lub Enter', () => {
+  it.each(['/index.html', '/docpro.html'])('%s zatrzymuje całą gotową migawkę podczas 1 → 18 → 189 i after-update', async (route) => {
+    const h = setup(); h.win.location.pathname = route;
+    const before = await h.api.getSnapshot();
+    focusMeasurement(h, 'height');
+    for (const value of ['1', '18', '189']) {
+      typeMeasurement(h, 'height', value);
+      // Normalne obliczenia nie są zatrzymywane: zmieniają pochodne working growth.
+      h.win.advancedGrowthData.growthVelocity = Number(value) - 139;
+      h.win.advancedGrowthData.tempo = { result: value };
+      h.win.VildaUpdateHooks.runAfterUpdateHooks({}, { source: 'fikcyjny-input' });
+      expect(await h.api.getSnapshot()).toBe(before);
+    }
+    blurMeasurement(h, 'height');
+    const after = await h.api.getSnapshot();
+    expect(after.currentHeight).toBe(189);
+    expect(after.advanced.currentHeight).toBe(189);
+    expect(after.currentWeight).toBe(46);
+    expect(after.advanced.growthVelocity).toBe(50);
+    expect(after.patientToken).toBe(before.patientToken);
+    expect(h.writes).not.toHaveBeenCalled();
+  });
+
+  it('Enter zatwierdza jedno pole, zachowuje fokus, a dalsze wpisywanie znowu czeka', async () => {
+    const h = setup(); await h.api.getSnapshot();
+    focusMeasurement(h, 'weight'); typeMeasurement(h, 'weight', '47,5');
+    expect(enterMeasurement(h, 'weight')).toHaveBeenCalledOnce();
+    const firstCommit = await h.api.getSnapshot();
+    expect(firstCommit.currentWeight).toBe(47.5);
+    expect(firstCommit.currentHeight).toBe(158);
+    expect(h.win.document.activeElement).toBe(h.fields.weight);
+    typeMeasurement(h, 'weight', '48');
+    expect(await h.api.getSnapshot()).toBe(firstCommit);
+    blurMeasurement(h, 'weight');
+    expect((await h.api.getSnapshot()).currentWeight).toBe(48);
+    expect(h.writes).not.toHaveBeenCalled();
+  });
+
+  it.each(['Enter', 'Tab'])('%s nie gubi zatwierdzenia, gdy następny draft wyprzedzi odświeżenie', async (method) => {
+    const h = setup(); await h.api.getSnapshot();
+    focusMeasurement(h, 'height'); typeMeasurement(h, 'height', '189');
+    if (method === 'Enter') {
+      enterMeasurement(h, 'height');
+      typeMeasurement(h, 'height', '1890');
+    } else {
+      blurMeasurement(h, 'height'); focusMeasurement(h, 'weight');
+      typeMeasurement(h, 'weight', '4');
+    }
+    const accepted = await h.api.getSnapshot();
+    expect(accepted.currentHeight).toBe(189);
+    expect(accepted.currentWeight).toBe(46);
+    expect(await h.api.getSnapshot()).toBe(accepted);
+    expect(h.writes).not.toHaveBeenCalled();
+  });
+
+  it('zatwierdzony stan czeka na pierwszy odczyt rekordu mimo kolejnego draftu', async () => {
+    const h = setup(), pending = deferred();
+    h.vault.getPatient = () => pending.promise;
+    const old = h.api.getSnapshot(); await Promise.resolve();
+    focusMeasurement(h, 'height'); typeMeasurement(h, 'height', '189');
+    enterMeasurement(h, 'height');
+    const accepted = h.api.getSnapshot();
+    typeMeasurement(h, 'height', '1890');
+    pending.resolve(patient());
+    expect(await old).toBeNull();
+    expect((await accepted).currentHeight).toBe(189);
+    expect((await h.api.getSnapshot()).currentHeight).toBe(189);
+  });
+
+  it('równoległe odczyty tego samego zatwierdzenia oba pozostają gotowe po zakończeniu rekordu', async () => {
+    const h = setup(), pending = deferred();
+    h.vault.getPatient = () => pending.promise;
+    focusMeasurement(h, 'height'); typeMeasurement(h, 'height', '189'); enterMeasurement(h, 'height');
+    const older = h.api.getSnapshot(), newest = h.api.getSnapshot();
+    typeMeasurement(h, 'height', '1890');
+    pending.resolve(patient());
+    const first = await older, second = await newest;
+    expect(first.currentHeight).toBe(189);
+    expect(second.currentHeight).toBe(189);
+    expect(second.patientToken).toBe(first.patientToken);
+    expect(await h.api.getSnapshot()).toBe(second);
+  });
+
+  it.each(['rekord', 'timeline'])('spóźniony %s sprzed Enter nie usuwa istniejącej karty przed następnym odświeżeniem', async (kind) => {
+    const h = setup({ working: kind === 'rekord' }), before = await h.api.getSnapshot(), pending = deferred();
+    const method = kind === 'rekord' ? 'getPatient' : 'listPatientTimelineEvents';
+    h.vault[method] = () => pending.promise;
+    h.doc.emit('vilda:auth-hidden');
+    const old = h.api.getSnapshot();
+    for (let i = 0; i < 10; i++) await Promise.resolve();
+    focusMeasurement(h, 'height'); typeMeasurement(h, 'height', '189'); enterMeasurement(h, 'height');
+    pending.resolve(kind === 'rekord' ? patient() : [{ type: 'measurement', ageMonths: 120, height: 141, weight: 33 }]);
+    expect(await old).toBe(before);
+    expect((await h.api.getSnapshot()).currentHeight).toBe(189);
+  });
+
+  it('Enter bez widocznej karty zatwierdza RAM, lecz nie przejmuje natywnego Done', async () => {
+    const h = setup(); h.state.panelVisible = false;
+    await h.api.getSnapshot(); focusMeasurement(h, 'height'); typeMeasurement(h, 'height', '189');
+    expect(enterMeasurement(h, 'height')).not.toHaveBeenCalled();
+    expect((await h.api.getSnapshot()).currentHeight).toBe(189);
+  });
+
+  it.each(['change', 'vilda:zrodlo-pacjenta-zmienione', 'vilda:centile-creator-changed'])('%s po blur wyprzedza render i nadal aktualizuje zatwierdzony podgląd', async (event) => {
+    const h = setup(); await h.api.getSnapshot();
+    focusMeasurement(h, 'height'); typeMeasurement(h, 'height', '189'); blurMeasurement(h, 'height');
+    h.state.source = 'PALCZEWSKA';
+    h.win.chartCreatorData.growth.free.height[0].txt = 'Nowy fikcyjny komentarz';
+    h.doc.emit(event);
+    const after = await h.api.getSnapshot();
+    expect(after.source).toBe('PALCZEWSKA');
+    expect(after.currentHeight).toBe(189);
+    expect(after.chartCreatorData.growth.free.height[0].txt).toBe('Nowy fikcyjny komentarz');
+  });
+
+  it('after-update po Enter przyjmuje gotowe pochodne, ale nie odczytuje następnego draftu', async () => {
+    const h = setup(); await h.api.getSnapshot();
+    focusMeasurement(h, 'height'); typeMeasurement(h, 'height', '189'); enterMeasurement(h, 'height');
+    h.win.advancedGrowthData.growthVelocity = 50;
+    h.win.VildaUpdateHooks.runAfterUpdateHooks({}, { source: 'fikcyjny-final-update' });
+    typeMeasurement(h, 'height', '1890');
+    h.win.advancedGrowthData.growthVelocity = 1751;
+    h.win.VildaUpdateHooks.runAfterUpdateHooks({}, { source: 'fikcyjny-next-input' });
+    const after = await h.api.getSnapshot();
+    expect(after.currentHeight).toBe(189);
+    expect(after.advanced.growthVelocity).toBe(50);
+  });
+
+  it.each(['', 'abc', '-2'])('zatwierdzenie %j zachowuje istniejącą semantykę braku dodatniej wartości', async (value) => {
+    const h = setup(), before = await h.api.getSnapshot();
+    focusMeasurement(h, 'height'); typeMeasurement(h, 'height', value);
+    expect(await h.api.getSnapshot()).toBe(before);
+    blurMeasurement(h, 'height');
+    const after = await h.api.getSnapshot();
+    expect(after.currentHeight).toBeNull();
+    expect(after.advanced.currentHeight).toBeNull();
+    expect(after.measurements).toEqual(before.measurements);
+  });
+
+  it('przejście z wagi do wzrostu zatwierdza wagę i osobno zatrzymuje wzrost', async () => {
+    const h = setup(); await h.api.getSnapshot();
+    focusMeasurement(h, 'weight'); typeMeasurement(h, 'weight', '47');
+    blurMeasurement(h, 'weight'); focusMeasurement(h, 'height');
+    const afterWeight = await h.api.getSnapshot();
+    expect(afterWeight.currentWeight).toBe(47);
+    typeMeasurement(h, 'height', '1');
+    expect(await h.api.getSnapshot()).toBe(afterWeight);
+    enterMeasurement(h, 'height');
+    expect((await h.api.getSnapshot()).currentHeight).toBe(1); // Bez nowego progu klinicznego.
+  });
+
+  it('focus bez pisania nie blokuje pierwszej migawki ani aktualizacji programowych poza edycją', async () => {
+    const h = setup(); focusMeasurement(h, 'height');
+    expect((await h.api.getSnapshot()).currentHeight).toBe(158);
+    blurMeasurement(h, 'height');
+    h.fields.height.value = '160'; h.doc.emit('input', { target: h.fields.height });
+    expect((await h.api.getSnapshot()).currentHeight).toBe(160);
+    h.fields.advFatherHeight.value = '183'; h.doc.emit('input', { target: h.fields.advFatherHeight });
+    expect((await h.api.getSnapshot()).parents.fatherHeight).toBe(183);
+  });
+
+  it.each(['rekord', 'timeline'])('pierwszy odczyt %s rozpoczęty przed edycją nie publikuje roboczej cyfry', async (kind) => {
+    const h = setup({ working: kind === 'rekord' }), pending = deferred();
+    const method = kind === 'rekord' ? 'getPatient' : 'listPatientTimelineEvents';
+    h.vault[method] = vi.fn(() => pending.promise);
+    const request = h.api.getSnapshot();
+    for (let i = 0; i < 10; i++) await Promise.resolve();
+    focusMeasurement(h, 'height'); typeMeasurement(h, 'height', '1');
+    pending.resolve(kind === 'rekord' ? patient() : [{ type: 'measurement', ageMonths: 120, height: 141, weight: 33 }]);
+    expect(await request).toBeNull();
+    expect(await h.api.getSnapshot()).toBeNull();
+    typeMeasurement(h, 'height', '189'); blurMeasurement(h, 'height');
+    const committed = await h.api.getSnapshot();
+    expect(committed.currentHeight).toBe(189);
+    expect(committed.measurements).toHaveLength(1);
+  });
+
+  it('puste początkowe pole zachowuje historię bez punktu do końca edycji', async () => {
+    const h = setup(); h.fields.height.value = '';
+    const before = await h.api.getSnapshot();
+    focusMeasurement(h, 'height'); typeMeasurement(h, 'height', '1');
+    expect(await h.api.getSnapshot()).toBe(before);
+    expect(before.currentHeight).toBeNull();
+    typeMeasurement(h, 'height', '189'); enterMeasurement(h, 'height');
+    expect((await h.api.getSnapshot()).currentHeight).toBe(189);
+  });
+
+  it('kompozycja i przytrzymany Enter nie zatwierdzają roboczej liczby', async () => {
+    const h = setup(), before = await h.api.getSnapshot();
+    focusMeasurement(h, 'height'); typeMeasurement(h, 'height', '189');
+    expect(enterMeasurement(h, 'height', { isComposing: true })).not.toHaveBeenCalled();
+    expect(await h.api.getSnapshot()).toBe(before);
+    expect(enterMeasurement(h, 'height', { keyCode: 229 })).not.toHaveBeenCalled();
+    expect(await h.api.getSnapshot()).toBe(before);
+    enterMeasurement(h, 'height', { repeat: true });
+    expect(await h.api.getSnapshot()).toBe(before);
+    expect(enterMeasurement(h, 'advFatherHeight')).not.toHaveBeenCalled();
+    enterMeasurement(h, 'height');
+    expect((await h.api.getSnapshot()).currentHeight).toBe(189);
+  });
+
+  it('powtórzony focusin tego samego pola nie zatwierdza jego roboczej wartości', async () => {
+    const h = setup(), before = await h.api.getSnapshot();
+    focusMeasurement(h, 'height'); typeMeasurement(h, 'height', '1');
+    focusMeasurement(h, 'height');
+    expect(await h.api.getSnapshot()).toBe(before);
+    blurMeasurement(h, 'height');
+    expect((await h.api.getSnapshot()).currentHeight).toBe(1);
+  });
+
+  it('źródło i historia odświeżają się po zatwierdzeniu bez mutacji poprzedniej migawki', async () => {
+    const h = setup(), before = await h.api.getSnapshot();
+    focusMeasurement(h, 'height'); typeMeasurement(h, 'height', '189');
+    h.state.source = 'PALCZEWSKA';
+    h.win.advancedGrowthData.measurements = [];
+    h.doc.emit('vilda:zrodlo-pacjenta-zmienione');
+    expect(await h.api.getSnapshot()).toBe(before);
+    blurMeasurement(h, 'height');
+    const after = await h.api.getSnapshot();
+    expect(after.source).toBe('PALCZEWSKA');
+    expect(after.measurements).toEqual([]);
+    expect(before.source).toBe('OLAF');
+    expect(before.measurements).toHaveLength(1);
+  });
+
+  it.each([
+    ['pacjent', h => { h.values.set('vildaCurrentPatientId', 'fikcyjny-b'); h.state.owner = 'fikcyjny-b'; }],
+    ['apply', h => { h.state.sequence++; }],
+    ['restore', h => { h.doc.emit('vilda:state-restored'); }],
+    ['clear', h => { h.doc.emit('vilda:user-state-cleared'); }],
+    ['lock/unlock', h => { h.state.unlocked = false; h.hooks.lock(); h.state.unlocked = true; h.hooks.unlock(); }],
+    ['hide/show', h => { h.win.frameElement.hidden = true; h.frameChanged(); h.win.frameElement.hidden = false; h.frameChanged(); }],
+  ])('%s usuwa zatrzymaną migawkę i stan edytowanego pola', async (_, reset) => {
+    const h = setup({ framed: true }), before = await h.api.getSnapshot();
+    focusMeasurement(h, 'height'); typeMeasurement(h, 'height', '1');
+    expect(await h.api.getSnapshot()).toBe(before);
+    reset(h); h.fields.height.value = '170';
+    const after = await h.api.getSnapshot();
+    expect(after).not.toBeNull();
+    expect(after.patientToken).not.toBe(before.patientToken);
+    expect(after.currentHeight).toBe(170);
+    blurMeasurement(h, 'height');
+    expect((await h.api.getSnapshot()).currentHeight).toBe(170);
+  });
+
+  it('blokada podczas edycji odrzuca stary token i nie zwraca zatrzymanej migawki', async () => {
+    const h = setup(), before = await h.api.getSnapshot();
+    focusMeasurement(h, 'height'); typeMeasurement(h, 'height', '1');
+    h.state.unlocked = false; h.hooks.lock();
+    expect(h.api.isCurrent(before)).toBe(false);
+    expect(await h.api.getSnapshot()).toBeNull();
+    expect(enterMeasurement(h, 'height')).not.toHaveBeenCalled();
+  });
+
+  it('potwierdzenie zapisu z oczekującym DOB zachowuje hold, potem kończy odświeżenie po blur', async () => {
+    const h = setup(), before = await h.api.getSnapshot();
+    focusMeasurement(h, 'height'); typeMeasurement(h, 'height', '189');
+    h.state.pending = true;
+    h.doc.emit('vilda:patient-loaded', { source: 'save', patientId: 'fikcyjny-a', applySequence: h.state.sequence });
+    expect(h.api.isCurrent(before)).toBe(true);
+    expect(await h.api.getSnapshot()).toBeNull();
+    h.state.pending = false; h.doc.emit('vilda:dob-restored');
+    expect(await h.api.getSnapshot()).toBe(before);
+    blurMeasurement(h, 'height');
+    const after = await h.api.getSnapshot();
+    expect(after.currentHeight).toBe(189);
+    expect(after.patientToken).toBe(before.patientToken);
+    expect(h.api.getRefreshState(after)).toBeNull();
+    expect(h.writes).not.toHaveBeenCalled();
+  });
+});
 
 describe('Panel nowego pomiaru — odczytowa migawka pacjenta', () => {
   it('czyta aktywną wizytę, jawne źródło, rodziców i kopię adnotacji bez zapisu', async () => {
