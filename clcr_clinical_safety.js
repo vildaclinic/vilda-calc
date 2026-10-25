@@ -486,6 +486,12 @@
   }
 
   function computeFractionalExcretion(input) {
+    // FEHCO3 has independently audited arithmetic and a disclosed specimen
+    // assumption. This marker does not confirm a bicarbonate-loading protocol.
+    if (input && input.formulaId === "FEHCO3_spot") {
+      if (typeof root?.VildaClcrFehco3?.compute === "function") return root.VildaClcrFehco3.compute(input);
+      return Object.freeze({ ok: false, valuePct: null, error: "Nie można obliczyć FEHCO₃: moduł obliczeniowy jest niedostępny." });
+    }
     // FECl has its own audited exact arithmetic. Only this explicit marker
     // opts into its disclosed sample assumption; other FE protocols retain
     // their independent, required confirmations below.

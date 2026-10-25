@@ -284,7 +284,7 @@ test('FECl: cienka sesja i preserved-only nie pożyczają starych chlorków i fa
 });
 
 for (const issue of ['different-time', 'different-urine']) {
-  test(`FECl: jawne ${issue} blokuje wynik, a korekta nie potwierdza protokołów TmP/GFR i FEHCO₃`, async ({ page }) => {
+  test(`FECl: jawne ${issue} blokuje frakcje, a korekta nie potwierdza protokołów TmP/GFR i obciążenia HCO₃`, async ({ page }) => {
     await openCalculator(page);
     await restore(page, { U_K_spot: '25', S_K_spot: '4', U_Na_spot: '20', S_Na_spot: '140', U_HCO3_spot: '1', S_HCO3_spot: '24',
       U_PO4_spot: '10', U_PO4_spot_unit: 'mmol/L', S_PO4_spot: '1', S_PO4_spot_unit: 'mmol/L',
@@ -301,7 +301,16 @@ for (const issue of ['different-time', 'different-urine']) {
     expect(await page.evaluate(() => window.canComputeFormula('TMP_GFR'))).toBe(false);
     await expect(page.locator('#tmpPairedSameTime')).not.toBeChecked();
     await choose(page, 'FEHCO3_spot');
-    expect(await page.evaluate(() => window.canComputeFormula('FEHCO3_spot'))).toBe(false);
+    // FEHCO₃ shares the disclosed specimen assumption, but correcting FECl
+    // cannot establish that bicarbonate loading occurred or was completed.
+    expect(await page.evaluate(() => window.canComputeFormula('FEHCO3_spot'))).toBe(true);
+    const fehco3 = page.locator('#clcrResultReport [data-clcr-series="FEHCO3_spot"]');
+    await expect(fehco3).toBeVisible();
+    expect(JSON.parse(await fehco3.getAttribute('data-clcr-fehco3-snapshot'))).toMatchObject({
+      protocol: { bicarbonateLoad: null, completion: 'not-assessed', comparisonActive: false },
+      outOfRange: null,
+    });
+    await expect(page.locator('#spotBicarbonateLoad')).not.toBeChecked();
     await choose(page, 'FECl_spot');
     await expectResult(page, { raw: 0.2 });
     await openSampleDetails(page);

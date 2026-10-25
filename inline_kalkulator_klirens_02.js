@@ -234,10 +234,10 @@
       },
       {
         id: "FEHCO3_spot",
-        label: "FEHCO\u2083 \u2013 sparowana próbka punktowa (%)",
+        label: "FEHCO₃ — frakcja wydalania wodorowęglanów (%)",
         version: "spot",
-        requires: ["spotPairedChemistry", "U_HCO3_spot", "S_HCO3_spot", "Ucr_spot", "Ucr_spot_unit", "Scr_spot", "Scr_spot_unit"],
-        note: "Bez potwierdzonego protokołu obciążenia wodorowęglanem kalkulator pokazuje wyłącznie wynik surowy.",
+        requires: ["U_HCO3_spot", "S_HCO3_spot", "Ucr_spot", "Ucr_spot_unit", "Scr_spot", "Scr_spot_unit"],
+        note: "Cztery stężenia. Interpretacja zależy od warunków badania; znana niezgodność próbek blokuje obliczenie.",
       },
       {
         id: "AGs",

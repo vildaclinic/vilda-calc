@@ -7236,6 +7236,123 @@ i `klirens-fecl-offline.spec.mjs` mają wywoływać kod produkcyjny
 z fikcyjnymi danymi. Wyniki wykonań, commit i PR podaje opis PR.
 Akceptacja polityki i zielone testy nie są nową walidacją kliniczną FECl.
 
+#### P-KLIRENS-FEHCO3-2026-10-25 — cztery stężenia i warunkowe progi w Szczegółach
+
+Właściciel zaakceptował
+[makietę przed/po na desktopie i telefonie](https://vilda-fehco3-audyt-20261025.maciej-flader.chatgpt.site)
+oraz wdrożenie wraz z naprawą potwierdzonych błędów. Źródło makiety:
+`856e049b81eb8f327174d264ea4c5b1f3ce20996`. Zakres: `FEHCO3_spot`;
+UAG, TmP/GFR i kolejne obliczenia pozostają osobnymi etapami audytu.
+Pełne źródła, populacje, jednostki i granice odczytu:
+[FEHCO3.md](FEHCO3.md).
+
+**Wpływ kliniczny:** zachowano równanie
+`FEHCO₃ [%] = 100 × U_HCO₃ × P_Cr / (P_HCO₃ × U_Cr)` i przelicznik
+Cr **1 mg/dL = 88,4 µmol/L**. Zmieniają się precyzja, walidacja
+jednostek, zgodność gotowości z rzeczywistym obliczeniem, odtwarzanie
+sesji i trwałość kontekstu. Dotychczas poprawne 0,04% lub 0,001% mogło
+być wyświetlane, zbierane i zapisywane jako zero. Nowa ścieżka zachowuje
+dodatnią wartość i chroni stronę 5/15 przy prezentacji. Nie rekonstruuje
+precyzji już utraconej w starych zerowych wpisach. To zmiana funkcjonalna
+i kliniczna, nie wyłącznie korekta wyglądu.
+
+**Źródła i ograniczenia, odczyt 25.10.2026:**
+
+- Santos i wsp., *Pediatr Nephrol.* **2015;30:2099–2107**,
+  [DOI 10.1007/s00467-015-3083-9, pełny PDF wydawcy](https://link.springer.com/content/pdf/10.1007/s00467-015-3083-9.pdf),
+  s. 2101–2103 i tabela 3 s. 2105: wzór, zależność od HCO₃ krwi,
+  warunki testu i odmienne odpowiedzi niemowląt. Przegląd głównie
+  pierwotnych RTA dzieci, nie badanie zdrowych norm. U niektórych
+  niemowląt z dRTA opisano FEHCO₃ 6–15% przy prawidłowym HCO₃ krwi;
+  nie jest to norma niemowląt ani samodzielna diagnoza pRTA.
+- Yaxley i Pirrone, *Ochsner J.* **2016;16(4):525–530**,
+  [pełny PDF wydawcy](https://www.ochsnerjournal.org/content/ochjnl/16/4/525.full.pdf),
+  PMID 27999512, s. 528 i ramka s. 529: wzór, pojedyncze oznaczenie
+  w określonym kontekście kwasicy oraz **<5 / 5–15 / >15%** po
+  odpowiednim obciążeniu i osiągnięciu właściwego HCO₃ krwi.
+  Dokładnie 5% i 15% należą do nierozstrzygającego pasma. Nie jest
+  to norma zdrowej populacji według wieku.
+- Bonner i Hladik, *AJKD* **2025;85(4):501–512**,
+  [DOI 10.1053/j.ajkd.2024.08.014](https://doi.org/10.1053/j.ajkd.2024.08.014),
+  pełny artykuł z potwierdzonym DOI/paginacją, s. 506–508: **>15% po
+  obciążeniu** wspiera zaburzenie reabsorpcji proksymalnej. Przykłady
+  dorosłych, bez zdrowych RI. Źródło pełnego odczytu podano w FEHCO3.md.
+- Haque i wsp., *NDT* **2012;27:4273–4287**,
+  [DOI 10.1093/ndt/gfs493, pełny tekst](https://pmc.ncbi.nlm.nih.gov/articles/PMC3616759/),
+  patofizjologia i rozpoznanie: poniżej obniżonego progu nerkowego
+  HCO₃ wydalanie w pRTA może ustać. Mały bazowy FEHCO₃ nie wyklucza
+  pRTA. Odmienne ≥15% tego źródła nie jest mieszane z wybranym
+  profilem >15% Yaxley.
+- Trepiccione i wsp., ERKNet/ESPN, *NDT* **2021;36:1585–1596**,
+  [DOI 10.1093/ndt/gfab171, pełny PDF](https://www.erknet.org/fileadmin/Guidelines/Trepiccione_et_al.__2021__CPR_dRTA.pdf),
+  tabela 2, przypis b, s. 1587: HCO₃ jako całkowite CO₂ lub pośrednio
+  z gazometrii żylnej. Punkty praktyczne dRTA, nie walidacja zamienności
+  pomiarów FEHCO₃ ani zakresy zdrowej populacji.
+- Oficjalne katalogi Mayo HCO3/FBIUR i Seattle Children’s LAB1970
+  oraz materiał Siemens rozróżniają materiał, metody i aktualne versus
+  standardowe HCO₃. Pełne adresy i brak jawnych dat rewizji opisano
+  w FEHCO3.md. U_HCO₃ <5 mEq/L lub „none detected” nie są normą
+  FEHCO₃ <5% ani dokładnym zerem. Małe badania niemowląt i nieodczytane
+  pełne tabele neonatalne nie tworzą zastępczej normy wieku.
+
+**Minimum i założenia:** cztery stężenia w grupach „Mocz” i „Krew”;
+HCO₃ ma stałe mmol/L, liczbowo równoważne mEq/L, Cr jawne mg/dL,
+µmol/L lub mmol/L. U_HCO₃ ≥0, pozostałe stężenia >0, wszystkie skończone.
+Nie wymaga się wieku, antropometrii, rodzaju/pory moczu, obciążenia,
+metody, stabilności/braku AKI lub IFCC/IDMS. Wspólna próbka moczu
+i równoczesna krew są opisanym założeniem przy braku znanej sprzeczności;
+sprzeczność nadal blokuje liczbę i zapis, zachowując stężenia. Korekta
+informacji nie potwierdza niezależnego protokołu UAG/TmP/GFR ani
+wykonania lub zakończenia obciążenia. Znane PChN, AKI, diuretyki,
+szybka zmiana kreatyniny i podanie zasad pozostają w uwagach i historii.
+
+Z gazometrii używa się **aktualnego, nie standardowego HCO₃**. Laboratoryjny
+tCO₂ krwi jest opisanym przybliżeniem HCO₃, bez dodatkowej korekty.
+U_HCO₃ pochodzi z właściwego wyniku laboratoryjnego, nie z samego pH
+ani przyjętego pCO₂ krwi. Nie dodaje się ankiety o metodę ani jednego
+uniwersalnego protokołu transportowego.
+
+**Polityka:** **`FEHCO3_CONTEXT_2026_10`, wersja 1**, jest danymi
+w `clcr_fehco3_reference_data.js`. `VildaClcrFehco3.evaluate(input, policy)`
+przyjmuje źródła i ograniczenia jako argument. W przejrzanych źródłach
+nie zweryfikowano odpowiedniego zdrowego RI punktowego FEHCO₃ dla wieku;
+to opis pokrycia danych, nie dowód nieistnienia wszystkich norm.
+Jedna neutralna karta B pokazuje wartość, **„Norma dla wieku / Brak normy
+do porównania”** i krótki komentarz. **`outOfRange:null`**, nie `false`.
+Progi Yaxley są wyłącznie objaśnieniem w Szczegółach, bez automatycznej
+klasyfikacji także po odnotowaniu podania zasad. Nie zakłada się
+przeprowadzonego testu ani HCO₃ ≥24 mmol/L jako warunku całego życia.
+
+**Precyzja i trwałość:** dokładny iloraz wejść i jednostek, surowa liczba
+oraz tekst prezentacji są odrębne. Dodatni wynik nie staje się zerem
+przez zaokrąglenie lub pośredni niedomiar. Niereprezentowalny dodatni
+wynik jest błędem. Snapshot **`clcr-fehco3`, wersja 1**, utrwala wejścia,
+jednostki, wartość/ułamek/tekst, źródła, politykę, kontekst, założenia
+i fakty oraz informację o obciążeniu z chwili zapisu. Historia nie ocenia
+ponownie według dzisiejszego pacjenta. Zachowuje przecinki i nierówności;
+granica nie jest dokładnym punktem wykresu. Nowa/niepełna sesja nie
+dziedziczy dawnych HCO₃ i potwierdzenia obciążenia, a zwykła zmiana
+wzoru zachowuje intencjonalne pola bieżącej sesji.
+
+**Syntetyczne kontrakty produkcyjne:**
+
+| Wejście / stan | Oczekiwany wynik |
+|---|---|
+| U_HCO₃ 12, P_HCO₃ 24 mmol/L; U_Cr 100, P_Cr 1 mg/dL | 0,5%, neutralnie, `outOfRange:null`. |
+| U_HCO₃ 0,024 / 1; P_HCO₃ 24 / 25; U_Cr 100, P_Cr 1 mg/dL | Odpowiednio 0,001 / 0,04%, bez zerowania w zapisie. |
+| U_HCO₃ 120 / 360 / 360,0024, P_HCO₃ 24; U_Cr 100, P_Cr 1 mg/dL | 5 / 15 / 15,0001%, bez automatycznej kategorii. |
+| U_HCO₃ 24, P_HCO₃ 24; U_Cr 8,84 mmol/L, P_Cr 88,4 µmol/L | 1%, jak przy U_Cr 100/P_Cr 1 mg/dL. |
+| U_HCO₃ 0 / puste, pozostałe dodatnie | 0% / brak liczby; zero w pozostałych trzech blokuje. |
+| Ten sam komplet w różnym wieku lub bez wieku | Ta sama liczba, bez zastępczej normy lub pytania. |
+| Znana niezgodność próbek lub nowa sesja bez HCO₃/obciążenia | Blokada sprzeczności; brak dziedziczenia poprzednich danych. |
+| Znane PChN/diuretyk/podanie zasad; zapis i zmiana obecnych danych | Pierwotna ocena i fakty zachowane, bez dopisanego zakończenia testu. |
+| Historia `0,001` lub `<0,001` | Zachowana wartość/operator, bez dokładnego punktu dla granicy. |
+
+Regresje silnika, UI, sesji, zapisu i E2E mają wywoływać rzeczywisty
+kod produkcyjny z fikcyjnymi danymi. Wyniki wykonań, offline, CI, commit
+i PR podaje opis PR. Zielone testy i akceptacja polityki nie stanowią
+nowej walidacji klinicznej FEHCO₃.
+
 #### Zakres i ograniczenia
 
 | Obszar | Wdrożona reguła | Najważniejsze ograniczenia |

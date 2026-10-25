@@ -24,6 +24,12 @@ async function assertLandscapeGeometry(page, frame, width, height) {
   // The shell recomputes its measured height on the next ResizeObserver frame
   // after the physical orientation and safe-area change have both arrived.
   if (frame !== page) await expect.poll(async () => (await layoutGeometry(page, frame)).host.panel.bottom).toBe(height);
+  // Blur and visualViewport resize restore the dock asynchronously. Its height
+  // can already be 52 px while the keyboard transform still places it offscreen.
+  await expect.poll(async () => {
+    const { host } = await layoutGeometry(page, frame);
+    return host.viewport.height - host.dock.bottom;
+  }).toBeGreaterThanOrEqual(LANDSCAPE_SAFE_AREA.bottom);
   const { host, content } = await layoutGeometry(page, frame);
   expect(host.viewport).toEqual({ width, height });
   expect(host.dock.width).toBe(552);
