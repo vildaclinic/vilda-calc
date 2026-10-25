@@ -19,7 +19,7 @@
  *   bo i tak chcemy zwracać HTML z cache natychmiast.
  */
 
-const SW_VERSION = '1.1.376';
+const SW_VERSION = '1.1.377';
 const CACHE_PREFIX = 'pwa-kalorii';
 const SHELL_CACHE = `${CACHE_PREFIX}-shell-v${SW_VERSION}`;
 const RUNTIME_CACHE = `${CACHE_PREFIX}-runtime`;
@@ -2051,6 +2051,7 @@ const OPTIONAL_ASSETS = [
   // Read-only new-measurement preview (Start / DocPro / fullscreen shell).
   '/vilda_centile_live_panel.css?v=1',
   '/vilda_centile_live_panel.css?v=2',
+  '/vilda_centile_live_panel.css?v=3',
   '/vilda_centile_live_data.js?v=1',
   '/vilda_centile_live_data.js?v=2',
   '/vilda_centile_live_data.js?v=3',
