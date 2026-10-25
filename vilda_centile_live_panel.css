@@ -23,7 +23,7 @@ html.vilda-centile-live-reserved #vildaCentileLiveMount+#currentSummaryWrap{marg
 .vilda-centile-live-scroll-locked{overflow:hidden!important}
 .vilda-centile-live-transferring{visibility:hidden!important}
 .vilda-centile-live-placeholder{height:var(--vilda-centile-live-placeholder-height,0px);pointer-events:none}
-.vilda-centile-live-card{box-sizing:border-box;position:relative;display:flex;flex-direction:column;min-width:0;min-height:0;height:var(--vilda-centile-live-inline-height,100%);overflow:hidden;margin:0;padding:0;border:var(--border-hairline) solid #d5e5e1;border-radius:var(--radius-12);background:#fff;box-shadow:0 7px 30px #205b5310;color:#203f46;font-family:inherit;line-height:1.4;text-align:left;cursor:default}
+.vilda-centile-live-card{box-sizing:border-box;position:relative;display:flex;flex-direction:column;min-width:0;min-height:0;height:var(--vilda-centile-live-inline-height,100%);overflow:hidden;margin:0;padding:0;border:var(--border-hairline) solid #d5e5e1;border-radius:var(--radius-12);background:#fff;box-shadow:0 7px 30px #205b5310;color:#203f46;font-family:inherit;line-height:1.4;text-align:left;cursor:default;opacity:1}
 .vilda-centile-live-card *{box-sizing:border-box}
 .vilda-centile-live-card [hidden]{display:none!important}
 .vilda-centile-live-card button,.vilda-centile-live-card select{box-sizing:border-box;font:inherit;letter-spacing:normal;text-transform:none;margin:0;min-height:0;max-width:none;box-shadow:none;cursor:pointer;-webkit-tap-highlight-color:transparent}

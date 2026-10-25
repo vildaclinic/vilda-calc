@@ -191,6 +191,16 @@ ważnym tokenie tej samej osoby i wizyty. Unieważnienie właściciela natychmia
 usuwa obraz i zamyka powiększenie; neutralna karta nie zawiera danych pacjenta.
 Spóźniona odpowiedź odczytu nie może przywrócić starego obrazu ani Przypomnień.
 
+Przy pierwszym oczekiwaniu karta pozostaje neutralna, bez tekstu i komunikatu
+czytnika ekranu. „Wczytywanie siatki…” pojawia się dopiero po 1200 ms ciągłego
+oczekiwania, liczonego od wczesnego bootstrapu; przejęcie przez panel i ponowne
+odczyty nie rozpoczynają tego czasu od nowa. Błąd, ponowienie oraz informacja
+o konieczności zakończenia edycji pozostają dostępne od razu. Pierwszy gotowy
+obraz pojawia się przez zmianę przezroczystości w ciągu 300 ms, po ustaleniu
+geometrii, bez opóźniania obliczeń. Animacja występuje raz na dokument i jest
+pomijana przy `prefers-reduced-motion`. Kolejne odświeżenia zachowują bieżący
+obraz; przeniesienie do pełnego ekranu kończy ewentualną animację pojawiania.
+
 Początkowa osłona miejsca siatki obejmuje także „Podsumowanie wyników”, które
 może odtworzyć się przed niezależnym odczytem porównania pomiarów. Ukrywa je
 tylko podczas startu i pierwszego oczekiwania bez aktywnej siatki; gotowość,
