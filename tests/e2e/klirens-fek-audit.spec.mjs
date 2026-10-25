@@ -83,6 +83,7 @@ async function expectResult(page, { raw, status, tone, outOfRange } = {}) {
   }).toEqual({ visible: true, visibleCards: 1, valueCount: 1, unit: '%', sameDisplay: true,
     sameRaw: true, sameStatus: true, sameTone: true, vaultLocked: true, saveDisabled: true });
   const result = observed.result;
+  if (raw !== undefined) expect(observed.rawAttribute).toBeCloseTo(raw, 12);
   expect(result).toMatchObject({ schema: 'clcr-fek', version: 1, valid: true, unit: '%' });
   if (status !== undefined) expect(result.status).toBe(status);
   if (tone !== undefined) expect(result.tone).toBe(tone);
