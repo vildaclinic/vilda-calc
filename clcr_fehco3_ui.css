@@ -1,0 +1,289 @@
+/* FEHCO₃: approved four-concentration layout. Input, reference and result widths
+   stay fixed across units, known context and empty/blocked/complete states. */
+html[data-clcr-workflow-ui="1"][data-clcr-fehco3-active="1"] {
+  --fehco3-unit-width: 116px;
+  scrollbar-gutter: stable;
+}
+html[data-clcr-fehco3-active="1"] #clcrWorkspace,
+html[data-clcr-fehco3-active="1"] #clcrWorkspace *,
+html[data-clcr-fehco3-active="1"] #clcrWorkspace *::before,
+html[data-clcr-fehco3-active="1"] #clcrWorkspace *::after { box-sizing: border-box; }
+html[data-clcr-workflow-ui="1"][data-clcr-fehco3-active="1"] #clcrWorkspace {
+  width: 100%;
+  min-width: 0;
+  gap: var(--space-20px);
+  align-items: start;
+}
+html[data-clcr-workflow-ui="1"][data-clcr-fehco3-active="1"] #clcrForm.flex {
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  flex-wrap: nowrap;
+  align-items: stretch;
+  gap: var(--space-16px);
+}
+html[data-clcr-workflow-ui="1"][data-clcr-fehco3-active="1"] #clcrForm.flex > *,
+html[data-clcr-workflow-ui="1"][data-clcr-fehco3-active="1"] #clcrResultRail,
+html[data-clcr-workflow-ui="1"][data-clcr-fehco3-active="1"] #clcrResultReport {
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+}
+html[data-clcr-workflow-ui="1"][data-clcr-fehco3-active="1"] #clcrForm > .clcr-workflow__utilities:empty { display: none; }
+html[data-clcr-workflow-ui="1"][data-clcr-fehco3-active="1"] #clcrResultReport {
+  margin: 0;
+  padding: var(--space-20px);
+}
+html[data-clcr-fehco3-active="1"] #clcrWorkspace :is(button, input, select),
+html[data-clcr-fehco3-active="1"] :is(.fehco3-input-card, .fehco3-proposal-card, #clcrVisitSaveCard) { transform: none !important; }
+.fehco3-input-card {
+  padding: var(--space-16px);
+  border: var(--border-hairline) solid var(--clcr-border-soft);
+  border-radius: var(--clcr-radius-card);
+  background: var(--clcr-surface);
+  box-shadow: var(--clcr-shadow-card);
+}
+.fehco3-readiness {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-12px);
+  color: var(--clcr-muted);
+  font-size: 12px;
+  line-height: 1.5;
+}
+.fehco3-readiness strong { color: var(--clcr-heading); font-variant-numeric: tabular-nums; }
+.fehco3-progress-track { height: 4px; margin-top: var(--space-6px); border-radius: var(--radius-6); background: var(--clcr-border-soft); overflow: hidden; }
+.fehco3-progress-track span { display: block; width: 0; height: 100%; background: var(--clcr-primary); }
+.fehco3-progress-track[data-filled="1"] span { width: 25%; }
+.fehco3-progress-track[data-filled="2"] span { width: 50%; }
+.fehco3-progress-track[data-filled="3"] span { width: 75%; }
+.fehco3-progress-track[data-filled="4"] span { width: 100%; }
+.fehco3-patient-age { margin: var(--space-12px) 0 0; color: var(--clcr-muted); font-size: 12px; line-height: 1.5; }
+.fehco3-sample-group {
+  width: 100%;
+  min-width: 0;
+  margin: var(--space-16px) 0 0;
+  padding: var(--space-12px);
+  border: var(--border-hairline) solid var(--clcr-border-soft);
+  border-radius: var(--radius-13);
+  background: var(--clcr-surface-soft);
+}
+html[data-clcr-workflow-ui="1"] #clcrForm .fehco3-sample-group h3 {
+  margin: 0 0 var(--space-12px);
+  color: var(--clcr-heading);
+  font-size: 14px;
+  line-height: 1.5;
+  font-weight: 750;
+}
+html[data-clcr-workflow-ui="1"] #clcrForm .fehco3-entry-field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-8px);
+  width: 100%;
+  min-width: 0;
+  min-height: 0;
+  margin: 0;
+  padding: 0;
+  background: transparent;
+  border: 0;
+  box-shadow: none;
+}
+html[data-clcr-workflow-ui="1"] #clcrForm .fehco3-entry-field + .fehco3-entry-field { margin-top: var(--space-16px); }
+html[data-clcr-workflow-ui="1"] #clcrForm .fehco3-entry-field .clcr-field__heading { display: block; margin: 0; padding: 0; }
+html[data-clcr-workflow-ui="1"] #clcrForm .fehco3-entry-field .clcr-field__name { color: var(--clcr-text); font-size: 13px; line-height: 1.5; font-weight: 650; }
+html[data-clcr-workflow-ui="1"] #clcrForm .fehco3-input-card :is(.clcr-field__status, .clcr-info-button) { display: none; }
+html[data-clcr-workflow-ui="1"] #clcrForm .fehco3-value-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) var(--fehco3-unit-width, 116px);
+  gap: var(--space-8px);
+  align-items: stretch;
+  width: 100%;
+  min-width: 0;
+}
+html[data-clcr-workflow-ui="1"] #clcrForm .fehco3-value-row :is(input, select),
+html[data-clcr-workflow-ui="1"] #clcrForm .fehco3-fixed-unit {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  height: 48px;
+  min-height: 48px;
+  margin: 0;
+  padding: var(--space-10px);
+  border: var(--border-hairline) solid var(--clcr-border);
+  border-radius: var(--radius-12);
+  background: var(--clcr-surface);
+  color: var(--clcr-text);
+  font: 400 16px/24px Inter, system-ui, sans-serif;
+  box-shadow: none;
+}
+html[data-clcr-workflow-ui="1"] #clcrForm .fehco3-value-row select { padding-inline: var(--space-8px); }
+html[data-clcr-workflow-ui="1"] #clcrForm .fehco3-fixed-unit { justify-content: center; color: var(--clcr-muted); }
+.fehco3-input-help { margin: var(--space-16px) 0 0; color: var(--clcr-muted); font-size: 12px; line-height: 1.6; }
+.fehco3-assumption { margin: var(--space-16px) 0 0; color: var(--clcr-muted); font-size: 12px; line-height: 1.6; }
+.fehco3-sample-info { margin-top: var(--space-6px); color: var(--clcr-muted); font-size: 12px; line-height: 1.6; }
+.fehco3-sample-info summary { display: flex; align-items: center; min-height: 44px; color: var(--clcr-primary-dark); font-weight: 650; cursor: pointer; }
+.fehco3-sample-info summary::before { content: "▸"; margin-right: var(--space-6px); }
+.fehco3-sample-info[open] summary::before { content: "▾"; }
+html[data-clcr-workflow-ui="1"] #clcrForm .fehco3-sample-info label { display: block; margin: 0 0 var(--space-6px); font-size: 12px; line-height: 1.5; }
+html[data-clcr-workflow-ui="1"] #clcrForm .fehco3-sample-info select {
+  display: block;
+  width: 100%;
+  min-width: 0;
+  min-height: 48px;
+  padding: var(--space-10px);
+  border: var(--border-hairline) solid var(--clcr-border);
+  border-radius: var(--radius-10);
+  background: var(--clcr-surface);
+  color: var(--clcr-text);
+  font: 400 16px/24px Inter, system-ui, sans-serif;
+}
+.fehco3-sample-info p { margin: var(--space-8px) 0; }
+html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .fehco3-proposal-card {
+  --clcr-result-color: #566f77;
+  --clcr-result-bg: #f4f7f8;
+  --clcr-result-border: #ccd9dc;
+  padding: var(--space-18px) !important;
+}
+.fehco3-result-main { grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); gap: var(--space-14px); }
+html[data-clcr-workflow-ui="1"] #clcrResultReport .fehco3-proposal-card :is(.clcr-result-patient-label, .clcr-result-reference-label) {
+  min-height: 43px;
+  margin-bottom: var(--space-10px);
+  color: #465e65;
+  font-size: 12px;
+}
+html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .fehco3-proposal-card .clcr-result-value {
+  display: flex;
+  align-items: center;
+  min-height: 53px;
+  font-size: 44px !important;
+  line-height: 1.08;
+  letter-spacing: -1.3px;
+  color: #253d43 !important;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .fehco3-proposal-card .clcr-result-value[data-long="true"] {
+  font-size: 29px !important;
+  letter-spacing: -.5px;
+}
+html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .fehco3-proposal-card .fehco3-reference-value {
+  display: flex;
+  align-items: center;
+  min-height: 53px;
+  padding: 0;
+  font-size: 23px !important;
+  line-height: 1.35;
+  letter-spacing: -.5px;
+  overflow-wrap: anywhere;
+}
+html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .fehco3-proposal-card .fehco3-reference-value[data-no-reference="true"] {
+  font-size: 18px !important;
+  letter-spacing: 0;
+}
+.fehco3-scope-tag {
+  display: inline-flex;
+  align-items: center;
+  min-height: 29px;
+  margin: var(--space-16px) 0 0;
+  padding: var(--space-4px) var(--space-8px);
+  border: var(--border-hairline) solid #ead59d;
+  border-radius: var(--radius-8);
+  background: var(--clcr-warning-bg);
+  color: var(--clcr-warning);
+  font-size: 11px;
+  font-weight: 650;
+  line-height: 1.5;
+}
+.fehco3-result-copy { margin: var(--space-14px) 0 0; color: #334e55; font-size: 13px; font-weight: 400; line-height: 1.65; }
+.fehco3-result-empty,
+.fehco3-result-error {
+  min-height: 235px;
+  padding: var(--space-20px);
+  border: var(--border-hairline) dashed var(--clcr-border);
+  border-radius: var(--radius-14);
+  background: var(--clcr-surface-soft);
+  color: var(--clcr-muted);
+  font-size: 13px;
+  line-height: 1.65;
+}
+.fehco3-result-empty strong,
+.fehco3-result-error strong { display: block; color: var(--clcr-heading); font-size: 16px; line-height: 1.5; }
+.fehco3-result-empty p,
+.fehco3-result-error p { margin: var(--space-12px) 0 0; }
+.fehco3-result-error { border-style: solid; border-color: #efbaba; background: var(--clcr-error-bg); color: var(--clcr-error); }
+.fehco3-result-error strong { color: var(--clcr-error); }
+.fehco3-proposal-details { width: 100%; min-width: 0; }
+html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .fehco3-proposal-details .clcr-result-category-table { width: 100%; table-layout: fixed; font-size: 11px; line-height: 1.6; }
+html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .fehco3-proposal-details .clcr-result-category-table :is(th, td) { padding: var(--space-8px); font-size: inherit; line-height: inherit; white-space: normal; overflow-wrap: anywhere; }
+html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .fehco3-proposal-details .clcr-result-category-table :is(th, td):first-child { width: 26%; }
+html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .fehco3-proposal-details .clcr-result-category-table :is(th, td):nth-child(2) { width: 74%; }
+.fehco3-formula { overflow-wrap: anywhere; }
+.fehco3-source-links { padding-left: var(--space-16px); }
+.fehco3-source-links li { margin: var(--space-6px) 0; }
+.fehco3-source-links a { overflow-wrap: anywhere; }
+@media (max-width: 700px) {
+  html[data-clcr-workflow-ui="1"][data-clcr-fehco3-active="1"] { --fehco3-unit-width: 112px; }
+  html[data-clcr-workflow-ui="1"][data-clcr-fehco3-active="1"] #clcrResultReport { padding: var(--space-16px); }
+  html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .fehco3-proposal-card { padding: 15px !important; }
+  .fehco3-result-main { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: var(--space-12px); }
+  html[data-clcr-workflow-ui="1"] #clcrResultReport .fehco3-proposal-card :is(.clcr-result-patient-label, .clcr-result-reference-label) { min-height: 46px; font-size: 11px; }
+  html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .fehco3-proposal-card .clcr-result-value { font-size: 34px !important; letter-spacing: -1px; }
+  html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .fehco3-proposal-card .clcr-result-value[data-long="true"] { font-size: 24px !important; letter-spacing: -.4px; }
+  html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .fehco3-proposal-card .fehco3-reference-value { font-size: 20px !important; }
+  html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .fehco3-proposal-card .fehco3-reference-value[data-no-reference="true"] { font-size: 16px !important; }
+  .fehco3-result-copy { font-size: 12px; }
+  .fehco3-scope-tag { font-size: 10px; }
+}
+@media (max-width: 360px) {
+  html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .fehco3-proposal-card .clcr-result-value { font-size: 32px !important; }
+  /* Preserve a full near-boundary result with wider fallback font metrics. */
+  html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .fehco3-proposal-card .clcr-result-value[data-long="true"] { font-size: 20px !important; }
+  html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .fehco3-proposal-card .fehco3-reference-value { font-size: 18px !important; }
+  html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .fehco3-proposal-card .fehco3-reference-value[data-no-reference="true"] {
+    font-size: 14px !important;
+    overflow-wrap: normal;
+    word-break: normal;
+    hyphens: none;
+  }
+}
+html[data-clcr-workflow-ui="1"][data-clcr-fehco3-active="1"] #clearContainer {
+  margin: 0 !important;
+  padding: 0;
+  border: 0;
+  background: none;
+  box-shadow: none;
+}
+html[data-clcr-workflow-ui="1"][data-clcr-fehco3-active="1"] #clearBtn {
+  display: block;
+  width: 100%;
+  min-height: 48px;
+  margin: 0;
+  padding: var(--space-10px) var(--space-12px);
+  font: 400 16px/24px Inter, system-ui, sans-serif;
+}
+html[data-clcr-workflow-ui="1"][data-clcr-fehco3-active="1"] #clcrVisitSaveCard :is(h2, .cvs-hint) { text-align: center; }
+/* The workflow heading and its four inputs form one continuous card, matching
+   the accepted prototype while keeping the shared heading's DOM contract. */
+html[data-clcr-workflow-ui="1"][data-clcr-fehco3-active="1"] #clcrActivePanel {
+  padding: var(--space-16px) var(--space-16px) 0;
+  border-bottom: 0;
+  border-radius: var(--clcr-radius-card) var(--clcr-radius-card) 0 0;
+  box-shadow: none;
+}
+html[data-clcr-workflow-ui="1"][data-clcr-fehco3-active="1"] #fehco3InputCard {
+  margin-top: calc(-1 * var(--space-16px));
+  border-top: 0;
+  border-radius: 0 0 var(--clcr-radius-card) var(--clcr-radius-card);
+  box-shadow: none;
+}
+
+.fehco3-source-links small { display: block; color: var(--clcr-muted); font-size: 11px; line-height: 1.6; }
+
+html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .fehco3-proposal-card .fehco3-reference-value { overflow-wrap: normal; word-break: normal; hyphens: none; }
+html[data-clcr-workflow-ui="1"][data-clcr-fehco3-active="1"] #clcrWorkspace { row-gap: var(--space-24px); }
+html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .fehco3-proposal-card .clcr-result-value[data-dense="true"] { font-size: 23px !important; }
+@media (max-width: 360px) {
+  html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .fehco3-proposal-card .clcr-result-value[data-dense="true"] { font-size: 17px !important; }
+}

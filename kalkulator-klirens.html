@@ -185,6 +185,7 @@
 <link href="clcr_fena_ui.css?v=1" rel="stylesheet" />
 <link href="clcr_fek_ui.css?v=1" rel="stylesheet" />
 <link href="clcr_fecl_ui.css?v=1" rel="stylesheet" />
+<link href="clcr_fehco3_ui.css?v=1" rel="stylesheet" />
 <link href="vilda_lab_assessment_ui.css?v=12" rel="stylesheet">
 <link href="vilda_lab_history_tab.css?v=4" rel="stylesheet">
   <link rel="stylesheet" href="vilda_phone_landscape.css?v=2">
@@ -581,10 +582,10 @@
             <input type="number" id="S_Cl_spot" step="0.1" />
           </label>
           <label class="advanced-field pro-field">HCO₃⁻ w próbce moczu (mmol/L):
-            <input type="number" id="U_HCO3_spot" step="0.1" />
+            <input type="number" id="U_HCO3_spot" step="any" />
           </label>
           <label class="advanced-field pro-field">HCO₃⁻ w surowicy (mmol/L):
-            <input type="number" id="S_HCO3_spot" step="0.1" />
+            <input type="number" id="S_HCO3_spot" step="any" />
           </label>
           <label class="advanced-field pro-field inline-checkbox-label" style="display:flex;align-items:center;gap:.45rem;">
             <input type="checkbox" id="spotDiureticUse" class="white-checkbox" style="margin:0;">
@@ -988,7 +989,7 @@
     <!-- === Rozszerzony moduł wyboru formuł === -->
     <script defer src="inline_kalkulator_klirens_01.js?v=1"></script>
 
-    <script defer src="clcr_clinical_safety.js?v=11"></script>
+    <script defer src="clcr_clinical_safety.js?v=12"></script>
     <script defer src="clcr_stone_safety.js?v=1"></script>
     <script defer src="clcr_dialysis_safety.js?v=1"></script>
     <script defer src="clcr_extended_egfr.js?v=1"></script>
@@ -1023,10 +1024,14 @@
     <script defer src="clcr_fecl.js?v=1"></script>
     <script defer src="clcr_fecl_ui.js?v=1"></script>
     <script defer src="clcr_fecl_persistence.js?v=1"></script>
+    <script defer src="clcr_fehco3_reference_data.js?v=1"></script>
+    <script defer src="clcr_fehco3.js?v=1"></script>
+    <script defer src="clcr_fehco3_ui.js?v=1"></script>
+    <script defer src="clcr_fehco3_persistence.js?v=1"></script>
     <script defer src="clcr_measured_clearance_reference_data.js?v=1"></script>
     <script defer src="clcr_measured_clearance_reference.js?v=1"></script>
     <script defer src="clcr_result_presentation.js?v=7"></script>
-    <script defer src="inline_kalkulator_klirens_02.js?v=19"></script>
+    <script defer src="inline_kalkulator_klirens_02.js?v=20"></script>
     <!-- Ujednolicona obsługa wyboru formuły w kalkulatorze klirensu/eGFR. -->
     <script defer src="inline_kalkulator_klirens_03.js?v=1"></script>
 <!-- Sekcja interpretacji AI z opisem i przyciskiem.  Umieszczamy ją w kontenerze
@@ -1093,7 +1098,7 @@
 </footer>
 
 <!-- 5. LOGIKA JS -->
-<script defer src="inline_kalkulator_klirens_04.js?v=24"></script>
+<script defer src="inline_kalkulator_klirens_04.js?v=25"></script>
 
 <!-- Moduł obsługi kliknięć listy dynamicznych wyników wyszukiwania -->
 <script defer src="inline_kalkulator_klirens_05.js?v=1"></script>
@@ -1691,7 +1696,7 @@ document.addEventListener('DOMContentLoaded', () => {
          wczytywane w tym formularzu. Plik userData.js korzysta z localStorage. -->
         <script src="userData.js?v=6" defer></script>
 <script src="ios26-ui.js?v=45" defer></script>
-<script defer src="inline_kalkulator_klirens_07.js?v=13"></script>
+<script defer src="inline_kalkulator_klirens_07.js?v=14"></script>
 <script defer src="vilda_down_syndrome.js?v=5"></script>
 <script defer src="vilda_anorexia_risk.js?v=4"></script>
 <!-- Tablice siatek zespolu Downa przed app.js: app.js przekazuje je silnikowi BMI (P-DS-1). -->
@@ -1952,6 +1957,6 @@ document.addEventListener('DOMContentLoaded', () => {
 </script>
 <script defer src="inline_kalkulator_klirens_08.js?v=1"></script>
   <script defer src="inline_kalkulator_klirens_09.js?v=1"></script>
-  <script defer src="clcr_ui_workflow.js?v=23"></script>
+  <script defer src="clcr_ui_workflow.js?v=24"></script>
 </body>
 </html>

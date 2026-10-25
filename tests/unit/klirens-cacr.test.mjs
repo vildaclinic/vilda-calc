@@ -215,7 +215,7 @@ describe('Ca/Cr — rzeczywisty adapter formularza i jednostkowa walidacja', () 
     expect(canCompute('CaCr_spot')).toBe(expected);
   });
 
-  it('rzeczywisty walidator zachowuje ocenę Ca/Cr, Ox/Cr, Cit/Cr, FENa, FEK i FECl oraz limity pozostałych wzorów', () => {
+  it('rzeczywisty walidator zachowuje ocenę Ca/Cr, Ox/Cr, Cit/Cr i frakcji wydalania oraz limity pozostałych wzorów', () => {
     const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
     const source = fs.readFileSync(path.join(root, 'inline_kalkulator_klirens_04.js'), 'utf8');
     const start = source.indexOf('function validateField('), end = source.indexOf('function validateClcrAgeContext(', start);
@@ -237,7 +237,9 @@ describe('Ca/Cr — rzeczywisty adapter formularza i jednostkowa walidacja', () 
     // nie może odrzucać np. µmol/L i akceptować tej samej ilości w mg/dL.
     expect(validate(field('Ucr_spot', '60000'))).toBe(true);
     controls.formulaPicker.value = 'FEHCO3_spot';
-    expect(validate(field('Ucr_spot', '60000'))).toBe(false);
+    // FEHCO₃ także normalizuje jednostki w swoim silniku; generyczny
+    // limit surowej liczby nie jest limitem tego samego stężenia w każdej jednostce.
+    expect(validate(field('Ucr_spot', '60000'))).toBe(true);
     controls.formulaPicker.value = 'TMP_GFR';
     expect(validate(field('Ucr_spot', '60000'))).toBe(false);
   });

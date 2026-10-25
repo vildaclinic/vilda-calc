@@ -232,7 +232,7 @@ test('TmP/GFR dobiera metodę na granicy 19 lat i nie korzysta z DZM', async ({ 
   await expect(page.locator('#elecInfo')).not.toContainText('TmP/GFR (dobowa');
 });
 
-test('FENa, FEK i FECl zakładają sparowane próbki; FEHCO₃ i UAG zachowują własne potwierdzenie', async ({ page }) => {
+test('frakcje wydalania zakładają sparowane próbki; UAG i protokół obciążenia zachowują własne fakty', async ({ page }) => {
   await openCalculator(page, 'spot');
   await setPatient(page, { age: 50 });
   await page.locator('#Ucr_spot').fill('100');
@@ -265,11 +265,18 @@ test('FENa, FEK i FECl zakładają sparowane próbki; FEHCO₃ i UAG zachowują 
   expect(Number(await fecl.getAttribute('data-clcr-value'))).toBeCloseTo(0.8, 12);
   expect(JSON.parse(await fecl.getAttribute('data-clcr-fecl-snapshot')).sample)
     .toEqual({ sameUrineSpecimen: 'assumed', pairedSameTime: 'assumed' });
-  await expect(fehco3).toHaveCount(0);
+  await expect(fehco3).toBeVisible();
+  await expect(fehco3).toHaveAttribute('data-clcr-tone', 'neutral');
+  expect(Number(await fehco3.getAttribute('data-clcr-value'))).toBeCloseTo(0.04, 12);
+  expect(JSON.parse(await fehco3.getAttribute('data-clcr-fehco3-snapshot'))).toMatchObject({
+    sample: { sameUrineSpecimen: 'assumed', pairedSameTime: 'assumed' },
+    protocol: { bicarbonateLoad: null, completion: 'not-assessed', comparisonActive: false },
+    outOfRange: null,
+  });
   await expect(uag).toHaveCount(0);
   expect(await page.evaluate(() => window.canComputeFormula('FEK_spot'))).toBe(true);
   expect(await page.evaluate(() => window.canComputeFormula('FECl_spot'))).toBe(true);
-  expect(await page.evaluate(() => window.canComputeFormula('FEHCO3_spot'))).toBe(false);
+  expect(await page.evaluate(() => window.canComputeFormula('FEHCO3_spot'))).toBe(true);
   expect(await page.evaluate(() => window.canComputeFormula('AGu_spot'))).toBe(false);
   await expect(page.locator('#spotPairedChemistry')).not.toBeChecked();
   await expect(page.locator('#spotBicarbonateLoad')).not.toBeChecked();
@@ -286,8 +293,13 @@ test('FENa, FEK i FECl zakładają sparowane próbki; FEHCO₃ i UAG zachowują 
     .toEqual({ sameUrineSpecimen: 'assumed', pairedSameTime: 'confirmed' });
   await expect(fehco3).toBeVisible();
   expect(Number(await fehco3.getAttribute('data-clcr-value'))).toBeCloseTo(0.04, 12);
+  expect(JSON.parse(await fehco3.getAttribute('data-clcr-fehco3-snapshot'))).toMatchObject({
+    sample: { sameUrineSpecimen: 'assumed', pairedSameTime: 'confirmed' },
+    protocol: { bicarbonateLoad: null, completion: 'not-assessed', comparisonActive: false },
+    outOfRange: null,
+  });
   await expect(page.locator('#spotBicarbonateLoad')).not.toBeChecked();
-  await expect(page.locator('#elecInfo')).toContainText('bez udokumentowanego testu obciążenia wodorowęglanem');
+  await expect(fehco3).toContainText('Sam wynik nie potwierdza ani nie wyklucza');
   await expect(uag).toBeVisible();
   expect(Number(await uag.getAttribute('data-clcr-value'))).toBe(-40);
   await expect(page.locator('#elecInfo')).toContainText('UAG; próbka punktowa');
