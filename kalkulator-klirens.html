@@ -183,6 +183,7 @@
 <link href="clcr_oxcr_ui.css?v=1" rel="stylesheet" />
 <link href="clcr_citcr_ui.css?v=1" rel="stylesheet" />
 <link href="clcr_fena_ui.css?v=1" rel="stylesheet" />
+<link href="clcr_fek_ui.css?v=1" rel="stylesheet" />
 <link href="vilda_lab_assessment_ui.css?v=12" rel="stylesheet">
 <link href="vilda_lab_history_tab.css?v=4" rel="stylesheet">
   <link rel="stylesheet" href="vilda_phone_landscape.css?v=2">
@@ -1013,10 +1014,14 @@
     <script defer src="clcr_fena.js?v=1"></script>
     <script defer src="clcr_fena_ui.js?v=1"></script>
     <script defer src="clcr_fena_persistence.js?v=1"></script>
+    <script defer src="clcr_fek_reference_data.js?v=1"></script>
+    <script defer src="clcr_fek.js?v=1"></script>
+    <script defer src="clcr_fek_ui.js?v=1"></script>
+    <script defer src="clcr_fek_persistence.js?v=1"></script>
     <script defer src="clcr_measured_clearance_reference_data.js?v=1"></script>
     <script defer src="clcr_measured_clearance_reference.js?v=1"></script>
     <script defer src="clcr_result_presentation.js?v=7"></script>
-    <script defer src="inline_kalkulator_klirens_02.js?v=17"></script>
+    <script defer src="inline_kalkulator_klirens_02.js?v=18"></script>
     <!-- Ujednolicona obsługa wyboru formuły w kalkulatorze klirensu/eGFR. -->
     <script defer src="inline_kalkulator_klirens_03.js?v=1"></script>
 <!-- Sekcja interpretacji AI z opisem i przyciskiem.  Umieszczamy ją w kontenerze
@@ -1083,7 +1088,7 @@
 </footer>
 
 <!-- 5. LOGIKA JS -->
-<script defer src="inline_kalkulator_klirens_04.js?v=22"></script>
+<script defer src="inline_kalkulator_klirens_04.js?v=23"></script>
 
 <!-- Moduł obsługi kliknięć listy dynamicznych wyników wyszukiwania -->
 <script defer src="inline_kalkulator_klirens_05.js?v=1"></script>
@@ -1681,7 +1686,7 @@ document.addEventListener('DOMContentLoaded', () => {
          wczytywane w tym formularzu. Plik userData.js korzysta z localStorage. -->
         <script src="userData.js?v=6" defer></script>
 <script src="ios26-ui.js?v=45" defer></script>
-<script defer src="inline_kalkulator_klirens_07.js?v=11"></script>
+<script defer src="inline_kalkulator_klirens_07.js?v=12"></script>
 <script defer src="vilda_down_syndrome.js?v=5"></script>
 <script defer src="vilda_anorexia_risk.js?v=4"></script>
 <!-- Tablice siatek zespolu Downa przed app.js: app.js przekazuje je silnikowi BMI (P-DS-1). -->
@@ -1942,6 +1947,6 @@ document.addEventListener('DOMContentLoaded', () => {
 </script>
 <script defer src="inline_kalkulator_klirens_08.js?v=1"></script>
   <script defer src="inline_kalkulator_klirens_09.js?v=1"></script>
-  <script defer src="clcr_ui_workflow.js?v=21"></script>
+  <script defer src="clcr_ui_workflow.js?v=22"></script>
 </body>
 </html>

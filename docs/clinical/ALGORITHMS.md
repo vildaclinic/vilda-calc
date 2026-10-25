@@ -6844,6 +6844,132 @@ i `klirens-fena-offline.spec.mjs` wywołują kod produkcyjny z fikcyjnymi
 danymi. Wyniki wykonań oraz commit/PR podaje opis PR. Akceptacja
 polityki i zielone testy nie stanowią nowej walidacji klinicznej.
 
+#### P-KLIRENS-FEK-2026-10-25 — cztery stężenia, zakresy wieku i zachowany kontekst
+
+Właściciel zaakceptował 25.10.2026
+[makietę przed/po na desktopie i telefonie](https://vilda-fek-audyt-20261025.maciej-flader.chatgpt.site)
+oraz kodowanie z naprawą potwierdzonych błędów. Źródło makiety:
+`8af3bac625a0395d12928dd65368e35382590e0f`. Zakres: `FEK_spot`;
+FECl i kolejne obliczenia pozostają osobnymi etapami audytu.
+Pełne źródła, populacje, luki i polityka: [FEK.md](FEK.md).
+
+**Wpływ kliniczny:** równanie
+`FEK [%] = 100 × U_K × S_Cr / (S_K × U_Cr)` oraz przelicznik Cr
+**1 mg/dL = 88,4 µmol/L** pozostają zachowane. Zmienia się precyzja
+prezentacji i zapisu, dostępność orientacyjnych porównań według wieku
+oraz obsługa danych i kontekstu. Wcześniej 6,25% stawało się zapisem
+6,3%, 9,99% zapisem 10%, a 0,01% zerem. Nowe wpisy zachowują liczbę
+i ocenę z chwili zapisu. Naprawiane są jednostkowo niespójne limity Cr,
+mieszanie starego K po niepełnym odtworzeniu sesji, brak kontekstu
+w zapisie oraz utrata przecinka lub znaku w starszej historii.
+Nie jest to wyłącznie zmiana wyglądu. Utraconej precyzji dawnych wpisów
+nie odtwarza się ani nie interpretuje ich nową normą.
+
+**Źródła i populacje, odczyt 25.10.2026:**
+
+- Lumbreras, Morales García i członkowie **AENP/SEQCML**, Rev Esp Pediatr.
+  **2020;75(Supl.1):5–24**, pełny
+  [konsensus, sekcja 1.3 i tabela 3, s. 12](https://semedlab.es/wp-content/uploads/2026/02/litiasis_documento-consenso_aenp.pdf#page=12):
+  zdrowe niemowlęta **1–12 miesięcy, P3–P97 3,8–27,4%**;
+  zdrowe dzieci **1–15 lat, P3–P97 4,6–20,4%**. To percentyle,
+  nie średnia ±SD i nie próg rozpoznania utraty potasu.
+  Nie rozciąga się źródła na noworodki lub cały wiek 15–<16 lat.
+  Przy 12 miesiącach źródłowe grupy nakładają się: dwa osobno nazwane
+  zakresy pozostają bez jednego werdyktu.
+- Rodríguez-Soriano i wsp., *Pediatr Nephrol.* **1990;4:105–110**,
+  [DOI 10.1007/BF00858819](https://link.springer.com/article/10.1007/BF00858819):
+  zweryfikowany abstrakt, 473 zdrowych dzieci od 1 miesiąca do 15 lat;
+  pełny protokół za subskrypcją. Nie przedstawia się go jako w całości
+  przeczytanego źródła wdrożeniowego; zakresy FEK pochodzą z pełnej
+  tabeli konsensusu, który cytuje to badanie.
+- Elisaf i Siamopoulos, *Postgrad Med J.* **1995;71:211–212**,
+  [DOI 10.1136/pgmj.71.834.211, pełne obie strony](https://pmc.ncbi.nlm.nih.gov/articles/PMC2398075/):
+  312 zdrowych osób **21–69 lat**, świeży mocz i krew żylna,
+  K oznaczane fotometrią płomieniową, Cr metodą Harre.
+  **4–16% to zakres obserwowany, nie przedział referencyjny P3–P97.**
+  S_K 3,6–5,2 mmol/L i S_Cr 53–124 µmol/L ograniczają informacyjne
+  porównanie do opisu grupy; nie potwierdzają prawidłowego GFR pacjenta.
+- [RCH/PIC Hypokalaemia](https://www.rch.org.au/clinicalguide/guideline_index/hypokalaemia/),
+  Background, październik 2024, oraz
+  [Hyperkalaemia](https://www.rch.org.au/clinicalguide/guideline_index/Hyperkalaemia/),
+  Background, sierpień 2024: kontekst S_K <3,5 i ograniczenia wieku.
+  Przyjęte pediatryczne okno porównania **3,5–5,0 mmol/L** jest jawną
+  polityką dostępności zdrowego porównania FEK, nie normą K dla każdego
+  wieku. K 5,1 nie jest tu automatycznym rozpoznaniem hiperkaliemii.
+- [KDIGO Controversies Conference, finalna publikacja 2020](https://kdigo.org/wp-content/uploads/2018/04/KDIGO-Potassium-Management-Final-publication.pdf),
+  DOI 10.1016/j.kint.2019.09.018, s. 43–44, oraz
+  [Maciel i wsp. 2014](https://pmc.ncbi.nlm.nih.gov/articles/PMC4103940/),
+  DOI 10.5935/0103-507x.20140021, pełne metody i dyskusja:
+  zależność FEK od kaliemii, czynności nerek, podaży i leków;
+  wzrost FEK w AKI nie oznacza wzrostu całkowitego wydalania K.
+
+Źródła i reguły są danymi w `clcr_fek_reference_data.js`, polityka
+**`FEK_AGE_CONTEXT_2026_10`, wersja 1**. `VildaClcrFek.evaluate(input, policy)`
+w `clcr_fek.js` przyjmuje politykę jako argument. Dane oceny zachowują
+populację i pochodzenie zakresu; renderer nie tworzy własnych norm.
+
+**Minimalny formularz i założenia:** K i Cr w moczu oraz K i Cr we krwi;
+K ma stałe mmol/L (liczbowo równoważne mEq/L), obie Cr mają jawne
+mg/dL, µmol/L lub mmol/L. U_K = 0 jest poprawne; pozostałe stężenia
+muszą być dodatnie, wszystkie skończone. Nie ma limitu opartego na samej
+liczbie przed konwersją ani obcinania wyniku do 100%. Wiek jest używany
+wyłącznie do dostępnego porównania i nie staje się piątą daną do liczby.
+Nie dodaje się rutynowej ankiety o AKI, stabilności, IFCC/IDMS lub leczeniu.
+Wspólna próbka moczu i równoczesna krew są opisanym założeniem; znana
+sprzeczność nadal blokuje i zachowuje pierwszeństwo po zmianie wzoru
+oraz odtworzeniu. Niezależny protokół TmP/GFR nie staje się potwierdzony
+przez korektę FEK. FEK nie wymaga domyślnego „bez AKI” do samej liczby.
+
+**Jedna karta i ograniczenia:** przy jednym pokrytym profilem przedziale
+wieku, S_K 3,5–5,0 i braku znanego czynnika wykluczającego zdrowe
+porównanie karta pokazuje orientacyjną „Normę dla wieku”. Końce P3/P97
+są zaliczane do zakresu, a odchylenie jest bursztynowe. Sam opis „w zakresie”
+nie potwierdza zdrowia ani odpowiedniej odpowiedzi nerek w hipokaliemii.
+Przy S_K <3,5, znanej PChN, AKI, diuretyku lub innym zachowanym czynniku
+nie nadaje się uspokajającego werdyktu. Wszystkie równoczesne ograniczenia
+pozostają przy tej samej liczbie. Zakres dorosłych jest neutralną informacją
+„Zakres w badaniu dorosłych”, bez normy całego życia lub kategorii G.
+Nie nadano jednej automatycznej granicy 6,5/9,29/9,8/10% utraty nerkowej.
+
+Dokładność istniejącego wieku jest zachowana: same ukończone lata
+oznaczają przedział do następnych urodzin, podane ukończone miesiące
+przedział do kolejnego miesiąca. Nie dopisuje się dokładności daty
+urodzenia. Cały przedział musi być objęty źródłem; przy nakładających się
+grupach pokazuje się osobne alternatywy. Brak profilu lub niepewność
+wychodząca poza jego granice nie blokują liczby ani nie wymuszają pytania.
+
+**Precyzja i trwałość:** porównanie używa dokładnego ilorazu dziesiętnych
+danych i jednostek, przed zaokrągleniem; 4,5999 nie staje się 4,6 z etykietą
+„poniżej”. Mały dodatni wynik nie jest zerowany. Snapshot **`clcr-fek`,
+wersja 1**, zachowuje pełną liczbę, dokładny ułamek, tekst prezentacji,
+cztery wejścia i jednostki, kontekst wieku, znane fakty, pochodzenie
+założeń/potwierdzeń, źródła, politykę i ocenę z chwili zapisu.
+`outOfRange` jest boolean tylko dla aktywnego pediatrycznego porównania;
+w pozostałych sytuacjach zachowuje `null`. Odczyt historii nie stosuje
+dzisiejszych norm ani danych pacjenta. Starszy przecinek i znak nierówności
+pozostają zachowane; granicy `<1` nie rysuje się jako dokładnego pomiaru 1.
+Cienka sesja czyści nieobecne operandy zamiast dziedziczyć poprzedni potas.
+
+**Syntetyczne kontrakty produkcyjne:**
+
+| Wejście / stan | Oczekiwany wynik |
+|---|---|
+| U_K 20, S_K 4 mmol/L; S_Cr 1, U_Cr 100 mg/dL; wiek 8 lat | Dokładnie 5%, orientacyjny zakres 4,6–20,4%. |
+| U_K 30, S_K 4; S_Cr 88,4 µmol/L, U_Cr 8,84 mmol/L | 7,5%, to samo co przy S_Cr 1 i U_Cr 100 mg/dL. |
+| U_K 18,3996 / 18,4 / 81,6004; pozostałe 4 / 1 / 100 | 4,5999 / 4,6 / 20,4001%; dokładna strona granicy zachowana. |
+| U_K 0,04 / 0 / puste; pozostałe 4 / 1 / 100 | 0,01% / 0% / brak liczby; zero w mianowniku blokuje. |
+| Wiek 6 miesięcy / 12 miesięcy / bez właściwego pokrycia | 3,8–27,4% / dwa osobno nazwane zakresy, bez wspólnej oceny / liczba bez normy. |
+| Hipokaliemia, FEK w zdrowym przedziale, znane PChN i diuretyk | Brak uspokajającego statusu, wszystkie ograniczenia zachowane. |
+| Dorosły 45 lat, S_K 4, S_Cr 88,4 µmol/L | 4–16% informacyjnie, neutralna karta i `outOfRange:null`. |
+| Równoważne U_Cr 50001 µmol/L lub 50001/88,4 mg/dL | Ta sama kwalifikacja, bez limitu zależnego od jednostki. |
+| Odtworzenie sesji bez K po pełnym poprzednim komplecie | Brak mieszania danych; wcześniejsze K nie staje się operandem. |
+
+Regresje `klirens-fek-engine.test.mjs`, `klirens-fek-session.test.mjs`,
+`klirens-fek-save.test.mjs`, E2E `klirens-fek-audit.spec.mjs`
+i `klirens-fek-offline.spec.mjs` mają wywoływać rzeczywisty kod produkcyjny
+z fikcyjnymi danymi. Wyniki kontroli, commit i PR podaje opis PR.
+Akceptacja polityki i zielone testy nie są nową walidacją kliniczną FEK.
+
 #### Zakres i ograniczenia
 
 | Obszar | Wdrożona reguła | Najważniejsze ograniczenia |
@@ -6853,7 +6979,7 @@ polityki i zielone testy nie stanowią nowej walidacji klinicznej.
 | Noworodek | Oszacowanie `0,31 × długość [cm] / Scr [mg/dL]` dla donoszonego noworodka w 0.–28. dniu życia. Aktualna masa >2,5 kg pozostaje konserwatywną bramką aplikacji powiązaną z kryteriami HERO, nie członem równania. Podanie techniki jest opcjonalne, a IDMS może być jawnym założeniem obliczenia; nie dopisuje się metody enzymatycznej. | Wcześniactwo, masa ≤2,5 kg, 29. dzień życia, znane AKI/szybka zmiana, jednoznaczny non-IDMS lub znany Jaffe blokują wynik. JASN zawiera meta-analizę i sprawdzenie k w 43 noworodkach HERO, opisanych następnie w Pediatr Nephrol jako ta sama kohorta; większa walidacja pozostaje potrzebna. Wynik jest neutralny, bez kategorii G, normy 90 i pobocznego BSA. Istniejąca uwaga dla wieku <3 dni jest widoczna przy liczbie; ocena wymaga dnia życia i trendu Scr. |
 | CrCl i BSA | `cl24` po P-KLIRENS-CL24 wymaga Scr, Ucr, objętości i rzeczywistego czasu; prawidłowa pełna zbiórka jest jawnym założeniem przy braku przeciwnych danych. Nazwany profil PathWest obejmuje 3–<120 lat, od 19 lat zależy od płci. Granice źródłowe na 1,73 m² są przeliczane przez BSA/1,73 do jednostki wyniku mL/min. BSA używa Haycocka przed 18. rokiem i Du Bois od 18 lat. | Znany błąd zbiórki lub inne przeciwwskazanie nie jest usuwane przez założenie. Porównanie z dobowym profilem przy innym czasie jest jawnie orientacyjne, bez twierdzenia o walidacji krótkich protokołów. Brak normy nie blokuje liczby. Nie nadaje się G ani nie wyklucza PChN. Cockcroft–Gault nadal jest eCrCl od 18 lat z masą rzeczywistą, bez automatycznej normy/G; `cg` zachowuje wiek dokładny, `cg_norm` używa ukończonych lat. Kanoniczny wiek i historia nie są przepisywane. |
 | KDIGO G/A, ACR i PCR | Kategorie są wyznaczane z wartości niezaokrąglonej. ACR po P-KLIRENS-ACR przyjmuje iloraz stężeń ze wspólnej próbki (jawne założenie, znana sprzeczność blokuje) albo gotowy raport; kategorię nadaje w natywnej osi od 2 lat według jawnej polityki aplikacji, także dla próbki losowej z zaleceniem potwierdzenia podwyższenia. Znane czynniki przejściowe wstrzymują kategorię ACR; brak wieku lub wiek <2 nie blokuje liczby, ale wyklucza dorosłą normę. PCR po P-KLIRENS-PCR wymaga dwóch stężeń albo gotowego raportu; wspólna próbka jest jawnym założeniem, znana sprzeczność blokuje iloraz. Orientacyjne odniesienia: 6–<24 m <500 mg/g, 24 m–<18 lat <200, dorośli <150; natywne progi SI pozostają odrębne. Znane czynniki przejściowe zachowują ograniczenia i sygnał liczbowego przekroczenia. Poniżej 6 m lub bez wieku nie stosuje się zastępczej normy. | Kategorie G i A są wstrzymane przed 2. rokiem życia. Kategoria zakresu G nie jest pokazywana przy znanym AKI, znanej niestabilności lub jednoznacznie niezgodnym standardzie używanego markera; przy braku przeciwnych danych może opierać się na jawnych założeniach aplikacji. Sama kategoria nie rozpoznaje PChN bez kryterium przewlekłości i innych właściwych kryteriów. ACR nie otrzymuje obowiązkowej ankiety o AKI/IDMS/IFCC. |
-| Frakcje wydalane i TmP/GFR | Analit i kreatynina muszą pochodzić z tej samej próbki moczu, a próbka krwi być równoczesna. FENa po P-KLIRENS-FENA wymaga czterech stężeń; pochodzenie próbek jest jawnym założeniem przy braku znanej sprzeczności. Dorosłe <1% / >2% to warunkowe progi pomocnicze w AKI, bez normy dla wieku lub automatycznej diagnozy. TmP/GFR używa drugiego porannego moczu po nocy na czczo; przed 19. rokiem stosowana jest ścieżka pediatryczna, od 19. roku algorytm Waltona–Bijvoeta/Payne’a z gałęzią dla TRP >0,86. | FENa pozostaje neutralna; dzieci i nieznany wiek nie otrzymują zastępczej normy. Znane PChN/diuretyki ograniczają pomoc interpretacyjną. FENa nie wymaga założenia stabilności/braku AKI ani IFCC. TmP/GFR nie jest liczone z DZM. Jego automatyczne zakresy laboratoryjne pozostają wyłączone do czasu wersjonowanego profilu metody i lokalnej walidacji. |
+| Frakcje wydalane i TmP/GFR | Analit i kreatynina muszą pochodzić z tej samej próbki moczu, a próbka krwi być równoczesna. FENa po P-KLIRENS-FENA wymaga czterech stężeń; pochodzenie próbek jest jawnym założeniem przy braku znanej sprzeczności. Dorosłe <1% / >2% to warunkowe progi pomocnicze w AKI, bez normy dla wieku lub automatycznej diagnozy. FEK po P-KLIRENS-FEK wymaga czterech stężeń i może otrzymać orientacyjne pediatryczne P3–P97 AENP/SEQCML 2020 przy właściwym pokryciu wieku oraz kontekście; dorosłe 4–16% pozostaje zakresem obserwowanym. TmP/GFR używa drugiego porannego moczu po nocy na czczo; przed 19. rokiem stosowana jest ścieżka pediatryczna, od 19. roku algorytm Waltona–Bijvoeta/Payne’a z gałęzią dla TRP >0,86. | FENa pozostaje neutralna; dzieci i nieznany wiek nie otrzymują zastępczej normy. Znane PChN/diuretyki ograniczają pomoc interpretacyjną. FENa i liczba FEK nie wymagają założenia stabilności/braku AKI ani IFCC. W FEK hipokaliemia i znane PChN/AKI/diuretyki wykluczają uspokajającą klasyfikację według zdrowej populacji; przy 12 mies. dwa zakresy pozostają bez wspólnego werdyktu. TmP/GFR nie jest liczone z DZM. Jego automatyczne zakresy laboratoryjne pozostają wyłączone do czasu wersjonowanego profilu metody i lokalnej walidacji. |
 | Kamica, Ca/Cr, Ox/Cr i Cit/Cr w próbce moczu | EAU Urolithiasis 2026 rozdziela dorosłe mmol/24 h od pediatrycznej interpretacji wapnia w mmol/kg/24 h. `CaCr_spot` po P-KLIRENS-CACR stosuje osobny dwustronny profil Mayo CACR3 od 1 miesiąca do dokładnego wieku 83 lat. `OxCr_spot` po P-KLIRENS-OXCR stosuje Fimlab P95 od 1 miesiąca do dokładnie 17 lat i osobny Newcastle 2–83 µmol/mmol dla >17 lat, z jawną podstawą masową przy konwersji. `CitCr_spot` po P-KLIRENS-CITCR stosuje PathWest: >300 µmol/mmol od urodzenia do <3 lat i >100 od 3 do <18 lat, bez górnej granicy; od ≥18 lat osobny Newcastle: mężczyźni 40–330, kobiety 110–550 µmol/mmol. Pozostałe pediatryczne anality pozostają liczbowe. Progi DZM wymagają dokładnie 24-godzinnej bieżącej zbiórki i właściwego kontekstu. | Nazwane zakresy laboratoryjne są orientacyjne, nie potwierdzają metody pacjenta i nie rozpoznają samodzielnie hiperkalciurii, PH lub kamicy. W Ox/Cr zmiana źródła po 17 latach nie jest fizjologiczną krzywą; brak wieku, nieobjęta populacja lub nieznana podstawa masowa nie otrzymują zastępczej normy. W Cit/Cr zmiana źródła w wieku 18 lat również nie jest krzywą; brak płci dorosłego nie tworzy wspólnego przedziału. Nie miesza się progów tych profili z EAU ani z DZM. EAU zaleca dwie kolejne zbiórki w swoistej ocenie metabolicznej. |
 | Hemodializa | Moduł dotyczy wyłącznie pojedynczej sesji IHD. spKt/Vurea Daugirdasa II używa źródłowych par GFAC dla 2–7 sesji/tydz. i rzeczywistego PIDI; URR i eKt/V są liczone z niezaokrąglonych danych, z uwzględnieniem dostępu AV/CVC, protokołu próbek i aktualności Kru. | Moduł jest niedostępny przed 2. rokiem życia, a w wieku 2–17 lat wymaga protokołu slow-flow. Dla 5–7 sesji/tydz. sesja >300 min jest blokowana i wymaga formalnego modelowania mocznika. Pary GFAC 2–7 pochodzą z symulacji, a walidację FHN opisano dla schematów 3, 4 i 6×/tydz. Progi 1,2/1,4 są stosowane tylko w opisanym profilu dorosłej IHD 3×/tydz.; poza nim oraz w pediatrii wynik techniczny nie otrzymuje dorosłej kategorii adekwatności. |
 
