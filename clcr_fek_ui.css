@@ -249,6 +249,8 @@ html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .fek-proposal-
 }
 @media (max-width: 360px) {
   html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .fek-proposal-card .clcr-result-value { font-size: 32px !important; }
+  /* Preserve a full near-boundary result with wider fallback font metrics. */
+  html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .fek-proposal-card .clcr-result-value[data-long="true"] { font-size: 20px !important; }
   html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .fek-proposal-card .fek-reference-value { font-size: 18px !important; }
   html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .fek-proposal-card .fek-reference-value[data-no-reference="true"] {
     font-size: 14px !important;

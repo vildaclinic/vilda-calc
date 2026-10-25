@@ -140,10 +140,16 @@ async function geometry(page, width) {
         const node = document.querySelector('#clcrResultReport .clcr-result-card .clcr-result-value');
         if (!node) return null;
         const range = document.createRange(); range.selectNodeContents(node);
+        const rects = [...range.getClientRects()].filter(rect => rect.width > 0);
+        const bounds = range.getBoundingClientRect(), container = node.getBoundingClientRect();
+        const style = getComputedStyle(node);
         // Glyph ink can exceed CSS line-height for the current fallback font.
         // Distinct text-fragment rows identify actual wrapping without relying
         // on font-specific glyph bounds.
-        return { rows: new Set([...range.getClientRects()].filter(rect => rect.width > 0).map(rect => Math.round(rect.top))).size };
+        return { rows: new Set(rects.map(rect => Math.round(rect.top))).size,
+          text: node.textContent.trim(), fontFamily: style.fontFamily, fontSize: style.fontSize,
+          textLeft: bounds.left, textRight: bounds.right, containerLeft: container.left, containerRight: container.right,
+          rects: rects.map(rect => ({ top: rect.top, bottom: rect.bottom, left: rect.left, right: rect.right })) };
       })(),
     };
   });
@@ -164,7 +170,7 @@ async function geometry(page, width) {
     expect(field.x, field.id).toBeGreaterThanOrEqual(0);
     expect(field.right, field.id).toBeLessThanOrEqual(width + 1);
   }
-  if (result.numberLine) expect(result.numberLine.rows).toBe(1);
+  if (result.numberLine) expect(result.numberLine.rows, JSON.stringify(result.numberLine)).toBe(1);
   if (width < 980) expect(result.report.top - result.clear.bottom).toBeGreaterThanOrEqual(20);
   else expect(Math.abs(result.report.top - result.activePanel.top)).toBeLessThanOrEqual(1);
   expect(Boolean(result.saveDate)).toBe(Boolean(result.saveButton));
@@ -219,6 +225,32 @@ for (const width of [1440, 390, 320]) {
     await page.locator('#U_K_spot').fill('81.6004');
     await expectResult(page, { raw: 20.4001, status: 'above', tone: 'warning' });
     sameWidths(initial, await geometry(page, width));
+    // CI's available fallback fonts have wider digits than the local font.
+    // Exercise that genuine browser constraint without rounding the value,
+    // widening the card or accepting clipping as a one-line result.
+    for (const [potassium, raw, shown, status] of [['18.3996', 4.5999, '4,5999', 'below'], ['81.6004', 20.4001, '20,4001', 'above']]) {
+      await page.locator('#U_K_spot').fill(potassium);
+      await expectResult(page, { raw, status, tone: 'warning', outOfRange: true });
+      const value = card(page).locator('.clcr-result-value');
+      const originalFont = await value.evaluate(node => {
+        const original = { value: node.style.getPropertyValue('font-family'), priority: node.style.getPropertyPriority('font-family') };
+        node.style.setProperty('font-family', 'monospace', 'important');
+        return original;
+      });
+      try {
+        const fallback = await geometry(page, width);
+        expect(fallback.numberLine.fontFamily).toContain('monospace');
+        expect(fallback.numberLine.text).toBe(shown);
+        expect(fallback.numberLine.textLeft).toBeGreaterThanOrEqual(fallback.numberLine.containerLeft - 0.5);
+        expect(fallback.numberLine.textRight).toBeLessThanOrEqual(fallback.numberLine.containerRight + 0.5);
+        sameWidths(initial, fallback);
+      } finally {
+        await value.evaluate((node, original) => {
+          if (original.value) node.style.setProperty('font-family', original.value, original.priority);
+          else node.style.removeProperty('font-family');
+        }, originalFont);
+      }
+    }
     await page.locator('#U_K_spot').fill('120');
     await openDetails(page);
     await expect(details(page)).toContainText(/AENP/);
