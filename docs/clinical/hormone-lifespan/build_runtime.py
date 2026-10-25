@@ -38,6 +38,8 @@ def build():
     insl3_age_source_policy = json.loads((ROOT / 'insl3-age-source-policy.json').read_text(encoding='utf-8'))
     female_tt_age_data = json.loads((ROOT / 'female-tt-age-data.json').read_text(encoding='utf-8'))
     female_tt_age_policy = json.loads((ROOT / 'female-tt-age-policy.json').read_text(encoding='utf-8'))
+    male_e2_age_data = json.loads((ROOT / 'male-e2-age-data.json').read_text(encoding='utf-8'))
+    male_e2_age_policy = json.loads((ROOT / 'male-e2-age-policy.json').read_text(encoding='utf-8'))
     female_gonadotropin_policy = json.loads((ROOT / 'female-gonadotropin-display-policy.json').read_text(encoding='utf-8'))
     female_gonadotropin_data = json.loads((ROOT / 'female-gonadotropin-display-data.json').read_text(encoding='utf-8'))
     female_gonadotropin_reference_policy = json.loads((ROOT / 'female-gonadotropin-reference-policy.json').read_text(encoding='utf-8'))
@@ -85,6 +87,8 @@ def build():
     insl3_age_source_policy_js = json.dumps(insl3_age_source_policy, ensure_ascii=False, indent=2)
     female_tt_age_data_js = json.dumps(female_tt_age_data, ensure_ascii=False, indent=2)
     female_tt_age_policy_js = json.dumps(female_tt_age_policy, ensure_ascii=False, indent=2)
+    male_e2_age_data_js = json.dumps(male_e2_age_data, ensure_ascii=False, indent=2)
+    male_e2_age_policy_js = json.dumps(male_e2_age_policy, ensure_ascii=False, indent=2)
     female_gonadotropin_policy_js = json.dumps(female_gonadotropin_policy, ensure_ascii=False, indent=2)
     female_gonadotropin_data_js = json.dumps(female_gonadotropin_data, ensure_ascii=False, indent=2)
     female_gonadotropin_reference_policy_js = json.dumps(female_gonadotropin_reference_policy, ensure_ascii=False, indent=2)
@@ -130,6 +134,8 @@ def build():
         f'const insl3AgeSourcePolicy = {insl3_age_source_policy_js};\n'
         f'const femaleTtAgeData = {female_tt_age_data_js};\n'
         f'const femaleTtAgePolicy = {female_tt_age_policy_js};\n'
+        f'const maleE2AgeData = {male_e2_age_data_js};\n'
+        f'const maleE2AgePolicy = {male_e2_age_policy_js};\n'
         f'const femaleGonadotropinPolicy = {female_gonadotropin_policy_js};\n'
         f'const femaleGonadotropinData = {female_gonadotropin_data_js};\n'
         f'const femaleGonadotropinReferencePolicy = {female_gonadotropin_reference_policy_js};\n'
@@ -167,6 +173,8 @@ def build():
         '  insl3AgeSourcePolicy: insl3AgeSourcePolicy,\n'
         '  femaleTtAgeData: femaleTtAgeData,\n'
         '  femaleTtAgePolicy: femaleTtAgePolicy,\n'
+        '  maleE2AgeData: maleE2AgeData,\n'
+        '  maleE2AgePolicy: maleE2AgePolicy,\n'
         '  femaleGonadotropinPolicy: femaleGonadotropinPolicy,\n'
         '  femaleGonadotropinData: femaleGonadotropinData,\n'
         '  femaleGonadotropinReferencePolicy: femaleGonadotropinReferencePolicy,\n'

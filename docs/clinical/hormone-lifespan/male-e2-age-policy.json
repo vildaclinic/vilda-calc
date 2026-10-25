@@ -1,0 +1,110 @@
+{
+  "schemaVersion": 1,
+  "kind": "educational-male-e2-age-comparison",
+  "version": "2026-10-25.1",
+  "sourceId": "madsen2022-male-estradiol-age",
+  "analyte": "estradiol",
+  "sex": "male",
+  "contextBasis": "current-patient",
+  "clinicalReferenceActivation": false,
+  "patientComparisonEnabled": true,
+  "notLaboratoryReference": true,
+  "noClinicalClassification": true,
+  "noHistoryWrite": true,
+  "fullAgeIntervalRequired": true,
+  "ordinaryOnly": true,
+  "interpolation": "pchip-between-published-p50",
+  "ageReferenceBasis": "entered-age-lower-bound",
+  "chartSelectionKey": "e2",
+  "allowedViews": [
+    "life",
+    "age"
+  ],
+  "displayUnits": [
+    "pmol/L",
+    "nmol/L",
+    "pg/mL",
+    "ng/L",
+    "ng/dL"
+  ],
+  "allowedAssayMethodIds": [
+    "lc-ms/ms",
+    "lc-ms-ms",
+    "lcmsms"
+  ],
+  "allowedSpecimens": [
+    "serum",
+    "surowica"
+  ],
+  "excludedCyclePhases": [
+    "follicular",
+    "midcycle",
+    "luteal",
+    "pregnancy",
+    "pregnancy_t1",
+    "pregnancy_t2",
+    "pregnancy_t3",
+    "postmenopause"
+  ],
+  "excludedReproductiveContexts": [
+    "pregnancy",
+    "postmenopause"
+  ],
+  "excludedPositiveFlags": [
+    "pregnancy",
+    "hormonalTreatment",
+    "stimulation",
+    "gnrha"
+  ],
+  "excludedTreatmentContexts": [
+    "hormonal",
+    "stimulation",
+    "gnrh-stimulation",
+    "hcg-stimulation"
+  ],
+  "excludedTreatmentFlags": [
+    "gnrha",
+    "sexSteroids",
+    "cocp",
+    "exogenousTestosterone"
+  ],
+  "allowedMeasurementKinds": [
+    "basal"
+  ],
+  "plot": {
+    "ageMin": 6,
+    "ageMax": 18,
+    "ageTicks": [
+      6,
+      9,
+      12,
+      15,
+      18
+    ],
+    "valueMin": 0,
+    "valueMax": 100,
+    "valueTicks": [
+      0,
+      20,
+      40,
+      60,
+      80,
+      100
+    ],
+    "unit": "pmol/L",
+    "independentOfPatient": true,
+    "sampleCount": 241
+  },
+  "knownExclusionPolicy": "Known hormonal therapy, GnRHa, stimulation, incompatible reported sample assay or material conservatively withhold this educational model comparison. Unknown facts do not become absence; no new laboratory RI or treatment-adjusted norms.",
+  "allowedTreatmentContexts": [
+    "none"
+  ],
+  "lowSourceAnnotation": {
+    "sourceValueThreshold": 0.58,
+    "sourceUnit": "pmol/L",
+    "sourceMethodId": "bgs2-ultrasensitive",
+    "note": "Ta część modelu leży poniżej oznaczalności metody użytej w publikacji.",
+    "notPatientLimit": true,
+    "notClinicalGate": true
+  }
+}

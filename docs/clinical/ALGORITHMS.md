@@ -22,6 +22,7 @@ Rejestr jest inwentaryzacją techniczną. Nie nadaje opisanym modułom statusu w
 | LAB-INHIBIN-B | Inhibina B: wiek, minipuberty i kontekst dorosłych | `vilda_lab_inhibin_b_data.js`, `vilda_lab_inhibin_b.js`, wspólne UI i snapshot | `lab-inhibin*.test.mjs`, E2E `lab-inhibin-b.spec.mjs` | orientacyjne zakresy źródłowe; ograniczenia i polityki w `INHIBIN_B.md`; akceptacja kliniczna właściciela przed scaleniem |
 | LAB-TT-MAYO | Testosteron całkowity: M według wieku/G, F według wieku od 6 miesięcy | `vilda_lab_testosterone_data.js`, `vilda_lab_testosterone.js`, `vilda_lab_testosterone_units.js`, wspólne UI i snapshot | `lab-testosterone*.test.mjs`, E2E `lab-testosterone*.spec.mjs`; wyniki uruchomień w PR | etap 3 M i pierwsza partia F; źródła, luki i polityki w `TESTOSTERONE.md`; końcowy przegląd kliniczny właściciela przed scaleniem |
 | HORMONE-FEMALE-TT-AGE | TT dziewcząt 6–18: osobna mediana modelu i punkt wyniku | `vilda_female_tt_age.js`, `vilda_female_tt_age_ui.js`, osobne dane/polityka pakowane do runtime | `female-tt-age.test.mjs`, E2E `lab-female-tt-age*.spec.mjs`; wyniki w PR | zakres zaakceptowanej makiety 24.10.2026; poza 85 zwykłymi profilami, bez nowych RI/SDS/historii; [kontrakt](hormone-lifespan/FEMALE_TT_AGE.md) |
+| HORMONE-MALE-E2-AGE | E2 chłopców 6–18: osobna mediana modelu i punkt wyniku, z ograniczeniem niskiego końca | `vilda_male_e2_age.js`, `vilda_male_e2_age_ui.js`, osobne dane/polityka pakowane do runtime | `male-e2-age.test.mjs` oraz regresje adaptera/UI/PWA; wykonane wyniki w PR | zaakceptowana makieta 25.10.2026; pełne [6,18], bez podłogi LLOQ i nowych RI/SDS/historii; [kontrakt](hormone-lifespan/MALE_E2_AGE.md) |
 | LAB-HISTORY | Historia i porównanie zapisanych wyników badań (model bez UI) | `vilda_lab_history.js` | `lab-history-view.test.mjs`, `lab-history-vault.test.mjs` | test regresyjny modelu; moduł jeszcze nieładowany przez strony (PR1 planu historii) |
 | LAB-PANELS | Panele i interpretacje laboratoryjne | `lab_clinical_panels.js`, `lab_pin_result.js` | kontrola składni; brak dedykowanej regresji interpretacji klinicznych | wysoki priorytet; brak pełnego pokrycia klinicznego |
 | GH-IGF | Dawkowanie i monitorowanie GH/IGF-1 | `gh_igf_therapy.js`, `gh_therapy_monitor.js`, `gh_therapy_segments.js`, `vilda_gh_opakowania_dane.js`, `vilda_gh_opakowania.js`, `vilda_gh_dawka_dane.js`, `vilda_gh_dawka.js` | kontrola składni; testy PRO dotyczą uprawnień, nie dawkowania ani terapii; liczba wkładów, wstrzykiwaczy i fiolek: `gh-opakowania-waznosc` (Vitest + E2E, P-GH-WAZNOSC); dawka podawana, krok i limit jednego wstrzyknięcia: `gh-dawka-podawana` (Vitest + E2E, P-GH-DAWKA-PODAWANA); Increlex — dawka na podanie, krok 0,1 mg, nie więcej niż 0,12 mg/kg: `gh-dawka-podawana` (Vitest + E2E, P-GH-INCRELEX-PODANIE); „Aktualna dawka” Increlex w Karcie pacjenta: `karta-gh-increlex-dawka` (E2E, P-GH-INCRELEX-KARTA); pozostałe widoki dawki Increlex w Karcie pacjenta: `karta-gh-increlex-widoki` (E2E, P-GH-INCRELEX-WIDOKI); tytuł wpisów Increlex: `karta-pacjenta-historia-automat` (Vitest) i `gh-dawka-podawana` (E2E, P-GH-INCRELEX-TYTUL); zalecenia dla pacjenta i liczba iniekcji z podziałem dawki: `gh-dawka-podawana` (Vitest) i `gh-iniekcje-zalecenia` (E2E, P-GH-INIEKCJE-ZALECENIA) | wysoki priorytet przeglądu klinicznego |
@@ -2625,6 +2626,73 @@ zakresu i zielone testy nie są walidacją kliniczną.
 
 Pełne źródła, SHA-256, liczby i ograniczenia:
 [FEMALE_TT_AGE.md](hormone-lifespan/FEMALE_TT_AGE.md).
+
+### HORMONE-MALE-E2-AGE — osobna mediana E2 chłopców 6–18, 2026-10-25
+
+**Decyzja i wpływ kliniczny:** właściciel zaakceptował prywatną makietę
+desktopową/mobilną i polecił wdrożenie („jest ok, koduj”). Osobna karta
+podaje P50 modelu Madsen i zestawia z dokładnym bieżącym wynikiem. To
+zamierzona nowa informacja medyczna, bez nowych RI, SDS, diagnoz,
+ilorazów wynik/P50 lub historii. Istniejące Mayo/Tietz i konwersje są
+niezależne; karta nie klasyfikuje normy z odległości od modelu.
+
+**Źródło i pochodzenie:** pełny Madsen 2022, DOI
+[10.1210/clinem/dgac155](https://doi.org/10.1210/clinem/dgac155), Methods,
+tabela 1, Results/ryc. 1, Discussion; Supplemental Table 1 **v1**, DOI
+[10.6084/m9.figshare.17153336.v1](https://doi.org/10.6084/m9.figshare.17153336.v1),
+`LCMSMS hormones!AA19:AD31`, M w AC19:AC31. Zera z-score/P50 odwracają
+jawne `LN(SI*1e6)` jako `exp(M)/1e6` pmol/L. To 13 modelowych P50,
+nie empiryczne mediany roczników lub średnie arytmetyczne. Nie importujemy
+przykładu z błędnym mianownikiem L37, L/S, SDS lub RI suplementu.
+
+Norweskie przekrojowe BGS2 (6–<16) i Fit Futures (15–18), surowica
+LC-MS/MS, pobrania 08–14, model łączący stadia. M414/M491 oznaczają
+dostępne próbki kohort, nie wykazane N dopasowania E2 lub każdego wieku.
+Metody mają odrębne LLOQ **0,58 i 13 pmol/L**. Bertelsen 2020, DOI
+[10.1210/jendso/bvaa047](https://doi.org/10.1210/jendso/bvaa047), tabele
+2–3: LOD **<0,28**, nie dokładnie 0,28; CV 15% przy LOQ, a 9,1% przy
+QC 1,7. Nie są to błędy modelu P50. Reguła cenzury/imputacji dziecięcego
+E2 nie jest podana. Osobnego eksperymentu 62 próbek 13–224 u Bertelsen
+nie utożsamiamy z R²=0,96/średnią różnicą 1,7%/P=0,053 u Madsen,
+gdzie w tym miejscu brak N i zakresu porównania.
+
+**Kontrakt danych i prezentacji:** osobne `male-e2-age-data.json` oraz
+`male-e2-age-policy.json`, `VildaMaleE2Age.evaluate(data, policy, context)`,
+renderer `VildaMaleE2AgeUI`, runtime `maleE2AgeData`/`maleE2AgePolicy`.
+To blok poza niezmienionym rejestrem **85 zwykłych profili**. PCHIP
+produkcyjnych `referenceAt/sampleProfile` na 13 P50 jest zaakceptowaną
+interpolacją aplikacji, nie odzyskanym ciągłym fitem autorów.
+
+Pełny jawny przedział wieku musi pasować do **[6,18]**. Dokładne 18
+kwalifikuje, `[17,18)` też, `[18,19)` nie. Odczyt jest przy wpisanej
+dolnej granicy; brak upper/domknięcia nie tworzy dokładnego wieku.
+Stała oś 0–100 pmol/L ma równoważne konwersje, bez zależności od wyniku.
+P50 jest opisana jako mediana modelu z ≈ i dwiema cyframi znaczącymi.
+Niski fragment poniżej źródłowej 0,58 ma adnotację ograniczenia,
+nie podłogę, pasmo ufności lub nowy próg jakości w wieku 8/9 lat.
+Nieznana cenzura pozostaje ograniczeniem; przekroczenie LLOQ nie jest
+walidacją modelu. Nie przypisujemy źródłowego LLOQ próbce pacjenta.
+
+Exact 0 i 0,4 pozostają punktami; ponad osią strzałka z prawdziwą liczbą.
+Nierówność/LOD/LOQ nie tworzy dokładnego punktu lub imputacji. Wiek/płeć
+pochodzą z formularza, bez nowych pytań i zgadywania G. Znane GnRHa,
+leczenie/stymulacja lub niezgodna metoda/materiał wyłączają zestawienie;
+most dodatnich faktów leczenia musi uwzględniać także chłopców i bieżący
+anonimowy formularz. Tożsamość, lock, spóźniony kontekst i historia nie
+mogą zachować starej liczby. Brak nowego zapisu lub rozszerzenia RI.
+
+**Przypadki rzeczywistych funkcji:** M6/0,4 pmol/L → P50
+0,24701013272002922 i punkt 0,4, mimo źródłowego LLOQ; M12/20 → P50
+6,129050070456699, punkt 20 i niezależne istniejące Mayo; M12,5 →
+8,699139831867987; dokładne M18 → 73,8467861754196. `[18,19)`, M3/M75,
+brak wieku lub znane wyłączenie → brak tej mediany. `<5`, `<LOD`, `<LOQ`
+zachowują charakter wyniku, bez dokładnej kropki. Weryfikacja ma objąć
+źródłowe węzły, jednostki, adapter, RI bez zmian, bramki, UI i prawdziwy
+zimny restart PWA offline. Wykonane wyniki raportuje PR, a nie ta lista
+oczekiwań. Akceptacja zakresu i zielone testy nie są walidacją kliniczną.
+
+Pełne źródła, SHA-256 i ograniczenia:
+[MALE_E2_AGE.md](hormone-lifespan/MALE_E2_AGE.md).
 
 ### HORMONE-LH-FSH-STABLE-CURVES — stałe krzywe i dorosłe odniesienia, 2026-10-11
 

@@ -10,6 +10,12 @@ akceptacji makiety wdrożenie TT opisuje
 [nowy kontrakt](FEMALE_TT_AGE.md); męski E2 pozostaje kandydatem.
 Sam historyczny zapis kontroli z 24.10 nie aktywuje żadnej referencji.
 
+**Późniejsza decyzja 25.10.2026 — E2 chłopców:** po analizie niskich
+wartości i akceptacji prywatnej makiety właściciel polecił wdrożenie
+osobnej karty pełnego modelu [6,18]. Bieżący kontrakt:
+[MALE_E2_AGE.md](MALE_E2_AGE.md). Nie zmienia to historycznych hashy,
+liczby 85 zwykłych profili ani ustaleń audytu sprzed tej decyzji.
+
 Poniżej zachowano historię i jej pierwotne hashe. Sekcja „Kolejność
 pracy” opisuje wcześniejsze decyzje, a nie zadania ponownie do wykonania.
 
@@ -431,3 +437,26 @@ wdrożeniem zaakceptowanego porównania edukacyjnego. Akceptacja
 inhibiny B z 21.10 nie stanowiła akceptacji E2/Th1; ten wiersz grupowy
 uzyskał osobną zgodę 22.10 i nie rozstrzyga rozbieżności publikacji.
 Synchronizacja obu zakresów nie nadaje statusu walidacji klinicznej.
+
+## Późniejsza decyzja: E2 chłopców 6–18, 25.10.2026
+
+Po odrębnym przeglądzie Madsen/Bertelsen oraz makiety desktop/mobile
+właściciel zaakceptował wdrożenie („jest ok, koduj”). Osobna karta
+udostępnia 13 P50 modelu Madsen, opcjonalny dokładny punkt wyniku oraz
+PCHIP jako interpolację aplikacji. To nowa informacja edukacyjna,
+nie nowe RI, SDS, iloraz do P50, rozpoznanie lub zwykły 86. profil.
+Normy Mayo/Tietz, historia i konwersje pozostają niezależne.
+
+Zachowano całe [6,18], bez arbitralnego odcięcia 8/9 lat lub podłogi
+źródłowego LLOQ. P50 6/7 poniżej 0,58 i 8 blisko niej wymagają opisu
+ograniczenia; nieznana obsługa cenzury pozostaje jawna. Druga metoda
+Fit Futures ma LLOQ 13, a nie wspólny próg dla próbek wszystkich chłopców.
+LLOQ źródła nie jest LLOQ pacjenta. Dokładne 0 i 0,4 mogą mieć punkt;
+nierówności/LOD/LOQ nie tworzą dokładnej kropki. Stała oś 0–100 pmol/L.
+
+Cały jawny przedział musi pasować: dokładne 18 i `[17,18)` kwalifikują,
+`[18,19)`/3/75/brak wieku nie. Znane GnRHa i niezgodny bieżący kontekst
+blokują nowe zestawienie. Nie dopisano ankiety lub danych do historii.
+[Źródła, liczby i kontrakt](MALE_E2_AGE.md) opisują tę późniejszą decyzję;
+powyższy przegląd oraz JSON z 24.10 nadal opisują wcześniejszy etap.
+Dorosły męski E2 Frederiksen pozostaje osobnym kontrolowanym odczytem.
