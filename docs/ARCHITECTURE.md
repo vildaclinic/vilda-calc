@@ -162,6 +162,20 @@ Nie wolno przenosić pola między pamięcią sesji, pamięcią trwałą i danymi
   Rzeczywista aktywność w dialogu korzysta z `VildaAuthUI.recordActivity` obu
   dokumentów. Automatyczny render, resize i scroll nie podtrzymują sesji.
 
+Miejsce podglądu ma osobny cykl życia: oczekiwanie, gotowa siatka, potwierdzony
+brak zastosowania i błąd odczytu. Oczekiwanie na odtworzenie sesji, dane pacjenta
+lub zakończenie odświeżania nie oznacza braku zastosowania. W dwóch kolumnach
+neutralna karta rezerwuje wtedy miejsce siatki; Przypomnienia wracają dopiero po
+potwierdzeniu, że podgląd nie dotyczy bieżącego kontekstu. Dokument, w którym
+nie wybrano jeszcze żadnego pacjenta, nie rezerwuje miejsca nawet podczas
+odtwarzania formularza gościa. Błąd pozostaje w tym
+miejscu z możliwością ponowienia odczytu. Rezerwacja miejsca jest oddzielona od
+klasy aktywnej siatki, która steruje m.in. obsługą Enter w polach pomiaru.
+Dotychczasowy wykres można zachować podczas odświeżania wyłącznie przy nadal
+ważnym tokenie tej samej osoby i wizyty. Unieważnienie właściciela natychmiast
+usuwa obraz i zamyka powiększenie; neutralna karta nie zawiera danych pacjenta.
+Spóźniona odpowiedź odczytu nie może przywrócić starego obrazu ani Przypomnień.
+
 Moduły nie wywołują kolektora/zapisu pacjenta, nie uruchamiają przeliczenia i nie
 przechowują podglądu w magazynach przeglądarki. Odświeżenie po obliczeniu korzysta
 z `VildaUpdateHooks`; zmiana adnotacji ogłasza `vilda:centile-creator-changed`.
