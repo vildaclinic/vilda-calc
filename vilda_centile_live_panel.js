@@ -501,10 +501,13 @@
     timer = 0;
     if (!started) return;
     if (eligibility().status === 'ineligible') { clear('stale'); return; }
-    // Invalidation and erasing another patient's chart stay synchronous. Reads
-    // of form geometry wait until the restoration's input/change burst ends,
-    // rather than forcing layout between every pair of field/HTML writes.
-    if (discarded && slotStatus !== 'ineligible') showPending(awaitingEdit);
+    // Reserve a first applicable slot synchronously: another frame callback
+    // may paint Reminders before our queued refresh. Once reserved, geometry
+    // waits until the restoration's input/change burst ends, while erasing a
+    // previous patient's drawing remains synchronous.
+    if (slotStatus === 'ineligible') {
+      if (!prepare()) return;
+    } else if (discarded) showPending(awaitingEdit);
     scheduledIdentity = scheduledIdentity || !!(event && event.identityChanged);
     scheduledReady = scheduledReady || !!readySignal(event);
     if (!scheduleFrame) scheduleFrame = w.requestAnimationFrame(finishScheduledRefresh);

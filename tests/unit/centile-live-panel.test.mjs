@@ -706,6 +706,43 @@ describe('live panel controller — prompt readiness signals', () => {
 });
 
 describe('live panel controller — coalesced restoration geometry', () => {
+  it.each(['pending', 'eligible'])('the first patient reserves a previously ineligible slot synchronously when %s', async eligibility => {
+    const e = setup({ lifecycle: true, eligibility: 'ineligible' });
+    expect(e.mount.hidden).toBe(true);
+    expect(e.data.getResult).not.toHaveBeenCalled();
+    e.fieldset.rect.height = 900;
+    e.setEligibility(eligibility);
+    e.emit({ reason: 'patient-loaded', identityChanged: true });
+    // No animation frame or timer has run: the first applicable notification
+    // must already hide Reminders and size the neutral slot for this paint.
+    expect(e.mount.hidden).toBe(false);
+    expect(e.notice.hidden).toBe(false);
+    expect(e.classes.has('vilda-centile-live-reserved')).toBe(true);
+    expect(e.classes.has('vilda-centile-live-active')).toBe(false);
+    expect(e.mount.style['--vilda-centile-live-inline-height']).toBe('870px');
+    expect(e.api.getState()).toMatchObject({ slotStatus: 'pending', eligible: false });
+    expect(e.data.getResult).not.toHaveBeenCalled();
+    e.form.getClientRects.mockClear();
+    e.fieldset.getBoundingClientRect.mockClear();
+    for (let index = 0; index < 40; index++) e.emit({ reason: 'change', identityChanged: false });
+    expect(e.form.getClientRects).not.toHaveBeenCalled();
+    expect(e.fieldset.getBoundingClientRect).not.toHaveBeenCalled();
+    e.nextFrame(); e.runTimers(0);
+    expect(e.data.getResult).toHaveBeenCalledOnce();
+    e.pending[0].resolve({ status: 'ready', snapshot: e.snapshot() }); await flush();
+    expect(e.api.getState().slotStatus).toBe('ready');
+  });
+
+  it('a first patient notification still does not reserve the slot in one column', () => {
+    const e = setup({ lifecycle: true, eligibility: 'ineligible', columns: '800px' });
+    e.setEligibility('eligible');
+    e.emit({ reason: 'patient-loaded', identityChanged: true });
+    expect(e.mount.hidden).toBe(true);
+    expect(e.classes.has('vilda-centile-live-reserved')).toBe(false);
+    e.nextFrame(); e.runTimers();
+    expect(e.data.getResult).not.toHaveBeenCalled();
+  });
+
   async function mounted() {
     const e = setup({ lifecycle: true });
     e.pending[0].resolve({ status: 'ready', snapshot: e.snapshot() }); await flush();
