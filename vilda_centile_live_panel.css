@@ -4,7 +4,16 @@
 html.vilda-centile-live-reserved #remindersInline{display:none!important}
 /* This early guard follows the form's CSS breakpoint. The controller then uses
    measured columns, including embedded and phone-landscape layouts. */
-@media(min-width:700px){html.vilda-centile-live-booting #remindersInline{display:none!important}html.vilda-centile-live-booting #vildaCentileLiveMount[hidden]{display:block!important}}
+@media(min-width:700px){
+  html.vilda-centile-live-booting #remindersInline,
+  html.vilda-centile-live-booting #vildaCentileLiveMount:not([data-centile-live-state="error"])+#currentSummaryWrap{display:none!important}
+  html.vilda-centile-live-booting #vildaCentileLiveMount[hidden]{display:block!important}
+  html.vilda-centile-live-booting #vildaCentileLiveMount+#currentSummaryWrap{margin-top:var(--space-1)}
+}
+/* DocPro summary and comparison restore independently. Hide only the initial pending
+   summary; ready/error/ineligible states retain its normal visibility rules. */
+html.vilda-centile-live-reserved:not(.vilda-centile-live-active) #vildaCentileLiveMount[data-centile-live-state="pending"]+#currentSummaryWrap{display:none!important}
+html.vilda-centile-live-reserved #vildaCentileLiveMount+#currentSummaryWrap{margin-top:var(--space-1)}
 .vilda-centile-live-loading{box-sizing:border-box;position:relative;display:flex;flex-direction:column;height:var(--vilda-centile-live-inline-height,280px);margin:0;border:var(--border-hairline) solid #d5e5e1;border-radius:var(--radius-12);background:#fff;box-shadow:0 7px 30px #205b5310;color:#203f46;font-family:inherit;line-height:1.4;align-items:center;justify-content:center;gap:var(--space-12px);min-height:280px;padding:var(--space-20px)!important}
 .vilda-centile-live-loading>p{margin:0;color:#6b8580;font-size:13px;line-height:1.6;text-align:center}
 .vilda-centile-live-card .vilda-centile-live-retry,.vilda-centile-live-loading .vilda-centile-live-retry{align-self:center;position:absolute;bottom:36px;padding:var(--space-10px) var(--space-16px);border:var(--border-hairline) solid #bfd8d0!important;border-radius:var(--radius-6)!important;background:#f0f7f3!important;color:#28746d!important;font-size:12px;line-height:1.4}
