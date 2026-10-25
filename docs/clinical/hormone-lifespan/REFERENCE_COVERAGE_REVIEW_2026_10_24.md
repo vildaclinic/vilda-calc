@@ -13,6 +13,15 @@ JSON pozostają zapisem etapu audytu przed tą decyzją; nie zmieniają
 historycznych hashy i nie są polityką uruchamiającą męski E2 lub inne
 pozostałe propozycje.
 
+**Kolejna decyzja z 25.10.2026:** po analizie niskich E2 i osobnej
+makiecie właściciel zaakceptował wdrożenie karty E2 chłopców 6–18
+(„jest ok, koduj”). Zachowano pełny model [6,18], bez podłogi LLOQ
+lub progu 8/9 lat, z opisem niepewności niskiego końca i odrębnością
+norm laboratoryjnych. Aktualny kontrakt: [MALE_E2_AGE.md](MALE_E2_AGE.md).
+Numerowana rekomendacja i liczby poniżej pozostają zapisem audytu
+24.10 sprzed obu decyzji; nie są samodzielną polityką wykonawczą,
+nie zmieniają historycznych hashy i nie uruchamiają dorosłego E2.
+
 ## Wynik i rekomendowana kolejność
 
 Wspólny silnik nadal ma **85 profili**, dane `2026-10-22.2`, API `1.4.0`.

@@ -1162,6 +1162,47 @@ F12/0,65 ma P50 około 0,425, a niezależne Mayo nadal może wskazywać
 `within`. Źródło, wartości, ograniczenia i kontrakt:
 [FEMALE_TT_AGE.md](hormone-lifespan/FEMALE_TT_AGE.md).
 
+## E2 chłopców — osobna karta 6–18 lat, 25 października 2026
+
+Po analizie pełnych źródeł właściciel zaakceptował prywatną makietę
+desktopową/mobilną i polecił wdrożenie. Karta bieżącego męskiego E2
+udostępnia 13 P50 modelu wieku Madsen 2022 oraz dokładny punkt wyniku.
+Wiek i płeć pochodzą z formularza; nie ma nowych pytań lub selektorów.
+Nieznane G nie blokuje P50 i nie jest wyznaczane z wieku lub stężenia.
+Istniejące normy Mayo/Tietz, konwersje i historia mają własne kontrakty.
+
+Oryginalny suplement LMS **v1**, `LCMSMS hormones!AA19:AD31`, podaje
+13 rocznych węzłów 6–18; `exp(M)/1e6` daje pmol/L. PCHIP tych P50
+korzysta z produkcyjnego czytnika, ale jest interpolacją aplikacji,
+nie odzyskanym ciągłym LMS. `maleE2AgeData` i `maleE2AgePolicy` są
+osobnymi blokami poza niezmienionymi **85 zwykłymi profilami** i bez
+przypisania do `maleHormones`, żeńskiego E2 lub porównania płci.
+
+Model łączy norweskie przekrojowe BGS2/Fit Futures, surowicę LC-MS/MS
+i różne stadia. LLOQ metod źródłowych wynosi 0,58 i 13 pmol/L; reguła
+cenzury dziecięcego dopasowania nie jest opisana. P50 przy 6/7/8 latach
+to około 0,247/0,379/0,590. Pełne [6,18] zachowujemy bez podłogi LOQ
+lub granicy 8/9 lat. Delikatnie kreskowany niski fragment i notka opisują
+ograniczenie źródła, nie próg wyniku, CI lub koniec problemu przy 0,58.
+Dokładny LOD nie jest znany: Bertelsen podaje <0,28; CV 15% przy LOQ
+i 9,1% przy QC 1,7 nie są niepewnością estymatora P50.
+
+Cały jawny przedział wieku musi mieścić się w [6,18], bez domyślnego
+upper lub domknięcia. Dokładne 18 i `[17,18)` kwalifikują; `[18,19)`
+nie. Odczyt jest przy dolnej granicy wpisanego wieku, z ≈ i dwiema
+cyframi znaczącymi. 3/75 lat i brak wieku nie otrzymują zastępczej P50.
+Znane leczenie/GnRHa/stymulacja i niezgodny materiał/metoda blokują
+zestawienie. Bieżące fakty nie mogą przejść na dawną próbkę lub inną osobę.
+
+Stała oś **0–100 pmol/L** i jej równoważne konwersje nie zależą od wyniku.
+Jasny znacznik jest P50, czerwony rzeczywistym exact wynikiem; 0 i 0,4
+pozostają punktami także przy niskiej medianie. Źródłowe LOQ nie jest
+LOQ laboratorium pacjenta. Wysoki wynik ma strzałkę i prawdziwą liczbę;
+nierówności/LOD/LOQ nie tworzą dokładnego punktu. Bez nowych RI, SDS,
+ilorazu do P50, diagnoz lub zapisu. Źródła są początkowo zwinięte.
+M12/20 daje P50 około 6,129; M12,5 około 8,699.
+Pełne źródła i kontrakt: [MALE_E2_AGE.md](hormone-lifespan/MALE_E2_AGE.md).
+
 ## Żeński E2 — zwykły punkt mediany wieku, 17 października 2026
 
 Po odrębnym przeglądzie źródeł właściciel polecił uruchomić profil
