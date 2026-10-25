@@ -69,7 +69,8 @@ function setup({ working = true, framed = false, nestedSourceOnSave = false, sta
       documentElement: { classList: { contains: name => name === 'vilda-centile-live-active' && state.panelVisible } },
       querySelector: () => ({ value: state.source }) },
     VildaVault: vault,
-    VildaDataImportExport: { getApplyLoadedDataSequence: () => state.sequence },
+    VildaDataImportExport: { getApplyLoadedDataSequence: () => state.sequence,
+      isMainSessionRestorePending: () => !!state.mainSessionRestorePending },
     VildaPanelPacjent: { nieaktualny: () => state.stale, wlasciciel: () => state.owner },
     VildaDobAge: { restorePending: () => state.pending, readExactAge: () => state.exactAge,
       readMeasuredAtISO: () => '2026-10-23', showsSavedMeasurement: () => values.get('vildaDobAgeZapisV1') === '1' },
@@ -940,6 +941,7 @@ describe('Panel nowego pomiaru — jawny stan miejsca siatki', () => {
   });
 
   it.each([
+    ['deferred session', h => { h.state.mainSessionRestorePending = true; }],
     ['restore', h => { h.win.__vildaPersistRestoring = true; }],
     ['mirror', h => { h.win.__vildaLustroWpis = true; }],
     ['clear grace', h => { h.win.__vildaPersistClearUntil = Date.now() + 10000; }],
@@ -1025,6 +1027,7 @@ describe('Panel nowego pomiaru — jawny stan miejsca siatki', () => {
 
   it.each([
     ['DOB', h => { h.state.pending = true; }, 'dob'],
+    ['deferred session', h => { h.state.mainSessionRestorePending = true; }, 'restoring'],
     ['mirror', h => { h.win.__vildaLustroWpis = true; }, 'restoring'],
     ['restore', h => { h.win.__vildaPersistRestoring = true; }, 'restoring'],
     ['owner', h => { h.state.owner = 'fikcyjny-b'; }, 'ownership'],
@@ -1111,5 +1114,120 @@ describe('Panel nowego pomiaru — jawny stan miejsca siatki', () => {
     blurMeasurement(h, 'height');
     expect((await h.api.getResult()).snapshot.currentHeight).toBe(189);
     expect(h.writes).not.toHaveBeenCalled();
+  });
+});
+
+describe('Panel nowego pomiaru — oczekiwanie na główną sesję po logowaniu', () => {
+  it.each(['/index.html', '/docpro.html'])('%s nie odczytuje wykresu między auth-ready a wznowieniem pełnego restore', async route => {
+    const h = setup({ startup: true });
+    h.win.location.pathname = route;
+    h.state.restoreRegistered = true;
+    h.state.mainSessionRestorePending = true;
+    h.state.unlocked = false;
+    // Wspólny persistence już wstawił dane; pełna sesja nadal czeka na konto.
+    h.fields.age.value = '30';
+    expect(h.api.getEligibility()).toEqual({ status: 'pending', reason: 'startup' });
+    h.frame(); h.frame();
+    expect(h.api.getEligibility()).toEqual({ status: 'pending', reason: 'authentication' });
+    h.state.authBootReady = true;
+    expect(await h.api.getResult()).toEqual({ status: 'pending', reason: 'restoring' });
+    h.state.unlocked = true;
+    h.doc.emit('vilda:auth-boot-settled');
+    expect(await h.api.getResult()).toEqual({ status: 'pending', reason: 'restoring' });
+    expect(h.vault.getPatient).not.toHaveBeenCalled();
+    // Przejęcie przez właściwe apply jest synchroniczne; potem działa zwykła
+    // bariera restore, a następnie dokładnej daty urodzenia.
+    h.state.mainSessionRestorePending = false;
+    h.win.__vildaPersistRestoring = true;
+    h.fields.age.value = '13'; h.fields.height.value = '161';
+    h.fields.weight.value = '49'; h.state.source = 'PALCZEWSKA';
+    h.state.sequence += 1;
+    h.doc.emit('vilda:state-restored');
+    expect(await h.api.getResult()).toEqual({ status: 'pending', reason: 'restoring' });
+    h.state.pending = true; h.win.__vildaPersistRestoring = false;
+    expect(await h.api.getResult()).toEqual({ status: 'pending', reason: 'dob' });
+    h.state.pending = false; h.doc.emit('vilda:dob-restored');
+    h.doc.emit('vilda:main-session-restored');
+    const complete = await h.api.getResult();
+    expect(complete.status).toBe('ready');
+    expect(complete.snapshot).toMatchObject({ source: 'PALCZEWSKA', currentHeight: 161, currentWeight: 49 });
+    expect(h.api.isCurrent(complete.snapshot)).toBe(true);
+    expect(h.vault.getPatient).toHaveBeenCalledOnce();
+    expect(h.writes).not.toHaveBeenCalled();
+  });
+
+  it.each(['record', 'timeline'])('spóźniony %s nie publikuje danych wspólnego persistence po rozpoczęciu oczekiwania', async kind => {
+    const h = setup({ working: kind === 'record' }), pending = deferred();
+    const method = kind === 'record' ? 'getPatient' : 'listPatientTimelineEvents';
+    h.vault[method].mockReturnValueOnce(pending.promise);
+    const old = h.api.getResult();
+    for (let index = 0; index < 10; index++) await Promise.resolve();
+    expect(h.vault[method]).toHaveBeenCalledOnce();
+    h.state.mainSessionRestorePending = true;
+    pending.resolve(kind === 'record' ? patient() : [{ type: 'measurement', ageMonths: 108, height: 139, weight: 32 }]);
+    expect(await old).toEqual({ status: 'pending', reason: 'restoring' });
+    expect(await h.api.getSnapshot()).toBeNull();
+    h.state.mainSessionRestorePending = false;
+    h.state.sequence += 1;
+    h.fields.height.value = '161';
+    h.doc.emit('vilda:state-restored');
+    const complete = await h.api.getResult();
+    expect(complete.status).toBe('ready');
+    expect(complete.snapshot.currentHeight).toBe(161);
+    expect(h.api.isCurrent(complete.snapshot)).toBe(true);
+    expect(h.writes).not.toHaveBeenCalled();
+  });
+
+  it('wyjątek zachowania rysunku po zapisie nie omija oczekującego pełnego restore', async () => {
+    const h = setup(), before = await h.api.getSnapshot();
+    h.state.pending = true;
+    h.doc.emit('vilda:patient-loaded', { source: 'save', patientId: 'fikcyjny-a', applySequence: h.state.sequence });
+    expect(h.api.isCurrent(before)).toBe(true);
+    expect(h.api.getRefreshState(before)).toBe('pending');
+    h.state.mainSessionRestorePending = true;
+    expect(h.api.isCurrent(before)).toBe(false);
+    expect(h.api.getRefreshState(before)).toBeNull();
+    expect(await h.api.getResult()).toEqual({ status: 'pending', reason: 'restoring' });
+  });
+
+  it('powiadamia o końcu auth i restore, a zakończenie restore unieważnia także wcześniejszy odczyt', async () => {
+    const h = setup(), pending = deferred(), listener = vi.fn();
+    h.api.subscribe(listener);
+    h.vault.getPatient.mockReturnValueOnce(pending.promise);
+    const old = h.api.getResult(); await Promise.resolve();
+    h.state.mainSessionRestorePending = true;
+    h.doc.emit('vilda:auth-boot-settled');
+    expect(listener).toHaveBeenCalledWith({ reason: 'vilda:auth-boot-settled', identityChanged: false });
+    expect(await h.api.getResult()).toEqual({ status: 'pending', reason: 'restoring' });
+    h.state.mainSessionRestorePending = false;
+    h.fields.height.value = '161';
+    h.doc.emit('vilda:main-session-restored');
+    expect(listener).toHaveBeenCalledWith({ reason: 'vilda:main-session-restored', identityChanged: true });
+    const complete = await h.api.getResult();
+    pending.resolve(patient());
+    expect(await old).toEqual({ status: 'pending', reason: 'superseded' });
+    expect(complete.status).toBe('ready');
+    expect(complete.snapshot.currentHeight).toBe(161);
+    expect(h.api.isCurrent(complete.snapshot)).toBe(true);
+    expect(h.writes).not.toHaveBeenCalled();
+  });
+
+  it('anulowane oczekiwanie po wyczyszczeniu pacjenta zwalnia miejsce bez odczytu rekordu', async () => {
+    const h = setup(); h.state.mainSessionRestorePending = true;
+    expect(await h.api.getResult()).toEqual({ status: 'pending', reason: 'restoring' });
+    h.values.delete('vildaCurrentPatientId');
+    h.state.mainSessionRestorePending = false;
+    h.doc.emit('vilda:user-state-cleared');
+    expect(await h.api.getResult()).toEqual({ status: 'ineligible', reason: 'no-patient' });
+    expect(h.vault.getPatient).not.toHaveBeenCalled();
+    expect(h.writes).not.toHaveBeenCalled();
+  });
+
+  it('starszy niezależny konsument bez nowego API zachowuje dotychczasowy kontrakt', async () => {
+    const h = setup();
+    delete h.win.VildaDataImportExport.isMainSessionRestorePending;
+    const result = await h.api.getResult();
+    expect(result.status).toBe('ready');
+    expect(h.api.isCurrent(result.snapshot)).toBe(true);
   });
 });

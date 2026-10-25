@@ -13,6 +13,8 @@ const resourceNames = [
   'vilda_centile_live_data.js', 'vilda_centile_live_render.js', 'vilda_centile_live_view.js',
   'vilda_centile_live_host.js', 'vilda_centile_live_panel.js', 'vilda_centile_live_panel.css',
   'vilda_save_feedback.js', 'vilda_save_feedback.css',
+  'vilda_html.js', 'vilda_persist_runtime.js', 'vilda_data_import_export.js',
+  'vilda_advanced_growth.js', 'growth-basic-module.js', 'vilda_auth_ui.js',
 ];
 
 function resourcesFor(documentName) {
@@ -165,7 +167,7 @@ test('new centile modules, annotated canvases and parent fullscreen survive a co
     await readyForPatient(frame);
     const shellResources = resourcesFor('app.html');
     expect(shellResources.map((entry) => entry.url.split('?')[0].slice(1)).sort())
-      .toEqual(['vilda_centile_live_host.js', 'vilda_centile_live_panel.css', 'vilda_save_feedback.css', 'vilda_save_feedback.js']);
+      .toEqual(['vilda_auth_ui.js', 'vilda_centile_live_host.js', 'vilda_centile_live_panel.css', 'vilda_html.js', 'vilda_save_feedback.css', 'vilda_save_feedback.js']);
     await assertOfflineResources(page, shellResources, responses);
     await test.step('app shell offline: fullscreen covers the parent viewport', () => assertPanelAndFullscreen(page, frame, ids.a));
     expect(await page.evaluate(() => new URL(navigator.serviceWorker.controller.scriptURL).pathname)).toBe('/service-worker-kalorii.js');
