@@ -7,6 +7,12 @@ function load(extra = {}) {
   loadBrowserScript('clcr_ui_workflow.js', global);
   return global;
 }
+// Explicit persisted identity in capture-only vault fixtures; never a real account.
+function selectPersistedPatient(global, patientId) {
+  global.VildaVault.getPatient = async id => id === patientId ? { id, patientId: id, name: 'Fikcyjny pacjent' } : null;
+  global.ClcrVisitSave._setPatientId(patientId);
+}
+
 const copy = value => JSON.parse(JSON.stringify(value));
 const values = global => ['Prot_mg24', 'Prot_g24', 'Prot_bsa'].map((key, index) => ({ ...global.ClcrVisitSave.mapDatapoint(key, [1500, 1.5, 850][index]) }));
 
@@ -17,7 +23,7 @@ describe('Klirens: canonical patient-record save operation', () => {
     const global = load({ VildaVault: { isUnlocked: () => true, getPatientNote: async id => copy(notes.get(id)), savePatientNoteOnce: async payload => {
       writes += 1; notes.set(payload.id, copy(payload)); return { id: payload.id, saved: true };
     } } });
-    global.ClcrVisitSave._setPatientId('fictional-metadata-patient');
+    selectPersistedPatient(global, 'fictional-metadata-patient');
     const options = { clinicalDateISO: '2026-10-25', datapoints: [global.ClcrVisitSave.mapDatapoint('egfr', 95)] };
     const saved = await global.ClcrVisitSave.saveActiveResultToCard(options);
     notes.set('fictional-unrelated-note', { id: 'fictional-unrelated-note', body: 'Fictional unrelated laboratory result' });
@@ -66,6 +72,7 @@ describe('Klirens: canonical patient-record save operation', () => {
       throw new Error('Fictional lost acknowledgement after a durable write');
     } };
     const options = { patientId: 'fictional-deleted-after-ack', clinicalDateISO: '2026-10-25', datapoints: [global.ClcrVisitSave.mapDatapoint('egfr', 95)] };
+    selectPersistedPatient(global, options.patientId);
     expect(await global.ClcrVisitSave.saveActiveResultToCard(options)).toMatchObject({ ok: false, saved: 0 });
     deleted = true;
     global.ClcrVisitSave.notifyRecordChanged({ noteId: attempts[0], patientId: options.patientId });
@@ -80,6 +87,7 @@ describe('Klirens: canonical patient-record save operation', () => {
     let writes = 0;
     const global = load({ VildaVault: { isUnlocked: () => true, getPatientNote: async () => null, savePatientNote: async () => { writes += 1; throw new Error('Fictional ambiguous failure'); } } });
     const options = { patientId: 'fictional-legacy-retry', clinicalDateISO: '2026-10-25', datapoints: [global.ClcrVisitSave.mapDatapoint('egfr', 95)] };
+    selectPersistedPatient(global, options.patientId);
     await global.ClcrVisitSave.saveActiveResultToCard(options);
     expect(await global.ClcrVisitSave.saveActiveResultToCard(options)).toMatchObject({ ok: false, saved: 0 });
     expect(writes).toBe(1);
@@ -88,6 +96,7 @@ describe('Klirens: canonical patient-record save operation', () => {
   it('rejects a missing or impossible explicit date instead of silently saving with another date', async () => {
     const writes = [];
     const global = load({ VildaVault: { isUnlocked: () => true, savePatientNote: async payload => { writes.push(payload); return { id: payload.id }; } } });
+    selectPersistedPatient(global, 'fictional-date');
     for (const clinicalDateISO of ['', '2026-02-30', '2026-13-01']) {
       expect(await global.ClcrVisitSave.saveActiveResultToCard({ patientId: 'fictional-date', clinicalDateISO, datapoints: [global.ClcrVisitSave.mapDatapoint('egfr', 95)] })).toMatchObject({ ok: false, reason: 'invalid-date' });
     }
@@ -103,6 +112,7 @@ describe('Klirens: canonical patient-record save operation', () => {
       return { id: payload.id };
     } };
     const options = { patientId: 'fictional-sync-event', clinicalDateISO: '2026-10-25', datapoints: [global.ClcrVisitSave.mapDatapoint('egfr', 95)] };
+    selectPersistedPatient(global, options.patientId);
     expect(await global.ClcrVisitSave.saveActiveResultToCard(options)).toMatchObject({ ok: true });
     expect(await global.ClcrVisitSave.saveActiveResultToCard(options)).toMatchObject({ ok: true });
     expect(writes).toBe(1);
@@ -113,10 +123,11 @@ describe('Klirens: canonical patient-record save operation', () => {
     const writes = [];
     const global = load({ VildaVault: { isUnlocked: () => true, savePatientNote: payload => new Promise(resolve => { writes.push(copy(payload)); release = () => resolve({ id: payload.id }); }) } });
     const options = { patientId: 'fictional-double', clinicalDateISO: '2026-10-25', datapoints: [global.ClcrVisitSave.mapDatapoint('egfr', 95)] };
+    selectPersistedPatient(global, options.patientId);
     const first = global.ClcrVisitSave.saveActiveResultToCard(options);
     const second = global.ClcrVisitSave.saveActiveResultToCard(options);
     expect(first).toBe(second);
-    expect(writes).toHaveLength(1);
+    await expect.poll(() => writes.length).toBe(1);
     release();
     expect(await first).toMatchObject({ ok: true, saved: 1, patientId: options.patientId });
     expect(await global.ClcrVisitSave.saveActiveResultToCard(options)).toMatchObject({ ok: true, saved: 1 });
@@ -133,6 +144,7 @@ describe('Klirens: canonical patient-record save operation', () => {
       notes.set(payload.id, copy(payload)); return { id: payload.id, saved: true };
     } } });
     const options = { patientId: 'fictional-partial', clinicalDateISO: '2026-10-25', datapoints: values(global) };
+    selectPersistedPatient(global, options.patientId);
     expect(await global.ClcrVisitSave.saveActiveResultToCard(options)).toMatchObject({ ok: false, saved: 2, total: 3, reason: 'partial' });
     const failedId = attempts.find(note => note.labResult.unit === 'g/24 h').id;
     expect(await global.ClcrVisitSave.saveActiveResultToCard(options)).toMatchObject({ ok: true, saved: 3, total: 3 });
@@ -148,6 +160,7 @@ describe('Klirens: canonical patient-record save operation', () => {
       writes += 1; notes.set(payload.id, copy(payload)); throw new Error('Fictional lost acknowledgement');
     } } });
     const options = { patientId: 'fictional-ack', clinicalDateISO: '2026-10-25', datapoints: [global.ClcrVisitSave.mapDatapoint('cg', 70)] };
+    selectPersistedPatient(global, options.patientId);
     expect(await global.ClcrVisitSave.saveActiveResultToCard(options)).toMatchObject({ ok: false, saved: 0 });
     expect(await global.ClcrVisitSave.saveActiveResultToCard(options)).toMatchObject({ ok: true, saved: 1 });
     expect(notes.size).toBe(1);
@@ -159,6 +172,7 @@ describe('Klirens: canonical patient-record save operation', () => {
     let conflict = true;
     const global = load({ VildaVault: { isUnlocked: () => true, savePatientNoteOnce: async payload => { attempts.push(payload.id); return conflict ? { saved: false, reason: 'conflict' } : { id: payload.id, saved: true }; } } });
     const options = { patientId: 'fictional-conflict', clinicalDateISO: '2026-10-25', datapoints: [global.ClcrVisitSave.mapDatapoint('cg', 70)] };
+    selectPersistedPatient(global, options.patientId);
     expect(await global.ClcrVisitSave.saveActiveResultToCard(options)).toMatchObject({ ok: false, saved: 0, reason: 'partial' });
     conflict = false;
     expect(await global.ClcrVisitSave.saveActiveResultToCard(options)).toMatchObject({ ok: true, saved: 1 });
@@ -172,12 +186,13 @@ describe('Klirens: canonical patient-record save operation', () => {
       writes.push(copy(payload));
       return writes.length === 1 ? new Promise(resolve => { release = () => resolve({ id: payload.id }); }) : Promise.resolve({ id: payload.id });
     } } });
-    global.ClcrVisitSave._setPatientId('fictional-original');
+    selectPersistedPatient(global, 'fictional-original');
     const datapoints = values(global);
     const options = { clinicalDateISO: '2026-10-20', datapoints };
     const saving = global.ClcrVisitSave.saveActiveResultToCard(options);
-    global.ClcrVisitSave._setPatientId('fictional-other');
     options.clinicalDateISO = '2026-10-25'; datapoints[1].valueNum = 999;
+    await expect.poll(() => writes.length).toBe(1);
+    global.ClcrVisitSave._setPatientId('fictional-other');
     release();
     expect(await saving).toMatchObject({ ok: true, patientId: 'fictional-original', clinicalDateISO: '2026-10-20' });
     expect(writes.every(note => note.patientId === 'fictional-original' && note.clinicalDateISO === '2026-10-20')).toBe(true);

@@ -436,17 +436,21 @@ test('neonatal: jeden zapis i spójna treść PDF/DOCX/AI bez BSA, kategorii G a
     const notes = [previous];
     const original = window.VildaVault;
     // Adapter wyłącznie w pamięci; bez tworzenia, otwierania lub odczytu sejfu.
+    const originalPatientId = api.resolveCurrentPatientId();
+    // The clinical writer now requires an existing selected fictional card.
     window.VildaVault = {
       isUnlocked: () => true,
+      getPatient: async patientId => patientId === 'synthetic-neonatal-only' ? { patientId, header: { name: 'Fikcyjny pacjent testu Klirensu' } } : null,
       savePatientNote: async note => { notes.push(JSON.parse(JSON.stringify(note))); },
     };
+    api._setPatientId('synthetic-neonatal-only');
     try {
       const outcome = await api.saveActiveResultToCard({
         patientId: 'synthetic-neonatal-only', clinicalDateISO: '2026-10-22',
         root: document, formulaId: 'neonatal_egfr',
       });
       return { outcome, points, notes, historyUnchanged: JSON.stringify(previous) === previousJson };
-    } finally { window.VildaVault = original; }
+    } finally { window.VildaVault = original; api._setPatientId(originalPatientId); }
   });
   expect(saved.outcome).toMatchObject({ ok: true, saved: 1, total: 1 });
   expect(saved.points).toHaveLength(1);

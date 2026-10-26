@@ -27,6 +27,39 @@ z jednakową datą i wartością pozostają osobnymi wpisami.
 główną kartę bezpośrednio na Badaniach, zgodnie z istniejącą nawigacją powłoki
 lub samodzielnej strony. Historia wyników Klirensu ma osobny link.
 
+### Wybrana zapisana karta przed zapisem wyniku
+
+Decyzja właściciela z 26.10.2026: obliczenia pozostają dostępne bez karty,
+natomiast „Zapisz do Badań pacjenta” jest wyłącznie akcją zapisu. Nie zmienia
+się w przycisk wczytywania pacjenta. Kontekst nad polami od początku pokazuje,
+czy lekarz pracuje bez karty, czy dla wybranego pacjenta, oraz osobną akcję
+wyboru lub utworzenia karty.
+
+Odblokowanie zapisu wymaga odblokowanego sejfu i odczytania istniejącego
+rekordu wybranego pacjenta. Sam identyfikator w sesji ani dane demograficzne
+nie potwierdzają zapisu karty. Błąd odczytu, usunięty rekord lub zmiana
+pacjenta/konta podczas sprawdzania nie zezwalają na zapis; przed właściwą
+próbą istnienie rekordu jest sprawdzane ponownie. Trwająca operacja zachowuje
+swój pierwotny cel i identyfikatory wyników.
+
+Wczytanie pacjenta chroni także częściowo wpisane oznaczenia Klirensu,
+również gdy czysty formularz główny znajduje się w innej ramce powłoki.
+Komunikat wyjaśnia, że zapis danych pacjenta nie zapisuje wyniku w Badaniach.
+Anulowanie zachowuje formularz, a świadome odrzucenie nie przypisuje starej
+próbki innej osobie. Podgląd poprzedniego obliczenia nie oznacza jego
+odtworzenia. Dopiero rzeczywiste odtworzenie lub nowy pomiar pozwalają
+zapisywać dane po zmianie osoby.
+
+Pomyślny zapis tej samej roboczej karty może nadać jej pierwszy identyfikator
+bez usuwania jej obliczenia. W powłoce potwierdzenie z innej ramki wymaga
+zgodnego obliczenia, konta i bieżącej operacji zapisu. Nie przenosi wyniku
+przez samą zgodność nazwiska. Zapis badania nadal wiąże pacjenta i datę
+badania; nie tworzy fikcyjnej wizyty ani relacji po samej dacie.
+
+Brak wieku przy ACR prowadzi do jego uzupełnienia w Klirensie. Nie wymaga
+przejścia na Start, masy ciała ani wzrostu. To poprawka prowadzenia przez
+formularz; dotychczasowe warunki nadawania kategorii pozostają bez zmian.
+
 Grupy są rozwinięte i zawierają wszystkie pomiary. Na telefonie zachowane są
 czytelne wiersze, wspólne szerokości i pola co najmniej 48 px / 16 px.
 Nagłówki tabel są białe na turkusie. „Nowy pomiar” przygotowuje bieżący

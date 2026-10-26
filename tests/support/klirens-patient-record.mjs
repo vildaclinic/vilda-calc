@@ -62,13 +62,17 @@ export async function installMemoryVault(scope, { patientId = PATIENT_ID, select
         name: 'Fikcyjny Drugi Pacjent', user: { name: 'Fikcyjny Drugi Pacjent', sex: 'M', age: 15, ageMonths: 0, height: 165, weight: 50 },
       }]]);
       host.__clcrRecordStore = {
-        notes: new Map(), tombstones: new Set(), payloads, series: [], windows: new Set(), observerErrors: [],
-        unlocked: true, sequence: 0, saves: [], updates: [], deletes: [], noteReads: [],
+        notes: new Map(), tombstones: new Set(), payloads, series: [], windows: new Set(), originalVaults: new Set(), observerErrors: [],
+        unlocked: true, userId: 'fictional-klirens-account', sequence: 0, saves: [], updates: [], deletes: [], noteReads: [],
+        patientReads: [], patientSaves: [], holdPatientReads: false, pendingPatientReads: [], failPatientReads: false,
         failBefore: [], failAfter: [], hold: false, pending: [], rejectUpdate: null, rejectDelete: null,
       };
     }
     const store = host.__clcrRecordStore;
     store.windows.add(window);
+    // Keep actual locked vault objects, not WindowProxy lookups that can point
+    // at a replacement document after legitimate application navigation.
+    store.originalVaults.add(original);
     window.__clcrFacadeNoteListeners = new Set();
     const notify = (patientId, noteId, action) => {
       // Only the writer window gets local vault callbacks. Other documents
@@ -132,10 +136,27 @@ export async function installMemoryVault(scope, { patientId = PATIENT_ID, select
     };
     window.VildaVault = {
       isUnlocked: () => store.unlocked,
+      getCurrentUser: () => ({ userId: store.userId }),
       getPatient: async id => {
-        ensureUnlocked(); const payload = store.payloads.get(id); if (!payload) return null;
-        return { id, patientId: id, header: { name: payload.name, age: Number(payload.user.age), sex: payload.user.sex },
+        ensureUnlocked(); store.patientReads.push(id);
+        // Capture the response before deliberately holding I/O, so the test can
+        // prove a late response cannot authorize another patient's current UI.
+        const payload = clone(store.payloads.get(id) || null);
+        if (store.holdPatientReads) await new Promise(resolve => { store.pendingPatientReads.push(resolve); });
+        ensureUnlocked();
+        if (store.failPatientReads) throw new Error('Fictional patient read failed');
+        if (!payload) return null;
+        return { id, patientId: id, snapshotCount: 1, header: { name: payload.name, age: Number(payload.user.age), sex: payload.user.sex },
           snapshots: [{ snapshotId: `fictional-snapshot-${id}`, savedAtISO: '2026-10-20T12:00:00.000Z', payload: clone(payload) }] };
+      },
+      savePatient: async (payload, options = {}) => {
+        ensureUnlocked();
+        const id = options.patientId || `fictional-created-patient-${++store.sequence}`;
+        const isNew = !store.payloads.has(id);
+        store.patientSaves.push({ patientId: id, payload: clone(payload), options: clone(options) });
+        store.payloads.set(id, clone(payload));
+        return { patientId: id, snapshotId: `fictional-snapshot-${id}`, isNew,
+          savedAtISO: new Date().toISOString(), updatedAtISO: new Date().toISOString() };
       },
       listPatients: async () => {
         ensureUnlocked(); return [...store.payloads].map(([id, payload]) => ({ patientId: id,
@@ -173,14 +194,21 @@ export async function installMemoryVault(scope, { patientId = PATIENT_ID, select
       },
       sanitizeNoteText: original.sanitizeNoteText, sanitizeLabResult: original.sanitizeLabResult,
     };
+    // The isolated facade represents an already authenticated fictional account.
+    // Align its public UI state without invoking a real login/logout transition;
+    // the original encrypted vault objects remain locked and are checked below.
+    window.VildaGuestMode = false;
     // A private UI fixture does not create real audit-log writes.
     window.VildaAuditLog = { log: () => {} };
     window.__clcrRecordFixture = {
       snapshot: () => ({ notes: clone([...store.notes.values()]), saves: clone(store.saves), updates: clone(store.updates),
-        deletes: clone(store.deletes), noteReads: [...store.noteReads], tombstones: [...store.tombstones], pending: store.pending.length,
-        unlocked: store.unlocked, observerErrors: [...store.observerErrors], originalsLocked: [...store.windows].every(w => !w.__clcrRecordOriginalVault.isUnlocked()) }),
+        deletes: clone(store.deletes), noteReads: [...store.noteReads], patientReads: [...store.patientReads],
+        patientSaves: clone(store.patientSaves), pendingPatientReads: store.pendingPatientReads.length, tombstones: [...store.tombstones], pending: store.pending.length,
+        unlocked: store.unlocked, observerErrors: [...store.observerErrors], originalsLocked: [...store.originalVaults].every(originalVault => !originalVault.isUnlocked()) }),
       configure: options => Object.assign(store, options),
       release: () => { store.hold = false; for (const resolve of store.pending.splice(0)) resolve(); },
+      releasePatientReads: () => { store.holdPatientReads = false; for (const resolve of store.pendingPatientReads.splice(0)) resolve(); },
+      removePatient: id => { store.payloads.delete(id); },
       seed: notes => { for (const note of notes) store.notes.set(note.id, clone(note)); },
       addSeries: series => store.series.push(clone(series)),
       removeExternally: id => { const note = store.notes.get(id); store.notes.delete(id); store.tombstones.add(id); if (note) notify(note.patientId, id, 'delete'); },
@@ -196,6 +224,7 @@ export async function installMemoryVault(scope, { patientId = PATIENT_ID, select
 export const memory = scope => scope.evaluate(() => window.__clcrRecordFixture.snapshot());
 export const configureMemory = (scope, options) => scope.evaluate(options => window.__clcrRecordFixture.configure(options), options);
 export const releaseWrites = scope => scope.evaluate(() => window.__clcrRecordFixture.release());
+export const releasePatientReads = scope => scope.evaluate(() => window.__clcrRecordFixture.releasePatientReads());
 
 export async function selectPatient(scope, patientId = PATIENT_ID) {
   await scope.evaluate(pid => {
@@ -261,18 +290,18 @@ export async function shellFrame(page, title) {
   return frame;
 }
 
-export async function openShellCalculator(page, { width = 1440 } = {}) {
+export async function openShellCalculator(page, { width = 1440, select = true } = {}) {
   await prepareBrowser(page); await page.setViewportSize({ width, height: 1000 });
   await page.goto('/app.html#/klirens', { waitUntil: 'domcontentloaded' });
   // The real shell owns its first guest/auth screen before any pane is visible.
   await enterGuest(page);
   await page.evaluate(() => { window.location.hash = '#/klirens'; });
   const calculator = await shellFrame(page, 'Kalkulator klirensu');
-  await enterGuest(calculator, { calculator: true }); await installMemoryVault(calculator);
+  await enterGuest(calculator, { calculator: true }); await installMemoryVault(calculator, { select });
   // Preload the actual Start pane so the real Shell can open its main card.
   await page.evaluate(() => { window.location.hash = '#/start'; });
   const start = await shellFrame(page, 'Start');
-  await enterGuest(start); await installMemoryVault(start);
+  await enterGuest(start); await installMemoryVault(start, { select });
   await page.evaluate(() => { window.location.hash = '#/klirens'; });
   await expect(page.locator('iframe.app-pane[title="Kalkulator klirensu"]')).toBeVisible();
   return { calculator, start };

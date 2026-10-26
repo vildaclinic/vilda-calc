@@ -12,6 +12,9 @@ function harness() {
   for (const file of ['clcr_pcr_reference_data.js', 'clcr_pcr.js', 'clcr_ui_workflow.js']) loadBrowserScript(file, browser);
   const realVault = {};
   loadBrowserScript('vilda_vault.js', realVault);
+  // A saved clinical result belongs to the selected persisted synthetic record.
+  browser.VildaVault.getPatient = async id => id === 'fictional-pcr-only' ? { id, patientId: id, name: 'Fikcyjny pacjent' } : null;
+  browser.ClcrVisitSave._setPatientId('fictional-pcr-only');
   return { browser, captured, sanitizer: realVault.VildaVault };
 }
 

@@ -126,15 +126,19 @@ async function captureSave(page, date) {
     const originalVault = window.VildaVault;
     const rawNotes = [], notes = [];
     const points = api.collectActiveDatapoints(document, { formulaId: 'PCR' });
-    window.VildaVault = { isUnlocked: () => true, savePatientNote: async note => {
+    const originalPatientId = api.resolveCurrentPatientId();
+    // The clinical writer now requires an existing selected fictional card.
+    window.VildaVault = { isUnlocked: () => true,
+      getPatient: async patientId => patientId === 'fictional-pcr-e2e-only' ? { patientId, header: { name: 'Fikcyjny pacjent testu Klirensu' } } : null, savePatientNote: async note => {
       rawNotes.push(JSON.parse(JSON.stringify(note)));
       notes.push({ ...note, body: originalVault.sanitizeNoteText(note.body), labResult: originalVault.sanitizeLabResult(note.labResult) });
     } };
+    api._setPatientId('fictional-pcr-e2e-only');
     try {
       const outcome = await api.saveActiveResultToCard({ patientId: 'fictional-pcr-e2e-only', clinicalDateISO, root: document, formulaId: 'PCR' });
       window.__pcrSyntheticNotes = [...(window.__pcrSyntheticNotes || []), ...notes];
       return { outcome, points, rawNotes, notes, vaultLocked: !originalVault.isUnlocked() };
-    } finally { window.VildaVault = originalVault; }
+    } finally { window.VildaVault = originalVault; api._setPatientId(originalPatientId); }
   }, date);
 }
 

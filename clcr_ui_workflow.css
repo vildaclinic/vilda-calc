@@ -2615,3 +2615,64 @@ html[data-clcr-workflow-ui="1"] #clcrVisitSaveBtn:not([disabled]) {
   color: #fff!important;
   border: var(--border-hairline) solid var(--primary)!important;
 }
+
+/* Pacjent jest wybierany przed oznaczeniami, niezależnie od wyniku. */
+html[data-clcr-workflow-ui="1"] #clcrPatientContext {
+  box-sizing: border-box;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  grid-column: 1 / -1;
+  gap: var(--space-12px);
+  width: 100%;
+  min-width: 0;
+  margin: 0;
+  padding: var(--space-16px);
+  color: var(--clcr-text);
+  background: var(--clcr-surface-soft);
+  border: var(--border-hairline) solid var(--clcr-border-soft);
+  border-radius: var(--radius-12);
+  text-align: left;
+}
+html[data-clcr-workflow-ui="1"] #clcrPatientContext .clcr-patient-context__copy {
+  display: grid;
+  min-width: 0;
+  gap: var(--space-4px);
+}
+html[data-clcr-workflow-ui="1"] #clcrPatientContext .clcr-patient-context__copy > span {
+  color: var(--clcr-muted);
+  font-size: 12px;
+  font-weight: 600;
+}
+html[data-clcr-workflow-ui="1"] #clcrPatientContextName {
+  color: var(--clcr-heading);
+  font-size: 16px;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+html[data-clcr-workflow-ui="1"] #clcrPatientContextHint {
+  margin: 0;
+  color: var(--clcr-muted);
+  font-size: 14px;
+  line-height: 1.6;
+  text-align: left;
+}
+html[data-clcr-workflow-ui="1"] #clcrChoosePatientBtn,
+html[data-clcr-workflow-ui="1"] #clcrStartPatientMeasurementBtn {
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+  min-height: 48px;
+  margin: 0;
+  padding: var(--space-10px) var(--space-12px);
+  font-size: 16px;
+  font-weight: 700;
+  line-height: 1.5;
+  white-space: normal;
+}
+html[data-clcr-workflow-ui="1"] #clcrStartPatientMeasurementBtn[hidden] { display: none; }
+@media (min-width: 980px) {
+  html[data-clcr-workflow-ui="1"] #clcrPatientContext {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-items: center;
+  }
+}

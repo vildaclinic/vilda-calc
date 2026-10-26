@@ -411,12 +411,16 @@ test('cl24: zapis, historia i eksporty zachowują jeden wynik, źródło normy, 
     const points = api.collectActiveDatapoints(document, { formulaId: 'cl24' });
     const notes = [];
     const original = window.VildaVault;
-    window.VildaVault = { isUnlocked: () => true, savePatientNote: async note => { notes.push(JSON.parse(JSON.stringify(note))); } };
+    const originalPatientId = api.resolveCurrentPatientId();
+    // The clinical writer now requires an existing selected fictional card.
+    window.VildaVault = { isUnlocked: () => true,
+      getPatient: async patientId => patientId === 'synthetic-cl24-only' ? { patientId, header: { name: 'Fikcyjny pacjent testu Klirensu' } } : null, savePatientNote: async note => { notes.push(JSON.parse(JSON.stringify(note))); } };
+    api._setPatientId('synthetic-cl24-only');
     try {
       const outcome = await api.saveActiveResultToCard({ patientId: 'synthetic-cl24-only', clinicalDateISO: '2026-10-23', root: document, formulaId: 'cl24' });
       window.__cl24SavedNotes = JSON.parse(JSON.stringify(notes));
       return { outcome, points, notes, series: api.buildSeriesFromNotes(notes, { formulaId: 'cl24' }) };
-    } finally { window.VildaVault = original; }
+    } finally { window.VildaVault = original; api._setPatientId(originalPatientId); }
   });
   expect(saved.outcome).toMatchObject({ ok: true, saved: 1, total: 1 });
   expect(saved.points).toHaveLength(1);

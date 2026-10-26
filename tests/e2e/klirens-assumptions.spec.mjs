@@ -357,14 +357,18 @@ test('historia i raport AI opisują założenia, zachowując nieznane fakty oraz
     const originalVault = window.VildaVault;
     // Adapter wyłącznie w pamięci tej strony. Nie wywołujemy create/unlock/read
     // prawdziwego sejfu ani nie zapisujemy nic do persistence.
+    const originalPatientId = api.resolveCurrentPatientId();
+    // The clinical writer now requires an existing selected fictional card.
     window.VildaVault = {
       isUnlocked: () => true,
+      getPatient: async patientId => patientId === 'synthetic-assumptions-only' ? { patientId, header: { name: 'Fikcyjny pacjent testu Klirensu' } } : null,
       savePatientNote: async note => {
         const copy = JSON.parse(JSON.stringify({ ...note, id: 'synthetic-current-cys' }));
         notes.push(copy);
         return copy;
       },
     };
+    api._setPatientId('synthetic-assumptions-only');
     try {
       const outcome = await api.saveActiveResultToCard({
         patientId: 'synthetic-assumptions-only', clinicalDateISO: '2026-10-22',
@@ -375,7 +379,7 @@ test('historia i raport AI opisują założenia, zachowując nieznane fakty oraz
         series: api.buildSeriesFromNotes(notes, { formulaId: 'ckid_u25_cys' }),
       };
     } finally {
-      window.VildaVault = originalVault;
+      window.VildaVault = originalVault; api._setPatientId(originalPatientId);
     }
   });
   expect(saved.outcome).toMatchObject({ ok: true, saved: 1, total: 1 });

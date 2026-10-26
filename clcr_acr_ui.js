@@ -73,6 +73,7 @@
     const clinical = layout.document.defaultView?.ClcrClinicalSafety;
     const age = clinical?.readAgeFromDocument?.(layout.document);
     layout.ageText.textContent = `Wiek pacjenta: ${age?.valid ? clinical.formatAge(age) : "niepodany"}`;
+    layout.ageEdit.textContent = layout.ageFields.hidden ? age?.valid ? "Zmień" : "Uzupełnij wiek" : "Gotowe";
   }
 
   function mountAgeContext(layout) {
@@ -141,7 +142,7 @@
     ageEdit.addEventListener("click", () => {
       ageFields.hidden = !ageFields.hidden;
       ageEdit.setAttribute("aria-expanded", String(!ageFields.hidden));
-      ageEdit.textContent = ageFields.hidden ? "Zmień" : "Gotowe";
+      refreshAge(layout);
       if (!ageFields.hidden) layout.fieldViews.get("age")?.control.focus();
     });
     layout.onFieldEdit = (event) => {
@@ -314,7 +315,9 @@
     // '<0.001 mg/g' must never become '<0 mg/mmol'). Keep its native unit only.
     const converted = !model.comparator && Number.isFinite(model.convertedValue)
       ? `<p><strong>Przeliczenie:</strong> ≈${escape(model.convertedValue.toLocaleString("pl-PL", { maximumFractionDigits: 2 }))} ${escape(model.convertedUnit)}.</p>` : "";
-    const qualification = model.qualification?.note || "";
+    const qualification = model.qualification?.reasonCode === "missing-age"
+      ? "Nie nadano kategorii A1–A3. Uzupełnij wiek przy formularzu ACR — masa ciała i wzrost nie są potrzebne."
+      : model.qualification?.note || "";
     return `<div class="result-box clcr-result-card acr-proposal-card${["warning", "danger"].includes(tone) ? " out-of-range" : ""}" data-clcr-formula="ACR" data-clcr-series="ACR" data-clcr-code="acr" data-clcr-value="${model.rawValue}" data-clcr-display-value="${escape(model.display?.value ?? model.rawValue)}" data-clcr-value-length="${shown.length}" data-clcr-display-unit="${escape(unit)}" data-clcr-display-label="Albumina/kreatynina — ACR" data-clcr-status="${escape(model.statusText)}" data-clcr-category="${escape(category)}" data-clcr-boundary="${escape(boundary)}" data-clcr-tone="${tone}" data-clcr-reference-profile="${escape(model.profileId)}" data-clcr-reference-comparison="${Boolean(reference && category)}" data-clcr-acr-snapshot="${escape(JSON.stringify(snapshot))}"><div class="clcr-result-main acr-proposal-main${reference ? "" : " acr-proposal-main--single"}"><div class="clcr-result-patient"><p class="clcr-result-patient-label">Wynik pacjenta ${badge}</p><strong class="clcr-result-value">${escape(shown)}</strong><span class="clcr-result-unit">${escape(unit)}</span>${boundary ? `<small class="clcr-result-boundary">Przed zaokrągleniem: ${escape(boundary)} ${escape(unit)}</small>` : ""}</div>${norm}</div><p class="clcr-result-interpretation acr-proposal-status">${escape(model.statusText || model.categoryDescription || "ACR — wynik liczbowy")}</p>${qualification ? `<p class="acr-confirmation">${escape(qualification)}</p>` : ""}</div>${sourceLine ? `<p class="clcr-result-source acr-source" data-clcr-formula="ACR">${sourceLine}</p>` : ""}<details class="clcr-result-details acr-proposal-details" id="${detailsId}" data-clcr-formula="ACR" tabindex="-1"><summary>Szczegóły i źródła</summary>${table}${converted}${notes.map((note) => `<p>${escape(note)}</p>`).join("")}${boundary ? `<p>Wartość przed zaokrągleniem: ${escape(boundary)} ${escape(unit)}.</p>` : ""}${source ? `<p>${source}</p>` : ""}</details>`;
   }
 

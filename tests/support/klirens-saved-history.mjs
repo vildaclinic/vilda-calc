@@ -8,6 +8,7 @@ export async function readVisibleSavedHistory(page, notesProperty) {
     const patientId = notes[0].patientId;
     window.VildaVault = {
       isUnlocked: () => true,
+      getPatient: async requestedId => requestedId === patientId ? { patientId, header: { name: 'Fikcyjny pacjent zapisanych wyników' } } : null,
       listPatientNotesForPatient: async requestedId => {
         if (requestedId !== patientId) throw new Error('Historia odczytała innego fikcyjnego pacjenta.');
         return notes;

@@ -123,18 +123,27 @@ test('all41 formulas/45 legacy outputs remain visible, including signed/bounded/
 test('save guards: no patient/locked and duplicate clicks; a patient switch during commit never reassigns the note', async ({ page }) => {
   await openCalculator(page, { select: false });
   await applyAcr(page, '45');
-  await expect(page.locator('#clcrVisitSaveBtn')).toHaveText('Wybierz pacjenta');
-  await page.locator('#clcrVisitSaveBtn').click();
+  await expect(page.locator('#clcrVisitSaveBtn')).toHaveText('Zapisz do Badań pacjenta');
+  await expect(page.locator('#clcrVisitSaveBtn')).toBeDisabled();
+  // Disabled save never turns into navigation, even via a programmatic click.
+  await page.locator('#clcrVisitSaveBtn').evaluate(button => button.click());
+  await expect(page.locator('.pt-rcard2')).toHaveCount(0);
+  await page.locator('#clcrChoosePatientBtn').click();
   await expect(page.locator('.pt-rcard2')).toHaveCount(2);
   expect((await memory(page)).notes).toHaveLength(0);
   await page.evaluate(() => window.VildaAuthUI.hide());
   await selectPatient(page);
+  // A bare identity event must not adopt the preceding anonymous specimen.
+  await expect(page.locator('#clcrVisitSaveBtn')).toBeDisabled();
+  await page.locator('#clcrStartPatientMeasurementBtn').click();
+  await applyAcr(page, '45');
   await configureMemory(page, { unlocked: false });
   await page.evaluate(() => window.ClcrVisitSave._refresh());
   await expect(page.locator('#clcrVisitSaveBtn')).toBeDisabled();
   await configureMemory(page, { unlocked: true, hold: true });
   await page.evaluate(() => window.ClcrVisitSave._refresh());
   await page.locator('#clcrVisitDate').fill('2026-10-25');
+  await expect(page.locator('#clcrVisitSaveBtn')).toBeEnabled();
   await page.locator('#clcrVisitSaveBtn').evaluate(button => { button.click(); button.click(); button.click(); });
   await expect.poll(async () => (await memory(page)).pending).toBe(1);
   expect((await memory(page)).saves).toHaveLength(1);
@@ -147,6 +156,8 @@ test('save guards: no patient/locked and duplicate clicks; a patient switch duri
   await expect(page.locator('#clcrOpenBadaniaBtn')).toBeHidden();
   expect(after.originalsLocked).toBe(true);
   // A lock after capture but before commit rejects the second write as well.
+  await expect(page.locator('#clcrVisitSaveBtn')).toBeDisabled();
+  await page.locator('#clcrStartPatientMeasurementBtn').click();
   await applyAcr(page, '13.6');
   await configureMemory(page, { hold: true });
   await page.locator('#clcrVisitSaveBtn').click();
