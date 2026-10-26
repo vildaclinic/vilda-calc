@@ -49,7 +49,7 @@ function installPaintProbe() {
             hittable = document.elementFromPoint(rect.x + x, rect.y + y) === frame;
           }
         }
-        const image = visible(card, owner) && [...card.querySelectorAll('canvas.vilda-centile-live-image')]
+        const image = visible(card, owner) && [...card.querySelectorAll('svg.vilda-centile-live-preview')]
           .some(canvas => visible(canvas, owner));
         if (result.frames.length < 10_000) result.frames.push({
           at: Math.round(now), path: owner.location.pathname, patientId,

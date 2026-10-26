@@ -365,7 +365,7 @@
       ranges: [], rangePlan: null, activeRangeId: null };
   }
 
-  function render(snapshot, options) {
+  function unavailable(snapshot) {
     if (!snapshot || !finite(snapshot.ageMonths) || !['M', 'F', 'K'].includes(snapshot.sex)) return empty(null, 'Uzupełnij wiek i płeć pacjenta.');
     var source = String(snapshot.source || snapshot.requestedSource || '').toUpperCase();
     var age = snapshot.ageMonths;
@@ -376,24 +376,76 @@
         ? w.getCentileChartUnavailableMessage(source, age / 12, !!snapshot.professionalMode) : 'Siatka jest niedostępna dla tego wieku lub trybu.';
       return empty(source, message);
     }
+    return null;
+  }
+
+  function normalizedSnapshot(snapshot) {
+    return Object.assign({}, snapshot, { source: String(snapshot.source || snapshot.requestedSource || '').toUpperCase(),
+      sex: snapshot.sex === 'M' ? 'M' : 'F', population: snapshot.population === 'DS' ? 'DS' : 'OGOLNA' });
+  }
+
+  function modelRanges(input, advanced, args, prepared) {
+    var source = input.source, ranges = [], plan = null;
+    var models = prepared || {};
+    if (source === 'PALCZEWSKA') {
+      plan = w.getPalczewskaChartPlan(input.ageMonths, advanced);
+      if (plan.mode !== 'EXTENDED_ONLY') ranges.push({ id: 'palInfant', label: '0–3 lata', models: pageModels(args, source) });
+      if (plan.mode !== 'INFANT_ONLY') ranges.push({ id: 'palRegular', label: '1–18 lat', models: models.pal || palModels(args) });
+    } else ranges.push({ id: source === 'OLAF' ? 'olaf' : 'who', label: source === 'OLAF' ? '3–18 lat' : '0–3 lata',
+      models: source === 'OLAF' && models.olaf || pageModels(args, source) });
+    return { ranges: ranges, plan: plan };
+  }
+
+  function bundle(input, ranges, plan) {
+    var active = ranges.find(function (range) { return range.id === (input.ageMonths < 36 ? 'palInfant' : 'palRegular'); }) || ranges[0];
+    return { status: 'ready', source: input.source, height: active.height, weight: active.weight,
+      ranges: ranges, rangePlan: plan, activeRangeId: active.id };
+  }
+
+  function previewMetric(model, metric, input) {
+    var plot = { x: 0, y: 0, w: 1, h: 1, ageMin: model.minX, ageMax: model.maxX, minY: model.minY, maxY: model.maxY };
+    var curves = {};
+    // Producers return inclusive monthly samples. Keep those source values:
+    // the SVG view supplies only screen geometry, never a new interpolation.
+    [3, 50, 97].forEach(function (percentile) { curves[percentile] = model.curves[percentile].slice(); });
+    var result = { preview: true, width: 1, height: 1, plot: plot, metric: metric,
+      source: input.source, sex: input.sex, population: input.population,
+      curves: curves, percentiles: [3, 50, 97], sampleStepMonths: 1,
+      officialMaxY: model.officialMaxY, units: model.units, title: model.title,
+      points: pointsFor(model, metric, input, plot), annotations: [], mph: null };
+    result.probe = function (age) { return probe(result, age); };
+    return result;
+  }
+
+  function preview(snapshot) {
+    var rejected = unavailable(snapshot);
+    if (rejected) return rejected;
+    var input = normalizedSnapshot(snapshot);
+    var advanced = advancedSnapshot(input);
+    var prepared = modelRanges(input, advanced, producerArgs(input, advanced));
+    prepared.ranges.forEach(function (range) {
+      METRICS.forEach(function (metric) { range[metric] = previewMetric(range.models[metric], metric, input); });
+      delete range.models;
+    });
+    return bundle(input, prepared.ranges, prepared.plan);
+  }
+
+  function render(snapshot, options) {
+    var rejected = unavailable(snapshot);
+    if (rejected) return rejected;
     ['buildCentilePageCanvas', 'buildPalczewskaExtendedCanvases', 'drawCentileGrid', 'drawCentileMeasurementSeries',
       'getCentilePlotMetrics', 'getCentilePercentileStatsForSource'].forEach(function (name) {
       if (typeof w[name] !== 'function') throw new Error('Missing centile renderer dependency: ' + name);
     });
     if (!w.VildaPublicationCreator || typeof w.VildaPublicationCreator.computeSnapshotLayout !== 'function') throw new Error('Missing snapshot annotation renderer');
-    var input = Object.assign({}, snapshot, { source: source, sex: snapshot.sex === 'M' ? 'M' : 'F',
-      population: snapshot.population === 'DS' ? 'DS' : 'OGOLNA' });
+    var input = normalizedSnapshot(snapshot);
     var advanced = advancedSnapshot(input);
     var args = producerArgs(input, advanced);
     var olaf = pageModels(args, 'OLAF');
     var pal = palModels(args);
     var sourceGeometries = { olaf: olaf.originalGeometries, palRegular: originalPalGeometries(pal) };
-    var ranges = [], plan = null;
-    if (source === 'PALCZEWSKA') {
-      plan = w.getPalczewskaChartPlan(age, advanced);
-      if (plan.mode !== 'EXTENDED_ONLY') ranges.push({ id: 'palInfant', label: '0–3 lata', models: pageModels(args, source) });
-      if (plan.mode !== 'INFANT_ONLY') ranges.push({ id: 'palRegular', label: '1–18 lat', models: pal });
-    } else ranges.push({ id: source === 'OLAF' ? 'olaf' : 'who', label: source === 'OLAF' ? '3–18 lat' : '0–3 lata', models: source === 'OLAF' ? olaf : pageModels(args, source) });
+    var prepared = modelRanges(input, advanced, args, { olaf: olaf, pal: pal });
+    var ranges = prepared.ranges;
     ranges.forEach(function (range) {
       METRICS.forEach(function (metric) {
         range[metric] = renderMetric(range.models[metric], metric, input, advanced, range.id, sourceGeometries,
@@ -401,9 +453,7 @@
       });
       delete range.models;
     });
-    var active = ranges.find(function (range) { return range.id === (age < 36 ? 'palInfant' : 'palRegular'); }) || ranges[0];
-    return { status: 'ready', source: source, height: active.height, weight: active.weight,
-      ranges: ranges, rangePlan: plan, activeRangeId: active.id };
+    return bundle(input, ranges, prepared.plan);
   }
 
   function probe(data, age) {
@@ -420,5 +470,5 @@
       statsFor(data.metric, value, age, data.sex, data.source, data.population), mappedPoint(data.plot, age, value));
   }
 
-  w.VildaCentileLiveRender = { render: render, probe: probe, prepareContentBounds: prepareContentBounds };
+  w.VildaCentileLiveRender = { preview: preview, render: render, probe: probe, prepareContentBounds: prepareContentBounds };
 })(typeof window !== 'undefined' ? window : globalThis);
