@@ -6,7 +6,7 @@ test.setTimeout(120_000);
 
 function installProbe() {
   if (window !== window.top) return;
-  const result = { frames: [], errors: [], expandedDuringFade: false, revealCancelledOnExpand: false };
+  const result = { frames: [], animations: [], documents: 0, errors: [], expandedDuringFade: false, revealCancelledOnExpand: false };
   window.__revealPaint = result;
   function visible(el, owner) {
     if (!el?.getClientRects().length) return false;
@@ -50,7 +50,7 @@ function installProbe() {
         const available = el => Boolean(el && !el.hidden && el.textContent.trim()
           && owner.getComputedStyle(el).display !== 'none');
         result.frames.push({
-          at: Date.now(), path: owner.location.pathname,
+          at: Date.now(), path: owner.location.pathname, animationDocument: owner.__revealAnimationDocument,
           patientId: owner.sessionStorage.getItem('vildaCurrentPatientId'),
           mode: owner.sessionStorage.getItem('vildaLoadChoiceV1'),
           controller: Boolean(owner.VildaCentileLivePanel),
@@ -82,6 +82,34 @@ function installProbe() {
   requestAnimationFrame(sample);
 }
 
+function observeNativeAnimations() {
+  if (window.__revealAnimationDocument) return;
+  const result = window.top.__revealPaint;
+  const documentId = ++result.documents;
+  window.__revealAnimationDocument = documentId;
+  const original = window.Element.prototype.animate;
+  window.Element.prototype.animate = function (...args) {
+    const animation = original.apply(this, args);
+    const keyframes = animation.effect?.getKeyframes() || [];
+    if (this.classList.contains('vilda-centile-live-card')
+      && keyframes.some(frame => frame.opacity !== undefined)
+      && keyframes.every(frame => frame.transform === undefined)) {
+      const event = type => ({ type, at: Date.now(), currentTime: animation.currentTime, playState: animation.playState });
+      const record = {
+        documentId, path: location.pathname, timing: animation.effect.getTiming(),
+        keyframes: keyframes.map(frame => ({ opacity: frame.opacity, offset: frame.computedOffset })),
+        playbackRate: animation.playbackRate, events: [event('start')],
+      };
+      result.animations.push(record);
+      // Pasywne obserwowanie prawdziwej animacji: nie zmieniamy zegara, czasu
+      // ani produkcyjnych onfinish/oncancel, także wewnątrz dokumentu SPA.
+      animation.addEventListener('finish', () => record.events.push(event('finish')), { once: true });
+      animation.addEventListener('cancel', () => record.events.push(event('cancel')), { once: true });
+    }
+    return animation;
+  };
+}
+
 async function painted(page, count = 8) {
   await page.evaluate(count => new Promise(resolve => {
     function next() { if (--count <= 0) resolve(); else requestAnimationFrame(next); }
@@ -99,6 +127,12 @@ async function capture(page, name) {
 
 async function fixture(page, { shell = false, route = 'start', narrow = false, measurement = true } = {}) {
   await page.addInitScript(installProbe);
+  // Prefiks rzeczywiście ładowanego modułu obejmuje też zastępowane dokumenty
+  // iframe, których wczesny init script nie zawsze przeżywa cykl powłoki.
+  await page.route(/\/vilda_centile_live_panel\.js(?:\?|$)/u, async request => {
+    const response = await request.fetch();
+    await request.fulfill({ response, body: `;(${observeNativeAnimations.toString()})();\n${await response.text()}` });
+  });
   await page.route(/\/vilda_pro_access\.js(?:\?|$)/u, async request => {
     const response = await request.fetch();
     await request.fulfill({ response, body: `${await response.text()}\n;(${function () {
@@ -179,15 +213,33 @@ function assertSilentInterval(frames, { controlled = false } = {}) {
   expect(neutral.filter(frame => frame.messageAvailable || frame.titleAvailable), 'przed 1200 ms nie przygotowujemy widocznego tekstu ładowania').toEqual([]);
 }
 
-function assertFade(frames) {
-  const fading = frames.filter(frame => frame.card && frame.image && frame.opacity > 0 && frame.opacity < 1 && frame.fades);
-  expect(fading.length, 'rzeczywiste klatki przejściowej opacity').toBeGreaterThan(1);
-  const reference = fading[0].card;
-  for (const frame of fading) {
+function assertFade(observed, path, documentId) {
+  expect(documentId, 'obserwujemy dokument faktycznie gotowego formularza').toBeGreaterThan(0);
+  const frames = observed.frames.filter(frame => frame.path === path && frame.animationDocument === documentId && frame.card && frame.image);
+  const animations = observed.animations.filter(animation => animation.path === path && animation.documentId === documentId);
+  expect(animations, 'jeden rzeczywisty start pierwszego pojawienia').toHaveLength(1);
+  const animation = animations[0];
+  expect(animation.timing).toMatchObject({ duration: 300, delay: 0, iterations: 1, easing: 'ease-out' });
+  expect(animation.keyframes).toEqual([{ opacity: '0', offset: 0 }, { opacity: '1', offset: 1 }]);
+  expect(animation.playbackRate).toBe(1);
+  expect(animation.events.map(event => event.type), 'animacja kończy się naturalnie, bez anulowania').toEqual(['start', 'finish']);
+  expect(animation.events[1]).toMatchObject({ currentTime: 300, playState: 'finished' });
+  const start = frames.findIndex(frame => frame.opacity === 0 && frame.fades === 1);
+  const partial = frames.findIndex((frame, index) => index > start && frame.opacity > 0 && frame.opacity < 1 && frame.fades === 1);
+  const end = frames.findIndex((frame, index) => index > partial && frame.opacity === 1 && frame.fades === 0);
+  expect(start, 'rzeczywista klatka początku opacity 0').toBeGreaterThanOrEqual(0);
+  // Zajęty runner może próbkować RAF co 100–250 ms. Wymagamy obserwacji trzech
+  // etapów oraz natywnego pełnego przebiegu 300 ms, a nie minimalnej liczby FPS.
+  expect(partial, 'rzeczywista klatka pośredniej opacity').toBeGreaterThan(start);
+  expect(end, 'rzeczywista klatka końca opacity 1').toBeGreaterThan(partial);
+  const transition = frames.slice(start, end + 1);
+  const reference = transition[0].card;
+  for (const frame of transition) {
     expect(frame.card).toEqual(reference);
     expect(frame.status).toBe('ready');
   }
-  expect(frames.some(frame => frame.card && frame.image && frame.opacity === 1 && frame.fades === 0)).toBe(true);
+  expect(transition.slice(1).every((frame, index) => frame.opacity >= transition[index].opacity),
+    'opacity rośnie bez ponownego zanikania').toBe(true);
 }
 
 for (const shell of [false, true]) for (const route of ['start', 'docpro']) {
@@ -199,7 +251,7 @@ for (const shell of [false, true]) for (const route of ['start', 'docpro']) {
     const scriptGate = new Promise(resolve => { releaseScript = resolve; });
     await page.route(/\/vilda_centile_live_panel\.js(?:\?|$)/u, async request => {
       await scriptGate;
-      await request.continue();
+      await request.fallback();
     });
     await page.reload({ waitUntil: 'commit' });
     const path = route === 'docpro' ? '/docpro.html' : '/index.html';
@@ -220,17 +272,25 @@ for (const shell of [false, true]) for (const route of ['start', 'docpro']) {
     await ready(owner, id);
     await owner.waitForFunction(() => !document.querySelector('.vilda-centile-live-card')?.getAnimations().length);
     const first = await capture(page, 'first-reveal.json');
-    assertFade(first.frames.filter(frame => frame.path === path));
+    assertFade(first, path, await owner.evaluate(() => window.__revealAnimationDocument));
     expect(first.frames.filter(frame => frame.path === path && frame.controller && frame.status !== 'ready'
       && frame.pendingElapsed >= 1200 && frame.mountVisible && !frame.message), 'przejęcie przez kontroler nie gasi należnego komunikatu').toEqual([]);
     if (!shell && route === 'start') {
-      await page.evaluate(() => { window.__revealPaint.frames = []; });
+      await page.evaluate(() => {
+        window.__revealPaint.frames = [];
+        window.__revealImageBeforeEdit = document.querySelector('canvas.vilda-centile-live-image');
+      });
       await owner.locator('#height').fill('160');
       await owner.locator('#height').blur();
       await expect.poll(() => owner.evaluate(() => window.advancedGrowthData.currentHeight)).toBe(160);
       await ready(owner, id);
+      await owner.waitForFunction(() => {
+        const image = document.querySelector('canvas.vilda-centile-live-image');
+        return image && image !== window.__revealImageBeforeEdit;
+      });
       const edit = await capture(page, 'ordinary-edit.json');
       expect(edit.frames.filter(frame => frame.card && (frame.opacity !== 1 || frame.fades))).toEqual([]);
+      expect(edit.animations, 'edycja nie uruchamia nowego efektu nawet między próbkami RAF').toEqual(first.animations);
     }
   });
 }
@@ -300,4 +360,5 @@ test('reduced motion: edycja i błąd pokazują informację od razu, a ponowieni
   expect(observed.frames.some(frame => frame.slotStatus === 'error' && frame.message)).toBe(true);
   expect(observed.frames.filter(frame => frame.card && (frame.opacity !== 1 || frame.fades))).toEqual([]);
   expect(observed.frames.some(frame => frame.card && frame.image && frame.opacity === 1)).toBe(true);
+  expect(observed.animations, 'reduced motion nie tworzy animacji pierwszego pojawienia').toEqual([]);
 });

@@ -89,10 +89,11 @@ jobs:
       fail-fast: false
       matrix:
         shard: [1, 2, 3]
-    # W PR #771 odłamek zakończył wszystkie 645 testów, ale limit 35 min przerwał
-    # job sekundę po podsumowaniu. Budżet obejmuje instalację Chromium, testy oraz
-    # zamknięcie procesu i raportu; limity pojedynczych testów pozostają bez zmian.
-    timeout-minutes: 40
+    # W PR #793 limit 40 min przerwał aktywny przebieg przy 699/722 uruchomionych
+    # testach bez zgłoszonych błędów; pozostałe odłamki potrzebowały ok. 39 min.
+    # Budżet obejmuje instalację Chromium, testy i raport. Limity pojedynczych
+    # testów, liczba workerów i wymagane asercje pozostają bez zmian.
+    timeout-minutes: 45
     steps:
       - name: Pobierz repozytorium
         uses: actions/checkout@v4
