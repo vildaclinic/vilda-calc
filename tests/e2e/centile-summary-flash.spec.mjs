@@ -67,7 +67,7 @@ function installSummaryProbe() {
           form: visible(form, owner), summaries, area, input, mount: bounds(mount),
           mountShown: visible(mount, owner), mountState: mount?.getAttribute('data-centile-live-state') || null,
           image: visible(card, owner)
-            && [...card.querySelectorAll('canvas.vilda-centile-live-image')].some(el => visible(el, owner)),
+            && [...card.querySelectorAll('svg.vilda-centile-live-preview')].some(el => visible(el, owner)),
           status: state?.status || 'uninitialized', slotStatus: state?.slotStatus || 'uninitialized',
           chartPatientId: state?.patientId || null, classes: doc.documentElement?.className || '',
           bootSettled: Boolean(owner.VildaAuthUI?.isBootReady?.() && owner.VildaVault?.isUnlocked()

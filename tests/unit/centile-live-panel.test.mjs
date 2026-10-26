@@ -55,7 +55,10 @@ function setup({ columns = '400px 400px', rects = true, lifecycle = false, eligi
     data.getResult = vi.fn(() => new Promise((resolve, reject) => { pending.push({ resolve, reject }); }));
     data.retry = vi.fn();
   }
-  const render = vi.fn((snapshot) => ({ status: 'ready', source: snapshot.source, height: {}, weight: {} }));
+  const preview = vi.fn((snapshot) => ({ status: 'ready', source: snapshot.source,
+    height: { preview: true, value: snapshot.currentHeight }, weight: { preview: true, value: snapshot.currentWeight } }));
+  const render = vi.fn((snapshot) => ({ status: 'ready', source: snapshot.source,
+    height: { preview: false, value: snapshot.currentHeight }, weight: { preview: false, value: snapshot.currentWeight } }));
   const prepareContentBounds = vi.fn((rendered, options) => {
     let resolve;
     const job = { rendered, options, promise: new Promise(done => { resolve = done; }),
@@ -74,7 +77,7 @@ function setup({ columns = '400px 400px', rects = true, lifecycle = false, eligi
     setTimeout: vi.fn((fn, delay) => { const key = ++id; timers.set(key, { fn, delay, due: Date.now() + delay }); return key; }),
     clearTimeout: (key) => timers.delete(key),
     ResizeObserver: class { constructor(fn) { resizeObservers.push(fn); } observe() {} },
-    VildaCentileLiveRender: { render, probe: vi.fn(), ...(deferredBounds ? { prepareContentBounds } : {}) },
+    VildaCentileLiveRender: { preview, render, probe: vi.fn(), ...(deferredBounds ? { prepareContentBounds } : {}) },
     VildaCentileLiveView: { create: vi.fn((options) => {
       const state = { metric: 'height', fullscreen: false };
       const view = {
@@ -109,7 +112,7 @@ function setup({ columns = '400px 400px', rects = true, lifecycle = false, eligi
   if (!deferStart) loadBrowserScript('vilda_centile_live_panel.js', win);
   const snapshot = (extra = {}) => ({ patientToken: currentToken, patientId: currentToken?.fictional || null,
     source: 'OLAF', ageMonths: 158, measurements: [], ...extra });
-  return { win, doc, data, pending, views, hosts, open, render, snapshot, style, classes, mount, fieldset, doctor, form, puberty,
+  return { win, doc, data, pending, views, hosts, open, preview, render, snapshot, style, classes, mount, fieldset, doctor, form, puberty,
     get api() { return win.VildaCentileLivePanel; },
     startController: () => loadBrowserScript('vilda_centile_live_panel.js', win),
     element, notice, noticeTitle, noticeMessage, retryButton, boundsJobs, prepareContentBounds, animations,
@@ -137,11 +140,18 @@ function setup({ columns = '400px 400px', rects = true, lifecycle = false, eligi
 
 const flush = async () => { for (let index = 0; index < 6; index++) await Promise.resolve(); };
 async function ready(e) { e.pending[0].resolve(e.snapshot()); await flush(); return e.views[0]; }
+async function expand(e, view = e.views.at(-1)) {
+  view.options.onExpand();
+  e.nextFrame();
+  e.nextFrame();
+  await flush();
+  return view;
+}
 
 describe('live panel controller — async ownership and invalidation', () => {
   it('keeps the mounted weight chart and fullscreen while a same-visit save defers its next snapshot', async () => {
     const e = setup(); const view = await ready(e);
-    view.setMetric('weight'); view.options.onExpand();
+    view.setMetric('weight'); await expand(e, view);
     const height = e.mount.style['--vilda-centile-live-inline-height'];
     e.setRefreshState('pending');
     e.emit({ identityChanged: false, reason: 'patient-loaded' });
@@ -157,7 +167,8 @@ describe('live panel controller — async ownership and invalidation', () => {
     e.emit({ identityChanged: false, reason: 'vilda:dob-restored' });
     e.nextFrame(); e.runTimers(); e.pending[2].resolve(e.snapshot({ currentHeight: 159 })); await flush();
     expect(e.views).toHaveLength(1);
-    expect(view.update).toHaveBeenCalledTimes(2);
+    expect(view.update).toHaveBeenCalledTimes(3);
+    expect(e.render).toHaveBeenCalledTimes(2);
     expect(e.api.getState()).toMatchObject({ eligible: true, fullscreen: true, metric: 'weight' });
     expect(view.destroy).not.toHaveBeenCalled();
   });
@@ -179,7 +190,7 @@ describe('live panel controller — async ownership and invalidation', () => {
 
   it.each(['owner', 'columns'])('a pending save never keeps a chart after %s invalidation', async kind => {
     const e = setup(); const view = await ready(e);
-    view.options.onExpand(); e.setRefreshState('pending');
+    await expand(e, view); e.setRefreshState('pending');
     const refresh = e.api.refresh();
     if (kind === 'owner') e.invalidate();
     else e.style.columns = '800px';
@@ -197,8 +208,8 @@ describe('live panel controller — async ownership and invalidation', () => {
     const newer = e.snapshot({ source: 'PALCZEWSKA' });
     e.pending[1].resolve(newer); await refresh;
     e.pending[0].resolve(old); await flush();
-    expect(e.render).toHaveBeenCalledTimes(1);
-    expect(e.render).toHaveBeenCalledWith(newer);
+    expect(e.preview).toHaveBeenCalledTimes(1);
+    expect(e.preview).toHaveBeenCalledWith(newer);
     expect(e.api.getState()).toMatchObject({ patientId: 'patient-a', source: 'PALCZEWSKA', status: 'ready' });
     expect(e.views).toHaveLength(1);
   });
@@ -214,13 +225,13 @@ describe('live panel controller — async ownership and invalidation', () => {
     expect(e.notice.hidden).toBe(false);
     e.nextFrame(); e.runTimers();
     const next = e.snapshot(); e.pending[1].resolve(next); await flush();
-    expect(e.render).toHaveBeenCalledWith(next);
+    expect(e.preview).toHaveBeenCalledWith(next);
     expect(e.api.getState().patientId).toBe('patient-b');
   });
 
   it('clears a fullscreen view synchronously and late snapshots cannot resurrect it', async () => {
     const e = setup(); const view = await ready(e);
-    view.options.onExpand();
+    await expand(e, view);
     expect(view.setFullscreen).toHaveBeenCalledWith(true);
     const pendingRefresh = e.api.refresh();
     const obsolete = e.snapshot();
@@ -231,24 +242,24 @@ describe('live panel controller — async ownership and invalidation', () => {
     expect(e.mount.hidden).toBe(true);
     expect(e.api.getState()).toMatchObject({ eligible: false, fullscreen: false, patientId: null });
     e.pending[1].resolve(obsolete); await pendingRefresh;
-    expect(e.render).toHaveBeenCalledTimes(1);
+    expect(e.preview).toHaveBeenCalledTimes(1);
     expect(e.views).toHaveLength(1);
     expect(e.api.getState().eligible).toBe(false);
   });
 
   it('closes a fullscreen card with the lock reason and cannot reopen from stale callbacks', async () => {
     const e = setup(); const view = await ready(e);
-    view.options.onExpand();
+    await expand(e, view);
     e.invalidate(); e.emit({ identityChanged: true, reason: 'lock' });
     expect(e.hosts[0].close).toHaveBeenCalledWith('lock');
-    view.options.onExpand();
+    await expand(e, view);
     expect(e.open).toHaveBeenCalledTimes(1);
     expect(view.destroy).toHaveBeenCalledOnce();
   });
 
   it('passes the opaque patient token to host and refuses a superseded view owner', async () => {
     const e = setup(); const oldView = await ready(e);
-    oldView.options.onExpand();
+    await expand(e, oldView);
     const options = e.hosts[0].options;
     expect(options.sourceWindow).toBe(e.win);
     expect(options.element).toBe(oldView.element);
@@ -261,14 +272,16 @@ describe('live panel controller — async ownership and invalidation', () => {
     expect(e.views[1].destroy).not.toHaveBeenCalled();
   });
 
-  it('avoids rebuilding canvases for an identical snapshot but renders changed measurements and source', async () => {
+  it('reuses an identical preview and redraws changed measurements and source without full canvases', async () => {
     const e = setup(); await ready(e);
     let refresh = e.api.refresh(); e.pending[1].resolve(e.snapshot()); await refresh;
-    expect(e.render).toHaveBeenCalledTimes(1);
+    expect(e.preview).toHaveBeenCalledTimes(1);
     refresh = e.api.refresh(); e.pending[2].resolve(e.snapshot({ currentHeight: 159 })); await refresh;
-    expect(e.render).toHaveBeenCalledTimes(2);
+    expect(e.preview).toHaveBeenCalledTimes(2);
     refresh = e.api.refresh(); e.pending[3].resolve(e.snapshot({ currentHeight: 159, source: 'PALCZEWSKA' })); await refresh;
-    expect(e.render).toHaveBeenCalledTimes(3);
+    expect(e.preview).toHaveBeenCalledTimes(3);
+    expect(e.render).not.toHaveBeenCalled();
+    expect(e.prepareContentBounds).not.toHaveBeenCalled();
   });
 
   it('hides the card when eligibility disappears during the snapshot await', async () => {
@@ -276,13 +289,13 @@ describe('live panel controller — async ownership and invalidation', () => {
     e.style.columns = '400px';
     e.pending[0].resolve(e.snapshot()); await flush();
     expect(e.views).toHaveLength(0);
-    expect(e.render).not.toHaveBeenCalled();
+    expect(e.preview).not.toHaveBeenCalled();
     expect(e.mount.hidden).toBe(true);
   });
 
   it('surfaces a renderer exception through the current view status and recovers on a later refresh', async () => {
     const e = setup();
-    e.render.mockImplementationOnce(() => { throw new Error('Synthetic renderer unavailable'); });
+    e.preview.mockImplementationOnce(() => { throw new Error('Synthetic renderer unavailable'); });
     e.pending[0].resolve(e.snapshot()); await flush();
     expect(e.api.getState().status).toBe('unavailable');
     expect(e.views[0].setStatus).toHaveBeenCalledWith(expect.stringContaining('Nie udało się'));
@@ -299,8 +312,8 @@ describe('live panel controller — async ownership and invalidation', () => {
       options.onClose({ current: true, restored: true, reason: 'mount-error' });
       return { closed: Promise.resolve({ reason: 'mount-error' }), close: vi.fn() };
     });
-    view.options.onExpand(); await flush();
-    view.options.onExpand();
+    await expand(e, view);
+    await expand(e, view);
     expect(e.open).toHaveBeenCalledTimes(2);
   });
 });
@@ -365,7 +378,7 @@ describe('live panel controller — actual form layout and collapsed height', ()
 
   it('removes an existing fullscreen view when the computed form becomes one column', async () => {
     const e = setup(); const view = await ready(e);
-    view.options.onExpand();
+    await expand(e, view);
     e.style.columns = '800px'; e.resize(); e.nextFrame();
     expect(e.hosts[0].close).toHaveBeenCalledWith('stale');
     expect(view.destroy).toHaveBeenCalledOnce();
@@ -422,7 +435,7 @@ describe('live panel controller — explicit slot lifecycle', () => {
 
   it('removes the old patient and fullscreen immediately but keeps the neutral slot', async () => {
     const e = setup({ lifecycle: true }); const old = await resolveReady(e);
-    old.options.onExpand();
+    await expand(e, old);
     e.replacePatient(); e.emit({ identityChanged: true, reason: 'patient-loaded' });
     expect(old.destroy).toHaveBeenCalledOnce();
     expect(e.hosts[0].close).toHaveBeenCalledWith('patient-change');
@@ -462,7 +475,7 @@ describe('live panel controller — explicit slot lifecycle', () => {
     expect(e.api.getState().slotStatus).toBe('error');
     expect(e.retryButton.hidden).toBe(false);
     e.pending[0].resolve({ status: 'ready', snapshot: e.snapshot() }); await flush();
-    expect(e.render).not.toHaveBeenCalled();
+    expect(e.preview).not.toHaveBeenCalled();
     expect(e.api.getState().slotStatus).toBe('error');
     const retried = e.api.retry(); await resolveReady(e, 1); await retried;
     expect(e.api.getState().slotStatus).toBe('ready');
@@ -470,7 +483,7 @@ describe('live panel controller — explicit slot lifecycle', () => {
 
   it('retains verified view state while a refresh is pending, including weight and fullscreen', async () => {
     const e = setup({ lifecycle: true }); const view = await resolveReady(e);
-    view.setMetric('weight'); view.options.onExpand();
+    view.setMetric('weight'); await expand(e, view);
     const refresh = e.api.refresh(); e.pending[1].resolve({ status: 'pending' }); await refresh;
     expect(e.api.getState()).toMatchObject({ metric: 'weight', fullscreen: true, slotStatus: 'pending' });
     expect(e.notice.hidden).toBe(true);
@@ -523,60 +536,44 @@ describe('live panel controller — explicit slot lifecycle', () => {
 
 });
 
-describe('live panel controller — deferred fullscreen preparation', () => {
+describe('live panel controller — fullscreen graphics prepared only on demand', () => {
   async function prepared(e) {
     const view = await ready(e);
-    e.nextFrame(); e.nextFrame();
+    await expand(e, view);
     e.boundsJobs[0].resolve({ status: 'ready' }); await flush();
     return view;
   }
 
-  it('publishes both complete metrics before starting bounds work after a paint opportunity', async () => {
+  it('publishes both lightweight metrics immediately and never schedules full graphics while inline', async () => {
     const e = setup({ deferredBounds: true }); const view = await ready(e);
-    expect(e.render).toHaveBeenCalledWith(e.snapshot(), { deferContentBounds: true });
-    expect(view.update).toHaveBeenCalledWith(expect.objectContaining({ height: {}, weight: {} }), e.snapshot());
+    expect(e.preview).toHaveBeenCalledWith(e.snapshot());
+    expect(view.update).toHaveBeenCalledWith(expect.objectContaining({
+      height: expect.objectContaining({ preview: true }), weight: expect.objectContaining({ preview: true }),
+    }), e.snapshot());
     expect(e.api.getState()).toMatchObject({ status: 'ready', slotStatus: 'ready', preparingFullscreen: false });
+    for (let index = 0; index < 5; index++) { e.nextFrame(); e.runTimers(); await flush(); }
+    expect(e.render).not.toHaveBeenCalled();
     expect(e.prepareContentBounds).not.toHaveBeenCalled();
-    e.nextFrame();
-    expect(e.prepareContentBounds).not.toHaveBeenCalled();
-    e.nextFrame();
-    expect(e.prepareContentBounds).toHaveBeenCalledOnce();
-    const fits = view.fit.mock.calls.length;
-    e.boundsJobs[0].resolve({ status: 'ready' }); await flush();
     expect(view.update).toHaveBeenCalledOnce();
-    expect(view.fit).toHaveBeenCalledTimes(fits);
   });
 
-  it('leaves a visible fade frame before background readback without postponing the ready drawing', async () => {
-    const e = setup({ deferredBounds: true, animated: true }); const view = await ready(e);
-    expect(e.api.getState()).toMatchObject({ status: 'ready', slotStatus: 'ready' });
-    expect(view.update).toHaveBeenCalledOnce();
-    expect(e.animations).toHaveLength(1);
-    e.nextFrame();
-    expect(e.prepareContentBounds).not.toHaveBeenCalled();
-    e.nextFrame();
-    expect(e.prepareContentBounds).not.toHaveBeenCalled();
-    e.nextFrame();
-    expect(e.prepareContentBounds).toHaveBeenCalledOnce();
-    expect(view.update).toHaveBeenCalledOnce();
-    expect(e.animations).toHaveLength(1);
-  });
-
-  it.each(['reduced-motion', 'without-WAAPI', 'finished-fade'])('%s preserves the existing two-frame readback boundary', async mode => {
+  it.each(['motion-enabled', 'reduced-motion', 'without-WAAPI'])('%s leaves the ready preview opaque without animation or idle readback', async mode => {
     const e = setup({ deferredBounds: true, animated: mode !== 'without-WAAPI', reducedMotion: mode === 'reduced-motion' });
-    await ready(e);
-    e.nextFrame();
+    const view = await ready(e);
+    expect(e.api.getState()).toMatchObject({ status: 'ready', slotStatus: 'ready' });
+    expect(view.element.hidden).toBe(false);
+    expect(e.animations).toHaveLength(0);
+    for (let index = 0; index < 4; index++) e.nextFrame();
+    expect(e.render).not.toHaveBeenCalled();
     expect(e.prepareContentBounds).not.toHaveBeenCalled();
-    if (mode === 'finished-fade') e.animations[0].onfinish();
-    else expect(e.animations).toHaveLength(0);
-    e.nextFrame();
-    expect(e.prepareContentBounds).toHaveBeenCalledOnce();
+    expect(view.update).toHaveBeenCalledOnce();
   });
 
-  it.each(['lock', 'clear', 'patient-change', 'pagehide'])('%s during the additional fade frame prevents stale readback', async reason => {
+  it.each(['lock', 'clear', 'patient-change', 'pagehide'])('%s before the expansion frame prevents stale full drawing', async reason => {
     const e = setup({ deferredBounds: true, animated: true }); const view = await ready(e);
-    e.nextFrame(); e.nextFrame();
-    expect(e.prepareContentBounds).not.toHaveBeenCalled();
+    view.options.onExpand();
+    expect(view.expandButton.attributes['aria-busy']).toBe('true');
+    expect(e.render).not.toHaveBeenCalled();
     if (reason === 'pagehide') e.win.dispatchEvent({ type: 'pagehide' });
     else {
       if (reason === 'patient-change') e.replacePatient();
@@ -584,73 +581,83 @@ describe('live panel controller — deferred fullscreen preparation', () => {
       e.emit({ reason, identityChanged: true });
     }
     expect(view.destroy).toHaveBeenCalledOnce();
-    expect(e.animations[0].cancel).toHaveBeenCalledOnce();
-    e.nextFrame();
+    e.nextFrame(); await flush();
+    expect(e.render).not.toHaveBeenCalled();
     expect(e.prepareContentBounds).not.toHaveBeenCalled();
+    expect(e.open).not.toHaveBeenCalled();
   });
 
-  it('a changed measurement cancels the additional first-reveal frame and prepares its new image after two frames', async () => {
+  it('a committed measurement and source update replace only the lightweight preview', async () => {
     const e = setup({ deferredBounds: true, animated: true }); const view = await ready(e);
+    e.emit({ reason: 'measurement-commit', identityChanged: false });
+    e.nextFrame(); e.runTimers();
+    const next = e.snapshot({ source: 'PALCZEWSKA', currentHeight: 161 });
+    e.pending[1].resolve(next); await flush();
+    expect(e.preview).toHaveBeenCalledTimes(2);
+    expect(view.update).toHaveBeenLastCalledWith(e.preview.mock.results[1].value, next);
     e.nextFrame(); e.nextFrame();
-    const refresh = e.api.refresh();
-    e.pending[1].resolve(e.snapshot({ source: 'PALCZEWSKA', currentHeight: 161 })); await refresh;
-    expect(view.update).toHaveBeenCalledTimes(2);
-    expect(e.animations[0].cancel).toHaveBeenCalledOnce();
-    e.nextFrame();
+    expect(e.render).not.toHaveBeenCalled();
     expect(e.prepareContentBounds).not.toHaveBeenCalled();
-    e.nextFrame();
-    expect(e.prepareContentBounds).toHaveBeenCalledOnce();
-    expect(e.boundsJobs[0].rendered.source).toBe('PALCZEWSKA');
-    expect(e.animations).toHaveLength(1);
+    expect(e.animations).toHaveLength(0);
   });
 
-  it('fullscreen priority cancels the additional fade frame and starts one immediate preparation', async () => {
-    const e = setup({ deferredBounds: true, animated: true }); const view = await ready(e);
-    e.nextFrame(); e.nextFrame();
-    expect(e.prepareContentBounds).not.toHaveBeenCalled();
-    view.options.onExpand();
-    expect(e.animations[0].cancel).toHaveBeenCalledOnce();
-    expect(e.prepareContentBounds).toHaveBeenCalledOnce();
-    expect(e.boundsJobs[0].prioritize).toHaveBeenCalledOnce();
-    e.nextFrame();
-    expect(e.prepareContentBounds).toHaveBeenCalledOnce();
-    e.boundsJobs[0].resolve({ status: 'ready' }); await flush();
-    expect(e.open).toHaveBeenCalledOnce();
-  });
-
-  it('coalesces early expand clicks and opens only after exact bounds are ready', async () => {
+  it('coalesces early expand clicks, allows the busy state to paint, and opens only with exact bounds', async () => {
     const e = setup({ deferredBounds: true }); const view = await ready(e);
     view.options.onExpand(); view.options.onExpand();
-    expect(e.boundsJobs).toHaveLength(1);
-    expect(e.boundsJobs[0].prioritize).toHaveBeenCalledOnce();
+    expect(e.render).not.toHaveBeenCalled();
+    expect(e.boundsJobs).toHaveLength(0);
     expect(view.expandButton.attributes['aria-busy']).toBe('true');
     expect(e.api.getState().preparingFullscreen).toBe(true);
     expect(e.open).not.toHaveBeenCalled();
+    e.nextFrame(); await flush();
+    expect(e.render).not.toHaveBeenCalled();
+    e.nextFrame(); await flush();
+    expect(e.render).toHaveBeenCalledOnce();
+    expect(e.render).toHaveBeenCalledWith(e.snapshot(), { deferContentBounds: true });
+    expect(e.boundsJobs).toHaveLength(1);
+    expect(e.boundsJobs[0].prioritize).toHaveBeenCalledOnce();
     e.nextFrame(); e.nextFrame();
     expect(e.boundsJobs).toHaveLength(1);
+    expect(view.update).toHaveBeenCalledOnce();
     e.boundsJobs[0].resolve({ status: 'ready' }); await flush();
     expect(e.open).toHaveBeenCalledOnce();
     expect(view.expandButton.attributes['aria-busy']).toBe('false');
+    expect(view.update).toHaveBeenLastCalledWith(e.render.mock.results[0].value, e.snapshot());
     expect(e.api.getState()).toMatchObject({ fullscreen: true, preparingFullscreen: false });
   });
 
-  it('Escape cancels the pending opening but allows the background preparation to finish', async () => {
+  it('Escape before full rendering cancels the queued work and allows a later explicit expansion', async () => {
     const e = setup({ deferredBounds: true }); const view = await ready(e);
     view.options.onExpand();
     const preventDefault = vi.fn();
     e.doc.dispatchEvent({ type: 'keydown', key: 'Escape', preventDefault });
     expect(preventDefault).toHaveBeenCalledOnce();
     expect(view.expandButton.attributes['aria-busy']).toBe('false');
-    expect(e.boundsJobs[0].cancel).not.toHaveBeenCalled();
-    e.boundsJobs[0].resolve({ status: 'ready' }); await flush();
+    e.nextFrame(); await flush();
+    expect(e.render).not.toHaveBeenCalled();
+    expect(e.prepareContentBounds).not.toHaveBeenCalled();
     expect(e.open).not.toHaveBeenCalled();
-    view.options.onExpand();
+    await expand(e, view);
+    e.boundsJobs[0].resolve({ status: 'ready' }); await flush();
     expect(e.open).toHaveBeenCalledOnce();
+  });
+
+  it('Escape during crop preparation prevents a late fullscreen opening', async () => {
+    const e = setup({ deferredBounds: true }); const view = await ready(e);
+    await expand(e, view);
+    const job = e.boundsJobs[0], preventDefault = vi.fn();
+    e.doc.dispatchEvent({ type: 'keydown', key: 'Escape', preventDefault });
+    expect(preventDefault).toHaveBeenCalledOnce();
+    expect(view.expandButton.attributes['aria-busy']).toBe('false');
+    job.resolve({ status: 'ready' }); await flush();
+    expect(e.open).not.toHaveBeenCalled();
+    expect(e.api.getState().preparingFullscreen).toBe(false);
+    expect(view.update).toHaveBeenCalledOnce();
   });
 
   it.each(['lock', 'clear', 'columns'])('cancels preparation and late opening when %s invalidates the image', async reason => {
     const e = setup({ deferredBounds: true }); const view = await ready(e);
-    view.options.onExpand(); const job = e.boundsJobs[0];
+    await expand(e, view); const job = e.boundsJobs[0];
     if (reason === 'columns') { e.style.columns = '800px'; e.resize(); e.nextFrame(); }
     else { e.invalidate(); e.emit({ identityChanged: true, reason }); }
     expect(job.cancel).toHaveBeenCalledOnce();
@@ -662,43 +669,260 @@ describe('live panel controller — deferred fullscreen preparation', () => {
     expect(e.api.getState().preparingFullscreen).toBe(false);
   });
 
-  it('keeps preparation for identical data but cancels it before a changed render replaces the image', async () => {
-    const e = setup({ deferredBounds: true }); await ready(e);
-    e.nextFrame(); e.nextFrame(); const old = e.boundsJobs[0];
-    let refresh = e.api.refresh(); e.pending[1].resolve(e.snapshot()); await refresh;
-    expect(old.cancel).not.toHaveBeenCalled();
-    expect(old.options.isCurrent()).toBe(true);
-    refresh = e.api.refresh(); e.pending[2].resolve(e.snapshot({ currentHeight: 161 })); await refresh;
+  it('a changed snapshot cancels an outstanding expansion and keeps the new inline preview lightweight', async () => {
+    const e = setup({ deferredBounds: true }); const view = await ready(e);
+    await expand(e, view); const old = e.boundsJobs[0];
+    const refresh = e.api.refresh();
+    const next = e.snapshot({ currentHeight: 161 });
+    e.pending[1].resolve(next); await refresh;
     expect(old.cancel).toHaveBeenCalledOnce();
     expect(old.options.isCurrent()).toBe(false);
+    old.resolve({ status: 'ready' }); await flush();
+    expect(e.open).not.toHaveBeenCalled();
+    expect(view.update).toHaveBeenLastCalledWith(e.preview.mock.results.at(-1).value, next);
     e.nextFrame(); e.nextFrame();
-    expect(e.boundsJobs).toHaveLength(2);
+    expect(e.render).toHaveBeenCalledOnce();
+    expect(e.prepareContentBounds).toHaveBeenCalledOnce();
+  });
+
+  it.each(['between-frames', 'during-crop'])('resumes one explicit expansion after an unchanged background refresh %s', async phase => {
+    const e = setup({ deferredBounds: true }); const view = await ready(e);
+    view.options.onExpand(); e.nextFrame();
+    if (phase === 'during-crop') { e.nextFrame(); await flush(); }
+    const obsolete = e.boundsJobs[0], initialDraws = e.render.mock.calls.length;
+    e.emit({ reason: 'after-update', identityChanged: false });
+    e.emit({ reason: 'sync-status-changed', identityChanged: false });
+    if (obsolete) {
+      expect(obsolete.cancel).toHaveBeenCalledOnce();
+      expect(obsolete.options.isCurrent()).toBe(false);
+    }
+    expect(view.expandButton.attributes['aria-busy']).toBe('true');
+    expect(e.api.getState().preparingFullscreen).toBe(true);
+    expect(e.open).not.toHaveBeenCalled();
+    e.nextFrame(); e.runTimers();
+    expect(e.pending).toHaveLength(2);
+    e.pending[1].resolve(e.snapshot()); await flush();
+    expect(e.render).toHaveBeenCalledTimes(initialDraws);
+    e.nextFrame(); await flush();
+    expect(e.render).toHaveBeenCalledTimes(initialDraws);
+    e.nextFrame(); await flush();
+    expect(e.render).toHaveBeenCalledTimes(initialDraws + 1);
+    expect(e.boundsJobs).toHaveLength(initialDraws + 1);
+    if (obsolete) { obsolete.resolve({ status: 'ready' }); await flush(); }
+    expect(e.open).not.toHaveBeenCalled();
+    e.boundsJobs.at(-1).resolve({ status: 'ready' }); await flush();
+    e.nextFrame(); e.nextFrame(); e.runTimers(); await flush();
+    expect(e.open).toHaveBeenCalledOnce();
+    expect(e.preview).toHaveBeenCalledOnce();
+    expect(view.expandButton.attributes['aria-busy']).toBe('false');
+    expect(e.api.getState()).toMatchObject({ fullscreen: true, preparingFullscreen: false });
+  });
+
+  it.each(['between-frames', 'during-crop'])('does not resume the old expansion after a changed measurement refresh %s', async phase => {
+    const e = setup({ deferredBounds: true }); const view = await ready(e);
+    view.options.onExpand(); e.nextFrame();
+    if (phase === 'during-crop') { e.nextFrame(); await flush(); }
+    const obsolete = e.boundsJobs[0], initialDraws = e.render.mock.calls.length;
+    e.emit({ reason: 'measurement-commit', identityChanged: false });
+    e.nextFrame(); e.runTimers();
+    const next = e.snapshot({ currentHeight: 161 });
+    e.pending[1].resolve(next); await flush();
+    e.nextFrame(); e.nextFrame(); await flush();
+    if (obsolete) { obsolete.resolve({ status: 'ready' }); await flush(); }
+    expect(e.render).toHaveBeenCalledTimes(initialDraws);
+    expect(e.open).not.toHaveBeenCalled();
+    expect(view.update).toHaveBeenLastCalledWith(e.preview.mock.results.at(-1).value, next);
+    expect(view.expandButton.attributes['aria-busy']).toBe('false');
+    expect(e.api.getState()).toMatchObject({ fullscreen: false, preparingFullscreen: false, status: 'ready' });
+  });
+
+  it('Escape cancels a suspended expansion before an unchanged refresh can resume it', async () => {
+    const e = setup({ deferredBounds: true }); const view = await ready(e);
+    await expand(e, view);
+    const obsolete = e.boundsJobs[0];
+    e.emit({ reason: 'after-update', identityChanged: false });
+    e.nextFrame(); e.runTimers();
+    expect(e.api.getState().preparingFullscreen).toBe(true);
+    const preventDefault = vi.fn();
+    e.doc.dispatchEvent({ type: 'keydown', key: 'Escape', preventDefault });
+    expect(preventDefault).toHaveBeenCalledOnce();
+    expect(view.expandButton.attributes['aria-busy']).toBe('false');
+    expect(e.api.getState().preparingFullscreen).toBe(false);
+    e.pending[1].resolve(e.snapshot()); await flush();
+    obsolete.resolve({ status: 'ready' }); await flush();
+    e.nextFrame(); e.nextFrame(); await flush();
+    expect(e.render).toHaveBeenCalledOnce();
+    expect(e.prepareContentBounds).toHaveBeenCalledOnce();
+    expect(e.open).not.toHaveBeenCalled();
+    expect(view.update).toHaveBeenCalledOnce();
+  });
+
+  it('keeps a suspended explicit expansion through a transient pending read and resumes it only after confirmation', async () => {
+    const e = setup({ deferredBounds: true, lifecycle: true });
+    e.pending[0].resolve({ status: 'ready', snapshot: e.snapshot() }); await flush();
+    const view = e.views[0];
+    view.options.onExpand(); e.nextFrame();
+    e.emit({ reason: 'after-update', identityChanged: false });
+    e.nextFrame(); e.runTimers();
+    e.pending[1].resolve({ status: 'pending', reason: 'restore' }); await flush();
+    expect(e.api.getState()).toMatchObject({ slotStatus: 'pending', preparingFullscreen: true });
+    expect(view.expandButton.attributes['aria-busy']).toBe('true');
+    e.nextFrame(); e.nextFrame();
+    expect(e.render).not.toHaveBeenCalled();
+    e.runTimers(150);
+    e.pending[2].resolve({ status: 'ready', snapshot: e.snapshot() }); await flush();
+    e.nextFrame(); e.nextFrame(); await flush();
+    expect(e.render).toHaveBeenCalledOnce();
+    e.boundsJobs[0].resolve({ status: 'ready' }); await flush();
+    expect(e.open).toHaveBeenCalledOnce();
+    expect(e.api.getState()).toMatchObject({ fullscreen: true, preparingFullscreen: false });
+  });
+
+  it('a patient identity change clears a suspended expansion before the new patient becomes ready', async () => {
+    const e = setup({ deferredBounds: true }); const old = await ready(e);
+    old.options.onExpand(); e.nextFrame();
+    e.emit({ reason: 'after-update', identityChanged: false });
+    e.nextFrame(); e.runTimers();
+    const obsolete = e.snapshot();
+    e.replacePatient(); e.emit({ reason: 'patient-loaded', identityChanged: true });
+    expect(old.destroy).toHaveBeenCalledOnce();
+    expect(e.api.getState().preparingFullscreen).toBe(false);
+    e.pending[1].resolve(obsolete); await flush();
+    e.nextFrame(); e.runTimers();
+    e.pending[2].resolve(e.snapshot()); await flush();
+    e.nextFrame(); e.nextFrame(); await flush();
+    expect(e.views).toHaveLength(2);
+    expect(e.render).not.toHaveBeenCalled();
+    expect(e.prepareContentBounds).not.toHaveBeenCalled();
+    expect(e.open).not.toHaveBeenCalled();
+    expect(e.api.getState()).toMatchObject({ patientId: 'patient-b', status: 'ready', preparingFullscreen: false });
+  });
+
+  it('an expand click after a measurement commit waits for the latest snapshot before full rendering', async () => {
+    const e = setup({ deferredBounds: true }); const view = await ready(e);
+    e.emit({ reason: 'measurement-commit', identityChanged: false });
+    view.options.onExpand();
+    expect(view.expandButton.attributes['aria-busy']).toBe('true');
+    expect(e.render).not.toHaveBeenCalled();
+    e.nextFrame(); e.runTimers(); await flush();
+    expect(e.pending).toHaveLength(2);
+    const next = e.snapshot({ currentHeight: 189 });
+    e.pending[1].resolve(next); await flush();
+    expect(view.update).toHaveBeenLastCalledWith(e.preview.mock.results.at(-1).value, next);
+    expect(e.render).not.toHaveBeenCalled();
+    e.nextFrame(); e.nextFrame(); await flush();
+    expect(e.render).toHaveBeenCalledOnce();
+    expect(e.render).toHaveBeenCalledWith(next, { deferContentBounds: true });
+    e.boundsJobs[0].resolve({ status: 'ready' }); await flush();
+    expect(e.open).toHaveBeenCalledOnce();
+    expect(view.update).toHaveBeenLastCalledWith(e.render.mock.results[0].value, next);
+  });
+
+  it('the read watchdog clears a waiting expansion and a late committed snapshot cannot open fullscreen', async () => {
+    const e = setup({ deferredBounds: true, lifecycle: true });
+    e.pending[0].resolve({ status: 'ready', snapshot: e.snapshot() }); await flush();
+    const view = e.views[0];
+    e.emit({ reason: 'measurement-commit', identityChanged: false });
+    view.options.onExpand();
+    expect(e.pending).toHaveLength(2);
+    expect(view.expandButton.attributes['aria-busy']).toBe('true');
+    expect(e.api.getState().preparingFullscreen).toBe(true);
+    e.runTimers(10000); await flush();
+    expect(view.expandButton.attributes['aria-busy']).toBe('false');
+    expect(e.api.getState()).toMatchObject({ status: 'unavailable', slotStatus: 'error', preparingFullscreen: false });
+    expect(e.retryButton.hidden).toBe(false);
+    expect(view.setStatus).toHaveBeenCalledWith(expect.stringContaining('trwa zbyt długo'));
+    e.pending[1].resolve({ status: 'ready', snapshot: e.snapshot({ currentHeight: 189 }) }); await flush();
+    e.nextFrame(); e.nextFrame(); await flush();
+    expect(e.preview).toHaveBeenCalledOnce();
+    expect(e.render).not.toHaveBeenCalled();
+    expect(e.prepareContentBounds).not.toHaveBeenCalled();
+    expect(e.open).not.toHaveBeenCalled();
+    expect(e.api.getState()).toMatchObject({ slotStatus: 'error', preparingFullscreen: false });
+  });
+
+  it('Escape while an expansion waits for a committed field leaves only the updated preview', async () => {
+    const e = setup({ deferredBounds: true }); const view = await ready(e);
+    e.emit({ reason: 'measurement-commit', identityChanged: false });
+    view.options.onExpand();
+    e.nextFrame(); e.runTimers(); await flush();
+    const preventDefault = vi.fn();
+    e.doc.dispatchEvent({ type: 'keydown', key: 'Escape', preventDefault });
+    expect(preventDefault).toHaveBeenCalledOnce();
+    expect(view.expandButton.attributes['aria-busy']).toBe('false');
+    const next = e.snapshot({ currentHeight: 189 });
+    e.pending[1].resolve(next); await flush();
+    e.nextFrame(); e.nextFrame(); await flush();
+    expect(view.update).toHaveBeenLastCalledWith(e.preview.mock.results.at(-1).value, next);
+    expect(e.render).not.toHaveBeenCalled();
+    expect(e.prepareContentBounds).not.toHaveBeenCalled();
+    expect(e.open).not.toHaveBeenCalled();
+    expect(e.api.getState()).toMatchObject({ status: 'ready', preparingFullscreen: false });
+  });
+
+  it('an identity change cancels an expansion waiting for the previous patient snapshot', async () => {
+    const e = setup({ deferredBounds: true }); const old = await ready(e);
+    const obsolete = e.snapshot({ currentHeight: 189 });
+    e.emit({ reason: 'measurement-commit', identityChanged: false });
+    old.options.onExpand();
+    e.nextFrame(); e.runTimers(); await flush();
+    e.replacePatient(); e.emit({ reason: 'patient-loaded', identityChanged: true });
+    expect(old.destroy).toHaveBeenCalledOnce();
+    e.pending[1].resolve(obsolete); await flush();
+    e.nextFrame(); e.runTimers();
+    const next = e.snapshot({ currentHeight: 120 });
+    e.pending[2].resolve(next); await flush();
+    e.nextFrame(); e.nextFrame(); await flush();
+    expect(e.views).toHaveLength(2);
+    expect(e.views[1].update).toHaveBeenLastCalledWith(e.preview.mock.results.at(-1).value, next);
+    expect(e.render).not.toHaveBeenCalled();
+    expect(e.prepareContentBounds).not.toHaveBeenCalled();
+    expect(e.open).not.toHaveBeenCalled();
+    expect(e.api.getState()).toMatchObject({ patientId: 'patient-b', status: 'ready', preparingFullscreen: false });
   });
 
   it('holds the existing fullscreen canvas until the replacement has its final crop', async () => {
     const e = setup({ deferredBounds: true }); const view = await prepared(e);
-    view.options.onExpand();
-    const original = view.update.mock.calls[0][0];
+    const original = view.update.mock.calls.at(-1)[0];
     const refresh = e.api.refresh(); e.pending[1].resolve(e.snapshot({ currentHeight: 161 })); await flush();
     expect(e.boundsJobs).toHaveLength(2);
     expect(e.boundsJobs[1].rendered).not.toBe(original);
-    expect(view.update).toHaveBeenCalledOnce();
+    expect(view.update).toHaveBeenCalledTimes(2);
+    expect(view.update.mock.calls.at(-1)[0]).toBe(original);
     expect(e.api.getState().fullscreen).toBe(true);
     e.boundsJobs[1].resolve({ status: 'ready' }); await refresh;
-    expect(view.update).toHaveBeenCalledTimes(2);
-    expect(view.update.mock.calls[1][0]).toBe(e.boundsJobs[1].rendered);
+    expect(view.update).toHaveBeenCalledTimes(3);
+    expect(view.update.mock.calls.at(-1)[0]).toBe(e.boundsJobs[1].rendered);
     expect(e.hosts[0].close).not.toHaveBeenCalled();
+  });
+
+  it('restarts a superseded fullscreen replacement even when the next read has the same committed snapshot', async () => {
+    const e = setup({ deferredBounds: true }); const view = await prepared(e);
+    const original = view.update.mock.calls.at(-1)[0];
+    const next = e.snapshot({ currentHeight: 161 });
+    const changed = e.api.refresh(); e.pending[1].resolve(next); await flush();
+    const obsolete = e.boundsJobs[1];
+    e.emit({ reason: 'after-update', identityChanged: false });
+    expect(obsolete.cancel).toHaveBeenCalledOnce();
+    e.nextFrame(); e.runTimers();
+    e.pending[2].resolve(next); await flush(); await changed;
+    expect(view.update.mock.calls.at(-1)[0]).toBe(original);
+    expect(e.boundsJobs).toHaveLength(3);
+    e.boundsJobs[2].resolve({ status: 'ready' }); await flush();
+    expect(view.update).toHaveBeenLastCalledWith(e.boundsJobs[2].rendered, next);
+    expect(view.update.mock.calls.at(-1)[0].height.value).toBe(161);
+    expect(e.api.getState()).toMatchObject({ fullscreen: true, status: 'ready', slotStatus: 'ready' });
   });
 
   it('reports a fullscreen refresh crop failure while retaining the image, then retries successfully', async () => {
     const e = setup({ deferredBounds: true, lifecycle: true });
     e.pending[0].resolve({ status: 'ready', snapshot: e.snapshot() }); await flush();
-    e.nextFrame(); e.nextFrame(); e.boundsJobs[0].resolve({ status: 'ready' }); await flush();
-    const view = e.views[0]; view.options.onExpand();
+    const view = e.views[0]; await expand(e, view);
+    e.boundsJobs[0].resolve({ status: 'ready' }); await flush();
     let refresh = e.api.refresh();
     e.pending[1].resolve({ status: 'ready', snapshot: e.snapshot({ currentHeight: 161 }) }); await flush();
     e.boundsJobs[1].resolve({ status: 'error' }); await refresh;
-    expect(view.update).toHaveBeenCalledOnce();
+    expect(view.update).toHaveBeenCalledTimes(2);
     expect(view.setStatus).not.toHaveBeenCalled();
     expect(e.api.getState()).toMatchObject({ fullscreen: true, status: 'unavailable', slotStatus: 'error' });
     expect(e.retryButton.hidden).toBe(false);
@@ -706,44 +930,98 @@ describe('live panel controller — deferred fullscreen preparation', () => {
     refresh = e.api.retry();
     e.pending[2].resolve({ status: 'ready', snapshot: e.snapshot({ currentHeight: 161 }) }); await flush();
     e.boundsJobs[2].resolve({ status: 'ready' }); await refresh;
-    expect(view.update).toHaveBeenCalledTimes(2);
+    expect(view.update).toHaveBeenCalledTimes(3);
     expect(e.retryButton.hidden).toBe(true);
     expect(e.retryButton.textContent).toBe('Spróbuj ponownie');
     expect(e.api.getState()).toMatchObject({ fullscreen: true, status: 'ready', slotStatus: 'ready' });
   });
 
-  it('can reopen prepared data after an intervening fullscreen replacement is superseded', async () => {
+  it('retains the displayed full image if rendering its replacement throws and retry uses the new snapshot', async () => {
+    const e = setup({ deferredBounds: true, lifecycle: true });
+    e.pending[0].resolve({ status: 'ready', snapshot: e.snapshot() }); await flush();
+    const view = e.views[0]; await expand(e, view);
+    e.boundsJobs[0].resolve({ status: 'ready' }); await flush();
+    const original = view.update.mock.calls.at(-1)[0];
+    const next = e.snapshot({ currentHeight: 161 });
+    e.render.mockImplementationOnce(() => { throw new Error('Synthetic full refresh failure'); });
+    let refresh = e.api.refresh();
+    e.pending[1].resolve({ status: 'ready', snapshot: next }); await refresh;
+    expect(view.update).toHaveBeenCalledTimes(2);
+    expect(view.update.mock.calls.at(-1)[0]).toBe(original);
+    expect(view.setStatus).not.toHaveBeenCalled();
+    expect(e.api.getState()).toMatchObject({ fullscreen: true, status: 'unavailable', slotStatus: 'error' });
+    expect(e.retryButton.hidden).toBe(false);
+    expect(e.retryButton.textContent).toContain('Nie udało się odświeżyć');
+    refresh = e.api.retry();
+    e.pending[2].resolve({ status: 'ready', snapshot: next }); await flush();
+    expect(e.render).toHaveBeenLastCalledWith(next, { deferContentBounds: true });
+    e.boundsJobs[1].resolve({ status: 'ready' }); await refresh;
+    expect(view.update).toHaveBeenLastCalledWith(e.boundsJobs[1].rendered, next);
+    expect(e.retryButton.hidden).toBe(true);
+    expect(e.api.getState()).toMatchObject({ fullscreen: true, status: 'ready', slotStatus: 'ready' });
+  });
+
+  it('restores the latest preview when closed during a fullscreen refresh and rejects the late canvas', async () => {
     const e = setup({ deferredBounds: true }); const view = await prepared(e);
-    view.options.onExpand();
-    const changed = e.api.refresh(); e.pending[1].resolve(e.snapshot({ currentHeight: 161 })); await flush();
+    const next = e.snapshot({ currentHeight: 161 });
+    const refresh = e.api.refresh(); e.pending[1].resolve(next); await flush();
     const obsolete = e.boundsJobs[1];
-    e.emit({ reason: 'after-update', identityChanged: false });
-    e.nextFrame(); e.runTimers(); e.pending[2].resolve(e.snapshot()); await flush();
-    await changed;
-    expect(obsolete.cancel).toHaveBeenCalledOnce();
-    expect(view.update).toHaveBeenCalledOnce();
     e.hosts[0].close();
-    view.options.onExpand();
+    expect(e.api.getState().fullscreen).toBe(false);
+    expect(view.update).toHaveBeenLastCalledWith(e.preview.mock.results.at(-1).value, next);
+    expect(view.update.mock.calls.at(-1)[0].height.preview).toBe(true);
+    expect(obsolete.cancel).toHaveBeenCalledOnce();
+    const updates = view.update.mock.calls.length;
+    obsolete.resolve({ status: 'ready' }); await refresh;
+    expect(view.update).toHaveBeenCalledTimes(updates);
+    expect(e.open).toHaveBeenCalledOnce();
+  });
+
+  it('restores a lightweight preview after closing and prepares full graphics anew only on another expansion', async () => {
+    const e = setup({ deferredBounds: true }); const view = await prepared(e);
+    e.hosts[0].close();
+    expect(view.update.mock.calls.at(-1)[0].height.preview).toBe(true);
+    expect(e.api.getState()).toMatchObject({ fullscreen: false, status: 'ready' });
+    e.nextFrame(); e.nextFrame();
+    expect(e.render).toHaveBeenCalledOnce();
+    await expand(e, view);
+    expect(e.render).toHaveBeenCalledTimes(2);
+    e.boundsJobs[1].resolve({ status: 'ready' }); await flush();
     expect(e.open).toHaveBeenCalledTimes(2);
     expect(e.api.getState().preparingFullscreen).toBe(false);
   });
 
-  it('keeps a valid inline image after background failure and retries crop preparation on expand', async () => {
+  it('keeps the valid preview after a fullscreen crop failure and the retry button prepares only full graphics', async () => {
     const e = setup({ deferredBounds: true }); const view = await ready(e);
-    e.nextFrame(); e.nextFrame(); e.boundsJobs[0].resolve({ status: 'error' }); await flush();
-    expect(e.api.getState()).toMatchObject({ status: 'ready', slotStatus: 'ready' });
-    expect(view.setStatus).not.toHaveBeenCalled();
-    view.options.onExpand();
-    expect(e.boundsJobs).toHaveLength(2);
-    e.boundsJobs[1].resolve({ status: 'error' }); await flush();
+    await expand(e, view);
+    e.boundsJobs[0].resolve({ status: 'error' }); await flush();
     expect(e.retryButton.hidden).toBe(false);
     expect(e.retryButton.textContent).toContain('Nie udało się przygotować');
     expect(view.update).toHaveBeenCalledOnce();
+    expect(view.update.mock.calls[0][0].height.preview).toBe(true);
     expect(view.setStatus).not.toHaveBeenCalled();
     expect(view.expandButton.attributes['aria-busy']).toBe('false');
-    view.options.onExpand(); e.boundsJobs[2].resolve({ status: 'ready' }); await flush();
+    expect(e.open).not.toHaveBeenCalled();
+    e.retryButton.dispatchEvent({ type: 'click' });
+    e.nextFrame(); e.nextFrame(); await flush();
+    expect(e.preview).toHaveBeenCalledOnce();
+    e.boundsJobs[1].resolve({ status: 'ready' }); await flush();
     expect(e.open).toHaveBeenCalledOnce();
     expect(e.retryButton.hidden).toBe(true);
+    expect(e.api.getState()).toMatchObject({ status: 'ready', slotStatus: 'ready' });
+  });
+
+  it('keeps the current preview when full rendering throws and allows an explicit retry', async () => {
+    const e = setup({ deferredBounds: true }); const view = await ready(e);
+    e.render.mockImplementationOnce(() => { throw new Error('Synthetic full rendering failure'); });
+    await expand(e, view);
+    expect(e.open).not.toHaveBeenCalled();
+    expect(view.update).toHaveBeenCalledOnce();
+    expect(view.setStatus).not.toHaveBeenCalled();
+    expect(view.expandButton.attributes['aria-busy']).toBe('false');
+    expect(e.retryButton.hidden).toBe(false);
+    await expand(e, view); e.boundsJobs[0].resolve({ status: 'ready' }); await flush();
+    expect(e.open).toHaveBeenCalledOnce();
     expect(e.api.getState()).toMatchObject({ status: 'ready', slotStatus: 'ready' });
   });
 });
@@ -942,13 +1220,13 @@ describe('live panel controller — coalesced restoration geometry', () => {
     e.runTimers(100);
     expect(e.data.getResult).toHaveBeenCalledTimes(2);
     e.pending[1].resolve({ status: 'pending', reason: 'restore' }); await flush();
-    expect(e.render).toHaveBeenCalledOnce();
+    expect(e.preview).toHaveBeenCalledOnce();
     expect(e.api.getState().slotStatus).toBe('pending');
     expect(e.win.__vildaRemindersResync).not.toHaveBeenCalled();
   });
 });
 
-describe('live panel controller — quiet waiting and first opacity reveal', () => {
+describe('live panel controller — quiet waiting and immediate preview', () => {
   let clock;
   let now;
   function at(value = 10000) {
@@ -972,7 +1250,7 @@ describe('live panel controller — quiet waiting and first opacity reveal', () 
     expect(e.notice.hidden).toBe(true);
     expect(e.noticeMessage.textContent).toBe('');
     expect(e.noticeMessage.hidden).toBe(true);
-    expect(e.animations).toHaveLength(1);
+    expect(e.animations).toHaveLength(0);
   });
 
   it('150 ms read retries do not restart the continuous 1200 ms waiting interval', async () => {
@@ -1021,69 +1299,66 @@ describe('live panel controller — quiet waiting and first opacity reveal', () 
     expect(e.api.getState().slotStatus).toBe('ready');
   });
 
-  it('the first ready drawing fades only after fitting, with no transforms or postponed ready state', async () => {
+  it('the first ready preview is fitted and shown immediately, with no opacity or transform animation', async () => {
     at();
     const e = setup({ animated: true });
     const view = await ready(e);
     expect(e.api.getState()).toMatchObject({ status: 'ready', slotStatus: 'ready' });
-    expect(e.animations).toHaveLength(1);
-    expect(e.animations[0].keyframes).toEqual([{ opacity: 0 }, { opacity: 1 }]);
-    expect(e.animations[0].options).toEqual({ duration: 300, easing: 'ease-out' });
-    expect(view.fit.mock.invocationCallOrder.at(-1)).toBeLessThan(view.element.animate.mock.invocationCallOrder[0]);
-    expect(view.update.mock.invocationCallOrder[0]).toBeLessThan(view.element.animate.mock.invocationCallOrder[0]);
-    const animation = e.animations[0];
+    expect(e.animations).toHaveLength(0);
+    expect(view.element.animate).not.toHaveBeenCalled();
+    expect(view.update).toHaveBeenCalledOnce();
+    expect(view.fit).toHaveBeenCalled();
+    expect(view.update.mock.invocationCallOrder[0]).toBeLessThan(view.fit.mock.invocationCallOrder.at(-1));
+    expect(view.element.hidden).toBe(false);
     const refresh = e.api.refresh();
     e.pending[1].resolve(e.snapshot({ source: 'PALCZEWSKA', currentHeight: 161 })); await refresh;
-    expect(animation.cancel).toHaveBeenCalledOnce();
-    expect(e.animations).toHaveLength(1);
     expect(view.update).toHaveBeenCalledTimes(2);
+    expect(view.element.animate).not.toHaveBeenCalled();
     expect(view.element.hidden).toBe(false);
+    expect(e.render).not.toHaveBeenCalled();
   });
 
-  it('natural completion and a same-visit refresh do not restart the fade', async () => {
+  it('a same-visit refresh does not animate or replace an identical preview', async () => {
     const e = setup({ animated: true }); const view = await ready(e);
-    const animation = e.animations[0];
-    animation.onfinish();
     const refresh = e.api.refresh(); e.pending[1].resolve(e.snapshot()); await refresh;
-    expect(animation.cancel).not.toHaveBeenCalled();
-    expect(view.element.animate).toHaveBeenCalledOnce();
+    expect(view.element.animate).not.toHaveBeenCalled();
     expect(view.update).toHaveBeenCalledOnce();
+    expect(e.preview).toHaveBeenCalledOnce();
+    expect(e.render).not.toHaveBeenCalled();
   });
 
-  it.each([false, true])('fullscreen completes the fade before transfer (deferred crop: %s)', async deferredBounds => {
+  it.each([false, true])('hands the full drawing to the host without an inline fade (deferred crop: %s)', async deferredBounds => {
     const e = setup({ animated: true, deferredBounds }); const view = await ready(e);
-    const animation = e.animations[0];
-    view.options.onExpand();
-    expect(animation.cancel).toHaveBeenCalledOnce();
+    await expand(e, view);
     if (deferredBounds) {
       expect(e.open).not.toHaveBeenCalled();
       e.boundsJobs[0].resolve({ status: 'ready' }); await flush();
     }
     expect(e.open).toHaveBeenCalledOnce();
-    expect(animation.cancel.mock.invocationCallOrder[0]).toBeLessThan(e.open.mock.invocationCallOrder[0]);
+    expect(view.element.animate).not.toHaveBeenCalled();
     expect(e.api.getState().fullscreen).toBe(true);
+    expect(view.update.mock.calls.at(-1)[0].height.preview).toBe(false);
   });
 
-  it.each(['lock', 'clear', 'patient-change', 'pagehide'])('%s cancels the effect and a later chart in the same document does not fade again', async reason => {
+  it.each(['lock', 'clear', 'patient-change', 'pagehide'])('%s removes the old preview immediately and a replacement does not fade', async reason => {
     const e = setup({ animated: true }); const old = await ready(e);
-    const animation = e.animations[0];
     if (reason === 'pagehide') e.win.dispatchEvent({ type: 'pagehide' });
     else {
       if (reason === 'patient-change') e.replacePatient();
       else e.invalidate();
       e.emit({ reason, identityChanged: true });
     }
-    expect(animation.cancel).toHaveBeenCalledOnce();
     expect(old.destroy).toHaveBeenCalledOnce();
     expect(old.element.hidden).toBe(true);
-    expect(animation.onfinish).toBeNull();
-    expect(animation.oncancel).toBeNull();
+    expect(e.animations).toHaveLength(0);
+    expect(e.render).not.toHaveBeenCalled();
     if (reason === 'pagehide' || reason === 'patient-change') {
       if (reason === 'pagehide') e.win.dispatchEvent({ type: 'pageshow', persisted: true });
       e.nextFrame(); e.runTimers();
       e.pending[1].resolve(e.snapshot()); await flush();
       expect(e.api.getState().status).toBe('ready');
-      expect(e.animations).toHaveLength(1);
+      expect(e.animations).toHaveLength(0);
+      expect(e.render).not.toHaveBeenCalled();
     }
   });
 

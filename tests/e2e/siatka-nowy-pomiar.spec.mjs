@@ -41,7 +41,8 @@ async function readyPanel(frame, patientId, source = 'OLAF') {
 async function productionPoint(frame, metric, ageMonths) {
   return frame.evaluate(async ({ metric, ageMonths }) => {
     const snapshot = await window.VildaCentileLiveData.getSnapshot();
-    const rendered = window.VildaCentileLiveRender.render(snapshot);
+    const fullscreen = window.VildaCentileLivePanel.getState().fullscreen;
+    const rendered = window.VildaCentileLiveRender[fullscreen ? 'render' : 'preview'](snapshot);
     const rangeId = window.VildaCentileLivePanel.getState().rangeId;
     const range = rendered.ranges.find(item => item.id === rangeId) || rendered;
     const data = range[metric];
@@ -54,9 +55,21 @@ async function hoverPoint(page, frame, ui, metric, ageMonths = 120) {
   const point = await productionPoint(frame, metric, ageMonths);
   const panes = ui.locator(`${PANE}:visible`);
   const pane = metric === 'weight' && await panes.count() === 2 ? panes.nth(1) : panes.first();
-  const canvas = await pane.locator('canvas.vilda-centile-live-image').boundingBox();
-  expect(canvas).toBeTruthy();
-  const target = { x: canvas.x + point.x / point.width * canvas.width, y: canvas.y + point.y / point.height * canvas.height };
+  const preview = pane.locator('svg.vilda-centile-live-preview');
+  let target;
+  if (await preview.count()) {
+    target = await preview.evaluate((svg, point) => {
+      const r = svg.getBoundingClientRect(), d = svg.dataset;
+      return {
+        x: r.x + Number(d.plotX) + (point.ageMonths - Number(d.ageMin)) / (Number(d.ageMax) - Number(d.ageMin)) * Number(d.plotWidth),
+        y: r.y + Number(d.plotY) + (Number(d.maxY) - point.value) / (Number(d.maxY) - Number(d.minY)) * Number(d.plotHeight),
+      };
+    }, point);
+  } else {
+    const canvas = await pane.locator('canvas.vilda-centile-live-image').boundingBox();
+    expect(canvas).toBeTruthy();
+    target = { x: canvas.x + point.x / point.width * canvas.width, y: canvas.y + point.y / point.height * canvas.height };
+  }
   await page.mouse.move(target.x, target.y);
   await expect.poll(() => frame.evaluate(() => window.VildaCentileLivePanel.getState().ageMonths)).toBe(ageMonths);
   await expect(pane.locator('.vilda-centile-live-tooltip')).toBeVisible();
@@ -75,9 +88,10 @@ test('Start: zapisany pacjent i Nowy pomiar pokazują prawdziwą historię i adn
   await readyPanel(frame, ids.a);
   const card = page.locator(CARD);
   await expect(card).toBeVisible();
-  await expect(card.locator('canvas.vilda-centile-live-image')).toHaveCount(1);
+  await expect(card.locator('svg.vilda-centile-live-preview')).toHaveCount(1);
+  await expect(card.locator('canvas.vilda-centile-live-image')).toHaveCount(0);
   await expect(card.locator(`${TAB}[data-centile-live-metric="both"]`)).toBeHidden();
-  await expect.poll(() => frame.evaluate(() => window.__siatkaE2eTexts.includes('E2E-LIVE-A'))).toBe(true);
+  expect(await frame.evaluate(() => window.__siatkaE2eTexts.includes('E2E-LIVE-A')), 'adnotacje powstają dopiero po powiększeniu').toBe(false);
   expect(await frame.evaluate(() => window.chartCreatorData)).toEqual(patients.a.chartCreator);
 
   await expect.poll(() => frame.evaluate(() => window.intakeHistory == null && window.intakeEstimatedKcalPerDay == null)).toBe(true);
@@ -102,6 +116,14 @@ test('Start: zapisany pacjent i Nowy pomiar pokazują prawdziwą historię i adn
   await page.keyboard.press('Enter');
   await expect.poll(() => frame.evaluate(() => window.VildaCentileLivePanel.getState().pinned)).toBe(false);
   expect((await frame.evaluate(() => window.VildaCentileLivePanel.getState())).fullscreen).toBe(false);
+  expect(await clinicalFingerprint(frame, ids.a)).toEqual(before);
+
+  await card.locator('.vilda-centile-live-expand').click();
+  await expect(page.locator('.vilda-centile-live-dialog')).toBeVisible();
+  await expect.poll(() => frame.evaluate(() => window.__siatkaE2eTexts.includes('E2E-LIVE-A'))).toBe(true);
+  await page.locator('.vilda-centile-live-close').click();
+  await expect(page.locator('.vilda-centile-live-dialog')).toHaveCount(0);
+  await expect(card.locator('svg.vilda-centile-live-preview')).toBeVisible();
   expect(await clinicalFingerprint(frame, ids.a)).toEqual(before);
 
   const collapsed = await card.boundingBox();
@@ -207,7 +229,7 @@ test('DocPro: Nowy pomiar dziedziczy wybraną na Start siatkę Palczewskiej, his
   const card = page.locator(CARD);
   await expect(card).toBeVisible();
   await expect(card.locator('.vilda-centile-live-source')).toContainText('Palczewska');
-  await expect.poll(() => page.evaluate(() => window.__siatkaE2eTexts.includes('E2E-LIVE-A'))).toBe(true);
+  expect(await page.evaluate(() => window.__siatkaE2eTexts.includes('E2E-LIVE-A'))).toBe(false);
   expect(await page.evaluate(() => window.chartCreatorData)).toEqual(creatorBefore);
   expect((await clinicalFingerprint(page, ids.a)).vaultSnapshots).toEqual(vaultBefore);
   const before = await clinicalFingerprint(page, ids.a);
@@ -217,6 +239,13 @@ test('DocPro: Nowy pomiar dziedziczy wybraną na Start siatkę Palczewskiej, his
   await expect(pane.locator('.vilda-centile-live-tooltip-reading')).toContainText('33');
   await card.locator(`${TAB}[data-centile-live-metric="height"]`).click();
   await hoverPoint(page, page, card, 'height');
+  expect(await clinicalFingerprint(page, ids.a)).toEqual(before);
+  await card.locator('.vilda-centile-live-expand').click();
+  await expect(page.locator('.vilda-centile-live-dialog')).toBeVisible();
+  await expect.poll(() => page.evaluate(() => window.__siatkaE2eTexts.includes('E2E-LIVE-A'))).toBe(true);
+  await page.locator('.vilda-centile-live-close').click();
+  await expect(page.locator('.vilda-centile-live-dialog')).toHaveCount(0);
+  await expect(card.locator('svg.vilda-centile-live-preview')).toBeVisible();
   expect(await clinicalFingerprint(page, ids.a)).toEqual(before);
 });
 
@@ -276,6 +305,8 @@ test('SPA: Start i DocPro przenoszą tę samą kartę do host fullscreen, zachow
   await page.keyboard.press('Escape');
   await expect(dialog).toHaveCount(0);
   await expect(start.locator(CARD)).toBeVisible();
+  await expect(start.locator('svg.vilda-centile-live-preview')).toBeVisible();
+  await expect(start.locator('canvas.vilda-centile-live-image')).toHaveCount(0);
   await expect.poll(() => start.evaluate(() => document.activeElement?.classList.contains('vilda-centile-live-expand'))).toBe(true);
   const restored = await start.locator(CARD).boundingBox();
   expect(restored.width).toBeCloseTo(initial.width, 0);
