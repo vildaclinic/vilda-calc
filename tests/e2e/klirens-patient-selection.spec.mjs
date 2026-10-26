@@ -1,7 +1,7 @@
 import { expect, test } from '../support/test-czas.mjs';
 import {
   PATIENT_ID, OTHER_PATIENT_ID, openCalculator, openShellCalculator, applyAcr, saveVisible,
-  memory, configureMemory, releasePatientReads, selectPatient,
+  memory, configureMemory, releasePatientReads, selectPatient, installMemoryVault,
 } from '../support/klirens-patient-record.mjs';
 
 test.use({ chwila: '2026-10-26T10:00:00Z' });
@@ -158,6 +158,14 @@ test('saving a new patient from the same working form retains the pending ACR an
   expect(created.patientId).not.toBe(PATIENT_ID);
   expect(created.patientId).not.toBe(OTHER_PATIENT_ID);
   await goToCalculator(page);
+  await calculator.waitForFunction(() => Boolean(window.VildaVault && window.ClcrVisitSave) && document.readyState === 'complete');
+  // The real Shell may replace this document after the main form gains its
+  // first saved patient ID. Reattach fictional I/O to that new document only;
+  // its patient ID and clinical session must come from production restoration.
+  if (!await calculator.evaluate(() => Boolean(window.__clcrRecordOriginalVault))) {
+    await installMemoryVault(calculator, { select: false });
+    await calculator.evaluate(() => window.ClcrVisitSave._refresh());
+  }
   await expect(calculator.locator('#U_Alb')).toHaveValue('45');
   await expect(calculator.locator('#Ucr_spot')).toHaveValue('100');
   await expect(acr(calculator)).toHaveAttribute('data-clcr-category', 'A2');
