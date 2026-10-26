@@ -7717,6 +7717,33 @@ wzorów, norm, kategorii, progów, wartości, zapisu i eksportu. Przykłady
 regresyjne wywołują produkcyjne moduły na fikcyjnych danych, w tym pojedynczy
 punkt, wcześniejszy zapis bez przyszłych pomiarów i zmianę źródła.
 
+#### Odtwarzanie porównania bez przejściowego podsumowania (2026-10-26)
+
+Brak widocznej karty porównania nie oznacza, że odczyt poprzedniej wizyty
+został zakończony. W ścieżce „Nowy pomiar” wybór samodzielnej karty z zakładkami
+wymaga jawnego wyniku odczytu: brak użytecznego porównania. Stan oczekiwania,
+błędu lub nierozstrzygniętego odczytu zachowuje osobne miejsce siatki i ukrywa
+przejściowe podsumowanie. Sam podgląd nie czeka na odczyt porównania.
+
+Moduł porównania publikuje stan związany z pacjentem i epoką porównania; spóźniona
+odpowiedź nie rozstrzyga układu innego pacjenta. Czyszczenie unieważnia odczyt
+natychmiast, także przed usunięciem identyfikatora. Zastosowanie pól do formularza
+nie unieważnia wyboru pomiaru historycznego. Odczyt stanu jest pasywny. Brak kotwicy
+poprzedniej wizyty rozstrzyga dotychczasowa ścieżka inicjalizacji/odtwarzania
+i istniejący selektor pomiaru, bez nowej reguły wyboru wizyty. Formularz roboczy
+i „Odtwórz zapis” nadal przechodzą bezpośrednio do samodzielnej karty.
+Odczyt inicjalizowany w tle, także bezpośrednio przez odtwarzanie powłoki,
+nie zastępuje trwającego odczytu wybranego pomiaru tego samego pacjenta
+i tej samej epoki porównania. Jawny nowy wybór lub usunięcie pomiaru nadal
+rozpoczynają własny odczyt.
+
+Testy przeglądarkowe wstrzymują rzeczywisty odczyt porównania na Start i DocPro,
+samodzielnie i w powłoce, aż podgląd siatki jest już gotowy. Sprawdzają każdą
+klatkę pod kątem przebijania podsumowania oraz zachowanie tego samego wykresu
+po zakończeniu odczytu. Osobny przypadek potwierdza przejście do zakładek po
+rzeczywistym stwierdzeniu braku porównania, także po przeładowaniu bez kotwicy.
+Obliczenia, wybór pomiaru odniesienia i treść wyników pozostają dotychczasowe.
+
 ### P-SIATKA-PO-EDYCJI — aktualizacja podglądu po zakończeniu pola (2026-10-25)
 
 **Decyzja właściciela.** Z makiety autozoomu wybrano tylko wariant A: interaktywna

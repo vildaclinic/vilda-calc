@@ -19,7 +19,7 @@
  *   bo i tak chcemy zwracać HTML z cache natychmiast.
  */
 
-const SW_VERSION = '1.1.384';
+const SW_VERSION = '1.1.385';
 const CACHE_PREFIX = 'pwa-kalorii';
 const SHELL_CACHE = `${CACHE_PREFIX}-shell-v${SW_VERSION}`;
 const RUNTIME_CACHE = `${CACHE_PREFIX}-runtime`;
@@ -2076,6 +2076,7 @@ const OPTIONAL_ASSETS = [
   '/vilda_centile_live_panel.css?v=4',
   '/vilda_centile_live_panel.css?v=5',
   '/vilda_centile_live_panel.css?v=6',
+  '/vilda_centile_live_panel.css?v=7',
   '/vilda_centile_live_data.js?v=1',
   '/vilda_centile_live_data.js?v=2',
   '/vilda_centile_live_data.js?v=3',
@@ -2090,6 +2091,7 @@ const OPTIONAL_ASSETS = [
   '/vilda_centile_live_preview.js?v=2',
   '/vilda_centile_live_colors.js?v=1',
   '/vilda_summary_tabs.js?v=1',
+  '/vilda_summary_tabs.js?v=2',
   '/vilda_professional_summary.js?v=1',
   '/vilda_professional_summary.css?v=1',
   '/vilda_centile_live_view.js?v=1',
@@ -3184,6 +3186,7 @@ const OPTIONAL_ASSETS = [
   '/vilda_summary_cards.js?v=60',
   '/vilda_summary_cards.js?v=61',
   '/vilda_summary_cards.js?v=62',
+  '/vilda_summary_cards.js?v=63',
   '/vilda_schowek.js?v=1',
   '/vilda_schowek.js?v=2',
   '/vilda_schowek.js?v=3',

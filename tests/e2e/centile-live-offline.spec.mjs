@@ -10,7 +10,7 @@ import { createFictionalVault, loadPatient, readyForPatient, shellFrame, NOTE_A 
 test.use({ serviceWorkers: 'allow' });
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const resourceNames = [
-  'vilda_centile_live_colors.js', 'vilda_summary_tabs.js',
+  'vilda_centile_live_colors.js', 'vilda_summary_tabs.js', 'vilda_summary_cards.js',
   'vilda_professional_summary.js', 'vilda_professional_summary.css',
   'vilda_centile_live_data.js', 'vilda_centile_live_render.js', 'vilda_centile_live_preview.js', 'vilda_centile_live_view.js',
   'vilda_centile_live_host.js', 'vilda_centile_live_panel.js', 'vilda_centile_live_panel.css',

@@ -290,7 +290,7 @@
   },
   "vilda_summary_cards.js": {
     "no-useless-assignment": {
-      "count": 5
+      "count": 4
     }
   },
   "vilda_sync_integration.js": {
