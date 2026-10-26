@@ -14,6 +14,16 @@
   var status = 'hidden', lastWidth = 0, collapsedHeight = 0, lastHeight = 0, renderKey = '', fullKey = '';
   var data = w.VildaCentileLiveData;
 
+  function presentation() {
+    return w.VildaSummaryTabs ? w.VildaSummaryTabs.getState() : { mode: 'dedicated', selected: 'chart' };
+  }
+
+  function summaryMode() { return presentation().mode === 'summary'; }
+  function dataOptions() { return summaryMode() ? { mode: 'summary' } : undefined; }
+  function displayable() {
+    return summaryMode() ? presentation().selected === 'chart' && form && !!form.getClientRects().length : twoColumns();
+  }
+
   function twoColumns() {
     if (!form || !fieldset || !doctor || !form.getClientRects().length) return false;
     var columns = w.getComputedStyle(form).gridTemplateColumns.trim().split(/\s+/);
@@ -26,13 +36,16 @@
     var wasReserved = slotStatus !== 'ineligible';
     slotStatus = state;
     var reserved = state !== 'ineligible';
+    var dedicated = !summaryMode();
     d.documentElement.classList.toggle('vilda-centile-live-booting', false);
-    d.documentElement.classList.toggle('vilda-centile-live-reserved', reserved);
-    d.documentElement.classList.toggle('vilda-centile-live-active', !!view);
+    d.documentElement.classList.toggle('vilda-centile-live-reserved', reserved && dedicated);
+    d.documentElement.classList.toggle('vilda-centile-live-active', !!view && reserved);
     if (mount) {
       mount.hidden = !reserved;
       mount.setAttribute('data-centile-live-state', state);
       mount.setAttribute('aria-busy', state === 'pending' ? 'true' : 'false');
+      var summaryPanel = d.getElementById('vildaSummaryChartPanel');
+      if (summaryPanel) summaryPanel.setAttribute('data-chart-state', state);
     }
     if (!reserved && wasReserved && typeof w.__vildaRemindersResync === 'function') {
       w.__vildaRemindersResync();
@@ -275,18 +288,18 @@
       pendingTimer = 0;
       request += 1;
       stopRefresh();
-      if (!twoColumns() || eligibility().status === 'ineligible') { clear('stale'); return; }
+      if (!displayable() || eligibility().status === 'ineligible') { clear('stale'); return; }
       showError('Wczytywanie siatki trwa zbyt długo. Spróbuj ponownie.');
     }, 10000);
     scheduleLayout();
   }
 
   function eligibility() {
-    return typeof data.getEligibility === 'function' ? data.getEligibility() : { status: 'eligible' };
+    return typeof data.getEligibility === 'function' ? data.getEligibility(dataOptions()) : { status: 'eligible' };
   }
 
   function prepare() {
-    if (!twoColumns()) { clear('stale'); return false; }
+    if (!displayable()) { clear('stale'); return false; }
     var state = eligibility();
     if (state.status === 'ineligible') { clear('stale'); return false; }
     var firstReservation = slotStatus === 'ineligible';
@@ -304,8 +317,21 @@
     return true;
   }
 
+  function applyInlineHeight(height) {
+    if (height !== lastHeight) {
+      mount.style.setProperty('--vilda-centile-live-inline-height', height + 'px');
+      lastHeight = height;
+    }
+    if (view) view.fit();
+  }
+
   function inlineSize() {
-    if (!mount || mount.hidden || !twoColumns()) return;
+    if (!mount || mount.hidden || !displayable()) return;
+    if (summaryMode() && !twoColumns()) {
+      var mobileHeight = Math.max(420, Math.min(620, Math.round((w.innerHeight || 720) * 0.72)));
+      applyInlineHeight(mobileHeight);
+      return;
+    }
     var bounds = fieldset.getBoundingClientRect();
     var puberty = d.getElementById('tannerStageWrap');
     var expanded = puberty && puberty.getClientRects().length
@@ -334,17 +360,21 @@
     // The status strip sits above the card on Start. As with Reminders, align
     // the bottom with the collapsed form rather than stretching the grid row.
     var offset = Math.max(0, mount.getBoundingClientRect().top - bounds.top);
-    var height = Math.max(280, Math.round(collapsedHeight - offset));
-    if (height !== lastHeight) {
-      mount.style.setProperty('--vilda-centile-live-inline-height', height + 'px');
-      lastHeight = height;
+    var trailing = 0;
+    if (summaryMode()) {
+      var card = d.getElementById('currentSummaryCard');
+      if (card) {
+        var cardStyle = w.getComputedStyle(card);
+        trailing = (parseFloat(cardStyle.paddingBottom) || 0) + (parseFloat(cardStyle.borderBottomWidth) || 0);
+      }
     }
-    if (view) view.fit();
+    var height = Math.max(280, Math.round(collapsedHeight - offset - trailing));
+    applyInlineHeight(height);
   }
 
   function layout() {
     layoutFrame = 0;
-    if (!twoColumns()) {
+    if (!displayable()) {
       if (slotStatus !== 'ineligible') clear('stale');
       return;
     }
@@ -363,7 +393,7 @@
   }
 
   function openFullscreen(currentView, currentSnapshot, owner) {
-    if (view !== currentView || fullscreen || !currentBounds(owner) || !twoColumns()) return;
+    if (view !== currentView || fullscreen || !currentBounds(owner) || !displayable()) return;
     var host = w.VildaCentileLiveHost;
     if (!host) return;
     var closedDuringOpen = false;
@@ -404,7 +434,7 @@
 
   function expand() {
     if (!view || !snapshot || fullscreen || expansion || expansionRead || resumedExpansion
-      || !data.isCurrent(snapshot) || !twoColumns() || !w.VildaCentileLiveHost) return;
+      || !data.isCurrent(snapshot) || !displayable() || !w.VildaCentileLiveHost) return;
     if (scheduleFrame || timer || slotStatus === 'pending') {
       // Clicking Expand also blurs an edited measurement. Accept that commit
       // first, rather than opening the last value while its refresh is queued.
@@ -426,7 +456,7 @@
     expandState(intent.view, 'pending');
     function current() {
       return expansion === intent && view === intent.view && request === intent.revision
-        && data.isCurrent(intent.snapshot) && twoColumns();
+        && data.isCurrent(intent.snapshot) && displayable();
     }
     function failed() {
       if (!current()) return;
@@ -487,17 +517,17 @@
     var revision = ++request;
     var result;
     try {
-      if (typeof data.getResult === 'function') result = await data.getResult();
+      if (typeof data.getResult === 'function') result = await data.getResult(dataOptions());
       else {
         // Compatibility for existing independent consumers of the controller.
-        var legacy = await data.getSnapshot();
+        var legacy = await data.getSnapshot(dataOptions());
         var refreshState = typeof data.getRefreshState === 'function' ? data.getRefreshState(snapshot) : null;
         result = legacy ? { status: 'ready', snapshot: legacy }
           : { status: refreshState || 'ineligible' };
       }
     } catch (_) { result = { status: 'error' }; }
     if (revision !== request) return;
-    if (!twoColumns()) { clear('stale'); return; }
+    if (!displayable()) { clear('stale'); return; }
     if (!result || result.status === 'error') {
       showError('Nie udało się wczytać siatki. Spróbuj ponownie.');
       return;
@@ -671,6 +701,12 @@
       var strip = d.getElementById('vildaStatusSide');
       if (strip) resize.observe(strip);
     }
+    d.addEventListener('vilda:summary-chart-state', function () {
+      // Switching owner/presentation clears any pending fullscreen request
+      // synchronously. Merely selecting Summary performs no chart work.
+      clear('presentation-change');
+      if (displayable()) refresh();
+    });
     w.addEventListener('resize', scheduleLayout);
     w.addEventListener('pageshow', schedule);
     w.addEventListener('pagehide', function () { clear('pagehide'); });
@@ -689,6 +725,7 @@
     refresh: refresh, retry: retry,
     getState: function () {
       return Object.assign({ eligible: !!snapshot, status: status, slotStatus: slotStatus,
+        presentation: presentation().mode, selectedTab: presentation().selected,
         patientId: snapshot ? snapshot.patientId : null,
         source: rendered ? rendered.source : null, fullscreen: !!fullscreen, preparingFullscreen: !!(expansion || expansionRead || resumedExpansion) },
       view ? view.getState() : {});

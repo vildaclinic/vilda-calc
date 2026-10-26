@@ -1,0 +1,152 @@
+/* Compact, consistently aligned results. Normal means colored text on WHITE, not a
+   tinted card; descriptive and missing values remain gray. */
+#currentSummaryCard {
+  --summary-normal: #087c80;
+  --summary-warn: #b97519;
+  --summary-danger: #bd4b50;
+  --summary-neutral: #7c8b90;
+}
+
+#currentSummaryCard.pro-summary-card,
+.liquid-ios26 #currentSummaryCard.pro-summary-card {
+  border: var(--border-hairline) solid #d8e5e5 !important;
+}
+
+#currentSummaryCard.vilda-summary-with-tabs .pro-summary-label {
+  top: 24px;
+  right: 16px;
+  padding: var(--space-4px) var(--space-6px);
+  border: var(--border-hairline) solid #e6dff2;
+  border-radius: var(--radius-6);
+  background: #f7f4fc;
+  color: #9981b8;
+  font-size: 10px;
+  font-weight: 650;
+  line-height: 1.4;
+}
+
+#currentSummaryCard.vilda-summary-with-tabs .vilda-summary-tabs {
+  margin-inline-end: 46px;
+}
+
+#currentSummaryCard .professional-summary-content {
+  margin-top: var(--space-12px);
+  min-width: 0;
+  color: var(--summary-neutral);
+}
+
+#currentSummaryCard .professional-summary-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 5px var(--space-8px);
+  box-sizing: border-box;
+  width: 100%;
+  margin: 0;
+  padding: 9px 11px;
+  border: 0;
+  border-inline-start: 3px solid transparent;
+  border-bottom: var(--border-hairline) solid #edf1f1;
+  background: #fff;
+  color: var(--summary-neutral);
+  font-size: 14px;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+
+#currentSummaryCard .professional-summary-value {
+  min-width: 0;
+}
+
+#currentSummaryCard .professional-summary-value strong {
+  font-weight: 600;
+}
+
+#currentSummaryCard .professional-summary-row[data-summary-key="weight"],
+#currentSummaryCard .professional-summary-row[data-summary-key="height"],
+#currentSummaryCard .professional-summary-row[data-summary-key="bmi"] {
+  font-size: 15px;
+}
+
+#currentSummaryCard .professional-summary-row[data-assessment="normal"] {
+  color: var(--summary-normal);
+}
+
+#currentSummaryCard .professional-summary-row[data-tone="warn"] {
+  color: var(--summary-warn);
+  background: #fff7e9;
+  border-inline-start-color: var(--summary-warn);
+}
+
+#currentSummaryCard .professional-summary-row[data-tone="danger"] {
+  color: var(--summary-danger);
+  background: #fff0f2;
+  border-inline-start-color: var(--summary-danger);
+}
+
+#currentSummaryCard .professional-summary-chip {
+  display: inline-block;
+  max-width: 100%;
+  border: var(--border-hairline) solid currentColor;
+  border-radius: 5px;
+  padding: 1px var(--space-6px);
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1.45;
+}
+
+#currentSummaryCard .professional-summary-extras {
+  margin-top: var(--space-12px);
+  border: var(--border-hairline) solid #d8e5e5;
+  border-radius: var(--radius-10);
+  overflow: hidden;
+  background: #fff;
+}
+
+#currentSummaryCard .professional-summary-extras > summary {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-4px) var(--space-10px);
+  padding: var(--space-12px) var(--space-14px);
+  font-size: 13px;
+  font-weight: 600;
+  color: #537b81;
+  cursor: pointer;
+  list-style: none;
+}
+
+#currentSummaryCard .professional-summary-extras > summary::-webkit-details-marker {
+  display: none;
+}
+
+#currentSummaryCard .professional-summary-extras > summary::after {
+  content: "⌄";
+  margin-inline-start: auto;
+}
+
+#currentSummaryCard .professional-summary-extras[open] > summary::after {
+  content: "⌃";
+}
+
+#currentSummaryCard .professional-summary-extra-count {
+  color: var(--summary-warn);
+  font-size: 11px;
+}
+
+#currentSummaryCard .professional-summary-extras > summary:focus-visible {
+  outline: var(--border-emphasis) solid var(--summary-normal);
+  outline-offset: -3px;
+}
+
+#currentSummaryCard .professional-summary-prediction-note {
+  margin: 0;
+  padding: var(--space-10px) var(--space-14px);
+  font-size: 12px;
+  color: var(--summary-neutral);
+}
+
+#currentSummaryCard .professional-summary-extras[hidden],
+#currentSummaryCard .professional-summary-extra-count[hidden] {
+  display: none;
+}

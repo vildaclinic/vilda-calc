@@ -10,6 +10,8 @@ import { createFictionalVault, loadPatient, readyForPatient, shellFrame, NOTE_A 
 test.use({ serviceWorkers: 'allow' });
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const resourceNames = [
+  'vilda_centile_live_colors.js', 'vilda_summary_tabs.js',
+  'vilda_professional_summary.js', 'vilda_professional_summary.css',
   'vilda_centile_live_data.js', 'vilda_centile_live_render.js', 'vilda_centile_live_preview.js', 'vilda_centile_live_view.js',
   'vilda_centile_live_host.js', 'vilda_centile_live_panel.js', 'vilda_centile_live_panel.css',
   'vilda_save_feedback.js', 'vilda_save_feedback.css',
@@ -95,7 +97,7 @@ async function assertPanelAndFullscreen(page, frame, patientId) {
   await expect.poll(() => frame.evaluate(() => window.VildaCentileLivePanel?.getState()), { timeout: 30_000 })
     .toMatchObject({ eligible: true, status: 'ready', patientId, source: 'OLAF' });
   await expect(frame.locator('svg.vilda-centile-live-preview')).toBeVisible();
-  await expect(frame.locator('canvas.vilda-centile-live-image')).toHaveCount(0);
+  await expect(frame.locator('canvas.vilda-centile-live-full-background')).toHaveCount(0);
   await frame.locator('.vilda-centile-live-expand').click();
   const dialog = page.locator('.vilda-centile-live-dialog');
   await expect(dialog).toBeVisible();
@@ -112,7 +114,7 @@ async function assertPanelAndFullscreen(page, frame, patientId) {
   await dialog.locator('.vilda-centile-live-close').click();
   await expect(dialog).toHaveCount(0);
   await expect(frame.locator('svg.vilda-centile-live-preview')).toBeVisible();
-  await expect(frame.locator('canvas.vilda-centile-live-image')).toHaveCount(0);
+  await expect(frame.locator('canvas.vilda-centile-live-full-background')).toHaveCount(0);
   // New measurement deliberately starts with empty weight/height. Supply the
   // synthetic visit before testing a successful offline save of that visit.
   await frame.locator('#weight').fill('47');

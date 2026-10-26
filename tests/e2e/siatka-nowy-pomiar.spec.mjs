@@ -66,7 +66,7 @@ async function hoverPoint(page, frame, ui, metric, ageMonths = 120) {
       };
     }, point);
   } else {
-    const canvas = await pane.locator('canvas.vilda-centile-live-image').boundingBox();
+    const canvas = await pane.locator('canvas.vilda-centile-live-full-background').boundingBox();
     expect(canvas).toBeTruthy();
     target = { x: canvas.x + point.x / point.width * canvas.width, y: canvas.y + point.y / point.height * canvas.height };
   }
@@ -89,7 +89,7 @@ test('Start: zapisany pacjent i Nowy pomiar pokazują prawdziwą historię i adn
   const card = page.locator(CARD);
   await expect(card).toBeVisible();
   await expect(card.locator('svg.vilda-centile-live-preview')).toHaveCount(1);
-  await expect(card.locator('canvas.vilda-centile-live-image')).toHaveCount(0);
+  await expect(card.locator('canvas.vilda-centile-live-full-background')).toHaveCount(0);
   await expect(card.locator(`${TAB}[data-centile-live-metric="both"]`)).toBeHidden();
   expect(await frame.evaluate(() => window.__siatkaE2eTexts.includes('E2E-LIVE-A')), 'adnotacje powstają dopiero po powiększeniu').toBe(false);
   expect(await frame.evaluate(() => window.chartCreatorData)).toEqual(patients.a.chartCreator);
@@ -274,7 +274,7 @@ test('SPA: Start i DocPro przenoszą tę samą kartę do host fullscreen, zachow
     return {
       rect: root.getBoundingClientRect().toJSON(),
       panes: panes.map(pane => {
-        const canvas = pane.querySelector('canvas.vilda-centile-live-image');
+        const canvas = pane.querySelector('canvas.vilda-centile-live-full-background');
         const image = canvas.getBoundingClientRect();
         return { width: image.width, height: image.height, intrinsicWidth: canvas.width, intrinsicHeight: canvas.height,
           viewport: pane.querySelector('.vilda-centile-live-viewport').getBoundingClientRect().toJSON(),
@@ -306,7 +306,7 @@ test('SPA: Start i DocPro przenoszą tę samą kartę do host fullscreen, zachow
   await expect(dialog).toHaveCount(0);
   await expect(start.locator(CARD)).toBeVisible();
   await expect(start.locator('svg.vilda-centile-live-preview')).toBeVisible();
-  await expect(start.locator('canvas.vilda-centile-live-image')).toHaveCount(0);
+  await expect(start.locator('canvas.vilda-centile-live-full-background')).toHaveCount(0);
   await expect.poll(() => start.evaluate(() => document.activeElement?.classList.contains('vilda-centile-live-expand'))).toBe(true);
   const restored = await start.locator(CARD).boundingBox();
   expect(restored.width).toBeCloseTo(initial.width, 0);
@@ -323,7 +323,7 @@ test('SPA: Start i DocPro przenoszą tę samą kartę do host fullscreen, zachow
   await docpro.getByRole('button', { name: 'Powiększ siatkę na pełny ekran', exact: true }).click();
   await expect(dialog).toBeVisible();
   await expect(docpro.locator('.vilda-centile-live-dialog')).toHaveCount(0);
-  await expect(page.locator(`${CARD} canvas.vilda-centile-live-image`)).toHaveCount(1);
+  await expect(page.locator(`${CARD} canvas.vilda-centile-live-full-background`)).toHaveCount(1);
   await page.evaluate(() => window.VildaShell.navigate('start'));
   await expect(dialog).toHaveCount(0);
   await expect(docpro.locator(CARD)).toHaveCount(0);

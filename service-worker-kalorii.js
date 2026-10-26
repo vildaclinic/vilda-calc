@@ -19,7 +19,7 @@
  *   bo i tak chcemy zwracać HTML z cache natychmiast.
  */
 
-const SW_VERSION = '1.1.383';
+const SW_VERSION = '1.1.384';
 const CACHE_PREFIX = 'pwa-kalorii';
 const SHELL_CACHE = `${CACHE_PREFIX}-shell-v${SW_VERSION}`;
 const RUNTIME_CACHE = `${CACHE_PREFIX}-runtime`;
@@ -2075,17 +2075,26 @@ const OPTIONAL_ASSETS = [
   '/vilda_centile_live_panel.css?v=3',
   '/vilda_centile_live_panel.css?v=4',
   '/vilda_centile_live_panel.css?v=5',
+  '/vilda_centile_live_panel.css?v=6',
   '/vilda_centile_live_data.js?v=1',
   '/vilda_centile_live_data.js?v=2',
   '/vilda_centile_live_data.js?v=3',
   '/vilda_centile_live_data.js?v=4',
   '/vilda_centile_live_data.js?v=5',
+  '/vilda_centile_live_data.js?v=6',
   '/vilda_centile_live_render.js?v=1',
   '/vilda_centile_live_render.js?v=2',
   '/vilda_centile_live_render.js?v=3',
+  '/vilda_centile_live_render.js?v=4',
   '/vilda_centile_live_preview.js?v=1',
+  '/vilda_centile_live_preview.js?v=2',
+  '/vilda_centile_live_colors.js?v=1',
+  '/vilda_summary_tabs.js?v=1',
+  '/vilda_professional_summary.js?v=1',
+  '/vilda_professional_summary.css?v=1',
   '/vilda_centile_live_view.js?v=1',
   '/vilda_centile_live_view.js?v=2',
+  '/vilda_centile_live_view.js?v=3',
   '/vilda_centile_live_host.js?v=1',
   '/vilda_centile_live_panel.js?v=1',
   '/vilda_centile_live_panel.js?v=2',
@@ -2094,6 +2103,7 @@ const OPTIONAL_ASSETS = [
   '/vilda_centile_live_panel.js?v=5',
   '/vilda_centile_live_panel.js?v=6',
   '/vilda_centile_live_panel.js?v=7',
+  '/vilda_centile_live_panel.js?v=8',
 
   '/vilda_hormone_lifespan_data.js?v=1',
   '/vilda_hormone_lifespan_data.js?v=2',
@@ -3247,6 +3257,7 @@ const OPTIONAL_ASSETS = [
   '/vilda_patient_report.js?v=45',
   '/vilda_patient_report.js?v=46',
   '/vilda_patient_report.js?v=47',
+  '/vilda_patient_report.js?v=48',
   '/vilda_raport_naglowek.js?v=1',
   '/vilda_raport_naglowek.js?v=2',
   '/vilda_raport_naglowek.js?v=3',

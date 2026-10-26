@@ -318,6 +318,7 @@
 
   function renderMetric(model, metric, snapshot, advanced, context, sourceGeometries, deferBounds) {
     var pc = w.VildaPublicationCreator;
+    var vectorPatient = !!w.VildaCentileLiveColors;
     var root = snapshot.chartCreatorData || {};
     function enabled(name) { return pc.snapshotElementEnabled(name, context, root); }
     var canvas = w.document.createElement('canvas');
@@ -337,10 +338,10 @@
     ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, canvas.width, canvas.height);
     ctx.save(); ctx.translate(offsetX, offsetY);
     w.drawCentileGrid(ctx, Object.assign({}, RECT, model, {
-      plotMetrics: plotMetrics, cutoffVal: model.maxY > model.officialMaxY ? model.officialMaxY : undefined,
+      skipUserPoint: vectorPatient, plotMetrics: plotMetrics, cutoffVal: model.maxY > model.officialMaxY ? model.officialMaxY : undefined,
       bandReferenceVisible: enabled('bandReference'), valueLabelVisible: enabled(metric === 'height' ? 'heightLabel' : 'weightLabel')
     }));
-    w.drawCentileMeasurementSeries(ctx, Object.assign({}, RECT, {
+    if (!vectorPatient) w.drawCentileMeasurementSeries(ctx, Object.assign({}, RECT, {
       plotMetrics: plotMetrics, minX: model.minX, maxX: model.maxX, minY: model.minY, maxY: model.maxY,
       points: model.points, valueKey: metric, pointRadius: 8, lastPointRadius: 8,
       lineWidth: w.getCentileChartLineWidth('historyPath', 3)
@@ -354,7 +355,8 @@
     pc._drawItems(ctx, items);
     ctx.restore();
     var result = { canvas: canvas, width: canvas.width, height: canvas.height, plot: plot, metric: metric,
-      source: snapshot.source, sex: snapshot.sex, population: snapshot.population, annotations: items, points: pointsFor(model, metric, snapshot, plot),
+      source: snapshot.source, sex: snapshot.sex, population: snapshot.population, annotations: items,
+      vectorPatient: vectorPatient, valueLabelVisible: enabled(metric === 'height' ? 'heightLabel' : 'weightLabel'), points: pointsFor(model, metric, snapshot, plot),
       contentBounds: deferBounds ? null : contentBounds(canvas), mph: metric === 'height' ? mphFor(snapshot, advanced, plot, enabled('mph')) : null };
     result.probe = function (age) { return probe(result, age); };
     return result;
