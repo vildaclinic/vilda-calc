@@ -89,7 +89,7 @@
   <script defer src="vilda_logger.js?v=2"></script>
 <script defer src="vilda_html.js?v=5"></script>
 <script defer src="vilda_persistence_adapter.js?v=32"></script>
-<script defer src="vilda_session_bridge.js?v=97"></script>
+<script defer src="vilda_session_bridge.js?v=98"></script>
 <script defer src="vilda_init.js?v=4"></script>
 <script defer src="vilda_crypto.js?v=15"></script>
 <script defer src="vilda_retention.js?v=1"></script>
@@ -102,7 +102,7 @@
 <script defer src="vilda_lab_assessment_ui.js?v=18"></script>
 <script defer src="vilda_lab_history.js?v=5"></script>
 <script defer src="vilda_lab_history_tab.js?v=8"></script>
-<script defer src="vilda_vault.js?v=226"></script>
+<script defer src="vilda_vault.js?v=227"></script>
 <script defer src="vilda_frame_sync.js?v=2"></script>
 <script defer src="vilda_sync.js?v=39"></script>
 <script defer src="vilda_sync_integration.js?v=51"></script>
@@ -122,7 +122,7 @@
 <script defer src="vilda_postepy_doroslego_wydruk.js?v=6"></script>
 <script defer src="vilda_werdykt.js?v=7"></script>
 <script defer src="vilda_trajectory_analysis.js?v=43"></script>
-<script defer src="vilda_auth_ui.js?v=506"></script>
+<script defer src="vilda_auth_ui.js?v=507"></script>
 <script defer src="vilda_urodzeniowe_rozbieznosc.js?v=1"></script>
 <script defer src="vilda_cykle_leczenia.js?v=3"></script>
 <script defer src="vilda_version_history_ui.js?v=15"></script>
@@ -141,7 +141,7 @@
   <!-- Ładujemy bibliotekę ikon Lucide do wyświetlania ikon w menu bocznym -->
   <script src="lucide.min.js?v=1" defer></script>
   <script src="ios26-ui.js?v=45" defer></script>
-<script defer src="vilda_chrome.js?v=174"></script>
+<script defer src="vilda_chrome.js?v=175"></script>
 <link href="vilda_lab_assessment_ui.css?v=13" rel="stylesheet">
 <link href="vilda_lab_history_tab.css?v=4" rel="stylesheet">
   <link rel="stylesheet" href="vilda_phone_landscape.css?v=2">
@@ -970,10 +970,10 @@
                       W tym trybie wyraźnie rozdzielamy dwie rzeczy.
                     </p>
                     <p class="settings-control-desc">
-                      <strong>Dane pacjentów</strong> — całość ich dokumentacji medycznej — przechowywane są wyłącznie w chmurze. Na ten komputer pobierają się tylko podczas Twojej sesji (do pamięci RAM) i znikają z chwilą wylogowania. Nikt, kto usiądzie tu po Tobie, nie znajdzie ich na dysku.
+                      <strong>Dane pacjentów</strong> — całość ich dokumentacji medycznej — przechowywane są w chmurze. Na ten komputer pobierają się tylko na czas sesji, do pamięci karty przeglądarki, i są usuwane z chwilą wylogowania. Wyjątki, zaszyfrowane Twoim hasłem: kosz, czyli treść usuniętych zapisów (także z innych urządzeń), który znika przy pierwszym logowaniu po 30 dniach, oraz dane pacjentów zapisane na tym komputerze, zanim włączono tryb chmurowy.
                     </p>
                     <p class="settings-control-desc">
-                      <strong>Twoje konto, ustawienia i biblioteka notatek</strong> są zapisywane lokalnie, ale w pełni zaszyfrowane Twoim hasłem (PBKDF2&nbsp;+&nbsp;AES‑GCM). Bez Twojego hasła te dane są nieczytelne — nawet dla kogoś z fizycznym dostępem do komputera.
+                      <strong>Twoje konto, ustawienia i biblioteka notatek</strong> są zapisywane lokalnie. Klucze konta i treść notatek są zaszyfrowane Twoim hasłem (PBKDF2&nbsp;+&nbsp;AES‑GCM) — bez hasła, klucza odzyskiwania ani Twojego logowania biometrycznego nieczytelne, nawet dla kogoś z fizycznym dostępem do komputera. Jawne zostają m.in. nazwa konta, ustawienia aplikacji, nazwy list oczekujących z terminami i nazwy urządzeń z logowaniem biometrycznym.
                     </p>
                     <div class="settings-card-toggle-row settings-backup-btn-row">
                       <label class="settings-backup-checkbox-label">
@@ -1011,7 +1011,7 @@
                       </select>
                     </div>
                     <p class="settings-inline-note" style="margin-top:6px;">
-                      Dotyczy <strong>tylko tego urządzenia</strong> (nie synchronizuje się). Długie okna (godziny/dni) wybieraj wyłącznie na <strong>prywatnym</strong> sprzęcie — nie na współdzielonym. Zamknięcie przeglądarki i tak wylogowuje.
+                      Dotyczy <strong>tylko tego urządzenia</strong> (nie synchronizuje się). Długie okna (godziny/dni) wybieraj wyłącznie na <strong>prywatnym</strong> sprzęcie — nie na współdzielonym. Zamknięcie przeglądarki nie zawsze wylogowuje: przeglądarka, która przywraca karty, może przywrócić sesję razem z kartą, bez hasła — do upływu wybranego czasu od ostatniej aktywności. Kończąc pracę, wyloguj się.
                     </p>
                   </div>
                 </div><!-- /syncControlCard -->
@@ -1027,7 +1027,7 @@
               <span class="settings-accordion-index" aria-hidden="true"><i data-lucide="log-in"></i></span>
               <div class="settings-accordion-copy">
                 <h2 class="settings-accordion-title">Logowanie na innych urządzeniach</h2>
-                <p class="settings-accordion-text">Zaloguj się na nowym komputerze telefonem, kodem QR lub zapasowym kodem konta — bez zostawiania danych na obcym urządzeniu.</p>
+                <p class="settings-accordion-text">Zaloguj się na nowym komputerze telefonem, kodem QR lub zapasowym kodem konta; telefonem także jednorazowo, bez zostawiania danych pacjentów na obcym urządzeniu.</p>
               </div>
               <div class="settings-accordion-meta">
                 <span class="settings-mini-chip">3 metody</span>
@@ -1045,7 +1045,7 @@
                       <span class="settings-tag" id="registerRoamingPasskeyTag">—</span>
                     </div>
                     <p class="settings-control-desc">
-                      Skonfiguruj logowanie telefonem — zamiast wpisywać hasło na komputerze w gabinecie, potwierdzasz biometrią (Face ID lub odcisk palca) na własnym telefonie. Żadne dane nie zostają na obcym komputerze.
+                      Skonfiguruj logowanie telefonem — zamiast wpisywać hasło na komputerze w gabinecie, potwierdzasz biometrią (Face ID lub odcisk palca) na własnym telefonie. Przy logowaniu wybierasz, ile danych zostawić na komputerze w gabinecie; przy „Obcym komputerze” nie zostają na nim dane pacjentów.
                     </p>
                     <div class="settings-card-toggle-row settings-backup-btn-row">
                       <button type="button" id="registerRoamingPasskeyBtn"
@@ -1056,7 +1056,7 @@
                     </div>
                     <p class="settings-inline-note settings-backup-note" id="registerRoamingPasskeyStatus"></p>
                     <p class="settings-inline-note" style="margin-top:0.6rem;">
-                      💡 <strong>Kiedy używać:</strong> logujesz się na komputerze w gabinecie lub szpitalu, który nie jest Twój — potwierdzasz logowanie biometrią na własnym telefonie, a po wylogowaniu nie ma śladu danych na obcym sprzęcie.
+                      💡 <strong>Kiedy używać:</strong> logujesz się na komputerze w gabinecie lub szpitalu, który nie jest Twój — potwierdzasz logowanie biometrią na własnym telefonie, a wybierając „Obcy komputer”, nie zostawiasz na obcym sprzęcie danych pacjentów.
                     </p>
                   </div>
 

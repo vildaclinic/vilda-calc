@@ -465,7 +465,10 @@ describe('strażniki źródła', () => {
     expect(le).toContain('const Bsl_w=await Bsl_scalPacjenta(F,j,H,R,Bkz_S,i,e);');
     expect(le).toContain('w+=await Bsl_usunPacjenta(j,m[j],e)');
     // P-BLOKADA-IMPORT: wewnętrzne scalanie importu (Bpb_IMPORT) pomija koniec scalania kosza; synchronizacja nie.
-    expect(le).toContain('Bkz_n=e===Bpb_IMPORT?0:await Bkz_scalKoniec(Bkz_S,e)}catch(Bkz_e){if(Bkz_e&&Bkz_e.vildaMergeBusy)throw Bkz_e;');
+    // P-CHMURA-OPIS: Le podmienia opcje na kopię z sesją startu, więc import rozpoznaje po tożsamości zapamiętanej
+    // przed podmianą (Bses_imp); zmiana sesji (SESSION_CHANGED) kończy scalanie jak zajęta blokada.
+    expect(le).toContain('const Bses_imp=e===Bpb_IMPORT;e=Bses_opcje(e);');
+    expect(le).toContain('Bkz_n=Bses_imp?0:await Bkz_scalKoniec(Bkz_S,e)}catch(Bkz_e){if(Bkz_e&&(Bkz_e.vildaMergeBusy||Bkz_e.code==="SESSION_CHANGED"))throw Bkz_e;');
     for (const f of ['Bsl_scalPacjenta', 'Bsl_usunPacjenta']) {
       const cialo = src.slice(src.indexOf(`async function ${f}(`));
       expect(cialo.slice(0, 200), f).toMatch(/return Bsl_podBlokada\(/);
@@ -475,6 +478,8 @@ describe('strażniki źródła', () => {
   it('delty na żywo idą tą samą drogą (applyEncryptedDelta → Le)', () => {
     expect(src).toContain('applyEncryptedDelta:ps,');
     const ps = src.slice(src.indexOf('async function ps(t){'));
-    expect(ps.slice(0, 300)).toContain('return!e||typeof e!="object"?null:await Le(e)}');
+    // P-CHMURA-OPIS: zmiana sesji (po odszyfrowaniu albo w scalaniu) — błąd SESSION_CHANGED oznaczony jak zajęta
+    // blokada (Bses_delta: vildaMergeBusy), żeby pętla delt w vilda_sync.js nie przesunęła kursora.
+    expect(ps.slice(0, 500)).toContain('if(Bses_zmieniona(Bses_d))throw Bses_delta(Bses_blad());if(!e||typeof e!="object")return null;try{return await Le(e)}catch(Bses_x){throw Bses_delta(Bses_x)}}');
   });
 });
