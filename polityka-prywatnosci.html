@@ -60,7 +60,7 @@
   <script src="vilda_logger.js?v=2"></script>
 <script src="vilda_html.js?v=5"></script>
 <script src="vilda_persistence_adapter.js?v=32"></script>
-<script src="vilda_session_bridge.js?v=98"></script>
+<script src="vilda_session_bridge.js?v=99"></script>
 <script src="vilda_init.js?v=4"></script>
 <script src="vilda_deps.js?v=98"></script>
 <script>
@@ -92,7 +92,7 @@
 
   <link href="inline_polityka_prywatnosci_00.css?v=1" rel="stylesheet">
   <script src="lucide.min.js?v=1" defer></script>
-<script src="vilda_chrome.js?v=175"></script>
+<script src="vilda_chrome.js?v=176"></script>
   <link rel="stylesheet" href="vilda_phone_landscape.css?v=2">
   <script src="vilda_phone_landscape.js?v=3"></script>
 </head>
@@ -178,11 +178,14 @@
                 <td><strong>sessionStorage</strong></td>
                 <td>Klucz sesji skarbca danych (Vilda Vault) — umożliwia odczyt zaszyfrowanych
                   danych pacjenta w trakcie bieżącej sesji przeglądarki, także po przejściu na inną
-                  stronę aplikacji lub odświeżeniu, bez ponownego wpisywania hasła</td>
-                <td>Przy wylogowaniu i automatycznej blokadzie po bezczynności, a poza tym wraz
-                  z zamknięciem karty lub okna przeglądarki. Przeglądarka, która przywraca karty
-                  (po ponownym uruchomieniu albo poleceniem „Otwórz ponownie zamkniętą kartę”),
-                  może odtworzyć klucz razem z kartą — aplikacja przyjmuje go wtedy tylko do upływu
+                  stronę aplikacji lub odświeżeniu, bez ponownego wpisywania hasła. W trybie chmurowym
+                  ponadto dane pacjentów pobrane z chmury na czas sesji (w postaci zaszyfrowanej, zob.
+                  niżej) oraz bieżący stan formularzy (w postaci niezaszyfrowanej)</td>
+                <td>Przy wylogowaniu, a poza tym wraz z zamknięciem karty lub okna przeglądarki;
+                  klucz sesji także przy automatycznej blokadzie po bezczynności. Przeglądarka,
+                  która przywraca karty (po ponownym uruchomieniu albo poleceniem „Otwórz ponownie
+                  zamkniętą kartę”), może odtworzyć te dane razem z kartą — klucz sesji aplikacja
+                  przyjmuje wtedy tylko do upływu
                   ustawionego czasu bezczynności (domyślnie 20 minut, w trybie chmurowym 10 minut;
                   najwyżej 7 dni). Wyjątek: sesji „Zaloguj jednorazowo” aplikacja po przywróceniu karty
                   nie przyjmuje — czyści całą pamięć sesji karty i wraca do ekranu logowania</td>
@@ -190,18 +193,8 @@
               <tr>
                 <td><strong>IndexedDB</strong></td>
                 <td>Zaszyfrowane dane pacjentów (baza <code>vilda_user_&lt;userId&gt;</code>)
-                  — wyłącznie dla zalogowanych użytkowników</td>
+                  — wyłącznie dla zalogowanych użytkowników (w trybie chmurowym zob. niżej)</td>
                 <td>Po usunięciu konta lub ręcznym wyczyszczeniu danych witryny</td>
-              </tr>
-              <tr>
-                <td><strong>IndexedDB</strong> — cache trybu chmurowego (baza <code>vilda-cloud-cache</code>)</td>
-                <td>Lokalna kopia danych pacjentów na zaufanym urządzeniu (tryb chmurowy) —
-                  umożliwia pracę offline i natychmiastowy start. Tożsamość pacjenta (imię, data
-                  urodzenia), pomiary i treść notatek są <strong>zaszyfrowane</strong> (AES-GCM-256);
-                  metadane organizacyjne (kategoria/termin wizyty, nazwa leku, procedura) są
-                  pseudonimizowane — powiązane z losowym identyfikatorem, nie z nazwiskiem. Osobny
-                  wpis dla każdego konta</td>
-                <td>Po wylogowaniu („Wyloguj się"), usunięciu konta lub ręcznym wyczyszczeniu danych witryny</td>
               </tr>
             </tbody>
           </table>
@@ -219,11 +212,16 @@
             i nigdy nie opuszcza urządzenia ani synchronizowanej kopii zaszyfrowanej.
           </p>
           <p>
-            <strong>Tryb chmurowy — lokalny cache na zaufanym urządzeniu:</strong> jeżeli użytkownik
-            (lekarz) korzysta z konta w trybie chmurowym, aplikacja może przechowywać na urządzeniu
-            lokalną kopię danych pacjentów (baza <code>vilda-cloud-cache</code>), aby działać offline
-            i startować natychmiast. <strong>Dane identyfikujące pacjenta (imię, data urodzenia),
-            wszystkie pomiary oraz treść notatek są zaszyfrowane</strong> algorytmem AES-GCM-256.
+            <strong>Tryb chmurowy:</strong> jeżeli użytkownik
+            (lekarz) korzysta z konta w trybie chmurowym, dane pacjentów przechowywane są w chmurze,
+            a na urządzenie pobierane są tylko na czas sesji, do pamięci karty przeglądarki,
+            i usuwane przy wylogowaniu („Wyloguj się"). Wyjątek stanowią, w postaci zaszyfrowanej
+            (baza <code>vilda_user_&lt;userId&gt;</code>), treść kosza, czyli zapisów usuniętych (także
+            na innych urządzeniach), usuwana przy pierwszym logowaniu po upływie 30 dni od usunięcia,
+            oraz dane pacjentów zapisane na urządzeniu przed włączeniem trybu chmurowego. Poza
+            bieżącym stanem formularzy w pamięci sesji karty (zob. tabela wyżej) <strong>dane
+            identyfikujące pacjenta (imię, data urodzenia), wszystkie pomiary oraz treść notatek są
+            zaszyfrowane</strong> algorytmem AES-GCM-256.
             Metadane organizacyjne notatek i wizyt (kategoria, terminy, nazwa i dawka leku, typ
             procedury) są przechowywane w postaci <strong>pseudonimizowanej</strong> — powiązane
             wyłącznie z losowym identyfikatorem rekordu, nie z danymi osobowymi pacjenta. <strong>Klucz
@@ -231,12 +229,8 @@
             IndexedDB) — jest wyprowadzany z hasła lub Touch-ID (PBKDF2-SHA256, 600 000 iteracji),
             a na czas odblokowanej sesji przechowywany w pamięci sesji karty przeglądarki
             (sessionStorage, zob. tabela wyżej). Do serwera synchronizacji dane wysyłane są w postaci <strong>w całości
-            zaszyfrowanej</strong> — administrator nie ma technicznej możliwości ich odczytu. Cache jest
-            odizolowany osobno dla każdego konta i zostaje <strong>automatycznie usunięty</strong> przy
-            wylogowaniu („Wyloguj się") oraz przy usunięciu konta; przetrwa natomiast zablokowanie po
-            bezczynności i zamknięcie aplikacji — co pozwala na szybkie, offline'owe wznowienie pracy
-            po ponownym podaniu hasła lub Touch-ID. Mechanizm jest przeznaczony dla urządzeń własnych —
-            na sprzęcie współdzielonym zalecane jest wylogowanie po zakończeniu pracy.
+            zaszyfrowanej</strong> — administrator nie ma technicznej możliwości ich odczytu. Na sprzęcie
+            współdzielonym zalecane jest wylogowanie po zakończeniu pracy.
           </p>
 
           <h2>4. Google Analytics 4 (analityka)</h2>
