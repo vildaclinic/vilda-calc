@@ -104,24 +104,24 @@ test.describe('etykiety pól Klirensu wskazują pole, nie przycisk „i"', () =>
   });
 
   test('pole z listą odpowiedzi: klik w nazwę daje fokus liście i niczego nie potwierdza', async ({ page }) => {
-    await otworzKalkulator(page, { tryb: 'AGu_spot' });
-    const lista = page.locator('#ui_spotSameSpecimen_answer');
+    await otworzKalkulator(page, { tryb: 'TMP_GFR' });
+    const lista = page.locator('#ui_tmpPairedSameTime_answer');
     await expect(lista).toBeVisible();
     await expect(lista).toHaveValue('');
 
     const { zle } = await zlyCelEtykiet(page);
     expect(zle, JSON.stringify(zle.slice(0, 8))).toEqual([]);
 
-    await kliknij(nazwa(page, 'spotSameSpecimen'));
+    await kliknij(nazwa(page, 'tmpPairedSameTime'));
     await expect(lista, 'fokus na liście odpowiedzi').toBeFocused();
     await expect(lista, 'klik w nazwę nie wybiera odpowiedzi').toHaveValue('');
-    await expect(page.locator('#spotSameSpecimen'), 'ukryte pole wyboru zostaje niezaznaczone').not.toBeChecked();
-    await expect(dymek(page, 'spotSameSpecimen')).toBeHidden();
+    await expect(page.locator('#tmpPairedSameTime'), 'ukryte pole wyboru zostaje niezaznaczone').not.toBeChecked();
+    await expect(dymek(page, 'tmpPairedSameTime')).toBeHidden();
 
-    await kliknij(info(page, 'spotSameSpecimen'));
-    await expect(dymek(page, 'spotSameSpecimen')).toBeVisible();
+    await kliknij(info(page, 'tmpPairedSameTime'));
+    await expect(dymek(page, 'tmpPairedSameTime')).toBeVisible();
     await expect(lista).toHaveValue('');
-    await expect(page.locator('#spotSameSpecimen')).not.toBeChecked();
+    await expect(page.locator('#tmpPairedSameTime')).not.toBeChecked();
   });
 });
 

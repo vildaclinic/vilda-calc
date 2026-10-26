@@ -536,6 +536,8 @@ function validateField(e) {
   } else if ($("formulaPicker")?.value === "FEHCO3_spot" && ["U_HCO3_spot", "S_HCO3_spot", "Ucr_spot", "Scr_spot"].includes(n)) {
     // The FEHCO₃ evaluator validates finite concentrations and units. A raw
     // unitless ceiling must not reject an equivalent physical measurement.
+  } else if ($("formulaPicker")?.value === "AGu_spot" && ["U_Na_spot", "U_K_spot", "U_Cl_spot"].includes(n)) {
+    // UAG validates three finite, nonnegative urine concentrations.
   } else if (maxValues[n] !== void 0 && t > maxValues[n])
     return (
       o && (o.textContent = "Warto\u015B\u0107 wydaje si\u0119 zbyt wysoka"),
@@ -547,7 +549,7 @@ function validateField(e) {
 function validateClcrAgeContext(e) {
   // Cit/Cr reference bands use completed years; zero years needs no extra
   // months or days to select the source's birth–<3-years interval.
-  if (["CitCr_spot", "FENa_spot", "FEK_spot", "FECl_spot", "FEHCO3_spot"].includes($("formulaPicker")?.value)) return;
+  if (["CitCr_spot", "FENa_spot", "FEK_spot", "FECl_spot", "FEHCO3_spot", "AGu_spot"].includes($("formulaPicker")?.value)) return;
   const n = document.getElementById("age"),
     t = document.getElementById("ageMonths");
   if (!n || (n.value || "").trim() === "") return;
@@ -572,6 +574,7 @@ function canComputeFormula(e) {
   if (e === "FEK_spot") return evaluateClcrFek().valid === true;
   if (e === "FECl_spot") return evaluateClcrFecl().valid === true;
   if (e === "FEHCO3_spot") return evaluateClcrFehco3().valid === true;
+  if (e === "AGu_spot") return evaluateClcrUag().valid === true;
   if (
     window.ClcrClinicalSafety &&
     typeof window.ClcrClinicalSafety.formulaSafety == "function"
@@ -695,6 +698,12 @@ function evaluateClcrFecl() {
   return engine?.evaluate(engine.readInputFromDocument(document), window.VildaClcrFeclReferenceData?.DEFAULT_POLICY)
     || { valid: false, errorCode: "FECL_UNAVAILABLE", error: "Nie można obliczyć FECl. Odśwież aplikację." };
 }
+function evaluateClcrUag() {
+  const engine = window.VildaClcrUag;
+  return engine?.evaluate(engine.readInputFromDocument(document), window.VildaClcrUagReferenceData?.DEFAULT_POLICY)
+    || { valid: false, errorCode: "UAG_UNAVAILABLE", error: "Nie można obliczyć UAG. Odśwież aplikację." };
+}
+
 function evaluateClcrFehco3() {
   const engine = window.VildaClcrFehco3;
   return engine?.evaluate(engine.readInputFromDocument(document), window.VildaClcrFehco3ReferenceData?.DEFAULT_POLICY)
@@ -747,14 +756,14 @@ function packClcrSupplementaryMarkup(markup, formulaId) {
   clcrSetTrustedMarkup(staging, markup, "clcr-result-presentation-staging");
   const nodes = [...staging.children];
   const primary = nodes.find((node) => node.classList.contains("clcr-result-card") && node.dataset.clcrFormula === formulaId);
-  if (!primary && ["CitCr_spot", "FENa_spot", "FEK_spot", "FECl_spot", "FEHCO3_spot"].includes(formulaId)) {
-    const pending = nodes.filter((node) => node.dataset.clcrFormula === formulaId && node.matches(".citcr-result-empty, .citcr-result-error, .fena-result-empty, .fena-result-error, .fek-result-empty, .fek-result-error, .fecl-result-empty, .fecl-result-error, .fehco3-result-empty, .fehco3-result-error"));
+  if (!primary && ["CitCr_spot", "FENa_spot", "FEK_spot", "FECl_spot", "FEHCO3_spot", "AGu_spot"].includes(formulaId)) {
+    const pending = nodes.filter((node) => node.dataset.clcrFormula === formulaId && node.matches(".citcr-result-empty, .citcr-result-error, .fena-result-empty, .fena-result-error, .fek-result-empty, .fek-result-error, .fecl-result-empty, .fecl-result-error, .fehco3-result-empty, .fehco3-result-error, .uag-result-empty, .uag-result-error"));
     if (pending.length) return pending.map((node) => node.outerHTML).join("");
   }
   if (!primary) return markup;
   const details = nodes.find((node) => node.classList.contains("clcr-result-details") && node.dataset.clcrFormula === formulaId);
   if (!details) return markup;
-  if (["OxCr_spot", "CitCr_spot", "FENa_spot", "FEK_spot", "FECl_spot", "FEHCO3_spot"].includes(formulaId)) {
+  if (["OxCr_spot", "CitCr_spot", "FENa_spot", "FEK_spot", "FECl_spot", "FEHCO3_spot", "AGu_spot"].includes(formulaId)) {
     // This card already carries its complete source and specimen context.
     // Unrelated stone-panel EAU notes must not label a Fimlab/NHS reference.
     nodes.filter((node) => node !== primary && node !== details &&
@@ -908,7 +917,8 @@ function update() {
     fenaEvaluation = evaluateClcrFena(),
     fekEvaluation = evaluateClcrFek(),
     feclEvaluation = evaluateClcrFecl(),
-    fehco3Evaluation = evaluateClcrFehco3();
+    fehco3Evaluation = evaluateClcrFehco3(),
+    uagEvaluation = evaluateClcrUag();
   acrRatio
     ? ((j = acrRatio.mgG),
       ($("U_ACR").value = j.toFixed(1)))
@@ -923,40 +933,7 @@ function update() {
     spotUrineChloride = readClcrOptionalNumber("U_Cl_spot"),
     spotSerumChloride = readClcrOptionalNumber("S_Cl_spot"),
     spotUrineBicarbonate = readClcrOptionalNumber("U_HCO3_spot"),
-    spotSerumBicarbonate = readClcrOptionalNumber("S_HCO3_spot"),
-    computeSpotFractionalExcretion = (urineAnalyte, serumAnalyte) =>
-      window.ClcrClinicalSafety &&
-      typeof window.ClcrClinicalSafety.computeFractionalExcretion == "function"
-        ? window.ClcrClinicalSafety.computeFractionalExcretion({
-            urineAnalyte,
-            serumAnalyte,
-            urineCreatinine: N,
-            urineCreatinineUnit: _,
-            serumCreatinine: P,
-            serumCreatinineUnit: I,
-            pairedSameTime: spotPairedChemistry,
-            sameUrineSpecimen: spotPairedChemistry,
-          })
-        : null,
-    spotFeNa = computeSpotFractionalExcretion(
-      spotUrineSodium,
-      spotSerumSodium,
-    ),
-    spotFeK = { ok: fekEvaluation.valid === true, valuePct: fekEvaluation.rawValue, error: fekEvaluation.error },
-    spotFeCl = { ok: feclEvaluation.valid === true, valuePct: feclEvaluation.rawValue, error: feclEvaluation.error },
-    spotFeHco3 = { ok: fehco3Evaluation.valid === true, valuePct: fehco3Evaluation.rawValue, error: fehco3Evaluation.error },
-    uagSpecimenConfirmed = typeof window.ClcrUiWorkflow?.uagSpecimenConfirmed === "function"
-      ? window.ClcrUiWorkflow.uagSpecimenConfirmed() : sameSpotSpecimen,
-    spotUag =
-      uagSpecimenConfirmed &&
-      window.ClcrClinicalSafety &&
-      typeof window.ClcrClinicalSafety.computeUrineAnionGap == "function"
-        ? window.ClcrClinicalSafety.computeUrineAnionGap({
-            sodium: spotUrineSodium,
-            potassium: spotUrinePotassium,
-            chloride: spotUrineChloride,
-          })
-        : null;
+    spotSerumBicarbonate = readClcrOptionalNumber("S_HCO3_spot");
   /*
    * Etap 0: automatyczne zakresy Ca/Cr oraz TmP/GFR są wyłączone.
    * Ich właściwa interpretacja wymaga dokładnego wieku, płci, materiału,
@@ -2346,52 +2323,16 @@ function update() {
   } else if (_e === "FEHCO3_spot") {
     ve += '<div class="fehco3-result-error" data-clcr-formula="FEHCO3_spot"><strong>Nie można wyświetlić FEHCO₃</strong><p>Odśwież aplikację, aby wczytać moduł wyniku FEHCO₃.</p></div>';
   }
-  if (isFiniteNum(spotUag)) {
-    y(
-      "Luka anionowa moczu (UAG; próbka punktowa)",
-      spotUag,
-      "mmol/L",
-      undefined,
-      "AGu_spot",
-    );
+  if (window.ClcrUagUi && (uagEvaluation.valid || _e === "AGu_spot")) {
+    ve += window.ClcrUagUi.renderResult(uagEvaluation);
+  } else if (_e === "AGu_spot") {
+    ve += '<div class="uag-result-error" data-clcr-formula="AGu_spot"><strong>Nie można wyświetlić UAG</strong><p>Odśwież aplikację, aby wczytać moduł wyniku UAG.</p></div>';
   }
-  const selectedFeResult = {
-      FENa_spot: spotFeNa,
-      FEK_spot: spotFeK,
-      FECl_spot: spotFeCl,
-      FEHCO3_spot: spotFeHco3,
-    }[_e],
-    selectedSpotChemistryMissing =
-      (selectedFeResult && !selectedFeResult.ok) ||
-      (_e === "AGu_spot" && !isFiniteNum(spotUag)),
-    selectedSpotChemistryLabel =
-      {
-        FENa_spot: "FENa",
-        FEK_spot: "FEK",
-        FECl_spot: "FECl",
-        FEHCO3_spot: "FEHCO\u2083",
-        AGu_spot: "UAG",
-      }[_e] || "FE/UAG";
-  if (_e === "AGu_spot" && !uagSpecimenConfirmed) {
-    ve += '<div class="result-box warn-yellow" data-clcr-formula="AGu_spot"><strong>Nie obliczono UAG:</strong> potwierdź, że sód, potas i chlorki pochodzą z tej samej próbki moczu.</div>';
-  } else if (["FENa_spot", "FEK_spot", "FECl_spot", "FEHCO3_spot"].includes(_e)) {
-    // The selected audited FE has one result/error card from its own engine.
-  } else if (spotChemistryRequested && _e !== "AGu_spot" && !spotPairedChemistry) {
-    ve +=
-      '<div class="result-box warn-yellow"><strong>Nie obliczono FE/UAG:</strong> potwierdź, że anality i kreatynina pochodzą z tej samej próbki moczu, a krew pobrano równocześnie.</div>';
-  } else if (selectedSpotChemistryMissing) {
-    ve += `<div class="result-box warn-yellow"><strong>Nie obliczono ${clcrEscapeHtml(selectedSpotChemistryLabel)}:</strong> ${clcrEscapeHtml(selectedFeResult && selectedFeResult.error ? selectedFeResult.error : "uzupełnij wymagane stężenia z tej samej próbki moczu.")}</div>`;
-  } else if (
-    spotChemistryRequested &&
-    !spotFeHco3?.ok &&
-    !isFiniteNum(spotUag)
-  ) {
-    ve += `<div class="result-box warn-yellow"><strong>Nie obliczono FE/UAG:</strong> ${clcrEscapeHtml(selectedFeResult && selectedFeResult.error ? selectedFeResult.error : "uzupełnij wymagane stężenia ze sparowanych próbek.")}</div>`;
-  }
-  if (isFiniteNum(spotUag)) {
-    ve += $("spotNagmaContext")?.checked
-      ? '<div class="result-box"><strong>UAG:</strong> znak wyniku należy oceniać łącznie z odpowiedzią amonową nerek i ograniczeniami metody; kalkulator nie stosuje uniwersalnej normy.</div>'
-      : '<div class="result-box warn-yellow"><strong>UAG:</strong> bez potwierdzonej kwasicy metabolicznej z prawidłową luką surowicy pokazano wyłącznie wartość liczbową, bez interpretacji.</div>';
+  // Each selected FE/UAG owns its result or error. The legacy broad view can
+  // show any complete calculation without demanding another confirmation.
+  if (!spotFeFormulaIds.has(_e) && spotChemistryRequested &&
+      ![fenaEvaluation, fekEvaluation, feclEvaluation, fehco3Evaluation, uagEvaluation].some(result => result.valid)) {
+    ve += '<div class="result-box warn-yellow"><strong>Nie obliczono FE/UAG:</strong> uzupełnij stężenia potrzebne do wybranego obliczenia. Znana niezgodność próbek blokuje obliczenie.</div>';
   }
   const timedCollectionAnalyteProvided = [
     "U_Na",
@@ -2459,10 +2400,12 @@ function update() {
   }
   const feclDetailsOpen = _e === "FECl_spot" && $("clcr-fecl-details")?.open === true;
   const fehco3DetailsOpen = _e === "FEHCO3_spot" && $("clcr-fehco3-details")?.open === true;
+  const uagDetailsOpen = _e === "AGu_spot" && $("clcr-uag-details")?.open === true;
   (clcrSetTrustedMarkup($("elecInfo"), packClcrSupplementaryMarkup(ve, _e), "electrolyte result html"),
     ($("elecCard").style.display = ve ? "block" : "none"));
   if (feclDetailsOpen && $("clcr-fecl-details")) $("clcr-fecl-details").open = true;
   if (fehco3DetailsOpen && $("clcr-fehco3-details")) $("clcr-fehco3-details").open = true;
+  if (uagDetailsOpen && $("clcr-uag-details")) $("clcr-uag-details").open = true;
   let he = "";
   const stoneEngine = window.ClcrStoneSafety,
     stoneVersionActive =
@@ -3891,23 +3834,24 @@ const clearBtn = document.getElementById("clearBtn");
 clearBtn &&
   clearBtn.addEventListener("click", (event) => {
     event.clcrClearedFormula = $("formulaPicker")?.value || "";
-    if (["FECl_spot", "FEHCO3_spot"].includes(event.clcrClearedFormula)) {
-      // Clear the concentrations, not an explicitly known problem with their
-      // sampling or the patient's context. The session clear listener restores
-      // this typed map after the generic reset, before workflow recalculation.
+    if (["FECl_spot", "FEHCO3_spot", "AGu_spot"].includes(event.clcrClearedFormula)) {
+      // Preserve the patient's known context before the generic reset. The
+      // session listener retains FE sampling facts; for UAG, clearing starts a
+      // fresh urine specimen while preserving known patient conditions.
       const vault = window.__vildaClcrVersionValueVault;
       const contextIds = ["age", "ageMonths", "ageDays", "Ucr_spot_unit", "Scr_spot_unit", "FENa_sample_status",
         "spotSameSpecimen", "ui_spotSameSpecimen_answer", "spotPairedChemistry", "ui_spotPairedChemistry_answer",
         "spotDiureticUse", "ui_spotDiureticUse_answer", "spotKnownCKD", "ui_spotKnownCKD_answer",
         "suspectedAKI", "ui_suspectedAKI_answer", "creatinineState", "spotSampleKind",
         "tmpPairedSameTime", "ui_tmpPairedSameTime_answer", "tmpOvernightFasting", "ui_tmpOvernightFasting_answer",
-        "spotBicarbonateLoad", "ui_spotBicarbonateLoad_answer"];
+        "spotBicarbonateLoad", "ui_spotBicarbonateLoad_answer", "spotNagmaContext", "ui_spotNagmaContext_answer"];
       const preserved = Object.fromEntries(contextIds.flatMap(id => {
         const control = $(id);
         if (control) return [[id, control.type === "checkbox" ? control.checked : control.value]];
         return vault && Object.hasOwn(vault, id) ? [[id, vault[id]]] : [];
       }));
-      if (event.clcrClearedFormula === "FEHCO3_spot") event.clcrPreservedFehco3Context = preserved;
+      if (event.clcrClearedFormula === "AGu_spot") event.clcrPreservedUagContext = preserved;
+      else if (event.clcrClearedFormula === "FEHCO3_spot") event.clcrPreservedFehco3Context = preserved;
       else event.clcrPreservedFeclContext = preserved;
     }
     resetApp(!1);

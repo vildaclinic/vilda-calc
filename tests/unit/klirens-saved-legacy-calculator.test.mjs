@@ -3,6 +3,7 @@ import { loadBrowserScript } from '../support/load-browser-script.mjs';
 
 const w = {};
 for (const file of [
+  'clcr_uag_reference_data.js', 'clcr_uag.js',
   'clcr_clinical_safety.js', 'clcr_extended_egfr.js', 'clcr_calculation_assumptions.js',
   'clcr_result_reference_data.js', 'clcr_result_presentation.js',
   'clcr_measured_clearance_reference_data.js', 'clcr_measured_clearance_reference.js',
@@ -65,9 +66,10 @@ describe('Saved Klirens: existing timed-urine production arithmetic', () => {
 
   it('preserves negative UAG and contradictory specimen information', () => {
     const values = { spotSameSpecimen: true, U_Na_spot: 20, U_K_spot: 10, U_Cl_spot: 45 };
-    expect(calculate('AGu_spot', values)).toMatchObject({ valueNum: -15, displayValue: '-15.0', comparator: '', norm: '', outOfRange: null });
+    expect(calculate('AGu_spot', values)).toMatchObject({ valueNum: -15, displayValue: '-15', comparator: '', norm: '', outOfRange: null });
     expect(calculate('AGu_spot', { ...values, spotSameSpecimen: false, spotPairedChemistry: true }).valueNum).toBe(-15);
-    for (const answer of ['no', 'unknown']) expect(() => calculate('AGu_spot', { ...values, ui_spotSameSpecimen_answer: answer })).toThrow(/próbkę/);
+    expect(() => calculate('AGu_spot', { ...values, ui_spotSameSpecimen_answer: 'no' })).toThrow(/próbki/);
+    expect(calculate('AGu_spot', { ...values, spotSameSpecimen: false, ui_spotSameSpecimen_answer: 'unknown' }).valueNum).toBe(-15);
     expect(calculate('AGs', { S_Na: 140, S_Cl: 105, S_HCO3: 25 }).valueNum).toBe(10);
   });
 

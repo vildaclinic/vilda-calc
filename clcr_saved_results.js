@@ -575,6 +575,8 @@
       const legacyFena = sourceFormulaId === "FENa_spot" && !fena ? global.ClcrFenaPersistence?.legacyPoint(note) : null;
       const fek = sourceFormulaId === "FEK_spot" ? global.ClcrFekPersistence?.savedAssessment(note) : null;
       const legacyFek = sourceFormulaId === "FEK_spot" && !fek ? global.ClcrFekPersistence?.legacyPoint(note) : null;
+      const uag = sourceFormulaId === "AGu_spot" ? global.ClcrUagPersistence?.savedAssessment(note) : null;
+      const legacyUag = sourceFormulaId === "AGu_spot" && !uag ? global.ClcrUagPersistence?.legacyPoint(note) : null;
       const fehco3 = sourceFormulaId === "FEHCO3_spot" ? global.ClcrFehco3Persistence?.savedAssessment(note) : null;
       const legacyFehco3 = sourceFormulaId === "FEHCO3_spot" && !fehco3 ? global.ClcrFehco3Persistence?.legacyPoint(note) : null;
       const fecl = sourceFormulaId === "FECl_spot" ? global.ClcrFeclPersistence?.savedAssessment(note) : null;
@@ -586,7 +588,7 @@
       const signedCacrText = sourceFormulaId === "CaCr_spot" && !cacr && typeof lab.value === "string" && lab.value.length <= 256
         ? /^\s*([<>≤≥])\s*((?:\d+(?:[.,]\d*)?|[.,]\d+)(?:[eE][+-]?\d+)?)\s*$/.exec(lab.value) : null;
       const signedCacrValue = signedCacrText ? Number(signedCacrText[2].replace(",", ".")) : NaN;
-      const valueNum = fehco3 ? fehco3.rawValue : legacyFehco3 ? legacyFehco3.rawValue : fecl ? fecl.rawValue : legacyFecl ? legacyFecl.rawValue : fek ? fek.rawValue : legacyFek ? legacyFek.rawValue : fena ? fena.rawValue : legacyFena ? legacyFena.rawValue : ratio ? ratio.rawValue : legacyCitcr ? legacyCitcr.rawValue : legacyOxcr ? legacyOxcr.rawValue :
+      const valueNum = uag ? uag.rawValue : legacyUag ? legacyUag.rawValue : fehco3 ? fehco3.rawValue : legacyFehco3 ? legacyFehco3.rawValue : fecl ? fecl.rawValue : legacyFecl ? legacyFecl.rawValue : fek ? fek.rawValue : legacyFek ? legacyFek.rawValue : fena ? fena.rawValue : legacyFena ? legacyFena.rawValue : ratio ? ratio.rawValue : legacyCitcr ? legacyCitcr.rawValue : legacyOxcr ? legacyOxcr.rawValue :
         Number.isFinite(signedCacrValue) ? signedCacrValue : typeof lab.valueNum === "number" && isFinite(lab.valueNum)
           ? lab.valueNum
           : legacyToNumber(lab.value);
@@ -621,7 +623,7 @@
       const staleCitcrSnapshot = sourceFormulaId === "CitCr_spot" && !citcr && global.ClcrCitcrPersistence?.hasSavedAssessment(note);
       // FENa helper thresholds never imply a normal/abnormal verdict. Legacy
       // notes remain historical numbers; no current patient facts are applied.
-      const outOfRange = ["FECl_spot", "FEHCO3_spot"].includes(sourceFormulaId) ? null : sourceFormulaId === "FEK_spot" ? fek?.outOfRange ?? null : sourceFormulaId === "FENa_spot" ? null : ratio ? ratio.status === "unassessed" ? null : ["below", "above"].includes(ratio.status) : staleAcrSnapshot || stalePcrSnapshot || staleCacrSnapshot || staleOxcrSnapshot || staleCitcrSnapshot ? null : ["OxCr_spot", "CitCr_spot"].includes(sourceFormulaId) ? typeof note.body === "string" && note.body.includes("wynik poza zakresem") ? true : null :
+      const outOfRange = ["FECl_spot", "FEHCO3_spot", "AGu_spot"].includes(sourceFormulaId) ? null : sourceFormulaId === "FEK_spot" ? fek?.outOfRange ?? null : sourceFormulaId === "FENa_spot" ? null : ratio ? ratio.status === "unassessed" ? null : ["below", "above"].includes(ratio.status) : staleAcrSnapshot || stalePcrSnapshot || staleCacrSnapshot || staleOxcrSnapshot || staleCitcrSnapshot ? null : ["OxCr_spot", "CitCr_spot"].includes(sourceFormulaId) ? typeof note.body === "string" && note.body.includes("wynik poza zakresem") ? true : null :
         typeof note.body === "string" &&
         note.body.indexOf("poza zakresem") >= 0;
       const norm = typeof lab.norm === "string" ? lab.norm.trim() : "";
@@ -683,6 +685,16 @@
         feclAssessment: fecl,
       });
       if (legacyFecl) Object.assign(point, legacyFecl, { outOfRange: null, norm: "" });
+      if (uag) Object.assign(point, {
+        valueNum: uag.rawValue, displayValue: uag.displayValue, unit: uag.unit,
+        comparator: "", assessment: "unassessed", category: null, outOfRange: null, norm: "",
+        uagAssessment: uag,
+      });
+      if (legacyUag) Object.assign(point, legacyUag, { outOfRange: null, norm: "" });
+      if (sourceFormulaId === "AGu_spot" && !uag) {
+        point.assessment = "unassessed"; point.category = null; point.norm = "";
+        if (!legacyUag) point.displayValue = String(valueNum).replace(".", ",");
+      }
       if (fehco3) Object.assign(point, {
         valueNum: fehco3.comparator ? null : fehco3.rawValue, displayValue: fehco3.displayValue, unit: fehco3.unit,
         comparator: fehco3.comparator || "", assessment: "unassessed", category: null, outOfRange: null, norm: "",
@@ -710,7 +722,7 @@
     const series = Array.from(byLabel.values());
     series.forEach((s) => {
       s.points.sort((a, b) => String(a.dateISO).localeCompare(String(b.dateISO)));
-      if (["ACR", "PCR", "CaCr_spot", "OxCr_spot", "CitCr_spot", "FENa_spot", "FEK_spot", "FECl_spot", "FEHCO3_spot"].includes(s.sourceFormulaId)) {
+      if (["ACR", "PCR", "CaCr_spot", "OxCr_spot", "CitCr_spot", "FENa_spot", "FEK_spot", "FECl_spot", "FEHCO3_spot", "AGu_spot"].includes(s.sourceFormulaId)) {
         s.norm = s.points[s.points.length - 1]?.norm || "";
         return;
       }
@@ -733,6 +745,10 @@
     if (typeof opts.patientId !== "string" || !opts.patientId) throw new TypeError("Brak pacjenta wyniku.");
     const clinicalDateISO = normalizeDateISO(opts.clinicalDateISO);
     if (!clinicalDateISO) throw new TypeError("Brak poprawnej daty badania.");
+    const uagNote = dp.sourceFormulaId === "AGu_spot" ? global.ClcrUagPersistence?.referenceNote(dp) : "";
+    if (dp.sourceFormulaId === "AGu_spot" && !uagNote) {
+      throw new Error("Brak kompletnej oceny UAG do bezpiecznego zapisu. Odśwież kalkulator i oblicz wynik ponownie.");
+    }
     const fehco3Note = dp.sourceFormulaId === "FEHCO3_spot" ? global.ClcrFehco3Persistence?.referenceNote(dp) : "";
     if (dp.sourceFormulaId === "FEHCO3_spot" && !fehco3Note) {
       throw new Error("Brak kompletnej oceny FEHCO₃ do bezpiecznego zapisu. Odśwież kalkulator i oblicz wynik ponownie.");
@@ -760,6 +776,7 @@
     if (dp.sourceFormulaId === "FEK_spot") global.ClcrFekPersistence?.applyLabResult(dp, labResult);
     if (dp.sourceFormulaId === "FECl_spot") global.ClcrFeclPersistence?.applyLabResult(dp, labResult);
     if (dp.sourceFormulaId === "FEHCO3_spot") global.ClcrFehco3Persistence?.applyLabResult(dp, labResult);
+    if (dp.sourceFormulaId === "AGu_spot") global.ClcrUagPersistence?.applyLabResult(dp, labResult);
     // Generic vault charts consume valueNum as an exact measurement. A
     // detection limit stays textual there; the signed endpoint is retained
     // in the ACR snapshot note and understood by this history adapter.
@@ -784,6 +801,7 @@
       (fekNote ? "\n\n" + fekNote : "") +
       (feclNote ? "\n\n" + feclNote : "") +
       (fehco3Note ? "\n\n" + fehco3Note : "") +
+      (uagNote ? "\n\n" + uagNote : "") +
       (dp.sourceFormulaId === "cl24" && dp.measuredClearanceReference ? "\n\n" + measuredReferenceNote(dp) : "") +
       (dp.sourceFormulaId === "cg_norm" && dp.agePolicy === "completed-years" && Number.isInteger(dp.ageUsedYears) && dp.ageUsedYears >= 18
         ? "\n\nWiek użyty we wzorze: " + dp.ageUsedYears + " ukończonych lat." : "");
@@ -794,12 +812,12 @@
 
   const ASSESSMENT_FIELDS = Object.freeze([
     "acrAssessment", "pcrAssessment", "cacrAssessment", "oxcrAssessment", "citcrAssessment",
-    "fenaAssessment", "fekAssessment", "feclAssessment", "fehco3Assessment",
+    "fenaAssessment", "fekAssessment", "feclAssessment", "fehco3Assessment", "uagAssessment",
   ]);
   const HELPER_BY_FORMULA = Object.freeze({
     OxCr_spot: "ClcrOxcrPersistence", CitCr_spot: "ClcrCitcrPersistence",
     FENa_spot: "ClcrFenaPersistence", FEK_spot: "ClcrFekPersistence",
-    FECl_spot: "ClcrFeclPersistence", FEHCO3_spot: "ClcrFehco3Persistence",
+    FECl_spot: "ClcrFeclPersistence", FEHCO3_spot: "ClcrFehco3Persistence", AGu_spot: "ClcrUagPersistence",
   });
   const HEADER_BY_FORMULA = Object.freeze({ ACR: ACR_NOTE_HEADER, PCR: PCR_NOTE_HEADER, CaCr_spot: CACR_NOTE_HEADER });
 
@@ -972,6 +990,10 @@
         population: reference?.population || null,
         profileId: reference?.profileId || null, profileVersion: reference?.profileVersion ?? null },
     });
+    if (capture.formulaId === "AGu_spot") Object.assign(point, {
+      comment: text(capture.comment), knownFacts: object(capture.knownFacts),
+      contextReferences: Array.isArray(capture.contextReferences) ? capture.contextReferences : [],
+    });
     return point;
   }
 
@@ -1026,7 +1048,7 @@
       point.interpretation = text(frozen.interpretation) || text(frozen.statusText) || ({
         within: "W zapisanym zakresie", below: "Poniżej zapisanego zakresu", above: "Powyżej zapisanego zakresu",
       })[point.assessment] || "Brak zapisanej oceny";
-    } else if (!isStale && !["FENa_spot", "FEK_spot", "FECl_spot", "FEHCO3_spot"].includes(entry?.sourceFormulaId)) {
+    } else if (!isStale && !["FENa_spot", "FEK_spot", "FECl_spot", "FEHCO3_spot", "AGu_spot"].includes(entry?.sourceFormulaId)) {
       if (typeof note.body === "string" && note.body.includes("wynik poza zakresem")) {
         point.outOfRange = true; point.tone = "warning"; point.interpretation = "Poza zapisanym zakresem";
       }
@@ -1036,9 +1058,13 @@
       point.basis = typeof base.basis === "string" ? base.basis : null;
       point.originalUnit = base.originalUnit || point.originalUnit;
     }
-    if (["FENa_spot", "FECl_spot", "FEHCO3_spot"].includes(entry?.sourceFormulaId)) {
+    if (["FENa_spot", "FECl_spot", "FEHCO3_spot", "AGu_spot"].includes(entry?.sourceFormulaId)) {
       point.norm = ""; point.assessment = "unassessed"; point.category = null; point.outOfRange = null; point.tone = "neutral";
     }
+    if (entry?.sourceFormulaId === "AGu_spot" && frozen && !isStale) Object.assign(point, {
+      comment: (frozen.cautions || []).filter(item => typeof item === "string").join(" "),
+      knownFacts: object(frozen.knownFacts), contextReferences: frozen.references || [],
+    });
     if (entry?.sourceFormulaId === "FEK_spot" && !frozen) point.norm = "";
     const bounds = object(frozen?.reference?.bounds) || referenceBounds(point.norm, point.unit);
     point.source = point.source || (!isStale && frozen ? metadata.source : null);

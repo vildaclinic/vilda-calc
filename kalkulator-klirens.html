@@ -68,7 +68,7 @@
 <script defer src="vilda_html.js?v=5"></script>
 <script defer src="vilda_persistence_adapter.js?v=32"></script>
 <script defer src="vilda_panel_pacjent.js?v=1"></script>
-<script defer src="vilda_session_bridge.js?v=98"></script>
+<script defer src="vilda_session_bridge.js?v=99"></script>
 <script defer src="vilda_init.js?v=4"></script>
 <script defer src="vilda_crypto.js?v=15"></script>
 <script defer src="vilda_retention.js?v=1"></script>
@@ -80,7 +80,7 @@
 <script defer src="vilda_hormone_reference_ui.js?v=1"></script>
 <script defer src="vilda_lab_assessment_ui.js?v=18"></script>
 <script defer src="vilda_lab_history.js?v=5"></script>
-<script defer src="vilda_lab_history_tab.js?v=8"></script>
+<script defer src="vilda_lab_history_tab.js?v=9"></script>
 <script defer src="vilda_vault.js?v=227"></script>
 <script defer src="vilda_frame_sync.js?v=2"></script>
 <script defer src="vilda_sync.js?v=39"></script>
@@ -137,7 +137,7 @@
 <script defer src="vilda_sds_wzrostu.js?v=5"></script>
 <script defer src="vilda_bmi.js?v=10"></script><script defer src="vilda_masa.js?v=1"></script><script defer src="vilda_farmakoterapia.js?v=1"></script><script defer src="vilda_raport_plan.js?v=22"></script>
 <script defer src="vilda_tempo_wzrastania.js?v=3"></script>
-<script defer src="vilda_trajectory_analysis.js?v=43"></script>
+<script defer src="vilda_trajectory_analysis.js?v=44"></script>
 <script defer src="vilda_advanced_growth.js?v=81"></script>
 <script defer src="vilda_estimated_intake.js?v=3"></script>
 <script src="vilda_update_prep.js?v=98" defer></script>
@@ -176,7 +176,7 @@
      w vilda_deps.js (jspdf@2.5.1 + html2canvas@1.4.1, te same URL-e i SRI co dawniej). -->
     <!-- Biblioteka do generowania plików DOCX. Jeśli z jakiegoś powodu nie zostanie załadowana (np. brak internetu), skrypt wykorzysta prosty fallback HTML/RTF. -->
     <script defer src="https://cdn.jsdelivr.net/npm/docx@7.7.0/build/index.js" integrity="sha384-w/LllGhZ3w+q1yFNKaoeSozJlt4DKDgPzR/QqsYJ/de7QdUKPayy2iETdCFxEscy" crossorigin="anonymous"></script>
-<script defer src="vilda_chrome.js?v=175"></script>
+<script defer src="vilda_chrome.js?v=176"></script>
 <link href="clcr_ui_workflow.css?v=18" rel="stylesheet" />
 <link href="clcr_saved_results_view.css?v=1" rel="stylesheet" />
 <link href="clcr_result_details.css?v=1" rel="stylesheet" />
@@ -189,6 +189,7 @@
 <link href="clcr_fek_ui.css?v=1" rel="stylesheet" />
 <link href="clcr_fecl_ui.css?v=1" rel="stylesheet" />
 <link href="clcr_fehco3_ui.css?v=1" rel="stylesheet" />
+<link href="clcr_uag_ui.css?v=1" rel="stylesheet" />
 <link href="vilda_lab_assessment_ui.css?v=13" rel="stylesheet">
 <link href="vilda_lab_history_tab.css?v=4" rel="stylesheet">
   <link rel="stylesheet" href="vilda_phone_landscape.css?v=2">
@@ -992,7 +993,7 @@
     <!-- === Rozszerzony moduł wyboru formuł === -->
     <script defer src="inline_kalkulator_klirens_01.js?v=1"></script>
 
-    <script defer src="clcr_clinical_safety.js?v=12"></script>
+    <script defer src="clcr_clinical_safety.js?v=13"></script>
     <script defer src="clcr_stone_safety.js?v=1"></script>
     <script defer src="clcr_dialysis_safety.js?v=1"></script>
     <script defer src="clcr_extended_egfr.js?v=1"></script>
@@ -1031,10 +1032,14 @@
     <script defer src="clcr_fehco3.js?v=1"></script>
     <script defer src="clcr_fehco3_ui.js?v=1"></script>
     <script defer src="clcr_fehco3_persistence.js?v=1"></script>
+    <script defer src="clcr_uag_reference_data.js?v=1"></script>
+    <script defer src="clcr_uag.js?v=1"></script>
+    <script defer src="clcr_uag_ui.js?v=1"></script>
+    <script defer src="clcr_uag_persistence.js?v=1"></script>
     <script defer src="clcr_measured_clearance_reference_data.js?v=1"></script>
     <script defer src="clcr_measured_clearance_reference.js?v=1"></script>
     <script defer src="clcr_result_presentation.js?v=8"></script>
-    <script defer src="inline_kalkulator_klirens_02.js?v=20"></script>
+    <script defer src="inline_kalkulator_klirens_02.js?v=21"></script>
     <!-- Ujednolicona obsługa wyboru formuły w kalkulatorze klirensu/eGFR. -->
     <script defer src="inline_kalkulator_klirens_03.js?v=1"></script>
 <!-- Sekcja interpretacji AI z opisem i przyciskiem.  Umieszczamy ją w kontenerze
@@ -1101,8 +1106,8 @@
 </footer>
 
 <!-- 5. LOGIKA JS -->
-<script defer src="clcr_saved_legacy_calculator.js?v=1"></script>
-<script defer src="inline_kalkulator_klirens_04.js?v=26"></script>
+<script defer src="clcr_saved_legacy_calculator.js?v=2"></script>
+<script defer src="inline_kalkulator_klirens_04.js?v=27"></script>
 
 <!-- Moduł obsługi kliknięć listy dynamicznych wyników wyszukiwania -->
 <script defer src="inline_kalkulator_klirens_05.js?v=1"></script>
@@ -1700,7 +1705,7 @@ document.addEventListener('DOMContentLoaded', () => {
          wczytywane w tym formularzu. Plik userData.js korzysta z localStorage. -->
         <script src="userData.js?v=6" defer></script>
 <script src="ios26-ui.js?v=45" defer></script>
-<script defer src="inline_kalkulator_klirens_07.js?v=15"></script>
+<script defer src="inline_kalkulator_klirens_07.js?v=16"></script>
 <script defer src="vilda_down_syndrome.js?v=5"></script>
 <script defer src="vilda_anorexia_risk.js?v=4"></script>
 <!-- Tablice siatek zespolu Downa przed app.js: app.js przekazuje je silnikowi BMI (P-DS-1). -->
@@ -1718,7 +1723,7 @@ document.addEventListener('DOMContentLoaded', () => {
 <script defer src="vilda_estimated_intake_runtime.js?v=1"></script>
 <script defer src="vilda_estimated_intake_input_model.js?v=1"></script>
 <script defer src="vilda_estimated_intake_dom_mount.js?v=1"></script>
-<script src="app.js?v=238" defer></script>
+<script src="app.js?v=239" defer></script>
 <script src="vilda_diet_recommendations.js?v=70" defer></script>
 <script src="vilda_patient_report.js?v=48" defer></script>
 <script defer src="vilda_tab_guard.js?v=5"></script><script src="custom-fixes.js?v=76" defer></script>
@@ -1961,10 +1966,10 @@ document.addEventListener('DOMContentLoaded', () => {
 </script>
 <script defer src="inline_kalkulator_klirens_08.js?v=1"></script>
   <script defer src="inline_kalkulator_klirens_09.js?v=1"></script>
-  <script defer src="clcr_saved_calculation.js?v=1"></script>
-  <script defer src="clcr_saved_results.js?v=1"></script>
+  <script defer src="clcr_saved_calculation.js?v=2"></script>
+  <script defer src="clcr_saved_results.js?v=2"></script>
   <script defer src="clcr_saved_results_view.js?v=1"></script>
   <script defer src="clcr_result_details.js?v=1"></script>
-  <script defer src="clcr_ui_workflow.js?v=26"></script>
+  <script defer src="clcr_ui_workflow.js?v=27"></script>
 </body>
 </html>

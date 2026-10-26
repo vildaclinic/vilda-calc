@@ -75,8 +75,9 @@ test.afterEach(async ({ page }, info) => {
 async function chooseSource(page, source) {
   await page.evaluate(source => {
     const input = document.getElementById(source === 'OLAF' ? 'sourceOlaf' : 'sourcePalczewska');
-    input.checked = true;
-    input.dispatchEvent(new Event('change', { bubbles: true }));
+    // Native radio activation dispatches click/input/change in browser order.
+    // A synthetic change alone can conceal dependencies on the other events.
+    if (!input.checked) input.click();
   }, source);
 }
 
@@ -155,7 +156,7 @@ for (const route of ['index', 'docpro']) {
   });
 }
 
-test('Podsumowanie: stała kolejność, białe prawidłowe wyniki, wyrównanie i niezmieniony schowek po zmianie zakładki', async ({ page }) => {
+test('Podsumowanie B: oddzielone wyniki bez chipów, turkusowa norma i niezmieniony schowek po zmianie zakładki', async ({ page }) => {
   await open(page);
   await saved(page, patient({ height: 139, weight: 32 }));
   const main = page.locator(`${CARD} .professional-summary-main`);
@@ -166,16 +167,25 @@ test('Podsumowanie: stała kolejność, białe prawidłowe wyniki, wyrównanie i
   for (const key of ['bmi', 'cole']) {
     const row = main.locator(`[data-summary-key="${key}"]`);
     await expect(row).toHaveAttribute('data-assessment', 'normal');
-    expect(await row.evaluate(el => getComputedStyle(el).color)).toBe('rgb(8, 124, 128)');
-    expect(await row.evaluate(el => getComputedStyle(el).backgroundColor)).toBe('rgb(255, 255, 255)');
+    expect(await row.evaluate(el => getComputedStyle(el).color)).toBe('rgb(0, 109, 115)');
+    expect(await row.evaluate(el => getComputedStyle(el).backgroundColor)).toBe('rgb(237, 248, 246)');
   }
-  for (const key of ['velocity-sds', 'bsa', 'prediction']) {
+  for (const key of ['velocity-sds', 'bsa']) {
     await expect(main.locator(`[data-summary-key="${key}"]`)).toHaveAttribute('data-assessment', 'unassessed');
   }
+  expect(await main.locator('[data-summary-key="bsa"]').evaluate(el => getComputedStyle(el).color)).toBe('rgb(38, 63, 69)');
+  expect(await main.locator('[data-summary-key="velocity-sds"]').evaluate(el => getComputedStyle(el).color)).toBe('rgb(98, 118, 122)');
+  await expect(main.locator('[data-summary-key="prediction"]')).toContainText(/centyl.*18 lat/);
+  await expect(main.locator('[data-summary-key="prediction"]')).not.toHaveAttribute('data-assessment', 'unassessed');
+  await expect(page.locator(`${CARD} .professional-summary-chip`)).toHaveCount(0);
+  await expect(page.locator(`${CARD} .pro-summary-label`)).toBeHidden();
   expect(await main.locator('[data-summary-key]').evaluateAll(rows => {
     const left = rows[0].getBoundingClientRect().left, right = rows[0].getBoundingClientRect().right;
     return rows.every(row => Math.abs(row.getBoundingClientRect().left - left) < 1 && Math.abs(row.getBoundingClientRect().right - right) < 1);
   })).toBe(true);
+  const gaps = await main.locator('[data-summary-key]').evaluateAll(rows => rows.slice(1).map((row, i) =>
+    row.getBoundingClientRect().top - rows[i].getBoundingClientRect().bottom));
+  for (const gap of gaps) expect(gap).toBeCloseTo(6, 1);
   await expect(main).not.toContainText('!');
   await expect(main.locator('[data-summary-key="velocity-sds"]')).not.toContainText('Duran');
   await expect(page.locator(`${CARD} .professional-summary-extra-body`)).toBeHidden();
@@ -191,6 +201,78 @@ test('Podsumowanie: stała kolejność, białe prawidłowe wyniki, wyrównanie i
   expect(await copySummary(page)).toBe(before);
   await page.getByRole('tab', { name: 'Podsumowanie', exact: true }).click();
   await expect(page.locator(`${CARD} .professional-summary-extra-body`)).toBeVisible();
+});
+
+test('Podsumowanie B: rzeczywiste SDS tempa i prognoza dla 18 lat zmieniają ocenę razem ze źródłem i pacjentem', async ({ page }) => {
+  await open(page, 'docpro');
+  await saved(page, patient({ height: 135, weight: 24, history: [
+    { ageMonths: 108, height: 113, weight: 19 },
+    { ageMonths: 120, height: 120, weight: 20.5 },
+    { ageMonths: 133, height: 127.5, weight: 22 },
+  ] }));
+  // The real advanced form supplies bone age; no generated result or reference
+  // model is substituted. Without optional BP/RWT tables, this real DocPro flow
+  // selects the available KR/Blum consensus and retains its native interval.
+  await page.evaluate(() => {
+    const field = document.getElementById('advBoneAge');
+    field.value = '11';
+    field.dispatchEvent(new Event('input', { bubbles: true }));
+    field.dispatchEvent(new Event('change', { bubbles: true }));
+    window.calculateGrowthAdvanced();
+  });
+  const main = page.locator(`${CARD} .professional-summary-main`);
+  const sds = main.locator('[data-summary-key="velocity-sds"]');
+  const prediction = main.locator('[data-summary-key="prediction"]');
+  const referenceCentiles = [];
+  for (const source of ['PALCZEWSKA', 'OLAF', 'PALCZEWSKA']) {
+    await chooseSource(page, source);
+    await expect(prediction).toHaveAttribute('data-reference-source', source);
+    await expect(prediction).toContainText('konsensus 2 metod i MPH');
+    await expect(sds).toHaveAttribute('data-assessment', 'normal');
+    await expect(sds.locator('.professional-summary-value')).toContainText('+0,8');
+    expect(await sds.evaluate(el => getComputedStyle(el).backgroundColor)).toBe('rgb(237, 248, 246)');
+    await expect(prediction).toHaveAttribute('data-tone', 'normal');
+    await expect(prediction).toHaveAttribute('data-reference-age-months', '216');
+    await expect(prediction.locator('.professional-summary-reference')).toContainText(/centyl.*18 lat/);
+    const native = await page.evaluate(() => {
+      const assessment = window.VildaSummaryCards.getAssessmentData();
+      const displayed = document.querySelector('#currentSummaryCard .professional-summary-main [data-summary-key="prediction"] .professional-summary-value').textContent;
+      const normalize = text => text.replace(/\u00a0/g, ' ').replace(/(\d)\.(\d)/g, '$1,$2').trim();
+      const chosen = assessment.predictions.find(item => normalize(item.line) === normalize(displayed));
+      if (!chosen) throw new Error('Displayed prognosis must match one typed native result');
+      const stats = window.getCentilePercentileStatsForSource(chosen.cm, assessment.sex, 216, 'HT', assessment.source,
+        { population: assessment.population || 'OGOLNA' });
+      return { source: assessment.source, sex: assessment.sex, rawSds: assessment.velocity.sds, cm: chosen.cm, percentile: stats.percentile };
+    });
+    expect(native.source).toBe(source);
+    expect(native.sex).toBe('F');
+    expect(native.rawSds).toBeCloseTo(0.8260551293926642, 5);
+    expect(native.cm).toBeCloseTo(161.57824841359923, 1);
+    expect(Number(await prediction.getAttribute('data-reference-percentile'))).toBeCloseTo(native.percentile, 6);
+    referenceCentiles.push(native.percentile);
+    await expect(page.locator(`${CARD} .professional-summary-chip`)).toHaveCount(0);
+    await capture(page, `summary-b-consensus-${source}`);
+  }
+  expect(referenceCentiles[0]).not.toBeCloseTo(referenceCentiles[1], 2);
+  expect(referenceCentiles[2]).toBeCloseTo(referenceCentiles[0], 6);
+
+  await saved(page, patient({ height: 139, weight: 32, history: [
+    { ageMonths: 96, height: 125, weight: 25 },
+    { ageMonths: 120, height: 132, weight: 28 },
+    { ageMonths: 132, height: 137, weight: 30 },
+  ] }));
+  await expect(sds).toHaveAttribute('data-tone', 'danger');
+  await expect(sds.locator('.professional-summary-value')).toContainText('−2,4');
+  expect(await sds.evaluate(el => getComputedStyle(el).backgroundColor)).toBe('rgb(255, 243, 244)');
+
+  // A subsequent one-measurement patient must not inherit the preceding SDS,
+  // bone-age consensus, color, or descriptive tooltip.
+  await saved(page, patient());
+  await expect(sds).toHaveAttribute('data-assessment', 'unassessed');
+  await expect(sds).toHaveAttribute('data-availability', 'missing');
+  await expect(sds.locator('.professional-summary-assessment')).toHaveCount(0);
+  await expect(prediction.locator('.professional-summary-value')).toContainText(/Khamis[-–]Roche/);
+  await expect(prediction).toHaveAttribute('data-assessment', 'normal');
 });
 
 for (const source of ['OLAF', 'PALCZEWSKA']) {
@@ -234,6 +316,23 @@ test('telefon: karta pod formularzem, zakładki z klawiatury i brak przewijania 
   await page.setViewportSize({ width: 390, height: 844 });
   await open(page, 'docpro');
   await fillDraft(page);
+  await expect(page.locator(`${CARD} .professional-summary-chip`)).toHaveCount(0);
+  await expect(page.locator(`${CARD} .pro-summary-label`)).toBeHidden();
+  for (const width of [390, 320]) {
+    await page.setViewportSize({ width, height: 844 });
+    const layout = await page.locator(CARD).evaluate(card => {
+      const tabs = card.querySelector('.vilda-summary-tabs');
+      const styles = getComputedStyle(tabs);
+      return { width: document.documentElement.clientWidth, scroll: document.documentElement.scrollWidth,
+        cardOverflow: card.scrollWidth > card.clientWidth + 1, marginEnd: styles.marginInlineEnd,
+        tabLabels: [...tabs.querySelectorAll('[role="tab"]')].map(tab => tab.scrollWidth <= tab.clientWidth + 1) };
+    });
+    expect(layout.scroll).toBeLessThanOrEqual(layout.width + 1);
+    expect(layout.cardOverflow).toBe(false);
+    expect(layout.marginEnd).toBe('0px');
+    expect(layout.tabLabels).toEqual([true, true]);
+  }
+  await page.setViewportSize({ width: 390, height: 844 });
   await capture(page, 'mobile-summary');
   const summaryTab = page.getByRole('tab', { name: 'Podsumowanie', exact: true });
   const chartTab = page.getByRole('tab', { name: 'Siatka centylowa', exact: true });
