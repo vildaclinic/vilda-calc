@@ -389,14 +389,18 @@ test('średnia U25 zapisuje tylko średnią, a treść PDF/DOCX/AI zawiera te sa
     const notes = [previous];
     const original = window.VildaVault;
     // Adapter tylko w pamięci, bez tworzenia, otwierania lub odczytu sejfu.
+    const originalPatientId = api.resolveCurrentPatientId();
+    // The clinical writer now requires an existing selected fictional card.
     window.VildaVault = {
       isUnlocked: () => true,
+      getPatient: async patientId => patientId === 'synthetic-average-only' ? { patientId, header: { name: 'Fikcyjny pacjent testu Klirensu' } } : null,
       savePatientNote: async note => {
         const copy = JSON.parse(JSON.stringify({ ...note, id: 'synthetic-current-average' }));
         notes.push(copy);
         return copy;
       },
     };
+    api._setPatientId('synthetic-average-only');
     try {
       const outcome = await api.saveActiveResultToCard({
         patientId: 'synthetic-average-only', clinicalDateISO: '2026-10-22',
@@ -404,7 +408,7 @@ test('średnia U25 zapisuje tylko średnią, a treść PDF/DOCX/AI zawiera te sa
       });
       return { outcome, points, notes, historyUnchanged: JSON.stringify(previous) === previousJson };
     } finally {
-      window.VildaVault = original;
+      window.VildaVault = original; api._setPatientId(originalPatientId);
     }
   });
   expect(saved.outcome).toMatchObject({ ok: true, saved: 1, total: 1 });

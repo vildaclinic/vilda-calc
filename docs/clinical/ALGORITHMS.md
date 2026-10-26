@@ -310,6 +310,19 @@ Pełny kontrakt, przypadki wejście → wynik, zależności i ograniczenia:
 [KLIRENS_PATIENT_RECORD.md](KLIRENS_PATIENT_RECORD.md). Regresje wywołują rzeczywiste
 producenty i sejf na danych fikcyjnych; testy nie stanowią walidacji klinicznej.
 
+**Uzupełnienie 26.10.2026 — zapis do wybranej istniejącej karty:** liczba i
+interpretacja pozostają dotychczasowe. Przycisk zapisu nie wczytuje pacjenta;
+odblokowanie wymaga odczytu jego zapisanego rekordu. Błąd, nieistniejąca karta
+i spóźniona odpowiedź po zmianie pacjenta/konta nie zezwalają na zapis.
+Wczytywanie ostrzega o niezapisanych oznaczeniach Klirensu także między
+ramkami. Zapis danych pacjenta nie jest przedstawiany jako zapis badania.
+Nowa zapisana karta tej samej roboczej osoby może zachować obliczenie;
+wczytanie innej nie przejmuje starej próbki. Lokalna edycja wieku przy ACR
+nie wymaga masy ani wzrostu i nie zmienia reguł kwalifikacji do kategorii.
+Scenariusze regresyjne obejmują anonimowe ACR 45 mg/g → wiek 10 lat → A2,
+bez zapisu do niewybranej karty; wybór/wczytanie z anulowaniem lub świadomym
+odrzuceniem; poprawny zapis do wybranego pacjenta oraz wyścigi odczytu karty.
+
 ### LAB-HISTORIA — model porównania zapisanych wyników (`vilda_lab_history.js` 1.0.0, PR1 planu historii wyników, 2026-10-14)
 
 **Wpływ kliniczny: brak w tym etapie.** Moduł nie jest ładowany przez żadną

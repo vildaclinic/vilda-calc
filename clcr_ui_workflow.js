@@ -3757,6 +3757,83 @@
   const doc = global.document;
   const CATEGORY = "wynik-klirens";
   const state = { patientId: null, patientName: "" };
+  let patientContextEpoch = 0;
+  let vaultSessionEpoch = 0;
+  let measurementBlocked = false;
+  let blockedFromPatientId = null;
+  let pendingInputOrigins = new WeakMap();
+  let patientVerification = null;
+
+  function accountId(v = vault()) {
+    try { return v?.getCurrentUser?.()?.userId || null; }
+    catch (_) { return null; }
+  }
+
+  function invalidatePatientVerification() {
+    patientContextEpoch += 1;
+    patientVerification = null;
+  }
+
+  function patientNameFromRecord(record) {
+    return record?.header?.name || record?.name || record?.snapshots?.[0]?.payload?.name || "Wybrany pacjent";
+  }
+
+  function getPatientSaveState() {
+    const patientId = resolveCurrentPatientId();
+    const v = vault();
+    const current = patientVerification && patientVerification.patientId === patientId &&
+      patientVerification.vault === v && patientVerification.accountId === accountId(v) &&
+      patientVerification.epoch === patientContextEpoch ? patientVerification : null;
+    return {
+      patientId, status: !patientId ? "none" : !vaultUnlocked() ? "locked" : current?.status || "checking",
+      patientName: current?.status === "ready" ? current.patientName : "",
+      measurementBlocked, hasUnsavedMeasurement: hasUnsavedMeasurement(),
+    };
+  }
+
+  function ensurePersistedPatient(options = {}) {
+    bindVaultEvents();
+    const patientId = resolveCurrentPatientId();
+    const v = vault();
+    const failed = reason => Promise.resolve({ ok:false, reason, patientId, patientName:"" });
+    if (!patientId) return failed("no-patient");
+    if (!vaultUnlocked()) return failed("locked");
+    const identity = accountId(v);
+    const previous = patientVerification;
+    if (!options.force && previous && previous.patientId === patientId && previous.vault === v &&
+        previous.accountId === identity && previous.epoch === patientContextEpoch) {
+      return previous.promise || Promise.resolve(previous.result);
+    }
+    const check = { patientId, vault:v, accountId:identity, epoch:patientContextEpoch,
+      sessionEpoch:vaultSessionEpoch, status:"checking", patientName:"", promise:null, result:null };
+    patientVerification = check;
+    const current = () => check === patientVerification && check.epoch === patientContextEpoch &&
+      check.sessionEpoch === vaultSessionEpoch && patientId === resolveCurrentPatientId() &&
+      v === vault() && identity === accountId(v) && vaultUnlocked();
+    check.promise = (async () => {
+      let record;
+      let readError = false;
+      try {
+        if (typeof v?.getPatient !== "function") throw new Error("Patient reader unavailable");
+        record = await v.getPatient(patientId);
+      } catch (_) { readError = true; }
+      if (!current()) return { ok:false, reason:"context-changed", patientId, patientName:"" };
+      const exists = record && typeof record === "object" && record.patientId === patientId &&
+        (!record.id || record.id === patientId);
+      check.status = readError ? "error" : exists ? "ready" : "missing";
+      check.patientName = exists ? String(patientNameFromRecord(record)) : "";
+      if (exists) state.patientName = check.patientName;
+      check.result = { ok:!readError && !!exists, reason:!readError && exists ? "ok" : "patient-unavailable",
+        patientId, patientName:check.patientName };
+      return check.result;
+    })().finally(() => { check.promise = null; scheduleRefresh(); });
+    return check.promise;
+  }
+
+  function notifyPatientRecordChanged() {
+    invalidatePatientVerification();
+    scheduleRefresh();
+  }
 
   function vault() {
     return global.VildaVault && typeof global.VildaVault === "object"
@@ -4233,11 +4310,22 @@
 
   async function runSaveOperation(operation) {
     const v = vault();
+    const identity = accountId(v), sessionEpoch = vaultSessionEpoch;
+    // A selected ID is not proof of a persisted patient. Check the actual
+    // record before every attempt; failed reads never enable a write.
+    const patient = await ensurePersistedPatient({ force:true });
+    if (!patient.ok || patient.patientId !== operation.patientId) {
+      operation.result = { ok:false, reason:patient.ok ? "context-changed" : patient.reason,
+        saved:operation.outputs.filter(output => output.completed).length, total:operation.outputs.length,
+        errors:[], patientId:operation.patientId, patientName:operation.patientName, clinicalDateISO:operation.clinicalDateISO };
+      return operation.result;
+    }
+    operation.patientName = patient.patientName;
     const errors = [];
     for (const output of operation.outputs) {
       if (output.completed) continue;
       try {
-        if (!vaultUnlocked()) throw new Error("Sejf jest zablokowany. Odblokuj go i ponów zapis.");
+        if (!vaultUnlocked() || v !== vault() || identity !== accountId(v) || sessionEpoch !== vaultSessionEpoch) throw new Error("Sesja sejfu zmieniła się. Odblokuj kartę pacjenta i ponów zapis.");
         if (!output.payload) output.payload = { ...buildPatientNotePayload(output.dp, {
           patientId: operation.patientId, clinicalDateISO: operation.clinicalDateISO,
         }), id: output.id };
@@ -4272,11 +4360,16 @@
     const options = opts || {};
     const v = vault();
     if (!vaultUnlocked() || !v || (typeof v.savePatientNote !== "function" && typeof v.savePatientNoteOnce !== "function")) return Promise.resolve({ ok:false, reason:"locked", saved:0, total:0, errors:[] });
+    const activePatientId = resolveCurrentPatientId();
+    if (!activePatientId) return Promise.resolve({ ok:false, reason:"no-patient", saved:0, total:0, errors:[] });
+    if (options.patientId && options.patientId !== activePatientId) return Promise.resolve({ ok:false, reason:"patient-mismatch", saved:0, total:0, errors:[] });
+    if (measurementBlocked) return Promise.resolve({ ok:false, reason:"patient-context", saved:0, total:0, errors:[] });
     const request = saveRequest(options);
     if (!request.patientId) return Promise.resolve({ ok:false, reason:"no-patient", saved:0, total:0, errors:[] });
     if (!request.clinicalDateISO) return Promise.resolve({ ok:false, reason:"invalid-date", saved:0, total:0, errors:[] });
     if (!request.datapoints.length) return Promise.resolve({ ok:false, reason:"no-data", saved:0, total:0, errors:[] });
     const operation = options.operation || saveOperations.get(request.key) || createSaveOperation({ ...options, ...request });
+    if (operation.patientId !== activePatientId) return Promise.resolve({ ok:false, reason:"patient-mismatch", saved:0, total:0, errors:[] });
     saveOperations.set(operation.key, operation);
     currentOperation = operation;
     if (operation.promise) return operation.promise;
@@ -4439,6 +4532,180 @@
   let ui = null;
   let refreshQueued = false;
 
+  function measurementInputControls() {
+    const formulaId = global.ClcrUiWorkflow?.state.activeFormulaId || doc?.getElementById?.("formulaPicker")?.value || "";
+    const spec = global.ClcrUiWorkflow?.getCalculationFieldSpec?.(formulaId);
+    if (!doc) return [];
+    const candidates = new Map();
+    spec?.fields?.forEach(field => {
+      if (field.historicalContext || !["number", "text", "textarea"].includes(field.type)) return;
+      const control = doc.getElementById(field.id);
+      if (control) candidates.set(field.id, control);
+    });
+    const historical = new Set(PATIENT_FACT_FIELDS);
+    const form = doc.getElementById?.("clcrForm");
+    Array.from(form?.querySelectorAll?.('input[type="number"][id], input[type="text"][id], textarea[id]') || []).forEach(control => {
+      if (!historical.has(control.id) && !["formulaSearch", "U_ACR", "U_PCR"].includes(control.id)) candidates.set(control.id, control);
+    });
+    return [...candidates.values()].filter(control => !control.readOnly && String(control.value || "").trim() !== "");
+  }
+
+  function hasMeasurementInputs() { return measurementInputControls().length > 0; }
+
+  function hasUnsavedMeasurement() {
+    const controls = measurementInputControls();
+    if (!controls.length) return false;
+    const request = currentSaveRequest();
+    const covered = new Set();
+    const preserved = global.__vildaClcrVersionValueVault || {};
+    for (const operation of saveOperations.values()) {
+      if (!operation.result?.ok || operation.patientId !== request.patientId || operation.clinicalDateISO !== request.clinicalDateISO) continue;
+      for (const output of operation.outputs) {
+        const capture = output.dp.capture;
+        if (!output.completed || !capture?.values || !capture.fields) continue;
+        const matches = Object.entries(capture.values).every(([id, value]) => {
+          const control = doc?.getElementById?.(id);
+          const current = control ? control.type === "checkbox" ? !!control.checked : String(control.value ?? "") : preserved[id];
+          return current != null && String(current) === String(value);
+        });
+        if (!matches) continue;
+        capture.fields.forEach(field => {
+          if (!field.historicalContext && ["number", "text", "textarea"].includes(field.type)) covered.add(field.id);
+        });
+      }
+    }
+    return controls.some(control => !covered.has(control.id));
+  }
+
+  function markRestoredPatientCalculation(patientId = resolveCurrentPatientId()) {
+    if (!patientId || patientId !== resolveCurrentPatientId()) return false;
+    measurementBlocked = false;
+    blockedFromPatientId = null;
+    pendingInputOrigins = new WeakMap();
+    scheduleRefresh();
+    return true;
+  }
+
+  function calculationFingerprint(session, spec) {
+    if (!session || typeof session !== "object" || !spec?.formulaId) return null;
+    const input = { ...session.preservedInputs, ...session.inputs };
+    const formula = session.selectedFormula || input.formulaPicker || "";
+    if (formula !== spec.formulaId) return null;
+    const demographic = new Set(["fullName", "age", "ageMonths", "ageDays", "sex", "weight", "height"]);
+    const fields = [...new Set(spec.fieldIds || [])].filter(id => !demographic.has(id)).sort();
+    return JSON.stringify([formula, fields.map(id => [id, input[id] == null ? "" : String(input[id])])]);
+  }
+
+  function isCurrentSaveReceipt(detail, sourceWindow) {
+    return detail?.source === "save" && typeof detail.patientId === "string" && detail.patientId &&
+      Number.isSafeInteger(detail.applySequence) && detail.applySequence >= 0 &&
+      typeof sourceWindow.VildaDataImportExport?.getApplyLoadedDataSequence === "function" &&
+      detail.applySequence === sourceWindow.VildaDataImportExport?.getApplyLoadedDataSequence?.() &&
+      sourceWindow.__vildaOstatniWlasnyZapis?.patientId === detail.patientId;
+  }
+
+  const observedSiblingWindows = new Set();
+  function rememberPendingInputOrigins() {
+    if (!hasMeasurementInputs()) { pendingInputOrigins = new WeakMap(); return; }
+    for (const sourceWindow of [global, ...observedSiblingWindows]) {
+      try {
+        const sourceDocument = sourceWindow.document;
+        const reader = sourceWindow.VildaDataImportExport;
+        if (!sourceDocument || pendingInputOrigins.has(sourceDocument)) continue;
+        // Keep an unproven first context unproven. A later reader appearing
+        // after another record was loaded is not a receipt for this input.
+        let sequence = null;
+        try {
+          if (typeof reader?.getApplyLoadedDataSequence === "function") sequence = reader.getApplyLoadedDataSequence();
+        } catch (_) { /* A failed initial read remains explicitly unproven. */ }
+        if (!Number.isSafeInteger(sequence) || sequence < 0) sequence = null;
+        pendingInputOrigins.set(sourceDocument, { applySequence:sequence, accountId:accountId(sourceWindow.VildaVault) });
+      } catch (_) { /* A replaced or cross-origin frame cannot anchor this input. */ }
+    }
+  }
+
+  // A successful save in Start may give this same working calculation its
+  // first persistent patient ID. The non-bubbling event is observed directly
+  // in sibling documents; no clinical data is sent via storage or a channel.
+  function acceptSiblingPatientSave(event, sourceWindow) {
+    try {
+      const detail = event?.detail;
+      if (!isCurrentSaveReceipt(detail, sourceWindow)) return;
+      const patientId = detail.patientId;
+      const sourceVault = sourceWindow.VildaVault;
+      if (!vaultUnlocked() || !sourceVault?.isUnlocked?.() || !accountId() || accountId(sourceVault) !== accountId()) return;
+      const active = resolveCurrentPatientId();
+      if (active && active !== patientId || measurementBlocked && blockedFromPatientId && blockedFromPatientId !== patientId) return;
+      if (hasMeasurementInputs()) {
+        const origin = pendingInputOrigins.get(sourceWindow.document);
+        if (!origin || origin.applySequence !== detail.applySequence || origin.accountId !== accountId(sourceVault)) return;
+        const own = global.VildaClcrSessionRuntime?.collectCurrentSession?.();
+        const saved = sourceWindow.lastLoadedData?.clcr;
+        const spec = global.ClcrUiWorkflow?.getCalculationFieldSpec?.();
+        const fingerprint = calculationFingerprint(own, spec);
+        if (!fingerprint || fingerprint !== calculationFingerprint(saved, spec)) return;
+      }
+      state.patientId = patientId;
+      state.patientName = typeof detail.name === "string" ? detail.name : "";
+      measurementBlocked = false;
+      blockedFromPatientId = null;
+      invalidatePatientVerification();
+      scheduleRefresh();
+    } catch (_) { /* Cross-origin or a replaced frame cannot supply a receipt. */ }
+  }
+
+  const observedPatientDocuments = new WeakSet();
+  function observeSiblingPatientSaves() {
+    try {
+      const parentDocument = global.parent && global.parent !== global ? global.parent.document : null;
+      if (!parentDocument?.querySelectorAll) return;
+      parentDocument.querySelectorAll("iframe").forEach(frame => {
+        try {
+          const sourceWindow = frame.contentWindow, sourceDocument = frame.contentDocument;
+          if (!sourceDocument || sourceWindow === global || observedPatientDocuments.has(sourceDocument)) return;
+          observedPatientDocuments.add(sourceDocument);
+          observedSiblingWindows.add(sourceWindow);
+          sourceDocument.addEventListener("vilda:patient-loaded", event => acceptSiblingPatientSave(event, sourceWindow));
+        } catch (_) { /* Unavailable sibling. */ }
+      });
+      rememberPendingInputOrigins();
+    } catch (_) { /* Standalone or cross-origin parent. */ }
+  }
+
+  function buildPatientContext() {
+    if (!doc || doc.getElementById("clcrPatientContext")) return;
+    const anchor = doc.getElementById("clcrActivePanel");
+    if (!anchor?.parentNode) return;
+    const context = doc.createElement("section");
+    context.id = "clcrPatientContext";
+    context.className = "clcr-patient-context";
+    context.setAttribute("aria-label", "Pacjent do zapisu wyniku");
+    context.innerHTML = '<div class="clcr-patient-context__copy"><span>Pacjent</span><strong id="clcrPatientContextName"></strong>' +
+      '<p id="clcrPatientContextHint" role="status" aria-live="polite"></p></div>' +
+      '<button type="button" id="clcrChoosePatientBtn">Wybierz lub utwórz pacjenta</button>';
+    anchor.parentNode.insertBefore(context, anchor);
+    context.querySelector("#clcrChoosePatientBtn").addEventListener("click", () => {
+      choosePatient().catch(error => setStatus(error?.message || "Nie udało się otworzyć listy pacjentów.", "err"));
+    });
+  }
+
+  function refreshPatientContext(patient) {
+    buildPatientContext();
+    const name = doc?.getElementById("clcrPatientContextName");
+    const hint = doc?.getElementById("clcrPatientContextHint");
+    const choose = doc?.getElementById("clcrChoosePatientBtn");
+    if (!name || !hint || !choose) return;
+    const ready = patient.status === "ready";
+    name.textContent = ready ? patient.patientName : "Obliczenie bez zapisanej karty pacjenta";
+    hint.textContent = ready ? "Wynik możesz zapisać w Badaniach tego pacjenta."
+      : patient.status === "checking" ? "Sprawdzamy zapisaną kartę pacjenta…"
+      : patient.status === "missing" || patient.status === "error" ? "Nie potwierdzono zapisanej karty pacjenta. Wybierz ją ponownie przed zapisem wyniku."
+      : !vaultUnlocked() ? "Możesz obliczać bez logowania. Aby zapisywać wyniki, zaloguj się i wybierz lub utwórz kartę pacjenta."
+      : "Możesz obliczać bez pacjenta. Aby zapisywać wyniki, najpierw wybierz lub utwórz kartę pacjenta.";
+    if (measurementBlocked) hint.textContent = "Po zmianie pacjenta rozpocznij nowy pomiar. Wcześniejsze oznaczenia nie zostaną zapisane do innej karty.";
+    choose.disabled = !vaultUnlocked();
+  }
+
   function setStatus(message, kind) {
     if (!ui || !ui.status) return;
     ui.status.textContent = message || "";
@@ -4447,6 +4714,7 @@
 
   function buildUI() {
     if (!doc || ui) return;
+    buildPatientContext();
     const anchor = doc.getElementById("stoneCard") || doc.getElementById("elecCard") || doc.getElementById("results");
     if (!anchor?.parentNode) return;
     const card = doc.createElement("section");
@@ -4455,7 +4723,7 @@
       '<div class="cvs-patient"><span>Pacjent</span><strong id="clcrVisitPatientName"></strong><small>Karta pacjenta → Badania</small></div>' +
       '<div class="cvs-row"><label class="cvs-date" for="clcrVisitDate">Data badania<input type="date" id="clcrVisitDate" name="clcrVisitDate" required></label>' +
       '<button type="button" id="clcrVisitSaveBtn" class="cvs-btn">Zapisz do Badań pacjenta</button></div>' +
-      '<p class="cvs-hint" id="clcrVisitHint"></p><p class="cvs-status" id="clcrVisitStatus" role="status" aria-live="polite"></p>' +
+      '<p class="cvs-hint" id="clcrVisitHint"></p><button type="button" id="clcrStartPatientMeasurementBtn" class="cvs-link" hidden>Rozpocznij nowy pomiar</button><p class="cvs-status" id="clcrVisitStatus" role="status" aria-live="polite"></p>' +
       '<button type="button" id="clcrOpenBadaniaBtn" class="cvs-btn cvs-open-badania" hidden>Otwórz Badania →</button>' +
       '<div class="cvs-open-row"><button type="button" id="clcrOpenCardBtn" class="cvs-link" hidden>Karta pacjenta →</button>' +
       '<button type="button" id="clcrOpenHistoryBtn" class="cvs-link" hidden>Historia wyników Klirensu</button></div>';
@@ -4463,36 +4731,50 @@
     ui = { card, date:card.querySelector("#clcrVisitDate"), btn:card.querySelector("#clcrVisitSaveBtn"),
       hint:card.querySelector("#clcrVisitHint"), status:card.querySelector("#clcrVisitStatus"),
       patient:card.querySelector("#clcrVisitPatientName"), openBtn:card.querySelector("#clcrOpenCardBtn"),
-      historyBtn:card.querySelector("#clcrOpenHistoryBtn"), badaniaBtn:card.querySelector("#clcrOpenBadaniaBtn"), statusKey:null };
+      historyBtn:card.querySelector("#clcrOpenHistoryBtn"), badaniaBtn:card.querySelector("#clcrOpenBadaniaBtn"),
+      startMeasurement:card.querySelector("#clcrStartPatientMeasurementBtn"), statusKey:null };
     ui.date.value = todayISO();
     ui.btn.addEventListener("click", onSaveClick);
     ui.date.addEventListener("input", scheduleRefresh);
     ui.openBtn.addEventListener("click", () => openPatientCard());
     ui.historyBtn.addEventListener("click", openHistoryCard);
     ui.badaniaBtn.addEventListener("click", () => openPatientCard());
+    ui.startMeasurement.addEventListener("click", newMeasurement);
     refresh();
   }
 
   function currentSaveRequest() { return saveRequest({ clinicalDateISO:ui?.date ? ui.date.value : null }); }
   function refresh() {
-    if (!ui) return;
     bindVaultEvents();
+    rememberPendingInputOrigins();
+    if (measurementBlocked && !hasMeasurementInputs()) {
+      measurementBlocked = false;
+      blockedFromPatientId = null;
+    }
+    const patient = getPatientSaveState();
+    if (patient.patientId && vaultUnlocked()) ensurePersistedPatient();
+    refreshPatientContext(patient);
+    if (!ui) return;
     const request = currentSaveRequest();
     ui.card.hidden = !request.datapoints.length;
     if (ui.card.hidden) return;
     const unlocked = vaultUnlocked(), patientId = resolveCurrentPatientId();
     const operation = saveOperations.get(request.key);
     const pending = operation?.pending === true, saved = operation?.result?.ok === true;
-    ui.patient.textContent = patientId ? state.patientName || readPatientName() || "Wybrany pacjent" : "Pacjent niewybrany";
-    ui.btn.disabled = !unlocked || pending || saved;
-    ui.btn.textContent = !patientId ? "Wybierz pacjenta" : pending ? "Zapisywanie…" : saved ? "Zapisano w Badaniach" : operation?.result?.reason === "partial" ? "Ponów zapis do Badań" : "Zapisz do Badań pacjenta";
-    ui.openBtn.hidden = !unlocked || !patientId;
-    ui.historyBtn.hidden = !unlocked || !patientId;
-    ui.badaniaBtn.hidden = !saved || !unlocked || !patientId;
+    ui.patient.textContent = patient.status === "ready" ? patient.patientName : "Pacjent niewybrany";
+    ui.btn.disabled = !unlocked || patient.status !== "ready" || measurementBlocked || pending || saved;
+    ui.btn.textContent = pending ? "Zapisywanie…" : saved ? "Zapisano w Badaniach" : "Zapisz do Badań pacjenta";
+    ui.openBtn.hidden = !unlocked || patient.status !== "ready";
+    ui.historyBtn.hidden = !unlocked || patient.status !== "ready";
+    ui.badaniaBtn.hidden = !saved || !unlocked || patient.status !== "ready";
+    ui.startMeasurement.hidden = !measurementBlocked;
     ui.date.disabled = pending;
     if (ui.statusKey !== request.key) { setStatus(""); ui.statusKey = request.key; }
     ui.hint.textContent = !unlocked ? "Zaloguj się do sejfu, aby zapisać wynik. Liczenie działa bez logowania."
-      : !patientId ? "Wybierz pacjenta, do którego Badań trafi wynik."
+      : !patientId ? "Zapis jest dostępny po wybraniu zapisanej karty pacjenta. Wybór znajdziesz nad formularzem."
+      : patient.status === "checking" ? "Sprawdzamy zapisaną kartę pacjenta…"
+      : patient.status !== "ready" ? "Nie potwierdzono zapisanej karty pacjenta. Wybierz ją ponownie przed zapisem."
+      : measurementBlocked ? "Rozpocznij nowy pomiar dla wybranego pacjenta. Dotychczasowy wynik pozostaje niezapisany."
       : "Do zapisu: " + request.datapoints.length + " " + (request.datapoints.length === 1 ? "wynik" : request.datapoints.length < 5 ? "wyniki" : "wyników") + ".";
     ui.hint.hidden = saved;
   }
@@ -4513,7 +4795,7 @@
 
   async function onSaveClick() {
     if (!ui || ui.btn.disabled) return;
-    if (!resolveCurrentPatientId()) { await choosePatient(); return; }
+    if (!resolveCurrentPatientId()) return;
     if (ui.date?.reportValidity && !ui.date.reportValidity()) return;
     const request = currentSaveRequest();
     ui.statusKey = request.key;
@@ -4525,6 +4807,7 @@
     if (currentSaveRequest().key !== request.key || currentOperation !== operation) { refresh(); scheduleHistoryRefresh(); return; }
     if (result.ok) setStatus("Zapisano w Badaniach: " + (result.patientName || "wybrany pacjent") + " · " + formatDateShort(result.clinicalDateISO) + ".", "ok");
     else if (result.reason === "no-patient") setStatus("Wybierz pacjenta przed zapisem.", "err");
+    else if (["patient-unavailable", "patient-mismatch", "context-changed", "patient-context"].includes(result.reason)) setStatus("Nie zapisano wyniku. Sprawdź wybraną kartę pacjenta; wpisane dane pozostały w formularzu.", "err");
     else if (result.reason === "locked") setStatus("Sejf jest zablokowany. Odblokuj go i ponów zapis.", "err");
     else if (result.reason === "invalid-date") setStatus("Wpisz datę badania.", "err");
     else if (result.reason === "no-data") setStatus("Brak poprawnego wyniku do zapisania.", "err");
@@ -4659,7 +4942,8 @@
     const shell = shellApi();
     if (typeof shell?.openPatientsInStart === "function") { await shell.openPatientsInStart(); return; }
     await global.VildaSession?.ensureAuthLoaded?.();
-    global.VildaAuthUI?.showPatientsList?.();
+    if (typeof global.VildaAuthUI?.showPatientsList !== "function" || typeof global.applyLoadedData !== "function") throw new Error("Lista pacjentów jest niedostępna. Odśwież aplikację.");
+    global.VildaAuthUI.showPatientsList(data => { if (data) global.applyLoadedData(data); });
   }
 
   const PATIENT_FACT_FIELDS = ["fullName", "age", "ageMonths", "ageDays", "neonatalTermStatus", "sex", "weight", "height", "ScrAssay", "creatinineState", "suspectedAKI", "CrCysStandardizationConfirmed", "CystatinCStandardization", "CystatinCAssayMethod", "spotKnownCKD", "spotDiureticUse", "stoneThiolTherapy", "stoneKnownCystinuria"];
@@ -4688,6 +4972,9 @@
       if (control) { if (control.type === "checkbox") control.checked = value; else control.value = value; }
     }
     saveOperations.clear(); currentOperation = null;
+    measurementBlocked = false;
+    blockedFromPatientId = null;
+    pendingInputOrigins = new WeakMap();
     if (ui?.date) ui.date.value = todayISO();
     if (ui) { ui.statusKey = null; setStatus(""); }
     global.ClcrUiWorkflow?.refresh?.();
@@ -4750,6 +5037,19 @@
   function onPatientLoaded(event) {
     const detail = event && event.detail ? event.detail : null;
     const id = detail && detail.patientId;
+    if (detail?.source === "save" && !isCurrentSaveReceipt(detail, global)) return;
+    const origin = pendingInputOrigins.get(doc);
+    const ownWorkingSave = detail?.source === "save" && vaultUnlocked() && (!hasMeasurementInputs() ||
+      origin && origin.applySequence === detail.applySequence && !!accountId() && origin.accountId === accountId());
+    if (ownWorkingSave && (!state.patientId || id === state.patientId) &&
+        (!measurementBlocked || !blockedFromPatientId || id === blockedFromPatientId)) {
+      measurementBlocked = false;
+      blockedFromPatientId = null;
+    } else if (id && hasMeasurementInputs() && (id !== state.patientId || hasUnsavedMeasurement())) {
+      if (!measurementBlocked) blockedFromPatientId = state.patientId;
+      measurementBlocked = true;
+    }
+    invalidatePatientVerification();
     if (id !== state.patientId) { verificationGeneration += 1; closePatientCard(); }
     if (typeof id === "string" && id) {
       state.patientId = id;
@@ -4778,9 +5078,14 @@
     }
   }
 
-  function onSharedStateRestored() {
+  function onSharedStateRestored(options = {}) {
     const id = sessionPatientId();
     if (id === undefined || id === state.patientId) return;
+    if (!options.initial && hasMeasurementInputs()) {
+      if (!measurementBlocked) blockedFromPatientId = state.patientId;
+      measurementBlocked = true;
+    }
+    invalidatePatientVerification();
     verificationGeneration += 1;
     closePatientCard();
     state.patientId = id;
@@ -4794,13 +5099,20 @@
     buildPatientCardUI();
     observeResults();
     bindVaultEvents();
-    onSharedStateRestored();
+    onSharedStateRestored({ initial:true });
+    observeSiblingPatientSaves();
+    try {
+      if (global.parent && global.parent !== global) global.parent.document.addEventListener("load", observeSiblingPatientSaves, true);
+    } catch (_) { /* Standalone or cross-origin parent. */ }
     if (doc) {
+      const form = doc.getElementById?.("clcrForm");
+      form?.addEventListener?.("input", rememberPendingInputOrigins);
+      form?.addEventListener?.("change", rememberPendingInputOrigins);
       doc.addEventListener("vilda:patient-loaded", onPatientLoaded);
       doc.addEventListener("vilda:persist-restored", onSharedStateRestored);
       doc.addEventListener("vilda:clcr-results-changed", event => notifyRecordChanged(event.detail));
       if (global.addEventListener) {
-        global.addEventListener("focus", () => { scheduleRefresh(); verifySavedOperations(); });
+        global.addEventListener("focus", () => { observeSiblingPatientSaves(); notifyPatientRecordChanged(); verifySavedOperations(); });
         global.addEventListener("storage", event => {
           if (event.key === "vilda-note-changed-ping-v1") notifyRecordChanged();
         });
@@ -4815,6 +5127,7 @@
   let observedVault = null;
   let unsubscribeNotes = null;
   let unsubscribeLock = null;
+  let unsubscribePatientEvents = [];
   async function verifySavedOperations() {
     const generation = ++verificationGeneration;
     const v = vault(), patientId = resolveCurrentPatientId();
@@ -4842,9 +5155,16 @@
   function bindVaultEvents() {
     const current = vault();
     if (!current || observedVault === current) return;
-    unsubscribeNotes?.(); unsubscribeLock?.(); observedVault = current;
+    unsubscribeNotes?.(); unsubscribeLock?.();
+    unsubscribePatientEvents.forEach(unsubscribe => unsubscribe?.());
+    unsubscribePatientEvents = [];
+    observedVault = current;
+    invalidatePatientVerification();
     unsubscribeNotes = typeof current.onPatientNoteChanged === "function" ? current.onPatientNoteChanged(notifyRecordChanged) : null;
-    unsubscribeLock = typeof current.onLock === "function" ? current.onLock(() => { verificationGeneration += 1; closePatientCard(); scheduleRefresh(); }) : null;
+    unsubscribeLock = typeof current.onLock === "function" ? current.onLock(() => { verificationGeneration += 1; vaultSessionEpoch += 1; invalidatePatientVerification(); closePatientCard(); scheduleRefresh(); }) : null;
+    ["onPatientSaved", "onPatientDeleted", "onUnlock"].forEach(name => {
+      if (typeof current[name] === "function") unsubscribePatientEvents.push(current[name](notifyPatientRecordChanged));
+    });
   }
 
   const api = {
@@ -4855,6 +5175,8 @@
     saveActiveResultToCard: saveActiveResultToCard,
     buildPatientNotePayload, createSaveOperation, captureCalculationFields,
     notifyRecordChanged,
+    getPatientSaveState, ensurePersistedPatient, notifyPatientRecordChanged,
+    hasUnsavedMeasurement, markRestoredPatientCalculation,
     buildSeriesFromNotes: buildSeriesFromNotes,
     readActiveSeries: readActiveSeries,
     readPatientFlowsheet: readPatientFlowsheet,
@@ -4869,6 +5191,7 @@
     seriesWord: seriesWord,
     // testowe / introspekcja
     _setPatientId: function (id) {
+      invalidatePatientVerification();
       state.patientId = typeof id === "string" && id ? id : null;
     },
     _refresh: refresh,
