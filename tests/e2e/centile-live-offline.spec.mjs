@@ -15,6 +15,7 @@ const resourceNames = [
   'vilda_save_feedback.js', 'vilda_save_feedback.css',
   'vilda_html.js', 'vilda_persist_runtime.js', 'vilda_data_import_export.js',
   'vilda_advanced_growth.js', 'growth-basic-module.js', 'vilda_auth_ui.js',
+  'docpro_state_persist.js',
 ];
 
 function resourcesFor(documentName) {
@@ -149,7 +150,8 @@ test('new centile modules, annotated canvases and parent fullscreen survive a co
     expect(await page.evaluate(() => fetch(`/__centile-offline-probe-${Date.now()}`).then(() => false, () => true)),
       'origin is really stopped, not merely an emulated cached response').toBe(true);
     const indexResources = resourcesFor('index.html');
-    expect(indexResources.map((entry) => entry.url.split('?')[0].slice(1)).sort()).toEqual([...resourceNames].sort());
+    expect(indexResources.map((entry) => entry.url.split('?')[0].slice(1)).sort())
+      .toEqual(resourceNames.filter((name) => name !== 'docpro_state_persist.js').sort());
     await assertOfflineResources(page, indexResources, responses);
     await test.step('index offline: annotated panel, both charts and fullscreen', () => assertPanelAndFullscreen(page, page, ids.a));
 
@@ -158,7 +160,10 @@ test('new centile modules, annotated canvases and parent fullscreen survive a co
     await readyForPatient(page);
     const confirmation = page.locator('#professionalConfirmBtn');
     if (await confirmation.isVisible()) await confirmation.click();
-    await assertOfflineResources(page, resourcesFor('docpro.html'), responses);
+    const docproResources = resourcesFor('docpro.html');
+    expect(docproResources.map((entry) => entry.url.split('?')[0].slice(1)).sort())
+      .toEqual(resourceNames.filter((name) => name !== 'growth-basic-module.js').sort());
+    await assertOfflineResources(page, docproResources, responses);
     await test.step('DocPro offline: annotated panel, both charts and fullscreen', () => assertPanelAndFullscreen(page, page, ids.a));
 
     responses.clear();

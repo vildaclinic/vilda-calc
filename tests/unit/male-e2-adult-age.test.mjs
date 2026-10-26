@@ -3,7 +3,7 @@ import { readFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import vm from 'node:vm';
 import { describe, expect, it } from 'vitest';
-import { beforeMaleE2AdultAgeRuntime } from '../support/prior-female-gonadotropin-bundle.mjs';
+import { beforeChildhoodLhResultOnlyRuntime, beforeMaleE2AdultAgeRuntime } from '../support/prior-female-gonadotropin-bundle.mjs';
 
 const require = createRequire(import.meta.url);
 const runtime = require('../../vilda_hormone_lifespan_data.js');
@@ -41,7 +41,7 @@ describe('adult male E2 — controlled graphic source through the production eng
   it('adds only two independent blocks and preserves the complete 38-field baseline and 85 profiles', () => {
     expect(runtime.maleE2AdultAgeData).toEqual(data);
     expect(runtime.maleE2AdultAgePolicy).toEqual(policy);
-    expect(Object.keys(runtime)).toHaveLength(40);
+    expect(Object.keys(beforeChildhoodLhResultOnlyRuntime(runtime))).toHaveLength(40);
     const preceding = beforeMaleE2AdultAgeRuntime(runtime);
     expect(Object.keys(preceding)).toHaveLength(38);
     expect(createHash('sha256').update(JSON.stringify(preceding)).digest('hex'))

@@ -453,6 +453,73 @@
     },
     pretermEligibilityPolicy: pretermPolicy,
     minipubertyEligibilityPolicy: minipubertyPolicy,
+    // Owner-approved clinical orientation, separate from every source RI below.
+    // In particular this is neither the male Mayo upper limit nor a Tanner I
+    // reference interval from Labcorp. No lower limit or population P50 is used.
+    prepubertalLhPolicy: {
+      id: 'prepubertal-lh-clinical-orienting', version: '2026-10-25.1',
+      kind: 'clinical-orienting-reference', analyte: 'lh', unit: 'IU/L',
+      approvedOn: '2026-10-25',
+      approval: 'Właściciel zaakceptował osobną jednostronną granicę i interpretację makiety 04, następnie polecił ich wdrożenie.',
+      referenceSelection: 'automatic', contextBasis: 'current-patient',
+      currentContextRequired: true,
+      material: 'serum', compatibleSpecimens: ['unknown', 'serum'],
+      compatibleMeasurementKinds: ['unknown', 'basal'],
+      excludedTreatmentFields: ['gnrha', 'sexSteroids', 'cocp', 'exogenousTestosterone'],
+      reproductiveContexts: ['unknown'],
+      allowMissingStage: true, requiredStage: 1,
+      scope: {
+        M: { stageKind: 'G', age: age(bound('>=', 1), bound('<', 9), '1–<9 lat; zakres stosowania polityki aplikacji', 'application-clinical-policy') },
+        F: { stageKind: 'Th', age: age(bound('>=', 1), bound('<', 8), '1–<8 lat; zakres stosowania polityki aplikacji', 'application-clinical-policy') }
+      },
+      bounds: range(null, bound('<=', 0.3), 'Górna granica: 0,3 IU/L', null),
+      population: {
+        label: 'Dzieci przed pokwitaniem — orientacyjne odniesienie kliniczne LH',
+        statistics: { kind: 'clinical-orienting-upper-limit', coveragePercent: null, sampleSize: null }
+      },
+      source: {
+        id: 'vilda-prepubertal-lh-clinical-policy-2026', version: '2026-10-25.1',
+        kind: 'application-clinical-policy', organization: 'Vilda · polityka kliniczna',
+        label: 'Przedpokwitaniowe LH · odniesienie kliniczne',
+        title: 'Jednostronne orientacyjne odniesienie LH zaakceptowane przez właściciela',
+        url: 'https://specialtytesting.labcorp.com/sites/default/files/2023-07/DX_QRG_L5167-0422-19.pdf',
+        supportingSourceNote: 'Labcorp/Esoterix Expected Values, oznaczenie 0422, drukowana s. 41/PDF 43: przedpokwitaniowe dzieci 12 miesięcy–8 lat, 0,02–0,3 mIU/mL. Aplikacja wykorzystuje wyłącznie górną granicę; jej zakres stosowania jest odrębną decyzją kliniczną.',
+        knownLimitations: [
+          'To jednostronne porównanie orientacyjne, nie potwierdzone dopasowanie metody pacjenta, statystyczny RI jednej nowej kohorty ani zakres Mayo.',
+          'Nie jest to odrębny przedział dla stadium Tannera I; G1/Th1 jest warunkiem zastosowania, gdy aktualne stadium jest znane.',
+          'Brak stadium nie potwierdza G1/Th1. Podana lecz nieaktualna lub niezgodna obserwacja nie jest zastępowana brakiem danych.',
+          'Dolna granica, mediana, centyl, SDS i iloraz do mediany nie są ustalane. Wartość 0 jest rzeczywistym wynikiem, nie dolną granicą normy.',
+          'Wynik ponad granicą może sugerować aktywację osi; nie rozpoznaje CPP. Niskie LH nie wyklucza wczesnej aktywacji, zwłaszcza przy progresji cech.'
+        ]
+      },
+      applicabilityText: 'Orientacyjne odniesienie przedpokwitaniowe. Bazalne LH w surowicy, poza terapią hormonalną; wynik oceń z zakresem metody użytej w laboratorium.',
+      reasonCodes: ['clinical_orienting_reference', 'assay_match_not_established', 'method_dependent_lh_upper_limit'],
+      interpretation: {
+        context: { withStage: 'ze stadium {kind}{stage}', withoutStage: 'z oceną pokwitania' },
+        above: { tone: 'attention', title: 'Możliwa aktywacja osi pokwitania',
+          text: 'Oceń wynik razem {context}, wiekiem dziecka oraz zakresem metody użytej w laboratorium.' },
+        within: { tone: 'info', title: 'Uwzględnij metodę oznaczenia',
+          text: 'Interpretuj wynik razem {context} i zakresem laboratorium. Niskie LH nie wyklucza wczesnej aktywacji osi pokwitania.' },
+        indeterminate: { tone: 'neutral', title: 'Niejednoznaczne odniesienie do granicy',
+          text: 'Taki zapis nie pozwala ustalić, czy LH przekracza {upper} {unit}. Uwzględnij ocenę pokwitania i zakres laboratorium.' }
+      },
+      methodHelp: {
+        title: 'Pokwitanie i metoda oznaczenia',
+        paragraphs: [
+          'Wynik interpretuj razem z wiekiem, aktualnym stadium G/Th i tempem rozwoju dziecka oraz zakresem referencyjnym dla metody użytej w laboratorium.',
+          'Metody ultraczułe pozwalają oznaczać bardzo niskie stężenia LH. Niektóre laboratoria podają granice niższe niż 0,3 IU/L. Sama nowość lub czułość testu nie oznacza jednak automatycznie niższej górnej granicy normy.',
+          'Przykłady różnych zakresów: Quest dla wieku 3–7 lat podaje ≤0,26 IU/L u obu płci; UChicago dla dziewcząt 1–9,5 lat podaje <0,2 IU/L. Są to zakresy konkretnych laboratoriów, a nie dodatkowe progi tego porównania.',
+          'Górna granica 0,3 IU/L jest tutaj wspólnym odniesieniem orientacyjnym. Sam wynik LH nie rozpoznaje przedwczesnego pokwitania. Niskie lub niewykrywalne LH nie wyklucza wczesnej aktywacji osi, zwłaszcza przy postępujących cechach pokwitania.'
+        ],
+        sources: [
+          { label: 'Przegląd metod LH · 2025', url: 'https://www.frontiersin.org/journals/pediatrics/articles/10.3389/fped.2024.1504874/full' },
+          { label: 'Wytyczne · 2026', url: 'https://doi.org/10.1210/clinem/dgag168' },
+          { label: 'Quest · LH pediatryczne', url: 'https://testdirectory.questdiagnostics.com/test/test-detail/36086/lh-pediatrics?cc=MASTER' },
+          { label: 'UChicago · LH', url: 'https://uchicagomedlabs.testcatalog.org/show/LH-1' },
+          { label: 'Labcorp/Esoterix · Expected Values · LH', url: 'https://specialtytesting.labcorp.com/sites/default/files/2023-07/DX_QRG_L5167-0422-19.pdf' }
+        ]
+      }
+    },
     automaticReferencePolicy: {
       id: 'lh-fsh-demographic-reference-selection', version: '2026-10-13.1',
       description: 'Source-population selection only; assay method remains unconfirmed unless explicitly reported for this sample.',

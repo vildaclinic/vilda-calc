@@ -19,6 +19,7 @@ Rejestr jest inwentaryzacją techniczną. Nie nadaje opisanym modułom statusu w
 | HOMA | HOMA-IR i interpretacja | `homa-ir.html` | E2E znanego przypadku | test regresyjny; progi populacyjne do pełnego rejestru |
 | LAB-UNITS | Konwersje jednostek laboratoryjnych | `lab_unit_converter.js`, `lab_units_data.js` | Vitest konwersji | test regresyjny; każda nowa para jednostek wymaga źródła |
 | LAB-PUBERTY | LH/FSH: niezależna ocena zakresu i czasu dojrzewania | `vilda_lab_puberty_data.js`, `vilda_lab_puberty.js`, `vilda_lab_snapshot.js`, `vilda_lab_puberty_ui.js`, `vilda_lab_assessment_ui.js` | `lab-puberty*.test.mjs`, `lab-snapshot*.test.mjs`, `lab-assessment*.test.mjs`, E2E `lab-snapshot.spec.mjs`, `lab-puberty-ui.spec.mjs` | PR3: aktywacja LH/FSH w dotychczasowym układzie i odczyt utrwalonych ocen; szczegóły w `LH_FSH.md` |
+| LAB-LH-CHILDHOOD | LH dzieci: jednostronne orientacyjne odniesienie ≤0,3 obu płci i punkt wyniku bez mediany | dane i silnik LH/FSH, wspólne assessment/snapshot, polityki wykresu | regresje produkcyjnego porównania, adaptera, historii i UI/PWA; wyniki uruchomień w PR | makieta 04 i wdrożenie zaakceptowane 25.10.2026; nowe odniesienie ma własne pochodzenie, nie zmienia RI Mayo; [kontrakt](LH_CHILDHOOD_REFERENCE.md) |
 | LAB-INHIBIN-B | Inhibina B: wiek, minipuberty i kontekst dorosłych | `vilda_lab_inhibin_b_data.js`, `vilda_lab_inhibin_b.js`, wspólne UI i snapshot | `lab-inhibin*.test.mjs`, E2E `lab-inhibin-b.spec.mjs` | orientacyjne zakresy źródłowe; ograniczenia i polityki w `INHIBIN_B.md`; akceptacja kliniczna właściciela przed scaleniem |
 | LAB-TT-MAYO | Testosteron całkowity: M według wieku/G, F według wieku od 6 miesięcy | `vilda_lab_testosterone_data.js`, `vilda_lab_testosterone.js`, `vilda_lab_testosterone_units.js`, wspólne UI i snapshot | `lab-testosterone*.test.mjs`, E2E `lab-testosterone*.spec.mjs`; wyniki uruchomień w PR | etap 3 M i pierwsza partia F; źródła, luki i polityki w `TESTOSTERONE.md`; końcowy przegląd kliniczny właściciela przed scaleniem |
 | HORMONE-FEMALE-TT-AGE | TT dziewcząt 6–18: osobna mediana modelu i punkt wyniku | `vilda_female_tt_age.js`, `vilda_female_tt_age_ui.js`, osobne dane/polityka pakowane do runtime | `female-tt-age.test.mjs`, E2E `lab-female-tt-age*.spec.mjs`; wyniki w PR | zakres zaakceptowanej makiety 24.10.2026; poza 85 zwykłymi profilami, bez nowych RI/SDS/historii; [kontrakt](hormone-lifespan/FEMALE_TT_AGE.md) |
@@ -1713,6 +1714,67 @@ odczyt nie liczy wyniku ponownie. Przypadki regresyjne obejmują granice
 wszystkich dziesięciu zakresów dorosłych, wiek wokół 18 lat, kobietę
 z nieustalonym cyklem, zmianę osoby/płci, niezależne ostrzeżenia dziecięce,
 kwalifikację wcześniaczą oraz zapis/odczyt, mobile i offline.
+
+#### LAB-PUBERTY — LH dzieci: górna granica 0,3 i wynik bez mediany, 2026-10-25
+
+**Wpływ kliniczny: TAK.** Po audycie i akceptacji makiety 04 właściciel
+polecił wdrożenie osobnego orientacyjnego odniesienia `LH ≤0,3 IU/L`
+dla obu płci oraz warunkowego komentarza o możliwej aktywacji osi.
+Cały możliwy wiek musi pasować do M `[1,9)` / F `[1,8)`; kwalifikuje
+aktualne typowane G1/Th1 albo brak stadium, bez domniemania stadium I.
+Jawne G/Th 2–5, niegotowy/dawny kontekst i znane przeciwwskazania nie
+uruchamiają tej propozycji. Nie dodano ankiety lub wyboru źródła.
+
+`prepubertalLhPolicy`, `prepubertal-lh-clinical-orienting/2026-10-25.1`,
+jest osobną wersjonowaną decyzją aplikacji. Liczbowe wsparcie: pełny
+[LabCorp/Esoterix Expected Values, DX_QRG_L5167-0422-19](https://specialtytesting.labcorp.com/sites/default/files/2023-07/DX_QRG_L5167-0422-19.pdf),
+s. 41 / PDF 43, wiek 12 mies.–8 lat obu płci `0,02–0,3 mIU/mL`,
+katalog 502286 two-site ECL. Importujemy tylko górną wartość wiersza
+wieku; nie jego dolne `0,02`, średnie lub odrębny żeński Tanner I `0,18`.
+Dokładny N, percentyl RI i reguła niskich wyników tego wiersza są nieznane.
+Granice wieku aplikacji i orientacyjna surowica są własnymi ograniczeniami,
+nie dowodem harmonizacji ECL/AnshLite lub metodą przypisaną pacjentowi.
+
+Pełny aktualny Mayo LHPED62999 nadal podaje M1–8/Tanner I `<0,02–0,5`
+i F `<0,02–0,3`, AnshLite CLIA. Jego dane i `biochemical` pozostają
+niezmienione. Nowe jednostronne porównanie nie zapożycza `<0,02`, `0,5`
+ani nazwy Mayo. Używa istniejącego `compareMeasurement`: dokładne `0,3`
+jest `within` tylko górnej granicy, `0,4` i `>0,3` są `above`, `<0,4`
+jest `indeterminate`. Nierówności/LOD/LOQ nie stają się dokładnym punktem.
+
+Pełne przeglądy [Bangalore Krishna/Garibaldi 2025](https://doi.org/10.3389/fped.2024.1504874)
+i [Howard 2021](https://doi.org/10.1111/cen.14578) oraz *Question 3*
+[Endocrine Society 2026](https://doi.org/10.1210/clinem/dgag168) uzasadniają
+ostrożny komentarz i niewykluczanie aktywacji osi niskim LH. Omawiane
+`≥0,3` w HS-IFMA/HS-ICMA jest progiem diagnostycznym innej roli, nie
+zmianą operatora przyjętej górnej granicy `≤0,3`. Dowody są głównie
+z dziewcząt B2/B3, ograniczone dla chłopców 1–6. Nie rozpoznajemy CPP
+ani stadium z LH. Czułość analityczna nie wyznacza górnego RI; nowsza
+metoda nie oznacza automatycznie niższej normy. Szczegóły pozostają zwinięte.
+
+Wykres dodaje **sam rzeczywisty wynik** w lukach M `[1,6)` / F `(1,6)`,
+bez nowej liczbowej mediany, łącznika, SDS, centyla, ilorazu lub zmiany
+stałej geometrii. Dokładne F1 zachowuje Ljubicic, od 6 Madsen. Nowe
+`childhoodLhResultOnlyPolicies` nie nadpisują ścieżki LH dziewcząt `(16,18)`.
+W całym wieku `[2,6)` tylko rozwijane źródła cytują Wiedemann 1993,
+[tabela 4, s. 398](https://doi.org/10.1515/cclm.1993.31.6.395): N282,
+obie płcie 2–11 lat, mediana `<0,07 IU/L`. To cenzurowana statystyka
+całej grupy, nie dokładne `0,07`, RI lub limit metody pacjenta.
+
+Nowe `prepubertalLh` ma dozwolony, wersjonowany zapis profilu/źródła,
+granicy, interpretacji i stadium. Historia wyświetla tę utrwaloną ocenę
+bez silnika i aktualnego formularza; starym ocenom bez tego pola niczego
+nie dopisuje. Fikcyjne M4/G1 i F4/Th1 z LH0,4 pozostają powyżej własnej
+zapisanej granicy0,3 po zmianie pacjenta. Komentarze są liczone tylko
+prospektywnie, nie dodawane ponownie do dawnych wyników. Stan tożsamości
+runtime i liczbowa mediana Wiedemann nie trafiają do snapshotu.
+
+Pełny [kontrakt, populacje, przypadki wejście → wynik i wymagane kontrole](LH_CHILDHOOD_REFERENCE.md)
+oraz [ekstrakt i hashe źródeł](hormone-lifespan/evidence/lh-childhood-upper-reference-audit-2026-10-25.json).
+Przypadki obejmują również brak G/Th, G2/Th2, pełny przedział wieku,
+reset osoby/płci, lock/restore, cenzurę, historię i zimny start offline.
+Rzeczywiste wyniki testów i kontrole końcowego SHA są raportowane w PR;
+akceptacja makiety ani zielone testy nie nadają statusu walidacji klinicznej.
 
 ### LAB-INHIBIN-B — wiek i minipuberty, 2026-10-09
 
