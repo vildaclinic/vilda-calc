@@ -58,6 +58,8 @@ async function readClinicalNotes(page, patientId) {
     return list
       .filter((n) => n.category === 'wynik-klirens')
       .map((n) => ({
+        id: n.id,
+        patientId: n.patientId,
         category: n.category,
         clinicalDateISO: n.clinicalDateISO,
         title: n.title,
@@ -196,9 +198,9 @@ test('gość bez pacjenta — karta zapisu nieaktywna z podpowiedzią', async ({
   await expect(page.locator('#clcrVisitHint')).toContainText('Zaloguj się');
 });
 
-test('Faza 2: historia pokazuje datowane punkty, sparkline i trend kierunkowy', async ({ page }) => {
+test('historia Klirensu pokazuje wszystkie datowane pomiary pod własnymi ID w odrębnym podglądzie', async ({ page }) => {
   await openCalculatorGuest(page);
-  await setupVaultPatient(page);
+  const setup = await setupVaultPatient(page);
   await page.evaluate(() => window.ClcrUiWorkflow.selectFormula('egfr'));
   await page.waitForTimeout(60);
   await page.locator('details.clcr-context-details:has(#weight) > summary').click();
@@ -216,6 +218,9 @@ test('Faza 2: historia pokazuje datowane punkty, sparkline i trend kierunkowy', 
   await page.locator('#clcrVisitDate').fill('2026-06-01');
   await page.locator('#clcrVisitSaveBtn').click();
   await expect(page.locator('#clcrVisitStatus')).toContainText('Zapisano', { timeout: 15000 });
+  const [firstNote] = await readClinicalNotes(page, setup.patientId);
+  expect(firstNote.id).toBeTruthy();
+  expect(firstNote.clinicalDateISO).toBe('2026-06-01');
 
   // wizyta 2 (Scr 1.4 → niższy eGFR)
   await page.locator('#Scr').fill('1.4');
@@ -224,20 +229,37 @@ test('Faza 2: historia pokazuje datowane punkty, sparkline i trend kierunkowy', 
   await page.locator('#clcrVisitSaveBtn').click();
   await expect(page.locator('#clcrVisitStatus')).toContainText('Zapisano', { timeout: 15000 });
 
-  const hist = page.locator('#clcrHistoryCard');
+  const notes = await readClinicalNotes(page, setup.patientId);
+  expect(notes).toHaveLength(2);
+  expect(new Set(notes.map((note) => note.id)).size).toBe(2);
+  expect(notes.find((note) => note.id === firstNote.id)).toEqual(firstNote);
+  expect(notes.every((note) => note.patientId === setup.patientId && note.labResult.test === 'eGFR — dorośli (kreatynina)')).toBe(true);
+  await expect(page.locator('#clcrHistoryCard')).toHaveCount(0);
+  await page.locator('#clcrOpenHistoryBtn').click();
+  const hist = page.locator('#clcrPatientCard');
   await expect(hist).toBeVisible();
-  await expect(hist).toContainText('Historia — eGFR — dorośli (kreatynina)');
-  await expect(hist.locator('.cvs-hist-points li')).toHaveCount(2);
-  await expect(hist.locator('.cvs-spark')).toHaveCount(1);
-  await expect(hist).toContainText('vs. poprzednio');
-  // punkty datowane
-  await expect(hist).toContainText('2026-06-01');
-  await expect(hist).toContainText('2026-07-01');
+  await expect(hist.getByRole('heading', { name: 'Historia wyników Klirensu', exact: true })).toBeVisible();
+  await expect(hist.locator('.vilda-clcr-measurement-group')).toHaveCount(1);
+  await expect(hist.locator('tr[data-note-id]')).toHaveCount(2);
+  for (const note of notes) {
+    const row = hist.locator(`tr[data-note-id="${note.id}"]`);
+    await expect(row).toHaveCount(1);
+    await expect(row.locator('time')).toHaveAttribute('datetime', note.clinicalDateISO);
+    await expect(row.locator('.vilda-clcr-value')).toContainText(note.labResult.value.replace('.', ','));
+    await expect(row.locator('.vilda-clcr-row-reference')).toHaveText(note.labResult.norm || 'Brak zapisanej normy');
+  }
+  await expect(hist).toContainText('01.06.26');
+  await expect(hist).toContainText('01.07.26');
+  await expect(hist.locator('.vilda-clcr-chart, .cvs-spark')).toHaveCount(0);
+  await expect(hist).not.toContainText('vs. poprzednio');
+  await page.locator('#cpcClose').click();
+  await expect(hist).toBeHidden();
+  expect(await readClinicalNotes(page, setup.patientId)).toEqual(notes);
 });
 
-test('Faza 3: Karta pacjenta pokazuje flowsheet parametry × wizyty', async ({ page }) => {
+test('Karta pacjenta otwiera główne Badania, a osobna historia pokazuje te same pomiary bez kopii', async ({ page }) => {
   await openCalculatorGuest(page);
-  await setupVaultPatient(page);
+  const setup = await setupVaultPatient(page);
   await page.evaluate(() => window.ClcrUiWorkflow.selectFormula('egfr'));
   await page.waitForTimeout(60);
   await page.locator('details.clcr-context-details:has(#weight) > summary').click();
@@ -260,23 +282,50 @@ test('Faza 3: Karta pacjenta pokazuje flowsheet parametry × wizyty', async ({ p
   await page.locator('#clcrVisitSaveBtn').click();
   await expect(page.locator('#clcrVisitStatus')).toContainText('Zapisano', { timeout: 15000 });
 
-  // wejście „Karta pacjenta →"
+  const notes = await readClinicalNotes(page, setup.patientId);
+  expect(notes).toHaveLength(2);
+  expect(new Set(notes.map((note) => note.id)).size).toBe(2);
+  expect(notes.every((note) => note.patientId === setup.patientId && note.labResult.test === 'eGFR — dorośli (kreatynina)')).toBe(true);
+
+  // Zatwierdzony V3: nazwa karty prowadzi do wspólnej zakładki Badania.
   const open = page.locator('#clcrOpenCardBtn');
   await expect(open).toBeVisible();
   await open.click();
 
+  await expect(page.locator('.vilda-patient-tab[data-tab="lab"]')).toHaveClass(/active/);
+  await expect(page.locator('.vilda-patient-hero-name')).toContainText('Pacjent Testowy');
+  const main = page.locator('.vilda-lab-hist-panel[data-panel="renal"]');
+  await expect(main).toContainText('eGFR — dorośli (kreatynina)');
+  await expect(main.locator('.vilda-clcr-measurement-group')).toHaveCount(1);
+  await expect(main.locator('tr[data-note-id]')).toHaveCount(2);
+  await expect(main.locator('.vilda-clcr-point')).toHaveCount(2);
+  for (const note of notes) {
+    const row = main.locator(`tr[data-note-id="${note.id}"]`);
+    await expect(row).toHaveCount(1);
+    await expect(row.locator('time')).toHaveAttribute('datetime', note.clinicalDateISO);
+    await expect(row.locator('.vilda-clcr-value')).toContainText(note.labResult.value.replace('.', ','));
+    await expect(row.locator('.vilda-clcr-row-reference')).toHaveText(note.labResult.norm || 'Brak zapisanej normy');
+    await expect(main.locator(`.vilda-clcr-point[data-note-id="${note.id}"]`)).toHaveCount(1);
+  }
+  await expect(main).toContainText('01.06.26');
+  await expect(main).toContainText('01.08.26');
+  await expect(page.locator('#clcrPatientCard')).toBeHidden();
+
+  // Lokalny podgląd to oddzielna akcja, oparta na tych samych oryginalnych ID.
+  await page.evaluate(() => window.VildaAuthUI.hide());
+  await page.locator('#clcrOpenHistoryBtn').click();
   const card = page.locator('#clcrPatientCard');
   await expect(card).toBeVisible();
-  await expect(card).toContainText('Karta pacjenta');
-  await expect(card).toContainText('eGFR — dorośli (kreatynina)');
-  // nagłówek: Parametr + 2 daty + Zakres + Trend = 5 kolumn
-  await expect(card.locator('.cpc-flow thead th')).toHaveCount(5);
-  await expect(card.locator('.cpc-flow thead th.nowcol')).toHaveCount(1);
-  // najnowsza kolumna wyróżniona w wierszu
-  await expect(card.locator('.cpc-flow tbody td.now')).toHaveCount(1);
-  await expect(card).toContainText(/01[.,]08[.,]26/);
+  await expect(card.getByRole('heading', { name: 'Historia wyników Klirensu', exact: true })).toBeVisible();
+  await expect(card.locator('.vilda-clcr-measurement-group')).toHaveCount(1);
+  await expect(card.locator('tr[data-note-id]')).toHaveCount(2);
+  await expect(card.locator('.vilda-clcr-measurements thead th')).toHaveText(['Data badania', 'Wynik', 'Zapisana norma', 'Zapisana ocena', 'Szczegóły']);
+  for (const note of notes) await expect(card.locator(`tr[data-note-id="${note.id}"]`)).toHaveCount(1);
+  await expect(card.locator('.cpc-flow')).toHaveCount(0);
+  await expect(card).toContainText('01.08.26');
 
   // „Zamknij" chowa kartę
   await page.locator('#cpcClose').click();
   await expect(card).toBeHidden();
+  expect(await readClinicalNotes(page, setup.patientId)).toEqual(notes);
 });

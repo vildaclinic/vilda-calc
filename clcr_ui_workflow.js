@@ -199,122 +199,12 @@
   //   ② ACR/PCR → jednostka `mg/g`.
   //   ③ Etykiety opisowe; kryptyczne nazwy wzorów w podlinii `method`.
   // ————————————————————————————————————————————————————————————————
-  const PARAM_GROUPS = Object.freeze([
-    Object.freeze({ id: "egfr", title: "eGFR i klirensy kreatyniny" }),
-    Object.freeze({ id: "dzm-excr", title: "Zbiórka dobowa — wydalania" }),
-    Object.freeze({ id: "dzm-ratio", title: "Zbiórka dobowa — wskaźniki" }),
-    Object.freeze({ id: "dzm-protein", title: "Zbiórka dobowa — białko" }),
-    Object.freeze({ id: "spot-ratio", title: "Próbka punktowa — wskaźniki" }),
-    Object.freeze({ id: "spot-fe", title: "Próbka punktowa — frakcje wydalnicze" }),
-    Object.freeze({ id: "spot-other", title: "Próbka punktowa — pozostałe" }),
-    Object.freeze({ id: "ph", title: "pH moczu" }),
-    Object.freeze({ id: "ktv", title: "Dializa — adekwatność KT/V" }),
-  ]);
-
-  const PARAM_DICTIONARY_SOURCE = [
-    // eGFR i klirensy kreatyniny (grupa egfr) — etykieta opisowa + metoda w podlinii (③)
-    { id: "egfr", group: "egfr", label: "eGFR — dorośli (kreatynina)", method: "wzór CKD‑EPI 2021, bez współczynnika rasowego", unit: "mL/min/1,73 m²" },
-    { id: "ckid_u25", group: "egfr", label: "eGFR — dzieci i młodzież 1–25 lat (kreatynina)", method: "wzór CKiD U25", unit: "mL/min/1,73 m²" },
-    { id: "egfr_cr_cys", group: "egfr", label: "eGFR — dorośli (kreatynina + cystatyna C)", method: "wzór CKD‑EPI 2021", unit: "mL/min/1,73 m²" },
-    { id: "ckid_u25_cys", group: "egfr", label: "eGFR — dzieci i młodzież 1–25 lat (cystatyna C)", method: "wzór CKiD U25", unit: "mL/min/1,73 m²" },
-    { id: "ckid_u25_cr_cys", group: "egfr", label: "eGFR — dzieci i młodzież 1–25 lat (kreatynina + cystatyna C)", method: "wzór CKiD U25", unit: "mL/min/1,73 m²" },
-    { id: "neonatal_egfr", group: "egfr", label: "eGFR — noworodek donoszony (kreatynina)", method: "wzór noworodkowy", unit: "mL/min/1,73 m²" },
-    { id: "cg", group: "egfr", label: "Klirens kreatyniny — dorośli (ml/min)", method: "wzór Cockcrofta‑Gaulta, nieindeksowany", unit: "mL/min" },
-    { id: "cg_norm", group: "egfr", label: "Klirens kreatyniny — dorośli (1,73 m²)", method: "wzór Cockcrofta‑Gaulta, przeliczony", unit: "mL/min/1,73 m²" },
-    { id: "cl24", group: "egfr", label: "Klirens kreatyniny — zmierzony (DZM)", method: "z dobowej zbiórki moczu", unit: "mL/min" },
-    { id: "sch_idms", group: "egfr", label: "eGFR — dzieci (kreatynina)", method: "przyłóżkowy wzór Schwartza, IDMS", unit: "mL/min/1,73 m²" },
-    // Zbiórka dobowa — wydalania (grupa dzm-excr)
-    { id: "Ca_mgkg", group: "dzm-excr", label: "Wydalanie wapnia (DZM)", unit: "mg/kg/24 h" },
-    { id: "UA_mgkg", group: "dzm-excr", label: "Wydalanie kwasu moczowego (DZM)", unit: "mg/kg/24 h" },
-    { id: "Mg_mgkg", group: "dzm-excr", label: "Wydalanie magnezu (DZM)", unit: "mg/kg/24 h" },
-    { id: "PO4_mgkg", group: "dzm-excr", label: "Wydalanie fosforanów (Pi, DZM)", unit: "mg P/24 h" },
-    { id: "Ox_mgkg", group: "dzm-excr", label: "Wydalanie szczawianów (DZM)", unit: "mg/kg/24 h" },
-    { id: "Cit_mgkg", group: "dzm-excr", label: "Wydalanie cytrynianów (DZM)", unit: "mg/kg/24 h" },
-    { id: "Na_mmol_d", group: "dzm-excr", label: "Wydalanie sodu (DZM)", unit: "mmol/24 h" },
-    { id: "K_mmol_d", group: "dzm-excr", label: "Wydalanie potasu (DZM)", unit: "mmol/24 h" },
-    // Zbiórka dobowa — wskaźniki (grupa dzm-ratio)
-    { id: "Ca_Cr", group: "dzm-ratio", label: "Wapń/kreatynina (DZM)", unit: "mg/mg" },
-    { id: "KM_Cr", group: "dzm-ratio", label: "Kwas moczowy/kreatynina (DZM)", unit: "mg/mg" },
-    { id: "PO4_Cr", group: "dzm-ratio", label: "Fosforany/kreatynina (Pi, DZM)", unit: "mg/mg" },
-    { id: "Mg_Ca", group: "dzm-ratio", label: "Magnez/wapń (DZM)", unit: "mg/mg" },
-    { id: "Ca_Cit", group: "dzm-ratio", label: "Wapń/cytryniany (DZM)", unit: "mg/mg" },
-    { id: "B_Cr", group: "dzm-ratio", label: "Białko/kreatynina (DZM)", unit: "mg/mg" },
-    { id: "K_frac", group: "dzm-ratio", label: "Udział potasu — K/(K+Na)", unit: "%" },
-    { id: "AGs", group: "dzm-ratio", label: "Luka anionowa surowicy (bez K)", unit: "mmol/L" },
-    // Zbiórka dobowa — białko (serie rozdzielone ①; źródło: Prot_mgkg)
-    { id: "Prot_mg24", group: "dzm-protein", label: "Białko w DZM [mg/24 h]", unit: "mg/24 h", sourceFormulaId: "Prot_mgkg" },
-    { id: "Prot_g24", group: "dzm-protein", label: "Białko w DZM [g/24 h]", unit: "g/24 h", sourceFormulaId: "Prot_mgkg" },
-    { id: "Prot_bsa", group: "dzm-protein", label: "Białko w DZM / BSA [mg/m²/24 h]", unit: "mg/m²/24 h", sourceFormulaId: "Prot_mgkg" },
-    // Próbka punktowa — wskaźniki (grupa spot-ratio); ACR/PCR w mg/g (②)
-    { id: "CaCr_spot", group: "spot-ratio", label: "Wapń/kreatynina (próbka punktowa)", unit: "mg/mg" },
-    { id: "OxCr_spot", group: "spot-ratio", label: "Szczawiany/kreatynina (próbka punktowa)", unit: "mg/mg" },
-    { id: "CitCr_spot", group: "spot-ratio", label: "Cytryniany/kreatynina (próbka punktowa)", unit: "mg/mg" },
-    { id: "ACR", group: "spot-ratio", label: "Albumina/kreatynina — ACR", unit: "mg/g" },
-    { id: "PCR", group: "spot-ratio", label: "Białko/kreatynina — PCR (próbka punktowa)", unit: "mg/g" },
-    // Próbka punktowa — frakcje wydalnicze (grupa spot-fe)
-    { id: "FENa_spot", group: "spot-fe", label: "Frakcja wydalania sodu (FENa)", unit: "%" },
-    { id: "FEK_spot", group: "spot-fe", label: "Frakcja wydalania potasu (FEK)", unit: "%" },
-    { id: "FECl_spot", group: "spot-fe", label: "Frakcja wydalania chlorków (FECl)", unit: "%" },
-    { id: "FEHCO3_spot", group: "spot-fe", label: "Frakcja wydalania HCO₃ (FEHCO₃)", unit: "%" },
-    // Próbka punktowa — pozostałe (grupa spot-other)
-    { id: "AGu_spot", group: "spot-other", label: "Luka anionowa moczu (UAG)", unit: "mmol/L" },
-    { id: "TMP_GFR", group: "spot-other", label: "TmP/GFR — próg reabsorpcji fosforanów", unit: "mmol/L" },
-    // pH moczu (grupa ph)
-    { id: "pH_spot", group: "ph", label: "pH moczu (próbka punktowa)", unit: "—" },
-    { id: "pH24", group: "ph", label: "pH moczu (DZM)", unit: "—" },
-    // Dializa — KT/V (serie rozdzielone ①; źródło: KTV)
-    { id: "KTV_spktv", group: "ktv", label: "spKt/V (mocznik, pojedyncza pula)", unit: "—", sourceFormulaId: "KTV" },
-    { id: "KTV_ektv", group: "ktv", label: "eKt/V (mocznik, równoważony)", unit: "—", sourceFormulaId: "KTV" },
-    { id: "KTV_urr", group: "ktv", label: "URR — wskaźnik redukcji mocznika", unit: "%", sourceFormulaId: "KTV" },
-  ];
-
-  const PARAM_DICTIONARY = Object.freeze(
-    PARAM_DICTIONARY_SOURCE.map((entry) =>
-      Object.freeze({
-        id: entry.id,
-        testKey: "clcr:" + entry.id,
-        group: entry.group,
-        label: entry.label,
-        method: entry.method || null,
-        unit: entry.unit,
-        sourceFormulaId: entry.sourceFormulaId || entry.id,
-      }),
-    ),
-  );
-
-  const PARAM_BY_KEY = new Map();
-  const PARAM_BY_LABEL = new Map();
-  PARAM_DICTIONARY.forEach((entry) => {
-    PARAM_BY_KEY.set(entry.id, entry);
-    PARAM_BY_KEY.set(entry.testKey, entry);
-    PARAM_BY_LABEL.set(entry.label, entry);
-  });
-
-  // Odczyt serii z sejfu grupujemy po PELNEJ etykiecie labResult.test
-  // (obejście §2 — magazyn gubi testKey). Mapowanie etykieta → wpis słownika
-  // pozwala odzyskać grupę/jednostkę/formułę-źródło przy budowie historii.
-  function getParamByLabel(label) {
-    if (typeof label !== "string") return null;
-    return PARAM_BY_LABEL.get(label.trim()) || null;
-  }
-
-  function normalizeTestKey(testKey) {
-    const raw = String(testKey == null ? "" : testKey).trim();
-    if (!raw) return "";
-    return raw.startsWith("clcr:") ? raw.slice(5) : raw;
-  }
-
-  function getParam(testKey) {
-    return PARAM_BY_KEY.get(normalizeTestKey(testKey)) || null;
-  }
-
-  function getParamGroups() {
-    return PARAM_GROUPS.map((group) => ({
-      id: group.id,
-      title: group.title,
-      entries: PARAM_DICTIONARY.filter((entry) => entry.group === group.id),
-    }));
-  }
+  const PARAM_GROUPS = global.ClcrSavedResults.PARAM_GROUPS;
+  const PARAM_DICTIONARY = global.ClcrSavedResults.PARAM_DICTIONARY;
+  const getParam = (...args) => global.ClcrSavedResults.getParam(...args);
+  const getParamByLabel = (...args) => global.ClcrSavedResults.getParamByLabel(...args);
+  const getParamGroups = (...args) => global.ClcrSavedResults.getParamGroups(...args);
+  const normalizeTestKey = (...args) => global.ClcrSavedResults.normalizeTestKey(...args);
 
   const DZM_PROTOCOL_FIELDS = Object.freeze([
     "collectionStartAt",
@@ -1985,14 +1875,7 @@
     }
   }
 
-  function activeSetsForFormula(formula) {
-    const required = new Set(Array.isArray(formula?.requires) ? formula.requires : []);
-    const context = getContext(formula.id);
-    const optional = new Set([...(context.interpretation || []), ...(context.optional || [])]);
-    if (["ACR", "PCR", "CaCr_spot", "OxCr_spot", "CitCr_spot", "TMP_GFR"].includes(formula.id)) optional.delete("sex");
-    // Katalog określa składniki obliczenia i twarde warunki metody. Kontekst
-    // odniesienia pozostaje dobrowolny i nie tworzy drugiego poziomu wyniku.
-    const referenceFields = {
+  const FORMULA_REFERENCE_FIELDS = Object.freeze({
       cl24: ["age", "sex", "weight", "height", "Cl24CollectionProblem"],
       UA_mgkg: ["age", "sex"], Ca_mgkg: ["age", "ageMonths"],
       Mg_mgkg: ["age", "ageMonths"], PO4_mgkg: ["age", "ageMonths"],
@@ -2000,8 +1883,16 @@
       Ox_mgkg: ["age", "ageMonths", "sex"], Cit_mgkg: ["age", "ageMonths", "sex"],
       ACR: ["age", "ageMonths"], PCR: ["age", "ageMonths"],
       CaCr_spot: ["age", "ageMonths"], OxCr_spot: ["age", "ageMonths"], CitCr_spot: ["age", "ageMonths"],
-    };
-    (referenceFields[formula.id] || []).forEach((fieldId) => optional.add(fieldId));
+  });
+
+  function activeSetsForFormula(formula) {
+    const required = new Set(Array.isArray(formula?.requires) ? formula.requires : []);
+    const context = getContext(formula.id);
+    const optional = new Set([...(context.interpretation || []), ...(context.optional || [])]);
+    if (["ACR", "PCR", "CaCr_spot", "OxCr_spot", "CitCr_spot", "TMP_GFR"].includes(formula.id)) optional.delete("sex");
+    // Katalog określa składniki obliczenia i twarde warunki metody. Kontekst
+    // odniesienia pozostaje dobrowolny i nie tworzy drugiego poziomu wyniku.
+    (FORMULA_REFERENCE_FIELDS[formula.id] || []).forEach((fieldId) => optional.add(fieldId));
     if (required.has("age") && !["neonatal_egfr", "cg_norm"].includes(formula.id)) optional.add("ageMonths");
     if (!["ACR", "PCR", "CaCr_spot", "OxCr_spot", "CitCr_spot"].includes(formula.id)) getSharedModuleFieldIds(formula.id).forEach((fieldId) => optional.add(fieldId));
     if (["FENa_spot", "FEK_spot", "FECl_spot", "FEHCO3_spot"].includes(formula.id)) {
@@ -3771,6 +3662,49 @@
     documentRef.documentElement.classList.add("clcr-workflow-ready");
   }
 
+  // Capture only the selected equation and its reference/context inputs. The
+  // optional fields shared by a neighbouring equation are not its inputs.
+  function getCalculationFieldSpec(formulaId = state.activeFormulaId) {
+    const formula = formulaById(formulaId);
+    if (!formula) return null;
+    const sets = activeSetsForFormula(formula);
+    const declared = new Set([...(formula.requires || []), ...(getContext(formulaId).interpretation || []), ...(getContext(formulaId).optional || []), ...(FORMULA_REFERENCE_FIELDS[formulaId] || [])]);
+    const shared = new Set(getSharedModuleFieldIds(formulaId));
+    const ids = new Set([...sets.active].filter(id => !shared.has(id) || declared.has(id)));
+    ["weight", "height"].forEach(id => {
+      if (!(formula.requires || []).includes(id) && !(FORMULA_REFERENCE_FIELDS[formulaId] || []).includes(id)) ids.delete(id);
+    });
+    const modes = { ACR: "ACR_entry_mode", PCR: "PCR_entry_mode", CaCr_spot: "CaCr_entry_mode", OxCr_spot: "OxCr_entry_mode", CitCr_spot: "CitCr_entry_mode" };
+    if (modes[formulaId]) ids.add(modes[formulaId]);
+    if (formulaId === "cl24") ["Cl24DurationSource", "Cl24DurationHours", "Cl24CollectionProblem", ...DZM_PROTOCOL_FIELDS].forEach(id => ids.add(id));
+    const policy = global.VildaClcrCalculationAssumptions?.POLICY;
+    if (policy?.markerFormulaIds?.includes(formulaId)) ["creatinineState", "suspectedAKI"].forEach(id => ids.add(id));
+    if (policy?.idmsFormulaIds?.includes(formulaId)) ids.add("ScrAssay");
+    if (policy?.ifccFormulaIds?.includes(formulaId)) ["CystatinCStandardization", "CrCysStandardizationConfirmed"].forEach(id => ids.add(id));
+    if (["FENa_spot", "FEK_spot", "FECl_spot", "FEHCO3_spot"].includes(formulaId)) ["age", "ageMonths", "spotDiureticUse", "spotKnownCKD", "suspectedAKI", "creatinineState", "FENa_sample_status", "spotSameSpecimen", "spotPairedChemistry", "spotSampleKind", "spotBicarbonateLoad"].forEach(id => ids.add(id));
+    [...ids].forEach(id => {
+      if (UNIT_PAIRS[id]) ids.add(UNIT_PAIRS[id]);
+      if (documentRef.getElementById(`ui_${id}_answer`) || Object.hasOwn(global.__vildaClcrVersionValueVault || {}, `ui_${id}_answer`)) ids.add(`ui_${id}_answer`);
+    });
+    ids.delete("fullName");
+    return {
+      formulaId, label: formula.label, version: formula.version || "",
+      requiredFieldIds: [...sets.required], fieldIds:[...ids],
+      fields: [...ids].flatMap(id => {
+        const control = documentRef.getElementById(id);
+        if (!control) return [];
+        if (String(control.type).toLowerCase() === "hidden") return [];
+        const view = state.fieldViews.get(id);
+        return [{ id, label: view?.labelText || fieldLabelText(control.labels?.[0] || control.closest?.("label"), control),
+          type: String(control.tagName).toLowerCase() === "select" ? "select" : String(control.type || control.tagName || "text").toLowerCase(),
+          required: sets.required.has(id), unitFieldId: UNIT_PAIRS[id] || null,
+          options: control.options ? Array.from(control.options).map(option => ({ value: option.value, label: option.textContent || "" })) : undefined,
+          historicalContext: ["age", "ageMonths", "ageDays", "sex", "weight", "height"].includes(id),
+        }];
+      }),
+    };
+  }
+
   const Workflow = {
     version: "1.1.0",
     model: Model,
@@ -3783,6 +3717,7 @@
     uagSpecimenConfirmed,
     crCysStandardization,
     calculationAssumptions,
+    getCalculationFieldSpec,
     openMeasuredReferenceFields,
     hasBlockingValidationError() {
       // FENa owns a concrete empty/error card from its semantic engine.
@@ -4011,6 +3946,27 @@
       const dp = mapDatapoint(series, el.getAttribute("data-clcr-value"));
       if (!dp) continue;
       if (target && !target.has(dp.sourceFormulaId)) continue;
+      dp.rawValue = dp.valueNum;
+      const displayed = el.getAttribute("data-clcr-display-value");
+      if (displayed != null && String(displayed).trim()) dp.displayValue = String(displayed).replace(".", ",");
+      const displayUnit = el.getAttribute("data-clcr-display-unit");
+      if (displayUnit) dp.unit = String(displayUnit);
+      const tone = el.getAttribute("data-clcr-tone");
+      if (["success", "warning", "danger", "neutral"].includes(tone)) dp.tone = tone;
+      const category = el.getAttribute("data-clcr-category");
+      if (category) dp.category = category;
+      dp.interpretation = el.getAttribute("data-clcr-status") || "";
+      dp.boundary = el.getAttribute("data-clcr-boundary") || "";
+      dp.referenceProfileId = el.getAttribute("data-clcr-reference-profile") || "";
+      const profileVersion = el.getAttribute("data-clcr-reference-profile-version");
+      if (profileVersion != null && String(profileVersion).trim() && Number.isFinite(Number(profileVersion))) dp.referenceProfileVersion = Number(profileVersion);
+      const encodedModel = el.getAttribute("data-clcr-result-record");
+      if (typeof encodedModel === "string" && encodedModel.length <= 65536) {
+        try {
+          const savedModel = JSON.parse(encodedModel);
+          if (savedModel && typeof savedModel === "object" && !Array.isArray(savedModel)) dp.model = savedModel;
+        } catch (_) { /* Older result cards do not carry a frozen model. */ }
+      }
       // Audited measurements preserve the raw value: rounding can cross a
       // clinical threshold. The display and any inequality are kept apart.
       if (!["ACR", "PCR", "CaCr_spot", "OxCr_spot", "CitCr_spot", "FENa_spot", "FEK_spot", "FECl_spot", "FEHCO3_spot"].includes(dp.sourceFormulaId)) dp.valueNum = displayedNumber(el, dp.valueNum);
@@ -4099,6 +4055,12 @@
           dp.agePolicy = "completed-years";
         }
       }
+      dp.reference = readDisplayedReference(el, dp);
+      if (dp.reference?.source) dp.source = copyData(dp.reference.source);
+      const warnings = readResultWarnings(el, dp.sourceFormulaId, scope);
+      if (warnings.length) dp.warnings = warnings;
+      dp.capture = captureCalculationFields(dp.sourceFormulaId, { root: options?.inputRoot });
+      if (dp.capture) dp.capture.referenceProfile = { id:dp.referenceProfileId || dp.acrSnapshot?.profileId || dp.pcrSnapshot?.profileId || dp.cacrSnapshot?.profileId || "", version:dp.referenceProfileVersion ?? dp.acrSnapshot?.profileVersion ?? dp.pcrSnapshot?.profileVersion ?? dp.cacrSnapshot?.profileVersion ?? null };
       seen.add(series);
       out.push(dp);
     }
@@ -4110,6 +4072,83 @@
     const rounded = Number.isInteger(n) ? String(n) : String(Number(n.toFixed(2)));
     // Polski separator dziesiętny (spójnie z kalkulatorem: „1,73 m²").
     return rounded.replace(".", ",");
+  }
+
+  function copyData(value) {
+    return value == null ? value : JSON.parse(JSON.stringify(value));
+  }
+
+  function readResultWarnings(element, formulaId, root) {
+    const scope = element.parentElement || root;
+    if (typeof scope?.querySelectorAll !== "function") return [];
+    return [...new Set(Array.from(scope.querySelectorAll(".result-box.warn-yellow[data-clcr-formula]")).filter(node => {
+      if (node.getAttribute("data-clcr-formula") !== formulaId || node.getAttribute("data-clcr-series") || !isVisible(node)) return false;
+      const comparison = node.closest?.("[data-clcr-comparison-for]")?.getAttribute("data-clcr-comparison-for");
+      return !comparison || comparison === formulaId;
+    }).map(node => String(node.textContent || "").replace(/\s+/g, " ").trim()).filter(Boolean))];
+  }
+
+  function readDisplayedReference(element, datapoint) {
+    const encoded = element.getAttribute?.("data-clcr-reference-record");
+    if (typeof encoded === "string" && encoded.length <= 65536) {
+      try {
+        const saved = JSON.parse(encoded);
+        if (saved && typeof saved === "object" && !Array.isArray(saved)) return copyData(saved);
+      } catch (_) { /* Legacy cards may have only visible reference text. */ }
+    }
+    if (!datapoint.norm) return null;
+    const typed = datapoint.acrSnapshot || datapoint.pcrSnapshot || datapoint.cacrSnapshot || datapoint.oxcrSnapshot || datapoint.citcrSnapshot || datapoint.fenaSnapshot || datapoint.fekSnapshot || datapoint.feclSnapshot || datapoint.fehco3Snapshot;
+    if (typed?.reference) return copyData({ ...typed.reference, text:datapoint.norm, source:typed.source || typed.reference.source || null, population:typed.population || typed.reference.population || null });
+    if (datapoint.measuredClearanceReference) return copyData({ ...datapoint.measuredClearanceReference, text:datapoint.norm });
+    const reference = element.querySelector?.(".clcr-result-reference");
+    const sources = Array.from(element.parentElement?.children || []).filter(node =>
+      node.getAttribute?.("data-clcr-formula") === datapoint.sourceFormulaId && node.classList?.contains("clcr-result-source"));
+    const link = sources.flatMap(node => Array.from(node.querySelectorAll?.("a[href]") || []))[0];
+    let source = link ? { label:String(link.textContent || "").trim(), url:link.getAttribute("href") || "" } : null;
+    const profile = global.ClcrResultReferenceData?.PROFILE;
+    if (source && profile?.id === datapoint.referenceProfileId) {
+      const known = Object.values(profile.sources || {}).find(candidate => candidate.url === source.url);
+      if (known) source = copyData(known);
+    }
+    return { text:datapoint.norm, value:reference?.querySelector?.(".clcr-result-reference-value")?.textContent || datapoint.norm,
+      unit:datapoint.unit, kind:reference?.getAttribute?.("data-clcr-reference-kind") || "recorded", source,
+      population:sources.map(node => String(node.textContent || "").trim()).filter(Boolean).join(" · ") || null,
+    };
+  }
+
+  function captureCalculationFields(formulaId, options) {
+    const scope = options?.root || doc;
+    const spec = global.ClcrUiWorkflow?.getCalculationFieldSpec?.(formulaId);
+    if (!scope || !spec) return null;
+    const values = {};
+    const fields = [];
+    const preserved = global.__vildaClcrVersionValueVault || {};
+    const metadata = new Map(spec.fields.map(field => [field.id, field]));
+    (spec.fieldIds || spec.fields.map(field => field.id)).forEach(id => {
+      const control = typeof scope.getElementById === "function" ? scope.getElementById(id)
+        : scope.querySelector?.(`[id="${id}"]`);
+      if (!control) {
+        if (Object.hasOwn(preserved, id) && ["string", "boolean", "number"].includes(typeof preserved[id])) values[id] = preserved[id];
+        return;
+      }
+      const type = String(control.type || "").toLowerCase();
+      if (type === "radio" && !control.checked) return;
+      values[id] = type === "checkbox" ? !!control.checked : String(control.value ?? "");
+      if (metadata.has(id)) fields.push(copyData(metadata.get(id)));
+    });
+    const age = global.ClcrClinicalSafety?.readAgeFromDocument?.(scope);
+    return {
+      values, fields, formulaId, formulaLabel: spec.label,
+      ageYears: age?.valid ? age.exactYears : null,
+      sourceContext: {
+        ...(Object.hasOwn(values, "creatinineState") ? { creatinineState: values.creatinineState || "unknown" } : {}),
+        ...(Object.hasOwn(values, "suspectedAKI") ? { suspectedAKI: values.suspectedAKI === true } : {}),
+        ...(Object.hasOwn(values, "ScrAssay") ? { scrAssay: values.ScrAssay } : {}),
+        ...(Object.hasOwn(values, "CystatinCStandardization") ? { cystatinCStandardization: values.CystatinCStandardization } : {}),
+        ...(Object.hasOwn(values, "CrCysStandardizationConfirmed") ? { crCysStandardizationConfirmed: values.CrCysStandardizationConfirmed === true } : {}),
+      },
+      calculationAssumptions: copyData(global.ClcrUiWorkflow?.calculationAssumptions?.(formulaId)),
+    };
   }
 
   function pad2(v) {
@@ -4127,490 +4166,124 @@
     return /^(\d{4})-(\d{1,2})-(\d{1,2})$/.test(trimmed) ? trimmed : null;
   }
 
-  function readAcrSnapshot(encoded) {
-    if (typeof encoded !== "string" || encoded.length > 40000) return null;
-    try {
-      const snapshot = JSON.parse(encoded);
-      if (!snapshot || typeof snapshot !== "object" || Array.isArray(snapshot)) return null;
-      if (snapshot.schema !== "clcr-acr" || snapshot.version !== 1) return null;
-      if (!Number.isFinite(snapshot.rawValue) || snapshot.rawValue < 0) return null;
-      if (!["mg/g", "mg/mmol"].includes(snapshot.unit)) return null;
-      if (!["", "=", "<", ">", "≤", "≥"].includes(snapshot.comparator || "")) return null;
-      if (!["within", "above", "unassessed"].includes(snapshot.status)) return null;
-      return snapshot;
-    } catch (_) { return null; }
+  const readAcrSnapshot = (...args) => global.ClcrSavedResults.readAcrSnapshot(...args);
+  const readPcrSnapshot = (...args) => global.ClcrSavedResults.readPcrSnapshot(...args);
+  const readCacrSnapshot = (...args) => global.ClcrSavedResults.readCacrSnapshot(...args);
+  const acrDisplayText = (...args) => global.ClcrSavedResults.acrDisplayText(...args);
+
+  // One stable operation owns one ID for each selected output. A retry never
+  // becomes a new measurement; the explicit New measurement action does.
+  let operationSequence = 0;
+  let currentOperation = null;
+  const saveOperations = new Map();
+  let verificationGeneration = 0;
+  function operationId() {
+    if (typeof global.crypto?.randomUUID === "function") return global.crypto.randomUUID();
+    operationSequence += 1;
+    return "clcr-" + Date.now().toString(36) + "-" + operationSequence + "-" + Math.random().toString(36).slice(2);
   }
 
-  function acrDisplayText(snapshot) {
-    const value = snapshot?.display?.value;
-    const numeric = value == null ? formatValueString(snapshot?.rawValue) : String(value);
-    return ((snapshot?.comparator === "=" ? "" : snapshot?.comparator || "") + numeric).replace(".", ",");
-  }
-
-  const ACR_NOTE_HEADER = "ACR — ocena w chwili zapisu:";
-
-  function acrReferenceNote(datapoint) {
-    const snapshot = datapoint?.acrSnapshot;
-    if (datapoint?.sourceFormulaId !== "ACR" || !snapshot) return "";
-    const number = value => Number.isFinite(value) ? String(value).replace(".", ",") : "";
-    const string = value => typeof value === "string" ? value.trim() : "";
-    const comparator = snapshot.comparator === "=" ? "" : snapshot.comparator || "";
-    const lines = [ACR_NOTE_HEADER,
-      `Tryb: ${snapshot.mode === "direct" ? "wynik ACR z laboratorium" : "obliczono ze stężeń"}.`,
-      `Wynik przed zaokrągleniem: ${comparator}${number(snapshot.rawValue)} ${snapshot.unit}.`,
-      `Wynik pokazany: ${datapoint.displayValue || acrDisplayText(snapshot)} ${snapshot.unit}.`,
-      `Ocena: ${{ within: "w zakresie", above: "powyżej normy", unassessed: "nie oceniono" }[snapshot.status] || "nie oceniono"}.`,
-      `Kategoria: ${snapshot.category || "nie nadano"}${snapshot.categoryDescription ? ` — ${snapshot.categoryDescription}` : ""}.`,
-    ];
-    if (datapoint.norm) lines.push(`Norma pokazana przy wyniku: ${datapoint.norm}.`);
-    if (string(snapshot.display?.boundary || snapshot.boundary)) lines.push(`Granica przed zaokrągleniem: ${snapshot.display?.boundary || snapshot.boundary}.`);
-    if (string(snapshot.statusText)) lines.push(snapshot.statusText);
-    if (string(snapshot.qualification?.note)) lines.push(snapshot.qualification.note);
-    const age = snapshot.context?.ageYears;
-    lines.push(Number.isFinite(age) ? `Wiek użyty przy ocenie: ${number(age)} lat.` : "Wiek użyty przy ocenie: nieznany.");
-    const input = snapshot.input || {};
-    if (snapshot.mode === "direct") {
-      lines.push(`Wynik wpisany z laboratorium: ${String(input.reportedValue ?? "")} ${string(input.reportedUnit) || snapshot.unit}.`);
-    } else {
-      if (input.albuminValue != null) lines.push(`Albumina w moczu: ${String(input.albuminValue).replace(".", ",")} ${string(input.albuminUnit)}.`);
-      if (input.creatinineValue != null) lines.push(`Kreatynina w moczu: ${String(input.creatinineValue).replace(".", ",")} ${string(input.creatinineUnit)}.`);
-      lines.push(snapshot.context?.sameSpecimen === "confirmed"
-        ? "Potwierdzono, że oznaczenia pochodzą z tej samej próbki moczu."
-        : "Założono, że oznaczenia pochodzą z tej samej próbki moczu.");
+  function buildPatientNotePayload(dp, options) {
+    const serializer = global.ClcrSavedResults?.buildPatientNotePayload;
+    if (typeof serializer !== "function") throw new Error("Nie załadowano modułu zapisu wyników. Odśwież kalkulator.");
+    const payload = serializer(dp, options || {});
+    if (dp.capture) {
+      const calculation = global.ClcrSavedCalculation;
+      if (typeof calculation?.createSnapshot !== "function" || typeof calculation?.serializeSnapshot !== "function") throw new Error("Nie można utrwalić oryginalnych danych obliczenia. Odśwież kalkulator.");
+      const snapshot = options?.calculationSnapshot || calculation.createSnapshot(dp, {
+        capture: dp.capture, patientId: payload.patientId, clinicalDateISO: payload.clinicalDateISO,
+      });
+      const block = calculation.serializeSnapshot(snapshot, payload);
+      if (typeof block !== "string" || !block) throw new Error("Nie można utrwalić oryginalnych danych obliczenia.");
+      payload.body += "\n\n" + block;
     }
-    const sample = { firstMorning: "pierwszy poranny mocz", secondMorning: "drugi poranny mocz", random: "próbka losowa", timed: "próbka ze zbiórki czasowej" }[snapshot.context?.sampleType];
-    lines.push(`Rodzaj próbki: ${sample || "nie podano"}.`);
-    const knownFactors = { menstruation: "miesiączka", hematuria: "krwiomocz", infection: "infekcja", exercise: "intensywny wysiłek", acuteIllness: "ostra choroba" };
-    const factors = Array.isArray(snapshot.context?.confounders) ? snapshot.context.confounders : [];
-    if (factors.length) lines.push(`Zgłoszone czynniki wpływające na ocenę: ${factors.map(key => knownFactors[key] || String(key)).join(", ")}.`);
-    const source = snapshot.source || snapshot.reference?.source || {};
-    if (string(source.label)) lines.push(`Źródło normy: ${source.label}${source.version ? `; ${source.version}` : ""}${source.accessedAt ? `; dostęp ${source.accessedAt}` : ""}.`);
-    if (string(source.url)) lines.push(`Adres źródła: ${source.url}`);
-    if (snapshot.profileId) lines.push(`Profil odniesienia: ${snapshot.profileId}; wersja ${snapshot.profileVersion ?? "niepodana"}.`);
-    const population = typeof snapshot.population === "string" ? snapshot.population : snapshot.population?.label;
-    if (string(population)) lines.push(`Populacja odniesienia: ${population}.`);
-    lines.push("Pojedynczy wynik ACR nie ustala rozpoznania przewlekłej choroby nerek.");
-    return lines.join("\n");
+    return payload;
   }
 
-  // Read only the original assessment from the saved, human-readable note.
-  // Do not consult today's patient or reference data when building history.
-  function savedAcrAssessment(note) {
-    const body = typeof note?.body === "string" ? note.body : "";
-    const start = body.indexOf(ACR_NOTE_HEADER);
-    if (start < 0 || body.length > 50000) return null;
-    const text = body.slice(start);
-    const raw = /^Wynik przed zaokrągleniem: ([<>≤≥]?)([\d.,eE+-]+) (mg\/g|mg\/mmol)\.$/m.exec(text);
-    if (!raw) return null;
-    const rawValue = Number(raw[2].replace(",", "."));
-    if (!Number.isFinite(rawValue) || rawValue < 0) return null;
-    const display = /^Wynik pokazany: (.+) (mg\/g|mg\/mmol)\.$/m.exec(text);
-    const lab = note.labResult || {};
-    const normalizeDisplay = value => String(value ?? "").replace(/\s+/g, "").replace(",", ".");
-    // A clinician can edit the laboratory note later. Never let an unchanged
-    // old snapshot replace that edited value or attach its original category.
-    if (lab.unit && lab.unit !== raw[3]) return null;
-    if (Number.isFinite(lab.valueNum) && lab.valueNum !== rawValue) return null;
-    if (display && lab.value != null && normalizeDisplay(lab.value) !== normalizeDisplay(display[1])) return null;
-    const category = /^Kategoria: (A[123])(?:\s|\.)/m.exec(text)?.[1] || null;
-    const status = /^Ocena: (w zakresie|powyżej normy|nie oceniono)\.$/m.exec(text)?.[1];
-    const age = /^Wiek użyty przy ocenie: ([\d.,]+) lat\.$/m.exec(text);
-    const profile = /^Profil odniesienia: ([^;\n]+); wersja ([^\n]+)\.$/m.exec(text);
-    return {
-      rawValue, unit: raw[3], comparator: raw[1],
-      displayValue: display ? display[1] : raw[1] + raw[2], category,
-      status: status === "w zakresie" ? "within" : status === "powyżej normy" ? "above" : "unassessed",
-      ageYears: age ? Number(age[1].replace(",", ".")) : null,
-      profileId: profile?.[1] || null, profileVersion: profile?.[2] || null,
-      contextNote: text,
-    };
-  }
-
-  function readPcrSnapshot(encoded) {
-    if (typeof encoded !== "string" || encoded.length > 40000) return null;
-    try {
-      const snapshot = JSON.parse(encoded);
-      if (!snapshot || typeof snapshot !== "object" || Array.isArray(snapshot)) return null;
-      if (snapshot.schema !== "clcr-pcr" || snapshot.version !== 1) return null;
-      if (!Number.isFinite(snapshot.rawValue) || snapshot.rawValue < 0) return null;
-      if (!["mg/g", "mg/mmol", "mg/mg", "g/g"].includes(snapshot.unit)) return null;
-      if (!["", "<", ">", "≤", "≥"].includes(snapshot.comparator || "")) return null;
-      if (!["within", "above", "unassessed"].includes(snapshot.status)) return null;
-      return snapshot;
-    } catch (_) { return null; }
-  }
-
-  const PCR_NOTE_HEADER = "PCR — ocena w chwili zapisu:";
-  const PCR_LEVEL_LABELS = { normal: "poniżej progu", raised: "podwyższony", marked: "znacznie podwyższony", nephrotic: "zakres nerczycowy" };
-  const PCR_COMPARISON_LABELS = { below: "poniżej progu", above: "próg osiągnięty lub przekroczony", ambiguous: "przedział obejmuje różne poziomy" };
-
-  function pcrReferenceNote(datapoint) {
-    const snapshot = datapoint?.pcrSnapshot;
-    if (datapoint?.sourceFormulaId !== "PCR" || !snapshot) return "";
-    const number = value => Number.isFinite(value) ? String(value).replace(".", ",") : "";
-    const string = value => typeof value === "string" ? value.trim() : "";
-    const comparator = snapshot.comparator || "";
-    const lines = [PCR_NOTE_HEADER,
-      `Tryb: ${snapshot.mode === "direct" ? "wynik PCR z laboratorium" : "obliczono ze stężeń"}.`,
-      `Wynik przed zaokrągleniem: ${comparator}${number(snapshot.rawValue)} ${snapshot.unit}.`,
-      `Wynik pokazany: ${datapoint.displayValue || acrDisplayText(snapshot)} ${snapshot.unit}.`,
-      `Ocena: ${{ within: "w zakresie", above: "powyżej normy", unassessed: "nie oceniono" }[snapshot.status] || "nie oceniono"}.`,
-      `Poziom PCR: ${PCR_LEVEL_LABELS[snapshot.category] || "nie nadano"}.`,
-      `Porównanie z progiem: ${PCR_COMPARISON_LABELS[snapshot.comparison] || "nie wykonano"}.`,
-    ];
-    if (datapoint.norm) lines.push(`Norma pokazana przy wyniku: ${datapoint.norm}.`);
-    if (string(snapshot.display?.boundary || snapshot.boundary)) lines.push(`Granica przed zaokrągleniem: ${String(snapshot.display?.boundary || snapshot.boundary).replace(".", ",")}.`);
-    if (snapshot.classificationUnit) lines.push(`Oś porównania: ${snapshot.classificationUnit}${Number.isFinite(snapshot.classificationValue) ? `; wartość ${number(snapshot.classificationValue)}` : ""}.`);
-    if (Number.isFinite(snapshot.reference?.nephroticThreshold)) lines.push(`Próg zakresu nerczycowego dla użytej grupy wieku: ≥${number(snapshot.reference.nephroticThreshold)} ${snapshot.unit}.`);
-    const band = snapshot.reference?.band;
-    if (band) lines.push(`Grupa wieku źródła: od ${number(band.minimumAgeYearsInclusive)} lat${Number.isFinite(band.maximumAgeYearsExclusive) ? ` do poniżej ${number(band.maximumAgeYearsExclusive)} lat` : ""}${band.populationLabel ? `; ${band.populationLabel}` : ""}.`);
-    if (string(band?.agePolicy)) lines.push(`Dobór przedziału wieku: ${band.agePolicy}`);
-    if (string(snapshot.statusText)) lines.push(snapshot.statusText);
-    if (string(snapshot.qualification?.note)) lines.push(snapshot.qualification.note);
-    const age = snapshot.context?.ageYears;
-    lines.push(Number.isFinite(age) ? `Wiek użyty przy ocenie: ${number(age)} lat.` : "Wiek użyty przy ocenie: nieznany.");
-    const input = snapshot.input || {};
-    if (snapshot.mode === "direct") {
-      lines.push(`Wynik wpisany z laboratorium: ${String(input.reportedValue ?? "")} ${string(input.reportedUnit) || snapshot.unit}.`);
-    } else {
-      if (input.proteinValue != null) lines.push(`Białko całkowite w moczu: ${String(input.proteinValue).replace(".", ",")} ${string(input.proteinUnit)}.`);
-      if (input.creatinineValue != null) lines.push(`Kreatynina w moczu: ${String(input.creatinineValue).replace(".", ",")} ${string(input.creatinineUnit)}.`);
-      lines.push(snapshot.context?.sameSpecimen === "confirmed"
-        ? "Potwierdzono, że oznaczenia pochodzą z tej samej próbki moczu."
-        : "Założono, że oznaczenia pochodzą z tej samej próbki moczu.");
+  function saveRequest(options) {
+    const opts = options || {};
+    const patientId = opts.patientId || resolveCurrentPatientId();
+    let clinicalDateISO = opts.clinicalDateISO == null ? todayISO() : normalizeDateISO(opts.clinicalDateISO);
+    if (clinicalDateISO) {
+      const [year, month, day] = clinicalDateISO.split("-").map(Number);
+      const checked = new Date(0);
+      checked.setUTCFullYear(year, month - 1, day);
+      if (checked.getUTCFullYear() !== year || checked.getUTCMonth() !== month - 1 || checked.getUTCDate() !== day) clinicalDateISO = null;
+      else clinicalDateISO = String(year).padStart(4, "0") + "-" + pad2(month) + "-" + pad2(day);
     }
-    const sample = { firstMorning: "pierwszy poranny mocz", secondMorning: "drugi poranny mocz", random: "próbka losowa", timed: "próbka ze zbiórki czasowej" }[snapshot.context?.sampleType];
-    lines.push(`Rodzaj próbki: ${sample || "nie podano"}.`);
-    const knownFactors = { menstruation: "miesiączka", hematuria: "krwiomocz", infection: "infekcja", exercise: "intensywny wysiłek", acuteIllness: "ostra choroba" };
-    const factors = Array.isArray(snapshot.context?.confounders) ? snapshot.context.confounders : [];
-    if (factors.length) lines.push(`Zgłoszone czynniki wpływające na ocenę: ${factors.map(key => knownFactors[key] || String(key)).join(", ")}.`);
-    const source = snapshot.source || snapshot.reference?.source || {};
-    if (string(source.label)) lines.push(`Źródło normy: ${source.label}${source.version ? `; ${source.version}` : ""}${source.accessedAt ? `; dostęp ${source.accessedAt}` : ""}.`);
-    if (string(source.url)) lines.push(`Adres źródła: ${source.url}`);
-    if (string(source.section)) lines.push(`Miejsce w źródle: ${source.section}.`);
-    const nephroticSource = snapshot.reference?.nephroticSource;
-    if (nephroticSource?.label) lines.push(`Źródło progu nerczycowego: ${nephroticSource.label}${nephroticSource.version ? `; ${nephroticSource.version}` : ""}.`);
-    if (nephroticSource?.url) lines.push(`Adres źródła progu nerczycowego: ${nephroticSource.url}`);
-    if (snapshot.profileId) lines.push(`Profil odniesienia: ${snapshot.profileId}; wersja ${snapshot.profileVersion ?? "niepodana"}.`);
-    const population = typeof snapshot.population === "string" ? snapshot.population : snapshot.population?.label;
-    if (string(population)) lines.push(`Populacja odniesienia: ${population}.`);
-    lines.push("Pojedynczy wynik PCR nie ustala rozpoznania przewlekłej choroby nerek ani zespołu nerczycowego.");
-    return lines.join("\n");
+    if (clinicalDateISO && typeof vault()?.sanitizeClinicalDateISO === "function") clinicalDateISO = vault().sanitizeClinicalDateISO(clinicalDateISO);
+    const datapoints = copyData(Array.isArray(opts.datapoints) ? opts.datapoints : collectActiveDatapoints(opts.root, opts));
+    const key = JSON.stringify([patientId, clinicalDateISO, datapoints.map(dp => ({ ...dp, capture:dp.capture ? { ...dp.capture, fields:undefined } : dp.capture }))]);
+    return { patientId, patientName: opts.patientName || state.patientName || readPatientName(), clinicalDateISO, datapoints, key };
   }
 
-  function savedPcrAssessment(note) {
-    const body = typeof note?.body === "string" ? note.body : "";
-    const start = body.indexOf(PCR_NOTE_HEADER);
-    if (start < 0 || body.length > 50000) return null;
-    const text = body.slice(start);
-    const raw = /^Wynik przed zaokrągleniem: ([<>≤≥]?)([\d.,eE+-]+) (mg\/g|mg\/mmol|mg\/mg|g\/g)\.$/m.exec(text);
-    if (!raw) return null;
-    const rawValue = Number(raw[2].replace(",", "."));
-    if (!Number.isFinite(rawValue) || rawValue < 0) return null;
-    const display = /^Wynik pokazany: (.+) (mg\/g|mg\/mmol|mg\/mg|g\/g)\.$/m.exec(text);
-    const lab = note.labResult || {};
-    const normalizeDisplay = value => String(value ?? "").replace(/\s+/g, "").replace(",", ".");
-    if (lab.unit && lab.unit !== raw[3]) return null;
-    if (Number.isFinite(lab.valueNum) && lab.valueNum !== rawValue) return null;
-    if (display && lab.value != null && normalizeDisplay(lab.value) !== normalizeDisplay(display[1])) return null;
-    const level = /^Poziom PCR: ([^\n]+)\.$/m.exec(text)?.[1];
-    const savedNorm = /^Norma pokazana przy wyniku: ([^\n]+)\.$/m.exec(text)?.[1] || "";
-    if (normalizeDisplay(lab.norm) !== normalizeDisplay(savedNorm)) return null;
-    const category = Object.keys(PCR_LEVEL_LABELS).find(key => PCR_LEVEL_LABELS[key] === level) || null;
-    const comparisonLabel = /^Porównanie z progiem: ([^\n]+)\.$/m.exec(text)?.[1];
-    const comparison = Object.keys(PCR_COMPARISON_LABELS).find(key => PCR_COMPARISON_LABELS[key] === comparisonLabel) || null;
-    const status = /^Ocena: (w zakresie|powyżej normy|nie oceniono)\.$/m.exec(text)?.[1];
-    const age = /^Wiek użyty przy ocenie: ([\d.,]+) lat\.$/m.exec(text);
-    const profile = /^Profil odniesienia: ([^;\n]+); wersja ([^\n]+)\.$/m.exec(text);
-    return {
-      rawValue, unit: raw[3], comparator: raw[1], displayValue: display ? display[1] : raw[1] + raw[2],
-      category, comparison, status: status === "w zakresie" ? "within" : status === "powyżej normy" ? "above" : "unassessed",
-      ageYears: age ? Number(age[1].replace(",", ".")) : null,
-      profileId: profile?.[1] || null, profileVersion: profile?.[2] || null, contextNote: text,
-    };
+  function createSaveOperation(options) {
+    const request = saveRequest(options);
+    return { ...request, id: operationId(), outputs: request.datapoints.map(dp => ({ dp, id: operationId(), payload: null, completed: false })), pending:false, promise: null, result: null };
   }
 
-  function readCacrSnapshot(encoded) {
-    if (typeof encoded !== "string" || encoded.length > 40000) return null;
-    try {
-      const snapshot = JSON.parse(encoded);
-      if (!snapshot || typeof snapshot !== "object" || Array.isArray(snapshot)) return null;
-      if (snapshot.schema !== "clcr-cacr" || snapshot.version !== 1) return null;
-      if (!Number.isFinite(snapshot.rawValue) || snapshot.rawValue < 0) return null;
-      if (!["mg/mg", "mg/g", "g/g", "mol/mol", "mmol/mmol", "mmol/mol", "mg/mmol"].includes(snapshot.unit)) return null;
-      if (!["", "<", ">", "≤", "≥"].includes(snapshot.comparator || "")) return null;
-      if (!["below", "within", "above", "unassessed"].includes(snapshot.status)) return null;
-      return snapshot;
-    } catch (_) { return null; }
+  function sameSavedPayload(note, payload) {
+    const v = vault();
+    const normalizedText = value => typeof v?.sanitizeNoteText === "function" ? v.sanitizeNoteText(value) : String(value || "");
+    const normalizedLab = value => typeof v?.sanitizeLabResult === "function" ? v.sanitizeLabResult(value) : value || null;
+    return note && note.patientId === payload.patientId && note.category === payload.category &&
+      note.clinicalDateISO === payload.clinicalDateISO && normalizedText(note.title) === normalizedText(payload.title) && normalizedText(note.body) === normalizedText(payload.body) &&
+      JSON.stringify(normalizedLab(note.labResult)) === JSON.stringify(normalizedLab(payload.labResult));
   }
 
-  const CACR_NOTE_HEADER = "Ca/Cr — ocena w chwili zapisu:";
-  const CACR_ASSESSMENT_LABELS = { below: "poniżej normy", within: "w zakresie", above: "powyżej normy", unassessed: "nie oceniono" };
-  const CACR_COMPARISON_LABELS = { below: "poniżej zakresu", within: "w zakresie", above: "powyżej zakresu", ambiguous: "przedział obejmuje różne poziomy" };
-
-  function cacrReferenceNote(datapoint) {
-    const snapshot = datapoint?.cacrSnapshot;
-    if (datapoint?.sourceFormulaId !== "CaCr_spot" || !snapshot) return "";
-    const number = value => Number.isFinite(value) ? String(value).replace(".", ",") : "";
-    const string = value => typeof value === "string" ? value.trim() : "";
-    const lines = [CACR_NOTE_HEADER,
-      `Tryb: ${snapshot.mode === "direct" ? "wynik Ca/Cr z laboratorium" : "obliczono ze stężeń"}.`,
-      `Wynik przed zaokrągleniem: ${snapshot.comparator || ""}${number(snapshot.rawValue)} ${snapshot.unit}.`,
-      `Wynik pokazany: ${datapoint.displayValue || acrDisplayText(snapshot)} ${snapshot.unit}.`,
-      `Ocena: ${CACR_ASSESSMENT_LABELS[snapshot.status] || "nie oceniono"}.`,
-      `Kategoria Ca/Cr: ${CACR_COMPARISON_LABELS[snapshot.category] || "nie nadano"}.`,
-      `Porównanie z zakresem: ${CACR_COMPARISON_LABELS[snapshot.comparison] || "nie wykonano"}.`,
-    ];
-    if (datapoint.norm) lines.push(`Norma pokazana przy wyniku: ${datapoint.norm}.`);
-    if (string(snapshot.display?.boundary || snapshot.boundary)) lines.push(`Granica przed zaokrągleniem: ${String(snapshot.display?.boundary || snapshot.boundary).replace(/\./g, ",")}.`);
-    const reference = snapshot.reference;
-    if (reference) {
-      if (Number.isFinite(reference.nativeLow) && Number.isFinite(reference.nativeHigh)) lines.push(`Zakres źródłowy: ${number(reference.nativeLow)}–${number(reference.nativeHigh)} mg/mg; obie granice należą do normy.`);
-      if (Number.isFinite(reference.lower) && Number.isFinite(reference.upper)) lines.push(`Zakres w jednostce wyniku przed zaokrągleniem: ${number(reference.lower)}–${number(reference.upper)} ${snapshot.unit}.`);
-      const band = reference.band;
-      if (string(band?.label || band?.sourceAge || band?.populationLabel)) lines.push(`Grupa wieku źródła: ${band.label || band.sourceAge || band.populationLabel}.`);
-      if (string(band?.agePolicy)) lines.push(`Dobór przedziału wieku: ${band.agePolicy}`);
-    }
-    if (Number.isFinite(snapshot.classificationValue)) lines.push(`Oś porównania: mg/mg; wartość ${number(snapshot.classificationValue)}.`);
-    if (string(snapshot.statusText)) lines.push(snapshot.statusText);
-    if (string(snapshot.qualification?.note)) lines.push(snapshot.qualification.note);
-    const age = snapshot.context?.ageYears;
-    lines.push(Number.isFinite(age) ? `Wiek użyty przy ocenie: ${number(age)} lat.` : "Wiek użyty przy ocenie: nieznany.");
-    const input = snapshot.input || {};
-    if (snapshot.mode === "direct") {
-      lines.push(`Wynik wpisany z laboratorium: ${String(input.reportedValue ?? "")} ${string(input.reportedUnit) || snapshot.unit}.`);
-    } else {
-      if (input.calciumValue != null) lines.push(`Wapń w moczu: ${String(input.calciumValue).replace(".", ",")} ${string(input.calciumUnit)}.`);
-      if (input.creatinineValue != null) lines.push(`Kreatynina w moczu: ${String(input.creatinineValue).replace(".", ",")} ${string(input.creatinineUnit)}.`);
-      lines.push(snapshot.context?.sameSpecimen === "confirmed"
-        ? "Potwierdzono, że oznaczenia pochodzą z tej samej próbki moczu."
-        : "Założono, że oznaczenia pochodzą z tej samej próbki moczu.");
-    }
-    const sample = { firstMorning: "pierwszy poranny mocz", secondMorning: "drugi poranny mocz", random: "próbka losowa", timed: "próbka ze zbiórki czasowej" }[snapshot.context?.sampleType];
-    lines.push(`Rodzaj próbki: ${sample || "nie podano"}.`);
-    const knownFactors = { menstruation: "miesiączka", hematuria: "krwiomocz", infection: "infekcja", exercise: "intensywny wysiłek", acuteIllness: "ostra choroba", diureticUse: "leczenie diuretykiem", knownCKD: "przewlekła choroba nerek", gadolinium: "kontrast gadolinowy", thiazide: "tiazyd", thiazides: "tiazydy" };
-    const factors = Array.isArray(snapshot.context?.confounders) ? snapshot.context.confounders : [];
-    if (factors.length) lines.push(`Zgłoszone czynniki: ${factors.map(key => knownFactors[key] || String(key)).join(", ")}.`);
-    const facts = snapshot.context?.knownFacts;
-    if (facts && typeof facts === "object" && !Array.isArray(facts)) {
-      for (const [key, value] of Object.entries(facts)) {
-        if (typeof value === "boolean") lines.push(`Podana informacja — ${knownFactors[key] || key}: ${value ? "tak" : "nie"}.`);
-        else if (value === null) lines.push(`Podana informacja — ${knownFactors[key] || key}: nie wiadomo.`);
-        else if (typeof value === "string" && value.trim()) lines.push(`Podana informacja — ${knownFactors[key] || key}: ${value.trim()}.`);
+  async function runSaveOperation(operation) {
+    const v = vault();
+    const errors = [];
+    for (const output of operation.outputs) {
+      if (output.completed) continue;
+      try {
+        if (!vaultUnlocked()) throw new Error("Sejf jest zablokowany. Odblokuj go i ponów zapis.");
+        if (!output.payload) output.payload = { ...buildPatientNotePayload(output.dp, {
+          patientId: operation.patientId, clinicalDateISO: operation.clinicalDateISO,
+        }), id: output.id };
+        // An ambiguous previous attempt may already have committed. Reuse its
+        // ID, but never overwrite an intervening edit of that record.
+        const once = typeof v.savePatientNoteOnce === "function";
+        if (!once && output.attempted) {
+          const existing = typeof v.getPatientNote === "function" ? await v.getPatientNote(output.id) : null;
+          if (!existing) throw new Error("Nie można bezpiecznie potwierdzić wcześniejszej próby zapisu. Odśwież Badania pacjenta.");
+          if (!sameSavedPayload(existing, output.payload)) throw new Error("Ten zapis został już zmieniony. Odśwież Badania pacjenta.");
+          output.completed = true;
+          continue;
+        }
+        output.attempted = true;
+        const result = once ? await v.savePatientNoteOnce(copyData(output.payload)) : await v.savePatientNote(copyData(output.payload));
+        if ((once && (result?.saved !== true || result.id !== output.id)) || result?.saved === false || result?.conflict === true || result?.updated === false || result?.ok === false) throw new Error(result?.reason === "deleted" ? "Ten pomiar został usunięty. Ponowienie nie przywraca usuniętego wyniku." : "Nie zapisano wyniku: konflikt lub odrzucona zmiana. Odśwież Badania pacjenta.");
+        output.completed = true;
+      } catch (error) {
+        errors.push({ testKey: output.dp.testKey, message: error?.message || String(error) });
       }
     }
-    if (Array.isArray(facts)) {
-      const reported = facts.filter(value => typeof value === "string" && value.trim());
-      if (reported.length) lines.push(`Dodatkowe podane informacje: ${reported.map(key => knownFactors[key] || key).join(", ")}.`);
-    }
-    const source = snapshot.source || reference?.source || {};
-    if (string(source.label)) lines.push(`Źródło normy: ${source.label}${source.version ? `; ${source.version}` : ""}${source.accessedAt ? `; dostęp ${source.accessedAt}` : ""}.`);
-    if (string(source.url)) lines.push(`Adres źródła: ${source.url}`);
-    if (string(source.section)) lines.push(`Miejsce w źródle: ${source.section}.`);
-    if (snapshot.profileId) lines.push(`Profil odniesienia: ${snapshot.profileId}; wersja ${snapshot.profileVersion ?? "niepodana"}.`);
-    const population = typeof snapshot.population === "string" ? snapshot.population : snapshot.population?.label;
-    if (string(population)) lines.push(`Populacja odniesienia: ${population}.`);
-    if (string(snapshot.notes?.source)) lines.push(snapshot.notes.source);
-    if (string(snapshot.notes?.agePolicy)) lines.push(snapshot.notes.agePolicy);
-    if (source.methods) {
-      const methods = [["calcium", "wapń"], ["creatinine", "kreatynina"], ["ratio", "Ca/Cr"]]
-        .filter(([key]) => string(source.methods[key])).map(([key, label]) => `${label} — ${source.methods[key]}`);
-      if (methods.length) lines.push(`Metody laboratorium źródłowego: ${methods.join("; ")}. Metody laboratorium pacjenta nie zostały potwierdzone.`);
-    }
-    lines.push("Pojedynczy wynik Ca/Cr nie ustala rozpoznania hiperkalciurii, kamicy ani niedoboru wapnia.");
-    return lines.join("\n");
-  }
-
-  // Saved assessments belong to the original visit. No current age, engine or
-  // profile is consulted here; an edit to any measured field invalidates it.
-  function savedCacrAssessment(note) {
-    const body = typeof note?.body === "string" ? note.body : "";
-    const start = body.indexOf(CACR_NOTE_HEADER);
-    if (start < 0 || body.length > 50000) return null;
-    const text = body.slice(start);
-    const raw = /^Wynik przed zaokrągleniem: ([<>≤≥]?)([\d.,eE+-]+) (mg\/mg|mg\/g|g\/g|mol\/mol|mmol\/mmol|mmol\/mol|mg\/mmol)\.$/m.exec(text);
-    if (!raw) return null;
-    const rawValue = Number(raw[2].replace(",", "."));
-    if (!Number.isFinite(rawValue) || rawValue < 0) return null;
-    const display = /^Wynik pokazany: (.+) (mg\/mg|mg\/g|g\/g|mol\/mol|mmol\/mmol|mmol\/mol|mg\/mmol)\.$/m.exec(text);
-    const lab = note.labResult || {};
-    const normalizeDisplay = value => String(value ?? "").replace(/\s+/g, "").replace(",", ".");
-    if (String(lab.unit ?? "") !== raw[3]) return null;
-    if (Number.isFinite(lab.valueNum) && lab.valueNum !== rawValue) return null;
-    if (!display || display[2] !== raw[3] || normalizeDisplay(lab.value) !== normalizeDisplay(display[1])) return null;
-    const savedNorm = /^Norma pokazana przy wyniku: ([^\n]+)\.$/m.exec(text)?.[1] || "";
-    if (normalizeDisplay(lab.norm) !== normalizeDisplay(savedNorm)) return null;
-    const statusLabel = /^Ocena: ([^\n]+)\.$/m.exec(text)?.[1];
-    const categoryLabel = /^Kategoria Ca\/Cr: ([^\n]+)\.$/m.exec(text)?.[1];
-    const comparisonLabel = /^Porównanie z zakresem: ([^\n]+)\.$/m.exec(text)?.[1];
-    const age = /^Wiek użyty przy ocenie: ([\d.,]+) lat\.$/m.exec(text);
-    const profile = /^Profil odniesienia: ([^;\n]+); wersja ([^\n]+)\.$/m.exec(text);
-    return {
-      rawValue, unit: raw[3], comparator: raw[1], displayValue: display ? display[1] : raw[1] + raw[2],
-      status: Object.keys(CACR_ASSESSMENT_LABELS).find(key => CACR_ASSESSMENT_LABELS[key] === statusLabel) || "unassessed",
-      category: ["below", "within", "above"].find(key => CACR_COMPARISON_LABELS[key] === categoryLabel) || null,
-      comparison: Object.keys(CACR_COMPARISON_LABELS).find(key => CACR_COMPARISON_LABELS[key] === comparisonLabel) || null,
-      ageYears: age ? Number(age[1].replace(",", ".")) : null,
-      profileId: profile?.[1] || null, profileVersion: profile?.[2] || null, contextNote: text,
+    const saved = operation.outputs.filter(output => output.completed).length;
+    operation.result = { ok: !errors.length && saved === operation.outputs.length && saved > 0,
+      reason: errors.length ? "partial" : "ok", saved, total: operation.outputs.length, errors,
+      patientId: operation.patientId, patientName: operation.patientName, clinicalDateISO: operation.clinicalDateISO,
+      operationId: operation.id, noteIds: operation.outputs.filter(output => output.completed).map(output => output.id),
     };
+    return operation.result;
   }
 
-  function measuredReferenceNote(datapoint) {
-    const reference = datapoint?.measuredClearanceReference;
-    if (datapoint?.sourceFormulaId !== "cl24" || !reference || typeof reference !== "object" || Array.isArray(reference)) return "";
-    // Snapshot of the result the clinician saw. The vault's note schema keeps
-    // body/norm, but deliberately rejects new arbitrary labResult properties.
-    // Never recompute a historical norm from today's profile or patient data.
-    const number = (value) => typeof value === "number" && Number.isFinite(value) ? String(value).replace(".", ",") : "";
-    const string = (value) => typeof value === "string" ? value.trim() : "";
-    const lines = ["Klirens kreatyniny — dane użyte w chwili zapisu:"];
-    if (number(reference.value)) lines.push(`Wynik przed zaokrągleniem: ${number(reference.value)} ${string(reference.unit) || "mL/min"}.`);
-    const assessment = { within: "w zakresie", below: "poniżej zakresu", above: "powyżej zakresu" }[reference.status];
-    lines.push(assessment ? `Ocena względem wybranego zakresu: ${assessment}.` : "Nie dobrano zakresu referencyjnego do tego wyniku.");
-    const source = reference.source || {};
-    if (string(source.label)) lines.push(`Źródło normy: ${string(source.label)}${string(source.lastUpdated) ? `; aktualizacja ${source.lastUpdated}` : ""}${string(source.accessedAt) ? `; dostęp ${source.accessedAt}` : ""}.`);
-    if (string(source.url)) lines.push(`Adres źródła: ${source.url}`);
-    if (string(reference.profileId)) lines.push(`Profil: ${reference.profileId}${reference.profileVersion != null ? `; wersja ${reference.profileVersion}` : ""}.`);
-    const population = typeof reference.population === "string" ? reference.population : reference.population?.label;
-    if (string(population)) lines.push(`Populacja: ${population}.`);
-    const band = reference.selectedBand;
-    if (band && number(band.minimumAgeInclusive) && number(band.maximumAgeExclusive)) {
-      lines.push(`Przedział wieku źródła: od ${number(band.minimumAgeInclusive)} do poniżej ${number(band.maximumAgeExclusive)} lat${band.sexRequired === false ? "; wspólny dla obu płci" : ""}.`);
-    }
-    const inputs = reference.inputs || {};
-    const patient = [];
-    if (number(reference.ageYears)) patient.push(`wiek ${number(reference.ageYears)} lat`);
-    if (["M", "F"].includes(reference.sex)) patient.push(reference.sex === "M" ? "płeć męska" : "płeć żeńska");
-    if (number(inputs.weightKg)) patient.push(`masa ${number(inputs.weightKg)} kg`);
-    if (number(inputs.heightCm)) patient.push(`wzrost ${number(inputs.heightCm)} cm`);
-    if (patient.length) lines.push(`Dane pacjenta: ${patient.join("; ")}.`);
-    if (number(reference.bsa)) lines.push(`Powierzchnia ciała użyta do przeliczenia normy: ${number(reference.bsa)} m²${string(reference.bsaMethod) ? ` (${reference.bsaMethod})` : ""}.`);
-    const indexed = reference.indexedRange;
-    if (indexed && number(indexed.lower) && number(indexed.upper)) lines.push(`Zakres źródłowy: ${number(indexed.lower)}–${number(indexed.upper)} ${string(indexed.unit)}.`);
-    const absolute = reference.absoluteRange;
-    if (absolute && number(absolute.lower) && number(absolute.upper)) lines.push(`Zakres po przeliczeniu na jednostkę wyniku, przed zaokrągleniem granic: ${number(absolute.lower)}–${number(absolute.upper)} ${string(absolute.unit)}.`);
-    if (datapoint.norm) lines.push(`Norma pokazana przy wyniku: ${datapoint.norm}.`);
-    if (number(reference.durationHours)) lines.push(`Rzeczywisty czas zbiórki: ${number(reference.durationHours)} h${number(inputs.durationMinutes) ? ` (${number(inputs.durationMinutes)} min)` : ""}. ${reference.durationSource === "legacy-dates" ? "Czas odtworzono z zapisanych dat początku i końca zbiórki." : "Czas podano w godzinach."}`);
-    const laboratory = [];
-    if (number(inputs.serumCreatinineMgDl)) laboratory.push(`kreatynina w surowicy ${number(inputs.serumCreatinineMgDl)} mg/dL`);
-    if (number(inputs.urineCreatinineMgDl)) laboratory.push(`kreatynina w moczu ${number(inputs.urineCreatinineMgDl)} mg/dL`);
-    if (number(inputs.volumeMl)) laboratory.push(`objętość ${number(inputs.volumeMl)} mL`);
-    if (laboratory.length) lines.push(`Dane badania użyte w obliczeniu: ${laboratory.join("; ")}.`);
-    if (reference.protocolContext?.nominalHours) lines.push(`Zakres źródłowy dotyczy zbiórki trwającej ${number(reference.protocolContext.nominalHours)} h.`);
-    if (string(reference.protocolNote)) lines.push(reference.protocolNote);
-    if (reference.collectionAssumptions?.collectionCompleteness === "assumed") lines.push("Założono pełną, prawidłową zbiórkę moczu.");
-    if (reference.collectionAssumptions?.serumSampling === "assumed-compatible") lines.push("Założono, że kreatynina w surowicy odpowiada okresowi zbiórki zgodnie z protokołem laboratorium.");
-    if (reference.referencePreview === true) lines.push("Norma ma charakter orientacyjny; zakres własnego laboratorium ma pierwszeństwo.");
-    for (const limitation of Array.isArray(reference.limitations) ? reference.limitations : []) {
-      if (string(limitation)) lines.push(limitation);
-    }
-    return lines.join("\n");
-  }
-
-  // Zapis: jedna notatka na datapoint, wspólna data = jedna wizyta.
-  async function saveActiveResultToCard(opts) {
+  function saveActiveResultToCard(opts) {
     const options = opts || {};
     const v = vault();
-    if (!vaultUnlocked() || !v || typeof v.savePatientNote !== "function") {
-      return { ok: false, reason: "locked", saved: 0, total: 0, errors: [] };
-    }
-    const patientId = options.patientId || resolveCurrentPatientId();
-    if (!patientId) {
-      return { ok: false, reason: "no-patient", saved: 0, total: 0, errors: [] };
-    }
-    const clinicalDateISO = normalizeDateISO(options.clinicalDateISO) || todayISO();
-    const datapoints = Array.isArray(options.datapoints)
-      ? options.datapoints
-      : collectActiveDatapoints(options.root, options);
-    if (!datapoints.length) {
-      return { ok: false, reason: "no-data", saved: 0, total: 0, errors: [] };
-    }
-    let saved = 0;
-    const errors = [];
-    for (let i = 0; i < datapoints.length; i += 1) {
-      const dp = datapoints[i];
-      const fehco3Note = dp.sourceFormulaId === "FEHCO3_spot" ? global.ClcrFehco3Persistence?.referenceNote(dp) : "";
-      if (dp.sourceFormulaId === "FEHCO3_spot" && !fehco3Note) {
-        errors.push({ testKey: dp.testKey, message: "Brak kompletnej oceny FEHCO₃ do bezpiecznego zapisu. Odśwież kalkulator i oblicz wynik ponownie." });
-        continue;
-      }
-      const feclNote = dp.sourceFormulaId === "FECl_spot" ? global.ClcrFeclPersistence?.referenceNote(dp) : "";
-      if (dp.sourceFormulaId === "FECl_spot" && !feclNote) {
-        errors.push({ testKey: dp.testKey, message: "Brak kompletnej oceny FECl do bezpiecznego zapisu. Odśwież kalkulator i oblicz wynik ponownie." });
-        continue;
-      }
-      const fekNote = dp.sourceFormulaId === "FEK_spot" ? global.ClcrFekPersistence?.referenceNote(dp) : "";
-      if (dp.sourceFormulaId === "FEK_spot" && !fekNote) {
-        errors.push({ testKey: dp.testKey, message: "Brak kompletnej oceny FEK do bezpiecznego zapisu. Odśwież kalkulator i oblicz wynik ponownie." });
-        continue;
-      }
-      const labResult = {
-        test: dp.label,
-        value: dp.sourceFormulaId === "CaCr_spot" && dp.cacrSnapshot
-          ? dp.displayValue || acrDisplayText(dp.cacrSnapshot) : dp.sourceFormulaId === "PCR" && dp.pcrSnapshot
-            ? dp.displayValue || acrDisplayText(dp.pcrSnapshot) : dp.sourceFormulaId === "ACR" && dp.acrSnapshot
-              ? dp.displayValue || acrDisplayText(dp.acrSnapshot) : formatValueString(dp.valueNum),
-        valueNum: dp.valueNum,
-        unit: dp.unit,
-      };
-      if (dp.sourceFormulaId === "OxCr_spot") global.ClcrOxcrPersistence?.applyLabResult(dp, labResult);
-      if (dp.sourceFormulaId === "CitCr_spot") global.ClcrCitcrPersistence?.applyLabResult(dp, labResult);
-      if (dp.sourceFormulaId === "FENa_spot") global.ClcrFenaPersistence?.applyLabResult(dp, labResult);
-      if (dp.sourceFormulaId === "FEK_spot") global.ClcrFekPersistence?.applyLabResult(dp, labResult);
-      if (dp.sourceFormulaId === "FECl_spot") global.ClcrFeclPersistence?.applyLabResult(dp, labResult);
-      if (dp.sourceFormulaId === "FEHCO3_spot") global.ClcrFehco3Persistence?.applyLabResult(dp, labResult);
-      // Generic vault charts consume valueNum as an exact measurement. A
-      // detection limit stays textual there; the signed endpoint is retained
-      // in the ACR snapshot note and understood by this history adapter.
-      if (dp.sourceFormulaId === "ACR" && dp.acrSnapshot?.comparator) delete labResult.valueNum;
-      if (dp.sourceFormulaId === "PCR" && dp.pcrSnapshot?.comparator) delete labResult.valueNum;
-      if (dp.sourceFormulaId === "CaCr_spot" && dp.cacrSnapshot?.comparator) delete labResult.valueNum;
-      // Zakres referencyjny (jeśli silnik go pokazał) — do kolumny „Zakres".
-      if (dp.norm) labResult.norm = String(dp.norm).slice(0, 200);
-      // Znacznik „poza zakresem" w treści (magazyn nie ma pola boolean) —
-      // czytelny dla lekarza i parsowalny przez flowsheet (§2: testKey też tu).
-      const body =
-        "Kalkulator klirensu · " +
-        dp.testKey +
-        (dp.outOfRange ? " · wynik poza zakresem" : "") +
-        (typeof dp.assumptions === "string" && dp.assumptions.trim() ? "\n\n" + dp.assumptions.trim() : "") +
-        (dp.sourceFormulaId === "ACR" && dp.acrSnapshot ? "\n\n" + acrReferenceNote(dp) : "") +
-        (dp.sourceFormulaId === "PCR" && dp.pcrSnapshot ? "\n\n" + pcrReferenceNote(dp) : "") +
-        (dp.sourceFormulaId === "CaCr_spot" && dp.cacrSnapshot ? "\n\n" + cacrReferenceNote(dp) : "") +
-        (dp.sourceFormulaId === "OxCr_spot" && dp.oxcrSnapshot ? "\n\n" + global.ClcrOxcrPersistence.referenceNote(dp) : "") +
-        (dp.sourceFormulaId === "CitCr_spot" && dp.citcrSnapshot ? "\n\n" + global.ClcrCitcrPersistence.referenceNote(dp) : "") +
-        (dp.sourceFormulaId === "FENa_spot" && dp.fenaSnapshot ? "\n\n" + global.ClcrFenaPersistence.referenceNote(dp) : "") +
-        (fekNote ? "\n\n" + fekNote : "") +
-        (feclNote ? "\n\n" + feclNote : "") +
-        (fehco3Note ? "\n\n" + fehco3Note : "") +
-        (dp.sourceFormulaId === "cl24" && dp.measuredClearanceReference ? "\n\n" + measuredReferenceNote(dp) : "") +
-        (dp.sourceFormulaId === "cg_norm" && dp.agePolicy === "completed-years" && Number.isInteger(dp.ageUsedYears) && dp.ageUsedYears >= 18
-          ? "\n\nWiek użyty we wzorze: " + dp.ageUsedYears + " ukończonych lat." : "");
-      try {
-        await v.savePatientNote({
-          patientId: patientId,
-          category: CATEGORY,
-          clinicalDateISO: clinicalDateISO,
-          title: dp.label,
-          body: body,
-          labResult: labResult,
-        });
-        saved += 1;
-      } catch (e) {
-        errors.push({
-          testKey: dp.testKey,
-          message: e && e.message ? e.message : String(e),
-        });
-      }
-    }
-    return {
-      ok: errors.length === 0 && saved > 0,
-      reason: errors.length ? "partial" : "ok",
-      saved: saved,
-      total: datapoints.length,
-      errors: errors,
-      clinicalDateISO: clinicalDateISO,
-    };
+    if (!vaultUnlocked() || !v || (typeof v.savePatientNote !== "function" && typeof v.savePatientNoteOnce !== "function")) return Promise.resolve({ ok:false, reason:"locked", saved:0, total:0, errors:[] });
+    const request = saveRequest(options);
+    if (!request.patientId) return Promise.resolve({ ok:false, reason:"no-patient", saved:0, total:0, errors:[] });
+    if (!request.clinicalDateISO) return Promise.resolve({ ok:false, reason:"invalid-date", saved:0, total:0, errors:[] });
+    if (!request.datapoints.length) return Promise.resolve({ ok:false, reason:"no-data", saved:0, total:0, errors:[] });
+    const operation = options.operation || saveOperations.get(request.key) || createSaveOperation({ ...options, ...request });
+    saveOperations.set(operation.key, operation);
+    currentOperation = operation;
+    if (operation.promise) return operation.promise;
+    if (operation.result?.ok) return Promise.resolve(operation.result);
+    operation.pending = true;
+    operation.promise = runSaveOperation(operation).finally(() => { operation.pending = false; operation.promise = null; });
+    return operation.promise;
   }
 
   function seriesWord(n) {
@@ -4627,183 +4300,8 @@
   // bierze tekst przed „(" i skleja różne serie). Ograniczamy do parametrów
   // aktywnego modułu — tak jak zapis.
   function buildSeriesFromNotes(notes, options) {
-    const list = Array.isArray(notes) ? notes : [];
     const target = resolveTargetFormulaSet(options);
-    const m = model();
-    const byLabel = new Map();
-    for (let i = 0; i < list.length; i += 1) {
-      const note = list[i];
-      if (!note || note.category !== CATEGORY) continue;
-      const lab = note.labResult;
-      if (!lab || typeof lab.test !== "string" || !lab.test) continue;
-      const oxcrLabel = global.ClcrOxcrPersistence?.canonicalLabel(lab.test) || lab.test;
-      const label = global.ClcrCitcrPersistence?.canonicalLabel(oxcrLabel) || oxcrLabel;
-      const entry =
-        m && typeof m.getParamByLabel === "function"
-          ? m.getParamByLabel(label)
-          : null;
-      const sourceFormulaId = entry ? entry.sourceFormulaId : null;
-      if (target && (!sourceFormulaId || !target.has(sourceFormulaId))) continue;
-      const acr = sourceFormulaId === "ACR" ? savedAcrAssessment(note) : null;
-      const pcr = sourceFormulaId === "PCR" ? savedPcrAssessment(note) : null;
-      const cacr = sourceFormulaId === "CaCr_spot" ? savedCacrAssessment(note) : null;
-      const oxcr = sourceFormulaId === "OxCr_spot" ? global.ClcrOxcrPersistence?.savedAssessment(note) : null;
-      const legacyOxcr = sourceFormulaId === "OxCr_spot" && !oxcr ? global.ClcrOxcrPersistence?.legacyPoint(note) : null;
-      const citcr = sourceFormulaId === "CitCr_spot" ? global.ClcrCitcrPersistence?.savedAssessment(note) : null;
-      const legacyCitcr = sourceFormulaId === "CitCr_spot" && !citcr ? global.ClcrCitcrPersistence?.legacyPoint(note) : null;
-      const fena = sourceFormulaId === "FENa_spot" ? global.ClcrFenaPersistence?.savedAssessment(note) : null;
-      const legacyFena = sourceFormulaId === "FENa_spot" && !fena ? global.ClcrFenaPersistence?.legacyPoint(note) : null;
-      const fek = sourceFormulaId === "FEK_spot" ? global.ClcrFekPersistence?.savedAssessment(note) : null;
-      const legacyFek = sourceFormulaId === "FEK_spot" && !fek ? global.ClcrFekPersistence?.legacyPoint(note) : null;
-      const fehco3 = sourceFormulaId === "FEHCO3_spot" ? global.ClcrFehco3Persistence?.savedAssessment(note) : null;
-      const legacyFehco3 = sourceFormulaId === "FEHCO3_spot" && !fehco3 ? global.ClcrFehco3Persistence?.legacyPoint(note) : null;
-      const fecl = sourceFormulaId === "FECl_spot" ? global.ClcrFeclPersistence?.savedAssessment(note) : null;
-      const legacyFecl = sourceFormulaId === "FECl_spot" && !fecl ? global.ClcrFeclPersistence?.legacyPoint(note) : null;
-      const ratio = acr || pcr || cacr || oxcr || citcr;
-      // A later edit can invalidate the old assessment while leaving a valid
-      // censored laboratory result. Keep that current text without restoring
-      // the original norm/category or turning its endpoint into a point.
-      const signedCacrText = sourceFormulaId === "CaCr_spot" && !cacr && typeof lab.value === "string" && lab.value.length <= 256
-        ? /^\s*([<>≤≥])\s*((?:\d+(?:[.,]\d*)?|[.,]\d+)(?:[eE][+-]?\d+)?)\s*$/.exec(lab.value) : null;
-      const signedCacrValue = signedCacrText ? Number(signedCacrText[2].replace(",", ".")) : NaN;
-      const valueNum = fehco3 ? fehco3.rawValue : legacyFehco3 ? legacyFehco3.rawValue : fecl ? fecl.rawValue : legacyFecl ? legacyFecl.rawValue : fek ? fek.rawValue : legacyFek ? legacyFek.rawValue : fena ? fena.rawValue : legacyFena ? legacyFena.rawValue : ratio ? ratio.rawValue : legacyCitcr ? legacyCitcr.rawValue : legacyOxcr ? legacyOxcr.rawValue :
-        Number.isFinite(signedCacrValue) ? signedCacrValue : typeof lab.valueNum === "number" && isFinite(lab.valueNum)
-          ? lab.valueNum
-          : toNumber(lab.value);
-      if (!Number.isFinite(valueNum)) continue;
-      const unit = (ratio?.unit || lab.unit || (entry ? entry.unit : "") || "").trim();
-      // Native mg/g and mg/mmol thresholds are deliberately different axes.
-      // Never draw a trend through values stored in different native units.
-      const seriesKey = sourceFormulaId === "CitCr_spot" ? global.ClcrCitcrPersistence?.seriesKey(label, unit, citcr, note) || `${label}\n${unit}\nlegacy-unknown` : sourceFormulaId === "OxCr_spot" ? global.ClcrOxcrPersistence?.seriesKey(label, unit, oxcr, note) || `${label}\n${unit}\nlegacy-unknown` : ["ACR", "PCR", "CaCr_spot"].includes(sourceFormulaId) ? `${label}\n${unit}` : label;
-      const dateISO =
-        normalizeDateISO(note.clinicalDateISO) ||
-        (typeof note.clinicalDateISO === "string"
-          ? note.clinicalDateISO.slice(0, 10)
-          : "");
-      if (!byLabel.has(seriesKey)) {
-        byLabel.set(seriesKey, {
-          label: label,
-          displayLabel: sourceFormulaId === "CitCr_spot" ? global.ClcrCitcrPersistence?.displayLabel(label, unit, citcr?.basis ?? global.ClcrCitcrPersistence?.savedBasis(note, unit) ?? "unknown") || lab.test : sourceFormulaId === "OxCr_spot" ? global.ClcrOxcrPersistence?.displayLabel(label, unit, oxcr?.basis ?? global.ClcrOxcrPersistence?.savedBasis(note, unit) ?? "unknown") || lab.test : label,
-          unit: unit,
-          id: entry ? entry.id : null,
-          group: entry ? entry.group : null,
-          sourceFormulaId: sourceFormulaId,
-          points: [],
-        });
-      }
-      const staleAcrSnapshot = sourceFormulaId === "ACR" && !acr &&
-        typeof note.body === "string" && note.body.includes(ACR_NOTE_HEADER);
-      const stalePcrSnapshot = sourceFormulaId === "PCR" && !pcr &&
-        typeof note.body === "string" && note.body.includes(PCR_NOTE_HEADER);
-      const staleCacrSnapshot = sourceFormulaId === "CaCr_spot" && !cacr &&
-        typeof note.body === "string" && note.body.includes(CACR_NOTE_HEADER);
-      const staleOxcrSnapshot = sourceFormulaId === "OxCr_spot" && !oxcr && global.ClcrOxcrPersistence?.hasSavedAssessment(note);
-      const staleCitcrSnapshot = sourceFormulaId === "CitCr_spot" && !citcr && global.ClcrCitcrPersistence?.hasSavedAssessment(note);
-      // FENa helper thresholds never imply a normal/abnormal verdict. Legacy
-      // notes remain historical numbers; no current patient facts are applied.
-      const outOfRange = ["FECl_spot", "FEHCO3_spot"].includes(sourceFormulaId) ? null : sourceFormulaId === "FEK_spot" ? fek?.outOfRange ?? null : sourceFormulaId === "FENa_spot" ? null : ratio ? ratio.status === "unassessed" ? null : ["below", "above"].includes(ratio.status) : staleAcrSnapshot || stalePcrSnapshot || staleCacrSnapshot || staleOxcrSnapshot || staleCitcrSnapshot ? null : ["OxCr_spot", "CitCr_spot"].includes(sourceFormulaId) ? typeof note.body === "string" && note.body.includes("wynik poza zakresem") ? true : null :
-        typeof note.body === "string" &&
-        note.body.indexOf("poza zakresem") >= 0;
-      const norm = typeof lab.norm === "string" ? lab.norm.trim() : "";
-      const point = {
-        dateISO: dateISO,
-        valueNum: valueNum,
-        outOfRange: outOfRange,
-        norm: norm,
-        noteId: note.id || null,
-      };
-      if (acr) Object.assign(point, {
-        displayValue: acr.displayValue, comparator: acr.comparator,
-        category: acr.category, assessment: acr.status, unit: acr.unit,
-        acrAssessment: acr,
-      });
-      if (pcr) Object.assign(point, {
-        displayValue: pcr.displayValue, comparator: pcr.comparator,
-        category: pcr.category, assessment: pcr.status, comparison: pcr.comparison,
-        unit: pcr.unit, pcrAssessment: pcr,
-      });
-      if (cacr) Object.assign(point, {
-        valueNum: cacr.comparator ? null : cacr.rawValue,
-        displayValue: cacr.displayValue, comparator: cacr.comparator,
-        category: cacr.category, assessment: cacr.status, comparison: cacr.comparison,
-        unit: cacr.unit, cacrAssessment: cacr,
-      });
-      if (!cacr && Number.isFinite(signedCacrValue)) Object.assign(point, {
-        valueNum: null, comparator: signedCacrText[1], displayValue: lab.value.trim(), outOfRange: null,
-      });
-      if (oxcr) Object.assign(point, {
-        valueNum: oxcr.comparator ? null : oxcr.rawValue,
-        displayValue: oxcr.displayValue, comparator: oxcr.comparator,
-        category: oxcr.category, assessment: oxcr.status, comparison: oxcr.comparison,
-        unit: oxcr.unit, basis: oxcr.basis, originalUnit: oxcr.originalUnit, oxcrAssessment: oxcr,
-      });
-      if (legacyOxcr) Object.assign(point, legacyOxcr, { outOfRange });
-      if (citcr) Object.assign(point, {
-        valueNum: citcr.comparator ? null : citcr.rawValue,
-        displayValue: citcr.displayValue, comparator: citcr.comparator,
-        category: citcr.category, assessment: citcr.status, comparison: citcr.comparison,
-        unit: citcr.unit, basis: citcr.basis, originalUnit: citcr.originalUnit, citcrAssessment: citcr,
-      });
-      if (legacyCitcr) Object.assign(point, legacyCitcr, { outOfRange });
-      if (fena) Object.assign(point, {
-        valueNum: fena.rawValue, displayValue: fena.displayValue, unit: fena.unit,
-        assessment: "unassessed", category: null, outOfRange: null, norm: "",
-        fenaAssessment: fena,
-      });
-      if (legacyFena) Object.assign(point, legacyFena, { outOfRange: null, norm: "" });
-      if (fek) Object.assign(point, {
-        valueNum: fek.comparator ? null : fek.rawValue, displayValue: fek.displayValue, unit: fek.unit,
-        comparator: fek.comparator || "", assessment: fek.status, category: null, outOfRange: fek.outOfRange, norm: fek.norm,
-        fekAssessment: fek,
-      });
-      if (legacyFek) Object.assign(point, legacyFek, { outOfRange: null, norm: "" });
-      if (fecl) Object.assign(point, {
-        valueNum: fecl.comparator ? null : fecl.rawValue, displayValue: fecl.displayValue, unit: fecl.unit,
-        comparator: fecl.comparator || "", assessment: "unassessed", category: null, outOfRange: null, norm: "",
-        feclAssessment: fecl,
-      });
-      if (legacyFecl) Object.assign(point, legacyFecl, { outOfRange: null, norm: "" });
-      if (fehco3) Object.assign(point, {
-        valueNum: fehco3.comparator ? null : fehco3.rawValue, displayValue: fehco3.displayValue, unit: fehco3.unit,
-        comparator: fehco3.comparator || "", assessment: "unassessed", category: null, outOfRange: null, norm: "",
-        fehco3Assessment: fehco3,
-      });
-      if (legacyFehco3) Object.assign(point, legacyFehco3, { outOfRange: null, norm: "" });
-      if (sourceFormulaId === "FEHCO3_spot" && !fehco3) {
-        point.assessment = "unassessed"; point.category = null;
-        if (!legacyFehco3) point.displayValue = String(valueNum).replace(".", ",");
-      }
-      if (sourceFormulaId === "FECl_spot" && !fecl) {
-        point.norm = "";
-        if (!legacyFecl) point.displayValue = String(valueNum).replace(".", ",");
-      }
-      if (sourceFormulaId === "FEK_spot" && !fek) {
-        point.displayValue = String(lab.value || valueNum).trim();
-        point.norm = "";
-      }
-      if (sourceFormulaId === "FENa_spot" && !fena) {
-        point.displayValue = String(lab.value || valueNum).trim();
-        point.norm = "";
-      }
-      byLabel.get(seriesKey).points.push(point);
-    }
-    const series = Array.from(byLabel.values());
-    series.forEach((s) => {
-      s.points.sort((a, b) => String(a.dateISO).localeCompare(String(b.dateISO)));
-      if (["ACR", "PCR", "CaCr_spot", "OxCr_spot", "CitCr_spot", "FENa_spot", "FEK_spot", "FECl_spot", "FEHCO3_spot"].includes(s.sourceFormulaId)) {
-        s.norm = s.points[s.points.length - 1]?.norm || "";
-        return;
-      }
-      // Zakres serii = z najnowszego punktu, który go niesie.
-      s.norm = "";
-      for (let k = s.points.length - 1; k >= 0; k -= 1) {
-        if (s.points[k].norm) {
-          s.norm = s.points[k].norm;
-          break;
-        }
-      }
-    });
-    return series;
+    return global.ClcrSavedResults.buildLegacySeriesFromNotes(notes, target ? { formulaIds: [...target] } : { allParams: true });
   }
 
   async function readActiveSeries(patientId, options) {
@@ -4931,6 +4429,8 @@
 
   function readPatientName() {
     if (!doc) return "";
+    const field = doc.getElementById("fullName");
+    if (field?.value) return String(field.value).trim();
     const el = doc.getElementById("patientName");
     return el && el.textContent ? el.textContent.trim() : "";
   }
@@ -4947,70 +4447,54 @@
 
   function buildUI() {
     if (!doc || ui) return;
-    const anchor =
-      doc.getElementById("stoneCard") ||
-      doc.getElementById("elecCard") ||
-      doc.getElementById("results");
-    if (!anchor || !anchor.parentNode) return;
+    const anchor = doc.getElementById("stoneCard") || doc.getElementById("elecCard") || doc.getElementById("results");
+    if (!anchor?.parentNode) return;
     const card = doc.createElement("section");
-    card.className = "card clcr-visit-save";
-    card.id = "clcrVisitSaveCard";
-    card.hidden = true;
-    card.innerHTML =
-      '<h2 class="text-center">Zapisz wynik do karty pacjenta</h2>' +
-      '<div class="cvs-row">' +
-      '<label class="cvs-date" for="clcrVisitDate">Data wizyty' +
-      '<input type="date" id="clcrVisitDate" name="clcrVisitDate"></label>' +
-      '<button type="button" id="clcrVisitSaveBtn" class="cvs-btn">Zapisz wynik do karty</button>' +
-      "</div>" +
-      '<p class="cvs-hint" id="clcrVisitHint"></p>' +
-      '<p class="cvs-status" id="clcrVisitStatus" role="status" aria-live="polite"></p>' +
-      '<p class="cvs-open-row"><button type="button" id="clcrOpenCardBtn" class="cvs-link" hidden>Karta pacjenta →</button></p>';
+    card.className = "card clcr-visit-save"; card.id = "clcrVisitSaveCard"; card.hidden = true;
+    card.innerHTML = '<h2>Zapisz do Badań pacjenta</h2>' +
+      '<div class="cvs-patient"><span>Pacjent</span><strong id="clcrVisitPatientName"></strong><small>Karta pacjenta → Badania</small></div>' +
+      '<div class="cvs-row"><label class="cvs-date" for="clcrVisitDate">Data badania<input type="date" id="clcrVisitDate" name="clcrVisitDate" required></label>' +
+      '<button type="button" id="clcrVisitSaveBtn" class="cvs-btn">Zapisz do Badań pacjenta</button></div>' +
+      '<p class="cvs-hint" id="clcrVisitHint"></p><p class="cvs-status" id="clcrVisitStatus" role="status" aria-live="polite"></p>' +
+      '<button type="button" id="clcrOpenBadaniaBtn" class="cvs-btn cvs-open-badania" hidden>Otwórz Badania →</button>' +
+      '<div class="cvs-open-row"><button type="button" id="clcrOpenCardBtn" class="cvs-link" hidden>Karta pacjenta →</button>' +
+      '<button type="button" id="clcrOpenHistoryBtn" class="cvs-link" hidden>Historia wyników Klirensu</button></div>';
     anchor.parentNode.insertBefore(card, anchor.nextSibling);
-    ui = {
-      card: card,
-      date: card.querySelector("#clcrVisitDate"),
-      btn: card.querySelector("#clcrVisitSaveBtn"),
-      hint: card.querySelector("#clcrVisitHint"),
-      status: card.querySelector("#clcrVisitStatus"),
-      openBtn: card.querySelector("#clcrOpenCardBtn"),
-    };
-    if (ui.date) ui.date.value = todayISO();
-    if (ui.btn) ui.btn.addEventListener("click", onSaveClick);
-    if (ui.openBtn) ui.openBtn.addEventListener("click", openPatientCard);
+    ui = { card, date:card.querySelector("#clcrVisitDate"), btn:card.querySelector("#clcrVisitSaveBtn"),
+      hint:card.querySelector("#clcrVisitHint"), status:card.querySelector("#clcrVisitStatus"),
+      patient:card.querySelector("#clcrVisitPatientName"), openBtn:card.querySelector("#clcrOpenCardBtn"),
+      historyBtn:card.querySelector("#clcrOpenHistoryBtn"), badaniaBtn:card.querySelector("#clcrOpenBadaniaBtn"), statusKey:null };
+    ui.date.value = todayISO();
+    ui.btn.addEventListener("click", onSaveClick);
+    ui.date.addEventListener("input", scheduleRefresh);
+    ui.openBtn.addEventListener("click", () => openPatientCard());
+    ui.historyBtn.addEventListener("click", openHistoryCard);
+    ui.badaniaBtn.addEventListener("click", () => openPatientCard());
     refresh();
   }
 
+  function currentSaveRequest() { return saveRequest({ clinicalDateISO:ui?.date ? ui.date.value : null }); }
   function refresh() {
     if (!ui) return;
-    const datapoints = collectActiveDatapoints();
-    if (!datapoints.length) {
-      ui.card.hidden = true;
-      return;
-    }
-    ui.card.hidden = false;
-    const unlocked = vaultUnlocked();
-    const patientId = resolveCurrentPatientId();
-    const ready = unlocked && !!patientId;
-    if (ui.btn) ui.btn.disabled = !ready;
-    if (ui.openBtn) ui.openBtn.hidden = !ready;
-    if (!ui.hint) return;
-    if (!unlocked) {
-      ui.hint.textContent =
-        "Zaloguj się do sejfu, aby zapisać wynik do karty. Liczenie działa bez logowania.";
-    } else if (!patientId) {
-      ui.hint.textContent =
-        "Wczytaj pacjenta, aby zapisać wynik do jego karty.";
-    } else {
-      const cnt = datapoints.length;
-      const name = state.patientName || readPatientName();
-      ui.hint.textContent =
-        "Do zapisania: " +
-        cnt +
-        " " +
-        seriesWord(cnt) +
-        (name ? " · pacjent: " + name : "");
-    }
+    bindVaultEvents();
+    const request = currentSaveRequest();
+    ui.card.hidden = !request.datapoints.length;
+    if (ui.card.hidden) return;
+    const unlocked = vaultUnlocked(), patientId = resolveCurrentPatientId();
+    const operation = saveOperations.get(request.key);
+    const pending = operation?.pending === true, saved = operation?.result?.ok === true;
+    ui.patient.textContent = patientId ? state.patientName || readPatientName() || "Wybrany pacjent" : "Pacjent niewybrany";
+    ui.btn.disabled = !unlocked || pending || saved;
+    ui.btn.textContent = !patientId ? "Wybierz pacjenta" : pending ? "Zapisywanie…" : saved ? "Zapisano w Badaniach" : operation?.result?.reason === "partial" ? "Ponów zapis do Badań" : "Zapisz do Badań pacjenta";
+    ui.openBtn.hidden = !unlocked || !patientId;
+    ui.historyBtn.hidden = !unlocked || !patientId;
+    ui.badaniaBtn.hidden = !saved || !unlocked || !patientId;
+    ui.date.disabled = pending;
+    if (ui.statusKey !== request.key) { setStatus(""); ui.statusKey = request.key; }
+    ui.hint.textContent = !unlocked ? "Zaloguj się do sejfu, aby zapisać wynik. Liczenie działa bez logowania."
+      : !patientId ? "Wybierz pacjenta, do którego Badań trafi wynik."
+      : "Do zapisu: " + request.datapoints.length + " " + (request.datapoints.length === 1 ? "wynik" : request.datapoints.length < 5 ? "wyniki" : "wyników") + ".";
+    ui.hint.hidden = saved;
   }
 
   function scheduleRefresh() {
@@ -5028,230 +4512,38 @@
   }
 
   async function onSaveClick() {
-    if (!ui || !ui.btn || ui.btn.disabled) return;
-    ui.btn.disabled = true;
-    setStatus("Zapisywanie…", "pending");
-    let res;
-    try {
-      res = await saveActiveResultToCard({
-        clinicalDateISO: ui.date ? ui.date.value : null,
-      });
-    } catch (e) {
-      res = { ok: false, reason: "error", saved: 0, total: 0, errors: [e] };
-    }
-    if (res.ok) {
-      setStatus(
-        "✓ Zapisano do karty (" +
-          res.saved +
-          " " +
-          seriesWord(res.saved) +
-          ", " +
-          res.clinicalDateISO +
-          ").",
-        "ok",
-      );
-    } else if (res.reason === "no-patient") {
-      setStatus("Nie wczytano pacjenta — zapis niemożliwy.", "err");
-    } else if (res.reason === "locked") {
-      setStatus("Sejf zablokowany — zaloguj się, aby zapisać.", "err");
-    } else if (res.reason === "no-data") {
-      setStatus("Brak wyniku do zapisania.", "err");
-    } else {
-      setStatus(
-        "Zapisano " +
-          res.saved +
-          "/" +
-          res.total +
-          "; niepowodzenia: " +
-          res.errors.length +
-          ".",
-        "warn",
-      );
-    }
-    refresh();
-    scheduleHistoryRefresh();
+    if (!ui || ui.btn.disabled) return;
+    if (!resolveCurrentPatientId()) { await choosePatient(); return; }
+    if (ui.date?.reportValidity && !ui.date.reportValidity()) return;
+    const request = currentSaveRequest();
+    ui.statusKey = request.key;
+    const pending = saveActiveResultToCard(request);
+    const operation = currentOperation;
+    setStatus("Zapisywanie do Badań pacjenta…", "pending"); refresh();
+    let result;
+    try { result = await pending; } catch (error) { result = { ok:false, reason:"error", saved:0, total:request.datapoints.length, errors:[{message:error?.message || String(error)}] }; }
+    if (currentSaveRequest().key !== request.key || currentOperation !== operation) { refresh(); scheduleHistoryRefresh(); return; }
+    if (result.ok) setStatus("Zapisano w Badaniach: " + (result.patientName || "wybrany pacjent") + " · " + formatDateShort(result.clinicalDateISO) + ".", "ok");
+    else if (result.reason === "no-patient") setStatus("Wybierz pacjenta przed zapisem.", "err");
+    else if (result.reason === "locked") setStatus("Sejf jest zablokowany. Odblokuj go i ponów zapis.", "err");
+    else if (result.reason === "invalid-date") setStatus("Wpisz datę badania.", "err");
+    else if (result.reason === "no-data") setStatus("Brak poprawnego wyniku do zapisania.", "err");
+    else setStatus((result.saved ? "Zapisano " + result.saved + " z " + result.total + " wyników. " : "Nie zapisano wyniku. ") + (result.errors?.[0]?.message || "Ponów zapis."), result.saved ? "warn" : "err");
+    refresh(); scheduleHistoryRefresh();
   }
 
-  // ————————————————————————— Faza 2: panel historii ———————————————————————
-  let historyUi = null;
+  // Both patient views use the same immutable projection and renderer.
   let historyQueued = false;
-
-  function escapeHtml(text) {
-    return String(text == null ? "" : text).replace(/[&<>"']/g, function (ch) {
-      return {
-        "&": "&amp;",
-        "<": "&lt;",
-        ">": "&gt;",
-        '"': "&quot;",
-        "'": "&#39;",
-      }[ch];
-    });
-  }
-
-  function fmtNum(n) {
-    return formatValueString(n);
-  }
-
-  function buildSparkline(points) {
-    // A reported detection limit is a bound, not a measured point. Retain the
-    // signed value in the table and suppress an exact-looking mini-chart.
-    if (points.some(point => point.comparator)) return "";
-    const w = 128;
-    const h = 30;
-    const pad = 4;
-    const vals = points.map(function (p) {
-      return p.valueNum;
-    });
-    const n = vals.length;
-    if (!n) return "";
-    const min = Math.min.apply(null, vals);
-    const max = Math.max.apply(null, vals);
-    const span = max - min || 1;
-    const xAt = function (i) {
-      return n === 1 ? w / 2 : pad + (i * (w - 2 * pad)) / (n - 1);
-    };
-    const yAt = function (v) {
-      return h - pad - ((v - min) / span) * (h - 2 * pad);
-    };
-    if (n === 1) {
-      return (
-        '<svg class="cvs-spark" width="' +
-        w +
-        '" height="' +
-        h +
-        '" viewBox="0 0 ' +
-        w +
-        " " +
-        h +
-        '" aria-hidden="true"><circle cx="' +
-        xAt(0).toFixed(1) +
-        '" cy="' +
-        yAt(vals[0]).toFixed(1) +
-        '" r="2.6"/></svg>'
-      );
-    }
-    const d = vals
-      .map(function (v, i) {
-        return (i ? "L" : "M") + xAt(i).toFixed(1) + " " + yAt(v).toFixed(1);
-      })
-      .join(" ");
-    return (
-      '<svg class="cvs-spark" width="' +
-      w +
-      '" height="' +
-      h +
-      '" viewBox="0 0 ' +
-      w +
-      " " +
-      h +
-      '" aria-hidden="true"><path d="' +
-      d +
-      '" fill="none" stroke-width="1.6"/><circle cx="' +
-      xAt(n - 1).toFixed(1) +
-      '" cy="' +
-      yAt(vals[n - 1]).toFixed(1) +
-      '" r="2.6"/></svg>'
-    );
-  }
-
-  function renderHistory(series) {
-    if (!historyUi) return;
-    const withData = (series || []).filter(function (s) {
-      return s.points && s.points.length;
-    });
-    if (!withData.length) {
-      historyUi.card.hidden = true;
-      historyUi.body.innerHTML = "";
-      return;
-    }
-    historyUi.card.hidden = false;
-    historyUi.body.innerHTML = withData
-      .map(function (s) {
-        const pts = s.points;
-        const trend = seriesTrend(pts);
-        const unit = s.unit ? " " + s.unit : "";
-        const trendLine = trend
-          ? '<span class="cvs-trend cvs-trend-' +
-            trend.direction +
-            '">' +
-            TREND_ARROW[trend.direction] +
-            " vs. poprzednio (" +
-            escapeHtml(["FENa_spot", "FEK_spot", "FECl_spot", "FEHCO3_spot"].includes(s.sourceFormulaId) ? pts[pts.length - 2].displayValue || String(trend.prev).replace(".", ",") : fmtNum(trend.prev)) +
-            " → " +
-            escapeHtml(["FENa_spot", "FEK_spot", "FECl_spot", "FEHCO3_spot"].includes(s.sourceFormulaId) ? pts[pts.length - 1].displayValue || String(trend.latest).replace(".", ",") : fmtNum(trend.latest)) +
-            escapeHtml(unit) +
-            ")</span>"
-          : pts.some(point => point.comparator)
-            ? '<span class="cvs-trend cvs-trend-flat">wynik z granicą oznaczenia — bez trendu liczbowego</span>'
-            : '<span class="cvs-trend cvs-trend-flat">pojedynczy pomiar</span>';
-        const dots = pts
-          .map(function (p) {
-            return (
-              '<li><span class="cvs-date">' +
-              escapeHtml(p.dateISO || "—") +
-              '</span><span class="cvs-num">' +
-              escapeHtml(p.displayValue || fmtNum(p.valueNum)) +
-              escapeHtml(unit) +
-              "</span></li>"
-            );
-          })
-          .join("");
-        return (
-          '<div class="cvs-hist-item"><div class="cvs-hist-head"><span class="cvs-hist-label">Historia — ' +
-          escapeHtml(s.displayLabel || s.label) +
-          "</span>" +
-          buildSparkline(pts) +
-          "</div>" +
-          trendLine +
-          '<ul class="cvs-hist-points">' +
-          dots +
-          "</ul></div>"
-        );
-      })
-      .join("");
-  }
-
-  function buildHistoryUI() {
-    if (!doc || historyUi) return;
-    const anchor =
-      doc.getElementById("clcrVisitSaveCard") ||
-      doc.getElementById("stoneCard") ||
-      doc.getElementById("results");
-    if (!anchor || !anchor.parentNode) return;
-    const card = doc.createElement("section");
-    card.className = "card clcr-visit-history";
-    card.id = "clcrHistoryCard";
-    card.hidden = true;
-    card.innerHTML =
-      '<h2 class="text-center">Historia wyników</h2>' +
-      '<div class="cvs-hist-body" id="clcrHistoryBody"></div>';
-    anchor.parentNode.insertBefore(card, anchor.nextSibling);
-    historyUi = { card: card, body: card.querySelector("#clcrHistoryBody") };
-  }
-
+  let historyGeneration = 0;
   async function refreshActiveHistory() {
-    if (!historyUi) return;
-    if (!vaultUnlocked() || !resolveCurrentPatientId()) {
-      historyUi.card.hidden = true;
-      historyUi.body.innerHTML = "";
-      return;
-    }
-    const series = await readActiveSeries();
-    renderHistory(series);
+    if (patientCardUi && !patientCardUi.overlay.hidden) await refreshHistoryCard();
   }
-
   function scheduleHistoryRefresh() {
-    if (historyQueued || !historyUi) return;
+    if (historyQueued || !patientCardUi || patientCardUi.overlay.hidden) return;
     historyQueued = true;
-    const run = function () {
-      historyQueued = false;
-      refreshActiveHistory();
-    };
-    if (typeof global.requestAnimationFrame === "function") {
-      global.requestAnimationFrame(run);
-    } else {
-      setTimeout(run, 0);
-    }
+    const run = () => { historyQueued = false; refreshActiveHistory(); };
+    if (typeof global.requestAnimationFrame === "function") global.requestAnimationFrame(run);
+    else global.setTimeout(run, 0);
   }
 
   // ————————————————————————— Faza 3: Karta pacjenta (flowsheet) ————————————
@@ -5263,176 +4555,150 @@
     return m[3] + "." + m[2] + "." + m[1].slice(2);
   }
 
-  function paramWord(n) {
-    const a = Math.abs(n) % 100;
-    const l = a % 10;
-    if (a === 1) return "parametr";
-    if (l >= 2 && l <= 4 && (a < 12 || a > 14)) return "parametry";
-    return "parametrów";
-  }
-  function visitWord(n) {
-    const a = Math.abs(n) % 100;
-    const l = a % 10;
-    if (a === 1) return "wizyta";
-    if (l >= 2 && l <= 4 && (a < 12 || a > 14)) return "wizyty";
-    return "wizyt";
-  }
-
   function closePatientCard() {
-    if (patientCardUi) patientCardUi.overlay.hidden = true;
-    if (doc && doc.documentElement) {
-      doc.documentElement.classList.remove("clcr-card-open");
+    historyGeneration += 1;
+    if (patientCardUi) {
+      if (patientCardUi.overlay.open && typeof patientCardUi.overlay.close === "function") patientCardUi.overlay.close();
+      patientCardUi.overlay.hidden = true;
+      patientCardUi.opener?.focus?.();
     }
+    doc?.documentElement?.classList.remove("clcr-card-open");
   }
 
   function buildPatientCardUI() {
     if (!doc || patientCardUi || typeof doc.createElement !== "function") return;
-    const overlay = doc.createElement("div");
-    overlay.className = "clcr-patient-card";
-    overlay.id = "clcrPatientCard";
-    overlay.hidden = true;
-    overlay.setAttribute("role", "dialog");
-    overlay.setAttribute("aria-modal", "true");
-    overlay.setAttribute("aria-label", "Karta pacjenta");
-    overlay.innerHTML =
-      '<div class="cpc-inner">' +
-      '<div class="cpc-head"><div class="cpc-id">' +
-      '<span class="cpc-kick">Karta pacjenta</span>' +
-      '<h2 class="cpc-name" id="cpcName"></h2>' +
-      '<span class="cpc-sub" id="cpcSub"></span></div>' +
-      '<div class="cpc-acts">' +
-      '<button type="button" class="cpc-btn" id="cpcNew">＋ Nowa wizyta</button>' +
-      '<button type="button" class="cpc-btn cpc-ghost" id="cpcClose">Zamknij</button>' +
-      "</div></div>" +
-      '<div class="cpc-body" id="cpcBody"></div></div>';
+    const overlay = doc.createElement("dialog");
+    overlay.className = "clcr-patient-card"; overlay.id = "clcrPatientCard"; overlay.hidden = true;
+    overlay.setAttribute("aria-label", "Historia wyników Klirensu");
+    overlay.innerHTML = '<div class="cpc-inner"><div class="cpc-head"><div class="cpc-id">' +
+      '<span class="cpc-kick">Karta pacjenta</span><h2>Historia wyników Klirensu</h2><strong class="cpc-name" id="cpcName"></strong><span class="cpc-sub" id="cpcSub"></span></div>' +
+      '<div class="cpc-acts"><button type="button" class="cpc-btn" id="cpcNew">＋ Nowy pomiar</button><button type="button" class="cpc-btn cpc-ghost" id="cpcClose">Zamknij</button></div></div>' +
+      '<div class="cpc-body" id="cpcBody"></div><button type="button" class="cvs-link" id="cpcReload" hidden>Spróbuj ponownie</button></div>';
     (doc.body || doc.documentElement).appendChild(overlay);
-    patientCardUi = {
-      overlay: overlay,
-      name: overlay.querySelector("#cpcName"),
-      sub: overlay.querySelector("#cpcSub"),
-      body: overlay.querySelector("#cpcBody"),
-    };
-    const closeBtn = overlay.querySelector("#cpcClose");
-    const newBtn = overlay.querySelector("#cpcNew");
-    if (closeBtn) closeBtn.addEventListener("click", closePatientCard);
-    // „+ Nowa wizyta" wraca do kalkulatora (zamyka kartę).
-    if (newBtn) newBtn.addEventListener("click", closePatientCard);
-    overlay.addEventListener("click", function (e) {
-      if (e.target === overlay) closePatientCard();
-    });
+    patientCardUi = { overlay, name:overlay.querySelector("#cpcName"), sub:overlay.querySelector("#cpcSub"), body:overlay.querySelector("#cpcBody"), retry:overlay.querySelector("#cpcReload"), renderer:null, opener:null };
+    overlay.querySelector("#cpcClose").addEventListener("click", closePatientCard);
+    overlay.querySelector("#cpcNew").addEventListener("click", newMeasurement);
+    patientCardUi.retry.addEventListener("click", refreshHistoryCard);
+    overlay.addEventListener("click", event => { if (event.target === overlay) closePatientCard(); });
+    overlay.addEventListener("cancel", event => { event.preventDefault(); closePatientCard(); });
   }
 
-  function renderFlowsheet(data) {
-    if (!patientCardUi) return;
-    const visits = (data && data.visits) || [];
-    const params = (data && data.parameters) || [];
-    if (!params.length) {
-      patientCardUi.body.innerHTML =
-        '<p class="cpc-empty">Brak zapisanych wyników. Policz wynik i zapisz go do karty, aby zbudować historię wizyt.</p>';
-      return;
-    }
-    const latest = visits.length ? visits[visits.length - 1] : null;
-    const headCols = visits
-      .map(function (d) {
-        return (
-          '<th class="' +
-          (d === latest ? "nowcol" : "") +
-          '">' +
-          escapeHtml(formatDateShort(d)) +
-          "</th>"
-        );
-      })
-      .join("");
-    const rows = params
-      .map(function (p) {
-        const cells = visits
-          .map(function (d) {
-            const cell = p.byDate[d];
-            const isNow = d === latest;
-            if (!cell) {
-              return '<td class="val miss' + (isNow ? " now" : "") + '">—</td>';
-            }
-            const cls =
-              "val" + (cell.outOfRange ? " hi" : "") + (isNow ? " now" : "");
-            return (
-              '<td class="' + cls + '">' + escapeHtml(cell.displayValue || fmtNum(cell.valueNum)) + "</td>"
-            );
-          })
-          .join("");
-        const trend = p.trend
-          ? '<span class="tchip">' +
-            TREND_ARROW[p.trend.direction] +
-            "</span> " +
-            buildSparkline(p.points)
-          : '<span class="tchip">·</span>';
-        const norm = p.norm ? escapeHtml(p.norm) : "—";
-        return (
-          '<tr><td class="param">' +
-          escapeHtml(p.displayLabel || p.label) +
-          '<br><span class="ref">' +
-          escapeHtml(p.unit || "") +
-          "</span></td>" +
-          cells +
-          '<td class="ref">' +
-          norm +
-          '</td><td class="trendcell">' +
-          trend +
-          "</td></tr>"
-        );
-      })
-      .join("");
-    patientCardUi.body.innerHTML =
-      '<div class="cpc-flowwrap"><table class="cpc-flow"><thead><tr><th>Parametr</th>' +
-      headCols +
-      "<th>Zakres</th><th>Trend</th></tr></thead><tbody>" +
-      rows +
-      "</tbody></table></div>" +
-      '<p class="cpc-note">Czerwony = wartość poza zakresem (referencja). Kolumna z ramką = ostatnia wizyta. Brak pomiaru = „—". Strzałka trendu pokazuje kierunek; kolor nie ocenia.</p>';
-  }
-
-  async function openPatientCard() {
-    if (!doc) return;
-    if (!patientCardUi) buildPatientCardUI();
-    if (!patientCardUi) return;
-    if (!vaultUnlocked() || !resolveCurrentPatientId()) return;
-    let name = state.patientName || readPatientName() || "";
-    let demo = "";
-    try {
-      const v = vault();
-      if (v && typeof v.getPatient === "function") {
-        const p = await v.getPatient(resolveCurrentPatientId());
-        const header = p && p.header ? p.header : null;
-        if (header) {
-          if (!name && typeof header.name === "string" && header.name.trim()) {
-            name = header.name.trim();
-          }
-          demo = demographicsText(header);
-        }
+  function invalidateSavedNote(noteId) {
+    if (!noteId) return;
+    for (const [key, operation] of saveOperations) {
+      if (!operation.pending && operation.result?.ok === true && operation.outputs.some(output => output.id === noteId)) {
+        saveOperations.delete(key);
+        if (currentOperation === operation) currentOperation = null;
+        if (ui?.statusKey === key) { ui.statusKey = null; setStatus(""); }
       }
-    } catch (e) {
-      /* nazwa/demografia pozostaną domyślne */
     }
-    patientCardUi.name.textContent = name || "Pacjent";
-    patientCardUi.sub.textContent = "";
-    patientCardUi.body.innerHTML = '<p class="cpc-empty">Wczytywanie…</p>';
-    patientCardUi.overlay.hidden = false;
-    if (doc.documentElement) doc.documentElement.classList.add("clcr-card-open");
-    let data;
+  }
+
+  async function refreshHistoryCard() {
+    if (!patientCardUi || patientCardUi.overlay.hidden) return;
+    const patientId = resolveCurrentPatientId();
+    if (!patientId || !vaultUnlocked()) { closePatientCard(); return; }
+    const generation = ++historyGeneration;
+    const v = vault();
+    patientCardUi.retry.hidden = true;
     try {
-      data = await readPatientFlowsheet();
-    } catch (e) {
-      data = { visits: [], parameters: [] };
+      const [notes, patient] = await Promise.all([
+        v.listPatientNotesForPatient(patientId),
+        typeof v.getPatient === "function" ? Promise.resolve(v.getPatient(patientId)).catch(() => null) : Promise.resolve(null),
+      ]);
+      if (generation !== historyGeneration || patientId !== resolveCurrentPatientId() || !vaultUnlocked() || patientCardUi.overlay.hidden) return;
+      const projection = global.ClcrSavedResults.projectPatientNotes(notes, { patientId });
+      patientCardUi.name.textContent = state.patientName || patient?.header?.name || readPatientName() || "Pacjent";
+      const count = projection.measurements.length;
+      patientCardUi.sub.textContent = [demographicsText(patient?.header || {}), count + " " + (count === 1 ? "pomiar" : count < 5 ? "pomiary" : "pomiarów")].filter(Boolean).join(" · ");
+      patientCardUi.renderer?.destroy?.();
+      patientCardUi.renderer = global.ClcrSavedResultsView.render(patientCardUi.body, {
+        projection, view:"table", onSelect:record => global.ClcrResultDetails?.open({
+          patientId, noteId:record.noteId || record.id, record, vault:v,
+          onChanged:() => { invalidateSavedNote(record.noteId || record.id); refresh(); scheduleHistoryRefresh(); },
+        }),
+      });
+    } catch (_) {
+      if (generation !== historyGeneration || patientCardUi.overlay.hidden) return;
+      patientCardUi.body.textContent = "Nie udało się wczytać historii wyników.";
+      patientCardUi.retry.hidden = false;
     }
-    const counts =
-      data.parameters.length +
-      " " +
-      paramWord(data.parameters.length) +
-      " · " +
-      data.visits.length +
-      " " +
-      visitWord(data.visits.length);
-    patientCardUi.sub.textContent = [demo, counts].filter(Boolean).join(" · ");
-    renderFlowsheet(data);
+  }
+
+  async function openHistoryCard() {
+    if (!doc || !vaultUnlocked() || !resolveCurrentPatientId()) return;
+    buildPatientCardUI();
+    patientCardUi.opener = doc.activeElement;
+    patientCardUi.name.textContent = state.patientName || readPatientName() || "Pacjent";
+    patientCardUi.sub.textContent = "";
+    patientCardUi.renderer?.destroy?.(); patientCardUi.renderer = null;
+    patientCardUi.body.textContent = "Wczytywanie…";
+    patientCardUi.overlay.hidden = false;
+    if (typeof patientCardUi.overlay.showModal === "function") patientCardUi.overlay.showModal();
+    doc.documentElement?.classList.add("clcr-card-open");
+    await refreshHistoryCard();
+  }
+
+  function shellApi() {
+    try { if (typeof global.VildaShell?.openPatientCardInStart === "function") return global.VildaShell; } catch (_) { /* standalone */ }
+    try { if (global.parent && global.parent !== global && typeof global.parent.VildaShell?.openPatientCardInStart === "function") return global.parent.VildaShell; } catch (_) { /* cross-origin parent */ }
+    return null;
+  }
+  async function openPatientCard(patientId = resolveCurrentPatientId()) {
+    if (!patientId || !vaultUnlocked()) return false;
+    const shell = shellApi();
+    if (shell) { await shell.openPatientCardInStart(patientId, { activeTab:"lab" }); return true; }
+    try {
+      await global.VildaSession?.ensureAuthLoaded?.();
+      if (typeof global.VildaAuthUI?.showPatientCard !== "function") throw new Error("Karta pacjenta jest niedostępna.");
+      await global.VildaAuthUI.showPatientCard(patientId, null, null, { activeTab:"lab" });
+      return true;
+    } catch (error) { setStatus(error?.message || "Nie udało się otworzyć Badań pacjenta.", "err"); return false; }
+  }
+  async function choosePatient() {
+    const shell = shellApi();
+    if (typeof shell?.openPatientsInStart === "function") { await shell.openPatientsInStart(); return; }
+    await global.VildaSession?.ensureAuthLoaded?.();
+    global.VildaAuthUI?.showPatientsList?.();
+  }
+
+  const PATIENT_FACT_FIELDS = ["fullName", "age", "ageMonths", "ageDays", "neonatalTermStatus", "sex", "weight", "height", "ScrAssay", "creatinineState", "suspectedAKI", "CrCysStandardizationConfirmed", "CystatinCStandardization", "CystatinCAssayMethod", "spotKnownCKD", "spotDiureticUse", "stoneThiolTherapy", "stoneKnownCystinuria"];
+  function newMeasurement() {
+    closePatientCard();
+    const formulaId = global.ClcrUiWorkflow?.state.activeFormulaId || doc?.getElementById("formulaPicker")?.value || "";
+    const preserved = new Map();
+    const form = doc?.getElementById("clcrForm");
+    if (!form) return;
+    const keep = new Set(PATIENT_FACT_FIELDS);
+    form.querySelectorAll("select[id]").forEach(control => {
+      if (/unit/i.test(control.id) || /_entry_mode$/.test(control.id)) keep.add(control.id);
+    });
+    [...keep].forEach(id => {
+      const control = doc.getElementById(id);
+      if (control) preserved.set(id, control.type === "checkbox" ? !!control.checked : control.value);
+      const answer = doc.getElementById(`ui_${id}_answer`);
+      if (answer) preserved.set(answer.id, answer.value);
+    });
+    global.clcrClearVersionValueVault?.();
+    global.clcrSamePatientAggregator?.reset?.();
+    if (typeof global.resetApp === "function") global.resetApp(true);
+    else form.reset?.();
+    for (const [id,value] of preserved) {
+      const control = doc.getElementById(id);
+      if (control) { if (control.type === "checkbox") control.checked = value; else control.value = value; }
+    }
+    saveOperations.clear(); currentOperation = null;
+    if (ui?.date) ui.date.value = todayISO();
+    if (ui) { ui.statusKey = null; setStatus(""); }
+    global.ClcrUiWorkflow?.refresh?.();
+    global.clcrCaptureVersionValues?.({ force:true, reason:"new-measurement" });
+    global.clcrUpdate?.();
+    global.clcrSaveSessionNow?.({ force:true, reason:"new-measurement" });
+    refresh();
+    const spec = global.ClcrUiWorkflow?.getCalculationFieldSpec?.(formulaId);
+    const field = spec?.fields.find(item => !item.historicalContext && ["number", "text"].includes(item.type) && !/_entry_mode$/.test(item.id)) || spec?.fields.find(item => !item.historicalContext && item.unitFieldId);
+    const focus = field && doc.getElementById(field.id);
+    focus?.focus?.();
   }
 
   function yearWord(n) {
@@ -5484,6 +4750,7 @@
   function onPatientLoaded(event) {
     const detail = event && event.detail ? event.detail : null;
     const id = detail && detail.patientId;
+    if (id !== state.patientId) { verificationGeneration += 1; closePatientCard(); }
     if (typeof id === "string" && id) {
       state.patientId = id;
       state.patientName =
@@ -5491,6 +4758,7 @@
           ? detail.patientName
           : "") || readPatientName();
     }
+    else if (detail && Object.hasOwn(detail, "patientId")) { state.patientId = null; state.patientName = ""; }
     refresh();
     scheduleHistoryRefresh();
   }
@@ -5513,6 +4781,8 @@
   function onSharedStateRestored() {
     const id = sessionPatientId();
     if (id === undefined || id === state.patientId) return;
+    verificationGeneration += 1;
+    closePatientCard();
     state.patientId = id;
     state.patientName = id ? readPatientName() : "";
     refresh();
@@ -5521,16 +4791,60 @@
 
   function init() {
     buildUI();
-    buildHistoryUI();
     buildPatientCardUI();
     observeResults();
+    bindVaultEvents();
+    onSharedStateRestored();
     if (doc) {
       doc.addEventListener("vilda:patient-loaded", onPatientLoaded);
       doc.addEventListener("vilda:persist-restored", onSharedStateRestored);
+      doc.addEventListener("vilda:clcr-results-changed", event => notifyRecordChanged(event.detail));
       if (global.addEventListener) {
-        global.addEventListener("focus", scheduleRefresh);
+        global.addEventListener("focus", () => { scheduleRefresh(); verifySavedOperations(); });
+        global.addEventListener("storage", event => {
+          if (event.key === "vilda-note-changed-ping-v1") notifyRecordChanged();
+        });
+      }
+      if (typeof global.BroadcastChannel === "function") {
+        const channel = new global.BroadcastChannel("vilda-notes");
+        channel.addEventListener("message", event => { if (event.data?.type === "note-changed") notifyRecordChanged(); });
       }
     }
+  }
+
+  let observedVault = null;
+  let unsubscribeNotes = null;
+  let unsubscribeLock = null;
+  async function verifySavedOperations() {
+    const generation = ++verificationGeneration;
+    const v = vault(), patientId = resolveCurrentPatientId();
+    const userId = v?.getCurrentUser?.()?.userId || null;
+    if (!patientId || !vaultUnlocked() || typeof v?.getPatientNote !== "function") return;
+    const confirmed = [...saveOperations.values()].filter(operation => operation.patientId === patientId && !operation.pending && operation.result?.ok === true);
+    const checks = await Promise.all(confirmed.flatMap(operation => operation.outputs.map(async output => {
+      try { return { operation, output, note:await v.getPatientNote(output.id), readable:true }; }
+      catch (_) { return { readable:false }; }
+    })));
+    if (generation !== verificationGeneration || v !== vault() || patientId !== resolveCurrentPatientId() || !vaultUnlocked() || userId !== (v.getCurrentUser?.()?.userId || null)) return;
+    for (const check of checks) {
+      if (!check.readable || check.operation.pending || check.operation.result?.ok !== true || saveOperations.get(check.operation.key) !== check.operation) continue;
+      if (!check.note || !sameSavedPayload(check.note, check.output.payload)) invalidateSavedNote(check.output.id);
+    }
+    scheduleRefresh();
+  }
+  function notifyRecordChanged(event) {
+    const noteId = event?.noteId || event?.id || event?.note?.id;
+    if (noteId) invalidateSavedNote(noteId);
+    const verifying = noteId ? null : verifySavedOperations();
+    if (!event?.patientId || event.patientId === resolveCurrentPatientId()) { scheduleRefresh(); scheduleHistoryRefresh(); }
+    return verifying;
+  }
+  function bindVaultEvents() {
+    const current = vault();
+    if (!current || observedVault === current) return;
+    unsubscribeNotes?.(); unsubscribeLock?.(); observedVault = current;
+    unsubscribeNotes = typeof current.onPatientNoteChanged === "function" ? current.onPatientNoteChanged(notifyRecordChanged) : null;
+    unsubscribeLock = typeof current.onLock === "function" ? current.onLock(() => { verificationGeneration += 1; closePatientCard(); scheduleRefresh(); }) : null;
   }
 
   const api = {
@@ -5539,12 +4853,15 @@
     collectActiveDatapoints: collectActiveDatapoints,
     mapDatapoint: mapDatapoint,
     saveActiveResultToCard: saveActiveResultToCard,
+    buildPatientNotePayload, createSaveOperation, captureCalculationFields,
+    notifyRecordChanged,
     buildSeriesFromNotes: buildSeriesFromNotes,
     readActiveSeries: readActiveSeries,
     readPatientFlowsheet: readPatientFlowsheet,
     seriesTrend: seriesTrend,
     refreshActiveHistory: refreshActiveHistory,
     openPatientCard: openPatientCard,
+    openHistoryCard, newMeasurement,
     closePatientCard: closePatientCard,
     formatValueString: formatValueString,
     todayISO: todayISO,

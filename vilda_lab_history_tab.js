@@ -11,6 +11,7 @@
  *     z zapisaną wartością zakładka zamyka zlecenie (vault.completePatientNote, decyzja 6.11) i daje „Cofnij”
  *   options.openReminders(list)                              arkusz przypomnień (Mr)
  *   options.onChanged()                                      zapis z zakładki zmienił notatki
+ *   options.openClcrResult({patientId,noteId,record,vault,onChanged}) — szczegóły obliczenia, nigdy edytor lab
  *   options.vault, options.model, options.trend, options.storage, options.now — do testów
  *
  * Projekt: docs/LAB_HISTORIA_WYNIKOW_PLAN.md, 3.2; opis: docs/clinical/ALGORITHMS.md, „LAB-HISTORIA”.
@@ -45,6 +46,8 @@
   // Daty, które model stawia na osi (decyzja 6.25): data badania, a dla IGF-1 z notatki GH termin odbytej kontroli.
   var SAMPLE_DATES = ['badanie', 'kontrola'];
   var GH_SOURCE = 'z notatki leczenia GH';
+  var resourceBootstrap = null;
+  var moduleURL = win && win.document && win.document.currentScript && win.document.currentScript.src;
 
   function own(value, key) { return value != null && Object.prototype.hasOwnProperty.call(value, key); }
   function text(value) { return typeof value === 'string' ? value.trim() : ''; }
@@ -96,12 +99,16 @@
     var subscribed = [];
 
     function subscribe(vault) {
-      if (!vault || typeof vault.onPatientNoteChanged !== 'function' || subscribed.indexOf(vault) !== -1) return;
+      if (!vault || subscribed.indexOf(vault) !== -1) return;
       subscribed.push(vault);
       // Sejf nie ma wypisania z nasłuchu, więc jeden nasłuch na sejf rozdziela zdarzenia żywym zakładkom.
-      vault.onPatientNoteChanged(function (event) {
+      if (typeof vault.onPatientNoteChanged === 'function') vault.onPatientNoteChanged(function (event) {
         instances = instances.filter(function (instance) { return instance.alive(); });
         instances.forEach(function (instance) { if (instance.vault === vault) instance.noteChanged(event); });
+      });
+      if (typeof vault.onLock === 'function') vault.onLock(function () {
+        instances = instances.filter(function (instance) { return instance.alive(); });
+        instances.forEach(function (instance) { if (instance.vault === vault) instance.locked(); });
       });
     }
 
@@ -110,11 +117,15 @@
       var doc = host.ownerDocument || (win && win.document);
       var vault = options.vault || (win && win.VildaVault) || null;
       var model = options.model || (win && win.VildaLabHistory) || null;
+      var savedResults = options.clcrSavedResults || (win && win.ClcrSavedResults) || null;
+      var savedView = options.clcrSavedResultsView || (win && win.ClcrSavedResultsView) || null;
       var trend = own(options, 'trend') ? options.trend : (win && win.__vildaLabTrend) || null;
       var storage = own(options, 'storage') ? options.storage : null;
       if (!storage) { try { storage = win && win.sessionStorage; } catch (_) { storage = null; } }
       var now = typeof options.now === 'function' ? options.now : function () { return new Date(); };
       var state = { gen: 0, destroyed: false, panel: 'all', view: null, data: null, timer: 0, retried: false, reminders: [], notice: null };
+      var renalView = null;
+      var initialPending = true;
 
       function node(tag, className, content) {
         var element = doc.createElement(tag);
@@ -163,11 +174,20 @@
         noteChanged: function (event) {
           if (event && event.patientId && event.patientId !== patientId) return;
           schedule();
+        },
+        locked: function () {
+          state.gen++; state.data = null;
+          if (renalView) { renalView.destroy(); renalView = null; }
+          message('vilda-lab-hist-locked', 'Sejf jest zablokowany. Odblokuj go, aby zobaczyć wyniki badań.');
         }
       };
       instances = instances.filter(function (other) { return other.alive(); });
       instances.push(instance);
       subscribe(vault);
+      // Zdarzenie nie przenosi pomiarów; po zapisie/usunięciu ponownie czytamy
+      // właściwego pacjenta. Między ramkami tę samą rolę ma istniejący ping sejfu.
+      function resultChanged(event) { if (instance.alive()) instance.noteChanged(event && event.detail); }
+      doc.addEventListener('vilda:clcr-results-changed', resultChanged);
 
       function schedule() {
         if (state.destroyed) return;
@@ -176,6 +196,37 @@
         if (!win) load();
       }
       function current(gen) { return gen === state.gen && instance.alive(); }
+
+      function ensureRecordResources(editor) {
+        // Jawne wstrzyknięcie zależności i lekki DOM testowy nie potrzebują sieci.
+        if (editor && typeof options.openClcrResult === 'function') return Promise.resolve();
+        if (!editor && (options.clcrSavedResults || options.clcrSavedResultsView)) return Promise.resolve();
+        if (!win || !win.location || !doc.head) return Promise.resolve();
+        function ready() {
+          var resources = win.ClcrRecordResources;
+          if (!resources || typeof resources[editor ? 'ensureEditor' : 'ensureReader'] !== 'function') throw new Error('Moduł zapisanych obliczeń jest niedostępny.');
+          return resources[editor ? 'ensureEditor' : 'ensureReader']();
+        }
+        if (win.ClcrRecordResources) return Promise.resolve().then(ready);
+        if (!resourceBootstrap) {
+          resourceBootstrap = new Promise(function (resolve, reject) {
+            var script = doc.createElement('script'), finished = false, timer;
+            function finish(error) {
+              if (finished) return; finished = true;
+              if (timer) win.clearTimeout(timer);
+              if (error) { if (script.parentNode) script.parentNode.removeChild(script); reject(error); }
+              else resolve();
+            }
+            script.addEventListener('load', function () { finish(win.ClcrRecordResources ? null : new Error('Moduł zapisanych obliczeń jest niedostępny.')); });
+            script.addEventListener('error', function () { finish(new Error('Nie udało się wczytać zapisanych obliczeń.')); });
+            script.setAttribute('src', new URL('clcr_record_resources.js?v=1', moduleURL || win.location.href).href);
+            timer = win.setTimeout(function () { finish(new Error('Upłynął czas wczytywania zapisanych obliczeń.')); }, 15000);
+            doc.head.appendChild(script);
+          });
+          resourceBootstrap.catch(function () { resourceBootstrap = null; });
+        }
+        return resourceBootstrap.then(ready);
+      }
 
       function waitForConverter() {
         if (win && win.LabUnitConverter && typeof win.LabUnitConverter.find === 'function') return Promise.resolve(true);
@@ -200,6 +251,8 @@
       }
 
       function load() {
+        if (state.destroyed || host.isConnected === false) return Promise.resolve();
+        initialPending = false;
         var gen = ++state.gen;
         section.setAttribute('aria-busy', 'true');
         if (!state.data) {
@@ -222,9 +275,20 @@
               ? Promise.resolve(vault.listPatientTreatmentPeriods(patientId)).catch(function () { return []; }) : [],
             waitForConverter()
           ]);
+        }).then(function (results) {
+          if (!current(gen)) return results;
+          // Nie obciążamy zwykłej historii dodatkowymi modułami, dopóki pacjent
+          // nie ma zapisanych obliczeń. Kolejne zdarzenie sejfu ponowi tę bramkę.
+          var hasSavedCalculations = (Array.isArray(results[1]) ? results[1] : []).some(function (note) { return note && note.category === 'wynik-klirens'; });
+          return (hasSavedCalculations ? ensureRecordResources(false) : Promise.resolve()).then(function () {
+            savedResults = options.clcrSavedResults || (win && win.ClcrSavedResults) || savedResults;
+            savedView = options.clcrSavedResultsView || (win && win.ClcrSavedResultsView) || savedView;
+            return results;
+          });
         });
         return reads.then(function (results) {
           if (!current(gen)) return null;
+          if (typeof vault.isUnlocked === 'function' && !vault.isUnlocked()) { instance.locked(); return null; }
           var notesById = {};
           (Array.isArray(results[1]) ? results[1] : []).forEach(function (note) { if (note && note.id) notesById[note.id] = note; });
           var view = model.buildHistoryView(results[0], {
@@ -233,7 +297,9 @@
             treatment: Array.isArray(results[2]) ? results[2] : [],
             parseNorm: trend && typeof trend.parseNorm === 'function' ? trend.parseNorm : null,
             nowISO: localISO(now()),
-            rangeSnapshot: win && win.VildaLabRangeSnapshot || null
+            rangeSnapshot: win && win.VildaLabRangeSnapshot || null,
+            clcrSavedResults: savedResults,
+            patientId: patientId
           });
           // Punkt bez notatki = odczyt serii i notatek z dwóch różnych chwil (zapis w międzyczasie). Jedno ponowienie.
           if (view.summary.missingNotes > 0 && !state.retried) { state.retried = true; schedule(); }
@@ -263,6 +329,9 @@
         var saved = null;
         try { saved = storage && storage.getItem(VIEW_KEY + patientId); } catch (_) { /* bez pamięci sesji: widok domyślny */ }
         if (saved === 'charts' || saved === 'table') return saved;
+        // Nowy wykres Klirensu mieści krótką serię na telefonie i zawsze ma pod
+        // sobą wszystkie pomiary. Dawna reguła zwykłych badań pozostaje niżej.
+        if (state.data && !state.data.view.panels.length && state.data.view.clcr && state.data.view.clcr.measurements.length) return 'charts';
         // Decyzja 6.17: na telefonie domyślnie tabela (wykres 660 px skalowany do 288 px ma nieczytelne etykiety).
         var narrow = false;
         try { narrow = !!(win && win.matchMedia && win.matchMedia('(max-width: 480px)').matches); } catch (_) { /* bez matchMedia: szeroki ekran */ }
@@ -361,12 +430,14 @@
           error: 'Wynik zapisany, ale nie udało się oznaczyć zlecenia jako wykonanego — zrób to w Przypomnieniach.',
           undone: 'Cofnięto — zlecenie' + name + ' znów jest w Przypomnieniach.',
           'undo-error': 'Nie udało się cofnąć oznaczenia — zrób to w Przypomnieniach.',
-          'undo-stale': 'Nie cofnięto: zlecenie' + name + ' zmieniło się w międzyczasie — sprawdź je w Przypomnieniach.'
+          'undo-stale': 'Nie cofnięto: zlecenie' + name + ' zmieniło się w międzyczasie — sprawdź je w Przypomnieniach.',
+          'clcr-resource-error': notice.text
         }[notice.kind];
         add(box, 'span', 'vilda-lab-hist-notice-text', message);
         if (notice.kind === 'completed' && typeof vault.uncompletePatientNote === 'function') {
           button(box, 'vilda-lab-hist-link vilda-lab-hist-notice-undo', 'Cofnij', function () { undoComplete(notice); });
         }
+        if (notice.kind === 'clcr-resource-error' && notice.record) button(box, 'vilda-lab-hist-link', 'Spróbuj ponownie', function () { state.notice = null; draw(); openClcrResult(notice.record); });
       }
       function converterLabel(id) {
         var converter = win && win.LabUnitConverter;
@@ -401,22 +472,23 @@
       function draw() {
         if (!state.data) return;
         var view = state.data.view;
+        if (renalView) { renalView.destroy(); renalView = null; }
         clear(section);
         remindersButton = null;
         drawHeader(view);
         drawNotice();
-        if (!view.panels.length && !view.pending.length) {
+        var renal = view.clcr && view.clcr.measurements.length;
+        if (!view.panels.length && !view.pending.length && !renal) {
           var empty = add(section, 'div', 'vilda-lab-hist-state vilda-lab-hist-empty');
           add(empty, 'p', '', 'Brak zapisanych wyników badań.');
           add(empty, 'p', 'vilda-lab-hist-muted', 'Wynik dodasz przyciskiem „+ Dodaj wynik” albo przypniesz w przeliczniku jednostek.');
           drawFooter(view);
           return;
         }
-        if (view.panels.length) drawToolbar(view);
+        if (view.panels.length || renal) drawToolbar(view);
         if (view.pending.length) drawPending(view);
         var mode = viewMode();
         var panels = view.panels.filter(function (panel) { return state.panel === 'all' || panel.id === state.panel; });
-        if (!panels.length) panels = view.panels;
         panels.forEach(function (panel) {
           var group = add(section, 'section', 'vilda-lab-hist-panel');
           group.setAttribute('data-panel', panel.id);
@@ -424,6 +496,7 @@
           if (mode === 'table') drawTable(group, panel);
           else drawCharts(group, panel);
         });
+        if (renal && (state.panel === 'all' || state.panel === 'renal')) drawClcr(view.clcr, mode);
         // W widoku wykresów leczenie raz, pod wszystkimi panelami; tabela wplata je w swoje wiersze.
         if (mode !== 'table') drawTreatment(section, panels);
         drawFooter(view);
@@ -458,7 +531,8 @@
         var choices = [{ id: 'all', label: 'Wszystkie · ' + view.summary.analytes }].concat(view.panels.map(function (panel) {
           return { id: panel.id, label: panel.label + ' · ' + panel.series.length };
         }));
-        if (state.panel !== 'all' && !view.panels.some(function (panel) { return panel.id === state.panel; })) state.panel = 'all';
+        if (view.clcr && view.clcr.measurements.length) choices.push({ id: 'renal', label: 'Nerki i mocz · ' + view.clcr.series.length });
+        if (!choices.some(function (choice) { return choice.id === state.panel; })) state.panel = 'all';
         choices.forEach(function (choice) {
           var chip = button(chips, 'vilda-lab-hist-chip', choice.label, function () { state.panel = choice.id; draw(); });
           chip.setAttribute('aria-pressed', String(state.panel === choice.id));
@@ -472,6 +546,44 @@
           var option = button(segment, 'vilda-lab-hist-segment-btn', pair[1], function () { setView(pair[0]); });
           option.setAttribute('aria-pressed', String(mode === pair[0]));
           option.setAttribute('data-view', pair[0]);
+        });
+      }
+
+      function drawClcr(projection, mode) {
+        var group = add(section, 'section', 'vilda-lab-hist-panel');
+        group.setAttribute('data-panel', 'renal');
+        add(group, 'h3', 'vilda-lab-hist-panel-h', 'Nerki i mocz');
+        var host = add(group, 'div');
+        if (!savedView || typeof savedView.render !== 'function') {
+          add(host, 'p', 'vilda-lab-hist-state', 'Widok zapisanych obliczeń jest niedostępny — odśwież stronę.');
+          return;
+        }
+        renalView = savedView.render(host, { projection: projection, view: mode, onSelect: openClcrResult });
+      }
+
+      function openClcrResult(record) {
+        if (!instance.alive() || (record.patientId && record.patientId !== patientId) || (typeof vault.isUnlocked === 'function' && !vault.isUnlocked())) return;
+        var gen = state.gen;
+        function open() {
+          if (!current(gen) || (typeof vault.isUnlocked === 'function' && !vault.isUnlocked())) return;
+          var details = win && win.ClcrResultDetails;
+          var callback = typeof options.openClcrResult === 'function' ? options.openClcrResult
+            : details && typeof details.open === 'function' ? details.open.bind(details) : null;
+          if (!callback) throw new Error('Szczegóły zapisanych obliczeń są niedostępne.');
+          if (state.notice && state.notice.kind === 'clcr-resource-error') { state.notice = null; draw(); }
+          return callback({ patientId: patientId, noteId: record.noteId, record: record, vault: vault, onChanged: function () {
+            if (!instance.alive()) return;
+            schedule();
+            if (typeof options.onChanged === 'function') options.onChanged();
+          } });
+        }
+        // Wstrzyknięty callback pozostaje synchroniczny; produkcyjna ścieżka
+        // dociąga silniki dopiero przy otwieraniu szczegółów/edycji.
+        if (typeof options.openClcrResult === 'function') { open(); return; }
+        ensureRecordResources(true).then(open).catch(function (error) {
+          if (!current(gen)) return;
+          state.notice = { kind: 'clcr-resource-error', record: record, text: error && error.message || 'Nie udało się otworzyć szczegółów obliczenia.' };
+          draw();
         });
       }
 
@@ -792,20 +904,28 @@
       function drawFooter(view) {
         var foot = add(section, 'div', 'vilda-lab-hist-footer');
         add(foot, 'p', 'vilda-lab-hist-footer-main', 'Wyniki pokazane tak, jak je zapisano. Historia nie jest oceniana dzisiejszymi normami.');
-        add(foot, 'p', 'vilda-lab-hist-muted', 'Strzałka ↑/↓ tylko przy wpisie z zakresem zapisanym z wynikiem przy przypięciu, z normą wpisaną we wpisie albo z zapisaną oceną; norma wpisana we wpisie nie dotyczy wyniku przeliczonego z innej jednostki. Wpisy bez zapisanego zakresu są bez oceny. Zakres ogólny przelicznika u dziecka (brak zakresu dla wieku) — bez strzałki. Wykresy bez pasma norm. Różnica: liczba i dni między dwoma dokładnymi wynikami z datą badania, bez procentu i koloru.');
+        var renal = view && view.clcr && view.clcr.measurements.length;
+        if (!renal || view.panels.length) add(foot, 'p', 'vilda-lab-hist-muted', (renal ? 'Pozostałe badania laboratoryjne: ' : '') + 'Strzałka ↑/↓ tylko przy wpisie z zakresem zapisanym z wynikiem przy przypięciu, z normą wpisaną we wpisie albo z zapisaną oceną; norma wpisana we wpisie nie dotyczy wyniku przeliczonego z innej jednostki. Wpisy bez zapisanego zakresu są bez oceny. Zakres ogólny przelicznika u dziecka (brak zakresu dla wieku) — bez strzałki. Wykresy bez pasma norm. Różnica: liczba i dni między dwoma dokładnymi wynikami z datą badania, bez procentu i koloru.');
+        if (renal) add(foot, 'p', 'vilda-lab-hist-muted', 'Obliczenia Klirensu: norma i ocena zachowane z dnia zapisu. Pasmo oznacza wyłącznie wspólną zapisaną normę.');
         // Decyzje 6.24–6.25: skąd IGF-1 bez daty badania ma datę na wykresie.
         if (view && view.ghIgf1 && view.ghIgf1.shown > 0) {
           add(foot, 'p', 'vilda-lab-hist-muted', 'IGF-1 z notatek leczenia GH: data badania, a gdy jej brak — termin odbytej kontroli (tak jak na wykresie „Trend leczenia GH”); bez normy i bez strzałki.');
         }
       }
 
-      load();
+      // showPatientCard(activeTab: 'lab') builds this host off DOM, then mounts
+      // the complete card synchronously. Start after that stack, keeping the
+      // detached guard for later refreshes. No observer or polling outlives a
+      // card that is destroyed/replaced before its first mount.
+      Promise.resolve().then(function () { if (initialPending) return load(); return null; });
       return {
         refresh: function () { return load(); },
         destroy: function () {
           state.destroyed = true;
           state.gen++;
           if (state.timer && win) win.clearTimeout(state.timer);
+          if (renalView) { renalView.destroy(); renalView = null; }
+          if (typeof doc.removeEventListener === 'function') doc.removeEventListener('vilda:clcr-results-changed', resultChanged);
           instances = instances.filter(function (other) { return other !== instance; });
           clear(host);
         }

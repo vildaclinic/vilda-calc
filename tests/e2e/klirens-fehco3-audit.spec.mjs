@@ -1,4 +1,5 @@
 import fs from 'node:fs/promises';
+import { readLegacyEditedProjection, readVisibleSavedHistory } from '../support/klirens-saved-history.mjs';
 import { expect, test } from '@playwright/test';
 import { czekajNaUstabilizowanyUklad, kliknij } from '../support/uklad-czekanie.mjs';
 import { applySession, base, captureSave, card, choose, details, expectBlocked, expectResult, openCalculator, restore } from '../support/klirens-fehco3.mjs';
@@ -263,26 +264,21 @@ test('FEHCO3: widoczna historia, przecinek, nierówność i edycja nie tracą pr
     await expectResult(page);
     expect((await captureSave(page, `2026-10-${day}`)).outcome).toMatchObject({ ok: true, saved: 1 });
   }
-  const history = await page.evaluate(async () => {
-    const originalVault = window.VildaVault, api = window.ClcrVisitSave, patientId = api.resolveCurrentPatientId();
-    window.VildaVault = { isUnlocked: () => true, listPatientNotesForPatient: async () => window.__fehco3SyntheticNotes };
-    api._setPatientId('fictional-fehco3-history-only');
-    try {
-      await api.refreshActiveHistory();
-      const original = window.__fehco3SyntheticNotes[0];
-      const old = { ...original, body: 'Kalkulator klirensu · clcr:FEHCO3_spot' };
-      const comma = { ...old, clinicalDateISO: '2026-10-01', labResult: { ...old.labResult, value: '0,8', valueNum: undefined, norm: 'dawna norma' } };
-      const bound = { ...old, clinicalDateISO: '2026-10-02', labResult: { ...old.labResult, value: '<0,1', valueNum: 0.1 } };
-      const edited = { ...original, clinicalDateISO: '2026-10-03', labResult: { ...original.labResult, value: '0,5', valueNum: 0.5 } };
-      return { hidden: document.getElementById('clcrHistoryCard').hidden,
-        shown: [...document.querySelectorAll('#clcrHistoryBody .cvs-num')].map(node => node.textContent.trim()),
-        trend: document.querySelector('#clcrHistoryBody .cvs-trend')?.textContent || '',
-        legacy: api.buildSeriesFromNotes([comma, bound, edited], { formulaId: 'FEHCO3_spot' }).flatMap(series => series.points) };
-    } finally { window.VildaVault = originalVault; api._setPatientId(patientId); }
-  });
-  expect(history.hidden).toBe(false);
-  expect(history.shown).toEqual(['0,0001 %', '0,001 %']);
-  expect(history.trend).toContain('0,0001 → 0,001 %');
+  const history = await readVisibleSavedHistory(page, '__fehco3SyntheticNotes');
+  Object.assign(history, await readLegacyEditedProjection(page, '__fehco3SyntheticNotes', 'FEHCO3_spot'));
+  expect(history.visible).toBe(true);
+  expect(history.values).toEqual(['0,0001 %', '0,001 %']);
+  expect(history.ids).toEqual(history.originalIds);
+  expect(new Set(history.ids).size).toBe(2);
+  expect(history.dates).toEqual(['2026-10-25', '2026-10-26']);
+  expect(history.dates).toEqual(history.originalDates);
+  expect(history.norms).toEqual(history.originalNorms);
+  expect(history.chartPoints).toBe(0);
+  expect(history.legacyShown).toEqual(['0,8 %', '<0,1 %', '0,5 %']);
+  expect(history.legacyNorms).toEqual(Array(3).fill('Brak zapisanej normy'));
+  expect(history.legacyRowIds).toEqual(history.legacy.map(point => point.noteId));
+  expect(new Set(history.legacyRowIds).size).toBe(3);
+  expect(history.legacyPlotIds).toEqual([history.legacy[0].noteId, history.legacy[2].noteId]);
   expect(history.legacy).toHaveLength(3);
   expect(history.legacy[0].valueNum).toBe(0.8);
   expect(history.legacy[1].valueNum).toBeNull();

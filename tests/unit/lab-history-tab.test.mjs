@@ -111,6 +111,88 @@ const przycisk = (env, tekst) => env.host.querySelectorAll('button').find((b) =>
 afterEach(() => { vi.useRealTimers(); });
 
 describe('zakładka Badania: widok z zapisanych wyników', () => {
+  it('AuthUI: render poza DOM, synchroniczny mount całej karty i dokładnie jeden pierwszy odczyt', async () => {
+    const env = srodowisko(), vault = sejf();
+    env.doc.body.removeChild(env.host);
+    otworz(env, vault);
+    expect(vault.odczyty).toBe(0);
+    env.doc.body.appendChild(env.host);
+    await gotowe(env);
+    expect(vault.odczyty).toBe(1);
+    expect(env.host.querySelectorAll('.vilda-lab-hist-card')).toHaveLength(2);
+    await Promise.resolve();
+    expect(vault.odczyty).toBe(1);
+  });
+
+  it('karta zniszczona przed pierwszym mount nie czyta sejfu ani nie odtwarza widoku po append', async () => {
+    const env = srodowisko(), vault = sejf();
+    env.doc.body.removeChild(env.host);
+    const { widok } = otworz(env, vault);
+    widok.destroy();
+    env.doc.body.appendChild(env.host);
+    await Promise.resolve();
+    await Promise.resolve();
+    expect(vault.odczyty).toBe(0);
+    expect(env.host.children).toHaveLength(0);
+    await widok.refresh();
+    expect(vault.odczyty).toBe(0);
+  });
+
+  it('refresh odpiętej aktywnej karty nie rozpoczyna nowego odczytu', async () => {
+    const env = srodowisko(), vault = sejf();
+    const { widok } = otworz(env, vault);
+    await gotowe(env);
+    env.doc.body.removeChild(env.host);
+    await widok.refresh();
+    expect(vault.odczyty).toBe(1);
+  });
+  it('prawdziwy adapter pełnych notatek pokazuje ujemny UAG i wpis tekstowy pominięte przez generic serie', async () => {
+    const env = srodowisko();
+    loadBrowserScript('clcr_saved_results.js', env.win);
+    loadBrowserScript('clcr_saved_results_view.js', env.win);
+    const notes = [
+      nota('fictional-uag', '2026-10-25', { test: 'Luka anionowa moczu (UAG)', value: '-15', unit: 'mmol/L' }, { category: 'wynik-klirens' }),
+      nota('fictional-text', '2026-10-25', { test: 'Albumina/kreatynina — ACR', value: 'nieoznaczalne', unit: 'mg/g' }, { category: 'wynik-klirens' }),
+    ];
+    const evaluate = vi.spyOn(env.win.LabUnitConverter, 'evaluate');
+    otworz(env, sejf({ dane: { notes, series: [], treatment: [] } }));
+    await gotowe(env);
+    expect(env.host.querySelectorAll('tr[data-note-id]')).toHaveLength(2);
+    expect(env.host.querySelector('.vilda-clcr-point[data-value="-15"]')).not.toBeNull();
+    expect(env.host.querySelector('.vilda-clcr-value[data-note-id="fictional-text"]').textContent).toContain('nieoznaczalne');
+    expect(env.host.querySelectorAll('.vilda-clcr-assessment').every((node) => node.classList.contains('tone-neutral'))).toBe(true);
+    expect(env.host.querySelectorAll('.vilda-clcr-norm-band')).toHaveLength(0);
+    expect(env.host.querySelector('.vilda-lab-hist-footer').textContent).not.toContain('Wykresy bez pasma norm');
+    expect(env.host.querySelector('.vilda-lab-hist-footer').textContent).not.toContain('Różnica:');
+    expect(evaluate).not.toHaveBeenCalled();
+  });
+  it('dołącza Nerki i mocz, zachowuje wszystkie pomiary i deleguje do szczegółów zamiast edytora lab', async () => {
+    const env = srodowisko();
+    loadBrowserScript('clcr_saved_results_view.js', env.win);
+    const note = nota('fictional-clcr', '2026-10-25', { test: 'ACR (pełna metoda)', value: '45', valueNum: 45, unit: 'mg/g' }, { category: 'wynik-klirens' });
+    const record = { noteId: note.id, patientId: PID, seriesKey: 'clcr:ACR|mg/g', label: note.labResult.test, method: 'Metoda (bez skrótu)', valueNum: 45, displayValue: '45', unit: 'mg/g', dateISO: note.clinicalDateISO, norm: '<30 mg/g', assessment: 'above', category: 'A2', tone: 'warning', status: 'recorded' };
+    const projection = { measurements: [record], series: [{ seriesKey: record.seriesKey }], handledNoteIds: [note.id] };
+    const projectPatientNotes = vi.fn(() => projection), details = vi.fn();
+    const d = dane();
+    d.notes.push(note);
+    d.series.push({ testKey: 'fictional-clcr', test: note.labResult.test, points: [punkt(note)] });
+    const vault = sejf({ dane: d });
+    const { wywolania } = otworz(env, vault, { clcrSavedResults: { projectPatientNotes }, clcrSavedResultsView: env.win.ClcrSavedResultsView, openClcrResult: details });
+    await gotowe(env);
+    expect(teksty(env.host, '.vilda-lab-hist-summary')).toEqual(['5 wyników · 3 badania · ostatnie badanie 25.10.26']);
+    expect(teksty(env.host, '.vilda-lab-hist-panel-h')).toEqual(['Tarczyca', 'Nerki i mocz']);
+    expect(env.host.querySelectorAll('.vilda-clcr-point')).toHaveLength(1);
+    expect(env.host.querySelectorAll('tr[data-note-id="fictional-clcr"]')).toHaveLength(1);
+    env.host.querySelector('.vilda-clcr-value').click();
+    expect(details).toHaveBeenCalledWith(expect.objectContaining({ patientId: PID, noteId: note.id, record, vault }));
+    expect(wywolania.edytor).toHaveLength(0);
+    expect(projectPatientNotes.mock.calls[0][0]).toHaveLength(7);
+    przycisk(env, 'Nerki i mocz · 1').click();
+    expect(env.host.querySelectorAll('.vilda-lab-hist-card')).toHaveLength(0);
+    przycisk(env, 'Tabela').click();
+    expect(env.host.querySelectorAll('.vilda-clcr-point')).toHaveLength(0);
+    expect(env.host.querySelectorAll('tr[data-note-id="fictional-clcr"]')).toHaveLength(1);
+  });
   it('podsumowanie, panele, strzałka tylko z normy wpisu, różnica liczbą i dniami', async () => {
     const env = srodowisko();
     otworz(env, sejf());
@@ -319,6 +401,44 @@ describe('zakładka Badania: stany i odświeżanie', () => {
     vault.zmiana({ id: 'tsh-2', patientId: PID, action: 'save' });
     await new Promise((resolve) => { setTimeout(resolve, 250); });
     expect(vault.odczyty).toBe(2);
+  });
+
+  it('sygnał po usunięciu odświeża tylko właściwego pacjenta, także po pustej projekcji', async () => {
+    const env = srodowisko();
+    loadBrowserScript('clcr_saved_results.js', env.win);
+    loadBrowserScript('clcr_saved_results_view.js', env.win);
+    const notes = [nota('fictional-clcr', '2026-10-25', { test: 'Luka anionowa moczu (UAG)', value: '-15', unit: 'mmol/L' }, { category: 'wynik-klirens' })];
+    const vault = sejf({ dane: { notes, series: [], treatment: [] } });
+    const { widok } = otworz(env, vault);
+    await gotowe(env);
+    expect(env.host.querySelectorAll('.vilda-clcr-value')).toHaveLength(1);
+    notes.splice(0);
+    env.doc.dispatchEvent({ type: 'vilda:clcr-results-changed', detail: { patientId: 'other-fictional' } });
+    await new Promise((resolve) => { setTimeout(resolve, 180); });
+    expect(vault.odczyty).toBe(1);
+    vault.zmiana({ patientId: PID, id: 'fictional-clcr', action: 'delete' });
+    await vi.waitFor(() => expect(env.host.querySelector('.vilda-lab-hist-empty')).not.toBeNull());
+    expect(vault.odczyty).toBe(2);
+    widok.destroy();
+    env.doc.dispatchEvent({ type: 'vilda:clcr-results-changed', detail: { patientId: PID } });
+    await new Promise((resolve) => { setTimeout(resolve, 180); });
+    expect(vault.odczyty).toBe(2);
+  });
+
+  it('blokada podczas oczekiwania na odczyt usuwa dane i nie pozwala starej odpowiedzi ich przywrócić', async () => {
+    const env = srodowisko();
+    let release, locked = false, onLock;
+    const pending = new Promise((resolve) => { release = resolve; });
+    const vault = sejf({ opoznienie: () => pending });
+    vault.isUnlocked = () => !locked;
+    vault.onLock = (callback) => { onLock = callback; };
+    otworz(env, vault);
+    await vi.waitFor(() => expect(vault.odczyty).toBe(1));
+    locked = true; onLock(); release();
+    await gotowe(env);
+    expect(env.host.querySelectorAll('.vilda-lab-hist-card')).toHaveLength(0);
+    expect(env.host.querySelectorAll('.vilda-clcr-value')).toHaveLength(0);
+    expect(env.host.querySelector('.vilda-lab-hist-locked')).not.toBeNull();
   });
 
   it('odczyt wyprzedzony przez nowszy nie rysuje (pokolenie)', async () => {

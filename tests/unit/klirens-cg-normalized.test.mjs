@@ -10,7 +10,9 @@ const pureEnd = source.indexOf('const refRanges =');
 if (pureEnd < 0) throw new Error('Nie znaleziono granicy produkcyjnych funkcji obliczeniowych Klirensu.');
 // Execute the actual leading production functions, before DOM event wiring.
 // The test contains fixed independently audited results, never a second CG/BSA equation.
-const production = new Function('window', `${source.slice(0, pureEnd)}\nreturn { BSA_DuBois, clCrCG, clCrCGNormalized };`)({});
+const mathWindow = {};
+loadBrowserScript('clcr_saved_legacy_calculator.js', mathWindow);
+const production = new Function('window', `${source.slice(0, pureEnd)}\nreturn { BSA_DuBois, clCrCG, clCrCGNormalized };`)(mathWindow);
 const browser = {};
 loadBrowserScript('clcr_clinical_safety.js', browser);
 loadBrowserScript('clcr_calculation_assumptions.js', browser);

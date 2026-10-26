@@ -18,7 +18,8 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..')
 const inline = fs.readFileSync(path.join(root, 'inline_kalkulator_klirens_04.js'), 'utf8');
 const pureEnd = inline.indexOf('const refRanges =');
 if (pureEnd < 0) throw new Error('Brak granicy produkcyjnych funkcji obliczeniowych Klirensu.');
-const production = new Function('window', `${inline.slice(0, pureEnd)}\nreturn { BSA_DuBois };`)({});
+loadBrowserScript('clcr_saved_legacy_calculator.js', browser);
+const production = new Function('window', `${inline.slice(0, pureEnd)}\nreturn { BSA_DuBois };`)(browser);
 
 const validInput = {
   value: 100, unit: 'mL/min', ageYears: 45, sex: 'M',

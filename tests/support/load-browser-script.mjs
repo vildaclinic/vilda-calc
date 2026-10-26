@@ -19,6 +19,10 @@ const repositoryRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url))
 // trajektoria bierze kursy otyłości (kursyOtylosci). Bez niego moduł trajektorii nie pada, tylko cicho
 // wraca do reguły sprzed raty 4 (Zakończenie + przerwa ≥ 3 mies.), więc testy kursów sprawdzałyby starą regułę.
 const ZALEZNOSCI = {
+  // The calculator and main patient history now share the same pure dictionary
+  // and frozen-note decoder; emulate their declared browser dependencies.
+  'clcr_ui_workflow.js': ['clcr_saved_results.js'],
+  'inline_kalkulator_klirens_04.js': ['clcr_saved_legacy_calculator.js'],
   'vilda_trajectory_analysis.js': ['vilda_werdykt.js', 'vilda_cykle_leczenia.js'],
   'vilda_postepy_doroslego.js': [
     'vilda_bmi.js',

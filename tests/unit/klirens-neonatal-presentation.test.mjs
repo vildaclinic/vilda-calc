@@ -113,9 +113,12 @@ describe('Noworodkowy eGFR — jeden neutralny wynik i ocena dla wieku', () => {
       expect(html).toContain(`href="${source.url}"`);
       expect(html).toContain(`>${source.label}</a>`);
     }
+    expect(html.match(/<a href=/g)).toHaveLength(profile.neonatal.sources.length);
     expect(html).toContain('data-clcr-neonatal-sources');
     expect(html).not.toContain('<strong>Metoda:</strong>');
-    expect(html).not.toContain(input.label);
+    // Frozen model metadata retains the method name without rendering it twice.
+    const renderedText = html.replace(/<[^>]+>/g, '');
+    expect(renderedText).not.toContain(input.label);
     expect(html).not.toContain('clcr-result-category-table');
     expect(html).not.toContain('Powierzchnia ciała');
   });
