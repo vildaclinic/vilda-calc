@@ -7,11 +7,11 @@
   var d = w.document;
   var mount, form, fieldset, doctor, view, snapshot, rendered, fullscreen;
   var request = 0, timer = 0, pendingTimer = 0, layoutFrame = 0, started = false;
-  var boundsFrame = 0, boundsOwner = null, expansion = null;
+  var boundsFrame = 0, boundsOwner = null, expansion = null, expansionRead = null, resumedExpansion = null;
   var scheduleFrame = 0, scheduledIdentity = false, scheduledReady = false;
   var notice, noticeTitle, noticeMessage, retryButton, slotStatus = 'ineligible', awaitingEdit = false;
-  var noticeTimer = 0, noticeSince = null, revealAnimation = null, firstChartShown = false;
-  var status = 'hidden', lastWidth = 0, collapsedHeight = 0, lastHeight = 0, renderKey = '';
+  var noticeTimer = 0, noticeSince = null, retryExpansion = false;
+  var status = 'hidden', lastWidth = 0, collapsedHeight = 0, lastHeight = 0, renderKey = '', fullKey = '';
   var data = w.VildaCentileLiveData;
 
   function twoColumns() {
@@ -81,32 +81,6 @@
     }, remaining);
   }
 
-  function finishReveal() {
-    var animation = revealAnimation;
-    revealAnimation = null;
-    if (animation) {
-      animation.onfinish = null;
-      animation.oncancel = null;
-      // The underlying card stays fully opaque; cancelling an opacity-only
-      // effect reveals it immediately without changing layout or ownership.
-      try { animation.cancel(); } catch (_) { /* An already removed effect is harmless. */ }
-    }
-  }
-
-  function revealFirstChart() {
-    if (firstChartShown || !view || status !== 'ready') return;
-    firstChartShown = true;
-    try {
-      if (typeof w.matchMedia === 'function' && w.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
-      if (typeof view.element.animate !== 'function') return;
-      var animation = view.element.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 300, easing: 'ease-out' });
-      revealAnimation = animation;
-      animation.onfinish = animation.oncancel = function () {
-        if (revealAnimation === animation) revealAnimation = null;
-      };
-    } catch (_) { /* Rendering remains immediate when animations are unavailable. */ }
-  }
-
   function stopRefresh() {
     w.clearTimeout(timer);
     timer = 0;
@@ -126,7 +100,14 @@
     target.expandButton.title = label;
   }
 
+  function cancelExpansionRead() {
+    if (expansionRead) expandState(expansionRead.view);
+    expansionRead = null;
+  }
+
   function cancelExpansion() {
+    if (boundsFrame) w.cancelAnimationFrame(boundsFrame);
+    boundsFrame = 0;
     if (expansion) expandState(expansion.view);
     expansion = null;
   }
@@ -140,7 +121,33 @@
     if (old && old.job) old.job.cancel();
   }
 
+  function cancelResumedExpansion() {
+    if (resumedExpansion) expandState(resumedExpansion.view);
+    resumedExpansion = null;
+  }
+
+  function suspendExpansion(includeRead) {
+    var intent = expansion || includeRead && expansionRead;
+    if (intent && snapshot) {
+      resumedExpansion = { view: intent.view, token: snapshot.patientToken, key: intent.key };
+    }
+    if (includeRead) cancelExpansionRead();
+    stopBounds();
+    if (resumedExpansion) expandState(resumedExpansion.view, 'pending');
+  }
+
+  function resumeExpansion() {
+    var intent = resumedExpansion;
+    cancelResumedExpansion();
+    // A background read may confirm the very same committed snapshot. Keep
+    // that explicit click, but never open its old drawing after a value/source
+    // change. The queued blur path accepts the snapshot it was waiting for.
+    if (intent && view === intent.view && snapshot && snapshot.patientToken === intent.token
+      && (intent.key === undefined || intent.key === renderKey)) expand();
+  }
+
   function hideRetry() {
+    retryExpansion = false;
     if (!retryButton) return;
     retryButton.hidden = true;
     retryButton.textContent = 'Spróbuj ponownie';
@@ -150,6 +157,7 @@
     // A failed crop must not erase a still-current complete inline/fullscreen
     // drawing. Make the stale refresh explicit and offer the existing retry.
     status = 'unavailable';
+    retryExpansion = !fullscreen;
     renderKey = '';
     if (retryButton && view) {
       retryButton.textContent = message;
@@ -185,37 +193,15 @@
     return owner.job;
   }
 
-  function scheduleBounds(owner) {
-    // Leave one actual paint opportunity before the first readback. A resolved
-    // Promise alone would still run before the browser can present the chart.
-    boundsFrame = w.requestAnimationFrame(function () {
-      boundsFrame = 0;
-      if (!currentBounds(owner)) return;
-      boundsFrame = w.requestAnimationFrame(function () {
-        boundsFrame = 0;
-        if (!currentBounds(owner)) return;
-        // WAAPI can present the first fade frame at opacity zero. Leave the
-        // following frame visible before background pixel readback competes
-        // with painting. Normal updates and reduced motion keep two frames.
-        if (revealAnimation) {
-          boundsFrame = w.requestAnimationFrame(function () {
-            boundsFrame = 0;
-            prepareBounds(owner, false);
-          });
-          return;
-        }
-        prepareBounds(owner, false);
-      });
-    });
-  }
-
   function discardView(reason) {
-    finishReveal();
+    cancelResumedExpansion();
+    cancelExpansionRead();
     stopBounds();
     awaitingEdit = false;
     snapshot = null;
     rendered = null;
     renderKey = '';
+    fullKey = '';
     if (view) view.element.hidden = true;
     var oldView = view;
     view = null;
@@ -248,7 +234,9 @@
   }
 
   function showError(message) {
-    finishReveal();
+    cancelResumedExpansion();
+    cancelExpansionRead();
+    retryExpansion = false;
     stopBounds();
     awaitingEdit = false;
     stopPending();
@@ -374,25 +362,32 @@
     if (!layoutFrame) layoutFrame = w.requestAnimationFrame(layout);
   }
 
-  function openFullscreen(currentView, currentSnapshot) {
-    if (view !== currentView || fullscreen || !data.isCurrent(currentSnapshot) || !twoColumns()) return;
+  function openFullscreen(currentView, currentSnapshot, owner) {
+    if (view !== currentView || fullscreen || !currentBounds(owner) || !twoColumns()) return;
     var host = w.VildaCentileLiveHost;
     if (!host) return;
-    finishReveal();
     var closedDuringOpen = false;
     var handle = host.open({
       sourceWindow: w, element: currentView.element,
       opener: currentView.expandButton, patientToken: currentSnapshot.patientToken,
-      // ResizeObserver/window resize enforce the two-column layout separately;
-      // the host's per-frame ownership check must not force a layout read.
+      // The host checks patient ownership; request revisions protect drawing
+      // work while a new measurement/source is awaiting its committed snapshot.
       isCurrent: function (token) { return view === currentView && data.isCurrent(token); },
       onMount: function () {
         currentView.setFullscreen(true);
+        currentView.update(owner.rendered, currentSnapshot);
+        fullKey = owner.key;
         currentView.fit();
       },
       onRestore: function (result) {
+        // Restore SVG while the host still hides the card. A full refresh may
+        // be cropping at this instant; it must never publish a raster inline.
+        fullscreen = null;
+        fullKey = '';
+        stopBounds();
         currentView.setFullscreen(false);
-        if (result.current && view === currentView) {
+        if (result.current && view === currentView && snapshot && data.isCurrent(snapshot)) {
+          currentView.update(rendered, snapshot);
           currentView.fit();
         }
       },
@@ -408,32 +403,69 @@
   }
 
   function expand() {
-    if (!view || !snapshot || fullscreen || expansion || !data.isCurrent(snapshot) || !twoColumns()) return;
-    finishReveal();
-    var currentView = view, currentSnapshot = snapshot;
-    var owner = boundsOwner;
-    if (!owner || owner.result && owner.result.status === 'ready') {
-      openFullscreen(currentView, currentSnapshot);
+    if (!view || !snapshot || fullscreen || expansion || expansionRead || resumedExpansion
+      || !data.isCurrent(snapshot) || !twoColumns() || !w.VildaCentileLiveHost) return;
+    if (scheduleFrame || timer || slotStatus === 'pending') {
+      // Clicking Expand also blurs an edited measurement. Accept that commit
+      // first, rather than opening the last value while its refresh is queued.
+      var waiting = { view: view, token: snapshot.patientToken };
+      expansionRead = waiting;
+      expandState(waiting.view, 'pending');
+      refresh().then(function () {
+        if (expansionRead !== waiting) return;
+        cancelExpansionRead();
+        if (view === waiting.view && snapshot && snapshot.patientToken === waiting.token
+          && slotStatus === 'ready') expand();
+      });
       return;
     }
-    var intent = { view: currentView };
+    if (!rendered || rendered.status !== 'ready') return;
+    stopBounds();
+    var intent = { view: view, snapshot: snapshot, revision: request, key: JSON.stringify(snapshot) };
     expansion = intent;
-    expandState(currentView, 'pending');
-    var job = prepareBounds(owner, true);
-    if (!job) { cancelExpansion(); return; }
-    job.promise.then(function (result) {
-      if (expansion !== intent) return;
+    expandState(intent.view, 'pending');
+    function current() {
+      return expansion === intent && view === intent.view && request === intent.revision
+        && data.isCurrent(intent.snapshot) && twoColumns();
+    }
+    function failed() {
+      if (!current()) return;
       cancelExpansion();
-      if (!currentBounds(owner) || !twoColumns()) return;
-      if (result && result.status === 'ready') {
-        status = rendered && rendered.status || 'ready';
-        slot('ready');
-        hideRetry();
-        openFullscreen(currentView, currentSnapshot);
-      } else if (result && result.status === 'error') {
-        expandState(currentView, 'error');
-        showBoundsError('Nie udało się przygotować pełnego ekranu. Spróbuj ponownie.');
-      }
+      expandState(intent.view, 'error');
+      showBoundsError('Nie udało się przygotować pełnego ekranu. Spróbuj ponownie.');
+    }
+    // Give the busy button an actual paint before creating the large canvases.
+    // No full rendering or pixel reads are scheduled by the inline preview.
+    boundsFrame = w.requestAnimationFrame(function () {
+      boundsFrame = 0;
+      if (!current()) { cancelExpansion(); return; }
+      boundsFrame = w.requestAnimationFrame(function () {
+        boundsFrame = 0;
+        if (!current()) { cancelExpansion(); return; }
+        try {
+          var renderer = w.VildaCentileLiveRender;
+          var deferred = typeof renderer.prepareContentBounds === 'function';
+          var full = renderer.render(intent.snapshot, { deferContentBounds: deferred });
+          if (!current()) return;
+          if (!full || full.status !== 'ready') { failed(); return; }
+          var owner = { view: intent.view, snapshot: intent.snapshot, rendered: full,
+            revision: intent.revision, key: intent.key, job: null, result: null };
+          boundsOwner = owner;
+          var job = deferred ? prepareBounds(owner, true) : { promise: Promise.resolve({ status: 'ready' }) };
+          if (!job) { cancelExpansion(); return; }
+          job.promise.then(function (result) {
+            if (!current() || !currentBounds(owner)) return;
+            if (result && result.status === 'ready') {
+              cancelExpansion();
+              status = rendered.status;
+              slot('ready');
+              hideRetry();
+              openFullscreen(intent.view, intent.snapshot, owner);
+            } else if (result && result.status === 'error') failed();
+            else cancelExpansion();
+          });
+        } catch (_) { failed(); }
+      });
     });
   }
 
@@ -449,6 +481,7 @@
 
   async function refresh() {
     if (!started || !data) return;
+    suspendExpansion(false);
     stopRefresh();
     if (!prepare()) return;
     var revision = ++request;
@@ -490,29 +523,46 @@
       var nextKey = JSON.stringify(next);
       if (!snapshot) snapshot = next;
       if (!view) createView();
-      if (rendered && nextKey === renderKey) {
-        if (boundsOwner && boundsOwner.rendered !== rendered) stopBounds();
+      if (rendered && nextKey === renderKey && (!fullscreen || fullKey === nextKey)) {
         snapshot = next;
         slot('ready');
         if (notice) notice.hidden = true;
         hideRetry();
         inlineSize();
+        resumeExpansion();
         return;
       }
       stopBounds();
       var renderer = w.VildaCentileLiveRender;
-      var deferredBounds = typeof renderer.prepareContentBounds === 'function';
-      var nextRendered = deferredBounds ? renderer.render(next, { deferContentBounds: true }) : renderer.render(next);
-      if (!data.isCurrent(next)) { discardView('stale'); schedule(); return; }
-      var owner = deferredBounds && nextRendered && nextRendered.status === 'ready'
-        ? { view: view, snapshot: next, rendered: nextRendered, job: null, result: null } : null;
-      boundsOwner = owner;
-      if (fullscreen && owner) {
-        // Keep the already verified fullscreen image until the replacement has
-        // its exact crop. Publishing null bounds would briefly shrink the grid.
-        owner.revision = revision;
-        var cropResult = await prepareBounds(owner, true).promise;
-        if (revision !== request || !currentBounds(owner)) {
+      var nextRendered = renderer.preview(next);
+      if (revision !== request || !data.isCurrent(next)) { discardView('stale'); schedule(); return; }
+      snapshot = next;
+      rendered = nextRendered;
+      renderKey = nextKey;
+      slot('ready');
+      if (notice) notice.hidden = true;
+      hideRetry();
+      view.element.hidden = false;
+      status = rendered && rendered.status || 'ready';
+      if (!fullscreen || status !== 'ready') {
+        view.update(rendered, next);
+      } else {
+        // Full images are produced only after expansion, including subsequent
+        // committed edits while that full view remains open. Keep its previous
+        // verified image until the replacement crop is complete.
+        var deferredBounds = typeof renderer.prepareContentBounds === 'function';
+        var fullRendered;
+        try { fullRendered = renderer.render(next, { deferContentBounds: deferredBounds }); }
+        catch (_) { showBoundsError('Nie udało się odświeżyć siatki. Spróbuj ponownie.'); return; }
+        if (!fullRendered || fullRendered.status !== 'ready') {
+          showBoundsError('Nie udało się odświeżyć siatki. Spróbuj ponownie.');
+          return;
+        }
+        var owner = { view: view, snapshot: next, rendered: fullRendered,
+          revision: revision, key: nextKey, job: null, result: null };
+        boundsOwner = owner;
+        var cropResult = deferredBounds ? await prepareBounds(owner, true).promise : { status: 'ready' };
+        if (revision !== request || !currentBounds(owner) || !fullscreen) {
           if (boundsOwner === owner) stopBounds();
           return;
         }
@@ -522,25 +572,15 @@
           showBoundsError('Nie udało się odświeżyć siatki. Spróbuj ponownie.');
           return;
         }
-        owner.revision = undefined;
+        view.update(fullRendered, next);
+        fullKey = nextKey;
       }
-      snapshot = next;
-      rendered = nextRendered;
-      slot('ready');
-      if (notice) notice.hidden = true;
-      hideRetry();
-      view.element.hidden = false;
-      status = rendered && rendered.status || 'ready';
-      finishReveal();
-      view.update(rendered, next);
-      renderKey = nextKey;
-      if (owner && !owner.job) scheduleBounds(owner);
     } catch (_) {
       showError('Nie udało się wyświetlić siatki. Spróbuj ponownie.');
       return;
     }
     inlineSize();
-    revealFirstChart();
+    resumeExpansion();
   }
 
   function readySignal(event) {
@@ -571,6 +611,7 @@
   function schedule(event) {
     // Cancel old promises immediately, before the debounced replacement starts.
     request += 1;
+    suspendExpansion(true);
     if (event && event.reason === 'measurement-commit') awaitingEdit = false;
     var discarded = false;
     if (event && event.identityChanged) {
@@ -599,6 +640,7 @@
   }
 
   function retry() {
+    if (retryExpansion) return expand();
     if (typeof data.retry === 'function') data.retry();
     return refresh();
   }
@@ -633,9 +675,11 @@
     w.addEventListener('pageshow', schedule);
     w.addEventListener('pagehide', function () { clear('pagehide'); });
     d.addEventListener('keydown', function (event) {
-      if (event.key === 'Escape' && expansion) {
+      if (event.key === 'Escape' && (expansion || expansionRead || resumedExpansion)) {
         event.preventDefault();
-        cancelExpansion();
+        cancelResumedExpansion();
+        cancelExpansionRead();
+        stopBounds();
       }
     });
     refresh();
@@ -646,7 +690,7 @@
     getState: function () {
       return Object.assign({ eligible: !!snapshot, status: status, slotStatus: slotStatus,
         patientId: snapshot ? snapshot.patientId : null,
-        source: rendered ? rendered.source : null, fullscreen: !!fullscreen, preparingFullscreen: !!expansion },
+        source: rendered ? rendered.source : null, fullscreen: !!fullscreen, preparingFullscreen: !!(expansion || expansionRead || resumedExpansion) },
       view ? view.getState() : {});
     }
   });

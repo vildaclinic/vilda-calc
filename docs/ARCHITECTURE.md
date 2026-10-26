@@ -166,10 +166,16 @@ Nie wolno przenosić pola między pamięcią sesji, pamięcią trwałą i danymi
   celowo pusta, ma pierwszeństwo przed osią pomiarów vaulta.
 - `render` pobiera modele rzeczywistych generatorów przez opcje `modelOnly` oraz
   `growthData`. Krzywe, zakresy, deduplikacja pomiarów i statystyki pozostają
-  odpowiedzialnością istniejących funkcji. `computeSnapshotLayout` Kreatora
-  pracuje na kopii adnotacji, bez podmiany globalnego pacjenta i zapisu geometrii.
-- `view` rysuje oba płótna z jednolitą skalą, obsługuje odczyt, przypięcie i
-  klawiaturę. Wybór widoku i przesuwanie wskaźnika nie są danymi pacjenta.
+  odpowiedzialnością istniejących funkcji. `preview(snapshot)` pobiera tylko modele
+  wybranego źródła, bez płócien i Kreatora. Pełny `render(snapshot)` zachowuje
+  eksportowe siatki; `computeSnapshotLayout` Kreatora pracuje na kopii adnotacji,
+  bez podmiany globalnego pacjenta i zapisu geometrii.
+- `preview` prezentuje dostarczone próbki jako SVG: centyle 3/50/97, jasne pasmo
+  i wyróżniony przebieg pacjenta. Wielkość tekstu i grubość linii odpowiadają
+  pikselom ekranu, a zakresy osi pochodzą z modelu, bez autozooma.
+- `view` dopasowuje SVG do miejsca karty, a na pełnym ekranie rysuje oba płótna
+  z jednolitą skalą. Odczyt, przypięcie i klawiatura korzystają ze wspólnego
+  modelu punktów; wybór widoku i wskaźnik nie są danymi pacjenta.
 - `panel` montuje kartę tylko przy rzeczywistych dwóch kolumnach formularza.
   Zastępuje Przypomnienia na Start; w DocPro wypełnia wolne miejsce. Wysokość
   odpowiada formularzowi ze zwiniętym pokwitaniem, z uwzględnieniem paska statusu.
@@ -179,20 +185,25 @@ Nie wolno przenosić pola między pamięcią sesji, pamięcią trwałą i danymi
   Rzeczywista aktywność w dialogu korzysta z `VildaAuthUI.recordActivity` obu
   dokumentów. Automatyczny render, resize i scroll nie podtrzymują sesji.
 
-Pierwszy obraz podglądu nie czeka na odczyt pikseli służący przycinaniu białych
-marginesów w pełnym ekranie. Opcja `deferContentBounds` renderera zachowuje
-rozdzielczość, obie metryki, wszystkie zakresy i adnotacje; odracza wyłącznie
-wyznaczenie `contentBounds`. Panel pozwala przeglądarce najpierw pokazać obraz,
-a następnie `prepareContentBounds` odczytuje niewielkie fragmenty płócien
-w oddzielnych zadaniach. Publikuje dokładne granice całego zestawu dopiero po
-zakończeniu i ponownym potwierdzeniu aktualności kontekstu. Zadanie można
-anulować, a obliczenia nie podtrzymują sesji ani nie zapisują danych.
-Powiększenie czeka na gotowe granice, aby siatka nie zmieniała skali w trakcie
-animacji. Odświeżenie już powiększonej siatki podmienia komplet przygotowanych
-obrazów jednocześnie. Wywołanie renderera bez tej opcji zachowuje dotychczasowy
-synchroniczny kontrakt. Sygnały zakończenia odtwarzania uruchamiają odświeżenie
-w najbliższej klatce; zwykłe zdarzenia nadal są scalane, a wszystkie bramki
-właściciela, odtwarzania i zatwierdzenia pomiaru pozostają obowiązujące.
+Podgląd nie tworzy pełnych grafik ani nie przygotowuje ich w czasie bezczynności.
+Dopiero jawne powiększenie uruchamia `render` z `deferContentBounds`, a potem
+`prepareContentBounds` wyznacza dokładne marginesy przez małe odczyty pikseli.
+Przycisk wcześniej pokazuje stan przygotowywania. Dialog otwiera kompletny
+zestaw, więc skala nie zmienia się w trakcie jego animacji. Pełny widok zachowuje
+wszystkie krzywe, zakresy, adnotacje, MPH i rodziców. Zmiany zatwierdzone przy
+otwartym dialogu przygotowują komplet zastępczych grafik, zachowując poprzednie
+do zakończenia przycinania. Zamknięcie przywraca SVG jeszcze przed odsłonięciem
+karty i zwalnia pełne płótna; ponowne powiększenie tworzy je na żądanie.
+
+Token pacjenta oraz rewizja żądania unieważniają spóźnioną grafikę, również po
+zmianie źródła lub wartości u tej samej osoby. Escape, zamknięcie i zmiana
+kontekstu anulują przygotowywanie. Kliknięcie powiększenia bezpośrednio po
+opuszczeniu pola najpierw przyjmuje oczekujące zatwierdzenie. Błąd przygotowania
+pełnego ekranu pozostawia dostępny podgląd i możliwość ponowienia. Samodzielne
+wywołanie pełnego renderera bez `deferContentBounds` zachowuje synchroniczny
+kontrakt. Sygnały zakończenia odtwarzania uruchamiają odświeżenie w najbliższej
+klatce; zwykłe zdarzenia nadal są scalane. Wszystkie bramki właściciela,
+odtwarzania i zatwierdzenia pomiaru pozostają obowiązujące.
 
 Miejsce podglądu ma osobny cykl życia: oczekiwanie, gotowa siatka, potwierdzony
 brak zastosowania i błąd odczytu. Oczekiwanie na odtworzenie sesji, dane pacjenta
@@ -212,14 +223,10 @@ Przy pierwszym oczekiwaniu karta pozostaje neutralna, bez tekstu i komunikatu
 czytnika ekranu. „Wczytywanie siatki…” pojawia się dopiero po 1200 ms ciągłego
 oczekiwania, liczonego od wczesnego bootstrapu; przejęcie przez panel i ponowne
 odczyty nie rozpoczynają tego czasu od nowa. Błąd, ponowienie oraz informacja
-o konieczności zakończenia edycji pozostają dostępne od razu. Pierwszy gotowy
-obraz pojawia się przez zmianę przezroczystości w ciągu 300 ms, po ustaleniu
-geometrii, bez opóźniania obliczeń. Animacja występuje raz na dokument i jest
-pomijana przy `prefers-reduced-motion`. Kolejne odświeżenia zachowują bieżący
-obraz; przeniesienie do pełnego ekranu kończy ewentualną animację pojawiania.
-Gdy trwa pierwsze pojawianie, skanowanie marginesów otrzymuje dodatkową klatkę
-odroczenia: pierwsza klatka animacji może być jeszcze całkowicie przezroczysta.
-Sam gotowy obraz i jego animacja nie czekają na skanowanie.
+o konieczności zakończenia edycji pozostają dostępne od razu. Gotowy podgląd
+pojawia się od razu, bez animacji przezroczystości i bez dodatkowego opóźnienia.
+Kolejne odświeżenia zachowują bieżący obraz do uzyskania nowego modelu.
+Dotychczasowe animacje otwierania i zamykania pełnego ekranu należą do `host`.
 
 Początkowa osłona miejsca siatki obejmuje także „Podsumowanie wyników”, które
 może odtworzyć się przed niezależnym odczytem porównania pomiarów. Ukrywa je

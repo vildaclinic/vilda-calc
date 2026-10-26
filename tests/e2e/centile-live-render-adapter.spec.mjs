@@ -240,3 +240,87 @@ test('default PDF canvas pixels remain unchanged before and after rendering a di
     expect(mode.pixels).toEqual([true, true, true, true, true]);
   }
 });
+
+test('light preview keeps full chart domains, clinical points and probes without canvas or Creator work', async ({ page }) => {
+  test.setTimeout(120_000);
+  await open(page);
+  const results = await page.evaluate(snapshot => {
+    const api = window.VildaCentileLiveRender;
+    const child = { ...snapshot, ageMonths: 24, exactAgeMonths: 24.3,
+      currentHeight: 88, currentWeight: 12,
+      measurements: [{ ageMonths: 6, height: 67, weight: 7.5 }, { ageMonths: 18, height: 82, weight: 10.5 }] };
+    const cases = [
+      { ...snapshot, source: 'OLAF', currentHeight: 159, currentWeight: 47 },
+      { ...snapshot, source: 'PALCZEWSKA', measurements: [...child.measurements, ...snapshot.measurements] },
+      { ...child, source: 'WHO', professionalMode: false },
+      { ...child, source: 'PALCZEWSKA' },
+      { ...snapshot, source: 'OLAF', sex: 'F' },
+      { ...snapshot, source: 'OLAF', population: 'DS' },
+    ];
+    function clinical(point) {
+      if (!point) return point;
+      const { x, y, ...data } = point;
+      return data;
+    }
+    function domain(asset) {
+      const { ageMin, ageMax, minY, maxY } = asset.plot;
+      return { ageMin, ageMax, minY, maxY };
+    }
+    return cases.map(input => {
+      const before = JSON.stringify(input);
+      const createElement = document.createElement;
+      const layout = window.VildaPublicationCreator.computeSnapshotLayout;
+      const getImageData = CanvasRenderingContext2D.prototype.getImageData;
+      let preview;
+      try {
+        document.createElement = function (name, ...args) {
+          if (String(name).toLowerCase() === 'canvas') throw new Error('Preview allocated a canvas');
+          return createElement.call(this, name, ...args);
+        };
+        window.VildaPublicationCreator.computeSnapshotLayout = () => { throw new Error('Preview prepared Creator annotations'); };
+        CanvasRenderingContext2D.prototype.getImageData = () => { throw new Error('Preview read canvas pixels'); };
+        preview = api.preview(input);
+      } finally {
+        document.createElement = createElement;
+        window.VildaPublicationCreator.computeSnapshotLayout = layout;
+        CanvasRenderingContext2D.prototype.getImageData = getImageData;
+      }
+      const full = api.render(input, { deferContentBounds: true });
+      const assets = preview.ranges.flatMap((range, index) => ['height', 'weight'].map(metric => {
+        const light = range[metric], original = full.ranges[index][metric];
+        const ages = light.points.map(point => point.ageMonths);
+        if (ages.length > 1) ages.push((ages[0] + ages[1]) / 2);
+        ages.push(light.plot.ageMin - 1, light.plot.ageMax + 1);
+        return {
+          range: range.id, metric, preview: light.preview, noCanvas: !light.canvas,
+          curves: Object.keys(light.curves), domain: domain(light), fullDomain: domain(original),
+          points: light.points.map(clinical), fullPoints: original.points.map(clinical),
+          probes: ages.map(age => clinical(light.probe(age))), fullProbes: ages.map(age => clinical(original.probe(age))),
+        };
+      }));
+      return { source: input.source, population: input.population || 'OGOLNA', sex: input.sex,
+        status: preview.status, fullStatus: full.status,
+        plan: preview.rangePlan, fullPlan: full.rangePlan,
+        ids: preview.ranges.map(range => range.id), fullIds: full.ranges.map(range => range.id),
+        active: preview.activeRangeId, fullActive: full.activeRangeId,
+        unchanged: JSON.stringify(input) === before, assets };
+    });
+  }, fixture);
+  expect(results).toHaveLength(6);
+  for (const row of results) {
+    expect(row.status).toBe('ready');
+    expect(row.status).toBe(row.fullStatus);
+    expect(row.plan).toEqual(row.fullPlan);
+    expect(row.ids).toEqual(row.fullIds);
+    expect(row.active).toBe(row.fullActive);
+    expect(row.unchanged).toBe(true);
+    for (const asset of row.assets) {
+      expect(asset.preview).toBe(true);
+      expect(asset.noCanvas).toBe(true);
+      expect(asset.curves).toEqual(['3', '50', '97']);
+      expect(asset.domain, `${row.source}/${row.population}/${row.sex}/${asset.range}/${asset.metric}: pełny zakres bez autozoomu`).toEqual(asset.fullDomain);
+      expect(asset.points).toEqual(asset.fullPoints);
+      expect(asset.probes).toEqual(asset.fullProbes);
+    }
+  }
+});
