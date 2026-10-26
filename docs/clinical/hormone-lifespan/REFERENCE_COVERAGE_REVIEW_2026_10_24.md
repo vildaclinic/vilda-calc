@@ -1,5 +1,17 @@
 # Pokrycie wykresów hormonów — przegląd po PR #766 i #770
 
+**Dalsza realizacja punktu 4 — 25–26.10.2026:** PR #790 wdrożył
+[orientacyjne LH dzieci i punkt bez mediany](../LH_CHILDHOOD_REFERENCE.md).
+Nie odzyskano dokładnej P50 dziecięcej. Osobny pełny audyt Busch 2022
+potwierdził wierny istniejący odczyt ścieżki; właściciel polecił wdrożyć
+[przybliżoną modelową medianę LH dla całego `(243;326]` dnia, następnie
+sam wynik do <1 roku](LH_INFANT_TAIL.md). Granica 326 jest decyzją
+prezentacji aplikacji, a nie regułą autora. Dotyczy zwykłego wykresu,
+bez zmiany porównania płci, RI i historii. Ten krok zastępuje niższą
+historyczną rekomendację dalszego wyjaśnienia ogona LH; **TT po 212. dniu
+pozostaje następnym osobnym etapem**. Poniższy przegląd i jego JSON
+nadal dokumentują stan z 24.10, bez przepisywania dawnych hashy.
+
 **24.10.2026, baza `audyt` `7ff480c21129dcb006443ca9c929e508eeea55e2`.**
 To audyt i rekomendacja dalszych prac, bez aktywacji nowych danych, norm,
 krzywych lub interpretacji. Nie jest systematycznym przeglądem całego
@@ -102,9 +114,14 @@ ma dalsze węzły w zachowanym odczycie. Obecna bramka porównania uwzględnia
 granicę oznaczenia, grubość kreski i resztę kalibracji. To polityka
 aplikacji, nie próg kliniczny lub reguła autorów. Przykładowo zapisane
 LH dnia 244 ≈0,170118 IU/L jest ponad LOD 0,05, a T dnia 213
-≈0,164593 nmol/L ponad LOD 0,012; mimo tego nie kwalifikują się do punktu.
+≈0,164593 nmol/L ponad LOQ 0,012; mimo tego nie kwalifikują się do punktu.
 Nie zmieniono tej polityki. Potrzeba lepszego dowodu liczbowego, a nie
 zastąpienia braku zerem, medianą starszej grupy lub samym usunięciem bramki.
+
+Korekta nazwy limitu po ponownym odczycie źródła 26.10: 0,012 nmol/L
+dotyczy **LOQ testosteronu**, nie LOD. Nie zmienia to jego polityki.
+Powyższy opis statusu LH jest historyczny; aktualną decyzję i granice
+po audycie ogona dokumentuje [LH_INFANT_TAIL.md](LH_INFANT_TAIL.md).
 
 ## Madsen 2022 — dwa niewykorzystane eksporty
 

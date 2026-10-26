@@ -9,6 +9,16 @@ ma pierwszeństwo. Dokument uzupełnia [AGENTS.md](../../AGENTS.md),
 [opis wykresu](HORMONE_LIFESPAN.md) i
 [kontrakt punktu pacjenta](hormone-lifespan/PATIENT_POINT.md).
 
+**Doprecyzowanie 26.10.2026 — zwykłe niemowlęce LH chłopców:**
+[nowy kontrakt](hormone-lifespan/LH_INFANT_TAIL.md) dopuszcza przybliżoną
+medianę modelu dla całego `(243;326]` dnia, następnie sam wynik do <1 roku,
+wyłącznie w zwykłym „Całym życiu” i „Minipuberty”. Zastępuje dawną
+granicę jakości tylko w tym zakresie. Nie przenoś tego wyjątku do
+opisanego niżej porównania płci: jego punkt LH nadal kończy się w dniu
+243. Grubość kreski nie jest błędem środka wektora; dokładna geometria
+nie usuwa ograniczeń modelu i wyników poniżej źródłowego LOD. Granica
+326 jest decyzją aplikacji, nie autorów; TT i normy nie zmieniają się.
+
 ## Cel: czytelny obraz zmian, bez sztucznych wydarzeń hormonalnych
 
 To pomoc do rozmowy z pacjentem i nauczania studentów. Linia ma pozwolić

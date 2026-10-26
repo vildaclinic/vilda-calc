@@ -16,6 +16,15 @@ granice zastosowania i przypadki kontrolne opisano w
 [PATIENT_POINT.md](hormone-lifespan/PATIENT_POINT.md). Nie wolno nadać
 dotychczasowemu schematowi znaczenia mediany przez samo dodanie punktu.
 
+**26.10.2026 — późne niemowlęce LH chłopców:** po audycie Busch 2022
+właściciel polecił wdrożenie przybliżonej mediany modelu dla całego wieku
+`(243;326]` dnia oraz samego wyniku później do <1 roku. To wyjątek
+zwykłych widoków „Całe życie” i „Minipuberty”, opisany w
+[LH_INFANT_TAIL.md](hormone-lifespan/LH_INFANT_TAIL.md). Nie zmienia
+poniższego odrębnego kontraktu porównania płci z ograniczeniem punktu
+LH do 243. dnia, źródłowego ekstraktu, geometrii, norm lub historii.
+Granica 326 jest polityką prezentacji aplikacji, nie końcem modelu autora.
+
 Po analizie czterech dostarczonych pełnych tekstów właściciel polecił wdrożenie
 uzupełnień inhibiny B: dwóch wizyt minipuberty według płci i donoszenia,
 median G1–G5 oraz średnich grup wieku mężczyzn do 101 lat. Osobne małe

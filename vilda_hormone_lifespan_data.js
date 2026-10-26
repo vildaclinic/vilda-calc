@@ -8551,7 +8551,7 @@ const lifespanData = {
   }
 };
 const patientPointData = {
-  "version": "2026-10-22.2",
+  "version": "2026-10-26.1",
   "purpose": "educational-population-central-comparison",
   "notClinicalReference": true,
   "interpolation": "Monotone PCHIP within continuous source profiles; age-group means and medians are constant within their own separate profiles. No interpolation across groups, source gaps or publications, and no extrapolation.",
@@ -11596,417 +11596,417 @@ const patientPointData = {
         {
           "ageYears": 0.6680355920602327,
           "value": 0.170118,
-          "eligible": false
+          "eligible": true
         },
         {
           "ageYears": 0.6707734428473648,
           "value": 0.167129,
-          "eligible": false
+          "eligible": true
         },
         {
           "ageYears": 0.6735112936344969,
           "value": 0.164183,
-          "eligible": false
+          "eligible": true
         },
         {
           "ageYears": 0.676249144421629,
           "value": 0.161308,
-          "eligible": false
+          "eligible": true
         },
         {
           "ageYears": 0.6789869952087612,
           "value": 0.158525,
-          "eligible": false
+          "eligible": true
         },
         {
           "ageYears": 0.6817248459958932,
           "value": 0.155771,
-          "eligible": false
+          "eligible": true
         },
         {
           "ageYears": 0.6844626967830253,
           "value": 0.153059,
-          "eligible": false
+          "eligible": true
         },
         {
           "ageYears": 0.6872005475701575,
           "value": 0.150415,
-          "eligible": false
+          "eligible": true
         },
         {
           "ageYears": 0.6899383983572895,
           "value": 0.147831,
-          "eligible": false
+          "eligible": true
         },
         {
           "ageYears": 0.6926762491444216,
           "value": 0.145277,
-          "eligible": false
+          "eligible": true
         },
         {
           "ageYears": 0.6954140999315537,
           "value": 0.142821,
-          "eligible": false
+          "eligible": true
         },
         {
           "ageYears": 0.6981519507186859,
           "value": 0.14045,
-          "eligible": false
+          "eligible": true
         },
         {
           "ageYears": 0.7008898015058179,
           "value": 0.138124,
-          "eligible": false
+          "eligible": true
         },
         {
           "ageYears": 0.70362765229295,
           "value": 0.135758,
-          "eligible": false
+          "eligible": true
         },
         {
           "ageYears": 0.7063655030800822,
           "value": 0.133451,
-          "eligible": false
+          "eligible": true
         },
         {
           "ageYears": 0.7091033538672142,
           "value": 0.131203,
-          "eligible": false
+          "eligible": true
         },
         {
           "ageYears": 0.7118412046543463,
           "value": 0.129014,
-          "eligible": false
+          "eligible": true
         },
         {
           "ageYears": 0.7145790554414785,
           "value": 0.126881,
-          "eligible": false
+          "eligible": true
         },
         {
           "ageYears": 0.7173169062286106,
           "value": 0.124791,
-          "eligible": false
+          "eligible": true
         },
         {
           "ageYears": 0.7200547570157426,
           "value": 0.12273,
-          "eligible": false
+          "eligible": true
         },
         {
           "ageYears": 0.7227926078028748,
           "value": 0.120684,
-          "eligible": false
+          "eligible": true
         },
         {
           "ageYears": 0.7255304585900069,
           "value": 0.118735,
-          "eligible": false
+          "eligible": true
         },
         {
           "ageYears": 0.7282683093771389,
           "value": 0.116772,
-          "eligible": false
+          "eligible": true
         },
         {
           "ageYears": 0.731006160164271,
           "value": 0.114835,
-          "eligible": false
+          "eligible": true
         },
         {
           "ageYears": 0.7337440109514032,
           "value": 0.112968,
-          "eligible": false
+          "eligible": true
         },
         {
           "ageYears": 0.7364818617385352,
           "value": 0.111182,
-          "eligible": false
+          "eligible": true
         },
         {
           "ageYears": 0.7392197125256673,
           "value": 0.10943,
-          "eligible": false
+          "eligible": true
         },
         {
           "ageYears": 0.7419575633127995,
           "value": 0.107685,
-          "eligible": false
+          "eligible": true
         },
         {
           "ageYears": 0.7446954140999316,
           "value": 0.105917,
-          "eligible": false
+          "eligible": true
         },
         {
           "ageYears": 0.7474332648870636,
           "value": 0.10422,
-          "eligible": false
+          "eligible": true
         },
         {
           "ageYears": 0.7501711156741958,
           "value": 0.102599,
-          "eligible": false
+          "eligible": true
         },
         {
           "ageYears": 0.7529089664613279,
           "value": 0.101011,
-          "eligible": false
+          "eligible": true
         },
         {
           "ageYears": 0.75564681724846,
           "value": 0.099441,
-          "eligible": false
+          "eligible": true
         },
         {
           "ageYears": 0.758384668035592,
           "value": 0.097888,
-          "eligible": false
+          "eligible": true
         },
         {
           "ageYears": 0.7611225188227242,
           "value": 0.096382,
-          "eligible": false
+          "eligible": true
         },
         {
           "ageYears": 0.7638603696098563,
           "value": 0.094912,
-          "eligible": false
+          "eligible": true
         },
         {
           "ageYears": 0.7665982203969883,
           "value": 0.093463,
-          "eligible": false
+          "eligible": true
         },
         {
           "ageYears": 0.7693360711841205,
           "value": 0.092076,
-          "eligible": false
+          "eligible": true
         },
         {
           "ageYears": 0.7720739219712526,
           "value": 0.090717,
-          "eligible": false
+          "eligible": true
         },
         {
           "ageYears": 0.7748117727583846,
           "value": 0.089365,
-          "eligible": false
+          "eligible": true
         },
         {
           "ageYears": 0.7775496235455168,
           "value": 0.088062,
-          "eligible": false
+          "eligible": true
         },
         {
           "ageYears": 0.7802874743326489,
           "value": 0.086791,
-          "eligible": false
+          "eligible": true
         },
         {
           "ageYears": 0.783025325119781,
           "value": 0.085474,
-          "eligible": false
+          "eligible": true
         },
         {
           "ageYears": 0.785763175906913,
           "value": 0.084179,
-          "eligible": false
+          "eligible": true
         },
         {
           "ageYears": 0.7885010266940452,
           "value": 0.082918,
-          "eligible": false
+          "eligible": true
         },
         {
           "ageYears": 0.7912388774811773,
           "value": 0.081703,
-          "eligible": false
+          "eligible": true
         },
         {
           "ageYears": 0.7939767282683093,
           "value": 0.080511,
-          "eligible": false
+          "eligible": true
         },
         {
           "ageYears": 0.7967145790554415,
           "value": 0.079356,
-          "eligible": false
+          "eligible": true
         },
         {
           "ageYears": 0.7994524298425736,
           "value": 0.078267,
-          "eligible": false
+          "eligible": true
         },
         {
           "ageYears": 0.8021902806297057,
           "value": 0.077225,
-          "eligible": false
+          "eligible": true
         },
         {
           "ageYears": 0.8049281314168378,
           "value": 0.076062,
-          "eligible": false
+          "eligible": true
         },
         {
           "ageYears": 0.8076659822039699,
           "value": 0.074958,
-          "eligible": false
+          "eligible": true
         },
         {
           "ageYears": 0.810403832991102,
           "value": 0.073913,
-          "eligible": false
+          "eligible": true
         },
         {
           "ageYears": 0.813141683778234,
           "value": 0.072916,
-          "eligible": false
+          "eligible": true
         },
         {
           "ageYears": 0.8158795345653662,
           "value": 0.071866,
-          "eligible": false
+          "eligible": true
         },
         {
           "ageYears": 0.8186173853524983,
           "value": 0.070858,
-          "eligible": false
+          "eligible": true
         },
         {
           "ageYears": 0.8213552361396304,
           "value": 0.069879,
-          "eligible": false
+          "eligible": true
         },
         {
           "ageYears": 0.8240930869267625,
           "value": 0.068915,
-          "eligible": false
+          "eligible": true
         },
         {
           "ageYears": 0.8268309377138946,
           "value": 0.067978,
-          "eligible": false
+          "eligible": true
         },
         {
           "ageYears": 0.8295687885010267,
           "value": 0.067086,
-          "eligible": false
+          "eligible": true
         },
         {
           "ageYears": 0.8323066392881588,
           "value": 0.066224,
-          "eligible": false
+          "eligible": true
         },
         {
           "ageYears": 0.8350444900752909,
           "value": 0.065378,
-          "eligible": false
+          "eligible": true
         },
         {
           "ageYears": 0.837782340862423,
           "value": 0.064473,
-          "eligible": false
+          "eligible": true
         },
         {
           "ageYears": 0.840520191649555,
           "value": 0.063629,
-          "eligible": false
+          "eligible": true
         },
         {
           "ageYears": 0.8432580424366872,
           "value": 0.062823,
-          "eligible": false
+          "eligible": true
         },
         {
           "ageYears": 0.8459958932238193,
           "value": 0.062012,
-          "eligible": false
+          "eligible": true
         },
         {
           "ageYears": 0.8487337440109514,
           "value": 0.061188,
-          "eligible": false
+          "eligible": true
         },
         {
           "ageYears": 0.8514715947980835,
           "value": 0.060407,
-          "eligible": false
+          "eligible": true
         },
         {
           "ageYears": 0.8542094455852156,
           "value": 0.05966,
-          "eligible": false
+          "eligible": true
         },
         {
           "ageYears": 0.8569472963723477,
           "value": 0.058933,
-          "eligible": false
+          "eligible": true
         },
         {
           "ageYears": 0.8596851471594799,
           "value": 0.058211,
-          "eligible": false
+          "eligible": true
         },
         {
           "ageYears": 0.8624229979466119,
           "value": 0.057489,
-          "eligible": false
+          "eligible": true
         },
         {
           "ageYears": 0.865160848733744,
           "value": 0.056768,
-          "eligible": false
+          "eligible": true
         },
         {
           "ageYears": 0.8678986995208761,
           "value": 0.056047,
-          "eligible": false
+          "eligible": true
         },
         {
           "ageYears": 0.8706365503080082,
           "value": 0.055381,
-          "eligible": false
+          "eligible": true
         },
         {
           "ageYears": 0.8733744010951403,
           "value": 0.054744,
-          "eligible": false
+          "eligible": true
         },
         {
           "ageYears": 0.8761122518822724,
           "value": 0.054113,
-          "eligible": false
+          "eligible": true
         },
         {
           "ageYears": 0.8788501026694046,
           "value": 0.053532,
-          "eligible": false
+          "eligible": true
         },
         {
           "ageYears": 0.8815879534565366,
           "value": 0.052938,
-          "eligible": false
+          "eligible": true
         },
         {
           "ageYears": 0.8843258042436687,
           "value": 0.052264,
-          "eligible": false
+          "eligible": true
         },
         {
           "ageYears": 0.8870636550308009,
           "value": 0.051627,
-          "eligible": false
+          "eligible": true
         },
         {
           "ageYears": 0.8898015058179329,
           "value": 0.051014,
-          "eligible": false
+          "eligible": true
         },
         {
           "ageYears": 0.892539356605065,
           "value": 0.050415,
-          "eligible": false
+          "eligible": true
         },
         {
           "ageYears": 0.8952772073921971,
@@ -12244,7 +12244,40 @@ const patientPointData = {
         "LOD/LOQ-censored median must remain censored; do not report ratios to an artificial floor.",
         "Methods are assay-specific; cross-assay transfer has not been validated.",
         "INSL3 Methods unit conflicts with Figure 3 and Table S1; retain ug/L and flag author confirmation before clinical use."
-      ]
+      ],
+      "numericReferencePolicy": {
+        "id": "male-lh-infant-tail-model-median",
+        "version": "2026-10-26.1",
+        "kind": "educational-model-median-extension",
+        "profileId": "busch2022-male-lh",
+        "minAge": 0.6652977412731006,
+        "minAgeExclusive": true,
+        "maxAge": 0.892539356605065,
+        "maxAgeExclusive": false,
+        "minAgeDays": 243,
+        "maxAgeDays": 326,
+        "dayDivisor": 365.25,
+        "fullAgeIntervalRequired": true,
+        "currentPatientOnly": true,
+        "contextAvailabilityKey": "infantLhContextAvailable",
+        "label": "Przybliżona mediana modelu Busch 2022",
+        "shortLabel": "Mediana modelu",
+        "significantDigits": 2,
+        "patientNote": "Przybliżone odniesienie do modelu, nie granica normy.",
+        "discussion": [
+          "Wartości pochodzą ze środka czarnej krzywej modelowanej mediany GAMLSS na rycinie 3, nie ze średniej podłużnej z ryciny 2.",
+          "Kontrolowany odczyt wektorowy odtwarza istniejące wartości źródłowe. Grubość linii nie jest błędem statystycznym modelu ani niepewnością numerycznego odczytu jej środka.",
+          "Wiek 326 dni jest konserwatywnym końcem przyjętej prezentacji liczbowej aplikacji, nie granicą modelu autorów ani progiem diagnostycznym.",
+          "Autorzy raportowali wyniki poniżej LOD jako połowę LOD. Również modelowana mediana powyżej LOD może zależeć od niskich pomiarów; nie jest dokładnie poznaną medianą stężeń niecenzurowanych.",
+          "Źródłowe LOD 0,05 IU/L dotyczy AutoDELFIA B031-101. Nie jest LOD próbki pacjenta, LOQ, górną normą ani progiem rozpoznania.",
+          "Szczegóły włączenia wyników poniżej LOD do dopasowania GAMLSS nie zostały osobno podane w publikacji. Precyzja rysunku nie jest niepewnością modelu."
+        ],
+        "ordinaryOnly": true,
+        "allowedViews": [
+          "life",
+          "mini"
+        ]
+      }
     },
     {
       "id": "busch2022-male-inhb",
@@ -38046,6 +38079,130 @@ const childhoodLhResultOnlyPolicies = [
     "wholeLifeResultNote": "Sam wynik zobaczysz w „Całym życiu”, bez mediany."
   }
 ];
+const infantLhTailPolicy = {
+  "id": "male-lh-infant-tail-2026",
+  "version": "2026-10-26.1",
+  "kind": "educational-infant-lh-tail-display",
+  "profileId": "busch2022-male-lh",
+  "analyte": "lh",
+  "sex": "male",
+  "unit": "IU/L",
+  "notClinicalReference": true,
+  "ordinaryOnly": true,
+  "source": {
+    "label": "Busch 2022 · modelowana mediana GAMLSS, rycina 3",
+    "url": "https://doi.org/10.1210/clinem/dgac115",
+    "doi": "10.1210/clinem/dgac115",
+    "figure": 3,
+    "printedPage": 1565,
+    "pdfSha256": "373c982e4e4f3221a3d17c646f833db5a0672eda41f689c5785d6633cb1ceb45",
+    "statistic": "Approximate drawn GAMLSS model median, not longitudinal mean or a laboratory RI",
+    "sourceAssay": "AutoDELFIA time-resolved fluoroimmunometric assay, PerkinElmer B031-101",
+    "sourceAssayLimit": {
+      "kind": "LOD",
+      "value": 0.05,
+      "unit": "IU/L",
+      "notPatientAssayLimit": true
+    },
+    "population": "Zdrowi chłopcy urodzeni o czasie, ciąże pojedyncze; COPENHAGEN Minipuberty Study, Dania",
+    "participantsPostnatal": 119,
+    "postnatalSerumSamples": 338,
+    "notAnalyteOrAgeSpecificCounts": true
+  },
+  "approval": {
+    "date": "2026-10-26",
+    "scope": "Wdrożenie zaproponowanego podziału po zakończonym audycie źródłowym; bez nowych RI, SDS lub diagnoz.",
+    "notClinicalValidation": true
+  },
+  "numericReference": {
+    "id": "male-lh-infant-tail-model-median",
+    "version": "2026-10-26.1",
+    "kind": "educational-model-median-extension",
+    "profileId": "busch2022-male-lh",
+    "minAge": 0.6652977412731006,
+    "minAgeExclusive": true,
+    "maxAge": 0.892539356605065,
+    "maxAgeExclusive": false,
+    "minAgeDays": 243,
+    "maxAgeDays": 326,
+    "dayDivisor": 365.25,
+    "fullAgeIntervalRequired": true,
+    "currentPatientOnly": true,
+    "contextAvailabilityKey": "infantLhContextAvailable",
+    "label": "Przybliżona mediana modelu Busch 2022",
+    "shortLabel": "Mediana modelu",
+    "significantDigits": 2,
+    "patientNote": "Przybliżone odniesienie do modelu, nie granica normy.",
+    "discussion": [
+      "Wartości pochodzą ze środka czarnej krzywej modelowanej mediany GAMLSS na rycinie 3, nie ze średniej podłużnej z ryciny 2.",
+      "Kontrolowany odczyt wektorowy odtwarza istniejące wartości źródłowe. Grubość linii nie jest błędem statystycznym modelu ani niepewnością numerycznego odczytu jej środka.",
+      "Wiek 326 dni jest konserwatywnym końcem przyjętej prezentacji liczbowej aplikacji, nie granicą modelu autorów ani progiem diagnostycznym.",
+      "Autorzy raportowali wyniki poniżej LOD jako połowę LOD. Również modelowana mediana powyżej LOD może zależeć od niskich pomiarów; nie jest dokładnie poznaną medianą stężeń niecenzurowanych.",
+      "Źródłowe LOD 0,05 IU/L dotyczy AutoDELFIA B031-101. Nie jest LOD próbki pacjenta, LOQ, górną normą ani progiem rozpoznania.",
+      "Szczegóły włączenia wyników poniżej LOD do dopasowania GAMLSS nie zostały osobno podane w publikacji. Precyzja rysunku nie jest niepewnością modelu."
+    ],
+    "ordinaryOnly": true,
+    "allowedViews": [
+      "life",
+      "mini"
+    ]
+  },
+  "resultOnlyPolicy": {
+    "version": "2026-10-26.1",
+    "id": "male-lh-infant-tail-result-only",
+    "kind": "educational-result-only",
+    "ordinaryOnly": true,
+    "analyte": "lh",
+    "sex": "male",
+    "unit": "IU/L",
+    "sourceProfileId": "busch2022-male-lh",
+    "minAge": 0.892539356605065,
+    "minAgeExclusive": true,
+    "maxAge": 1,
+    "maxAgeExclusive": true,
+    "minAgeDays": 326,
+    "maxAgeDays": 365.25,
+    "dayDivisor": 365.25,
+    "fullAgeIntervalRequired": true,
+    "currentPatientOnly": true,
+    "contextAvailabilityKey": "infantLhContextAvailable",
+    "allowedViews": [
+      "life",
+      "mini"
+    ],
+    "compatibleSpecimenIds": [
+      "serum",
+      "surowica"
+    ],
+    "excludedCyclePhases": [
+      "pregnancy",
+      "pregnancy_t1",
+      "pregnancy_t2",
+      "pregnancy_t3",
+      "postmenopause",
+      "postmenopausal",
+      "menopause"
+    ],
+    "patientNote": "Sam wynik, bez porównania do mediany.",
+    "discussion": [
+      "Model autorów obejmuje także dalszy niski odcinek, ale aplikacja pokazuje tutaj sam wynik bez liczbowej mediany, łącznika i ilorazu.",
+      "W wieku 340–390 dni 18 z 34 próbek LH w badaniu, czyli 53%, było poniżej źródłowego LOD. Precyzyjny odczyt grafiki nie odzyskuje tych nieznanych stężeń.",
+      "Modelowana P50 poniżej LOD nie staje się automatycznie nieważna. Sam wynik jest ostrożniejszym wyborem prezentacji aplikacji, nie regułą autorów ani normą.",
+      "Nie podstawiamy zera, 0,025 lub 0,05 IU/L jako mediany. LOD metody publikacji nie opisuje oznaczenia próbki pacjenta."
+    ],
+    "selectionPolicy": "Wymaga wybrania zgodnego profilu Busch i odrzucenia wyłącznie jego liczbowej kwalifikacji w całym późnym przedziale. Nie jest ogólnym fallbackiem po odrzuceniu źródła.",
+    "contextPolicy": "Wyłącznie bieżąca osoba i gotowy zgodny kontekst; zachowuje bramki źródła dotyczące donoszenia, materiału, metody, znanego leczenia, stymulacji oraz pełnego wieku.",
+    "measurementPolicy": "Dokładny skończony nieujemny wynik; zero pozostaje zerem. Nierówność lub LOD/LOQ nie daje dokładnej kropki. Poza stałą skalą strzałka zachowuje rzeczywistą liczbę.",
+    "sources": [
+      {
+        "label": "Busch 2022 · rycina 3 i metody",
+        "url": "https://doi.org/10.1210/clinem/dgac115"
+      }
+    ]
+  },
+  "archivePolicy": "Historyczny ekstrakt wektorowy i wszystkie liczby pozostają niezmienione. Wyłącznie flagi kwalifikacji LH po 243. do 326. dnia otrzymują nową jawną politykę prezentacji. Inne hormony zachowują dotychczasowe flagi.",
+  "agePolicy": "Cały możliwy wiek musi mieścić się w jednej dopuszczonej części. Nie dodajemy dokładności do ukończonych miesięcy lub lat ani nie przedłużamy domeny niemowlęcej poza jej wyłączny koniec."
+};
 const inhibinEvidence = {
   "version": "2026-10-10.1",
   "purpose": "educational-inhibin-b-group-observations",
@@ -45703,6 +45860,7 @@ return {
   maleLhCaliperReferencePolicy: maleLhCaliperReferencePolicy,
   gonadotropinComparisonPolicy: gonadotropinComparisonPolicy,
   gonadotropinComparisonReferenceData: gonadotropinComparisonReferenceData,
-  childhoodLhResultOnlyPolicies: childhoodLhResultOnlyPolicies
+  childhoodLhResultOnlyPolicies: childhoodLhResultOnlyPolicies,
+  infantLhTailPolicy: infantLhTailPolicy
 };
 });

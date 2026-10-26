@@ -2,7 +2,7 @@ import { createHash } from 'node:crypto';
 import { createRequire } from 'node:module';
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
-import { beforeFemaleE2ChildhoodBundle, beforeInhibinPost47Bundle } from '../support/prior-female-gonadotropin-bundle.mjs';
+import { beforeFemaleE2ChildhoodBundle, beforeInhibinPost47Bundle, beforeInfantLhTailBundle } from '../support/prior-female-gonadotropin-bundle.mjs';
 
 const require = createRequire(import.meta.url);
 const runtime = require('../../vilda_hormone_lifespan_data.js');
@@ -25,10 +25,10 @@ const addedNodes = [[47.25, 10], [47.5, 8], [47.75, 7]];
 
 describe('Inhibina B kobiet — źródłowe rozszerzenie po 47 do 47,75 lat', () => {
   it('zastępuje dokładnie jeden z 85 profili, zachowując 84 inne profile bieżącej bazy i historyczne hashe', () => {
-    expect(data.version).toBe('2026-10-22.2');
+    expect(data.version).toBe('2026-10-26.1');
     expect(data.profiles).toHaveLength(85);
     expect(data.profiles.some(item => item.id === prior.id)).toBe(false);
-    const others = data.profiles.filter(item => item.id !== profileId);
+    const others = beforeInfantLhTailBundle(data).profiles.filter(item => item.id !== profileId);
     expect(others).toHaveLength(84);
     // Exact audyt ab8ead6a (including the independently merged E2/Th1 group),
     // excluding only the replaced ordinary inhibin profile.

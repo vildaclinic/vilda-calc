@@ -417,11 +417,15 @@ describe('Punkt pacjenta — produkcyjny silnik i ilościowe dane źródłowe', 
     }
   });
 
-  it('nie rysuje punktu względem mediany zbyt bliskiej granicy oznaczalności i dokładności ryciny', () => {
-    for (const [analyte, lastDay] of [['lh', 243], ['t', 212], ['insl3', 95]]) {
-      expect(evaluate(analyte, lastDay / 365.25).status).toBe('ready');
-      expect(evaluate(analyte, (lastDay + 1) / 365.25)).toEqual(unavailable('reference-unavailable'));
-      expect(evaluate(analyte, lastDay / 365.25, { ageUpperYears: (lastDay + 1) / 365.25 }))
+  it('zachowuje odrębne końce kwalifikacji: zaakceptowany środek wektora LH oraz wcześniejsze reguły T i INSL3', () => {
+    for (const [analyte, lastDay] of [['lh', 326], ['t', 212], ['insl3', 95]]) {
+      const atDay = (day, extra = {}) => evaluate(analyte, day / 365.25, {
+        ...(analyte === 'lh' ? { ageUpperYears: day / 365.25, ageUpperInclusive: true,
+          contextBasis: 'current-patient', infantLhContextAvailable: true } : {}), ...extra,
+      });
+      expect(atDay(lastDay).status).toBe('ready');
+      expect(atDay(lastDay + 1)).toEqual(unavailable('reference-unavailable'));
+      expect(atDay(lastDay, { ageUpperYears: (lastDay + 1) / 365.25 }))
         .toEqual(unavailable('reference-unavailable'));
       // Source curve can remain visible beyond dot eligibility; this is not a
       // fabricated quantifiable patient-to-reference ratio below the floor.

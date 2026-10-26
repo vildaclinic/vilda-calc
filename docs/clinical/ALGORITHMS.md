@@ -20,6 +20,7 @@ Rejestr jest inwentaryzacją techniczną. Nie nadaje opisanym modułom statusu w
 | LAB-UNITS | Konwersje jednostek laboratoryjnych | `lab_unit_converter.js`, `lab_units_data.js` | Vitest konwersji | test regresyjny; każda nowa para jednostek wymaga źródła |
 | LAB-PUBERTY | LH/FSH: niezależna ocena zakresu i czasu dojrzewania | `vilda_lab_puberty_data.js`, `vilda_lab_puberty.js`, `vilda_lab_snapshot.js`, `vilda_lab_puberty_ui.js`, `vilda_lab_assessment_ui.js` | `lab-puberty*.test.mjs`, `lab-snapshot*.test.mjs`, `lab-assessment*.test.mjs`, E2E `lab-snapshot.spec.mjs`, `lab-puberty-ui.spec.mjs` | PR3: aktywacja LH/FSH w dotychczasowym układzie i odczyt utrwalonych ocen; szczegóły w `LH_FSH.md` |
 | LAB-LH-CHILDHOOD | LH dzieci: jednostronne orientacyjne odniesienie ≤0,3 obu płci i punkt wyniku bez mediany | dane i silnik LH/FSH, wspólne assessment/snapshot, polityki wykresu | regresje produkcyjnego porównania, adaptera, historii i UI/PWA; wyniki uruchomień w PR | makieta 04 i wdrożenie zaakceptowane 25.10.2026; nowe odniesienie ma własne pochodzenie, nie zmienia RI Mayo; [kontrakt](LH_CHILDHOOD_REFERENCE.md) |
+| HORMONE-INFANT-LH-TAIL | LH chłopców po 243. dniu: przybliżona mediana modelu do 326., później sam wynik do <1 roku | wspólny silnik/renderer odniesień wieku, osobna polityka ogona Busch i dotychczasowe węzły | regresje rzeczywistego API, adaptera, UI/PWA i zachowania pozostałych profili; wykonane wyniki w PR | wdrożenie zaakceptowane 26.10.2026; zwykłe widoki życia/minipuberty, bez zmiany RI, porównania płci lub historii; [kontrakt](hormone-lifespan/LH_INFANT_TAIL.md) |
 | LAB-INHIBIN-B | Inhibina B: wiek, minipuberty i kontekst dorosłych | `vilda_lab_inhibin_b_data.js`, `vilda_lab_inhibin_b.js`, wspólne UI i snapshot | `lab-inhibin*.test.mjs`, E2E `lab-inhibin-b.spec.mjs` | orientacyjne zakresy źródłowe; ograniczenia i polityki w `INHIBIN_B.md`; akceptacja kliniczna właściciela przed scaleniem |
 | LAB-TT-MAYO | Testosteron całkowity: M według wieku/G, F według wieku od 6 miesięcy | `vilda_lab_testosterone_data.js`, `vilda_lab_testosterone.js`, `vilda_lab_testosterone_units.js`, wspólne UI i snapshot | `lab-testosterone*.test.mjs`, E2E `lab-testosterone*.spec.mjs`; wyniki uruchomień w PR | etap 3 M i pierwsza partia F; źródła, luki i polityki w `TESTOSTERONE.md`; końcowy przegląd kliniczny właściciela przed scaleniem |
 | HORMONE-FEMALE-TT-AGE | TT dziewcząt 6–18: osobna mediana modelu i punkt wyniku | `vilda_female_tt_age.js`, `vilda_female_tt_age_ui.js`, osobne dane/polityka pakowane do runtime | `female-tt-age.test.mjs`, E2E `lab-female-tt-age*.spec.mjs`; wyniki w PR | zakres zaakceptowanej makiety 24.10.2026; poza 85 zwykłymi profilami, bez nowych RI/SDS/historii; [kontrakt](hormone-lifespan/FEMALE_TT_AGE.md) |
@@ -2872,6 +2873,74 @@ RI i wcześniejsze dane, mobile 320/390, pełny ekran/fokus i zimny start
 PWA po zamknięciu przeglądarki/wyłączeniu serwera. Wykonane wyniki i CI
 dla końcowego SHA podaje PR. Pełny kontrakt, hashe i źródłowe ograniczenia:
 [MALE_E2_ADULT_AGE.md](hormone-lifespan/MALE_E2_ADULT_AGE.md).
+
+### HORMONE-INFANT-LH-TAIL — późne niemowlęce LH chłopców, 2026-10-26
+
+**Decyzja właściciela:** po audycie pełnego Busch 2022 i trzech
+oficjalnych suplementów v1 wdrożyć przybliżoną modelową medianę dla
+całego znanego wieku `(243;326]` dnia, a następnie sam wynik w
+`(326 dni;1 rok)`. Nowa polityka dotyczy zwykłych widoków „Całe życie”
+i „Minipuberty”; porównanie płci zachowuje dotychczasowe ograniczenie
+punktu LH do 243. dnia. Nie zmienia się geometria, stała skala,
+testosteron ani inne anality.
+
+**Źródło i zakres:** Busch AS i wsp., JCEM 2022;107:1560–1568,
+[DOI 10.1210/clinem/dgac115](https://doi.org/10.1210/clinem/dgac115),
+Methods/Results s. 1561–1562 i ryc. 3 s. 1565. Zdrowi donoszeni chłopcy
+z ciąż pojedynczych, COPENHAGEN Minipuberty, Dania; 119 chłopców
+i 338 pourodzeniowych próbek surowicy nie są potwierdzonym N modelu LH
+lub jego ogona. LH oznaczano AutoDELFIA B031-101, źródłowe LOD
+0,05 IU/L, bez osobnego LOQ LH. Metoda źródła nie jest potwierdzeniem
+metody próbki pacjenta; LOD nie jest jego limitem, RI lub progiem CPP.
+
+Czarna krzywa ryc. 3 to modelowana mediana GAMLSS, nie średnia z ryc. 2.
+Nie znaleziono liczbowego eksportu modelu LH. Ponowny odczyt wektora
+potwierdził 394 zachowane węzły z różnicą najwyżej 0,000000494 IU/L
+wynikającą z ich zaokrąglenia. Grubość kreski nie jest błędem środka
+ścieżki ani niepewnością modelu. **326 jest granicą prezentacji aplikacji**,
+nie końcem modelu autora. Mediana poniżej LOD nie staje się automatycznie
+nieważna; precyzja grafiki nie odzyskuje dokładnej mediany nieznanych
+stężeń. Autorzy raportowali wyniki poniżej limitu jako limit/2, lecz
+nie opisali osobno ich włączenia do funkcji wiarygodności GAMLSS.
+Nie podstawiamy 0,025, 0,05 lub zera jako mediany.
+
+**Kontrakt wykonania:** `infantLhTailPolicy`, wersja `2026-10-26.1`,
+zawiera `male-lh-infant-tail-model-median` oraz
+`male-lh-infant-tail-result-only`. Obie wymagają jawnego pełnego wieku
+i gotowego aktualnego kontekstu `infantLhContextAvailable: true`.
+Pierwsza korzysta z niezmienionych stężeń i PCHIP profilu
+`busch2022-male-lh`; tylko nowe dopasowanie dodaje `referencePolicy`.
+Ścieżka do dnia 243 zachowuje dotychczasowy kontrakt. Druga dopuszcza
+wynik dopiero po zgodnym wyborze tego profilu, gdy jedyną przyczyną
+braku odniesienia jest `reference-unavailable` w całym późnym zakresie.
+Nie omija znanego wcześniactwa, niezgodnej metody/materiału, leczenia,
+stymulacji lub niedostępnego kontekstu. Rejestr `2026-10-26.1` nadal ma 85 profili;
+archiwum wektorowe, wszystkie stężenia i pozostałe 84 profile pozostają
+bez zmiany. Nowa kwalifikacja nie zależy od wartości wyniku.
+
+Już podana data urodzenia może dostarczyć osobne przejściowe
+`infantLhChronologicalAge` wyłącznie bieżącemu wykresowi LH. Jawny opt-in
+cache do <12 miesięcy zachowuje wszystkie możliwe ukończone dni,
+bez dopisywania godziny, eksportu DOB lub uściślania wejścia laboratoryjnego
+i innych analitów; domyślny odczyt kliniczny pozostaje przy <6 miesiącach.
+
+**Syntetyczne wejście → oczekiwanie:** kwalifikujący donoszony M244 dni,
+LH 0,4 IU/L → punkt 0,4 i przybliżona mediana ≈0,17; M300/LH 0,1 →
+mediana ≈0,070; dokładne M326 → ≈0,050; M330/LH 0,1 → sam punkt,
+bez liczbowej mediany, łącznika i ilorazu. Przedział `[243,244)` lub
+`[326,327)` nie kwalifikuje nowej ścieżki. Dokładny rok, nierówność
+lub LOD zamiast dokładnego wyniku nie tworzą zastępczej kropki.
+Zero i wynik ponad osią zachowują rzeczywistą liczbę oraz stałą skalę.
+
+**Wpływ kliniczny:** zmienia się dostępność edukacyjnego porównania,
+bez nowego RI, SDS, centyla lub diagnozy. Nie przeliczamy dawnych ocen,
+nie dodajemy migawki LH; edukacyjna migawka pozostaje AMH-only.
+Regresje mają używać rzeczywistych funkcji produkcyjnych i obejmować
+pełne granice, źródłowe bramki, kontekst, historię, porównanie płci,
+PWA/offline oraz zachowanie innych profili. Wykonane wyniki i kontrole
+końcowego SHA podaje PR, bez utożsamiania ich z walidacją kliniczną.
+Pełny kontrakt, źródła i mały własny ekstrakt audytu:
+[LH_INFANT_TAIL.md](hormone-lifespan/LH_INFANT_TAIL.md).
 
 ### HORMONE-LH-FSH-STABLE-CURVES — stałe krzywe i dorosłe odniesienia, 2026-10-11
 
@@ -24351,6 +24420,31 @@ SW 1.1.171 → **1.1.172**; `custom-fixes.js?v=72→73`, `vilda_data_import_expo
 `vilda_persist_runtime.js?v=19→20`, `vilda_persistence_adapter.js?v=29→30`, `vilda_shell.js?v=59→60`,
 `vilda_unsaved_guard.js?v=5→6`; nowy `vilda_panel_pacjent.js?v=1` (index, docpro, kalkulator-klirens; precache).
 
+
+### P-PERSIST-CURRENT-NAME — odroczony autosave nie usuwa nowszej nazwy bieżącego formularza, 26 października 2026
+
+**Problem.** Przy regresjach późnego niemowlęcego LH odtworzono rzeczywistą kolejność:
+zdarzenie formularza tworzy kopię `L` bez nazwy → DOB/`userData` publikuje pełniejszy
+stan tej samej osoby → timer `vilda_persist_runtime.x()` zapisuje starsze `L` i usuwa
+`name`/`fullName`. Po przejściu do przelicznika `VildaSession.getPatient()` nie ma
+nazwanego nośnika i przycisk przypięcia wyniku jest niedostępny. Sonda obserwująca
+rzeczywiste zapisy magazynu odtworzyła ostatni zapis usuwający nazwę w czterech
+niezależnych kontekstach; nie zmieniała danych przekazywanych między modułami.
+
+**Naprawa.** Po dotychczasowym odrzuceniu kolejki innej osoby (`Pp_obcy`) runtime
+uzgadnia wyłącznie parę `name`/`fullName` i jej wpisy `byId`. Świeży alias musi zgadzać
+się z aktualnym polem nazwy w DOM. Stary alternatywny alias nie przeżywa zmiany albo
+wyczyszczenia. Brak pola nazwy lub konflikt DOM–świeży stan nie uruchamia zastępczego
+odczytu z innej pamięci. Jawna blokada sejfu nie pozwala odtworzyć nazw z kolejki.
+Pozostałe dane, właściciel kolejki, restore/clear, kolejność zapisu i API pozostają
+bez zmian; nie scala się całego świeżego korzenia z opóźnioną kopią.
+
+**Wpływ i regresje.** Bez zmiany wyników, norm, źródeł i ocen laboratoryjnych ani
+formatu rekordu. `tests/unit/persist-current-name.test.mjs` wywołuje prawdziwy adapter,
+runtime i konsumenta `VildaSession`: timer i force, oba aliasy, późniejsze restore,
+jawne wyczyszczenie, konflikt DOM, brak pola, blokada oraz zmiana `patientId`, także
+przy identycznej nazwie dwóch fikcyjnych osób. Przed poprawką siedem nowych przypadków
+było czerwonych. Wynik końcowej walidacji E2E/PWA i CI podaje PR.
 
 ## Stan kart DocPro należy do pacjenta; ramka DocPro w tle czyści karty po zmianie pacjenta w innej ramce (P-TOZSAMOSC-RAMEK, SW 1.1.119, `docpro_state_persist.js` 6, 2026-09-30)
 

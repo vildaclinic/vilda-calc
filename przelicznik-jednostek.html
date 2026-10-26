@@ -495,13 +495,13 @@
   <script src="vilda_lab_puberty_ui.js?v=20"></script>
   <script src="vilda_zrodla_pacjenta.js?v=1"></script>
   <script src="vilda_puberty_source.js?v=13"></script>
-  <script src="vilda_lab_neonatal_context.js?v=2"></script>
-  <script src="vilda_hormone_lifespan_data.js?v=45"></script>
-  <script src="vilda_hormone_lifespan_reference.js?v=8"></script>
+  <script src="vilda_lab_neonatal_context.js?v=3"></script>
+  <script src="vilda_hormone_lifespan_data.js?v=46"></script>
+  <script src="vilda_hormone_lifespan_reference.js?v=9"></script>
   <script src="vilda_hormone_lifespan_observations.js?v=1"></script>
-  <script src="vilda_hormone_lifespan_display.js?v=15"></script>
+  <script src="vilda_hormone_lifespan_display.js?v=16"></script>
   <script src="vilda_insl3_age_source.js?v=1"></script>
-  <script src="vilda_hormone_lifespan.js?v=45"></script>
+  <script src="vilda_hormone_lifespan.js?v=46"></script>
   <script src="vilda_amh_age_reference_data.js?v=1"></script>
   <script src="vilda_amh_age_reference.js?v=1"></script>
   <script src="vilda_amh_age_reference_ui.js?v=1"></script>
@@ -768,6 +768,22 @@
         if (neonatalAge.gestationalDays && Number.isFinite(pretermLimitDays)) {
           context.preterm = neonatalAge.gestationalDays.upper < pretermLimitDays ? 'yes'
             : neonatalAge.gestationalDays.lower >= pretermLimitDays ? 'no' : 'unknown';
+        }
+      }
+      if (includeMinipubertyDays && currentSubstance.id === 'lh' && sex === 'M'
+          && !(neonatalAge && neonatalAge.postnatalDays) && window.VildaLabNeonatalContext
+          && lifespanChildhoodLhAvailable(context)) {
+        // The late calendar cache is a separate graph-only opt-in. It must
+        // never become the neonatal input used by laboratory qualification.
+        var sameMainAge = [[ageYears, shared.age], [ageMonths, shared.ageMonths]].every(function (parts) {
+          return parts.every(function (part) { return ['number', 'string'].includes(typeof part)
+            && String(part).trim() !== '' && Number.isFinite(Number(part)); })
+            && Number(parts[0]) === Number(parts[1]);
+        });
+        if (sameMainAge) {
+          var infantLhAge = window.VildaLabNeonatalContext.read(shared, identity, source,
+            { includeMinipuberty: true, includeInfantLhTail: true });
+          if (infantLhAge && infantLhAge.postnatalDays) context.infantLhChronologicalAge = infantLhAge;
         }
       }
       return context;
@@ -1259,6 +1275,38 @@
       } catch (_) { return false; }
       return true;
     }
+    function lifespanInfantLhChronology(source, input, substance) {
+      if (!substance || substance.id !== 'lh' || !source || source.sex !== 'M' || !input || input.sex !== 'M'
+          || input.contextBasis !== 'current-patient' || input.sampleDateISO
+          || !lifespanChildhoodLhAvailable(source) || lifespanContraindicated(source, input, input)
+          || localOverride.sex || localOverride.age != null) return null;
+      function samePart(left, right) {
+        var leftMissing = left == null || left === '', rightMissing = right == null || right === '';
+        return leftMissing || rightMissing ? leftMissing && rightMissing
+          : ['number', 'string'].includes(typeof left) && ['number', 'string'].includes(typeof right)
+            && Number.isFinite(Number(left)) && Number(left) === Number(right);
+      }
+      var age = input.age;
+      if (!age || !samePart(age.years, source.ageYears) || !samePart(age.months, source.ageMonths)
+          || age.days != null || input.birthDateISO && input.birthDateISO !== source.birthDateISO) return null;
+      var chronology = source.infantLhChronologicalAge, postnatal = chronology && chronology.postnatalDays;
+      var policy = window.VildaHormoneLifespanData && window.VildaHormoneLifespanData.infantLhTailPolicy;
+      var numeric = policy && policy.numericReference, divisor = numeric && numeric.dayDivisor;
+      var engine = window.VildaLabPuberty;
+      if (!postnatal || !Number.isSafeInteger(postnatal.lower) || !Number.isSafeInteger(postnatal.upper)
+          || postnatal.lower < 0 || postnatal.upper < postnatal.lower
+          || postnatal.source !== 'main-calendar-dates' || !Number.isFinite(divisor) || divisor <= 0
+          || !Number.isFinite(numeric.minAgeDays) || postnatal.upper + 1 <= numeric.minAgeDays
+          || !engine || typeof engine.resolveAge !== 'function') return null;
+      var validated = engine.resolveAge({ age: null, neonatalAge: chronology });
+      if (!validated || validated.status !== 'known') return null;
+      // The cache stores a range of possible completed days. Keep its full
+      // elapsed-time enclosure, including the final incomplete day. Only this
+      // diagram uses the source's fixed day/year coordinate; the clinical
+      // resolver and saved laboratory assessment retain their original bounds.
+      return Object.assign({}, validated, { lowerYears: postnatal.lower / divisor,
+        upperYears: (postnatal.upper + 1) / divisor, upperInclusive: false });
+    }
     function lifespanAnonymousMainTreatment(source, input) {
       // The anonymous main-form mirror can carry treatment without a Tanner
       // visit marker. It may only withhold this card, never supply a patient's
@@ -1317,12 +1365,15 @@
             // to position reported days using its original chronological age.
             resolved = window.VildaLabPuberty.resolveAge(input);
           }
+          var infantLhChronology = lifespanInfantLhChronology(source, input, substance);
+          if (infantLhChronology) resolved = infantLhChronology;
           patient = input;
           if (resolved && resolved.status === 'known') {
             // Position denotes the completed age, never an invented birthday.
             years = resolved.lowerYears;
             upperYears = resolved.upperYears;
-            label = lifespanAgeLabel(resolved, input);
+            label = lifespanAgeLabel(resolved, infantLhChronology
+              ? { neonatalAge: source.infantLhChronologicalAge } : input);
           }
         } else {
           patient = getEffectivePatient();
@@ -1407,6 +1458,7 @@
           ? input.assay.methodId || null : !isPubertyReferenceSubstance(substance) && patient && patient.method || null,
         sourceStatus: status,
         childhoodLhContextAvailable: substance.id === 'lh' && status === 'ready' && lifespanChildhoodLhAvailable(source),
+        infantLhContextAvailable: substance.id === 'lh' && status === 'ready' && lifespanChildhoodLhAvailable(source),
         // Used in memory only to invalidate the previous person's UI state.
         identityKey: source.identityKey || ''
       };

@@ -206,6 +206,44 @@
     });
   }
 
+  function currentPolicyReason(policy, context) {
+    if (policy.fullAgeIntervalRequired !== true || policy.currentPatientOnly !== true ||
+        typeof policy.contextAvailabilityKey !== 'string' || !policy.contextAvailabilityKey) {
+      return 'reference-unavailable';
+    }
+    if (!finite(context.ageUpperYears) || typeof context.ageUpperInclusive !== 'boolean' ||
+        (context.ageUpperYears === context.ageYears && context.ageUpperInclusive !== true)) {
+      return 'ambiguous-age';
+    }
+    var exclusiveEnd = context.ageUpperInclusive === false && context.ageUpperYears > context.ageYears;
+    if (!inDomain(policy, context.ageYears) ||
+        (!inDomain(policy, context.ageUpperYears) &&
+          !(exclusiveEnd && context.ageUpperYears === policy.maxAge))) return 'ambiguous-age';
+    if (context.contextBasis !== 'current-patient' ||
+        (context.sampleDateISO != null && context.sampleDateISO !== '')) return 'incompatible-current-context';
+    if (context[policy.contextAvailabilityKey] !== true) return 'current-context-unavailable';
+    var phase = typeof context.cyclePhase === 'string' ? context.cyclePhase.trim().toLowerCase() : '';
+    if (phase && Array.isArray(policy.excludedCyclePhases) && policy.excludedCyclePhases.indexOf(phase) >= 0) {
+      return 'incompatible-reproductive-context';
+    }
+    return null;
+  }
+
+  function numericExtension(data, profile, context, upper) {
+    var policy = profile.numericReferencePolicy;
+    if (!policy) return null;
+    if (policy.kind !== 'educational-model-median-extension' || policy.profileId !== profile.id ||
+        !finite(policy.minAge) || !finite(policy.maxAge)) return unavailable('reference-unavailable');
+    // The preceding source interval keeps its original API and presentation.
+    // Only a whole age touching the newly qualified segment needs this policy.
+    if (context.ageYears <= policy.minAge && upper <= policy.minAge) return null;
+    if (policy.ordinaryOnly === true && data && data.referenceScope === 'sex-comparison') {
+      return unavailable('reference-unavailable');
+    }
+    var reason = currentPolicyReason(policy, context);
+    return reason ? unavailable(reason) : { status: 'ready', policy: policy };
+  }
+
   function evaluate(data, context) {
     context = context || {};
     var choice = selected(data, context);
@@ -231,9 +269,44 @@
       upper = Math.max(context.ageYears, upper - Math.max(1, Math.abs(upper)) * Number.EPSILON * 4);
     }
     if (!eligibleSpan(profile, context.ageYears, upper)) return unavailable('reference-unavailable');
+    var extension = numericExtension(data, profile, context, upper);
+    if (extension && extension.status !== 'ready') return extension;
     var referenceValue = referenceAt(profile, context.ageYears);
     if (!(referenceValue > 0)) return unavailable('reference-unavailable');
-    return { status: 'ready', profile: profile, value: value, referenceValue: referenceValue };
+    var result = { status: 'ready', profile: profile, value: value, referenceValue: referenceValue };
+    if (extension) result.referencePolicy = extension.policy;
+    return result;
+  }
+
+  function selectedResultOnly(data, context, profile) {
+    var tail = data && data.infantLhTailPolicy;
+    var policy = tail && tail.resultOnlyPolicy;
+    if (!tail || tail.kind !== 'educational-infant-lh-tail-display' || tail.profileId !== profile.id ||
+        !policy || policy.kind !== 'educational-result-only' || policy.ordinaryOnly !== true ||
+        policy.sourceProfileId !== profile.id || policy.analyte !== profile.analyte ||
+        policy.sex !== profile.sex || policy.unit !== profile.unit || !inDomain(policy, context.ageYears)) {
+      return unavailable('reference-available');
+    }
+    if (data.referenceScope === 'sex-comparison') return unavailable('reference-unavailable');
+    var reason = currentPolicyReason(policy, context);
+    if (reason) return unavailable(reason);
+    // This permission follows a successfully selected source and ONLY the
+    // rejection of its numerical eligibility. It never recovers another source
+    // failure, an invalid model, an invalid/censored measurement or bad units.
+    var comparison = evaluate(data, context);
+    if (comparison.status !== 'unavailable' || comparison.reason !== 'reference-unavailable') {
+      return comparison.status === 'ready' ? unavailable('reference-available') : comparison;
+    }
+    var fitted = model(profile);
+    var upper = context.ageUpperYears;
+    if (context.ageUpperInclusive === false && upper > context.ageYears) {
+      upper -= Math.max(1, Math.abs(upper)) * Number.EPSILON * 4;
+    }
+    if (!fitted || !interval(fitted.points, context.ageYears) || !interval(fitted.points, upper) ||
+        eligibleSpan(profile, context.ageYears, upper)) return unavailable('reference-unavailable');
+    var units = sourceData(data).unitConversions[profile.analyte];
+    return { status: 'result-only', policy: policy,
+      value: context.measurement.value * units.factors[context.measurement.unit], unit: policy.unit };
   }
 
   function evaluateResultOnly(data, context) {
@@ -241,7 +314,7 @@
     // This path is an explicitly scoped display permission, never a fallback
     // for a source profile rejected by its age, method or population gates.
     var choice = selected(data, context);
-    if (choice.status === 'ready') return unavailable('reference-available');
+    if (choice.status === 'ready') return selectedResultOnly(data, context, choice.profile);
     if (choice.reason !== 'unsupported-age') return choice;
     var source = sourceData(data);
     // Permissions are kept outside the untouched numeric reference bundle.
@@ -309,6 +382,6 @@
     return sourceOutcome({ status: 'result-only', policy: policy, value: value, unit: policy.unit });
   }
 
-  return { version: '1.4.0', evaluate: evaluate, evaluateResultOnly: evaluateResultOnly, selectProfile: selected,
+  return { version: '1.5.0', evaluate: evaluate, evaluateResultOnly: evaluateResultOnly, selectProfile: selected,
     referenceAt: referenceAt, sampleProfile: sampleProfile };
 });

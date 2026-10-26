@@ -123,7 +123,14 @@ describe('LH/FSH — actual numerical source selection, independent of the educa
       expect(evaluate('fsh', 3, { puberty: stage })).toEqual(unavailable('incompatible-puberty-stage'));
     }
     expect(evaluate('lh', 243 / 365.25).status).toBe('ready');
-    expect(evaluate('lh', 244 / 365.25)).toEqual(unavailable('reference-unavailable'));
+    expect(evaluate('lh', 244 / 365.25)).toEqual(unavailable('ambiguous-age'));
+    const currentLh = { ageUpperYears: 244 / 365.25, ageUpperInclusive: true,
+      contextBasis: 'current-patient', infantLhContextAvailable: true };
+    expect(evaluate('lh', 244 / 365.25, currentLh)).toMatchObject({
+      status: 'ready', referenceValue: .170118, profile: { id: 'busch2022-male-lh' },
+    });
+    expect(evaluate('lh', 327 / 365.25, { ...currentLh, ageUpperYears: 327 / 365.25 }))
+      .toEqual(unavailable('reference-unavailable'));
   });
 
   it('retains real assay, specimen, contraindication and censored-result guards for newly supported adults', () => {

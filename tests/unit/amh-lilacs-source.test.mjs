@@ -3,7 +3,7 @@ import { readFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import vm from 'node:vm';
 import { describe, expect, it, vi } from 'vitest';
-import { beforeFshSourceRuntime } from '../support/prior-female-gonadotropin-bundle.mjs';
+import { beforeFshSourceRuntime, beforeInfantLhTailBundle } from '../support/prior-female-gonadotropin-bundle.mjs';
 
 const require = createRequire(import.meta.url);
 const ui = require('../../vilda_amh_lilacs_source_ui.js');
@@ -101,8 +101,8 @@ describe('AMH LiLACS — published source information, not a patient reference',
     // Frozen base594657f4: removing the two separate source-information fields
     // restores every earlier profile, geometry, policy and conversion verbatim.
     expect(digest(priorRuntime)).toBe('3bd76a0264cc097e81549d71bbd8aa2bb80611c3ff3ef18861f22a8294d78c4b');
-    expect(digest(runtime.patientPointData)).toBe('28730dd407d52ef41afe8f2f5af5ab56ce541398e1c25d4dce5be5324a5ddcc9');
-    expect(runtime.patientPointData.version).toBe('2026-10-22.2');
+    expect(digest(beforeInfantLhTailBundle(runtime.patientPointData))).toBe('28730dd407d52ef41afe8f2f5af5ab56ce541398e1c25d4dce5be5324a5ddcc9');
+    expect(runtime.patientPointData.version).toBe('2026-10-26.1');
     expect(runtime.patientPointData.profiles).toHaveLength(85);
   });
 

@@ -1,5 +1,15 @@
 # Punkt wyniku na wykresie hormonów
 
+**Uzupełnienie 26 października 2026 — późne niemowlęce LH chłopców:**
+po ponownym sprawdzeniu Busch 2022 właściciel polecił wdrożenie
+[odrębnej polityki](LH_INFANT_TAIL.md): cały znany wiek `(243;326]` dnia
+otrzymuje przybliżoną medianę modelu, a `(326 dni;1 rok)` sam wynik.
+Dotyczy zwykłych widoków „Całe życie” i „Minipuberty”. Porównanie płci
+zachowuje dawną kwalifikację do 243. dnia. Poniższe opisy pierwotnej
+bramki jakości pozostają historią i podstawą pozostałych analitów;
+nie są już pełną polityką zwykłego męskiego LH. Ekstrakt wektorowy,
+stężenia, reguły testosteronu, RI i dawne oceny nie są przepisywane.
+
 **Aktualny stan pokrycia, 18 października 2026:**
 [rejestr audytu](REFERENCE_COVERAGE_AUDIT.md) rozdziela zwykły punkt wieku,
 osobne odniesienia fazowe/grupowe, RI i ilustracje. Poniższe datowane
@@ -1300,6 +1310,14 @@ minimalnej. W zapisanym odczycie ostatnie całe dni kwalifikujące punkt to
 do końca aktywnego okresu niemowlęcego. INSL3 nie jest aktywnym kalkulatorem;
 jego odrębne ograniczenia omówiono wyżej. Heurystyka rozdzielczości grafiki
 nie jest dowodem nieobecności wczesnej fali fizjologicznej.
+
+**Wyjątek dla zwykłego LH, 26.10.2026:** po odrębnym audycie środka
+ścieżki wektorowej nowa [polityka ogona](LH_INFANT_TAIL.md) zachowuje
+stare zachowanie do dnia 243, dopuszcza przybliżoną modelową medianę
+w całym `(243;326]` oraz sam wynik w `(326 dni;1 rok)`. Granica 326 jest
+decyzją prezentacji aplikacji, nie końcem modelu autorów. Nie usuwa to
+bramki innych analitów lub odrębnego porównania płci i nie zamienia
+źródłowego LOD w limit oznaczenia pacjenta.
 
 Wang: źródło oznacza grupy wieku liczbami 0–14, a na ryc. 1 ich środki
 znajdują się w przybliżeniu przy N+0,5 roku. Nie opisuje dokładnej reguły

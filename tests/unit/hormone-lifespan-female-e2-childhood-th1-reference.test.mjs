@@ -25,7 +25,7 @@ const unavailable = reason => ({ status: 'unavailable', reason });
 
 describe('E2 dziewczynek — jawna mediana grupy Th1 w wieku >1–<6 lat', () => {
   it('dodaje jeden profil i zachowuje dokładnie wszystkie 84 wcześniejsze profile oraz cały pozostały runtime', () => {
-    expect(data.version).toBe('2026-10-22.2');
+    expect(data.version).toBe('2026-10-26.1');
     expect(data.profiles).toHaveLength(85);
     expect(data.profiles.filter(item => item.id === id)).toHaveLength(1);
     // Exact E2 group profile already merged in audyt ab8ead6a (PR #752).
