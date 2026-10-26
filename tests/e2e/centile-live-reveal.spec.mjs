@@ -57,6 +57,7 @@ function installProbe() {
           pendingElapsed: typeof since === 'number' && since > 0 ? Date.now() - since : null,
           controlledPendingElapsed: window.__revealViewportChangeAt ? Date.now() - window.__revealViewportChangeAt : null,
           mount: box(mount), mountVisible: visible(mount, owner), fieldset: box(fieldset), card: box(card), opacity, fades: fades(card),
+          native: owner.__readRevealAnimation?.(card) || null,
           message: visible(message, owner), title: visible(title, owner),
           messageAvailable: available(message), titleAvailable: available(title),
           messageText: message?.textContent || '',
@@ -69,9 +70,12 @@ function installProbe() {
             && !owner.VildaDataImportExport?.isMainSessionRestorePending?.()),
         });
         if (result.frames.length > 10_000) result.frames.shift();
-        if (window.__revealExpandDuringFade && !result.expandedDuringFade && opacity > 0 && opacity < 1 && fades(card)) {
+        const reveal = fadeAnimations(card)[0];
+        if (window.__revealExpandDuringFade && !result.expandedDuringFade && reveal
+          && reveal.currentTime !== null && reveal.currentTime < reveal.effect.getTiming().duration) {
           result.expandedDuringFade = true;
-          const reveal = fadeAnimations(card)[0];
+          // Klikamy podczas rzeczywiście trwającego efektu, także przy jego
+          // początku. Nie czekamy na RAF, który trafi w pośrednią opacity.
           card.querySelector('.vilda-centile-live-expand').click();
           result.revealCancelledOnExpand = reveal.playState === 'idle';
         }
@@ -87,6 +91,18 @@ function observeNativeAnimations() {
   const result = window.top.__revealPaint;
   const documentId = ++result.documents;
   window.__revealAnimationDocument = documentId;
+  const tracked = new WeakMap();
+  function sampleNative(element, id, animation) {
+    return {
+      id, documentId, currentTime: animation.currentTime, playState: animation.playState,
+      progress: animation.effect.getComputedTiming().progress,
+      targetMatches: animation.effect.target === element,
+    };
+  }
+  window.__readRevealAnimation = element => {
+    const entry = element && tracked.get(element);
+    return entry ? sampleNative(element, entry.id, entry.animation) : null;
+  };
   const original = window.Element.prototype.animate;
   window.Element.prototype.animate = function (...args) {
     const animation = original.apply(this, args);
@@ -94,9 +110,21 @@ function observeNativeAnimations() {
     if (this.classList.contains('vilda-centile-live-card')
       && keyframes.some(frame => frame.opacity !== undefined)
       && keyframes.every(frame => frame.transform === undefined)) {
-      const event = type => ({ type, at: Date.now(), currentTime: animation.currentTime, playState: animation.playState });
+      const id = result.animations.length + 1;
+      tracked.set(this, { id, animation });
+      const event = type => {
+        const rect = this.getBoundingClientRect();
+        return {
+          ...sampleNative(this, id, animation), type, at: Date.now(),
+          opacity: Number(getComputedStyle(this).opacity),
+          card: { x: rect.x, y: rect.y, width: rect.width, height: rect.height },
+          attached: this.isConnected && this.ownerDocument === document,
+          selectedCard: this === document.querySelector('#vildaCentileLiveMount .vilda-centile-live-card'),
+          image: Boolean(this.querySelector('canvas.vilda-centile-live-image')),
+        };
+      };
       const record = {
-        documentId, path: location.pathname, timing: animation.effect.getTiming(),
+        id, documentId, path: location.pathname, timing: animation.effect.getTiming(),
         keyframes: keyframes.map(frame => ({ opacity: frame.opacity, offset: frame.computedOffset })),
         playbackRate: animation.playbackRate, events: [event('start')],
       };
@@ -223,22 +251,33 @@ function assertFade(observed, path, documentId) {
   expect(animation.keyframes).toEqual([{ opacity: '0', offset: 0 }, { opacity: '1', offset: 1 }]);
   expect(animation.playbackRate).toBe(1);
   expect(animation.events.map(event => event.type), 'animacja kończy się naturalnie, bez anulowania').toEqual(['start', 'finish']);
-  expect(animation.events[1]).toMatchObject({ currentTime: 300, playState: 'finished' });
-  const start = frames.findIndex(frame => frame.opacity === 0 && frame.fades === 1);
-  const partial = frames.findIndex((frame, index) => index > start && frame.opacity > 0 && frame.opacity < 1 && frame.fades === 1);
-  const end = frames.findIndex((frame, index) => index > partial && frame.opacity === 1 && frame.fades === 0);
-  expect(start, 'rzeczywista klatka początku opacity 0').toBeGreaterThanOrEqual(0);
-  // Zajęty runner może próbkować RAF co 100–250 ms. Wymagamy obserwacji trzech
-  // etapów oraz natywnego pełnego przebiegu 300 ms, a nie minimalnej liczby FPS.
-  expect(partial, 'rzeczywista klatka pośredniej opacity').toBeGreaterThan(start);
-  expect(end, 'rzeczywista klatka końca opacity 1').toBeGreaterThan(partial);
-  const transition = frames.slice(start, end + 1);
-  const reference = transition[0].card;
-  for (const frame of transition) {
-    expect(frame.card).toEqual(reference);
+  const [start, finish] = animation.events;
+  expect(start, 'rzeczywisty element ma opacity 0 od początku efektu').toMatchObject({ currentTime: 0, progress: 0, opacity: 0, playState: 'running' });
+  expect(finish, 'naturalny koniec odsłania rzeczywisty element').toMatchObject({ currentTime: 300, opacity: 1, playState: 'finished' });
+  for (const event of animation.events) {
+    expect(event).toMatchObject({ id: animation.id, documentId, targetMatches: true, attached: true, selectedCard: true, image: true });
+    expect(event.card).toEqual(start.card);
+  }
+  expect(start.card.width).toBeGreaterThan(0);
+  expect(start.card.height).toBeGreaterThan(0);
+  expect(frames.length, 'obserwujemy także faktycznie wyświetlany obraz').toBeGreaterThan(0);
+  expect(frames.at(-1)).toMatchObject({ opacity: 1, fades: 0, mountVisible: true });
+  // RAF może nie otrzymać żadnej próbki wnętrza 300 ms. To nie dowodzi braku
+  // animacji i nie pomija testu: start, finish i cały native lifecycle powyżej
+  // pozostają obowiązkowe. Każdą dostępną próbkę sprawdzamy względem postępu
+  // TEGO efektu (progress zawiera ease-out), bez wymagania minimalnego FPS.
+  for (const frame of frames) {
+    expect(frame.native).toMatchObject({ id: animation.id, documentId, targetMatches: true });
+    if (frame.native.progress !== null) {
+      expect(frame.opacity, 'widoczna opacity odpowiada natywnemu postępowi efektu').toBeCloseTo(frame.native.progress, 5);
+    } else {
+      expect(frame.native.currentTime).toBe(300);
+      expect(frame.opacity).toBe(1);
+    }
+    expect(frame.card).toEqual(start.card);
     expect(frame.status).toBe('ready');
   }
-  expect(transition.slice(1).every((frame, index) => frame.opacity >= transition[index].opacity),
+  expect(frames.slice(1).every((frame, index) => frame.opacity >= frames[index].opacity),
     'opacity rośnie bez ponownego zanikania').toBe(true);
 }
 

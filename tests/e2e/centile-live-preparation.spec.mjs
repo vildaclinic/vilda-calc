@@ -167,10 +167,13 @@ async function holdPreparation(page) {
     const api = window.VildaCentileLiveRender;
     const prepare = api.prepareContentBounds;
     window.__heldCentilePreparations = [];
+    let release;
+    // Po zwolnieniu przepuszczamy także kolejne odświeżenia: mogą zastąpić
+    // poprzedni wynik już po jednorazowym wywołaniu release w teście.
+    const gate = new Promise(resolve => { release = resolve; });
     api.prepareContentBounds = function (...args) {
       const actual = prepare.apply(this, args);
-      const item = { actual, cancelled: 0, prioritized: 0, release: null, outcome: null };
-      const gate = new Promise(resolve => { item.release = resolve; });
+      const item = { actual, cancelled: 0, prioritized: 0, release, outcome: null };
       window.__heldCentilePreparations.push(item);
       return {
         promise: actual.promise.then(async result => { item.outcome = result.status; await gate; return result; }),
