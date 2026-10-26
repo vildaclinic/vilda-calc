@@ -156,9 +156,8 @@ test('UAG nie wymaga surowicy ani wieku do liczby, a źródłowy markup zapisu p
   await page.locator('#U_Na_spot').fill('40');
   await page.locator('#U_K_spot').fill('20');
   await page.locator('#U_Cl_spot').fill('45');
-  await expect(card(page, 'AGu_spot')).toHaveCount(0);
-  expect(await page.evaluate(() => window.canComputeFormula('AGu_spot'))).toBe(false);
-  await selectField(page, '#ui_spotSameSpecimen_answer', 'yes');
+  await expect(page.locator('#ui_spotSameSpecimen_answer')).toBeHidden();
+  expect(await page.evaluate(() => window.canComputeFormula('AGu_spot'))).toBe(true);
   const uag = card(page, 'AGu_spot');
   await expect(uag).toBeVisible();
   expect(Number(await uag.getAttribute('data-clcr-value'))).toBeCloseTo(15, 10);
@@ -194,45 +193,34 @@ test('czasowy klirens liczy główne 100 mL/min z czterech pól bez wieku, wzros
   expect(values[0]).toMatchObject({ sourceFormulaId: 'cl24', valueNum: 100, unit: 'mL/min' });
 });
 
-test('UAG odtwarza stary wynik -15 bez zmiany flag, a nowa odpowiedź Nie lub Nie wiem blokuje także ponowne odtworzenie', async ({ page }) => {
+test('UAG odtwarza dawne potwierdzenie, blokuje jawnie różny mocz i zachowuje nieznaną próbkę jako założenie', async ({ page }) => {
   await openCalculator(page);
-  await page.waitForTimeout(1050);
-  for (const answer of ['no', 'unknown']) {
-    const restored = await page.evaluate(() => window.applyClcrSessionSnapshot({
-      version: 1,
-      currentVersion: 'spot',
-      selectedFormula: 'AGu_spot',
-      inputs: {
-        currentVersion: 'spot', formulaPicker: 'AGu_spot',
-        U_Na_spot: '40', U_K_spot: '25', U_Cl_spot: '80',
-        spotPairedChemistry: true, spotSameSpecimen: false,
-        ui_spotSameSpecimen_answer: '',
-      },
-    }, { source: 'e2e-uag-legacy', update: true, dispatchEvents: false, preserveAcrossVersions: true }));
-    expect(restored).toBe(true);
-    const uag = card(page, 'AGu_spot');
-    await expect(uag).toBeVisible();
-    expect(Number(await uag.getAttribute('data-clcr-value'))).toBeCloseTo(-15, 10);
-    const legacy = await page.evaluate(() => window.buildClcrSessionSnapshot().inputs);
-    expect(legacy.spotPairedChemistry).toBe(true);
-    expect(legacy.spotSameSpecimen).toBe(false);
-    // Widoczna odpowiedź może pokazywać zgodność wynikającą ze starego
-    // potwierdzenia, ale kanoniczna flaga moczu pozostaje niezmieniona.
-    expect(legacy.ui_spotSameSpecimen_answer).toBe('yes');
-    const values = await page.evaluate(() => window.ClcrVisitSave.collectActiveDatapoints(document, { formulaId: 'AGu_spot' }));
-    expect(values).toHaveLength(1);
-    expect(values[0]).toMatchObject({ sourceFormulaId: 'AGu_spot', valueNum: -15 });
-    await selectField(page, '#ui_spotSameSpecimen_answer', answer);
-    await expect(uag).toHaveCount(0);
-    expect(await page.evaluate(() => window.canComputeFormula('AGu_spot'))).toBe(false);
-    const snapshot = await page.evaluate(() => window.buildClcrSessionSnapshot());
-    expect(snapshot.inputs.spotPairedChemistry).toBe(false);
-    expect(snapshot.inputs.spotSameSpecimen).toBe(false);
-    expect(snapshot.inputs.ui_spotSameSpecimen_answer).toBe(answer);
+  const session = { version: 2, currentVersion: 'spot', selectedFormula: 'AGu_spot', inputs: {
+    currentVersion: 'spot', formulaPicker: 'AGu_spot', U_Na_spot: '40', U_K_spot: '25', U_Cl_spot: '80',
+    spotPairedChemistry: true, spotSameSpecimen: false, ui_spotSameSpecimen_answer: '',
+  } };
+  for (const [answer, expected] of [['', 'confirmed'], ['no', 'different'], ['unknown', 'assumed']]) {
+    const value = { ...session, inputs: { ...session.inputs, ui_spotSameSpecimen_answer: answer } };
     expect(await page.evaluate(value => window.applyClcrSessionSnapshot(value, {
-      source: 'e2e-uag-blocked-restore', update: true, dispatchEvents: false, preserveAcrossVersions: true,
+      source: 'e2e-uag-legacy', update: true, dispatchEvents: false, preserveAcrossVersions: true,
+    }), value)).toBe(true);
+    const uag = card(page, 'AGu_spot');
+    if (answer === 'no') {
+      await expect(uag).toHaveCount(0);
+      expect(await page.evaluate(() => window.canComputeFormula('AGu_spot'))).toBe(false);
+    } else {
+      await expect(uag).toBeVisible();
+      expect(Number(await uag.getAttribute('data-clcr-value'))).toBe(-15);
+      expect(JSON.parse(await uag.getAttribute('data-clcr-uag-snapshot')).sample.sameUrineSpecimen).toBe(expected);
+      const values = await page.evaluate(() => window.ClcrVisitSave.collectActiveDatapoints(document, { formulaId: 'AGu_spot' }));
+      expect(values).toHaveLength(1);
+      expect(values[0]).toMatchObject({ sourceFormulaId: 'AGu_spot', valueNum: -15, capture: { values: { spotPairedChemistry: true, spotSameSpecimen: false } } });
+    }
+    const snapshot = await page.evaluate(() => window.buildClcrSessionSnapshot());
+    if (answer) expect(snapshot.inputs.ui_spotSameSpecimen_answer).toBe(answer);
+    expect(await page.evaluate(value => window.applyClcrSessionSnapshot(value, {
+      source: 'e2e-uag-second-restore', update: true, dispatchEvents: false, preserveAcrossVersions: true,
     }), snapshot)).toBe(true);
-    await expect(uag).toHaveCount(0);
-    expect(await page.evaluate(() => window.canComputeFormula('AGu_spot'))).toBe(false);
+    expect(await page.evaluate(() => window.canComputeFormula('AGu_spot'))).toBe(answer !== 'no');
   }
 });

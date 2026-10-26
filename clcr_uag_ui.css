@@ -1,0 +1,89 @@
+/* UAG: one fixed-width three-concentration form and one integrated result. */
+html[data-clcr-workflow-ui="1"][data-clcr-uag-active="1"] { --uag-unit-width: 100px; scrollbar-gutter: stable; }
+html[data-clcr-uag-active="1"] #clcrWorkspace,
+html[data-clcr-uag-active="1"] #clcrWorkspace *,
+html[data-clcr-uag-active="1"] #clcrWorkspace *::before,
+html[data-clcr-uag-active="1"] #clcrWorkspace *::after { box-sizing: border-box; }
+html[data-clcr-workflow-ui="1"][data-clcr-uag-active="1"] #clcrWorkspace { width: 100%; min-width: 0; gap: var(--space-20px); row-gap: var(--space-24px); align-items: start; }
+html[data-clcr-workflow-ui="1"][data-clcr-uag-active="1"] #clcrForm.flex { width: 100%; min-width: 0; max-width: 100%; flex-wrap: nowrap; align-items: stretch; gap: var(--space-16px); }
+html[data-clcr-workflow-ui="1"][data-clcr-uag-active="1"] #clcrForm.flex > *,
+html[data-clcr-workflow-ui="1"][data-clcr-uag-active="1"] #clcrResultRail,
+html[data-clcr-workflow-ui="1"][data-clcr-uag-active="1"] #clcrResultReport { width: 100%; min-width: 0; max-width: 100%; }
+html[data-clcr-workflow-ui="1"][data-clcr-uag-active="1"] #clcrForm > .clcr-workflow__utilities:empty { display: none; }
+html[data-clcr-workflow-ui="1"][data-clcr-uag-active="1"] #clcrResultReport { margin: 0; padding: var(--space-20px); }
+html[data-clcr-uag-active="1"] #clcrWorkspace :is(button, input, select),
+html[data-clcr-uag-active="1"] :is(.uag-input-card, .uag-proposal-card, #clcrVisitSaveCard) { transform: none !important; }
+.uag-input-card { padding: var(--space-16px); border: var(--border-hairline) solid var(--clcr-border-soft); border-radius: var(--clcr-radius-card); background: var(--clcr-surface); box-shadow: var(--clcr-shadow-card); }
+.uag-readiness { display: flex; justify-content: space-between; gap: var(--space-12px); color: var(--clcr-muted); font-size: 12px; line-height: 1.5; }
+.uag-readiness strong { color: var(--clcr-heading); font-variant-numeric: tabular-nums; }
+.uag-progress-track { height: 4px; margin-top: var(--space-6px); border-radius: var(--radius-6); background: var(--clcr-border-soft); overflow: hidden; }
+.uag-progress-track span { display: block; width: 0; height: 100%; background: var(--clcr-primary); }
+.uag-progress-track[data-filled="1"] span { width: 33.3333%; }
+.uag-progress-track[data-filled="2"] span { width: 66.6667%; }
+.uag-progress-track[data-filled="3"] span { width: 100%; }
+.uag-sample-group { width: 100%; min-width: 0; margin: var(--space-16px) 0 0; padding: var(--space-12px); border: var(--border-hairline) solid var(--clcr-border-soft); border-radius: var(--radius-13); background: var(--clcr-surface-soft); }
+html[data-clcr-workflow-ui="1"] #clcrForm .uag-sample-group h3 { margin: 0 0 var(--space-12px); color: var(--clcr-heading); font-size: 14px; line-height: 1.5; font-weight: 750; }
+html[data-clcr-workflow-ui="1"] #clcrForm .uag-entry-field { display: flex; flex-direction: column; gap: var(--space-8px); width: 100%; min-width: 0; min-height: 0; margin: 0; padding: 0; background: transparent; border: 0; box-shadow: none; }
+html[data-clcr-workflow-ui="1"] #clcrForm .uag-entry-field + .uag-entry-field { margin-top: var(--space-16px); }
+html[data-clcr-workflow-ui="1"] #clcrForm .uag-entry-field .clcr-field__heading { display: block; margin: 0; padding: 0; }
+html[data-clcr-workflow-ui="1"] #clcrForm .uag-entry-field .clcr-field__name { color: var(--clcr-text); font-size: 13px; line-height: 1.5; font-weight: 650; }
+html[data-clcr-workflow-ui="1"] #clcrForm .uag-input-card :is(.clcr-field__status, .clcr-info-button) { display: none; }
+html[data-clcr-workflow-ui="1"] #clcrForm .uag-value-row { display: grid; grid-template-columns: minmax(0, 1fr) var(--uag-unit-width, 100px); gap: var(--space-8px); align-items: stretch; width: 100%; min-width: 0; }
+html[data-clcr-workflow-ui="1"] #clcrForm .uag-value-row input,
+html[data-clcr-workflow-ui="1"] #clcrForm .uag-fixed-unit { display: flex; align-items: center; width: 100%; min-width: 0; max-width: 100%; height: 48px; min-height: 48px; margin: 0; padding: var(--space-10px); border: var(--border-hairline) solid var(--clcr-border); border-radius: var(--radius-12); background: var(--clcr-surface); color: var(--clcr-text); font: 400 16px/24px Inter, system-ui, sans-serif; box-shadow: none; }
+html[data-clcr-workflow-ui="1"] #clcrForm .uag-fixed-unit { justify-content: center; color: var(--clcr-muted); }
+.uag-assumption { margin: var(--space-16px) 0 0; color: var(--clcr-muted); font-size: 12px; line-height: 1.6; }
+.uag-known-sample-fact { margin: var(--space-12px) 0 0; color: var(--clcr-error); font-size: 12px; line-height: 1.6; }
+html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .uag-proposal-card { --clcr-result-color: #566f77; --clcr-result-bg: #f4f7f8; --clcr-result-border: #ccd9dc; padding: var(--space-18px) !important; }
+html[data-clcr-workflow-ui="1"] #clcrResultReport .uag-result-status { margin: 0 0 var(--space-16px); color: #334e55; font-size: 16px; line-height: 1.5; }
+.uag-result-main { grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); gap: var(--space-14px); }
+html[data-clcr-workflow-ui="1"] #clcrResultReport .uag-proposal-card :is(.clcr-result-patient-label, .clcr-result-reference-label) { min-height: 22px; margin-bottom: var(--space-10px); color: #465e65; font-size: 12px; }
+html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .uag-proposal-card .clcr-result-value { display: flex; align-items: center; min-height: 53px; font-size: 44px !important; line-height: 1.08; letter-spacing: -1.3px; color: #253d43 !important; white-space: normal; overflow-wrap: anywhere; }
+html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .uag-proposal-card .clcr-result-value[data-long="true"] { font-size: 29px !important; letter-spacing: -.5px; }
+html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .uag-proposal-card .clcr-result-value[data-dense="true"] { font-size: 23px !important; }
+html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .uag-proposal-card .uag-reference-value { display: flex; align-items: center; gap: var(--space-6px); min-height: 53px; padding: 0; font-size: 30px !important; line-height: 1.35; letter-spacing: -.5px; overflow-wrap: normal; word-break: normal; hyphens: none; }
+.uag-reference-value small { font-size: 13px; font-weight: 650; letter-spacing: 0; }
+.uag-reference-hint { margin: var(--space-8px) 0 0; color: #465e65; font-size: 12px; line-height: 1.5; }
+.uag-result-copy { margin: var(--space-14px) 0 0; color: #334e55; font-size: 13px; font-weight: 400; line-height: 1.65; }
+.uag-scope-tag { display: block; margin: var(--space-14px) 0 0; padding: var(--space-8px); border: var(--border-hairline) solid #ead59d; border-radius: var(--radius-8); background: var(--clcr-warning-bg); color: var(--clcr-warning); font-size: 11px; font-weight: 650; line-height: 1.6; }
+.uag-result-empty,
+.uag-result-error { min-height: 235px; padding: var(--space-20px); border: var(--border-hairline) dashed var(--clcr-border); border-radius: var(--radius-14); background: var(--clcr-surface-soft); color: var(--clcr-muted); font-size: 13px; line-height: 1.65; }
+.uag-result-empty strong,
+.uag-result-error strong { display: block; color: var(--clcr-heading); font-size: 16px; line-height: 1.5; }
+.uag-result-empty p,
+.uag-result-error p { margin: var(--space-12px) 0 0; }
+.uag-result-error { border-style: solid; border-color: #efbaba; background: var(--clcr-error-bg); color: var(--clcr-error); }
+.uag-result-error strong { color: var(--clcr-error); }
+.uag-proposal-details { width: 100%; min-width: 0; }
+html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .uag-proposal-details .clcr-result-category-table { width: 100%; table-layout: fixed; font-size: 11px; line-height: 1.6; }
+html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .uag-proposal-details .clcr-result-category-table :is(th, td) { padding: var(--space-8px); font-size: inherit; line-height: inherit; white-space: normal; overflow-wrap: anywhere; }
+html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .uag-proposal-details .clcr-result-category-table :is(th, td):first-child { width: 28%; }
+.uag-formula { overflow-wrap: anywhere; }
+.uag-source-links { padding-left: var(--space-16px); }
+.uag-source-links li { margin: var(--space-6px) 0; }
+.uag-source-links a { overflow-wrap: anywhere; }
+.uag-source-links small { display: block; color: var(--clcr-muted); font-size: 11px; line-height: 1.6; }
+html[data-clcr-workflow-ui="1"][data-clcr-uag-active="1"] #clearContainer { margin: 0 !important; padding: 0; border: 0; background: none; box-shadow: none; }
+html[data-clcr-workflow-ui="1"][data-clcr-uag-active="1"] #clearBtn { display: block; width: 100%; min-height: 48px; margin: 0; padding: var(--space-10px) var(--space-12px); font: 400 16px/24px Inter, system-ui, sans-serif; }
+html[data-clcr-workflow-ui="1"][data-clcr-uag-active="1"] #clcrVisitSaveCard :is(h2, .cvs-hint) { text-align: center; }
+html[data-clcr-workflow-ui="1"][data-clcr-uag-active="1"] #clcrActivePanel { padding: var(--space-16px) var(--space-16px) 0; border-bottom: 0; border-radius: var(--clcr-radius-card) var(--clcr-radius-card) 0 0; box-shadow: none; }
+html[data-clcr-workflow-ui="1"][data-clcr-uag-active="1"] #uagInputCard { margin-top: calc(-1 * var(--space-16px)); border-top: 0; border-radius: 0 0 var(--clcr-radius-card) var(--clcr-radius-card); box-shadow: none; }
+@media (max-width: 700px) {
+  html[data-clcr-workflow-ui="1"][data-clcr-uag-active="1"] { --uag-unit-width: 84px; }
+  html[data-clcr-workflow-ui="1"][data-clcr-uag-active="1"] #clcrResultReport { padding: var(--space-16px); }
+  html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .uag-proposal-card { padding: 15px !important; }
+  .uag-result-main { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: var(--space-12px); }
+  html[data-clcr-workflow-ui="1"] #clcrResultReport .uag-proposal-card :is(.clcr-result-patient-label, .clcr-result-reference-label) { font-size: 11px; }
+  html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .uag-proposal-card .clcr-result-value { font-size: 34px !important; letter-spacing: -1px; }
+  html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .uag-proposal-card .clcr-result-value[data-long="true"] { font-size: 24px !important; letter-spacing: -.4px; }
+  html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .uag-proposal-card .uag-reference-value { font-size: 26px !important; }
+  .uag-result-copy, .uag-reference-hint { font-size: 12px; }
+}
+@media (max-width: 360px) {
+  html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .uag-proposal-card .clcr-result-value[data-long="true"] { font-size: 20px !important; }
+  html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .uag-proposal-card .clcr-result-value[data-dense="true"] { font-size: 17px !important; }
+  html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .uag-proposal-card .uag-reference-value { font-size: 24px !important; }
+}
+@media (min-width: 980px) {
+  html[data-clcr-workflow-ui="1"][data-clcr-uag-active="1"] #clcrWorkspace { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+}

@@ -106,6 +106,14 @@ function clinicalReadinessHarness(formulaId, values) {
     },
   };
   loadBrowserScript('clcr_clinical_safety.js', browserGlobal);
+  if (formulaId === 'AGu_spot') {
+    loadBrowserScript('clcr_uag_reference_data.js', browserGlobal);
+    loadBrowserScript('clcr_uag.js', browserGlobal);
+    browserGlobal.evaluateClcrUag = () => browserGlobal.VildaClcrUag.evaluate(
+      browserGlobal.VildaClcrUag.readInputFromDocument(browserGlobal.document),
+      browserGlobal.VildaClcrUagReferenceData.DEFAULT_POLICY,
+    );
+  }
   loadBrowserScript('clcr_ui_workflow.js', browserGlobal);
   const workflow = browserGlobal.ClcrUiWorkflow;
   workflow.state.activeFormulaId = formulaId;
@@ -416,17 +424,15 @@ describe('Klirens — centralny model przepływu UI', () => {
     expect(controls.get('ageMonths').value).toBe('');
   });
 
-  it('UAG wymaga wyłącznie własnych danych moczu i protokołu, bez wieku i stężeń surowicy', () => {
+  it('UAG wymaga tylko trzech stężeń moczu, bez pytania o próbkę, wieku i stężeń surowicy', () => {
     const { formula, workflow } = clinicalReadinessHarness('AGu_spot', {
       U_Na_spot: '20',
       U_K_spot: '20',
       U_Cl_spot: '80',
-      spotPairedChemistry: true,
-      spotSameSpecimen: true,
     });
-    expect(formula.requires).toEqual(expect.arrayContaining([
+    expect(formula.requires).toEqual([
       'U_Na_spot', 'U_K_spot', 'U_Cl_spot',
-    ]));
+    ]);
     expect(formula.requires).not.toEqual(expect.arrayContaining(['age']));
     expect(formula.requires.some(field => /^(S_|Scr)/.test(field))).toBe(false);
     expect(workflow.getFormulaReadiness()).toMatchObject({
@@ -448,7 +454,8 @@ describe('Klirens — centralny model przepływu UI', () => {
     expect(workflow.getFormulaReadiness()).toMatchObject({
       status: 'ready', valueReady: true, missingFieldIds: [],
     });
-    const safety = loadBrowserScript('clcr_clinical_safety.js').ClcrClinicalSafety;
+    const safetyBrowser = loadBrowserScript('clcr_uag.js');
+    const safety = loadBrowserScript('clcr_clinical_safety.js', safetyBrowser).ClcrClinicalSafety;
     expect(safety.computeUrineAnionGap({
       sodium: Number(controls.get('U_Na_spot').value),
       potassium: Number(controls.get('U_K_spot').value),
@@ -463,7 +470,7 @@ describe('Klirens — centralny model przepływu UI', () => {
     [true, 'no', true],
     [true, 'unknown', false],
     [false, '', false],
-  ])('UAG nie przyjmuje potwierdzenia przy starej fladze %s i nowej odpowiedzi %s', (legacy, answer, blocked) => {
+  ])('UAG respektuje znaną sprzeczność, a brak potwierdzenia pozostawia założeniem (%s, %s)', (legacy, answer, blocked) => {
     const { controls, workflow } = clinicalReadinessHarness('AGu_spot', {
       U_Na_spot: '40', U_K_spot: '25', U_Cl_spot: '80',
       spotPairedChemistry: legacy,
@@ -473,8 +480,8 @@ describe('Klirens — centralny model przepływu UI', () => {
     workflow.state.fieldViews.get('spotSameSpecimen').answerSelect =
       controls.get('ui_spotSameSpecimen_answer');
     expect(workflow.getFormulaReadiness()).toMatchObject({
-      status: 'missing', valueReady: false,
-      missingFieldIds: ['spotSameSpecimen'], hasBlockedProtocol: blocked,
+      status: blocked ? 'blocked' : 'ready', valueReady: !blocked,
+      missingFieldIds: [], hasBlockedProtocol: blocked,
     });
     expect(controls.get('spotSameSpecimen').checked).toBe(false);
     expect(controls.get('ui_spotSameSpecimen_answer').value).toBe(answer);
@@ -658,22 +665,22 @@ describe('Klirens — centralny model przepływu UI', () => {
     );
 
     expect(html).toContain('clcr_ui_workflow.css?v=18');
-    expect(html).toContain('clcr_ui_workflow.js?v=26');
-    expect(html).toContain('inline_kalkulator_klirens_02.js?v=20');
-    expect(html).toContain('inline_kalkulator_klirens_04.js?v=26');
-    expect(html).toContain('inline_kalkulator_klirens_07.js?v=15');
+    expect(html).toContain('clcr_ui_workflow.js?v=27');
+    expect(html).toContain('inline_kalkulator_klirens_02.js?v=21');
+    expect(html).toContain('inline_kalkulator_klirens_04.js?v=27');
+    expect(html).toContain('inline_kalkulator_klirens_07.js?v=16');
     expect(html).toContain('clcr_result_reference_data.js?v=7');
     expect(html).toContain('clcr_result_presentation.js?v=8');
-    expect(serviceWorker).toContain("const SW_VERSION = '1.1.384'");
+    expect(serviceWorker).toContain("const SW_VERSION = '1.1.385'");
     expect(html).toContain('clcr_calculation_assumptions.js?v=2');
     expect(serviceWorker).toContain("'/clcr_calculation_assumptions.js?v=2'");
-    expect(serviceWorker).toContain("'/clcr_clinical_safety.js?v=12'");
+    expect(serviceWorker).toContain("'/clcr_clinical_safety.js?v=13'");
     expect(serviceWorker).toContain("'/clcr_result_reference_data.js?v=7'");
     expect(serviceWorker).toContain("'/clcr_result_presentation.js?v=8'");
     expect(serviceWorker).toContain("'/clcr_ui_workflow.css?v=18'");
-    expect(serviceWorker).toContain("'/clcr_ui_workflow.js?v=26'");
-    expect(serviceWorker).toContain("'/inline_kalkulator_klirens_02.js?v=20'");
-    expect(serviceWorker).toContain("'/inline_kalkulator_klirens_04.js?v=26'");
+    expect(serviceWorker).toContain("'/clcr_ui_workflow.js?v=27'");
+    expect(serviceWorker).toContain("'/inline_kalkulator_klirens_02.js?v=21'");
+    expect(serviceWorker).toContain("'/inline_kalkulator_klirens_04.js?v=27'");
     expect(html).toContain('clcr_acr_ui.js?v=2');
     expect(serviceWorker).toContain("'/clcr_acr_ui.js?v=2'");
     expect(html).toContain('vilda_unsaved_guard.js?v=7');
@@ -687,6 +694,7 @@ describe('Klirens — centralny model przepływu UI', () => {
       'clcr_fena_reference_data.js', 'clcr_fena.js', 'clcr_fena_ui.js', 'clcr_fena_ui.css', 'clcr_fena_persistence.js',
       'clcr_fecl_reference_data.js', 'clcr_fecl.js', 'clcr_fecl_ui.js', 'clcr_fecl_ui.css', 'clcr_fecl_persistence.js',
       'clcr_fehco3_reference_data.js', 'clcr_fehco3.js', 'clcr_fehco3_ui.js', 'clcr_fehco3_ui.css', 'clcr_fehco3_persistence.js',
+      'clcr_uag_reference_data.js', 'clcr_uag.js', 'clcr_uag_ui.js', 'clcr_uag_ui.css', 'clcr_uag_persistence.js',
     ]) {
       expect(html).toContain(`${file}?v=1`);
       expect(serviceWorker).toContain(`'/${file}?v=1'`);

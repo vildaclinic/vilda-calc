@@ -390,14 +390,13 @@
   }
 
   function computeUrineAnionGap(input) {
-    const sodium = toFiniteNumber(input && input.sodium);
-    const potassium = toFiniteNumber(input && input.potassium);
-    const chloride = toFiniteNumber(input && input.chloride);
-    if (sodium === null || potassium === null || chloride === null) {
-      return null;
-    }
-    const value = sodium + potassium - chloride;
-    return Number.isFinite(value) ? value : null;
+    // The UAG producer owns input validation and exact decimal subtraction.
+    // No second numeric path may reinterpret a missing/negative concentration.
+    const engine = root?.VildaClcrUag ||
+      (typeof require === "function" ? require("./clcr_uag.js") : null);
+    if (!engine || typeof engine.compute !== "function") return null;
+    const result = engine.compute(input);
+    return result.valid === true ? result.rawValue : null;
   }
 
   function computeProteinDzm(input) {

@@ -7526,6 +7526,123 @@ kod produkcyjny z fikcyjnymi danymi. Wyniki wykonań, offline, CI, commit
 i PR podaje opis PR. Zielone testy i akceptacja polityki nie stanowią
 nowej walidacji klinicznej FEHCO₃.
 
+#### P-KLIRENS-UAG-2026-10-26 — trzy stężenia, neutralny znak i trwały kontekst
+
+Właściciel zaakceptował
+[makietę przed/po na desktopie i telefonie](https://vilda-uag-audyt-20261026.maciej-flader.chatgpt.site)
+oraz wdrożenie z naprawą trzech potwierdzonych błędów. Zakres: `AGu_spot`;
+kolejne obliczenia pozostają osobnymi etapami audytu. Pełne źródła,
+lokalizatory, populacje, granice odczytu i przypadki: [UAG.md](UAG.md).
+Baza audytu kodu: `ebc150a5e12f9dcd8e95ca9112c3c87f2d2d1143`.
+
+**Wpływ kliniczny:** równanie `UAG = U_Na + U_K − U_Cl` w mmol/L
+pozostaje bez zmian. Poprawiana jest precyzja znaku, zgodność walidacji
+formularza i edytora oraz zachowanie kontekstu przy zapisie. Dawne
+±0,04 mogło być przedstawione jako `0,0` lub `−0,0`, a dokładne
+dziesiętne `0,3 + 0,6 − 0,9` jako mała ujemna reszta. Edytor
+akceptował ujemne stężenia mimo blokady formularza. Przechwycenie
+zapisu pomijało skuteczne stare `spotPairedChemistry=true`, przez co
+poprawny wynik nie dawał się edytować bez ponownego potwierdzenia próbki.
+Surowy ujemny UAG był już obsługiwany przez kanoniczny zapis; nie był
+to ogólny brak obsługi wyników ujemnych. Zmiana jest funkcjonalna
+i kliniczna, nie jedynie wizualna.
+
+**Źródła i ograniczenia, odczyt 26.10.2026:**
+
+- Batlle i wsp., *NEJM* **1988;318:594–599**,
+  [DOI 10.1056/NEJM198803103181002](https://doi.org/10.1056/NEJM198803103181002):
+  odczyt abstraktu; 38 zaburzeń dystalnego zakwaszania, 8 biegunek
+  i 7 zdrowych po NH₄Cl. Wybrane grupy wspierają warunkowe użycie znaku,
+  nie populacyjną normę punktowego UAG.
+- Sulyok/Guignard, *Biol Neonate* **1990;57:98–106**,
+  [PMID 2310794](https://pubmed.ncbi.nlm.nih.gov/2310794/): abstrakt;
+  10 wcześniaków, 11 donoszonych w 7. dniu, 25 starszych niemowląt.
+  Relacja z NH₄⁺ jest zawodna w pierwszych tygodniach; brak podstaw
+  do norm wieku albo arbitralnej bramki <12 miesięcy.
+- Raphael i wsp., *CJASN* **2018;13:205–212**,
+  [DOI 10.2215/CJN.03770417](https://doi.org/10.2215/CJN.03770417):
+  zindeksowany abstrakt, metody i wyniki; AASK, 1044 dorosłych z PChN,
+  dobowe zbiórki. Słaba korelacja standardowego UAG z NH₄⁺ (r=0,18;
+  r=0,07 u 128 z kwasicą) wspiera pierwszeństwo bezpośredniego NH₄⁺.
+- Uribarri/Oh, *JASN* **2021;32:1025–1028**,
+  [DOI 10.1681/ASN.2020101509](https://doi.org/10.1681/ASN.2020101509):
+  zindeksowane sekcje/tabela; dieta i inne jony ograniczają interpretację.
+  Dobowe średnie 41–79 mEq/d nie są normą punktową w mmol/L.
+- Bonner/Hladik, *AJKD* **2025;85:501–512**,
+  [DOI 10.1053/j.ajkd.2024.08.014](https://doi.org/10.1053/j.ajkd.2024.08.014),
+  s. 505 odczytanego pełnego PDF: odradzają szacowanie amonu przez UAG.
+  Batlle i wsp., *CJASN* **2025;20:1810–1813**,
+  [DOI 10.2215/CJN.0000000742](https://doi.org/10.2215/CJN.0000000742),
+  dostępne zindeksowane sekcje: bronią ograniczonej pomocy w określonym
+  kontekście kwasicy. Nie przedstawia się sporu autorów jako konsensusu.
+- Berend, *Kidney Dis* **2017;3:149–159**,
+  [DOI 10.1159/000479279](https://doi.org/10.1159/000479279),
+  zindeksowana sekcja ograniczeń: małe U_Na, wysokie pH i inne aniony
+  ograniczają UAG; ujemny wynik nie wyklucza proksymalnej RTA.
+
+Nie deklaruje się pełnego odczytu wszystkich publikacji PMC: część
+bezpośrednich stron wymagała CAPTCHA. UAG.md rozróżnia te fragmenty,
+abstrakty i odczytany pełny PDF oraz podaje źródła uzupełniające.
+W przejrzanych danych nie zweryfikowano odpowiedniego zdrowego RI
+punktowego UAG według wieku; nie dowodzi to nieistnienia wszystkich norm.
+
+**Minimum i założenia:** trzy skończone, nieujemne stężenia Na/K/Cl
+z tej samej próbki, mmol/L; dla tych jednowartościowych jonów mEq/L
+jest liczbowo równoważne. Zero jest poprawne. Nie wymaga się wieku,
+antropometrii, krwi, kreatyniny ani rutynowej ankiety kontekstu.
+Wspólna próbka jest jawnym założeniem przy braku znanej sprzeczności;
+nieznany fakt nie staje się potwierdzeniem. Jawnie różny mocz blokuje
+liczbę i zapis; sam różny czas krwi nie blokuje wzoru moczowego.
+Korekta nie potwierdza próbek krwi lub niezależnych protokołów FE/TmP/GFR.
+**NAGMA nie jest domyślnym założeniem.** Nie stosuje się IFCC/IDMS
+ani założenia braku AKI jako warunku arytmetyki UAG.
+
+**Interpretacja:** neutralna karta B pokazuje znak, liczbę i
+**„Granica znaku: 0 mmol/L / Nie jest granicą normy.”**
+`outOfRange:null`, bez zdrowego/patologicznego werdyktu na podstawie znaku.
+Komentarz o amonie jawnie wymaga potwierdzonej kwasicy metabolicznej
+z prawidłową luką anionową krwi. Znana PChN zastępuje ogólny komentarz
+ograniczeniem; U_Na <20 z istniejącego pola daje uwagę o przydatności
+metody, nie diagnozę hipowolemii. Szczegóły obejmują niepewność blisko
+zera, niemowlęta, proksymalną RTA, zasadowicę oddechową, spór w literaturze
+i preferowane bezpośrednie NH₄⁺. Nie tworzy się klinicznego pasma wokół 0.
+
+**Kontrakt implementacji:** `clcr_uag_reference_data.js` przechowuje
+politykę **`UAG_CONTEXT_2026_10`, wersja 1**, z pustymi `profiles`
+i osobnym `signBoundary` 0 mmol/L. `VildaClcrUag.compute(input)`
+liczy dokładną sumę, a `evaluate(input, policy)` przyjmuje politykę
+jako argument. Snapshot **`clcr-uag`, wersja 1**, utrwala podpisany
+`rawValue`, dokładny ułamek `exactValue`, tekst, wejścia, kontekst,
+założenia i źródła. `referenceAvailable:true` nie oznacza klasyfikacji:
+`referenceActive:false`, `outOfRange:null`, `category:null`.
+`ClcrUagPersistence` zachowuje ocenę w istniejącej nocie laboratoryjnej;
+historia nie wywołuje obecnego silnika. Mały surowy wynik może poprawić
+stary zerowy tekst, ale utraconej precyzji samego zapisanego zera nie
+rekonstruuje się. Szczegółowe API i ograniczenia w [UAG.md](UAG.md).
+
+**Syntetyczne kontrakty produkcyjne:**
+
+| Na / K / Cl w mmol/L lub stan | Oczekiwane zachowanie |
+|---|---|
+| 40 / 25 / 80 | −15, neutralnie; zero jest granicą znaku, nie normą. |
+| 40 / 25 / 64,96 albo 65,04 | +0,04 albo −0,04, także po zapisie/edycji. |
+| 0,3 / 0,6 / 0,9 | Dokładnie 0, bez binarnego ujemnego zera. |
+| 0 / 0 / 0 albo jedno puste | Poprawne 0 albo brak wyniku. |
+| Na=−10 lub Cl=−80, spacje lub błędny typ | Blokada także w edytorze; brak niejawnej zamiany na poprawne stężenie. |
+| Znana PChN przy −15 | Pierwszeństwo ograniczenia PChN przed wnioskowaniem o amonie. |
+| 10 / 25 / 80 | −45 z uwagą o U_Na <20, bez patologicznej kategorii. |
+| Stary `spotPairedChemistry=true`; zapis −15 i edycja Na→41 | −14 z zachowanym pochodzeniem potwierdzenia próbki. |
+| Zapis małego ujemnego wyniku, późniejsza zmiana pacjenta | Zachowany znak i ocena z chwili zapisu, bez dzisiejszego kontekstu. |
+
+Regresje `klirens-uag-engine.test.mjs`, `klirens-uag-ui.test.mjs`,
+`klirens-uag-save.test.mjs`,
+`klirens-uag-session.test.mjs`, E2E `klirens-uag-audit.spec.mjs`
+i `klirens-uag-offline.spec.mjs` wywołują rzeczywiste funkcje
+produkcyjne i ścieżkę zapisu z danymi fikcyjnymi. Wyniki wykonań,
+offline, CI, commit i PR podaje opis PR. Akceptacja właściciela
+obejmuje powyższą politykę i naprawy;
+zielone testy nie stanowią walidacji klinicznej metody.
+
 #### Zakres i ograniczenia
 
 | Obszar | Wdrożona reguła | Najważniejsze ograniczenia |
