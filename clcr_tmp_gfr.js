@@ -126,7 +126,14 @@
   }
   function ageCovered(profile, data) { const age = number(data.ageYears), minimum = Number.isFinite(data.ageContext.minimumMonths) ? data.ageContext.minimumMonths / 12 : age, maximum = Number.isFinite(data.ageContext.maximumMonths) ? data.ageContext.maximumMonths / 12 : age; return (profile.ageMinExclusive ? minimum > profile.ageMin : minimum >= profile.ageMin) && (maximum > minimum ? maximum <= profile.ageMax : maximum < profile.ageMax); }
   function renalCautions(data) { return [data.knownAKI === true ? "Znane lub podejrzewane AKI ogranicza interpretację i porównywanie odpowiedzi na leczenie." : "", data.rapidlyChangingCreatinine === true ? "Szybko zmieniająca się kreatynina ogranicza interpretację i porównywanie odpowiedzi na leczenie." : "", data.knownCKD === true ? "Znana PChN wymaga indywidualnej oceny; ten widok nie ocenia bezpieczeństwa ani skuteczności burosumabu w tym kontekście." : ""].filter(Boolean); }
-  function dateValue(value) { if (typeof value !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return null; const timestamp = Date.parse(`${value}T00:00:00Z`); return Number.isFinite(timestamp) && new Date(timestamp).toISOString().slice(0, 10) === value ? timestamp : null; }
+  function dateValue(value) {
+    if (typeof value !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return null;
+    const [year, month, day] = value.split("-").map(Number), instant = new Date(`${value}T00:00:00Z`);
+    // Validate the supplied calendar date, including normalization of invalid
+    // days. UTC components are used only for validation, never to format a
+    // local clinical day or replace it with today's date.
+    return Number.isFinite(instant.getTime()) && instant.getUTCFullYear() === year && instant.getUTCMonth() + 1 === month && instant.getUTCDate() === day ? instant.getTime() : null;
+  }
   function compareTreatment(current, previous, policy, options = {}) {
     const data = current.input, notes = validPolicy(policy) ? policy.notes : {}, enabled = data.burosumab === true;
     const result = { enabled, comparisonAllowed: false, direction: null, comparison: null, reason: "", title: "Podczas leczenia burosumabem", message: "", trendMessage: "", cautions: [], limitations: [], tone: "neutral" };

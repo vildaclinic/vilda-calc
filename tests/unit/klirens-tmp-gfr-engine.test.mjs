@@ -1,6 +1,8 @@
 import { test } from "vitest";
 import assert from "node:assert/strict";
 import { createRequire } from "node:module";
+import { execFileSync } from "node:child_process";
+import { fileURLToPath } from "node:url";
 const require = createRequire(import.meta.url);
 const engine = require("../../clcr_tmp_gfr.js");
 const { DEFAULT_POLICY: policy } = require("../../clcr_tmp_gfr_reference_data.js");
@@ -145,6 +147,31 @@ test("serum safety warning remains independent of missing or incomparable histor
   }
   for (const reason of ["history-loading", "history-unavailable", "patient-unavailable", "no-patient", "missing-date", "unknown-previous-context", "no-earlier-result", "ambiguous-date"]) {
     const result = evaluate({}, { comparisonReason: reason }); assert.equal(result.treatment.reason, reason); assert.ok(result.treatment.trendMessage);
+  }
+});
+
+test("treatment chronology validates literal calendar dates, including leap years and normalized invalid dates", () => {
+  for (const [priorDate, clinicalDate] of [["2024-02-28", "2024-02-29"], ["2000-02-29", "2000-03-01"], ["2026-04-30", "2026-05-01"], ["2026-12-31", "2027-01-01"]]) {
+    const result = evaluate({ clinicalDate }, { previous: before({ clinicalDate: priorDate }) });
+    assert.equal(result.treatment.comparisonAllowed, true, `${priorDate} → ${clinicalDate}`);
+    assert.equal(result.treatment.comparison.current.date, clinicalDate);
+    assert.equal(result.treatment.comparison.previous.date, priorDate);
+  }
+  for (const clinicalDate of ["2026-02-29", "1900-02-29", "2100-02-29", "2024-02-30", "2026-04-31", "2026-00-10", "2026-13-01", "2026-01-00", "2026-01-32", "2026-1-02", "2026-01-02T00:00:00Z", " 2026-01-02"]) {
+    const currentInvalid = evaluate({ clinicalDate }, { previous: before({ clinicalDate: "1899-01-01" }) });
+    assert.equal(currentInvalid.treatment.reason, "ambiguous-date", `Invalid current date ${clinicalDate}`);
+    const priorInvalid = evaluate({ clinicalDate: "2101-01-01" }, { previous: before({ clinicalDate }) });
+    assert.equal(priorInvalid.treatment.reason, "ambiguous-date", `Invalid prior date ${clinicalDate}`);
+  }
+});
+
+test("date-only comparison keeps the same clinical days in positive and negative UTC offsets", () => {
+  const enginePath = fileURLToPath(new URL("../../clcr_tmp_gfr.js", import.meta.url));
+  const policyPath = fileURLToPath(new URL("../../clcr_tmp_gfr_reference_data.js", import.meta.url));
+  const source = `const engine = require(${JSON.stringify(enginePath)}); const policy = require(${JSON.stringify(policyPath)}).DEFAULT_POLICY; const input = ${JSON.stringify(base)}; const previous = engine.evaluate({...input, clinicalDate:'2026-10-25'}, policy); const result = engine.evaluate(input, policy, {previous}); process.stdout.write(JSON.stringify({allowed:result.treatment.comparisonAllowed,current:result.treatment.comparison.current.date,previous:result.treatment.comparison.previous.date}));`;
+  for (const timezone of ["UTC", "Europe/Warsaw", "Pacific/Kiritimati", "America/Los_Angeles"]) {
+    const result = JSON.parse(execFileSync(process.execPath, ["-e", source], { encoding: "utf8", env: { ...process.env, TZ: timezone } }));
+    assert.deepEqual(result, { allowed: true, current: "2026-10-26", previous: "2026-10-25" }, timezone);
   }
 });
 

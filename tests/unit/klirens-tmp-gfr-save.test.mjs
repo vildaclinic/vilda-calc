@@ -119,4 +119,21 @@ describe('TmP/GFR comparison candidate uses clinical chronology and patient owne
     expect(context.w.ClcrTmpGfrPersistence.getPreviousComparison([today], { clinicalDate: '2026-02-30' }, { patientId: PATIENT })).toEqual({ previous: null, reason: 'missing-date' });
     expect(context.w.ClcrTmpGfrPersistence.getPreviousComparison([today], { clinicalDate: '2026-10-26' })).toEqual({ previous: null, reason: 'no-patient' });
   });
+  it.each([
+    ['2024-02-28', '2024-02-29'],
+    ['2000-02-29', '2000-03-01'],
+    ['2026-04-30', '2026-05-01'],
+    ['2026-12-31', '2027-01-01'],
+  ])('preserves valid calendar boundaries in saved chronology: %s → %s', (previousDate, currentDate) => {
+    const context = harness(), previous = record(context, {}, previousDate, 'calendar-previous').note;
+    const result = context.w.ClcrTmpGfrPersistence.getPreviousComparison([previous], { clinicalDate: currentDate }, { patientId: PATIENT });
+    expect(result).toMatchObject({ reason: null, clinicalDateISO: previousDate, previous: { input: { clinicalDate: previousDate } } });
+  });
+  it.each(['2026-02-29', '1900-02-29', '2100-02-29', '2024-02-30', '2026-04-31', '2026-00-10', '2026-13-01', '2026-01-00', '2026-01-32', '2026-1-02', '2026-01-02T00:00:00Z', ' 2026-01-02'])('rejects an invalid clinical day instead of normalizing it: %s', invalidDate => {
+    const context = harness(), previous = record(context, {}, '1899-01-01', 'calendar-previous').note;
+    const select = context.w.ClcrTmpGfrPersistence.getPreviousComparison;
+    expect(select([previous], { clinicalDate: invalidDate }, { patientId: PATIENT })).toEqual({ previous: null, reason: 'missing-date' });
+    const invalidNote = { ...previous, clinicalDateISO: invalidDate };
+    expect(select([invalidNote], { clinicalDate: '2101-01-01' }, { patientId: PATIENT })).toEqual({ previous: null, reason: 'no-earlier-result' });
+  });
 });

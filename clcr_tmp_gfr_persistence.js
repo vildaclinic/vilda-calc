@@ -165,8 +165,10 @@
   }
   function date(value) {
     if (typeof value !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return null;
-    const instant = new Date(value + "T00:00:00Z");
-    return Number.isFinite(instant.getTime()) && instant.toISOString().slice(0, 10) === value ? value : null;
+    const [year, month, day] = value.split("-").map(Number), instant = new Date(value + "T00:00:00Z");
+    // Keep the literal clinical day. Reject invalid dates that Date would
+    // normalize into another month, without converting through local time.
+    return Number.isFinite(instant.getTime()) && instant.getUTCFullYear() === year && instant.getUTCMonth() + 1 === month && instant.getUTCDate() === day ? value : null;
   }
   function savedMethod(note, snapshot = savedAssessment(note)) {
     // Unknown legacy methods remain a separate series. Never reconstruct a
