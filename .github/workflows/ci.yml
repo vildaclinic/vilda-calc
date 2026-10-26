@@ -89,9 +89,10 @@ jobs:
       fail-fast: false
       matrix:
         shard: [1, 2, 3]
-    # Pełny zestaw przekroczył 2200 testów. Limit 40 min przerwał odłamek przy
-    # 729/738, bez błędu asercji ani retry. Budżet obejmuje instalację Chromium,
-    # wszystkie testy i raport; limity pojedynczych testów pozostają bez zmian.
+    # W PR #793 limit 40 min przerwał aktywny przebieg przy 699/722 uruchomionych
+    # testach bez zgłoszonych błędów; pozostałe odłamki potrzebowały ok. 39 min.
+    # Budżet obejmuje instalację Chromium, testy i raport. Limity pojedynczych
+    # testów, liczba workerów i wymagane asercje pozostają bez zmian.
     timeout-minutes: 45
     steps:
       - name: Pobierz repozytorium

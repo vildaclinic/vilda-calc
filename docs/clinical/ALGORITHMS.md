@@ -282,6 +282,35 @@ artefakcie sprzed poprawki pięć z tych testów padają, a bez strażnika po
 odczycie zdarzeń — test Historii wyprzedzonej w trakcie tego odczytu. E2E
 `lab-trend-jednostki.spec.mjs` bez zmian w asercjach.
 
+### KLIRENS / LAB-HISTORIA — wspólny zapis, pełne pomiary i edycja (2026-10-25)
+
+**Wpływ kliniczny:** bez nowych wzorów, progów, norm, populacji lub konwersji.
+Badania pacjenta i Historia Klirensu odczytują te same oryginalne notatki
+`wynik-klirens`; bez kopiowania, migracji lub ponownej oceny przy odczycie.
+Zapisany wynik zachowuje metodę, dokładną wartość, nierówność, jednostkę,
+postać masową, kontekst oraz własną normę i ocenę. Brak zapisanej oceny jest
+neutralny, a nie domyślnie prawidłowy. Nowa decyzja właściciela zastępuje dawne
+wyłączenie Klirensu z głównych Badań (6.13); pozostałe reguły zwykłych badań
+i notatek leczenia nie są rozszerzane.
+
+Wykres punktowy i pełny wykaz zachowują każde z 45 wyjść 41 aktywnych wzorów,
+także osobne oznaczenia z jednego dnia. Wyniki graniczne nie stają się dokładnymi
+punktami, ujemny UAG zachowuje znak, a pasmo normy wymaga zgodnych zapisanych
+odniesień. Wiek/płeć dzisiejszego pacjenta nie zmieniają historii.
+
+Edycja to jawne przeliczenie poprawionych oryginalnych wejść istniejącymi
+silnikami i zastąpienie całego pomiaru/oceny pod tym samym ID. Nie zachowuje
+starego A2/G2 lub normy, gdy nowe wejścia nie pozwalają na taką ocenę.
+Niepełne stare zapisy pozostają czytelne, z wyjaśnieniem ograniczenia edycji.
+Usunięcie wymaga potwierdzenia konkretnego pomiaru. Kontrola rewizji, pacjenta,
+stanu konta i stałych ID zapobiega nadpisaniu innej wersji i fałszywemu sukcesowi.
+
+Źródła i populacje pozostają zgodne z dotychczasowymi profilami (KDIGO 2024,
+CKiD U25 2021, Cockcroft–Gault 1976, PathWest 20.03.2026, właściwe Mayo/EAU/KDOQI).
+Pełny kontrakt, przypadki wejście → wynik, zależności i ograniczenia:
+[KLIRENS_PATIENT_RECORD.md](KLIRENS_PATIENT_RECORD.md). Regresje wywołują rzeczywiste
+producenty i sejf na danych fikcyjnych; testy nie stanowią walidacji klinicznej.
+
 ### LAB-HISTORIA — model porównania zapisanych wyników (`vilda_lab_history.js` 1.0.0, PR1 planu historii wyników, 2026-10-14)
 
 **Wpływ kliniczny: brak w tym etapie.** Moduł nie jest ładowany przez żadną

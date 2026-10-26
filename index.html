@@ -72,18 +72,41 @@
       try {
         if (!sessionStorage.getItem('vildaCurrentPatientId') || sessionStorage.getItem('vildaLoadChoiceV1') !== 'new') return;
         document.documentElement.classList.add('vilda-centile-live-booting');
-        window.__vildaCentileLiveBootTimer = window.setTimeout(function () {
-          if (!document.documentElement.classList.contains('vilda-centile-live-booting')) return;
+        window.__vildaCentileLivePendingSince = Date.now();
+        var bootFailed = false;
+        function showBootFeedback() {
+          if (!document.documentElement.classList.contains('vilda-centile-live-booting')) {
+            document.removeEventListener('readystatechange', showBootFeedback);
+            return;
+          }
+          if (!bootFailed && Date.now() - window.__vildaCentileLivePendingSince < 1200) return;
+          var mount = document.getElementById('vildaCentileLiveMount');
+          var title = document.getElementById('vildaCentileLiveLoadingTitle');
           var message = document.getElementById('vildaCentileLiveLoadingMessage');
           var retry = document.getElementById('vildaCentileLiveRetry');
-          if (message) message.textContent = 'Nie udało się uruchomić siatki. Spróbuj ponownie.';
-          if (retry) {
+          // Parsing can still be in progress when the timer fires. The
+          // interactive ready-state retries after the neutral markup exists.
+          if (!message) return;
+          if (mount && bootFailed) mount.setAttribute('data-centile-live-state', 'error');
+          if (title) title.hidden = false;
+          var text = bootFailed ? 'Nie udało się uruchomić siatki. Spróbuj ponownie.' : 'Wczytywanie siatki…';
+          if (message.textContent !== text) message.textContent = text;
+          message.hidden = false;
+          if (bootFailed && retry) {
             retry.textContent = 'Odśwież stronę';
             retry.hidden = false;
             retry.addEventListener('click', function () {
               if (document.documentElement.classList.contains('vilda-centile-live-booting')) window.location.reload();
             }, { once: true });
           }
+          document.removeEventListener('readystatechange', showBootFeedback);
+        }
+        window.__vildaCentileLiveMessageTimer = window.setTimeout(showBootFeedback, 1200);
+        document.addEventListener('readystatechange', showBootFeedback);
+        window.__vildaCentileLiveBootTimer = window.setTimeout(function () {
+          bootFailed = true;
+          window.clearTimeout(window.__vildaCentileLiveMessageTimer);
+          showBootFeedback();
         }, 15000);
       } catch (_) { /* An unavailable session cannot establish chart ownership. */ }
     })();
@@ -156,7 +179,7 @@
 <script defer src="vilda_html.js?v=5"></script>
 <script defer src="vilda_persistence_adapter.js?v=32"></script>
 <script defer src="vilda_panel_pacjent.js?v=1"></script>
-<script defer src="vilda_session_bridge.js?v=96"></script>
+<script defer src="vilda_session_bridge.js?v=97"></script>
 <script defer src="vilda_init.js?v=4"></script>
 <script defer src="vilda_crypto.js?v=15"></script>
 <script defer src="vilda_retention.js?v=1"></script>
@@ -168,9 +191,9 @@
 <script defer src="vilda_lab_range_snapshot.js?v=2"></script>
 <script defer src="vilda_hormone_reference_ui.js?v=1"></script>
 <script defer src="vilda_lab_assessment_ui.js?v=18"></script>
-<script defer src="vilda_lab_history.js?v=4"></script>
-<script defer src="vilda_lab_history_tab.js?v=7"></script>
-<script defer src="vilda_vault.js?v=225"></script>
+<script defer src="vilda_lab_history.js?v=5"></script>
+<script defer src="vilda_lab_history_tab.js?v=8"></script>
+<script defer src="vilda_vault.js?v=226"></script>
 <script defer src="vilda_frame_sync.js?v=2"></script>
 <script defer src="vilda_sync.js?v=39"></script>
 <script defer src="vilda_sync_integration.js?v=51"></script>
@@ -394,10 +417,10 @@
         ]
       }
       </script>
-<script defer src="vilda_chrome.js?v=173"></script>
+<script defer src="vilda_chrome.js?v=174"></script>
 <link href="vilda_lab_assessment_ui.css?v=13" rel="stylesheet">
 <link href="vilda_lab_history_tab.css?v=4" rel="stylesheet">
-  <link rel="stylesheet" href="vilda_centile_live_panel.css?v=3">
+  <link rel="stylesheet" href="vilda_centile_live_panel.css?v=4">
   <link rel="stylesheet" href="vilda_phone_landscape.css?v=2">
   <script src="vilda_phone_landscape.js?v=3"></script>
 </head>
@@ -701,8 +724,8 @@
          chowa się gdy pojawi się „Podsumowanie wyników". Domyślnie ukryta. -->
     <div id="vildaCentileLiveMount" hidden aria-label="Podgląd siatki centylowej">
       <article id="vildaCentileLiveLoading" class="vilda-centile-live-loading" role="status" aria-live="polite">
-        <h2 class="vilda-centile-live-title">Siatka centylowa</h2>
-        <p id="vildaCentileLiveLoadingMessage">Wczytywanie siatki…</p>
+        <h2 id="vildaCentileLiveLoadingTitle" class="vilda-centile-live-title" hidden>Siatka centylowa</h2>
+        <p id="vildaCentileLiveLoadingMessage" hidden></p>
         <button id="vildaCentileLiveRetry" class="vilda-centile-live-retry" type="button" hidden>Spróbuj ponownie</button>
       </article>
     </div>
@@ -2226,7 +2249,7 @@
   <script defer src="vilda_centile_live_render.js?v=2"></script>
   <script defer src="vilda_centile_live_view.js?v=1"></script>
   <script defer src="vilda_centile_live_host.js?v=1"></script>
-  <script defer src="vilda_centile_live_panel.js?v=5"></script>
+  <script defer src="vilda_centile_live_panel.js?v=6"></script>
 
   <!-- Skrypt do zapisywania stanu rozwinięcia/zwinięcia kart w localStorage i jego przywracania.  
        Dzięki temu sekcje, takie jak „Zaawansowane obliczenia wzrostowe” czy „Obwód głowy i klatki piersiowej”,

@@ -1,4 +1,5 @@
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import fs from 'node:fs';
 import { loadBrowserScript } from '../support/load-browser-script.mjs';
 
 function emitter(target) {
@@ -8,11 +9,13 @@ function emitter(target) {
     listeners.get(type).add(fn);
   };
   target.dispatchEvent = (event) => { for (const fn of listeners.get(event.type) || []) fn(event); };
+  target.removeEventListener = (type, fn) => listeners.get(type)?.delete(fn);
   return target;
 }
 
-function setup({ columns = '400px 400px', rects = true, lifecycle = false, eligibility = 'eligible', deferredBounds = false, beforeStart } = {}) {
-  const pending = [], subscribers = [], views = [], hosts = [], frames = new Map(), timers = new Map(), resizeObservers = [], boundsJobs = [];
+function setup({ columns = '400px 400px', rects = true, lifecycle = false, eligibility = 'eligible', deferredBounds = false,
+  animated = false, reducedMotion = false, bootSince = null, deferStart = false, beforeStart } = {}) {
+  const pending = [], subscribers = [], views = [], hosts = [], frames = new Map(), timers = new Map(), resizeObservers = [], boundsJobs = [], animations = [];
   let id = 0, currentToken = Object.freeze({ fictional: 'patient-a', revision: 1 });
   let refreshState = null;
   function element(rect = {}) {
@@ -27,15 +30,17 @@ function setup({ columns = '400px 400px', rects = true, lifecycle = false, eligi
     };
   }
   const form = element(), fieldset = element(), doctor = element({ left: 420, right: 820 }), mount = element({ left: 420, right: 820, top: 30 }), puberty = element({ height: 320 }), strip = element();
-  const notice = element(), noticeMessage = element(), retryButton = emitter(element());
-  notice.appendChild(noticeMessage); notice.appendChild(retryButton); mount.appendChild(notice);
+  const notice = element(), noticeTitle = element(), noticeMessage = element(), retryButton = emitter(element());
+  noticeTitle.hidden = true; noticeMessage.hidden = true; noticeMessage.textContent = '';
+  notice.appendChild(noticeTitle); notice.appendChild(noticeMessage); notice.appendChild(retryButton); mount.appendChild(notice);
   mount.hidden = true;
   form.getClientRects = vi.fn(() => rects ? [{}] : []);
   const classes = new Set();
   const doc = emitter({ readyState: 'complete', documentElement: { classList: {
     toggle: (name, value) => value ? classes.add(name) : classes.delete(name),
+    add: name => classes.add(name), remove: name => classes.delete(name), contains: name => classes.has(name),
   } },
-  getElementById: (name) => ({ calcForm: form, doctorSection: doctor, vildaCentileLiveMount: mount, tannerStageWrap: puberty, vildaStatusSide: strip, vildaCentileLiveLoading: notice, vildaCentileLiveLoadingMessage: noticeMessage, vildaCentileLiveRetry: retryButton })[name] || null,
+  getElementById: (name) => ({ calcForm: form, doctorSection: doctor, vildaCentileLiveMount: mount, tannerStageWrap: puberty, vildaStatusSide: strip, vildaCentileLiveLoading: notice, vildaCentileLiveLoadingTitle: noticeTitle, vildaCentileLiveLoadingMessage: noticeMessage, vildaCentileLiveRetry: retryButton })[name] || null,
   querySelector: (selector) => selector === '#userSection fieldset.user-card' ? fieldset : null,
   });
   const style = { columns, pubertyDisplay: 'none', pubertyMarginTop: '12px', pubertyMarginBottom: '12px' };
@@ -59,12 +64,14 @@ function setup({ columns = '400px 400px', rects = true, lifecycle = false, eligi
     return job;
   });
   const win = emitter({ document: doc, VildaCentileLiveData: data, __vildaRemindersResync: vi.fn(),
+    __vildaCentileLivePendingSince: bootSince,
+    matchMedia: () => ({ matches: reducedMotion }),
     getComputedStyle: (node) => node.computedStyle || (node === form ? { gridTemplateColumns: style.columns } : {
       display: node === puberty ? style.pubertyDisplay : 'block', marginTop: style.pubertyMarginTop, marginBottom: style.pubertyMarginBottom,
     }),
     requestAnimationFrame: (fn) => { const key = ++id; frames.set(key, fn); return key; },
     cancelAnimationFrame: (key) => frames.delete(key),
-    setTimeout: (fn, delay) => { const key = ++id; timers.set(key, { fn, delay }); return key; },
+    setTimeout: vi.fn((fn, delay) => { const key = ++id; timers.set(key, { fn, delay, due: Date.now() + delay }); return key; }),
     clearTimeout: (key) => timers.delete(key),
     ResizeObserver: class { constructor(fn) { resizeObservers.push(fn); } observe() {} },
     VildaCentileLiveRender: { render, probe: vi.fn(), ...(deferredBounds ? { prepareContentBounds } : {}) },
@@ -77,6 +84,11 @@ function setup({ columns = '400px 400px', rects = true, lifecycle = false, eligi
         setMetric: (value) => { state.metric = value; },
         destroy: vi.fn(() => view.element.remove()), getState: () => ({ ...state }),
       };
+      if (animated) view.element.animate = vi.fn((keyframes, options) => {
+        const animation = { keyframes, options, cancel: vi.fn(), onfinish: null, oncancel: null };
+        animations.push(animation);
+        return animation;
+      });
       views.push(view); return view;
     }) },
   });
@@ -94,11 +106,13 @@ function setup({ columns = '400px 400px', rects = true, lifecycle = false, eligi
   });
   win.VildaCentileLiveHost = { open };
   if (beforeStart) beforeStart({ fieldset, doctor, mount, puberty, style, element });
-  loadBrowserScript('vilda_centile_live_panel.js', win);
+  if (!deferStart) loadBrowserScript('vilda_centile_live_panel.js', win);
   const snapshot = (extra = {}) => ({ patientToken: currentToken, patientId: currentToken?.fictional || null,
     source: 'OLAF', ageMonths: 158, measurements: [], ...extra });
   return { win, doc, data, pending, views, hosts, open, render, snapshot, style, classes, mount, fieldset, doctor, form, puberty,
-    api: win.VildaCentileLivePanel, element, notice, noticeMessage, retryButton, boundsJobs, prepareContentBounds,
+    get api() { return win.VildaCentileLivePanel; },
+    startController: () => loadBrowserScript('vilda_centile_live_panel.js', win),
+    element, notice, noticeTitle, noticeMessage, retryButton, boundsJobs, prepareContentBounds, animations,
     setEligibility: value => { eligibility = value; },
     emit: (event) => subscribers.forEach((fn) => fn(event)),
     replacePatient: (name = 'patient-b') => { currentToken = Object.freeze({ fictional: name, revision: 2 }); },
@@ -112,6 +126,11 @@ function setup({ columns = '400px 400px', rects = true, lifecycle = false, eligi
       }
     },
     runTimers: (maxDelay = 1000) => { const callbacks = [...timers].filter(([, task]) => task.delay <= maxDelay); callbacks.forEach(([key, task]) => { timers.delete(key); task.fn(); }); },
+    runDueTimers: () => {
+      for (const [key, task] of [...timers].filter(([, task]) => task.due <= Date.now())) {
+        if (timers.delete(key)) task.fn();
+      }
+    },
     resize: () => resizeObservers.forEach((fn) => fn()),
   };
 }
@@ -528,6 +547,77 @@ describe('live panel controller — deferred fullscreen preparation', () => {
     expect(view.fit).toHaveBeenCalledTimes(fits);
   });
 
+  it('leaves a visible fade frame before background readback without postponing the ready drawing', async () => {
+    const e = setup({ deferredBounds: true, animated: true }); const view = await ready(e);
+    expect(e.api.getState()).toMatchObject({ status: 'ready', slotStatus: 'ready' });
+    expect(view.update).toHaveBeenCalledOnce();
+    expect(e.animations).toHaveLength(1);
+    e.nextFrame();
+    expect(e.prepareContentBounds).not.toHaveBeenCalled();
+    e.nextFrame();
+    expect(e.prepareContentBounds).not.toHaveBeenCalled();
+    e.nextFrame();
+    expect(e.prepareContentBounds).toHaveBeenCalledOnce();
+    expect(view.update).toHaveBeenCalledOnce();
+    expect(e.animations).toHaveLength(1);
+  });
+
+  it.each(['reduced-motion', 'without-WAAPI', 'finished-fade'])('%s preserves the existing two-frame readback boundary', async mode => {
+    const e = setup({ deferredBounds: true, animated: mode !== 'without-WAAPI', reducedMotion: mode === 'reduced-motion' });
+    await ready(e);
+    e.nextFrame();
+    expect(e.prepareContentBounds).not.toHaveBeenCalled();
+    if (mode === 'finished-fade') e.animations[0].onfinish();
+    else expect(e.animations).toHaveLength(0);
+    e.nextFrame();
+    expect(e.prepareContentBounds).toHaveBeenCalledOnce();
+  });
+
+  it.each(['lock', 'clear', 'patient-change', 'pagehide'])('%s during the additional fade frame prevents stale readback', async reason => {
+    const e = setup({ deferredBounds: true, animated: true }); const view = await ready(e);
+    e.nextFrame(); e.nextFrame();
+    expect(e.prepareContentBounds).not.toHaveBeenCalled();
+    if (reason === 'pagehide') e.win.dispatchEvent({ type: 'pagehide' });
+    else {
+      if (reason === 'patient-change') e.replacePatient();
+      else e.invalidate();
+      e.emit({ reason, identityChanged: true });
+    }
+    expect(view.destroy).toHaveBeenCalledOnce();
+    expect(e.animations[0].cancel).toHaveBeenCalledOnce();
+    e.nextFrame();
+    expect(e.prepareContentBounds).not.toHaveBeenCalled();
+  });
+
+  it('a changed measurement cancels the additional first-reveal frame and prepares its new image after two frames', async () => {
+    const e = setup({ deferredBounds: true, animated: true }); const view = await ready(e);
+    e.nextFrame(); e.nextFrame();
+    const refresh = e.api.refresh();
+    e.pending[1].resolve(e.snapshot({ source: 'PALCZEWSKA', currentHeight: 161 })); await refresh;
+    expect(view.update).toHaveBeenCalledTimes(2);
+    expect(e.animations[0].cancel).toHaveBeenCalledOnce();
+    e.nextFrame();
+    expect(e.prepareContentBounds).not.toHaveBeenCalled();
+    e.nextFrame();
+    expect(e.prepareContentBounds).toHaveBeenCalledOnce();
+    expect(e.boundsJobs[0].rendered.source).toBe('PALCZEWSKA');
+    expect(e.animations).toHaveLength(1);
+  });
+
+  it('fullscreen priority cancels the additional fade frame and starts one immediate preparation', async () => {
+    const e = setup({ deferredBounds: true, animated: true }); const view = await ready(e);
+    e.nextFrame(); e.nextFrame();
+    expect(e.prepareContentBounds).not.toHaveBeenCalled();
+    view.options.onExpand();
+    expect(e.animations[0].cancel).toHaveBeenCalledOnce();
+    expect(e.prepareContentBounds).toHaveBeenCalledOnce();
+    expect(e.boundsJobs[0].prioritize).toHaveBeenCalledOnce();
+    e.nextFrame();
+    expect(e.prepareContentBounds).toHaveBeenCalledOnce();
+    e.boundsJobs[0].resolve({ status: 'ready' }); await flush();
+    expect(e.open).toHaveBeenCalledOnce();
+  });
+
   it('coalesces early expand clicks and opens only after exact bounds are ready', async () => {
     const e = setup({ deferredBounds: true }); const view = await ready(e);
     view.options.onExpand(); view.options.onExpand();
@@ -855,5 +945,223 @@ describe('live panel controller — coalesced restoration geometry', () => {
     expect(e.render).toHaveBeenCalledOnce();
     expect(e.api.getState().slotStatus).toBe('pending');
     expect(e.win.__vildaRemindersResync).not.toHaveBeenCalled();
+  });
+});
+
+describe('live panel controller — quiet waiting and first opacity reveal', () => {
+  let clock;
+  let now;
+  function at(value = 10000) {
+    now = value;
+    if (!clock) clock = vi.spyOn(Date, 'now').mockImplementation(() => now);
+  }
+  afterEach(() => { clock?.mockRestore(); clock = null; });
+
+  it('a quick response never inserts a loading announcement and stale timer callbacks cannot show it after ready', async () => {
+    at();
+    const e = setup({ lifecycle: true, animated: true });
+    expect(e.mount.hidden).toBe(false);
+    expect(e.notice.hidden).toBe(false);
+    expect(e.noticeTitle.hidden).toBe(true);
+    expect(e.noticeMessage.hidden).toBe(true);
+    expect(e.noticeMessage.textContent).toBe('');
+    const delayed = e.win.setTimeout.mock.calls.find(([, delay]) => delay === 1200)[0];
+    e.pending[0].resolve({ status: 'ready', snapshot: e.snapshot() }); await flush();
+    at(11500); e.runDueTimers(); delayed();
+    expect(e.api.getState().status).toBe('ready');
+    expect(e.notice.hidden).toBe(true);
+    expect(e.noticeMessage.textContent).toBe('');
+    expect(e.noticeMessage.hidden).toBe(true);
+    expect(e.animations).toHaveLength(1);
+  });
+
+  it('150 ms read retries do not restart the continuous 1200 ms waiting interval', async () => {
+    at();
+    const e = setup({ lifecycle: true, eligibility: 'pending' });
+    e.pending[0].resolve({ status: 'pending' }); await flush();
+    for (let index = 1; index <= 7; index++) {
+      at(10000 + 150 * index); e.runDueTimers();
+      e.pending[index].resolve({ status: 'pending' }); await flush();
+      expect(e.noticeMessage.hidden).toBe(true);
+      expect(e.noticeMessage.textContent).toBe('');
+    }
+    expect(e.win.setTimeout.mock.calls.filter(([, delay]) => delay === 1200)).toHaveLength(1);
+    at(11199); e.runDueTimers();
+    expect(e.noticeMessage.hidden).toBe(true);
+    at(11200); e.runDueTimers();
+    expect(e.noticeMessage.hidden).toBe(false);
+    expect(e.noticeTitle.hidden).toBe(false);
+    expect(e.noticeMessage.textContent).toBe('Wczytywanie siatki…');
+    expect(e.api.getState().slotStatus).toBe('pending');
+    at(20000); e.runDueTimers();
+    expect(e.api.getState().slotStatus).toBe('error');
+    expect(e.noticeMessage.textContent).toContain('trwa zbyt długo');
+    expect(e.retryButton.hidden).toBe(false);
+  });
+
+  it('an intentional edit and a read error are announced immediately, while retry starts a fresh quiet wait', async () => {
+    at();
+    const e = setup({ lifecycle: true });
+    e.pending[0].resolve({ status: 'pending', reason: 'measurement-edit' }); await flush();
+    expect(e.noticeMessage.hidden).toBe(false);
+    expect(e.noticeMessage.textContent).toContain('zakończeniu edycji');
+    at(25000); e.runDueTimers();
+    expect(e.api.getState().slotStatus).toBe('pending');
+    expect(e.retryButton.hidden).toBe(true);
+    const failed = e.api.refresh();
+    e.pending[1].resolve({ status: 'error' }); await failed;
+    expect(e.noticeMessage.hidden).toBe(false);
+    expect(e.noticeTitle.hidden).toBe(false);
+    expect(e.noticeMessage.textContent).toContain('Nie udało');
+    expect(e.retryButton.hidden).toBe(false);
+    const retry = e.api.retry();
+    expect(e.noticeMessage.textContent).toBe('');
+    expect(e.noticeMessage.hidden).toBe(true);
+    e.pending[2].resolve({ status: 'ready', snapshot: e.snapshot() }); await retry;
+    expect(e.api.getState().slotStatus).toBe('ready');
+  });
+
+  it('the first ready drawing fades only after fitting, with no transforms or postponed ready state', async () => {
+    at();
+    const e = setup({ animated: true });
+    const view = await ready(e);
+    expect(e.api.getState()).toMatchObject({ status: 'ready', slotStatus: 'ready' });
+    expect(e.animations).toHaveLength(1);
+    expect(e.animations[0].keyframes).toEqual([{ opacity: 0 }, { opacity: 1 }]);
+    expect(e.animations[0].options).toEqual({ duration: 300, easing: 'ease-out' });
+    expect(view.fit.mock.invocationCallOrder.at(-1)).toBeLessThan(view.element.animate.mock.invocationCallOrder[0]);
+    expect(view.update.mock.invocationCallOrder[0]).toBeLessThan(view.element.animate.mock.invocationCallOrder[0]);
+    const animation = e.animations[0];
+    const refresh = e.api.refresh();
+    e.pending[1].resolve(e.snapshot({ source: 'PALCZEWSKA', currentHeight: 161 })); await refresh;
+    expect(animation.cancel).toHaveBeenCalledOnce();
+    expect(e.animations).toHaveLength(1);
+    expect(view.update).toHaveBeenCalledTimes(2);
+    expect(view.element.hidden).toBe(false);
+  });
+
+  it('natural completion and a same-visit refresh do not restart the fade', async () => {
+    const e = setup({ animated: true }); const view = await ready(e);
+    const animation = e.animations[0];
+    animation.onfinish();
+    const refresh = e.api.refresh(); e.pending[1].resolve(e.snapshot()); await refresh;
+    expect(animation.cancel).not.toHaveBeenCalled();
+    expect(view.element.animate).toHaveBeenCalledOnce();
+    expect(view.update).toHaveBeenCalledOnce();
+  });
+
+  it.each([false, true])('fullscreen completes the fade before transfer (deferred crop: %s)', async deferredBounds => {
+    const e = setup({ animated: true, deferredBounds }); const view = await ready(e);
+    const animation = e.animations[0];
+    view.options.onExpand();
+    expect(animation.cancel).toHaveBeenCalledOnce();
+    if (deferredBounds) {
+      expect(e.open).not.toHaveBeenCalled();
+      e.boundsJobs[0].resolve({ status: 'ready' }); await flush();
+    }
+    expect(e.open).toHaveBeenCalledOnce();
+    expect(animation.cancel.mock.invocationCallOrder[0]).toBeLessThan(e.open.mock.invocationCallOrder[0]);
+    expect(e.api.getState().fullscreen).toBe(true);
+  });
+
+  it.each(['lock', 'clear', 'patient-change', 'pagehide'])('%s cancels the effect and a later chart in the same document does not fade again', async reason => {
+    const e = setup({ animated: true }); const old = await ready(e);
+    const animation = e.animations[0];
+    if (reason === 'pagehide') e.win.dispatchEvent({ type: 'pagehide' });
+    else {
+      if (reason === 'patient-change') e.replacePatient();
+      else e.invalidate();
+      e.emit({ reason, identityChanged: true });
+    }
+    expect(animation.cancel).toHaveBeenCalledOnce();
+    expect(old.destroy).toHaveBeenCalledOnce();
+    expect(old.element.hidden).toBe(true);
+    expect(animation.onfinish).toBeNull();
+    expect(animation.oncancel).toBeNull();
+    if (reason === 'pagehide' || reason === 'patient-change') {
+      if (reason === 'pagehide') e.win.dispatchEvent({ type: 'pageshow', persisted: true });
+      e.nextFrame(); e.runTimers();
+      e.pending[1].resolve(e.snapshot()); await flush();
+      expect(e.api.getState().status).toBe('ready');
+      expect(e.animations).toHaveLength(1);
+    }
+  });
+
+  it('reduced motion skips animation but keeps the same delayed loading notice', async () => {
+    at();
+    const e = setup({ animated: true, reducedMotion: true });
+    expect(e.noticeMessage.hidden).toBe(true);
+    at(11200); e.runDueTimers();
+    expect(e.noticeMessage.hidden).toBe(false);
+    await ready(e);
+    expect(e.animations).toHaveLength(0);
+    expect(e.api.getState().status).toBe('ready');
+  });
+
+  function runBootstrap(e, filename) {
+    const html = fs.readFileSync(new URL(`../../${filename}`, import.meta.url), 'utf8');
+    expect(html).toMatch(/id="vildaCentileLiveLoadingTitle"[^>]* hidden>/u);
+    expect(html).toMatch(/<p id="vildaCentileLiveLoadingMessage" hidden><\/p>/u);
+    const source = [...html.matchAll(/<script(?:\s[^>]*)?>([\s\S]*?)<\/script>/gu)]
+      .find(([, script]) => script.includes('window.__vildaCentileLivePendingSince'))?.[1];
+    expect(source).toBeTruthy();
+    const storage = { getItem: key => ({ vildaCurrentPatientId: 'fictional-a', vildaLoadChoiceV1: 'new' })[key] || null };
+    e.win.location = { reload: vi.fn() };
+    new Function('window', 'document', 'sessionStorage', source)(e.win, e.doc, storage);
+  }
+
+  it.each(['index.html', 'docpro.html'])('%s shows delayed boot feedback without the controller and preserves the 15 s error', filename => {
+    at();
+    const e = setup({ deferStart: true });
+    runBootstrap(e, filename);
+    const messageCallback = e.win.setTimeout.mock.calls.find(([, delay]) => delay === 1200)[0];
+    expect(e.win.__vildaCentileLivePendingSince).toBe(10000);
+    expect(e.noticeMessage.hidden).toBe(true);
+    expect(e.noticeMessage.textContent).toBe('');
+    at(11199); e.runDueTimers();
+    expect(e.noticeMessage.hidden).toBe(true);
+    at(11200); e.runDueTimers();
+    expect(e.noticeMessage.textContent).toBe('Wczytywanie siatki…');
+    expect(e.noticeMessage.hidden).toBe(false);
+    at(25000); e.runDueTimers();
+    expect(e.mount.attributes['data-centile-live-state']).toBe('error');
+    expect(e.noticeMessage.textContent).toContain('Nie udało się uruchomić');
+    expect(e.noticeTitle.hidden).toBe(false);
+    expect(e.retryButton.hidden).toBe(false);
+    messageCallback();
+    expect(e.noticeMessage.textContent).toContain('Nie udało się uruchomić');
+  });
+
+  it.each(['index.html', 'docpro.html'])('%s transfers elapsed boot time and neutral ready-state callbacks cannot revive the message', async filename => {
+    at();
+    const e = setup({ lifecycle: true, deferStart: true, animated: true });
+    runBootstrap(e, filename);
+    const bootCallback = e.win.setTimeout.mock.calls.find(([, delay]) => delay === 1200)[0];
+    at(10700); e.startController();
+    expect(e.win.setTimeout.mock.calls.some(([, delay]) => delay === 500)).toBe(true);
+    at(11199); e.runDueTimers();
+    expect(e.noticeMessage.hidden).toBe(true);
+    at(11200); e.runDueTimers();
+    expect(e.noticeMessage.textContent).toBe('Wczytywanie siatki…');
+    e.pending[0].resolve({ status: 'ready', snapshot: e.snapshot() }); await flush();
+    at(25000); e.runDueTimers(); bootCallback(); e.doc.dispatchEvent({ type: 'readystatechange' });
+    expect(e.noticeMessage.textContent).toBe('');
+    expect(e.noticeMessage.hidden).toBe(true);
+    expect(e.notice.hidden).toBe(true);
+    expect(e.api.getState().slotStatus).toBe('ready');
+  });
+
+  it('the boot timer can expire before the loader markup is parsed', () => {
+    at();
+    const e = setup({ deferStart: true });
+    const find = e.doc.getElementById;
+    e.doc.getElementById = () => null;
+    runBootstrap(e, 'docpro.html');
+    at(11200); e.runDueTimers();
+    expect(e.noticeMessage.textContent).toBe('');
+    e.doc.getElementById = find;
+    e.doc.dispatchEvent({ type: 'readystatechange' });
+    expect(e.noticeMessage.textContent).toBe('Wczytywanie siatki…');
+    expect(e.noticeMessage.hidden).toBe(false);
   });
 });

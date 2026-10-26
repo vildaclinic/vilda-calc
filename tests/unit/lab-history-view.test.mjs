@@ -293,13 +293,33 @@ describe('LAB-HISTORIA — oczekujące, bieżący wynik, panele i kategorie', ()
     expect(view.panels[0].label).toBe('Oś gonadalna');
   });
 
-  it('tylko „wynik-badania”: klirens i notatka leczenia z wynikiem poza historią (decyzja 6.13)', () => {
+  it('domyślna projekcja przelicznika pozostaje lab-only; główna karta osobno dołącza zapisane obliczenia', () => {
     const clearance = result('Klirens kreatyniny', 'clcr', '90', 90, 'ml/min', '2026-09-12', { category: 'wynik-klirens' });
     const treatment = result('TSH', 'tsh', '1', 1, 'mIU/L', '2026-09-13');
     treatment.note.medication = { name: 'Fikcyjny lek', action: 'start' };
     const view = build([result('TSH', 'tsh', '2', 2, 'mIU/L', '2026-09-12'), clearance, treatment]);
     expect(view.panels.flatMap((p) => p.series.map((s) => s.key))).toEqual(['tsh']);
     expect(seriesView(view, 'tsh').entries).toHaveLength(1);
+  });
+
+  it('główna karta komponuje pełne notatki Klirensu i deduplikuje wyłącznie po tym samym ID', () => {
+    const ordinary = result('Fikcyjne badanie', 'fictional', '13,6', 13.6, 'mg/g', '2026-10-25');
+    const clearance = result('ACR (fikcyjna metoda)', 'fictional', '13,6', 13.6, 'mg/g', '2026-10-25', { category: 'wynik-klirens' });
+    const negative = result('UAG (fikcyjna metoda)', null, '-15', null, 'mmol/L', '2026-10-25', { category: 'wynik-klirens' });
+    negative.skipSeries = true;
+    const projection = {
+      handledNoteIds: [clearance.note.id, negative.note.id],
+      measurements: [{ noteId: clearance.note.id, dateISO: '2026-10-25' }, { noteId: negative.note.id, dateISO: '2026-10-25' }],
+      series: [{ seriesKey: 'clcr:ACR|mg/g' }, { seriesKey: 'clcr:AGu|mmol/L' }],
+    };
+    const projectPatientNotes = vi.fn(() => projection);
+    const view = build([ordinary, clearance, negative], {
+      categoryFilter: ['wynik-badania', 'wynik-klirens'], patientId: 'fikcyjny-pacjent', clcrSavedResults: { projectPatientNotes },
+    });
+    expect(projectPatientNotes).toHaveBeenCalledWith([ordinary.note, clearance.note, negative.note], { patientId: 'fikcyjny-pacjent' });
+    expect(view.clcr).toBe(projection);
+    expect(seriesView(view, 'fictional').entries.map((entry) => entry.noteId)).toEqual([ordinary.note.id]);
+    expect(view.summary).toMatchObject({ results: 3, analytes: 3, lastDateISO: '2026-10-25' });
   });
 
   it('tabela panelu: daty malejąco, data badania przed datą wpisu tego samego dnia; zdarzenia leczenia jako osobne wiersze danych', () => {

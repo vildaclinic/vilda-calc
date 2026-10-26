@@ -291,7 +291,8 @@ describe('Zmierzony klirens — jeden wynik i przeliczony zakres źródłowy', (
     expect(snapshotFromHtml(html).inputs).not.toHaveProperty('foreignField');
     expect(html).toContain('data-clcr-assumptions="Założenia w pełnym opisie."');
     expect(html).not.toContain('class="clcr-result-assumptions"');
-    expect(html.match(/data-measured-detail/g)).toHaveLength(1);
+    // The frozen model also stores detailHtml; count only the rendered paragraph.
+    expect(html.match(/<p data-measured-detail>/g)).toHaveLength(1);
     expect(html).not.toContain('<strong>Metoda:</strong>');
   });
 });

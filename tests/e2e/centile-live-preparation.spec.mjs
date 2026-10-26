@@ -3,7 +3,7 @@ import { createFictionalVault, loadPatient } from '../support/centile-live-fixtu
 
 // Natywne klatki i zadania przeglądarki: zamrożony zegar ukryłby blokowanie
 // pierwszego malowania. Wszyscy pacjenci pochodzą z fikcyjnego sejfu fixture.
-test.use({ serviceWorkers: 'block', reducedMotion: 'reduce' });
+test.use({ serviceWorkers: 'block', contextOptions: { reducedMotion: 'reduce' } });
 test.setTimeout(120_000);
 
 const CARD = '.vilda-centile-live-card';
@@ -76,26 +76,30 @@ function installPreparationProbe() {
   };
 }
 
-test('Start: kompletna siatka jest malowana przed skanowaniem marginesów, a waga jest już przygotowana', async ({ page }) => {
-  await page.addInitScript(installPreparationProbe);
-  const { ids } = await createFictionalVault(page);
-  await loadPatient(page, ids.a);
-  await ready(page, ids.a);
-  await expect.poll(() => page.evaluate(() => window.__centilePreparationProbe.some(result => result.status === 'ready')))
-    .toBe(true);
-  const observed = await page.evaluate(() => window.__centilePreparationProbe.map(({ assets, ...result }) => result));
-  const completed = observed.filter(result => result.status === 'ready');
-  expect(completed.length).toBeGreaterThan(0);
-  for (const result of completed) {
-    expect(result.eagerMetrics).toEqual(['height', 'weight']);
-    expect(result.reads.length).toBeGreaterThan(1);
-    expect(result.reads.some(read => read.synchronousRender), 'start nie odczytuje całego obrazu przed montażem').toBe(false);
-    expect(result.reads[0].frames, 'co najmniej jedna klatka widocznej siatki przed pierwszym odczytem').toBeGreaterThan(0);
-    expect(result.reads.every(read => read.height < read.canvasHeight), 'odczyt marginesów podzielony na pasy').toBe(true);
-  }
-  await page.locator(`${CARD} [data-centile-live-metric="weight"]`).click();
-  await expect(page.locator(`${CARD} canvas.vilda-centile-live-image`)).toBeVisible();
-  await expect(page.locator('#remindersInline')).toBeHidden();
+for (const reducedMotion of ['reduce', 'no-preference']) test.describe(`pierwsze malowanie (${reducedMotion})`, () => {
+  test.use({ contextOptions: { reducedMotion } });
+  test('Start: kompletna siatka jest malowana przed skanowaniem marginesów, a waga jest już przygotowana', async ({ page }) => {
+    expect(await page.evaluate(() => matchMedia('(prefers-reduced-motion: reduce)').matches)).toBe(reducedMotion === 'reduce');
+    await page.addInitScript(installPreparationProbe);
+    const { ids } = await createFictionalVault(page);
+    await loadPatient(page, ids.a);
+    await ready(page, ids.a);
+    await expect.poll(() => page.evaluate(() => window.__centilePreparationProbe.some(result => result.status === 'ready')))
+      .toBe(true);
+    const observed = await page.evaluate(() => window.__centilePreparationProbe.map(({ assets, ...result }) => result));
+    const completed = observed.filter(result => result.status === 'ready');
+    expect(completed.length).toBeGreaterThan(0);
+    for (const result of completed) {
+      expect(result.eagerMetrics).toEqual(['height', 'weight']);
+      expect(result.reads.length).toBeGreaterThan(1);
+      expect(result.reads.some(read => read.synchronousRender), 'start nie odczytuje całego obrazu przed montażem').toBe(false);
+      expect(result.reads[0].frames, 'co najmniej jedna klatka widocznej siatki przed pierwszym odczytem').toBeGreaterThan(0);
+      expect(result.reads.every(read => read.height < read.canvasHeight), 'odczyt marginesów podzielony na pasy').toBe(true);
+    }
+    await page.locator(`${CARD} [data-centile-live-metric="weight"]`).click();
+    await expect(page.locator(`${CARD} canvas.vilda-centile-live-image`)).toBeVisible();
+    await expect(page.locator('#remindersInline')).toBeHidden();
+  });
 });
 
 const explicitSnapshot = {
@@ -163,10 +167,13 @@ async function holdPreparation(page) {
     const api = window.VildaCentileLiveRender;
     const prepare = api.prepareContentBounds;
     window.__heldCentilePreparations = [];
+    let release;
+    // Po zwolnieniu przepuszczamy także kolejne odświeżenia: mogą zastąpić
+    // poprzedni wynik już po jednorazowym wywołaniu release w teście.
+    const gate = new Promise(resolve => { release = resolve; });
     api.prepareContentBounds = function (...args) {
       const actual = prepare.apply(this, args);
-      const item = { actual, cancelled: 0, prioritized: 0, release: null, outcome: null };
-      const gate = new Promise(resolve => { item.release = resolve; });
+      const item = { actual, cancelled: 0, prioritized: 0, release, outcome: null };
       window.__heldCentilePreparations.push(item);
       return {
         promise: actual.promise.then(async result => { item.outcome = result.status; await gate; return result; }),

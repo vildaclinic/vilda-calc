@@ -4012,7 +4012,17 @@ describe('P-NOTATKI-ZA-KARTA — strażniki źródła', () => {
     expect(bpu.split('new Date().toISOString()').length - 1, 'jedna chwila').toBe(1);
     expect(bpu).not.toContain('listPatientNoteTombstonesForUser');
     expect(src).toContain('return Ac(t,function(){return Eb(t)})');
-    expect(src).toContain('async function Eb(t,Qwp,Qwm){');
+    // Klirens adds a private, opt-in fourth argument. Ordinary $o and the
+    // patient-deletion loop still call Eb without it; retain their storage,
+    // tombstone fields and historical error policy rather than matching only
+    // the former three-argument spelling of the declaration.
+    const eb = sekcja('async function Eb(t,Qwp,Qwm,Qwf){', 'async function ts(');
+    expect(eb).toContain('const Qwg=Qwf&&Qwf.token===VildaExistingNoteUpdateToken?Qwf:null;');
+    expect(eb).toContain('await (Qwg?Qwg.adapter:I()).getPatientNoteForUser(Qwg?Qwg.account:b,t)');
+    expect(eb).toContain('if(Qwg)Qwg.beforeCommit();await (Qwg?Qwg.adapter:I()).removePatientNoteForUser(Qwg?Qwg.account:b,t);');
+    expect(eb).toContain('const r=Qwg?Qwg.adapter:I();');
+    expect(eb).toContain('r.putPatientNoteTombstoneForUser(Qwg?Qwg.account:b,{id:t,deletedAtISO:n,rev:Qd5,deletedWithPatient:Qwq})');
+    expect(eb.split('catch(Qwe){if(Qwg)throw Qwe}').length - 1, 'old read/tombstone catches only rethrow for the private guarded call').toBe(2);
     expect(src).toContain('await Bnp_poleEb(t,Qwp,n,Qwm)');
     expect(sekcja('async function ls(t,e){', 'async function ds(')).toContain('const Qx=await Bnp_nagrobek(I(),t)');
     expect(src).toContain('typeof a.rev=="number"&&isFinite(a.rev)&&a.rev>0&&(c.rev=a.rev)');
