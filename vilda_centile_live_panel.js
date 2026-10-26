@@ -9,7 +9,8 @@
   var request = 0, timer = 0, pendingTimer = 0, layoutFrame = 0, started = false;
   var boundsFrame = 0, boundsOwner = null, expansion = null;
   var scheduleFrame = 0, scheduledIdentity = false, scheduledReady = false;
-  var notice, noticeMessage, retryButton, slotStatus = 'ineligible', awaitingEdit = false;
+  var notice, noticeTitle, noticeMessage, retryButton, slotStatus = 'ineligible', awaitingEdit = false;
+  var noticeTimer = 0, noticeSince = null, revealAnimation = null, firstChartShown = false;
   var status = 'hidden', lastWidth = 0, collapsedHeight = 0, lastHeight = 0, renderKey = '';
   var data = w.VildaCentileLiveData;
 
@@ -41,6 +42,69 @@
   function stopPending() {
     w.clearTimeout(pendingTimer);
     pendingTimer = 0;
+  }
+
+  function noticeText(message) {
+    if (noticeTitle) noticeTitle.hidden = !message;
+    if (noticeMessage) {
+      if (noticeMessage.textContent !== message) noticeMessage.textContent = message;
+      noticeMessage.hidden = !message;
+    }
+  }
+
+  function stopNoticeDelay() {
+    w.clearTimeout(noticeTimer);
+    noticeTimer = 0;
+    noticeSince = null;
+    w.__vildaCentileLivePendingSince = null;
+  }
+
+  function pendingNotice() {
+    if (view || awaitingEdit) {
+      stopNoticeDelay();
+      noticeText(awaitingEdit ? 'Siatka pojawi się po zakończeniu edycji pola.' : '');
+      return;
+    }
+    if (noticeSince === null) {
+      var bootSince = Number(w.__vildaCentileLivePendingSince);
+      noticeSince = Number.isFinite(bootSince) && bootSince > 0 ? bootSince : Date.now();
+    }
+    var remaining = 1200 - Math.max(0, Date.now() - noticeSince);
+    if (remaining <= 0) {
+      noticeText('Wczytywanie siatki…');
+      return;
+    }
+    noticeText('');
+    if (!noticeTimer) noticeTimer = w.setTimeout(function () {
+      noticeTimer = 0;
+      if (slotStatus === 'pending' && !view && !awaitingEdit) noticeText('Wczytywanie siatki…');
+    }, remaining);
+  }
+
+  function finishReveal() {
+    var animation = revealAnimation;
+    revealAnimation = null;
+    if (animation) {
+      animation.onfinish = null;
+      animation.oncancel = null;
+      // The underlying card stays fully opaque; cancelling an opacity-only
+      // effect reveals it immediately without changing layout or ownership.
+      try { animation.cancel(); } catch (_) { /* An already removed effect is harmless. */ }
+    }
+  }
+
+  function revealFirstChart() {
+    if (firstChartShown || !view || status !== 'ready') return;
+    firstChartShown = true;
+    try {
+      if (typeof w.matchMedia === 'function' && w.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+      if (typeof view.element.animate !== 'function') return;
+      var animation = view.element.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 300, easing: 'ease-out' });
+      revealAnimation = animation;
+      animation.onfinish = animation.oncancel = function () {
+        if (revealAnimation === animation) revealAnimation = null;
+      };
+    } catch (_) { /* Rendering remains immediate when animations are unavailable. */ }
   }
 
   function stopRefresh() {
@@ -129,12 +193,24 @@
       if (!currentBounds(owner)) return;
       boundsFrame = w.requestAnimationFrame(function () {
         boundsFrame = 0;
+        if (!currentBounds(owner)) return;
+        // WAAPI can present the first fade frame at opacity zero. Leave the
+        // following frame visible before background pixel readback competes
+        // with painting. Normal updates and reduced motion keep two frames.
+        if (revealAnimation) {
+          boundsFrame = w.requestAnimationFrame(function () {
+            boundsFrame = 0;
+            prepareBounds(owner, false);
+          });
+          return;
+        }
         prepareBounds(owner, false);
       });
     });
   }
 
   function discardView(reason) {
+    finishReveal();
     stopBounds();
     awaitingEdit = false;
     snapshot = null;
@@ -157,6 +233,8 @@
     request += 1;
     stopRefresh();
     stopPending();
+    stopNoticeDelay();
+    noticeText('');
     if (layoutFrame) w.cancelAnimationFrame(layoutFrame);
     layoutFrame = 0;
     discardView(reason);
@@ -170,9 +248,11 @@
   }
 
   function showError(message) {
+    finishReveal();
     stopBounds();
     awaitingEdit = false;
     stopPending();
+    stopNoticeDelay();
     status = 'unavailable';
     rendered = null;
     renderKey = '';
@@ -185,7 +265,7 @@
       if (retryButton) view.element.appendChild(retryButton);
     } else {
       if (notice) notice.hidden = false;
-      if (noticeMessage) noticeMessage.textContent = message;
+      noticeText(message);
     }
     if (retryButton) { retryButton.textContent = 'Spróbuj ponownie'; retryButton.hidden = false; }
     slot('error');
@@ -197,10 +277,9 @@
     if (view && snapshot && !data.isCurrent(snapshot)) discardView('stale');
     if (!view) status = 'pending';
     if (notice) notice.hidden = !!view;
-    if (noticeMessage) noticeMessage.textContent = awaitingEdit
-      ? 'Siatka pojawi się po zakończeniu edycji pola.' : 'Wczytywanie siatki…';
     if (retryButton) retryButton.hidden = true;
     slot('pending');
+    pendingNotice();
     // A lost completion event or a hung read must become a recoverable error,
     // never an endless placeholder or a time-based return to Reminders.
     if (awaitingEdit) stopPending();
@@ -299,6 +378,7 @@
     if (view !== currentView || fullscreen || !data.isCurrent(currentSnapshot) || !twoColumns()) return;
     var host = w.VildaCentileLiveHost;
     if (!host) return;
+    finishReveal();
     var closedDuringOpen = false;
     var handle = host.open({
       sourceWindow: w, element: currentView.element,
@@ -329,6 +409,7 @@
 
   function expand() {
     if (!view || !snapshot || fullscreen || expansion || !data.isCurrent(snapshot) || !twoColumns()) return;
+    finishReveal();
     var currentView = view, currentSnapshot = snapshot;
     var owner = boundsOwner;
     if (!owner || owner.result && owner.result.status === 'ready') {
@@ -402,6 +483,8 @@
     }
     awaitingEdit = false;
     stopPending();
+    stopNoticeDelay();
+    noticeText('');
     if (snapshot && snapshot.patientToken !== next.patientToken) discardView('patient-change');
     try {
       var nextKey = JSON.stringify(next);
@@ -448,6 +531,7 @@
       hideRetry();
       view.element.hidden = false;
       status = rendered && rendered.status || 'ready';
+      finishReveal();
       view.update(rendered, next);
       renderKey = nextKey;
       if (owner && !owner.job) scheduleBounds(owner);
@@ -456,6 +540,7 @@
       return;
     }
     inlineSize();
+    revealFirstChart();
   }
 
   function readySignal(event) {
@@ -527,9 +612,11 @@
     if (!form || !fieldset || !doctor || !mount) return;
     started = true;
     notice = d.getElementById('vildaCentileLiveLoading');
+    noticeTitle = d.getElementById('vildaCentileLiveLoadingTitle');
     noticeMessage = d.getElementById('vildaCentileLiveLoadingMessage');
     retryButton = d.getElementById('vildaCentileLiveRetry');
     w.clearTimeout(w.__vildaCentileLiveBootTimer);
+    w.clearTimeout(w.__vildaCentileLiveMessageTimer);
     if (retryButton) {
       retryButton.textContent = 'Spróbuj ponownie';
       retryButton.addEventListener('click', retry);
