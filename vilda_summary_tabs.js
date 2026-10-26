@@ -4,13 +4,43 @@
   'use strict';
   if (!w || w.VildaSummaryTabs) return;
   var d = w.document, card, content, mount, home, tabs, chartPanel, empty;
-  var summaryButton, chartButton, heading, started = false;
+  var summaryButton, chartButton, heading, started = false, controllerChecked = false, missingRetryBound = false;
   var mode = 'dedicated', selected = 'summary';
   var information = { available: false, comparisonVisible: false, isChild: false };
 
   function state() { return { mode: mode, selected: selected }; }
   function announce() {
     d.dispatchEvent(new w.CustomEvent('vilda:summary-chart-state', { detail: state() }));
+  }
+  function missingController() {
+    if (!controllerChecked || mode !== 'summary' || w.VildaCentileLivePanel) return;
+    // All deferred scripts have settled. Keep the results usable and place an
+    // honest recovery action only inside the explicitly selected chart tab.
+    w.clearTimeout(w.__vildaCentileLiveBootTimer);
+    w.clearTimeout(w.__vildaCentileLiveMessageTimer);
+    d.documentElement.classList.remove('vilda-centile-live-booting');
+    mount.hidden = false;
+    mount.setAttribute('data-centile-live-state', 'error');
+    mount.setAttribute('aria-busy', 'false');
+    chartPanel.setAttribute('data-chart-state', 'error');
+    var notice = d.getElementById('vildaCentileLiveLoading');
+    var title = d.getElementById('vildaCentileLiveLoadingTitle');
+    var message = d.getElementById('vildaCentileLiveLoadingMessage');
+    var retry = d.getElementById('vildaCentileLiveRetry');
+    if (notice) notice.hidden = false;
+    if (title) title.hidden = false;
+    if (message) {
+      message.textContent = 'Nie udało się uruchomić siatki. Spróbuj ponownie.';
+      message.hidden = false;
+    }
+    if (retry) {
+      retry.textContent = 'Odśwież stronę';
+      retry.hidden = false;
+      if (!missingRetryBound) {
+        retry.addEventListener('click', function () { w.location.reload(); });
+        missingRetryBound = true;
+      }
+    }
   }
   function select(value, focus, notify) {
     var previous = selected;
@@ -24,6 +54,7 @@
     chartPanel.hidden = !chart;
     card.setAttribute('data-summary-tab', chart ? 'chart' : 'summary');
     if (focus) (chart ? chartButton : summaryButton).focus();
+    missingController();
     if (notify === true || notify !== false && previous !== selected) announce();
   }
   function update() {
@@ -120,6 +151,12 @@
       isChild: card.dataset.isChild === 'true'
     };
     update();
+    function checkController() {
+      controllerChecked = true;
+      missingController();
+    }
+    if (d.readyState === 'complete') checkController();
+    else d.addEventListener('DOMContentLoaded', checkController, { once: true });
   }
   w.VildaSummaryTabs = Object.freeze({ getState: state, refresh: update });
   if (d.readyState === 'loading') d.addEventListener('DOMContentLoaded', start, { once: true });

@@ -105,11 +105,13 @@ async function wybierz(page, przycisk) {
   await expect(page.locator('#vildaLoadChoiceModal')).toHaveCount(0);
 }
 
-// Kolor wiersza z karty Podsumowania (tryb PRO): { tekst, kolor }.
+// Stan semantyczny i rzeczywisty kolor wiersza (tryb PRO). Karta używa teraz
+// klas/CSS zamiast style.color, więc sprawdzamy też to, co widzi użytkownik.
 const wierszPodsumowania = (page, etykieta) => page.evaluate((et) => {
   const r = [...document.querySelectorAll('#currentSummaryContent .current-summary-row')]
     .find((x) => x.textContent.trim().startsWith(et + ':'));
-  return r ? { tekst: r.textContent.trim(), kolor: r.style.color } : null;
+  return r ? { tekst: r.textContent.trim(), kolor: getComputedStyle(r).color,
+    ton: r.dataset.tone, ocena: r.dataset.assessment } : null;
 }, etykieta);
 
 test.describe('Centyle masy i wzrostu nie przechodzą na następnego pacjenta', () => {
@@ -154,8 +156,12 @@ test.describe('Centyle masy i wzrostu nie przechodzą na następnego pacjenta', 
     expect.soft(await centyle(page), 'błąd zakresu: bez centyli').toEqual(PUSTE);
     const waga = await wierszPodsumowania(page, 'Waga');
     expect(waga && waga.tekst, 'warunek: Podsumowanie pokazuje masę nowego dziecka').toMatch(/33 kg, 47 centyl/);
-    // Na bazie: var(--danger) — ton z centyla masy A (0,08).
-    expect(waga.kolor, 'kolor wiersza masy z centyla w tym wierszu').toBe('var(--primary)');
+    // Na bazie: var(--danger) — ton z centyla masy A (0,08). Teraz żaden alarm
+    // poprzedniego pacjenta; przy zatrzymanej walidacji brak aktualnego modelu
+    // oceny zostaje szary, zamiast sugerować potwierdzony prawidłowy wynik.
+    expect(waga, 'bez alarmu poprzedniego pacjenta i bez pozornej prawidłowej oceny').toMatchObject({
+      ton: 'normal', ocena: 'unassessed', kolor: 'rgb(124, 139, 144)',
+    });
   });
 
   test('odwrotnie: po dziecku w normie masa < 1. centyla nowego dziecka nie traci alarmu przy błędzie zakresu', async ({ page }) => {
@@ -172,7 +178,9 @@ test.describe('Centyle masy i wzrostu nie przechodzą na następnego pacjenta', 
     const waga = await wierszPodsumowania(page, 'Waga');
     expect(waga && waga.tekst, 'warunek: Podsumowanie pokazuje masę nowego dziecka').toMatch(/20 kg, <1 centyla/);
     // Na bazie: var(--primary) — ton z centyla masy dziecka w normie, czyli brak alarmu.
-    expect(waga.kolor, 'alarm masy < 1. centyla').toBe('var(--danger)');
+    expect(waga, 'alarm własnej masy < 1. centyla, mimo wcześniejszego wyniku w normie').toMatchObject({
+      ton: 'danger', ocena: 'abnormal', kolor: 'rgb(189, 75, 80)',
+    });
   });
 
   test('ten sam pacjent 17 → 19 lat: dorosły bez centyli z wieku dziecięcego', async ({ page }) => {
@@ -203,7 +211,9 @@ test.describe('Centyle masy i wzrostu nie przechodzą na następnego pacjenta', 
     await trybPro(page, false);
     await trybPro(page, true);
     await expect(page.locator('#whResult .pro-overlay.bmi-danger'), 'puls karty centyli po włączeniu PRO').toHaveCount(1);
-    expect((await wierszPodsumowania(page, 'Waga')).kolor, 'ton masy dziecka bez zmian').toBe('var(--danger)');
+    expect(await wierszPodsumowania(page, 'Waga'), 'ton własnej masy dziecka bez zmian').toMatchObject({
+      ton: 'danger', ocena: 'abnormal', kolor: 'rgb(189, 75, 80)',
+    });
 
     await zalogowana(page);
     await expect.poll(() => centyle(page), { message: 'F5: odtworzenie sesji liczy centyle A od nowa' }).toEqual(wlasne);

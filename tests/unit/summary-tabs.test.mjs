@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import { loadBrowserScript } from '../support/load-browser-script.mjs';
 
-function setup({ available = true, child = true, comparison = false, pending = false } = {}) {
+function setup({ available = true, child = true, comparison = false, pending = false, missingController = false, readyState = 'complete' } = {}) {
   const elements = [], subscribers = [], listeners = new Map();
   function element(tag = 'div') {
     const classes = new Set(), events = new Map();
@@ -27,12 +27,12 @@ function setup({ available = true, child = true, comparison = false, pending = f
   card.id = 'currentSummaryCard'; content.id = 'currentSummaryContent'; mount.id = 'vildaCentileLiveMount';
   card.dataset = { summaryAvailable: String(available), comparisonVisible: String(comparison), isChild: String(child) };
   home.appendChild(mount); home.appendChild(card); card.appendChild(heading); card.appendChild(content);
-  const doc = { readyState: 'complete', getElementById: id => elements.find(e => e.id === id), createElement: element,
+  const doc = { readyState, documentElement: { classList: { remove: vi.fn() } }, getElementById: id => elements.find(e => e.id === id), createElement: element,
     createComment: () => element('#comment'),
     addEventListener(type, callback) { if (!listeners.has(type)) listeners.set(type, []); listeners.get(type).push(callback); },
     dispatchEvent(event) { for (const callback of listeners.get(event.type) || []) callback(event); },
   };
-  const win = { document: doc, CustomEvent: class { constructor(type, options) { this.type = type; this.detail = options.detail; } },
+  const win = { document: doc, clearTimeout: vi.fn(), location: { reload: vi.fn() }, VildaCentileLivePanel: missingController ? undefined : {}, CustomEvent: class { constructor(type, options) { this.type = type; this.detail = options.detail; } },
     VildaCentileLiveData: { getEligibility: () => ({ status: pending ? 'pending' : 'eligible' }), subscribe: fn => subscribers.push(fn) } };
   const changes = []; doc.addEventListener('vilda:summary-chart-state', event => changes.push(event.detail));
   loadBrowserScript('vilda_summary_tabs.js', win);
@@ -113,6 +113,31 @@ describe('professional summary tabs — stable DOM and chart ownership', () => {
     expect(e.win.VildaSummaryTabs.getState()).toEqual({ mode: 'summary', selected: 'chart' });
     expect(e.mount.parentNode).toBe(e.panel);
     expect(e.changes).toHaveLength(2);
+  });
+
+  it('waits for deferred scripts before deciding that the controller failed', () => {
+    const e = setup({ missingController: true, readyState: 'interactive' });
+    expect(e.mount.attributes['data-centile-live-state']).toBeUndefined();
+    e.win.VildaCentileLivePanel = {};
+    e.doc.dispatchEvent({ type: 'DOMContentLoaded' });
+    expect(e.mount.attributes['data-centile-live-state']).toBeUndefined();
+    expect(e.panel.hidden).toBe(true);
+  });
+
+  it('keeps Summary usable if the deferred chart controller failed and exposes its error only inside Chart', () => {
+    const e = setup({ missingController: true });
+    expect(e.content.hidden).toBe(false);
+    expect(e.panel.hidden).toBe(true);
+    expect(e.mount.attributes['data-centile-live-state']).toBe('error');
+    expect(e.panel.attributes['data-chart-state']).toBe('error');
+    e.chart.fire('click');
+    expect(e.content.hidden).toBe(true);
+    expect(e.panel.hidden).toBe(false);
+    expect(e.mount.hidden).toBe(false);
+    expect(e.win.location.reload).not.toHaveBeenCalled();
+    e.summary.fire('click');
+    expect(e.content.hidden).toBe(false);
+    expect(e.panel.hidden).toBe(true);
   });
 
   it.each([{ child: false }, { available: false }, { comparison: true }])('does not expose pediatric chart tabs for %o', options => {

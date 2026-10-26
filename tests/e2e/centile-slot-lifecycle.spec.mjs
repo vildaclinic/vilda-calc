@@ -296,7 +296,14 @@ test('błąd odczytu zostaje w miejscu siatki, a przycisk ponowienia wykonuje pr
   await resetProbe(page);
   await page.evaluate(() => {
     window.__slotRealGetPatient = window.VildaVault.getPatient;
-    window.VildaVault.getPatient = async () => { throw new Error('Fikcyjny błąd odczytu E2E'); };
+    window.VildaVault.getPatient = async function (...args) {
+      // Fail this adapter's read only. A simultaneous comparison/vault failure
+      // legitimately changes the whole presentation to the standalone summary.
+      if (String(new Error().stack).includes('/vilda_centile_live_data.js')) {
+        throw new Error('Fikcyjny błąd odczytu E2E');
+      }
+      return window.__slotRealGetPatient.apply(this, args);
+    };
     document.dispatchEvent(new CustomEvent('vilda:sync-status-changed'));
   });
   await expect.poll(() => page.evaluate(() => window.VildaCentileLivePanel.getState().slotStatus)).toBe('error');

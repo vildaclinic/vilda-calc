@@ -65,6 +65,10 @@ function installSummaryProbe() {
           mode: owner.sessionStorage.getItem('vildaLoadChoiceV1'),
           columns: form ? owner.getComputedStyle(form).gridTemplateColumns.trim().split(/\s+/u).length : 0,
           form: visible(form, owner), summaries, area, input, mount: bounds(mount),
+          summaryResults: visible(doc.getElementById('currentSummaryContent'), owner),
+          presentation: owner.VildaSummaryTabs?.getState()?.mode || null,
+          selectedTab: owner.VildaSummaryTabs?.getState()?.selected || null,
+          chartCount: doc.querySelectorAll('.vilda-centile-live-card').length,
           mountShown: visible(mount, owner), mountState: mount?.getAttribute('data-centile-live-state') || null,
           image: visible(card, owner)
             && [...card.querySelectorAll('svg.vilda-centile-live-preview')].some(el => visible(el, owner)),
@@ -191,33 +195,54 @@ async function holdComparisonOnReload(page) {
   });
 }
 
-test('DocPro: późniejsze porównanie nie wypycha gotowej siatki, a legalne summary pozostaje poniżej', async ({ page }) => {
+test('DocPro: oczekiwanie na porównanie używa jednej karty z zakładkami, a gotowe porównanie przejmuje siatkę bez przebicia wyników', async ({ page }) => {
   await holdComparisonOnReload(page);
   const { id } = await prepareDocPro(page, false);
   await page.evaluate(() => sessionStorage.setItem('__e2eHoldComparison', 'true'));
   await page.reload({ waitUntil: 'load' });
   await page.waitForFunction(() => window.__e2eComparisonWaiting);
-  await expect.poll(() => page.evaluate(() => window.VildaCentileLivePanel?.getState()), { timeout: 30_000 })
-    .toMatchObject({ status: 'ready', eligible: true, patientId: id });
+  await expect(page.getByRole('tab', { name: 'Podsumowanie', exact: true })).toHaveAttribute('aria-selected', 'true');
   await expect(page.locator('#prevSummaryWrap')).toBeHidden();
   await expect(page.locator('#currentSummaryCard')).toBeVisible();
+  await expect(page.locator('#currentSummaryContent')).toContainText('159 cm');
+  await expect(page.locator('#vildaCentileLiveMount')).toBeHidden();
+  await expect(page.locator('.vilda-centile-live-card')).toHaveCount(0);
+
+  // The approved replacement of "summary below chart" is one shared card.
+  // After the explicit chart selection, result text must never flash through it.
+  await page.evaluate(() => { window.__centileSummaryPaint.frames = []; });
+  await page.getByRole('tab', { name: 'Siatka centylowa', exact: true }).click();
+  await expect.poll(() => page.evaluate(() => window.VildaCentileLivePanel?.getState()), { timeout: 30_000 })
+    .toMatchObject({ status: 'ready', eligible: true, patientId: id, presentation: 'summary', selectedTab: 'chart' });
   const during = await observations(page);
-  expectSlotFree(during, id);
-  expect(during.some(frame => frame.status === 'ready' && frame.image
-    && frame.summaries.some(summary => summary.shown && summary.box.top >= frame.mount.bottom)),
-  'gotowy rysunek i legalne summary istnieją równocześnie w prawidłowej kolejności').toBe(true);
-  const before = during.at(-1);
-  expect(Math.abs(before.mount.top - before.input.top), 'siatka zaczyna się na wysokości formularza').toBeLessThan(1);
-  expect(Math.abs(before.mount.bottom - before.input.bottom), 'summary nie zabiera wysokości siatce').toBeLessThan(1);
+  const selected = during.filter(frame => frame.selectedTab === 'chart' && frame.form);
+  expect(selected.length).toBeGreaterThan(5);
+  expect(selected.filter(frame => frame.summaryResults), 'wyniki nie przebijają przez wybraną zakładkę siatki').toEqual([]);
+  expect(selected.some(frame => frame.image && frame.chartCount === 1)).toBe(true);
+  expect(selected.filter(frame => frame.chartCount > 1), 'karta nie tworzy drugiej siatki').toEqual([]);
+  const before = selected.at(-1);
+  const summaryBox = before.summaries.find(summary => summary.id === 'currentSummaryCard').box;
+  expect(Math.abs(summaryBox.top - before.input.top), 'karta zaczyna się na wysokości formularza').toBeLessThan(1);
+  expect(Math.abs(summaryBox.bottom - before.input.bottom), 'zakładki wliczają się do wysokości karty').toBeLessThan(1);
+
   await page.evaluate(() => window.__e2eReleaseComparison());
   await expect(page.locator('#prevSummaryWrap')).toBeVisible();
   await expect(page.locator('#currentSummaryCard')).toBeHidden();
-  const after = await observations(page);
-  expectSlotFree(after, id);
-  expect(after.at(-1).mount, 'zakończenie porównania nie przesuwa ani nie rozciąga gotowej siatki').toEqual(before.mount);
+  await expect.poll(() => page.evaluate(() => window.VildaCentileLivePanel?.getState()), { timeout: 30_000 })
+    .toMatchObject({ status: 'ready', eligible: true, patientId: id, presentation: 'dedicated' });
+  const all = await observations(page);
+  const firstChart = all.findIndex(frame => frame.selectedTab === 'chart' && frame.form);
+  expect(firstChart).toBeGreaterThanOrEqual(0);
+  const after = all.slice(firstChart).filter(frame => frame.form);
+  expect(after.filter(frame => frame.summaryResults), 'przejęcie siatki przez porównanie nie odsłania wyników').toEqual([]);
+  expect(after.filter(frame => frame.chartCount > 1)).toEqual([]);
+  const final = after.at(-1);
+  expect(final.image && final.comparison).toBe(true);
+  expect(Math.abs(final.mount.top - final.input.top)).toBeLessThan(1);
+  expect(Math.abs(final.mount.bottom - final.input.bottom)).toBeLessThan(1);
 });
 
-test('DocPro: brak skryptu siatki pokazuje błąd i legalne summary, a ponowienie przywraca rysunek', async ({ page }) => {
+test('DocPro: brak skryptu siatki pozostawia Podsumowanie, a wybrana zakładka pokazuje błąd z działającym ponowieniem', async ({ page }) => {
   await holdComparisonOnReload(page);
   const { id } = await prepareDocPro(page, false);
   let blockPanel = true;
@@ -227,36 +252,54 @@ test('DocPro: brak skryptu siatki pokazuje błąd i legalne summary, a ponowieni
   await page.reload({ waitUntil: 'load' });
   await page.waitForFunction(() => window.__e2eComparisonWaiting);
   expect(await page.evaluate(() => Boolean(window.VildaCentileLivePanel)), 'moduł faktycznie nie wystartował').toBe(false);
-  await expect(page.locator('#currentSummaryWrap')).toBeHidden();
-  // Prawdziwe 15 s watchdogu HTML, bez podmiany zegara, timeoutu ani stanu DOM.
-  await expect(page.locator('#vildaCentileLiveMount')).toHaveAttribute('data-centile-live-state', 'error', { timeout: 25_000 });
+  await expect(page.locator('#currentSummaryCard')).toBeVisible();
+  await expect(page.locator('#currentSummaryContent')).toContainText('159 cm');
+  await expect(page.locator('#vildaCentileLiveMount')).toBeHidden();
+  await page.evaluate(() => { window.__centileSummaryPaint.frames = []; });
+  await page.getByRole('tab', { name: 'Siatka centylowa', exact: true }).click();
+  await expect(page.locator('#vildaCentileLiveMount')).toHaveAttribute('data-centile-live-state', 'error');
   await expect(page.locator('#vildaCentileLiveLoadingMessage')).toContainText('Nie udało się uruchomić siatki');
   await expect(page.locator('#vildaCentileLiveRetry')).toBeVisible();
   await expect(page.locator('#vildaCentileLiveRetry')).toHaveText('Odśwież stronę');
-  await expect(page.locator('#currentSummaryCard')).toBeVisible();
-  await expect(page.locator('#currentSummaryContent')).toContainText('159 cm');
-  const frames = (await observations(page)).filter(frame => frame.patientId === id && frame.mode === 'new' && frame.columns === 2);
-  const boot = frames.filter(frame => frame.mountState !== 'error');
-  expect(boot.length, 'obserwacja obejmuje oczekiwanie na brakujący skrypt').toBeGreaterThan(5);
-  expect(boot.filter(frame => frame.summaries.some(summary => summary.shown)), 'podczas boot nie przebija summary').toEqual([]);
-  const error = frames.filter(frame => frame.mountState === 'error');
-  expect(error.length).toBeGreaterThan(5);
-  expect(error.every(frame => frame.mountShown && !frame.image && frame.summaries.some(summary => summary.shown
-    && summary.box.top >= frame.mount.bottom)), 'po błędzie loader i legalne summary pozostają dostępne').toBe(true);
+  await expect(page.locator('#currentSummaryContent')).toBeHidden();
+  const frames = (await observations(page)).filter(frame => frame.selectedTab === 'chart' && frame.form);
+  expect(frames.length).toBeGreaterThan(5);
+  expect(frames.every(frame => frame.mountShown && !frame.image && !frame.summaryResults),
+    'błąd siatki zajmuje wyłącznie jej zakładkę, bez przebicia wyników').toBe(true);
 
   blockPanel = false;
   await Promise.all([
     page.waitForNavigation({ waitUntil: 'load' }),
     page.locator('#vildaCentileLiveRetry').click(),
   ]);
-  await expect.poll(() => page.evaluate(() => window.VildaCentileLivePanel?.getState()), { timeout: 30_000 })
-    .toMatchObject({ status: 'ready', eligible: true, patientId: id });
+  await expect(page.getByRole('tab', { name: 'Podsumowanie', exact: true })).toHaveAttribute('aria-selected', 'true');
   await expect(page.locator('#height')).toHaveValue('159');
   await expect(page.locator('#weight')).toHaveValue('47');
-  expectSlotFree(await observations(page), id);
+  await page.getByRole('tab', { name: 'Siatka centylowa', exact: true }).click();
+  await expect.poll(() => page.evaluate(() => window.VildaCentileLivePanel?.getState()), { timeout: 30_000 })
+    .toMatchObject({ status: 'ready', eligible: true, patientId: id, presentation: 'summary' });
+  await expect(page.locator('#vildaSummaryChartPanel svg.vilda-centile-live-preview')).toBeVisible();
   await page.evaluate(() => window.__e2eReleaseComparison());
   await expect(page.locator('#prevSummaryWrap')).toBeVisible();
   await expect(page.locator('#currentSummaryCard')).toBeHidden();
+  await expect.poll(() => page.evaluate(() => window.VildaCentileLivePanel?.getState()), { timeout: 30_000 })
+    .toMatchObject({ status: 'ready', patientId: id, presentation: 'dedicated' });
+});
+
+test('DocPro Odtwórz: brak modułu siatki ma dostępne ponowienie także bez watchdogu ścieżki Nowy pomiar', async ({ page }) => {
+  await prepareDocPro(page, false, { choice: 'restore' });
+  await page.route(/\/vilda_centile_live_panel\.js(?:\?|$)/u, request => request.abort('failed'));
+  await page.reload({ waitUntil: 'load' });
+  await expect(page.locator('#currentSummaryContent')).toContainText('159 cm');
+  await expect(page.getByRole('tab', { name: 'Podsumowanie', exact: true })).toHaveAttribute('aria-selected', 'true');
+  expect(await page.evaluate(() => window.__vildaCentileLiveBootTimer)).toBeUndefined();
+  await page.getByRole('tab', { name: 'Siatka centylowa', exact: true }).click();
+  await expect(page.locator('#vildaCentileLiveLoadingMessage')).toBeVisible();
+  await expect(page.locator('#vildaCentileLiveRetry')).toHaveText('Odśwież stronę');
+  await expect(page.locator('#vildaCentileLiveRetry')).toBeVisible();
+  await page.getByRole('tab', { name: 'Podsumowanie', exact: true }).click();
+  await expect(page.locator('#currentSummaryContent')).toBeVisible();
+  await expect(page.locator('#vildaCentileLiveRetry')).toBeHidden();
 });
 
 for (const mobile of [false, true]) {

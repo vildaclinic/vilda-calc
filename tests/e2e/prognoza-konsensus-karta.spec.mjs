@@ -4,9 +4,10 @@ import { expect, test } from '@playwright/test';
 // jako prognoza wzrostu ostatecznego ma stać TYLKO konsensus metod; prognozy pojedynczych
 // metod zostają do wglądu pod przyciskiem, a do schowka nie idą wcale.
 //
-// Mierzymy na prawdziwej stronie, bo sedno zmiany jest w DOM: czy w kolumnach karty
+// Mierzymy na prawdziwej stronie, bo sedno zmiany jest w DOM: czy w głównej części karty
 // zostaje jedna linia prognozy, czy reszta naprawdę jest w rozwijanym bloku i czy blok
 // przeżywa przeliczenie karty (karta przebudowuje się przy każdym ruchu w formularzu).
+// W karcie z zakładkami metody należą do wspólnego bloku „Pozostałe parametry”.
 // Dane wyłącznie FIKCYJNE.
 test.use({ serviceWorkers: 'block' });
 
@@ -71,25 +72,37 @@ async function otworzPro(page) {
 
 const PREFIKS = 'Prognoza wzrostu ostatecznego';
 
-// Wiersze WIDOCZNE od razu (kolumny karty) — z pominięciem tych w rozwijanym bloku.
-const wierszeKolumn = (page) => page.evaluate(() => Array.from(
-  document.querySelectorAll('.current-summary-columns .current-summary-row'),
+// Wiersze WIDOCZNE od razu — z pominięciem tych w rozwijanym bloku.
+const wierszeGlowne = (page) => page.evaluate(() => Array.from(
+  document.querySelectorAll('#currentSummaryContent .professional-summary-main .current-summary-row'),
 ).map((el) => (el.textContent || '').trim()));
 
 const wierszeUkryte = (page) => page.evaluate(() => Array.from(
-  document.querySelectorAll('.current-summary-prognosis .current-summary-row'),
+  document.querySelectorAll('#currentSummaryContent .professional-summary-extras [data-summary-key="prediction"]'),
 ).map((el) => (el.textContent || '').trim()));
 
-const blok = (page) => page.locator('.current-summary-prognosis');
+const blok = (page) => page.locator('#currentSummaryContent .professional-summary-extras');
+
+// Oczekiwane liczby pochodzą z istniejącego generatora/splittera produkcyjnego,
+// nie z kopii wzorów ani ze sztywnego wyniku po zaokrągleniu w makiecie.
+const prognozyZModelu = (page) => page.evaluate(() => {
+  const p = window.VildaGrowthPredictionLines.podziel(window.getFormattedProfessionalSummaryLines());
+  const format = text => String(text).replace(/\u00a0/g, ' ').replace(/(\d)\.(\d)/g, '$1,$2').trim();
+  return {
+    glowne: p.widoczne.filter(t => t.startsWith('Prognoza wzrostu ostatecznego')).map(format),
+    pozostale: p.pozostale.map(format),
+  };
+});
 
 test.describe('Karta „Podsumowanie wyników" — jedna prognoza, reszta pod przyciskiem', () => {
-  test('w kolumnach karty zostaje DOKŁADNIE jedna prognoza i jest to konsensus', async ({ page }) => {
+  test('w głównej części karty zostaje DOKŁADNIE jedna prognoza i jest to konsensus', async ({ page }) => {
     test.setTimeout(120_000);
     await otworzPro(page);
     await expect(blok(page)).toHaveCount(1, { timeout: 20000 });
 
-    const widoczne = (await wierszeKolumn(page)).filter((t) => t.startsWith(PREFIKS));
-    expect(widoczne.length, `kolumny karty:\n${widoczne.join('\n')}`).toBe(1);
+    const widoczne = (await wierszeGlowne(page)).filter((t) => t.startsWith(PREFIKS));
+    expect(widoczne.length, `główne wiersze karty:\n${widoczne.join('\n')}`).toBe(1);
+    expect(widoczne, 'pełna linia i liczby konsensusu z istniejącego modelu').toEqual((await prognozyZModelu(page)).glowne);
 
     const etykieta = await page.evaluate(() => window.advancedGrowthData.finalHeightPrediction.sourceLabel);
     expect(widoczne[0]).toContain(`${PREFIKS} (${etykieta})`);
@@ -102,9 +115,8 @@ test.describe('Karta „Podsumowanie wyników" — jedna prognoza, reszta pod pr
 
     const ukryte = await wierszeUkryte(page);
     expect(ukryte.length, 'blok ma zawierać prognozy metod').toBeGreaterThanOrEqual(2);
-    expect(ukryte.every((t) => t.startsWith(PREFIKS))).toBe(true);
-    // Nic nie ginie: liczba w podpisie przycisku zgadza się z zawartością.
-    await expect(blok(page).locator('> summary')).toHaveText(`Pozostałe metody prognozy (${ukryte.length})`);
+    expect(ukryte, 'wszystkie nazwy metod i ich źródłowe wartości pozostają dostępne').toEqual((await prognozyZModelu(page)).pozostale);
+    await expect(blok(page).locator('> summary .professional-summary-extra-label')).toHaveText('Pozostałe parametry');
   });
 
   test('blok jest domyślnie zwinięty, a po kliknięciu pokazuje prognozy', async ({ page }) => {
@@ -112,7 +124,7 @@ test.describe('Karta „Podsumowanie wyników" — jedna prognoza, reszta pod pr
     await otworzPro(page);
     await expect(blok(page)).toHaveCount(1, { timeout: 20000 });
 
-    const pierwszy = blok(page).locator('.current-summary-row').first();
+    const pierwszy = blok(page).locator('[data-summary-key="prediction"]').first();
     await expect(pierwszy).toBeHidden();
     await blok(page).locator('> summary').click();
     await expect(pierwszy).toBeVisible();
@@ -125,12 +137,16 @@ test.describe('Karta „Podsumowanie wyników" — jedna prognoza, reszta pod pr
     await otworzPro(page);
     await expect(blok(page)).toHaveCount(1, { timeout: 20000 });
     await blok(page).locator('> summary').click();
-    await expect(blok(page).locator('.current-summary-row').first()).toBeVisible();
+    await expect(blok(page).locator('[data-summary-key="prediction"]').first()).toBeVisible();
+    const wezel = await blok(page).elementHandle();
 
     await page.fill('#weight', '39');
     await page.evaluate(() => document.activeElement && document.activeElement.blur());
     await expect(blok(page)).toHaveCount(1);
-    await expect(blok(page).locator('.current-summary-row').first()).toBeVisible();
+    await expect(blok(page)).toHaveJSProperty('open', true);
+    expect(await wezel.evaluate(el => el.isConnected), 'przeliczenie zachowuje węzeł rozwinięcia pod kursorem').toBe(true);
+    await expect(blok(page).locator('[data-summary-key="prediction"]').first()).toBeVisible();
+    expect(await wierszeUkryte(page), 'po edycji widok zawiera aktualne wartości wszystkich metod').toEqual((await prognozyZModelu(page)).pozostale);
   });
 
   test('do schowka idzie tylko konsensus', async ({ page }) => {
@@ -157,22 +173,20 @@ test.describe('Karta „Podsumowanie wyników" — jedna prognoza, reszta pod pr
     await otworzPro(page);
     await expect(blok(page)).toHaveCount(1, { timeout: 20000 });
 
-    const nota = blok(page).locator('.current-summary-prognosis-nota');
+    const nota = blok(page).locator('.professional-summary-prediction-note');
     await expect(nota).toHaveCount(1);
-    await expect(nota).toContainText('Wartości metod jak w publikacjach');
+    await expect(nota).toContainText('Wartości pozostałych metod jak w publikacjach');
     await expect(nota).toContainText('nie jest ich średnią');
   });
 
-  // KONTROLA POZYTYWNA — celowo nie czeka na nowy blok, żeby była zielona także PRZED
-  // zmianą. Mierzy, że ruszam wyłącznie prognozami: MPH to cel genetyczny, nie prognoza,
-  // i musi zostać w kolumnach karty oraz w schowku.
+  // MPH to cel genetyczny, nie prognoza, i musi zostać w głównej części karty oraz w schowku.
   test('MPH zostaje widoczne w karcie i nadal się kopiuje', async ({ page }) => {
     test.setTimeout(120_000);
     await otworzPro(page);
-    await expect(page.locator('.current-summary-columns').first()).toBeVisible({ timeout: 20000 });
+    await expect(page.locator('#currentSummaryContent .professional-summary-main')).toBeVisible({ timeout: 20000 });
 
-    const widoczne = await wierszeKolumn(page);
-    expect(widoczne.some((t) => /^MPH\b/.test(t)), `kolumny:\n${widoczne.join('\n')}`).toBe(true);
+    const widoczne = await wierszeGlowne(page);
+    expect(widoczne.some((t) => /^MPH\b/.test(t)), `wiersze główne:\n${widoczne.join('\n')}`).toBe(true);
 
     await page.click('#metabolicSummaryBtn');
     await expect.poll(() => page.evaluate(() => window.__schowek || ''), { timeout: 15000 })
