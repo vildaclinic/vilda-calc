@@ -269,11 +269,11 @@
  },
  "clcr_ui_workflow.css": {
   "v": 18,
-  "sha256": "2d0c451daa67238ea257a353cde00d09b2d95528728267dceddcc1b02f29628a"
+  "sha256": "12d4350588acc710cb8ec43552632add44e79ef2c9101455eb9c4dfd2623e95d"
  },
  "clcr_ui_workflow.js": {
   "v": 26,
-  "sha256": "1414d52566f00709d1424a331c69e19ca6a9718601ed4df8d0c451950df0e999"
+  "sha256": "fb515659b5216421f30d9b0062bf5709a3dee52f6086f7a81cce7ce32d6af455"
  },
  "cukrzyca.js": {
   "v": 30,

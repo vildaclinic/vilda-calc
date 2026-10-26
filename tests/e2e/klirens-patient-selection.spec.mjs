@@ -1,4 +1,5 @@
 import { expect, test } from '../support/test-czas.mjs';
+import { czekajNaUstabilizowanyUklad } from '../support/uklad-czekanie.mjs';
 import {
   PATIENT_ID, OTHER_PATIENT_ID, openCalculator, openShellCalculator, applyAcr, saveVisible,
   memory, configureMemory, releasePatientReads, selectPatient, installMemoryVault,
@@ -214,4 +215,43 @@ test('saving PCR does not discard a retained unsaved ACR; the guard clears only 
   expect(await page.evaluate(() => window.ClcrVisitSave.hasUnsavedMeasurement())).toBe(false);
   expect((await memory(page)).notes.map(note => note.id)).toEqual([pcrNote.id, acrNote.id]);
   expect((await memory(page)).notes.every(note => note.patientId === PATIENT_ID)).toBe(true);
+});
+
+
+test('1440px: patient context spans both columns and keeps every audited formula aligned', async ({ page }) => {
+  await openCalculator(page, { width: 1440, select: false });
+  const formulas = ['ACR', 'PCR', 'CaCr_spot', 'OxCr_spot', 'CitCr_spot',
+    'FENa_spot', 'FEK_spot', 'FECl_spot', 'FEHCO3_spot', 'cg', 'cg_norm'];
+  for (const selected of [false, true]) {
+    if (selected) {
+      await selectPatient(page);
+      await expect(page.locator('#clcrPatientContextName')).toContainText('Fikcyjna Pacjentka Nerkowa');
+    }
+    for (const formulaId of formulas) {
+      await test.step(`${formulaId}: ${selected ? 'saved patient' : 'anonymous'}`, async () => {
+        await page.evaluate(id => window.ClcrUiWorkflow.selectFormula(id), formulaId);
+        await expect(page.locator('#clcrActivePanel')).toBeVisible();
+        await expect(page.locator('#clcrResultReport')).toBeVisible();
+        await czekajNaUstabilizowanyUklad(page);
+        const geometry = await page.evaluate(() => {
+          const box = id => {
+            const rect = document.getElementById(id).getBoundingClientRect();
+            return { left: rect.left, right: rect.right, top: rect.top + scrollY, bottom: rect.bottom + scrollY };
+          };
+          return { context: box('clcrPatientContext'), form: box('clcrForm'), rail: box('clcrResultRail'),
+            panel: box('clcrActivePanel'), report: box('clcrResultReport'),
+            overflow: document.documentElement.scrollWidth - document.documentElement.clientWidth };
+        });
+        expect(Math.abs(geometry.panel.top - geometry.report.top), `${formulaId}: form and result start together`).toBeLessThanOrEqual(1);
+        expect(geometry.context.bottom, `${formulaId}: patient context is above both columns`)
+          .toBeLessThanOrEqual(Math.min(geometry.panel.top, geometry.report.top));
+        expect(Math.abs(geometry.context.left - Math.min(geometry.form.left, geometry.rail.left)), `${formulaId}: shared left edge`)
+          .toBeLessThanOrEqual(1);
+        expect(Math.abs(geometry.context.right - Math.max(geometry.form.right, geometry.rail.right)), `${formulaId}: shared right edge`)
+          .toBeLessThanOrEqual(1);
+        expect(geometry.overflow, `${formulaId}: no horizontal overflow`).toBeLessThanOrEqual(1);
+      });
+    }
+  }
+  expect((await memory(page)).saves).toHaveLength(0);
 });

@@ -4673,9 +4673,15 @@
   }
 
   function buildPatientContext() {
-    if (!doc || doc.getElementById("clcrPatientContext")) return;
-    const anchor = doc.getElementById("clcrActivePanel");
-    if (!anchor?.parentNode) return;
+    if (!doc) return;
+    const form = doc.getElementById("clcrForm");
+    const parent = doc.getElementById("clcrWorkspace") || form?.parentNode;
+    if (!parent || !form) return;
+    const existing = doc.getElementById("clcrPatientContext");
+    if (existing) {
+      if (existing.parentNode !== parent) parent.insertBefore(existing, form);
+      return;
+    }
     const context = doc.createElement("section");
     context.id = "clcrPatientContext";
     context.className = "clcr-patient-context";
@@ -4683,7 +4689,7 @@
     context.innerHTML = '<div class="clcr-patient-context__copy"><span>Pacjent</span><strong id="clcrPatientContextName"></strong>' +
       '<p id="clcrPatientContextHint" role="status" aria-live="polite"></p></div>' +
       '<button type="button" id="clcrChoosePatientBtn">Wybierz lub utwórz pacjenta</button>';
-    anchor.parentNode.insertBefore(context, anchor);
+    parent.insertBefore(context, form);
     context.querySelector("#clcrChoosePatientBtn").addEventListener("click", () => {
       choosePatient().catch(error => setStatus(error?.message || "Nie udało się otworzyć listy pacjentów.", "err"));
     });
@@ -5669,6 +5675,8 @@
     doc.documentElement.dataset.clcrLayout = "single-result";
     container.insertBefore(workspace, form);
     workspace.appendChild(form);
+    const patientContext = el("clcrPatientContext");
+    if (patientContext) workspace.insertBefore(patientContext, form);
 
     rail = doc.createElement("section");
     rail.id = "clcrResultRail";
