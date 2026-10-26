@@ -159,6 +159,12 @@
         methodId: text(f.assay.methodId), confirmation: ['reported', 'configured'].includes(f.assay.confirmation) ? f.assay.confirmation : 'unknown'
       };
     }
+    // Live LH qualification flags are ephemeral. The clinical engine keeps
+    // them out of the normalized input and the saved patient assessment.
+    if (input.analyte === 'lh') {
+      if (typeof f.currentContextAvailable === 'boolean') input.currentContextAvailable = f.currentContextAvailable;
+      if (typeof f.pubertyObservationProvided === 'boolean') input.puberty.observationProvided = f.pubertyObservationProvided;
+    }
     return input;
   }
 
@@ -278,6 +284,44 @@
     wrappers.reproductiveContext.classList.add('lab-puberty-cycle-field'); wrappers.reproductiveContext.hidden = true;
 
     function ready() { return !!context && context.sourceStatus === 'ready'; }
+    function currentLhContextAvailable() {
+      if (!ready() || context.pubertyAssessmentContext && context.pubertyAssessmentContext.preparing === true) return false;
+      try {
+        var currentIdentity = text(root._vildaCurrentPatientId);
+        if (root.sessionStorage && typeof root.sessionStorage.getItem === 'function') currentIdentity = text(root.sessionStorage.getItem('vildaCurrentPatientId'));
+        if (text(context.identityKey) !== currentIdentity) return false;
+        var active = context.pubertyAssessmentContext;
+        if (active && active.available && text(active.patientId) !== currentIdentity) return false;
+        var vault = root.VildaVault;
+        if (currentIdentity && vault && typeof vault.isUnlocked === 'function' && !vault.isUnlocked()) return false;
+        var persistence = opts.persistence || root.VildaPersistence;
+        if (persistence && (typeof persistence.isClearInProgress === 'function' && persistence.isClearInProgress()
+            || typeof persistence.isRestoring === 'function' && persistence.isRestoring())) return false;
+        return true;
+      } catch (_) { return false; }
+    }
+    function lhObservationProvided(values) {
+      if (text(values.stage) || text(values.kind) && text(values.kind) !== 'unspecified'
+          || text(values.assessedAt)) return true;
+      var read = assessmentView(), assessment = read && read.assessment;
+      if (read && (read.legacy || !['absent', 'ready'].includes(read.status))) return true;
+      var observations = assessment && assessment.observations;
+      if (observations && ['G', 'Th', 'P'].some(function (axis) { return observations[axis] != null; })) return true;
+      var observation = !localAssessment && context && context.gonadalObservation;
+      return !!(observation && (observation.stage != null || observation.observation || observation.observedAtISO));
+    }
+    function currentAnonymousLhGnrha() {
+      // An identified patient never borrows the anonymous main-form mirror.
+      if (!currentLhContextAvailable() || text(context.identityKey)) return false;
+      var active = context.pubertyAssessmentContext;
+      if (active && active.available) return false;
+      try {
+        var persistence = opts.persistence || root.VildaPersistence;
+        var shared = persistence && typeof persistence.readShared === 'function' ? persistence.readShared(null) : null;
+        var byId = shared && shared._vildaPersist && shared._vildaPersist.byId;
+        return !!(byId && byId.pubertyGnrhaStatus === 'w-trakcie');
+      } catch (_) { return false; }
+    }
     function sharedRuntime() { return opts.pubertyContext || root.VildaPubertyAssessmentContext; }
     function sharedVisit() {
       var active = context && context.pubertyAssessmentContext;
@@ -418,6 +462,25 @@
       // Zakres działania modułu nie potwierdza rodzaju konkretnego oznaczenia
       // ani braku leczenia. Znane bieżące GnRHa nadal wyklucza zakresy bazalne.
       values.sexSteroids = 'unknown'; values.treatmentContext = values.gnrha === 'yes' ? 'hormonal' : 'unknown'; values.measurementKind = 'unknown';
+      if (analyte === 'lh') {
+        values.currentContextAvailable = currentLhContextAvailable();
+        values.pubertyObservationProvided = lhObservationProvided(values);
+        if (currentAnonymousLhGnrha()) { values.gnrha = 'yes'; values.treatmentContext = 'hormonal'; }
+        if (values.currentContextAvailable && typeof opts.readMeasurementContext === 'function') {
+          var lhKnown = {};
+          try { lhKnown = opts.readMeasurementContext(analyte) || {}; } catch (_) { /* Unknown stays unknown. */ }
+          if (!lhKnown.sampleDateISO && [undefined, null, '', 'current-patient'].includes(lhKnown.contextBasis)) {
+            // Positive current-person therapy is shared, but a TT sample's
+            // method, material, protocol, time and dates never become LH facts.
+            var lhTreatment = lhKnown.treatment || {};
+            if (flag(lhTreatment.gnrha) === 'yes') values.gnrha = 'yes';
+            if (flag(lhTreatment.sexSteroids) === 'yes') values.sexSteroids = 'yes';
+            if (lhTreatment.context === 'hormonal' || ['gnrha', 'sexSteroids', 'cocp', 'exogenousTestosterone'].some(function (key) {
+              return flag(lhTreatment[key]) === 'yes';
+            })) values.treatmentContext = 'hormonal';
+          }
+        }
+      }
       if (isTestosterone() && typeof opts.readMeasurementContext === 'function') {
         var known = {};
         try { known = opts.readMeasurementContext(analyte) || {}; } catch (_) { /* No facts are inferred after a failed read. */ }
@@ -786,6 +849,16 @@
       var view = renderer.renderEvaluation(assessment, evaluation, {
         compact: true, hideMeasurement: true, live: true, pretermContextMode: neonatalContext(), displayUnit: target
       });
+      var prepubertal = evaluation.prepubertalLh;
+      if (status && valid && analyte === 'lh' && prepubertal && prepubertal.status === 'available') {
+        var lhStatuses = {
+          within: ['Nie przekracza górnej granicy — orientacyjnie', 'is-normal'],
+          above: ['Powyżej górnej granicy — orientacyjnie', 'is-above'],
+          indeterminate: ['Porównanie niejednoznaczne — orientacyjnie', '']
+        };
+        var lhStatus = lhStatuses[prepubertal.comparison && prepubertal.comparison.status];
+        if (lhStatus) status.appendChild(element('span', 'lab-range-status' + (lhStatus[1] ? ' ' + lhStatus[1] : ''), lhStatus[0]));
+      }
       if (big) {
         big.replaceChildren();
         if (valid) {

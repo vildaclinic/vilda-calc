@@ -1,0 +1,208 @@
+{
+  "date": "2026-10-25",
+  "version": "2026-10-25.1",
+  "purpose": "Own concise extract of audited sources and the accepted application policy. Full publications and the private prototype are not distributed.",
+  "ownerDecision": "The owner accepted mock04 and implementation on 2026-10-25: a separate orienting upper-only LH comparison, qualified clinical information, a current result point without a median in childhood gaps, and a closed-panel censored source note.",
+  "clinicalImpact": "New prospective comparison and information. Actual method-specific reference intervals and biochemical classification data remain unchanged. New records preserve their own versioned comparison; older records are not recalculated.",
+  "notClinicalValidation": true,
+  "applicationPolicy": {
+    "dataKey": "prepubertalLhPolicy",
+    "id": "prepubertal-lh-clinical-orienting",
+    "version": "2026-10-25.1",
+    "analyte": "lh",
+    "unit": "IU/L",
+    "maleAge": "[1,9)",
+    "femaleAge": "[1,8)",
+    "wholeKnownAgeRequired": true,
+    "stage": "Current typed G1/Th1 or absent observation. No stage inference from age, P/Ax or LH; known G/Th2–5 excluded.",
+    "bounds": {
+      "lower": null,
+      "censoredLower": null,
+      "upper": {
+        "operator": "<=",
+        "value": 0.3
+      }
+    },
+    "sourceRole": "Accepted application orienting reference supported by the Labcorp age-row upper value, not a validated universal RI or Tanner-stage profile.",
+    "context": "Current patient; basal serum scope. Known hormonal treatment/stimulation/incompatible context retain meaning. Unknown method, time, specimen and therapy do not become confirmed facts.",
+    "notImported": [
+      "Mayo male upper0.5",
+      "Mayo censored lower0.02",
+      "Labcorp lower0.02",
+      "Labcorp means0.09/0.06",
+      "female TannerI upper0.18 as a shared profile",
+      "numeric P50 from censored Wiedemann"
+    ],
+    "sourceId": "vilda-prepubertal-lh-clinical-policy-2026",
+    "sourceKind": "application-clinical-policy",
+    "kind": "clinical-orienting-reference",
+    "assessmentKey": "prepubertalLh",
+    "currentContextAvailableRequired": true,
+    "orientingOnly": true,
+    "assayMatched": false,
+    "stageGuard": "Explicit rejected, stale, wrong-feature or P observation cannot masquerade as missing stage. Known valid assay permits only orienting comparison, malformed assay fails closed."
+  },
+  "sourceReview": {
+    "date": "2026-10-25",
+    "notSystematicReview": true,
+    "sources": [
+      {
+        "id": "labcorp502286",
+        "citation": "Labcorp/Esoterix, Endocrinology Expected Values, DX_QRG_L5167-0422-19",
+        "url": "https://specialtytesting.labcorp.com/sites/default/files/2023-07/DX_QRG_L5167-0422-19.pdf",
+        "catalogueUrl": "https://www.labcorp.com/tests/502286/luteinizing-hormone-lh-pediatric-endocrine-sciences",
+        "artifact": {
+          "format": "Full official PDF",
+          "bytes": 375277,
+          "sha256": "7731dca2284357203bc80a306ba1332d63357a9c1a57972540d4837348a2b334"
+        },
+        "location": "Printedp41/PDF43; programme descriptionp2/PDF4; current full catalogue method/specimen",
+        "literalAgeRange": "12months–8years, both sexes:0.02–0.3mIU/mL",
+        "literalStageRanges": "TannerI M0.02–0.3(<9.8years), F0.02–0.18(<9.2years); feature typing not given.",
+        "population": "Reference programme includes healthy recruitment and external literature, without assigning this LH row to a cohort, subgroupN or exact RI percentile.",
+        "materialMethod": "Two-site electrochemiluminescence; serum preferred or plasma frozen. Platform/reagent not named. Application serum-only scope is narrower.",
+        "limitations": "Exact continuous birthday assignment, LOD/LOQ and low-result handling unknown.0.09/0.06 are MEAN, not P50. Code0422 currently served is not a new2026 cohort. No cross-method transfer demonstrated."
+      },
+      {
+        "id": "mayo62999",
+        "citation": "Mayo Clinic Laboratories LHPED62999, current full catalogue PDF generated2026-10-25",
+        "url": "https://www.mayocliniclabs.com/api/sitecore/TestCatalog/DownloadTestCatalog?testId=62999",
+        "artifact": {
+          "format": "Full official five-page PDF",
+          "bytes": 419033,
+          "sha256": "4e92468abf4e7e48cb005cac647c0daa38316ba825bf7404df9b34de14f37bce"
+        },
+        "location": "PDF2–3 Reference Values; PDF4 Method Description; PDF1 analytical sensitivity",
+        "literal": "M1–8/TannerI <0.02–0.5IU/L; F1–8/TannerI <0.02–0.3IU/L",
+        "materialMethod": "Serum, AnshLite LH CLIA, three-step sandwich, Unpublished Mayo Method. Analytical sensitivity0.02 is not a documented LOQ.",
+        "limitations": "Male0.5 remains in the authoritative source, not a transcription error. RI data unchanged. N, exact percentile/cohort and censoring not published. Transfer to unknown methods not established."
+      },
+      {
+        "id": "krishnaGaribaldi2025",
+        "citation": "Bangalore Krishna K, Garibaldi L. Front Pediatr12:1504874, published2025-01-21",
+        "doi": "10.3389/fped.2024.1504874",
+        "url": "https://www.ebi.ac.uk/europepmc/webservices/rest/PMC11795171/fullTextXML",
+        "artifact": {
+          "format": "Full primary JATS/XML",
+          "bytes": 204638,
+          "sha256": "98e2f074e943120dbf812286af126226579dad3c3d0e5fee055dbe8655445fe6"
+        },
+        "location": "General considerations, Baseline LH, Table1",
+        "finding": "Review >=0.3IU/L for hormonal puberty onset in appropriate HS-IFMA/HS-ICMA is a diagnostic threshold, not a universal reference percentile. Low LH does not exclude early activation.",
+        "limitations": "Method, sampling and clinical selection matter; limited boys evidence. Cannot directly generalise girl CPP cohorts to all boys1–6/G1 or unknown methods. Diagnostic0.5 for less-sensitive assays does not justify Mayo's RI0.5."
+      },
+      {
+        "id": "howard2021",
+        "citation": "Howard SR. Interpretation of reproductive hormones before, during and after the pubertal transition—Identifying health and disordered puberty. Clin Endocrinol95:702–716,2021",
+        "doi": "10.1111/cen.14578",
+        "url": "https://www.ebi.ac.uk/europepmc/webservices/rest/PMC9291332/fullTextXML",
+        "artifact": {
+          "format": "Full primary JATS/XML",
+          "bytes": 184563,
+          "sha256": "2699125d278d2999d6b557f84bdd802bc5ec4c043722ca8417d9493c93a52f94"
+        },
+        "location": "Biochemical diagnosis of precocious puberty",
+        "finding": "Method-dependent thresholds; biochemical activation may precede visibleG2/Th2. Low basal LH does not exclude CPP.",
+        "limitations": "Review description <0.1IU/L is not a verified empirical P97.5 for all healthy children1–6 or all assays."
+      },
+      {
+        "id": "endo2026",
+        "citation": "Central precocious puberty: an Endocrine Society clinical practice guideline. JCEM111(8):2101–2144,2026",
+        "doi": "10.1210/clinem/dgag168",
+        "url": "https://doi.org/10.1210/clinem/dgag168",
+        "artifact": {
+          "format": "Full official publisher HTML",
+          "bytes": 1051457,
+          "sha256": "1e029bf23e278111c6c85eb2b060699072bd5e4162dc8ad69801d3bb6513b484"
+        },
+        "location": "Entire Question3, Recommendation3, benefits/harms, additional/research considerations; related reviewdgag169 Question3 and correctiondgag320 also read.",
+        "finding": "Conditional very-low-certainty recommendation for ultrasensitive basal LH in suspected CPP; method/stage-specific diagnostic examples, not a universal RI. Low LH does not exclude CPP.",
+        "limitations": "Predominantly girlB2/B3 evidence, scarce boys data. No universal proof for boys1–6 or G1/Th1. Method detection <0.05–0.1IU/L is not an upper RI.",
+        "associatedArtifacts": [
+          {
+            "doi": "10.1210/clinem/dgag169",
+            "url": "https://doi.org/10.1210/clinem/dgag169",
+            "format": "Full official publisher HTML",
+            "bytes": 223809,
+            "sha256": "2de82572c74b23a5e4160e6c60c09de41fc291e47982c0fba100d1f3cf56fb6d"
+          },
+          {
+            "doi": "10.1210/clinem/dgag320",
+            "url": "https://doi.org/10.1210/clinem/dgag320",
+            "format": "Full official publisher HTML",
+            "bytes": 12039,
+            "sha256": "8f471c1f18caf44ab9287a5b525e7f663fa7180db4339da694cfb31426a3a528"
+          }
+        ]
+      },
+      {
+        "id": "wiedemann1993",
+        "citation": "Wiedemann G, Jonetz-Mentzel L, Panse R. Establishment of Reference Ranges for Follitropin and Lutropin in Neonates, Infants, Children and Adolescents.1993;31(6):395–401",
+        "doi": "10.1515/cclm.1993.31.6.395",
+        "url": "https://edoc.hu-berlin.de/server/api/core/bitstreams/b786c46e-00db-447b-9c33-9cee50d62758/content",
+        "artifact": {
+          "format": "Full final primary PDF",
+          "bytes": 1758746,
+          "sha256": "b312c8ee0bece47100d2a179413488da282d81febb9f77bde9f0f61bf9d723d0"
+        },
+        "location": "Methodsp396/PDF2; Table4p398/PDF4, visually checked",
+        "population": "Both sexes pooled2–11years, N282; not N under6 or each sex. No verified typed TannerI restriction.",
+        "materialMethod": "Serum08–10, Abbott IMx MEIA, WHO68/40. Source sensitivity0.07U/L, not retrospectively labelled formalLOQ.",
+        "literalMedian": {
+          "operator": "<",
+          "value": 0.07,
+          "unit": "U/L"
+        },
+        "censoring": "Authors replaced below-sensitivity observations with the method boundary, retaining<. Exact latent median unknown.",
+        "limitations": "No1–<2 coverage; whole broad age group, not continuous age P50 or individual trajectory. Historical method not automatically comparable. Source RI and numeric median not imported."
+      }
+    ]
+  },
+  "graphContract": {
+    "key": "childhoodLhResultOnlyPolicies",
+    "policyIds": [
+      "childhood-male-lh-result-only",
+      "childhood-female-lh-result-only"
+    ],
+    "version": "2026-10-25.1",
+    "maleAge": "[1,6)",
+    "femaleAge": "(1,6)",
+    "wholeExplicitAgeIntervalRequired": true,
+    "noFallbackAfterExistingProfileRejection": true,
+    "dot": "Real finite nonnegative exact current measurement only, zero preserved. Inequalities/LOD/LOQ have no exact dot. No referenceValue, median marker, ratio, SDS or percentile.",
+    "preserve": "ExactF1 Ljubicic, Madsen from6, existing femaleLH(16,18) resultOnlyPolicies, numeric median profiles and fixed geometry.",
+    "sourceOnlyNote": "Whole age[2,6), closed source panel only: P50<0.07 for the whole Wiedemann group, not exact point/RI. Censored patient results may retain this information; same current identity/context guards remain.",
+    "method": "Known method need not match a publication to plot a result alone in a genuine gap. Known non-serum excluded; no harmonisation claim.",
+    "contextAvailabilityKey": "childhoodLhContextAvailable",
+    "currentPatientOnly": true,
+    "contextFlag": "Strict true only after matching ready current patient identity, outside persistence preparation, restore, clear and vault lock. Ephemeral; not persisted. Existing female16–18 contract unchanged."
+  },
+  "historyContract": {
+    "newAssessment": "Whitelist optional versioned prepubertalLh with own profile, cap, source, interpretation and recorded stage. Display frozen without engine/current form.",
+    "legacyAssessment": "Missing field remains missing; no backfill, recalculation or new comment.",
+    "notPersisted": "Ephemeral context availability/identity state and numeric Wiedemann P50."
+  },
+  "examples": [
+    {
+      "input": "M4/G1 or F4/Th1, LH0.3IU/L",
+      "expected": "Within upper-only reference; does not exclude activation or diagnose CPP."
+    },
+    {
+      "input": "Same context, LH0.4 or >0.3",
+      "expected": "Above; qualified possible-activation comment, retained frozen in a new assessment."
+    },
+    {
+      "input": "Same context, LH<0.4",
+      "expected": "Indeterminate; no exact dot or imputation."
+    },
+    {
+      "input": "Missing stage, current valid whole age",
+      "expected": "May qualify without assuming G1/Th1 or adding questions."
+    },
+    {
+      "input": "KnownG2/Th2, therapy/stimulation, wrong identity or historical context",
+      "expected": "No new prospective proposal; preserve existing clinical/source constraints."
+    }
+  ],
+  "validationStatus": "Contract and expected cases only. Actual production-function, adapter, UI, snapshot, PWA and final-SHA GitHub results are reported in the implementation PR, not asserted here."
+}

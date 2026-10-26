@@ -787,9 +787,125 @@
     return { byAge: unavailable(codes.length ? codes : 'no_matching_reference_range'), byStage: byStage,
       reasonCodes: codes, variants: variants.length ? variants : undefined };
   }
+  function plainObject(value) { return Object.prototype.toString.call(value) === '[object Object]'; }
+  function freezeReference(value) {
+    if (value && typeof value === 'object' && !Object.isFrozen(value)) {
+      Object.keys(value).forEach(function (key) { freezeReference(value[key]); });
+      Object.freeze(value);
+    }
+    return value;
+  }
+  function validPrepubertalPolicy(policy) {
+    if (!policy || !policy.id || !policy.version || policy.kind !== 'clinical-orienting-reference' ||
+        !policy.analyte || policy.unit !== 'IU/L' || policy.referenceSelection !== 'automatic' ||
+        policy.contextBasis !== 'current-patient' || !policy.source || !policy.source.id || !policy.source.title ||
+        !policy.population || !policy.scope || !policy.bounds || policy.bounds.lower !== null ||
+        policy.bounds.censoredLower !== null || !boundsInterval(policy.bounds) || !policy.bounds.upper ||
+        !finite(policy.bounds.upper.value) || policy.bounds.upper.value <= 0 ||
+        !Array.isArray(policy.compatibleSpecimens) || !Array.isArray(policy.compatibleMeasurementKinds) ||
+        !Array.isArray(policy.excludedTreatmentFields) || !Array.isArray(policy.reproductiveContexts) ||
+        !Array.isArray(policy.reasonCodes) || !Number.isInteger(policy.requiredStage) ||
+        policy.currentContextRequired !== true || !policy.interpretation || !policy.interpretation.context) return false;
+    return ['M', 'F'].every(function (sex) {
+      var scope = policy.scope[sex];
+      return scope && ['G', 'Th'].includes(scope.stageKind) && scope.age && scope.age.lower && scope.age.upper &&
+        scope.age.axis === 'chronologicalYears' && boundsInterval(scope.age);
+    }) && ['above', 'within', 'indeterminate'].every(function (status) {
+      var rule = policy.interpretation[status];
+      return rule && text(rule.tone) && text(rule.title) && text(rule.text, 2000);
+    }) && text(policy.interpretation.context.withStage) && text(policy.interpretation.context.withoutStage);
+  }
+  function prepubertalStageContext(input, policy, scope) {
+    var raw = input.puberty;
+    if (raw == null) return { missing: true, stage: null };
+    if (!plainObject(raw) || (Object.prototype.hasOwnProperty.call(raw, 'observationProvided') && typeof raw.observationProvided !== 'boolean')) return null;
+    // The adapter records a supplied but discarded observation before legacy
+    // normalization. Its absence must never turn P, a stale G/Th or invalid data
+    // into assumed stage I. The marker cannot erase a raw supplied observation.
+    var supplied = raw.observationProvided === true ||
+      (raw.stage != null && raw.stage !== '') ||
+      (raw.kind != null && raw.kind !== '' && raw.kind !== 'unspecified') ||
+      (raw.assessedAtISO != null && raw.assessedAtISO !== '') ||
+      (raw.source != null && raw.source !== '' && raw.source !== 'provided') ||
+      raw.appliesToSample === true || raw.appliesToCurrentContext === true;
+    if (!supplied) return { missing: true, stage: null };
+    var p = pubertyAtSample(input);
+    return p.usable && p.kind === scope.stageKind && p.stage === policy.requiredStage &&
+      raw.appliesToCurrentContext === true && raw.appliesToSample !== true
+      ? { missing: false, stage: { kind: p.kind, stage: p.stage } } : null;
+  }
+  function prepubertalInterpretation(policy, compared, stage) {
+    var rule = policy.interpretation[compared.status];
+    if (!rule) return { visible: false };
+    var context = stage ? policy.interpretation.context.withStage.replace('{kind}', stage.kind).replace('{stage}', String(stage.stage))
+      : policy.interpretation.context.withoutStage;
+    return { visible: true, tone: rule.tone, title: rule.title,
+      text: rule.text.replace('{context}', context).replace('{upper}', String(policy.bounds.upper.value).replace('.', ',')).replace('{unit}', policy.unit) };
+  }
+  function prepubertalLhReference(input, data, evaluation) {
+    var policy = data.prepubertalLhPolicy;
+    var result = { status: 'unavailable', kind: 'clinical-orienting-reference',
+      policyId: policy && policy.id || null, policyVersion: policy && policy.version || null,
+      orientingOnly: true, assayMatched: false, reasonCodes: [], range: null,
+      comparison: { status: 'unavailable', reasonCodes: [] }, interpretation: { visible: false }, stageContext: null };
+    function blocked(reason) {
+      result.reasonCodes = [reason]; result.comparison.reasonCodes = [reason];
+      return freezeReference(result);
+    }
+    if (!validPrepubertalPolicy(policy)) return blocked('prepubertal_lh_policy_missing_or_invalid');
+    if (input.analyte !== policy.analyte) return blocked('unsupported_analyte');
+    if (input.referenceSelection !== policy.referenceSelection || input.contextBasis !== policy.contextBasis || input.sampleDateISO) return blocked('prepubertal_lh_requires_current_automatic_context');
+    // This ephemeral flag comes from the actual runtime readiness/person gate;
+    // it is deliberately not part of normalizedInput or persisted old inputs.
+    if (input.currentContextAvailable !== true) return blocked('current_context_unavailable');
+    var scope = policy.scope[input.sex], age = evaluation.ageAtSample;
+    if (!scope) return blocked('missing_sex');
+    if (!age || age.status !== 'known') return blocked('missing_age');
+    var ageMatch = ageMatches(age, scope.age);
+    if (ageMatch !== 'within') return blocked(ageMatch === 'indeterminate' ? 'age_precision_crosses_reference_boundary' : 'prepubertal_lh_age_out_of_scope');
+    var specimen = input.specimen == null || input.specimen === '' ? 'unknown' : input.specimen;
+    var measurementKind = input.measurementKind == null || input.measurementKind === '' ? 'unknown' : input.measurementKind;
+    if (!policy.compatibleSpecimens.includes(specimen)) return blocked('unsupported_or_unknown_specimen');
+    if (!policy.compatibleMeasurementKinds.includes(measurementKind)) return blocked('non_basal_or_unknown_measurement');
+    var t = therapy(input), suppliedTreatment = input.treatment || {};
+    if (!previewContextValid(input, t) || !policy.excludedTreatmentFields.every(function (key) {
+      return [undefined, null, '', 'unknown', 'no', false].includes(suppliedTreatment[key]);
+    })) return blocked('treatment_requires_separate_profile');
+    var reproductive = input.reproductiveContext == null || input.reproductiveContext === '' ? 'unknown' : input.reproductiveContext;
+    if (!policy.reproductiveContexts.includes(reproductive) || flag(input.pregnancy) === 'yes') return blocked('reproductive_context_not_applicable');
+    var assay = input.assay;
+    if (assay != null && (!plainObject(assay) || ![undefined, null, '', 'unknown', 'reported', 'configured'].includes(assay.confirmation) ||
+        (assay.confirmation === 'reported' && !text(assay.methodId)) ||
+        ['methodId', 'profileId'].some(function (key) { return assay[key] != null && typeof assay[key] !== 'string'; }))) return blocked('invalid_assay_context');
+    var stage = prepubertalStageContext(input, policy, scope);
+    if (!stage || (stage.missing && policy.allowMissingStage !== true)) return blocked('prepubertal_lh_stage_incompatible_or_unconfirmed');
+    var reasons = policy.reasonCodes.slice();
+    if (!assay || !text(assay.methodId)) reasons.push('source_method_unconfirmed');
+    if (specimen === 'unknown') reasons.push('specimen_unconfirmed');
+    if (measurementKind === 'unknown') reasons.push('non_basal_or_unknown_measurement');
+    if (!untreated(t)) reasons.push('treatment_context_unknown');
+    if (stage.missing) reasons.push('missing_puberty_stage');
+    var compared = compareMeasurement(evaluation.measurement, policy.bounds);
+    result.status = 'available'; result.reasonCodes = unique(reasons);
+    result.comparison = compared; result.stageContext = stage.stage;
+    result.range = { id: policy.id, profileId: policy.id, profileVersion: policy.version, dataVersion: policy.version,
+      sourceId: policy.source.id, source: copy(policy.source), population: copy(policy.population), method: null,
+      material: policy.material, unit: policy.unit, sex: input.sex, age: copy(scope.age),
+      stage: stage.stage ? { kind: stage.stage.kind, value: stage.stage.stage } : null,
+      bounds: copy(policy.bounds), basis: 'prepubertal-orienting', orientingOnly: true, assayMatched: false };
+    result.interpretation = prepubertalInterpretation(policy, compared, stage.stage);
+    result.applicabilityText = policy.applicabilityText;
+    result.methodHelp = copy(policy.methodHelp);
+    result.limitations = copy(policy.source.knownLimitations || []);
+    return freezeReference(result);
+  }
   function evaluate(input, data) {
     input = input || {}; data = data || {};
-    if (input.referenceSelection !== 'automatic') return evaluateExplicit(input, data);
+    if (input.referenceSelection !== 'automatic') {
+      var explicit = evaluateExplicit(input, data);
+      explicit.prepubertalLh = prepubertalLhReference(input, data, explicit);
+      return explicit;
+    }
     var policy = data.automaticReferencePolicy, age = resolveAge(input), neonatal = resolveNeonatalAge(input);
     var profiles = Array.isArray(data.profiles) ? data.profiles : [];
     var rule = data.biochemicalPolicy && data.biochemicalPolicy.infantAgeYears;
@@ -850,6 +966,7 @@
     if (result.summary.status !== 'attention' && result.summary.code !== 'unsupported_analyte' && result.measurement.status === 'valid') result.summary = {
       status: 'limited', code: status === 'variants' ? 'reference_variants_available' : available ? 'automatic_reference_comparison' : 'limited_interpretation',
       title: status === 'variants' ? 'Warianty zakresów referencyjnych' : available ? 'Orientacyjne porównanie ze źródłem' : 'Brak zakresu dla podanych danych' };
+    result.prepubertalLh = prepubertalLhReference(input, data, result);
     return result;
   }
   return Object.freeze({ version: VERSION, evaluate: evaluate, parseMeasurement: parseMeasurement, resolveAge: resolveAge, resolveNeonatalAge: resolveNeonatalAge, compareMeasurement: compareMeasurement, assessTiming: assessTiming });

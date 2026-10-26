@@ -259,6 +259,18 @@ ponownie montowany. Rozszerzenia artefaktów odtwarza idempotentny
 `node tools/apply_restore_result_batching.mjs`; `--check` weryfikuje jednoznaczne
 kotwice. Nie zmieniają wzorów ani danych referencyjnych.
 
+Przy odtwarzaniu pełnej sesji własne pole `intake.history` z wartością `null`
+lub tablicą ma pierwszeństwo przed przejściowym `window.intakeHistory`:
+`applyLoadedData` przekazuje je jawnie do `rehydrateIntakeFromState`.
+`null` i `[]` oznaczają brak zapisanej historii, więc pośrednie przeliczenie
+starszych wspólnych danych nie może dopisać ich jako pomiaru historycznego.
+Bieżący wiersz nadal powstaje z odtworzonych danych podstawowych, a niepusta
+historia przechodzi dotychczasową sanitację i usunięcie duplikatu tego pomiaru.
+Brak pola, nieobsługiwany typ, zwykły import i wywołanie bez opcji zachowują
+dotychczasowy fallback. Bez `intakeMeasurements` odtworzenie tabeli nie zmienia
+historii innych paneli. Pierwszeństwo dotyczy odczytu, bez wstępnego nadpisania
+globalnej historii lub mutacji danych wejściowych.
+
 Przy starcie z wybranym zapisanym pacjentem pełne odtworzenie sesji czeka,
 jeżeli vault jest jeszcze zamknięty i pierwsza próba przywrócenia konta trwa.
 Zapobiega to odtworzeniu, a następnie wyczyszczeniu oceny pokwitania przez
@@ -273,6 +285,15 @@ i formularz gościa nie dostają dodatkowej bariery.
 Panel siatki obserwuje te granice, zachowując pozostałe warunki gotowości.
 `isMainSessionRestorePending()` blokuje także publikację obrazu w krótkim
 odstępie między gotowością konta a wznowieniem odtwarzania formularza.
+
+DocPro odtwarza osobno stan własnych kontrolek, w tym `details`; gotowość
+konta i głównej sesji nie oznacza zakończenia tego kroku.
+`docpro_state_persist.js` udostępnia zamrożony interfejs tylko do odczytu
+`window.VildaDocproStatePersistence`: `isReady()` jest prawdziwe po
+inicjalizacji i poza własnym odtwarzaniem, a `isRestoring()` wskazuje jego
+trwanie. Integracje i testy stabilnego UI DocPro obserwują także tę granicę.
+To stan wyłącznie runtime; interfejs nie dodaje zapisów ani timerów
+i nie steruje odtwarzaniem.
 
 Samo odtworzenie sesji (`isSessionRestore`) nie rozsyła sygnału nowego wczytania
 `vilda:sharedLoadSeq`. Powłoka odpowiada na ten sygnał odtwarzaniem wspólnego

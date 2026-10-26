@@ -85,6 +85,31 @@
   font-size: .85rem;
 }
 
+.vilda-lab-assessment .vilda-lab-prepubertal-interpretation {
+  padding: var(--space-12px) var(--space-14px);
+  margin: var(--space-14px) 0;
+  border: var(--border-hairline) solid var(--vilda-lab-line);
+  border-radius: var(--radius-11);
+  background: var(--vilda-lab-soft);
+}
+
+.vilda-lab-assessment .vilda-lab-prepubertal-interpretation[data-prepubertal-interpretation="attention"] {
+  color: var(--vilda-lab-amber);
+  background: var(--vilda-lab-amber-bg);
+}
+
+.vilda-lab-assessment .vilda-lab-prepubertal-interpretation[data-prepubertal-interpretation="neutral"] {
+  color: var(--vilda-lab-muted);
+}
+
+.vilda-lab-assessment .vilda-lab-prepubertal-interpretation h3 {
+  font-size: .875rem;
+}
+
+.vilda-lab-assessment .vilda-lab-prepubertal-interpretation p {
+  font-size: .85rem;
+}
+
 .vilda-lab-assessment .vilda-lab-summary {
   font-size: .85rem;
   font-weight: 600;
