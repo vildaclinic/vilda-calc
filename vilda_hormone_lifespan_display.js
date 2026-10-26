@@ -666,8 +666,10 @@
     arc(0, infant.peakAgeDays / shared.daysPerYear, birth.value, infant.peakValue, infant, 0, 0);
     infant.shoulderPoints.forEach(function (point) { add(point.ageDays / shared.daysPerYear, point.value); });
     var sourcePoints = infantSource.points.filter(function (point) {
+      // Numeric qualification can extend beyond the approved drawing. Its
+      // childhood join remains owned by the unchanged display policy.
       return point.eligible !== false && point.ageYears >= infant.sourceStartAgeDays / shared.daysPerYear &&
-        point.ageYears <= infant.sourceMaxAgeYears;
+        point.ageYears <= Math.min(infant.sourceMaxAgeYears, childhood.minAge);
     });
     if (sourcePoints.length < 2) return null;
     sourcePoints.forEach(function (point) { add(point.ageYears, point.value); });
@@ -1444,7 +1446,9 @@
     // Only the two target age models enter this view. The ordinary FSH Zec
     // stage profile cannot substitute for Madsen, and a mismatch in the other
     // sex cannot suppress a valid own point. Global profile arrays stay intact.
-    var referenceData = Object.assign({}, data, { patientPointData: Object.assign({}, source, {
+    // A source profile can authorize an extension only in ordinary views;
+    // this explicit scope keeps that permission out of sex comparisons.
+    var referenceData = Object.assign({}, data, { referenceScope: 'sex-comparison', patientPointData: Object.assign({}, source, {
       profiles: profiles.slice()
     }) });
     var invalid = false;

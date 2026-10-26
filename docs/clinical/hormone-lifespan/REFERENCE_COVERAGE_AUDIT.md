@@ -1,5 +1,16 @@
 # Pokrycie odniesień hormonalnych — stan 24 października 2026
 
+**Decyzje po tym audycie — 25–26.10.2026:**
+[LH dzieci z PR #790](../LH_CHILDHOOD_REFERENCE.md) ma osobne orientacyjne
+odniesienie i punkt samego wyniku w luce, bez dokładnej P50. Następnie
+audyt pełnego Busch 2022 potwierdził zachowany odczyt niemowlęcego LH;
+właściciel polecił wdrożenie [przybliżonej mediany w `(243;326]` dnia
+i samego wyniku później do <1 roku](LH_INFANT_TAIL.md). To nowe reguły
+zwykłej prezentacji, bez rozszerzania porównania płci, RI lub historii.
+Luka dokładnej dziecięcej mediany pozostaje; niemowlęcy TT po 212. dniu
+jest kolejnym osobnym audytem. Historycznych tabel i hashy poniżej nie
+przepisujemy na nową politykę.
+
 **Aktualny przegląd po scaleniu E2 D3 #766 i INSL3 #770:**
 [wyniki i rekomendowana kolejność](REFERENCE_COVERAGE_REVIEW_2026_10_24.md),
 [zapis kontroli rzeczywistych funkcji](evidence/reference-coverage-audit-2026-10-24.json).

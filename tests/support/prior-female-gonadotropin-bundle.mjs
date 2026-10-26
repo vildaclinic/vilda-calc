@@ -9,13 +9,28 @@ const addedIds = new Set(['madsen2022-female-lh-age-6-16', 'madsen2022-female-fs
   'madsen2022-female-e2-age-6-18']);
 const fshCaliperIds = new Set(['wilson2023-male-fsh-age-16-18', 'wilson2023-female-fsh-age-16-19']);
 
+// Exactly the deployed Busch LH profile on c3fd6882, before the 2026-10-26
+// centreline qualification policy. This archival fixture restores historical
+// hash checks; the new data regression separately proves all changed fields.
+const priorInfantLhProfile = JSON.parse(readFileSync(new URL(
+  '../fixtures/hormone-lifespan-prior-male-infant-lh-profile.json', import.meta.url), 'utf8'));
+export function beforeInfantLhTailBundle(data) {
+  return { ...data, version: '2026-10-22.2', profiles: data.profiles.map(profile =>
+    profile.id === priorInfantLhProfile.id ? priorInfantLhProfile : profile) };
+}
+
+export function beforeInfantLhTailRuntime(runtime) {
+  const { infantLhTailPolicy: _infantLhTailPolicy, ...prior } = runtime;
+  return { ...prior, patientPointData: beforeInfantLhTailBundle(prior.patientPointData) };
+}
+
 // Freeze precisely the ordinary female inhibin B profile from 3b6a5302 before
 // its 2026-10-21 extension. This is archival test data, never a runtime source.
 // Preserve the earlier ID, metadata and PCHIP knots for every historical hash.
 const priorInhibinProfile = JSON.parse(readFileSync(new URL(
   '../fixtures/hormone-lifespan-prior-female-inhibin-profile.json', import.meta.url), 'utf8'));
 export function beforeInhibinPost47Bundle(data) {
-  return { ...data, version: '2026-10-21.1', profiles: data.profiles.map(profile =>
+  return { ...data, version: '2026-10-21.1', profiles: beforeInfantLhTailBundle(data).profiles.map(profile =>
     profile.id === 'borelli2025-female-inhb-age-5p6-47p75' ? priorInhibinProfile : profile) };
 }
 
@@ -23,7 +38,7 @@ export function beforeInhibinPost47Bundle(data) {
 // Removing precisely this new profile restores the complete preceding bundle;
 // no earlier source data or frozen hash expectation is regenerated.
 export function beforeFemaleE2ChildhoodBundle(data) {
-  return { ...data, version: '2026-10-21.1', profiles: data.profiles
+  return { ...data, version: '2026-10-21.1', profiles: beforeInfantLhTailBundle(data).profiles
     .filter(profile => profile.id !== 'kulle2024-female-e2-th1-age-over1-under6') };
 }
 
@@ -48,7 +63,7 @@ export function beforeMaleLhCaliperBundle(data) {
 // Adult male E2 adds exactly its graphical source and separate product policy.
 // Removing only those fields restores the complete 38-field preceding runtime.
 export function beforeChildhoodLhResultOnlyRuntime(runtime) {
-  const { childhoodLhResultOnlyPolicies: _childhoodLhResultOnly, ...prior } = runtime;
+  const { childhoodLhResultOnlyPolicies: _childhoodLhResultOnly, ...prior } = beforeInfantLhTailRuntime(runtime);
   return prior;
 }
 

@@ -1032,24 +1032,24 @@
   "sha256": "bcb1febb3098914cf475549a97ebaec2078b4bd4cfc07d1e0a19922f760be3b3"
  },
  "vilda_hormone_lifespan.js": {
-  "v": 45,
-  "sha256": "ac8b91be1969a875b0e74efb7ba2c803ac693b0bc767fe889818bbbd6bf28ced"
+  "v": 46,
+  "sha256": "87f51e39b5c53eaa5ba66671c4619fefe1c49b75b8eb0ceba287d7147a1eb3ba"
  },
  "vilda_hormone_lifespan_data.js": {
-  "v": 45,
-  "sha256": "0d1fa1c58060bbb58c91f6c77d321162bef4a8383b5418e758577e6901053a07"
+  "v": 46,
+  "sha256": "237708ca93bc0f503d84c4158f07bc3ce818a2a39dd4b0fa5db55a04ae1d229c"
  },
  "vilda_hormone_lifespan_display.js": {
-  "v": 15,
-  "sha256": "d9d921af5f6952727c578c948e0267aa488af52fd9cc0ee3e1424964beff034a"
+  "v": 16,
+  "sha256": "0887cc9313de9f629b67395b4b839821dda85ce79c0223d296ce7db5f9586a09"
  },
  "vilda_hormone_lifespan_observations.js": {
   "v": 1,
   "sha256": "0ce37df26b1e38e416fc7c02072e9664ad890f924c9aad95851607b5c01b84ba"
  },
  "vilda_hormone_lifespan_reference.js": {
-  "v": 8,
-  "sha256": "fc27b0706c8ba9f61e882a2f7b1e0fe36fc6e3edc790468ce3b9bdc8ffb1299a"
+  "v": 9,
+  "sha256": "553c138affa998583dd3c64628ba0537b19035fc00bd99a2e17fcc34b34d8937"
  },
  "vilda_hormone_reference_snapshot.js": {
   "v": 1,
@@ -1116,8 +1116,8 @@
   "sha256": "ebe8447c307fe987501305fd29ca0cfd4037ba2c63f30e8a92246d369d80f028"
  },
  "vilda_lab_neonatal_context.js": {
-  "v": 2,
-  "sha256": "691af2ce15b9402d05a8e746801bd2006ad9bba9cc1fb20611b00c5a6eeea59e"
+  "v": 3,
+  "sha256": "14041bb15e5b28d4ecf1f0535a6fcc73bad2a0df6c4b1bbd421e56979a45b87e"
  },
  "vilda_lab_profile_preferences.js": {
   "v": 1,

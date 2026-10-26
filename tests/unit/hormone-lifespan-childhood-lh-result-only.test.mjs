@@ -3,6 +3,7 @@ import { createRequire } from 'node:module';
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { loadBrowserScript } from '../support/load-browser-script.mjs';
+import { beforeInfantLhTailBundle, beforeInfantLhTailRuntime } from '../support/prior-female-gonadotropin-bundle.mjs';
 
 const require = createRequire(import.meta.url);
 const runtime = require('../../vilda_hormone_lifespan_data.js');
@@ -24,12 +25,12 @@ const unavailable = reason => ({ status: 'unavailable', reason });
 
 describe('LH dzieci — rzeczywisty wynik, bez nowej mediany', () => {
   it('dodaje tylko osobną listę uprawnień i zachowuje wszystkie wcześniejsze 40 pól oraz 85 profili', () => {
-    const { childhoodLhResultOnlyPolicies, ...previous } = runtime;
+    const { childhoodLhResultOnlyPolicies, ...previous } = beforeInfantLhTailRuntime(runtime);
     expect(childhoodLhResultOnlyPolicies).toEqual(policies);
     expect(Object.keys(previous)).toHaveLength(40);
     expect(digest(previous)).toBe('10c7276f91bcd0a12464a21769ea6bd434dd4a986688b6f34766052604f46784');
     expect(runtime.patientPointData.profiles).toHaveLength(85);
-    expect(digest(runtime.patientPointData)).toBe('28730dd407d52ef41afe8f2f5af5ab56ce541398e1c25d4dce5be5324a5ddcc9');
+    expect(digest(beforeInfantLhTailBundle(runtime.patientPointData))).toBe('28730dd407d52ef41afe8f2f5af5ab56ce541398e1c25d4dce5be5324a5ddcc9');
     expect(runtime.resultOnlyPolicies).toEqual([oldPolicy]);
     expect(runtime.patientPointData).not.toHaveProperty('childhoodLhResultOnlyPolicies');
     policies.forEach(policy => {

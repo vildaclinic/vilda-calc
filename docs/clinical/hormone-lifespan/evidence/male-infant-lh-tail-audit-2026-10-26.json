@@ -1,0 +1,187 @@
+{
+  "id": "male-infant-lh-tail-source-audit-2026-10-26",
+  "version": "2026-10-26.1",
+  "kind": "own-factual-source-and-graphic-audit-extract",
+  "auditDate": "2026-10-26",
+  "scope": "Male LH after day 243 to strictly under one year; no other analyte, laboratory RI, diagnostic threshold or new fitted model.",
+  "baselineAudytSha": "c3fd68826235171c2521bf7055d5990f32bc87c7",
+  "notClinicalValidation": true,
+  "article": {
+    "title": "Dynamic Changes of Reproductive Hormones in Male Minipuberty: Temporal Dissociation of Leydig and Sertoli Cell Activity",
+    "authors": "Busch AS et al.",
+    "journal": "Journal of Clinical Endocrinology & Metabolism 2022;107(6):1560–1568",
+    "doi": "10.1210/clinem/dgac115",
+    "url": "https://doi.org/10.1210/clinem/dgac115",
+    "pmid": "35225342",
+    "advanceAccessDate": "2022-02-28",
+    "correctedAndTypesetDate": "2022-03-17",
+    "pdfSha256": "373c982e4e4f3221a3d17c646f833db5a0672eda41f689c5785d6633cb1ceb45",
+    "pdfBytes": 1140064,
+    "readLocators": [
+      "Full final nine-page article",
+      "Methods and Results, printed pages 1561–1562",
+      "Figure 3 and caption, printed page 1565",
+      "Discussion and limitations, printed pages 1564 and 1566",
+      "Data availability and supplement references 25–27, printed page 1567"
+    ]
+  },
+  "population": {
+    "design": "Prospective population-based COPENHAGEN Minipuberty Study 2016–2018, Copenhagen, Denmark",
+    "participants": "Healthy term singleton male infants; source reports Caucasian infants only",
+    "postnatalBoysN": 119,
+    "postnatalVisitsN": 630,
+    "postnatalSerumSamplesN": 338,
+    "visitAgeDays": [4, 440],
+    "exactLhFitN": null,
+    "exactTailLhN": null,
+    "countsAreNotAnalyteOrDailyFitN": true,
+    "cordSamplesIncludedInPostnatalReferenceCurves": false,
+    "detailedRecruitmentExclusions": "Delegated by the article to its separate cohort-profile reference; not inferred here"
+  },
+  "assay": {
+    "locator": "Hormone Assays, printed page 1561",
+    "specimen": "Serum",
+    "method": "AutoDELFIA time-resolved fluoroimmunometric assay, PerkinElmer B031-101",
+    "unit": "IU/L",
+    "sourceLOD": 0.05,
+    "sourceLOQ": null,
+    "interassayCV": "<5%; low-level QC concentrations not specified",
+    "sampleTimeAndFasting": "Not specified; diurnal variation was not evaluated",
+    "belowLimitReporting": "Reported as half the corresponding LOD or LOQ; for source LH, LOD/2 is 0.025 IU/L",
+    "exactCensoredLikelihoodHandling": "Not separately specified; reporting is not proof of a particular likelihood or replacement-data fitting algorithm",
+    "patientAssayLimitConfirmed": false,
+    "sourceLimitIsPatientLimitOrRIOrDiagnosticThreshold": false
+  },
+  "model": {
+    "locator": "Statistical Methods, printed page 1562; Figure 3, printed page 1565",
+    "statistic": "Age-specific GAMLSS model median M, graphically read from the black curve",
+    "lhTransform": "Square-root before analysis, back-transformed for the published IU/L coordinates",
+    "greyCurves": "Plus/minus 1 and 2 SDS; not confidence intervals for the median or graphical read",
+    "figure2": "Separate normalized longitudinal mean trajectories; not this median",
+    "numericLmsOrDailyP50ExportFound": false,
+    "completeLhFitObjectFound": false,
+    "sourceModelEndsAtDay243Or326": false,
+    "modelBelowLODAutomaticallyInvalid": false,
+    "exactUncensoredBiologicalMedianRecovered": false,
+    "lateBelowLODObservation": {
+      "locator": "Results, printed page 1562",
+      "ageDays": [340, 390],
+      "lhBelowLODN": 18,
+      "lhGroupSamplesN": 34,
+      "reportedPercent": 53,
+      "notEachDayOrModelFitN": true
+    }
+  },
+  "supplementVersionCheck": {
+    "checkedDate": "2026-10-26",
+    "method": "Official Figshare current-article, version-list and version-1 metadata; downloaded files checked",
+    "eachVersionList": [1],
+    "eachFileCount": 1,
+    "items": [
+      {
+        "doi": "10.6084/m9.figshare.19093787.v1",
+        "name": "SFig S1.pdf",
+        "url": "https://doi.org/10.6084/m9.figshare.19093787.v1",
+        "sha256": "936fc4d91e42c725d6b631e2423a445df0f8586aad5b43fbf29729597500d023",
+        "bytes": 1043669,
+        "content": "SHBG and free testosterone; no numerical LH export"
+      },
+      {
+        "doi": "10.6084/m9.figshare.19093790.v1",
+        "name": "SFig S2.pdf",
+        "url": "https://doi.org/10.6084/m9.figshare.19093790.v1",
+        "sha256": "d7ca7af727e291c198a1954fe6efdb3f83af15fc5d5db1b469be79db8e36c1e5",
+        "bytes": 1146596,
+        "content": "Within-infant SDS variation; LH mean SD of SDS 0.69 is not median uncertainty or an age-to-LH export"
+      },
+      {
+        "doi": "10.6084/m9.figshare.19093793.v1",
+        "name": "STable1.xlsx",
+        "url": "https://doi.org/10.6084/m9.figshare.19093793.v1",
+        "sha256": "4f3a41db1366e01be9d956fd21e71ecf9e294e55976842e188487462c7fae3bb",
+        "bytes": 11809,
+        "content": "INSL3 group statistics; complete workbook and structure checked, no LH model or raw export"
+      }
+    ]
+  },
+  "graphicAudit": {
+    "existingArchive": "evidence/patient-point/busch2022-figure3-vector-medians.json",
+    "existingArchiveSha256": "b320f037978c1fa2bf2fc55dd4e3aa0708dea55f9b1cb69302c127e13352d795",
+    "archiveAndConcentrationValuesUnchanged": true,
+    "sourceFigure": 3,
+    "sourcePdfPageIndex": 5,
+    "independentDailyNodesChecked": 394,
+    "nodeDays": [7, 400],
+    "maxAbsNativeVectorVersusRoundedNodeIU_L": 4.931448747e-7,
+    "testedCalibrationVariantsN": 5,
+    "calibrationSensitivityAgeDays": [244, 365],
+    "maxTestedCalibrationChangeIU_L": 0.0000490972,
+    "pchipVersusNativeBezierQuarterDayAgesN": 489,
+    "maxAbsPchipVersusNativeBezierIU_L": 0.000032915262160634895,
+    "legacySourceLODComponentIU_L": 0.05,
+    "legacyHalfStrokeComponentIU_L": 0.1206886516405212,
+    "legacyMaxYCalibrationResidualIU_L": 0.00006277197368476095,
+    "legacyDisplayFloorIU_L": 0.17075142361420598,
+    "halfStrokeIsModelOrCenterlineError": false,
+    "notStatisticalConfidenceOrClinicalValidation": true,
+    "roundedSavedModelExamplesIU_L": {
+      "243": 0.173137,
+      "244": 0.170118,
+      "300": 0.069879,
+      "326": 0.050415,
+      "327": 0.049857,
+      "365": 0.035144
+    }
+  },
+  "acceptedApplicationDecision": {
+    "acceptedDate": "2026-10-26",
+    "instruction": "Implement the source-audited proposal in the application",
+    "policyId": "male-lh-infant-tail-2026",
+    "policyVersion": "2026-10-26.1",
+    "dayDivisor": 365.25,
+    "legacyAtOrBefore243": "Preserve the existing path",
+    "newApproximateMedian": {
+      "id": "male-lh-infant-tail-model-median",
+      "minAgeDays": 243,
+      "minExclusive": true,
+      "maxAgeDays": 326,
+      "maxInclusive": true,
+      "label": "Przybliżona mediana modelu Busch 2022"
+    },
+    "newActualResultOnly": {
+      "id": "male-lh-infant-tail-result-only",
+      "minAgeDays": 326,
+      "minExclusive": true,
+      "maxAgeYears": 1,
+      "maxExclusive": true,
+      "without": ["numeric median", "median connector", "ratio to median"]
+    },
+    "endpoint326IsAuthorRuleOrBiologicalLimit": false,
+    "endpoint326Rationale": "Conservative application presentation endpoint: last whole day with drawn model median above the source LOD in the checked calibration variants; not invalidation of later modeled medians",
+    "fullKnownAgeMustFitOnePart": true,
+    "newViews": ["ordinary life", "ordinary mini"],
+    "sexComparisonQualificationUnchanged": true,
+    "currentQualifiedContextRequired": true,
+    "existingChronologyReuse": {
+      "cacheApi": "VildaLabNeonatalContext",
+      "optIn": "includeInfantLhTail: true",
+      "lateReadAlsoRequires": "includeMinipuberty: true",
+      "lateRecordMarker": "infantLhTailOnly: true",
+      "cacheKeyAndVersionUnchanged": "vildaLabNeonatalAgeV1 / 1",
+      "defaultClinicalCalendarMonthLimitUnchanged": 6,
+      "optInCalendarMonthLimitExclusive": 12,
+      "graphOnlyTransientField": "infantLhChronologicalAge",
+      "cacheIntervalMeaning": "Possible completed days [lower,upper]",
+      "elapsedYearEnclosure": "[lower/365.25,(upper+1)/365.25)",
+      "birthTimeInferred": false,
+      "birthDateIncludedInCacheOrOutput": false,
+      "changesOtherAnalytesOrLaboratoryPrecision": false
+    },
+    "noBypassAfterSourceSelectionFailure": true,
+    "inequalityOrLimitIsNotExactPatientValue": true,
+    "newClinicalRiOrSdsOrDiagnosis": false,
+    "historicalAssessmentsRecalculated": false,
+    "other84ProfilesAndAllTestosteroneRulesUnchanged": true
+  },
+  "verificationBoundary": "Geometric source audit results above precede implementation. Final production tests, browser/PWA/offline checks and exact-head CI results belong to the implementation PR; this extract does not assert that they passed."
+}

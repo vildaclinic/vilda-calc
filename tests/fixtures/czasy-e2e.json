@@ -1,6 +1,6 @@
 {
   "opis": "E2E-ODŁAMKI: sekundy na plik e2e (pierwsza próba każdego testu, wszystkie projekty razem). Źródło podziału na odłamki CI — tests/support/odlamki-e2e.mjs. Odświeżenie: node tests/scripts/odlamki-e2e.mjs --pomoc.",
-  "zrodlo": "1 raport(y) JSON pełnego przebiegu, Playwright 1.61.1, 2026-10-18; uzupełnienie 2026-10-25: 2 pełne pliki LH z lokalnego przebiegu 22/22; startup-restore-batching (5 testów) i centile-summary-flash (6 testów) z lokalnego przebiegu 45/45, Playwright 1.61.1, sumy pierwszych prób bez powtórek; dotychczasowe 364 wagi i 2 pomiary LH zachowane",
+  "zrodlo": "1 raport(y) JSON pełnego przebiegu, Playwright 1.61.1, 2026-10-18; uzupełnienie 2026-10-25: 2 pełne pliki LH z lokalnego przebiegu 22/22; startup-restore-batching (5 testów) i centile-summary-flash (6 testów) z lokalnego przebiegu 45/45, Playwright 1.61.1, sumy pierwszych prób bez powtórek; dotychczasowe 364 wagi i 2 pomiary LH zachowane; uzupełnienie 2026-10-26: dwa pełne nowe pliki LH niemowląt z lokalnego przebiegu 6/6 PASS, Playwright 1.61.1, sumy pierwszych prób bez powtórek (UI 116,7 s, offline 30,6 s); wszystkie 368 wcześniejszych wag zachowano",
   "pliki": {
     "application.spec.mjs": 14.6,
     "arkusz-przypomnien-pisanie-mobile.spec.mjs": 34.9,
@@ -173,6 +173,8 @@
     "lab-inhibin-b.spec.mjs": 147,
     "lab-lh-childhood-reference-offline.spec.mjs": 38.3,
     "lab-lh-childhood-reference.spec.mjs": 123.5,
+    "lab-lh-infant-tail-reference-offline.spec.mjs": 30.6,
+    "lab-lh-infant-tail-reference.spec.mjs": 116.7,
     "lab-puberty-adult-auto.spec.mjs": 67.9,
     "lab-puberty-age-variants.spec.mjs": 82.9,
     "lab-puberty-clinical-context.spec.mjs": 91.2,

@@ -920,16 +920,25 @@
       const [minAge, maxAge] = visibleAgeDomain();
       return patientAgeYears < minAge || patientAgeYears > maxAge;
     }
-    function childhoodLhContextReady() {
+    function currentLhContextReady(availabilityKey) {
       return sourceStatus === "ready" && typeof identityKey === "string" &&
-        patientContext?.childhoodLhContextAvailable === true &&
+        (availabilityKey === "childhoodLhContextAvailable" || availabilityKey === "infantLhContextAvailable") &&
+        patientContext?.[availabilityKey] === true &&
         patientContext.contextBasis === "current-patient" && !patientContext.sampleDateISO &&
         (patientContext.currentIdentityKey == null || patientContext.currentIdentityKey === identityKey);
+    }
+    function childhoodLhContextReady() {
+      return currentLhContextReady("childhoodLhContextAvailable");
     }
     function resultOnlyVisible() {
       return !compare && resultOnlyPoint?.status === "result-only" &&
         canShowAgeMarker() && selected.has(analyteHormones[currentAnalyte]) &&
-        (!resultOnlyPoint.policy.currentPatientOnly || childhoodLhContextReady());
+        (!resultOnlyPoint.policy.currentPatientOnly ||
+          currentLhContextReady(resultOnlyPoint.policy.contextAvailabilityKey));
+    }
+    function resultOnlyAllowedInView() {
+      return resultOnlyVisible() && (Array.isArray(resultOnlyPoint.policy.allowedViews)
+        ? resultOnlyPoint.policy.allowedViews.includes(view) : view === "life");
     }
     function childhoodLhSourceNote() {
       return !compare && currentAnalyte === "lh" && selected.has("lh") &&
@@ -949,6 +958,19 @@
       target.append(section);
       if (note.source?.url) addLink(note.source.label, note.source.url);
     }
+    function appendNumericReferencePolicySource(target) {
+      const policy = renderedPoint?.referencePolicy;
+      if (!policy) return;
+      const section = document.createElement("section");
+      section.setAttribute("data-reference-policy-source", policy.id);
+      for (const copy of [policy.label, ...(policy.discussion || [])]) {
+        if (typeof copy !== "string" || !copy) continue;
+        const paragraph = document.createElement("p");
+        paragraph.textContent = copy;
+        section.append(paragraph);
+      }
+      target.append(section);
+    }
     function patientDotModel() {
       const engine = pointEngine();
       const id = analyteHormones[currentAnalyte];
@@ -959,6 +981,9 @@
       if (!engine || patientPoint?.status !== "ready" ||
           !canShowAgeMarker() || patientAgeYears < minAge || patientAgeYears > maxAge ||
           (compare ? compareHormone !== id : !selected.has(id))) return null;
+      if (patientPoint.referencePolicy &&
+          ((compare && patientPoint.referencePolicy.ordinaryOnly) ||
+            !currentLhContextReady(patientPoint.referencePolicy.contextAvailabilityKey))) return null;
       if (compare && patientPoint.profile.ordinaryOnly) return null;
       let profiles = [patientPoint.profile];
       const stableDisplay = !compare ? (sex === "male" ? stableCurves.get(id)?.display
@@ -1128,7 +1153,7 @@
       // specimen conversion is implied by this ordinary unit conversion.
       const enteredUnit = patientContext?.displayUnit || patientContext?.measurement?.unit;
       const conversions = data.patientPointData.unitConversions[model.id];
-      const enteredFactor = model.profile.patientNote && conversions?.unit === model.profile.unit &&
+      const enteredFactor = (model.referencePolicy?.patientNote || model.profile.patientNote) && conversions?.unit === model.profile.unit &&
         Object.prototype.hasOwnProperty.call(conversions.factors || {}, enteredUnit)
         ? conversions.factors[enteredUnit] : null;
       const labelFactor = Number.isFinite(enteredFactor) && enteredFactor > 0 ? enteredFactor : 1;
@@ -1138,17 +1163,17 @@
       const groupMean = model.profile.statistic === "group-mean";
       // Source readouts can require coarser labels than their exact unit
       // conversion. This does not round the patient's result or move either dot.
-      const referenceDigits = Number.isInteger(model.profile.referenceSignificantDigits) &&
-        model.profile.referenceSignificantDigits >= 1 && model.profile.referenceSignificantDigits <= 6
-        ? model.profile.referenceSignificantDigits
+      const requestedDigits = model.referencePolicy?.significantDigits ?? model.profile.referenceSignificantDigits;
+      const referenceDigits = Number.isInteger(requestedDigits) && requestedDigits >= 1 && requestedDigits <= 6
+        ? requestedDigits
         : model.profile.id === "ljubicic2020-male-fsh-75-80-approximate" ? 2 : 3;
-      const medianLabel = groupMean ? "Średnia grupy" : model.profile.statistic === "group-median" ? "Mediana grupy" : "Mediana";
-      const medianContext = model.profile.referenceGroupLabel
+      const medianLabel = model.referencePolicy?.shortLabel || (groupMean ? "Średnia grupy" : model.profile.statistic === "group-median" ? "Mediana grupy" : "Mediana");
+      const medianContext = model.referencePolicy?.label || (model.profile.referenceGroupLabel
         ? `Mediana grupy ${model.profile.referenceGroupLabel}`
         : groupMean ? `Średnia w grupie ${model.profile.ageGroup.label}` : model.profile.statistic === "group-median"
         ? `Mediana grupy ${model.profile.ageGroup.label}` +
           (model.profile.requiredGonadalStage != null ? `, Tanner ${model.profile.requiredGonadalStage}` : "")
-        : "Mediana dla wieku";
+        : "Mediana dla wieku");
       const a11y = (offscale ? "Wynik powyżej skali; strzałka nie oznacza dokładnego położenia stężenia. " : "") + `Wynik ${person}: ${pointNumber(labelValue)} ${unit}. ${medianContext}: około ${pointNumber(labelReference, referenceDigits)} ${unit}. Czerwony punkt oznacza wynik, nie jego klasyfikację.`;
       const dot = el("g", {
         "data-patient-concentration": model.id, "data-value": model.value,
@@ -1157,6 +1182,7 @@
         // statistic is explicit and must never be inferred from that name.
         "data-reference-value": model.referenceValue, "data-reference-statistic": model.profile.statistic,
         "data-label-unit": unit,
+        ...(model.referencePolicy ? { "data-reference-policy": model.referencePolicy.id } : {}),
         "data-divisor": model.divisor, "data-ceiling": model.ceiling,
         ...(model.scaleTransform ? { "data-scale-transform": model.scaleTransform } : {}),
         "data-plot-top": top, "data-plot-bottom": bottom,
@@ -1335,11 +1361,11 @@
       }
     }
     function updateSourcePointNote() {
-      const model = renderedPoint, note = model?.profile.patientNote;
+      const model = renderedPoint, note = model?.referencePolicy?.patientNote || model?.profile.patientNote;
       if (!note) return;
       const caption = byId("scale-note");
-      const basis = model.profile.statistic === "group-median" ? "mediana grupy"
-        : model.profile.statistic === "group-mean" ? "średnia grupy" : "mediana";
+      const basis = model.referencePolicy?.label || (model.profile.statistic === "group-median" ? "mediana grupy"
+        : model.profile.statistic === "group-mean" ? "średnia grupy" : "mediana");
       let detail = note;
       if (model.profile.referenceGroupLabel) {
         const enteredUnit = patientContext?.displayUnit || patientContext?.measurement?.unit;
@@ -2217,7 +2243,8 @@
       });
       // A scoped permission supplies only the patient's exact concentration;
       // it does not alter this approved geometry or create a source median.
-      if (sex === "male" && full && resultOnlyVisible()) {
+      if (sex === "male" && resultOnlyAllowedInView() &&
+          patientAgeYears >= visibleAgeDomain()[0] && patientAgeYears <= visibleAgeDomain()[1]) {
         const display = stableCurves.get("lh")?.display;
         if (display?.unit === "IU/L" && display.divisor > 0 && display.ceiling > 0) {
           drawResultOnlyDot(g, resultOnlyPoint, {
@@ -2711,6 +2738,7 @@
         if (outside) reason = outsideReason;
         else if (evaluated?.status !== "ready") reason = evaluated?.reason || "reference-unavailable";
         else if (evaluated.profile.id !== model.profileIds[sex]) reason = outsideReason;
+        else if (evaluated.referencePolicy?.ordinaryOnly || patientPoint?.referencePolicy?.ordinaryOnly) reason = "reference-unavailable";
         else point = { ...evaluated, valueIU: evaluated.value * sourceToIU,
           referenceIU: evaluated.referenceValue * sourceToIU };
       }
@@ -3301,6 +3329,7 @@
         data.insl3AgeSourceData?.version, data.insl3AgeSourcePolicy?.version, insl3Reading] : null;
       const nextKey = JSON.stringify([sex, view, compare, compareHormone, [...selected].sort(),
         renderedPoint?.profile.id, renderedPoint?.curves.map((curve) => curve.profile.id), renderedObservation?.kind,
+        renderedPoint?.referencePolicy?.id,
         insl3ContextKey, resultPolicy?.id, childhoodSourceNote?.id]);
       if (nextKey === sourcesKey) return;
       sourcesKey = nextKey;
@@ -3317,6 +3346,7 @@
         for (const source of resultPolicy.sources || []) links.push([source.label, source.url]);
       }
       appendChildhoodLhSourceNote(target, (label, url) => links.push([label, url]));
+      appendNumericReferencePolicySource(target);
       if (stableInhibinVisible()) {
         paragraph("Linia inhibiny B jest poglądową syntezą badań, nie jedną medianą ani granicą normy. Zachowuje ten sam przebieg i skalę przed wpisaniem wyniku i po nim. Pozostałe hormony mają własne skale.");
         paragraph("Łagodne przejścia między źródłami (około 9–24 miesięcy, 4,5–7 i 18–25 lat), okres płodowy oraz odcinek po 80. roku są ilustracyjne. Nie służą do wyznaczania mediany, norm ani wyniku pacjenta. Niemowlęcy przebieg źródłowy dotyczy chłopców urodzonych o czasie.");
@@ -3884,6 +3914,7 @@
         contextBasis: typeof next.contextBasis === "string" ? next.contextBasis : null,
         sampleDateISO: typeof next.sampleDateISO === "string" && next.sampleDateISO ? next.sampleDateISO : null,
         childhoodLhContextAvailable: next.childhoodLhContextAvailable === true,
+        infantLhContextAvailable: next.infantLhContextAvailable === true,
         currentIdentityKey: typeof next.currentIdentityKey === "string" ? next.currentIdentityKey : null,
         measurement: next.measurement ? { ...next.measurement } : null,
         displayUnit: next.displayUnit,
@@ -3897,8 +3928,15 @@
       const engine = pointEngine();
       patientPoint = currentAnalyte !== "insl3" && engine && data.patientPointData
         ? engine.evaluate(data.patientPointData, patientContext) : null;
-      resultOnlyPoint = patientPoint?.reason === "unsupported-age" && engine?.evaluateResultOnly
+      const resultOnlyCandidate = engine?.evaluateResultOnly && (patientPoint?.reason === "unsupported-age" ||
+        (patientPoint?.reason === "reference-unavailable" &&
+          data.infantLhTailPolicy?.resultOnlyPolicy?.analyte === currentAnalyte &&
+          data.infantLhTailPolicy?.resultOnlyPolicy?.sex === sex))
         ? engine.evaluateResultOnly(data, patientContext) : null;
+      // The engine authorizes only the data-scoped infant exception. Other
+      // existing reference errors retain their original reason and caption.
+      resultOnlyPoint = patientPoint?.reason === "unsupported-age" || resultOnlyCandidate?.status === "result-only"
+        ? resultOnlyCandidate : null;
       if (resetContext) {
         closeFullscreen(false);
         selected.clear();

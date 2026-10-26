@@ -7,6 +7,7 @@
   // Keep the existing weeks editor unchanged. The LH/FSH consumer can also
   // reuse known calendar days across the 2–5 month reference window.
   var CALENDAR_MONTH_LIMIT = 6;
+  var INFANT_LH_CALENDAR_MONTH_LIMIT = 12;
   var pending = null;
   var boundVault = null;
 
@@ -45,19 +46,20 @@
     });
   }
   function interval(lower, upper, source) { return { lower: lower, upper: upper, source: source }; }
-  function readForm() {
+  function readForm(options) {
     var api = w.VildaDobAge, form = values();
     if (!field('dobInput') || !field('age') || !api || integer(form.age) !== 0) return null;
     var months = integer(form.ageMonths);
     if (months == null) months = 0;
-    if (months >= CALENDAR_MONTH_LIMIT) return null;
+    var includeInfantLhTail = options && options.includeInfantLhTail === true;
+    if (months >= (includeInfantLhTail ? INFANT_LH_CALENDAR_MONTH_LIMIT : CALENDAR_MONTH_LIMIT)) return null;
     var exact = typeof api.readExactAge === 'function' ? api.readExactAge() : null;
     var result, liveDay = null;
     if (exact && integer(exact.days) != null && exact.totalMonths === months) {
       result = interval(Math.max(0, exact.days - 1), exact.days, 'main-calendar-dates');
       if (!(api.showsSavedMeasurement && api.showsSavedMeasurement())) liveDay = day();
     } else {
-      if (months >= api.WEEKS_MONTH_LIMIT) return null;
+      if (months >= CALENDAR_MONTH_LIMIT || months >= api.WEEKS_MONTH_LIMIT) return null;
       // An invalid birth date must not lend precision to leftover weeks.
       var dob = field('dobInput');
       if (dob && text(dob.value) && !(api.readISO && api.readISO())) return null;
@@ -68,6 +70,7 @@
     var record = { version: 1, identityKey: identity(), mode: mode(), form: form,
       liveDay: liveDay, postnatalDays: result };
     if (months >= api.WEEKS_MONTH_LIMIT) record.minipubertyOnly = true;
+    if (months >= CALENDAR_MONTH_LIMIT) record.infantLhTailOnly = true;
     return record;
   }
   function currentPanel() {
@@ -83,7 +86,9 @@
     if (w.__vildaPersistRestoring || w.__vildaLustroWpis || adapter.isRestoring && adapter.isRestoring()) return false;
     if (adapter.isClearInProgress && adapter.isClearInProgress()) return false;
     if (identity() && (!w.VildaVault || !w.VildaVault.isUnlocked || !w.VildaVault.isUnlocked())) { clear(); return false; }
-    var next = readForm();
+    // The extended calendar cache is opt-in at read time. Existing clinical
+    // consumers retain their six-month limit and the completed-weeks contract.
+    var next = readForm({ includeInfantLhTail: true });
     if (JSON.stringify(readCache()) === JSON.stringify(next)) return false;
     // Cache may precede the ordinary shared-form writer. The reader verifies
     // their agreement; publishing never writes to sharedUserData or its timestamp.
@@ -105,12 +110,20 @@
     shared = shared && typeof shared === 'object' ? shared : {};
     if (text(patientId) && (!source || source.patientId !== text(patientId) || source.status !== 'ready')) return null;
     var saved = readCache(), postnatal = null, gestational = null;
+    var calendarMonths = saved && saved.form ? integer(saved.form.ageMonths) : null;
+    var infantTail = saved && (saved.infantLhTailOnly === true ||
+      calendarMonths != null && calendarMonths >= CALENDAR_MONTH_LIMIT);
+    var infantTailAllowed = !infantTail || saved.infantLhTailOnly === true &&
+      integer(saved.form && saved.form.age) === 0 && calendarMonths >= CALENDAR_MONTH_LIMIT &&
+      calendarMonths < INFANT_LH_CALENDAR_MONTH_LIMIT && options && options.includeInfantLhTail === true;
     if (saved && saved.version === 1 && saved.identityKey === text(patientId)
       && saved.mode === mode() && sameForm(saved.form || {}, shared)
+      && infantTailAllowed
       && (!saved.minipubertyOnly || options && options.includeMinipuberty === true)
       && (!saved.liveDay || saved.liveDay === day())) {
       var p = saved.postnatalDays;
       if (p && integer(p.lower) != null && integer(p.upper) != null && p.lower <= p.upper
+        && (!infantTail || p.source === 'main-calendar-dates')
         && ['main-calendar-dates', 'main-completed-weeks'].indexOf(p.source) >= 0) {
         postnatal = interval(p.lower, p.upper, p.source);
       }

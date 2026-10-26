@@ -66,7 +66,7 @@ function currentForm(years = 18, months = 0) {
 
 describe('Męskie AMH 18–<20 — mediana całej grupy Woloszynek 18–30', () => {
   it('dodaje tylko jeden profil, zachowując wszystkie 80 wcześniejszych profili i pozostały runtime', () => {
-    expect(data.version).toBe('2026-10-22.2');
+    expect(data.version).toBe('2026-10-26.1');
     expect(data.profiles).toHaveLength(85);
     expect(data).toEqual(read('population-reference-data.json'));
     expect(runtime.maleAmhYoungAdultReferencePolicy).toEqual(policy);

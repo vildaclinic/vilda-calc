@@ -1,0 +1,124 @@
+{
+  "id": "male-lh-infant-tail-2026",
+  "version": "2026-10-26.1",
+  "kind": "educational-infant-lh-tail-display",
+  "profileId": "busch2022-male-lh",
+  "analyte": "lh",
+  "sex": "male",
+  "unit": "IU/L",
+  "notClinicalReference": true,
+  "ordinaryOnly": true,
+  "source": {
+    "label": "Busch 2022 · modelowana mediana GAMLSS, rycina 3",
+    "url": "https://doi.org/10.1210/clinem/dgac115",
+    "doi": "10.1210/clinem/dgac115",
+    "figure": 3,
+    "printedPage": 1565,
+    "pdfSha256": "373c982e4e4f3221a3d17c646f833db5a0672eda41f689c5785d6633cb1ceb45",
+    "statistic": "Approximate drawn GAMLSS model median, not longitudinal mean or a laboratory RI",
+    "sourceAssay": "AutoDELFIA time-resolved fluoroimmunometric assay, PerkinElmer B031-101",
+    "sourceAssayLimit": {
+      "kind": "LOD",
+      "value": 0.05,
+      "unit": "IU/L",
+      "notPatientAssayLimit": true
+    },
+    "population": "Zdrowi chłopcy urodzeni o czasie, ciąże pojedyncze; COPENHAGEN Minipuberty Study, Dania",
+    "participantsPostnatal": 119,
+    "postnatalSerumSamples": 338,
+    "notAnalyteOrAgeSpecificCounts": true
+  },
+  "approval": {
+    "date": "2026-10-26",
+    "scope": "Wdrożenie zaproponowanego podziału po zakończonym audycie źródłowym; bez nowych RI, SDS lub diagnoz.",
+    "notClinicalValidation": true
+  },
+  "numericReference": {
+    "id": "male-lh-infant-tail-model-median",
+    "version": "2026-10-26.1",
+    "kind": "educational-model-median-extension",
+    "profileId": "busch2022-male-lh",
+    "minAge": 0.6652977412731006,
+    "minAgeExclusive": true,
+    "maxAge": 0.892539356605065,
+    "maxAgeExclusive": false,
+    "minAgeDays": 243,
+    "maxAgeDays": 326,
+    "dayDivisor": 365.25,
+    "fullAgeIntervalRequired": true,
+    "currentPatientOnly": true,
+    "contextAvailabilityKey": "infantLhContextAvailable",
+    "label": "Przybliżona mediana modelu Busch 2022",
+    "shortLabel": "Mediana modelu",
+    "significantDigits": 2,
+    "patientNote": "Przybliżone odniesienie do modelu, nie granica normy.",
+    "discussion": [
+      "Wartości pochodzą ze środka czarnej krzywej modelowanej mediany GAMLSS na rycinie 3, nie ze średniej podłużnej z ryciny 2.",
+      "Kontrolowany odczyt wektorowy odtwarza istniejące wartości źródłowe. Grubość linii nie jest błędem statystycznym modelu ani niepewnością numerycznego odczytu jej środka.",
+      "Wiek 326 dni jest konserwatywnym końcem przyjętej prezentacji liczbowej aplikacji, nie granicą modelu autorów ani progiem diagnostycznym.",
+      "Autorzy raportowali wyniki poniżej LOD jako połowę LOD. Również modelowana mediana powyżej LOD może zależeć od niskich pomiarów; nie jest dokładnie poznaną medianą stężeń niecenzurowanych.",
+      "Źródłowe LOD 0,05 IU/L dotyczy AutoDELFIA B031-101. Nie jest LOD próbki pacjenta, LOQ, górną normą ani progiem rozpoznania.",
+      "Szczegóły włączenia wyników poniżej LOD do dopasowania GAMLSS nie zostały osobno podane w publikacji. Precyzja rysunku nie jest niepewnością modelu."
+    ],
+    "ordinaryOnly": true,
+    "allowedViews": [
+      "life",
+      "mini"
+    ]
+  },
+  "resultOnlyPolicy": {
+    "version": "2026-10-26.1",
+    "id": "male-lh-infant-tail-result-only",
+    "kind": "educational-result-only",
+    "ordinaryOnly": true,
+    "analyte": "lh",
+    "sex": "male",
+    "unit": "IU/L",
+    "sourceProfileId": "busch2022-male-lh",
+    "minAge": 0.892539356605065,
+    "minAgeExclusive": true,
+    "maxAge": 1,
+    "maxAgeExclusive": true,
+    "minAgeDays": 326,
+    "maxAgeDays": 365.25,
+    "dayDivisor": 365.25,
+    "fullAgeIntervalRequired": true,
+    "currentPatientOnly": true,
+    "contextAvailabilityKey": "infantLhContextAvailable",
+    "allowedViews": [
+      "life",
+      "mini"
+    ],
+    "compatibleSpecimenIds": [
+      "serum",
+      "surowica"
+    ],
+    "excludedCyclePhases": [
+      "pregnancy",
+      "pregnancy_t1",
+      "pregnancy_t2",
+      "pregnancy_t3",
+      "postmenopause",
+      "postmenopausal",
+      "menopause"
+    ],
+    "patientNote": "Sam wynik, bez porównania do mediany.",
+    "discussion": [
+      "Model autorów obejmuje także dalszy niski odcinek, ale aplikacja pokazuje tutaj sam wynik bez liczbowej mediany, łącznika i ilorazu.",
+      "W wieku 340–390 dni 18 z 34 próbek LH w badaniu, czyli 53%, było poniżej źródłowego LOD. Precyzyjny odczyt grafiki nie odzyskuje tych nieznanych stężeń.",
+      "Modelowana P50 poniżej LOD nie staje się automatycznie nieważna. Sam wynik jest ostrożniejszym wyborem prezentacji aplikacji, nie regułą autorów ani normą.",
+      "Nie podstawiamy zera, 0,025 lub 0,05 IU/L jako mediany. LOD metody publikacji nie opisuje oznaczenia próbki pacjenta."
+    ],
+    "selectionPolicy": "Wymaga wybrania zgodnego profilu Busch i odrzucenia wyłącznie jego liczbowej kwalifikacji w całym późnym przedziale. Nie jest ogólnym fallbackiem po odrzuceniu źródła.",
+    "contextPolicy": "Wyłącznie bieżąca osoba i gotowy zgodny kontekst; zachowuje bramki źródła dotyczące donoszenia, materiału, metody, znanego leczenia, stymulacji oraz pełnego wieku.",
+    "measurementPolicy": "Dokładny skończony nieujemny wynik; zero pozostaje zerem. Nierówność lub LOD/LOQ nie daje dokładnej kropki. Poza stałą skalą strzałka zachowuje rzeczywistą liczbę.",
+    "sources": [
+      {
+        "label": "Busch 2022 · rycina 3 i metody",
+        "url": "https://doi.org/10.1210/clinem/dgac115"
+      }
+    ]
+  },
+  "archivePolicy": "Historyczny ekstrakt wektorowy i wszystkie liczby pozostają niezmienione. Wyłącznie flagi kwalifikacji LH po 243. do 326. dnia otrzymują nową jawną politykę prezentacji. Inne hormony zachowują dotychczasowe flagi.",
+  "agePolicy": "Cały możliwy wiek musi mieścić się w jednej dopuszczonej części. Nie dodajemy dokładności do ukończonych miesięcy lub lat ani nie przedłużamy domeny niemowlęcej poza jej wyłączny koniec."
+}

@@ -34,7 +34,7 @@ const medians = [
 describe('Zwykły żeński E2 — źródłowa mediana wieku 6–18 Madsen', () => {
   it('dodaje tylko jeden profil i politykę, zachowując wszystkie 77 profili, jednostki i pozostały runtime', () => {
     expect(data.profiles).toHaveLength(85);
-    expect(data.version).toBe('2026-10-22.2');
+    expect(data.version).toBe('2026-10-26.1');
     const prior = { ...data, version: '2026-10-16.1',
       profiles: beforeFshCaliperBundle(data).profiles.filter(item => item.id !== id).map(beforeAmhPregnancyPolicy) };
     expect(prior.profiles).toHaveLength(77);

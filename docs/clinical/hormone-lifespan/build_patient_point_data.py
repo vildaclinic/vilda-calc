@@ -42,6 +42,13 @@ def build():
         profiles.append(profile)
 
     busch = read('busch2022-figure3-vector-medians.json')
+    infant_lh_tail = json.loads((ROOT / 'male-lh-infant-tail-policy.json').read_text(encoding='utf-8'))
+    numeric_tail = infant_lh_tail['numericReference']
+    assert infant_lh_tail['kind'] == 'educational-infant-lh-tail-display'
+    assert infant_lh_tail['profileId'] == numeric_tail['profileId'] == 'busch2022-male-lh'
+    assert (numeric_tail['minAgeDays'], numeric_tail['maxAgeDays'], numeric_tail['dayDivisor']) == (243, 326, 365.25)
+    assert (numeric_tail['minAge'], numeric_tail['maxAge']) == (243 / 365.25, 326 / 365.25)
+    assert numeric_tail['minAgeExclusive'] is True and numeric_tail['maxAgeExclusive'] is False
     ids = {'testosterone':'t','inhibin_b':'inhb'}
     assay_ids = {
         'lh':['autodelfia','autodelfia-lh'], 'fsh':['autodelfia','autodelfia-fsh'],
@@ -50,7 +57,12 @@ def build():
         't':['lc-ms/ms','lc-ms-ms','lcmsms'], 'insl3':['lc-ms/ms','lc-ms-ms','lcmsms']}
     for name, hormone in busch['hormones'].items():
         analyte = ids.get(name,name)
-        points = [dict(ageYears=r[0]/365.25, value=r[1], eligible=r[4])
+        # Source concentrations and the archival graphic-eligibility decisions
+        # stay untouched. Only this approved LH interval has a new, separately
+        # versioned presentation decision based on the vector centreline.
+        points = [dict(ageYears=r[0]/365.25, value=r[1], eligible=(
+                      True if name == 'lh' and numeric_tail['minAgeDays'] < r[0] <= numeric_tail['maxAgeDays']
+                      else r[4]))
                   for r in hormone['daily'] if r[0] <= 366]
         add('busch2022-male-'+analyte, analyte,'male',points,7/365.25,1,
             'Busch 2022 · minipuberty','https://doi.org/10.1210/clinem/dgac115',
@@ -65,7 +77,8 @@ def build():
                         'floorRule':hormone['floorRule'],
                         'lodOrLoq':hormone['lodOrLoq'],
                         'participants':119,'postnatalSerumSamples':338},
-            limitations=busch['limitations'])
+            limitations=busch['limitations'],
+            **({'numericReferencePolicy': numeric_tail} if name == 'lh' else {}))
 
     madsen = read('madsen2022-male-p50-lms.json')
     for analyte in ('lh','fsh'):
@@ -985,7 +998,7 @@ def build():
                      childhood_e2_policy['assayPolicy'], childhood_e2_policy['contextPolicy'],
                      childhood_e2_policy['lowValuePolicy']])
 
-    return {'version':'2026-10-22.2','purpose':'educational-population-central-comparison',
+    return {'version':infant_lh_tail['version'],'purpose':'educational-population-central-comparison',
             'notClinicalReference':True,
             'interpolation':'Monotone PCHIP within continuous source profiles; age-group means and medians are constant within their own separate profiles. No interpolation across groups, source gaps or publications, and no extrapolation.',
             'profiles':profiles,

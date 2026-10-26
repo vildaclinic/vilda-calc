@@ -3,7 +3,7 @@ import { createRequire } from 'node:module';
 import { readFileSync } from 'node:fs';
 import vm from 'node:vm';
 import { describe, expect, it } from 'vitest';
-import { beforeFshSourceRuntime, beforeTestosteroneBoysBundle } from '../support/prior-female-gonadotropin-bundle.mjs';
+import { beforeFshSourceRuntime, beforeTestosteroneBoysBundle, beforeInfantLhTailRuntime } from '../support/prior-female-gonadotropin-bundle.mjs';
 import { loadBrowserScript } from '../support/load-browser-script.mjs';
 
 const require = createRequire(import.meta.url);
@@ -75,7 +75,7 @@ function currentForm(years = 17, months = 0) {
 
 describe('LH CALIPER chłopców — jawna rekonstrukcja mediany wyłącznie w (16,18)', () => {
   it('dodaje jeden profil i zachowuje wszystkie 81 wcześniejszych profili, konwersje i pozostały runtime', () => {
-    expect(data.version).toBe('2026-10-22.2');
+    expect(data.version).toBe('2026-10-26.1');
     expect(data.profiles).toHaveLength(85);
     expect(data).toEqual(read('population-reference-data.json'));
     expect(runtime.maleLhCaliperReferencePolicy).toEqual(policy);
@@ -256,8 +256,19 @@ describe('LH CALIPER chłopców — jawna rekonstrukcja mediany wyłącznie w (1
 
   it('zachowuje geometrię i skale zwykłego LH, żeńskie krzywe oraz oba porównania LH/FSH', () => {
     const before = JSON.stringify(runtime);
-    expect(digest(display.buildMaleLh(runtime, engine)))
+    // The infant extension deliberately changes only reference qualification
+    // and profile metadata. Freeze the old complete model, then compare every
+    // actual geometry/scale field without masking those intentional metadata.
+    const previousModel = display.buildMaleLh(beforeInfantLhTailRuntime(runtime), engine);
+    expect(digest(previousModel))
       .toBe('068ef61e3c6105cca32955f11c9fc4e66d2c808e25a060b99a21e80816fd7a35');
+    const currentModel = display.buildMaleLh(runtime, engine);
+    expect(currentModel).not.toBeNull();
+    const { profiles: previousProfiles, ...previousGeometry } = previousModel;
+    const { profiles: currentProfiles, ...currentGeometry } = currentModel;
+    expect(currentGeometry).toEqual(previousGeometry);
+    expect(currentProfiles.filter(item => item.id !== 'busch2022-male-lh'))
+      .toEqual(previousProfiles.filter(item => item.id !== 'busch2022-male-lh'));
     expect(digest(display.buildFemaleGonadotropins(runtime)))
       .toBe('359c0a3658cb20f394c91a4b0b530243db6de9d545edf3954023a80e5fe7e4a8');
     const prior = Object.fromEntries(Object.entries(runtime).filter(([key]) => key !== 'maleLhCaliperReferencePolicy'));
