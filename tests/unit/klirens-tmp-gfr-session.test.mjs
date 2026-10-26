@@ -327,4 +327,3 @@ describe('TmP/GFR — asynchronous comparison does not create another saved meas
     expect(r.api.createSaveOperation({ ...options, datapoints: [changed] }).key).not.toBe(before);
   });
 });
-
