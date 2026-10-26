@@ -1,4 +1,4 @@
-/* Read-only presentation of the production centile canvases. The controller owns
+/* Read-only presentation of lightweight previews and production centile canvases. The controller owns
  * patient eligibility and the fullscreen host; this module never saves a patient,
  * changes a form field, or calculates a percentile. */
 (function (w) {
@@ -132,6 +132,15 @@
     });
     controls.append(tabs, rangeSelect, sourceBadge);
 
+    var latest = node('div', 'latest');
+    var latestMain = node('div', 'latest-main');
+    var latestLabel = node('span', 'latest-label');
+    var latestValue = node('strong', 'latest-value');
+    var latestCentile = node('span', 'latest-centile');
+    var latestAge = node('span', 'latest-age');
+    latestMain.append(latestLabel, latestValue);
+    latest.append(latestMain, latestCentile, latestAge);
+    hidden(latest, true);
     var metadata = node('div', 'metadata');
     var legend = node('span', 'legend');
     legend.append(node('span', 'line-key'), doc.createTextNode('Przebieg pacjenta'));
@@ -154,7 +163,7 @@
     var hint = node('p', 'hint', 'Najedź, aby odczytać wartości. Powiększ siatkę ikoną w prawym górnym rogu.');
     hint.id = id + '-hint';
     footer.append(note, hint);
-    element.append(header, controls, metadata, deck, footer);
+    element.append(header, controls, latest, metadata, deck, footer);
 
     function createPane(index) {
       var root = node('section', 'pane');
@@ -196,7 +205,7 @@
         crosshair: crosshair, dot: dot, tooltip: tooltip, tooltipHeading: tooltipHeading,
         tooltipReading: tooltipReading, bar: bar, mph: mph, mphValue: mphValue, input: input,
         empty: empty, image: null, metric: index === 0 ? 'height' : 'weight', scale: 0,
-        bounds: null, gesture: null, suppressClickUntil: 0
+        bounds: null, presentationPlot: null, previewAsset: null, previewWidth: 0, previewHeight: 0, gesture: null, suppressClickUntil: 0
       };
       bindPane(pane);
       return pane;
@@ -256,7 +265,7 @@
       };
     }
     function project(pane, age, value) {
-      var p = plotOf(asset(pane.metric));
+      var p = pane.presentationPlot || plotOf(asset(pane.metric));
       if (!p || !pane.bounds || !(pane.scale > 0) || !(p.ageMax > p.ageMin) || !(p.maxY > p.minY)) return null;
       return {
         x: (p.x + (age - p.ageMin) / (p.ageMax - p.ageMin) * p.w - pane.bounds.x) * pane.scale,
@@ -285,6 +294,36 @@
       });
       hidden(parents, !state.fullscreen || !available);
     }
+    function updateLatest() {
+      var data = asset(panes[0].metric);
+      var list = points(data);
+      var current = list.find(function (point) { return point.current; });
+      var point = current || list[list.length - 1];
+      hidden(latest, state.fullscreen || !data || !data.preview || !point);
+      if (!point) return;
+      text(latestLabel, current ? 'OBECNY POMIAR' : 'OSTATNI POMIAR');
+      text(latestValue, numberLabel(point.value) + (panes[0].metric === 'height' ? ' cm' : ' kg'));
+      var pct = point.percentile;
+      var effectiveSource = point.source && point.source !== data.source ? ' · ' + sourceLabel(point.source) : '';
+      text(latestCentile, (finite(pct) ? (pct >= 97 ? '≥97' : pct <= 3 ? '≤3' : Math.round(pct)) + '. centyl' : 'Centyl niedostępny') + effectiveSource);
+      text(latestAge, ageLabel(finite(point.clinicalAgeMonths) ? point.clinicalAgeMonths : point.ageMonths));
+    }
+    function fitPreview(pane, data, width, height) {
+      var api = w.VildaCentileLivePreview;
+      if (!api || typeof api.draw !== 'function') throw new Error('Brak modułu podglądu siatki.');
+      pane.scale = 1;
+      pane.bounds = { x: 0, y: 0, width: width, height: height };
+      styles(pane.stage, { width: width + 'px', height: height + 'px' });
+      styles(pane.imageFrame, { width: width + 'px', height: height + 'px' });
+      if (pane.previewAsset !== data || pane.previewWidth !== width || pane.previewHeight !== height || !pane.image) {
+        var drawing = api.draw(pane.imageFrame.ownerDocument || doc, data, width, height);
+        pane.imageFrame.replaceChildren(drawing.element);
+        pane.image = drawing.element;
+        pane.presentationPlot = drawing.plot;
+        pane.previewAsset = data; pane.previewWidth = width; pane.previewHeight = height;
+      }
+      hidden(pane.mph, true);
+    }
     function fit() {
       if (destroyed) return;
       ensureWindow();
@@ -292,7 +331,7 @@
       var layouts = [];
       visiblePanes().forEach(function (pane) {
         var data = asset(pane.metric);
-        if (!data || !pane.image || !(data.width > 0) || !(data.height > 0)) return;
+        if (!data || !data.preview && (!pane.image || !(data.width > 0) || !(data.height > 0))) return;
         var style = typeof win.getComputedStyle === 'function' ? win.getComputedStyle(pane.viewport) : {};
         var rect = pane.viewport.getBoundingClientRect();
         var width = rect.width - (parseFloat(style.paddingLeft) || 0) - (parseFloat(style.paddingRight) || 0)
@@ -300,6 +339,11 @@
         var height = rect.height - (parseFloat(style.paddingTop) || 0) - (parseFloat(style.paddingBottom) || 0)
           - (parseFloat(style.borderTopWidth) || 0) - (parseFloat(style.borderBottomWidth) || 0);
         if (!(width > 0 && height > 0)) return;
+        if (data.preview) {
+          fitPreview(pane, data, width, height);
+          return;
+        }
+        pane.presentationPlot = null;
         var bounds = crop(data);
         var mph = pane.metric === 'height' ? validMph(data) : null;
         var p = plotOf(data);
@@ -308,7 +352,7 @@
         if (mphX !== null && mphX > 0) scale = Math.min(scale, (width - MPH_REACH) / mphX);
         layouts.push({ pane: pane, data: data, bounds: bounds, mphX: mphX, scale: scale });
       });
-      if (!layouts.length) return;
+      if (!layouts.length) { if (state.age !== null) renderAge(state.age); return; }
       var commonScale = Math.min.apply(null, layouts.map(function (layout) { return layout.scale; }));
       if (!(commonScale > 0)) return;
       // One source-pixel scale for both portrait charts, including the external
@@ -402,7 +446,7 @@
     }
     function ageFromClient(pane, clientX, pointerType) {
       var data = asset(pane.metric);
-      var p = plotOf(data);
+      var p = pane.presentationPlot || plotOf(data);
       if (!data || !p || !pane.bounds || !(pane.scale > 0)) return null;
       var rect = pane.stage.getBoundingClientRect();
       var sourceX = (clientX - rect.left) / pane.scale + pane.bounds.x;
@@ -505,10 +549,18 @@
       element.classList.toggle(PREFIX + 'card--fullscreen', state.fullscreen);
       element.classList.toggle(PREFIX + 'card--dual', dual);
       element.dataset.centileLiveMetric = state.metric;
+      element.classList.toggle(PREFIX + 'card--preview', !state.fullscreen && !!(asset(state.metric) && asset(state.metric).preview));
       hidden(expandButton, state.fullscreen); hidden(closeButton, !state.fullscreen);
       hidden(panes[1].root, !dual);
       panes[0].metric = dual ? 'height' : state.metric;
       panes[1].metric = 'weight';
+      if (!state.fullscreen && asset(panes[0].metric) && asset(panes[0].metric).preview) {
+        // Returning from the dual full view must release the hidden canvas too.
+        panes.filter(function (pane) { return pane.root.hidden; }).forEach(function (pane) {
+          pane.imageFrame.replaceChildren(); pane.image = null; pane.previewAsset = null; pane.presentationPlot = null;
+          hidePaneProbe(pane);
+        });
+      }
       text(title, dual ? 'Siatki centylowe wzrostu i masy ciała' : 'Siatka centylowa ' + (state.metric === 'weight' ? 'masy ciała' : 'wzrostu'));
       Object.keys(tabButtons).forEach(function (metric) {
         var button = tabButtons[metric];
@@ -521,11 +573,19 @@
         text(pane.title, LABELS[pane.metric]);
         pane.root.setAttribute('aria-label', 'Siatka: ' + LABELS[pane.metric]);
         pane.input.setAttribute('aria-label', LABELS[pane.metric] + '. Przesuń wskaźnik, aby odczytać dane. Enter przypina odczyt. Strzałki wybierają pomiary.');
-        hidden(pane.empty, !(!data || !data.canvas));
+        var available = !!(data && (data.preview || data.canvas));
+        hidden(pane.empty, available);
         text(pane.empty, state.rendered && state.rendered.message || 'Siatka jest niedostępna dla tego zakresu.');
-        hidden(pane.input, !data || !data.canvas);
-        hidden(pane.stage, !data || !data.canvas);
-        if (!data || !data.canvas) hidePaneProbe(pane);
+        hidden(pane.input, !available);
+        hidden(pane.stage, !available);
+        if (!available) hidePaneProbe(pane);
+        if (data && data.preview) {
+          if (pane.previewAsset !== data) {
+            pane.imageFrame.replaceChildren(); pane.image = null; pane.presentationPlot = null;
+          }
+          return;
+        }
+        pane.previewAsset = null; pane.presentationPlot = null;
         var nextImage = data && data.canvas || null;
         if (pane.image !== nextImage || nextImage && nextImage.parentNode !== pane.imageFrame) {
           pane.imageFrame.replaceChildren();
@@ -542,7 +602,8 @@
       text(sourceBadge, sourceLabel(data && data.source || state.snapshot && state.snapshot.source));
       var sex = state.snapshot && state.snapshot.sex;
       text(count, (sex === 'F' ? 'Dziewczęta' : sex === 'M' ? 'Chłopcy' : '') + ' · ' + points(data).length + ' pomiarów');
-      updateParents();
+      updateParents(); updateLatest();
+      text(note, data && data.preview ? 'Centyle 3, 50 i 97 · Pełna siatka i adnotacje po powiększeniu' : 'Adnotacje z Kreatora siatek');
       text(hint, state.fullscreen ? 'Przesuń kursor lub palec, aby odczytać wartości. Kliknięcie przypina odczyt.' : 'Najedź, aby odczytać wartości. Powiększ siatkę ikoną w prawym górnym rogu.');
       panes.forEach(function (pane) { hidden(pane.mph, true); });
       fit(); scheduleFit();

@@ -12,7 +12,7 @@ const DIALOG = '.vilda-centile-live-dialog';
 async function ready(page, patientId) {
   await expect.poll(() => page.evaluate(() => window.VildaCentileLivePanel?.getState()), { timeout: 30_000 })
     .toMatchObject({ status: 'ready', patientId });
-  await expect(page.locator(`${CARD} canvas.vilda-centile-live-image`)).toBeVisible();
+  await expect(page.locator(`${CARD} svg.vilda-centile-live-preview`)).toBeVisible();
 }
 
 async function frames(page, count = 4) {
@@ -78,12 +78,26 @@ function installPreparationProbe() {
 
 for (const reducedMotion of ['reduce', 'no-preference']) test.describe(`pierwsze malowanie (${reducedMotion})`, () => {
   test.use({ contextOptions: { reducedMotion } });
-  test('Start: kompletna siatka jest malowana przed skanowaniem marginesów, a waga jest już przygotowana', async ({ page }) => {
+  test('Start: lekki SVG nie przygotowuje pełnych grafik ani marginesów przed powiększeniem', async ({ page }) => {
     expect(await page.evaluate(() => matchMedia('(prefers-reduced-motion: reduce)').matches)).toBe(reducedMotion === 'reduce');
     await page.addInitScript(installPreparationProbe);
     const { ids } = await createFictionalVault(page);
     await loadPatient(page, ids.a);
     await ready(page, ids.a);
+    await frames(page, 12);
+    await expect(page.locator(`${CARD} canvas`)).toHaveCount(0);
+    expect(await page.evaluate(() => window.__centilePreparationProbe)).toEqual([]);
+    const preview = page.locator(`${CARD} svg.vilda-centile-live-preview`);
+    await expect(preview.locator('.vilda-centile-live-preview-centile')).toHaveCount(3);
+    expect(await preview.locator('.vilda-centile-live-preview-centile').evaluateAll(paths => paths.map(path => path.dataset.centile)))
+      .toEqual(['3', '50', '97']);
+    await page.locator(`${CARD} [data-centile-live-metric="weight"]`).click();
+    await expect(preview).toBeVisible();
+    await frames(page, 12);
+    expect(await page.evaluate(() => window.__centilePreparationProbe), 'zmiana parametru także nie rozgrzewa pełnego renderera').toEqual([]);
+    await expect(page.locator('#remindersInline')).toBeHidden();
+    await page.locator(`${CARD} .vilda-centile-live-expand`).click();
+    await expect(page.locator(DIALOG)).toBeVisible();
     await expect.poll(() => page.evaluate(() => window.__centilePreparationProbe.some(result => result.status === 'ready')))
       .toBe(true);
     const observed = await page.evaluate(() => window.__centilePreparationProbe.map(({ assets, ...result }) => result));
@@ -92,13 +106,15 @@ for (const reducedMotion of ['reduce', 'no-preference']) test.describe(`pierwsze
     for (const result of completed) {
       expect(result.eagerMetrics).toEqual(['height', 'weight']);
       expect(result.reads.length).toBeGreaterThan(1);
-      expect(result.reads.some(read => read.synchronousRender), 'start nie odczytuje całego obrazu przed montażem').toBe(false);
-      expect(result.reads[0].frames, 'co najmniej jedna klatka widocznej siatki przed pierwszym odczytem').toBeGreaterThan(0);
+      expect(result.reads.some(read => read.synchronousRender), 'rysowanie nie wykonuje synchronicznego skanowania całego obrazu').toBe(false);
       expect(result.reads.every(read => read.height < read.canvasHeight), 'odczyt marginesów podzielony na pasy').toBe(true);
     }
-    await page.locator(`${CARD} [data-centile-live-metric="weight"]`).click();
-    await expect(page.locator(`${CARD} canvas.vilda-centile-live-image`)).toBeVisible();
-    await expect(page.locator('#remindersInline')).toBeHidden();
+    await page.locator(`${DIALOG} [data-centile-live-metric="both"]`).click();
+    await expect(page.locator(`${DIALOG} canvas.vilda-centile-live-image:visible`)).toHaveCount(2);
+    await page.locator(`${DIALOG} .vilda-centile-live-close`).click();
+    await expect(page.locator(DIALOG)).toHaveCount(0);
+    await expect(preview).toBeVisible();
+    await expect(page.locator(`${CARD} canvas`)).toHaveCount(0);
   });
 });
 
@@ -193,8 +209,9 @@ test('wczesne powiększenie czeka na dokładny kadr i otwiera raz stabilny widok
   await holdPreparation(page);
   await loadPatient(page, ids.a);
   await ready(page, ids.a);
-  await waitPreparation(page);
+  expect(await page.evaluate(() => window.__heldCentilePreparations.length)).toBe(0);
   await page.locator('.vilda-centile-live-expand').click();
+  await waitPreparation(page);
   await expect.poll(() => page.evaluate(() => window.__heldCentilePreparations.some(item => item.prioritized > 0))).toBe(true);
   await expect(page.locator(DIALOG)).toHaveCount(0);
   await page.evaluate(() => { for (const item of window.__heldCentilePreparations) item.release(); });
@@ -214,8 +231,9 @@ for (const action of ['clear', 'lock']) test(`oczekujące powiększenie jest anu
   await holdPreparation(page);
   await loadPatient(page, ids.a);
   await ready(page, ids.a);
-  await waitPreparation(page);
+  expect(await page.evaluate(() => window.__heldCentilePreparations.length)).toBe(0);
   await page.locator('.vilda-centile-live-expand').click();
+  await waitPreparation(page);
   await expect.poll(() => page.evaluate(() => window.__heldCentilePreparations.some(item => item.prioritized > 0))).toBe(true);
   await page.evaluate(action => { if (action === 'lock') window.VildaVault.lock(); else window.clearAllData(); }, action);
   await expect(page.locator(CARD)).toHaveCount(0);
@@ -251,4 +269,89 @@ test('odświeżenie pełnego ekranu zachowuje poprzedni kadr do gotowości noweg
   const after = await style();
   await frames(page, 8);
   expect(await style()).toBe(after);
+});
+
+test('zmiana źródła podczas przygotowywania anuluje stare powiększenie, a ponowienie używa aktualnej siatki', async ({ page }) => {
+  const { ids } = await createFictionalVault(page);
+  await holdPreparation(page);
+  await loadPatient(page, ids.a);
+  await ready(page, ids.a);
+  await page.locator('.vilda-centile-live-expand').click();
+  await waitPreparation(page);
+  await page.evaluate(() => {
+    const source = document.getElementById('sourcePalczewska');
+    source.checked = true;
+    source.dispatchEvent(new Event('change', { bubbles: true }));
+  });
+  await expect.poll(() => page.evaluate(() => window.VildaCentileLivePanel.getState().source)).toBe('PALCZEWSKA');
+  await expect.poll(() => page.evaluate(() => window.__heldCentilePreparations.some(item => item.cancelled > 0))).toBe(true);
+  await page.evaluate(() => { for (const item of window.__heldCentilePreparations) item.release(); });
+  await frames(page, 8);
+  await expect(page.locator(DIALOG)).toHaveCount(0);
+  await expect(page.locator(`${CARD} svg.vilda-centile-live-preview`)).toBeVisible();
+  await expect(page.locator(`${CARD} .vilda-centile-live-source`)).toContainText('Palczewska');
+  await page.locator('.vilda-centile-live-expand').click();
+  await expect(page.locator(DIALOG)).toBeVisible();
+  await expect(page.locator(`${DIALOG} .vilda-centile-live-source`)).toContainText('Palczewska');
+  await expect(page.locator(`${DIALOG} canvas.vilda-centile-live-image`)).toBeVisible();
+});
+
+test('zamknięcie podczas odświeżania pełnej grafiki pozostawia SVG także po spóźnionym kadrowaniu', async ({ page }) => {
+  const { ids } = await createFictionalVault(page);
+  await loadPatient(page, ids.a);
+  await ready(page, ids.a);
+  await page.locator('.vilda-centile-live-expand').click();
+  await expect(page.locator(DIALOG)).toBeVisible();
+  await holdPreparation(page);
+  await page.evaluate(() => {
+    window.chartCreatorData.growth.free.height.push({ id: 9903, ageMonths: 120, value: 141,
+      txt: 'E2E po zamknięciu', arrow: true, frame: { ageMonths: 255, value: 220 } });
+    document.dispatchEvent(new CustomEvent('vilda:centile-creator-changed'));
+  });
+  await waitPreparation(page);
+  await page.locator(`${DIALOG} .vilda-centile-live-close`).click();
+  await expect(page.locator(DIALOG)).toHaveCount(0);
+  await expect(page.locator(`${CARD} svg.vilda-centile-live-preview`)).toBeVisible();
+  expect(await page.evaluate(() => window.__heldCentilePreparations.some(item => item.cancelled > 0))).toBe(true);
+  await page.evaluate(() => { for (const item of window.__heldCentilePreparations) item.release(); });
+  await frames(page, 12);
+  await expect(page.locator(DIALOG)).toHaveCount(0);
+  await expect(page.locator(`${CARD} svg.vilda-centile-live-preview`)).toBeVisible();
+  await expect(page.locator(`${CARD} canvas`)).toHaveCount(0);
+  expect(await page.evaluate(() => window.VildaCentileLivePanel.getState().fullscreen)).toBe(false);
+});
+
+test('blur i natychmiastowe powiększenie pokazują ostatnią zatwierdzoną wartość', async ({ page }) => {
+  const { ids } = await createFictionalVault(page);
+  await loadPatient(page, ids.a);
+  await ready(page, ids.a);
+  await page.locator('#height').fill('171');
+  // Jedno zadanie przeglądarki: kliknięcie poprzedza debounce i odczyt sejfu.
+  await page.evaluate(() => {
+    document.getElementById('height').blur();
+    document.querySelector('.vilda-centile-live-expand').click();
+  });
+  await expect(page.locator(DIALOG)).toBeVisible();
+  const interaction = page.locator(`${DIALOG} .vilda-centile-live-interaction`).first();
+  await interaction.focus();
+  await interaction.press('End');
+  await expect(page.locator(`${DIALOG} .vilda-centile-live-tooltip-reading`).first()).toContainText('171 cm');
+  await page.locator(`${DIALOG} .vilda-centile-live-close`).click();
+  await expect(page.locator(DIALOG)).toHaveCount(0);
+  await expect(page.locator(`${CARD} .vilda-centile-live-preview-point[data-value="171"]`)).toBeVisible();
+});
+
+test('odświeżenie tego samego rekordu podczas kadrowania zachowuje żądanie powiększenia', async ({ page }) => {
+  const { ids } = await createFictionalVault(page);
+  await loadPatient(page, ids.a);
+  await ready(page, ids.a);
+  await holdPreparation(page);
+  await page.locator('.vilda-centile-live-expand').click();
+  await waitPreparation(page);
+  await page.evaluate(() => window.VildaCentileLivePanel.refresh());
+  await expect(page.locator(DIALOG)).toHaveCount(0);
+  await page.evaluate(() => { for (const item of window.__heldCentilePreparations) item.release(); });
+  await expect(page.locator(DIALOG)).toBeVisible();
+  await expect(page.locator(DIALOG)).toHaveCount(1);
+  await expect(page.locator(`${DIALOG} canvas.vilda-centile-live-image`)).toBeVisible();
 });

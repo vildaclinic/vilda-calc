@@ -23,16 +23,22 @@ async function openMeasurement(page, route, shell) {
     if (await confirmation.isVisible()) await confirmation.click();
   }
   // Observe the real renderer and normal calculator updates. No calculation,
-  // snapshot, canvas or result is substituted by the test.
+  // snapshot, preview or result is substituted by the test.
   await owner.evaluate(() => {
     window.__fieldCommitRenders = [];
+    window.__fieldCommitFullRenders = 0;
     window.__fieldCommitUpdates = 0;
     window.__fieldCommitSaves = 0;
     window.__fieldCommitSubmits = 0;
     window.__fieldCommitEnter = [];
     const renderer = window.VildaCentileLiveRender;
-    const originalRender = renderer.render;
-    renderer.render = function (snapshot) {
+    const fullRender = renderer.render;
+    renderer.render = function (...args) {
+      window.__fieldCommitFullRenders++;
+      return fullRender.apply(this, args);
+    };
+    const originalRender = renderer.preview;
+    renderer.preview = function (snapshot) {
       const result = originalRender.apply(this, arguments);
       window.__fieldCommitRenders.push({
         patientId: snapshot.patientId, source: snapshot.source,
@@ -162,6 +168,7 @@ for (const { route, shell } of [
     }));
     expect(sideEffects).toMatchObject({ saves: 0, submits: 0, currentId: ids.a });
     expect(sideEffects.enter).toEqual([{ id: 'weight', prevented: true }, { id: 'height', prevented: true }]);
+    expect(await owner.evaluate(() => window.__fieldCommitFullRenders), 'edycja ani przełączanie źródła nie tworzą pełnej grafiki').toBe(0);
     expect(await owner.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true);
     await test.info().attach('field-commit-render-transitions.json', {
       body: JSON.stringify(await owner.evaluate(() => ({ renders: window.__fieldCommitRenders,
