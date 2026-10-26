@@ -386,7 +386,8 @@
 <script defer src="vilda_chrome.js?v=174"></script>
 <link href="vilda_lab_assessment_ui.css?v=13" rel="stylesheet">
 <link href="vilda_lab_history_tab.css?v=4" rel="stylesheet">
-  <link rel="stylesheet" href="vilda_centile_live_panel.css?v=5">
+  <link rel="stylesheet" href="vilda_centile_live_panel.css?v=6">
+  <link rel="stylesheet" href="vilda_professional_summary.css?v=1">
   <link rel="stylesheet" href="vilda_phone_landscape.css?v=2">
   <script src="vilda_phone_landscape.js?v=3"></script>
 </head>
@@ -662,8 +663,8 @@
     </div>
   </div>
   <div id="doctorSection" class="half">
-    <!-- Keep the chart first: a summary awaiting its comparison must never
-         displace the chart. A valid standalone summary remains below it. -->
+    <!-- Dedicated comparison chart slot. The tab shell moves this same mount into
+         the standalone child summary only after comparison ownership settles. -->
     <div id="vildaCentileLiveMount" hidden aria-label="Podgląd siatki centylowej">
       <article id="vildaCentileLiveLoading" class="vilda-centile-live-loading" role="status" aria-live="polite">
         <h2 id="vildaCentileLiveLoadingTitle" class="vilda-centile-live-title" hidden>Siatka centylowa</h2>
@@ -671,9 +672,9 @@
         <button id="vildaCentileLiveRetry" class="vilda-centile-live-retry" type="button" hidden>Spróbuj ponownie</button>
       </article>
     </div>
-    <!-- Karta „Podsumowanie wyników” – generowana dynamicznie w JS. W ścieżce bez poprzedniego
-         pomiaru stoi tutaj; gdy widać „Porównanie z poprzednim pomiarem” (P-OSTATNI-2a), jest ukryta,
-         a jej treść idzie do tabeli porównania i sekcji „Pozostałe wyniki”. Plakietka PRO jak na index. -->
+    <!-- Samodzielne podsumowanie: u dzieci stabilne zakładki Podsumowanie / Siatka
+         dodaje vilda_summary_tabs.js. Przy widocznym porównaniu ta karta pozostaje
+         ukryta; porównanie korzysta z dotychczasowych wyników i osobnej siatki. -->
     <div id="currentSummaryWrap" style="display:none;">
       <div id="currentSummaryCard" class="card summary-card current-summary-card" style="display:none; position: relative;">
         <h3 style="margin:0;">Podsumowanie wyników</h3>
@@ -3013,6 +3014,7 @@
 <script defer src="vilda_schowek.js?v=5"></script>
 <script defer src="vilda_raport_naglowek.js?v=10"></script>
 <script defer src="vilda_summary_cards.js?v=62"></script>
+<script defer src="vilda_professional_summary.js?v=1"></script>
 <script defer src="vilda_ree_rownania_data.js?v=3"></script>
 <script defer src="vilda_diet_plan_ui.js?v=44"></script>
 <script defer src="vilda_estimated_intake_ui.js?v=3"></script>
@@ -3021,7 +3023,7 @@
 <script defer src="vilda_estimated_intake_dom_mount.js?v=1"></script>
 <script src="app.js?v=238" defer></script>
 <script src="vilda_diet_recommendations.js?v=70" defer></script>
-<script src="vilda_patient_report.js?v=47" defer></script>
+<script src="vilda_patient_report.js?v=48" defer></script>
 <!-- po app.js -->
 <script src="vilda_module_monitor_badges.js?v=1" defer></script>
 <script src="gh_igf_therapy.js?v=33" defer></script>
@@ -3224,12 +3226,14 @@
   <script defer src="inline_index_07.js?v=15"></script>
   <!-- P-PAL-POZIOM: siatka 1–18 lat na jednej stronie A4 poziomo (składanie strony, przełącznik „Układ PDF”). -->
   <script defer src="vilda_centile_landscape.js?v=2"></script>
-  <script defer src="vilda_centile_live_data.js?v=5"></script>
-  <script defer src="vilda_centile_live_render.js?v=3"></script>
-  <script defer src="vilda_centile_live_preview.js?v=1"></script>
-  <script defer src="vilda_centile_live_view.js?v=2"></script>
+  <script defer src="vilda_centile_live_data.js?v=6"></script>
+  <script defer src="vilda_centile_live_colors.js?v=1"></script>
+  <script defer src="vilda_summary_tabs.js?v=1"></script>
+  <script defer src="vilda_centile_live_render.js?v=4"></script>
+  <script defer src="vilda_centile_live_preview.js?v=2"></script>
+  <script defer src="vilda_centile_live_view.js?v=3"></script>
   <script defer src="vilda_centile_live_host.js?v=1"></script>
-  <script defer src="vilda_centile_live_panel.js?v=7"></script>
+  <script defer src="vilda_centile_live_panel.js?v=8"></script>
 
   <!-- Skrypt aktywujący moduł lekarski na stronie DocPro. Po załadowaniu
        strony automatycznie zaznacza ukryty checkbox #isDoctor i wywołuje

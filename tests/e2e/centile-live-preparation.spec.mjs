@@ -110,7 +110,9 @@ for (const reducedMotion of ['reduce', 'no-preference']) test.describe(`pierwsze
       expect(result.reads.every(read => read.height < read.canvasHeight), 'odczyt marginesów podzielony na pasy').toBe(true);
     }
     await page.locator(`${DIALOG} [data-centile-live-metric="both"]`).click();
-    await expect(page.locator(`${DIALOG} canvas.vilda-centile-live-image:visible`)).toHaveCount(2);
+    await expect(page.locator(`${DIALOG} .vilda-centile-live-image:visible`)).toHaveCount(2);
+    await expect(page.locator(`${DIALOG} canvas.vilda-centile-live-full-background:visible`)).toHaveCount(2);
+    await expect(page.locator(`${DIALOG} svg.vilda-centile-live-full-svg:visible`)).toHaveCount(2);
     await page.locator(`${DIALOG} .vilda-centile-live-close`).click();
     await expect(page.locator(DIALOG)).toHaveCount(0);
     await expect(preview).toBeVisible();
@@ -218,8 +220,8 @@ test('wczesne powiększenie czeka na dokładny kadr i otwiera raz stabilny widok
   await expect(page.locator(DIALOG)).toBeVisible();
   await expect(page.locator(DIALOG)).toHaveCount(1);
   await page.locator(`${DIALOG} [data-centile-live-metric="both"]`).click();
-  await expect(page.locator(`${DIALOG} canvas.vilda-centile-live-image:visible`)).toHaveCount(2);
-  const geometry = () => page.locator(`${DIALOG} canvas.vilda-centile-live-image`).evaluateAll(canvases => canvases
+  await expect(page.locator(`${DIALOG} .vilda-centile-live-image:visible`)).toHaveCount(2);
+  const geometry = () => page.locator(`${DIALOG} .vilda-centile-live-image`).evaluateAll(canvases => canvases
     .map(canvas => ({ width: canvas.style.width, height: canvas.style.height, left: canvas.style.left, top: canvas.style.top })));
   const before = await geometry();
   await frames(page, 8);
@@ -265,7 +267,7 @@ test('odświeżenie pełnego ekranu zachowuje poprzedni kadr do gotowości noweg
   await page.evaluate(() => { for (const item of window.__heldCentilePreparations) item.release(); });
   await expect.poll(() => page.evaluate(() => document.querySelector('.vilda-centile-live-image') !== window.__oldFullscreenCanvas)).toBe(true);
   await expect(page.locator(DIALOG)).toBeVisible();
-  const style = () => page.locator(`${DIALOG} canvas.vilda-centile-live-image`).evaluate(canvas => canvas.getAttribute('style'));
+  const style = () => page.locator(`${DIALOG} .vilda-centile-live-image`).evaluate(canvas => canvas.getAttribute('style'));
   const after = await style();
   await frames(page, 8);
   expect(await style()).toBe(after);
@@ -293,7 +295,7 @@ test('zmiana źródła podczas przygotowywania anuluje stare powiększenie, a po
   await page.locator('.vilda-centile-live-expand').click();
   await expect(page.locator(DIALOG)).toBeVisible();
   await expect(page.locator(`${DIALOG} .vilda-centile-live-source`)).toContainText('Palczewska');
-  await expect(page.locator(`${DIALOG} canvas.vilda-centile-live-image`)).toBeVisible();
+  await expect(page.locator(`${DIALOG} .vilda-centile-live-image`)).toBeVisible();
 });
 
 test('zamknięcie podczas odświeżania pełnej grafiki pozostawia SVG także po spóźnionym kadrowaniu', async ({ page }) => {
@@ -353,5 +355,5 @@ test('odświeżenie tego samego rekordu podczas kadrowania zachowuje żądanie p
   await page.evaluate(() => { for (const item of window.__heldCentilePreparations) item.release(); });
   await expect(page.locator(DIALOG)).toBeVisible();
   await expect(page.locator(DIALOG)).toHaveCount(1);
-  await expect(page.locator(`${DIALOG} canvas.vilda-centile-live-image`)).toBeVisible();
+  await expect(page.locator(`${DIALOG} .vilda-centile-live-image`)).toBeVisible();
 });

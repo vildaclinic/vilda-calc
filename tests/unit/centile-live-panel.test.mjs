@@ -14,7 +14,7 @@ function emitter(target) {
 }
 
 function setup({ columns = '400px 400px', rects = true, lifecycle = false, eligibility = 'eligible', deferredBounds = false,
-  animated = false, reducedMotion = false, bootSince = null, deferStart = false, beforeStart } = {}) {
+  animated = false, reducedMotion = false, bootSince = null, deferStart = false, beforeStart, summaryPresentation } = {}) {
   const pending = [], subscribers = [], views = [], hosts = [], frames = new Map(), timers = new Map(), resizeObservers = [], boundsJobs = [], animations = [];
   let id = 0, currentToken = Object.freeze({ fictional: 'patient-a', revision: 1 });
   let refreshState = null;
@@ -108,6 +108,7 @@ function setup({ columns = '400px 400px', rects = true, lifecycle = false, eligi
     return handle;
   });
   win.VildaCentileLiveHost = { open };
+  if (summaryPresentation) win.VildaSummaryTabs = { getState: () => summaryPresentation };
   if (beforeStart) beforeStart({ fieldset, doctor, mount, puberty, style, element });
   if (!deferStart) loadBrowserScript('vilda_centile_live_panel.js', win);
   const snapshot = (extra = {}) => ({ patientToken: currentToken, patientId: currentToken?.fictional || null,
@@ -1438,5 +1439,55 @@ describe('live panel controller — quiet waiting and immediate preview', () => 
     e.doc.dispatchEvent({ type: 'readystatechange' });
     expect(e.noticeMessage.textContent).toBe('Wczytywanie siatki…');
     expect(e.noticeMessage.hidden).toBe(false);
+  });
+});
+
+
+describe('standalone summary chart presentation', () => {
+  it('does not read or render a chart before selecting its tab, including on mobile', async () => {
+    const presentation = { mode: 'summary', selected: 'summary' };
+    const e = setup({ columns: '400px', lifecycle: true, summaryPresentation: presentation });
+    expect(e.data.getResult).not.toHaveBeenCalled();
+    expect(e.preview).not.toHaveBeenCalled();
+    expect(e.render).not.toHaveBeenCalled();
+    presentation.selected = 'chart';
+    e.doc.dispatchEvent({ type: 'vilda:summary-chart-state' });
+    expect(e.data.getResult).toHaveBeenCalledWith({ mode: 'summary' });
+    e.pending[0].resolve({ status: 'ready', snapshot: e.snapshot({ patientId: null }) });
+    await flush();
+    expect(e.preview).toHaveBeenCalledTimes(1);
+    expect(e.render).not.toHaveBeenCalled();
+    expect(e.api.getState()).toMatchObject({ presentation: 'summary', selectedTab: 'chart', eligible: true });
+    expect(e.classes.has('vilda-centile-live-reserved')).toBe(false);
+    expect(e.mount.style['--vilda-centile-live-inline-height']).toBe('518px');
+    await expand(e);
+    expect(e.render).toHaveBeenCalledTimes(1);
+    expect(e.open).toHaveBeenCalledTimes(1);
+  });
+
+  it('cancels pending expansion synchronously on selecting Summary and never publishes its result', async () => {
+    const presentation = { mode: 'summary', selected: 'chart' };
+    const e = setup({ lifecycle: true, deferredBounds: true, summaryPresentation: presentation });
+    e.pending[0].resolve({ status: 'ready', snapshot: e.snapshot() }); await flush();
+    await expand(e);
+    expect(e.boundsJobs).toHaveLength(1);
+    presentation.selected = 'summary';
+    e.doc.dispatchEvent({ type: 'vilda:summary-chart-state' });
+    expect(e.views[0].destroy).toHaveBeenCalledTimes(1);
+    expect(e.boundsJobs[0].cancel).toHaveBeenCalled();
+    e.boundsJobs[0].resolve({ status: 'ready' }); await flush();
+    expect(e.open).not.toHaveBeenCalled();
+    expect(e.data.getResult).toHaveBeenCalledTimes(1);
+  });
+
+  it('reuses the dedicated controller only when the comparison presentation is selected', async () => {
+    const presentation = { mode: 'summary', selected: 'summary' };
+    const e = setup({ lifecycle: true, summaryPresentation: presentation });
+    presentation.mode = 'dedicated';
+    e.doc.dispatchEvent({ type: 'vilda:summary-chart-state' });
+    expect(e.data.getResult).toHaveBeenCalledWith(undefined);
+    e.pending[0].resolve({ status: 'ready', snapshot: e.snapshot() }); await flush();
+    expect(e.classes.has('vilda-centile-live-reserved')).toBe(true);
+    expect(e.views).toHaveLength(1);
   });
 });

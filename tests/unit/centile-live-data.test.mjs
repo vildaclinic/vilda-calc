@@ -1231,3 +1231,243 @@ describe('Panel nowego pomiaru — oczekiwanie na główną sesję po logowaniu'
     expect(h.api.isCurrent(result.snapshot)).toBe(true);
   });
 });
+
+
+describe('Zakładka siatki — nowy formularz i dokładnie odtworzony zapis', () => {
+  const summary = { mode: 'summary' };
+
+  function draft(options = {}) {
+    const h = setup({ initialNoPatient: true, working: false, ...options });
+    h.values.delete('vildaLoadChoiceV1');
+    h.state.owner = null;
+    h.win.chartCreatorData = {};
+    return h;
+  }
+
+  function restored(options = {}) {
+    const h = setup({ working: false, ...options });
+    h.values.set('vildaLoadChoiceV1', 'restore');
+    h.values.set('vildaDobAgeZapisV1', '1');
+    h.win.lastLoadedData = {
+      user: { age: 10, ageMonths: 7, sex: 'K', height: 144, weight: 35,
+        dobISO: '2014-10-26', measuredAtISO: '2025-05-26' },
+      advanced: { data: { motherHeight: 160, fatherHeight: 175,
+        measurements: [{ ageMonths: 108, height: 132, weight: 29 }] } },
+      chartCreator: { growth: { free: { height: [{ id: 'old', txt: 'Fikcyjny zapis wcześniejszej wizyty' }] } } },
+    };
+    Object.assign(h.fields.age, { value: '10' });
+    Object.assign(h.fields.ageMonths, { value: '7' });
+    h.fields.sex.value = 'K'; h.fields.height.value = '144'; h.fields.weight.value = '35';
+    h.fields.advMotherHeight.value = '160'; h.fields.advFatherHeight.value = '175';
+    h.state.exactAge = { totalMonths: 127, exactMonths: 126.98151950718686 };
+    h.win.VildaDobAge.readMeasuredAtISO = () => '2025-05-26';
+    h.win.chartCreatorData = structuredClone(h.win.lastLoadedData.chartCreator);
+    // Nowszy rekord ma inne dane. Nie wolno go użyć do odtwarzanej wizyty.
+    h.state.record.snapshots[0].payload.advanced.data = {
+      motherHeight: 190, fatherHeight: 200,
+      measurements: [{ ageMonths: 144, height: 155, weight: 44 }],
+    };
+    return h;
+  }
+
+  it.each(['/index.html', '/docpro.html'])('%s: niezapisany pojedynczy pomiar nie tworzy ID ani nie czyta sejfu', async (route) => {
+    const h = draft(); h.win.location.pathname = route;
+    h.state.unlocked = false; // Odczyt własnego formularza nie wymaga konta ani sejfu.
+    const result = await h.api.getResult(summary);
+    expect(result.status).toBe('ready');
+    expect(result.snapshot).toMatchObject({ patientId: null, currentHeight: 158, currentWeight: 46,
+      measurements: [], chartCreatorData: {}, eligibility: { savedPatient: false, mode: 'summary' } });
+    expect(result.snapshot.patientToken).toMatchObject({ kind: 'draft', ownerKey: 'draft:0', mode: 'summary' });
+    expect(h.api.isCurrent(result.snapshot)).toBe(true);
+    expect(h.vault.getPatient).not.toHaveBeenCalled();
+    expect(h.vault.listPatientTimelineEvents).not.toHaveBeenCalled();
+    expect(h.writes).not.toHaveBeenCalled();
+    expect(h.api.getEligibility()).toEqual({ status: 'ineligible', reason: 'no-patient' });
+  });
+
+  it('draft 1 → 18 → 189 czeka na blur i nie zmienia historii zaakceptowanej migawki', async () => {
+    const h = draft(), before = await h.api.getSnapshot(summary);
+    focusMeasurement(h, 'height');
+    for (const value of ['1', '18', '189']) {
+      typeMeasurement(h, 'height', value);
+      expect(await h.api.getSnapshot(summary)).toBe(before);
+    }
+    blurMeasurement(h, 'height');
+    const after = await h.api.getSnapshot(summary);
+    expect(after.currentHeight).toBe(189);
+    expect(after.patientToken).toBe(before.patientToken);
+    expect(before.currentHeight).toBe(158);
+    expect(h.writes).not.toHaveBeenCalled();
+  });
+
+  it('Enter w draft zatwierdza właściwą wartość także przed kolejnym wpisaniem i zmianą źródła', async () => {
+    const h = draft(); await h.api.getSnapshot(summary);
+    focusMeasurement(h, 'height'); typeMeasurement(h, 'height', '189'); enterMeasurement(h, 'height');
+    typeMeasurement(h, 'height', '1');
+    h.state.source = 'PALCZEWSKA'; h.doc.emit('vilda:zrodlo-pacjenta-zmienione');
+    const accepted = await h.api.getSnapshot(summary);
+    expect(accepted.currentHeight).toBe(189);
+    expect(accepted.source).toBe('OLAF');
+    blurMeasurement(h, 'height');
+    const next = await h.api.getSnapshot(summary);
+    expect(next.currentHeight).toBe(1);
+    expect(next.source).toBe('PALCZEWSKA');
+  });
+
+  it('czyszczenie formularza daje nowy RAM-token i nie ożywia starego rysunku', async () => {
+    const h = draft(), before = await h.api.getSnapshot(summary);
+    h.doc.emit('vilda:user-state-cleared');
+    h.fields.height.value = '140';
+    const after = await h.api.getSnapshot(summary);
+    expect(h.api.isCurrent(before)).toBe(false);
+    expect(after.patientId).toBeNull();
+    expect(after.patientToken.ownerKey).not.toBe(before.patientToken.ownerKey);
+    expect(h.writes).not.toHaveBeenCalled();
+  });
+
+  it('synchroniczne pytania subskrybentów podczas Wyczyść nie odbierają zgody na nowy draft', async () => {
+    const h = setup();
+    await h.api.getSnapshot(summary);
+    h.api.subscribe(event => {
+      if (event.reason === 'clear') {
+        // Tak jak tabs/controller: odczyt przed późniejszym listenerem paska bocznego,
+        // który dopiero usuwa vildaCurrentPatientId w tym samym stosie zdarzenia.
+        expect(h.values.get('vildaCurrentPatientId')).toBe('fikcyjny-a');
+        h.api.getEligibility();
+        h.api.getEligibility(summary);
+      }
+    });
+    h.win.__vildaPersistClearUntil = Date.now() + 1500;
+    h.emit('vilda:user-state-cleared');
+    h.values.delete('vildaCurrentPatientId'); h.values.delete('vildaLoadChoiceV1');
+    h.state.owner = null; h.win.lastLoadedData = null;
+    h.win.advancedGrowthData = { measurements: [] }; h.win.chartCreatorData = {};
+    h.win.__vildaPersistClearUntil = 0;
+    const next = await h.api.getSnapshot(summary);
+    expect(next.patientId).toBeNull();
+    expect(next.measurements).toEqual([]);
+    expect(next.chartCreatorData).toEqual({});
+    // Zapisanie/ponowne przyjęcie pacjenta zamyka to jednorazowe przejście.
+    h.values.set('vildaCurrentPatientId', 'fikcyjny-a'); h.state.owner = 'fikcyjny-a';
+    h.doc.emit('vilda:patient-loaded', { patientId: 'fikcyjny-a', source: 'save' });
+    h.values.delete('vildaCurrentPatientId'); h.state.owner = null;
+    expect(h.api.getEligibility(summary)).toEqual({ status: 'ineligible', reason: 'no-patient' });
+  });
+
+  it('brak ID po wyborze pacjenta nie zamienia jego pozostawionego formularza w anonimowy draft', async () => {
+    const h = setup(), before = await h.api.getSnapshot(summary);
+    h.values.delete('vildaCurrentPatientId'); h.state.owner = null;
+    expect(h.api.isCurrent(before)).toBe(false);
+    expect(h.api.getEligibility(summary)).toEqual({ status: 'ineligible', reason: 'no-patient' });
+    h.doc.emit('vilda:user-state-cleared');
+    h.win.advancedGrowthData = { measurements: [] };
+    h.win.chartCreatorData = {};
+    expect((await h.api.getSnapshot(summary)).patientId).toBeNull();
+  });
+
+  it('odtworzenie bierze wybrany zapis, jego datę, historię, rodziców i adnotacje bez nowszego rekordu', async () => {
+    const h = restored();
+    const snapshot = await h.api.getSnapshot(summary);
+    expect(snapshot).toMatchObject({ patientId: 'fikcyjny-a', ageMonths: 127,
+      exactAgeMonths: 126.98151950718686, currentHeight: 144, currentWeight: 35,
+      parents: { motherHeight: 160, fatherHeight: 175 },
+      measurements: [{ ageMonths: 108, height: 132, weight: 29 }],
+      meta: { measuredAtISO: '2025-05-26', savedMeasurement: true },
+      eligibility: { mode: 'summary', choice: 'restore' } });
+    expect(snapshot.chartCreatorData).toEqual(h.win.lastLoadedData.chartCreator);
+    expect(h.vault.getPatient).not.toHaveBeenCalled();
+    expect(h.vault.listPatientTimelineEvents).not.toHaveBeenCalled();
+    expect(h.writes).not.toHaveBeenCalled();
+  });
+
+  it('pusty zapis historyczny pozostaje pojedynczym punktem bez historii i rodziców z przyszłego rekordu', async () => {
+    const h = restored();
+    h.win.lastLoadedData.advanced = { data: { measurements: [] } };
+    h.fields.advMotherHeight.value = ''; h.fields.advFatherHeight.value = '';
+    h.win.chartCreatorData = {};
+    const snapshot = await h.api.getSnapshot(summary);
+    expect(snapshot.measurements).toEqual([]);
+    expect(snapshot.parents).toEqual({ motherHeight: null, fatherHeight: null });
+    expect(snapshot.chartCreatorData).toEqual({});
+    expect(h.vault.getPatient).not.toHaveBeenCalled();
+  });
+
+  it('jawne usunięcie working history nie wskrzesza pomiarów z odtworzonego payloadu', async () => {
+    const h = restored();
+    h.win.basicGrowthData = { measurements: [] };
+    h.win.getEffectiveCentileGrowthDataState = () => null;
+    expect((await h.api.getSnapshot(summary)).measurements).toEqual([]);
+    expect(h.vault.listPatientTimelineEvents).not.toHaveBeenCalled();
+  });
+
+  it('odtworzony pomiar nie pokazuje późniejszych wierszy także jeśli trafiły do bufora historii', async () => {
+    const h = restored();
+    h.win.basicGrowthData = { measurements: [
+      { ageMonths: 108, height: 132, weight: 29 },
+      { ageMonths: 144, height: 155, weight: 44 },
+      { ageYears: 12, height: 155, weight: 44 },
+    ] };
+    expect((await h.api.getSnapshot(summary)).measurements).toEqual([{ ageMonths: 108, height: 132, weight: 29 }]);
+  });
+
+  it('pomiar dziecięcy osoby dziś dorosłej zachowuje wiek i datę zapisanej wizyty', async () => {
+    const h = restored();
+    h.win.lastLoadedData.user.dobISO = '2000-10-26';
+    h.win.lastLoadedData.user.measuredAtISO = '2011-05-26';
+    h.win.VildaDobAge.readMeasuredAtISO = () => '2011-05-26';
+    const snapshot = await h.api.getSnapshot(summary);
+    expect(snapshot.ageMonths).toBe(127);
+    expect(snapshot.meta.measuredAtISO).toBe('2011-05-26');
+    expect(snapshot.eligibility.under18).toBe(true);
+    h.fields.age.value = '26'; h.fields.ageMonths.value = '0';
+    expect(h.api.isCurrent(snapshot)).toBe(false);
+    expect(h.api.getEligibility(summary)).toEqual({ status: 'ineligible', reason: 'age' });
+  });
+
+  it.each(['restore', 'applied'])('zapisany pojedynczy pomiar w trybie %s nie wymaga ścieżki Nowy pomiar', async (mode) => {
+    const h = restored();
+    if (mode === 'applied') h.values.delete('vildaLoadChoiceV1');
+    h.win.lastLoadedData.advanced = { data: { measurements: [] } };
+    const snapshot = await h.api.getSnapshot(summary);
+    expect(snapshot.measurements).toEqual([]);
+    expect(snapshot.patientToken.kind).toBe(mode);
+    expect(h.vault.getPatient).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ['blokada', h => { h.state.unlocked = false; h.hooks.lock(); }],
+    ['nowy apply', h => { h.state.sequence++; }],
+    ['obcy właściciel', h => { h.state.owner = 'fikcyjny-b'; }],
+    ['inna osoba', h => { h.values.set('vildaCurrentPatientId', 'fikcyjny-b'); }],
+    ['nieaktualna ramka', h => { h.state.stale = true; }],
+    ['ukryta ramka', h => { h.win.frameElement.hidden = true; }],
+    ['zmiana ścieżki', h => { h.win.location.pathname = '/klirens.html'; }],
+    ['nowy pomiar', h => { h.values.set('vildaLoadChoiceV1', 'new'); }],
+  ])('%s natychmiast unieważnia odtworzony rysunek', async (_, change) => {
+    const h = restored({ framed: true }), snapshot = await h.api.getSnapshot(summary);
+    expect(h.api.isCurrent(snapshot)).toBe(true);
+    change(h);
+    expect(h.api.isCurrent(snapshot)).toBe(false);
+  });
+
+  it('usunięty zapis nie odżywa z pozostawionego payloadu przy kolejnym odczycie', async () => {
+    const h = restored(), before = await h.api.getSnapshot(summary);
+    h.hooks.remove({ patientId: 'fikcyjny-a' });
+    expect(h.api.isCurrent(before)).toBe(false);
+    expect(await h.api.getResult(summary)).toEqual({ status: 'ineligible', reason: 'deleted' });
+    expect(h.vault.getPatient).not.toHaveBeenCalled();
+  });
+
+  it('startowa blokada pustego sejfu nie wyłącza formularza nowego pacjenta', async () => {
+    const h = draft(); h.hooks.lock(); h.state.unlocked = false;
+    expect((await h.api.getResult(summary)).status).toBe('ready');
+    expect(h.vault.getPatient).not.toHaveBeenCalled();
+  });
+
+  it('odtworzenie bez zastosowanego payloadu czeka zamiast czytać najnowszy snapshot z sejfu', async () => {
+    const h = restored(); delete h.win.lastLoadedData;
+    expect(await h.api.getResult(summary)).toEqual({ status: 'pending', reason: 'applied-payload' });
+    expect(h.vault.getPatient).not.toHaveBeenCalled();
+    expect(h.vault.listPatientTimelineEvents).not.toHaveBeenCalled();
+  });
+});

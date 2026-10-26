@@ -7673,6 +7673,50 @@ argumenty generatorów kończą odczyt modelu przed tworzeniem strony i efektami
 ubocznymi Kreatora. Testy adaptera, hosta, renderera i scenariusze przeglądarkowe
 używają wyłącznie fikcyjnych pacjentów i rzeczywistych funkcji produkcyjnych.
 
+### GROWTH-SUMMARY-TABS — podsumowanie i siatka dla pojedynczego pomiaru (2026-10-26)
+
+**Decyzja właściciela po makiecie desktopowej i mobilnej.** Karta
+„Podsumowanie wyników” na Start i DocPro otrzymuje zakładki „Podsumowanie”
+i „Siatka centylowa”. Zakładka siatki obejmuje także niezapisanego pacjenta,
+pojedynczy pomiar oraz odtworzony zapis dziecka; wiek dotyczy dnia pomiaru.
+Domyślnie pozostaje podsumowanie. Dotychczasowy osobny podgląd przy porównaniu
+z poprzednim pomiarem pozostaje bez duplikowania go w drugiej karcie.
+
+**Prezentacja wyników.** Główne wiersze dziecka: masa, wzrost, BMI, Cole,
+tempo wzrastania, SDS tempa, MPH, hSDS − mpSDS, główna prognoza wzrostu
+ostatecznego (konsensus, jeżeli dostępny), powierzchnia ciała. Pozostałe
+istniejące wyniki i metody są pod „Pozostałe parametry”. Brak danych nie
+oznacza wyniku prawidłowego. Bibliografia SDS tempa jest pomijana wyłącznie
+w widocznym wierszu. Dotychczasowy przycisk kopiowania nadal generuje pełny
+tekst niezależnie od zakładki i rozwinięcia; jego wybór prognozy się nie zmienia.
+
+**Kolory, bez nowych progów klinicznych.** Jawnie oceniony wynik prawidłowy
+ma turkusowy tekst na białym tle. Istniejące ostrzeżenia mają kolor bursztynowy
+lub czerwony, jasne tło i etykietę tekstową bez wykrzyknika. Wyniki opisowe,
+nieocenione i brakujące są szare. SDS tempa, prognoza i powierzchnia ciała
+pozostają opisowe; tempo poza oknem oceny nie jest kolorowane jako prawidłowe.
+Stosowane są dotychczasowe klasyfikatory BMI, masy, tempa i reguły tonu
+podsumowania; masa dla wieku nie jest nazywana nadwagą wg BMI.
+
+**Punkty na siatce.** Każdy pomiar jest kolorowany według własnego centyla,
+metryki, wieku, płci i wybranego źródła. Odcinek między pomiarami ma gradient
+kolorów jego końców — to interpolacja wizualna, nie dodatkowa ocena kliniczna.
+Podgląd SVG i pełny widok używają tych samych barw. Pojedynczy pomiar jest
+pojedynczym punktem. Pełne płótna i adnotacje Kreatora powstają dopiero po
+powiększeniu; bez autozoomu ani animacji początkowego pojawienia się.
+
+**Własność danych.** Niezapisany formularz ma tożsamość roboczą wyłącznie
+w RAM, bez sztucznego identyfikatora w bazie. Odtworzony zapis korzysta
+z zastosowanego stanu formularza, historii, rodziców i adnotacji tego zapisu,
+bez dołączania nowszej osi czasu pacjenta. Zmiana osoby, czyszczenie, blokada
+i ukrycie trasy unieważniają odczyty i pełny widok. Zatwierdzanie masy/wzrostu
+przez blur lub Enter pozostaje zgodne z P-SIATKA-PO-EDYCJI.
+
+**Wpływ kliniczny:** zmiana prezentacji i dostępności podglądu; bez zmiany
+wzorów, norm, kategorii, progów, wartości, zapisu i eksportu. Przykłady
+regresyjne wywołują produkcyjne moduły na fikcyjnych danych, w tym pojedynczy
+punkt, wcześniejszy zapis bez przyszłych pomiarów i zmianę źródła.
+
 ### P-SIATKA-PO-EDYCJI — aktualizacja podglądu po zakończeniu pola (2026-10-25)
 
 **Decyzja właściciela.** Z makiety autozoomu wybrano tylko wariant A: interaktywna

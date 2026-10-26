@@ -143,7 +143,8 @@
     hidden(latest, true);
     var metadata = node('div', 'metadata');
     var legend = node('span', 'legend');
-    legend.append(node('span', 'line-key'), doc.createTextNode('Przebieg pacjenta'));
+    var legendKey = node('span', 'line-key');
+    legend.append(legendKey, doc.createTextNode('Przebieg pacjenta'));
     var parents = node('div', 'parents');
     parents.setAttribute('aria-label', 'Wzrost rodziców');
     hidden(parents, true);
@@ -302,6 +303,11 @@
       hidden(latest, state.fullscreen || !data || !data.preview || !point);
       if (!point) return;
       text(latestLabel, current ? 'OBECNY POMIAR' : 'OSTATNI POMIAR');
+      var colors = w.VildaCentileLiveColors;
+      if (colors) {
+        var pointColor = colors.color(colors.tone(panes[0].metric, point.percentile));
+        styles(latestValue, { color: pointColor }); styles(latestCentile, { color: pointColor });
+      }
       text(latestValue, numberLabel(point.value) + (panes[0].metric === 'height' ? ' cm' : ' kg'));
       var pct = point.percentile;
       var effectiveSource = point.source && point.source !== data.source ? ' · ' + sourceLabel(point.source) : '';
@@ -370,6 +376,7 @@
           width: layout.data.width * commonScale + 'px', height: layout.data.height * commonScale + 'px',
           left: -layout.bounds.x * commonScale + 'px', top: -layout.bounds.y * commonScale + 'px'
         });
+        if (typeof pane.image.fitPatientLayer === 'function') pane.image.fitPatientLayer(commonScale);
         updateMph(pane);
       });
       if (state.age !== null) renderAge(state.age);
@@ -426,7 +433,9 @@
       text(pane.tooltipHeading, label); text(pane.tooltipReading, reading);
       text(pane.bar, label + ' — ' + LABELS[pane.metric] + ': ' + reading);
       styles(pane.crosshair, { left: point.x + 'px', top: point.top + 'px', height: point.height + 'px' });
-      styles(pane.dot, { left: point.x + 'px', top: point.y + 'px' });
+      var colors = w.VildaCentileLiveColors;
+      styles(pane.dot, { left: point.x + 'px', top: point.y + 'px',
+        backgroundColor: colors ? colors.colorAt(pane.metric, data.points, result.ageMonths) : '' });
       hidden(pane.crosshair, false); hidden(pane.dot, false);
       hidden(pane.tooltip, state.pointerType === 'touch'); hidden(pane.bar, state.pointerType !== 'touch');
       pane.stage.classList.toggle(PREFIX + 'stage--pinned', state.pinned);
@@ -587,6 +596,10 @@
         }
         pane.previewAsset = null; pane.presentationPlot = null;
         var nextImage = data && data.canvas || null;
+        if (nextImage && data.vectorPatient && w.VildaCentileLiveColors) {
+          if (!data.patientLayer) data.patientLayer = w.VildaCentileLiveColors.fullLayer(nextImage, data);
+          nextImage = data.patientLayer;
+        }
         if (pane.image !== nextImage || nextImage && nextImage.parentNode !== pane.imageFrame) {
           pane.imageFrame.replaceChildren();
           pane.image = nextImage;
@@ -599,9 +612,16 @@
         }
       });
       var data = asset(panes[0].metric);
+      if (w.VildaCentileLiveColors) {
+        var legendColors = points(data).map(function (point) { return w.VildaCentileLiveColors.color(w.VildaCentileLiveColors.tone(panes[0].metric, point.percentile)); });
+        styles(legendKey, { background: legendColors.length > 1 ? 'linear-gradient(90deg, ' + legendColors.join(', ') + ')' : legendColors[0] || '#7c8b90' });
+      }
       text(sourceBadge, sourceLabel(data && data.source || state.snapshot && state.snapshot.source));
       var sex = state.snapshot && state.snapshot.sex;
-      text(count, (sex === 'F' ? 'Dziewczęta' : sex === 'M' ? 'Chłopcy' : '') + ' · ' + points(data).length + ' pomiarów');
+      var countValue = points(data).length;
+      var countLabel = countValue === 1 ? 'pomiar' : countValue % 10 >= 2 && countValue % 10 <= 4
+        && (countValue % 100 < 12 || countValue % 100 > 14) ? 'pomiary' : 'pomiarów';
+      text(count, (sex === 'F' ? 'Dziewczęta' : sex === 'M' ? 'Chłopcy' : '') + ' · ' + countValue + ' ' + countLabel);
       updateParents(); updateLatest();
       text(note, data && data.preview ? 'Centyle 3, 50 i 97 · Pełna siatka i adnotacje po powiększeniu' : 'Adnotacje z Kreatora siatek');
       text(hint, state.fullscreen ? 'Przesuń kursor lub palec, aby odczytać wartości. Kliknięcie przypina odczyt.' : 'Najedź, aby odczytać wartości. Powiększ siatkę ikoną w prawym górnym rogu.');

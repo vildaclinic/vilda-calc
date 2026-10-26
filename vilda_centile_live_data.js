@@ -1,4 +1,4 @@
-/* Read-only data boundary for the centile panel during an explicit new measurement.
+/* Read-only data boundary for the dedicated new-measurement panel and summary chart tab.
  * Patient/operation tokens are RAM-only. This module never collects, saves or restores
  * a payload, changes a form field, or asks the calculator to recalculate.
  */
@@ -21,6 +21,9 @@
   var measurementRevision = 0;
   var lastSnapshot = null;
   var hadSelectedPatient = !!patientId();
+  var draftAllowed = !hadSelectedPatient;
+  var clearingPatientId = null;
+  var deletedPatientId = null;
   var startupSettled = !(d && typeof d.readyState === 'string' && w.VildaInit);
   var startupScheduled = false;
 
@@ -90,13 +93,51 @@
       && api.isMainSessionRestorePending());
   }
 
-  function context(allowPendingDob) {
+  function observePatientIdentity(id) {
+    if (!id) { clearingPatientId = null; return; }
+    hadSelectedPatient = true;
+    // clearUserState dispatches before the sidebar removes its patient ID.
+    // Subscribers may inspect eligibility in that same event stack. Seeing the
+    // outgoing ID must not revoke the explicit transition to a new draft.
+    if (id !== clearingPatientId) draftAllowed = false;
+  }
+
+  function requestedMode(options) { return options && options.mode === 'summary' ? 'summary' : 'dedicated'; }
+
+  function appliedPayload() {
+    var loaded = w.lastLoadedData;
+    return loaded && loaded.user && typeof loaded.user === 'object' ? loaded : null;
+  }
+
+  function summaryKind(id) {
+    if (!id) return 'draft';
+    var choice = sessionValue('vildaLoadChoiceV1');
+    return choice === 'new' ? 'new' : choice === 'restore' ? 'restore' : 'applied';
+  }
+
+  function context(allowPendingDob, mode) {
     try {
       var vault = w.VildaVault, panel = w.VildaPanelPacjent, dob = w.VildaDobAge;
       var id = patientId(), route = activeRoute(), age = activeAge();
       var api = w.VildaDataImportExport;
       var sequence = api && typeof api.getApplyLoadedDataSequence === 'function'
         ? api.getApplyLoadedDataSequence() : null;
+      var summary = mode === 'summary';
+      if (summary) {
+        var kind = summaryKind(id);
+        if (!route || age === null || !Number.isSafeInteger(sequence) || sequence < 0
+          || mainSessionRestorePending() || w.__vildaPersistRestoring === true || w.__vildaLustroWpis === true
+          || Number(w.__vildaPersistClearUntil || 0) > Date.now()
+          || !allowPendingDob && dob && typeof dob.restorePending === 'function' && dob.restorePending()
+          || panel && typeof panel.nieaktualny === 'function' && panel.nieaktualny()
+          || panel && typeof panel.wlasciciel === 'function' && (panel.wlasciciel() || null) !== id
+          || id && (!vault || typeof vault.isUnlocked !== 'function' || !vault.isUnlocked())
+          || id && id === deletedPatientId
+          || !id && !draftAllowed
+          || id && kind !== 'new' && !appliedPayload()) return null;
+        return { patientId: id, route: route, applySequence: sequence, mode: 'summary', kind: kind,
+          ownerKey: id || 'draft:' + generation };
+      }
       if (!id || !route || age === null || sessionValue('vildaLoadChoiceV1') !== 'new'
         || !Number.isSafeInteger(sequence) || sequence < 0
         || !vault || typeof vault.isUnlocked !== 'function' || !vault.isUnlocked()
@@ -107,7 +148,7 @@
         || !allowPendingDob && dob && typeof dob.restorePending === 'function' && dob.restorePending()
         || panel && typeof panel.nieaktualny === 'function' && panel.nieaktualny()
         || panel && typeof panel.wlasciciel === 'function' && panel.wlasciciel() !== id) return null;
-      return { patientId: id, route: route, applySequence: sequence };
+      return { patientId: id, route: route, applySequence: sequence, mode: 'dedicated', kind: 'new', ownerKey: id };
     } catch (_) { return null; }
   }
 
@@ -134,11 +175,45 @@
     return true;
   }
 
-  function getEligibility() {
+  function getSummaryEligibility() {
+    try {
+      if (!activeRoute()) return eligibility('ineligible', 'inactive-document');
+      var id = patientId(), dob = w.VildaDobAge;
+      observePatientIdentity(id);
+      if (startupPending()) return eligibility('pending', 'startup');
+      var auth = w.VildaAuthUI;
+      if (auth && typeof auth.isBootReady === 'function' && !auth.isBootReady()) {
+        return eligibility('pending', 'authentication');
+      }
+      if (mainSessionRestorePending() || w.__vildaPersistRestoring === true || w.__vildaLustroWpis === true
+        || Number(w.__vildaPersistClearUntil || 0) > Date.now()) return eligibility('pending', 'restoring');
+      if (dob && typeof dob.restorePending === 'function' && dob.restorePending()) return eligibility('pending', 'dob');
+      var vault = w.VildaVault, panel = w.VildaPanelPacjent;
+      if (id && vault && typeof vault.isUnlocked === 'function' && !vault.isUnlocked()) return eligibility('ineligible', 'locked');
+      if (id && id === deletedPatientId) return eligibility('ineligible', 'deleted');
+      if (!id && !draftAllowed) return eligibility('ineligible', 'no-patient');
+      if (panel && typeof panel.nieaktualny === 'function' && panel.nieaktualny()
+        || panel && typeof panel.wlasciciel === 'function' && (panel.wlasciciel() || null) !== id) {
+        return eligibility('pending', 'ownership');
+      }
+      if (id && (!vault || typeof vault.isUnlocked !== 'function'
+        || summaryKind(id) === 'new' && typeof vault.getPatient !== 'function')) return eligibility('pending', 'dependencies');
+      var api = w.VildaDataImportExport;
+      var sequence = api && typeof api.getApplyLoadedDataSequence === 'function'
+        ? api.getApplyLoadedDataSequence() : null;
+      if (!Number.isSafeInteger(sequence) || sequence < 0) return eligibility('pending', 'apply-sequence');
+      if (id && summaryKind(id) !== 'new' && !appliedPayload()) return eligibility('pending', 'applied-payload');
+      if (activeAge() === null) return eligibility('ineligible', 'age');
+      return eligibility('eligible', id ? 'saved-summary' : 'draft-summary');
+    } catch (_) { return eligibility('error', 'context'); }
+  }
+
+  function getEligibility(options) {
+    if (requestedMode(options) === 'summary') return getSummaryEligibility();
     try {
       if (!activeRoute()) return eligibility('ineligible', 'inactive-document');
       var id = patientId();
-      if (id) hadSelectedPatient = true;
+      observePatientIdentity(id);
       // An initial guest has never owned a chart. Guest form/DOB restoration
       // must not reserve a chart slot; this flag carries no patient data and
       // does not grant permission to retain a snapshot.
@@ -187,7 +262,7 @@
 
   function sameContext(a, b) {
     return !!(a && b && a.patientId === b.patientId && a.route === b.route
-      && a.applySequence === b.applySequence);
+      && a.applySequence === b.applySequence && a.mode === b.mode && a.kind === b.kind && a.ownerKey === b.ownerKey);
   }
 
   function isCurrent(snapshotOrToken) {
@@ -197,10 +272,10 @@
     // continue to wait for DOB. No other restore/ownership gate is relaxed.
     var pendingSave = saveRefresh && saveRefresh.token === candidate && saveRefresh.phase === 'pending';
     return !!(candidate && candidate === token && candidate.generation === generation
-      && sameContext(candidate, context(!!pendingSave)));
+      && sameContext(candidate, context(!!pendingSave, candidate.mode)));
   }
 
-  function ready(scope) { return isCurrent(scope) && sameContext(scope, context()); }
+  function ready(scope) { return isCurrent(scope) && sameContext(scope, context(false, scope.mode)); }
 
   function getRefreshState(snapshotOrToken) {
     var candidate = snapshotOrToken && (snapshotOrToken.patientToken || snapshotOrToken);
@@ -243,13 +318,16 @@
     var vault = w.VildaVault;
     if (!vault || vault === boundVault) return;
     boundVault = vault;
-    if (typeof vault.onLock === 'function') vault.onLock(function () { invalidate('lock', true); });
+    if (typeof vault.onLock === 'function') vault.onLock(function () { if (hadSelectedPatient) draftAllowed = false; invalidate('lock', true); });
     if (typeof vault.onUnlock === 'function') vault.onUnlock(function () { invalidate('unlock', true); });
     if (typeof vault.onPatientSaved === 'function') vault.onPatientSaved(function (event) {
       if (event && event.patientId === patientId()) invalidate('patient-saved', false, true);
     });
     if (typeof vault.onPatientDeleted === 'function') vault.onPatientDeleted(function (event) {
-      if (event && event.patientId === patientId()) invalidate('patient-deleted', true);
+      if (event && event.patientId === patientId()) {
+        deletedPatientId = event.patientId;
+        invalidate('patient-deleted', true);
+      }
     });
   }
 
@@ -265,10 +343,10 @@
     updateHookRegistered = !!(registration && registration.ok);
   }
 
-  function currentToken() {
+  function currentToken(options) {
     bindVault();
     bindUpdateHook();
-    var current = context();
+    var current = context(false, options ? requestedMode(options) : token && token.mode);
     if (!current) return null;
     if (!sameContext(token, current) || token.generation !== generation) {
       saveRefresh = null;
@@ -276,7 +354,7 @@
       measurementCommit = null;
       lastSnapshot = null;
       token = Object.freeze({ patientId: current.patientId, route: current.route,
-        applySequence: current.applySequence, generation: generation });
+        applySequence: current.applySequence, generation: generation, mode: current.mode, kind: current.kind, ownerKey: current.ownerKey });
       recordRequest = null;
       timelineRequest = null;
     }
@@ -335,7 +413,7 @@
 
   // Capture the accepted form state synchronously. A subsequent keystroke may
   // arrive before the debounced render or asynchronous record/timeline read.
-  function captureSnapshotInput() {
+  function captureSnapshotInput(scope) {
     var age = activeAge(), dob = w.VildaDobAge;
     var exact = dob && typeof dob.readExactAge === 'function' ? dob.readExactAge() : null;
     var exactAge = exact && exact.totalMonths === age && Number.isFinite(exact.exactMonths)
@@ -349,12 +427,22 @@
     var proToggle = field('resultsModeToggle');
     var professionalMode = typeof w.isGrowthResultsProfessionalMode === 'function'
       ? !!w.isGrowthResultsProfessionalMode() : !!(proToggle && proToggle.checked);
+    var loaded = scope && scope.mode === 'summary' && scope.kind !== 'new' ? appliedPayload() : null;
+    var growth = copy(workingGrowth());
+    // A restore belongs to the payload applied to this form, never the latest vault head.
+    if (!growth && loaded) {
+      var advancedHistory = loaded.advanced && loaded.advanced.data;
+      var basicHistory = loaded.growthBasic && loaded.growthBasic.data;
+      if (advancedHistory && Array.isArray(advancedHistory.measurements)) growth = copy(advancedHistory);
+      else if (basicHistory && Array.isArray(basicHistory.measurements)) growth = copy(basicHistory);
+    }
     var headerState = typeof w.getCentileChartHeaderNameState === 'function'
       ? w.getCentileChartHeaderNameState() : null;
     return { age: age, exactAge: exactAge, source: source, population: population,
       sex: sexInput && sexInput.value, height: height, weight: weight,
       mother: capturedField('advMotherHeight'), father: capturedField('advFatherHeight'),
-      advanced: copy(w.advancedGrowthData) || {}, growth: copy(workingGrowth()),
+      advanced: copy(w.advancedGrowthData) || {}, growth: growth,
+      loaded: loaded ? { advanced: copy(loaded.advanced), user: { sex: loaded.user.sex } } : null,
       chartCreatorData: copy(w.chartCreatorData) || {}, professionalMode: professionalMode,
       standardChartStyle: !!w.forceStandardCentileChartStyle || !professionalMode,
       hasHeaderName: !!(headerState && headerState.name),
@@ -363,7 +451,7 @@
   }
 
   function makeSnapshot(scope, record, input, measurements) {
-    var head = record.snapshots[0] && record.snapshots[0].payload || {};
+    var head = record ? record.snapshots[0] && record.snapshots[0].payload || {} : input.loaded || {};
     var growth = input.growth;
     var advanced = Object.assign({}, copy(head.advanced && head.advanced.data) || {},
       copy(input.advanced) || {}, copy(growth) || {});
@@ -389,9 +477,9 @@
       professionalMode: input.professionalMode,
       standardChartStyle: input.standardChartStyle,
       hasHeaderName: input.hasHeaderName,
-      eligibility: { savedPatient: true, choice: 'new', route: scope.route,
+      eligibility: { savedPatient: !!scope.patientId, choice: scope.kind === 'new' ? 'new' : scope.kind === 'draft' ? null : 'restore', mode: scope.mode, route: scope.route,
         activeDocument: true, under18: true },
-      meta: { historySource: growth ? 'working' : 'vault',
+      meta: { historySource: growth ? 'working' : record ? 'vault' : 'applied',
         measuredAtISO: input.measuredAtISO, savedMeasurement: input.savedMeasurement }
     });
   }
@@ -414,37 +502,51 @@
     if (scope !== token || scope.generation !== generation || revision !== historyRevision) {
       return eligibility('pending', 'superseded');
     }
-    var state = getEligibility();
+    var state = getEligibility(scope);
     return state.status === 'eligible' ? eligibility('pending', 'context-changed') : state;
   }
 
-  async function getResult() {
-    var state = getEligibility();
+  async function getResult(options) {
+    var state = getEligibility(options);
     if (state.status !== 'eligible') return state;
-    var scope = currentToken();
+    var scope = currentToken(options || { mode: 'dedicated' });
     if (!scope) return eligibility('pending', 'context-changed');
     var commit = measurementCommit;
     var acceptedRevision = measurementRevision;
     if (!commit && editing(scope)) return snapshotResult(heldSnapshot(scope), 'measurement-edit');
     var revision = historyRevision;
-    var record = await readRecord(scope);
+    var readsVault = scope.mode !== 'summary' || scope.kind === 'new';
+    var record = readsVault ? await readRecord(scope) : null;
     if (revision !== historyRevision || !ready(scope)) return interruptedResult(scope, revision);
     if (acceptedRevision !== measurementRevision) return snapshotResult(heldSnapshot(scope), 'measurement-commit');
     if (!commit && editing(scope)) return snapshotResult(heldSnapshot(scope), 'measurement-edit');
-    if (!record) { finishSaveRefresh(scope, revision, true); return eligibility('error', 'patient-read'); }
+    if (readsVault && !record) { finishSaveRefresh(scope, revision, true); return eligibility('error', 'patient-read'); }
     try {
-      var input = commit ? commit.input : captureSnapshotInput();
+      var input = commit ? commit.input : captureSnapshotInput(scope);
       var growth = input.growth, measurements = growth && growth.measurements;
-      if (!growth) {
+      if (!growth && readsVault) {
         measurements = await readTimeline(scope);
         if (revision !== historyRevision || !ready(scope)) return interruptedResult(scope, revision);
         if (acceptedRevision !== measurementRevision) return snapshotResult(heldSnapshot(scope), 'measurement-commit');
         if (!commit && editing(scope)) return snapshotResult(heldSnapshot(scope), 'measurement-edit');
         if (measurements === null) { finishSaveRefresh(scope, revision, true); return eligibility('error', 'timeline-read'); }
         // A form restoration may have supplied an explicit working history meanwhile.
-        if (!commit) input = captureSnapshotInput();
+        if (!commit) input = captureSnapshotInput(scope);
         growth = input.growth;
         if (growth) measurements = growth.measurements;
+      }
+      // Historical restoration must not acquire measurements from a later visit.
+      // Applied empty history is authoritative; one current measurement remains one point.
+      if (!Array.isArray(measurements)) measurements = [];
+      if (scope.mode === 'summary' && scope.kind === 'restore' && input.savedMeasurement) {
+        measurements = measurements.filter(function (measurement) {
+          var measuredAge = number(measurement && measurement.ageMonths);
+          if (measuredAge === null) {
+            var years = number(measurement && measurement.ageYears);
+            measuredAge = years === null ? null : years * 12;
+          }
+          return measuredAge === null || measuredAge <= input.age;
+        });
       }
       var snapshot = makeSnapshot(scope, record, input, measurements);
       if (revision !== historyRevision || !ready(scope)) return interruptedResult(scope, revision);
@@ -461,8 +563,8 @@
   }
 
   // Existing consumers still receive the original snapshot-or-null contract.
-  async function getSnapshot() {
-    var result = await getResult();
+  async function getSnapshot(options) {
+    var result = await getResult(options);
     return result.status === 'ready' ? result.snapshot : null;
   }
 
@@ -486,7 +588,7 @@
 
   function captureMeasurementCommit(scope) {
     try {
-      measurementCommit = { scope: scope, input: captureSnapshotInput() };
+      measurementCommit = { scope: scope, input: captureSnapshotInput(scope) };
       measurementRevision += 1;
       return true;
     } catch (_) { return false; }
@@ -538,11 +640,16 @@
     // DOB has entered its pending state. Arm ownership retention in capture,
     // before those nested notifications reach the panel.
     if (detail && detail.source === 'save' && token && detail.patientId === token.patientId
-      && detail.applySequence === token.applySequence && sameContext(token, context(true))) {
+      && detail.applySequence === token.applySequence && sameContext(token, context(true, token.mode))) {
       saveRefresh = { token: token, phase: 'pending' };
     }
   }, true);
   listen(d, 'vilda:patient-loaded', function (event) {
+    if (event && event.detail && event.detail.patientId) {
+      clearingPatientId = null;
+      draftAllowed = false;
+      if (event.detail.patientId !== deletedPatientId) deletedPatientId = null;
+    }
     invalidate('patient-loaded', !(event && event.detail && event.detail.source === 'save'), true);
   });
   ['vilda:state-restored', 'vilda:persist-restored', 'vilda:main-session-restored', 'vilda:json-imported'].forEach(function (event) {
@@ -554,7 +661,12 @@
   ['vilda:auth-hidden', 'vilda:auth-state-settled', 'vilda:auth-boot-settled', 'vilda:sync-status-changed'].forEach(function (event) {
     listen(d, event, function () { invalidate(event, false, true); });
   });
-  function cleared() { invalidate('clear', true); }
+  function cleared() {
+    clearingPatientId = patientId();
+    draftAllowed = true;
+    deletedPatientId = null;
+    invalidate('clear', true);
+  }
   listen(d, 'vilda:user-state-cleared', cleared);
   listen(w, 'vilda:user-state-cleared', cleared);
   listen(w, 'pagehide', function () { invalidate('pagehide', true); });

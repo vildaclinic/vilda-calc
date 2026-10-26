@@ -1,4 +1,6 @@
 /* Presentation shared by the source frame and the parent fullscreen host. */
+.vilda-centile-live-image[data-patient-layer="vector"]{pointer-events:none}
+.vilda-centile-live-full-svg,.vilda-centile-live-full-background{position:absolute;inset:0;display:block;width:100%;height:100%;pointer-events:none}
 #vildaCentileLiveMount{min-width:0;min-height:0;max-width:100%}
 #vildaCentileLiveMount[hidden],#vildaCentileLiveLoading[hidden]{display:none!important}
 html.vilda-centile-live-reserved #remindersInline{display:none!important}
@@ -109,3 +111,23 @@ html.vilda-centile-live-reserved #vildaCentileLiveMount+#currentSummaryWrap{marg
 .vilda-centile-live-card--preview .vilda-centile-live-footer{font-size:10px}
 .vilda-centile-live-card--preview .vilda-centile-live-hint{font-size:9px!important}
 .vilda-centile-live-card--fullscreen .vilda-centile-live-latest{display:none!important}
+/* Summary tabs share a single chart instance with the dedicated comparison
+   layout. Their DOM stays in place while result fields commit on blur. */
+#currentSummaryCard.vilda-summary-with-tabs{min-width:0;overflow:hidden}
+.vilda-summary-tabs{display:flex;align-items:stretch;gap:var(--space-4px);margin:0 0 var(--space-14px);padding:var(--space-4px);border:var(--border-hairline) solid #dce8e8;border-radius:var(--radius-10);background:#f3f7f7}
+#currentSummaryCard .vilda-summary-tab{flex:1;min-width:0;width:auto;min-height:42px;margin:0;padding:9px var(--space-12px);border:0!important;border-radius:7px!important;background:transparent!important;box-shadow:none!important;color:#607980!important;font:inherit;font-size:14px;font-weight:550;line-height:1.35;letter-spacing:normal;text-transform:none;cursor:pointer}
+#currentSummaryCard .vilda-summary-tab[aria-selected=true]{background:#fff!important;color:#087c80!important;box-shadow:0 1px 5px #21474b14!important}
+#currentSummaryCard .vilda-summary-tab:focus-visible{outline:var(--border-emphasis) solid #087c80;outline-offset:2px}
+.vilda-summary-tabs[hidden],#currentSummaryContent[hidden],#vildaSummaryChartPanel[hidden]{display:none!important}
+.vilda-summary-chart-panel{min-width:0;min-height:0}
+#currentSummaryCard[data-summary-tab=chart]>.current-summary-actions{display:none!important}
+.vilda-summary-chart-empty{margin:0;padding:40px var(--space-16px);color:#657c80;font-size:14px;line-height:1.5;text-align:center}
+#vildaSummaryChartPanel[data-chart-state=pending]>.vilda-summary-chart-empty,#vildaSummaryChartPanel[data-chart-state=ready]>.vilda-summary-chart-empty,#vildaSummaryChartPanel[data-chart-state=error]>.vilda-summary-chart-empty{display:none}
+#vildaSummaryChartPanel .vilda-centile-live-card:not(.vilda-centile-live-card--fullscreen),#vildaSummaryChartPanel .vilda-centile-live-loading{border:0;border-radius:0;box-shadow:none}
+#vildaSummaryChartPanel .vilda-centile-live-card:not(.vilda-centile-live-card--fullscreen) .vilda-centile-live-header{padding-top:0}
+@media(max-width:699px){
+  #currentSummaryCard .vilda-summary-tab{font-size:13px;padding:9px 7px}
+  .vilda-summary-tabs{margin-bottom:var(--space-12px)}
+  .vilda-centile-live-card--fullscreen.vilda-centile-live-card--dual .vilda-centile-live-deck{grid-template-columns:minmax(0,1fr);grid-template-rows:repeat(2,minmax(0,1fr))}
+  .vilda-centile-live-card--fullscreen.vilda-centile-live-card--dual .vilda-centile-live-pane+.vilda-centile-live-pane{border-left:0;border-top:var(--border-hairline) solid #e3ece7}
+}

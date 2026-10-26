@@ -42,6 +42,7 @@ function environment() {
     cancelAnimationFrame: id => frames.delete(id),
   });
   doc.defaultView = win;
+  loadBrowserScript('vilda_centile_live_colors.js', win);
   loadBrowserScript('vilda_centile_live_preview.js', win);
   loadBrowserScript('vilda_centile_live_view.js', win);
   const all = node => [node, ...node.children.flatMap(all)];
@@ -135,7 +136,7 @@ describe('screen-sized centile preview and view', () => {
     const rendered = { status: 'ready', source: 'PALCZEWSKA', activeRangeId: 'palRegular', ranges: [infant, regular] };
     view.update(rendered, { patientId: 'fictional-a', sex: 'F' });
     const select = e.byClass(view.element, 'range')[0]; select.value = 'palInfant'; select.dispatchEvent({ type: 'change' });
-    const full = { ...rendered, ranges: rendered.ranges.map(range => ({ ...range, ...Object.fromEntries(['height', 'weight'].map(metric => [metric, { ...range[metric], preview: false, canvas: e.doc.createElement('canvas'), width: 200, height: 300, contentBounds: { x: 0, y: 0, width: 200, height: 300 } }])) })) };
+    const full = { ...rendered, ranges: rendered.ranges.map(range => ({ ...range, ...Object.fromEntries(['height', 'weight'].map(metric => [metric, { ...range[metric], preview: false, vectorPatient: true, canvas: e.doc.createElement('canvas'), width: 200, height: 300, contentBounds: { x: 0, y: 0, width: 200, height: 300 } }])) })) };
     view.update(full, { patientId: 'fictional-a', sex: 'F' }); view.setFullscreen(true); view.setMetric('both');
     expect(e.byClass(view.element, 'image')).toHaveLength(2);
     expect(view.getState().rangeId).toBe('palInfant');
@@ -146,4 +147,59 @@ describe('screen-sized centile preview and view', () => {
     expect(e.byClass(view.element, 'latest')[0].hidden).toBe(false);
     view.destroy();
   });
+  it('uses colored measurement endpoints and unique per-segment gradients in the inline preview', () => {
+    const e = environment();
+    const data = preview();
+    data.points.forEach((point, index) => { point.percentile = [22, 9, 2][index]; });
+    const before = JSON.stringify(data);
+    const a = e.win.VildaCentileLivePreview.draw(e.doc, data, 600, 450);
+    const b = e.win.VildaCentileLivePreview.draw(e.doc, data, 330, 450);
+    const dots = e.byClass(a.element, 'preview-point');
+    expect(dots.map(dot => dot.getAttribute('fill'))).toEqual(['#087c80', '#b97519', '#bd4b50']);
+    expect(dots.map(dot => dot.getAttribute('data-tone'))).toEqual(['neutral', 'warn', 'danger']);
+    const gradients = e.all(a.element).filter(node => node.tagName === 'LINEARGRADIENT');
+    expect(gradients).toHaveLength(2);
+    expect(gradients.map(node => node.children.map(stop => stop.getAttribute('stop-color')))).toEqual([
+      ['#087c80', '#b97519'], ['#b97519', '#bd4b50'],
+    ]);
+    expect(gradients.every(node => node.getAttribute('gradientUnits') === 'userSpaceOnUse')).toBe(true);
+    const ids = e.all(a.element).concat(e.all(b.element)).filter(node => node.tagName === 'LINEARGRADIENT').map(node => node.getAttribute('id'));
+    expect(new Set(ids).size).toBe(4);
+    expect(e.byClass(a.element, 'preview-patient-path')).toHaveLength(2);
+    expect(JSON.stringify(data)).toBe(before);
+  });
+
+  it('shows one actual measurement as one colored dot with no fabricated path', () => {
+    const e = environment();
+    const data = preview(); data.points = [data.points[2]];
+    const result = e.win.VildaCentileLivePreview.draw(e.doc, data, 330, 450);
+    expect(e.byClass(result.element, 'preview-point')).toHaveLength(1);
+    expect(e.byClass(result.element, 'preview-patient-path')).toHaveLength(0);
+    expect(e.all(result.element).filter(node => node.tagName === 'LINEARGRADIENT')).toHaveLength(0);
+  });
+
+  it('keeps fullscreen point radii in CSS pixels and honors Creator label visibility', () => {
+    const e = environment();
+    const view = e.win.VildaCentileLiveView.create({ document: e.doc });
+    const data = { ...preview(), preview: false, vectorPatient: true, valueLabelVisible: false,
+      canvas: e.doc.createElement('canvas'), width: 2296, height: 3041,
+      plot: { x: 190, y: 115, w: 1946, h: 2745, ageMin: 36, ageMax: 216, minY: 0, maxY: 200 },
+      contentBounds: { x: 100, y: 100, width: 2100, height: 2850 } };
+    data.points.forEach((point, index) => { point.percentile = [22, 9, 2][index]; });
+    view.update(bundle(data), { patientId: 'fictional', sex: 'F' }); view.setFullscreen(true);
+    const viewport = e.byClass(view.element, 'viewport')[0];
+    for (const width of [600, 350, 900]) {
+      viewport.rect.width = width; viewport.rect.height = width; view.fit();
+      const layer = e.byClass(view.element, 'image')[0], scale = parseFloat(layer.style.width) / data.width;
+      const dots = e.byClass(layer, 'full-point');
+      expect(dots).toHaveLength(3);
+      expect(Number(dots[0].getAttribute('r')) * scale).toBeCloseTo(4.6, 8);
+      expect(Number(dots[2].getAttribute('r')) * scale).toBeCloseTo(5.8, 8);
+      expect(dots.map(dot => dot.getAttribute('fill'))).toEqual(['#087c80', '#b97519', '#bd4b50']);
+      expect(e.byClass(layer, 'full-latest-label')).toHaveLength(0);
+      expect(data.canvas.parentNode).toBe(layer);
+    }
+    view.destroy();
+  });
+
 });

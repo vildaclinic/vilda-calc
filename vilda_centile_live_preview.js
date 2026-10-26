@@ -115,12 +115,9 @@
     });
     var points = (data.points || []).filter(function (point) { return finite(point.ageMonths) && finite(point.value); });
     var mapped = points.map(function (point) { return { x: sx(point.ageMonths), y: sy(point.value) }; });
-    graph.appendChild(node('path', { d: path(mapped), fill: 'none', stroke: '#fff', 'stroke-width': 6.3, 'stroke-linecap': 'round', 'stroke-linejoin': 'round' }));
-    graph.appendChild(node('path', { class: PREFIX + '-patient-path', d: path(mapped), fill: 'none', stroke: '#087c80', 'stroke-width': 3.2, 'stroke-linecap': 'round', 'stroke-linejoin': 'round', 'vector-effect': 'non-scaling-stroke' }));
-    points.forEach(function (point, index) {
-      var last = index === points.length - 1;
-      graph.appendChild(node('circle', { class: PREFIX + '-point', 'data-age-months': point.ageMonths, 'data-value': point.value, cx: mapped[index].x, cy: mapped[index].y, r: last ? 5.8 : 4.2, fill: last ? '#087c80' : '#fff', stroke: '#087c80', 'stroke-width': 2 }));
-    });
+    var colors = w.VildaCentileLiveColors;
+    if (!colors) throw new Error('Brak prezentacji kolorów siatki.');
+    colors.draw(doc, { defs: defs, group: graph, points: points, mapped: mapped, metric: data.metric, prefix: PREFIX });
     if (points.length) {
       var lastPoint = points[points.length - 1], position = mapped[mapped.length - 1];
       var reading = label(lastPoint.value) + ' ' + data.units;
@@ -128,7 +125,7 @@
       var chipX = Math.max(plot.x, Math.min(plot.x + plot.w - chipWidth, position.x - chipWidth / 2));
       var chipY = Math.max(plot.y, Math.min(plot.y + plot.h - 23, position.y + (position.y - plot.y > 34 ? -34 : 11)));
       svg.appendChild(node('rect', { x: chipX, y: chipY, width: chipWidth, height: 23, rx: 6, fill: '#fff', stroke: '#cfdfde' }));
-      svg.appendChild(node('text', { x: chipX + chipWidth / 2, y: chipY + 16, 'text-anchor': 'middle', fill: '#087c80', 'font-size': 12, 'font-weight': 700 }, reading));
+      svg.appendChild(node('text', { x: chipX + chipWidth / 2, y: chipY + 16, 'text-anchor': 'middle', fill: colors.color(colors.tone(data.metric, lastPoint.percentile)), 'font-size': 12, 'font-weight': 700 }, reading));
     }
     return { element: svg, plot: plot };
   }

@@ -23,7 +23,7 @@ function setup() {
     'LMS_INFANT_WEIGHT_BOYS', 'LMS_INFANT_WEIGHT_GIRLS']) win[name] = tablica(name);
   const context = vm.createContext(win);
   for (const file of ['centile_data.js', 'ds_lms.js', 'vilda_centile_interpolation.js', 'vilda_sds_wzrostu.js',
-    'vilda_centile_charts.js', 'inline_index_03.js', 'inline_index_04.js', 'inline_index_07.js', 'vilda_centile_live_render.js']) {
+    'vilda_centile_charts.js', 'inline_index_03.js', 'inline_index_04.js', 'inline_index_07.js', 'vilda_centile_live_colors.js', 'vilda_centile_live_render.js']) {
     vm.runInContext(zrodlo(file), context, { filename: file });
   }
   win.VildaSdsWzrostu.ustawDane({ palCentyl: (sex, age, p) => win.VildaCentileInterp.palCentileValue(sex, age, p, 'HT'),
@@ -181,4 +181,15 @@ describe('lightweight centile preview from production models', () => {
     const win = setup();
     expect(win.VildaCentileLiveRender.preview(snapshot)).toEqual(win.VildaCentileLiveRender.render(snapshot));
   });
+  it.each(['OLAF', 'PALCZEWSKA'])('uses each actual %s measurement centile for a declining trajectory', source => {
+    const win = setup();
+    const result = win.VildaCentileLiveRender.preview({ ...fictional, source, ageMonths: 144, exactAgeMonths: 144,
+      currentHeight: 139, currentWeight: 32, measurements: [
+        { ageMonths: 96, height: 125, weight: 25 }, { ageMonths: 120, height: 132, weight: 28 },
+        { ageMonths: 132, height: 137, weight: 30 }, { ageMonths: 144, height: 139, weight: 32 },
+      ] });
+    expect(result.height.points.map(point => win.VildaCentileLiveColors.tone('height', point.percentile))).toEqual(['neutral', 'warn', 'warn', 'danger']);
+    expect(result.weight.points.map(point => win.VildaCentileLiveColors.tone('weight', point.percentile))).toEqual(['neutral', 'neutral', 'neutral', 'warn']);
+  });
+
 });
