@@ -1,4 +1,5 @@
 import fs from 'node:fs/promises';
+import { readVisibleSavedHistory } from '../support/klirens-saved-history.mjs';
 import { expect, test } from '@playwright/test';
 import { czekajNaUstabilizowanyUklad, kliknij } from '../support/uklad-czekanie.mjs';
 
@@ -422,29 +423,22 @@ test('FEK: zapis i historia zachowują surową liczbę oraz pierwotną normę i 
   for (const [index, point] of points.entries()) expect(point.fekAssessment).toMatchObject(assessments[index]);
 });
 
-test('FEK: widoczna historia i trend nie zamieniają małych dodatnich wyników na zero', async ({ page }) => {
+test('FEK: pełna historia zachowuje małe dodatnie pomiary bez zamiany na zero', async ({ page }) => {
   await openCalculator(page);
   for (const [potassium, raw, day] of [['0.0004', 0.0001, '25'], ['0.004', 0.001, '26']]) {
     await restore(page, { U_K_spot: potassium });
     await expectResult(page, { raw, status: 'below' });
     expect((await captureSave(page, `2026-10-${day}`)).outcome).toMatchObject({ ok: true, saved: 1 });
   }
-  const history = await page.evaluate(async () => {
-    const originalVault = window.VildaVault, api = window.ClcrVisitSave;
-    const originalPatientId = api.resolveCurrentPatientId();
-    window.VildaVault = { isUnlocked: () => true, listPatientNotesForPatient: async () => window.__fekSyntheticNotes };
-    api._setPatientId('fictional-fek-history-only');
-    try {
-      await api.refreshActiveHistory();
-      return { hidden: document.getElementById('clcrHistoryCard').hidden,
-        values: [...document.querySelectorAll('#clcrHistoryBody .cvs-num')].map(node => node.textContent.trim()),
-        trend: document.querySelector('#clcrHistoryBody .cvs-trend')?.textContent || '',
-        points: (await api.readActiveSeries()).flatMap(series => series.points) };
-    } finally { window.VildaVault = originalVault; api._setPatientId(originalPatientId); }
-  });
-  expect(history.hidden).toBe(false);
+  const history = await readVisibleSavedHistory(page, '__fekSyntheticNotes');
+  expect(history.visible).toBe(true);
   expect(history.values).toEqual(['0,0001 %', '0,001 %']);
-  expect(history.trend).toContain('0,0001 → 0,001 %');
+  expect(history.ids).toEqual(history.originalIds);
+  expect(new Set(history.ids).size).toBe(2);
+  expect(history.dates).toEqual(['2026-10-25', '2026-10-26']);
+  expect(history.dates).toEqual(history.originalDates);
+  expect(history.norms).toEqual(history.originalNorms);
+  expect(history.chartPoints).toBe(0); // Zatwierdzony podgląd historii to pełna tabela, bez trendu.
   expect(history.points.map(point => point.valueNum)).toEqual([0.0001, 0.001]);
   expect(await page.evaluate(() => window.VildaVault.isUnlocked())).toBe(false);
 });

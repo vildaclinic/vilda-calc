@@ -1,19 +1,13 @@
 function BSA_DuBois(e, n) {
-  return 0.007184 * Math.pow(e, 0.425) * Math.pow(n, 0.725);
+  return window.ClcrSavedLegacyCalculator.math.BSA_DuBois(e, n);
 }
 function clCrCG(e, n, t, o) {
-  const a = e === "F" ? 0.85 : 1;
-  return ((140 - n) * t * a) / (72 * o);
+  return window.ClcrSavedLegacyCalculator.math.clCrCG(e, n, t, o);
 }
 // The indexed variant intentionally uses completed years. Keep the original
 // CG helper and the shared patient age unchanged for the other equations.
 function clCrCGNormalized(sex, ageYears, weight, scr, bsaM2) {
-  if (
-    !["M", "F"].includes(sex) ||
-    !Number.isFinite(ageYears) || ageYears < 18 ||
-    ![weight, scr, bsaM2].every((value) => Number.isFinite(value) && value > 0)
-  ) return null;
-  return clCrCG(sex, Math.floor(ageYears), weight, scr) * 1.73 / bsaM2;
+  return window.ClcrSavedLegacyCalculator.math.clCrCGNormalized(sex, ageYears, weight, scr, bsaM2);
 }
 function eGFR_CKD_EPI_2021_cr(e, n, t) {
   if (
@@ -74,9 +68,9 @@ function eGFR_neonatal_term(e, n, t, o, a) {
 }
 const refRanges = {},
   clRefRanges = {},
-  excr_mgkg = (e, n, t) => (e && n && t ? (e * n) / (100 * t) : null),
-  excr_mmol_d = (e, n) => (e && n ? (e * n) / 1e3 : null),
-  ratio = (e, n) => (e && n ? e / n : null),
+  excr_mgkg = (e, n, t) => window.ClcrSavedLegacyCalculator.math.excr_mgkg(e, n, t),
+  excr_mmol_d = (e, n) => window.ClcrSavedLegacyCalculator.math.excr_mmol_d(e, n),
+  ratio = (e, n) => window.ClcrSavedLegacyCalculator.math.ratio(e, n),
   AG_serum = (e, n, t) =>
     window.ClcrClinicalSafety &&
     typeof window.ClcrClinicalSafety.computeAnionGapWithoutPotassium ==
@@ -89,7 +83,7 @@ const refRanges = {},
       : e && n && t
         ? e - n - t
         : null,
-  K_frac = (e, n) => (e && n ? (e / (e + n)) * 100 : null),
+  K_frac = (e, n) => window.ClcrSavedLegacyCalculator.math.K_frac(e, n),
   $ = (e) => document.getElementById(e);
 const CLCR_KTV_RESULT_IDS = Object.freeze([
   "ktvValidation",
@@ -988,7 +982,7 @@ function update() {
       R > 0 &&
       collectionDurationMinutes &&
       urineCollectionProtocolComplete
-        ? R * (1440 / collectionDurationMinutes)
+        ? window.ClcrSavedLegacyCalculator.math.dailyAmount(R, collectionDurationMinutes)
         : null;
   if (
     (document
@@ -2106,8 +2100,8 @@ function update() {
     Fe = +$("U_Cit").value,
     Ye = +$("U_Cys").value,
     we = readClcrOptionalNumber("pH24"),
-    pe = Ke ? Ke * 4 : null,
-    Ue = Me ? Me / 10 : null,
+    pe = window.ClcrSavedLegacyCalculator.math.calciumMgDl(Ke),
+    Ue = window.ClcrSavedLegacyCalculator.math.magnesiumMgDl(Me),
     je = excr_mgkg(gt, collectionDailyVolume, ie),
     Be = excr_mgkg(Fe, collectionDailyVolume, ie),
     oxalateMg24 =
@@ -2139,7 +2133,7 @@ function update() {
           : null,
     cystineMg24 = cystineDzm ? cystineDzm.totalMg24h : null,
     cystineMmol24 = cystineDzm ? cystineDzm.totalMmol24h : null,
-    yt = pe && Fe ? pe / Fe : null,
+    yt = ratio(pe, Fe),
     wt = ratio(ft, c),
     ht = ratio(pt, c),
     kt = excr_mgkg(De, collectionDailyVolume, ie),
@@ -2174,7 +2168,7 @@ function update() {
               String($("U_Prot").value || "").trim() !== "" &&
               collectionDurationMinutes &&
               urineCollectionProtocolComplete
-                ? Ce * (1440 / collectionDurationMinutes)
+                ? window.ClcrSavedLegacyCalculator.math.dailyAmount(Ce, collectionDurationMinutes)
                 : null,
             bsaM2: W,
           })
@@ -2210,9 +2204,9 @@ function update() {
     zt = excr_mmol_d(xe, collectionDailyVolume),
     Et = ratio(De, Y),
     St = ratio(pe, Y),
-    Pt = Ue && pe ? Ue / pe : null,
+    Pt = ratio(Ue, pe),
     It = ratio(fe, Y),
-    Rt = Ce && Y && R ? Ce / ((Y * R) / 100) : null,
+    Rt = window.ClcrSavedLegacyCalculator.math.proteinCreatinineRatio(Ce, Y, R),
     Ft = K_frac(xe, ke),
     Tt = AG_serum(He, Je, Xe);
   const tmpGfrRequested =

@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test';
+import { readVisibleSavedHistory } from '../support/klirens-saved-history.mjs';
 import { czekajNaUstabilizowanyUklad, kliknij } from '../support/uklad-czekanie.mjs';
 
 // Wyłącznie fikcyjne stężenia. Prawdziwy sejf pozostaje zamknięty. Zapis
@@ -349,28 +350,21 @@ test('FENa: publiczne odświeżenie z niepełnej sesji nie przywraca poprzedniej
   await expect(card(page)).toHaveCount(0);
 });
 
-test('FENa: historia pokazuje małe dodatnie wyniki i trend bez zamiany na zero', async ({ page }) => {
+test('FENa: pełna historia zachowuje małe dodatnie pomiary bez zamiany na zero', async ({ page }) => {
   await openCalculator(page);
   for (const [sodium, day] of [['0.014', '25'], ['0.14', '26']]) {
     await restore(page, { U_Na_spot: sodium }); await expectResult(page, { raw: day === '25' ? 0.0001 : 0.001 });
     expect((await captureSave(page, `2026-10-${day}`)).outcome).toMatchObject({ ok: true, saved: 1 });
   }
-  const history = await page.evaluate(async () => {
-    const originalVault = window.VildaVault, api = window.ClcrVisitSave;
-    const originalPatientId = api.resolveCurrentPatientId();
-    window.VildaVault = { isUnlocked: () => true, listPatientNotesForPatient: async () => window.__fenaSyntheticNotes };
-    api._setPatientId('fictional-fena-history-only');
-    try {
-      await api.refreshActiveHistory();
-      return { hidden: document.getElementById('clcrHistoryCard').hidden,
-        values: [...document.querySelectorAll('#clcrHistoryBody .cvs-num')].map(node => node.textContent.trim()),
-        trend: document.querySelector('#clcrHistoryBody .cvs-trend')?.textContent || '',
-        points: (await api.readActiveSeries()).flatMap(series => series.points) };
-    } finally { window.VildaVault = originalVault; api._setPatientId(originalPatientId); }
-  });
-  expect(history.hidden).toBe(false);
+  const history = await readVisibleSavedHistory(page, '__fenaSyntheticNotes');
+  expect(history.visible).toBe(true);
   expect(history.values).toEqual(['0,0001 %', '0,001 %']);
-  expect(history.trend).toContain('0,0001 → 0,001 %');
+  expect(history.ids).toEqual(history.originalIds);
+  expect(new Set(history.ids).size).toBe(2);
+  expect(history.dates).toEqual(['2026-10-25', '2026-10-26']);
+  expect(history.dates).toEqual(history.originalDates);
+  expect(history.norms).toEqual(history.originalNorms);
+  expect(history.chartPoints).toBe(0); // Zatwierdzony podgląd historii to pełna tabela, bez trendu.
   expect(history.points.map(point => point.valueNum)).toEqual([0.0001, 0.001]);
   expect(await page.evaluate(() => window.VildaVault.isUnlocked())).toBe(false);
 });

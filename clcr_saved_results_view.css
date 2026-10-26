@@ -1,0 +1,449 @@
+/* Wspólny widok wyników Klirensu: główne Badania i lokalny podgląd.
+   Kolor dotyczy wyłącznie oceny zapisanej z konkretnym pomiarem. */
+.vilda-clcr-history {
+  --saved-normal: var(--clcr-success, #147a64);
+  --saved-normal-bg: var(--clcr-success-bg, #eaf8f3);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-16px);
+  min-width: 0;
+  max-width: 100%;
+  color: var(--text-strong);
+}
+
+.vilda-clcr-history *,
+.vilda-clcr-history *::before {
+  box-sizing: border-box;
+}
+
+.vilda-clcr-history p {
+  margin: 0;
+}
+
+.vilda-clcr-measurement-group {
+  min-width: 0;
+  max-width: 100%;
+  padding: var(--space-16px);
+  border: var(--border-hairline) solid var(--line);
+  border-radius: var(--radius-16);
+  background: var(--bg);
+}
+
+.vilda-clcr-group-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: var(--space-12px);
+}
+
+.vilda-clcr-group-head > div {
+  min-width: 0;
+}
+
+.vilda-clcr-group-label {
+  color: var(--text-muted);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: .05em;
+}
+
+.vilda-clcr-history .vilda-clcr-group-title {
+  margin: var(--space-4px) 0;
+  color: var(--text-heading);
+  font-size: 18px;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+
+.vilda-clcr-group-subtitle {
+  color: var(--text-muted);
+  font-size: 12px;
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+}
+
+.vilda-clcr-source-badge {
+  flex: 0 0 auto;
+  padding: var(--space-4px) var(--space-8px);
+  border-radius: var(--radius-8);
+  background: var(--tint-teal);
+  color: var(--primary);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.vilda-clcr-history .vilda-clcr-group-reference {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-4px) var(--space-12px);
+  margin-top: var(--space-12px);
+  padding: var(--space-10px) var(--space-12px);
+  border: var(--border-hairline) solid var(--line);
+  border-radius: var(--radius-10);
+  background: var(--card);
+  color: var(--text-strong);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.vilda-clcr-group-reference > span {
+  color: var(--text-muted);
+}
+
+.vilda-clcr-history .vilda-clcr-group-reference.has-common-reference {
+  background: var(--saved-normal-bg);
+}
+
+.vilda-clcr-group-reference.has-common-reference > strong {
+  color: var(--saved-normal);
+}
+
+.vilda-clcr-chart-scroll {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  margin-top: var(--space-12px);
+}
+
+.vilda-clcr-chart {
+  display: block;
+  max-width: none;
+  overflow: visible;
+}
+
+.vilda-clcr-chart-grid {
+  stroke: var(--line);
+  stroke-width: 1;
+}
+
+.vilda-clcr-chart-axis {
+  stroke: var(--text-muted);
+  stroke-width: 1;
+}
+
+.vilda-clcr-chart-tick,
+.vilda-clcr-chart-date,
+.vilda-clcr-chart-year {
+  fill: var(--text-muted);
+  font-size: 11px;
+}
+
+.vilda-clcr-chart-year {
+  font-size: 10px;
+}
+
+.vilda-clcr-norm-band {
+  fill: var(--saved-normal-bg);
+}
+
+.vilda-clcr-norm-boundary {
+  stroke: var(--saved-normal);
+  stroke-width: 1.5;
+  stroke-dasharray: 5 4;
+}
+
+.vilda-clcr-point {
+  cursor: pointer;
+  color: var(--text-muted);
+}
+
+.vilda-clcr-point-dot {
+  fill: currentColor;
+  stroke: var(--bg);
+  stroke-width: 2;
+}
+
+.vilda-clcr-point-label {
+  fill: currentColor;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.vilda-clcr-point:focus {
+  outline: none;
+}
+
+.vilda-clcr-point:focus .vilda-clcr-point-dot {
+  stroke: var(--text-strong);
+  stroke-width: 3;
+}
+
+.vilda-clcr-history .vilda-clcr-chart-note,
+.vilda-clcr-history .vilda-clcr-chart-help {
+  margin-top: var(--space-8px);
+  color: var(--text-muted);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.vilda-clcr-chart-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-8px) var(--space-16px);
+  margin-top: var(--space-12px);
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.vilda-clcr-chart-legend > span {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-4px);
+}
+
+.vilda-clcr-chart-legend i {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: var(--radius-circle);
+  background: currentColor;
+}
+
+.vilda-clcr-history .vilda-clcr-all-label {
+  margin: var(--space-16px) 0 var(--space-8px);
+  color: var(--text-heading);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.vilda-clcr-table-scroll {
+  max-width: 100%;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+}
+
+.vilda-clcr-history .vilda-clcr-measurements {
+  width: 100%;
+  margin: 0;
+  border-collapse: collapse;
+  table-layout: fixed;
+  background: var(--bg);
+  font-size: 12px;
+}
+
+.vilda-clcr-history .vilda-clcr-measurements thead th {
+  padding: var(--space-10px) var(--space-8px);
+  background: var(--primary);
+  color: #fff!important;
+  text-align: left;
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+.vilda-clcr-measurements th:first-child {
+  width: 17%;
+}
+
+.vilda-clcr-measurements th:nth-child(2) {
+  width: 20%;
+}
+
+.vilda-clcr-measurements th:nth-child(3) {
+  width: 20%;
+}
+
+.vilda-clcr-measurements th:nth-child(4) {
+  width: 29%;
+}
+
+.vilda-clcr-history .vilda-clcr-measurements td {
+  padding: var(--space-12px) var(--space-8px);
+  border-bottom: var(--border-hairline) solid var(--line);
+  vertical-align: top;
+  text-align: left;
+  overflow-wrap: anywhere;
+  color: var(--text-strong);
+}
+
+.vilda-clcr-history .vilda-clcr-measurements tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+.vilda-clcr-history .vilda-clcr-value,
+.vilda-clcr-history .vilda-clcr-details {
+  display: inline-flex!important;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0 var(--space-4px);
+  max-width: 100%;
+  min-height: 44px;
+  margin: 0!important;
+  padding: 0!important;
+  border: 0!important;
+  border-radius: 0!important;
+  background: transparent!important;
+  box-shadow: none!important;
+  backdrop-filter: none!important;
+  -webkit-backdrop-filter: none!important;
+  color: var(--text-strong)!important;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.vilda-clcr-history .vilda-clcr-value {
+  flex-direction: column;
+  align-items: flex-start;
+  font-size: 23px;
+  font-weight: 700;
+  line-height: 1.25;
+}
+
+.vilda-clcr-unit {
+  display: block;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.vilda-clcr-history .vilda-clcr-details {
+  color: var(--primary)!important;
+  font-size: 11px;
+  font-weight: 700;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.vilda-clcr-row-reference {
+  display: block;
+  padding-top: var(--space-8px);
+  line-height: 1.5;
+}
+
+.vilda-clcr-rounding-note {
+  display: block;
+  color: var(--text-muted);
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+.vilda-clcr-assessment {
+  display: inline-flex;
+  flex-direction: column;
+  gap: var(--space-4px);
+  border-radius: var(--radius-8);
+  padding: var(--space-8px);
+  background: var(--card);
+  color: var(--text-muted);
+  line-height: 1.5;
+}
+
+.vilda-clcr-history .tone-success {
+  color: var(--saved-normal);
+}
+
+.vilda-clcr-history .tone-warning {
+  color: var(--warning);
+}
+
+.vilda-clcr-history .tone-danger {
+  color: var(--danger);
+}
+
+.vilda-clcr-history .tone-neutral {
+  color: var(--text-muted);
+}
+
+.vilda-clcr-history .vilda-clcr-value.tone-success {
+  color: var(--saved-normal)!important;
+}
+
+.vilda-clcr-history .vilda-clcr-value.tone-warning {
+  color: var(--warning)!important;
+}
+
+.vilda-clcr-history .vilda-clcr-value.tone-danger {
+  color: var(--danger)!important;
+}
+
+.vilda-clcr-assessment.tone-success {
+  background: var(--saved-normal-bg);
+}
+
+.vilda-clcr-assessment.tone-warning {
+  background: var(--warning-bg);
+}
+
+.vilda-clcr-assessment.tone-danger {
+  background: var(--danger-bg);
+}
+
+.vilda-clcr-sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+@media (max-width: 480px) {
+  .vilda-clcr-measurement-group {
+    padding: var(--space-12px);
+  }
+  .vilda-clcr-history .vilda-clcr-measurements,
+  .vilda-clcr-history .vilda-clcr-measurements tbody {
+    display: block;
+  }
+  .vilda-clcr-measurements thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+  }
+  .vilda-clcr-history .vilda-clcr-measurements tbody {
+    padding: var(--space-8px);
+    background: var(--card);
+  }
+  .vilda-clcr-measurements tbody tr {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: var(--space-12px);
+    margin-bottom: var(--space-12px);
+    padding: var(--space-12px);
+    border: var(--border-hairline) solid var(--line);
+    border-radius: var(--radius-10);
+    background: var(--bg);
+  }
+  .vilda-clcr-measurements tbody tr:last-child {
+    margin-bottom: 0;
+  }
+  .vilda-clcr-history .vilda-clcr-measurements td {
+    display: block;
+    min-width: 0;
+    padding: 0;
+    border: 0;
+  }
+  .vilda-clcr-measurements td[data-label]::before {
+    display: block;
+    margin-bottom: var(--space-4px);
+    color: var(--text-muted);
+    font-size: 10px;
+    font-weight: 700;
+    content: attr(data-label);
+  }
+  .vilda-clcr-measurements td:nth-child(2) {
+    text-align: right;
+  }
+  .vilda-clcr-measurements td:nth-child(2) .vilda-clcr-value {
+    align-items: flex-end;
+    width: 100%;
+    font-size: 27px;
+  }
+  .vilda-clcr-measurements td:nth-child(3),
+  .vilda-clcr-measurements td:nth-child(4) {
+    grid-column: 1 / -1;
+  }
+  .vilda-clcr-history .vilda-clcr-measurements td:nth-child(3) {
+    padding-top: var(--space-8px);
+    border-top: var(--border-hairline) solid var(--line);
+  }
+  .vilda-clcr-row-details {
+    grid-column: 1 / -1;
+  }
+  .vilda-clcr-row-reference {
+    padding-top: 0;
+  }
+}
