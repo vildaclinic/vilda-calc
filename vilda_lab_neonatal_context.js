@@ -8,6 +8,7 @@
   // reuse known calendar days across the 2–5 month reference window.
   var CALENDAR_MONTH_LIMIT = 6;
   var INFANT_LH_CALENDAR_MONTH_LIMIT = 12;
+  var INFANT_TT_CALENDAR_MONTH_LIMIT = 12;
   var pending = null;
   var boundVault = null;
 
@@ -52,7 +53,10 @@
     var months = integer(form.ageMonths);
     if (months == null) months = 0;
     var includeInfantLhTail = options && options.includeInfantLhTail === true;
-    if (months >= (includeInfantLhTail ? INFANT_LH_CALENDAR_MONTH_LIMIT : CALENDAR_MONTH_LIMIT)) return null;
+    var includeInfantTtTail = options && options.includeInfantTtTail === true;
+    var monthLimit = includeInfantLhTail ? INFANT_LH_CALENDAR_MONTH_LIMIT
+      : includeInfantTtTail ? INFANT_TT_CALENDAR_MONTH_LIMIT : CALENDAR_MONTH_LIMIT;
+    if (months >= monthLimit) return null;
     var exact = typeof api.readExactAge === 'function' ? api.readExactAge() : null;
     var result, liveDay = null;
     if (exact && integer(exact.days) != null && exact.totalMonths === months) {
@@ -70,7 +74,10 @@
     var record = { version: 1, identityKey: identity(), mode: mode(), form: form,
       liveDay: liveDay, postnatalDays: result };
     if (months >= api.WEEKS_MONTH_LIMIT) record.minipubertyOnly = true;
-    if (months >= CALENDAR_MONTH_LIMIT) record.infantLhTailOnly = true;
+    if (months >= CALENDAR_MONTH_LIMIT) {
+      if (includeInfantLhTail) record.infantLhTailOnly = true;
+      if (includeInfantTtTail) record.infantTtTailOnly = true;
+    }
     return record;
   }
   function currentPanel() {
@@ -88,7 +95,7 @@
     if (identity() && (!w.VildaVault || !w.VildaVault.isUnlocked || !w.VildaVault.isUnlocked())) { clear(); return false; }
     // The extended calendar cache is opt-in at read time. Existing clinical
     // consumers retain their six-month limit and the completed-weeks contract.
-    var next = readForm({ includeInfantLhTail: true });
+    var next = readForm({ includeInfantLhTail: true, includeInfantTtTail: true });
     if (JSON.stringify(readCache()) === JSON.stringify(next)) return false;
     // Cache may precede the ordinary shared-form writer. The reader verifies
     // their agreement; publishing never writes to sharedUserData or its timestamp.
@@ -111,11 +118,12 @@
     if (text(patientId) && (!source || source.patientId !== text(patientId) || source.status !== 'ready')) return null;
     var saved = readCache(), postnatal = null, gestational = null;
     var calendarMonths = saved && saved.form ? integer(saved.form.ageMonths) : null;
-    var infantTail = saved && (saved.infantLhTailOnly === true ||
+    var infantTail = saved && (saved.infantLhTailOnly === true || saved.infantTtTailOnly === true ||
       calendarMonths != null && calendarMonths >= CALENDAR_MONTH_LIMIT);
-    var infantTailAllowed = !infantTail || saved.infantLhTailOnly === true &&
-      integer(saved.form && saved.form.age) === 0 && calendarMonths >= CALENDAR_MONTH_LIMIT &&
-      calendarMonths < INFANT_LH_CALENDAR_MONTH_LIMIT && options && options.includeInfantLhTail === true;
+    var infantTailAllowed = !infantTail || integer(saved.form && saved.form.age) === 0 &&
+      calendarMonths >= CALENDAR_MONTH_LIMIT && options &&
+      (saved.infantLhTailOnly === true && calendarMonths < INFANT_LH_CALENDAR_MONTH_LIMIT && options.includeInfantLhTail === true ||
+        saved.infantTtTailOnly === true && calendarMonths < INFANT_TT_CALENDAR_MONTH_LIMIT && options.includeInfantTtTail === true);
     if (saved && saved.version === 1 && saved.identityKey === text(patientId)
       && saved.mode === mode() && sameForm(saved.form || {}, shared)
       && infantTailAllowed

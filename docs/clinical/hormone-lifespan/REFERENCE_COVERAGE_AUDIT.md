@@ -7,9 +7,13 @@ audyt pełnego Busch 2022 potwierdził zachowany odczyt niemowlęcego LH;
 właściciel polecił wdrożenie [przybliżonej mediany w `(243;326]` dnia
 i samego wyniku później do <1 roku](LH_INFANT_TAIL.md). To nowe reguły
 zwykłej prezentacji, bez rozszerzania porównania płci, RI lub historii.
-Luka dokładnej dziecięcej mediany pozostaje; niemowlęcy TT po 212. dniu
-jest kolejnym osobnym audytem. Historycznych tabel i hashy poniżej nie
-przepisujemy na nową politykę.
+Luka dokładnej dziecięcej mediany pozostaje. Po osobnym audycie
+niemowlęcego TT i odrzuceniu propozycji nowej mediany właściciel
+zaakceptował [sam punkt wyniku TT w `(212 dni;1 rok)`](TT_INFANT_RESULT_ONLY.md),
+z cytowaniem opisów, bez zmiany krzywej, RI lub historii. Luka liczbowego
+odniesienia TT nadal pozostaje; możliwość zaznaczenia własnego wyniku
+nie wypełnia jej medianą. Historycznych tabel i hashy poniżej nie
+przepisujemy na nowe polityki.
 
 **Aktualny przegląd po scaleniu E2 D3 #766 i INSL3 #770:**
 [wyniki i rekomendowana kolejność](REFERENCE_COVERAGE_REVIEW_2026_10_24.md),

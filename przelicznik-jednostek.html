@@ -63,7 +63,7 @@
   <link href="vilda_chrome.css?v=45" rel="stylesheet">
   <link href="vilda_lab_assessment_ui.css?v=13" rel="stylesheet">
   <link href="vilda_lab_puberty_ui.css?v=7" rel="stylesheet">
-  <link href="vilda_hormone_lifespan.css?v=6" rel="stylesheet">
+  <link href="vilda_hormone_lifespan.css?v=7" rel="stylesheet">
   <link href="vilda_amh_age_reference_ui.css?v=1" rel="stylesheet">
   <link href="vilda_amh_lilacs_source_ui.css?v=1" rel="stylesheet">
   <link href="vilda_e2_phase_source_ui.css?v=1" rel="stylesheet">
@@ -495,13 +495,13 @@
   <script src="vilda_lab_puberty_ui.js?v=20"></script>
   <script src="vilda_zrodla_pacjenta.js?v=1"></script>
   <script src="vilda_puberty_source.js?v=13"></script>
-  <script src="vilda_lab_neonatal_context.js?v=3"></script>
-  <script src="vilda_hormone_lifespan_data.js?v=46"></script>
-  <script src="vilda_hormone_lifespan_reference.js?v=9"></script>
+  <script src="vilda_lab_neonatal_context.js?v=4"></script>
+  <script src="vilda_hormone_lifespan_data.js?v=47"></script>
+  <script src="vilda_hormone_lifespan_reference.js?v=10"></script>
   <script src="vilda_hormone_lifespan_observations.js?v=1"></script>
   <script src="vilda_hormone_lifespan_display.js?v=16"></script>
   <script src="vilda_insl3_age_source.js?v=1"></script>
-  <script src="vilda_hormone_lifespan.js?v=46"></script>
+  <script src="vilda_hormone_lifespan.js?v=47"></script>
   <script src="vilda_amh_age_reference_data.js?v=1"></script>
   <script src="vilda_amh_age_reference.js?v=1"></script>
   <script src="vilda_amh_age_reference_ui.js?v=1"></script>
@@ -770,7 +770,7 @@
             : neonatalAge.gestationalDays.lower >= pretermLimitDays ? 'no' : 'unknown';
         }
       }
-      if (includeMinipubertyDays && currentSubstance.id === 'lh' && sex === 'M'
+      if (includeMinipubertyDays && ['lh', 'testosterone_total'].includes(currentSubstance.id) && sex === 'M'
           && !(neonatalAge && neonatalAge.postnatalDays) && window.VildaLabNeonatalContext
           && lifespanChildhoodLhAvailable(context)) {
         // The late calendar cache is a separate graph-only opt-in. It must
@@ -781,9 +781,11 @@
             && Number(parts[0]) === Number(parts[1]);
         });
         if (sameMainAge) {
-          var infantLhAge = window.VildaLabNeonatalContext.read(shared, identity, source,
-            { includeMinipuberty: true, includeInfantLhTail: true });
-          if (infantLhAge && infantLhAge.postnatalDays) context.infantLhChronologicalAge = infantLhAge;
+          var tailOptions = { includeMinipuberty: true };
+          var tailKey = currentSubstance.id === 'lh' ? 'infantLhChronologicalAge' : 'infantTtChronologicalAge';
+          tailOptions[currentSubstance.id === 'lh' ? 'includeInfantLhTail' : 'includeInfantTtTail'] = true;
+          var infantAge = window.VildaLabNeonatalContext.read(shared, identity, source, tailOptions);
+          if (infantAge && infantAge.postnatalDays) context[tailKey] = infantAge;
         }
       }
       return context;
@@ -1307,6 +1309,57 @@
       return Object.assign({}, validated, { lowerYears: postnatal.lower / divisor,
         upperYears: (postnatal.upper + 1) / divisor, upperInclusive: false });
     }
+    function lifespanInfantTtChronology(source, input, substance) {
+      if (!substance || substance.id !== 'testosterone_total' || !source || source.sex !== 'M' || !input || input.sex !== 'M'
+          || input.contextBasis !== 'current-patient' || input.sampleDateISO
+          || !lifespanChildhoodLhAvailable(source) || lifespanContraindicated(source, input, input)
+          || lifespanInfantTtPositiveTreatment(input)
+          || localOverride.sex || localOverride.age != null) return null;
+      function samePart(left, right) {
+        var leftMissing = left == null || left === '', rightMissing = right == null || right === '';
+        return leftMissing || rightMissing ? leftMissing && rightMissing
+          : ['number', 'string'].includes(typeof left) && ['number', 'string'].includes(typeof right)
+            && Number.isFinite(Number(left)) && Number(left) === Number(right);
+      }
+      var age = input.age;
+      if (!age || !samePart(age.years, source.ageYears) || !samePart(age.months, source.ageMonths)
+          || age.days != null || input.birthDateISO && input.birthDateISO !== source.birthDateISO) return null;
+      var chronology = source.infantTtChronologicalAge, postnatal = chronology && chronology.postnatalDays;
+      var bundle = window.VildaHormoneLifespanData && window.VildaHormoneLifespanData.infantTtResultOnlyPolicy;
+      var policy = bundle && bundle.resultOnlyPolicy, divisor = policy && policy.dayDivisor;
+      var engine = window.VildaLabPuberty;
+      if (!postnatal || !Number.isSafeInteger(postnatal.lower) || !Number.isSafeInteger(postnatal.upper)
+          || postnatal.lower < 0 || postnatal.upper < postnatal.lower
+          || postnatal.source !== 'main-calendar-dates' || !Number.isFinite(divisor) || divisor <= 0
+          || !Number.isFinite(policy.minAgeDays) || postnatal.upper + 1 <= policy.minAgeDays
+          || !engine || typeof engine.resolveAge !== 'function') return null;
+      var validated = engine.resolveAge({ age: null, neonatalAge: chronology });
+      if (!validated || validated.status !== 'known') return null;
+      var reported = engine.resolveAge({ age: age });
+      if (!reported || reported.status !== 'known' || validated.upperYears <= reported.lowerYears
+          || validated.lowerYears >= reported.upperYears) return null;
+      // DOB dates enclose possible elapsed time, not an invented birth time.
+      // Only the graph uses the source's fixed day/year coordinate. Clinical
+      // TT age qualification and saved assessments keep their original bounds.
+      return Object.assign({}, validated, { lowerYears: postnatal.lower / divisor,
+        upperYears: (postnatal.upper + 1) / divisor, upperInclusive: false });
+    }
+    function lifespanInfantTtPositiveTreatment(input) {
+      var treatment = input && input.treatment || {};
+      return ['cocp', 'exogenousTestosterone'].some(function (key) {
+        return treatment[key] === true || treatment[key] === 'yes';
+      });
+    }
+    function lifespanInfantTtKnownTreatment(source, input, substance, ageYears) {
+      var bundle = window.VildaHormoneLifespanData && window.VildaHormoneLifespanData.infantTtResultOnlyPolicy;
+      var policy = bundle && bundle.resultOnlyPolicy;
+      // Preserve positive facts for the new permission without changing the
+      // preceding infant median or the independent clinical assessment.
+      return !!(policy && substance.id === 'testosterone_total' && source.sex === 'M' && input && input.sex === 'M'
+        && input.contextBasis === 'current-patient' && !input.sampleDateISO
+        && Number.isFinite(ageYears) && ageYears > policy.minAge && ageYears < policy.maxAge
+        && lifespanInfantTtPositiveTreatment(input));
+    }
     function lifespanAnonymousMainTreatment(source, input) {
       // The anonymous main-form mirror can carry treatment without a Tanner
       // visit marker. It may only withhold this card, never supply a patient's
@@ -1367,13 +1420,16 @@
           }
           var infantLhChronology = lifespanInfantLhChronology(source, input, substance);
           if (infantLhChronology) resolved = infantLhChronology;
+          var infantTtChronology = lifespanInfantTtChronology(source, input, substance);
+          if (infantTtChronology) resolved = infantTtChronology;
           patient = input;
           if (resolved && resolved.status === 'known') {
             // Position denotes the completed age, never an invented birthday.
             years = resolved.lowerYears;
             upperYears = resolved.upperYears;
             label = lifespanAgeLabel(resolved, infantLhChronology
-              ? { neonatalAge: source.infantLhChronologicalAge } : input);
+              ? { neonatalAge: source.infantLhChronologicalAge } : infantTtChronology
+                ? { neonatalAge: source.infantTtChronologicalAge } : input);
           }
         } else {
           patient = getEffectivePatient();
@@ -1441,7 +1497,8 @@
         // Display only: keep the calculated measurement in its existing unit.
         displayUnit: unitEl.value,
         contraindicated: lifespanContraindicated(source, input, patient)
-          || lifespanFemaleHormoneContraindicated(substance, source, input, patient),
+          || lifespanFemaleHormoneContraindicated(substance, source, input, patient)
+          || lifespanInfantTtKnownTreatment(source, input, substance, years),
         // Source-specific reproductive exclusions are application policy for
         // the educational point, not changes to laboratory ranges or fields.
         cyclePhase: lifespanCyclePhase(substance, input, patient),
@@ -1459,6 +1516,9 @@
         sourceStatus: status,
         childhoodLhContextAvailable: substance.id === 'lh' && status === 'ready' && lifespanChildhoodLhAvailable(source),
         infantLhContextAvailable: substance.id === 'lh' && status === 'ready' && lifespanChildhoodLhAvailable(source),
+        infantTtContextAvailable: substance.id === 'testosterone_total' && source.sex === 'M' && patient && patient.sex === 'M'
+          && status === 'ready' && lifespanChildhoodLhAvailable(source),
+        currentIdentityKey: substance.id === 'testosterone_total' ? currentPatientIdentity() : undefined,
         // Used in memory only to invalidate the previous person's UI state.
         identityKey: source.identityKey || ''
       };

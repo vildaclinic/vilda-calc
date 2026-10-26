@@ -67,6 +67,11 @@
         uid + prefix + "-title " + uid + prefix + "-desc",
       );
     }
+    const insightCitations = document.createElement("p");
+    insightCitations.className = "vhl-insight-citations";
+    insightCitations.dataset.insightCitations = "t";
+    insightCitations.hidden = true;
+    byId("insight-text").after(insightCitations);
     const { maleAges, maleHormones, maleStages, referenceData, lifespanData } =
       data;
     const infant = referenceData.femaleInfantMedians;
@@ -927,6 +932,13 @@
         patientContext.contextBasis === "current-patient" && !patientContext.sampleDateISO &&
         (patientContext.currentIdentityKey == null || patientContext.currentIdentityKey === identityKey);
     }
+    function currentTtContextReady(availabilityKey) {
+      return availabilityKey === "infantTtContextAvailable" &&
+        sourceStatus === "ready" && typeof identityKey === "string" &&
+        patientContext?.infantTtContextAvailable === true &&
+        patientContext.contextBasis === "current-patient" && !patientContext.sampleDateISO &&
+        patientContext.currentIdentityKey === identityKey;
+    }
     function childhoodLhContextReady() {
       return currentLhContextReady("childhoodLhContextAvailable");
     }
@@ -934,7 +946,9 @@
       return !compare && resultOnlyPoint?.status === "result-only" &&
         canShowAgeMarker() && selected.has(analyteHormones[currentAnalyte]) &&
         (!resultOnlyPoint.policy.currentPatientOnly ||
-          currentLhContextReady(resultOnlyPoint.policy.contextAvailabilityKey));
+          (resultOnlyPoint.policy.analyte === "t"
+            ? currentTtContextReady(resultOnlyPoint.policy.contextAvailabilityKey)
+            : currentLhContextReady(resultOnlyPoint.policy.contextAvailabilityKey)));
     }
     function resultOnlyAllowedInView() {
       return resultOnlyVisible() && (Array.isArray(resultOnlyPoint.policy.allowedViews)
@@ -2245,8 +2259,8 @@
       // it does not alter this approved geometry or create a source median.
       if (sex === "male" && resultOnlyAllowedInView() &&
           patientAgeYears >= visibleAgeDomain()[0] && patientAgeYears <= visibleAgeDomain()[1]) {
-        const display = stableCurves.get("lh")?.display;
-        if (display?.unit === "IU/L" && display.divisor > 0 && display.ceiling > 0) {
+        const display = stableCurves.get(resultOnlyPoint.policy.analyte)?.display;
+        if (display?.unit === resultOnlyPoint.unit && display.divisor > 0 && display.ceiling > 0) {
           drawResultOnlyDot(g, resultOnlyPoint, {
             W, mobile, left, right, top, bottom, px: x(patientAgeYears), y,
             period: { scale: { max: display.divisor * display.ceiling, kind: "linear" },
@@ -2294,9 +2308,11 @@
       }
       pointDescription(dotModel);
       if (renderedResultOnlyPoint) {
-        byId("scale-note").textContent = "Kropka: wynik. " + renderedResultOnlyPoint.policy.patientNote +
+        byId("scale-note").textContent = (renderedResultOnlyPoint.policy.analyte === "t" ? "" : "Kropka: wynik. ") +
+          renderedResultOnlyPoint.policy.patientNote +
           (renderedResultOnlyPoint.offscale ? " ↑ Wynik powyżej skali." : "") +
-          (patientContext.ageUpperYears > patientAgeYears ? " Pozycja wieku przybliżona." : "");
+          (patientContext.ageUpperYears > patientAgeYears ? " Pozycja wieku przybliżona." : "") +
+          (renderedResultOnlyPoint.policy.analyte === "t" && selected.size > 1 ? " Każdy hormon ma własną skalę." : "");
         byId("chart-desc").textContent += " " + renderedResultOnlyPoint.a11y;
       }
     }
@@ -3032,10 +3048,12 @@
     }
     function updateInsight() {
       if (femaleGonadotropinsActive()) {
+        updateInsightCitations([]);
         updateFemaleGonadotropinInsight();
         return;
       }
-      let title, copy;
+      let title, copy, citations = [];
+      const ttReferences = data.infantTtResultOnlyPolicy?.insightReferences;
       const showCycle =
         sex === "female" &&
         !compare &&
@@ -3085,6 +3103,12 @@
           : s
             ? s.text
             : "Wybierz etap, aby przyjrzeć się przebiegowi zmian.";
+        if (sex === "male" && selected.has("t") && ttReferences) {
+          if (h?.id === "t") {
+            copy = ttReferences.overviewCopy || copy;
+            citations = ttReferences.overviewSources;
+          } else if (!h && s?.min === 0) citations = ttReferences.miniSources;
+        }
       }
       if (showCycle) {
         title = "Estradiol w cyklu";
@@ -3097,6 +3121,7 @@
           "Szeroki wierzchołek linii jest poglądowy; nie wyznacza dnia szczytu u konkretnego dziecka.";
       }
       if (renderedPoint) {
+        citations = [];
         const groupMean = renderedPoint.profile.statistic === "group-mean";
         title = groupMean ? "Wynik na tle średniej grupy wieku" : renderedPoint.profile.statistic === "group-median"
           ? "Wynik na tle mediany grupy" : "Wynik na tle mediany dla wieku";
@@ -3121,6 +3146,7 @@
       if (gonadotropinComparisonActive()) [title, copy] = gonadotropinComparisonInsight();
       byId("insight-title").textContent = title;
       byId("insight-text").textContent = copy;
+      updateInsightCitations(citations);
       const observations = opts.observations || root.VildaHormoneLifespanObservations;
       // Measure the inset in its final, full-width layout rather than beside
       // the insight icon. Restore the compact layout if nothing is rendered.
@@ -3146,6 +3172,24 @@
       }
       panel.querySelector(".vhl-insight")
         .classList.toggle("vhl-cycle-open", showCycle || Boolean(renderedObservation));
+    }
+    function updateInsightCitations(references) {
+      insightCitations.replaceChildren();
+      const sources = Array.isArray(references) ? references.filter((source) =>
+        source && typeof source.label === "string" && typeof source.url === "string" &&
+        /^https:\/\//.test(source.url)) : [];
+      insightCitations.hidden = sources.length === 0;
+      if (!sources.length) return;
+      insightCitations.append("Źródła: ");
+      for (const [index, source] of sources.entries()) {
+        if (index) insightCitations.append(" · ");
+        const link = document.createElement("a");
+        link.textContent = source.label;
+        link.href = source.url;
+        link.target = "_blank";
+        link.rel = "noopener noreferrer";
+        insightCitations.append(link);
+      }
     }
     function renderCycle() {
       const chart = byId("cycle-chart"),
@@ -3361,7 +3405,9 @@
         paragraph("Niemowlęca część źródłowa dotyczy chłopców urodzonych o czasie. Od 6. do 18. urodzin odniesienie pochodzi z Madsen 2022 (LC-MS/MS), a w wieku 3–<6 lat z Kelsey 2014/2015. Łagodne zejście po minipuberty nie odtwarza różnicy między tymi modelami jako nagłego spadku w wieku 5–6 lat. Okres płodowy i połączenia między źródłami są ilustracyjne.");
         paragraph("Dorośli: średnie grup wieku z tabeli 1 badania Walravens 2025/2026, 1194 mężczyzn w wieku 18–86 lat. Testosteron całkowity oznaczano rano, na czczo, metodą LC-MS/MS. Zdrowe młodsze kohorty połączono ze starszą populacją, w której występowały choroby współistniejące. Różnice między grupami nie są wyłącznie skutkiem wieku.");
         paragraph("Dorosłość pokazujemy jednym szerokim łukiem, bez wymuszania przejścia przez każdą średnią grupową. Nie jest to indywidualne tempo starzenia ani ustalenie wieku fizjologicznego maksimum. Wygaszona końcówka po 86 latach nie dostarcza wartości odniesienia.");
-        paragraph("Kropka oznacza wynik, a jasny znacznik źródłową medianę lub u dorosłych średnią grupy wieku. Znacznik może nie leżeć na poglądowej linii. Strzałka oznacza wynik powyżej stałej skali; etykieta podaje rzeczywistą wartość. Średnia ani mediana nie są granicami normy. Kolor nie klasyfikuje wyniku.");
+        paragraph(resultPolicy?.analyte === "t"
+          ? "W tym przedziale wieku wykres pokazuje sam wynik pacjenta. Strzałka oznacza wynik powyżej stałej skali; etykieta podaje rzeczywistą wartość. Ocena według zakresu referencyjnego jest niezależna od wykresu. Kolor nie klasyfikuje wyniku."
+          : "Kropka oznacza wynik, a jasny znacznik źródłową medianę lub u dorosłych średnią grupy wieku. Znacznik może nie leżeć na poglądowej linii. Strzałka oznacza wynik powyżej stałej skali; etykieta podaje rzeczywistą wartość. Średnia ani mediana nie są granicami normy. Kolor nie klasyfikuje wyniku.");
         const testosteroneSources = new Set();
         if (renderedPoint?.id === "t" && renderedPoint.profile.ageGroup) {
           const profile = renderedPoint.profile;
@@ -3379,6 +3425,13 @@
           testosteroneSources.add(sourceKey);
           paragraph([profile.sourceLabel, profile.method, profile.population].filter(Boolean).join(" · "));
           if (profile.url) links.push([profile.sourceLabel || "Źródło", profile.url]);
+        }
+        for (const source of data.infantTtResultOnlyPolicy?.insightReferences?.fullSources || []) {
+          paragraph([source.label, source.title, source.bibliography, source.location, source.details]
+            .filter((item) => typeof item === "string" && item).join(" "));
+          if (typeof source.url === "string" && !links.some(([, url]) => url === source.url)) {
+            links.push([source.label || "Źródło", source.url]);
+          }
         }
       }
       if (stableAmhVisible()) {
@@ -3849,6 +3902,7 @@
       sourcesKey = null;
       byId("insight-title").textContent = "";
       byId("insight-text").textContent = "";
+      updateInsightCitations([]);
       byId("cycle-panel").hidden = true;
       byId("population-note").textContent = "";
       byId("population-note").hidden = true;
@@ -3915,6 +3969,7 @@
         sampleDateISO: typeof next.sampleDateISO === "string" && next.sampleDateISO ? next.sampleDateISO : null,
         childhoodLhContextAvailable: next.childhoodLhContextAvailable === true,
         infantLhContextAvailable: next.infantLhContextAvailable === true,
+        infantTtContextAvailable: next.infantTtContextAvailable === true,
         currentIdentityKey: typeof next.currentIdentityKey === "string" ? next.currentIdentityKey : null,
         measurement: next.measurement ? { ...next.measurement } : null,
         displayUnit: next.displayUnit,
@@ -3930,8 +3985,8 @@
         ? engine.evaluate(data.patientPointData, patientContext) : null;
       const resultOnlyCandidate = engine?.evaluateResultOnly && (patientPoint?.reason === "unsupported-age" ||
         (patientPoint?.reason === "reference-unavailable" &&
-          data.infantLhTailPolicy?.resultOnlyPolicy?.analyte === currentAnalyte &&
-          data.infantLhTailPolicy?.resultOnlyPolicy?.sex === sex))
+          [data.infantLhTailPolicy?.resultOnlyPolicy, data.infantTtResultOnlyPolicy?.resultOnlyPolicy]
+            .some((policy) => policy && policy.analyte === analyteHormones[currentAnalyte] && policy.sex === sex)))
         ? engine.evaluateResultOnly(data, patientContext) : null;
       // The engine authorizes only the data-scoped infant exception. Other
       // existing reference errors retain their original reason and caption.

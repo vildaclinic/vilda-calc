@@ -95,6 +95,18 @@ def build():
     assert infant_result_only['contextAvailabilityKey'] == 'infantLhContextAvailable'
     assert not any(key in infant_result_only for key in ('points', 'statistic', 'referenceValue'))
     infant_lh_tail_policy_js = json.dumps(infant_lh_tail_policy, ensure_ascii=False, indent=2)
+    infant_tt_result_only_policy = json.loads((ROOT / 'male-testosterone-infant-result-only-policy.json').read_text(encoding='utf-8'))
+    assert (infant_tt_result_only_policy['kind'], infant_tt_result_only_policy['profileId']) == (
+        'educational-infant-tt-result-only-display', 'busch2022-male-t')
+    infant_tt_result_only = infant_tt_result_only_policy['resultOnlyPolicy']
+    assert (infant_tt_result_only['kind'], infant_tt_result_only['sourceProfileId'],
+            infant_tt_result_only['minAge'], infant_tt_result_only['minAgeExclusive'],
+            infant_tt_result_only['maxAge'], infant_tt_result_only['maxAgeExclusive']) == (
+        'educational-result-only', 'busch2022-male-t', 212 / 365.25, True, 1, True)
+    assert infant_tt_result_only['fullAgeIntervalRequired'] is True and infant_tt_result_only['currentPatientOnly'] is True
+    assert infant_tt_result_only['contextAvailabilityKey'] == 'infantTtContextAvailable'
+    assert not any(key in infant_tt_result_only for key in ('points', 'statistic', 'referenceValue'))
+    infant_tt_result_only_policy_js = json.dumps(infant_tt_result_only_policy, ensure_ascii=False, indent=2)
     # Preserve this unchanged readable JSON's layout in the generated module.
     # Parsing above still verifies JSON; repacking other data must not reformat it.
     inhibin_evidence_js = (ROOT / 'inhibin-observational-data.json').read_text(encoding='utf-8').strip()
@@ -154,6 +166,7 @@ def build():
         f'const resultOnlyPolicies = {result_only_policies_js};\n'
         f'const childhoodLhResultOnlyPolicies = {childhood_lh_result_only_policies_js};\n'
         f'const infantLhTailPolicy = {infant_lh_tail_policy_js};\n'
+        f'const infantTtResultOnlyPolicy = {infant_tt_result_only_policy_js};\n'
         f'const inhibinEvidence = {inhibin_evidence_js};\n'
         f'const inhibinDisplayPolicy = {inhibin_display_policy_js};\n'
         f'const inhibinComparisonPolicy = {inhibin_comparison_policy_js};\n'
@@ -228,7 +241,8 @@ def build():
         '  gonadotropinComparisonPolicy: gonadotropinComparisonPolicy,\n'
         '  gonadotropinComparisonReferenceData: gonadotropinComparisonReferenceData,\n'
         '  childhoodLhResultOnlyPolicies: childhoodLhResultOnlyPolicies,\n'
-        '  infantLhTailPolicy: infantLhTailPolicy\n'
+        '  infantLhTailPolicy: infantLhTailPolicy,\n'
+        '  infantTtResultOnlyPolicy: infantTtResultOnlyPolicy\n'
         '};\n'
         '});\n'
     )

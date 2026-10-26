@@ -3,7 +3,7 @@ import { createRequire } from 'node:module';
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { loadBrowserScript } from '../support/load-browser-script.mjs';
-import { beforeInfantLhTailBundle, beforeInfantLhTailRuntime } from '../support/prior-female-gonadotropin-bundle.mjs';
+import { beforeInfantLhTailBundle, beforeInfantLhTailRuntime, beforeInfantTtResultOnlyRuntime } from '../support/prior-female-gonadotropin-bundle.mjs';
 
 const require = createRequire(import.meta.url);
 const runtime = require('../../vilda_hormone_lifespan_data.js');
@@ -52,7 +52,7 @@ describe('LH niemowląt — jawna kwalifikacja istniejących liczb i zachowanie 
     // Independently frozen from audyt c3fd6882; no new baseline is generated.
     expect(digest(data.profiles.filter(item => item.id !== profile.id)))
       .toBe('684c1e9d27b8c52d3f8d4e7ecf402712d8b08dddf953016d6297b83c00242ffc');
-    const earlier = Object.fromEntries(Object.entries(runtime)
+    const earlier = Object.fromEntries(Object.entries(beforeInfantTtResultOnlyRuntime(runtime))
       .filter(([key]) => key !== 'patientPointData' && key !== 'infantLhTailPolicy'));
     expect(Object.keys(earlier)).toHaveLength(40);
     expect(digest(earlier)).toBe('dadcccd107f7a0908566b9f6595c024d653b5cb074aae37a1fb7c87f1417b4df');

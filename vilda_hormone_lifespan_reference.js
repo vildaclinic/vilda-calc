@@ -280,9 +280,15 @@
 
   function selectedResultOnly(data, context, profile) {
     var tail = data && data.infantLhTailPolicy;
-    var policy = tail && tail.resultOnlyPolicy;
-    if (!tail || tail.kind !== 'educational-infant-lh-tail-display' || tail.profileId !== profile.id ||
-        !policy || policy.kind !== 'educational-result-only' || policy.ordinaryOnly !== true ||
+    var policy = tail && tail.kind === 'educational-infant-lh-tail-display' &&
+      tail.profileId === profile.id ? tail.resultOnlyPolicy : null;
+    // TT has a separate owner-approved permission. It does not inherit LH's
+    // numeric extension or activate any stored TT median/eligibility flag.
+    var tt = data && data.infantTtResultOnlyPolicy;
+    if (!policy && tt && tt.kind === 'educational-infant-tt-result-only-display' &&
+        tt.profileId === profile.id && tt.analyte === 't' && profile.analyte === 't' &&
+        tt.sex === profile.sex && tt.unit === profile.unit) policy = tt.resultOnlyPolicy;
+    if (!policy || policy.kind !== 'educational-result-only' || policy.ordinaryOnly !== true ||
         policy.sourceProfileId !== profile.id || policy.analyte !== profile.analyte ||
         policy.sex !== profile.sex || policy.unit !== profile.unit || !inDomain(policy, context.ageYears)) {
       return unavailable('reference-available');
@@ -382,6 +388,6 @@
     return sourceOutcome({ status: 'result-only', policy: policy, value: value, unit: policy.unit });
   }
 
-  return { version: '1.5.0', evaluate: evaluate, evaluateResultOnly: evaluateResultOnly, selectProfile: selected,
+  return { version: '1.6.0', evaluate: evaluate, evaluateResultOnly: evaluateResultOnly, selectProfile: selected,
     referenceAt: referenceAt, sampleProfile: sampleProfile };
 });
