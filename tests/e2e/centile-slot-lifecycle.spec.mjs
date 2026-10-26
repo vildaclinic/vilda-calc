@@ -312,9 +312,33 @@ test('błąd odczytu zostaje w miejscu siatki, a przycisk ponowienia wykonuje pr
   await expect(retry).toBeVisible();
   await page.screenshot({ path: test.info().outputPath('blad-odczytu-siatki.png') });
   await assertNoReminderFlash(page, 'blad-odczytu.json', ids.a, { readyImage: false });
-  await page.evaluate(() => { window.VildaVault.getPatient = window.__slotRealGetPatient; });
+  await page.evaluate(() => {
+    window.__slotRetryAction = { clicks: 0, completedAdapterReads: 0 };
+    // Keep the simulated failure active until the user's actual click. Restoring
+    // the getter earlier lets a background refresh remove the retry button while
+    // Playwright scrolls/waits. Delegation also survives error-card rerenders.
+    function recoverOnRetry(event) {
+      if (!event.target?.closest?.('#vildaCentileLiveRetry')) return;
+      document.removeEventListener('click', recoverOnRetry, true);
+      window.__slotRetryAction.clicks += 1;
+      window.VildaVault.getPatient = async function (...args) {
+        const adapterRead = String(new Error().stack).includes('/vilda_centile_live_data.js');
+        const record = await window.__slotRealGetPatient.apply(this, args);
+        if (adapterRead) window.__slotRetryAction.completedAdapterReads += 1;
+        return record;
+      };
+    }
+    document.addEventListener('click', recoverOnRetry, true);
+  });
   await retry.click();
   await ready(page, ids.a);
+  await expect.poll(() => page.evaluate(() => window.__slotRetryAction.completedAdapterReads)).toBeGreaterThan(0);
+  const retryAction = await page.evaluate(() => ({ ...window.__slotRetryAction,
+    retryEvents: window.__siatkaE2eLifecycle.filter(event => event.reason === 'retry').length,
+  }));
+  expect(retryAction.clicks).toBe(1);
+  expect(retryAction.retryEvents).toBe(1);
+  await test.info().attach('rzeczywisty-odczyt-po-kliknieciu.json', { body: JSON.stringify(retryAction), contentType: 'application/json' });
   await assertNoReminderFlash(page, 'ponowienie-odczytu.json', ids.a);
 });
 

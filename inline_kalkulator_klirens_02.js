@@ -249,8 +249,8 @@
         id: "AGu_spot",
         label: "Luka anionowa moczu (UAG; próbka moczu)",
         version: "spot",
-        requires: ["spotSameSpecimen", "U_Na_spot", "U_K_spot", "U_Cl_spot"],
-        note: "Bez uniwersalnej normy; interpretować wyłącznie w odpowiednim kontekście kwasicy metabolicznej.",
+        requires: ["U_Na_spot", "U_K_spot", "U_Cl_spot"],
+        note: "Trzy stężenia z tej samej próbki moczu. Zero oznacza granicę znaku, nie granicę normy.",
       },
       {
         id: "K_frac",

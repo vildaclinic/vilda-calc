@@ -246,7 +246,7 @@ test('frakcje wydalania zakładają sparowane próbki; UAG i protokół obciąż
   await page.locator('#U_HCO3_spot').fill('1');
   await page.locator('#S_HCO3_spot').fill('25');
 
-  await expect(page.locator('#elecInfo')).toContainText('Nie obliczono FE/UAG');
+  await expect(page.locator('#elecInfo')).not.toContainText('Nie obliczono FE/UAG');
   const fena = page.locator('#elecInfo .clcr-result-card[data-clcr-series="FENa_spot"]');
   await expect(fena).toBeVisible();
   await expect(fena).toHaveAttribute('data-clcr-tone', 'neutral');
@@ -273,11 +273,13 @@ test('frakcje wydalania zakładają sparowane próbki; UAG i protokół obciąż
     protocol: { bicarbonateLoad: null, completion: 'not-assessed', comparisonActive: false },
     outOfRange: null,
   });
-  await expect(uag).toHaveCount(0);
+  await expect(uag).toBeVisible();
+  expect(Number(await uag.getAttribute('data-clcr-value'))).toBe(-40);
+  expect(JSON.parse(await uag.getAttribute('data-clcr-uag-snapshot')).sample.sameUrineSpecimen).toBe('assumed');
   expect(await page.evaluate(() => window.canComputeFormula('FEK_spot'))).toBe(true);
   expect(await page.evaluate(() => window.canComputeFormula('FECl_spot'))).toBe(true);
   expect(await page.evaluate(() => window.canComputeFormula('FEHCO3_spot'))).toBe(true);
-  expect(await page.evaluate(() => window.canComputeFormula('AGu_spot'))).toBe(false);
+  expect(await page.evaluate(() => window.canComputeFormula('AGu_spot'))).toBe(true);
   await expect(page.locator('#spotPairedChemistry')).not.toBeChecked();
   await expect(page.locator('#spotBicarbonateLoad')).not.toBeChecked();
 
@@ -302,8 +304,9 @@ test('frakcje wydalania zakładają sparowane próbki; UAG i protokół obciąż
   await expect(fehco3).toContainText('Sam wynik nie potwierdza ani nie wyklucza');
   await expect(uag).toBeVisible();
   expect(Number(await uag.getAttribute('data-clcr-value'))).toBe(-40);
-  await expect(page.locator('#elecInfo')).toContainText('UAG; próbka punktowa');
-  await expect(page.locator('#elecInfo')).toContainText('bez potwierdzonej kwasicy metabolicznej');
+  expect(JSON.parse(await uag.getAttribute('data-clcr-uag-snapshot')).sample.sameUrineSpecimen).toBe('confirmed');
+  await expect(uag).toContainText(/kwasic.*prawidłow.*luk|NAGMA/i);
+  await expect(uag).toContainText(/granica znaku/i);
   await expect(page.locator('#elecInfo .out-of-range')).toHaveCount(0);
 });
 

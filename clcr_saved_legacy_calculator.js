@@ -195,10 +195,20 @@
       const value = formulaId === "cg_norm" ? clCrCGNormalized(values.sex, age, weight, serum, bsa(values, age)) : clCrCG(values.sex, age, weight, serum);
       return modeled(formulaId, parameterKey, value, formulaId === "cg_norm" ? "mL/min/1,73 m²" : "mL/min", 0, values, context);
     }
-    if (formulaId === "AGs" || formulaId === "AGu_spot") {
-      const urine = formulaId === "AGu_spot";
-      if (urine && (["no", "unknown"].includes(values.ui_spotSameSpecimen_answer) || !(checked(values, "spotSameSpecimen") || checked(values, "spotPairedChemistry")))) throw new Error("Potwierdź wspólną próbkę moczu.");
-      const value = urine ? safety.computeUrineAnionGap({ sodium: number(values, "U_Na_spot"), potassium: number(values, "U_K_spot"), chloride: number(values, "U_Cl_spot") }) : safety.computeAnionGapWithoutPotassium({ sodium: number(values, "S_Na"), chloride: number(values, "S_Cl"), bicarbonate: number(values, "S_HCO3") });
+    if (formulaId === "AGu_spot") {
+      const engine = requiredModule("VildaClcrUag"), policy = requiredModule("VildaClcrUagReferenceData").DEFAULT_POLICY;
+      const result = engine.evaluate(engine.inputFromValues(values), policy);
+      if (!result.valid) throw new Error(result.error || "Sprawdź trzy stężenia w tej samej próbce moczu.");
+      return {
+        id: parameterKey, sourceFormulaId: formulaId, label: "Luka anionowa moczu (UAG)", testKey: "clcr:AGu_spot",
+        valueNum: result.rawValue, rawValue: result.rawValue, unit: result.unit,
+        displayValue: result.display.text, boundary: result.display.boundary, comparator: "",
+        category: null, assessment: "unassessed", tone: "neutral", norm: "", outOfRange: null,
+        interpretation: result.interpretation, uagSnapshot: result,
+      };
+    }
+    if (formulaId === "AGs") {
+      const value = safety.computeAnionGapWithoutPotassium({ sodium: number(values, "S_Na"), chloride: number(values, "S_Cl"), bicarbonate: number(values, "S_HCO3") });
       return modeled(formulaId, parameterKey, value, "mmol/L", 1, values, context);
     }
     if (formulaId === "TMP_GFR") {

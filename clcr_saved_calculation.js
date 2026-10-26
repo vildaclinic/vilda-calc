@@ -94,7 +94,7 @@
   }
   function canonical(snapshot) {
     const dp = snapshot.assessment;
-    const typed = dp.acrSnapshot || dp.pcrSnapshot || dp.cacrSnapshot || dp.oxcrSnapshot || dp.citcrSnapshot || dp.fenaSnapshot || dp.fekSnapshot || dp.feclSnapshot || dp.fehco3Snapshot;
+    const typed = dp.acrSnapshot || dp.pcrSnapshot || dp.cacrSnapshot || dp.oxcrSnapshot || dp.citcrSnapshot || dp.fenaSnapshot || dp.fekSnapshot || dp.feclSnapshot || dp.fehco3Snapshot || dp.uagSnapshot;
     const model = dp.model || dp.resultModel;
     const category = dp.category?.code || dp.category || typed?.category || null;
     const toneValue = dp.tone || typed?.tone || model?.tone || "neutral";
@@ -120,7 +120,12 @@
     const basis = typeof dp.basis === "string" ? dp.basis : typeof typed?.basis === "string" ? typed.basis : typed?.reportingEntity || "";
     const interpretation = text(dp.interpretation || typed?.interpretation || typed?.categoryDescription || model?.interpretation);
     const comment = [...new Set([typed?.qualification?.note, typed?.interpretation, ...(typed?.cautions || []), ...(model?.reasons || []), ...(dp.warnings || [])].filter(value => typeof value === "string" && value && value !== interpretation))].join(" ");
-    return { formulaId: snapshot.formulaId, parameterKey: snapshot.parameterKey, rawValue: raw, valueNum: comparator ? null : raw, displayValue: String(dp.displayValue ?? raw ?? ""), unit: text(dp.unit), comparator, category, assessment: status, status, tone, outOfRange, norm, reference, source, context: copy(snapshot.capturedContext), inputs: copy(snapshot.values), method: text(dp.label), basis, boundary: text(dp.boundary || typed?.boundary), interpretation, comment, assumptions: text(dp.assumptions || snapshot.capturedContext.calculationAssumptions?.assumptionsText), knownFacts: typed?.knownFacts || null, contextReferences: typed?.references || [] };
+    let displayValue = String(dp.displayValue ?? raw ?? "");
+    // Older UAG captures kept a signed nonzero raw result alongside a rounded
+    // zero. Restore that recorded quantity only; never recalculate old inputs
+    // or attach today's interpretation to a historical measurement.
+    if (snapshot.formulaId === "AGu_spot" && finite(raw) && raw !== 0 && /^[+-]?0+(?:[.,]0+)?$/.test(displayValue.trim().replace(/−/g, "-"))) displayValue = String(raw).replace(".", ",");
+    return { formulaId: snapshot.formulaId, parameterKey: snapshot.parameterKey, rawValue: raw, valueNum: comparator ? null : raw, displayValue, unit: text(dp.unit), comparator, category, assessment: status, status, tone, outOfRange, norm, reference, source, context: copy(snapshot.capturedContext), inputs: copy(snapshot.values), method: text(dp.label), basis, boundary: text(dp.boundary || typed?.boundary), interpretation, comment, assumptions: text(dp.assumptions || snapshot.capturedContext.calculationAssumptions?.assumptionsText), knownFacts: typed?.knownFacts || null, contextReferences: typed?.references || [] };
   }
   function readSaved(note) {
     if (!hasSaved(note)) return null;
@@ -171,7 +176,7 @@
     return { id: old.id || snapshot.parameterKey, sourceFormulaId: snapshot.formulaId, testKey: old.testKey, label: old.label, unit: old.unit, valueNum: null, rawValue: null, displayValue: "", category: null, tone: "neutral", assessment: "unassessed", norm: "", outOfRange: null, assumptions: old.assumptions || "", comparator: "", boundary: "", basis: old.basis || "" };
   }
   function preserveRecordedContext(input, prior, edited) {
-    const fieldNames = { diureticUse: "spotDiureticUse", knownCKD: "spotKnownCKD", knownAKI: "suspectedAKI", bicarbonateLoad: "spotBicarbonateLoad", potassiumSupplementation: "spotPotassiumSupplementation", menstruation: "spotMenstruation", hematuria: "spotHematuria", infection: "spotInfection", exercise: "spotExercise", acuteIllness: "spotAcuteIllness" };
+    const fieldNames = { diureticUse: "spotDiureticUse", knownCKD: "spotKnownCKD", knownAKI: "suspectedAKI", bicarbonateLoad: "spotBicarbonateLoad", nagmaContext: "spotNagmaContext", potassiumSupplementation: "spotPotassiumSupplementation", menstruation: "spotMenstruation", hematuria: "spotHematuria", infection: "spotInfection", exercise: "spotExercise", acuteIllness: "spotAcuteIllness" };
     const facts = prior?.knownFacts || prior?.input?.knownFacts || {};
     const preserved = {};
     for (const [key, value] of Object.entries(facts)) {
@@ -201,7 +206,7 @@
   function ratioCalculation(snapshot, values, edited) {
     const configs = {
       ACR: ["Acr", "acr", "KDIGO_ACR_2024"], PCR: ["Pcr", "pcr", "KDIGO_PCR_2024_2025"], CaCr_spot: ["Cacr", "cacr", "MAYO_CACR3_RANDOM_2026_10"],
-      OxCr_spot: ["Oxcr", "oxcr"], CitCr_spot: ["Citcr", "citcr"], FENa_spot: ["Fena", "fena"], FEK_spot: ["Fek", "fek"], FECl_spot: ["Fecl", "fecl"], FEHCO3_spot: ["Fehco3", "fehco3"],
+      OxCr_spot: ["Oxcr", "oxcr"], CitCr_spot: ["Citcr", "citcr"], FENa_spot: ["Fena", "fena"], FEK_spot: ["Fek", "fek"], FECl_spot: ["Fecl", "fecl"], FEHCO3_spot: ["Fehco3", "fehco3"], AGu_spot: ["Uag", "uag"],
     };
     const config = configs[snapshot.formulaId];
     if (!config) return null;
@@ -211,11 +216,16 @@
     const prior = snapshot.assessment[key + "Snapshot"];
     const policy = pinnedProfile(data, prior, fallback || data?.DEFAULT_POLICY?.id);
     const doc = dataDocument(values);
-    let input = engine.readInputFromDocument ? engine.readInputFromDocument(doc) : {
+    let input = snapshot.formulaId === "AGu_spot" && engine.inputFromValues ? engine.inputFromValues(values) : engine.readInputFromDocument ? engine.readInputFromDocument(doc) : {
       mode: values.ACR_entry_mode || "concentration", albuminValue: values.U_Alb ?? "", albuminUnit: values.U_Alb_unit || "mg/L", creatinineValue: values.Ucr_spot ?? "", creatinineUnit: values.Ucr_spot_unit || "mg/dl", reportedValue: values.ACR_reported ?? "", reportedUnit: values.ACR_reported_unit || "mg/g", ageYears: ageOf(values), sameSpecimen: values.ACR_same_specimen === "different" || values.ui_spotSameSpecimen_answer === "no" ? "different" : values.ACR_same_specimen === "confirmed" || values.ui_spotSameSpecimen_answer === "yes" || values.spotSameSpecimen === true ? "confirmed" : "assumed", sampleType: values.spotSampleKind || "", confounders: ["Menstruation", "Hematuria", "Infection", "Exercise", "AcuteIllness"].filter(field => values["spot" + field] === true).map(field => field[0].toLowerCase() + field.slice(1)),
     };
     if (snapshot.formulaId === "CitCr_spot" && prior?.input?.population) input = { ...input, population: copy(prior.input.population) };
+    const parsedUagSample = snapshot.formulaId === "AGu_spot" ? input.sameUrineSpecimen : null;
     input = preserveRecordedContext(input, prior, edited);
+    if (snapshot.formulaId === "AGu_spot" && ["spotSameSpecimen", "ui_spotSameSpecimen_answer", "spotPairedChemistry", "ui_spotPairedChemistry_answer", "FENa_sample_status"].some(field => edited.has(field))) input.sameUrineSpecimen = parsedUagSample;
+    if (snapshot.formulaId === "AGu_spot" && prior?.sample?.evidence && !["spotSameSpecimen", "ui_spotSameSpecimen_answer", "spotPairedChemistry", "ui_spotPairedChemistry_answer", "FENa_sample_status"].some(field => edited.has(field))) {
+      input.sampleEvidence = copy(prior.sample.evidence);
+    }
     const result = engine.evaluate(input, policy);
     if (!result.valid) throw new Error(result.message || result.error || "Sprawdź dane potrzebne do obliczenia.");
     const typed = result.snapshot || result;
@@ -311,7 +321,7 @@
     if (date && snapshot.formulaId === "KTV") Object.assign(context, { clinicalDateISO: date, evaluationDate: date });
     const dp = ratioCalculation(snapshot, values, edited) || gfrCalculation(snapshot, values) || root.ClcrSavedLegacyCalculator?.recalculate(snapshot.formulaId, values, snapshot.parameterKey, context);
     if (!dp || !finite(dp.valueNum)) throw new Error("Brak poprawnego wyniku dla podanych danych.");
-    const typed = dp.acrSnapshot || dp.pcrSnapshot || dp.cacrSnapshot || dp.oxcrSnapshot || dp.citcrSnapshot || dp.fenaSnapshot || dp.fekSnapshot || dp.feclSnapshot || dp.fehco3Snapshot;
+    const typed = dp.acrSnapshot || dp.pcrSnapshot || dp.cacrSnapshot || dp.oxcrSnapshot || dp.citcrSnapshot || dp.fenaSnapshot || dp.fekSnapshot || dp.feclSnapshot || dp.fehco3Snapshot || dp.uagSnapshot;
     const ageYears = typed?.input && own(typed.input, "ageYears") ? typed.input.ageYears : typed?.context && own(typed.context, "ageYears") ? typed.context.ageYears : ageOf(values);
     return { ...baseDatapoint(snapshot), ...dp, id: snapshot.assessment.id || snapshot.parameterKey, sourceFormulaId: snapshot.formulaId, capture: { ...copy(context), formulaId: snapshot.formulaId, values, fields: copy(snapshot.fields), ageYears } };
   }

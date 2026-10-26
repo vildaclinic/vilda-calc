@@ -18,14 +18,15 @@
     ["clcr_fek_persistence.js?v=1", "ClcrFekPersistence"],
     ["clcr_fecl_persistence.js?v=1", "ClcrFeclPersistence"],
     ["clcr_fehco3_persistence.js?v=1", "ClcrFehco3Persistence"],
+    ["clcr_uag_persistence.js?v=1", "ClcrUagPersistence"],
     // readSaved is pure and needed for the new capture format. Its recalculate
     // method is not called while opening history and resolves engines lazily.
-    ["clcr_saved_calculation.js?v=1", "ClcrSavedCalculation"],
-    ["clcr_saved_results.js?v=1", "ClcrSavedResults"],
+    ["clcr_saved_calculation.js?v=2", "ClcrSavedCalculation"],
+    ["clcr_saved_results.js?v=2", "ClcrSavedResults"],
     ["clcr_saved_results_view.js?v=1", "ClcrSavedResultsView"],
   ];
   const editor = [
-    ["clcr_clinical_safety.js?v=12", "ClcrClinicalSafety"],
+    ["clcr_clinical_safety.js?v=13", "ClcrClinicalSafety"],
     ["clcr_stone_safety.js?v=1", "ClcrStoneSafety"],
     ["clcr_dialysis_safety.js?v=1", "ClcrDialysisSafety"],
     ["clcr_extended_egfr.js?v=1", "ClcrExtendedEgfr"],
@@ -49,10 +50,12 @@
     ["clcr_fecl.js?v=1", "VildaClcrFecl"],
     ["clcr_fehco3_reference_data.js?v=1", "VildaClcrFehco3ReferenceData"],
     ["clcr_fehco3.js?v=1", "VildaClcrFehco3"],
+    ["clcr_uag_reference_data.js?v=1", "VildaClcrUagReferenceData"],
+    ["clcr_uag.js?v=1", "VildaClcrUag"],
     ["clcr_measured_clearance_reference_data.js?v=1", "ClcrMeasuredClearanceReferenceData"],
     ["clcr_measured_clearance_reference.js?v=1", "ClcrMeasuredClearanceReference"],
     ["clcr_result_presentation.js?v=8", "ClcrResultPresentation"],
-    ["clcr_saved_legacy_calculator.js?v=1", "ClcrSavedLegacyCalculator"],
+    ["clcr_saved_legacy_calculator.js?v=2", "ClcrSavedLegacyCalculator"],
     ["clcr_result_details.js?v=1", "ClcrResultDetails"],
   ];
   function load(path, name, style = false) {

@@ -320,10 +320,7 @@
       interpretation: [],
       optional: [],
     },
-    AGu_spot: {
-      interpretation: ["spotSampleKind", "spotNagmaContext"],
-      optional: ["spotKnownCKD"],
-    },
+    AGu_spot: { interpretation: [], optional: [] },
     TMP_GFR: {
       interpretation: ["ageMonths", "sex"],
       optional: [],
@@ -1591,7 +1588,7 @@
   }
 
   function groupCollapsibleContextFields() {
-    if (["cl24", "ACR", "PCR", "CaCr_spot", "OxCr_spot", "CitCr_spot", "FENa_spot", "FEK_spot", "FECl_spot", "FEHCO3_spot"].includes(state.activeFormulaId) && !state.legacyBroad) return;
+    if (["cl24", "ACR", "PCR", "CaCr_spot", "OxCr_spot", "CitCr_spot", "FENa_spot", "FEK_spot", "FECl_spot", "FEHCO3_spot", "AGu_spot"].includes(state.activeFormulaId) && !state.legacyBroad) return;
     const groups = new Map();
     const sharedFieldset = ["egfr_cr_cys", "ckid_u25_cys", "ckid_u25_cr_cys"].includes(state.activeFormulaId)
       ? documentRef.getElementById("serumSet") : null;
@@ -1895,7 +1892,7 @@
     (FORMULA_REFERENCE_FIELDS[formula.id] || []).forEach((fieldId) => optional.add(fieldId));
     if (required.has("age") && !["neonatal_egfr", "cg_norm"].includes(formula.id)) optional.add("ageMonths");
     if (!["ACR", "PCR", "CaCr_spot", "OxCr_spot", "CitCr_spot"].includes(formula.id)) getSharedModuleFieldIds(formula.id).forEach((fieldId) => optional.add(fieldId));
-    if (["FENa_spot", "FEK_spot", "FECl_spot", "FEHCO3_spot"].includes(formula.id)) {
+    if (["FENa_spot", "FEK_spot", "FECl_spot", "FEHCO3_spot", "AGu_spot"].includes(formula.id)) {
       required.delete("spotPairedChemistry");
       optional.clear();
     }
@@ -1986,7 +1983,7 @@
       optional.delete("ScrAssay");
     }
     const module = getModuleForFormula(formula.id);
-    if (module?.path === "spot" && !required.has("spotSampleKind") && !["PCR", "CaCr_spot", "OxCr_spot", "CitCr_spot", "FENa_spot", "FEK_spot", "FECl_spot", "FEHCO3_spot"].includes(formula.id)) optional.add("spotSampleKind");
+    if (module?.path === "spot" && !required.has("spotSampleKind") && !["PCR", "CaCr_spot", "OxCr_spot", "CitCr_spot", "FENa_spot", "FEK_spot", "FECl_spot", "FEHCO3_spot", "AGu_spot"].includes(formula.id)) optional.add("spotSampleKind");
     if (formula.id === "PCR" && fieldValue("spotSampleKind")) optional.add("spotSampleKind");
     if (formula.id === "KTV") {
       documentRef.getElementById("ktvFields")?.querySelectorAll("input[id], select[id]").forEach((control) => {
@@ -2016,6 +2013,7 @@
     if (state.legacyBroad || formula?.id !== "FEK_spot") global.ClcrFekUi?.sync(documentRef, { active: false, fieldViews: state.fieldViews });
     if (state.legacyBroad || formula?.id !== "FECl_spot") global.ClcrFeclUi?.sync(documentRef, { active: false, fieldViews: state.fieldViews });
     if (state.legacyBroad || formula?.id !== "FEHCO3_spot") global.ClcrFehco3Ui?.sync(documentRef, { active: false, fieldViews: state.fieldViews });
+    if (state.legacyBroad || formula?.id !== "AGu_spot") global.ClcrUagUi?.sync(documentRef, { active: false, fieldViews: state.fieldViews });
     // Same-formula refresh must not reparent a focused correction control.
     // syncNeonatalAgeCorrection releases it once the correction loses focus.
     if (state.legacyBroad || formula?.id !== "neonatal_egfr") restoreNeonatalAgeCorrection();
@@ -2091,6 +2089,7 @@
     global.ClcrFekUi?.sync(documentRef, { active: formula?.id === "FEK_spot", fieldViews: state.fieldViews });
     global.ClcrFeclUi?.sync(documentRef, { active: formula?.id === "FECl_spot", fieldViews: state.fieldViews });
     global.ClcrFehco3Ui?.sync(documentRef, { active: formula?.id === "FEHCO3_spot", fieldViews: state.fieldViews });
+    global.ClcrUagUi?.sync(documentRef, { active: formula?.id === "AGu_spot", fieldViews: state.fieldViews });
     syncFieldsetVisibility();
     renderReadiness();
   }
@@ -2439,6 +2438,12 @@
   }
 
   function evaluateFormulaOutcome(formula) {
+    if (formula?.id === "AGu_spot" && typeof global.evaluateClcrUag === "function") {
+      const outcome = global.evaluateClcrUag();
+      return outcome.valid
+        ? { ok: true, outcome, blockers: [], limitations: [] }
+        : semanticBlock(outcome.errorCode || "UAG_INVALID", outcome.error || "Sprawdź trzy stężenia z tej samej próbki moczu.", "", outcome);
+    }
     if (formula?.id === "FEHCO3_spot" && typeof global.evaluateClcrFehco3 === "function") {
       const outcome = global.evaluateClcrFehco3();
       return outcome.valid
@@ -2729,7 +2734,7 @@
     }
     // These ratios use the same production reader as their result card.
     // Legacy generic maxima and >0 analyte checks do not qualify this model.
-    const ratioEvaluator = { CaCr_spot: global.evaluateClcrCacr, OxCr_spot: global.evaluateClcrOxcr, CitCr_spot: global.evaluateClcrCitcr, FENa_spot: global.evaluateClcrFena, FEK_spot: global.evaluateClcrFek, FECl_spot: global.evaluateClcrFecl, FEHCO3_spot: global.evaluateClcrFehco3 }[formula.id];
+    const ratioEvaluator = { CaCr_spot: global.evaluateClcrCacr, OxCr_spot: global.evaluateClcrOxcr, CitCr_spot: global.evaluateClcrCitcr, FENa_spot: global.evaluateClcrFena, FEK_spot: global.evaluateClcrFek, FECl_spot: global.evaluateClcrFecl, FEHCO3_spot: global.evaluateClcrFehco3, AGu_spot: global.evaluateClcrUag }[formula.id];
     if (typeof ratioEvaluator === "function") {
       const semantic = evaluateFormulaOutcome(formula);
       const outcome = semantic.outcome;
@@ -2949,6 +2954,7 @@
     if (state.activeFormulaId === "FEK_spot") global.ClcrFekUi?.refresh(documentRef);
     if (state.activeFormulaId === "FECl_spot") global.ClcrFeclUi?.refresh(documentRef);
     if (state.activeFormulaId === "FEHCO3_spot") global.ClcrFehco3Ui?.refresh(documentRef);
+    if (state.activeFormulaId === "AGu_spot") global.ClcrUagUi?.refresh(documentRef);
     syncAssayOptions();
     syncNeonatalAgeCorrection();
     syncMeasuredProblem();
@@ -2978,7 +2984,7 @@
     }
     const readiness = getFormulaReadiness(formula.id);
     documentRef.documentElement.dataset.clcrReady = String(readiness.valueReady);
-    if (["CaCr_spot", "OxCr_spot", "CitCr_spot", "FENa_spot", "FEK_spot", "FECl_spot", "FEHCO3_spot"].includes(formula.id)) {
+    if (["CaCr_spot", "OxCr_spot", "CitCr_spot", "FENa_spot", "FEK_spot", "FECl_spot", "FEHCO3_spot", "AGu_spot"].includes(formula.id)) {
       // Empty, invalid and qualified states belong to the single result card.
       state.readiness.hidden = true;
       global.ClcrLayout?.refresh?.();
@@ -3028,7 +3034,7 @@
   }
 
   function renderDataCompletion() {
-    if (["ACR", "PCR", "CaCr_spot", "OxCr_spot", "CitCr_spot", "FENa_spot", "FEK_spot", "FECl_spot", "FEHCO3_spot"].includes(state.activeFormulaId)) return;
+    if (["ACR", "PCR", "CaCr_spot", "OxCr_spot", "CitCr_spot", "FENa_spot", "FEK_spot", "FECl_spot", "FEHCO3_spot", "AGu_spot"].includes(state.activeFormulaId)) return;
     const questions = new Set();
     state.requiredFieldIds.forEach((fieldId) => {
       if (DZM_QUALITY_FIELDS.includes(fieldId)) questions.add(DZM_QUALITY_GROUP_FOCUS_ID);
@@ -3075,7 +3081,7 @@
     eyebrow.append(step, documentRef.createTextNode("Dane do obliczenia"));
     state.activePanel.appendChild(eyebrow);
     const heading = createElement("h2", "clcr-active-panel__title", formula
-      ? formula.id === "FEHCO3_spot" ? "FEHCO₃ — frakcja wydalania wodorowęglanów" : formula.id === "FECl_spot" ? "FECl — frakcja wydalania chlorków" : formula.id === "FEK_spot" ? "FEK — frakcja wydalania potasu" : formula.id === "FENa_spot" ? "FENa — frakcja wydalania sodu" : formula.id === "CitCr_spot" ? "Cytryniany/kreatynina — Cit/Cr" : formula.id === "OxCr_spot" ? "Szczawiany/kreatynina — Ox/Cr" : formula.id === "CaCr_spot" ? "Wapń/kreatynina — Ca/Cr" : formula.id === "PCR" ? "Białko/kreatynina — PCR" : formula.id === "ACR" ? "ACR — albumina/kreatynina" : formula.id === "cl24" ? "Klirens kreatyniny ze zbiórki moczu" : formula.id === "cg_norm" ? "Cockcroft–Gault (1,73 m²)" : formula.id === "cg" ? "Cockcroft–Gault" : formula.label
+      ? formula.id === "AGu_spot" ? "Luka anionowa moczu — UAG" : formula.id === "FEHCO3_spot" ? "FEHCO₃ — frakcja wydalania wodorowęglanów" : formula.id === "FECl_spot" ? "FECl — frakcja wydalania chlorków" : formula.id === "FEK_spot" ? "FEK — frakcja wydalania potasu" : formula.id === "FENa_spot" ? "FENa — frakcja wydalania sodu" : formula.id === "CitCr_spot" ? "Cytryniany/kreatynina — Cit/Cr" : formula.id === "OxCr_spot" ? "Szczawiany/kreatynina — Ox/Cr" : formula.id === "CaCr_spot" ? "Wapń/kreatynina — Ca/Cr" : formula.id === "PCR" ? "Białko/kreatynina — PCR" : formula.id === "ACR" ? "ACR — albumina/kreatynina" : formula.id === "cl24" ? "Klirens kreatyniny ze zbiórki moczu" : formula.id === "cg_norm" ? "Cockcroft–Gault (1,73 m²)" : formula.id === "cg" ? "Cockcroft–Gault" : formula.label
       : legacy ? "Obliczenia" : "Wybierz obliczenie");
     state.activePanel.appendChild(heading);
     if (formula?.id === "cl24") {
@@ -3246,7 +3252,7 @@
     const module = getModuleForFormula(formulaId);
     if (!formula || !module || HISTORICAL_FORMULA_IDS.includes(formulaId)) return false;
     const sameSpotWorkspace = getModuleForFormula(state.activeFormulaId)?.path === "spot" && module.path === "spot";
-    const preserveCalculationInputs = sameSpotWorkspace || ["cl24", "ACR", "PCR", "CaCr_spot", "OxCr_spot", "CitCr_spot", "FENa_spot", "FEK_spot", "FECl_spot", "FEHCO3_spot"].includes(state.activeFormulaId) || ["cl24", "ACR", "PCR", "CaCr_spot", "OxCr_spot", "CitCr_spot", "FENa_spot", "FEK_spot", "FECl_spot", "FEHCO3_spot"].includes(formulaId);
+    const preserveCalculationInputs = sameSpotWorkspace || ["cl24", "ACR", "PCR", "CaCr_spot", "OxCr_spot", "CitCr_spot", "FENa_spot", "FEK_spot", "FECl_spot", "FEHCO3_spot", "AGu_spot"].includes(state.activeFormulaId) || ["cl24", "ACR", "PCR", "CaCr_spot", "OxCr_spot", "CitCr_spot", "FENa_spot", "FEK_spot", "FECl_spot", "FEHCO3_spot", "AGu_spot"].includes(formulaId);
     state.legacyBroad = false;
     state.mobileModulesExpanded = false;
     documentRef.documentElement.classList.remove("clcr-mobile-modules-expanded");
@@ -3639,7 +3645,7 @@
     const clear = documentRef.getElementById("clearBtn");
     if (clear) {
       clear.addEventListener("click", (event) => {
-        const resumeCitcr = ["CitCr_spot", "FENa_spot", "FEK_spot", "FECl_spot", "FEHCO3_spot"].includes(event.clcrClearedFormula);
+        const resumeCitcr = ["CitCr_spot", "FENa_spot", "FEK_spot", "FECl_spot", "FEHCO3_spot", "AGu_spot"].includes(event.clcrClearedFormula);
         const clearedFormula = event.clcrClearedFormula;
         global.setTimeout(() => {
           if (resumeCitcr) {
@@ -3682,6 +3688,7 @@
     if (policy?.idmsFormulaIds?.includes(formulaId)) ids.add("ScrAssay");
     if (policy?.ifccFormulaIds?.includes(formulaId)) ["CystatinCStandardization", "CrCysStandardizationConfirmed"].forEach(id => ids.add(id));
     if (["FENa_spot", "FEK_spot", "FECl_spot", "FEHCO3_spot"].includes(formulaId)) ["age", "ageMonths", "spotDiureticUse", "spotKnownCKD", "suspectedAKI", "creatinineState", "FENa_sample_status", "spotSameSpecimen", "spotPairedChemistry", "spotSampleKind", "spotBicarbonateLoad"].forEach(id => ids.add(id));
+    if (formulaId === "AGu_spot") (global.VildaClcrUag?.FIELD_IDS || []).forEach(id => ids.add(id));
     [...ids].forEach(id => {
       if (UNIT_PAIRS[id]) ids.add(UNIT_PAIRS[id]);
       if (documentRef.getElementById(`ui_${id}_answer`) || Object.hasOwn(global.__vildaClcrVersionValueVault || {}, `ui_${id}_answer`)) ids.add(`ui_${id}_answer`);
@@ -3721,7 +3728,7 @@
     openMeasuredReferenceFields,
     hasBlockingValidationError() {
       // FENa owns a concrete empty/error card from its semantic engine.
-      if (["FENa_spot", "FEK_spot", "FECl_spot", "FEHCO3_spot"].includes(state.activeFormulaId)) return false;
+      if (["FENa_spot", "FEK_spot", "FECl_spot", "FEHCO3_spot", "AGu_spot"].includes(state.activeFormulaId)) return false;
       return Array.from(state.requiredFieldIds).some((fieldId) => {
         const control = documentRef.getElementById(fieldId);
         return Boolean(control && control.classList.contains("error"));
@@ -4046,7 +4053,7 @@
       }
       // Audited measurements preserve the raw value: rounding can cross a
       // clinical threshold. The display and any inequality are kept apart.
-      if (!["ACR", "PCR", "CaCr_spot", "OxCr_spot", "CitCr_spot", "FENa_spot", "FEK_spot", "FECl_spot", "FEHCO3_spot"].includes(dp.sourceFormulaId)) dp.valueNum = displayedNumber(el, dp.valueNum);
+      if (!["ACR", "PCR", "CaCr_spot", "OxCr_spot", "CitCr_spot", "FENa_spot", "FEK_spot", "FECl_spot", "FEHCO3_spot", "AGu_spot"].includes(dp.sourceFormulaId)) dp.valueNum = displayedNumber(el, dp.valueNum);
       dp.norm = readRangeText(el);
       dp.outOfRange = elementOutOfRange(el);
       if (dp.sourceFormulaId === "ACR") {
@@ -4100,6 +4107,10 @@
       if (dp.sourceFormulaId === "FECl_spot") {
         global.ClcrFeclPersistence?.augmentDatapoint(el, dp);
         if (!dp.feclSnapshot) continue;
+      }
+      if (dp.sourceFormulaId === "AGu_spot") {
+        global.ClcrUagPersistence?.augmentDatapoint(el, dp);
+        if (!dp.uagSnapshot) continue;
       }
       if (dp.sourceFormulaId === "FEHCO3_spot") {
         global.ClcrFehco3Persistence?.augmentDatapoint(el, dp);
@@ -4174,7 +4185,7 @@
       } catch (_) { /* Legacy cards may have only visible reference text. */ }
     }
     if (!datapoint.norm) return null;
-    const typed = datapoint.acrSnapshot || datapoint.pcrSnapshot || datapoint.cacrSnapshot || datapoint.oxcrSnapshot || datapoint.citcrSnapshot || datapoint.fenaSnapshot || datapoint.fekSnapshot || datapoint.feclSnapshot || datapoint.fehco3Snapshot;
+    const typed = datapoint.acrSnapshot || datapoint.pcrSnapshot || datapoint.cacrSnapshot || datapoint.oxcrSnapshot || datapoint.citcrSnapshot || datapoint.fenaSnapshot || datapoint.fekSnapshot || datapoint.feclSnapshot || datapoint.fehco3Snapshot || datapoint.uagSnapshot;
     if (typed?.reference) return copyData({ ...typed.reference, text:datapoint.norm, source:typed.source || typed.reference.source || null, population:typed.population || typed.reference.population || null });
     if (datapoint.measuredClearanceReference) return copyData({ ...datapoint.measuredClearanceReference, text:datapoint.norm });
     const reference = element.querySelector?.(".clcr-result-reference");
@@ -4442,7 +4453,7 @@
         s.points.forEach((p) => {
           byDate[p.dateISO] = {
             valueNum: p.valueNum,
-            outOfRange: ["ACR", "PCR", "CaCr_spot", "OxCr_spot", "CitCr_spot", "FENa_spot", "FEK_spot", "FECl_spot", "FEHCO3_spot"].includes(s.sourceFormulaId) ? p.outOfRange : !!p.outOfRange,
+            outOfRange: ["ACR", "PCR", "CaCr_spot", "OxCr_spot", "CitCr_spot", "FENa_spot", "FEK_spot", "FECl_spot", "FEHCO3_spot", "AGu_spot"].includes(s.sourceFormulaId) ? p.outOfRange : !!p.outOfRange,
           };
           if (s.sourceFormulaId === "ACR") Object.assign(byDate[p.dateISO], {
             displayValue: p.displayValue, comparator: p.comparator,
@@ -4462,6 +4473,9 @@
           });
           if (s.sourceFormulaId === "FECl_spot") Object.assign(byDate[p.dateISO], {
             displayValue: p.displayValue, comparator: p.comparator, assessment: p.assessment, feclAssessment: p.feclAssessment,
+          });
+          if (s.sourceFormulaId === "AGu_spot") Object.assign(byDate[p.dateISO], {
+            displayValue: p.displayValue, comparator: p.comparator, assessment: p.assessment, uagAssessment: p.uagAssessment,
           });
           if (s.sourceFormulaId === "FEHCO3_spot") Object.assign(byDate[p.dateISO], {
             displayValue: p.displayValue, comparator: p.comparator, assessment: p.assessment, fehco3Assessment: p.fehco3Assessment,
@@ -5749,7 +5763,7 @@
     rail.dataset.clcrHasResult = String(hasResult);
     reportActions.hidden = !hasResult;
     const resultBody = reportSection.querySelector(".clcr-result-extra");
-    if (resultBody) resultBody.hidden = !["CitCr_spot", "FENa_spot", "FEK_spot", "FECl_spot", "FEHCO3_spot"].includes(formulaId) && Boolean(readiness && !readiness.valueReady);
+    if (resultBody) resultBody.hidden = !["CitCr_spot", "FENa_spot", "FEK_spot", "FECl_spot", "FEHCO3_spot", "AGu_spot"].includes(formulaId) && Boolean(readiness && !readiness.valueReady);
   }
 
   function scheduleRefresh() {

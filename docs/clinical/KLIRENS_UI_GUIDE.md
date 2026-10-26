@@ -111,6 +111,22 @@ obcą wizualnie kartą i nie dodawaj kilku podobnych wierszy „odniesienia”.
   jest opisanym przybliżeniem bez dodatkowego przeliczenia. Małe wyniki,
   znane fakty i znaczenie nierówności pozostają w zapisie i historii.
   Źródła i ograniczenia: [FEHCO3.md](FEHCO3.md).
+- Dla UAG (decyzja 26.10.2026) wystarczają **trzy stężenia w moczu:
+  Na, K i Cl**, ze stałą jednostką mmol/L. Wspólna próbka jest opisanym
+  założeniem, bez obowiązkowego checkboxa; jawnie różne próbki moczu
+  blokują liczbę i zapis. Sam inny czas krwi nie blokuje tego wzoru.
+  Nie zakłada się kwasicy metabolicznej z prawidłową luką anionową krwi
+  ani nie dodaje pytania o wiek do „pełnej interpretacji”. Jedna neutralna
+  karta B łączy podpis znaku, liczbę, **„Granica znaku: 0 mmol/L”**
+  oraz **„Nie jest granicą normy.”** Nie oznaczaj samego dodatniego UAG
+  jako nieprawidłowego ani ujemnego jako prawidłowego. Krótki komentarz
+  o amonie jest warunkowy; znana PChN zastępuje go uwagą o ograniczeniu.
+  U_Na <20 mmol/L z istniejącego pola daje uwagę o przydatności metody,
+  nie diagnozę lub kategorię patologicznego UAG. Szczegóły wyjaśniają
+  brak zweryfikowanej normy wieku, ograniczenia i niepewność oznaczeń
+  blisko zera. Nie twórz dowolnego pasma „blisko zera”; zachowuj mały
+  dodatni i ujemny wynik, dokładne zero oraz zamrożony kontekst historii.
+  Źródła i reguły: [UAG.md](UAG.md).
 - Pełne poziomy, np. A1–A3 albuminurii, opisuj w zwiniętych
   **„Szczegółach i źródłach”**. Wyróżnij wyłącznie rzeczywiście nadaną
   kategorię pacjenta. Przycisk kategorii powinien otwierać właściwe Szczegóły.
