@@ -312,6 +312,19 @@ Pełny kontrakt, przypadki wejście → wynik, zależności i ograniczenia:
 [KLIRENS_PATIENT_RECORD.md](KLIRENS_PATIENT_RECORD.md). Regresje wywołują rzeczywiste
 producenty i sejf na danych fikcyjnych; testy nie stanowią walidacji klinicznej.
 
+**Uzupełnienie 26.10.2026 — zapis do wybranej istniejącej karty:** liczba i
+interpretacja pozostają dotychczasowe. Przycisk zapisu nie wczytuje pacjenta;
+odblokowanie wymaga odczytu jego zapisanego rekordu. Błąd, nieistniejąca karta
+i spóźniona odpowiedź po zmianie pacjenta/konta nie zezwalają na zapis.
+Wczytywanie ostrzega o niezapisanych oznaczeniach Klirensu także między
+ramkami. Zapis danych pacjenta nie jest przedstawiany jako zapis badania.
+Nowa zapisana karta tej samej roboczej osoby może zachować obliczenie;
+wczytanie innej nie przejmuje starej próbki. Lokalna edycja wieku przy ACR
+nie wymaga masy ani wzrostu i nie zmienia reguł kwalifikacji do kategorii.
+Scenariusze regresyjne obejmują anonimowe ACR 45 mg/g → wiek 10 lat → A2,
+bez zapisu do niewybranej karty; wybór/wczytanie z anulowaniem lub świadomym
+odrzuceniem; poprawny zapis do wybranego pacjenta oraz wyścigi odczytu karty.
+
 ### LAB-HISTORIA — model porównania zapisanych wyników (`vilda_lab_history.js` 1.0.0, PR1 planu historii wyników, 2026-10-14)
 
 **Wpływ kliniczny: brak w tym etapie.** Moduł nie jest ładowany przez żadną
@@ -24407,6 +24420,31 @@ SW 1.1.171 → **1.1.172**; `custom-fixes.js?v=72→73`, `vilda_data_import_expo
 `vilda_persist_runtime.js?v=19→20`, `vilda_persistence_adapter.js?v=29→30`, `vilda_shell.js?v=59→60`,
 `vilda_unsaved_guard.js?v=5→6`; nowy `vilda_panel_pacjent.js?v=1` (index, docpro, kalkulator-klirens; precache).
 
+
+### P-PERSIST-CURRENT-NAME — odroczony autosave nie usuwa nowszej nazwy bieżącego formularza, 26 października 2026
+
+**Problem.** Przy regresjach późnego niemowlęcego LH odtworzono rzeczywistą kolejność:
+zdarzenie formularza tworzy kopię `L` bez nazwy → DOB/`userData` publikuje pełniejszy
+stan tej samej osoby → timer `vilda_persist_runtime.x()` zapisuje starsze `L` i usuwa
+`name`/`fullName`. Po przejściu do przelicznika `VildaSession.getPatient()` nie ma
+nazwanego nośnika i przycisk przypięcia wyniku jest niedostępny. Sonda obserwująca
+rzeczywiste zapisy magazynu odtworzyła ostatni zapis usuwający nazwę w czterech
+niezależnych kontekstach; nie zmieniała danych przekazywanych między modułami.
+
+**Naprawa.** Po dotychczasowym odrzuceniu kolejki innej osoby (`Pp_obcy`) runtime
+uzgadnia wyłącznie parę `name`/`fullName` i jej wpisy `byId`. Świeży alias musi zgadzać
+się z aktualnym polem nazwy w DOM. Stary alternatywny alias nie przeżywa zmiany albo
+wyczyszczenia. Brak pola nazwy lub konflikt DOM–świeży stan nie uruchamia zastępczego
+odczytu z innej pamięci. Jawna blokada sejfu nie pozwala odtworzyć nazw z kolejki.
+Pozostałe dane, właściciel kolejki, restore/clear, kolejność zapisu i API pozostają
+bez zmian; nie scala się całego świeżego korzenia z opóźnioną kopią.
+
+**Wpływ i regresje.** Bez zmiany wyników, norm, źródeł i ocen laboratoryjnych ani
+formatu rekordu. `tests/unit/persist-current-name.test.mjs` wywołuje prawdziwy adapter,
+runtime i konsumenta `VildaSession`: timer i force, oba aliasy, późniejsze restore,
+jawne wyczyszczenie, konflikt DOM, brak pola, blokada oraz zmiana `patientId`, także
+przy identycznej nazwie dwóch fikcyjnych osób. Przed poprawką siedem nowych przypadków
+było czerwonych. Wynik końcowej walidacji E2E/PWA i CI podaje PR.
 
 ## Stan kart DocPro należy do pacjenta; ramka DocPro w tle czyści karty po zmianie pacjenta w innej ramce (P-TOZSAMOSC-RAMEK, SW 1.1.119, `docpro_state_persist.js` 6, 2026-09-30)
 

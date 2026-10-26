@@ -29,6 +29,9 @@ function harness() {
     'clcr_measured_clearance_reference_data.js', 'clcr_measured_clearance_reference.js',
     'clcr_result_reference_data.js', 'clcr_result_presentation.js', 'clcr_ui_workflow.js',
   ]) loadBrowserScript(file, browser);
+  // A saved clinical result belongs to the selected persisted synthetic record.
+  browser.VildaVault.getPatient = async id => id === 'fictional-only' ? { id, patientId: id, name: 'Fikcyjny pacjent' } : null;
+  browser.ClcrVisitSave._setPatientId('fictional-only');
   return { browser, captured, sanitizer: actualVault.VildaVault };
 }
 

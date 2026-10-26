@@ -8,6 +8,9 @@ function harness() {
   for (const file of ['clcr_oxcr_reference_data.js', 'clcr_oxcr.js', 'clcr_oxcr_persistence.js', 'clcr_ui_workflow.js']) loadBrowserScript(file, browser);
   const realVault = {};
   loadBrowserScript('vilda_vault.js', realVault);
+  // A saved clinical result belongs to the selected persisted synthetic record.
+  browser.VildaVault.getPatient = async id => id === 'fictional-oxcr-only' ? { id, patientId: id, name: 'Fikcyjny pacjent' } : null;
+  browser.ClcrVisitSave._setPatientId('fictional-oxcr-only');
   return { browser, captured, sanitizer: realVault.VildaVault };
 }
 function evaluate(browser, input = {}) {

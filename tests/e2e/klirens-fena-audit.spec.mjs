@@ -68,15 +68,19 @@ async function captureSave(page, date = '2026-10-25') {
   return page.evaluate(async clinicalDateISO => {
     const api = window.ClcrVisitSave, originalVault = window.VildaVault, rawNotes = [], notes = [];
     const points = api.collectActiveDatapoints(document, { formulaId: 'FENa_spot' });
-    window.VildaVault = { isUnlocked: () => true, savePatientNote: async note => {
+    const originalPatientId = api.resolveCurrentPatientId();
+    // The clinical writer now requires an existing selected fictional card.
+    window.VildaVault = { isUnlocked: () => true,
+      getPatient: async patientId => patientId === 'fictional-fena-e2e-only' ? { patientId, header: { name: 'Fikcyjny pacjent testu Klirensu' } } : null, savePatientNote: async note => {
       rawNotes.push(JSON.parse(JSON.stringify(note)));
       notes.push({ ...note, body: originalVault.sanitizeNoteText(note.body), labResult: originalVault.sanitizeLabResult(note.labResult) });
     } };
+    api._setPatientId('fictional-fena-e2e-only');
     try {
       const outcome = await api.saveActiveResultToCard({ patientId: 'fictional-fena-e2e-only', clinicalDateISO, root: document, formulaId: 'FENa_spot' });
       window.__fenaSyntheticNotes = [...(window.__fenaSyntheticNotes || []), ...notes];
       return { outcome, points, rawNotes, notes, vaultLocked: !originalVault.isUnlocked() };
-    } finally { window.VildaVault = originalVault; }
+    } finally { window.VildaVault = originalVault; api._setPatientId(originalPatientId); }
   }, date);
 }
 

@@ -657,26 +657,30 @@ describe('Klirens — centralny model przepływu UI', () => {
       'utf8'
     );
 
-    expect(html).toContain('clcr_ui_workflow.css?v=17');
-    expect(html).toContain('clcr_ui_workflow.js?v=25');
+    expect(html).toContain('clcr_ui_workflow.css?v=18');
+    expect(html).toContain('clcr_ui_workflow.js?v=26');
     expect(html).toContain('inline_kalkulator_klirens_02.js?v=20');
     expect(html).toContain('inline_kalkulator_klirens_04.js?v=26');
-    expect(html).toContain('inline_kalkulator_klirens_07.js?v=14');
+    expect(html).toContain('inline_kalkulator_klirens_07.js?v=15');
     expect(html).toContain('clcr_result_reference_data.js?v=7');
     expect(html).toContain('clcr_result_presentation.js?v=8');
-    expect(serviceWorker).toContain("const SW_VERSION = '1.1.382'");
+    expect(serviceWorker).toContain("const SW_VERSION = '1.1.383'");
     expect(html).toContain('clcr_calculation_assumptions.js?v=2');
     expect(serviceWorker).toContain("'/clcr_calculation_assumptions.js?v=2'");
     expect(serviceWorker).toContain("'/clcr_clinical_safety.js?v=12'");
     expect(serviceWorker).toContain("'/clcr_result_reference_data.js?v=7'");
     expect(serviceWorker).toContain("'/clcr_result_presentation.js?v=8'");
-    expect(serviceWorker).toContain("'/clcr_ui_workflow.css?v=17'");
-    expect(serviceWorker).toContain("'/clcr_ui_workflow.js?v=25'");
+    expect(serviceWorker).toContain("'/clcr_ui_workflow.css?v=18'");
+    expect(serviceWorker).toContain("'/clcr_ui_workflow.js?v=26'");
     expect(serviceWorker).toContain("'/inline_kalkulator_klirens_02.js?v=20'");
     expect(serviceWorker).toContain("'/inline_kalkulator_klirens_04.js?v=26'");
+    expect(html).toContain('clcr_acr_ui.js?v=2');
+    expect(serviceWorker).toContain("'/clcr_acr_ui.js?v=2'");
+    expect(html).toContain('vilda_unsaved_guard.js?v=7');
+    expect(serviceWorker).toContain("'/vilda_unsaved_guard.js?v=7'");
     for (const file of [
       'clcr_measured_clearance_reference_data.js', 'clcr_measured_clearance_reference.js',
-      'clcr_acr_reference_data.js', 'clcr_acr.js', 'clcr_acr_ui.js', 'clcr_acr_ui.css',
+      'clcr_acr_reference_data.js', 'clcr_acr.js', 'clcr_acr_ui.css',
       'clcr_pcr_reference_data.js', 'clcr_pcr.js', 'clcr_pcr_ui.js', 'clcr_pcr_ui.css',
       'clcr_cacr_reference_data.js', 'clcr_cacr.js', 'clcr_cacr_ui.js', 'clcr_cacr_ui.css',
       'clcr_citcr_reference_data.js', 'clcr_citcr.js', 'clcr_citcr_ui.js', 'clcr_citcr_ui.css', 'clcr_citcr_persistence.js',

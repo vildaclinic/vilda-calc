@@ -1,5 +1,5 @@
 import { expect, test } from '../support/test-czas.mjs';
-import { openCalculator, applyAcr, applyU25, saveVisible, memory } from '../support/klirens-patient-record.mjs';
+import { openCalculator, applyAcr, applyU25, saveVisible, memory, selectPatient } from '../support/klirens-patient-record.mjs';
 
 test.use({ chwila: '2026-10-25T12:00:00Z' });
 
@@ -83,3 +83,35 @@ test('390px: U25 serum fields and historical age/sex keep16px/48px dimensions', 
   await page.locator('#editDialog').getByRole('button', { name: 'Anuluj', exact: true }).first().tap();
   expect((await memory(page)).notes).toEqual([note]);
 });
+
+for (const width of [390, 320]) {
+  test(`${width}px: patient prerequisite is visible before fields and stable across anonymous/selected states`, async ({ page }) => {
+    await openCalculator(page, { width, select: false });
+    await applyAcr(page, '45');
+    await expect(page.locator('#clcrPatientContext')).toBeVisible();
+    await expect(page.locator('#clcrVisitSaveBtn')).toBeDisabled();
+    const before = await page.locator('#clcrPatientContext').evaluate(element => {
+      const panel = document.getElementById('clcrActivePanel');
+      return { width: element.getBoundingClientRect().width,
+        beforeFields: Boolean(element.compareDocumentPosition(panel) & Node.DOCUMENT_POSITION_FOLLOWING) };
+    });
+    expect(before.beforeFields).toBe(true);
+    for (const id of ['clcrChoosePatientBtn']) {
+      const measured = await page.locator(`#${id}`).evaluate(element => ({
+        height: element.getBoundingClientRect().height, font: parseFloat(getComputedStyle(element).fontSize),
+      }));
+      expect(measured.height, `${id}: touch target`).toBeGreaterThanOrEqual(48);
+      expect(measured.font, `${id}: legible mobile control`).toBeGreaterThanOrEqual(16);
+    }
+    await expectGeometry(page);
+    await selectPatient(page);
+    await expect(page.locator('#clcrVisitSaveBtn')).toBeDisabled();
+    await page.locator('#clcrStartPatientMeasurementBtn').tap();
+    await applyAcr(page, '13.6');
+    await expect(page.locator('#clcrVisitSaveBtn')).toBeEnabled();
+    const afterWidth = await page.locator('#clcrPatientContext').evaluate(element => element.getBoundingClientRect().width);
+    expect(afterWidth).toBeCloseTo(before.width, 1);
+    await expectGeometry(page);
+    expect((await memory(page)).saves).toHaveLength(0);
+  });
+}

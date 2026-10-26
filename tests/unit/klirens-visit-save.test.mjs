@@ -9,6 +9,12 @@ function loadVisitSave(extra = {}) {
   return g;
 }
 
+// Explicit persisted identity in capture-only vault fixtures; never a real account.
+function selectPersistedPatient(global, patientId) {
+  global.VildaVault.getPatient = async id => id === patientId ? { id, patientId: id, name: 'Fikcyjny pacjent' } : null;
+  global.ClcrVisitSave._setPatientId(patientId);
+}
+
 function fakeEl(series, value, { visible = true, attributes = {} } = {}) {
   return {
     getAttribute(name) {
@@ -160,6 +166,7 @@ describe('Klirens — ClcrVisitSave (Faza 1: zapis do karty)', () => {
     const before = JSON.stringify(datapoints);
     const saved = [];
     g.VildaVault = { isUnlocked: () => true, savePatientNote: async note => saved.push(note) };
+    selectPersistedPatient(g, 'synthetic-cys-assumptions');
     const result = await g.ClcrVisitSave.saveActiveResultToCard({
       patientId: 'synthetic-cys-assumptions', clinicalDateISO: '2026-10-22', datapoints,
     });
@@ -192,6 +199,7 @@ describe('Klirens — ClcrVisitSave (Faza 1: zapis do karty)', () => {
     const datapointsBefore = JSON.stringify(datapoints);
     const saved = [];
     g.VildaVault = { isUnlocked: () => true, savePatientNote: async note => saved.push(note) };
+    selectPersistedPatient(g, 'synthetic-cg-indexed-age');
     const result = await g.ClcrVisitSave.saveActiveResultToCard({
       patientId: 'synthetic-cg-indexed-age', clinicalDateISO: '2026-10-23', datapoints,
     });
@@ -222,6 +230,7 @@ describe('Klirens — ClcrVisitSave (Faza 1: zapis do karty)', () => {
     expect(datapoints[0]).not.toHaveProperty('agePolicy');
     const saved = [];
     g.VildaVault = { isUnlocked: () => true, savePatientNote: async note => saved.push(note) };
+    selectPersistedPatient(g, 'synthetic-no-cg-age-policy');
     const result = await g.ClcrVisitSave.saveActiveResultToCard({
       patientId: 'synthetic-no-cg-age-policy', clinicalDateISO: '2026-10-23',
       datapoints: [{ ...datapoints[0], ageUsedYears: Number(age), agePolicy: policy }],
@@ -280,6 +289,7 @@ describe('Klirens — ClcrVisitSave (Faza 1: zapis do karty)', () => {
     expect(datapoints[0]).not.toHaveProperty('category');
     const saved = [];
     g.VildaVault = { isUnlocked: () => true, savePatientNote: async note => saved.push(note) };
+    selectPersistedPatient(g, 'synthetic-u25');
     const result = await g.ClcrVisitSave.saveActiveResultToCard({
       patientId: 'synthetic-u25', clinicalDateISO: '2026-10-22', datapoints,
     });
@@ -392,6 +402,7 @@ describe('Klirens — ClcrVisitSave (Faza 1: zapis do karty)', () => {
     });
     expect(res).toMatchObject({ ok: false, reason: 'no-patient' });
 
+    selectPersistedPatient(g, 'p1');
     res = await vs.saveActiveResultToCard({ patientId: 'p1', datapoints: [] });
     expect(res).toMatchObject({ ok: false, reason: 'no-data' });
 
@@ -408,7 +419,7 @@ describe('Klirens — ClcrVisitSave (Faza 1: zapis do karty)', () => {
       },
     };
     const vs = g.ClcrVisitSave;
-    vs._setPatientId('patient-42');
+    selectPersistedPatient(g, 'patient-42');
 
     const root = fakeRoot([
       fakeEl('egfr', '91.6914'),
@@ -463,7 +474,7 @@ describe('Klirens — ClcrVisitSave (Faza 1: zapis do karty)', () => {
       },
     };
     const vs = g.ClcrVisitSave;
-    vs._setPatientId('p1');
+    selectPersistedPatient(g, 'p1');
     const res = await vs.saveActiveResultToCard({
       datapoints: [
         { testKey: 'clcr:egfr', label: 'eGFR', unit: 'mL/min/1,73 m²', valueNum: 90 },

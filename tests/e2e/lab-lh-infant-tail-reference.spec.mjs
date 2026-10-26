@@ -147,20 +147,33 @@ test('late-infant result cannot bypass rejected current, sample, method or popul
       await expect(chart(page).locator('[data-median-point]')).toHaveCount(0);
     });
   }
-  // Calendar ages crossing the new cutoffs remain intervals, never invented
-  // exact 244/327-day values. These boundary spans are also unit tested.
-  await mainPatient(page, { days: 327 });
-  await choose(page);
-  await expect(point(page)).toHaveCount(0);
-  await mainPatient(page, { days: 326 });
-  await choose(page);
-  await expect(point(page)).toHaveCount(0);
-  await mainPatient(page, { days: 325 });
-  await choose(page);
-  await expectNumeric(page, .4, .051627);
+  // Rejected source/identity input must not prevent a later valid current
+  // context from restoring the independent result-only point.
+  await exactDay(page, id, 350);
+  await expectResultOnly(page, .4);
 });
 
-test('documented prematurity and GnRHa block the late point while saved laboratory history stays frozen without the new median', async ({ page }) => {
+// Each calendar boundary starts with its own current patient and browser
+// context. It does not depend on several unrelated form/load lifecycles
+// fitting within the budget of the rejected-source matrix above.
+for (const days of [325, 326, 327]) test(`main DOB ${days} days preserves the complete calendar-age interval at the infant LH cutoff`, async ({ page }) => {
+  await start(page);
+  await mainPatient(page, { days });
+  await choose(page);
+  // Calendar ages crossing the cutoff remain intervals, never invented
+  // exact326/327-day values. These spans are also unit tested.
+  if (days === 325) await expectNumeric(page, .4, .051627);
+  else await expect(point(page)).toHaveCount(0);
+});
+
+test('documented GnRHa blocks the late-infant LH point', async ({ page }) => {
+  await start(page);
+  await mainPatient(page, { days: 350, gnrhaStatus: 'w-trakcie' });
+  await choose(page);
+  await expect(point(page)).toHaveCount(0);
+});
+
+test('switching to a different preterm patient blocks the late point while the first patient laboratory history stays frozen', async ({ page }) => {
   await start(page);
   const id = await mainPatient(page, { days: 300 });
   await choose(page);
@@ -180,9 +193,6 @@ test('documented prematurity and GnRHa block the late point while saved laborato
   await choose(page);
   await expect(point(page)).toHaveCount(0);
   expect(preterm).not.toBe(id);
-  await mainPatient(page, { days: 350, gnrhaStatus: 'w-trakcie' });
-  await choose(page);
-  await expect(point(page)).toHaveCount(0);
   await page.evaluate(id => window.VildaAuthUI.showPatientCard(id), id);
   await page.locator('.vilda-patient-tab[data-tab="lab"]').click();
   const history = page.locator(`.vilda-lab-assessment-history-row[data-note-id="${saved.id}"]`);

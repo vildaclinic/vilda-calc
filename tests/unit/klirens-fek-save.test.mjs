@@ -8,6 +8,9 @@ function harness() {
   for (const file of ['clcr_fek_reference_data.js', 'clcr_fek.js', 'clcr_fek_persistence.js', 'clcr_ui_workflow.js']) loadBrowserScript(file, browser);
   const locked = {};
   loadBrowserScript('vilda_vault.js', locked);
+  // A saved clinical result belongs to the selected persisted synthetic record.
+  browser.VildaVault.getPatient = async id => id === 'fictional-fek-only' ? { id, patientId: id, name: 'Fikcyjny pacjent' } : null;
+  browser.ClcrVisitSave._setPatientId('fictional-fek-only');
   return { browser, captured, sanitizer: locked.VildaVault };
 }
 function evaluate(browser, extra = {}) {

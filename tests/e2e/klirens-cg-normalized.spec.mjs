@@ -246,19 +246,23 @@ test('CG na 1,73 m² zapisuje jeden wynik, zachowuje historię i wiek źródłow
     const notes = [history];
     const originalVault = window.VildaVault;
     // Memory-only sink, never opening or reading a real vault.
+    const originalPatientId = api.resolveCurrentPatientId();
+    // The clinical writer now requires an existing selected fictional card.
     window.VildaVault = {
       isUnlocked: () => true,
+      getPatient: async patientId => patientId === 'synthetic-cg-norm-only' ? { patientId, header: { name: 'Fikcyjny pacjent testu Klirensu' } } : null,
       savePatientNote: async note => {
         const copy = JSON.parse(JSON.stringify({ ...note, id: 'synthetic-current-cg-norm' }));
         notes.push(copy);
         return copy;
       },
     };
+    api._setPatientId('synthetic-cg-norm-only');
     try {
       const outcome = await api.saveActiveResultToCard({ patientId: 'synthetic-cg-norm-only', clinicalDateISO: '2026-10-23', root: document, formulaId: 'cg_norm' });
       return { points, outcome, notes, historyUnchanged: JSON.stringify(history) === historyBefore };
     } finally {
-      window.VildaVault = originalVault;
+      window.VildaVault = originalVault; api._setPatientId(originalPatientId);
     }
   });
   expect(saved.outcome).toMatchObject({ ok: true, saved: 1, total: 1 });
