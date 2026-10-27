@@ -119,13 +119,22 @@
     if (!colors) throw new Error('Brak prezentacji kolorów siatki.');
     colors.draw(doc, { defs: defs, group: graph, points: points, mapped: mapped, metric: data.metric, prefix: PREFIX });
     if (points.length) {
-      var lastPoint = points[points.length - 1], position = mapped[mapped.length - 1];
+      var currentIndex = points.findIndex(function (point) { return point.current; });
+      if (currentIndex < 0) currentIndex = points.length - 1;
+      var lastPoint = points[currentIndex];
       var reading = label(lastPoint.value) + ' ' + data.units;
-      var chipWidth = reading.length * 6.5 + 16;
-      var chipX = Math.max(plot.x, Math.min(plot.x + plot.w - chipWidth, position.x - chipWidth / 2));
-      var chipY = Math.max(plot.y, Math.min(plot.y + plot.h - 23, position.y + (position.y - plot.y > 34 ? -34 : 11)));
-      svg.appendChild(node('rect', { x: chipX, y: chipY, width: chipWidth, height: 23, rx: 6, fill: '#fff', stroke: '#cfdfde' }));
-      svg.appendChild(node('text', { x: chipX + chipWidth / 2, y: chipY + 16, 'text-anchor': 'middle', fill: colors.color(colors.tone(data.metric, lastPoint.percentile)), 'font-size': 12, 'font-weight': 700 }, reading));
+      var chip = colors.placeLabel({ plot: plot, mapped: mapped, pointIndex: currentIndex,
+        width: reading.length * 8 + 16, height: 23 });
+      // Dense histories keep the reading above the preview, rather than hiding
+      // any measurement or segment under an in-plot label.
+      svg.setAttribute('data-value-label', chip ? 'placed' : 'header');
+      if (chip) {
+        svg.appendChild(node('rect', { class: PREFIX + '-latest-label-box', x: chip.x, y: chip.y,
+          width: chip.width, height: chip.height, rx: 6, fill: '#fff', stroke: '#cfdfde' }));
+        svg.appendChild(node('text', { class: PREFIX + '-latest-label', x: chip.x + chip.width / 2,
+          y: chip.y + 16, 'text-anchor': 'middle', fill: colors.color(colors.tone(data.metric, lastPoint.percentile)),
+          'font-size': 12, 'font-weight': 700 }, reading));
+      }
     }
     return { element: svg, plot: plot };
   }

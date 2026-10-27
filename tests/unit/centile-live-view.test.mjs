@@ -202,4 +202,36 @@ describe('screen-sized centile preview and view', () => {
     view.destroy();
   });
 
+  it('keeps a fallback heading row stable when its own height changes label placement', () => {
+    const e = environment();
+    const view = e.win.VildaCentileLiveView.create({ document: e.doc });
+    const viewport = e.byClass(view.element, 'viewport')[0];
+    const title = e.byClass(view.element, 'pane-title')[0];
+    const plot = { x: 190, y: 115, w: 1946, h: 2745, ageMin: 36, ageMax: 216, minY: 0, maxY: 200 };
+    const mapped = [[212.4567225, 2157.130225], [220.290056, 1256.743658],
+      [429.522359, 2383.633488], [841.985474, 2854.795807], [1026.245555, 1159.598483]];
+    const data = { ...preview(), preview: false, vectorPatient: true,
+      canvas: e.doc.createElement('canvas'), width: 2296, height: 3041, plot,
+      contentBounds: { x: 100, y: 100, width: 2100, height: 2850 },
+      points: mapped.map(([x, y], index) => ({ ageMonths: 36 + (x - plot.x) / plot.w * 180,
+        value: (plot.y + plot.h - y) / plot.h * 200, current: index === 0, percentile: 50 })) };
+    const availableHeight = .1727344951707847 * 2850;
+    viewport.getBoundingClientRect = () => ({ left: 0, top: 0, width: 800,
+      height: availableHeight - (title.style.display === 'block' ? 15 : 0) });
+    view.setFullscreen(true);
+    view.update(bundle(data), { patientId: 'fictional', sex: 'F' });
+    expect(data.patientLayer.dataset.valueLabel).toBe('header');
+    expect(title.style.display).toBe('block');
+    expect(title.textContent).toBe('Wzrost · 51,2 cm');
+    for (let pass = 0; pass < 5; pass++) {
+      view.fit();
+      expect(data.patientLayer.dataset.valueLabel).toBe('placed');
+      expect(title.style.display).toBe('block');
+      expect(title.textContent).toBe('Wzrost');
+    }
+    view.setFullscreen(false);
+    expect(title.style.display).toBe('');
+    view.destroy();
+  });
+
 });
