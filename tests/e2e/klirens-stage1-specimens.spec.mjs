@@ -218,9 +218,15 @@ test('TmP/GFR dobiera metodę na granicy 19 lat i nie korzysta z DZM', async ({ 
   await page.locator('#Ucr_spot').fill('10000');
   await page.locator('#Ucr_spot_unit').selectOption('umol');
 
-  await expect(page.locator('#elecInfo')).toContainText(/0[.,]964/);
+  const tmpCard = page.locator('#elecInfo [data-clcr-series="TMP_GFR"]');
+  await expect(tmpCard.locator('.clcr-result-value')).toHaveText('0,96');
+  const raw = Number(await tmpCard.getAttribute('data-clcr-value'));
+  expect(raw).toBeCloseTo(0.9642857142857143, 12);
   await expect(page.locator('#elecInfo')).toContainText('Walton–Bijvoet/Payne');
-  await expect(page.locator('#elecInfo')).toContainText('drugi poranny mocz');
+  await expect(page.locator('#clcr-tmp-gfr-details')).toContainText('Zakładamy sparowane oznaczenia krwi i moczu');
+  expect(await tmpCard.evaluate(node => JSON.parse(node.dataset.clcrTmpGfrSnapshot).input)).toMatchObject({
+    sampleKind: 'secondMorning', pairedSameTime: 'confirmed', overnightFasting: true,
+  });
   await expect(page.locator('#elecInfo .out-of-range')).toHaveCount(0);
 
   await page.evaluate(() => {
@@ -228,7 +234,8 @@ test('TmP/GFR dobiera metodę na granicy 19 lat i nie korzysta z DZM', async ({ 
     document.getElementById('V24').value = '1000';
     window.clcrUpdate();
   });
-  await expect(page.locator('#elecInfo')).toContainText(/0[.,]964/);
+  await expect(tmpCard.locator('.clcr-result-value')).toHaveText('0,96');
+  expect(Number(await tmpCard.getAttribute('data-clcr-value'))).toBe(raw);
   await expect(page.locator('#elecInfo')).not.toContainText('TmP/GFR (dobowa');
 });
 

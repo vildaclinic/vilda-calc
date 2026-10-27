@@ -241,6 +241,10 @@ describe('Ca/Cr — rzeczywisty adapter formularza i jednostkowa walidacja', () 
     // limit surowej liczby nie jest limitem tego samego stężenia w każdej jednostce.
     expect(validate(field('Ucr_spot', '60000'))).toBe(true);
     controls.formulaPicker.value = 'TMP_GFR';
+    // Audited TmP/GFR uses its declared-unit engine too; a raw ceiling is not
+    // a concentration limit shared by mg/dL and µmol/L.
+    expect(validate(field('Ucr_spot', '60000'))).toBe(true);
+    controls.formulaPicker.value = 'pH_spot';
     expect(validate(field('Ucr_spot', '60000'))).toBe(false);
   });
 });

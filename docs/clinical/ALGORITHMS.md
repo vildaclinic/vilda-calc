@@ -7643,6 +7643,92 @@ offline, CI, commit i PR podaje opis PR. Akceptacja właściciela
 obejmuje powyższą politykę i naprawy;
 zielone testy nie stanowią walidacji klinicznej metody.
 
+#### P-KLIRENS-TMP-GFR-2026-10-26 — normy, widoczny TRP i monitorowanie burosumabu
+
+Właściciel zaakceptował [makietę desktop/mobile](https://vilda-tmp-gfr-burosumab-20261026.maciej-flader.chatgpt.site)
+i wdrożenie po sprawdzeniu kombinacji komunikatów monitorowania XLH.
+Pełne źródła, metody, populacje, granice odczytu i macierz komunikatów:
+[TMP_GFR.md](TMP_GFR.md). Baza: `90d544c082aff87121c890c13a70b49702fc79e5`.
+
+**Wpływ kliniczny:** cztery stężenia i istniejący wiek wystarczają do obliczenia;
+rutynowe trzy potwierdzenia protokołu zastępuje jawne założenie sparowanych
+próbek i stabilnej czynności nerek, bez podejrzenia AKI. Znana sprzeczność
+próbek nadal blokuje wynik; znane AKI, szybko zmieniająca się kreatynina
+lub PChN zachowują uwagę i ograniczają wnioskowanie o terapii. Brak nocnego
+postu nie jest utożsamiany z pobraniem nie na czczo. Wskazówki protokołu
+pozostają w Szczegółach. Nie dopisuje się potwierdzenia standaryzacji.
+
+Wzór pozostaje bezpośredni Brodehla przed 19. rokiem oraz
+Waltona–Bijvoeta/Payne’a od 19 lat, z gałęzią TRP ≤0,86 i >0,86.
+Nowy czytelny moduł `clcr_tmp_gfr.js` jest wspólną drogą formularza i edytora.
+Zero fosforanów w moczu jest dopuszczalne; pozostałe trzy stężenia muszą być
+dodatnie, TRP w granicach 0–1. Konwersje: fosfor mg/dL /3,097; kreatynina
+mg/dL ×88,4 µmol/L. Klasyfikacja wykorzystuje liczbę przed zaokrągleniem;
+8 ULP chroni wyłącznie przed błędem binarnym, nie tworzy strefy klinicznej.
+
+**Normy jako dane:** `clcr_tmp_gfr_reference_data.js`, polityka wersjonowana
+przekazywana do `evaluate(input, policy)`. GPN dostarcza normy metody
+bezpośredniej od urodzenia; jej zakres ≥16 lat nie jest przenoszony na
+Waltona. Osobny profil AACB–ANZBMS 2025 (Chiang i wsp.,
+[DOI 10.1093/jbmrpl/ziae140](https://doi.org/10.1093/jbmrpl/ziae140),
+tabela 1 i część metod, pełny tekst) dostarcza orientacyjne
+0,70–1,35 mmol/L dla Waltona i dosłownego wieku >19 lat, obie płcie,
+przy metodach kreatyniny zgodnych z IDMS. Nie potwierdza oznaczenia
+konkretnego laboratorium. Granicę dokładnie 19 lat oraz niejednoznaczne
+etykiety GPN w 12.–<13. miesiąca opisano w polityce bez wymyślonego zakresu.
+Mayo PHOS dostarcza osobne, orientacyjne normy fosforanów surowicy od roku
+życia według wieku i płci; przy braku płci tylko wspólny zakres obu płci
+pozwala na jednoznaczną ocenę. Brak normy nie blokuje liczby.
+
+**Jedna karta:** główny TmP/GFR i jego norma mają wspólny układ B;
+TRP jest widoczny niżej, neutralnie, z orientacyjnym 85–95% według GPN
+oraz informacją, że sam nie wyklucza nerkowej utraty fosforanów.
+Fosforany surowicy mają niezależny kolor i normę; ich podwyższenie nie
+barwi liczby TmP/GFR ani jednostki normy. FEPO₄, wzory i źródła pozostają
+w Szczegółach. Cztery wejścia zachowują geometrię i rozmiar mobilny.
+
+**Monitorowanie XLH:** opcjonalny checkbox ujawnia jedynie czas od ostatniej
+dawki do pobrania. Dane poprzedniego pomiaru pochodzą z historii aktualnie
+wybranego zapisanego pacjenta. Opis aktualnego stanu fosforanów jest
+niezależny od porównania. Wyższy wynik nie oznacza automatycznie poprawy,
+a niskie fosforany nie przesądzają o nieskuteczności. Wysokie fosforany
+otrzymują lokalną uwagę o ocenie bezpieczeństwa; nie kasuje ona przyczyny
+nieporównywalności pomiarów. Znana ta sama metoda, kolejność dat, kontekst
+leczenia i równy zapisany czas od dawki pozwalają wyłącznie na opis kierunku
+zmiany. Równa liczba dni jest ostrożną regułą porównania aplikacji, nie
+zwalidowanym oknem skuteczności. Nie ma progu odpowiedzi procentowej,
+werdyktu skuteczny/nieskuteczny, automatycznego punktu sprzed leczenia ani
+zalecenia dawki. Komentarz kliniczny rozróżnia dzieci i dorosłych.
+Podstawy: aktualna angielska ChPL EMA Crysvita, Haffner 2025 i pediatryczne
+IWG 2025; dokładny zakres odczytu zapisano w TMP_GFR.md.
+
+**Historia i trwałość:** snapshot `clcr-tmp-gfr`, wersja 1, zachowuje wejścia,
+metodę, zakresy, ocenę i kontekst pobrania w istniejącej nocie badania.
+Zmiana pacjenta, konta lub zablokowanie sejfu unieważnia odczyt historii;
+błąd odczytu nie udaje braku wcześniejszych pomiarów. Różne metody tworzą
+odrębne serie; wzrost 0,95 →1,1875 wynikający wyłącznie ze zmiany wzoru
+w 19. roku nie staje się trendem odpowiedzi na lek. Edycja i usunięcie
+pozostają wspólne dla Badań i historii Klirensu. Dawne zapisy bez kontekstu
+nie otrzymują domyślnej terapii ani odtworzonej normy. „Wyczyść” rozpoczyna
+nową próbkę i usuwa czas od dawki, zachowując dane pacjenta i opcję terapii.
+
+**Regresje produkcyjne:** przy wieku 10 lat, płci M, U_P=20 mmol/L,
+U_Cr=5 mmol/L i S_Cr=50 µmol/L:
+
+| S_P mmol/L | TmP/GFR mmol/L | TRP | Ocena |
+|---|---:|---:|---|
+| 1,10 | 0,90 | 81,8% | Niskie TmP/GFR i fosforany; bez werdyktu nieskuteczności. |
+| 1,17 | 0,97 | 82,9% | Dolna granica TmP/GFR w normie mimo błędu binarnego. |
+| 1,40 | 1,20 | 85,7% | Oba parametry w zastosowanych normach, bez pełnego werdyktu terapii. |
+| 1,80 | 1,60 | 88,9% | TmP/GFR w normie; czerwone tylko fosforany i lokalna uwaga terapii. |
+| 1,90 | 1,70 | 89,5% | Oba podwyższone, bez sugestii korzystniejszej odpowiedzi. |
+
+Testy `klirens-tmp-gfr-*` wywołują rzeczywisty silnik, renderer, sesję,
+zapis i edycję; obejmują kombinacje stanów i trendów, granice wieku,
+jednostki, historię, izolację pacjenta, desktop/mobile i prawdziwy offline.
+Wyniki wykonań i kontroli GitHub podaje PR. Akceptacja właściciela dotyczy
+tego etapu; testy techniczne nie stanowią walidacji klinicznej.
+
 #### Zakres i ograniczenia
 
 | Obszar | Wdrożona reguła | Najważniejsze ograniczenia |
@@ -7652,7 +7738,7 @@ zielone testy nie stanowią walidacji klinicznej metody.
 | Noworodek | Oszacowanie `0,31 × długość [cm] / Scr [mg/dL]` dla donoszonego noworodka w 0.–28. dniu życia. Aktualna masa >2,5 kg pozostaje konserwatywną bramką aplikacji powiązaną z kryteriami HERO, nie członem równania. Podanie techniki jest opcjonalne, a IDMS może być jawnym założeniem obliczenia; nie dopisuje się metody enzymatycznej. | Wcześniactwo, masa ≤2,5 kg, 29. dzień życia, znane AKI/szybka zmiana, jednoznaczny non-IDMS lub znany Jaffe blokują wynik. JASN zawiera meta-analizę i sprawdzenie k w 43 noworodkach HERO, opisanych następnie w Pediatr Nephrol jako ta sama kohorta; większa walidacja pozostaje potrzebna. Wynik jest neutralny, bez kategorii G, normy 90 i pobocznego BSA. Istniejąca uwaga dla wieku <3 dni jest widoczna przy liczbie; ocena wymaga dnia życia i trendu Scr. |
 | CrCl i BSA | `cl24` po P-KLIRENS-CL24 wymaga Scr, Ucr, objętości i rzeczywistego czasu; prawidłowa pełna zbiórka jest jawnym założeniem przy braku przeciwnych danych. Nazwany profil PathWest obejmuje 3–<120 lat, od 19 lat zależy od płci. Granice źródłowe na 1,73 m² są przeliczane przez BSA/1,73 do jednostki wyniku mL/min. BSA używa Haycocka przed 18. rokiem i Du Bois od 18 lat. | Znany błąd zbiórki lub inne przeciwwskazanie nie jest usuwane przez założenie. Porównanie z dobowym profilem przy innym czasie jest jawnie orientacyjne, bez twierdzenia o walidacji krótkich protokołów. Brak normy nie blokuje liczby. Nie nadaje się G ani nie wyklucza PChN. Cockcroft–Gault nadal jest eCrCl od 18 lat z masą rzeczywistą, bez automatycznej normy/G; `cg` zachowuje wiek dokładny, `cg_norm` używa ukończonych lat. Kanoniczny wiek i historia nie są przepisywane. |
 | KDIGO G/A, ACR i PCR | Kategorie są wyznaczane z wartości niezaokrąglonej. ACR po P-KLIRENS-ACR przyjmuje iloraz stężeń ze wspólnej próbki (jawne założenie, znana sprzeczność blokuje) albo gotowy raport; kategorię nadaje w natywnej osi od 2 lat według jawnej polityki aplikacji, także dla próbki losowej z zaleceniem potwierdzenia podwyższenia. Znane czynniki przejściowe wstrzymują kategorię ACR; brak wieku lub wiek <2 nie blokuje liczby, ale wyklucza dorosłą normę. PCR po P-KLIRENS-PCR wymaga dwóch stężeń albo gotowego raportu; wspólna próbka jest jawnym założeniem, znana sprzeczność blokuje iloraz. Orientacyjne odniesienia: 6–<24 m <500 mg/g, 24 m–<18 lat <200, dorośli <150; natywne progi SI pozostają odrębne. Znane czynniki przejściowe zachowują ograniczenia i sygnał liczbowego przekroczenia. Poniżej 6 m lub bez wieku nie stosuje się zastępczej normy. | Kategorie G i A są wstrzymane przed 2. rokiem życia. Kategoria zakresu G nie jest pokazywana przy znanym AKI, znanej niestabilności lub jednoznacznie niezgodnym standardzie używanego markera; przy braku przeciwnych danych może opierać się na jawnych założeniach aplikacji. Sama kategoria nie rozpoznaje PChN bez kryterium przewlekłości i innych właściwych kryteriów. ACR nie otrzymuje obowiązkowej ankiety o AKI/IDMS/IFCC. |
-| Frakcje wydalane i TmP/GFR | Analit i kreatynina muszą pochodzić z tej samej próbki moczu, a próbka krwi być równoczesna. FENa po P-KLIRENS-FENA wymaga czterech stężeń; pochodzenie próbek jest jawnym założeniem przy braku znanej sprzeczności. Dorosłe <1% / >2% to warunkowe progi pomocnicze w AKI, bez normy dla wieku lub automatycznej diagnozy. FEK po P-KLIRENS-FEK wymaga czterech stężeń i może otrzymać orientacyjne pediatryczne P3–P97 AENP/SEQCML 2020 przy właściwym pokryciu wieku oraz kontekście; dorosłe 4–16% pozostaje zakresem obserwowanym. FECl po P-KLIRENS-FECL wymaga czterech stężeń i jawnie zakłada zgodne próbki przy braku sprzeczności; nie otrzymuje niezweryfikowanej normy wieku. TmP/GFR używa drugiego porannego moczu po nocy na czczo; przed 19. rokiem stosowana jest ścieżka pediatryczna, od 19. roku algorytm Waltona–Bijvoeta/Payne’a z gałęzią dla TRP >0,86. | FENa pozostaje neutralna; dzieci i nieznany wiek nie otrzymują zastępczej normy. Znane PChN/diuretyki ograniczają pomoc interpretacyjną. FENa oraz liczby FEK/FECl nie wymagają założenia stabilności/braku AKI ani IFCC. FECl pozostaje neutralna bez normy; >0,5% z KDIGO to warunkowe kryterium podejrzenia GS opisane w Szczegółach, nie uniwersalny próg prawidłowości. Znane czynniki ograniczające interpretację pozostają w zapisie. W FEK hipokaliemia i znane PChN/AKI/diuretyki wykluczają uspokajającą klasyfikację według zdrowej populacji; przy 12 mies. dwa zakresy pozostają bez wspólnego werdyktu. TmP/GFR nie jest liczone z DZM. Jego automatyczne zakresy laboratoryjne pozostają wyłączone do czasu wersjonowanego profilu metody i lokalnej walidacji. |
+| Frakcje wydalane i TmP/GFR | Analit i kreatynina muszą pochodzić z tej samej próbki moczu, a próbka krwi być równoczesna. FENa po P-KLIRENS-FENA wymaga czterech stężeń; pochodzenie próbek jest jawnym założeniem przy braku znanej sprzeczności. Dorosłe <1% / >2% to warunkowe progi pomocnicze w AKI, bez normy dla wieku lub automatycznej diagnozy. FEK po P-KLIRENS-FEK wymaga czterech stężeń i może otrzymać orientacyjne pediatryczne P3–P97 AENP/SEQCML 2020 przy właściwym pokryciu wieku oraz kontekście; dorosłe 4–16% pozostaje zakresem obserwowanym. FECl po P-KLIRENS-FECL wymaga czterech stężeń i jawnie zakłada zgodne próbki przy braku sprzeczności; nie otrzymuje niezweryfikowanej normy wieku. TmP/GFR po P-KLIRENS-TMP-GFR wymaga czterech stężeń i wieku; sparowane próbki są jawnym założeniem przy braku znanej sprzeczności. Przed 19. rokiem stosowany jest Brodehl z zakresem GPN, od 19. roku Walton–Bijvoet/Payne, z osobnym orientacyjnym profilem AACB–ANZBMS dla >19 lat. TRP pozostaje neutralnym wynikiem pomocniczym. | FENa pozostaje neutralna; dzieci i nieznany wiek nie otrzymują zastępczej normy. Znane PChN/diuretyki ograniczają pomoc interpretacyjną. FENa oraz liczby FEK/FECl nie wymagają założenia stabilności/braku AKI ani IFCC. FECl pozostaje neutralna bez normy; >0,5% z KDIGO to warunkowe kryterium podejrzenia GS opisane w Szczegółach, nie uniwersalny próg prawidłowości. Znane czynniki ograniczające interpretację pozostają w zapisie. W FEK hipokaliemia i znane PChN/AKI/diuretyki wykluczają uspokajającą klasyfikację według zdrowej populacji; przy 12 mies. dwa zakresy pozostają bez wspólnego werdyktu. TmP/GFR nie jest liczone z DZM. Zakresy są orientacyjne, zgodne z wybraną metodą, bez deklarowania walidacji lokalnego laboratorium. Niejasne granice wieku pozostają bez wspólnej oceny. Opcjonalne monitorowanie XLH opisuje fosforany i porównywalny trend, bez automatycznego werdyktu skuteczności ani dawkowania. |
 | Kamica, Ca/Cr, Ox/Cr i Cit/Cr w próbce moczu | EAU Urolithiasis 2026 rozdziela dorosłe mmol/24 h od pediatrycznej interpretacji wapnia w mmol/kg/24 h. `CaCr_spot` po P-KLIRENS-CACR stosuje osobny dwustronny profil Mayo CACR3 od 1 miesiąca do dokładnego wieku 83 lat. `OxCr_spot` po P-KLIRENS-OXCR stosuje Fimlab P95 od 1 miesiąca do dokładnie 17 lat i osobny Newcastle 2–83 µmol/mmol dla >17 lat, z jawną podstawą masową przy konwersji. `CitCr_spot` po P-KLIRENS-CITCR stosuje PathWest: >300 µmol/mmol od urodzenia do <3 lat i >100 od 3 do <18 lat, bez górnej granicy; od ≥18 lat osobny Newcastle: mężczyźni 40–330, kobiety 110–550 µmol/mmol. Pozostałe pediatryczne anality pozostają liczbowe. Progi DZM wymagają dokładnie 24-godzinnej bieżącej zbiórki i właściwego kontekstu. | Nazwane zakresy laboratoryjne są orientacyjne, nie potwierdzają metody pacjenta i nie rozpoznają samodzielnie hiperkalciurii, PH lub kamicy. W Ox/Cr zmiana źródła po 17 latach nie jest fizjologiczną krzywą; brak wieku, nieobjęta populacja lub nieznana podstawa masowa nie otrzymują zastępczej normy. W Cit/Cr zmiana źródła w wieku 18 lat również nie jest krzywą; brak płci dorosłego nie tworzy wspólnego przedziału. Nie miesza się progów tych profili z EAU ani z DZM. EAU zaleca dwie kolejne zbiórki w swoistej ocenie metabolicznej. |
 | Hemodializa | Moduł dotyczy wyłącznie pojedynczej sesji IHD. spKt/Vurea Daugirdasa II używa źródłowych par GFAC dla 2–7 sesji/tydz. i rzeczywistego PIDI; URR i eKt/V są liczone z niezaokrąglonych danych, z uwzględnieniem dostępu AV/CVC, protokołu próbek i aktualności Kru. | Moduł jest niedostępny przed 2. rokiem życia, a w wieku 2–17 lat wymaga protokołu slow-flow. Dla 5–7 sesji/tydz. sesja >300 min jest blokowana i wymaga formalnego modelowania mocznika. Pary GFAC 2–7 pochodzą z symulacji, a walidację FHN opisano dla schematów 3, 4 i 6×/tydz. Progi 1,2/1,4 są stosowane tylko w opisanym profilu dorosłej IHD 3×/tydz.; poza nim oraz w pediatrii wynik techniczny nie otrzymuje dorosłej kategorii adekwatności. |
 
