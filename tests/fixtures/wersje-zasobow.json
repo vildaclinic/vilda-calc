@@ -223,9 +223,29 @@
   "v": 1,
   "sha256": "891095f7c5b7654bb77043eb97ab7c566793c31ea756b1580b18dd2da479d1b1"
  },
+ "clcr_ph.js": {
+  "v": 1,
+  "sha256": "8d81d855c2ccd98808ad045d42c430f8ce3909ebf8084e4c3d269c2f1ad09a2c"
+ },
+ "clcr_ph_persistence.js": {
+  "v": 1,
+  "sha256": "d2fb1273b9839ae8f38c17b16ee4118a5543e0264ecc9fe94e6f01971d73717d"
+ },
+ "clcr_ph_reference_data.js": {
+  "v": 1,
+  "sha256": "9ea934fe1c78251c9d6fc36d3d15728a987bec7fcca52bf678959101253f6d68"
+ },
+ "clcr_ph_ui.css": {
+  "v": 1,
+  "sha256": "75eb28c8f85c32faea485f429faa3848ba13e6e4a40b70d447144bd8a0c0c0a4"
+ },
+ "clcr_ph_ui.js": {
+  "v": 1,
+  "sha256": "9ab7a3da974ce49562de1094954be41370b845e84af2817f7aca808f4b3c7a3b"
+ },
  "clcr_record_resources.js": {
-  "v": 3,
-  "sha256": "dc7eb8dbdd6088f9bee687170b9b04af96aeed5d8507b92e1b1e424aa5e2b728"
+  "v": 4,
+  "sha256": "2bae3ae9cf74b878cd21252a2712e1104c31b1428994b3fff182d38748e64e12"
  },
  "clcr_result_details.css": {
   "v": 1,
@@ -244,16 +264,16 @@
   "sha256": "1ad049ce05fd63ba7783d052c43576e9a2e80b2115c9eda5d7ff5bc2d8df952e"
  },
  "clcr_saved_calculation.js": {
-  "v": 3,
-  "sha256": "0e5e700f0ed83699944185e50504cb75400f33052ca4bafae4756e293ca71b20"
+  "v": 4,
+  "sha256": "ae587998d51911c0d75e1ce40afcdf8f8379404a9ab3e3adb7796558387435dd"
  },
  "clcr_saved_legacy_calculator.js": {
-  "v": 3,
-  "sha256": "104fc2093a7565d4355e8953ae0393e171696f43bd7ca089457e79ed0c0d92b2"
+  "v": 4,
+  "sha256": "287a64efa6fc23f12002fbef489dc4dca0025f3d3a449c96a96336444222256b"
  },
  "clcr_saved_results.js": {
-  "v": 3,
-  "sha256": "69af29cae0cb9f2161c02c7b9ea9d75e19fa3938513eacfa1615274c4afc5263"
+  "v": 4,
+  "sha256": "9b9ab26ac67bbc9fba0b895411e41d23c815fe32cbf22ac43cbb4f0294845416"
  },
  "clcr_saved_results_view.css": {
   "v": 1,
@@ -316,8 +336,8 @@
   "sha256": "12d4350588acc710cb8ec43552632add44e79ef2c9101455eb9c4dfd2623e95d"
  },
  "clcr_ui_workflow.js": {
-  "v": 28,
-  "sha256": "8a10bc24046371e1f82316d69ebaec66debd2909050e9420110ffbdd11aaa9d2"
+  "v": 29,
+  "sha256": "ac3e8cee4a3e0995ed56a8b8b4ce36cdccd3b41399c7c949a92a9b67bc8398f7"
  },
  "cukrzyca.js": {
   "v": 30,
@@ -472,8 +492,8 @@
   "sha256": "e001befeb185ae42780ecb51a5046c463b1691adea99292fd911b62e090919d6"
  },
  "inline_kalkulator_klirens_04.js": {
-  "v": 28,
-  "sha256": "79343b4924adbe5cb42afa64f2142525048a53af6f885506d2cd36c659707204"
+  "v": 29,
+  "sha256": "9ae43e9ca4c423a860748a3fce6294ccb4d1dfe94db811fe455605168e096f03"
  },
  "inline_kalkulator_klirens_05.js": {
   "v": 1,
@@ -484,8 +504,8 @@
   "sha256": "555ca77dae012c28f79c6cd419963ab20f651a77ab20d04b49640b6fc4214abf"
  },
  "inline_kalkulator_klirens_07.js": {
-  "v": 17,
-  "sha256": "9af59dda4a917e684728fee9c80909682ed85f528caa45d3260e93c354c0633f"
+  "v": 18,
+  "sha256": "a1dfcd26c615caf27f62e7af6108b001b03922b0d3e78df3d21ff31d641279a8"
  },
  "inline_kalkulator_klirens_08.js": {
   "v": 1,
@@ -844,8 +864,8 @@
   "sha256": "620b1e147449b87920a9ae5b756bbf62dee9928571838e794e449b680080f63c"
  },
  "vilda_chrome.js": {
-  "v": 178,
-  "sha256": "c6289d97ace31fc472ae87caa0b9d78ebc69497b1bff9992410a8a2268f2f45a"
+  "v": 179,
+  "sha256": "75e6f00a639279bab4f935be8424c3a471ef98a19ba69c7ad35dd1718c6bd685"
  },
  "vilda_cloud_cache_warm.js": {
   "v": 2,
@@ -1156,8 +1176,8 @@
   "sha256": "ae2d4a8f8f6d6397b102eae26696c7725d2986447e99da17e9df8f279d7f6cd9"
  },
  "vilda_lab_history_tab.js": {
-  "v": 10,
-  "sha256": "be02338f6b3981e9c9a70dc33ba6ee1ef0c55a6a68c5d3bf53a1ae4153764b0d"
+  "v": 11,
+  "sha256": "e7325ab9204d1fccd86963e7b13c33a78611e309711a3cc542dff07e1aee0512"
  },
  "vilda_lab_inhibin_b.js": {
   "v": 1,
@@ -1436,8 +1456,8 @@
   "sha256": "bf561188adfe403fa735bef0b88bd2297144ec1fe7909582e0dbb50cd6c99c97"
  },
  "vilda_session_bridge.js": {
-  "v": 101,
-  "sha256": "886964aeff0033767f158b045050e5740cbfc9f70e4aadd2397febf74e682207"
+  "v": 102,
+  "sha256": "a52e8bd9998de4d13ea0adabca7bc0fa629a3b601fb3ef4e764b276bbd95b410"
  },
  "vilda_sga_catchup.js": {
   "v": 2,

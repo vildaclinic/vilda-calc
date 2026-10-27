@@ -5,6 +5,7 @@ const w = {};
 for (const file of [
   'clcr_uag_reference_data.js', 'clcr_uag.js',
   'clcr_tmp_gfr_reference_data.js', 'clcr_tmp_gfr.js', 'clcr_tmp_gfr_persistence.js',
+  'clcr_ph_reference_data.js', 'clcr_ph.js', 'clcr_ph_persistence.js',
   'clcr_clinical_safety.js', 'clcr_extended_egfr.js', 'clcr_calculation_assumptions.js',
   'clcr_result_reference_data.js', 'clcr_result_presentation.js',
   'clcr_measured_clearance_reference_data.js', 'clcr_measured_clearance_reference.js',
@@ -74,8 +75,18 @@ describe('Saved Klirens: existing timed-urine production arithmetic', () => {
     expect(calculate('AGs', { S_Na: 140, S_Cl: 105, S_HCO3: 25 }).valueNum).toBe(10);
   });
 
-  it('keeps a single pH neutral and invokes the existing EAU context when eligible', () => {
-    expect(calculate('pH_spot', { U_pH: 6.1 })).toMatchObject({ valueNum: 6.1, norm: '', outOfRange: null });
+  it.each([
+    [4.4999, 'below', true, 'warning'], [4.5, 'within', false, 'success'],
+    [6.1, 'within', false, 'success'], [8, 'within', false, 'success'],
+    [8.0001, 'above', true, 'warning'],
+  ])('compares a single pH %s with the approved general reference while preserving exact value', (value, assessment, outOfRange, tone) => {
+    const result = calculate('pH_spot', { U_pH: value });
+    expect(result).toMatchObject({ valueNum: value, rawValue: value, unit: '—', norm: '4,5–8,0', assessment, outOfRange, tone });
+    expect(result.phSnapshot).toMatchObject({ valid: true, reference: { lower: 4.5, upper: 8, lowerInclusive: true, upperInclusive: true } });
+    expect(result.phSnapshot.policy).toEqual({ id: w.VildaClcrPhReferenceData.DEFAULT_POLICY.id, version: w.VildaClcrPhReferenceData.DEFAULT_POLICY.version });
+  });
+
+  it('retains the existing EAU context and collection validation for the separate pH24 calculation', () => {
     const ph = calculate('pH24', { age: '30', pH24: 7.8, stoneKnownCystinuria: true, stonePhPersistent: true, stoneCollectionPlausibilityReviewed: true, stoneTwoCollectionsConfirmed: true });
     expect(ph.tone).toBe('success');
     expect(ph.reference.kind).toBe('stone-target');

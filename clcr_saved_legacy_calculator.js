@@ -225,7 +225,19 @@
       requiredModule("ClcrTmpGfrPersistence").augmentDatapoint({ getAttribute: () => JSON.stringify(result) }, datapoint);
       return datapoint;
     }
-    if (["pH_spot", "pH24"].includes(formulaId)) {
+    if (formulaId === "pH_spot") {
+      const engine = requiredModule("VildaClcrPh"), policy = requiredModule("VildaClcrPhReferenceData").DEFAULT_POLICY;
+      const result = engine.evaluate(engine.inputFromValues(values, context), policy);
+      if (!result.valid) throw new Error(result.error || "Podaj prawidłowe pH.");
+      const datapoint = {
+        id: parameterKey, sourceFormulaId: formulaId, label: "pH moczu (próbka punktowa)", testKey: "clcr:pH_spot",
+        valueNum: result.rawValue, rawValue: result.rawValue, unit: "—", displayValue: result.display.text,
+        comparator: "", category: null, interpretation: result.interpretation, phSnapshot: result,
+      };
+      requiredModule("ClcrPhPersistence").augmentDatapoint({ getAttribute: () => JSON.stringify(result) }, datapoint);
+      return datapoint;
+    }
+    if (formulaId === "pH24") {
       const value = number(values, formulaId === "pH24" ? "pH24" : "U_pH");
       if (!(value > 0 && value <= 14)) throw new Error("Podaj prawidłowe pH.");
       const sample = collection(values);

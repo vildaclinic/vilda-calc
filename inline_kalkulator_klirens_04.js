@@ -282,7 +282,7 @@ const maxValues = {
     Cit_Cr_spot: 400,
     Ca_spot: 30,
     U_Cys: 2e3,
-    U_pH: 9,
+    U_pH: 14,
     pH24: 9,
     S_PTH: 2e3,
     S_VitD: 200,
@@ -552,7 +552,7 @@ function validateField(e) {
 function validateClcrAgeContext(e) {
   // Cit/Cr reference bands use completed years; zero years needs no extra
   // months or days to select the source's birth–<3-years interval.
-  if (["CitCr_spot", "FENa_spot", "FEK_spot", "FECl_spot", "FEHCO3_spot", "AGu_spot", "TMP_GFR"].includes($("formulaPicker")?.value)) return;
+  if (["CitCr_spot", "FENa_spot", "FEK_spot", "FECl_spot", "FEHCO3_spot", "AGu_spot", "TMP_GFR", "pH_spot"].includes($("formulaPicker")?.value)) return;
   const n = document.getElementById("age"),
     t = document.getElementById("ageMonths");
   if (!n || (n.value || "").trim() === "") return;
@@ -579,6 +579,7 @@ function canComputeFormula(e) {
   if (e === "FEHCO3_spot") return evaluateClcrFehco3().valid === true;
   if (e === "AGu_spot") return evaluateClcrUag().valid === true;
   if (e === "TMP_GFR") return evaluateClcrTmpGfr().valid === true;
+  if (e === "pH_spot") return evaluateClcrPh().valid === true;
   if (
     window.ClcrClinicalSafety &&
     typeof window.ClcrClinicalSafety.formulaSafety == "function"
@@ -708,6 +709,12 @@ function evaluateClcrUag() {
     || { valid: false, errorCode: "UAG_UNAVAILABLE", error: "Nie można obliczyć UAG. Odśwież aplikację." };
 }
 
+function evaluateClcrPh() {
+  const engine = window.VildaClcrPh;
+  return engine?.evaluate(engine.readInputFromDocument(document), window.VildaClcrPhReferenceData?.DEFAULT_POLICY)
+    || { valid: false, errorCode: "PH_UNAVAILABLE", error: "Nie można ocenić pH. Odśwież aplikację." };
+}
+
 function evaluateClcrTmpGfr() {
   const engine = window.VildaClcrTmpGfr;
   if (!engine) return { valid: false, errorCode: "TMP_UNAVAILABLE", error: "Nie można obliczyć TmP/GFR. Odśwież aplikację." };
@@ -769,14 +776,14 @@ function packClcrSupplementaryMarkup(markup, formulaId) {
   clcrSetTrustedMarkup(staging, markup, "clcr-result-presentation-staging");
   const nodes = [...staging.children];
   const primary = nodes.find((node) => node.classList.contains("clcr-result-card") && node.dataset.clcrFormula === formulaId);
-  if (!primary && ["CitCr_spot", "FENa_spot", "FEK_spot", "FECl_spot", "FEHCO3_spot", "AGu_spot", "TMP_GFR"].includes(formulaId)) {
-    const pending = nodes.filter((node) => node.dataset.clcrFormula === formulaId && node.matches(".citcr-result-empty, .citcr-result-error, .fena-result-empty, .fena-result-error, .fek-result-empty, .fek-result-error, .fecl-result-empty, .fecl-result-error, .fehco3-result-empty, .fehco3-result-error, .uag-result-empty, .uag-result-error, .tmp-gfr-result-empty, .tmp-gfr-result-error"));
+  if (!primary && ["CitCr_spot", "FENa_spot", "FEK_spot", "FECl_spot", "FEHCO3_spot", "AGu_spot", "TMP_GFR", "pH_spot"].includes(formulaId)) {
+    const pending = nodes.filter((node) => node.dataset.clcrFormula === formulaId && node.matches(".citcr-result-empty, .citcr-result-error, .fena-result-empty, .fena-result-error, .fek-result-empty, .fek-result-error, .fecl-result-empty, .fecl-result-error, .fehco3-result-empty, .fehco3-result-error, .uag-result-empty, .uag-result-error, .tmp-gfr-result-empty, .tmp-gfr-result-error, .ph-result-empty, .ph-result-error"));
     if (pending.length) return pending.map((node) => node.outerHTML).join("");
   }
   if (!primary) return markup;
   const details = nodes.find((node) => node.classList.contains("clcr-result-details") && node.dataset.clcrFormula === formulaId);
   if (!details) return markup;
-  if (["OxCr_spot", "CitCr_spot", "FENa_spot", "FEK_spot", "FECl_spot", "FEHCO3_spot", "AGu_spot", "TMP_GFR"].includes(formulaId)) {
+  if (["OxCr_spot", "CitCr_spot", "FENa_spot", "FEK_spot", "FECl_spot", "FEHCO3_spot", "AGu_spot", "TMP_GFR", "pH_spot"].includes(formulaId)) {
     // This card already carries its complete source and specimen context.
     // Unrelated stone-panel EAU notes must not label a Fimlab/NHS reference.
     nodes.filter((node) => node !== primary && node !== details &&
@@ -931,7 +938,8 @@ function update() {
     fekEvaluation = evaluateClcrFek(),
     feclEvaluation = evaluateClcrFecl(),
     fehco3Evaluation = evaluateClcrFehco3(),
-    uagEvaluation = evaluateClcrUag();
+    uagEvaluation = evaluateClcrUag(),
+    phEvaluation = evaluateClcrPh();
   acrRatio
     ? ((j = acrRatio.mgG),
       ($("U_ACR").value = j.toFixed(1)))
@@ -2717,21 +2725,11 @@ function update() {
     if (window.ClcrCitcrUi && (citcrEvaluation.valid || $("formulaPicker")?.value === "CitCr_spot")) {
       he += window.ClcrCitcrUi.renderResult(citcrEvaluation);
     }
-    isFiniteNum(ye) &&
-      appendStoneValue(
-        "pH próbki moczu",
-        `${formatStoneThresholdSafe(
-          ye,
-          2,
-          adultStone && adultStone.ph,
-          adultStone &&
-            ["rtaScreenPatternPresent", "rtaScreenIncomplete"].includes(
-              adultStone.ph?.code,
-            )
-            ? [">", 5.8]
-            : null,
-        )} \u2014 pojedynczy wynik bez automatycznego rozpoznania`, "", "pH_spot", ye,
-      );
+    if (window.ClcrPhUi && (phEvaluation.valid || _e === "pH_spot")) {
+      he += window.ClcrPhUi.renderResult(phEvaluation);
+    } else if (_e === "pH_spot") {
+      he += '<div class="ph-result-error" data-clcr-formula="pH_spot"><strong>Nie można wyświetlić pH</strong><p>Odśwież aplikację, aby wczytać moduł wyniku pH.</p></div>';
+    }
     Ie > 0 &&
       appendStoneValue(
         "Wapń całkowity w surowicy",
@@ -2852,6 +2850,7 @@ function update() {
       );
     }
   }
+  const phDetailsOpen = _e === "pH_spot" && $("clcr-ph-details")?.open === true;
   let be = "";
   {
     const i = document.getElementById("stoneInfo"),
@@ -2870,6 +2869,7 @@ function update() {
           (l.style.display = "block"));
       } else (clcrClearElement(i), (l.style.display = "none"));
   }
+  if (phDetailsOpen && $("clcr-ph-details")) $("clcr-ph-details").open = true;
   const it = document.getElementById("ktvFields"),
     Ve = document.getElementById("ktvToggle");
   if (it && Ve)
@@ -3785,6 +3785,14 @@ const clearBtn = document.getElementById("clearBtn");
 clearBtn &&
   clearBtn.addEventListener("click", (event) => {
     event.clcrClearedFormula = $("formulaPicker")?.value || "";
+    if (event.clcrClearedFormula === "pH_spot") {
+      const vault = window.__vildaClcrVersionValueVault;
+      event.clcrPreservedPhContext = Object.fromEntries((window.ClcrPhSession?.CONTEXT_IDS || []).flatMap(id => {
+        const control = $(id);
+        if (control) return [[id, control.type === "checkbox" ? control.checked : control.value]];
+        return vault && Object.hasOwn(vault, id) ? [[id, vault[id]]] : [];
+      }));
+    }
     if (["FECl_spot", "FEHCO3_spot", "AGu_spot", "TMP_GFR"].includes(event.clcrClearedFormula)) {
       // Preserve the patient's known context before the generic reset. The
       // session listener retains FE sampling facts; for UAG, clearing starts a
