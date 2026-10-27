@@ -2,25 +2,34 @@ import { describe, expect, it, vi } from 'vitest';
 import { loadBrowserScript } from '../support/load-browser-script.mjs';
 
 function setup({ columns = '400px 400px', contentHeight = 1100, hidden = false } = {}) {
-  const nodes = new Map(), listeners = new Map(), frames = new Map(), observed = [];
+  const nodes = new Map(), listeners = new Map(), frames = new Map(), observed = [], mutations = [];
   let sequence = 0;
   function element(id, rect = {}, computed = {}) {
     const attributes = new Map(), classes = new Set(), handlers = new Map(), properties = new Map();
+    let hiddenState = false;
     const node = {
-      id, hidden: false, computed, children: [], scrollTop: 0,
+      id, computed, children: [], scrollTop: 0,
+      get hidden() { return hiddenState; },
+      set hidden(value) { hiddenState = value; mutations.push({ node: this.id, attribute: 'hidden' }); },
       rect: { left: 0, top: 100, width: 400, height: 800, ...rect },
       style: {
         getPropertyValue: name => properties.get(name) || '',
-        setProperty: vi.fn((name, value) => properties.set(name, value)),
-        removeProperty: name => properties.delete(name),
+        setProperty: vi.fn((name, value) => { properties.set(name, value); mutations.push({ node: id, attribute: 'style' }); }),
+        removeProperty: name => { properties.delete(name); mutations.push({ node: id, attribute: 'style' }); },
       },
       classList: {
-        add: name => classes.add(name), remove: name => classes.delete(name), contains: name => classes.has(name),
-        toggle: (name, enabled) => enabled ? classes.add(name) : classes.delete(name),
+        // Browsers report add/remove calls even when the class set is unchanged.
+        add: name => { classes.add(name); mutations.push({ node: id, attribute: 'class' }); },
+        remove: name => { classes.delete(name); mutations.push({ node: id, attribute: 'class' }); },
+        contains: name => classes.has(name),
+        toggle: (name, enabled) => {
+          if (classes.has(name) !== enabled) mutations.push({ node: id, attribute: 'class' });
+          return enabled ? classes.add(name) : classes.delete(name);
+        },
       },
-      setAttribute: (name, value) => attributes.set(name, value),
+      setAttribute: (name, value) => { attributes.set(name, value); mutations.push({ node: id, attribute: name }); },
       getAttribute: name => attributes.get(name) ?? null,
-      removeAttribute: name => attributes.delete(name),
+      removeAttribute: name => { if (attributes.delete(name)) mutations.push({ node: id, attribute: name }); },
       getClientRects: () => node.hidden ? [] : [{}],
       getBoundingClientRect: vi.fn(() => ({ ...node.rect, right: node.rect.left + node.rect.width, bottom: node.rect.top + node.rect.height })),
       appendChild: child => { node.children.push(child); nodes.set(child.id, child); },
@@ -61,7 +70,7 @@ function setup({ columns = '400px 400px', contentHeight = 1100, hidden = false }
   loadBrowserScript('vilda_summary_layout.js', win);
   return {
     api: win.VildaSummaryLayout, form, fieldset, doctor, card, content, puberty,
-    hint: nodes.get('vildaSummaryScrollHint'), observed,
+    hint: nodes.get('vildaSummaryScrollHint'), observed, mutations,
     event: name => listeners.get(name)?.(),
     resize: () => observed.forEach(item => item.callback()),
     flush: () => { for (const [id, callback] of [...frames]) { frames.delete(id); callback(); } },
@@ -70,6 +79,45 @@ function setup({ columns = '400px 400px', contentHeight = 1100, hidden = false }
 }
 
 describe('summary card — measured two-column layout', () => {
+  it.each([
+    ['hidden comparison summary', { hidden: true }],
+    ['overflowing summary', {}],
+    ['short summary', { contentHeight: 450 }],
+    ['stacked phone summary', { columns: '400px' }],
+  ])('does not retrigger DOM observers for an unchanged %s', (_, options) => {
+    const e = setup(options);
+    e.mutations.length = 0;
+    for (let index = 0; index < 3; index += 1) {
+      e.api.refresh();
+      e.event('vilda:professional-summary-updated');
+      e.resize(); e.flush();
+      e.content.fire('scroll');
+    }
+    expect(e.mutations).toEqual([]);
+  });
+
+  it('writes genuine size and visibility changes once, then settles without observer feedback', () => {
+    const e = setup();
+    e.fieldset.rect.height = 850;
+    e.api.refresh();
+    expect(e.card.style.getPropertyValue('--vilda-summary-card-height')).toBe('810px');
+    expect(e.content.style.getPropertyValue('--vilda-summary-content-height')).toBe('680px');
+    e.card.hidden = true;
+    e.api.refresh();
+    expect(e.card.classList.contains('vilda-summary-height-matched')).toBe(false);
+    expect(e.hint.hidden).toBe(true);
+    e.mutations.length = 0;
+    e.api.refresh();
+    expect(e.mutations).toEqual([]);
+    e.card.hidden = false;
+    e.api.refresh();
+    expect(e.card.classList.contains('vilda-summary-height-matched')).toBe(true);
+    expect(e.hint.hidden).toBe(false);
+    e.mutations.length = 0;
+    e.api.refresh();
+    expect(e.mutations).toEqual([]);
+  });
+
   it('aligns the bottom with the actual form, allowing the status strip above it', () => {
     const e = setup();
     expect(e.card.style.getPropertyValue('--vilda-summary-card-height')).toBe('760px');

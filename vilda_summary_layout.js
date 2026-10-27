@@ -53,29 +53,44 @@
     });
   }
 
-  var card, content, hint, geometry, frame = 0, started = false, overflowing = false;
+  var card, content, hint, geometry, frame = 0, started = false;
   function setSize(element, name, value) {
     if (element.style.getPropertyValue(name) !== value) element.style.setProperty(name, value);
+  }
+  function removeSize(element, name) {
+    if (element.style.getPropertyValue(name)) element.style.removeProperty(name);
+  }
+  function setClass(element, name, enabled) {
+    if (element.classList.contains(name) !== enabled) element.classList.toggle(name, enabled);
+  }
+  function setAttribute(element, name, value) {
+    if (element.getAttribute(name) === value) return;
+    if (value === null) element.removeAttribute(name);
+    else element.setAttribute(name, value);
+  }
+  function setHidden(element, hidden) {
+    if (element.hidden !== hidden) element.hidden = hidden;
   }
   function scrollCue() {
     if (!hint || hint.hidden) return;
     // Keep its space at the end of a scroll, so the final rows do not jump.
     var atEnd = content.scrollHeight - content.clientHeight - content.scrollTop <= 4;
-    hint.classList.toggle('vilda-summary-scroll-hint-at-end', atEnd);
+    setClass(hint, 'vilda-summary-scroll-hint-at-end', atEnd);
   }
   function clearOverflow() {
-    overflowing = false;
-    hint.hidden = true;
-    content.removeAttribute('tabindex');
+    setHidden(hint, true);
+    setAttribute(content, 'tabindex', null);
     if (content.getAttribute('role') === 'region') {
-      content.removeAttribute('role');
-      content.removeAttribute('aria-label');
+      setAttribute(content, 'role', null);
+      setAttribute(content, 'aria-label', null);
     }
   }
   function release() {
-    card.classList.remove('vilda-summary-height-matched');
-    card.style.removeProperty('--vilda-summary-card-height');
-    content.style.removeProperty('--vilda-summary-content-height');
+    // Native Reminders observes this card's style/class. Even removing an
+    // absent class creates a mutation, so an unchanged layout must write none.
+    setClass(card, 'vilda-summary-height-matched', false);
+    removeSize(card, '--vilda-summary-card-height');
+    removeSize(content, '--vilda-summary-content-height');
     clearOverflow();
   }
   function refresh() {
@@ -87,25 +102,30 @@
     var height = geometry.availableHeight(card);
     if (!height) { release(); return; }
     setSize(card, '--vilda-summary-card-height', height + 'px');
-    card.classList.add('vilda-summary-height-matched');
+    setClass(card, 'vilda-summary-height-matched', true);
     if (content.hidden) { clearOverflow(); return; }
 
     var style = w.getComputedStyle(card);
     var trailing = (parseFloat(style.paddingBottom) || 0) + (parseFloat(style.borderBottomWidth) || 0);
     var available = Math.max(0, Math.floor(card.getBoundingClientRect().top + height - trailing - content.getBoundingClientRect().top));
-    setSize(content, '--vilda-summary-content-height', available + 'px');
-    overflowing = content.scrollHeight > content.clientHeight + 1;
-    if (!overflowing) { clearOverflow(); return; }
+    // Compare the full content with the available space before writing its
+    // final constraint. Temporarily expanding it on every refresh would emit
+    // style mutations and could clamp the user's scroll position twice.
+    if (content.scrollHeight <= available + 1) {
+      setSize(content, '--vilda-summary-content-height', available + 'px');
+      clearOverflow();
+      return;
+    }
 
-    hint.hidden = false;
+    setHidden(hint, false);
     setSize(hint, '--vilda-summary-hint-bottom', trailing + 'px');
     var hintStyle = w.getComputedStyle(hint);
     var cueHeight = hint.getBoundingClientRect().height + (parseFloat(hintStyle.marginTop) || 0);
     setSize(content, '--vilda-summary-content-height', Math.max(0, available - cueHeight) + 'px');
-    content.setAttribute('tabindex', '0');
+    setAttribute(content, 'tabindex', '0');
     if (content.getAttribute('role') !== 'tabpanel') {
-      content.setAttribute('role', 'region');
-      content.setAttribute('aria-label', 'Podsumowanie wyników');
+      setAttribute(content, 'role', 'region');
+      setAttribute(content, 'aria-label', 'Podsumowanie wyników');
     }
     scrollCue();
   }
