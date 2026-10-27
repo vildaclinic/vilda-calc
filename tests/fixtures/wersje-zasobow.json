@@ -820,8 +820,8 @@
   "sha256": "620b1e147449b87920a9ae5b756bbf62dee9928571838e794e449b680080f63c"
  },
  "vilda_chrome.js": {
-  "v": 176,
-  "sha256": "0ebb31397fd0688243981eb4520409566cbdb651aa4847b277f1ff4c39f30eec"
+  "v": 177,
+  "sha256": "03526d8658cb930bb6fe84ab8fbc290182e9e4f0a5ea349ceb9e63878a8415f5"
  },
  "vilda_cloud_cache_warm.js": {
   "v": 2,
@@ -1112,8 +1112,8 @@
   "sha256": "d3d985e043362cdf3139d42d9344085043fe150259b5964f2f53ae00d6b3ef35"
  },
  "vilda_kosz_zapisow.js": {
-  "v": 3,
-  "sha256": "bd21aa35a6f8eb801a55435c99c1ae6527f327771aa5bcd388f293c95a1bec1c"
+  "v": 4,
+  "sha256": "6c7792a9a31c8e16b7926d0094e429470ff1ff4705025cbd0a9e278102607f29"
  },
  "vilda_lab_assessment_ui.css": {
   "v": 13,
@@ -1412,8 +1412,8 @@
   "sha256": "bf561188adfe403fa735bef0b88bd2297144ec1fe7909582e0dbb50cd6c99c97"
  },
  "vilda_session_bridge.js": {
-  "v": 99,
-  "sha256": "63166ba49fa8a1da1431d6953fdeab396f26579b7fb5b1ced0161dee38516bb2"
+  "v": 100,
+  "sha256": "7bb6e567c217f0065588313f10abe56bba41d99916f29c3b3f768f2ed6fef511"
  },
  "vilda_sga_catchup.js": {
   "v": 2,
@@ -1500,8 +1500,8 @@
   "sha256": "59ee39776162dde3f0f8beb5d779ae68323128e2d7bd4c4fa21ce897f56f942e"
  },
  "vilda_vault.js": {
-  "v": 227,
-  "sha256": "c9393f1b4bcc1a3863f206f2cfdbc739bed5fe712f074b229f7b5e844a70cbee"
+  "v": 228,
+  "sha256": "bccd23034d4ab434c3d149620e7908a7c3f966e8e9d39f1487df99f2f8c2cfef"
  },
  "vilda_version_history_ui.js": {
   "v": 15,

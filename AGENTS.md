@@ -9,6 +9,8 @@ Ten plik obowiązuje w całym repozytorium. Vilda jest aplikacją medyczną; bł
 - Używaj gałęzi `agent/<krótki-opis>` i draft pull requestu do `audyt`.
 - Nie commituj ani nie pushuj bezpośrednio do `audyt`.
 - Nie scalaj PR, nie publikuj wydania i nie wdrażaj produkcji bez wyraźnego polecenia właściciela.
+- Rozwijana aplikacja to pliki z gałęzi `audyt` publikowane przez GitHub Pages pod `https://vildaclinic.github.io/vilda-calc/`. Właściciel i agenci pracują na plikach w GitHubie; scalenie PR do `audyt` uruchamia publikację na tej stronie. To, czy zmiana jest już na stronie, sprawdzaj tam.
+- Domena `wagaiwzrost.pl` ma wcześniejszą wersję aplikacji, której już nie rozwijamy; to domena na przyszłość. Nie sprawdzaj na niej wdrożeń i nie bierz jej plików za wzór (ustalenie właściciela z 2026-10-27).
 - Przed rozpoczęciem odśwież `origin/audyt` i porównaj bazowy SHA z `refs/remotes/origin/audyt`. Jeżeli fetch jest niedostępny, sprawdź zdalny `refs/heads/audyt` przez `git ls-remote`. Po stwierdzeniu rozbieżności najpierw odśwież checkout.
 - Zachowuj niepowiązane zmiany użytkownika. Nie używaj destrukcyjnych poleceń do czyszczenia repozytorium.
 

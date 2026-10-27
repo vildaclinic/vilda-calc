@@ -555,7 +555,9 @@
     if (ocena.przypiety) {
       var uw = el('div', 'settings-kosz-uwaga');
       uw.appendChild(ikona('pinezka'));
-      uw.appendChild(el('span', null, 'Ten zapis jest przypięty — ktoś oznaczył go do zachowania. Żeby go usunąć, trzeba go najpierw odpiąć. Oba kroki cofniesz, przywracając zapis z kosza.'));
+      // P-PRZYPIETA-POLKRATA (S4 krok 2, decyzja właściciela D2 = a): odpięcie zapisuje się przed koszem, więc
+      // „Przywróć” oddaje zapis bez przypięcia (dotąd przypięcie wracało razem z treścią).
+      uw.appendChild(el('span', null, 'Ten zapis jest przypięty — ktoś oznaczył go do zachowania. Żeby go usunąć, trzeba go najpierw odpiąć. Usunięcie cofniesz, przywracając zapis z kosza; wróci nieprzypięty — przypniesz go wtedy ponownie.'));
       tresc.push(uw);
     }
     tresc.push(punkty);
@@ -630,9 +632,12 @@
                 return;
               }
               o.zajmij(false);
+              // F-F (P-PRZYPIETA-POLKRATA): po „Odepnij i usuń” sejf przy błędzie kosza przypina zapis z powrotem; gdy i to
+              // się nie uda (kod 'kosz-odpiety'), komunikat sejfu mówi, że zapis jest odpięty — bez „Karta jest bez zmian”.
               o.pokazBlad(e && e.code === 'zablokowany'
                 ? 'Sejf jest zablokowany — zaloguj się i spróbuj ponownie. Nic nie zostało usunięte.'
-                : 'Nie udało się usunąć zapisu' + (e && e.message ? ': ' + e.message : '.') + ' Karta jest bez zmian.');
+                : e && e.code === 'kosz-odpiety' ? e.message
+                  : 'Nie udało się usunąć zapisu' + (e && e.message ? ': ' + e.message : '.') + ' Karta jest bez zmian.');
             }
           },
         },

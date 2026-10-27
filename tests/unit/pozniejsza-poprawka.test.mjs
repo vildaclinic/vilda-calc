@@ -167,7 +167,10 @@ describe('P-POZNIEJSZA-POPRAWKA: wersja tej samej karty — wygrywa późniejsza
   });
 
   for (const kol of KOL) {
-    it(`T6 dwie poprawki masy na K (rev 2), później gwiazdka na P (rev 1), ${kol}: 24 kg z gwiazdką na obu (LWW całej wersji, PD-12)`, async () => {
+    // P-PRZYPIETA-POLKRATA (S4 krok 2, W3 — decyzja właściciela D1 = C, 2026-10-21): PD-12 dla gwiazdki — późniejsza
+    // gwiazdka nie kasuje wcześniejszej poprawki treści z urządzenia, które o niej nie wiedziało. Dotąd (LWW całej wersji):
+    // 24 kg z gwiazdką; teraz rekord złożony 31 kg z gwiazdką, rev = 2 + 1, chwila zmiany = chwila gwiazdki (D3 = a).
+    it(`T6 dwie poprawki masy na K (rev 2), później gwiazdka na P (rev 1), ${kol}: 31 kg z gwiazdką na obu (W3: treść i gwiazdka osobno)`, async () => {
       sztucznyZegar();
       const { P, K, pid, sid } = await dwaUrzadzenia();
       await popraw(K, pid, sid, { weight: 30 });
@@ -178,7 +181,7 @@ describe('P-POZNIEJSZA-POPRAWKA: wersja tej samej karty — wygrywa późniejsza
       await wymiana(P, K, 'naraz');
       for (const [nazwa, v] of [['P', P], ['K', K]]) {
         const w = await wersja(v, pid, sid);
-        expect({ masa: w.payload.user.weight, pinned: !!w.pinned }, nazwa).toEqual({ masa: 24, pinned: true });
+        expect({ masa: w.payload.user.weight, pinned: !!w.pinned, rev: w.rev }, nazwa).toEqual({ masa: 31, pinned: true, rev: 3 });
       }
     });
   }
@@ -384,7 +387,10 @@ describe('strażnik źródła P-POZNIEJSZA-POPRAWKA', () => {
   };
   it('wersja tej samej karty: jedna reguła Bkz_nowszaWersja, zapis z treścią i chwilą zwycięzcy, rev = wyższa z dwóch także przy odrzuceniu (P-REV-MAX), bez „teraz”', () => {
     const scal = czesc('async function Bsl_scalPacjenta(', 'function Bsw_bezNowych(');
-    expect(scal).toContain('if (!Bkz_nowszaWersja(S, g)) {');
+    // W3 (P-PRZYPIETA-POLKRATA): treść i gwiazdka osobno (Bgw_scal); bez odczytu treści albo przy remisie obu składników —
+    // Bkz_nowszaWersja jak dotąd.
+    expect(scal).toContain('if (Bgw_w ? !Bgw_w.zLadunku : !Bkz_nowszaWersja(S, g)) {');
+    expect(czesc('async function Bgw_scal(', 'async function Bsl_scalPacjenta(')).toContain('if (ct === 0 && cg === 0) return { zLadunku: Bkz_nowszaWersja(S, g) };');
     expect(scal).toContain('rev: Math.max(mt(S), mt(g)), updatedAtISO: zmianaZdalna, payloadCipher: szyfry[k],');
     expect(scal).toContain('if (mt(S) > mt(g)) {');
     expect(scal).toContain('Bng_dopisz(Bng_zap, Bng_j, Object.assign({}, g, { rev: mt(S) }, Bm1(g, S)), null, g.payloadCipher)');
@@ -394,7 +400,10 @@ describe('strażnik źródła P-POZNIEJSZA-POPRAWKA', () => {
   });
   it('poprawka w miejscu: stempel w updatedAtISO, w rekordzie dla nagłówka i w lastSavedAtISO; savedAtISO bez stempla', () => {
     const akt = czesc('async function Bzw_aktualizujWersje(', 'function tn(t)');
-    expect(akt).toContain('d=y&&a.savedAtISO||l,Bpp_z=Bpp_chwilaZmiany(a.updatedAtISO,a.savedAtISO);');
+    // P-KOSZ-POLKRATA: stempel zna też przycięcie, które ta wersja przeżyła (Bpk_retencjaZapisu) — przy zmianie gwiazdki
+    // i wersji nieprzypiętej po zapisie (F-C: poprawka wersji przypiętej bez niego); liczy go Bgw_poZapisie.
+    expect(akt).toContain('d=y&&a.savedAtISO||l,Bgw_z=await Bgw_poZapisie(n,a,e,!!(r&&r.Bgw_gwiazdka)),Bpp_z=Bgw_z.chwila;');
+    expect(czesc('async function Bgw_poZapisie(', 'function Bgw_zWpisu(')).toContain("const chwila = Bpp_chwilaZmiany(stary.updatedAtISO, stary.savedAtISO, gwiazdka || !przypietaPo ? await Bpk_retencjaZapisu(snapshotId) : '');");
     expect(akt).toContain('rev:mt(a)+1,updatedAtISO:Bpp_z,payloadCipher:i},Bm1(a))');
     expect(akt).toContain('{savedAtISO:d,rev:mt(a)+1,updatedAtISO:Bpp_z,payloadCipher:i}');
     expect(akt).toContain('lastSavedAtISO:Bkz_pozniejsza(p.lastSavedAtISO,Bpp_z)');
@@ -412,7 +421,8 @@ describe('strażnik źródła P-POZNIEJSZA-POPRAWKA', () => {
     expect(poImporcie).not.toContain('updatedAtISO: teraz');
   });
   it('usunięcie do kosza i retencja: chwila usunięcia później niż usuwana wersja', () => {
-    expect(czesc('async function Bkz_doKosza(', 'Bkz_zmienListe([wpis], [])')).toContain('deletedAtISO: Bpp_chwilaZmiany(Bkz_zmiana(zapis)),');
+    // P-KOSZ-POLKRATA: usunięcie później także niż zmiany znane nagrobkowi tego zapisu.
+    expect(czesc('async function Bkz_doKosza(', 'Bkz_zmienListe([wpis], [])')).toContain("deletedAtISO: Bpp_chwilaZmiany(Bkz_zmiana(zapis), Bpk_n ? Bkz_znanaZmiana(Bpk_n) : ''),");
     const ret = czesc('const Bpp_t = function (s)', 'powod: \'retencja\'');
     expect(ret).toContain('return z > teraz ? Bpp_chwilaZmiany(z) : teraz;');
     expect(ret).toContain('deletedAtISO: Bpp_t(s),');
