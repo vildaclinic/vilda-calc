@@ -19428,9 +19428,10 @@ z którego dochodzą dwa komunikaty błędu (niżej, „Format”).
 **Decyzja właściciela.** D5 = a (2026-10-21, decyzje S4: „tak, akceptuję wszystko, działaj”): „Przywróć”, gdy wersja jest
 w karcie i w koszu, zapisuje wersję z nowszą z dwóch treści, z chwilą zmiany późniejszą niż usunięcie i `rev` = najwyższa
 + 1; wynik na P, K i C: karta 78, kosz pusty, komunikat „Przywrócono”. Osobny PR po PR-S4 (kolejność PR-S4 → PR-PRZ0 →
-PR-E4a → PR-E3). Start: „ruszaj z PRZ0” (2026-10-27). **Do potwierdzenia przez właściciela w tym PR:** PRZ-odp (wynik
-zmienia się także poza dosłownym scenariuszem PRZ0 — zamyka utratę poprawki masy) i ograniczenie „zegar do przodu”
-(niżej).
+PR-E4a → PR-E3). Start: „ruszaj z PRZ0” (2026-10-27). **Potwierdzone przez właściciela 2026-10-27** („PRZ0: 1 tak,
+2 tak, 3 tak”): (1) PRZ-odp — wynik zmienia się także poza dosłownym scenariuszem PRZ0 i zamyka utratę poprawki masy;
+(2) ograniczenie „zegar do przodu” (niżej) — przyjęte jako znane ograniczenie; (3) nowy komunikat przy nieczytelnym
+wpisie kosza.
 
 **Co było** (`audyt` `ae1ac892`, wydanie S4: `vilda_vault.js` 228; prawdziwy sejf, magazyny w pamięci, sztuczny zegar,
 dane fikcyjne; katalog `tests/unit/polkrata-katalog.test.mjs`, 8 kolejności, i 30 kolejności poza repozytorium).
@@ -19548,7 +19549,7 @@ w trwałej bazie), lista kosza — jak dotąd do metadanych konta. W 8 z 8 kolej
 po blokadzie („idle”) i ponownym zalogowaniu P dostaje 78 r2 z synchronizacji (dotąd sam kosz 78).
 
 **Ograniczenia.**
-- **Zegar urządzenia, które usunęło, do przodu** (do potwierdzenia). Stempel przywrócenia jest późniejszy niż usunięcie
+- **Zegar urządzenia, które usunęło, do przodu** (przyjęte przez właściciela 2026-10-27). Stempel przywrócenia jest późniejszy niż usunięcie
   (PD-4b), więc przy zegarze do przodu przywrócenie wygrywa też z poprawką z urządzenia jeszcze niezsynchronizowanego,
   zrobioną w czasie rzeczywistym po kliknięciu — aż czas dogoni chwilę usunięcia (okno = przesunięcie zegara); ta
   poprawka nie zostaje w koszu, jak każda przegrana poprawka tej samej wersji. Dotąd w stanie PRZ0 nic się nie
