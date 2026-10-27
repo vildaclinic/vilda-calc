@@ -322,9 +322,6 @@
         version: "spot",
         requires: [
           "age",
-          "spotSampleKind",
-          "tmpOvernightFasting",
-          "tmpPairedSameTime",
           "U_PO4_spot",
           "U_PO4_spot_unit",
           "S_PO4_spot",
@@ -334,7 +331,7 @@
           "Scr_spot",
           "Scr_spot_unit",
         ],
-        note: "Wymaga drugiego porannego moczu po nocnym pozostawaniu na czczo oraz równocześnie pobranej próbki krwi.",
+        note: "Cztery stężenia ze sparowanych próbek krwi i moczu. Wiek służy do doboru metody i normy.",
       },
       {
         id: "pH_spot",

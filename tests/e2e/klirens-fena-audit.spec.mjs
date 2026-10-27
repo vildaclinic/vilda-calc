@@ -504,22 +504,53 @@ for (const issue of ['different-time', 'different-urine']) {
     await expect(card(page)).toHaveCount(0);
     const knownTmp = await page.evaluate(() => ({
       paired: document.getElementById('tmpPairedSameTime').checked,
-      answer: document.getElementById('ui_tmpPairedSameTime_answer')?.value,
       vaultAnswer: window.__vildaClcrVersionValueVault?.ui_tmpPairedSameTime_answer,
+      effectivePairing: window.VildaClcrTmpGfr.readInputFromDocument(document).pairedSameTime,
     }));
-    expect(knownTmp).toEqual({ paired: false, answer: issue === 'different-time' ? 'no' : 'unknown', vaultAnswer: issue === 'different-time' ? 'no' : 'unknown' });
+    // The routine tri-state control is retired; its previously recorded fact
+    // remains authoritative in the value vault and the production engine.
+    expect(knownTmp).toEqual({ paired: false, vaultAnswer: issue === 'different-time' ? 'no' : 'unknown', effectivePairing: 'different' });
     await choose('TMP_GFR'); await expect(tmpCard).toHaveCount(0);
     expect(await page.evaluate(() => window.canComputeFormula('TMP_GFR'))).toBe(false);
     expect(await page.evaluate(() => window.ClcrUiWorkflow.getFormulaReadiness('TMP_GFR').valueReady)).toBe(false);
     expect(await page.evaluate(() => window.ClcrVisitSave.collectActiveDatapoints(document, { formulaId: 'TMP_GFR' }))).toEqual([]);
     await choose('FENa_spot'); await openSampleDetails(page);
     await kliknij(page.locator('#fenaCorrectSampleIssue')); await expectResult(page, { raw: 1 / 7 });
-    // Correcting Na/Cr pairing does not silently re-confirm the independent
-    // TmP/GFR phosphate sampling protocol that was invalidated above.
-    await choose('TMP_GFR'); await expect(tmpCard).toHaveCount(0);
+    await choose('TMP_GFR');
     await expect(page.locator('#tmpPairedSameTime')).not.toBeChecked();
-    await page.locator('#ui_tmpPairedSameTime_answer').selectOption('yes');
+    await expect(page.locator('#ui_tmpPairedSameTime_answer')).toBeHidden();
+    if (issue === 'different-time') {
+      // An explicit negative TmP/GFR timing fact still wins over the shared
+      // FE correction. The retired routine questionnaire is not a way out.
+      await expect(tmpCard).toHaveCount(0);
+      expect(await page.evaluate(() => window.VildaClcrTmpGfr.readInputFromDocument(document).pairedSameTime)).toBe('different');
+      await expect(page.locator('.tmp-gfr-known-sample-fact')).toContainText('Wyczyść wszystkie pola');
+      for (const [id, value] of Object.entries({ U_PO4_spot: '10', S_PO4_spot: '1', Ucr_spot: '100', Scr_spot: '1' })) {
+        await expect(page.locator('#' + id)).toHaveValue(value);
+      }
+      // Clearing starts a NEW measurement: it must remove the concentrations
+      // as well as the old sample facts, rather than certify the old sample.
+      await kliknij(page.locator('#clearBtn'));
+      await page.waitForFunction(() => window.clcrIsResetting !== true);
+      for (const id of ['U_PO4_spot', 'S_PO4_spot', 'Ucr_spot', 'Scr_spot']) await expect(page.locator('#' + id)).toHaveValue('');
+      await expect(tmpCard).toHaveCount(0);
+      expect(await page.evaluate(() => window.VildaClcrTmpGfr.readInputFromDocument(document))).toMatchObject({ pairedSameTime: 'assumed', sameUrineSpecimen: 'assumed' });
+      await page.locator('#U_PO4_spot_unit').selectOption('mmol/L');
+      await page.locator('#S_PO4_spot_unit').selectOption('mmol/L');
+      await page.locator('#Ucr_spot_unit').selectOption('mg/dl');
+      await page.locator('#Scr_spot_unit').selectOption('mg/dl');
+      for (const [id, value] of Object.entries({ U_PO4_spot: '10', S_PO4_spot: '1', Ucr_spot: '100', Scr_spot: '1' })) {
+        await page.locator('#' + id).fill(value);
+      }
+    } else {
+      // Correcting the shared urine mismatch removes that known problem.
+      // An unanswered independent TMP checkbox is no longer a numeric gate;
+      // the simplified form discloses the remaining sampling assumptions.
+      expect(await page.evaluate(() => window.__vildaClcrVersionValueVault.ui_tmpPairedSameTime_answer)).toBe('unknown');
+      expect(await page.evaluate(() => window.VildaClcrTmpGfr.readInputFromDocument(document))).toMatchObject({ pairedSameTime: 'confirmed', sameUrineSpecimen: 'confirmed' });
+    }
     await expect(tmpCard).toBeVisible();
     expect(await page.evaluate(() => window.canComputeFormula('TMP_GFR'))).toBe(true);
+    expect(Number(await tmpCard.getAttribute('data-clcr-value'))).toBeCloseTo(0.27 / 0.28, 12);
   });
 }

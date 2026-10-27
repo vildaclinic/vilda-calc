@@ -98,7 +98,13 @@ test('wyszukiwarka rozpoznaje zwarty alias tmpgfr', async ({ page }) => {
   await expect(page.locator('#version-spot')).toHaveClass(/selected/);
   await expect(page.locator('#U_PO4_spot')).toBeVisible();
   await expect(page.locator('#S_PO4_spot')).toBeVisible();
-  await expect(page.locator('#tmpOvernightFasting')).toBeVisible();
+  await expect(page.locator('#Ucr_spot')).toBeVisible();
+  await expect(page.locator('#Scr_spot')).toBeVisible();
+  await expect(page.locator('#tmpOvernightFasting')).toBeHidden();
+  await expect(page.locator('#tmpPairedSameTime')).toBeHidden();
+  await expect(page.locator('#tmpBurosumab')).toBeVisible();
+  await expect(page.locator('#tmpBurosumab')).not.toBeChecked();
+  await expect(page.locator('#tmpDaysSinceDose')).toBeHidden();
 });
 
 test('czynniki zakłócające i opcjonalny kontekst ograniczają tylko interpretację aktywnej formuły', async ({
@@ -541,24 +547,17 @@ test('Ca/Cit ma minimalny formularz i renderuje rzeczywisty wynik', async ({
   await expect(page.locator('#elecInfo')).toContainText('Wapń/cytryniany');
 });
 
-test('każdy widoczny przycisk Info ma dostępny i niepusty opis', async ({
-  page,
-}) => {
+test('każdy widoczny przycisk Info ma dostępny i niepusty opis', async ({ page }) => {
   await openCalculator(page);
-  await selectFromSearch(page, 'TmP/GFR', 'TMP_GFR');
-
-  for (const details of await page.locator('details.clcr-context-details:not([hidden])').all()) {
-    if (await details.getAttribute('open') === null) {
-      await details.locator(':scope > summary').click();
-    }
+  // TmP/GFR now gathers explanations in its result details. Test the shared
+  // field-help contract on the unchanged collection form with ten controls.
+  await selectFromSearch(page, 'Na_mmol_d', 'Na_mmol_d');
+  for (const details of await page.locator('details.clcr-context-details:visible, details.clcr-dzm-quality__details:visible').all()) {
+    if (await details.getAttribute('open') === null) await details.locator(':scope > summary').click();
   }
-
-  const infoButtons = page.locator(
-    '.clcr-field:not([hidden]) .clcr-info-button'
-  );
+  const infoButtons = page.locator('.clcr-field .clcr-info-button:visible');
   const count = await infoButtons.count();
   expect(count).toBeGreaterThanOrEqual(10);
-
   for (let index = 0; index < count; index += 1) {
     const button = infoButtons.nth(index);
     const controls = await button.getAttribute('aria-controls');
@@ -568,13 +567,13 @@ test('każdy widoczny przycisk Info ma dostępny i niepusty opis', async ({
     await expect(button).toHaveAttribute('aria-expanded', 'true');
     const help = page.locator(`#${controls}`);
     await expect(help).toBeVisible();
-    await expect(help).not.toHaveAttribute(
-      'data-clcr-help-source',
-      'generated'
-    );
+    await expect(help).not.toHaveAttribute('data-clcr-help-source', 'generated');
     const text = (await help.textContent())?.trim() || '';
     expect(text.length).toBeGreaterThan(10);
     expect(text).not.toMatch(/Brak opisu/i);
+    await button.click();
+    await expect(button).toHaveAttribute('aria-expanded', 'false');
+    await expect(help).toBeHidden();
   }
 });
 

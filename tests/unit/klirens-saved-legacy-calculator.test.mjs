@@ -4,6 +4,7 @@ import { loadBrowserScript } from '../support/load-browser-script.mjs';
 const w = {};
 for (const file of [
   'clcr_uag_reference_data.js', 'clcr_uag.js',
+  'clcr_tmp_gfr_reference_data.js', 'clcr_tmp_gfr.js', 'clcr_tmp_gfr_persistence.js',
   'clcr_clinical_safety.js', 'clcr_extended_egfr.js', 'clcr_calculation_assumptions.js',
   'clcr_result_reference_data.js', 'clcr_result_presentation.js',
   'clcr_measured_clearance_reference_data.js', 'clcr_measured_clearance_reference.js',
@@ -86,9 +87,12 @@ describe('Saved Klirens: existing timed-urine production arithmetic', () => {
     const fields = { age: '10', U_PO4_spot: '20', U_PO4_spot_unit: 'mg/dl', S_PO4_spot: '4', S_PO4_spot_unit: 'mg/dl', Scr_spot: '0.6', Scr_spot_unit: 'mg/dl', Ucr_spot: '100', Ucr_spot_unit: 'mg/dl', spotSampleKind: 'secondMorning', tmpPairedSameTime: true, tmpOvernightFasting: true };
     const result = calculate('TMP_GFR', fields);
     expect(result.valueNum).toBeGreaterThan(0);
-    expect(result).toMatchObject({ id: 'TMP_GFR', unit: 'mmol/L', norm: '', category: null });
-    expect(result.tmpGfrResult).toMatchObject({ ok: true, branch: 'pediatric-direct' });
-    expect(() => calculate('TMP_GFR', { ...fields, tmpPairedSameTime: false })).toThrow();
+    expect(result).toMatchObject({ id: 'TMP_GFR', unit: 'mmol/L', category: null });
+    expect(result.tmpGfrSnapshot).toMatchObject({ valid: true, method: 'Brodehl' });
+    expect(result.norm).toContain('0,97');
+    expect(result.rawValue).toBeCloseTo((4 - 20 * 0.6 / 100) / 3.097, 12);
+    expect(calculate('TMP_GFR', { ...fields, tmpPairedSameTime: false }).tmpGfrSnapshot.sample.pairedSameTime).toBe('assumed');
+    expect(() => calculate('TMP_GFR', { ...fields, FENa_sample_status: 'different-time' })).toThrow();
   });
 });
 
