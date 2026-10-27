@@ -1,13 +1,20 @@
-/* Variant B: shared patient documents drawer, hosted by the active page/shell. */
+/* Shared patient documents dialog, centered in the active page/shell viewport. */
 .vilda-patient-documents {
   --documents-gap: 15px;
+  --documents-top: max(var(--documents-gap), env(safe-area-inset-top));
+  --documents-right: max(var(--documents-gap), env(safe-area-inset-right));
+  --documents-bottom: max(var(--documents-gap), env(safe-area-inset-bottom));
+  --documents-left: max(var(--documents-gap), env(safe-area-inset-left));
   box-sizing: border-box;
   position: fixed;
-  inset: max(var(--documents-gap), env(safe-area-inset-top)) max(var(--documents-gap), env(safe-area-inset-right)) auto auto;
-  width: min(490px, calc(100% - max(var(--documents-gap), env(safe-area-inset-left)) - max(var(--documents-gap), env(safe-area-inset-right))));
-  height: calc(100dvh - max(var(--documents-gap), env(safe-area-inset-top)) - max(var(--documents-gap), env(safe-area-inset-bottom)));
+  inset: auto;
+  top: calc((100dvh + var(--documents-top) - var(--documents-bottom)) / 2);
+  left: calc((100vw + var(--documents-left) - var(--documents-right)) / 2);
+  transform: translate(-50%, -50%);
+  width: min(490px, calc(100% - var(--documents-left) - var(--documents-right)));
+  height: fit-content;
   max-width: none;
-  max-height: none;
+  max-height: calc(100dvh - var(--documents-top) - var(--documents-bottom));
   margin: 0;
   padding: 0;
   border: var(--border-hairline) solid #d6e4e0;

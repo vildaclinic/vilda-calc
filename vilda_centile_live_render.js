@@ -108,6 +108,9 @@
       var value = point[metric];
       var current = point.ageMonths === model.userAgeMonths && value === model.userVal;
       var clinicalAge = current && finite(snapshot.exactAgeMonths) ? snapshot.exactAgeMonths : point.ageMonths;
+      if (snapshot.population === 'DS' && typeof w.vildaWiekDoSiatek === 'function') {
+        clinicalAge = w.vildaWiekDoSiatek(clinicalAge, point.ageMonths, 'DS');
+      }
       return Object.assign({ ageMonths: point.ageMonths, value: value, current: current, exact: true,
         clinicalAgeMonths: clinicalAge }, statsFor(metric, value, clinicalAge, snapshot.sex, snapshot.source, snapshot.population),
       mappedPoint(plot, point.ageMonths, value));
@@ -308,12 +311,14 @@
   }
 
   function mphFor(snapshot, advanced, plot, enabled) {
+    // MPH describes general-population parental potential. It has no position
+    // or centile interpretation on Zemel charts (P-DS / P-MPH-DS).
+    if (snapshot.population === 'DS') return null;
     if (!enabled || !positive(advanced.motherHeight) || !positive(advanced.fatherHeight) || !positive(advanced.targetHeight)) return null;
     if (216 < plot.ageMin || 216 > plot.ageMax || advanced.targetHeight < plot.minY || advanced.targetHeight > plot.maxY) return null;
     return Object.assign({ ageMonths: 216, value: advanced.targetHeight, motherHeight: advanced.motherHeight,
       fatherHeight: advanced.fatherHeight, targetHeight: advanced.targetHeight },
-    snapshot.population === 'DS' ? { percentile: null, sd: null, source: snapshot.source }
-      : statsFor('height', advanced.targetHeight, 216, snapshot.sex, snapshot.source, snapshot.population), mappedPoint(plot, 216, advanced.targetHeight));
+    statsFor('height', advanced.targetHeight, 216, snapshot.sex, snapshot.source, snapshot.population), mappedPoint(plot, 216, advanced.targetHeight));
   }
 
   function renderMetric(model, metric, snapshot, advanced, context, sourceGeometries, deferBounds) {
@@ -369,9 +374,12 @@
 
   function unavailable(snapshot) {
     if (!snapshot || !finite(snapshot.ageMonths) || !['M', 'F', 'K'].includes(snapshot.sex)) return empty(null, 'Uzupełnij wiek i płeć pacjenta.');
-    var source = String(snapshot.source || snapshot.requestedSource || '').toUpperCase();
+    var source = snapshot.population === 'DS' ? 'DS' : String(snapshot.source || snapshot.requestedSource || '').toUpperCase();
     var age = snapshot.ageMonths;
-    if (!['OLAF', 'PALCZEWSKA', 'WHO'].includes(source)) return empty(source, 'Brak siatki dla wybranego źródła.');
+    if (!['OLAF', 'PALCZEWSKA', 'WHO', 'DS'].includes(source)) return empty(source, 'Brak siatki dla wybranego źródła.');
+    if (source === 'DS' && (!w.VildaDsCentileModels || typeof w.VildaDsCentileModels.build !== 'function')) {
+      return empty(source, 'Brak danych siatki Zemel 2015.');
+    }
     if (age < 0 || age >= 216 || source === 'OLAF' && age < 36 || source === 'WHO' && age >= 36
       || source === 'PALCZEWSKA' && snapshot.professionalMode === false) {
       var message = typeof w.getCentileChartUnavailableMessage === 'function'
@@ -382,14 +390,19 @@
   }
 
   function normalizedSnapshot(snapshot) {
-    return Object.assign({}, snapshot, { source: String(snapshot.source || snapshot.requestedSource || '').toUpperCase(),
-      sex: snapshot.sex === 'M' ? 'M' : 'F', population: snapshot.population === 'DS' ? 'DS' : 'OGOLNA' });
+    var source = snapshot.population === 'DS' ? 'DS' : String(snapshot.source || snapshot.requestedSource || '').toUpperCase();
+    return Object.assign({}, snapshot, { source: source,
+      sex: snapshot.sex === 'M' ? 'M' : 'F', population: source === 'DS' ? 'DS' : 'OGOLNA' });
   }
 
   function modelRanges(input, advanced, args, prepared) {
     var source = input.source, ranges = [], plan = null;
     var models = prepared || {};
-    if (source === 'PALCZEWSKA') {
+    if (source === 'DS') {
+      var ds = w.VildaDsCentileModels.build(args);
+      if (!ds || !ds.height || !ds.weight) return { ranges: [], plan: null };
+      ranges.push({ id: 'ds', label: '0–20 lat', models: ds });
+    } else if (source === 'PALCZEWSKA') {
       plan = w.getPalczewskaChartPlan(input.ageMonths, advanced);
       if (plan.mode !== 'EXTENDED_ONLY') ranges.push({ id: 'palInfant', label: '0–3 lata', models: pageModels(args, source) });
       if (plan.mode !== 'INFANT_ONLY') ranges.push({ id: 'palRegular', label: '1–18 lat', models: models.pal || palModels(args) });
@@ -425,6 +438,7 @@
     var input = normalizedSnapshot(snapshot);
     var advanced = advancedSnapshot(input);
     var prepared = modelRanges(input, advanced, producerArgs(input, advanced));
+    if (!prepared.ranges.length) return empty(input.source, 'Brak danych siatki Zemel 2015.');
     prepared.ranges.forEach(function (range) {
       METRICS.forEach(function (metric) { range[metric] = previewMetric(range.models[metric], metric, input); });
       delete range.models;
@@ -448,9 +462,17 @@
     var sourceGeometries = { olaf: olaf.originalGeometries, palRegular: originalPalGeometries(pal) };
     var prepared = modelRanges(input, advanced, args, { olaf: olaf, pal: pal });
     var ranges = prepared.ranges;
+    if (!ranges.length) return empty(input.source, 'Brak danych siatki Zemel 2015.');
     ranges.forEach(function (range) {
       METRICS.forEach(function (metric) {
-        range[metric] = renderMetric(range.models[metric], metric, input, advanced, range.id, sourceGeometries,
+        // Annotation settings remain in their existing patient-owned storage
+        // contexts. The selected reference curves are independent of that UI.
+        var context = range.id;
+        if (input.source === 'DS') {
+          context = input.requestedSource === 'PALCZEWSKA' ? input.ageMonths < 36 ? 'palInfant' : 'palRegular'
+            : input.requestedSource === 'WHO' ? 'who' : 'olaf';
+        }
+        range[metric] = renderMetric(range.models[metric], metric, input, advanced, context, sourceGeometries,
           !!(options && options.deferContentBounds));
       });
       delete range.models;

@@ -22,14 +22,14 @@ function setup() {
     'LMS_INFANT_HEIGHT_BOYS', 'LMS_INFANT_HEIGHT_GIRLS', 'LMS_HEIGHT_WHO_BOYS', 'LMS_HEIGHT_WHO_GIRLS',
     'LMS_INFANT_WEIGHT_BOYS', 'LMS_INFANT_WEIGHT_GIRLS']) win[name] = tablica(name);
   const context = vm.createContext(win);
-  for (const file of ['centile_data.js', 'ds_lms.js', 'vilda_centile_interpolation.js', 'vilda_sds_wzrostu.js',
-    'vilda_centile_charts.js', 'inline_index_03.js', 'inline_index_04.js', 'inline_index_07.js', 'vilda_centile_live_colors.js', 'vilda_centile_live_render.js']) {
+  for (const file of ['centile_data.js', 'ds_lms.js', 'vilda_bmi.js', 'vilda_centile_interpolation.js', 'vilda_sds_wzrostu.js',
+    'vilda_centile_charts.js', 'inline_index_03.js', 'inline_index_04.js', 'inline_index_05.js', 'inline_index_07.js', 'vilda_centile_live_colors.js', 'vilda_centile_live_render.js']) {
     vm.runInContext(zrodlo(file), context, { filename: file });
   }
   win.VildaSdsWzrostu.ustawDane({ palCentyl: (sex, age, p) => win.VildaCentileInterp.palCentileValue(sex, age, p, 'HT'),
     LMS_HEIGHT_DS_INFANT_BOYS: win.VildaDsLMS.NIEMOWLE.HT.M, LMS_HEIGHT_DS_INFANT_GIRLS: win.VildaDsLMS.NIEMOWLE.HT.F,
     LMS_HEIGHT_DS_BOYS: win.VildaDsLMS.DZIECKO.HT.M, LMS_HEIGHT_DS_GIRLS: win.VildaDsLMS.DZIECKO.HT.F });
-  for (const name of ['erf', 'normalCDF', 'normInv', 'getPalReferenceCentileInterpolated', 'getPalCentile',
+  for (const name of ['vildaDsTablica', 'vildaDsWiersz', 'vildaWiekDoSiatek', 'erf', 'normalCDF', 'normInv', 'getPalReferenceCentileInterpolated', 'getPalCentile',
     'calcPercentileStatsPal', 'getPLWeightCentile', 'getPLHeightCentile']) {
     vm.runInContext(funkcjaZ(appSrc, name), context, { filename: `app.js:${name}` });
   }
@@ -149,8 +149,8 @@ describe('lightweight centile preview from production models', () => {
     const midpoint = asset.probe(102);
     expect(midpoint.value).toBe(129);
     expect(midpoint.exact).toBe(false);
-    expect(stats).toHaveBeenLastCalledWith(129, 'F', 102, 'HT', 'OLAF', { population: 'DS' });
-    const expected = win.getCentilePercentileStatsForSource(129, 'F', 102, 'HT', 'OLAF', { population: 'DS' });
+    expect(stats).toHaveBeenLastCalledWith(129, 'F', 102, 'HT', 'DS', { population: 'DS' });
+    const expected = win.getCentilePercentileStatsForSource(129, 'F', 102, 'HT', 'DS', { population: 'DS' });
     expect(Number.isFinite(expected.percentile)).toBe(true);
     expect(Number.isFinite(expected.sd)).toBe(true);
     expect(midpoint.percentile).toBe(expected?.percentile ?? null);
@@ -158,6 +158,87 @@ describe('lightweight centile preview from production models', () => {
     expect(asset.probe(96).exact).toBe(true);
     expect(asset.probe(95.9)).toBeNull();
     expect(asset.probe(144.1)).toBeNull();
+  });
+
+  it.each([['M', 8], ['F', 8], ['M', 25], ['F', 25], ['M', 144], ['F', 144]])('uses native Zemel curves and clinical readouts for %s at %s months', (sex, ageMonths) => {
+    const win = setup();
+    const snapshot = { ...fictional, sex, ageMonths, exactAgeMonths: ageMonths,
+      source: 'PALCZEWSKA', requestedSource: 'PALCZEWSKA', population: 'DS' };
+    const olaf = vi.spyOn(win, 'buildCentilePageCanvas');
+    const pal = vi.spyOn(win, 'buildPalczewskaExtendedCanvases');
+    const before = JSON.stringify(snapshot);
+    const rendered = win.VildaCentileLiveRender.preview(snapshot);
+    expect(rendered.source).toBe('DS');
+    expect(rendered.activeRangeId).toBe('ds');
+    expect(rendered.ranges.map(range => range.id)).toEqual(['ds']);
+    for (const metric of ['height', 'weight']) {
+      const asset = rendered[metric];
+      const native = win.VildaDsCentileModels.build({ sex, userAgeMonths: ageMonths,
+        userHeight: snapshot.currentHeight, userWeight: snapshot.currentWeight,
+        growthData: { measurements: snapshot.measurements } })[metric];
+      for (const percentile of [3, 50, 97]) expect(asset.curves[percentile]).toEqual(native.curves[percentile]);
+      expect(asset.curves[50]).toHaveLength(241);
+      expect(asset.plot.ageMin).toBe(0);
+      expect(asset.plot.ageMax).toBe(240);
+      expect(asset.population).toBe('DS');
+      const current = asset.points.find(point => point.current);
+      const stats = win.getCentilePercentileStatsForSource(current.value, sex, ageMonths,
+        metric === 'height' ? 'HT' : 'WT', 'DS', { population: 'DS' });
+      expect(current.percentile).toBe(stats.percentile);
+      expect(current.sd).toBe(stats.sd);
+    }
+    expect(olaf).not.toHaveBeenCalled();
+    expect(pal).not.toHaveBeenCalled();
+    expect(win.document.createElement).not.toHaveBeenCalled();
+    expect(JSON.stringify(snapshot)).toBe(before);
+  });
+
+  it('uses the native full-month DS boundary for a current exact age just before the second birthday', () => {
+    const win = setup();
+    const input = { ...fictional, source: 'DS', population: 'DS', ageMonths: 24, exactAgeMonths: 23.98,
+      currentHeight: 79.361, currentWeight: 10.526, measurements: [] };
+    const result = win.VildaCentileLiveRender.preview(input);
+    for (const metric of ['height', 'weight']) {
+      const point = result[metric].points.find(item => item.current);
+      expect(point.clinicalAgeMonths).toBe(24);
+      expect(point.percentile).toBeCloseTo(50, 6);
+      expect(point.sd).toBeCloseTo(0, 12);
+    }
+  });
+
+  it('does not fall back to a population chart if the DS producer or engine is unavailable', () => {
+    const win = setup();
+    const snapshot = { ...fictional, population: 'DS' };
+    win.VildaDsCentileModels = null;
+    expect(win.VildaCentileLiveRender.preview(snapshot)).toMatchObject({ status: 'unavailable', source: 'DS' });
+    const other = setup();
+    other.VildaBmi = null;
+    expect(other.VildaCentileLiveRender.preview(snapshot)).toMatchObject({ status: 'unavailable', source: 'DS' });
+  });
+
+  it.each([undefined, 'OGOLNA', 'DS'])('an explicit DS source has DS points and no MPH marker with population %s', population => {
+    const win = setup();
+    const draw = vi.fn();
+    win.document.createElement = vi.fn(() => ({ width: 0, height: 0,
+      getContext: () => ({ fillRect() {}, save() {}, translate() {}, restore() {} }) }));
+    win.drawCentileGrid = draw;
+    Object.defineProperty(win, 'VildaPublicationCreator', { configurable: true, value: {
+      snapshotElementEnabled: name => name === 'mph', computeSnapshotLayout: () => [], _drawItems() {} } });
+    win.VildaAdvancedGrowth = { advGrowthBuildTargetHeightForReport: () => 150 };
+    const advanced = { motherHeight: 155, fatherHeight: 175 };
+    const snapshot = { ...fictional, source: 'DS', requestedSource: 'PALCZEWSKA', population, advanced };
+    const rendered = win.VildaCentileLiveRender.render(snapshot, { deferContentBounds: true });
+    expect(rendered.source).toBe('DS');
+    expect(rendered.height.population).toBe('DS');
+    expect(rendered.weight.population).toBe('DS');
+    expect(rendered.height.mph).toBeNull();
+    expect(rendered.height.points.find(point => point.current).source).toBe('DS');
+    const native = win.VildaDsCentileModels.build({ sex: snapshot.sex, userAgeMonths: snapshot.ageMonths,
+      userHeight: snapshot.currentHeight, userWeight: snapshot.currentWeight, growthData: advanced });
+    expect(draw.mock.calls[0][1].curves).toEqual(native.height.curves);
+    expect(draw.mock.calls[1][1].curves).toEqual(native.weight.curves);
+    const general = win.VildaCentileLiveRender.render({ ...fictional, population: 'OGOLNA', advanced }, { deferContentBounds: true });
+    expect(general.height.mph).not.toBeNull();
   });
 
   it('retains production axis expansion for outliers without zooming to history', () => {
