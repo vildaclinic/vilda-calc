@@ -158,7 +158,8 @@ test.describe('P-KOSZ-ZAPISOW — usuwanie pomylonego zapisu do kosza', () => {
     expect(await wersje(page, id.a)).toContain(id.zly);
   });
 
-  test('zapis przypięty: „Odepnij i usuń do kosza”; z kosza wraca przypięty', async ({ page }) => {
+  // P-PRZYPIETA-POLKRATA (S4 krok 2, D2 = a): odpięcie zapisane przed koszem — z kosza zapis wraca nieprzypięty.
+  test('zapis przypięty: „Odepnij i usuń do kosza”; z kosza wraca nieprzypięty', async ({ page }) => {
     await otworzZKontem(page);
     const id = await zasiej(page, 'jest');
     await page.evaluate(async ({ a, zly }) => window.VildaVault.setSnapshotPinned(a, zly, true), id);
@@ -167,6 +168,7 @@ test.describe('P-KOSZ-ZAPISOW — usuwanie pomylonego zapisu do kosza', () => {
     const o = okno(page);
     await expect(o.locator('.settings-kosz-zapis-meta')).toContainText('przypięty');
     await expect(o.locator('.settings-kosz-uwaga')).toContainText('Ten zapis jest przypięty');
+    await expect(o.locator('.settings-kosz-uwaga')).toContainText('wróci nieprzypięty');
     await o.getByRole('button', { name: 'Odepnij i usuń do kosza' }).click();
     await expect(o).toHaveCount(0);
     expect(await wersje(page, id.a)).not.toContain(id.zly);
@@ -174,7 +176,7 @@ test.describe('P-KOSZ-ZAPISOW — usuwanie pomylonego zapisu do kosza', () => {
     await page.locator('#recordTrashList .settings-kosz-wpis').getByRole('button', { name: /Przywróć zapis/ }).click();
     await expect(page.locator('#recordTrashStatus')).toHaveText('Kosz jest pusty.');
     const przypiety = await page.evaluate(async ({ a, zly }) => (await window.VildaVault.getPatient(a)).snapshots.find((s) => s.snapshotId === zly).pinned, id);
-    expect(przypiety).toBe(true);
+    expect(przypiety).toBe(false);
   });
 
   test('kopia .wiw przed usunięciem: osobny plik z datą, potem usunięcie', async ({ page }) => {

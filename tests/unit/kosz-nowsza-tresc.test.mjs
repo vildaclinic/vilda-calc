@@ -318,10 +318,11 @@ describe('P-KOSZ-NOWSZA-TRESC: trzy urządzenia, retencja starej wersji na trzec
     });
   }
 
-  // Ograniczenie sprzed zmiany (P-RETENCJA-NAGROBKI): P scala retencję C, zanim dostanie kosz K. Nagrobek retencji
-  // (późniejszy niż poprawka) wygrywa z poprawką jak dotąd i nie niesie treści, więc poprawka przepada, zanim dotrze
-  // gdziekolwiek. Kosz K przychodzi potem z treścią sprzed poprawki. Wynik zbieżny i taki sam jak na 44256803.
-  it('poprawka na P, kosz na K, retencja na C (P←C,P←K): poprawka przegrywa z retencją jak dotąd, kosz zbieżny ze starą treścią', async () => {
+  // P-KOSZ-POLKRATA (rekomendacja Q4 z cel.md — czeka na decyzję właściciela): P scala retencję C, zanim dostanie kosz
+  // K. Nagrobek retencji (późniejszy niż poprawka) wygrywa z poprawką jak dotąd, ale treść poprawki zostaje lokalnie
+  // w cieniu nagrobka (niewidoczna, nie w ładunku nagrobka retencji). Kosz K przychodzi potem i jest ważny (żadna
+  // zmiana nie jest od niego późniejsza), więc bierze nowszą treść — z cienia. Dotąd (ograniczenie „P←C,P←K”): 23 kg.
+  it('poprawka na P, kosz na K, retencja na C (P←C,P←K): kosz z poprawką, jak w pozostałych kolejnościach (cień treści)', async () => {
     sztucznyZegar();
     const { P, K, C, pid, sid } = await trzyUrzadzenia();
     przesunZegar(60e3);
@@ -335,7 +336,7 @@ describe('P-KOSZ-NOWSZA-TRESC: trzy urządzenia, retencja starej wersji na trzec
     const wzor = await nagrobek(K, sid);
     for (const [nazwa, v] of [['P', P], ['K', K], ['C', C]]) {
       expect(await wersja(v, pid, sid), `${nazwa}: zapis nie wraca`).toBeNull();
-      expect((await wKoszu(v, sid)).payload.user.weight, `${nazwa}: kosz z treścią sprzed poprawki`).toBe(23);
+      expect((await wKoszu(v, sid)).payload.user.weight, `${nazwa}: kosz z poprawką`).toBe(99);
       expect(await nagrobek(v, sid), `${nazwa}: ten sam nagrobek`).toEqual(wzor);
     }
   });
@@ -757,10 +758,13 @@ describe('P-POZNIEJSZA-POPRAWKA: kosz i „Przywróć” liczą na tej samej osi
       vi.setSystemTime(zegar + 10 * 60e3); await popraw(K, sid, 74); vi.setSystemTime(zegar);
       await sync(K, P); przesunZegar(60e3); await popraw(P, sid, 77);
     }, { karta: { masa: 77, pin: false }, kosz: null }],
+    // K9 — P-PRZYPIETA-POLKRATA (S4 krok 2, W3, decyzja właściciela D1 = C): PD-12 dla gwiazdki — późniejsza gwiazdka P
+    // nie kasuje wcześniejszych poprawek C; karta 58 kg z gwiazdką (rekord złożony). Dotąd (LWW całej wersji): 23 kg
+    // z gwiazdką, poprawki C przepadały.
     'K9 dwie poprawki na C (rev 2) przed późniejszą gwiazdką na P (rev 1), retencja na K': [trzyUrzadzenia, async ({ P, K, C, sid }) => {
       await popraw(C, sid, 57); przesunZegar(60e3); await popraw(C, sid, 58); przesunZegar(60e3);
       await przypnij(P, sid, true); przesunZegar(60e3); await przytnij(K, sid);
-    }, { karta: { masa: 23, pin: true }, kosz: null }],
+    }, { karta: { masa: 58, pin: true }, kosz: null }],
   };
   for (const [nazwa, [przygotuj, krok, oczekiwany]] of Object.entries(SCEN)) {
     for (const kolejnosc of KOLEJNOSCI_8) {
@@ -817,28 +821,18 @@ describe('P-POZNIEJSZA-POPRAWKA: kosz i „Przywróć” liczą na tej samej osi
     });
   }
 
-  // K10 (S6b) — ZNANE OGRANICZENIE (PD-12, LWW całej wersji): gwiazdka, odpięcie i gwiazdka na P (rev 3), potem
-  // późniejsza poprawka masy na C (rev 1, bez gwiazdki), retencja na K. Do D-7 wygrywała rev 3: wizyta przypięta
-  // w 8 z 8 kolejności. Teraz wygrywa późniejsza poprawka bez gwiazdki, a wynik zależy od kolejności, w której
-  // urządzenia poznają retencję: 4 × karta bez gwiazdki, 3 × przypięta (retencja przegrała z gwiazdką wcześniej),
-  // 1 × wizyty nie ma nigdzie. Zbieżnie w każdej kolejności. Domknięcie: PR „przypięta wizyta / półkrata łączenia
-  // nagrobków” (po D-7). Test pilnuje opisanego zachowania.
-  const K10 = {
-    'K←C,P←K': 'bez', 'P←K,K←C': 'bez', 'K←P,K←C': 'bez', 'K←C,K←P': 'bez',
-    'C←K,P←C': 'przypieta', 'P←C,P←K': 'brak', 'C←P,C←K': 'przypieta', 'C←K,C←P': 'przypieta',
-  };
-  const K10_STAN = {
-    bez: { karta: { masa: 58, pin: false }, kosz: null },
-    przypieta: { karta: { masa: 23, pin: true }, kosz: null },
-    brak: { karta: null, kosz: null },
-  };
+  // K10 (S6b) — P-PRZYPIETA-POLKRATA, S4 krok 2 (W3, decyzja właściciela D1 = C „gwiazdka z własną datą”): gwiazdka,
+  // odpięcie i gwiazdka na P (rev 3), potem późniejsza poprawka masy na C (rev 1, bez wiedzy o gwiazdce), retencja na K.
+  // Gwiazdka P (rejestr z chwilą ostatniego przypięcia) i poprawka C to osobne składniki: karta 58 kg z gwiazdką w 8 z 8
+  // kolejności (rekord złożony). W kroku 1 (B2): 7 × 23 kg z gwiazdką (poprawka przepadała), 1 × brak (P←C,P←K); na
+  // 1d6be72e: 4 × karta bez gwiazdki, 3 × przypięta, 1 × brak; na 54a84da3: 8 × przypięta.
   for (const kolejnosc of KOLEJNOSCI_8) {
-    it(`K10 (S6b, znane ograniczenie) gwiazdka/odpięcie/gwiazdka na P (rev 3), późniejsza poprawka na C, retencja na K (${kolejnosc}): ${K10[kolejnosc]}`, async () => {
+    it(`K10 (S6b, W3) gwiazdka/odpięcie/gwiazdka na P (rev 3), późniejsza poprawka na C, retencja na K (${kolejnosc}): 58 kg z gwiazdką`, async () => {
       const { st } = await przebieg(trzyUrzadzenia, async ({ P, K, C, sid }) => {
         await przypnij(P, sid, true); przesunZegar(60e3); await przypnij(P, sid, false); przesunZegar(60e3);
         await przypnij(P, sid, true); przesunZegar(60e3); await popraw(C, sid, 58); przesunZegar(60e3); await przytnij(K, sid);
       }, kolejnosc);
-      for (const [i, n] of ['P', 'K', 'C'].entries()) expect(st[i], n).toEqual(K10_STAN[K10[kolejnosc]]);
+      for (const [i, n] of ['P', 'K', 'C'].entries()) expect(st[i], n).toEqual({ karta: { masa: 58, pin: true }, kosz: null });
     });
   }
 
@@ -878,32 +872,40 @@ describe('P-POZNIEJSZA-POPRAWKA: kosz i „Przywróć” liczą na tej samej osi
 
 describe('strażnik źródła', () => {
   const src = readFileSync(path.join(repoRoot, 'vilda_vault.js'), 'utf8');
+  // P-KOSZ-POLKRATA: rev wpisu kosza = najwyższa z rev treści, par (chwila usunięcia, rev) treści wpisów kosza, które
+  // kosz może trzymać (Bpk_tr: bez treści unieważnionych zmianą po ich usunięciu), i rev wersji pokonanych w scalaniu
+  // (wr, para z chwilą kosza — D6); nagrobek retencji rev do kosza nie dokłada.
   it('P-REV-MAX (PD-7 b): rev treści kosza = wyższa z pary w łączeniu nagrobków, w Bkz_pomin i w Bkz_scalKoniec', () => {
-    expect(src).toContain('if (zrodlo) wynik.rev = Math.max(mt(zrodlo), Bkz_revPary(nowszy, starszy), Bkz_revPary(starszy, nowszy));');
-    expect(src).toContain("function Bkz_revPary(p, q) { return p.powod === 'retencja' || Bkz_nieaktualny(p, q) ? 0 : mt(p); }");
-    expect(src).toContain('ctx.mapa.set(zapis.snapshotId, Object.assign({}, e, { rev: mt(zapis) }));');
-    expect(src).toContain('z.rev = Math.max(mt(lokalna), mt(e));');
-    expect(src).toContain('ctx.mapa.set(e.snapshotId, Object.assign({}, e, { rev: mt(lokalna) }));');
-    expect(src).toContain('z.rev = Math.max(mt(s), mt(e));');
-    expect(src).toContain('ctx.mapa.set(id, Object.assign({}, e, { rev: mt(s) }));');
+    const czesc = (od, doo) => src.slice(src.indexOf(od), src.indexOf(doo));
+    expect(czesc('function Bpk_tr(', 'function Bpk_dl(')).toContain("if (!x || typeof x.od !== 'string' || !(x.od >= (z || ''))) continue;");
+    const wpis = czesc('function Bpk_wpis(', 'function Bkz_dolacz(');
+    expect(wpis).toContain('const tr = Bpk_wr(pk) >= 0 ? Bpk_tr((pk.tr || []).concat([{ od: pk.k, rev: Bpk_wr(pk) }]), pk.z) : (pk.tr || []);');
+    expect(wpis).toContain('e.rev = tr.reduce(function (m, x) { return Math.max(m, x.rev); }, e.rev);');
+    expect(czesc('function Bpk_zWersji(', 'function Bpk_polacz(')).toContain('tr: [], wr: tresc ? mt(w) : -1,');
+    expect(czesc('function Bpk_polacz(', 'function Bpk_wazny(')).toContain('wr: Math.max(Bpk_wr(a), Bpk_wr(c)),');
+    expect(czesc('function Bkz_pomin(', 'async function Bkz_scalKoniec(')).toContain('Bpk_zWersja(e, Bpk_zWersji(zapis, { c: null, od: od }, st))');
+    expect(czesc('async function Bkz_scalKoniec(', 'async function Bkz_poImporcie(')).toContain('Bpk_zWersja(e, Bpk_zWersji(lokalna, { c: szyfr, od: od }, st))');
   });
   it('jedna reguła „nowsza wersja” w łączeniu nagrobków, w treści z ładunku, w pętli wersji i na końcu scalania', () => {
     expect(src).toContain('function Bkz_nowszaWersja(x, y) {');
     const czesc = (od, doo) => src.slice(src.indexOf(od), src.indexOf(doo));
-    const dolacz = czesc('function Bkz_dolacz(', 'async function Bkz_czytaj(');
-    expect(dolacz).toContain('okN && okS ? (Bkz_nowszaWersja(starszy, nowszy) ? starszy : nowszy)');
-    expect(dolacz).toContain('const okN = !!nowszy.payloadCipher && !Bkz_nieaktualny(nowszy, starszy);');
-    expect(dolacz).toContain('const okS = !!starszy.payloadCipher && !Bkz_nieaktualny(starszy, nowszy);');
-    expect(czesc('async function Bkz_scalStart(', 'function Bkz_przegral(')).toContain('!Bkz_nowszaWersja(e, lokalny)');
-    expect(czesc('function Bkz_pomin(', 'async function Bkz_scalKoniec(')).toContain('Bkz_nowszaWersja(zapis, e)');
-    expect(czesc('async function Bkz_scalKoniec(', 'async function Bkz_poImporcie(')).toContain('Bkz_nowszaWersja(lokalna, e)');
+    // P-KOSZ-POLKRATA: porządek liniowy Bpk_nowszy = Bkz_nowszaWersja, przy pełnym remisie chwila zapisu.
+    expect(czesc('function Bpk_nowszy(', 'function Bpk_trescLepsza(')).toContain('if (Bkz_nowszaWersja(x, y)) return true;');
+    // P-PRZYPIETA-POLKRATA (W3): treść kosza i cienia — najpierw późniejsza chwila treści, przy równej ta sama reguła wersji.
+    expect(czesc('function Bpk_trescNowsza(', 'function Bpk_trescLepsza(')).toContain('return x !== y ? x > y : Bpk_nowszy(a.o, b.o);');
+    expect(czesc('function Bpk_trescLepsza(', 'function Bpk_tr(')).toContain('if (Bpk_trescNowsza(b, a)) return b;');
+    expect(czesc('function Bkz_dolacz(', 'async function Bkz_czytaj(')).toContain('Bpk_polacz(Bpk_zWpisu(byl), Bpk_zWpisu(e))');
+    expect(czesc('async function Bkz_scalStart(', 'function Bkz_przegral(')).toContain('Bpk_nowszaTrescKosza(Bgw_t, tl)');
+    expect(czesc('function Bpk_nowszaTrescKosza(', 'function Bpk_trescLepsza(')).toContain('return Bpk_trescNowsza(t, tl) && mt(t.o) === mt(tl.o);');
+    expect(czesc('function Bkz_pomin(', 'async function Bkz_scalKoniec(')).toContain('Bpk_trescNowsza({ o: Bpk_opis(zapis), cz: st.cz }, { o: Bpk_opis(byla.zapis), cz: byla.st.cz })');
+    expect(czesc('async function Bkz_scalKoniec(', 'async function Bkz_poImporcie(')).toContain('!Bpk_trescNowsza({ o: o, cz: x.st.cz }, pk.t)');
   });
   it('P-POZNIEJSZA-POPRAWKA: „nowsza” = późniejsza chwila zmiany, przy równej wyższa rev; opis nagrobka tą samą regułą', () => {
     const czesc = (od, doo) => src.slice(src.indexOf(od), src.indexOf(doo));
-    const regula = czesc('function Bkz_nowszaWersja(x, y) {', 'function Bkz_zTresci(');
+    const regula = czesc('function Bkz_nowszaWersja(x, y) {', 'function Bkz_chwilaKosza(');
     expect(regula).toContain('const zx = Bkz_zmiana(x), zy = Bkz_zmiana(y);');
     expect(regula).toContain('if (zx !== zy) return zx > zy;');
     expect(regula).toContain('return mt(x) > mt(y);');
-    expect(czesc('function Bkz_opisPozniejszy(', 'function Bkz_wygrywa(')).toContain('return Bkz_nowszaWersja(c, a) ? c : a;');
+    expect(czesc('function Bpk_dl(', 'function Bpk_karta(')).toContain('return Bpk_nowszy(c.d, a.d) ? c : a;');
   });
 });

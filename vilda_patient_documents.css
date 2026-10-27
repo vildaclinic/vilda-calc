@@ -1,0 +1,72 @@
+/* Shared patient documents dialog, centered in the active page/shell viewport. */
+.vilda-patient-documents {
+  --documents-gap: 15px;
+  --documents-top: max(var(--documents-gap), env(safe-area-inset-top));
+  --documents-right: max(var(--documents-gap), env(safe-area-inset-right));
+  --documents-bottom: max(var(--documents-gap), env(safe-area-inset-bottom));
+  --documents-left: max(var(--documents-gap), env(safe-area-inset-left));
+  box-sizing: border-box;
+  position: fixed;
+  inset: auto;
+  top: calc((100dvh + var(--documents-top) - var(--documents-bottom)) / 2);
+  left: calc((100vw + var(--documents-left) - var(--documents-right)) / 2);
+  transform: translate(-50%, -50%);
+  width: min(490px, calc(100% - var(--documents-left) - var(--documents-right)));
+  height: fit-content;
+  max-width: none;
+  max-height: calc(100dvh - var(--documents-top) - var(--documents-bottom));
+  margin: 0;
+  padding: 0;
+  border: var(--border-hairline) solid #d6e4e0;
+  border-radius: var(--radius-18);
+  color: #263f45;
+  background: #fff;
+  box-shadow: 0 18px 70px #16382f28;
+  font-family: inherit;
+  overflow: hidden;
+}
+.vilda-patient-documents[open] { display: flex; flex-direction: column; }
+.vilda-patient-documents::backdrop { background: #193c383c; backdrop-filter: var(--blur-drawer-backdrop); }
+.vilda-patient-documents *, .vilda-patient-documents *::before, .vilda-patient-documents *::after { box-sizing: border-box; }
+.vilda-patient-documents-header { text-align: left; display: flex; flex: none; align-items: flex-start; justify-content: space-between; gap: var(--space-12px); padding: 23px 23px var(--space-18px); border-bottom: var(--border-hairline) solid #e5ecea; }
+.vilda-patient-documents h2 { margin: 0; color: #263f45; font-size: 23px; line-height: 1.25; letter-spacing: -.4px; }
+.vilda-patient-documents h3 { margin: 0 0 var(--space-8px); color: #263f45; font-size: 16px; line-height: 1.4; }
+.vilda-patient-documents p { margin: 0 0 15px; color: #587377; font-size: 13px; line-height: 1.6; overflow-wrap: anywhere; }
+.vilda-patient-documents-header p:last-child { margin: var(--space-8px) 0 0; font-size: 12px; }
+.vilda-patient-documents p.vilda-patient-documents-eyebrow { margin: 0 0 7px; color: #617d78; font-size: 10px; letter-spacing: .1em; }
+dialog.vilda-patient-documents button { width: auto; margin: 0; min-height: 44px; padding: 11px var(--space-16px); border: var(--border-hairline) solid #aed3cb !important; border-radius: var(--radius-9) !important; background: #f0f9f5 !important; color: #006d73 !important; font-family: inherit; font-size: 14px; font-weight: 600; line-height: 1.4; cursor: pointer; box-shadow: none !important; backdrop-filter: none !important; -webkit-backdrop-filter: none !important; }
+.vilda-patient-documents button:disabled { opacity: .58; cursor: default; }
+.vilda-patient-documents [data-patient-documents-close] { width: 44px; height: 44px; padding: 0; flex: none; border-color: #dce6e3 !important; background: #fff !important; color: #37575b !important; font-size: 28px; line-height: 1; }
+.vilda-patient-documents-body { padding: 22px 23px; min-height: 0; flex: 1; overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin; }
+.vilda-patient-documents-narrative { padding-bottom: 22px; margin-bottom: 22px; border-bottom: var(--border-hairline) solid #e5eeeb; }
+.vilda-patient-documents [data-patient-documents-copy] { width: 100%; }
+.vilda-patient-documents p.vilda-patient-documents-note { margin: var(--space-12px) 0 0; font-size: 12px; }
+.vilda-patient-documents-choice { display: flex; align-items: flex-start; gap: 11px; padding: var(--space-14px) var(--space-12px); margin-top: var(--space-10px); border: var(--border-hairline) solid #dce6e3; border-radius: var(--radius-11); cursor: pointer; }
+.vilda-patient-documents-choice.is-selected { background: #f0f9f6; border-color: #94c5ba; }
+.vilda-patient-documents-choice.is-unavailable { color: #6f8184; background: #f7f9f8; cursor: default; }
+.vilda-patient-documents-choice input { appearance: auto; width: 18px; height: 18px; margin: 2px 0 0; flex: none; accent-color: #00818a; }
+.vilda-patient-documents-choice strong { display: block; font-size: 14px; line-height: 1.45; font-weight: 600; }
+.vilda-patient-documents-choice small { display: block; margin-top: 5px; color: #5d777a; font-size: 12px; line-height: 1.5; }
+.vilda-patient-documents-footer { display: flex; flex: none; justify-content: space-between; align-items: center; gap: var(--space-12px); padding: var(--space-18px) 23px; border-top: var(--border-hairline) solid #e1eae7; background: #f8fbfa; }
+.vilda-patient-documents-footer > span { color: #55716f; font-size: 12px; }
+.vilda-patient-documents [data-patient-documents-generate] { background: #087e82 !important; border-color: #087e82 !important; color: #fff !important; }
+.vilda-patient-documents-status:empty { display: none; }
+.vilda-patient-documents p.vilda-patient-documents-status { margin: var(--space-16px) 0 0; color: #006d73; }
+.vilda-patient-documents :focus-visible { outline: var(--border-pro) solid #087e82; outline-offset: 3px; }
+@media (max-width: 699px) {
+  .vilda-patient-documents { --documents-gap: 7px; border-radius: 15px; }
+  .vilda-patient-documents-header { padding: var(--space-20px) 17px 15px; }
+  .vilda-patient-documents-body { padding: var(--space-20px) 17px; }
+  .vilda-patient-documents-footer { padding: 15px 17px; }
+  .vilda-patient-documents h2 { font-size: 22px; }
+  .vilda-patient-documents-choice { padding: var(--space-12px) var(--space-10px); }
+}
+@media (max-height: 500px) and (orientation: landscape) {
+  .vilda-patient-documents-header { padding-block: var(--space-12px); }
+  .vilda-patient-documents-header .vilda-patient-documents-eyebrow { display: none; }
+  .vilda-patient-documents-footer { padding-block: var(--space-10px); }
+}
+
+
+/* The dialog keeps a stable viewport while retaining any existing scroll lock. */
+.vilda-patient-documents-scroll-lock { overflow: hidden !important; }

@@ -1,0 +1,169 @@
+/* TmP/GFR: fixed geometry, one integrated result and independently coloured
+   clinical parameters. Reference values and TRP remain neutral. */
+html[data-clcr-workflow-ui="1"][data-clcr-tmp-gfr-active="1"] {
+  --tmp-gfr-unit-width: 106px;
+  scrollbar-gutter: stable;
+}
+html[data-clcr-tmp-gfr-active="1"] #clcrWorkspace,
+html[data-clcr-tmp-gfr-active="1"] #clcrWorkspace *,
+html[data-clcr-tmp-gfr-active="1"] #clcrWorkspace *::before,
+html[data-clcr-tmp-gfr-active="1"] #clcrWorkspace *::after { box-sizing: border-box; }
+html[data-clcr-workflow-ui="1"][data-clcr-tmp-gfr-active="1"] #clcrWorkspace {
+  width: 100%; min-width: 0; gap: var(--space-24px); align-items: start;
+}
+html[data-clcr-workflow-ui="1"][data-clcr-tmp-gfr-active="1"] #clcrForm.flex {
+  width: 100%; min-width: 0; max-width: 100%; flex-wrap: nowrap;
+  align-items: stretch; gap: var(--space-16px);
+}
+html[data-clcr-workflow-ui="1"][data-clcr-tmp-gfr-active="1"] #clcrForm.flex > *,
+html[data-clcr-workflow-ui="1"][data-clcr-tmp-gfr-active="1"] #clcrResultRail,
+html[data-clcr-workflow-ui="1"][data-clcr-tmp-gfr-active="1"] #clcrResultReport { width: 100%; min-width: 0; max-width: 100%; }
+html[data-clcr-workflow-ui="1"][data-clcr-tmp-gfr-active="1"] #clcrForm > .clcr-workflow__utilities:empty { display: none; }
+html[data-clcr-workflow-ui="1"][data-clcr-tmp-gfr-active="1"] #clcrResultReport { margin: 0; padding: var(--space-20px); }
+html[data-clcr-tmp-gfr-active="1"] #clcrWorkspace :is(button, input, select),
+html[data-clcr-tmp-gfr-active="1"] :is(.tmp-gfr-input-card, .tmp-gfr-proposal-card, #clcrVisitSaveCard) { transform: none !important; }
+.tmp-gfr-input-card {
+  padding: var(--space-16px); border: var(--border-hairline) solid var(--clcr-border-soft);
+  border-radius: var(--clcr-radius-card); background: var(--clcr-surface); box-shadow: var(--clcr-shadow-card);
+}
+.tmp-gfr-readiness { display: flex; justify-content: space-between; gap: var(--space-12px); color: var(--clcr-muted); font-size: 12px; line-height: 1.5; }
+.tmp-gfr-readiness strong { color: var(--clcr-heading); font-variant-numeric: tabular-nums; }
+.tmp-gfr-progress-track { height: 4px; margin-top: var(--space-6px); border-radius: var(--radius-6); background: var(--clcr-border-soft); overflow: hidden; }
+.tmp-gfr-progress-track span { display: block; width: 0; height: 100%; background: var(--clcr-primary); }
+.tmp-gfr-progress-track[data-filled="1"] span { width: 25%; }
+.tmp-gfr-progress-track[data-filled="2"] span { width: 50%; }
+.tmp-gfr-progress-track[data-filled="3"] span { width: 75%; }
+.tmp-gfr-progress-track[data-filled="4"] span { width: 100%; }
+.tmp-gfr-patient-age { display: flex; align-items: center; justify-content: space-between; gap: var(--space-12px); margin-top: var(--space-12px); color: var(--clcr-muted); font-size: 12px; line-height: 1.6; }
+html[data-clcr-workflow-ui="1"] #clcrForm .tmp-gfr-age-edit { flex: 0 0 auto; width: auto; min-height: 40px; margin: 0; padding: var(--space-8px); border: 0; background: transparent; color: var(--clcr-primary-dark); font-size: 12px; box-shadow: none; }
+.tmp-gfr-age-fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-12px); margin-top: var(--space-12px); }
+.tmp-gfr-sample-group { width: 100%; min-width: 0; margin: var(--space-16px) 0 0; padding: var(--space-12px); border: var(--border-hairline) solid var(--clcr-border-soft); border-radius: var(--radius-13); background: var(--clcr-surface-soft); }
+html[data-clcr-workflow-ui="1"] #clcrForm .tmp-gfr-sample-group h3 { margin: 0 0 var(--space-12px); color: var(--clcr-heading); font-size: 14px; line-height: 1.5; font-weight: 750; }
+html[data-clcr-workflow-ui="1"] #clcrForm .tmp-gfr-entry-field { display: flex; flex-direction: column; gap: var(--space-8px); width: 100%; min-width: 0; min-height: 0; margin: 0; padding: 0; background: transparent; border: 0; box-shadow: none; }
+html[data-clcr-workflow-ui="1"] #clcrForm .tmp-gfr-entry-field + .tmp-gfr-entry-field { margin-top: var(--space-16px); }
+html[data-clcr-workflow-ui="1"] #clcrForm .tmp-gfr-entry-field .clcr-field__heading { display: block; margin: 0; padding: 0; }
+html[data-clcr-workflow-ui="1"] #clcrForm .tmp-gfr-entry-field .clcr-field__name { color: var(--clcr-text); font-size: 13px; line-height: 1.5; font-weight: 650; }
+html[data-clcr-workflow-ui="1"] #clcrForm .tmp-gfr-input-card :is(.clcr-field__status, .clcr-info-button) { display: none; }
+html[data-clcr-workflow-ui="1"] #clcrForm .tmp-gfr-value-row { display: grid; grid-template-columns: minmax(0, 1fr) var(--tmp-gfr-unit-width, 106px); gap: var(--space-8px); align-items: stretch; width: 100%; min-width: 0; }
+html[data-clcr-workflow-ui="1"] #clcrForm .tmp-gfr-input-card :is(input:not([type="checkbox"]), select) {
+  width: 100%; min-width: 0; max-width: 100%; height: 48px; min-height: 48px;
+  margin: 0; padding: var(--space-10px); border: var(--border-hairline) solid var(--clcr-border);
+  border-radius: var(--radius-12); background: var(--clcr-surface); color: var(--clcr-text);
+  font: 400 16px/24px Inter, system-ui, sans-serif; box-shadow: none;
+}
+html[data-clcr-workflow-ui="1"] #clcrForm .tmp-gfr-value-row select { padding-inline: var(--space-6px); color: var(--clcr-muted); }
+.tmp-gfr-assumption { margin: var(--space-16px) 0 0; color: var(--clcr-muted); font-size: 11px; line-height: 1.6; }
+.tmp-gfr-known-sample-fact { margin: var(--space-12px) 0 0; color: var(--clcr-error); font-size: 12px; line-height: 1.6; }
+.tmp-gfr-therapy-options { margin-top: var(--space-18px); padding-top: var(--space-16px); border-top: var(--border-hairline) solid var(--clcr-border-soft); }
+html[data-clcr-workflow-ui="1"] #clcrForm .tmp-gfr-therapy-toggle { display: flex; align-items: flex-start; gap: var(--space-10px); width: 100%; margin: 0; padding: var(--space-4px) 0; cursor: pointer; }
+html[data-clcr-workflow-ui="1"] #clcrForm .tmp-gfr-therapy-toggle input[type="checkbox"] { appearance: auto; accent-color: var(--clcr-primary); flex: 0 0 20px; width: 20px; min-width: 20px; height: 20px; min-height: 20px; margin: 2px 0 0; padding: 0; box-shadow: none; }
+.tmp-gfr-therapy-toggle strong { display: block; color: var(--clcr-heading); font-size: 13px; line-height: 1.5; }
+.tmp-gfr-therapy-toggle small { display: block; margin-top: var(--space-4px); color: var(--clcr-muted); font-size: 11px; line-height: 1.5; }
+.tmp-gfr-therapy-fields { margin-top: var(--space-16px); }
+html[data-clcr-workflow-ui="1"] #clcrForm .tmp-gfr-therapy-fields > label { display: block; margin-bottom: var(--space-8px); color: var(--clcr-heading); font-size: 12px; line-height: 1.5; font-weight: 650; }
+.tmp-gfr-days-unit { display: flex; align-items: center; justify-content: center; color: var(--clcr-muted); font-size: 14px; }
+.tmp-gfr-therapy-fields > p { margin: var(--space-8px) 0 0; color: var(--clcr-muted); font-size: 11px; line-height: 1.6; }
+html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .tmp-gfr-proposal-card { --clcr-result-color: #526b72; --clcr-result-bg: #f4f7f8; --clcr-result-border: #d0dadd; padding: var(--space-18px) !important; }
+html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .tmp-gfr-proposal-card[data-clcr-tone="success"] { --clcr-result-color: var(--clcr-primary-dark); --clcr-result-bg: #eef8f8; --clcr-result-border: #bbdadd; }
+html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .tmp-gfr-proposal-card[data-clcr-tone="warning"] { --clcr-result-color: var(--clcr-warning); --clcr-result-bg: var(--clcr-warning-bg); --clcr-result-border: #ead2a3; }
+html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .tmp-gfr-proposal-card[data-clcr-tone="danger"] { --clcr-result-color: var(--clcr-error); --clcr-result-bg: var(--clcr-error-bg); --clcr-result-border: #efb8b8; }
+html[data-clcr-workflow-ui="1"] #clcrResultReport .tmp-gfr-result-status { margin: 0 0 var(--space-16px); color: var(--clcr-result-color); font-size: 15px; line-height: 1.5; }
+.tmp-gfr-result-main { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-14px); align-items: start; }
+html[data-clcr-workflow-ui="1"] #clcrResultReport .tmp-gfr-proposal-card :is(.clcr-result-patient-label, .clcr-result-reference-label) { min-height: 22px; margin: 0 0 var(--space-8px); color: var(--clcr-muted); font-size: 12px; line-height: 1.5; }
+html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .tmp-gfr-proposal-card .clcr-result-value { display: flex; align-items: center; min-height: 53px; font-size: 44px !important; line-height: 1.08; letter-spacing: -1px; color: var(--clcr-result-color) !important; white-space: normal; overflow-wrap: anywhere; }
+html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .tmp-gfr-proposal-card .clcr-result-value[data-long="true"] { font-size: 29px !important; letter-spacing: -.4px; }
+html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .tmp-gfr-proposal-card .clcr-result-value[data-dense="true"] { font-size: 23px !important; }
+html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .tmp-gfr-proposal-card .tmp-gfr-reference-value { display: flex; align-items: center; min-height: 53px; padding: 0; color: var(--clcr-heading) !important; font-size: 24px !important; line-height: 1.25; letter-spacing: -.6px; white-space: nowrap; overflow-wrap: normal; word-break: normal; hyphens: none; }
+html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .tmp-gfr-proposal-card .tmp-gfr-reference-value[data-no-reference="true"] { font-size: 15px !important; line-height: 1.5; letter-spacing: 0; white-space: normal; }
+html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .tmp-gfr-proposal-card .clcr-result-unit { display: block; margin-top: var(--space-4px); color: var(--clcr-result-color); font-size: 13px; line-height: 1.5; font-weight: 650; }
+.tmp-gfr-reference-unit { display: block; margin-top: var(--space-4px); color: var(--clcr-muted) !important; font-size: 13px; line-height: 1.5; font-weight: 650; }
+.tmp-gfr-reference-alternatives { padding: 0; margin: var(--space-8px) 0 0; list-style: none; font-size: 11px; line-height: 1.6; color: var(--clcr-muted); }
+.tmp-gfr-reference-alternatives li + li { margin-top: var(--space-8px); }
+.tmp-gfr-reference-alternatives strong { display: block; color: var(--clcr-heading); }
+.tmp-gfr-result-copy { margin: var(--space-16px) 0 0; color: var(--clcr-heading); font-size: 13px; line-height: 1.65; }
+.tmp-gfr-reference-source { margin: var(--space-8px) 0 0; color: var(--clcr-muted); font-size: 10px; line-height: 1.6; }
+.tmp-gfr-scope-tag { margin: var(--space-12px) 0 0; padding: var(--space-8px); border: var(--border-hairline) solid #ead59d; border-radius: var(--radius-8); color: var(--clcr-warning); background: var(--clcr-warning-bg); font-size: 11px; line-height: 1.6; }
+.tmp-gfr-trp-row { margin-top: var(--space-16px); padding-top: var(--space-14px); border-top: var(--border-hairline) solid var(--clcr-result-border); color: var(--clcr-heading); }
+.tmp-gfr-trp-main { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-14px); align-items: end; }
+html[data-clcr-workflow-ui="1"] #clcrResultReport .tmp-gfr-trp-main h4,
+.tmp-gfr-trp-reference-label { margin: 0 0 var(--space-8px); font-size: 11px; line-height: 1.5; font-weight: 650; color: var(--clcr-heading); }
+.tmp-gfr-trp-reference-label { color: var(--clcr-muted); }
+.tmp-gfr-trp-value { display: block; color: var(--clcr-heading) !important; font-size: 25px; line-height: 1.25; font-variant-numeric: tabular-nums; }
+.tmp-gfr-trp-reference-value { display: block; color: var(--clcr-muted) !important; font-size: 20px; line-height: 1.55; font-variant-numeric: tabular-nums; }
+.tmp-gfr-trp-note { margin: var(--space-10px) 0 0; color: var(--clcr-muted); font-size: 10px; line-height: 1.6; }
+.tmp-gfr-serum-row { margin-top: var(--space-14px); padding-top: var(--space-14px); border-top: var(--border-hairline) solid var(--clcr-result-border); font-size: 12px; line-height: 1.6; }
+html[data-clcr-workflow-ui="1"] #clcrResultReport .tmp-gfr-serum-row h4 { margin: 0; color: var(--clcr-heading); font-size: 12px; line-height: 1.6; }
+.tmp-gfr-serum-result { margin: var(--space-4px) 0 0; color: var(--clcr-heading); }
+.tmp-gfr-serum-result strong { font-size: 16px; font-variant-numeric: tabular-nums; }
+.tmp-gfr-serum-row[data-serum-tone="warning"] .tmp-gfr-serum-result { color: var(--clcr-warning); }
+.tmp-gfr-serum-row[data-serum-tone="danger"] .tmp-gfr-serum-result { color: var(--clcr-error); }
+.tmp-gfr-serum-reference { margin: var(--space-6px) 0 0; color: var(--clcr-muted); font-size: 11px; }
+.tmp-gfr-serum-reference strong { color: var(--clcr-heading); font-size: 12px; }
+.tmp-gfr-serum-reference small { display: block; margin-top: var(--space-4px); font-size: 10px; }
+.tmp-gfr-therapy-summary { margin-top: var(--space-20px); padding-top: var(--space-16px); border-top: var(--border-hairline) solid var(--clcr-result-border); font-size: 12px; line-height: 1.65; }
+html[data-clcr-workflow-ui="1"] #clcrResultReport .tmp-gfr-therapy-summary h3 { margin: 0 0 var(--space-10px); color: var(--clcr-heading); font-size: 13px; line-height: 1.5; }
+.tmp-gfr-therapy-summary p { margin: var(--space-8px) 0 0; color: var(--clcr-heading); }
+.tmp-gfr-trend-row { display: flex; align-items: center; flex-wrap: wrap; gap: var(--space-12px); color: var(--clcr-heading); }
+.tmp-gfr-trend-row > div > span { display: block; color: var(--clcr-muted); font-size: 10px; }
+.tmp-gfr-trend-row > div > strong { display: block; color: var(--clcr-heading); font-size: 24px; line-height: 1.35; font-variant-numeric: tabular-nums; }
+.tmp-gfr-trend-unit { color: var(--clcr-muted); font-size: 11px; }
+.tmp-gfr-therapy-summary .tmp-gfr-trend-label,
+.tmp-gfr-therapy-summary .tmp-gfr-treatment-note { color: var(--clcr-muted); font-size: 10px; }
+html[data-clcr-workflow-ui="1"] #clcrResultReport .tmp-gfr-therapy-summary[data-treatment-tone="danger"] h3,
+.tmp-gfr-therapy-summary[data-treatment-tone="danger"] .tmp-gfr-therapy-copy { color: var(--clcr-error); }
+.tmp-gfr-therapy-summary .tmp-gfr-treatment-caution { color: var(--clcr-warning); }
+.tmp-gfr-proposal-details { width: 100%; min-width: 0; }
+.tmp-gfr-aux-results { margin: var(--space-10px) 0; }
+.tmp-gfr-aux-results > div { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: var(--space-12px); padding: var(--space-8px) 0; border-bottom: var(--border-hairline) solid var(--clcr-border-soft); }
+.tmp-gfr-aux-results dt { color: var(--clcr-muted); }
+.tmp-gfr-aux-results dd { margin: 0; color: var(--clcr-heading); font-weight: 750; font-variant-numeric: tabular-nums; }
+html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .tmp-gfr-proposal-details .clcr-result-category-table { width: 100%; table-layout: fixed; font-size: 11px; line-height: 1.6; }
+html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .tmp-gfr-proposal-details .clcr-result-category-table :is(th, td) { padding: var(--space-8px); font-size: inherit; line-height: inherit; white-space: normal; overflow-wrap: anywhere; }
+.tmp-gfr-proposal-details .clcr-result-category-table caption { margin: var(--space-12px) 0 var(--space-8px); text-align: left; color: var(--clcr-heading); font-weight: 700; }
+.tmp-gfr-proposal-details .clcr-result-category-table td small { display: block; color: var(--clcr-muted); font-size: 10px; }
+.tmp-gfr-source-links { padding-left: var(--space-16px); }
+.tmp-gfr-source-links li { margin: var(--space-6px) 0; }
+.tmp-gfr-source-links a { overflow-wrap: anywhere; }
+.tmp-gfr-source-links small { display: block; color: var(--clcr-muted); font-size: 11px; line-height: 1.6; }
+.tmp-gfr-result-empty, .tmp-gfr-result-error { min-height: 235px; padding: var(--space-20px); border: var(--border-hairline) dashed var(--clcr-border); border-radius: var(--radius-14); background: var(--clcr-surface-soft); color: var(--clcr-muted); font-size: 13px; line-height: 1.65; }
+.tmp-gfr-result-empty strong, .tmp-gfr-result-error strong { display: block; color: var(--clcr-heading); font-size: 16px; line-height: 1.5; }
+.tmp-gfr-result-empty p, .tmp-gfr-result-error p { margin: var(--space-12px) 0 0; }
+.tmp-gfr-result-error { border-style: solid; border-color: #efbaba; background: var(--clcr-error-bg); color: var(--clcr-error); }
+.tmp-gfr-result-error strong { color: var(--clcr-error); }
+html[data-clcr-workflow-ui="1"][data-clcr-tmp-gfr-active="1"] #clearContainer { margin: 0 !important; padding: 0; border: 0; background: none; box-shadow: none; }
+html[data-clcr-workflow-ui="1"][data-clcr-tmp-gfr-active="1"] #clearBtn { display: block; width: 100%; min-height: 48px; margin: 0; padding: var(--space-10px) var(--space-12px); font: 400 16px/24px Inter, system-ui, sans-serif; }
+html[data-clcr-workflow-ui="1"][data-clcr-tmp-gfr-active="1"] #clcrVisitSaveCard :is(h2, .cvs-hint) { text-align: center; }
+html[data-clcr-workflow-ui="1"][data-clcr-tmp-gfr-active="1"] #clcrActivePanel { padding: var(--space-16px) var(--space-16px) 0; border-bottom: 0; border-radius: var(--clcr-radius-card) var(--clcr-radius-card) 0 0; box-shadow: none; }
+html[data-clcr-workflow-ui="1"][data-clcr-tmp-gfr-active="1"] #tmpGfrInputCard { margin-top: calc(-1 * var(--space-16px)); border-top: 0; border-radius: 0 0 var(--clcr-radius-card) var(--clcr-radius-card); box-shadow: none; }
+html[data-clcr-tmp-gfr-active="1"] .tmp-gfr-input-card [hidden] { display: none !important; }
+@media (max-width: 700px) {
+  html[data-clcr-workflow-ui="1"][data-clcr-tmp-gfr-active="1"] { --tmp-gfr-unit-width: 98px; }
+  html[data-clcr-workflow-ui="1"][data-clcr-tmp-gfr-active="1"] #clcrResultReport { padding: var(--space-16px); }
+  html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .tmp-gfr-proposal-card { padding: var(--space-14px) !important; }
+  .tmp-gfr-result-main, .tmp-gfr-trp-main { gap: var(--space-12px); }
+  html[data-clcr-workflow-ui="1"] #clcrResultReport .tmp-gfr-proposal-card :is(.clcr-result-patient-label, .clcr-result-reference-label) { font-size: 11px; }
+  html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .tmp-gfr-proposal-card .clcr-result-value { font-size: 38px !important; }
+  html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .tmp-gfr-proposal-card .clcr-result-value[data-long="true"] { font-size: 25px !important; }
+  html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .tmp-gfr-proposal-card .tmp-gfr-reference-value { font-size: 22px !important; }
+  html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .tmp-gfr-proposal-card .tmp-gfr-reference-value[data-no-reference="true"] { font-size: 14px !important; }
+  .tmp-gfr-result-copy { font-size: 12px; }
+  .tmp-gfr-trp-value { font-size: 23px; }
+  .tmp-gfr-trp-reference-value { font-size: 19px; }
+}
+@media (max-width: 360px) {
+  html[data-clcr-workflow-ui="1"][data-clcr-tmp-gfr-active="1"] { --tmp-gfr-unit-width: 90px; }
+  .tmp-gfr-result-main, .tmp-gfr-trp-main { gap: var(--space-8px); }
+  html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .tmp-gfr-proposal-card .clcr-result-value { font-size: 32px !important; }
+  html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .tmp-gfr-proposal-card .clcr-result-value[data-long="true"] { font-size: 21px !important; }
+  html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .tmp-gfr-proposal-card .clcr-result-value[data-dense="true"] { font-size: 17px !important; }
+  html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .tmp-gfr-proposal-card .tmp-gfr-reference-value { font-size: 19px !important; }
+  html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .tmp-gfr-proposal-card .tmp-gfr-reference-value[data-no-reference="true"] { font-size: 12px !important; }
+  html[data-clcr-workflow-ui="1"] #clcrResultReport .tmp-gfr-proposal-card :is(.clcr-result-patient-label, .clcr-result-reference-label) { font-size: 10px; }
+  .tmp-gfr-therapy-toggle strong { font-size: 12px; }
+  .tmp-gfr-trp-reference-label { font-size: 10px; }
+  .tmp-gfr-trp-value { font-size: 21px; }
+  .tmp-gfr-trp-reference-value { font-size: 18px; }
+}
+@media (min-width: 980px) {
+  html[data-clcr-workflow-ui="1"][data-clcr-tmp-gfr-active="1"] #clcrWorkspace { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}

@@ -175,7 +175,8 @@ describe('vilda_summary_cards.js — karta czeka na datę urodzenia (Sd_poDacie)
   it('strażnik źródła: Y buduje kartę po odczycie z sejfu przez Sd_poDacie, z kontrolą epoki i .catch jak dotąd', () => {
     const src = czytaj('vilda_summary_cards.js');
     expect(src).toContain('m.getPatient(n).then(function(l){Sd_poDacie(function(){if(Gp_ep()!==Gp_e0)return;');
-    expect(src).toContain('try{typeof a.updatePrevSummaryDiff=="function"&&a.updatePrevSummaryDiff()}catch{}})}).catch(function(){G()})}');
+    expect(src).toContain('try{typeof a.updatePrevSummaryDiff=="function"&&a.updatePrevSummaryDiff()}catch{}summaryComparisonFinish(comparisonRequest,"ready");');
+    expect(src).toContain('.catch(function(){if(!summaryComparisonCurrent(comparisonRequest))return;G();summaryComparisonFinish(comparisonRequest,"error");})}');
     expect(src).toContain('czeka=!!(V&&typeof V.restorePending=="function"&&V.restorePending())');
     expect(src).toContain('document.addEventListener("vilda:dob-restored",dalej)');
   });

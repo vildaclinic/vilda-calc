@@ -597,9 +597,24 @@ for (const issue of ['different-time', 'different-urine']) {
     await record('corrected-FEK');
     await expectResult(page, { raw: 6.25 });
     await choose(page, 'TMP_GFR');
-    await expect(page.locator('#clcrResultReport [data-clcr-series="TMP_GFR"]')).toHaveCount(0);
     await expect(page.locator('#tmpPairedSameTime')).not.toBeChecked();
-    expect(await page.evaluate(() => window.canComputeFormula('TMP_GFR'))).toBe(false);
+    const tmp = page.locator('#clcrResultReport [data-clcr-series="TMP_GFR"]');
+    if (issue === 'different-time') {
+      // A known negative TMP timing answer remains a blocking fact even
+      // after the shared FE sample issue was corrected.
+      await expect(tmp).toHaveCount(0);
+      expect(await page.evaluate(() => window.VildaClcrTmpGfr.readInputFromDocument(document).pairedSameTime)).toBe('different');
+      expect(await page.evaluate(() => window.canComputeFormula('TMP_GFR'))).toBe(false);
+    } else {
+      // The urine mismatch has been explicitly corrected. The independent
+      // unanswered TMP checkbox is preserved, but its old routine gate was
+      // intentionally removed by the simplified TmP/GFR workflow.
+      await expect(tmp).toBeVisible();
+      expect(await page.evaluate(() => window.__vildaClcrVersionValueVault.ui_tmpPairedSameTime_answer)).toBe('unknown');
+      expect(await page.evaluate(() => window.VildaClcrTmpGfr.readInputFromDocument(document))).toMatchObject({ pairedSameTime: 'confirmed', sameUrineSpecimen: 'confirmed' });
+      expect(await page.evaluate(() => window.canComputeFormula('TMP_GFR'))).toBe(true);
+      expect(Number(await tmp.getAttribute('data-clcr-value'))).toBeCloseTo(0.9, 12);
+    }
   });
 }
 

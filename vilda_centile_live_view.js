@@ -17,7 +17,7 @@
     return Number(value).toLocaleString('pl-PL', { maximumFractionDigits: digits === undefined ? 1 : digits });
   }
   function sourceLabel(source) {
-    return source === 'PALCZEWSKA' ? 'Palczewska' : source === 'WHO' ? 'WHO' : source === 'OLAF' ? 'OLAF / OLA' : source === 'DS' ? 'Zemel (zespół Downa)' : String(source || '');
+    return source === 'PALCZEWSKA' ? 'Palczewska' : source === 'WHO' ? 'WHO' : source === 'OLAF' ? 'OLAF / OLA' : source === 'DS' ? 'Zemel 2015' : String(source || '');
   }
   function ageLabel(age) {
     var months = Math.max(0, Math.floor(age + 0.0000001));
@@ -314,6 +314,22 @@
       text(latestCentile, (finite(pct) ? (pct >= 97 ? '≥97' : pct <= 3 ? '≤3' : Math.round(pct)) + '. centyl' : 'Centyl niedostępny') + effectiveSource);
       text(latestAge, ageLabel(finite(point.clinicalAgeMonths) ? point.clinicalAgeMonths : point.ageMonths));
     }
+    function updatePaneTitle(pane) {
+      var data = asset(pane.metric);
+      var list = points(data);
+      var point = list.find(function (item) { return item.current; }) || list[list.length - 1];
+      var fallback = !!(state.fullscreen && point && pane.image && pane.image.dataset.valueLabel === 'header');
+      // Keep a fallback row for this image once it has been needed. Otherwise
+      // showing the row changes the fit scale, which can make placement succeed
+      // and hide the row again in a ResizeObserver loop near a tight boundary.
+      if (fallback) pane.reservedTitleImage = pane.image;
+      if (!state.fullscreen) pane.reservedTitleImage = null;
+      var reserved = state.fullscreen && pane.image && pane.reservedTitleImage === pane.image;
+      text(pane.title, LABELS[pane.metric] + (fallback ? ' · ' + numberLabel(point.value)
+        + (pane.metric === 'height' ? ' cm' : ' kg') : ''));
+      styles(pane.title, { display: fallback || reserved ? 'block' : '',
+        color: fallback && w.VildaCentileLiveColors ? w.VildaCentileLiveColors.color(w.VildaCentileLiveColors.tone(pane.metric, point.percentile)) : '' });
+    }
     function fitPreview(pane, data, width, height) {
       var api = w.VildaCentileLivePreview;
       if (!api || typeof api.draw !== 'function') throw new Error('Brak modułu podglądu siatki.');
@@ -377,6 +393,7 @@
           left: -layout.bounds.x * commonScale + 'px', top: -layout.bounds.y * commonScale + 'px'
         });
         if (typeof pane.image.fitPatientLayer === 'function') pane.image.fitPatientLayer(commonScale);
+        updatePaneTitle(pane);
         updateMph(pane);
       });
       if (state.age !== null) renderAge(state.age);
@@ -579,7 +596,7 @@
       });
       visiblePanes().forEach(function (pane) {
         var data = asset(pane.metric);
-        text(pane.title, LABELS[pane.metric]);
+        updatePaneTitle(pane);
         pane.root.setAttribute('aria-label', 'Siatka: ' + LABELS[pane.metric]);
         pane.input.setAttribute('aria-label', LABELS[pane.metric] + '. Przesuń wskaźnik, aby odczytać dane. Enter przypina odczyt. Strzałki wybierają pomiary.');
         var available = !!(data && (data.preview || data.canvas));

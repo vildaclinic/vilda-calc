@@ -212,13 +212,32 @@
       return modeled(formulaId, parameterKey, value, "mmol/L", 1, values, context);
     }
     if (formulaId === "TMP_GFR") {
-      const assumptions = assumed(formulaId, values);
-      if (!assumptions.calculationContext.markerPolicy.calculationAllowed) throw new Error("Nieprawidłowy kontekst czynności nerek.");
-      const result = safety.computeTmpGfr({ ageYears: age, sampleKind: values.spotSampleKind || "", pairedSameTime: checked(values, "tmpPairedSameTime"), overnightFasting: checked(values, "tmpOvernightFasting"), serumPhosphate: number(values, "S_PO4_spot"), serumPhosphateUnit: values.S_PO4_spot_unit, urinePhosphate: number(values, "U_PO4_spot"), urinePhosphateUnit: values.U_PO4_spot_unit, serumCreatinine: number(values, "Scr_spot"), serumCreatinineUnit: values.Scr_spot_unit, urineCreatinine: number(values, "Ucr_spot"), urineCreatinineUnit: values.Ucr_spot_unit });
-      if (!result.ok) throw new Error(result.error || "Nieprawidłowe dane TmP/GFR.");
-      return modeled(formulaId, parameterKey, result.tmpGfrMmolL, "mmol/L", 3, values, context, { datapoint: { tmpGfrResult: result } });
+      const engine = requiredModule("VildaClcrTmpGfr"), policy = requiredModule("VildaClcrTmpGfrReferenceData").DEFAULT_POLICY;
+      const result = engine.evaluate(engine.inputFromValues(values, { ...context, ageYears: age }), policy);
+      if (!result.valid) throw new Error(result.error || "Nieprawidłowe dane TmP/GFR.");
+      const datapoint = {
+        id: parameterKey, sourceFormulaId: formulaId, label: "TmP/GFR — próg reabsorpcji fosforanów", testKey: "clcr:TMP_GFR",
+        valueNum: result.rawValue, rawValue: result.rawValue, unit: result.unit,
+        displayValue: result.display.text, comparator: "", category: null,
+        assessment: result.status, tone: result.tone, norm: "", outOfRange: result.outOfRange,
+        interpretation: result.interpretation, calculationMethod: result.method, tmpGfrSnapshot: result,
+      };
+      requiredModule("ClcrTmpGfrPersistence").augmentDatapoint({ getAttribute: () => JSON.stringify(result) }, datapoint);
+      return datapoint;
     }
-    if (["pH_spot", "pH24"].includes(formulaId)) {
+    if (formulaId === "pH_spot") {
+      const engine = requiredModule("VildaClcrPh"), policy = requiredModule("VildaClcrPhReferenceData").DEFAULT_POLICY;
+      const result = engine.evaluate(engine.inputFromValues(values, context), policy);
+      if (!result.valid) throw new Error(result.error || "Podaj prawidłowe pH.");
+      const datapoint = {
+        id: parameterKey, sourceFormulaId: formulaId, label: "pH moczu (próbka punktowa)", testKey: "clcr:pH_spot",
+        valueNum: result.rawValue, rawValue: result.rawValue, unit: "—", displayValue: result.display.text,
+        comparator: "", category: null, interpretation: result.interpretation, phSnapshot: result,
+      };
+      requiredModule("ClcrPhPersistence").augmentDatapoint({ getAttribute: () => JSON.stringify(result) }, datapoint);
+      return datapoint;
+    }
+    if (formulaId === "pH24") {
       const value = number(values, formulaId === "pH24" ? "pH24" : "U_pH");
       if (!(value > 0 && value <= 14)) throw new Error("Podaj prawidłowe pH.");
       const sample = collection(values);

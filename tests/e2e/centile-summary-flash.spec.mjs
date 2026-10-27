@@ -1,8 +1,31 @@
 import { expect, test } from '@playwright/test';
-import { createFictionalVault, loadPatient, readyForPatient, shellFrame } from '../support/centile-live-fixture.mjs';
+import { createFictionalVault, fictionalPatient, loadPatient, readyForPatient, shellFrame } from '../support/centile-live-fixture.mjs';
 
 test.use({ serviceWorkers: 'block', reducedMotion: 'reduce' });
 test.setTimeout(120_000);
+
+test.afterEach(async ({ page }) => {
+  if (test.info().status === test.info().expectedStatus) return;
+  const frames = [];
+  for (const frame of page.frames()) {
+    try {
+      frames.push(await frame.evaluate(() => ({
+        path: location.pathname,
+        comparison: window.VildaSummaryComparison?.getState(),
+        chart: window.VildaCentileLivePanel?.getState(),
+        tabs: window.VildaSummaryTabs?.getState(),
+        eligibility: window.VildaCentileLiveData?.getEligibility(),
+        lifecycle: window.__siatkaE2eLifecycle,
+        choice: sessionStorage.getItem('vildaLoadChoiceV1'),
+        anchor: sessionStorage.getItem('vildaPrevSummaryPid'),
+        previous: document.getElementById('prevSummaryWrap')?.textContent?.trim().slice(0, 300),
+      })));
+    } catch (_) { /* A navigation failure can destroy its previous document. */ }
+  }
+  await test.info().attach('comparison-state-on-failure.json', {
+    body: JSON.stringify(frames, null, 2), contentType: 'application/json',
+  });
+});
 
 // Natywne klatki od początku dokumentu. W SPA obserwator hosta odnajduje
 // aktualny dokument aktywnej ramki; nie zachowuje starego contentWindow.
@@ -29,7 +52,7 @@ function installSummaryProbe() {
       const frames = [...document.querySelectorAll('iframe.app-pane')];
       const frame = frames.find(element => !element.hidden && visible(element, window));
       const owner = frames.length ? frame?.contentWindow : window;
-      if (owner?.document && /\/docpro\.html$/u.test(owner.location.pathname)) {
+      if (owner?.document && /\/(?:docpro|index)\.html$/u.test(owner.location.pathname)) {
         const doc = owner.document;
         const form = doc.getElementById('calcForm');
         const doctor = doc.getElementById('doctorSection');
@@ -95,7 +118,7 @@ async function painted(page, count = 20) {
   }), count);
 }
 
-async function prepareDocPro(page, shell, { choice = 'new' } = {}) {
+async function prepareDocPro(page, shell, { choice = 'new', route = 'docpro' } = {}) {
   await page.addInitScript(installSummaryProbe);
   // Publiczny hook wyłącznie fikcyjnego konta. Uprawnienie powstaje w rzeczywistym
   // dokumencie przed odtworzeniem; po reloadzie nie naprawiamy PRO ani wyników.
@@ -112,7 +135,9 @@ async function prepareDocPro(page, shell, { choice = 'new' } = {}) {
   });
   const fixture = await createFictionalVault(page, { shell });
   let owner;
-  if (shell) {
+  if (route === 'start') {
+    owner = fixture.frame;
+  } else if (shell) {
     await page.evaluate(() => window.VildaShell.navigate('docpro'));
     owner = await shellFrame(page, 'DocPro');
   } else {
@@ -195,54 +220,79 @@ async function holdComparisonOnReload(page) {
   });
 }
 
-test('DocPro: oczekiwanie na porównanie używa jednej karty z zakładkami, a gotowe porównanie przejmuje siatkę bez przebicia wyników', async ({ page }) => {
+for (const route of ['start', 'docpro']) {
+  for (const shell of [false, true]) {
+    test(`${route} ${shell ? 'SPA' : 'samodzielne'}: opóźnione porównanie nie odsłania Podsumowania ani nie opóźnia siatki`, async ({ page }) => {
+      await holdComparisonOnReload(page);
+      const { id } = await prepareDocPro(page, shell, { route });
+      await page.evaluate(() => sessionStorage.setItem('__e2eHoldComparison', 'true'));
+      await page.reload({ waitUntil: 'load' });
+      const owner = shell ? await shellFrame(page, route === 'start' ? 'Start' : 'DocPro') : page;
+      await owner.waitForFunction(() => window.__e2eComparisonWaiting);
+      await expect.poll(() => owner.evaluate(() => window.VildaCentileLivePanel?.getState()), { timeout: 30_000 })
+        .toMatchObject({ status: 'ready', eligible: true, patientId: id, presentation: 'dedicated' });
+      await expect(owner.locator('#prevSummaryWrap')).toBeHidden();
+      await expect(owner.locator('#currentSummaryWrap')).toBeHidden();
+      await expect(owner.locator('.vilda-centile-live-card')).toHaveCount(1);
+      const before = await observations(page);
+      expectSlotFree(before, id);
+      expect(before.filter(frame => frame.patientId === id && frame.summaryResults),
+        'brak choćby jednej klatki wyników przed zakończeniem rzeczywistego odczytu porównania').toEqual([]);
+      await owner.evaluate(() => { window.__e2eReservedChart = document.querySelector('.vilda-centile-live-card'); });
+      await owner.evaluate(() => window.__e2eReleaseComparison());
+      await expect(owner.locator('#prevSummaryWrap')).toBeVisible();
+      await expect(owner.locator('#currentSummaryWrap')).toBeHidden();
+      await expect.poll(() => owner.evaluate(() => window.VildaSummaryComparison.getState().status)).toBe('ready');
+      const after = await observations(page);
+      expectSlotFree(after, id);
+      expect(after.filter(frame => frame.patientId === id && frame.summaryResults)).toEqual([]);
+      expect(after.filter(frame => frame.chartCount > 1)).toEqual([]);
+      expect(await owner.evaluate(() => window.__e2eReservedChart === document.querySelector('.vilda-centile-live-card')),
+        'gotowa siatka nie jest niszczona przy zakończeniu odczytu porównania').toBe(true);
+      const final = after.at(-1);
+      expect(final.image && final.comparison).toBe(true);
+      expect(Math.abs(final.mount.top - final.input.top)).toBeLessThan(1);
+      expect(Math.abs(final.mount.bottom - final.input.bottom)).toBeLessThan(1);
+    });
+  }
+}
+
+test('DocPro: dopiero potwierdzony brak poprzedniego pomiaru udostępnia zakładki, także po reloadzie bez kotwicy', async ({ page }) => {
   await holdComparisonOnReload(page);
-  const { id } = await prepareDocPro(page, false);
-  await page.evaluate(() => sessionStorage.setItem('__e2eHoldComparison', 'true'));
+  await prepareDocPro(page, false);
+  const payload = fictionalPatient({ firstName: 'BezPomiaru', height: null, weight: null });
+  payload.advanced.data.measurements = [];
+  const id = await page.evaluate(async record => (await window.VildaVault.savePatient(record, { dedup: false })).patientId, payload);
+  await loadPatient(page, id, 'new', { clear: true });
+  await page.locator('#height').fill('159');
+  await page.locator('#weight').fill('47');
+  await page.locator('#weight').blur();
+  await expect.poll(() => page.evaluate(() => window.VildaSummaryComparison.getState().status)).toBe('absent');
+  await expect(page.getByRole('tab', { name: 'Podsumowanie', exact: true })).toHaveAttribute('aria-selected', 'true');
+  expect(await page.evaluate(() => sessionStorage.getItem('vildaPrevSummaryPid'))).toBeNull();
+  await expect.poll(() => page.evaluate(() => window.vildaSession.saveNow({ force: true }))).toBe(true);
+  await page.evaluate(() => {
+    window.vildaPersistFlushNow({ force: true });
+    sessionStorage.setItem('__e2eHoldComparison', 'true');
+  });
   await page.reload({ waitUntil: 'load' });
   await page.waitForFunction(() => window.__e2eComparisonWaiting);
+  await expect(page.locator('#currentSummaryWrap')).toBeHidden();
+  await expect(page.getByRole('tab', { name: 'Podsumowanie', exact: true })).toBeHidden();
+  const pending = (await observations(page)).filter(frame => frame.patientId === id);
+  expect(pending.length).toBeGreaterThan(5);
+  expect(pending.filter(frame => frame.summaryResults)).toEqual([]);
+  await page.evaluate(() => window.__e2eReleaseComparison());
+  await expect.poll(() => page.evaluate(() => window.VildaSummaryComparison.getState().status)).toBe('absent');
   await expect(page.getByRole('tab', { name: 'Podsumowanie', exact: true })).toHaveAttribute('aria-selected', 'true');
-  await expect(page.locator('#prevSummaryWrap')).toBeHidden();
-  await expect(page.locator('#currentSummaryCard')).toBeVisible();
   await expect(page.locator('#currentSummaryContent')).toContainText('159 cm');
   await expect(page.locator('#vildaCentileLiveMount')).toBeHidden();
   await expect(page.locator('.vilda-centile-live-card')).toHaveCount(0);
-
-  // The approved replacement of "summary below chart" is one shared card.
-  // After the explicit chart selection, result text must never flash through it.
-  await page.evaluate(() => { window.__centileSummaryPaint.frames = []; });
   await page.getByRole('tab', { name: 'Siatka centylowa', exact: true }).click();
-  await expect.poll(() => page.evaluate(() => window.VildaCentileLivePanel?.getState()), { timeout: 30_000 })
-    .toMatchObject({ status: 'ready', eligible: true, patientId: id, presentation: 'summary', selectedTab: 'chart' });
-  const during = await observations(page);
-  const selected = during.filter(frame => frame.selectedTab === 'chart' && frame.form);
-  expect(selected.length).toBeGreaterThan(5);
-  expect(selected.filter(frame => frame.summaryResults), 'wyniki nie przebijają przez wybraną zakładkę siatki').toEqual([]);
-  expect(selected.some(frame => frame.image && frame.chartCount === 1)).toBe(true);
-  expect(selected.filter(frame => frame.chartCount > 1), 'karta nie tworzy drugiej siatki').toEqual([]);
-  const before = selected.at(-1);
-  const summaryBox = before.summaries.find(summary => summary.id === 'currentSummaryCard').box;
-  expect(Math.abs(summaryBox.top - before.input.top), 'karta zaczyna się na wysokości formularza').toBeLessThan(1);
-  expect(Math.abs(summaryBox.bottom - before.input.bottom), 'zakładki wliczają się do wysokości karty').toBeLessThan(1);
-
-  await page.evaluate(() => window.__e2eReleaseComparison());
-  await expect(page.locator('#prevSummaryWrap')).toBeVisible();
-  await expect(page.locator('#currentSummaryCard')).toBeHidden();
-  await expect.poll(() => page.evaluate(() => window.VildaCentileLivePanel?.getState()), { timeout: 30_000 })
-    .toMatchObject({ status: 'ready', eligible: true, patientId: id, presentation: 'dedicated' });
-  const all = await observations(page);
-  const firstChart = all.findIndex(frame => frame.selectedTab === 'chart' && frame.form);
-  expect(firstChart).toBeGreaterThanOrEqual(0);
-  const after = all.slice(firstChart).filter(frame => frame.form);
-  expect(after.filter(frame => frame.summaryResults), 'przejęcie siatki przez porównanie nie odsłania wyników').toEqual([]);
-  expect(after.filter(frame => frame.chartCount > 1)).toEqual([]);
-  const final = after.at(-1);
-  expect(final.image && final.comparison).toBe(true);
-  expect(Math.abs(final.mount.top - final.input.top)).toBeLessThan(1);
-  expect(Math.abs(final.mount.bottom - final.input.bottom)).toBeLessThan(1);
+  await expect(page.locator('#vildaSummaryChartPanel svg.vilda-centile-live-preview')).toBeVisible();
 });
 
-test('DocPro: brak skryptu siatki pozostawia Podsumowanie, a wybrana zakładka pokazuje błąd z działającym ponowieniem', async ({ page }) => {
+test('DocPro: brak skryptu siatki nie odsłania wyników przed rozstrzygnięciem porównania, a ponowienie przywraca siatkę', async ({ page }) => {
   await holdComparisonOnReload(page);
   const { id } = await prepareDocPro(page, false);
   let blockPanel = true;
@@ -251,39 +301,30 @@ test('DocPro: brak skryptu siatki pozostawia Podsumowanie, a wybrana zakładka p
   await page.evaluate(() => sessionStorage.setItem('__e2eHoldComparison', 'true'));
   await page.reload({ waitUntil: 'load' });
   await page.waitForFunction(() => window.__e2eComparisonWaiting);
-  expect(await page.evaluate(() => Boolean(window.VildaCentileLivePanel)), 'moduł faktycznie nie wystartował').toBe(false);
-  await expect(page.locator('#currentSummaryCard')).toBeVisible();
-  await expect(page.locator('#currentSummaryContent')).toContainText('159 cm');
-  await expect(page.locator('#vildaCentileLiveMount')).toBeHidden();
-  await page.evaluate(() => { window.__centileSummaryPaint.frames = []; });
-  await page.getByRole('tab', { name: 'Siatka centylowa', exact: true }).click();
-  await expect(page.locator('#vildaCentileLiveMount')).toHaveAttribute('data-centile-live-state', 'error');
+  expect(await page.evaluate(() => Boolean(window.VildaCentileLivePanel))).toBe(false);
+  await expect(page.locator('#currentSummaryWrap')).toBeHidden();
+  // Keep the native dedicated-slot watchdog: no fabricated timer or UI state.
+  await expect(page.locator('#vildaCentileLiveMount')).toHaveAttribute('data-centile-live-state', 'error', { timeout: 25_000 });
   await expect(page.locator('#vildaCentileLiveLoadingMessage')).toContainText('Nie udało się uruchomić siatki');
   await expect(page.locator('#vildaCentileLiveRetry')).toBeVisible();
   await expect(page.locator('#vildaCentileLiveRetry')).toHaveText('Odśwież stronę');
-  await expect(page.locator('#currentSummaryContent')).toBeHidden();
-  const frames = (await observations(page)).filter(frame => frame.selectedTab === 'chart' && frame.form);
-  expect(frames.length).toBeGreaterThan(5);
-  expect(frames.every(frame => frame.mountShown && !frame.image && !frame.summaryResults),
-    'błąd siatki zajmuje wyłącznie jej zakładkę, bez przebicia wyników').toBe(true);
-
+  await expect(page.locator('#currentSummaryWrap')).toBeHidden();
+  const failed = (await observations(page)).filter(frame => frame.patientId === id);
+  expect(failed.length).toBeGreaterThan(5);
+  expect(failed.filter(frame => frame.summaryResults)).toEqual([]);
   blockPanel = false;
   await Promise.all([
     page.waitForNavigation({ waitUntil: 'load' }),
     page.locator('#vildaCentileLiveRetry').click(),
   ]);
-  await expect(page.getByRole('tab', { name: 'Podsumowanie', exact: true })).toHaveAttribute('aria-selected', 'true');
+  await expect.poll(() => page.evaluate(() => window.VildaCentileLivePanel?.getState()), { timeout: 30_000 })
+    .toMatchObject({ status: 'ready', eligible: true, patientId: id, presentation: 'dedicated' });
   await expect(page.locator('#height')).toHaveValue('159');
   await expect(page.locator('#weight')).toHaveValue('47');
-  await page.getByRole('tab', { name: 'Siatka centylowa', exact: true }).click();
-  await expect.poll(() => page.evaluate(() => window.VildaCentileLivePanel?.getState()), { timeout: 30_000 })
-    .toMatchObject({ status: 'ready', eligible: true, patientId: id, presentation: 'summary' });
-  await expect(page.locator('#vildaSummaryChartPanel svg.vilda-centile-live-preview')).toBeVisible();
+  expectSlotFree(await observations(page), id);
   await page.evaluate(() => window.__e2eReleaseComparison());
   await expect(page.locator('#prevSummaryWrap')).toBeVisible();
-  await expect(page.locator('#currentSummaryCard')).toBeHidden();
-  await expect.poll(() => page.evaluate(() => window.VildaCentileLivePanel?.getState()), { timeout: 30_000 })
-    .toMatchObject({ status: 'ready', patientId: id, presentation: 'dedicated' });
+  await expect(page.locator('#currentSummaryWrap')).toBeHidden();
 });
 
 test('DocPro Odtwórz: brak modułu siatki ma dostępne ponowienie także bez watchdogu ścieżki Nowy pomiar', async ({ page }) => {

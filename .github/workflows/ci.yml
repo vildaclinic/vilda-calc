@@ -91,9 +91,11 @@ jobs:
         shard: [1, 2, 3]
     # W PR #793 limit 40 min przerwał aktywny przebieg przy 699/722 uruchomionych
     # testach bez zgłoszonych błędów; pozostałe odłamki potrzebowały ok. 39 min.
+    # W PR #802 limit 45 min przerwał odłamek 2/3 przy 753/769 testach,
+    # nadal regularnie wykonywanych, bez błędów asercji przed anulowaniem.
     # Budżet obejmuje instalację Chromium, testy i raport. Limity pojedynczych
     # testów, liczba workerów i wymagane asercje pozostają bez zmian.
-    timeout-minutes: 45
+    timeout-minutes: 50
     steps:
       - name: Pobierz repozytorium
         uses: actions/checkout@v4

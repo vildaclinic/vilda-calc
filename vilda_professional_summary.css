@@ -1,10 +1,11 @@
-/* Compact, consistently aligned results. Normal means colored text on WHITE, not a
-   tinted card; descriptive and missing values remain gray. */
+/* Variant B: separated rows, pale backgrounds for assessed results and dark
+   descriptive values. Only unavailable data uses the muted text color. */
 #currentSummaryCard {
-  --summary-normal: #087c80;
-  --summary-warn: #b97519;
-  --summary-danger: #bd4b50;
-  --summary-neutral: #7c8b90;
+  --summary-normal: #006d73;
+  --summary-warn: #965405;
+  --summary-danger: #b43b45;
+  --summary-neutral: #263f45;
+  --summary-missing: #62767a;
 }
 
 #currentSummaryCard.pro-summary-card,
@@ -12,21 +13,14 @@
   border: var(--border-hairline) solid #d8e5e5 !important;
 }
 
-#currentSummaryCard.vilda-summary-with-tabs .pro-summary-label {
-  top: 24px;
-  right: 16px;
-  padding: var(--space-4px) var(--space-6px);
-  border: var(--border-hairline) solid #e6dff2;
-  border-radius: var(--radius-6);
-  background: #f7f4fc;
-  color: #9981b8;
-  font-size: 10px;
-  font-weight: 650;
-  line-height: 1.4;
+#currentSummaryCard .pro-summary-label {
+  display: none !important;
 }
 
 #currentSummaryCard.vilda-summary-with-tabs .vilda-summary-tabs {
-  margin-inline-end: 46px;
+  margin-inline-end: 0;
+  width: 100%;
+  min-width: 0;
 }
 
 #currentSummaryCard .professional-summary-content {
@@ -35,22 +29,26 @@
   color: var(--summary-neutral);
 }
 
-#currentSummaryCard .professional-summary-row {
+#currentSummaryCard .professional-summary-main,
+#currentSummaryCard .professional-summary-extra-body {
   display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
-  gap: 5px var(--space-8px);
+  flex-direction: column;
+  gap: var(--space-6px);
+}
+
+#currentSummaryCard .professional-summary-row {
+  display: block;
   box-sizing: border-box;
   width: 100%;
   margin: 0;
-  padding: 9px 11px;
-  border: 0;
+  padding: 9px var(--space-12px);
+  border: var(--border-hairline) solid #e5ece9;
   border-inline-start: 3px solid transparent;
-  border-bottom: var(--border-hairline) solid #edf1f1;
+  border-radius: 7px;
   background: #fff;
   color: var(--summary-neutral);
   font-size: 14px;
-  line-height: 1.45;
+  line-height: 1.55;
   overflow-wrap: anywhere;
 }
 
@@ -60,6 +58,7 @@
 
 #currentSummaryCard .professional-summary-value strong {
   font-weight: 600;
+  color: inherit;
 }
 
 #currentSummaryCard .professional-summary-row[data-summary-key="weight"],
@@ -70,29 +69,51 @@
 
 #currentSummaryCard .professional-summary-row[data-assessment="normal"] {
   color: var(--summary-normal);
+  background: #edf8f6;
+  border-color: #cfe6df;
+  border-inline-start-color: var(--summary-normal);
 }
 
 #currentSummaryCard .professional-summary-row[data-tone="warn"] {
   color: var(--summary-warn);
   background: #fff7e9;
-  border-inline-start-color: var(--summary-warn);
+  border-color: #efdec0;
+  border-inline-start-color: #b97519;
 }
 
 #currentSummaryCard .professional-summary-row[data-tone="danger"] {
   color: var(--summary-danger);
-  background: #fff0f2;
-  border-inline-start-color: var(--summary-danger);
+  background: #fff3f4;
+  border-color: #f1d4d7;
+  border-inline-start-color: #bd4551;
 }
 
-#currentSummaryCard .professional-summary-chip {
-  display: inline-block;
-  max-width: 100%;
-  border: var(--border-hairline) solid currentColor;
-  border-radius: 5px;
-  padding: 1px var(--space-6px);
-  font-size: 11px;
-  font-weight: 600;
-  line-height: 1.45;
+#currentSummaryCard .professional-summary-row[data-availability="missing"] {
+  color: var(--summary-missing);
+  background: #fff;
+  border-color: #e5ece9;
+  border-inline-start-color: transparent;
+}
+
+#currentSummaryCard .professional-summary-assessment {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+
+#currentSummaryCard .professional-summary-reference {
+  font-size: .92em;
+}
+
+#currentSummaryCard .professional-summary-extra-body {
+  padding: var(--space-6px);
 }
 
 #currentSummaryCard .professional-summary-extras {
@@ -148,5 +169,55 @@
 
 #currentSummaryCard .professional-summary-extras[hidden],
 #currentSummaryCard .professional-summary-extra-count[hidden] {
+  display: none;
+}
+
+/* Match the collapsed form only when the native layout has two columns.
+   Heights come from its measured geometry, including the status strip above
+   this card. Stacked layouts keep their natural document scrolling. */
+#currentSummaryCard.vilda-summary-height-matched {
+  box-sizing: border-box;
+  height: var(--vilda-summary-card-height);
+  min-height: 0;
+  overflow: hidden;
+}
+
+#currentSummaryCard.vilda-summary-height-matched > #currentSummaryContent {
+  min-height: 0;
+  max-height: var(--vilda-summary-content-height);
+  overflow-y: auto;
+  overflow-x: hidden;
+  scrollbar-width: thin;
+  scrollbar-color: #a8c7c1 transparent;
+  overscroll-behavior-y: contain;
+  scroll-padding-block: var(--space-12px);
+}
+
+#currentSummaryContent[tabindex="0"]:focus-visible {
+  outline: var(--border-emphasis) solid #087c80;
+  outline-offset: -2px;
+  border-radius: var(--radius-6);
+}
+
+#currentSummaryCard > .vilda-summary-scroll-hint {
+  position: absolute;
+  inset-inline: var(--space-1);
+  bottom: var(--vilda-summary-hint-bottom);
+  margin-top: var(--space-6px);
+  padding-top: var(--space-4px);
+  border-top: var(--border-hairline) solid #e5efeb;
+  background: #fff;
+  color: #476f73;
+  font-size: 11px;
+  line-height: 1.5;
+  text-align: center;
+  pointer-events: none;
+}
+
+#currentSummaryCard > .vilda-summary-scroll-hint-at-end {
+  visibility: hidden;
+}
+
+#currentSummaryCard > .vilda-summary-scroll-hint[hidden] {
   display: none;
 }

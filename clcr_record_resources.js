@@ -19,10 +19,12 @@
     ["clcr_fecl_persistence.js?v=1", "ClcrFeclPersistence"],
     ["clcr_fehco3_persistence.js?v=1", "ClcrFehco3Persistence"],
     ["clcr_uag_persistence.js?v=1", "ClcrUagPersistence"],
+    ["clcr_tmp_gfr_persistence.js?v=1", "ClcrTmpGfrPersistence"],
+    ["clcr_ph_persistence.js?v=1", "ClcrPhPersistence"],
     // readSaved is pure and needed for the new capture format. Its recalculate
     // method is not called while opening history and resolves engines lazily.
-    ["clcr_saved_calculation.js?v=2", "ClcrSavedCalculation"],
-    ["clcr_saved_results.js?v=2", "ClcrSavedResults"],
+    ["clcr_saved_calculation.js?v=4", "ClcrSavedCalculation"],
+    ["clcr_saved_results.js?v=4", "ClcrSavedResults"],
     ["clcr_saved_results_view.js?v=1", "ClcrSavedResultsView"],
   ];
   const editor = [
@@ -52,10 +54,14 @@
     ["clcr_fehco3.js?v=1", "VildaClcrFehco3"],
     ["clcr_uag_reference_data.js?v=1", "VildaClcrUagReferenceData"],
     ["clcr_uag.js?v=1", "VildaClcrUag"],
+    ["clcr_tmp_gfr_reference_data.js?v=1", "VildaClcrTmpGfrReferenceData"],
+    ["clcr_tmp_gfr.js?v=1", "VildaClcrTmpGfr"],
+    ["clcr_ph_reference_data.js?v=1", "VildaClcrPhReferenceData"],
+    ["clcr_ph.js?v=1", "VildaClcrPh"],
     ["clcr_measured_clearance_reference_data.js?v=1", "ClcrMeasuredClearanceReferenceData"],
     ["clcr_measured_clearance_reference.js?v=1", "ClcrMeasuredClearanceReference"],
     ["clcr_result_presentation.js?v=8", "ClcrResultPresentation"],
-    ["clcr_saved_legacy_calculator.js?v=2", "ClcrSavedLegacyCalculator"],
+    ["clcr_saved_legacy_calculator.js?v=4", "ClcrSavedLegacyCalculator"],
     ["clcr_result_details.js?v=1", "ClcrResultDetails"],
   ];
   function load(path, name, style = false) {

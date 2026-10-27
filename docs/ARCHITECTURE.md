@@ -48,6 +48,14 @@ Trasy i osadzanie paneli definiuje przede wszystkim `vilda_shell.js`. Zmiana adr
 
 Skrypty są globalne i zależne od kolejności ładowania. Publiczne obiekty `window.Vilda…` pełnią rolę kontraktów między modułami. Ich zmiana wymaga wyszukania wszystkich konsumentów oraz testu uruchomienia zarówno w shellu, jak i samodzielnie.
 
+**Dokumenty pacjenta i równe karty (2026-10-27, wariant B zatwierdzony przez właściciela; baza `a83c87938621cfdeeb1de108878dfdb4e5de7131`).** Na stronie głównej i DocPro akcje opisu i raportów są dostępne w menu „Dokumenty pacjenta”, zamiast w stopce podsumowania lub porównania. `vilda_patient_documents.js` jest adapterem prezentacji: zachowuje natywne bramki trybu PRO/DocPro oraz dostępności danych, `VildaPatientNarrativeUI.copyCurrent()`, kolektor `patientReportGetPdfChoiceOptions()` i generator `generatePatientSelectedPdfPackage()`. Raport wzrastania z zaznaczalnym tekstem nadal powstaje jako osobny PDF przy wyborze razem z innymi raportami. Nie zmieniają się obliczenia, tekst opisu, formaty dokumentów ani zapis pacjenta.
+
+`VildaPatientDocuments.getState()` i zdarzenie `vilda:patient-documents-state` synchronizują dostępność menu. Powłoka otwiera panel wyłącznie z aktywnej, gotowej ramki Start/DocPro. `open({opener, hostDocument, isCurrent})` umieszcza modal w dokumencie powłoki, zachowując funkcje i kontekst danych ramki; zmiana pacjenta, źródła, sesji lub trasy unieważnia żądanie. Panel zamyka się przed uruchomieniem natywnego generatora, aby jego wybór zakresu siatki i dostarczenie PDF pozostały dostępne. Na Start `VildaPatientReportLoader.ensure()` współdzieli jeden oczekiwany łańcuch dieta → raport, umożliwia ponowienie po błędzie sieci i zachowuje dotychczasowe uruchomienie przy pierwszej interakcji lub bezczynności. Na DocPro raport pozostaje ładowany statycznie.
+
+`vilda_summary_layout.js`, ładowany przed zakładkami i panelem siatki, współdzieli pomiar zwiniętego formularza przez `VildaSummaryLayout.createFormGeometry()`. W rzeczywistym układzie dwóch kolumn wysokość prawej karty odpowiada formularzowi z uwzględnieniem przesunięcia przez pasek stanu. Długie podsumowanie przewija się wewnątrz `#currentSummaryContent`, z dostępem klawiaturą i wskazówką dalszych wyników. Układ jednej kolumny zachowuje naturalną wysokość. Rozwinięcie pokwitania nie powiększa bazowej wysokości podglądu; zmiana szerokości ponawia pomiar. Mechanizm nie zmienia kwalifikacji siatki ani osobnego przepływu porównania z poprzednim pomiarem. Jedno miejsce zapisu `setSize()` przekazuje zmierzoną geometrię do zmiennych CSS (ujęte w inwentarzu `style-elementow.json`); stałe stany wyglądu i widoczności korzystają z klas arkusza.
+
+Powtórny pomiar tej samej geometrii nie zapisuje atrybutów ponownie. Natywne Przypomnienia obserwują `style` i `class` karty podsumowania; nawet usunięcie już nieobecnej klasy przez `classList.remove()` emituje mutację i wywołuje zbędne odświeżenie. Układ porównuje poprzedni stan przed zapisem, a końcową wysokość treści ustawia bez przejściowego rozszerzania i zwężania.
+
 **Powrót do panelu (P-PANEL-POWROT, 2026-10-12).** Nieaktywny panel jest ukryty przez `display:none`, więc jego ponowne pokazanie uruchamia od nowa animacje CSS elementów, a powłoka odtwarza w nim sesję i wyniki są przeliczane. Żeby karty i przyciski nie wjeżdżały ponownie, `vilda_shell.js` przed pokazaniem wczytanego panelu dodaje do jego `<html>` klasę `vilda-panel-powrot` na 2 s: `style.css` startuje wtedy animacje wejścia (`.animate-in`, `._enter`, `._pop`, `._bounce`, `.lab-step`, jednorazowe impulsy) jako zakończone, a `app.js` nie odlicza liczb. Nowa klasa animacji wejścia powinna trafić do tej samej reguły w `style.css`.
 
 **Przewinięcie panelu (P-PANEL-PRZEWINIECIE, 2026-10-12, decyzja właściciela).** Panel wraca tam, gdzie go zostawiono. Ten sam `display:none` zeruje przewinięcie dokumentu ramki, więc `vilda_shell.js` zapamiętuje przewinięcie okna panelu tuż przed ukryciem (`Pp_zapisz`) i odtwarza je zaraz po pokazaniu (`Pp_odtworz`, `behavior: 'instant'`), w tym samym zadaniu, przed pierwszą klatką. W `w()` odtworzenie stoi po klasie trasy powłoki, a przed odtworzeniem sesji (`Gp_p`): przebudowę treści nad oknem przeglądarka kompensuje wtedy sama (zakotwiczenie przewinięcia). Nie odtwarzamy przy nawigacji z celem (np. sekcja konta; cel ma pierwszeństwo) ani w nowym dokumencie ramki (przeładowanie). Kolejny kod, który przebudowuje treść panelu przy pokazaniu, powinien działać po `Pp_odtworz`, nie przed. Opis i pomiary: `docs/clinical/ALGORITHMS.md`, wpisy P-PANEL-POWROT i P-PANEL-PRZEWINIECIE.
@@ -176,6 +184,11 @@ Nie wolno przenosić pola między pamięcią sesji, pamięcią trwałą i danymi
 - `view` dopasowuje SVG do miejsca karty, a na pełnym ekranie rysuje oba płótna
   z jednolitą skalą. Odczyt, przypięcie i klawiatura korzystają ze wspólnego
   modelu punktów; wybór widoku i wskaźnik nie są danymi pacjenta.
+- `colors.placeLabel` dobiera miejsce etykiety wartości wspólnie dla podglądu
+  i pełnego widoku. Sprawdza wszystkie punkty i odcinki przebiegu pacjenta
+  z marginesem dla ich grubości; po zmianie rozmiaru ponawia dopasowanie.
+  Gdy brakuje wolnego miejsca, wartość pozostaje w nagłówku poza wykresem.
+  Nie przesuwa pomiarów, nie zmienia osi ani nie ukrywa przebiegu pod etykietą.
 - `panel` montuje kartę tylko przy rzeczywistych dwóch kolumnach formularza.
   Zastępuje Przypomnienia na Start; w DocPro wypełnia wolne miejsce. Wysokość
   odpowiada formularzowi ze zwiniętym pokwitaniem, z uwzględnieniem paska statusu.
@@ -185,12 +198,14 @@ Nie wolno przenosić pola między pamięcią sesji, pamięcią trwałą i danymi
   Rzeczywista aktywność w dialogu korzysta z `VildaAuthUI.recordActivity` obu
   dokumentów. Automatyczny render, resize i scroll nie podtrzymują sesji.
 
+Dla populacji DS migawka niesie `source: 'DS'` oraz odrębne `requestedSource` z preferencją OLAF/Palczewska/WHO. Populacja jest częścią tożsamości migawki. `VildaDsSource.getState()` udostępnia potwierdzoną osobę, gotowość i populację; sygnał `vilda:ds-source-state` kończy oczekiwanie adaptera. Nowy właściciel czeka na odczyt rozpoznania, a odświeżenie tej samej potwierdzonej osoby zachowuje podgląd. Błąd odczytu nowej osoby nie dopuszcza siatki poprzedniej; ponowienie korzysta z natywnego źródła. `VildaDsCentileModels.build()` udostępnia model istniejącego generatora Zemel 2015 bez tworzenia płótna, więc zarówno SVG, jak i pełny ekran korzystają z tych samych krzywych. Brak danych DS nie uruchamia źródła populacji ogólnej. Wzrosty rodziców pozostają tekstem; znacznik MPH nie jest nanoszony na siatkę DS. Kontrakt kliniczny i zakresy: P-DS-LIVE w `docs/clinical/ALGORITHMS.md`.
+
 Podgląd nie tworzy pełnych grafik ani nie przygotowuje ich w czasie bezczynności.
 Dopiero jawne powiększenie uruchamia `render` z `deferContentBounds`, a potem
 `prepareContentBounds` wyznacza dokładne marginesy przez małe odczyty pikseli.
 Przycisk wcześniej pokazuje stan przygotowywania. Dialog otwiera kompletny
 zestaw, więc skala nie zmienia się w trakcie jego animacji. Pełny widok zachowuje
-wszystkie krzywe, zakresy, adnotacje, MPH i rodziców. Zmiany zatwierdzone przy
+wszystkie krzywe, zakresy, adnotacje, rodziców oraz MPH tam, gdzie ma interpretację dla wybranej populacji. Zmiany zatwierdzone przy
 otwartym dialogu przygotowują komplet zastępczych grafik, zachowując poprzednie
 do zakończenia przycinania. Zamknięcie przywraca SVG jeszcze przed odsłonięciem
 karty i zwalnia pełne płótna; ponowne powiększenie tworzy je na żądanie.

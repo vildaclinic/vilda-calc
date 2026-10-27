@@ -234,7 +234,7 @@ async function assertMenu(page, { width, height, left, right, top, bottom, lands
     expect(target.width).toBeGreaterThanOrEqual(44);
   }
   expect(geometry.links).toEqual([
-    'saveDataBtnSidebar', 'addVisitNoteBtnSidebar', 'patientsListBtnSidebar',
+    'saveDataBtnSidebar', 'addVisitNoteBtnSidebar', 'patientDocumentsBtnSidebar', 'patientsListBtnSidebar',
     'index.html', 'docpro.html', 'homa-ir.html', 'kalkulator-klirens.html',
     'steroidy.html', 'przelicznik-jednostek.html', 'materialy-edukacyjne.html',
     'notatki.html', 'terminarz.html', 'ustawienia.html',
