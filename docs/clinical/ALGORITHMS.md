@@ -19417,7 +19417,7 @@ a lekarz poprawia jedno z miejsc. Wartość dni spoza 0–6 w rekordzie nie jest
 
 **Wersje.** `sga_birth_module.js?v=10→11`; SW 1.1.168 → **1.1.169**.
 
-## „Przywróć” wizyty, która jest w karcie i w koszu, zapisuje nowszą treść na wszystkich urządzeniach (P-PRZYWROC-Z-KARTY, PR-PRZ0, SW 1.1.393, `vilda_vault.js` 229, 2026-10-27)
+## „Przywróć” wizyty, która jest w karcie i w koszu, zapisuje nowszą treść na wszystkich urządzeniach (P-PRZYWROC-Z-KARTY, PR-PRZ0, SW 1.1.394, `vilda_vault.js` 229, 2026-10-27)
 
 **Zmiana kliniczna: tak** — wzory, progi, jednostki i interpretacje bez zmian; zmienia się, jaka postać wizyty (masa,
 wzrost, gwiazdka) zostaje w karcie na każdym urządzeniu po „Przywróć” zapisu, który jest jednocześnie w karcie i w koszu,
@@ -19632,7 +19632,7 @@ zapisów, straż sesji); komentarz `Bkz_nowszaWersja`. Testy: `tests/unit/przywr
 PRZ-nie-ostatnia w `tests/unit/s4d7-wspolne.mjs` i w katalogu; zmienione oczekiwania: `pozniejsza-poprawka-mutacje`
 (test A), strażniki źródła w `pozniejsza-poprawka` i `zmiana-w-karcie`.
 
-**Wersje** (`npm run podbij-wersje`). `vilda_vault.js` 228 → 229 (z nim odwołania w `vilda_chrome.js` 181 i `vilda_session_bridge.js` 103); SW 1.1.392 → **1.1.393**.
+**Wersje** (`npm run podbij-wersje`). `vilda_vault.js` 228 → 229 (z nim odwołania w `vilda_chrome.js` 181 i `vilda_session_bridge.js` 103); SW 1.1.393 → **1.1.394**.
 
 ## Przypięta wizyta: półkrata łączenia nagrobków i gwiazdka z własną datą (P-KOSZ-POLKRATA, P-PRZYPIETA-POLKRATA, PR-S4, SW 1.1.388, `vilda_vault.js` 228, `vilda_kosz_zapisow.js` 4, 2026-10-22)
 
