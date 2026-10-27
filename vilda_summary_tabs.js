@@ -55,6 +55,7 @@
     card.setAttribute('data-summary-tab', chart ? 'chart' : 'summary');
     if (focus) (chart ? chartButton : summaryButton).focus();
     missingController();
+    if (w.VildaSummaryLayout) w.VildaSummaryLayout.refresh();
     if (notify === true || notify !== false && previous !== selected) announce();
   }
   function awaitingComparison() {

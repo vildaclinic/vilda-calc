@@ -6,6 +6,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { expect, test } from '@playwright/test';
 import { createFictionalVault, loadPatient, readyForPatient, shellFrame, NOTE_A } from '../support/centile-live-fixture.mjs';
+import { openPatientDocuments, closePatientDocuments, DOCUMENTS_DIALOG } from '../support/patient-documents-ui.mjs';
 
 test.use({ serviceWorkers: 'allow' });
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
@@ -14,6 +15,7 @@ const resourceNames = [
   'vilda_centile_live_colors.js', 'vilda_summary_tabs.js', 'vilda_summary_cards.js',
   'vilda_professional_summary_rules.js', 'vilda_professional_summary.js', 'vilda_professional_summary.css',
   'vilda_trajectory_analysis.js',
+  'vilda_summary_layout.js', 'vilda_patient_documents.js', 'vilda_patient_documents.css',
   'vilda_centile_live_data.js', 'vilda_centile_live_render.js', 'vilda_centile_live_preview.js', 'vilda_centile_live_view.js',
   'vilda_centile_live_host.js', 'vilda_centile_live_panel.js', 'vilda_centile_live_panel.css',
   'vilda_save_feedback.js', 'vilda_save_feedback.css',
@@ -148,6 +150,20 @@ async function assertSummaryOffline(frame, patientId) {
   await expect(frame.locator('#vildaSummaryChartPanel svg.vilda-centile-live-preview')).toBeVisible();
 }
 
+async function assertDocumentsOffline(page, frame) {
+  await openPatientDocuments(page);
+  const dialog = page.locator(DOCUMENTS_DIALOG);
+  await expect(dialog.locator('input[name="patientReportPdfChoice"]')).toHaveCount(4);
+  const native = await frame.evaluate(() => window.patientReportGetPdfChoiceOptions().map(option => option.value));
+  expect(await dialog.locator('input[name="patientReportPdfChoice"]:enabled')
+    .evaluateAll(inputs => inputs.map(input => input.value))).toEqual(native);
+  expect(native).toContain('visit');
+  expect(native).toContain('growth');
+  await expect(dialog.locator('[data-patient-documents-copy]')).toBeEnabled();
+  if (frame !== page) await expect(frame.locator(DOCUMENTS_DIALOG)).toHaveCount(0);
+  await closePatientDocuments(page);
+}
+
 // Real installation + cold browser restart + stopped origin. The first visits to
 // index/DocPro/app all happen offline, with a real encrypted, purely fictional vault.
 test('new centile modules, annotated canvases and parent fullscreen survive a cold offline restart', async ({ playwright, browserName, launchOptions }) => {
@@ -183,6 +199,7 @@ test('new centile modules, annotated canvases and parent fullscreen survive a co
     await assertOfflineResources(page, indexResources, responses);
     await test.step('index offline: summary B includes typed velocity SDS and 18-year prediction assessment', () => assertSummaryOffline(page, ids.a));
     await test.step('index offline: annotated panel, both charts and fullscreen', () => assertPanelAndFullscreen(page, page, ids.a));
+    await test.step('index offline: sidebar documents load the native reports on demand', () => assertDocumentsOffline(page, page));
 
     responses.clear();
     await page.goto('/docpro.html', { waitUntil: 'load' });
@@ -194,6 +211,7 @@ test('new centile modules, annotated canvases and parent fullscreen survive a co
       .toEqual(resourceNames.filter((name) => name !== 'growth-basic-module.js').sort());
     await assertOfflineResources(page, docproResources, responses);
     await test.step('DocPro offline: annotated panel, both charts and fullscreen', () => assertPanelAndFullscreen(page, page, ids.a));
+    await test.step('DocPro offline: native documents remain available', () => assertDocumentsOffline(page, page));
 
     responses.clear();
     await page.goto('/app.html#/start', { waitUntil: 'load' });
@@ -201,9 +219,10 @@ test('new centile modules, annotated canvases and parent fullscreen survive a co
     await readyForPatient(frame);
     const shellResources = resourcesFor('app.html');
     expect(shellResources.map((entry) => entry.url.split('?')[0].slice(1)).sort())
-      .toEqual(['vilda_auth_ui.js', 'vilda_centile_live_host.js', 'vilda_centile_live_panel.css', 'vilda_html.js', 'vilda_save_feedback.css', 'vilda_save_feedback.js', 'vilda_trajectory_analysis.js']);
+      .toEqual(['vilda_auth_ui.js', 'vilda_centile_live_host.js', 'vilda_centile_live_panel.css', 'vilda_html.js', 'vilda_patient_documents.css', 'vilda_save_feedback.css', 'vilda_save_feedback.js', 'vilda_trajectory_analysis.js']);
     await assertOfflineResources(page, shellResources, responses);
     await test.step('app shell offline: fullscreen covers the parent viewport', () => assertPanelAndFullscreen(page, frame, ids.a));
+    await test.step('app shell offline: documents cover the parent viewport', () => assertDocumentsOffline(page, frame));
     expect(await page.evaluate(() => new URL(navigator.serviceWorker.controller.scriptURL).pathname)).toBe('/service-worker-kalorii.js');
   } finally {
     if (context) await context.close().catch(() => {});

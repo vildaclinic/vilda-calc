@@ -19,7 +19,7 @@
  *   bo i tak chcemy zwracać HTML z cache natychmiast.
  */
 
-const SW_VERSION = '1.1.389';
+const SW_VERSION = '1.1.390';
 const CACHE_PREFIX = 'pwa-kalorii';
 const SHELL_CACHE = `${CACHE_PREFIX}-shell-v${SW_VERSION}`;
 const RUNTIME_CACHE = `${CACHE_PREFIX}-runtime`;
@@ -1346,6 +1346,7 @@ const CORE_SHELL_URLS = [
   '/vilda_chrome.js?v=176',
   '/vilda_chrome.js?v=177',
   '/vilda_chrome.js?v=178',
+  '/vilda_chrome.js?v=179',
   '/vilda_realtime.js?v=1',
   '/vilda_realtime.js?v=2',
   '/vilda_realtime.js?v=3',
@@ -2103,6 +2104,9 @@ const OPTIONAL_DOCUMENTS = [
 ];
 
 const OPTIONAL_ASSETS = [
+  '/vilda_patient_documents.js?v=1',
+  '/vilda_patient_documents.css?v=1',
+  '/vilda_summary_layout.js?v=1',
   // Read-only new-measurement preview (Start / DocPro / fullscreen shell).
   '/vilda_centile_live_panel.css?v=1',
   '/vilda_centile_live_panel.css?v=2',
@@ -2126,11 +2130,13 @@ const OPTIONAL_ASSETS = [
   '/vilda_centile_live_colors.js?v=1',
   '/vilda_summary_tabs.js?v=1',
   '/vilda_summary_tabs.js?v=2',
+  '/vilda_summary_tabs.js?v=3',
   '/vilda_professional_summary.js?v=1',
   '/vilda_professional_summary.js?v=2',
   '/vilda_professional_summary_rules.js?v=1',
   '/vilda_professional_summary.css?v=1',
   '/vilda_professional_summary.css?v=2',
+  '/vilda_professional_summary.css?v=3',
   '/vilda_centile_live_view.js?v=1',
   '/vilda_centile_live_view.js?v=2',
   '/vilda_centile_live_view.js?v=3',
@@ -2143,6 +2149,7 @@ const OPTIONAL_ASSETS = [
   '/vilda_centile_live_panel.js?v=6',
   '/vilda_centile_live_panel.js?v=7',
   '/vilda_centile_live_panel.js?v=8',
+  '/vilda_centile_live_panel.js?v=9',
 
   '/vilda_hormone_lifespan_data.js?v=1',
   '/vilda_hormone_lifespan_data.js?v=2',
@@ -2549,6 +2556,7 @@ const OPTIONAL_ASSETS = [
   '/vilda_shell.js?v=66',
   '/vilda_shell.js?v=67',
   '/vilda_shell.js?v=68',
+  '/vilda_shell.js?v=69',
   '/vilda_shell.css',
   '/vilda_shell.css?v=1',
   '/vilda_shell.css?v=2',
@@ -2905,6 +2913,7 @@ const OPTIONAL_ASSETS = [
   '/vilda_patient_narrative_ui.js?v=10',
   '/vilda_patient_narrative_ui.js?v=11',
   '/vilda_patient_narrative_ui.js?v=12',
+  '/vilda_patient_narrative_ui.js?v=13',
   '/vilda_data_import_export.js?v=58',
   '/vilda_trajectory_analysis.js?v=13',
   '/hv_donald_data.js?v=1',
@@ -3299,6 +3308,7 @@ const OPTIONAL_ASSETS = [
   '/vilda_patient_report.js?v=46',
   '/vilda_patient_report.js?v=47',
   '/vilda_patient_report.js?v=48',
+  '/vilda_patient_report.js?v=49',
   '/vilda_raport_naglowek.js?v=1',
   '/vilda_raport_naglowek.js?v=2',
   '/vilda_raport_naglowek.js?v=3',

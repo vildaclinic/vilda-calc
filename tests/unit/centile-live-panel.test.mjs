@@ -110,6 +110,7 @@ function setup({ columns = '400px 400px', rects = true, lifecycle = false, eligi
   win.VildaCentileLiveHost = { open };
   if (summaryPresentation) win.VildaSummaryTabs = { getState: () => summaryPresentation };
   if (beforeStart) beforeStart({ fieldset, doctor, mount, puberty, style, element });
+  loadBrowserScript('vilda_summary_layout.js', win);
   if (!deferStart) loadBrowserScript('vilda_centile_live_panel.js', win);
   const snapshot = (extra = {}) => ({ patientToken: currentToken, patientId: currentToken?.fictional || null,
     source: 'OLAF', ageMonths: 158, measurements: [], ...extra });
