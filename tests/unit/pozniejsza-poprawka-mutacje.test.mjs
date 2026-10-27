@@ -105,7 +105,7 @@ async function dwieWizytyNaRaz() {
 }
 
 describe('P-POZNIEJSZA-POPRAWKA: „Przywróć”, import z kosza i stempel chwili zmiany', () => {
-  it('A „Przywróć” — warunek Bkz_nowszaWersja(wersja w karcie, kosz): w karcie późniejsza poprawka z niższą rev (40, rev 1), w koszu wcześniejsza treść z wyższą rev (31, rev 2), usunięcie po obu: w karcie zostaje 40 z rev 1 (bez zapisu wersji), wpis kosza znika', async () => {
+  it('A „Przywróć” — w karcie późniejsza poprawka z niższą rev (40, rev 1), w koszu wcześniejsza treść z wyższą rev (31, rev 2), usunięcie po obu: zapis przywrócenia z nowszą treścią z karty (40, rev 3, chwila po usunięciu), wpis kosza znika, K przyjmuje go po synchronizacji (P-PRZYWROC-Z-KARTY, PRZ0; dotąd „już w karcie” bez zapisu — usunięcie K znów wygrywało)', async () => {
     sztucznyZegar();
     const { P, K, pid, sid, s1, s3 } = await dwaUrzadzenia();
     przesunZegar(60e3);
@@ -120,10 +120,16 @@ describe('P-POZNIEJSZA-POPRAWKA: „Przywróć”, import z kosza i stempel chwi
     przesunZegar(60e3);
     // Starsza aplikacja („najpierw rev”: 1 < 2) zapisałaby tu treść kosza 31 z rev 3 — to akcja, nie scalenie; treść
     // i to, czy „Przywróć” zapisuje, wybiera reguła D-7.
+    const usunieto = ((await K.exportSyncPayload()).snapshotTombstones || []).find((x) => x.snapshotId === sid).deletedAtISO;
     const wynik = await P.restoreTrashedSnapshot(pid, sid);
     const po = await wersja(P, pid, sid);
     expect({ juz: wynik.alreadyInCard === true, masa: po.payload.user.weight, rev: po.rev, kosz: await wKoszu(P, sid) })
-      .toEqual({ juz: true, masa: 40, rev: 1, kosz: null });
+      .toEqual({ juz: false, masa: 40, rev: 3, kosz: null });
+    expect(po.updatedAtISO > usunieto, 'chwila przywrócenia później niż usunięcie K').toBe(true);
+    await sync(P, K);
+    const naK = await wersja(K, pid, sid);
+    expect({ masa: naK && naK.payload.user.weight, rev: naK && naK.rev, kosz: await wKoszu(K, sid) }, 'K po synchronizacji')
+      .toEqual({ masa: 40, rev: 3, kosz: null });
   });
 
   it('B poprawka — lastSavedAtISO karty ze stempla: K (+10 min) poprawia, P (dobry zegar) poprawia po niej; chwila zapisu karty na P nie wcześniejsza niż poprawka, a usunięcie pacjenta na C w chwili poprawki K przegrywa z kartą', async () => {

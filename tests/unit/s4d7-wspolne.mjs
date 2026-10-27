@@ -285,6 +285,14 @@ async function przywrocNaP(u, ile) {
   return opis;
 }
 
+// Pierwsze „Przywróć” s na P w krokach scenariusza (wynik w u.pierwszePrzywroc), jak w PRZ.
+async function przywrocPierwsze(u) {
+  let wynik;
+  try { wynik = await u.P.restoreTrashedSnapshot(u.pid, u.sid); } catch (er) { wynik = { blad: er.code || er.message }; }
+  u.pierwszePrzywroc = wynik.blad ? `błąd ${wynik.blad}` : wynik.alreadyInCard ? 'już w karcie' : 'przywrócono';
+  krok(u, `P: Przywróć s → ${u.pierwszePrzywroc}`); przesunZegar(60e3);
+}
+
 // --- katalog ------------------------------------------------------------------------------------------------------
 export const KOLEJNOSCI_8 = ['K←C,P←K', 'P←K,K←C', 'K←P,K←C', 'K←C,K←P', 'C←K,P←C', 'P←C,P←K', 'C←P,C←K', 'C←K,C←P'];
 // S5 (4 urządzenia): 6 kolejności z przeglądu zbieżności (zb-s5.test.mjs) + 2.
@@ -379,7 +387,7 @@ export const SCENARIUSZE = {
     regula: 'kosz 23*',
   },
   PRZ: {
-    opis: 'ograniczenie z P-POZNIEJSZA-POPRAWKA: s2 ostatnią wersją karty na P (P daje s1 do kosza); K (zegar +10 min) daje s2 do kosza; P dostaje kosz K, poprawia s2 na 78 (chwila poprawki przed chwilą usunięcia K) i od razu „Przywróć” s2 (przed kolejną synchronizacją); po rundach drugie „Przywróć” na P',
+    opis: 'PRZ0 (dotąd ograniczenie z P-POZNIEJSZA-POPRAWKA, zamknięte przez P-PRZYWROC-Z-KARTY): s2 ostatnią wersją karty na P (P daje s1 do kosza); K (zegar +10 min) daje s2 do kosza; P dostaje kosz K, poprawia s2 na 78 (chwila poprawki przed chwilą usunięcia K) i od razu „Przywróć” s2 (przed kolejną synchronizacją); po rundach drugie „Przywróć” na P',
     przygotuj: 'jan2', kolejnosci: KOLEJNOSCI_8,
     kroki: async (u) => {
       await doKosza(u, 'P', u.s1);
@@ -393,6 +401,62 @@ export const SCENARIUSZE = {
     },
     poRundach: async (u) => ({ pierwsze: u.pierwszePrzywroc, ...(await przywrocNaP(u, 1)) }),
     regula: 'karta 78 (zapis w karcie na trzech już po pierwszym „Przywróć”)',
+  },
+  // P-PRZYWROC-Z-KARTY (PRZ0, D5 = a): warianty PRZ — gwiazdka zamiast poprawki, poprawka i gwiazdka, „Odepnij i usuń” K
+  // z zegarem do przodu po poprawce P (dotąd „Przywróć” oddawało starą treść), wersja w karcie nie jako ostatnia.
+  'PRZ-gw': {
+    opis: 'jak PRZ, ale P zamiast poprawki przypina s2 (gwiazdka przed chwilą usunięcia K); „Przywróć” s2 na P',
+    przygotuj: 'jan2', kolejnosci: KOLEJNOSCI_8,
+    kroki: async (u) => {
+      await doKosza(u, 'P', u.s1);
+      await naZegarze(u, 10 * 60e3, () => doKosza(u, 'K'));
+      await sync(u.K, u.P); krok(u, 'P ← K');
+      await przypnij(u, 'P', true);
+      await przywrocPierwsze(u);
+    },
+    poRundach: async (u) => ({ pierwsze: u.pierwszePrzywroc, ...(await przywrocNaP(u, 1)) }),
+    regula: 'karta 23* (treść kosza = treść karty, gwiazdka z karty — późniejszy rejestr)',
+  },
+  'PRZ-pg': {
+    opis: 'jak PRZ, P poprawia s2 na 78 i przypina; „Przywróć” s2 na P',
+    przygotuj: 'jan2', kolejnosci: KOLEJNOSCI_8,
+    kroki: async (u) => {
+      await doKosza(u, 'P', u.s1);
+      await naZegarze(u, 10 * 60e3, () => doKosza(u, 'K'));
+      await sync(u.K, u.P); krok(u, 'P ← K');
+      await popraw(u, 'P', 78); await przypnij(u, 'P', true);
+      await przywrocPierwsze(u);
+    },
+    poRundach: async (u) => ({ pierwsze: u.pierwszePrzywroc, ...(await przywrocNaP(u, 1)) }),
+    regula: 'karta 78*',
+  },
+  'PRZ-odp': {
+    opis: 'P przypina s2, K zna gwiazdkę; P daje s1 do kosza i poprawia s2 na 78; K (zegar +10 min) „Odepnij i usuń” s2; P dostaje kosz K; „Przywróć” s2 na P',
+    przygotuj: 'jan2', kolejnosci: KOLEJNOSCI_8,
+    kroki: async (u) => {
+      await przypnij(u, 'P', true); await sync(u.P, u.K); krok(u, 'K ← P (gwiazdka)');
+      await doKosza(u, 'P', u.s1);
+      await popraw(u, 'P', 78);
+      await naZegarze(u, 10 * 60e3, () => doKosza(u, 'K'));
+      await sync(u.K, u.P); krok(u, 'P ← K');
+      await przywrocPierwsze(u);
+    },
+    poRundach: async (u) => ({ pierwsze: u.pierwszePrzywroc, ...(await przywrocNaP(u, 1)) }),
+    regula: 'karta 78 (treść z karty — późniejsza chwila treści; bez gwiazdki — odpięcie K późniejsze, D2 = a)',
+  },
+  'PRZ-nie-ostatnia': {
+    opis: 'jak PRZ, ale po poprawce P dodaje nową wizytę — s2 nie jest już ostatnią wersją karty; „Przywróć” s2 na P',
+    przygotuj: 'jan2', kolejnosci: KOLEJNOSCI_8,
+    kroki: async (u) => {
+      await doKosza(u, 'P', u.s1);
+      await naZegarze(u, 10 * 60e3, () => doKosza(u, 'K'));
+      await sync(u.K, u.P); krok(u, 'P ← K');
+      await popraw(u, 'P', 78);
+      await u.P.savePatient(jan(131, 27), { dedup: false, patientId: u.pid }); krok(u, 'P: nowa wizyta'); przesunZegar(60e3);
+      await przywrocPierwsze(u);
+    },
+    poRundach: async (u) => ({ pierwsze: u.pierwszePrzywroc, ...(await przywrocNaP(u, 1)) }),
+    regula: 'karta 78',
   },
   'PRZ-kontrola': {
     opis: 's2 ostatnią wersją karty na P: P poprawia s2 (78) i daje s1 do kosza; K (bez wiedzy) daje s2 do kosza później; po rundach „Przywróć” s2 na P',

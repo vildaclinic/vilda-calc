@@ -528,11 +528,12 @@ function Bkz_czysc(lista, terazMs) {
 }
 
 // P-POZNIEJSZA-POPRAWKA (decyzja wlasciciela D-7 wariant 2, 2026-10-21): x opisuje nowsza wersje tego zapisu niz y.
-// Jedna regula dla wersji tej samej karty (Bsl_scalPacjenta), tresci kosza (P-KOSZ-NOWSZA-TRESC, D-6 B) i „Przywroc”
-// (Bkz_przywroc): wygrywa pozniejsza chwila zmiany (updatedAtISO, a bez niej savedAtISO — Bkz_zmiana) niezaleznie od
-// rev; przy rownej chwili wyzsza rev (ta sama tresc, rev liczy przeniesienia „Scal pacjentow”). Pelny remis: false
-// (zostaje tutejsza). Dotad: najpierw rev, wiec dwie wczesniejsze poprawki bily jedna pozniejsza. Wlasciciela wersji
-// wspolnej dwom kartom ta regula nie wybiera (Bsw_nowszyRekord: najpierw rev, celowo).
+// Jedna regula dla wersji tej samej karty (Bsl_scalPacjenta) i tresci kosza (P-KOSZ-NOWSZA-TRESC, D-6 B; „Przywroc”
+// wybiera tresc po chwili tresci W3 — P-PRZYWROC-Z-KARTY, Bkz_przywroc): wygrywa pozniejsza chwila zmiany
+// (updatedAtISO, a bez niej savedAtISO — Bkz_zmiana) niezaleznie od rev; przy rownej chwili wyzsza rev (ta sama tresc,
+// rev liczy przeniesienia „Scal pacjentow”). Pelny remis: false (zostaje tutejsza). Dotad: najpierw rev, wiec dwie
+// wczesniejsze poprawki bily jedna pozniejsza. Wlasciciela wersji wspolnej dwom kartom ta regula nie wybiera
+// (Bsw_nowszyRekord: najpierw rev, celowo).
 function Bkz_nowszaWersja(x, y) {
   const zx = Bkz_zmiana(x), zy = Bkz_zmiana(y);
   if (zx !== zy) return zx > zy;
@@ -1616,53 +1617,95 @@ async function Bkz_lista() {
 // P-KOSZ-PRZYWROC-NOWSZA (zlecenie wlasciciela 2026-10-07; przeglad A10, krok 1). Zapis bywa jednoczesnie w karcie
 // i w koszu: tak zostawia go „Przywroc” w trakcie konca scalania synchronizacji (koniec scalania zapisuje liste
 // nagrobkow juz po zwolnieniu blokad i dokladal zdjety wpis; do P-KOSZ-SCALANIE-PRZYWROC) albo starsza wersja aplikacji
-// w innej karcie. Drugie
+// w innej karcie, a takze ostatnia wersja karty, ktorej nagrobek z innego urzadzenia nie usuwa (PRZ0). Drugie
 // „Przywroc” zapisywalo wtedy tresc z chwili usuniecia z rewizja usuniecia + 1 — poprawka pomiaru albo przypiecie
-// zrobione po pierwszym przywroceniu znikaly po cichu. Teraz: gdy wersja jest w karcie i zmieniono ja po usunieciu
-// (chwila zmiany pozniejsza niz usuniecie) ALBO jest nowsza niz tresc kosza (Bkz_nowszaWersja: pozniejsza chwila
-// zmiany, przy rownej wyzsza rev — P-POZNIEJSZA-POPRAWKA; dotad: rewizja wyzsza niz w chwili usuniecia), tresci
-// z kosza nie zapisujemy: zdejmujemy tylko ten nieaktualny wpis kosza (nie pozniejsze usuniecie) i zwracamy
-// { alreadyInCard: true }. W pozostalych przypadkach jak dotad, z rewizja wyzsza od obu; chwila zmiany przywrocenia
-// jest pozniejsza niz tresc kosza, wersja w karcie i usuniecie (Bpp_chwilaZmiany), takze przy zegarze spoznionym
-// wobec urzadzenia, ktore usunelo — inaczej nagrobek z innych urzadzen znow by z nia wygral.
+// zrobione po pierwszym przywroceniu znikaly po cichu.
+// P-PRZYWROC-Z-KARTY (PRZ0, decyzja wlasciciela D5 = a, 2026-10-21). „Juz w karcie” ({ alreadyInCard: true }: bez zapisu
+// wersji, tylko zdjecie tego nieaktualnego wpisu kosza; naglowek karty — tylko gdy zostal w tyle po przerwanym
+// przywroceniu) tylko, gdy wersja w karcie zmieniona po usunieciu i po przycieciu (wygrywa wtedy z nagrobkiem na kazdym
+// urzadzeniu) i jej tresc nie jest starsza niz tresc kosza. Inaczej — takze gdy wersja w karcie ma nowsza tresc, ale
+// usuniecie z innego urzadzenia jest pozniejsze (dotad „juz w karcie”: usuniecie znow wygrywalo na pozostalych
+// urzadzeniach) — zapis przywrocenia: tresc nowsza z dwoch po chwili tresci (W3, Bpk_trescNowsza; nie po chwili zmiany
+// rekordu: zmiana samej gwiazdki nie czyni tresci nowsza; wygrywa tresc kosza nieczytelna tutaj — bez zapisu), gwiazdka —
+// najpozniejszy z rejestrow karty, tresci kosza i nagrobka, z jego chwila (D1 = C, D2 = a), chwila zmiany pozniejsza
+// niz tresc kosza, wersja w karcie i usuniecie (Bpp_chwilaZmiany, takze przy zegarze spoznionym wobec urzadzenia, ktore
+// usunelo), rewizja wyzsza od obu. Zapisy tylko w sesji, w ktorej kliknieto „Przywroc” (jak scalanie, P-CHMURA-OPIS).
 async function Bkz_przywroc(patientId, snapshotId) {
   if (!T()) throw Bkz_blad('Zaloguj się, by przywrócić zapis.', 'zablokowany');
+  const Bses_o = Bses_opcje(null);
+  function przerwane() { return Bkz_blad('W trakcie zablokowano sejf albo przełączono konto. Przywracanie przerwane.', 'SESSION_CHANGED'); }
+  function pilnuj() { if (Bses_zmieniona(Bses_o)) throw przerwane(); }
   return Ap('pat:' + patientId, async function () {
+    // Blad po zmianie sesji — tez „przerwane” (bez mylacego komunikatu z odczytu w nowej sesji).
+    try { return await Bkz_przywrocWSesji(); } catch (err) { throw (err && err.code === 'SESSION_CHANGED') || Bses_zmieniona(Bses_o) ? przerwane() : err; }
+  }, { timeoutMs: 3e4 });
+  async function Bkz_przywrocWSesji() {
+    pilnuj();
     const e = (await Bkz_czytaj()).find(function (x) { return x.snapshotId === snapshotId && x.patientId === patientId; });
     if (!e || !e.payloadCipher) throw Bkz_blad('Tego zapisu nie ma już w koszu.', 'brak');
     const rekord = await I().getPatientForUser(b, patientId);
     if (!rekord) throw Bkz_blad('Karta tego zapisu została usunięta.', 'brak-karty');
     const revUsuniecia = typeof e.rev === 'number' && isFinite(e.rev) ? Math.floor(e.rev) : 0;
     const obecna = (await I().listSnapshotsForUser(b, patientId)).find(function (x) { return x.snapshotId === snapshotId; });
+    let tresc, st = null;
+    try { tresc = await G(e.payloadCipher.iv, e.payloadCipher.data); st = Bgw_stan(e, tresc); } catch { tresc = null; }
+    // Wersja w karcie: jej tresc i stan W3; zKarty — tresc karty nowsza niz tresc kosza (chwila tresci — przy tresci
+    // kosza nieczytelnej z opisu wpisu; przy rownej porzadek wersji). Bez odczytu tresci karty decyduje sama chwila
+    // zmiany (jak dotad).
+    let tk = null, sk = null, zKarty = false;
     if (obecna) {
+      try { tk = await G(obecna.payloadCipher.iv, obecna.payloadCipher.data); } catch { tk = null; }
+      if (tk && typeof tk === 'object') {
+        sk = Bgw_stan(obecna, tk);
+        const pt = Bpk_zWpisu(e).t;
+        zKarty = Bpk_trescNowsza({ o: Bpk_opis(obecna), cz: sk.cz }, { o: Bpk_opis(e), cz: (pt && Bpk_cz(pt)) || (st && st.cz) || '' });
+      } else tk = null;
       const zmianaObecnej = (typeof obecna.updatedAtISO === 'string' && obecna.updatedAtISO) || obecna.savedAtISO || '';
-      if (e.deletedAtISO < zmianaObecnej || Bkz_nowszaWersja(obecna, e)) {
-        await Bkz_zmienListe([], [{ snapshotId: snapshotId, doISO: Bkz_ostatnie(e) }]);
+      if (Bkz_ostatnie(e) < zmianaObecnej && (!tk || zKarty)) {
+        pilnuj();
+        // Naglowek karty nadrabia zmiane wersji, gdy poprzednie „Przywroc” przerwano po zapisie wersji (bez zapisu,
+        // gdy juz zgodny — jak zwykle po pierwszym przywroceniu); potem dopiero wpis kosza znika.
+        await Bkz_przebudujNaglowek(patientId, zmianaObecnej, Bses_o);
+        await Bkz_zmienListe([], [{ snapshotId: snapshotId, doISO: Bkz_ostatnie(e) }], Bses_o);
         return { patientId: patientId, snapshotId: snapshotId, alreadyInCard: true };
       }
     }
     const teraz = new Date().toISOString();
     const zmiana = Bpp_chwilaZmiany(Bkz_znanaZmiana(e), obecna ? Bkz_zmiana(obecna) : '', Bkz_ostatnie(e));
-    let Bgw_szyfr = e.payloadCipher;
+    const zrodlo = zKarty ? tk : tresc;
+    // Wygrywa tresc, ktorej nie da sie tu odczytac: bez zapisu (nieczytelny szyfr w karcie zatrzymalby eksport
+    // synchronizacji, a starsza tresc karty ze stemplem wygralaby z czytelna kopia na innych urzadzeniach).
+    if (!(zrodlo && typeof zrodlo === 'object')) throw Bkz_blad('Treści tego zapisu w koszu nie da się odczytać na tym urządzeniu.', 'nieczytelny');
+    let Bgw_szyfr = zKarty ? obecna.payloadCipher : e.payloadCipher;
     try {
-      const tresc = await G(e.payloadCipher.iv, e.payloadCipher.data);
-      const st = Bgw_stan(e, tresc), g = Bgw_pozniejszy({ pin: st.pin, at: st.at }, Bgw_zWpisu(e));
+      let rej = st ? { pin: st.pin, at: st.at } : { pin: !!sk.pin, at: sk.at };
+      if (sk) rej = Bgw_pozniejszy(rej, { pin: sk.pin, at: sk.at });
+      const g = Bgw_pozniejszy(rej, Bgw_zWpisu(e));
       // Zawsze od nowa: chwila tresci = chwila przywrocenia (z odciskiem tresc z pola bylaby sprzed usuniecia).
-      Bgw_szyfr = await V(Bgw_ustaw(tresc, zmiana, g && g.pin !== st.pin ? g : { pin: st.pin, at: st.at }));
-    } catch { /* tresc kosza bez zmian */ }
-    await I().putSnapshotForUser(b, Object.assign(Bm1(e), {
+      // Najpozniejszy rejestr z jego chwila, takze przy tej samej gwiazdce: starsza chwila przegralaby potem
+      // z wczesniejszym przypieciem z innego urzadzenia (D1 = C, D2 = a).
+      Bgw_szyfr = await V(Bgw_ustaw(zrodlo, zmiana, g || rej));
+    } catch { /* tresc bez zmian */ }
+    const zapisano = zKarty ? (obecna.savedAtISO || e.savedAtISO || teraz) : (e.savedAtISO || teraz);
+    pilnuj();
+    await I().putSnapshotForUser(b, Object.assign(zKarty ? Bm1(obecna, e) : Bm1(e), {
       snapshotId: snapshotId,
       patientId: patientId,
-      savedAtISO: e.savedAtISO || teraz,
+      savedAtISO: zapisano,
       rev: Math.max(revUsuniecia, obecna ? mt(obecna) : 0) + 1,
       updatedAtISO: zmiana,
       payloadCipher: Bgw_szyfr,
     }));
-    await Bkz_zmienListe([], [snapshotId]);
-    await Bkz_przebudujNaglowek(patientId, zmiana);
-    Vn({ patientId: patientId, snapshotId: snapshotId, isSnapshotRestore: true, savedAtISO: e.savedAtISO || teraz });
+    // Kolejnosc: wersja, naglowek, wpis kosza. Przerwane przed zdjeciem wpisu zostawia go w koszu, a nastepne „Przywroc”
+    // konczy przywrocenie („juz w karcie” z naglowkiem); wersja ze stemplem i tak wygrywa z nagrobkiem przy
+    // synchronizacji (gdy ta przyjdzie pierwsza, zdejmuje wpis, a chwila zapisu karty zostaje w tyle — ograniczenie).
+    await Bkz_przebudujNaglowek(patientId, zmiana, Bses_o);
+    pilnuj();
+    await Bkz_zmienListe([], [snapshotId], Bses_o);
+    // Zmiana sesji juz po ostatnim zapisie: przywrocenie jest kompletne, ale powiadomienie nalezy do tamtej sesji.
+    if (!Bses_zmieniona(Bses_o)) Vn({ patientId: patientId, snapshotId: snapshotId, isSnapshotRestore: true, savedAtISO: zapisano });
     return { patientId: patientId, snapshotId: snapshotId };
-  }, { timeoutMs: 3e4 });
+  }
 }
 
 // Do exportSyncPayload: kosz jedzie jako tresc jawna (caly ladunek synchronizacji jest szyfrowany kluczem sync).
