@@ -69,11 +69,43 @@ async function expectAligned(frame) {
   }), { message: 'the summary/chart outer bottom matches the actual form, including native status offset' }).toBeLessThanOrEqual(1);
 }
 
+async function expectDocumentsCentered(page) {
+  const geometry = await page.locator(DOCUMENTS_DIALOG).evaluate(dialog => {
+    const rect = dialog.getBoundingClientRect();
+    const css = getComputedStyle(dialog);
+    const probe = document.createElement('div');
+    probe.style.cssText = 'position:fixed;visibility:hidden;padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left)';
+    document.body.appendChild(probe);
+    const probeStyle = getComputedStyle(probe), gap = parseFloat(css.getPropertyValue('--documents-gap'));
+    const inset = name => Math.max(gap, parseFloat(probeStyle[name]) || 0);
+    const safe = { top: inset('paddingTop'), right: inset('paddingRight'), bottom: inset('paddingBottom'), left: inset('paddingLeft') };
+    probe.remove();
+    // The dialog stays centered in the physical viewport even when a stable
+    // scrollbar gutter makes its fixed containing block slightly narrower.
+    const width = innerWidth, height = innerHeight;
+    return { x: rect.x, y: rect.y, width: rect.width, height: rect.height, safe,
+      centerX: (safe.left + width - safe.right) / 2,
+      centerY: (safe.top + height - safe.bottom) / 2,
+      viewportWidth: width, viewportHeight: height,
+      horizontalOverflow: dialog.scrollWidth > dialog.clientWidth + 1 };
+  });
+  expect(Math.abs(geometry.x + geometry.width / 2 - geometry.centerX), 'dialog centered in the safe viewport, with stable gutter retained').toBeLessThanOrEqual(1);
+  expect(Math.abs(geometry.y + geometry.height / 2 - geometry.centerY), 'dialog centered vertically instead of pinned to the top edge').toBeLessThanOrEqual(1);
+  expect(geometry.x).toBeGreaterThanOrEqual(geometry.safe.left - 1);
+  expect(geometry.x + geometry.width).toBeLessThanOrEqual(geometry.viewportWidth - geometry.safe.right + 1);
+  expect(geometry.y).toBeGreaterThanOrEqual(geometry.safe.top - 1);
+  expect(geometry.y + geometry.height).toBeLessThanOrEqual(geometry.viewportHeight - geometry.safe.bottom + 1);
+  expect(geometry.horizontalOverflow).toBe(false);
+  await expect(page.locator(`${DOCUMENTS_DIALOG} [data-patient-documents-close]`)).toBeInViewport();
+  await expect(page.locator(GENERATE)).toBeInViewport();
+}
+
 for (const route of ['index', 'docpro']) {
   test(`${route}: Dokumenty w menu zachowują cztery natywne opcje i przekazują wybrany pakiet`, async ({ page }) => {
     const { frame } = await open(page, route);
     await restored(frame);
     await openPatientDocuments(page);
+    await expectDocumentsCentered(page);
     await expect(page.locator(CHOICES)).toHaveCount(4);
     expect(await page.locator(CHOICES).evaluateAll(inputs => inputs.map(input => input.value)))
       .toEqual(['visit', 'diet', 'centile', 'growth']);
@@ -177,11 +209,21 @@ for (const shell of [false, true]) {
     const dialogBox = await page.locator(DOCUMENTS_DIALOG).boundingBox();
     expect(dialogBox.x).toBeGreaterThanOrEqual(0);
     expect(dialogBox.x + dialogBox.width).toBeLessThanOrEqual(391);
+    await expectDocumentsCentered(page);
     for (const key of ['Tab', 'Tab', 'Shift+Tab']) {
       await page.keyboard.press(key);
       await expect.poll(() => page.locator(DOCUMENTS_DIALOG).evaluate(dialog => dialog.contains(document.activeElement))).toBe(true);
     }
     await page.screenshot({ path: test.info().outputPath(`phone-documents-${shell ? 'shell' : 'standalone'}.png`) });
+    const cdp = await page.context().newCDPSession(page);
+    await cdp.send('Emulation.setSafeAreaInsetsOverride', { insets: { top: 0, right: 0, bottom: 21, left: 62 } });
+    await page.setViewportSize({ width: 844, height: 390 });
+    await expectDocumentsCentered(page);
+    await cdp.send('Emulation.setSafeAreaInsetsOverride', { insets: { top: 0, right: 62, bottom: 21, left: 0 } });
+    await expectDocumentsCentered(page);
+    await cdp.send('Emulation.setSafeAreaInsetsOverride', { insets: { top: 0, right: 0, bottom: 0, left: 0 } });
+    await page.setViewportSize({ width: 390, height: 844 });
+    await expectDocumentsCentered(page);
     await page.keyboard.press('Escape');
     await expect(page.locator(DOCUMENTS_DIALOG)).toBeHidden();
     await expect(page.locator(TRIGGER)).toBeFocused();
@@ -195,6 +237,7 @@ test('app.html: aktywna strona obsługuje dokumenty, ukryta ramka nie obsługuje
   const { frame: start } = await open(page, 'index', { shell: true });
   await fillDraft(start);
   await openPatientDocuments(page);
+  await expectDocumentsCentered(page);
   await expect(start.locator(DOCUMENTS_DIALOG)).toHaveCount(0);
   await closePatientDocuments(page);
   await start.evaluate(() => window.vildaPersistFlushNow({ force: true }));

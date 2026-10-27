@@ -87,6 +87,20 @@
     return Number.isFinite(result) && result >= 0 && result < 216 ? result : null;
   }
 
+  function activePopulation() {
+    return typeof w.VildaPopulacjaPacjenta === 'function' && w.VildaPopulacjaPacjenta() === 'DS' ? 'DS' : 'OGOLNA';
+  }
+
+  function populationState(id) {
+    var source = w.VildaDsSource;
+    if (!id || !source || typeof source.getState !== 'function') return null;
+    var state = source.getState();
+    if (!state || state.patientId !== id || state.status === 'idle' || state.status === 'pending') {
+      return eligibility('pending', 'population');
+    }
+    return state.status === 'ready' ? null : eligibility('error', 'population-read');
+  }
+
   function mainSessionRestorePending() {
     var api = w.VildaDataImportExport;
     return !!(api && typeof api.isMainSessionRestorePending === 'function'
@@ -118,11 +132,12 @@
   function context(allowPendingDob, mode) {
     try {
       var vault = w.VildaVault, panel = w.VildaPanelPacjent, dob = w.VildaDobAge;
-      var id = patientId(), route = activeRoute(), age = activeAge();
+      var id = patientId(), route = activeRoute(), age = activeAge(), population = activePopulation();
       var api = w.VildaDataImportExport;
       var sequence = api && typeof api.getApplyLoadedDataSequence === 'function'
         ? api.getApplyLoadedDataSequence() : null;
       var summary = mode === 'summary';
+      if (populationState(id)) return null;
       if (summary) {
         var kind = summaryKind(id);
         if (!route || age === null || !Number.isSafeInteger(sequence) || sequence < 0
@@ -136,7 +151,7 @@
           || !id && !draftAllowed
           || id && kind !== 'new' && !appliedPayload()) return null;
         return { patientId: id, route: route, applySequence: sequence, mode: 'summary', kind: kind,
-          ownerKey: id || 'draft:' + generation };
+          ownerKey: id || 'draft:' + generation, population: population };
       }
       if (!id || !route || age === null || sessionValue('vildaLoadChoiceV1') !== 'new'
         || !Number.isSafeInteger(sequence) || sequence < 0
@@ -148,7 +163,7 @@
         || !allowPendingDob && dob && typeof dob.restorePending === 'function' && dob.restorePending()
         || panel && typeof panel.nieaktualny === 'function' && panel.nieaktualny()
         || panel && typeof panel.wlasciciel === 'function' && panel.wlasciciel() !== id) return null;
-      return { patientId: id, route: route, applySequence: sequence, mode: 'dedicated', kind: 'new', ownerKey: id };
+      return { patientId: id, route: route, applySequence: sequence, mode: 'dedicated', kind: 'new', ownerKey: id, population: population };
     } catch (_) { return null; }
   }
 
@@ -204,6 +219,8 @@
       if (!Number.isSafeInteger(sequence) || sequence < 0) return eligibility('pending', 'apply-sequence');
       if (id && summaryKind(id) !== 'new' && !appliedPayload()) return eligibility('pending', 'applied-payload');
       if (activeAge() === null) return eligibility('ineligible', 'age');
+      var population = populationState(id);
+      if (population) return population;
       return eligibility('eligible', id ? 'saved-summary' : 'draft-summary');
     } catch (_) { return eligibility('error', 'context'); }
   }
@@ -256,13 +273,19 @@
         ? api.getApplyLoadedDataSequence() : null;
       if (!Number.isSafeInteger(sequence) || sequence < 0) return eligibility('pending', 'apply-sequence');
       if (activeAge() === null) return eligibility('ineligible', 'age');
+      var population = populationState(id);
+      if (population) return population;
       return eligibility('eligible', 'new-measurement');
     } catch (_) { return eligibility('error', 'context'); }
   }
 
-  function sameContext(a, b) {
+  function sameOwnerContext(a, b) {
     return !!(a && b && a.patientId === b.patientId && a.route === b.route
       && a.applySequence === b.applySequence && a.mode === b.mode && a.kind === b.kind && a.ownerKey === b.ownerKey);
+  }
+
+  function sameContext(a, b) {
+    return sameOwnerContext(a, b) && a.population === b.population;
   }
 
   function isCurrent(snapshotOrToken) {
@@ -349,12 +372,18 @@
     var current = context(false, options ? requestedMode(options) : token && token.mode);
     if (!current) return null;
     if (!sameContext(token, current) || token.generation !== generation) {
+      // A reference-population change invalidates the old drawing immediately,
+      // but a half-entered measurement is still a draft until blur/Enter.
+      var continuedEdit = measurementEdit && measurementEdit.dirty && sameOwnerContext(token, current)
+        && token.population !== current.population ? measurementEdit : null;
       saveRefresh = null;
       measurementEdit = null;
       measurementCommit = null;
       lastSnapshot = null;
       token = Object.freeze({ patientId: current.patientId, route: current.route,
-        applySequence: current.applySequence, generation: generation, mode: current.mode, kind: current.kind, ownerKey: current.ownerKey });
+        applySequence: current.applySequence, generation: generation, mode: current.mode, kind: current.kind, ownerKey: current.ownerKey,
+        population: current.population });
+      if (continuedEdit) measurementEdit = { scope: token, input: continuedEdit.input, dirty: true };
       recordRequest = null;
       timelineRequest = null;
     }
@@ -419,8 +448,9 @@
     var exactAge = exact && exact.totalMonths === age && Number.isFinite(exact.exactMonths)
       ? exact.exactMonths : null;
     var sourceInput = d && d.querySelector('input[name="dataSource"]:checked');
-    var source = String(sourceInput && sourceInput.value || 'OLAF').toUpperCase();
-    var population = typeof w.VildaPopulacjaPacjenta === 'function' ? w.VildaPopulacjaPacjenta() : 'OGOLNA';
+    var requestedSource = String(sourceInput && sourceInput.value || 'OLAF').toUpperCase();
+    var population = activePopulation();
+    var source = population === 'DS' ? 'DS' : requestedSource;
     var sexInput = field('sex');
     var height = positive(field('height') && field('height').value);
     var weight = positive(field('weight') && field('weight').value);
@@ -438,7 +468,7 @@
     }
     var headerState = typeof w.getCentileChartHeaderNameState === 'function'
       ? w.getCentileChartHeaderNameState() : null;
-    return { age: age, exactAge: exactAge, source: source, population: population,
+    return { age: age, exactAge: exactAge, source: source, requestedSource: requestedSource, population: population,
       sex: sexInput && sexInput.value, height: height, weight: weight,
       mother: capturedField('advMotherHeight'), father: capturedField('advFatherHeight'),
       advanced: copy(w.advancedGrowthData) || {}, growth: growth,
@@ -464,14 +494,18 @@
       currentHeight: height, currentWeight: weight, sex: sex,
       motherHeight: parents.motherHeight, fatherHeight: parents.fatherHeight });
     var effectiveSource = { height: null, weight: null };
-    if (height !== null && typeof w.getCentilePercentileStatsForSource === 'function') {
-      var stats = w.getCentilePercentileStatsForSource(height, sex, exactAge === null ? age : exactAge, 'HT', source,
-        { population: population });
-      if (stats && typeof stats.siatka === 'string') effectiveSource.height = stats.siatka;
+    if (typeof w.getCentilePercentileStatsForSource === 'function') {
+      var statsAge = exactAge === null ? age : exactAge;
+      if (population === 'DS' && typeof w.vildaWiekDoSiatek === 'function') statsAge = w.vildaWiekDoSiatek(statsAge, age, population);
+      [['height', height, 'HT'], ['weight', weight, 'WT']].forEach(function (metric) {
+        if (metric[1] === null) return;
+        var stats = w.getCentilePercentileStatsForSource(metric[1], sex, statsAge, metric[2], source, { population: population });
+        if (stats && typeof stats.siatka === 'string') effectiveSource[metric[0]] = stats.siatka;
+      });
     }
     return freeze({ patientId: scope.patientId, patientToken: scope, sex: sex, ageMonths: age,
       exactAgeMonths: exactAge, currentHeight: height, currentWeight: weight,
-      source: source, requestedSource: source, population: population, effectiveSourceByMetric: effectiveSource,
+      source: source, requestedSource: input.requestedSource, population: population, effectiveSourceByMetric: effectiveSource,
       measurements: copy(measurements) || [], advanced: advanced, parents: parents,
       chartCreatorData: copy(input.chartCreatorData) || {},
       professionalMode: input.professionalMode,
@@ -568,7 +602,14 @@
     return result.status === 'ready' ? result.snapshot : null;
   }
 
-  function retry() { invalidate('retry', false, true); }
+  function retry() {
+    var source = w.VildaDsSource;
+    if (source && typeof source.getState === 'function' && typeof source.retry === 'function') {
+      var state = source.getState();
+      if (state && state.patientId === patientId() && state.status === 'error') source.retry();
+    }
+    invalidate('retry', false, true);
+  }
 
   function listen(target, event, callback, options) {
     if (target && typeof target.addEventListener === 'function') target.addEventListener(event, callback, options);
@@ -658,6 +699,7 @@
   ['vilda:dob-restored', 'vilda:centile-creator-changed', 'vilda:zrodlo-pacjenta-zmienione'].forEach(function (event) {
     listen(d, event, function () { invalidate(event, false); });
   });
+  listen(d, 'vilda:ds-source-state', function () { invalidate('ds-source-state', false); });
   ['vilda:auth-hidden', 'vilda:auth-state-settled', 'vilda:auth-boot-settled', 'vilda:sync-status-changed'].forEach(function (event) {
     listen(d, event, function () { invalidate(event, false, true); });
   });

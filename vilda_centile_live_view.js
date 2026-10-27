@@ -17,7 +17,7 @@
     return Number(value).toLocaleString('pl-PL', { maximumFractionDigits: digits === undefined ? 1 : digits });
   }
   function sourceLabel(source) {
-    return source === 'PALCZEWSKA' ? 'Palczewska' : source === 'WHO' ? 'WHO' : source === 'OLAF' ? 'OLAF / OLA' : source === 'DS' ? 'Zemel (zespół Downa)' : String(source || '');
+    return source === 'PALCZEWSKA' ? 'Palczewska' : source === 'WHO' ? 'WHO' : source === 'OLAF' ? 'OLAF / OLA' : source === 'DS' ? 'Zemel 2015' : String(source || '');
   }
   function ageLabel(age) {
     var months = Math.max(0, Math.floor(age + 0.0000001));

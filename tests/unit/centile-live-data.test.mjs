@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import { loadBrowserScript } from '../support/load-browser-script.mjs';
+import { appSrc, funkcjaZ, zrodlo } from '../support/silnik-bmi.mjs';
 
 // Fikcyjni pacjenci i odroczone odczyty; wykonujemy rzeczywisty moduł adaptera.
 function events() {
@@ -66,9 +67,11 @@ function setup({ working = true, framed = false, nestedSourceOnSave = false, sta
       setItem: writes, removeItem: writes,
     },
     document: { ...docEvents, getElementById: (id) => fields[id] || null,
+      dispatchEvent: (event) => docEvents.emit(event.type, event.detail || {}),
       documentElement: { classList: { contains: name => name === 'vilda-centile-live-active' && state.panelVisible } },
       querySelector: () => ({ value: state.source }) },
     VildaVault: vault,
+    CustomEvent: class { constructor(type, options) { this.type = type; this.detail = options.detail; } },
     VildaDataImportExport: { getApplyLoadedDataSequence: () => state.sequence,
       isMainSessionRestorePending: () => !!state.mainSessionRestorePending },
     VildaPanelPacjent: { nieaktualny: () => state.stale, wlasciciel: () => state.owner },
@@ -77,7 +80,7 @@ function setup({ working = true, framed = false, nestedSourceOnSave = false, sta
     VildaPopulacjaPacjenta: () => state.population,
     getCentileChartHeaderNameState: () => ({ name: state.headerName }),
     getCurrentCentileChartAgeMonths: () => Math.round(Number(fields.age.value) * 12 + Number(fields.ageMonths.value)),
-    getCentilePercentileStatsForSource: vi.fn(() => ({ percentile: 45, sd: -0.1, siatka: state.source })),
+    getCentilePercentileStatsForSource: vi.fn((_value, _sex, _age, _metric, source) => ({ percentile: 45, sd: -0.1, siatka: source })),
     collectUserData: writes, vildaPersistFlushNow: writes, debouncedUpdate: writes,
     chartCreatorData: { growth: { free: { height: [{ id: 1, ageMonths: 120, value: 141, txt: 'Fikcyjny komentarz' }] } } },
     MutationObserver: class {
@@ -800,17 +803,132 @@ describe('Panel nowego pomiaru — odrzucanie spóźnionych odczytów', () => {
     expect(h.writes).not.toHaveBeenCalled();
   });
 
-  it('utrwala populację z istniejącego API i podaje ją jawnie statystykom bieżącego punktu', async () => {
+  it('zmiana populacji unieważnia dawną siatkę i podaje DS jawnie obu statystykom', async () => {
     const h = setup();
     const first = await h.api.getSnapshot();
     h.state.population = 'DS';
+    expect(h.api.isCurrent(first)).toBe(false);
     h.doc.emit('vilda:zrodlo-pacjenta-zmienione');
     const next = await h.api.getSnapshot();
     expect(first.population).toBe('OGOLNA');
     expect(next.population).toBe('DS');
-    expect(h.win.getCentilePercentileStatsForSource).toHaveBeenLastCalledWith(158, 'M', 158.2, 'HT', 'OLAF', { population: 'DS' });
-    expect(next.patientToken).toBe(first.patientToken);
+    expect(next.source).toBe('DS');
+    expect(next.requestedSource).toBe('OLAF');
+    expect(next.effectiveSourceByMetric).toEqual({ height: 'DS', weight: 'DS' });
+    expect(h.win.getCentilePercentileStatsForSource).toHaveBeenCalledWith(158, 'M', 158.2, 'HT', 'DS', { population: 'DS' });
+    expect(h.win.getCentilePercentileStatsForSource).toHaveBeenCalledWith(46, 'M', 158.2, 'WT', 'DS', { population: 'DS' });
+    expect(next.patientToken).not.toBe(first.patientToken);
     expect(h.writes).not.toHaveBeenCalled();
+  });
+});
+
+describe('Siatka Zemel — źródło i własność migawki', () => {
+  it('czeka na rozpoznanie tego pacjenta, gdy natywny odczyt DS nadal trwa', async () => {
+    const h = setup(), pending = deferred();
+    h.state.record.snapshots[0].payload.clinical = { downSyndrome: true };
+    h.win.document.readyState = 'loading';
+    loadBrowserScript('vilda_ds_source.js', h.win);
+    h.vault.getPatient.mockReturnValueOnce(pending.promise);
+    h.doc.emit('vilda:patient-loaded', { patientId: 'fikcyjny-a' });
+    const reading = await h.api.getResult();
+    expect(reading.status, 'OLAF nie może zastąpić jeszcze niewczytanego rozpoznania DS').toBe('pending');
+    pending.resolve(h.state.record);
+    await Promise.resolve(); await Promise.resolve();
+    expect(await h.api.getSnapshot()).toMatchObject({ source: 'DS', population: 'DS' });
+  });
+
+  it.each(['OLAF', 'PALCZEWSKA', 'WHO'])('rozpoznanie DS wybiera Zemel i zachowuje preferencję %s do wyłączenia flagi', async (source) => {
+    const h = setup();
+    h.state.source = source;
+    h.state.population = 'DS';
+    const before = JSON.stringify({ fields: h.fields, session: [...h.values] });
+    const ds = await h.api.getSnapshot();
+    expect(ds).toMatchObject({ source: 'DS', requestedSource: source, population: 'DS', patientToken: { population: 'DS' } });
+    h.state.population = 'OGOLNA';
+    h.doc.emit('vilda:zrodlo-pacjenta-zmienione');
+    expect(h.api.isCurrent(ds)).toBe(false);
+    const general = await h.api.getSnapshot();
+    expect(general).toMatchObject({ source, requestedSource: source, population: 'OGOLNA' });
+    expect(JSON.stringify({ fields: h.fields, session: [...h.values] })).toBe(before);
+    expect(h.writes).not.toHaveBeenCalled();
+  });
+
+  it('odtworzenie zapisu bierze rozpoznanie aktywnego pacjenta bez odczytu późniejszego rekordu', async () => {
+    const h = setup();
+    h.values.set('vildaLoadChoiceV1', 'restore');
+    h.win.lastLoadedData = patient().snapshots[0].payload;
+    h.state.population = 'DS';
+    const ds = await h.api.getSnapshot({ mode: 'summary' });
+    expect(ds).toMatchObject({ source: 'DS', population: 'DS', eligibility: { mode: 'summary', choice: 'restore' } });
+    expect(h.vault.getPatient).not.toHaveBeenCalled();
+    expect(h.writes).not.toHaveBeenCalled();
+  });
+
+  it('odrzuca oczekujący odczyt poprzedniej populacji po zmianie rozpoznania', async () => {
+    const h = setup(), pending = deferred();
+    h.vault.getPatient.mockReturnValueOnce(pending.promise);
+    const oldRead = h.api.getSnapshot();
+    await Promise.resolve();
+    h.state.population = 'DS';
+    h.doc.emit('vilda:zrodlo-pacjenta-zmienione');
+    const current = await h.api.getSnapshot();
+    expect(current.source).toBe('DS');
+    pending.resolve(h.state.record);
+    expect(await oldRead).toBeNull();
+    expect(h.api.isCurrent(current)).toBe(true);
+  });
+
+  it('zmiana populacji w trakcie pisania nie rysuje połowy liczby ani starej siatki', async () => {
+    const h = setup(), original = await h.api.getSnapshot();
+    focusMeasurement(h, 'height'); typeMeasurement(h, 'height', '1');
+    h.state.population = 'DS';
+    h.doc.emit('vilda:zrodlo-pacjenta-zmienione');
+    expect(h.api.isCurrent(original)).toBe(false);
+    expect(await h.api.getResult()).toMatchObject({ status: 'pending', reason: 'measurement-edit' });
+    typeMeasurement(h, 'height', '189');
+    expect(await h.api.getSnapshot()).toBeNull();
+    blurMeasurement(h, 'height');
+    expect(await h.api.getSnapshot()).toMatchObject({ source: 'DS', currentHeight: 189 });
+    expect(h.writes).not.toHaveBeenCalled();
+  });
+
+  it.each(['M', 'F'])('kieruje oba pomiary %s do rzeczywistego Zemel LMS i istniejących silników', async (sex) => {
+    const h = setup();
+    h.state.population = 'DS'; h.fields.sex.value = sex;
+    for (const file of ['ds_lms.js', 'vilda_bmi.js', 'vilda_sds_wzrostu.js']) loadBrowserScript(file, h.win);
+    const heightTables = h.win.VildaDsLMS;
+    h.win.VildaSdsWzrostu.ustawDane({
+      LMS_HEIGHT_DS_INFANT_BOYS: heightTables.NIEMOWLE.HT.M, LMS_HEIGHT_DS_INFANT_GIRLS: heightTables.NIEMOWLE.HT.F,
+      LMS_HEIGHT_DS_BOYS: heightTables.DZIECKO.HT.M, LMS_HEIGHT_DS_GIRLS: heightTables.DZIECKO.HT.F,
+    });
+    const native = new Function('window', [
+      funkcjaZ(appSrc, 'vildaDsTablica'), funkcjaZ(appSrc, 'vildaDsWiersz'),
+      funkcjaZ(zrodlo('inline_index_03.js'), 'getCentilePercentileStatsForSource'),
+      'return getCentilePercentileStatsForSource;',
+    ].join('\n'))(h.win);
+    h.win.getCentilePercentileStatsForSource = vi.fn(native);
+    for (const [field, metric] of [['height', 'HT'], ['weight', 'WT']]) {
+      h.fields[field].value = String(h.win.VildaBmi.interpoluj(heightTables.DZIECKO[metric][sex], 158.2)[1]);
+    }
+    const snapshot = await h.api.getSnapshot();
+    expect(snapshot.effectiveSourceByMetric).toEqual({ height: 'DS', weight: 'DS' });
+    for (const result of h.win.getCentilePercentileStatsForSource.mock.results) {
+      expect(result.value.siatka).toBe('DS');
+      expect(result.value.percentile).toBeCloseTo(50, 5);
+      expect(result.value.sd).toBeCloseTo(0, 10);
+    }
+  });
+
+  it('w dniu drugich urodzin używa natywnej granicy pełnych miesięcy dla obu miar DS', async () => {
+    const h = setup();
+    h.state.population = 'DS'; h.fields.age.value = '2'; h.fields.ageMonths.value = '0';
+    h.state.exactAge = { totalMonths: 24, exactMonths: 23.98 };
+    for (const file of ['ds_lms.js', 'vilda_bmi.js', 'vilda_sds_wzrostu.js']) loadBrowserScript(file, h.win);
+    h.win.vildaWiekDoSiatek = new Function('window', `${funkcjaZ(appSrc, 'vildaWiekDoSiatek')}return vildaWiekDoSiatek;`)(h.win);
+    const snapshot = await h.api.getSnapshot();
+    expect(snapshot).toMatchObject({ ageMonths: 24, exactAgeMonths: 23.98, source: 'DS' });
+    expect(h.win.getCentilePercentileStatsForSource).toHaveBeenCalledWith(158, 'M', 24, 'HT', 'DS', { population: 'DS' });
+    expect(h.win.getCentilePercentileStatsForSource).toHaveBeenCalledWith(46, 'M', 24, 'WT', 'DS', { population: 'DS' });
   });
 });
 
