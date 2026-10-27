@@ -92,8 +92,13 @@ const OCZEKIWANE = {
   // stara kopia K (T4d) albo P (ODP) wraca do karty z gwiazdką: T4d 7 z 8 (poza K←P,K←C), ODP 8 z 8.
   T4d: { st: 'brak', n: RET('4', '3', null, 1) },
   ODP: { st: 'brak', n: RET('3', '2', null, 2) },
-  // [POZA] PRZ: ograniczenie „Przywróć, gdy ta sama wersja jest w karcie i w koszu” (P-POZNIEJSZA-POPRAWKA, Q6) — bez zmian.
-  PRZ: { st: 'karta 78', karta: { masa: 78, pin: false, rev: 2 }, n: null, pierwsze: 'już w karcie' },
+  // [R] PRZ0 (P-PRZYWROC-Z-KARTY, D5 = a; dotąd ograniczenie P-POZNIEJSZA-POPRAWKA, Q6): już pierwsze „Przywróć” zapisuje
+  // nowszą z dwóch treści (z karty) ze stemplem po usunięciu — karta 78 na trzech, bez drugiego „Przywróć”.
+  PRZ: { st: 'karta 78', karta: { masa: 78, pin: false, rev: 2 }, n: null, pierwsze: 'przywrócono' },
+  'PRZ-gw': { st: 'karta 23*', karta: { masa: 23, pin: true, rev: 2 }, n: null, pierwsze: 'przywrócono' },
+  'PRZ-pg': { st: 'karta 78*', karta: { masa: 78, pin: true, rev: 3 }, n: null, pierwsze: 'przywrócono' },
+  'PRZ-odp': { st: 'karta 78', karta: { masa: 78, pin: false, rev: 3 }, n: null, pierwsze: 'przywrócono' },
+  'PRZ-nie-ostatnia': { st: 'karta 78', karta: { masa: 78, pin: false, rev: 2 }, n: null, pierwsze: 'przywrócono' },
   'PRZ-kontrola': { st: 'karta 78', karta: { masa: 78, rev: 2 }, n: null },
   'PRZ-po-koszu': { st: 'karta 78', karta: { masa: 78, rev: 1 }, n: null },
   'PRZ-K7': { st: 'karta 74', karta: { masa: 74, rev: 3 }, n: null },

@@ -409,13 +409,15 @@ describe('strażnik źródła P-POZNIEJSZA-POPRAWKA', () => {
     expect(akt).toContain('lastSavedAtISO:Bkz_pozniejsza(p.lastSavedAtISO,Bpp_z)');
     expect(akt).not.toContain('updatedAtISO:l');
   });
-  it('„Przywróć” i import z kosza: reguła Bkz_nowszaWersja i stempel z chwilą usunięcia', () => {
+  it('„Przywróć” i import z kosza: „już w karcie” tylko, gdy wersja w karcie wygrywa z usunięciem i ma nowszą treść (PRZ0); stempel z chwilą usunięcia', () => {
     const przywroc = czesc('async function Bkz_przywroc(', 'async function Bkz_poImporcie(');
-    expect(przywroc).toContain('e.deletedAtISO < zmianaObecnej || Bkz_nowszaWersja(obecna, e)');
+    expect(przywroc).toContain('if (Bkz_ostatnie(e) < zmianaObecnej && (!tk || zKarty)) {');
+    expect(przywroc).toContain('zKarty = Bpk_trescNowsza({ o: Bpk_opis(obecna), cz: sk.cz }, { o: Bpk_opis(e), cz: (pt && Bpk_cz(pt)) || (st && st.cz) || \'\' });');
+    expect(przywroc).not.toContain('Bkz_nowszaWersja(obecna, e)');
     expect(przywroc).not.toContain('mt(obecna) > revUsuniecia');
     expect(przywroc).toContain("Bpp_chwilaZmiany(Bkz_znanaZmiana(e), obecna ? Bkz_zmiana(obecna) : '', Bkz_ostatnie(e))");
     expect(przywroc).toContain('updatedAtISO: zmiana,');
-    expect(przywroc).toContain('Bkz_przebudujNaglowek(patientId, zmiana)');
+    expect(przywroc).toContain('Bkz_przebudujNaglowek(patientId, zmiana, Bses_o)');
     const poImporcie = czesc('async function Bkz_poImporcie(', '\n}\n');
     expect(poImporcie).toContain('Bpp_chwilaZmiany(wersja.updatedAtISO, wersja.savedAtISO, Bkz_znanaZmiana(e), Bkz_ostatnie(e))');
     expect(poImporcie).not.toContain('updatedAtISO: teraz');

@@ -19417,6 +19417,223 @@ a lekarz poprawia jedno z miejsc. Wartość dni spoza 0–6 w rekordzie nie jest
 
 **Wersje.** `sga_birth_module.js?v=10→11`; SW 1.1.168 → **1.1.169**.
 
+## „Przywróć” wizyty, która jest w karcie i w koszu, zapisuje nowszą treść na wszystkich urządzeniach (P-PRZYWROC-Z-KARTY, PR-PRZ0, SW 1.1.394, `vilda_vault.js` 229, 2026-10-27)
+
+**Zmiana kliniczna: tak** — wzory, progi, jednostki i interpretacje bez zmian; zmienia się, jaka postać wizyty (masa,
+wzrost, gwiazdka) zostaje w karcie na każdym urządzeniu po „Przywróć” zapisu, który jest jednocześnie w karcie i w koszu,
+oraz czy po synchronizacji wizyta jest w karcie, czy w koszu. Serwer, `vilda_sync.js`, schemat IndexedDB (wersja bazy 5),
+sygnatura API `window.VildaVault` i moduły kosza bez zmian; zmienia się tylko `restoreTrashedSnapshot` (`Bkz_przywroc`),
+z którego dochodzą dwa komunikaty błędu (niżej, „Format”).
+
+**Decyzja właściciela.** D5 = a (2026-10-21, decyzje S4: „tak, akceptuję wszystko, działaj”): „Przywróć”, gdy wersja jest
+w karcie i w koszu, zapisuje wersję z nowszą z dwóch treści, z chwilą zmiany późniejszą niż usunięcie i `rev` = najwyższa
++ 1; wynik na P, K i C: karta 78, kosz pusty, komunikat „Przywrócono”. Osobny PR po PR-S4 (kolejność PR-S4 → PR-PRZ0 →
+PR-E4a → PR-E3). Start: „ruszaj z PRZ0” (2026-10-27). **Potwierdzone przez właściciela 2026-10-27** („PRZ0: 1 tak,
+2 tak, 3 tak”): (1) PRZ-odp — wynik zmienia się także poza dosłownym scenariuszem PRZ0 i zamyka utratę poprawki masy;
+(2) ograniczenie „zegar do przodu” (niżej) — przyjęte jako znane ograniczenie; (3) nowy komunikat przy nieczytelnym
+wpisie kosza.
+
+**Co było** (`audyt` `ae1ac892`, wydanie S4: `vilda_vault.js` 228; prawdziwy sejf, magazyny w pamięci, sztuczny zegar,
+dane fikcyjne; katalog `tests/unit/polkrata-katalog.test.mjs`, 8 kolejności, i 30 kolejności poza repozytorium).
+Ostatnia wersja karty zostaje w karcie, nawet gdy inne urządzenie usunęło ją później (nagrobek nigdy nie usuwa ostatniej
+wersji karty, P-KOSZ-ZAPISOW), więc ta sama wizyta bywa w karcie i w koszu. „Przywróć” odpowiadało wtedy „już w karcie”,
+gdy wersja w karcie była zmieniona po usunięciu albo nowsza od wpisu kosza po chwili zmiany rekordu (`Bkz_nowszaWersja`),
+i nie zapisywało wersji — zdejmowało tylko wpis kosza.
+Usunięcie z innego urządzenia było jednak późniejsze, więc przy synchronizacji znów wygrywało na pozostałych
+urządzeniach:
+- **PRZ** (P daje s1 do kosza, więc s2 jest ostatnią wersją karty P; K z zegarem 10 min do przodu daje s2 do kosza; P
+  dostaje kosz K i poprawia s2 z 23 na 78 kg; „Przywróć” na P): „już w karcie” w 30 z 30 kolejności; po 3 rundach P —
+  karta 78 i kosz 78, K — sam kosz 78, C — sam kosz 78 (21 z 30), karta 78 i kosz 78 (8 z 30) albo karta **23** kg i kosz
+  78 (1 z 30). Wizyta wracała do kart dopiero po drugim „Przywróć”.
+- **PRZ-gw**, **PRZ-pg** (P przypina zamiast poprawiać; P poprawia i przypina) — to samo z 23* i 78*.
+- **PRZ-nie-ostatnia** (ta sama wizyta nie jest ostatnią wersją karty, np. tuż po nowej wizycie): „już w karcie”, potem
+  wizyta znika z kart na trzech urządzeniach (sam kosz 78, 30 z 30).
+- **PRZ-odp** (s2 przypięta na P i K; P poprawia na 78; K z zegarem 10 min do przodu robi „Odepnij i usuń”;
+  „Przywróć” na P): zapis treści kosza 23 kg na trzech urządzeniach (30 z 30) — **późniejsza poprawka 78 kg przepadała**
+  (wpis kosza był „nowszy” po chwili zmiany rekordu, którą podniosło samo odpięcie).
+- Rejestr gwiazdki: po „Odepnij i usuń” na K i poprawce z urządzenia, które o gwiazdce nie wiedziało, przywrócona wizyta
+  dostawała rejestr gwiazdki ze starszą chwilą, a po synchronizacji wcześniejsze przypięcie z P wracało (44* na trzech;
+  D2 = a niespełnione) — także w zwykłym „Przywróć” wizyty tylko w koszu.
+- Treść wpisu kosza nieczytelna na tym urządzeniu (uszkodzony zapis): „Przywróć” zapisywało nieczytelny szyfr do karty,
+  także nad czytelną wersją, a potem eksport synchronizacji z tego urządzenia przestawał działać.
+- Przerwane „Przywróć” (np. zamknięcie karty przeglądarki albo awaria w trakcie zapisu): nagłówek karty mógł zostać
+  w tyle, a wcześniejsze „Usuń pacjenta” z innego urządzenia usuwało potem kartę na wszystkich urządzeniach.
+
+**Reguła po zmianie** (`Bkz_przywroc`; ten sam wynik na każdym urządzeniu, w każdej kolejności synchronizacji — zmierzone
+w 8 kolejnościach katalogu i 30 poza repozytorium; wyjątki — „Ograniczenia”):
+- **„Już w karcie”** (`{ alreadyInCard: true }`: bez zapisu wersji, zdjęcie tylko tego nieaktualnego wpisu kosza) —
+  tylko, gdy wersję w karcie zmieniono po usunięciu **i** po przycięciu historii (`Bkz_ostatnie`: późniejsza z dwóch
+  chwil; taka wersja wygrywa z nagrobkiem na każdym urządzeniu), a jej treść nie jest starsza niż treść kosza (chwila
+  treści W3, `Bpk_trescNowsza`). Gdy treści karty nie da się odczytać — decyduje sama chwila zmiany wersji wobec
+  usunięcia i przycięcia (dotąd wystarczała też chwila zmiany późniejsza niż wpis kosza); zapis bierze wtedy treść kosza. Nagłówek
+  karty dostaje przy tym chwilę zmiany wersji, jeśli został w tyle (przerwane wcześniejsze „Przywróć”); zwykle nic się
+  nie zapisuje.
+- **W pozostałych przypadkach zapis przywrócenia**, także gdy wersja w karcie ma nowszą treść, ale usunięcie z innego
+  urządzenia jest późniejsze (dotąd „już w karcie”):
+  - treść — nowsza z dwóch (karta albo kosz) po chwili treści W3, nie po chwili zmiany rekordu: sama zmiana gwiazdki nie
+    czyni treści nowszą (D1 = C; chwila treści nieczytelnego wpisu kosza — z opisu wpisu); gdy wygrywa treść, której
+    nie da się tu odczytać, „Przywróć” odmawia bez zapisu: „Treści tego zapisu w koszu nie da się odczytać na tym
+    urządzeniu.” (nowy komunikat; czytelna kopia zostaje na innych urządzeniach i tam da się ją przywrócić);
+  - gwiazdka — najpóźniejszy z rejestrów: wersji w karcie, treści kosza i nagrobka, z jego własną chwilą, także gdy ma
+    tę samą gwiazdkę co rejestr treści (D1 = C, D3 = a: bez syntetycznych dat); „Odepnij i usuń” późniejsze niż
+    przypięcie daje zapis bez gwiazdki (D2 = a);
+  - chwila zmiany = chwila treści — później niż treść kosza, wersja w karcie i usunięcie albo przycięcie
+    (`Bpp_chwilaZmiany`, także przy zegarze spóźnionym wobec urządzenia, które usunęło: +1 ms i losowo 0–999 ms);
+  - `rev` = wyższa z dwóch (usunięcia i wersji w karcie) + 1; `savedAtISO` — z wersji, której treść wygrała (miejsce
+    w historii bez zmian); numer kolejny wpisu (`seq`) — z wersji w karcie, gdy wygrała jej treść;
+  - kolejność zapisów: wersja, nagłówek karty (chwila przywrócenia; `lastSavedAtISO` nigdy nie maleje), wpis kosza
+    zdjęty w całości, jedno `onPatientSaved({ isSnapshotRestore: true })`, wynik `{ patientId, snapshotId }`.
+    Przerwane przed zdjęciem wpisu zostawia wpis w koszu — następne „Przywróć” kończy przywrócenie („już w karcie”
+    z nagłówkiem); wersja ze stemplem i tak wygrywa z nagrobkiem przy synchronizacji. Zmiana sesji już po ostatnim
+    zapisie — wynik „przywrócono” bez powiadomienia (należy do tamtej sesji).
+- **Zapis tylko w sesji, w której kliknięto „Przywróć”** (jak scalanie, P-CHMURA-OPIS). Zablokowanie sejfu, wylogowanie
+  albo zalogowanie konta w trakcie — błąd `SESSION_CHANGED` („W trakcie zablokowano sejf albo przełączono konto.
+  Przywracanie przerwane.”), bez zapisu sejfu w nowej sesji.
+- Wizyta tylko w koszu (nie w karcie) — jak dotąd, z rejestrem gwiazdki jak wyżej (najpóźniejszy z jego chwilą; w fuzzie
+  zmienia to tylko `rev` w 4 z 520 programów, bez zmiany widoku) i z odmową przy nieczytelnej treści.
+
+**Format.** Bez nowych pól; sygnatura API bez zmian, wynik `restoreTrashedSnapshot` jak dotąd (`alreadyInCard` tylko
+w pierwszym przypadku); nowe kody błędu: `nieczytelny` („Treści tego zapisu w koszu nie da się odczytać na tym
+urządzeniu.”) i `SESSION_CHANGED` („W trakcie zablokowano sejf albo przełączono konto. Przywracanie przerwane.”) —
+okno kosza pokazuje je jako „Nie udało się przywrócić: …”. Komunikaty powodzenia bez zmian: przy zapisie „Przywrócono zapis z kosza.” (historia wersji) i „Zapis wrócił na swoje
+miejsce w historii karty.” („Cofnij” w sprawdzeniu spójności), przy „już w karcie” — „Ten zapis jest już w karcie
+w nowszej postaci — usunięto go z kosza.”. Lista kosza pokazuje tylko chwilę zapisu i nazwę wizyty, nie masę. Dziennik
+dostępu: „Przywrócenie zapisu z kosza”, znacznik `juzWKarcie` tylko w pierwszym przypadku.
+
+**Przypadki** (wiersze PRZ*: katalog — P, K, C, 8 kolejności synchronizacji, 3 rundy i runda kontrolna, wynik ten sam
+na każdym urządzeniu w każdej kolejności, 0 zapisów w rundzie kontrolnej; pozostałe: `tests/unit/przywroc-z-karty*.test.mjs`,
+jedna kolejność, 3 rundy):
+| Scenariusz | Dotąd (228) | Teraz |
+|---|---|---|
+| PRZ | „już w karcie”; P karta 78 + kosz 78, K kosz 78, C kosz 78 / karta 78 + kosz 78 | „przywrócono”; karta 78 r2 na trzech, kosz pusty |
+| PRZ-gw (P przypina s2) | „już w karcie”, rozjazd jak PRZ (23*) | karta 23* r2 |
+| PRZ-pg (P poprawia na 78 i przypina) | „już w karcie”, rozjazd jak PRZ (78*) | karta 78* r3 |
+| PRZ-odp (K „Odepnij i usuń” z zegarem do przodu po poprawce P) | karta 23 r3 na trzech — poprawka 78 przepada | karta 78 bez gwiazdki r3 |
+| PRZ-nie-ostatnia | „już w karcie”, potem sam kosz 78 na trzech | karta 78 r2 |
+| PRZ-kontrola, PRZ-po-koszu, PRZ-K7 | 78 r2, 78 r1, 74 r3 | bez zmian |
+| P przypina, K zna gwiazdkę, C bez wiedzy poprawia na 44, K „Odepnij i usuń”, „Przywróć” na K | 44* na trzech | 44 bez gwiazdki (rejestr odpięcia K) |
+| to samo w gałęzi treści z karty (D poprawia na 60 jako ostatnią wersję, 4 urządzenia) | „już w karcie”; potem P, K i C sam kosz 60, D karta 60* (gwiazdka wraca) i kosz 60 | 60 bez gwiazdki na czterech |
+| treść wpisu kosza nieczytelna na P, karta 78, w koszu późniejsze 74 | nieczytelny szyfr w karcie P, eksport z P nie działa | odmowa bez zapisu; „Przywróć” na K → 74 na trzech |
+| to samo, treść karty nowsza (P poprawia na 78 po otrzymaniu kosza) | „już w karcie”, potem rozjazd jak PRZ (K sam kosz 78) | 78 r2 z karty na trzech |
+| wizyta tylko w koszu, treść nieczytelna na P | nieczytelny szyfr w karcie P | odmowa bez zapisu |
+| „Przywróć” przerwane w trakcie zapisu, wcześniej „Usuń pacjenta” na C; drugie „Przywróć” przed synchronizacją | karta znika z trzech urządzeń | „już w karcie”, nagłówek nadrobiony; karta i wizyta 23 r1 na trzech |
+| wersja w karcie zmieniona po usunięciu, ale przed przycięciem na C | „już w karcie”, potem C usuwa wizytę | zapis 78 r2 ze stemplem później niż przycięcie |
+
+**Flota mieszana.** Decyduje aplikacja urządzenia, na którym kliknięto „Przywróć”: scalanie, eksport i nagrobki
+są takie jak w 228, więc 228 przyjmuje zapis przywrócenia jak każdą wersję. Pomiar poza repozytorium (P, K, C;
+8 kolejności × 2 harmonogramy rund; 228 i nowa aplikacja na każdym położeniu; kopia 228 tylko w danych pomiaru):
+każda flota mieszana daje to samo co flota samych urządzeń klikającej aplikacji (96 z 96 w każdej parze scenariusz ×
+harmonogram), 0 zapisów w rundach kontrolnych (7296 rund).
+- P z nową aplikacją, K lub C na 228: PRZ (78 r2), PRZ-gw (23* r2), PRZ-pg (78* r3), PRZ-odp (78 r3 bez gwiazdki) —
+  „przywrócono” i cel na trzech w 64 z 64 przebiegów na scenariusz, 0 strat.
+- P na 228: jak dotąd — „już w karcie” i stabilny rozjazd w PRZ, PRZ-gw, PRZ-pg (192 ze 192; C z kartą 23 kg w 36),
+  utrata poprawki w PRZ-odp (192 ze 192). Sama aktualizacja P niczego nie zmienia (wpis wraca do kosza P po
+  synchronizacji); drugie „Przywróć” — po aktualizacji albo jeszcze na 228 — domyka PRZ, PRZ-gw i PRZ-pg (128 ze 128).
+  Straty z PRZ-odp na 228 aktualizacja nie cofa.
+- Zwykłe „Przywróć” wizyty tylko w koszu: ten sam wynik na 228 i na nowej aplikacji (256 z 256 na scenariusz).
+- Urządzenie wyłączone na tydzień (228 albo nowe) po powrocie dochodzi do tego samego (8 z 8, 0 zapisów); cofnięcie
+  wydania do 228 po przywróceniu niczego nie zmienia (16 z 16).
+- Ze starszą aplikacją 221 (dane testów): P z nową aplikacją domyka PRZ (80 z 80); gdy „Odepnij i usuń” zrobiło
+  urządzenie 221, gwiazdka wraca na wszystkich urządzeniach (221 nie zapisuje rejestru odpięcia), masa 78 zostaje;
+  gdy „Przywróć” klika urządzenie inne niż nowe, urządzenia 221 przepisują przy każdej synchronizacji te same dane
+  (2 zapisy na rundę na każde urządzenie 221) — do „Przywróć” na nowej aplikacji; „Przywróć” po „Odepnij i usuń”
+  kliknięte na 221 gubi późniejszą poprawkę jak na 228 (288 z 288).
+- Nota przy wydaniu (do wklejenia): „»Przywróć« wizyty, która jest jednocześnie w karcie i w koszu, działa teraz od razu
+  na wszystkich urządzeniach: wizyta wraca do kart z najnowszą treścią (np. poprawioną masą). Zaktualizuj aplikację
+  na wszystkich urządzeniach; do tego czasu przywracaj z kosza tylko na urządzeniu już zaktualizowanym. Po aktualizacji
+  urządzenia sprawdź jego kosz po synchronizacji: jeśli wcześniej »Przywróć« odpowiedziało »Ten zapis jest już
+  w karcie w nowszej postaci«, a wizyta znów jest w koszu, kliknij »Przywróć« jeszcze raz.”
+
+**Tryb chmurowy.** Bez zmian w zasadzie: zapisy przywrócenia trafiają do części sesyjnej (bez zapisów wersji i kart
+w trwałej bazie), lista kosza — jak dotąd do metadanych konta. W 8 z 8 kolejności po rundach 78 r2 na trzech;
+po blokadzie („idle”) i ponownym zalogowaniu P dostaje 78 r2 z synchronizacji (dotąd sam kosz 78).
+
+**Ograniczenia.**
+- **Zegar urządzenia, które usunęło, do przodu** (przyjęte przez właściciela 2026-10-27). Stempel przywrócenia jest późniejszy niż usunięcie
+  (PD-4b), więc przy zegarze do przodu przywrócenie wygrywa też z poprawką z urządzenia jeszcze niezsynchronizowanego,
+  zrobioną w czasie rzeczywistym po kliknięciu — aż czas dogoni chwilę usunięcia (okno = przesunięcie zegara); ta
+  poprawka nie zostaje w koszu, jak każda przegrana poprawka tej samej wersji. Dotąd w stanie PRZ0 nic się nie
+  zapisywało, więc poprawka zostawała, ale wizyta była rozjechana między urządzeniami (sam kosz na K); w zwykłym
+  „Przywróć” wizyty tylko w koszu tak było już dotąd. Ochrona: automatyczny czas na urządzeniach i ostrzeżenie
+  o przesuniętym zegarze (D13).
+- **„Przywróć” = najpóźniejsza zmiana (R4, PD-9) w większej liczbie stanów.** Przywrócenie wygrywa z poprawką z innego
+  urządzenia, której to urządzenie jeszcze nie znało (fuzz: 52* zamiast niewidzianej 58*), jak przy wizycie tylko
+  w koszu.
+- **Dwa „Przywróć” tej samej wizyty na dwóch urządzeniach przed synchronizacją** — wygrywa jedno (losowe 0–999 ms
+  stempla przy zegarach spóźnionych wobec usunięcia; 78 zostaje w 13–17 z 32 przebiegów); raz na ok. 1000 —
+  identyczny stempel i `rev` przy różnej treści: rozjazd do następnej zmiany tej wizyty. Przy wizycie tylko w koszu
+  tak samo jak przed PRZ0; w stanie PRZ0 na 228 wygrywało zawsze 23 (78 zostawało w 0 z 64).
+- **Przerwane „Przywróć”, a synchronizacja przed drugim kliknięciem.** Przerwanie (zamknięcie karty, awaria, blokada)
+  między zapisem wersji a nagłówkiem zostawia wpis w koszu — drugie „Przywróć” kończy przywrócenie. Gdy wcześniej
+  przyjdzie synchronizacja (po odblokowaniu aplikacja synchronizuje się sama), wersja ze stemplem wygrywa z nagrobkiem
+  i wpis znika, ale chwila zapisu karty zostaje za wersją; wcześniejsze „Usuń pacjenta” z innego urządzenia, z chwilą
+  między dawną chwilą zapisu karty a przywróceniem, usuwa wtedy kartę na wszystkich urządzeniach. Okno: kilka operacji
+  magazynu i szyfrowania; zmierzone dla „Przywróć” (także przed PRZ0 — 228 przy przerwaniu po zapisie wersji zawsze),
+  z kodu wynika to samo dla innych zapisów dwuetapowych (wersja, potem nagłówek). Domknięcie (scalanie podnosi chwilę zapisu karty do najpóźniejszej zmiany jej wersji) —
+  osobny PR, do decyzji.
+- **Lista kosza po zmianie sesji tuż po ostatnim zapisie.** Wynik „przywrócono” bez powiadomienia; lista w Ustawieniach
+  pokazuje „Zaloguj się, aby zobaczyć kosz.”, a po ponownym zalogowaniu odświeża się dopiero po synchronizacji albo po
+  ponownym otwarciu sekcji.
+- **Flota mieszana** — wyżej: naprawa działa tylko na urządzeniu z nową aplikacją; „Przywróć” po „Odepnij i usuń”
+  z innego urządzenia, kliknięte na 228 albo 221, nadal gubi późniejszą poprawkę (PRZ-odp), a aktualizacja jej nie
+  cofa.
+- **Import pliku karty i „Scal kopię konta”** (`Bkz_poImporcie`): rejestr gwiazdki jak dotąd (przy tej samej gwiazdce
+  starsza chwila); stan „w karcie i w koszu” import pomija (wersje, które karta ma, R2-K1) — osobny PR.
+- **Przed kliknięciem (E1, E3).** Do „Przywróć” kosz P pokazuje starszą treść (23), a C może mieć w karcie 23 kg —
+  PR-E3.
+- **Ponowne przypięcie przy rozjeździe zegarów** po „Odepnij i usuń” z urządzenia z zegarem do przodu może przegrać
+  z odpięciem — jak D1 = C bez kosza.
+- **Wskaźnik zapisu formularza** (`vilda_save_status_indicator.js`): każde `onPatientSaved`, także z „Przywróć”,
+  oznacza niezapisane zmiany formularza jako zapisane, a strażnik niezapisanych zmian przestaje pytać. Tak jest od
+  dawna przy każdym zwykłym „Przywróć”; PRZ0 dokłada to zdarzenie przy pierwszym kliknięciu w stanach D5 = a (dotąd
+  dopiero przy drugim). Osobny PR (UI).
+
+**Wpływ kliniczny.** Jedno „Przywróć” wystarcza: wizyta wraca do kart na wszystkich urządzeniach z najnowszą treścią
+(np. poprawioną masą 78 kg), zamiast zostać w koszu na innych urządzeniach, zniknąć z ich kart (PRZ-nie-ostatnia) albo
+pokazywać tam starą masę 23 kg. Poprawka masy zrobiona przed „Odepnij i usuń” na innym urządzeniu nie przepada po
+„Przywróć” (PRZ-odp) — masa służy do dawkowania. Wizyta odpięta przez „Odepnij i usuń” wraca bez gwiazdki także wtedy,
+gdy w międzyczasie poprawiło ją urządzenie, które o gwiazdce nie wiedziało (D2 = a). Przerwane „Przywróć”, dokończone
+drugim kliknięciem przed synchronizacją, nie zostawia karty podatnej na wcześniejsze „Usuń pacjenta” z innego
+urządzenia; gdy synchronizacja przyjdzie pierwsza (domyślnie po odblokowaniu) — ograniczenie wyżej.
+
+**Walidacja.** Prawdziwy `vilda_vault.js`, sejfy w pamięci, sztuczny zegar, dane fikcyjne; dwie rundy
+przeglądu adwersarza z weryfikacją (zbieżność, klinika i sesja), mutacje, równoważność wobec 228, flota mieszana.
+- Katalog `polkrata-katalog` 31 × 8 = 248 przebiegów (wszystkie urządzenia nowe): oczekiwania 248 z 248 (31 z 31
+  scenariuszy w 8 z 8); zgodność z celem W3 (`cel.md` 3a + 3b) 184 z 200, 23 z 25 scenariuszy w 8 z 8 — poza E4a i E4b
+  (228: 176 z 200 i 22 z 25, poza E4a, E4b i PRZ0); zbieżnie 248, stabilnie 248, 0 zapisów w rundzie kontrolnej. Wobec
+  228: 0 przebiegów bez wizyty, która tam była; 8 innych widoków — wyłącznie PRZ-odp (78 zamiast 23 na trzech); po
+  pierwszym „Przywróć” wizyta w kartach na trzech w 32 przebiegach, w których 228 trzymała ją tylko w koszu na K (i na
+  C w 7 z 8; w PRZ-nie-ostatnia na trzech) (PRZ, PRZ-gw, PRZ-pg, PRZ-nie-ostatnia). Rozszerzony zestaw poza repozytorium (1268
+  przebiegów: 30 kolejności na każdy scenariusz trzech urządzeń i 12 scenariuszy dodatkowych): zbieżnie, stabilnie
+  i bez zapisów w rundzie kontrolnej wszystkie; wobec 228 różnice tylko w 210 przebiegach z „Przywróć” wizyty w karcie
+  i w koszu; wersja końcowa — 0 z 1268 różnic wobec wersji sprzed poprawek przeglądu (także pełny eksport).
+- Fuzz praw łączenia (`polkrata-prawa` 20 z 20; poza repozytorium F1 200, F2 200 z rozjazdem zegarów, F3 120
+  z „Przywróć” wizyt w karcie): te same niespełnione programy co na 228 (1, 8, 7 — istniejące wcześniej); różnice
+  wobec 228 tylko w programach z „Przywróć” wizyty w karcie i w koszu albo — przez rejestr gwiazdki — `rev`.
+- Fuzz zbieżności (poza repozytorium, P, K, C, 3200 programów z ziarnem i floty z 221 — 800): 0 wad, których 228 nie
+  ma; 228 ma wady, których tu nie ma, w 30 ziarnach.
+- Flota mieszana z 228 i 221 — liczby wyżej.
+- Mutanty `Bkz_przywroc`: 57 w pierwszej rundzie (46 zabitych testami zachowania, 9 równoważnych z uzasadnieniem, 2
+  przeżyły bez testu: lista kosza zapisywana równolegle w innej karcie w trakcie „Przywróć” i — usunięty poprawką —
+  rejestr gwiazdki ze starszą chwilą); mutanty poprawek przeglądu na kodzie końcowym — 7 (rejestr z chwilą, odmowa
+  przy nieczytelnej treści i jej warunek, nagłówek w „już w karcie”, kolejność zapisów, powiadomienie po zmianie
+  sesji) — każdy czerwieni swój test.
+- Testy PRZ0: `przywroc-z-karty` 27, `-flota` 32, `-sesja` 36 — wszystkie zielone; na 228: 79 czerwonych, 16 zielonych
+  (kontrole i przypadki, w których 228 daje ten sam wynik, w tym 8 wierszy floty z P na 221). Pliki testów sejfu związane z „Przywróć”, katalogiem i flotą: 23 pliki, 1214 z 1214 zielonych.
+- `npm test`: polityka repozytorium (2180 plików; bez dowiązania `node_modules` kopii roboczej), lint, składnia (1457
+  plików), testy jednostkowe — 558 plików, 15 802 z 15 802, `test:pro` — zielone. E2e (Chromium headless,
+  `--project=desktop-chromium --workers=1`): `kosz-zapisow`, `spojnosc-zapisow`, `polkrata-cien-indexeddb`,
+  `blokada-zapisu-wersji`, `sync-wlasciciel-wersji`, `jednorazowe-bez-przywracania`, `pwa-wersjonowane-klucze` —
+  34 z 34.
+
+**Kod.** `vilda_vault.js`: `Bkz_przywroc` (warunek „już w karcie”, wybór treści i gwiazdki, stempel, `rev`, kolejność
+zapisów, straż sesji); komentarz `Bkz_nowszaWersja`. Testy: `tests/unit/przywroc-z-karty.test.mjs`,
+`przywroc-z-karty-flota.test.mjs`, `przywroc-z-karty-sesja.test.mjs`; scenariusze PRZ, PRZ-gw, PRZ-pg, PRZ-odp,
+PRZ-nie-ostatnia w `tests/unit/s4d7-wspolne.mjs` i w katalogu; zmienione oczekiwania: `pozniejsza-poprawka-mutacje`
+(test A), strażniki źródła w `pozniejsza-poprawka` i `zmiana-w-karcie`.
+
+**Wersje** (`npm run podbij-wersje`). `vilda_vault.js` 228 → 229 (z nim odwołania w `vilda_chrome.js` 181 i `vilda_session_bridge.js` 103); SW 1.1.393 → **1.1.394**.
+
 ## Przypięta wizyta: półkrata łączenia nagrobków i gwiazdka z własną datą (P-KOSZ-POLKRATA, P-PRZYPIETA-POLKRATA, PR-S4, SW 1.1.388, `vilda_vault.js` 228, `vilda_kosz_zapisow.js` 4, 2026-10-22)
 
 **Zmiana kliniczna: tak** — wzory, progi, jednostki i interpretacje bez zmian; zmienia się, czy wizyta zostaje w karcie,
@@ -19453,7 +19670,7 @@ to `f612fe09`.
 - D10 = a — odcisk pól wpisu w lokalnym stanie nagrobka (cofnięcie wydania, stara karta przeglądarki);
 - D11 = a — kopia starszego sejfu w `tests/fixtures/` (dane testów floty mieszanej);
 - D5 (PRZ0), D6 (E4a), D7 (E3) — osobne PR, poza tym wpisem; kolejność: PR-S4 → PR-PRZ0 → PR-E4a → PR-E3, E3 przed
-  etapem 2 synchronizacji przyrostowej (etap 1 — serwer — równolegle).
+  etapem 2 synchronizacji przyrostowej (etap 1 — serwer — równolegle). *(Aktualizacja 2026-10-27, P-PRZYWROC-Z-KARTY: PR-PRZ0 — osobny wpis wyżej.)*
 
 **Do potwierdzenia przez właściciela (po panelu sędziów 2026-10-22; wykonawca wybrał wariant zgodny z decyzjami) —
 PRZYJĘTE 2026-10-27** (odpowiedź właściciela po scaleniu PR-S4, vildaclinic/vilda-calc#803: „akceptuję klinicznie;
@@ -19853,7 +20070,9 @@ złożony dostaje `rev` + 1, żeby starsza go przyjęła. Pomiar (katalog, jedno
   ODP 8/6/0, T4d 0/2/0, gwiazdka w koszu S5 0/1/0, reszta te same przebiegi co na `f612fe09` (S1, S1b, X3, S4r);
 - zapisy w rundzie kontrolnej 22/16/22 — tylko E4b i PRZ0 (`f612fe09` 60/60/60); bez pętli;
 - po aktualizacji starego urządzenia (3 rundy, 15 dni, 3 rundy) — dla 221 i 218 na P, K, C: 200 z 216 zbieżnie (widok
-  i stan pełny), rozjazd tylko E4b i PRZ0, 0 zapisów;
+  i stan pełny), rozjazd tylko E4b i PRZ0, 0 zapisów *(Aktualizacja 2026-10-27, P-PRZYWROC-Z-KARTY: rozjazd i zapisy PRZ0 znikają, gdy
+  „Przywróć” klika urządzenie z nową aplikacją — zmierzone z 221 i 228, 218 nie mierzone; flota mieszana — w tamtym
+  wpisie)*;
 - z opublikowaną przed S4 227 (pomiar 2026-10-27 po wydaniu, poza repozytorium: prawdziwy 227 obok 221, przypadki floty
   mieszanej z „Ograniczeń”, 8 kolejności; 221 odtwarza liczby tego wpisu): 11 z 13 przypadków jak z 221; R2-K2 i R2-K3
   z 227 lepiej — późniejsza poprawka zrobiona bez sieci zostaje, z gwiazdką (50* zamiast 37*/41*), bo 227 wybiera wersję
@@ -19884,7 +20103,7 @@ urządzeniu, w każdej kolejności, stan stabilny, 0 zapisów w rundzie kontroln
 | ODP: gwiazdka P → C; C odpina i przerzedza; P ze starą kopią | 8 × karta 23* | brak (8 z 8) |
 | D-7 T6: dwie poprawki K (31 kg), później gwiazdka P | 24 kg z gwiazdką | 31 kg z gwiazdką, r3 |
 Zgodność z celem W3 (`cel.md` 3a + 3b): 176 z 200 przebiegów, 22 z 25 scenariuszy w 8 z 8 — poza E4a, E4b i PRZ0
-(osobne PR); dotąd 106 z 200 i 10 z 25. `rev` rekordu złożonego = najwyższa + 1, więc S5, K10a, K10b, S6 mają `rev` o 1
+(osobne PR; *(Aktualizacja 2026-10-27, P-PRZYWROC-Z-KARTY: PRZ0 w 8 z 8)*); dotąd 106 z 200 i 10 z 25. `rev` rekordu złożonego = najwyższa + 1, więc S5, K10a, K10b, S6 mają `rev` o 1
 wyższą niż tabela 3b `cel.md` (r2, r3, r2, r1), a T4 — r3 zamiast r2; `rev` jest ta sama w każdej kolejności (dotąd K10b
 w 2 z 8 kolejności r1).
 
@@ -20117,7 +20336,8 @@ tak samo, od razu i na każdym urządzeniu (dotąd gwiazdka widoczna po imporcie
   (przypadkowa, zależna od kolejności synchronizacji), po zbiorze kart usuniętych (W3P) znika, gdy ten nagrobek
   przychodzi przed poprawką (W5P-1).
 - **Bez zmian:** E4a (poprawka sprzed „Scal pacjentów” w koszu ginie), E4b/E3 (rozjazd karty po „Scal pacjentów”, 12
-  zapisów na rundę), PRZ0 („Przywróć”, gdy wersja jest w karcie i w koszu), F2 (rozjazd zegarów ze starszą aplikacją).
+  zapisów na rundę), PRZ0 („Przywróć”, gdy wersja jest w karcie i w koszu; *(Aktualizacja 2026-10-27, P-PRZYWROC-Z-KARTY: zamknięte)*), F2
+  (rozjazd zegarów ze starszą aplikacją).
 
 **Nota wydania (D8 = a, uzupełniona po decyzjach 2, 4 i 5b z 2026-10-26, poprawiona 2026-10-27: Ustawienia nie pokazują
 numeru wersji — aktualizacja przez komunikat o nowej wersji; do wklejenia przy wydaniu).** „Przypięte wizyty mają
@@ -20138,7 +20358,7 @@ urządzeń, jak dotąd.”
 **Walidacja.** Prawdziwy `vilda_vault.js`, sejfy w pamięci, sztuczny zegar, dane fikcyjne; jeden proces testów naraz.
 - Katalog `cel.md` 27 × 8 = 216 przebiegów (wszystkie urządzenia nowe): zgodność z celem W3 176 z 200, 22 z 25
   scenariuszy w 8 z 8 (poza E4a, E4b, PRZ0 — osobne PR); zbieżnie 200 z 216 (rozjazd tylko E4b i PRZ0, jak na
-  `f612fe09`), stabilnie 216 z 216, 0 zapisów w rundzie kontrolnej (na `f612fe09` 60 w 14 przebiegach). Wobec
+  `f612fe09`; *(Aktualizacja 2026-10-27, P-PRZYWROC-Z-KARTY: katalog z wariantami PRZ — w tamtym wpisie)*), stabilnie 216 z 216, 0 zapisów w rundzie kontrolnej (na `f612fe09` 60 w 14 przebiegach). Wobec
   `f612fe09`: 12 przebiegów bez wizyty, która tam była — wyłącznie ODP (8) i T4d (4) (D2 = a); 10 odzysków, 48 innych
   widoków. Poprawki panelu nie zmieniają tu żadnego widoku ani `rev` (0 różnic wobec `1fcfa0d9`).
 - Flota mieszana (221 i 218 na P, K albo C, z aktualizacją i bez) — liczby w „Flota mieszana”; wobec `1fcfa0d9` różnice
@@ -21307,6 +21527,8 @@ wizyta 125 cm / 24 kg).
   treść, `rev` liczy przeniesienia „Scal pacjentów”); pełny remis — zostaje tutejsza, bez zapisu (PD-3). Reguła działa
   w scalaniu wersji tej samej karty (`Bsl_scalPacjenta`), w treści kosza (`Bkz_dolacz`, `Bkz_scalStart`, `Bkz_pomin`,
   `Bkz_scalKoniec`, `Bkz_opisPozniejszy`) i w „Przywróć” (zapis jest już w karcie w nowszej postaci, PD-8).
+  *(Aktualizacja 2026-10-27, P-PRZYWROC-Z-KARTY: „Przywróć” wybiera treść po chwili treści W3 (`Bpk_trescNowsza`), a „już w karcie” zapada tylko,
+  gdy wersję w karcie zmieniono po usunięciu i po przycięciu, a jej treść nie jest starsza niż treść kosza.)*
 - **R2, chwila zmiany poprawki zawsze późniejsza niż poprawiana wersja** (`Bpp_chwilaZmiany`, PD-4). Zwykle „teraz”;
   gdy zegar urządzenia jest za poprawianą wersją — o 1 ms i losowo 0–999 ms później niż ona (PD-4a; dwa takie
   urządzenia nie dają tej samej chwili i `rev`). Dotyczy poprawki w miejscu (okno pomiaru, gwiazdka, edycja i usunięcie
@@ -21421,7 +21643,9 @@ wizyta 125 cm / 24 kg).
   więc „Przywróć” odpowiada „już w karcie” i zdejmuje wpis kosza; przy następnej synchronizacji późniejsze usunięcie
   znów wygrywa na pozostałych urządzeniach (wersja zostaje w koszu, na tym urządzeniu — w karcie i w koszu). Treść nie
   ginie. Dotąd „Przywróć” zapisywało wtedy starszą treść z kosza z wyższą `rev`, gubiąc późniejszą poprawkę. Domknięcie
-  (zapis wersji z karty ze stemplem zamiast „już w karcie”) — osobny PR.
+  (zapis wersji z karty ze stemplem zamiast „już w karcie”) — osobny PR. *(Zamknięte 2026-10-27 w P-PRZYWROC-Z-KARTY:
+  „Przywróć” zapisuje wtedy nowszą z dwóch treści ze stemplem późniejszym niż usunięcie; na trzech urządzeniach karta
+  78, kosz pusty.)*
 - **E4a (K6, PD-16).** Poprawka w starej karcie PRZED scaleniami, potem kosz na urządzeniu, które scaliło → poprawka
   ginie wszędzie, jak dotąd. Osobny PR.
 - **Gwiazdka a retencja (K10, PD-12).** Gwiazdka, odpięcie i gwiazdka na P (`rev` 3), późniejsza poprawka na C, retencja
@@ -21907,7 +22131,9 @@ oraz delty na żywo; dane fikcyjne).
   z dwóch: dotychczasowej i chwili zmiany. Dotyczy to wszystkich dziewięciu dróg wyżej, w tym **wpisu historycznego
   z okna pomiaru**. Wersja dostaje `rev + 1` i nową chwilę zmiany (`updatedAtISO`) jak dotąd. Przy `preserveSavedAt` jej
   `savedAtISO` zostaje, czyli wersja nie zmienia miejsca w historii. Kliknięcie gwiazdki bez zmiany stanu i „Przywróć”
-  zapisu, który jest już w karcie (P-KOSZ-PRZYWROC-NOWSZA), niczego nie zapisują i daty nie podnoszą.
+  zapisu, który jest już w karcie (P-KOSZ-PRZYWROC-NOWSZA), niczego nie zapisują i daty nie podnoszą. *(Aktualizacja 2026-10-27, P-PRZYWROC-Z-KARTY: „już
+  w karcie” tylko w węższym przypadku; datę karty podnosi wtedy tylko, gdy przerwane wcześniejsze „Przywróć” zostawiło
+  ją za zapisaną wersją.)*
 - **R2, kosz (D-5 B).** Przeniesienie do kosza dowolnej wersji, także najnowszej, daje `lastSavedAtISO` = późniejsza
   z: dotychczasowej, chwili zapisu nowej najnowszej wersji i chwili usunięcia z nagrobka (`deletedAtISO`; ta sama
   chwila, bez drugiego odczytu zegara). Także wtedy, gdy wersję w międzyczasie usunęło scalanie.
@@ -23342,7 +23568,10 @@ tak samo, bo jej chwila zmiany była wcześniejsza niż zapisane usunięcie.
   treści kosza, nie `alreadyInCard`. Przywrócenie dostaje chwilę zmiany późniejszą niż treść kosza, wersja w karcie
   i usunięcie)* — „Przywróć” nie
   zapisuje treści z kosza. Zdejmuje tylko ten nieaktualny wpis kosza (nie późniejsze usunięcie tego zapisu) i zwraca
-  `{ alreadyInCard: true }`. Karta, nagłówek i powiadomienie o zapisie bez zmian.
+  `{ alreadyInCard: true }`. Karta, nagłówek i powiadomienie o zapisie bez zmian. *(Aktualizacja 2026-10-27, P-PRZYWROC-Z-KARTY: tylko, gdy wersję
+  zmieniono po usunięciu i po przycięciu, a jej treść nie jest starsza niż treść kosza; nagłówek karty nadrabiany po
+  przerwanym przywróceniu; inaczej zapis nowszej treści ze stemplem — także gdy wersja w karcie jest nowsza, ale
+  usunięcie z innego urządzenia późniejsze.)*
 - W pozostałych przypadkach jak dotąd; rewizja przywróconej wersji jest wyższa od obu (z kosza i z karty, jeśli tam jest).
 - Historia wersji karty i „Cofnij” w sprawdzeniu spójności mówią wtedy: „Ten zapis jest już w karcie w nowszej postaci —
   usunięto go z kosza.”. Kosz w Ustawieniach — jak przy zwykłym przywróceniu: wpis znika z listy.
@@ -24522,7 +24751,9 @@ usunięciu, więc nie przechowuje stanu sprzed niego.
   2026-10-22, D2 = a: „Odepnij i usuń” zapisuje odpięcie przed koszem, więc zapis wraca bez przypięcia; wersja przypięta
   pokonana koszem z innego urządzenia — z przypięciem)*; nagłówek karty z najnowszej wersji. *(Aktualizacja
   2026-10-07, P-KOSZ-PRZYWROC-NOWSZA: zapis, który jest już w karcie w nowszej postaci, nie jest nadpisywany — „Przywróć”
-  zdejmuje wtedy tylko wpis kosza.)*
+  zdejmuje wtedy tylko wpis kosza.)* *(Aktualizacja 2026-10-27, P-PRZYWROC-Z-KARTY: gdy usunięcie jest późniejsze niż zmiana w karcie albo treść kosza
+  nowsza — zapis nowszej treści ze stemplem; gwiazdka z najpóźniejszego rejestru, z jego chwilą; nowe kody błędu
+  `nieczytelny` i `SESSION_CHANGED`.)*
 - Synchronizacja: `exportSyncPayload` niesie `snapshotTombstones` (treść jawna wewnątrz ładunku szyfrowanego kluczem sync);
   `mergeSyncPayload` pomija wersje z ładunku, które przegrywają z nagrobkiem, usuwa je lokalnie, przebudowuje nagłówki
   dotkniętych kart i zwraca `trashedSnapshotCount`.
