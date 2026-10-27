@@ -25,7 +25,7 @@
 (function (w) {
   'use strict';
 
-  var VERSION = '3';
+  var VERSION = '4';
 
   /* ── czyste funkcje (mierzalne bez przeglądarki) ─────────────────────────────── */
 
@@ -51,6 +51,35 @@
   /* ── pamięć rekordu (jak w vilda_perinatal_source.js) ────────────────────────── */
 
   var zapamietane = null;
+  var potwierdzonyPacjent = null;
+  var oczekiwanyPacjent = null;
+  var statusOdczytu = 'idle';
+  var ostatniStan = '';
+  var podlaczonySejf = null;
+  var odswiez = null;
+
+  // Ownership/readiness is presentation metadata. Existing calculators keep
+  // using maFlage()/populacja(); charts can wait for the correct patient's read.
+  function getState() {
+    return { patientId: oczekiwanyPacjent, status: statusOdczytu, population: populacja() };
+  }
+
+  function oglosStan() {
+    var stan = getState(), podpis = JSON.stringify(stan);
+    if (podpis === ostatniStan) return;
+    ostatniStan = podpis;
+    try {
+      if (w.document && typeof w.document.dispatchEvent === 'function' && typeof w.CustomEvent === 'function') {
+        w.document.dispatchEvent(new w.CustomEvent('vilda:ds-source-state', { detail: stan }));
+      }
+    } catch (_) { /* no presentation consumer */ }
+  }
+
+  function ustawStan(patientId, status) {
+    oczekiwanyPacjent = patientId || null;
+    statusOdczytu = status;
+    oglosStan();
+  }
 
   /* Wspólny sygnał zmiany źródeł pacjenta (vilda_zrodla_pacjenta.js). Odczyt rekordu z
    * sejfu jest asynchroniczny, a strona nie miała powodu policzyć się drugi raz — stąd
@@ -72,7 +101,10 @@
   }
 
   function zapomnij() {
+    generacjaOdczytu += 1;
     zapamietane = null;
+    potwierdzonyPacjent = null;
+    ustawStan(null, 'idle');
     oglos();
   }
 
@@ -95,19 +127,49 @@
    * nowszego (ta sama zasada co w vilda_puberty_source.js). */
   var generacjaOdczytu = 0;
 
+  function wybranyPacjent() {
+    var id = null;
+    try { if (w.sessionStorage) id = w.sessionStorage.getItem('vildaCurrentPatientId'); } catch (_) { /* legacy frame */ }
+    return id || w._vildaCurrentPatientId || null;
+  }
+
+  function podepnijSejf(V) {
+    if (!V || V === podlaczonySejf) return;
+    podlaczonySejf = V;
+    if (typeof V.onLock === 'function') V.onLock(function () {
+      if (podlaczonySejf === V) zapomnij();
+    });
+  }
+
   function wczytaj(patientId) {
     var V = w.VildaVault;
     if (!patientId || !V || typeof V.isUnlocked !== 'function' || !V.isUnlocked()
       || typeof V.getPatient !== 'function') return;
+    podepnijSejf(V);
     var generacja = ++generacjaOdczytu;
+    var zachowaj = statusOdczytu === 'ready' && potwierdzonyPacjent === patientId;
+    if (!zachowaj) ustawStan(patientId, 'pending');
     try {
       V.getPatient(patientId).then(function (rec) {
-        if (generacja !== generacjaOdczytu) return;
+        var wybrany = wybranyPacjent();
+        if (generacja !== generacjaOdczytu || podlaczonySejf !== V || !V.isUnlocked()
+          || wybrany && wybrany !== patientId) return;
         var snap = rec && Array.isArray(rec.snapshots) && rec.snapshots.length
           ? rec.snapshots[0] : null;
-        zapamietaj(snap && snap.payload ? snap.payload : null);
-      }).catch(function () { /* rekord nieczytelny — zostaje to, co bylo */ });
-    } catch (e) { /* vault odmowil — jak wyzej */ }
+        if (!snap || !snap.payload || typeof snap.payload !== 'object'
+          || rec.patientId && rec.patientId !== patientId) {
+          if (!zachowaj) ustawStan(patientId, 'error');
+          return;
+        }
+        zapamietaj(snap.payload);
+        potwierdzonyPacjent = patientId;
+        ustawStan(patientId, 'ready');
+      }).catch(function () {
+        if (generacja === generacjaOdczytu && !zachowaj) ustawStan(patientId, 'error');
+      });
+    } catch (e) {
+      if (generacja === generacjaOdczytu && !zachowaj) ustawStan(patientId, 'error');
+    }
   }
 
   function podepnij() {
@@ -129,12 +191,8 @@
     /* P-ZRODLA-PRZEJECIE (2026-10-06, uwaga Codex P1 do #491): bieżący pacjent to pacjent sesji
      * karty. Ramki powłoki app.html dzielą sessionStorage, a własna zmienna ramki potrafi jeszcze
      * wskazywać poprzedniego pacjenta (P-POWLOKA-ID); zmienna ramki zostaje, gdy sesja go nie zna. */
-    var odswiez = function () {
-      var id = null;
-      try {
-        if (w.sessionStorage) id = w.sessionStorage.getItem('vildaCurrentPatientId');
-      } catch (e) { /* brak dostepu do sessionStorage */ }
-      if (!id) id = w._vildaCurrentPatientId || null;
+    odswiez = function () {
+      var id = wybranyPacjent();
       if (id) wczytaj(id);
     };
     doc.addEventListener('vilda:auth-hidden', odswiez);
@@ -173,6 +231,8 @@
     zapamietaj: zapamietaj,
     zapomnij: zapomnij,
     maFlage: maFlage,
-    populacja: populacja
+    populacja: populacja,
+    getState: getState,
+    retry: function () { if (typeof odswiez === 'function') odswiez(); }
   };
 }(typeof window !== 'undefined' ? window : this));

@@ -193,12 +193,14 @@ Nie wolno przenosić pola między pamięcią sesji, pamięcią trwałą i danymi
   Rzeczywista aktywność w dialogu korzysta z `VildaAuthUI.recordActivity` obu
   dokumentów. Automatyczny render, resize i scroll nie podtrzymują sesji.
 
+Dla populacji DS migawka niesie `source: 'DS'` oraz odrębne `requestedSource` z preferencją OLAF/Palczewska/WHO. Populacja jest częścią tożsamości migawki. `VildaDsSource.getState()` udostępnia potwierdzoną osobę, gotowość i populację; sygnał `vilda:ds-source-state` kończy oczekiwanie adaptera. Nowy właściciel czeka na odczyt rozpoznania, a odświeżenie tej samej potwierdzonej osoby zachowuje podgląd. Błąd odczytu nowej osoby nie dopuszcza siatki poprzedniej; ponowienie korzysta z natywnego źródła. `VildaDsCentileModels.build()` udostępnia model istniejącego generatora Zemel 2015 bez tworzenia płótna, więc zarówno SVG, jak i pełny ekran korzystają z tych samych krzywych. Brak danych DS nie uruchamia źródła populacji ogólnej. Wzrosty rodziców pozostają tekstem; znacznik MPH nie jest nanoszony na siatkę DS. Kontrakt kliniczny i zakresy: P-DS-LIVE w `docs/clinical/ALGORITHMS.md`.
+
 Podgląd nie tworzy pełnych grafik ani nie przygotowuje ich w czasie bezczynności.
 Dopiero jawne powiększenie uruchamia `render` z `deferContentBounds`, a potem
 `prepareContentBounds` wyznacza dokładne marginesy przez małe odczyty pikseli.
 Przycisk wcześniej pokazuje stan przygotowywania. Dialog otwiera kompletny
 zestaw, więc skala nie zmienia się w trakcie jego animacji. Pełny widok zachowuje
-wszystkie krzywe, zakresy, adnotacje, MPH i rodziców. Zmiany zatwierdzone przy
+wszystkie krzywe, zakresy, adnotacje, rodziców oraz MPH tam, gdzie ma interpretację dla wybranej populacji. Zmiany zatwierdzone przy
 otwartym dialogu przygotowują komplet zastępczych grafik, zachowując poprzednie
 do zakończenia przycinania. Zamknięcie przywraca SVG jeszcze przed odsłonięciem
 karty i zwalnia pełne płótna; ponowne powiększenie tworzy je na żądanie.

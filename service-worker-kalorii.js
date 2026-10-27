@@ -19,7 +19,7 @@
  *   bo i tak chcemy zwracać HTML z cache natychmiast.
  */
 
-const SW_VERSION = '1.1.391';
+const SW_VERSION = '1.1.392';
 const CACHE_PREFIX = 'pwa-kalorii';
 const SHELL_CACHE = `${CACHE_PREFIX}-shell-v${SW_VERSION}`;
 const RUNTIME_CACHE = `${CACHE_PREFIX}-runtime`;
@@ -1897,8 +1897,10 @@ const CORE_SHELL_URLS = [
   '/vilda_down_syndrome.js?v=5',
   '/inline_index_05.js?v=4',
   '/inline_index_05.js?v=5',
+  '/inline_index_05.js?v=6',
   '/inline_docpro_03.js?v=2',
   '/inline_docpro_03.js?v=3',
+  '/inline_docpro_03.js?v=4',
   '/vilda_down_syndrome.js',
   '/vilda_down_syndrome.js?v=1',
   '/vilda_anorexia_risk.js',
@@ -2120,6 +2122,7 @@ const OPTIONAL_DOCUMENTS = [
 const OPTIONAL_ASSETS = [
   '/vilda_patient_documents.js?v=1',
   '/vilda_patient_documents.css?v=1',
+  '/vilda_patient_documents.css?v=2',
   '/vilda_summary_layout.js?v=1',
   // Read-only new-measurement preview (Start / DocPro / fullscreen shell).
   '/vilda_centile_live_panel.css?v=1',
@@ -2135,10 +2138,12 @@ const OPTIONAL_ASSETS = [
   '/vilda_centile_live_data.js?v=4',
   '/vilda_centile_live_data.js?v=5',
   '/vilda_centile_live_data.js?v=6',
+  '/vilda_centile_live_data.js?v=7',
   '/vilda_centile_live_render.js?v=1',
   '/vilda_centile_live_render.js?v=2',
   '/vilda_centile_live_render.js?v=3',
   '/vilda_centile_live_render.js?v=4',
+  '/vilda_centile_live_render.js?v=5',
   '/vilda_centile_live_preview.js?v=1',
   '/vilda_centile_live_preview.js?v=2',
   '/vilda_centile_live_colors.js?v=1',
@@ -2154,6 +2159,7 @@ const OPTIONAL_ASSETS = [
   '/vilda_centile_live_view.js?v=1',
   '/vilda_centile_live_view.js?v=2',
   '/vilda_centile_live_view.js?v=3',
+  '/vilda_centile_live_view.js?v=4',
   '/vilda_centile_live_host.js?v=1',
   '/vilda_centile_live_panel.js?v=1',
   '/vilda_centile_live_panel.js?v=2',
@@ -2667,6 +2673,7 @@ const OPTIONAL_ASSETS = [
   '/inline_index_03.js?v=14',
   '/inline_index_03.js?v=15',
   '/inline_index_03.js?v=16',
+  '/inline_index_03.js?v=17',
   '/vilda_diet_recommendations.js?v=5',
   '/vilda_diet_recommendations.js?v=6',
   '/vilda_diet_recommendations.js?v=7',
@@ -2899,6 +2906,7 @@ const OPTIONAL_ASSETS = [
   '/vilda_ds_source.js?v=2',
   '/vilda_ds_source.js?v=3',
   '/vilda_ds_source.js?v=4',
+  '/vilda_ds_source.js?v=5',
   '/vilda_b64_checklist_ui.js?v=2',
   '/vilda_b64_checklist_ui.js?v=3',
   '/vilda_b64_checklist_ui.js?v=4',
