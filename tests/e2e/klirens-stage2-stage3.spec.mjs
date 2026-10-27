@@ -373,7 +373,12 @@ test('pH drugiego porannego moczu nie jest zaokrąglane wstecz przez próg dRTA'
 
   const stone = page.locator('#stoneInfo');
   await expect(stone).toContainText(/pH\s*czasowej\s*zbiórki:\s*>6[.,]20/);
-  await expect(stone).toContainText(/pH\s*próbki\s*moczu:\s*>5[.,]80/);
+  // The audited single-sample card preserves every entered decimal instead of
+  // substituting the former >5.80 boundary label from the separate EAU context.
+  const spotPh = stone.locator('.clcr-result-card[data-clcr-series="pH_spot"]');
+  await expect(spotPh).toHaveAttribute('data-clcr-value', '5.8004');
+  await expect(spotPh).toHaveAttribute('data-clcr-display-value', '5,8004');
+  await expect(spotPh.locator('.clcr-result-value')).toHaveText('5,8004');
   await expect(stone).toContainText('spełniają przesiewowy wzorzec EAU');
 });
 

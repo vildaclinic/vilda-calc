@@ -246,6 +246,8 @@ test('przelicza cystynę w spójnych jednostkach i nie stawia rozpoznania', asyn
   await expect(page.locator('#stoneInfo')).not.toContainText('Cystynuria');
   await expect(page.locator('#stoneInfo')).not.toContainText('pH próbki moczu');
   await expect(page.locator('#stoneInfo')).not.toContainText('pH dobowej zbiórki');
+  await expect(page.locator('#stoneInfo [data-clcr-series="pH_spot"]')).toHaveCount(0);
+  await expect(page.locator('#stoneInfo [data-clcr-series="pH24"]')).toHaveCount(0);
   await expect(page.locator('#stoneInfo .out-of-range')).toHaveCount(0);
 });
 
