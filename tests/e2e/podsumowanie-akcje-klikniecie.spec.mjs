@@ -1,17 +1,9 @@
 import { expect, test } from '../support/test-czas.mjs';
+import { openPatientDocuments, DOCUMENTS_BUTTON, DOCUMENTS_DIALOG, DOCUMENTS_COPY } from '../support/patient-documents-ui.mjs';
 
-// Przyciski akcji w karcie „Podsumowanie wyników" — „Raport PDF dla pacjenta"
-// i „Kopiuj opis pacjenta" — gubiły PIERWSZE kliknięcie wykonane zaraz po wpisaniu
-// wartości do formularza.
-//
-// Mechanizm: `mousedown` odbiera fokus polu (masa/wzrost/wiek) → `blur` przelicza kartę
-// → `attachPatientReportActionToSummaryCard` kasowało wrapper `.current-summary-actions`
-// i budowało nowy → `mouseup` trafiał w INNY węzeł niż `mousedown`, więc przeglądarka
-// nie składała zdarzenia `click`. Dla lekarza wyglądało to jak martwy przycisk: klik,
-// i nic. Drugie kliknięcie działało, bo wtedy fokus był już zdjęty.
-//
-// Ten plik mierzy zachowanie na prawdziwej stronie, w układzie, w którym błąd występuje:
-// wartość wpisana w pole, kursor nadal w polu, jedno kliknięcie w przycisk.
+// Regresja pierwszego kliknięcia po edycji formularza: mousedown → blur
+// przelicza podsumowanie. Nowe wejście „Dokumenty pacjenta” ma przeżyć ten cykl
+// jako ten sam węzeł i otworzyć panel bez drugiego kliknięcia.
 test.use({ serviceWorkers: 'block' });
 
 const HASLO = 'E2e#AkcjeKlik!26aa';
@@ -63,67 +55,56 @@ async function popawMaseIZostawFokus(page) {
   )).toBe('weight');
 }
 
-const pdfBtn = (page) => page.locator('.current-summary-actions [data-patient-report-pdf-btn]');
-const opisBtn = (page) => page.locator('.current-summary-actions [data-patient-narrative-copy-btn]');
-const modal = (page) => page.locator('#patientReportPdfChoiceBackdrop');
+const menuBtn = (page) => page.locator(DOCUMENTS_BUTTON);
+const modal = (page) => page.locator(DOCUMENTS_DIALOG);
 
-test.describe('Karta podsumowania — pierwsze kliknięcie po wpisaniu wartości', () => {
-  test('„Raport PDF dla pacjenta" reaguje na PIERWSZE kliknięcie', async ({ page }) => {
+test.describe('Dokumenty pacjenta — pierwsze kliknięcie po wpisaniu wartości', () => {
+  test('menu reaguje na PIERWSZE kliknięcie i udostępnia wybór raportu', async ({ page }) => {
     await otworzPro(page);
-    await expect(pdfBtn(page)).toBeVisible({ timeout: 20000 });
+    await expect(menuBtn(page)).toBeVisible({ timeout: 20000 });
     await popawMaseIZostawFokus(page);
 
-    await pdfBtn(page).click();
-    await expect(modal(page), 'jedno kliknięcie ma otworzyć wybór raportu').toBeVisible({ timeout: 10000 });
+    await menuBtn(page).click();
+    await expect(modal(page), 'jedno kliknięcie ma otworzyć Dokumenty pacjenta').toBeVisible({ timeout: 10000 });
+    await expect(modal(page).locator('input[name="patientReportPdfChoice"][value="visit"]')).toBeChecked();
   });
 
   test('kontrola pozytywna: kliknięcie bez fokusu w polu działa jak dotąd', async ({ page }) => {
     await otworzPro(page);
-    await expect(pdfBtn(page)).toBeVisible({ timeout: 20000 });
+    await expect(menuBtn(page)).toBeVisible({ timeout: 20000 });
     await popawMaseIZostawFokus(page);
-    // Zdjęcie fokusu przed kliknięciem to ścieżka, która działała także przed naprawą —
-    // pilnuje, żeby poprawka niczego w niej nie zepsuła.
     await page.evaluate(() => document.activeElement && document.activeElement.blur());
 
-    await pdfBtn(page).click();
+    await menuBtn(page).click();
     await expect(modal(page)).toBeVisible({ timeout: 10000 });
   });
 
-  test('„Kopiuj opis pacjenta" też reaguje na pierwsze kliknięcie', async ({ page }) => {
+  test('pierwsze kliknięcie udostępnia opis wraz z przyczyną braku historii', async ({ page }) => {
     await otworzPro(page);
-    await expect(opisBtn(page)).toBeVisible({ timeout: 20000 });
+    await expect(menuBtn(page)).toBeVisible({ timeout: 20000 });
     await popawMaseIZostawFokus(page);
 
-    await opisBtn(page).click();
-    // Bez historii pomiarów opis nie powstanie — liczy się to, że KLIKNIĘCIE DOSZŁO,
-    // czyli że pojawia się jakikolwiek komunikat z obsługi przycisku.
-    await expect(page.locator('#vildaDymek'))
-      .toBeVisible({ timeout: 10000 });
+    await openPatientDocuments(page);
+    await expect(page.locator(DOCUMENTS_COPY)).toBeVisible();
+    await expect(page.locator(DOCUMENTS_COPY)).toBeDisabled();
+    await expect(modal(page).locator('[data-patient-documents-copy-reason]')).toContainText('co najmniej dwóch pomiarów');
+    expect(await page.evaluate(() => window.__schowek)).toBeUndefined();
   });
 
-  test('wrapper akcji nie jest przebudowywany przy każdym przeliczeniu karty', async ({ page }) => {
+  test('wejście w menu nie jest przebudowywane przy każdym przeliczeniu karty', async ({ page }) => {
     await otworzPro(page);
-    await expect(pdfBtn(page)).toBeVisible({ timeout: 20000 });
+    await expect(menuBtn(page)).toBeVisible({ timeout: 20000 });
 
-    // Znakujemy węzeł przycisku; po przeliczeniu karty ma to być TEN SAM węzeł.
-    await page.evaluate(() => {
-      document.querySelector('[data-patient-report-pdf-btn]').dataset.znacznikTestu = 'przed';
-    });
+    await menuBtn(page).evaluate(button => { button.dataset.znacznikTestu = 'przed'; });
     await page.fill('#weight', '20.7');
-    await page.evaluate(() => document.activeElement && document.activeElement.blur());
+    await page.locator('#weight').blur();
     await page.fill('#weight', '21');
-    await page.evaluate(() => document.activeElement && document.activeElement.blur());
+    await page.locator('#weight').blur();
 
-    const stan = await page.evaluate(() => {
-      const btny = document.querySelectorAll('[data-patient-report-pdf-btn]');
-      return {
-        ile: btny.length,
-        tenSamWezel: btny[0] ? btny[0].dataset.znacznikTestu === 'przed' : false,
-        wrappery: document.querySelectorAll('.current-summary-actions').length,
-      };
-    });
-    expect(stan.ile, 'jeden przycisk PDF, nie duplikaty').toBe(1);
-    expect(stan.wrappery, 'jeden wrapper akcji').toBe(1);
-    expect(stan.tenSamWezel, 'przycisk przeżywa przeliczenie karty jako ten sam węzeł').toBe(true);
+    await expect(menuBtn(page), 'jedno wejście desktopowe, nie duplikaty').toHaveCount(1);
+    await expect(menuBtn(page), 'przycisk przeżywa przeliczenie jako ten sam węzeł').toHaveAttribute('data-znacznik-testu', 'przed');
+    await expect(page.locator('.current-summary-actions'), 'stopka nie odrasta po przeliczeniu').toHaveCount(0);
+    await openPatientDocuments(page);
+    await expect(page.locator(DOCUMENTS_DIALOG)).toHaveCount(1);
   });
 });

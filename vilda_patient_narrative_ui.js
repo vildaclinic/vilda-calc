@@ -317,8 +317,13 @@
   // ukryte pole tekstowe + execCommand. Pole jest zdejmowane natychmiast — opis nie
   // zostaje w DOM.
 
-  function kopiujPrzezPole(t) {
-    var doc = w.document;
+  function kopiujPrzezPole(t, options) {
+    if (options && typeof options.isCurrent === 'function' && !options.isCurrent()) return false;
+    // A shell-hosted documents dialog makes its source iframe inert. Place only
+    // the temporary fallback textarea inside that dialog; text processing and
+    // native Clipboard API remain the same.
+    var host = options && options.clipboardHost;
+    var doc = host && host.ownerDocument || w.document;
     var ta = doc.createElement('textarea');
     ta.value = t;
     ta.setAttribute('readonly', '');
@@ -326,7 +331,7 @@
     ta.style.position = 'fixed';
     ta.style.left = '-9999px';
     ta.style.top = '0';
-    doc.body.appendChild(ta);
+    (host || doc.body).appendChild(ta);
     var ok;
     try {
       ta.focus();
@@ -348,15 +353,15 @@
     return S && typeof S.dlaSystemuSzpitalnego === 'function' ? S.dlaSystemuSzpitalnego(t) : t;
   }
 
-  function kopiuj(t) {
+  function kopiuj(t, options) {
     t = tekstDlaHis(t);
     var nav = w.navigator;
     if (nav && nav.clipboard && typeof nav.clipboard.writeText === 'function') {
       return nav.clipboard.writeText(t).then(function () { return true; }, function () {
-        return kopiujPrzezPole(t);
+        return kopiujPrzezPole(t, options);
       });
     }
-    return Promise.resolve(kopiujPrzezPole(t));
+    return Promise.resolve(kopiujPrzezPole(t, options));
   }
 
   // ── Komunikat ────────────────────────────────────────────────────────────────
@@ -370,13 +375,13 @@
   }
 
   // Kliknięcie: zloz, skopiuj, zamelduj. Zwraca obietnice — dla testow.
-  function copyCurrent() {
+  function copyCurrent(options) {
     var opis = describeCurrent();
     if (!opis.text) {
       komunikat(opis.reason);
       return Promise.resolve({ ok: false, reason: opis.reason });
     }
-    return kopiuj(opis.text).then(function (ok) {
+    return kopiuj(opis.text, options).then(function (ok) {
       if (ok) {
         komunikat('Opis pacjenta skopiowano do schowka (' + opis.sentences.length + ' zd.).');
         return { ok: true, text: opis.text };
