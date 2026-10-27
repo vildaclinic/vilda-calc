@@ -131,3 +131,7 @@ html.vilda-centile-live-reserved #vildaCentileLiveMount+#currentSummaryWrap{marg
   .vilda-centile-live-card--fullscreen.vilda-centile-live-card--dual .vilda-centile-live-deck{grid-template-columns:minmax(0,1fr);grid-template-rows:repeat(2,minmax(0,1fr))}
   .vilda-centile-live-card--fullscreen.vilda-centile-live-card--dual .vilda-centile-live-pane+.vilda-centile-live-pane{border-left:0;border-top:var(--border-hairline) solid #e3ece7}
 }
+
+/* A previous-measurement read can finish after form/chart restoration. Do not
+   expose the standalone summary until that native read confirms absence. */
+html.vilda-summary-comparison-reserved #currentSummaryWrap{display:none!important}

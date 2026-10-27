@@ -10,8 +10,10 @@ import { createFictionalVault, loadPatient, readyForPatient, shellFrame, NOTE_A 
 test.use({ serviceWorkers: 'allow' });
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const resourceNames = [
-  'vilda_centile_live_colors.js', 'vilda_summary_tabs.js',
-  'vilda_professional_summary.js', 'vilda_professional_summary.css',
+  'app.js', 'inline_index_04.js',
+  'vilda_centile_live_colors.js', 'vilda_summary_tabs.js', 'vilda_summary_cards.js',
+  'vilda_professional_summary_rules.js', 'vilda_professional_summary.js', 'vilda_professional_summary.css',
+  'vilda_trajectory_analysis.js',
   'vilda_centile_live_data.js', 'vilda_centile_live_render.js', 'vilda_centile_live_preview.js', 'vilda_centile_live_view.js',
   'vilda_centile_live_host.js', 'vilda_centile_live_panel.js', 'vilda_centile_live_panel.css',
   'vilda_save_feedback.js', 'vilda_save_feedback.css',
@@ -125,6 +127,27 @@ async function assertPanelAndFullscreen(page, frame, patientId) {
   if (frame !== page) await expect(frame.locator('#vildaSaveFeedback')).toHaveCount(0);
 }
 
+async function assertSummaryOffline(frame, patientId) {
+  await loadPatient(frame, patientId, 'restore', { clear: true });
+  const card = frame.locator('#currentSummaryCard');
+  await expect(card).toBeVisible();
+  await expect(card.locator('.professional-summary-chip')).toHaveCount(0);
+  await expect(card.locator('.pro-summary-label')).toBeHidden();
+  const main = card.locator('.professional-summary-main');
+  await expect(main.locator('[data-summary-key]')).toHaveCount(10);
+  const prediction = main.locator('[data-summary-key="prediction"]');
+  await expect(prediction).toHaveAttribute('data-reference-age-months', '216');
+  await expect(prediction.locator('.professional-summary-reference')).toContainText(/centyl.*18 lat/);
+  expect(Number(await prediction.getAttribute('data-reference-percentile'))).toBeGreaterThan(0);
+  expect(await main.locator('[data-summary-key="bsa"]').evaluate(el => getComputedStyle(el).color)).toBe('rgb(38, 63, 69)');
+  await expect(main.locator('[data-summary-key="velocity-sds"]')).not.toHaveAttribute('data-assessment', 'unassessed');
+  const data = await frame.evaluate(() => window.VildaSummaryCards.getAssessmentData());
+  expect(Number.isFinite(data.velocity.sds)).toBe(true);
+  expect(data.predictions.some(item => Number.isFinite(item.cm))).toBe(true);
+  await frame.getByRole('tab', { name: 'Siatka centylowa', exact: true }).click();
+  await expect(frame.locator('#vildaSummaryChartPanel svg.vilda-centile-live-preview')).toBeVisible();
+}
+
 // Real installation + cold browser restart + stopped origin. The first visits to
 // index/DocPro/app all happen offline, with a real encrypted, purely fictional vault.
 test('new centile modules, annotated canvases and parent fullscreen survive a cold offline restart', async ({ playwright, browserName, launchOptions }) => {
@@ -158,6 +181,7 @@ test('new centile modules, annotated canvases and parent fullscreen survive a co
     expect(indexResources.map((entry) => entry.url.split('?')[0].slice(1)).sort())
       .toEqual(resourceNames.filter((name) => name !== 'docpro_state_persist.js').sort());
     await assertOfflineResources(page, indexResources, responses);
+    await test.step('index offline: summary B includes typed velocity SDS and 18-year prediction assessment', () => assertSummaryOffline(page, ids.a));
     await test.step('index offline: annotated panel, both charts and fullscreen', () => assertPanelAndFullscreen(page, page, ids.a));
 
     responses.clear();
@@ -177,7 +201,7 @@ test('new centile modules, annotated canvases and parent fullscreen survive a co
     await readyForPatient(frame);
     const shellResources = resourcesFor('app.html');
     expect(shellResources.map((entry) => entry.url.split('?')[0].slice(1)).sort())
-      .toEqual(['vilda_auth_ui.js', 'vilda_centile_live_host.js', 'vilda_centile_live_panel.css', 'vilda_html.js', 'vilda_save_feedback.css', 'vilda_save_feedback.js']);
+      .toEqual(['vilda_auth_ui.js', 'vilda_centile_live_host.js', 'vilda_centile_live_panel.css', 'vilda_html.js', 'vilda_save_feedback.css', 'vilda_save_feedback.js', 'vilda_trajectory_analysis.js']);
     await assertOfflineResources(page, shellResources, responses);
     await test.step('app shell offline: fullscreen covers the parent viewport', () => assertPanelAndFullscreen(page, frame, ids.a));
     expect(await page.evaluate(() => new URL(navigator.serviceWorker.controller.scriptURL).pathname)).toBe('/service-worker-kalorii.js');

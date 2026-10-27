@@ -74,11 +74,11 @@ const PREFIKS = 'Prognoza wzrostu ostatecznego';
 
 // Wiersze WIDOCZNE od razu — z pominięciem tych w rozwijanym bloku.
 const wierszeGlowne = (page) => page.evaluate(() => Array.from(
-  document.querySelectorAll('#currentSummaryContent .professional-summary-main .current-summary-row'),
+  document.querySelectorAll('#currentSummaryContent .professional-summary-main .current-summary-row .professional-summary-value'),
 ).map((el) => (el.textContent || '').trim()));
 
 const wierszeUkryte = (page) => page.evaluate(() => Array.from(
-  document.querySelectorAll('#currentSummaryContent .professional-summary-extras [data-summary-key="prediction"]'),
+  document.querySelectorAll('#currentSummaryContent .professional-summary-extras [data-summary-key="prediction"] .professional-summary-value'),
 ).map((el) => (el.textContent || '').trim()));
 
 const blok = (page) => page.locator('#currentSummaryContent .professional-summary-extras');

@@ -7834,6 +7834,129 @@ wzorów, norm, kategorii, progów, wartości, zapisu i eksportu. Przykłady
 regresyjne wywołują produkcyjne moduły na fikcyjnych danych, w tym pojedynczy
 punkt, wcześniejszy zapis bez przyszłych pomiarów i zmianę źródła.
 
+#### Wariant B — czytelność i ocena SDS tempa oraz prognozy (2026-10-26)
+
+**Decyzja właściciela.** Po makiecie desktopowej i mobilnej właściciel wybrał
+wariant B, usunięcie chipów interpretacji oraz poniższe reguły kolorów SDS tempa
+i prognozy; następnie polecił ich wdrożenie. Ta sekcja zastępuje wcześniejsze
+ustalenie o szarym SDS tempa i prognozie w karcie GROWTH-SUMMARY-TABS.
+
+**Wygląd i zakres.** Karta dziecka na Start i DocPro zachowuje kolejność wyników
+oraz zakładki. Wiersze mają równe wcięcie i mały odstęp, także pomiędzy kilkoma
+czerwonymi wynikami. Wynik oceniony jako prawidłowy ma turkusowy tekst i blade
+turkusowe tło. Parametr bez osobnej oceny, np. powierzchnia ciała, ma ciemny,
+czytelny tekst; szarość oznacza brak danych. Chipy nie zajmują miejsca przy
+wartościach, a opis oceny pozostaje dostępny w podpowiedzi i dla czytnika ekranu.
+PRO znika z tej karty i zwalnia miejsce zakładkom. Zmiana nie obejmuje znaczków
+PRO pozostałych części aplikacji.
+
+**SDS tempa: dane i ograniczenia.** Liczba pochodzi z tej samej produkcyjnej
+ścieżki obliczenia tempa i HV-SDS, która tworzy dotychczasowy wiersz
+„SDS tempa”; kolor jest ustalany z wartości liczbowej **przed zaokrągleniem**,
+a nie z napisu. Zachowane są wybór pary pomiarów, wiek środka przedziału,
+płeć, bramki dostępności i odmowy obliczenia. Nieobliczone SDS pozostaje bez
+oceny; sam centyl ani obecność liczby tempa w cm/rok nie zastępują brakującego SDS.
+
+Źródło istniejących liczb: Duran I, Zimmermann M, Buggisch J, Hoyer-Kuhn H,
+Alexy U, Schoenau E. *Height velocity in the detection of growth disorders
+reconsidered: a retrospective analysis of the DONALD study.*
+**J Pediatr Endocrinol Metab. 2025;38(9):887–897**, tabele 2 i 3,
+[DOI 10.1515/jpem-2025-0225](https://doi.org/10.1515/jpem-2025-0225),
+[PMID 40557842](https://pubmed.ncbi.nlm.nih.gov/40557842/).
+Populacja niemiecka DONALD, 453 dziewczynki i 473 chłopców; tempo w cm/rok,
+SDS bez jednostki, odstęp pomiarów 6–18 miesięcy, wiek środka przedziału
+2,0–16,5 roku u dziewcząt i 2,0–17,0 u chłopców. Tabele nie uwzględniają
+indywidualnego czasu pokwitania. Szczegóły pozostałych istniejących informacji
+Kelly/KOWD oraz odmów są w GROWTH-HV-MULTI; ta zmiana ich nie zastępuje.
+
+**Progi kolorów są regułą prezentacji ustaloną przez właściciela, a nie progami
+diagnostycznymi zaczerpniętymi z publikacji Duran:**
+
+| Dokładny SDS tempa | Kolor |
+| --- | --- |
+| `< −1,5` | czerwony |
+| `−1,5 ≤ SDS < −0,5` | bursztynowy |
+| `−0,5 ≤ SDS ≤ +1` | turkusowy |
+| `> +1` | bursztynowy |
+
+**Prognoza: wartość środkowa wobec 18 lat.** Oceniana jest centralna wartość
+w cm tej prognozy, która faktycznie została wybrana do głównego wiersza,
+w tym konsensusu. Używany jest jej model liczbowy, bez wyciągania zaokrąglonych
+centymetrów z tekstu. Wartość trafia do istniejącego silnika wysokości
+z jawnym wiekiem **216 miesięcy**, płcią pacjenta i aktywnym źródłem OLAF lub
+Palczewska. Kolor ma identyczne granice jak wzrost: centyl `≤3` czerwony,
+`>3 i <10` oraz `>97` bursztynowy, `10–97` turkusowy. Obok prognozy pojawia się
+centyl z dopiskiem „dla 18 lat”. Przedział ± pozostaje niepewnością metody;
+nie klasyfikujemy jego końców i nie zmieniamy wartości ani doboru prognozy.
+Brak wiarygodnego dopasowania linii do modelu, płci, wartości albo danych
+wybranego odniesienia oznacza brak nowej oceny. Nie wprowadzamy cichej zamiany
+źródła na domyślne odniesienie dorosłych ani oceny z wyniku zastępczego.
+
+Normy wysokości są dotychczasowymi danymi aplikacji, opisanymi w P-SDS-1:
+Kułaga Z i wsp., *Polish 2010 growth references for school-aged children and
+adolescents*, **Eur J Pediatr. 2011;170(5):599–609**,
+[DOI 10.1007/s00431-010-1329-x](https://doi.org/10.1007/s00431-010-1329-x),
+[PMID 20972688](https://pubmed.ncbi.nlm.nih.gov/20972688/), polska populacja
+OLAF; oraz Palczewska I, Niedźwiedzka Z, *Wskaźniki rozwoju somatycznego dzieci
+i młodzieży warszawskiej*, **Med Wieku Rozwoj. 2001;5(2 Suppl 1):18–118**,
+[PMID 11675534](https://pubmed.ncbi.nlm.nih.gov/11675534/), populacja warszawska
+1996–1999. Ocena w wieku 18 lat używa już istniejących funkcji, tablic i ich
+ograniczeń; nie jest nową transkrypcją ani ponowną walidacją danych źródłowych.
+Nie zamienia się norm wysokości w normy tempa wzrastania.
+
+**Przypadki syntetyczne i wpływ kliniczny.** Granice SDS: −1,5001 → czerwony;
+−1,5 → bursztynowy; −0,5 oraz +1 → turkusowy; +1,0001 → bursztynowy;
+brak wyniku → brak oceny. Fikcyjna dziewczynka z prognozą centralną
+156,170447 cm: odniesienie dla 216 miesięcy daje ok. 6,24 centyla Palczewskiej
+i 6,62 OLAF, zatem w obu źródłach kolor bursztynowy. Zmiana płci lub źródła
+musi ponownie obliczyć odniesienie, a zmiana pacjenta nie może zachować oceny
+z wcześniejszego modelu. Testy modelu podsumowania i przeglądarkowe wywołują
+rzeczywiste funkcje produkcyjne, obejmują granice, brak danych, oba źródła
+oraz zgodność wyświetlonej prognozy i jej oceny.
+
+To **zmiana interpretacji wizualnej** dwóch parametrów, zaakceptowana przez
+właściciela w tej sesji, a nie wyłącznie kosmetyka. Nie zmienia wzorów, tablic,
+liczbowych wyników, rozpoznania, zapisu pacjenta, tekstu kopiowania ani PDF.
+Zielone testy potwierdzają kontrakt implementacji; nie nadają regułom kolorów
+statusu „zwalidowane klinicznie”.
+
+Przełączanie OLAF → Palczewska i z powrotem wymaga także odświeżenia modelu
+zaawansowanego. Handler wyboru źródła po dotychczasowym `update()` wywołuje
+istniejące `calculateGrowthAdvanced()`; getter oceny pozostaje tylko do odczytu.
+Usuwa to stan, w którym źródło formularza było już nowe, a fingerprint prognozy
+pozostawał stary. Test rzeczywistego handlera oraz test kliknięć sprawdzają
+pełny cykl powrotu do wcześniejszego źródła. W awaryjnym odczycie podsumowania
+z DOM do nakładki siatki używana jest wyłącznie `.professional-summary-value`
+(z zachowaniem starego wiersza jako fallbacku), aby nie eksportować opisów
+oceny dla czytników ekranu. Natywna lista wyników nadal ma pierwszeństwo.
+
+#### Odtwarzanie porównania bez przejściowego podsumowania (2026-10-26)
+
+Brak widocznej karty porównania nie oznacza, że odczyt poprzedniej wizyty
+został zakończony. W ścieżce „Nowy pomiar” wybór samodzielnej karty z zakładkami
+wymaga jawnego wyniku odczytu: brak użytecznego porównania. Stan oczekiwania,
+błędu lub nierozstrzygniętego odczytu zachowuje osobne miejsce siatki i ukrywa
+przejściowe podsumowanie. Sam podgląd nie czeka na odczyt porównania.
+
+Moduł porównania publikuje stan związany z pacjentem i epoką porównania; spóźniona
+odpowiedź nie rozstrzyga układu innego pacjenta. Czyszczenie unieważnia odczyt
+natychmiast, także przed usunięciem identyfikatora. Zastosowanie pól do formularza
+nie unieważnia wyboru pomiaru historycznego. Odczyt stanu jest pasywny. Brak kotwicy
+poprzedniej wizyty rozstrzyga dotychczasowa ścieżka inicjalizacji/odtwarzania
+i istniejący selektor pomiaru, bez nowej reguły wyboru wizyty. Formularz roboczy
+i „Odtwórz zapis” nadal przechodzą bezpośrednio do samodzielnej karty.
+Odczyt inicjalizowany w tle, także bezpośrednio przez odtwarzanie powłoki,
+nie zastępuje trwającego odczytu wybranego pomiaru tego samego pacjenta
+i tej samej epoki porównania. Jawny nowy wybór lub usunięcie pomiaru nadal
+rozpoczynają własny odczyt.
+
+Testy przeglądarkowe wstrzymują rzeczywisty odczyt porównania na Start i DocPro,
+samodzielnie i w powłoce, aż podgląd siatki jest już gotowy. Sprawdzają każdą
+klatkę pod kątem przebijania podsumowania oraz zachowanie tego samego wykresu
+po zakończeniu odczytu. Osobny przypadek potwierdza przejście do zakładek po
+rzeczywistym stwierdzeniu braku porównania, także po przeładowaniu bez kotwicy.
+Obliczenia, wybór pomiaru odniesienia i treść wyników pozostają dotychczasowe.
+
 ### P-SIATKA-PO-EDYCJI — aktualizacja podglądu po zakończeniu pola (2026-10-25)
 
 **Decyzja właściciela.** Z makiety autozoomu wybrano tylko wariant A: interaktywna
