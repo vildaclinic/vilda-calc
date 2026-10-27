@@ -219,7 +219,7 @@
             }
             script.addEventListener('load', function () { finish(win.ClcrRecordResources ? null : new Error('Moduł zapisanych obliczeń jest niedostępny.')); });
             script.addEventListener('error', function () { finish(new Error('Nie udało się wczytać zapisanych obliczeń.')); });
-            script.setAttribute('src', new URL('clcr_record_resources.js?v=3', moduleURL || win.location.href).href);
+            script.setAttribute('src', new URL('clcr_record_resources.js?v=4', moduleURL || win.location.href).href);
             timer = win.setTimeout(function () { finish(new Error('Upłynął czas wczytywania zapisanych obliczeń.')); }, 15000);
             doc.head.appendChild(script);
           });

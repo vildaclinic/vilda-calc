@@ -7729,6 +7729,99 @@ jednostki, historię, izolację pacjenta, desktop/mobile i prawdziwy offline.
 Wyniki wykonań i kontroli GitHub podaje PR. Akceptacja właściciela dotyczy
 tego etapu; testy techniczne nie stanowią walidacji klinicznej.
 
+#### P-KLIRENS-PH-SPOT-2026-10-27 — jeden pomiar i jawna norma ogólna
+
+Właściciel zaakceptował
+[makietę przed/po na desktopie i telefonie](https://vilda-urine-ph-20261027.maciej-flader.chatgpt.site)
+oraz wdrożenie wraz z naprawą potwierdzonych błędów. Zakres: `pH_spot`;
+`pH24` i obliczenia ze zbiórki dobowej pozostają odrębnym etapem.
+Baza audytu: `a83c87938621cfdeeb1de108878dfdb4e5de7131`.
+Pełne źródła, lokalizatory, pokrycie wieku i ograniczenia:
+[KLIRENS_PH_SPOT_AUDIT.md](KLIRENS_PH_SPOT_AUDIT.md).
+
+**Wpływ kliniczny:** zmierzone pH nie jest przeliczane. Dotychczasowy
+neutralny odczyt otrzymuje porównanie z jawnym profilem **Mayo PHU_,
+4,5–8,0 włącznie**, podpisanym „Norma ogólna”. Wynik w zakresie jest
+turkusowy, poza nim bursztynowy. Nie powstaje próg pilności, rozpoznanie
+ZUM/RTA/kamicy, ocena skuteczności leczenia ani zalecenie dawki.
+pH 5,0 i 7,5 mieszczą się w tym profilu. Wprowadzenie normy i zmiany
+precyzji/walidacji są zmianą kliniczną, nie wyłącznie wizualną.
+
+**Źródła i populacja, odczyt 27.10.2026:** pełny katalog
+[Mayo PHU_](https://www.mayocliniclabs.com/test-catalog/overview/606510),
+sekcje Reference Values, Clinical Information, Cautions i Method,
+opisuje przypadkowy mocz, pH-metr i 4,5–8,0 bez podziału wieku/płci.
+[Katalog pediatryczny](https://pediatric.testcatalog.org/show/PHU_)
+podaje ten sam zakres; nie jest niezależną walidacją neonatalną.
+Pełny [Labcorp 013037](https://www.labcorp.com/tests/013037/ph-urine)
+podaje noworodkom 5,0–7,0, później 4,5–8,0, ale nie definiuje liczbowo
+końca okresu noworodkowego. Informacja pozostaje w Szczegółach i przy
+jawnym kontekście noworodkowym; nie dodaje się granicy dni ani ukrytej
+hybrydy źródeł. Pełny [UW UPH](https://dlmp.uw.edu/test-guide/view/UPH)
+podaje 5,0–8,0 dla metody spektrofotometrycznej; ilustruje różnice
+laboratoriów, bez drugiego aktywnego profilu.
+
+Odczytane właściwe części pełnego HTML/PDF **EAU Urolithiasis 2026,
+aktualizacja marzec 2026** rozdzielają normę od celów leczenia u dorosłych:
+[chemoliza złogów kwasu moczowego 7,0–7,2](https://uroweb.org/guidelines/urolithiasis/chapter/guidelines)
+oraz [cystynuria >7,5](https://uroweb.org/guidelines/urolithiasis/chapter/metabolic-evaluation-and-recurrence-prevention).
+Cele pozostają edukacyjne w Szczegółach i nie zmieniają głównej oceny.
+Potrzebne są powtarzane pomiary świeżego moczu i kontekst; nadmierna
+alkalizacja może sprzyjać złogom fosforanowo-wapniowym. Kryteriów RTA
+ze zbiórki dobowej i drugiej porannej próbki na czczo nie przenosi się
+do dowolnego pojedynczego pH. Abstrakt Kwong 2013,
+[DOI 10.1007/s00240-013-0546-y](https://doi.org/10.1007/s00240-013-0546-y),
+wspiera uwagę o ograniczonej dokładności pasków; nie deklaruje się
+odczytu pełnego tekstu zablokowanego przez CAPTCHA.
+
+**Minimum i prezentacja:** tylko wartość `U_pH`, bez jednostki i bez
+obowiązkowego wieku, płci, antropometrii, kreatyniny, AKI lub IFCC.
+Dotychczasowe sześć kontrolek było opcjonalne i zwinięte; usunięcie
+ich z tego formularza nie kasuje wspólnych faktów ani dawnych zapisów.
+Karta B łączy liczbę, status, neutralną normę, widoczne granice skali
+i krótki komentarz. Kwaśny/zasadowy odczyn sam nie jest rozpoznaniem.
+Źródłowa metoda nie zostaje dopisana jako metoda próbki pacjenta.
+
+**Walidacja i precyzja:** wspólny techniczny zakres formularza i edytora
+**0–14 włącznie** zastępuje niespójne ograniczenia formularza ≤9
+i edytora >0 do 14. To skala wejściowa, nie norma moczu; skrajne wyniki
+wymagają weryfikacji. Puste pole nie jest zerem. Niepoprawne i nieskończone
+wartości są odrzucane bez obcięcia do granicy. Klasyfikacja i zapis
+zachowują surową wartość; tekst nie ukrywa odchylenia 4,4999 lub 8,0001
+jako pozornie równego granicy. Nie dopisuje się pozornej dokładności
+wyniku paskowego.
+
+**Kontrakt implementacji i historia:** osobne dane
+`clcr_ph_reference_data.js`, polityka **`PH_SPOT_MAYO_2026_10`, wersja 1**,
+są przekazywane do `VildaClcrPh.evaluate(input, policy)`. Snapshot
+**`clcr-ph`, wersja 1**, utrwala wejście, liczbę, tekst, normę, źródła,
+ocenę, kontekst i wersje reguł. `ClcrPhPersistence` zachowuje zgodność
+z podstawowym `labResult`, historią, edycją i eksportem. Stare zapisy bez
+normy pozostają nieocenione z `outOfRange:null`, także gdy dawny adapter
+wpisał `false` z samego braku klasy CSS. Historia nie wywołuje obecnego
+silnika; świadoma edycja tworzy nową ocenę. Nie rekonstruuje się utraconej
+precyzji ani nie dopisuje retrospektywnie normy Mayo. Istniejąca bramka
+zapisu do wybranego, zapisanego pacjenta pozostaje obowiązująca.
+
+**Syntetyczne kontrakty funkcji produkcyjnych:**
+
+| Wejście lub stan | Oczekiwany wynik |
+|---|---|
+| 6,5 bez wieku, u dziecka i dorosłego | Ta sama liczba i ogólna norma 4,5–8,0; bez dodatkowej ankiety. |
+| 4,4999 / 4,5 / 8 / 8,0001 | Poniżej / w zakresie / w zakresie / powyżej, z zachowaną dokładną liczbą. |
+| U_pH 5.8004 / 5,8004 w dotychczasowym kontekście DZM | Ta sama liczba i dostępność przesiewowego wzorca EAU; bez zmiany progów DZM. |
+| 5,0 / 7,5 | Oba w zakresie; bez automatycznej diagnozy kamicy lub ZUM. |
+| 0 / 14 albo puste pole | Dwa poprawne technicznie, nieprawidłowe względem normy wyniki / brak liczby. |
+| −0,01 / 14,01 / tekst / nieskończoność | Odrzucenie w formularzu i edytorze, bez cichego obcięcia. |
+| 4,8 i jawny kontekst noworodka | Ocena Mayo i uwaga o odrębnym Labcorp 5–7, bez zmiany profilu. |
+| Stary neutralny zapis z `outOfRange:false` | Nieoceniony; bez nowej normy przy odczycie. |
+| Zapis 8,0001 i późniejsza zmiana danych pacjenta | Ta sama zamrożona liczba, ocena i źródło w historii/eksporcie. |
+
+Regresje silnika, UI, zapisu, edycji i E2E wywołują rzeczywisty kod
+produkcyjny z fikcyjnymi danymi. Wyniki desktop/mobile, offline, CI,
+commit i PR podaje opis PR. Akceptacja właściciela obejmuje opisany
+etap; testy techniczne nie stanowią walidacji klinicznej.
+
 #### Zakres i ograniczenia
 
 | Obszar | Wdrożona reguła | Najważniejsze ograniczenia |
@@ -7740,6 +7833,7 @@ tego etapu; testy techniczne nie stanowią walidacji klinicznej.
 | KDIGO G/A, ACR i PCR | Kategorie są wyznaczane z wartości niezaokrąglonej. ACR po P-KLIRENS-ACR przyjmuje iloraz stężeń ze wspólnej próbki (jawne założenie, znana sprzeczność blokuje) albo gotowy raport; kategorię nadaje w natywnej osi od 2 lat według jawnej polityki aplikacji, także dla próbki losowej z zaleceniem potwierdzenia podwyższenia. Znane czynniki przejściowe wstrzymują kategorię ACR; brak wieku lub wiek <2 nie blokuje liczby, ale wyklucza dorosłą normę. PCR po P-KLIRENS-PCR wymaga dwóch stężeń albo gotowego raportu; wspólna próbka jest jawnym założeniem, znana sprzeczność blokuje iloraz. Orientacyjne odniesienia: 6–<24 m <500 mg/g, 24 m–<18 lat <200, dorośli <150; natywne progi SI pozostają odrębne. Znane czynniki przejściowe zachowują ograniczenia i sygnał liczbowego przekroczenia. Poniżej 6 m lub bez wieku nie stosuje się zastępczej normy. | Kategorie G i A są wstrzymane przed 2. rokiem życia. Kategoria zakresu G nie jest pokazywana przy znanym AKI, znanej niestabilności lub jednoznacznie niezgodnym standardzie używanego markera; przy braku przeciwnych danych może opierać się na jawnych założeniach aplikacji. Sama kategoria nie rozpoznaje PChN bez kryterium przewlekłości i innych właściwych kryteriów. ACR nie otrzymuje obowiązkowej ankiety o AKI/IDMS/IFCC. |
 | Frakcje wydalane i TmP/GFR | Analit i kreatynina muszą pochodzić z tej samej próbki moczu, a próbka krwi być równoczesna. FENa po P-KLIRENS-FENA wymaga czterech stężeń; pochodzenie próbek jest jawnym założeniem przy braku znanej sprzeczności. Dorosłe <1% / >2% to warunkowe progi pomocnicze w AKI, bez normy dla wieku lub automatycznej diagnozy. FEK po P-KLIRENS-FEK wymaga czterech stężeń i może otrzymać orientacyjne pediatryczne P3–P97 AENP/SEQCML 2020 przy właściwym pokryciu wieku oraz kontekście; dorosłe 4–16% pozostaje zakresem obserwowanym. FECl po P-KLIRENS-FECL wymaga czterech stężeń i jawnie zakłada zgodne próbki przy braku sprzeczności; nie otrzymuje niezweryfikowanej normy wieku. TmP/GFR po P-KLIRENS-TMP-GFR wymaga czterech stężeń i wieku; sparowane próbki są jawnym założeniem przy braku znanej sprzeczności. Przed 19. rokiem stosowany jest Brodehl z zakresem GPN, od 19. roku Walton–Bijvoet/Payne, z osobnym orientacyjnym profilem AACB–ANZBMS dla >19 lat. TRP pozostaje neutralnym wynikiem pomocniczym. | FENa pozostaje neutralna; dzieci i nieznany wiek nie otrzymują zastępczej normy. Znane PChN/diuretyki ograniczają pomoc interpretacyjną. FENa oraz liczby FEK/FECl nie wymagają założenia stabilności/braku AKI ani IFCC. FECl pozostaje neutralna bez normy; >0,5% z KDIGO to warunkowe kryterium podejrzenia GS opisane w Szczegółach, nie uniwersalny próg prawidłowości. Znane czynniki ograniczające interpretację pozostają w zapisie. W FEK hipokaliemia i znane PChN/AKI/diuretyki wykluczają uspokajającą klasyfikację według zdrowej populacji; przy 12 mies. dwa zakresy pozostają bez wspólnego werdyktu. TmP/GFR nie jest liczone z DZM. Zakresy są orientacyjne, zgodne z wybraną metodą, bez deklarowania walidacji lokalnego laboratorium. Niejasne granice wieku pozostają bez wspólnej oceny. Opcjonalne monitorowanie XLH opisuje fosforany i porównywalny trend, bez automatycznego werdyktu skuteczności ani dawkowania. |
 | Kamica, Ca/Cr, Ox/Cr i Cit/Cr w próbce moczu | EAU Urolithiasis 2026 rozdziela dorosłe mmol/24 h od pediatrycznej interpretacji wapnia w mmol/kg/24 h. `CaCr_spot` po P-KLIRENS-CACR stosuje osobny dwustronny profil Mayo CACR3 od 1 miesiąca do dokładnego wieku 83 lat. `OxCr_spot` po P-KLIRENS-OXCR stosuje Fimlab P95 od 1 miesiąca do dokładnie 17 lat i osobny Newcastle 2–83 µmol/mmol dla >17 lat, z jawną podstawą masową przy konwersji. `CitCr_spot` po P-KLIRENS-CITCR stosuje PathWest: >300 µmol/mmol od urodzenia do <3 lat i >100 od 3 do <18 lat, bez górnej granicy; od ≥18 lat osobny Newcastle: mężczyźni 40–330, kobiety 110–550 µmol/mmol. Pozostałe pediatryczne anality pozostają liczbowe. Progi DZM wymagają dokładnie 24-godzinnej bieżącej zbiórki i właściwego kontekstu. | Nazwane zakresy laboratoryjne są orientacyjne, nie potwierdzają metody pacjenta i nie rozpoznają samodzielnie hiperkalciurii, PH lub kamicy. W Ox/Cr zmiana źródła po 17 latach nie jest fizjologiczną krzywą; brak wieku, nieobjęta populacja lub nieznana podstawa masowa nie otrzymują zastępczej normy. W Cit/Cr zmiana źródła w wieku 18 lat również nie jest krzywą; brak płci dorosłego nie tworzy wspólnego przedziału. Nie miesza się progów tych profili z EAU ani z DZM. EAU zaleca dwie kolejne zbiórki w swoistej ocenie metabolicznej. |
+| pH pojedynczej próbki moczu | `pH_spot` po P-KLIRENS-PH-SPOT wymaga wyłącznie zmierzonego pH, bez jednostki. Ogólne, orientacyjne odniesienie Mayo PHU_ wynosi 4,5–8,0 włącznie, bez doboru według wieku/płci. Techniczne wejście 0–14 ma wspólną walidację formularza i edytora. | Wynik poza normą jest bursztynowy; odczyn sam nie rozpoznaje ani nie wyklucza choroby. Labcorp 5–7 dla noworodków pozostaje jawną uwagą, bez przełączania profilu lub wymyślonej definicji wieku. Cele terapii EAU są osobne od normy. Dawne zapisy pozostają nieocenione; aktualna historia nie przelicza ich nowym źródłem. |
 | Hemodializa | Moduł dotyczy wyłącznie pojedynczej sesji IHD. spKt/Vurea Daugirdasa II używa źródłowych par GFAC dla 2–7 sesji/tydz. i rzeczywistego PIDI; URR i eKt/V są liczone z niezaokrąglonych danych, z uwzględnieniem dostępu AV/CVC, protokołu próbek i aktualności Kru. | Moduł jest niedostępny przed 2. rokiem życia, a w wieku 2–17 lat wymaga protokołu slow-flow. Dla 5–7 sesji/tydz. sesja >300 min jest blokowana i wymaga formalnego modelowania mocznika. Pary GFAC 2–7 pochodzą z symulacji, a walidację FHN opisano dla schematów 3, 4 i 6×/tydz. Progi 1,2/1,4 są stosowane tylko w opisanym profilu dorosłej IHD 3×/tydz.; poza nim oraz w pediatrii wynik techniczny nie otrzymuje dorosłej kategorii adekwatności. |
 
 EKFC pozostaje wyłączone za bramką lokalnej walidacji. Historyczny Schwartz z dobieranym współczynnikiem (k) jest wyłączony z rutynowego użycia.

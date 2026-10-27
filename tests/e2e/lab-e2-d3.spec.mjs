@@ -390,7 +390,8 @@ test('E2 D3 reuses the main form inside the application shell without asking for
     && typeof window.collectUserData === 'function' && !document.documentElement.classList.contains('vilda-auth-locked'));
   await start.waitForFunction(() => !window.VildaPersistence.isAutosaveSuppressed() && !window.VildaPersistence.isRestoring()
     && !window.VildaDobAge.restorePending());
-  await start.locator('#sex').selectOption('F');
+  // The saved patient supplies sex; the main form intentionally locks this identity field.
+  await expect(start.locator('#sex')).toHaveValue('F');
   await start.locator('#age').fill('40');
   await start.locator('#ageMonths').fill('0');
   await start.locator('#ageMonths').dispatchEvent('change');
