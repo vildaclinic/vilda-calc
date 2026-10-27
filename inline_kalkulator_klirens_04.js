@@ -96,6 +96,12 @@ function readClcrOptionalNumber(e) {
   const n = $(e),
     t = n ? String(n.value || "").trim() : "";
   if (t === "") return null;
+  // Every consumer of this measured pH uses the same input validation. This
+  // does not apply the Mayo reference or change the separate pH24 algorithm.
+  if (e === "U_pH") {
+    const result = window.VildaClcrPh?.compute({ urinePh: t });
+    return result?.valid === true ? result.rawValue : null;
+  }
   const o = Number(t);
   return Number.isFinite(o) ? o : null;
 }

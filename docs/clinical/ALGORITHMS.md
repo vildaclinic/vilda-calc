@@ -7809,6 +7809,7 @@ zapisu do wybranego, zapisanego pacjenta pozostaje obowiązująca.
 |---|---|
 | 6,5 bez wieku, u dziecka i dorosłego | Ta sama liczba i ogólna norma 4,5–8,0; bez dodatkowej ankiety. |
 | 4,4999 / 4,5 / 8 / 8,0001 | Poniżej / w zakresie / w zakresie / powyżej, z zachowaną dokładną liczbą. |
+| U_pH 5.8004 / 5,8004 w dotychczasowym kontekście DZM | Ta sama liczba i dostępność przesiewowego wzorca EAU; bez zmiany progów DZM. |
 | 5,0 / 7,5 | Oba w zakresie; bez automatycznej diagnozy kamicy lub ZUM. |
 | 0 / 14 albo puste pole | Dwa poprawne technicznie, nieprawidłowe względem normy wyniki / brak liczby. |
 | −0,01 / 14,01 / tekst / nieskończoność | Odrzucenie w formularzu i edytorze, bez cichego obcięcia. |

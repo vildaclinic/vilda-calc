@@ -121,6 +121,13 @@ pomiar próbki. Nie wprowadza się cichego obcięcia do 0 lub 14.
 
 - Puste pole nie jest zerem; samo 0 jest poprawną liczbą wejściową.
 - Wartość nienumeryczna, nieskończoność i wynik poza skalą są odrzucane.
+- Kropka i przecinek dziesiętny oznaczają tę samą liczbę również we
+  współdzielonym, dotychczasowym odczycie pH dla kontekstu DZM. Zmiana
+  `5.8004` na `5,8004` nie może zmieniać dostępności przesiewowego wzorca
+  EAU. Wspólny odczyt używa liczbowej walidacji `VildaClcrPh.compute`, aby
+  wpis odrzucony na karcie pH (np. `15`, `0x6` lub utrata precyzji) nie
+  zasilał równocześnie kontekstu DZM. Nie stosuje tam normy Mayo ani nie
+  zmienia wzoru lub progów interpretacji `pH24`.
 - Klasyfikacja opiera się na dokładnej zapisanej wartości przed formatowaniem.
   `4,4999` pozostaje poniżej normy, `4,5` i `8` należą do normy, a `8,0001`
   przekracza jej górną granicę. Tekst nie może ukryć tej różnicy.

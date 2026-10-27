@@ -380,6 +380,36 @@ test('pH drugiego porannego moczu nie jest zaokrąglane wstecz przez próg dRTA'
   await expect(spotPh).toHaveAttribute('data-clcr-display-value', '5,8004');
   await expect(spotPh.locator('.clcr-result-value')).toHaveText('5,8004');
   await expect(stone).toContainText('spełniają przesiewowy wzorzec EAU');
+  const dotSnapshot = JSON.parse(await spotPh.getAttribute('data-clcr-ph-snapshot'));
+  expect(dotSnapshot.input.urinePh).toBe('5.8004');
+
+  // The text field accepts the Polish decimal separator. The same measured
+  // value must remain available to the existing timed-urine context too.
+  await page.locator('#U_pH').fill('5,8004');
+  await expect(spotPh).toHaveAttribute('data-clcr-value', '5.8004');
+  await expect(spotPh).toHaveAttribute('data-clcr-display-value', '5,8004');
+  await expect(spotPh.locator('.clcr-result-value')).toHaveText('5,8004');
+  const commaSnapshot = JSON.parse(await spotPh.getAttribute('data-clcr-ph-snapshot'));
+  expect(commaSnapshot).toEqual({
+    ...dotSnapshot,
+    input: { ...dotSnapshot.input, urinePh: '5,8004' }
+  });
+  await expect(page.locator('#pH24')).toHaveValue('6.2004');
+  await expect(stone).toContainText(/pH\s*czasowej\s*zbiórki:\s*>6[.,]20/);
+  await expect(stone).toContainText('spełniają przesiewowy wzorzec EAU');
+  // An input rejected by the pH reader must not silently become a qualifying
+  // second-morning pH in another consumer of the same measurement.
+  for (const invalid of ['0x6', '0b110', '15', '5.8000000000000000004']) {
+    await page.locator('#U_pH').fill(invalid);
+    await expect(spotPh).toHaveCount(0);
+    expect(await page.evaluate(() => window.evaluateClcrPh().valid)).toBe(false);
+    await expect(stone).not.toContainText('spełniają przesiewowy wzorzec EAU');
+    await expect(stone).toContainText('potrzebne są także pH drugiego porannego');
+    await expect(page.locator('#pH24')).toHaveValue('6.2004');
+  }
+  await page.locator('#U_pH').fill('5,8004');
+  await expect(spotPh).toHaveAttribute('data-clcr-value', '5.8004');
+  await expect(stone).toContainText('spełniają przesiewowy wzorzec EAU');
 });
 
 test('Kt/V pokazuje exact GFAC, eKt/V, URR i warunkową ocenę z aktualnym Kru', async ({ page }) => {
