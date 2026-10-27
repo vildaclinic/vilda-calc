@@ -2776,7 +2776,9 @@ describe('strażniki źródła (P-SYNC-WLASCICIEL)', () => {
     expect(le).toContain('const Bsw_f=await Bsl_przeniesWersje(Bkz_S,i,e);l+=Bsw_f.dodane,w+=Bsw_f.usuniete;');
     expect(le).toContain('mergedPatientCount:c,addedPatientCount:l,');
     expect(le).toContain(',deletedPatientCount:w,');
-    const iUsun = le.indexOf('w+=await Bsl_usunPacjenta(j,m[j],e)');
+    // P-KOSZ-USUWANEJ-KARTY (E4a): usuwanie kart dostaje kontekst kosza scalania (decyzja kosza wersji usuwanej karty),
+    // scalanie importu — bez niego (kosza nie scala).
+    const iUsun = le.indexOf('w+=await Bsl_usunPacjenta(j,m[j],e,Bses_imp?null:Bkz_S)');
     const iKosz = le.indexOf('await Bkz_scalKoniec(Bkz_S,e)');
     expect(iPetla).toBeGreaterThan(0);
     expect(iPrzen).toBeGreaterThan(iPetla);

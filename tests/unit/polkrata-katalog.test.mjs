@@ -14,7 +14,8 @@
 //        lokalnie w cieniu (30 dni), późniejszy ważny kosz bierze z niej nowszą treść;
 //   [F1] rev wpisu kosza bez treści unieważnionych (P-REV-MAX, przegląd końcowy D-7 F1) — odstępstwo od cel.md X1b/X6
 //        („r2”), zgodne z tests/unit/pozniejsza-poprawka-mutacje.test.mjs E1b;
-//   [R]  cel jednoznaczny z reguł; [POZA] poza zakresem półkraty — przypięte zachowanie 1d6be72e (znane ograniczenie).
+//   [R]  cel jednoznaczny z reguł; [POZA] poza zakresem półkraty — przypięte zachowanie 1d6be72e (znane ograniczenie);
+//        PRZ (P-PRZYWROC-Z-KARTY) i E4a (P-KOSZ-USUWANEJ-KARTY) — osobne PR po S4, dawniej [POZA].
 // Przy każdej kolejności: ten sam pełny stan na wszystkich urządzeniach (także nagrobek i chwile), stan stabilny, 0 zapisów
 // listy, wersji i kart w dodatkowej rundzie, a stan zgodny z oczekiwanym (ten sam w każdej kolejności).
 import { afterEach, describe, expect, it, vi } from 'vitest';
@@ -102,9 +103,10 @@ const OCZEKIWANE = {
   'PRZ-kontrola': { st: 'karta 78', karta: { masa: 78, rev: 2 }, n: null },
   'PRZ-po-koszu': { st: 'karta 78', karta: { masa: 78, rev: 1 }, n: null },
   'PRZ-K7': { st: 'karta 74', karta: { masa: 74, rev: 3 }, n: null },
-  // [POZA] E4a (K6, PD-16, Q7): poprawka sprzed „Scal pacjentów” dalej ginie — w koszu 23.
-  E4a: { st: 'kosz 23', n: { powod: null, masa: 23, rev: 2 } },
-  'E4a-1': { st: 'kosz 23', n: { powod: null, masa: 23, rev: 1 } },
+  // [R] E4a (P-KOSZ-USUWANEJ-KARTY, D6 = a, Q7; dotąd ograniczenie K6, PD-16: w koszu 23): wersje karty przegranej
+  // z nagrobkiem pacjenta przechodzą decyzję kosza — w koszu poprawka sprzed „Scal pacjentów” (74), rev przeniesień.
+  E4a: { st: 'kosz 74', n: { powod: null, masa: 74, rev: 2 } },
+  'E4a-1': { st: 'kosz 74', n: { powod: null, masa: 74, rev: 1 } },
   'E4a-kontrola': { st: 'karta Z 74', karta: { masa: 74, rev: 2 }, n: null },
 };
 
