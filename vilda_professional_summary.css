@@ -171,3 +171,53 @@
 #currentSummaryCard .professional-summary-extra-count[hidden] {
   display: none;
 }
+
+/* Match the collapsed form only when the native layout has two columns.
+   Heights come from its measured geometry, including the status strip above
+   this card. Stacked layouts keep their natural document scrolling. */
+#currentSummaryCard.vilda-summary-height-matched {
+  box-sizing: border-box;
+  height: var(--vilda-summary-card-height);
+  min-height: 0;
+  overflow: hidden;
+}
+
+#currentSummaryCard.vilda-summary-height-matched > #currentSummaryContent {
+  min-height: 0;
+  max-height: var(--vilda-summary-content-height);
+  overflow-y: auto;
+  overflow-x: hidden;
+  scrollbar-width: thin;
+  scrollbar-color: #a8c7c1 transparent;
+  overscroll-behavior-y: contain;
+  scroll-padding-block: var(--space-12px);
+}
+
+#currentSummaryContent[tabindex="0"]:focus-visible {
+  outline: var(--border-emphasis) solid #087c80;
+  outline-offset: -2px;
+  border-radius: var(--radius-6);
+}
+
+#currentSummaryCard > .vilda-summary-scroll-hint {
+  position: absolute;
+  inset-inline: var(--space-1);
+  bottom: var(--vilda-summary-hint-bottom);
+  margin-top: var(--space-6px);
+  padding-top: var(--space-4px);
+  border-top: var(--border-hairline) solid #e5efeb;
+  background: #fff;
+  color: #476f73;
+  font-size: 11px;
+  line-height: 1.5;
+  text-align: center;
+  pointer-events: none;
+}
+
+#currentSummaryCard > .vilda-summary-scroll-hint-at-end {
+  visibility: hidden;
+}
+
+#currentSummaryCard > .vilda-summary-scroll-hint[hidden] {
+  display: none;
+}

@@ -32,7 +32,7 @@ const MIEJSCA = [
   ['vilda_auth_ui.js', 'function Il(t,a,n){', 400, 'Karta pacjenta — „Skopiuj podsumowanie wyników"'],
   ['inline_notatki_00.js', 'function P(e){', 400, 'notatki — „Kopiuj"'],
   ['vilda_b64_checklist_ui.js', 'function kopiuj(t) {', 60, 'ściąga B.64', 'tekstDlaHis(t)'],
-  ['vilda_patient_narrative_ui.js', 'function kopiuj(t) {', 60, 'opis pacjenta', 'tekstDlaHis(t)'],
+  ['vilda_patient_narrative_ui.js', 'function kopiuj(t, options) {', 60, 'opis pacjenta', 'tekstDlaHis(t)'],
   ['przelicznik-jednostek.html', 'function copyTextToClipboard(text) {', 80, 'przelicznik jednostek', 'tekstDlaHis(String('],
 ];
 

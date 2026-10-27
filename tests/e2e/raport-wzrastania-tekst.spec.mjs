@@ -8,7 +8,12 @@ import { expect, test } from '@playwright/test';
 
 async function ustawPacjenta(page) {
   await page.goto('/index.html', { waitUntil: 'load' });
-  await page.waitForFunction(() => typeof window.calculateGrowthAdvanced === 'function' && !!window.VildaAdvancedGrowth);
+  await page.waitForFunction(() => typeof window.calculateGrowthAdvanced === 'function' && !!window.VildaAdvancedGrowth
+    && typeof window.VildaPatientReportLoader?.ensure === 'function');
+  // Start ładuje raporty na żądanie. Czekamy na ten sam loader co menu,
+  // zamiast pomijać test PDF, gdy idle callback jeszcze się nie wykonał.
+  await page.evaluate(() => window.VildaPatientReportLoader.ensure());
+  await page.waitForFunction(() => typeof window.patientReportBuildSelectedPdfPackage === 'function');
   await page.evaluate(() => {
     const set = (id, v) => { const el = document.getElementById(id); if (el) el.value = String(v); };
     window.professionalMode = true;
@@ -75,7 +80,6 @@ test('ADV-REPORT-8: okno wyboru PDF oddaje ten sam dokument tekstowy, gdy raport
   await ustawPacjenta(page);
 
   const out = await page.evaluate(async () => {
-    if (typeof window.patientReportBuildSelectedPdfPackage !== 'function') return { brak: true };
     const paczka = await window.patientReportBuildSelectedPdfPackage(['growth']);
     const bajty = new Uint8Array(await paczka.blob.arrayBuffer());
     let tekst = '';
@@ -89,7 +93,6 @@ test('ADV-REPORT-8: okno wyboru PDF oddaje ten sam dokument tekstowy, gdy raport
     };
   });
 
-  if (out.brak) test.skip(true, 'patientReportBuildSelectedPdfPackage nie jest wystawiony na window');
   expect(out.vector).toBe(true);
   expect(out.nazwa).toMatch(/^Raport_wzrastania.*\.pdf$/);
   expect(out.fonty).toBeGreaterThan(0);
@@ -105,7 +108,6 @@ test('ADV-REPORT-10: w pakiecie z innym raportem raport wzrastania idzie osobnym
   await ustawPacjenta(page);
 
   const out = await page.evaluate(async () => {
-    if (typeof window.patientReportBuildSelectedPdfPackage !== 'function') return { brak: true };
     const opcje = typeof window.patientReportGetPdfChoiceOptions === 'function'
       ? window.patientReportGetPdfChoiceOptions().map((o) => o.value) : [];
     const towarzysz = opcje.find((v) => v !== 'growth');
@@ -136,7 +138,6 @@ test('ADV-REPORT-10: w pakiecie z innym raportem raport wzrastania idzie osobnym
     };
   });
 
-  if (out.brak) test.skip(true, 'patientReportBuildSelectedPdfPackage nie jest wystawiony na window');
   if (out.brakTowarzysza) test.skip(true, 'brak drugiego raportu do zaznaczenia w tym stanie strony');
   if (out.brakJsPdf) test.skip(true, 'jsPDF nie wstał — pakietu nie da się złożyć bez dostępu do CDN');
 

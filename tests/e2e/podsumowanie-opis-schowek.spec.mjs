@@ -1,14 +1,10 @@
 import { expect, test } from '../support/test-czas.mjs';
 import { spozaWindows1250 } from '../support/windows1250.mjs';
+import { openPatientDocuments, closePatientDocuments, copyPatientDescription, DOCUMENTS_COPY, DOCUMENTS_DIALOG } from '../support/patient-documents-ui.mjs';
 
-// Etap 2 silnika opisu (decyzja właściciela 2026-09-07): w karcie „Podsumowanie wyników"
-// nad „Raport PDF dla pacjenta" stoi przycisk, który składa opis pacjenta i kopiuje go
-// do schowka — BEZ pokazywania na stronie. Właściciel testuje opis w prawdziwej
-// dokumentacji, a karta ma nie rosnąć.
-//
-// Ten plik sprawdza to, czego test jednostkowy nie może: że przycisk naprawdę wstaje
-// w tym wrapperze, w tym miejscu, że przeżywa ponowny render karty, że do schowka
-// trafia tekst opisu, a na stronę — nie; i że odmowa schowka nie jest cicha.
+// Opis nadal trafia wyłącznie do schowka, ale jego przycisk jest teraz w panelu
+// „Dokumenty pacjenta” otwieranym z menu. Wszystkie kliniczne oczekiwania poniżej
+// pozostały takie same; zmieniła się tylko rzeczywista droga użytkownika do akcji.
 test.use({ serviceWorkers: 'block' });
 
 const HASLO = 'E2e#OpisSchowek!26aa';
@@ -89,8 +85,8 @@ async function wypelnij(page, { zHistoria = true } = {}) {
   });
 }
 
-const przycisk = (page) => page.locator('.current-summary-actions [data-patient-narrative-copy-btn]');
-const toast = (page) => page.locator('#vildaDymek');
+const przycisk = (page) => page.locator(DOCUMENTS_COPY);
+const toast = (page) => page.locator(`${DOCUMENTS_DIALOG} [data-patient-documents-status]`);
 
 // Etap 4: przebieg prognozy w czasie. Ten test sprawdza PRAWDZIWY łańcuch — eksport
 // silnika Bayleya-Pinneau z vilda_advanced_growth.js, wczytanie jego tabel, adapter
@@ -166,41 +162,42 @@ test.describe('Przebieg prognozy w czasie — łańcuch do prawdziwego silnika',
   });
 });
 
-test.describe('„Kopiuj opis pacjenta" w karcie Podsumowanie wyników', () => {
-  test('przycisk stoi nad „Raport PDF dla pacjenta" i przeżywa ponowny render karty', async ({ page }) => {
+test.describe('„Kopiuj opis pacjenta" w Dokumentach pacjenta', () => {
+  test('opis i PDF są razem w Dokumentach pacjenta, bez stopki i duplikowania po przeliczeniu', async ({ page }) => {
     await otworz(page);
     await wypelnij(page);
-    await expect(przycisk(page)).toBeVisible({ timeout: 20000 });
+    await openPatientDocuments(page);
 
-    const porzadek = await page.evaluate(() => {
-      const wr = document.querySelector('.current-summary-actions');
-      const kopiuj = wr.querySelector('[data-patient-narrative-copy-btn]');
-      const pdf = wr.querySelector('[data-patient-report-pdf-btn]');
+    const porzadek = await page.locator(DOCUMENTS_DIALOG).evaluate(dialog => {
+      const kopiuj = dialog.querySelector('[data-patient-documents-copy]');
+      const pdf = dialog.querySelector('[data-patient-documents-generate]');
       return {
-        tenSamWrapper: Boolean(kopiuj && pdf),
+        razem: Boolean(kopiuj && pdf),
         kopiujPrzedPdf: Boolean(kopiuj && pdf && (kopiuj.compareDocumentPosition(pdf) & Node.DOCUMENT_POSITION_FOLLOWING)),
-        ile: document.querySelectorAll('[data-patient-narrative-copy-btn]').length,
+        ile: document.querySelectorAll('[data-patient-documents-copy]').length,
         etykieta: kopiuj && kopiuj.textContent.trim(),
       };
     });
-    expect(porzadek.tenSamWrapper).toBe(true);
-    expect(porzadek.kopiujPrzedPdf, 'nad przyciskiem PDF, nie pod').toBe(true);
+    expect(porzadek.razem).toBe(true);
+    expect(porzadek.kopiujPrzedPdf, 'opis nad generowaniem raportów').toBe(true);
     expect(porzadek.ile).toBe(1);
     expect(porzadek.etykieta).toBe('Kopiuj opis pacjenta');
+    await expect(page.locator('.current-summary-actions')).toHaveCount(0);
 
-    // Zmiana masy przerysowuje kartę (wrapper akcji jest budowany od nowa) — przycisk
-    // ma wrócić dokładnie raz, nie zniknąć i nie zdublować się.
+    await closePatientDocuments(page);
     await page.fill('#weight', '21');
+    await page.locator('#weight').blur();
+    await openPatientDocuments(page);
     await expect(przycisk(page)).toBeVisible();
-    await expect.poll(() => page.evaluate(
-      () => document.querySelectorAll('[data-patient-narrative-copy-btn]').length,
-    )).toBe(1);
+    await expect(przycisk(page)).toHaveCount(1);
+    await expect(page.locator('.current-summary-actions')).toHaveCount(0);
   });
 
   test('kliknięcie kopiuje akapit do schowka i NIE pokazuje go na stronie', async ({ page }) => {
     await otworz(page);
     await wypelnij(page);
-    await expect(przycisk(page)).toBeVisible({ timeout: 20000 });
+    await openPatientDocuments(page);
+    await expect(przycisk(page)).toBeVisible();
 
     await przycisk(page).click();
     await expect(toast(page)).toContainText('skopiowano do schowka');
@@ -226,7 +223,8 @@ test.describe('„Kopiuj opis pacjenta" w karcie Podsumowanie wyników', () => {
   test('odmowa schowka nie jest cicha', async ({ page }) => {
     await otworz(page, { schowek: 'odmawia' });
     await wypelnij(page);
-    await expect(przycisk(page)).toBeVisible({ timeout: 20000 });
+    await openPatientDocuments(page);
+    await expect(przycisk(page)).toBeVisible();
 
     await przycisk(page).click();
     await expect(toast(page)).toContainText('odmówiła dostępu do schowka');
@@ -236,10 +234,11 @@ test.describe('„Kopiuj opis pacjenta" w karcie Podsumowanie wyników', () => {
   test('bez historii pomiarów przycisk mówi, czego brakuje, i niczego nie kopiuje', async ({ page }) => {
     await otworz(page);
     await wypelnij(page, { zHistoria: false });
-    await expect(przycisk(page)).toBeVisible({ timeout: 20000 });
+    await openPatientDocuments(page);
+    await expect(przycisk(page)).toBeVisible();
 
-    await przycisk(page).click();
-    await expect(toast(page)).toContainText('co najmniej dwóch pomiarów');
+    await expect(przycisk(page)).toBeDisabled();
+    await expect(page.locator('[data-patient-documents-copy-reason]')).toContainText('co najmniej dwóch pomiarów');
     expect(await page.evaluate(() => window.__schowek)).toBeUndefined();
   });
 });
@@ -288,7 +287,7 @@ test.describe('SGA bez catch-upu — łańcuch bez karty SGA na stronie', () => 
       if (typeof window.calculateGrowthAdvanced === 'function') window.calculateGrowthAdvanced();
     });
 
-    await przycisk(page).click();
+    await copyPatientDescription(page);
     await page.waitForFunction(() => typeof window.__schowek === 'string' && window.__schowek.length > 0);
     const t = await page.evaluate(() => window.__schowek);
 
@@ -364,7 +363,7 @@ test.describe('Dane okołoporodowe z Karty Pacjenta zasilają opis', () => {
       if (typeof window.calculateGrowthAdvanced === 'function') window.calculateGrowthAdvanced();
     });
 
-    await przycisk(page).click();
+    await copyPatientDescription(page);
     await page.waitForFunction(() => typeof window.__schowek === 'string' && window.__schowek.length > 0);
     const t = await page.evaluate(() => window.__schowek);
 

@@ -1,11 +1,12 @@
 import { expect, test } from '@playwright/test';
 import fs from 'node:fs';
 import path from 'node:path';
+import { openPatientDocuments, closePatientDocuments, DOCUMENTS_DIALOG } from '../support/patient-documents-ui.mjs';
 
 // P-OSTATNI-2a na PRAWDZIWEJ stronie: po ścieżce Wczytaj pacjenta → „Co chcesz zrobić?" → Nowy pomiar
 // jest JEDNA karta „Porównanie z poprzednim pomiarem" na całą szerokość formularza (pod obiema
 // kolumnami), z tabelą Poprzednio / Dziś / Zmiana, paskiem tempa i sekcją „Pozostałe wyniki",
-// która przejmuje resztę „Podsumowania wyników" razem z przyciskami. Osobna karta Podsumowania
+// która przejmuje resztę „Podsumowania wyników"; dokumenty są dostępne w menu. Osobna karta Podsumowania
 // w tej ścieżce znika. Plik „-mobile" → projekt mobile-chromium; blok desktopowy nadpisuje viewport.
 // Dane FIKCYJNE. Zrzuty: VILDA_ZRZUTY=<katalog> (opcjonalnie).
 test.use({ serviceWorkers: 'block' });
@@ -145,11 +146,14 @@ async function sprawdzWspolne(page) {
   const tempo = page.locator('#porownanieTempo');
   await expect(tempo).toBeVisible();
   await expect(tempo).toHaveText(/Tempo wzrastania: 5,1 cm\/rok/);
-  // osobna karta Podsumowania znika, jej reszta + przycisk PDF są w „Pozostałych wynikach"
+  // osobna karta Podsumowania znika, jej reszta jest w „Pozostałych wynikach"; PDF pozostaje w menu
   await expect(page.locator('#currentSummaryCard')).toBeHidden();
   const pozostale = page.locator('#porownaniePozostale');
   await expect(pozostale).toBeVisible();
-  await expect(pozostale.locator('[data-patient-report-pdf-btn]')).toBeVisible();
+  await expect(pozostale.locator('.current-summary-actions')).toHaveCount(0);
+  await openPatientDocuments(page);
+  await expect(page.locator(`${DOCUMENTS_DIALOG} input[value="visit"]`)).toBeEnabled();
+  await closePatientDocuments(page);
   await expect(pozostale.locator('.current-summary-row').first()).toBeVisible();
   const tekstPozostale = await pozostale.innerText();
   expect(tekstPozostale).not.toMatch(/^Wzrost:|^Waga:|^BMI:/m);

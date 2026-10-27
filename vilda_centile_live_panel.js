@@ -5,13 +5,13 @@
   'use strict';
   if (!w || w.VildaCentileLivePanel) return;
   var d = w.document;
-  var mount, form, fieldset, doctor, view, snapshot, rendered, fullscreen;
+  var mount, form, fieldset, doctor, geometry, view, snapshot, rendered, fullscreen;
   var request = 0, timer = 0, pendingTimer = 0, layoutFrame = 0, started = false;
   var boundsFrame = 0, boundsOwner = null, expansion = null, expansionRead = null, resumedExpansion = null;
   var scheduleFrame = 0, scheduledIdentity = false, scheduledReady = false;
   var notice, noticeTitle, noticeMessage, retryButton, slotStatus = 'ineligible', awaitingEdit = false;
   var noticeTimer = 0, noticeSince = null, retryExpansion = false;
-  var status = 'hidden', lastWidth = 0, collapsedHeight = 0, lastHeight = 0, renderKey = '', fullKey = '';
+  var status = 'hidden', lastHeight = 0, renderKey = '', fullKey = '';
   var data = w.VildaCentileLiveData;
 
   function presentation() {
@@ -25,11 +25,7 @@
   }
 
   function twoColumns() {
-    if (!form || !fieldset || !doctor || !form.getClientRects().length) return false;
-    var columns = w.getComputedStyle(form).gridTemplateColumns.trim().split(/\s+/);
-    var left = fieldset.getBoundingClientRect(), right = doctor.getBoundingClientRect();
-    return columns.length === 2 && left.width > 0 && right.width > 0
-      && right.left >= left.right - 1 && right.top < left.bottom;
+    return !!geometry && geometry.twoColumns();
   }
 
   function slot(state) {
@@ -242,8 +238,7 @@
     if (retryButton) retryButton.hidden = true;
     slot('ineligible');
     lastHeight = 0;
-    collapsedHeight = 0;
-    lastWidth = 0;
+    if (geometry) geometry.reset();
   }
 
   function showError(message) {
@@ -332,34 +327,6 @@
       applyInlineHeight(mobileHeight);
       return;
     }
-    var bounds = fieldset.getBoundingClientRect();
-    var puberty = d.getElementById('tannerStageWrap');
-    var expanded = puberty && puberty.getClientRects().length
-      && w.getComputedStyle(puberty).display !== 'none';
-    if (!expanded) {
-      collapsedHeight = bounds.height;
-      lastWidth = bounds.width;
-    } else if (!collapsedHeight || Math.abs(bounds.width - lastWidth) > 1) {
-      var styles = w.getComputedStyle(puberty);
-      var removed = puberty.getBoundingClientRect().height
-        + (parseFloat(styles.marginTop) || 0) + (parseFloat(styles.marginBottom) || 0);
-      var before = puberty.previousElementSibling, after = puberty.nextElementSibling;
-      while (before && !before.getClientRects().length) before = before.previousElementSibling;
-      while (after && !after.getClientRects().length) after = after.nextElementSibling;
-      if (before && after) {
-        // Hiding the panel leaves the normal collapsed margin between its
-        // neighbours. Subtracting both panel margins would remove that gap too.
-        var bottomMargin = parseFloat(w.getComputedStyle(before).marginBottom) || 0;
-        var topMargin = parseFloat(w.getComputedStyle(after).marginTop) || 0;
-        var remainingGap = Math.max(0, bottomMargin, topMargin) + Math.min(0, bottomMargin, topMargin);
-        removed = after.getBoundingClientRect().top - before.getBoundingClientRect().bottom - remainingGap;
-      }
-      collapsedHeight = bounds.height - removed;
-      lastWidth = bounds.width;
-    }
-    // The status strip sits above the card on Start. As with Reminders, align
-    // the bottom with the collapsed form rather than stretching the grid row.
-    var offset = Math.max(0, mount.getBoundingClientRect().top - bounds.top);
     var trailing = 0;
     if (summaryMode()) {
       var card = d.getElementById('currentSummaryCard');
@@ -368,7 +335,7 @@
         trailing = (parseFloat(cardStyle.paddingBottom) || 0) + (parseFloat(cardStyle.borderBottomWidth) || 0);
       }
     }
-    var height = Math.max(280, Math.round(collapsedHeight - offset - trailing));
+    var height = geometry.availableHeight(mount, trailing, 280);
     applyInlineHeight(height);
   }
 
@@ -676,13 +643,14 @@
   }
 
   function start() {
-    if (started || !data || !w.VildaCentileLiveView || !w.VildaCentileLiveRender) return;
+    if (started || !data || !w.VildaCentileLiveView || !w.VildaCentileLiveRender || !w.VildaSummaryLayout) return;
     form = d.getElementById('calcForm');
     fieldset = d.querySelector('#userSection fieldset.user-card');
     doctor = d.getElementById('doctorSection');
     mount = d.getElementById('vildaCentileLiveMount');
     if (!form || !fieldset || !doctor || !mount) return;
     started = true;
+    geometry = w.VildaSummaryLayout.createFormGeometry(form, fieldset, doctor);
     notice = d.getElementById('vildaCentileLiveLoading');
     noticeTitle = d.getElementById('vildaCentileLiveLoadingTitle');
     noticeMessage = d.getElementById('vildaCentileLiveLoadingMessage');
