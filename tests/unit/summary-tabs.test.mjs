@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import { loadBrowserScript } from '../support/load-browser-script.mjs';
 
-function setup({ available = true, child = true, comparison = false, pending = false, missingController = false, readyState = 'complete' } = {}) {
+function setup({ available = true, child = true, comparison = false, pending = false, missingController = false, readyState = 'complete', choice = null, comparisonState = 'unknown' } = {}) {
   const elements = [], subscribers = [], listeners = new Map();
   function element(tag = 'div') {
     const classes = new Set(), events = new Map();
@@ -27,12 +27,14 @@ function setup({ available = true, child = true, comparison = false, pending = f
   card.id = 'currentSummaryCard'; content.id = 'currentSummaryContent'; mount.id = 'vildaCentileLiveMount';
   card.dataset = { summaryAvailable: String(available), comparisonVisible: String(comparison), isChild: String(child) };
   home.appendChild(mount); home.appendChild(card); card.appendChild(heading); card.appendChild(content);
-  const doc = { readyState, documentElement: { classList: { remove: vi.fn() } }, getElementById: id => elements.find(e => e.id === id), createElement: element,
+  const doc = { readyState, documentElement: { classList: { remove: vi.fn(), toggle: vi.fn() } }, getElementById: id => elements.find(e => e.id === id), createElement: element,
     createComment: () => element('#comment'),
     addEventListener(type, callback) { if (!listeners.has(type)) listeners.set(type, []); listeners.get(type).push(callback); },
     dispatchEvent(event) { for (const callback of listeners.get(event.type) || []) callback(event); },
   };
   const win = { document: doc, clearTimeout: vi.fn(), location: { reload: vi.fn() }, VildaCentileLivePanel: missingController ? undefined : {}, CustomEvent: class { constructor(type, options) { this.type = type; this.detail = options.detail; } },
+    sessionStorage: { getItem: key => key === 'vildaLoadChoiceV1' ? choice : key === 'vildaCurrentPatientId' && choice ? 'fictional-patient' : null },
+    VildaSummaryComparison: { getState: () => ({ patientId: choice ? 'fictional-patient' : null, status: comparisonState }) },
     VildaCentileLiveData: { getEligibility: () => ({ status: pending ? 'pending' : 'eligible' }), subscribe: fn => subscribers.push(fn) } };
   const changes = []; doc.addEventListener('vilda:summary-chart-state', event => changes.push(event.detail));
   loadBrowserScript('vilda_summary_tabs.js', win);
@@ -42,6 +44,7 @@ function setup({ available = true, child = true, comparison = false, pending = f
     report: detail => doc.dispatchEvent({ type: 'vilda:professional-summary-updated', detail }),
     signal: event => subscribers.forEach(fn => fn(event)),
     setPending: value => { pending = value; },
+    setComparison: value => { comparisonState = value; doc.dispatchEvent({ type: 'vilda:comparison-state' }); },
   };
 }
 
@@ -138,6 +141,34 @@ describe('professional summary tabs — stable DOM and chart ownership', () => {
     e.summary.fire('click');
     expect(e.content.hidden).toBe(false);
     expect(e.panel.hidden).toBe(true);
+  });
+
+  it.each(['unknown', 'pending', 'error'])('keeps the dedicated slot when a New measurement comparison is %s', status => {
+    const e = setup({ choice: 'new', comparisonState: status });
+    expect(e.win.VildaSummaryTabs.getState().mode).toBe('dedicated');
+    expect(e.mount.parentNode).toBe(e.home);
+    expect(e.doc.documentElement.classList.toggle).toHaveBeenLastCalledWith('vilda-summary-comparison-reserved', true);
+    e.signal({ reason: 'startup-settled' });
+    expect(e.win.VildaSummaryTabs.getState().mode).toBe('dedicated');
+    e.setComparison('absent');
+    expect(e.win.VildaSummaryTabs.getState()).toEqual({ mode: 'summary', selected: 'summary' });
+    expect(e.doc.documentElement.classList.toggle).toHaveBeenLastCalledWith('vilda-summary-comparison-reserved', false);
+    expect(e.mount.parentNode).toBe(e.panel);
+  });
+
+  it('does not wait for previous-measurement reads in Restore', () => {
+    const e = setup({ choice: 'restore', comparisonState: 'pending' });
+    expect(e.win.VildaSummaryTabs.getState().mode).toBe('summary');
+    expect(e.mount.parentNode).toBe(e.panel);
+  });
+
+  it('does not replace the selected summary chart while a resolved absence is revalidating', () => {
+    const e = setup({ choice: 'new', comparisonState: 'absent' });
+    e.chart.fire('click');
+    e.signal({ reason: 'patient-saved', identityChanged: false });
+    e.setComparison('absent');
+    expect(e.win.VildaSummaryTabs.getState()).toEqual({ mode: 'summary', selected: 'chart' });
+    expect(e.mount.parentNode).toBe(e.panel);
   });
 
   it.each([{ child: false }, { available: false }, { comparison: true }])('does not expose pediatric chart tabs for %o', options => {

@@ -1398,7 +1398,7 @@
 
   /* Jedno zdanie do karty „Podsumowanie wyników" — tekst, nie HTML, bo tamta karta składa
    * wiersze przez textContent. Pusty ciąg znaczy „nie ma czego pokazać". */
-  function hvSdsPodsumowanie(we) {
+  function hvSdsDlaPodsumowania(we) {
     var i = we && typeof we === 'object' ? we : {};
     var teraz = num(i.currentAgeMonths);
     var gap = num(i.gapM);
@@ -1431,9 +1431,20 @@
       });
       if (model && model.velocity) vel = model.velocity;
     }
-    if (!vel) return '';
+    if (!vel) return null;
     var d = hvSdsDane(vel, null);
-    if (!d) return '';
+    if (!d) return null;
+    return { sds: d.r.sds, percentile: d.r.centyl, text: hvSdsTekstPodsumowania(d) };
+  }
+
+  // One pair of measurements and one raw SDS serve both the text and its card tone.
+  // The unrounded value is never reconstructed from a displayed decimal.
+  function hvSdsPodsumowanie(we) {
+    var result = hvSdsDlaPodsumowania(we);
+    return result ? result.text : '';
+  }
+
+  function hvSdsTekstPodsumowania(d) {
     if (d.r.sds == null) return 'SDS tempa: nie policzono — ' + (d.r.opisPowodu || 'brak danych');
     var txt = 'SDS tempa: ' + fmtS(d.r.sds) + ' (' + fmtCentyl(d.r.centyl) + ' centyl) — wg '
       + zrodloKrotkie(d.r);
@@ -2033,6 +2044,7 @@
     analyzeAndRenderHtml: analyzeAndRenderHtml,
     buildPatientHtml: buildPatientHtml,
     hvSdsPodsumowanie: hvSdsPodsumowanie,
+    hvSdsDlaPodsumowania: hvSdsDlaPodsumowania,
     hvSdsDlaOpisu: hvSdsDlaOpisu,
     hvSdsKafelek: hvSdsKafelek,
     buildCardPanelHtml: buildCardPanelHtml,

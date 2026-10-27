@@ -1,6 +1,7 @@
-/* Presentation of existing professional results. No medical calculation or threshold
- * lives here: generated summary lines and their existing assessment remain authoritative.
- * This view does not participate in the clipboard/PDF summary generation. */
+/* Professional summary view. Original result lines stay authoritative for values
+ * and copying. SUMMARY-B adds owner-selected presentation assessments using raw
+ * numeric context and existing reference engines; policy lives in the rules file.
+ * This view does not participate in clipboard/PDF summary generation. */
 (function (w) {
   'use strict';
 
@@ -36,8 +37,8 @@
   function hasCentile(line) { return /(?:[<>]?\s*\d+(?:[.,]\d+)?\.?\s*centyl|centyl\s*:\s*\d+)/i.test(line); }
   function validCategory(category) { return !!(category && category.klucz && category.klucz !== 'brak'); }
 
-  /* A neutral tone is not proof that a result was assessed. Descriptive values (BSA,
-   * prediction, velocity SDS), missing references and an unevaluable velocity stay gray. */
+  /* A neutral tone is not proof that a result was assessed. Descriptive values,
+   * missing references and an unevaluable velocity remain explicitly unassessed. */
   function assessed(k, line, context) {
     if (!line || /brak danych|nie oceniono|poza zakresem wieku|uzupełnij/i.test(line)) return false;
     if (k === 'bmi') return validCategory(w.lastBmiKategoria);
@@ -74,10 +75,64 @@
     var isAssessed = !missing && assessed(k, original, context);
     // Unknown/descriptive results never acquire a reassuring normal color.
     var assessment = missing ? 'unassessed' : tone !== 'normal' ? 'abnormal' : isAssessed ? 'normal' : 'unassessed';
-    return { key: k, text: shown, original: original, tone: tone, assessment: assessment, badge: missing ? '' : badge(k, tone, original) };
+    var unavailable = missing || /:\s*(?:brak (?:danych|wcześniejszego pomiaru)|nie (?:policzono|obliczono|podano|oceniono)|uzupełnij|—\s*$)/i.test(original);
+    return { key: k, text: shown, original: original, tone: tone, assessment: assessment, availability: unavailable ? 'missing' : 'available', badge: missing ? '' : badge(k, tone, original) };
+  }
+  function matchLine(line) { return text(line).replace(/[\u00a0\u202f]/g, ' ').replace(/\s+/g, ' '); }
+  function velocitySdsTone(sds) {
+    var rules = w.VildaProfessionalSummaryRules && w.VildaProfessionalSummaryRules.velocitySds;
+    if (!rules || !number(sds)) return 'unknown';
+    if (sds < rules.dangerBelow) return 'danger';
+    if (sds < rules.normalFrom || sds > rules.normalThrough) return 'warn';
+    return 'normal';
+  }
+  function referenceCentile(value) {
+    if (value < 1) return '<1';
+    if (value > 99) return '>99';
+    return String(Math.round(value));
+  }
+  function newAssessment(item, context) {
+    var data = context.assessmentData;
+    if (!context.isChild || !data || item.availability === 'missing') return;
+    if (item.key === 'velocity-sds') {
+      var velocity = data.velocity;
+      if (!velocity || matchLine(velocity.text) !== matchLine(item.original)) return;
+      var velocityTone = velocitySdsTone(velocity.sds);
+      if (velocityTone === 'unknown') return;
+      item.tone = velocityTone;
+      item.assessment = velocityTone === 'normal' ? 'normal' : 'abnormal';
+      item.badge = velocityTone === 'normal' ? 'W wybranym zakresie SDS tempa' : 'SDS tempa poza wybranym zakresem';
+      item.explanation = 'Oznaczenie SDS tempa: poniżej −1,5 czerwone; od −1,5 do poniżej −0,5 oraz powyżej +1 bursztynowe; od −0,5 do +1 turkusowe.';
+    }
+    if (item.key !== 'prediction') return;
+    var rules = w.VildaProfessionalSummaryRules && w.VildaProfessionalSummaryRules.prediction;
+    var reference = w.VildaSdsWzrostu, colors = w.VildaCentileLiveColors;
+    if (!rules || !reference || typeof reference.policz !== 'function' || !colors || typeof colors.tone !== 'function') return;
+    if (rules.sources.indexOf(data.source) < 0 || data.population !== rules.population || ['F', 'M'].indexOf(data.sex) < 0) return;
+    var candidate = (Array.isArray(data.predictions) ? data.predictions : []).find(function (prediction) {
+      return matchLine(prediction.line) === matchLine(item.original);
+    });
+    if (!candidate || !number(candidate.cm) || candidate.cm <= 0) return;
+    var stats = reference.policz({ wzrost: candidate.cm, plec: data.sex, wiekMies: rules.referenceAgeMonths, zrodlo: data.source });
+    if (!stats || !number(stats.centyl) || stats.fallback || stats.siatka !== data.source) return;
+    var tone = colors.tone('height', stats.centyl);
+    if (tone === 'unknown') return;
+    item.tone = tone === 'neutral' ? 'normal' : tone;
+    item.assessment = item.tone === 'normal' ? 'normal' : 'abnormal';
+    item.badge = item.tone === 'normal' ? 'Prognoza w typowym zakresie wzrostu dla 18 lat' : 'Prognoza poza typowym zakresem wzrostu dla 18 lat';
+    item.explanation = 'Ocena wartości środkowej dla wieku 18 lat, ' + (data.sex === 'F' ? 'dziewczęta' : 'chłopcy') + ', ' + (data.source === 'PALCZEWSKA' ? 'Palczewska' : 'OLAF') + '. Zakres ± opisuje niepewność prognozy.';
+    item.reference = { percentile: stats.centyl, ageMonths: rules.referenceAgeMonths, source: stats.siatka, sex: data.sex,
+      text: ' · ' + referenceCentile(stats.centyl) + ' centyl dla 18 lat' };
   }
   function build(lines, options) {
     var context = Object.assign({ isChild: true, tone: function () { return 'normal'; } }, options || {});
+    if (context.assessmentData === undefined && w.VildaSummaryCards && typeof w.VildaSummaryCards.getAssessmentData === 'function') {
+      try { context.assessmentData = w.VildaSummaryCards.getAssessmentData(); }
+      catch (error) {
+        context.assessmentData = null;
+        if (typeof w.vildaLogSwallowedCatch === 'function') w.vildaLogSwallowedCatch('vilda_professional_summary.js', error, { context: 'summary-assessment-data' });
+      }
+    }
     var all = (Array.isArray(lines) ? lines : []).map(text).filter(Boolean);
     var divided = w.VildaGrowthPredictionLines && typeof w.VildaGrowthPredictionLines.podziel === 'function'
       ? w.VildaGrowthPredictionLines.podziel(all) : { widoczne: all, pozostale: [] };
@@ -94,6 +149,7 @@
           ? matches.find(function (line) { return /Khamis[-–]Roche/i.test(line); }) || matches[0] : matches[0];
         if (chosen) {
           var item = row(chosen, context);
+          newAssessment(item, context);
           if (definition[0] === 'velocity' && item.text.length > 85 && item.text.indexOf(' — ') >= 0) {
             item.text = item.text.split(' — ')[0];
             if (!item.badge && item.assessment === 'normal') item.badge = 'W normie';
@@ -131,6 +187,7 @@
       node.dataset.summaryKey = data.key;
       node.dataset.tone = data.tone;
       node.dataset.assessment = data.assessment;
+      node.dataset.availability = data.availability;
       if (data.text !== data.original && data.key === 'velocity') node.title = data.original;
       var copy = create(doc, 'span', 'professional-summary-value');
       var split = data.text.indexOf(':');
@@ -141,10 +198,21 @@
         copy.appendChild(doc.createTextNode(data.text.slice(split + 1)));
       } else copy.textContent = data.text;
       node.appendChild(copy);
-      if (data.badge) {
-        var chip = create(doc, 'span', 'professional-summary-chip');
-        chip.textContent = data.badge;
-        node.appendChild(chip);
+      if (data.reference) {
+        var reference = create(doc, 'span', 'professional-summary-reference');
+        reference.textContent = data.reference.text;
+        node.appendChild(reference);
+        node.dataset.referencePercentile = String(data.reference.percentile);
+        node.dataset.referenceAgeMonths = String(data.reference.ageMonths);
+        node.dataset.referenceSource = data.reference.source;
+      }
+      if (data.assessment !== 'unassessed') {
+        var description = create(doc, 'span', 'professional-summary-assessment');
+        var verdict = data.badge || (data.assessment === 'normal' ? 'W normie' : 'Wymaga uwagi');
+        var explanation = [verdict, data.explanation || ''].filter(Boolean).join('. ').replace(/[.]+$/, '') + '.';
+        description.textContent = ' Ocena: ' + explanation;
+        node.appendChild(description);
+        node.title = (node.title ? node.title + '. ' : '') + explanation;
       }
       fragment.appendChild(node);
     });
@@ -183,5 +251,5 @@
     container.classList.add('professional-summary-content');
     return model;
   }
-  w.VildaProfessionalSummary = Object.freeze({ build: build, render: render });
+  w.VildaProfessionalSummary = Object.freeze({ build: build, render: render, velocitySdsTone: velocitySdsTone });
 }(typeof window !== 'undefined' ? window : globalThis));

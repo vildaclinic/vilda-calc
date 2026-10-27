@@ -451,12 +451,14 @@ describe('Zdanie podsumowania nie zależy od gotowości globalnej', () => {
   // e2e (potrzebuje pełnej maszynerii centylowej); tutaj pilnujemy, że droga istnieje
   // i że karta podsumowania ma z czego ją zasilić.
   it('silnik zdania ma drugą drogę: pomiary zamiast odstępu', () => {
-    const i = src.indexOf('function hvSdsPodsumowanie');
+    const i = src.indexOf('function hvSdsDlaPodsumowania');
     const j = src.indexOf('function patientHvCardHtml', i);
     const cialo = src.slice(i, j);
     expect(cialo).toContain('Array.isArray(i.measurements)');
     expect(cialo, 'model tempa liczony tą samą funkcją co karta').toContain('analyze({');
-    expect(cialo, 'brak jednego i drugiego to nadal brak danych').toContain("return '';");
+    expect(cialo, 'brak jednego i drugiego to nadal brak danych').toContain("if (!vel) return null;");
+    expect(cialo, 'tekst korzysta z tej samej numerycznej drogi').toContain('var result = hvSdsDlaPodsumowania(we)');
+    expect(cialo, 'odmowa nadal daje pusty tekst').toContain("return result ? result.text : '';");
   });
 
   it('karta podsumowania czyta pomiary i wiek z formularza, nie tylko z globalnej', () => {

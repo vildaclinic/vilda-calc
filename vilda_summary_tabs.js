@@ -57,6 +57,19 @@
     missingController();
     if (notify === true || notify !== false && previous !== selected) announce();
   }
+  function awaitingComparison() {
+    var id, choice;
+    try {
+      id = w.sessionStorage.getItem('vildaCurrentPatientId') || w._vildaCurrentPatientId || null;
+      choice = w.sessionStorage.getItem('vildaLoadChoiceV1');
+    } catch (_) { return false; }
+    if (!id || choice !== 'new') return false;
+    var comparison = w.VildaSummaryComparison;
+    var result = comparison && typeof comparison.getState === 'function' ? comparison.getState() : null;
+    // A hidden comparison is not proof that no previous measurement exists.
+    // Only its native read/render lifecycle can conclusively establish absence.
+    return !result || result.status !== 'absent';
+  }
   function update() {
     if (!started) return;
     // An intermediate summary written while a saved patient is restoring must
@@ -66,7 +79,9 @@
     if (data && typeof data.getEligibility === 'function') {
       pending = data.getEligibility().status === 'pending';
     }
-    var next = information.available && information.isChild && !information.comparisonVisible && (!pending || mode === 'summary')
+    var comparisonReserved = information.isChild && awaitingComparison();
+    d.documentElement.classList.toggle('vilda-summary-comparison-reserved', comparisonReserved);
+    var next = !comparisonReserved && information.available && information.isChild && !information.comparisonVisible && (!pending || mode === 'summary')
       ? 'summary' : 'dedicated';
     var changed = next !== mode;
     mode = next;
@@ -136,6 +151,7 @@
       event.preventDefault();
       select(value, true);
     });
+    d.addEventListener('vilda:comparison-state', update);
     d.addEventListener('vilda:professional-summary-updated', function (event) {
       information = event.detail || information;
       update();
