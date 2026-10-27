@@ -19909,14 +19909,15 @@ tak samo, od razu i na każdym urządzeniu (dotąd gwiazdka widoczna po imporcie
 - **Bez zmian:** E4a (poprawka sprzed „Scal pacjentów” w koszu ginie), E4b/E3 (rozjazd karty po „Scal pacjentów”, 12
   zapisów na rundę), PRZ0 („Przywróć”, gdy wersja jest w karcie i w koszu), F2 (rozjazd zegarów ze starszą aplikacją).
 
-**Nota wydania (D8 = a, uzupełniona po decyzjach 2, 4 i 5b z 2026-10-26; do wklejenia przy wydaniu).** „Przypięte wizyty mają
+**Nota wydania (D8 = a, uzupełniona po decyzjach 2, 4 i 5b z 2026-10-26, poprawiona 2026-10-27: Ustawienia nie pokazują
+numeru wersji — aktualizacja przez komunikat o nowej wersji; do wklejenia przy wydaniu).** „Przypięte wizyty mają
 teraz własną datę przypięcia: późniejsza
 poprawka pomiaru z innego urządzenia nie zdejmuje gwiazdki, a świadomie odpięta albo usunięta wizyta nie wraca ze
-starej kopii na innym urządzeniu. Zaktualizuj aplikację na **wszystkich** urządzeniach tego samego dnia (numer wersji
-w Ustawieniach). Do tego czasu: (1) przypinaj, odpinaj i używaj »Odepnij i usuń« na urządzeniu już zaktualizowanym;
+starej kopii na innym urządzeniu. Zaktualizuj aplikację na **wszystkich** urządzeniach tego samego dnia (komunikat
+»Dostępna nowa wersja aplikacji« → »Aktualizuj«). Do tego czasu: (1) przypinaj, odpinaj i używaj »Odepnij i usuń« na urządzeniu już zaktualizowanym;
 (2) jeśli na starszym urządzeniu wizyta wróciła z gwiazdką po usunięciu, usuń ją ponownie na zaktualizowanym;
 (3) po »Przywróć« i po imporcie sprawdź gwiazdkę i przypnij wizytę ponownie, jeśli trzeba; (4) przed aktualizacją
-zsynchronizuj każde urządzenie — zwłaszcza po odpięciu wizyty: odpięcie, które nie zdążyło się zsynchronizować, może po
+zsynchronizuj każde urządzenie (Ustawienia → »Synchronizuj teraz«) — zwłaszcza po odpięciu wizyty: odpięcie, które nie zdążyło się zsynchronizować, może po
 aktualizacji wrócić jako gwiazdka (odepnij ją wtedy ponownie na zaktualizowanym urządzeniu); (5) na urządzeniu jeszcze
 niezaktualizowanym nie poprawiaj wizyt (pomiarów), nie odpinaj i nie przywracaj z kosza bez połączenia z siecią — zrób to
 na zaktualizowanym, inaczej taka poprawka może przepaść. W trybie chmurowym kopie robocze usuniętych wizyt (dzięki nim
@@ -20102,8 +20103,10 @@ urządzeń, jak dotąd.”
   bez dowiązania `node_modules`), lint, składnia (1417 plików), 539 plików testów, 15 247 z 15 247 zielonych, `test:pro`
   43 z 43, 32 z 32, 44 z 44; e2e (`desktop-chromium`, `--workers=1`, `PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH` jak wyżej)
   `polkrata-cien-indexeddb` 2 z 2, `kosz-zapisow` 11 z 11, `chmura-po-blokadzie` 2 z 2, `jednorazowe-bez-przywracania`
-  2 z 2, `pwa` 2 z 2 — 19 z 19; `podbij-wersje --sprawdz` — „Nic do zmiany”. Katalog, fuzz praw i fuzz floty —
-  niepowtarzane: scalenie nie zmienia `vilda_vault.js` ani `vilda_kosz_zapisow.js`.
+  2 z 2, `pwa` 2 z 2 — 19 z 19, pokrewne (`sync-wlasciciel-wersji` 8, `spojnosc-zapisow` 6,
+  `karta-pacjenta-notatki-historia` 5, `blokada-importu` 2, `meta-konta-blokada` 2, `kopia-konta-pomija` 1) 24 z 24
+  (pierwszy ich przebieg od scalenia #800 i zapisów S4 pilnujących sesji); `podbij-wersje --sprawdz` — „Nic do zmiany”.
+  Katalog, fuzz praw i fuzz floty — niepowtarzane: scalenie nie zmienia `vilda_vault.js` ani `vilda_kosz_zapisow.js`.
 
 **Kod.** `vilda_vault.js`: krok 1 — `Bpk_*` (składniki, `Bpk_wpis`, `Bpk_polacz`, `Bpk_zWpisu`, `Bpk_zWersji`,
 `Bpk_odcisk`, `Bpk_bezZnaczenia`, `Bpk_retencjaZapisu`, `Bpk_nowszaTrescKosza`), `Bkz_dolacz`, `Bkz_scalStart`,
