@@ -19325,6 +19325,9 @@ wylogowania (P-CIEN-POZA-LISTA, decyzje 2026-10-26; poprawki po przeglądzie war
 tego samego dnia, w tym „Usuń pacjenta” zdejmujące cień karty — decyzja 1 po przeglądzie wariantu V, po weryfikacji 3
 na całej flocie i bez wyścigu ze scaleniem, W3P-1).
 
+**Akceptacja kliniczna właściciela: 2026-10-27** („akceptuję klinicznie; F-A/K3 tak, F-D tak, K9 tak”, po scaleniu
+PR-S4, vildaclinic/vilda-calc#803) — reguła po zmianie, przypadki, ograniczenia i nota wydania z tego wpisu.
+
 Skróty commitów stanów pośrednich S4 w tym wpisie (np. `1fcfa0d9`, `2443fa0a`, `1132ee1e`, `1da487ce`, `e107e186`) odnoszą
 się do historii roboczej gałęzi. PR-S4 to jeden commit nad `audyt`, więc tych stanów w repozytorium nie ma; stan przed S4
 to `f612fe09`.
@@ -19346,7 +19349,9 @@ to `f612fe09`.
 - D5 (PRZ0), D6 (E4a), D7 (E3) — osobne PR, poza tym wpisem; kolejność: PR-S4 → PR-PRZ0 → PR-E4a → PR-E3, E3 przed
   etapem 2 synchronizacji przyrostowej (etap 1 — serwer — równolegle).
 
-**Do potwierdzenia przez właściciela (po panelu sędziów 2026-10-22; wykonawca wybrał wariant zgodny z decyzjami):**
+**Do potwierdzenia przez właściciela (po panelu sędziów 2026-10-22; wykonawca wybrał wariant zgodny z decyzjami) —
+PRZYJĘTE 2026-10-27** (odpowiedź właściciela po scaleniu PR-S4, vildaclinic/vilda-calc#803: „akceptuję klinicznie;
+F-A/K3 tak, F-D tak, K9 tak”; K1 rozstrzygnęła wcześniej decyzja 6):
 - **F-A/K3 — kosz starszej aplikacji z treścią przypiętą:** wdrożony W20 („brak pola gwiazdka = nieznany”, rekomendacja
   panelu 2.4, D2 = a), a nie F7 z `cel.md` („przypięta treść = odpięcie w chwili usunięcia”). F7 domyka też część T4d
   (3/8 zamiast 8/8 z gwiazdką), ale w S5 z 221 na P gubi przypiętą wizytę ponad flotę samych 221 (7/8 „brak” wobec 6/8)
@@ -19727,9 +19732,11 @@ przenosi w całości razem z polami W3):
   zapisów metadanych w R20; możliwy później, osobny PR); V4 (całe składniki `Bpk` poza listą — usuwa narzut ×4 po
   wygaśnięciu, 3–5 dni, większe ryzyko).
 
-**Flota mieszana (D8 = a: nota przy wydaniu, bez bramki).** Starsza aplikacja (221, 218, `f612fe09` przed aktualizacją
-albo po cofnięciu wydania, stara karta przeglądarki) liczy „najpierw `rev`” i chroni przypiętą przed retencją; nie zna
-rejestru gwiazdki ani składników. Nowa aplikacja rozpoznaje jej zmiany po polach W3 i odcisku treści (wyżej), rekord
+**Flota mieszana (D8 = a: nota przy wydaniu, bez bramki).** Starsza aplikacja (221, 218, `f612fe09`, opublikowana
+przed S4 227 — przed aktualizacją albo po cofnięciu wydania, stara karta przeglądarki) chroni przypiętą przed retencją;
+nie zna rejestru gwiazdki ani składników. Wersję tej samej karty 221 i 218 wybierają „najpierw `rev`”, a `f612fe09`
+i 227 — najpierw późniejsza chwila zmiany (P-POZNIEJSZA-POPRAWKA od 222). *(Poprawione 2026-10-27: dotąd zdanie
+przypisywało „najpierw `rev`” także `f612fe09`.)* Nowa aplikacja rozpoznaje jej zmiany po polach W3 i odcisku treści (wyżej), rekord
 złożony dostaje `rev` + 1, żeby starsza go przyjęła. Pomiar (katalog, jedno urządzenie 221 albo 218 na P, K albo C,
 216 przebiegów na położenie; odniesienie — flota samych starych i `f612fe09` w tej samej flocie):
 - utrata wizyty obecnej we flocie samych 221: 8/12/1 przebiegów (P/K/C), wyłącznie ODP i T4d (D2 = a: flota samych 221
@@ -19740,7 +19747,18 @@ złożony dostaje `rev` + 1, żeby starsza go przyjęła. Pomiar (katalog, jedno
   ODP 8/6/0, T4d 0/2/0, gwiazdka w koszu S5 0/1/0, reszta te same przebiegi co na `f612fe09` (S1, S1b, X3, S4r);
 - zapisy w rundzie kontrolnej 22/16/22 — tylko E4b i PRZ0 (`f612fe09` 60/60/60); bez pętli;
 - po aktualizacji starego urządzenia (3 rundy, 15 dni, 3 rundy) — dla 221 i 218 na P, K, C: 200 z 216 zbieżnie (widok
-  i stan pełny), rozjazd tylko E4b i PRZ0, 0 zapisów.
+  i stan pełny), rozjazd tylko E4b i PRZ0, 0 zapisów;
+- z opublikowaną przed S4 227 (pomiar 2026-10-27 po wydaniu, poza repozytorium: prawdziwy 227 obok 221, przypadki floty
+  mieszanej z „Ograniczeń”, 8 kolejności; 221 odtwarza liczby tego wpisu): 11 z 13 przypadków jak z 221; R2-K2 i R2-K3
+  z 227 lepiej — późniejsza poprawka zrobiona bez sieci zostaje, z gwiazdką (50* zamiast 37*/41*), bo 227 wybiera wersję
+  po chwili zmiany. Urządzenie z 227 wyłączone na tydzień (zsynchronizowane przed wyłączeniem, nieużywane do
+  aktualizacji; 11 scenariuszy przez jeden blob konta): po aktualizacji wynik jak przy natychmiastowej aktualizacji,
+  0 zapisów w rundzie kontrolnej; do aktualizacji pokazuje — i przy synchronizacji wysyła — starą przypiętą kopię
+  wizyty świadomie odpiętej albo usuniętej gdzie indziej (ODP, T4d), co naprawia najbliższa synchronizacja urządzenia
+  już zaktualizowanego. Zmiana zrobiona na nim bez sieci przed wyłączeniem, gdy tę samą wizytę zmieniono w tym czasie
+  gdzie indziej (poprawka, a potem gwiazdka albo odwrotnie), przepada przy jego pierwszej synchronizacji — jak przed S4
+  (T6, K10b). Komunikat o nowej wersji czeka na koniec synchronizacji po zalogowaniu (P-AKTUALIZACJA-BRAMKA), więc
+  stara wersja zwykle synchronizuje się raz przed „Aktualizuj” (punkt 4 noty).
 Opisane wyżej poprawki panelu (odcisk treści, W20, wersje bez pól, chwila treści kosza po aktualizacji, F-D) i ich
 granice — „Ograniczenia, flota mieszana”.
 
