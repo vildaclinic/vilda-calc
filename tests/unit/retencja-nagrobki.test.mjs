@@ -328,7 +328,10 @@ describe('retencja w synchronizacji (dwa urządzenia)', () => {
     expect(await B.listTrashedSnapshots(), 'B: nagrobek retencji nie wciąga treści do kosza').toEqual([]);
   });
 
-  it('wersja przypięta na B, zanim A ją przyciął, zostaje na obu urządzeniach', async () => {
+  // P-KOSZ-POLKRATA (S4 krok 1, decyzja właściciela D9 = a, A3a): nagrobek retencji przegrany z wersją przypiętą
+  // zostaje (365 dni) — bez niego późniejsza zmiana bez gwiazdki z urządzenia, które o gwiazdce nie wie, omijałaby
+  // retencję (S6, K10). Wersji przypiętej nie usuwa (krok 1, tryb B2: przypięta chroniona jak dotąd). Dotąd: znikał.
+  it('wersja przypięta na B, zanim A ją przyciął, zostaje na obu urządzeniach (nagrobek retencji zostaje)', async () => {
     sztucznyZegar();
     const A = await urzadzenie();
     const B = await urzadzenie();
@@ -351,8 +354,11 @@ describe('retencja w synchronizacji (dwa urządzenia)', () => {
     expect(kartaA.snapshots.find((s) => s.snapshotId === przypieta).pinned).toBe(true);
     for (const v of [A, B]) {
       const nagrobki = (await v.exportSyncPayload()).snapshotTombstones.map((n) => n.snapshotId);
-      expect(nagrobki, 'nagrobek przypiętej zniknął').not.toContain(przypieta);
-      expect(nagrobki).toHaveLength(6);
+      expect(nagrobki, 'nagrobek retencji przypiętej zostaje (P-KOSZ-POLKRATA)').toContain(przypieta);
+      expect(nagrobki).toHaveLength(7);
+      const n = (await v.exportSyncPayload()).snapshotTombstones.find((x) => x.snapshotId === przypieta);
+      expect(n.powod, 'sam nagrobek retencji, nie kosz').toBe('retencja');
+      expect(await v.listTrashedSnapshots(), 'kosz pusty').toEqual([]);
     }
   });
 
