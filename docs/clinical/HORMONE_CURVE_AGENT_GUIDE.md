@@ -19,6 +19,19 @@ opisanego niżej porównania płci: jego punkt LH nadal kończy się w dniu
 nie usuwa ograniczeń modelu i wyników poniżej źródłowego LOD. Granica
 326 jest decyzją aplikacji, nie autorów; TT i normy nie zmieniają się.
 
+**Kolejna decyzja 26.10.2026 — zwykły niemowlęcy TT chłopców:**
+[odrębny kontrakt](hormone-lifespan/TT_INFANT_RESULT_ONLY.md) dopuszcza
+sam dokładny wynik dla całego znanego wieku `(212 dni;1 rok)` w „Całym
+życiu” i „Minipuberty”. Właściciel odrzucił nową medianę z późnej części
+grafiki i adnotację o rozbieżności źródła w produkcie. Liczbowe TT,
+flagi i kwalifikacja do dnia 212, geometria, skala, porównanie płci,
+RI i historia pozostają bez zmian. Nowa polityka samego wyniku nie
+przenosi do TT granicy lub wyjątku LH. Przy medycznych opisach TT podaj
+krótkie klikalne źródła, a pełne cytowania i lokalizacje w rozwijanych
+źródłach: Madsen 2022 dla pokwitania, Walravens 2026/tabela 1 dla średnich
+dorosłych (online 2025), Busch 2022 dla minipuberty. Różnic kohort
+dorosłych nie przedstawiaj jako indywidualnego tempa starzenia.
+
 ## Cel: czytelny obraz zmian, bez sztucznych wydarzeń hormonalnych
 
 To pomoc do rozmowy z pacjentem i nauczania studentów. Linia ma pozwolić

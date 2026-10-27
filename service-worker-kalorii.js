@@ -19,7 +19,7 @@
  *   bo i tak chcemy zwracać HTML z cache natychmiast.
  */
 
-const SW_VERSION = '1.1.394';
+const SW_VERSION = '1.1.395';
 const CACHE_PREFIX = 'pwa-kalorii';
 const SHELL_CACHE = `${CACHE_PREFIX}-shell-v${SW_VERSION}`;
 const RUNTIME_CACHE = `${CACHE_PREFIX}-runtime`;
@@ -586,6 +586,7 @@ const CORE_SHELL_URLS = [
   '/vilda_lab_neonatal_context.js?v=1',
   '/vilda_lab_neonatal_context.js?v=2',
   '/vilda_lab_neonatal_context.js?v=3',
+  '/vilda_lab_neonatal_context.js?v=4',
   '/vilda_lab_puberty.js?v=1',
   '/vilda_lab_puberty.js?v=2',
   '/vilda_lab_puberty.js?v=3',
@@ -2221,6 +2222,7 @@ const OPTIONAL_ASSETS = [
   '/vilda_hormone_lifespan_data.js?v=44',
   '/vilda_hormone_lifespan_data.js?v=45',
   '/vilda_hormone_lifespan_data.js?v=46',
+  '/vilda_hormone_lifespan_data.js?v=47',
   '/vilda_hormone_lifespan_reference.js?v=1',
   '/vilda_hormone_lifespan_reference.js?v=2',
   '/vilda_hormone_lifespan_reference.js?v=3',
@@ -2230,6 +2232,7 @@ const OPTIONAL_ASSETS = [
   '/vilda_hormone_lifespan_reference.js?v=7',
   '/vilda_hormone_lifespan_reference.js?v=8',
   '/vilda_hormone_lifespan_reference.js?v=9',
+  '/vilda_hormone_lifespan_reference.js?v=10',
   '/vilda_insl3_age_source.js?v=1',
   '/vilda_hormone_lifespan_observations.js?v=1',
   '/vilda_amh_age_reference_data.js?v=1',
@@ -2320,12 +2323,14 @@ const OPTIONAL_ASSETS = [
   '/vilda_hormone_lifespan.js?v=44',
   '/vilda_hormone_lifespan.js?v=45',
   '/vilda_hormone_lifespan.js?v=46',
+  '/vilda_hormone_lifespan.js?v=47',
   '/vilda_hormone_lifespan.css?v=1',
   '/vilda_hormone_lifespan.css?v=2',
   '/vilda_hormone_lifespan.css?v=3',
   '/vilda_hormone_lifespan.css?v=4',
   '/vilda_hormone_lifespan.css?v=5',
   '/vilda_hormone_lifespan.css?v=6',
+  '/vilda_hormone_lifespan.css?v=7',
   '/cukrzyca.js',
   '/cukrzyca.js?v=29',
   '/cukrzyca.js?v=30',

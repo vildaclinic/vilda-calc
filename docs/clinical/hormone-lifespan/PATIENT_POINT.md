@@ -1,5 +1,16 @@
 # Punkt wyniku na wykresie hormonów
 
+**Nowsza decyzja 26 października 2026 — późny niemowlęcy TT chłopców:**
+[osobna polityka](TT_INFANT_RESULT_ONLY.md) pozwala pokazać sam dokładny
+wynik w całym `(212 dni;1 rok)`, tylko w zwykłych widokach „Całe życie”
+i „Minipuberty”. Nie dodaje mediany, jasnego znacznika, łącznika,
+ilorazu lub normy. Źródłowy profil Busch, 360 węzłów TT i dawna
+kwalifikacja liczbowa pozostają bez zmian. Wcześniejsze wzmianki o luce
+po 212. dniu nadal opisują brak nowej mediany, ale już nie pełną politykę
+widoczności samego wyniku. Nie rozszerzamy porównania płci, RI lub
+historii. Przy objaśnieniach TT są krótkie klikalne cytowania i pełne
+publikacje w rozwijanych źródłach.
+
 **Uzupełnienie 26 października 2026 — późne niemowlęce LH chłopców:**
 po ponownym sprawdzeniu Busch 2022 właściciel polecił wdrożenie
 [odrębnej polityki](LH_INFANT_TAIL.md): cały znany wiek `(243;326]` dnia
@@ -1318,6 +1329,14 @@ w całym `(243;326]` oraz sam wynik w `(326 dni;1 rok)`. Granica 326 jest
 decyzją prezentacji aplikacji, nie końcem modelu autorów. Nie usuwa to
 bramki innych analitów lub odrębnego porównania płci i nie zamienia
 źródłowego LOD w limit oznaczenia pacjenta.
+
+**Późniejszy wyjątek dla zwykłego TT, 26.10.2026:**
+[polityka samego wyniku](TT_INFANT_RESULT_ONLY.md) zachowuje starą
+kwalifikację mediany do 212. dnia i dopuszcza wyłącznie rzeczywisty
+punkt dla całego `(212 dni;1 rok)`. Nie usuwa flag bramki liczbowej,
+nie aktywuje późnej mediany i nie odzyskuje profilu odrzuconego z powodu
+populacji, metody, materiału lub niegotowego/obcego kontekstu. Prawdziwy
+wynik jest rysowany na niezmienionej skali; nie przyciągamy go do linii.
 
 Wang: źródło oznacza grupy wieku liczbami 0–14, a na ryc. 1 ich środki
 znajdują się w przybliżeniu przy N+0,5 roku. Nie opisuje dokładnej reguły

@@ -21,6 +21,7 @@ Rejestr jest inwentaryzacją techniczną. Nie nadaje opisanym modułom statusu w
 | LAB-PUBERTY | LH/FSH: niezależna ocena zakresu i czasu dojrzewania | `vilda_lab_puberty_data.js`, `vilda_lab_puberty.js`, `vilda_lab_snapshot.js`, `vilda_lab_puberty_ui.js`, `vilda_lab_assessment_ui.js` | `lab-puberty*.test.mjs`, `lab-snapshot*.test.mjs`, `lab-assessment*.test.mjs`, E2E `lab-snapshot.spec.mjs`, `lab-puberty-ui.spec.mjs` | PR3: aktywacja LH/FSH w dotychczasowym układzie i odczyt utrwalonych ocen; szczegóły w `LH_FSH.md` |
 | LAB-LH-CHILDHOOD | LH dzieci: jednostronne orientacyjne odniesienie ≤0,3 obu płci i punkt wyniku bez mediany | dane i silnik LH/FSH, wspólne assessment/snapshot, polityki wykresu | regresje produkcyjnego porównania, adaptera, historii i UI/PWA; wyniki uruchomień w PR | makieta 04 i wdrożenie zaakceptowane 25.10.2026; nowe odniesienie ma własne pochodzenie, nie zmienia RI Mayo; [kontrakt](LH_CHILDHOOD_REFERENCE.md) |
 | HORMONE-INFANT-LH-TAIL | LH chłopców po 243. dniu: przybliżona mediana modelu do 326., później sam wynik do <1 roku | wspólny silnik/renderer odniesień wieku, osobna polityka ogona Busch i dotychczasowe węzły | regresje rzeczywistego API, adaptera, UI/PWA i zachowania pozostałych profili; wykonane wyniki w PR | wdrożenie zaakceptowane 26.10.2026; zwykłe widoki życia/minipuberty, bez zmiany RI, porównania płci lub historii; [kontrakt](hormone-lifespan/LH_INFANT_TAIL.md) |
+| HORMONE-INFANT-TT-RESULT-ONLY | TT chłopców po 212. dniu do <1 roku: sam rzeczywisty wynik bez mediany | wspólny silnik/renderer, osobna polityka samego wyniku i istniejący czytnik wieku bieżącej osoby | regresje produkcyjnego API, pełnego wieku, kontekstu i UI/PWA; wykonane wyniki w PR | makieta i wdrożenie zaakceptowane 26.10.2026; bez nowych median, RI, geometrii, porównania płci lub historii; cytowania przy opisach; [kontrakt](hormone-lifespan/TT_INFANT_RESULT_ONLY.md) |
 | LAB-INHIBIN-B | Inhibina B: wiek, minipuberty i kontekst dorosłych | `vilda_lab_inhibin_b_data.js`, `vilda_lab_inhibin_b.js`, wspólne UI i snapshot | `lab-inhibin*.test.mjs`, E2E `lab-inhibin-b.spec.mjs` | orientacyjne zakresy źródłowe; ograniczenia i polityki w `INHIBIN_B.md`; akceptacja kliniczna właściciela przed scaleniem |
 | LAB-TT-MAYO | Testosteron całkowity: M według wieku/G, F według wieku od 6 miesięcy | `vilda_lab_testosterone_data.js`, `vilda_lab_testosterone.js`, `vilda_lab_testosterone_units.js`, wspólne UI i snapshot | `lab-testosterone*.test.mjs`, E2E `lab-testosterone*.spec.mjs`; wyniki uruchomień w PR | etap 3 M i pierwsza partia F; źródła, luki i polityki w `TESTOSTERONE.md`; końcowy przegląd kliniczny właściciela przed scaleniem |
 | HORMONE-FEMALE-TT-AGE | TT dziewcząt 6–18: osobna mediana modelu i punkt wyniku | `vilda_female_tt_age.js`, `vilda_female_tt_age_ui.js`, osobne dane/polityka pakowane do runtime | `female-tt-age.test.mjs`, E2E `lab-female-tt-age*.spec.mjs`; wyniki w PR | zakres zaakceptowanej makiety 24.10.2026; poza 85 zwykłymi profilami, bez nowych RI/SDS/historii; [kontrakt](hormone-lifespan/FEMALE_TT_AGE.md) |
@@ -2941,6 +2942,94 @@ PWA/offline oraz zachowanie innych profili. Wykonane wyniki i kontrole
 końcowego SHA podaje PR, bez utożsamiania ich z walidacją kliniczną.
 Pełny kontrakt, źródła i mały własny ekstrakt audytu:
 [LH_INFANT_TAIL.md](hormone-lifespan/LH_INFANT_TAIL.md).
+
+### HORMONE-INFANT-TT-RESULT-ONLY — sam wynik TT po 212. dniu, 2026-10-26
+
+**Decyzja właściciela:** po audycie pełnego Busch 2022 i trzech
+suplementów oraz przeglądzie makiety wdrożyć sam rzeczywisty punkt
+TT chłopców dla całego znanego wieku `(212 dni;1 rok)`, wyłącznie
+w zwykłych widokach „Całe życie” i „Minipuberty”. Właściciel odrzucił
+nową medianę z późnej grafiki i adnotację o rozbieżności publikacji
+w produkcie. Podpis brzmi: „Czerwony punkt: wynik pacjenta. Linia
+pokazuje poglądowy przebieg zmian.” Nie ma mediany, jasnego znacznika,
+łącznika, ilorazu, SDS, centyla lub nowego laboratoryjnego werdyktu.
+
+**Źródło i populacja:** Busch AS i wsp., *Dynamic Changes of Reproductive
+Hormones in Male Minipuberty: Temporal Dissociation of Leydig and
+Sertoli Cell Activity*, JCEM 2022;107(6):1560–1568,
+[DOI dgac115](https://doi.org/10.1210/clinem/dgac115). Pełny końcowy
+artykuł, Methods/Results s. 1561–1562, ryc. 3 s. 1565 i wszystkie
+trzy oficjalne suplementy v1 sprawdzono w audycie. Zdrowi donoszeni
+chłopcy z ciąż pojedynczych, COPENHAGEN Minipuberty, Dania. TT:
+surowica, in-house LC-MS/MS, nmol/L, źródłowe **LOQ 0,012 nmol/L**.
+119 chłopców i 338 próbek pourodzeniowych łącznie nie są potwierdzonym
+N dopasowania TT lub jego późnego ogona. Metoda/LOQ źródła nie
+ustalają metody lub granicy oznaczalności próbki pacjenta.
+
+Tekst i późna grafika nie rozstrzygają spójnie liczbowej mediany TT;
+nie odzyskano oryginalnego eksportu ani wystarczającej reguły połączenia
+dwóch dopasowań. Suplementy dotyczą SHBG/wolnego T, zmienności SDS
+i INSL3. Wdrożenie nie przypisuje konkretnej pomyłki autorom i nie
+uzupełnia luki własną medianą, LOQ, LOQ/2 lub zerem. Granica 212 dni
+jest dotychczasową decyzją graficznej kwalifikacji aplikacji,
+nie źródłowym progiem diagnostycznym.
+
+**Kontrakt wykonania:**
+`male-testosterone-infant-result-only-policy.json`, wersja `2026-10-26.1`,
+jest pakowana do zewnętrznego `infantTtResultOnlyPolicy`.
+`evaluate()` nadal zgłasza `reference-unavailable`; osobne
+`evaluateResultOnly()` dopuszcza sam wynik dopiero po zgodnym wyborze
+`busch2022-male-t` i odrzuceniu wyłącznie jego liczbowej kwalifikacji.
+Wymaga całego jawnego wieku w `(212/365.25;1)`, aktualnej osoby
+i `infantTtContextAvailable: true`. Zachowuje gotowość, tożsamość,
+blokadę, donoszenie oraz znane bramki metody/materiału, leczenia,
+stymulacji i przeciwwskazań. Nie jest fallbackiem po innym odrzuceniu.
+Nierówność lub zapis LOD/LOQ nie tworzą dokładnego punktu; zero i wynik
+ponad skalą zachowują rzeczywistą liczbę. Nie zmieniamy 85 profili,
+360 węzłów TT, ich flag ani liczbowego odniesienia do 212. dnia.
+
+Już podana data urodzenia dostarcza osobne przejściowe
+`infantTtChronologicalAge` tylko bieżącemu wykresowi TT. Jawny opt-in
+`includeInfantTtTail` obsługuje późny cache z własnym markerem
+`infantTtTailOnly`; wymaga też `includeMinipuberty`. Domyślna granica
+odczytu klinicznego <6 miesięcy pozostaje. Nie dopisujemy godziny
+urodzenia, nie eksportujemy DOB ani nie uściślamy historycznych próbek.
+Cache możliwych ukończonych dni `[lower,upper]` daje wykresowi cały
+przedział `[lower/365.25;(upper+1)/365.25)`, bez arbitralnego wyboru dnia.
+
+**Cytowanie objaśnień:** krótki klikalny odsyłacz znajduje się przy
+opisie, a pełny tytuł i lokalizacja danych w rozwijanych źródłach.
+Madsen 2022, [DOI dgac155](https://doi.org/10.1210/clinem/dgac155),
+suplement tabela 1/`LCMSMS hormones`, uzasadnia wzrost TT w pokwitaniu
+w modelach 6–18 lat. Walravens 2026 (online 10.09.2025),
+[DOI dgaf507](https://doi.org/10.1210/clinem/dgaf507), tabela 1,
+wiersz **Total T, nmol/L**, podaje średnie TT u 1194 mężczyzn 18–86 lat:
+20,7 w grupie 18–29, niższe we wszystkich starszych grupach. Nie jest
+to ściśle monotoniczny spadek w każdej dekadzie; różnice zdrowia
+i rekrutacji kohort nie pozwalają opisywać ich jako indywidualnego
+tempa lub czystego efektu starzenia. Tytuł pracy Walravensa dotyczy
+wolnego T, lecz ten cytowany wiersz całkowitego T. Opis minipuberty
+odsyła do Busch 2022. Cytowania nie aktywują mediany dla niemowlęcia.
+
+**Syntetyczne wejście → oczekiwanie:** przy zgodnym gotowym kontekście
+donoszony M300 dni/TT 0,4 nmol/L → sam punkt 0,4; 10 ng/dL → wysokość
+0,3467 nmol/L. Dokładny dzień 212 zachowuje wcześniejsze odniesienie;
+dokładne 213 lub 365 dni mogą otrzymać sam wynik. Przedział
+`[212,214)` lub przecinający rok nie otrzymuje nowej ścieżki. Wiek
+z kalendarzowych ukończonych dni nie jest dokładnym punktem wieku.
+Dokładnie rok zachowuje wybór dotychczasowego źródła dziecięcego.
+
+**Wpływ kliniczny:** tylko widoczność edukacyjnego punktu i źródła
+objaśnień. RI, kliniczne oceny, historia, snapshoty, geometria, stała
+skala, porównanie płci i inne anality zachowują kontrakty. Nie dodajemy
+migawki TT; źródłowa migawka edukacyjna pozostaje AMH-only. Regresje
+mają używać rzeczywistych funkcji produkcyjnych i obejmować cały wiek,
+kontekst, źródłowe bramki, jednostki, brak mediany/metadanych
+odniesienia, UI/mobile i rzeczywisty zimny restart PWA offline.
+Wykonane wyniki i wszystkie kontrole końcowego SHA podaje PR;
+nie są deklaracją walidacji klinicznej.
+Pełny kontrakt i własny mały zapis audytu:
+[TT_INFANT_RESULT_ONLY.md](hormone-lifespan/TT_INFANT_RESULT_ONLY.md).
 
 ### HORMONE-LH-FSH-STABLE-CURVES — stałe krzywe i dorosłe odniesienia, 2026-10-11
 
