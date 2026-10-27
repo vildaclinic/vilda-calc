@@ -35,6 +35,87 @@
     var channels = [1, 3, 5].map(function (offset) { return Math.round(parseInt(a.slice(offset, offset + 2), 16) * (1 - fraction) + parseInt(b.slice(offset, offset + 2), 16) * fraction); });
     return 'rgb(' + channels.join(', ') + ')';
   }
+
+  // Presentation coordinates only. A value label may be omitted when there is
+  // no clear space: its value remains in the chart heading. Never move a point
+  // or cover a patient's trajectory merely to make room for its label.
+  function placeLabel(opts) {
+    var cfg = opts || {}, plot = cfg.plot, mapped = cfg.mapped || [];
+    var width = cfg.width, height = cfg.height, point = mapped[cfg.pointIndex];
+    if (!plot || !point || !finite(width) || !finite(height) || width <= 0 || height <= 0
+      || ![plot.x, plot.y, plot.w, plot.h, point.x, point.y].every(finite)
+      || plot.w <= width || plot.h <= height
+      || mapped.some(function (item) { return !item || !finite(item.x) || !finite(item.y); })) return null;
+    var gap = finite(cfg.gap) && cfg.gap >= 0 ? cfg.gap : 4;
+    var radius = finite(cfg.pointRadius) && cfg.pointRadius >= 0 ? cfg.pointRadius : 6.8;
+    var lineWidth = finite(cfg.lineWidth) && cfg.lineWidth >= 0 ? cfg.lineWidth : 6.3;
+    var obstacles = cfg.obstacles || [], inset = Math.max(gap / 4, 0.000001);
+    var minX = plot.x + inset, maxX = plot.x + plot.w - width - inset;
+    var minY = plot.y + inset, maxY = plot.y + plot.h - height - inset;
+    if (maxX < minX || maxY < minY) return null;
+
+    function expanded(rect, margin) {
+      return { x: rect.x - margin, y: rect.y - margin,
+        right: rect.x + rect.width + margin, bottom: rect.y + rect.height + margin };
+    }
+    function contains(rect, item) {
+      return item.x >= rect.x && item.x <= rect.right && item.y >= rect.y && item.y <= rect.bottom;
+    }
+    function crosses(rect, a, b) {
+      // Slab clipping also covers vertical and zero-length segments and lines
+      // with both endpoints outside the plot that cross its visible region.
+      var start = 0, end = 1;
+      for (var axis = 0; axis < 2; axis += 1) {
+        var origin = axis ? a.y : a.x, delta = (axis ? b.y : b.x) - origin;
+        var lower = axis ? rect.y : rect.x, upper = axis ? rect.bottom : rect.right;
+        if (delta === 0) { if (origin < lower || origin > upper) return false; }
+        else {
+          var entry = (lower - origin) / delta, exit = (upper - origin) / delta;
+          start = Math.max(start, Math.min(entry, exit)); end = Math.min(end, Math.max(entry, exit));
+          if (start > end) return false;
+        }
+      }
+      return true;
+    }
+    function clear(rect) {
+      var disks = expanded(rect, radius + gap), lines = expanded(rect, lineWidth / 2 + gap);
+      if (mapped.some(function (item) { return contains(disks, item); })) return false;
+      for (var index = 1; index < mapped.length; index += 1) {
+        if (crosses(lines, mapped[index - 1], mapped[index])) return false;
+      }
+      return !obstacles.some(function (item) {
+        if (!item || ![item.x, item.y, item.w, item.h].every(finite) || item.w < 0 || item.h < 0) return false;
+        return item.x <= lines.right && item.x + item.w >= lines.x
+          && item.y <= lines.bottom && item.y + item.h >= lines.y;
+      });
+    }
+    var reach = radius + gap + inset, seen = Object.create(null);
+    // Keep labels close to their associated dot. Wider rings cover difficult
+    // reversals without searching every pixel or introducing long connectors.
+    for (var ring = 0; ring < 4; ring += 1) {
+      var dx = reach + ring * width / 2, dy = reach + ring * height;
+      var candidates = [
+        [point.x + dx, point.y - height / 2],
+        [point.x + dx, point.y - height - dy],
+        [point.x + dx, point.y + dy],
+        [point.x - width / 2, point.y - height - dy],
+        [point.x - width / 2, point.y + dy],
+        [point.x - width - dx, point.y - height / 2],
+        [point.x - width - dx, point.y - height - dy],
+        [point.x - width - dx, point.y + dy]
+      ];
+      for (var candidate = 0; candidate < candidates.length; candidate += 1) {
+        var x = Math.max(minX, Math.min(maxX, candidates[candidate][0]));
+        var y = Math.max(minY, Math.min(maxY, candidates[candidate][1]));
+        var key = x + ':' + y;
+        if (seen[key]) continue;
+        seen[key] = true;
+        var rect = { x: x, y: y, width: width, height: height };
+        if (clear(rect)) return rect;
+      }
+    }
+    return null;
+  }
   function draw(doc, opts) {
     var defs = opts.defs, group = opts.group, points = opts.points || [], mapped = opts.mapped || [];
     var prefix = opts.prefix || 'vilda-centile-live-preview', idPrefix = (opts.idPrefix || prefix) + '-tone-' + (++nextId);
@@ -117,17 +198,21 @@
         idPrefix: id, prefix: 'vilda-centile-live-full', lineWidth: 3.2,
         haloWidth: 6.3, pointRadius: 4.6 / scale, lastRadius: 5.8 / scale,
         pointStrokeWidth: 2, vectorEffect: true});
+      wrapper.dataset.valueLabel = 'hidden';
       if (!points.length || asset.valueLabelVisible === false) return;
       var currentIndex = points.findIndex(function (point) { return point.current; });
       if (currentIndex < 0) currentIndex = points.length - 1;
-      var point = points[currentIndex], pos = mapped[currentIndex];
+      var point = points[currentIndex];
       var value = Number(point.value).toLocaleString('pl-PL', {maximumFractionDigits: 1}) + ' ' + (asset.units || (asset.metric === 'height' ? 'cm' : 'kg'));
-      var labelWidth = (value.length * 6.5 + 16) / scale, labelHeight = 23 / scale;
-      var x = Math.max(plot.x, Math.min(plot.x + plot.w - labelWidth, pos.x - labelWidth / 2));
-      var y = Math.max(plot.y, Math.min(plot.y + plot.h - labelHeight,
-        pos.y + (pos.y - plot.y > 34 / scale ? -34 / scale : 11 / scale)));
+      var labelWidth = (value.length * 8 + 16) / scale, labelHeight = 23 / scale;
+      var rect = placeLabel({ plot: plot, mapped: mapped, pointIndex: currentIndex,
+        width: labelWidth, height: labelHeight, gap: 4 / scale,
+        pointRadius: 6.8 / scale, lineWidth: 6.3 / scale });
+      wrapper.dataset.valueLabel = rect ? 'placed' : 'header';
+      if (!rect) return;
+      var x = rect.x, y = rect.y;
       labels.appendChild(node('rect', {x: x, y: y, width: labelWidth, height: labelHeight, rx: 6 / scale,
-        fill: '#ffffff', stroke: '#cfdfde', 'stroke-width': 1 / scale}));
+        fill: '#ffffff', stroke: '#cfdfde', 'stroke-width': 1 / scale, class: 'vilda-centile-live-full-latest-label-box'}));
       labels.appendChild(node('text', {x: x + labelWidth / 2, y: y + 16 / scale, 'text-anchor': 'middle',
         fill: color(tone(asset.metric, point.percentile)), 'font-family': 'sans-serif',
         'font-size': 12 / scale, 'font-weight': 700, class: 'vilda-centile-live-full-latest-label'}, value));
@@ -141,5 +226,6 @@
 
     return wrapper;
   }
-  w.VildaCentileLiveColors = Object.freeze({ tone: tone, color: color, colorAt: colorAt, draw: draw, fullLayer: fullLayer, palette: palette });
+  w.VildaCentileLiveColors = Object.freeze({ tone: tone, color: color, colorAt: colorAt,
+    placeLabel: placeLabel, draw: draw, fullLayer: fullLayer, palette: palette });
 })(typeof window !== 'undefined' ? window : globalThis);

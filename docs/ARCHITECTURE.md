@@ -184,6 +184,11 @@ Nie wolno przenosić pola między pamięcią sesji, pamięcią trwałą i danymi
 - `view` dopasowuje SVG do miejsca karty, a na pełnym ekranie rysuje oba płótna
   z jednolitą skalą. Odczyt, przypięcie i klawiatura korzystają ze wspólnego
   modelu punktów; wybór widoku i wskaźnik nie są danymi pacjenta.
+- `colors.placeLabel` dobiera miejsce etykiety wartości wspólnie dla podglądu
+  i pełnego widoku. Sprawdza wszystkie punkty i odcinki przebiegu pacjenta
+  z marginesem dla ich grubości; po zmianie rozmiaru ponawia dopasowanie.
+  Gdy brakuje wolnego miejsca, wartość pozostaje w nagłówku poza wykresem.
+  Nie przesuwa pomiarów, nie zmienia osi ani nie ukrywa przebiegu pod etykietą.
 - `panel` montuje kartę tylko przy rzeczywistych dwóch kolumnach formularza.
   Zastępuje Przypomnienia na Start; w DocPro wypełnia wolne miejsce. Wysokość
   odpowiada formularzowi ze zwiniętym pokwitaniem, z uwzględnieniem paska statusu.
