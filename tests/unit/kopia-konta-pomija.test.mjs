@@ -467,8 +467,10 @@ describe('P-KOPIA-POMIJA — strażnik wersji innej karty i kontrole', () => {
 
   it('błąd odczytu przerywa scalenie także przed zdjęciem wpisu kosza karty bez nowych wersji (Codex P2 w #593)', async () => {
     // Karta Adama ma wszystkie wersje z kopii, ale jedna leży też w koszu — zapis bywa jednocześnie w karcie i w koszu
-    // (P-KOSZ-PRZYWROC-NOWSZA). Dla takiej wersji import zdejmuje wpis kosza i podbija rewizję (Bkz_poImporcie).
-    // Dopiero dalszy pacjent kopii (X, scalony tu z Y spoza kopii) potrzebuje mapy właścicieli, której odczyt zawodzi.
+    // (P-KOSZ-PRZYWROC-NOWSZA). Dla takiej wersji import zdejmował wpis kosza i podbijał rewizję (Bkz_poImporcie); od
+    // P-PRZYPIETA-POLKRATA (R2-K1) wersji, które karta ma przed importem, scalenie nie rusza — test pilnuje dalej, że
+    // błąd odczytu niczego nie zapisuje. Dopiero dalszy pacjent kopii (X, scalony tu z Y spoza kopii) potrzebuje mapy
+    // właścicieli, której odczyt zawodzi.
     const A = await sejf();
     const p = await karta(A.v, 'Testowy', 'Adam');
     const x = await karta(A.v, 'Testowy', 'Jan');

@@ -19311,6 +19311,933 @@ a lekarz poprawia jedno z miejsc. Wartość dni spoza 0–6 w rekordzie nie jest
 
 **Wersje.** `sga_birth_module.js?v=10→11`; SW 1.1.168 → **1.1.169**.
 
+## Przypięta wizyta: półkrata łączenia nagrobków i gwiazdka z własną datą (P-KOSZ-POLKRATA, P-PRZYPIETA-POLKRATA, PR-S4, SW 1.1.388, `vilda_vault.js` 228, `vilda_kosz_zapisow.js` 4, 2026-10-22)
+
+**Zmiana kliniczna: tak** — wzory, progi, jednostki i interpretacje bez zmian; zmienia się, czy wizyta zostaje w karcie,
+w koszu czy znika, z jaką treścią i z jaką gwiazdką, gdy na różnych urządzeniach ktoś ją przypiął, odpiął, poprawił,
+usunął do kosza albo przyciął historię (retencja), co oddają „Przywróć” i import po „Odepnij i usuń” oraz co „Scal kopię
+konta” robi z wersjami, które karta już ma. Serwer, `vilda_sync.js`,
+schemat IndexedDB (wersja bazy 5, te same sklepy) i API `window.VildaVault` bez zmian; `updateSnapshotPayload` nie zmienia
+już gwiazdki przez `_pinned` w treści wołającego (nikt w aplikacji ani w e2e tego nie robił). PR-S4 to jedno wydanie:
+krok 1 (półkrata, gwiazdka jak dotąd), krok 2 (W3), poprawki po panelu sędziów i po przeglądzie 2 (2026-10-22) oraz cień
+poza listą nagrobków, w trybie chmurowym nigdy na dysku — tylko w pamięci dokumentu, który wykonał scalenie, najwyżej do
+wylogowania (P-CIEN-POZA-LISTA, decyzje 2026-10-26; poprawki po przeglądzie wariantu V i po weryfikacji przeniesienia
+tego samego dnia, w tym „Usuń pacjenta” zdejmujące cień karty — decyzja 1 po przeglądzie wariantu V, po weryfikacji 3
+na całej flocie i bez wyścigu ze scaleniem, W3P-1).
+
+Skróty commitów stanów pośrednich S4 w tym wpisie (np. `1fcfa0d9`, `2443fa0a`, `1132ee1e`, `1da487ce`, `e107e186`) odnoszą
+się do historii roboczej gałęzi. PR-S4 to jeden commit nad `audyt`, więc tych stanów w repozytorium nie ma; stan przed S4
+to `f612fe09`.
+
+**Decyzje właściciela 2026-10-21** (S4, „tak, akceptuję wszystko, działaj”; rekomendacja panelu sędziów):
+- D1 = C — gwiazdka z własną datą (W3): treść = najnowsza po chwili treści, gwiazdka = rejestr o najpóźniejszej chwili,
+  przypięta → karta, nieprzypięta i przycięcie nie wcześniejsze niż znana zmiana → brak; napis „Przypięte zostają
+  zawsze.” bez zmian; PD-12 dla gwiazdki: późniejsza gwiazdka nie kasuje wcześniejszej poprawki (D-7 T6: 31 kg
+  z gwiazdką, K10b: 58 kg z gwiazdką);
+- D2 = a — świadomie odpięta albo usunięta wizyta nie wraca po przerzedzeniu ani ze starej kopii (T4b, T4d, ODP); wraca
+  tylko, gdy inne urządzenie poprawiło ją po usunięciu i nie przerzedziło (T4); „Przywróć” po „Odepnij i usuń” oddaje
+  zapis bez gwiazdki;
+- D3 = a — bez syntetycznych dat: rekord złożony dostaje późniejszą z prawdziwych chwil;
+- D4 = a — cień treści usuniętej lokalnie (zaszyfrowany, niewidoczny, ≤ 30 dni, bez wysyłki);
+- D8 = a — nota przy wydaniu (aktualizacja wszystkich urządzeń tego samego dnia), bez bramki 14 dni;
+- D9 = a — nagrobek przerzedzenia przypiętej wizyty zostaje 365 dni;
+- D10 = a — odcisk pól wpisu w lokalnym stanie nagrobka (cofnięcie wydania, stara karta przeglądarki);
+- D11 = a — kopia starszego sejfu w `tests/fixtures/` (dane testów floty mieszanej);
+- D5 (PRZ0), D6 (E4a), D7 (E3) — osobne PR, poza tym wpisem; kolejność: PR-S4 → PR-PRZ0 → PR-E4a → PR-E3, E3 przed
+  etapem 2 synchronizacji przyrostowej (etap 1 — serwer — równolegle).
+
+**Do potwierdzenia przez właściciela (po panelu sędziów 2026-10-22; wykonawca wybrał wariant zgodny z decyzjami):**
+- **F-A/K3 — kosz starszej aplikacji z treścią przypiętą:** wdrożony W20 („brak pola gwiazdka = nieznany”, rekomendacja
+  panelu 2.4, D2 = a), a nie F7 z `cel.md` („przypięta treść = odpięcie w chwili usunięcia”). F7 domyka też część T4d
+  (3/8 zamiast 8/8 z gwiazdką), ale w S5 z 221 na P gubi przypiętą wizytę ponad flotę samych 221 (7/8 „brak” wobec 6/8)
+  i daje różną gwiazdkę w koszu między urządzeniami. Koszt W20 — „Ograniczenia, flota mieszana”.
+- **F-D — rev + 1 przy dwóch różnych rekordach złożonych** z tą samą `rev` i chwilą: drugie odstępstwo od F3 („`rev` jak
+  we flocie samych starych”) obok przyjętego max + 1 rekordu złożonego; jeden zapis więcej, bez niego urządzenie ze
+  starszą aplikacją zostawało na stałe przy innej treści.
+- **K1 — koszt cienia (D4 = a) był zaniżony o rząd wielkości** (D9: „lista lokalna ok. 6×” zmierzono na treści 127 B);
+  przy prawdziwej karcie — „Ograniczenia, koszt cienia”. Cień zostaje (D4 = a); wariant zmniejszający koszt (V2) odrzucony,
+  bo łamał niezależność od kolejności. *(2026-10-26: koszt zmniejsza cień poza listą — decyzja 6, P-CIEN-POZA-LISTA.)*
+- **K9 — doprecyzowanie D11:** kopia leży jako `tests/fixtures/vilda_vault-221.js.txt` (jak
+  `tests/fixtures/gh-monitor-przed-api.js.txt`), więc wyjątki w eslint i w strażniku D-8 nie są potrzebne; D11 mówiło
+  dosłownie „z wyjątkiem w eslint i strażniku D-8”.
+
+**Do potwierdzenia przez właściciela — po przeglądzie 2 (2026-10-22; rozstrzygnięte 2026-10-26 — „Decyzje właściciela
+2026-10-26” niżej).**
+- **R2-K4 — import zapisu usuniętego przez „Odepnij i usuń”:** wdrożony wariant B — import pliku karty i „Scal kopię
+  konta” oddają taki zapis bez gwiazdki, jak „Przywróć” (D2 = a; rejestr = późniejszy z treści i wpisu kosza). Dotąd
+  tuż po imporcie 23*, a po pierwszej synchronizacji gwiazdka znikała po cichu. Wariant A — import = nowe przypięcie
+  w chwili importu (jak `f612fe09`: 23* na wszystkich urządzeniach, wizyta przeżywa retencję) — też jedna linia,
+  sprawdzony przez sędziego (707 testów zielonych); do wyboru. → Decyzja 1: wariant B.
+- **Odcisk treści nie odróżnia przypięcia i odpięcia w starszej aplikacji (Z2) od jej zapisu bez zmiany treści (R2P-1,
+  R2P-3)** — T-E (wyjątek od R4 we flocie mieszanej, regresja wobec `f612fe09`), T-D1 i T-D2 (jak `f612fe09`):
+  „Ograniczenia, flota mieszana”. Wariant „ten sam odcisk = zmiana treści” naprawia T-E, ale gubi poprawkę z nowego
+  urządzenia ponad flotę samych 221 (Z2b) — odrzucony. Rozróżnienie po `rev` zapisanej w `_pinnedState` — niezmierzone.
+  → Decyzja 3: zostaje, z opisem.
+- **`rev` + 1 rekordu złożonego a późniejsza zmiana starszej aplikacji zrobiona offline (R2-K2, R2-K3).** Wyjątek F3
+  przyjęto przy założeniu F1 („flota mieszana nie gubi poprawki, którą zachowuje flota samych starych”); dla tego wzorca
+  F1 nie jest spełnione — „Ograniczenia, flota mieszana”. Opcje: (a) zostawić z punktem 5 noty wydania (rekomendacja);
+  (b) `rev` = wyższa z dwóch w `Bgw_scal`, `Bgw_zloz`, `Bgw_wskrzes` i F-D — usuwa utratę, ale wraca rozjazd F-D
+  (3 zapisy na rundę), gwiazdka znika na starszych urządzeniach do aktualizacji, a przy odpięciu zostaje trwały rozjazd
+  (P 23 / K 37 / C 41 / O 23; pomiar sędziów, nie gotowa poprawka); (c) chwila + 1 ms — wbrew D3 = a, niezmierzone.
+  Samo cofnięcie F-D nie wystarcza (trasa szeregowa przez blob: 41* w 6 z 6). → Decyzja 2: opcja (a).
+- **T-F — dane sprzed W3 w dniu wydania (R2P-2):** ograniczenie opisane, punkt 4 noty wydania. Prototyp sędziego (jawny
+  rejestr odpięcia, gdy przy wersjach bez pól wygrywa nowsza nieprzypięta) nie wdrożony: domyka T-F, nie T-F′, i nie ma
+  pomiaru niezależności od kolejności. → Decyzja 4: sama nota wydania.
+- **K1 / D4 po przeglądzie 2:** koszt cienia na treści 18 KB, w IndexedDB i w trybie chmurowym — „Ograniczenia, koszt
+  cienia” i „cień w trybie chmurowym”. Zmierzony wariant „cień poza listą” daje te same wyniki przy ok. 23 razy mniejszym
+  zapisie przy scaleniu i musi wejść w PR-S4; tryb chmurowy (W2) wymaga osobnej decyzji. → Decyzje 5 i 6: wdrożone
+  (P-CIEN-POZA-LISTA).
+
+**Decyzje właściciela 2026-10-26** (rekomendacje 1–6 przeglądu 2 S4; odpowiedź „ruszaj z kolejnym krokiem”):
+1. Import pliku karty i „Scal kopię konta” po „Odepnij i usuń” — zapis bez gwiazdki, jak po „Przywróć” (R2-K4, wariant B;
+   wdrożone w przeglądzie 2).
+2. Utrata późniejszej poprawki masy ze starszego urządzenia bez sieci, gdy dwa nowe urządzenia przypięły i poprawiły tę
+   samą wizytę (R2-K2, R2-K3) — zostaje jako znane ograniczenie, z zasadą w nocie wydania: przed aktualizacją
+   zsynchronizuj każde urządzenie, a na niezaktualizowanym urządzeniu nie poprawiaj wizyt bez sieci (punkty 4 i 5).
+3. „Przywróć” albo zapis bez zmiany treści na starszym urządzeniu może przegrać z poprawką z innego urządzenia albo zdjąć
+   gwiazdkę (T-E, T-D1, T-D2, T-D3) — zostaje, z opisem („Ograniczenia, flota mieszana”).
+4. Odpięcie tuż przed aktualizacją może wrócić jako gwiazdka (T-F, R2P-2) — sama nota wydania (punkt 4).
+5. Tryb chmurowy: (a) napis w Ustawieniach („…znikają z chwilą wylogowania. Nikt, kto usiądzie tu po Tobie, nie znajdzie
+   ich na dysku.”) jest dziś nieprawdziwy — poprawka osobnym małym PR po akceptacji treści przez właściciela, poza
+   PR-S4; (b) w PR-S4 kopie robocze kosza (cień) w trybie chmurowym tylko do wylogowania — wdrożone jako „nigdy na
+   dysku: tylko w pamięci dokumentu, który wykonał scalenie, najwyżej do wylogowania” (P-CIEN-POZA-LISTA, „Tryb
+   chmurowy”; zasięg szerszy niż „do wylogowania” — przyjęty 2026-10-26, decyzja 2 po przeglądzie wariantu V, niżej).
+6. Wariant „cień poza listą” w PR-S4 — wdrożony (P-CIEN-POZA-LISTA, niżej). V5 i V-G — niewdrożone.
+
+**Do decyzji właściciela — po przeglądzie wariantu V (2026-10-26; trzy soczewki ze sceptykami) — ROZSTRZYGNIĘTE
+2026-10-26** (odpowiedź właściciela „1 tak, 2 tak, 3 tak”). W PR-S4 wdrożone: jedno uid konta na całą zmianę listy (W3 —
+blokada sejfu w trakcie zapisu kierowała rekordy cienia poza konto zmienianej listy), błąd zapisu rekordów przy cieniu z treści
+ważnego kosza z dysku (R1 — lista nie zapisywała się wcale), testy luk (R2–R5) i opis ograniczeń (W1, W2, S4V-MP2,
+S4V-MP3, R7, R8); po weryfikacji przeniesienia — adapter cienia dla rekordów i sprzątania ustalany w tej samej chwili co
+uid (W2P-1: w trybie chmurowym blokada w odstępie między nimi zapisywała rekordy cienia na dysk) i testy M9b, M8a (W2P-2,
+W2P-3).
+1. **„Usuń pacjenta” a cień (S4V-MP4) — ROZSTRZYGNIĘTE: wariant (b), wdrożony na całej flocie.** Po „Usuń pacjenta”
+   zaszyfrowane kopie robocze (cień) wizyt tej karty są usuwane od razu, a nie zostają do 30 dni — na urządzeniu, które
+   kliknęło, i na pozostałych, do których usunięcie dochodzi synchronizacją (także źródło „Scal pacjentów”), przy
+   najbliższym zapisie listy nagrobków (P-CIEN-POZA-LISTA, „„Usuń pacjenta””, niżej; M10, M11). Koszt przyjęty: w rzadkiej
+   krawędzi D-21 (karta zachowana albo wracająca na innym urządzeniu, jego stara kopia wersji przyciętej gdzie indziej
+   w koszu) kosz bierze treść innych urządzeń, jak przed S4 (`f612fe09`). **Przyjęte przez właściciela 2026-10-26**
+   („2 tak”; W5P-2 przeglądu stanu `e107e186`; wcześniejszy zapis decyzji przyjmował koszt tylko dla „Usuń pacjenta”,
+   krawędź D-21): ten sam koszt na zwykłej ścieżce każdego „Scal pacjentów”, gdy źródło ma cień — na urządzeniu,
+   które scala (już na
+   `1da487ce`), i teraz także na tych, które scalenie dostają: wizyty źródła żyją dalej pod kartą docelową, a kosz ich
+   starej kopii z innego urządzenia bierze treść innych urządzeń, jak `f612fe09` (M11d, z powrotem źródła i bez).
+   Dotąd (wariant a) — sam opis ograniczenia;
+   po przeglądzie wariantu V działało tylko na urządzeniu, które kliknęło, i nie w wyścigu ze scaleniem (weryfikacja 3,
+   W3P-1).
+2. **Zasięg decyzji 5b (W2, S4V-MP1) — ROZSTRZYGNIĘTE: przyjęty.** W trybie chmurowym cień żyje w pamięci otwartego
+   dokumentu, który wykonał scalenie (w powłoce `app.html` — dokument główny i otwarte ramki), a nie „do wylogowania”
+   sesji: znika przy wylogowaniu, blokadzie, odświeżeniu, aktualizacji, wyjściu poza powłokę i w drugiej karcie; druga
+   karta albo ramka przeładowana go nie widzi i — gdy pierwsza scali późniejszy kosz — daje całej flocie treść innych
+   urządzeń (jak `f612fe09`, nigdy gorzej). Pełna naprawa (zapytanie innych instancji o brakujący szyfr przez
+   BroadcastChannel pod blokadą metadanych) — niewdrożona; osobny PR tylko, jeśli D4 ma działać między instancjami.
+3. **Tekst Ustawień o trybie chmurowym** — osobny PR (decyzja 5a), poza PR-S4. *(Scalony: P-CHMURA-OPIS, #800, razem
+   z porządkami danych sesji; S4 przeniesione na niego scaleniem `audyt` `b0221a7d`.)*
+
+**Co było** (`vilda_vault.js` 222/223 — `1d6be72e`, `f612fe09`; katalog `cel.md` 27 scenariuszy × 8 kolejności
+pierwszych scaleń, potem 3 rundy pełnej wymiany i runda kontrolna; sejfy w pamięci, sztuczny zegar, dane fikcyjne,
+„Testowy Jan”, wizyta 103 cm / 23 kg).
+- Łączenie nagrobków (`Bkz_dolacz`) było przemienne, ale nie łączne (11,2 % trójek zależnych od kolejności), więc wynik
+  zależał od tego, które urządzenie zsynchronizuje się pierwsze: S4 (gwiazdka P, kosz K bez wiedzy, poprawka C bez
+  wiedzy, przerzedzenie C) — 3 × karta 23 kg z gwiazdką, 2 × brak, 3 × kosz; X5, S1, S1b — w koszu najstarsza treść
+  (23 kg) w 4 z 8 kolejności zamiast ostatniej poprawki (78 / 99 kg); PC-PK — 7 z 8.
+- Gwiazdka była częścią całej wersji (D-7 PD-12): poprawka z urządzenia, które o gwiazdce nie wiedziało, zdejmowała ją
+  albo przegrywała z nią w całości (S6, K10a: 4 × karta bez gwiazdki, 3 × z gwiazdką bez poprawki, 1 × brak);
+  późniejsza gwiazdka kasowała wcześniejsze poprawki (T6: 24 kg z gwiazdką zamiast 31 kg; K10b: 23 kg z gwiazdką).
+- Świadomie odpięta albo usunięta wizyta wracała z gwiazdką ze starej kopii innego urządzenia (ODP 8 z 8, T4d 4 z 8),
+  a „Przywróć” po „Odepnij i usuń” oddawało zapis przypięty.
+- Cele W3 (`cel.md` 3a + 3b): 106 z 200 przebiegów, 10 z 25 scenariuszy w 8 z 8; 60 zapisów w rundzie kontrolnej
+  w 14 przebiegach.
+
+**Reguła po zmianie — krok 1, półkrata (P-KOSZ-POLKRATA).**
+- **Składniki.** Nagrobek wersji to krotka niezależnych składników, każdy łączony przez maksimum w porządku liniowym
+  (`Bpk_polacz`): `k` — najpóźniejsza chwila kosza (także nieaktualnego), `r` — przycięcia, `z` — najpóźniejsza znana
+  zmiana, `t` — najnowsza treść (z wpisów kosza, z wersji pokonanych koszem i przycięciem w scalaniu), `tr` — pary
+  (chwila usunięcia, `rev`) treści, które kosz może trzymać (P-REV-MAX), `wr` — `rev` wersji pokonanych w scalaniu,
+  `dm`/`dl`/`p` — opisy i karta, `g` — rejestr gwiazdki (krok 2). Łączenie jest przemienne, łączne i idempotentne
+  (0 z 65 808 trójek zależnych od kolejności, `polkrata-mechanizmy`), a decyzja „wpis kosza / sam nagrobek retencji”
+  i jego kształt to funkcja wyniku (`Bpk_wpis`): kosz ważny, gdy `k ≥ z`; inaczej, przy przycięciu, nagrobek retencji
+  z chwilą przycięcia, `koszISO` i opisem najnowszej wersji, gdy znana jest zmiana po koszu.
+- **Cień** (D4 = a): treść kosza unieważnionego i wersji pokonanej przycięciem w scalaniu zostaje lokalnie —
+  zaszyfrowana kluczem sejfu, niewidoczna w koszu (wpis bez `payloadCipher`), 30 dni od usunięcia, które ją zabrało,
+  nigdy w ładunku (starsza aplikacja zrobiłaby z treści nagrobka retencji wpis kosza, F5). Późniejszy ważny kosz bierze
+  z niej nowszą treść (X5, S1, PC-PK). Pełny szyfr cienia leży poza listą nagrobków, w magazynie cienia, a w trybie
+  chmurowym tylko w pamięci dokumentu, który wykonał scalenie, najwyżej do wylogowania (P-CIEN-POZA-LISTA, niżej). Koszt —
+  „Ograniczenia”.
+- **A3a** (D9 = a): nagrobek retencji przegrany z przypiętą zostaje (365 dni) i zna tę wersję.
+- **Stemple** (`Bpp_chwilaZmiany`: później niż wszystko, co zmiana zna, przy zegarze spóźnionym +1 ms i losowo
+  0–999 ms): poprawka, gwiazdka i odpięcie — później niż zmieniana wersja; usunięcie do kosza — także później niż zmiany
+  znane nagrobkowi tego zapisu; zmiana gwiazdki i zapis wersji, która po nim nie jest przypięta, — także później niż
+  przycięcie, które ta wersja przeżyła (`Bpk_retencjaZapisu`; odpięcie na zegarze spóźnionym nie przegrywa z tym
+  przycięciem). Poprawka wersji, która zostaje przypięta, tego stempla nie dostaje (F-C, niżej).
+- **K1** (D10 = a): odcisk pól wpisu (`Bpk_odcisk`) — przy niezgodnym (starszy kod zmienił pola wpisu i przeniósł `Bpk`
+  bez zmian) składniki liczone są z pól; chwila treści takiego wpisu — z odszyfrowanej treści (Z4, niżej).
+- **D6** (prawo L3): `rev` wersji pokonanych w scalaniu jako składnik `wr` (para z chwilą kosza); przycięcie wcześniejsze
+  niż znana zmiana nie zostaje w składnikach; lista nagrobków bez zapisu, gdy różni się tylko tym, czego eksport nie
+  używa (`Bpk_bezZnaczenia`); ta sama treść z wyższą `rev` (podniesioną bez zmiany treści) nie jest nowszą treścią kosza
+  (`Bpk_nowszaTrescKosza`).
+
+**Reguła po zmianie — krok 2, gwiazdka z własną datą (P-PRZYPIETA-POLKRATA, W3).**
+- **Pola w treści wersji** (pisze je ta aplikacja przy każdym zapisie treści wersji, `Bgw_ustaw`):
+  `_pinnedState = { pin, at, h }` — stan po ostatnim jawnym przypięciu albo odpięciu i jego chwila (`at: null` — nigdy
+  jawnie), zgodny z `_pinned`, oraz odcisk treści `h` (FNV-1a 32 na JSON z posortowanymi kluczami, bez `_pinned`,
+  `_pinnedState` i `_contentAtISO`, z długością; `Bgw_odcisk`); `_contentAtISO` — chwila ostatniej zmiany treści. Nowa
+  wizyta (`savePatient`, także „Przywróć jako nowy zapis”): `{ pin: false, at: null }` i chwila zapisu. Gwiazdka
+  i odpięcie (`setSnapshotPinned`, „Odepnij i usuń”) zmieniają tylko rejestr, poprawka, edycja i usunięcie pomiaru —
+  tylko chwilę treści; `_pinned` w treści przekazanej do `updateSnapshotPayload` się nie liczy (Z7, K4: okno „Popraw
+  pomiar” trzyma kopię sprzed synchronizacji). „Przywróć” i import z kosza zapisują treść od nowa z chwilą treści =
+  chwila przywrócenia, a gwiazdkę — późniejszy z rejestrów treści i wpisu kosza (po „Odepnij i usuń” bez gwiazdki,
+  D2 = a; import pliku karty i „Scal kopię konta” tak samo od przeglądu 2, R2-K4). „Scal kopię konta” nie rusza
+  wersji, które karta ma przed importem (bez nowej `rev` i chwili, wpis kosza i nagrobek A3a zostają; R2-K1).
+- **Odczyt** (`Bgw_stan`, chwila zmiany rekordu `u` = `updatedAtISO`, bez niej `savedAtISO`):
+  - bez pól (starsza aplikacja, dane sprzed W3) — treść zmieniona w `u`, gwiazdka przypięta w `u`, nieprzypięta
+    „nigdy jawnie” (bez pól nie da się odróżnić świadomego odpięcia od poprawki bez wiedzy o gwiazdce);
+  - `_pinned` różny od rejestru — gwiazdkę zmieniła starsza aplikacja w chwili `u`; chwila treści z pola, chyba że odcisk
+    jest inny: wtedy starsza aplikacja zmieniła też treść (w `u`) — Z1, F-B;
+  - zgodny, a `u` późniejsza niż obie chwile — odcisk ten sam: starsza aplikacja zmieniła gwiazdkę i wróciła do stanu
+    rejestru (przypięcie i odpięcie, Z2) albo tylko podniosła chwilę zmiany — rejestr w chwili `u`; odcisk inny albo brak
+    odcisku — zmiana treści w `u`. Samą chwilę zmiany podnoszą w starszej aplikacji „Przywróć”, import, „Edytuj”
+    wiersza z tymi samymi wartościami i „Popraw pomiar” wizyty z innego dnia, której treść już raz przeszła przez okno
+    (korekta wizyty z dzisiejszą datą zmienia `timestampISO`, więc odcisk jest inny). Skutki dla R4, D1 i D2 —
+    „Ograniczenia, flota mieszana” (T-E, T-D1, T-D2).
+- **Porządek rejestrów** (`Bgw_porownaj`): późniejsza chwila, przy remisie przypięta.
+- **Wersja tej samej karty tu i w ładunku** (`Bgw_scal` w `Bsl_scalPacjenta`): obie bez pól W3 i ta sama treść poza
+  `_pinned` — cała nowsza wersja (`Bkz_nowszaWersja`, jak we flocie starszych aplikacji; K2, Z3); inaczej treść —
+  późniejsza chwila treści, gwiazdka — późniejszy rejestr; remis jednego składnika — z rekordu, który wygrywa drugi; remis
+  obu — `Bkz_nowszaWersja` (D-7). Gdy oba składniki pochodzą z jednego rekordu — cała wersja, `rev` wyższa z dwóch;
+  wyjątek F-D: dwa różne rekordy złożone z tą samą `rev` i chwilą — zwycięzca z `rev` = wyższa + 1 (starsza aplikacja
+  przy remisie zostawała przy swoim). Inaczej **rekord złożony**: treść jednego z gwiazdką drugiego, `rev` = wyższa
+  z dwóch + 1 (starsza aplikacja liczy najpierw `rev` i przyjmuje go zamiast któregoś z rodziców), chwila zmiany =
+  późniejsza z chwil treści i gwiazdki (D3 = a), chwila zapisu wersji — z rekordu treści, znacznik `_pinnedState.zl`
+  (ta sama `rev` i chwila nie pomijają wtedy porównania: dwa urządzenia mogą złożyć różne treści z tą samą gwiazdką).
+- **Nagrobek** (`Bpk_przypieta` — jedyna decyzja „przypięta przeżywa przycięcie”, z `Bkz_wygrywa` i z końca scalania):
+  kosz wygrywa z każdą wersją nie późniejszą niż on; przycięcie — z wersją nie późniejszą niż ono, której gwiazdka nie
+  jest przypięta, gdzie gwiazdka = późniejszy z rejestrów wersji i nagrobka. Nagrobek zna rejestr każdej wersji, którą
+  pokonał albo która przeżyła przycięcie (składnik `g`, pole `gwiazdka` w ładunku); przycinana wersja oddaje rejestr
+  nagrobkowi retencji (ODP). Rejestr nagrobka z ładunku — **tylko z pola `gwiazdka`** (brak pola = „nieznany”: decyduje
+  gwiazdka wersji, jak we flocie starszych aplikacji; W20 — F-A, K3); z treści kosza — tylko chwila treści.
+- **Koniec scalania:** wersja, która zostaje w karcie (przeżyła przycięcie albo jest późniejsza niż nagrobek), przyjmuje
+  najnowszą treść z cienia i najpóźniejszy rejestr nagrobka jako rekord złożony (`Bgw_zloz`; `rev` = najwyższa znana
+  + 1); wersji tu nie ma, kosz nie jest ważny, a rejestr nagrobka jest przypięty („przypięta → karta”) — wersja wraca
+  z cienia (`Bgw_wskrzes`).
+- **Kosz:** treść = najnowsza po chwili treści (`Bpk_trescNowsza`; wpis bez składników i bez `trescISO` — lista starszej
+  aplikacji po aktualizacji — chwila treści z odszyfrowanej treści, jak dla ładunku, Z4), gwiazdka w liście kosza =
+  późniejszy z rejestrów treści i nagrobka (`Bgw_wKoszu`; lista kosza jej nie rysuje — liczy się przy „Przywróć”).
+  „Odepnij i usuń” zapisuje najpierw odpięcie (rev + 1, stempel), potem kosz z treścią bez gwiazdki; gdy zapis kosza się
+  nie uda albo wersja zmieniła się w trakcie, zapis wraca przypięty (nowa chwila gwiazdki; F-F), a gdy i to zawiedzie —
+  komunikat „…zapis jest już odpięty — zostaje w karcie; przypnij go ponownie.” (kod `kosz-odpiety`). „Przywróć” oddaje
+  zapis z gwiazdką z listy kosza (po „Odepnij i usuń” — bez, D2 = a); import pliku karty i „Scal kopię konta” — tak
+  samo (R2-K4).
+- Interfejs: okno „Usunąć pomylony zapis?” przy zapisie przypiętym mówi „Usunięcie cofniesz, przywracając zapis z kosza;
+  wróci nieprzypięty — przypniesz go wtedy ponownie.” (dotąd: „Oba kroki cofniesz…”); przy kodzie `kosz-odpiety` okno
+  pokazuje komunikat sejfu bez dopisku „Karta jest bez zmian”. Okna importu pliku karty i „Scal kopię konta” bez
+  zmian (zapis usunięty przez „Odepnij i usuń” wraca bez gwiazdki, jak po „Przywróć”). Gwiazdka w historii wersji
+  i napis „Przypięte zostają zawsze.” bez zmian.
+
+**Format** (pola opcjonalne; starsza aplikacja pomija nieznane pola nagrobka i nie przekazuje ich dalej, a treść wersji
+przenosi w całości razem z polami W3):
+- w zaszyfrowanej treści wersji: `_pinnedState = { pin, at, h, zl? }`, `_contentAtISO`;
+- w nagrobku wersji (ładunek, wewnątrz bloba szyfrowanego kluczem sync): `gwiazdka = { pin, at }` (najpóźniejszy rejestr,
+  jaki zna nagrobek; bez rejestru „nigdy jawnie”), `koszISO` (nagrobek retencji po koszu nieaktualnym), `revPary`
+  (pary rev treści kosza);
+- lokalnie (nigdy w ładunku) we wpisie listy nagrobków `userMeta.snapshotTombstones`: `Bpk` (składniki, odcisk `f`,
+  cień `t.c`) i `trescISO`. Pola nagrobka są w lokalnej bazie jawne, jak chwile i `rev` nagrobka dotąd: stan przypięcia
+  usuniętej wersji (dotąd tylko w szyfrogramie) jest widoczny bez hasła dla kogoś z dostępem do IndexedDB profilu
+  przeglądarki — jeden bit i jedna chwila przy losowych identyfikatorach, bez danych pacjenta (K8);
+- cień (P-CIEN-POZA-LISTA): w `Bpk.t.c` wpisu, który nie jest ważnym koszem, zaślepka `{ iv, cien: 1 }` (`iv` szyfru =
+  klucz rekordu); pełny szyfr w rekordzie magazynu cienia `{ key, c: { iv, data }, patientId, snapshotId, od }` (`od` —
+  chwila usunięcia, od której liczy się 30 dni); ważny kosz — jak dotąd pełne `payloadCipher` we wpisie, a w `Bpk.t`
+  bez szyfru: `{ wE: true, o, od, cz }`.
+
+**Cień poza listą (P-CIEN-POZA-LISTA; wariant V przeglądu 2 — decyzje właściciela 2026-10-26: 6 i 5b).**
+- **Dlaczego.** Bez wariantu pełny szyfr każdego cienia leżał w liście nagrobków w rekordzie metadanych konta, a ten
+  rekord przepisuje każde scalenie (także bez zmian — chwila ostatniego scalenia) i każde usunięcie do kosza: w R20
+  7,51 MB przy każdym scaleniu i 798 MB zapisów w 8 tygodni na urządzeniu, które samo nie przycina („Ograniczenia, koszt
+  cienia”). Reguła, wyniki, ładunek i zajętość dysku bez zmian — zmienia się tylko, gdzie leży pełny szyfr cienia i jak
+  często się go zapisuje.
+- **Reguła bez zmian.** Dla algebry półkraty zaślepka jest „treścią z szyfrem” (`Bpk_trescLepsza`, `Bpk_wygas`,
+  `Bpk_nowszaTrescKosza`, koniec scalania patrzą tylko na obecność szyfru, treść wybierają po opisie i chwili treści),
+  a odcisk K1 (`Bpk_odcisk`) bierze tylko `iv`. Pełny szyfr jest potrzebny tylko, gdy cień zostaje treścią ważnego kosza
+  (lista dostaje pełną treść przed zapisem — brakujący szyfr doczytany z magazynu, obliczenie powtórzone), i przy
+  odszyfrowaniu cienia (rekord złożony `Bgw_zloz`, „przypięta → karta” `Bgw_wskrzes`).
+- **Magazyn** (opcjonalne metody adaptera: `getSnapshotShadowForUser`, `writeSnapshotShadowsForUser` — partia zapisów
+  i usunięć jedną transakcją, `listSnapshotShadowKeysForUser` — same klucze):
+  - IndexedDB: istniejący sklep `meta` bazy `vilda_user_<id>`, `id = "cien:<iv>"`; `getUserMeta` czyta tylko
+    `id = "singleton"`. Bez zmiany schematu: wersja bazy 5 i `onupgradeneeded` bez zmian (podbicie wersji zablokowałoby
+    cofnięcie wydania — starsza aplikacja nie otwiera bazy, VersionError);
+  - adapter w pamięci (przeglądarka bez IndexedDB, tryb jednorazowy, część sesyjna trybu chmurowego, testy): mapa na
+    konto, nigdy w zrzucie do `sessionStorage` ani do trwałego cache;
+  - tryb chmurowy — część sesyjna (niżej);
+  - adapter bez tych metod (własny adapter) — cień w liście, jak bez wariantu.
+- **Zapis** (pod blokadą metadanych konta, `Bmk_zmien`, P-META-KONTA; między kartami — Web Locks). Rekordy nowych cieni
+  zapisuje jedna transakcja przed listą, która je wskazuje (kolejność „rekordy przed listą” trzyma inwariant przy
+  przerwaniu między transakcjami — M8d). Uid konta jest ustalone przed pierwszym `await` na całą zmianę listy (odczyt
+  wstępny, każda próba, rekordy, doczytanie treści kosza, sprzątanie, znacznik zamiatania). W tej samej chwili ustalony
+  jest adapter magazynu cienia dla rekordów i sprzątania (`Bpc_przedZapisem`, `Bpc_sprzataj`), a od zapisów S4
+  pilnujących sesji (niżej) także dla doczytania treści kosza w pętli prób (`Bpc_pelny`); pamięć podręczna szyfrów jest
+  wtedy pamięcią tej zmiany listy, gdy jej konto nie jest już bieżącym. Dotąd doczytanie brało adapter bieżący (W3P-2
+  weryfikacji 3) — po blokadzie, gdy lista kosza szła do magazynu z chwili usunięcia wersji, czytało z innego magazynu
+  niż lista, a treść kosza z cienia liczyła się jak wygasła. Wszystko to także wtedy, gdy sejf zablokowano
+  w trakcie (W3 przeglądu wariantu V; dotąd rekordy trafiały wtedy poza konto zmienianej listy, a lista konta dostawała
+  wiszące zaślepki: rekordy — M9; doczytanie, sprzątanie i znacznik — M9b). Od scalenia z P-CHMURA-OPIS (#800) scalanie
+  przerwane zmianą sesji kończy się błędem `SESSION_CHANGED`, a lista kosza konta, które scalało, i rekordy cienia idą
+  do tego konta — M9 i M9b sprawdzają ten błąd i dalej to, że magazyn cienia i zapisy idą tylko do konta zmienianej
+  listy. Zapisy, które S4 dokłada w scalaniu, pilnują sesji jak w P-CHMURA-OPIS (niżej, „Zapisy S4 w scalaniu
+  i sesja”). W2P-1 weryfikacji przeniesienia: po poprawce W3
+  adapter był ustalany dopiero po odczycie wstępnym (przygotowanie Z4), a w trybie chmurowym blokada w tym odstępie
+  (`kn` → `ur`) podmienia `I()` na trwały adapter — uid dalej wskazywało konto, więc 11 pełnych szyfrów cienia trafiało
+  do trwałej bazy i przeżywało wylogowanie (wbrew 5b; na `1132ee1e` w tym punkcie nic, bo zapis listy kończył się
+  błędem „Brak metadanych konta.”). Test W2P-1 (`polkrata-cien-chmura`, blokada „manual” i „idle” po każdym z 13 wywołań
+  trwałej bazy w scaleniu C→P): 0 rekordów w trwałej bazie w każdym punkcie, a gdzie lista zapisała się po blokadzie
+  (punkty 4, 5, 6, 12) — po ponownym logowaniu kosz 23 na trzech; na `30810faf` czerwony (punkt 4: 11 rekordów).
+  Zaślepkę spoza listy na dysku (mapa scalania sprzed zmiany w innej karcie tego samego urządzenia)
+  sprawdza pod tą blokadą — rekordu nie ma: cień jak wygasły i lista liczona od nowa. Po zapisie listy jedna transakcja
+  usuwa rekordy, których lista już nie wskazuje (wygaśnięcie, nowsza treść, ważny kosz, zdjęty nagrobek), a przy
+  pierwszym zapisie listy w sesji (także po blokadzie i ponownym odblokowaniu tego samego konta — L2) także sieroty — po
+  samych kluczach (`getAllKeys` po zakresie `cien:`), bez czytania rekordów. Scalenie bez zmiany cienia nie dotyka
+  magazynu. Inwariant zapisu: lista zapisana pod blokadą wskazuje tylko rekordy, które w chwili zapisu są w magazynie tej
+  instancji sejfu (wyjątki — łagodna degradacja niżej; w trybie chmurowym rekord jest tylko w części sesyjnej instancji,
+  która listę zapisała). `Bgw_zloz` i `Bgw_wskrzes` doczytują z magazynu każdy cień zapisany we wcześniejszym scaleniu
+  (pamięć podręczną szyfrów zapełnia tylko odczyt z magazynu, a każde scalenie czyta listę z dysku), także w tej samej
+  karcie (N4, N5).
+- **Zapisy S4 w scalaniu i sesja (po P-CHMURA-OPIS).** Zapisy S4 w scalaniu pilnują sesji jak w P-CHMURA-OPIS. Każdy
+  zapis, który S4 dokłada w scalaniu z chmury (`mergeSyncPayload`, `applyEncryptedDelta`), idzie po synchronicznym
+  sprawdzeniu sesji, bez `await` pomiędzy — jak usunięcie wersji i pętle list w P-CHMURA-OPIS: rekord złożony wersji
+  w pętli kart (`Bgw_scal`), w końcu scalania wersja, która przyjmuje gwiazdkę albo nowszą treść nagrobka (`Bgw_zloz`),
+  wersja wracająca z cienia (`Bgw_wskrzes`) i wyższa rev pominiętej wersji z ładunku (`Bpk_podnies`), nagłówek karty po
+  tych zmianach, rekordy cienia przed listą kosza, sama lista po nich i sprzątanie po niej. Odczyt cienia w końcu
+  scalania — też tylko w sesji scalania. Inna sesja (blokada, ponowne zalogowanie, zalogowanie innego konta) — błąd
+  `SESSION_CHANGED` bez dalszych zapisów; następne scalenie w tym koncie daje to samo, co scalenie bez przerwy. Wyjątek
+  P-CHMURA-OPIS bez zmian: po usunięciu wersji lista kosza idzie do konta i magazynu z chwili usunięcia, a z nią rekordy
+  cienia, sprzątanie i doczytanie treści kosza z cienia (wyżej, „Zapis”). Sprzątanie po liście zapisanej w sesji
+  scalania, przerwane zmianą sesji, nic nie usuwa — sieroty zamiata pierwszy zapis listy w następnej sesji (M9b-2
+  dostosowany). Import pliku i „Scal kopię konta” przechodzą przez scalanie bez końca scalania kosza i bez wersji
+  z ładunku, więc tych zapisów nie robią. Poza zapisami magazynu: zbiór kart usuniętych w sesji (`Bpc_usuniete`) i pamięć
+  chwil treści (`Bgw_czPam`) to pamięć dokumentu z kluczem konta albo szyfru — bez zmian. Testy: `polkrata-sesja`
+  (prawdziwy sejf; przełączenie sesji w wybranym miejscu kroku — zalogowanie innego konta i ponowne zalogowanie tego
+  samego; wyjątek w trybie jednorazowym i chmurowym); walidacja niżej.
+- **Łagodna degradacja.** Brak rekordu wskazanego przez listę (uszkodzenie; w trybie chmurowym przeładowanie, ponowne
+  logowanie i inna instancja sejfu tego samego konta — druga karta przeglądarki albo inna ramka powłoki `app.html`; tryb
+  jednorazowy po przeładowaniu; ramka bez Web Locks) — bez wyjątku, wynik nigdy gorszy niż na `f612fe09`. Zaślepka bez
+  rekordu liczy się jak cień wygasły dopiero wtedy, gdy potrzebny jest pełny szyfr (treść ważnego kosza, `Bgw_zloz`,
+  `Bgw_wskrzes`): przez jedną synchronizację wpis kosza bez treści, potem treść z innych urządzeń (M5: kosz 23 zamiast 58
+  na trzech, jak `f612fe09`). Do tego czasu jest dla algebry „treścią z szyfrem” — nie przyjmuje tej samej ani starszej
+  treści z ładunku (`Bpk_nowszaTrescKosza`, kandydat końca scalania, remis w `Bpk_trescLepsza`). Skutek (W1 przeglądu
+  wariantu V, test w `polkrata-cien-chmura`): P w trybie chmurowym loguje się ponownie po powstaniu cienia 58, D (zna 58,
+  nie zna przycięcia) wysyła do P, potem sam przycina, K daje starą kopię 23 do kosza — kosz 23 na czterech, jak
+  `f612fe09`, choć cień naprawdę wygasły (`c = null`) przyjąłby 58 z D i dałby kosz 58. Leniwie celowo: w trybie
+  chmurowym rekord tej zaślepki może leżeć w części sesyjnej innej otwartej instancji, a zerowanie przy odczycie listy
+  niszczyłoby jej cień (dwie karty: instancja z cieniem 58 → 23). Błąd odczytu albo zapisu rekordów (np. brak miejsca) —
+  te cienie jak wygasłe, a lista zapisuje się bez nich (nagrobki i treść ważnego kosza z wersji usuniętych w tym
+  scaleniu zostają; M8b). Dotyczy to także cienia, który powstaje z treści ważnego kosza z dysku unieważnionego w tym
+  scaleniu (R1 przeglądu wariantu V: klucz bez udanego zapisu zdejmowany z wyniku złączenia — dotąd ponowienia do rzutu
+  „Nie udało się odczytać kopii treści kosza.”, połkniętego w scalaniu, i lista z nagrobkami tego scalenia
+  niezapisana; M8e, błąd stały i jednorazowy — jednorazowy też kończy się cieniem jak wygasłym, bez ponowienia zapisu
+  rekordu). Błąd sprzątania i sprzątanie przerwane zmianą sesji — tylko sieroty, które zamiata następny zapis listy
+  (po zmianie sesji — pierwszy zapis listy nowej sesji tego konta).
+- **Tryb chmurowy (decyzja 5b: kopie robocze nigdy na dysku — tylko w pamięci dokumentu, najwyżej do wylogowania).**
+  Magazyn cienia w części sesyjnej (pamięć, jak wersje kart), nigdy w trwałej bazie z metadanymi konta — tam lista
+  trzyma same zaślepki (bez treści). Cień nie wchodzi do zrzutu części sesyjnej w `sessionStorage`: limit
+  `sessionStorage` w Chromium 141 to 5 242 880 znaków na pochodzenie (pomiar 2026-10-26); w teście „limit zrzutu sesji”
+  (10 kart po jednej wersji po przycięciu, 300 cieni po ok. 24 KB jak w R20) zrzut z cieniem wyliczono na ok. 7,44 mln
+  znaków wobec zmierzonych 0,25 mln bez niego — zrzut nie zapisałby się, a przeładowanie odtwarzałoby stare dane kart.
+  W R20 (dane kart C 4,35 MB) sam zrzut bez cienia byłby rzędu 4,4 mln znaków, ok. 83 % limitu (szacunek; rozmiar zrzutu
+  części sesyjnej to osobny, znany problem planu synchronizacji, `docs/SYNC_PRZYROSTOWA_PLAN.md`).
+  - **Zasięg (W2, S4V-MP1 przeglądu wariantu V).** Cień żyje tylko w pamięci dokumentu, który wykonał scalenie. W powłoce
+    `app.html` to dokument główny i ramki paneli otwarte w tej chwili (każda ramka ładuje własny sejf z własną częścią
+    sesyjną i sama scala ładunek), więc przełączanie paneli go nie zabiera. Zabiera go wylogowanie, blokada (także po
+    bezczynności) i nowy dokument: F5 albo aktualizacja, wyjście poza powłokę (np. `subskrypcja.html`), każda zmiana
+    strony przy wyłączonej powłoce, panel przeładowany albo otwarty później. Po takim zdarzeniu albo w innej instancji
+    sejfu tego konta (druga karta przeglądarki, ramka przeładowana) lista ze wspólnej trwałej bazy wskazuje rekord,
+    którego ta instancja nie ma. Instancja bez cienia, która pierwsza scali późniejszy kosz z innego urządzenia, bierze
+    treść innych urządzeń dla całej floty — jak `f612fe09`, nigdy gorzej — także wtedy, gdy dokument z cieniem jest dalej
+    otwarty. Pomiar (Chromium 141, prawdziwe IndexedDB i `sessionStorage`; poprawka 77): druga karta albo przeładowany
+    panel scala kosz pierwsza — kosz 23 na wszystkich; dokument z cieniem pierwszy — 77; samo przełączanie paneli — 77.
+    Test ograniczenia (`polkrata-cien-chmura`, dwie karty i dwie ramki ze wspólnym `sessionStorage`, wspólna atrapa Web
+    Locks): scala instancja bez cienia — kosz 23 na czterech (po jej pierwszym scaleniu przejściowo kosz bez treści),
+    z cieniem — 58; bez wyjątku. Zasięg przyjęty przez właściciela 2026-10-26 (decyzja 2 po przeglądzie wariantu V,
+    wyżej). Pełna naprawa (zapytanie innych instancji o brakujący szyfr przez BroadcastChannel pod blokadą metadanych,
+    zanim cień zostanie uznany za wygasły) — niewdrożona, osobny PR tylko, jeśli D4 ma działać między instancjami;
+    wspólny magazyn w trwałej bazie albo w `sessionStorage` łamie 5b i limit zrzutu.
+  - **Konto przełączone z trybu lokalnego (S4V-MP3).** Rekordy cienia z trwałej bazy przechodzą do części sesyjnej
+    i znikają z dysku przy pierwszym użyciu magazynu w sesji, czyli przy odczycie cienia albo pierwszym zapisie listy
+    nagrobków. Sesja, w której scalenia nie zmieniają listy, zostawia je na dysku także po wylogowaniu; najpóźniej zamiata
+    je pierwsze scalenie po wygaśnięciu cienia (30 dni od usunięcia, jak w trybie lokalnym). Tak samo zostaje w trwałej
+    bazie lokalna karta sprzed przełączenia (stan sprzed S4; decyzja 5a, osobny PR).
+  - **Pomiar** (`polkrata-cien-chmura`): w trwałej bazie 0 rekordów i 0 B szyfrów cienia przed i po blokadzie „manual”,
+    „user” i „idle” — także po blokadzie w trakcie scalenia, po każdym wywołaniu trwałej bazy (W2P-1); po ponownym
+    logowaniu i po przeładowaniu kosz 23 na trzech, bez wyjątku. Weryfikator równoważności
+    na tym samym scenariuszu: bez wariantu (`abfdf302`) w trwałej bazie 11 pełnych szyfrów cienia w liście, 3 945 B,
+    i kosz 58 po blokadzie albo przeładowaniu; z wariantem 0 B, 11 zaślepek i kosz 23 (zmiana oczekiwana z 5b). Blokada
+    czyści też pamięć podręczną pełnych szyfrów cienia (`Bpc_wyczysc` w `kn`): cień odczytany przed blokadą nie wraca po
+    ponownym logowaniu (kosz 23* zamiast 58*; R5).
+- **Cofnięcie wydania.** Wariant wchodzi razem z S4 (PR-S4) i nie może być od niego oddzielony: stan S4 bez wariantu
+  czytałby zaślepkę jak szyfr (M7 przeglądu 2: kosz z treścią `null` na stałe). Cofnięcie do `f612fe09`, 221, 218:
+  starsze aplikacje nie czytają `Bpk` i pomijają rekordy `cien:` w sklepie `meta` (czytają tylko `singleton`). Nie
+  wygaszają ich ani nie usuwają (S4V-MP2), więc przez cały czas pracy na starszej wersji zaszyfrowana treść przyciętych
+  wersji zostaje na dysku — także po 30 dniach i po wygaśnięciu nagrobków (365 dni); bez wariantu treść ginęła razem
+  z wpisem listy, najpóźniej po 365 dniach. Ładunek synchronizacji i kopia konta tej treści nie zawierają, a zbiór nie
+  rośnie (starsza aplikacja nowych rekordów nie tworzy). Rekordy zamiata pierwszy zapis listy po powrocie do nowej
+  wersji — nie samo odblokowanie ani scalenie bez zmiany listy (M7 w `polkrata-cien`: wynik jak dla cienia w liście,
+  sierota z 221 zamieciona przy pierwszym zapisie listy po powrocie, 11 → 10 rekordów) — albo usunięcie konta
+  (`deleteUserDatabase` zabiera rekordy z bazą). Po powrocie odcisk K1 przelicza składniki z pól.
+- **„Usuń pacjenta”** (decyzja właściciela 2026-10-26, 1 po przeglądzie wariantu V: S4V-MP4 = b) — cień wersji tej karty
+  znika od razu. `Bpu_usun` po `removePatientForUser` woła `Bkz_zmienListe` z opcją `bezCieniaKarty` (`Bpc_bezKarty`):
+  składnik `t` wpisów tej karty, które nie są ważnym koszem, bez szyfru — jak cień wygasły; rekordy usuwa zwykłe
+  sprzątanie jedną partią. Treść ważnego kosza zostaje (widoczna w Koszu, jak `f612fe09`). Kolejność blokad jak w koszu:
+  karta (wołający), potem metadane; blokada metadanych jest zwolniona przed pętlą notatek (D-21: `Bnp_usunZPacjentem`
+  bierze blokady notatek), więc nie powstaje nowe zagnieżdżenie ani cykl. Działa też w trybie chmurowym (część
+  sesyjna) i dla adaptera bez magazynu (cień w liście). `Bpu_usun` wołają też „Scal pacjentów” (karta źródłowa)
+  i usunięcie ostatniej wersji. Błąd zmiany listy jest połykany — cień zostaje wtedy do wygaśnięcia. Koszt
+  i ograniczenia — „Ograniczenia, „Usuń pacjenta” a cień”; testy M10, M11.
+  - **Zbiór kart usuniętych w tej sesji** (`Bpc_usuniete`, klucz `uid|patientId`; weryfikacja 3: W3P-1 i decyzja 1 na
+    całej flocie). Trafiają do niego: karta usunięta tutaj (`Bpu_usun`, zaraz po udanym `removePatientForUser`, bez
+    `await` pomiędzy), karta usunięta scaleniem z powodu nagrobka karty (`Bsl_usunPacjenta` — nagrobek z ładunku albo
+    lokalny; każde scalenie przechodzi wszystkie wygrywające nagrobki kart, więc także dawno usunięte) i pusta karta
+    źródła „Scal pacjentów” z innego urządzenia, którą faza przeniesień opróżnia i usuwa bez nagrobka (`Bsw_poOddaniu`:
+    np. delta karty docelowej przed deltą nagrobka źródła). Każda zmiana listy (`Bkz_zmienListe`), także końcowa
+    w `Bkz_scalKoniec`, zdejmuje cień kart ze zbioru (`Bpc_bezKarty`) na świeżej liście i na wpisach dokładanych
+    (`dodaj` — mapa scalania), a od przeglądu W5P (W5P-3) także na wyniku złączenia, przed planem rekordów
+    (`Bpc_odloz`): `Bpc_bezKarty` pomija źródło, które jest ważnym koszem, a złączenie może je unieważnić (inne
+    urządzenie zmieniło tę wersję po koszu i ją przycięło, `z > k`) — treść kosza przechodziła wtedy do wyniku jako cień
+    karty usuniętej i zostawała do najbliższej zmiany listy, a ponowne scalenie tego samego ładunku zapisywało listę (L3;
+    M11h: na `e107e186` 1 zaślepka i 1 rekord, teraz 0 i 0 zapisów listy przy ponownym scaleniu). Zdejmowanie ze źródeł
+    zostaje — decyduje, czy treść ważnego kosza bierze treść innych urządzeń zamiast cienia karty usuniętej (koszt
+    decyzji 1). Rekordy usuwa ta sama partia sprzątania. Wpisy źródła „Scal pacjentów” zachowują jego
+    `patientId`, więc filtr po `patientId` je obejmuje. Nie trafia do zbioru karta, która zostaje: zapisana po chwili
+    usunięcia (`Bsl_usunPacjenta`, gałąź „karta zostaje” — D-21 F2, M11c-2; urządzenie, które o usunięciu nie wie — M11c)
+    i źródło „Scal pacjentów”, które ma tu wersję spoza scalenia (M11e-2). Zbiór tylko rośnie i żyje w pamięci
+    dokumentu: czyści go blokada i wylogowanie (`Bpc_wyczysc` w `kn`), a także przeładowanie strony i aktualizacja (stała
+    modułu). Bez nowych blokad i bez nowych `await`: dodanie jest synchroniczne (bez `await`) — w `Bpu_usun`
+    i `Bsl_usunPacjenta` pod blokadą karty (`Bzw_podBlokada` wołającego, `Bsl_podBlokada`), w fazie przeniesień zaraz po
+    zwolnieniu blokad obu kart; wypada nadal przed końcowym zapisem listy tego scalenia, a zbiór tylko rośnie, więc
+    blokada nie jest potrzebna (W5P-4). Sprawdzenie — w wywołaniu zwrotnym `Bmk_zmien` (liść kolejności karta →
+    metadane); `Bsl_usunPacjenta` F2 i pętla notatek D-21 (`Bnp_*`) bez zmian.
+  - **W3P-1 (wyścig z końcem scalania).** Scalenie obsługuje karty po kolei, każdą pod jej blokadą: usuwa wersje przycięte
+    gdzie indziej i wkłada ich pełny szyfr jako cień do mapy scalania, a listę zapisuje raz, na końcu, po zwolnieniu
+    blokady karty. „Usuń pacjenta” kliknięte w tym czasie (interfejs nie blokuje go na czas synchronizacji) zdejmowało
+    cień tylko z listy na dysku, a końcowy zapis scalenia dokładał go z mapy z powrotem — do wygaśnięcia (pomiar
+    weryfikacji 3: 11 rekordów; okno obejmowało znaczną część trwania scalenia). Teraz końcowy zapis scalenia widzi kartę
+    w zbiorze i zdejmuje jej cień (M11a: 0 zaślepek, 0 rekordów, także po rundzie synchronizacji; M11a-2 bez haka
+    opóźniającego, dwie karty w scaleniu: usuniętej 0, drugiej 11).
+- **Bez zmian:** ładunek synchronizacji (cień nigdy w ładunku), kopia konta (bez listy nagrobków i cienia), zajętość dysku
+  (cień leży tyle samo — 30 dni od usunięcia, które go zabrało; poza cofnięciem wydania, wyżej).
+- **Niewdrożone:** V5 („cień tylko wersji zmienionej po zapisie”: w R20 bez cienia, ale zmienia W-D4 i wnosi L3 w 2 ze
+  100 programów fuzzu — tylko z osobną decyzją); V-G (chwila ostatniego scalenia poza rekordem metadanych — 160 z 241
+  zapisów metadanych w R20; możliwy później, osobny PR); V4 (całe składniki `Bpk` poza listą — usuwa narzut ×4 po
+  wygaśnięciu, 3–5 dni, większe ryzyko).
+
+**Flota mieszana (D8 = a: nota przy wydaniu, bez bramki).** Starsza aplikacja (221, 218, `f612fe09` przed aktualizacją
+albo po cofnięciu wydania, stara karta przeglądarki) liczy „najpierw `rev`” i chroni przypiętą przed retencją; nie zna
+rejestru gwiazdki ani składników. Nowa aplikacja rozpoznaje jej zmiany po polach W3 i odcisku treści (wyżej), rekord
+złożony dostaje `rev` + 1, żeby starsza go przyjęła. Pomiar (katalog, jedno urządzenie 221 albo 218 na P, K albo C,
+216 przebiegów na położenie; odniesienie — flota samych starych i `f612fe09` w tej samej flocie):
+- utrata wizyty obecnej we flocie samych 221: 8/12/1 przebiegów (P/K/C), wyłącznie ODP i T4d (D2 = a: flota samych 221
+  wskrzesza świadomie odpiętą albo usuniętą wizytę); poza nimi 0/0/0 (`f612fe09` 0/1/1); z 218: poza ODP i T4d 1/1/1
+  (`f612fe09` 1/3/8);
+- rozjazd widoku przed aktualizacją poza E4b i PRZ0: z 221 — 8/8/0, tylko ODP i T4d (urządzenie 221 trzyma do
+  aktualizacji starą kopię z gwiazdką, bo nie zna rejestru; `f612fe09` 0/0/0); z 218 — 10/15/19 (`f612fe09` 2/6/22):
+  ODP 8/6/0, T4d 0/2/0, gwiazdka w koszu S5 0/1/0, reszta te same przebiegi co na `f612fe09` (S1, S1b, X3, S4r);
+- zapisy w rundzie kontrolnej 22/16/22 — tylko E4b i PRZ0 (`f612fe09` 60/60/60); bez pętli;
+- po aktualizacji starego urządzenia (3 rundy, 15 dni, 3 rundy) — dla 221 i 218 na P, K, C: 200 z 216 zbieżnie (widok
+  i stan pełny), rozjazd tylko E4b i PRZ0, 0 zapisów.
+Opisane wyżej poprawki panelu (odcisk treści, W20, wersje bez pól, chwila treści kosza po aktualizacji, F-D) i ich
+granice — „Ograniczenia, flota mieszana”.
+
+**Przypadki** (katalog `cel.md`, `tests/unit/polkrata-katalog.test.mjs` 216 przebiegów; wynik ten sam na każdym
+urządzeniu, w każdej kolejności, stan stabilny, 0 zapisów w rundzie kontrolnej):
+| Scenariusz | Dotąd (`f612fe09`) | Teraz |
+|---|---|---|
+| S4: gwiazdka P; kosz K; poprawka C 74; przerzedzenie C | 3 × karta 23*, 2 × brak, 3 × kosz | karta 23* r1 (8 z 8; 74 kg przycięło urządzenie, które je zrobiło) |
+| S5 (4 urządzenia): gwiazdka i poprawka P 99; kosz K; poprawka D 74; przerzedzenie C | 6 × brak, 2 × karta 74 | karta 74* r3 (rekord złożony) |
+| S6: gwiazdka P; poprawka C 58 bez wiedzy; przerzedzenie K | 4 × 58, 3 × 23*, 1 × brak | karta 58* r2 |
+| K10a: gwiazdka, odpięcie, gwiazdka P; poprawka C 58; przerzedzenie K | 4 × 58, 3 × 23*, 1 × brak | karta 58* r4 |
+| K10b: poprawki C 57, 58; później gwiazdka P; przerzedzenie K | 8 × 23* | karta 58* r3 |
+| X5 / S1 / S1b / PC-PK | kosz 23 w 4/4/4/1 z 8 | kosz 78 / 99 / 99 / 99 (8 z 8) |
+| T4: gwiazdka P; „Odepnij i usuń” P; poprawka C 74 | karta 74 r1 | karta 74 bez gwiazdki r3 |
+| T4c: gwiazdka P; „Odepnij i usuń” P; przerzedzenie C | kosz 23* | kosz 23 bez gwiazdki r2 |
+| T4d: jak T4c z poprawką C i starą kopią z gwiazdką na K | 4 × brak, 3 × kosz 23*, 1 × karta 23* | brak (8 z 8) |
+| ODP: gwiazdka P → C; C odpina i przerzedza; P ze starą kopią | 8 × karta 23* | brak (8 z 8) |
+| D-7 T6: dwie poprawki K (31 kg), później gwiazdka P | 24 kg z gwiazdką | 31 kg z gwiazdką, r3 |
+Zgodność z celem W3 (`cel.md` 3a + 3b): 176 z 200 przebiegów, 22 z 25 scenariuszy w 8 z 8 — poza E4a, E4b i PRZ0
+(osobne PR); dotąd 106 z 200 i 10 z 25. `rev` rekordu złożonego = najwyższa + 1, więc S5, K10a, K10b, S6 mają `rev` o 1
+wyższą niż tabela 3b `cel.md` (r2, r3, r2, r1), a T4 — r3 zamiast r2; `rev` jest ta sama w każdej kolejności (dotąd K10b
+w 2 z 8 kolejności r1).
+
+Przypadki zgłoszeń panelu sędziów (`tests/unit/przypieta-w3-flota.test.mjs`, 8 kolejności, 3 rundy, 0 zapisów w rundzie
+kontrolnej; „221” — `tests/fixtures/vilda_vault-221.js.txt`; „przed” — `1fcfa0d9`, krok 2 przed poprawkami):
+| Przypadek | Przed | Teraz |
+|---|---|---|
+| Z1a: C 74; P (221) poprawia 58, potem przypina | 74* (poprawka P ginie, także na P) | 58* |
+| Z1c: gwiazdka K na trzech; C 74; P (221) poprawia 58 i odpina | 74 | 58 |
+| F-B B1: C (221) przypina; P bez wiedzy 58; C później 74 | 58* | 74* |
+| F-B U4: C (221) przypina i wysyła; P zna gwiazdkę, 58; C 74 przed pobraniem | 58* | 74* |
+| Z2a: P (221) przypina, kopie na K i C, P odpina | 23* (odpięcie cofnięte, także na P) | 23 |
+| Z3/MU1: cała flota 221 (dane sprzed W3): P przypina i wysyła, odpina; aktualizacja | 23* | 23 |
+| Z4: C 37 → K; P (221) przypina kopię 23; K bez wiedzy daje do kosza; aktualizacja P | P: kosz 23*, K, C: kosz 37* (na stałe, 7 z 8) | kosz 37 na trzech (gwiazdka w koszu: „Ograniczenia”) |
+| T4 / T4b z P na 221 („Odepnij i usuń” w starszej aplikacji) | 5 z 8 karta 74* / 5 z 8 karta 23* | karta 74 / brak (8 z 8, jak `f612fe09`) |
+| Z7: P otwiera okno poprawki; K przypina, gwiazdka dochodzi do P; P zapisuje 58 z okna | 58 (z retencją: brak) | 58* (z retencją: 58*) |
+| Z7 odwrotnie: wizyta przypięta; okno P; K odpina; P zapisuje 58 | 58* | 58 |
+| F-C C1/C2: K (zegar +60 min) przycina; P 58, C 2 min później 74 | 58* w 3–5 z 8 (C1, losowa część stempla) i 8 z 8 (C2) | 74* (8 z 8) |
+| F-D: K 37, C 41, P przypina; O (221) dostaje najpierw 37* | O: 37* na stałe | 41* na czterech |
+| F-F: „Odepnij i usuń”, zapis kosza zawodzi, potem retencja | odpięta, retencja usuwa bez kosza | 23* w karcie, retencja jej nie tnie |
+
+Przypadki przeglądu 2 (2026-10-22; `tests/unit/przypieta-w3-import.test.mjs` i koniec `przypieta-w3-flota.test.mjs`;
+„przed” — `2443fa0a`):
+| Przypadek | Przed | Teraz |
+|---|---|---|
+| R2-K1: kopia konta na K; P przypina → K; C (bez wiedzy) przycina → K (A3a); P 74 offline; K „Scal kopię konta” | 23* w 8 z 8 na trzech, także z C na 221 (poprawka 74 ginie, także na P; `f612fe09`: 74*) | 74* w 8 z 8, wersja z karty bez nowej `rev` i chwili |
+| R2-K4: K przypina; plik karty albo kopia konta; „Odepnij i usuń”; import na K | tuż po imporcie 23*, po synchronizacji po cichu 23 (8 z 8) | 23 od razu, na trzech, w 8 z 8 (jak „Przywróć”) |
+| R2P-4: T-K1 (ścieżka K1 po cofnięciu P do 221), T-G (F-F przy „zmieniony”), T-FCZ7 (okno poprawki × przycięcie z zegara do przodu), F-D a/b (chwila zwycięzcy), komunikat `kosz-odpiety` | gałęzie bez testu zachowania — mutant każdej przeżywał 69 plików testów sejfu | kosz 58 na trzech / 23* po retencji / 74* w 8 z 8 / karta 41 i 41* / strażnik źródła — każdy test czerwony na swoim mutancie |
+| Z2b: K 33; P (221) bez wiedzy przypina i odpina; K przypina | 33* (pilnowane tylko strażnikiem napisu) | 33* w 8 z 8 (test zachowania; wariant „ten sam odcisk = zmiana treści”: 23*) |
+
+**Wpływ kliniczny.** Przypięta wizyta zostaje w karcie, także gdy inne urządzenie, które o gwiazdce nie wiedziało,
+poprawiło ją albo przerzedziło historię — i z tą poprawką (wcześniej poprawka masy przepadała albo zdejmowała gwiazdkę).
+Późniejsza gwiazdka nie cofa wcześniejszej poprawki pomiaru z innego urządzenia, a późniejsza poprawka masy nie ginie
+po cichu ani przy gwiazdce zmienionej w starszej aplikacji (Z1, F-B), ani przy przycięciu przez urządzenie ze złym
+zegarem (F-C) — masa służy do dawkowania. Świadome odpięcie i „Odepnij i usuń” są trwałe: stara kopia z gwiazdką na
+wyłączonym urządzeniu nie wskrzesza wizyty, a „Odepnij i usuń” w starszej aplikacji nie wraca do karty z gwiazdką (T4,
+T4b). Poprawka z okna otwartego przed synchronizacją nie zdejmuje gwiazdki (wizyta nie traci ochrony przed retencją).
+W koszu jest ostatnia istniejąca treść, niezależnie od kolejności synchronizacji. Po „Przywróć” wizyta usunięta przez
+„Odepnij i usuń” wraca bez gwiazdki — lekarz przypina ją ponownie, jeśli chce; po imporcie pliku karty albo kopii konta
+tak samo, od razu i na każdym urządzeniu (dotąd gwiazdka widoczna po imporcie znikała po cichu przy synchronizacji).
+„Scal kopię konta” nie cofa już po cichu późniejszej poprawki masy z innego urządzenia (R2-K1).
+
+**Ograniczenia.**
+- **Cień tylko lokalnie (D2, topologia blob).** Przy wymianie przez trzecie urządzenie albo przez blob konta inne
+  urządzenia mogą do następnej synchronizacji urządzenia z cieniem widzieć starszą treść (w koszu albo w karcie); jeśli
+  to urządzenie już się nie zsynchronizuje (zgubiony telefon), starsza treść zostaje. Fuzz praw: L2 widok 1/1/0/1
+  programów (zestawy A/B/C/D: ziarna 93, 511, 1525), stan końcowy zbieżny.
+- **Koszt cienia (K1; D4 = a, od decyzji 6 — cień poza listą).** Cień trzyma pełny szyfr każdej wersji pokonanej
+  przycięciem w scalaniu, 30 dni, na każdym urządzeniu, które samo nie przycinało. Lista nagrobków jest w rekordzie
+  metadanych konta, a ten rekord przepisuje każde scalenie (także bez zmian — chwila ostatniego scalenia) i każde
+  usunięcie do kosza. Pomiar przeglądu 2 na treści 17 788 B (rozmiar zapisu karty z `docs/SYNC_PRZYROSTOWA_PLAN.md`,
+  „około 18 KB”); R20 — 20 kart, 8 tygodni, co tydzień wizyta z 3 zapisami na K, retencja domyślna, K↔C po każdej
+  wizycie, C samo nie przycina; META — 20 kart × 12 wersji, C przycina, K scala (wcześniejszy pomiar panelu sędziów na
+  treści 10–16 KB — 3,76 MB przy scaleniu w META, ×63 i 2,56 MB po 8 tygodniach dla 10 kart — zaniżał koszt ok.
+  1,5–3 razy, W1 przeglądu 2):
+
+  | Pomiar | `f612fe09` | S4 bez wariantu | S4 z cieniem poza listą* |
+  |---|---|---|---|
+  | R20, C: lista nagrobków (300 wpisów) | 79,4 KB | 7,50 MB (300 z cieniem) | 323,4 KB (300 zaślepek) |
+  | R20, C: magazyn cienia | — | — | 300 rekordów, 7,24 MB (każdy zapisany raz) |
+  | R20, C: rekord metadanych przy każdym scaleniu | 80,2 KB | 7,51 MB | 324,3 KB |
+  | R20, C: zapisy w 8 tygodni (241 zapisów metadanych + magazyn) | 8,64 MB | 798,0 MB | 41,8 MB (34,6 + 7,2; magazyn: 300 rekordów w 80 transakcjach, 0 usunięć) |
+  | R20, C: zapisy w 8. tygodniu | 3,01 MB | 281,2 MB | 13,1 MB |
+  | R20, C: scalenie bez zmian po 7 dniach przerwy (wygasanie cienia) | 1 zapis, 80 KB | 2 zapisy, 9,26 MB | 2 zapisy, 641 KB, 120 usunięć rekordów (1 transakcja) |
+  | R20, C: usunięcie do kosza | 105 KB | 4,73 MB | 349 KB |
+  | R20, C: IndexedDB (Chromium 141 headless, Linux; 2 przebiegi 2026-10-26), zapis / odczyt rekordu metadanych | 1,5–1,6 / 1,0–1,2 ms | 29–33 / 22–23 ms | 3,9–5,0 / 2,3–3,1 ms |
+  | META, K: scalenie bez zmian | 1 zapis, 57,1 KB | 1 zapis, 5,50 MB | 1 zapis, 236,5 KB, 0 rekordów |
+  | META, K: pierwsze scalenie (magazyn) | — | — | 220 rekordów, 5,31 MB, raz, jedną transakcją |
+
+  \* Liczby wariantu potwierdzone na wersji końcowej `1132ee1e` (weryfikator równoważności 2026-10-26, `zc-koszt2`
+  z licznikiem partii magazynu; poprawki W3 i R1 przeglądu wariantu V nie zmieniają tych ścieżek): te same bajty i liczby
+  rekordów co w prototypie przeglądu 2 (`latka-cien.py` na `2443fa0a`), magazyn zapisywany partią — R20, C: 300 rekordów
+  w 80 transakcjach, 0 usunięć w 8 tygodni; META, K: 220 rekordów w 1 transakcji. Kolumna „bez wariantu” równa się
+  `abfdf302` (poza 27 B szumu uprzęży w tygodniu 0, ta sama różnica co między dwoma przebiegami `f612fe09`
+  w przeglądzie 2). IndexedDB (Chromium 141, ten sam przebieg): 300 rekordów cienia (7,25 MB) jedną transakcją
+  166–179 ms (transakcja na rekord 307–332 ms; prototyp podawał 409 ms), `getAllKeys` po zakresie `cien:` 5–6 ms,
+  usunięcie 300 rekordów jedną transakcją 253–276 ms; czas scalenia bez zmian w pamięci (`f612fe09` / bez wariantu /
+  z wariantem, mediana z 3, dzielona maszyna): R20 186 / 370 / 198 ms, META 36 / 188 / 51 ms. Deterministycznie
+  (`polkrata-cien`, test K; 3 karty × 12 wersji po ok. 18 KB, 33 cienie): rekord metadanych 36,4 KB bez żadnego
+  pełnego szyfru cienia wobec 794,5 KB w magazynie; scalenie bez zmian — 0 zapisów listy i rekordów cienia; usunięcie
+  do kosza — 1 zapis listy, 0 rekordów.
+  Safari na macOS i iOS niezmierzone (strona pomiarowa z danymi syntetycznymi czeka na przebieg na macOS). Ładunek
+  synchronizacji bez zmian (cień nigdy w ładunku); poprawność i widok bez zmian; to koszt zapisu i czasu, nie danych.
+  Zajętość dysku wariant zostawia (lista 0,32 MB + magazyn 7,24 MB wobec 7,50 MB w R20). Cień wygasa po 30 dniach od
+  usunięcia, które go zabrało, a jego rekord znika przy następnym zapisie listy (następnym scaleniu). Po wygaśnięciu
+  cienia lista zostaje ok. 4 razy większa niż na `f612fe09` (318,6 KB wobec 80,4 KB po 31 dniach bez przycięć): narzut
+  składników `Bpk` (ok. 1,05 KB na wpis wobec 265 B) przez 365 dni życia nagrobka — to „lista lokalna ok. 6×” z D9;
+  wariant go nie usuwa. Ekstrapolacja (liczona, nie zmierzona): po roku w rytmie R20 ok. 2 080 wpisów, w tym ok. 171
+  z cieniem — rekord metadanych przy każdym scaleniu ok. 0,55 MB na `f612fe09`, 6,3 MB bez wariantu, 2,2 MB z wariantem
+  (+ magazyn ok. 4,1 MB, każdy rekord zapisany raz). Wariant V2 („bez cienia, gdy nagrobek retencji opisuje dokładnie tę
+  wersję”; lista 11 456 B) odrzucony: treść kosza zależała od kolejności scaleń (scenariusz „P 58 → C; C przycina;
+  K ze starą kopią daje do kosza” — „kosz 23” w 2 z 10 kolejności zamiast „kosz 58”) i zostawiał L3 (ziarno 535). Limit
+  bajtów cienia — odrzucony z tego samego powodu (który cień zostaje, zależałoby od kolejności).
+- **Cień w trybie chmurowym (W2; decyzja 5b — rozstrzygnięte w tym PR).** Bez wariantu adapter trybu chmurowego
+  trzymał listę nagrobków z pełnym cieniem w trwałej bazie urządzenia (IndexedDB `vilda_user_<id>`), a wersje kart
+  tylko w sesji: szyfr wersji przyciętej na innym urządzeniu zostawał na dysku do 30 dni, także po wylogowaniu
+  (przegląd 2, `zc-chmura` na `2443fa0a`: 10 cieni, 3 945 B treści w trwałej bazie po blokadzie, w tym 227 B jawnego
+  kosza; `f612fe09`: tylko treść jawnego kosza, 227 B). Teraz cień tylko w części sesyjnej — w pamięci dokumentu, który
+  wykonał scalenie, najwyżej do wylogowania; druga karta albo ramka przeładowana go nie widzi (zasięg i skutek dla D4 —
+  P-CIEN-POZA-LISTA, „Tryb chmurowy”, wyżej). Zostaje, poza tym PR (decyzja 5a): treść jawnego kosza w metadanych konta na
+  dysku (jak `f612fe09`) i napis w Ustawieniach trybu chmurowego („znikają z chwilą wylogowania. Nikt, kto usiądzie tu po
+  Tobie, nie znajdzie ich na dysku”). Porządki danych sesji trybu chmurowego — osobny PR (P-CHMURA-OPIS).
+- **„Usuń pacjenta” a cień (S4V-MP4; decyzja właściciela 2026-10-26: wariant b — wdrożony).** Bez tej zmiany „Usuń
+  pacjenta” (`Bpu_usun`) usuwał kartę, wersje i notatki i stawiał nagrobek karty, ale listy nagrobków wersji ani
+  magazynu cienia nie dotykał (tak samo `f612fe09`; `removePatientForUser` w IndexedDB otwiera tylko sklepy `patients`
+  i `snapshots`): w trybie lokalnym zaszyfrowana treść wszystkich wersji tej karty przyciętych na innym urządzeniu
+  w ostatnich 30 dniach zostawała na dysku do wygaśnięcia cienia — niewidoczna, bez możliwości usunięcia przez
+  użytkownika, wbrew oknu potwierdzenia („…wraz z całą historią pomiarów i notatek”). Pomiar sceptyka (K 12 wersji,
+  P poprawia 58 i daje drugą do kosza, C przycina, P scala, „Usuń pacjenta” na P): 10 rekordów `cien:` usuniętej karty
+  po usunięciu, po scaleniach i po 29 dniach, 0 po 31 dniach (bez wariantu, `abfdf302` — 10 pełnych szyfrów w liście;
+  `f612fe09` — tylko treść jawnego kosza). Teraz cień karty usuniętej — na tym urządzeniu albo synchronizacją, także
+  źródła „Scal pacjentów” — znika przy najbliższym zapisie listy nagrobków (decyzja właściciela 2026-10-26, 1, „1 tak”:
+  od razu, a nie po 30 dniach). Na urządzeniu, które kliknęło, od razu (M10a: 10 rekordów → 0 jednym zapisem listy i jedną
+  partią usunięć, 0 zaślepek, kosz z treścią zostaje, cień innej karty nietknięty — jej późniejszy kosz 68 na trzech; tak
+  samo dla adaptera bez magazynu, a w trybie chmurowym 0 zaślepek w trwałej liście), także gdy kliknięcie trafi w trwające
+  scalenie, które przycina wersje tej karty (W3P-1, M11a, M11a-2). Na pozostałych urządzeniach — przy końcowym zapisie
+  listy w scaleniu, które przynosi usunięcie (M11b: 10 rekordów → 0 jedną partią, kosz z treścią i cień innej karty
+  zostają, kosz 68 na trzech; adapter bez magazynu; tryb chmurowy — chmura M11: 0 zaślepek w trwałej liście, a cień
+  z części sesyjnej też znika: kosz 23 na czterech, na `1da487ce` 58). „Scal pacjentów” na innym urządzeniu: źródło znika tu
+  z nagrobkiem z pełnego ładunku (M11d) albo jako pusta karta w fazie przeniesień, gdy delta karty docelowej przyjdzie
+  przed deltą nagrobka (M11e) — cień źródła znika w tym samym scaleniu (na `1da487ce` po 11 rekordów). Koszt przyjęty
+  (D4, krawędź D-21): karta zachowana albo wracająca na innym urządzeniu, a jego stara kopia wersji przyciętej gdzie
+  indziej trafia potem do kosza — kosz bierze treść innych urządzeń (M10b: kosz 23 na trzech, jak M5 i `f612fe09`;
+  z cieniem byłoby 58). Ten sam koszt przy „Scal pacjentów” na tym urządzeniu (karta źródłowa idzie przez `Bpu_usun`):
+  cień wersji źródła znika przy scaleniu kart (pomiar: 11 rekordów → 0; tak już na `1da487ce`) — a teraz także na
+  urządzeniach, które to scalenie dostają, na zwykłej ścieżce każdego „Scal pacjentów”, gdy źródło ma cień, nie tylko
+  w krawędzi D-21: wizyty źródła żyją dalej pod kartą docelową, a kosz ich starej kopii z innego urządzenia bierze treść
+  innych urządzeń (M11d: K scala, P dostaje — kosz 23 na trzech niezależnie od powrotu źródła; na `1da487ce` 58; jak
+  `f612fe09`). Przyjęte przez właściciela 2026-10-26 („2 tak”; W5P-2; decyzja 1, wyżej).
+  Ograniczenia (pomiar, dane fikcyjne; nigdy w ładunku ani w kopii konta):
+  - **druga karta przeglądarki** — zbiór kart usuniętych żyje w pamięci dokumentu. „Usuń pacjenta” w jednej karcie
+    w trakcie scalenia w drugiej, które przycina wersje tej karty, nie powstrzyma końcowego zapisu listy w drugiej: cień
+    wraca do magazynu (M11g: 11 rekordów). Zdejmuje go najbliższe scalenie w dowolnej karcie przeglądarki tego urządzenia
+    — przechodzi lokalny nagrobek karty (`Bsl_usunPacjenta`) i dodaje ją do zbioru przed końcowym zapisem listy (M11g:
+    11 → 0; na `1da487ce` cień zostawał do wygaśnięcia);
+  - **urządzenie, które nie scala** (wyłączone, bez sieci, nieużywane) — trzyma cień karty usuniętej gdzie indziej do
+    pierwszego scalenia, które przyniesie usunięcie; gdy to później niż 30 dni od usunięcia wersji, ten sam zapis listy
+    usuwa go już jako wygasły. W trybie chmurowym cień i tak nie przeżywa wylogowania (5b);
+  - **zbiór żyje w pamięci dokumentu** (do blokady, wylogowania albo przeładowania strony — F5, aktualizacja; sesja sejfu
+    może przeładowanie przeżyć, zbiór nie, więc koszt trwa wtedy krócej, a kolejne scalenie i tak dodaje karty
+    z wygrywającym nagrobkiem; W5P-4) i tylko rośnie — karta, która w tej sesji wraca (D-21: nowa
+    wizyta albo poprawka z urządzenia, które o usunięciu nie wie, „Przywróć”, import), do końca sesji nie ma cienia, więc
+    kosz bierze treść innych urządzeń, jak `f612fe09` (M11f). Po ponownym logowaniu karta, której nagrobek
+    przegrał, do zbioru nie trafia i cień znów powstaje przy scaleniu (M11f: 0 w sesji usunięcia, 11 po ponownym
+    logowaniu). Wybrane jako prostsze: wypuszczanie karty ze zbioru przy jej ponownym zapisie wymagałoby haka w każdej
+    ścieżce zapisu karty (zapis, scalenie karty z ładunku, faza przeniesień, import, „Scal kopię konta”), a zysk dotyczy
+    tylko krawędzi, w której koszt jest już przyjęty (decyzja 1);
+  - **karta zachowana tu** (zapis po chwili usunięcia na tym urządzeniu — D-21; także zapis w innej karcie przeglądarki
+    w trakcie scalenia, `Bsl_usunPacjenta` F2) i źródło „Scal pacjentów”, które ma tu wersję spoza scalenia, zachowują
+    cień — to urządzenie karty nie usunęło, a karta wraca potem na pozostałe urządzenia (M11c, M11c-2, M11e-2: po 11
+    rekordów);
+  - **import pliku i „Scal kopię konta”** scalają bez nagrobków kart z pliku i bez końca scalania kosza: przechodzą tylko
+    lokalne nagrobki kart (dokładają je do zbioru), a cień zdejmuje najbliższy zapis listy.
+- **Wizyta „znika i wraca” (W-D4).** Dopóki urządzenie z gwiazdką jest wyłączone, pozostałe jej nie znają: wizyta może
+  u nich zniknąć (przerzedzenie) i wrócić po synchronizacji tamtego urządzenia — z cienia albo z jego wersji.
+- **Zamknięte w tym PR:** D6 (prawo L3 — ponowne scalenie bez zapisów: fuzz 0/0/0/0; dotąd 4/1/20/15 programów
+  kandydata) i K10b `rev` (r3 w każdej kolejności; dotąd 6 × r2, 2 × r1).
+- **`rev`, opis i część pól nagrobka zależne od kolejności (D7, Z5).** `rev` rekordu złożonego zależy od tego, jakie
+  rekordy pośrednie powstały po drodze (max + 1 nie jest półkratą); opis nagrobka po plotce (`rev`, `updatedAtISO`,
+  `zmianaISO`), `koszISO` (składnik `k` ginie razem z koszem, który przegrał z późniejszą wersją bez przycięcia,
+  `Bpk_wpis`: 4 z 300 programów fuzzu) i treść nagrobka (`_pinned`, `_pinnedState`: 4 z 300) — od kolejności scaleń.
+  Niezależne od kolejności (0 z 300): `deletedAtISO`, `przycietoISO`, `gwiazdka`, a dla wersji `updatedAtISO`, treść
+  i rejestr. Widok i obecność wizyty są te same; fuzz praw G2 pełny 10/2/6/2 programów. Manifest (PD-17) nie może
+  kolejkować ponownie wersji tylko z powodu `rev`, a nagrobka — z powodu opisu, `revPary`, `koszISO` ani treści.
+- **Flota mieszana (D8 = a).**
+  - ODP i T4d: urządzenie ze starszą aplikacją trzyma do aktualizacji starą kopię z gwiazdką, gdy pozostałe przyjęły
+    świadome odpięcie albo usunięcie (rozjazd widoku 8/8/0 z 221), bez pętli zapisów; po aktualizacji — brak na wszystkich.
+  - „Odepnij i usuń” w starszej aplikacji, gdy inne urządzenie ma jej kopię z gwiazdką: odpięcia starsza aplikacja nie
+    zapisuje, więc nikt go nie zna — wizyta wraca z gwiazdką (T4K: karta 74*, T4d: karta 23* w 8 z 8 z P na 221;
+    `f612fe09`: 74 bez gwiazdki / 4 × brak, 3 × kosz 23*, 1 × karta 23*). Bez tej kopii — jak `f612fe09` (T4, T4b).
+  - W20: kosz starszej aplikacji z przypiętą treścią nie mówi nic o gwiazdce. Gdy starsza aplikacja zamieni swoją
+    przypiętą wersję na wpis kosza (po koszu z innego urządzenia bez wiedzy), zanim nowe urządzenia ją zobaczą,
+    gwiazdka w koszu ginie (Z4: 4 z 8 kolejności, treść 37 kg na wszystkich) — „Przywróć” oddaje wtedy zapis bez
+    gwiazdki. Z P na 221 albo 218 S4 (2 z 8) i S5 (3 i 4 z 8) kończą się jak na `f612fe09` w tej samej flocie — „brak”
+    albo kosz bez gwiazdki (z 218 na P w jednej kolejności S5 kosz 74 bez gwiazdki, na `f612fe09` kosz 99 z gwiazdką);
+    zysk kroku 2 w tych kolejnościach oddany, utrata ponad flotę samych starych — w tych scenariuszach żadna (F1;
+    wyjątek — rekord złożony, R2-K2 i R2-K3 niżej).
+  - Odpięcie zrobione przez starszą aplikację na wersji bez pól W3 jest rozpoznane w porównaniu wersji z wersją, gdy
+    treść poza gwiazdką się nie zmieniła (K2, Z3, Z2); gdy ta sama aplikacja potem poprawiła treść (U3), gwiazdka wraca
+    z kopii innego urządzenia (rekord złożony; `f612fe09`: 58 bez gwiazdki). Nie jest rozpoznane, gdy wizytę przytnie
+    urządzenie, zanim nowsza wersja nieprzypięta spotka starą kopię z gwiazdką (R2P-2): nagrobek retencji wersji bez pól
+    nie zna rejestru i uczy się rejestru starej kopii (A3a). T-F (dzień wydania: cała flota na 221, P przypina i wysyła K
+    i C, odpina bez synchronizacji, aktualizacja wszystkich, P→K, K przycina): 23* w 7 z 8 kolejności, brak w 1
+    (`f612fe09` w tej samej flocie: 23 ×3, brak ×3, 23* ×2); bez przycięcia — 23. T-F′ (przycina samo P): 23* w 8 z 8,
+    jak `f612fe09`. Treść bez zmian; gwiazdkę zdejmuje ponowne odpięcie w nowej aplikacji; nota wydania, punkt 4.
+  - Zmiana starszej aplikacji, która nie zmienia ani treści, ani gwiazdki, a podnosi chwilę zmiany, liczy się jak
+    potwierdzenie gwiazdki w tej chwili (odcisk ten sam): odcisk nie odróżnia jej od przypięcia i odpięcia (Z2). Tak
+    działają w starszej aplikacji „Przywróć”, import, „Edytuj” wiersza z tymi samymi wartościami i „Popraw pomiar”
+    wizyty z innego dnia, której treść już raz przeszła przez okno (korekta z dzisiejszą datą zmienia `timestampISO`).
+    Skutki (8 kolejności, 0 zapisów w rundzie kontrolnej; flota samych 221 w tych samych krokach w nawiasie):
+    - T-E (R2P-1) — wyjątek od R4 (PD-9): K daje do kosza i wysyła P (221); C bez wiedzy poprawia 58; P „Przywróć”:
+      karta 58 na wszystkich, także na P, które przywróciło 23 (23; `f612fe09`: 23). Tak samo na dwóch urządzeniach
+      (P na 221 daje do kosza i przywraca, K w tym czasie 58). Wynik spójny, bez pętli, zostaje późniejsza świadoma
+      poprawka treści — ale „Przywróć” rozstrzyga się inaczej niż we flocie jednorodnej. Regresja wobec `f612fe09`.
+    - T-D1 (R2P-3) — wbrew D1 = C: K przypina; P (221) bez wiedzy zapisuje 23 → 23: karta 23, gwiazdka zdjęta
+      i wizyta podlega potem retencji (23). T-D2 — wbrew D2 = a: K przypina i wysyła P; K odpina; P zapisuje 23 → 23:
+      karta 23* (23*). T-D3 (poprawka 24 i powrót do 23) jak T-D1. `f612fe09` — to samo: bez regresji wobec wydania.
+    - Wariant „ten sam odcisk = zmiana treści w chwili zmiany” naprawia T-E, ale gubi poprawkę z nowego urządzenia
+      przy przypięciu i odpięciu w starszej aplikacji (Z2b: K 33; P (221) bez wiedzy przypina i odpina; K przypina —
+      23* zamiast 33*; 33*) — odrzucony. Rozróżnienie po `rev` zapisanej w `_pinnedState` (starsza aplikacja podnosi
+      `rev` o 1 na każdą zmianę: przypięcie i odpięcie co najmniej +2, zapis bez zmiany +1) nie pomaga na T-E ani T-D3,
+      niezmierzone; zostaje, z opisem (decyzja 3, 2026-10-26).
+  - Dwie różne poprawki tej samej wizyty i gwiazdka późniejsza od obu: zwycięzca dostaje `rev` o 2 wyższą niż we flocie
+    samych starych (rekord złożony + F-D; ta flota gubi obie poprawki).
+  - **Późniejsza zmiana starszej aplikacji po rekordzie złożonym (R2-K2, R2-K3) — utrata ponad flotę samych starych.**
+    Rekord złożony dostaje `rev` = wyższa + 1 (wyjątek F3), a starsza aplikacja porównuje najpierw `rev`. Gwiazdka
+    i poprawka 37 na dwóch niezsynchronizowanych nowych urządzeniach dają rekord złożony 37* r2; starsze urządzenie
+    offline poprawia potem na 50 (r1) i po powrocie do sieci najpierw pobiera i scala (tak działają `vilda_sync.js`
+    i `vilda_realtime.js`): 37* na wszystkich, poprawka 50 ginie po cichu także na urządzeniu, które ją wpisało (221 albo
+    218 na P, K albo C: 6 z 6; flota samych 221 i `f612fe09` z tą samą starszą: 50 — giną tam wcześniejsza 37
+    i gwiazdka; z `f612fe09` jako starszą: 50*). Dwa złożenia po kolei podnoszą `rev` o 2 (R2-K3, jeden blob jak
+    w synchronizacji: K 37 i C 41 offline, P przypina i wysyła, O (221) zna gwiazdkę, K, potem C wysyłają — C składa 41*
+    r3; O poprawia 50 offline: 41* na czterech; flota samych 221: 50*; gdy O zamiast tego odpina, masa 41 zostaje
+    i wraca sama gwiazdka — flota samych starych gubi tu obie poprawki). F-D dokłada tylko drugą trasę; jego cofnięcie
+    nie pomaga. Gdy przypinający zna już poprawkę (żywa synchronizacja), rekord złożony nie powstaje, a 50 ginie we
+    wszystkich flotach (PD-13, przyjęte). Klinicznie ginie późniejsza poprawka masy (dawkowanie) — nota wydania,
+    punkt 5; decyzja 2 (2026-10-26): opcja (a), znane ograniczenie.
+  - F2 (rozjazd zegarów ze starszą aplikacją) — przyjęte wcześniej, bez zmian.
+- **Rozjazd zegarów (F-C, G17/D13).** Poprawka zrobiona po przycięciu przez urządzenie z zegarem do przodu, na
+  urządzeniu, które o przycięciu wie, a potem świadome odpięcie na urządzeniu, które go nie zna: chwila odpięcia jest
+  przed chwilą przycięcia, więc retencja usuwa wizytę (G1: brak w 8 z 8; wcześniej karta 58). Wizyta świadomie odpięta,
+  retencja i tak usunęłaby ją przy następnym zapisie.
+- **„Odepnij i usuń” w dwóch zapisach.** Gdy po odpięciu zawiedzie zapis kosza i ponowne przypięcie (skorelowany błąd
+  IndexedDB), zapis zostaje w karcie odpięty — z prawdziwym komunikatem (`kosz-odpiety`); pełną atomowość dałby dopiero
+  jeden zapis.
+- **Rekord złożony tylko w obrębie karty.** Wersja wspólna dwóm kartom (P-SYNC-WLASCICIEL, „Scal pacjentów”) dalej
+  przechodzi cała, z nowszą treścią (`Bsw_rekord`) — E3/E4a, osobne PR. Dotyczy to też wizyty przypiętej po „Scal
+  pacjentów”: poprawka z urządzenia, które o scaleniu nie wie, przegrywa z późniejszą gwiazdką na karcie docelowej (22*,
+  jak `f612fe09`), a droga ratunku przez cień nagrobka retencji z trzeciego urządzenia, które tę wizytę przycięło
+  (przypadkowa, zależna od kolejności synchronizacji), po zbiorze kart usuniętych (W3P) znika, gdy ten nagrobek
+  przychodzi przed poprawką (W5P-1).
+- **Bez zmian:** E4a (poprawka sprzed „Scal pacjentów” w koszu ginie), E4b/E3 (rozjazd karty po „Scal pacjentów”, 12
+  zapisów na rundę), PRZ0 („Przywróć”, gdy wersja jest w karcie i w koszu), F2 (rozjazd zegarów ze starszą aplikacją).
+
+**Nota wydania (D8 = a, uzupełniona po decyzjach 2, 4 i 5b z 2026-10-26, poprawiona 2026-10-27: Ustawienia nie pokazują
+numeru wersji — aktualizacja przez komunikat o nowej wersji; do wklejenia przy wydaniu).** „Przypięte wizyty mają
+teraz własną datę przypięcia: późniejsza
+poprawka pomiaru z innego urządzenia nie zdejmuje gwiazdki, a świadomie odpięta albo usunięta wizyta nie wraca ze
+starej kopii na innym urządzeniu. Zaktualizuj aplikację na **wszystkich** urządzeniach tego samego dnia (komunikat
+»Dostępna nowa wersja aplikacji« → »Aktualizuj«). Do tego czasu: (1) przypinaj, odpinaj i używaj »Odepnij i usuń« na urządzeniu już zaktualizowanym;
+(2) jeśli na starszym urządzeniu wizyta wróciła z gwiazdką po usunięciu, usuń ją ponownie na zaktualizowanym;
+(3) po »Przywróć« i po imporcie sprawdź gwiazdkę i przypnij wizytę ponownie, jeśli trzeba; (4) przed aktualizacją
+zsynchronizuj każde urządzenie (Ustawienia → »Synchronizuj teraz«) — zwłaszcza po odpięciu wizyty: odpięcie, które nie zdążyło się zsynchronizować, może po
+aktualizacji wrócić jako gwiazdka (odepnij ją wtedy ponownie na zaktualizowanym urządzeniu); (5) na urządzeniu jeszcze
+niezaktualizowanym nie poprawiaj wizyt (pomiarów), nie odpinaj i nie przywracaj z kosza bez połączenia z siecią — zrób to
+na zaktualizowanym, inaczej taka poprawka może przepaść. W trybie chmurowym kopie robocze usuniętych wizyt (dzięki nim
+kosz z innego urządzenia dostaje najnowszą poprawkę) trzyma tylko otwarta strona aplikacji, nigdy dysk — znikają przy
+wylogowaniu, blokadzie i odświeżeniu strony, a druga karta przeglądarki ich nie widzi; kosz ma wtedy treść z innych
+urządzeń, jak dotąd.”
+
+**Walidacja.** Prawdziwy `vilda_vault.js`, sejfy w pamięci, sztuczny zegar, dane fikcyjne; jeden proces testów naraz.
+- Katalog `cel.md` 27 × 8 = 216 przebiegów (wszystkie urządzenia nowe): zgodność z celem W3 176 z 200, 22 z 25
+  scenariuszy w 8 z 8 (poza E4a, E4b, PRZ0 — osobne PR); zbieżnie 200 z 216 (rozjazd tylko E4b i PRZ0, jak na
+  `f612fe09`), stabilnie 216 z 216, 0 zapisów w rundzie kontrolnej (na `f612fe09` 60 w 14 przebiegach). Wobec
+  `f612fe09`: 12 przebiegów bez wizyty, która tam była — wyłącznie ODP (8) i T4d (4) (D2 = a); 10 odzysków, 48 innych
+  widoków. Poprawki panelu nie zmieniają tu żadnego widoku ani `rev` (0 różnic wobec `1fcfa0d9`).
+- Flota mieszana (221 i 218 na P, K albo C, z aktualizacją i bez) — liczby w „Flota mieszana”; wobec `1fcfa0d9` różnice
+  tylko z 221 albo 218 na P: S4 2, S5 3–4, T4 5, T4b 5 przebiegów — wszystkie do wyniku `f612fe09` w tej samej flocie.
+- Fuzz praw łączenia (`zz-sedzia-prawa`: 300 programów po 12 kroków × 6 harmonogramów = 1800 przebiegów; zestawy
+  A/B/C/D — para / para z rozjazdem zegarów / blob konta / blob z rozjazdem): 0 wyjątków, 0 niestabilnych; G1 widok
+  i pełny 0/0; G2 widok 0; G3 0; L1 widok 0; L3 0/0/0/0; L2 widok 1/1/0/1 (cień lokalny, D2); G2 pełny 10/2/6/2, L1
+  pełny 8/1/1/0, L2 pełny 10/2/7/3 (`rev` rekordu złożonego i opis nagrobka, D7).
+- Fuzz floty mieszanej (`zz-s2a-prawa` sędziego „algebra” z poprawioną aktualizacją; P na 221, po 100 programów × 6
+  harmonogramów w zestawach A i C): przed aktualizacją P rozjazd widoku w 3 programach A (11 przebiegów; przed
+  poprawkami panelu 4 i 14, `f612fe09` 0) i 5 programach C (23 przebiegi; przed poprawkami 6 i 29, `f612fe09` 0) —
+  ograniczenie floty mieszanej (D8 = a); wyrocznia „ostatnia poprawka” (zapis widoczny, ale bez ostatniej poprawki
+  pola, zestaw A): 68 przebiegów wobec 89 przed poprawkami, 151 na `f612fe09` w tej samej flocie i 170 we flocie samych
+  221, żaden tylko tutaj — fuzz nie zawiera wzorca R2-K2/R2-K3 (gwiazdka i poprawka na dwóch nowych urządzeniach przed
+  zmianą starszej aplikacji offline, która najpierw pobiera); po aktualizacji P: 0 rozjazdów widoku w A i C (przed
+  poprawkami 11 i 6 — sam kosz, Z4),
+  0 zapisów, 0 wyjątków, 0 niestabilnych.
+- Pliki testów sejfu po jednym (po przeglądzie 2): 71 plików, 2152 z 2152 zielonych, m.in. `polkrata-katalog` 216,
+  `kosz-nowsza-tresc` 236, `sync-wlasciciel-wersji` 325, `notatki-za-karta` 157 (D-21), `przypieta-w3` 15,
+  `przypieta-w3-flota` 48 (zgłoszenia panelu — na `1fcfa0d9` czerwone wszystkie przypadki poprawek; przegląd 2 — R2P-4
+  i znane ograniczenia), `przypieta-w3-import` 8 (R2-K1, R2-K4; na `2443fa0a` 6 czerwonych), `przypieta-w3-reguly`
+  15 (12 mutantów kluczowych gałęzi, które przeżywały 67 plików testów sejfu, K5 — każdy czerwieni plik),
+  `pozniejsza-poprawka` 32, `polkrata-wady` 26, `polkrata-prawa` 20, `retencja-nagrobki` 17, `kosz-zapisow` 28,
+  `kopia-konta-pomija` 22.
+- Przegląd 2 (poprawki R2-K1 i R2-K4 zmieniają tylko ścieżki importu): katalog 13 × 216 = 2 808 przebiegów (nowe
+  urządzenia, flota z 221 i z 218 na P, K albo C, z aktualizacją i bez) — 0 różnic wobec stanu sprzed przeglądu 2; fuzz
+  praw (1 800) i fuzz floty mieszanej (1 800) — identyczne przebieg po przebiegu. Mutanty pięciu gałęzi bez testu
+  (R2P-4) i wariant „ten sam odcisk = zmiana treści” — każdy czerwieni swój nowy test.
+- `npm run lint` (bez uwag), `npm run test:syntax` (1132 pliki), `npm run test:repo` (1770 plików; bez dowiązania
+  `node_modules` kopii roboczej) — zielone.
+- Cień poza listą (2026-10-26, po przeglądzie wariantu V): pliki testów sejfu w jednym procesie — 73 pliki (70 z listy
+  przeglądu 2, `przypieta-w3-import` 8 i nowe `polkrata-cien` 20, `polkrata-cien-chmura` 15): 2187 z 2187 zielonych
+  (`1132ee1e` przed przeglądem wariantu V: 2171 z 2171; przed wariantem: 71 plików, 2152 z 2152); e2e
+  `polkrata-cien-indexeddb` 2 z 2 (Chromium 141 headless; Playwright 1.61 szuka innej rewizji przeglądarki, więc
+  `PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH=/opt/pw-browsers/chromium-1194/chrome-linux/chrome`, `--project=desktop-chromium
+  --workers=1`). M9 (W3) i M8e (R1) czerwone na `1132ee1e`. Mutanty — obca zaślepka bez sprawdzenia, błąd zapisu
+  rekordów przerywający zapis listy, brak ponowienia zamiatania po błędzie, zamiatanie wyłączone, magazyn cienia trybu
+  chmurowego w trwałej bazie, cień w zrzucie adaptera w pamięci — każdy czerwieni swój test; po przeglądzie wariantu V
+  także lista przed rekordami (m01 → M8d), `kn` bez `Bpc_wyczysc` (m11 → L2 i test pamięci podręcznej w
+  `polkrata-cien-chmura`), `Bgw_wskrzes` bez odczytu z magazynu (m17 → N4, N5; dotąd przeżywał cały zestaw z katalogiem,
+  prawami i flotą), `Bpc_bez` = tożsamość (m05 → M5, M8a) i brak powrotu do zapisu po obcej zaślepce bez rekordu
+  (→ M8a); `Bgw_zloz` bez odczytu z magazynu (m18) czerwieni `kosz-nowsza-tresc` (K9, K10: 4 z 236) i katalog (pomiar
+  sceptyka na `1132ee1e`). Partię IndexedDB i zamiatanie po samych kluczach pilnuje tylko e2e. Przeżywają: m13
+  (ponowny zapis rekordu ze źródła z pełnym szyfrem — działa tylko przy zmianie listy w innej karcie między próbami,
+  R6), m19 (pamięć podręczna bez czyszczenia po zapisie listy — sama pamięć) oraz — po weryfikacji przeniesienia — uid
+  z `b` w odczycie wstępnym (w3e) i w kolejnych próbach `Bmk_zmien` (w3f; skutek łagodny: zmiana listy przerwana
+  z ostrzeżeniem, następne scalenie po zalogowaniu naprawia wynik do kosza 58). Instrumentacja 73 plików na `1132ee1e`
+  (sceptyk R8): obca zaślepka sprawdzana pod blokadą bez rekordu — tylko M8a, nieudany zapis rekordów — tylko M8b,
+  nieudane doczytanie rekordu (cień jak wygasły) — M5 i 4 testy `polkrata-cien-chmura` (blokada ×3, przeładowanie),
+  w pozostałych plikach 0 razy; doczytanie treści kosza z magazynu (cień zostaje treścią ważnego kosza) — 37 razy;
+  nowe testy przeglądu wariantu V (M8d, M8e, M9, W1, W2) przechodzą przez te ścieżki celowo. Równoważność `1132ee1e`
+  z `abfdf302` (weryfikator równoważności 2026-10-26, przebieg po przebiegu; kontrola uprzęży — `abfdf302` wobec wyników
+  przeglądu 2 na `671e71ec` identyczny): katalog 13 × 216 — 2 808/2 808 identycznych; fuzz praw 1 800/1 800 (magazyn
+  użyty w 1 517 przebiegach, w L3 i w rundzie kontrolnej 0 rekordów i 0 transakcji); fuzz floty mieszanej 1 800/1 800;
+  dodatkowo katalog z adapterem w pamięci z kodu badanego także na urządzeniach ze starszą aplikacją (po aktualizacji
+  z magazynem cienia; nowe, a221, a218 — 7 × 216) 1 512/1 512 (ścieżkę „lista z pełnym cieniem → zaślepki i rekordy”
+  pokrywa M6). Jedyne różnice — oczekiwane z 5b (tryb chmurowy po blokadzie, ponownym logowaniu i przeładowaniu: kosz 23
+  zamiast 58, 0 B w trwałej bazie zamiast 3 945 B). Poprawki W3 i R1 zmieniają tylko ścieżki blokady sejfu w trakcie
+  zapisu listy i błędu zapisu partii, których katalog i fuzz nie wywołują. `eslint` na zmienionych plikach bez uwag,
+  `npm run test:syntax` (1135 plików), `npm run test:repo` (1773 pliki) — zielone.
+- Po weryfikacji przeniesienia (2026-10-26; W2P-1, W2P-2, W2P-3 i decyzja 1): `polkrata-cien` 29 z 29 (nowe M9b ×5,
+  M10 ×4, zapis listy w M8a), `polkrata-cien-chmura` 18 z 18 (nowe W2P-1 ×2, M10). Czerwone przed zmianą: W2P-1 ×2 na
+  `30810faf` (punkt 4 z 13: 11 rekordów w trwałej bazie), M10 ×5 bez `bezCieniaKarty` (`e41152d9`). Mutanty (pojedyncze
+  pliki): sprzątanie z `b` (w3b) → M9b-1 i M9b-2 ×2, doczytanie treści kosza z `b` (w3c) → M9b-1 ×2, znacznik zamiatania
+  bez `b === uid` (w3d) → M9b-3, „uid globalne” → M9 i M9b (6), brak strażnika `bezRekordu` w `Bpc_przedZapisem` → M8a
+  („scalenie nie zapisuje listy z wiszącą zaślepką”: 2 zapisy zamiast 0), „bezRekordu poza `Bpc_nd`” → M8a,
+  `Bpc_bezKarty` bez strażnika ważnego kosza albo bez filtra `patientId` → M10a ×2. Pliki testów kart, notatek i scalania
+  pacjentów (27 plików z `removePatient`/`mergePatients`, `meta-konta-blokada`, `polkrata-wady`, `kosz-zapisow`) w jednym
+  procesie: 30 z 30, 1 439 z 1 439 zielonych. Fuzz praw i fuzz floty nie wywołują „Usuń pacjenta”, „Scal pacjentów” ani
+  blokady w trakcie scalenia (W2P-1 zmienia tylko tryb chmurowy — w lokalnym `I()` jest stałe); katalog woła „Scal
+  pacjentów” (E4a, E4b) — przebieg po zmianie w następnym punkcie.
+- Po scaleniu `audyt` `6c7cc825` (2026-10-26; zwykłe scalenie z bazą `2971acea` — wcześniej przeniesienie na `2971acea`
+  scaleniem 3-way z bazą `f612fe09`; po `npm run podbij-wersje`): `npm test` — polityka repozytorium (2090 plików; bez
+  dowiązania `node_modules`), lint, składnia (1379 plików), 519 plików testów, 14 758 z 14 758 zielonych (m.in.
+  `notatki-za-karta` 227, `sync-wlasciciel-wersji` 329, `kosz-nowsza-tresc` 236, `polkrata-katalog` 216, `polkrata-cien`
+  29, `polkrata-cien-chmura` 18), `test:pro` 43 z 43, 32 z 32, 44 z 44; e2e (`desktop-chromium`, `--workers=1`,
+  `PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH` jak wyżej) `kosz-zapisow` 11 z 11, `polkrata-cien-indexeddb` 2 z 2, pokrewne
+  (`sync-wlasciciel-wersji` 8, `spojnosc-zapisow` 6, `karta-pacjenta-notatki-historia` 5, `blokada-importu` 2,
+  `meta-konta-blokada` 2, `kopia-konta-pomija` 1) 24 z 24, `pwa` 2 z 2 — zielone; `podbij-wersje --sprawdz` — „Nic do
+  zmiany”. Równoważność po W2P-1 i decyzji 1 (sejf z głowy, wobec wyników `30810faf`, równych V′ `1132ee1e`; pełny
+  rekord przebiegu): katalog 13 × 216 — 2 808/2 808 identycznych (z E4a i E4b — „Scal pacjentów” przed pierwszym
+  scaleniem, bez cienia źródła), katalog z adapterem nowego kodu 7 × 216 — 1 512/1 512, liczniki magazynu cienia na plik
+  identyczne. Fuzz praw i fuzz floty — niepowtarzane (nie wywołują zmienionych ścieżek, wyżej).
+- Po weryfikacji 3 (2026-10-26; W3P-1, W3P-2, decyzja 1 na całej flocie — „1 tak”): `polkrata-cien` 40 z 40 (nowe M11
+  ×11: M11a i M11b z magazynem i bez, M11a-2, M11c, M11c-2, M11d, M11e, M11e-2, M11f), `polkrata-cien-chmura` 21 z 21
+  (nowe M11 w trybie chmurowym, M11g ×2 — druga karta przeglądarki). Czerwone na `1da487ce`: M11a ×2 (11 zaślepek albo
+  11 pełnych szyfrów Jana po scaleniu), M11a-2 (usuniętej 11), M11b ×2 (10), M11d (11 i kosz 58), M11e (11), M11f (11
+  w sesji usunięcia), chmura M11 (11 zaślepek w trwałej liście; bez tej asercji kosz 58 na czterech), M11g ×2 (11 po
+  najbliższym scaleniu); M11c, M11c-2, M11e-2 (cień zostaje) zielone i tam. Mutanty (pojedyncze pliki, oba pliki
+  testów): bez dodania w `Bpu_usun` → M11a ×2, M11a-2, M11f; bez dodania w scalaniu (`Bsl_usunPacjenta` i faza) →
+  M11b ×2, M11d, M11e, chmura M11, M11g (P1); sam `Bsl_usunPacjenta` → M11b ×2, chmura M11, M11g (P1); sama faza
+  przeniesień → M11e; bez czyszczenia przy blokadzie → M11f; dodanie przed gałęzią „karta zostaje” → M11c-2; dodanie
+  źródła przy każdym przeniesieniu (także gdy zostaje) → M11e-2. Testy-dowody przeglądu (pojedyncze pliki, poza
+  repozytorium): „wyścig”, „pierwsza”, „druga”, okno kliknięcia po N obrotach pętli (Jan, Jan + 2, Piotr + 2) — wszędzie
+  0 rekordów; niedomknięcia (1) i (2) z poprzedniej rundy — po 0; „po-fazie-karty” (druga karta) — 11, opisane jako
+  ograniczenie (M11g). Pliki testów kart, kosza, notatek, scalania pacjentów i półkraty (14 plików, m.in.
+  `notatki-za-karta`, `sync-wlasciciel-wersji`, `polkrata-katalog`, `kosz-nowsza-tresc`) w jednym procesie: 1 140 z 1 140.
+- Po scaleniu `audyt` `ebc150a5` (2026-10-26; zwykłe scalenia: `4c478b12` z bazą `6c7cc825`, potem `ebc150a5` z bazą
+  `4c478b12`, oba bez konfliktów; po `npm run podbij-wersje`), stan końcowy weryfikacji 3, przebiegi po kolei, jeden
+  ciężki proces naraz: polityka repozytorium (2111 plików; bez dowiązania `node_modules`), lint, składnia (1395 plików),
+  527 plików testów, 14 900 z 14 900 zielonych (m.in. `polkrata-cien` 40, `polkrata-cien-chmura` 21, `notatki-za-karta`
+  227, `sync-wlasciciel-wersji` 329, `kosz-nowsza-tresc` 236, `polkrata-katalog` 216, `kosz-zapisow` 28), `test:pro` 43
+  z 43, 32 z 32, 44 z 44; e2e (`desktop-chromium`, `--workers=1`, `PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH` jak wyżej)
+  `polkrata-cien-indexeddb` 2 z 2, `kosz-zapisow` 11 z 11, pokrewne (`sync-wlasciciel-wersji` 8, `spojnosc-zapisow` 6,
+  `karta-pacjenta-notatki-historia` 5, `blokada-importu` 2, `meta-konta-blokada` 2, `kopia-konta-pomija` 1) 24 z 24,
+  `pwa` 2 z 2 — zielone; `podbij-wersje --sprawdz` — „Nic do zmiany”. Przebieg na `4c478b12` miał jeden czerwony test
+  niezwiązany z sejfem: `odlamki-e2e` („podział wszystkich plików e2e z dysku na 3 odłamki”, limit 10 s) — plik e2e S4
+  bez pomiaru w `tests/fixtures/czasy-e2e.json`, a po #796 (dwa nowe pliki e2e) poprawa podziału trwała 9,5 s (na
+  `audyt` 2,4 s); po uzupełnieniu tabeli pomiarem z lokalnego przebiegu (1,9 s, tylko `desktop-chromium`) ok. 5 s
+  i powtórzony pełny przebieg zielony (524 pliki, 14 836 testów), a na `ebc150a5` — 1,4 s. Równoważność stanu
+  końcowego (sejf `db5f61ec`, ten sam po obu scaleniach; pełny rekord przebiegu, wobec wyników `1da487ce` i V′
+  `1132ee1e`): katalog 13 × 216 — 2 808/2 808 identycznych z oboma, katalog z adapterem nowego kodu 7 × 216 —
+  1 512/1 512 z oboma, liczniki magazynu cienia na plik identyczne (katalog woła „Scal pacjentów” w E4a i E4b przed
+  pierwszym scaleniem, gdy cienia źródła jeszcze nie ma, i nie woła „Usuń pacjenta”). Fuzz praw i fuzz floty —
+  niepowtarzane: ich uprzęże nie wołają „Usuń pacjenta” ani „Scal pacjentów”, więc nie ma nagrobków kart ani wersji
+  wspólnych dwóm kartom, a zbiór kart usuniętych zostaje pusty.
+- Po przeglądzie W5P i scaleniu `audyt` `b0221a7d` (2026-10-26; #800, P-CHMURA-OPIS). W5P-3: M11h ×2 (z magazynem i bez)
+  czerwone na `e107e186` (po scaleniu C 1 zaślepka i 1 rekord karty usuniętej, bez magazynu 1 pełny szyfr w liście) i na
+  mutancie bez nowej linii w `Bkz_zmienListe` (cały plik `polkrata-cien` — czerwone tylko M11h ×2), czerwone też na
+  `1da487ce`; M11d ×2 (z powrotem źródła i bez — kosz 23 w obu) czerwone na `1da487ce`. Scalenie: konflikt w
+  `vilda_vault.js` rozstrzygnięty wersją S4 z nałożonymi zmianami sejfu z #800 (te same dokładne podmiany; na audycie
+  odtwarzają jego `vilda_vault.js` bajt w bajt), `node --check`; `vilda_chrome.js`, `vilda_session_bridge.js` i
+  `tests/fixtures/wersje-zasobow.json` z audytu, potem `npm run podbij-wersje`. Po scaleniu M9 ×2 i M9b ×5 oczekiwały
+  scalenia bez błędu — dostosowane do `SESSION_CHANGED` (wyżej, „Zapis”), asercje o magazynie konta bez zmian. Pliki
+  testów pojedynczo, po kolei (36 plików): `polkrata-cien` 43, `polkrata-cien-chmura` 21, `polkrata-wady` 26,
+  `przypieta-w3` 15, `przypieta-w3-flota` 48, `przypieta-w3-import` 8, `przypieta-w3-reguly` 15, `kosz-nowsza-tresc`
+  236, `kosz-przywroc-nowsza` 4, `kosz-scalanie-przywroc` 8, `kosz-zapisow` 28, `notatki-za-karta` 227, `odlamki-e2e`
+  32, testy #800 (`chmura-delta-kursor` 3, `chmura-opis` 6, `chmura-przywrocenie-po-terminie` 5,
+  `chmura-scalanie-po-blokadzie` 23, `chmura-zrzut-po-blokadzie` 7, `scalanie-blokada` 18, `blokada-importu` 15),
+  `wersje-zasobow` 4 i pliki czytające ALGORITHMS (20, część z nich wyżej; m.in. `sync-wlasciciel-wersji` 329,
+  `sw-precache-stron` 13, `rejestr-decyzji-karta-pacjenta` 15, `scalanie-duplikatow` 10) — wszystkie zielone. Potem po
+  kolei, jeden ciężki proces naraz: polityka repozytorium (2117 plików; bez dowiązania `node_modules`), lint, składnia
+  (1401 plików), 532 pliki testów, 14 949 z 14 949 zielonych, `test:pro` 43 z 43, 32 z 32, 44 z 44; e2e
+  (`desktop-chromium`, `--workers=1`, `PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH` jak wyżej) `polkrata-cien-indexeddb` 2 z 2,
+  `kosz-zapisow` 11 z 11, z #800 `chmura-po-blokadzie` 2 z 2 i `jednorazowe-bez-przywracania` 2 z 2; `podbij-wersje
+  --sprawdz` — „Nic do zmiany”. Katalog, fuzz praw i fuzz floty — niepowtarzane: nowa linia działa tylko przy niepustym
+  zbiorze kart usuniętych (fuzz praw i floty go nie zapełniają, a w katalogu E4a i E4b nie ma cienia do zdjęcia —
+  analiza równoważności `e107e186`), a zmiany #800 — tylko przy zmianie sesji w trakcie scalania, której te uprzęże nie
+  wywołują.
+- Po zapisach S4 pilnujących sesji i scaleniu `audyt` `90d544c0` (2026-10-26; #799, zwykłe scalenie, konflikty tylko
+  w liniach wersji, potem `npm run podbij-wersje`). Nowy `polkrata-sesja` (37 testów, prawdziwy sejf, dane fikcyjne):
+  na `2c14778e` czerwonych 24 — każdy wariant z przełączeniem sesji poza ponownym zalogowaniem w przebudowie nagłówka
+  (to samo konto czyta dawny nagłówek, więc zapisu i tak nie ma) i poza strażnikiem wyjątku po usunięciu wersji (lista
+  i rekordy cienia już wtedy szły do konta A); zielone też kontrole bez przełączenia i strażniki wierszy stosu. M9b-2 ×2
+  w nowym brzmieniu czerwone na `2c14778e` (11 rekordów usuniętych po blokadzie). Mutanty: 13, każdy cofa jedną zmianę
+  (`polkrata-sesja`, `polkrata-cien`, `polkrata-cien-chmura`, `chmura-scalanie-po-blokadzie` — jeden przebieg na mutanta):
+  12 złapanych — sprawdzenie po `Bgw_scal` (3 testy czerwone), przed odczytem cienia i przed zapisem w `Bgw_zloz` (1 i 4)
+  i w `Bgw_wskrzes` (1 i 2), w `Bpk_podnies` (2), przed zapisem nagłówka karty (1), w `Bpc_przedZapisem` (2), w `Bmk_zmien`
+  po zapisach pomocniczych (2), sesja przekazana z `Bkz_zmienListe` do `Bmk_zmien` (2), w `Bpc_sprzataj` (4, w tym M9b-2
+  ×2), doczytanie treści kosza z magazynu listy (2: tryb jednorazowy — żadnej bazy IndexedDB, tryb chmurowy — kosz 58
+  jak bez blokady, dotąd brak); trzynasty (pamięć podręczna szyfrów konta listy) niewidoczny w magazynie — dotyczy tylko
+  pamięci dokumentu, zostaje jako higiena. Pliki testów pojedynczo, po kolei (37 plików, 1 378 testów): `polkrata-sesja` 37,
+  `polkrata-cien` 43, `polkrata-cien-chmura` 21, `przypieta-w3` 15, `przypieta-w3-flota` 48, `przypieta-w3-import` 8,
+  `przypieta-w3-reguly` 15, `kosz-nowsza-tresc` 236, `kosz-przywroc-nowsza` 4, `kosz-scalanie-przywroc` 8, `kosz-zapisow`
+  28, `notatki-za-karta` 227, `chmura-delta-kursor` 3, `chmura-opis` 6, `chmura-przywrocenie-po-terminie` 5,
+  `chmura-scalanie-po-blokadzie` 23, `chmura-zrzut-po-blokadzie` 7, `scalanie-blokada` 18, `blokada-importu` 15,
+  `odlamki-e2e` 32, `wersje-zasobow` 4, `klirens-ui-model` 26 i 15 pozostałych plików czytających ALGORITHMS (m.in.
+  `sync-wlasciciel-wersji` 329, `sw-precache-stron` 13, `rejestr-decyzji-karta-pacjenta` 15) — zielone; lint i składnia
+  (1414 plików) czyste. Potem po kolei, jeden ciężki proces naraz: polityka repozytorium (2132 pliki; bez dowiązania
+  `node_modules`), lint, składnia (1414 plików), 537 plików testów, 15 190 z 15 190 zielonych, `test:pro` 43 z 43, 32 z 32,
+  44 z 44; e2e (`desktop-chromium`, `--workers=1`, `PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH` jak wyżej)
+  `polkrata-cien-indexeddb` 2 z 2, `kosz-zapisow` 11 z 11, `chmura-po-blokadzie` 2 z 2, `jednorazowe-bez-przywracania`
+  2 z 2 — w pierwszym wspólnym przebiegu 16 z 17: test zamknięcia i przywrócenia przeglądarki (profil trwały) nie
+  doczekał startu aplikacji w przywróconej karcie (limit 20 s); osobno 4 razy po 2 z 2, a powtórzony wspólny przebieg
+  17 z 17 (test nie woła scalania). Po wpisaniu tej walidacji: 20 plików czytających ALGORITHMS — 1 083 z 1 083,
+  polityka repozytorium (2132 pliki) i `podbij-wersje --sprawdz` — „Nic do zmiany”. Katalog, fuzz praw i fuzz floty —
+  niepowtarzane: bez zmiany
+  sesji nowe sprawdzenia nic nie robią, a doczytanie treści kosza i pamięć podręczna biorą ten sam magazyn i tę samą
+  pamięć co dotąd (magazyn ustalony na początku zmiany listy to bieżący, a konto listy — bieżące).
+- Po scaleniu `audyt` `5185ef8f` (2026-10-27; #798, Podsumowanie B — zwykłe scalenie bez konfliktów, bez zmian w plikach
+  S4; potem `npm run podbij-wersje`, SW 1.1.388): po kolei, jeden ciężki proces naraz — polityka repozytorium (2135 plików;
+  bez dowiązania `node_modules`), lint, składnia (1417 plików), 539 plików testów, 15 247 z 15 247 zielonych, `test:pro`
+  43 z 43, 32 z 32, 44 z 44; e2e (`desktop-chromium`, `--workers=1`, `PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH` jak wyżej)
+  `polkrata-cien-indexeddb` 2 z 2, `kosz-zapisow` 11 z 11, `chmura-po-blokadzie` 2 z 2, `jednorazowe-bez-przywracania`
+  2 z 2, `pwa` 2 z 2 — 19 z 19, pokrewne (`sync-wlasciciel-wersji` 8, `spojnosc-zapisow` 6,
+  `karta-pacjenta-notatki-historia` 5, `blokada-importu` 2, `meta-konta-blokada` 2, `kopia-konta-pomija` 1) 24 z 24
+  (pierwszy ich przebieg od scalenia #800 i zapisów S4 pilnujących sesji); `podbij-wersje --sprawdz` — „Nic do zmiany”.
+  Katalog, fuzz praw i fuzz floty — niepowtarzane: scalenie nie zmienia `vilda_vault.js` ani `vilda_kosz_zapisow.js`.
+
+**Kod.** `vilda_vault.js`: krok 1 — `Bpk_*` (składniki, `Bpk_wpis`, `Bpk_polacz`, `Bpk_zWpisu`, `Bpk_zWersji`,
+`Bpk_odcisk`, `Bpk_bezZnaczenia`, `Bpk_retencjaZapisu`, `Bpk_nowszaTrescKosza`), `Bkz_dolacz`, `Bkz_scalStart`,
+`Bkz_pomin`, `Bkz_scalKoniec`, `Bkz_eksport`; krok 2 — `Bgw_stan`, `Bgw_odcisk`, `Bgw_kanon`, `Bgw_porownaj`, `Bgw_ustaw`,
+`Bgw_nowa`, `Bgw_poZapisie`, `Bgw_scal`, `Bgw_bezGwiazdki`, `Bgw_zloz`, `Bgw_wskrzes`, `Bgw_wKoszu`, `Bgw_czZTresci`,
+`Bgw_przygotujCz`, `Bpk_przypieta`, `Bpk_trescNowsza`, `Bkz_przypnijPoBledzie`; `savePatient`, `Bzw_aktualizujWersje`,
+`Bzw_przypnij`, `Bkz_doKosza`, `Bkz_przywroc`, `Bkz_poImporcie`, `Bkz_przytnij`, `Bkz_lista`, `ss` („Scal kopię konta”:
+`Bkz_poImporcie` tylko dla wersji dopisanych z kopii, R2-K1); cień poza listą — `Bpc_*` (`Bpc_odloz`,
+`Bpc_przedZapisem`, `Bpc_sprzataj`, `Bpc_pelny`, `Bpc_rozwin`, `Bpc_bez`, `Bpc_bezKarty`, `Bpc_hybryda`, `Bpc_wyczysc`,
+zbiór kart usuniętych w sesji `Bpc_usuniete`/`Bpc_usunieta` — W3P-1 i decyzja 1 na całej flocie), haki
+`przedZapisem`/`poZapisie` w `Bmk_zmien`, `Bkz_zmienListe` (jedno uid konta na zmianę listy i adapter cienia rekordów
+i sprzątania z tej samej chwili — W3, W2P-1; `bezZap` na wyniku złączenia w `Bpc_odloz` — R1; opcja `bezCieniaKarty`;
+cień kart ze zbioru zdejmowany przy każdej zmianie listy — ze źródeł i z wyniku złączenia, W5P-3),
+`Bpu_usun` („Usuń pacjenta” zdejmuje cień karty — decyzja 1;
+karta do zbioru), `Bsl_usunPacjenta` i `Bsl_przeniesWersje` (karta usunięta scaleniem i pusta karta źródła „Scal
+pacjentów” do zbioru), adaptery IndexedDB (`Sa`), w pamięci (`Ze`) i trybu chmurowego (`ba`),
+blokada (`kn`). `vilda_kosz_zapisow.js`:
+tekst okna usunięcia zapisu przypiętego i komunikat `kosz-odpiety`. Testy: `polkrata-katalog`, `polkrata-mechanizmy`,
+`polkrata-wady`, `polkrata-prawa`, `przypieta-w3`, `przypieta-w3-flota`, `przypieta-w3-reguly`, `przypieta-w3-import` (uprząż
+`polkrata-uprzaz.mjs`, `s4d7-wspolne.mjs`), zmienione `kosz-nowsza-tresc` (K9, K10), `pozniejsza-poprawka` (T6),
+`kosz-zapisow` (strażnik komunikatu `kosz-odpiety`), `kopia-konta-pomija` (komentarz), `retencja-nagrobki`, e2e
+`kosz-zapisow` („z kosza wraca nieprzypięty”); cień poza listą — `polkrata-cien` (po przeglądzie wariantu V także M8d,
+M8e, M9, N4, N5, L2, strażnik w M8a, zamiatanie w M7; po weryfikacji przeniesienia M9b, zapis listy w M8a, M10; po
+weryfikacji 3 M11; po przeglądzie W5P M11h i M11d bez powrotu źródła, a po scaleniu #800 M9 i M9b z `SESSION_CHANGED`,
+po zapisach S4 pilnujących sesji M9b-2 — sprzątanie przerwane zmianą sesji), zapisy S4 w scalaniu i sesja — `polkrata-sesja`,
+`polkrata-cien-chmura` (także pamięć podręczna przy blokadzie i ograniczenia W1, W2; po weryfikacji
+przeniesienia W2P-1 i M10; po weryfikacji 3 M11 i M11g — druga karta przeglądarki w trybie lokalnym), e2e `polkrata-cien-indexeddb` (jego
+pomiar w `tests/fixtures/czasy-e2e.json`), zmieniona asercja formatu w `polkrata-wady`; kopia starszej aplikacji
+`tests/fixtures/vilda_vault-221.js.txt` (bajt w bajt `54a84da3:vilda_vault.js`).
+
+**Wersje.** `vilda_vault.js` 228 (wstrzykiwany: `vilda_chrome.js` 177, `vilda_session_bridge.js` 100),
+`vilda_kosz_zapisow.js` 4 (pin w `spojnosc-zapisow`); SW 1.1.387 → **1.1.388** — `npm run podbij-wersje` po scaleniu
+`audyt` `5185ef8f` (#798, Podsumowanie B: podniósł SW z 1.1.386 na 1.1.387, bez zmian w plikach S4; scalenie bez
+konfliktów). Wcześniej: po scaleniu `audyt` `90d544c0` (#799, Klirens: podniósł SW z 1.1.385 na 1.1.386 i wstrzykujące
+`vilda_chrome.js` i `vilda_session_bridge.js` na 176 i 99, więc S4 dostaje następne numery; konflikty tylko w liniach
+wersji) — SW 1.1.386 → 1.1.387;
+po scaleniu `audyt` `b0221a7d` (#800, P-CHMURA-OPIS, podniósł SW z 1.1.384 na 1.1.385 i `vilda_vault.js` z 226 na 227,
+a wstrzykujące go `vilda_chrome.js` i `vilda_session_bridge.js` na 175 i 98) — SW 1.1.385 → 1.1.386, `vilda_vault.js`
+228; po scaleniu
+`audyt` `ebc150a5` (#797 podniósł SW z 1.1.383 na 1.1.384) — SW 1.1.384 → 1.1.385, numery plików bez zmian; po scaleniu
+`audyt` `4c478b12` (#796 podniósł SW z 1.1.382 na 1.1.383) — SW 1.1.383 → 1.1.384, w
+`tests/fixtures/wersje-zasobow.json` nowy odcisk sejfu po weryfikacji 3; po scaleniu `audyt` `6c7cc825`
+(#794 podniósł SW z 1.1.381 na 1.1.382) — SW 1.1.382 → 1.1.383; przeniesienie na `audyt` `2971acea` (zawiera #746 z poprawką MS2 D-21; scalenie 3-way z bazą `f612fe09`, bo S4
+wyrosło z gałęzi D-21 sprzed squasha #746) — SW 1.1.381 → 1.1.382.
+
 ## Notatki pacjenta wracają z kartą przywróconą po „Usuń pacjenta” (P-NOTATKI-ZA-KARTA, SW 1.1.336, `vilda_vault.js` 223, 2026-10-21)
 
 **Zmiana kliniczna: tak** — wzory, progi, jednostki i interpretacje bez zmian; zmienia się reguła synchronizacji, która
@@ -20280,6 +21207,10 @@ wizyta 125 cm / 24 kg).
   „Scal pacjentów”, nie scalenia. Rekord dla nagłówka (D-3 A) przy podniesieniu — bez jawnej treści odrzuconej strony.
 - **R4, „Przywróć” i import z kosza** są najpóźniejszą zmianą zapisu: wygrywają z poprawką zrobioną na innym
   urządzeniu po koszu, niezależnie od liczby takich poprawek (PD-9; dotąd dwie poprawki przeżywały, jedna ginęła).
+  *(Aktualizacja 2026-10-22, P-PRZYPIETA-POLKRATA, przegląd 2: we flocie mieszanej „Przywróć” starszej aplikacji nie
+  zmienia odcisku treści i liczy się jak potwierdzenie gwiazdki, więc przegrywa z poprawką z nowego urządzenia zrobioną
+  bez wiedzy o koszu — T-E: 58 kg zamiast przywróconych 23 kg na wszystkich urządzeniach; wyjątek od R4 do aktualizacji,
+  opis i decyzja w P-PRZYPIETA-POLKRATA.)*
 - **Bez zmian:** reguła właściciela wersji wspólnej dwom kartom (`Bsw_nowszyRekord`, najpierw `rev`, PD-1), wybór
   treści między kartami (`Bsw_nowszaTresc`, PD-11), `rev + 1` w „Scal pacjentów”, `rev` wyniku między kartami = wyższa
   z dwóch, kolejność wersji karty (`yr`), import pliku karty i „Scal kopię konta” dalej pomijają wersje, które już są
@@ -20325,9 +21256,15 @@ wizyta 125 cm / 24 kg).
 **Ograniczenia.**
 - **LWW całej wersji (PD-12).** Przegrana poprawka ginie bez kopii. Gwiazdka i korekta nazwiska to też poprawka całej
   wersji: późniejsza gwiazdka na starej treści kasuje wcześniejszą poprawkę masy z innego urządzenia (T6), dotąd tylko
-  przy równej `rev`.
+  przy równej `rev`. *(Aktualizacja 2026-10-22, P-PRZYPIETA-POLKRATA, decyzja D1 = C: gwiazdka ma własną chwilę —
+  późniejsza gwiazdka nie kasuje już wcześniejszej poprawki: T6 — 31 kg z gwiazdką, rekord złożony z `rev` 3. Po panelu
+  sędziów: poprawka zrobiona przez starszą aplikację razem ze zmianą gwiazdki wygrywa po swojej chwili (odcisk treści
+  w rejestrze gwiazdki — Z1, F-B), a poprawka z okna otwartego przed synchronizacją gwiazdki jej nie zmienia (Z7, K4).)*
 - **Poprawki równoległe przy rozjeździe zegarów.** Wygrywa późniejsza według zegara ściennego; gdy oba urządzenia są
   za poprawianą wersją — wyższy losowy stempel (T3). Ostrzeżenie o rozjeździe zegarów (D13) bez zmian.
+  *(Aktualizacja 2026-10-22, P-PRZYPIETA-POLKRATA, F-C: przycięcie wersji przypiętej przez urządzenie z zegarem do
+  przodu nie daje już jej poprawkom stempla „po przycięciu” — dwie poprawki z dobrych zegarów zachowują kolejność;
+  stempel zostaje przy zmianie gwiazdki i przy zapisie wersji, która po nim nie jest przypięta.)*
 - **Chwila z przyszłości.** Poprawka zrobiona na zegarze do przodu przesuwa kolejne stemple tej wersji, chwilę
   usunięcia tej wersji i chwilę ostatniego zapisu karty w przód, aż czas ją dogoni (ta sama klasa co przy D-4).
   Nagrobek pacjenta (`removePatient`) bez stempla — bez zmian wobec dotąd.
@@ -20340,7 +21277,10 @@ wizyta 125 cm / 24 kg).
   dziś przyjąć po `rev` wcześniejszą treść zamiast swojej późniejszej poprawki (S8, S9: 16 ze 109; w fuzzie 78 par
   wobec 325 we flocie samych starych). Bez rozjazdu przed aktualizacją i bez ping-ponga; po aktualizacji wszystkich
   urządzeń (D-11) pierwsza synchronizacja zbiega stan. Przy wydaniu: nota o aktualizacji wszystkich urządzeń tego samego
-  dnia. Liczby — sekcja Walidacja.
+  dnia. Liczby — sekcja Walidacja. *(Aktualizacja 2026-10-22, P-PRZYPIETA-POLKRATA, przegląd 2: od S4 zdanie „flota
+  mieszana nie gubi poprawki, którą zachowuje flota samych starych” nie obejmuje rekordu złożonego — jego `rev` + 1
+  (F3) przebija poprawkę starszej aplikacji zrobioną offline po gwiazdce i poprawce z dwóch nowych urządzeń: R2-K2
+  37* zamiast 50, R2-K3 41* zamiast 50*; opis, nota wydania i decyzja w P-PRZYPIETA-POLKRATA.)*
 - **Flota mieszana przy rozjeździe zegarów (przegląd końcowy, F2).** Starsza aplikacja nie ma stempla zmiany. Gdy
   urządzenie z zegarem do przodu (np. +10 min) poprawi wizytę, a starsza aplikacja na dobrym zegarze poprawi ją później
   (albo „Przywróć” zapis, który nowa aplikacja usunęła ze stemplem z przyszłości), późniejsza zmiana starszej aplikacji
@@ -20363,7 +21303,8 @@ wizyta 125 cm / 24 kg).
 - **Gwiazdka a retencja (K10, PD-12).** Gwiazdka, odpięcie i gwiazdka na P (`rev` 3), późniejsza poprawka na C, retencja
   na K: 4 z 8 kolejności karta bez gwiazdki, 3 przypięta, 1 bez wizyty (dotąd 8 przypięta). Dwie poprawki na C przed
   późniejszą gwiazdką na P: teraz 8 z 8 przypięta (dotąd 5 z 8 inaczej). Domknięcie: PR „przypięta wizyta / półkrata
-  łączenia nagrobków”.
+  łączenia nagrobków”. *(Aktualizacja 2026-10-22, P-PRZYPIETA-POLKRATA: w obu przypadkach 58 kg z gwiazdką w 8 z 8
+  kolejności, `rev` rekordu złożonego 4 (K10a) i 3 (K10b) w każdej kolejności.)*
 - **Dawne dane bez `updatedAtISO`** i dawna poprawka na zegarze spóźnionym, z chwilą wcześniejszą niż chwila zapisu
   kopii z zegara szybkiego: przegrywa z niepoprawianą kopią (tylko kopie jeszcze niezbiegnięte).
 - **Manifest (plan 3.3, PD-17)** musi porównywać tą samą regułą i nie kolejkować ponownie pary (`rev`, chwila zmiany),
@@ -20706,7 +21647,10 @@ urządzeniach, także gdy trzecie urządzenie przytnie ją retencją. Kosz pokaz
 **Ograniczenia.**
 - Poprawka przed koszem przegrywa z przycięciem, zanim kosz dotrze do urządzenia z poprawką (np. P scala retencję C,
   potem kosz K). Nagrobek retencji nie niesie treści, więc kosz trzyma treść sprzed poprawki: tylko w koszu, nie
-  w karcie, zbieżnie na wszystkich urządzeniach i tak samo jak na `44256803` (test „P←C,P←K”).
+  w karcie, zbieżnie na wszystkich urządzeniach i tak samo jak na `44256803` (test „P←C,P←K”). *(Aktualizacja
+  2026-10-22, P-KOSZ-POLKRATA: treść wersji pokonanej przycięciem w scalaniu zostaje w cieniu — PC-PK: kosz 99 kg
+  w 8 z 8 kolejności; koszt cienia — P-PRZYPIETA-POLKRATA, „Ograniczenia” (K1; od 2026-10-26 cień poza listą,
+  P-CIEN-POZA-LISTA).)*
 - Dwa kosze tej samej wizyty na różnych urządzeniach i zmiana między nimi (fuzz v5: S1, X1, X5, X6): w koszu zostaje
   jedna z dwóch starszych treści, zależnie od kolejności synchronizacji, zbieżnie w obrębie przebiegu. Treść kosza
   unieważnionego zmianą po nim odpada, zanim dotrze późniejszy, ważny kosz. Najbardziej widoczny przypadek X5 wygląda
@@ -20716,11 +21660,14 @@ urządzeniach, także gdy trzecie urządzenie przytnie ją retencją. Kosz pokaz
   zastąpiło tu porównanie chwil, zgodne z `Bkz_wygrywa` i z kierunkiem D-7 wariant 2 („wygrywa późniejsza poprawka”).
   *(Aktualizacja 2026-10-21, P-POZNIEJSZA-POPRAWKA: X1 — 74 kg w 8 z 8 kolejności; X5 i S1 bez zmian.)*
   Pełna łączność wymaga przebudowy łączenia nagrobków: niezależne składniki i treść kosza zachowywana także po
-  unieważnieniu. To osobny PR, razem z naprawą wizyty przypiętej niżej.
+  unieważnieniu. To osobny PR, razem z naprawą wizyty przypiętej niżej. *(Aktualizacja 2026-10-22, P-KOSZ-POLKRATA:
+  półkrata i cień — X5 kosz 78 kg, S1 i S1b kosz 99 kg w 8 z 8 kolejności.)*
 - Istniejące przed tym PR (także na `cd3a2876`, część na `44256803`), do osobnych PR:
   - gwiazdka na P przed koszem na K, poprawka na C po koszu, retencja na C: w 2 z 8 kolejności wizyty nie ma ani
     w karcie, ani w koszu (w pozostałych jest przypięta w karcie albo w koszu z gwiazdką). Zgodnie z regułami
     przypięta wizyta powinna wrócić do karty, gdy kosz okazuje się nieaktualny; to wymaga nowego mechanizmu;
+    *(Aktualizacja 2026-10-22, P-PRZYPIETA-POLKRATA: wraca z cienia z gwiazdką z rejestru nagrobka — S4 karta 23 kg
+    z gwiazdką w 8 z 8 kolejności; z poprawką C, która przetrwała, — rekord złożony, S5: 74 kg z gwiazdką.)*
   - gwiazdka na P i równoległa poprawka tej samej wersji na C, bez kosza, retencja na K: wynik zależy od kolejności
     (reguła wersji tej samej karty, D-7 wariant 2). *(Aktualizacja 2026-10-21, P-POZNIEJSZA-POPRAWKA (D-7 wariant 2): bez zmian. Dwie poprawki na C przed późniejszą gwiazdką
     na P — teraz przypięta w 8 z 8 kolejności; gwiazdka, odpięcie i gwiazdka na P przed późniejszą poprawką na C —
@@ -21566,7 +22513,9 @@ błędu (mapa niepotrzebna), a scalenie tej samej kopii — skończyć się bł�
 
 **Reguła po zmianie.** Podgląd i scalenie budują mapę raz, przed pętlą pacjentów kopii. Błąd odczytu wersji którejkolwiek
 karty przerywa oba, zanim cokolwiek zostanie zapisane — także gdy kopia nie wnosi nic nowego. Reguły pomijania, teksty
-i UI bez zmian.
+i UI bez zmian. *(Aktualizacja 2026-10-22, P-PRZYPIETA-POLKRATA, R2-K1: scalenie nie woła już `Bkz_poImporcie` dla
+wersji, które karta ma przed importem — wpis kosza takiej wersji zostaje, a jej `rev` i chwila się nie zmieniają; testy
+błędu odczytu pilnują dalej, że nic nie jest zapisane.)*
 
 **Przypadki syntetyczne** — `tests/unit/kopia-konta-pomija.test.mjs`, prawdziwy `vilda_vault.js`, magazyn w pamięci:
 - kopia z Adamem (wszystkie wersje w karcie, jedna z nich także w koszu) i X; X scalony tu z Y spoza kopii, nagrobek X
@@ -23350,7 +24299,9 @@ przypiętych ani najnowszej). Próg 10 wersji i wyłącznik `localStorage.vildaR
   treści, więc nie trafia do kosza (Ustawienia, historia wersji). Ważność 365 dni, jak każdy nagrobek wersji. *(Aktualizacja 2026-10-20, P-ZMIANA-W-KARCIE: retencja nie zmienia chwili zapisu karty — ani jej nie podnosi, ani nie obniża.)*
 - Scalanie: te same reguły co dla kosza (późniejsza zmiana wersji wygrywa; ostatniej wersji karty nie usuwa żaden
   nagrobek), a do tego **nagrobek retencji przegrywa z wersją przypiętą** — urządzenie, które przycinało, mogło nie wiedzieć
-  o przypięciu z innego urządzenia. Wersję sprawdza się w ładunku (treść jawna) albo lokalnie (po odszyfrowaniu); wersji
+  o przypięciu z innego urządzenia. *(Aktualizacja 2026-10-22, P-PRZYPIETA-POLKRATA: przypięta = późniejszy z rejestrów
+  gwiazdki wersji i nagrobka, więc wersja świadomie odpięta przegrywa także wtedy, gdy inne urządzenie ma jej starą kopię
+  z gwiazdką (D2 = a); nagrobek retencji zostaje przy przypiętej 365 dni i zna ją (A3a); „Przypięte zostają zawsze.”)* Wersję sprawdza się w ładunku (treść jawna) albo lokalnie (po odszyfrowaniu); wersji
   nieczytelnej nie rusza, a nagrobek zostaje dla urządzeń, które ją czytają.
 - Nagrobek retencji nigdy nie wciąga treści do kosza. Dwa nagrobki tego samego zapisu (kosz na jednym urządzeniu, retencja
   na drugim): późniejsze usunięcie wygrywa; treść kosza ze starszego nagrobka przechodzi na nowszy **tylko wtedy, gdy oba
@@ -23380,7 +24331,7 @@ karta: dni 1–3 po trzy zapisy, dzień 4 dwa — 11 wersji; przycinanie 11.09, 
 | A przycina | zostaje ostatnia wersja z każdego dnia (4), 7 nagrobków „retencja” bez treści, kosz pusty |
 | A scala stary ładunek B | przycięte wersje nie wracają na A |
 | B (retencja wyłączona) scala ładunek A | B ma te same 4 wersje, `prunedSnapshotCount` 7, `trashedSnapshotCount` 0, kosz pusty |
-| B przypiął wersję, zanim A ją przyciął | wersja zostaje na B i wraca na A (przypięta); jej nagrobek znika, 6 zostaje |
+| B przypiął wersję, zanim A ją przyciął | wersja zostaje na B i wraca na A (przypięta); jej nagrobek znika, 6 zostaje *(od P-KOSZ-POLKRATA, A3a, 2026-10-22: nagrobek retencji zostaje przy przypiętej 365 dni i zna ją)* |
 | B poprawił wersję po przycięciu na A | wersja zostaje na obu urządzeniach |
 | wersja w koszu na A, później przycięta na B | na obu urządzeniach zostaje w koszu, z treścią |
 | C ma wersję w koszu; na A przywrócona, poprawiona i przycięta | kosz C pusty, nagrobek „retencja” bez treści |
@@ -23431,15 +24382,21 @@ usunięciu, więc nie przechowuje stanu sprzed niego.
 
 **Sejf (`vilda_vault.js` 190; blok `Bkz_*`, czytelny, z komentarzem).**
 - `moveSnapshotToTrash(patientId, snapshotId, { odepnij })` — pod tą samą blokadą co zapis pacjenta (`vilda-save-pat:<id>`).
-  Odmawia dla ostatniej wersji karty (`ostatni`), wersji nieczytelnej i przypiętej bez `odepnij` (`przypiety`). Najpierw
+  Odmawia dla ostatniej wersji karty (`ostatni`), wersji nieczytelnej i przypiętej bez `odepnij` (`przypiety`)
+  *(od P-PRZYPIETA-POLKRATA, 2026-10-22: z `odepnij` najpierw zapisuje odpięcie; gdy zapis kosza się nie uda, zapis
+  wraca przypięty — F-F)*. Najpierw
   zapisuje nagrobek z treścią i sprawdza, że jest, dopiero potem usuwa wersję (`deleteSnapshot` *(Aktualizacja 2026-10-20, P-USUN-WERSJE-LOKALNIE: rdzeń
   `Bzw_usunWersje` przez `Bkz_usunJesliBezZmian`)*: nagłówek karty z
   poprzedniej wersji, zdarzenie zapisu → synchronizacja). Po usunięciu sprawdza nagrobek jeszcze raz. *(Aktualizacja 2026-10-20, P-ZMIANA-W-KARCIE: chwila zapisu karty nie spada do poprzedniej wersji — kosz podnosi ją do chwili usunięcia.)*
 - Nagrobek `{patientId, snapshotId, deletedAtISO, savedAtISO, rev, updatedAtISO, seq, payloadCipher}` w metadanych konta
   (`userMeta.snapshotTombstones`, jak nagrobki kluczy dostępu); każda zmiana listy pod blokadą, na świeżym odczycie.
   Przez 30 dni niesie zaszyfrowaną treść wersji (kosz), potem treść znika, a sam nagrobek żyje 365 dni (jak nagrobek pacjenta).
+  *(Od P-KOSZ-POLKRATA i P-PRZYPIETA-POLKRATA, 2026-10-22: nowe pola `gwiazdka`, `koszISO`, `revPary`, lokalnie `Bpk`
+  i `trescISO` — jawne w lokalnej bazie jak chwile i `rev`; gwiazdki kosza lista nie rysuje, liczy się przy „Przywróć”.)*
 - `listTrashedSnapshots()`, `restoreTrashedSnapshot(patientId, snapshotId)` — wersja wraca na swoje miejsce (`savedAtISO`
-  bez zmian), z nową chwilą zmiany i `rev + 1`; przypięcie wraca razem z treścią; nagłówek karty z najnowszej wersji. *(Aktualizacja
+  bez zmian), z nową chwilą zmiany i `rev + 1`; przypięcie wraca razem z treścią *(od P-PRZYPIETA-POLKRATA,
+  2026-10-22, D2 = a: „Odepnij i usuń” zapisuje odpięcie przed koszem, więc zapis wraca bez przypięcia; wersja przypięta
+  pokonana koszem z innego urządzenia — z przypięciem)*; nagłówek karty z najnowszej wersji. *(Aktualizacja
   2026-10-07, P-KOSZ-PRZYWROC-NOWSZA: zapis, który jest już w karcie w nowszej postaci, nie jest nadpisywany — „Przywróć”
   zdejmuje wtedy tylko wpis kosza.)*
 - Synchronizacja: `exportSyncPayload` niesie `snapshotTombstones` (treść jawna wewnątrz ładunku szyfrowanego kluczem sync);

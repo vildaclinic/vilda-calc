@@ -132,7 +132,9 @@ describe('kosz: przeniesienie, lista, przywrócenie', () => {
     expect(await v.listTrashedSnapshots()).toEqual([]);
   });
 
-  it('przypięty zapis: bez zgody na odpięcie odmowa i nic się nie zmienia; po przywróceniu znów przypięty', async () => {
+  // P-PRZYPIETA-POLKRATA (S4 krok 2, W3, decyzja właściciela D2 = a): „Odepnij i usuń” zapisuje odpięcie przed koszem, więc
+  // w koszu i po „Przywróć” zapis jest bez gwiazdki (dotąd: przypięcie wracało razem z treścią).
+  it('przypięty zapis: bez zgody na odpięcie odmowa i nic się nie zmienia; „Odepnij i usuń”: w koszu i po przywróceniu bez gwiazdki', async () => {
     sztucznyZegar();
     const v = await urzadzenie();
     const { patientId, zly } = await kartaZPomylka(v);
@@ -147,10 +149,12 @@ describe('kosz: przeniesienie, lista, przywrócenie', () => {
     przesunZegar(60e3);
     const wynik = await v.moveSnapshotToTrash(patientId, zly, { odepnij: true });
     expect(wynik.wasPinned).toBe(true);
-    expect((await v.listTrashedSnapshots())[0].pinned).toBe(true);
+    expect((await v.listTrashedSnapshots())[0].pinned).toBe(false);
     przesunZegar(60e3);
     await v.restoreTrashedSnapshot(patientId, zly);
-    expect((await v.getPatient(patientId)).snapshots.find((s) => s.snapshotId === zly).pinned).toBe(true);
+    const wrocil = (await v.getPatient(patientId)).snapshots.find((s) => s.snapshotId === zly);
+    expect(wrocil.pinned, 'bez gwiazdki').toBe(false);
+    expect(wrocil.payload._pinnedState, 'rejestr gwiazdki: odpięcie z „Odepnij i usuń”').toMatchObject({ pin: false });
   });
 
   it('ostatniego zapisu karty nie da się przenieść do kosza', async () => {
@@ -599,6 +603,13 @@ describe('strażniki interfejsu', () => {
   it('z sejfu: odczyty oraz wyłącznie przeniesienie do kosza i przywrócenie (bez deleteSnapshot, bez zapisu pacjenta)', () => {
     const wolane = new Set([...kosz.matchAll(/(?:sejf\(\)|\bv)\.([A-Za-z]+)\(/g)].map((m) => m[1]));
     expect([...wolane].sort()).toEqual(['getPatient', 'isUnlocked', 'listTrashedSnapshots', 'moveSnapshotToTrash', 'restoreTrashedSnapshot', 'shortHashOfPatientId']);
+  });
+
+  it('„Odepnij i usuń” z kodem kosz-odpiety: okno pokazuje komunikat sejfu, bez „Karta jest bez zmian” (F-F, R2P-4)', () => {
+    // P-PRZYPIETA-POLKRATA: gdy zawiodą zapis kosza i ponowne przypięcie, zapis zostaje odpięty — dopisek „Karta jest bez
+    // zmian” byłby nieprawdą. Okno modułu wymaga DOM, więc strażnik źródła (mutant bez tej gałęzi przeżywał 69 plików).
+    expect(kosz).toContain(": e && e.code === 'kosz-odpiety' ? e.message\n");
+    expect(kosz.indexOf("e.code === 'kosz-odpiety' ? e.message")).toBeLessThan(kosz.indexOf("' Karta jest bez zmian.'"));
   });
 
   it('historia wersji woła kosz pod listą wersji; dziennik dostępu ma etykiety nowych zdarzeń', () => {
