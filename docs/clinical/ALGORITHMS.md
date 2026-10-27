@@ -19239,6 +19239,9 @@ wylogowania (P-CIEN-POZA-LISTA, decyzje 2026-10-26; poprawki po przeglądzie war
 tego samego dnia, w tym „Usuń pacjenta” zdejmujące cień karty — decyzja 1 po przeglądzie wariantu V, po weryfikacji 3
 na całej flocie i bez wyścigu ze scaleniem, W3P-1).
 
+**Akceptacja kliniczna właściciela: 2026-10-27** („akceptuję klinicznie; F-A/K3 tak, F-D tak, K9 tak”, po scaleniu
+PR-S4, vildaclinic/vilda-calc#803) — reguła po zmianie, przypadki, ograniczenia i nota wydania z tego wpisu.
+
 Skróty commitów stanów pośrednich S4 w tym wpisie (np. `1fcfa0d9`, `2443fa0a`, `1132ee1e`, `1da487ce`, `e107e186`) odnoszą
 się do historii roboczej gałęzi. PR-S4 to jeden commit nad `audyt`, więc tych stanów w repozytorium nie ma; stan przed S4
 to `f612fe09`.
@@ -19260,7 +19263,9 @@ to `f612fe09`.
 - D5 (PRZ0), D6 (E4a), D7 (E3) — osobne PR, poza tym wpisem; kolejność: PR-S4 → PR-PRZ0 → PR-E4a → PR-E3, E3 przed
   etapem 2 synchronizacji przyrostowej (etap 1 — serwer — równolegle).
 
-**Do potwierdzenia przez właściciela (po panelu sędziów 2026-10-22; wykonawca wybrał wariant zgodny z decyzjami):**
+**Do potwierdzenia przez właściciela (po panelu sędziów 2026-10-22; wykonawca wybrał wariant zgodny z decyzjami) —
+PRZYJĘTE 2026-10-27** (odpowiedź właściciela po scaleniu PR-S4, vildaclinic/vilda-calc#803: „akceptuję klinicznie;
+F-A/K3 tak, F-D tak, K9 tak”; K1 rozstrzygnęła wcześniej decyzja 6):
 - **F-A/K3 — kosz starszej aplikacji z treścią przypiętą:** wdrożony W20 („brak pola gwiazdka = nieznany”, rekomendacja
   panelu 2.4, D2 = a), a nie F7 z `cel.md` („przypięta treść = odpięcie w chwili usunięcia”). F7 domyka też część T4d
   (3/8 zamiast 8/8 z gwiazdką), ale w S5 z 221 na P gubi przypiętą wizytę ponad flotę samych 221 (7/8 „brak” wobec 6/8)
