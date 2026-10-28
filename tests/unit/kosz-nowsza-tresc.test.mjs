@@ -784,13 +784,15 @@ describe('P-POZNIEJSZA-POPRAWKA: kosz i „Przywróć” liczą na tej samej osi
       }, kolejnosc);
       for (const [i, n] of ['P', 'K', 'C'].entries()) expect(st[i].kosz, `${n}: kosz z poprawką`).toEqual({ masa: 74, pin: false });
     });
-    it(`K6 (E4a, znane ograniczenie, PD-16) poprawka PRZED scaleniami, potem kosz na K (${kolejnosc}): poprawka ginie, kosz bez niej`, async () => {
+    // K6 (E4a) — P-KOSZ-USUWANEJ-KARTY (decyzja właściciela D6 = a, Q7): wersje karty X, która przegrywa z nagrobkiem
+    // pacjenta, przechodzą decyzję kosza, więc w koszu poprawka. Dotąd (znane ograniczenie PD-16) kosz 23 na trzech.
+    it(`K6 (E4a) poprawka PRZED scaleniami, potem kosz na K (${kolejnosc}): w koszu poprawka`, async () => {
       const { st } = await przebieg(trzyKarty, async ({ P, K, X, Y, Z, sid }) => {
         await popraw(P, sid, 74); przesunZegar(60e3);
         await K.mergePatients(X, Y); przesunZegar(60e3); await K.mergePatients(Y, Z); przesunZegar(60e3);
         await doKosza(K, sid);
       }, kolejnosc);
-      for (const [i, n] of ['P', 'K', 'C'].entries()) expect(st[i].kosz, `${n}: kosz bez poprawki`).toEqual({ masa: 23, pin: false });
+      for (const [i, n] of ['P', 'K', 'C'].entries()) expect(st[i], `${n}: kosz z poprawką, x w żadnej karcie`).toEqual({ karta: null, kosz: { masa: 74, pin: false } });
     });
   }
 
