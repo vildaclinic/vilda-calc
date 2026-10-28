@@ -163,6 +163,22 @@ Granice te są częścią kontraktu regresyjnego. Łączenie ich ponownie zwięk
 
 Nie wolno przenosić pola między pamięcią sesji, pamięcią trwałą i danymi pochodnymi bez analizy cyklu życia, zachowania wielu kart, czyszczenia oraz odtworzenia pacjenta. Samo zachowanie jednego widoku po odświeżeniu nie wystarcza jako test.
 
+Wskaźnik zapisu porównuje kanoniczną projekcję wejść, bez modyfikacji sesji lub
+rekordu pacjenta. `intake.estKcalPerDay` jest wynikiem przeliczenia. Z
+`intake.history` pomijane są wyłącznie zwykłe kopie pomiarów obecnych już w
+bieżących danych użytkownika albo historii wzrastania; niezależne wiersze i ich
+dodatkowa treść nadal uczestniczą w porównaniu. Kolejność kluczy obiektu nie jest
+edycją. Starsza referencja `vilda-save-ref-v1` przechodzi tę samą projekcję.
+Po wyborze „Nowy pomiar” `custom-fixes.js` emituje `vilda:load-choice-applied`
+z identyfikatorem pacjenta i sekwencją importu dopiero po archiwizacji poprzedniego
+pomiaru. Wskaźnik ustanawia wtedy bazę dla tej operacji; samo odświeżenie strony
+nie zatwierdza niezapisanych edycji.
+
+`vilda_persist_runtime.js` przyjmuje zapisany kontekst wizyty przed odtwarzaniem
+pól i przeliczaniem wieku. Brak `lastLoadedData` przed pierwszą próbą odtworzenia
+lub podczas trwającego odtwarzania nie usuwa zachowanego `loadedComparisonData`.
+Pusta kontrolka podczas startu strony nie oznacza wyczyszczenia danych pacjenta.
+
 ### Przypomnienia B2.2
 
 Czytelny blok `P-PRZYPOMNIENIA-B22` w `vilda_auth_ui.js` i osobny
