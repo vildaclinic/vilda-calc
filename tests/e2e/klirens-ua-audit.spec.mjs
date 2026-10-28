@@ -228,10 +228,13 @@ test('UA DZM: znana niepełna zbiórka pozostaje przeciwwskazaniem, jednostki UA
   await choose(page, 'Ca_mgkg');
   await choose(page, 'UA_mgkg');
   await expectBlocked(page);
-  await expect(page.locator('#ui_collectionNoMissedVoids_answer')).toHaveValue('no');
+  // Both audited DZM forms keep protocol facts in their session value vault;
+  // neither needs to mount the former questionnaire to preserve a known error.
+  expect(await page.evaluate(() => window.VildaClcrUa.readInputFromDocument(document).knownFacts.ui_collectionNoMissedVoids_answer)).toBe('no');
+  expect(await page.evaluate(() => window.evaluateClcrUa().errorCode)).toBe('collection-conflict');
   const legacy = { ...base, U_Ca: '10', U_UA: '30', V24: '1200', collectionStartAt: '2026-10-20T08:00', collectionEndAt: '2026-10-21T08:00', UA_concentration: '1', UA_concentrationUnit: 'mmol/L', UA_volume: '1.2', UA_volumeUnit: 'L' };
   for (const id of ['collectionStartVoidDiscarded', 'collectionFinalVoidIncluded', 'collectionNoMissedVoids', 'collectionNoSpillage', 'collectionNoExtraVoids', 'collectionStorageFollowed']) { legacy[id] = true; legacy[`ui_${id}_answer`] = 'yes'; }
-  await applySession(page, { version: 2, currentVersion: 'pro', selectedFormula: 'Ca_mgkg', inputs: { ...legacy, formulaPicker: 'Ca_mgkg' } }, 'Ca_mgkg');
+  await applySession(page, { version: 2, currentVersion: 'pro', selectedFormula: 'Ca_mgkg', context: { durationMinutes: 1440 }, inputs: { ...legacy, formulaPicker: 'Ca_mgkg' } }, 'Ca_mgkg');
   const calcium = page.locator('#clcrResultReport .clcr-result-card[data-clcr-series="Ca_mgkg"]');
   await expect(calcium).toBeVisible();
   const original = await calcium.innerText();

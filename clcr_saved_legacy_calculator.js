@@ -184,6 +184,16 @@
   }
   function recalculate(formulaId, values = {}, parameterKey = formulaId, context = {}) {
     parameterKey = String(parameterKey).replace(/^clcr:/, "");
+    if (formulaId === "Ca_mgkg") {
+      const engine = requiredModule("VildaClcrCaDzm"), policy = requiredModule("ClcrCaDzmReferenceData").DEFAULT_POLICY;
+      const persistence = requiredModule("ClcrCaDzmPersistence");
+      const prepared = persistence.prepareValues(values, context);
+      const result = engine.evaluate(engine.inputFromValues(prepared, context), policy);
+      if (!result.valid) throw new Error(result.error || "Sprawdź dane potrzebne do obliczenia wydalania wapnia.");
+      const datapoint = { id: parameterKey, sourceFormulaId: formulaId, label: "Wydalanie wapnia (DZM)", testKey: "clcr:Ca_mgkg", category: null, comparator: "", caDzmSnapshot: result };
+      persistence.augmentDatapoint({ getAttribute: () => JSON.stringify(result) }, datapoint);
+      return datapoint;
+    }
     if (formulaId === "UA_mgkg") {
       const engine = requiredModule("VildaClcrUa"), policy = requiredModule("ClcrUaReferenceData").DEFAULT_POLICY;
       const persistence = requiredModule("ClcrUaPersistence");

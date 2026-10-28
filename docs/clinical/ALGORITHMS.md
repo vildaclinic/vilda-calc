@@ -8044,6 +8044,23 @@ Wyniki wykonań, CI, commit i PR podaje opis PR. Akceptacja właściciela
 nie jest deklaracją niezależnej walidacji klinicznej. Ponowny przegląd
 po zmianie EAU/Mayo, polityki wieku, czasu, konwersji lub zapisu historii.
 
+
+#### P-KLIRENS-CA-DZM-2026-10-28 — wapń, norma wieku i kontekst przytarczyc
+
+Właściciel zaakceptował [makietę desktop/mobile](https://vilda-ca-dzm-20261028.maciej-flader.chatgpt.site) i wdrożenie z naprawą błędów. Zakres `Ca_mgkg`; baza `d921497f63729e660478d4025c72b97d2cecfe87`. Pełne źródła, populacje, kwalifikacja i syntetyczne kontrakty: [CA_DZM.md](CA_DZM.md).
+
+Zmiana kliniczna: dokładny przelicznik 40,078 mg/mmol zamiast 40, walidacja ujemnych/zerowych/małych liczb, precyzja granic i nowe odniesienia jako dane poza silnikiem. EAU Paediatric 2026 (18.2.1) daje dla< 3 miesięcy≤ 5 mg/kg/24 h; od 3 miesięcy do< 18 lat stosujemy< 4 z szerszej tabeli 4.4 EAU Urolithiasis 2026, również u cięższych nastolatków. Nie przypisujemy Paediatric pokrycia ≥ 60 kg ani ścisłego < 4 z innej tabeli. Dokładnie 4 jest graniczne, bez automatycznej diagnozy. Samo 0 ukończonych lat nie wymyśla miesięcy; nie deklarujemy odrębnego profilu wcześniaczego.
+
+Dorośli: Mayo CALU F< 200/M< 250 mg/24 h to próg ryzyka kamicy, nie populacyjny RI. ESE 2025 R 2.3 w rozpoznanej niedoczynności: cel F< 250/M< 300, alternatywne < 4 mg/kg/d pozostaje w Szczegółach bez łączenia profili. Workshop 2022 panel 5.1.3.3 w rozpoznanej hiperkalcemicznej PHPT: F> 250/M> 300 jako jedno kryterium nerkowe, równość nie spełnia >. To nie diagnoza ani automatyczna decyzja o operacji. Niespełnione kryterium jest neutralne; spełnione bursztynowe i jawnie nazwane kryterium.
+
+Konsensus HypoPT 2025 (tab 1, pkt 9, sekcja 4.6), PTE 2023 (część 15) i SFE–AFCE–SFMN 2024/2025 (rozdz 7, R 1) uzasadniają komentarze pediatryczne i monitorowanie. Opcjonalna rozpoznana choroba u dziecka zmienia opis, zachowując normę wieku; bez celów dorosłych, automatycznej oceny skuteczności terapii lub wskazań operacyjnych. Mała kalciuria nie rozpoznaje FHH.
+
+Domyślnie stężenie+objętość, jawne 24 h i znane dane pacjenta; alternatywnie jeden gotowy wynik. Bez masy/wieku pozostaje dostępna liczba. Znany błąd zbiórki blokuje; inny czas daje neutralne oszacowanie. Jedna karta B łączy wynik i odniesienie. Odchylenie jest bursztynowe, liczby odniesienia neutralne. Pełna nazwa choroby zawija się w selektorze mobile bez zmiany szerokości formularza.
+
+`clcr_ca_dzm_reference_data.js` przechowuje `CA_DZM_EAU_MAYO_ESE_PHPT_2026_10`, wersja 1. `VildaClcrCaDzm.evaluate(input,policy)` jest wspólnym producentem. `ClcrCaDzmUi` i `ClcrCaDzmPersistence` używają `clcr-ca-dzm`, wersja 1, pola `caDzmSnapshot`, badania `clcr-ca-dzm`. Historia, wykresy i eksport zamrażają wartość, czas, kontekst, normę i komentarz z dnia zapisu. Stare zapisy nie dostają dzisiejszej normy; edycja dat bez czasu liczbowego wymaga godzin, nie `Date.parse` w strefie urządzenia. Zmiana pacjenta czyści pomiar i diagnozę. Nowe `CA_*` nie nadpisują współdzielonych aliasów innych formuł. Zapis pozostaje za bramką zapisanej karty pacjenta.
+
+Przypadek bazowy 10 lat/30 kg/5 mmol/L/1200 mL/24 h →240,468 mg/24 h i 8,0156 mg/kg/24 h, pokazane 8,02 przy < 4. Kobieta 45 lat/220 mg ma odmienne odniesienia kamica/hypoPT/PHPT. Niemowlę 2m/5 pozostaje przy≤ 5;3m/4 jest graniczne. Regresje wywołują funkcje produkcyjne. Testy techniczne nie stanowią niezależnej walidacji klinicznej; wyniki desktop/mobile, offline i wszystkich kontroli SHA są w PR.
+
 #### Zakres i ograniczenia
 
 | Obszar | Wdrożona reguła | Najważniejsze ograniczenia |

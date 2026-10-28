@@ -259,9 +259,11 @@ describe('Klirens — ClcrVisitSave (Faza 1: zapis do karty)', () => {
     const vs = g.ClcrVisitSave;
     // UA now requires its typed, clinically frozen producer in this shared panel.
     for (const file of ['clcr_ua_reference_data.js', 'clcr_ua.js', 'clcr_ua_persistence.js']) loadBrowserScript(file, g);
+    for (const file of ['clcr_ca_dzm_reference_data.js', 'clcr_ca_dzm.js', 'clcr_ca_dzm_persistence.js']) loadBrowserScript(file, g);
+    const ca = g.VildaClcrCaDzm.evaluate({ mode: 'reported', reportedValue: '4', reportedUnit: 'mg/kg/24h', ageYears: 10 }, g.ClcrCaDzmReferenceData.DEFAULT_POLICY);
     const ua = g.VildaClcrUa.evaluate({ mode: 'reported', reportedValue: '8', reportedUnit: 'mg/kg/24h', ageYears: 10 }, g.ClcrUaReferenceData.DEFAULT_POLICY);
     const root = fakeRoot([
-      fakeEl('Ca_mgkg', '4'),
+      fakeEl('Ca_mgkg', '4', { attributes: { 'data-clcr-ca-dzm-snapshot': JSON.stringify(ca) } }),
       fakeEl('UA_mgkg', '8', { attributes: { 'data-clcr-ua-snapshot': JSON.stringify(ua) } }),
       fakeEl('Ox_mgkg', '0.3'), // inny moduł → pomiń
       fakeEl('egfr', '95'), // inny moduł → pomiń

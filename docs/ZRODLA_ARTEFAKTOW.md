@@ -1279,3 +1279,10 @@ git fetch --depth=5000 origin audyt main
 git log origin/audyt --format='%h %ad %s' --date=short -- ios26-ui.js     # wersje pliku
 git log origin/audyt --format='%h %s' ad98909a..origin/audyt -- <plik>     # zmiany po ostatnim wgraniu
 ```
+
+
+### Dobowe wydalanie wapnia — 28.10.2026
+
+Czytelne źródła bez bundlera: `clcr_ca_dzm.js` (dokładny producent), `clcr_ca_dzm_reference_data.js` (wersjonowane dane), `clcr_ca_dzm_ui.js`/`.css` (formularz i kartaB), `clcr_ca_dzm_persistence.js` (zamrożona ocena, jawna edycja). Integracja pozostaje w czytelnych inline02/inline04, `clcr_ui_workflow.js` i adapterach zapisu. Klinika: `docs/clinical/CA_DZM.md`.
+
+Producent fragmentu sesji: `tools/patch-klirens-ca-dzm-session.mjs`; `node tools/patch-klirens-ca-dzm-session.mjs inline_kalkulator_klirens_07.js` wstawia lub sprawdza dokładny fragment `KLIRENS-CA-DZM-SESSION` i jednoznaczne haki. Poprzednie patchery pozostają idempotentne. Wersje końcowe ustawia `npm run podbij-wersje`.

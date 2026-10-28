@@ -174,7 +174,7 @@
       var g = chartGeometry(group.records, reference, availableWidth);
       var m = g.margin, plotWidth = g.width - m.left - m.right, bottom = g.height - m.bottom;
       var svg = svgNode(scroll, 'svg', { class: 'vilda-clcr-chart', viewBox: '0 0 ' + g.width + ' ' + g.height, width: g.width, height: g.height, role: 'group', 'aria-label': group.label + '. Dokładne pomiary: ' + numeric.length + '. Punkty nie są połączone linią.' });
-      if (reference) {
+      if (reference && reference.kind !== 'recorded-criterion') {
         var low = finite(reference.bounds.low) ? reference.bounds.low : g.min;
         var high = finite(reference.bounds.high) ? reference.bounds.high : g.max;
         svgNode(svg, 'rect', { class: 'vilda-clcr-norm-band', x: m.left, y: g.y(high), width: plotWidth, height: Math.max(0, g.y(low) - g.y(high)) });

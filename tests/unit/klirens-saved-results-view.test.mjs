@@ -119,6 +119,20 @@ describe('wspólny widok zapisanych obliczeń Klirensu', () => {
     expect(env.host.querySelectorAll('.vilda-clcr-measurement-group')).toHaveLength(2);
   });
 
+  it('kryterium PHPT ma linię progu bez udawania pasma normy', () => {
+    const env = environment();
+    const ref = { ...reference(), text: 'Kryterium PHPT: >250 mg/24 h', kind: 'recorded-criterion', bounds: { low: null, high: 250, lowInclusive: false, highInclusive: true } };
+    const records = [220, 320].map((value, index) => measurement('fictional-phpt-' + index, value, {
+      parameterKey: 'clcr:Ca_mgkg', seriesKey: 'Ca|mg/24h', unit: 'mg/24 h', reference: ref, norm: ref.text,
+      assessment: index ? 'above' : 'unassessed', tone: index ? 'warning' : 'neutral',
+    }));
+    env.api.render(env.host, { projection: projection(...records) });
+    expect(env.host.querySelectorAll('.vilda-clcr-norm-band')).toHaveLength(0);
+    expect(env.host.querySelectorAll('.vilda-clcr-norm-boundary')).toHaveLength(1);
+    expect(env.host.querySelectorAll('.vilda-clcr-point')).toHaveLength(2);
+    expect(env.host.textContent).toContain('Kryterium PHPT: >250 mg/24 h');
+  });
+
   it('neutralny starszy zapis nie staje się prawidłowy, a treść danych jest zawsze tekstem', () => {
     const env = environment();
     env.api.render(env.host, { projection: projection(measurement('fictional-legacy', 13.6, {
