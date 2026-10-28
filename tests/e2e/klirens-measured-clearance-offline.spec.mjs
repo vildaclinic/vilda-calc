@@ -96,8 +96,9 @@ async function openOfflineCalculator(context, origin) {
 }
 
 async function enterFictionalResult(page) {
-  // Patient context is applied through the production restore adapter. The
-  // four clinical inputs remain empty and are then entered through the UI.
+  // Patient context is applied through the production restore adapter. Three
+  // measurements are empty; the default 24 h is explicitly confirmed through
+  // its real disclosure so the recorded source remains "hours" in this test.
   expect(await page.evaluate(() => window.applyClcrSessionSnapshot({
     version: 2, currentVersion: 'advanced', selectedFormula: 'cl24', inputs: {
       currentVersion: 'advanced', formulaPicker: 'cl24', age: '45', ageMonths: '', ageDays: '',
@@ -108,7 +109,14 @@ async function enterFictionalResult(page) {
   }, { source: 'e2e-cl24-offline-fictional', update: true, dispatchEvents: false, preserveAcrossVersions: true }))).toBe(true);
   await expect(page.locator('#formulaPicker')).toHaveValue('cl24');
   await page.waitForFunction(() => window.ClcrUiWorkflow.state.activeFormulaId === 'cl24' && window.clcrIsResetting !== true);
+  await expect(page.locator('#Cl24DurationHours')).toHaveValue('24');
+  await expect(page.locator('#Cl24DurationSource')).toHaveValue('assumed-24h');
+  await expect(page.locator('#Cl24DurationHours')).toBeHidden();
   for (const [id, value] of [['Scr', '1'], ['Ucr', '100'], ['V24', '1440'], ['Cl24DurationHours', '24']]) {
+    if (id === 'Cl24DurationHours') {
+      await page.locator('#clcrCommonDuration .clcr-duration-change').click();
+      await expect(page.locator('#Cl24DurationHours')).toBeVisible();
+    }
     await page.locator(`#${id}`).fill(value);
   }
   const card = page.locator('#clcrResultReport .clcr-result-card[data-clcr-series="cl24"]');
@@ -124,6 +132,7 @@ async function enterFictionalResult(page) {
     'https://pathwesttd.health.wa.gov.au/testdirectory/testdetail.aspx?TestID=521');
   await expect(page.locator('#clcrDataCompletion')).toContainText('4/4');
   await expect(page.locator('#clcrVisitSaveBtn')).toBeDisabled();
+  await expect.poll(async () => JSON.parse(await card.getAttribute('data-clcr-measured-reference')).durationSource).toBe('hours');
   const snapshot = JSON.parse(await card.getAttribute('data-clcr-measured-reference'));
   expect(snapshot).toMatchObject({ available: true, status: 'within', value: 100, unit: 'mL/min',
     profileId: 'PATHWEST_CCL_2026_03_20', profileVersion: 1, ageYears: 45, sex: 'M',

@@ -13,7 +13,12 @@ function controls() {
   const doc = { getElementById: id => fields[id] || null, defaultView: { Event: class { constructor(type, options) { this.type = type; this.bubbles = options?.bubbles; this.isTrusted = false; } } } };
   function add(id, value) {
     const listeners = {};
-    const control = { id, value, ownerDocument: doc, addEventListener(type, callback) { (listeners[type] ||= []).push(callback); }, dispatchEvent(event) { emitted.push({ id, type: event.type, bubbles: event.bubbles }); for (const callback of listeners[event.type] || []) callback(event); }, emit(type, trusted = true) { for (const callback of listeners[type] || []) callback({ type, isTrusted: trusted }); } };
+    function deliver(event) {
+      for (const capture of [true, false]) for (const listener of listeners[event.type] || []) {
+        if (listener.capture === capture) listener.callback(event);
+      }
+    }
+    const control = { id, value, ownerDocument: doc, addEventListener(type, callback, options) { (listeners[type] ||= []).push({ callback, capture: options === true || options?.capture === true }); }, dispatchEvent(event) { emitted.push({ id, type: event.type, bubbles: event.bubbles }); deliver(event); }, emit(type, trusted = true) { deliver({ type, isTrusted: trusted }); } };
     fields[id] = control; return control;
   }
   return { fields, emitted, doc, add };
@@ -107,6 +112,23 @@ describe('Shared DZM numeric duration — new collections versus historical edit
     hours.value = '12'; hours.emit('input');
     expect(source.value).toBe('hours');
     expect(api.readFromDocument(ui.doc, { fieldId: 'CA_collectionHours' })).toMatchObject({ hours: 12, source: 'hours', assumed: false });
+  });
+  it('updates provenance before an older result input listener even when assumed24 is explicitly entered as the same24', () => {
+    const api = harness().ClcrCollectionDuration, ui = controls(), hours = ui.add('Cl24DurationHours', '24'), source = ui.add('Cl24DurationSource', 'assumed-24h');
+    ui.doc.defaultView.__vildaClcrVersionValueVault = { durationNeedsConfirmation: false };
+    const computed = [api.readFromDocument(ui.doc)];
+    // The legacy producer is registered first, just as inline04 is initialized
+    // before the shared duration module binds its input event on the page.
+    hours.addEventListener('input', () => computed.push({ ...api.readFromDocument(ui.doc),
+      confirmation: ui.doc.defaultView.__vildaClcrVersionValueVault.durationNeedsConfirmation }));
+    api.ensureDefaults(ui.doc);
+    hours.value = '24'; hours.emit('input');
+    expect(computed).toHaveLength(2);
+    expect(computed[0]).toMatchObject({ valid: true, hours: 24, source: 'assumed-24h' });
+    expect(computed[1]).toMatchObject({ valid: true, hours: 24, source: 'hours', assumed: false, confirmation: false });
+    source.value = 'historical-missing'; ui.doc.defaultView.__vildaClcrVersionValueVault.durationNeedsConfirmation = true;
+    hours.value = '24'; hours.emit('input');
+    expect(computed[2]).toMatchObject({ valid: true, hours: 24, source: 'hours', assumed: false, confirmation: false });
   });
   it.each(['Cl24DurationHours', 'CA_collectionHours', 'UA_collectionHours', 'MG_collectionHours'])('%s requires a positive historical duration before blank can default again and resets without leaking the old flag', fieldId => {
     const api = harness().ClcrCollectionDuration, ui = controls();

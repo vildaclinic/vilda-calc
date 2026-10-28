@@ -44,6 +44,8 @@ async function openCalculator(page) {
 }
 
 async function selectFromSearch(page, query, formulaId) {
+  // Reopen the intent-controlled dropdown before entering a new search.
+  await page.locator('#formulaSearch').click();
   await page.locator('#formulaSearch').fill(query);
   const result = page.locator(
     `#formulaLive .clcr-search-result[data-formula-id="${formulaId}"]`
@@ -216,80 +218,56 @@ test('wyszukanie KT/V otwiera formularz PRO bez widocznego przełącznika', asyn
   );
 });
 
-test('DZM grupuje 6 warunków zbiórki i pozwala potwierdzić je jednym kliknięciem', async ({
-  page,
-}) => {
+test('DZM przyjmuje 24 h bez ankiety, zapisuje źródło czasu i blokuje jawną negatywną informację', async ({ page }) => {
   await openCalculator(page);
   await selectFromSearch(page, 'wydalanie sodu', 'Na_mmol_d');
-
-  await expect(page.locator('#collectionStartAt')).toBeVisible();
-  await expect(page.locator('#collectionEndAt')).toBeVisible();
-  const qualityGroup = page.locator('#clcrDzmQualityGroup');
-  const details = qualityGroup.locator('details');
-  const confirmAll = qualityGroup.locator('.clcr-dzm-quality__confirm');
-  await expect(qualityGroup).toBeVisible();
-  await expect(qualityGroup).toContainText(
-    'Jakość zbiórki moczu'
-  );
-  await expect(qualityGroup).toContainText('0/6 potwierdzono');
-  await expect(details).not.toHaveAttribute('open', '');
-  await expect(confirmAll).toHaveText(
-    'Tak — wszystkie warunki spełniono'
-  );
-  for (const fieldId of [
-    'collectionStartVoidDiscarded',
-    'collectionFinalVoidIncluded',
-    'collectionNoMissedVoids',
-    'collectionNoSpillage',
-    'collectionNoExtraVoids',
-    'collectionStorageFollowed',
-  ]) {
-    await expect(page.locator(`#ui_${fieldId}_answer`)).toBeHidden();
+  const hours = page.locator('#Cl24DurationHours');
+  await expect(hours).toHaveValue('24');
+  await expect(hours).toBeHidden();
+  await expect(page.locator('#Cl24DurationSource')).toHaveValue('assumed-24h');
+  await expect(page.locator('#clcrCommonDuration')).toContainText('24 godz.');
+  await expect(page.locator('#collectionStartAt')).toBeHidden();
+  await expect(page.locator('#collectionEndAt')).toBeHidden();
+  await expect(page.locator('#clcrDzmQualityGroup')).toBeHidden();
+  const qualityIds = [
+    'collectionStartVoidDiscarded', 'collectionFinalVoidIncluded',
+    'collectionNoMissedVoids', 'collectionNoSpillage',
+    'collectionNoExtraVoids', 'collectionStorageFollowed',
+  ];
+  for (const id of qualityIds) {
+    await expect(page.locator('#' + id)).not.toBeChecked();
+    await expect(page.locator('#ui_' + id + '_answer')).toBeHidden();
   }
-  await expect(page.locator('#clcrReadiness')).toContainText(
-    'Jakość czasowej lub dobowej zbiórki moczu'
-  );
-  await expect(page.locator('#clcrReadiness')).not.toContainText(
-    'Początkową mikcję odrzucono'
-  );
-  await confirmAll.click();
-  await expect(qualityGroup).toContainText('6/6 potwierdzono');
-  await expect(confirmAll).not.toHaveAttribute('aria-pressed', /.*/);
-  for (const fieldId of [
-    'collectionStartVoidDiscarded',
-    'collectionFinalVoidIncluded',
-    'collectionNoMissedVoids',
-    'collectionNoSpillage',
-    'collectionNoExtraVoids',
-    'collectionStorageFollowed',
-  ]) {
-    await expect(page.locator(`#${fieldId}`)).toBeChecked();
-  }
-  await expect(page.locator('#clcrReadiness')).toContainText(
-    'Początek zbiórki'
-  );
-  await expect(
-    page.locator('[data-clcr-field-id="collectionStartAt"]')
-  ).toHaveAttribute('data-clcr-status', 'required');
+  const readiness = await page.evaluate(() => window.getClcrFormulaReadiness('Na_mmol_d'));
+  for (const id of ['collectionStartAt', 'collectionEndAt', ...qualityIds]) expect(readiness.missingFieldIds).not.toContain(id);
+  await expect(page.locator('#clcrReadiness')).not.toContainText('Jakość czasowej lub dobowej zbiórki moczu');
+  await page.locator('#U_Na').fill('100');
+  await page.locator('#V24').fill('1000');
+  const capture = () => page.evaluate(() => window.ClcrVisitSave.collectActiveDatapoints(document, { formulaId: 'Na_mmol_d' })
+    .map(point => ({ value: point.rawValue ?? point.valueNum, hours: point.capture?.values?.Cl24DurationHours, source: point.capture?.values?.Cl24DurationSource })));
+  await expect.poll(capture).toEqual([{ value: 100, hours: '24', source: 'assumed-24h' }]);
+  expect(await page.evaluate(() => window.ClcrCollectionDuration.readFromDocument(document))).toMatchObject({ valid: true, complete: true, assumed: true, protocolMode: 'assumed-complete' });
 
-  await qualityGroup.locator('summary').click();
-  const firstAnswer = page.locator(
-    '#ui_collectionStartVoidDiscarded_answer'
-  );
-  await firstAnswer.selectOption('no');
-  await expect(qualityGroup).toContainText('5 Tak · 1 Nie');
-  await expect(confirmAll).toHaveText(
-    'Przejdź do odpowiedzi wymagającej zmiany'
-  );
-  await expect(confirmAll).toBeEnabled();
-  await expect(page.locator('#collectionStartVoidDiscarded')).not.toBeChecked();
-  await expect(page.locator('#clcrReadiness')).toContainText(
-    'co najmniej jeden warunek nie został spełniony'
-  );
+  await page.locator('#clcrCommonDuration').getByRole('button', { name: 'Zmień', exact: true }).click();
+  await hours.fill('12');
+  await expect(page.locator('#Cl24DurationSource')).toHaveValue('hours');
+  await expect.poll(capture).toEqual([{ value: 200, hours: '12', source: 'hours' }]);
+  for (const id of qualityIds) await expect(page.locator('#' + id)).not.toBeChecked();
 
-  await firstAnswer.selectOption('yes');
-  await expect(qualityGroup).toContainText('6/6 potwierdzono');
-  await expect(page.locator('#collectionStartVoidDiscarded')).toBeChecked();
+  // Imported negative information stays authoritative even though the new
+  // form does not ask the doctor to confirm six collection questions.
+  const applied = await page.evaluate(() => {
+    const snapshot = window.buildClcrSessionSnapshot();
+    const patch = { collectionStartVoidDiscarded: false, ui_collectionStartVoidDiscarded_answer: 'no' };
+    Object.assign(snapshot.inputs, patch);
+    Object.assign(snapshot.preservedInputs, patch);
+    return window.applyClcrSessionSnapshot(snapshot, { source: 'e2e-known-collection-problem', update: true });
+  });
+  expect(applied).toBe(true);
+  await expect.poll(async () => page.evaluate(() => window.canComputeFormula('Na_mmol_d'))).toBe(false);
+  await expect.poll(capture).toEqual([]);
+  expect(await page.evaluate(() => window.ClcrCollectionDuration.readFromDocument(document))).toMatchObject({ complete: false, knownProblems: ['collectionStartVoidDiscarded'] });
+  expect((await page.evaluate(() => window.buildClcrSessionSnapshot())).inputs).toMatchObject({ Cl24DurationHours: '12', Cl24DurationSource: 'hours', ui_collectionStartVoidDiscarded_answer: 'no' });
 });
 
 test('pojedyncza widoczna kolumna DZM zajmuje całą szerokość przy 1600 px', async ({
@@ -349,92 +327,66 @@ test('DZM inicjalizuje pełną szerokość bez przewijania przy 320 px', async (
   expect(mobileLayout.widthDifference).toBeLessThanOrEqual(2);
 });
 
-test('po restore zmiana odpowiedzi DZM nie wraca do starego vaultu', async ({
-  page,
-}) => {
+test('po restore korekta zapisanej odpowiedzi DZM nie wraca do starego vaultu', async ({ page }) => {
   await openCalculator(page);
   await selectFromSearch(page, 'wydalanie sodu', 'Na_mmol_d');
-  await page.waitForFunction(
-    () => typeof window.applyClcrSessionSnapshot === 'function'
-  );
-
+  await page.waitForFunction(() => typeof window.applyClcrSessionSnapshot === 'function');
   const qualityIds = [
-    'collectionStartVoidDiscarded',
-    'collectionFinalVoidIncluded',
-    'collectionNoMissedVoids',
-    'collectionNoSpillage',
-    'collectionNoExtraVoids',
-    'collectionStorageFollowed',
+    'collectionStartVoidDiscarded', 'collectionFinalVoidIncluded',
+    'collectionNoMissedVoids', 'collectionNoSpillage',
+    'collectionNoExtraVoids', 'collectionStorageFollowed',
   ];
   const applied = await page.evaluate(ids => {
-    const inputs = {
-      currentVersion: 'advanced',
-      formulaPicker: 'Na_mmol_d',
-      age: '10',
-      ageMonths: '0',
-      U_Na: '100',
-      V24: '1000',
-      collectionStartAt: '2026-07-27T08:00',
-      collectionEndAt: '2026-07-28T08:00',
-    };
+    const inputs = { currentVersion: 'advanced', formulaPicker: 'Na_mmol_d', age: '10', ageMonths: '0', U_Na: '100', V24: '1000',
+      Cl24DurationHours: '24', Cl24DurationSource: 'captured',
+      collectionStartAt: '2026-07-27T08:00', collectionEndAt: '2026-07-28T08:00' };
     ids.forEach((id, index) => {
       const answer = index === 0 ? 'no' : index === 1 ? 'unknown' : 'yes';
       inputs[id] = answer === 'yes';
-      inputs[`ui_${id}_answer`] = answer;
+      inputs['ui_' + id + '_answer'] = answer;
     });
-    return window.applyClcrSessionSnapshot(
-      {
-        version: 2,
-        currentVersion: 'advanced',
-        selectedFormula: 'Na_mmol_d',
-        preserveAcrossVersions: true,
-        preservedInputs: { ...inputs },
-        inputs,
-      },
-      {
-        source: 'e2e-dzm-restore',
-        update: true,
-        dispatchEvents: false,
-        preserveAcrossVersions: true,
-      }
-    );
+    return window.applyClcrSessionSnapshot({ version: 2, currentVersion: 'advanced', selectedFormula: 'Na_mmol_d',
+      preserveAcrossVersions: true, preservedInputs: { ...inputs }, inputs },
+    { source: 'e2e-dzm-restore', update: true, dispatchEvents: false, preserveAcrossVersions: true });
   }, qualityIds);
   expect(applied).toBe(true);
+  await expect(page.locator('#clcrDzmQualityGroup')).toBeHidden();
+  const imported = await page.evaluate(() => window.buildClcrSessionSnapshot());
+  expect(imported.inputs).toMatchObject({ ui_collectionStartVoidDiscarded_answer: 'no', ui_collectionFinalVoidIncluded_answer: 'unknown' });
+  await expect(page.locator('#ui_collectionStartVoidDiscarded_answer')).toBeHidden();
+  await expect(page.locator('#ui_collectionFinalVoidIncluded_answer')).toBeHidden();
+  await expect(page.locator('#Cl24DurationHours')).toHaveValue('24');
+  await expect(page.locator('#Cl24DurationSource')).toHaveValue('captured');
+  expect(await page.evaluate(() => window.canComputeFormula('Na_mmol_d'))).toBe(false);
+  expect(await page.evaluate(() => window.ClcrVisitSave.collectActiveDatapoints(document, { formulaId: 'Na_mmol_d' }))).toEqual([]);
 
-  const qualityGroup = page.locator('#clcrDzmQualityGroup');
-  await expect(qualityGroup).toContainText('4 Tak · 1 Nie · 1 Nie wiem');
-  await expect(
-    page.locator('#ui_collectionStartVoidDiscarded_answer')
-  ).toHaveValue('no');
-  await expect(
-    page.locator('#ui_collectionFinalVoidIncluded_answer')
-  ).toHaveValue('unknown');
-
-  await page
-    .locator('#ui_collectionStartVoidDiscarded_answer')
-    .selectOption('yes');
-  await page
-    .locator('#ui_collectionFinalVoidIncluded_answer')
-    .selectOption('yes');
-  await expect(qualityGroup).toContainText('6/6 potwierdzono');
-  for (const fieldId of qualityIds) {
-    await expect(page.locator(`#${fieldId}`)).toBeChecked();
-    await expect(page.locator(`#ui_${fieldId}_answer`)).toHaveValue('yes');
+  // A corrected incoming record is the editing path for historical protocol
+  // facts. It must replace the old negative fact in both DOM and the vault.
+  expect(await page.evaluate(ids => {
+    const snapshot = window.buildClcrSessionSnapshot();
+    for (const id of ids) {
+      snapshot.inputs[id] = snapshot.preservedInputs[id] = true;
+      snapshot.inputs['ui_' + id + '_answer'] = snapshot.preservedInputs['ui_' + id + '_answer'] = 'yes';
+    }
+    return window.applyClcrSessionSnapshot(snapshot, { source: 'e2e-corrected-dzm-record', update: true, preserveAcrossVersions: true });
+  }, qualityIds)).toBe(true);
+  await expect.poll(async () => page.evaluate(() => window.getClcrFormulaReadiness('Na_mmol_d'))).toMatchObject({ valueReady: true, missingFieldIds: [], hasBlockedProtocol: false });
+  for (const id of qualityIds) {
+    await expect(page.locator('#' + id)).toBeChecked();
+    await expect(page.locator('#ui_' + id + '_answer')).toBeHidden();
   }
-  await expect.poll(async () =>
-    page.evaluate(() => window.getClcrFormulaReadiness('Na_mmol_d'))
-  ).toMatchObject({
-    valueReady: true,
-    missingFieldIds: [],
-    hasBlockedProtocol: false,
-  });
-
   await page.evaluate(() => window.ClcrUiWorkflow.refresh());
-  await expect(qualityGroup).toContainText('6/6 potwierdzono');
-  for (const fieldId of qualityIds) {
-    await expect(page.locator(`#${fieldId}`)).toBeChecked();
-    await expect(page.locator(`#ui_${fieldId}_answer`)).toHaveValue('yes');
+  const restored = await page.evaluate(() => ({ snapshot: window.buildClcrSessionSnapshot(), vault: window.__vildaClcrVersionValueVault,
+    points: window.ClcrVisitSave.collectActiveDatapoints(document, { formulaId: 'Na_mmol_d' }) }));
+  for (const id of qualityIds) {
+    expect(restored.snapshot.inputs[id]).toBe(true);
+    expect(restored.snapshot.inputs['ui_' + id + '_answer']).toBe('yes');
+    expect(restored.vault['ui_' + id + '_answer']).toBe('yes');
   }
+  expect(restored.points).toHaveLength(1);
+  expect(restored.points[0].rawValue ?? restored.points[0].valueNum).toBe(100);
+  expect(restored.points[0].capture.values).toMatchObject({ Cl24DurationHours: '24', Cl24DurationSource: 'captured', ui_collectionStartVoidDiscarded_answer: 'yes', ui_collectionFinalVoidIncluded_answer: 'yes' });
+  await expect(page.locator('#clcrDzmQualityGroup')).toBeHidden();
 });
 
 test('CKD-EPI pokazuje listę braków, a błąd ukrytego pola spot nie bramkuje wyniku', async ({
@@ -549,15 +501,19 @@ test('Ca/Cit ma minimalny formularz i renderuje rzeczywisty wynik', async ({
 
 test('każdy widoczny przycisk Info ma dostępny i niepusty opis', async ({ page }) => {
   await openCalculator(page);
-  // TmP/GFR now gathers explanations in its result details. Test the shared
-  // field-help contract on the unchanged collection form with ten controls.
+  // The simplified collection form has two required inputs and an optional
+  // duration editor. Every visible help button still needs real source text.
   await selectFromSearch(page, 'Na_mmol_d', 'Na_mmol_d');
+  await page.locator('#clcrCommonDuration').getByRole('button', { name: 'Zmień', exact: true }).click();
+  for (const id of ['U_Na', 'V24', 'Cl24DurationHours']) {
+    await expect(page.locator('[data-clcr-field-id="' + id + '"] .clcr-info-button')).toBeVisible();
+  }
   for (const details of await page.locator('details.clcr-context-details:visible, details.clcr-dzm-quality__details:visible').all()) {
     if (await details.getAttribute('open') === null) await details.locator(':scope > summary').click();
   }
   const infoButtons = page.locator('.clcr-field .clcr-info-button:visible');
   const count = await infoButtons.count();
-  expect(count).toBeGreaterThanOrEqual(10);
+  expect(count).toBeGreaterThanOrEqual(3);
   for (let index = 0; index < count; index += 1) {
     const button = infoButtons.nth(index);
     const controls = await button.getAttribute('aria-controls');

@@ -110,7 +110,7 @@
       }
       const layout = layouts.get(doc);
       if (layout?.control === control) updateDurationSummary(layout, readFromDocument(doc));
-    });
+    }, true);
     control.addEventListener("blur", () => {
       if (!absent(control.value) || historicalControl(control)) return;
       control.value = "24";
