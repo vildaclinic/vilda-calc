@@ -16,8 +16,10 @@ import { expect, test } from '../support/test-czas.mjs';
 // klasa zostawała, obserwator powłoki trzymał `vilda-pane-auth-open` i sidebar nie wracał do
 // przeładowania strony (przeładowanie budowało <body> od nowa, bez klasy).
 //
-// Test idzie ścieżką ze zgłoszenia i sprawdza jedno i drugie: klasę w ramce (przyczyna) oraz
-// realną widoczność sidebara w oknie nadrzędnym (skutek, który widzi lekarz).
+// B2.2 otwiera natywny dialog w POWŁOCE, a wiersz wybiera szczegóły z linkiem do pacjenta.
+// Test zachowuje całą ścieżkę zgłoszenia. Pod nakładką sidebar ma być niedostępny dla kliknięć;
+// po wyjściu ma wrócić bez przeładowania. Kontrolujemy obie klasy, oba dokumenty i trafienie
+// kursora — widoczność prostokąta za natywnym backdropem nie oznacza dostępności przycisku.
 
 const HASLO = 'E2e#Powloka!2026';
 
@@ -26,19 +28,29 @@ const ramkaStart = (page) => page.frames().find((f) => f.url().includes('index.h
 const widokPowloki = async (page) => {
   const gora = await page.evaluate(() => {
     const s = document.querySelector('aside.sidebar, aside[data-vilda-chrome-sidebar]');
+    const r = s && s.getBoundingClientRect();
+    const hit = r && document.elementFromPoint(r.left + r.width / 2, r.top + Math.min(60, r.height / 2));
     return {
       sidebarWidoczny: !!(s && s.getClientRects().length),
+      sidebarZablokowany: !s || !s.getClientRects().length || !(hit === s || s.contains(hit)),
       paneAuthOpen: document.documentElement.classList.contains('vilda-pane-auth-open'),
+      remindersOpen: document.body.classList.contains('vilda-reminders-open'),
+      nakladki: document.querySelectorAll('.vilda-reminders-modal-overlay').length,
+      natywnyModal: !!document.querySelector('dialog.vb22:modal'),
     };
   });
   const ramka = await ramkaStart(page).evaluate(() => ({
-    remindersOpen: document.body.classList.contains('vilda-reminders-open'),
-    nakladki: document.querySelectorAll('.vilda-reminders-modal-overlay').length,
+    frameRemindersOpen: document.body.classList.contains('vilda-reminders-open'),
+    frameNakladki: document.querySelectorAll('.vilda-reminders-modal-overlay').length,
   }));
   return { ...gora, ...ramka };
 };
 
 test('powłoka: sidebar wraca po wejściu w kartę pacjenta z pełnoekranowych Przypomnień', async ({ page }) => {
+  await page.addInitScript(() => {
+    localStorage.setItem('vilda-terms-accepted-v1', JSON.stringify({ version: 1, acceptedAtISO: new Date().toISOString() }));
+    localStorage.setItem('analyticsConsent', 'denied');
+  });
   await page.route('**/*', (route) => {
     const u = route.request().url();
     return (u.startsWith('http://127.0.0.1:') || u.startsWith('data:') || u.startsWith('blob:'))
@@ -57,7 +69,7 @@ test('powłoka: sidebar wraca po wejściu w kartę pacjenta z pełnoekranowych P
     const p = (n) => String(n).padStart(2, '0');
     const d = new Date();
     const dzis = `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
-    const pac = await V.savePatient({ name: 'Jan Powłokowy' });
+    const pac = await V.savePatient({ name: 'Fikcyjny Jan Powłokowy' });
     await V.savePatientNote({
       patientId: pac.id || pac.patientId, title: 'Kontrola', body: '',
       category: 'followup', dueDateISO: dzis,
@@ -80,51 +92,47 @@ test('powłoka: sidebar wraca po wejściu w kartę pacjenta z pełnoekranowych P
   }, null, { timeout: 20000 });
 
   expect(await widokPowloki(page), 'punkt wyjścia: sidebar widoczny').toMatchObject({
-    sidebarWidoczny: true, paneAuthOpen: false, remindersOpen: false,
+    sidebarWidoczny: true, paneAuthOpen: false, remindersOpen: false, frameRemindersOpen: false,
   });
 
-  // „Pokaż wszystkie" → pełnoekranowe Przypomnienia; sidebar ma się schować (to jest zamierzone)
+  // „Pokaż wszystkie" → natywny dialog powłoki, bez drugiego okna wewnątrz ramki.
   await ramkaStart(page).evaluate(() => document.querySelector('#remindersInline .vild-rem-all').click());
-  await ramkaStart(page).waitForSelector('.vilda-reminders-row', { timeout: 20000 });
-  await page.waitForFunction(() => document.documentElement.classList.contains('vilda-pane-auth-open'),
-    null, { timeout: 10000 });
-  expect(await widokPowloki(page), 'nakładka pełnoekranowa chowa sidebar — tak ma być').toMatchObject({
-    sidebarWidoczny: false, paneAuthOpen: true, remindersOpen: true,
+  const dialog = page.locator('dialog.vb22');
+  await expect(dialog.locator('.vilda-reminders-row')).toHaveCount(1);
+  expect(await widokPowloki(page), 'modal blokuje tło — tak ma być').toMatchObject({
+    sidebarZablokowany: true, remindersOpen: true, nakladki: 1, natywnyModal: true,
+    frameRemindersOpen: false, frameNakladki: 0,
   });
 
-  // Klik w pozycję → karta pacjenta. Nakładka znika, więc klasa TEŻ musi zniknąć.
-  await ramkaStart(page).evaluate(() => document.querySelector('.vilda-reminders-row').click());
-  await ramkaStart(page).waitForFunction(
-    () => document.querySelectorAll('.vilda-reminders-modal-overlay').length === 0,
-    null, { timeout: 20000 },
-  );
+  // W B2.2 klik wybiera szczegóły, a link otwiera natywną Kartę Pacjenta w powłoce.
+  await dialog.locator('.vilda-reminders-row').click();
+  await dialog.getByRole('button', { name: /otwórz Kartę pacjenta/ }).click();
+  await expect(dialog).toHaveCount(0);
   const poKliku = await widokPowloki(page);
   expect(poKliku.nakladki, 'nakładka zdjęta').toBe(0);
   expect(poKliku.remindersOpen, 'klasa vilda-reminders-open nie może zostać po zdjęciu nakładki')
     .toBe(false);
 
-  // Karta pacjenta jest otwarta: powłoka trzyma sidebar schowany, bo <body> ramki nosi teraz
-  // `vilda-auth-embedded-open`. To ZAMIERZONE i dlatego nie sprawdzamy tu widoczności sidebara —
-  // pierwsza wersja tego testu właśnie na tym poległa na CI. Klasa Przypomnień musi jednak już
-  // być zdjęta: to jest przyczyna usterki i jedyny stan trwały, jaki da się w tym miejscu badać.
-  await ramkaStart(page).waitForSelector('#vilda-auth-ui-root button', { timeout: 20000 });
+  await expect(page.locator('.vilda-auth-patient-card')).toBeVisible();
+  await expect(page.locator('.vilda-auth-patient-card')).toContainText('Fikcyjny Jan Powłokowy');
   expect(await widokPowloki(page), 'karta pacjenta chowa sidebar — tak ma być').toMatchObject({
-    remindersOpen: false, nakladki: 0, sidebarWidoczny: false,
+    remindersOpen: false, nakladki: 0, sidebarZablokowany: true,
+    frameRemindersOpen: false, frameNakladki: 0,
   });
 
   // „Wróć do listy" → lista pacjentów (nadal pełnoekranowa).
-  await ramkaStart(page).evaluate(() => {
+  await page.evaluate(() => {
     const b = Array.from(document.querySelectorAll('#vilda-auth-ui-root button'))
       .find((x) => /Wróć do listy/.test(x.textContent));
     if (!b) throw new Error('brak przycisku „Wróć do listy"');
     b.click();
   });
-  await ramkaStart(page).waitForFunction(() => Array.from(
+  await page.waitForFunction(() => Array.from(
     document.querySelectorAll('#vilda-auth-ui-root button'),
   ).some((x) => /Strona główna/.test(x.textContent)), null, { timeout: 20000 });
 
   // „Strona główna" → wyjście z pełnego ekranu. TU sidebar ma wrócić, bez przeładowania.
-  await ramkaStart(page).evaluate(() => {
+  await page.evaluate(() => {
     const b = Array.from(document.querySelectorAll('#vilda-auth-ui-root button'))
       .find((x) => /Strona główna/.test(x.textContent));
     if (!b) throw new Error('brak przycisku „Strona główna"');
@@ -136,6 +144,7 @@ test('powłoka: sidebar wraca po wejściu w kartę pacjenta z pełnoekranowych P
   }, null, { timeout: 20000 });
 
   expect(await widokPowloki(page), 'sidebar wrócił bez przeładowania strony').toMatchObject({
-    sidebarWidoczny: true, paneAuthOpen: false, remindersOpen: false,
+    sidebarWidoczny: true, sidebarZablokowany: false, paneAuthOpen: false, remindersOpen: false,
+    frameRemindersOpen: false, frameNakladki: 0, nakladki: 0, natywnyModal: false,
   });
 });
