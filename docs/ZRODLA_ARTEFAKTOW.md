@@ -737,6 +737,17 @@ zglosBaner(() => showUpdateBanner(() => postSkipWaiting(registration, reason), {
 
 ## Blok P-PRZYPOMNIENIA-STAN (2026-10-28)
 
+**P-PRZYPOMNIENIA-RECZNIE (2026-10-28):** czytelna bramka w `tn` zwraca
+`false` dla wywołania bez `force`, przed jakimkolwiek efektem odczytu lub
+synchronizacji. Pozostałe granice asynchronicznego odczytu pozostają takie
+same. Z artefaktu usunięto wyłącznie trzy źródła automatycznego otwarcia:
+subskrypcję `onUnlock` z zegarem 3 s w `Is`, zegar 3 s w obsłudze `onUnlock`
+w `Ei` i podpinany tam nasłuch `vilda:sync-merged` z zegarem 800 ms. Migracja
+nazw w `Is`, reszta obsługi odblokowania w `Ei` oraz nasłuchy odświeżania
+danych małej karty i dzwonka zostają. Nie ma nowego pliku runtime ani bundlera.
+Jest to zmiana reguły otwarcia, a nie przechowywania danych; starsze pomocnicze
+bramki dzienne i wywołania bez `force` pozostają bezpiecznie nieaktywne.
+
 Czytelne źródło jest bezpośrednio w artefakcie `vilda_auth_ui.js`, od komentarza
 `P-PRZYPOMNIENIA-STAN`: funkcje `remReadOwner`, `remReadCurrent`,
 `remInlineState`, `remInlineReserved`, `remInlineAllowed`, `remInvalidateInline`,

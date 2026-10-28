@@ -174,6 +174,15 @@ wykonują sam pomiar wysokości, a rezerwacja miejsca siatki blokuje nowe odczyt
 ukrytej karty. Zwolnienie miejsca uruchamia dotychczasowy sygnał odświeżenia.
 Stan ten nie zawiera trwałej kopii notatek i nie zapisuje danych pacjenta.
 
+Od decyzji właściciela z 2026-10-28 pełny arkusz Przypomnień otwiera się
+wyłącznie świadomie: dzwonek lub „Pokaż wszystkie” wywołuje
+`maybeShowReminders({ force: true })`. Niewymuszone wywołanie kończy się przed
+synchronizacją i odczytem notatek (`P-PRZYPOMNIENIA-RECZNIE`). Usunięto zegary
+otwarcia po odblokowaniu/odtworzeniu konta oraz nasłuch otwierający po sync.
+Odczyt małej karty i licznika po zdarzeniach danych pozostaje aktywny.
+Historyczne znaczniki dnia zachowano dla zgodności — nie warunkują świadomego
+otwarcia i nie są migrowane ani usuwane.
+
 `index.html` i `docpro.html` wczytują czytelne moduły `vilda_centile_live_*`:
 
 - `data` buduje zamrożoną migawkę zapisanej osoby i bieżącej wizyty. Jawny wybór

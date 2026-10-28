@@ -14852,6 +14852,49 @@ Rozstrzygający eksperyment: przy sztucznie spowolnionym o 6 s odczycie sejfu st
 
 **Zasięg.** Zmierzony kierunek OGOLNA → DS na `index.html`. Ta sama poprawka obejmuje kierunek odwrotny, wczytanie innego pacjenta oraz dane okołoporodowe i pokwitaniowe — te same trzy moduły, ten sam wzorzec odczytu.
 
+## Pełny arkusz Przypomnień tylko po świadomym otwarciu (P-PRZYPOMNIENIA-RECZNIE, 2026-10-28)
+
+**Decyzja właściciela:** „Tylko po kliknięciu dzwonka”. Zastępuje reguły
+automatycznego otwarcia z P-ARKUSZ i P-ARKUSZ-PISANIE poniżej. Mała karta
+i licznik przy dzwonku pozostają dostępne oraz odświeżają dane jak dotąd.
+
+**Diagnoza przed zmianą:** synchronizowany `remindersLastShownDate` jest
+sprawdzany przed `syncPull`, ale nie po nim. W kontrolowanym wykonaniu
+rzeczywistej funkcji `tn` początkowe `null`, a po pobraniu dzisiejsza data,
+wciąż skutkuje `Mr()`. Przy dacie obecnej od początku okno się nie otwiera.
+Lokalne znaczniki `vilda-reminders-shown-v1` i `vilda-reminders-closed-v1`
+nie są dostępne na nowym komputerze. Wybrano wyłączenie automatycznego
+otwarcia na wszystkich urządzeniach zamiast kolejnej reguły dobowej.
+
+**Implementacja:** `tn` (`maybeShowReminders`) bez `force` kończy się przed
+synchronizacją i odczytem notatek. Usunięto zegary automatycznego otwarcia
+po odblokowaniu/odtworzeniu sesji oraz otwierający nasłuch `vilda:sync-merged`.
+Kliknięcie dzwonka, „Pokaż wszystkie” i świadome ponowienie po błędzie
+przekazują `force: true` i zachowują obsługę błędu, ochronę kolejności,
+sprawdzenie konta/sejfu oraz zamknięcie podpowiedzi i klawiatury spod okna.
+Nie dodano nowej preferencji, nie kasowano historycznych znaczników i nie
+zmieniono synchronizacji konta. Decyzja dotyczy zachowania aplikacji na
+każdym urządzeniu, więc nie zależy od dostarczenia znacznika z chmury.
+
+**Wpływ kliniczny:** brak zmiany obliczeń, treści notatek, kategorii,
+interpretacji, terminów, reguł zaległości i zapisów wykonania. Nowy wygląd
+karty oraz opis wykonania/kolejny krok/wynik są na tym etapie propozycją
+makiety poza kodem aplikacji, nie częścią tego wdrożenia.
+
+**Przypadki syntetyczne i testy:** `reminders-read-state.test.mjs` wykonuje
+rzeczywistą `tn`: świeże środowisko bez znacznika dnia (także drugi niezależny
+kontekst tego samego konta), wywołanie bez opcji/`{}`/`force:false` → bez
+sync, odczytu i okna; świadome otwarcie → istniejąca lista; ponowne świadome
+otwarcie → lista bez ograniczenia dobowego; starsze świadome żądanie nie
+zastępuje nowszego. E2E `przypomnienia-nad-karta.spec.mjs` sprawdza odtworzenie
+sesji, czas poprzednich zegarów, zdarzenie synchronizacji i zamknięcie Karty:
+bez automatycznego okna, następnie rzeczywisty dzwonek pokazuje notatkę.
+Mobilny `arkusz-przypomnien-pisanie-mobile.spec.mjs` obejmuje pisanie,
+wyjście z pola, sync i panele w tle: bez samoczynnego okna; dzwonek otwiera
+jeden arkusz w powłoce, zamyka podpowiedź i nie gubi wpisanego nazwiska.
+Wcześniejsze asercje o automatycznym otwarciu zastąpiono zgodnie z tą nową,
+jawną decyzją produktową; kontrole świadomego otwarcia pozostają pozytywne.
+
 ## Dzienny arkusz przypomnień nie przerywa otwartej Karty (P-ARKUSZ, SW 1.1.9, 2026-09-19)
 
 **Skąd znalezisko.** Pytanie właściciela o zaległy punkt z mojej listy. Wcześniejszy opis („powtarzalna porażka e2e") nie miał pokrycia — dwa pełne przebiegi e2e i CI były zielone, żadna porażka nie dotyczyła przypomnień. Została sama kwestia projektowa i ta okazała się prawdziwa.
