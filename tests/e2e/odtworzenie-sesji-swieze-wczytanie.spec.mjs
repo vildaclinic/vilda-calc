@@ -228,3 +228,55 @@ test('odświeżenie strony nadal przywraca niezapisaną zmianę wczytanego pacje
   expect(s.id).toBe(ids.x);
   expect(await page.evaluate(() => document.getElementById('weight').value)).toBe('43.7');
 });
+
+// P-ZAPIS-PRZED-ODTWORZENIEM (2026-10-28): zapis pacjenta, który wyprzedził startowe odtworzenie sesji, zamyka to
+// odtworzenie jak wczytanie pacjenta. Dotąd spóźnione odtworzenie (klatki wstrzymane jak w karcie w tle; na CI — zegar
+// testu pod obciążeniem) nakładało migawkę sprzed zapisu na wpisany już drugi pomiar: 40 kg / 135 cm wracało do
+// 38 kg / 133 cm, BMI 21,5 zamiast 21,9 (porownanie-data-urodzenia, porownanie-synchronizacja-w-tle).
+test('zapis nowego pacjenta przed startowym odtworzeniem sesji zamyka to odtworzenie (P-ZAPIS-PRZED-ODTWORZENIEM)', async ({ page }) => {
+  test.setTimeout(120_000);
+  await otworzZKontem(page);
+
+  await page.evaluate(() => window.sessionStorage.setItem('__e2eWstrzymajKlatki', '1'));
+  await page.goto('/index.html', { waitUntil: 'domcontentloaded' });
+  await page.waitForFunction(() => Boolean(window.VildaVault) && window.VildaVault.isUnlocked()
+    && typeof window.saveUserData === 'function'
+    && window.VildaInit && window.VildaInit.isInitialized('app:main-session-restore-init'),
+  null, { polling: 100, timeout: 30_000 });
+
+  const wpisz = (pola) => page.evaluate((p) => {
+    Object.keys(p).forEach((id) => {
+      const el = document.getElementById(id);
+      el.value = p[id];
+      el.dispatchEvent(new Event('input', { bubbles: true }));
+      el.dispatchEvent(new Event('change', { bubbles: true }));
+    });
+  }, pola);
+  const wagaWMigawce = () => page.evaluate(() => {
+    const m = window.VildaPersistence.readMainSession();
+    return m && m.user ? String(m.user.weight) : null;
+  });
+  const dob = await page.evaluate(() => {
+    const d = new Date();
+    const u = new Date(d.getFullYear() - 9, d.getMonth() - 1, d.getDate() - 12);
+    const z = (n) => String(n).padStart(2, '0');
+    return `${z(u.getDate())}-${z(u.getMonth() + 1)}-${u.getFullYear()}`;
+  });
+
+  await wpisz({ lastName: 'Fikcyjny', firstName: 'Trzeci', dobInput: dob, sex: 'M', weight: '38', height: '133' });
+  await expect.poll(wagaWMigawce).toBe('38');
+  expect(await page.evaluate(async () => Boolean(await window.saveUserData())), 'zapis nowego pacjenta').toBe(true);
+  await expect.poll(() => page.evaluate(async () => (await window.VildaVault.listPatients()).length)).toBe(1);
+  await wpisz({ weight: '40', height: '135' });
+
+  // Karta wraca na wierzch: spóźnione startowe odtworzenie dostaje swoje klatki.
+  await page.evaluate(() => window.__e2ePuscKlatki());
+  await dwieKlatki(page);
+  await page.waitForTimeout(500);
+
+  const pola = await page.evaluate(() => ({
+    waga: document.getElementById('weight').value, wzrost: document.getElementById('height').value }));
+  expect(pola, 'drugi pomiar zostaje w formularzu').toEqual({ waga: '40', wzrost: '135' });
+  await expect(page.locator('#bmiResult .result-number')).toHaveText('21,9', { timeout: 15_000 });
+  await expect.poll(wagaWMigawce, { message: 'migawka sesji idzie za formularzem' }).toBe('40');
+});

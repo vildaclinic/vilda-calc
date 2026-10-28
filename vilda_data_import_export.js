@@ -156,7 +156,16 @@ try{if(s&&Array.isArray(s.przyjeteZBazy)&&s.przyjeteZBazy.length){s.patientId!==
 // samemu, a „Zapisz to, co w formularzu" kasowalo jego wlasny wiersz. Od teraz baza = zapisany
 // payload (sejf modyfikuje `a` w miejscu: scalone wiersze i anti-clobber juz w nim sa), a kopia
 // w persistence (`loadedComparisonData`) jest odswiezana od razu, zeby F5 nie wrocil do starej.
-try{if(s&&s.patientId){r.lastLoadedData=JSON.parse(JSON.stringify(a));BpotwierdzStanPoZapisie();r.__vildaOstatniWlasnyZapis={patientId:s.patientId,snapshotId:s.snapshotId||null,kiedy:Date.now()};try{typeof r.vildaPersistFlushNow=="function"&&r.vildaPersistFlushNow({force:!0})}catch(Bo1){l("vilda_data_import_export:saveUserData:baza-flush",Bo1)}}}catch(Bo0){l("vilda_data_import_export:saveUserData:baza-po-zapisie",Bo0)}
+// P-ZAPIS-PRZED-ODTWORZENIEM (zlecenie wlasciciela 2026-10-28): udany zapis pacjenta zamyka startowe odtworzenie
+// sesji tej strony (Ke), tak jak wczytanie pacjenta (P-SWIEZE-WCZYTANIE). Odtworzenie rusza dwie klatki animacji po
+// DOMContentLoaded (pod obciazeniem, w karcie w tle albo pod zegarem testu — pozniej); gdy przyszlo dopiero po pierwszym
+// zapisie nowego pacjenta, warunek „formularz wypelniony, a nikt nie jest wczytany” juz go nie zatrzymywal (zapis ustawia
+// biezacego pacjenta) i migawka sesji sprzed zapisu (np. 38 kg / 133 cm) nadpisywala wpisany juz drugi pomiar (40 kg /
+// 135 cm). Zapisany formularz jest pozniejszy niz kazda migawka sesji sprzed zapisu; od zapisu Gp_k nie blokuje juz
+// zapisu sesji, wiec migawka idzie za formularzem. Tylko zapis z identyfikatorem pacjenta (ta sama galaz co
+// success:true). Jawne vildaSession.restore() (Ke=!1) dziala jak dotad.
+// Rejestr: docs/clinical/ALGORITHMS.md, P-ZAPIS-PRZED-ODTWORZENIEM.
+try{if(s&&s.patientId){Ke=!0;cancelPendingMainSessionRestore();r.lastLoadedData=JSON.parse(JSON.stringify(a));BpotwierdzStanPoZapisie();r.__vildaOstatniWlasnyZapis={patientId:s.patientId,snapshotId:s.snapshotId||null,kiedy:Date.now()};try{typeof r.vildaPersistFlushNow=="function"&&r.vildaPersistFlushNow({force:!0})}catch(Bo1){l("vilda_data_import_export:saveUserData:baza-flush",Bo1)}}}catch(Bo0){l("vilda_data_import_export:saveUserData:baza-po-zapisie",Bo0)}
 
 // P-TOZSAMOSC-PYTAJ (2026-09-14): ostrzezenie o imienniku nalezy sie TYLKO wtedy, gdy
 // o zalozeniu nowego pacjenta zdecydowal automat. Gdy lekarz sam wybral w oknie „Ktory to

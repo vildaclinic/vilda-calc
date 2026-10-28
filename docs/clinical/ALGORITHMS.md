@@ -30681,6 +30681,73 @@ SW 1.1.164 → **1.1.165**; `vilda_chrome.js?v=103→104`, `vilda_data_import_ex
 z migawki, gdy ta je niesie; początek wczytania (poza odtworzeniem) kończy stan „nieaktualny” dokumentu i czyści
 globals pacjenta w stanie wspólnym — wpis P-POWLOKA-OBCY.)*
 
+*(Uzupełnienie 2026-10-28, P-ZAPIS-PRZED-ODTWORZENIEM: tak samo jak wczytanie, startowe odtworzenie zamyka też udany
+zapis pacjenta na tej stronie — wpis niżej.)*
+
+## Zapis pacjenta przed startowym odtworzeniem sesji zamyka to odtworzenie (P-ZAPIS-PRZED-ODTWORZENIEM, SW 1.1.397, 2026-10-28)
+
+**Zmiana kliniczna: NIE** — żaden wzór, próg, jednostka, dawka ani interpretacja. Zmienia się kolejność dwóch kroków
+na stronie: startowego odtworzenia sesji karty i zapisu pacjenta. Zlecenie właściciela 2026-10-28 („Zrób to — mała
+poprawka startu aplikacji”), po diagnozie czerwonego testu e2e w PR #810.
+
+### Na czym polegał błąd
+
+Startowe odtworzenie sesji (`restoreMainSessionIfAny`, `vilda_data_import_export.js`) rusza dwie klatki animacji po
+`DOMContentLoaded`: w karcie w tle dopiero, gdy karta wróci na wierzch, a na obciążonym komputerze (i pod zegarem
+testów e2e) z opóźnieniem. P-SWIEZE-WCZYTANIE zamykało je przy każdym wczytaniu pacjenta, ale nie przy jego zapisie.
+Gdy odtworzenie przyszło dopiero po pierwszym zapisie nowego pacjenta, warunek „formularz wypełniony, a nikt nie jest
+wczytany” już go nie zatrzymywał (zapis ustawia bieżącego pacjenta karty). Wtedy migawka sesji sprzed zapisu
+nadpisywała to, co lekarz wpisał po zapisie: przykład z testu — zapis 38 kg / 133 cm, potem wpisane 40 kg / 135 cm,
+a w formularzu z powrotem 38 kg / 133 cm i BMI 21,5 zamiast 21,9, bez żadnego komunikatu. Do czasu odtworzenia
+blokada „przed pierwszym odtworzeniem” (`Gp_k`) nie zapisywała też sesji, więc migawka zostawała przy wartościach
+sprzed zapisu. Na CI dawało to powtarzające się czerwone testy `porownanie-data-urodzenia`
+i `porownanie-synchronizacja-w-tle` (18 razy w 3 dni w różnych PR-ach, zwykle przechodziły przy ponowieniu).
+
+### Reguła po poprawce
+
+1. Udany zapis pacjenta (`saveUserData`, sejf zwrócił identyfikator pacjenta — ta sama odpowiedź, którą zapis uznaje
+   za udany) zamyka startowe odtworzenie sesji tej strony, tak jak wczytanie pacjenta (P-SWIEZE-WCZYTANIE): zapisany
+   formularz jest późniejszy niż każda migawka sesji sprzed zapisu.
+2. Od tego zapisu blokada `Gp_k` już nie obowiązuje, więc migawka sesji idzie za formularzem (np. drugi pomiar
+   wpisany po zapisie trafia do migawki i wraca po F5). Odtworzenie czekające na odblokowanie sejfu zapis gasił już
+   dotąd (własnym zdarzeniem wczytania), ale migawka zostawała wtedy przy wartościach sprzed zapisu — teraz już nie.
+3. Nieudany zapis (błąd sejfu, odpowiedź bez identyfikatora pacjenta) niczego nie zmienia — odtworzenie zachowuje się
+   jak dotąd.
+4. Zapis, który wyprzedził startowe odtworzenie, zostawia formularz taki, jak zapisano: dane, które były tylko
+   w migawce sesji, a nie na ekranie (np. niezapisana zmiana sprzed F5), nie wracają — tak samo jak po wczytaniu
+   pacjenta. W widocznej karcie odtworzenie przychodzi, zanim da się kliknąć „Zapisz” (przyciski działają od
+   `DOMContentLoaded`, zapis czeka na sejf), a karta w tle nie przyjmuje kliknięć, więc w praktyce dotyczy to tylko
+   wstrzymanych klatek animacji, jak w testach.
+
+Bez zmian: odświeżenie strony bez zapisu (P-ODSWIEZENIE) nadal przywraca niezapisane zmiany; jawne
+`vildaSession.restore()` z powłoki nadal odtwarza sesję; nowy pacjent bez zapisu z wypełnionym formularzem nadal nie
+dostaje migawki. Wszystkie wywołania zapisu pacjenta biorą się z działania użytkownika: przycisk zapisu (pasek boczny
+i powłoka), „Zapisz pacjenta” w oknie terminarza GH, okno niezapisanych zmian („Zapisz i wczytaj”, „Zapisz nowego
+i wyczyść”). Nie zmieniają się format sesji, klucze storage, zapis wersji, synchronizacja ani wybór „Odtwórz zapis” /
+„Nowy pomiar”.
+
+**Walidacja.** Prawdziwy `vilda_data_import_export.js`, dane fikcyjne. Testy jednostkowe Z1–Z8 (atrapy tylko zdarzeń,
+magazynu, klatek animacji, timerów i sejfu): na kodzie sprzed zmiany czerwone Z1 (nowy pacjent), Z2 (po F5 z wczytanym
+pacjentem) i Z8 (odtworzenie czekające na logowanie), kontrole zielone (nieudany zapis, odpowiedź bez identyfikatora
+pacjenta, F5 bez zapisu, jawne odtworzenie z powłoki, nowy pacjent bez zapisu); z poprawką 9 z 9. E2e (czwarty test w
+`odtworzenie-sesji-swieze-wczytanie`, klatki wstrzymane jak w karcie w tle): czerwony na `audyt` 3d6e989b (formularz
+wraca do 38 / 133), zielony z poprawką; powiązane specyfikacje sesji, zapisu i odtwarzania (16 plików, `--workers=2`) —
+66 z 66, mobilna `porownanie-data-urodzenia-mobile` — 1 z 1. Obciążenie jak na CI (`porownanie-data-urodzenia` i
+`porownanie-synchronizacja-w-tle`, `--workers=4 --repeat-each=6`, 6 rund): 0 z 144 błędów (bez poprawki 2 z 144, ten sam
+krok BMI). Mutanty poprawki: 6 — usunięcie zatrzasku albo jego odwrócenie czerwieni Z1, Z2 i Z8, zatrzask także przy
+odpowiedzi bez identyfikatora — Z7; równoważne: zamiana kolejności dwóch instrukcji w tej samej gałęzi i samo anulowanie
+odtworzenia czekającego na logowanie (robi to już zdarzenie wczytania). Przegląd adwersarza (powłoka i panele, DocPro,
+F5, odblokowanie sejfu, terminarz GH, okno niezapisanych zmian, druga karta, wersje): bez regresji, doprecyzowania opisu
+wprowadzone (reguły 2–4). `npm test`: polityka repozytorium (2193 pliki; bez dowiązania `node_modules` kopii roboczej),
+lint, składnia (1467 plików), testy jednostkowe — 565 plików, 16 220 z 16 220, `test:pro` — zielone. `npm run
+podbij-wersje -- --sprawdz`: „Nic do zmiany”.
+
+**Kod.** `vilda_data_import_export.js` (`saveUserData`, gałąź udanego zapisu: zamknięcie startowego odtworzenia).
+Testy: `tests/unit/zapis-przed-odtworzeniem-sesji.test.mjs` (Z1–Z8), czwarty test
+w `tests/e2e/odtworzenie-sesji-swieze-wczytanie.spec.mjs`.
+
+**Wersje.** `vilda_data_import_export.js` 110 → 111; SW 1.1.396 → **1.1.397**.
+
 ## Zasady aktualizacji rejestru
 
 - Nie usuwaj starego wpisu bez pozostawienia informacji, czym został zastąpiony.
