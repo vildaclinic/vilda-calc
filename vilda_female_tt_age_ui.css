@@ -53,7 +53,7 @@
 .lab-smart-card>.lab-pane--chart>#labFemaleTtAge>.vilda-female-tt-age:not(:fullscreen){border:0;border-radius:0;padding:0}
 
 /* Separate group medians are not a continuous age trajectory. */
-.vilda-female-tt-age[data-render-mode="age-groups"] .vfta-source-key{width:10px;height:10px;border:2px solid var(--primary);border-radius:50%;background:#fff;box-sizing:border-box}
+.vilda-female-tt-age[data-render-mode="age-groups"] .vfta-source-key{width:10px;height:10px;border:var(--border-emphasis) solid var(--primary);border-radius:var(--radius-circle);background:#fff;box-sizing:border-box}
 .vilda-female-tt-age .vfta-group-highlight{fill:#edf7f6}
 .vilda-female-tt-age .vfta-group-marker{fill:#fff;stroke:#93b6ba;stroke-width:1.8}
 .vilda-female-tt-age .vfta-group-text{font-family:inherit;fill:#7d979d;font-size:10px;font-weight:400}
@@ -63,14 +63,14 @@
 .vilda-female-tt-age .vfta-chart-note{margin-bottom:var(--space-6px)}
 
 /* The existing laboratory verdict controls emphasis, independently of P50. */
-.vilda-female-tt-age .vfta-alert{display:flex;align-items:flex-start;gap:var(--space-14px);border:1px solid #ebc1c9;border-left:4px solid #b72840;border-radius:12px;background:#fff3f5;padding:17px var(--space-20px);margin:var(--space-20px) 0 var(--space-4px);color:#a32238}
-.vilda-female-tt-age .vfta-alert-icon{display:grid;place-items:center;flex:none;width:28px;height:28px;border-radius:50%;background:#b72840;color:#fff;font-size:19px;font-weight:750;line-height:1;margin-top:2px}
+.vilda-female-tt-age .vfta-alert{display:flex;align-items:flex-start;gap:var(--space-14px);border:var(--border-hairline) solid #ebc1c9;border-left:4px solid #b72840;border-radius:var(--radius-12);background:#fff3f5;padding:17px var(--space-20px);margin:var(--space-20px) 0 var(--space-4px);color:#a32238}
+.vilda-female-tt-age .vfta-alert-icon{display:grid;place-items:center;flex:none;width:28px;height:28px;border-radius:var(--radius-circle);background:#b72840;color:#fff;font-size:19px;font-weight:750;line-height:1;margin-top:2px}
 .vilda-female-tt-age .vfta-alert-copy{min-width:0;flex:1}
 .vilda-female-tt-age .vfta-alert-title{margin:0 0 var(--space-8px);font-size:13px;line-height:1.5;font-weight:650;color:#a32238}
 .vilda-female-tt-age .vfta-alert-measurement{display:flex;align-items:baseline;flex-wrap:wrap;gap:var(--space-6px) 9px;font-variant-numeric:tabular-nums}
 .vilda-female-tt-age .vfta-alert-measurement>strong{font-size:34px;line-height:1.15;letter-spacing:-.7px;font-weight:700;color:#a32238;overflow-wrap:anywhere}
 .vilda-female-tt-age .vfta-alert-measurement>span:not(.vfta-alert-ratio){font-size:16px;color:#a44b5c}
-.vilda-female-tt-age .vfta-alert-ratio{align-self:center;margin-left:auto;border:1px solid #e9b8c2;background:#fff;border-radius:7px;padding:7px var(--space-10px);font-size:13px;line-height:1.5;font-weight:650;color:#a32238}
+.vilda-female-tt-age .vfta-alert-ratio{align-self:center;margin-left:auto;border:var(--border-hairline) solid #e9b8c2;background:#fff;border-radius:7px;padding:7px var(--space-10px);font-size:13px;line-height:1.5;font-weight:650;color:#a32238}
 .vilda-female-tt-age .vfta-alert-reference{margin:9px 0 0;font-size:12px;color:#98505e;line-height:1.55}
 .vilda-female-tt-age.vfta-above-range .vfta-reading>p{color:#a32238;font-weight:650}
 .vilda-female-tt-age .vfta-patient-halo{fill:#e4435d;opacity:.14}
