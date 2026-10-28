@@ -22,6 +22,7 @@
     ["clcr_tmp_gfr_persistence.js?v=1", "ClcrTmpGfrPersistence"],
     ["clcr_ph_persistence.js?v=1", "ClcrPhPersistence"],
     ["clcr_ua_persistence.js?v=1", "ClcrUaPersistence"],
+    ["clcr_ca_dzm_persistence.js?v=1", "ClcrCaDzmPersistence"],
     // readSaved is pure and needed for the new capture format. Its recalculate
     // method is not called while opening history and resolves engines lazily.
     ["clcr_saved_calculation.js?v=5", "ClcrSavedCalculation"],
@@ -59,6 +60,8 @@
     ["clcr_tmp_gfr.js?v=1", "VildaClcrTmpGfr"],
     ["clcr_ua_reference_data.js?v=1", "ClcrUaReferenceData"],
     ["clcr_ua.js?v=1", "VildaClcrUa"],
+    ["clcr_ca_dzm_reference_data.js?v=1", "ClcrCaDzmReferenceData"],
+    ["clcr_ca_dzm.js?v=1", "VildaClcrCaDzm"],
     ["clcr_ph_reference_data.js?v=1", "VildaClcrPhReferenceData"],
     ["clcr_ph.js?v=1", "VildaClcrPh"],
     ["clcr_measured_clearance_reference_data.js?v=1", "ClcrMeasuredClearanceReferenceData"],

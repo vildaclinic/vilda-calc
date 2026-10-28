@@ -7,6 +7,7 @@ for (const file of [
   'clcr_tmp_gfr_reference_data.js', 'clcr_tmp_gfr.js', 'clcr_tmp_gfr_persistence.js',
   'clcr_ph_reference_data.js', 'clcr_ph.js', 'clcr_ph_persistence.js',
   'clcr_ua_reference_data.js', 'clcr_ua.js', 'clcr_ua_persistence.js',
+  'clcr_ca_dzm_reference_data.js', 'clcr_ca_dzm.js', 'clcr_ca_dzm_persistence.js',
   'clcr_clinical_safety.js', 'clcr_extended_egfr.js', 'clcr_calculation_assumptions.js',
   'clcr_result_reference_data.js', 'clcr_result_presentation.js',
   'clcr_measured_clearance_reference_data.js', 'clcr_measured_clearance_reference.js',
@@ -28,7 +29,6 @@ const calculate = (id, patch = {}, output = id, context = {}) => engine.recalcul
 
 describe('Saved Klirens: existing timed-urine production arithmetic', () => {
   it.each([
-    ['Ca_mgkg', 2.4, 'mg/kg/24 h'],
     ['Mg_mgkg', 0.6, 'mg/kg/24 h'], ['PO4_mgkg', 150, 'mg P/24 h'],
     ['Ox_mgkg', 0.06, 'mg/kg/24 h'], ['Cit_mgkg', 1.5, 'mg/kg/24 h'],
     ['Na_mmol_d', 90, 'mmol/24 h'], ['K_mmol_d', 60, 'mmol/24 h'],
@@ -42,11 +42,16 @@ describe('Saved Klirens: existing timed-urine production arithmetic', () => {
     expect(result).toMatchObject({ sourceFormulaId: id, comparator: '', tone: 'neutral', norm: '', outOfRange: null, category: null });
   });
 
+  it('calcium uses the audited converter and source-native adult daily unit', () => {
+    expect(calculate('Ca_mgkg', { CA_collectionHours: '24' })).toMatchObject({ valueNum: 120.234, unit: 'mg/24 h', outOfRange: false, caDzmSnapshot: { perKg: 2.40468, referenceText: '<250' } });
+    expect(() => calculate('Ca_mgkg')).toThrow(/czas/i);
+  });
+
   it('normalizes the recorded collection duration, without using a current day', () => {
-    expect(calculate('Ca_mgkg', { collectionEndAt: '2026-10-20T20:00' }).valueNum).toBe(4.8);
+    expect(calculate('Ca_mgkg', { CA_collectionHours: '12', collectionEndAt: '2026-10-20T20:00' }).valueNum).toBe(240.468);
     expect(calculate('Ca_Cr', { collectionEndAt: '' }).valueNum).toBe(0.08);
     expect(() => calculate('Ca_mgkg', { collectionEndAt: '' })).toThrow();
-    expect(() => calculate('Ca_mgkg', { collectionNoMissedVoids: false })).toThrow();
+    expect(() => calculate('Ca_mgkg', { CA_collectionHours: '24', collectionNoMissedVoids: false, ui_collectionNoMissedVoids_answer: 'no' })).toThrow();
   });
 
   it('updates only the requested one of the three protein outputs', () => {
@@ -147,6 +152,6 @@ describe('Saved Klirens: measured clearance, CG and dialysis reuse actual produc
     expect(fields.UreaPost).toBe(36);
   });
   it('rejects an unavailable frozen reference profile rather than using a new policy', () => {
-    expect(() => calculate('Ca_mgkg', {}, 'Ca_mgkg', { profileId: 'unknown-version' })).toThrow(/profil/);
+    expect(() => calculate('Mg_mgkg', {}, 'Mg_mgkg', { profileId: 'unknown-version' })).toThrow(/profil/);
   });
 });

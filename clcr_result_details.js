@@ -22,6 +22,10 @@
   }
   const valueLabel = record => record?.displayValue ?? record?.display ?? record?.rawValue ?? record?.valueNum ?? "—";
   function editableInput(field, formulaId, unitIds) {
+    // This optional selector intentionally changes a recorded calcium
+    // interpretation. Editing it is an explicit correction, not a new
+    // specimen checklist or an inferred patient diagnosis.
+    if (formulaId === "Ca_mgkg" && field.id === "CA_clinicalMode") return true;
     if (["age", "ageMonths", "sex"].includes(field.id) || field.id === "ageDays" && formulaId !== "neonatal_egfr" || unitIds.has(field.id)) return false;
     if (/unit|Assay|Standardization|creatinineState|suspectedAKI/i.test(field.id) || /_entry_mode$/i.test(field.id)) return false;
     // Routine assumptions and optional specimen/therapy facts stay exactly as

@@ -132,14 +132,10 @@
       },
       {
         id: "Ca_mgkg",
-        label: "Wydalanie wapnia (DZM; bez automatycznej normy)",
+        label: "Dobowe wydalanie wapnia",
         version: "advanced",
-        requires: [
-          "U_Ca",
-          "V24",
-          "weight",
-          ...timedCollectionProtocol,
-        ],
+        requires: ["CA_concentration", "CA_concentrationUnit", "CA_volume", "CA_volumeUnit", "CA_collectionHours"],
+        note: "Stężenie i objętość zbiórki albo gotowe wydalanie. Przyjmujemy pełne 24 h; znane dane pacjenta służą dobraniu odniesienia.",
       },
       {
         id: "Mg_mgkg",

@@ -148,8 +148,8 @@ describe('Klirens — flowsheet karty pacjenta (Faza 3)', () => {
 
     const ca = data.parameters[1];
     expect(ca.byDate['2026-06-01']).toBeUndefined(); // brak pomiaru → „—"
-    expect(ca.byDate['2026-08-01']).toMatchObject({ valueNum: 3.2, outOfRange: false });
-    expect(ca.norm).toBe('< 4,0');
+    expect(ca.byDate['2026-08-01']).toMatchObject({ valueNum: 3.2, outOfRange: null });
+    expect(ca.norm).toBe(''); // Unqualified legacy calcium remains neutral, without a current reference.
   });
 
   it('readPatientFlowsheet: pusto, gdy sejf zablokowany', async () => {
