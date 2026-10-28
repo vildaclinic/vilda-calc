@@ -76,7 +76,8 @@ function VildaRemoveExistingPatientNote(payload) {
 function VildaOnceClinicalPayload(note) {
   return JSON.stringify([
     note.patientId, Un(note.category), Z(note.title).trim(), Z(note.body),
-    Ct(note.clinicalDateISO), ye(note.linkedAgeMonths), kt(note.labResult)
+    Ct(note.clinicalDateISO), ye(note.linkedAgeMonths), kt(note.labResult),
+    ...(note.reminderContext && note.reminderContext.kind === 'reminder' ? [Cn(note.dueDateISO), note.dueTime || null] : [])
   ]);
 }
 async function VildaSavePatientNoteOnce(payload) {
@@ -124,12 +125,15 @@ async function VildaSavePatientNoteOnce(payload) {
 `;
 
 const insertionAnchor = 'async function ie(t,e){';
+// B2.2 follows this block in the current artifact. Reapplying the older
+// conditional-note patch must keep that source order, including its shared token.
+const remindersInsertionAnchor = '/* P-PRZYPOMNIENIA-B22: encrypted note context;';
 export const existingNoteExportAnchor = 'savePatientNote:ie,getPatientNote:Fe';
 export const existingNoteExportReplacement = 'savePatientNote:ie,savePatientNoteOnce:VildaSavePatientNoteOnce,updateExistingPatientNote:VildaUpdateExistingPatientNote,getPatientNote:Fe';
 export const existingNoteRemoveExportAnchor = 'removePatientNote:$o,onPatientNoteChanged:ms';
 export const existingNoteRemoveExportReplacement = 'removePatientNote:$o,removeExistingPatientNote:VildaRemoveExistingPatientNote,onPatientNoteChanged:ms';
 export const existingNoteCommitAnchor = 'await I().putPatientNoteForUser(b,nt);';
-export const existingNoteCommitReplacement = 'if(e&&e.token===VildaExistingNoteUpdateToken)e.beforeCommit();' + existingNoteCommitAnchor;
+export const existingNoteCommitReplacement = 'if(e&&e.token===VildaExistingNoteUpdateToken){e.beforeCommit();if(e.prepareOnly)return nt;}' + existingNoteCommitAnchor;
 export const existingNoteDeleteAnchor = 'async function Eb(t,Qwp,Qwm){';
 export const existingNoteDeleteReplacement = 'async function Eb(t,Qwp,Qwm,Qwf){const Qwg=Qwf&&Qwf.token===VildaExistingNoteUpdateToken?Qwf:null;';
 
@@ -163,18 +167,19 @@ export function unpatchExistingNoteDeleteWriter(block) {
 }
 
 export function patchVaultExistingNote(source) {
+  const targetAnchor = source.includes(remindersInsertionAnchor) ? remindersInsertionAnchor : insertionAnchor;
   const marks = [existingNoteUpdateSource, existingNoteExportReplacement, existingNoteRemoveExportReplacement, existingNoteCommitReplacement, existingNoteDeleteReplacement];
   if (marks.every(mark => source.includes(mark))) return source;
   if (marks.some(mark => source.includes(mark)) || source.includes('function VildaChangeExistingPatientNote(')) {
     throw new Error('Partially applied or changed existing-note mutation: review the artifact first.');
   }
-  for (const anchor of [insertionAnchor, existingNoteExportAnchor, existingNoteRemoveExportAnchor, existingNoteCommitAnchor, existingNoteDeleteAnchor]) {
+  for (const anchor of [targetAnchor, existingNoteExportAnchor, existingNoteRemoveExportAnchor, existingNoteCommitAnchor, existingNoteDeleteAnchor]) {
     if (source.split(anchor).length !== 2) throw new Error(`Expected one vault anchor: ${anchor}`);
   }
   const removeStart = source.indexOf(existingNoteDeleteAnchor), removeEnd = source.indexOf('async function ts(', removeStart);
   if (removeEnd < 0) throw new Error('Missing note remover end anchor.');
   const originalRemove = source.slice(removeStart, removeEnd);
-  return source.replace(insertionAnchor, existingNoteUpdateSource + insertionAnchor)
+  return source.replace(targetAnchor, existingNoteUpdateSource + targetAnchor)
     .replace(existingNoteExportAnchor, existingNoteExportReplacement)
     .replace(existingNoteRemoveExportAnchor, existingNoteRemoveExportReplacement)
     .replace(existingNoteCommitAnchor, existingNoteCommitReplacement)

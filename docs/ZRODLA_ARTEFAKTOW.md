@@ -735,6 +735,33 @@ window.VildaServiceWorkerClientLifecycle.updateBannerGateReasons = powodyWstrzym
 zglosBaner(() => showUpdateBanner(() => postSkipWaiting(registration, reason), { reason, notes }, onDismissShowIndicator));
 ```
 
+## Przypomnienia B2.2 (2026-10-28)
+
+Źródłem prezentacji jest czytelny blok `P-PRZYPOMNIENIA-B22` bezpośrednio
+w `vilda_auth_ui.js`, od `remB22Views` do `remB22Styles`, oraz sformatowany
+`vilda_reminders.css`. Nie ma osobnego generatora ani kroku minifikacji.
+`Mr`, `Br` i `tn` delegują do tego widoku, zachowując dotychczasowe bramki PRO,
+widoczności i aktualności odczytu. Stary renderer pozostaje w artefakcie jako
+kod historyczny; aktualny kontrakt filtrów zastępuje zwijanie kategorii.
+Nie usuwamy dawnych preferencji kategorii z kopii i synchronizacji.
+
+W `vilda_vault.js` czytelny blok `P-PRZYPOMNIENIA-B22` zawiera
+`RemB22Context`, `RemB22CheckCommit`, adaptery atomowego zapisu i
+`RemB22SaveOutcome` (publiczne `saveReminderOutcome`). Wąskie punkty wpięcia:
+`Ad` zachowuje kontekst i wspiera wewnętrzne przygotowanie rekordu bez zapisu;
+`Ft` odczytuje kontekst; `Le` przenosi go przy scalaniu synchronizacji;
+`VildaOnceClinicalPayload` porównuje termin/czas wyłącznie nowych przypomnień
+`reminderContext.kind === 'reminder'`. Publiczne kontrakty zapisów klinicznych
+pozostają bez zmian. Adaptery IndexedDB, pamięciowy i hybrydowy udostępniają
+`commitReminderForUser`. Nie zmienia się schemat sejfu ani kolejność skryptów.
+`tools/patch-vault-existing-note.mjs` uwzględnia wspólny punkt przygotowania rekordu,
+porównanie terminu nowych przypomnień i położenie istniejącego bloku przed B2.2;
+test odtworzenia nadal wymaga identycznych bajtów artefaktu i idempotencji łatki.
+
+Test `reminders-outcome-vault.test.mjs` uruchamia rzeczywisty sejf i kryptografię;
+testy `przypomnienia-b22*` sprawdzają natywną aplikację desktop/mobile, awarię
+drugiego zapisu IndexedDB, Kartę Pacjenta i zimny restart PWA offline.
+
 ## Blok P-PRZYPOMNIENIA-STAN (2026-10-28)
 
 Czytelne źródło jest bezpośrednio w artefakcie `vilda_auth_ui.js`, od komentarza

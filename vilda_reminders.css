@@ -1,0 +1,809 @@
+/* B2.2 — shared inline/full workspace, scoped to native reminders. */
+.vb22 {
+  --vb-ink:#29464d;
+  --vb-muted:#607b81;
+  --vb-line:#dce7e8;
+  --vb-teal:#087e83;
+  --vb-soft:#f0f7f6;
+  --vb-red:#95525b;
+  font: 14px/1.45 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+  color: var(--vb-ink);
+  background: #fff;
+  box-sizing: border-box;
+  text-align: left
+}
+
+.vb22 * {
+  box-sizing: border-box
+}
+
+.vb22 button,
+.vb22 input,
+.vb22 select,
+.vb22 textarea {
+  font: inherit;
+  color: inherit
+}
+
+.vb22 h2,
+.vb22 h3,
+.vb22 h4,
+.vb22 p {
+  margin: 0
+}
+
+.vb22 button {
+  cursor: pointer;
+  width: auto;
+  min-height: 34px;
+  padding: var(--space-8px) var(--space-12px);
+  font-size: 12px;
+  line-height: 1.4;
+  letter-spacing: normal
+}
+
+.vb22 button:disabled {
+  cursor: default;
+  opacity: .65
+}
+
+.vb22 button:focus-visible,
+.vb22 input:focus-visible,
+.vb22 textarea:focus-visible,
+.vb22 select:focus-visible {
+  outline: var(--border-pro) solid #78b8bc;
+  outline-offset: 2px
+}
+
+.vb22 [hidden] {
+  display: none!important
+}
+
+.vb22 .vb22-text {
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  min-height: 26px;
+  padding: var(--space-4px) 0;
+  color: var(--vb-teal);
+  font-size: 12px;
+  font-weight: 600;
+  text-align: left;
+  display: block
+}
+
+.vb22 .vb22-primary {
+  background: var(--vb-teal);
+  border-color: var(--vb-teal);
+  color: #fff;
+  font-weight: 650
+}
+
+.vb22 .vb22-icon {
+  height: 36px;
+  width: 36px;
+  min-width: 36px;
+  min-height: 36px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  font-size: 23px;
+  line-height: 1
+}
+
+.vb22 .vb22-head {
+  padding: 22px var(--space-24px) 17px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-14px);
+  flex-shrink: 0
+}
+
+.vb22 .vb22-heading {
+  min-width: 0
+}
+
+.vb22 .vb22-head h2 {
+  font-size: 22px;
+  line-height: 1.25;
+  font-weight: 700;
+  color: var(--vb-ink);
+  letter-spacing: -.35px
+}
+
+.vb22 .vb22-subtitle {
+  font-size: 11px;
+  color: var(--vb-muted);
+  margin-top: var(--space-6px)
+}
+
+.vb22 .vb22-tools {
+  display: flex;
+  gap: var(--space-8px);
+  align-items: center
+}
+
+.vb22 .vb22-add {
+  border: 0;
+  background: transparent;
+  color: var(--vb-teal);
+  padding: var(--space-4px) 0;
+  font-size: 12px;
+  font-weight: 650;
+  white-space: nowrap
+}
+
+.vb22 .vb22-tabs {
+  display: flex;
+  gap: var(--space-24px);
+  padding: 0 var(--space-24px);
+  border-bottom: var(--border-hairline) solid var(--vb-line);
+  flex-shrink: 0
+}
+
+.vb22 .vb22-tabs button {
+  padding: 0 0 var(--space-12px);
+  position: relative;
+  font-size: 12px;
+  font-weight: 650;
+  min-height: 30px
+}
+
+.vb22 .vb22-tabs button.is-active:after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -1px;
+  height: 3px;
+  background: var(--vb-teal);
+  border-radius: 3px
+}
+
+.vb22 .vb22-filters {
+  padding: var(--space-14px) var(--space-24px);
+  display: grid;
+  grid-template-columns: repeat(4,minmax(0,1fr));
+  gap: 9px;
+  flex-shrink: 0
+}
+
+.vb22 .vb22-filters button {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-8px);
+  padding: var(--space-8px) 11px;
+  min-height: var(--brand-logo-size);
+  font-size: 12px;
+  font-weight: 600;
+  text-align: left;
+  min-width: 0
+}
+
+.vb22 .vb22-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  border-left: var(--border-hairline) solid #dbe4e5;
+  min-width: 21px;
+  padding-left: 9px;
+  height: 16px;
+  color: var(--vb-red);
+  font-size: 12px;
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+  background: transparent;
+  border-radius: 0
+}
+
+.vb22 .vb22-layout {
+  min-height: 0;
+  flex: 1;
+  display: grid;
+  grid-template-columns: 340px minmax(0,1fr)
+}
+
+.vb22 .vb22-list-pane {
+  background: #fbfcfc;
+  border-right: var(--border-hairline) solid var(--vb-line);
+  padding: var(--space-16px);
+  overflow: auto;
+  min-height: 0
+}
+
+.vb22 .vb22-search {
+  display: block;
+  width: 100%;
+  border: var(--border-hairline) solid var(--vb-line);
+  border-radius: var(--radius-9);
+  box-shadow: none;
+  background: #fff;
+  color: var(--vb-ink);
+  font-size: 12px;
+  padding: var(--space-10px) var(--space-12px);
+  min-height: 40px;
+  margin: 0 0 15px
+}
+
+.vb22 .vb22-list {
+  display: flex;
+  flex-direction: column
+}
+
+.vb22 .vb22-row {
+  display: block;
+  flex-shrink: 0;
+  width: 100%;
+  min-height: 0;
+  padding: var(--space-10px) 9px;
+  border: 0;
+  border-bottom: var(--border-hairline) solid #e0e9ea;
+  border-left: var(--border-pro) solid transparent;
+  background: transparent;
+  border-radius: 0;
+  box-shadow: none;
+  text-align: left;
+  margin: 0;
+  color: var(--vb-ink)
+}
+
+.vb22 .vb22-row:hover {
+  background: #f3f8f7
+}
+
+.vb22 .vb22-row.is-selected {
+  border-left-color: #218a8f;
+  border-bottom-color: #d5e5e4;
+  background: #eaf5f3;
+  border-radius: var(--radius-8)
+}
+
+.vb22 .vb22-row-top {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-8px);
+  font-size: 10px;
+  color: var(--vb-muted);
+  line-height: 1.35;
+  margin-bottom: var(--space-4px)
+}
+
+.vb22 .vb22-row-top .vild-rem-when {
+  flex-shrink: 0;
+  color: #99692f;
+  font-size: 10px
+}
+
+.vb22 .vb22-row-top .vild-rem-cat {
+  font-size: 10px;
+  color: var(--vb-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap
+}
+
+.vb22 .vb22-row-title {
+  display: block;
+  font-size: 13px;
+  line-height: 1.4;
+  font-weight: 650
+}
+
+.vb22 .vb22-row-patient {
+  display: block;
+  font-size: 11px;
+  line-height: 1.4;
+  margin-top: 3px;
+  color: var(--vb-muted)
+}
+
+.vb22 .vb22-row-date {
+  display: block;
+  font-size: 10px;
+  line-height: 1.4;
+  margin-top: 3px;
+  color: var(--vb-muted);
+  font-weight: 400
+}
+
+.vb22 .vb22-detail {
+  padding: 23px 28px 30px;
+  min-width: 0;
+  overflow: auto;
+  min-height: 0
+}
+
+.vb22 .vb22-detail h3 {
+  font-size: 23px;
+  line-height: 1.3;
+  letter-spacing: -.3px;
+  margin: var(--space-12px) 0 var(--space-8px);
+  color: var(--vb-ink)
+}
+
+.vb22 .vb22-category {
+  font-size: 11px;
+  color: var(--vb-muted)
+}
+
+.vb22 .vb22-meta {
+  padding-bottom: var(--space-18px);
+  border-bottom: var(--border-hairline) solid var(--vb-line);
+  margin-top: var(--space-16px);
+  font-size: 12px;
+  color: var(--vb-muted)
+}
+
+.vb22 .vb22-body {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  font-size: 13px;
+  line-height: 1.65;
+  margin-top: var(--space-18px);
+  color: var(--vb-ink)
+}
+
+.vb22 .vb22-actions {
+  display: flex;
+  gap: var(--space-8px);
+  flex-wrap: wrap;
+  margin-top: var(--space-20px);
+  align-items: center
+}
+
+.vb22 .vb22-actions .vb22-text {
+  padding: var(--space-6px)
+}
+
+.vb22 .vb22-help {
+  font-size: 11px;
+  color: var(--vb-muted);
+  line-height: 1.5;
+  margin-top: var(--space-16px)
+}
+
+.vb22 .vb22-foot {
+  border-top: var(--border-hairline) solid var(--vb-line);
+  padding: 11px var(--space-24px);
+  min-height: 39px;
+  display: flex;
+  gap: var(--space-8px);
+  align-items: center;
+  justify-content: space-between;
+  color: var(--vb-muted);
+  font-size: 11px;
+  flex-shrink: 0;
+  background: #fff
+}
+
+.vb22 .vb22-empty {
+  padding: var(--space-24px) var(--space-6px);
+  text-align: center;
+  color: var(--vb-muted);
+  font-size: 12px;
+  line-height: 1.5
+}
+
+.vb22 .vb22-form {
+  margin-top: var(--space-20px);
+  background: #fcfefe;
+  border: var(--border-hairline) solid #d3e4e4;
+  border-radius: var(--radius-12);
+  padding: var(--space-18px)
+}
+
+.vb22 .vb22-form h3,
+.vb22 .vb22-form h4 {
+  margin: 0 0 var(--space-4px);
+  font-size: 17px;
+  letter-spacing: -.15px
+}
+
+.vb22 .vb22-field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6px);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--vb-ink);
+  margin-top: var(--space-14px)
+}
+
+.vb22 .vb22-field input,
+.vb22 .vb22-field textarea,
+.vb22 .vb22-field select {
+  display: block;
+  max-width: 100%;
+  width: 100%;
+  background: #fff;
+  border: var(--border-hairline) solid #cedfe1;
+  border-radius: var(--radius-9);
+  padding: var(--space-10px) 11px;
+  font-size: 13px;
+  color: var(--vb-ink);
+  box-shadow: none;
+  font-weight: 400;
+  min-height: 40px
+}
+
+.vb22 .vb22-field textarea {
+  resize: vertical;
+  min-height: 88px
+}
+
+.vb22 .vb22-check {
+  display: flex;
+  gap: var(--space-8px);
+  align-items: center;
+  font-size: 12px;
+  font-weight: 600;
+  margin-top: var(--space-18px)
+}
+
+.vb22 .vb22-check input {
+  width: 17px;
+  height: 17px;
+  min-height: 0;
+  margin: 0;
+  accent-color: var(--vb-teal)
+}
+
+.vb22 .vb22-next {
+  padding-top: 1px
+}
+
+.vb22 .vb22-error,
+.vb22 .vb22-notice {
+  padding: var(--space-12px) 13px;
+  border: var(--border-hairline) solid #e4c8c8;
+  background: #fff7f6;
+  border-radius: var(--radius-9);
+  margin-top: var(--space-14px);
+  font-size: 12px;
+  line-height: 1.5;
+  white-space: pre-wrap
+}
+
+.vb22 .vb22-notice {
+  background: #eff8f6;
+  border-color: #c0dcd8;
+  color: #176e72
+}
+
+.vb22 .vb22-back {
+  display: none
+}
+
+dialog.vb22.vb22-modal {
+  position: fixed;
+  inset: 16px 16px calc(16px + var(--vb22-bottom,0px));
+  margin: auto;
+  width: min(1160px,calc(100vw - 32px));
+  height: min(900px,calc(var(--vb22-height,100dvh) - 32px - var(--vb22-bottom,0px)));
+  max-width: none;
+  max-height: none;
+  border: var(--border-hairline) solid #d5e1e2;
+  border-radius: var(--radius-20);
+  padding: 0;
+  background: #fff;
+  overflow: hidden;
+  box-shadow: 0 22px 80px #16333e2b;
+  z-index: var(--z-reminder-dialog)
+}
+
+dialog.vb22.vb22-modal[open] {
+  display: flex;
+  flex-direction: column
+}
+
+dialog.vb22.vb22-modal::backdrop {
+  background: #15343d55;
+  backdrop-filter: blur(3px)
+}
+
+.vb22.vb22-inline {
+  height: 100%;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border: var(--border-hairline) solid var(--vb-line);
+  border-radius: var(--radius-18);
+  box-shadow: 0 7px 24px #203c4405
+}
+
+.vb22-inline .vb22-head {
+  padding: var(--space-20px) 21px var(--space-16px)
+}
+
+.vb22-inline .vb22-head h2 {
+  font-size: 20px
+}
+
+.vb22-inline .vb22-tabs {
+  padding: 0 21px
+}
+
+.vb22-inline .vb22-filters {
+  grid-template-columns: 1fr 1fr;
+  padding: 13px 21px var(--space-8px);
+  gap: 7px
+}
+
+.vb22-inline .vb22-filters button {
+  padding: 7px var(--space-10px);
+  min-height: 35px
+}
+
+.vb22-inline .vb22-count {
+  height: 15px;
+  font-size: 11px;
+  padding-left: var(--space-8px)
+}
+
+.vb22-inline .vb22-layout {
+  display: block;
+  overflow: auto
+}
+
+.vb22-inline .vb22-list-pane {
+  background: #fff;
+  border-right: 0;
+  padding: 0 15px 15px;
+  overflow: visible
+}
+
+.vb22-inline .vb22-row {
+  padding: 11px var(--space-6px);
+  border-left: 0
+}
+
+.vb22-inline .vb22-row-title {
+  font-size: 13px
+}
+
+.vb22-inline .vb22-foot {
+  padding: var(--space-10px) 21px;
+  font-size: 10px;
+  min-height: 45px
+}
+
+@media(max-width:850px) {
+  .vb22 .vb22-layout {
+    grid-template-columns: 310px minmax(0,1fr)
+  }
+  .vb22 .vb22-detail {
+    padding-left: 21px;
+    padding-right: 21px
+  }
+  .vb22 .vb22-head {
+    padding-left: var(--space-20px);
+    padding-right: var(--space-20px)
+  }
+  .vb22 .vb22-filters {
+    padding-left: var(--space-20px);
+    padding-right: var(--space-20px)
+  }
+}
+
+@media(max-width:650px) {
+  dialog.vb22.vb22-modal {
+    inset: 0 0 var(--vb22-bottom,0px);
+    width: 100vw;
+    height: calc(var(--vb22-height,100dvh) - var(--vb22-bottom,0px));
+    margin: 0;
+    border: 0;
+    border-radius: 0;
+    padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left)
+  }
+  .vb22 .vb22-head {
+    padding: 17px var(--space-16px) 15px;
+    gap: var(--space-8px);
+    align-items: start
+  }
+  .vb22 .vb22-head h2 {
+    font-size: 21px
+  }
+  .vb22 .vb22-tools {
+    gap: 7px;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    max-width: 140px
+  }
+  .vb22 .vb22-add {
+    white-space: normal;
+    font-size: 11px;
+    max-width: 95px;
+    text-align: right;
+    line-height: 1.45
+  }
+  .vb22 .vb22-subtitle {
+    font-size: 10px;
+    max-width: 180px
+  }
+  .vb22 .vb22-tabs {
+    padding: 0 var(--space-16px)
+  }
+  .vb22 .vb22-filters {
+    padding: 13px var(--space-16px);
+    grid-template-columns: 1fr 1fr;
+    gap: 7px
+  }
+  .vb22 .vb22-filters button {
+    padding: 7px var(--space-10px);
+    min-height: 36px;
+    font-size: 12px
+  }
+  .vb22 .vb22-count {
+    font-size: 11px;
+    height: 15px
+  }
+  .vb22 .vb22-layout {
+    display: block;
+    overflow: hidden
+  }
+  .vb22 .vb22-list-pane {
+    height: 100%;
+    padding: 15px var(--space-16px) var(--space-20px);
+    border: 0
+  }
+  .vb22 .vb22-detail {
+    height: 100%;
+    display: none;
+    padding: 17px
+  }
+  .vb22.vb22-show-detail .vb22-list-pane {
+    display: none
+  }
+  .vb22.vb22-show-detail .vb22-detail {
+    display: block
+  }
+  .vb22 .vb22-row {
+    padding: 11px 9px
+  }
+  .vb22 .vb22-row-title {
+    font-size: 14px
+  }
+  .vb22 .vb22-row-patient {
+    font-size: 12px
+  }
+  .vb22 .vb22-row-date {
+    font-size: 11px
+  }
+  .vb22 .vb22-back {
+    display: block;
+    margin-bottom: 15px
+  }
+  .vb22 .vb22-field input,
+  .vb22 .vb22-field select,
+  .vb22 .vb22-field textarea {
+    font-size: 16px
+  }
+  .vb22 .vb22-foot {
+    padding: var(--space-10px) var(--space-16px);
+    font-size: 10px
+  }
+  .vb22 .vb22-form {
+    padding: 15px
+  }
+  .vb22 .vb22-detail h3 {
+    font-size: 22px
+  }
+  .vb22-inline .vb22-layout {
+    overflow: auto
+  }
+  .vb22-inline .vb22-list-pane {
+    height: auto;
+    padding: 0 15px 15px
+  }
+}
+
+@media(max-height:500px) and (min-width:651px) {
+  .vb22 .vb22-head {
+    padding-top: var(--space-12px);
+    padding-bottom: var(--space-12px)
+  }
+  .vb22 .vb22-filters {
+    padding-top: var(--space-10px);
+    padding-bottom: var(--space-10px)
+  }
+}
+
+/* The application glass theme deliberately styles every button/header with
+ * !important. The approved B2.2 workspace keeps its own flat controls. */
+.vb22.vb22 button {
+  background: #fff!important;
+  border: var(--border-hairline) solid var(--vb-line)!important;
+  color: var(--vb-ink)!important;
+  border-radius: var(--radius-9)!important;
+  backdrop-filter: none!important;
+  -webkit-backdrop-filter: none!important;
+  box-shadow: none!important;
+  font-family: inherit!important;
+  width: auto!important;
+  min-width: 0!important
+}
+
+.vb22.vb22 .vb22-icon {
+  width: 36px!important;
+  min-width: 36px!important
+}
+
+.vb22.vb22 .vb22-text,
+.vb22.vb22 .vb22-add {
+  background: transparent!important;
+  border: 0!important;
+  color: var(--vb-teal)!important;
+  border-radius: 0!important
+}
+
+.vb22.vb22 .vb22-primary {
+  background: var(--vb-teal)!important;
+  border-color: var(--vb-teal)!important;
+  color: #fff!important
+}
+
+.vb22.vb22 .vb22-tabs button {
+  background: transparent!important;
+  border: 0!important;
+  border-radius: 0!important;
+  color: var(--vb-muted)!important
+}
+
+.vb22.vb22 .vb22-tabs button.is-active {
+  color: var(--vb-teal)!important
+}
+
+.vb22.vb22 .vb22-filters button {
+  color: #56747a!important
+}
+
+.vb22.vb22 .vb22-filters button.is-active {
+  background: var(--vb-soft)!important;
+  border-color: #91babc!important;
+  box-shadow: 0 0 0 1px #c9dfe0!important;
+  color: #096b71!important
+}
+
+.vb22.vb22 .vb22-row {
+  width: 100%!important;
+  min-height: 0!important;
+  background: transparent!important;
+  border: 0!important;
+  border-bottom: var(--border-hairline) solid #e0e9ea!important;
+  border-left: var(--border-pro) solid transparent!important;
+  border-radius: 0!important
+}
+
+.vb22.vb22 .vb22-row:hover {
+  background: #f3f8f7!important
+}
+
+.vb22.vb22 .vb22-row.is-selected {
+  border-left-color: #218a8f!important;
+  border-bottom-color: #d5e5e4!important;
+  background: #eaf5f3!important;
+  border-radius: var(--radius-8)!important
+}
+
+.vb22.vb22-inline .vb22-row {
+  border-left: 0!important
+}
+
+.vb22 .vb22-head {
+  position: static!important;
+  top: auto!important;
+  width: auto!important;
+  max-width: none!important;
+  margin: 0!important;
+  box-shadow: none!important;
+  backdrop-filter: none!important;
+  -webkit-backdrop-filter: none!important;
+  border-radius: 0!important;
+  border: 0!important;
+  background: #fff!important
+}

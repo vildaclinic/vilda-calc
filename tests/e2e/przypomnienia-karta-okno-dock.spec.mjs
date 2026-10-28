@@ -68,23 +68,21 @@ test('w powłoce z dockiem okno i jego przyciski leżą nad dockiem, nie pod nim
   const dock = page.locator('#mobileBottomDock');
   await expect(dock, 'kontrola dodatnia: dock powłoki jest na ekranie przy 900 px').toBeVisible();
 
-  await f.locator('#remindersInline .vild-rem-row .vild-rem-more').first().click();
-  await f.waitForSelector('.vild-rem-dlg', { state: 'visible' });
+  await f.locator('#remindersInline .vild-rem-row').first().click();
+  await page.waitForSelector('dialog.vb22', { state: 'visible' });
   await page.waitForTimeout(800); // drugi pomiar wcięcia (600 ms) — jak w pełnoekranowych Przypomnieniach
 
-  const dockTop = await page.evaluate(() => document.getElementById('mobileBottomDock').getBoundingClientRect().top);
-  const ramkaTop = await page.evaluate(() => {
-    const el = Array.from(document.querySelectorAll('iframe')).find((x) => (x.getAttribute('src') || '').includes('index.html?embedded=1'));
-    return el.getBoundingClientRect().top;
+  const dockTop = await page.evaluate(() => { const node=document.getElementById('mobileBottomDock'),r=node.getBoundingClientRect();return r.height>0&&getComputedStyle(node).display!=='none'?r.top:innerHeight; });
+  await page.locator('dialog.vb22 .vb22-actions').scrollIntoViewIfNeeded();
+  const g = await page.evaluate(() => {
+    const d = document.querySelector('dialog.vb22');
+    const acts = d.querySelector('.vb22-actions');
+    return { dlgBottom: d.getBoundingClientRect().bottom, actsBottom: acts.getBoundingClientRect().bottom, ovBottom: getComputedStyle(d).getPropertyValue('--vb22-bottom') };
   });
-  const g = await f.evaluate(() => {
-    const d = document.querySelector('.vild-rem-dlg');
-    const acts = document.querySelector('.vild-rem-dlg-acts');
-    return { dlgBottom: d.getBoundingClientRect().bottom, actsBottom: acts.getBoundingClientRect().bottom, ovBottom: getComputedStyle(document.querySelector('.vild-rem-dlg-ov')).bottom };
-  });
-  expect(ramkaTop + g.actsBottom, `przyciski akcji (dół ${Math.round(ramkaTop + g.actsBottom)}) nad dockiem (góra ${Math.round(dockTop)})`).toBeLessThanOrEqual(dockTop + 1);
-  expect(ramkaTop + g.dlgBottom, 'całe okno nad dockiem').toBeLessThanOrEqual(dockTop + 1);
-  expect(g.ovBottom, 'nakładka ma wcięcie na dock').not.toBe('0px');
+  expect(g.actsBottom, `przyciski akcji (dół ${Math.round(g.actsBottom)}) nad dockiem (góra ${Math.round(dockTop)})`).toBeLessThanOrEqual(dockTop + 1);
+  expect(g.dlgBottom, 'całe okno nad dockiem').toBeLessThanOrEqual(dockTop + 1);
+  expect(parseFloat(g.ovBottom), 'wcięcie jest poprawne także przy schowanym docku').toBeGreaterThanOrEqual(0);
+  expect(g.dlgBottom,'dialog pozostaje w widocznym viewport').toBeLessThanOrEqual(600);
 });
 
 test('w dokumencie samodzielnym strzałka „do góry” chowa się na czas okna i wraca po nim', async ({ page }) => {
@@ -103,11 +101,11 @@ test('w dokumencie samodzielnym strzałka „do góry” chowa się na czas okna
     const st = getComputedStyle(b);
     return st.display === 'none' || st.visibility === 'hidden' || st.opacity === '0';
   });
-  await page.locator('#remindersInline .vild-rem-row .vild-rem-more').first().click();
-  await page.waitForSelector('.vild-rem-dlg', { state: 'visible' });
+  await page.locator('#remindersInline .vild-rem-row').first().click();
+  await page.waitForSelector('dialog.vb22', { state: 'visible' });
   expect(await page.evaluate(() => document.body.classList.contains('nav-ui-temporarily-hidden')), 'klasa chowająca nawigację na czas okna').toBe(true);
   expect(await ukryta(), 'strzałka nawigacyjna schowana').not.toBe(false);
   await page.keyboard.press('Escape');
-  await expect(page.locator('.vild-rem-dlg')).toHaveCount(0);
+  await expect(page.locator('dialog.vb22')).toHaveCount(0);
   expect(await page.evaluate(() => document.body.classList.contains('nav-ui-temporarily-hidden')), 'klasa zdjęta po zamknięciu').toBe(false);
 });

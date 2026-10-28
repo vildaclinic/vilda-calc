@@ -1,6 +1,7 @@
 import { expect, test } from '../support/test-czas.mjs';
 
-// P-ARKUSZ-PISANIE (decyzja właściciela 2026-10-18, wariant A): dzienny arkusz „Przypomnienia” nie
+// P-PRZYPOMNIENIA-RECZNIE (2026-10-28): zastępuje P-ARKUSZ-PISANIE. Okno nie otwiera się samo.
+// P-ARKUSZ-PISANIE (wcześniejsza decyzja 2026-10-18, wariant A): arkusz „Przypomnienia” nie
 // przerywa pisania. Zgłoszenie: pierwsze uruchomienie aplikacji, lekarz od razu dotyka Nazwiska
 // i wpisuje — otwiera się podpowiedź zapisanych pacjentów, a w trakcie wchodzi pełnoekranowy
 // arkusz, przez który na iPhonie przebija lista podpowiedzi.
@@ -97,7 +98,7 @@ async function dotknijNazwiska(page, start) {
   await expect.poll(() => start.evaluate(() => document.activeElement && document.activeElement.id)).toBe('lastName');
 }
 
-test('pierwsze uruchomienie dnia: arkusz czeka, aż lekarz przestanie pisać, i wchodzi raz, pełnoekranowo, ok. 3 s po wyjściu z pola', async ({ page }) => {
+test('pierwsze uruchomienie dnia: arkusz nie otwiera się po pisaniu; dzwonek otwiera jeden arkusz w powłoce', async ({ page }) => {
   test.setTimeout(150_000);
   const start = await przygotuj(page);
   // Terminarz wczytuje się w tle ok. 1–1,5 s po starcie; to on pokazywał arkusz niewidocznie.
@@ -117,16 +118,13 @@ test('pierwsze uruchomienie dnia: arkusz czeka, aż lekarz przestanie pisać, i 
   }
   expect(await stanPola(start)).toEqual({ fokus: 'lastName', lista: 'block', nazwisko: 'Fikcyjna' });
 
-  // Wyjście z pola („Gotowe”). Czas mierzony w samej stronie: od wyjścia z pola do wejścia arkusza.
-  await page.evaluate((sel) => {
-    window.__e2eArkusz = null;
-    new MutationObserver((_, o) => { if (document.querySelector(sel)) { window.__e2eArkusz = Date.now(); o.disconnect(); } })
-      .observe(document.body, { childList: true, subtree: true });
-  }, ARKUSZ);
-  const wyjscie = await start.evaluate(() => { document.activeElement.blur(); return Date.now(); });
-  await expect.poll(() => page.evaluate(() => window.__e2eArkusz), { timeout: 15000 }).not.toBeNull();
-  const poIlu = (await page.evaluate(() => window.__e2eArkusz)) - wyjscie;
-  expect(poIlu, '3 s przerwy od ostatniego wpisu albo wyjścia z pola').toBeGreaterThanOrEqual(2900);
+  // Nowa decyzja: po wyjściu z pola okno nie otwiera się już automatycznie.
+  await start.evaluate(() => document.activeElement.blur());
+  await page.evaluate(() => document.dispatchEvent(new CustomEvent('vilda:sync-merged')));
+  await page.waitForTimeout(4000);
+  expect(await arkusze(page), 'bez okna także po przerwie i synchronizacji').toEqual([]);
+  await page.locator('#vildaRemindersBtn').click();
+  await expect(page.locator(ARKUSZ)).toBeVisible();
 
   // Jeden arkusz, w powłoce (jak dotąd pełnoekranowy) — żaden w ukrytym panelu.
   await page.waitForTimeout(1500);
