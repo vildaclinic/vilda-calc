@@ -15,6 +15,7 @@
     { id: "CA_reportedValue", label: "Wydalanie z wyniku badania", placeholder: "np. 360" },
     { id: "CA_reportedUnit", label: "Jednostka gotowego wydalania", options: [["mg/24h", "mg/24 h"], ["mmol/24h", "mmol/24 h"], ["mg/kg/24h", "mg/kg/24 h"]] },
     { id: "CA_collectionHours", label: "Rzeczywisty czas zbiórki", value: "24", placeholder: "24" },
+    { id: "CA_collectionSource", label: "Pochodzenie czasu zbiórki", type: "hidden", value: "assumed-24h" },
   ];
   CONTROLS.push({ id: "CA_clinicalMode", label: "Kontekst interpretacji", options: [["general", "Ocena ogólna / kamica"], ["hypo", "Niedoczynność przytarczyc"], ["phpt", "Pierwotna nadczynność przytarczyc"]] });
   const EDIT_ATTRIBUTES = ["aria-describedby", "aria-invalid"];
@@ -46,7 +47,7 @@
     }
     return CONTROLS.map(spec => {
       const existing = doc.getElementById(spec.id);
-      if (existing) return existing;
+      if (existing) { if (spec.id === "CA_collectionHours") root.ClcrCollectionDuration?.bindControl(existing, { sourceControl: doc.getElementById("CA_collectionSource") }); return existing; }
       const label = element(doc, "label", "", spec.label);
       label.htmlFor = spec.id;
       const control = element(doc, spec.options ? "select" : "input");
@@ -71,6 +72,7 @@
       control.setAttribute("aria-label", spec.label);
       label.append(control);
       registry.append(label);
+      if (spec.id === "CA_collectionSource") root.ClcrCollectionDuration?.bindControl(doc.getElementById("CA_collectionHours"), { sourceControl: control });
       return control;
     });
   }
@@ -221,6 +223,8 @@
     const model = evaluate(doc);
     const rawWeight = doc.getElementById("weight")?.value?.trim() || "";
     const rawHours = doc.getElementById("CA_collectionHours")?.value?.trim() || "";
+    const duration = (doc.defaultView?.ClcrCollectionDuration || root.ClcrCollectionDuration)?.readFromDocument(doc, { fieldId: "CA_collectionHours" });
+    const unresolvedDuration = duration?.missing || !duration?.valid && doc.getElementById("CA_collectionSource")?.value === "historical-missing";
     const input = model?.input || {};
     const knownAdult = model?.populationCategory === "adult";
     layout.weight.row.hidden = knownAdult && !(reported && input.reportedUnit === "mg/kg/24h");
@@ -229,9 +233,9 @@
     const weightOpen = !layout.weight.row.hidden && (layout.weight.userOpen || model?.invalidIds?.includes("weight"));
     layout.weight.editor.hidden = !weightOpen;
     layout.weight.button.setAttribute("aria-expanded", String(Boolean(weightOpen)));
-    layout.duration.value.textContent = rawHours ? `${rawHours.replace(".", ",")} godz.` : "Uzupełnij czas zbiórki";
+    layout.duration.value.textContent = unresolvedDuration ? "Uzupełnij czas" : `${String(duration?.valid ? duration.hours : rawHours || "24").replace(".", ",")} godz.`;
     layout.duration.row.hidden = reported;
-    const durationOpen = !reported && (layout.duration.userOpen || !rawHours || model?.invalidIds?.includes("CA_collectionHours"));
+    const durationOpen = !reported && (layout.duration.userOpen || unresolvedDuration || doc.activeElement?.id === "CA_collectionHours" || model?.invalidIds?.includes("CA_collectionHours"));
     layout.duration.editor.hidden = !durationOpen;
     layout.duration.button.setAttribute("aria-expanded", String(Boolean(durationOpen)));
     const context = doc.getElementById("CA_clinicalMode");
@@ -240,7 +244,8 @@
     layout.clinicalHelp.textContent = model?.populationCategory === "child" ? "Dotyczy rozpoznanej choroby. Zmienia komentarz; norma dla wieku pozostaje ta sama." : "Dotyczy rozpoznanej choroby. Zmienia opis i punkt odniesienia; bez dodatkowych badań do obliczenia.";
     layout.assumption.textContent = reported
       ? "Gotowy wynik traktujemy zgodnie z podaną jednostką jako wydalanie dobowe."
-      : "Przyjmujemy pełną zbiórkę z podanego czasu.";
+      : unresolvedDuration ? "Czas tej zbiórki nie został zapisany. Wpisz rzeczywistą liczbę godzin."
+        : "Domyślnie przyjmujemy pełną zbiórkę 24 h. Jeśli trwała inaczej, zmień czas.";
     layout.assumption.hidden = model?.blocked === true;
     const invalid = Boolean(model && !model.valid && model.errorCode && !/^missing-/.test(model.errorCode));
     layout.error.hidden = !invalid;

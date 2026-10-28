@@ -10,7 +10,7 @@
   const doc = root.document;
   const base = new URL(".", doc.currentScript?.src || root.location.href);
   const pending = new Map();
-  let readerPromise = null, editorPromise = null;
+  let readerPromise = null, editorPromise = null, notesPromise = null;
   const reader = [
     ["clcr_oxcr_persistence.js?v=1", "ClcrOxcrPersistence"],
     ["clcr_citcr_persistence.js?v=1", "ClcrCitcrPersistence"],
@@ -23,13 +23,15 @@
     ["clcr_ph_persistence.js?v=1", "ClcrPhPersistence"],
     ["clcr_ua_persistence.js?v=1", "ClcrUaPersistence"],
     ["clcr_ca_dzm_persistence.js?v=1", "ClcrCaDzmPersistence"],
+    ["clcr_mg_dzm_persistence.js?v=1", "ClcrMgDzmPersistence"],
     // readSaved is pure and needed for the new capture format. Its recalculate
     // method is not called while opening history and resolves engines lazily.
-    ["clcr_saved_calculation.js?v=6", "ClcrSavedCalculation"],
-    ["clcr_saved_results.js?v=6", "ClcrSavedResults"],
+    ["clcr_saved_calculation.js?v=7", "ClcrSavedCalculation"],
+    ["clcr_saved_results.js?v=7", "ClcrSavedResults"],
     ["clcr_saved_results_view.js?v=2", "ClcrSavedResultsView"],
   ];
   const editor = [
+    ["clcr_collection_duration.js?v=1", "ClcrCollectionDuration"],
     ["clcr_clinical_safety.js?v=13", "ClcrClinicalSafety"],
     ["clcr_stone_safety.js?v=1", "ClcrStoneSafety"],
     ["clcr_dialysis_safety.js?v=1", "ClcrDialysisSafety"],
@@ -59,16 +61,18 @@
     ["clcr_tmp_gfr_reference_data.js?v=1", "VildaClcrTmpGfrReferenceData"],
     ["clcr_tmp_gfr.js?v=1", "VildaClcrTmpGfr"],
     ["clcr_ua_reference_data.js?v=1", "ClcrUaReferenceData"],
-    ["clcr_ua.js?v=1", "VildaClcrUa"],
+    ["clcr_ua.js?v=2", "VildaClcrUa"],
     ["clcr_ca_dzm_reference_data.js?v=1", "ClcrCaDzmReferenceData"],
-    ["clcr_ca_dzm.js?v=1", "VildaClcrCaDzm"],
+    ["clcr_ca_dzm.js?v=2", "VildaClcrCaDzm"],
+    ["clcr_mg_dzm_reference_data.js?v=1", "ClcrMgDzmReferenceData"],
+    ["clcr_mg_dzm.js?v=1", "VildaClcrMgDzm"],
     ["clcr_ph_reference_data.js?v=1", "VildaClcrPhReferenceData"],
     ["clcr_ph.js?v=1", "VildaClcrPh"],
     ["clcr_measured_clearance_reference_data.js?v=1", "ClcrMeasuredClearanceReferenceData"],
     ["clcr_measured_clearance_reference.js?v=1", "ClcrMeasuredClearanceReference"],
     ["clcr_result_presentation.js?v=8", "ClcrResultPresentation"],
-    ["clcr_saved_legacy_calculator.js?v=6", "ClcrSavedLegacyCalculator"],
-    ["clcr_result_details.js?v=2", "ClcrResultDetails"],
+    ["clcr_saved_legacy_calculator.js?v=7", "ClcrSavedLegacyCalculator"],
+    ["clcr_result_details.js?v=3", "ClcrResultDetails"],
   ];
   function load(path, name, style = false) {
     if (name && root[name]) return Promise.resolve();
@@ -125,5 +129,15 @@
     }
     return editorPromise;
   }
-  return Object.freeze({ ensureReader, ensureEditor, manifest: Object.freeze({ reader: Object.freeze(reader), editor: Object.freeze(editor) }) });
+  function ensureNotes() {
+    if (!notesPromise) {
+      notesPromise = ensureReader().then(() => Promise.all([
+        load("clcr_notes_view.css?v=1", null, true),
+        load("clcr_notes_view.js?v=1", "ClcrNotesView"),
+      ])).then(() => root.ClcrNotesView);
+      notesPromise.catch(() => { notesPromise = null; });
+    }
+    return notesPromise;
+  }
+  return Object.freeze({ ensureReader, ensureEditor, ensureNotes, manifest: Object.freeze({ reader: Object.freeze(reader), editor: Object.freeze(editor) }) });
 });

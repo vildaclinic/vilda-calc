@@ -15,6 +15,7 @@
     { id: "UA_reportedValue", label: "Wydalanie z wyniku badania", placeholder: "np. 360" },
     { id: "UA_reportedUnit", label: "Jednostka gotowego wydalania", options: [["mg/24h", "mg/24 h"], ["mmol/24h", "mmol/24 h"], ["mg/kg/24h", "mg/kg/24 h"]] },
     { id: "UA_collectionHours", label: "Rzeczywisty czas zbiórki", value: "24", placeholder: "24" },
+    { id: "UA_collectionSource", label: "Pochodzenie czasu zbiórki", type: "hidden", value: "assumed-24h" },
   ];
   const EDIT_ATTRIBUTES = ["aria-describedby", "aria-invalid"];
 
@@ -45,7 +46,7 @@
     }
     return CONTROLS.map(spec => {
       const existing = doc.getElementById(spec.id);
-      if (existing) return existing;
+      if (existing) { if (spec.id === "UA_collectionHours") root.ClcrCollectionDuration?.bindControl(existing, { sourceControl: doc.getElementById("UA_collectionSource") }); return existing; }
       const label = element(doc, "label", "", spec.label);
       label.htmlFor = spec.id;
       const control = element(doc, spec.options ? "select" : "input");
@@ -70,6 +71,7 @@
       control.setAttribute("aria-label", spec.label);
       label.append(control);
       registry.append(label);
+      if (spec.id === "UA_collectionSource") root.ClcrCollectionDuration?.bindControl(doc.getElementById("UA_collectionHours"), { sourceControl: control });
       return control;
     });
   }
@@ -210,6 +212,8 @@
     const model = evaluate(doc);
     const rawWeight = doc.getElementById("weight")?.value?.trim() || "";
     const rawHours = doc.getElementById("UA_collectionHours")?.value?.trim() || "";
+    const duration = (doc.defaultView?.ClcrCollectionDuration || root.ClcrCollectionDuration)?.readFromDocument(doc, { fieldId: "UA_collectionHours" });
+    const unresolvedDuration = duration?.missing || !duration?.valid && doc.getElementById("UA_collectionSource")?.value === "historical-missing";
     const input = model?.input || {};
     const knownAdult = model?.populationCategory === "adult";
     const noWeightNeeded = !rawWeight && (input.mode === "reported" && input.reportedUnit === "mg/kg/24h" || knownAdult);
@@ -218,14 +222,15 @@
     const weightOpen = layout.weight.userOpen || !rawWeight && !noWeightNeeded || model?.invalidIds?.includes("weight");
     layout.weight.editor.hidden = !weightOpen;
     layout.weight.button.setAttribute("aria-expanded", String(Boolean(weightOpen)));
-    layout.duration.value.textContent = rawHours ? `${rawHours.replace(".", ",")} godz.` : "Uzupełnij czas zbiórki";
+    layout.duration.value.textContent = unresolvedDuration ? "Uzupełnij czas" : `${String(duration?.valid ? duration.hours : rawHours || "24").replace(".", ",")} godz.`;
     layout.duration.row.hidden = reported;
-    const durationOpen = !reported && (layout.duration.userOpen || !rawHours || model?.invalidIds?.includes("UA_collectionHours"));
+    const durationOpen = !reported && (layout.duration.userOpen || unresolvedDuration || doc.activeElement?.id === "UA_collectionHours" || model?.invalidIds?.includes("UA_collectionHours"));
     layout.duration.editor.hidden = !durationOpen;
     layout.duration.button.setAttribute("aria-expanded", String(Boolean(durationOpen)));
     layout.assumption.textContent = reported
       ? "Gotowy wynik traktujemy zgodnie z podaną jednostką jako wydalanie dobowe."
-      : "Przyjmujemy pełną zbiórkę z podanego czasu.";
+      : unresolvedDuration ? "Czas tej zbiórki nie został zapisany. Wpisz rzeczywistą liczbę godzin."
+        : "Domyślnie przyjmujemy pełną zbiórkę 24 h. Jeśli trwała inaczej, zmień czas.";
     layout.assumption.hidden = model?.blocked === true;
     const invalid = Boolean(model && !model.valid && model.errorCode && !/^missing-/.test(model.errorCode));
     layout.error.hidden = !invalid;

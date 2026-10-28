@@ -41,7 +41,7 @@ describe('UA DZM — produkcyjny wzór i jednostki', () => {
   it('nie wymaga kreatyniny, wzrostu, BSA, pH ani płci u dziecka', () => {
     const result = engine.evaluate({ ...input, sex: null }, policy);
     expect(result).toMatchObject({ valid: true, rawValue: 12, status: 'high', missingIds: [] });
-    expect(engine.FIELD_IDS).toEqual(['UA_inputMode', 'UA_concentration', 'UA_concentrationUnit', 'UA_volume', 'UA_volumeUnit', 'UA_reportedValue', 'UA_reportedUnit', 'UA_collectionHours']);
+    expect(engine.FIELD_IDS).toEqual(['UA_inputMode', 'UA_concentration', 'UA_concentrationUnit', 'UA_volume', 'UA_volumeUnit', 'UA_reportedValue', 'UA_reportedUnit', 'UA_collectionHours', 'UA_collectionSource']);
   });
 
   it.each([
@@ -161,7 +161,9 @@ describe('UA DZM — dokładność, zero i walidacja wejścia', () => {
 
   it('zwraca wszystkie brakujące pola, a nie arbitralny pusty wynik', () => {
     const result = engine.evaluate({ concentration: '', volume: '', hours: '', weightKg: '' }, policy);
-    expect(result.missingIds).toEqual(['weight', 'UA_concentration', 'UA_volume', 'UA_collectionHours']);
+    expect(result.missingIds).toEqual(['weight', 'UA_concentration', 'UA_volume']);
+    expect(Number(result.input.hours)).toBe(24);
+    expect(result.input.durationSource).toBe('assumed-24h');
     expect(result).toMatchObject({ valid: false, referenceActive: false });
   });
 

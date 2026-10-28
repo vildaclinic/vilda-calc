@@ -11,7 +11,7 @@ const bsaSource = source.slice(source.indexOf('function BSA_DuBois('), source.in
 function runtime(overrides = {}) {
   const browser = {};
   for (const file of [
-    'clcr_clinical_safety.js', 'clcr_extended_egfr.js',
+    'clcr_collection_duration.js', 'clcr_clinical_safety.js', 'clcr_extended_egfr.js',
     'clcr_measured_clearance_reference_data.js', 'clcr_measured_clearance_reference.js',
   ]) loadBrowserScript(file, browser);
   const values = {

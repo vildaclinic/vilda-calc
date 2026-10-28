@@ -1313,3 +1313,65 @@ git log origin/audyt --format='%h %s' ad98909a..origin/audyt -- <plik>     # zmi
 Czytelne źródła bez bundlera: `clcr_ca_dzm.js` (dokładny producent), `clcr_ca_dzm_reference_data.js` (wersjonowane dane), `clcr_ca_dzm_ui.js`/`.css` (formularz i kartaB), `clcr_ca_dzm_persistence.js` (zamrożona ocena, jawna edycja). Integracja pozostaje w czytelnych inline02/inline04, `clcr_ui_workflow.js` i adapterach zapisu. Klinika: `docs/clinical/CA_DZM.md`.
 
 Producent fragmentu sesji: `tools/patch-klirens-ca-dzm-session.mjs`; `node tools/patch-klirens-ca-dzm-session.mjs inline_kalkulator_klirens_07.js` wstawia lub sprawdza dokładny fragment `KLIRENS-CA-DZM-SESSION` i jednoznaczne haki. Poprzednie patchery pozostają idempotentne. Wersje końcowe ustawia `npm run podbij-wersje`.
+
+### Dobowe wydalanie magnezu i wspólny czas zbiórki — 28.10.2026
+
+Czytelne źródła bez bundlera: `clcr_mg_dzm.js` (producent wyniku),
+`clcr_mg_dzm_reference_data.js` (wersjonowane źródła i polityka),
+`clcr_mg_dzm_ui.js`/`.css` (kontrolki, formularz i karta wyniku) oraz
+`clcr_mg_dzm_persistence.js` (odczyt zamrożonej oceny). Wspólny liczbowy czas
+zbiórki i pochodzenie 24 h są w `clcr_collection_duration.js`/`.css`.
+Integracja kalkulatora pozostaje w czytelnych fragmentach
+`inline_kalkulator_klirens_02.js`, `inline_kalkulator_klirens_04.js`,
+`clcr_ui_workflow.js` oraz istniejących adapterach zapisu, historii i edycji.
+Nie odtwarzano wzoru z dawnego zminifikowanego buildu. Klinika i ograniczenia:
+`docs/clinical/MG_DZM.md`, `docs/clinical/DZM_COLLECTION_DURATION.md`.
+
+Producent fragmentu sesji to `tools/patch-klirens-mg-dzm-session.mjs`:
+
+```bash
+node tools/patch-klirens-mg-dzm-session.mjs inline_kalkulator_klirens_07.js
+```
+
+Polecenie wstawia lub sprawdza dokładny, czytelny fragment
+`KLIRENS-MG-DZM-SESSION` i pojedynczy hook materializacji kontrolek przy
+przechwytywaniu sesji. Eksportowany `patchMgDzmSessionHooks(source)` odrzuca
+niejednoznaczny punkt wpięcia albo rozbieżność z producentem. Adapter dodaje
+obsługę Mg, pochodzenia czasu i resetu, zachowując wcześniejsze łatki sesji.
+Liczbowy czas dawnej zbiórki pozostaje utrwalonym czasem; niejednoznaczne stare
+daty nie są ponownie interpretowane w strefie urządzenia ani zastępowane 24 h.
+Regresje uruchamiają rzeczywisty adapter:
+`tests/unit/klirens-mg-dzm-session.test.mjs`.
+
+### Czytelne wyniki Klirensu w Notatkach — 28.10.2026
+
+Czytelne źródła bez bundlera: `clcr_notes_view.js`/`.css`. Widok korzysta z
+istniejących `ClcrSavedResults.projectPatientNotes` i
+`ClcrSavedCalculation.readSaved`; nie przelicza historycznych pomiarów ani nie
+zmienia treści zapisanych notatek. `clcr_record_resources.js` udostępnia leniwe
+`ensureNotes()`; silniki i edytor są ładowane dopiero po jawnej akcji otwarcia
+szczegółów. Kontrakt widoku, komentarzy i kanonicznej edycji/usuwania:
+`docs/clinical/KLIRENS_NOTES.md`.
+
+Wąskie podpięcie do zachowanego artefaktu auth odtwarza:
+
+```bash
+node tools/patch-klirens-notes-view.mjs
+```
+
+Skrypt dotyczy wyłącznie `vilda_auth_ui.js`. Wstawia czytelny blok oznaczony
+`KLIRENS-NOTES-VIEW` oraz trzy jednoznaczne warunki dla kategorii
+`wynik-klirens`: tytuł `Jo`, karta notatki `h` w `Xo` i wejście ogólnego edytora
+`ga`. Pozostałe notatki, przypomnienia i istniejący kod auth pozostają
+dotychczasowe. Ponowne wywołanie nie dodaje drugiego bloku ani hooka;
+niejednoznaczny lub zmieniony punkt wpięcia zgłasza błąd. Wynik pomiaru trafia
+do istniejących `ClcrResultDetails` oraz transakcji tego samego identyfikatora,
+bez edytora tekstowego technicznej koperty.
+
+Regresje: `tests/unit/klirens-notes-view.test.mjs`,
+`tests/unit/klirens-notes-resources.test.mjs` i
+`tests/e2e/klirens-notes-view.spec.mjs`. Dane są jednoznacznie fikcyjne;
+załączniki właściciela i dane realnego sejfu nie są źródłem fixture.
+Nowe zasoby wymagają jawnych wpisów ładowania/precache; końcowe wersje znanych
+zasobów ustawia `npm run podbij-wersje`, bez przebudowy artefaktów z dawnych
+źródeł.

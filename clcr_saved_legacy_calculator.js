@@ -58,18 +58,13 @@
     const candidates = [context.ageYears, context.ageContext?.exactYears, context.age?.exactYears];
     return candidates.find((value) => Number.isFinite(value) && value >= 0) ?? null;
   }
-  function duration(values) {
-    const start = Date.parse(values.collectionStartAt || "");
-    const end = Date.parse(values.collectionEndAt || "");
-    const minutes = (end - start) / 6e4;
-    return Number.isFinite(minutes) && minutes > 0 ? minutes : null;
-  }
   const protocolFields = Object.freeze(["collectionStartVoidDiscarded", "collectionFinalVoidIncluded", "collectionNoMissedVoids", "collectionNoSpillage", "collectionNoExtraVoids", "collectionStorageFollowed"]);
-  function collection(values) {
-    const minutes = duration(values);
-    const complete = protocolFields.every((id) => checked(values, id));
-    const volume = number(values, "V24");
-    return { minutes, complete, volume, dailyVolume: volume > 0 && minutes && complete ? dailyAmount(volume, minutes) : null };
+  function durationResult(values, context = {}) {
+    return requiredModule("ClcrCollectionDuration").fromValues(values, context, { historical: values.durationNeedsConfirmation === true || values.Cl24DurationSource === "historical-missing" || context.durationHistorical === true });
+  }
+  function collection(values, context = {}) {
+    const result = durationResult(values, context), volume = number(values, "V24");
+    return { ...result, volume, dailyVolume: volume > 0 && result.valid && result.complete ? dailyAmount(volume, result.minutes) : null };
   }
   function bsa(values, age) {
     const weight = number(values, "weight"), height = number(values, "height");
@@ -120,8 +115,9 @@
   }
   function measured(values, parameterKey, context) {
     const safety = requiredModule("ClcrClinicalSafety");
-    const hours = number(values, "Cl24DurationHours");
-    const minutes = hours !== null && hours > 0 ? hours * 60 : null;
+    const collectionTime = durationResult(values, context);
+    if (!collectionTime.valid) throw new Error(collectionTime.error);
+    const minutes = collectionTime.minutes;
     const serum = number(values, "Scr");
     const protocol = {}, knownProblems = [];
     const keys = ["startVoidDiscarded", "finalVoidIncluded", "noMissedVoids", "noSpillage", "noExtraVoids", "storageFollowed"];
@@ -134,7 +130,7 @@
     const input = {
       urineCreatinineMgDl: number(values, "Ucr"), serumCreatinineMgDl: values.ScrUnit === "umol" && serum !== null ? serum / 88.4 : values.ScrUnit === "mg/dl" ? serum : null,
       volumeMl: number(values, "V24"), durationMinutes: minutes,
-      durationSource: minutes ? values.Cl24DurationSource === "legacy-dates" ? "legacy-dates" : "hours" : "missing",
+      durationSource: collectionTime.source,
       bsaM2: area, bsaMethod: area ? age < 18 ? "Haycock" : "Du Bois" : "", weightKg: number(values, "weight"), heightCm: number(values, "height"), ageYears: age, sex: values.sex || "",
       protocolMode: "assumed-complete", protocol, collectionProblem, knownProblems,
       collectionAssumptions: { collectionCompleteness: collectionProblem ? "known-problem" : "assumed", serumSampling: "assumed-compatible" },
@@ -184,6 +180,16 @@
   }
   function recalculate(formulaId, values = {}, parameterKey = formulaId, context = {}) {
     parameterKey = String(parameterKey).replace(/^clcr:/, "");
+    if (formulaId === "Mg_mgkg") {
+      const engine = requiredModule("VildaClcrMgDzm"), policy = requiredModule("ClcrMgDzmReferenceData").DEFAULT_POLICY;
+      const persistence = requiredModule("ClcrMgDzmPersistence");
+      const prepared = persistence.prepareValues(values, context);
+      const result = engine.evaluate(engine.inputFromValues(prepared, context), policy);
+      if (!result.valid) throw new Error(result.error || "Sprawdź dane potrzebne do obliczenia wydalania magnezu.");
+      const datapoint = { id: parameterKey, sourceFormulaId: formulaId, label: "Wydalanie magnezu (DZM)", testKey: "clcr:Mg_mgkg", category: null, comparator: "", mgDzmSnapshot: result };
+      persistence.augmentDatapoint({ getAttribute: () => JSON.stringify(result) }, datapoint);
+      return datapoint;
+    }
     if (formulaId === "Ca_mgkg") {
       const engine = requiredModule("VildaClcrCaDzm"), policy = requiredModule("ClcrCaDzmReferenceData").DEFAULT_POLICY;
       const persistence = requiredModule("ClcrCaDzmPersistence");
@@ -260,8 +266,9 @@
     if (formulaId === "pH24") {
       const value = number(values, formulaId === "pH24" ? "pH24" : "U_pH");
       if (!(value > 0 && value <= 14)) throw new Error("Podaj prawidłowe pH.");
-      const sample = collection(values);
-      if (formulaId === "pH24" && (!sample.minutes || !sample.complete)) throw new Error("Uzupełnij protokół i czas zbiórki.");
+      const sample = collection(values, context);
+      if (!sample.valid) throw new Error(sample.error);
+      if (!sample.complete) throw new Error("Zgłoszono niepełną lub błędną zbiórkę moczu.");
       let interpreted = null;
       if (formulaId === "pH24" && age !== null && age >= 18 && (checked(values, "stoneKnownCystinuria") || checked(values, "stoneMetabolicEvaluationContext")) && sample.complete && Math.abs(sample.minutes - 1440) <= 0.5 && checked(values, "stoneCollectionPlausibilityReviewed") && checked(values, "stoneTwoCollectionsConfirmed")) {
         interpreted = requiredModule("ClcrStoneSafety").interpretAdultDzmPh({ ph: value, treatmentContext: checked(values, "stoneKnownCystinuria") ? "cystinuria" : null, persistentAbnormalPh: checked(values, "stonePhPersistent") });
@@ -272,7 +279,8 @@
       } : { label: "pH moczu", tone: "neutral", reasons: interpreted?.message ? [interpreted.message] : [] };
       return modeled(formulaId, parameterKey, value, "", 2, values, context, { presentation, referenceContext: { stone: interpreted } });
     }
-    const sample = collection(values), daily = sample.dailyVolume;
+    const sample = collection(values, context), daily = sample.dailyVolume;
+    if (["Mg_mgkg", "Ox_mgkg", "Cit_mgkg", "Na_mmol_d", "K_mmol_d", "PO4_mgkg", "Prot_mgkg"].includes(formulaId) && !sample.valid) throw new Error(sample.error);
     const weight = number(values, "weight"), urineCr = number(values, "Ucr");
     const calcium = calciumMgDl(number(values, "U_Ca")), magnesium = magnesiumMgDl(number(values, "U_Mg"));
     let value, unit = "mg/mg", digits = 3;
