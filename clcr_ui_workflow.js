@@ -3811,6 +3811,7 @@
         if (
           [
             "UA_inputMode", "CA_inputMode", "MG_inputMode",
+            "UA_collectionSource", "CA_collectionSource", "MG_collectionSource",
             "formulaSearch",
             "formulaPicker",
             "samePatientMode",

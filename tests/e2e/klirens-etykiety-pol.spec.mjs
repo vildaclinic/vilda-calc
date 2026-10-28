@@ -77,6 +77,10 @@ test.describe('etykiety pól Klirensu wskazują pole, nie przycisk „i"', () =>
     const { liczba, zle } = await zlyCelEtykiet(page);
     expect(liczba, 'kontrola sensu: strona ma udekorowane pola').toBeGreaterThan(50);
     expect(zle, JSON.stringify(zle.slice(0, 8))).toEqual([]);
+    for (const id of ['CA_collectionSource', 'UA_collectionSource', 'MG_collectionSource']) {
+      await expect(page.locator('#' + id)).toHaveAttribute('type', 'hidden');
+      await expect(page.locator(`label.clcr-field[data-clcr-field-id="${id}"]`)).toHaveCount(0);
+    }
   });
 
   test('klik w nazwę pola wyboru przełącza pole, a „i" tylko otwiera pomoc', async ({ page }) => {
@@ -104,10 +108,10 @@ test.describe('etykiety pól Klirensu wskazują pole, nie przycisk „i"', () =>
   });
 
   test('pole z listą odpowiedzi: klik w nazwę daje fokus liście i niczego nie potwierdza', async ({ page }) => {
-    // The response-list label contract is still used by timed collections;
-    // TmP/GFR no longer asks for a routine sampling confirmation.
-    await otworzKalkulator(page, { tryb: 'Na_mmol_d' });
-    const lista = page.locator('#ui_collectionStartVoidDiscarded_answer');
+    // Dialysis still requires sampling confirmations. Routine DZM uses
+    // explicit assumptions, so it no longer creates these response lists.
+    await otworzKalkulator(page, { tryb: 'KTV' });
+    const lista = page.locator('#ui_ktvSameSession_answer');
     for (const details of await lista.locator('xpath=ancestor::details').all()) {
       if (await details.getAttribute('open') === null) await kliknij(details.locator(':scope > summary'));
     }
@@ -117,16 +121,16 @@ test.describe('etykiety pól Klirensu wskazują pole, nie przycisk „i"', () =>
     const { zle } = await zlyCelEtykiet(page);
     expect(zle, JSON.stringify(zle.slice(0, 8))).toEqual([]);
 
-    await kliknij(nazwa(page, 'collectionStartVoidDiscarded'));
+    await kliknij(nazwa(page, 'ktvSameSession'));
     await expect(lista, 'fokus na liście odpowiedzi').toBeFocused();
     await expect(lista, 'klik w nazwę nie wybiera odpowiedzi').toHaveValue('');
-    await expect(page.locator('#collectionStartVoidDiscarded'), 'ukryte pole wyboru zostaje niezaznaczone').not.toBeChecked();
-    await expect(dymek(page, 'collectionStartVoidDiscarded')).toBeHidden();
+    await expect(page.locator('#ktvSameSession'), 'ukryte pole wyboru zostaje niezaznaczone').not.toBeChecked();
+    await expect(dymek(page, 'ktvSameSession')).toBeHidden();
 
-    await kliknij(info(page, 'collectionStartVoidDiscarded'));
-    await expect(dymek(page, 'collectionStartVoidDiscarded')).toBeVisible();
+    await kliknij(info(page, 'ktvSameSession'));
+    await expect(dymek(page, 'ktvSameSession')).toBeVisible();
     await expect(lista).toHaveValue('');
-    await expect(page.locator('#collectionStartVoidDiscarded')).not.toBeChecked();
+    await expect(page.locator('#ktvSameSession')).not.toBeChecked();
   });
 });
 
