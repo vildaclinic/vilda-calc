@@ -347,16 +347,12 @@ test('cl24: znany problem zbiórki i przeciwwskazania blokują, dawne niezaznacz
   });
   await expectResult(page);
   await selectFormula(page, 'UA_mgkg');
-  // Zmiana obliczenia ma własny dotychczasowy reset. Wpisujemy ponownie dane
-  // liczbowe, aby brak wyniku dowodził wymagania protokołu, a nie pustego UUA.
-  await page.locator('#U_UA').fill('100');
-  await page.locator('#V24').fill('1440');
-  await page.locator('#collectionStartAt').fill('2026-10-01T08:00');
-  await page.locator('#collectionEndAt').fill('2026-10-02T08:00');
-  expect(await inputs(page)).toMatchObject({ U_UA: '100', V24: '1440', weight: '70' });
+  // Audited UA owns dedicated controls and assumes a complete 24-hour collection.
+  await page.locator('#UA_concentration').fill('100');
+  await page.locator('#UA_volume').fill('1440');
   await expect(page.locator('#clcrResultReport .clcr-result-card[data-clcr-series="cl24"]')).toHaveCount(0);
-  await expect(page.locator('#clcrResultReport .clcr-result-card[data-clcr-series="UA_mgkg"]')).toHaveCount(0);
-  expect(await page.evaluate(() => window.ClcrUiWorkflow.getFormulaReadiness('UA_mgkg').valueReady)).toBe(false);
+  await expect(page.locator('#clcrResultReport .clcr-result-card[data-clcr-series="UA_mgkg"]')).toHaveCount(1);
+  expect(await page.evaluate(() => window.ClcrUiWorkflow.getFormulaReadiness('UA_mgkg').valueReady)).toBe(true);
   await selectFormula(page);
   await expect(page.locator('#Cl24DurationHours')).toHaveValue('24');
   await expectResult(page);

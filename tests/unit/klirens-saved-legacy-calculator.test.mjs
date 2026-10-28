@@ -6,6 +6,7 @@ for (const file of [
   'clcr_uag_reference_data.js', 'clcr_uag.js',
   'clcr_tmp_gfr_reference_data.js', 'clcr_tmp_gfr.js', 'clcr_tmp_gfr_persistence.js',
   'clcr_ph_reference_data.js', 'clcr_ph.js', 'clcr_ph_persistence.js',
+  'clcr_ua_reference_data.js', 'clcr_ua.js', 'clcr_ua_persistence.js',
   'clcr_clinical_safety.js', 'clcr_extended_egfr.js', 'clcr_calculation_assumptions.js',
   'clcr_result_reference_data.js', 'clcr_result_presentation.js',
   'clcr_measured_clearance_reference_data.js', 'clcr_measured_clearance_reference.js',
@@ -27,7 +28,7 @@ const calculate = (id, patch = {}, output = id, context = {}) => engine.recalcul
 
 describe('Saved Klirens: existing timed-urine production arithmetic', () => {
   it.each([
-    ['UA_mgkg', 6, 'mg/kg/24 h'], ['Ca_mgkg', 2.4, 'mg/kg/24 h'],
+    ['Ca_mgkg', 2.4, 'mg/kg/24 h'],
     ['Mg_mgkg', 0.6, 'mg/kg/24 h'], ['PO4_mgkg', 150, 'mg P/24 h'],
     ['Ox_mgkg', 0.06, 'mg/kg/24 h'], ['Cit_mgkg', 1.5, 'mg/kg/24 h'],
     ['Na_mmol_d', 90, 'mmol/24 h'], ['K_mmol_d', 60, 'mmol/24 h'],
@@ -42,10 +43,10 @@ describe('Saved Klirens: existing timed-urine production arithmetic', () => {
   });
 
   it('normalizes the recorded collection duration, without using a current day', () => {
-    expect(calculate('UA_mgkg', { collectionEndAt: '2026-10-20T20:00' }).valueNum).toBe(12);
+    expect(calculate('Ca_mgkg', { collectionEndAt: '2026-10-20T20:00' }).valueNum).toBe(4.8);
     expect(calculate('Ca_Cr', { collectionEndAt: '' }).valueNum).toBe(0.08);
-    expect(() => calculate('UA_mgkg', { collectionEndAt: '' })).toThrow();
-    expect(() => calculate('UA_mgkg', { collectionNoMissedVoids: false })).toThrow();
+    expect(() => calculate('Ca_mgkg', { collectionEndAt: '' })).toThrow();
+    expect(() => calculate('Ca_mgkg', { collectionNoMissedVoids: false })).toThrow();
   });
 
   it('updates only the requested one of the three protein outputs', () => {
@@ -63,7 +64,7 @@ describe('Saved Klirens: existing timed-urine production arithmetic', () => {
   it('uses the existing phosphorus producer for an exact zero, without changing zero rules of other formulas', () => {
     expect(calculate('PO4_mgkg', { U_PO4: '0' }).valueNum).toBe(0);
     expect(() => calculate('PO4_mgkg', { U_PO4: '-1' })).toThrow();
-    expect(() => calculate('UA_mgkg', { U_UA: '0' })).toThrow();
+    expect(() => calculate('Ca_mgkg', { U_Ca: '0' })).toThrow();
   });
 
   it('preserves negative UAG and contradictory specimen information', () => {
@@ -146,6 +147,6 @@ describe('Saved Klirens: measured clearance, CG and dialysis reuse actual produc
     expect(fields.UreaPost).toBe(36);
   });
   it('rejects an unavailable frozen reference profile rather than using a new policy', () => {
-    expect(() => calculate('UA_mgkg', {}, 'UA_mgkg', { profileId: 'unknown-version' })).toThrow(/profil/);
+    expect(() => calculate('Ca_mgkg', {}, 'Ca_mgkg', { profileId: 'unknown-version' })).toThrow(/profil/);
   });
 });

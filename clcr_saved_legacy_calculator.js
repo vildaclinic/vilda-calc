@@ -184,6 +184,16 @@
   }
   function recalculate(formulaId, values = {}, parameterKey = formulaId, context = {}) {
     parameterKey = String(parameterKey).replace(/^clcr:/, "");
+    if (formulaId === "UA_mgkg") {
+      const engine = requiredModule("VildaClcrUa"), policy = requiredModule("ClcrUaReferenceData").DEFAULT_POLICY;
+      const persistence = requiredModule("ClcrUaPersistence");
+      const prepared = persistence.prepareValues(values, context);
+      const result = engine.evaluate(engine.inputFromValues(prepared, context), policy);
+      if (!result.valid) throw new Error(result.error || "Sprawdź dane potrzebne do obliczenia wydalania kwasu moczowego.");
+      const datapoint = { id: parameterKey, sourceFormulaId: formulaId, label: "Wydalanie kwasu moczowego (DZM)", testKey: "clcr:UA_mgkg", category: null, comparator: "", uaSnapshot: result };
+      persistence.augmentDatapoint({ getAttribute: () => JSON.stringify(result) }, datapoint);
+      return datapoint;
+    }
     if (formulaId === "cl24") return measured(values, parameterKey, context);
     if (formulaId === "KTV") return dialysis(values, parameterKey, context);
     const age = formulaId === "cg_norm" ? number(values, "age") : ageOf(values, context), safety = requiredModule("ClcrClinicalSafety");
@@ -256,7 +266,7 @@
     const weight = number(values, "weight"), urineCr = number(values, "Ucr");
     const calcium = calciumMgDl(number(values, "U_Ca")), magnesium = magnesiumMgDl(number(values, "U_Mg"));
     let value, unit = "mg/mg", digits = 3;
-    const analytes = { UA_mgkg: "U_UA", Ca_mgkg: "U_Ca", Mg_mgkg: "U_Mg", Ox_mgkg: "U_Ox", Cit_mgkg: "U_Cit" };
+    const analytes = { Ca_mgkg: "U_Ca", Mg_mgkg: "U_Mg", Ox_mgkg: "U_Ox", Cit_mgkg: "U_Cit" };
     if (own(analytes, formulaId)) {
       const concentration = formulaId === "Ca_mgkg" ? calcium : formulaId === "Mg_mgkg" ? magnesium : number(values, analytes[formulaId]);
       value = excr_mgkg(concentration, daily, weight); unit = "mg/kg/24 h"; digits = 1;
