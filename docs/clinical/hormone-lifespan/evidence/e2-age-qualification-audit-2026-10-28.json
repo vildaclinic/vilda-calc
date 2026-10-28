@@ -1,0 +1,55 @@
+{
+  "date": "2026-10-28",
+  "source": "Mayo Clinic Laboratories EEST/81816, Estradiol, Serum",
+  "sourceUrls": {
+    "html": "https://www.mayocliniclabs.com/test-catalog/Overview/81816",
+    "pdf": "https://www.mayocliniclabs.com/test-catalog/download-setup?format=pdf&unit_code=81816"
+  },
+  "sha256": {
+    "mayo-eest.html": "872bf31fe8ce253fc645edfceb5118ff1cd6f696d63fb2f014a2af1053bac4bd",
+    "mayo-eest.pdf": "99e429cfa0d228854aa97767db3b27a163a0d4a496c4dbd46cfb0285a4177d55"
+  },
+  "readScope": "Full official HTML and7-page PDF; Reference Values p3, method p1 and6–7, clinical limitations p4–6",
+  "population": "Children separated by sex and Tanner; adults by sex/reproductive context. Pediatric RI based on literature, method cross-correlation and young-adult data; full cohort N and GA qualification unavailable.",
+  "sourceUnit": "pg/mL",
+  "sourceSpecimen": "serum",
+  "sourceMethod": "LC-MS/MS",
+  "facts": [
+    "Children1–14days described without tabulated numerical RI",
+    "StageI >14days and prepubertal",
+    "Mean age is not a cutoff",
+    "Adult reference sections separate from children"
+  ],
+  "appPolicy": {
+    "adultAgeYears": 18,
+    "adultAgeOrigin": "existing application age boundary, not newly recovered Mayo limit",
+    "neonatalMaxDays": 14,
+    "fullIntervalRequired": true,
+    "missingAgeNoReference": true
+  },
+  "normValuesChanged": false,
+  "conversionFactorsChanged": false,
+  "tietzFullTableAvailable": false,
+  "tietzNumbersRevalidated": false,
+  "clinicalValidation": false,
+  "ownerAuthorization": "Owner accepted final audit recommendation and instructed implementation on2026-10-28",
+  "cases": [
+    {
+      "input": "M30,TannerI,E2=50pmol/L",
+      "before": "pediatric0–47.79,above",
+      "after": "existing adult40–160,within"
+    },
+    {
+      "input": "M,missing age,TannerI/V",
+      "after": "no RI,conversion retained"
+    },
+    {
+      "input": "M,14days,TannerI",
+      "after": "no RI"
+    },
+    {
+      "input": "F30,unknown cycle,TannerI",
+      "after": "four neutral phase alternatives,unchanged"
+    }
+  ]
+}

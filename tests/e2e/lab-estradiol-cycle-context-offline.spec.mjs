@@ -264,6 +264,21 @@ for (const upgrade of [false, true]) test(`E2 unknown cycle survives ${upgrade ?
     await expectUnknown(page);
     await verifyResources(page, resources, loaded);
     expect(await noNetwork(), 'the origin remains stopped after conversion, context reset, and reload').toBe(true);
+    // New E2 age qualification runs from the newly installed production
+    // resources after the entire browser has restarted without the origin.
+    await page.evaluate(() => {
+      window.VildaPersistence.writeShared({ name: 'Fikcyjny dorosły E2 offline', sex: 'M', age: 30, ageMonths: 0, tannerStage: 1 }, { force: true });
+      window.dispatchEvent(new Event('focus'));
+    });
+    await page.locator('#labValue').fill('50');
+    await expect(page.locator('#labMeta')).toContainText('40–160');
+    await expect(page.locator('#labResultStatus')).toContainText('w zakresie normy');
+    await page.evaluate(() => {
+      window.VildaPersistence.writeShared({ name: 'Fikcyjny noworodek E2 offline', sex: 'M', age: 0, ageMonths: 0, tannerStage: 1 }, { force: true });
+      window.dispatchEvent(new Event('focus'));
+    });
+    await expect(page.locator('#labRangeBlock')).toContainText('Brak zakresu referencyjnego estradiolu');
+    await expect(page.locator('#labRangeBlock .lab-range-scale')).toHaveCount(0);
     await testInfo.attach('E2-offline-production-evidence', { body: JSON.stringify({
       baseline: upgrade ? deployment.baseline : 'fresh-current-production-install',
       previousVersion: upgrade ? deployment.previousVersion : null, version: deployment.version,
