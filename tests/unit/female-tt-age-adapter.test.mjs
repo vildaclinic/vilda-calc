@@ -75,6 +75,27 @@ describe('Female TT age — actual converter context adapter and real source rea
     expect(result).toEqual(before);
   });
 
+  it('forwards a detached real Mayo preview without changing canonical bounds or the assessment', () => {
+    const app = adapter(), result = evaluate({ value: '1.50', age: { years: 3, months: 0, precision: 'year' } });
+    const before = structuredClone(result);
+    app.update(result);
+    expect(app.last().context.referencePreview).toEqual(result.referencePreview);
+    expect(app.last().context.referencePreview.byAge.status).toBe('above');
+    expect(app.last().context.referencePreview.byAge.range.bounds.upper.value).toBe(.6934);
+    app.last().context.referencePreview.byAge.range.bounds.upper.value = 999;
+    expect(result).toEqual(before);
+    app.update(result);
+    expect(app.last().context.referencePreview.byAge.range.bounds.upper.value).toBe(.6934);
+  });
+
+  it('withholds a source context that belongs to a different current person', () => {
+    const app = adapter();
+    app.update(evaluate());
+    app.context.sourcePatient.identityKey = 'fictional-abandoned-tt-person';
+    app.update(evaluate());
+    expect(app.last()).toBeNull();
+  });
+
   it('forwards normalized postmenopause even when the unchanged Mayo preview remains within', () => {
     const app = adapter(), baseline = evaluate();
     app.update(baseline);

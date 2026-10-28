@@ -110,7 +110,7 @@ test('female TT keeps the source curve fixed for zero, overflow, inequalities an
   await page.locator('#labValue').fill('<10');
   await expectMedian(page);
   await expectNoPatientPoint(page);
-  await expect(page.locator('#labResultBig .lab-result-big-value')).toHaveText('<10');
+  await expect(page.locator('#labResultBig .lab-result-big-value')).toHaveText('<10,00');
   await expect(page.locator('#labResultBig .lab-result-big-unit')).toHaveText('ng/dL');
   await expect(card(page).locator('[data-female-tt-age="state"]')).toContainText(/nierówno/);
   await expect(card(page).locator('[data-female-tt-age="state"]')).not.toContainText(/0[,.]3467/);
@@ -122,7 +122,7 @@ test('female TT uses the whole age interval and clears a same-person age correct
   const original = await geometry(page);
   const identity = (await runtimeState(page)).context.identityKey;
   for (const [age, months, expected] of [[12, 6, .4874143269614546], [17, '', .8313584790221047],
-    [18, '', null], [3, '', null], [75, '', null], ['', '', null], [12, 0, .42502815745885664]]) {
+    [18, '', null], [0, 5, null], [75, '', null], ['', '', null], [12, 0, .42502815745885664]]) {
     await setQuickAge(page, age, months);
     if (expected == null) await expectNoMedian(page);
     else {

@@ -812,13 +812,17 @@
     function isLegacyFemale() { return getEffectiveContext().isLegacyFemale; }
     function displayMeasurement(unit) {
       if (!isTestosterone()) return evaluation.measurement.raw;
-      if (unit === evaluation.measurement.sourceUnit) return evaluation.measurement.raw;
+      var fixedFemale = evaluation.input.sex === 'F' && evaluation.input.contextBasis === 'current-patient' &&
+        !evaluation.input.sampleDateISO && renderer && typeof renderer.formatFemaleTestosteroneNumber === 'function';
+      if (!fixedFemale && unit === evaluation.measurement.sourceUnit) return evaluation.measurement.raw;
+      // Always convert the original input, never an earlier rounded display.
       var converted = engine.convertMeasurement(evaluation.measurement.raw, evaluation.measurement.sourceUnit, unit);
       if (!converted || converted.status !== 'valid') return '—';
       if (converted.value === null) return converted.raw;
       var operator = ({ '>=': '≥', '<=': '≤', '=': '' })[converted.operator];
       if (operator == null) operator = converted.operator || '';
-      return operator + String(Number(converted.value.toPrecision(8))).replace('.', ',');
+      return operator + (fixedFemale ? renderer.formatFemaleTestosteroneNumber(converted.value, unit)
+        : String(Number(converted.value.toPrecision(8))).replace('.', ','));
     }
     function render(measurement) {
       if (!analyte) return null;
@@ -847,7 +851,8 @@
       // Wspólny model prezentacji wyprowadza wyróżnienie z obu zapisanych
       // porównań. Formularz nie oblicza ponownie progów ani zakresów.
       var view = renderer.renderEvaluation(assessment, evaluation, {
-        compact: true, hideMeasurement: true, live: true, pretermContextMode: neonatalContext(), displayUnit: target
+        compact: true, hideMeasurement: true, live: true, pretermContextMode: neonatalContext(), displayUnit: target,
+        femaleTtFixedDecimals: isTestosterone() && input.sex === 'F' && input.contextBasis === 'current-patient' && !input.sampleDateISO
       });
       var prepubertal = evaluation.prepubertalLh;
       if (status && valid && analyte === 'lh' && prepubertal && prepubertal.status === 'available') {
@@ -914,7 +919,7 @@
     return { setAnalyte: setAnalyte, setPatientContext: setPatientContext, render: render, getAssessment: getAssessment, getEffectiveContext: getEffectiveContext, getLegacyPatient: getLegacyPatient, isLegacyFemale: isLegacyFemale, reset: reset };
   }
 
-  var api = { version: '1.15.0', buildInput: buildInput, sharedObservationFields: sharedObservationFields,
+  var api = { version: '1.16.0', buildInput: buildInput, sharedObservationFields: sharedObservationFields,
     parseGestationalAge: parseGestationalAge, parsePostnatalDays: parsePostnatalDays, mount: mount };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   root.VildaLabPubertyUI = api;
