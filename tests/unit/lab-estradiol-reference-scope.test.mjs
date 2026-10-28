@@ -20,7 +20,7 @@ const MISSING_CONTEXT = [
   ['chłopiec 3 miesiące bez stadium', { sex: 'M', age: 0.25, life_stage: 'pediatric' }],
   ['dziewczynka w dniu urodzenia bez stadium', { sex: 'F', age: 0, life_stage: 'pediatric' }],
   ['dziecko bez płci', { sex: null, age: 8, life_stage: 'pediatric' }],
-  ['pediatryczny kontekst poza ostatnim przedziałem wieku', { sex: 'F', age: 18, life_stage: 'pediatric' }],
+  ['wiek przecinający podział dzieci i dorosłych', { sex: 'F', age: 17, ageUpperYears: 19, ageUpperInclusive: false, life_stage: 'pediatric' }],
   ['brak kontekstu', {}],
 ];
 const NO_REFERENCE = 'Brak zakresu referencyjnego estradiolu dla tego kontekstu pacjenta. Przeliczenie jednostek pozostaje dostępne.';
@@ -153,9 +153,14 @@ describe('Estradiol — dorosła pacjentka bez ustalonej fazy cyklu', () => {
     });
   });
 
-  it.each([18, 30, 70, undefined])('wiek %j nie ustala fazy ani menopauzy', (age) => {
+  it.each([18, 30, 70])('wiek %j nie ustala fazy ani menopauzy', (age) => {
     const { converter } = fixture();
     expectCycleAlternatives(converter, { sex: 'F', age, life_stage: 'adult' });
+  });
+
+  it('brak wieku nie uzyskuje kontekstu dorosłej przez dawny life_stage', () => {
+    const { converter } = fixture();
+    expectUnavailable(converter, converter.find('estradiol'), { sex: 'F', life_stage: 'adult' });
   });
 
   it.each(UNSUPPORTED_CYCLE)('kontekst %s nie uruchamia wariantów cyklu ani zastępczej normy', (cycle_phase) => {
@@ -229,7 +234,7 @@ describe('Estradiol — dorosła pacjentka bez ustalonej fazy cyklu', () => {
       id: 'e2_F_latepubertal_age', low: 0, high: 290, matched: true,
     });
     expect(converter.evaluate('estradiol', { value: 50, unit: 'pmol/L', patient: pediatric }).status).toBe('within');
-    expectUnavailable(converter, converter.find('estradiol'), { ...pediatric, age: 18 });
+    expectCycleAlternatives(converter, { ...pediatric, age: 18 });
     for (const age of [18, 30, 70]) {
       const patient = { sex: 'M', age, life_stage: 'adult' };
       expect(converter.selectRange(converter.find('estradiol'), patient)).toMatchObject({

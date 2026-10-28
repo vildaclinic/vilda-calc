@@ -1131,6 +1131,31 @@ sam wpis przez prawdziwy sejf do `buildHistoryView`. Na artefakcie sprzed
 łatki trzy nowe testy padają. Zielone testy nie są walidacją kliniczną;
 zmiana czeka na akceptację kliniczną właściciela (AGENTS.md § 3).
 
+### LAB-E2-AGE-QUALIFICATION — wiek przed stadium, 2026-10-28
+
+**Wpływ kliniczny: tak.** Polityka `estradiol-matched-reference-only`
+`2026-10-28.1`, `LabUnitConverter` 2.0.3. Cały znany wiek kwalifikuje
+istniejące źródło przed Tannerem i dawnym `life_stage`. M30/Tanner I,
+E2 50 pmol/L → dotychczasowe dorosłe 40–160/within, zamiast dziecięcego
+0–47,79/above. Brak wieku i pierwsze 14 dni nie otrzymują RI przez
+sam numer stadium. Podział 18 lat to istniejąca reguła aplikacji,
+nie nowa granica źródła Mayo. F30 bez fazy zachowuje cztery neutralne
+alternatywy; znana faza zachowuje poprzedni zakres.
+
+Pełny Mayo EEST/81816 HTML i 7-stronicowy PDF odczytano 28.10.2026:
+Reference Values s. 3, metoda s. 1/6–7, ograniczenia s. 4–6. Surowica,
+LC-MS/MS, pg/mL; Stage I >14 dni i przed pokwitaniem; brak liczbowego
+RI 1–14 dni. Nie potwierdzamy ponownie liczb Tietz ani pełnej kohorty
+Mayo; pełna tabela Tietz niedostępna. Konwersje, stężenia, źródłowe
+wiersze, 85 profili i dawne zapisane oceny pozostają niezmienione.
+
+Adapter wykorzystuje istniejący bieżący kontekst i resolver pełnego
+wieku, bez dodatkowej ankiety lub domniemanej daty. Regresje rzeczywistego
+API i adaptera: `lab-e2-age-qualification.test.mjs`; E2E/zimny restart
+PWA w plikach E2 zakresu i cyklu. Właściciel zaakceptował zakres i polecił
+wdrożenie; testy nie nadają statusu walidacji klinicznej. Szczegóły,
+populacja, granice i przypadki: [E2_AGE_QUALIFICATION.md](E2_AGE_QUALIFICATION.md).
+
 ### LAB-E2-CYCLE-CONTEXT — nieznana faza u dorosłych kobiet, 2026-10-19
 
 **Wpływ kliniczny: tak.** `LabUnitsData` i `LabUnitConverter` 2.0.2,

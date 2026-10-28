@@ -63,8 +63,21 @@
   // Refuse both generic fallback paths when no existing context row matches.
   reference_selection_policy: {
     id: 'estradiol-matched-reference-only',
-    version: '2026-10-19.1',
+    version: '2026-10-28.1',
     require_matched: true,
+    // Chronological scope qualifies the source before Tanner or cycle selection.
+    // 18 years is the existing application adult boundary, not a Mayo age cutoff.
+    chronological_age: {
+      id: 'e2-chronological-age-qualification',
+      required: true,
+      adult_min_years: 18,
+      neonatal_max_days: 14,
+      days_per_year: 365.25,
+      full_interval_required: true,
+      adult_life_stage: 'adult',
+      child_life_stage: 'pediatric',
+      source_note: 'Mayo EEST/81816, Reference Values p. 3: children 1–14 days have no tabulated RI; Stage I is >14 days and prepubertal; adults are separate. Existing application age boundary and RI values retained.'
+    },
     context_pl: 'Brak zakresu referencyjnego estradiolu dla tego kontekstu pacjenta. Przeliczenie jednostek pozostaje dostępne.',
     // Existing adult rows are alternatives until the current sample context is
     // known. Their numbers and provenance stay in reference_ranges_si.
