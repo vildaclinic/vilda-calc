@@ -82,8 +82,21 @@ test('Komputer prywatny (powłoka PWA): pobieranie rusza samo, bez pytania; krok
   // Pierwsze pobranie ma wyłączność (czerwony E2E odłamek 1/3 w CI #652): włączona przez nie synchronizacja budzi
   // inne pobrania — arkusz przypomnień 3 s po odblokowaniu (ten dokument), panele powłoki ładowane w tle (Start,
   // Terminarz — swoje ramki). Dotąd każde z nich pobierało ten sam blob równolegle; teraz czekają, a blob idzie raz.
-  const zwyklePobranie = page.evaluate(() => window.VildaSync.syncPull().then((w) => w.action));
+  // W tym samym dokumencie syncPull czeka najpierw na lokalną obietnicę pierwszego pobrania — nie ma go jeszcze
+  // w kolejce Web Locks. Uruchamiamy też prawdziwe pobranie w odblokowanym panelu Start, zamiast liczyć na jego
+  // przypadkowe zadanie w tle. To ono ma czekać na współdzieloną blokadę między dokumentami.
+  let zwyklePobranieZakonczone = false;
+  const zwyklePobranie = page.evaluate(() => window.VildaSync.syncPull().then((w) => w.action)).then((action) => {
+    zwyklePobranieZakonczone = true;
+    return action;
+  });
+  const panelStart = page.frameLocator('#appPanes > iframe.app-pane[src^="index.html"]');
+  await expect.poll(() => panelStart.locator('html').evaluate(() => Boolean(window.VildaSync && window.VildaVault?.isUnlocked())), {
+    message: 'panel Start ma rzeczywisty moduł synchronizacji i odblokowany sejf', timeout: 15_000,
+  }).toBe(true);
+  const pobranieWPanelu = panelStart.locator('html').evaluate(() => window.VildaSync.syncPull().then((w) => w.action));
   await expect.poll(() => czekajaceNaPierwsze(page), { message: 'pobranie w ramce panelu czeka na blokadę', timeout: 15_000 }).toBeGreaterThanOrEqual(1);
+  expect(zwyklePobranieZakonczone, 'pobranie w tym samym dokumencie nadal czeka na pierwszy blob').toBe(false);
   expect(bloby(zadania), 'w trakcie — jedno pobranie bloba').toBe(1);
 
   blob.otworz();
@@ -97,6 +110,7 @@ test('Komputer prywatny (powłoka PWA): pobieranie rusza samo, bez pytania; krok
   await expect(okno(page)).toBeVisible();
   expect(await czyAktywne(page)).toBe(true);
   expect(await zwyklePobranie, 'zwykłe pobranie w tym dokumencie czekało na pierwsze').toBe('up-to-date');
+  expect(await pobranieWPanelu, 'pobranie w panelu Start czekało na wspólną blokadę i widzi zapisany ETag').toBe('up-to-date');
   expect(bloby(zadania), 'czekające pobrania widzą zapisany ETag — bez drugiego bloba').toBe(1);
   expect(await czekajaceNaPierwsze(page)).toBe(0);
   await okno(page).getByRole('button', { name: 'Przejdź do aplikacji' }).click();
