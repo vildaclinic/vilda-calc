@@ -674,6 +674,7 @@ function remB22Inline(host, groups) {
   Nr();
 }
 function remB22Open(groups, options) {
+  al();
   if (remB22Full && remB22Full.alive()) { remB22Full.request(options || {}); return remB22Full.root; }
   var root = remB22Node('dialog', 'vilda-reminders-modal-overlay vb22 vb22-modal');
   root.setAttribute('aria-label', 'Przypomnienia');
