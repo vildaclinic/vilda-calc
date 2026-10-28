@@ -1,25 +1,9 @@
 import { expect, test } from '../support/test-czas.mjs';
 
-// P-ARKUSZ na PRAWDZIWEJ stronie: dzienny arkusz przypomnień nie wchodzi na otwartą Kartę
-// Pacjenta, ale też się nie gubi — wraca, gdy Karta zostanie zamknięta.
-//
-// Zgłoszenie i decyzja właściciela (2026-09-19, wariant „odłóż, nie porzuć"). Zegar arkusza
-// rusza 3 s po odblokowaniu sejfu (plus do 2,5 s na `syncPull`), a lekarz jest w tym czasie
-// już w Karcie. Zmierzone przed poprawką: Karta otwarta w t=219 ms, arkusz wszedł do DOM
-// w t=2648 ms — pełnoekranowy, `z-index: 1000001`, nieprzezroczysty, a `elementFromPoint`
-// w środku ekranu trafiał w arkusz, nie w Kartę. Arkusz bramkował się wyłącznie datą i nie
-// pytał, co jest na ekranie.
-//
-// Drugi test jest KONTROLĄ: bez otwartej Karty arkusz ma nadal pokazywać się sam. Bez niego
-// „naprawą" byłoby ciche wyłączenie funkcji i test pierwszy przeszedłby również wtedy.
-//
-// STEROWANY ZEGAR (2026-09-19, po porażce w pełnym przebiegu przy 6 workerach). Pierwsza wersja
-// tego testu zakładała, że Karta zdąży się otworzyć przed upływem 3 s od odblokowania sejfu.
-// Pod obciążeniem to założenie pada: arkusz wchodził PIERWSZY, a test widział go nad Kartą
-// otwartą chwilę później i zgłaszał usterkę produktu tam, gdzie była usterka testu. Zegar strony
-// zatrzymujemy więc zanim odliczanie arkusza dobiegnie, otwieramy Kartę, i dopiero wtedy
-// przesuwamy czas ręcznie. Kolejność zdarzeń przestaje zależeć od obciążenia maszyny.
-//
+// P-PRZYPOMNIENIA-RECZNIE (decyzja właściciela 2026-10-28): okno otwierane
+// wyłącznie świadomie. Zastępuje wcześniejszą regułę „odłóż, nie porzuć”.
+// Kontrola pozytywna: te same istniejące przypomnienia otwierają się z dzwonka.
+// Zegar sterowany obejmuje poprzednie terminy startu i sync, bez wyścigów.
 // Dane wyłącznie FIKCYJNE.
 test.use({ serviceWorkers: 'block' });
 
@@ -83,7 +67,7 @@ async function kontoZNotatkaNaDzis(page) {
   return patientId;
 }
 
-test('arkusz nie przykrywa otwartej Karty Pacjenta, a po jej zamknięciu sam wraca', async ({ page }) => {
+test('arkusz nie otwiera się nad Kartą Pacjenta ani po jej zamknięciu', async ({ page }) => {
   test.setTimeout(180_000);
   const patientId = await kontoZNotatkaNaDzis(page);
 
@@ -118,18 +102,24 @@ test('arkusz nie przykrywa otwartej Karty Pacjenta, a po jej zamknięciu sam wra
   expect(przyKarcie.arkusz, 'arkusz nie wchodzi na otwartą Kartę').toBe(false);
   expect(przyKarcie.przykrywaSrodek, 'nic nie przykrywa środka ekranu').toBe(false);
 
-  // Zamknięcie Karty — odłożony arkusz ma wrócić sam, bez klikania w dzwoneczek.
+  // Zamknięcie Karty również nie jest zgodą na otwarcie Przypomnień.
   await page.evaluate(() => window.VildaAuthUI.hide());
   await page.clock.runFor(10_000);
-  await expect(page.locator(ARKUSZ), 'arkusz wraca po zamknięciu Karty')
-    .toBeVisible({ timeout: 30_000 });
+  await expect(page.locator(ARKUSZ), 'arkusz nie wraca sam po zamknięciu Karty').toHaveCount(0);
+  await page.locator('#vildaRemindersBtn').click();
+  await expect(page.locator(ARKUSZ), 'świadome otwarcie nadal działa').toBeVisible({ timeout: 30_000 });
 });
 
-test('kontrola: bez otwartej Karty arkusz nadal pokazuje się sam', async ({ page }) => {
+test('pierwsze logowanie i sync nie otwierają okna; dzwonek pokazuje istniejące przypomnienie', async ({ page }) => {
   test.setTimeout(180_000);
   await kontoZNotatkaNaDzis(page);
-  // Karty nie otwieramy — puszczamy czas poza zegar arkusza i arkusz ma wejść sam.
+  // Brak lokalnego znacznika dnia i konto z przypomnieniem po odtworzeniu sesji.
   await page.clock.runFor(PO_ZEGARZE_MS);
-  await expect(page.locator(ARKUSZ), 'dzienny przegląd działa jak dotąd')
-    .toBeVisible({ timeout: 30_000 });
+  await expect(page.locator(ARKUSZ)).toHaveCount(0);
+  await page.evaluate(() => document.dispatchEvent(new CustomEvent('vilda:sync-merged')));
+  await page.clock.runFor(5000);
+  await expect(page.locator(ARKUSZ)).toHaveCount(0);
+  await page.locator('#vildaRemindersBtn').click();
+  await expect(page.locator(ARKUSZ)).toBeVisible({ timeout: 30_000 });
+  await expect(page.locator(ARKUSZ)).toContainText('Wizyta kontrolna');
 });

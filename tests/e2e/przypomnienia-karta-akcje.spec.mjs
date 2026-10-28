@@ -79,88 +79,44 @@ async function otworzZDanymi(page) {
 
 const notatka = (page, id) => page.evaluate(async (i) => {
   const n = await window.VildaVault.getPatientNote(i);
-  return { completedAtISO: n.completedAtISO || null, dueDateISO: String(n.dueDateISO || '').slice(0, 10) };
+  return { body: n.body, completedAtISO: n.completedAtISO || null, dueDateISO: String(n.dueDateISO || '').slice(0, 10) };
 }, id);
 
 const wierszObs = (page) => page.locator('#remindersInline .vild-rem-row', { hasText: 'Umówić densytometr' });
 
-test('klik w pozycję karty otwiera okno z pełną treścią zdarzenia', async ({ page }) => {
-  await otworzZDanymi(page);
-  const w = wierszObs(page);
-  await expect(w).toHaveCount(1);
-  // W karcie treść jest skrócona (nazwisko + „Obserwacja — tytuł”), pełnej treści nie ma.
-  await expect(w).not.toContainText('odstawić wapń');
-  await w.click();
-  const dlg = page.locator('.vild-rem-dlg');
-  await expect(dlg).toBeVisible();
-  await expect(dlg).toContainText('Densyta Dorota');
-  await expect(dlg).toContainText('Obserwacja');
-  await expect(dlg).toContainText('Umówić densytometr');
-  await expect(dlg).toContainText(DLUGA_TRESC);
-  await expect(dlg).toContainText('Termin');
-  // Geometria: okno jest nakładką fixed, wyśrodkowaną w oknie przeglądarki — nie blokiem na dole.
-  const geo = await page.evaluate(() => {
-    const ov = document.querySelector('.vild-rem-dlg-ov');
-    const d = document.querySelector('.vild-rem-dlg');
-    const r = d.getBoundingClientRect();
-    return {
-      position: getComputedStyle(ov).position,
-      cx: r.left + r.width / 2, cy: r.top + r.height / 2, w: r.width, h: r.height,
-      vw: window.innerWidth, vh: window.innerHeight,
-    };
-  });
-  expect(geo.position, 'nakładka okna jest fixed').toBe('fixed');
-  expect(Math.abs(geo.cx - geo.vw / 2), 'okno wyśrodkowane w poziomie').toBeLessThan(40);
-  expect(Math.abs(geo.cy - geo.vh / 2), 'okno wyśrodkowane w pionie').toBeLessThan(60);
-  expect(geo.w, 'szerokość okna (max 460 px)').toBeLessThanOrEqual(461);
-  const akcje = await dlg.locator('.vild-rem-dlg-acts button').allTextContents();
-  expect(akcje.join(' | ')).toMatch(/Otwórz kartę pacjenta/);
-  expect(akcje.join(' | ')).toMatch(/Zrobione/);
-  expect(akcje.join(' | ')).toMatch(/Przełóż/);
-  expect(akcje.join(' | ')).toMatch(/Nie zgłosił się/);
-  await page.keyboard.press('Escape');
-  await expect(dlg).toHaveCount(0);
+test('klik w pozycję karty otwiera pełny B2.2 z treścią, terminem i akcjami', async ({ page }) => {
+  await otworzZDanymi(page); const row = wierszObs(page); await expect(row).toHaveCount(1);
+  await expect(row).not.toContainText('odstawić wapń'); await row.click();
+  const dialog = page.locator('dialog.vb22'); await expect(dialog).toBeVisible();
+  for (const text of ['Densyta Dorota','Obserwacja','Umówić densytometr',DLUGA_TRESC,'Termin']) await expect(dialog).toContainText(text);
+  const geometry = await dialog.evaluate(node => { const r = node.getBoundingClientRect(); return { position: getComputedStyle(node).position, cx: r.x+r.width/2, cy:r.y+r.height/2, w:r.width, h:r.height, vw:innerWidth,vh:innerHeight }; });
+  expect(geometry.position).toBe('fixed'); expect(Math.abs(geometry.cx-geometry.vw/2)).toBeLessThan(40); expect(Math.abs(geometry.cy-geometry.vh/2)).toBeLessThan(60);
+  expect(geometry.w).toBeLessThanOrEqual(1161); expect(geometry.w).toBeGreaterThan(700); expect(geometry.h).toBeLessThanOrEqual(geometry.vh);
+  await expect(dialog.getByRole('button',{name:/otwórz Kartę pacjenta/})).toBeVisible();
+  for (const name of ['Oznacz jako wykonane','Przełóż termin','Nie zgłosił się']) await expect(dialog.getByRole('button',{name,exact:true})).toBeVisible();
+  await page.keyboard.press('Escape'); await expect(dialog).toHaveCount(0);
 });
 
-test('„⋮” przy pozycji ma rozmiar jak w widoku pełnoekranowym i otwiera to samo okno z akcjami', async ({
-  page,
-}) => {
-  const ids = await otworzZDanymi(page);
-  const w = wierszObs(page);
-  const box = await w.locator('.vild-rem-more').boundingBox();
-  expect(box, 'przycisk „⋮” istnieje').toBeTruthy();
-  expect(Math.round(box.width), 'szerokość 34 px jak kebab widoku pełnoekranowego').toBe(34);
-  expect(Math.round(box.height), 'wysokość 32 px jak kebab widoku pełnoekranowego').toBe(32);
-
-  await w.locator('.vild-rem-more').click();
-  const dlg = page.locator('.vild-rem-dlg');
-  await expect(dlg).toBeVisible();
-  await expect(dlg).toContainText(DLUGA_TRESC);
-  const akcje = (await dlg.locator('.vild-rem-dlg-acts button').allTextContents()).map((t) => t.trim());
-  expect(akcje).toEqual(
-    expect.arrayContaining([
-      expect.stringContaining('Otwórz kartę pacjenta'),
-      expect.stringContaining('Zrobione'),
-      expect.stringContaining('Przełóż'),
-      expect.stringContaining('Nie zgłosił się'),
-    ]),
-  );
-  // „Zrobione” → wpis wykonany w sejfie, okno zamknięte, pozycja znika z karty.
-  await dlg.locator('.vild-rem-dlg-acts button', { hasText: 'Zrobione' }).click();
-  await expect.poll(async () => (await notatka(page, ids.obs)).completedAtISO).toBeTruthy();
-  await expect(dlg).toHaveCount(0);
-  await expect(w).toHaveCount(0);
-
-  // „Przełóż…” w oknie dzisiejszej kontroli → „Jutro” przesuwa termin o dzień.
-  const k = page.locator('#remindersInline .vild-rem-row', { hasText: 'Wizyta kontrolna' });
-  await expect(k).toHaveCount(1);
-  await k.locator('.vild-rem-more').click();
-  await page.locator('.vild-rem-dlg .vild-rem-dlg-acts button', { hasText: 'Przełóż' }).click();
-  await page.locator('.vilda-reminders-snooze-menu button', { hasText: 'Jutro' }).click();
-  const jutro = await dataWPrzegladarce(page, 1);
-  await expect.poll(async () => (await notatka(page, ids.kontrola)).dueDateISO).toBe(jutro);
-  await expect(page.locator('.vild-rem-dlg')).toHaveCount(0);
-  await expect(k).toHaveCount(0);
+test('B2.2: wykonanie zachowuje opis, a przełożenie zachowuje zadanie z nowym terminem', async ({ page }) => {
+  const ids=await otworzZDanymi(page); await wierszObs(page).click(); const dialog=page.locator('dialog.vb22');
+  await expect(dialog).toContainText(DLUGA_TRESC);
+  for(const name of ['Oznacz jako wykonane','Przełóż termin','Nie zgłosił się']) await expect(dialog.getByRole('button',{name,exact:true})).toBeVisible();
+  await dialog.getByRole('button',{name:'Oznacz jako wykonane',exact:true}).click();
+  await dialog.getByLabel('Co zostało zrobione? (opcjonalnie)',{exact:true}).fill('Fikcyjny zapis wykonania densytometrii.');
+  await dialog.getByRole('button',{name:'Zapisz wykonanie',exact:true}).click();
+  await expect.poll(async()=>!!(await notatka(page,ids.obs)).completedAtISO).toBe(true);
+  expect((await notatka(page,ids.obs)).body).toContain(DLUGA_TRESC); expect((await notatka(page,ids.obs)).body).toContain('Fikcyjny zapis wykonania');
+  await expect(wierszObs(page)).toHaveCount(0); await dialog.getByRole('button',{name:'Zamknij Przypomnienia',exact:true}).click();
+  const control=page.locator('#remindersInline .vild-rem-row',{hasText:'Wizyta kontrolna'}); await expect(control).toHaveCount(1); await control.click();
+  await dialog.getByRole('button',{name:'Przełóż termin',exact:true}).click();
+  const tomorrow=await dataWPrzegladarce(page,1); await dialog.getByLabel('Nowy termin',{exact:true}).fill(tomorrow.slice(0,10));
+  await dialog.getByLabel('Powód zmiany (opcjonalnie)',{exact:true}).fill('Fikcyjnie ustalony nowy termin.');
+  await dialog.getByRole('button',{name:'Zapisz nowy termin',exact:true}).click();
+  await expect.poll(async()=>(await notatka(page,ids.kontrola)).dueDateISO).toBe(tomorrow);
+  expect((await notatka(page,ids.kontrola)).completedAtISO).toBeNull(); expect((await notatka(page,ids.kontrola)).body).toContain('Fikcyjnie ustalony nowy termin.');
+  await expect(control).toHaveCount(1); // Wszystkie includes the future appointment; Dziś does not.
+  await dialog.getByRole('button',{name:'Zamknij Przypomnienia',exact:true}).click();
+  await page.locator('#remindersInline [data-filter=today]').click(); await expect(control).toHaveCount(0);
 });
 
 // P-PRZYPOMNIENIA-ECHO (2026-10-13): po pierwszym renderze karta wysyła ping samonaprawy licznika
@@ -170,7 +126,7 @@ test('„⋮” przy pozycji ma rozmiar jak w widoku pełnoekranowym i otwiera t
 // (#652, #653). Tu karta wysyła ping za każdym razem: licznik paska nie trafia do sessionStorage.
 test('własny ping licznika nie przebudowuje karty; ping z innej karty lub ramki nadal ją odświeża', async ({ page }) => {
   await page.addInitScript(() => {
-    const P = { pingi: [], zmiany: [], wToku: new Set() };
+    const P = { pingi: [], zmiany: [], wToku: new Set(), reads:0 };
     window.__echo = P;
     // Licznik paska (vilda_chrome.js) kasujemy — sessionStorage przeżywa przeładowanie — i nie dajemy go
     // zapisać przed żadnym skryptem strony, więc karta zawsze widzi inny licznik niż swój.
@@ -201,6 +157,7 @@ test('własny ping licznika nie przebudowuje karty; ping z innej karty lub ramki
       const zwykle = sejf && sejf.listPatientNotesDueByDate;
       if (!zwykle) return;
       sejf.listPatientNotesDueByDate = function (...argumenty) {
+        if (/\bBr\b/.test(new Error().stack || '')) P.reads++;
         const wynik = Promise.resolve(zwykle.apply(this, argumenty));
         P.wToku.add(wynik);
         wynik.finally(() => P.wToku.delete(wynik)).catch(() => {});
@@ -221,8 +178,9 @@ test('własny ping licznika nie przebudowuje karty; ping z innej karty lub ramki
   const poPingu = await ustal();
   expect(poPingu.filter((z) => z.dodane > 0).length, 'karta wypełniła się raz').toBe(1);
   expect(poPingu.filter((z) => z.usuniete > 0), 'własny ping karty nie przebudowuje jej drugi raz').toEqual([]);
-  const box = await wierszObs(page).locator('.vild-rem-more').boundingBox();
-  expect(box, 'przycisk „⋮” mierzalny po pingu').toBeTruthy();
+  const box = await wierszObs(page).boundingBox();
+  expect(box, 'wiersz B2.2 jest mierzalny po pingu').toBeTruthy();
+  const readsBefore = await page.evaluate(()=>window.__echo.reads);
 
   // Kontrola: ten sam ping z innego obiektu kanału (inna karta przeglądarki albo ramka powłoki) odświeża kartę.
   await page.evaluate(() => {
@@ -230,8 +188,7 @@ test('własny ping licznika nie przebudowuje karty; ping z innej karty lub ramki
     k.postMessage({ type: 'note-changed', ts: Date.now(), sender: 'rem-inline-selfheal', action: 'recount' });
     k.close();
   });
-  await expect.poll(async () => (await ustal()).filter((z) => z.usuniete > 0).length, {
-    message: 'ping z innej karty przebudowuje kartę',
-  }).toBe(1);
+  await expect.poll(()=>page.evaluate(()=>window.__echo.reads), {message:'ping z innej karty odświeża dane'}).toBe(readsBefore+1);
+  expect((await ustal()).filter(z=>z.usuniete>0), 'B2.2 zachowuje korzeń karty').toEqual([]);
   await expect(wierszObs(page)).toHaveCount(1);
 });

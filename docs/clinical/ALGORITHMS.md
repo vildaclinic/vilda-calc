@@ -10788,6 +10788,59 @@ Na bazie oba testy padają (994 i 284 mutacje). Każda z mutacji poprawki wywrac
 
 **Wersje.** `vilda_summary_cards.js` 58; SW 1.1.259 → 1.1.260 (numery 1.1.258 i 1.1.259 nadały równolegle #658 i #660).
 
+### P-PRZYPOMNIENIA-B22 — ręczne otwarcie, kompaktowy widok i ciągłość spraw (2026-10-28)
+
+**Decyzja właściciela.** Po makietach B, B2 i B2.2 wdrożyć B2.2: uniwersalne
+„Dodaj przypomnienie”, płaskie kompaktowe pozycje, filtry w nagłówku i stonowane
+czerwone liczby bez wypełnionych chipów. Liczba oznacza wszystkie sprawy w danym
+filtrze; filtry mogą się nakładać. Pełne okno otwiera się tylko po kliknięciu,
+również przy pierwszym logowaniu na kolejnym urządzeniu. Karta obok formularza
+i licznik dzwonka pozostają dostępne według dotychczasowych reguł.
+
+**Wpływ funkcjonalny.** Nowy zapis wykonania może zawierać opis, datę i kolejny
+krok z własnym terminem. Nie usuwa pierwotnej treści ani terminu: dodaje historię
+w natywnej notatce pacjenta. Wynik opisowy (np. biopsja) zamyka oczekiwanie i
+tworzy powiązaną notatkę z pełnym opisem w kartotece. Przełożenie terminu
+zachowuje poprzedni termin i uzasadnienie. Nie zmieniono wzorów, norm, progów,
+jednostek ani interpretacji klinicznych. Opis nie jest parsowany do wyniku
+liczbowego. Data otrzymania nie zastępuje daty pobrania: `clinicalDateISO` nowego
+wyniku opisowego pozostaje puste, a data otrzymania znajduje się w jego treści.
+Istniejące wyniki liczbowe i ich oceny pozostają nietknięte.
+
+**Kontrakt danych.** `saveReminderOutcome` przygotowuje zaszyfrowane rekordy,
+sprawdza sesję, rewizję i nagrobki ponownie w atomowym zapisie adaptera i dopiero
+po zatwierdzeniu powiadamia widoki/synchronizację. Awaria dowolnego zapisu
+pozostawia całą sprawę w poprzednim stanie. Powtórzenie tej samej operacji jest
+idempotentne; ta sama tożsamość operacji z inną treścią jest odrzucana. Starszy
+edytor nie może zastąpić nowszej notatki. Szyfrowany `reminderContext` zachowuje
+powiązania w synchronizacji, eksporcie i imporcie. Zwykła edycja istniejącej
+notatki zachowuje jej kontekst. Nie ma nowego jawnego magazynu danych pacjenta.
+
+**Przypadki syntetyczne → oczekiwane zachowanie.**
+
+- Zaległe „Umówić fikcyjne MR”, wykonanie „Umówiono na 02.02.2027” i kolejny
+  krok na 02.02 → oryginał zakończony z historią, jedna powiązana czynna notatka.
+- Drugi zapis transakcji IndexedDB kończy się błędem → oryginał nadal czynny,
+  brak osieroconego kroku; formularz zachowany, ponowienie zapisuje jeden komplet.
+- Otrzymano fikcyjny opis biopsji → pełny tekst w notatce pacjenta, oczekiwanie
+  zakończone, brak nowej liczbowej serii i brak wymyślonej daty pobrania.
+- Przypomnienie na 26.01 i ustalone badanie na 02.02 o 09:30 → `dueDateISO`
+  26.01, treść notatki zawiera 02.02 i 09:30; oba widoczne w Karcie Pacjenta.
+- Logowanie/sync na dwóch urządzeniach → zero samoczynnych okien; każde kliknięcie
+  dzwonka otwiera aktualną listę, także pustą, z możliwością dodania pierwszej sprawy.
+- 5 czynnych spraw, w tym 2 zaległe, 2 dzisiejsze i 2 oczekujące → liczniki
+  5/2/2/2; przyszły wpis jest w „Wszystkie”, nie zwiększa dzwonka przed terminem.
+
+**Weryfikacja.** Rzeczywista kryptografia/sejf: `reminders-outcome-vault.test.mjs`;
+aktualność odczytów i ręczne otwarcie: `reminders-read-state.test.mjs`;
+desktop, telefon, awarie, konflikt, karta pacjenta: `przypomnienia-b22.spec.mjs`
+i `przypomnienia-b22-mobile.spec.mjs`; produkcyjny SW, wyłączony serwer i restart
+przeglądarki: `przypomnienia-b22-offline.spec.mjs`. Regresje wcześniejszej karty
+sprawdzają nadal daty lokalne, kolejność, nieobecności, dyżury, liczniki, brak
+odczytów ukrytej karty i obsługę błędów. Testy dawnego zwijania kategorii/awatarów
+zastąpiono testami zaakceptowanych filtrów i płaskich wierszy; dane i dawne
+preferencje pozostają zachowane.
+
 ### P-PRZYPOMNIENIA-STAN — błędy odczytu, kolejność odpowiedzi i odświeżanie widocznej karty (2026-10-28)
 
 **Polecenie właściciela.** Naprawić trzy punkty analizy: błąd odczytu udający pustą listę, starsza odpowiedź nadpisująca nowszą oraz zbędne odświeżenia po akcji i pod siatką centylową.

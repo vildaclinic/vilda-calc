@@ -113,13 +113,14 @@ test('jedna akcja wykonania daje jeden odczyt i jedną przebudowę karty', async
   const { notes } = await open(page);
   await page.locator(`${CARD} .vild-rem-row`).filter({ hasText: TITLE + ' 1' }).click();
   await page.evaluate(() => { window.__reminderTest.calls = []; window.__reminderTest.paints = 0; });
-  await page.locator('.vild-rem-dlg-acts').getByRole('button', { name: /Zrobione/ }).click();
+  await page.locator('dialog.vb22').getByRole('button', { name: 'Oznacz jako wykonane', exact: true }).click();
+  await page.locator('dialog.vb22').getByRole('button', { name: 'Zapisz wykonanie', exact: true }).click();
   await expect.poll(() => page.evaluate(async id => !!(await window.VildaVault.getPatientNote(id)).completedAtISO, notes[0])).toBe(true);
   await expect(page.locator(`${CARD} .vild-rem-row`)).toHaveCount(1);
   await expect(page.locator('#vildaRemindersBtn')).toHaveAttribute('data-count', '1');
   await settle(page);
   const result = await page.evaluate(() => ({ reads: window.__reminderTest.calls.filter(call => call.inline).length, paints: window.__reminderTest.paints }));
-  expect(result).toEqual({ reads: 1, paints: 1 });
+  expect(result).toEqual({ reads: 1, paints: 0 }); // B2.2 updates content without remounting the card root.
 });
 
 test('zmiana rozmiaru zachowuje wiersze i nie odczytuje ponownie notatek', async ({ page }) => {
@@ -170,12 +171,15 @@ test('błąd odświeżenia po akcji nie zamyka pełnego arkusza i pozwala ponowi
   const modal = page.locator('.vilda-reminders-modal-overlay');
   await expect(modal.locator('.vilda-reminders-row')).toHaveCount(2);
   await page.evaluate(() => { window.__reminderTest.fault = true; });
-  await modal.locator('.vilda-reminders-row').first().getByRole('button', { name: 'Więcej akcji', exact: true }).click();
-  await page.locator('.vilda-rem-ctx-menu').getByText('Zrobione', { exact: true }).click();
+  await modal.locator('.vilda-reminders-row').first().click();
+  await modal.getByRole('button', { name: 'Oznacz jako wykonane', exact: true }).click();
+  await modal.getByRole('button', { name: 'Zapisz wykonanie', exact: true }).click();
   await expect(modal).toBeVisible();
   await expect(modal.getByRole('alert')).toContainText('Nie udało się wczytać przypomnień');
   await page.evaluate(() => { window.__reminderTest.fault = false; });
   await modal.getByRole('button', { name: 'Spróbuj ponownie', exact: true }).click();
+  await expect(modal.locator('.vilda-reminders-row')).toHaveCount(1);
+  await modal.getByRole('button', { name: /^Do wykonania/ }).click();
   await expect(modal.locator('.vilda-reminders-row')).toHaveCount(1);
 });
 

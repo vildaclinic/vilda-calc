@@ -27,6 +27,7 @@ const HASLO = 'E2e#Karta!2026rem';
  * strefę wymuszoną przez test; kontener testowy chodzi w UTC i policzyłby inną dobę.
  */
 async function otworz(page, wpisy, opcje) {
+  await page.addInitScript(()=>localStorage.setItem('vilda-terms-accepted-v1',JSON.stringify({version:1,acceptedAtISO:new Date().toISOString()})));
   await page.route('**/*', (route) => {
     const u = route.request().url();
     if (u.startsWith('http://127.0.0.1:') || u.startsWith('data:') || u.startsWith('blob:')) {
@@ -100,7 +101,8 @@ const wiersze = (page) => page.evaluate(() => Array.from(
 ).map((r) => ({
   nazwa: r.querySelector('.vild-rem-nm')?.textContent,
   kiedy: r.querySelector('.vild-rem-when')?.textContent,
-  sekcja: (r.closest('.vild-rem-sec')?.className || '').replace('vild-rem-sec ', ''),
+  sekcja: r.dataset.period,
+  termin: r.querySelector('.vb22-row-date')?.textContent,
 })));
 
 test.describe('P1 — Pacific/Auckland: lokalna doba wyprzedza UTC', () => {
@@ -128,12 +130,12 @@ test.describe('P1 — Pacific/Auckland: lokalna doba wyprzedza UTC', () => {
     expect(doby.lokalna, 'a lokalnie jest już następny dzień').toBe('2026-06-18');
 
     const w = await wiersze(page);
-    const zalegly = w.find((x) => x.sekcja === 'vild-rem-sec-over');
-    const dzisiejszy = w.find((x) => x.sekcja === 'vild-rem-sec-today');
+    const zalegly = w.find((x) => x.sekcja === 'overdue');
+    const dzisiejszy = w.find((x) => x.sekcja === 'today');
 
     expect(zalegly?.nazwa).toBe('Anna Wczorajsza');
     expect(zalegly?.kiedy, 'wpis w sekcji „Zaległe” nie może twierdzić, że termin jest dziś')
-      .toBe('wczoraj');
+      .toBe('Po terminie');
     expect(dzisiejszy?.nazwa).toBe('Bogdan Dzisiejszy');
   });
 });
@@ -158,8 +160,8 @@ test.describe('P1 — kontrola pozytywna w Europe/Warsaw', () => {
 
     const w = await wiersze(page);
     expect(w.map((x) => [x.nazwa, x.kiedy])).toEqual([
-      ['Adam Przedwczorajszy', '2 dni temu'],
-      ['Beata Wczorajsza', 'wczoraj'],
+      ['Adam Przedwczorajszy', 'Po terminie'],
+      ['Beata Wczorajsza', 'Po terminie'],
     ]);
   });
 });
@@ -186,7 +188,7 @@ test('P3 — kolejność: data rosnąco, a w obrębie doby całodniowe przed god
       'Celina Poranna',
       'Ewa Popoludniowa',
     ]);
-  expect(w.map((x) => x.kiedy)).toEqual(['2 dni temu', 'wczoraj', 'dziś', '09:00', '15:30']);
+  expect(w.map((x) => x.kiedy)).toEqual(['Po terminie', 'Po terminie', 'Dzisiaj', '09:00', '15:30']);
 });
 
 test('P2 — tytuł odznaki liczy wszystkie notatki, także po grupie z zaległością', async ({ page }) => {
@@ -275,13 +277,14 @@ test('P4 — wpis aktywności bez miejsca pokazuje tytuł, nie „—" z awatare
     return r ? {
       nazwa: r.querySelector('.vild-rem-nm')?.textContent,
       kategoria: r.querySelector('.vild-rem-cat')?.textContent,
-      awatar: r.querySelector('.vild-rem-av')?.textContent,
+      tytul: r.querySelector('.vb22-row-title')?.textContent,
     } : null;
   });
   expect(wiersz, 'wiersz dyżuru jest w karcie').toBeTruthy();
-  expect(wiersz.nazwa, 'tytuł wpisu zamiast pustego nazwiska').toBe('Dyżur nocny');
+  expect(wiersz.tytul, 'tytuł aktywności pozostaje widoczny').toBe('Dyżur nocny');
+  expect(wiersz.nazwa, 'etykieta zamiast pustego nazwiska').toBe('Dyżur');
   expect(wiersz.nazwa).not.toBe('—');
-  expect(wiersz.awatar, 'inicjał kategorii zamiast znaku zapytania').toBe('D');
+  expect(wiersz.tytul, 'zwięzły wiersz nie gubi treści aktywności').not.toContain('?');
   expect(wiersz.kategoria, 'kategoria zostaje w drugiej linii').toContain('Dyżur');
 });
 
@@ -303,162 +306,66 @@ test('P6 — karta ma nagłówek i etykietę regionu dla czytnika ekranu', async
   });
 });
 
-test('P8 — wiersze karty mają te same kolory co wiersze modalu spod dzwoneczka', async ({ page }) => {
-  // Zgłoszenie właściciela 2026-09-03: karta w prawej kolumnie strony głównej i pełnoekranowy
-  // widok spod dzwoneczka mają wyglądać kolorystycznie identycznie, razem z awatarami.
-  // Zmierzone przed poprawką: awatary już były identyczne (oba brały `accent` kategorii), ale
-  // linia kategorii w karcie miała stały szary #64797b, a w modalu kolor kategorii (#0E6E99,
-  // #0A5BBF, #1F7A3D, #C2271D, #006b73); nazwa różniła się odcieniem (#1f2d2e vs #0f2b33).
+// B2.2 replaces decorative avatars/category colors with the approved compact list.
+// Both surfaces still use identical data, category labels, fonts and neutral colors.
+async function collectB22(page, selector) {
+  return page.locator(selector).evaluateAll(rows => rows.map(row => {
+    const get = cls => row.querySelector(cls), style = (cls, prop) => getComputedStyle(get(cls))[prop];
+    return { id: row.dataset.noteId, title: get('.vb22-row-title').textContent,
+      name: get('.vb22-row-patient').textContent, category: get('.vild-rem-cat').textContent,
+      date: get('.vb22-row-date').textContent, status: get('.vild-rem-when').textContent,
+      titleColor: style('.vb22-row-title', 'color'), nameColor: style('.vb22-row-patient', 'color'),
+      categoryColor: style('.vild-rem-cat', 'color'), titleSize: style('.vb22-row-title', 'fontSize'),
+      nameSize: style('.vb22-row-patient', 'fontSize'), categorySize: style('.vild-rem-cat', 'fontSize'),
+      shadow: getComputedStyle(row).boxShadow, role: row.tagName };
+  }));
+}
+
+test('P8 — B2.2: compact card and full workspace preserve matching content, labels and typography', async ({ page }) => {
   await otworz(page, [
-    { name: 'Anna Kontrola', title: 'Wpis', dniTemu: 0, category: 'followup' },
-    { name: 'Bartek Leczenie', title: 'Wpis', dniTemu: 0, category: 'treatment' },
-    { name: 'Celina Obserwacja', title: 'Wpis', dniTemu: 0, category: 'observation' },
-    { name: 'Damian Klirens', title: 'Wpis', dniTemu: 0, category: 'wynik-klirens' },
+    { name: 'Anna Kontrola', title: 'Wpis kontrolny', dniTemu: 0, category: 'followup' },
+    { name: 'Bartek Leczenie', title: 'Wpis leczenia', dniTemu: 0, category: 'treatment' },
+    { name: 'Celina Obserwacja', title: 'Wpis obserwacji', dniTemu: 0, category: 'observation' },
+    { name: 'Damian Klirens', title: 'Wpis klirensu', dniTemu: 0, category: 'wynik-klirens' },
   ], { dyzur: true });
-
-  const style = (r, sel, pole) => {
-    const el = sel ? r.querySelector(sel) : r;
-    return el ? getComputedStyle(el)[pole] : null;
-  };
-
-  const zKarty = await page.evaluate(() => Array.from(
-    document.querySelectorAll('#remindersInline .vild-rem-row'),
-  ).map((r) => {
-    const av = r.querySelector('.vild-rem-av');
-    const nm = r.querySelector('.vild-rem-nm');
-    const cat = r.querySelector('.vild-rem-cat');
-    return {
-      nazwa: nm && nm.textContent,
-      litera: av && av.textContent,
-      awatar: av && getComputedStyle(av).backgroundImage,
-      nazwaKolor: nm && getComputedStyle(nm).color,
-      kategoriaKolor: cat && getComputedStyle(cat).color,
-      nazwaRozmiar: nm && getComputedStyle(nm).fontSize,
-      kategoriaRozmiar: cat && getComputedStyle(cat).fontSize,
-      literaRozmiar: av && getComputedStyle(av).fontSize,
-      kropka: (() => {
-        const d = r.querySelector('.vild-rem-dot');
-        return d ? getComputedStyle(d).backgroundColor : null;
-      })(),
-    };
-  }));
-  void style;
-
-  await page.evaluate(() => window.VildaAuthUI.maybeShowReminders({ force: true }));
-  await page.waitForSelector('.vilda-reminders-row', { timeout: 20000 });
-  const zModalu = await page.evaluate(() => Array.from(
-    document.querySelectorAll('.vilda-reminders-row'),
-  ).map((r) => {
-    const kids = Array.from(r.children);
-    const av = kids[0];
-    const linie = kids[1] ? Array.from(kids[1].children) : [];
-    return {
-      nazwa: linie[0] && linie[0].textContent,
-      litera: av && av.textContent,
-      awatar: av && getComputedStyle(av).backgroundImage,
-      nazwaKolor: linie[0] && getComputedStyle(linie[0]).color,
-      kategoriaKolor: linie[1] && getComputedStyle(linie[1]).color,
-      nazwaRozmiar: linie[0] && getComputedStyle(linie[0]).fontSize,
-      kategoriaRozmiar: linie[1] && getComputedStyle(linie[1]).fontSize,
-      literaRozmiar: av && getComputedStyle(av).fontSize,
-      kropka: (() => {
-        const d = linie[1] && linie[1].querySelector('span');
-        return d ? getComputedStyle(d).backgroundColor : null;
-      })(),
-    };
-  }));
-
-  expect(zKarty.length, 'oba widoki pokazują te same pozycje').toBe(zModalu.length);
-  const wgNazwy = (lista) => Object.fromEntries(lista.map((r) => [r.nazwa, r]));
-  const K = wgNazwy(zKarty);
-  const M = wgNazwy(zModalu);
-  expect(Object.keys(K).sort(), 'te same wiersze w obu widokach').toEqual(Object.keys(M).sort());
-
-  for (const nazwa of Object.keys(K)) {
-    expect(K[nazwa].kategoriaKolor, `kolor kategorii: ${nazwa}`).toBe(M[nazwa].kategoriaKolor);
-    expect(K[nazwa].awatar, `tło awatara: ${nazwa}`).toBe(M[nazwa].awatar);
-    expect(K[nazwa].litera, `litera awatara: ${nazwa}`).toBe(M[nazwa].litera);
-    expect(K[nazwa].nazwaKolor, `kolor nazwy: ${nazwa}`).toBe(M[nazwa].nazwaKolor);
-    // PR 21, decyzja właściciela: karta podciągnięta do WIĘKSZYCH rozmiarów modalu.
-    // Przed poprawką karta miała 13,92/12,32/13,12 px tam, gdzie modal 14,72/13,12/14,4 px.
-    expect(K[nazwa].nazwaRozmiar, `rozmiar nazwy: ${nazwa}`).toBe(M[nazwa].nazwaRozmiar);
-    expect(K[nazwa].kategoriaRozmiar, `rozmiar kategorii: ${nazwa}`)
-      .toBe(M[nazwa].kategoriaRozmiar);
-    expect(K[nazwa].literaRozmiar, `rozmiar litery awatara: ${nazwa}`)
-      .toBe(M[nazwa].literaRozmiar);
-    // PR 21: kropkę kategorii miała tylko karta — modal dostał ją w tym samym kolorze akcentu.
-    expect(K[nazwa].kropka, `karta ma kropkę kategorii: ${nazwa}`).toBeTruthy();
-    expect(M[nazwa].kropka, `modal ma kropkę kategorii: ${nazwa}`).toBeTruthy();
-    expect(K[nazwa].kropka, `kolor kropki: ${nazwa}`).toBe(M[nazwa].kropka);
+  const small = await collectB22(page, '#remindersInline .vb22-row');
+  await page.locator('#vildaRemindersBtn').click();
+  await expect(page.locator('dialog.vb22 .vb22-row')).toHaveCount(5);
+  const big = await collectB22(page, 'dialog.vb22 .vb22-row');
+  expect(small).toHaveLength(5); expect(big).toHaveLength(5);
+  const keyed = Object.fromEntries(big.map(row => [row.id, row]));
+  for (const row of small) {
+    expect(keyed[row.id]).toBeTruthy();
+    for (const key of ['title','name','category','date','status','titleColor','nameColor','categoryColor','titleSize','nameSize','categorySize']) {
+      expect(row[key], key + ': ' + row.name).toBe(keyed[row.id][key]);
+    }
+    expect(row.shadow).toBe('none'); expect(keyed[row.id].shadow).toBe('none');
+    expect(row.role).toBe('BUTTON'); expect(keyed[row.id].role).toBe('BUTTON');
+    expect(row.category).not.toBe('Notatka');
   }
-
-  // Kontrola pozytywna dla kropki: to akcent KATEGORII, a nie jeden wspólny kolor.
-  const kropki = new Set(Object.values(M).map((r) => r.kropka));
-  expect(kropki.size, 'każda kategoria ma własną kropkę').toBeGreaterThan(3);
-
-  // Kontrola pozytywna: kolory naprawdę są kategoryjne, a nie jednym wspólnym odcieniem.
-  const kolory = new Set(Object.values(K).map((r) => r.kategoriaKolor));
-  expect(kolory.size, 'każda kategoria ma własny kolor').toBeGreaterThan(3);
+  expect(new Set(small.map(row => row.category)).size).toBe(5);
+  expect(new Set(small.map(row => row.categoryColor)).size).toBe(1);
 });
 
-test('P9 — procedura i rezerwacja mają w karcie ten sam kolor co w modalu', async ({ page }) => {
-  // Zgłoszenie właściciela 2026-09-03 (drugie, ze zrzutami): mimo P8 awatary procedur nadal
-  // różniły się między kartą a modalem. Przyczyna nie leżała w P8, tylko w słowniku kategorii Me:
-  // nie miał wpisów `procedura` ani `reservation`, więc każdy widok wpadał we WŁASNY awaryjny
-  // kolor — karta w szary #8E8E93, modal w niebieski #32ADE6 — a etykieta schodziła do „Notatka”
-  // (karta) albo do surowej nazwy kategorii „procedura” (modal). Terminarz zapisuje obie te
-  // kategorie z terminem, więc obie trafiają do przypomnień.
+test('P9 — B2.2 retains Polish procedure/reservation labels and the original activity title', async ({ page }) => {
   await otworz(page, [
     { name: 'Ewa Biopsja', title: 'Biopsja tarczycy (BACC)', dniTemu: 0, category: 'procedura' },
-    { name: 'Filip Kontrola', title: 'Wpis', dniTemu: 0, category: 'followup' },
+    { name: 'Filip Kontrola', title: 'Wpis kontrolny', dniTemu: 0, category: 'followup' },
   ], { rezerwacja: true });
-
-  const zbierzKarte = () => page.evaluate(() => Array.from(
-    document.querySelectorAll('#remindersInline .vild-rem-row'),
-  ).map((r) => ({
-    nazwa: r.querySelector('.vild-rem-nm')?.textContent,
-    kategoria: r.querySelector('.vild-rem-cat')?.textContent,
-    awatar: getComputedStyle(r.querySelector('.vild-rem-av')).backgroundImage,
-    kategoriaKolor: getComputedStyle(r.querySelector('.vild-rem-cat')).color,
-  })));
-
-  const zKarty = await zbierzKarte();
-  await page.evaluate(() => window.VildaAuthUI.maybeShowReminders({ force: true }));
-  await page.waitForSelector('.vilda-reminders-row', { timeout: 20000 });
-  const zModalu = await page.evaluate(() => Array.from(
-    document.querySelectorAll('.vilda-reminders-row'),
-  ).map((r) => {
-    const kids = Array.from(r.children);
-    const linie = kids[1] ? Array.from(kids[1].children) : [];
-    return {
-      nazwa: linie[0] && linie[0].textContent,
-      kategoria: linie[1] && linie[1].textContent,
-      awatar: getComputedStyle(kids[0]).backgroundImage,
-      kategoriaKolor: linie[1] && getComputedStyle(linie[1]).color,
-    };
-  }));
-
-  const wgNazwy = (lista) => Object.fromEntries(lista.map((r) => [r.nazwa, r]));
-  const K = wgNazwy(zKarty);
-  const M = wgNazwy(zModalu);
-  expect(Object.keys(K).sort(), 'te same wiersze w obu widokach').toEqual(Object.keys(M).sort());
-
-  for (const nazwa of ['Ewa Biopsja', 'Rezerwacja']) {
-    expect(K[nazwa], `wiersz „${nazwa}” jest w karcie`).toBeTruthy();
-    expect(K[nazwa].awatar, `tło awatara: ${nazwa}`).toBe(M[nazwa].awatar);
-    expect(K[nazwa].kategoriaKolor, `kolor kategorii: ${nazwa}`).toBe(M[nazwa].kategoriaKolor);
-    expect(K[nazwa].kategoria, `etykieta kategorii: ${nazwa}`).toBe(M[nazwa].kategoria);
+  const small = await collectB22(page, '#remindersInline .vb22-row');
+  await page.locator('#vildaRemindersBtn').click(); await expect(page.locator('dialog.vb22 .vb22-row')).toHaveCount(3);
+  const big = await collectB22(page, 'dialog.vb22 .vb22-row');
+  expect(small).toHaveLength(3); expect(big).toHaveLength(3);
+  for (const row of small) {
+    const other = big.find(item => item.id === row.id); expect(other).toBeTruthy();
+    for (const key of ['title','name','category','date','status','titleColor','nameColor','categoryColor','titleSize','nameSize','categorySize']) expect(row[key]).toBe(other[key]);
+    expect(row.shadow).toBe('none'); expect(other.shadow).toBe('none');
   }
-
-  // Kategorie mają własne etykiety po polsku, a nie awaryjne „Notatka” / surowy klucz.
-  expect(K['Ewa Biopsja'].kategoria).toContain('Procedura');
-  expect(K['Ewa Biopsja'].kategoria).toContain('Biopsja tarczycy (BACC)');
-  expect(K.Rezerwacja.kategoria).toContain('Rezerwacja');
-  expect(K['Ewa Biopsja'].kategoria).not.toContain('Notatka');
-  expect(M['Ewa Biopsja'].kategoria).not.toContain('procedura');
-
-  // Kontrola pozytywna: procedura nie dostała po prostu koloru sąsiedniej kontroli.
-  expect(K['Ewa Biopsja'].awatar).not.toBe(K['Filip Kontrola'].awatar);
+  const procedure = small.find(row => row.name === 'Ewa Biopsja'), reservation = small.find(row => row.category === 'Rezerwacja');
+  expect(procedure).toBeTruthy(); expect(reservation).toBeTruthy();
+  expect(procedure.title).toBe('Biopsja tarczycy (BACC)'); expect(procedure.category).toContain('Procedura');
+  expect(reservation.title).toBe('Rezerwacja'); expect(reservation.name).toBe('RTG klatki');
+  expect(procedure.category).not.toBe('Notatka'); expect(reservation.category).not.toBe('reservation');
 });
 
 test.describe('P10 — filtr pory doby: dyżur, który już się skończył, znika z przypomnień', () => {

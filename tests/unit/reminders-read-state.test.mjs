@@ -270,7 +270,7 @@ describe('production reminder badge read boundary', () => {
   });
 });
 
-describe('production automatic and manually requested reminder sheet', () => {
+describe('production manually requested reminder sheet', () => {
   function sheet() {
     const e = environment();
     Object.assign(e.context, { rl: () => null, Er: () => false, Sr: 'shown', ei: 'closed',
@@ -292,16 +292,40 @@ describe('production automatic and manually requested reminder sheet', () => {
     expect(e.context.ponowArkuszPoPrzerwie).not.toHaveBeenCalled();
   });
 
-  it('manual opening supersedes an earlier automatic read', async () => {
-    const e = sheet(), automatic = deferred(), manual = deferred();
+  it('a newer manual opening supersedes an earlier manual read', async () => {
+    const e = sheet(), older = deferred(), manual = deferred();
     e.context.lekarzPisze = () => false;
-    e.vault.listPatientNotesDueByDate.mockImplementationOnce(() => automatic.promise).mockImplementationOnce(() => manual.promise);
-    const first = e.context.tn(); await settle();
+    e.vault.listPatientNotesDueByDate.mockImplementationOnce(() => older.promise).mockImplementationOnce(() => manual.promise);
+    const first = e.context.tn({ force: true }); await settle();
     const second = e.context.tn({ force: true });
     manual.resolve(groups('RĘCZNE')); expect(await second).toBe(true);
-    automatic.resolve(groups('AUTOMATYCZNE')); expect(await first).toBe(false);
+    older.resolve(groups('STARSZE RĘCZNE')); expect(await first).toBe(false);
     expect(e.context.Mr).toHaveBeenCalledTimes(1);
     expect(e.context.Mr.mock.calls[0][0][0].notes[0].title).toBe('RĘCZNE');
+  });
+
+  it.each([undefined, {}, { force: false }])('an unsolicited call (%j) does not start sync, read data, or schedule an opening', async options => {
+    const e = sheet();
+    e.context.lekarzPisze = () => false;
+    expect(await e.context.tn(options)).toBe(false);
+    expect(e.context.wn).not.toHaveBeenCalled();
+    expect(e.vault.listPatientNotesDueByDate).not.toHaveBeenCalled();
+    expect(e.context.Mr).not.toHaveBeenCalled();
+    expect(e.context.ponowArkuszPoZamknieciu).not.toHaveBeenCalled();
+    expect(e.context.ponowArkuszPoPrzerwie).not.toHaveBeenCalled();
+  });
+
+  it('a fresh second device needs no daily marker from the first device and the bell still opens repeatedly', async () => {
+    const first = sheet(), second = sheet();
+    for (const e of [first, second]) {
+      e.context.lekarzPisze = () => false;
+      expect(await e.context.tn()).toBe(false);
+      expect(e.context.wn).not.toHaveBeenCalled();
+      expect(e.vault.listPatientNotesDueByDate).not.toHaveBeenCalled();
+      expect(await e.context.tn({ force: true })).toBe(true);
+      expect(await e.context.tn({ force: true })).toBe(true);
+      expect(e.context.Mr).toHaveBeenCalledTimes(2);
+    }
   });
 
   it('a failed manual read releases its priority and permits retry', async () => {

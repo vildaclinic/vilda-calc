@@ -112,7 +112,7 @@ test('karta „Przypomnienia” i odznaka dzwoneczka pomijają dni urlopu', asyn
 
   expect(karta.widoczna).toBe(true);
   expect(karta.tekst, 'urlop nie jest przypomnieniem').not.toContain('Urlop');
-  expect(karta.tekst, 'sekcja zaległych znika — urlopu nie da się odhaczyć').not.toContain('Zaległe');
+  await expect(page.locator('#remindersInline [data-filter=overdue] .vb22-count'), 'dni urlopu nie zwiększają liczby zaległych spraw').toHaveText('0');
   expect(karta.tekst, 'kontrola pozytywna: wizyta pacjenta zostaje').toContain('Jan Kontrolny');
   expect(karta.chip, 'licznik liczy jednego pacjenta, nie dwóch dni urlopu').toBe('1');
   expect(karta.tekst).toContain('Pokaż wszystkie (1)');

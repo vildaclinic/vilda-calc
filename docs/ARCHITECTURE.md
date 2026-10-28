@@ -163,6 +163,36 @@ Granice te są częścią kontraktu regresyjnego. Łączenie ich ponownie zwięk
 
 Nie wolno przenosić pola między pamięcią sesji, pamięcią trwałą i danymi pochodnymi bez analizy cyklu życia, zachowania wielu kart, czyszczenia oraz odtworzenia pacjenta. Samo zachowanie jednego widoku po odświeżeniu nie wystarcza jako test.
 
+### Przypomnienia B2.2
+
+Czytelny blok `P-PRZYPOMNIENIA-B22` w `vilda_auth_ui.js` i osobny
+`vilda_reminders.css` obsługują małą kartę oraz pełny widok lista/szczegóły.
+Pełny widok otwiera wyłącznie świadome działanie użytkownika (`force: true`):
+dzwonek, powiększenie albo wybranie pozycji. Logowanie, zegar i synchronizacja
+nie otwierają go na żadnym urządzeniu. Historyczne preferencje pozostają w danych,
+ale nie służą już jako bramka automatycznego otwarcia.
+
+Filtry Wszystkie/Zaległe/Dziś/Oczekujące wyniki liczą wszystkie pasujące wpisy,
+również przyszłe w odpowiednich filtrach. Dzwonek nadal liczy sprawy z terminem
+do dzisiaj. Odczyt korzysta z natywnego `listPatientNotesDueByDate`, a historia
+z `listPatientNotesInRange`. Widok nie ma własnej bazy przypomnień. Na telefonie
+lista i szczegóły są osobnymi krokami; natywny dialog otwiera się w powłoce,
+uwzględnia widoczną wysokość i znika wraz z treścią roboczą po blokadzie sejfu.
+
+`VildaVault.saveReminderOutcome` zapisuje wykonanie, otrzymanie opisu wyniku lub
+przełożenie terminu. Pierwotna treść i historia pozostają w notatce pacjenta;
+opcjonalny kolejny krok i wynik opisowy są powiązanymi notatkami tego pacjenta.
+Metadane `reminderContext` są częścią zaszyfrowanego `bodyCipher`, nie preferencji
+ani jawnych rekordów. Przygotowanie szyfrogramów nie zapisuje danych. Adapter
+`commitReminderForUser` sprawdza właściciela, rewizję i nagrobki, a następnie
+zapisuje komplet atomowo (jedna transakcja IndexedDB lub wymiana mapy adaptera
+pamięciowego). Identyfikator operacji z odciskiem treści daje bezpieczne ponowienie.
+Konflikt zachowuje wpisany formularz zamiast nadpisywać nowszą notatkę.
+
+Ustalony termin badania/wizyty jest osobną informacją w treści notatki, niezależną
+od `dueDateISO` przypomnienia. Data otrzymania opisu wyniku nie jest datą pobrania
+materiału; wynik opisowy nie trafia do liczbowych serii laboratoryjnych.
+
 ### Podgląd siatki podczas nowego pomiaru
 
 Przypomnienia w `vilda_auth_ui.js` mają osobny, czytelny blok `P-PRZYPOMNIENIA-STAN`.
