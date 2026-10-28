@@ -224,7 +224,10 @@
     layout.weight.button.setAttribute("aria-expanded", String(Boolean(weightOpen)));
     layout.duration.value.textContent = unresolvedDuration ? "Uzupełnij czas" : `${String(duration?.valid ? duration.hours : rawHours || "24").replace(".", ",")} godz.`;
     layout.duration.row.hidden = reported;
-    const durationOpen = !reported && (layout.duration.userOpen || unresolvedDuration || doc.activeElement?.id === "UA_collectionHours" || model?.invalidIds?.includes("UA_collectionHours"));
+    // Keep an actively edited auto-opened field open until Zmień closes it;
+    // collapsing on blur can move the next button before its click completes.
+    if (doc.activeElement?.id === "UA_collectionHours") layout.duration.userOpen = true;
+    const durationOpen = !reported && (layout.duration.userOpen || unresolvedDuration || model?.invalidIds?.includes("UA_collectionHours"));
     layout.duration.editor.hidden = !durationOpen;
     layout.duration.button.setAttribute("aria-expanded", String(Boolean(durationOpen)));
     layout.assumption.textContent = reported

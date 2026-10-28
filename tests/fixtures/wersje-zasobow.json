@@ -65,7 +65,7 @@
  },
  "clcr_ca_dzm_ui.js": {
   "v": 2,
-  "sha256": "bfcffba2fdbf4c1cb4324e56b25169c39b74eb551fcfad8f8813c339c3af27db"
+  "sha256": "0369a2891411d8a0d09f04bd3248458339536962b575b1b9d38c6ded5763f6c2"
  },
  "clcr_cacr.js": {
   "v": 1,
@@ -233,7 +233,7 @@
  },
  "clcr_mg_dzm_ui.js": {
   "v": 1,
-  "sha256": "1583bb5e57f05507cf0f1ba05529dcb14e897c07b72d756a4a73dee0de0f71b2"
+  "sha256": "552de7278c6fd1caae733eca6afd955bf43a7c113d77e1b2144fbf0cb3b19944"
  },
  "clcr_notes_view.css": {
   "v": 1,
@@ -385,7 +385,7 @@
  },
  "clcr_ua_ui.js": {
   "v": 2,
-  "sha256": "c0d0568655314f92f0c07f00e023dd58f3ddd7707df11b23c829be3280f83b4f"
+  "sha256": "0a975fa478b83b60285f173c2272a7144e50a8823b941639db1e82381a64b6f3"
  },
  "clcr_uag.js": {
   "v": 1,
