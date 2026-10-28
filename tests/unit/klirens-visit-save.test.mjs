@@ -257,10 +257,12 @@ describe('Klirens — ClcrVisitSave (Faza 1: zapis do karty)', () => {
 
   it('collectActiveDatapoints: panel DZM zapisuje anality swojego modułu, pomija cudze', () => {
     const vs = g.ClcrVisitSave;
-    // timed-urine-panel zawiera Ca_mgkg, UA_mgkg… ale NIE Ox_mgkg (stone-profile).
+    // UA now requires its typed, clinically frozen producer in this shared panel.
+    for (const file of ['clcr_ua_reference_data.js', 'clcr_ua.js', 'clcr_ua_persistence.js']) loadBrowserScript(file, g);
+    const ua = g.VildaClcrUa.evaluate({ mode: 'reported', reportedValue: '8', reportedUnit: 'mg/kg/24h', ageYears: 10 }, g.ClcrUaReferenceData.DEFAULT_POLICY);
     const root = fakeRoot([
       fakeEl('Ca_mgkg', '4'),
-      fakeEl('UA_mgkg', '8'),
+      fakeEl('UA_mgkg', '8', { attributes: { 'data-clcr-ua-snapshot': JSON.stringify(ua) } }),
       fakeEl('Ox_mgkg', '0.3'), // inny moduł → pomiń
       fakeEl('egfr', '95'), // inny moduł → pomiń
     ]);
@@ -270,6 +272,8 @@ describe('Klirens — ClcrVisitSave (Faza 1: zapis do karty)', () => {
     expect(ids).toContain('UA_mgkg');
     expect(ids).not.toContain('Ox_mgkg');
     expect(ids).not.toContain('egfr');
+    const rejected = vs.collectActiveDatapoints(fakeRoot([fakeEl('UA_mgkg', '8')]), { formulaId: 'UA_mgkg' });
+    expect(rejected).toEqual([]);
   });
 
   it('collectActiveDatapoints: pojedyncza formuła (eGFR dorośli) — bez CG obok', () => {

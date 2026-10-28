@@ -106,6 +106,14 @@ function clinicalReadinessHarness(formulaId, values) {
     },
   };
   loadBrowserScript('clcr_clinical_safety.js', browserGlobal);
+  if (formulaId === 'UA_mgkg') {
+    loadBrowserScript('clcr_ua_reference_data.js', browserGlobal);
+    loadBrowserScript('clcr_ua.js', browserGlobal);
+    browserGlobal.evaluateClcrUa = () => browserGlobal.VildaClcrUa.evaluate(
+      browserGlobal.VildaClcrUa.readInputFromDocument(browserGlobal.document),
+      browserGlobal.ClcrUaReferenceData.DEFAULT_POLICY,
+    );
+  }
   if (formulaId === 'AGu_spot') {
     loadBrowserScript('clcr_uag_reference_data.js', browserGlobal);
     loadBrowserScript('clcr_uag.js', browserGlobal);
@@ -291,8 +299,9 @@ describe('Klirens — centralny model przepływu UI', () => {
     ];
     expect(model.DZM_QUALITY_FIELDS).toEqual(timedProtocol.slice(2));
 
+    expect(byId('UA_mgkg')?.requires).toEqual(['UA_concentration', 'UA_concentrationUnit', 'UA_volume', 'UA_volumeUnit', 'UA_collectionHours', 'weight']);
+    expect(byId('UA_mgkg')?.requires).not.toEqual(expect.arrayContaining(timedProtocol));
     for (const formulaId of [
-      'UA_mgkg',
       'Ca_mgkg',
       'Mg_mgkg',
       'PO4_mgkg',
@@ -665,22 +674,22 @@ describe('Klirens — centralny model przepływu UI', () => {
     );
 
     expect(html).toContain('clcr_ui_workflow.css?v=18');
-    expect(html).toContain('clcr_ui_workflow.js?v=29');
-    expect(html).toContain('inline_kalkulator_klirens_02.js?v=22');
-    expect(html).toContain('inline_kalkulator_klirens_04.js?v=29');
-    expect(html).toContain('inline_kalkulator_klirens_07.js?v=18');
+    expect(html).toContain('clcr_ui_workflow.js?v=30');
+    expect(html).toContain('inline_kalkulator_klirens_02.js?v=23');
+    expect(html).toContain('inline_kalkulator_klirens_04.js?v=30');
+    expect(html).toContain('inline_kalkulator_klirens_07.js?v=19');
     expect(html).toContain('clcr_result_reference_data.js?v=7');
     expect(html).toContain('clcr_result_presentation.js?v=8');
-    expect(serviceWorker).toContain("const SW_VERSION = '1.1.397'");
+    expect(serviceWorker).toContain("const SW_VERSION = '1.1.398'");
     expect(html).toContain('clcr_calculation_assumptions.js?v=2');
     expect(serviceWorker).toContain("'/clcr_calculation_assumptions.js?v=2'");
     expect(serviceWorker).toContain("'/clcr_clinical_safety.js?v=13'");
     expect(serviceWorker).toContain("'/clcr_result_reference_data.js?v=7'");
     expect(serviceWorker).toContain("'/clcr_result_presentation.js?v=8'");
     expect(serviceWorker).toContain("'/clcr_ui_workflow.css?v=18'");
-    expect(serviceWorker).toContain("'/clcr_ui_workflow.js?v=29'");
-    expect(serviceWorker).toContain("'/inline_kalkulator_klirens_02.js?v=22'");
-    expect(serviceWorker).toContain("'/inline_kalkulator_klirens_04.js?v=29'");
+    expect(serviceWorker).toContain("'/clcr_ui_workflow.js?v=30'");
+    expect(serviceWorker).toContain("'/inline_kalkulator_klirens_02.js?v=23'");
+    expect(serviceWorker).toContain("'/inline_kalkulator_klirens_04.js?v=30'");
     expect(html).toContain('clcr_acr_ui.js?v=2');
     expect(serviceWorker).toContain("'/clcr_acr_ui.js?v=2'");
     expect(html).toContain('vilda_unsaved_guard.js?v=7');
@@ -695,6 +704,7 @@ describe('Klirens — centralny model przepływu UI', () => {
       'clcr_fecl_reference_data.js', 'clcr_fecl.js', 'clcr_fecl_ui.js', 'clcr_fecl_ui.css', 'clcr_fecl_persistence.js',
       'clcr_fehco3_reference_data.js', 'clcr_fehco3.js', 'clcr_fehco3_ui.js', 'clcr_fehco3_ui.css', 'clcr_fehco3_persistence.js',
       'clcr_uag_reference_data.js', 'clcr_uag.js', 'clcr_uag_ui.js', 'clcr_uag_ui.css', 'clcr_uag_persistence.js',
+      'clcr_ua_reference_data.js', 'clcr_ua.js', 'clcr_ua_ui.js', 'clcr_ua_ui.css', 'clcr_ua_persistence.js',
     ]) {
       expect(html).toContain(`${file}?v=1`);
       expect(serviceWorker).toContain(`'/${file}?v=1'`);
@@ -727,5 +737,27 @@ describe('Klirens — centralny model przepływu UI', () => {
     expect(serviceWorker).toContain(
       "'/inline_kalkulator_klirens_04.js?v=9'"
     );
+  });
+});
+
+
+describe('UA DZM — readiness uses the same clinical producer as the card', () => {
+  const input = { age: '10', weight: '30', UA_inputMode: 'concentration', UA_concentration: '30', UA_concentrationUnit: 'mg/dL', UA_volume: '1200', UA_volumeUnit: 'mL', UA_collectionHours: '24' };
+  it.each([
+    [{}, true, 'ready', 'high'],
+    [{ UA_concentration: '0' }, true, 'ready', 'zero'],
+    [{ UA_concentration: '-1' }, false, 'blocked', null],
+    [{ UA_concentration: '' }, false, 'missing', null],
+    [{ age: '40', weight: '', sex: 'M' }, true, 'ready', 'within'],
+    [{ UA_collectionHours: '12' }, true, 'ready', 'unassessed'],
+    [{ collectionNoMissedVoids: false, ui_collectionNoMissedVoids_answer: 'no' }, false, 'blocked', null],
+  ])('agrees with the actual UA engine for %j', (patch, ready, status, assessment) => {
+    const { workflow, browserGlobal } = clinicalReadinessHarness('UA_mgkg', { ...input, ...patch });
+    const outcome = browserGlobal.evaluateClcrUa();
+    const readiness = workflow.getFormulaReadiness('UA_mgkg');
+    expect(readiness.valueReady).toBe(ready);
+    expect(readiness.status).toBe(status);
+    expect(readiness.outcome).toEqual(outcome);
+    if (assessment) expect(outcome.status).toBe(assessment);
   });
 });

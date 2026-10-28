@@ -7911,6 +7911,114 @@ produkcyjny z fikcyjnymi danymi. Wyniki desktop/mobile, offline, CI,
 commit i PR podaje opis PR. Akceptacja właściciela obejmuje opisany
 etap; testy techniczne nie stanowią walidacji klinicznej.
 
+#### P-KLIRENS-UA-DZM-2026-10-27 — proste wydalanie kwasu moczowego i normy wieku
+
+Właściciel zaakceptował
+[makietę przed/po na desktopie i telefonie](https://vilda-ua-dzm-20261027.maciej-flader.chatgpt.site)
+oraz wdrożenie wraz z naprawą potwierdzonych błędów. Zakres: `UA_mgkg`;
+pozostałe obliczenia DZM pozostają osobnymi etapami. Baza audytu:
+`25dfbbe057f2d67ec7be0dae24ec6360967f517f`. Pełne uzasadnienie,
+lokalizatory źródeł i ograniczenia: [UA_DZM.md](UA_DZM.md).
+
+**Wpływ kliniczny:** dodatnie równanie w dotychczasowych jednostkach
+`mg/dL × mL / (100 × kg)` dla pełnych 24 h pozostaje bez zmiany.
+Nowe odniesienia, konwersje, walidacja, precyzja i utrwalenie czasu/oceny
+są zmianą kliniczną i funkcjonalną. Wynik poza wybranym zakresem lub na
+ścisłej granicy pediatrycznej jest bursztynowy, norma neutralna. Dokładne
+zero oraz brak właściwego profilu są neutralne. Nie powstaje rozpoznanie,
+próg pilności, ocena skuteczności leczenia ani instrukcja terapii.
+
+**Źródła i populacja, odczyt 27.10.2026:**
+
+- **EAU Urolithiasis 2026, limited update March 2026**, tabela 4.4,
+  kolumna masowa, [pełny HTML](https://uroweb.org/guidelines/urolithiasis/chapter/metabolic-evaluation-and-recurrence-prevention)
+  i [PDF, strona 48](https://d56bochluxqnz.cloudfront.net/documents/full-guideline/EAU-Guidelines-on-Urolithiasis-2026.pdf).
+  Obie płcie: <1 roku **<13**, `1 ≤ wiek ≤ 5` **<11**, `5 < wiek < 18`
+  **<9,3 mg/kg/24 h**. Równość nie spełnia ścisłego `<`. Dosłowna
+  operacjonalizacja wieku ciągłego umieszcza 5,5 roku w >5; nie przesuwa
+  granicy na szóste urodziny. Nie deklaruje odrębnej walidacji tej granicy
+  ani dokładnego wieku przy danych wyłącznie w latach. Samo 5 ukończonych
+  lat bez miesięcy/dni zachowuje `agePrecision:"completed-years"`:
+  wynik neutralny z alternatywami <11 i <9,3, bez wyboru jednej normy.
+  Grupa <1 roku nie
+  jest krzywą dni życia lub osobną normą wcześniaczą. Przypis wskazuje
+  zależność od diety, płci i geografii.
+- **Mayo URCU, Uric Acid, 24 Hour, Urine**, [katalog główny](https://www.mayocliniclabs.com/test-catalog/overview/614044)
+  i odczytana [pełna kopia katalogu nerkowego](https://renal.testcatalog.org/show/URCU):
+  pełne 24 h, wiek ≥18 lat, M **200–1000**, F **250–750 mg/24 h**, granice
+  włącznie; <18 lat zakres nieustalony. Metoda kolorymetryczna opisuje
+  źródło, nie potwierdza metody próbki pacjenta. Przy znanej masie oba
+  końce dzieli się przez tę samą masę co wynik, ale ocenę liczy się ze
+  źródłowego, niezaokrąglonego mg/24 h. Dorosły bez masy otrzymuje
+  mg/24 h i właściwą normę. Brak potrzebnej płci lub wieku pozostawia
+  liczbę bez oceny. Gotowe mg/kg/24 h bez masy nie pozwala na dorosły
+  profil całkowitego wydalania.
+- Jedna konwersja **168,11 mg/mmol**, zgodna z
+  [NIST SRD 69](https://webbook.nist.gov/cgi/cbook.cgi?ID=69-93-2)
+  i [PubChem CID 1175](https://pubchem.ncbi.nlm.nih.gov/compound/Uric%20acid).
+  Rozbieżnych kolumn molowych EAU nie kopiuje się jako innych norm.
+  Progi kamicowe EAU mają inne zastosowanie niż laboratoryjny RI Mayo;
+  nie łączy się ich w jeden automatyczny status. Labcorp jest opisaną
+  alternatywą, bez mieszania granic źródeł.
+
+**Minimum i czas:** domyślnie stężenie + objętość, znane dane pacjenta
+i jawne 24 h. Opcjonalna zmiana czasu otwiera jedno pole godzin zamiast
+dwóch dat i obowiązkowego potwierdzania protokołu. Inny czas daje
+`24 / godziny` jako ekstrapolowaną szybkość, neutralnie i bez porównania
+z normą pełnej DZM. Gotowe mg/24 h, mmol/24 h lub mg/kg/24 h nie wymagają
+odtwarzania stężenia i objętości ani ponownego mnożenia przez czas.
+Masa jest konieczna do /kg z wyniku całkowitego, ale nie do gotowego /kg
+lub dorosłego mg/24 h. Wzrost, BSA, kreatynina i pH są zbędne.
+Znany błąd zbiórki zachowuje blokadę; brak odpowiedzi nie potwierdza
+ani prawidłowej zbiórki, ani zgłoszonego błędu.
+
+**Walidacja i precyzja:** formularz, edytor i zapis odrzucają ujemne
+dane, niepoprawną objętość/masę/czas, hex, NaN i nieskończoność. Zero
+stężenia lub gotowego wydalania jest liczbą z neutralną uwagą weryfikacji,
+a nie brakiem albo uspokajającą normą; `<LOD` i `<LOQ` nie stają się 0.
+Klasyfikacja poprzedza formatowanie. Mały dodatni wynik nie znika jako 0,
+a tekst zachowuje stronę granicy. Karta i wszystkie ścieżki zapisu mają
+zgodne liczby i tekst, bez odzyskiwania wyniku z zaokrąglonego napisu.
+
+**Kontrakt i historia:** `clcr_ua_reference_data.js` trzyma wersjonowane
+normy poza silnikiem; `VildaClcrUa.evaluate(input, policy)` przyjmuje
+politykę **`UA_DZM_EAU_MAYO_2026_10`, wersja 1**, jako dane.
+`ClcrUaUi` i `ClcrUaPersistence` korzystają z jednego
+modelu. Snapshot **`clcr-ua`, wersja 1**, jako `uaSnapshot` w badaniu
+`clcr-ua-dzm`, zamraża wejścia, czas liczbowy, kontekst, wynik, tekst,
+normę, źródła i wersje. Historia nie ocenia ponownie dzisiejszymi normami.
+Dawny zapis bez normy pozostaje nieoceniony (`outOfRange:null`);
+świadoma edycja tworzy nową ocenę. Dawne lokalne daty nie są ponownie
+parsowane w strefie aktualnego urządzenia: wykorzystuje się zachowany
+czas w minutach, a przy jego braku edycja wymaga jawnych godzin.
+Do tego czasu zachowuje się zamrożony wynik. Nie miesza się serii
+mg/24 h z /kg bez możliwej konwersji. Nowe surowe pola `UA_*` nie
+zmieniają jednostek współdzielonych dawnych `U_UA`/`V24` innych wzorów.
+Obowiązuje dotychczasowa bramka zapisu do zapisanego pacjenta.
+
+**Syntetyczne kontrakty funkcji produkcyjnych:**
+
+| Wejście lub stan | Oczekiwany wynik |
+|---|---|
+| 10 lat, 30 kg, 30 mg/dL, 1200 mL, 24 h | 360 mg/24 h, 12 mg/kg/24 h, powyżej <9,3. |
+| Równoważne mg/L, mmol/L, µmol/L lub gotowe wydalanie | Ta sama liczba i norma, bez podwójnego przeliczenia czasu/objętości. |
+| Jak wyżej, ale 12 h / 48 h | 24 / 6 mg/kg/24 h, neutralnie, bez normy 24 h. |
+| Stężenie 0 / brak / −1 / hex | Neutralne 0 / brak liczby / odrzucenie / odrzucenie. |
+| 0,001 mg/dL | 0,0004 mg/kg/24 h, widoczne jako dodatnie również po zapisie. |
+| 23,25 / 23,24999999999 mg/dL | Dokładne 9,3 graniczne / poniżej 9,3 bez mylącego zrównania tekstu. |
+| Wiek dokładnie 5 / 5,5 / 18 lat | <11 / <9,3 / profil dorosły przy znanej płci. |
+| Samo 5 ukończonych lat, brak miesięcy/dni | Neutralna liczba z alternatywami <11 i <9,3, bez fałszywie dokładnego wieku. |
+| Dorosły M, 360 mg/24 h, brak masy | Wynik 360 mg/24 h i norma 200–1000 bez nowego wymaganego pola. |
+| Dorosły 70 kg na źródłowych granicach Mayo | W zakresie; przeliczony i zaokrąglony zakres /kg nie zmienia oceny. |
+| Stary nieoceniony zapis i nowy wiek pacjenta | Bez retrospektywnej normy. |
+| Zmiana strefy urządzenia lub dawne daty bez czasu liczbowego | Zamrożony nowy czas/wynik; dawna edycja wymaga czasu zamiast zgadywania. |
+
+Regresje silnika, UI, zapisu i edycji wywołują kod produkcyjny;
+scenariusze przeglądarkowe obejmują desktop/mobile, pacjenta i offline.
+Wyniki wykonań, CI, commit i PR podaje opis PR. Akceptacja właściciela
+nie jest deklaracją niezależnej walidacji klinicznej. Ponowny przegląd
+po zmianie EAU/Mayo, polityki wieku, czasu, konwersji lub zapisu historii.
+
 #### Zakres i ograniczenia
 
 | Obszar | Wdrożona reguła | Najważniejsze ograniczenia |

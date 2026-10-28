@@ -126,14 +126,9 @@
       },
       {
         id: "UA_mgkg",
-        label: "Wydalanie kwasu moczowego (DZM; bez automatycznej normy)",
+        label: "Dobowe wydalanie kwasu moczowego",
         version: "advanced",
-        requires: [
-          "U_UA",
-          "V24",
-          "weight",
-          ...timedCollectionProtocol,
-        ],
+        requires: ["UA_concentration", "UA_concentrationUnit", "UA_volume", "UA_volumeUnit", "UA_collectionHours", "weight"],
       },
       {
         id: "Ca_mgkg",
@@ -401,7 +396,6 @@
       ]),
       r = new Set([]),
       timedCollectionIds = new Set([
-        "UA_mgkg",
         "Ca_mgkg",
         "Mg_mgkg",
         "PO4_mgkg",

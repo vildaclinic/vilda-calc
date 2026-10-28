@@ -1586,7 +1586,7 @@
   }
 
   function groupCollapsibleContextFields() {
-    if (["cl24", "ACR", "PCR", "CaCr_spot", "OxCr_spot", "CitCr_spot", "FENa_spot", "FEK_spot", "FECl_spot", "FEHCO3_spot", "AGu_spot", "TMP_GFR", "pH_spot"].includes(state.activeFormulaId) && !state.legacyBroad) return;
+    if (["cl24", "ACR", "PCR", "CaCr_spot", "OxCr_spot", "CitCr_spot", "FENa_spot", "FEK_spot", "FECl_spot", "FEHCO3_spot", "AGu_spot", "TMP_GFR", "pH_spot", "UA_mgkg"].includes(state.activeFormulaId) && !state.legacyBroad) return;
     const groups = new Map();
     const sharedFieldset = ["egfr_cr_cys", "ckid_u25_cys", "ckid_u25_cr_cys"].includes(state.activeFormulaId)
       ? documentRef.getElementById("serumSet") : null;
@@ -1881,6 +1881,18 @@
   });
 
   function activeSetsForFormula(formula) {
+    if (formula.id === "UA_mgkg") {
+      const reported = fieldValue("UA_inputMode") === "reported";
+      const required = new Set(reported
+        ? ["UA_reportedValue", "UA_reportedUnit"]
+        : ["UA_concentration", "UA_concentrationUnit", "UA_volume", "UA_volumeUnit", "UA_collectionHours"]);
+      const alreadyPerKg = reported && fieldValue("UA_reportedUnit") === "mg/kg/24h";
+      const adult = global.evaluateClcrUa?.().input?.ageYears >= global.ClcrUaReferenceData?.DEFAULT_POLICY?.adultAgeMinimum;
+      const optional = new Set();
+      if (!alreadyPerKg && !adult) required.add("weight");
+      else optional.add("weight");
+      return { active: new Set([...required, ...optional]), required, interpretation: new Set(), optional };
+    }
     const required = new Set(Array.isArray(formula?.requires) ? formula.requires : []);
     const context = getContext(formula.id);
     const optional = new Set([...(context.interpretation || []), ...(context.optional || [])]);
@@ -2018,6 +2030,7 @@
     if (state.legacyBroad || formula?.id !== "FEHCO3_spot") global.ClcrFehco3Ui?.sync(documentRef, { active: false, fieldViews: state.fieldViews });
     if (state.legacyBroad || formula?.id !== "AGu_spot") global.ClcrUagUi?.sync(documentRef, { active: false, fieldViews: state.fieldViews });
     if (state.legacyBroad || formula?.id !== "TMP_GFR") global.ClcrTmpGfrUi?.sync(documentRef, { active: false, fieldViews: state.fieldViews });
+    if (state.legacyBroad || formula?.id !== "UA_mgkg") global.ClcrUaUi?.sync(documentRef, { active: false, fieldViews: state.fieldViews });
     if (state.legacyBroad || formula?.id !== "pH_spot") global.ClcrPhUi?.sync(documentRef, { active: false, fieldViews: state.fieldViews });
     // Same-formula refresh must not reparent a focused correction control.
     // syncNeonatalAgeCorrection releases it once the correction loses focus.
@@ -2097,6 +2110,7 @@
     global.ClcrUagUi?.sync(documentRef, { active: formula?.id === "AGu_spot", fieldViews: state.fieldViews });
     global.ClcrTmpGfrUi?.sync(documentRef, { active: formula?.id === "TMP_GFR", fieldViews: state.fieldViews });
     global.ClcrPhUi?.sync(documentRef, { active: formula?.id === "pH_spot", fieldViews: state.fieldViews });
+    global.ClcrUaUi?.sync(documentRef, { active: formula?.id === "UA_mgkg", fieldViews: state.fieldViews });
     syncFieldsetVisibility();
     renderReadiness();
   }
@@ -2111,6 +2125,7 @@
   }
 
   function renderLegacyBroad(level) {
+    global.ClcrUaUi?.sync(documentRef, { active: false, fieldViews: state.fieldViews });
     global.ClcrAcrUi?.sync({ document: documentRef, active: false, fieldViews: state.fieldViews });
     global.ClcrPcrUi?.sync(documentRef, { active: false, fieldViews: state.fieldViews });
     global.ClcrCacrUi?.sync(documentRef, { active: false, fieldViews: state.fieldViews });
@@ -2131,7 +2146,7 @@
     delete documentRef.documentElement.dataset.clcrActiveModule;
     const active = new Set();
     state.fieldViews.forEach((_view, id) => {
-      if (!["Cl24DurationHours", "Cl24CollectionProblem", "ACR_reported", "ACR_reported_unit", "ACR_same_specimen", "PCR_reported", "PCR_reported_unit", "PCR_same_specimen", "U_Prot_spot_unit", "CaCr_reported", "CaCr_reported_unit", "CaCr_same_specimen", "OxCr_reported", "OxCr_reported_unit", "OxCr_same_specimen", "oxalateSpotReportingEntity", "CitCr_reported", "CitCr_reported_unit", "CitCr_reported_basis", "CitCr_same_specimen", "citrateSpotReportingEntity", "tmpBurosumab", "tmpDaysSinceDose"].includes(id)) active.add(id);
+      if (!id.startsWith("UA_") && !["Cl24DurationHours", "Cl24CollectionProblem", "ACR_reported", "ACR_reported_unit", "ACR_same_specimen", "PCR_reported", "PCR_reported_unit", "PCR_same_specimen", "U_Prot_spot_unit", "CaCr_reported", "CaCr_reported_unit", "CaCr_same_specimen", "OxCr_reported", "OxCr_reported_unit", "OxCr_same_specimen", "oxalateSpotReportingEntity", "CitCr_reported", "CitCr_reported_unit", "CitCr_reported_basis", "CitCr_same_specimen", "citrateSpotReportingEntity", "tmpBurosumab", "tmpDaysSinceDose"].includes(id)) active.add(id);
     });
     state.activeFieldIds = active;
     state.requiredFieldIds = new Set();
@@ -2447,6 +2462,12 @@
   }
 
   function evaluateFormulaOutcome(formula) {
+    if (formula?.id === "UA_mgkg" && typeof global.evaluateClcrUa === "function") {
+      const outcome = global.evaluateClcrUa();
+      return outcome.valid
+        ? { ok: true, outcome, blockers: [], limitations: [] }
+        : semanticBlock(outcome.errorCode || "UA_INVALID", outcome.error || "Sprawdź dane wydalania kwasu moczowego.", outcome.invalidIds?.[0] || outcome.missingIds?.[0] || "", outcome);
+    }
     if (formula?.id === "pH_spot" && typeof global.evaluateClcrPh === "function") {
       const outcome = global.evaluateClcrPh();
       return outcome.valid
@@ -2755,7 +2776,7 @@
     }
     // These ratios use the same production reader as their result card.
     // Legacy generic maxima and >0 analyte checks do not qualify this model.
-    const ratioEvaluator = { CaCr_spot: global.evaluateClcrCacr, OxCr_spot: global.evaluateClcrOxcr, CitCr_spot: global.evaluateClcrCitcr, FENa_spot: global.evaluateClcrFena, FEK_spot: global.evaluateClcrFek, FECl_spot: global.evaluateClcrFecl, FEHCO3_spot: global.evaluateClcrFehco3, AGu_spot: global.evaluateClcrUag, TMP_GFR: global.evaluateClcrTmpGfr, pH_spot: global.evaluateClcrPh }[formula.id];
+    const ratioEvaluator = { CaCr_spot: global.evaluateClcrCacr, OxCr_spot: global.evaluateClcrOxcr, CitCr_spot: global.evaluateClcrCitcr, FENa_spot: global.evaluateClcrFena, FEK_spot: global.evaluateClcrFek, FECl_spot: global.evaluateClcrFecl, FEHCO3_spot: global.evaluateClcrFehco3, AGu_spot: global.evaluateClcrUag, TMP_GFR: global.evaluateClcrTmpGfr, pH_spot: global.evaluateClcrPh, UA_mgkg: global.evaluateClcrUa }[formula.id];
     if (typeof ratioEvaluator === "function") {
       const semantic = evaluateFormulaOutcome(formula);
       const outcome = semantic.outcome;
@@ -2978,6 +2999,7 @@
     if (state.activeFormulaId === "AGu_spot") global.ClcrUagUi?.refresh(documentRef);
     if (state.activeFormulaId === "TMP_GFR") global.ClcrTmpGfrUi?.refresh(documentRef);
     if (state.activeFormulaId === "pH_spot") global.ClcrPhUi?.refresh(documentRef);
+    if (state.activeFormulaId === "UA_mgkg") global.ClcrUaUi?.refresh(documentRef);
     syncAssayOptions();
     syncNeonatalAgeCorrection();
     syncMeasuredProblem();
@@ -3007,7 +3029,7 @@
     }
     const readiness = getFormulaReadiness(formula.id);
     documentRef.documentElement.dataset.clcrReady = String(readiness.valueReady);
-    if (["CaCr_spot", "OxCr_spot", "CitCr_spot", "FENa_spot", "FEK_spot", "FECl_spot", "FEHCO3_spot", "AGu_spot", "TMP_GFR", "pH_spot"].includes(formula.id)) {
+    if (["CaCr_spot", "OxCr_spot", "CitCr_spot", "FENa_spot", "FEK_spot", "FECl_spot", "FEHCO3_spot", "AGu_spot", "TMP_GFR", "pH_spot", "UA_mgkg"].includes(formula.id)) {
       // Empty, invalid and qualified states belong to the single result card.
       state.readiness.hidden = true;
       global.ClcrLayout?.refresh?.();
@@ -3278,7 +3300,7 @@
     const module = getModuleForFormula(formulaId);
     if (!formula || !module || HISTORICAL_FORMULA_IDS.includes(formulaId)) return false;
     const sameSpotWorkspace = getModuleForFormula(state.activeFormulaId)?.path === "spot" && module.path === "spot";
-    const preserveCalculationInputs = sameSpotWorkspace || ["cl24", "ACR", "PCR", "CaCr_spot", "OxCr_spot", "CitCr_spot", "FENa_spot", "FEK_spot", "FECl_spot", "FEHCO3_spot", "AGu_spot", "TMP_GFR", "pH_spot"].includes(state.activeFormulaId) || ["cl24", "ACR", "PCR", "CaCr_spot", "OxCr_spot", "CitCr_spot", "FENa_spot", "FEK_spot", "FECl_spot", "FEHCO3_spot", "AGu_spot", "TMP_GFR", "pH_spot"].includes(formulaId);
+    const preserveCalculationInputs = sameSpotWorkspace || ["cl24", "ACR", "PCR", "CaCr_spot", "OxCr_spot", "CitCr_spot", "FENa_spot", "FEK_spot", "FECl_spot", "FEHCO3_spot", "AGu_spot", "TMP_GFR", "pH_spot", "UA_mgkg"].includes(state.activeFormulaId) || ["cl24", "ACR", "PCR", "CaCr_spot", "OxCr_spot", "CitCr_spot", "FENa_spot", "FEK_spot", "FECl_spot", "FEHCO3_spot", "AGu_spot", "TMP_GFR", "pH_spot", "UA_mgkg"].includes(formulaId);
     state.legacyBroad = false;
     state.mobileModulesExpanded = false;
     documentRef.documentElement.classList.remove("clcr-mobile-modules-expanded");
@@ -3540,11 +3562,13 @@
   }
 
   function initFields(form) {
+    global.ClcrUaUi?.ensureControls(documentRef);
     form
       .querySelectorAll("input[id], select[id], textarea[id]")
       .forEach((control) => {
         if (
           [
+            "UA_inputMode",
             "formulaSearch",
             "formulaPicker",
             "samePatientMode",
@@ -3596,6 +3620,10 @@
     const picker = documentRef.getElementById("formulaPicker");
     if (picker) picker.addEventListener("change", () => global.setTimeout(syncFromPicker, 0));
     form.addEventListener("input", scheduleReadiness, true);
+    // Dedicated UA controls are created after legacy direct listeners mount.
+    ["input", "change"].forEach(type => form.addEventListener(type, event => {
+      if (event.target?.id?.startsWith("UA_") && typeof global.clcrUpdate === "function") global.clcrUpdate();
+    }));
     form.addEventListener("input", (event) => {
       if (event.target?.id === "Cl24CollectionProblem" && !event.target.checked) clearMeasuredProblemAnswers();
       if (event.target?.id === "Cl24DurationHours") {
@@ -3605,7 +3633,7 @@
     }, true);
     form.addEventListener("change", scheduleReadiness, true);
     form.addEventListener("change", (event) => {
-      if (["ACR_entry_mode", "PCR_entry_mode", "CaCr_entry_mode", "OxCr_entry_mode", "CitCr_entry_mode"].includes(event.target?.id)) {
+      if (["ACR_entry_mode", "PCR_entry_mode", "CaCr_entry_mode", "OxCr_entry_mode", "CitCr_entry_mode", "UA_inputMode", "UA_reportedUnit"].includes(event.target?.id)) {
         syncFromPicker();
         if (typeof global.clcrUpdate === "function") global.clcrUpdate();
       }
@@ -3716,6 +3744,7 @@
     if (["FENa_spot", "FEK_spot", "FECl_spot", "FEHCO3_spot"].includes(formulaId)) ["age", "ageMonths", "spotDiureticUse", "spotKnownCKD", "suspectedAKI", "creatinineState", "FENa_sample_status", "spotSameSpecimen", "spotPairedChemistry", "spotSampleKind", "spotBicarbonateLoad"].forEach(id => ids.add(id));
     if (formulaId === "AGu_spot") (global.VildaClcrUag?.FIELD_IDS || []).forEach(id => ids.add(id));
     if (formulaId === "TMP_GFR") (global.VildaClcrTmpGfr?.FIELD_IDS || []).forEach(id => ids.add(id));
+    if (formulaId === "UA_mgkg") [...(global.VildaClcrUa?.FIELD_IDS || []), ...(global.VildaClcrUa?.CONTEXT_FIELD_IDS || [])].forEach(id => ids.add(id));
     if (formulaId === "pH_spot") [...(global.VildaClcrPh?.FIELD_IDS || []), ...(global.VildaClcrPh?.CONTEXT_FIELD_IDS || [])].forEach(id => ids.add(id));
     [...ids].forEach(id => {
       if (UNIT_PAIRS[id]) ids.add(UNIT_PAIRS[id]);
@@ -3729,6 +3758,7 @@
         // Retain the historical context in values without reintroducing an
         // optional questionnaire when editing this single measured result.
         if (formulaId === "pH_spot" && id !== "U_pH") return [];
+        if (formulaId === "UA_mgkg" && !id.startsWith("UA_") && id !== "weight") return [];
         const control = documentRef.getElementById(id);
         if (!control) return [];
         if (String(control.type).toLowerCase() === "hidden") return [];
@@ -3759,7 +3789,7 @@
     openMeasuredReferenceFields,
     hasBlockingValidationError() {
       // FENa owns a concrete empty/error card from its semantic engine.
-      if (["FENa_spot", "FEK_spot", "FECl_spot", "FEHCO3_spot", "AGu_spot", "TMP_GFR", "pH_spot"].includes(state.activeFormulaId)) return false;
+      if (["FENa_spot", "FEK_spot", "FECl_spot", "FEHCO3_spot", "AGu_spot", "TMP_GFR", "pH_spot", "UA_mgkg"].includes(state.activeFormulaId)) return false;
       return Array.from(state.requiredFieldIds).some((fieldId) => {
         const control = documentRef.getElementById(fieldId);
         return Boolean(control && control.classList.contains("error"));
@@ -4143,6 +4173,10 @@
       if (dp.sourceFormulaId === "TMP_GFR") {
         global.ClcrTmpGfrPersistence?.augmentDatapoint(el, dp);
         if (!dp.tmpGfrSnapshot) continue;
+      }
+      if (dp.sourceFormulaId === "UA_mgkg") {
+        global.ClcrUaPersistence?.augmentDatapoint(el, dp);
+        if (!dp.uaSnapshot) continue;
       }
       if (dp.sourceFormulaId === "pH_spot") {
         global.ClcrPhPersistence?.augmentDatapoint(el, dp);
@@ -4629,14 +4663,14 @@
     if (!doc) return [];
     const candidates = new Map();
     spec?.fields?.forEach(field => {
-      if (field.historicalContext || !["number", "text", "textarea"].includes(field.type)) return;
+      if (field.historicalContext || field.id === "UA_collectionHours" || !["number", "text", "textarea"].includes(field.type)) return;
       const control = doc.getElementById(field.id);
       if (control) candidates.set(field.id, control);
     });
     const historical = new Set(PATIENT_FACT_FIELDS);
     const form = doc.getElementById?.("clcrForm");
     Array.from(form?.querySelectorAll?.('input[type="number"][id], input[type="text"][id], textarea[id]') || []).forEach(control => {
-      if (!historical.has(control.id) && !["formulaSearch", "U_ACR", "U_PCR"].includes(control.id)) candidates.set(control.id, control);
+      if (!historical.has(control.id) && !["formulaSearch", "U_ACR", "U_PCR", "UA_collectionHours"].includes(control.id)) candidates.set(control.id, control);
     });
     return [...candidates.values()].filter(control => !control.readOnly && String(control.value || "").trim() !== "");
   }
@@ -5845,7 +5879,7 @@
     rail.dataset.clcrHasResult = String(hasResult);
     reportActions.hidden = !hasResult;
     const resultBody = reportSection.querySelector(".clcr-result-extra");
-    if (resultBody) resultBody.hidden = !["CitCr_spot", "FENa_spot", "FEK_spot", "FECl_spot", "FEHCO3_spot", "AGu_spot", "TMP_GFR", "pH_spot"].includes(formulaId) && Boolean(readiness && !readiness.valueReady);
+    if (resultBody) resultBody.hidden = !["CitCr_spot", "FENa_spot", "FEK_spot", "FECl_spot", "FEHCO3_spot", "AGu_spot", "TMP_GFR", "pH_spot", "UA_mgkg"].includes(formulaId) && Boolean(readiness && !readiness.valueReady);
   }
 
   function scheduleRefresh() {
