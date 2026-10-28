@@ -10746,6 +10746,31 @@ Na bazie oba testy padają (994 i 284 mutacje). Każda z mutacji poprawki wywrac
 
 **Wersje.** `vilda_summary_cards.js` 58; SW 1.1.259 → 1.1.260 (numery 1.1.258 i 1.1.259 nadały równolegle #658 i #660).
 
+### P-PRZYPOMNIENIA-STAN — błędy odczytu, kolejność odpowiedzi i odświeżanie widocznej karty (2026-10-28)
+
+**Polecenie właściciela.** Naprawić trzy punkty analizy: błąd odczytu udający pustą listę, starsza odpowiedź nadpisująca nowszą oraz zbędne odświeżenia po akcji i pod siatką centylową.
+
+**Zmiana prezentacji, bez wpływu na obliczenia kliniczne.** Pozostają te same wpisy, kategorie, terminy, strefy dat, statusy, reguły zakończenia dyżurów/poradni i uprawnienia PRO. Natywne `listPatientNotesDueByDate`, zapisy notatek, schemat, synchronizacja i preferencje nie są zmieniane. Nie wprowadzono pamięci podręcznej odczytanych notatek.
+
+**Odczyt.** Czytelny blok `P-PRZYPOMNIENIA-STAN` w `vilda_auth_ui.js` przechowuje wyłącznie stan interfejsu: numer żądania per kontener oraz tożsamość sejfu, konta i cykl blokady. Wynik lub błąd może zmienić widok tylko, gdy nadal należy do najnowszego żądania, bieżącego konta i dostępnego widoku. Zabezpieczenie obejmuje kartę, automatyczne/ręczne otwarcie pełnego arkusza i jego odświeżenie po akcji. Zamknięty arkusz odrzuca spóźnioną odpowiedź. Dzwonek w `vilda_chrome.js` ma analogiczny numer żądania i kontrolę konta; zaplanowanie nowego odświeżenia od razu unieważnia poprzednie.
+
+**Błąd.** Karta pokazuje „Nie udało się wczytać przypomnień” i „Spróbuj ponownie”, zamiast „Brak przypomnień na dziś”. Dzwonek pokazuje `?` i opis błędu; ostatni licznik w pamięci sesji nie jest zastępowany zerem. Ręczne otwarcie po błędzie oferuje ponowienie. Nieudane odświeżenie otwartego arkusza pozostawia go otwartym z przyciskiem ponowienia. Prawidłowe puste dane nadal dają normalny stan pustej listy. Nieudany odczyt nie oznacza dnia jako obejrzanego lub zamkniętego.
+
+**Praca w tle.** Akcja karty i powiadomienie sejfu trafiają przez ten sam harmonogram najbliższej klatki. Zmiana rozmiaru albo geometrii kart podsumowania przelicza wysokość widocznej listy, bez ponownego pobierania notatek. Podsumowanie wyników, zarezerwowane miejsce siatki, wstępne oczekiwanie na nią i niewłaściwy układ ekranu blokują nowe odczyty karty. Odczyt już rozpoczęty może dokończyć pracę sejfu, ale nie może namalować ukrytej listy. Zwolnienie miejsca przez siatkę zachowuje dotychczasowy `__vildaRemindersResync` i przywraca świeże wpisy. Odczyt dzwonka pozostaje dostępny, gdy karta jest ukryta.
+
+**Przypadki syntetyczne i weryfikacja funkcji produkcyjnych.**
+
+- błąd odczytu przy dwóch zadaniach → komunikat błędu i ponowienie, licznik nie staje się zerem; prawdziwa pusta lista → stan pusty;
+- żądanie A, żądanie B, odpowiedź B, odpowiedź/błąd A → widoczna wyłącznie lista B;
+- blokada/odblokowanie, zmiana konta/sejfu albo usunięcie kontenera podczas odczytu → odpowiedź odrzucona;
+- jedna akcja „Zrobione” i jej powiadomienie → jedno pobranie oraz jedna przebudowa karty;
+- zmiana rozmiaru gotowej karty → pomiar wysokości, bez pobrania i bez wymiany wierszy;
+- widoczna siatka + sygnał odświeżenia → zero nowych odczytów karty; po wyczyszczeniu formularza → Przypomnienia wracają;
+- błąd pełnego arkusza po akcji → arkusz pozostaje otwarty i daje się odświeżyć.
+- ręczne otwarcie dzwonkiem w toku + automatyczne sprawdzenie → ręczne żądanie ma pierwszeństwo; automatyczne nie unieważnia kliknięcia podczas pisania.
+
+Testy: `tests/unit/reminders-read-state.test.mjs` wycina i uruchamia rzeczywiste funkcje z artefaktów przez AST, z kontrolowanymi odpowiedziami odczytu; `tests/e2e/przypomnienia-stabilnosc.spec.mjs` sprawdza rzeczywistą aplikację i syntetyczny sejf. Dotychczasowe testy dat, kategorii, akcji i synchronizacji pozostają obowiązujące.
+
 ### P-PRZYPOMNIENIA-ECHO — karta „Przypomnienia” nie przebudowuje się od własnego pingu licznika (SW 1.1.263, 2026-10-13, polecenie właściciela)
 
 **Skąd.** Test „„⋮” przy pozycji ma rozmiar jak w widoku pełnoekranowym i otwiera to samo okno z akcjami” (`tests/e2e/przypomnienia-karta-akcje.spec.mjs`) padał w CI (m.in. na #652), a lokalnie przechodził: `boundingBox()` przycisku „⋮” dawał `null`, choć na zrzucie przycisk był widoczny. Na #652 ustalono, że karta przebudowuje się w całości chwilę po pierwszym renderze, także na czystym `audyt`. Właściciel polecił naprawę 2026-10-13 („napraw niestabilny test przypomnień”). Zmiana niekliniczna: nie zmienia wyników, jednostek, progów, danych, zapisu ani synchronizacji.
@@ -10767,7 +10792,7 @@ Na bazie oba testy padają (994 i 284 mutacje). Każda z mutacji poprawki wywrac
 
 **Testy.** `tests/e2e/przypomnienia-karta-akcje.spec.mjs`: nowy test „własny ping licznika nie przebudowuje karty; ping z innej karty lub ramki nadal ją odświeża”. Licznik paska jest kasowany i nie może trafić do `sessionStorage`, więc karta za każdym razem wysyła ping. Test czeka na odbiór pingu i na koniec pobrań wpisów, bez stałych opóźnień. Potem sprawdza, że karta wypełniła się raz i nie była przebudowana. Kontrola: ping z innego obiektu kanału przebudowuje kartę. Bez poprawki test pada 12/12, z poprawką przechodzi 36/36 (6 przebiegów równolegle na 4 rdzeniach). Testy przypomnień i karty (`przypomnienia-*.spec.mjs`, `reminders-*.spec.mjs`, `powloka-sidebar-po-karcie`, `porownanie-uklad-mobile`) przechodzą 34/34.
 
-**Ustalenie poza zakresem (do decyzji właściciela).** Po akcji w oknie pozycji, np. „Zrobione”, karta przebudowuje się dwa razy w odstępie kilku milisekund. Raz z samej akcji (`remOdswiez()` → `Rr()`), drugi raz z powiadomienia sejfu o zmianie wpisu (`onPatientNoteChanged` → `xe()`). Komunikat sejfu z kanału wpada w tę samą klatkę. Obie przebudowy mają tę samą treść, a testy tego nie wywracają, bo dalsze kroki czekają na elementy. Ta zmiana tego nie dotyka.
+**Ustalenie poza zakresem tej historycznej poprawki.** Po akcji w oknie pozycji, np. „Zrobione”, karta przebudowywała się dwa razy w odstępie kilku milisekund: z samej akcji i z powiadomienia sejfu. Aktualizacja 2026-10-28: oba sygnały są scalane przez harmonogram w P-PRZYPOMNIENIA-STAN powyżej.
 
 **Wersje.** `vilda_auth_ui.js` 485 → 486; `vilda_chrome.js` 134 i `vilda_session_bridge.js` 58 (tylko nowy `?v=` wstrzykiwanego `vilda_auth_ui.js`); SW 1.1.262 → 1.1.263 (numer 1.1.262 nadał równolegle #663).
 
