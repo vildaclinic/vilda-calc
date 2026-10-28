@@ -88,6 +88,30 @@ const cycleRows = page => cycleVariants(page).locator('[data-variant-id]');
 const cycleIds = ['e2_female_follicular', 'e2_female_ovulation', 'e2_female_luteal', 'e2_female_postmeno'];
 const cyclePhases = ['follicular', 'ovulation', 'luteal', 'postmenopause'];
 
+for (const width of [1440, 320]) test(`E2 chronological qualification at ${width}px: adult Tanner, missing age and neonatal interval`, async ({ page, e2Origin }) => {
+  await page.setViewportSize({ width, height: 1000 });
+  await open(page, e2Origin, patient({ age: 30, ageMonths: 0, tannerStage: 1 }));
+  await page.locator('#labValue').fill('50');
+  await bounds(page, '40–160');
+  await expect(page.locator('#labResultStatus')).toContainText('w zakresie normy');
+  await expect(page.locator('#labMeta')).not.toContainText('47,8');
+
+  await writePatient(page, patient({ age: null, ageMonths: null, tannerStage: 1 }));
+  await expectUnavailable(page);
+  await expect(page.locator('#labResultBig .lab-result-big-value')).toHaveText('50');
+
+  // A completed zero month spans the source's >14-day boundary. No birth
+  // time or midpoint is inserted to obtain a neonatal reference.
+  await writePatient(page, patient({ age: 0, ageMonths: 0, tannerStage: 1 }));
+  await expectUnavailable(page);
+  await writePatient(page, patient({ age: 0, ageMonths: 1, tannerStage: 1 }));
+  await bounds(page, '0–47,8');
+  await expect(page.locator('#labResultStatus')).toContainText('powyżej normy');
+  await writePatient(page, patient({ sex: 'F', age: 30, ageMonths: 0, tannerStage: 1 }));
+  await expectCycleAlternatives(page);
+  await noOverflow(page);
+});
+
 async function neutralResult(page) {
   await expect(page.locator('#labRangeBlock .lab-range-scale, #labRangeBlock .lab-range-marker')).toHaveCount(0);
   await expect(page.locator('#labResultStatus')).not.toContainText(/w zakresie normy|poniżej normy|powyżej normy/i);

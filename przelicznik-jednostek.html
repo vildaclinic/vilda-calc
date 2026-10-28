@@ -78,7 +78,7 @@
   <script src="vilda_html.js?v=5"></script>
   <script src="vilda_schowek.js?v=5"></script>
   <script src="vilda_persistence_adapter.js?v=32"></script>
-  <script src="vilda_session_bridge.js?v=106"></script>
+  <script src="vilda_session_bridge.js?v=107"></script>
   <script src="vilda_init.js?v=4"></script>
   <script src="vilda_deps.js?v=98"></script>
   <script>
@@ -115,7 +115,7 @@
 
   <link href="inline_przelicznik_jednostek_00.css?v=7" rel="stylesheet">
 
-  <script src="vilda_chrome.js?v=184"></script>
+  <script src="vilda_chrome.js?v=185"></script>
   <script src="lucide.min.js?v=1" defer></script>
   <script defer src="vilda_frame_sync.js?v=2"></script>
   <link rel="stylesheet" href="vilda_phone_landscape.css?v=2">
@@ -473,8 +473,8 @@
   <script src="ios26-ui.js?v=45" defer></script>
 
   <!-- Dane + moduł logiki (dwa pliki przygotowane do reużycia w innych podstronach). -->
-  <script src="lab_units_data.js?v=41"></script>
-  <script src="lab_unit_converter.js?v=9"></script>
+  <script src="lab_units_data.js?v=42"></script>
+  <script src="lab_unit_converter.js?v=10"></script>
   <script src="vilda_lab_puberty_data.js?v=8"></script>
   <script src="vilda_lab_puberty.js?v=9"></script>
   <script src="vilda_lab_inhibin_b_data.js?v=1"></script>
@@ -2207,6 +2207,18 @@
       p._shared_tanner_kind = shared.tannerKind || null;
       p._shared_tanner_current = shared.tannerCurrent == null ? null : shared.tannerCurrent;
       p._tanner_overridden = (typeof localOverride.tanner === 'number' && isFinite(localOverride.tanner));
+      if (typeof currentSubstance !== 'undefined' && currentSubstance && currentSubstance.id === 'estradiol') {
+        var e2Source = readPubertyPatientContext();
+        var e2Age = e2Source.sourceStatus === 'ready' && lifespanLegacyAge(e2Source).resolved;
+        // E2 needs the same current-person and complete-age carrier as the
+        // educational cards. A year/month is never promoted to an exact day.
+        p.age = e2Age && e2Age.status === 'known' ? e2Age.lowerYears : null;
+        p.sex = localOverride.sex || e2Source.sex || null;
+        if (e2Age && e2Age.status === 'known') {
+          p.ageUpperYears = e2Age.upperYears;
+          p.ageUpperInclusive = e2Age.upperInclusive === true;
+        }
+      }
       if (typeof currentSubstance !== 'undefined' && currentSubstance && currentSubstance.id === 'amh') {
         var amhSource = readPubertyPatientContext();
         var amhAge = lifespanLegacyAge(amhSource).resolved;
