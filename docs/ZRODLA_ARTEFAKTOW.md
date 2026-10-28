@@ -735,6 +735,24 @@ window.VildaServiceWorkerClientLifecycle.updateBannerGateReasons = powodyWstrzym
 zglosBaner(() => showUpdateBanner(() => postSkipWaiting(registration, reason), { reason, notes }, onDismissShowIndicator));
 ```
 
+## Blok P-PRZYPOMNIENIA-STAN (2026-10-28)
+
+Czytelne źródło jest bezpośrednio w artefakcie `vilda_auth_ui.js`, od komentarza
+`P-PRZYPOMNIENIA-STAN`: funkcje `remReadOwner`, `remReadCurrent`,
+`remInlineState`, `remInlineReserved`, `remInlineAllowed`, `remInvalidateInline`,
+`remInlineHide`, `remInlineLayout`, `remBadgeRecover` i renderery błędu.
+Granice odczytu `Br`, `tn` oraz `H` wewnątrz `Mr` używają tych funkcji, zachowując
+natywny renderer wierszy/kategorii. `Rr`, `xe` i `remOdswiez` pozostają punktem
+montowania i harmonogramem. Nasłuchy geometrii w `Wr` wywołują
+`remInlineLayout`, a zdarzenia danych nadal wywołują `xe`.
+
+W `vilda_chrome.js` licznik `RemBadgeSequence` jest obok `kt`; `E` unieważnia
+poprzedni odczyt przy samym planowaniu odświeżenia. `kt` sprawdza numer żądania,
+tożsamość konta i sejfu przed zmianą DOM albo licznika pamięci sesji. Brak nowego
+bundlera, zależności aplikacji i pliku ładowanego w runtime. Testy
+`reminders-read-state.test.mjs` wycinają funkcje przez AST i wykonują ten kod,
+bez odrębnej kopii algorytmu. Szczegóły: P-PRZYPOMNIENIA-STAN w ALGORITHMS.md.
+
 ## Łatka P-PRZYPOMNIENIA-ECHO (`vilda_auth_ui.js` 485 → 486, 2026-10-13)
 
 Zmiana wprost w artefakcie, jedno wyrażenie w funkcji podpinającej kartę „Przypomnienia” (w artefakcie `Wr()`). Nasłuch kanału `vilda-notes` używa obiektu, którym karta wysyła ping samonaprawy licznika. Nazwy z artefaktu: `kn` — kanał nadawczy modułu, `Tr` — ping samonaprawy po renderze, `xe` — przebudowa karty w następnej klatce. Opis działania: `docs/clinical/ALGORITHMS.md`, wpis P-PRZYPOMNIENIA-ECHO.

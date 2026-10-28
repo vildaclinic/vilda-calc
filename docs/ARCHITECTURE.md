@@ -165,6 +165,15 @@ Nie wolno przenosić pola między pamięcią sesji, pamięcią trwałą i danymi
 
 ### Podgląd siatki podczas nowego pomiaru
 
+Przypomnienia w `vilda_auth_ui.js` mają osobny, czytelny blok `P-PRZYPOMNIENIA-STAN`.
+Numer żądania i tożsamość konta/sejfu blokują spóźnione odpowiedzi w karcie oraz
+pełnym arkuszu. Błąd jest odrębny od pustej listy i pozwala ponowić odczyt;
+dzwonek w `vilda_chrome.js` nie zapisuje wtedy fałszywego zera w pamięci sesji.
+Akcje i zdarzenia danych korzystają ze wspólnego harmonogramu. Zdarzenia układu
+wykonują sam pomiar wysokości, a rezerwacja miejsca siatki blokuje nowe odczyty
+ukrytej karty. Zwolnienie miejsca uruchamia dotychczasowy sygnał odświeżenia.
+Stan ten nie zawiera trwałej kopii notatek i nie zapisuje danych pacjenta.
+
 `index.html` i `docpro.html` wczytują czytelne moduły `vilda_centile_live_*`:
 
 - `data` buduje zamrożoną migawkę zapisanej osoby i bieżącej wizyty. Jawny wybór
