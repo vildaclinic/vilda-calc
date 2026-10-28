@@ -1,6 +1,6 @@
 {
   "opis": "E2E-ODŁAMKI: sekundy na plik e2e (pierwsza próba każdego testu, wszystkie projekty razem). Źródło podziału na odłamki CI — tests/support/odlamki-e2e.mjs. Odświeżenie: node tests/scripts/odlamki-e2e.mjs --pomoc.",
-  "zrodlo": "1 raport(y) JSON pełnego przebiegu, Playwright 1.61.1, 2026-10-18; uzupełnienie 2026-10-25: 2 pełne pliki LH z lokalnego przebiegu 22/22; startup-restore-batching (5 testów) i centile-summary-flash (6 testów) z lokalnego przebiegu 45/45, Playwright 1.61.1, sumy pierwszych prób bez powtórek; dotychczasowe 364 wagi i 2 pomiary LH zachowane; uzupełnienie 2026-10-26 po regresji autosave: dwa pełne nowe pliki LH niemowląt (9 UI + 1 offline) z lokalnego przebiegu 32/32 PASS, Playwright 1.61.1, 4 workers, sumy pierwszych prób bez powtórek (UI 149,1 s, offline 51,2 s); wszystkie 368 wcześniejszych wag zachowano; uzupełnienie 2026-10-26 (PR-S4): polkrata-cien-indexeddb (2 testy, tylko projekt desktop-chromium) z lokalnego przebiegu 2/2, Playwright 1.61.1, 1 worker, suma pierwszych prób bez powtórek 1,9 s; wszystkie 370 wcześniejszych wag zachowano",
+  "zrodlo": "1 raport(y) JSON pełnego przebiegu, Playwright 1.61.1, 2026-10-18; uzupełnienie 2026-10-25: 2 pełne pliki LH z lokalnego przebiegu 22/22; startup-restore-batching (5 testów) i centile-summary-flash (6 testów) z lokalnego przebiegu 45/45, Playwright 1.61.1, sumy pierwszych prób bez powtórek; dotychczasowe 364 wagi i 2 pomiary LH zachowane; uzupełnienie 2026-10-26 po regresji autosave: dwa pełne nowe pliki LH niemowląt (9 UI + 1 offline) z lokalnego przebiegu 32/32 PASS, Playwright 1.61.1, 4 workers, sumy pierwszych prób bez powtórek (UI 149,1 s, offline 51,2 s); wszystkie 368 wcześniejszych wag zachowano; uzupełnienie 2026-10-26 (PR-S4): polkrata-cien-indexeddb (2 testy, tylko projekt desktop-chromium) z lokalnego przebiegu 2/2, Playwright 1.61.1, 1 worker, suma pierwszych prób bez powtórek 1,9 s; wszystkie 370 wcześniejszych wag zachowano; uzupełnienie 2026-10-26: dwa pełne nowe pliki TT niemowląt (10 UI + 1 offline) z lokalnego przebiegu 11/11 PASS, Playwright 1.61.1, 4 workers, bez ponowień; sumy pierwszych prób UI 172,9 s i offline 29,5 s; wcześniejsze wagi zachowano",
   "pliki": {
     "application.spec.mjs": 14.6,
     "arkusz-przypomnien-pisanie-mobile.spec.mjs": 34.9,
@@ -118,6 +118,8 @@
     "hormone-lifespan-patient-point.spec.mjs": 72.6,
     "hormone-lifespan-puberty-comparison.spec.mjs": 82.9,
     "hormone-lifespan-shell-scroll.spec.mjs": 36.5,
+    "hormone-lifespan-testosterone-infant-result-only-offline.spec.mjs": 29.5,
+    "hormone-lifespan-testosterone-infant-result-only.spec.mjs": 172.9,
     "hormone-lifespan-testosterone-stability.spec.mjs": 76.3,
     "hormone-lifespan-zec.spec.mjs": 63.1,
     "hv-sds-trzy-miejsca.spec.mjs": 128,

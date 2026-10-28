@@ -21,6 +21,7 @@ Rejestr jest inwentaryzacją techniczną. Nie nadaje opisanym modułom statusu w
 | LAB-PUBERTY | LH/FSH: niezależna ocena zakresu i czasu dojrzewania | `vilda_lab_puberty_data.js`, `vilda_lab_puberty.js`, `vilda_lab_snapshot.js`, `vilda_lab_puberty_ui.js`, `vilda_lab_assessment_ui.js` | `lab-puberty*.test.mjs`, `lab-snapshot*.test.mjs`, `lab-assessment*.test.mjs`, E2E `lab-snapshot.spec.mjs`, `lab-puberty-ui.spec.mjs` | PR3: aktywacja LH/FSH w dotychczasowym układzie i odczyt utrwalonych ocen; szczegóły w `LH_FSH.md` |
 | LAB-LH-CHILDHOOD | LH dzieci: jednostronne orientacyjne odniesienie ≤0,3 obu płci i punkt wyniku bez mediany | dane i silnik LH/FSH, wspólne assessment/snapshot, polityki wykresu | regresje produkcyjnego porównania, adaptera, historii i UI/PWA; wyniki uruchomień w PR | makieta 04 i wdrożenie zaakceptowane 25.10.2026; nowe odniesienie ma własne pochodzenie, nie zmienia RI Mayo; [kontrakt](LH_CHILDHOOD_REFERENCE.md) |
 | HORMONE-INFANT-LH-TAIL | LH chłopców po 243. dniu: przybliżona mediana modelu do 326., później sam wynik do <1 roku | wspólny silnik/renderer odniesień wieku, osobna polityka ogona Busch i dotychczasowe węzły | regresje rzeczywistego API, adaptera, UI/PWA i zachowania pozostałych profili; wykonane wyniki w PR | wdrożenie zaakceptowane 26.10.2026; zwykłe widoki życia/minipuberty, bez zmiany RI, porównania płci lub historii; [kontrakt](hormone-lifespan/LH_INFANT_TAIL.md) |
+| HORMONE-INFANT-TT-RESULT-ONLY | TT chłopców po 212. dniu do <1 roku: sam rzeczywisty wynik bez mediany | wspólny silnik/renderer, osobna polityka samego wyniku i istniejący czytnik wieku bieżącej osoby | regresje produkcyjnego API, pełnego wieku, kontekstu i UI/PWA; wykonane wyniki w PR | makieta i wdrożenie zaakceptowane 26.10.2026; bez nowych median, RI, geometrii, porównania płci lub historii; cytowania przy opisach; [kontrakt](hormone-lifespan/TT_INFANT_RESULT_ONLY.md) |
 | LAB-INHIBIN-B | Inhibina B: wiek, minipuberty i kontekst dorosłych | `vilda_lab_inhibin_b_data.js`, `vilda_lab_inhibin_b.js`, wspólne UI i snapshot | `lab-inhibin*.test.mjs`, E2E `lab-inhibin-b.spec.mjs` | orientacyjne zakresy źródłowe; ograniczenia i polityki w `INHIBIN_B.md`; akceptacja kliniczna właściciela przed scaleniem |
 | LAB-TT-MAYO | Testosteron całkowity: M według wieku/G, F według wieku od 6 miesięcy | `vilda_lab_testosterone_data.js`, `vilda_lab_testosterone.js`, `vilda_lab_testosterone_units.js`, wspólne UI i snapshot | `lab-testosterone*.test.mjs`, E2E `lab-testosterone*.spec.mjs`; wyniki uruchomień w PR | etap 3 M i pierwsza partia F; źródła, luki i polityki w `TESTOSTERONE.md`; końcowy przegląd kliniczny właściciela przed scaleniem |
 | HORMONE-FEMALE-TT-AGE | TT dziewcząt 6–18: osobna mediana modelu i punkt wyniku | `vilda_female_tt_age.js`, `vilda_female_tt_age_ui.js`, osobne dane/polityka pakowane do runtime | `female-tt-age.test.mjs`, E2E `lab-female-tt-age*.spec.mjs`; wyniki w PR | zakres zaakceptowanej makiety 24.10.2026; poza 85 zwykłymi profilami, bez nowych RI/SDS/historii; [kontrakt](hormone-lifespan/FEMALE_TT_AGE.md) |
@@ -2941,6 +2942,94 @@ PWA/offline oraz zachowanie innych profili. Wykonane wyniki i kontrole
 końcowego SHA podaje PR, bez utożsamiania ich z walidacją kliniczną.
 Pełny kontrakt, źródła i mały własny ekstrakt audytu:
 [LH_INFANT_TAIL.md](hormone-lifespan/LH_INFANT_TAIL.md).
+
+### HORMONE-INFANT-TT-RESULT-ONLY — sam wynik TT po 212. dniu, 2026-10-26
+
+**Decyzja właściciela:** po audycie pełnego Busch 2022 i trzech
+suplementów oraz przeglądzie makiety wdrożyć sam rzeczywisty punkt
+TT chłopców dla całego znanego wieku `(212 dni;1 rok)`, wyłącznie
+w zwykłych widokach „Całe życie” i „Minipuberty”. Właściciel odrzucił
+nową medianę z późnej grafiki i adnotację o rozbieżności publikacji
+w produkcie. Podpis brzmi: „Czerwony punkt: wynik pacjenta. Linia
+pokazuje poglądowy przebieg zmian.” Nie ma mediany, jasnego znacznika,
+łącznika, ilorazu, SDS, centyla lub nowego laboratoryjnego werdyktu.
+
+**Źródło i populacja:** Busch AS i wsp., *Dynamic Changes of Reproductive
+Hormones in Male Minipuberty: Temporal Dissociation of Leydig and
+Sertoli Cell Activity*, JCEM 2022;107(6):1560–1568,
+[DOI dgac115](https://doi.org/10.1210/clinem/dgac115). Pełny końcowy
+artykuł, Methods/Results s. 1561–1562, ryc. 3 s. 1565 i wszystkie
+trzy oficjalne suplementy v1 sprawdzono w audycie. Zdrowi donoszeni
+chłopcy z ciąż pojedynczych, COPENHAGEN Minipuberty, Dania. TT:
+surowica, in-house LC-MS/MS, nmol/L, źródłowe **LOQ 0,012 nmol/L**.
+119 chłopców i 338 próbek pourodzeniowych łącznie nie są potwierdzonym
+N dopasowania TT lub jego późnego ogona. Metoda/LOQ źródła nie
+ustalają metody lub granicy oznaczalności próbki pacjenta.
+
+Tekst i późna grafika nie rozstrzygają spójnie liczbowej mediany TT;
+nie odzyskano oryginalnego eksportu ani wystarczającej reguły połączenia
+dwóch dopasowań. Suplementy dotyczą SHBG/wolnego T, zmienności SDS
+i INSL3. Wdrożenie nie przypisuje konkretnej pomyłki autorom i nie
+uzupełnia luki własną medianą, LOQ, LOQ/2 lub zerem. Granica 212 dni
+jest dotychczasową decyzją graficznej kwalifikacji aplikacji,
+nie źródłowym progiem diagnostycznym.
+
+**Kontrakt wykonania:**
+`male-testosterone-infant-result-only-policy.json`, wersja `2026-10-26.1`,
+jest pakowana do zewnętrznego `infantTtResultOnlyPolicy`.
+`evaluate()` nadal zgłasza `reference-unavailable`; osobne
+`evaluateResultOnly()` dopuszcza sam wynik dopiero po zgodnym wyborze
+`busch2022-male-t` i odrzuceniu wyłącznie jego liczbowej kwalifikacji.
+Wymaga całego jawnego wieku w `(212/365.25;1)`, aktualnej osoby
+i `infantTtContextAvailable: true`. Zachowuje gotowość, tożsamość,
+blokadę, donoszenie oraz znane bramki metody/materiału, leczenia,
+stymulacji i przeciwwskazań. Nie jest fallbackiem po innym odrzuceniu.
+Nierówność lub zapis LOD/LOQ nie tworzą dokładnego punktu; zero i wynik
+ponad skalą zachowują rzeczywistą liczbę. Nie zmieniamy 85 profili,
+360 węzłów TT, ich flag ani liczbowego odniesienia do 212. dnia.
+
+Już podana data urodzenia dostarcza osobne przejściowe
+`infantTtChronologicalAge` tylko bieżącemu wykresowi TT. Jawny opt-in
+`includeInfantTtTail` obsługuje późny cache z własnym markerem
+`infantTtTailOnly`; wymaga też `includeMinipuberty`. Domyślna granica
+odczytu klinicznego <6 miesięcy pozostaje. Nie dopisujemy godziny
+urodzenia, nie eksportujemy DOB ani nie uściślamy historycznych próbek.
+Cache możliwych ukończonych dni `[lower,upper]` daje wykresowi cały
+przedział `[lower/365.25;(upper+1)/365.25)`, bez arbitralnego wyboru dnia.
+
+**Cytowanie objaśnień:** krótki klikalny odsyłacz znajduje się przy
+opisie, a pełny tytuł i lokalizacja danych w rozwijanych źródłach.
+Madsen 2022, [DOI dgac155](https://doi.org/10.1210/clinem/dgac155),
+suplement tabela 1/`LCMSMS hormones`, uzasadnia wzrost TT w pokwitaniu
+w modelach 6–18 lat. Walravens 2026 (online 10.09.2025),
+[DOI dgaf507](https://doi.org/10.1210/clinem/dgaf507), tabela 1,
+wiersz **Total T, nmol/L**, podaje średnie TT u 1194 mężczyzn 18–86 lat:
+20,7 w grupie 18–29, niższe we wszystkich starszych grupach. Nie jest
+to ściśle monotoniczny spadek w każdej dekadzie; różnice zdrowia
+i rekrutacji kohort nie pozwalają opisywać ich jako indywidualnego
+tempa lub czystego efektu starzenia. Tytuł pracy Walravensa dotyczy
+wolnego T, lecz ten cytowany wiersz całkowitego T. Opis minipuberty
+odsyła do Busch 2022. Cytowania nie aktywują mediany dla niemowlęcia.
+
+**Syntetyczne wejście → oczekiwanie:** przy zgodnym gotowym kontekście
+donoszony M300 dni/TT 0,4 nmol/L → sam punkt 0,4; 10 ng/dL → wysokość
+0,3467 nmol/L. Dokładny dzień 212 zachowuje wcześniejsze odniesienie;
+dokładne 213 lub 365 dni mogą otrzymać sam wynik. Przedział
+`[212,214)` lub przecinający rok nie otrzymuje nowej ścieżki. Wiek
+z kalendarzowych ukończonych dni nie jest dokładnym punktem wieku.
+Dokładnie rok zachowuje wybór dotychczasowego źródła dziecięcego.
+
+**Wpływ kliniczny:** tylko widoczność edukacyjnego punktu i źródła
+objaśnień. RI, kliniczne oceny, historia, snapshoty, geometria, stała
+skala, porównanie płci i inne anality zachowują kontrakty. Nie dodajemy
+migawki TT; źródłowa migawka edukacyjna pozostaje AMH-only. Regresje
+mają używać rzeczywistych funkcji produkcyjnych i obejmować cały wiek,
+kontekst, źródłowe bramki, jednostki, brak mediany/metadanych
+odniesienia, UI/mobile i rzeczywisty zimny restart PWA offline.
+Wykonane wyniki i wszystkie kontrole końcowego SHA podaje PR;
+nie są deklaracją walidacji klinicznej.
+Pełny kontrakt i własny mały zapis audytu:
+[TT_INFANT_RESULT_ONLY.md](hormone-lifespan/TT_INFANT_RESULT_ONLY.md).
 
 ### HORMONE-LH-FSH-STABLE-CURVES — stałe krzywe i dorosłe odniesienia, 2026-10-11
 
@@ -19525,6 +19614,236 @@ a lekarz poprawia jedno z miejsc. Wartość dni spoza 0–6 w rekordzie nie jest
 
 **Wersje.** `sga_birth_module.js?v=10→11`; SW 1.1.168 → **1.1.169**.
 
+## W koszu zostaje poprawka wizyty zrobiona przed „Scal pacjentów” na innym urządzeniu (P-KOSZ-USUWANEJ-KARTY, PR-E4a, SW 1.1.396, `vilda_vault.js` 230, 2026-10-28)
+
+**Zmiana kliniczna: tak** — wzory, progi, jednostki i interpretacje bez zmian; zmienia się, jaka treść wizyty (masa,
+wzrost, gwiazdka) zostaje w koszu na każdym urządzeniu, gdy wizytę poprawiono w starej karcie, zanim inne urządzenie
+zrobiło „Scal pacjentów”, a potem ta wizyta trafiła do kosza (także gdy kartę z tą wizytą w koszu usunięto „Usuń
+pacjenta”) — a więc co oddaje potem „Przywróć”. Serwer, `vilda_sync.js`, schemat IndexedDB (wersja bazy 5), format
+listy nagrobków, sygnatura API `window.VildaVault`, import i moduły kosza bez zmian; zmienia się tylko scalanie
+synchronizacji: usuwanie kart, które przegrywają z nagrobkiem pacjenta (`Bsl_usunPacjenta`), i pomijanie takich kart
+z ładunku (`Le`).
+
+**Decyzja właściciela.** D6 = a (2026-10-21, decyzje S4: „tak, akceptuję wszystko, działaj”; pytanie Q7: „wersje karty
+przegranej z nagrobkiem pacjenta przechodzą decyzję kosza (w koszu poprawka)?” — rekomendacja „tak”). Osobny PR po
+PR-PRZ0 (kolejność PR-S4 → PR-PRZ0 → PR-E4a → PR-E3). Start: „scaliłem, ruszaj dalej” (2026-10-27, po scaleniu PRZ0).
+**Do potwierdzenia przez właściciela** (PR): (1) „Usuń pacjenta” karty, której wizyta leży w koszu (U1, U3) — w koszu
+zostaje teraz nowsza treść z innego urządzenia (74 zamiast 23 kg; w U1 `rev` 1 zamiast 0); karta i jej wizyty nie
+wracają, a bez wpisu kosza nic nowego nie powstaje; (2) znane ograniczenia E4a-kp i E4a-ret-pin (niżej) — bez zmian
+w tym PR, ewentualnie osobne decyzje; (3) E4a-Cpin (niżej) — gdy trzecie urządzenie przypnie tę wizytę na karcie
+docelowej, wynik zależy od kolejności synchronizacji (74\* albo 23\*, dotąd zawsze 23\*); domknięcie w PR-E3.
+
+**Co było** (`audyt` `25dfbbe0`, wydanie PRZ0: `vilda_vault.js` 229; prawdziwy sejf, magazyny w pamięci, sztuczny zegar,
+dane fikcyjne; 8 kolejności katalogu, 30 poza repozytorium). Trzy urządzenia: P, K, C; „Testowy Jan” — karta X z trzema
+wizytami (x = druga, 125 cm / 23 kg), „Testowa Ola” — karty Y i Z; komplet na każdym urządzeniu.
+- **E4a** (ograniczenie K6, PD-16 z P-POZNIEJSZA-POPRAWKA): P, zanim dowie się o scaleniach, poprawia x w starej X na
+  74 kg; K robi „Scal pacjentów” X → Y i Y → Z (x pod Z z `rev` 2, treść 23) i daje x do kosza. Po synchronizacji w każdej
+  z 8 (i 30) kolejności kosz 23 kg na trzech urządzeniach — **poprawka 74 kg przepadała wszędzie**, a „Przywróć” oddawało
+  23 kg. Przyczyny: urządzenie z poprawką usuwało kartę X (przegraną z nagrobkiem pacjenta — scalenie stawia go źródłu)
+  razem z jej wersjami (`removePatientForUser`), zanim koniec scalania kosza (`Bkz_scalKoniec`) porównał wersje z wpisami
+  kosza, a ten i tak szuka wersji tylko pod kartą wpisu (Z); urządzenie, które dostawało kartę X w ładunku, pomijało ją
+  w całości, bo jej nagrobek pacjenta wygrywał (zbiór N w `Le`). Bez kosza (E4a-kontrola) poprawka przechodziła już pod Z
+  (faza przeniesień, P-SYNC-WLASCICIEL) — karta Z 74 kg.
+- To samo przy jednym scaleniu (E4a-1: kosz 23 `rev` 1), przy poprawce na C, przy poprawce pod Y po pierwszym scaleniu,
+  przy dwóch poprawkach (74 na P, później 80 na C: kosz 23), przy samym przypięciu (kosz 23 bez gwiazdki — gwiazdka
+  ginęła), przy poprawce z przypięciem i przy remisie chwili kosza i poprawki (kosz 23).
+- **„Usuń pacjenta” karty, której wizyta leży w koszu** (U1: P poprawia x na 74; K daje x do kosza, potem „Usuń
+  pacjenta” X; U3: K scala X → Y, daje x do kosza pod Y, usuwa Y): w koszu 23 kg (`rev` 0 / 1) — poprawka z P ginęła
+  tak samo; bez „Usuń pacjenta” kosz miał 74 w U1 (U3 bez „Usuń pacjenta” to E4a-1 — kosz 23 już dotąd).
+
+**Reguła po zmianie** (ten sam wynik na każdym urządzeniu, w każdej kolejności — zmierzone w 8 kolejnościach katalogu,
+30 kolejnościach wzorcowego zestawu poza repozytorium oraz 36 i 216 kolejnościach pierwszych scaleń w przeglądzie;
+wyjątki — „Ograniczenia”, zwłaszcza E4a-Cpin):
+- **Wersje karty, która przegrywa z nagrobkiem pacjenta, przechodzą tę samą decyzję kosza co pozostałe wersje.** Czytelna
+  wersja, z którą wygrywa wpis kosza tej samej wersji (ten sam zapis, pod dowolną kartą — wpis wskazuje kartę, w której
+  wersję dano do kosza), oddaje mu swoją zmianę, opis, `rev` i treść (rekord nagrobka P-KOSZ-POLKRATA): treść kosza =
+  nowsza po chwili treści (W3), gwiazdka = najpóźniejszy rejestr (D1 = C), `rev` = najwyższa znana (przeniesienia „Scal
+  pacjentów” ją podnoszą, chwili nie zmieniają). Tak samo jak wersja tutejsza pokonana koszem w `Bkz_scalKoniec`. Remis
+  chwili kosza i zmiany wersji to wygrana kosza, jak dotąd.
+- **Na urządzeniu z tą kartą** (`Bsl_usunPacjenta` → `Bsl_koszUsuwanejKarty`, pod blokadą karty): przed usunięciem karty.
+  Lista kosza zapisuje się od razu, przed usunięciem (tylko gdy wpis kosza się zmienia — treść, gwiazdka, `rev` albo
+  chwila zmiany; zapis niesie tylko wpisy tej karty) — przerwanie dalszej fazy scalania (blokada innej karty, zmiana
+  sesji, zamknięcie aplikacji) nie gubi treści. Gdy ten zapis się nie uda (błąd magazynu, nie zmiana sesji), karty w tym
+  scaleniu nie usuwamy — bez zapisanej kopii treści jej wersji nie znikają (dotąd ginęły z kartą); usunie ją następne
+  scalanie, a koniec tego scalania próbuje zapisać listę z treścią.
+- **Na urządzeniu, które dostaje tę kartę w ładunku** (`Le` → `Bsl_koszZLadunku`): wersje z ładunku, z którymi wygrywa
+  wpis kosza, są kandydatem treści kosza (`Bkz_pomin`, jak wersje z ładunku pokonane nagrobkiem w karcie, która zostaje);
+  bez zapisów wersji i kart. Poprawka nie ginie, gdy urządzenie, które ją ma, po wysłaniu już nie scala albo ma starszą
+  aplikację i wysłało ładunek, zanim samo scaliło nagrobki (inaczej — „Flota mieszana”).
+- **Tylko wygrana kosza.** Przycięcie (retencja) nie robi cienia karty usuwanej (decyzja 1 z 2026-10-26, P-CIEN-POZA-LISTA)
+  ani nie bierze jej zmiany do nagrobka retencji; bez wpisu kosza nic nie powstaje — „Usuń pacjenta” bez kosza usuwa
+  wszystko, jak dotąd (U2), a karta i jej wizyty po „Usuń pacjenta” nie wracają. Wersja nieczytelna na tym urządzeniu
+  znika z kartą, jak dotąd (bez wkładu do wpisu kosza).
+- **Sesja** (P-CHMURA-OPIS): odczyt wersji usuwanej karty, zapis listy przed usunięciem, usunięcie karty, zbiór kart
+  usuniętych i nagrobek karty w scalaniu — tylko w sesji scalania (sprawdzenie tuż przed operacją, bez oczekiwania
+  pomiędzy; zapis listy kosza w scalaniu sprawdza sesję przed pierwszym odczytem magazynu). Zmiana sesji w trakcie kończy
+  scalanie jak dotąd (`SESSION_CHANGED`), bez zapisu po zmianie — karta nie znika w nowej sesji ani w innym koncie.
+- **Import** (wewnętrzne scalanie importu, które kosza nie scala) — bez tej decyzji, jak dotąd.
+
+**Format.** Bez zmian: ten sam kształt listy nagrobków i ładunku (urządzenia ze starszą aplikacją czytają wynik bez
+różnicy), bez nowych pól i komunikatów. Zmienia się tylko chwila zapisu listy kosza w scalaniu (dodatkowy zapis przed
+usunięciem karty, gdy wpis kosza jej wersji się zmienia).
+
+**Przypadki** (P, K, C, „Testowy Jan” X / „Testowa Ola” Y i Z; 8 kolejności pierwszych scaleń, 3 rundy; w każdej
+kolejności ten sam pełny stan na trzech, stan stabilny, 0 zapisów listy, wersji i kart w rundzie kontrolnej):
+
+| Przypadek | Kroki | Dotąd (229) | Teraz |
+|---|---|---|---|
+| E4a | P: x → 74 w starej X; K: X → Y, Y → Z, kosz x | kosz 23 `rev` 2 | **kosz 74 `rev` 2** |
+| E4a-1 | jak E4a, jedno scalenie X → Y | kosz 23 `rev` 1 | **kosz 74 `rev` 1** |
+| E4a-C | poprawka na C zamiast P | kosz 23 | **kosz 74** |
+| E4a-Y | K: X → Y; P←K; P: x → 74 pod Y; K: Y → Z, kosz x | kosz 23 | **kosz 74** |
+| E4a-pin | P przypina x (bez poprawki); K: scalenia, kosz | kosz 23 bez gwiazdki | **kosz 23\*** |
+| E4a-pin74 | P: x → 74 i gwiazdka; K: scalenia, kosz | kosz 23 | **kosz 74\*** |
+| E4a-2kor | P: x → 74, później C: x → 80 (obie w starej X); K: scalenia, kosz | kosz 23 | **kosz 80** |
+| E4a-pin-2kor, E4a-2kor-pin | P przypina x, C poprawia x na 80 (w obu kolejnościach); K: scalenia, kosz | kosz 23 | **kosz 80\*** (treść z C, gwiazdka z P) |
+| E4a-kp-remis | K: kosz x w X i P: x → 74 w tej samej chwili; K: scalenia | kosz 23 | **kosz 74 `rev` 1** |
+| U1 | P: x → 74; K: kosz x w X, „Usuń pacjenta” X | kosz 23 `rev` 0 | **kosz 74 `rev` 1** |
+| U3 | P: x → 74; K: X → Y, kosz x pod Y, „Usuń pacjenta” Y | kosz 23 `rev` 1 | **kosz 74 `rev` 1** |
+| U2 (kontrola) | P: x → 74; K: „Usuń pacjenta” X, bez kosza | brak | brak (bez zmian) |
+| U1-bez (kontrola) | K: kosz x, „Usuń pacjenta” X, bez poprawki | kosz 23 `rev` 0 | bez zmian |
+| E4a-ret (kontrola) | P: x → 74; K: scalenia, retencja przycina x (zamiast kosza) | brak | brak (bez zmian; nagrobek retencji bez treści, cienia i zmiany z P) |
+| E4a-kp-ret (kontrola) | K: kosz x w X; P: x → 74 później; C przycina x; K: scalenia | kosz 23 w 6 z 8, retencja w 2 z 8 | bez zmian |
+| E4a-kontrola | jak E4a bez kosza | karta Z 74 `rev` 2 | bez zmian |
+| E4b (K5) | poprawka w starej X PO scaleniach, kosz | kosz 74 (+ rozjazd karty X, E3) | bez zmian |
+| E4a-kp (ograniczenie) | K: kosz x w X; P: x → 74 później; K: scalenia | kosz 23 `rev` 0 | bez zmian |
+| E4a-ret-pin (ograniczenie) | P: x → 74 i gwiazdka; K: scalenia, retencja | brak | bez zmian |
+| E4a-Cpin (ograniczenie) | P: x → 74; K: scalenia, K→C, kosz x; C (bez wiedzy o koszu) przypina x pod Z | karta Z 23\* w 8 z 8 | karta Z **74\*** w 4 z 8, 23\* w 4 z 8 |
+| E4a-Cpin-przed (ograniczenie) | jak wyżej, C przypina przed koszem K | kosz 23\* w 8 z 8 | kosz **74\*** w 7 z 8, 23\* w 1 z 8 |
+| E4a-kontrola-Cpin | jak E4a-Cpin bez kosza | karta Z 74\* w 3 z 8, 23\* w 5 z 8 | bez zmian |
+
+Przerwane scalenie, sesja i błąd zapisu (`tests/unit/kosz-usuwanej-karty-sesja.test.mjs`):
+- zalogowanie od nowa zaraz po usunięciu karty X na urządzeniu z poprawką — scalenie kończy się `SESSION_CHANGED` bez
+  zapisu po przełączeniu, X znika bez lokalnego nagrobka (zapisze go następne scalanie), kosz ma już 74; po rundach kosz 74
+  na trzech w 8 z 8 (dotąd 23; z decyzją kosza tylko na urządzeniu z kartą i bez zapisu listy przed usunięciem — 74 w 1
+  z 8; z decyzją także po stronie ładunku, ale bez tego zapisu — 74 w 4 z 8); zapis przed usunięciem niesie tylko wpisy
+  usuwanej karty;
+- zalogowanie od nowa po zapisie listy, przed usunięciem — karta X w nowej sesji nie znika;
+- przełączenie na inne konto po usunięciu karty — nagrobek X nie trafia do tamtego konta; przełączenie na konto z kopią
+  tych kart po odczycie rekordu X — karta X tamtego konta zostaje; przełączenie w zapisie listy — żadnego zapisu;
+- błąd zapisu listy przed usunięciem (raz) — scalenie bez błędu, karta zostaje do następnego scalenia, kosz 74; trwały
+  błąd — karta z poprawką zostaje na tym urządzeniu, a inne urządzenie bierze 74 z jego ładunku;
+- urządzenie z poprawką wysyła ją i więcej nie scala — kosz 74 na pozostałych (przy remisie chwili też 74; przy koszu
+  przed poprawką — 23, jak E4a-kp); wersja nieczytelna — kosz 23, bez błędu.
+
+**Flota mieszana** (`tests/unit/kosz-usuwanej-karty-flota.test.mjs`, kopia 221; pomiar z 228 — „Walidacja”). Starsza
+aplikacja nie przenosi wersji usuwanej karty do kosza i pomija kartę z ładunku, ale czyta wynik nowej bez różnicy:
+- K albo C ze starszą aplikacją (przy K scalenia i kosz robi starsza; poprawkę trzyma nowa P) — kosz 74 w 8 z 8;
+- P ze starszą aplikacją (urządzenie z poprawką) — kosz 74 tylko w kolejnościach, w których nowe K albo C dostaje ładunek
+  P, zanim P scali nagrobki (4 z 8); w pozostałych kosz 23 — tak jak we flocie samych starszych aplikacji, nigdy gorzej;
+- P aktualizuje aplikację przed scaleniami — kosz 74 w 8 z 8; E4a-kontrola w każdej flocie bez zmian (karta Z 74).
+W tych scenariuszach zawsze zbieżnie, stabilnie, 0 zapisów w rundzie kontrolnej; z 228 i z 229 (pomiar przeglądu) — też
+nigdy gorzej niż flota samych starszych aplikacji. Z 221 i przypiętą wizytą po „Odepnij i usuń” ścieżka E4a pokazuje
+teraz ten sam rozjazd widoku co bez scalenia (ODP, znane ograniczenie floty 221, P-PRZYPIETA-POLKRATA) — dotąd kosz 23
+na trzech. Przy przypięciu i poprawce z dwóch urządzeń (E4a-pin-2kor) pole `_pinned` w treści wpisu kosza zależy od
+kolejności (widok — 80\* — decyduje rejestr gwiazdki); starsza aplikacja czyta gwiazdkę z tego pola. Cofnięcie wydania:
+wynik zostaje (zwykłe wpisy kosza).
+
+**Nota przy wydaniu** (do wklejenia): „Poprawka wizyty zrobiona na jednym urządzeniu, zanim na innym połączono karty
+pacjenta („Scal pacjentów”), nie ginie już, gdy tę wizytę potem przeniesiono do kosza: w koszu (i po „Przywróć”) jest
+poprawiona treść. Zaktualizuj aplikację na wszystkich urządzeniach; najważniejsze jest urządzenie, na którym poprawiano
+wizyty.”
+
+**Tryb chmurowy.** Zapis listy przed usunięciem karty idzie tą samą drogą co końcowy zapis listy (`Bkz_zmienListe`):
+lista kosza to metadane konta — w trybie chmurowym w trwałym rekordzie konta, jak każdy kosz; rekordy cienia tylko
+w pamięci sesji (P-CIEN-POZA-LISTA). Delty na żywo (`applyEncryptedDelta` → `Le`) nie niosą listy kosza: decyzja działa
+w nich tylko na wpisach kosza, które to urządzenie już ma; delta nagrobka z kartą docelową przenosi wersje pod nią jak
+dotąd (P-SYNC-WLASCICIEL). Sprawdzone w przeglądzie sesji: tryb lokalny i chmurowy, scalanie i delta, przełączenie na to
+samo konto i na inne (także z kopią kart) — po przełączeniu żadnego zapisu.
+
+**Ograniczenia (czego zmiana nie robi).**
+- **E4a-kp — kosz przed scaleniem, poprawka później.** K daje x do kosza w X, P (bez wiedzy) poprawia x później, potem K
+  scala X → Y → Z: poprawka ginie (kosz 23), choć bez scalenia wygrywa (karta X 74). Wpis kosza wskazuje X, a żadne
+  urządzenie nie zna karty docelowej scalenia — wymagałoby to celu scalenia w nagrobku pacjenta (zmiana formatu, rodzina
+  E1/E3, osobna decyzja).
+- **E4a-ret-pin — przypięta wizyta i retencja.** P poprawia i przypina x w starej X, K scala i retencja przycina x (nie
+  kosz): przypięta wizyta znika na trzech (bez scalenia zostaje: karta X 74\*). Istniało wcześniej; decyzja dotyczy tylko
+  kosza (przycięcie nie robi cienia karty usuwanej, decyzja 1). Domknięcie (przeniesienie takiej wersji pod kartę wpisu)
+  — osobna decyzja.
+- **E4a-Cpin — gwiazdka z trzeciego urządzenia na karcie docelowej.** P poprawia x w starej X, K scala X → Y → Z i daje
+  x do kosza, a C, które zna scalenia, ale nie kosz, przypina x pod Z: wynik zależy od kolejności synchronizacji — karta
+  Z 74\* w 4 z 8 albo 23\* w 4 z 8 (dotąd 23\* zawsze; bez scaleń karta X 74\*); przy gwiazdce przed koszem kosz 74\*
+  w 7 z 8. Każde urządzenie kończy z tym samym stanem, nigdy gorszym niż dotąd. Gdy gwiazdka C pokona wpis kosza, zanim
+  dojdzie do niego poprawka, wersję spod X przenosi pod Z reguła wersji wspólnej dwóm kartom (`Bsw_rekord`: cały rekord
+  nowszy po chwili zmiany, bez łączenia treści i gwiazdki między kartami) — ta sama przyczyna co zależność od kolejności
+  bez kosza (E4a-kontrola-Cpin: 74\* w 3 z 8 już dotąd). Domknięcie: rekord złożony między kartami (treść po chwili
+  treści, gwiazdka po rejestrze) — PR-E3.
+- **Urządzenie z poprawką ze starszą aplikacją** — patrz „Flota mieszana” (4 z 8); nota: aktualizacja wszystkich urządzeń.
+- **Przerwane scalenie po zapisie listy, a przed usunięciem karty** (zmiana sesji, zamknięcie aplikacji) albo nieudany
+  zapis listy: do następnego scalenia na tym urządzeniu wizyta jest i w starej karcie X, i w koszu (z poprawką). „Przywróć”
+  w tym czasie przenosi ją do karty wpisu (Z), a karta X zostaje chwilowo pusta, aż usunie ją następne scalanie; ładunek
+  wysłany w tym czasie pokazuje innym urządzeniom chwilowo „karta 23 + kosz 74” — po rundach wszędzie ten sam wynik.
+  Podobnie „Przywróć” w drugiej karcie przeglądarki w trakcie scalania: wizyta bywa chwilowo w karcie i w koszu, następne
+  scalanie zdejmuje wpis (przywrócona wersja jest późniejsza niż usunięcie).
+- **Zmiana sesji między usunięciem karty a jej nagrobkiem** (to samo konto): karta znika bez lokalnego nagrobka — zapisze
+  go następne scalanie (nagrobek jest w ładunku urządzenia, które scaliło); treść kosza jest już zapisana.
+- **Treść urządzenia, które usunęło pacjenta** („Usuń pacjenta” po poprawce na tym samym urządzeniu, U4 przeglądu): przez
+  kosz innego urządzenia i „Przywróć” może wrócić do karty docelowej scalenia — dotąd ta sama droga istniała bez kosza
+  (zależnie od kolejności).
+- Numer kolejny wpisu kosza (`seq`) idzie za zwycięską treścią (P-KOSZ-POLKRATA, `Bpk_wpis`) — z kopii spod X zwykle bez
+  numeru; „Przywróć” zapisuje wtedy wersję bez `seq` (rozstrzyga tylko remis kolejności wizyt). Kosmetyczne.
+- W trakcie oczekiwania na blokadę metadanych konta (zapis listy przed usunięciem) scalanie trzyma blokadę tej karty:
+  zapis do niej z innej karty przeglądarki czeka i kończy się zwykłym komunikatem o zapisie w innej karcie (dotąd —
+  komunikatem o usuniętej karcie); karta i tak znika w tym scaleniu.
+- **Delta nagrobka bez karty docelowej** (starsza aplikacja nadawcy, przekroczony limit, karta docelowa scalona dalej)
+  usuwa wersje przed nadejściem listy kosza — bez zmian (P-SYNC-WLASCICIEL-2, „Ograniczenia”).
+- E4b / E3 (rozjazd karty X po „Scal pacjentów”) — bez zmian, następny PR (D7 = a). Rekord złożony (treść z jednej karty,
+  gwiazdka z drugiej) w obrębie dwóch kart — bez zmian (S4, „Ograniczenia”).
+- Nagrobki pacjentów zapisują się w każdym scaleniu jak dotąd (licznik zapisów „inne” w rundzie kontrolnej bez zmian).
+
+**Wpływ kliniczny.** Poprawka masy albo wzrostu wizyty sprzed „Scal pacjentów” na innym urządzeniu nie przepada, gdy tę
+wizytę potem przeniesiono do kosza: kosz i „Przywróć” oddają poprawioną treść (np. 74 kg zamiast 23 kg — różnica, która
+zmienia centyl, BMI i ocenę przyrostu), z gwiazdką, jeśli wizytę przypięto. Nic, co lekarz usunął, nie wraca do karty:
+zmienia się tylko treść istniejącego wpisu kosza.
+
+**Walidacja.** Prawdziwy `vilda_vault.js`, sejfy w pamięci, sztuczny zegar, dane fikcyjne; dwie rundy przeglądu
+adwersarza z weryfikacją (poprawność i zbieżność, klinika, sesja i konta, jakość testów), mutacje, równoważność wobec
+229, flota mieszana.
+- Katalog `polkrata-katalog` 31 × 8 = 248 przebiegów (wszystkie urządzenia nowe): oczekiwania 248 z 248; zgodność z
+  celem W3 (`cel.md` 3a + 3b, liczona jak w PRZ0) 192 z 200, 24 z 25 scenariuszy w 8 z 8 — poza E4b (229: 184 z 200,
+  poza E4a i E4b); zbieżnie 248, stabilnie 248, 0 zapisów listy, wersji i kart w rundzie kontrolnej. Wobec 229: 0
+  przebiegów bez wizyty albo karty, która tam była; inne widoki tylko E4a i E4a-1 (16 przebiegów: kosz 23 → 74 na
+  trzech). Rozszerzony zestaw poza repozytorium (1268 przebiegów: 30 kolejności na każdy scenariusz trzech urządzeń i 12
+  scenariuszy dodatkowych): zbieżnie, stabilnie i bez zapisów listy, wersji i kart w rundzie kontrolnej wszystkie; wobec
+  229 różnice tylko w 60 przebiegach E4a i E4a-1 (wpis kosza x na trzech: 74 zamiast 23, chwila poprawki P), pozostałe
+  1208 — ten sam pełny stan (z eksportem, koszem i wynikami „Przywróć”); wersja końcowa (po poprawkach drugiego
+  przeglądu) — 0 z 1268 różnic wobec wersji z pomiaru.
+- Fuzz praw łączenia (`polkrata-prawa`; poza repozytorium 220 ziaren, także z rozjazdem zegarów i wymianą parami):
+  wszystkie zrzuty identyczne z 229 (te programy nie mają „Scal pacjentów” — zmiana jest w nich neutralna); jedyny
+  niespełniony program (łączność przy rozjeździe zegarów) — ten sam co na 229.
+- Fuzz zbieżności z „Scal pacjentów”, „Usuń pacjenta”, koszem, retencją, przypięciem i częściowymi wymianami (poza
+  repozytorium, P, K, C, 720 ziaren): 0 ziaren, w których 229 jest zbieżna, stabilna i bez zapisów w rundzie kontrolnej,
+  a poprawka nie; różnice tylko tam, gdzie kosz trzyma teraz nowszą poprawkę.
+- Flota mieszana z 221 (testy), 228 i 229 (pomiar przeglądu; E4a, U1, E4a-pin74, E4a-2kor, „Odepnij i usuń”; P, K albo C
+  ze starszą aplikacją, 8 kolejności): zawsze zbieżnie i stabilnie, 0 zapisów w rundzie kontrolnej, nigdy gorzej niż
+  flota samych starszych aplikacji (tam kosz 23 wszędzie) — liczby w „Flota mieszana”.
+- Mutanty zmienionych linii: 37 — 14 zabitych testami zachowania, 14 równoważnych albo równoważnych w praktyce (z
+  uzasadnieniem), 9 luk w testach, każdą zamknął dodany test (czerwony dla mutanta, zielony na poprawce); mutanty
+  poprawek drugiego przeglądu na kodzie końcowym — 5: usunięcie karty mimo nieudanego zapisu listy (dwa warianty)
+  czerwienią S7 i S7b; bez sprawdzenia sesji przed odczytem wersji karty albo przed odczytem wstępnym listy — tylko
+  strażniki źródła (równoważne w praktyce: następne sprawdzenie zatrzymuje każdy zapis); połknięta zmiana sesji przy
+  zapisie listy — równoważny (karta zostaje, następne sprawdzenie kończy scalanie).
+- Przegląd sesji (tryb lokalny i chmurowy, scalanie i delta, zalogowanie od nowa, przełączenie na inne konto, także z
+  kopią tych kart): po zmianie sesji żadnego odczytu wersji, zapisu ani usunięcia karty w nowej sesji; ustalenia
+  poprawione w tym PR (testy w `kosz-usuwanej-karty-sesja`).
+- Testy E4a: `kosz-usuwanej-karty` 152, `-sesja` 36, `-flota` 152 — 340, wszystkie zielone; na 229: 225 czerwonych, 115
+  zielonych (kontrole, znane ograniczenia i przypadki, w których 229 daje ten sam wynik).
+- `npm test`: polityka repozytorium (2192 pliki; bez dowiązania `node_modules` kopii roboczej), lint, składnia (1466
+  plików), testy jednostkowe — 564 pliki, 16 211 z 16 211, `test:pro` — zielone. E2e (Chromium headless,
+  `--project=desktop-chromium --workers=1`): `kosz-zapisow`, `spojnosc-zapisow`, `polkrata-cien-indexeddb`,
+  `blokada-zapisu-wersji`, `sync-wlasciciel-wersji`, `jednorazowe-bez-przywracania`, `pwa-wersjonowane-klucze`,
+  `kopia-konta-pomija` — 35 z 35. `npm run podbij-wersje -- --sprawdz`: „Nic do zmiany”.
+
+**Kod.** `vilda_vault.js`: `Bsl_koszUsuwanejKarty` (nowa), `Bsl_koszZLadunku` (nowa), `Bsl_usunPacjenta` (kontekst kosza,
+decyzja przed usunięciem karty, karta zostaje przy nieudanym zapisie listy, sprawdzenie sesji przed usunięciem i przed
+zbiorem kart usuniętych z nagrobkiem), `Bkz_zmienListe` (sprawdzenie sesji scalania przed pierwszym odczytem), `Le` (dwa
+wywołania). Testy: `tests/unit/kosz-usuwanej-karty.test.mjs`, `kosz-usuwanej-karty-sesja.test.mjs`,
+`kosz-usuwanej-karty-flota.test.mjs`; zmienione oczekiwania: `polkrata-katalog.test.mjs` (E4a, E4a-1),
+`kosz-nowsza-tresc.test.mjs` (K6); strażniki źródła `scalanie-blokada.test.mjs`, `sync-wlasciciel-wersji.test.mjs`.
+
+**Wersje.** `vilda_vault.js` 229 → 230 (z nim odwołania w `vilda_chrome.js` 182 i `vilda_session_bridge.js` 104);
+SW 1.1.395 → **1.1.396** (po #801, który zajął 1.1.395).
+
 ## „Przywróć” wizyty, która jest w karcie i w koszu, zapisuje nowszą treść na wszystkich urządzeniach (P-PRZYWROC-Z-KARTY, PR-PRZ0, SW 1.1.394, `vilda_vault.js` 229, 2026-10-27)
 
 **Zmiana kliniczna: tak** — wzory, progi, jednostki i interpretacje bez zmian; zmienia się, jaka postać wizyty (masa,
@@ -20438,12 +20757,16 @@ tak samo, od razu i na każdym urządzeniu (dotąd gwiazdka widoczna po imporcie
   IndexedDB), zapis zostaje w karcie odpięty — z prawdziwym komunikatem (`kosz-odpiety`); pełną atomowość dałby dopiero
   jeden zapis.
 - **Rekord złożony tylko w obrębie karty.** Wersja wspólna dwóm kartom (P-SYNC-WLASCICIEL, „Scal pacjentów”) dalej
-  przechodzi cała, z nowszą treścią (`Bsw_rekord`) — E3/E4a, osobne PR. Dotyczy to też wizyty przypiętej po „Scal
+  przechodzi cała, z nowszą treścią (`Bsw_rekord`) — E3/E4a, osobne PR *(Aktualizacja 2026-10-28, P-KOSZ-USUWANEJ-KARTY:
+  E4a — treść wersji karty przegranej z nagrobkiem pacjenta trafia do kosza; rekord złożony między dwiema kartami — bez
+  zmian)*. Dotyczy to też wizyty przypiętej po „Scal
   pacjentów”: poprawka z urządzenia, które o scaleniu nie wie, przegrywa z późniejszą gwiazdką na karcie docelowej (22*,
-  jak `f612fe09`), a droga ratunku przez cień nagrobka retencji z trzeciego urządzenia, które tę wizytę przycięło
+  jak `f612fe09`; *(Aktualizacja 2026-10-28, P-KOSZ-USUWANEJ-KARTY: zależnie od kolejności — bez kosza 74\* w 3 z 8 już
+  wcześniej, z koszem teraz 74\* w 4 z 8, E4a-Cpin)*), a droga ratunku przez cień nagrobka retencji z trzeciego urządzenia, które tę wizytę przycięło
   (przypadkowa, zależna od kolejności synchronizacji), po zbiorze kart usuniętych (W3P) znika, gdy ten nagrobek
   przychodzi przed poprawką (W5P-1).
-- **Bez zmian:** E4a (poprawka sprzed „Scal pacjentów” w koszu ginie), E4b/E3 (rozjazd karty po „Scal pacjentów”, 12
+- **Bez zmian:** E4a (poprawka sprzed „Scal pacjentów” w koszu ginie; *(Aktualizacja 2026-10-28, P-KOSZ-USUWANEJ-KARTY:
+  zamknięte)*), E4b/E3 (rozjazd karty po „Scal pacjentów”, 12
   zapisów na rundę), PRZ0 („Przywróć”, gdy wersja jest w karcie i w koszu; *(Aktualizacja 2026-10-27, P-PRZYWROC-Z-KARTY: zamknięte)*), F2
   (rozjazd zegarów ze starszą aplikacją).
 
@@ -21755,7 +22078,8 @@ wizyta 125 cm / 24 kg).
   „Przywróć” zapisuje wtedy nowszą z dwóch treści ze stemplem późniejszym niż usunięcie; na trzech urządzeniach karta
   78, kosz pusty.)*
 - **E4a (K6, PD-16).** Poprawka w starej karcie PRZED scaleniami, potem kosz na urządzeniu, które scaliło → poprawka
-  ginie wszędzie, jak dotąd. Osobny PR.
+  ginie wszędzie, jak dotąd. Osobny PR. *(Aktualizacja 2026-10-28, P-KOSZ-USUWANEJ-KARTY: zamknięte — wersje karty
+  przegranej z nagrobkiem pacjenta przechodzą decyzję kosza; kosz 74 na trzech w 8 z 8, także przy jednym scaleniu.)*
 - **Gwiazdka a retencja (K10, PD-12).** Gwiazdka, odpięcie i gwiazdka na P (`rev` 3), późniejsza poprawka na C, retencja
   na K: 4 z 8 kolejności karta bez gwiazdki, 3 przypięta, 1 bez wizyty (dotąd 8 przypięta). Dwie poprawki na C przed
   późniejszą gwiazdką na P: teraz 8 z 8 przypięta (dotąd 5 z 8 inaczej). Domknięcie: PR „przypięta wizyta / półkrata
@@ -22337,7 +22661,9 @@ w międzyczasie usunęło scalanie” w `Bkz_doKosza`, `savedAtISO` treści w `B
   wygrywa), który musi zmienić `Bkz_nowszaWersja` razem z regułą wersji w `Bsl_scalPacjenta`. *(Aktualizacja 2026-10-21, P-POZNIEJSZA-POPRAWKA (D-7 wariant 2): zamknięte E4b —
   poprawka w starej karcie PO scaleniach: kosz z poprawką na obu urządzeniach w 8 z 8 kolejności. E4a — poprawka PRZED
   scaleniami, potem kosz — dalej otwarte (poprawka ginie: karta z ładunku przegrywa z nagrobkiem pacjenta przed pętlą
-  wersji), osobny PR.)*
+  wersji), osobny PR.)* *(Aktualizacja 2026-10-28, P-KOSZ-USUWANEJ-KARTY: zamknięte E4a — kosz z poprawką na trzech
+  urządzeniach w 8 z 8 kolejności; poprawka ginęła też na urządzeniu, które ją miało: usunięcie karty razem z wersjami
+  przed końcem scalania kosza.)*
 - **Flota mieszana.** Pełna ochrona działa po aktualizacji wszystkich urządzeń. Stara aplikacja nadal cofa datę przy
   koszu i nie przyjmuje daty bez zmienionej wersji.
 - **Ostatnia wersja karty (E1)** dalej nie trafia do kosza; nagrobek pacjenta i scalenie bez celu w nagrobku — bez
@@ -24009,7 +24335,7 @@ Zastępuje w części P-KLUCZ-SESJI-OPIS (wiersz `sessionStorage` w polityce, ak
 
 **Mechanizm.**
 - Strażnik adapterów: operacje na danych konta wymagają `userId` (błąd `NO_USER`) — IndexedDB: każda operacja na danych konta (otwarcie bazy ją zakłada), pamięć: każdy zapis (odczyt bez `userId` zwraca tam pusto). Rejestr kont, zakładanie konta i odblokowanie (hasło, klucz odzyskiwania, biometria, tryb jednorazowy, „Zaloguj telefonem”, kod QR) działają na jawnym `userId` i nie są dotknięte.
-- Scalanie (`mergeSyncPayload`, `applyEncryptedDelta`) pamięta sesję, w której ruszyło: konto i klucz sesji (każde odblokowanie to nowa sesja). Każdy krok z zapisem sprawdza ją pod swoją blokadą (pacjenta, notatki, metadanych konta). Przy zmianie sesji scalanie kończy się błędem `SESSION_CHANGED` bez dalszych zapisów, a pobranie nie przesuwa znacznika wersji.
+- Scalanie (`mergeSyncPayload`, `applyEncryptedDelta`) pamięta sesję, w której ruszyło: konto i klucz sesji (każde odblokowanie to nowa sesja). Każdy krok z zapisem sprawdza ją pod swoją blokadą (pacjenta, notatki, metadanych konta). Przy zmianie sesji scalanie kończy się błędem `SESSION_CHANGED` bez dalszych zapisów, a pobranie nie przesuwa znacznika wersji. *(Aktualizacja 2026-10-28, P-KOSZ-USUWANEJ-KARTY: także odczyt wersji karty z wygrywającym nagrobkiem pacjenta, jej usunięcie i zapis jej nagrobka — sprawdzenie sesji tuż przed każdym z nich; lista kosza z treścią wersji tej karty zapisuje się przed jej usunięciem, w sesji scalania (bez udanego zapisu karta zostaje), więc wyjątek niżej jej nie dotyczy; zapis listy w sesji scalania sprawdza sesję przed pierwszym odczytem magazynu.)*
 - Wyjątek — lista kosza konta, które scalało: gdy scalanie usunęło już lokalną wersję, bo wygrał nagrobek z ładunku, lista kosza jest jedynym zapisem nowszej treści tej wersji (D-6 B, P-KOSZ-NOWSZA-TRESC). Zapisuje się wtedy do konta i magazynu, w których wersję usunięto, żeby nie zgubić nowszej treści; trafia na nią tylko treść zaszyfrowana w sesji scalania. W trybie chmurowym metadane konta i tak leżą w trwałym rekordzie konta (`ba` kieruje je do adaptera trwałego), więc lista trafia tam jak każdy kosz. W sesji „Zaloguj jednorazowo” trafia do magazynu sesji w pamięci, bez bazy na dysku. Konto nigdy nie jest puste. Po tym zapisie scalanie idzie dalej tylko w swojej sesji.
 - Delta przerwana zmianą sesji kończy się błędem oznaczonym jak zajęta blokada (`vildaMergeBusy`): pętla delt w `vilda_sync.js` (bez zmian) kończy partię bez przesunięcia kursora, a następne pobranie stosuje ją od nowa w nowej sesji.
 - Odroczony zapis zrzutu sesji (adapter w pamięci) jest odpinany przy końcu sesji: przy każdym powodzie blokady w trybie chmurowym i na końcu sesji jednorazowej.
@@ -30462,6 +30788,73 @@ SW 1.1.164 → **1.1.165**; `vilda_chrome.js?v=103→104`, `vilda_data_import_ex
 *(Uzupełnienie 2026-10-06, P-POWLOKA-OBCY: odtworzenie sesji przywraca też punkty leczenia otyłości i bisfosfonianów
 z migawki, gdy ta je niesie; początek wczytania (poza odtworzeniem) kończy stan „nieaktualny” dokumentu i czyści
 globals pacjenta w stanie wspólnym — wpis P-POWLOKA-OBCY.)*
+
+*(Uzupełnienie 2026-10-28, P-ZAPIS-PRZED-ODTWORZENIEM: tak samo jak wczytanie, startowe odtworzenie zamyka też udany
+zapis pacjenta na tej stronie — wpis niżej.)*
+
+## Zapis pacjenta przed startowym odtworzeniem sesji zamyka to odtworzenie (P-ZAPIS-PRZED-ODTWORZENIEM, SW 1.1.397, 2026-10-28)
+
+**Zmiana kliniczna: NIE** — żaden wzór, próg, jednostka, dawka ani interpretacja. Zmienia się kolejność dwóch kroków
+na stronie: startowego odtworzenia sesji karty i zapisu pacjenta. Zlecenie właściciela 2026-10-28 („Zrób to — mała
+poprawka startu aplikacji”), po diagnozie czerwonego testu e2e w PR #810.
+
+### Na czym polegał błąd
+
+Startowe odtworzenie sesji (`restoreMainSessionIfAny`, `vilda_data_import_export.js`) rusza dwie klatki animacji po
+`DOMContentLoaded`: w karcie w tle dopiero, gdy karta wróci na wierzch, a na obciążonym komputerze (i pod zegarem
+testów e2e) z opóźnieniem. P-SWIEZE-WCZYTANIE zamykało je przy każdym wczytaniu pacjenta, ale nie przy jego zapisie.
+Gdy odtworzenie przyszło dopiero po pierwszym zapisie nowego pacjenta, warunek „formularz wypełniony, a nikt nie jest
+wczytany” już go nie zatrzymywał (zapis ustawia bieżącego pacjenta karty). Wtedy migawka sesji sprzed zapisu
+nadpisywała to, co lekarz wpisał po zapisie: przykład z testu — zapis 38 kg / 133 cm, potem wpisane 40 kg / 135 cm,
+a w formularzu z powrotem 38 kg / 133 cm i BMI 21,5 zamiast 21,9, bez żadnego komunikatu. Do czasu odtworzenia
+blokada „przed pierwszym odtworzeniem” (`Gp_k`) nie zapisywała też sesji, więc migawka zostawała przy wartościach
+sprzed zapisu. Na CI dawało to powtarzające się czerwone testy `porownanie-data-urodzenia`
+i `porownanie-synchronizacja-w-tle` (18 razy w 3 dni w różnych PR-ach, zwykle przechodziły przy ponowieniu).
+
+### Reguła po poprawce
+
+1. Udany zapis pacjenta (`saveUserData`, sejf zwrócił identyfikator pacjenta — ta sama odpowiedź, którą zapis uznaje
+   za udany) zamyka startowe odtworzenie sesji tej strony, tak jak wczytanie pacjenta (P-SWIEZE-WCZYTANIE): zapisany
+   formularz jest późniejszy niż każda migawka sesji sprzed zapisu.
+2. Od tego zapisu blokada `Gp_k` już nie obowiązuje, więc migawka sesji idzie za formularzem (np. drugi pomiar
+   wpisany po zapisie trafia do migawki i wraca po F5). Odtworzenie czekające na odblokowanie sejfu zapis gasił już
+   dotąd (własnym zdarzeniem wczytania), ale migawka zostawała wtedy przy wartościach sprzed zapisu — teraz już nie.
+3. Nieudany zapis (błąd sejfu, odpowiedź bez identyfikatora pacjenta) niczego nie zmienia — odtworzenie zachowuje się
+   jak dotąd.
+4. Zapis, który wyprzedził startowe odtworzenie, zostawia formularz taki, jak zapisano: dane, które były tylko
+   w migawce sesji, a nie na ekranie (np. niezapisana zmiana sprzed F5), nie wracają — tak samo jak po wczytaniu
+   pacjenta. W widocznej karcie odtworzenie przychodzi, zanim da się kliknąć „Zapisz” (przyciski działają od
+   `DOMContentLoaded`, zapis czeka na sejf), a karta w tle nie przyjmuje kliknięć, więc w praktyce dotyczy to tylko
+   wstrzymanych klatek animacji, jak w testach.
+
+Bez zmian: odświeżenie strony bez zapisu (P-ODSWIEZENIE) nadal przywraca niezapisane zmiany; jawne
+`vildaSession.restore()` z powłoki nadal odtwarza sesję; nowy pacjent bez zapisu z wypełnionym formularzem nadal nie
+dostaje migawki. Wszystkie wywołania zapisu pacjenta biorą się z działania użytkownika: przycisk zapisu (pasek boczny
+i powłoka), „Zapisz pacjenta” w oknie terminarza GH, okno niezapisanych zmian („Zapisz i wczytaj”, „Zapisz nowego
+i wyczyść”). Nie zmieniają się format sesji, klucze storage, zapis wersji, synchronizacja ani wybór „Odtwórz zapis” /
+„Nowy pomiar”.
+
+**Walidacja.** Prawdziwy `vilda_data_import_export.js`, dane fikcyjne. Testy jednostkowe Z1–Z8 (atrapy tylko zdarzeń,
+magazynu, klatek animacji, timerów i sejfu): na kodzie sprzed zmiany czerwone Z1 (nowy pacjent), Z2 (po F5 z wczytanym
+pacjentem) i Z8 (odtworzenie czekające na logowanie), kontrole zielone (nieudany zapis, odpowiedź bez identyfikatora
+pacjenta, F5 bez zapisu, jawne odtworzenie z powłoki, nowy pacjent bez zapisu); z poprawką 9 z 9. E2e (czwarty test w
+`odtworzenie-sesji-swieze-wczytanie`, klatki wstrzymane jak w karcie w tle): czerwony na `audyt` 3d6e989b (formularz
+wraca do 38 / 133), zielony z poprawką; powiązane specyfikacje sesji, zapisu i odtwarzania (16 plików, `--workers=2`) —
+66 z 66, mobilna `porownanie-data-urodzenia-mobile` — 1 z 1. Obciążenie jak na CI (`porownanie-data-urodzenia` i
+`porownanie-synchronizacja-w-tle`, `--workers=4 --repeat-each=6`, 6 rund): 0 z 144 błędów (bez poprawki 2 z 144, ten sam
+krok BMI). Mutanty poprawki: 6 — usunięcie zatrzasku albo jego odwrócenie czerwieni Z1, Z2 i Z8, zatrzask także przy
+odpowiedzi bez identyfikatora — Z7; równoważne: zamiana kolejności dwóch instrukcji w tej samej gałęzi i samo anulowanie
+odtworzenia czekającego na logowanie (robi to już zdarzenie wczytania). Przegląd adwersarza (powłoka i panele, DocPro,
+F5, odblokowanie sejfu, terminarz GH, okno niezapisanych zmian, druga karta, wersje): bez regresji, doprecyzowania opisu
+wprowadzone (reguły 2–4). `npm test`: polityka repozytorium (2193 pliki; bez dowiązania `node_modules` kopii roboczej),
+lint, składnia (1467 plików), testy jednostkowe — 565 plików, 16 220 z 16 220, `test:pro` — zielone. `npm run
+podbij-wersje -- --sprawdz`: „Nic do zmiany”.
+
+**Kod.** `vilda_data_import_export.js` (`saveUserData`, gałąź udanego zapisu: zamknięcie startowego odtworzenia).
+Testy: `tests/unit/zapis-przed-odtworzeniem-sesji.test.mjs` (Z1–Z8), czwarty test
+w `tests/e2e/odtworzenie-sesji-swieze-wczytanie.spec.mjs`.
+
+**Wersje.** `vilda_data_import_export.js` 110 → 111; SW 1.1.396 → **1.1.397**.
 
 ## Zasady aktualizacji rejestru
 

@@ -38203,6 +38203,131 @@ const infantLhTailPolicy = {
   "archivePolicy": "Historyczny ekstrakt wektorowy i wszystkie liczby pozostają niezmienione. Wyłącznie flagi kwalifikacji LH po 243. do 326. dnia otrzymują nową jawną politykę prezentacji. Inne hormony zachowują dotychczasowe flagi.",
   "agePolicy": "Cały możliwy wiek musi mieścić się w jednej dopuszczonej części. Nie dodajemy dokładności do ukończonych miesięcy lub lat ani nie przedłużamy domeny niemowlęcej poza jej wyłączny koniec."
 };
+const infantTtResultOnlyPolicy = {
+  "id": "male-tt-infant-result-only-2026",
+  "version": "2026-10-26.1",
+  "kind": "educational-infant-tt-result-only-display",
+  "profileId": "busch2022-male-t",
+  "analyte": "t",
+  "sex": "male",
+  "unit": "nmol/L",
+  "notClinicalReference": true,
+  "ordinaryOnly": true,
+  "source": {
+    "label": "Busch i wsp. 2022 · testosteron całkowity w niemowlęctwie",
+    "title": "Dynamic Changes of Reproductive Hormones in Male Minipuberty: Temporal Dissociation of Leydig and Sertoli Cell Activity",
+    "url": "https://doi.org/10.1210/clinem/dgac115",
+    "doi": "10.1210/clinem/dgac115",
+    "journal": "JCEM 107(6):1560–1568",
+    "pdfSha256": "373c982e4e4f3221a3d17c646f833db5a0672eda41f689c5785d6633cb1ceb45",
+    "population": "Zdrowi chłopcy urodzeni o czasie, ciąże pojedyncze; COPENHAGEN Minipuberty Study, Dania",
+    "sourceMethod": "Testosteron całkowity w surowicy, in-house LC-MS/MS",
+    "numericReferenceActivated": false
+  },
+  "approval": {
+    "date": "2026-10-26",
+    "scope": "Właściciel odrzucił przybliżoną medianę po 212. dniu i adnotację o niespójności źródła. Zatwierdził sam rzeczywisty wynik na niezmienionym poglądowym wykresie, z cytowaniem wiedzy medycznej.",
+    "notClinicalValidation": true
+  },
+  "resultOnlyPolicy": {
+    "id": "male-tt-infant-result-only",
+    "version": "2026-10-26.1",
+    "kind": "educational-result-only",
+    "ordinaryOnly": true,
+    "analyte": "t",
+    "sex": "male",
+    "unit": "nmol/L",
+    "sourceProfileId": "busch2022-male-t",
+    "minAge": 0.5804243668720055,
+    "minAgeExclusive": true,
+    "maxAge": 1,
+    "maxAgeExclusive": true,
+    "minAgeDays": 212,
+    "maxAgeDays": 365.25,
+    "dayDivisor": 365.25,
+    "fullAgeIntervalRequired": true,
+    "currentPatientOnly": true,
+    "contextAvailabilityKey": "infantTtContextAvailable",
+    "allowedViews": [
+      "life",
+      "mini"
+    ],
+    "compatibleSpecimenIds": [
+      "serum",
+      "surowica"
+    ],
+    "excludedCyclePhases": [
+      "pregnancy",
+      "pregnancy_t1",
+      "pregnancy_t2",
+      "pregnancy_t3",
+      "postmenopause",
+      "postmenopausal",
+      "menopause"
+    ],
+    "patientNote": "Czerwony punkt: wynik pacjenta. Linia pokazuje poglądowy przebieg zmian.",
+    "discussion": [
+      "Dla wieku tego dziecka wykres przedstawia sam wpisany wynik, bez liczbowego odniesienia do mediany.",
+      "Ocena według zakresu referencyjnego jest niezależna od wykresu."
+    ],
+    "selectionPolicy": "Wymaga wybranego zgodnego profilu Busch i odrzucenia wyłącznie jego liczbowej kwalifikacji. Nie odzyskuje odrzuconej populacji, źródła, metody lub niepoprawnego wyniku.",
+    "contextPolicy": "Bieżąca osoba, zgodny gotowy kontekst oraz pełny wiek w (212 dni, 1 rok). Zachowuje wymaganie donoszenia i bramki znanej metody, materiału, leczenia i stymulacji.",
+    "measurementPolicy": "Wyłącznie dokładny, skończony, nieujemny wynik w obsługiwanej jednostce. Zero pozostaje zerem. Nierówności nie otrzymują dokładnego punktu.",
+    "sources": [
+      {
+        "label": "Busch i wsp. 2022 · niemowlęca część wykresu",
+        "url": "https://doi.org/10.1210/clinem/dgac115"
+      }
+    ]
+  },
+  "archivePolicy": "Wszystkie istniejące profile, stężenia, flagi kwalifikacji, skale i geometria pozostają niezmienione. Nie aktywuje mediany, centyla, SDS, ilorazu lub nowego zakresu laboratoryjnego.",
+  "agePolicy": "Cały znany przedział wieku musi mieścić się po 212. dniu i przed końcem profilu niemowlęcego. Nie przedłuża źródła przez pierwsze urodziny i nie dodaje dokładności do ukończonych miesięcy.",
+  "insightReferences": {
+    "overviewCopy": "W okresie pokwitania stężenie testosteronu wzrasta. W badaniu dorosłych najwyższa średnia dotyczyła grupy 18–29 lat, a w starszych grupach była niższa.",
+    "overviewSources": [
+      {
+        "label": "Madsen 2022",
+        "url": "https://doi.org/10.1210/clinem/dgac155"
+      },
+      {
+        "label": "Walravens 2026, tabela 1",
+        "url": "https://doi.org/10.1210/clinem/dgaf507"
+      }
+    ],
+    "miniSources": [
+      {
+        "label": "Busch 2022",
+        "url": "https://doi.org/10.1210/clinem/dgac115"
+      }
+    ],
+    "fullSources": [
+      {
+        "label": "Busch 2022 · niemowlęctwo",
+        "title": "Dynamic Changes of Reproductive Hormones in Male Minipuberty: Temporal Dissociation of Leydig and Sertoli Cell Activity",
+        "bibliography": "Busch i wsp. The Journal of Clinical Endocrinology & Metabolism. 2022;107(6):1560–1568.",
+        "location": "Metody i wyniki: zdrowi donoszeni chłopcy; kolejność szczytów hormonów w pierwszym roku życia.",
+        "details": "Dla późnego niemowlęctwa wykres pokazuje sam wpisany wynik, bez liczbowej mediany. Ocena według zakresu referencyjnego jest niezależna od wykresu.",
+        "url": "https://doi.org/10.1210/clinem/dgac115"
+      },
+      {
+        "label": "Madsen 2022 · pokwitanie",
+        "title": "Reference Curves for Pediatric Endocrinology: Leveraging Biomarker Z-Scores for Clinical Classifications",
+        "bibliography": "Madsen i wsp. The Journal of Clinical Endocrinology & Metabolism. 2022;107(7):2004–2015.",
+        "location": "Suplement, tabela 1, arkusz „LCMSMS hormones”: testosteron chłopców, modele wieku 6–18 lat.",
+        "details": "Źródło opisu wzrostu testosteronu w okresie pokwitania. Model przekrojowy opisuje populację, nie trajektorię każdej osoby.",
+        "url": "https://doi.org/10.1210/clinem/dgac155"
+      },
+      {
+        "label": "Walravens 2026 · dorośli · tabela 1",
+        "title": "Age-Stratified Reference Ranges for Directly Measured Serum Free Testosterone in Community-Dwelling and Healthy Men",
+        "bibliography": "Walravens i wsp. The Journal of Clinical Endocrinology & Metabolism. 2026;111(3):e787–e793. Publikacja online: 10 września 2025.",
+        "location": "Tabela 1, wiersz „Total T, nmol/L”: średnie testosteronu całkowitego u 1194 mężczyzn w wieku 18–86 lat.",
+        "details": "Wszystkie starsze grupy mają niższą średnią niż grupa 18–29 lat, ale średnie nie maleją ściśle w każdej kolejnej dekadzie. To porównanie różnych kohort o różnym stanie zdrowia, a nie obserwacja zmian u jednej osoby ani pomiar samego wpływu starzenia. Mimo tytułu pracy dotyczącego wolnego testosteronu cytowane dane odnoszą się do testosteronu całkowitego. Średnie nie są normami.",
+        "url": "https://doi.org/10.1210/clinem/dgaf507"
+      }
+    ]
+  }
+};
 const inhibinEvidence = {
   "version": "2026-10-10.1",
   "purpose": "educational-inhibin-b-group-observations",
@@ -45861,6 +45986,7 @@ return {
   gonadotropinComparisonPolicy: gonadotropinComparisonPolicy,
   gonadotropinComparisonReferenceData: gonadotropinComparisonReferenceData,
   childhoodLhResultOnlyPolicies: childhoodLhResultOnlyPolicies,
-  infantLhTailPolicy: infantLhTailPolicy
+  infantLhTailPolicy: infantLhTailPolicy,
+  infantTtResultOnlyPolicy: infantTtResultOnlyPolicy
 };
 });

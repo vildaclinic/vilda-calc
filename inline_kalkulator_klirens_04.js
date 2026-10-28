@@ -1058,7 +1058,7 @@ function update() {
   }
   const rt = o && d,
     dt = [...document.querySelectorAll("#clcrForm input")].some((i) =>
-      i.type === "hidden" ? false : i.type === "checkbox" ? i.checked : (i.value || "").trim() !== "",
+      (i.type === "hidden" || i.id === "UA_collectionHours") ? false : i.type === "checkbox" ? i.checked : (i.value || "").trim() !== "",
     );
   let Ne = !1;
   {

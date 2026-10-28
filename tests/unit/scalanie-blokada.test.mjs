@@ -463,7 +463,7 @@ describe('strażniki źródła', () => {
       expect(le, zapis).not.toContain(zapis);
     }
     expect(le).toContain('const Bsl_w=await Bsl_scalPacjenta(F,j,H,R,Bkz_S,i,e);');
-    expect(le).toContain('w+=await Bsl_usunPacjenta(j,m[j],e)');
+    expect(le).toContain('w+=await Bsl_usunPacjenta(j,m[j],e,Bses_imp?null:Bkz_S)');
     // P-BLOKADA-IMPORT: wewnętrzne scalanie importu (Bpb_IMPORT) pomija koniec scalania kosza; synchronizacja nie.
     // P-CHMURA-OPIS: Le podmienia opcje na kopię z sesją startu, więc import rozpoznaje po tożsamości zapamiętanej
     // przed podmianą (Bses_imp); zmiana sesji (SESSION_CHANGED) kończy scalanie jak zajęta blokada.

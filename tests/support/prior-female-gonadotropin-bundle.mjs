@@ -19,8 +19,15 @@ export function beforeInfantLhTailBundle(data) {
     profile.id === priorInfantLhProfile.id ? priorInfantLhProfile : profile) };
 }
 
+// This later TT permission contains no new source concentration or profile.
+// Remove only that block when proving frozen earlier runtime hashes.
+export function beforeInfantTtResultOnlyRuntime(runtime) {
+  const { infantTtResultOnlyPolicy: _infantTtResultOnlyPolicy, ...prior } = runtime;
+  return prior;
+}
+
 export function beforeInfantLhTailRuntime(runtime) {
-  const { infantLhTailPolicy: _infantLhTailPolicy, ...prior } = runtime;
+  const { infantLhTailPolicy: _infantLhTailPolicy, ...prior } = beforeInfantTtResultOnlyRuntime(runtime);
   return { ...prior, patientPointData: beforeInfantLhTailBundle(prior.patientPointData) };
 }
 

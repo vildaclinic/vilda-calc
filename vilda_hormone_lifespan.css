@@ -401,6 +401,14 @@ dialog.vhl-fullscreen-dialog > .vilda-hormone-lifespan {
   line-height: 1.65;
   margin: 0;
 }
+.vilda-hormone-lifespan .vhl-insight .vhl-insight-citations {
+  margin-top: var(--space-8px);
+  font-size: 11px;
+  font-weight: 400;
+  line-height: 1.65;
+  color: var(--vhl-muted);
+  overflow-wrap: anywhere;
+}
 .vilda-hormone-lifespan .vhl-insight.vhl-cycle-open {
   display: block;
 }

@@ -1,0 +1,145 @@
+{
+  "id": "male-infant-tt-result-only-audit-2026-10-26",
+  "version": "2026-10-26.1",
+  "kind": "own-factual-source-audit-and-approved-display-decision",
+  "auditDate": "2026-10-26",
+  "implementationBaseAudytSha": "90d544c082aff87121c890c13a70b49702fc79e5",
+  "scope": "Male total testosterone after day 212 to strictly under one year; exact patient result only, no new population numerical reference.",
+  "documentationBasedOnCompletedFullSourceAudit": true,
+  "notClinicalValidation": true,
+  "ownerDecision": {
+    "date": "2026-10-26",
+    "accepted": "Exact patient result on unchanged ordinary life/mini illustration; short source links next to medical explanations, full citations in collapsed sources.",
+    "rejected": "Approximate late-infant median from figure and visible source-discrepancy explanation.",
+    "numericReferenceActivated": false
+  },
+  "article": {
+    "authors": "Busch AS et al.",
+    "title": "Dynamic Changes of Reproductive Hormones in Male Minipuberty: Temporal Dissociation of Leydig and Sertoli Cell Activity",
+    "journal": "J Clin Endocrinol Metab. 2022;107(6):1560–1568",
+    "doi": "10.1210/clinem/dgac115",
+    "url": "https://doi.org/10.1210/clinem/dgac115",
+    "advanceAccessDate": "2022-02-28",
+    "correctedAndTypesetDate": "2022-03-17",
+    "pdfSha256": "373c982e4e4f3221a3d17c646f833db5a0672eda41f689c5785d6633cb1ceb45",
+    "pdfBytes": 1140064,
+    "readLocators": [
+      "Complete final nine-page article",
+      "Methods/Results, printed pages 1561–1562",
+      "Figure 3 and caption, printed page 1565",
+      "Limitations, printed page 1566",
+      "Data availability and three supplement references, printed page 1567"
+    ]
+  },
+  "population": {
+    "description": "Healthy term singleton male infants, COPENHAGEN Minipuberty Study 2016–2018, Denmark; source describes Caucasian infants only.",
+    "postnatalParticipants": 119,
+    "totalPostnatalSerumSamples": 338,
+    "exactTtFitN": null,
+    "exactLateInfantTtN": null,
+    "countsAreNotTtSpecificOrDailyModelN": true
+  },
+  "assay": {
+    "analyte": "total testosterone",
+    "specimen": "serum",
+    "method": "in-house LC-MS/MS",
+    "unit": "nmol/L",
+    "sourceLoqNmolL": 0.012,
+    "separateTtLodReported": false,
+    "sourceMethodOrLimitDoesNotEstablishPatientMethodOrLimit": true
+  },
+  "unresolvedSourceLimits": [
+    "Results describe a TT model median below LOQ around six months; the late graphical center does not reconcile with that wording. No specific author error or correction is assumed.",
+    "Results report 6/34 TT samples below LOQ in the entire 340–390-day window. This is not a median, exact-day value or under-one-year-specific denominator.",
+    "Two TT fits are described without a sufficient selection/joining rule or original numeric model export; exact handling of low results in fitting remains unclear.",
+    "The three official v1 supplements do not supply a numeric TT export or resolve this conflict.",
+    "The old day-212 numeric display boundary belongs to the application graphical-readability policy, not a source diagnostic threshold or proof that biological values cease there."
+  ],
+  "supplements": [
+    {
+      "doi": "10.6084/m9.figshare.19093787.v1",
+      "version": 1,
+      "sha256": "936fc4d91e42c725d6b631e2423a445df0f8586aad5b43fbf29729597500d023",
+      "bytes": 1043669,
+      "content": "SHBG and calculated free testosterone, not total testosterone export."
+    },
+    {
+      "doi": "10.6084/m9.figshare.19093790.v1",
+      "version": 1,
+      "sha256": "d7ca7af727e291c198a1954fe6efdb3f83af15fc5d5db1b469be79db8e36c1e5",
+      "bytes": 1146596,
+      "content": "SDS variation, not numeric TT age model."
+    },
+    {
+      "doi": "10.6084/m9.figshare.19093793.v1",
+      "version": 1,
+      "sha256": "4f3a41db1366e01be9d956fd21e71ecf9e294e55976842e188487462c7fae3bb",
+      "bytes": 11809,
+      "content": "INSL3 group statistics, not numeric TT age model."
+    }
+  ],
+  "runtimePreservation": {
+    "profiles": 85,
+    "ttProfileId": "busch2022-male-t",
+    "ttRuntimeNodes": 360,
+    "numericNodesValuesEligibilityUnchanged": true,
+    "newNumericReferenceProfile": false,
+    "illustrativeCurveAndScaleUnchanged": true,
+    "laboratoryRiAndHistoryUnchanged": true
+  },
+  "displayPolicy": {
+    "policyFile": "male-testosterone-infant-result-only-policy.json",
+    "outerRuntimeKey": "infantTtResultOnlyPolicy",
+    "policyId": "male-tt-infant-result-only-2026",
+    "resultOnlyPolicyId": "male-tt-infant-result-only",
+    "analyte": "t",
+    "sex": "male",
+    "minimumDays": 212,
+    "minimumExclusive": true,
+    "maximumYears": 1,
+    "maximumExclusive": true,
+    "dayDivisor": 365.25,
+    "wholeKnownAgeRequired": true,
+    "ordinaryViews": [
+      "life",
+      "mini"
+    ],
+    "currentContextKey": "infantTtContextAvailable",
+    "activationRequiresSelectedSourceAndOnlyNumericEligibilityFailure": true,
+    "censoredMeasurementBecomesExactPoint": false
+  },
+  "insightCitations": [
+    {
+      "claim": "Total testosterone rises during puberty.",
+      "authors": "Madsen et al.",
+      "title": "Reference Curves for Pediatric Endocrinology: Leveraging Biomarker Z-Scores for Clinical Classifications",
+      "journal": "J Clin Endocrinol Metab. 2022;107(7):2004–2015",
+      "doi": "10.1210/clinem/dgac155",
+      "url": "https://doi.org/10.1210/clinem/dgac155",
+      "location": "Supplemental Table 1, LCMSMS hormones sheet, male TT age model 6–18 years",
+      "sourceWorkbookSha256": "45cd1b63284c9f53a5936abee7ab8d8e6fce13a19025d4e2cbed0e5b3468897e",
+      "existingEvidence": "patient-point/madsen2022-male-p50-lms.json",
+      "limitation": "Cross-sectional chronological-age model, not an individual trajectory or observed peak at ages 20–29."
+    },
+    {
+      "claim": "The highest adult total-testosterone group mean was in 18–29; all older group means were lower.",
+      "authors": "Walravens et al.",
+      "title": "Age-Stratified Reference Ranges for Directly Measured Serum Free Testosterone in Community-Dwelling and Healthy Men",
+      "journal": "J Clin Endocrinol Metab. 2026;111(3):e787–e793",
+      "onlinePublicationDate": "2025-09-10",
+      "doi": "10.1210/clinem/dgaf507",
+      "url": "https://doi.org/10.1210/clinem/dgaf507",
+      "location": "Table 1, Total T, nmol/L row; 1194 participants aged 18–86",
+      "priorFullPublisherHtmlSha256": "b45f83063a249dc28db9ab4101da0ca62bf8a141cce4e645bf5dcf3c1bdbc49c",
+      "existingEvidence": "patient-point/walravens2025-male-total-testosterone-group-means.json",
+      "statistic": "arithmetic group mean of total testosterone, despite paper title focused on free testosterone",
+      "limitations": [
+        "All older means are lower than 20.7 nmol/L at 18–29, but the sequence is not strictly decreasing every decade.",
+        "Mixed younger healthy and older community cohorts; group differences do not isolate causal aging or predict individual change.",
+        "These means are not medians, reference intervals or normal/abnormal thresholds."
+      ]
+    }
+  ],
+  "publicArtifactPolicy": "Only this own factual extract and source citations are committed; publisher PDFs, crops, uploaded files and internal work reports remain outside the repository.",
+  "validationScope": "Required production-function, adapter, UI and real cold-offline regressions are specified in TT_INFANT_RESULT_ONLY.md. Executed results and final-SHA GitHub checks belong in the implementation PR; this extract does not claim they have already passed."
+}
