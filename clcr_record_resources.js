@@ -25,9 +25,9 @@
     ["clcr_ca_dzm_persistence.js?v=1", "ClcrCaDzmPersistence"],
     // readSaved is pure and needed for the new capture format. Its recalculate
     // method is not called while opening history and resolves engines lazily.
-    ["clcr_saved_calculation.js?v=5", "ClcrSavedCalculation"],
-    ["clcr_saved_results.js?v=5", "ClcrSavedResults"],
-    ["clcr_saved_results_view.js?v=1", "ClcrSavedResultsView"],
+    ["clcr_saved_calculation.js?v=6", "ClcrSavedCalculation"],
+    ["clcr_saved_results.js?v=6", "ClcrSavedResults"],
+    ["clcr_saved_results_view.js?v=2", "ClcrSavedResultsView"],
   ];
   const editor = [
     ["clcr_clinical_safety.js?v=13", "ClcrClinicalSafety"],
@@ -67,8 +67,8 @@
     ["clcr_measured_clearance_reference_data.js?v=1", "ClcrMeasuredClearanceReferenceData"],
     ["clcr_measured_clearance_reference.js?v=1", "ClcrMeasuredClearanceReference"],
     ["clcr_result_presentation.js?v=8", "ClcrResultPresentation"],
-    ["clcr_saved_legacy_calculator.js?v=5", "ClcrSavedLegacyCalculator"],
-    ["clcr_result_details.js?v=1", "ClcrResultDetails"],
+    ["clcr_saved_legacy_calculator.js?v=6", "ClcrSavedLegacyCalculator"],
+    ["clcr_result_details.js?v=2", "ClcrResultDetails"],
   ];
   function load(path, name, style = false) {
     if (name && root[name]) return Promise.resolve();
