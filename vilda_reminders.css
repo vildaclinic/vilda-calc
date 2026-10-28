@@ -34,18 +34,12 @@
 
 .vb22 button {
   cursor: pointer;
-  border: 1px solid var(--vb-line);
-  border-radius: 9px;
-  background: #fff;
-  color: var(--vb-ink);
   width: auto;
   min-height: 34px;
-  padding: 8px 12px;
+  padding: var(--space-8px) var(--space-12px);
   font-size: 12px;
   line-height: 1.4;
-  box-shadow: none;
-  letter-spacing: normal;
-  transition: background-color .12s,border-color .12s
+  letter-spacing: normal
 }
 
 .vb22 button:disabled {
@@ -57,7 +51,7 @@
 .vb22 input:focus-visible,
 .vb22 textarea:focus-visible,
 .vb22 select:focus-visible {
-  outline: 3px solid #78b8bc;
+  outline: var(--border-pro) solid #78b8bc;
   outline-offset: 2px
 }
 
@@ -71,7 +65,7 @@
   border-radius: 0;
   box-shadow: none;
   min-height: 26px;
-  padding: 4px 0;
+  padding: var(--space-4px) 0;
   color: var(--vb-teal);
   font-size: 12px;
   font-weight: 600;
@@ -99,11 +93,11 @@
 }
 
 .vb22 .vb22-head {
-  padding: 22px 24px 17px;
+  padding: 22px var(--space-24px) 17px;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 14px;
+  gap: var(--space-14px);
   flex-shrink: 0
 }
 
@@ -122,12 +116,12 @@
 .vb22 .vb22-subtitle {
   font-size: 11px;
   color: var(--vb-muted);
-  margin-top: 6px
+  margin-top: var(--space-6px)
 }
 
 .vb22 .vb22-tools {
   display: flex;
-  gap: 8px;
+  gap: var(--space-8px);
   align-items: center
 }
 
@@ -135,7 +129,7 @@
   border: 0;
   background: transparent;
   color: var(--vb-teal);
-  padding: 4px 0;
+  padding: var(--space-4px) 0;
   font-size: 12px;
   font-weight: 650;
   white-space: nowrap
@@ -143,27 +137,18 @@
 
 .vb22 .vb22-tabs {
   display: flex;
-  gap: 24px;
-  padding: 0 24px;
-  border-bottom: 1px solid var(--vb-line);
+  gap: var(--space-24px);
+  padding: 0 var(--space-24px);
+  border-bottom: var(--border-hairline) solid var(--vb-line);
   flex-shrink: 0
 }
 
 .vb22 .vb22-tabs button {
-  border: 0;
-  background: transparent;
-  border-radius: 0;
-  box-shadow: none;
-  padding: 0 0 12px;
+  padding: 0 0 var(--space-12px);
   position: relative;
-  color: var(--vb-muted);
   font-size: 12px;
   font-weight: 650;
   min-height: 30px
-}
-
-.vb22 .vb22-tabs button.is-active {
-  color: var(--vb-teal)
 }
 
 .vb22 .vb22-tabs button.is-active:after {
@@ -178,7 +163,7 @@
 }
 
 .vb22 .vb22-filters {
-  padding: 14px 24px;
+  padding: var(--space-14px) var(--space-24px);
   display: grid;
   grid-template-columns: repeat(4,minmax(0,1fr));
   gap: 9px;
@@ -189,29 +174,20 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 8px;
-  padding: 8px 11px;
-  min-height: 38px;
+  gap: var(--space-8px);
+  padding: var(--space-8px) 11px;
+  min-height: var(--brand-logo-size);
   font-size: 12px;
-  color: #56747a;
   font-weight: 600;
   text-align: left;
-  border-radius: 9px;
   min-width: 0
-}
-
-.vb22 .vb22-filters button.is-active {
-  background: var(--vb-soft);
-  border-color: #91babc;
-  box-shadow: 0 0 0 1px #c9dfe0;
-  color: #096b71
 }
 
 .vb22 .vb22-count {
   display: inline-flex;
   align-items: center;
   justify-content: flex-end;
-  border-left: 1px solid #dbe4e5;
+  border-left: var(--border-hairline) solid #dbe4e5;
   min-width: 21px;
   padding-left: 9px;
   height: 16px;
@@ -232,8 +208,8 @@
 
 .vb22 .vb22-list-pane {
   background: #fbfcfc;
-  border-right: 1px solid var(--vb-line);
-  padding: 16px;
+  border-right: var(--border-hairline) solid var(--vb-line);
+  padding: var(--space-16px);
   overflow: auto;
   min-height: 0
 }
@@ -241,13 +217,13 @@
 .vb22 .vb22-search {
   display: block;
   width: 100%;
-  border: 1px solid var(--vb-line);
-  border-radius: 9px;
+  border: var(--border-hairline) solid var(--vb-line);
+  border-radius: var(--radius-9);
   box-shadow: none;
   background: #fff;
   color: var(--vb-ink);
   font-size: 12px;
-  padding: 10px 12px;
+  padding: var(--space-10px) var(--space-12px);
   min-height: 40px;
   margin: 0 0 15px
 }
@@ -262,10 +238,10 @@
   flex-shrink: 0;
   width: 100%;
   min-height: 0;
-  padding: 10px 9px;
+  padding: var(--space-10px) 9px;
   border: 0;
-  border-bottom: 1px solid #e0e9ea;
-  border-left: 3px solid transparent;
+  border-bottom: var(--border-hairline) solid #e0e9ea;
+  border-left: var(--border-pro) solid transparent;
   background: transparent;
   border-radius: 0;
   box-shadow: none;
@@ -282,18 +258,18 @@
   border-left-color: #218a8f;
   border-bottom-color: #d5e5e4;
   background: #eaf5f3;
-  border-radius: 8px
+  border-radius: var(--radius-8)
 }
 
 .vb22 .vb22-row-top {
   display: flex;
   align-items: baseline;
   justify-content: space-between;
-  gap: 8px;
+  gap: var(--space-8px);
   font-size: 10px;
   color: var(--vb-muted);
   line-height: 1.35;
-  margin-bottom: 4px
+  margin-bottom: var(--space-4px)
 }
 
 .vb22 .vb22-row-top .vild-rem-when {
@@ -345,7 +321,7 @@
   font-size: 23px;
   line-height: 1.3;
   letter-spacing: -.3px;
-  margin: 12px 0 8px;
+  margin: var(--space-12px) 0 var(--space-8px);
   color: var(--vb-ink)
 }
 
@@ -355,9 +331,9 @@
 }
 
 .vb22 .vb22-meta {
-  padding-bottom: 18px;
-  border-bottom: 1px solid var(--vb-line);
-  margin-top: 16px;
+  padding-bottom: var(--space-18px);
+  border-bottom: var(--border-hairline) solid var(--vb-line);
+  margin-top: var(--space-16px);
   font-size: 12px;
   color: var(--vb-muted)
 }
@@ -367,35 +343,35 @@
   overflow-wrap: anywhere;
   font-size: 13px;
   line-height: 1.65;
-  margin-top: 18px;
+  margin-top: var(--space-18px);
   color: var(--vb-ink)
 }
 
 .vb22 .vb22-actions {
   display: flex;
-  gap: 8px;
+  gap: var(--space-8px);
   flex-wrap: wrap;
-  margin-top: 20px;
+  margin-top: var(--space-20px);
   align-items: center
 }
 
 .vb22 .vb22-actions .vb22-text {
-  padding: 6px
+  padding: var(--space-6px)
 }
 
 .vb22 .vb22-help {
   font-size: 11px;
   color: var(--vb-muted);
   line-height: 1.5;
-  margin-top: 16px
+  margin-top: var(--space-16px)
 }
 
 .vb22 .vb22-foot {
-  border-top: 1px solid var(--vb-line);
-  padding: 11px 24px;
+  border-top: var(--border-hairline) solid var(--vb-line);
+  padding: 11px var(--space-24px);
   min-height: 39px;
   display: flex;
-  gap: 8px;
+  gap: var(--space-8px);
   align-items: center;
   justify-content: space-between;
   color: var(--vb-muted);
@@ -405,7 +381,7 @@
 }
 
 .vb22 .vb22-empty {
-  padding: 24px 6px;
+  padding: var(--space-24px) var(--space-6px);
   text-align: center;
   color: var(--vb-muted);
   font-size: 12px;
@@ -413,16 +389,16 @@
 }
 
 .vb22 .vb22-form {
-  margin-top: 20px;
+  margin-top: var(--space-20px);
   background: #fcfefe;
-  border: 1px solid #d3e4e4;
-  border-radius: 12px;
-  padding: 18px
+  border: var(--border-hairline) solid #d3e4e4;
+  border-radius: var(--radius-12);
+  padding: var(--space-18px)
 }
 
 .vb22 .vb22-form h3,
 .vb22 .vb22-form h4 {
-  margin: 0 0 4px;
+  margin: 0 0 var(--space-4px);
   font-size: 17px;
   letter-spacing: -.15px
 }
@@ -430,11 +406,11 @@
 .vb22 .vb22-field {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: var(--space-6px);
   font-size: 12px;
   font-weight: 600;
   color: var(--vb-ink);
-  margin-top: 14px
+  margin-top: var(--space-14px)
 }
 
 .vb22 .vb22-field input,
@@ -444,9 +420,9 @@
   max-width: 100%;
   width: 100%;
   background: #fff;
-  border: 1px solid #cedfe1;
-  border-radius: 9px;
-  padding: 10px 11px;
+  border: var(--border-hairline) solid #cedfe1;
+  border-radius: var(--radius-9);
+  padding: var(--space-10px) 11px;
   font-size: 13px;
   color: var(--vb-ink);
   box-shadow: none;
@@ -461,11 +437,11 @@
 
 .vb22 .vb22-check {
   display: flex;
-  gap: 8px;
+  gap: var(--space-8px);
   align-items: center;
   font-size: 12px;
   font-weight: 600;
-  margin-top: 18px
+  margin-top: var(--space-18px)
 }
 
 .vb22 .vb22-check input {
@@ -482,11 +458,11 @@
 
 .vb22 .vb22-error,
 .vb22 .vb22-notice {
-  padding: 12px 13px;
-  border: 1px solid #e4c8c8;
+  padding: var(--space-12px) 13px;
+  border: var(--border-hairline) solid #e4c8c8;
   background: #fff7f6;
-  border-radius: 9px;
-  margin-top: 14px;
+  border-radius: var(--radius-9);
+  margin-top: var(--space-14px);
   font-size: 12px;
   line-height: 1.5;
   white-space: pre-wrap
@@ -510,13 +486,13 @@ dialog.vb22.vb22-modal {
   height: min(900px,calc(var(--vb22-height,100dvh) - 32px - var(--vb22-bottom,0px)));
   max-width: none;
   max-height: none;
-  border: 1px solid #d5e1e2;
-  border-radius: 20px;
+  border: var(--border-hairline) solid #d5e1e2;
+  border-radius: var(--radius-20);
   padding: 0;
   background: #fff;
   overflow: hidden;
   box-shadow: 0 22px 80px #16333e2b;
-  z-index: 1000001
+  z-index: var(--z-reminder-dialog)
 }
 
 dialog.vb22.vb22-modal[open] {
@@ -535,13 +511,13 @@ dialog.vb22.vb22-modal::backdrop {
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  border: 1px solid var(--vb-line);
-  border-radius: 18px;
+  border: var(--border-hairline) solid var(--vb-line);
+  border-radius: var(--radius-18);
   box-shadow: 0 7px 24px #203c4405
 }
 
 .vb22-inline .vb22-head {
-  padding: 20px 21px 16px
+  padding: var(--space-20px) 21px var(--space-16px)
 }
 
 .vb22-inline .vb22-head h2 {
@@ -554,19 +530,19 @@ dialog.vb22.vb22-modal::backdrop {
 
 .vb22-inline .vb22-filters {
   grid-template-columns: 1fr 1fr;
-  padding: 13px 21px 8px;
+  padding: 13px 21px var(--space-8px);
   gap: 7px
 }
 
 .vb22-inline .vb22-filters button {
-  padding: 7px 10px;
+  padding: 7px var(--space-10px);
   min-height: 35px
 }
 
 .vb22-inline .vb22-count {
   height: 15px;
   font-size: 11px;
-  padding-left: 8px
+  padding-left: var(--space-8px)
 }
 
 .vb22-inline .vb22-layout {
@@ -582,7 +558,7 @@ dialog.vb22.vb22-modal::backdrop {
 }
 
 .vb22-inline .vb22-row {
-  padding: 11px 6px;
+  padding: 11px var(--space-6px);
   border-left: 0
 }
 
@@ -591,7 +567,7 @@ dialog.vb22.vb22-modal::backdrop {
 }
 
 .vb22-inline .vb22-foot {
-  padding: 10px 21px;
+  padding: var(--space-10px) 21px;
   font-size: 10px;
   min-height: 45px
 }
@@ -605,12 +581,12 @@ dialog.vb22.vb22-modal::backdrop {
     padding-right: 21px
   }
   .vb22 .vb22-head {
-    padding-left: 20px;
-    padding-right: 20px
+    padding-left: var(--space-20px);
+    padding-right: var(--space-20px)
   }
   .vb22 .vb22-filters {
-    padding-left: 20px;
-    padding-right: 20px
+    padding-left: var(--space-20px);
+    padding-right: var(--space-20px)
   }
 }
 
@@ -625,8 +601,8 @@ dialog.vb22.vb22-modal::backdrop {
     padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left)
   }
   .vb22 .vb22-head {
-    padding: 17px 16px 15px;
-    gap: 8px;
+    padding: 17px var(--space-16px) 15px;
+    gap: var(--space-8px);
     align-items: start
   }
   .vb22 .vb22-head h2 {
@@ -650,15 +626,15 @@ dialog.vb22.vb22-modal::backdrop {
     max-width: 180px
   }
   .vb22 .vb22-tabs {
-    padding: 0 16px
+    padding: 0 var(--space-16px)
   }
   .vb22 .vb22-filters {
-    padding: 13px 16px;
+    padding: 13px var(--space-16px);
     grid-template-columns: 1fr 1fr;
     gap: 7px
   }
   .vb22 .vb22-filters button {
-    padding: 7px 10px;
+    padding: 7px var(--space-10px);
     min-height: 36px;
     font-size: 12px
   }
@@ -672,7 +648,7 @@ dialog.vb22.vb22-modal::backdrop {
   }
   .vb22 .vb22-list-pane {
     height: 100%;
-    padding: 15px 16px 20px;
+    padding: 15px var(--space-16px) var(--space-20px);
     border: 0
   }
   .vb22 .vb22-detail {
@@ -708,7 +684,7 @@ dialog.vb22.vb22-modal::backdrop {
     font-size: 16px
   }
   .vb22 .vb22-foot {
-    padding: 10px 16px;
+    padding: var(--space-10px) var(--space-16px);
     font-size: 10px
   }
   .vb22 .vb22-form {
@@ -728,12 +704,12 @@ dialog.vb22.vb22-modal::backdrop {
 
 @media(max-height:500px) and (min-width:651px) {
   .vb22 .vb22-head {
-    padding-top: 12px;
-    padding-bottom: 12px
+    padding-top: var(--space-12px);
+    padding-bottom: var(--space-12px)
   }
   .vb22 .vb22-filters {
-    padding-top: 10px;
-    padding-bottom: 10px
+    padding-top: var(--space-10px);
+    padding-bottom: var(--space-10px)
   }
 }
 
@@ -741,9 +717,9 @@ dialog.vb22.vb22-modal::backdrop {
  * !important. The approved B2.2 workspace keeps its own flat controls. */
 .vb22.vb22 button {
   background: #fff!important;
-  border: 1px solid var(--vb-line)!important;
+  border: var(--border-hairline) solid var(--vb-line)!important;
   color: var(--vb-ink)!important;
-  border-radius: 9px!important;
+  border-radius: var(--radius-9)!important;
   backdrop-filter: none!important;
   -webkit-backdrop-filter: none!important;
   box-shadow: none!important;
@@ -798,8 +774,8 @@ dialog.vb22.vb22-modal::backdrop {
   min-height: 0!important;
   background: transparent!important;
   border: 0!important;
-  border-bottom: 1px solid #e0e9ea!important;
-  border-left: 3px solid transparent!important;
+  border-bottom: var(--border-hairline) solid #e0e9ea!important;
+  border-left: var(--border-pro) solid transparent!important;
   border-radius: 0!important
 }
 
@@ -811,7 +787,7 @@ dialog.vb22.vb22-modal::backdrop {
   border-left-color: #218a8f!important;
   border-bottom-color: #d5e5e4!important;
   background: #eaf5f3!important;
-  border-radius: 8px!important
+  border-radius: var(--radius-8)!important
 }
 
 .vb22.vb22-inline .vb22-row {
@@ -830,10 +806,4 @@ dialog.vb22.vb22-modal::backdrop {
   border-radius: 0!important;
   border: 0!important;
   background: #fff!important
-}
-
-@media(prefers-reduced-motion:reduce) {
-  .vb22 button {
-    transition: none
-  }
 }

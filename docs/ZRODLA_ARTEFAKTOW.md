@@ -754,6 +754,9 @@ W `vilda_vault.js` czytelny blok `P-PRZYPOMNIENIA-B22` zawiera
 `reminderContext.kind === 'reminder'`. Publiczne kontrakty zapisów klinicznych
 pozostają bez zmian. Adaptery IndexedDB, pamięciowy i hybrydowy udostępniają
 `commitReminderForUser`. Nie zmienia się schemat sejfu ani kolejność skryptów.
+`tools/patch-vault-existing-note.mjs` uwzględnia wspólny punkt przygotowania rekordu,
+porównanie terminu nowych przypomnień i położenie istniejącego bloku przed B2.2;
+test odtworzenia nadal wymaga identycznych bajtów artefaktu i idempotencji łatki.
 
 Test `reminders-outcome-vault.test.mjs` uruchamia rzeczywisty sejf i kryptografię;
 testy `przypomnienia-b22*` sprawdzają natywną aplikację desktop/mobile, awarię

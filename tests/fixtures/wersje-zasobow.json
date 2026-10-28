@@ -1473,7 +1473,7 @@
  },
  "vilda_reminders.css": {
   "v": 1,
-  "sha256": "094ed75a29a11cb887e02f655300ca5c4fe59f8d4d05837b222e4f03feb577d3"
+  "sha256": "33cb0a766d0f9d8cc24ad633f72111ea62adbed205a7d59641a9bf920b9816bf"
  },
  "vilda_reminders_collapse.js": {
   "v": 2,
@@ -1601,7 +1601,7 @@
  },
  "vilda_vault.js": {
   "v": 231,
-  "sha256": "e39a643c676f57802f3a520f0ed60b95989cad70648ebab51f338a2af28d4544"
+  "sha256": "99c2071e7c3276797646c9b0867f15903b6e8b66ed06fd1bed136e8081354146"
  },
  "vilda_version_history_ui.js": {
   "v": 15,
