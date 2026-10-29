@@ -159,6 +159,15 @@ posiada; pola własne formularza, także puste, pozostają autorytatywne. Nie mo
 uzupełnić C starszymi danymi B. Kolejne zapisy zachowują ten sam podział
 własności, historie oraz dedykowane sesje.
 
+Pełny zestaw E2E wykrył też regresję pierwszej wersji tej poprawki: ponowne
+wczytanie tej samej osoby na DocPro usuwało nowsze potrawy z bieżącej sesji,
+gdy zapisany rekord miał tylko pusty wrapper kontrolek spożycia. DocPro nie
+ma ich edytora. Taki dokładnie pusty wrapper albo brak sekcji zachowuje teraz
+potrawy ze zgodnej sesji tej samej osoby. Niepuste potrawy wczytanego rekordu,
+jawne wyczyszczenie oraz kontrolki strony posiadającej edytor pozostają
+autorytatywne. Inna tożsamość lub niezgodna data urodzenia blokują ten wyjątek;
+nie stosuje się go do PAL, historii ani pozostałych sekcji.
+
 Dla starszego rekordu bez PAL brakującą wartość wyznacza istniejące API planu
 i spożycia. Nie dodano nowego wzoru ani stałej medycznej. Wybór „Nowy pomiar”
 może zmienić automatyczny PAL, bo usuwa antropometrię: wartość wytworzona przez

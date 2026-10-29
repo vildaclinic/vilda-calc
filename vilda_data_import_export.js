@@ -412,6 +412,18 @@ const MAIN_SESSION_DOM_FIELDS=[
 function mergeMainSessionOwnedFields(target,source,previous){
   if(!source)return;
   const incoming=JSON.parse(JSON.stringify(source)),own=(object,key)=>Object.prototype.hasOwnProperty.call(object,key);
+  const foods=!!(f("foodRowsSection")||f("addFoodRowBtn")||r.document&&r.document.querySelector&&r.document.querySelector(".food-row"));
+  const sourceFoods=source.foods,emptyFoodPlaceholder=!own(source,"foods")
+    ||sourceFoods&&typeof sourceFoods==="object"&&!Array.isArray(sourceFoods)
+      &&Object.keys(sourceFoods).every(key=>(key==="snacks"||key==="meals")&&Array.isArray(sourceFoods[key])&&sourceFoods[key].length===0);
+  // DocPro's empty food wrapper says nothing about an existing same-person
+  // draft from another page. Preserve only this historical unowned fallback;
+  // explicit clears, unknown shapes and every other section keep their source.
+  if(!foods&&emptyFoodPlaceholder&&Gt_tozsamosc(target)
+    &&compatibleMainSessionIdentity(target,source,false)&&compatibleMainSessionIdentity(target,previous,false)
+    &&!Le(previous.foods))incoming.foods=JSON.parse(JSON.stringify(previous.foods));
+  // The food editor owns the complete model, including legacy array carriers.
+  if(foods)delete incoming.foods;
   function path(root,keys){let node=root;for(const key of keys){if(!node||typeof node!=="object"||!own(node,key))return {present:false};node=node[key]}return {present:true,value:node}}
   function set(root,keys,value){let node=root;for(const key of keys.slice(0,-1)){if(!node[key]||typeof node[key]!=="object"||Array.isArray(node[key]))node[key]={};node=node[key]}node[keys[keys.length-1]]=JSON.parse(JSON.stringify(value))}
   function remove(root,keys){let node=root;for(const key of keys.slice(0,-1)){node=node&&node[key];if(!node||typeof node!=="object")return}delete node[keys[keys.length-1]]}
@@ -444,7 +456,6 @@ function mergeMainSessionOwnedFields(target,source,previous){
       }catch(error){l("vilda_data_import_export:therapy-session-authority",error)}
     });
   }
-  const foods=!!(f("foodRowsSection")||f("addFoodRowBtn")||r.document&&r.document.querySelector&&r.document.querySelector(".food-row"));
   field("foods.snacks",foods);field("foods.meals",foods);
   if(r.VildaPubertyAssessmentState)r.VildaPubertyAssessmentState.mergeSession(target,incoming,Et);
   else Et(target,incoming);

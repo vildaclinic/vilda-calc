@@ -112,6 +112,76 @@ describe('main-session persistence respects partial-page ownership and the actua
     expect(h.main().respiratory.rate).toBeNull();
   });
 
+  it('reloading the same named patient retains an unowned legacy food draft before the first write', () => {
+    const source = record(), previous = record(source.name, '1.4');
+    source.foods = { snacks: [], meals: [] }; previous.foods = [{ name: 'Fikcyjne jabłko', grams: 150 }];
+    const original = clone(source), h = harness(previous);
+    h.current({ ...partial(source), foods: { snacks: [], meals: [] } }); h.load(source);
+    expect(h.writes[0].foods).toEqual(previous.foods);
+    expect(h.main().foods).toEqual(previous.foods);
+    expect(h.main().plan.palFactor).toBe(1.8);
+    expect(h.main().user).toMatchObject({ weight: null, height: null });
+    expect(source).toEqual(original);
+  });
+
+  it('the same-patient empty food placeholder also retains a modern draft', () => {
+    const source = record(), previous = record();
+    source.foods = { snacks: [], meals: [] };
+    previous.foods = { snacks: [{ key: 'fictional-apple', qty: 2 }], meals: [] };
+    const h = harness(previous); h.current({ ...partial(source), foods: { snacks: [], meals: [] } });
+    h.load(source); expect(h.main().foods).toEqual(previous.foods);
+  });
+
+  it('meaningful incoming food data wins over the previous same-patient draft', () => {
+    const source = record(), previous = record();
+    source.foods = { snacks: [{ key: 'fictional-banana', qty: 1 }], meals: [] };
+    previous.foods = [{ name: 'Fikcyjne jabłko', grams: 150 }];
+    const h = harness(previous); h.current({ ...partial(source), foods: { snacks: [], meals: [] } });
+    h.load(source); expect(h.main().foods).toEqual(source.foods);
+  });
+
+  it.each([[{ snacks: [{ key: 'fictional-banana', qty: 1 }], meals: [] }], [[{ name: 'Fikcyjne jabłko', grams: 150 }]]])('the actual food editor can clear an incoming carrier %j', foods => {
+    const source = record(); source.foods = clone(foods);
+    const h = harness(record()); h.fields.set('foodRowsSection', { id: 'foodRowsSection' });
+    h.current({ ...partial(source), foods: { snacks: [], meals: [] } });
+    h.load(source); expect(h.main().foods).toEqual({ snacks: [], meals: [] });
+  });
+
+  it.each(['different-name', 'different-dob', 'anonymous'])('food fallback rejects the %s identity boundary', reason => {
+    const source = record(), previous = record(); source.foods = { snacks: [], meals: [] };
+    previous.foods = [{ name: 'Fikcyjne jabłko', grams: 150 }];
+    if (reason === 'different-name') previous.name = 'Fikcyjny Inny Pacjent';
+    if (reason === 'different-dob') previous.user.dobISO = '2012-06-17';
+    if (reason === 'anonymous') { source.name = ''; previous.name = ''; }
+    const h = harness(previous); h.current({ ...partial(source), foods: { snacks: [], meals: [] } });
+    h.load(source); expect(h.main().foods).toEqual({ snacks: [], meals: [] });
+  });
+
+  it('explicit clear and unknown food shapes never reuse the older draft', () => {
+    for (const foods of [null, false, [], { snacks: null, meals: [] }, { snacks: [], meals: [], futureFlag: true }]) {
+      const source = record(), previous = record(); source.foods = clone(foods);
+      previous.foods = [{ name: 'Fikcyjne jabłko', grams: 150 }];
+      const h = harness(previous); h.current({ ...partial(source), foods: { snacks: [], meals: [] } });
+      h.load(source);
+      expect(h.main().foods).not.toEqual(previous.foods);
+      if (foods && !Array.isArray(foods)) expect(h.main().foods).toEqual(foods);
+    }
+  });
+
+  it('a failed first write retries against the latest food draft and respects a later clear without replay', () => {
+    for (const latest of [[], { snacks: [{ key: 'fictional-current-draft', qty: 3 }], meals: [] }]) {
+      const source = record(), previous = record(); source.foods = { snacks: [], meals: [] };
+      previous.foods = [{ name: 'Fikcyjne jabłko', grams: 150 }];
+      const h = harness(previous); h.current({ ...partial(source), foods: { snacks: [], meals: [] } });
+      h.allow(false); h.load(source);
+      expect(h.writes[0].foods).toEqual(previous.foods);
+      expect(h.main().foods).toEqual(previous.foods);
+      const updated = h.main(); updated.foods = clone(latest); h.previous(updated);
+      h.allow(true); expect(h.save()).toBe(true);
+      expect(h.main().foods).toEqual(Array.isArray(latest) ? { snacks: [], meals: [] } : latest);
+    }
+  });
+
   it('retains a cloned incoming source across a failed first write and consumes it on success', () => {
     const source = record(), h = harness(); h.allow(false); h.load(source);
     expect(h.writes.length).toBeGreaterThan(0);
