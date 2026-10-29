@@ -9,8 +9,8 @@
   "use strict";
   const HOURS_ID = "Cl24DurationHours";
   const SOURCE_ID = "Cl24DurationSource";
-  const HOURS_FIELDS = Object.freeze([HOURS_ID, "CA_collectionHours", "UA_collectionHours", "MG_collectionHours"]);
-  const SOURCES = Object.freeze({ [HOURS_ID]: SOURCE_ID, CA_collectionHours: "CA_collectionSource", UA_collectionHours: "UA_collectionSource", MG_collectionHours: "MG_collectionSource" });
+  const HOURS_FIELDS = Object.freeze([HOURS_ID, "CA_collectionHours", "UA_collectionHours", "MG_collectionHours", "PO4_collectionHours"]);
+  const SOURCES = Object.freeze({ [HOURS_ID]: SOURCE_ID, CA_collectionHours: "CA_collectionSource", UA_collectionHours: "UA_collectionSource", MG_collectionHours: "MG_collectionSource", PO4_collectionHours: "PO4_collectionSource" });
   const PROTOCOL_IDS = Object.freeze(["collectionStartVoidDiscarded", "collectionFinalVoidIncluded", "collectionNoMissedVoids", "collectionNoSpillage", "collectionNoExtraVoids", "collectionStorageFollowed"]);
   const PROTOCOL_KEYS = Object.freeze(["startVoidDiscarded", "finalVoidIncluded", "noMissedVoids", "noSpillage", "noExtraVoids", "storageFollowed"]);
   const bindings = new WeakMap(), layouts = new WeakMap();
@@ -89,6 +89,26 @@
       else if (own(vault, id)) values[id] = vault[id];
     }
     return fromValues(values, options.context || {}, options);
+  }
+  // A native form.reset() clears dynamically mounted text inputs even though
+  // their new-collection meaning remains an assumed24h. Persist that meaning
+  // consistently with restoration, without changing the focused editor, its
+  // DOM value or the version-value vault while a doctor is still typing.
+  function normalizeCapturedInputs(values = {}) {
+    const result = { ...values };
+    for (const fieldId of HOURS_FIELDS) {
+      if (!own(values, fieldId)) continue;
+      const sourceId = SOURCES[fieldId], flagId = confirmationId(fieldId);
+      const historical = values[sourceId] === "historical-missing" || confirmed(values[flagId]);
+      if (absent(values[fieldId]) && !historical) {
+        result[fieldId] = "24";
+        result[sourceId] = "assumed-24h";
+      }
+      // Existing DOM strings and older boolean metadata are both retained.
+      // False means no unresolved historical gap, never a valid collection.
+      if (!own(values, flagId)) result[flagId] = historical;
+    }
+    return result;
   }
   function bindControl(control, options = {}) {
     if (!control) return control;
@@ -179,5 +199,5 @@
     bindControl(control);
   }
   if (root.document?.addEventListener) root.document.addEventListener("DOMContentLoaded", () => ensureDefaults(root.document));
-  return Object.freeze({ HOURS_ID, SOURCE_ID, HOURS_FIELDS, PROTOCOL_IDS, SOURCES, parseHours, resolveHours, collectionFacts, fromValues, readFromDocument, bindControl, ensureDefaults, syncDurationView });
+  return Object.freeze({ HOURS_ID, SOURCE_ID, HOURS_FIELDS, PROTOCOL_IDS, SOURCES, parseHours, resolveHours, collectionFacts, fromValues, readFromDocument, normalizeCapturedInputs, bindControl, ensureDefaults, syncDurationView });
 });

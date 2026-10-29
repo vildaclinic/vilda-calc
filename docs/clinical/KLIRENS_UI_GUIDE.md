@@ -133,6 +133,27 @@ obcą wizualnie kartą i nie dodawaj kilku podobnych wierszy „odniesienia”.
 - Wynik, porównanie, eksport i zapis mają opisywać tę samą ocenę. Zachowuj
   dokładną wartość, znak nierówności i kontekst użyty przed zaokrągleniem.
 
+## Fosforany w DZM — decyzja 29.10.2026
+
+Dla `PO4_mgkg` główną miarą jest ilość dobowa **mg P/24 h**, z opcją
+**mmol/24 h**. Domyślnie wystarczają stężenie i objętość; drugi tryb przyjmuje
+gotowy wynik dobowy. Masa nie jest wymagana, a znana masa daje jedynie
+dodatkowe /kg w Szczegółach. `mg P` oznacza fosfor, nie masę jonu PO₄.
+
+Jedna karta B pokazuje wynik i orientacyjny zakres **Labcorp 003251** w tej
+samej jednostce, z nazwą źródła i grupą wieku w Szczegółach. Liczby normy są
+neutralne, odchylenie bursztynowe. Brak właściwego wieku/płci/profilu daje
+liczbę z krótką przyczyną braku porównania, bez zielonego werdyktu. Dokładne
+zero jest neutralne z uwagą o oznaczalności, a mały dodatni wynik pozostaje
+dodatni także w raporcie i zapisie.
+
+Nowe jawne 24 h ma opcję **Zmień**. Znana błędna zbiórka blokuje oba tryby;
+znany inny czas zachowuje ograniczenie po zmianie trybu, bez normy pełnej
+DZM i bez ponownego skalowania gotowej ilości dobowej. Kontekst przytarczyc,
+krzywicy hipofosfatemicznej/XLH i burosumabu należy do zwiniętych
+**Szczegółów**, z odnośnikiem do TmP/GFR. Nie dodawaj selektora choroby,
+nowych pól krwi, dawki ani ankiety. Pełne źródła i reguły: [PO4_DZM.md](PO4_DZM.md).
+
 ## Makieta i sprawdzenie przed przekazaniem
 
 Każdą kolejną zmianę wizualną w audycie przedstaw najpierw do akceptacji jako
