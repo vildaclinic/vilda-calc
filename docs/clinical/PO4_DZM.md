@@ -11,7 +11,7 @@ Audyt odtworzył poniższe zachowania rzeczywistych funkcji produkcyjnych i form
 - Brak normy bywał zapisywany jako `outOfRange:false`, mimo braku wykonanej oceny. Sama karta pozostawała neutralna; nie potwierdzono błędu polegającego na zielonym werdykcie w bieżącym widoku.
 - Obecny moduł nie miał wdrożonego profilu wieku. Komunikat „Brak uniwersalnej normy” nie dowodzi nieistnienia źródeł pediatrycznych.
 
-Nie potwierdzono błędu podstawy chemicznej ani mnożnika około 3,066: istniejący producent poprawnie liczył masę P i stosował 30,9738 mg P/mmol. Nie wykazano też potrzeby zmiany wspólnej obsługi czasu: nowe puste pole przyjmowało 24 h, jawne 12 h pozostawało 12 h, czas 0 i znana błędna zbiórka blokowały wynik, a nieznany czas historyczny wymagał podania godzin przy edycji. Te zabezpieczenia należy zachować.
+Nie potwierdzono błędu podstawy chemicznej ani mnożnika około 3,066: istniejący producent poprawnie liczył masę P i stosował 30,9738 mg P/mmol. Nie wykazano też potrzeby zmiany klinicznej reguły obsługi czasu: nowe puste pole przyjmowało 24 h, jawne 12 h pozostawało 12 h, czas 0 i znana błędna zbiórka blokowały wynik, a nieznany czas historyczny wymagał podania godzin przy edycji. Te zabezpieczenia należy zachować.
 
 ## Formularz, jednostki i obliczenie
 
@@ -26,6 +26,8 @@ Po sprowadzeniu jednostek:
 Dla pełnych 24 h równoważnie: `stężenie mg P/dL × objętość mL / 100`. Wynik molowy to ilość mg P/24 h podzielona przez 30,9738. Gotowy wynik dobowy jest już ilością na dobę: nie mnoży się go ponownie przez objętość ani 24/czas. Zmiana jednostki ma zachować tę samą ilość, także na granicy odniesienia.
 
 W nowym pomiarze rzeczywiście wpisane domyślne 24 h jest jawnym założeniem użytkowym, a **Zmień** otwiera jedno pole godzin. Puste nowe pole korzysta z tej samej reguły `ClcrCollectionDuration`. Jawny czas musi być skończoną liczbą dodatnią; 0, wartość ujemna lub błędny tekst nie stają się 24. Inny dodatni czas daje oszacowanie na dobę bez normy pełnej DZM. Znany czas 12 h odbiera prawo do normy także po przejściu na gotowy wynik, choć podana ilość dobowa nie jest ponownie skalowana.
+
+Zapis sesji utrwala znaczenie nowego pustego czasu jako 24 h już przed pierwszym odtworzeniem. Zapobiega to różnicy po resecie dynamicznych pól formularza. Ta normalizacja nie zmienia edytowanego pola ani magazynu wartości, nie dopisuje nieobecnych pól innych kalkulatorów i zachowuje historyczną niewiadomą oraz jawne wartości błędne.
 
 Jawnie znana niepełna lub błędna zbiórka blokuje oba tryby. Krótszy czas nie naprawia brakującej porcji. Niezaznaczony dawny checkbox bez odpowiedzi nie oznacza sam przez się zgłoszonego błędu. Zachowujemy jawne odpowiedzi negatywne i `Cl24CollectionProblem`. Nie dodajemy obowiązkowej ankiety o protokół.
 

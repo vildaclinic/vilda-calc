@@ -90,6 +90,26 @@
     }
     return fromValues(values, options.context || {}, options);
   }
+  // A native form.reset() clears dynamically mounted text inputs even though
+  // their new-collection meaning remains an assumed24h. Persist that meaning
+  // consistently with restoration, without changing the focused editor, its
+  // DOM value or the version-value vault while a doctor is still typing.
+  function normalizeCapturedInputs(values = {}) {
+    const result = { ...values };
+    for (const fieldId of HOURS_FIELDS) {
+      if (!own(values, fieldId)) continue;
+      const sourceId = SOURCES[fieldId], flagId = confirmationId(fieldId);
+      const historical = values[sourceId] === "historical-missing" || confirmed(values[flagId]);
+      if (absent(values[fieldId]) && !historical) {
+        result[fieldId] = "24";
+        result[sourceId] = "assumed-24h";
+      }
+      // Existing DOM strings and older boolean metadata are both retained.
+      // False means no unresolved historical gap, never a valid collection.
+      if (!own(values, flagId)) result[flagId] = historical;
+    }
+    return result;
+  }
   function bindControl(control, options = {}) {
     if (!control) return control;
     const doc = control.ownerDocument;
@@ -179,5 +199,5 @@
     bindControl(control);
   }
   if (root.document?.addEventListener) root.document.addEventListener("DOMContentLoaded", () => ensureDefaults(root.document));
-  return Object.freeze({ HOURS_ID, SOURCE_ID, HOURS_FIELDS, PROTOCOL_IDS, SOURCES, parseHours, resolveHours, collectionFacts, fromValues, readFromDocument, bindControl, ensureDefaults, syncDurationView });
+  return Object.freeze({ HOURS_ID, SOURCE_ID, HOURS_FIELDS, PROTOCOL_IDS, SOURCES, parseHours, resolveHours, collectionFacts, fromValues, readFromDocument, normalizeCapturedInputs, bindControl, ensureDefaults, syncDurationView });
 });

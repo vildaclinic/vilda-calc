@@ -56,6 +56,62 @@ async function expectReady(page, formula) {
   return current;
 }
 
+test('DZM session capture after formula reset is stable without changing an edited field or inventing historical hours', async ({ page }) => {
+  await openCalculator(page);
+  await page.evaluate(() => window.ClcrUiWorkflow.selectFormula('ckid_u25'));
+  await page.waitForFunction(() => window.ClcrUiWorkflow.state.activeFormulaId === 'ckid_u25' && window.clcrIsResetting !== true);
+  const result = await page.evaluate(() => {
+    const api = window.ClcrCollectionDuration;
+    const fields = api.HOURS_FIELDS.map(field => ({ field, source: api.SOURCES[field],
+      flag: field === 'Cl24DurationHours' ? 'durationNeedsConfirmation' : field.split('_')[0] + '_durationNeedsConfirmation' }));
+    const raw = () => Object.fromEntries(fields.map(({ field }) => [field, document.getElementById(field).value]));
+    const durationInputs = session => Object.fromEntries(fields.flatMap(({ field, source, flag }) =>
+      [field, source, flag].map(key => [key, session.inputs[key]])));
+    const prepare = (hours, sourceValue, historical = false) => {
+      window.clcrClearVersionValueVault();
+      for (const entry of fields) {
+        document.getElementById(entry.field).value = hours;
+        document.getElementById(entry.source).value = sourceValue;
+        const flag = document.getElementById(entry.flag);
+        if (flag) flag.value = historical ? 'true' : 'false';
+        else if (historical) window.__vildaClcrVersionValueVault[entry.flag] = true;
+      }
+    };
+    // Reproduce the exact first-capture state from T56: the legacy formula
+    // reset empties dynamically mounted hours and leaves default provenance.
+    document.getElementById('clcrForm').reset();
+    prepare('', 'assumed-24h');
+    document.getElementById('Cl24DurationHours').value = '24';
+    const before = raw(), initial = window.buildClcrSessionSnapshot(), after = raw();
+    const restored = window.applyClcrSessionSnapshot(initial, { source: 'e2e-duration-reset', update: false,
+      dispatchEvents: false, writeSession: false, preserveAcrossVersions: true });
+    const replay = window.buildClcrSessionSnapshot();
+    prepare('0', 'hours');
+    const invalidBefore = raw(), invalid = window.buildClcrSessionSnapshot(), invalidAfter = raw();
+    prepare('', 'historical-missing', true);
+    const historicalBefore = raw(), historical = window.buildClcrSessionSnapshot(), historicalAfter = raw();
+    return { fields, before, after, restored, initial: durationInputs(initial), replay: durationInputs(replay),
+      invalidBefore, invalidAfter, invalid: durationInputs(invalid),
+      historicalBefore, historicalAfter, historical: durationInputs(historical) };
+  });
+  expect(result.restored).toBe(true);
+  expect(result.after).toEqual(result.before);
+  expect(Object.values(result.before).filter(value => value === '')).toHaveLength(4);
+  expect(result.replay).toEqual(result.initial);
+  expect(result.invalidAfter).toEqual(result.invalidBefore);
+  expect(result.historicalAfter).toEqual(result.historicalBefore);
+  for (const { field, source, flag } of result.fields) {
+    expect(result.initial[field]).toBe('24');
+    expect(result.initial[source]).toBe('assumed-24h');
+    expect([false, 'false']).toContain(result.initial[flag]);
+    expect(result.invalid[field]).toBe('0');
+    expect(result.invalid[source]).toBe('hours');
+    expect(result.historical[field]).toBe('');
+    expect(result.historical[source]).toBe('historical-missing');
+    expect([true, 'true']).toContain(result.historical[flag]);
+  }
+});
+
 for (const formula of formulas) test(`Shared DZM: ${formula} defaults, blank, invalid and clear`, async ({ page }) => {
   const errors = []; page.on('pageerror', error => errors.push(error.message));
   await openCalculator(page); await restore(page, formula);

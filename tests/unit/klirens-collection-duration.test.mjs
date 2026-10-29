@@ -54,6 +54,52 @@ function mountedDurationView(initialSource = 'assumed-24h', initialHours = '24',
 }
 
 describe('Shared DZM numeric duration — new collections versus historical edits', () => {
+  it('captures reset/new blanks as the same24h used by production readers without mutating the editor values', () => {
+    const api = harness().ClcrCollectionDuration;
+    const values = { Scr: '0.4', formulaPicker: 'ckid_u25', Cl24DurationHours: '24', Cl24DurationSource: 'assumed-24h',
+      CA_collectionHours: '', CA_collectionSource: 'assumed-24h', UA_collectionHours: '', UA_collectionSource: 'assumed-24h',
+      MG_collectionHours: '', MG_collectionSource: 'assumed-24h', PO4_collectionHours: '', PO4_collectionSource: 'assumed-24h', PO4_durationNeedsConfirmation: 'false' };
+    const original = structuredClone(values), captured = api.normalizeCapturedInputs(values);
+    expect(values).toEqual(original);
+    expect(captured).not.toBe(values);
+    expect([captured.Scr, captured.formulaPicker]).toEqual(['0.4', 'ckid_u25']);
+    for (const fieldId of api.HOURS_FIELDS) {
+      const flag = fieldId === 'Cl24DurationHours' ? 'durationNeedsConfirmation' : fieldId.split('_')[0] + '_durationNeedsConfirmation';
+      expect(captured[fieldId]).toBe('24');
+      expect(captured[api.SOURCES[fieldId]]).toBe('assumed-24h');
+      expect(captured[flag]).toBe(fieldId === 'PO4_collectionHours' ? 'false' : false);
+      expect(api.fromValues(captured, {}, { fieldId })).toMatchObject({ valid: true, hours: 24, assumed: true });
+      expect(api.fromValues(values, {}, { fieldId })).toMatchObject({ valid: true, hours: 24, assumed: true });
+    }
+    expect(api.normalizeCapturedInputs(captured)).toEqual(captured);
+  });
+  it('capture does not invent unrelated duration fields in a minimal or old input set', () => {
+    const api = harness().ClcrCollectionDuration;
+    const old = { Scr: '0.4', collectionStartAt: '2026-10-24T08:00', collectionEndAt: '2026-10-25T08:00' };
+    expect(api.normalizeCapturedInputs(old)).toEqual(old);
+    expect(api.normalizeCapturedInputs({})).toEqual({});
+  });
+  it.each(['Cl24DurationHours', 'CA_collectionHours', 'UA_collectionHours', 'MG_collectionHours', 'PO4_collectionHours'])('%s capture keeps explicit invalid and historical duration evidence without substituting24h', fieldId => {
+    const api = harness().ClcrCollectionDuration, sourceId = api.SOURCES[fieldId];
+    const flag = fieldId === 'Cl24DurationHours' ? 'durationNeedsConfirmation' : fieldId.split('_')[0] + '_durationNeedsConfirmation';
+    for (const raw of ['0', '-1', 'invalid', '1e-9999']) {
+      const captured = api.normalizeCapturedInputs({ [fieldId]: raw, [sourceId]: 'hours' });
+      expect(captured).toEqual({ [fieldId]: raw, [sourceId]: 'hours', [flag]: false });
+      expect(api.fromValues(captured, {}, { fieldId })).toMatchObject({ valid: false, invalid: true });
+    }
+    for (const raw of ['', '0', '-1', 'invalid']) {
+      const values = { [fieldId]: raw, [sourceId]: 'historical-missing', [flag]: true };
+      expect(api.normalizeCapturedInputs(values)).toEqual(values);
+      expect(api.fromValues(api.normalizeCapturedInputs(values), {}, { fieldId }).valid).toBe(false);
+    }
+    const unknown = api.normalizeCapturedInputs({ [fieldId]: '', [sourceId]: 'historical-missing' });
+    expect(unknown).toEqual({ [fieldId]: '', [sourceId]: 'historical-missing', [flag]: true });
+    expect(api.fromValues(unknown, {}, { fieldId })).toMatchObject({ valid: false, missing: true });
+    for (const metadata of [false, 'false', true, 'true']) {
+      const values = { [fieldId]: '', [sourceId]: metadata === true || metadata === 'true' ? 'historical-missing' : 'assumed-24h', [flag]: metadata };
+      expect(api.normalizeCapturedInputs(values)[flag]).toBe(metadata);
+    }
+  });
   it.each([undefined, null, '', '   '])('new blank %s really resolves to assumed24h', value => {
     const api = harness().ClcrCollectionDuration;
     expect(api.resolveHours(value)).toMatchObject({ valid: true, hours: 24, minutes: 1440, source: 'assumed-24h', assumed: true, missing: false, invalid: false });

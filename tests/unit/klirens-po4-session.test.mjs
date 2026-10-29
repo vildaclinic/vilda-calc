@@ -65,6 +65,30 @@ function restore(session, initial, options) {
 const snapshot = result => result.api.buildClcrSessionSnapshot().inputs;
 
 describe('PO4 DZM — complete production session runtime', () => {
+  it('the actual capture canonicalizes native-reset duration defaults before their first restoration without mutating DOM or value vault', () => {
+    const resetHours = { Cl24DurationHours: '24', Cl24DurationSource: 'assumed-24h',
+      CA_collectionHours: '', CA_collectionSource: 'assumed-24h', UA_collectionHours: '', UA_collectionSource: 'assumed-24h',
+      MG_collectionHours: '', MG_collectionSource: 'assumed-24h', PO4_collectionHours: '', PO4_collectionSource: 'assumed-24h' };
+    const result = runtime({ formulaPicker: 'ckid_u25', ...resetHours, PO4_durationNeedsConfirmation: 'false',
+      collectionStartAt: '', collectionEndAt: '', Cl24CollectionProblem: false });
+    // The existing capture lazily allocates an empty vault. Seed that same
+    // empty boundary so this assertion detects new metadata writes, not the
+    // established lazy allocation itself.
+    result.api.__vildaClcrVersionValueVault = {};
+    const vaultBefore = structuredClone(result.api.__vildaClcrVersionValueVault);
+    const first = result.api.buildClcrSessionSnapshot();
+    for (const [field, value] of Object.entries(resetHours)) expect(result.controls[field].value).toBe(value);
+    expect(result.api.__vildaClcrVersionValueVault).toEqual(vaultBefore);
+    const durationKeys = result.api.ClcrCollectionDuration.HOURS_FIELDS.flatMap(field => [field, result.api.ClcrCollectionDuration.SOURCES[field],
+      field === 'Cl24DurationHours' ? 'durationNeedsConfirmation' : field.split('_')[0] + '_durationNeedsConfirmation']);
+    const durationValues = input => Object.fromEntries(durationKeys.map(key => [key, input[key]]));
+    for (const field of result.api.ClcrCollectionDuration.HOURS_FIELDS) expect(first.inputs[field]).toBe('24');
+    expect(first.inputs.PO4_durationNeedsConfirmation).toBe('false');
+    expect(first.inputs.CA_durationNeedsConfirmation).toBe(false);
+    expect(first.inputs.durationNeedsConfirmation).toBe(false);
+    expect(result.api.applyClcrSessionSnapshot(first, { update: false, preserveAcrossVersions: true })).toBe(true);
+    expect(durationValues(snapshot(result))).toEqual(durationValues(first.inputs));
+  });
   it.each(['PO4_mgkg', 'Mg_mgkg', 'Ca_mgkg', 'UA_mgkg', 'ACR', 'Na_mmol_d'])('new %s never inherits previous phosphorus specimen values', selectedFormula => {
     const result = restore({ selectedFormula, inputs: { age: '12' } });
     expect(snapshot(result)).toMatchObject({ ...defaults, PO4_durationNeedsConfirmation: false });
@@ -233,8 +257,10 @@ describe('PO4 DZM — portable collection provenance', () => {
   });
 
   it('reproduces the shipped adapter from the preceding audited session source', () => {
-    const preceding = source.replace(po4DzmSessionSource, '').replace('try{window.ClcrPo4DzmUi?.ensureControls?.(document)}catch{}', '');
+    const preceding = source.replace(po4DzmSessionSource, '').replace('try{window.ClcrPo4DzmUi?.ensureControls?.(document)}catch{}', '')
+      .replace('o.inputs=window.ClcrCollectionDuration?.normalizeCapturedInputs?.(o.inputs)||o.inputs,', '');
     expect(patchPo4DzmSessionHooks(preceding)).toBe(source);
     expect(() => patchPo4DzmSessionHooks(preceding.replace('(function(){const b="vildaClcrSessionV1";', ''))).toThrow('Ambiguous phosphorus session integration anchor');
+    expect(() => patchPo4DzmSessionHooks(preceding.replace('o.inputs.formulaPicker=r,o}', 'o.inputs.formulaPicker=r}'))).toThrow('Ambiguous captured duration normalization anchor');
   });
 });

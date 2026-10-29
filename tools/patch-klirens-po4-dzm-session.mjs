@@ -136,6 +136,8 @@ export const po4DzmSessionSource = String.raw`/* KLIRENS-PO4-DZM-SESSION: source
 const marker = '(function(){const b="vildaClcrSessionV1";';
 const captureAnchor = 'function h(){try{window.ClcrUaUi?.ensureControls?.(document)}catch{}const e=document.getElementById("clcrForm");try{window.ClcrMgDzmUi?.ensureControls?.(document)}catch{}';
 const capturePatched = captureAnchor + 'try{window.ClcrPo4DzmUi?.ensureControls?.(document)}catch{}';
+const snapshotAnchor = 'o.inputs.currentVersion=t,o.inputs.formulaPicker=r,o}';
+const snapshotPatched = 'o.inputs.currentVersion=t,o.inputs.formulaPicker=r,o.inputs=window.ClcrCollectionDuration?.normalizeCapturedInputs?.(o.inputs)||o.inputs,o}';
 export function patchPo4DzmSessionHooks(source) {
   let result = source;
   if (!result.includes('/* KLIRENS-PO4-DZM-SESSION:')) {
@@ -144,6 +146,11 @@ export function patchPo4DzmSessionHooks(source) {
   }
   if (result.split(po4DzmSessionSource).length !== 2) throw new Error('Phosphorus session source differs from the reproducible patch');
   if (result.split(capturePatched).length !== 2) throw new Error('Missing or duplicate phosphorus session capture hook');
+  if (!result.includes(snapshotPatched)) {
+    if (result.split(snapshotAnchor).length !== 2) throw new Error('Ambiguous captured duration normalization anchor');
+    result = result.replace(snapshotAnchor, snapshotPatched);
+  }
+  if (result.split(snapshotPatched).length !== 2) throw new Error('Missing or duplicate captured duration normalization hook');
   return result;
 }
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
