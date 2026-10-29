@@ -1,4 +1,5 @@
 import { expect, test } from '../support/test-czas.mjs';
+import { czekajNaOdtworzenieSesji } from '../support/sesja-czekanie.mjs';
 
 // P-BA-WIZYTA: rzeczywiste zapisy sejfu i kolejne wizyty fikcyjnego pacjenta.
 // Ostatnie badanie pozostaje dostępne do prognoz, ale nie staje się badaniem
@@ -10,7 +11,17 @@ const HASLO = 'E2e#WiekKostnyWizyty!26';
 async function gotowaStrona(page) {
   await page.waitForFunction(() => Boolean(window.VildaVault) && window.VildaVault.isUnlocked()
     && typeof window.collectUserData === 'function' && typeof window.calculateGrowthAdvanced === 'function');
-  await page.waitForFunction(() => !document.documentElement.classList.contains('vilda-auth-locked'));
+  await page.waitForFunction(() => window.VildaAuthUI?.isBootReady?.()
+    && !document.documentElement.classList.contains('vilda-auth-locked'));
+  // Gotowy model tempa może jeszcze pochodzić ze starego pomiaru. Przed edycją
+  // obserwujemy koniec odtwarzania sesji, zamiast używać wyniku jako bramki.
+  await czekajNaOdtworzenieSesji(page);
+  await page.waitForFunction(() => !window.__vildaPersistRestoring
+    && !window.VildaDataImportExport?.isMainSessionRestorePending?.()
+    && !window.VildaDobAge?.restorePending?.());
+  await page.evaluate(() => new Promise(resolve => {
+    requestAnimationFrame(() => requestAnimationFrame(resolve));
+  }));
 }
 
 async function otworzKonto(page) {

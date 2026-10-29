@@ -79,10 +79,23 @@ test('Komputer prywatny (powłoka PWA): pobieranie rusza samo, bez pytania; krok
   expect(ramka).toMatchObject({ x: 0, y: 0, height: ekran.height });
   expect(ramka.width).toBeGreaterThanOrEqual(ekran.width - 20);
 
-  // Pierwsze pobranie ma wyłączność (czerwony E2E odłamek 1/3 w CI #652): włączona przez nie synchronizacja budzi
-  // inne pobrania — arkusz przypomnień 3 s po odblokowaniu (ten dokument), panele powłoki ładowane w tle (Start,
-  // Terminarz — swoje ramki). Dotąd każde z nich pobierało ten sam blob równolegle; teraz czekają, a blob idzie raz.
+  // Pierwsze pobranie ma wyłączność także wobec innych dokumentów. Host czeka najpierw
+  // na własną obietnicę pobrania, więc nie tworzy oczekującej blokady Web Locks. Panel
+  // embedded z BroadcastChannel nie pobiera sam przy starcie, a przypomnienia otwieramy
+  // teraz jawnie. Uruchamiamy zatem rzeczywiste pobranie w gotowym panelu, zamiast
+  // uzależniać tę kontrolę od przypadkowego zdarzenia startowego innego modułu.
   const zwyklePobranie = page.evaluate(() => window.VildaSync.syncPull().then((w) => w.action));
+  await page.waitForFunction(() => {
+    const frame = document.querySelector('iframe.app-pane[title="Start"]');
+    const win = frame && frame.contentWindow;
+    return Boolean(frame && !frame.hidden && win
+      && /\/index\.html$/.test(win.location.pathname)
+      && new URLSearchParams(win.location.search).get('embedded') === '1'
+      && win.VildaVault && win.VildaVault.isUnlocked()
+      && win.VildaSync && typeof win.VildaSync.syncPull === 'function');
+  });
+  const panel = await (await page.locator('iframe.app-pane[title="Start"]').elementHandle()).contentFrame();
+  const pobranieWPanelu = panel.evaluate(() => window.VildaSync.syncPull().then((w) => w.action));
   await expect.poll(() => czekajaceNaPierwsze(page), { message: 'pobranie w ramce panelu czeka na blokadę', timeout: 15_000 }).toBeGreaterThanOrEqual(1);
   expect(bloby(zadania), 'w trakcie — jedno pobranie bloba').toBe(1);
 
@@ -97,6 +110,7 @@ test('Komputer prywatny (powłoka PWA): pobieranie rusza samo, bez pytania; krok
   await expect(okno(page)).toBeVisible();
   expect(await czyAktywne(page)).toBe(true);
   expect(await zwyklePobranie, 'zwykłe pobranie w tym dokumencie czekało na pierwsze').toBe('up-to-date');
+  expect(await pobranieWPanelu, 'pobranie w ramce panelu czekało na pierwsze').toBe('up-to-date');
   expect(bloby(zadania), 'czekające pobrania widzą zapisany ETag — bez drugiego bloba').toBe(1);
   expect(await czekajaceNaPierwsze(page)).toBe(0);
   await okno(page).getByRole('button', { name: 'Przejdź do aplikacji' }).click();
