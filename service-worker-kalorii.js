@@ -1722,6 +1722,7 @@ const CORE_SHELL_URLS = [
   '/vilda_auth_ui.css?v=77',
   '/vilda_auth_ui.css?v=78',
   '/vilda_auth_ui.css?v=79',
+  '/vilda_auth_ui.css?v=80',
   '/vilda_urodzeniowe_rozbieznosc.css?v=1',
   '/vilda_file_export.js',
   '/vilda_file_export.js?v=4',

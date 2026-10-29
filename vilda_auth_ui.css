@@ -1028,7 +1028,7 @@ select.vilda-auth-input {
     grid-template-columns: 1fr 1fr;
     gap: var(--space-4px)
   }
-  .vilda-patient-tabs>.vilda-patient-tab:nth-child(5) {
+  .vilda-patient-tabs>.vilda-patient-tab:last-child:nth-child(odd) {
     grid-column: 1/-1
   }
 }
@@ -1036,6 +1036,7 @@ select.vilda-auth-input {
 .vilda-patient-tab {
   flex: 1;
   min-width: 0;
+  min-height: 44px;
   overflow: hidden;
   display: flex;
   align-items: center;
@@ -1051,6 +1052,18 @@ select.vilda-auth-input {
 
 .vilda-patient-tab+.vilda-patient-tab {
   margin-left: 0
+}
+
+/* Stała geometria zakładek: globalne podnoszenie przycisku po najechaniu
+   nie przesuwa pojedynczej zakładki względem sąsiadów w tym samym rzędzie. */
+.vilda-patient-tabs>.vilda-patient-tab {
+  transform: none
+}
+
+/* Sześć pełnych etykiet mieści się dzięki szerokości według treści;
+   układ pięciu zakładek starszego widoku pozostaje bez zmian. */
+.vilda-patient-tabs:has(>.vilda-patient-tab[data-tab=care])>.vilda-patient-tab {
+  flex: 1 1 auto
 }
 
 /* LAB-HISTORIA PR2: pięć zakładek w wierszu karty o szerokości ok. 675 px (okno 1025–1200 px).
