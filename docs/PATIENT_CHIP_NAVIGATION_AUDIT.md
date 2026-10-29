@@ -350,7 +350,8 @@ mechanizm. Nie powstają nowe klucze storage ani nowy punkt odniesienia zapisu.
 ### Pierwsze przejście z już otwartego starego klienta
 
 Osobna próba serwowała rzeczywisty kod `989830ce` i SW 1.1.411, a następnie
-nowe pliki z prawidłowo podbitymi `?v=` i SW 1.1.412. Stary, już uruchomiony
+roboczy klient poprawki z prawidłowo podbitymi `?v=` i testowym SW 1.1.412
+(przed późniejszą integracją #827). Stary, już uruchomiony
 klient zdążył podczas zamykania nadpisać sesję: BP 120 → 118 i usunięcie daty
 29.10.2026. Nowa wersja uruchomiła się z takim formularzem; stary cache został
 usunięty, referencja i PID pozostały identyczne. W tej próbie `dirty` odpowiada

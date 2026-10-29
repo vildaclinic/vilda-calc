@@ -4,6 +4,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { expect, test } from '@playwright/test';
+import { expectNoInfantReference } from '../support/female-tt-infant-upper.mjs';
 import {
   initializeStorage, ready, setCurrentPatient, choose, setQuickAge,
   expectMedian, expectNoMedian, patientPoint, sources, card, median, curve, overflowPoint,
@@ -127,7 +128,8 @@ test('production SW supplies under6 TT medians and the Mayo warning after update
     await expect(alert(page).locator('[data-female-tt-age="alert-ratio"]')).toHaveText('≈2,16 × górna granica');
     await page.locator('#labUnitTarget').selectOption('nmol/L');
     await setQuickAge(page, 0, 5);
-    await expectNoMedian(page);
+    await expectNoMedian(page, { hidden: true });
+    await expectNoInfantReference(page);
     await expect(alert(page)).toBeHidden();
     await setQuickAge(page, 0, 6);
     await expectGroup(page, .06934);

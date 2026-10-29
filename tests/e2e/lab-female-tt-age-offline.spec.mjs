@@ -4,6 +4,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { expect, test } from '@playwright/test';
+import { expectNoInfantReference } from '../support/female-tt-infant-upper.mjs';
 import {
   initializeStorage, ready, setCurrentPatient, choose, setQuickAge,
   expectMedian, expectNoMedian, geometry, patientPoint, sources,
@@ -112,7 +113,12 @@ test('production SW upgrades and supplies female TT after a cold browser restart
     for (const [age, months, value] of [[12, 6, .4874143269614546], [17, '', .8313584790221047],
       [18, '', null], [0, 5, null], [75, '', null], [12, 0, .42502815745885664]]) {
       await setQuickAge(page, age, months);
-      if (value == null) await expectNoMedian(page);
+      if (value == null) {
+        // Completed age [5,6) months is outside the infant whole-age policy;
+        // neither source view may supply a median, patient point or norm.
+        await expectNoMedian(page, { hidden: age === 0 && months === 5 });
+        if (age === 0 && months === 5) await expectNoInfantReference(page);
+      }
       else {
         await expectMedian(page, value);
         expect(await geometry(page)).toEqual(original);

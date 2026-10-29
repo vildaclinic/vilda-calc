@@ -1,6 +1,6 @@
 {
   "opis": "E2E-ODŁAMKI: sekundy na plik e2e (pierwsza próba każdego testu, wszystkie projekty razem). Źródło podziału na odłamki CI — tests/support/odlamki-e2e.mjs. Odświeżenie: node tests/scripts/odlamki-e2e.mjs --pomoc.",
-  "zrodlo": "1 raport(y) JSON pełnego przebiegu, Playwright 1.61.1, 2026-10-18; uzupełnienie 2026-10-25: 2 pełne pliki LH z lokalnego przebiegu 22/22; startup-restore-batching (5 testów) i centile-summary-flash (6 testów) z lokalnego przebiegu 45/45, Playwright 1.61.1, sumy pierwszych prób bez powtórek; dotychczasowe 364 wagi i 2 pomiary LH zachowane; uzupełnienie 2026-10-26 po regresji autosave: dwa pełne nowe pliki LH niemowląt (9 UI + 1 offline) z lokalnego przebiegu 32/32 PASS, Playwright 1.61.1, 4 workers, sumy pierwszych prób bez powtórek (UI 149,1 s, offline 51,2 s); wszystkie 368 wcześniejszych wag zachowano; uzupełnienie 2026-10-26 (PR-S4): polkrata-cien-indexeddb (2 testy, tylko projekt desktop-chromium) z lokalnego przebiegu 2/2, Playwright 1.61.1, 1 worker, suma pierwszych prób bez powtórek 1,9 s; wszystkie 370 wcześniejszych wag zachowano; uzupełnienie 2026-10-26: dwa pełne nowe pliki TT niemowląt (10 UI + 1 offline) z lokalnego przebiegu 11/11 PASS, Playwright 1.61.1, 4 workers, bez ponowień; sumy pierwszych prób UI 172,9 s i offline 29,5 s; wcześniejsze wagi zachowano; uzupełnienie 2026-10-28 po scaleniu audyt a919bd28: pełne pliki E2 zakresu i cyklu offline, 16/16 PASS, Playwright 1.61.1, 4 workers, bez retry; sumy pierwszych prób: lab-estradiol-cycle-context-offline.spec.mjs 43.9 s, lab-estradiol-reference-scope.spec.mjs 69.3 s; rzeczywista aktualizacja SW 398→399 i zimny restart offline; pozostałe wagi zachowane; uzupełnienie 2026-10-29 (#823): cztery pełne nowe pliki patient-chip, 16/16 PASS, Playwright 1.61.1, 1 worker, bez retry; sumy pierwszych prób z dwóch raportów JSON, wszystkie 374 wcześniejszych wag zachowano; uzupełnienie 2026-10-29 (P-CHIP-AKTUALIZACJA): pełny plik patient-status-pwa-update (4/4 PASS), Playwright 1.61.1, 1 worker, suma pierwszych prób bez retry 190,8 s; wszystkie 378 wcześniejszych wag zachowano",
+  "zrodlo": "1 raport(y) JSON pełnego przebiegu, Playwright 1.61.1, 2026-10-18; uzupełnienie 2026-10-25: 2 pełne pliki LH z lokalnego przebiegu 22/22; startup-restore-batching (5 testów) i centile-summary-flash (6 testów) z lokalnego przebiegu 45/45, Playwright 1.61.1, sumy pierwszych prób bez powtórek; dotychczasowe 364 wagi i 2 pomiary LH zachowane; uzupełnienie 2026-10-26 po regresji autosave: dwa pełne nowe pliki LH niemowląt (9 UI + 1 offline) z lokalnego przebiegu 32/32 PASS, Playwright 1.61.1, 4 workers, sumy pierwszych prób bez powtórek (UI 149,1 s, offline 51,2 s); wszystkie 368 wcześniejszych wag zachowano; uzupełnienie 2026-10-26 (PR-S4): polkrata-cien-indexeddb (2 testy, tylko projekt desktop-chromium) z lokalnego przebiegu 2/2, Playwright 1.61.1, 1 worker, suma pierwszych prób bez powtórek 1,9 s; wszystkie 370 wcześniejszych wag zachowano; uzupełnienie 2026-10-26: dwa pełne nowe pliki TT niemowląt (10 UI + 1 offline) z lokalnego przebiegu 11/11 PASS, Playwright 1.61.1, 4 workers, bez ponowień; sumy pierwszych prób UI 172,9 s i offline 29,5 s; wcześniejsze wagi zachowano; uzupełnienie 2026-10-28 po scaleniu audyt a919bd28: pełne pliki E2 zakresu i cyklu offline, 16/16 PASS, Playwright 1.61.1, 4 workers, bez retry; sumy pierwszych prób: lab-estradiol-cycle-context-offline.spec.mjs 43.9 s, lab-estradiol-reference-scope.spec.mjs 69.3 s; rzeczywista aktualizacja SW 398→399 i zimny restart offline; pozostałe wagi zachowane; uzupełnienie 2026-10-29 (#823): cztery pełne nowe pliki patient-chip, 16/16 PASS, Playwright 1.61.1, 1 worker, bez retry; sumy pierwszych prób z dwóch raportów JSON, wszystkie 374 wcześniejszych wag zachowano; uzupełnienie 2026-10-29: dwa pełne pliki TT niemowląt płci żeńskiej z lokalnego przebiegu 8/8 PASS, Playwright 1.61.1, 1 worker, bez retry; sumy pierwszych prób z raportu JSON i czasyZRaportow: UI 141,6 s, offline 19,9 s; wszystkie wcześniejsze wagi zachowane; uzupełnienie 2026-10-29 (P-CHIP-AKTUALIZACJA): pełny plik patient-status-pwa-update (6/6 PASS po scaleniu #827), Playwright 1.61.1, 1 worker, suma pierwszych prób bez retry 225,4 s; wszystkie 380 wcześniejszych wag z audyt zachowano",
   "pliki": {
     "application.spec.mjs": 14.6,
     "arkusz-przypomnien-pisanie-mobile.spec.mjs": 34.9,
@@ -165,6 +165,8 @@
     "lab-amh-xu-reference.spec.mjs": 77.2,
     "lab-estradiol-cycle-context-offline.spec.mjs": 43.9,
     "lab-estradiol-reference-scope.spec.mjs": 69.3,
+    "lab-female-tt-infant-upper-offline.spec.mjs": 19.9,
+    "lab-female-tt-infant-upper.spec.mjs": 141.6,
     "lab-historia-gh-igf1.spec.mjs": 9.1,
     "lab-historia-przelicznik-mobile.spec.mjs": 12.9,
     "lab-historia-przelicznik-offline.spec.mjs": 19.5,
@@ -234,6 +236,10 @@
     "panel-dojrzewania.spec.mjs": 149,
     "panel-zwiniety-i-mph.spec.mjs": 38.4,
     "pasek-statusu.spec.mjs": 34.3,
+    "patient-chip-all-routes.spec.mjs": 299.5,
+    "patient-chip-klirens-load-origin.spec.mjs": 176.4,
+    "patient-chip-klirens-navigation.spec.mjs": 292.7,
+    "patient-chip-load-origin.spec.mjs": 131.4,
     "pdf-bez-cdn.spec.mjs": 11.1,
     "plec-z-imienia-mobile.spec.mjs": 8.5,
     "plec-z-imienia.spec.mjs": 45.2,
@@ -376,10 +382,6 @@
     "zapis-usunietej-karty.spec.mjs": 31.6,
     "zapisy-dwie-karty.spec.mjs": 89.6,
     "zdania-rol-zalecen.spec.mjs": 14.4,
-    "patient-chip-all-routes.spec.mjs": 299.5,
-    "patient-chip-klirens-load-origin.spec.mjs": 176.4,
-    "patient-chip-klirens-navigation.spec.mjs": 292.7,
-    "patient-chip-load-origin.spec.mjs": 131.4,
-    "patient-status-pwa-update.spec.mjs": 190.8
+    "patient-status-pwa-update.spec.mjs": 225.4
   }
 }
