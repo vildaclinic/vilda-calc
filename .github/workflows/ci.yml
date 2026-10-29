@@ -95,6 +95,7 @@ jobs:
     # nadal regularnie wykonywanych, bez błędów asercji przed anulowaniem.
     # W PR #823 limit 50 min przerwał odłamek 3/3 przy 807/810 testach
     # z ciągłym postępem i bez błędu asercji; pozostałe trwały 43,2 i 47,4 min.
+    # W PR #826 limit 50 min przerwał odłamek 1/3 przy 901/915 testach.
     # Budżet obejmuje instalację Chromium, testy i raport. Limity pojedynczych
     # testów, liczba workerów i wymagane asercje pozostają bez zmian.
     timeout-minutes: 60

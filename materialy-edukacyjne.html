@@ -34,7 +34,7 @@
   <!-- App-shell (B1): jako panel w app.html (?embedded=1) chowamy własny nagłówek/sidebar/dock —
        chrome dostarcza shell. Identyczne jak w pozostałych hostowanych stronach. -->
   <script>try{if(new URLSearchParams(location.search).get('embedded')==='1')document.documentElement.classList.add('vilda-embedded');}catch(_){}</script>
-  <link href="vilda_embedded.css?v=1" rel="stylesheet">
+  <link href="vilda_embedded.css?v=2" rel="stylesheet">
 <!-- Google Consent Mode v2 — domyślne ustawienie przed podjęciem decyzji przez użytkownika.
      GA4 załaduje się dopiero po wyrażeniu zgody (patrz: vilda_chrome.js / initConsentBanner).
      Blok musi być w <head> przed jakimkolwiek tagiem analytics. -->
@@ -194,7 +194,7 @@
 }
   </script>
 
-<script src="vilda_chrome.js?v=193"></script>
+<script src="vilda_chrome.js?v=194"></script>
   <link rel="stylesheet" href="vilda_phone_landscape.css?v=2">
   <script src="vilda_phone_landscape.js?v=3"></script>
 </head>
@@ -410,7 +410,7 @@ document.addEventListener('DOMContentLoaded', function() {
 <script src="vilda_logger.js?v=2"></script>
 <script src="vilda_html.js?v=5"></script>
 <script src="vilda_persistence_adapter.js?v=32"></script>
-<script src="vilda_session_bridge.js?v=116"></script>
+<script src="vilda_session_bridge.js?v=117"></script>
 <script src="vilda_init.js?v=4"></script>
 <script src="vilda_deps.js?v=98"></script>
 <script src="ios26-ui.js?v=45" defer></script>

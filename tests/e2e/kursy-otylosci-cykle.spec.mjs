@@ -165,6 +165,20 @@ test.describe('P-OTYLOSC-CYKLE rata 4 — kursy otyłości z cykli w analizie tr
     test.setTimeout(120_000);
     await page.setViewportSize({ width: 390, height: 844 });
     await otworzZKontem(page);
+    // Test mierzy układ karty PRO: fikcyjne konto musi mieć przygotowany dostęp,
+    // inaczej strażnik trybu ponownie ukrywa formularz lub wyniki po wymuszonym kliknięciu.
+    await page.waitForFunction(() => Boolean(window.VildaProAccess));
+    await page.evaluate(() => {
+      window.VildaProAccess.__setTokenModeForTest(false);
+      window.VildaProAccess.setPlan('pro', '2099-12-31T23:59:59.000Z');
+      const tryb = document.getElementById('resultsModeToggle');
+      if (tryb && !tryb.checked) {
+        tryb.checked = true;
+        tryb.dispatchEvent(new Event('change', { bubbles: true }));
+      }
+    });
+    await expect(page.locator('#resultsModeToggle')).toBeChecked();
+    await page.waitForFunction(() => window.professionalMode === true);
     await page.evaluate((c) => {
       document.getElementById('age').value = String(c.y);
       document.getElementById('sex').value = 'F';
@@ -172,9 +186,10 @@ test.describe('P-OTYLOSC-CYKLE rata 4 — kursy otyłości z cykli w analizie tr
       document.getElementById('weight').value = String(c.w);
       if (typeof window.update === 'function') window.update();
     }, CUR_CY9);
-    // Karta podpina przycisk leniwie (jak zaawansowane-wzrostowe-uklad-mobile.spec.mjs); bramkę trybu pomijamy.
+    // Karta podpina przycisk leniwie (jak zaawansowane-wzrostowe-uklad-mobile.spec.mjs).
     await page.waitForSelector('#toggleAdvancedGrowth[data-vilda-advanced-growth-toggle-attached="true"]', { state: 'attached' });
-    await page.evaluate(() => { const t = document.getElementById('toggleAdvancedGrowth'); if (t) { t.disabled = false; t.click(); } });
+    await expect(page.locator('#toggleAdvancedGrowth')).toBeEnabled();
+    await page.locator('#toggleAdvancedGrowth').click();
     await expect(page.locator('#advancedGrowthForm')).toBeVisible();
     const r = await kartaZaawansowana(page, { cur: CUR_CY9, hist: HIST_CY9, red: CY9_DZIECKO });
     expect(r.zetony).toHaveLength(2);
