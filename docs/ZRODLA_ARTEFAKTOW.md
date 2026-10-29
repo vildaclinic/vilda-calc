@@ -1500,3 +1500,37 @@ czytelnymi blokami bez ponownej minifikacji pozostałej części artefaktów.
 
 Szczegóły diagnozy i rozdzielenie obserwacji przeglądarkowych od deterministycznej
 regresji wyścigu: `docs/PATIENT_CHIP_NAVIGATION_AUDIT.md`.
+
+## Łatka P-CHIP-AKTUALIZACJA (2026-10-29)
+
+Czytelne źródła nowych bloków znajdują się bezpośrednio w plikach wdrożeniowych;
+nie minifikowano ponownie pozostałej treści. Przy odtwarzaniu z zewnętrznych
+źródeł należy przenieść następujące funkcje i punkty wywołania:
+
+- `ios26-ui.js`: `reloadForServiceWorkerUpdate(reason)` wybiera koordynator
+  własnego hosta albo nadrzędnej powłoki; samodzielna strona zachowuje reload.
+  Słuchacz `In` wywołuje go po zmianie istniejącego kontrolera, a funkcja
+  zapasowego przeładowania `b` wewnątrz `zn` używa go po czasie oczekiwania.
+  Pierwszy claim nadal kończy się przed przeładowaniem. Nieudane żądanie
+  pozwala ponowić zapasowe przeładowanie.
+- `vilda_shell.js`: `Su_canFlushForAppUpdate`, `Su_reloadForAppUpdate` i
+  `Su_isAppUpdateReloadPending` oraz publiczne aliasy
+  `reloadForAppUpdate`/`isAppUpdateReloadPending`. Istniejący `Gp_f(c)` zapisuje
+  aktywny dokument przed tymczasową blokadą zapisów starych ramek.
+  Osobne przygotowanie `Su_prepareForAppReload` służy też `host.pagehide`;
+  `pageshow.persisted` resetuje blokadę przed dotychczasowym pokazaniem panelu.
+  Nie dodano blokady w `beforeunload`, którą anulowana nawigacja zostawiałaby
+  w działającej aplikacji.
+- `vilda_panel_pacjent.js`: osobna ocena własności `ocenPacjenta` oraz
+  tymczasowa blokada z pamięci rodzica. Własność pacjenta jest oceniana także
+  podczas blokady i zachowuje dotychczasowe reguły po jej zdjęciu.
+- `vilda_save_status_indicator.js`: `normalizeClcrStatusInputs` obsługuje
+  osierocone domyślne pochodzenie czasu starego odcisku, bez zmiany payloadu
+  ani utworzenia bieżącej referencji.
+
+`patient-status-pwa-update-lifecycle.test.mjs` odczytuje rzeczywiste funkcje
+kontrolera i watchdog z AST oraz wykonuje pełną powłokę i moduły zapisu.
+Mała fixture `save-status-pre-823-duration.json` utrwala wynik starych wydanych
+modułów wraz z SHA256; test migracji wykonuje obecny model czasu, serializer
+i SSI. Zachowanie przeglądarki sprawdza `patient-status-pwa-update.spec.mjs`
+z pełnym produkcyjnym service workerem.

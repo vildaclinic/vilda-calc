@@ -282,3 +282,96 @@ bez własnego wskaźnika doładowuje jego wersję tylko do odczytu po gotowości
 
 Wyniki końcowych sprawdzeń i dokładny commit są podawane w PR. Zmiana nie
 wprowadza nowych wzorów, norm, jednostek ani interpretacji klinicznych.
+
+## Aktualizacja PWA — dalsza analiza z 29.10.2026
+
+Po scaleniu #823 sprawdzono bieżący `audyt` `989830ce` oraz opublikowany
+service worker 1.1.411. Aktualizacja z pacjentem nie była objęta wcześniejszymi
+testami PWA: badały one instalację, cache, offline i baner bez powiązania
+z referencją zapisu pacjenta. Odtworzono dwa odrębne mechanizmy.
+
+### Starsza referencja domyślnej zbiórki
+
+Rzeczywisty serializer oraz SSI z `eee48301` zapisują po resecie formularza
+`CA/MG/UA_collectionHours: ''` z `collectionSource: 'assumed-24h'`. Historyczna
+kanonizacja usuwała puste godziny, zostawiając samo pochodzenie. Obecny
+serializer materializuje istniejące domyślne 24 h; projekcja SSI usuwa ich
+parę, ale wcześniej nie usuwała osieroconego pochodzenia starej referencji.
+Przy niezmienionym `Scr: '0.4'` porównanie po aktualizacji dawało `dirty`.
+
+Projekcja na kopii utożsamia teraz dokładne `assumed-24h` z brakującymi lub
+pustymi godzinami, jeśli nie ma wymaganego potwierdzenia. Historycznie brakujący
+czas, ręczny czas, niepoprawne wartości, badania i rozszerzenia pozostają
+porównywane. Referencja nie jest resetowana ani zastępowana bieżącymi danymi.
+Mała fikcyjna fixture zawiera wynik rzeczywiście wydanych modułów i ich SHA256:
+`tests/fixtures/save-status-pre-823-duration.json`. Regresja wykonuje obecny
+serializer, model czasu i SSI w `save-status-update-migration.test.mjs`.
+
+### Zamykane ramki tego samego pacjenta nadpisują nowszą sesję
+
+Prawdziwy przebieg: rozgrzanie DocPro i Klirensu, powrót na Start, zapis 47 kg,
+kliknięcie „Aktualizuj”. Przed aktualizacją chip był `saved`. Przy zamykaniu
+Start zapisał sesję z `user.measuredAtISO: '2026-10-29'`, po nim DocPro również
+zachował datę, a ukryty Klirens jako ostatni zapisał ją bez tej daty. Jego PID
+był zgodny z PID karty, więc dotychczasowy strażnik innego pacjenta pozwolił na
+zapis. Referencja zachowała datę, bieżąca sesja ją straciła i chip stał się
+`dirty`. Następne F5 odtworzyło datę i stan `saved`.
+
+Deterministyczna kontrola rzeczywistych modułów potwierdza także utratę wejść:
+ukryty formularz z ciśnieniem 118 nadpisuje zapisane 120. Sama zgodność PID
+nie dowodzi więc, że formularz jest najnowszym właścicielem całej sesji.
+Zaobserwowany przebieg nie wymaga osobnego reloadu każdej ramki: wystarcza
+zamknięcie ich w różnej kolejności przez przeładowanie hosta.
+
+Aktualizację koordynuje teraz `VildaShell.reloadForAppUpdate()`:
+
+1. Gotowy, bieżący aktywny panel zapisuje stan wspólny i sesję główną.
+2. Flaga w pamięci hosta blokuje publikację ze wszystkich zamykanych ramek,
+   także tego samego pacjenta, przez istniejący protokół `VildaPanelPacjent`.
+3. Host przeładowuje się raz; ramki delegują do niego `controllerchange`.
+   Tę samą drogę stosuje zapasowy reload banera.
+
+Ten sam błąd potwierdzono przy zwykłym F5 na poprawionej wcześniej ścieżce PWA:
+BP 120 cofało się do 118 i znikała data pomiaru. Przygotowanie jest więc także
+wywoływane przez `host.pagehide`, bez zlecania kolejnego reloadu. W rzeczywistym
+Chromium kolejność była: host `beforeunload`, dzieci `beforeunload`, host
+`pagehide`, dzieci `pagehide`. Zapis aktywnego panelu w `host.pagehide` naprawia
+wcześniejszy wpis stanu wspólnego i poprzedza blokadę dziecięcych zapisów sesji.
+Samo anulowane `beforeunload` nie włącza blokady. Powrót z BFcache zdejmuje ją
+w `pageshow.persisted` przed dotychczasową obsługą pokazywania panelu.
+
+Aktywna strona bez formularza nie wymusza zapisu ukrytego Startu. Formularz
+nieodtworzony, zablokowany lub nieaktualny nie zapisuje częściowego DOM.
+Wyjątek nawigacji zdejmuje tymczasową blokadę; rzeczywista własność pacjenta
+zachowuje swój wcześniejszy kontrakt. Pierwsze przejęcie przez SW nadal nie
+przeładowuje strony. Strona samodzielna i starsza powłoka zachowują dotychczasowy
+mechanizm. Nie powstają nowe klucze storage ani nowy punkt odniesienia zapisu.
+
+### Pierwsze przejście z już otwartego starego klienta
+
+Osobna próba serwowała rzeczywisty kod `989830ce` i SW 1.1.411, a następnie
+roboczy klient poprawki z prawidłowo podbitymi `?v=` i testowym SW 1.1.412
+(przed późniejszą integracją #827). Stary, już uruchomiony
+klient zdążył podczas zamykania nadpisać sesję: BP 120 → 118 i usunięcie daty
+29.10.2026. Nowa wersja uruchomiła się z takim formularzem; stary cache został
+usunięty, referencja i PID pozostały identyczne. W tej próbie `dirty` odpowiada
+rzeczywistej zmianie danych sesji, mimo braku edycji przez użytkownika.
+
+Nowy kod nie może wstecznie zmienić listenerów działającego starego dokumentu.
+Pierwszą instalację poprawionego klienta należy więc wykonać po zakończeniu
+pracy z pacjentem i przed ponownym wczytaniem wizyty. Nie dodano automatycznego
+odtwarzania z sejfu ani ustanawiania nowej referencji, które mogłyby usunąć
+autentyczne niezapisane edycje albo zatwierdzić nadpisane wejścia.
+Dowód tej pierwszej migracji obejmuje sesję, DOM, referencję, PID i cache;
+sonda nie odczytywała snapshotów sejfu po aktualizacji. Pełne porównanie
+snapshotów sejfu przed i po jest asertowane w nowych testach przeglądarkowych.
+
+Test integracyjny `patient-status-pwa-update-lifecycle.test.mjs` używa pełnej
+powłoki, rzeczywistych modułów zapisu i funkcji `controllerchange` oraz watchdog
+odczytanych z AST artefaktu. Test przeglądarkowy
+`patient-status-pwa-update.spec.mjs` używa osobnego serwera dla każdej próby,
+pełnego produkcyjnego SW i rzeczywistego banera. Sprawdza zapisane oraz faktycznie
+zmienione dane w powłoce i samodzielnie, a także zwykłe F5 rozgrzanej powłoki,
+z zachowaniem snapshotów sejfu. Testy aktualizacji wykonują nowego klienta
+przechodzącego na kolejny SW; nie stanowią dowodu retroaktywnej ochrony
+listenerów starego klienta. Historyczny odcisk bada osobny test migracji.

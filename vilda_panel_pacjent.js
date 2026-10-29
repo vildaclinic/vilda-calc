@@ -55,6 +55,16 @@
     } catch (_) { return false; } // inna domena albo brak dostępu
   }
 
+  // The shell has already flushed its active document. Every old frame must
+  // now stop publishing until the host reloads, including the same patient.
+  // Keep this separate from patient ownership so a failed reload can roll back.
+  function aktualizacjaAplikacji() {
+    try {
+      var shell = w.parent && w.parent.VildaShell;
+      return !!(shell && typeof shell.isAppUpdateReloadPending === 'function' && shell.isAppUpdateReloadPending());
+    } catch (_) { return false; }
+  }
+
   function tablica(x) { return Array.isArray(x) && x.length > 0; }
 
   /* Czy dokument niesie dane jakiegoś pacjenta: pola formularza (anyDataEntered) albo stan pacjenta poza nimi
@@ -112,7 +122,7 @@
     return true;
   }
 
-  function ocen() {
+  function ocenPacjenta() {
     if (!aktywny()) return false;
     var karta = pacjentKarty();
     if (stan.nieaktualny) {
@@ -134,6 +144,11 @@
       return false;
     }
     return oznacz();
+  }
+
+  function ocen() {
+    var nieaktualny = ocenPacjenta();
+    return nieaktualny || (aktywny() && aktualizacjaAplikacji());
   }
 
   /* Własne wczytanie albo „Wyczyść” kończy stan nieaktualny także po `utrwal()`: dokument trzyma wtedy to, co sam
@@ -163,13 +178,13 @@
     /* true: w innej ramce tej karty wczytano innego pacjenta, a ten dokument trzyma poprzedniego. */
     nieaktualny: ocen,
     /* identyfikator pacjenta, którego dane trzyma dokument (null: nowy, niezapisany pacjent albo pusty formularz) */
-    wlasciciel: function () { return ocen() ? stan.wlasciciel : stan.znany; },
+    wlasciciel: function () { ocen(); return stan.nieaktualny ? stan.wlasciciel : stan.znany; },
     /* pacjent docelowy zapisu do sejfu i notatki: `domyslny`, a w dokumencie nieaktualnym — jego własny pacjent */
-    cel: function (domyslny) { return ocen() ? stan.wlasciciel : domyslny; },
+    cel: function (domyslny) { ocen(); return stan.nieaktualny ? stan.wlasciciel : domyslny; },
     /* początek własnego wczytania (applyLoadedData poza odtworzeniem sesji): zapisy wczytania mają przejść */
     wczytanie: function () { odNowa(pacjentKarty()); },
     /* powłoka przeładowuje ramkę: powrót karty do pacjenta dokumentu nie kończy już stanu nieaktualnego */
-    utrwal: function () { if (ocen()) stan.koncowy = true; return stan.koncowy; },
+    utrwal: function () { if (ocen() && stan.nieaktualny) stan.koncowy = true; return stan.koncowy; },
     pacjentKarty: pacjentKarty,
   });
 })(typeof window !== 'undefined' ? window : undefined);
