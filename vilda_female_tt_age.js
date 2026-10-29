@@ -60,6 +60,43 @@
       ticks(p.valueTicks, p.valueMin, p.valueMax) && data.points.every(function (point) { return point.value <= p.valueMax; }) &&
       policy.displayUnits.every(function (unit) { return finite(convert(p.valueMax, data.unit, unit)); }));
   }
+  function validGroupedData(data, policy) {
+    var domain = data && data.ageDomain, source = data && data.source, p = policy && policy.plot;
+    return !!(record(data) && data.kind === 'published-age-group-median-data' && nonempty(data.id) && nonempty(data.version) &&
+      data.analyte === 'testosterone_total' && data.sex === 'female' && data.unit === 'nmol/L' &&
+      record(domain) && finite(domain.min) && finite(domain.max) && domain.min >= 0 && domain.max > domain.min &&
+      domain.minimumInclusive === true && domain.maximumInclusive === false &&
+      Array.isArray(data.groups) && data.groups.length >= 2 && data.groups.length <= 100 &&
+      data.groups.every(function (group, index, groups) {
+        return record(group) && nonempty(group.id) && nonempty(group.label) && nonempty(group.axisLabel) &&
+          finite(group.minAgeYears) && finite(group.maxAgeYears) && group.maxAgeYears > group.minAgeYears &&
+          group.minimumInclusive === true && group.maximumInclusive === false && finite(group.value) && group.value > 0 &&
+          (!index || group.minAgeYears === groups[index - 1].maxAgeYears) &&
+          !groups.slice(0, index).some(function (previous) { return previous.id === group.id; });
+      }) && data.groups[0].minAgeYears === domain.min && data.groups[data.groups.length - 1].maxAgeYears === domain.max &&
+      record(source) && source.id === data.id && source.unit === data.unit &&
+      source.statistic === 'approximate-group-median' && source.approximate === true &&
+      ['label', 'citation', 'population', 'method', 'specimen', 'url', 'limitsDescription', 'sourceLocation']
+        .every(function (key) { return nonempty(source[key]); }) && list(source.limitations) &&
+      record(policy) && policy.kind === 'educational-female-tt-group-comparison' && nonempty(policy.version) &&
+      policy.sourceId === data.id && policy.analyte === data.analyte && policy.sex === data.sex &&
+      policy.contextBasis === 'current-patient' && policy.clinicalReferenceActivation === false &&
+      policy.patientComparisonEnabled === true && policy.notLaboratoryReference === true &&
+      policy.noClinicalClassification === true && policy.noHistoryWrite === true &&
+      policy.fullAgeIntervalRequired === true && policy.fullSourceAgeIntervalRequired === true && policy.ordinaryOnly === true &&
+      policy.interpolation === 'none-discrete-age-groups' && policy.ageReferenceBasis === 'whole-age-group' &&
+      policy.groupBoundaryConvention === 'lower-inclusive-upper-exclusive' && policy.requiresTannerStage === false &&
+      policy.notExactAgeMedian === true && policy.notContinuousCurve === true && policy.renderMode === 'age-groups' &&
+      nonempty(policy.chartSelectionKey) && ['allowedViews', 'displayUnits', 'allowedAssayMethodIds', 'allowedSpecimens',
+        'excludedCyclePhases', 'excludedReproductiveContexts', 'excludedPositiveFlags', 'excludedTreatmentContexts', 'allowedTreatmentContexts',
+        'excludedTreatmentFlags', 'allowedMeasurementKinds'].every(function (key) { return list(policy[key]); }) &&
+      policy.displayUnits.indexOf(data.unit) >= 0 && record(p) && p.ageMin === domain.min && p.ageMax === domain.max &&
+      finite(p.valueMin) && finite(p.valueMax) && p.valueMin >= 0 && p.valueMax > p.valueMin &&
+      p.unit === data.unit && p.ageAxis === 'categorical-groups' && p.independentOfPatient === true &&
+      ticks(p.ageTicks, p.ageMin, p.ageMax) && ticks(p.valueTicks, p.valueMin, p.valueMax) &&
+      data.groups.every(function (group) { return group.value <= p.valueMax; }) &&
+      policy.displayUnits.every(function (unit) { return finite(convert(p.valueMax, data.unit, unit)); }));
+  }
   function unavailable(reason, visible, base) {
     return Object.assign({}, base || {}, { status: 'unavailable', visible: visible === true, reason: reason,
       median: null, ageContext: null, curve: [], knots: [],
@@ -122,7 +159,8 @@
       !testosterone || typeof testosterone.convertMeasurement !== 'function' || typeof testosterone.parseMeasurement !== 'function') {
       return unavailable('dependency-unavailable', false);
     }
-    if (!validData(data, policy)) return unavailable('source-unavailable', false);
+    var grouped = validGroupedData(data, policy);
+    if (!grouped && !validData(data, policy)) return unavailable('source-unavailable', false);
     if (c.sourceStatus !== 'ready') return unavailable('patient-context-unavailable', false);
     if (c.analyte !== data.analyte) return unavailable('unsupported-analyte', false);
     if (c.sex !== data.sex) return unavailable('unsupported-sex', false);
@@ -137,6 +175,7 @@
     var base = { kind: policy.kind, source: copy(data.source), policy: copy(policy), sourceVersion: data.version,
       policyVersion: policy.version, unit: displayUnit, sourceUnit: data.unit,
       clinicalReferenceActivation: false, identityKey: typeof c.identityKey === 'string' ? c.identityKey : '' };
+    if (grouped) base.renderMode = 'age-groups';
     if (policy.displayUnits.indexOf(displayUnit) < 0) return unavailable('unsupported-display-unit', true, base);
     var plot = policy.plot;
     base.plot = { ageMin: plot.ageMin, ageMax: plot.ageMax, ageTicks: plot.ageTicks.slice(),
@@ -152,6 +191,32 @@
       c.ageUpperYears === c.ageYears && c.ageUpperInclusive !== true) return unavailable('ambiguous-age', true, base);
     if (c.ageYears < data.ageDomain.min || c.ageUpperYears > data.ageDomain.max) {
       return unavailable('unsupported-source-age', true, base);
+    }
+    if (grouped) {
+      if (c.ageYears >= data.ageDomain.max || c.ageUpperYears === data.ageDomain.max && c.ageUpperInclusive) {
+        return unavailable('unsupported-source-age', true, base);
+      }
+      var groupIndex = data.groups.findIndex(function (group) {
+        return c.ageYears >= group.minAgeYears && c.ageYears < group.maxAgeYears &&
+          (c.ageUpperYears < group.maxAgeYears || c.ageUpperYears === group.maxAgeYears && !c.ageUpperInclusive);
+      });
+      if (groupIndex < 0) return unavailable('ambiguous-age-group', true, base);
+      var groups = data.groups.map(function (group, index) {
+        return { index: index, id: group.id, minAgeYears: group.minAgeYears, maxAgeYears: group.maxAgeYears,
+          minimumInclusive: true, maximumInclusive: false, label: group.label, axisLabel: group.axisLabel,
+          value: convert(group.value, data.unit, displayUnit), unit: displayUnit,
+          sourceValue: group.value, sourceUnit: data.unit, approximate: true };
+      });
+      var selectedGroup = groups[groupIndex];
+      return Object.assign({}, base, { status: 'ready', visible: true, reason: null, renderMode: 'age-groups',
+        groups: groups, knots: [], curve: [],
+        median: { ageYears: c.ageYears, groupIndex: groupIndex, groupId: selectedGroup.id, groupLabel: selectedGroup.label,
+          minAgeYears: selectedGroup.minAgeYears, maxAgeYears: selectedGroup.maxAgeYears,
+          value: selectedGroup.value, unit: displayUnit, sourceValue: selectedGroup.sourceValue,
+          sourceUnit: data.unit, interpolated: false, approximate: true },
+        ageContext: { lowerYears: c.ageYears, upperYears: c.ageUpperYears, upperInclusive: c.ageUpperInclusive,
+          basis: policy.ageReferenceBasis },
+        comparison: measuredPoint(data, policy, c, c.ageYears, displayUnit) });
     }
     var profile = { minAge: data.ageDomain.min, maxAge: data.ageDomain.max,
       interpolation: 'pchip', points: data.points.map(function (p) { return { ageYears: p.ageYears, value: p.value }; }) };

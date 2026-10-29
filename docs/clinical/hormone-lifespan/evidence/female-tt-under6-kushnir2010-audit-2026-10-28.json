@@ -1,0 +1,382 @@
+{
+  "schemaVersion": 1,
+  "auditDate": "2026-10-28",
+  "scope": "Female total testosterone, six calendar months to under six years; approximate empirical age-group comparison, not new laboratory RI",
+  "source": {
+    "citation": "Kushnir MM, Blamires T, Rockwood AL et al. Liquid Chromatography–Tandem Mass Spectrometry Assay for Androstenedione, Dehydroepiandrosterone, and Testosterone with Pediatric and Adult Reference Intervals. Clinical Chemistry 2010;56(7):1138–1147.",
+    "doi": "10.1373/clinchem.2010.143222",
+    "url": "https://doi.org/10.1373/clinchem.2010.143222",
+    "documentVersion": "Final journal PDF, 10 pages",
+    "readScope": "Complete final journal PDF, 10 pages, including methods, both tables, figures and references",
+    "pdfSha256": "25132120d7379f5d1e94dc6a6381e4de6550d901121afcd70b3bd987d457442d",
+    "locator": {
+      "figure": "4A, female Te filled triangles",
+      "printedPage": 1146,
+      "pdfPageIndex": 8,
+      "axisDrawingIndex": 105
+    },
+    "statistic": "empirical age-group medians, graphically published",
+    "specimen": "serum",
+    "method": "derivatization, two-dimensional LC-MS/MS",
+    "lodNgL": 5,
+    "loqNgL": 10,
+    "limitations": [
+      "Exact annual-bin N unavailable. Table 2 has different bins: N92 (6–24 months), N126 (2–3y), N127 (4–5y), N131 (6–7y).",
+      "Age-bin inequalities are not recovered from the labels; half-open routing would be an explicit application policy.",
+      "Young samples collected after induction of anesthesia before elective surgery; 24 high testosterone observations in the combined young cohort discussed by authors.",
+      "Authors add central-90% RI but do not publish a separate corrected median. No removal/recalculation assumed.",
+      "Censoring/imputation rules for individual low values and gestational-age criteria are not reported.",
+      "Age groups are not a Th1 cohort or an exact-age/continuous model. Do not infer Tanner from age."
+    ]
+  },
+  "extraction": {
+    "coordinateUnit": "PDF points",
+    "primaryMarkerAnchor": "Bounding-box center",
+    "primaryCalibration": "Linear endpoints 0 and 0.8 microgram/L",
+    "sensitivityChecks": [
+      "All five axis ticks",
+      "Triangle centroid versus bounding-box center",
+      "Half stroke width",
+      "Coarse rounding to 5 ng/L"
+    ],
+    "axis": {
+      "tickCentersPdfY": [
+        96.4945068359375,
+        125.77499389648438,
+        154.51852416992188,
+        183.79852294921875,
+        212.54299926757812
+      ],
+      "tickValuesUgL": [
+        0.8,
+        0.6,
+        0.4,
+        0.2,
+        0
+      ],
+      "endpointSlope": -0.006893669906752533,
+      "endpointIntercept": 1.465201277941829,
+      "allTickFitSlope": -0.006893616314672406,
+      "allTickFitIntercept": 1.4659316918751593,
+      "maxFitResidualNgL": 1.1128580274677446
+    },
+    "readoutBudget": {
+      "anchorConventionSpreadNgL": 4.5268460438090425,
+      "calibrationMethodSpreadNgL": 0.7416461892646424,
+      "roundingSpreadNgL": 1.0825334363132377,
+      "halfStrokeWidthNgL": 1.60622505622355,
+      "conservativeRoundedSumNgL": 9,
+      "meaning": "Graph-extraction convention/sensitivity estimate only; NOT CI, assay CV, model error or biological variation"
+    }
+  },
+  "groups": [
+    {
+      "sourceAgeLabel": "6 months to 1 year",
+      "drawingIndex": 134,
+      "verticesPdfPoints": [
+        [
+          137.69400024414062,
+          207.61798095703125
+        ],
+        [
+          139.66299438476562,
+          211.5579833984375
+        ],
+        [
+          135.7239990234375,
+          211.5579833984375
+        ]
+      ],
+      "bboxPdfPoints": [
+        135.7239990234375,
+        207.61798095703125,
+        139.66299438476562,
+        211.5579833984375
+      ],
+      "bboxCenterEndpointNgL": 20.370912386195485,
+      "bboxCenterAllTickFitNgL": 21.112558575460127,
+      "centroidEndpointNgL": 15.844066342386443,
+      "coarseApproximateReadoutNgL": 20,
+      "individualFigureGroupN": null,
+      "usedForUnderSixComparison": true,
+      "applicationAgeYears": {
+        "lowerInclusive": 0.5,
+        "upperExclusive": 1
+      },
+      "convertedNmolLUsingExistingPgMlFactor": 0.06934,
+      "exactNumericTableMedianAvailable": false
+    },
+    {
+      "sourceAgeLabel": "1 to 2 years",
+      "drawingIndex": 135,
+      "verticesPdfPoints": [
+        [
+          156.7209930419922,
+          207.61798095703125
+        ],
+        [
+          158.6909942626953,
+          211.5579833984375
+        ],
+        [
+          154.7519989013672,
+          211.5579833984375
+        ]
+      ],
+      "bboxPdfPoints": [
+        154.7519989013672,
+        207.61798095703125,
+        158.6909942626953,
+        211.5579833984375
+      ],
+      "bboxCenterEndpointNgL": 20.370912386195485,
+      "bboxCenterAllTickFitNgL": 21.112558575460127,
+      "centroidEndpointNgL": 15.844066342386443,
+      "coarseApproximateReadoutNgL": 20,
+      "individualFigureGroupN": null,
+      "usedForUnderSixComparison": true,
+      "applicationAgeYears": {
+        "lowerInclusive": 1,
+        "upperExclusive": 2
+      },
+      "convertedNmolLUsingExistingPgMlFactor": 0.06934,
+      "exactNumericTableMedianAvailable": false
+    },
+    {
+      "sourceAgeLabel": "2 to 3 years",
+      "drawingIndex": 136,
+      "verticesPdfPoints": [
+        [
+          175.75,
+          207.61798095703125
+        ],
+        [
+          177.62899780273438,
+          211.5579833984375
+        ],
+        [
+          173.77999877929688,
+          211.5579833984375
+        ]
+      ],
+      "bboxPdfPoints": [
+        173.77999877929688,
+        207.61798095703125,
+        177.62899780273438,
+        211.5579833984375
+      ],
+      "bboxCenterEndpointNgL": 20.370912386195485,
+      "bboxCenterAllTickFitNgL": 21.112558575460127,
+      "centroidEndpointNgL": 15.844066342386443,
+      "coarseApproximateReadoutNgL": 20,
+      "individualFigureGroupN": null,
+      "usedForUnderSixComparison": true,
+      "applicationAgeYears": {
+        "lowerInclusive": 2,
+        "upperExclusive": 3
+      },
+      "convertedNmolLUsingExistingPgMlFactor": 0.06934,
+      "exactNumericTableMedianAvailable": false
+    },
+    {
+      "sourceAgeLabel": "3 to 4 years",
+      "drawingIndex": 137,
+      "verticesPdfPoints": [
+        [
+          194.68800354003906,
+          207.1710205078125
+        ],
+        [
+          196.65699768066406,
+          210.97601318359375
+        ],
+        [
+          192.71800231933594,
+          210.97601318359375
+        ]
+      ],
+      "bboxPdfPoints": [
+        192.71800231933594,
+        207.1710205078125,
+        196.65699768066406,
+        210.97601318359375
+      ],
+      "bboxCenterEndpointNgL": 23.917466563686762,
+      "bboxCenterAllTickFitNgL": 24.659085181684137,
+      "centroidEndpointNgL": 19.545739312945454,
+      "coarseApproximateReadoutNgL": 25,
+      "individualFigureGroupN": null,
+      "usedForUnderSixComparison": true,
+      "applicationAgeYears": {
+        "lowerInclusive": 3,
+        "upperExclusive": 4
+      },
+      "convertedNmolLUsingExistingPgMlFactor": 0.086675,
+      "exactNumericTableMedianAvailable": false
+    },
+    {
+      "sourceAgeLabel": "4 to 5 years",
+      "drawingIndex": 138,
+      "verticesPdfPoints": [
+        [
+          213.71600341796875,
+          206.1409912109375
+        ],
+        [
+          215.68699645996094,
+          210.08001708984375
+        ],
+        [
+          211.7480010986328,
+          210.08001708984375
+        ]
+      ],
+      "bboxPdfPoints": [
+        211.7480010986328,
+        206.1409912109375,
+        215.68699645996094,
+        210.08001708984375
+      ],
+      "bboxCenterEndpointNgL": 30.55615820118307,
+      "bboxCenterAllTickFitNgL": 31.29772520932694,
+      "centroidEndpointNgL": 26.030434173960558,
+      "coarseApproximateReadoutNgL": 30,
+      "individualFigureGroupN": null,
+      "usedForUnderSixComparison": true,
+      "applicationAgeYears": {
+        "lowerInclusive": 4,
+        "upperExclusive": 5
+      },
+      "convertedNmolLUsingExistingPgMlFactor": 0.10401,
+      "exactNumericTableMedianAvailable": false
+    },
+    {
+      "sourceAgeLabel": "5 to 6 years",
+      "drawingIndex": 139,
+      "verticesPdfPoints": [
+        [
+          232.7449951171875,
+          206.1409912109375
+        ],
+        [
+          234.71299743652344,
+          210.08001708984375
+        ],
+        [
+          230.7740020751953,
+          210.08001708984375
+        ]
+      ],
+      "bboxPdfPoints": [
+        230.7740020751953,
+        206.1409912109375,
+        234.71299743652344,
+        210.08001708984375
+      ],
+      "bboxCenterEndpointNgL": 30.55615820118307,
+      "bboxCenterAllTickFitNgL": 31.29772520932694,
+      "centroidEndpointNgL": 26.030434173960558,
+      "coarseApproximateReadoutNgL": 30,
+      "individualFigureGroupN": null,
+      "usedForUnderSixComparison": true,
+      "applicationAgeYears": {
+        "lowerInclusive": 5,
+        "upperExclusive": 6
+      },
+      "convertedNmolLUsingExistingPgMlFactor": 0.10401,
+      "exactNumericTableMedianAvailable": false
+    },
+    {
+      "sourceAgeLabel": "6 to 7 years",
+      "drawingIndex": 140,
+      "verticesPdfPoints": [
+        [
+          251.77200317382812,
+          206.1409912109375
+        ],
+        [
+          253.74099731445312,
+          210.08001708984375
+        ],
+        [
+          249.80300903320312,
+          210.08001708984375
+        ]
+      ],
+      "bboxPdfPoints": [
+        249.80300903320312,
+        206.1409912109375,
+        253.74099731445312,
+        210.08001708984375
+      ],
+      "bboxCenterEndpointNgL": 30.55615820118307,
+      "bboxCenterAllTickFitNgL": 31.29772520932694,
+      "centroidEndpointNgL": 26.030434173960558,
+      "coarseApproximateReadoutNgL": 30,
+      "individualFigureGroupN": null,
+      "usedForUnderSixComparison": false,
+      "reasonNotUsed": "Control readout only; existing Madsen begins at six years."
+    }
+  ],
+  "applicationPolicy": {
+    "halfOpenRoutingNotRecoveredSourceInequalities": true,
+    "fullKnownAgeIntervalInsideOneGroup": true,
+    "calendarMonthMinimum": 6,
+    "noExactBirthDateOrMidpointInvented": true,
+    "noTh1Requirement": true,
+    "noCurveOrStepConnection": true,
+    "noBridgeToMadsen": true,
+    "underSixMonthsUnchanged": true,
+    "madsenSixToEighteenUnchanged": true,
+    "mayoRangesUnchanged": true,
+    "newRiOrDiagnosis": false,
+    "historyReevaluation": false,
+    "newQuestions": false,
+    "plotMaximumNmolL": 0.8
+  },
+  "display": {
+    "defaultDecimalPlaces": 2,
+    "ngPerMlDecimalPlaces": 3,
+    "approximationSignRequired": true,
+    "retainFullPrecisionForVerdictAndUnitChanges": true,
+    "tinyNonzeroNotRoundedToApparentZero": true,
+    "abovePanelUsesExistingMayoStatus": "referencePreview.byAge.status === above",
+    "noNewSignificanceOrUrgencyThreshold": true,
+    "medianNotClassificationBasis": true,
+    "nonExactMeasurementHasNoExactPointOrRatio": true,
+    "overflowAloneDoesNotMeanAboveReference": true
+  },
+  "secondarySourcesNotActivated": {
+    "Holmes2021": {
+      "doi": "10.1016/j.jmsacl.2021.10.005",
+      "finalHtmlSha256": "97e068705103482267e3fc53c60e6ab51c772e6eb830d6aed68c792145d2decd",
+      "repository": "https://github.com/drdanholmes/jmsacl_continuous_reference_interval",
+      "repositoryCommit": "01e58c3f23a959e86808af2d040cc2c72bf9c9ec",
+      "finding": "Published model P50 exists; 0.05 nmol/L is calibration/reportable boundary, not established LOD/LOQ. Data handling at/below it is unresolved; no claim of imputation.",
+      "femaleOneToUnderSixCounts": {
+        "n": 58,
+        "below0_05": 11,
+        "equal0_05": 24
+      }
+    },
+    "Kulle2010": {
+      "doi": "10.1210/jc.2009-1670",
+      "pdfSha256": "338f4ae59c84fc76c7104ca7a2241e83eb59409c65fdc39f10345224a19e160d",
+      "specimen": "plasma",
+      "sourceLloqNmolL": 0.1,
+      "finding": "Small age groups, near-LOQ medians; female 1–3y N9 in Table3 versus N8 in Methods. Pooled P1 is not exact-age or automatically Th1."
+    }
+  },
+  "ownerDecision": {
+    "implementationRequested": true,
+    "latestInstruction": "jednak wracamy do twojej pierwotnej koncepcji, żadna z tych mi się nie podoba, koduj z twoją pierwotną koncepcją.",
+    "acceptedPresentation": "Original strong above-reference panel and overflow arrow; alternatives A/B/C not product settings",
+    "clinicalValidationClaim": false
+  },
+  "privacy": {
+    "publisherOriginalIncluded": false,
+    "individualResearchRowsIncluded": false,
+    "patientDataIncluded": false
+  },
+  "verification": "Production-engine, adapter/UI, unit, identity, desktop/mobile and PWA results are reported by the implementation PR; not asserted by this source evidence file."
+}

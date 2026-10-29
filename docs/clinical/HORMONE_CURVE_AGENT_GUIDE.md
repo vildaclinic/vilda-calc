@@ -940,6 +940,55 @@ Pełny kontrakt i przypadki:
 [FEMALE_TT_AGE.md](hormone-lifespan/FEMALE_TT_AGE.md).
 Akceptacja makiety i wdrożenia nie nadaje modelowi walidacji klinicznej.
 
+## TT dziewcząt — rozszerzenie grupowe od 6 miesięcy do <6 lat, 28 października 2026
+
+Właściciel po audycie i makietach polecił wdrożyć **pierwotny wariant**
+z wyraźnym wyróżnieniem wyniku. Alternatywy A/B/C nie są nowymi
+ustawieniami aplikacji. Ten kontrakt uzupełnia kartę Madsen opisaną
+wyżej; jej historyczny brak odniesienia dla 3 lat zastępuje wyłącznie
+osobna przybliżona mediana grupy Kushnir, bez nowego modelu Madsena.
+
+- Kushnir 2010, pełny końcowy PDF, DOI
+  [10.1373/clinchem.2010.143222](https://doi.org/10.1373/clinchem.2010.143222),
+  żeńska ryc. 4A/s.1146: odrębne empiryczne mediany grup, odczytane
+  orientacyjnie jako 20/20/20/25/30/30 ng/L. Nie myl z męską 4C,
+  normą, średnią lub medianą dokładnego wieku. Znak ≈ jest wymagany.
+- Osobne dane i polityka definiują półotwarte grupy od sześciu miesięcy
+  kalendarzowych do <6 lat. To routing aplikacji, nie odzyskane
+  nierówności autorów. Cały możliwy wiek musi mieścić się w jednej
+  grupie; nie dopisuj środka wieku, DOB ani zastępczej liczby.
+- Sześć jasnych punktów na kategorycznej osi grup, stała skala 0–0,8
+  nmol/L. Nie łącz ich linią/schodkami ani z Madsenem. Od 6 lat model
+  Madsen i jego oś 0–1,2 pozostają bez zmian. Różnica dwóch badań nie
+  oznacza spadku fizjologicznego w dniu szóstych urodzin. Poniżej
+  6 miesięcy ta zmiana nie ustanawia nowej mediany lub normy.
+- Surowica, derywatyzacja i dwuwymiarowa LC-MS/MS; dzieci bez znanych
+  chorób/leków na receptę, pobrania po indukcji znieczulenia przed
+  zabiegiem. Źródłowe LOD5/LOQ10 ng/L nie są granicami metody pacjentki.
+  Brak jednoznacznych reguł niskich obserwacji i rocznych N ryciny;
+  tabela 2 ma inne grupy. Około ±9 ng/L to wrażliwość odczytu grafiki,
+  nie CI, CV, zmienność biologiczna lub walidacja medyczna.
+- Czerwony panel „Powyżej zakresu referencyjnego” pochodzi z aktualnego
+  istniejącego Mayo `above` i jego górnej granicy. Nie wyprowadzaj
+  statusu z mediany, krotności mediany albo wyjścia ponad oś. Dla
+  dokładnego wyniku pokaż przybliżoną krotność górnej granicy; dla
+  nierówności operator, bez dokładnej kropki/krotności. Strzałka i
+  prawdziwa wartość „ponad skalą wykresu” nie zmieniają stałej osi.
+  Nie dodawaj nowego progu „znacznego” odchylenia lub pilności.
+- Wyświetlanie wyniku/zakresu/konwersji: 2 miejsca po przecinku,
+  ng/mL3; bardzo małe dodatnie liczby nie stają się dokładnym zerem.
+  Formatowanie nie może zmieniać źródłowej wartości, werdyktu ani
+  kolejnego przeliczenia jednostki. Nie zmieniaj współczynników TT.
+- Brak nowej ankiety o Th/P, metodę lub publikację. Zachowaj znane
+  wyłączenia i rozdzielenie aktualnej osoby od dawnego wyniku. Nie
+  zapisuj mediany/ostrzeżenia do historii, nie przeliczaj dawnej oceny.
+  Holmes/Kulle pozostają źródłami pomocniczymi bez aktywacji.
+
+Pełne ograniczenia, odczyt, SHA-256 i przypadki:
+[FEMALE_TT_UNDER6.md](hormone-lifespan/FEMALE_TT_UNDER6.md).
+Wykonane wyniki testów i PWA podaje PR; decyzja właściciela nie jest
+walidacją kliniczną.
+
 ## E2 chłopców — zaakceptowana karta 6–18, 25 października 2026
 
 Właściciel zaakceptował osobną prywatną makietę i polecił wdrożenie.
