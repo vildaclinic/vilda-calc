@@ -121,3 +121,40 @@ test('A7 clicking an ordinary row invalidates an older pending future navigation
   await expect(page.locator(`${WORKSPACE} .vb22-row[aria-current=true]`)).toHaveAttribute('data-note-id', records.parentB);
   await expect(row(page, records.futureA)).toHaveCount(0);
 });
+
+test('A7 mobile Back reloads History after another historical task was reopened during a future-step detour', async ({ page }) => {
+  const records = await fixture(page);
+  const siblingId = await page.evaluate(async ({ historicalId, futureId, patientA, patientB }) => {
+    const date = new Date(); date.setDate(date.getDate() - 1);
+    const day = date.getFullYear() + '-' + String(date.getMonth() + 1).padStart(2, '0') + '-' + String(date.getDate()).padStart(2, '0');
+    const sibling = await window.VildaVault.savePatientNote({
+      patientId: patientB, title: 'Fikcyjna historyczna sprawa D', body: 'Stary zakończony opis D.',
+      category: 'reminder-task', dueDateISO: day, completedAtISO: new Date().toISOString(),
+    });
+    await window.VildaVault.savePatientNote({
+      id: historicalId, patientId: patientA, reminderContext: { version: 1, nextId: futureId },
+    });
+    return sibling.id;
+  }, { historicalId: records.historical, futureId: records.futureA, patientA: records.ids.a, patientB: records.ids.b });
+  await page.setViewportSize({ width: 393, height: 852 });
+  await page.locator(WORKSPACE).getByRole('button', { name: 'Historia', exact: true }).click();
+  await expect(row(page, siblingId)).toBeVisible();
+  await row(page, records.historical).click();
+  await expect(page.locator(`${WORKSPACE} .vb22-list-pane`)).toBeHidden();
+  await page.locator(WORKSPACE).getByRole('button', { name: 'Otwórz kolejny krok →', exact: true }).click();
+  await expect(title(page)).toHaveText('Fikcyjny kolejny krok A');
+  await page.evaluate(({ id, patientId, futureDay }) => window.VildaVault.savePatientNote({
+    id, patientId, completedAtISO: null, noShowAtISO: null, dueDateISO: futureDay,
+    body: 'Nowy aktualny opis ponownie otwartej sprawy D.',
+  }), { id: siblingId, patientId: records.ids.b, futureDay: records.futureDayC });
+  await refreshParentB(page, records);
+  await page.locator(WORKSPACE).getByRole('button', { name: '← Lista spraw', exact: true }).click();
+  await expect(page.locator(WORKSPACE).getByRole('button', { name: 'Historia', exact: true })).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.locator(`${WORKSPACE} .vb22-list-pane`)).toBeVisible();
+  await expect(row(page, records.historical)).toBeVisible();
+  await expect(row(page, siblingId)).toHaveCount(0);
+  await expect(page.locator(`${WORKSPACE} .vb22-row`)).toHaveCount(1);
+  const reopened = await page.evaluate(id => window.VildaVault.getPatientNote(id), siblingId);
+  expect(reopened.completedAtISO).toBeNull();
+  expect(reopened.body).toBe('Nowy aktualny opis ponownie otwartej sprawy D.');
+});

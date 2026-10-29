@@ -101,7 +101,9 @@ test('A7 completion cancellation preserves the selected task and mobile controls
     expect(after.body).toBe(before.body); expect(after.completedAtISO).toBeNull();
   }
   for (const viewport of [{ width: 320, height: 800 }, { width: 393, height: 852 }, { width: 393, height: 480 }, { width: 852, height: 393 }]) {
-    await page.setViewportSize(viewport); await action.click();
+    await page.setViewportSize(viewport);
+    if (!await action.isVisible()) await page.locator(`${WORKSPACE} [data-note-id="${noteId}"]`).click();
+    await action.click();
     const editor = page.locator(EDITOR), textarea = editor.getByLabel('Co zostało zrobione? (opcjonalnie)', { exact: true });
     expect(await textarea.evaluate(node => node === document.activeElement)).toBe(false);
     await editor.locator('.vb22-next-step summary').click();
@@ -119,8 +121,19 @@ test('A7 completion cancellation preserves the selected task and mobile controls
     expect(await editor.evaluate(node => node.scrollWidth <= node.clientWidth + 1)).toBe(true);
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true);
     await editor.getByRole('button', { name: 'Anuluj', exact: true }).click();
-    await expect(page.locator(`${WORKSPACE} .vb22-list-pane`)).toBeVisible();
     await expect(page.locator(`${WORKSPACE} .vb22-detail`)).toBeVisible();
+    if (viewport.width <= 700) {
+      await expect(page.locator(`${WORKSPACE} .vb22-list-pane`)).toBeHidden();
+      await page.locator(`${WORKSPACE} .vb22-back`).click();
+      await expect(page.locator(`${WORKSPACE} .vb22-list-pane`)).toBeVisible();
+      await expect(page.locator(`${WORKSPACE} .vb22-detail`)).toBeHidden();
+      await expect(page.locator(`${WORKSPACE} .vb22-row[aria-current=true]`)).toHaveAttribute('data-note-id', noteId);
+      await page.locator(`${WORKSPACE} [data-note-id="${noteId}"]`).click();
+      await expect(page.locator(`${WORKSPACE} .vb22-list-pane`)).toBeHidden();
+      await expect(page.locator(`${WORKSPACE} .vb22-detail`)).toBeVisible();
+    } else {
+      await expect(page.locator(`${WORKSPACE} .vb22-list-pane`)).toBeVisible();
+    }
   }
 });
 

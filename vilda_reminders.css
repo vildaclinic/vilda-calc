@@ -221,7 +221,7 @@
 
 .vb22 .vb22-list-pane {
   background: #f4f8f6;
-  border-right: 2px solid #c7dcd6;
+  border-right: var(--border-emphasis) solid #c7dcd6;
   padding: var(--space-12px) var(--space-14px);
   overflow: auto;
   min-height: 0;
@@ -261,7 +261,7 @@
   padding: var(--space-12px);
   border: 0;
   border-bottom: var(--border-hairline) solid #dce7e2;
-  border-left: 2px solid transparent;
+  border-left: var(--border-emphasis) solid transparent;
   background: transparent;
   border-radius: 0;
   box-shadow: none;
@@ -625,10 +625,10 @@
 
 dialog.vb22.vb22-modal {
   position: fixed;
-  inset: 16px 16px calc(16px + var(--vb22-bottom,0px));
+  inset: 16px 16px calc(16px + var(--vb22-inset,0px));
   margin: auto;
   width: min(1280px,calc(100vw - 32px));
-  height: min(900px,calc(var(--vb22-height,100dvh) - 32px - var(--vb22-bottom,0px)));
+  height: min(900px,calc(var(--vb22-height,100dvh) - 32px - var(--vb22-inset,0px)));
   max-width: none;
   max-height: none;
   border: var(--border-hairline) solid #d5e1e2;
@@ -704,7 +704,7 @@ dialog.vb22::backdrop {
 /* The outcome editor has a single scrollable body and a persistent footer. */
 dialog.vb22.vb22-outcome {
   position: fixed;
-  top: calc(var(--vb22-outcome-top,0px) + var(--vb22-outcome-height,100dvh)/2);
+  top: calc(var(--vb22-inset,0px) + var(--vb22-height,100dvh)/2);
   left: 50%;
   right: auto;
   bottom: auto;
@@ -713,7 +713,7 @@ dialog.vb22.vb22-outcome {
   width: min(580px,calc(100vw - 36px));
   max-width: none;
   height: auto;
-  max-height: calc(var(--vb22-outcome-height,100dvh) - 48px);
+  max-height: calc(var(--vb22-height,100dvh) - 48px);
   padding: 0;
   border: var(--border-hairline) solid #d4e3e0;
   border-radius: var(--radius-18);
@@ -821,7 +821,7 @@ dialog.vb22.vb22-outcome[open] {
   margin-top: 5px;
   border: var(--border-hairline) solid #d6e4e0;
   background: #f7faf9;
-  border-radius: 11px
+  border-radius: var(--radius-11)
 }
 
 .vb22 .vb22-next-step>summary {
@@ -905,9 +905,9 @@ dialog.vb22.vb22-outcome[open] {
 
 @media(max-width:700px) {
   dialog.vb22.vb22-modal {
-    inset: 0 0 var(--vb22-bottom,0px);
+    inset: 0 0 var(--vb22-inset,0px);
     width: 100vw;
-    height: calc(var(--vb22-height,100dvh) - var(--vb22-bottom,0px));
+    height: calc(var(--vb22-height,100dvh) - var(--vb22-inset,0px));
     margin: 0;
     border: 0;
     border-radius: 0;
@@ -942,28 +942,48 @@ dialog.vb22.vb22-outcome[open] {
     grid-template-columns: 1fr 1fr;
     gap: var(--space-4px)
   }
-  .vb22 .vb22-layout {
+  dialog.vb22.vb22-modal .vb22-layout {
     display: block;
-    overflow: auto;
+    overflow: hidden;
     overscroll-behavior: contain
   }
-  .vb22 .vb22-list-pane {
-    height: auto;
-    max-height: 280px;
+  dialog.vb22.vb22-modal .vb22-list-pane {
+    height: 100%;
+    max-height: none;
     padding: var(--space-12px) var(--space-10px);
-    border-right: 0
+    border-right: 0;
+    overflow: auto
   }
-  .vb22 .vb22-detail {
-    height: auto;
-    display: block;
-    overflow: visible;
+  dialog.vb22.vb22-modal .vb22-detail {
+    height: 100%;
+    display: none;
+    overflow: auto;
     padding: 22px 19px
+  }
+  dialog.vb22.vb22-modal.vb22-show-detail .vb22-list-pane {
+    display: none
+  }
+  dialog.vb22.vb22-modal.vb22-show-detail .vb22-detail {
+    display: block
+  }
+  dialog.vb22.vb22-modal.vb22-show-detail .vb22-tabs,
+  dialog.vb22.vb22-modal.vb22-show-detail .vb22-filters {
+    display: none
+  }
+  dialog.vb22.vb22-modal .vb22-detail-label,
+  dialog.vb22.vb22-modal .vb22-foot {
+    display: none
+  }
+  dialog.vb22.vb22-modal .vb22-back {
+    display: block;
+    min-height: 44px;
+    margin-bottom: var(--space-12px)
   }
   .vb22 .vb22-detail-label {
     margin: -22px -19px var(--space-20px);
     padding: var(--space-12px) 19px;
     background: #eaf3ef;
-    border-top: 3px solid #a9cac0;
+    border-top: var(--border-pro) solid #a9cac0;
     border-bottom: var(--border-hairline) solid #d5e5dd;
     color: #3c716f
   }
@@ -991,15 +1011,15 @@ dialog.vb22.vb22-outcome[open] {
     font-size: 19px
   }
   dialog.vb22.vb22-outcome {
-    top: var(--vb22-outcome-top,0px);
+    top: var(--vb22-inset,0px);
     left: 0;
     right: 0;
     bottom: auto;
     transform: none;
     margin: 0;
     width: 100vw;
-    height: var(--vb22-outcome-height,100dvh);
-    max-height: var(--vb22-outcome-height,100dvh);
+    height: var(--vb22-height,100dvh);
+    max-height: var(--vb22-height,100dvh);
     border: 0;
     border-radius: 0
   }
@@ -1011,7 +1031,7 @@ dialog.vb22.vb22-outcome[open] {
     font-size: 19px
   }
   .vb22 .vb22-outcome-body {
-    padding: var(--space-18px)
+    padding: var(--space-18px) max(18px,env(safe-area-inset-right)) var(--space-18px) max(18px,env(safe-area-inset-left))
   }
   .vb22 .vb22-context {
     padding: 11px var(--space-12px);
@@ -1068,6 +1088,102 @@ dialog.vb22.vb22-outcome[open] {
     padding-top: var(--space-8px);
     padding-bottom: var(--space-8px)
   }
+}
+
+/* A phone keeps list → detail navigation after rotating into landscape. */
+html.vilda-phone dialog.vb22.vb22-modal {
+  inset: 0 0 var(--vb22-inset,0px);
+  width: 100vw;
+  height: calc(var(--vb22-height,100dvh) - var(--vb22-inset,0px));
+  margin: 0;
+  border: 0;
+  border-radius: 0;
+  padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left)
+}
+
+html.vilda-phone dialog.vb22.vb22-modal .vb22-layout {
+  display: block;
+  overflow: hidden;
+  overscroll-behavior: contain
+}
+
+html.vilda-phone dialog.vb22.vb22-modal .vb22-list-pane {
+  height: 100%;
+  max-height: none;
+  border-right: 0;
+  overflow: auto
+}
+
+html.vilda-phone dialog.vb22.vb22-modal .vb22-detail {
+  display: none;
+  height: 100%;
+  overflow: auto
+}
+
+html.vilda-phone dialog.vb22.vb22-modal.vb22-show-detail .vb22-list-pane {
+  display: none
+}
+
+html.vilda-phone dialog.vb22.vb22-modal.vb22-show-detail .vb22-detail {
+  display: block
+}
+
+html.vilda-phone dialog.vb22.vb22-modal.vb22-show-detail .vb22-tabs,
+html.vilda-phone dialog.vb22.vb22-modal.vb22-show-detail .vb22-filters {
+  display: none
+}
+
+html.vilda-phone dialog.vb22.vb22-modal .vb22-detail-label,
+html.vilda-phone dialog.vb22.vb22-modal .vb22-foot {
+  display: none
+}
+
+html.vilda-phone dialog.vb22.vb22-modal .vb22-back {
+  display: block;
+  min-height: 44px;
+  margin-bottom: var(--space-12px)
+}
+
+html.vilda-phone dialog.vb22.vb22-outcome {
+  top: var(--vb22-inset,0px);
+  left: 0;
+  right: 0;
+  bottom: auto;
+  transform: none;
+  margin: 0;
+  width: 100vw;
+  height: var(--vb22-height,100dvh);
+  max-height: var(--vb22-height,100dvh);
+  border: 0;
+  border-radius: 0
+}
+
+html.vilda-phone .vb22 .vb22-outcome-head {
+  padding: max(17px,env(safe-area-inset-top)) max(18px,env(safe-area-inset-right)) var(--space-16px) max(18px,env(safe-area-inset-left));
+  gap: var(--space-12px)
+}
+
+html.vilda-phone .vb22 .vb22-outcome-body {
+  padding: var(--space-18px) max(18px,env(safe-area-inset-right)) var(--space-18px) max(18px,env(safe-area-inset-left))
+}
+
+html.vilda-phone .vb22 .vb22-outcome-actions {
+  padding: 13px max(18px,env(safe-area-inset-right)) max(13px,env(safe-area-inset-bottom)) max(18px,env(safe-area-inset-left));
+  gap: 9px
+}
+
+html.vilda-phone .vb22 .vb22-outcome-actions button {
+  min-height: 48px;
+  padding: 11px var(--space-12px);
+  font-size: 15px
+}
+
+html.vilda-phone .vb22 .vb22-outcome-actions button:not(.vb22-primary) {
+  flex: 0 0 82px
+}
+
+html.vilda-phone .vb22 .vb22-outcome-actions .vb22-primary {
+  flex: 1
 }
 
 /* The application glass theme styles every button and header with !important.
@@ -1158,7 +1274,7 @@ dialog.vb22.vb22-outcome[open] {
   background: transparent!important;
   border: 0!important;
   border-bottom: var(--border-hairline) solid #dce7e2!important;
-  border-left: 2px solid transparent!important;
+  border-left: var(--border-emphasis) solid transparent!important;
   border-radius: 0!important;
   transition: none!important;
   transform: none!important
