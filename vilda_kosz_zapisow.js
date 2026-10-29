@@ -199,14 +199,24 @@
   // nadpisuje, tylko zdejmuje nieaktualny wpis kosza ({ alreadyInCard: true }). Dziennik dostaje znacznik, a widoki
   // mowia to wprost zamiast „Przywrócono zapis z kosza”.
   var TEKST_JUZ_W_KARCIE = 'Ten zapis jest już w karcie w nowszej postaci — usunięto go z kosza.';
+  // P-KOSZ-PO-KLUCZU: zapis jest w innej karcie niz wpis kosza — bez wskazywania kierunku scalenia (bywa w karcie
+  // docelowej „Scal pacjentow”, a po przerwanym scaleniu w starej karcie).
+  var TEKST_W_INNEJ_KARCIE = 'Przywrócono zapis z kosza — jest w innej karcie tego pacjenta (po „Scal pacjentów”).';
+  var TEKST_JUZ_W_INNEJ_KARCIE = 'Ten zapis jest już w nowszej postaci w innej karcie tego pacjenta (po „Scal pacjentów”) — usunięto go z kosza.';
 
+  // P-KOSZ-PO-KLUCZU: zapis, ktory lezy na tym urzadzeniu pod inna karta niz wpis kosza (po „Scal pacjentow”), wraca
+  // w miejscu — dziennik i zdarzenie wskazuja karte, w ktorej jest (wynik.patientId), a kartaWpisu — karte wpisu kosza.
   async function przywroc(patientId, snapshotId) {
     var wynik = await sejf().restoreTrashedSnapshot(patientId, snapshotId);
     var juzWKarcie = !!(wynik && wynik.alreadyInCard);
-    var dane = { patientId: patientId, snapshotId: snapshotId };
+    var karta = (wynik && wynik.patientId) || patientId;
+    var dane = { patientId: karta, snapshotId: snapshotId };
+    if (karta !== patientId) dane.kartaWpisu = patientId;
     if (juzWKarcie) dane.juzWKarcie = true;
     dziennik('snapshot.restore', dane);
-    oglosZmiane({ akcja: 'przywroc', patientId: patientId, snapshotId: snapshotId, juzWKarcie: juzWKarcie });
+    var zmiana = { akcja: 'przywroc', patientId: karta, snapshotId: snapshotId, juzWKarcie: juzWKarcie };
+    if (karta !== patientId) zmiana.kartaWpisu = patientId;
+    oglosZmiane(zmiana);
     return wynik;
   }
 
@@ -742,7 +752,9 @@
         b.addEventListener('click', function () {
           b.disabled = true;
           przywroc(e.patientId, e.snapshotId).then(function (wynik) {
-            var tekst = wynik && wynik.alreadyInCard ? TEKST_JUZ_W_KARCIE : 'Przywrócono zapis z kosza.';
+            var inna = !!(wynik && wynik.patientId && wynik.patientId !== e.patientId);
+            var tekst = wynik && wynik.alreadyInCard ? (inna ? TEKST_JUZ_W_INNEJ_KARCIE : TEKST_JUZ_W_KARCIE)
+              : inna ? TEKST_W_INNEJ_KARCIE : 'Przywrócono zapis z kosza.';
             if (typeof ctx.reload === 'function') ctx.reload(e.snapshotId, { kind: 'ok', text: tekst });
           }).catch(function (er) {
             b.disabled = false;

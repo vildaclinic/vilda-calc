@@ -34,7 +34,9 @@
 // F3 C (221) → jak F2 (C 221 dawniej: 23 kg w karcie w 3/8 i 2 zapisy w rundzie kontrolnej; czerwony 8/8).
 // F4 P (221) klika „Przywróć” — znane ograniczenie: starsza aplikacja odpowiada „już w karcie” (jej warunek: rev karty
 //    wyższy niż rev usunięcia), a widoki i karty na P, K i C po rundach są takie same jak we flocie samych 221
-//    (równoległy przebieg w tym samym teście). Po aktualizacji P do nowej aplikacji wpis jest w koszu P, ponowne
+//    (równoległy przebieg w tym samym teście) albo lepsze: od P-KOSZ-PO-KLUCZU (sejf 231) C w K←C,P←K, P←K,K←C
+//    i P←C,P←K ma w karcie 78 (rev 1) — ostatnia wersja karty przyjmuje nowszą treść kosza (Q8) — gdzie flota samych
+//    221 zostawia 23 kg (rev 0). Po aktualizacji P do nowej aplikacji wpis jest w koszu P, ponowne
 //    „Przywróć” → karta 78 rev 2 na trzech, bez nagrobka, 0 zapisów. Kontrola: zielony także na bazie (drugie
 //    „Przywróć” na bazie: pełny remis chwili zmiany i rev → zwykła gałąź, rev 2).
 // Stan P tuż po kliknięciu sprawdza expect.soft: na kodzie sprzed zmiany raport pokazuje też widoki i zapisy po rundach.
@@ -211,9 +213,14 @@ describe('PRZ0, P na starszej aplikacji 221 (F4): ograniczenie, potem aktualizac
       const wszystkie221 = await przebiegStaryP({ P: 'S221', K: 'S221', C: 'S221' }, kol);
       const r = await przebiegStaryP({ P: 'S221' }, kol);
       // Ograniczenie: starsza aplikacja na P odpowiada „już w karcie” i nie zapisuje; K i C (nowe) kończą tak samo
-      // jak we flocie samych 221 — bez pogorszenia.
+      // jak we flocie samych 221 — bez pogorszenia — albo lepiej: C (231) przyjmuje w karcie nowszą treść kosza (Q8).
       expect(r.porownanie.pierwsze).toBe('już w karcie');
-      expect(r.porownanie).toEqual(wszystkie221.porownanie);
+      const oczekiwane = JSON.parse(JSON.stringify(wszystkie221.porownanie));
+      if (oczekiwane.widoki.C === 'karta 23 + kosz 78') {
+        oczekiwane.widoki.C = 'karta 78 + kosz 78';
+        oczekiwane.karty.C = { masa: 78, pin: false, rev: 1 };
+      }
+      expect(r.porownanie).toEqual(oczekiwane);
       const { d, usuniecie } = r;
       const { u, pid, sid } = d;
       u.P = await aktualizuj(u.P, 'N');

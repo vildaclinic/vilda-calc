@@ -181,9 +181,10 @@ function obserwuj(p) {
 async function pytanieBramyIZapisNaB(opcje) {
   const A = await urzadzenie(opcje);
   const odpowiedz = odroczone();
+  const zapytano = odroczone();
   let pierwsze = true;
   A.v.setSaveConflictResolver(() => {
-    if (pierwsze) { pierwsze = false; return odpowiedz.obietnica; }
+    if (pierwsze) { pierwsze = false; zapytano.rozwiaz(); return odpowiedz.obietnica; }
     return 'scal';
   });
   const pid = await karta(A.v, [[60, 66], [60, 66, 80]]);
@@ -194,7 +195,7 @@ async function pytanieBramyIZapisNaB(opcje) {
   const zapisA = A.v.savePatient(payload([60, 66, 74]), {
     patientId: pid, dedup: false, baselinePayload: payload([60, 66]),
   });
-  await chwila(20);
+  await zapytano.obietnica; // karta A trzyma blokadę (pytanie bramy otwarte) — bez stałej przerwy, która pod obciążeniem bywa za krótka
   return { A, pid, ladunekB, zapisA, odpowiedz };
 }
 
@@ -329,9 +330,10 @@ for (const [tryb, opcje] of [['kolejka strony (bez Web Locks)', () => ({})], ['W
     it('nagrobek pacjenta przy otwartym pytaniu bramy: scalanie czeka, a po zapisie karta zostaje z całą historią', async () => {
       const A = await urzadzenie(opcje());
       const odpowiedz = odroczone();
+      const zapytano = odroczone();
       let pierwsze = true;
       A.v.setSaveConflictResolver(() => {
-        if (pierwsze) { pierwsze = false; return odpowiedz.obietnica; }
+        if (pierwsze) { pierwsze = false; zapytano.rozwiaz(); return odpowiedz.obietnica; }
         return 'scal';
       });
       const pid = await karta(A.v, [[60, 66], [60, 66, 80]]);
@@ -340,7 +342,7 @@ for (const [tryb, opcje] of [['kolejka strony (bez Web Locks)', () => ({})], ['W
       await B.v.removePatient(pid); // usunięcie na B jest późniejsze niż ostatni zapis, który A ma w chwili scalania
       const ladunekB = await B.v.exportSyncPayload();
       const zapisA = A.v.savePatient(payload([60, 66, 74]), { patientId: pid, dedup: false, baselinePayload: payload([60, 66]) });
-      await chwila(20);
+      await zapytano.obietnica; // karta A trzyma blokadę (pytanie bramy otwarte)
 
       const scal = obserwuj(A.v.mergeSyncPayload(ladunekB));
       await chwila(30);
