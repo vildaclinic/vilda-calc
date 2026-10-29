@@ -908,6 +908,7 @@
       // Odczyt pól przy otwarciu przypięcia zamyka również okno pomiędzy edycją
       // DOM a eventem change. Snapshot nie zależy od późniejszych zmian pól.
       var current = render(result ? { raw: result.raw, unit: result.unit, targetUnit: lastMeasurement.targetUnit } : lastMeasurement);
+      if (typeof opts.onAssessmentPreview === 'function') opts.onAssessmentPreview(current);
       if (!current || !snapshots || typeof snapshots.create !== 'function') return { schemaVersion: 1, status: 'unavailable', reasonCodes: ['snapshot_helper_unavailable'], evaluation: null };
       return snapshots.create(current);
     }

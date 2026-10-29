@@ -47,6 +47,33 @@
     });
   }
   function interval(lower, upper, source) { return { lower: lower, upper: upper, source: source }; }
+  // Same calendar-anniversary/clamp convention as VildaLabPuberty.resolveAge.
+  // Compute only derived ages at the main form; DOB is never cached/exported.
+  function calendarAge(iso, pna) {
+    if (typeof iso !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(iso)) return null;
+    var parts = iso.split('-').map(Number), birth = Date.UTC(parts[0], parts[1] - 1, parts[2]);
+    var birthday = new Date(birth);
+    if (!Number.isFinite(birth) || birthday.getUTCFullYear() !== parts[0] ||
+        birthday.getUTCMonth() !== parts[1] - 1 || birthday.getUTCDate() !== parts[2]) return null;
+    function anniversary(months) {
+      var year = parts[0] + Math.floor((parts[1] - 1 + months) / 12);
+      var month = (parts[1] - 1 + months) % 12;
+      var last = new Date(Date.UTC(year, month + 1, 0)).getUTCDate();
+      return Date.UTC(year, month, Math.min(parts[2], last));
+    }
+    function at(dayCount) {
+      var time = birth + dayCount * 86400000, date = new Date(time);
+      if (!Number.isFinite(time) || Number.isNaN(date.getTime())) return null;
+      var months = (date.getUTCFullYear() - parts[0]) * 12 + date.getUTCMonth() - (parts[1] - 1);
+      if (anniversary(months) > time) months -= 1;
+      var start = anniversary(months), end = anniversary(months + 1);
+      return (months + (time - start) / (end - start)) / 12;
+    }
+    var lower = at(pna.lower), upper = at(pna.upper);
+    return Number.isFinite(lower) && Number.isFinite(upper) && upper >= lower
+      ? { lowerYears: lower, upperYears: upper, upperInclusive: true,
+        postnatalDays: interval(pna.lower, pna.upper, pna.source) } : null;
+  }
   function readForm(options) {
     var api = w.VildaDobAge, form = values();
     if (!field('dobInput') || !field('age') || !api || integer(form.age) !== 0) return null;
@@ -73,6 +100,10 @@
     }
     var record = { version: 1, identityKey: identity(), mode: mode(), form: form,
       liveDay: liveDay, postnatalDays: result };
+    if (result.source === 'main-calendar-dates' && typeof api.readISO === 'function') {
+      var calendar = calendarAge(api.readISO(), result);
+      if (calendar) record.femaleTtCalendarAge = calendar;
+    }
     if (months >= api.WEEKS_MONTH_LIMIT) record.minipubertyOnly = true;
     if (months >= CALENDAR_MONTH_LIMIT) {
       if (includeInfantLhTail) record.infantLhTailOnly = true;
@@ -116,7 +147,7 @@
   function read(shared, patientId, source, options) {
     shared = shared && typeof shared === 'object' ? shared : {};
     if (text(patientId) && (!source || source.patientId !== text(patientId) || source.status !== 'ready')) return null;
-    var saved = readCache(), postnatal = null, gestational = null;
+    var saved = readCache(), postnatal = null, gestational = null, calendar = null;
     var calendarMonths = saved && saved.form ? integer(saved.form.ageMonths) : null;
     var infantTail = saved && (saved.infantLhTailOnly === true || saved.infantTtTailOnly === true ||
       calendarMonths != null && calendarMonths >= CALENDAR_MONTH_LIMIT);
@@ -134,6 +165,21 @@
         && (!infantTail || p.source === 'main-calendar-dates')
         && ['main-calendar-dates', 'main-completed-weeks'].indexOf(p.source) >= 0) {
         postnatal = interval(p.lower, p.upper, p.source);
+        var c = saved.femaleTtCalendarAge, cp = c && c.postnatalDays;
+        if (options && options.includeFemaleTtCalendarAge === true && p.source === 'main-calendar-dates' &&
+            c && Number.isFinite(c.lowerYears) && c.lowerYears >= 0 && Number.isFinite(c.upperYears) &&
+            c.upperYears >= c.lowerYears && c.upperInclusive === true && cp && cp.source === p.source &&
+            cp.lower === p.lower && cp.upper === p.upper) {
+          // A same-document programmatic DOB edit can precede its input event.
+          // Across pages the synchronous invalidation below protects the cache.
+          var api = field('dobInput') && w.VildaDobAge, exact = api && typeof api.readExactAge === 'function' ? api.readExactAge() : null;
+          var current = api && typeof api.readISO === 'function'
+            ? exact && exact.days === p.upper ? calendarAge(api.readISO(), p) : null : c;
+          if (current && current.lowerYears === c.lowerYears && current.upperYears === c.upperYears) {
+            calendar = { lowerYears: c.lowerYears, upperYears: c.upperYears, upperInclusive: true,
+              postnatalDays: interval(p.lower, p.upper, p.source) };
+          }
+        }
       }
     }
     if (source && source.patientId === text(patientId) && source.status === 'ready'
@@ -141,7 +187,16 @@
       var g = source.neonatalAge.gestationalDays;
       gestational = interval(g.lower, g.upper, g.source);
     }
-    return postnatal || gestational ? { postnatalDays: postnatal, gestationalDays: gestational } : null;
+    var result = postnatal || gestational ? { postnatalDays: postnatal, gestationalDays: gestational } : null;
+    if (result && calendar) result.femaleTtCalendarAge = calendar;
+    return result;
+  }
+  function invalidateCalendar() {
+    var adapter = w.VildaPersistence;
+    if (!field('dobInput') || !adapter ||
+        typeof w._vildaCurrentPatientId !== 'undefined' && text(w._vildaCurrentPatientId) !== identity()) return;
+    var cached = readCache();
+    if (cached && cached.identityKey === identity()) clear();
   }
   function schedule() {
     if (pending != null || typeof w.setTimeout !== 'function') return;
@@ -160,11 +215,15 @@
     if (!field('dobInput') || !w.document || !w.document.addEventListener) return;
     ['input', 'change'].forEach(function (event) {
       w.document.addEventListener(event, function (ev) {
-        if (ev && ev.target && ['dobInput', 'age', 'ageMonths', 'ageWeeks', 'weight', 'height'].indexOf(ev.target.id) >= 0) schedule();
-      });
+        if (ev && ev.target && ['dobInput', 'age', 'ageMonths', 'ageWeeks', 'weight', 'height'].indexOf(ev.target.id) >= 0) {
+          if (ev.target.id === 'dobInput') invalidateCalendar();
+          schedule();
+        }
+      }, true);
     });
-    ['vilda:patient-loaded', 'vilda:state-restored', 'vilda:persist-restored', 'vilda:zrodlo-pacjenta-zmienione'].forEach(function (event) {
-      w.document.addEventListener(event, schedule);
+    ['vilda:patient-loaded', 'vilda:state-restored', 'vilda:persist-restored', 'vilda:zrodlo-pacjenta-zmienione',
+      'vilda:dob-restored', 'vilda:main-session-restored'].forEach(function (event) {
+      w.document.addEventListener(event, function () { invalidateCalendar(); schedule(); });
     });
     if (w.addEventListener) w.addEventListener('focus', schedule);
     schedule();

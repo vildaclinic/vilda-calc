@@ -989,6 +989,62 @@ Pełne ograniczenia, odczyt, SHA-256 i przypadki:
 Wykonane wyniki testów i PWA podaje PR; decyzja właściciela nie jest
 walidacją kliniczną.
 
+## TT dziewczynek — górne odniesienie niemowlęce, 29 października 2026
+
+Po audycie źródeł, zaakceptowanej prywatnej makiecie i wyjaśnieniu
+odrębności Mayo właściciel polecił wdrożenie rekomendacji. To osobna
+karta górnego p97,5 źródła, bez nowej mediany, laboratoryjnego RI,
+dolnej normy, SDS, diagnozy lub ponownego przeliczania historii.
+
+- Johannsen 2018, DOI
+  [10.1210/jc.2018-00482](https://doi.org/10.1210/jc.2018-00482), pełny
+  zachowany tekst wydawcy i pięć rycin: tabela 1/s.3033, rycina 3/s.3032.
+  Źródłowe grupy dziewczynek TT surowica LC-MS/MS: **2–<3,5 miesiąca,
+  N165, p97,5 0,21 nmol/L; 3,5–5 miesiąca, N125, 0,17**. N290 nie jest
+  N799 wszystkich dziewczynek. Średnia geometryczna i dolny p2,5 to
+  `<LOD`; nie zamieniaj średniej geometrycznej na medianę.
+- **79,0%** żeńskich TT LC-MS/MS poniżej LOD **0,10**. Źródłowe
+  LOD/2 **0,05** służyło analizie autorów, nie jest zmierzonym wynikiem
+  lub P50. LOQ nie podano. Nie twórz dolnej normy, pasma 0–U, fikcyjnej
+  mediany, ilościowego modelu wieku lub progu z klasyfikatora płci 0,31.
+- Osobne dane i polityka `female-tt-infant-upper-*.json` dodają dwa
+  pola runtime, zachowując wcześniejsze 45 i rejestr 85 profili. Aplikacja
+  używa całego wieku w **[2,3;5,0] miesiąca** — jawna konserwatywna
+  decyzja na podstawie zaokrąglonego zakresu wszystkich dziewczynek,
+  nie potwierdzone minimum podgrupy TT. Źródło nie definiuje długości
+  miesiąca. Zachowaj kalendarzowy przedział, bez nowych równoważników
+  dni, DOB, daty próbki, środka wieku i korekcji wcześniaczej.
+- Do przypisanego porównania potrzebne są jedna grupa wieku, cały
+  znany przedział GA w **259–293 dniach**, znana surowica i zgłoszona
+  LC-MS/MS. Sama metoda publikacji nie potwierdza próbki. Nieznane
+  GA/metoda/materiał pozostawiają informację o źródle, bez punktu
+  lub werdyktu pacjentki. Znane niezgodności i terapia/stymulacja
+  wyłączają. Nie dodawaj pól, pytań, badge o metodzie lub Th/P;
+  nieznany wywiad nie jest potwierdzeniem braku leczenia.
+- Wiek obejmujący 3,5 miesiąca daje dwie dosłowne górne wartości,
+  bez połączonego RI, pojedynczego werdyktu i kropki. Pewny wynik
+  poniżej/równy U otrzymuje neutralne „Nie przekracza górnej wartości
+  odniesienia”, pewny powyżej „Powyżej górnej wartości odniesienia”.
+  `>U` to powyżej; `≥U` pozostaje niejednoznaczne. `<LOD` bez liczby
+  nie pożycza granicy autorów. Nierówności nie dostają dokładnego punktu.
+- Stała neutralna oś **0–0,4 nmol/L** i konwersje nie zależą od wyniku.
+  Zero osi nie jest dolną normą; brak zielonego pasma, mediany i krzywej.
+  Ponad osią strzałka z prawdziwą liczbą. Domyślnie 2 miejsca, ng/mL3;
+  gdy zaokrąglenie ukrywa pewne przekroczenie, zwiększ wspólną precyzję
+  tylko do minimum (maks.10): 0,214/0,210 lub 0,06060/0,06057 ng/mL.
+  Surowy wynik, źródłowa liczba, werdykt i przelicznik nie zmieniają się.
+- Rozbieżność niewłączonego Mayo 20–80 ng/dL pozostaje niewyjaśniona.
+  Oba źródła opisują LC-MS/MS. Bez uśredniania, kalibracji lub fallbacku
+  według wyniku. Wiek przed 2,3 lub po 5 do <6 miesiąca, wcześniactwo, Olthof i szersze
+  modele pozostają poza tą zmianą. Historyczne hashe nie są przepisywane;
+  zmiana osoby/płci/analitu, lock i spóźniony kontekst czyszczą kartę.
+
+Pełny kontrakt, źródła, hashe i przypadki:
+[FEMALE_TT_INFANT_UPPER.md](hormone-lifespan/FEMALE_TT_INFANT_UPPER.md).
+PR raportuje wykonane regresje, mobile/fullscreen i zimny start PWA
+offline oraz wszystkie kontrole końcowego SHA. Akceptacja i zielone
+testy nie nadają statusu walidacji klinicznej.
+
 ## E2 chłopców — zaakceptowana karta 6–18, 25 października 2026
 
 Właściciel zaakceptował osobną prywatną makietę i polecił wdrożenie.
