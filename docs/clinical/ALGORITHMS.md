@@ -25,6 +25,7 @@ Rejestr jest inwentaryzacją techniczną. Nie nadaje opisanym modułom statusu w
 | LAB-INHIBIN-B | Inhibina B: wiek, minipuberty i kontekst dorosłych | `vilda_lab_inhibin_b_data.js`, `vilda_lab_inhibin_b.js`, wspólne UI i snapshot | `lab-inhibin*.test.mjs`, E2E `lab-inhibin-b.spec.mjs` | orientacyjne zakresy źródłowe; ograniczenia i polityki w `INHIBIN_B.md`; akceptacja kliniczna właściciela przed scaleniem |
 | LAB-TT-MAYO | Testosteron całkowity: M według wieku/G, F według wieku od 6 miesięcy | `vilda_lab_testosterone_data.js`, `vilda_lab_testosterone.js`, `vilda_lab_testosterone_units.js`, wspólne UI i snapshot | `lab-testosterone*.test.mjs`, E2E `lab-testosterone*.spec.mjs`; wyniki uruchomień w PR | etap 3 M i pierwsza partia F; źródła, luki i polityki w `TESTOSTERONE.md`; końcowy przegląd kliniczny właściciela przed scaleniem |
 | HORMONE-FEMALE-TT-AGE | TT dziewcząt 6–18: osobna mediana modelu i punkt wyniku | `vilda_female_tt_age.js`, `vilda_female_tt_age_ui.js`, osobne dane/polityka pakowane do runtime | `female-tt-age.test.mjs`, E2E `lab-female-tt-age*.spec.mjs`; wyniki w PR | zakres zaakceptowanej makiety 24.10.2026; poza 85 zwykłymi profilami, bez nowych RI/SDS/historii; [kontrakt](hormone-lifespan/FEMALE_TT_AGE.md) |
+| HORMONE-FEMALE-TT-UNDER6 | TT dziewcząt od 6 miesięcy do <6 lat: przybliżona mediana grupy Kushnir; pierwotne wyróżnienie istniejącego `above` | `vilda_female_tt_age.js`, `vilda_female_tt_age_ui.js`, osobne `female-tt-under6-data.json` i `female-tt-under6-policy.json` | `female-tt-under6.test.mjs` i regresje adaptera/UI/PWA; wykonane wyniki w PR | akceptacja makiety i polecenie wdrożenia; bez nowych RI/progu pilności/historii, z niezmienionym Madsen 6–18; [kontrakt](hormone-lifespan/FEMALE_TT_UNDER6.md) |
 | HORMONE-MALE-E2-AGE | E2 chłopców 6–18: osobna mediana modelu i punkt wyniku, z ograniczeniem niskiego końca | `vilda_male_e2_age.js`, `vilda_male_e2_age_ui.js`, osobne dane/polityka pakowane do runtime | `male-e2-age.test.mjs` oraz regresje adaptera/UI/PWA; wykonane wyniki w PR | zaakceptowana makieta 25.10.2026; pełne [6,18], bez podłogi LLOQ i nowych RI/SDS/historii; [kontrakt](hormone-lifespan/MALE_E2_AGE.md) |
 | HORMONE-MALE-E2-ADULT-AGE | E2 mężczyzn 31,4–60,9: przybliżona mediana z ryciny i punkt wyniku w tej samej karcie | `vilda_male_e2_age.js`, `vilda_male_e2_age_ui.js`, odrębne dane/polityka Frederiksen pakowane do runtime | `male-e2-adult-age.test.mjs`, rzeczywisty adapter, UI i zimny start PWA; wykonane wyniki w PR | makieta i wdrożenie zaakceptowane 25.10.2026; 296 wierzchołków odczytu, liniowo po ścieżce, stała oś 0–200, bez mostu wieku i nowych RI/SDS/historii; [kontrakt](hormone-lifespan/MALE_E2_ADULT_AGE.md) |
 | LAB-HISTORY | Historia i porównanie zapisanych wyników badań (model bez UI) | `vilda_lab_history.js` | `lab-history-view.test.mjs`, `lab-history-vault.test.mjs` | test regresyjny modelu; moduł jeszcze nieładowany przez strony (PR1 planu historii) |
@@ -2758,6 +2759,90 @@ zakresu i zielone testy nie są walidacją kliniczną.
 
 Pełne źródła, SHA-256, liczby i ograniczenia:
 [FEMALE_TT_AGE.md](hormone-lifespan/FEMALE_TT_AGE.md).
+
+### HORMONE-FEMALE-TT-UNDER6 — mediana grupy wieku od 6 miesięcy do <6 lat, 2026-10-28
+
+**Decyzja i wpływ kliniczny:** po audycie i makiecie właściciel polecił
+wdrożenie pierwotnego wariantu, odrzucając alternatywy A/B/C. Osobna
+karta bieżącego żeńskiego TT zyskuje przybliżone odniesienie grupy
+wieku Kushnir od sześciu miesięcy do <6 lat. To zmiana informacji
+medycznej, bez nowego RI, SDS, diagnozy, progu pilności, ankiety lub
+ponownej oceny historii. Dotychczasowe Mayo i Madsen 6–18 nie zmieniają
+norm, liczb lub kwalifikacji. Wcześniejszy wpis `HORMONE-FEMALE-TT-AGE`
+opisuje model Madsen; wymieniony w nim brak mediany dla F3 zastępuje
+wyłącznie poniższe osobne odniesienie grupowe.
+
+**Pełne źródło:** Kushnir MM i wsp., Clinical Chemistry 2010;56:1138–1147,
+DOI [10.1373/clinchem.2010.143222](https://doi.org/10.1373/clinchem.2010.143222),
+końcowy PDF 10 stron; żeńskie wypełnione trójkąty `Te`, rycina **4A**,
+s. **1146** (PDF indeks 8), nie męska 4C. To mediany empirycznych grup
+publikowane graficznie, bez liczbowej tabeli tych rocznych P50.
+Kontrolowany odczyt wektorów i kalibracji osi dał orientacyjnie
+20/20/20/25/30/30 ng/L dla sześciu kolejnych grup. Środek bbox,
+porównanie centroidu, kalibracji wszystkich kresek i zaokrąglenia
+zapisano z SHA-256 w [dowodzie](hormone-lifespan/evidence/female-tt-under6-kushnir2010-audit-2026-10-28.json).
+Oszacowanie wrażliwości odczytu do około ±9 ng/L nie jest CI, CV
+metody, zmiennością biologiczną lub walidacją medyczną.
+
+**Populacja i oznaczenie:** dziewczęta bez znanych chorób i leków na
+receptę; młodsze dzieci pobierane po indukcji znieczulenia przed
+planowym zabiegiem. Surowica, derywatyzacja i dwuwymiarowa LC-MS/MS.
+Źródłowe LOD TT 5 ng/L, LOQ 10 ng/L; mediana 20–30 ng/L leży ponad LOQ,
+ale obsługa wszystkich niskich obserwacji nie jest opisana. Autorzy
+omawiają 24 wysokie wyniki w łącznej młodszej kohorcie; dodatkowy
+centralny 90% RI nie ustanawia poprawionej mediany. Tabela 2 używa
+innych przedziałów i nie dostarcza N każdego rocznego punktu. Brak
+zdefiniowanego Th1 i osobnego profilu GA/wcześniactwa. Metoda źródła
+nie jest potwierdzeniem metody próbki pacjentki.
+
+**Kontrakt:** osobne dane i polityka `female-tt-under6-*.json`, ten sam
+produkcyjny evaluator. Półotwarte grupy `[6 mies.,1 rok)`, `[1,2)`,
+`[2,3)`, `[3,4)`, `[4,5)`, `[5,6)` są jawnym routingiem aplikacji,
+nie odzyskanymi nierównościami autorów. Cały znany przedział wieku
+musi pasować do jednej grupy, z uwzględnieniem końca otwartego lub
+zamkniętego. Sześć miesięcy to wiek kalendarzowy z istniejącego
+kontekstu, bez arbitralnej nowej granicy dni lub wieku skorygowanego.
+Adapter zachowuje kalendarzowy przedział resolvera TT również przy
+wieku podanym tylko w dniach, bez zastępowania go ogólną pozycją na
+wykresie. Przykładowe 183 dni bez dat dają 5–<7 miesięcy i brak mediany.
+Znane wyłączenia, bieżąca tożsamość i brak przenoszenia danych na
+historię zachowują znaczenie. Nie wymaga Th/P, metody lub wyboru źródła.
+
+Sześć odrębnych punktów na osi grup wieku ma stałą skalę 0–0,8 nmol/L.
+Nie łączymy ich linią, schodkami ani mostem do Madsena; różnica źródeł
+nie staje się spadkiem fizjologicznym przy 6 latach. Od dokładnych 6 lat
+pozostaje Madsen z osią 0–1,2; poniżej 6 miesięcy nie dodano mediany.
+Przeliczenie używa istniejącej konwersji TT: 1 ng/L = 1 pg/mL =
+0,003467 nmol/L. Przykładowe 25 ng/L daje 0,086675 wyłącznie jako
+konwersję przybliżonego odczytu, z podpisem **≈0,09 nmol/L**.
+
+Pierwotny czerwony panel i większa strzałka wyeksponują wynik powyżej
+zakresu. Panel korzysta z **istniejącego** bieżącego Mayo `above` i jego
+górnej granicy, nie z odległości od mediany. Dokładny wynik otrzymuje
+przybliżoną krotność górnej granicy; nierówność zachowuje operator,
+bez dokładnej kropki lub dokładnej krotności. Samo przekroczenie skali
+nie oznacza przekroczenia RI. Nie dodano progu „znacznego” odchylenia
+lub pilności. Wynik, zakres i konwersje pokazują 2 miejsca po przecinku,
+ng/mL 3; dodatnie bardzo małe wartości nie stają się dokładnym zerem.
+Pełna precyzja pozostaje podstawą obliczeń, statusu i zmiany jednostki.
+
+| Fikcyjne wejście | Oczekiwany wynik rzeczywistych funkcji/UI |
+| --- | --- |
+| F3 lata 1 mies., TT 0,30 nmol/L | Grupa 3–<4; przybliżona mediana 0,086675 → ≈0,09, punkt 0,30; odrębny Mayo `within` |
+| Ta sama pacjentka, TT 1,50 | Ta sama oś/mediana; Mayo `above`, górna 0,6934; ≈2,16 × górna granica, strzałka ponad osią |
+| F3, TT 0,75 / F12, TT 1,50 | Pierwszy `above` mimo punktu w osi 0–0,8; drugi może być `within` mimo wyjścia ponad oś 1,2 |
+| `[5,6)` / dokładne 6 / `[5,6]` | Kushnir ≈0,10 / istniejący Madsen 0,055406420261450574 / bez grupy Kushnir dla całego przedziału |
+| F5 mies. / wiek 3,9–4,1 / brak wieku | Bez zastępczej mediany, środka przedziału lub nowego DOB |
+| `>1,50` / `<1,50` | Operator zachowany; bez dokładnego punktu/krotności; tylko istniejące pewne `above` dostaje panel |
+
+Holmes 2021 i Kulle 2010 zachowano jako źródła pomocnicze, bez aktywacji,
+uśredniania badań lub uzupełnienia luki przed 6 miesiącami. Pełne powody,
+populacje, hashe, przypadki i wymagane kontrole:
+[FEMALE_TT_UNDER6.md](hormone-lifespan/FEMALE_TT_UNDER6.md).
+Testy wywołują produkcyjny silnik i rzeczywiste UI/adaptery; konkretne
+wyniki desktop/mobile, PWA/offline i wszystkich kontroli GitHub podaje
+PR po ich zakończeniu. Akceptacja zakresu i zielone testy nie nadają
+statusu walidacji klinicznej.
 
 ### HORMONE-MALE-E2-AGE — osobna mediana E2 chłopców 6–18, 2026-10-25
 

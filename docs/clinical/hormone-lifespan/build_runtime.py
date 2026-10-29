@@ -38,6 +38,8 @@ def build():
     insl3_age_source_policy = json.loads((ROOT / 'insl3-age-source-policy.json').read_text(encoding='utf-8'))
     female_tt_age_data = json.loads((ROOT / 'female-tt-age-data.json').read_text(encoding='utf-8'))
     female_tt_age_policy = json.loads((ROOT / 'female-tt-age-policy.json').read_text(encoding='utf-8'))
+    female_tt_under6_data = json.loads((ROOT / 'female-tt-under6-data.json').read_text(encoding='utf-8'))
+    female_tt_under6_policy = json.loads((ROOT / 'female-tt-under6-policy.json').read_text(encoding='utf-8'))
     male_e2_age_data = json.loads((ROOT / 'male-e2-age-data.json').read_text(encoding='utf-8'))
     male_e2_age_policy = json.loads((ROOT / 'male-e2-age-policy.json').read_text(encoding='utf-8'))
     male_e2_adult_age_data = json.loads((ROOT / 'male-e2-adult-age-data.json').read_text(encoding='utf-8'))
@@ -134,6 +136,8 @@ def build():
     insl3_age_source_policy_js = json.dumps(insl3_age_source_policy, ensure_ascii=False, indent=2)
     female_tt_age_data_js = json.dumps(female_tt_age_data, ensure_ascii=False, indent=2)
     female_tt_age_policy_js = json.dumps(female_tt_age_policy, ensure_ascii=False, indent=2)
+    female_tt_under6_data_js = json.dumps(female_tt_under6_data, ensure_ascii=False, indent=2)
+    female_tt_under6_policy_js = json.dumps(female_tt_under6_policy, ensure_ascii=False, indent=2)
     male_e2_age_data_js = json.dumps(male_e2_age_data, ensure_ascii=False, indent=2)
     male_e2_age_policy_js = json.dumps(male_e2_age_policy, ensure_ascii=False, indent=2)
     male_e2_adult_age_data_js = json.dumps(male_e2_adult_age_data, ensure_ascii=False, indent=2)
@@ -186,6 +190,8 @@ def build():
         f'const insl3AgeSourcePolicy = {insl3_age_source_policy_js};\n'
         f'const femaleTtAgeData = {female_tt_age_data_js};\n'
         f'const femaleTtAgePolicy = {female_tt_age_policy_js};\n'
+        f'const femaleTtUnder6Data = {female_tt_under6_data_js};\n'
+        f'const femaleTtUnder6Policy = {female_tt_under6_policy_js};\n'
         f'const maleE2AgeData = {male_e2_age_data_js};\n'
         f'const maleE2AgePolicy = {male_e2_age_policy_js};\n'
         f'const maleE2AdultAgeData = {male_e2_adult_age_data_js};\n'
@@ -227,6 +233,8 @@ def build():
         '  insl3AgeSourcePolicy: insl3AgeSourcePolicy,\n'
         '  femaleTtAgeData: femaleTtAgeData,\n'
         '  femaleTtAgePolicy: femaleTtAgePolicy,\n'
+        '  femaleTtUnder6Data: femaleTtUnder6Data,\n'
+        '  femaleTtUnder6Policy: femaleTtUnder6Policy,\n'
         '  maleE2AgeData: maleE2AgeData,\n'
         '  maleE2AgePolicy: maleE2AgePolicy,\n'
         '  maleE2AdultAgeData: maleE2AdultAgeData,\n'

@@ -45,7 +45,8 @@ async function saveThroughUi(page, owner) {
   else {
     // Drawer kopiuje stan akcji hosta przy otwarciu; odtworzenie właściciela
     // poprzedza osobne odświeżenie tej akcji w powłoce.
-    await expect(sidebar).toBeEnabled();
+    await expect(sidebar).not.toHaveAttribute('disabled');
+    await expect(sidebar).not.toHaveAttribute('aria-disabled', 'true');
     await page.locator('[data-vilda-chrome-menu-btn]').click();
     await page.locator('[data-drawer-btn="saveDataBtnSidebar"]').click();
     await expect(page.locator('[data-vilda-chrome-drawer]')).toBeHidden();

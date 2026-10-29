@@ -206,14 +206,28 @@
     return numeric(factor) && factor > 0 ? factor : null;
   }
   function projectedNumber(value) { return numeric(value) ? number(Number(value.toPrecision(10))) : ''; }
-  function testosteroneRange(range, unit, factor) {
+  // Current female TT display only. Keep source thresholds, coordinates and
+  // recorded evaluations at full precision; no rounded value is assessed.
+  function formatFemaleTestosteroneNumber(value, unit) {
+    if (!numeric(value)) return '—';
+    var digits = unit === 'ng/mL' ? 3 : 2;
+    var scientific = value !== 0 && Math.abs(value) < 0.5 * Math.pow(10, -digits);
+    return new Intl.NumberFormat('pl-PL', { minimumFractionDigits: digits,
+      maximumFractionDigits: digits, useGrouping: false,
+      notation: scientific ? 'scientific' : 'standard' }).format(value);
+  }
+  function testosteroneRange(range, unit, factor, fixedDecimals) {
     var limits = range && range.bounds;
     if (!limits) return '';
+    var display = fixedDecimals ? function (value) { return formatFemaleTestosteroneNumber(value, unit); } : projectedNumber;
     function endpoint(value) {
-      return value && numeric(value.value) ? ({ '>=': '≥', '<=': '≤', '>': '>', '<': '<' })[value.operator] + projectedNumber(value.value / factor) : '';
+      return value && numeric(value.value) ? ({ '>=': '≥', '<=': '≤', '>': '>', '<': '<' })[value.operator] + display(value.value / factor) : '';
+    }
+    if (fixedDecimals && !limits.lower && limits.censoredLower && limits.upper && limits.upper.operator === '<=') {
+      return 'Zakres: ' + endpoint(limits.censoredLower) + '–' + display(limits.upper.value / factor) + ' ' + unit;
     }
     if (limits.lower && limits.upper && limits.lower.operator === '>=' && limits.upper.operator === '<=') {
-      return 'Zakres: ' + projectedNumber(limits.lower.value / factor) + '–' + projectedNumber(limits.upper.value / factor) + ' ' + unit;
+      return 'Zakres: ' + display(limits.lower.value / factor) + '–' + display(limits.upper.value / factor) + ' ' + unit;
     }
     return (limits.censoredLower ? endpoint(limits.censoredLower) + ' (dolny kraniec nieokreślony); ' : '') +
       [endpoint(limits.lower), endpoint(limits.upper)].filter(Boolean).join(' i ') + ' ' + unit;
@@ -477,6 +491,9 @@
     var analyte = ANALYTES[e.analyte], inhibin = e.analyte === 'inhibin_b', testosterone = e.analyte === 'testosterone_total';
     var displayUnit = testosterone && analyte.sourceUnits.includes(options && options.displayUnit) ? options.displayUnit : analyte.unit;
     var displayFactor = testosterone ? testosteroneFactor(displayUnit) : 1;
+    var fixedFemaleTt = testosterone && input.sex === 'F' && input.contextBasis === 'current-patient' && !input.sampleDateISO &&
+      !!(options && options.live === true && options.femaleTtFixedDecimals === true && !options.historical);
+
     if (!displayFactor) return { valid: false };
     if (m.status === 'valid' && (m.unit !== analyte.unit || !analyte.sourceUnits.includes(m.sourceUnit))) return { valid: false };
     var automatic = input.referenceSelection === 'automatic' && e.referenceSelection && e.referenceSelection.mode === 'automatic';
@@ -541,8 +558,8 @@
         shortTitle: item[0] === 'age' ? ageTitle : item[0] === 'stage' ? 'Dla stadium' + (scope ? ' ' + scope : '') : variant ? variantTitle : item[1],
         variantId: variant ? text(variant.id) : '', reproductiveContext: variant ? variant.reproductiveContext : null,
         visualState: state, visualLabel: visualLabel + (conditional && !automatic && item[0] !== 'prepubertal' ? ' · warunkowo' : ''),
-        axis: limits && maximum ? { min: 0, max: displayMaximum, displayPrecision: testosterone ? 10 : null, unknownLower: item[0] === 'prepubertal' || testosterone && !!(range.bounds && range.bounds.censoredLower && !range.bounds.lower), lower: limits.lower === null ? null : limits.lower / displayFactor, upper: limits.upper === null ? null : limits.upper / displayFactor, value: point === null ? null : point / displayFactor, unit: displayUnit } : null,
-        label: item[0] === 'prepubertal' ? visualLabel : upperOnlyLabel ? upperOnlyLabel + (conditional ? automatic ? ' — orientacyjnie' : ' — warunkowo' : '') : upperOnly && status === 'within' ? 'Nie przekracza górnej granicy' + (automatic ? ' — orientacyjnie' : '') : conditional ? ({ above: 'Liczbowo powyżej zakresu', below: 'Liczbowo poniżej zakresu', within: 'Liczbowo w zakresie', indeterminate: 'Porównanie liczbowe niejednoznaczne' })[status] + (automatic ? ' — orientacyjnie' : ' — warunkowo') : STATUS[status], rangeText: testosterone ? testosteroneRange(c.range, displayUnit, displayFactor) : formatRange(c.range),
+        axis: limits && maximum ? { min: 0, max: displayMaximum, displayPrecision: testosterone ? 10 : null, ...(fixedFemaleTt ? { fixedFemaleTt: true } : {}), unknownLower: item[0] === 'prepubertal' || testosterone && !!(range.bounds && range.bounds.censoredLower && !range.bounds.lower), lower: limits.lower === null ? null : limits.lower / displayFactor, upper: limits.upper === null ? null : limits.upper / displayFactor, value: point === null ? null : point / displayFactor, unit: displayUnit } : null,
+        label: item[0] === 'prepubertal' ? visualLabel : upperOnlyLabel ? upperOnlyLabel + (conditional ? automatic ? ' — orientacyjnie' : ' — warunkowo' : '') : upperOnly && status === 'within' ? 'Nie przekracza górnej granicy' + (automatic ? ' — orientacyjnie' : '') : conditional ? ({ above: 'Liczbowo powyżej zakresu', below: 'Liczbowo poniżej zakresu', within: 'Liczbowo w zakresie', indeterminate: 'Porównanie liczbowe niejednoznaczne' })[status] + (automatic ? ' — orientacyjnie' : ' — warunkowo') : STATUS[status], rangeText: testosterone ? testosteroneRange(c.range, displayUnit, displayFactor, fixedFemaleTt) : formatRange(c.range),
         primary: b.primary === item[0], method: range.method ? methodName(range.method.id, range.method.name) : '',
         population: text(range.population && range.population.label), source: c.range ? sourceView(range.source) : null,
         referenceVersion: text(range.profileVersion),
@@ -639,10 +656,10 @@
     var ageVariantConsensus = ageVariantMode ? infantCurveConsensus(comparisons) : null;
     var emphasis = ageVariantConsensus || resultEmphasis(comparisons);
     var resultText = formatResult({ value: m.raw, unit: m.sourceUnit });
-    if (testosterone && m.status === 'valid' && options && options.displayUnit && displayUnit !== m.sourceUnit) {
+    if (testosterone && m.status === 'valid' && (fixedFemaleTt || options && options.displayUnit && displayUnit !== m.sourceUnit)) {
       var operator = ({ '>=': '≥', '<=': '≤', '=': '' })[m.operator];
       if (operator == null) operator = m.operator || '';
-      resultText = (numeric(m.value) ? operator + projectedNumber(m.value / displayFactor) : text(m.raw)) + ' ' + displayUnit;
+      resultText = (numeric(m.value) ? operator + (fixedFemaleTt ? formatFemaleTestosteroneNumber(m.value / displayFactor, displayUnit) : projectedNumber(m.value / displayFactor)) : text(m.raw)) + ' ' + displayUnit;
     }
     var view = { valid: true, analyte: analyte.label, analyteKey: e.analyte, prepubertalLh: prepubertalLh, pretermProfile: pretermProfile, automatic: !!automatic, adultProfile: adultProfile,
       johannsenProfile: johannsenProfile, populationNote: populationNote, referenceFallbackNote: fallbackNote, referenceFallbackCode: fallbackCode || '',
@@ -857,7 +874,7 @@
     var model = comparison.axis;
     if (!model) return;
     var axis = add(parent, 'div', 'vilda-lab-axis');
-    var axisNumber = model.displayPrecision ? projectedNumber : number;
+    var axisNumber = model.fixedFemaleTt ? function (value) { return formatFemaleTestosteroneNumber(value, model.unit); } : model.displayPrecision ? projectedNumber : number;
     var lower = model.lower === null ? 0 : model.lower;
     var upper = model.upper === null ? model.max : model.upper;
     axis.setAttribute('data-axis-max', String(model.max));
@@ -1058,6 +1075,8 @@
     return view;
   }
   function renderAssessment(container, assessment, options) {
+    // A saved record retains its original display even if a live caller reuses options.
+    options = Object.assign({}, options, { femaleTtFixedDecimals: false });
     var helper = commonSnapshot || root && root.VildaLabSnapshot;
     var normalized = helper && typeof helper.normalize === 'function' ? helper.normalize(assessment) : { status: 'unavailable', reasonCodes: ['snapshot_helper_unavailable'], evaluation: null };
     if (normalized.status === 'recorded') return renderEvaluation(container, normalized.evaluation, options);
@@ -1077,5 +1096,5 @@
     }
     return { valid: false, status: normalized.status };
   }
-  return Object.freeze({ version: '1.9.0', formatResult: formatResult, buildView: buildView, renderEvaluation: renderEvaluation, renderAssessment: renderAssessment });
+  return Object.freeze({ version: '1.10.0', formatResult: formatResult, formatFemaleTestosteroneNumber: formatFemaleTestosteroneNumber, buildView: buildView, renderEvaluation: renderEvaluation, renderAssessment: renderAssessment });
 });

@@ -75,6 +75,27 @@ describe('Female TT age — actual converter context adapter and real source rea
     expect(result).toEqual(before);
   });
 
+  it('forwards a detached real Mayo preview without changing canonical bounds or the assessment', () => {
+    const app = adapter(), result = evaluate({ value: '1.50', age: { years: 3, months: 0, precision: 'year' } });
+    const before = structuredClone(result);
+    app.update(result);
+    expect(app.last().context.referencePreview).toEqual(result.referencePreview);
+    expect(app.last().context.referencePreview.byAge.status).toBe('above');
+    expect(app.last().context.referencePreview.byAge.range.bounds.upper.value).toBe(.6934);
+    app.last().context.referencePreview.byAge.range.bounds.upper.value = 999;
+    expect(result).toEqual(before);
+    app.update(result);
+    expect(app.last().context.referencePreview.byAge.range.bounds.upper.value).toBe(.6934);
+  });
+
+  it('withholds a source context that belongs to a different current person', () => {
+    const app = adapter();
+    app.update(evaluate());
+    app.context.sourcePatient.identityKey = 'fictional-abandoned-tt-person';
+    app.update(evaluate());
+    expect(app.last()).toBeNull();
+  });
+
   it('forwards normalized postmenopause even when the unchanged Mayo preview remains within', () => {
     const app = adapter(), baseline = evaluate();
     app.update(baseline);
@@ -143,6 +164,51 @@ describe('Female TT age — actual converter context adapter and real source rea
     app.update(evaluate({ age: { years: 18, months: 0, days: 0, precision: 'day' } }));
     expect(app.last().context).toMatchObject({ ageYears: 18, ageUpperYears: 18, ageUpperInclusive: true });
     expect(app.last().result.median.sourceValue).toBe(.869047786256784);
+  });
+
+  it.each([
+    { days: 183, lower: 5 / 12, upper: 7 / 12, reason: 'unsupported-source-age' },
+    { days: 184, lower: 6 / 12, upper: 7 / 12, groupId: 'female-tt-age-group-1' },
+    { days: 364, lower: 11 / 12, upper: 12 / 12, groupId: 'female-tt-age-group-1' },
+    { days: 365, lower: 11 / 12, upper: 13 / 12, reason: 'ambiguous-age-group' },
+    { days: 366, lower: 12 / 12, upper: 13 / 12, groupId: 'female-tt-age-group-2' },
+  ])('keeps the actual calendar-month envelope for female TT reported as $days days', ({ days, lower, upper, groupId, reason }) => {
+    const app = adapter();
+    const result = testosterone.evaluate({ analyte: substance.id, sex: 'F', value: '.3', unit: 'nmol/L',
+      contextBasis: 'current-patient', neonatalAge: {
+        postnatalDays: { lower: days, upper: days, source: 'reported-days' },
+      } }, testosteroneData);
+    const before = structuredClone(result);
+    expect(result.ageAtSample).toMatchObject({ status: 'known', source: 'neonatal-days',
+      lowerYears: lower, upperYears: upper, upperInclusive: false });
+    app.update(result);
+    expect(app.last().context).toMatchObject({ ageYears: lower, ageUpperYears: upper, ageUpperInclusive: false });
+    // Use the production group reader on the actual adapter context. Neither
+    // the generic day/year plotting coordinate nor an invented DOB may choose
+    // a calendar-age group when this envelope crosses its boundary.
+    const grouped = femaleAge.evaluate(bundle.femaleTtUnder6Data, bundle.femaleTtUnder6Policy, app.last().context);
+    if (groupId) {
+      expect(grouped).toMatchObject({ status: 'ready', renderMode: 'age-groups', median: { groupId } });
+    } else {
+      expect(grouped).toMatchObject({ status: 'unavailable', reason, median: null });
+    }
+    expect(result).toEqual(before);
+  });
+
+  it('keeps the existing male infant plotting coordinate separate from the clinical calendar envelope', () => {
+    const app = adapter();
+    app.context.sourcePatient.sex = 'M';
+    const result = testosterone.evaluate({ analyte: substance.id, sex: 'M', value: '.3', unit: 'nmol/L',
+      contextBasis: 'current-patient', neonatalAge: {
+        postnatalDays: { lower: 183, upper: 183, source: 'reported-days' },
+      } }, testosteroneData);
+    const before = structuredClone(result), chronological = puberty.resolveAge(result.input);
+    expect(result.ageAtSample.lowerYears).not.toBe(chronological.lowerYears);
+    app.update(result);
+    expect(app.last()).toBeNull();
+    expect(app.generic.at(-1)).toMatchObject({ sex: 'male', ageYears: chronological.lowerYears,
+      ageUpperYears: chronological.upperYears, ageUpperInclusive: chronological.upperInclusive });
+    expect(result).toEqual(before);
   });
 
   it('preserves censoring and clearing through the production parser and actual adapter', () => {
