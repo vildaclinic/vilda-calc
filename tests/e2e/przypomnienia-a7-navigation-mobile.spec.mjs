@@ -103,13 +103,17 @@ test('A7 touch navigation preserves filter, search, scroll and selection across 
   for (const viewport of [{ width: 852, height: 393 }, { width: 393, height: 480 }, { width: 393, height: 852 }]) {
     await page.setViewportSize(viewport); await listPage(page); await noPhoneExpander(page);
   }
-  // Saving moves the selected record to History. Returning to the old list
-  // must restore that list's context and select its nearest surviving row.
+  // Saving closes the record while keeping the active view and its details.
+  // Returning restores the list context and selects its nearest surviving row.
   await workspace.locator(`[data-note-id="${selectedId}"]`).tap(); await detailPage(page, selectedId);
   await workspace.getByRole('button', { name: 'Oznacz jako wykonane', exact: true }).tap();
   await page.locator(OUTCOME).getByRole('button', { name: 'Zapisz wykonanie', exact: true }).tap();
   await expect(page.locator(OUTCOME)).toHaveCount(0);
   await expect(workspace.locator('.vb22-detail-title')).toHaveText(title);
+  await expect(workspace.locator('[data-tab=active]')).toHaveAttribute('aria-pressed', 'true');
+  await expect(workspace.locator('[data-tab=history]')).toHaveAttribute('aria-pressed', 'false');
+  await expect(workspace.locator('[data-filter=overdue]')).toHaveAttribute('aria-pressed', 'true');
+  await expect(workspace.locator('.vb22-search')).toHaveValue('nawigacja MR');
   await workspace.locator('.vb22-back').tap(); await listPage(page);
   await expect(workspace.locator('[data-filter=overdue]')).toHaveAttribute('aria-pressed', 'true');
   await expect(search).toHaveValue('nawigacja MR');

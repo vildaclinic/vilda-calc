@@ -29,13 +29,20 @@ test('A7 mobile: completion form remains usable through portrait/landscape and s
   }
   await page.screenshot({ path: test.info().outputPath('b22-phone-completion.png') });
   await page.locator(OUTCOME).getByRole('button', { name: 'Zapisz wykonanie', exact: true }).click(); await expect(page.locator(`${DIALOG} .vb22-notice`)).toContainText('Zapisano');
+  await expect(page.locator(`${DIALOG} [data-tab=active]`)).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.locator(`${DIALOG} [data-tab=history]`)).toHaveAttribute('aria-pressed', 'false');
+  await expect(page.locator(`${DIALOG} .vb22-detail-title`)).toHaveText('Fikcyjne mobilne MR B22');
+  await expect(page.locator(`${DIALOG} .vb22-list-pane`)).toBeHidden();
   const record = await page.evaluate(async ({ id, patientId }) => { const parent = await window.VildaVault.getPatientNote(id); return { parent, all: await window.VildaVault.listPatientNotesForPatient(patientId) }; }, { id: noteId, patientId: ids.a });
   expect(record.parent.completedAtISO).toBeTruthy(); expect(record.parent.body).toContain('02.02.2027'); expect(record.all.find(n => n.id === record.parent.reminderContext.nextId)).toBeTruthy();
 });
 
 test('A7 mobile: generic contact reminder reaches the real patient record', async ({ page }) => {
   const { ids } = await setup(page); await page.locator(DIALOG).getByRole('button', { name: 'Dodaj przypomnienie', exact: true }).click();
-  await page.locator(DIALOG).getByLabel('Pacjent', { exact: true }).selectOption(ids.a); await page.locator(DIALOG).getByLabel('Rodzaj przypomnienia').selectOption('reminder-contact');
+  const picker = page.locator(`${DIALOG} .vb22-patient-picker`);
+  await picker.getByRole('searchbox', { name: 'Szukaj pacjenta', exact: true }).fill('Antoni');
+  await picker.locator(`[data-patient-id="${ids.a}"]`).click();
+  await page.locator(DIALOG).getByLabel('Rodzaj przypomnienia').selectOption('reminder-contact');
   await page.locator(DIALOG).getByLabel('Treść przypomnienia', { exact: true }).fill('Fikcyjny kontakt mobilny B22'); await page.locator(DIALOG).getByLabel('Godzina (opcjonalnie)', { exact: true }).fill('14:30');
   await page.locator(DIALOG).getByRole('button', { name: 'Zapisz przypomnienie', exact: true }).click(); await expect(page.locator(`${DIALOG} .vb22-detail-title`)).toHaveText('Fikcyjny kontakt mobilny B22');
   const notes = await page.evaluate(id => window.VildaVault.listPatientNotesForPatient(id), ids.a); expect(notes.filter(n => n.title === 'Fikcyjny kontakt mobilny B22')).toHaveLength(1); expect(notes.find(n => n.title === 'Fikcyjny kontakt mobilny B22').dueTime).toBe('14:30');
