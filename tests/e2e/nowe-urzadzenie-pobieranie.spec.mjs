@@ -84,7 +84,11 @@ test('Komputer prywatny (powłoka PWA): pobieranie rusza samo, bez pytania; krok
   // embedded z BroadcastChannel nie pobiera sam przy starcie, a przypomnienia otwieramy
   // teraz jawnie. Uruchamiamy zatem rzeczywiste pobranie w gotowym panelu, zamiast
   // uzależniać tę kontrolę od przypadkowego zdarzenia startowego innego modułu.
-  const zwyklePobranie = page.evaluate(() => window.VildaSync.syncPull().then((w) => w.action));
+  let zwyklePobranieZakonczone = false;
+  const zwyklePobranie = page.evaluate(() => window.VildaSync.syncPull().then((w) => w.action)).then((action) => {
+    zwyklePobranieZakonczone = true;
+    return action;
+  });
   await page.waitForFunction(() => {
     const frame = document.querySelector('iframe.app-pane[title="Start"]');
     const win = frame && frame.contentWindow;
@@ -97,6 +101,7 @@ test('Komputer prywatny (powłoka PWA): pobieranie rusza samo, bez pytania; krok
   const panel = await (await page.locator('iframe.app-pane[title="Start"]').elementHandle()).contentFrame();
   const pobranieWPanelu = panel.evaluate(() => window.VildaSync.syncPull().then((w) => w.action));
   await expect.poll(() => czekajaceNaPierwsze(page), { message: 'pobranie w ramce panelu czeka na blokadę', timeout: 15_000 }).toBeGreaterThanOrEqual(1);
+  expect(zwyklePobranieZakonczone, 'pobranie w tym samym dokumencie nadal czeka na pierwszy blob').toBe(false);
   expect(bloby(zadania), 'w trakcie — jedno pobranie bloba').toBe(1);
 
   blob.otworz();
@@ -110,7 +115,7 @@ test('Komputer prywatny (powłoka PWA): pobieranie rusza samo, bez pytania; krok
   await expect(okno(page)).toBeVisible();
   expect(await czyAktywne(page)).toBe(true);
   expect(await zwyklePobranie, 'zwykłe pobranie w tym dokumencie czekało na pierwsze').toBe('up-to-date');
-  expect(await pobranieWPanelu, 'pobranie w ramce panelu czekało na pierwsze').toBe('up-to-date');
+  expect(await pobranieWPanelu, 'pobranie w panelu Start czekało na wspólną blokadę i widzi zapisany ETag').toBe('up-to-date');
   expect(bloby(zadania), 'czekające pobrania widzą zapisany ETag — bez drugiego bloba').toBe(1);
   expect(await czekajaceNaPierwsze(page)).toBe(0);
   await okno(page).getByRole('button', { name: 'Przejdź do aplikacji' }).click();

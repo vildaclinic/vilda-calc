@@ -110,7 +110,7 @@ test('production SW upgrades and supplies female TT after a cold browser restart
     await expect(sources(page)).not.toHaveAttribute('open');
     const original = await geometry(page);
     for (const [age, months, value] of [[12, 6, .4874143269614546], [17, '', .8313584790221047],
-      [18, '', null], [3, '', null], [75, '', null], [12, 0, .42502815745885664]]) {
+      [18, '', null], [0, 5, null], [75, '', null], [12, 0, .42502815745885664]]) {
       await setQuickAge(page, age, months);
       if (value == null) await expectNoMedian(page);
       else {
