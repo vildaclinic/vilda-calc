@@ -25,7 +25,7 @@ const patches = [
     "file": "vilda_data_import_export.js",
     "label": "Scope only main-session apply; normal loads retain immediate presentation",
     "before": "function Ft(e,t){const a=t&&typeof t==\"object\"?t:{},o=r.document||null",
-    "after": "function Ft(e,t){\n  if (e && typeof e === \"object\" && !(t && t.isSessionRestore === true)) cancelPendingMainSessionRestore();\n  const html = r.VildaHtml;\n  return t && t.isSessionRestore === true && html && typeof html.withResultRefreshBatch === \"function\"\n    ? html.withResultRefreshBatch(function () { return applyLoadedDataImmediately(e,t); })\n    : applyLoadedDataImmediately(e,t);\n}\nfunction applyLoadedDataImmediately(e,t){const a=t&&typeof t==\"object\"?t:{},o=r.document||null"
+    "after": "function Ft(e,t){\n  if (e && typeof e === \"object\" && !(t && t.isSessionRestore === true)) cancelPendingMainSessionRestore();\n  e=currentClcrForSessionRestore(e,t);\n  const html = r.VildaHtml;\n  return t && t.isSessionRestore === true && html && typeof html.withResultRefreshBatch === \"function\"\n    ? html.withResultRefreshBatch(function () { return applyLoadedDataImmediately(e,t); })\n    : applyLoadedDataImmediately(e,t);\n}\nfunction applyLoadedDataImmediately(e,t){const a=t&&typeof t==\"object\"?t:{},o=r.document||null"
   },
   {
     "file": "vilda_advanced_growth.js",
@@ -84,8 +84,8 @@ const patches = [
   {
     "file": "vilda_data_import_export.js",
     "label": "Explicit session clear cancels a deferred startup restore",
-    "before": "function re(e){try{$&&",
-    "after": "function re(e){cancelPendingMainSessionRestore();try{$&&"
+    "before": "function re(e){pendingIncomingMainSessionCarry=null;pendingSynthesizedMainPlanPal=null;pendingNewMeasurementBasicArchive=null;try{$&&",
+    "after": "function re(e){pendingIncomingMainSessionCarry=null;pendingSynthesizedMainPlanPal=null;pendingNewMeasurementBasicArchive=null;cancelPendingMainSessionRestore();try{$&&"
   },
   {
     "file": "vilda_auth_ui.js",
