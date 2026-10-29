@@ -19774,7 +19774,7 @@ i „Przywróć” wizyty, która leży na urządzeniu pod inną kartą niż kar
 **Decyzja właściciela.** D7 = a (2026-10-21, decyzje S4: „E3: następny PR po S4, przed etapem 2 synchronizacji”) i Q8
 („wersja zostawiona wyjątkiem ostatniej wersji karty przyjmuje nowszą treść?” — rekomendacja „tak”, przyjęte „tak,
 akceptuję wszystko”). Kolejność PR-S4 → PR-PRZ0 → PR-E4a → PR-E3; start: „A potem ruszaj z PR-E3” (2026-10-28, po
-scaleniu PR-E4a). **Do potwierdzenia przez właściciela** (PR): P1 — stary duplikat karty, któremu inne urządzenie dało
+scaleniu PR-E4a). **Przyjęte przez właściciela** (2026-10-29, „ok, przyjmuję P1-P7”): P1 — stary duplikat karty, któremu inne urządzenie dało
 do kosza ostatnią wizytę, znika z listy pacjentów na wszystkich urządzeniach (wizyta z poprawką jest w koszu, „Przywróć”
 oddaje ją do karty scalonej; inne wizyty, które to urządzenie dało do kosza w starym duplikacie, zostają w koszu
 bez karty i bez „Przywróć” — jak dotąd przy koszu przed scaleniem); P2 — przycięcie (retencja) karty scalonej usuwa te same nieprzypięte wizyty także ze
@@ -19788,10 +19788,10 @@ ograniczeniem; P6 — notatki dopisane do starej karty na urządzeniu, które o 
 równoważności (we wszystkich jego 30 kolejnościach) późniejsza poprawka z innego urządzenia (58 kg) nie jest już
 nadpisywana starszą treścią z kosza (52 kg): zostaje 58 kg z gwiazdką; P7 — wizyta przypięta (albo poprawiona)
 w duplikacie, który wrócił po „Scal pacjentów” i który lekarz potem świadomie usunął („Usuń pacjenta”), wraca do karty
-scalonej, gdy trzecie urządzenie przycięło historię tego duplikatu (niżej, „Ograniczenia”); rekomendacja — przyjąć
-(ten sam pacjent, nic nie ginie, wizytę można znów dać do kosza); bez tej zgody — wycofać regułę „wizyta, która
-przeżywa przycięcie, idzie za scaleniem”, a wtedy przypięta wizyta w przypadku np-ret-A1 ginie na wszystkich
-urządzeniach.
+scalonej, gdy trzecie urządzenie przycięło historię tego duplikatu (niżej, „Ograniczenia”) — przyjęte zgodnie
+z rekomendacją (ten sam pacjent, nic nie ginie, wizytę można znów dać do kosza; alternatywą było wycofanie reguły
+„wizyta, która przeżywa przycięcie, idzie za scaleniem”, a wtedy przypięta wizyta w przypadku np-ret-A1 ginęłaby na
+wszystkich urządzeniach).
 
 **Co było** (`audyt` `8240e0df`, wydanie E4a: `vilda_vault.js` 230; prawdziwy sejf, magazyny w pamięci, sztuczny zegar,
 dane fikcyjne; 8 kolejności pierwszych scaleń × 2 porządki rund, 30 kolejności poza repozytorium). Trzy urządzenia: P, K,
