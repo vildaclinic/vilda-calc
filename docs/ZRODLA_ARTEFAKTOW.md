@@ -1375,3 +1375,39 @@ załączniki właściciela i dane realnego sejfu nie są źródłem fixture.
 Nowe zasoby wymagają jawnych wpisów ładowania/precache; końcowe wersje znanych
 zasobów ustawia `npm run podbij-wersje`, bez przebudowy artefaktów z dawnych
 źródeł.
+
+## Łatka P-CHIP-NAWIGACJA — odcisk wejść po wczytaniu pacjenta (2026-10-28)
+
+Zmiany są czytelnymi blokami w `vilda_save_status_indicator.js` i w obsłudze
+przycisku `#vildaLcmNew` w `custom-fixes.js`; bez ponownej minifikacji artefaktów.
+
+- `normalizeStatusInputs` usuwa z kopii porównawczej wyliczone
+  `intake.estKcalPerDay` oraz zwykłe wiersze `intake.history` powtarzające pełną
+  krotkę wieku w miesiącach, wzrostu i masy z `user`, `advanced` lub `growthBasic`.
+  Niezależne wiersze i dodatkowa treść pozostają porównywane. Rekurencyjna
+  normalizacja `M` sortuje klucze obiektów, zachowując kolejność tablic.
+- `te` stosuje tę projekcję przed usuwaniem pustych wartości, a `k` przepuszcza
+  przez nią również zapisaną referencję starszej wersji. Projekcja nie zapisuje
+  zmienionego payloadu do sesji, eksportu ani sejfu.
+- Obsługa „Nowy pomiar” po archiwizacji poprzedniego pomiaru, odtworzeniu historii
+  i aktualizacji wieku emituje `vilda:load-choice-applied`. Identyfikator pacjenta
+  i sekwencja importu pochodzą z chwili otwarcia okna wyboru, a ich aktualność jest
+  sprawdzana przed zmianą danych. Wskaźnik przyjmuje tylko `choice: 'new'` z
+  bieżącym identyfikatorem i sekwencją, ustanawiając bazę synchronicznie przed
+  pierwszą edycją lekarza i zachowując czas oraz numer zapisu.
+
+Regresje wykonujące kod produkcyjny: `tests/unit/save-status-navigation.test.mjs`
+i `tests/e2e/patient-chip-navigation.spec.mjs`. Scenariusze przeglądarkowe korzystają
+wyłącznie z fikcyjnego sejfu i obejmują oba wybory wczytania, samodzielne strony,
+powłokę, nawigację oraz F5 po rzeczywistej edycji.
+
+Kontekst odtworzonej wizyty zachowuje `vilda_persist_runtime.js`:
+`comparisonRestorePending` chroni istniejące `loadedComparisonData` przed
+usunięciem przy pustym `lastLoadedData` przed pierwszą próbą odtworzenia i podczas
+trwających odtworzeń. `restoreSharedStateImmediately` przyjmuje raz zwalidowaną,
+sklonowaną bazę przed wpisywaniem pól i wywoływaniem obliczeń; istniejący blok
+podsumowania korzysta z tej samej bazy. Dzięki temu wpisanie daty urodzenia przy
+starcie strony nie zastępuje wieku i daty dawnej wizyty bieżącym dniem. Jawne
+czyszczenie i ochrona przed zapisem kolejki innego pacjenta zachowują swoje reguły.
+Test produkcyjnego adaptera, runtime i modułu daty:
+`tests/unit/persist-loaded-comparison-order.test.mjs`.

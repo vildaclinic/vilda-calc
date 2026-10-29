@@ -107,7 +107,7 @@
     'vilda_update_prep.js?v=98',
     'vilda_growth_reference_data.js?v=1',
     'vilda_professional_module.js?v=13',
-    'vilda_persist_runtime.js?v=24',
+    'vilda_persist_runtime.js?v=25',
     'vilda_growth_prediction_lines.js?v=1',
     'vilda_summary_cards.js?v=63',
     'tw2_data.js?v=4',

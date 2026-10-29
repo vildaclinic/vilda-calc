@@ -19,7 +19,7 @@
  *   bo i tak chcemy zwracać HTML z cache natychmiast.
  */
 
-const SW_VERSION = '1.1.403';
+const SW_VERSION = '1.1.404';
 const CACHE_PREFIX = 'pwa-kalorii';
 const SHELL_CACHE = `${CACHE_PREFIX}-shell-v${SW_VERSION}`;
 const RUNTIME_CACHE = `${CACHE_PREFIX}-runtime`;
@@ -1834,6 +1834,7 @@ const CORE_SHELL_URLS = [
   '/vilda_persist_runtime.js?v=22',
   '/vilda_persist_runtime.js?v=23',
   '/vilda_persist_runtime.js?v=24',
+  '/vilda_persist_runtime.js?v=25',
   '/vilda_summary_cards.js',
   '/vilda_summary_cards.js?v=2',
   '/vilda_summary_cards.js?v=3',
@@ -1921,6 +1922,7 @@ const CORE_SHELL_URLS = [
   '/vilda_save_status_indicator.js?v=28',
   '/vilda_save_status_indicator.js?v=29',
   '/vilda_save_status_indicator.js?v=30',
+  '/vilda_save_status_indicator.js?v=31',
   '/vilda_unsaved_guard.js?v=1',
   '/vilda_unsaved_guard.js?v=2',
   '/vilda_unsaved_guard.js?v=3',
@@ -2872,6 +2874,7 @@ const OPTIONAL_ASSETS = [
   '/custom-fixes.js?v=74',
   '/custom-fixes.js?v=75',
   '/custom-fixes.js?v=76',
+  '/custom-fixes.js?v=77',
   '/reposition.js?v=7',
   '/vilda_klawiatura.js?v=1',
   '/vilda_klawiatura.js?v=2',
