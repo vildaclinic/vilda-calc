@@ -1359,6 +1359,7 @@ html[data-clcr-workflow-ui="1"] #U_PCR {
 }
 
 @media (prefers-reduced-motion: reduce) {
+  html[data-clcr-workflow-ui="1"],
   html[data-clcr-workflow-ui="1"] *,
   html[data-clcr-workflow-ui="1"] *::before,
   html[data-clcr-workflow-ui="1"] *::after {

@@ -20,6 +20,10 @@ for (const width of [1440, 390, 320]) {
   test(`Wybór formuły prowadzi do brakujących pól bez kasowania danych ${width}px`, async ({ page }) => {
     await page.emulateMedia({ reducedMotion: 'reduce' });
     await openCalculator(page, width);
+    // Window scrolling follows the root element, not the body's computed style.
+    // Respect reduced motion before measuring/reopening the search popup.
+    await expect(page.locator('html')).toHaveCSS('scroll-behavior', 'auto');
+    await expect(page.locator('body')).toHaveCSS('scroll-behavior', 'auto');
     await restore(page, { CA_concentration: '', CA_volume: '', weight: '' });
     await page.evaluate(() => window.scrollTo(0, 0));
     const initial = await guidance(page);
