@@ -121,7 +121,7 @@ test('production SW update and cold offline restart retain infant TT source-only
     await expectUpper(page, .21, 'source-info');
     await expectNoPatientPoint(page);
     await expect(card(page).locator('input, select, textarea')).toHaveCount(0);
-    for (const resource of ['/vilda_female_tt_infant_upper.js', '/vilda_female_tt_infant_upper_ui.js',
+    for (const resource of ['/vilda_female_tt_infant_context.js', '/vilda_female_tt_infant_upper.js', '/vilda_female_tt_infant_upper_ui.js',
       '/vilda_female_tt_infant_upper_ui.css', '/vilda_hormone_lifespan_data.js']) {
       expect(fromWorker.has(resource), `${resource} delivered by the production SW`).toBe(true);
     }

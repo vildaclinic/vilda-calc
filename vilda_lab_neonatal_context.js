@@ -52,7 +52,9 @@
   function calendarAge(iso, pna) {
     if (typeof iso !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(iso)) return null;
     var parts = iso.split('-').map(Number), birth = Date.UTC(parts[0], parts[1] - 1, parts[2]);
-    if (!Number.isFinite(birth) || new Date(birth).toISOString().slice(0, 10) !== iso) return null;
+    var birthday = new Date(birth);
+    if (!Number.isFinite(birth) || birthday.getUTCFullYear() !== parts[0] ||
+        birthday.getUTCMonth() !== parts[1] - 1 || birthday.getUTCDate() !== parts[2]) return null;
     function anniversary(months) {
       var year = parts[0] + Math.floor((parts[1] - 1 + months) / 12);
       var month = (parts[1] - 1 + months) % 12;
