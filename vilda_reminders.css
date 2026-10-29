@@ -1676,6 +1676,6 @@ html.vilda-phone .vb22 .vb22-outcome-actions .vb22-primary {
 }
 @media (max-width: 700px) {
   .vb22 .vb22-tabs {
-    gap: 18px;
+    gap: var(--space-18px);
   }
 }

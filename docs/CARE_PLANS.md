@@ -25,7 +25,7 @@ Publiczne API sejfu:
 
 Zmiana porównuje rewizję planu i wszystkich zmienianych wpisów w jednej transakcji. Sprawdza aktualne konto i sesję, obecność pacjenta, usunięcia oraz ponowienie operacji. Błąd zapisu nie może zakończyć kroku bez zapisania wyniku lub kolejnego działania. Eksport/import i synchronizacja przenoszą kontekst w istniejących kopertach notatek. Dotychczasowe operacje na powiązanych notatkach aktualizują plan przez ten sam mechanizm.
 
-Równoczesne zmiany tego samego planu na różnych urządzeniach zachowują kroki i przebieg obu gałęzi. Plan oznaczony do przeglądu pokazuje komunikat i wymaga jawnego potwierdzenia przed zamknięciem. Moduł nie rozstrzyga za lekarza sprzecznych ustaleń. Potwierdzenie przeglądu jest osobną operacją z kontrolą rewizji i pozostaje w historii.
+Równoczesne zmiany tego samego planu na różnych urządzeniach zachowują kroki i przebieg obu gałęzi. Plan oznaczony do przeglądu pokazuje komunikat i wymaga jawnego potwierdzenia przed zamknięciem. Moduł nie rozstrzyga za lekarza sprzecznych ustaleń. Potwierdzenie przeglądu jest osobną operacją z kontrolą rewizji i pozostaje w historii. Po poprawieniu ewentualnych rozbieżności lekarz potwierdza widoczny plan; ta sama transakcja uzgadnia daty i stany jego przypomnień oraz powiązanych wydarzeń. Treść dokumentacji pozostaje zachowana, a niewykonany krok nie oznacza automatycznego odwołania wydarzenia w Terminarzu.
 
 `vilda_care_plans.js` odpowiada za interfejs, `vilda_care_plans.css` za jego style. `vilda_auth_ui.js` montuje moduł w karcie i oknie Przypomnień oraz w Karcie pacjenta. Zasoby są ładowane na stronach z interfejsem sejfu, w obu loaderach i przez precache PWA.
 

@@ -572,6 +572,56 @@ describe('Plany opieki — real encrypted vault and shared patient records', () 
     }
   });
 
+  it('converges exact-clock conflicting workflow snapshots and reconciles calendar and helpers after explicit review', async () => {
+    const { a, b, plan } = await fork();
+    const base = (await add(a, plan, { title: 'Fikcyjny wspólny krok z terminem', eventDateISO: '2026-11-03', eventTime: '09:00' })).plan;
+    await b.vault.mergeSyncPayload(await a.vault.exportSyncPayload());
+    const other = await b.vault.getCarePlan(base.id), step = base.steps[base.steps.length - 1];
+    const completeText = 'Fikcyjne potwierdzenie wykonania na urządzeniu A.';
+    const editText = 'Fikcyjna alternatywna zmiana na urządzeniu B.';
+    await mutate(a, base, 'complete', { stepId: step.id, text: completeText, dateISO: DAY,
+      continuation: 'later', decisionDateISO: '2026-11-05' });
+    await mutate(b, other, 'editStep', { stepId: step.id, step: { title: 'Fikcyjny zmieniony krok B',
+      kind: 'Badanie', state: 'pending', reminderDateISO: '2026-11-08', eventDateISO: '2026-11-09',
+      eventTime: '11:15', description: editText } });
+    const instant = '2026-10-29T13:00:00.000Z', RealDate = globalThis.Date;
+    for (const d of [a, b]) {
+      const record = await d.adapter.getPatientNoteForUser(d.userId, base.id);
+      await d.adapter.putPatientNoteForUser(d.userId, { ...record, updatedAtISO: instant });
+    }
+    globalThis.Date = class FixedCareDate extends RealDate {
+      constructor(...args) { super(...(args.length ? args : [instant])); }
+      static now() { return RealDate.parse(instant); }
+    };
+    try {
+      for (let round = 0; round < 3; round += 1) {
+        const payloadA = await a.vault.exportSyncPayload(), payloadB = await b.vault.exportSyncPayload();
+        await a.vault.mergeSyncPayload(payloadB); await b.vault.mergeSyncPayload(payloadA);
+        const currentA = await a.vault.getCarePlan(base.id), currentB = await b.vault.getCarePlan(base.id);
+        expect(currentA.syncNeedsReview).toBe(true); expect(currentB.syncNeedsReview).toBe(true);
+        expect(currentA.steps).toEqual(currentB.steps); expect(currentA.log).toEqual(currentB.log);
+        expect(JSON.stringify(currentA)).toContain(completeText); expect(JSON.stringify(currentA)).toContain(editText);
+        expect(currentA.rev).toBe(currentB.rev); expect(currentA.updatedAtISO).toBe(currentB.updatedAtISO);
+      }
+      const before = await a.vault.getCarePlan(base.id);
+      const reviewed = await mutate(a, before, 'acknowledgeMerge', { text: 'Fikcyjny świadomy przegląd obu wersji.' });
+      expect(reviewed.saved).toBe(true); expect(reviewed.plan.syncNeedsReview).toBe(false);
+      await b.vault.mergeSyncPayload(await a.vault.exportSyncPayload());
+      await a.vault.mergeSyncPayload(await b.vault.exportSyncPayload());
+      const canonical = await a.vault.getCarePlan(base.id), target = canonical.steps.find(item => item.id === step.id);
+      expect((await b.vault.getCarePlan(base.id)).steps).toEqual(canonical.steps);
+      for (const d of [a, b]) {
+        const calendar = await d.vault.getPatientNote(target.calendarNoteId);
+        const reminder = await d.vault.getPatientNote(target.reminderNoteId);
+        expect(calendar.dueDateISO.slice(0, 10)).toBe(target.eventDateISO); expect(calendar.dueTime).toBe(target.eventTime);
+        expect(calendar.completedAtISO ? 'done' : 'pending').toBe(target.state);
+        expect(reminder.title).toBe(target.title); expect(reminder.careContext.state).toBe(target.state);
+        expect(reminder.dueDateISO.slice(0, 10)).toBe(target.reminderDateISO);
+        expect(reminder.completedAtISO ? 'done' : 'pending').toBe(target.state);
+      }
+    } finally { globalThis.Date = RealDate; }
+  });
+
   it('reopens a concurrently closed plan with new offline work and requires acknowledgement before closure', async () => {
     const { a, b, plan, other } = await fork();
     expect((await mutate(a, plan, 'close', { reason: 'Przekazano opiekę', text: 'Fikcyjne zamknięcie offline na A.', cancelOpen: true })).saved).toBe(true);

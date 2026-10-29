@@ -134,19 +134,22 @@
       if (!current() || state.editing || state.busy) return;
       if (!options.full && options.requestExpand) { options.requestExpand(planId, false); return; }
       selectedOrigin = { scrollTop: list.scrollTop, query: state.query, filter: state.filter, id: planId };
-      state.selected = planId; state.detail = true; root.classList.add('vcp-show-detail'); render(); detail.scrollTop = 0;
+      state.selected = planId; if (closed(activePlan())) state.filter = 'closed'; state.detail = true; root.classList.add('vcp-show-detail'); render(); detail.scrollTop = 0;
       var back = detail.querySelector('.vcp-back'); if (back && mobile()) back.focus({ preventScroll: true });
     }
     function mobile() { return win.document.documentElement.classList.contains('vilda-phone') || !!(win.matchMedia && win.matchMedia('(max-width:700px)').matches); }
     function back() {
       if (state.editing || state.busy) return; state.detail = false; root.classList.remove('vcp-show-detail');
+      if (options.onReturnToReminders && options.onReturnToReminders() === true) return;
       if (selectedOrigin) { state.filter = selectedOrigin.filter; state.query = selectedOrigin.query; search.value = state.query; } render();
       if (selectedOrigin) list.scrollTop = selectedOrigin.scrollTop;
       var row = Array.from(list.querySelectorAll('[data-plan-id]')).find(function (item) { return item.dataset.planId === state.selected; }); if (row) row.focus({ preventScroll: true });
     }
     function openPatient(plan, noteId) { if (!state.editing && !state.busy && options.openPatient) options.openPatient(plan.patientId, noteId || null); }
     function renderDetail() {
-      var scroll = detail.scrollTop, menuOpen = !!detail.querySelector('.vcp-menu[open]'); clear(detail); detail.appendChild(button('← Lista planów', 'vcp-back vcp-text', back));
+      var scroll = detail.scrollTop, menuOpen = !!detail.querySelector('.vcp-menu[open]'); clear(detail);
+      var backLabel = typeof options.backLabel === 'function' ? options.backLabel() : options.backLabel;
+      detail.appendChild(button(backLabel || '← Lista planów', 'vcp-back vcp-text', back));
       var plan = activePlan(); if (!plan) { detail.appendChild(node('p', 'vcp-empty', 'Wybierz plan z listy albo dodaj nowy plan opieki.')); return; }
       var top = node('div', 'vcp-detail-top'), patient = node('div', '');
       patient.appendChild(options.openPatient ? button(name(plan) + ' ↗', 'vcp-patient-link', function () { openPatient(plan); }) : node('h3', 'vcp-patient', name(plan)));
@@ -220,6 +223,7 @@
         function snapshot(plans, patients) { return JSON.stringify([plans.slice().sort(function (a, b) { return a.id.localeCompare(b.id); }), patients.map(function (entry) { return [entry.patientId, patientName(entry)]; }).sort()]); }
         var changed = !state.loaded || snapshot(nextPlans, nextPatients) !== snapshot(state.plans, state.patients);
         state.plans = nextPlans; state.patients = nextPatients;
+        if (!state.loaded && options.planId && closed(activePlan())) state.filter = 'closed';
         state.names.clear(); state.patients.forEach(function (patient) { state.names.set(patient.patientId, patientName(patient)); });
         state.loaded = true; state.stale = false;
       } catch (error) {
@@ -393,7 +397,7 @@
     }
     function acknowledgeMerge(plan) {
       showEditor('Przegląd planu po synchronizacji', plan, function (model) {
-        notice(model.body, 'Plan zmieniano równolegle na kilku urządzeniach. Potwierdź po sprawdzeniu kroków i zapisanych ustaleń. Potwierdzenie pozostanie w przebiegu planu.', true);
+        notice(model.body, 'Plan zmieniano równolegle na kilku urządzeniach. Potwierdź po sprawdzeniu kroków i zapisanych ustaleń. Potwierdzenie pozostanie w przebiegu planu. Potwierdzenie ujednolici terminy i stany wpisów w Terminarzu oraz przypomnień zgodnie z wyświetlonym planem. Najpierw popraw ewentualne rozbieżności.', true);
       }, 'Potwierdzam przegląd planu', function () { return { action: 'acknowledgeMerge' }; });
     }
     function reopen(plan) {

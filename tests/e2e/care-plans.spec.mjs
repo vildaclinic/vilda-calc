@@ -204,6 +204,10 @@ test('care plans: native reminder form can add a timed step to the selected pati
   const duplicates = await created.frame.evaluate(async patientId => (await window.VildaVault.listPatientNotesForPatient(patientId)).filter(n => n.title === 'Fikcyjne przypomnienie powiązane z planem').map(n => n.id), created.ids.b);
   expect(duplicates).toEqual([step.reminderNoteId]);
   await workspace.locator('[data-tab=active]').click();
+  await workspace.locator(`[data-note-id="${step.reminderNoteId}"]`).click();
+  await expect(workspace.locator('[data-tab=plans]')).toHaveAttribute('aria-pressed', 'true');
+  await expect(workspace.locator('.vcp-title')).toHaveText(linked.title);
+  await workspace.locator('[data-tab=active]').click();
   await workspace.getByRole('button', { name: 'Dodaj przypomnienie', exact: true }).click();
   await form.getByRole('searchbox', { name: 'Szukaj pacjenta', exact: true }).fill('Beata');
   await form.locator(`[data-patient-id="${created.ids.b}"]`).click();
@@ -288,8 +292,11 @@ test('care plans: direct patient-card navigation scopes records to that patient 
   expect(rowStyle.fontSize, 'patient typography matches actual 16.8px input values').toBeCloseTo(16.8, 1);
   expect(rowStyle.fontWeight).toBe('400'); expect(rowStyle.shadow).toBe('none');
   expect(Math.abs(rowStyle.rowWidth - rowStyle.availableWidth), 'rows fill the list instead of inheriting compact global button dimensions').toBeLessThan(2);
+  // Hover first lets Playwright bring the partly clipped patient-card panel
+  // into view. Measure the wheel action after that browser-managed scroll.
+  await list.hover();
   const before = await search.boundingBox();
-  await list.hover(); await page.mouse.wheel(0, 1500);
+  await page.mouse.wheel(0, 1500);
   await expect.poll(() => list.evaluate(node => node.scrollTop)).toBeGreaterThan(100);
   expect(Math.abs((await search.boundingBox()).y - before.y)).toBeLessThan(1);
   expect(await search.evaluate(node => {

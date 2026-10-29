@@ -52,6 +52,17 @@ async function VildaChangeExistingPatientNote(payload, remove) {
       assertSession();
       return Object.assign(result, { reason: "conflict", conflict: true, rev: revision, current });
     }
+    // Dispatch plan-owned records only after acquiring this note's original
+    // lock and checking its patient, tombstone and exact captured revision.
+    const careNote = await Ft(stored); assertSession();
+    if (careNote.careContext && ['step', 'calendar'].indexOf(careNote.careContext.role) >= 0) {
+      if (remove) {
+        const handled = await CareMvpLegacyDelete(next.id, next.baseRev); assertSession();
+        return handled ? { id: next.id, removed: true } : Object.assign(result, { conflict: true, reason: 'conflict' });
+      }
+      const handled = await CareMvpLegacyWrite(next); assertSession();
+      if (handled) return handled;
+    }
     const guard = { token: VildaExistingNoteUpdateToken, beforeCommit: assertSession, account, adapter };
     if (remove) {
       // Invoke the existing remover directly, retaining its tombstone policy.
@@ -128,6 +139,7 @@ const insertionAnchor = 'async function ie(t,e){';
 // B2.2 follows this block in the current artifact. Reapplying the older
 // conditional-note patch must keep that source order, including its shared token.
 const remindersInsertionAnchor = '/* P-PRZYPOMNIENIA-B22: encrypted note context;';
+const careInsertionAnchor = '/* PLANY-OPIEKI MVP.';
 export const existingNoteExportAnchor = 'savePatientNote:ie,getPatientNote:Fe';
 export const existingNoteExportReplacement = 'savePatientNote:ie,savePatientNoteOnce:VildaSavePatientNoteOnce,updateExistingPatientNote:VildaUpdateExistingPatientNote,getPatientNote:Fe';
 export const existingNoteRemoveExportAnchor = 'removePatientNote:$o,onPatientNoteChanged:ms';
@@ -167,7 +179,7 @@ export function unpatchExistingNoteDeleteWriter(block) {
 }
 
 export function patchVaultExistingNote(source) {
-  const targetAnchor = source.includes(remindersInsertionAnchor) ? remindersInsertionAnchor : insertionAnchor;
+  const targetAnchor = source.includes(careInsertionAnchor) ? careInsertionAnchor : source.includes(remindersInsertionAnchor) ? remindersInsertionAnchor : insertionAnchor;
   const marks = [existingNoteUpdateSource, existingNoteExportReplacement, existingNoteRemoveExportReplacement, existingNoteCommitReplacement, existingNoteDeleteReplacement];
   if (marks.every(mark => source.includes(mark))) return source;
   if (marks.some(mark => source.includes(mark)) || source.includes('function VildaChangeExistingPatientNote(')) {

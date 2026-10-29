@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { CARE_FORM, careFixture, noHorizontalOverflow, openCarePlans, readPlan, selectPlan } from '../support/care-plans-fixture.mjs';
+import { CARE_FORM, CARE_WORKSPACE, careFixture, mutatePlan, noHorizontalOverflow, openCarePlans, readPlan, selectPlan } from '../support/care-plans-fixture.mjs';
 
 test.use({ serviceWorkers: 'block', reducedMotion: 'reduce' });
 test.setTimeout(180000);
@@ -60,5 +60,42 @@ test('care plans mobile: result form remains usable in landscape and an unchecke
   expect(plan.steps.find(step => step.title === 'Fikcyjna kontrola po wyniku mobilnym')).toMatchObject({
     state: 'pending', reminderDateISO: '2027-04-29', calendarNoteId: null,
   });
+  await noHorizontalOverflow(page);
+});
+
+test('care plans mobile: returning from a due care step restores the original reminder filter, search and list position', async ({ page }) => {
+  const created = await careFixture(page);
+  for (let index = 0; index < 12; index += 1) await mutatePlan(created.frame, created.ids.a, created.plans.biopsy, 'addStep', {
+    step: { title: 'Fikcyjne dodatkowe zadanie ' + index, kind: 'Kontakt', state: 'pending', reminderDateISO: '2026-10-26' },
+  });
+  const beforePlan = await readPlan(created.frame, created.plans.biopsy);
+  const step = beforePlan.steps.find(s => s.id === created.steps.awaiting);
+  const beforeNote = await created.frame.evaluate(id => window.VildaVault.getPatientNote(id), step.reminderNoteId);
+  await page.locator('#vildaRemindersBtn').click();
+  const workspace = page.locator(CARE_WORKSPACE);
+  await expect(workspace.locator('[data-tab=active]')).toHaveAttribute('aria-pressed', 'true');
+  await workspace.locator('[data-filter=overdue]').click();
+  const search = workspace.getByRole('searchbox', { name: 'Szukaj pacjenta lub sprawy', exact: true });
+  await search.fill('Antoni');
+  const list = workspace.locator('.vb22-list'), row = list.locator(`[data-note-id="${step.reminderNoteId}"]`);
+  await expect(list.locator('[data-note-id]')).toHaveCount(13);
+  await row.scrollIntoViewIfNeeded();
+  const beforeScroll = await list.evaluate(node => node.scrollTop);
+  expect(beforeScroll, 'the selected reminder is beyond the first visible page').toBeGreaterThan(100);
+  await row.click();
+  await expect(workspace.locator('[data-tab=plans]')).toHaveAttribute('aria-pressed', 'true');
+  const panel = workspace.locator('.vcp');
+  await expect(panel.locator('.vcp-detail')).toBeVisible();
+  await expect(panel.locator('.vcp-title')).toHaveText(beforePlan.title);
+  await panel.locator('.vcp-back').click();
+  await expect(workspace.locator('[data-tab=active]')).toHaveAttribute('aria-pressed', 'true');
+  await expect(workspace.locator('[data-filter=overdue]')).toHaveAttribute('aria-pressed', 'true');
+  await expect(search).toHaveValue('Antoni');
+  await expect(list).toBeVisible();
+  await expect(list.locator('[data-note-id]')).toHaveCount(13);
+  expect(Math.abs(await list.evaluate(node => node.scrollTop) - beforeScroll)).toBeLessThan(1);
+  await expect(row).toBeVisible();
+  expect(await readPlan(created.frame, beforePlan.id)).toEqual(beforePlan);
+  expect(await created.frame.evaluate(id => window.VildaVault.getPatientNote(id), step.reminderNoteId)).toEqual(beforeNote);
   await noHorizontalOverflow(page);
 });

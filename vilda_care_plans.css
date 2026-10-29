@@ -17,144 +17,143 @@
 .vcp [hidden] { display: none!important; }
 .vcp h2, .vcp h3, .vcp h4, .vcp p { margin: 0; }
 .vcp button, .vcp input, .vcp textarea, .vcp select { font: inherit; color: inherit; letter-spacing: normal; }
-.vcp button { cursor: pointer; width: auto; min-height: 36px; padding: 8px 12px; border: 1px solid var(--vcp-line); border-radius: 9px; background: #fff; box-shadow: none; line-height: 1.4; }
-.vcp button:hover { border-color: #9abfc2; }
-.vcp button:disabled { cursor: default; opacity: .6; }
-.vcp button:focus-visible, .vcp input:focus-visible, .vcp textarea:focus-visible, .vcp select:focus-visible, .vcp summary:focus-visible { outline: 2px solid #4c9ea5; outline-offset: 2px; }
+.vcp button { cursor: pointer; width: auto; min-height: 36px; padding: var(--space-8px) var(--space-12px);     line-height: 1.4; }
+.vcp button:disabled { cursor: default; opacity: var(--opacity-slider-tick); }
+.vcp button:focus-visible, .vcp input:focus-visible, .vcp textarea:focus-visible, .vcp select:focus-visible, .vcp summary:focus-visible { outline: var(--border-emphasis) solid #4c9ea5; outline-offset: 2px; }
 .vcp.vcp-inline, .vcp.vcp-full { display: flex; flex-direction: column; flex: 1 1 auto; height: 100%; overflow: hidden; }
-.vcp .vcp-tools { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 22px 8px; flex-shrink: 0; }
+.vcp .vcp-tools { display: flex; align-items: center; justify-content: space-between; gap: var(--space-12px); padding: var(--space-12px) 22px var(--space-8px); flex-shrink: 0; }
 .vcp .vcp-scope { color: var(--vcp-muted); font-size: 11.5px; }
-.vcp .vcp-text { border: 0; padding: 4px 0; min-height: 28px; background: transparent; color: var(--vcp-teal); font-size: 13px; font-weight: 400; text-align: left; }
+.vcp .vcp-text { border: 0; padding: var(--space-4px) 0; min-height: 28px; background: transparent; color: var(--vcp-teal); font-size: 13px; font-weight: 400; text-align: left; }
 .vcp .vcp-create { white-space: nowrap; font-weight: 500; }
 .vcp .vcp-layout { display: grid; grid-template-columns: minmax(285px, 35%) minmax(0, 1fr); flex: 1 1 auto; min-height: 0; overflow: hidden; }
-.vcp .vcp-list-pane { display: flex; flex-direction: column; min-height: 0; min-width: 0; background: #fff; border-right: 1px solid var(--vcp-line); }
-.vcp .vcp-list-fixed { flex-shrink: 0; min-width: 0; padding: 10px 16px 7px; }
-.vcp .vcp-search { display: block; width: 100%; min-width: 0; min-height: 43px; border: 1px solid var(--vcp-line); border-radius: 9px; padding: 10px 12px; box-shadow: none; color: var(--vcp-ink); background: #fff; font-size: 16.8px; font-weight: 400; margin: 0; }
-.vcp .vcp-filters { display: flex; flex-wrap: wrap; gap: 3px; padding: 10px 0 3px; }
-.vcp .vcp-filters button { display: flex; gap: 8px; align-items: center; min-height: 29px; padding: 4px 7px; border: 0; background: transparent; font-size: 11.5px; color: var(--vcp-muted); font-weight: 400; }
+.vcp .vcp-list-pane { display: flex; flex-direction: column; min-height: 0; min-width: 0; background: #fff; border-right: var(--border-hairline) solid var(--vcp-line); }
+.vcp .vcp-list-fixed { flex-shrink: 0; min-width: 0; padding: var(--space-10px) var(--space-16px) 7px; }
+.vcp .vcp-search { display: block; width: 100%; min-width: 0; min-height: 43px; border: var(--border-hairline) solid var(--vcp-line); border-radius: var(--radius-9); padding: var(--space-10px) var(--space-12px); box-shadow: none; color: var(--vcp-ink); background: #fff; font-size: 16.8px; font-weight: 400; margin: 0; }
+.vcp .vcp-filters { display: flex; flex-wrap: wrap; gap: 3px; padding: var(--space-10px) 0 3px; }
+.vcp .vcp-filters button { display: flex; gap: var(--space-8px); align-items: center; min-height: 29px; padding: var(--space-4px) 7px;   font-size: 11.5px;  font-weight: 400; }
 .vcp .vcp-filters .is-active { color: var(--vcp-teal); background: var(--vcp-soft); }
 .vcp .vcp-count { color: #985c65; font-size: 11px; }
-.vcp .vcp-list { flex: 1 1 auto; min-height: 0; min-width: 0; overflow: auto; padding: 3px 10px 12px; overscroll-behavior: contain; scrollbar-width: thin; scrollbar-color: #bed1d1 transparent; }
-.vcp .vcp-row { display: block; width: 100%; flex-shrink: 0; padding: 14px; border: 0; border-radius: 9px; background: #fff; text-align: left; position: relative; margin: 0 0 4px; }
+.vcp .vcp-list { flex: 1 1 auto; min-height: 0; min-width: 0; overflow: auto; padding: 3px var(--space-10px) var(--space-12px); overscroll-behavior: contain; scrollbar-width: thin; scrollbar-color: #bed1d1 transparent; }
+.vcp .vcp-row { display: block; width: 100%; flex-shrink: 0; padding: var(--space-14px); border: 0; border-radius: var(--radius-9); background: #fff; text-align: left; position: relative; margin: 0 0 var(--space-4px); }
 .vcp .vcp-row:not(.is-selected)::after { content: ''; position: absolute; left: 14px; right: 14px; bottom: -2px; height: 1px; background: #e7eeee; }
 .vcp .vcp-row:hover { background: #f6faf9; }
 .vcp .vcp-row.is-selected { background: var(--vcp-soft); }
 .vcp .vcp-patient { display: block; font: 400 16.8px/1.45 Inter, sans-serif; color: #142a31; overflow-wrap: anywhere; }
-.vcp .vcp-row-title { display: block; font-size: 14.4px; font-weight: 500; line-height: 1.5; color: #3f5b63; margin-top: 6px; overflow-wrap: anywhere; }
+.vcp .vcp-row-title { display: block; font-size: 14.4px; font-weight: 500; line-height: 1.5; color: #3f5b63; margin-top: var(--space-6px); overflow-wrap: anywhere; }
 .vcp .vcp-row-meta { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 7px; color: var(--vcp-muted); font-size: 12px; margin-top: 9px; }
 .vcp .vcp-row-next { display: block; font-size: 12.5px; line-height: 1.5; color: var(--vcp-muted); margin-top: 7px; overflow-wrap: anywhere; }
-.vcp .vcp-row-progress { display: block; font-size: 11px; color: #70898e; margin-top: 8px; }
+.vcp .vcp-row-progress { display: block; font-size: 11px; color: #70898e; margin-top: var(--space-8px); }
 .vcp .vcp-status { display: inline-flex; align-items: center; font-size: 11px; line-height: 1.4; border-radius: 5px; background: #f1f4f5; color: var(--vcp-muted); padding: 3px 7px; font-weight: 400; white-space: nowrap; }
 .vcp .vcp-status-near, .vcp .vcp-status-current, .vcp .vcp-status-done { background: #edf6f3; color: #087e83; }
 .vcp .vcp-status-medium, .vcp .vcp-status-decision { background: #fff5e5; color: #8d5817; }
 .vcp .vcp-status-late { background: #fceff1; color: #a73c4d; }
 .vcp .vcp-status-waiting { background: #eff5fa; color: #3b6388; }
 .vcp .vcp-detail { min-width: 0; min-height: 0; overflow: auto; padding: 22px 27px 30px; overscroll-behavior: contain; background: #fff; scrollbar-width: thin; }
-.vcp .vcp-detail-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 14px; }
+.vcp .vcp-detail-top { display: flex; justify-content: space-between; align-items: flex-start; gap: var(--space-14px); }
 .vcp .vcp-patient-link { font-size: 16.8px; font-weight: 400; border: 0; background: transparent; padding: 0; min-height: 27px; border-radius: 0; color: var(--vcp-teal); text-align: left; overflow-wrap: anywhere; }
-.vcp .vcp-detail-date { font-size: 12px; color: var(--vcp-muted); margin-top: 4px; }
-.vcp .vcp-title { font-size: 23px; font-weight: 500; line-height: 1.35; letter-spacing: -.35px; margin-top: 18px; overflow-wrap: anywhere; }
-.vcp .vcp-goal { color: var(--vcp-muted); font-size: 13px; line-height: 1.6; margin-top: 8px; white-space: pre-line; overflow-wrap: anywhere; }
+.vcp .vcp-detail-date { font-size: 12px; color: var(--vcp-muted); margin-top: var(--space-4px); }
+.vcp .vcp-title { font-size: 23px; font-weight: 500; line-height: 1.35; letter-spacing: -.35px; margin-top: var(--space-18px); overflow-wrap: anywhere; }
+.vcp .vcp-goal { color: var(--vcp-muted); font-size: 13px; line-height: 1.6; margin-top: var(--space-8px); white-space: pre-line; overflow-wrap: anywhere; }
 .vcp .vcp-menu { position: relative; }
-.vcp .vcp-menu summary { cursor: pointer; list-style: none; font-size: 25px; padding: 3px 10px; min-height: 36px; }
+.vcp .vcp-menu summary { cursor: pointer; list-style: none; font-size: 25px; padding: 3px var(--space-10px); min-height: 36px; }
 .vcp .vcp-menu summary::-webkit-details-marker { display: none; }
-.vcp .vcp-menu-items { position: absolute; top: 39px; right: 0; z-index: 5; min-width: 195px; padding: 6px; background: #fff; border: 1px solid var(--vcp-line); border-radius: 10px; box-shadow: 0 8px 25px #29464d1a; }
-.vcp .vcp-menu-items button { display: block; width: 100%; border: 0; font-size: 13px; text-align: left; }
-.vcp .vcp-plan-strip { display: flex; gap: 13px; align-items: center; flex-wrap: wrap; border-top: 1px solid var(--vcp-line); border-bottom: 1px solid var(--vcp-line); padding: 13px 0; margin-top: 17px; color: var(--vcp-muted); font-size: 12px; }
-.vcp .vcp-section-heading { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin: 22px 0 8px; }
+.vcp .vcp-menu-items { position: absolute; top: 39px; right: 0; z-index: var(--z-mini-summary); min-width: 195px; padding: var(--space-6px); background: #fff; border: var(--border-hairline) solid var(--vcp-line); border-radius: var(--radius-10); box-shadow: 0 8px 25px #29464d1a; }
+.vcp .vcp-menu-items button { display: block; width: 100%;  font-size: 13px; text-align: left; }
+.vcp .vcp-plan-strip { display: flex; gap: 13px; align-items: center; flex-wrap: wrap; border-top: var(--border-hairline) solid var(--vcp-line); border-bottom: var(--border-hairline) solid var(--vcp-line); padding: 13px 0; margin-top: 17px; color: var(--vcp-muted); font-size: 12px; }
+.vcp .vcp-section-heading { display: flex; justify-content: space-between; align-items: center; gap: var(--space-12px); margin: 22px 0 var(--space-8px); }
 .vcp .vcp-section-heading h3 { font-size: 17px; font-weight: 600; }
-.vcp .vcp-step { display: grid; grid-template-columns: 24px minmax(0, 1fr); gap: 11px; padding: 15px 0; border-bottom: 1px solid #e7eeee; }
-.vcp .vcp-step-marker { display: grid; place-items: center; width: 22px; height: 22px; border: 1.5px solid #c7d7d9; border-radius: 50%; font-size: 11px; color: #6f8b90; margin-top: 1px; }
+.vcp .vcp-step { display: grid; grid-template-columns: 24px minmax(0, 1fr); gap: 11px; padding: 15px 0; border-bottom: var(--border-hairline) solid #e7eeee; }
+.vcp .vcp-step-marker { display: grid; place-items: center; width: 22px; height: 22px; border: 1.5px solid #c7d7d9; border-radius: var(--radius-circle); font-size: 11px; color: #6f8b90; margin-top: 1px; }
 .vcp .vcp-step-done { border-color: #087e83; background: #087e83; color: #fff; }
 .vcp .vcp-step-waiting { border-color: #99b6d0; background: #f5f9fc; color: #3b6388; }
-.vcp .vcp-step-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; }
+.vcp .vcp-step-top { display: flex; justify-content: space-between; align-items: flex-start; gap: var(--space-10px); }
 .vcp .vcp-step-title { font-size: 15px; font-weight: 500; line-height: 1.45; overflow-wrap: anywhere; }
-.vcp .vcp-step-meta { font-size: 12px; color: var(--vcp-muted); line-height: 1.6; margin-top: 6px; }
-.vcp .vcp-description { font-size: 13px; line-height: 1.6; color: #587278; margin-top: 8px; white-space: pre-line; overflow-wrap: anywhere; }
-.vcp .vcp-step-actions { display: flex; flex-wrap: wrap; gap: 6px 16px; margin-top: 9px; align-items: center; }
-.vcp .vcp-step-actions button { min-height: 29px; font-size: 12px; padding: 4px 0; border: 0; background: transparent; color: var(--vcp-teal); border-radius: 4px; text-align: left; }
-.vcp .vcp-step-actions .vcp-action { padding: 6px 10px; border: 1px solid #d4e7e1; background: #eef7f4; }
+.vcp .vcp-step-meta { font-size: 12px; color: var(--vcp-muted); line-height: 1.6; margin-top: var(--space-6px); }
+.vcp .vcp-description { font-size: 13px; line-height: 1.6; color: #587278; margin-top: var(--space-8px); white-space: pre-line; overflow-wrap: anywhere; }
+.vcp .vcp-step-actions { display: flex; flex-wrap: wrap; gap: var(--space-6px) var(--space-16px); margin-top: 9px; align-items: center; }
+.vcp .vcp-step-actions button { min-height: 29px; font-size: 12px; padding: var(--space-4px) 0;     text-align: left; }
+.vcp .vcp-step-actions .vcp-action { padding: var(--space-6px) var(--space-10px); border: var(--border-hairline) solid #d4e7e1; background: #eef7f4; }
 .vcp .vcp-step-actions .vcp-subtle { font-size: 11px; color: #788c90; }
-.vcp .vcp-button-row, .vcp .vcp-detail-bottom { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; margin-top: 14px; }
-.vcp .vcp-detail-bottom { justify-content: space-between; margin-top: 20px; }
+.vcp .vcp-button-row, .vcp .vcp-detail-bottom { display: flex; align-items: center; flex-wrap: wrap; gap: var(--space-10px); margin-top: var(--space-14px); }
+.vcp .vcp-detail-bottom { justify-content: space-between; margin-top: var(--space-20px); }
 .vcp .vcp-outline { border-color: #bcd2d5; color: var(--vcp-teal); background: #fff; font-size: 13px; }
 .vcp .vcp-primary { border-color: var(--vcp-teal); background: var(--vcp-teal); color: #fff; font-size: 13px; font-weight: 500; }
 .vcp .vcp-primary:hover { background: #066f74; border-color: #066f74; }
-.vcp .vcp-decision, .vcp .vcp-closed { padding: 15px; border: 1px solid #edddbd; background: #fff8ed; border-radius: 10px; margin-top: 20px; font-size: 13px; line-height: 1.6; }
+.vcp .vcp-decision, .vcp .vcp-closed { padding: 15px; border: var(--border-hairline) solid #edddbd; background: #fff8ed; border-radius: var(--radius-10); margin-top: var(--space-20px); font-size: 13px; line-height: 1.6; }
 .vcp .vcp-decision strong { color: #8d5817; display: block; margin-bottom: 5px; }
 .vcp .vcp-closed { border-color: #cfe4d9; background: #eef7f3; }
 .vcp .vcp-closed p { margin-top: 5px; white-space: pre-line; }
-.vcp .vcp-history { border-top: 1px solid var(--vcp-line); margin-top: 25px; padding-top: 18px; }
+.vcp .vcp-history { border-top: var(--border-hairline) solid var(--vcp-line); margin-top: 25px; padding-top: var(--space-18px); }
 .vcp .vcp-history summary { cursor: pointer; font-size: 13px; font-weight: 500; color: #486a72; }
-.vcp .vcp-timeline { padding: 0 0 0 10px; margin-top: 16px; }
-.vcp .vcp-timeline-entry { position: relative; border-left: 1px solid #c8dddd; padding: 0 0 18px 18px; font-size: 12px; line-height: 1.6; }
-.vcp .vcp-timeline-entry::before { content: ''; position: absolute; left: -4px; top: 6px; width: 7px; height: 7px; border-radius: 50%; background: #7fa9a7; }
+.vcp .vcp-timeline { padding: 0 0 0 var(--space-10px); margin-top: var(--space-16px); }
+.vcp .vcp-timeline-entry { position: relative; border-left: var(--border-hairline) solid #c8dddd; padding: 0 0 var(--space-18px) var(--space-18px); font-size: 12px; line-height: 1.6; }
+.vcp .vcp-timeline-entry::before { content: ''; position: absolute; left: -4px; top: 6px; width: 7px; height: 7px; border-radius: var(--radius-circle); background: #7fa9a7; }
 .vcp .vcp-timeline-entry time { display: block; color: #7a9297; font-size: 10px; margin-bottom: 3px; }
 .vcp .vcp-timeline-entry p { white-space: pre-line; overflow-wrap: anywhere; }
 .vcp .vcp-timeline-entry .vcp-text { font-size: 11px; }
 .vcp .vcp-empty { padding: 30px 15px; color: var(--vcp-muted); font-size: 13px; text-align: center; line-height: 1.7; }
-.vcp .vcp-back { display: none; margin-bottom: 16px; }
-.vcp .vcp-feedback { margin: 0 20px 8px; padding: 9px 12px; border: 1px solid #d4e7e1; border-radius: 8px; background: #f3f9f6; color: var(--vcp-teal); font-size: 12px; line-height: 1.6; flex-shrink: 0; }
-.vcp .vcp-error { padding: 12px; border: 1px solid #e9bdc4; border-radius: 8px; background: #fff4f5; color: #a03647; font-size: 13px; line-height: 1.6; margin-bottom: 12px; }
+.vcp .vcp-back { display: none; margin-bottom: var(--space-16px); }
+.vcp .vcp-feedback { margin: 0 var(--space-20px) var(--space-8px); padding: 9px var(--space-12px); border: var(--border-hairline) solid #d4e7e1; border-radius: var(--radius-8); background: #f3f9f6; color: var(--vcp-teal); font-size: 12px; line-height: 1.6; flex-shrink: 0; }
+.vcp .vcp-error { padding: var(--space-12px); border: var(--border-hairline) solid #e9bdc4; border-radius: var(--radius-8); background: #fff4f5; color: #a03647; font-size: 13px; line-height: 1.6; margin-bottom: var(--space-12px); }
 .vcp.vcp-inline .vcp-layout { display: flex; }
 .vcp.vcp-inline .vcp-list-pane { width: 100%; border-right: 0; }
-.vcp.vcp-inline .vcp-tools { padding: 9px 20px 2px; }
-.vcp.vcp-inline .vcp-list-fixed { padding-top: 8px; }
-dialog.vcp.vcp-dialog { width: 560px; max-width: calc(100vw - 30px); max-height: calc(100dvh - 40px); padding: 0; border: 1px solid #cddedf; border-radius: 17px; box-shadow: 0 22px 80px #183c4433; overflow: hidden; background: #fff; color: var(--vcp-ink); margin: auto; }
+.vcp.vcp-inline .vcp-tools { padding: 9px var(--space-20px) 2px; }
+.vcp.vcp-inline .vcp-list-fixed { padding-top: var(--space-8px); }
+dialog.vcp.vcp-dialog { width: 560px; max-width: calc(100vw - 30px); max-height: calc(100dvh - 40px); padding: 0; border: var(--border-hairline) solid #cddedf; border-radius: 17px; box-shadow: 0 22px 80px #183c4433; overflow: hidden; background: #fff; color: var(--vcp-ink); margin: auto; }
 dialog.vcp.vcp-dialog::backdrop { background: #1a3b4445; backdrop-filter: blur(3px); }
 .vcp .vcp-form { display: flex; flex-direction: column; max-height: calc(100dvh - 42px); min-height: 0; margin: 0; padding: 0; }
-.vcp .vcp-form-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 15px; padding: 23px 25px 19px; background: #fff; border-bottom: 1px solid var(--vcp-line); flex-shrink: 0; min-height: 0!important; height: auto!important; position: relative; box-shadow: none; width: auto; border-radius: 0; }
+.vcp .vcp-form-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 15px; padding: 23px 25px 19px; background: #fff; border-bottom: var(--border-hairline) solid var(--vcp-line); flex-shrink: 0; min-height: 0!important; height: auto!important; position: relative; box-shadow: none; width: auto; border-radius: 0; }
 .vcp .vcp-form-head h2 { font-size: 21px; font-weight: 600; line-height: 1.4; color: var(--vcp-ink); }
-.vcp .vcp-form-patient { font-size: 11px; color: #738f94; margin-bottom: 6px; line-height: 1.5; }
+.vcp .vcp-form-patient { font-size: 11px; color: #738f94; margin-bottom: var(--space-6px); line-height: 1.5; }
 .vcp .vcp-icon { display: grid; place-items: center; min-height: 44px; width: 44px; height: 44px; padding: 0; border: 0; background: transparent; font-size: 26px; line-height: 1; flex-shrink: 0; margin: -6px -9px 0 0; }
 .vcp .vcp-form-body { overflow: auto; min-height: 0; padding: 21px 25px; overscroll-behavior: contain; }
-.vcp .vcp-field { display: block; margin: 16px 0 0; font-size: 13px; font-weight: 500; color: var(--vcp-ink); text-align: left; }
+.vcp .vcp-field { display: block; margin: var(--space-16px) 0 0; font-size: 13px; font-weight: 500; color: var(--vcp-ink); text-align: left; }
 .vcp .vcp-field:first-child { margin-top: 0; }
-.vcp .vcp-field input, .vcp .vcp-field textarea, .vcp .vcp-field select { display: block; width: 100%; min-width: 0; min-height: 43px; border: 1px solid #cbdcdf; border-radius: 8px; padding: 11px 12px; background: #fff; color: var(--vcp-ink); font-size: 15px; font-weight: 400; margin: 7px 0 0; box-shadow: none; }
+.vcp .vcp-field input, .vcp .vcp-field textarea, .vcp .vcp-field select { display: block; width: 100%; min-width: 0; min-height: 43px; border: var(--border-hairline) solid #cbdcdf; border-radius: var(--radius-8); padding: 11px var(--space-12px); background: #fff; color: var(--vcp-ink); font-size: 15px; font-weight: 400; margin: 7px 0 0; box-shadow: none; }
 .vcp .vcp-field textarea { resize: vertical; min-height: 100px; line-height: 1.6; }
 .vcp .vcp-help { font-size: 11.5px; line-height: 1.6; color: var(--vcp-muted); font-weight: 400; margin: 7px 0 0; }
-.vcp .vcp-notice { background: #f3f9f6; border: 1px solid #d8e8e3; border-radius: 9px; padding: 12px 14px; font-size: 12px; line-height: 1.7; color: #4a7372; white-space: pre-line; margin-bottom: 18px; overflow-wrap: anywhere; }
+.vcp .vcp-notice { background: #f3f9f6; border: var(--border-hairline) solid #d8e8e3; border-radius: var(--radius-9); padding: var(--space-12px) var(--space-14px); font-size: 12px; line-height: 1.7; color: #4a7372; white-space: pre-line; margin-bottom: var(--space-18px); overflow-wrap: anywhere; }
 .vcp .vcp-warning { background: #fff8eb; border-color: #ebdbb8; color: #825d2d; }
-.vcp .vcp-check { display: flex; align-items: flex-start; gap: 10px; margin: 17px 0 0; font-size: 13px; font-weight: 400; line-height: 1.6; color: var(--vcp-ink); text-align: left; }
+.vcp .vcp-check { display: flex; align-items: flex-start; gap: var(--space-10px); margin: 17px 0 0; font-size: 13px; font-weight: 400; line-height: 1.6; color: var(--vcp-ink); text-align: left; }
 .vcp .vcp-check input { accent-color: var(--vcp-teal); width: 17px; height: 17px; min-width: 17px; margin: 2px 0 0; padding: 0; }
-.vcp .vcp-field-pair { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-top: 16px; }
+.vcp .vcp-field-pair { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-14px); margin-top: var(--space-16px); }
 .vcp .vcp-field-pair .vcp-field { margin-top: 0; }
-.vcp .vcp-continuation { border: 0; padding: 0; margin: 20px 0 0; min-width: 0; }
+.vcp .vcp-continuation { border: 0; padding: 0; margin: var(--space-20px) 0 0; min-width: 0; }
 .vcp .vcp-continuation legend { font-size: 13px; font-weight: 500; padding: 0; }
 .vcp .vcp-radio-options { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 9px; }
-.vcp .vcp-radio-options label { display: flex; align-items: center; gap: 7px; border: 1px solid var(--vcp-line); border-radius: 8px; padding: 9px 10px; margin: 0; font-size: 12px; font-weight: 400; }
+.vcp .vcp-radio-options label { display: flex; align-items: center; gap: 7px; border: var(--border-hairline) solid var(--vcp-line); border-radius: var(--radius-8); padding: 9px var(--space-10px); margin: 0; font-size: 12px; font-weight: 400; }
 .vcp .vcp-radio-options input { accent-color: var(--vcp-teal); margin: 0; width: 15px; height: 15px; }
-.vcp .vcp-later, .vcp .vcp-next-fields { padding-top: 16px; }
-.vcp .vcp-date-shortcut { border: 0; background: transparent; color: var(--vcp-teal); font-size: 11px; padding: 4px 0; min-height: 27px; }
-.vcp .vcp-form-actions { display: flex; justify-content: flex-end; gap: 10px; padding: 15px 25px; border-top: 1px solid var(--vcp-line); flex-shrink: 0; background: #fff; border-radius: 0; margin: 0; min-height: 0; }
+.vcp .vcp-later, .vcp .vcp-next-fields { padding-top: var(--space-16px); }
+.vcp .vcp-date-shortcut { border: 0; background: transparent; color: var(--vcp-teal); font-size: 11px; padding: var(--space-4px) 0; min-height: 27px; }
+.vcp .vcp-form-actions { display: flex; justify-content: flex-end; gap: var(--space-10px); padding: 15px 25px; border-top: var(--border-hairline) solid var(--vcp-line); flex-shrink: 0; background: #fff; border-radius: 0; margin: 0; min-height: 0; }
 .vcp .vcp-form-actions button { min-height: 43px; }
-.vcp .vcp-patient-results { max-height: 200px; overflow: auto; margin-top: 8px; border-bottom: 1px solid var(--vcp-line); }
-.vcp .vcp-patient-option { display: block; border: 0; width: 100%; text-align: left; padding: 10px 8px; font-size: 16.8px; font-weight: 400; }
-.vcp .vcp-selected-patient { display: flex; align-items: center; justify-content: space-between; gap: 12px; background: #edf6f3; border-radius: 9px; padding: 12px; }
+.vcp .vcp-patient-results { max-height: 200px; overflow: auto; margin-top: var(--space-8px); border-bottom: var(--border-hairline) solid var(--vcp-line); }
+.vcp .vcp-patient-option { display: block; border: 0; width: 100%; text-align: left; padding: var(--space-10px) var(--space-8px); font-size: 16.8px; font-weight: 400; }
+.vcp .vcp-selected-patient { display: flex; align-items: center; justify-content: space-between; gap: var(--space-12px); background: #edf6f3; border-radius: var(--radius-9); padding: var(--space-12px); }
 @media (max-width: 700px) {
   .vcp .vcp-layout { display: block; }
   .vcp .vcp-list-pane { height: 100%; width: 100%; border-right: 0; }
-  .vcp .vcp-detail { display: none; height: 100%; padding: 19px 20px 28px; }
+  .vcp .vcp-detail { display: none; height: 100%; padding: 19px var(--space-20px) 28px; }
   .vcp.vcp-show-detail .vcp-list-pane { display: none; }
   .vcp.vcp-show-detail .vcp-detail { display: block; }
   .vcp .vcp-back { display: block; }
-  .vcp .vcp-tools { padding: 10px 18px 6px; }
+  .vcp .vcp-tools { padding: var(--space-10px) var(--space-18px) var(--space-6px); }
   .vcp .vcp-scope { font-size: 10.5px; }
-  .vcp .vcp-row { padding: 16px 14px; }
+  .vcp .vcp-row { padding: var(--space-16px) var(--space-14px); }
   .vcp .vcp-row-title { font-size: 15px; }
   .vcp .vcp-row-next { font-size: 13px; }
-  .vcp .vcp-step-top { flex-wrap: wrap; gap: 6px; }
-  .vcp .vcp-step-actions { gap: 7px 18px; }
+  .vcp .vcp-step-top { flex-wrap: wrap; gap: var(--space-6px); }
+  .vcp .vcp-step-actions { gap: 7px var(--space-18px); }
   .vcp .vcp-step-actions button { min-height: 36px; }
   .vcp .vcp-title { font-size: 22px; }
-  dialog.vcp.vcp-dialog { width: calc(100vw - 16px); max-width: calc(100vw - 16px); max-height: calc(100dvh - 20px); border-radius: 14px; }
+  dialog.vcp.vcp-dialog { width: calc(100vw - 16px); max-width: calc(100vw - 16px); max-height: calc(100dvh - 20px); border-radius: var(--radius-14); }
   .vcp .vcp-form { max-height: calc(100dvh - 22px); }
-  .vcp .vcp-form-head { padding: 20px 18px 16px; }
+  .vcp .vcp-form-head { padding: var(--space-20px) var(--space-18px) var(--space-16px); }
   .vcp .vcp-form-head h2 { font-size: 20px; }
-  .vcp .vcp-form-body { padding: 18px; }
-  .vcp .vcp-form-actions { padding: 13px 18px; }
+  .vcp .vcp-form-body { padding: var(--space-18px); }
+  .vcp .vcp-form-actions { padding: 13px var(--space-18px); }
   .vcp .vcp-form-actions button { flex: 1; }
-  .vcp .vcp-field-pair { gap: 10px; }
+  .vcp .vcp-field-pair { gap: var(--space-10px); }
 }
 .vilda-phone .vcp .vcp-layout { display: block; }
 .vilda-phone .vcp .vcp-list-pane { height: 100%; width: 100%; border-right: 0; }
@@ -166,19 +165,19 @@ dialog.vcp.vcp-dialog::backdrop { background: #1a3b4445; backdrop-filter: blur(3
 /* The patient card owns its own scroll region; its plan list stays bounded. */
 .vilda-patient-care-section { display: flex; flex-direction: column; height: min(680px, 72dvh); min-height: 340px; overflow: hidden; }
 @media (max-height: 520px) {
-  .vilda-patient-care-section { height: 76dvh; min-height: 230px; }
+  .vilda-patient-care-section { height: 76dvh; min-height: var(--decor-sidebar-width); }
 }
 
-.vcp .vcp-sync-review { border: 1px solid #edddbd; border-radius: 10px; background: #fff8ed; padding: 15px; margin-top: 18px; font-size: 13px; line-height: 1.6; }
+.vcp .vcp-sync-review { border: var(--border-hairline) solid #edddbd; border-radius: var(--radius-10); background: #fff8ed; padding: 15px; margin-top: var(--space-18px); font-size: 13px; line-height: 1.6; }
 .vcp .vcp-sync-review strong { display: block; color: #8d5817; margin-bottom: 5px; font-weight: 600; }
-.vcp .vcp-sync-review p { margin-bottom: 12px; }
+.vcp .vcp-sync-review p { margin-bottom: var(--space-12px); }
 
 /* Native glass styles and the reminders host use !important on every button.
  * Keep the approved plan controls flat in both hosts and in body-level forms. */
 .vcp.vcp button {
   background: #fff!important;
-  border: 1px solid var(--vcp-line)!important;
-  border-radius: 9px!important;
+  border: var(--border-hairline) solid var(--vcp-line)!important;
+  border-radius: var(--radius-9)!important;
   color: var(--vcp-ink)!important;
   box-shadow: none!important;
   backdrop-filter: none!important;
@@ -194,10 +193,10 @@ dialog.vcp.vcp-dialog::backdrop { background: #1a3b4445; backdrop-filter: blur(3
   width: 100%!important;
   min-height: 0!important;
   border: 0!important;
-  border-radius: 9px!important;
+  border-radius: var(--radius-9)!important;
   background: #fff!important;
   text-align: left!important;
-  padding: 14px!important;
+  padding: var(--space-14px)!important;
 }
 .vcp.vcp .vcp-row:hover { background: #f6faf9!important; }
 .vcp.vcp .vcp-row.is-selected { background: var(--vcp-soft)!important; }
@@ -211,7 +210,7 @@ dialog.vcp.vcp-dialog::backdrop { background: #1a3b4445; backdrop-filter: blur(3
 }
 .vcp.vcp .vcp-filters button {
   min-height: 29px!important;
-  padding: 4px 7px!important;
+  padding: var(--space-4px) 7px!important;
   border: 0!important;
   border-radius: 7px!important;
   background: transparent!important;
@@ -221,8 +220,8 @@ dialog.vcp.vcp-dialog::backdrop { background: #1a3b4445; backdrop-filter: blur(3
 .vcp.vcp .vcp-primary { background: var(--vcp-teal)!important; border-color: var(--vcp-teal)!important; color: #fff!important; font-weight: 500!important; }
 .vcp.vcp .vcp-primary:hover { background: #066f74!important; border-color: #066f74!important; }
 .vcp.vcp .vcp-outline { background: #fff!important; border-color: #bcd2d5!important; color: var(--vcp-teal)!important; }
-.vcp.vcp .vcp-step-actions button { border: 0!important; background: transparent!important; color: var(--vcp-teal)!important; padding: 4px 0!important; }
-.vcp.vcp .vcp-step-actions .vcp-action { background: #eef7f4!important; border: 1px solid #d4e7e1!important; padding: 6px 10px!important; }
+.vcp.vcp .vcp-step-actions button { border: 0!important; background: transparent!important; color: var(--vcp-teal)!important; padding: var(--space-4px) 0!important; }
+.vcp.vcp .vcp-step-actions .vcp-action { background: #eef7f4!important; border: var(--border-hairline) solid #d4e7e1!important; padding: var(--space-6px) var(--space-10px)!important; }
 .vcp.vcp .vcp-step-actions .vcp-subtle { color: #788c90!important; }
 .vcp.vcp .vcp-menu-items button,
 .vcp.vcp .vcp-patient-option { width: 100%!important; border: 0!important; background: #fff!important; }
@@ -235,7 +234,7 @@ dialog.vcp.vcp-dialog::backdrop { background: #1a3b4445; backdrop-filter: blur(3
   margin: 0!important;
   background: #fff!important;
   border: 0!important;
-  border-bottom: 1px solid var(--vcp-line)!important;
+  border-bottom: var(--border-hairline) solid var(--vcp-line)!important;
   border-radius: 0!important;
   box-shadow: none!important;
   backdrop-filter: none!important;
@@ -246,8 +245,8 @@ dialog.vcp.vcp-dialog::backdrop { background: #1a3b4445; backdrop-filter: blur(3
 .vcp.vcp .vcp-field select,
 .vcp.vcp .vcp-field textarea {
   width: 100%!important;
-  border: 1px solid #cbdcdf!important;
-  border-radius: 9px!important;
+  border: var(--border-hairline) solid #cbdcdf!important;
+  border-radius: var(--radius-9)!important;
   background: #fff!important;
   color: var(--vcp-ink)!important;
   box-shadow: none!important;
