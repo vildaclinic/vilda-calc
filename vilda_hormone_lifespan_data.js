@@ -42369,6 +42369,263 @@ const femaleTtUnder6Policy = {
   "notExactAgeMedian": true,
   "notContinuousCurve": true
 };
+const femaleTtInfantUpperData = {
+  "schemaVersion": 1,
+  "kind": "published-age-group-upper-percentile-data",
+  "id": "johannsen2018-female-total-testosterone-infant-upper",
+  "version": "2026-10-29.1",
+  "analyte": "testosterone_total",
+  "sex": "female",
+  "unit": "nmol/L",
+  "ageDomain": {
+    "min": 0.16666666666666666,
+    "max": 0.4166666666666667,
+    "minimumInclusive": true,
+    "maximumInclusive": true
+  },
+  "population": {
+    "minGestationalAgeDays": 259,
+    "maxGestationalAgeDays": 293,
+    "allHealthyInfantsN": 1840,
+    "allGirlsN": 799,
+    "femaleTestosteroneLcmsN": 290,
+    "observedAllGirlsAgeMonths": {
+      "min": 2.3,
+      "max": 5,
+      "mean": 3.3
+    },
+    "femaleTestosteroneLcmsSubsetAgeExtremaReported": false
+  },
+  "source": {
+    "id": "johannsen2018-female-total-testosterone-infant-upper",
+    "label": "Johannsen 2018 · dziewczęta",
+    "citation": "Johannsen TH i wsp. Sex Differences in Reproductive Hormones During Mini-Puberty in Infants With Normal and Disordered Sex Development. J Clin Endocrinol Metab. 2018;103(8):3028–3037. DOI 10.1210/jc.2018-00482.",
+    "url": "https://academic.oup.com/jcem/article/103/8/3028/5037960",
+    "population": "Zdrowe dziewczynki z trzech duńskich kohort, urodzone w 37+0–41+6 tygodniu ciąży; jedna próbka na dziecko. Dwie grupy TT LC-MS/MS: N=165 i N=125. Zakres 2,3–5,0 miesiąca opisuje wszystkie dziewczynki, nie osobno podgrupę TT LC-MS/MS.",
+    "method": "LC-MS/MS, laboratorium Rigshospitalet w Kopenhadze",
+    "specimen": "serum",
+    "unit": "nmol/L",
+    "statistic": "published-upper-p97.5",
+    "sourceLocation": "Tabela 1, drukowana s. 3033; Methods: Healthy infants, Hormone analyses i Statistical analyses; rycina 3, drukowana s. 3032.",
+    "limits": {
+      "lod": 0.1,
+      "loq": null,
+      "unit": "nmol/L",
+      "femaleBelowLodPercent": 79,
+      "authorImputedBelowLodValue": 0.05,
+      "authorCensoringRule": "LOD/2",
+      "patientImputationAllowed": false
+    },
+    "lowerLimit": null,
+    "lowerLimitCensoring": "below-source-lod",
+    "geometricMean": null,
+    "geometricMeanCensoring": "below-source-lod",
+    "median": null,
+    "limitations": [
+      "Górne wartości 0,21 i 0,17 nmol/L to opublikowane p97,5 całych grup wieku. Nie są normą każdego laboratorium, medianą dokładnego wieku ani progiem rozpoznania.",
+      "Dolny percentyl i średnią geometryczną zapisano jako <LOD. Nie ma liczbowej dolnej granicy ani dokładnej mediany; nie podstawiamy zera lub środka przedziału.",
+      "79,0% żeńskich wyników TT LC-MS/MS było poniżej źródłowego LOD 0,10 nmol/L. Dokładnej liczby tych wyników nie wydrukowano. LOD nie jest LOQ ani granicą laboratorium pacjentki.",
+      "Autorzy zastępowali wyniki poniżej LOD przez LOD/2, czyli 0,05 nmol/L. To reguła analizy statystycznej, nie zmierzone stężenie ani mediana do porównania pacjentki.",
+      "Statystyki tabeli powstały po transformacji logarytmicznej i transformacji powrotnej. Nie określamy tych p97,5 jako niezależnych od imputacji lub jako niecenzurowanych empirycznych percentyli.",
+      "Badanie objęło 799 dziewczynek, ale TT LC-MS/MS oznaczono u 290: 165 i 125 w grupach. Faktyczne granice wieku tej podgrupy nie są osobno podane.",
+      "Zastosowanie aplikacji 2,3–5,0 miesiąca to konserwatywna polityka na podstawie zaokrąglonego wieku wszystkich dziewczynek. Autorzy nie podali reguły przeliczania miesięcy na dni.",
+      "Metoda i materiał publikacji nie potwierdzają metody ani materiału próbki pacjentki. Brak znanego GA, metody lub materiału pozwala tylko na informację o źródle.",
+      "Rozbieżność z niewłączonym niemowlęcym zakresem Mayo TTST 20–80 ng/dL pozostaje niewyjaśniona. Oba porównywane źródła opisują LC-MS/MS; nie uśredniamy ani nie kalibrujemy ich zakresów.",
+      "Klasyfikator płci 0,31 nmol/L z tej pracy nie jest żeńskim p97,5 ani progiem diagnostycznym DSD. Nie uruchamiamy go."
+    ],
+    "display": {
+      "citationLabel": "Johannsen 2018 · tabela 1",
+      "sourceMethodLabel": "Surowica · LC-MS/MS · zdrowe dziewczynki urodzone w 37+0–41+6 tygodniu ciąży",
+      "details": [
+        "Dwie źródłowe grupy: 2–<3,5 miesiąca, N=165, p97,5 0,21 nmol/L; 3,5–5 miesięcy, N=125, p97,5 0,17 nmol/L.",
+        "Dolny percentyl i średnia geometryczna: <LOD. 79,0% żeńskich wyników TT LC-MS/MS było poniżej LOD 0,10 nmol/L. Dokładna mediana nie jest dostępna.",
+        "LOD/2 = 0,05 nmol/L służyło autorom do analizy statystycznej. Nie zastępuje wyniku pacjentki i nie jest medianą.",
+        "Aplikacja stosuje konserwatywne okno 2,3–5,0 miesiąca na podstawie zaokrąglonego wieku wszystkich dziewczynek. Dokładnych skrajnych wieków podgrupy TT LC-MS/MS nie podano. Źródło nie określa przeliczenia miesięcy na dni.",
+        "Odniesienie dotyczy źródła i badanej populacji; nie zastępuje normy laboratorium ani oceny klinicznej."
+      ]
+    }
+  },
+  "groups": [
+    {
+      "id": "johannsen2018-female-tt-2-under3p5-months",
+      "label": "2–<3,5 miesiąca",
+      "sourceAgeLabel": "2.0 to <3.5 months",
+      "minAgeYears": 0.16666666666666666,
+      "maxAgeYears": 0.2916666666666667,
+      "minimumInclusive": true,
+      "maximumInclusive": false,
+      "upper": 0.21,
+      "individualGroupN": 165
+    },
+    {
+      "id": "johannsen2018-female-tt-3p5-to5-months",
+      "label": "3,5–5 miesięcy",
+      "sourceAgeLabel": "3.5 to 5.0 months",
+      "minAgeYears": 0.2916666666666667,
+      "maxAgeYears": 0.4166666666666667,
+      "minimumInclusive": true,
+      "maximumInclusive": true,
+      "upper": 0.17,
+      "individualGroupN": 125
+    }
+  ],
+  "provenance": {
+    "doi": "10.1210/jc.2018-00482",
+    "pmid": "29917083",
+    "articlePublished": "2018-06-15",
+    "articleHtmlSha256": "58f117a94ad1b37de4dfd5f649c0af12b6198bff89a287bbd8cdfe9ff708415b",
+    "articleTextSha256": "024622d7f740a160705736641cab0e19278650a02b948be504d220dabc3f1102",
+    "articleReadScope": "Pełny zachowany tekst wydawcy: Methods, obie tabele, Results, Discussion, ograniczenia i piśmiennictwo; pięć oryginalnych rycin wydawcy obejrzano w audycie źródłowym.",
+    "sourceTable": 1,
+    "printedPage": 3033,
+    "censoringFigure": 3,
+    "censoringFigurePrintedPage": 3032,
+    "supplementLocated": false,
+    "supplementStatus": "W HTML i spisie numeru nie znaleziono suplementu tej publikacji. Plik Supplementary Data_Johannsen et al.pdf dotyczy innej pracy o inhibinie B i nie jest źródłem TT.",
+    "sourceMonthToDayConversionPublished": false,
+    "sourceAgeMonths": [
+      [
+        2,
+        3.5
+      ],
+      [
+        3.5,
+        5
+      ]
+    ],
+    "evidence": "evidence/female-tt-infant-upper-johannsen2018-audit-2026-10-29.json",
+    "ownerApproval": "29.10.2026: po audycie, zaakceptowanej prywatnej makiecie i wyjaśnieniu odrębności Mayo właściciel polecił wdrożenie zgodne z rekomendacją. Nie oznacza walidacji klinicznej."
+  }
+};
+const femaleTtInfantUpperPolicy = {
+  "schemaVersion": 1,
+  "kind": "source-upper-female-tt-infant-comparison",
+  "version": "2026-10-29.1",
+  "sourceId": "johannsen2018-female-total-testosterone-infant-upper",
+  "analyte": "testosterone_total",
+  "sex": "female",
+  "contextBasis": "current-patient",
+  "clinicalReferenceActivation": false,
+  "patientComparisonEnabled": true,
+  "upperOnly": true,
+  "noMedian": true,
+  "noLowerLimit": true,
+  "notLaboratoryReference": true,
+  "noClinicalClassification": true,
+  "noHistoryWrite": true,
+  "fullAgeIntervalRequired": true,
+  "fullSourceAgeIntervalRequired": true,
+  "ordinaryOnly": true,
+  "applicationAgeDomain": {
+    "min": 0.19166666666666665,
+    "max": 0.4166666666666667,
+    "minimumInclusive": true,
+    "maximumInclusive": true
+  },
+  "applicationAgeDomainBasis": "Jawna konserwatywna polityka 2,3–5,0 miesiąca na podstawie zaokrąglonego zakresu wieku wszystkich dziewczynek; nie potwierdzony zakres podgrupy TT LC-MS/MS i nie nowy próg autorów.",
+  "ageReferenceBasis": "whole-chronological-age-interval",
+  "ageMonthConvention": "calendar-month-context-with-conservative-uncertainty",
+  "ageMonthConventionNote": "Źródło nie podaje przeliczenia miesięcy na dni. Zachowujemy pełny kalendarzowy przedział wieku z istniejących danych; bez nowego DOB, daty pobrania, środka przedziału, arbitralnej długości miesiąca lub wieku skorygowanego. Precyzyjniejsza pozycja ogólnego wykresu w dniach nie zastępuje tego kontekstu.",
+  "wholeAgeAcrossGroups": "split",
+  "singleGroupRequiredForComparison": true,
+  "interpolation": "none-discrete-source-age-groups",
+  "sourceSelection": "whole-chronological-age-interval",
+  "unknownSourceContextMode": "source-info",
+  "requireKnownGestationalAge": true,
+  "fullGestationalAgeIntervalRequired": true,
+  "requireKnownSpecimen": true,
+  "requireKnownAssayMethod": true,
+  "allowSourceMethodAsPatientMethod": false,
+  "requiresTannerStage": false,
+  "chartSelectionKey": "t",
+  "allowedViews": [
+    "life",
+    "age"
+  ],
+  "displayUnits": [
+    "nmol/L",
+    "ng/dL",
+    "ng/mL",
+    "pg/mL"
+  ],
+  "allowedAssayMethodIds": [
+    "lc-ms/ms",
+    "lc-ms-ms",
+    "lcmsms"
+  ],
+  "allowedSpecimens": [
+    "serum",
+    "surowica"
+  ],
+  "excludedCyclePhases": [
+    "pregnancy",
+    "pregnancy_t1",
+    "pregnancy_t2",
+    "pregnancy_t3",
+    "postmenopause"
+  ],
+  "excludedReproductiveContexts": [
+    "pregnancy",
+    "postmenopause"
+  ],
+  "excludedPositiveFlags": [
+    "pregnancy",
+    "hormonalTreatment",
+    "stimulation",
+    "gnrha"
+  ],
+  "excludedTreatmentContexts": [
+    "hormonal",
+    "stimulation",
+    "gnrh-stimulation",
+    "hcg-stimulation"
+  ],
+  "excludedTreatmentFlags": [
+    "gnrha",
+    "sexSteroids",
+    "cocp",
+    "exogenousTestosterone"
+  ],
+  "allowedTreatmentContexts": [
+    "none"
+  ],
+  "allowedMeasurementKinds": [
+    "basal"
+  ],
+  "knownExclusionPolicy": "Znane leczenie, stymulacja, ciąża lub niezgodny materiał/metoda wstrzymują zestawienie. Nieznany wywiad nie jest potwierdzeniem braku leczenia. Nie dodajemy obowiązkowych pytań o próbkę, leczenie lub stadium.",
+  "plot": {
+    "valueMin": 0,
+    "valueMax": 0.4,
+    "valueTicks": [
+      0,
+      0.1,
+      0.2,
+      0.3,
+      0.4
+    ],
+    "unit": "nmol/L",
+    "independentOfPatient": true,
+    "kind": "upper-reference-concentration-gauge",
+    "normalBand": false,
+    "zeroIsLowerReferenceLimit": false
+  },
+  "renderMode": "upper-source-reference",
+  "exactPointRequiresMatchedContext": true,
+  "inequalityPointAllowed": false,
+  "numericPatientLimitRequired": true,
+  "sourceLodIsPatientLimit": false,
+  "display": {
+    "defaultFractionDigits": 2,
+    "fractionDigitsByUnit": {
+      "ng/mL": 3
+    },
+    "preserveAboveUpperDistinction": true,
+    "maximumFractionDigits": 10,
+    "smallPositiveMode": "scientific-instead-of-rounded-zero",
+    "notAboveLabel": "Nie przekracza górnej wartości odniesienia",
+    "aboveLabel": "Powyżej górnej wartości odniesienia"
+  }
+};
 const maleE2AgeData = {
   "schemaVersion": 1,
   "kind": "published-age-p50-data",
@@ -46233,6 +46490,8 @@ return {
   femaleTtAgePolicy: femaleTtAgePolicy,
   femaleTtUnder6Data: femaleTtUnder6Data,
   femaleTtUnder6Policy: femaleTtUnder6Policy,
+  femaleTtInfantUpperData: femaleTtInfantUpperData,
+  femaleTtInfantUpperPolicy: femaleTtInfantUpperPolicy,
   maleE2AgeData: maleE2AgeData,
   maleE2AgePolicy: maleE2AgePolicy,
   maleE2AdultAgeData: maleE2AdultAgeData,

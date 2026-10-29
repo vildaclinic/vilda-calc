@@ -1,4 +1,5 @@
 import { expect, test } from '../support/test-czas.mjs';
+import { expectNoInfantReference } from '../support/female-tt-infant-upper.mjs';
 import { quickSelect, closePatientEditor } from '../support/lab-puberty-quick.mjs';
 import {
   host, card, median, sources, curve, patientPoint, sourcePoint, overflowPoint, runtimeState,
@@ -124,12 +125,18 @@ test('female TT uses the whole age interval and clears a same-person age correct
   for (const [age, months, expected] of [[12, 6, .4874143269614546], [17, '', .8313584790221047],
     [18, '', null], [0, 5, null], [75, '', null], ['', '', null], [12, 0, .42502815745885664]]) {
     await setQuickAge(page, age, months);
-    if (expected == null) await expectNoMedian(page);
+    if (expected == null) {
+      await expectNoMedian(page, { hidden: age === 0 && months === 5 });
+      if (age === 0 && months === 5) await expectNoInfantReference(page);
+    }
     else {
       await expectMedian(page, expected);
       expect(await geometry(page)).toEqual(original);
     }
-    expect((await runtimeState(page)).context.identityKey).toBe(identity);
+    if (age === 0 && months === 5) {
+      expect((await runtimeState(page)).context).toBeNull();
+      expect(await page.evaluate(() => window.VildaLabPubertyRuntime.getEffectiveContext().identityKey || '')).toBe(identity);
+    } else expect((await runtimeState(page)).context.identityKey).toBe(identity);
     await expect(page.locator('#labResultBig .lab-result-big-value')).toHaveText('0,65');
   }
 });
