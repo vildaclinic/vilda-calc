@@ -4,7 +4,7 @@ import { loadBrowserScript } from '../support/load-browser-script.mjs';
 // Fikcyjny pacjent: 1 lutego → 1 czerwca 2026 to 4 ukończone miesiące i 120 dni.
 // Oba moduły montują prawdziwe nasłuchy; pola przekazują zdarzenia do dokumentu.
 function harness({ fromRecord = false } = {}) {
-  const listeners = {};
+  const listeners = {}, capturedListeners = {};
   const fields = {};
   const emitted = [];
   const storage = new Map([['vildaCurrentPatientId', 'fictional-dob-clear-a']]);
@@ -14,8 +14,8 @@ function harness({ fromRecord = false } = {}) {
   const document = {
     readyState: 'complete',
     getElementById: id => fields[id] || null,
-    addEventListener: (type, fn) => { (listeners[type] ||= []).push(fn); },
-    dispatchEvent: event => { invoke(listeners, event); return true; },
+    addEventListener: (type, fn, capture) => { ((capture ? capturedListeners : listeners)[type] ||= []).push(fn); },
+    dispatchEvent: event => { invoke(capturedListeners, event); invoke(listeners, event); return true; },
   };
   for (const id of ['dobInput', 'dobNote', 'dobError', 'dobClear', 'age', 'ageMonths',
     'ageWeeks', 'ageWeeksRow', 'ageWeeksNote', 'ageWeeksError', 'weight', 'height']) {
@@ -26,8 +26,9 @@ function harness({ fromRecord = false } = {}) {
       addEventListener: (type, fn) => { (local[type] ||= []).push(fn); },
       dispatchEvent: event => {
         Object.defineProperty(event, 'target', { configurable: true, value: field });
+        if (event.bubbles) invoke(capturedListeners, event);
         invoke(local, event);
-        if (event.bubbles) document.dispatchEvent(event);
+        if (event.bubbles) invoke(listeners, event);
         return true;
       },
     };
@@ -70,6 +71,41 @@ beforeEach(() => { vi.useFakeTimers(); vi.setSystemTime(new Date(2026, 5, 1, 12)
 afterEach(() => vi.useRealTimers());
 
 describe('czyszczenie DOB powiadamia odbiorców formularza', () => {
+  it('zmiana DOB w tym samym miesiącu unieważnia cache w capture przed obsługą pola i publikacją', () => {
+    vi.setSystemTime(new Date(2026, 5, 15, 12));
+    const h = harness(), before = h.api.readCache(), cacheInTarget = [];
+    h.fields.dobInput.addEventListener('input', () => { cacheInTarget.push(h.api.readCache()); });
+    h.fields.dobInput.value = '02-02-2026';
+    h.fields.dobInput.dispatchEvent(new Event('input', { bubbles: true }));
+    expect(cacheInTarget).toEqual([null]);
+    expect(h.fields.ageMonths.value).toBe(before.form.ageMonths);
+    expect(h.api.readCache()).toBeNull();
+    expect(h.writeCache).not.toHaveBeenCalled();
+    vi.runAllTimers();
+    expect(h.api.readCache().postnatalDays.upper).toBe(before.postnatalDays.upper - 1);
+    expect(JSON.stringify(h.api.readCache())).not.toContain('2026-02-02');
+  });
+
+  it.each(['vilda:patient-loaded', 'vilda:state-restored', 'vilda:persist-restored',
+    'vilda:zrodlo-pacjenta-zmienione', 'vilda:dob-restored', 'vilda:main-session-restored'])(
+    '%s usuwa własny cache natychmiast także podczas restore, bez publikacji aż do końca odtwarzania', event => {
+      vi.setSystemTime(new Date(2026, 5, 15, 12));
+      const h = harness(), before = h.api.readCache();
+      h.w.__vildaPersistRestoring = true;
+      h.fields.dobInput.value = '02-02-2026';
+      h.w.document.dispatchEvent(new CustomEvent(event));
+      expect(h.api.readCache()).toBeNull();
+      expect(h.fields.ageMonths.value).toBe(before.form.ageMonths);
+      vi.runAllTimers();
+      expect(h.api.readCache()).toBeNull();
+      expect(h.writeCache).not.toHaveBeenCalled();
+      h.w.__vildaPersistRestoring = false;
+      h.api.publish();
+      expect(h.api.readCache().postnatalDays.upper).toBe(before.postnatalDays.upper - 1);
+      expect(JSON.stringify(h.api.readCache())).not.toContain('2026-02-02');
+    },
+  );
+
   it.each(['API', 'przycisk'])('usuwa precyzję dni z cache przez %s bez edycji masy ani wzrostu', method => {
     const h = harness();
     expect(h.api.readCache()).toMatchObject({
@@ -125,7 +161,7 @@ describe('czyszczenie DOB powiadamia odbiorców formularza', () => {
   });
 
   it.each(['restore flag', 'mirror flag', 'adapter restore', 'clear in progress', 'stale panel', 'other patient'])(
-    'zwykłe powiadomienie nadal respektuje strażnika: %s', reason => {
+    'czyści własny cache po DOB mimo blokady publikacji, lecz zachowuje cache innej osoby: %s', reason => {
       const h = harness();
       if (reason === 'restore flag') h.w.__vildaPersistRestoring = true;
       if (reason === 'mirror flag') h.w.__vildaLustroWpis = true;
@@ -145,8 +181,13 @@ describe('czyszczenie DOB powiadamia odbiorców formularza', () => {
       expect(h.fields.dobInput.value).toBe('');
       expect(h.api.readForm()).toBeNull();
       expect(h.emitted.map(event => event.type)).toEqual(['input', 'change']);
-      expect(h.api.readCache()).toEqual(before);
-      expect(h.removeCache).not.toHaveBeenCalled();
+      if (reason === 'other patient') {
+        expect(h.api.readCache()).toEqual(before);
+        expect(h.removeCache).not.toHaveBeenCalled();
+      } else {
+        expect(h.api.readCache()).toBeNull();
+        expect(h.removeCache).toHaveBeenCalledExactlyOnceWith('session', 'vildaLabNeonatalAgeV1');
+      }
       expect(h.writeCache).not.toHaveBeenCalled();
     },
   );

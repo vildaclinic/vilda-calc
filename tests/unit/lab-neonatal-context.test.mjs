@@ -1,6 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { readFileSync } from 'node:fs';
+import { createRequire } from 'node:module';
 import { loadBrowserScript } from '../support/load-browser-script.mjs';
+
+const require = createRequire(import.meta.url);
+const puberty = require('../../vilda_lab_puberty.js');
 
 const html = readFileSync(new URL('../../przelicznik-jednostek.html', import.meta.url), 'utf8');
 const start = html.indexOf('    function readPubertyPatientContext() {');
@@ -10,6 +14,8 @@ const makeReader = new Function('window', 'sessionStorage', 'persistence', 'extr
 const storageListener = html.match(/window\.addEventListener\('storage', function \(e\) \{[\s\S]*?refreshPatientContext\(\);[\s\S]*?\}\);/);
 if (!storageListener) throw new Error('Missing production LH/FSH storage listener');
 const bindStorage = new Function('window', 'refreshPatientContext', storageListener[0]);
+
+const patientReader = (h, substance) => makeReader(h.w, h.w.sessionStorage, h.w.VildaPersistence, () => null, substance);
 
 function harness() {
   const fields = {};
@@ -98,7 +104,7 @@ describe('LH/FSH — pochodny wiek z istniejącego formularza', () => {
   it.each(['lh', 'fsh', 'inhibin_b', 'amh', 'estradiol', 'testosterone_total'])(
     'adapter dla %s wybiera rozszerzony transport bez zmiany wieku pozostałych analitów', id => {
       const h = harness(); h.dob('2026-06-11'); h.api.publish();
-      const reader = makeReader(h.w, h.w.sessionStorage, h.w.VildaPersistence, () => null, { id });
+      const reader = patientReader(h, { id });
       if (['lh', 'fsh', 'amh', 'testosterone_total'].includes(id)) {
         expect(reader()).toMatchObject({ neonatalAge: { postnatalDays: { lower: 119, upper: 120 } } });
       } else expect(reader()).not.toHaveProperty('neonatalAge');
@@ -107,7 +113,7 @@ describe('LH/FSH — pochodny wiek z istniejącego formularza', () => {
 
   it('AMH korzysta z daty niemowlęcia i odrzuca pozostawione dni po usunięciu lub błędnej dacie', () => {
     const h = harness();
-    const reader = makeReader(h.w, h.w.sessionStorage, h.w.VildaPersistence, () => null, { id: 'amh' });
+    const reader = patientReader(h, { id: 'amh' });
     for (const invalidDate of ['', '31-02-2026']) {
       h.dob('2026-06-11'); h.api.publish();
       expect(reader()).toMatchObject({ neonatalAge: {
@@ -141,6 +147,60 @@ describe('LH/FSH — pochodny wiek z istniejącego formularza', () => {
     expect(h.api.publish()).toBe(false);
     expect(h.writeCache).toHaveBeenCalledTimes(1);
   });
+
+  it('nie udostępnia precyzyjniejszego wieku TT po zmianie DOB przed opublikowaniem nowego cache', () => {
+    const h = harness(); h.dob('2026-08-27'); h.api.publish();
+    const originalShared = structuredClone(h.shared);
+    const options = { includeFemaleTtCalendarAge: true };
+    expect(h.api.read(h.shared, '', null).postnatalDays.upper).toBe(43);
+    expect(h.api.read(h.shared, '', null, options)).toHaveProperty('femaleTtCalendarAge');
+    h.dob('2026-08-28');
+    expect(h.shared).toEqual(originalShared);
+    expect(h.api.read(h.shared, '', null, options)).not.toHaveProperty('femaleTtCalendarAge');
+    h.api.publish();
+    expect(h.api.read(h.shared, '', null).postnatalDays).toEqual({
+      lower: 41, upper: 42, source: 'main-calendar-dates',
+    });
+    expect(h.writeShared).not.toHaveBeenCalled();
+  });
+
+  it('udostępnia tylko pochodny wiek kalendarzowy przy jawnym odczycie, bez transportu DOB', () => {
+    const h = harness(); h.dob('2026-08-27'); h.api.publish();
+    const options = { includeFemaleTtCalendarAge: true };
+    const calendar = h.api.read(h.shared, '', null, options).femaleTtCalendarAge;
+    expect(h.api.read(h.shared, '', null)).not.toHaveProperty('femaleTtCalendarAge');
+    expect(calendar).toMatchObject({ upperInclusive: true,
+      postnatalDays: { lower: 42, upper: 43, source: 'main-calendar-dates' } });
+    // The converter has neither the DOB field nor its main-form API.
+    delete h.w.VildaDobAge;
+    expect(h.api.read(h.shared, '', null, options).femaleTtCalendarAge).toEqual(calendar);
+    expect(JSON.stringify(h.api.readCache())).not.toContain('2026-08-27');
+    expect(JSON.stringify(h.api.read(h.shared, '', null, options))).not.toContain('2026-08-27');
+    const oldCache = h.api.readCache(); delete oldCache.femaleTtCalendarAge;
+    h.w.VildaPersistence.writeJSON('session', 'vildaLabNeonatalAgeV1', oldCache);
+    expect(h.api.read(h.shared, '', null, options)).not.toHaveProperty('femaleTtCalendarAge');
+    expect(h.api.read(h.shared, '', null, options).postnatalDays.upper).toBe(43);
+  });
+
+  it.each(['1900-02-28', '2000-02-29', '2024-01-29', '2024-01-30', '2024-01-31',
+    '2024-02-29', '2024-03-31', '2024-04-30', '2024-08-31', '2024-09-30', '2024-12-31'])(
+    'pochodny wiek dla DOB %s zgadza się z rzeczywistym resolverem kalendarza na końcach miesięcy i w latach przestępnych', iso => {
+      const birth = Date.parse(iso + 'T00:00:00Z');
+      for (const dayCount of [60, 90, 120, 150]) {
+        const parts = iso.split('-').map(Number);
+        vi.setSystemTime(new Date(parts[0], parts[1] - 1, parts[2] + dayCount, 12));
+        const h = harness(); h.dob(iso); h.api.publish();
+        const calendar = h.api.read(h.shared, '', null, {
+          includeMinipuberty: true, includeFemaleTtCalendarAge: true,
+        }).femaleTtCalendarAge;
+        const at = days => puberty.resolveAge({ birthDateISO: iso,
+          sampleDateISO: new Date(birth + days * 86400000).toISOString().slice(0, 10) });
+        expect(calendar.lowerYears).toBe(at(dayCount - 1).lowerYears);
+        expect(calendar.upperYears).toBe(at(dayCount).upperYears);
+        expect(calendar.upperInclusive).toBe(true);
+        expect(JSON.stringify(h.api.readCache())).not.toContain(iso);
+      }
+    });
 
   it.each([['2026-10-09', 0, 0], ['2026-10-08', 0, 1], ['2026-10-07', 1, 2]])(
     'data %s nie jest potwierdzeniem pełnych 24 h po samym przekroczeniu północy', (iso, lower, upper) => {
@@ -311,7 +371,7 @@ describe('LH/FSH — GA z chronionego źródła tego samego pacjenta', () => {
       loadBrowserScript('vilda_lab_puberty_data.js', h.w);
       h.w.VildaPubertySource.zapamietaj({ perinatal: { gestationalWeeks: weeks, gestationalDays: days } }, 'fictional-neonate');
       h.api.publish();
-      const reader = makeReader(h.w, h.w.sessionStorage, h.w.VildaPersistence, () => null);
+      const reader = patientReader(h);
       expect(reader()).toMatchObject({ preterm: expected, neonatalAge: {
         postnatalDays: { lower: 42, upper: 43 }, gestationalDays: { source: 'patient-record' },
       } });
@@ -320,7 +380,7 @@ describe('LH/FSH — GA z chronionego źródła tego samego pacjenta', () => {
 
   it('adapter nie dodaje metadanych noworodkowych przy braku obu źródeł', () => {
     const h = harness();
-    const reader = makeReader(h.w, h.w.sessionStorage, h.w.VildaPersistence, () => null);
+    const reader = patientReader(h);
     expect(reader()).not.toHaveProperty('neonatalAge');
     expect(reader()).not.toHaveProperty('preterm');
   });

@@ -26,6 +26,7 @@ Rejestr jest inwentaryzacją techniczną. Nie nadaje opisanym modułom statusu w
 | LAB-TT-MAYO | Testosteron całkowity: M według wieku/G, F według wieku od 6 miesięcy | `vilda_lab_testosterone_data.js`, `vilda_lab_testosterone.js`, `vilda_lab_testosterone_units.js`, wspólne UI i snapshot | `lab-testosterone*.test.mjs`, E2E `lab-testosterone*.spec.mjs`; wyniki uruchomień w PR | etap 3 M i pierwsza partia F; źródła, luki i polityki w `TESTOSTERONE.md`; końcowy przegląd kliniczny właściciela przed scaleniem |
 | HORMONE-FEMALE-TT-AGE | TT dziewcząt 6–18: osobna mediana modelu i punkt wyniku | `vilda_female_tt_age.js`, `vilda_female_tt_age_ui.js`, osobne dane/polityka pakowane do runtime | `female-tt-age.test.mjs`, E2E `lab-female-tt-age*.spec.mjs`; wyniki w PR | zakres zaakceptowanej makiety 24.10.2026; poza 85 zwykłymi profilami, bez nowych RI/SDS/historii; [kontrakt](hormone-lifespan/FEMALE_TT_AGE.md) |
 | HORMONE-FEMALE-TT-UNDER6 | TT dziewcząt od 6 miesięcy do <6 lat: przybliżona mediana grupy Kushnir; pierwotne wyróżnienie istniejącego `above` | `vilda_female_tt_age.js`, `vilda_female_tt_age_ui.js`, osobne `female-tt-under6-data.json` i `female-tt-under6-policy.json` | `female-tt-under6.test.mjs` i regresje adaptera/UI/PWA; wykonane wyniki w PR | akceptacja makiety i polecenie wdrożenia; bez nowych RI/progu pilności/historii, z niezmienionym Madsen 6–18; [kontrakt](hormone-lifespan/FEMALE_TT_UNDER6.md) |
+| HORMONE-FEMALE-TT-INFANT-UPPER | TT dziewczynek: osobne górne p97,5 Johannsen w konserwatywnym oknie 2,3–5 miesięcy | `vilda_female_tt_infant_upper.js`, UI i osobne `female-tt-infant-upper-*.json` | `female-tt-infant-upper.test.mjs` oraz regresje adaptera/UI/PWA; wykonane wyniki w PR | wyłącznie górne odniesienie źródła; bez mediany, dolnej normy, aktywacji laboratoryjnego RI lub historii; znane zgodne GA/materiał/metoda do porównania; [kontrakt](hormone-lifespan/FEMALE_TT_INFANT_UPPER.md) |
 | HORMONE-MALE-E2-AGE | E2 chłopców 6–18: osobna mediana modelu i punkt wyniku, z ograniczeniem niskiego końca | `vilda_male_e2_age.js`, `vilda_male_e2_age_ui.js`, osobne dane/polityka pakowane do runtime | `male-e2-age.test.mjs` oraz regresje adaptera/UI/PWA; wykonane wyniki w PR | zaakceptowana makieta 25.10.2026; pełne [6,18], bez podłogi LLOQ i nowych RI/SDS/historii; [kontrakt](hormone-lifespan/MALE_E2_AGE.md) |
 | HORMONE-MALE-E2-ADULT-AGE | E2 mężczyzn 31,4–60,9: przybliżona mediana z ryciny i punkt wyniku w tej samej karcie | `vilda_male_e2_age.js`, `vilda_male_e2_age_ui.js`, odrębne dane/polityka Frederiksen pakowane do runtime | `male-e2-adult-age.test.mjs`, rzeczywisty adapter, UI i zimny start PWA; wykonane wyniki w PR | makieta i wdrożenie zaakceptowane 25.10.2026; 296 wierzchołków odczytu, liniowo po ścieżce, stała oś 0–200, bez mostu wieku i nowych RI/SDS/historii; [kontrakt](hormone-lifespan/MALE_E2_ADULT_AGE.md) |
 | LAB-HISTORY | Historia i porównanie zapisanych wyników badań (model bez UI) | `vilda_lab_history.js` | `lab-history-view.test.mjs`, `lab-history-vault.test.mjs` | test regresyjny modelu; moduł jeszcze nieładowany przez strony (PR1 planu historii) |
@@ -121,7 +122,7 @@ Pełny PRINCE 2026 z suplementem rozróżnia B/PH, ale autorzy wykluczają
 tabele stadium jako samodzielne RI; to statystyki opisowe innej metody
 CLIA. Nie przenosimy ich do Mayo LC-MS/MS.
 
-Całe **F <6 miesięcy** pozostaje bez kwalifikowanego profilu, z zachowanym
+W tej partii całe **F <6 miesięcy** pozostawało bez kwalifikowanego profilu, z zachowanym
 przeliczeniem i konkretnym powodem. Niewłączone Mayo 20–80 ng/dL istotnie
 różni się od pełnego Johannsen 2018, tabela 1: dziewczynki LC-MS/MS
 `<LOD–0,21` i `<LOD–0,17` nmol/L w nominalnych grupach 2–<3,5/3,5–5 miesięcy,
@@ -129,6 +130,11 @@ LOD 0,10; GA 37+0–41+6, faktyczny żeński wiek 2,3–5,0 miesiąca. Wymaga to
 osobnego profilu i polityki wieku/GA/metody, bez fallbacku Mayo lub normy
 dorosłej. Ljubičić 2022 nie zawiera TT. Znane wcześniactwo nie dostaje
 zastępczych norm.
+
+Osobne zaakceptowane uzupełnienie z 29.10.2026
+`HORMONE-FEMALE-TT-INFANT-UPPER` poniżej wprowadza wyłącznie informację
+o górnym p97,5 Johannsen i warunkowe zestawienie w wąskim oknie wieku.
+Nie aktywuje niemowlęcego profilu laboratoryjnego Mayo ani mediany.
 
 **Odrębne żeńskie komunikaty:** [SFE 2025](https://doi.org/10.1111/cen.15265)
 §6.2 i tabela 3 traktują **>5 nmol/L** jako próg dalszej pilnej oceny
@@ -2843,6 +2849,91 @@ Testy wywołują produkcyjny silnik i rzeczywiste UI/adaptery; konkretne
 wyniki desktop/mobile, PWA/offline i wszystkich kontroli GitHub podaje
 PR po ich zakończeniu. Akceptacja zakresu i zielone testy nie nadają
 statusu walidacji klinicznej.
+
+### HORMONE-FEMALE-TT-INFANT-UPPER — górne odniesienie Johannsen, 2026-10-29
+
+**Decyzja i wpływ kliniczny:** po audycie źródłowym, zaakceptowanej
+prywatnej makiecie i wyjaśnieniu różnicy względem Mayo właściciel polecił
+wdrożenie zgodne z rekomendacją. Bieżący TT dziewczynki zyskuje osobną
+informację o górnym p97,5 Johannsen i ściśle kwalifikowane porównanie.
+To zmiana dostępnej informacji medycznej, bez aktywacji laboratoryjnego
+RI, dolnej normy, mediany, SDS, rozpoznania, oceny pilności lub historii.
+Mayo, Kushnir od sześciu miesięcy, Madsen 6–18, 85 zwykłych profili oraz
+45 wcześniejszych pól runtime pozostają odrębne i niezmienione.
+
+**Pełne źródło:** Johannsen TH i wsp., JCEM 2018;103:3028–3037,
+DOI [10.1210/jc.2018-00482](https://doi.org/10.1210/jc.2018-00482),
+[końcowy tekst](https://academic.oup.com/jcem/article/103/8/3028/5037960),
+**tabela 1/s.3033**, Methods i **rycina 3/s.3032**. Audyt odczytał pełny
+zachowany HTML/tekst wydawcy, obie tabele i wszystkie pięć rycin;
+bieżące pobranie OUP zwracało 403. Nie znaleziono suplementu tej pracy.
+Podobnie nazwany lokalny suplement dotyczy inhibiny B i nie jest źródłem TT.
+
+**Dane:** surowica LC-MS/MS, zdrowe niemowlęta trzech duńskich kohort,
+GA 37+0–41+6 tygodni (259–293 dni), jedna próbka na dziecko. Dla
+dziewczynek tabela podaje **2–<3,5 miesiąca: N165, górny p97,5 0,21
+nmol/L; 3,5–5 miesiąca: N125, 0,17**. Łączne N żeńskiego TT LC-MS/MS
+to 290, nie 799 wszystkich dziewczynek. Wiek 2,3–5,0 opisuje wszystkie
+dziewczynki; dokładne skrajne wieki podgrupy TT nie są osobno podane.
+Statystyki raportowano po logarytmowaniu i transformacji powrotnej.
+Średnia geometryczna i dolny p2,5 to **<LOD**, nie mediana ani liczbowy
+dolny limit. **79,0%** żeńskich wyników było poniżej LOD **0,10 nmol/L**;
+LOQ nie podano. Autorskie LOD/2 **0,05** nie jest wynikiem pacjentki
+lub medianą. Klasyfikator płci 0,31 pozostaje niewłączony.
+
+**Kontrakt:** osobne `female-tt-infant-upper-data.json` i polityka;
+`VildaFemaleTTInfantUpper.evaluate(data, policy, context)` bierze źródło
+jako argument. Dwa nowe pola runtime nie są 86. profilem. Jawny zakres
+aplikacji **[2,3;5,0] miesiąca** jest konserwatywną decyzją na podstawie
+zaokrąglonego zakresu wszystkich dziewczynek, nie odzyskanym minimum
+podgrupy TT. Cały znany kalendarzowy przedział wieku musi pasować.
+Źródło nie podaje przeliczenia miesięcy na dni; bez nowych progów dni,
+DOB, daty próbki, środka wieku, korekcji wcześniaczej lub PMA.
+
+Jednoznaczne porównanie wymaga jednej grupy wieku, całego jawnego
+przedziału GA w 259–293 dniach, znanej surowicy i zgłoszonej LC-MS/MS.
+Metoda publikacji nie potwierdza metody próbki. Brak GA/metody/materiału
+pozostawia informację o źródle i rzeczywisty wynik/konwersje, bez punktu
+lub przypisanego werdyktu; nie dodajemy pytań ani badge o metodzie.
+Znana niezgodność, leczenie lub stymulacja wstrzymują zestawienie;
+nieznany wywiad nie jest ujemny. Tożsamość i bieżący kontekst nie mogą
+przejść na inną osobę lub dawny wynik. Wiek obejmujący 3,5 miesiąca
+daje dwie dosłowne górne wartości, bez połączonego RI i wspólnego werdyktu.
+
+**Prezentacja:** neutralne „Nie przekracza górnej wartości odniesienia”
+lub „Powyżej górnej wartości odniesienia” tylko dla pewnego porównania
+całego znanego stężenia. Dokładne =U nie przekracza, `>U` przekracza,
+`≥U` pozostaje niejednoznaczne. `<LOD`/`<LOQ` bez liczby nie pożycza
+źródłowego LOD. Nierówność nie otrzymuje dokładnego punktu. Stała oś
+**0–0,4 nmol/L** nie oznacza dolnej normy i nie ma zielonego pasma
+0–U, mediany ani krzywej wieku. Ponad osią strzałka z rzeczywistą liczbą.
+Domyślnie 2 miejsca, ng/mL3; gdy zaokrąglenie ukrywa przekroczenie,
+wspólna precyzja rośnie do minimum potrzebnego rozróżnienia (maks.10).
+0,214 vs 0,21 → 0,214/0,210; 0,0606 ng/mL → 0,06060/0,06057.
+Obliczenia, przelicznik i surowy zapis pozostają bez zmian.
+
+| Fikcyjne wejście (zgodne pozostałe warunki) | Oczekiwany wynik produkcyjnej funkcji/UI |
+| --- | --- |
+| Dokładne 2,5 mies., TT 0,18 nmol/L / dokładne 4 mies., 0,18 | U0,21, nie przekracza / U0,17, powyżej; bez mediany |
+| 2,5 mies., `<0,10` / `<LOD` | Nie przekracza / brak liczbowego wniosku; żadnej dokładnej kropki |
+| Cały wiek `[3,4)` mies. | Dwie górne 0,21 i 0,17; bez wspólnego werdyktu |
+| Nieznana metoda/GA, GA bez górnej granicy albo poza 259–293, znane osocze/leczenie | Brak przypisanego porównania; bez fallbacku Mayo lub nowej ankiety |
+| Historyczny wynik / zmiana osoby / lock | Bez ponownej oceny lub zapisu; usunięte stare odniesienie |
+
+Niemowlęce Mayo TTST 20–80 ng/dL = 0,6934–2,7736 nmol/L nadal występuje
+w pełnym aktualnym katalogu i obu PDF; przeliczenie jest poprawne,
+pochodzenie rozbieżności niewyjaśnione. Oba źródła opisują LC-MS/MS;
+nie nazywamy Mayo błędem, nie uśredniamy i nie wybieramy według wyniku.
+Mayo pozostaje odroczone. Przed 2,3 miesiąca, po 5 do <6 i wcześniactwo
+pozostają poza tą zmianą. Kandydaci noworodkowi i szersze modele
+wymagają osobnej oceny; nie twierdzimy, że literaturowe mediany nie istnieją.
+
+Pełne hashe, źródła, ograniczenia i przypadki:
+[FEMALE_TT_INFANT_UPPER.md](hormone-lifespan/FEMALE_TT_INFANT_UPPER.md).
+Regresje obejmują produkcyjny silnik, kontekst, nierówności/konwersje,
+desktop/mobile, pełny ekran, PWA z zimnym startem offline i niezmienione
+historyczne hashe. Wykonane wyniki oraz wszystkie kontrole GitHub dla
+końcowego SHA podaje PR; sama lista nie jest deklaracją zaliczenia.
 
 ### HORMONE-MALE-E2-AGE — osobna mediana E2 chłopców 6–18, 2026-10-25
 

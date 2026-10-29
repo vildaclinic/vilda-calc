@@ -1,0 +1,732 @@
+{
+  "schemaVersion": 1,
+  "kind": "sanitized-source-audit-and-approved-application-policy",
+  "auditDate": "2026-10-29",
+  "analyte": "testosterone_total",
+  "sex": "female",
+  "scope": "Published female serum LC-MS/MS upper p97.5 only; no median, laboratory RI activation, historical reassessment or source blending.",
+  "ownerDecision": "Approved private mockup followed by explicit instruction to implement recommendations on 2026-10-29; not clinical validation.",
+  "primary": {
+    "citation": "Johannsen TH et al. Sex Differences in Reproductive Hormones During Mini-Puberty in Infants With Normal and Disordered Sex Development. J Clin Endocrinol Metab. 2018;103(8):3028-3037.",
+    "doi": "10.1210/jc.2018-00482",
+    "pmid": "29917083",
+    "url": "https://academic.oup.com/jcem/article/103/8/3028/5037960",
+    "pdfUrl": "https://academic.oup.com/jcem/article-pdf/103/8/3028/25407703/jc.2018-00482.pdf",
+    "readScope": "Full preserved publisher HTML/text: abstract, introduction, all Methods, Tables1/2, Results, Discussion, limitations, Conclusion and all references; all five original public publisher figures downloaded and visually inspected.",
+    "currentAccess": "PubMed/freearticle metadata reverified by web on audit date. Current OUP HTML/PDF fetch returns403 or inaccessible redirect. Full preserved publisher HTML/text from prior local audit was therefore used, not an abstract or review."
+  },
+  "sourceSnapshots": [
+    {
+      "file": "figure1.jpg",
+      "bytes": 25737,
+      "sha256": "db34ea0303623d9167afd697288b15fab7c9cee221717bd2023455177b46a7a5"
+    },
+    {
+      "file": "figure2.jpg",
+      "bytes": 40566,
+      "sha256": "1a6a9f279c718db7f8ba790b5094de23e6daa28c0f175acbe1c4adf927d22e35"
+    },
+    {
+      "file": "figure3.jpg",
+      "bytes": 56853,
+      "sha256": "c22086aec4e8ed9338aa79e831c7b570132a6405942949dbcdf874890c4868ec"
+    },
+    {
+      "file": "figure4.jpg",
+      "bytes": 58129,
+      "sha256": "0ffba659f7e1a9e03f2d4a587240efbe117362587b25622eebccd310d59972eb"
+    },
+    {
+      "file": "figure5.jpg",
+      "bytes": 32819,
+      "sha256": "dc6cd67d47d54f6712f9daa33e72241e773040b630c5c4fdbfeb7a9383d81f56"
+    },
+    {
+      "file": "johannsen-2018.html",
+      "bytes": 211625,
+      "sha256": "58f117a94ad1b37de4dfd5f649c0af12b6198bff89a287bbd8cdfe9ff708415b"
+    },
+    {
+      "file": "johannsen-2018.txt",
+      "bytes": 55143,
+      "sha256": "024622d7f740a160705736641cab0e19278650a02b948be504d220dabc3f1102"
+    }
+  ],
+  "verifiedFacts": {
+    "population": {
+      "design": "Cross-sectional, one serum sample per infant; pooled three Danish cohorts",
+      "allHealthy": 1840,
+      "boysAll": 1041,
+      "girlsAll": 799,
+      "girlsAllNotNForTestosterone": true,
+      "cohorts": [
+        {
+          "n": 1278,
+          "boys": 733,
+          "girls": 545,
+          "recruitment": "Copenhagen1997-2002; Danish-origin healthy pregnant women"
+        },
+        {
+          "n": 117,
+          "boys": 64,
+          "girls": 53,
+          "recruitment": "Funen1996-2001; mothers working in greenhouses"
+        },
+        {
+          "n": 445,
+          "boys": 244,
+          "girls": 201,
+          "recruitment": "Odense2010-2012 mother-child cohort"
+        }
+      ],
+      "gestationWeeksLowerInclusive": 37,
+      "gestationDaysUpperInclusive": 293,
+      "gestationText": "37+0 through41+6 weeks (259-293 days)",
+      "observedGirlAgeMonths": {
+        "min": 2.3,
+        "max": 5.0,
+        "mean": 3.3,
+        "p2_5": 2.5,
+        "p97_5": 4.6
+      },
+      "observedLCMSFemaleSubsetAgeRange": "Not separately reported; do not assign all-girls actual extrema as measured subset extrema",
+      "ethnicity": "Primarily Danish; authors caution other ethnicities",
+      "unknownDetails": [
+        "Medication/treatment-specific exclusion rules not fully enumerated",
+        "Per-assay allocation to each cohort not reported",
+        "No female paired RIA/LCMS method-comparison dataset reported"
+      ]
+    },
+    "specimenAndMethod": {
+      "specimen": "Serum",
+      "collection": "Nonfasting, antecubital venous blood08:00-18:00; clotted and centrifuged",
+      "storage": "-20C, maximum5years before analysis",
+      "laboratory": "DepartmentofGrowthandReproduction,Rigshospitalet,Copenhagen",
+      "ttLCMSAllSexesN": 716,
+      "ttRIAAllSexesN": 848,
+      "ttLCMSfemaleN": 290,
+      "ttRIAfemaleN": 88,
+      "LCMSMethodCitation": "Soeborg et al. Clin Chim Acta2013;419:95-101, reference20",
+      "ttLCMSLODnmolL": 0.1,
+      "ttRIALODnmolL": 0.23,
+      "LOQ": "Not established by this article; do not relabel reportedLOD asLOQ",
+      "ttLCMSInterassayCVPercent": 9,
+      "cvConcentrationForThisStatement": "Not specified in article; do not interpret as precision atLOD"
+    },
+    "censoring": {
+      "sourceSection": "Hormoneanalyses, immediately beforeFigures1-3",
+      "rule": "All values below hormone-specificLOD replaced withLOD/2",
+      "forTTLCMSImputedValueNmolL": 0.05,
+      "clinicalPatientImputationAllowed": false,
+      "figure3FemaleBelowLODPercent": 79.0,
+      "figure3MaleBelowLODPercent": 0.5,
+      "exactFemaleBelowLODCount": "Not printed; do not replace percentage by an asserted exact count",
+      "observedMedianInference": "With79% belowLOD, exact empirical central concentration is not identified. A plotted/imputed0.05 is not a measured or published numerical median.",
+      "figure2FemaleRIABelowLODPercent": 89.8,
+      "figure2MaleRIABelowLODPercent": 0.8
+    },
+    "table1": {
+      "printedPage": 3033,
+      "statistic": "Back-transformed geometric mean and p2.5-p97.5; not median or SDS model",
+      "ageSelection": "Age subdivided after visual inspection; first2.0to<3.5 months, second3.5to5.0 months",
+      "TTLCMS": [
+        {
+          "sourceAgeMonths": {
+            "lower": 2.0,
+            "upper": 3.5,
+            "lowerInclusive": true,
+            "upperInclusive": false
+          },
+          "femaleN": 165,
+          "femaleGeometricMean": "<LOD",
+          "femaleP2_5": "<LOD",
+          "femaleP97_5NmolL": 0.21,
+          "maleN": 251,
+          "sourceCutoffNmolL": 0.31
+        },
+        {
+          "sourceAgeMonths": {
+            "lower": 3.5,
+            "upper": 5.0,
+            "lowerInclusive": true,
+            "upperInclusive": true
+          },
+          "femaleN": 125,
+          "femaleGeometricMean": "<LOD",
+          "femaleP2_5": "<LOD",
+          "femaleP97_5NmolL": 0.17,
+          "maleN": 175,
+          "sourceCutoffNmolL": 0.31
+        }
+      ],
+      "femaleAgeGroupPValue": 0.57,
+      "censoredLowerBound": "Unknown numerical concentration, not0/0.05/0.10",
+      "upperNumbersPurpose": "Published source97.5percentiles, not universal diagnostic cutoffs or upperLOQ"
+    },
+    "sexClassifier": {
+      "sourceTable": 2,
+      "TTLCMSCutoffNmolL": 0.31,
+      "meaning": "Threshold for separating sexes in this research population; not female97.5percentile or a diagnostic threshold for a specific disorder",
+      "TTLCMSAUC": "1.00(0.99-1.00)"
+    },
+    "methodComparison": {
+      "sourceFigure": 5,
+      "pairedN": 182,
+      "sex": "Boys only",
+      "spearmanR": 0.92,
+      "p": "<0.001",
+      "medianRIAoverLCMS": 0.67,
+      "IQR": [
+        0.58,
+        0.75
+      ],
+      "cannotDo": [
+        "Apply0.67 to female results",
+        "Harmonize any other laboratory assay",
+        "Explain highMayo femaleinfant interval simply by claimingRIAreads higher"
+      ]
+    },
+    "coverageLimits": {
+      "uncovered": [
+        "Birth to nominal2.0months (and observed female age below2.3months)",
+        "After5.0months to under6calendar months",
+        "Preterm or post-term children outside studiedGA",
+        "Exact pointwise age-specificmedian throughout infancy"
+      ],
+      "sourceAgeMonthToDayConversion": "Not specified; do not invent exact day equivalents",
+      "routingDecision": "Nominal author bins2.0-5.0 vs conservative observed all-girls2.3-5.0 needs explicit product/clinicalpolicy; whole possible age must fit chosen domain and one source bin."
+    },
+    "traceability": {
+      "population": "MaterialsandMethods/Healthyinfants",
+      "collectionAssayLODImputationCV": "MaterialsandMethods/Hormoneanalyses",
+      "ageGroupsStatistics": "Statisticalanalyses",
+      "femaleRI": "Table1 p3033",
+      "79percent": "Fig3 p3032, originalpublisherimage",
+      "maleMethodComparison": "Results/CorrelationofTmeasurements andFig5",
+      "scopeCautions": "Discussion/limitations"
+    }
+  },
+  "supplementStatus": {
+    "locatedForJohannsen2018": false,
+    "publisherHtmlAndIssueChecked": true,
+    "notProofNoSupplementExistsAnywhere": true,
+    "excludedDifferentPaper": {
+      "fileName": "Supplementary Data_Johannsen et al.pdf",
+      "title": "Serum Concentrations of Inhibin B in Healthy Females and Males Throughout Life (Supplementary Data)",
+      "authors": "Anna Borelli-Kjær et al.; Trine Holm Johannsen last author",
+      "sha256": "c9a763c851b596c99dbb337e3fe9b7f4014207a660657ed0d9e0eeb974a39972",
+      "reason": "Different paper and analyte; not a TT source."
+    }
+  },
+  "approvedApplicationPolicy": {
+    "wholeChronologicalAgeMonths": {
+      "min": 2.3,
+      "max": 5,
+      "minimumInclusive": true,
+      "maximumInclusive": true
+    },
+    "agePolicyIsConservativeProductDecision": true,
+    "ageBasis": "Rounded observed range of all girls; not separately observed female TT LC-MS/MS subset extremes.",
+    "sourceMonthToDayConversionPublished": false,
+    "noNewDayCutoff": true,
+    "noInventedDobOrSampleDate": true,
+    "singleSourceGroupForSingleComparison": true,
+    "crossGroupMode": "Two literal upper references; no single verdict or merged interval.",
+    "gestationalAgeDays": {
+      "min": 259,
+      "max": 293,
+      "inclusive": true
+    },
+    "matchedComparisonRequires": [
+      "known compatible gestational age",
+      "known serum",
+      "reported compatible LC-MS/MS",
+      "current patient identity and age",
+      "no known source-comparison exclusion"
+    ],
+    "unknownSourceContext": "Information about source only; actual result and conversions retained; no patient point or verdict.",
+    "knownIncompatibleContext": "Withhold matched comparison without alternate-source fallback.",
+    "knownTreatmentStimulation": "Preserved exclusions; unknown history does not prove absence.",
+    "newMandatoryQuestions": false,
+    "sourceLodBecomesPatientLod": false,
+    "fullGreenZeroToUpperNormalBand": false,
+    "numericLowerLimit": null,
+    "median": null,
+    "plot": {
+      "valueMin": 0,
+      "valueMax": 0.4,
+      "unit": "nmol/L",
+      "independentOfPatient": true
+    },
+    "formatting": {
+      "defaultFractionDigits": 2,
+      "ngMlFractionDigits": 3,
+      "maximumAdaptiveFractionDigits": 10,
+      "fullPrecisionComparison": true
+    },
+    "fullGestationalAgeIntervalRequired": true,
+    "gestationalAgeContextFields": [
+      "gestationalAgeDays",
+      "gestationalAgeUpperDays",
+      "gestationalAgeUpperInclusive"
+    ]
+  },
+  "mayoDiscrepancy": {
+    "deferralRetained": true,
+    "primaryTTST": {
+      "testId": "TTST",
+      "testCatalogId": 8533,
+      "url": "https://www.mayocliniclabs.com/test-catalog/overview/8533",
+      "fullSourcesRead": [
+        "ttst-current.html",
+        "ttst-definition.pdf (all 8 pages)",
+        "ttst-setup.pdf (both pages)"
+      ],
+      "femaleInfantRow": {
+        "label": "0-5 months",
+        "lower": 20,
+        "upper": 80,
+        "unit": "ng/dL",
+        "productionCanonicalNmolL": [
+          0.6934,
+          2.7736
+        ],
+        "definitionPage": 3,
+        "setupPage": 2
+      },
+      "method": {
+        "material": "serum/red top",
+        "technique": "LC-MS/MS",
+        "methodName": "unpublished Mayo method",
+        "internalStandard": "carbon-13-labelled testosterone",
+        "derivatization": "hydroxylamine",
+        "onlineExtractionThenConventionalLC": true,
+        "sourceDescriptionPage": 7
+      },
+      "publicUnreportedItems": [
+        "infant cohort N",
+        "recruitment and exclusions",
+        "gestational age distribution or term-only criterion",
+        "infant observed min/max ages",
+        "percentile definition",
+        "infant age-stratified medians",
+        "source-row-specific citation",
+        "numeric LOD",
+        "numeric LOQ",
+        "low-result censoring method",
+        "calendar day-to-month mapping"
+      ],
+      "referenceProvenanceText": "Catalog generic convention says Mayo-derived unless designated otherwise; no infant-row cohort provenance is supplied.",
+      "quantitationCaution": "The lower-censored value7 in later age rows is not publicly established here as LOD or LOQ.",
+      "pdfGenerationDate": "October 29, 2026, 06:21 AM CT (downloaded copies); not a clinical revision date",
+      "latestListedUpdate": {
+        "url": "https://www.mayocliniclabs.com/test-notifications/attachment.php?id=86303",
+        "date": "2026-10-16",
+        "kind": "instrument-related test delay",
+        "changesReferenceIntervals": false
+      }
+    },
+    "separateReferralComparator": {
+      "testId": "FFTST",
+      "performingLab": "LabCorp Burlington",
+      "url": "https://www.mayocliniclabs.com/test-catalog/overview/75642",
+      "componentUnderComparison": "total testosterone (Z6079), not free/weakly-bound fraction",
+      "method": "LC-MS/MS total testosterone; ammonium-sulfate precipitation is used for bioavailable fraction",
+      "femaleNewborn": {
+        "lower": 20,
+        "upper": 64,
+        "unit": "ng/dL",
+        "canonicalNmolL": [
+          0.6934,
+          2.21888
+        ]
+      },
+      "female1to7Months": "Catalog describes decline during the first month to <10ng/dL, then remaining low until puberty.",
+      "tenNgDlCanonicalNmolL": 0.3467,
+      "primaryReferralProof": {
+        "url": "https://www.mayocliniclabs.com/test-notifications/attachment.php?id=83221",
+        "date": "2025-08-25",
+        "effective": "2025-08-28",
+        "page": 1
+      },
+      "primarySetupProof": {
+        "url": "https://www.mayocliniclabs.com/test-notifications/attachment.php?id=83222",
+        "page": 1,
+        "femaleTablePage": 2
+      },
+      "historicalTTBSNotice": {
+        "url": "https://www.mayocliniclabs.com/test-notifications/attachment.php?id=80378",
+        "date": "2024-08-22",
+        "effective": "2024-08-23",
+        "reason": "bioavailable-testosterone assay issues; referral to FFTST",
+        "isTTSTRangeCorrection": false
+      },
+      "notEstablished": [
+        "equivalence of TTST and FFTST methods",
+        "infant RI cohort provenance for FFTST",
+        "numeric infant median",
+        "exact first-month/newborn date eligibility",
+        "new default RI for application"
+      ]
+    },
+    "assessment": {
+      "established": [
+        "TTST20–80ng/dL persists in current primary catalog and both PDFs.",
+        "Unit conversion is correct in production; it does not remove discrepancy with Johannsen values.",
+        "Another Mayo-hosted LC-MS/MS referral catalog separates newborns from later infancy and describes much lower female values after the first month.",
+        "The latest TTST notice is operational, not an RI correction."
+      ],
+      "inferenceOnly": [
+        "Broad newborn-to5-month binning may contribute to the discrepancy; the specific TTST origin is not documented, so this is not a proved explanation.",
+        "A simple claim that this is RIA-versus-LC-MS/MS would not describe the two main compared assays, both labelled LC-MS/MS. Calibration and cohort differences remain possible but unquantified."
+      ],
+      "notJustified": [
+        "Calling the TTST row a demonstrated Mayo error.",
+        "Renaming TTST0–5months as newborn-only.",
+        "Using LabCorp/FFTST<10ng/dL as a corrected TTST upper limit.",
+        "Taking the middle of a range as a median.",
+        "Imputing0,LOD/2 orLOQ for a censored result."
+      ],
+      "recommendation": "Keep existing infant female TTST deferral. If a narrowly qualified Johannsen profile is proposed, select it as an explicitly separate source with its own age/population/assay/censoring policy. Do not blend sources or select whichever gives a normal result."
+    },
+    "sourceSnapshots": [
+      {
+        "name": "ttst-current.html",
+        "url": "https://www.mayocliniclabs.com/test-catalog/overview/8533",
+        "finalUrl": "https://www.mayocliniclabs.com/test-catalog/overview/8533",
+        "status": 200,
+        "contentType": "text/html; charset=utf-8",
+        "sha256": "cf617fce980be9ba2efaced09487b11f1c38f4cd084701dc9fa26c485d144b58",
+        "bytes": 173757,
+        "retrievedUTC": "2026-10-29T11:21:33.153724+00:00"
+      },
+      {
+        "name": "ttst-definition.pdf",
+        "url": "https://www.mayocliniclabs.com/test-catalog/download-setup?format=pdf&unit_code=8533",
+        "finalUrl": "https://www.mayocliniclabs.com/api/sitecore/TestCatalog/DownloadTestCatalog?testId=8533",
+        "status": 200,
+        "contentType": "application/pdf",
+        "sha256": "c5bed224f38e1c24176b70c6002874b57ea2b158376bc61ba90d6dec6cdb7ce1",
+        "bytes": 523896,
+        "retrievedUTC": "2026-10-29T11:21:35.450726+00:00",
+        "pages": 8
+      },
+      {
+        "name": "ttst-setup.pdf",
+        "url": "https://www.mayocliniclabs.com/test-catalog/setup.php?unit_code=8533&format=pdf",
+        "finalUrl": "https://www.mayocliniclabs.com/test-catalog/setup.php?unit_code=8533&format=pdf",
+        "status": 200,
+        "contentType": "application/pdf",
+        "sha256": "1fb6451c8835c01c8132836a991db782cb3bfd3dc7f849f67526a2db59288c0e",
+        "bytes": 13054,
+        "retrievedUTC": "2026-10-29T11:21:35.755929+00:00",
+        "pages": 2
+      },
+      {
+        "name": "ttbs-notification-80378.pdf",
+        "url": "https://www.mayocliniclabs.com/test-notifications/attachment.php?id=80378",
+        "finalUrl": "https://www.mayocliniclabs.com/test-notifications/attachment.php?id=80378",
+        "status": 200,
+        "contentType": "application/pdf",
+        "sha256": "03dbcf3c29a587a5d3fb08b2ae470bc78d3c942b253d58d05e75b65f280554ae",
+        "bytes": 154967,
+        "retrievedUTC": "2026-10-29T11:21:36.124862+00:00",
+        "pages": 3
+      },
+      {
+        "name": "ttst-pediatric.html",
+        "url": "https://pediatric.testcatalog.org/show/TTST",
+        "finalUrl": "https://pediatric.testcatalog.org/show/TTST",
+        "status": 200,
+        "contentType": "text/html; charset=utf-8",
+        "sha256": "7fa5fe0e1eff3630d05bd33ea7d4a81d1aca44c379805a944d525b3a9fc07b68",
+        "bytes": 35167,
+        "retrievedUTC": "2026-10-29T11:21:36.528344+00:00"
+      },
+      {
+        "name": "ttst-delay-86303.pdf",
+        "url": "https://www.mayocliniclabs.com/test-notifications/attachment.php?id=86303",
+        "finalUrl": "https://www.mayocliniclabs.com/test-notifications/attachment.php?id=86303",
+        "status": 200,
+        "contentType": "application/pdf",
+        "sha256": "c69859807cac536fd12a0d247f16b59be4c989ec54570dcb72928133a3f6bc4c",
+        "bytes": 115806,
+        "retrievedUTC": "2026-10-29T11:21:36.929802+00:00",
+        "pages": 1
+      },
+      {
+        "name": "fftst-current.html",
+        "url": "https://www.mayocliniclabs.com/test-catalog/overview/75642",
+        "finalUrl": "https://www.mayocliniclabs.com/test-catalog/overview/75642",
+        "status": 200,
+        "contentType": "text/html; charset=utf-8",
+        "bytes": 178639,
+        "sha256": "e00a9de73ac91821881441995f2e26371824af9eb81422b91c5ecf00d125ed68",
+        "retrievedUTC": "2026-10-29T11:22:49.269642+00:00"
+      },
+      {
+        "name": "fftst-referral-83221.pdf",
+        "url": "https://www.mayocliniclabs.com/test-notifications/attachment.php?id=83221",
+        "finalUrl": "https://www.mayocliniclabs.com/test-notifications/attachment.php?id=83221",
+        "status": 200,
+        "contentType": "application/pdf",
+        "bytes": 127998,
+        "sha256": "6ee57dff457b8351142fad135d5d996bc0e345af4d25ec2ea5e0887a2f78ba96",
+        "retrievedUTC": "2026-10-29T11:22:49.644869+00:00",
+        "pages": 2
+      },
+      {
+        "name": "fftst-definition-83222.pdf",
+        "url": "https://www.mayocliniclabs.com/test-notifications/attachment.php?id=83222",
+        "finalUrl": "https://www.mayocliniclabs.com/test-notifications/attachment.php?id=83222",
+        "status": 200,
+        "contentType": "application/pdf",
+        "bytes": 12028,
+        "sha256": "5cc30ee689a935f74969a4fa230003982d962cb455e01de8ea93d17e782ab973",
+        "retrievedUTC": "2026-10-29T11:22:49.832218+00:00",
+        "pages": 4
+      }
+    ],
+    "bothMainComparatorsLcms": true,
+    "causeResolved": false,
+    "mayoErrorEstablished": false
+  },
+  "notActivated": [
+    {
+      "source": "Olthof 2025 (online 2024)",
+      "doi": "10.1515/cclm-2024-0393",
+      "reason": "Indexed full primary main text read, technical supplement not obtained; literal neonatal group medians are not a continuous infant model; day convention unresolved."
+    },
+    {
+      "source": "Kulle 2010",
+      "doi": "10.1210/jc.2009-1670",
+      "reason": "Small plasma groups with unreported GA; not a serum substitute."
+    },
+    {
+      "source": "Frederiksen 2024",
+      "doi": "10.1016/j.cca.2024.119852",
+      "reason": "Full text and supplement not obtained; model/P50 not evaluated for import."
+    },
+    {
+      "source": "Busch 2025",
+      "doi": "10.1093/ejendo/lvaf193",
+      "reason": "Full text and supplement not available in audit; not evaluated as a P50 source."
+    }
+  ],
+  "syntheticCases": [
+    {
+      "id": "qualified-first-group",
+      "input": {
+        "sex": "female",
+        "ageMonths": 2.5,
+        "gestationalAgeDays": 280,
+        "specimen": "serum",
+        "assayMethodId": "lc-ms/ms",
+        "result": "0.18 nmol/L",
+        "gestationalAgeUpperDays": 280,
+        "gestationalAgeUpperInclusive": true
+      },
+      "expected": {
+        "upper": 0.21,
+        "comparison": "not-above-upper",
+        "exactPoint": 0.18,
+        "median": null
+      }
+    },
+    {
+      "id": "qualified-second-group",
+      "input": {
+        "ageMonths": 4,
+        "gestationalAgeDays": 280,
+        "specimen": "serum",
+        "assayMethodId": "lc-ms/ms",
+        "result": "0.18 nmol/L",
+        "gestationalAgeUpperDays": 280,
+        "gestationalAgeUpperInclusive": true
+      },
+      "expected": {
+        "upper": 0.17,
+        "comparison": "above-upper",
+        "exactPoint": 0.18
+      }
+    },
+    {
+      "id": "equal-upper",
+      "input": {
+        "qualifiedAgeMonths": 2.5,
+        "result": "0.21 nmol/L"
+      },
+      "expected": {
+        "comparison": "not-above-upper",
+        "notAFullNormalVerdict": true
+      }
+    },
+    {
+      "id": "numeric-less-than",
+      "input": {
+        "qualifiedAgeMonths": 2.5,
+        "result": "<0.10 nmol/L"
+      },
+      "expected": {
+        "comparison": "not-above-upper",
+        "operator": "<",
+        "exactPoint": null
+      }
+    },
+    {
+      "id": "strict-greater",
+      "input": {
+        "qualifiedAgeMonths": 2.5,
+        "result": ">0.21 nmol/L"
+      },
+      "expected": {
+        "comparison": "above-upper",
+        "exactPoint": null
+      }
+    },
+    {
+      "id": "inclusive-greater-at-upper",
+      "input": {
+        "qualifiedAgeMonths": 2.5,
+        "result": "≥0.21 nmol/L"
+      },
+      "expected": {
+        "comparison": "indeterminate",
+        "exactPoint": null
+      }
+    },
+    {
+      "id": "unnumbered-lod",
+      "input": {
+        "qualifiedAgeMonths": 2.5,
+        "result": "<LOD"
+      },
+      "expected": {
+        "comparison": "indeterminate",
+        "exactPoint": null,
+        "borrowSourceLod": false
+      }
+    },
+    {
+      "id": "cross-group",
+      "input": {
+        "wholeAgeMonths": {
+          "min": 3,
+          "max": 4,
+          "maximumInclusive": false
+        },
+        "otherwiseKnownCompatible": true,
+        "result": "0.18 nmol/L"
+      },
+      "expected": {
+        "status": "split",
+        "literalUppers": [
+          0.21,
+          0.17
+        ],
+        "singleVerdict": false,
+        "exactPoint": null
+      }
+    },
+    {
+      "id": "outside-conservative-domain",
+      "input": {
+        "wholeAgeMonths": {
+          "min": 2,
+          "max": 3,
+          "maximumInclusive": false
+        },
+        "otherwiseKnownCompatible": true
+      },
+      "expected": {
+        "matchedComparison": false
+      }
+    },
+    {
+      "id": "unknown-method",
+      "input": {
+        "qualifiedAgeMonths": 4,
+        "gestationalAgeDays": 280,
+        "specimen": "serum",
+        "assayMethodId": null,
+        "result": "0.18 nmol/L",
+        "gestationalAgeUpperDays": 280,
+        "gestationalAgeUpperInclusive": true
+      },
+      "expected": {
+        "status": "source-info",
+        "matchedComparison": false,
+        "exactPoint": null,
+        "mandatoryMethodQuestion": false
+      }
+    },
+    {
+      "id": "unknown-ga",
+      "input": {
+        "qualifiedAgeMonths": 4,
+        "gestationalAgeDays": null,
+        "specimen": "serum",
+        "assayMethodId": "lc-ms/ms",
+        "result": "0.18 nmol/L"
+      },
+      "expected": {
+        "status": "source-info",
+        "exactPoint": null
+      }
+    },
+    {
+      "id": "known-incompatible",
+      "input": {
+        "qualifiedAgeMonths": 4,
+        "gestationalAgeDays": 258,
+        "specimen": "plasma",
+        "assayMethodId": "immunoassay",
+        "gestationalAgeUpperDays": 258,
+        "gestationalAgeUpperInclusive": true
+      },
+      "expected": {
+        "matchedComparison": false,
+        "fallbackMayo": false
+      }
+    },
+    {
+      "id": "rounding-preserves-above",
+      "input": {
+        "qualifiedAgeMonths": 2.5,
+        "result": "0.214 nmol/L"
+      },
+      "expected": {
+        "comparison": "above-upper",
+        "resultLabel": "0,214",
+        "upperLabel": "0,210"
+      }
+    },
+    {
+      "id": "ngml-rounding-preserves-above",
+      "input": {
+        "qualifiedAgeMonths": 2.5,
+        "result": "0.0606 ng/mL"
+      },
+      "expected": {
+        "comparison": "above-upper",
+        "resultLabel": "0,06060",
+        "upperLabel": "0,06057"
+      }
+    },
+    {
+      "id": "historical-result",
+      "input": {
+        "contextBasis": "historical-sample",
+        "previousSnapshot": true
+      },
+      "expected": {
+        "newComparison": false,
+        "reevaluateOrRewriteSnapshot": false
+      }
+    }
+  ],
+  "privacy": "Only aggregate published observations, source hashes and explicitly fictional cases; no individual source records, patient data, secrets or publisher full texts included.",
+  "syntheticCaseDefaults": {
+    "qualified": "Exact GA280–280days inclusive, reported serum/compatible LC-MS/MS, current patient identity, no known source-comparison exclusion; omitted values are not manufactured by production."
+  }
+}
