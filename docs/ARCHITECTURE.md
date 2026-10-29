@@ -174,6 +174,40 @@ z identyfikatorem pacjenta i sekwencją importu dopiero po archiwizacji poprzedn
 pomiaru. Wskaźnik ustanawia wtedy bazę dla tej operacji; samo odświeżenie strony
 nie zatwierdza niezapisanych edycji.
 
+Referencja `vilda-save-ref-v1` jest wspólna dla ramek tej samej karty i zawiera
+identyfikator pacjenta. Lokalne `hidden` nie uprawnia do jej usunięcia.
+`reconcileFromSharedReference()` przejmuje aktualny odcisk i metadane oraz
+porównuje wspólną sesję bez zapisywania formularza. Dotyczy to również ponownego
+zapisu tego samego pacjenta w innej ramce. Uzgodnienie czeka na odtworzenie
+sesji i zakończenie publikacji bazy, nie anuluje kolejki rzeczywistej edycji
+i zachowuje stan trwającego zapisu lub błędu. Powłoka odzwierciedla gotowy
+wskaźnik właściwego pacjenta także na trasach bez własnego wskaźnika;
+nie wymusza stanów ukrytych ramek przez `_forceTransition()`.
+
+Puste kalkulatory Klirensu materializują domyślne kontrolki przy otwarciu.
+W projekcji porównawczej domyślny tryb stężenia, nieokreślone metadane i
+24 godziny z pochodzeniem `assumed-24h` odpowiadają brakowi tych kontrolek.
+Ręczny czas zbiórki (także 24 godziny), jego pochodzenie, odmienne ustawienia
+i oznaczenia nadal są porównywane. Normalizacja dotyczy wyłącznie kopii
+odcisku bieżącego i referencyjnego. Analiza przyczyn i zakres sprawdzenia:
+[Chip pacjenta i nawigacja powłoki](PATIENT_CHIP_NAVIGATION_AUDIT.md).
+
+`vilda_session_bridge.js` doładowuje wspólny wskaźnik i jego CSS na stronach
+bez formularza po gotowości modułów auth, w trybie `__vildaSaveStatusReadOnly`.
+Taki odbiorca nie publikuje ani nie usuwa referencji, nie zapisuje formularza
+i nie zatwierdza sesji po powiadomieniach o zapisie karty. Host `app.html`
+zachowuje własne proxy, a istniejące wskaźniki formularzy zachowują swój tryb.
+Mostek sprawdza także istniejący tag natywnego skryptu, który jeszcze się nie
+wykonał: `defer` działa przy `readyState=interactive`, a wcześniejsze
+powiadomienie auth nie może przełączyć formularza w tryb tylko do odczytu.
+
+Dedykowana sesja Klirensu jest autorytatywna względem swojej kopii w sesji
+głównej. `saveMainSessionNow` po uzupełnieniu pól innych stron zachowuje jej
+aktualną całą sekcję, także puste wejścia i wyczyszczone wyniki. Odtwarzanie
+sesji głównej korzysta z istniejącego bieżącego szkicu Klirensu; brak takiego
+szkicu zachowuje zgodność ze starszym zapisem tylko w sesji głównej. Jawne
+wczytanie pacjenta i „Odtwórz zapis” nadal przyjmują wybrany rekord.
+
 `vilda_persist_runtime.js` przyjmuje zapisany kontekst wizyty przed odtwarzaniem
 pól i przeliczaniem wieku. Brak `lastLoadedData` przed pierwszą próbą odtworzenia
 lub podczas trwającego odtwarzania nie usuwa zachowanego `loadedComparisonData`.

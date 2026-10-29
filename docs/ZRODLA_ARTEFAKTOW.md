@@ -1411,3 +1411,37 @@ starcie strony nie zastępuje wieku i daty dawnej wizyty bieżącym dniem. Jawne
 czyszczenie i ochrona przed zapisem kolejki innego pacjenta zachowują swoje reguły.
 Test produkcyjnego adaptera, runtime i modułu daty:
 `tests/unit/persist-loaded-comparison-order.test.mjs`.
+
+## Łatka P-CHIP-POWLOKA / P-CHIP-KLIRENS (2026-10-29)
+
+Zmiany w `vilda_save_status_indicator.js` i `vilda_shell.js` pozostają
+czytelnymi blokami bez ponownej minifikacji pozostałej części artefaktów.
+
+- `normalizeClcrStatusInputs` normalizuje wyłącznie kopie do porównania:
+  domyślne kontrolki pustych kalkulatorów i domyślną 24-godzinną zbiórkę
+  z pochodzeniem `assumed-24h`. Odmienny lub ręcznie podany czas, pochodzenie
+  i wartości badań nadal uczestniczą w porównaniu. Bieżący odcisk i starsza
+  referencja przechodzą tę samą projekcję w `te`.
+- Protokół referencji rozdziela publikację po zapisie/wczytaniu od odczytu po
+  odtworzeniu. `reconcileFromSharedReference` nie zapisuje formularza ani
+  magazynu. Referencja niesie `patientId`, a późna ramka w stanie `hidden`
+  nie usuwa jej. Osobny timer uzgodnienia nie anuluje obsługi rzeczywistej
+  edycji; gotowość obejmuje odtworzenie, odblokowanie i publikację bazy.
+- Powłoka wybiera gotowe źródło stanu właściwego pacjenta również na trasach
+  bez własnego wskaźnika. Nagłówek i proxy korzystają z tego samego źródła.
+  Usunięto narzucanie `_forceTransition` ukrytym ramkom bez ich referencji.
+- `vilda_session_bridge.js` doładowuje wskaźnik na pozostałych stronach po
+  modułach auth. Wskaźnik przejmuje tryb tylko do odczytu przed inicjalizacją;
+  nie publikuje ani nie usuwa referencji i nie zatwierdza wspólnych edycji po
+  zapisie karty. Sprawdzanie istnienia natywnego wskaźnika i klasy hosta
+  zachowuje istniejące formularze oraz proxy powłoki.
+- `vilda_data_import_export.js`: `readCurrentClcrCarrier` odczytuje i klonuje
+  bieżący szkic, `preserveCurrentClcrInMainSession` zachowuje całą jego sekcję
+  po scalaniu sesji głównej, a `currentClcrForSessionRestore` wybiera istniejący
+  szkic wyłącznie przy odtwarzaniu sesji. Jawny import pacjenta i odtworzenie
+  zapisanego rekordu zachowują dotychczasową drogę. Regresje producenta sesji,
+  jawnego importu, starszego zapisu i odtworzenia wykonują rzeczywisty importer
+  w `tests/unit/main-session-klirens-authority.test.mjs`.
+
+Szczegóły diagnozy i rozdzielenie obserwacji przeglądarkowych od deterministycznej
+regresji wyścigu: `docs/PATIENT_CHIP_NAVIGATION_AUDIT.md`.
