@@ -105,6 +105,14 @@ grupie. Przykładowo `[3,4)` pasuje, `[3,4]` oraz przedział 3,9–4,1
 nie pasują do jednej grupy. Nie wyznaczamy nowego DOB, dnia, środka
 wieku ani mediany dla samej dostępnej części przedziału.
 
+Adapter zachowuje przedział miesięcy kalendarzowych z rzeczywistego
+resolvera TT także wtedy, gdy podano tylko liczbę dni od urodzenia.
+Nie zastępuje go ilorazem dni i długości roku z ogólnego wykresu
+edukacyjnego. Na przykład 183 podane dni bez dat kalendarzowych dają
+w resolverze TT niepewny przedział 5–<7 miesięcy: nowa mediana nie jest
+wtedy dostępna. To przykład regresyjny istniejącego resolvera, nie nowy
+próg kwalifikacji zdefiniowany w dniach.
+
 Od 6 lat automatycznie obowiązuje dotychczasowy model Madsen, przy
 jego własnej pełnej kwalifikacji [6,18]. Nie rysujemy mostu między
 około 0,10401 przed 6 lat a P50 Madsen 0,055406420261450574 przy 6.
@@ -195,6 +203,7 @@ nie tworzymy median z granic RI i nie wypełniamy luki przed 6 miesiącami.
 | TT 0,75 nmol/L u F3 | `above` według Mayo, wyróżniony punkt w osi; brak mylenia górnej osi 0,8 z normą 0,6934 |
 | F12, TT 1,50 nmol/L | Dotychczasowy Madsen i oś 1,2; strzałka ponad osią; brak `above` tylko z powodu skali |
 | Wiek 6 miesięcy / 5 miesięcy | Pierwszy kwalifikuje po spełnieniu całego przedziału, drugi nie otrzymuje nowej mediany |
+| Tylko 183 dni od urodzenia, bez dat kalendarzowych | Adapter zachowuje niepewny przedział 5–<7 miesięcy z silnika TT; bez nowej mediany |
 | [5,6) / dokładne 6 / [5,6] | Pierwszy: Kushnir ≈0,10; drugie: Madsen 0,055406420261450574; ostatni nie mieści się w jednej grupie Kushnir |
 | Znany przedział 3,9–4,1 | Bez zastępczej mediany, średniej grup lub wyboru środka wieku |
 | `>1,50` / `<1,50` u F3 | Operator zachowany, bez dokładnego punktu i krotności; tylko istniejący pewny `above` otrzymuje panel |

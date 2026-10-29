@@ -2802,6 +2802,9 @@ nie odzyskanymi nierównościami autorów. Cały znany przedział wieku
 musi pasować do jednej grupy, z uwzględnieniem końca otwartego lub
 zamkniętego. Sześć miesięcy to wiek kalendarzowy z istniejącego
 kontekstu, bez arbitralnej nowej granicy dni lub wieku skorygowanego.
+Adapter zachowuje kalendarzowy przedział resolvera TT również przy
+wieku podanym tylko w dniach, bez zastępowania go ogólną pozycją na
+wykresie. Przykładowe 183 dni bez dat dają 5–<7 miesięcy i brak mediany.
 Znane wyłączenia, bieżąca tożsamość i brak przenoszenia danych na
 historię zachowują znaczenie. Nie wymaga Th/P, metody lub wyboru źródła.
 
