@@ -170,15 +170,28 @@ test('błąd odświeżenia po akcji nie zamyka pełnego arkusza i pozwala ponowi
   await page.locator('#vildaRemindersBtn').click();
   const modal = page.locator('.vilda-reminders-modal-overlay');
   await expect(modal.locator('.vilda-reminders-row')).toHaveCount(2);
-  await page.evaluate(() => { window.__reminderTest.fault = true; });
+  const completedId = await modal.locator('.vilda-reminders-row').first().getAttribute('data-note-id');
+  await page.evaluate(() => {
+    window.__reminderTest.fault = true; window.__reminderTest.outcomeWrites = 0;
+    const save = window.VildaVault.saveReminderOutcome;
+    window.VildaVault.saveReminderOutcome = function (...args) {
+      window.__reminderTest.outcomeWrites += 1;
+      return save.apply(this, args);
+    };
+  });
   await modal.locator('.vilda-reminders-row').first().click();
   await modal.getByRole('button', { name: 'Oznacz jako wykonane', exact: true }).click();
   await page.locator('dialog.vb22-outcome').getByRole('button', { name: 'Zapisz wykonanie', exact: true }).click();
   await expect(modal).toBeVisible();
-  await expect(modal.getByRole('alert')).toContainText('Nie udało się wczytać przypomnień');
+  await expect(modal.getByRole('alert')).toContainText('Zapisano zmiany, ale nie udało się odświeżyć szczegółów');
+  await expect(page.locator('dialog.vb22-outcome')).toHaveCount(0);
+  const committed = await page.evaluate(id => window.VildaVault.getPatientNote(id), completedId);
+  expect(committed.completedAtISO).toBeTruthy();
   await page.evaluate(() => { window.__reminderTest.fault = false; });
-  await modal.getByRole('button', { name: 'Spróbuj ponownie', exact: true }).click();
+  await modal.getByRole('button', { name: 'Odśwież zapis', exact: true }).click();
   await expect(modal.locator('.vilda-reminders-row')).toHaveCount(1);
+  expect(await page.evaluate(id => window.VildaVault.getPatientNote(id), completedId)).toEqual(committed);
+  expect(await page.evaluate(() => window.__reminderTest.outcomeWrites)).toBe(1);
   await modal.getByRole('button', { name: /^Do wykonania/ }).click();
   await expect(modal.locator('.vilda-reminders-row')).toHaveCount(1);
 });

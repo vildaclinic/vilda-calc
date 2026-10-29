@@ -83,6 +83,14 @@ const notatka = (page, id) => page.evaluate(async (i) => {
 }, id);
 
 const wierszObs = (page) => page.locator('#remindersInline .vild-rem-row', { hasText: 'Umówić densytometr' });
+const sprawdzAkcje = async dialog => {
+  for (const name of ['Oznacz jako wykonane', 'Przełóż termin', 'Edytuj treść przypomnienia']) await expect(dialog.getByRole('button', { name, exact: true })).toBeVisible();
+  const more = dialog.locator('.vb22-action-more');
+  await more.locator('summary').click();
+  await expect(more.getByRole('button', { name: 'Nie zgłosił się', exact: true })).toBeVisible();
+  await more.locator('summary').click();
+  await expect(more.getByRole('button', { name: 'Nie zgłosił się', exact: true })).toBeHidden();
+};
 
 test('klik w pozycję karty otwiera pełny B2.2 z treścią, terminem i akcjami', async ({ page }) => {
   await otworzZDanymi(page); const row = wierszObs(page); await expect(row).toHaveCount(1);
@@ -93,14 +101,14 @@ test('klik w pozycję karty otwiera pełny B2.2 z treścią, terminem i akcjami'
   expect(geometry.position).toBe('fixed'); expect(Math.abs(geometry.cx-geometry.vw/2)).toBeLessThan(40); expect(Math.abs(geometry.cy-geometry.vh/2)).toBeLessThan(60);
   expect(geometry.w).toBeLessThanOrEqual(1281); expect(geometry.w).toBeGreaterThan(700); expect(geometry.h).toBeLessThanOrEqual(geometry.vh);
   await expect(dialog.getByRole('button',{name:/[Oo]twórz Kartę pacjenta/})).toBeVisible();
-  for (const name of ['Oznacz jako wykonane','Przełóż termin','Nie zgłosił się']) await expect(dialog.getByRole('button',{name,exact:true})).toBeVisible();
+  await sprawdzAkcje(dialog);
   await page.keyboard.press('Escape'); await expect(dialog).toHaveCount(0);
 });
 
 test('B2.2: wykonanie zachowuje opis, a przełożenie zachowuje zadanie z nowym terminem', async ({ page }) => {
   const ids=await otworzZDanymi(page); await wierszObs(page).click(); const dialog=page.locator('dialog.vb22-modal');
   await expect(dialog).toContainText(DLUGA_TRESC);
-  for(const name of ['Oznacz jako wykonane','Przełóż termin','Nie zgłosił się']) await expect(dialog.getByRole('button',{name,exact:true})).toBeVisible();
+  await sprawdzAkcje(dialog);
   await dialog.getByRole('button',{name:'Oznacz jako wykonane',exact:true}).click();
   await page.locator('dialog.vb22-outcome').getByLabel('Co zostało zrobione? (opcjonalnie)',{exact:true}).fill('Fikcyjny zapis wykonania densytometrii.');
   await page.locator('dialog.vb22-outcome').getByRole('button',{name:'Zapisz wykonanie',exact:true}).click();
