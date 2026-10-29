@@ -146,7 +146,8 @@
         id: "Prot_mgkg",
         label: "Białko całkowite w DZM",
         version: "advanced",
-        requires: [ "U_Prot", ...timedCollectionDurationFields],
+        requires: ["Prot_concentration", "Prot_concentrationUnit", "Prot_volume", "Prot_volumeUnit", "Prot_collectionHours"],
+        note: "Stężenie i objętość albo gotowy wynik dobowy. Przyjmujemy pełne 24 h; znane dane pacjenta służą wyznaczeniu normy dla pacjenta.",
       },
       {
         id: "Na_mmol_d",

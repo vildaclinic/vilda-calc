@@ -9,8 +9,8 @@
   "use strict";
   const HOURS_ID = "Cl24DurationHours";
   const SOURCE_ID = "Cl24DurationSource";
-  const HOURS_FIELDS = Object.freeze([HOURS_ID, "CA_collectionHours", "UA_collectionHours", "MG_collectionHours", "PO4_collectionHours"]);
-  const SOURCES = Object.freeze({ [HOURS_ID]: SOURCE_ID, CA_collectionHours: "CA_collectionSource", UA_collectionHours: "UA_collectionSource", MG_collectionHours: "MG_collectionSource", PO4_collectionHours: "PO4_collectionSource" });
+  const HOURS_FIELDS = Object.freeze([HOURS_ID, "CA_collectionHours", "UA_collectionHours", "MG_collectionHours", "PO4_collectionHours", "Prot_collectionHours"]);
+  const SOURCES = Object.freeze({ [HOURS_ID]: SOURCE_ID, CA_collectionHours: "CA_collectionSource", UA_collectionHours: "UA_collectionSource", MG_collectionHours: "MG_collectionSource", PO4_collectionHours: "PO4_collectionSource", Prot_collectionHours: "Prot_collectionSource" });
   const PROTOCOL_IDS = Object.freeze(["collectionStartVoidDiscarded", "collectionFinalVoidIncluded", "collectionNoMissedVoids", "collectionNoSpillage", "collectionNoExtraVoids", "collectionStorageFollowed"]);
   const PROTOCOL_KEYS = Object.freeze(["startVoidDiscarded", "finalVoidIncluded", "noMissedVoids", "noSpillage", "noExtraVoids", "storageFollowed"]);
   const bindings = new WeakMap(), layouts = new WeakMap();

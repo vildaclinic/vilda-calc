@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
 import vm from 'node:vm';
 import { patchPo4DzmSessionHooks, po4DzmSessionSource } from '../../tools/patch-klirens-po4-dzm-session.mjs';
+import { patchProteinDzmSessionHooks, proteinDzmSessionSource } from '../../tools/patch-klirens-protein-dzm-session.mjs';
 import { patchMgDzmSessionHooks } from '../../tools/patch-klirens-mg-dzm-session.mjs';
 import { patchCaDzmSessionHooks } from '../../tools/patch-klirens-ca-dzm-session.mjs';
 import { patchUaSessionHooks } from '../../tools/patch-klirens-ua-session.mjs';
@@ -68,7 +69,8 @@ describe('PO4 DZM — complete production session runtime', () => {
   it('the actual capture canonicalizes native-reset duration defaults before their first restoration without mutating DOM or value vault', () => {
     const resetHours = { Cl24DurationHours: '24', Cl24DurationSource: 'assumed-24h',
       CA_collectionHours: '', CA_collectionSource: 'assumed-24h', UA_collectionHours: '', UA_collectionSource: 'assumed-24h',
-      MG_collectionHours: '', MG_collectionSource: 'assumed-24h', PO4_collectionHours: '', PO4_collectionSource: 'assumed-24h' };
+      MG_collectionHours: '', MG_collectionSource: 'assumed-24h', PO4_collectionHours: '', PO4_collectionSource: 'assumed-24h',
+      Prot_collectionHours: '', Prot_collectionSource: 'assumed-24h' };
     const result = runtime({ formulaPicker: 'ckid_u25', ...resetHours, PO4_durationNeedsConfirmation: 'false',
       collectionStartAt: '', collectionEndAt: '', Cl24CollectionProblem: false });
     // The existing capture lazily allocates an empty vault. Seed that same
@@ -257,9 +259,11 @@ describe('PO4 DZM — portable collection provenance', () => {
   });
 
   it('reproduces the shipped adapter from the preceding audited session source', () => {
-    const preceding = source.replace(po4DzmSessionSource, '').replace('try{window.ClcrPo4DzmUi?.ensureControls?.(document)}catch{}', '')
+    const beforeProtein = source.replace(proteinDzmSessionSource, '').replace('try{window.ClcrProteinDzmUi?.ensureControls?.(document)}catch{}', '');
+    const preceding = beforeProtein.replace(po4DzmSessionSource, '').replace('try{window.ClcrPo4DzmUi?.ensureControls?.(document)}catch{}', '')
       .replace('o.inputs=window.ClcrCollectionDuration?.normalizeCapturedInputs?.(o.inputs)||o.inputs,', '');
-    expect(patchPo4DzmSessionHooks(preceding)).toBe(source);
+    expect(patchPo4DzmSessionHooks(preceding)).toBe(beforeProtein);
+    expect(patchProteinDzmSessionHooks(patchPo4DzmSessionHooks(preceding))).toBe(source);
     expect(() => patchPo4DzmSessionHooks(preceding.replace('(function(){const b="vildaClcrSessionV1";', ''))).toThrow('Ambiguous phosphorus session integration anchor');
     expect(() => patchPo4DzmSessionHooks(preceding.replace('o.inputs.formulaPicker=r,o}', 'o.inputs.formulaPicker=r}'))).toThrow('Ambiguous captured duration normalization anchor');
   });

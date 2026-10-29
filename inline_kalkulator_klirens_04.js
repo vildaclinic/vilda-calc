@@ -448,6 +448,13 @@ function validateField(e) {
   const n = e.id,
     t = parseFloat(e.value),
     o = e.parentNode.querySelector(".validation-message");
+  if ($("formulaPicker")?.value === "Prot_mgkg" && n.startsWith("Prot_")) {
+    const outcome = evaluateClcrProteinDzm(), invalid = outcome.invalidIds?.includes(n) === true;
+    e.classList.toggle("error", invalid);
+    e.setAttribute("aria-invalid", String(invalid));
+    if (o) o.textContent = invalid ? outcome.error : "";
+    return !invalid;
+  }
   if ($("formulaPicker")?.value === "PO4_mgkg" && n.startsWith("PO4_")) {
     const outcome = evaluateClcrPo4Dzm(), invalid = outcome.invalidIds?.includes(n) === true;
     e.classList.toggle("error", invalid);
@@ -576,7 +583,7 @@ function validateField(e) {
 function validateClcrAgeContext(e) {
   // Cit/Cr reference bands use completed years; zero years needs no extra
   // months or days to select the source's birth–<3-years interval.
-  if (["CitCr_spot", "FENa_spot", "FEK_spot", "FECl_spot", "FEHCO3_spot", "AGu_spot", "TMP_GFR", "pH_spot", "UA_mgkg", "Ca_mgkg", "Mg_mgkg", "PO4_mgkg"].includes($("formulaPicker")?.value)) return;
+  if (["CitCr_spot", "FENa_spot", "FEK_spot", "FECl_spot", "FEHCO3_spot", "AGu_spot", "TMP_GFR", "pH_spot", "UA_mgkg", "Ca_mgkg", "Mg_mgkg", "PO4_mgkg", "Prot_mgkg"].includes($("formulaPicker")?.value)) return;
   const n = document.getElementById("age"),
     t = document.getElementById("ageMonths");
   if (!n || (n.value || "").trim() === "") return;
@@ -607,6 +614,7 @@ function canComputeFormula(e) {
   if (e === "Ca_mgkg") return evaluateClcrCaDzm().valid === true;
   if (e === "Mg_mgkg") return evaluateClcrMgDzm().valid === true;
   if (e === "PO4_mgkg") return evaluateClcrPo4Dzm().valid === true;
+  if (e === "Prot_mgkg") return evaluateClcrProteinDzm().valid === true;
   if (e === "UA_mgkg") return evaluateClcrUa().valid === true;
   if (
     window.ClcrClinicalSafety &&
@@ -739,6 +747,28 @@ function evaluateClcrUag() {
   const engine = window.VildaClcrUag;
   return engine?.evaluate(engine.readInputFromDocument(document), window.VildaClcrUagReferenceData?.DEFAULT_POLICY)
     || { valid: false, errorCode: "UAG_UNAVAILABLE", error: "Nie można obliczyć UAG. Odśwież aplikację." };
+}
+
+function evaluateClcrProteinDzm() {
+  const engine = window.VildaClcrProteinDzm;
+  if (!engine) return { valid: false, errorCode: "PROTEIN_UNAVAILABLE", error: "Nie można obliczyć białka w DZM. Odśwież aplikację." };
+  let input = engine.readInputFromDocument(document);
+  if (window.ClcrUiWorkflow?.state.legacyBroad) {
+    // U_Prot historically means the total amount in the whole collection.
+    // Convert it explicitly; never treat it as a concentration or reuse V24.
+    const vault = window.__vildaClcrVersionValueVault || {};
+    const values = Object.fromEntries(engine.CONTEXT_FIELD_IDS.flatMap(id => {
+      const control = $(id);
+      return control ? [[id, control.type === "checkbox" ? control.checked : control.value]] : Object.hasOwn(vault, id) ? [[id, vault[id]]] : [];
+    }));
+    const minutes = readClcrCollectionDurationMinutes();
+    const total = engine.parseValue($("U_Prot")?.value);
+    const daily = total && minutes > 0 ? window.ClcrSavedLegacyCalculator?.math?.dailyAmount?.(total.value, minutes) : null;
+    Object.assign(values, { Prot_inputMode: "reported", Prot_reportedValue: Number.isFinite(daily) ? String(daily) : "", Prot_reportedUnit: "mg/24h", Prot_outputUnit: "mg/24h",
+      Prot_collectionHours: $("Cl24DurationHours")?.value ?? (minutes ? String(minutes / 60) : ""), Prot_collectionSource: $("Cl24DurationSource")?.value || "assumed-24h" });
+    input = engine.inputFromValues(values);
+  }
+  return engine.evaluate(input, window.ClcrProteinDzmReferenceData?.DEFAULT_POLICY);
 }
 
 function evaluateClcrPo4Dzm() {
@@ -892,14 +922,14 @@ function packClcrSupplementaryMarkup(markup, formulaId) {
   clcrSetTrustedMarkup(staging, markup, "clcr-result-presentation-staging");
   const nodes = [...staging.children];
   const primary = nodes.find((node) => node.classList.contains("clcr-result-card") && node.dataset.clcrFormula === formulaId);
-  if (!primary && ["CitCr_spot", "FENa_spot", "FEK_spot", "FECl_spot", "FEHCO3_spot", "AGu_spot", "TMP_GFR", "pH_spot", "UA_mgkg", "Ca_mgkg", "Mg_mgkg", "PO4_mgkg"].includes(formulaId)) {
+  if (!primary && ["CitCr_spot", "FENa_spot", "FEK_spot", "FECl_spot", "FEHCO3_spot", "AGu_spot", "TMP_GFR", "pH_spot", "UA_mgkg", "Ca_mgkg", "Mg_mgkg", "PO4_mgkg", "Prot_mgkg"].includes(formulaId)) {
     const pending = nodes.filter((node) => node.dataset.clcrFormula === formulaId && node.matches(".citcr-result-empty, .citcr-result-error, .fena-result-empty, .fena-result-error, .fek-result-empty, .fek-result-error, .fecl-result-empty, .fecl-result-error, .fehco3-result-empty, .fehco3-result-error, .uag-result-empty, .uag-result-error, .tmp-gfr-result-empty, .tmp-gfr-result-error, .ph-result-empty, .ph-result-error, .ua-result-empty, .ua-result-error, .ca-dzm-result-empty, .ca-dzm-result-error, .mg-dzm-result-empty, .mg-dzm-result-error, .po4-dzm-result-empty, .po4-dzm-result-error"));
     if (pending.length) return pending.map((node) => node.outerHTML).join("");
   }
   if (!primary) return markup;
   const details = nodes.find((node) => node.classList.contains("clcr-result-details") && node.dataset.clcrFormula === formulaId);
   if (!details) return markup;
-  if (["OxCr_spot", "CitCr_spot", "FENa_spot", "FEK_spot", "FECl_spot", "FEHCO3_spot", "AGu_spot", "TMP_GFR", "pH_spot", "UA_mgkg", "Ca_mgkg", "Mg_mgkg", "PO4_mgkg"].includes(formulaId)) {
+  if (["OxCr_spot", "CitCr_spot", "FENa_spot", "FEK_spot", "FECl_spot", "FEHCO3_spot", "AGu_spot", "TMP_GFR", "pH_spot", "UA_mgkg", "Ca_mgkg", "Mg_mgkg", "PO4_mgkg", "Prot_mgkg"].includes(formulaId)) {
     // This card already carries its complete source and specimen context.
     // Unrelated stone-panel EAU notes must not label a Fimlab/NHS reference.
     nodes.filter((node) => node !== primary && node !== details &&
@@ -931,7 +961,7 @@ function packClcrSupplementaryMarkup(markup, formulaId) {
 function consolidateClcrEngineOutputs(formulaId) {
   if (!formulaId || !window.ClcrResultPresentation) return;
   const containers = [$("clcrInfo"), $("elecInfo"), $("stoneInfo")].filter(Boolean);
-  if (["UA_mgkg", "Ca_mgkg", "Mg_mgkg", "PO4_mgkg"].includes(formulaId)) {
+  if (["UA_mgkg", "Ca_mgkg", "Mg_mgkg", "PO4_mgkg", "Prot_mgkg"].includes(formulaId)) {
     // Also isolate empty/error states; a dormant legacy collection must never
     // remain visible when the active UA calculation is incomplete or invalid.
     containers.filter(node => node !== $("elecInfo")).forEach(clearClcrResultElement);
@@ -945,7 +975,7 @@ function consolidateClcrEngineOutputs(formulaId) {
   containers.filter((other) => other !== container).forEach((other) => {
     // The audited UA card already owns its exact duration, value and sources.
     // Legacy stone/DZM output can describe a different, dormant collection.
-    if (["UA_mgkg", "Ca_mgkg", "Mg_mgkg", "PO4_mgkg"].includes(formulaId)) { clearClcrResultElement(other); return; }
+    if (["UA_mgkg", "Ca_mgkg", "Mg_mgkg", "PO4_mgkg", "Prot_mgkg"].includes(formulaId)) { clearClcrResultElement(other); return; }
     [...other.children].forEach((node) => {
       if (node.dataset.clcrFormula !== formulaId && node.dataset.clcrComparisonFor !== formulaId) {
         node.remove();
@@ -1067,7 +1097,8 @@ function update() {
     uaEvaluation = evaluateClcrUa(),
     caDzmEvaluation = evaluateClcrCaDzm(),
     mgDzmEvaluation = evaluateClcrMgDzm(),
-    po4DzmEvaluation = evaluateClcrPo4Dzm();
+    po4DzmEvaluation = evaluateClcrPo4Dzm(),
+    proteinDzmEvaluation = evaluateClcrProteinDzm();
   acrRatio
     ? ((j = acrRatio.mgG),
       ($("U_ACR").value = j.toFixed(1)))
@@ -1133,7 +1164,7 @@ function update() {
   }
   const rt = o && d,
     dt = [...document.querySelectorAll("#clcrForm input")].some((i) =>
-      (i.type === "hidden" || ["Cl24DurationHours", "UA_collectionHours", "CA_collectionHours", "CA_clinicalMode", "MG_collectionHours", "PO4_collectionHours"].includes(i.id)) ? false : i.type === "checkbox" ? i.checked : (i.value || "").trim() !== "",
+      (i.type === "hidden" || ["Cl24DurationHours", "UA_collectionHours", "CA_collectionHours", "CA_clinicalMode", "MG_collectionHours", "PO4_collectionHours", "Prot_collectionHours"].includes(i.id)) ? false : i.type === "checkbox" ? i.checked : (i.value || "").trim() !== "",
     );
   let Ne = !1;
   {
@@ -2272,35 +2303,6 @@ function update() {
           : null,
     Ct = phosphorusDzm ? phosphorusDzm.totalMg24h : null,
     PiMmol24 = phosphorusDzm ? phosphorusDzm.totalMmol24h : null,
-    proteinDzm =
-      window.ClcrClinicalSafety &&
-      typeof window.ClcrClinicalSafety.computeProteinDzm == "function"
-        ? window.ClcrClinicalSafety.computeProteinDzm({
-            totalMg24h:
-              $("U_Prot") &&
-              String($("U_Prot").value || "").trim() !== "" &&
-              collectionDurationMinutes &&
-              urineCollectionProtocolComplete
-                ? window.ClcrSavedLegacyCalculator.math.dailyAmount(Ce, collectionDurationMinutes)
-                : null,
-            bsaM2: W,
-          })
-        : Ce >= 0 &&
-            collectionDurationMinutes &&
-            urineCollectionProtocolComplete
-          ? {
-              totalMg24h: Ce * (1440 / collectionDurationMinutes),
-              totalG24h:
-                (Ce * (1440 / collectionDurationMinutes)) / 1000,
-              mgM2Per24h:
-                W > 0
-                  ? (Ce * (1440 / collectionDurationMinutes)) / W
-                  : null,
-            }
-          : null,
-    vt = proteinDzm ? proteinDzm.totalMg24h : null,
-    proteinG24 = proteinDzm ? proteinDzm.totalG24h : null,
-    proteinPerBsa = proteinDzm ? proteinDzm.mgM2Per24h : null,
     uricAcidMg24 =
       De && collectionDailyVolume
         ? (De * collectionDailyVolume) / 100
@@ -2350,6 +2352,11 @@ function update() {
     }
     ve += `<div class="result-box${m ? "" : " out-of-range"}"${Sa}><strong>${q}:</strong> ${l.toFixed(L)} ${u}${V}</div>`;
   }
+  if (_e === "Prot_mgkg" || window.ClcrUiWorkflow?.state.legacyBroad && proteinDzmEvaluation.valid) {
+    ve += window.ClcrProteinDzmUi
+      ? window.ClcrProteinDzmUi.renderResult(proteinDzmEvaluation)
+      : '<div class="protein-dzm-result-error" data-clcr-formula="Prot_mgkg"><strong>Nie można wyświetlić wyniku</strong><p>Odśwież aplikację, aby wczytać moduł białka w DZM.</p></div>';
+  }
   if (_e === "PO4_mgkg" || window.ClcrUiWorkflow?.state.legacyBroad && po4DzmEvaluation.valid) {
     ve += window.ClcrPo4DzmUi
       ? window.ClcrPo4DzmUi.renderResult(po4DzmEvaluation)
@@ -2392,11 +2399,6 @@ function update() {
       Tt,
       "mmol/L", undefined, "AGs",
     ),
-    y("Bia\u0142ko całkowite w DZM", vt, "mg/24 h", undefined, "Prot_mg24"),
-    y("Bia\u0142ko całkowite w DZM", proteinG24, "g/24 h", undefined, "Prot_g24"),
-    o &&
-      t < 18 &&
-      y("Białko całkowite znormalizowane do BSA", proteinPerBsa, "mg/m\xB2/24 h", undefined, "Prot_bsa"),
     y("Białko/kreatynina w DZM", Rt, "mg/mg", undefined, "B_Cr"));
   const spotFeFormulaIds = new Set([
       "FENa_spot",
@@ -2490,6 +2492,7 @@ function update() {
   const uagDetailsOpen = _e === "AGu_spot" && $("clcr-uag-details")?.open === true;
   const caDzmDetailsOpen = _e === "Ca_mgkg" && $("clcr-ca-dzm-details")?.open === true;
   const po4DzmDetailsOpen = _e === "PO4_mgkg" && $("clcr-po4-dzm-details")?.open === true;
+  const proteinDzmDetailsOpen = _e === "Prot_mgkg" && $("clcr-protein-dzm-details")?.open === true;
   const mgDzmDetailsOpen = _e === "Mg_mgkg" && $("clcr-mg-dzm-details")?.open === true;
   const uaDetailsOpen = _e === "UA_mgkg" && $("clcr-ua-details")?.open === true;
   (clcrSetTrustedMarkup($("elecInfo"), packClcrSupplementaryMarkup(ve, _e), "electrolyte result html"),
@@ -2499,6 +2502,7 @@ function update() {
   if (uagDetailsOpen && $("clcr-uag-details")) $("clcr-uag-details").open = true;
   if (caDzmDetailsOpen && $("clcr-ca-dzm-details")) $("clcr-ca-dzm-details").open = true;
   if (po4DzmDetailsOpen && $("clcr-po4-dzm-details")) $("clcr-po4-dzm-details").open = true;
+  if (proteinDzmDetailsOpen && $("clcr-protein-dzm-details")) $("clcr-protein-dzm-details").open = true;
   if (mgDzmDetailsOpen && $("clcr-mg-dzm-details")) $("clcr-mg-dzm-details").open = true;
   if (uaDetailsOpen && $("clcr-ua-details")) $("clcr-ua-details").open = true;
   if (tmpGfrDetailsOpen && $("clcr-tmp-gfr-details")) $("clcr-tmp-gfr-details").open = true;
@@ -3922,6 +3926,14 @@ const clearBtn = document.getElementById("clearBtn");
 clearBtn &&
   clearBtn.addEventListener("click", (event) => {
     event.clcrClearedFormula = $("formulaPicker")?.value || "";
+    if (event.clcrClearedFormula === "Prot_mgkg") {
+      const vault = window.__vildaClcrVersionValueVault;
+      event.clcrPreservedProteinDzmContext = Object.fromEntries((window.ClcrProteinDzmSession?.CONTEXT_IDS || []).flatMap(id => {
+        const control = $(id);
+        if (control) return [[id, control.type === "checkbox" ? control.checked : control.value]];
+        return vault && Object.hasOwn(vault, id) ? [[id, vault[id]]] : [];
+      }));
+    }
     if (event.clcrClearedFormula === "PO4_mgkg") {
       const vault = window.__vildaClcrVersionValueVault;
       event.clcrPreservedPo4DzmContext = Object.fromEntries((window.ClcrPo4DzmSession?.CONTEXT_IDS || []).flatMap(id => {

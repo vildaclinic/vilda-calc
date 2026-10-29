@@ -37,7 +37,9 @@ function harness(hours, { absent = false } = {}) {
 describe('Actual generic readiness gate agrees with the shared duration module', () => {
   const timed = ['Prot_mgkg', 'Na_mmol_d', 'K_mmol_d', 'Ox_mgkg', 'Cit_mgkg', 'pH24'];
   function canCompute(formula, hours, knownProblem = false) {
-    const w = {}; loadBrowserScript('clcr_collection_duration.js', w);
+    const w = { ClcrUiWorkflow: { state: { legacyBroad: true } } };
+    for (const file of ['clcr_collection_duration.js', 'clcr_extended_egfr.js', 'clcr_saved_legacy_calculator.js',
+      'clcr_protein_dzm_data.js', 'clcr_protein_dzm.js']) loadBrowserScript(file, w);
     const values = { age: '45', weight: '60', height: '165', V24: '1440', U_Na: '50', U_K: '20',
       U_PO4: '50', U_Prot: '1000', U_Ox: '5', U_Cit: '5', pH24: '5.5',
       oxalateReportingEntity: 'oxalate_ion', Cl24DurationHours: hours,
@@ -45,7 +47,7 @@ describe('Actual generic readiness gate agrees with the shared duration module',
       ...(knownProblem ? { ui_collectionNoMissedVoids_answer: 'no' } : {}) };
     const doc = { getElementById: id => Object.hasOwn(values, id)
       ? { value: values[id], type: 'text', tagName: id === 'oxalateReportingEntity' ? 'SELECT' : 'INPUT' } : null };
-    return new Function('window', 'document', 'FORMULAS', `${actualFunction('canComputeFormula')}\nreturn canComputeFormula(${JSON.stringify(formula)});`)(w, doc, formulas);
+    return new Function('window', 'document', '$', 'FORMULAS', `${actualFunction('readClcrCollectionDurationMinutes')}\n${actualFunction('evaluateClcrProteinDzm')}\n${actualFunction('canComputeFormula')}\nreturn canComputeFormula(${JSON.stringify(formula)});`)(w, doc, id => doc.getElementById(id), formulas);
   }
   it.each(timed)('%s accepts blank/default and explicit valid duration, rejects explicit invalid values', formula => {
     expect(formulas.find(item => item.id === formula).requires).toContain('Cl24DurationHours');
@@ -87,7 +89,7 @@ describe('Actual result cleanup accepts IDs and DOM nodes', () => {
     expect(() => h.clearClcrResultElement(null)).not.toThrow();
   });
 
-  it.each(['Mg_mgkg', 'Ca_mgkg', 'UA_mgkg', 'PO4_mgkg'])('%s retains one original result plus Details and removes separate BSA/dormant cards', formula => {
+  it.each(['Mg_mgkg', 'Ca_mgkg', 'UA_mgkg', 'PO4_mgkg', 'Prot_mgkg'])('%s retains one original result plus Details and removes separate BSA/dormant cards', formula => {
     const h = setup();
     const containers = Object.fromEntries(['clcrInfo', 'elecInfo', 'stoneInfo'].map(id => {
       const host = h.node('div', { id }); h.doc.body.appendChild(host); return [id, host];
