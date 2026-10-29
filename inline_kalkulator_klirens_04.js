@@ -1133,7 +1133,7 @@ function update() {
   }
   const rt = o && d,
     dt = [...document.querySelectorAll("#clcrForm input")].some((i) =>
-      (i.type === "hidden" || ["Cl24DurationHours", "UA_collectionHours", "CA_collectionHours", "CA_clinicalMode", "MG_collectionHours"].includes(i.id)) ? false : i.type === "checkbox" ? i.checked : (i.value || "").trim() !== "",
+      (i.type === "hidden" || ["Cl24DurationHours", "UA_collectionHours", "CA_collectionHours", "CA_clinicalMode", "MG_collectionHours", "PO4_collectionHours"].includes(i.id)) ? false : i.type === "checkbox" ? i.checked : (i.value || "").trim() !== "",
     );
   let Ne = !1;
   {

@@ -63,6 +63,29 @@ function sameWidths(before, after) {
   }
 }
 
+for (const width of [1440, 390]) {
+  test(`PO4 DZM: domyślny czas nie pokazuje czyszczenia pustego wyboru ${width}px`, async ({ page }) => {
+    await openCalculator(page, width);
+    await expect(page.locator('#formulaPicker')).toHaveValue('');
+    await expect(page.locator('#PO4_collectionHours')).toHaveValue('24');
+    await expect(page.locator('#clearContainer')).toBeHidden();
+    await page.evaluate(() => window.clcrUpdate());
+    await expect(page.locator('#clearContainer')).toBeHidden();
+    // Selecting an equation retains the existing clear-action behavior, even
+    // before a value is entered. A real zero is a measurement and is clearable.
+    await choose(page, 'PO4_mgkg');
+    await expect(page.locator('#clearBtn')).toBeVisible();
+    await page.locator('#PO4_concentration').fill('0');
+    await page.locator('#PO4_volume').fill('1000');
+    await expectResult(page, { raw: 0, status: 'zero', tone: 'neutral', reference: false });
+    await expect(page.locator('#clearBtn')).toBeVisible();
+    await page.locator('#clearBtn').click();
+    await page.waitForFunction(() => window.clcrIsResetting !== true);
+    await expect(page.locator('#PO4_concentration')).toHaveValue('');
+    await expect(page.locator('#PO4_volume')).toHaveValue('');
+  });
+}
+
 for (const width of [1440, 390, 320]) {
   test(`PO4 DZM: dwa pola, jedna liczba i stała geometria ${width}px`, async ({ page }, testInfo) => {
     const errors = []; page.on('pageerror', error => errors.push(error.message));
