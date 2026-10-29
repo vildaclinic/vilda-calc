@@ -701,7 +701,7 @@ function Ia(){mr||!i.addEventListener||(mr=!0,function(){try{i.document.addEvent
   if (!groups || !groups.length) { Qc0(); if (a && typeof a.onClose === 'function') a.onClose(); return; }
   et(groups);
 }function V(G){var nt=[];return(G||[]).forEach(function(j){(j.notes||[]).forEach(function(E){E&&E.category==="absence"||nt.push({g:j,n:E,day:String(E.dueDateISO||"").slice(0,10)})})}),nt}function ut(G){try{var nt=new Date(G+"T12:00:00"),j=new Date(u+"T12:00:00"),E=Math.round((j-nt)/864e5);return E<=0?"":E===1?"1 dzie\u0144":E+" dni"}catch{return""}}var wt=["nd","pn","wt","\u015Br","cz","pt","sb"];function bt(G){try{var nt=new Date(G+"T12:00:00");return wt[nt.getDay()]+" "+nt.getDate()+"."+String(nt.getMonth()+1).padStart(2,"0")}catch{return G||""}}function $(G,nt){if(G==="pending")return e("div",{text:"Oczekuj\u0105ce wyniki \xB7 "+nt,style:"background:#E9E9FB;border:1px solid #C8C6F2;color:#302D9C;border-radius:9px;padding:6px 12px;font-size:0.8rem;font-weight:600;margin:8px 0 2px;"});var j=G==="overdue";return e("div",{text:(j?"Zaleg\u0142e \xB7 ":"Dzi\u015B \xB7 ")+nt,style:j?"background:#FFF3E0;border:1px solid #FFC56E;color:#A35F00;border-radius:9px;padding:6px 12px;font-size:0.8rem;font-weight:600;margin:4px 0 2px;":"background:#E8F8EC;color:#1F7A3D;border-radius:9px;padding:6px 12px;font-size:0.8rem;font-weight:600;margin:8px 0 2px;"})}var ot="background:transparent !important;color:#1F7A3D !important;border:1px solid #34C759 !important;border-radius:8px !important;width:auto !important;padding:5px 10px !important;font-size:0.78rem !important;font-weight:600;flex:0 0 auto !important;",gt="background:transparent !important;color:#C2271D !important;border:1px solid #FFB4AF !important;border-radius:8px !important;width:auto !important;padding:5px 10px !important;font-size:0.78rem !important;font-weight:600;flex:0 0 auto !important;",yt="background:transparent !important;color:#5b6672 !important;border:1px solid #d7e9ec !important;border-radius:8px !important;width:auto !important;padding:5px 9px !important;font-size:0.78rem !important;font-weight:600;flex:0 0 auto !important;",tt="background:transparent !important;color:#5b6672 !important;border:1px solid #d7e9ec !important;border-radius:8px !important;width:34px !important;min-width:34px !important;height:32px !important;padding:0 !important;display:inline-flex !important;align-items:center !important;justify-content:center !important;flex:0 0 auto !important;cursor:pointer;";function it(G,nt){var j=G.g,E=G.n,g=E.category==="wynik-badania"&&typeof E.recheckDays=="number"&&E.recheckDays>0&&!E.completedAtISO,B=Jv(E.category),U=B.color,O=B.accent,J=B.label,at=e("div",{class:"vilda-reminders-row",style:"background:#fff;border:1px solid rgba(255,255,255,.85);border-radius:11px;padding:9px 11px;display:flex;gap:11px;align-items:center;box-shadow:0 1px 2px rgba(3,42,48,.05);"}),Jm=j.isActivity===!0,Jp=String(E.title||"").trim(),Jq=Jm?Jp||J:String(j.patientName||"").trim(),_t=(String(Jm?Jq||J:j.patientName||"?").trim().charAt(0)||"?").toUpperCase(),It=e("div",{"aria-hidden":"true",text:_t,style:"width:34px;height:34px;border-radius:50%;flex:0 0 auto;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:0.9rem;background:linear-gradient(135deg,"+O+","+O+"cc);pointer-events:none;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;"});at.appendChild(It);var Pt=e("div",{style:"flex:1 1 auto;min-width:0;"});Pt.appendChild(e("div",{text:Jq||"\u2014",style:"font-size:0.92rem;font-weight:600;color:#0f2b33;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"})),Pt.appendChild(e("div",{style:"font-size:0.82rem;color:"+U+";overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"},[e("span",{"aria-hidden":"true",style:"display:inline-block;width:7px;height:7px;border-radius:50%;margin-right:5px;vertical-align:middle;background:"+O+";"}),Jm?J+(j.patientName?" \u00B7 "+j.patientName:""):J+(E.title?" \u2014 "+E.title:"")])),g&&Pt.appendChild(e("div",{text:"Oczekuj\u0105cy wynik \xB7 sprawdzaj co "+E.recheckDays+" "+k(E.recheckDays,"dzie\u0144","dni","dni"),style:"font-size:0.74rem;color:#302D9C;margin-top:1px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"})),at.appendChild(Pt);var Mt=e("div",{style:"flex:0 0 auto;text-align:right;min-width:52px;"});if(nt){var Et=ut(G.day);Et&&Mt.appendChild(e("div",{text:Et+" temu",style:"font-size:0.72rem;color:"+O+";font-weight:700;"})),Mt.appendChild(e("div",{text:bt(G.day),style:"font-size:0.68rem;color:#8a979c;"})),E.dueTime&&Mt.appendChild(e("div",{text:E.dueTime,style:"font-size:0.74rem;color:#0f2b33;font-weight:600;"}))}else E.dueTime?Mt.appendChild(e("div",{text:E.dueTime,style:"font-size:0.9rem;color:#0f2b33;font-weight:600;"})):Mt.appendChild(e("div",{text:"ca\u0142y dzie\u0144",style:"font-size:0.68rem;color:#8a979c;"}));at.appendChild(Mt);var Bt=o&&o.EXTERNAL_PATIENT_ID||"__vilda_external__",pt=o&&o.ACTIVITY_PATIENT_ID||"__vilda_activity__",kt=!d&&j.patientId!==Bt&&j.patientId!==pt&&!j.isActivity&&!j.isExternal;if(kt&&(at.style.cursor="pointer",at.addEventListener("click",function(zt){if(at._remSuppressClick){at._remSuppressClick=!1;return}try{if(zt&&zt.target&&zt.target.closest&&zt.target.closest("button"))return}catch{}Qc0(),a&&typeof a.onClose=="function"&&a.onClose(),setTimeout(function(){try{a&&typeof a.onOpenPatient=="function"?a.onOpenPatient(j.patientId,E.id):se(j.patientId,null,{focusNoteId:E.id})}catch(At){Ot("reminder-open",At)}},50)})),!d&&E.category!=="duty"){var Ft=e("div",{style:"display:flex;gap:6px;flex:0 0 auto;align-items:center;justify-content:flex-end;"}),Nt=e("button",{type:"button",class:"vilda-auth-btn vilda-auth-btn-small vilda-rem-kebab","aria-label":"Wi\u0119cej akcji","aria-haspopup":"menu",title:"Akcje",style:tt,html:'<svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" focusable="false"><circle cx="12" cy="5" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="12" cy="19" r="2"/></svg>',onclick:function(zt){zt&&typeof zt.stopPropagation=="function"&&zt.stopPropagation(),at._remSuppressClick=!0,Q(at,G),setTimeout(function(){at._remSuppressClick=!1},350)},onmouseenter:function(){try{Nt.style.setProperty("background","#eef6f7","important"),Nt.style.setProperty("color","#0f2b33","important"),Nt.style.setProperty("border-color","#c4dde1","important")}catch{}},onmouseleave:function(){try{Nt.style.setProperty("background","transparent","important"),Nt.style.setProperty("color","#5b6672","important"),Nt.style.setProperty("border-color","#d7e9ec","important")}catch{}}});Ft.appendChild(Nt),at.appendChild(Ft)}return _(at,G),at}function ht(G){return remAkcje(G)}function _(G,nt){G.style.webkitTouchCallout="none",G.style.webkitUserSelect="none",G.style.userSelect="none";var j=null,E=0,g=0,B=!1,U=!1;function O(){j&&(clearTimeout(j),j=null)}G.addEventListener("touchstart",function(J){!J.touches||J.touches.length!==1||(B=!1,U=!1,E=J.touches[0].clientX,g=J.touches[0].clientY,O(),j=setTimeout(function(){j=null,!U&&(B=!0,G._remSuppressClick=!0,Q(G,nt))},450))},{passive:!0}),G.addEventListener("touchmove",function(J){!J.touches||!J.touches.length||(Math.abs(J.touches[0].clientX-E)>10||Math.abs(J.touches[0].clientY-g)>10)&&(U=!0,O())},{passive:!0}),G.addEventListener("touchend",function(){O(),B&&setTimeout(function(){G._remSuppressClick=!1},400)}),G.addEventListener("touchcancel",O),G.addEventListener("contextmenu",function(J){J.preventDefault(),Q(G,nt)})}function Q(G,nt){var j=ht(nt);if(!j.length)return;var E=i.document;try{for(var g=E.querySelectorAll(".vilda-rem-ctx-overlay"),B=0;B<g.length;B++)g[B].remove()}catch{}var U=nt.n,O=nt.g,J=G.getBoundingClientRect(),at=e("div",{class:"vilda-rem-ctx-overlay",style:"position:fixed;inset:0;z-index:1000005;background:rgba(15,43,51,.30);-webkit-backdrop-filter:blur(7px);backdrop-filter:blur(7px);-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;"});function _t(){try{at.remove()}catch{}try{E.removeEventListener("keydown",It)}catch{}}function It(zt){zt.key==="Escape"&&_t()}E.addEventListener("keydown",It),at.addEventListener("click",function(zt){zt.target===at&&_t()});var Pt=G.cloneNode(!0);Pt.style.position="fixed",Pt.style.left=J.left+"px",Pt.style.top=J.top+"px",Pt.style.width=J.width+"px",Pt.style.margin="0",Pt.style.transform="scale(1.03)",Pt.style.boxShadow="0 18px 40px rgba(0,0,0,.30)",Pt.style.border="0",Pt.style.zIndex="1",Pt.style.webkitTouchCallout="none",Pt.style.pointerEvents="none",at.appendChild(Pt);var Mt=e("div",{class:"vilda-rem-ctx-menu",style:"position:fixed;width:248px;border-radius:14px;overflow:hidden;background:rgba(250,250,250,.86);-webkit-backdrop-filter:blur(22px) saturate(180%);backdrop-filter:blur(22px) saturate(180%);box-shadow:0 12px 40px rgba(0,0,0,.28);z-index:2;"});j.forEach(function(zt,At){var Dt=e("div",{style:"display:flex;align-items:center;justify-content:space-between;gap:12px;padding:0 15px;height:46px;font-size:1rem;cursor:pointer;color:"+(zt.destructive?"#FF3B30":"#0f2b33")+";"+(At<j.length-1?"border-bottom:0.5px solid rgba(60,60,67,.12);":"")});Dt.appendChild(e("span",{text:zt.label,style:"flex:1 1 auto;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"})),Dt.appendChild(e("span",{text:zt.ico||"",style:"flex:0 0 auto;font-size:0.96rem;"+(zt.destructive?"":"opacity:.7;")})),Dt.addEventListener("click",function(ne){ne.stopPropagation(),Nt(zt.k)}),Dt.addEventListener("touchstart",function(){Dt.style.background="rgba(0,0,0,.06)"},{passive:!0}),Dt.addEventListener("touchend",function(){Dt.style.background=""}),Dt.addEventListener("mouseover",function(){Dt.style.background="rgba(0,0,0,.05)"}),Dt.addEventListener("mouseout",function(){Dt.style.background=""}),Mt.appendChild(Dt)}),at.appendChild(Mt);var Et=i.innerHeight||700,Bt=i.innerWidth||360,pt=j.length*46,kt=J.bottom+8;kt+pt>Et-12&&(kt=Math.max(12,J.top-pt-8));var Ft=Math.min(J.left,Bt-248-10);Ft<8&&(Ft=8),Mt.style.top=kt+"px",Mt.style.left=Ft+"px";function Nt(zt){if(zt==="snooze"){_t(),xt(G,U.id);return}if(zt==="open"){_t(),Qc0(),a&&typeof a.onClose=="function"&&a.onClose(),setTimeout(function(){try{a&&typeof a.onOpenPatient=="function"?a.onOpenPatient(O.patientId,U.id):se(O.patientId,null,{focusNoteId:U.id})}catch(Jt){Ot("reminder-open",Jt)}},50);return}var At;if(zt==="complete")At=o.completePatientNote(U.id);else if(zt==="noshow")At=o.noShowPatientNote(U.id);else if(zt==="recheck"){var Dt=new Date(u+"T12:00:00");Dt.setDate(Dt.getDate()+U.recheckDays);var ne=Dt.getFullYear()+"-"+String(Dt.getMonth()+1).padStart(2,"0")+"-"+String(Dt.getDate()).padStart(2,"0");At=o.snoozePatientNote(U.id,ne)}else return;Promise.resolve(At).then(function(){return _t(),H()}).catch(function(Jt){Ot("reminder-ctx-act",Jt);try{i.alert("Nie uda\u0142o si\u0119 wykona\u0107 akcji: "+(Jt&&Jt.message?Jt.message:Jt))}catch{}})}return E.body.appendChild(at),at}function mt(G){var nt=String(G||"").split(":");return(parseInt(nt[0],10)||0)*60+(parseInt(nt[1],10)||0)}function f(G){var nt=Math.floor(G/60),j=G%60;return(nt<10?"0":"")+nt+":"+(j<10?"0":"")+j}function K(G){return G.dueTime?G.durationMin?G.dueTime+"\u2013"+f(Math.min(mt(G.dueTime)+G.durationMin,1439)):G.dueTime:"ca\u0142y dzie\u0144"}function P(G,nt){var j=nt.filter(function(Et){return Et.g&&!Et.g.isActivity}),E=nt.filter(function(Et){return Et.n.category==="clinic"||Et.n.category==="clinic-nfz"}),g=nt.filter(function(Et){return Et.n.category==="duty"}),B=function(){var Et=new Date;return Math.floor((Et-new Date(Et.getFullYear(),0,0))/864e5)}(),U=e("div",{style:"background:linear-gradient(180deg,#f1fafb,#ffffff);border:0.5px solid #d7e9ec;border-radius:12px;padding:13px 15px;margin-bottom:4px;"});if(U.appendChild(e("div",{text:"Dzie\u0144 dobry.",style:"font-size:0.98rem;font-weight:600;color:#0f2b33;margin-bottom:5px;"})),!j.length&&!E.length&&!g.length&&!G.length){var O=["Na dzi\u015B nic nie zaplanowano \u2014 zas\u0142u\u017Cy\u0142e\u015B na spokojny dzie\u0144 ;)","Pusty grafik na dzi\u015B. Idealny moment na kaw\u0119 bez po\u015Bpiechu.","Dzi\u015B kalendarz \u015Bwieci pustkami \u2014 ciesz si\u0119 chwil\u0105 oddechu."];U.appendChild(e("div",{text:O[B%O.length],style:"font-size:0.87rem;color:#33464e;line-height:1.55;"}))}else{if(j.length){var J="Na dzi\u015B masz "+j.length+" "+k(j.length,"wizyt\u0119 pacjenta","wizyty pacjent\xF3w","wizyt pacjent\xF3w")+".";j.length>=8&&(J+=" Konkretny dzie\u0144 \u2014 kawa obowi\u0105zkowa."),U.appendChild(e("div",{text:J,style:"font-size:0.87rem;color:#33464e;line-height:1.55;"}))}else U.appendChild(e("div",{text:"Na dzi\u015B brak wizyt pacjent\xF3w.",style:"font-size:0.87rem;color:#33464e;line-height:1.55;"}));E.forEach(function(Et){var Bt=(Et.n.category==="clinic-nfz"?"Poradnia NFZ ":"Poradnia ")+K(Et.n);Et.g.patientName&&(Bt+=" \xB7 "+Et.g.patientName),U.appendChild(e("div",{text:Bt,style:"font-size:0.87rem;color:#7A5C00;line-height:1.55;margin-top:2px;"}))}),g.forEach(function(Et){var Bt="Dy\u017Cur "+K(Et.n);Et.g.patientName&&(Bt+=" \xB7 "+Et.g.patientName);var pt=Et.n.dueTime&&mt(Et.n.dueTime)>=18*60;pt&&(Bt+=" \u2014 noc nale\u017Cy do Ciebie."),U.appendChild(e("div",{text:Bt,style:"font-size:0.87rem;color:#A81C14;line-height:1.55;margin-top:2px;"}))}),G.length&&U.appendChild(e("div",{text:"Czeka "+G.length+" "+k(G.length,"zaleg\u0142e przypomnienie","zaleg\u0142e przypomnienia","zaleg\u0142ych przypomnie\u0144")+".",style:"font-size:0.87rem;color:#A32D2D;line-height:1.55;margin-top:2px;"}))}if(h){var at=h,_t=at.days===0?at.label+" zaczyna si\u0119 dzi\u015B.":at.days===1?at.label+" ju\u017C jutro.":at.label+" za "+at.days+" dni.",It=e("div",{style:"margin-top:9px;font-size:0.8rem;color:#0B5C84;display:flex;align-items:center;gap:7px;flex-wrap:wrap;"});It.appendChild(e("span",{text:"Nieobecno\u015B\u0107",style:"background:#E1F2FB;color:#0B5C84;font-size:0.72rem;font-weight:600;padding:2px 8px;border-radius:999px;flex:0 0 auto;"})),It.appendChild(e("span",{text:_t})),U.appendChild(It)}var Pt=il();if(Pt){var Mt=e("div",{style:"margin-top:9px;font-size:0.8rem;color:#5b6672;display:flex;align-items:center;gap:7px;flex-wrap:wrap;"});Mt.appendChild(e("span",{text:"Imieniny",style:"background:#FAEEDA;color:#854F0B;font-size:0.72rem;font-weight:600;padding:2px 8px;border-radius:999px;flex:0 0 auto;"})),Mt.appendChild(e("span",{text:Pt})),U.appendChild(Mt)}return U}function L(G){var nt=G&&G.n;return!!(nt&&nt.category==="wynik-badania"&&!nt.completedAtISO)}var A={"wynik-badania":"\u{1F9EA}",followup:"\u{1FA7A}",observation:"\u{1F441}\uFE0F",treatment:"\u{1F48A}",procedura:"\u{1F52C}",duty:"\u{1F6E1}\uFE0F",clinic:"\u{1F3E5}","clinic-nfz":"\u{1F3E5}",lecture:"\u{1F393}",seminar:"\u{1F393}",practical:"\u{1F393}","activity-other":"\u{1F4CC}"},X={"wynik-badania":"Badania",followup:"Kontrole",observation:"Obserwacje",treatment:"Leczenie",procedura:"Procedury"},lt=Qa0;function ft(G){var nt=Jv(G),j=nt.accent,E=nt.bg;var g=X[G]||nt.label||"Inne";return{label:g,icon:A[G]||"\u2022",ac:j,bg:E}}function st(G){var nt={},j=[];return G.forEach(function(E){var g=E.n&&E.n.category||"activity-other";nt[g]||(nt[g]=[],j.push(g)),nt[g].push(E)}),j.sort(function(E,g){var B=lt.indexOf(E),U=lt.indexOf(g);return(B<0?999:B)-(U<0?999:U)}),j.map(function(E){return{cat:E,rows:nt[E]}})}function rt(G,nt,j){var E=ft(G),Qb0=Qa4(G),g=e("div",{style:"background:"+E.bg+";border:1px solid "+E.ac+"40;border-radius:14px;padding:10px 10px 11px;display:flex;flex-direction:column;gap:6px;"}),B=e("div",{"data-vild-cat":G,"aria-expanded":Qb0?"false":"true",style:"display:flex;align-items:center;gap:9px;cursor:pointer;"});B.appendChild(e("span",{class:"vild-rem-caret",text:Qb0?"\u25B8":"\u25BE",style:"font-size:0.72rem;line-height:1;color:"+E.ac+";flex:0 0 auto;"})),B.appendChild(e("div",{text:E.icon,style:"width:26px;height:26px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:0.95rem;background:#fff;border:1px solid "+E.ac+"33;flex:0 0 auto;"})),B.appendChild(e("div",{text:E.label,style:"font-size:0.84rem;font-weight:700;color:"+E.ac+";flex:1 1 auto;"})),B.appendChild(e("div",{text:String(nt.length),style:"font-size:0.7rem;font-weight:700;border-radius:999px;padding:1px 9px;background:#fff;color:"+E.ac+";flex:0 0 auto;"})),Qa8(B,function(){Qa7(G)}),g.appendChild(B);var Qb1=e("div",{"data-vild-cat":G,"data-vild-flow":"flex",style:"display:flex;flex-direction:column;gap:6px;"});return Qb0&&(Qb1.style.display="none"),nt.forEach(function(U){var O=j==="overdue"||j==="pending"&&U.day&&U.day<u;Qb1.appendChild(it(U,O))}),g.appendChild(Qb1),g}var vt=1e3;function dt(){try{return(i.innerWidth||0)>=vt}catch{return!1}}function q(G){return G==="overdue"?{bg:"#FFF3E0",fg:"#A35F00",label:"zaleg\u0142e",empty:"Nic zaleg\u0142ego \u2014 czysto"}:G==="today"?{bg:"#E8F8EC",fg:"#1F7A3D",label:"na dzi\u015B",empty:"Na dzi\u015B nic nie zaplanowano"}:{bg:"#EDEDFB",fg:"#4341B5",label:"oczekuj\u0105ce",empty:"Brak oczekuj\u0105cych wynik\xF3w"}}function Y(G,nt,j){var E=q(G),g=e("div",{style:"display:flex;flex-direction:column;gap:12px;min-width:0;"}),B=e("div",{style:"display:flex;align-items:baseline;gap:9px;border-radius:14px;padding:13px 15px;background:"+E.bg+";color:"+E.fg+";flex:0 0 auto;"});if(B.appendChild(e("div",{text:String(j||0),style:"font-size:1.55rem;font-weight:800;line-height:1;"})),B.appendChild(e("div",{text:E.label,style:"font-size:0.92rem;font-weight:700;"})),g.appendChild(B),nt&&nt.length){var U=e("div",{style:"display:flex;flex-direction:column;gap:10px;"});st(nt).forEach(function(J){U.appendChild(rt(J.cat,J.rows,G))}),g.appendChild(U)}else{var O=e("div",{style:"flex:1 1 auto;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;border:1.5px dashed #dde7e8;border-radius:14px;padding:26px 14px;min-height:120px;"});O.appendChild(e("div",{text:"\u2713",style:"width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:1.15rem;margin-bottom:8px;background:"+E.bg+";color:"+E.fg+";"})),O.appendChild(e("div",{text:E.empty,style:"font-size:0.86rem;font-weight:600;color:#5a7274;"})),g.appendChild(O)}return g}function et(G){oe(R);var nt=V(G),j=nt.filter(L);nt=nt.filter(function(O){return!L(O)});var E=nt.filter(function(O){return O.day&&O.day<u}),g=nt.filter(function(O){return!(O.day&&O.day<u)});E.sort(function(O,J){if(O.day!==J.day)return O.day<J.day?-1:1;var at=O.n.dueTime||"99:99",_t=J.n.dueTime||"99:99";return at<_t?-1:at>_t?1:0}),g.sort(function(O,J){var at=O.n.dueTime||"99:99",_t=J.n.dueTime||"99:99";return at<_t?-1:at>_t?1:0}),j.sort(function(O,J){var at=O.day||"9999-99-99",_t=J.day||"9999-99-99";return at<_t?-1:at>_t?1:0});var B=ai()?P(E,g):null;if(I({overdue:E.length,today:g.length,pending:j.length}),dt()){try{b.style.display="none"}catch{}try{R.style.maxWidth="none",R.style.padding="14px 24px 20px"}catch{}B&&R.appendChild(B);var U=e("div",{style:"display:grid;grid-template-columns:repeat(3,1fr);gap:18px;align-items:start;width:100%;"});U.appendChild(Y("overdue",E,E.length)),U.appendChild(Y("today",g,g.length)),U.appendChild(Y("pending",j,j.length)),R.appendChild(U);return}try{b.style.display="flex"}catch{}try{R.style.maxWidth="760px",R.style.padding="12px 14px 18px"}catch{}R.appendChild(b),B&&R.appendChild(B),E.length&&(R.appendChild($("overdue",E.length)),st(E).forEach(function(O){R.appendChild(rt(O.cat,O.rows,"overdue"))})),g.length&&(R.appendChild($("today",g.length)),st(g).forEach(function(O){R.appendChild(rt(O.cat,O.rows,"today"))})),j.length&&(R.appendChild($("pending",j.length)),st(j).forEach(function(O){R.appendChild(rt(O.cat,O.rows,"pending"))}))}function xt(G,nt){return remPrzeloz(G,nt,H)}et(t);var St=null;function Wt(){if(St)try{i.clearTimeout(St)}catch{}St=i.setTimeout(function(){try{et(t)}catch{}},150)}try{i.addEventListener("resize",Wt)}catch{}return ai()&&m(),s}function Fa(){var t=new Date;return t.getFullYear()+"-"+String(t.getMonth()+1).padStart(2,"0")+"-"+String(t.getDate()).padStart(2,"0")}function rl(){try{var t=i.VildaPersistence;if(!t||typeof t.readModuleRaw!="function")return null;var a=t.readModuleRaw("remindersLastShownDate",null);return typeof a=="string"&&a?a:null}catch{return null}}function ol(t){try{var a=i.VildaPersistence;return!a||typeof a.writeModuleRaw!="function"?!1:(a.writeModuleRaw("remindersLastShownDate",t),!0)}catch(n){return Ot("writeRemindersLastShownDate",n),!1}}function wn(t){return new Promise(function(a){var n=!1,r=function(){n||(n=!0,a())};try{var o=i.VildaSync,l=i.VildaSyncIntegration,d=!1;try{d=!!(l&&typeof l.isSyncEnabled=="function"&&l.isSyncEnabled())}catch{}if(!d||!o||typeof o.syncPull!="function"){r();return}var c=i.setTimeout(r,typeof t=="number"?t:2500);Promise.resolve().then(function(){return o.syncPull()}).then(function(){try{i.clearTimeout(c)}catch{}r()},function(){try{i.clearTimeout(c)}catch{}r()})}catch{r()}})}/* P-ARKUSZ (decyzja wlasciciela 2026-09-19, wariant „odloz, nie porzuc"): dzienny arkusz przypomnien wchodzil na otwarta Karte Pacjenta. Zegar arkusza rusza 3 s po odblokowaniu sejfu (plus do 2,5 s na syncPull), a lekarz jest wtedy juz w Karcie — zmierzone: Karta otwarta w t=219 ms, arkusz wszedl do DOM w t=2648 ms, pelnoekranowy, z-index 1000001, nieprzezroczysty, elementFromPoint w srodku ekranu trafial w arkusz. Arkusz nie pytal, co jest na ekranie — bramkowal sie wylacznie data. Teraz przy otwartej nakladce odklada sie do jej zamkniecia; bramka dobowa bez zmian, bo date zapisuje dopiero onClose. Wywolanie wymuszone (dzwoneczek) omija ta regule — swiadome klikniecie nie jest przerwaniem pracy. */function nakladkaOtwarta(){try{var t=i.document.getElementById(Oi);if(!t)return!1;var a="";try{a=i.getComputedStyle?i.getComputedStyle(t).display:t.style&&t.style.display||""}catch{a=t.style&&t.style.display||""}return a!=="none"&&t.offsetHeight>0}catch{return!1}}var arkuszCzekaNaZamkniecie=!1;function ponowArkuszPoZamknieciu(){if(!arkuszCzekaNaZamkniecie)try{arkuszCzekaNaZamkniecie=!0;i.document.addEventListener("vilda:auth-hidden",function t(){i.document.removeEventListener("vilda:auth-hidden",t),arkuszCzekaNaZamkniecie=!1,i.setTimeout(function(){tn().catch(function(){})},400)})}catch{arkuszCzekaNaZamkniecie=!1}}/* P-ARKUSZ-PISANIE (decyzja wlasciciela 2026-10-18, wariant A): dzienny arkusz przypomnien nie przerywa pisania. Zgloszenie: pierwsze uruchomienie, lekarz od razu dotyka Nazwiska i wpisuje, otwiera sie podpowiedz pacjentow, a w trakcie wchodzi pelnoekranowy arkusz. Zmierzone (emulacja telefonu, powloka app.html): Nazwisko 0,1 s, lista po "Fik" 0,5 s, arkusz w powloce 2,4 s; pole zostaje z fokusem, lista otwarta pod arkuszem, kolejne znaki ida do zakrytego pola. Na iPhonie lista z ramki przebija arkusz powloki. Arkusz czeka teraz, az lekarz przestanie pisac: zadne pole tekstowe (w powloce i w widocznych ramkach) nie ma fokusu, zadna podpowiedz nie jest otwarta, a od ostatniego wpisu albo wyjscia z pola minely 3 s (sprawdzane co 0,5 s). Tak jak P-ARKUSZ: odloz, nie porzuc; data "pokazano dzis" zapisuje sie dopiero przy pokazaniu. Wywolanie wymuszone (dzwoneczek) omija bramke, ale kazde otwarcie arkusza zamyka podpowiedzi i zdejmuje fokus z pola (zamknijPisaniePodArkuszem), wiec klawiatura chowa sie, a znaki nie trafiaja do zakrytego pola. Bramka patrzy z okna najwyzszego (powloka i jej widoczne ramki), bo modul dziala w kazdym panelu: ukryty panel Terminarz, wczytany w tle, nie widzial pola w Starcie i pokazywal arkusz u siebie — niewidocznie, ze znacznikiem "pokazano dzis". Dlatego ukryty panel (Fr()) arkusza nie pokazuje wcale. Panel ustepuje tez powloce, ktora juz czeka na przerwe (arkuszCzekaWyzej) — arkusz zostaje pelnoekranowy w powloce jak dotad. Tuz przed Mr() znacznik dnia jest sprawdzany jeszcze raz: miedzy pierwszym sprawdzeniem a Mr() sa await, a czekac moze kilka instancji naraz. */var PISANIE_PRZERWA_MS=3e3,PISANIE_KROK_MS=500,arkuszCzekaNaPrzerwe=!1;function poleDoPisania(t){try{if(!t||t.disabled||t.readOnly)return!1;if(t.isContentEditable||t.tagName==="TEXTAREA")return!0;if(t.tagName!=="INPUT")return!1;return!/^(checkbox|radio|button|submit|reset|image|range|color|file|hidden)$/.test(String(t.getAttribute("type")||"text").toLowerCase())}catch{return!1}}function dokumentyDoPisania(){var t=i;try{i.top&&i.top!==i&&i.top.document&&(t=i.top)}catch{t=i}var a=[t.document];try{for(var n=t.document.querySelectorAll("iframe"),r=0;r<n.length;r++)try{if(n[r].hidden)continue;var o=n[r].contentDocument;o&&a.push(o)}catch{}}catch{}return a}function lekarzPisze(){for(var t=Date.now(),a=dokumentyDoPisania(),n=0;n<a.length;n++){var r=a[n];try{if(poleDoPisania(r.activeElement))return!0;var o=r.defaultView;if(o&&t-(o.__vildaOstatniePisanie||0)<PISANIE_PRZERWA_MS)return!0;for(var l=r.querySelectorAll(".vilda-ac-dd"),d=0;d<l.length;d++)if(l[d].style.display==="block")return!0}catch{}}return!1}function ponowArkuszPoPrzerwie(){if(!arkuszCzekaNaPrzerwe){arkuszCzekaNaPrzerwe=!0,i.__vildaArkuszCzekaNaPrzerwe=!0;var t=function(){try{if(!lekarzPisze()){arkuszCzekaNaPrzerwe=!1,tn().catch(function(){}).then(function(){arkuszCzekaNaPrzerwe||(i.__vildaArkuszCzekaNaPrzerwe=!1)});return}}catch{}i.setTimeout(t,PISANIE_KROK_MS)};i.setTimeout(t,PISANIE_KROK_MS)}}function arkuszCzekaWyzej(){try{return i.top!==i&&!!i.top.__vildaArkuszCzekaNaPrzerwe}catch{return!1}}function zamknijPisaniePodArkuszem(){for(var t=dokumentyDoPisania(),a=0;a<t.length;a++){var n=t[a];try{var r=n.defaultView;r&&typeof r.CustomEvent=="function"&&n.dispatchEvent(new r.CustomEvent("vilda:zamknij-pisanie"))}catch{}try{poleDoPisania(n.activeElement)&&n.activeElement.blur()}catch{}}}try{i.document.addEventListener("input",function(t){t&&t.isTrusted!==!1&&poleDoPisania(t.target)&&(i.__vildaOstatniePisanie=Date.now())},!0),i.document.addEventListener("focusout",function(t){t&&poleDoPisania(t.target)&&(i.__vildaOstatniePisanie=Date.now())},!0),i.document.addEventListener("vilda:zamknij-pisanie",function(){try{Ua()}catch{}})}catch{}
-/* P-PRZYPOMNIENIA-B22: readable presentation source embedded in the auth UI.
+/* P-PRZYPOMNIENIA-A7: approved clean presentation, shared inline/full workspace.
  * Uses the native vault, categories, patient card and date eligibility.
  * No patient data is kept in browser preferences or unencrypted storage.
  */
@@ -718,6 +718,20 @@ function remB22Button(text, cls, fn) {
 }
 function remB22Day(value) { return String(value || '').slice(0, 10); }
 function remB22Date(value) { var day = remB22Day(value); return day ? day.split('-').reverse().join('.') : 'Bez terminu'; }
+function remA7DaysLate(value, today) {
+  function dayNumber(day) {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(day)) return NaN;
+    var parts = day.split('-').map(Number); return Date.UTC(parts[0], parts[1] - 1, parts[2]) / 86400000;
+  }
+  var difference = dayNumber(today || Fa()) - dayNumber(remB22Day(value));
+  return Number.isFinite(difference) ? Math.max(0, difference) : 0;
+}
+function remA7OverdueClass(days) { return days > 14 ? 'vb22-overdue-long' : days > 3 ? 'vb22-overdue-medium' : 'vb22-overdue-short'; }
+function remA7Category(category) { return category === 'wynik-badania' ? 'Oczekujący wynik' : category === 'reminder-exam' ? 'Badanie' : Jv(category).label; }
+function remA7DatedRow(note) {
+  return { n: note, name: note.patientName || note.externalName || '', act: note.isActivity === true,
+    g: { patientId: note.patientId, patientName: note.patientName, isActivity: note.isActivity, isExternal: note.isExternal } };
+}
 function remB22Flat(groups) {
   var rows = [];
   (groups || []).forEach(function (group) { (group.notes || []).forEach(function (note) {
@@ -761,7 +775,8 @@ function remB22Open(groups, options) {
 }
 function remB22Create(host, full, options) {
   var owner = remReadOwner(), vault = owner.vault, root = host, sequence = 0, timer = null;
-  var state = { rows: [], history: [], tab: 'active', filter: 'all', query: '', selected: null, editing: false, busy: false, stale: false, historyReady: false };
+  var state = { rows: [], history: [], tab: 'active', filter: 'all', query: '', selected: null, detached: null, editing: false, busy: false, stale: false, historyReady: false };
+  var outcomeRoot = null, outcomeOrigin = null;
   var previousFocus = i.document.activeElement, previousNavHidden = i.document.body.classList.contains('nav-ui-temporarily-hidden');
   function alive() { return root.isConnected && remReadCurrent(owner); }
   function clear(node) { while (node.firstChild) node.removeChild(node.firstChild); }
@@ -771,9 +786,11 @@ function remB22Create(host, full, options) {
   function closed() { if (full && !state.busy && (!state.editing || i.confirm('Odrzucić niezapisany opis?'))) close(); }
   function close() {
     sequence += 1; if (timer) i.clearTimeout(timer);
+    dismissOutcome(false);
     if (root.open) root.close(); root.remove();
     i.removeEventListener('resize', fit);
     if (i.visualViewport) i.visualViewport.removeEventListener('resize', fit);
+    if (i.visualViewport) i.visualViewport.removeEventListener('scroll', fit);
     i.document.removeEventListener('vilda:sync-merged', changed);
     i.document.body.classList.remove('vilda-reminders-open');
     if (!previousNavHidden) i.document.body.classList.remove('nav-ui-temporarily-hidden');
@@ -781,13 +798,17 @@ function remB22Create(host, full, options) {
     if (options.onClose) options.onClose();
     if (previousFocus && previousFocus.isConnected && previousFocus.focus) previousFocus.focus();
   }
-  function fit() { if (full) { root.style.setProperty('--vb22-bottom', Math.max(0, er()) + 'px'); root.style.setProperty('--vb22-height', (i.visualViewport ? i.visualViewport.height : i.innerHeight) + 'px'); } }
+  function fit() {
+    var viewport = i.visualViewport, height = viewport ? viewport.height : i.innerHeight;
+    if (full) { root.style.setProperty('--vb22-bottom', Math.max(0, er()) + 'px'); root.style.setProperty('--vb22-height', height + 'px'); }
+    if (outcomeRoot) { outcomeRoot.style.setProperty('--vb22-outcome-height', height + 'px'); outcomeRoot.style.setProperty('--vb22-outcome-top', (viewport ? viewport.offsetTop : 0) + 'px'); }
+  }
   function status(row) {
     var note = row.n, day = remB22Day(note.dueDateISO);
     if (note.noShowAtISO) return 'Nie zgłosił się';
     if (note.completedAtISO) return 'Wykonano';
-    if (day < Fa()) return 'Po terminie';
-    if (day === Fa()) return note.dueTime || 'Dzisiaj';
+    if (day && day < Fa()) { var days = remA7DaysLate(note.dueDateISO); return days + (days === 1 ? ' dzień' : ' dni') + ' po terminie'; }
+    if (day === Fa()) return 'Na dziś';
     return 'Zaplanowane';
   }
   function matches(row, key) {
@@ -802,7 +823,10 @@ function remB22Create(host, full, options) {
   function visible() {
     return searched(state.tab === 'history' ? state.history : state.rows).filter(function (row) { return state.tab === 'history' || matches(row, state.filter); }).sort(Jc);
   }
-  function currentRow() { return state.rows.concat(state.history).find(function (row) { return row.n.id === state.selected; }); }
+  function currentRow() {
+    if (state.detached && state.detached.n.id === state.selected) return state.detached;
+    return (state.tab === 'history' ? state.history : state.rows).find(function (row) { return row.n.id === state.selected; });
+  }
   function report(error, target) {
     if (!alive()) return;
     var box = make('div', 'vb22-error'); box.setAttribute('role', 'alert');
@@ -825,20 +849,22 @@ function remB22Create(host, full, options) {
   var tabs = make('nav', 'vb22-tabs'); tabs.setAttribute('aria-label', 'Widok Przypomnień');
   var activeTab = btn('Do wykonania', 'is-active', function () { switchTab('active'); });
   var historyTab = btn('Historia', '', function () { switchTab('history'); });
+  activeTab.dataset.tab = 'active'; historyTab.dataset.tab = 'history';
+  activeTab.setAttribute('aria-label', 'Do wykonania'); historyTab.setAttribute('aria-label', 'Historia');
   tabs.appendChild(activeTab); tabs.appendChild(historyTab); root.appendChild(tabs);
   var filters = make('nav', 'vb22-filters'); filters.setAttribute('aria-label', 'Filtry Przypomnień');
   var keys = [['all', 'Wszystkie'], ['overdue', 'Zaległe'], ['today', 'Dziś'], ['pending', 'Oczekujące wyniki']];
   keys.forEach(function (entry) {
-    var button = btn('', '', function () { if (state.editing) return; state.filter = entry[0]; state.selected = null; render(); });
+    var button = btn('', '', function () { if (state.editing) return; sequence += 1; state.filter = entry[0]; state.selected = null; state.detached = null; render(); });
     button.dataset.filter = entry[0]; button.appendChild(make('span', '', entry[1])); button.appendChild(make('span', 'vb22-count' + (entry[0] === 'all' ? ' vild-rem-chip' : ''), '0')); filters.appendChild(button);
   }); root.appendChild(filters);
   var layout = make('div', 'vb22-layout'), left = make('section', 'vb22-list-pane'), detail = make('section', 'vb22-detail');
   detail.setAttribute('aria-label', 'Szczegóły przypomnienia');
   var search = make('input', 'vb22-search'); search.type = 'search'; search.placeholder = 'Szukaj pacjenta lub sprawy…'; search.setAttribute('aria-label', 'Szukaj pacjenta lub sprawy');
-  search.addEventListener('input', function () { if (state.editing) return; state.query = search.value; state.selected = null; render(); });
+  search.addEventListener('input', function () { if (state.editing) return; sequence += 1; state.query = search.value; state.selected = null; state.detached = null; render(); });
   if (full) left.appendChild(search);
   var list = make('div', full ? 'vb22-list' : 'vb22-mini-list'); left.appendChild(list); layout.appendChild(left); if (full) layout.appendChild(detail); root.appendChild(layout);
-  var footer = make('footer', 'vb22-foot'); footer.appendChild(make('span', '', 'Sprawy wszystkich pacjentów'));
+  var footer = make('footer', 'vb22-foot'); footer.appendChild(make('span', '', 'Bieżące przypomnienia'));
   if (!full) { var allButton = textButton('Pokaż wszystkie →', function () { remB22Request(); }); allButton.classList.add('vild-rem-all'); footer.appendChild(allButton); } root.appendChild(footer);
   function counts() {
     var rows = searched(state.rows);
@@ -850,31 +876,45 @@ function remB22Create(host, full, options) {
       button.setAttribute('aria-label', keys[index][1] + ', liczba spraw: ' + count); button.disabled = state.editing;
     });
     subtitle.textContent = full ? 'Sprawy, terminy i historia pacjentów' : state.rows.length + ' spraw · ' + state.rows.filter(function (row) { return matches(row, 'overdue'); }).length + ' po terminie';
-    activeTab.textContent = full ? 'Do wykonania ' + state.rows.length : 'Do wykonania';
+    clear(activeTab); activeTab.appendChild(make('span', '', 'Do wykonania')); activeTab.appendChild(make('span', 'vb22-tab-count', String(state.rows.length)));
+    clear(historyTab); historyTab.appendChild(make('span', '', 'Historia')); if (state.historyReady) historyTab.appendChild(make('span', 'vb22-tab-count', String(state.history.length)));
     activeTab.classList.toggle('is-active', state.tab === 'active'); historyTab.classList.toggle('is-active', state.tab === 'history');
+    activeTab.setAttribute('aria-pressed', String(state.tab === 'active')); historyTab.setAttribute('aria-pressed', String(state.tab === 'history'));
     activeTab.disabled = historyTab.disabled = search.disabled = state.editing;
     filters.hidden = state.tab === 'history';
   }
   function rowNode(row) {
     var note = row.n, node = btn('', 'vb22-row vild-rem-row' + (full ? ' vilda-reminders-row' : '') + (state.selected === note.id && full ? ' is-selected' : ''), function () {
       if (!full) { remB22Request({ noteId: note.id, history: state.tab === 'history' }); return; }
-      if (state.editing) return; state.selected = note.id; root.classList.add('vb22-show-detail'); render();
+      if (state.editing) return; sequence += 1; state.selected = note.id; state.detached = null; root.classList.add('vb22-show-detail'); updateSelection(); renderDetail();
     });
     node.dataset.noteId = note.id;
     node.dataset.period = remB22Day(note.dueDateISO) < Fa() ? 'overdue' : remB22Day(note.dueDateISO) === Fa() ? 'today' : 'future';
-    var top = make('span', 'vb22-row-top'); top.appendChild(make('span', 'vild-rem-cat', Jv(note.category).label)); top.appendChild(make('span', 'vild-rem-when', status(row))); node.appendChild(top);
-    node.appendChild(make('strong', 'vb22-row-title', note.title || Jv(note.category).label));
     node.appendChild(make('span', 'vb22-row-patient vild-rem-nm', row.name || (row.act ? Jv(note.category).label : 'Sprawa ogólna')));
-    node.appendChild(make('span', 'vb22-row-date', 'Termin: ' + remB22Date(note.dueDateISO) + (note.dueTime ? ' · ' + note.dueTime : '')));
+    var meta = make('span', 'vb22-row-meta'), day = remB22Day(note.dueDateISO);
+    meta.appendChild(make('span', 'vb22-row-date', (day === Fa() ? 'Dziś' : remB22Date(note.dueDateISO)) + (note.dueTime ? ' · ' + note.dueTime : '')));
+    if (note.completedAtISO || note.noShowAtISO || day < Fa() || day > Fa()) {
+      var overdue = !note.completedAtISO && !note.noShowAtISO && day && day < Fa();
+      meta.appendChild(make('span', 'vild-rem-when' + (overdue ? ' vb22-overdue ' + remA7OverdueClass(remA7DaysLate(note.dueDateISO)) : ''), status(row)));
+    }
+    node.appendChild(meta); node.appendChild(make('span', 'vb22-row-title', note.title || Jv(note.category).label));
+    node.setAttribute('aria-label', (row.name || 'Sprawa ogólna') + '. Termin: ' + remB22Date(note.dueDateISO) + (note.dueTime ? ' ' + note.dueTime : '') + '. ' + status(row) + '. ' + (note.title || Jv(note.category).label));
+    if (full) node.setAttribute('aria-current', String(state.selected === note.id));
     node.disabled = state.editing; return node;
+  }
+  function updateSelection() {
+    Array.from(list.querySelectorAll('[data-note-id]')).forEach(function (node) {
+      var current = node.dataset.noteId === state.selected; node.classList.toggle('is-selected', current); node.setAttribute('aria-current', String(current));
+    });
   }
   function render() {
     if (!alive()) return;
-    counts(); clear(list);
+    var previousScroll = left.scrollTop; counts(); clear(list);
     var rows = visible();
-    if (!state.selected || !rows.some(function (row) { return row.n.id === state.selected; })) state.selected = rows[0] && rows[0].n.id || null;
+    if (!state.selected || !rows.some(function (row) { return row.n.id === state.selected; }) && !(state.detached && state.detached.n.id === state.selected)) state.selected = rows[0] && rows[0].n.id || null;
     rows.forEach(function (row) { list.appendChild(rowNode(row)); });
     if (!rows.length) list.appendChild(make('p', 'vb22-empty vild-rem-empty', state.tab === 'history' ? 'Brak wykonanych spraw z terminem.' : state.rows.length ? 'Brak spraw w tym filtrze.' : 'Brak przypomnień na dziś. Możesz dodać nowe przypomnienie.'));
+    left.scrollTop = previousScroll;
     if (full && !state.editing) renderDetail();
   }
   function openCard(row, noteId) {
@@ -883,13 +923,19 @@ function remB22Create(host, full, options) {
   }
   function renderDetail() {
     clear(detail); detail.scrollTop = 0; var row = currentRow();
-    detail.appendChild(btn('← Lista spraw', 'vb22-back vb22-text', function () { root.classList.remove('vb22-show-detail'); }));
+    detail.appendChild(make('div', 'vb22-detail-label', 'Szczegóły wydarzenia'));
     if (!row) { detail.appendChild(make('p', 'vb22-empty', 'Wybierz sprawę z listy lub dodaj przypomnienie.')); return; }
     var note = row.n, context = note.reminderContext || {}, actions = remAkcje(row);
-    detail.appendChild(make('p', 'vb22-category', Jv(note.category).label)); detail.appendChild(make('h3', '', note.title || Jv(note.category).label));
-    if (!row.g.isActivity && !row.g.isExternal) detail.appendChild(textButton(row.name + ' · otwórz Kartę pacjenta →', function () { openCard(row); }));
-    else detail.appendChild(make('p', 'vb22-category', row.name));
-    detail.appendChild(make('div', 'vb22-meta', status(row) + ' · Termin: ' + remB22Date(note.dueDateISO) + (note.dueTime && status(row) !== note.dueTime ? ' · ' + note.dueTime : '')));
+    var patientHeading = make('h3', 'vb22-detail-patient');
+    if (!row.g.isActivity && !row.g.isExternal) {
+      var patientLink = btn(row.name || 'Pacjent', 'vb22-patient-link', function () { openCard(row); });
+      patientLink.setAttribute('aria-label', 'Otwórz Kartę pacjenta: ' + (row.name || 'Pacjent')); patientHeading.appendChild(patientLink);
+    } else patientHeading.textContent = row.name || (row.act ? Jv(note.category).label : 'Sprawa ogólna');
+    detail.appendChild(patientHeading);
+    var meta = make('div', 'vb22-meta'); meta.appendChild(make('span', 'vb22-detail-date', remB22Date(note.dueDateISO) + (note.dueTime ? ' · ' + note.dueTime : ''))); meta.appendChild(make('span', 'vb22-category', remA7Category(note.category))); detail.appendChild(meta);
+    detail.appendChild(make('p', 'vb22-detail-title', note.title || Jv(note.category).label));
+    if (row.g.isExternal || row.g.isActivity) detail.appendChild(make('p', 'vb22-origin', row.g.isExternal ? 'Osoba spoza kartoteki' : 'Wydarzenie Terminarza'));
+    if (!note.completedAtISO && !note.noShowAtISO && remB22Day(note.dueDateISO) > Fa()) detail.appendChild(make('p', 'vb22-notice', 'Zapisano na przyszły termin: ' + remB22Date(note.dueDateISO) + '. Sprawa pozostaje w Karcie pacjenta i pojawi się w Przypomnieniach w swoim dniu.'));
     if (note.body) detail.appendChild(make('p', 'vb22-body', note.body));
     var actionBar = make('div', 'vb22-actions');
     if (!note.completedAtISO && !note.noShowAtISO) {
@@ -918,11 +964,25 @@ function remB22Create(host, full, options) {
     var ticket = ++sequence;
     try {
       var note = await vault.getPatientNote(id); if (!alive() || ticket !== sequence || state.editing || !note) return;
+      var nextTab = 'active', nextDetached = null;
       if (note.completedAtISO || note.noShowAtISO) {
-        if (!await loadHistory(ticket)) return; state.tab = 'history';
-      } else state.tab = 'active';
+        if (!await loadHistory(ticket)) return; nextTab = 'history';
+      } else {
+        nextDetached = state.rows.some(function (row) { return row.n.id === id; }) ? null : await loadDetached(note, ticket);
+        if (!alive() || ticket !== sequence || state.editing) return;
+        if (!nextDetached && !state.rows.some(function (row) { return row.n.id === id; })) { report(new Error('Nie można otworzyć aktualnej sprawy. Odśwież listę.'), detail); return; }
+      }
+      if (!alive() || ticket !== sequence || state.editing) return;
+      state.tab = nextTab; state.detached = nextDetached;
       state.selected = id; state.filter = 'all'; state.query = ''; search.value = ''; render();
-    } catch (error) { report(error, detail); }
+    } catch (error) { if (alive() && ticket === sequence && !state.editing) report(error, detail); }
+  }
+  async function loadDetached(note, ticket) {
+    var day = remB22Day(note && note.dueDateISO); if (!day) return null;
+    var notes = await vault.listPatientNotesInRange(day, day + 'T23:59:59.999Z');
+    if (!alive() || ticket !== sequence || state.editing) return null;
+    var current = (notes || []).find(function (item) { return item.id === note.id; });
+    return current ? remA7DatedRow(current) : null;
   }
   function field(form, label, type, value, required) {
     var wrap = make('label', 'vb22-field'), input = make(type === 'textarea' ? 'textarea' : 'input', '');
@@ -932,46 +992,78 @@ function remB22Create(host, full, options) {
     input.addEventListener('input', function () { input.setCustomValidity(''); });
     wrap.appendChild(input); form.appendChild(wrap); return input;
   }
-  function editing(value) { state.editing = value; counts(); }
+  function editing(value) { if (value) sequence += 1; state.editing = value; counts(); }
   function formActions(form, submitText) {
     var actions = make('div', 'vb22-actions'), cancel = btn('Anuluj', '', function () { if (state.busy) return; editing(false); render(); if (state.stale) refresh(); });
     var save = make('button', 'vb22-primary', submitText); save.type = 'submit'; actions.appendChild(cancel); actions.appendChild(save); form.appendChild(actions); return [save, cancel];
   }
   function operationId() { return i.crypto && i.crypto.randomUUID ? i.crypto.randomUUID() : Date.now().toString(36) + Math.random().toString(36).slice(2); }
+  function dismissOutcome(restoreFocus) {
+    var dialog = outcomeRoot, focus = outcomeOrigin; outcomeRoot = null; outcomeOrigin = null;
+    if (dialog) { if (dialog.open) dialog.close(); dialog.remove(); }
+    if (restoreFocus && focus && focus.isConnected && focus.focus) focus.focus({ preventScroll: true });
+  }
+  function cancelOutcome() {
+    if (state.busy) return;
+    editing(false); dismissOutcome(true);
+    if (state.stale) refresh();
+  }
   function outcome(kind, row) {
-    if (state.editing) return;
-    editing(true);defaultEditingGuard(); var form = make('form', 'vb22-form');
-    form.appendChild(make('h4', '', kind === 'result' ? 'Zapisz otrzymany wynik' : kind === 'reschedule' ? 'Przełóż termin' : 'Zapisz wykonanie'));
-    var text = field(form, kind === 'result' ? 'Opis otrzymanego wyniku' : kind === 'reschedule' ? 'Powód zmiany (opcjonalnie)' : 'Co zostało zrobione? (opcjonalnie)', 'textarea', '', kind === 'result');
-    var date = field(form, kind === 'result' ? 'Data otrzymania wyniku' : kind === 'reschedule' ? 'Nowy termin' : 'Data wykonania', 'date', Fa(), true);
-    var nextWrap = make('div', 'vb22-next'), checkLabel = make('label', 'vb22-check'), check = make('input', ''); check.type = 'checkbox';
-    checkLabel.appendChild(check); checkLabel.appendChild(make('span', '', 'Dodaj kolejny krok z własnym terminem'));
-    if (kind !== 'reschedule') form.appendChild(checkLabel);
+    if (state.editing || !alive()) return;
+    editing(true); outcomeOrigin = i.document.activeElement;
+    var dialog = make('dialog', 'vb22 vb22-outcome'), uid = 'rem-outcome-' + operationId(); outcomeRoot = dialog;
+    var head = make('header', 'vb22-outcome-head'), titleGroup = make('div', ''), patient = make('p', 'vb22-outcome-patient', row.name || 'Sprawa ogólna');
+    patient.id = uid + '-patient'; titleGroup.appendChild(patient);
+    var title = make('h2', '', kind === 'result' ? 'Dodaj wynik do kartoteki' : kind === 'reschedule' ? 'Przełóż termin' : 'Oznacz jako wykonane'); title.id = uid + '-title'; titleGroup.appendChild(title);
+    var closeButton = btn('×', 'vb22-icon vb22-outcome-close', cancelOutcome); closeButton.setAttribute('aria-label', 'Zamknij formularz');
+    head.appendChild(titleGroup); head.appendChild(closeButton); dialog.appendChild(head);
+    dialog.setAttribute('aria-labelledby', title.id); dialog.setAttribute('aria-describedby', patient.id);
+    dialog.addEventListener('cancel', function (event) { event.preventDefault(); cancelOutcome(); });
+    var form = make('form', 'vb22-form vb22-outcome-form'); form.autocomplete = 'off';
+    var body = make('div', 'vb22-outcome-body'), context = make('div', 'vb22-context');
+    context.appendChild(make('small', '', 'Dotyczy przypomnienia')); context.appendChild(make('p', '', row.n.title || Jv(row.n.category).label)); body.appendChild(context);
+    var text = field(body, kind === 'result' ? 'Opis otrzymanego wyniku' : kind === 'reschedule' ? 'Powód zmiany (opcjonalnie)' : 'Co zostało zrobione? (opcjonalnie)', 'textarea', '', kind === 'result');
+    text.rows = 5; text.placeholder = kind === 'result' ? 'Wpisz treść otrzymanego wyniku lub najważniejsze ustalenia…' : kind === 'reschedule' ? 'Dopisz ustalenia dotyczące zmiany terminu…' : 'Np. Umówiłem MR na 02.02.2027 r.';
+    var descriptionHelp = make('p', 'vb22-help', kind === 'result' ? 'Opis zostanie zachowany przy tej sprawie i zapisany jako wynik opisowy w Karcie pacjenta.' : 'Dopisz ustalenia, aby pozostały w historii sprawy.'); descriptionHelp.id = uid + '-help'; text.setAttribute('aria-describedby', descriptionHelp.id); body.appendChild(descriptionHelp);
+    var date = field(body, kind === 'result' ? 'Data otrzymania wyniku' : kind === 'reschedule' ? 'Nowy termin' : 'Data wykonania', 'date', Fa(), true);
+    var nextStep = make('details', 'vb22-next-step'), nextSummary = make('summary', ''), summaryText = make('span', '');
+    summaryText.appendChild(make('b', '', 'Dodaj kolejny krok')); summaryText.appendChild(make('small', '', 'Opcjonalne przypomnienie z własnym terminem'));
+    var chevron = make('span', 'vb22-next-chevron', '⌄'); chevron.setAttribute('aria-hidden', 'true'); nextSummary.appendChild(summaryText); nextSummary.appendChild(chevron); nextStep.appendChild(nextSummary);
+    var nextWrap = make('div', 'vb22-next-fields');
     var nextTitle = field(nextWrap, 'Kolejny krok', 'text', '', false), nextDate = field(nextWrap, 'Termin kolejnego kroku', 'date', '', false);
-    nextWrap.hidden = true; form.appendChild(nextWrap);
-    check.addEventListener('change', function () { nextWrap.hidden = !check.checked; nextTitle.required = nextDate.required = check.checked; });
-    form.appendChild(make('p', 'vb22-help', kind === 'result' ? 'Zapisujemy pełną treść jako wynik opisowy w Karcie pacjenta. Data otrzymania nie jest datą pobrania badania.' : 'Opis pozostanie przy pacjencie. Samo umówienie badania nie oznacza jego wykonania.'));
-    var controls = formActions(form, kind === 'result' ? 'Zapisz wynik i zamknij sprawę' : kind === 'reschedule' ? 'Zapisz nowy termin' : 'Zapisz wykonanie');
+    nextTitle.placeholder = 'Np. Sprawdzić, czy jest wynik MR';
+    nextStep.appendChild(nextWrap); if (kind !== 'reschedule') body.appendChild(nextStep);
+    nextStep.addEventListener('toggle', function () { nextTitle.required = nextDate.required = nextStep.open; });
+    body.appendChild(make('p', 'vb22-help', kind === 'result' ? 'Data otrzymania nie jest datą pobrania badania. Zapis pozostanie w Karcie pacjenta i w Historii.' : kind === 'reschedule' ? 'Przypomnienie pozostanie przy pacjencie z nowym terminem.' : 'Zapis pozostanie w Historii. Samo umówienie badania nie oznacza jego wykonania.'));
+    var footer = make('footer', 'vb22-outcome-actions'), cancel = btn('Anuluj', '', cancelOutcome);
+    var save = make('button', 'vb22-primary', kind === 'result' ? 'Zapisz wynik' : kind === 'reschedule' ? 'Zapisz nowy termin' : 'Zapisz wykonanie'); save.type = 'submit'; footer.appendChild(cancel); footer.appendChild(save); form.appendChild(body); form.appendChild(footer); dialog.appendChild(form);
+    var controls = [save, cancel, closeButton];
     var op = operationId(), signature = null;
     form.addEventListener('submit', async function (event) {
-      event.preventDefault(); if (state.busy || !form.reportValidity() || !alive()) return;
+      event.preventDefault(); if (state.busy || !alive()) return;
+      if (kind === 'result' && !text.value.trim()) text.setCustomValidity('Wpisz opis otrzymanego wyniku.');
+      if (nextStep.open && !nextTitle.value.trim()) nextTitle.setCustomValidity('Wpisz treść kolejnego kroku.');
+      if (!form.reportValidity()) return;
       var request = { id: row.n.id, patientId: row.n.patientId, baseRev: row.n.rev || 0, action: kind, dateISO: date.value, text: text.value,
-        next: check.checked ? { title: nextTitle.value, dateISO: nextDate.value } : null };
+        next: kind !== 'reschedule' && nextStep.open ? { title: nextTitle.value, dateISO: nextDate.value } : null };
       var sig = JSON.stringify(request); if (signature && signature !== sig) op = operationId(); signature = sig; request.operationId = op;
       state.busy = true; var fields = Array.from(form.querySelectorAll('input,select,textarea')); fields.forEach(function (node) { node.disabled = true; }); controls.forEach(function (node) { node.disabled = true; });
+      nextSummary.setAttribute('aria-disabled', 'true');
       try {
         var result = await vault.saveReminderOutcome(request); if (!alive()) return;
         if (!result.saved) throw new Error(result.reason === 'conflict' || result.reason === 'already-closed' ? 'Ta sprawa zmieniła się w innej karcie lub na innym urządzeniu. Zachowaj wpisany opis i otwórz aktualny zapis.' : 'Nie zapisano zmian. Sprawa mogła zostać usunięta.');
-        state.tab = kind === 'reschedule' ? 'active' : 'history'; state.selected = row.n.id; editing(false); clear(detail);
+        if (kind === 'reschedule') { var savedNote = await vault.getPatientNote(row.n.id); if (!alive()) return; state.detached = savedNote ? { n: savedNote, name: row.name, act: row.act, g: row.g } : null; }
+        else state.detached = null;
+        state.tab = kind === 'reschedule' ? 'active' : 'history'; state.selected = row.n.id; editing(false); dismissOutcome(false); clear(detail);
         detail.appendChild(make('p', 'vb22-notice', 'Zapisano. Odświeżanie listy…'));
         state.busy = false; await refresh();
         if (alive()) { var oldNotice = detail.querySelector('.vb22-notice'); if (oldNotice) oldNotice.remove(); detail.insertBefore(make('p', 'vb22-notice', kind === 'result' ? 'Wynik zapisany w Karcie pacjenta.' : 'Zapisano w Karcie pacjenta.'), detail.firstChild); }
-      } catch (error) { report(error, form); }
-      finally { state.busy = false; if (fields) fields.forEach(function (node) { node.disabled = false; }); controls.forEach(function (node) { node.disabled = false; }); }
+      } catch (error) { report(error, body); }
+      finally { state.busy = false; if (fields) fields.forEach(function (node) { node.disabled = false; }); controls.forEach(function (node) { node.disabled = false; }); nextSummary.removeAttribute('aria-disabled'); }
     });
-    detail.appendChild(form); text.focus();
+    nextSummary.addEventListener('click', function (event) { if (state.busy) event.preventDefault(); });
+    i.document.body.appendChild(dialog); fit(); dialog.showModal(); closeButton.focus({ preventScroll: true });
   }
-  function defaultEditingGuard() { Array.from(detail.querySelectorAll('button')).forEach(function (node) { node.disabled = true; }); }
   async function addReminder() {
     if (state.editing) return;
     root.classList.add('vb22-show-detail'); clear(detail); editing(true);
@@ -998,6 +1090,8 @@ function remB22Create(host, full, options) {
       try {
         var result = await vault.savePatientNoteOnce({ reminderContext: { version: 1, kind: 'reminder' }, id: noteId, patientId: patient.value, title: title.value, category: category.value, dueDateISO: date.value, dueTime: time.value || null, body: (!eventFields.hidden && eventDate.value ? 'Ustalony termin badania / wizyty: ' + remB22Date(eventDate.value) + (eventTime.value ? ' · ' + eventTime.value : '') + '\n\n' : '') + body.value });
         if (!alive()) return; if (!result.saved) throw new Error('Nie zapisano przypomnienia. Otwórz aktualny zapis pacjenta.');
+        var savedNote = await vault.getPatientNote(noteId); if (!alive()) return;
+        state.detached = savedNote ? { n: savedNote, name: patient.options[patient.selectedIndex] && patient.options[patient.selectedIndex].textContent || 'Pacjent', act: false, g: { patientId: savedNote.patientId } } : null;
         state.tab = 'active'; state.filter = 'all'; state.selected = noteId; editing(false); clear(detail); detail.appendChild(make('p', 'vb22-notice', 'Przypomnienie zapisane.')); state.busy = false; await refresh();
       } catch (error) { report(error, form); }
       finally { state.busy = false; if (fields) fields.forEach(function (node) { node.disabled = false; }); controls.forEach(function (node) { node.disabled = false; }); }
@@ -1007,24 +1101,29 @@ function remB22Create(host, full, options) {
     if (ticket == null) ticket = ++sequence;
     var notes = await vault.listPatientNotesInRange('0001-01-01', '9999-12-31T23:59:59.999Z');
     if (!alive() || ticket !== sequence || state.editing) return false;
-    state.history = (notes || []).filter(function (note) { return note.category !== 'absence' && (note.completedAtISO || note.noShowAtISO); }).map(function (note) {
-      return { n: note, name: note.patientName || note.externalName || '', g: { patientId: note.patientId, patientName: note.patientName, isActivity: note.isActivity, isExternal: note.isExternal } };
-    }); state.historyReady = true; return true;
+    state.history = (notes || []).filter(function (note) { return note.category !== 'absence' && (note.completedAtISO || note.noShowAtISO); }).map(remA7DatedRow); state.historyReady = true; return true;
   }
   async function switchTab(tab) {
     if (state.editing) return;
     var ticket = ++sequence;
     if (tab === 'history' && !state.historyReady) { try { if (!await loadHistory(ticket)) return; } catch (error) { if (ticket === sequence) report(error, list); return; } }
-    if (!alive() || ticket !== sequence || state.editing) return; state.tab = tab; state.selected = null; render();
+    if (!alive() || ticket !== sequence || state.editing) return; state.tab = tab; state.selected = null; state.detached = null; render();
   }
   async function refresh() {
     if (!alive() || state.editing || state.busy) { state.stale = true; return; }
     var ticket = ++sequence;
     try {
-      var groups = await vault.listPatientNotesDueByDate('9999-12-31T23:59:59.999Z');
+      var groups = await vault.listPatientNotesDueByDate();
       if (!alive() || ticket !== sequence) return;
       if (state.editing || state.busy) { state.stale = true; return; }
       state.rows = remB22Flat(groups); state.historyReady = false;
+      if (state.detached) {
+        var detachedNote = await vault.getPatientNote(state.detached.n.id);
+        if (!alive() || ticket !== sequence || state.editing) return;
+        var nextDetached = detachedNote && !state.rows.some(function (row) { return row.n.id === detachedNote.id; }) ? await loadDetached(detachedNote, ticket) : null;
+        if (!alive() || ticket !== sequence || state.editing) return;
+        state.detached = nextDetached;
+      }
       if (state.tab === 'history' && !await loadHistory(ticket)) return;
       if (!alive() || ticket !== sequence || state.editing) return; state.stale = false; render();
     } catch (error) { if (alive() && ticket === sequence) { Ot('readRemindersB22', error); report(new Error('Nie udało się wczytać przypomnień.'), list); list.appendChild(textButton('Spróbuj ponownie', refresh)); } }
@@ -1041,19 +1140,14 @@ function remB22Create(host, full, options) {
       if (state.editing || !alive()) return;
       if (request.newReminder) addReminder();
       else if (request.noteId) {
-        var ticket = ++sequence; state.selected = request.noteId;
-        if (request.history) loadHistory(ticket).then(function (loaded) {
-          if (!loaded || !alive() || ticket !== sequence || state.editing) return;
-          state.tab = 'history'; state.selected = request.noteId; render();
-        }).catch(function (error) { if (ticket === sequence) report(error, list); });
-        else { state.tab = 'active'; render(); }
+        selectLinked(request.noteId);
         root.classList.add('vb22-show-detail');
       }
     }
   };
   if (full) {
     root.addEventListener('cancel', function (event) { event.preventDefault(); closed(); });
-    fit(); i.addEventListener('resize', fit, { passive: true }); if (i.visualViewport) i.visualViewport.addEventListener('resize', fit, { passive: true });
+    fit(); i.addEventListener('resize', fit, { passive: true }); if (i.visualViewport) { i.visualViewport.addEventListener('resize', fit, { passive: true }); i.visualViewport.addEventListener('scroll', fit, { passive: true }); }
     i.document.addEventListener('vilda:sync-merged', changed); remB22Watch(vault);
   }
   return controller;
@@ -1061,7 +1155,7 @@ function remB22Create(host, full, options) {
 function remB22Styles() {
   if (!i.document || !i.document.head || !i.document.createElement) return;
   if (i.document.querySelector('link[data-reminders-b22]')) return;
-  var link = i.document.createElement('link'); link.rel = 'stylesheet'; link.href = 'vilda_reminders.css?v=1'; link.dataset.remindersB22 = 'true'; i.document.head.appendChild(link);
+  var link = i.document.createElement('link'); link.rel = 'stylesheet'; link.href = 'vilda_reminders.css?v=2'; link.dataset.remindersB22 = 'true'; i.document.head.appendChild(link);
 }
 remB22Styles();
 
@@ -1201,7 +1295,7 @@ async function tn(t) {
     if (forced) remMaybeForced = { sequence: sequence, owner: owner };
     if (forced) { try { wn(2500); } catch {} } else await wn(2500);
     if (sequence !== remMaybeReadSequence || !remReadCurrent(owner)) return false;
-    var groups = await vault.listPatientNotesDueByDate("9999-12-31T23:59:59.999Z");
+    var groups = await vault.listPatientNotesDueByDate();
     if (sequence !== remMaybeReadSequence || !remReadCurrent(owner)) return false;
     try { if (i.VildaChrome && typeof i.VildaChrome.refreshRemindersBtn === 'function') i.VildaChrome.refreshRemindersBtn(); } catch {}
     if ((!groups || !groups.length) && typeof remB22Open !== "function") return false;
@@ -1225,7 +1319,7 @@ async function tn(t) {
   function current() { return state.sequence === sequence && remReadCurrent(owner) && remInlineAllowed(t); }
   t.setAttribute('aria-busy', 'true');
   var n;
-  try { n = await owner.vault.listPatientNotesDueByDate("9999-12-31T23:59:59.999Z"); }
+  try { n = await owner.vault.listPatientNotesDueByDate(); }
   catch (error) {
     if (current()) { Ot('readRemindersInline', error); remInlineError(t); }
     return;

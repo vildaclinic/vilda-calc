@@ -30,7 +30,7 @@ async function startServer() {
   }) };
 }
 
-test('B2.2 cold offline: current assets, native completion, next step and persisted patient history', async ({ playwright, browserName, launchOptions }) => {
+test('A7 cold offline: current assets, native completion, next step and persisted patient history', async ({ playwright, browserName, launchOptions }) => {
   test.setTimeout(240000);
   const profile = fs.mkdtempSync(path.join(os.tmpdir(), 'vilda-reminders-b22-offline-'));
   const server = await startServer();
@@ -68,17 +68,20 @@ test('B2.2 cold offline: current assets, native completion, next step and persis
       body: 'Fikcyjny pierwotny opis offline.', dueDateISO: new Date().toLocaleDateString('sv'),
     })).id, ids.a);
     await page.locator('#vildaRemindersBtn').click();
-    const dialog = page.locator('dialog.vb22'); await expect(dialog).toBeVisible();
+    const dialog = page.locator('dialog.vb22-modal'), outcome = page.locator('dialog.vb22-outcome'); await expect(dialog).toBeVisible();
     await dialog.locator(`[data-note-id="${id}"]`).click();
     await dialog.getByRole('button', { name: 'Oznacz jako wykonane', exact: true }).click();
-    await dialog.getByLabel('Co zostało zrobione? (opcjonalnie)', { exact: true }).fill('Umówiono fikcyjne MR na 02.02.2027 r.');
-    await dialog.getByLabel('Dodaj kolejny krok z własnym terminem').check();
-    await dialog.getByLabel('Kolejny krok', { exact: true }).fill('Fikcyjna kontrola po MR offline');
-    await dialog.getByLabel('Termin kolejnego kroku', { exact: true }).fill('2027-02-02');
-    await dialog.getByRole('button', { name: 'Zapisz wykonanie', exact: true }).click();
+    await outcome.getByLabel('Co zostało zrobione? (opcjonalnie)', { exact: true }).fill('Umówiono fikcyjne MR na 02.02.2027 r.');
+    await outcome.locator('.vb22-next-step summary').click();
+    await outcome.getByLabel('Kolejny krok', { exact: true }).fill('Fikcyjna kontrola po MR offline');
+    await outcome.getByLabel('Termin kolejnego kroku', { exact: true }).fill('2027-02-02');
+    await outcome.getByRole('button', { name: 'Zapisz wykonanie', exact: true }).click();
     await expect(dialog.locator('.vb22-notice')).toContainText('Zapisano w Karcie pacjenta');
     const html = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
-    const resources = ['vilda_reminders.css?v=1', ...['vilda_auth_ui.js', 'vilda_vault.js'].map(name => {
+    const auth = fs.readFileSync(path.join(root, 'vilda_auth_ui.js'), 'utf8');
+    const cssEntry = auth.match(/link\.href = '(vilda_reminders\.css\?v=\d+)'/);
+    expect(cssEntry, 'reminders stylesheet has an actual versioned runtime entry').toBeTruthy();
+    const resources = [cssEntry[1], ...['vilda_auth_ui.js', 'vilda_vault.js'].map(name => {
       const match = html.match(new RegExp(`src="(${name.replaceAll('.', '\\.')}\\?v=[^"]+)"`));
       expect(match, `${name} has an actual versioned entry in index`).toBeTruthy(); return match[1];
     })];

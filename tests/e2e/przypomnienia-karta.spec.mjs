@@ -135,7 +135,7 @@ test.describe('P1 — Pacific/Auckland: lokalna doba wyprzedza UTC', () => {
 
     expect(zalegly?.nazwa).toBe('Anna Wczorajsza');
     expect(zalegly?.kiedy, 'wpis w sekcji „Zaległe” nie może twierdzić, że termin jest dziś')
-      .toBe('Po terminie');
+      .toBe('1 dzień po terminie');
     expect(dzisiejszy?.nazwa).toBe('Bogdan Dzisiejszy');
   });
 });
@@ -160,8 +160,8 @@ test.describe('P1 — kontrola pozytywna w Europe/Warsaw', () => {
 
     const w = await wiersze(page);
     expect(w.map((x) => [x.nazwa, x.kiedy])).toEqual([
-      ['Adam Przedwczorajszy', 'Po terminie'],
-      ['Beata Wczorajsza', 'Po terminie'],
+      ['Adam Przedwczorajszy', '2 dni po terminie'],
+      ['Beata Wczorajsza', '1 dzień po terminie'],
     ]);
   });
 });
@@ -188,7 +188,10 @@ test('P3 — kolejność: data rosnąco, a w obrębie doby całodniowe przed god
       'Celina Poranna',
       'Ewa Popoludniowa',
     ]);
-  expect(w.map((x) => x.kiedy)).toEqual(['Po terminie', 'Po terminie', 'Dzisiaj', '09:00', '15:30']);
+  expect(w.slice(0, 2).map((x) => x.kiedy)).toEqual(['2 dni po terminie', '1 dzień po terminie']);
+  const today = await page.evaluate(() => new Date().toLocaleDateString('pl-PL'));
+  expect(w[2].termin.startsWith('Dziś') || w[2].termin.startsWith(today), 'dzisiejszy wpis ma dzisiejszą datę lokalną').toBe(true);
+  expect(w[3].termin).toContain('09:00'); expect(w[4].termin).toContain('15:30');
 });
 
 test('P2 — tytuł odznaki liczy wszystkie notatki, także po grupie z zaległością', async ({ page }) => {
@@ -273,10 +276,9 @@ test('P4 — wpis aktywności bez miejsca pokazuje tytuł, nie „—" z awatare
 
   const wiersz = await page.evaluate(() => {
     const rows = Array.from(document.querySelectorAll('#remindersInline .vild-rem-row'));
-    const r = rows.find((x) => (x.querySelector('.vild-rem-cat')?.textContent || '').includes('Dyżur'));
+    const r = rows.find((x) => (x.querySelector('.vb22-row-title')?.textContent || '') === 'Dyżur nocny');
     return r ? {
       nazwa: r.querySelector('.vild-rem-nm')?.textContent,
-      kategoria: r.querySelector('.vild-rem-cat')?.textContent,
       tytul: r.querySelector('.vb22-row-title')?.textContent,
     } : null;
   });
@@ -285,7 +287,8 @@ test('P4 — wpis aktywności bez miejsca pokazuje tytuł, nie „—" z awatare
   expect(wiersz.nazwa, 'etykieta zamiast pustego nazwiska').toBe('Dyżur');
   expect(wiersz.nazwa).not.toBe('—');
   expect(wiersz.tytul, 'zwięzły wiersz nie gubi treści aktywności').not.toContain('?');
-  expect(wiersz.kategoria, 'kategoria zostaje w drugiej linii').toContain('Dyżur');
+  await page.locator('#remindersInline .vb22-row', { hasText: 'Dyżur nocny' }).click();
+  await expect(page.locator('dialog.vb22-modal .vb22-meta .vb22-category'), 'kategoria jest w szczegółach').toContainText('Dyżur');
 });
 
 test('P6 — karta ma nagłówek i etykietę regionu dla czytnika ekranu', async ({ page }) => {
@@ -306,66 +309,74 @@ test('P6 — karta ma nagłówek i etykietę regionu dla czytnika ekranu', async
   });
 });
 
-// B2.2 replaces decorative avatars/category colors with the approved compact list.
-// Both surfaces still use identical data, category labels, fonts and neutral colors.
-async function collectB22(page, selector) {
+// A7 keeps the same content and typography in the inline card and full list.
+// Category labels move to the detail metadata row instead of repeating per row.
+async function collectA7(page, selector) {
   return page.locator(selector).evaluateAll(rows => rows.map(row => {
     const get = cls => row.querySelector(cls), style = (cls, prop) => getComputedStyle(get(cls))[prop];
     return { id: row.dataset.noteId, title: get('.vb22-row-title').textContent,
-      name: get('.vb22-row-patient').textContent, category: get('.vild-rem-cat').textContent,
-      date: get('.vb22-row-date').textContent, status: get('.vild-rem-when').textContent,
+      name: get('.vb22-row-patient').textContent,
+      date: get('.vb22-row-date').textContent, status: get('.vild-rem-when')?.textContent || '',
       titleColor: style('.vb22-row-title', 'color'), nameColor: style('.vb22-row-patient', 'color'),
-      categoryColor: style('.vild-rem-cat', 'color'), titleSize: style('.vb22-row-title', 'fontSize'),
-      nameSize: style('.vb22-row-patient', 'fontSize'), categorySize: style('.vild-rem-cat', 'fontSize'),
+      titleSize: style('.vb22-row-title', 'fontSize'), nameSize: style('.vb22-row-patient', 'fontSize'),
+      dateSize: style('.vb22-row-date', 'fontSize'), nameWeight: style('.vb22-row-patient', 'fontWeight'),
+      categoryCount: row.querySelectorAll('.vild-rem-cat').length,
       shadow: getComputedStyle(row).boxShadow, role: row.tagName };
   }));
 }
 
-test('P8 — B2.2: compact card and full workspace preserve matching content, labels and typography', async ({ page }) => {
+async function detailsCategory(page, id) {
+  await page.locator(`dialog.vb22-modal [data-note-id="${id}"]`).click();
+  return page.locator('dialog.vb22-modal .vb22-meta .vb22-category').textContent();
+}
+
+const sharedRowFields = ['title','name','date','status','titleColor','nameColor','titleSize','nameSize','dateSize','nameWeight'];
+
+test('P8 — A7: patient-first card and full workspace preserve matching content and typography; categories remain in details', async ({ page }) => {
   await otworz(page, [
     { name: 'Anna Kontrola', title: 'Wpis kontrolny', dniTemu: 0, category: 'followup' },
     { name: 'Bartek Leczenie', title: 'Wpis leczenia', dniTemu: 0, category: 'treatment' },
     { name: 'Celina Obserwacja', title: 'Wpis obserwacji', dniTemu: 0, category: 'observation' },
     { name: 'Damian Klirens', title: 'Wpis klirensu', dniTemu: 0, category: 'wynik-klirens' },
   ], { dyzur: true });
-  const small = await collectB22(page, '#remindersInline .vb22-row');
+  const small = await collectA7(page, '#remindersInline .vb22-row');
   await page.locator('#vildaRemindersBtn').click();
-  await expect(page.locator('dialog.vb22 .vb22-row')).toHaveCount(5);
-  const big = await collectB22(page, 'dialog.vb22 .vb22-row');
+  await expect(page.locator('dialog.vb22-modal .vb22-row')).toHaveCount(5);
+  const big = await collectA7(page, 'dialog.vb22-modal .vb22-row');
   expect(small).toHaveLength(5); expect(big).toHaveLength(5);
-  const keyed = Object.fromEntries(big.map(row => [row.id, row]));
+  const keyed = Object.fromEntries(big.map(row => [row.id, row])), categories = [];
   for (const row of small) {
     expect(keyed[row.id]).toBeTruthy();
-    for (const key of ['title','name','category','date','status','titleColor','nameColor','categoryColor','titleSize','nameSize','categorySize']) {
-      expect(row[key], key + ': ' + row.name).toBe(keyed[row.id][key]);
-    }
+    for (const key of sharedRowFields) expect(row[key], key + ': ' + row.name).toBe(keyed[row.id][key]);
     expect(row.shadow).toBe('none'); expect(keyed[row.id].shadow).toBe('none');
     expect(row.role).toBe('BUTTON'); expect(keyed[row.id].role).toBe('BUTTON');
-    expect(row.category).not.toBe('Notatka');
+    expect(row.categoryCount).toBe(0); expect(keyed[row.id].categoryCount).toBe(0);
+    expect(row.nameSize).toBe('16.8px'); expect(row.nameWeight).toBe('400'); expect(row.dateSize).toBe('14.4px'); expect(row.titleSize).toBe('16px');
+    categories.push(await detailsCategory(page, row.id));
   }
-  expect(new Set(small.map(row => row.category)).size).toBe(5);
-  expect(new Set(small.map(row => row.categoryColor)).size).toBe(1);
+  expect(categories.every(category => category && category !== 'Notatka')).toBe(true);
+  expect(new Set(categories).size).toBe(5);
 });
 
-test('P9 — B2.2 retains Polish procedure/reservation labels and the original activity title', async ({ page }) => {
+test('P9 — A7 retains Polish procedure/reservation labels in details and the original activity title', async ({ page }) => {
   await otworz(page, [
     { name: 'Ewa Biopsja', title: 'Biopsja tarczycy (BACC)', dniTemu: 0, category: 'procedura' },
     { name: 'Filip Kontrola', title: 'Wpis kontrolny', dniTemu: 0, category: 'followup' },
   ], { rezerwacja: true });
-  const small = await collectB22(page, '#remindersInline .vb22-row');
-  await page.locator('#vildaRemindersBtn').click(); await expect(page.locator('dialog.vb22 .vb22-row')).toHaveCount(3);
-  const big = await collectB22(page, 'dialog.vb22 .vb22-row');
+  const small = await collectA7(page, '#remindersInline .vb22-row');
+  await page.locator('#vildaRemindersBtn').click(); await expect(page.locator('dialog.vb22-modal .vb22-row')).toHaveCount(3);
+  const big = await collectA7(page, 'dialog.vb22-modal .vb22-row');
   expect(small).toHaveLength(3); expect(big).toHaveLength(3);
   for (const row of small) {
     const other = big.find(item => item.id === row.id); expect(other).toBeTruthy();
-    for (const key of ['title','name','category','date','status','titleColor','nameColor','categoryColor','titleSize','nameSize','categorySize']) expect(row[key]).toBe(other[key]);
+    for (const key of sharedRowFields) expect(row[key]).toBe(other[key]);
     expect(row.shadow).toBe('none'); expect(other.shadow).toBe('none');
   }
-  const procedure = small.find(row => row.name === 'Ewa Biopsja'), reservation = small.find(row => row.category === 'Rezerwacja');
+  const procedure = small.find(row => row.name === 'Ewa Biopsja'), reservation = small.find(row => row.name === 'RTG klatki');
   expect(procedure).toBeTruthy(); expect(reservation).toBeTruthy();
-  expect(procedure.title).toBe('Biopsja tarczycy (BACC)'); expect(procedure.category).toContain('Procedura');
+  expect(procedure.title).toBe('Biopsja tarczycy (BACC)'); expect(await detailsCategory(page, procedure.id)).toContain('Procedura');
   expect(reservation.title).toBe('Rezerwacja'); expect(reservation.name).toBe('RTG klatki');
-  expect(procedure.category).not.toBe('Notatka'); expect(reservation.category).not.toBe('reservation');
+  expect(await detailsCategory(page, reservation.id)).toBe('Rezerwacja');
 });
 
 test.describe('P10 — filtr pory doby: dyżur, który już się skończył, znika z przypomnień', () => {
