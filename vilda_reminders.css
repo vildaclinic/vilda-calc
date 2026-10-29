@@ -109,11 +109,15 @@
 }
 
 .vb22 .vb22-head h2 {
-  font-size: 20px;
+  font-size: 22px;
   line-height: 1.3;
   font-weight: 600;
   color: var(--vb-ink);
   letter-spacing: -.2px
+}
+
+.vb22 .vb22-head h2:focus {
+  outline: 0
 }
 
 .vb22 .vb22-subtitle {
@@ -220,7 +224,7 @@
 }
 
 .vb22 .vb22-list-pane {
-  background: #f4f8f6;
+  background: #fff;
   border-right: var(--border-emphasis) solid #c7dcd6;
   padding: var(--space-12px) var(--space-14px);
   overflow: auto;
@@ -477,6 +481,146 @@
   padding: var(--space-6px)
 }
 
+/* Approved A8 actions: one group closes the reminder description. */
+.vb22 .vb22-action-group {
+  border-top: var(--border-hairline) solid #e4ecea;
+  margin-top: 28px;
+  padding-top: var(--space-18px);
+  display: grid;
+  gap: var(--space-10px);
+  min-width: 0
+}
+
+.vb22 .vb22-action-label {
+  font-size: 11px;
+  font-weight: 400;
+  letter-spacing: .07em;
+  color: #71888b;
+  margin-bottom: 1px;
+  text-transform: uppercase
+}
+
+.vb22 .vb22-action-row {
+  display: flex;
+  align-items: stretch;
+  gap: var(--space-8px);
+  flex-wrap: wrap;
+  margin-top: 0;
+  min-width: 0
+}
+
+.vb22 .vb22-action-links {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+  margin-top: var(--space-18px)
+}
+
+.vb22 .vb22-action-links .vb22-text {
+  display: flex;
+  align-items: center;
+  min-height: 44px
+}
+
+.vb22 .vb22-action-row button {
+  min-height: 44px!important;
+  padding: var(--space-10px) var(--space-14px)!important;
+  margin: 0;
+  white-space: normal;
+  font-size: 13px!important;
+  line-height: 1.35!important;
+  text-align: center!important;
+  font-weight: 500!important;
+  overflow-wrap: anywhere
+}
+
+.vb22 .vb22-action-row>.vb22-action-primary {
+  flex: 1 1 auto
+}
+
+.vb22.vb22 .vb22-action-row .vb22-action-secondary {
+  border: var(--border-hairline) solid #d4e3e2!important;
+  border-radius: var(--radius-9)!important;
+  background: #fff!important;
+  color: #38727a!important;
+  min-height: 44px!important;
+  box-shadow: none!important;
+  display: inline-flex!important;
+  justify-content: center;
+  align-items: center;
+  gap: 7px;
+  flex: 0 1 auto
+}
+
+.vb22.vb22 .vb22-action-row .vb22-action-secondary:hover {
+  background: #f5faf8!important
+}
+
+.vb22 .vb22-action-more {
+  position: relative;
+  flex: 0 0 auto;
+  min-width: 0
+}
+
+.vb22 .vb22-action-more>summary {
+  list-style: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  height: 100%;
+  padding: var(--space-10px) var(--space-14px);
+  border: var(--border-hairline) solid #d4e3e2;
+  border-radius: var(--radius-9);
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1.35;
+  color: #38727a;
+  min-height: 44px
+}
+
+.vb22 .vb22-action-more>summary::-webkit-details-marker {
+  display: none
+}
+
+.vb22 .vb22-action-menu {
+  display: none;
+  flex-direction: column;
+  position: absolute;
+  bottom: calc(100% + var(--space-6px));
+  right: 0;
+  z-index: var(--z-dropdown);
+  min-width: 210px;
+  max-width: min(320px,calc(100vw - 48px));
+  max-height: min(280px,60dvh);
+  overflow: auto;
+  background: #fff;
+  border: var(--border-hairline) solid #d8e5e1;
+  border-radius: var(--radius-12);
+  padding: var(--space-6px);
+  box-shadow: 0 8px 28px #34534d18
+}
+
+.vb22 .vb22-action-more[open]>.vb22-action-menu {
+  display: flex
+}
+
+.vb22.vb22 .vb22-action-menu button {
+  width: 100%!important;
+  border: 0!important;
+  box-shadow: none!important;
+  text-align: left!important;
+  justify-content: flex-start!important;
+  background: #fff!important;
+  color: #38676d!important;
+  padding: 11px var(--space-12px)!important;
+  min-height: 44px
+}
+
+.vb22.vb22 .vb22-action-menu button:hover {
+  background: #f2f8f5!important
+}
+
 .vb22 .vb22-help {
   font-size: 12px;
   font-weight: 400;
@@ -528,6 +672,89 @@
   font-weight: 500;
   line-height: 1.3;
   letter-spacing: -.15px
+}
+
+.vb22 .vb22-patient-picker {
+  min-width: 0
+}
+
+.vb22 .vb22-patient-search {
+  margin: 0
+}
+
+.vb22 .vb22-patient-status {
+  margin-top: var(--space-8px);
+  color: var(--vb-muted);
+  font-size: 14.4px;
+  font-weight: 400;
+  line-height: 1.45
+}
+
+.vb22 .vb22-patient-results {
+  display: grid;
+  gap: var(--space-6px);
+  max-height: 240px;
+  overflow: auto;
+  margin-top: var(--space-8px);
+  min-width: 0;
+  overscroll-behavior: contain
+}
+
+.vb22.vb22 .vb22-patient-option {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-4px);
+  width: 100%!important;
+  min-height: 48px;
+  padding: var(--space-12px);
+  text-align: left
+}
+
+.vb22.vb22 .vb22-patient-option:hover {
+  background: var(--vb-soft)!important
+}
+
+.vb22 .vb22-patient-name {
+  color: #000;
+  font-size: 16.8px;
+  font-weight: 400;
+  line-height: 1.35;
+  overflow-wrap: anywhere
+}
+
+.vb22 .vb22-patient-meta {
+  color: var(--vb-muted);
+  font-size: 14.4px;
+  font-weight: 400;
+  line-height: 1.4;
+  overflow-wrap: anywhere
+}
+
+.vb22 .vb22-patient-selected {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-12px);
+  margin-top: var(--space-16px);
+  padding: var(--space-12px);
+  border: var(--border-hairline) solid var(--vb-line);
+  border-radius: var(--radius-10);
+  background: #fff
+}
+
+.vb22 .vb22-patient-selected>div {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4px);
+  flex: 1 1 180px;
+  min-width: 0
+}
+
+.vb22.vb22 .vb22-patient-clear {
+  min-height: 44px;
+  color: var(--vb-teal)!important;
+  font-weight: 400
 }
 
 .vb22 .vb22-field {
@@ -666,7 +893,13 @@ dialog.vb22::backdrop {
 }
 
 .vb22-inline .vb22-head h2 {
-  font-size: 19px
+  font-size: 19px;
+  font-weight: 620;
+  letter-spacing: -.15px
+}
+
+.vb22-inline .vb22-tools {
+  gap: var(--space-6px)
 }
 
 .vb22-inline .vb22-tabs {
@@ -904,6 +1137,32 @@ dialog.vb22.vb22-outcome[open] {
 }
 
 @media(max-width:700px) {
+  .vb22 .vb22-action-row {
+    display: grid;
+    grid-template-columns: minmax(0,1fr) minmax(0,1fr);
+    gap: 9px
+  }
+  .vb22 .vb22-action-row>.vb22-action-primary {
+    grid-column: 1/-1;
+    min-height: 46px!important
+  }
+  .vb22.vb22 .vb22-action-row>.vb22-action-secondary {
+    width: 100%!important
+  }
+  .vb22 .vb22-action-more {
+    grid-column: 1/-1
+  }
+  .vb22 .vb22-action-more>summary {
+    justify-content: center
+  }
+  .vb22 .vb22-action-menu {
+    left: 0;
+    right: 0;
+    max-width: none
+  }
+  .vb22 .vb22-action-group {
+    margin-top: var(--space-24px)
+  }
   dialog.vb22.vb22-modal {
     inset: 0 0 var(--vb22-inset,0px);
     width: 100vw;
@@ -1206,6 +1465,24 @@ html.vilda-phone .vb22 .vb22-outcome-actions .vb22-primary {
   min-width: 36px!important
 }
 
+.vb22.vb22 .vb22-tools .vb22-icon {
+  border: 0!important;
+  background: transparent!important;
+  color: #648087!important
+}
+
+.vb22.vb22 .vb22-tools .vb22-icon:hover {
+  background: var(--vb-soft)!important;
+  color: #137e86!important
+}
+
+.vb22.vb22-inline .vb22-tools .vb22-icon {
+  width: 32px!important;
+  min-width: 32px!important;
+  height: 32px;
+  min-height: 32px
+}
+
 .vb22.vb22 .vb22-outcome-close {
   width: 44px!important;
   min-width: 44px!important;
@@ -1312,4 +1589,8 @@ html.vilda-phone .vb22 .vb22-outcome-actions .vb22-primary {
 
 .vb22 .vb22-outcome-head {
   border-bottom: var(--border-hairline) solid #e0eae7!important
+}
+
+.vb22-modal .vb22-head {
+  border-bottom: var(--border-hairline) solid #e5eded!important
 }

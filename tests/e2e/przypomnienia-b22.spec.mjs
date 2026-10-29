@@ -28,6 +28,11 @@ async function select(page, id) { await page.locator(`${DIALOG} [data-note-id="$
 async function field(page, label, value) { await page.locator(DIALOG).getByLabel(label, { exact: true }).fill(value); }
 async function outcomeField(page, label, value) { await page.locator(OUTCOME).getByLabel(label, { exact: true }).fill(value); }
 async function nextStep(page) { await page.locator(OUTCOME).locator('.vb22-next-step summary').click(); }
+async function choosePatient(page, patientId) {
+  const picker = page.locator(`${DIALOG} .vb22-patient-picker`);
+  await picker.getByRole('searchbox', { name: 'Szukaj pacjenta', exact: true }).fill('Antoni');
+  await picker.locator(`[data-patient-id="${patientId}"]`).click();
+}
 
 test('A7 shows due-only header filters, counts all matches, and retains compact rows', async ({ page }) => {
   await setup(page); await open(page);
@@ -42,7 +47,7 @@ test('A7 shows due-only header filters, counts all matches, and retains compact 
 test('generic add saves a contact reminder with its patient and time', async ({ page }) => {
   const { ids } = await setup(page); await open(page);
   await page.locator(DIALOG).getByRole('button', { name: 'Dodaj przypomnienie', exact: true }).click();
-  await page.locator(DIALOG).getByLabel('Pacjent', { exact: true }).selectOption(ids.a);
+  await choosePatient(page, ids.a);
   await page.locator(DIALOG).getByLabel('Rodzaj przypomnienia').selectOption('reminder-contact');
   await field(page, 'Treść przypomnienia', 'Fikcyjny telefon do rodzica B22'); await field(page, 'Godzina (opcjonalnie)', '14:30');
   await field(page, 'Dodatkowe informacje (opcjonalnie)', 'Ustalenia z rodzicem.');
@@ -53,13 +58,22 @@ test('generic add saves a contact reminder with its patient and time', async ({ 
 });
 
 test('completion and next step survive reload and remain linked in the patient notes', async ({ page }) => {
-  const { notes, ids } = await setup(page); await open(page); await select(page, notes[0]);
+  const { notes, ids } = await setup(page); await open(page);
+  await page.locator(`${DIALOG} [data-filter=overdue]`).click();
+  await page.locator(`${DIALOG} .vb22-search`).fill('Fikcyjne umówienie MR');
+  await select(page, notes[0]);
   await page.locator(DIALOG).getByRole('button', { name: 'Oznacz jako wykonane', exact: true }).click();
   await outcomeField(page, 'Co zostało zrobione? (opcjonalnie)', 'Umówiłem fikcyjne MR na 02.02.2027 r.');
   await nextStep(page);
   await outcomeField(page, 'Kolejny krok', 'Fikcyjne MR — sprawdzić wykonanie'); await outcomeField(page, 'Termin kolejnego kroku', '2027-02-02');
   await page.locator(OUTCOME).getByRole('button', { name: 'Zapisz wykonanie', exact: true }).click();
   await expect(page.locator(`${DIALOG} .vb22-notice`)).toContainText('Zapisano w Karcie pacjenta');
+  await expect(page.locator(`${DIALOG} [data-tab=active]`)).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.locator(`${DIALOG} [data-tab=history]`)).toHaveAttribute('aria-pressed', 'false');
+  await expect(page.locator(`${DIALOG} [data-filter=overdue]`)).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.locator(`${DIALOG} .vb22-search`)).toHaveValue('Fikcyjne umówienie MR');
+  await expect(page.locator(`${DIALOG} .vb22-detail-title`)).toHaveText('Fikcyjne umówienie MR');
+  await expect(page.locator(`${DIALOG} [data-note-id="${notes[0]}"]`)).toHaveCount(0);
   await page.locator(DIALOG).getByRole('button', { name: 'Otwórz kolejny krok →', exact: true }).click();
   await expect(page.locator(`${DIALOG} .vb22-detail-title`)).toHaveText('Fikcyjne MR — sprawdzić wykonanie');
   await page.reload();
@@ -69,11 +83,20 @@ test('completion and next step survive reload and remain linked in the patient n
 });
 
 test('narrative biopsy saves its full text at the patient and closes the waiting task', async ({ page }) => {
-  const { notes, ids } = await setup(page); await open(page); await select(page, notes[1]);
+  const { notes, ids } = await setup(page); await open(page);
+  await page.locator(`${DIALOG} [data-filter=pending]`).click();
+  await page.locator(`${DIALOG} .vb22-search`).fill('Fikcyjny wynik biopsji');
+  await select(page, notes[1]);
   await page.locator(DIALOG).getByRole('button', { name: 'Dodaj wynik do kartoteki', exact: true }).click();
   const narrative = 'Fikcyjny opis otrzymanej biopsji. '.repeat(12); await outcomeField(page, 'Opis otrzymanego wyniku', narrative);
   await page.locator(OUTCOME).getByRole('button', { name: 'Zapisz wynik', exact: true }).click();
   await expect(page.locator(`${DIALOG} .vb22-notice`)).toContainText('Wynik zapisany');
+  await expect(page.locator(`${DIALOG} [data-tab=active]`)).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.locator(`${DIALOG} [data-tab=history]`)).toHaveAttribute('aria-pressed', 'false');
+  await expect(page.locator(`${DIALOG} [data-filter=pending]`)).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.locator(`${DIALOG} .vb22-search`)).toHaveValue('Fikcyjny wynik biopsji');
+  await expect(page.locator(`${DIALOG} .vb22-detail-title`)).toHaveText('Fikcyjny wynik biopsji');
+  await expect(page.locator(`${DIALOG} [data-note-id="${notes[1]}"]`)).toHaveCount(0);
   const data = await page.evaluate(async ({ id, patientId }) => { const parent = await window.VildaVault.getPatientNote(id); return { parent, result: await window.VildaVault.getPatientNote(parent.reminderContext.resultNoteId), series: await window.VildaVault.listPatientLabSeries(patientId) }; }, { id: notes[1], patientId: ids.b });
   expect(data.result.body).toContain(narrative.trim()); expect(data.parent.completedAtISO).toBeTruthy(); expect(data.result.clinicalDateISO).toBeNull(); expect(data.series).toEqual([]);
 });
@@ -117,7 +140,7 @@ test('an actual IndexedDB child-write failure rolls back the parent and permits 
 
 test('an agreed appointment date is kept at the patient separately from the reminder date', async ({ page }) => {
   const { ids } = await setup(page); await open(page); await page.locator(DIALOG).getByRole('button', { name: 'Dodaj przypomnienie', exact: true }).click();
-  await page.locator(DIALOG).getByLabel('Pacjent', { exact: true }).selectOption(ids.a);
+  await choosePatient(page, ids.a);
   await page.locator(DIALOG).getByLabel('Rodzaj przypomnienia').selectOption('reminder-exam');
   await field(page, 'Treść przypomnienia', 'MR — potwierdzony fikcyjny termin'); await field(page, 'Przypomnij w dniu', '2027-01-26');
   await field(page, 'Ustalony termin badania / wizyty (opcjonalnie)', '2027-02-02'); await field(page, 'Godzina badania / wizyty (opcjonalnie)', '09:30');
@@ -133,8 +156,8 @@ test('an agreed appointment date is kept at the patient separately from the remi
 test('a delayed history read cannot undo newer navigation or replace an add form', async ({ page }) => {
   await setup(page); await open(page);
   await page.evaluate(() => {
-    const native = window.VildaVault.listPatientNotesInRange;
-    window.VildaVault.listPatientNotesInRange = async (...args) => {
+    const native = window.VildaVault.listReminderHistory;
+    window.VildaVault.listReminderHistory = async (...args) => {
       const notes = await native(...args);
       await new Promise(resolve => { window.__releaseB22History = resolve; });
       return notes;

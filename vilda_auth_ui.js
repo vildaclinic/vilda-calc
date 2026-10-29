@@ -769,13 +769,15 @@ function remB22Open(groups, options) {
   var view = remB22Create(root, true, options || {}); remB22Full = view;
   view.setGroups(groups); view.request(options || {});
   root.showModal(); i.document.body.classList.add('vilda-reminders-open', 'nav-ui-temporarily-hidden');
+  var initialHeading = root.querySelector('.vb22-head h2');
+  if (initialHeading) initialHeading.focus({ preventScroll: true });
   zamknijPisaniePodArkuszem(); view.fit();
   if (i.requestAnimationFrame) i.requestAnimationFrame(view.fit);
   return root;
 }
 function remB22Create(host, full, options) {
   var owner = remReadOwner(), vault = owner.vault, root = host, sequence = 0, timer = null;
-  var state = { rows: [], history: [], tab: 'active', filter: 'all', query: '', selected: null, detached: null, editing: false, busy: false, stale: false, historyReady: false };
+  var state = { rows: [], history: [], tab: 'active', filter: 'all', query: '', selected: null, detached: null, savedOutcome: null, editing: false, busy: false, stale: false, historyReady: false, historyLoading: false, historyLimit: 50 };
   var outcomeRoot = null, outcomeOrigin = null, listContext = null;
   var previousFocus = i.document.activeElement, previousNavHidden = i.document.body.classList.contains('nav-ui-temporarily-hidden');
   function alive() { return root.isConnected && remReadCurrent(owner); }
@@ -813,7 +815,7 @@ function remB22Create(host, full, options) {
     if (!root.classList.contains('vb22-show-detail') || !mobileNavigation() || !listContext) {
       var nodes = Array.from(list.querySelectorAll('[data-note-id]'));
       listContext = { tab: state.tab, filter: state.filter, query: state.query, selected: noteId || state.selected,
-        index: Math.max(0, nodes.findIndex(function (node) { return node.dataset.noteId === (noteId || state.selected); })), scrollTop: left.scrollTop };
+        index: Math.max(0, nodes.findIndex(function (node) { return node.dataset.noteId === (noteId || state.selected); })), scrollTop: left.scrollTop, historyLimit: state.historyLimit };
     }
     root.classList.add('vb22-show-detail');
   }
@@ -826,8 +828,8 @@ function remB22Create(host, full, options) {
       catch (error) { if (alive() && ticket === sequence && !state.editing) report(error, detail); return; }
     }
     if (!alive() || ticket !== sequence || state.editing) return;
-    if (context) { state.tab = context.tab; state.filter = context.filter; state.query = context.query; search.value = state.query; state.selected = context.selected; }
-    state.detached = null; root.classList.remove('vb22-show-detail');
+    if (context) { state.tab = context.tab; state.filter = context.filter; state.query = context.query; search.value = state.query; state.selected = context.selected; state.historyLimit = context.historyLimit || 50; }
+    state.detached = null; state.savedOutcome = null; root.classList.remove('vb22-show-detail');
     var rows = visible();
     if (!rows.some(function (row) { return row.n.id === state.selected; })) {
       var index = Math.min(context && context.index || 0, Math.max(0, rows.length - 1));
@@ -838,6 +840,7 @@ function remB22Create(host, full, options) {
     listContext = null;
     var selectedNode = Array.from(list.querySelectorAll('[data-note-id]')).find(function (node) { return node.dataset.noteId === state.selected; });
     if (selectedNode) selectedNode.focus({ preventScroll: true });
+    if (state.stale) await refresh();
   }
   function status(row) {
     var note = row.n, day = remB22Day(note.dueDateISO);
@@ -874,6 +877,7 @@ function remB22Create(host, full, options) {
   else root.classList.add('vilda-reminders-modal-sheet');
   var header = make('header', 'vb22-head vild-rem-head'), heading = make('div', 'vb22-heading');
   heading.appendChild(make('h2', 'vild-rem-ttl', 'Przypomnienia'));
+  heading.firstChild.tabIndex = -1;
   var subtitle = make('div', 'vb22-subtitle'); heading.appendChild(subtitle); header.appendChild(heading);
   var tools = make('div', 'vb22-tools');
   tools.appendChild(btn(full ? '+ Dodaj przypomnienie' : '+', full ? 'vb22-add' : 'vb22-icon', function () {
@@ -891,13 +895,13 @@ function remB22Create(host, full, options) {
   var filters = make('nav', 'vb22-filters'); filters.setAttribute('aria-label', 'Filtry Przypomnień');
   var keys = [['all', 'Wszystkie'], ['overdue', 'Zaległe'], ['today', 'Dziś'], ['pending', 'Oczekujące wyniki']];
   keys.forEach(function (entry) {
-    var button = btn('', '', function () { if (state.editing) return; sequence += 1; state.filter = entry[0]; state.selected = null; state.detached = null; render(); });
+      var button = btn('', '', function () { if (state.editing) return; sequence += 1; state.filter = entry[0]; state.selected = null; state.detached = null; state.savedOutcome = null; render(); });
     button.dataset.filter = entry[0]; button.appendChild(make('span', '', entry[1])); button.appendChild(make('span', 'vb22-count' + (entry[0] === 'all' ? ' vild-rem-chip' : ''), '0')); filters.appendChild(button);
   }); root.appendChild(filters);
   var layout = make('div', 'vb22-layout'), left = make('section', 'vb22-list-pane'), detail = make('section', 'vb22-detail');
   detail.setAttribute('aria-label', 'Szczegóły przypomnienia');
   var search = make('input', 'vb22-search'); search.type = 'search'; search.placeholder = 'Szukaj pacjenta lub sprawy…'; search.setAttribute('aria-label', 'Szukaj pacjenta lub sprawy');
-  search.addEventListener('input', function () { if (state.editing) return; sequence += 1; state.query = search.value; state.selected = null; state.detached = null; render(); });
+  search.addEventListener('input', function () { if (state.editing) return; sequence += 1; state.query = search.value; state.selected = null; state.detached = null; state.savedOutcome = null; state.historyLimit = 50; render(); });
   if (full) left.appendChild(search);
   var list = make('div', full ? 'vb22-list' : 'vb22-mini-list'); left.appendChild(list); layout.appendChild(left); if (full) layout.appendChild(detail); root.appendChild(layout);
   var footer = make('footer', 'vb22-foot'); footer.appendChild(make('span', '', 'Bieżące przypomnienia'));
@@ -913,16 +917,17 @@ function remB22Create(host, full, options) {
     });
     subtitle.textContent = full ? 'Sprawy, terminy i historia pacjentów' : state.rows.length + ' spraw · ' + state.rows.filter(function (row) { return matches(row, 'overdue'); }).length + ' po terminie';
     clear(activeTab); activeTab.appendChild(make('span', '', 'Do wykonania')); activeTab.appendChild(make('span', 'vb22-tab-count', String(state.rows.length)));
-    clear(historyTab); historyTab.appendChild(make('span', '', 'Historia')); if (state.historyReady) historyTab.appendChild(make('span', 'vb22-tab-count', String(state.history.length)));
+    clear(historyTab); historyTab.appendChild(make('span', '', 'Historia'));
     activeTab.classList.toggle('is-active', state.tab === 'active'); historyTab.classList.toggle('is-active', state.tab === 'history');
     activeTab.setAttribute('aria-pressed', String(state.tab === 'active')); historyTab.setAttribute('aria-pressed', String(state.tab === 'history'));
-    activeTab.disabled = historyTab.disabled = search.disabled = state.editing;
+    activeTab.disabled = historyTab.disabled = state.editing;
+    search.disabled = state.editing || state.tab === 'history' && state.historyLoading;
     filters.hidden = state.tab === 'history';
   }
   function rowNode(row) {
     var note = row.n, node = btn('', 'vb22-row vild-rem-row' + (full ? ' vilda-reminders-row' : '') + (state.selected === note.id && full ? ' is-selected' : ''), function () {
       if (!full) { remB22Request({ noteId: note.id, history: state.tab === 'history' }); return; }
-      if (state.editing) return; enterDetail(note.id); sequence += 1; state.selected = note.id; state.detached = null; updateSelection(); renderDetail();
+      if (state.editing || state.busy) return; enterDetail(note.id); sequence += 1; state.selected = note.id; state.detached = null; state.savedOutcome = null; updateSelection(); renderDetail();
     });
     node.dataset.noteId = note.id;
     node.dataset.period = remB22Day(note.dueDateISO) < Fa() ? 'overdue' : remB22Day(note.dueDateISO) === Fa() ? 'today' : 'future';
@@ -946,23 +951,48 @@ function remB22Create(host, full, options) {
   function render() {
     if (!alive()) return;
     var previousScroll = left.scrollTop; counts(); clear(list);
+    list.setAttribute('aria-busy', String(state.tab === 'history' && state.historyLoading));
+    if (state.tab === 'history' && state.historyLoading) {
+      var loading = make('p', 'vb22-empty', 'Wczytywanie historii…'); loading.setAttribute('role', 'status'); list.appendChild(loading);
+      if (full && !state.editing) renderDetail(); return;
+    }
     var rows = visible();
     if (!state.selected || !rows.some(function (row) { return row.n.id === state.selected; }) && !(state.detached && state.detached.n.id === state.selected)) state.selected = rows[0] && rows[0].n.id || null;
-    rows.forEach(function (row) { list.appendChild(rowNode(row)); });
+    if (state.tab === 'history') {
+      var selectedIndex = rows.findIndex(function (row) { return row.n.id === state.selected; });
+      if (selectedIndex >= state.historyLimit) state.historyLimit = Math.ceil((selectedIndex + 1) / 50) * 50;
+    }
+    rows.slice(0, state.tab === 'history' ? state.historyLimit : rows.length).forEach(function (row) { list.appendChild(rowNode(row)); });
+    if (state.tab === 'history' && rows.length > state.historyLimit) list.appendChild(textButton('Pokaż kolejne ' + Math.min(50, rows.length - state.historyLimit) + ' spraw', function () { state.historyLimit += 50; render(); }));
     if (!rows.length) list.appendChild(make('p', 'vb22-empty vild-rem-empty', state.tab === 'history' ? 'Brak wykonanych spraw z terminem.' : state.rows.length ? 'Brak spraw w tym filtrze.' : 'Brak przypomnień na dziś. Możesz dodać nowe przypomnienie.'));
     left.scrollTop = previousScroll;
     if (full && !state.editing) renderDetail();
   }
   function openCard(row, noteId) {
-    if (state.editing) return;
+    if (state.editing || state.busy) return;
     close(); setTimeout(function () { se(row.g.patientId, null, null, { activeTab: 'notes', focusNoteId: noteId || row.n.id }); }, 0);
   }
+  function closeActionMenus(event) {
+    Array.from(root.querySelectorAll('.vb22-action-more[open]')).forEach(function (menu) {
+      var target = event.type === 'focusout' ? event.relatedTarget : event.target;
+      if (target && !menu.contains(target)) menu.open = false;
+    });
+  }
+  root.addEventListener('pointerdown', closeActionMenus);
+  root.addEventListener('focusout', closeActionMenus);
+  root.addEventListener('keydown', function (event) {
+    if (event.key !== 'Escape') return;
+    var menu = root.querySelector('.vb22-action-more[open]'); if (!menu) return;
+    event.preventDefault(); event.stopPropagation(); menu.open = false;
+    menu.querySelector('summary').focus({ preventScroll: true });
+  }, true);
   function renderDetail() {
     clear(detail); detail.scrollTop = 0; var row = currentRow();
     detail.appendChild(btn('← Lista spraw', 'vb22-back vb22-text', backToList));
     detail.appendChild(make('div', 'vb22-detail-label', 'Szczegóły wydarzenia'));
     if (!row) { detail.appendChild(make('p', 'vb22-empty', 'Wybierz sprawę z listy lub dodaj przypomnienie.')); return; }
     var note = row.n, context = note.reminderContext || {}, actions = remAkcje(row);
+    var saved = state.savedOutcome && state.savedOutcome.id === note.id ? state.savedOutcome : null;
     var patientHeading = make('h3', 'vb22-detail-patient');
     if (!row.g.isActivity && !row.g.isExternal) {
       var patientLink = btn(row.name || 'Pacjent', 'vb22-patient-link', function () { openCard(row); });
@@ -971,30 +1001,49 @@ function remB22Create(host, full, options) {
     detail.appendChild(patientHeading);
     var meta = make('div', 'vb22-meta'); meta.appendChild(make('span', 'vb22-detail-date', remB22Date(note.dueDateISO) + (note.dueTime ? ' · ' + note.dueTime : ''))); meta.appendChild(make('span', 'vb22-category', remA7Category(note.category))); detail.appendChild(meta);
     detail.appendChild(make('p', 'vb22-detail-title', note.title || Jv(note.category).label));
-    if (row.g.isExternal || row.g.isActivity) detail.appendChild(make('p', 'vb22-origin', row.g.isExternal ? 'Osoba spoza kartoteki' : 'Wydarzenie Terminarza'));
-    if (!note.completedAtISO && !note.noShowAtISO && remB22Day(note.dueDateISO) > Fa()) detail.appendChild(make('p', 'vb22-notice', 'Zapisano na przyszły termin: ' + remB22Date(note.dueDateISO) + '. Sprawa pozostaje w Karcie pacjenta i pojawi się w Przypomnieniach w swoim dniu.'));
-    if (note.body) detail.appendChild(make('p', 'vb22-body', note.body));
-    var actionBar = make('div', 'vb22-actions');
-    if (!note.completedAtISO && !note.noShowAtISO) {
-      if (note.category === 'wynik-badania') actionBar.appendChild(btn('Dodaj wynik do kartoteki', 'vb22-primary', function () { outcome('result', row); }));
-      else if (actions.some(function (action) { return action.k === 'complete'; })) actionBar.appendChild(btn('Oznacz jako wykonane', 'vb22-primary', function () { outcome('complete', row); }));
-      if (actions.some(function (action) { return action.k === 'snooze'; })) actionBar.appendChild(btn('Przełóż termin', '', function () { outcome('reschedule', row); }));
-      actions.filter(function (action) { return action.k === 'noshow' || action.k === 'recheck'; }).forEach(function (action) {
-        actionBar.appendChild(btn(action.label, 'vb22-text', async function () {
-          if (state.busy) return; state.busy = true;
-          try { await remWykonaj(action.k, row); state.busy = false; await refresh(); }
-          catch (error) { report(error, detail); }
-          finally { state.busy = false; }
-        }));
-      });
+    if (saved) {
+      detail.appendChild(make('p', 'vb22-notice', saved.kind === 'result' ? 'Wynik zapisany w Karcie pacjenta.' : 'Zapisano w Karcie pacjenta.'));
+      if (saved.readError) {
+        var readError = make('div', 'vb22-error'); readError.setAttribute('role', 'alert');
+        readError.appendChild(make('p', '', 'Zapisano zmiany, ale nie udało się odświeżyć szczegółów. Ponów odczyt, aby zobaczyć aktualny zapis.'));
+        readError.appendChild(textButton('Odśwież zapis', refresh)); detail.appendChild(readError);
+      } else if (saved.awaitingRead) detail.appendChild(make('p', 'vb22-help', 'Odświeżanie szczegółów…'));
     }
-    detail.appendChild(actionBar);
-    if (context.nextId) detail.appendChild(textButton('Otwórz kolejny krok →', function () { selectLinked(context.nextId); }));
-    if (context.resultNoteId) detail.appendChild(textButton('Otwórz zapisany wynik w Karcie pacjenta →', function () { openCard(row, context.resultNoteId); }));
-    if (context.parentId) detail.appendChild(textButton('Zobacz wcześniejszą sprawę →', function () { selectLinked(context.parentId); }));
-    if (!note.completedAtISO && !note.noShowAtISO) detail.appendChild(textButton('Edytuj treść przypomnienia', function () {
-      close(); ga({ patientId: note.patientId, note: note, onSaved: function () { remB22Request({ noteId: note.id }); } });
-    }));
+    if (row.g.isExternal || row.g.isActivity) detail.appendChild(make('p', 'vb22-origin', row.g.isExternal ? 'Osoba spoza kartoteki' : 'Wydarzenie Terminarza'));
+    if (!saved && !note.completedAtISO && !note.noShowAtISO && remB22Day(note.dueDateISO) > Fa()) detail.appendChild(make('p', 'vb22-notice', 'Zapisano na przyszły termin: ' + remB22Date(note.dueDateISO) + '. Sprawa pozostaje w Karcie pacjenta i pojawi się w Przypomnieniach w swoim dniu.'));
+    if (note.body) detail.appendChild(make('p', 'vb22-body', note.body));
+    var actionGroup = make('section', 'vb22-action-group'), actionBar = make('div', 'vb22-actions vb22-action-row');
+    actionGroup.setAttribute('aria-label', 'Działania dotyczące sprawy');
+    actionGroup.appendChild(make('div', 'vb22-action-label', 'Działania')); actionGroup.appendChild(actionBar);
+    if (!note.completedAtISO && !note.noShowAtISO && !(saved && saved.awaitingRead)) {
+      if (note.category === 'wynik-badania') actionBar.appendChild(btn('Dodaj wynik do kartoteki', 'vb22-primary vb22-action-primary', function () { outcome('result', row); }));
+      else if (actions.some(function (action) { return action.k === 'complete'; })) actionBar.appendChild(btn('Oznacz jako wykonane', 'vb22-primary vb22-action-primary', function () { outcome('complete', row); }));
+      if (actions.some(function (action) { return action.k === 'snooze'; })) actionBar.appendChild(btn('Przełóż termin', 'vb22-action-secondary', function () { outcome('reschedule', row); }));
+      var edit = btn('Edytuj', 'vb22-action-secondary', function () {
+        if (state.busy) return;
+        close(); ga({ patientId: note.patientId, note: note, onSaved: function () { remB22Request({ noteId: note.id }); } });
+      }); edit.setAttribute('aria-label', 'Edytuj treść przypomnienia'); actionBar.appendChild(edit);
+      var extraActions = actions.filter(function (action) { return action.k === 'noshow' || action.k === 'recheck'; });
+      if (extraActions.length) {
+        var more = make('details', 'vb22-action-more'), moreSummary = make('summary', '', 'Więcej'), moreMenu = make('div', 'vb22-action-menu');
+        moreSummary.setAttribute('aria-label', 'Więcej akcji przypomnienia'); moreMenu.setAttribute('role', 'group'); moreMenu.setAttribute('aria-label', 'Dodatkowe działania przypomnienia');
+        more.appendChild(moreSummary); more.appendChild(moreMenu); actionBar.appendChild(more);
+        extraActions.forEach(function (action) {
+          moreMenu.appendChild(btn(action.label, '', async function () {
+            if (state.busy) return; more.open = false; state.busy = true;
+            try { await remWykonaj(action.k, row); state.busy = false; await refresh(); }
+            catch (error) { report(error, detail); }
+            finally { state.busy = false; }
+          }));
+        });
+      }
+    }
+    if (actionBar.childElementCount) detail.appendChild(actionGroup);
+    var links = make('div', 'vb22-action-links');
+    if (context.nextId) links.appendChild(textButton('Otwórz kolejny krok →', function () { selectLinked(context.nextId); }));
+    if (context.resultNoteId) links.appendChild(textButton('Otwórz zapisany wynik w Karcie pacjenta →', function () { openCard(row, context.resultNoteId); }));
+    if (context.parentId) links.appendChild(textButton('Zobacz wcześniejszą sprawę →', function () { selectLinked(context.parentId); }));
+    if (links.childElementCount) detail.appendChild(links);
   }
   async function selectLinked(id) {
     if (state.editing) return;
@@ -1010,7 +1059,7 @@ function remB22Create(host, full, options) {
         if (!nextDetached && !state.rows.some(function (row) { return row.n.id === id; })) { report(new Error('Nie można otworzyć aktualnej sprawy. Odśwież listę.'), detail); return; }
       }
       if (!alive() || ticket !== sequence || state.editing) return;
-      state.tab = nextTab; state.detached = nextDetached;
+      state.tab = nextTab; state.detached = nextDetached; state.savedOutcome = null;
       state.selected = id; state.filter = 'all'; state.query = ''; search.value = ''; render();
     } catch (error) { if (alive() && ticket === sequence && !state.editing) report(error, detail); }
   }
@@ -1029,9 +1078,9 @@ function remB22Create(host, full, options) {
     input.addEventListener('input', function () { input.setCustomValidity(''); });
     wrap.appendChild(input); form.appendChild(wrap); return input;
   }
-  function editing(value) { if (value) sequence += 1; state.editing = value; counts(); }
+  function editing(value) { if (value) { sequence += 1; state.historyLoading = false; } state.editing = value; counts(); }
   function formActions(form, submitText, onCancel) {
-    var actions = make('div', 'vb22-actions'), cancel = btn('Anuluj', '', async function () { if (state.busy) return; editing(false); if (onCancel) await onCancel(); else render(); if (state.stale) refresh(); });
+    var actions = make('div', 'vb22-actions'), cancel = btn('Anuluj', '', async function () { if (state.busy) return; editing(false); if (onCancel) await onCancel(); else render(); if (state.stale || state.tab === 'history' && !state.historyReady) refresh(); });
     var save = make('button', 'vb22-primary', submitText); save.type = 'submit'; actions.appendChild(cancel); actions.appendChild(save); form.appendChild(actions); return [save, cancel];
   }
   function operationId() { return i.crypto && i.crypto.randomUUID ? i.crypto.randomUUID() : Date.now().toString(36) + Math.random().toString(36).slice(2); }
@@ -1047,7 +1096,7 @@ function remB22Create(host, full, options) {
     if (state.stale) refresh();
   }
   function outcome(kind, row) {
-    if (state.editing || !alive()) return;
+    if (state.editing || state.busy || !alive()) return;
     editing(true); outcomeOrigin = i.document.activeElement;
     var dialog = make('dialog', 'vb22 vb22-outcome'), uid = 'rem-outcome-' + operationId(); outcomeRoot = dialog;
     var head = make('header', 'vb22-outcome-head'), titleGroup = make('div', ''), patient = make('p', 'vb22-outcome-patient', row.name || 'Sprawa ogólna');
@@ -1090,12 +1139,12 @@ function remB22Create(host, full, options) {
       try {
         var result = await vault.saveReminderOutcome(request); if (!alive()) return;
         if (!result.saved) throw new Error(result.reason === 'conflict' || result.reason === 'already-closed' ? 'Ta sprawa zmieniła się w innej karcie lub na innym urządzeniu. Zachowaj wpisany opis i otwórz aktualny zapis.' : 'Nie zapisano zmian. Sprawa mogła zostać usunięta.');
-        if (kind === 'reschedule') { var savedNote = await vault.getPatientNote(row.n.id); if (!alive()) return; state.detached = savedNote ? { n: savedNote, name: row.name, act: row.act, g: row.g } : null; }
-        else state.detached = null;
-        state.tab = kind === 'reschedule' ? 'active' : 'history'; state.selected = row.n.id; editing(false); dismissOutcome(false); clear(detail);
-        detail.appendChild(make('p', 'vb22-notice', 'Zapisano. Odświeżanie listy…'));
-        state.busy = false; await refresh();
-        if (alive()) { var oldNotice = detail.querySelector('.vb22-notice'); if (oldNotice) oldNotice.remove(); detail.insertBefore(make('p', 'vb22-notice', kind === 'result' ? 'Wynik zapisany w Karcie pacjenta.' : 'Zapisano w Karcie pacjenta.'), detail.firstChild); }
+        // The transaction is committed. Subsequent failures are read failures;
+        // retain the current details/back navigation and offer only a read retry.
+        state.savedOutcome = { id: row.n.id, kind: kind, awaitingRead: true, readError: false };
+        state.detached = row; state.selected = row.n.id; state.stale = true;
+        if (kind !== 'reschedule') state.rows = state.rows.filter(function (item) { return item.n.id !== row.n.id; });
+        editing(false); dismissOutcome(false); state.busy = false; render(); await refresh();
       } catch (error) { report(error, body); }
       finally { state.busy = false; if (fields) fields.forEach(function (node) { node.disabled = false; }); controls.forEach(function (node) { node.disabled = false; }); nextSummary.removeAttribute('aria-disabled'); }
     });
@@ -1103,12 +1152,64 @@ function remB22Create(host, full, options) {
     i.document.body.appendChild(dialog); fit(); dialog.showModal(); closeButton.focus({ preventScroll: true });
   }
   async function addReminder() {
-    if (state.editing) return;
+    if (state.editing || state.busy) return;
     var wasDetail = root.classList.contains('vb22-show-detail');
     enterDetail(state.selected); clear(detail); editing(true);
     var form = make('form', 'vb22-form'); form.appendChild(make('h3', '', 'Dodaj przypomnienie'));
-    var patientLabel = make('label', 'vb22-field'), patient = make('select', ''); patient.required = true; patient.setAttribute('aria-label', 'Pacjent'); patientLabel.appendChild(make('span', '', 'Pacjent')); patientLabel.appendChild(patient); form.appendChild(patientLabel);
-    var blank = make('option', '', 'Wybierz pacjenta'); blank.value = ''; patient.appendChild(blank);
+    var picker = make('section', 'vb22-patient-picker'), searchWrap = make('div', 'vb22-patient-search-wrap'); picker.setAttribute('aria-label', 'Pacjent');
+    var patientSearch = field(searchWrap, 'Szukaj pacjenta', 'search', '', false); patientSearch.classList.add('vb22-search', 'vb22-patient-search'); patientSearch.placeholder = 'Nazwisko lub imię pacjenta…'; patientSearch.autocomplete = 'off';
+    var pickerId = 'rem-patient-' + operationId(), patientStatus = make('p', 'vb22-patient-status', 'Wczytywanie pacjentów…'), patientResults = make('div', 'vb22-patient-results');
+    patientStatus.id = pickerId + '-status'; patientStatus.setAttribute('role', 'status'); patientStatus.setAttribute('aria-live', 'polite'); patientResults.id = pickerId + '-results'; patientResults.setAttribute('role', 'group'); patientResults.setAttribute('aria-label', 'Pacjenci pasujący do wyszukiwania');
+    patientSearch.setAttribute('aria-controls', patientResults.id); patientSearch.setAttribute('aria-describedby', patientStatus.id);
+    var patientSelected = make('div', 'vb22-patient-selected'), selectedInfo = make('div', ''), selectedName = make('span', 'vb22-patient-name'), selectedMeta = make('span', 'vb22-patient-meta');
+    patientSelected.hidden = true; patientSelected.setAttribute('role', 'group'); patientSelected.setAttribute('aria-label', 'Wybrany pacjent'); selectedInfo.appendChild(selectedName); selectedInfo.appendChild(selectedMeta); patientSelected.appendChild(selectedInfo);
+    var clearPatient = btn('Wyczyść wybór', 'vb22-patient-clear', function () {
+      if (state.busy || !pickerAlive()) return;
+      selectedPatient = null; patientSearch.value = ''; patientSearch.setCustomValidity(''); patientSelected.hidden = true; searchWrap.hidden = patientResults.hidden = false;
+      renderPatients(); patientSearch.focus({ preventScroll: true });
+    }); patientSelected.appendChild(clearPatient);
+    var patientFeedback = make('div', 'vb22-patient-feedback'); picker.appendChild(searchWrap); picker.appendChild(patientSelected); picker.appendChild(patientStatus); picker.appendChild(patientResults); picker.appendChild(patientFeedback); form.appendChild(picker);
+    var patientHeaders = [], selectedPatient = null, patientsReady = false, patientLoading = false;
+    function pickerAlive() { return alive() && state.editing && form.isConnected; }
+    function patientMetadata(record) {
+      var header = record.header || {}, dob = remB22Day(header.dobISO);
+      if (/^\d{4}-\d{2}-\d{2}$/.test(dob)) return 'ur. ' + remB22Date(dob);
+      return record.lastSavedAtISO ? 'Ostatni zapis: ' + remB22Date(record.lastSavedAtISO) : 'Brak daty urodzenia';
+    }
+    function updatePatientSave() { if (controls) controls[0].disabled = !patientsReady || !selectedPatient || state.busy; }
+    function choosePatient(record) {
+      if (state.busy || !pickerAlive()) return;
+      selectedPatient = record; patientSearch.setCustomValidity(''); selectedName.textContent = record.name; selectedMeta.textContent = record.meta;
+      searchWrap.hidden = patientResults.hidden = true; patientSelected.hidden = false; patientStatus.textContent = 'Wybrano pacjenta. Możesz wyczyścić wybór i wskazać inną osobę.';
+      updatePatientSave(); clearPatient.focus({ preventScroll: true });
+    }
+    function renderPatients() {
+      if (!pickerAlive()) return;
+      clear(patientResults); updatePatientSave();
+      if (!patientsReady) { patientStatus.textContent = patientLoading ? 'Wczytywanie pacjentów…' : 'Nie udało się wczytać pacjentów.'; return; }
+      var query = De(patientSearch.value).trim(), matches = patientHeaders.filter(function (record) { return !query || record.searchKey.indexOf(query) >= 0; });
+      matches.slice(0, 20).forEach(function (record) {
+        var option = btn('', 'vb22-patient-option', function () { choosePatient(record); }); option.dataset.patientId = record.patientId;
+        option.appendChild(make('span', 'vb22-patient-name', record.name)); option.appendChild(make('span', 'vb22-patient-meta', record.meta)); patientResults.appendChild(option);
+      });
+      patientStatus.textContent = !matches.length ? query ? 'Brak pasujących pacjentów.' : 'Brak zapisanych pacjentów.' : matches.length > 20 ? 'Pokazano 20 z ' + matches.length + ' pacjentów. Wpisz więcej znaków, aby zawęzić listę.' : 'Wybierz pacjenta z listy. Liczba wyników: ' + matches.length + '.';
+    }
+    patientSearch.addEventListener('input', function () { patientSearch.setCustomValidity(''); renderPatients(); });
+    async function loadPatients() {
+      if (patientLoading || patientsReady || !pickerAlive()) return;
+      patientLoading = true; clear(patientFeedback); renderPatients();
+      try {
+        var patients = await vault.listPatients(); if (!pickerAlive()) return;
+        patientHeaders = (patients || []).filter(function (record) { return record && typeof record.patientId === 'string' && record.patientId; }).map(function (record) {
+          var header = record.header || {}, name = header.name || [header.lastName, header.firstName].filter(Boolean).join(' ') || 'Pacjent';
+          return { patientId: record.patientId, name: name, meta: patientMetadata(record), searchKey: De(name + ' ' + (header.lastName || '') + ' ' + (header.firstName || '')) };
+        });
+        patientsReady = true; renderPatients();
+      } catch (error) {
+        if (!pickerAlive()) return;
+        report(error, patientFeedback); patientFeedback.appendChild(textButton('Spróbuj ponownie wczytać pacjentów', loadPatients));
+      } finally { patientLoading = false; if (pickerAlive() && !patientsReady) renderPatients(); }
+    }
     var categoryLabel = make('label', 'vb22-field'), category = make('select', ''); category.setAttribute('aria-label', 'Rodzaj przypomnienia'); categoryLabel.appendChild(make('span', '', 'Rodzaj przypomnienia')); categoryLabel.appendChild(category); form.appendChild(categoryLabel);
     [['reminder-task', 'Sprawa do wykonania'], ['reminder-contact', 'Kontakt z pacjentem / rodzicem'], ['followup', 'Kontrola / wizyta'], ['reminder-exam', 'Organizacja badania'], ['wynik-badania', 'Oczekujący wynik'], ['reminder-other', 'Inne']].forEach(function (entry) { var option = make('option', '', entry[1]); option.value = entry[0]; category.appendChild(option); });
     var title = field(form, 'Treść przypomnienia', 'text', '', true), date = field(form, 'Przypomnij w dniu', 'date', Fa(), true), time = field(form, 'Godzina (opcjonalnie)', 'time', '', false), body = field(form, 'Dodatkowe informacje (opcjonalnie)', 'textarea', '', false);
@@ -1117,36 +1218,41 @@ function remB22Create(host, full, options) {
     form.insertBefore(eventFields, body.parentElement); category.addEventListener('change', function () { eventFields.hidden = category.value !== 'reminder-exam' && category.value !== 'followup'; });
     form.appendChild(make('p', 'vb22-help', 'Przypomnienie i późniejszy opis wykonania pozostaną w Karcie pacjenta.'));
     var controls = formActions(form, 'Zapisz przypomnienie', function () { if (wasDetail) render(); else return backToList(); }); controls[0].disabled = true; detail.appendChild(form);
-    try {
-      var patients = await vault.listPatients(); if (!alive()) return;
-      (patients || []).forEach(function (record) { var option = make('option', '', record.header && record.header.name || 'Pacjent'); option.value = record.patientId; patient.appendChild(option); }); controls[0].disabled = false;
-    } catch (error) { report(error, form); }
     var noteId = 'reminder-' + operationId();
     form.addEventListener('submit', async function (event) {
-      event.preventDefault(); if (state.busy || !alive() || !form.reportValidity()) return;
+      event.preventDefault(); if (state.busy || !pickerAlive()) return;
+      if (!patientsReady || !selectedPatient) { patientSearch.setCustomValidity('Wybierz pacjenta z listy.'); patientSearch.reportValidity(); return; }
+      if (!form.reportValidity()) return;
       if (!title.value.trim()) { title.setCustomValidity('Wpisz treść przypomnienia.'); title.reportValidity(); return; }
-      state.busy = true; var fields = Array.from(form.querySelectorAll('input,select,textarea')); fields.forEach(function (node) { node.disabled = true; }); controls.forEach(function (node) { node.disabled = true; });
+      var chosenPatient = selectedPatient;
+      state.busy = true; var fields = Array.from(form.querySelectorAll('input,select,textarea,button')); fields.forEach(function (node) { node.disabled = true; }); controls.forEach(function (node) { node.disabled = true; });
       try {
-        var result = await vault.savePatientNoteOnce({ reminderContext: { version: 1, kind: 'reminder' }, id: noteId, patientId: patient.value, title: title.value, category: category.value, dueDateISO: date.value, dueTime: time.value || null, body: (!eventFields.hidden && eventDate.value ? 'Ustalony termin badania / wizyty: ' + remB22Date(eventDate.value) + (eventTime.value ? ' · ' + eventTime.value : '') + '\n\n' : '') + body.value });
+        var result = await vault.savePatientNoteOnce({ reminderContext: { version: 1, kind: 'reminder' }, id: noteId, patientId: chosenPatient.patientId, title: title.value, category: category.value, dueDateISO: date.value, dueTime: time.value || null, body: (!eventFields.hidden && eventDate.value ? 'Ustalony termin badania / wizyty: ' + remB22Date(eventDate.value) + (eventTime.value ? ' · ' + eventTime.value : '') + '\n\n' : '') + body.value });
         if (!alive()) return; if (!result.saved) throw new Error('Nie zapisano przypomnienia. Otwórz aktualny zapis pacjenta.');
         var savedNote = await vault.getPatientNote(noteId); if (!alive()) return;
-        state.detached = savedNote ? { n: savedNote, name: patient.options[patient.selectedIndex] && patient.options[patient.selectedIndex].textContent || 'Pacjent', act: false, g: { patientId: savedNote.patientId } } : null;
+        state.detached = savedNote ? { n: savedNote, name: chosenPatient.name, act: false, g: { patientId: savedNote.patientId } } : null;
         state.tab = 'active'; state.filter = 'all'; state.selected = noteId; editing(false); clear(detail); detail.appendChild(make('p', 'vb22-notice', 'Przypomnienie zapisane.')); state.busy = false; await refresh();
       } catch (error) { report(error, form); }
-      finally { state.busy = false; if (fields) fields.forEach(function (node) { node.disabled = false; }); controls.forEach(function (node) { node.disabled = false; }); }
+      finally { state.busy = false; if (fields) fields.forEach(function (node) { node.disabled = false; }); controls.forEach(function (node) { node.disabled = false; }); updatePatientSave(); }
     });
+    await loadPatients();
   }
   async function loadHistory(ticket) {
     if (ticket == null) ticket = ++sequence;
-    var notes = await vault.listPatientNotesInRange('0001-01-01', '9999-12-31T23:59:59.999Z');
+    var notes = typeof vault.listReminderHistory === 'function' ? await vault.listReminderHistory() : await vault.listPatientNotesInRange('0001-01-01', '9999-12-31T23:59:59.999Z');
     if (!alive() || ticket !== sequence || state.editing) return false;
-    state.history = (notes || []).filter(function (note) { return note.category !== 'absence' && (note.completedAtISO || note.noShowAtISO); }).map(remA7DatedRow); state.historyReady = true; return true;
+    state.history = (notes || []).filter(function (note) { return note.category !== 'absence' && (note.completedAtISO || note.noShowAtISO); }).map(remA7DatedRow); state.historyReady = true; state.historyLoading = false; return true;
   }
   async function switchTab(tab) {
-    if (state.editing) return;
+    if (state.editing || tab === state.tab && state.historyLoading) return;
     var ticket = ++sequence;
-    if (tab === 'history' && !state.historyReady) { try { if (!await loadHistory(ticket)) return; } catch (error) { if (ticket === sequence) report(error, list); return; } }
-    if (!alive() || ticket !== sequence || state.editing) return; state.tab = tab; state.selected = null; state.detached = null; render();
+    state.tab = tab; state.selected = null; state.detached = null; state.savedOutcome = null; state.historyLimit = 50;
+    state.historyLoading = tab === 'history' && !state.historyReady; render();
+    if (state.historyLoading) {
+      try { if (!await loadHistory(ticket)) return; }
+      catch (error) { if (alive() && ticket === sequence && !state.editing) { state.historyLoading = false; render(); report(error, list); list.appendChild(textButton('Spróbuj ponownie', function () { switchTab('history'); })); } return; }
+    }
+    if (!alive() || ticket !== sequence || state.editing) return; state.historyLoading = false; render();
   }
   async function refresh() {
     if (!alive() || state.editing || state.busy) { state.stale = true; return; }
@@ -1159,13 +1265,26 @@ function remB22Create(host, full, options) {
       if (state.detached) {
         var detachedNote = await vault.getPatientNote(state.detached.n.id);
         if (!alive() || ticket !== sequence || state.editing) return;
-        var nextDetached = detachedNote && !state.rows.some(function (row) { return row.n.id === detachedNote.id; }) ? await loadDetached(detachedNote, ticket) : null;
+        var nextDetached = null;
+        if (detachedNote && !state.rows.some(function (row) { return row.n.id === detachedNote.id; })) {
+          var committedRow = state.savedOutcome && state.savedOutcome.awaitingRead && state.savedOutcome.id === detachedNote.id && detachedNote.patientId === state.detached.g.patientId;
+          nextDetached = committedRow ? { n: detachedNote, name: state.detached.name, act: state.detached.act, g: state.detached.g } : await loadDetached(detachedNote, ticket);
+        }
         if (!alive() || ticket !== sequence || state.editing) return;
         state.detached = nextDetached;
       }
       if (state.tab === 'history' && !await loadHistory(ticket)) return;
-      if (!alive() || ticket !== sequence || state.editing) return; state.stale = false; render();
-    } catch (error) { if (alive() && ticket === sequence) { Ot('readRemindersB22', error); report(new Error('Nie udało się wczytać przypomnień.'), list); list.appendChild(textButton('Spróbuj ponownie', refresh)); } }
+      if (!alive() || ticket !== sequence || state.editing) return;
+      if (state.savedOutcome) { state.savedOutcome.awaitingRead = false; state.savedOutcome.readError = false; }
+      state.historyLoading = false; state.stale = false; render();
+    } catch (error) {
+      if (alive() && ticket === sequence && !state.editing) {
+        Ot('readRemindersB22', error); state.historyLoading = false;
+        if (state.savedOutcome && state.savedOutcome.awaitingRead) state.savedOutcome.readError = true;
+        render();
+        if (!state.savedOutcome || !state.savedOutcome.readError) { report(new Error('Nie udało się wczytać przypomnień.'), list); list.appendChild(textButton('Spróbuj ponownie', refresh)); }
+      }
+    }
   }
   function changed() {
     if (!alive()) return;
@@ -1194,7 +1313,7 @@ function remB22Create(host, full, options) {
 function remB22Styles() {
   if (!i.document || !i.document.head || !i.document.createElement) return;
   if (i.document.querySelector('link[data-reminders-b22]')) return;
-  var link = i.document.createElement('link'); link.rel = 'stylesheet'; link.href = 'vilda_reminders.css?v=2'; link.dataset.remindersB22 = 'true'; i.document.head.appendChild(link);
+  var link = i.document.createElement('link'); link.rel = 'stylesheet'; link.href = 'vilda_reminders.css?v=3'; link.dataset.remindersB22 = 'true'; i.document.head.appendChild(link);
 }
 remB22Styles();
 
