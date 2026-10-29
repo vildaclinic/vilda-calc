@@ -4011,7 +4011,9 @@ describe('P-NOTATKI-ZA-KARTA — strażniki źródła', () => {
     expect(bpu.indexOf('await Bnp_odnow(I(),t,e,Qnm,Qnd);')).toBeLessThan(bpu.indexOf('putTombstoneForUser(b,{patientId:t,deletedAtISO:e})'));
     expect(bpu.split('new Date().toISOString()').length - 1, 'jedna chwila').toBe(1);
     expect(bpu).not.toContain('listPatientNoteTombstonesForUser');
-    expect(src).toContain('return Ac(t,function(){return Eb(t)})');
+    // Care-owned notes dispatch inside the original Ac note lock; ordinary
+    // notes retain the Eb fallback and its storage/tombstone policy below.
+    expect(src).toContain('return Ac(t,async function(){const CareMvpRemoved=await CareMvpLegacyDelete(t);if(CareMvpRemoved)return true;return Eb(t)})');
     // Klirens adds a private, opt-in fourth argument. Ordinary $o and the
     // patient-deletion loop still call Eb without it; retain their storage,
     // tombstone fields and historical error policy rather than matching only
