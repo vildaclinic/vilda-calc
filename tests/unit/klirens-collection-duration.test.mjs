@@ -130,7 +130,7 @@ describe('Shared DZM numeric duration — new collections versus historical edit
     hours.value = '24'; hours.emit('input');
     expect(computed[2]).toMatchObject({ valid: true, hours: 24, source: 'hours', assumed: false, confirmation: false });
   });
-  it.each(['Cl24DurationHours', 'CA_collectionHours', 'UA_collectionHours', 'MG_collectionHours'])('%s requires a positive historical duration before blank can default again and resets without leaking the old flag', fieldId => {
+  it.each(['Cl24DurationHours', 'CA_collectionHours', 'UA_collectionHours', 'MG_collectionHours', 'PO4_collectionHours'])('%s requires a positive historical duration before blank can default again and resets without leaking the old flag', fieldId => {
     const api = harness().ClcrCollectionDuration, ui = controls();
     const sourceId = api.SOURCES[fieldId], flagId = fieldId === 'Cl24DurationHours' ? 'durationNeedsConfirmation' : fieldId.split('_')[0] + '_durationNeedsConfirmation';
     const hours = ui.add(fieldId, ''), source = ui.add(sourceId, 'historical-missing');
@@ -205,12 +205,19 @@ describe('Shared DZM numeric duration — new collections versus historical edit
     expect(result.measuredClearanceReference.durationSource).toBe('assumed-24h');
     expect(() => w.ClcrSavedLegacyCalculator.recalculate('cl24', { ...specimen, Ucr: '100', Scr: '1', ScrUnit: 'mg/dl', Cl24DurationHours: '0' })).toThrow('większy od 0');
   });
-  it.each([['Na_mmol_d', 75], ['K_mmol_d', 30], ['PO4_mgkg', 750], ['Prot_mgkg', 240], ['Ox_mgkg', 1.25], ['Cit_mgkg', 1.25]])('actual legacy %s producer no longer needs dates or six answers', (formula, expected) => {
+  it.each([['Na_mmol_d', 75], ['K_mmol_d', 30], ['Prot_mgkg', 240], ['Ox_mgkg', 1.25], ['Cit_mgkg', 1.25]])('actual legacy %s producer no longer needs dates or six answers', (formula, expected) => {
     const w = harness();
     expect(w.ClcrSavedLegacyCalculator.recalculate(formula, specimen).valueNum).toBe(expected);
     expect(w.ClcrSavedLegacyCalculator.recalculate(formula, { ...specimen, Cl24DurationHours: '12' }).valueNum).toBe(expected * 2);
     expect(() => w.ClcrSavedLegacyCalculator.recalculate(formula, { ...specimen, Cl24DurationHours: '', Cl24DurationSource: 'historical-missing' })).toThrow('nie został utrwalony');
     expect(() => w.ClcrSavedLegacyCalculator.recalculate(formula, { ...specimen, ui_collectionNoMissedVoids_answer: 'no' })).toThrow();
+  });
+  it('audited phosphorus editing preserves captured hours and requires an unknown historical duration', () => {
+    const api = harness().ClcrSavedLegacyCalculator;
+    expect(api.recalculate('PO4_mgkg', { ...specimen, PO4_collectionHours: '24' }).valueNum).toBe(750);
+    expect(api.recalculate('PO4_mgkg', { ...specimen, Cl24DurationHours: '12' }).valueNum).toBe(1500);
+    expect(() => api.recalculate('PO4_mgkg', specimen)).toThrow(/czas/i);
+    expect(() => api.recalculate('PO4_mgkg', { ...specimen, PO4_collectionHours: '24', ui_collectionNoMissedVoids_answer: 'no' })).toThrow();
   });
   it('never normalizes measured pH by time', () => {
     const w = harness();
