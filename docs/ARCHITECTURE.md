@@ -219,6 +219,12 @@ rekordzie PAL korzysta z istniejących API, a automatyczna wartość wytworzona
 przy imporcie jest uzgadniana przed referencją „Nowego pomiaru”. Istniejące
 i ręczne wartości pozostają zachowane.
 
+Sama obecność globalnej pustej listy terapii nie dowodzi wyczyszczenia:
+monitory tworzą takie listy również przed odczytem magazynu. Brak klucza lub
+API zachowuje dotychczasowe uzupełnienie z sesji; jawne `[]` właściwego modułu
+pozwala zachować usunięcie ostatniego punktu. GH zachowuje własną istniejącą
+regułę pierwszeństwa magazynu modułu.
+
 Odtwarzanie skalarów rozróżnia brak klucza od jawnego `null`/pustej wartości:
 te ostatnie czyszczą rozgrzany formularz. Jawna zmiana rekordu resetuje DOB
 przed jego zastosowaniem, również gdy nowy rekord nie zawiera daty.

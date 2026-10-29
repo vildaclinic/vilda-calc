@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { loadBrowserScript } from '../support/load-browser-script.mjs';
 import { oknoZSilnikiem, wczytajDoOkna } from '../support/silnik-bmi.mjs';
@@ -27,7 +28,7 @@ const partial = source => ({ version: 1, name: source.name,
 
 function harness(previous = record('Fikcyjny Pacjent B', '1.4')) {
   let main = clone(previous), current = partial(record()), allowWrite = true;
-  const writes = [], fields = new Map(), listeners = [], storage = new Map([['vildaCurrentPatientId', 'fictional-current-c']]);
+  const writes = [], fields = new Map(), listeners = [], modules = new Map(), storage = new Map([['vildaCurrentPatientId', 'fictional-current-c']]);
   for (const id of ['name', 'age', 'ageMonths', 'sex', 'height', 'weight', 'dobInput',
     'customGoalKg', 'bpSystolic', 'bpDiastolic', 'advMotherHeight']) {
     fields.set(id, { id, value: '', style: {}, dataset: {}, checked: false,
@@ -38,6 +39,8 @@ function harness(previous = record('Fikcyjny Pacjent B', '1.4')) {
     getStorage: () => ({}), readMainSession: () => clone(main),
     writeMainSession(value) { writes.push(clone(value)); if (allowWrite) main = clone(value); return allowWrite; },
     clearMainSession() { main = null; }, readClcrSession: () => null,
+    readModuleJSON: (key, fallback) => modules.has(key) ? clone(modules.get(key)) : fallback,
+    writeModuleJSON(key, value) { modules.set(key, clone(value)); return true; },
   };
   const win = { document: { readyState: 'loading', getElementById: id => fields.get(id) || null,
     querySelector: () => null, querySelectorAll: () => [],
@@ -60,7 +63,7 @@ function harness(previous = record('Fikcyjny Pacjent B', '1.4')) {
   const api = win.VildaDataImportExport;
   const options = { collectUserData: () => clone(current), syncSharedUserDataFromLoadedData() {} };
   api.initMainSessionPersistence(options);
-  return { api, win, fields, writes, main: () => clone(main),
+  return { api, win, fields, writes, modules, main: () => clone(main),
     current(value) { current = clone(value); }, previous(value) { main = clone(value); },
     allow(value) { allowWrite = value; },
     load(value, overrides = {}) { return api.applyLoadedData(value, { ...options, ...overrides }); },
@@ -148,6 +151,7 @@ describe('main-session persistence respects partial-page ownership and the actua
     h.win.advancedGrowthData = {}; h.win.intakeHistory = [];
     h.win.intakeEstimatedKcalPerDay = null; h.win.ghTherapyPoints = [];
     h.win.obesityTherapyPoints = []; h.win.vildaBirthData = null;
+    h.modules.set('GH_THERAPY_POINTS', []); h.modules.set('OBESITY_THERAPY_POINTS', []);
     const old = h.main(); old.ghTherapyPoints = [{ ageMonths: 120 }];
     old.obesityTherapyPoints = [{ ageMonths: 121 }]; old.birth = { weightGrams: 3000 };
     h.previous(old); h.current(edited); h.save();
@@ -157,6 +161,61 @@ describe('main-session persistence respects partial-page ownership and the actua
     expect(h.main().ghTherapyPoints).toEqual([]);
     expect(h.main().obesityTherapyPoints).toEqual([]);
     expect(h.main().birth).toBeNull();
+  });
+
+  it.each(['missing-key', 'no-module-reader'])('empty therapy globals retain the previous-session fallback with %s', reason => {
+    const source = record(), h = harness(); h.load(source);
+    h.modules.clear();
+    const previous = h.main(), current = partial(source);
+    for (const key of ['ghTherapyPoints', 'obesityTherapyPoints', 'bisphosTherapyPoints']) {
+      previous[key] = [{ id: `fictional-${key}`, ageMonths: 120 }]; current[key] = []; h.win[key] = [];
+    }
+    if (reason === 'no-module-reader') delete h.win.VildaPersistence.readModuleJSON;
+    h.previous(previous); h.current(current); h.save();
+    for (const key of ['ghTherapyPoints', 'obesityTherapyPoints', 'bisphosTherapyPoints']) {
+      expect(h.main()[key]).toEqual(previous[key]);
+    }
+  });
+
+  it.each([
+    ['obesity', 'obesity_therapy_monitor.js', 'obesityTherapyPoints', 'OBESITY_THERAPY_POINTS', 'obesityTherapyMonitorSetPoints'],
+    ['bisphos', 'bisphos_therapy_monitor.js', 'bisphosTherapyPoints', 'BISPHOS_THERAPY_POINTS', 'bisphosTherapyMonitorSetPoints'],
+  ])('%s monitor explicit clear remains empty in the main session', (_name, file, field, key, setter) => {
+    const source = record(), h = harness(); h.load(source);
+    const previous = h.main(), current = partial(source);
+    previous[field] = [{ id: `fictional-${field}`, ageMonths: 120 }]; current[field] = [];
+    h.modules.set(key, clone(previous[field]));
+    h.previous(previous); h.current(current);
+    const script = readFileSync(new URL(`../../${file}`, import.meta.url), 'utf8');
+    new Function('window', 'globalThis', 'document', script)(h.win, h.win, h.win.document);
+    h.win[setter]([]);
+    expect(h.modules.get(key)).toEqual([]);
+    expect(h.save()).toBe(true);
+    expect(h.main()[field]).toEqual([]);
+  });
+
+  it('a nonempty current therapy list remains current when no module key exists', () => {
+    const source = record(), h = harness(); h.load(source);
+    h.modules.clear();
+    const previous = h.main(), current = partial(source);
+    previous.obesityTherapyPoints = [{ id: 'fictional-old', weight: 70 }];
+    current.obesityTherapyPoints = [{ id: 'fictional-current', weight: 71 }];
+    h.win.obesityTherapyPoints = current.obesityTherapyPoints;
+    h.previous(previous); h.current(current); h.save();
+    expect(h.main().obesityTherapyPoints).toEqual(current.obesityTherapyPoints);
+  });
+
+  it('a fresh C load replaces B module empties before the first main-session write', () => {
+    const source = record(), h = harness();
+    source.obesityTherapyPoints = [{ id: 'fictional-c-obesity', ageMonths: 150, weight: 75 }];
+    source.bisphosTherapyPoints = [{ id: 'fictional-c-bisphos', ageMonths: 151, weight: 75 }];
+    h.modules.set('OBESITY_THERAPY_POINTS', []); h.modules.set('BISPHOS_THERAPY_POINTS', []);
+    const current = partial(source); current.obesityTherapyPoints = []; current.bisphosTherapyPoints = [];
+    h.current(current); h.load(source);
+    expect(h.modules.get('OBESITY_THERAPY_POINTS')).toEqual(source.obesityTherapyPoints);
+    expect(h.modules.get('BISPHOS_THERAPY_POINTS')).toEqual(source.bisphosTherapyPoints);
+    expect(h.writes[0].obesityTherapyPoints).toEqual(source.obesityTherapyPoints);
+    expect(h.writes[0].bisphosTherapyPoints).toEqual(source.bisphosTherapyPoints);
   });
 
   it('preserves an explicit clear and false for fields owned by this page', () => {

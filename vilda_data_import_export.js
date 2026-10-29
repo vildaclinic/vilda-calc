@@ -327,12 +327,23 @@ function mergeMainSessionOwnedFields(target,source){
     ["growthBasic.data","basicGrowthData","basicGrowthMeasurements"],
     ["intake.history","intakeHistory","intakeMeasurements"],
     ["intake.estKcalPerDay","intakeEstimatedKcalPerDay","intakeMeasurements"],
-    ["ghTherapyPoints","ghTherapyPoints",null],["obesityTherapyPoints","obesityTherapyPoints",null],
-    ["bisphosTherapyPoints","bisphosTherapyPoints",null],
     ["advanced.boneAgeContext","vildaBoneAgeContext","advBoneAge"],
     ["chartCreator","chartCreatorData",null],["birth","vildaBirthData",null]
   ];
   live.forEach(function(binding){field(binding[0],own(r,binding[1])||!!(binding[2]&&f(binding[2])))});
+  // Therapy monitors initialize window lists to [] even when storage has no
+  // key. Keep their historical merge fallback; an explicit empty module and
+  // empty collector together prove a real clear. GH has its existing module
+  // authority immediately after this merge in saveMainSessionNow.
+  const persistence=Z();
+  if(persistence&&typeof persistence.readModuleJSON==="function"){
+    [["obesityTherapyPoints","OBESITY_THERAPY_POINTS"],["bisphosTherapyPoints","BISPHOS_THERAPY_POINTS"]].forEach(function(binding){
+      try{
+        const points=persistence.readModuleJSON(binding[1],null),current=target[binding[0]];
+        if(Array.isArray(points)&&points.length===0&&Array.isArray(current)&&current.length===0)remove(incoming,[binding[0]]);
+      }catch(error){l("vilda_data_import_export:therapy-session-authority",error)}
+    });
+  }
   const foods=!!(f("foodRowsSection")||f("addFoodRowBtn")||r.document&&r.document.querySelector&&r.document.querySelector(".food-row"));
   field("foods.snacks",foods);field("foods.meals",foods);
   if(r.VildaPubertyAssessmentState)r.VildaPubertyAssessmentState.mergeSession(target,incoming,Et);
