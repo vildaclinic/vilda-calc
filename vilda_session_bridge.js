@@ -14,7 +14,7 @@ function ensurePageSaveStatus(){
     .then(function(){
       if(n.VildaSaveStatusIndicator||doc.querySelector('script[src*="vilda_save_status_indicator.js"]'))return;
       n.__vildaSaveStatusReadOnly=true;
-      return A({type:"script",src:"vilda_save_status_indicator.js?v=33",ready:function(){return!!n.VildaSaveStatusIndicator}})
+      return A({type:"script",src:"vilda_save_status_indicator.js?v=34",ready:function(){return!!n.VildaSaveStatusIndicator}})
         .then(function(){pageStatusOwned=true});
     })
     .catch(function(){pageStatusLoading=null});

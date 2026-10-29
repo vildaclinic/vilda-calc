@@ -256,6 +256,12 @@ function normalizeClcrStatusInputs(session){
     ["MG_collectionHours","MG_collectionSource"],["UA_collectionHours","UA_collectionSource"],
     ["PO4_collectionHours","PO4_collectionSource"],["Prot_collectionHours","Prot_collectionSource"]].forEach(function(pair){
     var value=inputs[pair[0]],source=inputs[pair[1]],present=value!==null&&value!==undefined&&String(value).trim()!=="";
+    // Old fingerprints omitted blank reset hours but retained their assumed
+    // source. Match ClcrCollectionDuration's absent/default semantics without
+    // changing the session or accepting an unresolved historical collection.
+    var flag=inputs[pair[0]==="Cl24DurationHours"?"durationNeedsConfirmation":pair[0].split("_")[0]+"_durationNeedsConfirmation"];
+    var needsConfirmation=flag===true||flag==="true"||inputs.durationNeedsConfirmation===true||inputs.durationNeedsConfirmation==="true";
+    if(source==="assumed-24h"&&(value==null||typeof value==="string"&&value.trim()==="")&&!needsConfirmation)delete inputs[pair[1]];
     // This is the existing durationFields migration: an entered historical
     // duration without a provenance field is manual, including an explicit 24.
     if(present&&(source===undefined||source===null||source===""))inputs[pair[1]]="hours";

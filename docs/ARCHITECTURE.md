@@ -190,6 +190,27 @@ oceną pustego formularza. Nieaktualny panel nie może po `visibilitychange`
 przejść do automatycznego usunięcia aktualnej sesji głównej. Jawne czyszczenie
 i globalny reset konta zachowują odrębne dotychczasowe ścieżki adaptera.
 
+Przeładowanie przy aktualizacji PWA koordynuje
+`VildaShell.reloadForAppUpdate()`. Najpierw kończy istniejący zapis wyłącznie
+gotowego aktywnego panelu, potem włącza w pamięci hosta
+`isAppUpdateReloadPending()` i przeładowuje host raz. Kliniczne ramki odczytują
+tę flagę w protokole aktualności, dlatego ich późniejsze wymuszone zapisy
+`pagehide` nie mogą nadpisać sesji starszym formularzem tego samego pacjenta.
+Ocena własności pacjenta nadal działa niezależnie od tymczasowej blokady.
+Wyjątek przeładowania cofa flagę; nie utrwala ona nowego stanu pacjenta.
+Aktywna trasa bez formularza nie wybiera do zapisu ukrytego Startu.
+`ios26-ui.js` używa koordynatora dla `controllerchange` i zapasowego reloadu
+banera. Pierwszy claim bez wcześniejszego kontrolera zachowuje brak reloadu;
+strona samodzielna i starsza powłoka zachowują dotychczasowy fallback.
+
+Przygotowanie bez zlecania nawigacji działa też w `host.pagehide`, aby zwykłe
+F5 nie pozwalało ukrytym formularzom nadpisać sesji. Kończy istniejący zapis
+aktywnego panelu po wczesnych dziecięcych `beforeunload`, a przed dziecięcymi
+`pagehide`. Sama próba `beforeunload` nie blokuje dalszej pracy po anulowaniu.
+`pageshow.persisted` zdejmuje tymczasową blokadę przed wcześniejszym handlerem
+pokazania panelu; nie utrwala jej w BFcache. Nowy mechanizm działa w kliencie,
+który już go zawiera; nie zmienia wstecznie listenerów otwartej starszej wersji.
+
 Puste kalkulatory Klirensu materializują domyślne kontrolki przy otwarciu.
 W projekcji porównawczej domyślny tryb stężenia, nieokreślone metadane i
 24 godziny z pochodzeniem `assumed-24h` odpowiadają brakowi tych kontrolek.
@@ -197,6 +218,11 @@ Ręczny czas zbiórki (także 24 godziny), jego pochodzenie, odmienne ustawienia
 i oznaczenia nadal są porównywane. Normalizacja dotyczy wyłącznie kopii
 odcisku bieżącego i referencyjnego. Analiza przyczyn i zakres sprawdzenia:
 [Chip pacjenta i nawigacja powłoki](PATIENT_CHIP_NAVIGATION_AUDIT.md).
+
+Starszy odcisk mógł usunąć puste godziny, zostawiając samo `assumed-24h`.
+Ta reprezentacja przechodzi tę samą projekcję co nowe domyślne 24 h, o ile nie
+wymaga potwierdzenia. Projekcja nie zapisuje sesji ani referencji i nie zatwierdza
+bieżącego formularza; prawdziwa edycja nadal różni się od poprzedniego zapisu.
 
 `vilda_session_bridge.js` doładowuje wspólny wskaźnik i jego CSS na stronach
 bez formularza po gotowości modułów auth, w trybie `__vildaSaveStatusReadOnly`.

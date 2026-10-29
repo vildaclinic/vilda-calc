@@ -83,6 +83,45 @@ describe('patient chip — protein DZM controls emitted by the real UI and sessi
     expect(env.indicator.getState()).toBe('saved');
   });
 
+  it.each([undefined, null, '', '  '])('a legacy assumed protein duration %j matches the real collector without changing either session', hours => {
+    const captured = collector().capture();
+    const legacy = { inputs: { Prot_collectionSource: 'assumed-24h' } };
+    if (hours !== undefined) legacy.inputs.Prot_collectionHours = hours;
+    const before = clone(legacy), currentBefore = clone(captured);
+    const env = status({ legacy });
+    env.compare(captured);
+    expect(env.indicator.getState()).toBe('saved');
+    expect(env.indicator._computeCanonicalFingerprint()).toBe(env.indicator.getReferenceFingerprint());
+    expect(legacy).toEqual(before);
+    expect(captured).toEqual(currentBefore);
+    expect(env.session()).toEqual(currentBefore);
+  });
+
+  it.each([false, 'false'])('an old blank assumed protein duration with exact false marker %j remains an untouched default', confirmation => {
+    const legacy = { inputs: { Prot_collectionHours: '', Prot_collectionSource: 'assumed-24h',
+      Prot_durationNeedsConfirmation: confirmation } };
+    const before = clone(legacy), captured = collector().capture();
+    const env = status({ legacy });
+    env.compare(captured);
+    expect(env.indicator.getState()).toBe('saved');
+    expect(env.indicator._computeCanonicalFingerprint()).toBe(env.indicator.getReferenceFingerprint());
+    expect(legacy).toEqual(before);
+    expect(env.session()).toEqual(captured);
+  });
+
+  it.each([
+    ['Prot_durationNeedsConfirmation', true], ['Prot_durationNeedsConfirmation', 'true'],
+    ['durationNeedsConfirmation', true], ['durationNeedsConfirmation', 'true'],
+  ])('an orphaned assumed protein duration still requires confirmation for %s=%j', (flag, confirmation) => {
+    const current = { inputs: { Prot_collectionHours: '', Prot_collectionSource: 'assumed-24h', [flag]: confirmation } };
+    const before = clone(current), env = status();
+    env.compare(current);
+    expect(env.indicator.getState()).toBe('dirty');
+    expect(JSON.parse(env.indicator._computeCanonicalFingerprint()).clcr.inputs.Prot_collectionSource).toBe('assumed-24h');
+    expect(current).toEqual(before);
+    expect(env.session()).toEqual(before);
+  });
+
   it.each([
     ['Prot_concentration', '20'], ['Prot_concentration', '0'], ['Prot_volume', '1500'],
     ['Prot_reportedValue', '0'], ['Prot_reportedValue', '0.015'],
