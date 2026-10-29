@@ -137,9 +137,10 @@
       },
       {
         id: "PO4_mgkg",
-        label: "Wydalanie fosforu nieorganicznego (P\u1D62; DZM)",
+        label: "Dobowe wydalanie fosforu",
         version: "advanced",
-        requires: [ "U_PO4", "V24", ...timedCollectionDurationFields],
+        requires: ["PO4_concentration", "PO4_concentrationUnit", "PO4_volume", "PO4_volumeUnit", "PO4_collectionHours"],
+        note: "Stężenie i objętość albo gotowy wynik dobowy. Przyjmujemy pełne 24 h; dane pacjenta służą dobraniu zakresu laboratoryjnego.",
       },
       {
         id: "Prot_mgkg",
@@ -379,7 +380,7 @@
       ]),
       r = new Set([]),
       timedCollectionIds = new Set([
-        "PO4_mgkg", "Prot_mgkg", "Na_mmol_d", "K_mmol_d",
+        "Prot_mgkg", "Na_mmol_d", "K_mmol_d",
         "Ox_mgkg", "Cit_mgkg", "pH24",
       ]),
       timedCollectionRequirements = ["Cl24DurationHours"];
