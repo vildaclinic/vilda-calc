@@ -109,6 +109,50 @@ ustawiało `saved` także w niezapisanym formularzu pacjenta A. Referencja
 otrzymywała przy tym metadane B. Powiadomienie musi być przypisane do pacjenta;
 nieaktualna ramka również nie może ustanawiać wspólnej bazy.
 
+### Wczytanie na DocPro pomija pola innych kart
+
+Pełny zapis pacjenta C na Start, wczytanie B, a następnie ponowne wczytanie C
+na DocPro ujawniło odrębną przyczynę. DocPro nie ma kontrolek wszystkich kart
+Start. Pierwszy zapis sesji nowego pacjenta nie zachowywał jego niewyświetlanych
+pól, m.in. PAL, tętna i kontekstu oddechowego. Powrót na Start i F5 uzupełniały
+je ustawieniami kontrolek, zmieniając odcisk bez edycji.
+
+Pierwszy zapis korzysta teraz z kopii właśnie wczytanego C, przypisanej do
+konkretnej operacji. Zachowuje wyłącznie pola, których bieżący dokument nie
+posiada; pola własne formularza, także puste, pozostają autorytatywne. Nie może
+uzupełnić C starszymi danymi B. Kolejne zapisy zachowują ten sam podział
+własności, historie oraz dedykowane sesje.
+
+Dla starszego rekordu bez PAL brakującą wartość wyznacza istniejące API planu
+i spożycia. Nie dodano nowego wzoru ani stałej medycznej. Wybór „Nowy pomiar”
+może zmienić automatyczny PAL, bo usuwa antropometrię: wartość wytworzona przez
+ten import musi zostać ponownie uzgodniona przed ustanowieniem referencji.
+Istniejący PAL rekordu i ręczny wybór nie są zastępowane tym mechanizmem.
+
+### Puste pola po nowym pomiarze i brak daty urodzenia
+
+Rozgrzany Start pomijał odtwarzanie skalarów równych `null`. Po „Nowym pomiarze”
+sesja miała pustą masę i wzrost, ale DOM mógł nadal pokazywać poprzedni pomiar.
+Odtworzenie rozróżnia teraz brak pola w starszym formacie od jawnego `null`
+lub pustego tekstu, który ma wyczyścić kontrolkę. Zero pozostaje wartością.
+
+Zmiana pacjenta B z datą urodzenia na C bez daty nie resetowała kontrolki DOB
+przed zastosowaniem C. Moduł wieku mógł więc użyć daty B zamiast ręcznego wieku C.
+Jawny import resetuje DOB przez istniejącą funkcję przed odtworzeniem nowego
+rekordu. Odtwarzanie tej samej sesji zachowuje wpisaną datę.
+
+### Domyślne kontrolki Start i metadane sejfu w odcisku
+
+Puste karty materializują także dokładnie określone domyślne ustawienia Start:
+wytyczną ESC, populację zdrową i kontekst oddechowy healthy/awake. Projekcja
+porównawcza utożsamia je z brakiem tych ustawień; odmienne wartości pozostają
+porównywane. PAL nadal uczestniczy w porównaniu.
+
+Pola techniczne rekordu sejfu `_contentAtISO`, `_pinnedState.h` i `_pinned`
+mogły trafić do pierwszej sesji, a zniknąć po F5. Są pomijane wyłącznie na
+kopii do porównania, tak samo dla bieżącej i starszej referencji. Nie zmienia
+to zapisu, eksportu ani przypięcia rekordu.
+
 ## Kontrakt poprawki
 
 - Nawigacja i odtworzenie odczytują wspólną referencję; nie ustanawiają nowego
@@ -134,6 +178,10 @@ Powłoka deklaruje 11 tras: Start, DocPro, Klirens, HOMA, Steroidy, Lab,
 Notatki, Terminarz, Ustawienia, Materiały edukacyjne i Cukrzyca. Zakres regresji
 obejmuje zimne otwarcie, F5 aktywnej trasy, przejścia pomiędzy rozgrzanymi
 trasami, Wstecz/Dalej, nawigację z menu i rzeczywistą edycję danych.
+Test macierzy wykonuje wszystkie 110 skierowanych przejść między różnymi
+trasami. Osobne scenariusze wczytują rekord na DocPro w trybach „Odtwórz”
+i „Nowy pomiar”, po czym wracają na Start i wykonują F5. Obejmują także starszy
+rekord bez PAL oraz zachowanie pustych pomiarów i niezmienionego sejfu.
 Instrukcje, dokumenty prawne i strony informacyjne otwierane poza tą listą
 nie są dodatkowymi panelami powłoki. Repozytorium ma 22 główne dokumenty HTML:
 host i 21 stron samodzielnych. Wszystkie używają mostka sesji, który na stronach

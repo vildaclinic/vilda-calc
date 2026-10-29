@@ -1443,6 +1443,23 @@ czytelnymi blokami bez ponownej minifikacji pozostałej części artefaktów.
   zapisanego rekordu zachowują dotychczasową drogę. Regresje producenta sesji,
   jawnego importu, starszego zapisu i odtworzenia wykonują rzeczywisty importer
   w `tests/unit/main-session-klirens-authority.test.mjs`.
+- Importer zachowuje czytelny blok własności pól sesji: kopia świeżo wczytanego
+  rekordu jest przypisana do operacji i konsumowana po udanym zapisie.
+  Uzupełniane są tylko pola nieposiadane przez stronę; jawne puste wartości
+  formularza nie są zastępowane. Blok zachowuje częściowe sekcje, historie,
+  wrapper pokwitania i własne pola rozszerzeń. Brakujący PAL starszego rekordu
+  korzysta z istniejących API; uzgodnienie po „Nowym pomiarze” obejmuje tylko
+  wartość wytworzoną przez tę operację. Regresje:
+  `tests/unit/main-session-owned-sections.test.mjs`.
+- Reset DOB jawnego importu używa istniejącego `Bdob0`; odtworzenie sesji
+  czyści własne skalary przy `null` lub pustym tekście, zachowując brakujące
+  klucze starszego formatu i zero. Rzeczywisty moduł DOB oraz importer sprawdza
+  `tests/unit/patient-load-dob-reset.test.mjs`.
+- Projekcja SSI pomija dokładne ustawienia domyślne pustych kart Start oraz
+  trzy techniczne pola rekordu sejfu. Działa symetrycznie na kopiach bieżącej
+  sesji i starszej referencji; nie normalizuje PAL i nie zmienia zapisu.
+  Regresje: `tests/unit/save-status-main-ui-defaults.test.mjs` oraz
+  `tests/e2e/patient-chip-load-origin.spec.mjs` (DocPro → Start → F5).
 
 Szczegóły diagnozy i rozdzielenie obserwacji przeglądarkowych od deterministycznej
 regresji wyścigu: `docs/PATIENT_CHIP_NAVIGATION_AUDIT.md`.

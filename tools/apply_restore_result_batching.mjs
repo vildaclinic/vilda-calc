@@ -84,8 +84,8 @@ const patches = [
   {
     "file": "vilda_data_import_export.js",
     "label": "Explicit session clear cancels a deferred startup restore",
-    "before": "function re(e){try{$&&",
-    "after": "function re(e){cancelPendingMainSessionRestore();try{$&&"
+    "before": "function re(e){pendingIncomingMainSessionCarry=null;pendingSynthesizedMainPlanPal=null;try{$&&",
+    "after": "function re(e){pendingIncomingMainSessionCarry=null;pendingSynthesizedMainPlanPal=null;cancelPendingMainSessionRestore();try{$&&"
   },
   {
     "file": "vilda_auth_ui.js",

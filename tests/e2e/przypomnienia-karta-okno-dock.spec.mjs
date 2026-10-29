@@ -77,7 +77,7 @@ test('w powłoce z dockiem okno i jego przyciski leżą nad dockiem, nie pod nim
   const g = await page.evaluate(() => {
     const d = document.querySelector('dialog.vb22');
     const acts = d.querySelector('.vb22-actions');
-    return { dlgBottom: d.getBoundingClientRect().bottom, actsBottom: acts.getBoundingClientRect().bottom, ovBottom: getComputedStyle(d).getPropertyValue('--vb22-bottom') };
+    return { dlgBottom: d.getBoundingClientRect().bottom, actsBottom: acts.getBoundingClientRect().bottom, ovBottom: getComputedStyle(d).getPropertyValue('--vb22-inset') };
   });
   expect(g.actsBottom, `przyciski akcji (dół ${Math.round(g.actsBottom)}) nad dockiem (góra ${Math.round(dockTop)})`).toBeLessThanOrEqual(dockTop + 1);
   expect(g.dlgBottom, 'całe okno nad dockiem').toBeLessThanOrEqual(dockTop + 1);

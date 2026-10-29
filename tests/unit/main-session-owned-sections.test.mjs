@@ -1,0 +1,362 @@
+import { describe, expect, it } from 'vitest';
+import { loadBrowserScript } from '../support/load-browser-script.mjs';
+import { oknoZSilnikiem, wczytajDoOkna } from '../support/silnik-bmi.mjs';
+
+const clone = value => value == null ? value : JSON.parse(JSON.stringify(value));
+const record = (name = 'Fikcyjny Pacjent C', pal = '1.8') => ({ version: 1, name,
+  user: { age: 13, ageMonths: 0, sex: 'M', height: 158, weight: 75, dobISO: '2013-06-17',
+    measuredAtISO: '2026-06-17', waist: 81, tannerStage: '3' },
+  intake: { pal, history: [{ ageMonths: 150, height: 156, weight: 73 }], estKcalPerDay: 2100 },
+  plan: { palFactor: Number(pal), palWybrany: true, dietLevel: 'reduction', dietaWybrana: true, customGoalKg: 65 },
+  bp: { heartRate: 82, temperature: 37.2, population: 'hospital', systolic: 118, diastolic: 74 },
+  adultVitals: { guideline: 'AHA', heartRate: 83, systolic: 119, diastolic: 75, athlete: true, betaBlocker: false },
+  respiratory: { rate: 18, temperature: 37.1, state: 'sleep', population: 'hospital' },
+  advanced: { motherHeight: 164, data: { measurements: [{ ageMonths: 150, height: 156 }] } },
+  extension: { note: `source-${name}` } });
+
+// A partial page has these actual collector controls. Nulls and false values
+// represent deliberate edits/new-visit blanks, not a missing other-page form.
+const partial = source => ({ version: 1, name: source.name,
+  user: { age: 13, ageMonths: 0, sex: 'M', height: null, weight: null, dobISO: source.user?.dobISO },
+  intake: { pal: null, history: null, estKcalPerDay: null },
+  plan: { palFactor: null, palWybrany: false, dietLevel: null, dietaWybrana: false, customGoalKg: null },
+  bp: { heartRate: null, temperature: null, population: null, systolic: null, diastolic: null },
+  adultVitals: { guideline: null, heartRate: null, systolic: null, diastolic: null, athlete: null, betaBlocker: null },
+  respiratory: { rate: null, temperature: null, state: null, population: null },
+  advanced: { motherHeight: null, data: null } });
+
+function harness(previous = record('Fikcyjny Pacjent B', '1.4')) {
+  let main = clone(previous), current = partial(record()), allowWrite = true;
+  const writes = [], fields = new Map(), listeners = [], storage = new Map([['vildaCurrentPatientId', 'fictional-current-c']]);
+  for (const id of ['name', 'age', 'ageMonths', 'sex', 'height', 'weight', 'dobInput',
+    'customGoalKg', 'bpSystolic', 'bpDiastolic', 'advMotherHeight']) {
+    fields.set(id, { id, value: '', style: {}, dataset: {}, checked: false,
+      addEventListener() {}, dispatchEvent() {}, setAttribute() {}, removeAttribute() {},
+      classList: { add() {}, remove() {}, toggle() {}, contains: () => false } });
+  }
+  const persistence = {
+    getStorage: () => ({}), readMainSession: () => clone(main),
+    writeMainSession(value) { writes.push(clone(value)); if (allowWrite) main = clone(value); return allowWrite; },
+    clearMainSession() { main = null; }, readClcrSession: () => null,
+  };
+  const win = { document: { readyState: 'loading', getElementById: id => fields.get(id) || null,
+    querySelector: () => null, querySelectorAll: () => [],
+    addEventListener(type, callback, options) { listeners.push({ type, callback, capture: options === true || !!options?.capture }); },
+    dispatchEvent(event) {
+      for (const listener of listeners.filter(item => item.type === event.type).sort((a, b) => Number(b.capture) - Number(a.capture))) {
+        listener.callback(event);
+      }
+    } },
+  VildaPersistence: persistence, location: { pathname: '/docpro.html' },
+  sessionStorage: { getItem: key => storage.get(key) ?? null,
+    setItem: (key, value) => storage.set(key, String(value)), removeItem: key => storage.delete(key) },
+  setTimeout: () => 0, clearTimeout() {}, addEventListener() {}, dispatchEvent() {},
+  Event: class { constructor(type) { this.type = type; } },
+  CustomEvent: class { constructor(type, options) { this.type = type; this.detail = options?.detail; } } };
+  loadBrowserScript('vilda_data_import_export.js', win);
+  main = null;
+  win.VildaDataImportExport.restoreMainSessionIfAny();
+  main = clone(previous);
+  const api = win.VildaDataImportExport;
+  const options = { collectUserData: () => clone(current), syncSharedUserDataFromLoadedData() {} };
+  api.initMainSessionPersistence(options);
+  return { api, win, fields, writes, main: () => clone(main),
+    current(value) { current = clone(value); }, previous(value) { main = clone(value); },
+    allow(value) { allowWrite = value; },
+    load(value, overrides = {}) { return api.applyLoadedData(value, { ...options, ...overrides }); },
+    newChoice(overrides = {}) {
+      storage.set('vildaLoadChoiceV1', 'new');
+      win.document.dispatchEvent(new win.CustomEvent('vilda:load-choice-applied', { detail: {
+        choice: 'new', patientId: storage.get('vildaCurrentPatientId'), applySequence: api.getApplyLoadedDataSequence(), ...overrides,
+      } }));
+    },
+    restore(value) { return api.restoreLoadedState({ ...options, data: value, anyDataEntered: () => false }); },
+    save() { return api.saveMainSessionNow({ ...options, force: true }); } };
+}
+
+describe('main-session persistence respects partial-page ownership and the actual incoming record', () => {
+  it('carries C unrendered choices/numbers after B, while preserving owned new-visit blanks', () => {
+    const source = record(), h = harness();
+    expect(h.load(source)).toBe(true);
+    const saved = h.main();
+    expect(saved.intake.pal).toBe('1.8');
+    expect(saved.plan).toEqual({ ...source.plan, customGoalKg: null });
+    expect(saved.bp).toEqual({ ...source.bp, systolic: null, diastolic: null });
+    expect(saved.adultVitals).toEqual(source.adultVitals);
+    expect(saved.respiratory).toEqual(source.respiratory);
+    expect(saved.user).toMatchObject({ height: null, weight: null });
+    expect(saved.user).not.toHaveProperty('measuredAtISO');
+    expect(saved.advanced.motherHeight).toBeNull();
+    expect(saved.extension).toEqual(source.extension);
+    expect(source).toEqual(record());
+  });
+
+  it('uses the new snapshot for the same identity instead of the previous session', () => {
+    const source = record(), h = harness(record(source.name, '1.4'));
+    h.load(source);
+    expect(h.main().intake.pal).toBe('1.8');
+    expect(h.main().plan.palFactor).toBe(1.8);
+  });
+
+  it('carries explicit null and false from C without reviving populated values from B', () => {
+    const source = record();
+    source.intake.pal = null; source.plan.palFactor = null; source.plan.palWybrany = false;
+    source.adultVitals.athlete = false; source.respiratory.rate = null;
+    const h = harness(); h.load(source);
+    expect(h.main().intake.pal).toBeNull();
+    expect(h.main().plan).toMatchObject({ palFactor: null, palWybrany: false });
+    expect(h.main().adultVitals.athlete).toBe(false);
+    expect(h.main().respiratory.rate).toBeNull();
+  });
+
+  it('retains a cloned incoming source across a failed first write and consumes it on success', () => {
+    const source = record(), h = harness(); h.allow(false); h.load(source);
+    expect(h.writes.length).toBeGreaterThan(0);
+    source.intake.pal = '2.4'; source.plan.palFactor = 2.4;
+    h.allow(true); expect(h.save()).toBe(true);
+    expect(h.main().intake.pal).toBe('1.8');
+    const updated = h.main(); updated.intake.pal = '2.0'; updated.plan.palFactor = 2;
+    h.previous(updated); expect(h.save()).toBe(true);
+    expect(h.main().intake.pal).toBe('2.0');
+    expect(h.main().plan.palFactor).toBe(2);
+  });
+
+  it('replaces a failed pending C source when a new explicit D record arrives', () => {
+    const h = harness(); h.allow(false); h.load(record());
+    const next = record('Fikcyjny Pacjent D', '2.0'); h.current(partial(next));
+    h.load(next); h.allow(true); h.save();
+    expect(h.main().name).toBe(next.name);
+    expect(h.main().intake.pal).toBe('2.0');
+    expect(h.main().extension).toEqual(next.extension);
+  });
+
+  it('invalidates a pending source on clear before an anonymous draft is entered', () => {
+    const h = harness(); h.allow(false); h.load(record());
+    h.api.clearMainSessionStorage(); h.allow(true);
+    h.current({ version: 1, user: { age: 14, weight: 45 }, intake: { pal: null } });
+    expect(h.save()).toBe(true);
+    expect(h.main().intake.pal).toBeNull();
+    expect(h.main()).not.toHaveProperty('extension');
+  });
+
+  it('keeps current runtime archives and intentional empty arrays authoritative', () => {
+    const source = record(), h = harness(); h.load(source);
+    const edited = partial(source);
+    edited.advanced.data = { measurements: [{ ageMonths: 156, weight: 75, height: 158 }] };
+    edited.intake.history = []; edited.intake.estKcalPerDay = null;
+    edited.ghTherapyPoints = []; edited.obesityTherapyPoints = []; edited.birth = null;
+    h.win.advancedGrowthData = {}; h.win.intakeHistory = [];
+    h.win.intakeEstimatedKcalPerDay = null; h.win.ghTherapyPoints = [];
+    h.win.obesityTherapyPoints = []; h.win.vildaBirthData = null;
+    const old = h.main(); old.ghTherapyPoints = [{ ageMonths: 120 }];
+    old.obesityTherapyPoints = [{ ageMonths: 121 }]; old.birth = { weightGrams: 3000 };
+    h.previous(old); h.current(edited); h.save();
+    expect(h.main().advanced.data).toEqual(edited.advanced.data);
+    expect(h.main().intake.history).toEqual([]);
+    expect(h.main().intake.estKcalPerDay).toBeNull();
+    expect(h.main().ghTherapyPoints).toEqual([]);
+    expect(h.main().obesityTherapyPoints).toEqual([]);
+    expect(h.main().birth).toBeNull();
+  });
+
+  it('preserves an explicit clear and false for fields owned by this page', () => {
+    const source = record(), h = harness();
+    h.fields.set('palFactor', { value: '', dataset: {}, style: {} });
+    h.fields.set('adultHrAthlete', { checked: false, dataset: {}, style: {} });
+    const current = partial(source); current.adultVitals.athlete = false; h.current(current);
+    h.load(source);
+    expect(h.main().plan.palFactor).toBeNull();
+    expect(h.main().plan.palWybrany).toBe(false);
+    expect(h.main().adultVitals.athlete).toBe(false);
+  });
+
+  it('never borrows B or invents defaults for a sparse incoming record', () => {
+    const source = { version: 1, name: 'Fikcyjny Pacjent C', user: { age: 13, sex: 'M' } };
+    const h = harness(); h.current(partial(source)); h.load(source);
+    expect(h.main().intake.pal).toBeNull();
+    expect(h.main().adultVitals.guideline).toBeNull();
+    expect(h.main().respiratory.population).toBeNull();
+    expect(h.main()).not.toHaveProperty('extension');
+  });
+
+  it.each(['identity', 'dob'])('rejects a pending source after an incompatible %s change', change => {
+    const source = record(), h = harness(); h.allow(false); h.load(source);
+    const next = partial(source);
+    if (change === 'identity') next.name = 'Fikcyjny Inny Pacjent';
+    else next.user.dobISO = '2012-06-17';
+    h.current(next); h.allow(true); h.save();
+    expect(h.main().intake.pal).toBeNull();
+    expect(h.main()).not.toHaveProperty('extension');
+  });
+
+  it('retains ordinary anonymous draft continuity across pages without an explicit patient load', () => {
+    const previous = { version: 1, user: { age: 13, weight: 45 }, intake: { pal: '1.8' } };
+    const h = harness(previous);
+    h.current({ version: 1, user: { age: 13, weight: 45 }, intake: { pal: null } });
+    expect(h.save()).toBe(true);
+    expect(h.main().intake.pal).toBe('1.8');
+  });
+
+  it.each([null, ''])('session restoration replaces warm measurement controls with explicit blanks (%j)', blank => {
+    const h = harness(), source = { version: 1, name: 'Fikcyjny Pacjent C',
+      user: { age: 13, ageMonths: 0, weight: blank, height: blank, waist: blank, hip: blank } };
+    for (const [id, value] of Object.entries({ age: '12', ageMonths: '4', weight: '75', height: '158', waistCm: '81', hipCm: '90' })) {
+      if (!h.fields.has(id)) h.fields.set(id, { id, dataset: {}, style: {} });
+      h.fields.get(id).value = value;
+    }
+    h.load(source, { isSessionRestore: true });
+    for (const id of ['weight', 'height', 'waistCm', 'hipCm']) expect(h.fields.get(id).value).toBe('');
+    expect(h.fields.get('age').value).toBe('13');
+    expect(h.fields.get('ageMonths').value).toBe('0');
+  });
+
+  it('session restoration leaves absent legacy measurement fields alone', () => {
+    const h = harness(); h.fields.get('weight').value = '75'; h.fields.get('height').value = '158';
+    h.load({ version: 1, name: 'Fikcyjny Pacjent C', user: { age: 13 } }, { isSessionRestore: true });
+    expect(h.fields.get('weight').value).toBe('75');
+    expect(h.fields.get('height').value).toBe('158');
+  });
+
+  it('the separate Restore saved state flow carries the selected record rather than B', () => {
+    const h = harness(), source = record(); h.win.lastLoadedData = record('Fikcyjny Pacjent B');
+    h.restore(source);
+    expect(h.main().intake.pal).toBe('1.8');
+    expect(h.main().extension).toEqual(source.extension);
+    expect(h.main().user.weight).toBeNull();
+  });
+
+  it('retains arbitrary own JSON extension keys as data without traversing object prototypes', () => {
+    const source = record();
+    const extension = JSON.parse('{"__proto__":{"fictionalCarrierMarker":"data"},"constructor":{"prototype":{"fictionalConstructorMarker":"data"}},"prototype":{"note":"ordinary extension"}}');
+    source.extension = extension;
+    Object.defineProperty(source, '__proto__', { value: { fictionalRootMarker: 'data' }, enumerable: true });
+    const h = harness(), current = partial(source); current.extension = {}; h.current(current); h.load(source);
+    expect(Object.prototype).not.toHaveProperty('fictionalCarrierMarker');
+    expect(Object.prototype).not.toHaveProperty('fictionalRootMarker');
+    expect(Object.prototype).not.toHaveProperty('fictionalConstructorMarker');
+    expect(Object.getPrototypeOf(h.main())).toBe(Object.prototype);
+    expect(Object.hasOwn(h.main(), '__proto__')).toBe(true);
+    expect(h.main().__proto__).toEqual({ fictionalRootMarker: 'data' });
+    expect(h.main().extension).toEqual(extension);
+    expect(JSON.parse(JSON.stringify(h.main())).extension).toEqual(extension);
+  });
+
+  it('materializes missing legacy PAL using the existing public APIs and exact incoming anthropometry', () => {
+    const source = record(); delete source.intake.pal; source.plan.palFactor = null;
+    source.user.ageMonths = 4;
+    const h = harness(), calls = [];
+    h.win.energyDefaultPlanPal = function (...args) {
+      expect(this).toBe(h.win); calls.push(['plan', ...args]); return 1.6;
+    };
+    h.win.energyNormalizePal = function (...args) {
+      expect(this).toBe(h.win); calls.push(['intake', ...args]); return { pal: 1.6 };
+    };
+    h.load(source);
+    expect(calls).toEqual([
+      ['plan', 13 + 4 / 12, 4, { sex: 'M', weightKg: 75, heightCm: 158 }],
+      ['intake', 13 + 4 / 12, 4, 1.6, 'clinical'],
+    ]);
+    expect(h.main().plan).toMatchObject({ palFactor: 1.6, palWybrany: true });
+    expect(h.main().intake.pal).toBe('1.6');
+    const previous = h.main(); previous.intake.pal = null; previous.plan.palFactor = null;
+    h.previous(previous); h.save();
+    expect(calls).toHaveLength(2);
+    expect(h.main().intake.pal).toBeNull();
+    expect(h.main().plan.palFactor).toBeNull();
+  });
+
+  it('missing intake follows a preserved manually selected plan PAL', () => {
+    const source = record(); delete source.intake.pal;
+    const h = harness(), candidates = [];
+    h.win.energyDefaultPlanPal = () => { throw new Error('An existing plan must remain authoritative'); };
+    h.win.energyNormalizePal = (_age, _months, candidate) => { candidates.push(candidate); return { pal: candidate }; };
+    h.load(source);
+    expect(candidates).toEqual([1.8]);
+    expect(h.main().intake.pal).toBe('1.8');
+    expect(h.main().plan.palWybrany).toBe(true);
+  });
+
+  it('never replaces an existing intake choice when the plan needs a legacy default', () => {
+    const source = record(); source.intake.pal = '2.0'; source.plan.palFactor = null;
+    const h = harness(); h.win.energyDefaultPlanPal = () => 1.6;
+    h.win.energyNormalizePal = () => { throw new Error('An existing intake choice must remain authoritative'); };
+    h.load(source);
+    expect(h.main().intake.pal).toBe('2.0');
+    expect(h.main().plan.palFactor).toBe(1.6);
+  });
+
+  it('keeps missing values when a public model is unavailable or rejects the context', () => {
+    const source = record(); source.intake.pal = null; source.plan.palFactor = null;
+    const h = harness(); h.win.energyDefaultPlanPal = () => { throw new Error('Fictional model failure'); };
+    h.win.energyNormalizePal = () => { throw new Error('No candidate'); };
+    h.load(source);
+    expect(h.main().intake.pal).toBeNull();
+    expect(h.main().plan.palFactor).toBeNull();
+  });
+
+  it.each([[46, 1.6], [75, 1.4]])('uses the actual BMI and PAL models for legacy C (%s kg → %s)', (weight, expected) => {
+    const source = record(); source.user.weight = weight; delete source.intake; delete source.plan;
+    const h = harness(), model = oknoZSilnikiem({ document: h.win.document });
+    wczytajDoOkna(model, 'vilda_diet_plan_ui.js');
+    h.win.energyDefaultPlanPal = model.energyDefaultPlanPal;
+    h.win.energyNormalizePal = model.energyNormalizePal;
+    h.load(source);
+    expect(h.main().plan.palFactor).toBe(expected);
+    expect(h.main().intake.pal).toBe(expected.toFixed(1));
+  });
+
+  it('a new measurement uses current anthropometry for PAL synthesized from a legacy record', () => {
+    const source = record(); delete source.intake; delete source.plan;
+    const h = harness(), model = oknoZSilnikiem({ document: h.win.document });
+    wczytajDoOkna(model, 'vilda_diet_plan_ui.js');
+    h.win.energyDefaultPlanPal = model.energyDefaultPlanPal;
+    h.win.energyNormalizePal = model.energyNormalizePal;
+    const current = partial(source); current.user = clone(source.user); h.current(current);
+    h.load(source);
+    expect(h.main().plan.palFactor).toBe(1.4);
+    h.current(partial(source));
+    const expected = model.energyDefaultPlanPal(13, 0, { sex: 'M', weightKg: null, heightCm: null });
+    expect(expected).toBe(1.6);
+    let baseline;
+    h.win.document.addEventListener('vilda:load-choice-applied', () => { baseline = h.main().plan.palFactor; });
+    h.newChoice();
+    expect(h.main().plan.palFactor).toBe(expected);
+    expect(baseline).toBe(expected);
+    expect(h.main().intake.pal).toBe('1.4');
+    expect(h.main().user.weight).toBeNull();
+    expect(h.main().user.height).toBeNull();
+  });
+
+  it.each(['patient', 'sequence', 'clear', 'next-load', 'unavailable', 'manual', 'changed'])('a synthesized legacy plan respects the %s guard at new-measurement choice', reason => {
+    const source = record(); delete source.plan; delete source.intake;
+    const h = harness();
+    h.win.energyDefaultPlanPal = (_age, _months, user) => user.weightKg == null ? 1.6 : 1.4;
+    h.win.energyNormalizePal = (_age, _months, candidate) => ({ pal: candidate });
+    h.load(source); h.current(partial(source));
+    const detail = {};
+    if (reason === 'patient') detail.patientId = 'fictional-stale-patient';
+    if (reason === 'sequence') detail.applySequence = h.api.getApplyLoadedDataSequence() - 1;
+    if (reason === 'clear') h.api.clearMainSessionStorage();
+    if (reason === 'next-load') {
+      const next = record(); next.plan.palFactor = 1.8;
+      h.load(next); detail.applySequence = h.api.getApplyLoadedDataSequence() - 1;
+    }
+    if (reason === 'unavailable') delete h.win.energyDefaultPlanPal;
+    if (reason === 'manual' || reason === 'changed') {
+      const previous = h.main();
+      if (reason === 'manual') previous.plan.palWybrany = true;
+      else previous.plan.palFactor = 1.8;
+      h.previous(previous);
+    }
+    const before = h.main(); h.newChoice(detail);
+    expect(h.main()?.plan?.palFactor ?? null).toBe(before?.plan?.palFactor ?? null);
+  });
+
+  it('a real incoming manual plan and intake remain unchanged at a new-measurement choice', () => {
+    const source = record(), h = harness();
+    h.win.energyDefaultPlanPal = () => 1.6;
+    h.load(source); h.current(partial(source)); h.newChoice(); h.save();
+    expect(h.main().plan).toMatchObject({ palFactor: 1.8, palWybrany: true });
+    expect(h.main().intake.pal).toBe('1.8');
+  });
+});

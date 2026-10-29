@@ -1,12 +1,13 @@
-/* B2.2 — shared inline/full workspace, scoped to native reminders. */
+/* A7 — approved reminders card, full workspace and outcome forms.
+ * Component rules are scoped to the native reminder UI. */
 .vb22 {
   --vb-ink:#29464d;
   --vb-muted:#607b81;
   --vb-line:#dce7e8;
   --vb-teal:#087e83;
-  --vb-soft:#f0f7f6;
-  --vb-red:#95525b;
-  font: 14px/1.45 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+  --vb-soft:#edf6f3;
+  --vb-red:#985c65;
+  font: 14.4px/1.45 Inter,sans-serif;
   color: var(--vb-ink);
   background: #fff;
   box-sizing: border-box;
@@ -35,9 +36,9 @@
 .vb22 button {
   cursor: pointer;
   width: auto;
-  min-height: 34px;
+  min-height: 36px;
   padding: var(--space-8px) var(--space-12px);
-  font-size: 12px;
+  font-size: 14.4px;
   line-height: 1.4;
   letter-spacing: normal
 }
@@ -50,8 +51,9 @@
 .vb22 button:focus-visible,
 .vb22 input:focus-visible,
 .vb22 textarea:focus-visible,
-.vb22 select:focus-visible {
-  outline: var(--border-pro) solid #78b8bc;
+.vb22 select:focus-visible,
+.vb22 summary:focus-visible {
+  outline: var(--border-pro) solid #4c9ea5;
   outline-offset: 2px
 }
 
@@ -64,11 +66,11 @@
   border: 0;
   border-radius: 0;
   box-shadow: none;
-  min-height: 26px;
+  min-height: 28px;
   padding: var(--space-4px) 0;
   color: var(--vb-teal);
-  font-size: 12px;
-  font-weight: 600;
+  font-size: 13px;
+  font-weight: 500;
   text-align: left;
   display: block
 }
@@ -77,7 +79,7 @@
   background: var(--vb-teal);
   border-color: var(--vb-teal);
   color: #fff;
-  font-weight: 650
+  font-weight: 500
 }
 
 .vb22 .vb22-icon {
@@ -88,12 +90,13 @@
   display: grid;
   place-items: center;
   padding: 0;
-  font-size: 23px;
+  font-size: 25px;
+  font-weight: 400;
   line-height: 1
 }
 
 .vb22 .vb22-head {
-  padding: 22px var(--space-24px) 17px;
+  padding: var(--space-18px) var(--space-24px) var(--space-14px);
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -106,23 +109,22 @@
 }
 
 .vb22 .vb22-head h2 {
-  font-size: 22px;
-  line-height: 1.25;
-  font-weight: 700;
+  font-size: 20px;
+  line-height: 1.3;
+  font-weight: 600;
   color: var(--vb-ink);
-  letter-spacing: -.35px
+  letter-spacing: -.2px
 }
 
 .vb22 .vb22-subtitle {
-  font-size: 11px;
-  color: var(--vb-muted);
-  margin-top: var(--space-6px)
+  display: none
 }
 
 .vb22 .vb22-tools {
   display: flex;
   gap: var(--space-8px);
-  align-items: center
+  align-items: center;
+  flex-shrink: 0
 }
 
 .vb22 .vb22-add {
@@ -130,8 +132,8 @@
   background: transparent;
   color: var(--vb-teal);
   padding: var(--space-4px) 0;
-  font-size: 12px;
-  font-weight: 650;
+  font-size: 13px;
+  font-weight: 500;
   white-space: nowrap
 }
 
@@ -139,16 +141,20 @@
   display: flex;
   gap: var(--space-24px);
   padding: 0 var(--space-24px);
-  border-bottom: var(--border-hairline) solid var(--vb-line);
+  border-bottom: var(--border-hairline) solid #e5ecec;
   flex-shrink: 0
 }
 
 .vb22 .vb22-tabs button {
-  padding: 0 0 var(--space-12px);
+  padding: var(--space-4px) 0 var(--space-10px);
   position: relative;
-  font-size: 12px;
-  font-weight: 650;
-  min-height: 30px
+  font-size: 14.4px;
+  font-weight: 500;
+  min-height: 34px
+}
+
+.vb22 .vb22-tabs button.is-active {
+  font-weight: 600
 }
 
 .vb22 .vb22-tabs button.is-active:after {
@@ -157,16 +163,16 @@
   left: 0;
   right: 0;
   bottom: -1px;
-  height: 3px;
+  height: 2px;
   background: var(--vb-teal);
-  border-radius: 3px
+  border-radius: 2px
 }
 
 .vb22 .vb22-filters {
-  padding: var(--space-14px) var(--space-24px);
+  padding: var(--space-10px) 21px 11px;
   display: grid;
-  grid-template-columns: repeat(4,minmax(0,1fr));
-  gap: 9px;
+  grid-template-columns: 1fr 1fr .75fr 1.6fr;
+  gap: var(--space-4px);
   flex-shrink: 0
 }
 
@@ -175,60 +181,74 @@
   align-items: center;
   justify-content: space-between;
   gap: var(--space-8px);
-  padding: var(--space-8px) 11px;
-  min-height: var(--brand-logo-size);
-  font-size: 12px;
-  font-weight: 600;
+  padding: 7px var(--space-8px);
+  min-height: 35px;
+  font-size: 14.4px;
+  font-weight: 400;
   text-align: left;
   min-width: 0
+}
+
+.vb22 .vb22-filters button>span:first-child {
+  min-width: 0;
+  white-space: normal;
+  overflow-wrap: anywhere
 }
 
 .vb22 .vb22-count {
   display: inline-flex;
   align-items: center;
   justify-content: flex-end;
-  border-left: var(--border-hairline) solid #dbe4e5;
-  min-width: 21px;
-  padding-left: 9px;
+  border-left: var(--border-hairline) solid #e5ecec;
+  min-width: 18px;
+  padding-left: 7px;
   height: 16px;
   color: var(--vb-red);
-  font-size: 12px;
-  font-weight: 650;
+  font-size: 14.4px;
+  font-weight: 400;
   font-variant-numeric: tabular-nums;
   background: transparent;
-  border-radius: 0
+  border-radius: 0;
+  flex-shrink: 0
 }
 
 .vb22 .vb22-layout {
   min-height: 0;
   flex: 1;
   display: grid;
-  grid-template-columns: 340px minmax(0,1fr)
+  grid-template-columns: minmax(320px,38%) minmax(0,1fr)
 }
 
 .vb22 .vb22-list-pane {
-  background: #fbfcfc;
-  border-right: var(--border-hairline) solid var(--vb-line);
-  padding: var(--space-16px);
+  background: #f4f8f6;
+  border-right: var(--border-emphasis) solid #c7dcd6;
+  padding: var(--space-12px) var(--space-14px);
   overflow: auto;
-  min-height: 0
+  min-height: 0;
+  min-width: 0;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  scrollbar-color: #bed1d1 transparent
 }
 
 .vb22 .vb22-search {
   display: block;
   width: 100%;
+  min-width: 0;
   border: var(--border-hairline) solid var(--vb-line);
   border-radius: var(--radius-9);
   box-shadow: none;
   background: #fff;
   color: var(--vb-ink);
-  font-size: 12px;
+  font-size: 16.8px;
+  font-weight: 400;
   padding: var(--space-10px) var(--space-12px);
-  min-height: 40px;
-  margin: 0 0 15px
+  min-height: 44px;
+  margin: 0 0 var(--space-10px)
 }
 
-.vb22 .vb22-list {
+.vb22 .vb22-list,
+.vb22 .vb22-mini-list {
   display: flex;
   flex-direction: column
 }
@@ -238,10 +258,10 @@
   flex-shrink: 0;
   width: 100%;
   min-height: 0;
-  padding: var(--space-10px) 9px;
+  padding: var(--space-12px);
   border: 0;
-  border-bottom: var(--border-hairline) solid #e0e9ea;
-  border-left: var(--border-pro) solid transparent;
+  border-bottom: var(--border-hairline) solid #dce7e2;
+  border-left: var(--border-emphasis) solid transparent;
   background: transparent;
   border-radius: 0;
   box-shadow: none;
@@ -250,108 +270,206 @@
   color: var(--vb-ink)
 }
 
-.vb22 .vb22-row:hover {
-  background: #f3f8f7
-}
-
-.vb22 .vb22-row.is-selected {
-  border-left-color: #218a8f;
-  border-bottom-color: #d5e5e4;
-  background: #eaf5f3;
-  border-radius: var(--radius-8)
-}
-
-.vb22 .vb22-row-top {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: var(--space-8px);
-  font-size: 10px;
-  color: var(--vb-muted);
-  line-height: 1.35;
-  margin-bottom: var(--space-4px)
-}
-
-.vb22 .vb22-row-top .vild-rem-when {
-  flex-shrink: 0;
-  color: #99692f;
-  font-size: 10px
-}
-
-.vb22 .vb22-row-top .vild-rem-cat {
-  font-size: 10px;
-  color: var(--vb-muted);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap
-}
-
-.vb22 .vb22-row-title {
-  display: block;
-  font-size: 13px;
-  line-height: 1.4;
-  font-weight: 650
+.vb22 .vb22-row-patient,
+.vb22 .vb22-detail h3,
+.vb22 .vb22-patient-link,
+.vb22 .vb22-outcome-patient {
+  font-family: Inter,sans-serif;
+  font-size: 16.8px;
+  font-weight: 400;
+  line-height: normal;
+  letter-spacing: normal;
+  font-feature-settings: normal;
+  font-variation-settings: normal;
+  color: #000;
+  overflow-wrap: anywhere
 }
 
 .vb22 .vb22-row-patient {
   display: block;
-  font-size: 11px;
+  margin: 0
+}
+
+.vb22 .vb22-row-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-4px) var(--space-8px);
+  width: 100%;
+  margin-top: var(--space-4px);
+  font-size: 14.4px;
+  font-weight: 400;
   line-height: 1.4;
-  margin-top: 3px;
-  color: var(--vb-muted)
+  color: #5d777e
 }
 
 .vb22 .vb22-row-date {
   display: block;
-  font-size: 10px;
+  min-width: 0;
+  max-width: 100%;
+  flex: 0 1 auto;
+  font-size: 14.4px;
   line-height: 1.4;
-  margin-top: 3px;
-  color: var(--vb-muted);
-  font-weight: 400
+  color: #5d777e;
+  font-weight: 400;
+  font-variant-numeric: tabular-nums
+}
+
+.vb22 .vb22-row-meta .vild-rem-when {
+  margin-left: auto;
+  text-align: right;
+  flex: 0 0 auto;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  font-size: 14.4px;
+  font-weight: 400;
+  line-height: 1.4
+}
+
+.vb22 .vb22-overdue {
+  display: inline-block;
+  padding: 2px 7px;
+  border-radius: var(--radius-6);
+  white-space: normal;
+  font-variant-numeric: tabular-nums
+}
+
+.vb22 .vb22-overdue-short {
+  color: #0e7378;
+  background: #edf7f4
+}
+
+.vb22 .vb22-overdue-medium {
+  color: #895812;
+  background: #fff5e6
+}
+
+.vb22 .vb22-overdue-long {
+  color: #a53f4b;
+  background: #fceff1
+}
+
+.vb22 .vb22-row-title {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+  font-size: 16px;
+  line-height: 1.4;
+  font-weight: 400;
+  color: #435b64;
+  margin-top: 5px
 }
 
 .vb22 .vb22-detail {
-  padding: 23px 28px 30px;
+  padding: 26px 30px 30px;
   min-width: 0;
   overflow: auto;
-  min-height: 0
+  min-height: 0;
+  background: #fff
+}
+
+.vb22 .vb22-detail-label {
+  font-size: 11px;
+  line-height: 1.4;
+  font-weight: 500;
+  letter-spacing: .65px;
+  text-transform: uppercase;
+  color: #597f83;
+  margin-bottom: 17px
 }
 
 .vb22 .vb22-detail h3 {
-  font-size: 23px;
-  line-height: 1.3;
-  letter-spacing: -.3px;
-  margin: var(--space-12px) 0 var(--space-8px);
-  color: var(--vb-ink)
+  margin: 0 0 var(--space-8px)
+}
+
+.vb22 .vb22-patient-link {
+  padding: 0;
+  min-height: 0;
+  text-align: left
+}
+
+.vb22 .vb22-patient-link:hover {
+  text-decoration: underline;
+  text-underline-offset: 3px
 }
 
 .vb22 .vb22-category {
-  font-size: 11px;
-  color: var(--vb-muted)
+  font-size: 14.4px;
+  color: #71878e;
+  font-weight: 400;
+  line-height: 1.4
 }
 
 .vb22 .vb22-meta {
-  padding-bottom: var(--space-18px);
-  border-bottom: var(--border-hairline) solid var(--vb-line);
-  margin-top: var(--space-16px);
-  font-size: 12px;
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: baseline;
+  gap: var(--space-8px);
+  width: 100%;
+  padding: 0;
+  border: 0;
+  margin: 0 0 22px;
+  font-size: 14.4px;
+  font-weight: 400;
+  line-height: 1.4;
+  color: #5d777e
+}
+
+.vb22 .vb22-tab-count {
+  margin-left: var(--space-6px);
+  font-size: 13px;
+  font-weight: 400;
+  color: #748b91;
+  font-variant-numeric: tabular-nums
+}
+
+.vb22 .vb22-origin {
+  margin-top: var(--space-8px);
+  font-size: 13px;
+  font-weight: 400;
+  line-height: 1.45;
   color: var(--vb-muted)
+}
+
+.vb22 .vb22-meta>:first-child {
+  min-width: min-content;
+  flex: 0 1 auto
+}
+
+.vb22 .vb22-meta .vb22-category {
+  margin-left: auto;
+  flex: 0 1 auto;
+  min-width: 0;
+  max-width: 55%;
+  text-align: right;
+  overflow-wrap: anywhere
+}
+
+.vb22 .vb22-detail-title {
+  font-size: 16px;
+  font-weight: 400;
+  line-height: 1.4;
+  color: #344f59;
+  overflow-wrap: anywhere
 }
 
 .vb22 .vb22-body {
   white-space: pre-wrap;
   overflow-wrap: anywhere;
-  font-size: 13px;
-  line-height: 1.65;
-  margin-top: var(--space-18px);
-  color: var(--vb-ink)
+  font-size: 16px;
+  font-weight: 400;
+  line-height: 1.5;
+  margin-top: var(--space-12px);
+  color: #526b74
 }
 
 .vb22 .vb22-actions {
   display: flex;
-  gap: var(--space-8px);
+  gap: 9px;
   flex-wrap: wrap;
-  margin-top: var(--space-20px);
+  margin-top: var(--space-24px);
   align-items: center
 }
 
@@ -360,32 +478,39 @@
 }
 
 .vb22 .vb22-help {
-  font-size: 11px;
-  color: var(--vb-muted);
-  line-height: 1.5;
+  font-size: 12px;
+  font-weight: 400;
+  color: #68848b;
+  line-height: 1.6;
   margin-top: var(--space-16px)
 }
 
 .vb22 .vb22-foot {
-  border-top: var(--border-hairline) solid var(--vb-line);
-  padding: 11px var(--space-24px);
+  border-top: var(--border-hairline) solid #e8eeee;
+  padding: 11px 21px;
   min-height: 39px;
   display: flex;
   gap: var(--space-8px);
   align-items: center;
   justify-content: space-between;
-  color: var(--vb-muted);
-  font-size: 11px;
+  color: #798d93;
+  font-size: 12.8px;
+  font-weight: 400;
   flex-shrink: 0;
   background: #fff
+}
+
+.vb22 .vb22-foot button {
+  font-size: 12.8px
 }
 
 .vb22 .vb22-empty {
   padding: var(--space-24px) var(--space-6px);
   text-align: center;
   color: var(--vb-muted);
-  font-size: 12px;
-  line-height: 1.5
+  font-size: 15px;
+  font-weight: 400;
+  line-height: 1.6
 }
 
 .vb22 .vb22-form {
@@ -399,18 +524,22 @@
 .vb22 .vb22-form h3,
 .vb22 .vb22-form h4 {
   margin: 0 0 var(--space-4px);
-  font-size: 17px;
+  font-size: 18px;
+  font-weight: 500;
+  line-height: 1.3;
   letter-spacing: -.15px
 }
 
 .vb22 .vb22-field {
   display: flex;
   flex-direction: column;
-  gap: var(--space-6px);
-  font-size: 12px;
-  font-weight: 600;
+  gap: var(--space-8px);
+  font-size: 14.4px;
+  font-weight: 500;
+  line-height: 1.45;
   color: var(--vb-ink);
-  margin-top: var(--space-14px)
+  margin-top: var(--space-16px);
+  min-width: 0
 }
 
 .vb22 .vb22-field input,
@@ -419,34 +548,49 @@
   display: block;
   max-width: 100%;
   width: 100%;
+  min-width: 0;
   background: #fff;
-  border: var(--border-hairline) solid #cedfe1;
-  border-radius: var(--radius-9);
-  padding: var(--space-10px) 11px;
-  font-size: 13px;
-  color: var(--vb-ink);
+  border: var(--border-hairline) solid #bfcfce;
+  border-radius: var(--radius-10);
+  padding: var(--space-12px) 13px;
+  font-family: Inter,sans-serif;
+  font-size: 16.8px;
+  line-height: 1.45;
+  color: #173a41;
   box-shadow: none;
   font-weight: 400;
-  min-height: 40px
+  min-height: 48px
+}
+
+.vb22 .vb22-field input[type=date] {
+  appearance: none;
+  -webkit-appearance: none;
+  text-align: left
 }
 
 .vb22 .vb22-field textarea {
   resize: vertical;
-  min-height: 88px
+  min-height: 142px
+}
+
+.vb22 .vb22-field input::placeholder,
+.vb22 .vb22-field textarea::placeholder {
+  color: #84999c;
+  opacity: 1
 }
 
 .vb22 .vb22-check {
   display: flex;
   gap: var(--space-8px);
   align-items: center;
-  font-size: 12px;
-  font-weight: 600;
+  font-size: 14.4px;
+  font-weight: 500;
   margin-top: var(--space-18px)
 }
 
 .vb22 .vb22-check input {
-  width: 17px;
-  height: 17px;
+  width: 18px;
+  height: 18px;
   min-height: 0;
   margin: 0;
   accent-color: var(--vb-teal)
@@ -463,9 +607,10 @@
   background: #fff7f6;
   border-radius: var(--radius-9);
   margin-top: var(--space-14px);
-  font-size: 12px;
+  font-size: 14px;
   line-height: 1.5;
-  white-space: pre-wrap
+  white-space: pre-wrap;
+  overflow-wrap: anywhere
 }
 
 .vb22 .vb22-notice {
@@ -480,10 +625,10 @@
 
 dialog.vb22.vb22-modal {
   position: fixed;
-  inset: 16px 16px calc(16px + var(--vb22-bottom,0px));
+  inset: 16px 16px calc(16px + var(--vb22-inset,0px));
   margin: auto;
-  width: min(1160px,calc(100vw - 32px));
-  height: min(900px,calc(var(--vb22-height,100dvh) - 32px - var(--vb22-bottom,0px)));
+  width: min(1280px,calc(100vw - 32px));
+  height: min(900px,calc(var(--vb22-height,100dvh) - 32px - var(--vb22-inset,0px)));
   max-width: none;
   max-height: none;
   border: var(--border-hairline) solid #d5e1e2;
@@ -500,7 +645,7 @@ dialog.vb22.vb22-modal[open] {
   flex-direction: column
 }
 
-dialog.vb22.vb22-modal::backdrop {
+dialog.vb22::backdrop {
   background: #15343d55;
   backdrop-filter: blur(3px)
 }
@@ -513,36 +658,25 @@ dialog.vb22.vb22-modal::backdrop {
   overflow: hidden;
   border: var(--border-hairline) solid var(--vb-line);
   border-radius: var(--radius-18);
-  box-shadow: 0 7px 24px #203c4405
+  box-shadow: 0 4px 20px #29464d03
 }
 
 .vb22-inline .vb22-head {
-  padding: var(--space-20px) 21px var(--space-16px)
+  padding: var(--space-14px) 17px var(--space-8px)
 }
 
 .vb22-inline .vb22-head h2 {
-  font-size: 20px
+  font-size: 19px
 }
 
 .vb22-inline .vb22-tabs {
-  padding: 0 21px
+  padding: 0 17px
 }
 
 .vb22-inline .vb22-filters {
   grid-template-columns: 1fr 1fr;
-  padding: 13px 21px var(--space-8px);
-  gap: 7px
-}
-
-.vb22-inline .vb22-filters button {
-  padding: 7px var(--space-10px);
-  min-height: 35px
-}
-
-.vb22-inline .vb22-count {
-  height: 15px;
-  font-size: 11px;
-  padding-left: var(--space-8px)
+  padding: 9px var(--space-14px);
+  gap: var(--space-4px)
 }
 
 .vb22-inline .vb22-layout {
@@ -553,60 +687,239 @@ dialog.vb22.vb22-modal::backdrop {
 .vb22-inline .vb22-list-pane {
   background: #fff;
   border-right: 0;
-  padding: 0 15px 15px;
+  padding: 2px var(--space-14px) var(--space-8px);
   overflow: visible
 }
 
 .vb22-inline .vb22-row {
-  padding: 11px var(--space-6px);
+  padding: var(--space-10px) 3px;
   border-left: 0
 }
 
-.vb22-inline .vb22-row-title {
-  font-size: 13px
-}
-
 .vb22-inline .vb22-foot {
-  padding: var(--space-10px) 21px;
-  font-size: 10px;
-  min-height: 45px
+  padding: 11px 17px;
+  min-height: 41px
 }
 
-@media(max-width:850px) {
+/* The outcome editor has a single scrollable body and a persistent footer. */
+dialog.vb22.vb22-outcome {
+  position: fixed;
+  top: calc(var(--vb22-inset,0px) + var(--vb22-height,100dvh)/2);
+  left: 50%;
+  right: auto;
+  bottom: auto;
+  transform: translate(-50%,-50%);
+  margin: 0;
+  width: min(580px,calc(100vw - 36px));
+  max-width: none;
+  height: auto;
+  max-height: calc(var(--vb22-height,100dvh) - 48px);
+  padding: 0;
+  border: var(--border-hairline) solid #d4e3e0;
+  border-radius: var(--radius-18);
+  background: #fff;
+  overflow: hidden;
+  box-shadow: 0 22px 80px #16333e3f;
+  z-index: var(--z-reminder-dialog)
+}
+
+dialog.vb22.vb22-outcome[open] {
+  display: flex;
+  flex-direction: column
+}
+
+.vb22 .vb22-outcome-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 15px;
+  padding: 21px 22px var(--space-18px);
+  border-bottom: var(--border-hairline) solid #e0eae7;
+  flex-shrink: 0
+}
+
+.vb22 .vb22-outcome-patient {
+  margin-bottom: var(--space-6px);
+  text-align: left
+}
+
+.vb22 .vb22-outcome-head h2 {
+  font-size: 20px;
+  font-weight: 500;
+  line-height: 1.3;
+  color: var(--vb-ink);
+  letter-spacing: -.2px
+}
+
+.vb22 .vb22-outcome-close {
+  height: 44px;
+  width: 44px;
+  min-height: 44px;
+  min-width: 44px;
+  font-size: 27px;
+  flex-shrink: 0
+}
+
+.vb22 .vb22-form.vb22-outcome-form {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: #fff
+}
+
+.vb22 .vb22-outcome-body {
+  padding: 22px;
+  overflow: auto;
+  flex: 1;
+  min-height: 0;
+  overscroll-behavior: contain;
+  scrollbar-width: thin
+}
+
+.vb22 .vb22-context {
+  padding: var(--space-12px) var(--space-14px);
+  background: #f3f7f5;
+  border: var(--border-hairline) solid #e3ece9;
+  border-radius: var(--radius-10);
+  margin-bottom: 22px
+}
+
+.vb22 .vb22-context small {
+  font-size: 11px;
+  color: #6a8588;
+  line-height: 1.4;
+  display: block;
+  margin-bottom: 5px
+}
+
+.vb22 .vb22-context p {
+  font-size: 14px;
+  line-height: 1.5;
+  color: #36565e;
+  overflow-wrap: anywhere
+}
+
+.vb22 .vb22-outcome-form .vb22-field {
+  margin: 0 0 var(--space-18px)
+}
+
+.vb22 .vb22-outcome-form .vb22-help {
+  margin: -10px 0 var(--space-20px)
+}
+
+.vb22 .vb22-outcome-form>.vb22-help,
+.vb22 .vb22-outcome-body>.vb22-help:last-child {
+  margin: 17px 0 0
+}
+
+.vb22 .vb22-next-step {
+  margin-top: 5px;
+  border: var(--border-hairline) solid #d6e4e0;
+  background: #f7faf9;
+  border-radius: var(--radius-11)
+}
+
+.vb22 .vb22-next-step>summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 13px;
+  list-style: none;
+  cursor: pointer;
+  min-height: 70px;
+  padding: var(--space-14px)
+}
+
+.vb22 .vb22-next-step>summary::-webkit-details-marker {
+  display: none
+}
+
+.vb22 .vb22-next-step>summary b {
+  display: block;
+  font-size: 14.4px;
+  font-weight: 500;
+  color: #1c6f75;
+  line-height: 1.4
+}
+
+.vb22 .vb22-next-step>summary small {
+  display: block;
+  font-size: 12px;
+  font-weight: 400;
+  color: #7b9195;
+  line-height: 1.45;
+  margin-top: 3px
+}
+
+.vb22 .vb22-next-step>summary>:last-child:not(:first-child) {
+  font-size: 22px;
+  color: #4f8a8b;
+  line-height: 1;
+  flex-shrink: 0
+}
+
+.vb22 .vb22-next-fields {
+  padding: 2px var(--space-14px) 0
+}
+
+.vb22 .vb22-next-fields .vb22-field:last-child {
+  margin-bottom: var(--space-14px)
+}
+
+.vb22 .vb22-outcome-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-10px);
+  flex-shrink: 0;
+  padding: 15px 22px;
+  background: #fff;
+  border-top: var(--border-hairline) solid #dce7e4;
+  box-shadow: 0 -4px 14px #264f4c04
+}
+
+.vb22 .vb22-outcome-actions button {
+  min-height: 46px;
+  padding: 11px 17px;
+  font-size: 15px;
+  line-height: 1.3;
+  font-weight: 400
+}
+
+.vb22 .vb22-outcome-actions .vb22-primary {
+  font-weight: 500
+}
+
+@media(max-width:900px) {
   .vb22 .vb22-layout {
-    grid-template-columns: 310px minmax(0,1fr)
+    grid-template-columns: 320px minmax(0,1fr)
   }
   .vb22 .vb22-detail {
-    padding-left: 21px;
-    padding-right: 21px
-  }
-  .vb22 .vb22-head {
-    padding-left: var(--space-20px);
-    padding-right: var(--space-20px)
-  }
-  .vb22 .vb22-filters {
-    padding-left: var(--space-20px);
-    padding-right: var(--space-20px)
+    padding: 22px
   }
 }
 
-@media(max-width:650px) {
+@media(max-width:700px) {
   dialog.vb22.vb22-modal {
-    inset: 0 0 var(--vb22-bottom,0px);
+    inset: 0 0 var(--vb22-inset,0px);
     width: 100vw;
-    height: calc(var(--vb22-height,100dvh) - var(--vb22-bottom,0px));
+    height: calc(var(--vb22-height,100dvh) - var(--vb22-inset,0px));
     margin: 0;
     border: 0;
     border-radius: 0;
     padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left)
   }
   .vb22 .vb22-head {
-    padding: 17px var(--space-16px) 15px;
+    padding: 15px var(--space-16px) 11px;
     gap: var(--space-8px);
-    align-items: start
+    align-items: center
   }
   .vb22 .vb22-head h2 {
-    font-size: 21px
+    font-size: 20px
   }
   .vb22 .vb22-tools {
     gap: 7px;
@@ -616,105 +929,265 @@ dialog.vb22.vb22-modal::backdrop {
   }
   .vb22 .vb22-add {
     white-space: normal;
-    font-size: 11px;
+    font-size: 12px;
     max-width: 95px;
     text-align: right;
     line-height: 1.45
-  }
-  .vb22 .vb22-subtitle {
-    font-size: 10px;
-    max-width: 180px
   }
   .vb22 .vb22-tabs {
     padding: 0 var(--space-16px)
   }
   .vb22 .vb22-filters {
-    padding: 13px var(--space-16px);
+    padding: var(--space-8px) var(--space-14px) 9px;
     grid-template-columns: 1fr 1fr;
-    gap: 7px
+    gap: var(--space-4px)
   }
-  .vb22 .vb22-filters button {
-    padding: 7px var(--space-10px);
-    min-height: 36px;
-    font-size: 12px
-  }
-  .vb22 .vb22-count {
-    font-size: 11px;
-    height: 15px
-  }
-  .vb22 .vb22-layout {
+  dialog.vb22.vb22-modal .vb22-layout {
     display: block;
-    overflow: hidden
+    overflow: hidden;
+    overscroll-behavior: contain
   }
-  .vb22 .vb22-list-pane {
+  dialog.vb22.vb22-modal .vb22-list-pane {
     height: 100%;
-    padding: 15px var(--space-16px) var(--space-20px);
-    border: 0
+    max-height: none;
+    padding: var(--space-12px) var(--space-10px);
+    border-right: 0;
+    overflow: auto
   }
-  .vb22 .vb22-detail {
+  dialog.vb22.vb22-modal .vb22-detail {
     height: 100%;
     display: none;
-    padding: 17px
+    overflow: auto;
+    padding: 22px 19px
   }
-  .vb22.vb22-show-detail .vb22-list-pane {
+  dialog.vb22.vb22-modal.vb22-show-detail .vb22-list-pane {
     display: none
   }
-  .vb22.vb22-show-detail .vb22-detail {
+  dialog.vb22.vb22-modal.vb22-show-detail .vb22-detail {
     display: block
   }
-  .vb22 .vb22-row {
-    padding: 11px 9px
+  dialog.vb22.vb22-modal.vb22-show-detail .vb22-tabs,
+  dialog.vb22.vb22-modal.vb22-show-detail .vb22-filters {
+    display: none
   }
-  .vb22 .vb22-row-title {
-    font-size: 14px
+  dialog.vb22.vb22-modal .vb22-detail-label,
+  dialog.vb22.vb22-modal .vb22-foot {
+    display: none
   }
-  .vb22 .vb22-row-patient {
-    font-size: 12px
-  }
-  .vb22 .vb22-row-date {
-    font-size: 11px
-  }
-  .vb22 .vb22-back {
+  dialog.vb22.vb22-modal .vb22-back {
     display: block;
-    margin-bottom: 15px
+    min-height: 44px;
+    margin-bottom: var(--space-12px)
   }
-  .vb22 .vb22-field input,
-  .vb22 .vb22-field select,
-  .vb22 .vb22-field textarea {
-    font-size: 16px
+  .vb22 .vb22-detail-label {
+    margin: -22px -19px var(--space-20px);
+    padding: var(--space-12px) 19px;
+    background: #eaf3ef;
+    border-top: var(--border-pro) solid #a9cac0;
+    border-bottom: var(--border-hairline) solid #d5e5dd;
+    color: #3c716f
+  }
+  .vb22 .vb22-row {
+    padding-top: var(--space-10px);
+    padding-bottom: var(--space-10px)
+  }
+  .vb22 .vb22-actions button {
+    min-height: 44px
   }
   .vb22 .vb22-foot {
-    padding: var(--space-10px) var(--space-16px);
-    font-size: 10px
+    padding: var(--space-10px) var(--space-16px)
   }
   .vb22 .vb22-form {
     padding: 15px
-  }
-  .vb22 .vb22-detail h3 {
-    font-size: 22px
   }
   .vb22-inline .vb22-layout {
     overflow: auto
   }
   .vb22-inline .vb22-list-pane {
-    height: auto;
-    padding: 0 15px 15px
+    max-height: none;
+    padding: 2px var(--space-14px) var(--space-8px)
+  }
+  .vb22-inline .vb22-head h2 {
+    font-size: 19px
+  }
+  dialog.vb22.vb22-outcome {
+    top: var(--vb22-inset,0px);
+    left: 0;
+    right: 0;
+    bottom: auto;
+    transform: none;
+    margin: 0;
+    width: 100vw;
+    height: var(--vb22-height,100dvh);
+    max-height: var(--vb22-height,100dvh);
+    border: 0;
+    border-radius: 0
+  }
+  .vb22 .vb22-outcome-head {
+    padding: max(17px,env(safe-area-inset-top)) max(18px,env(safe-area-inset-right)) var(--space-16px) max(18px,env(safe-area-inset-left));
+    gap: var(--space-12px)
+  }
+  .vb22 .vb22-outcome-head h2 {
+    font-size: 19px
+  }
+  .vb22 .vb22-outcome-body {
+    padding: var(--space-18px) max(18px,env(safe-area-inset-right)) var(--space-18px) max(18px,env(safe-area-inset-left))
+  }
+  .vb22 .vb22-context {
+    padding: 11px var(--space-12px);
+    margin-bottom: var(--space-20px)
+  }
+  .vb22 .vb22-next-step>summary {
+    padding: 13px
+  }
+  .vb22 .vb22-outcome-actions {
+    padding: 13px max(18px,env(safe-area-inset-right)) max(13px,env(safe-area-inset-bottom)) max(18px,env(safe-area-inset-left));
+    gap: 9px
+  }
+  .vb22 .vb22-outcome-actions button {
+    min-height: 48px;
+    padding: 11px var(--space-12px);
+    font-size: 15px
+  }
+  .vb22 .vb22-outcome-actions button:not(.vb22-primary) {
+    flex: 0 0 82px
+  }
+  .vb22 .vb22-outcome-actions .vb22-primary {
+    flex: 1
   }
 }
 
-@media(max-height:500px) and (min-width:651px) {
+@media(max-width:360px) {
+  .vb22 .vb22-detail {
+    padding-left: var(--space-8px);
+    padding-right: var(--space-8px)
+  }
+  .vb22 .vb22-detail-label {
+    margin-left: -8px;
+    margin-right: -8px;
+    padding-left: var(--space-12px);
+    padding-right: var(--space-12px)
+  }
+  .vb22 .vb22-outcome-head,
+  .vb22 .vb22-outcome-body,
+  .vb22 .vb22-outcome-actions {
+    padding-left: 15px;
+    padding-right: 15px
+  }
+  .vb22 .vb22-outcome-head h2 {
+    font-size: 18px
+  }
+}
+
+@media(max-height:500px) and (min-width:701px) {
   .vb22 .vb22-head {
     padding-top: var(--space-12px);
     padding-bottom: var(--space-12px)
   }
   .vb22 .vb22-filters {
-    padding-top: var(--space-10px);
-    padding-bottom: var(--space-10px)
+    padding-top: var(--space-8px);
+    padding-bottom: var(--space-8px)
   }
 }
 
-/* The application glass theme deliberately styles every button/header with
- * !important. The approved B2.2 workspace keeps its own flat controls. */
+/* A phone keeps list → detail navigation after rotating into landscape. */
+html.vilda-phone dialog.vb22.vb22-modal {
+  inset: 0 0 var(--vb22-inset,0px);
+  width: 100vw;
+  height: calc(var(--vb22-height,100dvh) - var(--vb22-inset,0px));
+  margin: 0;
+  border: 0;
+  border-radius: 0;
+  padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left)
+}
+
+html.vilda-phone dialog.vb22.vb22-modal .vb22-layout {
+  display: block;
+  overflow: hidden;
+  overscroll-behavior: contain
+}
+
+html.vilda-phone dialog.vb22.vb22-modal .vb22-list-pane {
+  height: 100%;
+  max-height: none;
+  border-right: 0;
+  overflow: auto
+}
+
+html.vilda-phone dialog.vb22.vb22-modal .vb22-detail {
+  display: none;
+  height: 100%;
+  overflow: auto
+}
+
+html.vilda-phone dialog.vb22.vb22-modal.vb22-show-detail .vb22-list-pane {
+  display: none
+}
+
+html.vilda-phone dialog.vb22.vb22-modal.vb22-show-detail .vb22-detail {
+  display: block
+}
+
+html.vilda-phone dialog.vb22.vb22-modal.vb22-show-detail .vb22-tabs,
+html.vilda-phone dialog.vb22.vb22-modal.vb22-show-detail .vb22-filters {
+  display: none
+}
+
+html.vilda-phone dialog.vb22.vb22-modal .vb22-detail-label,
+html.vilda-phone dialog.vb22.vb22-modal .vb22-foot {
+  display: none
+}
+
+html.vilda-phone dialog.vb22.vb22-modal .vb22-back {
+  display: block;
+  min-height: 44px;
+  margin-bottom: var(--space-12px)
+}
+
+html.vilda-phone dialog.vb22.vb22-outcome {
+  top: var(--vb22-inset,0px);
+  left: 0;
+  right: 0;
+  bottom: auto;
+  transform: none;
+  margin: 0;
+  width: 100vw;
+  height: var(--vb22-height,100dvh);
+  max-height: var(--vb22-height,100dvh);
+  border: 0;
+  border-radius: 0
+}
+
+html.vilda-phone .vb22 .vb22-outcome-head {
+  padding: max(17px,env(safe-area-inset-top)) max(18px,env(safe-area-inset-right)) var(--space-16px) max(18px,env(safe-area-inset-left));
+  gap: var(--space-12px)
+}
+
+html.vilda-phone .vb22 .vb22-outcome-body {
+  padding: var(--space-18px) max(18px,env(safe-area-inset-right)) var(--space-18px) max(18px,env(safe-area-inset-left))
+}
+
+html.vilda-phone .vb22 .vb22-outcome-actions {
+  padding: 13px max(18px,env(safe-area-inset-right)) max(13px,env(safe-area-inset-bottom)) max(18px,env(safe-area-inset-left));
+  gap: 9px
+}
+
+html.vilda-phone .vb22 .vb22-outcome-actions button {
+  min-height: 48px;
+  padding: 11px var(--space-12px);
+  font-size: 15px
+}
+
+html.vilda-phone .vb22 .vb22-outcome-actions button:not(.vb22-primary) {
+  flex: 0 0 82px
+}
+
+html.vilda-phone .vb22 .vb22-outcome-actions .vb22-primary {
+  flex: 1
+}
+
+/* The application glass theme styles every button and header with !important.
+ * These scoped overrides keep the approved reminder controls flat. */
 .vb22.vb22 button {
   background: #fff!important;
   border: var(--border-hairline) solid var(--vb-line)!important;
@@ -733,12 +1206,31 @@ dialog.vb22.vb22-modal::backdrop {
   min-width: 36px!important
 }
 
+.vb22.vb22 .vb22-outcome-close {
+  width: 44px!important;
+  min-width: 44px!important;
+  border: 0!important;
+  border-radius: var(--radius-12)!important;
+  background: #f3f7f5!important;
+  color: #627f83!important
+}
+
 .vb22.vb22 .vb22-text,
-.vb22.vb22 .vb22-add {
+.vb22.vb22 .vb22-add,
+.vb22.vb22 .vb22-patient-link {
   background: transparent!important;
   border: 0!important;
-  color: var(--vb-teal)!important;
-  border-radius: 0!important
+  border-radius: 0!important;
+  color: var(--vb-teal)!important
+}
+
+.vb22.vb22 .vb22-patient-link {
+  color: #000!important;
+  font-size: 16.8px;
+  font-weight: 400;
+  line-height: normal;
+  padding: 0;
+  min-height: 0
 }
 
 .vb22.vb22 .vb22-primary {
@@ -751,22 +1243,29 @@ dialog.vb22.vb22-modal::backdrop {
   background: transparent!important;
   border: 0!important;
   border-radius: 0!important;
-  color: var(--vb-muted)!important
+  color: #73868d!important
 }
 
 .vb22.vb22 .vb22-tabs button.is-active {
-  color: var(--vb-teal)!important
+  color: #117e85!important
 }
 
 .vb22.vb22 .vb22-filters button {
-  color: #56747a!important
+  background: transparent!important;
+  border-color: transparent!important;
+  color: #617980!important
+}
+
+.vb22.vb22 .vb22-filters button:hover {
+  background: #f7faf9!important
 }
 
 .vb22.vb22 .vb22-filters button.is-active {
   background: var(--vb-soft)!important;
-  border-color: #91babc!important;
-  box-shadow: 0 0 0 1px #c9dfe0!important;
-  color: #096b71!important
+  border-color: transparent!important;
+  box-shadow: none!important;
+  color: #13777e!important;
+  font-weight: 500
 }
 
 .vb22.vb22 .vb22-row {
@@ -774,19 +1273,21 @@ dialog.vb22.vb22-modal::backdrop {
   min-height: 0!important;
   background: transparent!important;
   border: 0!important;
-  border-bottom: var(--border-hairline) solid #e0e9ea!important;
-  border-left: var(--border-pro) solid transparent!important;
-  border-radius: 0!important
+  border-bottom: var(--border-hairline) solid #dce7e2!important;
+  border-left: var(--border-emphasis) solid transparent!important;
+  border-radius: 0!important;
+  transition: none!important;
+  transform: none!important
 }
 
 .vb22.vb22 .vb22-row:hover {
-  background: #f3f8f7!important
+  background: #f4f9f7!important
 }
 
 .vb22.vb22 .vb22-row.is-selected {
-  border-left-color: #218a8f!important;
-  border-bottom-color: #d5e5e4!important;
-  background: #eaf5f3!important;
+  border-left-color: #1f9292!important;
+  border-bottom-color: #d4e7df!important;
+  background: #e6f3ef!important;
   border-radius: var(--radius-8)!important
 }
 
@@ -794,7 +1295,8 @@ dialog.vb22.vb22-modal::backdrop {
   border-left: 0!important
 }
 
-.vb22 .vb22-head {
+.vb22 .vb22-head,
+.vb22 .vb22-outcome-head {
   position: static!important;
   top: auto!important;
   width: auto!important;
@@ -806,4 +1308,8 @@ dialog.vb22.vb22-modal::backdrop {
   border-radius: 0!important;
   border: 0!important;
   background: #fff!important
+}
+
+.vb22 .vb22-outcome-head {
+  border-bottom: var(--border-hairline) solid #e0eae7!important
 }

@@ -210,6 +210,21 @@ sesji głównej korzysta z istniejącego bieżącego szkicu Klirensu; brak takie
 szkicu zachowuje zgodność ze starszym zapisem tylko w sesji głównej. Jawne
 wczytanie pacjenta i „Odtwórz zapis” nadal przyjmują wybrany rekord.
 
+Przy jawnym wczytaniu importer zachowuje w pamięci kopię wybranego rekordu
+przypisaną do operacji. Pierwszy zapis sesji uzupełnia z niej tylko pola,
+których bieżąca strona nie posiada. Własne kontrolki, również jawnie puste,
+mają pierwszeństwo; poprzedni pacjent nie jest źródłem uzupełnienia. Dotyczy
+to zwłaszcza wczytania na DocPro i powrotu na Start. Brakujący w starszym
+rekordzie PAL korzysta z istniejących API, a automatyczna wartość wytworzona
+przy imporcie jest uzgadniana przed referencją „Nowego pomiaru”. Istniejące
+i ręczne wartości pozostają zachowane.
+
+Odtwarzanie skalarów rozróżnia brak klucza od jawnego `null`/pustej wartości:
+te ostatnie czyszczą rozgrzany formularz. Jawna zmiana rekordu resetuje DOB
+przed jego zastosowaniem, również gdy nowy rekord nie zawiera daty.
+Domyślne ustawienia pustych kart Start i techniczne metadane sejfu są
+normalizowane wyłącznie na kopii do porównania; PAL nadal jest porównywany.
+
 `vilda_persist_runtime.js` przyjmuje zapisany kontekst wizyty przed odtwarzaniem
 pól i przeliczaniem wieku. Brak `lastLoadedData` przed pierwszą próbą odtworzenia
 lub podczas trwającego odtwarzania nie usuwa zachowanego `loadedComparisonData`.
