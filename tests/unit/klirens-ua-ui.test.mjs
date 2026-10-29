@@ -150,7 +150,9 @@ function documentFixture() {
 describe('UA — kontrolki zarejestrowane w formularzu i przywracanie innych wzorów', () => {
   it('tworzy kontrolki tylko raz i nie nadpisuje wznowionej sesji ani pól innych zbiórek', () => {
     const { doc } = documentFixture();
-    expect(ui.ensureControls(doc)).toHaveLength(8);
+    expect(ui.ensureControls(doc)).toHaveLength(9);
+    expect(doc.getElementById('UA_collectionSource').type).toBe('hidden');
+    expect(doc.getElementById('UA_collectionSource').value).toBe('assumed-24h');
     expect(doc.getElementById('UA_inputMode').value).toBe('concentration');
     expect(doc.getElementById('UA_collectionHours').value).toBe('24');
     expect(doc.getElementById('UA_concentrationUnit').children.map(option => option.textContent)).toEqual(['mg/dL', 'mg/L', 'mmol/L', 'µmol/L']);
@@ -209,14 +211,14 @@ describe('UA — kontrolki zarejestrowane w formularzu i przywracanie innych wzo
     expect(weight.getAttribute('aria-invalid')).toBe('true');
   });
 
-  it('zamyka automatyczne pytania po odtworzeniu danych, zachowując edytor otwarty przez lekarza', () => {
+  it('pusty nowy czas nie otwiera pytania, a odtworzenie zachowuje edytor otwarty przez lekarza', () => {
     const { doc, weight } = documentFixture();
     ui.ensureControls(doc);
     weight.value = '';
     doc.getElementById('UA_collectionHours').value = '';
     ui.sync(doc, { active: true });
     expect(doc.getElementById('uaWeightEditor').hidden).toBe(false);
-    expect(doc.getElementById('uaDurationEditor').hidden).toBe(false);
+    expect(doc.getElementById('uaDurationEditor').hidden).toBe(true);
     weight.value = '30';
     doc.getElementById('UA_collectionHours').value = '24';
     ui.refresh(doc);

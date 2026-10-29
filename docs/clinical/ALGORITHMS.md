@@ -8061,6 +8061,30 @@ Domyślnie stężenie+objętość, jawne 24 h i znane dane pacjenta; alternatywn
 
 Przypadek bazowy 10 lat/30 kg/5 mmol/L/1200 mL/24 h →240,468 mg/24 h i 8,0156 mg/kg/24 h, pokazane 8,02 przy < 4. Kobieta 45 lat/220 mg ma odmienne odniesienia kamica/hypoPT/PHPT. Niemowlę 2m/5 pozostaje przy≤ 5;3m/4 jest graniczne. Regresje wywołują funkcje produkcyjne. Testy techniczne nie stanowią niezależnej walidacji klinicznej; wyniki desktop/mobile, offline i wszystkich kontroli SHA są w PR.
 
+#### P-KLIRENS-MG-DZM-2026-10-28 — magnez, prosty formularz i odniesienie wieku
+
+Właściciel zaakceptował [makietę desktop/mobile](https://vilda-mg-dzm-20261028.maciej-flader.chatgpt.site) oraz kodowanie pakietu. Szczegółowe źródła, tabele, ograniczenia i syntetyczne kontrakty: [MG_DZM.md](MG_DZM.md). Status techniczny: test regresyjny; nie jest to deklaracja niezależnej walidacji klinicznej.
+
+Nowy `VildaClcrMgDzm.evaluate(input, policy)` przyjmuje wersjonowane dane z `clcr_mg_dzm_reference_data.js`. Stężenie mg/L, mg/dL lub mmol/L i objętość mL/L albo gotowe mg/24 h, mmol/24 h lub mg/kg/24 h. Przelicznik 24,305 mg/mmol (CIAAW abridged2024) dotyczy nowych jednostek; dotychczasowa podstawowa arytmetyka mg/L była poprawna. Naprawiono ujemne wejścia, odrzucanie zera, zerowanie małych dodatnich liczb i zależne od strefy odtwarzanie dawnych dat. Klasyfikacja dokładnego wyniku poprzedza prezentację.
+
+Mayo MAGU: 51–269 mg/24 h, obie płcie, literalne 18–83 lata włącznie. Brak źródłowego pokrycia poniżej18 i powyżej83; nie rozszerza się do84. Granice51/269 należą do zakresu. Przy niepewnym wieku obejmującym niepokrytą populację nie nadaje się zastępczej normy.
+
+Dzieci >2 do <18 lat: pomocniczy kamicowy próg **>88 mg/1,73 m²/24 h**, Pięta2026 tabela3 (Biomolecules16:119) i Penido/Tavares2021 tabela1. To dolny próg z przeglądów dotyczących kamicy, nie pełny pediatryczny RI, górna granica, rozpoznanie niedoboru lub nerkowej utraty. Dokładnie88 jest graniczne, poniżej88 obniżone, ponad88 nieobniżone. BSA liczy istniejący Haycock; ilość dobowa×1,73/BSA daje tę samą jednostkę co próg. Bez masy/wzrostu nadal dostępne jest mg/24 h; gotowe /kg bez masy pozostaje liczbą bez nieuprawnionego porównania. Nie wykorzystuje się niespójnych przeliczeń mmol/kg ani wierszy Mg/Cr ze źródeł punktowych.
+
+Usunięto całą opcję hipomagnezemii i powiązane interpretacje na wyraźne polecenie właściciela; brak automatycznych progów12/24mg i nowej ankiety. EAU<3mmol/24 h u dorosłych opisuje się tylko w Szczegółach jako inny cel kamicowy. Zero jest neutralne z uwagą o oznaczalności, inny czas niż24h daje neutralne oszacowanie bez normy pełnej doby; znany problem zbiórki zachowuje blokadę. Jedna kartaB łączy liczbę i odniesienie w tej samej jednostce, odchylenie bursztynowe, odniesienie neutralne.
+
+Nowy zapis utrwala surową wartość, prezentację, granice, źródło, BSA/metodę, kontekst i czas. Historia nie wywołuje dzisiejszego silnika ani źródła; stare wyniki /kg nie otrzymują nowej normy. Serie /kg, /dobę i /1,73m² rozdzielone. Świadoma edycja legacy bez liczbowego czasu wymaga godzin. Przykład:10lat,30kg,135cm,20mg/L×1500mL/24h→30mg/24h, BSA1,056429m², wynik49,13mg/1,73m²/24h poniżej88. Dorośli:1,25mmol/L×1,6L→48,61mg/24h, poniżej51. Testy wywołują rzeczywiste moduły produkcyjne, zapis/odczyt/edycję i przeglądarkę; wyniki CI podaje PR.
+
+#### P-KLIRENS-DZM-CZAS-NOTATKI-WYBOR-2026-10-28 — wspólne24h i prowadzenie formularza
+
+Decyzja właściciela: nowe DZM mają rzeczywiście wpisane domyślne24h; puste pole nie blokuje, jawny dodatni inny czas pozostaje, zero/ujemne/błędny zapis wymagają korekty. To jawne założenie użytkowe, nie ustalony fakt o próbce. Pełna zbiórka jest założeniem bez sześciu potwierdzeń; znane negatywne fakty nadal blokują. `ClcrCollectionDuration` jest wspólne dla cl24 i wydalań Ca/UA/Mg/Pi/białka/Na/K/Ox/Cit. pH nie jest mnożone przez24/czas; ilorazy i luka surowicy nie dostają pytania o czas. [DZM_COLLECTION_DURATION.md](DZM_COLLECTION_DURATION.md) podaje kontrakt i wpływ względem poprzednich bramek dat/protokołu.
+
+Wsteczny odczyt nie zmienia liczb ani norm. Stare lokalne daty nie są reparsowane do czasu na innym urządzeniu; edycja wymaga utrwalonego lub jawnie podanego czasu. W nowym formularzu gotowy wynik dobowy nie potrzebuje dodatkowej objętości ani czasu.
+
+Notatki Klirensu przedstawiają ten sam kanoniczny pomiar co Badania: zapisaną prezentację, normę i interpretację, bez technicznego drzewa/JSON i nadmiarowych cyfr surowych. Dane techniczne pozostają w magazynie do odtworzenia/edycji; brak migracji lub ponownego oceniania historii. Komentarze lekarza zachowane; Szczegóły/edycja/usunięcie operują na tym samymID. Zwykłe notatki i przypomnienia zachowują swoje zachowanie. [KLIRENS_NOTES.md](KLIRENS_NOTES.md).
+
+Lista formuł ma równe odstępy, zamyka się po kliknięciu poza nią, Escape, opuszczeniu i wyborze, także w powłoce. Powrót zachowuje frazę i formułę, ale nie stan rozwinięcia. Dopasowanie/kolejność bez zmian. Po świadomym wyborze jeden mechanizm wskazuje widoczne brakujące pola bieżącego trybu i przewija do pierwszego lub do wyniku, zachowując wpisane wartości. Nie przewija przy pisaniu/odtwarzaniu sesji. Dotyczy także mobile, gdzie globalny wrapper scrollIntoView jest wyłączony; osobna obsługa używa aktualnej geometrii i respektuje ograniczony ruch. [KLIRENS_SELECTION.md](KLIRENS_SELECTION.md).
+
 #### Zakres i ograniczenia
 
 | Obszar | Wdrożona reguła | Najważniejsze ograniczenia |

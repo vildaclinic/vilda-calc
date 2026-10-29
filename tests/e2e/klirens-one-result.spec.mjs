@@ -174,6 +174,7 @@ test('UAG nie wymaga surowicy ani wieku do liczby, a źródłowy markup zapisu p
 test('czasowy klirens liczy główne 100 mL/min z czterech pól bez wieku, wzrostu i masy', async ({ page }) => {
   await openCalculator(page);
   await selectFormula(page, 'cl24');
+  await page.locator('#clcrCommonDuration').getByRole('button', { name: 'Zmień', exact: true }).click();
   for (const [selector, value] of [
     ['#Scr', '1'], ['#Ucr', '100'], ['#V24', '720'],
     ['#Cl24DurationHours', '12'],

@@ -1,15 +1,6 @@
 (function () {
   const C = { basic: "basic", advanced: "advanced", spot: "spot", pro: "pro" },
-    timedCollectionProtocol = Object.freeze([
-      "collectionStartAt",
-      "collectionEndAt",
-      "collectionStartVoidDiscarded",
-      "collectionFinalVoidIncluded",
-      "collectionNoMissedVoids",
-      "collectionNoSpillage",
-      "collectionNoExtraVoids",
-      "collectionStorageFollowed",
-    ]),
+    timedCollectionDurationFields = Object.freeze(["Cl24DurationHours"]),
     ktvSamplingProtocol = Object.freeze([
       "ktvPostMethod",
       "ktvSameSession",
@@ -139,38 +130,34 @@
       },
       {
         id: "Mg_mgkg",
-        label: "Wydalanie magnezu (DZM; bez automatycznej normy)",
+        label: "Dobowe wydalanie magnezu",
         version: "advanced",
-        requires: [
-          "U_Mg",
-          "V24",
-          "weight",
-          ...timedCollectionProtocol,
-        ],
+        requires: ["MG_concentration", "MG_concentrationUnit", "MG_volume", "MG_volumeUnit", "MG_collectionHours"],
+        note: "Stężenie i objętość albo gotowe wydalanie. Przyjmujemy pełne 24 h; dane pacjenta służą dobraniu odniesienia.",
       },
       {
         id: "PO4_mgkg",
         label: "Wydalanie fosforu nieorganicznego (P\u1D62; DZM)",
         version: "advanced",
-        requires: [ "U_PO4", "V24", ...timedCollectionProtocol],
+        requires: [ "U_PO4", "V24", ...timedCollectionDurationFields],
       },
       {
         id: "Prot_mgkg",
         label: "Białko całkowite w DZM",
         version: "advanced",
-        requires: [ "U_Prot", ...timedCollectionProtocol],
+        requires: [ "U_Prot", ...timedCollectionDurationFields],
       },
       {
         id: "Na_mmol_d",
         label: "Wydalanie\xA0sodu (mmol/d)",
         version: "advanced",
-        requires: [ "U_Na", "V24", ...timedCollectionProtocol],
+        requires: [ "U_Na", "V24", ...timedCollectionDurationFields],
       },
       {
         id: "K_mmol_d",
         label: "Wydalanie\xA0potasu (mmol/d)",
         version: "advanced",
-        requires: [ "U_K", "V24", ...timedCollectionProtocol],
+        requires: [ "U_K", "V24", ...timedCollectionDurationFields],
       },
       {
         id: "KM_Cr",
@@ -339,7 +326,7 @@
           "oxalateReportingEntity",
           "V24",
           "weight",
-          ...timedCollectionProtocol,
+          ...timedCollectionDurationFields,
         ],
       },
       {
@@ -350,7 +337,7 @@
           "U_Cit",
           "V24",
           "weight",
-          ...timedCollectionProtocol,
+          ...timedCollectionDurationFields,
         ],
       },
       {
@@ -363,7 +350,7 @@
         id: "pH24",
         label: "pH dobowej zbi\xF3rki (24\xA0h)",
         version: "pro",
-        requires: ["pH24", ...timedCollectionProtocol],
+        requires: ["pH24", ...timedCollectionDurationFields],
       },
       {
         id: "KTV",
@@ -392,25 +379,10 @@
       ]),
       r = new Set([]),
       timedCollectionIds = new Set([
-        "Ca_mgkg",
-        "Mg_mgkg",
-        "PO4_mgkg",
-        "Prot_mgkg",
-        "Na_mmol_d",
-        "K_mmol_d",
-        "Ox_mgkg",
-        "Cit_mgkg",
+        "PO4_mgkg", "Prot_mgkg", "Na_mmol_d", "K_mmol_d",
+        "Ox_mgkg", "Cit_mgkg", "pH24",
       ]),
-      timedCollectionRequirements = [
-        "collectionStartAt",
-        "collectionEndAt",
-        "collectionStartVoidDiscarded",
-        "collectionFinalVoidIncluded",
-        "collectionNoMissedVoids",
-        "collectionNoSpillage",
-        "collectionNoExtraVoids",
-        "collectionStorageFollowed",
-      ];
+      timedCollectionRequirements = ["Cl24DurationHours"];
     l.forEach((t) => {
       (e.has(t.id) &&
         Array.isArray(t.requires) &&

@@ -96,12 +96,12 @@ describe('CL24 — jawne założenie metody nie zastępuje zapisanych faktów', 
   });
 });
 describe('CL24 — zgodność zapisów i izolacja czasu między pacjentami', () => {
-  it('dawne daty przepisuje na rzeczywiste godziny bez utraty źródłowych danych', () => {
+  it('wstępny adapter zachowuje dawne daty bez odtwarzania nieutrwalonych godzin', () => {
     const original = { ...dates, ui_collectionNoMissedVoids_answer: 'no' };
     const session = { inputs: original };
     migration().normalize(session);
-    expect(session.inputs).toMatchObject({ ...dates, Cl24DurationHours: '12.5',
-      Cl24DurationSource: 'legacy-dates', ui_collectionNoMissedVoids_answer: 'no' });
+    expect(session.inputs).toMatchObject({ ...dates, Cl24DurationHours: '',
+      Cl24DurationSource: '', ui_collectionNoMissedVoids_answer: 'no' });
     expect(original).not.toHaveProperty('Cl24DurationHours');
   });
   it.each(['', '0', '13.5'])(

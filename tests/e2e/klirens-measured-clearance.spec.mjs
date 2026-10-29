@@ -34,7 +34,7 @@ async function restorePatient(page, fields = {}, { legacy = false } = {}) {
       currentVersion: 'advanced', formulaPicker: 'cl24', age: '45', ageMonths: '', ageDays: '',
       sex: 'M', weight: '70', height: '175', Scr: '1', ScrUnit: 'mg/dl', Ucr: '100', V24: '1440',
       ScrAssay: '', creatinineState: 'unknown', suspectedAKI: false, Cl24CollectionProblem: false,
-      ...(old ? {} : { Cl24DurationHours: '24', Cl24DurationSource: 'hours' }), ...values,
+      ...(old ? {} : { Cl24DurationHours: '24', Cl24DurationSource: 'assumed-24h' }), ...values,
     };
     return window.applyClcrSessionSnapshot({ version: 2, currentVersion: 'advanced', selectedFormula: 'cl24', inputs }, {
       source: 'e2e-cl24-synthetic', update: true, dispatchEvents: false, preserveAcrossVersions: true,
@@ -71,6 +71,13 @@ async function openDetails(page) {
   if (await details(page).getAttribute('open') === null) await details(page).locator(':scope > summary').evaluate(node => node.click());
   await expect(details(page)).toHaveAttribute('open', '');
   return details(page);
+}
+
+async function openDurationEditor(page) {
+  if (!await page.locator('#Cl24DurationHours').isVisible()) {
+    await kliknij(page.locator('#clcrCommonDuration .clcr-duration-change'));
+  }
+  await expect(page.locator('#Cl24DurationHours')).toBeVisible();
 }
 
 async function visibleFields(page) {
@@ -182,23 +189,23 @@ async function expectPaintedGauge(page) {
 }
 
 for (const width of [1440, 390, 320]) {
-  test(`cl24 ${width}px: cztery dane, jawne 24 h i jeden wynik z normą pacjenta`, async ({ page }, testInfo) => {
+  test(`cl24 ${width}px: trzy wpisy, domyślne 24 h i jeden wynik z normą pacjenta`, async ({ page }, testInfo) => {
     const errors = [];
     page.on('pageerror', error => errors.push(error.message));
     await openCalculator(page, width);
     await restorePatient(page, { Scr: '', Ucr: '', V24: '', Cl24DurationHours: '', Cl24DurationSource: '' });
-    await expect(page.locator('#Cl24DurationHours')).toHaveValue('');
+    await expect(page.locator('#Cl24DurationHours')).toHaveValue('24');
+    await expect(page.locator('#Cl24DurationSource')).toHaveValue('assumed-24h');
+    await expect(page.locator('#clcrCommonDuration strong')).toHaveText('24 godz.');
+    await expect(page.locator('#Cl24DurationHours')).toBeHidden();
     await expect(card(page)).toHaveCount(0);
-    await expect(page.locator('#clcrDataCompletion')).toContainText('0/4');
+    await expect(page.locator('#clcrDataCompletion')).toContainText('1/4');
     await expect(page.locator('#clcrReadiness')).toContainText('Tutaj pojawi się wynik');
     await page.locator('#Scr').fill('1');
     await page.locator('#Ucr').fill('100');
     await page.locator('#V24').fill('1440');
-    await expect(page.locator('#clcrDataCompletion')).toContainText('3/4');
-    await kliknij(page.locator('#cl24DurationShortcut'));
-    await expect(page.locator('#Cl24DurationHours')).toHaveValue('24');
     await expectResult(page);
-    expect((await visibleFields(page)).map(field => field.id).sort()).toEqual(['Cl24DurationHours', 'Scr', 'ScrUnit', 'Ucr', 'V24']);
+    expect((await visibleFields(page)).map(field => field.id).sort()).toEqual(['Scr', 'ScrUnit', 'Ucr', 'V24']);
     for (const id of ['age', 'sex', 'weight', 'height', 'collectionStartAt', 'collectionEndAt', 'serumSampleAt', 'creatinineState', 'ScrAssay']) {
       await expect(page.locator(`#${id}`)).toBeHidden();
     }
@@ -208,12 +215,16 @@ for (const width of [1440, 390, 320]) {
     await expect(card(page).locator('.clcr-measured-reference-gauge')).toHaveAttribute('aria-label', /100.*86,5.*135,7/);
     await expectPaintedGauge(page);
     const snapshot = await reference(page);
-    expect(snapshot).toMatchObject({ available: true, status: 'within', profileId, value: 100, unit: 'mL/min', durationHours: 24, durationSource: 'hours', bsaMethod: 'Du Bois', referencePreview: true });
+    expect(snapshot).toMatchObject({ available: true, status: 'within', profileId, value: 100, unit: 'mL/min', durationHours: 24, durationSource: 'assumed-24h', bsaMethod: 'Du Bois', referencePreview: true });
     expect(snapshot.absoluteRange.lower).toBeCloseTo(adultBounds[0], 8);
     expect(snapshot.absoluteRange.upper).toBeCloseTo(adultBounds[1], 8);
     expect(await inputs(page)).toMatchObject({ ScrAssay: '', creatinineState: 'unknown', suspectedAKI: false });
     await expectGeometry(page, width);
     await screenshot(page, testInfo, `cl24-${width}-form.png`);
+    await openDurationEditor(page);
+    expect((await visibleFields(page)).map(field => field.id).sort()).toEqual(['Cl24DurationHours', 'Scr', 'ScrUnit', 'Ucr', 'V24']);
+    await expectGeometry(page, width);
+    await kliknij(page.locator('#clcrCommonDuration .clcr-duration-change'));
     const expanded = await openDetails(page);
     await expect(expanded.locator(':scope > summary')).toHaveText('Szczegóły i źródła');
     await expect(expanded).toContainText(/24 h = 1440 min/);
@@ -227,24 +238,32 @@ for (const width of [1440, 390, 320]) {
   });
 }
 
-test('cl24: jednostki i rzeczywisty czas z przecinkiem; pusty lub błędny czas nie staje się 24 h', async ({ page }) => {
+test('cl24: jednostki i rzeczywisty czas z przecinkiem; pusty nowy czas wraca do 24 h, błędny pozostaje błędem', async ({ page }) => {
   await openCalculator(page);
   await restorePatient(page);
   await page.locator('#ScrUnit').selectOption('umol');
   await page.locator('#Scr').fill('88.4');
   await expectResult(page);
+  await openDurationEditor(page);
   await page.locator('#Cl24DurationHours').fill('12,5');
   await expectResult(page, 192, 'warning');
   expect(await reference(page)).toMatchObject({ available: true, status: 'above', durationHours: 12.5, durationSource: 'hours' });
   await expect(card(page).locator('.clcr-measured-protocol-note')).toContainText('Porównanie z normą dla zbiórki dobowej.');
   const expanded = await openDetails(page);
   await expect(expanded).toContainText('12,5 h = 750 min');
-  for (const value of ['0', '-1', 'abc', '']) {
+  for (const value of ['0', '-1', 'abc']) {
     await page.locator('#Cl24DurationHours').fill(value);
     await expect(card(page)).toHaveCount(0);
     await expect(page.locator('#Cl24DurationHours')).toHaveValue(value);
     expect(await page.evaluate(() => window.canComputeFormula('cl24'))).toBe(false);
   }
+  await page.locator('#Cl24DurationHours').fill('');
+  await expectResult(page);
+  await expect(page.locator('#Cl24DurationHours')).toHaveValue('');
+  expect(await reference(page)).toMatchObject({ durationHours: 24, durationSource: 'assumed-24h' });
+  await page.locator('#Cl24DurationHours').blur();
+  await expect(page.locator('#Cl24DurationHours')).toHaveValue('24');
+  await expectResult(page);
 });
 
 test('cl24: norma zależy od wieku, płci i BSA; dziecko nie wymaga płci, liczba nie ma progu eGFR', async ({ page }) => {
@@ -359,16 +378,25 @@ test('cl24: znany problem zbiórki i przeciwwskazania blokują, dawne niezaznacz
   expect(await page.evaluate(() => window.currentVersion)).toBe('advanced');
 });
 
-test('cl24: migracja zapisanych dat jest jednorazowa; przełączenie i czyszczenie nie tworzą czasu ani starej normy', async ({ page }) => {
+test('cl24: stare daty wymagają jawnego czasu; przełączenie zachowuje godziny, a czyszczenie rozpoczyna nową zbiórkę 24 h', async ({ page }) => {
   await openCalculator(page);
   const dates = { collectionStartAt: '2026-10-01T08:00', collectionEndAt: '2026-10-02T08:00' };
   await restorePatient(page, dates, { legacy: true });
+  await expect(page.locator('#Cl24DurationHours')).toHaveValue('');
+  await expect(page.locator('#Cl24DurationHours')).toBeVisible();
+  await expect(page.locator('#Cl24DurationSource')).toHaveValue('historical-missing');
+  await expect(page.locator('#clcrCommonDuration strong')).toHaveText('Uzupełnij czas');
+  await expect(card(page)).toHaveCount(0);
+  expect(await page.evaluate(() => window.canComputeFormula('cl24'))).toBe(false);
+  await page.locator('#Cl24DurationHours').fill('24');
   await expect(page.locator('#Cl24DurationHours')).toHaveValue('24');
   await expectResult(page);
-  expect((await reference(page)).durationSource).toBe('legacy-dates');
+  expect((await reference(page)).durationSource).toBe('hours');
   await restorePatient(page, { ...dates, Cl24DurationHours: '', Cl24DurationSource: '' });
-  await expect(page.locator('#Cl24DurationHours')).toHaveValue('');
-  await expect(card(page)).toHaveCount(0);
+  await expect(page.locator('#Cl24DurationHours')).toHaveValue('24');
+  await expect(page.locator('#Cl24DurationSource')).toHaveValue('assumed-24h');
+  await expectResult(page);
+  await openDurationEditor(page);
   await page.locator('#Cl24DurationHours').fill('12,5');
   await expectResult(page, 192, 'warning');
   await selectFormula(page, 'cg_norm');
@@ -378,21 +406,25 @@ test('cl24: migracja zapisanych dat jest jednorazowa; przełączenie i czyszczen
   await selectFormula(page);
   await expect(page.locator('#Cl24DurationHours')).toHaveValue('12,5');
   await expectResult(page, 192, 'warning');
+  await openDurationEditor(page);
   await page.locator('#Cl24DurationHours').clear();
+  await expectResult(page);
+  await page.locator('#Cl24DurationHours').blur();
   await selectFormula(page, 'cg_norm');
   await selectFormula(page);
-  await expect(page.locator('#Cl24DurationHours')).toHaveValue('');
-  await expect(card(page)).toHaveCount(0);
+  await expect(page.locator('#Cl24DurationHours')).toHaveValue('24');
+  await expect(page.locator('#Cl24DurationSource')).toHaveValue('assumed-24h');
+  await expectResult(page);
   await restorePatient(page, { ...dates, Cl24CollectionProblem: true, ui_collectionNoMissedVoids_answer: 'no' });
   await kliknij(page.locator('#clearBtn'));
   await page.waitForFunction(() => window.clcrIsResetting !== true);
   const cleared = await inputs(page);
-  expect(cleared.Cl24DurationHours).toBe('');
-  expect(cleared.Cl24DurationSource).toBe('');
+  expect(cleared.Cl24DurationHours).toBe('24');
+  expect(cleared.Cl24DurationSource).toBe('assumed-24h');
   expect(cleared.Cl24CollectionProblem).toBe(false);
   expect(cleared.ui_collectionNoMissedVoids_answer || '').toBe('');
   await selectFormula(page);
-  await expect(page.locator('#Cl24DurationHours')).toHaveValue('');
+  await expect(page.locator('#Cl24DurationHours')).toHaveValue('24');
   await expect(card(page)).toHaveCount(0);
 });
 
@@ -431,7 +463,7 @@ test('cl24: zapis, historia i eksporty zachowują jeden wynik, źródło normy, 
   expect(saved.series[0].points).toHaveLength(1);
   expect(saved.series[0].points[0]).toMatchObject({ valueNum: 100, norm: saved.points[0].norm });
   const session = await page.evaluate(() => window.buildClcrSessionSnapshot());
-  expect(session.inputs).toMatchObject({ Cl24DurationHours: '24', Cl24DurationSource: 'hours', Cl24CollectionProblem: false });
+  expect(session.inputs).toMatchObject({ Cl24DurationHours: '24', Cl24DurationSource: 'assumed-24h', Cl24CollectionProblem: false });
   await restorePatient(page, { age: '82', V24: '1008' });
   await expectResult(page, 70);
   expect(await page.evaluate(() => window.ClcrVisitSave.buildSeriesFromNotes(window.__cl24SavedNotes, { formulaId: 'cl24' }))).toEqual(saved.series);

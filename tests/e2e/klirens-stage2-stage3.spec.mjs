@@ -72,22 +72,30 @@ async function setPatient(page, {
 
 async function completeTimedCollection(page, {
   volume = 1000,
-  start = '2026-07-27T08:00',
-  end = '2026-07-28T08:00'
+  hours = 24
 } = {}) {
   await page.locator('#V24').fill(String(volume));
-  await page.locator('#collectionStartAt').fill(start);
-  await page.locator('#collectionEndAt').fill(end);
-  for (const id of [
-    'collectionStartVoidDiscarded',
-    'collectionFinalVoidIncluded',
-    'collectionNoMissedVoids',
-    'collectionNoSpillage',
-    'collectionNoExtraVoids',
-    'collectionStorageFollowed'
-  ]) {
-    await zaznacz(page.locator(`#${id}`));
+  const duration = page.locator('#Cl24DurationHours');
+  if (hours !== 24) {
+    // This file deliberately aggregates several panels in the legacy broad
+    // fixture. Enter a nondefault time through the real single-formula UI,
+    // then return to that fixture without changing the entered specimen.
+    const broadLevel = await page.evaluate(() => document.documentElement.classList.contains('clcr-legacy-broad') ? window.currentVersion : null);
+    if (broadLevel) await page.evaluate(() => window.ClcrUiWorkflow.selectFormula('cl24', { guide: false }));
+    if (!await duration.isVisible()) {
+      await kliknij(page.locator('#clcrCommonDuration').getByRole('button', { name: 'Zmień', exact: true }));
+    }
+    await duration.fill(String(hours));
+    if (broadLevel) await page.evaluate(level => {
+      document.getElementById('formulaPicker').value = '';
+      window.applyVersion(level);
+      window.clcrUpdate();
+    }, broadLevel);
   }
+  // A fresh collection is already 24 h; unrelated legacy dates and six checked
+  // protocol boxes are no longer prerequisites for its numerical result.
+  await expect(duration).toHaveValue(String(hours));
+  await expect(page.locator('#Cl24DurationSource')).toHaveValue(hours === 24 ? 'assumed-24h' : 'hours');
 }
 
 async function completeAdultKtv(page, overrides = {}) {
@@ -302,8 +310,7 @@ test('progi DZM pozostają wstrzymane, gdy bieżąca zbiórka nie trwa dokładni
   await setPatient(page, { age: 50, sex: 'F' });
   await completeTimedCollection(page, {
     volume: 500,
-    start: '2026-07-28T08:00',
-    end: '2026-07-28T20:00'
+    hours: 12
   });
   for (const id of [
     'stoneMetabolicEvaluationContext',

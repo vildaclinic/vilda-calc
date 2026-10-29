@@ -50,6 +50,14 @@ async function setPatient(page, {
   await page.locator('#height').fill(String(height));
 }
 
+async function setCollectionHours(page, hours) {
+  const control = page.locator('#Cl24DurationHours');
+  if (!await control.isVisible()) {
+    await page.locator('#clcrCommonDuration').getByRole('button', { name: 'Zmień', exact: true }).click();
+  }
+  await control.fill(String(hours));
+}
+
 test('nie podstawia domyślnie płci do wzorów zależnych od płci', async ({ page }) => {
   await openCalculator(page);
   await setPatient(page, { age: 20, sex: '' });
@@ -317,7 +325,7 @@ test('frakcje wydalania zakładają sparowane próbki; UAG i protokół obciąż
   await expect(page.locator('#elecInfo .out-of-range')).toHaveCount(0);
 });
 
-test('czasowy klirens liczy z czterech pól i blokuje znany problem ze zbiórką', async ({ page }) => {
+test('czasowy klirens domyślnie liczy dla 24 h, pozwala zmienić czas i blokuje znany problem ze zbiórką', async ({ page }) => {
   await openCalculator(page);
   await page.locator('#formulaPicker').selectOption('cl24');
   await page.waitForFunction(() => window.clcrIsResetting !== true);
@@ -325,10 +333,13 @@ test('czasowy klirens liczy z czterech pól i blokuje znany problem ze zbiórką
   await page.locator('#Ucr').fill('100');
   await page.locator('#V24').fill('720');
   const result = page.locator('#clcrResultReport .clcr-result-card[data-clcr-series="cl24"]');
-  await expect(page.locator('#Cl24DurationHours')).toHaveValue('');
-  await expect(result).toHaveCount(0);
+  await expect(page.locator('#Cl24DurationHours')).toHaveValue('24');
+  await expect(page.locator('#Cl24DurationSource')).toHaveValue('assumed-24h');
+  await expect(page.locator('#Cl24DurationHours')).toBeHidden();
+  await expect(result.locator('.clcr-result-value')).toHaveText('50');
+  await expect(result).toHaveAttribute('data-clcr-value', '50');
 
-  await page.locator('#Cl24DurationHours').fill('12');
+  await setCollectionHours(page, 12);
   await expect(result.locator('.clcr-result-value')).toHaveText('100');
   await expect(result).toHaveAttribute('data-clcr-value', '100');
   await expect(result).toHaveAttribute('data-clcr-category', '');
@@ -343,7 +354,7 @@ test('czasowy klirens liczy z czterech pól i blokuje znany problem ze zbiórką
   ]) await expect(page.locator(`#${id}`)).not.toBeChecked();
 
   // The entered elapsed time changes the number; it is not silently 24 hours.
-  await page.locator('#Cl24DurationHours').fill('24');
+  await setCollectionHours(page, 24);
   await expect(result.locator('.clcr-result-value')).toHaveText('50');
   await expect(result).toHaveAttribute('data-clcr-value', '50');
 
@@ -356,28 +367,39 @@ test('czasowy klirens liczy z czterech pól i blokuje znany problem ze zbiórką
   await expect(result.locator('.clcr-result-value')).toHaveText('50');
 });
 
-test('blokuje ilości dobowe przy niepotwierdzonej zbiórce i nie wymaga do nich Scr', async ({ page }) => {
+test('ilości dobowe zakładają pełną zbiórkę 24 h bez Scr i blokują jawny problem zbiórki', async ({ page }) => {
   await openCalculator(page, 'advanced');
   await setPatient(page, { age: 50 });
   await page.locator('#U_Prot').fill('1000');
-  await page.locator('#collectionStartAt').fill('2026-07-27T08:00');
-  await page.locator('#collectionEndAt').fill('2026-07-28T08:00');
+  await page.locator('#V24').fill('1000');
+  await expect(page.locator('#Cl24DurationHours')).toHaveValue('24');
+  await expect(page.locator('#Cl24DurationSource')).toHaveValue('assumed-24h');
+  for (const id of [
+    'collectionStartVoidDiscarded', 'collectionFinalVoidIncluded',
+    'collectionNoMissedVoids', 'collectionNoSpillage',
+    'collectionNoExtraVoids', 'collectionStorageFollowed'
+  ]) await expect(page.locator(`#${id}`)).not.toBeChecked();
+  await expect(page.locator('#elecInfo')).toContainText(/1000[.,]0\s*mg\/24\s*h/);
+  await expect(page.locator('#Scr')).toHaveValue('');
+  await expect(page.locator('#serumSampleDuringCollection')).not.toBeChecked();
 
+  // A recorded collection problem is an explicit contradiction. Unchecked
+  // legacy confirmation boxes above are merely unanswered questions.
+  await page.evaluate(() => {
+    const control = document.getElementById('Cl24CollectionProblem');
+    control.checked = true;
+    control.dispatchEvent(new Event('change', { bubbles: true }));
+    window.clcrUpdate();
+  });
   await expect(page.locator('#elecInfo')).toContainText('Nie obliczono wartości /24 h');
   await expect(page.locator('#elecInfo')).not.toContainText(/1000[.,]0\s*mg\/24\s*h/);
-
-  for (const id of [
-    'collectionStartVoidDiscarded',
-    'collectionFinalVoidIncluded',
-    'collectionNoMissedVoids',
-    'collectionNoSpillage',
-    'collectionNoExtraVoids',
-    'collectionStorageFollowed'
-  ]) {
-    await page.locator(`#${id}`).check();
-  }
+  await page.evaluate(() => {
+    const control = document.getElementById('Cl24CollectionProblem');
+    control.checked = false;
+    control.dispatchEvent(new Event('change', { bubbles: true }));
+    window.clcrUpdate();
+  });
   await expect(page.locator('#elecInfo')).toContainText(/1000[.,]0\s*mg\/24\s*h/);
-  await expect(page.locator('#serumSampleDuringCollection')).not.toBeChecked();
 });
 
 test('czas pobrania Scr poza zbiórką nie blokuje uproszczonego CrCl ani nie zmienia dawnych danych', async ({ page }) => {
@@ -387,7 +409,8 @@ test('czas pobrania Scr poza zbiórką nie blokuje uproszczonego CrCl ani nie zm
   await page.locator('#Scr').fill('1');
   await page.locator('#Ucr').fill('100');
   await page.locator('#V24').fill('1440');
-  await page.locator('#Cl24DurationHours').fill('24');
+  await expect(page.locator('#Cl24DurationHours')).toHaveValue('24');
+  await expect(page.locator('#Cl24DurationSource')).toHaveValue('assumed-24h');
   const result = page.locator('#clcrResultReport .clcr-result-card[data-clcr-series="cl24"]');
   await expect(result.locator('.clcr-result-value')).toHaveText('100');
 
@@ -416,4 +439,48 @@ test('czas pobrania Scr poza zbiórką nie blokuje uproszczonego CrCl ani nie zm
   await expect(page.locator('#serumSampleDuringCollection')).not.toBeChecked();
   expect(await page.evaluate(() => window.ClcrUiWorkflow.getFormulaReadiness('cl24').valueReady)).toBe(true);
   await expect(page.locator('#clcrInfo')).not.toContainText('mieszczący się w tym przedziale');
+});
+
+
+test('dawne daty bez utrwalonego czasu wymagają jawnych godzin i nigdy nie wywołują Date.parse', async ({ page }) => {
+  await openCalculator(page);
+  const legacyDates = { collectionStartAt: '2026-07-27T08:00', collectionEndAt: '2026-07-28T08:00' };
+  await page.evaluate(dates => {
+    window.__clcrLegacyCollectionDateParses = [];
+    const priorParse = Date.parse;
+    Date.parse = value => {
+      if (Object.values(dates).includes(String(value))) {
+        window.__clcrLegacyCollectionDateParses.push(String(value));
+        throw new Error('Historical collection dates must not be parsed');
+      }
+      return priorParse(value);
+    };
+    const applied = window.applyClcrSessionSnapshot({ selectedFormula: 'cl24', inputs: { Scr: '1', Ucr: '100', V24: '1440', ...dates } }, { update: true });
+    if (!applied) throw new Error('Legacy collection restore failed');
+  }, legacyDates);
+  const duration = page.locator('#Cl24DurationHours');
+  const result = page.locator('#clcrResultReport .clcr-result-card[data-clcr-series="cl24"]');
+  await expect(duration).toHaveValue('');
+  await expect(page.locator('#Cl24DurationSource')).toHaveValue('historical-missing');
+  await expect(duration).toBeVisible();
+  await expect(page.locator('#clcrCommonDuration')).toContainText('Uzupełnij czas');
+  await expect(result).toHaveCount(0);
+  for (const hours of ['0', '-1', 'abc', '']) {
+    await setCollectionHours(page, hours);
+    await page.locator('#Scr').focus();
+    await expect(duration).toHaveValue(hours);
+    await expect(page.locator('#Cl24DurationSource')).toHaveValue('historical-missing');
+    await expect(result).toHaveCount(0);
+  }
+  const saved = await page.evaluate(() => window.buildClcrSessionSnapshot());
+  await page.evaluate(snapshot => window.applyClcrSessionSnapshot(snapshot, { update: true }), saved);
+  await expect(duration).toHaveValue('');
+  await expect(page.locator('#Cl24DurationSource')).toHaveValue('historical-missing');
+  await expect(result).toHaveCount(0);
+  await setCollectionHours(page, 24);
+  await expect(result.locator('.clcr-result-value')).toHaveText('100');
+  await expect(result).toHaveAttribute('data-clcr-value', '100');
+  await expect(page.locator('#Cl24DurationSource')).toHaveValue('hours');
+  for (const [id, value] of Object.entries(legacyDates)) await expect(page.locator('#' + id)).toHaveValue(value);
+  expect(await page.evaluate(() => window.__clcrLegacyCollectionDateParses)).toEqual([]);
 });

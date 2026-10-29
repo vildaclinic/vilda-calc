@@ -1,0 +1,10 @@
+.clcr-duration-disclosure { grid-column: 1 / -1; min-width: 0; margin-top: var(--space-12px); padding-top: var(--space-18px); border-top: var(--border-hairline) solid var(--clcr-border-soft, #d7e5e8); }
+.clcr-duration-row { display: flex; justify-content: space-between; align-items: center; gap: var(--space-16px); }
+.clcr-duration-row > div { display: grid; gap: 7px; min-width: 0; }
+.clcr-duration-row span { color: var(--clcr-muted, #5d787e); font-size: 12px; }
+.clcr-duration-row strong { color: var(--clcr-heading, #173e43); font-size: 14px; line-height: 1.5; }
+.clcr-duration-change { min-height: 48px; padding: var(--space-10px) var(--space-16px); border: var(--border-hairline) solid var(--clcr-border-soft, #d7e5e8); border-radius: var(--radius-10); background: #fff; color: var(--clcr-primary-dark, #006b76); font: inherit; font-size: 14px; font-weight: 650; cursor: pointer; }
+.clcr-duration-editor { margin-top: var(--space-16px); }
+.clcr-duration-editor input { min-height: 48px; font-size: 16px; }
+.clcr-duration-hint { margin: var(--space-10px) 0 0; font-size: 12px; line-height: 1.6; color: var(--clcr-muted, #5d787e); }
+.clcr-duration-disclosure [hidden] { display: none !important; }

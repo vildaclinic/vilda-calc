@@ -6,7 +6,7 @@
 })(typeof window !== "undefined" ? window : globalThis, function (root) {
   "use strict";
   const ENGINE_VERSION = 1, MOLAR_MASS = 168.11;
-  const FIELD_IDS = Object.freeze(["UA_inputMode", "UA_concentration", "UA_concentrationUnit", "UA_volume", "UA_volumeUnit", "UA_reportedValue", "UA_reportedUnit", "UA_collectionHours"]);
+  const FIELD_IDS = Object.freeze(["UA_inputMode", "UA_concentration", "UA_concentrationUnit", "UA_volume", "UA_volumeUnit", "UA_reportedValue", "UA_reportedUnit", "UA_collectionHours", "UA_collectionSource"]);
   const COLLECTION_FIELDS = Object.freeze(["collectionStartVoidDiscarded", "collectionFinalVoidIncluded", "collectionNoMissedVoids", "collectionNoSpillage", "collectionNoExtraVoids", "collectionStorageFollowed"]);
   const CONTEXT_FIELD_IDS = Object.freeze(["weight", "age", "ageMonths", "ageDays", "sex", ...COLLECTION_FIELDS, ...COLLECTION_FIELDS.map(id => "ui_" + id + "_answer"), "collectionStartAt", "collectionEndAt", "Cl24CollectionProblem"]);
   const own = (value, key) => Object.prototype.hasOwnProperty.call(value || {}, key);
@@ -98,7 +98,11 @@
   }
   function inputData(input) {
     const data = object(input) ? input : {};
-    return { mode: own(data, "mode") ? primitive(data.mode) : "concentration", concentration: primitive(data.concentration), concentrationUnit: own(data, "concentrationUnit") ? primitive(data.concentrationUnit) : "mg/dL", volume: primitive(data.volume), volumeUnit: own(data, "volumeUnit") ? primitive(data.volumeUnit) : "mL", reportedValue: primitive(data.reportedValue), reportedUnit: own(data, "reportedUnit") ? primitive(data.reportedUnit) : "mg/24h", hours: own(data, "hours") ? primitive(data.hours) : "24", weightKg: primitive(data.weightKg), ageYears: absent(data.ageYears) ? null : primitive(data.ageYears), sex: typeof data.sex === "string" && ["M", "F"].includes(data.sex.toUpperCase()) ? data.sex.toUpperCase() : null, agePrecision: data.agePrecision === "completed-years" ? "completed-years" : "exact", knownFacts: facts(data) };
+    const rawHours = own(data, "hours") ? primitive(data.hours) : "";
+    const durationNeedsConfirmation = absent(rawHours) && (data.durationNeedsConfirmation === true || data.durationSource === "historical-missing");
+    const hours = !durationNeedsConfirmation && absent(rawHours) ? "24" : rawHours;
+    const durationSource = durationNeedsConfirmation ? "historical-missing" : absent(rawHours) || data.durationSource === "assumed-24h" && Number(String(hours).replace(",", ".")) === 24 ? "assumed-24h" : ["hours", "captured", "legacy-dates"].includes(data.durationSource) ? data.durationSource : "hours";
+    return { mode: own(data, "mode") ? primitive(data.mode) : "concentration", concentration: primitive(data.concentration), concentrationUnit: own(data, "concentrationUnit") ? primitive(data.concentrationUnit) : "mg/dL", volume: primitive(data.volume), volumeUnit: own(data, "volumeUnit") ? primitive(data.volumeUnit) : "mL", reportedValue: primitive(data.reportedValue), reportedUnit: own(data, "reportedUnit") ? primitive(data.reportedUnit) : "mg/24h", hours, durationSource, durationNeedsConfirmation, weightKg: primitive(data.weightKg), ageYears: absent(data.ageYears) ? null : primitive(data.ageYears), sex: typeof data.sex === "string" && ["M", "F"].includes(data.sex.toUpperCase()) ? data.sex.toUpperCase() : null, agePrecision: data.agePrecision === "completed-years" ? "completed-years" : "exact", knownFacts: facts(data) };
   }
   function ageFrom(values, context) {
     if (own(values, "age")) {
@@ -113,10 +117,12 @@
   function inputFromValues(values, context) {
     const data = object(values) ? values : {}, supplied = object(context) ? context : {};
     let hours = own(data, "UA_collectionHours") ? data.UA_collectionHours : own(supplied, "collectionHours") ? supplied.collectionHours : finite(supplied.durationMinutes) ? supplied.durationMinutes / 60 : finite(supplied.collectionAnalysis?.durationMinutes) ? supplied.collectionAnalysis.durationMinutes / 60 : "24";
-    if (!own(data, "UA_collectionHours") && !own(supplied, "collectionHours") && !finite(supplied.durationMinutes) && !finite(supplied.collectionAnalysis?.durationMinutes) && (!absent(data.collectionStartAt) || !absent(data.collectionEndAt))) hours = "";
+    const historicalDuration = data.UA_durationNeedsConfirmation === true || data.UA_collectionSource === "historical-missing" || (!own(data, "UA_collectionSource") && absent(hours) && (!absent(data.collectionStartAt) || !absent(data.collectionEndAt)));
+    if (!own(data, "UA_collectionHours") && !own(supplied, "collectionHours") && !finite(supplied.durationMinutes) && !finite(supplied.collectionAnalysis?.durationMinutes) && (!absent(data.collectionStartAt) || !absent(data.collectionEndAt))) { hours = ""; }
+    const durationNeedsConfirmation = historicalDuration || (absent(hours) && !own(data, "UA_collectionSource") && (!absent(data.collectionStartAt) || !absent(data.collectionEndAt)));
     const knownFacts = { ...facts(supplied), ...facts(data) };
     for (const id of ["age", "ageMonths", "ageDays", "collectionStartAt", "collectionEndAt"]) if (own(data, id)) knownFacts[id] = primitive(data[id]);
-    return inputData({ mode: own(data, "UA_inputMode") ? data.UA_inputMode : "concentration", concentration: own(data, "UA_concentration") ? data.UA_concentration : data.U_UA ?? "", concentrationUnit: own(data, "UA_concentrationUnit") ? data.UA_concentrationUnit : "mg/dL", volume: own(data, "UA_volume") ? data.UA_volume : data.V24 ?? "", volumeUnit: own(data, "UA_volumeUnit") ? data.UA_volumeUnit : "mL", reportedValue: data.UA_reportedValue ?? "", reportedUnit: own(data, "UA_reportedUnit") ? data.UA_reportedUnit : "mg/24h", hours, weightKg: data.weight ?? supplied.weightKg ?? "", ageYears: ageFrom(data, supplied), agePrecision: own(data, "age") && Number.isInteger(parseValue(data.age)?.value) && absent(data.ageMonths) && absent(data.ageDays) ? "completed-years" : supplied.agePrecision, sex: own(data, "sex") ? data.sex : supplied.sex, knownFacts });
+    return inputData({ mode: own(data, "UA_inputMode") ? data.UA_inputMode : "concentration", concentration: own(data, "UA_concentration") ? data.UA_concentration : data.U_UA ?? "", concentrationUnit: own(data, "UA_concentrationUnit") ? data.UA_concentrationUnit : "mg/dL", volume: own(data, "UA_volume") ? data.UA_volume : data.V24 ?? "", volumeUnit: own(data, "UA_volumeUnit") ? data.UA_volumeUnit : "mL", reportedValue: data.UA_reportedValue ?? "", reportedUnit: own(data, "UA_reportedUnit") ? data.UA_reportedUnit : "mg/24h", hours, durationSource: data.UA_collectionSource || supplied.durationSource, durationNeedsConfirmation, weightKg: data.weight ?? supplied.weightKg ?? "", ageYears: ageFrom(data, supplied), agePrecision: own(data, "age") && Number.isInteger(parseValue(data.age)?.value) && absent(data.ageMonths) && absent(data.ageDays) ? "completed-years" : supplied.agePrecision, sex: own(data, "sex") ? data.sex : supplied.sex, knownFacts });
   }
   function readInputFromDocument(documentRef, context) {
     const doc = documentRef || root?.document, vault = doc?.defaultView?.__vildaClcrVersionValueVault || root?.__vildaClcrVersionValueVault || {}, values = {};

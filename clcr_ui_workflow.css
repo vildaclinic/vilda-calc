@@ -1359,6 +1359,7 @@ html[data-clcr-workflow-ui="1"] #U_PCR {
 }
 
 @media (prefers-reduced-motion: reduce) {
+  html[data-clcr-workflow-ui="1"],
   html[data-clcr-workflow-ui="1"] *,
   html[data-clcr-workflow-ui="1"] *::before,
   html[data-clcr-workflow-ui="1"] *::after {
@@ -2675,4 +2676,79 @@ html[data-clcr-workflow-ui="1"] #clcrStartPatientMeasurementBtn[hidden] { displa
     grid-template-columns: repeat(2, minmax(0, 1fr));
     align-items: center;
   }
+}
+
+/* Formula chooser: equal row gaps; keep the global glass-button treatment out
+   of this small list. The input/popup widths never depend on result labels. */
+html[data-clcr-workflow-ui="1"] #formulaSearch {
+  min-height: 52px;
+  font-size: 16px;
+}
+html[data-clcr-workflow-ui="1"] #formulaLive {
+  display: grid;
+  gap: var(--space-8px);
+  padding: var(--space-8px);
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  bottom: auto;
+  left: 0;
+  max-height: var(--clcr-search-height, 440px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+  background: #f8fbfc;
+}
+html[data-clcr-workflow-ui="1"] #formulaLive[data-placement="above"] {
+  top: auto;
+  bottom: calc(100% + 8px);
+}
+html[data-clcr-workflow-ui="1"] #formulaLive .clcr-search-result {
+  display: flex !important;
+  flex-direction: column;
+  justify-content: center;
+  align-items: stretch;
+  gap: 5px;
+  min-height: 70px;
+  margin: 0 !important;
+  padding: var(--space-12px) var(--space-14px) !important;
+  border: var(--border-hairline) solid #e0eaed !important;
+  border-radius: var(--radius-10) !important;
+  background: #fff !important;
+  color: var(--clcr-text) !important;
+  box-shadow: none !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  transform: none !important;
+}
+html[data-clcr-workflow-ui="1"] #formulaLive .clcr-search-result:hover,
+html[data-clcr-workflow-ui="1"] #formulaLive .clcr-search-result:focus-visible,
+html[data-clcr-workflow-ui="1"] #formulaLive .clcr-search-result[aria-selected="true"] {
+  border-color: #79b9c0 !important;
+  background: #edf7f8 !important;
+  box-shadow: inset 3px 0 var(--primary) !important;
+  outline: none !important;
+  transform: none !important;
+}
+html[data-clcr-workflow-ui="1"] #formulaLive .clcr-search-result__name {
+  font-size: 15px;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+html[data-clcr-workflow-ui="1"] #formulaLive .clcr-search-result__meta {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.45;
+}
+/* This is an empty-input cue, not a clinical abnormality flag. Use controls
+   rather than display:contents labels; existing invalid-value red wins. */
+html[data-clcr-workflow-ui="1"] #clcrWorkspace #clcrForm :is(input,select,textarea).clcr-missing-input:not(.error):not([aria-invalid="true"]) {
+  border-color: #bd861c !important;
+  background: #fff9ed !important;
+  box-shadow: 0 0 0 1px #bd861c33 !important;
+}
+@media (max-width: 700px) {
+  html[data-clcr-workflow-ui="1"] #formulaLive .clcr-search-result { min-height: 76px; padding: var(--space-12px) !important; }
+  html[data-clcr-workflow-ui="1"] #formulaLive .clcr-search-result__name { font-size: 14px; }
+  html[data-clcr-workflow-ui="1"] #formulaLive .clcr-search-result__meta { font-size: 11px; line-height: 1.5; }
 }

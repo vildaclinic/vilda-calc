@@ -271,6 +271,7 @@ test('Cockcroft i zmierzony klirens DZM zachowują własne jednostki bez kategor
   await expect(page.locator('.clcr-result-assumptions[data-clcr-formula="cg"]')).not.toContainText(/IFCC|IDMS/);
 
   await selectFormula(page, 'cl24');
+  await page.locator('#clcrCommonDuration').getByRole('button', { name: 'Zmień', exact: true }).click();
   for (const [selector, value] of [
     ['#Scr', '1'], ['#Ucr', '100'], ['#V24', '720'],
     ['#Cl24DurationHours', '12'],
