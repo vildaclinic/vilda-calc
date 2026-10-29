@@ -3744,6 +3744,7 @@ const OPTIONAL_ASSETS = [
   '/vilda_kosz_zapisow.js?v=2',
   '/vilda_kosz_zapisow.js?v=3',
   '/vilda_kosz_zapisow.js?v=4',
+  '/vilda_kosz_zapisow.js?v=5',
   '/inline_index_02.js?v=11',
   '/inline_index_02.js?v=12',
   '/inline_index_02.js?v=13',

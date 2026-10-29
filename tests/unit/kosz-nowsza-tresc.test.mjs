@@ -776,13 +776,22 @@ describe('P-POZNIEJSZA-POPRAWKA: kosz i „Przywróć” liczą na tej samej osi
   }
 
   for (const kolejnosc of KOLEJNOSCI_8) {
-    it(`K5 (E4b) „Scal pacjentów” X → Y → Z na K, P (bez wiedzy) poprawia x w starej X, K później daje x do kosza (${kolejnosc}): w koszu poprawka`, async () => {
-      const { st } = await przebieg(trzyKarty, async ({ P, K, X, Y, Z, sid }) => {
+    // P-KOSZ-PO-KLUCZU (E3): wpis kosza x (pod Z) znajduje x pod starą X po snapshotId — x znika z X, a pusta X (bez
+    // innych wersji niż te, które przegrały) razem z nią; nagrobki X i Y na trzech. Dotąd (8240e0df) na P zostawała karta
+    // X z x 74 obok kosza 74.
+    it(`K5 (E4b) „Scal pacjentów” X → Y → Z na K, P (bez wiedzy) poprawia x w starej X, K później daje x do kosza (${kolejnosc}): w koszu poprawka, x w żadnej karcie, karty X nie ma`, async () => {
+      const { u, st } = await przebieg(trzyKarty, async ({ P, K, X, Y, Z, sid }) => {
         await K.mergePatients(X, Y); przesunZegar(60e3); await K.mergePatients(Y, Z); przesunZegar(60e3);
         await popraw(P, sid, 74); przesunZegar(60e3);
         await doKosza(K, sid);
       }, kolejnosc);
-      for (const [i, n] of ['P', 'K', 'C'].entries()) expect(st[i].kosz, `${n}: kosz z poprawką`).toEqual({ masa: 74, pin: false });
+      for (const [i, n] of ['P', 'K', 'C'].entries()) {
+        const v = u[n];
+        const nagrobki = ((await v.exportSyncPayload()).tombstones || []).map((t) => t.patientId);
+        expect({ ...st[i], kartaX: !!(await v.getPatient(u.X)), nagrobekX: nagrobki.includes(u.X), nagrobekY: nagrobki.includes(u.Y) },
+          `${n}: kosz z poprawką, x w żadnej karcie, bez karty X`)
+          .toEqual({ karta: null, kosz: { masa: 74, pin: false }, kartaX: false, nagrobekX: true, nagrobekY: true });
+      }
     });
     // K6 (E4a) — P-KOSZ-USUWANEJ-KARTY (decyzja właściciela D6 = a, Q7): wersje karty X, która przegrywa z nagrobkiem
     // pacjenta, przechodzą decyzję kosza, więc w koszu poprawka. Dotąd (znane ograniczenie PD-16) kosz 23 na trzech.

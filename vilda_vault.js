@@ -1665,23 +1665,56 @@ async function Bkz_lista() {
 // najpozniejszy z rejestrow karty, tresci kosza i nagrobka, z jego chwila (D1 = C, D2 = a), chwila zmiany pozniejsza
 // niz tresc kosza, wersja w karcie i usuniecie (Bpp_chwilaZmiany, takze przy zegarze spoznionym wobec urzadzenia, ktore
 // usunelo), rewizja wyzsza od obu. Zapisy tylko w sesji, w ktorej kliknieto „Przywroc” (jak scalanie, P-CHMURA-OPIS).
+// P-KOSZ-PO-KLUCZU (F-R5, przeglad 3): wersja lezy tu pod inna istniejaca karta niz karta wpisu — zwykle wyjatek
+// ostatniej wersji karty pod inna karta (Q8): zywa karta docelowa „Scal pacjentow” Y trzyma x, a wpis x wskazuje stara
+// karte X, ktora wrocila z nowa wizyta (D-4 A). „Przywroc” przywraca ja w miejscu, w tamtej karcie (karta jest), ta
+// sama regula co w karcie wpisu (juz w karcie albo zapis przywrocenia), z naglowkiem tamtej karty i powiadomieniem
+// o niej. Dotad zapis szedl pod karte wpisu z tym samym snapshotId, czyli przenosil wersje bez licznika i naglowka
+// tamtej karty: Y zostawala na liscie pacjentow z 1 wizyta i bez zadnej (pusta karta na zawsze), a urzadzenia
+// rozjezdzaly sie (bez Y, z pusta Y, z Y[y]). Miejsce wersji: jeden odczyt po kluczu przed blokadami (Bsw_wersjaLokalna),
+// potem blokady obu kart w kolejnosci rosnacych id (jak „Scal pacjentow” i faza przeniesien) i ponowne sprawdzenie
+// pod nimi; wersja przeniesiona w miedzyczasie pod karte bez blokady — od nowa (najwyzej 3 razy, potem 'zmieniony',
+// nic nie zapisane). Karty wpisu tu nie ma — jak dotad brak-karty.
 async function Bkz_przywroc(patientId, snapshotId) {
   if (!T()) throw Bkz_blad('Zaloguj się, by przywrócić zapis.', 'zablokowany');
   const Bses_o = Bses_opcje(null);
   function przerwane() { return Bkz_blad('W trakcie zablokowano sejf albo przełączono konto. Przywracanie przerwane.', 'SESSION_CHANGED'); }
   function pilnuj() { if (Bses_zmieniona(Bses_o)) throw przerwane(); }
-  return Ap('pat:' + patientId, async function () {
-    // Blad po zmianie sesji — tez „przerwane” (bez mylacego komunikatu z odczytu w nowej sesji).
-    try { return await Bkz_przywrocWSesji(); } catch (err) { throw (err && err.code === 'SESSION_CHANGED') || Bses_zmieniona(Bses_o) ? przerwane() : err; }
-  }, { timeoutMs: 3e4 });
-  async function Bkz_przywrocWSesji() {
+  const PONOW = {};
+  for (let proba = 0; proba < 3; proba += 1) {
+    pilnuj(); // P-CHMURA-OPIS: odczyt po kluczu tylko w sesji „Przywroc”
+    const tu = await Bkz_gdzieLezy(patientId, snapshotId);
+    const karty = tu ? (patientId < tu ? [patientId, tu] : [tu, patientId]) : [patientId];
+    const w = await Ap('pat:' + karty[0], async function () {
+      // Blad po zmianie sesji — tez „przerwane” (bez mylacego komunikatu z odczytu w nowej sesji).
+      const dalej = async function () {
+        try { return await Bkz_przywrocWSesji(tu); } catch (err) { throw (err && err.code === 'SESSION_CHANGED') || Bses_zmieniona(Bses_o) ? przerwane() : err; }
+      };
+      return karty.length > 1 ? Ap('pat:' + karty[1], dalej, { timeoutMs: 3e4 }) : dalej();
+    }, { timeoutMs: 3e4 });
+    if (w !== PONOW) return w;
+  }
+  throw Bkz_blad('Ten zapis zmienił miejsce w trakcie przywracania (synchronizacja) — nic nie zostało przywrócone. Spróbuj ponownie.', 'zmieniony');
+  async function Bkz_przywrocWSesji(tu) {
     pilnuj();
     const e = (await Bkz_czytaj()).find(function (x) { return x.snapshotId === snapshotId && x.patientId === patientId; });
     if (!e || !e.payloadCipher) throw Bkz_blad('Tego zapisu nie ma już w koszu.', 'brak');
     const rekord = await I().getPatientForUser(b, patientId);
     if (!rekord) throw Bkz_blad('Karta tego zapisu została usunięta.', 'brak-karty');
     const revUsuniecia = typeof e.rev === 'number' && isFinite(e.rev) ? Math.floor(e.rev) : 0;
-    const obecna = (await I().listSnapshotsForUser(b, patientId)).find(function (x) { return x.snapshotId === snapshotId; });
+    // F-R5: karta, pod ktora wersja lezy (pod blokada — swiezy odczyt); inna niz przed blokadami — od nowa.
+    let karta = patientId;
+    let obecna = (await I().listSnapshotsForUser(b, patientId)).find(function (x) { return x.snapshotId === snapshotId; });
+    if (!obecna) {
+      pilnuj(); // P-CHMURA-OPIS: odczyt po kluczu tylko w sesji „Przywroc”
+      const gdzie = await Bkz_gdzieLezy(patientId, snapshotId);
+      if (gdzie !== tu) return PONOW;
+      if (gdzie) {
+        karta = gdzie;
+        obecna = (await I().listSnapshotsForUser(b, karta)).find(function (x) { return x.snapshotId === snapshotId; });
+        if (!obecna) return PONOW;
+      }
+    }
     let tresc, st = null;
     try { tresc = await G(e.payloadCipher.iv, e.payloadCipher.data); st = Bgw_stan(e, tresc); } catch { tresc = null; }
     // Wersja w karcie: jej tresc i stan W3; zKarty — tresc karty nowsza niz tresc kosza (chwila tresci — przy tresci
@@ -1700,9 +1733,9 @@ async function Bkz_przywroc(patientId, snapshotId) {
         pilnuj();
         // Naglowek karty nadrabia zmiane wersji, gdy poprzednie „Przywroc” przerwano po zapisie wersji (bez zapisu,
         // gdy juz zgodny — jak zwykle po pierwszym przywroceniu); potem dopiero wpis kosza znika.
-        await Bkz_przebudujNaglowek(patientId, zmianaObecnej, Bses_o);
+        await Bkz_przebudujNaglowek(karta, zmianaObecnej, Bses_o);
         await Bkz_zmienListe([], [{ snapshotId: snapshotId, doISO: Bkz_ostatnie(e) }], Bses_o);
-        return { patientId: patientId, snapshotId: snapshotId, alreadyInCard: true };
+        return { patientId: karta, snapshotId: snapshotId, alreadyInCard: true };
       }
     }
     const teraz = new Date().toISOString();
@@ -1725,7 +1758,7 @@ async function Bkz_przywroc(patientId, snapshotId) {
     pilnuj();
     await I().putSnapshotForUser(b, Object.assign(zKarty ? Bm1(obecna, e) : Bm1(e), {
       snapshotId: snapshotId,
-      patientId: patientId,
+      patientId: karta,
       savedAtISO: zapisano,
       rev: Math.max(revUsuniecia, obecna ? mt(obecna) : 0) + 1,
       updatedAtISO: zmiana,
@@ -1734,13 +1767,21 @@ async function Bkz_przywroc(patientId, snapshotId) {
     // Kolejnosc: wersja, naglowek, wpis kosza. Przerwane przed zdjeciem wpisu zostawia go w koszu, a nastepne „Przywroc”
     // konczy przywrocenie („juz w karcie” z naglowkiem); wersja ze stemplem i tak wygrywa z nagrobkiem przy
     // synchronizacji (gdy ta przyjdzie pierwsza, zdejmuje wpis, a chwila zapisu karty zostaje w tyle — ograniczenie).
-    await Bkz_przebudujNaglowek(patientId, zmiana, Bses_o);
+    await Bkz_przebudujNaglowek(karta, zmiana, Bses_o);
     pilnuj();
     await Bkz_zmienListe([], [snapshotId], Bses_o);
     // Zmiana sesji juz po ostatnim zapisie: przywrocenie jest kompletne, ale powiadomienie nalezy do tamtej sesji.
-    if (!Bses_zmieniona(Bses_o)) Vn({ patientId: patientId, snapshotId: snapshotId, isSnapshotRestore: true, savedAtISO: zapisano });
-    return { patientId: patientId, snapshotId: snapshotId };
+    if (!Bses_zmieniona(Bses_o)) Vn({ patientId: karta, snapshotId: snapshotId, isSnapshotRestore: true, savedAtISO: zapisano });
+    return { patientId: karta, snapshotId: snapshotId };
   }
+}
+
+// P-KOSZ-PO-KLUCZU (F-R5): istniejaca karta inna niz karta wpisu, pod ktora wersja lezy tu, albo null — jeden odczyt po
+// kluczu (Bsw_wersjaLokalna; magazyn bez odczytu po kluczu — mapa wlascicieli, raz na wywolanie).
+async function Bkz_gdzieLezy(patientId, snapshotId) {
+  const g = await Bsw_wersjaLokalna({}, snapshotId);
+  if (!g || !g.patientId || g.patientId === patientId) return null;
+  return (await I().getPatientForUser(b, g.patientId)) ? g.patientId : null;
 }
 
 // Do exportSyncPayload: kosz jedzie jako tresc jawna (caly ladunek synchronizacji jest szyfrowany kluczem sync).
@@ -1780,6 +1821,9 @@ async function Bkz_eksport() {
 // Scalanie, krok 1: nagrobki lokalne + z ladunku (tresc z ladunku szyfrujemy lokalnym kluczem).
 async function Bkz_scalStart(t) {
   const ctx = { mapa: new Map(), nadpisane: new Set(), przegraneDo: new Map(), dotknieci: new Set(), naStarcie: new Map() };
+  // P-KOSZ-PO-KLUCZU: pelny ladunek (exportSyncPayload zawsze niesie liste kosza; delta nigdy) — tylko wtedy nagrobek
+  // odszukuje wersje pod inna karta (Bkz_gdzieIndziej).
+  ctx.pelny = !!(t && Array.isArray(t.snapshotTombstones));
   try {
     (await Bkz_czytaj()).forEach(function (e) {
       Bkz_dolacz(ctx.mapa, e);
@@ -1928,9 +1972,21 @@ async function Bgw_zloz(ctx, patientId, lokalna, tresc, e, opcje) {
 // wersja wraca do karty z cienia (najnowsza tresc, jaka zna to urzadzenie) z ta gwiazdka. Gdy tresc i rejestr sa te
 // same co w cieniu — dawny rekord bez zmian (rev, chwile); inaczej rekord zlozony. Bez cienia — nic (wersja przyjdzie
 // z urzadzenia, ktore ja ma). Zwraca { rekord, st } albo false.
+// P-KOSZ-PO-KLUCZU (F-R4, przeglad 3): w delcie (bez listy kosza, ctx.pelny falsz) Bkz_gdzieIndziej nie szuka, wiec
+// wersje lezaca tu pod inna karta zapis z cienia pod karta wpisu przenosil (ten sam snapshotId) bez licznika i naglowka
+// tamtej karty — po stanie M01 (x 74* pod stara X, wpis retencji x pod Z z cieniem) delta na zywo zostawilaby X z 1 wizyta
+// i bez zadnej, czego pelne scalania juz nie naprawiaja. Dlatego w delcie, dopiero dla wpisu, ktory przeszedl warunki
+// wyzej (nie wazny kosz, rejestr gwiazdki przypiety, cien) — jeden odczyt po kluczu; wersja tu pod inna karta — bez
+// zapisu: rozstrzyga ja najblizsze pelne scalanie (Bkz_obceKarty, jak w M01). W pelnym scalaniu ten odczyt zrobil juz
+// Bkz_gdzieIndziej (przed Bgw_wskrzes).
 async function Bgw_wskrzes(ctx, patientId, e, opcje) {
   const pk = Bpk_zWpisu(e);
   if (Bpk_wazny(pk) || !pk.g || !pk.g.pin || !pk.t || !pk.t.c || !pk.t.o) return false;
+  if (!ctx.pelny) {
+    Bses_pilnuj(opcje); // P-CHMURA-OPIS: odczyt po kluczu tylko w sesji scalania
+    const g = await Bsw_wersjaLokalna(ctx, e.snapshotId);
+    if (g && g.patientId && g.patientId !== patientId) return false;
+  }
   let t, Bpc_c;
   Bses_pilnuj(opcje); // P-CHMURA-OPIS w S4: cien z konta i magazynu sesji scalania
   // P-CIEN-POZA-LISTA: bez rekordu cienia — jak cien wygasly (wersja przyjdzie z urzadzenia, ktore ja ma).
@@ -1952,6 +2008,267 @@ async function Bgw_wskrzes(ctx, patientId, e, opcje) {
   await I().putSnapshotForUser(b, Object.assign(Bm1(rekord), rekord));
   ctx.dotknieci.add(patientId);
   return { rekord: rekord, st: Bgw_stan(rekord, nowa) };
+}
+
+// P-KOSZ-PO-KLUCZU (PR-E3, decyzja wlasciciela D7 = a i Q8 z 2026-10-21): nagrobek wersji (kosz albo retencja) dziala
+// na wersje tam, gdzie lezy na tym urzadzeniu, a nie tylko pod karta wpisu (e.patientId). Po „Scal pacjentow” stara
+// karta X (duplikat na urzadzeniu, ktore o scaleniu nie wiedzialo i poprawilo w niej wizyte) trzymala wizyte, ktora
+// inne urzadzenie dalo do kosza pod karta docelowa Z — na czesci urzadzen ze stara trescia (23 kg zamiast 74 kg).
+// Strona ladunku (Bkz_pomin) dopasowuje wersje po kluczu od zawsze; teraz takze strona tutejsza. Tylko w pelnym
+// scalaniu (ctx.pelny): delta nie niesie listy kosza, a kazda wersja z delty i tak przechodzi Bkz_pomin po kluczu.
+// Wersja lezy tu pod inna karta niz wpis: zapamietaj ja do fazy Bkz_obceKarty i zwroc true (odczyt po kluczu).
+// P-KOSZ-PO-KLUCZU (F-C1, przeglad 3): odloz — wpis, dla ktorego odpowiedz nie zmienia niczego w petli kart (Bgw_wskrzes
+// i tak nic nie zapisze: rejestr gwiazdki nieprzypiety, Bkz_doWskrzeszenia), czeka na Bkz_gdzieIndziejRazem po petli —
+// bez odczytu tutaj; zwraca false. Kolejka ctx.Bkz_szukane trzyma kolejnosc petli (z niej powstaje ctx.Bkz_obce).
+// P-KOSZ-PO-KLUCZU (F-S2): odczyt po kluczu tylko w sesji scalania (Bses_pilnuj przed nim), a decyzja do ctx dopiero po
+// ponownym sprawdzeniu, bez await pomiedzy (dodatkowe sprawdzenia sesji).
+async function Bkz_gdzieIndziej(ctx, e, patientId, opcje, odloz) {
+  if (!ctx.pelny) return false;
+  const q = ctx.Bkz_szukane || (ctx.Bkz_szukane = []);
+  if (odloz) {
+    Bses_pilnuj(opcje); // P-CHMURA-OPIS: wpis do kolejki (po odczycie wersji karty) tylko w sesji scalania
+    q.push({ sid: e.snapshotId, wpis: patientId, czeka: true, karta: null });
+    return false;
+  }
+  Bses_pilnuj(opcje); // P-KOSZ-PO-KLUCZU (F-S2): odczyt po kluczu tylko w sesji scalania
+  const g = await Bsw_wersjaLokalna(ctx, e.snapshotId);
+  Bses_pilnuj(opcje); // P-CHMURA-OPIS: decyzja do ctx tylko w sesji scalania, bez await przed nia
+  const tu = !!g && !!g.patientId && g.patientId !== patientId;
+  q.push({ sid: e.snapshotId, wpis: patientId, czeka: false, karta: tu ? g.patientId : null });
+  return tu;
+}
+// P-KOSZ-PO-KLUCZU (F-C1): warunek konieczny zapisu z cienia (Bgw_wskrzes: „przypieta → karta” — rejestr gwiazdki
+// nagrobka przypiety). Bez niego Bgw_wskrzes konczy sie bez odczytu i zapisu, wiec wyszukanie po kluczu moze poczekac.
+function Bkz_doWskrzeszenia(e) {
+  const pk = Bpk_zWpisu(e);
+  return !!(pk.g && pk.g.pin);
+}
+// P-KOSZ-PO-KLUCZU (F-C1, przeglad 3): wyszukanie odlozone w petli kart (Bkz_gdzieIndziej z odloz) — po petli, razem.
+// Odczyt po kluczu na kazdy wpis, ktorego wersji nie ma pod jego karta, przy kazdym pelnym scaleniu (kazde pobranie
+// z chmury), kosztowalby za duzo. To zwykly stan (wersja usunieta razem z koszem albo przycieciem), a wpisy retencji zyja 365 dni:
+// 40 kart po 12 wizyt z retencja — 440 osobnych transakcji magazynu na pobranie. Teraz:
+//   1. listy wersji kart, ktore petla kart i tak przeczytala (karty z wpisami) — bez odczytu; petla usuwa, poprawia
+//      w miejscu albo (Bgw_wskrzes) dopisuje pod karta tylko wersje jej wlasnych wpisow (jeden wpis na snapshotId),
+//      a wersji miedzy kartami nie przenosi — dla wpisu innej karty lista z petli to stan po petli;
+//   2. wpisy, ktorych wersji tam nie ma: lista kart konta (jeden odczyt), potem odczyt po kluczu kazdego z nich albo lista
+//      wersji kazdej karty, ktorej petla nie czytala — co mniej odczytow (magazyn bez odczytu po kluczu — zawsze listy).
+// Koszt: 0, gdy nie ma czego szukac albo kazda szukana wersja lezy pod karta z wpisem; inaczej 1 + mniejsza z liczb
+// (wpisy do szukania, karty bez wpisow) — najwyzej jeden odczyt na karte konta i najwyzej o jeden wiecej niz odczyt po kluczu na kazdy wpis.
+// Wynik i kolejnosc ctx.Bkz_obce (kolejnosc petli kart) jak przy odczycie po kluczu w petli. Bez szukania wedlug
+// nagrobkow pacjenta: wersja lezy pod inna karta takze bez znanego tu nagrobka (nagrobek „Scal pacjentow” przegral
+// z pozniejszym zapisem starej karty albo karta zniknela bez nagrobka na urzadzeniu, od ktorego jest ladunek).
+// Sesja (P-CHMURA-OPIS): Bses_pilnuj przed kazdym odczytem i przed decyzja do ctx, bez await pomiedzy.
+async function Bkz_gdzieIndziejRazem(ctx, opcje) {
+  const q = ctx.Bkz_szukane || [];
+  ctx.Bkz_szukane = [];
+  const czekaja = ctx.Bsw_pusto ? [] : q.filter(function (x) { return x.czeka; });
+  if (czekaja.length) {
+    const listy = ctx.Bkz_listy || new Map();
+    const gdzie = new Map();
+    listy.forEach(function (ids, pid) { ids.forEach(function (id) { gdzie.set(id, pid); }); });
+    const reszta = czekaja.filter(function (x) { return !gdzie.has(x.sid); });
+    if (reszta.length) {
+      const h = I();
+      Bses_pilnuj(opcje); // P-KOSZ-PO-KLUCZU (F-S2): odczyty tylko w sesji scalania
+      const inne = (await h.listPatientsForUser(b)).map(function (k) { return k && k.patientId; })
+        .filter(function (pid) { return pid && !listy.has(pid); });
+      if (typeof h.getSnapshotForUser === 'function' && reszta.length <= inne.length) {
+        for (let i = 0; i < reszta.length; i += 1) {
+          Bses_pilnuj(opcje);
+          const g = await Bsw_wersjaLokalna(ctx, reszta[i].sid);
+          if (g && g.patientId) gdzie.set(reszta[i].sid, g.patientId);
+        }
+      } else {
+        for (let k = 0; k < inne.length; k += 1) {
+          Bses_pilnuj(opcje);
+          (await h.listSnapshotsForUser(b, inne[k])).forEach(function (s) { if (s && s.snapshotId) gdzie.set(s.snapshotId, inne[k]); });
+        }
+      }
+    }
+    czekaja.forEach(function (x) { x.karta = gdzie.get(x.sid) || null; });
+  }
+  const obce = q.filter(function (x) { return x.karta && x.karta !== x.wpis; });
+  if (!obce.length) return;
+  Bses_pilnuj(opcje); // P-CHMURA-OPIS: decyzje do ctx tylko w sesji scalania, bez await przed nimi
+  obce.forEach(function (x) { (ctx.Bkz_obce || (ctx.Bkz_obce = [])).push({ sid: x.sid, karta: x.karta }); });
+}
+// Faza po petli kart, przed zapisem listy: wersje lezace tu pod inna karta niz ich wpis kosza — ta sama decyzja co pod
+// karta wpisu (zmiana pozniejsza niz usuniecie wygrywa, przypieta przezywa retencje, nieczytelna przy retencji zostaje).
+// Wyjatek ostatniej wersji karty nie obowiazuje tylko dla starego duplikatu: karta, w ktorej wizyta lezy, ma znany
+// nagrobek pacjenta (z ladunku albo tutejszy, ctx.Bkz_nagrKart — zwykle „Scal pacjentow” na innym urzadzeniu), a karta
+// wpisu jest tu (to dom wizyty: tam oddaje ja „Przywroc”). Inaczej — np. karta wpisu wrocila na innym urzadzeniu nowa
+// wizyta (D-4 A), a wizyta lezy w zywej karcie docelowej scalenia — wizyta zostaje i przyjmuje najnowsza tresc (Q8,
+// Bkz_zostawOstatnia), a karta nie znika. Wersja pokonana oddaje wklad nagrobkowi (ctx.mapa) jak w petli kart —
+// nieczytelna bez tresci (jak w P-KOSZ-USUWANEJ-KARTY), zeby jej szyfr nie zastapil czytelnej tresci kosza; usuwa ja
+// dopiero Bkz_usunZObcych po zapisie listy. Karta przegrana z nagrobkiem pacjenta (Bsw_N) zostaje dla
+// P-KOSZ-USUWANEJ-KARTY (Bsl_koszUsuwanejKarty, tez po kluczu). Sesja (P-CHMURA-OPIS): wersje karty czytamy zaraz po
+// sprawdzeniu sesji przy blokadzie, a kazda decyzja trafia do ctx dopiero po ponownym sprawdzeniu (bez await pomiedzy) —
+// decyzja powstaje tylko z rekordow sesji scalania.
+// P-KOSZ-PO-KLUCZU (F-R3): decyzja usuniecia ostatniej wersji tej karty zdjetym wyjatkiem (stary duplikat) niesie znika:
+// true — tylko wtedy Bkz_usunZObcych moze usunac cala karte. Bez tego karta znikala, gdy na swiezym odczycie zostaly same
+// wersje do usuniecia, choc decyzja szla na karcie z inna wizyta (druga karta przegladarki dala ja w tym czasie do kosza).
+async function Bkz_obceKarty(ctx, opcje, granicaKosza) {
+  const lista = ctx.Bkz_obce || [];
+  ctx.Bkz_doUsuniecia = [];
+  if (!lista.length) return;
+  const poKarcie = new Map();
+  lista.forEach(function (x) { if (!poKarcie.has(x.karta)) poKarcie.set(x.karta, []); poKarcie.get(x.karta).push(x.sid); });
+  for (const [karta, ids] of poKarcie) {
+    if (ctx.Bsw_N && ctx.Bsw_N.has(karta)) continue;
+    await Bsl_podBlokada(karta, async function () {
+      const wersje = await I().listSnapshotsForUser(b, karta);
+      if (!wersje.length || !(await I().getPatientForUser(b, karta))) return;
+      let zostaje = wersje.length;
+      for (let i = 0; i < ids.length; i += 1) {
+        const e = ctx.mapa.get(ids[i]);
+        if (!e || e.patientId === karta) continue;
+        const lokalna = wersje.find(function (s) { return s.snapshotId === ids[i]; });
+        if (!lokalna) continue;
+        const zmiana = Bkz_zmiana(lokalna);
+        const kosz = Bkz_chwilaKosza(e), przyciecie = Bkz_chwilaRetencji(e);
+        // P-REV-MAX (R3a): jak w petli kart.
+        const Bpk_podnies = async function () {
+          const rp = ctx.Bkz_revPom && ctx.Bkz_revPom.get(e.snapshotId);
+          if (!rp || rp <= mt(lokalna)) return;
+          Bses_pilnuj(opcje); // P-CHMURA-OPIS: zapis tylko w sesji scalania, bez await przed nim
+          await I().putSnapshotForUser(b, Object.assign(Bm1(lokalna), lokalna, { rev: rp }));
+          ctx.dotknieci.add(karta);
+        };
+        if (!(kosz && kosz >= zmiana) && !(przyciecie && przyciecie >= zmiana)) {
+          if (!(await Bgw_zloz(ctx, karta, lokalna, null, e, opcje))) await Bpk_podnies();
+          Bses_pilnuj(opcje); // P-CHMURA-OPIS: decyzja do ctx tylko w sesji scalania
+          Bkz_przegral(ctx, e); ctx.mapa.delete(e.snapshotId); continue;
+        }
+        const retencja = !(kosz && kosz >= zmiana);
+        let tresc;
+        try { tresc = await G(lokalna.payloadCipher.iv, lokalna.payloadCipher.data); } catch { tresc = null; }
+        const st = tresc ? Bgw_stan(lokalna, tresc) : null;
+        if (retencja) {
+          if (!tresc) continue;
+          if (Bpk_przypieta(e, st)) {
+            const e2 = Bpk_zWersja(e, Bpk_zWersji(lokalna, null, st));
+            const w = await Bgw_zloz(ctx, karta, lokalna, tresc, e2, opcje);
+            Bses_pilnuj(opcje); // P-CHMURA-OPIS: decyzja do ctx tylko w sesji scalania
+            ctx.mapa.set(e.snapshotId, w ? Bpk_zWersja(e2, Bpk_zWersji(w.rekord, null, w.st)) : e2);
+            if (!w) await Bpk_podnies();
+            continue;
+          }
+        }
+        if (zostaje <= 1 && !(ctx.Bkz_nagrKart && ctx.Bkz_nagrKart.has(karta) && (await I().getPatientForUser(b, e.patientId)))) {
+          if (tresc && st) await Bkz_zostawOstatnia(ctx, karta, e, lokalna, tresc, st, retencja ? przyciecie : kosz, Bpk_podnies, opcje);
+          continue;
+        }
+        const od = retencja ? przyciecie : kosz;
+        const szyfr = tresc && od >= granicaKosza ? lokalna.payloadCipher : null;
+        Bses_pilnuj(opcje); // P-CHMURA-OPIS: decyzja do ctx tylko w sesji scalania
+        ctx.mapa.set(e.snapshotId, Bpk_zWersja(e, Bpk_zWersji(lokalna, { c: szyfr, od: od }, st)));
+        ctx.Bkz_doUsuniecia.push({ karta: karta, sid: e.snapshotId, rev: mt(lokalna), zmiana: lokalna.updatedAtISO || null, retencja: retencja, znika: zostaje <= 1 });
+        zostaje -= 1;
+      }
+      if (ctx.dotknieci.has(karta)) await Bkz_przebudujNaglowek(karta, undefined, opcje);
+    }, opcje);
+  }
+}
+// Po zapisie listy (wklad pokonanych wersji — zmiana, rev, rejestr gwiazdki i tresc, o ile usuniecie nie jest starsze niz
+// 30 dni; przy retencji tresc w cieniu — jest juz zapisany): usuniecie wersji spod innych kart. Swiezy odczyt pod blokada
+// karty: usuwamy tylko wersje w tym samym rekordzie co przy decyzji (zmienione w miedzyczasie — nastepne scalanie).
+// Karta bez zadnej pozostalej wersji znika tylko wtedy, gdy decyzja szla przez zdjety wyjatek ostatniej wersji (stary
+// duplikat ze znanym nagrobkiem pacjenta i karta wpisu tutaj — Bkz_obceKarty, znika), w jednym zapisie razem z wersjami,
+// jak Bsw_poOddaniu.
+// P-KOSZ-PO-KLUCZU (F-R3): gdy na swiezym odczycie zostaly same wersje do usuniecia, a decyzja szla na karcie z inna
+// wizyta (druga karta przegladarki dala ja w tym czasie do kosza), ostatnia z nich zostaje w karcie — jak po scaleniu
+// przerwanym po zapisie listy: wizyta jest w karcie i w koszu, a nastepne pelne scalenie rozstrzyga ja zwyklym wyjatkiem
+// ostatniej wersji (Q8, Bkz_zostawOstatnia, na swiezym odczycie). Bez tego warunku znikalaby cala karta (takze zywa karta
+// docelowa „Scal pacjentow”), a jej wpisy kosza nie mialyby dokad wrocic („Przywroc” — brak-karty).
+// P-KOSZ-PO-KLUCZU (F-R2): przy usunieciu karty zostaje tu nagrobek „Scal pacjentow”, na ktorym oparl sie zdjety wyjatek
+// (z ladunku albo tutejszy — ta sama chwila deletedAtISO, ctx.Bsw_m z Le; nie nowy nagrobek z chwila „teraz”), tak jak
+// zapisuje go Bsl_usunPacjenta dla karty, ktora z nim przegrywa. Bez tego urzadzenie, na ktorym karta przezyla nagrobek
+// (pozniejsza poprawka albo kosz podniosly lastSavedAtISO — D-4 A), nie mialoby go wcale, wiec po usunieciu karty
+// wysylaloby ladunek bez karty i bez nagrobka: urzadzenie, ktore dostaje tylko jego ladunki (urzadzenie scalajace juz
+// sie nie synchronizuje), zostawaloby na zawsze ze starym duplikatem. Chwila z „Scal pacjentow” zostawia D-4 A bez zmian:
+// karta zapisana gdzie indziej pozniej niz scalenie nadal z nim wygrywa (wtedy nagrobek zdejmuje Bsl_zdejmijNagrobek).
+// Bez magazynu nagrobkow albo bez chwili — jak dotad, bez nagrobka.
+// Zwraca liczbe wersji przeniesionych do kosza; retencje liczy ctx.przyciete, karty — ctx.Bkz_kartyUsuniete.
+async function Bkz_usunZObcych(ctx, opcje) {
+  const lista = ctx.Bkz_doUsuniecia || [];
+  if (!lista.length) return 0;
+  const poKarcie = new Map();
+  lista.forEach(function (x) { if (!poKarcie.has(x.karta)) poKarcie.set(x.karta, []); poKarcie.get(x.karta).push(x); });
+  let usuniete = 0;
+  for (const [karta, d] of poKarcie) {
+    usuniete += await Bsl_podBlokada(karta, async function () {
+      const wersje = await I().listSnapshotsForUser(b, karta);
+      let dalej = d.filter(function (x) {
+        const s = wersje.find(function (q) { return q && q.snapshotId === x.sid; });
+        return s && mt(s) === x.rev && (s.updatedAtISO || null) === x.zmiana;
+      });
+      const calosc = dalej.length === wersje.length;
+      const znika = calosc && d.some(function (x) { return x.znika; });
+      if (calosc && !znika) dalej = dalej.slice(0, -1); // F-R3: ostatnia zostaje do nastepnego scalenia
+      if (!dalej.length) return 0;
+      let tu = 0;
+      Bses_pilnuj(opcje); // P-CHMURA-OPIS: liczniki wyniku i usuniecie karty tylko w sesji scalania, bez await przed nimi
+      dalej.forEach(function (x) { if (x.retencja) ctx.przyciete += 1; else tu += 1; });
+      if (znika) {
+        await I().removePatientForUser(b, karta);
+        Bses_pilnuj(opcje); // P-CHMURA-OPIS: zbior kart usunietych (Bpc_usunieta), licznik kart i nagrobek tylko w sesji scalania, jak w Bsl_usunPacjenta
+        Bpc_usunieta(karta);
+        ctx.Bkz_kartyUsuniete = (ctx.Bkz_kartyUsuniete || 0) + 1;
+        const chwila = ctx.Bsw_m && ctx.Bsw_m[karta];
+        if (chwila) await I().putTombstoneForUser(b, { patientId: karta, deletedAtISO: chwila });
+        return tu;
+      }
+      for (let i = 0; i < dalej.length; i += 1) {
+        Bses_pilnuj(opcje); // P-CHMURA-OPIS: usuniecie wersji tylko w sesji scalania, bez await przed nim
+        await I().removeSnapshotForUser(b, dalej[i].sid);
+      }
+      await Bkz_przebudujNaglowek(karta, undefined, opcje);
+      return tu;
+    }, opcje);
+  }
+  return usuniete;
+}
+// Q8 (P-KOSZ-PO-KLUCZU): wersja zostawiona wyjatkiem ostatniej wersji karty przyjmuje najnowsza tresc — scisle
+// pozniejsza chwila tresci (W3, jak Bgw_zloz), z tresci nagrobka (kosz albo cien) albo z kandydata z ladunku
+// (ctx.Bkz_kand) — i najpozniejszy rejestr gwiazdki. Rekord calej nowszej wersji: rev = max, czasy zrodla; rekord
+// zlozony: chwila zmiany = pozniejsza z prawdziwych chwil (D3 = a), rev = max (bez +1 — inaczej rev zalezy od
+// kolejnosci). Chwila zmiany nigdy pozniejsza niz usuniecie, ktore pokonalo wersje (wizyta nie wraca nad nagrobek),
+// lastSavedAtISO karty bez zmian. Szyfr zawsze od nowa (V). Bez wkladu do nagrobka: kosz poznaje nowsza tresc
+// zostawionej wersji, jak dotad, przez ladunek (Bkz_pomin na innym urzadzeniu). Zwraca true, gdy zapisala wersje.
+async function Bkz_zostawOstatnia(ctx, patientId, e, lokalna, tresc, st, od, Bpk_podnies, opcje) {
+  const pk = Bpk_zWpisu(e);
+  let zr = { t: tresc, o: lokalna, cz: st.cz, rej: { pin: st.pin, at: st.at }, tu: true };
+  const lepsza = function (c) { return !!c && c > zr.cz; };
+  if (pk.t && pk.t.c && lepsza(Bpk_cz(pk.t))) {
+    Bses_pilnuj(opcje); // P-CHMURA-OPIS: tresc nagrobka (i cien) czytamy tylko w sesji scalania
+    try {
+      const c = await Bpc_pelny(pk.t.c);
+      const t2 = c ? await G(c.iv, c.data) : null;
+      if (t2 && typeof t2 === 'object') { const s2 = Bgw_stan(pk.t.o, t2); zr = { t: t2, o: pk.t.o, cz: Bpk_cz(pk.t), rej: { pin: s2.pin, at: s2.at } }; }
+    } catch { /* zostaje tresc tutejsza */ }
+  }
+  const x = ctx.Bkz_kand && ctx.Bkz_kand.get(e.snapshotId);
+  if (x && x.zapis.payload && typeof x.zapis.payload === 'object' && lepsza(x.st.cz)) zr = { t: x.zapis.payload, o: x.zapis, cz: x.st.cz, rej: { pin: x.st.pin, at: x.st.at } };
+  const rej = Bgw_pozniejszy({ pin: st.pin, at: st.at }, Bgw_pozniejszy(zr.rej, pk.g));
+  if (zr.tu && Bgw_porownaj(rej, { pin: st.pin, at: st.at }) === 0) { await Bpk_podnies(); return false; }
+  const rp = ctx.Bkz_revPom && ctx.Bkz_revPom.get(lokalna.snapshotId);
+  let rekord;
+  if (!zr.tu && Bgw_porownaj(rej, zr.rej) === 0) {
+    // Obrona (dane poprawne tu nie trafiaja: zrodlo przegralo z tym usunieciem albo ma jego chwile) — wizyta nigdy nad nagrobkiem.
+    if (!(Bkz_zmiana(zr.o) <= od)) { await Bpk_podnies(); return false; }
+    rekord = Object.assign(Bm1(lokalna), lokalna, {
+      rev: Math.max(mt(zr.o), mt(lokalna), rp || 0), updatedAtISO: (typeof zr.o.updatedAtISO === 'string' && zr.o.updatedAtISO) || null,
+      savedAtISO: zr.o.savedAtISO || lokalna.savedAtISO, payloadCipher: await V(zr.t),
+    });
+  } else {
+    const zmiana = Bkz_pozniejsza(zr.cz, rej.at);
+    if (!(zmiana <= od)) { await Bpk_podnies(); return false; }
+    rekord = Object.assign(Bm1(lokalna), lokalna, { rev: Math.max(Bgw_revMax(pk, lokalna, rp), mt(zr.o)), updatedAtISO: zmiana, payloadCipher: await V(Bgw_ustaw(zr.t, zr.cz, rej, true)) });
+  }
+  Bses_pilnuj(opcje); // P-CHMURA-OPIS: zapis tylko w sesji scalania, bez await przed nim
+  await I().putSnapshotForUser(b, Object.assign(Bm1(rekord), rekord));
+  ctx.dotknieci.add(patientId);
+  return true;
 }
 
 // Scalanie, krok 2: nagrobki na wersjach lokalnych, naglowki dotknietych kart, zapis listy. Zwraca liczbe wersji
@@ -1983,11 +2300,25 @@ async function Bkz_scalKoniec(ctx, opcje) {
         let tu = 0;
         const Bgw_tu = Array.from(Bgw_po.entries()).filter(function (x) { return x[1].patientId === patientId; });
         const wersje = nagrobki.length || Bgw_tu.length ? await I().listSnapshotsForUser(b, patientId) : [];
+        // P-KOSZ-PO-KLUCZU (F-C1): lista wersji tej karty dla wyszukania po petli (Bkz_gdzieIndziejRazem) — bez odczytu;
+        // do ctx tylko w sesji scalania (P-CHMURA-OPIS), bez await przed nia.
+        if (ctx.pelny && (nagrobki.length || Bgw_tu.length)) {
+          Bses_pilnuj(opcje);
+          (ctx.Bkz_listy || (ctx.Bkz_listy = new Map())).set(patientId, wersje.map(function (s) { return s.snapshotId; }));
+        }
         let zostaje = wersje.length;
+        // P-KOSZ-PO-KLUCZU: karta wpisu bez wersji tutaj (albo bez karty) — wersje jej nagrobkow moga lezec pod inna karta
+        // (F-C1: szukane po petli kart, Bgw_wskrzes tu nie dziala).
+        if (!wersje.length) { for (let i = 0; i < nagrobki.length; i += 1) await Bkz_gdzieIndziej(ctx, nagrobki[i], patientId, opcje, true); }
         for (let i = 0; i < nagrobki.length && wersje.length; i += 1) {
           const e = nagrobki[i];
           const lokalna = wersje.find(function (s) { return s.snapshotId === e.snapshotId; });
           if (!lokalna) {
+            // P-KOSZ-PO-KLUCZU: wersja lezy tu pod inna karta — decyzja w fazie Bkz_obceKarty (w pelnym scalaniu przed
+            // Bgw_wskrzes: cien nie moze zapisac wersji pod karta wpisu, gdy ta sama wizyta jest tu pod inna karta; w delcie
+            // Bgw_wskrzes sam sprawdza po kluczu i wtedy nic nie zapisuje — F-R4). F-C1: odczyt po kluczu tutaj tylko,
+            // gdy od niego zalezy Bgw_wskrzes (rejestr gwiazdki przypiety); reszta — po petli (Bkz_gdzieIndziejRazem).
+            if (await Bkz_gdzieIndziej(ctx, e, patientId, opcje, !Bkz_doWskrzeszenia(e))) continue;
             // W3: „przypieta → karta” — wersja wraca z cienia (Bgw_wskrzes); nagrobek retencji zostaje i ja zna.
             const w = await Bgw_wskrzes(ctx, patientId, e, opcje);
             if (w) { zostaje += 1; ctx.mapa.set(e.snapshotId, Bpk_zWersja(e, Bpk_zWersji(w.rekord, null, w.st))); }
@@ -2026,7 +2357,12 @@ async function Bkz_scalKoniec(ctx, opcje) {
               continue;
             }
           }
-          if (zostaje <= 1) continue; // ostatniej wersji karty nigdy nie usuwamy
+          if (zostaje <= 1) { // ostatniej wersji karty nigdy nie usuwamy
+            // Q8 (P-KOSZ-PO-KLUCZU): zostawiona wersja przyjmuje najnowsza tresc i rejestr gwiazdki (dotad zostawala
+            // stara tresc, choc kosz i inne urzadzenia mialy poprawke).
+            if (tresc && st) await Bkz_zostawOstatnia(ctx, patientId, e, lokalna, tresc, st, retencja ? przyciecie : kosz, Bpk_podnies, opcje);
+            continue;
+          }
           // P-KOSZ-POLKRATA: wersja pokonana oddaje nagrobkowi zmiane, opis, rev i tresc — kandydat tresci kosza (P-KOSZ-
           // NOWSZA-TRESC, D-6 B) albo cien (wersje pokonalo przyciecie); tresc nie dluzej niz 30 dni od usuniecia.
           const od = retencja ? przyciecie : kosz;
@@ -2050,6 +2386,8 @@ async function Bkz_scalKoniec(ctx, opcje) {
         return tu;
       }, opcje);
     }
+    await Bkz_gdzieIndziejRazem(ctx, opcje); // P-KOSZ-PO-KLUCZU (F-C1): wyszukanie odlozone w petli kart
+    await Bkz_obceKarty(ctx, opcje, granicaKosza); // P-KOSZ-PO-KLUCZU: wersje pod inna karta niz wpis
   } catch (er) {
     przerwane = er;
   }
@@ -2086,6 +2424,9 @@ async function Bkz_scalKoniec(ctx, opcje) {
     if (!przerwane) throw er;
   }
   if (przerwane) throw przerwane;
+  // P-KOSZ-PO-KLUCZU: wersje spod innych kart usuwamy dopiero po zapisie listy z ich trescia — przy nieudanym zapisie
+  // (blad wyzej) zostaja do nastepnego scalenia, jak karta w P-KOSZ-USUWANEJ-KARTY.
+  usuniete += await Bkz_usunZObcych(ctx, opcje);
   Bses_pilnuj(opcje); // P-CHMURA-OPIS: dalsze fazy scalania tylko w jego sesji
   return usuniete;
 }
@@ -2339,7 +2680,9 @@ function Bsl_wersjaZLadunku(F, S, szyfr, teraz) {
  *     zniknie — jej wersje przechodza zawsze (inaczej zwykle scalenie gubiloby wersje X), z nowsza trescia;
  *   - tresc wersji wspolnej dwom kartom: pozniejsza chwila zmiany (Bsw_nowszaTresc), niezaleznie od tego, ktora karta
  *     wygrala — rev liczy tez przeniesienia, wiec po kilku „Scal pacjentow” nie mowi, ktora tresc jest nowsza; wynik
- *     z wyzsza z dwoch rev (Bsw_rekord); tutejszy rekord, ktory zostaje, przyjmuje pozniejsza tresc (decyzja 'tresc');
+ *     z wyzsza z dwoch rev (Bsw_rekord); od P-KOSZ-PO-KLUCZU wedlug W3, jak w jednej karcie (Bsw_rekordW3): tresc po
+ *     chwili tresci, gwiazdka po rejestrze, rekord zlozony z rev = wyzsza + 1 — Bsw_rekord tylko, gdy W3 nie umie
+ *     porownac kopii; tutejszy rekord, ktory zostaje, przyjmuje pozniejsza tresc albo pozniejszy rejestr (decyzja 'tresc');
  *     chwila zapisu wersji (miejsce w historii karty) — ze strony, ktora wygrala przypisanie karty, wiec przeniesiona
  *     dawna glowa scalonej karty nie wyprzedza glowy scalenia;
  *   - przeniesienie miedzy dwiema istniejacymi kartami w osobnej fazie, pod blokadami obu kart (Bsl_przeniesWersje);
@@ -2480,11 +2823,11 @@ async function Bsw_wersjaLokalna(ctx, snapshotId) {
 // Wersja z ladunku (S), ktorej karta F tu nie ma:
 //   'nowa'     — nie ma jej tu nigdzie (albo jej karta nie istnieje): zapis pod F jak dotad;
 //   'zabierz'  — lezy pod karta z wygrywajacym nagrobkiem (zbior N, zaraz zniknie): przechodzi pod F zawsze, w fazie
-//                przeniesien (Bsw_przenies: blokady obu kart, swiezy odczyt, nowsza z dwoch tresci);
+//                przeniesien (Bsw_przenies: blokady obu kart, swiezy odczyt, rekord W3 obu kopii — Bsw_rekordW3);
 //   'przenies' — lezy pod inna istniejaca karta, a rekord z ladunku jest nowszy: przechodzi w fazie przeniesien;
-//   'tresc'    — lezy pod inna istniejaca karta, tutejszy rekord jest nowszy (zostaje tam), ale tresc z ladunku jest
-//                pozniejsza (Bsw_nowszaTresc; typowo poprawka w starej karcie po kilku „Scal pacjentow”): tresc
-//                przechodzi do tutejszego rekordu w fazie przeniesien;
+//   'tresc'    — lezy pod inna istniejaca karta, tutejszy rekord jest nowszy (zostaje tam), ale ladunek wnosi
+//                pozniejsza tresc albo pozniejszy rejestr gwiazdki (Bsw_wklad, W3; typowo poprawka w starej karcie po
+//                kilku „Scal pacjentow”): wklad przechodzi do tutejszego rekordu w fazie przeniesien;
 //   'pomin'    — lezy pod inna istniejaca karta, a tutejszy rekord i jego tresc sa nowsze: zostaje tam bez zmian.
 async function Bsw_decyzja(ctx, F, S) {
   const g = await Bsw_wersjaLokalna(ctx, S.snapshotId);
@@ -2492,9 +2835,56 @@ async function Bsw_decyzja(ctx, F, S) {
   if (!(await I().getPatientForUser(b, g.patientId))) return { co: 'nowa', g: null };
   if (ctx.Bsw_N && ctx.Bsw_N.has(g.patientId)) return { co: 'zabierz', g: g };
   if (Bsw_ladunekWygrywa(S, g, F.patientId, g.patientId)) return { co: 'przenies', g: g };
-  return Bsw_nowszaTresc(S, g) ? { co: 'tresc', g: g } : { co: 'pomin', g: g };
+  return (await Bsw_wklad(S, g)) ? { co: 'tresc', g: g } : { co: 'pomin', g: g };
+}
+// P-KOSZ-PO-KLUCZU, W3 miedzy kartami (E4a-Cpin): wersja wspolna dwom kartom bierze dotad caly rekord — tresc
+// i gwiazdke — z kopii o pozniejszej chwili zmiany (Bsw_nowszaTresc); przypiecie przesuwa te chwile bez zmiany tresci,
+// wiec pozniejsza gwiazdka na starej tresci (23 kg) wygrywala z wczesniejsza poprawka (74 kg) albo poprawka gubila
+// gwiazdke — zaleznie od kolejnosci synchronizacji. Teraz jak w jednej karcie (Bgw_scal, D1 = C): tresc po chwili
+// tresci, gwiazdka po rejestrze. Przypisanie karty (Bsw_ladunekWygrywa: najpierw rev) bez zmian. Porownanie obu kopii
+// (null: obie kopie bez rejestru W3 i z ta sama trescia poza _pinned — roznia sie najwyzej gwiazdka, ktorej chwili nie
+// znamy —, kopia z ladunku bez tresci, nieczytelna kopia tutejsza albo pelny remis — wtedy regula dotychczasowa,
+// Bsw_rekord).
+async function Bsw_w3(S, g) {
+  if (!g || !S || !S.payload || typeof S.payload !== 'object' || !g.payloadCipher) return null;
+  let tg;
+  try { tg = await G(g.payloadCipher.iv, g.payloadCipher.data); } catch { tg = null; }
+  if (!tg || typeof tg !== 'object') return null;
+  if (!Bgw_rej(S.payload._pinnedState) && !Bgw_rej(tg._pinnedState) && Bgw_bezGwiazdki(S.payload) === Bgw_bezGwiazdki(tg)) return null;
+  const a = Bgw_stan(S, S.payload), c = Bgw_stan(g, tg);
+  const ct = a.cz === c.cz ? 0 : a.cz > c.cz ? 1 : -1;
+  const cg = Bgw_porownaj(a, c);
+  if (ct === 0 && cg === 0) return null;
+  const tr = ct !== 0 ? ct : cg, gw = cg !== 0 ? cg : tr;
+  return { tr: tr, gw: gw, a: a, c: c, tg: tg };
+}
+// Czy kopia z ladunku wnosi cos do tutejszego rekordu: pozniejsza tresc albo pozniejszy rejestr gwiazdki (W3).
+async function Bsw_wklad(S, g) {
+  const w = await Bsw_w3(S, g);
+  return w ? (w.tr > 0 || w.gw > 0) : Bsw_nowszaTresc(S, g);
+}
+// Rekord wersji wspolnej dwom kartom wg W3: cala nowsza kopia (rev = max) albo rekord zlozony — tresc z jednej kopii,
+// rejestr gwiazdki z drugiej, chwila zmiany = pozniejsza z prawdziwych chwil (D3 = a), rev = max + 1 (Q5: starsza
+// aplikacja, ktora czyta najpierw rev, przyjmuje rekord zlozony). Bez porownania W3 — Bsw_rekord jak dotad.
+async function Bsw_rekordW3(cel, S, szyfr, teraz, g, tutejszaKarta) {
+  const w = g ? await Bsw_w3(S, g) : null;
+  if (!w) return Bsw_rekord(cel, S, szyfr, teraz, g, tutejszaKarta);
+  const r = Bsl_wersjaZLadunku(cel, S, szyfr, teraz);
+  if ((tutejszaKarta || !S.savedAtISO) && g.savedAtISO) r.savedAtISO = g.savedAtISO;
+  if (w.tr === w.gw && !(Bkz_wersjaZgodna(S, g) && Bgw_zlozony(S.payload) && Bgw_zlozony(w.tg))) {
+    if (w.tr < 0) { r.payloadCipher = g.payloadCipher; r.updatedAtISO = g.updatedAtISO || null; }
+    r.rev = Math.max(mt(S), mt(g));
+    return r;
+  }
+  const st = w.tr > 0 ? w.a : w.c, rej = w.gw > 0 ? w.a : w.c;
+  const tresc = w.tr === w.gw ? (w.tr > 0 ? S.payload : w.tg) : Bgw_ustaw(w.tr > 0 ? S.payload : w.tg, st.cz, { pin: rej.pin, at: rej.at }, true);
+  r.payloadCipher = await V(tresc);
+  r.updatedAtISO = w.tr === w.gw ? ((w.tr > 0 ? S : g).updatedAtISO || null) : Bkz_pozniejsza(st.cz, rej.at);
+  r.rev = Math.max(mt(S), mt(g)) + 1;
+  return r;
 }
 
+// Regula zapasowa (P-KOSZ-PO-KLUCZU): Bsw_rekordW3 wola ja, gdy W3 nie umie porownac kopii (Bsw_w3 = null).
 // Rekord wersji wspolnej dwom kartom pod karta `cel` ({ patientId }): karta z ladunku F („zabierz”, „przenies”) albo
 // tutejsza G („tresc”, tutejszaKarta = true). Tresc nowsza wg Bsw_nowszaTresc — z ladunku (S, szyfr) albo tutejsza
 // (g) — idzie razem ze swoja chwila zmiany (wtedy poprawka zrobiona tu nie ginie pod starsza trescia z ladunku; przy
@@ -2510,7 +2900,9 @@ async function Bsw_decyzja(ctx, F, S) {
 // wersja lezy juz pod karta `cel`. Bez +1: rev, ktora rosnie bez zmiany tresci, wygrywala regula „najpierw rev”
 // z pozniejsza poprawka tej samej wersji w tej samej karcie (fuzz roznicowy do dd21d11: wariant z +1 gubil tak
 // poprawki, ktore zostawaly na dd21d11). Od P-POZNIEJSZA-POPRAWKA ta karta liczy najpierw chwile, ale +1 dalej
-// szkodzi: starsze aplikacje i regula wlasciciela (Bsw_nowszyRekord) licza najpierw rev. Numer kolejny (Bm1) dokleja wolajacy, jak przy Bsl_wersjaZLadunku.
+// szkodzi: starsze aplikacje i regula wlasciciela (Bsw_nowszyRekord) licza najpierw rev. (Rekord zlozony W3 w
+// Bsw_rekordW3 dostaje +1: niesie najpozniejsza chwile tresci i najpozniejszy rejestr gwiazdki, wiec wyzsza rev nie
+// ukrywa pozniejszej poprawki, a starsza aplikacja, ktora czyta najpierw rev, go przyjmuje — Q5.) Numer kolejny (Bm1) dokleja wolajacy, jak przy Bsl_wersjaZLadunku.
 function Bsw_rekord(cel, S, szyfr, teraz, g, tutejszaKarta) {
   const r = Bsl_wersjaZLadunku(cel, S, szyfr, teraz);
   if (!g) return r;
@@ -2529,8 +2921,8 @@ function Bsw_rekord(cel, S, szyfr, teraz, g, tutejszaKarta) {
 // decyzja 'tresc': wersja zostaje pod G, przechodzi tylko tresc z ladunku (Bsw_poprawTresc). zabierz — decyzja
 // 'zabierz' (G w zbiorze N): wersja przechodzi takze wtedy, gdy zmieniono ja tu po decyzji (Bsw_przenies). gDecyzji —
 // tutejszy rekord z chwili decyzji 'zabierz' (tresc, chwila zmiany, chwila zapisu, rev): gdy wersja zniknie z G razem
-// z karta przed faza (Bsw_bezSladu), faza zapisuje pod F nowsza z dwoch tresci z tego odczytu, jak zapis od razu na
-// 32b6557 (Bsw_rekord z d.g) — a nie sama tresc z ladunku, pod ktora ginela poprawka albo przypiecie zrobione tu
+// z karta przed faza (Bsw_bezSladu), faza zapisuje pod F nowsza z dwoch tresci z tego odczytu (od P-KOSZ-PO-KLUCZU:
+// rekord W3 obu kopii, Bsw_rekordW3), jak zapis od razu na 32b6557 (Bsw_rekord z d.g) — a nie sama tresc z ladunku, pod ktora ginela poprawka albo przypiecie zrobione tu
 // przed synchronizacja (uwaga recenzenta do eb81091).
 function Bsw_odloz(ctx, F, naglowek, S, szyfr, d) {
   const g = d.g;
@@ -2611,7 +3003,14 @@ async function Bgw_scal(S, g, patientId, teraz) {
 // nowsze, nagrobki) zapadaja pod blokada, na swiezym odczycie. Od P-SYNC-WLASCICIEL wersja, ktorej ta karta nie ma,
 // a ktora lezy tu pod inna karta, idzie wedlug Bsw_decyzja (wyzej), a licznik zapisow = liczba wersji karty.
 // wersjeZdalne — wersje z ladunku, szyfry — ich tresc zaszyfrowana juz poza blokada, naglowek — zaszyfrowany naglowek.
+// P-KOSZ-PO-KLUCZU (np-ret-A1): karta z ladunku kazdej jego wersji (karty spoza N) — gdzie inne urzadzenie trzyma wersje
+// starej karty po „Scal pacjentow” (karta docelowa w Bsw_przezyteRetencji). Tylko pamiec scalania, bez odczytow.
+function Bsw_zLadunku(ctx, patientId, wersje) {
+  const m = ctx.Bsw_lad || (ctx.Bsw_lad = new Map());
+  wersje.forEach(function (S) { if (S && S.snapshotId) m.set(S.snapshotId, patientId); });
+}
 async function Bsl_scalPacjenta(F, wersjeZdalne, naglowek, szyfry, ctx, teraz, opcje) {
+  Bsw_zLadunku(ctx, F.patientId, wersjeZdalne);
   return Bsl_podBlokada(F.patientId, async function () {
     await Bsl_odswiezNagrobki(ctx, F.patientId);
     const w = { nowy: false, dodane: 0, pominiete: 0, zmienione: 0 };
@@ -2686,6 +3085,7 @@ async function Bsl_scalPacjenta(F, wersjeZdalne, naglowek, szyfry, ctx, teraz, o
         // Wersja spod innej karty ('przenies', 'zabierz') i tresc dla tamtej karty ('tresc') — tylko w fazie przeniesien,
         // pod blokadami obu kart; tu, pod sama blokada F, zapisujemy wylacznie wersje, ktorej nie ma tu nigdzie ('nowa').
         const d = await Bsw_decyzja(ctx, F, S);
+        Bses_pilnuj(opcje); // P-KOSZ-PO-KLUCZU (P-CHMURA-OPIS): decyzja i zapis nowej wersji tylko w sesji scalania
         if (d.co === 'tresc' || d.co === 'przenies' || d.co === 'zabierz') Bsw_odloz(ctx, F, naglowek, S, szyfry[k], d);
         if (d.co === 'pomin' || d.co === 'tresc') { w.pominiete += 1; continue; }
         if (d.co !== 'nowa') continue;
@@ -2702,6 +3102,7 @@ async function Bsl_scalPacjenta(F, wersjeZdalne, naglowek, szyfry, ctx, teraz, o
         // Licznik = liczba wersji karty (swiezy odczyt pod blokada + dopisane), a nie dawny licznik + dopisane.
         // D-3 A: naglowek z najnowszej wersji karty po zapisie (tutejszej albo z ladunku), a nie naglowek z ladunku.
         const Bng_n = await Bng_zmiana(U, Bng_poZapisie(lokalne, Bng_zap), Bng_j);
+        Bses_pilnuj(opcje); // P-KOSZ-PO-KLUCZU (P-CHMURA-OPIS): naglowek karty tylko w sesji scalania
         await I().putPatientForUser(b, Object.assign({}, U || {}, {
           patientId: F.patientId, headerCipher: Bng_n ? Bng_n.headerCipher : U && U.headerCipher || naglowek,
           snapshotCount: lokalne.length + nowe, lastSavedAtISO: ostatni || teraz,
@@ -2710,9 +3111,10 @@ async function Bsl_scalPacjenta(F, wersjeZdalne, naglowek, szyfry, ctx, teraz, o
         const zmiany = Bsw_bezNowych(Bpu_rek, lokalne.length, F.lastSavedAtISO);
         // D-3 A: takze bez nowych wersji (poprawka w miejscu z innego urzadzenia, dawny rozjazd naglowka) — jeden zapis.
         const Bng_n = await Bng_zmiana(Bpu_rek, Bng_poZapisie(lokalne, Bng_zap), Bng_j);
+        Bses_pilnuj(opcje); // P-KOSZ-PO-KLUCZU (P-CHMURA-OPIS): naglowek karty tylko w sesji scalania
         if (zmiany || Bng_n) await I().putPatientForUser(b, Object.assign({}, Bpu_rek, zmiany, Bng_n ? { headerCipher: Bng_n.headerCipher } : null));
       }
-      if (Bpu_n) await I().removeTombstoneForUser(b, F.patientId);
+      if (Bpu_n) { Bses_pilnuj(opcje); await I().removeTombstoneForUser(b, F.patientId); }
       return w;
     }
     w.nowy = true;
@@ -2725,6 +3127,7 @@ async function Bsl_scalPacjenta(F, wersjeZdalne, naglowek, szyfry, ctx, teraz, o
       // P-SYNC-WLASCICIEL: karta wraca (np. nagrobek scalenia przegral z nowym zapisem z innego urzadzenia) — jej
       // dawne wersje, ktore leza tu pod inna karta, nie przechodza bez porownania rekordow.
       const d = await Bsw_decyzja(ctx, F, S);
+      Bses_pilnuj(opcje); // P-KOSZ-PO-KLUCZU (P-CHMURA-OPIS): decyzja i zapis nowej wersji tylko w sesji scalania
       if (d.co === 'tresc' || d.co === 'przenies' || d.co === 'zabierz') Bsw_odloz(ctx, F, naglowek, S, szyfry[k], d);
       if (d.co === 'pomin' || d.co === 'tresc') { w.pominiete += 1; continue; }
       if (d.co !== 'nowa') { czekaja += 1; continue; }
@@ -2745,11 +3148,13 @@ async function Bsl_scalPacjenta(F, wersjeZdalne, naglowek, szyfry, ctx, teraz, o
     // D-3 A: nowa karta — naglowek z najnowszej zapisanej wersji (tresc z ladunku, bez odszyfrowania); rowny
     // naglowkowi z ladunku — jego gotowy szyfr.
     const Bng_h = await Bng_naglowek(Bng_zap, Bng_j);
+    const Bng_hc = Bng_h && !(F.header && Bng_klucz(F.header) === Bng_klucz(Bng_h)) ? await V(Bng_h) : naglowek;
+    Bses_pilnuj(opcje); // P-KOSZ-PO-KLUCZU (P-CHMURA-OPIS): rekord nowej karty tylko w sesji scalania
     await I().putPatientForUser(b, {
-      patientId: F.patientId, headerCipher: Bng_h && !(F.header && Bng_klucz(F.header) === Bng_klucz(Bng_h)) ? await V(Bng_h) : naglowek, createdAtISO: F.createdAtISO || teraz,
+      patientId: F.patientId, headerCipher: Bng_hc, createdAtISO: F.createdAtISO || teraz,
       lastSavedAtISO: F.lastSavedAtISO || teraz, snapshotCount: zapisane,
     });
-    if (Bpu_n) await I().removeTombstoneForUser(b, F.patientId);
+    if (Bpu_n) { Bses_pilnuj(opcje); await I().removeTombstoneForUser(b, F.patientId); }
     return w;
   }, opcje);
 }
@@ -2780,11 +3185,14 @@ async function Bsl_przeniesWersje(ctx, teraz, opcje) {
   const lista = ctx.Bsw_P || [];
   ctx.Bsw_P = [];
   const wynik = { przeniesione: 0, poprawione: 0, dodane: 0, usuniete: 0, zabrane: 0 };
+  // P-KOSZ-PO-KLUCZU (np-ret-A1): najpierw wersje kart ze zbioru N, ktore przezywaja przyciecie — przed 'zabierz'
+  // pozostalych wersji tych kart, zeby scalenie przerwane w tej fazie nie zgubilo karty docelowej.
+  const Bsw_pr = await Bsw_przezyteRetencji(ctx, lista, opcje);
   for (let k = 0; k < lista.length; k += 1) {
     const p = lista[k], F = p.F.patientId, G = p.G;
     const para = F < G ? [F, G] : [G, F];
     const r = await Bsl_podBlokada(para[0], function () {
-      return Bsl_podBlokada(para[1], function () { return p.tylkoTresc ? Bsw_poprawTresc(p, teraz) : Bsw_przenies(p, teraz, ctx); }, opcje);
+      return Bsl_podBlokada(para[1], function () { return p.tylkoTresc ? Bsw_poprawTresc(p, teraz, opcje) : Bsw_przenies(p, teraz, ctx, opcje); }, opcje);
     }, opcje);
     if (r && r.dalej) {
       // 'zabierz': F zniknela po decyzji („Scal pacjentow” F -> H w innej karcie przegladarki) — wersja idzie za
@@ -2803,35 +3211,169 @@ async function Bsl_przeniesWersje(ctx, teraz, opcje) {
     // (Bpc_usuniete), jak na urzadzeniu, ktore scalilo (Bpu_usun zrodla). Zrodlo, ktore tu zostaje (ma wersje spoza
     // scalenia, np. wizyte zapisana tu po nim — D-21), zachowuje cien. Dodanie po zwolnieniu blokad obu kart (W5P-4):
     // nadal przed koncowym zapisem listy tego scalenia, a zbior tylko rosnie, wiec blokada nie jest potrzebna.
-    if (r.usunieta) Bpc_usunieta(G);
+    // P-KOSZ-PO-KLUCZU (P-CHMURA-OPIS): zbior kart usunietych tylko w sesji scalania — po await blokad sprawdzenie sesji
+    // tuz przed Bpc_usunieta (jak w Bkz_usunZObcych i Bsl_usunPacjenta); przerwane scalenie dopisze karte w nastepnym
+    // (nagrobek).
+    if (r.usunieta) {
+      Bses_pilnuj(opcje);
+      Bpc_usunieta(G);
+    }
+  }
+  // Karta docelowa, ktora zaklada dopiero 'zabierz' (nowa tu karta z ladunku) — po petli.
+  for (let k = 0; k < Bsw_pr.odlozone.length; k += 1) await Bsw_przeniesPrzezyta(Bsw_pr.odlozone[k], Bsw_pr, opcje);
+  wynik.zabrane += Bsw_pr.przeniesione;
+  wynik.usuniete += Bsw_pr.usuniete;
+  return wynik;
+}
+
+/* P-KOSZ-PO-KLUCZU (np-ret-A1, fuzz wielu kart, ziarna 168 i 198): wersja starej karty, ktora przezywa nagrobek
+ * retencji, nie ginie z ta karta przez nagrobek „Scal pacjentow”. Trzy urzadzenia: P przypina x w starej X (albo
+ * poprawia ja po przycieciu), C (bez wiedzy) przycina X, K (bez wiedzy o obu) scala X -> Y. Wpis retencji z C (karta X)
+ * przycina po kluczu kopie x pod Y na K (A1, Bkz_gdzieIndziej; K nie zna gwiazdki), a na P karta X przegrywa z nagrobkiem
+ * scalenia (zbior N) i znika razem z przypieta x: ladunek K nie niesie juz x, wiec decyzja 'zabierz' nie ma czego
+ * przeniesc, a P-KOSZ-USUWANEJ-KARTY bierze tylko wygrane kosza. Przypieta wizyta (albo pozniejsza poprawka) nie byla
+ * w zadnej karcie ani w koszu na zadnym urzadzeniu (na 8240e0df w czesci kolejnosci K ze stara x 23 kg bez gwiazdki, a P i C bez x).
+ * Teraz, na poczatku fazy przeniesien (przed decyzjami 'zabierz' i przed Bsl_usunPacjenta), czytelna wersja karty ze
+ * zbioru N, ktora wygrywa ze swoim wpisem retencji (przypieta — Bpk_przypieta — albo zmieniona pozniej niz przyciecie;
+ * wpis bez chwili kosza) i ktorej nie przenosi zadna decyzja tej fazy, przechodzi pod karte docelowa z tym samym
+ * rekordem (rev, tresc i chwile bez zmian — jak rekord, ktory daje 'zabierz', gdy kopia scalenia jeszcze jest: cala
+ * nowsza kopia, rev = wyzsza z dwoch; bez + 1, bo wtedy wersja spod Y wygrywala regula wlasciciela z ta sama wizyta
+ * przywrocona tu do karty X, ktora wrocila po scaleniu — fz-d7 A, ziarno 4). Karta docelowa bez nowego pola
+ * w nagrobku: karta wpisu, gdy to inna zywa karta spoza N (przyciecie bylo juz pod karta docelowa — E4a-ret-pin);
+ * inaczej karta, do ktorej decyzje 'zabierz' tej fazy przenosza inne wersje tej samej karty (jak Bzu_dokad: „Scal
+ * pacjentow” przepina wersje z tym samym snapshotId), a bez takich decyzji — karta wpisu kosza albo przyciecia innej
+ * wersji X i karta z ladunku, w ktorej leza wersje X (tutejsze i z wpisow pod X; Bsw_zLadunku); tylko gdy to jedna
+ * karta — dwie rozne albo zadna: bez przeniesienia, jak dotad. Przed 'zabierz', bo po przerwanym scaleniu (zmiana
+ * sesji, zajeta blokada) wersje przeniesione juz pod Y nie wskazuja Y w nastepnym. Potem dziala wpis retencji jak
+ * zawsze: Bkz_obceKarty albo petla kart w Bkz_scalKoniec (przypieta zostaje i nagrobek zna jej rejestr, pozniejsza
+ * zmiana zdejmuje wpis), a ladunek niesie ja pod Y na inne urzadzenia (Bkz_pomin po kluczu). To nie cien karty
+ * usuwanej (decyzja 1 z 2026-10-26 dotyczy wersji pokonanych przycieciem): wersja nie przegrala z zadnym nagrobkiem
+ * wersji, a nagrobek „Scal pacjentow” znaczy „wersje sa teraz w karcie docelowej”. Wersje pokonane przycieciem,
+ * wersje bez wpisu i wpisy kosza — bez zmian. Swiezy odczyt pod blokadami obu kart (rosnace id): karta X nadal
+ * przegrywa z nagrobkiem (jak w Bsl_usunPacjenta), karta docelowa jest, wersja w tym samym rekordzie co przy decyzji;
+ * sesja sprawdzana tuz przed kazdym zapisem. Tylko scalanie z magazynem nagrobkow i poza importem (ctx.Bsw_m z Le);
+ * bez wpisow retencji albo bez kart w N — zero odczytow.
+ */
+async function Bsw_przezyteRetencji(ctx, lista, opcje) {
+  const wynik = { przeniesione: 0, usuniete: 0, odlozone: [] };
+  const N = ctx.Bsw_N, m = ctx.Bsw_m;
+  if (!N || !N.size || !m || !ctx.mapa.size) return wynik;
+  let sa = false;
+  ctx.mapa.forEach(function (e) { if (!Bkz_chwilaKosza(e) && Bkz_chwilaRetencji(e)) sa = true; });
+  if (!sa) return wynik;
+  const wDecyzjach = new Set(lista.map(function (p) { return p.S.snapshotId; }));
+  const lad = ctx.Bsw_lad || new Map();
+  const cele = new Map();
+  const cel = async function (X, e, wersjeX) {
+    if (e.patientId !== X && !N.has(e.patientId) && (Bses_pilnuj(opcje), await I().getPatientForUser(b, e.patientId))) return e.patientId;
+    if (cele.has(X)) return cele.get(X);
+    const zywe = function (k) { k.delete(X); N.forEach(function (q) { k.delete(q); }); return k; };
+    let k = zywe(new Set(lista.filter(function (p) { return p.zabierz && p.G === X; }).map(function (p) { return p.F.patientId; })));
+    if (!k.size) {
+      k = new Set();
+      wersjeX.forEach(function (q) { const e2 = ctx.mapa.get(q.snapshotId); if (e2) k.add(e2.patientId); if (lad.has(q.snapshotId)) k.add(lad.get(q.snapshotId)); });
+      ctx.mapa.forEach(function (e2, sid) { if (e2.patientId === X && lad.has(sid)) k.add(lad.get(sid)); });
+      zywe(k);
+    }
+    const H = k.size === 1 ? k.values().next().value : null;
+    cele.set(X, H);
+    return H;
+  };
+  // P-CHMURA-OPIS: odczyty tylko w sesji scalania. Karty spoza listy kart konta nie czytamy: nagrobki kart, ktorych tu
+  // juz nie ma, nie kosztuja odczytu (delta i stan zbiezny — jedna lista zamiast odczytu na nagrobek).
+  Bses_pilnuj(opcje);
+  const Bsw_tu = new Set((await I().listPatientsForUser(b)).map(function (k) { return k && k.patientId; }));
+  for (const X of N) {
+    if (!Bsw_tu.has(X)) continue;
+    Bses_pilnuj(opcje);
+    if (!(await I().getPatientForUser(b, X))) continue;
+    const kand = [];
+    Bses_pilnuj(opcje);
+    const wersje = await I().listSnapshotsForUser(b, X);
+    for (let i = 0; i < wersje.length; i += 1) {
+      const s = wersje[i];
+      const e = ctx.mapa.get(s.snapshotId);
+      if (!e || wDecyzjach.has(s.snapshotId) || Bkz_chwilaKosza(e) || !Bkz_chwilaRetencji(e)) continue;
+      let tresc;
+      try { tresc = await G(s.payloadCipher.iv, s.payloadCipher.data); } catch { tresc = null; }
+      if (!tresc || typeof tresc !== 'object' || Bkz_wygrywa(e, Bkz_zmiana(s), Bgw_stan(s, tresc))) continue;
+      const H = await cel(X, e, wersje);
+      if (H) kand.push({ X: X, s: s, H: H, m: m[X] });
+    }
+    for (let i = 0; i < kand.length; i += 1) {
+      if (await Bsw_przeniesPrzezyta(kand[i], wynik, opcje) === 'bezH') wynik.odlozone.push(kand[i]);
+    }
   }
   return wynik;
 }
 
-// Decyzja 'tresc' (Bsw_decyzja), pod blokadami obu kart, na swiezym odczycie: wersja nadal u G, a tresc z ladunku nadal
-// pozniejsza niz tutejsza (zmieniona tu w miedzyczasie, np. w innej karcie przegladarki — zostaje bez zmian). Rekord G
-// dostaje tresc z ladunku i jej chwile zmiany; chwila zapisu wersji (miejsce w historii G) zostaje tutejsza, bo G
-// wygrala przypisanie (Bsw_rekord z tutejszaKarta) — poprawka dawnej glowy starej karty nie staje sie biezaca wersja
-// G; rev = wyzsza z dwoch. Licznik i chwila zapisu karty G bez zmian (wersji nie przybylo; tak samo urzadzenie,
+// Przeniesienie wersji k.s spod karty k.X pod k.H (Bsw_przezyteRetencji) pod blokadami obu kart (rosnace id), na
+// swiezym odczycie. 'bezH' — karty docelowej tu jeszcze nie ma (zalozy ja 'zabierz' tej fazy).
+async function Bsw_przeniesPrzezyta(k, wynik, opcje) {
+  const X = k.X, H = k.H, para = X < H ? [X, H] : [H, X];
+  const r = await Bsl_podBlokada(para[0], function () {
+    return Bsl_podBlokada(para[1], async function () {
+      const rekX = await I().getPatientForUser(b, X);
+      if (!rekX) return null;
+      Bses_pilnuj(opcje); // P-CHMURA-OPIS: kazdy odczyt po await tylko w sesji scalania
+      if (!(await I().getPatientForUser(b, H))) return 'bezH';
+      Bses_pilnuj(opcje);
+      const n = await Bpu_nagrobek(X);
+      const doISO = Bkz_pozniejsza(k.m, n && n.deletedAtISO);
+      if (!doISO || (rekX.lastSavedAtISO || '') > doISO) return null; // karta X zostaje (jak Bsl_usunPacjenta)
+      Bses_pilnuj(opcje);
+      const wX = await I().listSnapshotsForUser(b, X);
+      const g = wX.find(function (q) { return q && q.snapshotId === k.s.snapshotId; });
+      if (!g || mt(g) !== mt(k.s) || (g.updatedAtISO || null) !== (k.s.updatedAtISO || null)) return null;
+      Bses_pilnuj(opcje); // P-CHMURA-OPIS: zapis tylko w sesji scalania, bez await przed nim
+      await I().putSnapshotForUser(b, Object.assign(Bm1(g), g, { patientId: H }));
+      Bses_pilnuj(opcje);
+      await Bkz_przebudujNaglowek(H, undefined, opcje);
+      const pozostale = wX.filter(function (q) { return q && q.snapshotId !== g.snapshotId; });
+      return { usunieta: await Bsw_poOddaniu(X, rekX, pozostale.length, pozostale, opcje) };
+    }, opcje);
+  }, opcje);
+  if (!r || r === 'bezH') return r;
+  wynik.przeniesione += 1;
+  wynik.usuniete += r.usunieta;
+  if (r.usunieta) {
+    Bses_pilnuj(opcje); // P-CHMURA-OPIS: zbior kart usunietych tylko w sesji scalania
+    Bpc_usunieta(X);
+  }
+  return r;
+}
+
+// Decyzja 'tresc' (Bsw_decyzja), pod blokadami obu kart, na swiezym odczycie: wersja nadal u G, a ladunek nadal wnosi
+// pozniejsza tresc albo pozniejszy rejestr gwiazdki niz tutejszy rekord (Bsw_wklad, W3; zmieniony tu w miedzyczasie,
+// np. w innej karcie przegladarki — zostaje bez zmian). Rekord G wedlug W3 (Bsw_rekordW3 z tutejszaKarta): cala
+// nowsza kopia z ladunku — jej tresc i chwila zmiany, rev = wyzsza z dwoch; rekord zlozony — tresc z jednej kopii,
+// gwiazdka z drugiej, chwila zmiany = pozniejsza z prawdziwych chwil, rev = wyzsza + 1; chwila zapisu wersji (miejsce
+// w historii G) zostaje tutejsza, bo G wygrala przypisanie — poprawka dawnej glowy starej karty nie staje sie biezaca
+// wersja G. Licznik i chwila zapisu karty G bez zmian (wersji nie przybylo; tak samo urzadzenie,
 // ktore dostaje ten rekord jako zmiane wersji tej samej karty); naglowek G z jej najnowszej wersji (D-3 A — zmienia sie,
 // gdy poprawiona wersja jest najnowsza). Zwraca null (bez zmian) albo { dodana: 0, usunieta: 0 }.
-async function Bsw_poprawTresc(p, teraz) {
+async function Bsw_poprawTresc(p, teraz, opcje) {
   const Bng_wG = await I().listSnapshotsForUser(b, p.G);
   const g = Bng_wG.find(function (s) { return s && s.snapshotId === p.S.snapshotId; });
-  if (!g || !Bsw_nowszaTresc(p.S, g)) return null;
+  if (!g || !(await Bsw_wklad(p.S, g))) return null;
   const Bng_rekG = await I().getPatientForUser(b, p.G);
   if (!Bng_rekG) return null;
   const Bng_zap = [], Bng_j = new Map();
-  await I().putSnapshotForUser(b, Bng_dopisz(Bng_zap, Bng_j, Object.assign(Bsw_rekord({ patientId: p.G }, p.S, p.szyfr, teraz, g, true), Bm1(g, p.S)), p.S.payload || {}, p.szyfr));
+  const Bsw_r3 = await Bsw_rekordW3({ patientId: p.G }, p.S, p.szyfr, teraz, g, true);
+  Bses_pilnuj(opcje); // P-CHMURA-OPIS: rekord W3 (odczyt i szyfr) w sesji scalania — zapis bez await przed nim
+  await I().putSnapshotForUser(b, Bng_dopisz(Bng_zap, Bng_j, Object.assign(Bsw_r3, Bm1(g, p.S)), p.S.payload || {}, p.szyfr));
   const Bng_n = await Bng_zmiana(Bng_rekG, Bng_poZapisie(Bng_wG, Bng_zap), Bng_j);
-  if (Bng_n) await I().putPatientForUser(b, Object.assign({}, Bng_rekG, { headerCipher: Bng_n.headerCipher }));
+  if (Bng_n) {
+    Bses_pilnuj(opcje); // P-CHMURA-OPIS: naglowek G tylko w sesji scalania, bez await przed zapisem
+    await I().putPatientForUser(b, Object.assign({}, Bng_rekG, { headerCipher: Bng_n.headerCipher }));
+  }
   return { dodana: 0, usunieta: 0 };
 }
 
 // Jedno przeniesienie, pod blokadami obu kart, na swiezym odczycie: wersja nadal u G i w tej samej rewizji co przy
 // decyzji, a karta F istnieje albo jej nagrobek nadal przegrywa z zapisem z ladunku (wtedy F powstaje z naglowkiem
-// z ladunku). Tresc nowsza wg Bsw_nowszaTresc (z ladunku albo tutejsza; Bsw_rekord), chwila zapisu wersji — z ladunku
-// (F wygrala przypisanie). Licznik F = liczba jej wersji.
+// z ladunku). Rekord wedlug W3 obu kopii (Bsw_rekordW3; bez porownania W3 — nowsza tresc wg Bsw_nowszaTresc,
+// Bsw_rekord), chwila zapisu wersji — z ladunku (F wygrala przypisanie). Licznik F = liczba jej wersji.
 // Ostatnia wersja G tez przechodzi (ta sama regula wlasciciela co dla pozostalych), a pusta karta G znika — bez nagrobka.
 // Dotad ostatnia wersja zostawala przy G: delta karty Y po „Scal pacjentow” X -> Y (buildPatientDelta, bez nagrobkow)
 // przenosila spod X wszystko poza glowa X, a osobna delta nagrobka X usuwala potem X razem z ta glowa — wersja ginela
@@ -2840,14 +3382,14 @@ async function Bsw_poprawTresc(p, teraz) {
 // urzadzenia oprozniaja G ta sama regula, a nagrobek z data G (np. z poprawki G na tym urzadzeniu) moglby wygrac na
 // trzecim urzadzeniu z zapisem G, ktorego tu nie znamy, i usunac go razem z karta.
 // Decyzja 'zabierz' (p.zabierz, G w zbiorze N — zaraz zniknie): wersja przechodzi takze wtedy, gdy zmieniono ja tu po
-// decyzji — rekord G nie moze wygrac z karta, ktora znika — z nowsza z dwoch tresci (Bsw_rekord na swiezym odczycie:
+// decyzji — rekord G nie moze wygrac z karta, ktora znika — z rekordem W3 obu kopii (Bsw_rekordW3 na swiezym odczycie:
 // poprawka zrobiona w miedzyczasie w innej karcie przegladarki, pod blokada G, przechodzi pod F, o ile jest pozniejsza
 // niz tresc z ladunku). Ostatnia wersja G przechodzi tak samo, a nagrobek G stawia potem Bsl_usunPacjenta.
 // P-SYNC-WLASCICIEL-2 (uwagi recenzentow do poprawki uwagi Codex P1): miedzy decyzja 'zabierz' a faza inna karta
 // przegladarki moze zmienic F albo G. Dotad (zapis od razu, pod blokada F) wersja lezala juz pod F i dzielila jej los;
 // teraz faza odtwarza ten wynik:
 //   - wersji nie ma juz pod G i nie ma jej tu nigdzie, a nie lezy w koszu ani nie przycial jej nagrobek retencji
-//     („Usun pacjenta” G) — zapis pod F z nowsza z dwoch tresci z chwili decyzji (z ladunku albo tutejsza, p.gDecyzji),
+//     („Usun pacjenta” G) — zapis pod F z rekordem W3 obu kopii z chwili decyzji (z ladunku i tutejsza, p.gDecyzji),
 //     jak zapis od razu na 32b6557 (Bsw_bezSladu); wersja pod inna karta („Scal pacjentow” G -> K) albo w koszu (pod
 //     dowolna karta) zostaje tam, gdzie jest;
 //   - F zniknela z nagrobkiem zapisanym po decyzji: „Scal pacjentow” F -> H — wersja idzie pod H, za pozostalymi
@@ -2855,17 +3397,17 @@ async function Bsw_poprawTresc(p, teraz) {
 //     nigdzie) — wersja zostaje pod G i znika razem z nia, jak razem z F.
 // Zwraca null (bez zmian), { dalej: H } albo { dodana, usunieta }: 1, gdy karta F tu powstala, i 1, gdy pusta karta G
 // zniknela.
-async function Bsw_przenies(p, teraz, ctx) {
+async function Bsw_przenies(p, teraz, ctx, opcje) {
   const G = p.G;
   const wersjeG = await I().listSnapshotsForUser(b, G);
   const g = wersjeG.find(function (s) { return s && s.snapshotId === p.S.snapshotId; });
-  if (!g && p.zabierz && await Bsw_bezSladu(ctx, p)) return Bsw_doF(p, teraz, ctx, p.gDecyzji);
+  if (!g && p.zabierz && await Bsw_bezSladu(ctx, p)) return Bsw_doF(p, teraz, ctx, p.gDecyzji, opcje);
   if (!g || !p.zabierz && (mt(g) !== p.rev || Bsw_zmiana(g) !== p.zmiana)) return null;
   const rekG = await I().getPatientForUser(b, G);
   if (!rekG) return null;
-  const r = await Bsw_doF(p, teraz, ctx, g);
+  const r = await Bsw_doF(p, teraz, ctx, g, opcje);
   if (!r || r.dalej) return r;
-  return { dodana: r.dodana, usunieta: await Bsw_poOddaniu(G, rekG, wersjeG.length - 1, wersjeG.filter(function (s) { return s && s.snapshotId !== p.S.snapshotId; })) };
+  return { dodana: r.dodana, usunieta: await Bsw_poOddaniu(G, rekG, wersjeG.length - 1, wersjeG.filter(function (s) { return s && s.snapshotId !== p.S.snapshotId; }), opcje) };
 }
 
 // Zapis wersji pod F w fazie przeniesien (Bsw_przenies, pod blokadami F i G); g — tutejszy rekord wersji (wersja znikla
@@ -2875,7 +3417,7 @@ async function Bsw_przenies(p, teraz, ctx) {
 // nie powstaje nigdy, a wersja dostaje pod nia rev + 1, jak przy „Scal pacjentow” F -> H (Bsw_poScaleniu).
 // Naglowek F (i nastepcy H) z najnowszej wersji po zapisie (D-3 A); karta, ktora tu powstaje, bez czytelnej najnowszej
 // wersji — naglowek z ladunku. Chwila zapisu karty H — bez zmian.
-async function Bsw_doF(p, teraz, ctx, g) {
+async function Bsw_doF(p, teraz, ctx, g, opcje) {
   const F = p.F.patientId;
   let rekF = await I().getPatientForUser(b, F);
   const dodana = rekF ? 0 : 1;
@@ -2889,10 +3431,14 @@ async function Bsw_doF(p, teraz, ctx, g) {
       patientId: F, headerCipher: p.naglowek, createdAtISO: p.F.createdAtISO || teraz,
       lastSavedAtISO: p.F.lastSavedAtISO || teraz, snapshotCount: 0,
     };
-    if (nagrobek) await I().removeTombstoneForUser(b, F);
+    if (nagrobek) {
+      Bses_pilnuj(opcje); // P-CHMURA-OPIS: tylko w sesji scalania, bez await przed zapisem
+      await I().removeTombstoneForUser(b, F);
+    }
   }
-  const rek = Bsw_rekord(p.F, p.S, p.szyfr, teraz, g);
+  const rek = await Bsw_rekordW3(p.F, p.S, p.szyfr, teraz, g);
   if (p.nastepca) Object.assign(rek, Bsw_poScaleniu(rek, F));
+  Bses_pilnuj(opcje); // P-CHMURA-OPIS: rekord W3 (odczyt i szyfr) w sesji scalania — zapis bez await przed nim
   await I().putSnapshotForUser(b, Object.assign(rek, Bm1(p.S)));
   if (p.zabierz) Bsw_wersjeF(ctx, p.zrodlo || F).push(p.S.snapshotId);
   const Bng_wF = await I().listSnapshotsForUser(b, F);
@@ -2903,6 +3449,7 @@ async function Bsw_doF(p, teraz, ctx, g) {
   }
   const Bng_n = await Bng_zmiana(rekF, Bng_wF, rek.payloadCipher === p.szyfr ? new Map([[p.S.snapshotId, { tresc: p.S.payload || {}, dokladnie: true }]]) : null);
   if (Bng_n) zmiany.headerCipher = Bng_n.headerCipher;
+  Bses_pilnuj(opcje); // P-CHMURA-OPIS: karta F tylko w sesji scalania, bez await przed zapisem
   await I().putPatientForUser(b, Object.assign({}, rekF, zmiany));
   return { dodana: dodana, usunieta: 0 };
 }
@@ -2940,8 +3487,9 @@ async function Bsw_nastepca(ctx, p) {
 // Karta G po oddaniu wersji (pod blokada G): licznik = liczba pozostalych wersji, a bez wersji — karta znika (bez
 // nagrobka; powod przy Bsw_przenies). Wersja jest juz zapisana pod F, wiec usuniecie G nie zabiera zadnej wersji.
 // Naglowek G z jej najnowszej pozostalej wersji (D-3 A), w tym samym zapisie. Zwraca 1, gdy karta zniknela.
-async function Bsw_poOddaniu(G, rekG, zostalo, pozostale) {
+async function Bsw_poOddaniu(G, rekG, zostalo, pozostale, opcje) {
   const Bng_n = zostalo > 0 ? await Bng_zmiana(rekG, pozostale, null) : null;
+  Bses_pilnuj(opcje); // P-CHMURA-OPIS: karta G tylko w sesji scalania, bez await przed zapisem
   if (zostalo > 0) await I().putPatientForUser(b, Object.assign({}, rekG, { snapshotCount: zostalo }, Bng_n ? { headerCipher: Bng_n.headerCipher } : null));
   else await I().removePatientForUser(b, G);
   return zostalo > 0 ? 0 : 1;
@@ -4086,7 +4634,9 @@ async function Bsl_zdejmijNagrobek(patientId, deletedAtISO, opcje) {
   return Bsl_podBlokada(patientId, async function () {
     const n = await Bpu_nagrobek(patientId);
     if (!n || n.deletedAtISO !== deletedAtISO) return;
+    Bses_pilnuj(opcje); // P-CHMURA-OPIS: odczyt i zdjecie nagrobka tylko w sesji scalania
     if (!(await I().getPatientForUser(b, patientId))) return;
+    Bses_pilnuj(opcje);
     await I().removeTombstoneForUser(b, patientId);
   }, opcje);
 }
@@ -4164,12 +4714,18 @@ async function Bsl_usunPacjenta(patientId, deletedAtISO, opcje, ctx) {
   return Bsl_podBlokada(patientId, async function () {
     const Bsl_lok = await Bpu_nagrobek(patientId);
     if (Bsl_lok && Bsl_lok.deletedAtISO > deletedAtISO) deletedAtISO = Bsl_lok.deletedAtISO;
+    Bses_pilnuj(opcje); // P-CHMURA-OPIS: odczyty karty i jej wersji tylko w sesji scalania
     const rekord = await I().getPatientForUser(b, patientId);
     if (rekord && (rekord.lastSavedAtISO || '') > deletedAtISO) {
       // P-SYNC-WLASCICIEL: karta zostaje (zapisana w innej karcie przegladarki po chwili usuniecia), ale jej wersje
-      // mogly w tym scalaniu przejsc pod inna karte — licznik = liczba jej wersji.
+      // mogly w tym scalaniu przejsc pod inna karte — licznik = liczba jej wersji. P-CHMURA-OPIS: odczyt i zapis licznika
+      // tylko w sesji scalania (dodatkowe sprawdzenia sesji).
+      Bses_pilnuj(opcje);
       const ile = (await I().listSnapshotsForUser(b, patientId)).length;
-      if (ile && rekord.snapshotCount !== ile) await I().putPatientForUser(b, Object.assign({}, rekord, { snapshotCount: ile }));
+      if (ile && rekord.snapshotCount !== ile) {
+        Bses_pilnuj(opcje);
+        await I().putPatientForUser(b, Object.assign({}, rekord, { snapshotCount: ile }));
+      }
       return 0;
     }
     let usunieta = 0;
@@ -4712,7 +5268,7 @@ const Bpb_IMPORT=Object.freeze({});async function ns(t,e,Bpb_o){if(!T())throw ne
    rzetelnym dolnym oszacowaniem rozjazdu, a ujemny jest zaszumiony i nie alarmuje.
    Szczesliwie dodatni kierunek to ten grozny: nadawca ma zegar do przodu wzgledem naszego. */
 function Gcs(t,e){var n=typeof t=="string"&&t?Date.parse(t):NaN;if(!isFinite(n)||!isFinite(e))return null;var r=n-e,o=6e4;return{offsetMs:r,thresholdMs:o,warn:r>o,otherExportedAtISO:t}}
-function Gz(t,e,n){const r=Math.round(de/864e5),o=Gy(t,n),a=Gy(e,n),i=typeof o=="number"&&o>r,c=typeof a=="number"&&a>r;return{thresholdDays:r,localLastMergeAtISO:typeof t=="string"&&t?t:null,localDays:o,localStale:i,remoteLastMergeAtISO:typeof e=="string"&&e?e:null,remoteDays:a,remoteStale:c,warn:i||c}}async function Gm(){if(!T())return null;return Gz(await Gw(),null,Date.now())}async function is(){if(!T())throw new Error("VildaVault.exportSyncPayload: vault nie jest odblokowany.");const t=await I().listPatientsForUser(b),e=[];for(let p=0;p<t.length;p+=1){const w=t[p],h=await G(w.headerCipher.iv,w.headerCipher.data),O=await I().listSnapshotsForUser(b,w.patientId),u=[];for(let f=0;f<O.length;f+=1){const m=O[f],E=await G(m.payloadCipher.iv,m.payloadCipher.data);u.push({snapshotId:m.snapshotId,savedAtISO:m.savedAtISO,rev:mt(m),updatedAtISO:typeof m.updatedAtISO=="string"&&m.updatedAtISO?m.updatedAtISO:null,payload:E})}u.sort(function(f,m){return f.savedAtISO>m.savedAtISO?1:f.savedAtISO<m.savedAtISO?-1:0}),e.push({patientId:w.patientId,header:h,snapshots:u,createdAtISO:w.createdAtISO,lastSavedAtISO:w.lastSavedAtISO,snapshotCount:w.snapshotCount})}let n=[];try{const p=I();if(p&&typeof p.listTombstonesForUser=="function"&&(n=await p.listTombstonesForUser(b),typeof p.removeTombstoneForUser=="function"&&n.length)){const w=new Date(Date.now()-de).toISOString(),h=[];for(let O=0;O<n.length;O++){const u=n[O];u&&u.deletedAtISO&&u.deletedAtISO<w?await p.removeTombstoneForUser(b,u.patientId):h.push(u)}n=h}}catch{n=[]}let r=[],o=[];try{const p=await I().getUserMeta(b);if(p&&Array.isArray(p.passkeys)&&(r=p.passkeys.map(function(w){return{credentialId:w.credentialId,deviceLabel:w.deviceLabel,createdAtISO:w.createdAtISO,roaming:w.roaming===!0}})),p&&Array.isArray(p.passkeyTombstones)){const w=new Date(Date.now()-de).toISOString();o=p.passkeyTombstones.filter(function(h){return h&&h.credentialId&&h.deletedAtISO&&h.deletedAtISO>=w})}}catch{}let a={};try{const p=await I().getUserMeta(b);p&&typeof p.userPreferences=="object"&&p.userPreferences&&(a=p.userPreferences)}catch(p){}let s=[],i=[];try{const p=I();if(p&&typeof p.listNotesForUser=="function"){const w=await p.listNotesForUser(b);for(let h=0;h<w.length;h+=1){const O=await nn(w[h]);s.push(O)}}if(p&&typeof p.listNoteTombstonesForUser=="function"&&(i=await p.listNoteTombstonesForUser(b),typeof p.removeNoteTombstoneForUser=="function"&&i.length)){const w=new Date(Date.now()-de).toISOString(),h=[];for(let O=0;O<i.length;O+=1){const u=i[O];u&&u.deletedAtISO&&u.deletedAtISO<w?await p.removeNoteTombstoneForUser(b,u.id):h.push(u)}i=h}}catch{s=[],i=[]}let c=[],l=[];try{const p=I();if(p&&typeof p.listPatientNotesForUser=="function"){const w=await p.listPatientNotesForUser(b);for(let h=0;h<w.length;h+=1){/* P-NOTATKI-1 (G12): jak wyzej — uszkodzona notatka zostaje na urzadzeniu zamiast jechac jako atrapa. */try{await G(w[h].bodyCipher.iv,w[h].bodyCipher.data)}catch{continue}const O=await Ft(w[h]);c.push(O)}}if(p&&typeof p.listPatientNoteTombstonesForUser=="function"&&(l=await p.listPatientNoteTombstonesForUser(b),typeof p.removePatientNoteTombstoneForUser=="function"&&l.length)){const w=new Date(Date.now()-de).toISOString(),h=[];for(let O=0;O<l.length;O+=1){const u=l[O];u&&u.deletedAtISO&&u.deletedAtISO<w?await p.removePatientNoteTombstoneForUser(b,u.id):h.push(u)}l=h}}catch{c=[],l=[]}let y=[],d=[];try{const p=I();if(p&&typeof p.listPatientListsForUser=="function"){const w=await p.listPatientListsForUser(b);for(let h=0;h<w.length;h+=1)y.push(await Re(w[h]))}if(p&&typeof p.listPatientListTombstonesForUser=="function"&&(d=await p.listPatientListTombstonesForUser(b),typeof p.removePatientListTombstoneForUser=="function"&&d.length)){const w=new Date(Date.now()-de).toISOString(),h=[];for(let O=0;O<d.length;O+=1){const u=d[O];u&&u.deletedAtISO&&u.deletedAtISO<w?await p.removePatientListTombstoneForUser(b,u.id):h.push(u)}d=h}}catch{y=[],d=[]}const Gp=await Gw();return{schemaVersion:at,userId:b,label:st,exportedAtISO:new Date().toISOString(),lastMergeAtISO:Gp,credential:await Gc5(),patients:e,tombstones:Array.isArray(n)?n:[],passkeys:r,passkeyTombstones:o,userPreferences:a,notes:Array.isArray(s)?s:[],noteTombstones:Array.isArray(i)?i:[],patientNotes:Array.isArray(c)?c:[],patientNoteTombstones:Array.isArray(l)?l:[],patientLists:Array.isArray(y)?y:[],patientListTombstones:Array.isArray(d)?d:[],snapshotTombstones:await Bkz_eksport()}}async function cs(t){if(!T())throw new Error("VildaVault.buildNoteDelta: vault nie jest odblokowany.");if(typeof t!="string"||!t)return null;const e=await I().getPatientNoteForUser(b,t);if(!e)return null;/* P-NOTATKI-1 (G12): notatka, ktorej nie da sie odszyfrowac, nie wychodzi z urzadzenia jako „(blad odczytu)" — nadpisalaby czytelna tresc na drugim urzadzeniu. Ta sama bramka, co w bibliotece szablonow (Qb0). */try{await G(e.bodyCipher.iv,e.bodyCipher.data)}catch{return null}const n=await Ft(e);return await V({schemaVersion:at,patients:[],tombstones:[],passkeys:[],passkeyTombstones:[],userPreferences:{},notes:[],noteTombstones:[],patientNotes:[n],patientNoteTombstones:[]})}async function Qb0(t){if(!T())throw new Error("VildaVault.buildLibraryNoteDelta: vault nie jest odblokowany.");if(typeof t!="string"||!t)return null;const e=await I().getNoteForUser(b,t);if(!e||!e.noteCipher)return null;try{await G(e.noteCipher.iv,e.noteCipher.data)}catch{return null}const n=await nn(e);if(!n||!n.id||!n.updatedAtISO)return null;return await V({schemaVersion:at,patients:[],tombstones:[],passkeys:[],passkeyTombstones:[],userPreferences:{},notes:[n],noteTombstones:[],patientNotes:[],patientNoteTombstones:[]})}async function Qb1(t,e){if(!T())throw new Error("VildaVault.buildLibraryNoteTombstoneDelta: vault nie jest odblokowany.");if(typeof t!="string"||!t)return null;const n=typeof e=="string"&&e?e:new Date().toISOString();return await V({schemaVersion:at,patients:[],tombstones:[],passkeys:[],passkeyTombstones:[],userPreferences:{},notes:[],noteTombstones:[{id:t,deletedAtISO:n}],patientNotes:[],patientNoteTombstones:[]})}async function us(t,e){if(!T())throw new Error("VildaVault.buildTombstoneDelta: vault nie jest odblokowany.");if(typeof t!="string"||!t)return null;const n=typeof e=="string"&&e?e:new Date().toISOString();return await Bsw_deltaNagrobka(t,{schemaVersion:at,patients:[],tombstones:[{patientId:t,deletedAtISO:n}],passkeys:[],passkeyTombstones:[],userPreferences:{},notes:[],noteTombstones:[],patientNotes:[],patientNoteTombstones:[]})}async function ls(t,e){if(!T())throw new Error("VildaVault.buildNoteTombstoneDelta: vault nie jest odblokowany.");if(typeof t!="string"||!t)return null;const n=typeof e=="string"&&e?e:new Date().toISOString();/* P-NOTATKI-ZA-KARTA (D-21 A): delta niesie nagrobek tak, jak lezy w sklepie (rev i pole deletedWithPatient) — bez tego drugie urzadzenie dostawalo nagrobek bez pola i kasowalo notatki, zanim przyszedl pelny ladunek. Brak rekordu: postac dotychczasowa. */let Qz={id:t,deletedAtISO:n};try{const Qx=await Bnp_nagrobek(I(),t);Qx&&Qx.deletedAtISO&&(Qz={id:t,deletedAtISO:Qx.deletedAtISO},typeof Qx.rev=="number"&&isFinite(Qx.rev)&&Qx.rev>0&&(Qz.rev=Qx.rev),Bnp_pole(Qx)&&(Qz.deletedWithPatient=Bnp_pole(Qx)))}catch{}return await V({schemaVersion:at,patients:[],tombstones:[],passkeys:[],passkeyTombstones:[],userPreferences:{},notes:[],noteTombstones:[],patientNotes:[],patientNoteTombstones:[Qz]})}async function ds(t){if(!T())throw new Error("VildaVault.buildPatientDelta: vault nie jest odblokowany.");if(typeof t!="string"||!t)return null;const e=await I().listPatientsForUser(b);let n=null;for(let i=0;i<e.length;i+=1)if(e[i]&&e[i].patientId===t){n=e[i];break}if(!n||!n.headerCipher)return null;const r=await G(n.headerCipher.iv,n.headerCipher.data),o=await I().listSnapshotsForUser(b,t),a=[];for(let i=0;i<o.length;i+=1){const c=o[i],l=await G(c.payloadCipher.iv,c.payloadCipher.data);a.push({snapshotId:c.snapshotId,savedAtISO:c.savedAtISO,rev:mt(c),updatedAtISO:typeof c.updatedAtISO=="string"&&c.updatedAtISO?c.updatedAtISO:null,payload:l})}a.sort(function(i,c){return i.savedAtISO>c.savedAtISO?1:i.savedAtISO<c.savedAtISO?-1:0});const s={schemaVersion:at,patients:[{patientId:n.patientId,header:r,snapshots:a,createdAtISO:n.createdAtISO,lastSavedAtISO:n.lastSavedAtISO,snapshotCount:n.snapshotCount}],tombstones:[],passkeys:[],passkeyTombstones:[],userPreferences:{},notes:[],noteTombstones:[],patientNotes:[],patientNoteTombstones:[]};return await V(s)}async function ps(t){if(!T()||!t||typeof t.iv!="string"||typeof t.data!="string")return null;const Bses_d=Bses_opcje(null);let e=null;try{e=await G(t.iv,t.data)}catch{return null}if(Bses_zmieniona(Bses_d))throw Bses_delta(Bses_blad());if(!e||typeof e!="object")return null;try{return await Le(e)}catch(Bses_x){throw Bses_delta(Bses_x)}}const Qe0=[];function Qe1(t){typeof t=="function"&&Qe0.push(t)}function Qe2(t){Qe0.forEach(function(e){try{e(t)}catch{}})}function Gc2(t){const e=t&&typeof t.passwordKdfIterations=="number"&&isFinite(t.passwordKdfIterations)&&t.passwordKdfIterations>0?Math.round(t.passwordKdfIterations):null;return e||(t?t.kdfIterations:null)}function Gc3(t){const e=new Date().toISOString(),n=t&&typeof t.passwordUpdatedAtISO=="string"&&t.passwordUpdatedAtISO?t.passwordUpdatedAtISO:null;if(!n||e>n)return e;const r=Date.parse(n);return Number.isFinite(r)?new Date(r+1).toISOString():e}async function Gc4(t,e,n,r,o){try{const a=L(),s=await a.deriveKey(t,e,n),i=new Uint8Array(await a.decryptBytes(s,r.iv,r.data)),c=new Uint8Array(o);if(i.length!==c.length)return!1;let l=0;for(let y=0;y<i.length;y+=1)l|=i[y]^c[y];return l===0}catch{return!1}}async function Gc5(){try{const t=await I().getUserMeta(b);if(!t)return null;const e=typeof t.passwordUpdatedAtISO=="string"&&t.passwordUpdatedAtISO?t.passwordUpdatedAtISO:null;if(!e)return null;const n=t.encryptedMasterByPassword;if(typeof t.passwordSalt!="string"||!t.passwordSalt||!n||typeof n.iv!="string"||typeof n.data!="string")return null;const r=Gc2(t);return typeof r!="number"||!isFinite(r)||r<=0?null:{passwordSalt:t.passwordSalt,kdfIterations:r,encryptedMasterByPassword:{iv:n.iv,data:n.data},updatedAtISO:e}}catch{return null}}async function Gc1(t,Bses_o){if(!t||typeof t!="object")return!1;const e=typeof t.updatedAtISO=="string"&&t.updatedAtISO?t.updatedAtISO:null,n=typeof t.passwordSalt=="string"&&t.passwordSalt?t.passwordSalt:null,r=t.encryptedMasterByPassword,o=r&&typeof r=="object"&&typeof r.iv=="string"&&r.iv&&typeof r.data=="string"&&r.data?{iv:r.iv,data:r.data}:null,a=typeof t.kdfIterations=="number"&&isFinite(t.kdfIterations)&&t.kdfIterations>0?Math.round(t.kdfIterations):null;if(!e||!n||!o||!a)return!1;if(!await Bmk_zmien(b,function(s){if(!s)return null;const i=typeof s.passwordUpdatedAtISO=="string"&&s.passwordUpdatedAtISO?s.passwordUpdatedAtISO:null;if(i&&!(e>i))return null;if(s.passwordSalt===n&&s.encryptedMasterByPassword&&s.encryptedMasterByPassword.iv===o.iv&&s.encryptedMasterByPassword.data===o.data&&Gc2(s)===a)return null;return Object.assign({},s,{passwordSalt:n,passwordKdfIterations:a,encryptedMasterByPassword:o,passwordUpdatedAtISO:e})},Bses_o))return!1;try{v.VildaPersistence&&typeof v.VildaPersistence.writePreferenceRaw=="function"&&v.VildaPersistence.writePreferenceRaw("PASSWORD_CHANGED_REMOTELY_AT",e,{force:!0})}catch{}return Qe2({action:"password-changed-remotely",updatedAtISO:e}),!0}async function Le(t,e){if(!T())throw new Error("VildaVault.mergeSyncPayload: vault nie jest odblokowany.");const Bses_imp=e===Bpb_IMPORT;e=Bses_opcje(e);if(!t||typeof t!="object")throw new Error("VildaVault.mergeSyncPayload: nieprawid\u0142owy format danych.");const n=e&&typeof e.onProgress=="function"?e.onProgress:null;function r(P,F,j){if(n)try{n({phase:P,current:F,total:j})}catch{}}const Gp=await Gw(),Gq=t&&typeof t.lastMergeAtISO=="string"&&t.lastMergeAtISO?t.lastMergeAtISO:null,o=Array.isArray(t.patients)?t.patients:[],a=await I().listPatientsForUser(b);const Bkz_S=await Bkz_scalStart(t);r("patients-start",0,o.length);const i=new Date().toISOString();let c=0,l=0,y=0,d=0,p=0,w=0;const h=I(),O=h&&typeof h.listTombstonesForUser=="function"&&typeof h.putTombstoneForUser=="function"&&typeof h.removeTombstoneForUser=="function",u=Array.isArray(t.tombstones)?t.tombstones:[],f=O?await h.listTombstonesForUser(b):[],m=Object.create(null);function E(P,F){!P||!F||(!m[P]||F>m[P])&&(m[P]=F)}u.forEach(function(P){P&&E(P.patientId,P.deletedAtISO)}),f.forEach(function(P){P&&E(P.patientId,P.deletedAtISO)});const _=Object.create(null);function A(P,F){!P||!F||(!_[P]||F>_[P])&&(_[P]=F)}a.forEach(function(P){P&&A(P.patientId,P.lastSavedAtISO)}),o.forEach(function(P){P&&A(P.patientId,P.lastSavedAtISO)});const N=new Set;Object.keys(m).forEach(function(P){const F=_[P]||null;(!F||m[P]>=F)&&N.add(P)});Bkz_S.Bsw_N=N;Bkz_S.Bsw_pusto=!a.length;for(let P=0;P<o.length;P++){r("patients",P+1,o.length);const F=o[P];if(!F||!F.patientId||!F.header)continue;if(N.has(F.patientId)){Bsl_koszZLadunku(Bkz_S,F);continue}const j=(Array.isArray(F.snapshots)?F.snapshots:[]).filter(function(x){return x&&x.snapshotId}),W=V(F.header),X=j.map(function(x){return V(x.payload||{})}),K=await Promise.all([W].concat(X)),H=K[0],R=K.slice(1);const Bsl_w=await Bsl_scalPacjenta(F,j,H,R,Bkz_S,i,e);y+=Bsl_w.dodane,d+=Bsl_w.pominiete,p+=Bsl_w.zmienione,Bsl_w.usuniety||(Bsl_w.nowy?l++:c++)}const Bsw_f=await Bsl_przeniesWersje(Bkz_S,i,e);l+=Bsw_f.dodane,w+=Bsw_f.usuniete;y+=Bsw_f.zabrane;if(O){const P=Array.from(N);for(let F=0;F<P.length;F++){const j=P[F];w+=await Bsl_usunPacjenta(j,m[j],e,Bses_imp?null:Bkz_S)}for(let F=0;F<f.length;F++){const j=f[F];j&&j.patientId&&!N.has(j.patientId)&&await Bsl_zdejmijNagrobek(j.patientId,j.deletedAtISO,e)}}let Bkz_n=0;try{Bkz_n=Bses_imp?0:await Bkz_scalKoniec(Bkz_S,e)}catch(Bkz_e){if(Bkz_e&&(Bkz_e.vildaMergeBusy||Bkz_e.code==="SESSION_CHANGED"))throw Bkz_e;try{console.warn("[vault] kosz zapisow: scalanie nagrobkow",Bkz_e)}catch{}}let C=0,Q=0;try{const P=Array.isArray(t.passkeys)?t.passkeys:[],F=Array.isArray(t.passkeyTombstones)?t.passkeyTombstones:[],Bmk_w=await Bmk_zmien(b,function(j){if(!j)return null;C=0,Q=0;let W=Array.isArray(j.passkeys)?j.passkeys.slice():[],X=Array.isArray(j.passkeyTombstones)?j.passkeyTombstones.slice():[];const K=Object.create(null);X.forEach(function(U){U&&U.credentialId&&(K[U.credentialId]=U.deletedAtISO||"")}),F.forEach(function(U){if(!U||!U.credentialId)return;const S=K[U.credentialId]||"";(!S||U.deletedAtISO&&U.deletedAtISO>S)&&(K[U.credentialId]=U.deletedAtISO||"")});const H=new Date(Date.now()-de).toISOString(),R=[];Object.keys(K).forEach(function(U){const S=K[U];S&&S>=H&&R.push({credentialId:U,deletedAtISO:S})});const x=new Set(R.map(function(U){return U.credentialId})),Y=W.length;W=W.filter(function(U){return!x.has(U.credentialId)}),Q=Y-W.length;const nt=new Set(W.map(function(U){return U.credentialId}));P.forEach(function(U){!U||!U.credentialId||nt.has(U.credentialId)||x.has(U.credentialId)||(W.push({credentialId:U.credentialId,deviceLabel:U.deviceLabel||"(inne urz\u0105dzenie)",createdAtISO:U.createdAtISO||new Date().toISOString(),roaming:U.roaming===!0}),C++)});return C>0||Q>0||R.length!==(Array.isArray(j.passkeyTombstones)?j.passkeyTombstones.length:0)?Object.assign({},j,{passkeys:W,passkeyTombstones:R}):null},e);Bmk_w&&await ln(b)}catch{}let J=0;try{const P=t&&typeof t.userPreferences=="object"&&t.userPreferences||{},F=Object.keys(P);if(F.length>0){const Bmk_ap=[],Bmk_w=await Bmk_zmien(b,function(j){if(!j)return null;J=0,Bmk_ap.length=0;const W=j.userPreferences&&typeof j.userPreferences=="object"?Object.assign({},j.userPreferences):{};let X=!1;for(let K=0;K<F.length;K++){const H=F[K],R=P[H];if(!R||typeof R!="object"||!R.updatedAtISO)continue;const x=W[H];/* P-HISTORIA-ZWIJANA (uwaga Codex do #479): advHistoryCollapsed to mapa per pacjent ({id:{z:1|deleted,updatedAtISO}}) - scalana per wpis jak wlsched/wllists, zeby zmiany roznych pacjentow na dwoch urzadzeniach offline nie nadpisywaly sie nawzajem; wynik trafia tez do lokalnej preferencji (applyPreferenceFromCloud), bo ta preferencja zyje w VildaPersistence, nie tylko w sejfie. */if(H==="wlsched"||H==="wllists"||H==="advHistoryCollapsed"){const Az=Ak(x,R);Az&&(W[H]=Az,X=!0,J++),Az&&H==="advHistoryCollapsed"&&Bmk_ap.push([H,Az.value]);continue}if(!x||!x.updatedAtISO||R.updatedAtISO>x.updatedAtISO){W[H]={value:String(R.value),updatedAtISO:R.updatedAtISO},X=!0,J++,Bmk_ap.push([H,R.value])}}return X?Object.assign({},j,{userPreferences:W}):null},e);Bmk_w&&Bmk_ap.forEach(function(Bmk_p){try{v.VildaPersistence&&typeof v.VildaPersistence.applyPreferenceFromCloud=="function"&&v.VildaPersistence.applyPreferenceFromCloud(Bmk_p[0],Bmk_p[1])}catch(Y){}})}}catch{}let $=0,tt=0,wt=0;try{const P=I();if(P&&typeof P.listNotesForUser=="function"&&typeof P.putNoteForUser=="function"&&typeof P.removeNoteForUser=="function"){let x=function(S,g){!S||!g||(!R[S]||g>R[S])&&(R[S]=g)},nt=function(S,g){!S||!g||(!Y[S]||g>Y[S])&&(Y[S]=g)};const j=Array.isArray(t.notes)?t.notes:[],W=Array.isArray(t.noteTombstones)?t.noteTombstones:[],X=await P.listNotesForUser(b),K=typeof P.listNoteTombstonesForUser=="function"?await P.listNoteTombstonesForUser(b):[],H=Object.create(null);X.forEach(function(S){S&&S.id&&(H[S.id]=S)});const R=Object.create(null);W.forEach(function(S){S&&x(S.id,S.deletedAtISO)}),K.forEach(function(S){S&&x(S.id,S.deletedAtISO)});const Y=Object.create(null);X.forEach(function(S){S&&nt(S.id,S.updatedAtISO)}),j.forEach(function(S){S&&nt(S.id,S.updatedAtISO)});const U=new Set;Object.keys(R).forEach(function(S){const g=Y[S]||null;(!g||R[S]>=g)&&U.add(S)});for(let S=0;S<j.length;S+=1){const g=j[S];if(!g||!g.id||!g.updatedAtISO||U.has(g.id))continue;const M=H[g.id];if(!(!M||!M.updatedAtISO||g.updatedAtISO>M.updatedAtISO))continue;await Ac("lib:"+g.id,async function(){Bses_pilnuj(e);let Qm0=M;try{Qm0=await P.getNoteForUser(b,g.id)}catch{}if(Qm0&&Qm0.updatedAtISO&&!(g.updatedAtISO>Qm0.updatedAtISO))return;const et={title:Z(typeof g.title=="string"?g.title:""),category:Mn(g.category),body:Z(typeof g.body=="string"?g.body:""),pinned:g.pinned===!0,order:Number.isFinite(g.order)?g.order:0},_t=await V(et);await P.putNoteForUser(b,{id:g.id,noteCipher:_t,createdAtISO:g.createdAtISO||g.updatedAtISO,updatedAtISO:g.updatedAtISO}),Qm0?tt++:$++})}if(typeof P.putNoteTombstoneForUser=="function"){const S=Array.from(U);for(let g=0;g<S.length;g+=1){const M=S[g];await Ac("lib:"+M,async function(){Bses_pilnuj(e);let Qm1;try{Qm1=await P.getNoteForUser(b,M)}catch{Qm1=H[M]||null}Qm1&&(await P.removeNoteForUser(b,M),wt++),await P.putNoteTombstoneForUser(b,{id:M,deletedAtISO:R[M]})})}if(typeof P.removeNoteTombstoneForUser=="function")for(let g=0;g<K.length;g+=1){const M=K[g];Bses_pilnuj(e),M&&M.id&&!U.has(M.id)&&await P.removeNoteTombstoneForUser(b,M.id)}}}}catch{}let Et=0,Nt=0,Tt=0;/* P-NOTATKI-2 (G14, decyzja wlasciciela D10): scalanie z innego urzadzenia nie zglaszalo zadnej
+function Gz(t,e,n){const r=Math.round(de/864e5),o=Gy(t,n),a=Gy(e,n),i=typeof o=="number"&&o>r,c=typeof a=="number"&&a>r;return{thresholdDays:r,localLastMergeAtISO:typeof t=="string"&&t?t:null,localDays:o,localStale:i,remoteLastMergeAtISO:typeof e=="string"&&e?e:null,remoteDays:a,remoteStale:c,warn:i||c}}async function Gm(){if(!T())return null;return Gz(await Gw(),null,Date.now())}async function is(){if(!T())throw new Error("VildaVault.exportSyncPayload: vault nie jest odblokowany.");const t=await I().listPatientsForUser(b),e=[];for(let p=0;p<t.length;p+=1){const w=t[p],h=await G(w.headerCipher.iv,w.headerCipher.data),O=await I().listSnapshotsForUser(b,w.patientId),u=[];for(let f=0;f<O.length;f+=1){const m=O[f],E=await G(m.payloadCipher.iv,m.payloadCipher.data);u.push({snapshotId:m.snapshotId,savedAtISO:m.savedAtISO,rev:mt(m),updatedAtISO:typeof m.updatedAtISO=="string"&&m.updatedAtISO?m.updatedAtISO:null,payload:E})}u.sort(function(f,m){return f.savedAtISO>m.savedAtISO?1:f.savedAtISO<m.savedAtISO?-1:0}),e.push({patientId:w.patientId,header:h,snapshots:u,createdAtISO:w.createdAtISO,lastSavedAtISO:w.lastSavedAtISO,snapshotCount:w.snapshotCount})}let n=[];try{const p=I();if(p&&typeof p.listTombstonesForUser=="function"&&(n=await p.listTombstonesForUser(b),typeof p.removeTombstoneForUser=="function"&&n.length)){const w=new Date(Date.now()-de).toISOString(),h=[];for(let O=0;O<n.length;O++){const u=n[O];u&&u.deletedAtISO&&u.deletedAtISO<w?await p.removeTombstoneForUser(b,u.patientId):h.push(u)}n=h}}catch{n=[]}let r=[],o=[];try{const p=await I().getUserMeta(b);if(p&&Array.isArray(p.passkeys)&&(r=p.passkeys.map(function(w){return{credentialId:w.credentialId,deviceLabel:w.deviceLabel,createdAtISO:w.createdAtISO,roaming:w.roaming===!0}})),p&&Array.isArray(p.passkeyTombstones)){const w=new Date(Date.now()-de).toISOString();o=p.passkeyTombstones.filter(function(h){return h&&h.credentialId&&h.deletedAtISO&&h.deletedAtISO>=w})}}catch{}let a={};try{const p=await I().getUserMeta(b);p&&typeof p.userPreferences=="object"&&p.userPreferences&&(a=p.userPreferences)}catch(p){}let s=[],i=[];try{const p=I();if(p&&typeof p.listNotesForUser=="function"){const w=await p.listNotesForUser(b);for(let h=0;h<w.length;h+=1){const O=await nn(w[h]);s.push(O)}}if(p&&typeof p.listNoteTombstonesForUser=="function"&&(i=await p.listNoteTombstonesForUser(b),typeof p.removeNoteTombstoneForUser=="function"&&i.length)){const w=new Date(Date.now()-de).toISOString(),h=[];for(let O=0;O<i.length;O+=1){const u=i[O];u&&u.deletedAtISO&&u.deletedAtISO<w?await p.removeNoteTombstoneForUser(b,u.id):h.push(u)}i=h}}catch{s=[],i=[]}let c=[],l=[];try{const p=I();if(p&&typeof p.listPatientNotesForUser=="function"){const w=await p.listPatientNotesForUser(b);for(let h=0;h<w.length;h+=1){/* P-NOTATKI-1 (G12): jak wyzej — uszkodzona notatka zostaje na urzadzeniu zamiast jechac jako atrapa. */try{await G(w[h].bodyCipher.iv,w[h].bodyCipher.data)}catch{continue}const O=await Ft(w[h]);c.push(O)}}if(p&&typeof p.listPatientNoteTombstonesForUser=="function"&&(l=await p.listPatientNoteTombstonesForUser(b),typeof p.removePatientNoteTombstoneForUser=="function"&&l.length)){const w=new Date(Date.now()-de).toISOString(),h=[];for(let O=0;O<l.length;O+=1){const u=l[O];u&&u.deletedAtISO&&u.deletedAtISO<w?await p.removePatientNoteTombstoneForUser(b,u.id):h.push(u)}l=h}}catch{c=[],l=[]}let y=[],d=[];try{const p=I();if(p&&typeof p.listPatientListsForUser=="function"){const w=await p.listPatientListsForUser(b);for(let h=0;h<w.length;h+=1)y.push(await Re(w[h]))}if(p&&typeof p.listPatientListTombstonesForUser=="function"&&(d=await p.listPatientListTombstonesForUser(b),typeof p.removePatientListTombstoneForUser=="function"&&d.length)){const w=new Date(Date.now()-de).toISOString(),h=[];for(let O=0;O<d.length;O+=1){const u=d[O];u&&u.deletedAtISO&&u.deletedAtISO<w?await p.removePatientListTombstoneForUser(b,u.id):h.push(u)}d=h}}catch{y=[],d=[]}const Gp=await Gw();return{schemaVersion:at,userId:b,label:st,exportedAtISO:new Date().toISOString(),lastMergeAtISO:Gp,credential:await Gc5(),patients:e,tombstones:Array.isArray(n)?n:[],passkeys:r,passkeyTombstones:o,userPreferences:a,notes:Array.isArray(s)?s:[],noteTombstones:Array.isArray(i)?i:[],patientNotes:Array.isArray(c)?c:[],patientNoteTombstones:Array.isArray(l)?l:[],patientLists:Array.isArray(y)?y:[],patientListTombstones:Array.isArray(d)?d:[],snapshotTombstones:await Bkz_eksport()}}async function cs(t){if(!T())throw new Error("VildaVault.buildNoteDelta: vault nie jest odblokowany.");if(typeof t!="string"||!t)return null;const e=await I().getPatientNoteForUser(b,t);if(!e)return null;/* P-NOTATKI-1 (G12): notatka, ktorej nie da sie odszyfrowac, nie wychodzi z urzadzenia jako „(blad odczytu)" — nadpisalaby czytelna tresc na drugim urzadzeniu. Ta sama bramka, co w bibliotece szablonow (Qb0). */try{await G(e.bodyCipher.iv,e.bodyCipher.data)}catch{return null}const n=await Ft(e);return await V({schemaVersion:at,patients:[],tombstones:[],passkeys:[],passkeyTombstones:[],userPreferences:{},notes:[],noteTombstones:[],patientNotes:[n],patientNoteTombstones:[]})}async function Qb0(t){if(!T())throw new Error("VildaVault.buildLibraryNoteDelta: vault nie jest odblokowany.");if(typeof t!="string"||!t)return null;const e=await I().getNoteForUser(b,t);if(!e||!e.noteCipher)return null;try{await G(e.noteCipher.iv,e.noteCipher.data)}catch{return null}const n=await nn(e);if(!n||!n.id||!n.updatedAtISO)return null;return await V({schemaVersion:at,patients:[],tombstones:[],passkeys:[],passkeyTombstones:[],userPreferences:{},notes:[n],noteTombstones:[],patientNotes:[],patientNoteTombstones:[]})}async function Qb1(t,e){if(!T())throw new Error("VildaVault.buildLibraryNoteTombstoneDelta: vault nie jest odblokowany.");if(typeof t!="string"||!t)return null;const n=typeof e=="string"&&e?e:new Date().toISOString();return await V({schemaVersion:at,patients:[],tombstones:[],passkeys:[],passkeyTombstones:[],userPreferences:{},notes:[],noteTombstones:[{id:t,deletedAtISO:n}],patientNotes:[],patientNoteTombstones:[]})}async function us(t,e){if(!T())throw new Error("VildaVault.buildTombstoneDelta: vault nie jest odblokowany.");if(typeof t!="string"||!t)return null;const n=typeof e=="string"&&e?e:new Date().toISOString();return await Bsw_deltaNagrobka(t,{schemaVersion:at,patients:[],tombstones:[{patientId:t,deletedAtISO:n}],passkeys:[],passkeyTombstones:[],userPreferences:{},notes:[],noteTombstones:[],patientNotes:[],patientNoteTombstones:[]})}async function ls(t,e){if(!T())throw new Error("VildaVault.buildNoteTombstoneDelta: vault nie jest odblokowany.");if(typeof t!="string"||!t)return null;const n=typeof e=="string"&&e?e:new Date().toISOString();/* P-NOTATKI-ZA-KARTA (D-21 A): delta niesie nagrobek tak, jak lezy w sklepie (rev i pole deletedWithPatient) — bez tego drugie urzadzenie dostawalo nagrobek bez pola i kasowalo notatki, zanim przyszedl pelny ladunek. Brak rekordu: postac dotychczasowa. */let Qz={id:t,deletedAtISO:n};try{const Qx=await Bnp_nagrobek(I(),t);Qx&&Qx.deletedAtISO&&(Qz={id:t,deletedAtISO:Qx.deletedAtISO},typeof Qx.rev=="number"&&isFinite(Qx.rev)&&Qx.rev>0&&(Qz.rev=Qx.rev),Bnp_pole(Qx)&&(Qz.deletedWithPatient=Bnp_pole(Qx)))}catch{}return await V({schemaVersion:at,patients:[],tombstones:[],passkeys:[],passkeyTombstones:[],userPreferences:{},notes:[],noteTombstones:[],patientNotes:[],patientNoteTombstones:[Qz]})}async function ds(t){if(!T())throw new Error("VildaVault.buildPatientDelta: vault nie jest odblokowany.");if(typeof t!="string"||!t)return null;const e=await I().listPatientsForUser(b);let n=null;for(let i=0;i<e.length;i+=1)if(e[i]&&e[i].patientId===t){n=e[i];break}if(!n||!n.headerCipher)return null;const r=await G(n.headerCipher.iv,n.headerCipher.data),o=await I().listSnapshotsForUser(b,t),a=[];for(let i=0;i<o.length;i+=1){const c=o[i],l=await G(c.payloadCipher.iv,c.payloadCipher.data);a.push({snapshotId:c.snapshotId,savedAtISO:c.savedAtISO,rev:mt(c),updatedAtISO:typeof c.updatedAtISO=="string"&&c.updatedAtISO?c.updatedAtISO:null,payload:l})}a.sort(function(i,c){return i.savedAtISO>c.savedAtISO?1:i.savedAtISO<c.savedAtISO?-1:0});const s={schemaVersion:at,patients:[{patientId:n.patientId,header:r,snapshots:a,createdAtISO:n.createdAtISO,lastSavedAtISO:n.lastSavedAtISO,snapshotCount:n.snapshotCount}],tombstones:[],passkeys:[],passkeyTombstones:[],userPreferences:{},notes:[],noteTombstones:[],patientNotes:[],patientNoteTombstones:[]};return await V(s)}async function ps(t){if(!T()||!t||typeof t.iv!="string"||typeof t.data!="string")return null;const Bses_d=Bses_opcje(null);let e=null;try{e=await G(t.iv,t.data)}catch{return null}if(Bses_zmieniona(Bses_d))throw Bses_delta(Bses_blad());if(!e||typeof e!="object")return null;try{return await Le(e)}catch(Bses_x){throw Bses_delta(Bses_x)}}const Qe0=[];function Qe1(t){typeof t=="function"&&Qe0.push(t)}function Qe2(t){Qe0.forEach(function(e){try{e(t)}catch{}})}function Gc2(t){const e=t&&typeof t.passwordKdfIterations=="number"&&isFinite(t.passwordKdfIterations)&&t.passwordKdfIterations>0?Math.round(t.passwordKdfIterations):null;return e||(t?t.kdfIterations:null)}function Gc3(t){const e=new Date().toISOString(),n=t&&typeof t.passwordUpdatedAtISO=="string"&&t.passwordUpdatedAtISO?t.passwordUpdatedAtISO:null;if(!n||e>n)return e;const r=Date.parse(n);return Number.isFinite(r)?new Date(r+1).toISOString():e}async function Gc4(t,e,n,r,o){try{const a=L(),s=await a.deriveKey(t,e,n),i=new Uint8Array(await a.decryptBytes(s,r.iv,r.data)),c=new Uint8Array(o);if(i.length!==c.length)return!1;let l=0;for(let y=0;y<i.length;y+=1)l|=i[y]^c[y];return l===0}catch{return!1}}async function Gc5(){try{const t=await I().getUserMeta(b);if(!t)return null;const e=typeof t.passwordUpdatedAtISO=="string"&&t.passwordUpdatedAtISO?t.passwordUpdatedAtISO:null;if(!e)return null;const n=t.encryptedMasterByPassword;if(typeof t.passwordSalt!="string"||!t.passwordSalt||!n||typeof n.iv!="string"||typeof n.data!="string")return null;const r=Gc2(t);return typeof r!="number"||!isFinite(r)||r<=0?null:{passwordSalt:t.passwordSalt,kdfIterations:r,encryptedMasterByPassword:{iv:n.iv,data:n.data},updatedAtISO:e}}catch{return null}}async function Gc1(t,Bses_o){if(!t||typeof t!="object")return!1;const e=typeof t.updatedAtISO=="string"&&t.updatedAtISO?t.updatedAtISO:null,n=typeof t.passwordSalt=="string"&&t.passwordSalt?t.passwordSalt:null,r=t.encryptedMasterByPassword,o=r&&typeof r=="object"&&typeof r.iv=="string"&&r.iv&&typeof r.data=="string"&&r.data?{iv:r.iv,data:r.data}:null,a=typeof t.kdfIterations=="number"&&isFinite(t.kdfIterations)&&t.kdfIterations>0?Math.round(t.kdfIterations):null;if(!e||!n||!o||!a)return!1;if(!await Bmk_zmien(b,function(s){if(!s)return null;const i=typeof s.passwordUpdatedAtISO=="string"&&s.passwordUpdatedAtISO?s.passwordUpdatedAtISO:null;if(i&&!(e>i))return null;if(s.passwordSalt===n&&s.encryptedMasterByPassword&&s.encryptedMasterByPassword.iv===o.iv&&s.encryptedMasterByPassword.data===o.data&&Gc2(s)===a)return null;return Object.assign({},s,{passwordSalt:n,passwordKdfIterations:a,encryptedMasterByPassword:o,passwordUpdatedAtISO:e})},Bses_o))return!1;try{v.VildaPersistence&&typeof v.VildaPersistence.writePreferenceRaw=="function"&&v.VildaPersistence.writePreferenceRaw("PASSWORD_CHANGED_REMOTELY_AT",e,{force:!0})}catch{}return Qe2({action:"password-changed-remotely",updatedAtISO:e}),!0}async function Le(t,e){if(!T())throw new Error("VildaVault.mergeSyncPayload: vault nie jest odblokowany.");const Bses_imp=e===Bpb_IMPORT;e=Bses_opcje(e);if(!t||typeof t!="object")throw new Error("VildaVault.mergeSyncPayload: nieprawid\u0142owy format danych.");const n=e&&typeof e.onProgress=="function"?e.onProgress:null;function r(P,F,j){if(n)try{n({phase:P,current:F,total:j})}catch{}}const Gp=await Gw(),Gq=t&&typeof t.lastMergeAtISO=="string"&&t.lastMergeAtISO?t.lastMergeAtISO:null,o=Array.isArray(t.patients)?t.patients:[],a=await I().listPatientsForUser(b);const Bkz_S=await Bkz_scalStart(t);r("patients-start",0,o.length);const i=new Date().toISOString();let c=0,l=0,y=0,d=0,p=0,w=0;const h=I(),O=h&&typeof h.listTombstonesForUser=="function"&&typeof h.putTombstoneForUser=="function"&&typeof h.removeTombstoneForUser=="function",u=Array.isArray(t.tombstones)?t.tombstones:[],f=O?await h.listTombstonesForUser(b):[],m=Object.create(null);function E(P,F){!P||!F||(!m[P]||F>m[P])&&(m[P]=F)}u.forEach(function(P){P&&E(P.patientId,P.deletedAtISO)}),f.forEach(function(P){P&&E(P.patientId,P.deletedAtISO)});const _=Object.create(null);function A(P,F){!P||!F||(!_[P]||F>_[P])&&(_[P]=F)}a.forEach(function(P){P&&A(P.patientId,P.lastSavedAtISO)}),o.forEach(function(P){P&&A(P.patientId,P.lastSavedAtISO)});/* P-KOSZ-PO-KLUCZU: karty ze znanym nagrobkiem pacjenta (ladunek i tutejsze) — tylko taka karta jest starym duplikatem, z ktorego wpis kosza innej karty zabiera ostatnia wersje (Bkz_obceKarty). */Bkz_S.Bkz_nagrKart=new Set(Object.keys(m));const N=new Set;Object.keys(m).forEach(function(P){const F=_[P]||null;(!F||m[P]>=F)&&N.add(P)});Bkz_S.Bsw_N=N;/* P-KOSZ-PO-KLUCZU (np-ret-A1): chwile nagrobkow kart dla Bsw_przezyteRetencji — tylko gdy karty z N znikaja (magazyn nagrobkow, poza importem). */Bkz_S.Bsw_m=O&&!Bses_imp?m:null;Bkz_S.Bsw_pusto=!a.length;for(let P=0;P<o.length;P++){r("patients",P+1,o.length);const F=o[P];if(!F||!F.patientId||!F.header)continue;if(N.has(F.patientId)){Bsl_koszZLadunku(Bkz_S,F);continue}const j=(Array.isArray(F.snapshots)?F.snapshots:[]).filter(function(x){return x&&x.snapshotId}),W=V(F.header),X=j.map(function(x){return V(x.payload||{})}),K=await Promise.all([W].concat(X)),H=K[0],R=K.slice(1);const Bsl_w=await Bsl_scalPacjenta(F,j,H,R,Bkz_S,i,e);y+=Bsl_w.dodane,d+=Bsl_w.pominiete,p+=Bsl_w.zmienione,Bsl_w.usuniety||(Bsl_w.nowy?l++:c++)}const Bsw_f=await Bsl_przeniesWersje(Bkz_S,i,e);l+=Bsw_f.dodane,w+=Bsw_f.usuniete;y+=Bsw_f.zabrane;if(O){const P=Array.from(N);for(let F=0;F<P.length;F++){const j=P[F];w+=await Bsl_usunPacjenta(j,m[j],e,Bses_imp?null:Bkz_S)}for(let F=0;F<f.length;F++){const j=f[F];j&&j.patientId&&!N.has(j.patientId)&&await Bsl_zdejmijNagrobek(j.patientId,j.deletedAtISO,e)}}let Bkz_n=0;try{Bkz_n=Bses_imp?0:await Bkz_scalKoniec(Bkz_S,e)}catch(Bkz_e){if(Bkz_e&&(Bkz_e.vildaMergeBusy||Bkz_e.code==="SESSION_CHANGED"))throw Bkz_e;try{console.warn("[vault] kosz zapisow: scalanie nagrobkow",Bkz_e)}catch{}}/* P-KOSZ-PO-KLUCZU: karty-duplikaty, ktore zniknely z ostatnia wersja w koszu innej karty, licza sie jak usuniete (vilda:sync-merged odswieza liste pacjentow). */w+=Bkz_S.Bkz_kartyUsuniete||0;let C=0,Q=0;try{const P=Array.isArray(t.passkeys)?t.passkeys:[],F=Array.isArray(t.passkeyTombstones)?t.passkeyTombstones:[],Bmk_w=await Bmk_zmien(b,function(j){if(!j)return null;C=0,Q=0;let W=Array.isArray(j.passkeys)?j.passkeys.slice():[],X=Array.isArray(j.passkeyTombstones)?j.passkeyTombstones.slice():[];const K=Object.create(null);X.forEach(function(U){U&&U.credentialId&&(K[U.credentialId]=U.deletedAtISO||"")}),F.forEach(function(U){if(!U||!U.credentialId)return;const S=K[U.credentialId]||"";(!S||U.deletedAtISO&&U.deletedAtISO>S)&&(K[U.credentialId]=U.deletedAtISO||"")});const H=new Date(Date.now()-de).toISOString(),R=[];Object.keys(K).forEach(function(U){const S=K[U];S&&S>=H&&R.push({credentialId:U,deletedAtISO:S})});const x=new Set(R.map(function(U){return U.credentialId})),Y=W.length;W=W.filter(function(U){return!x.has(U.credentialId)}),Q=Y-W.length;const nt=new Set(W.map(function(U){return U.credentialId}));P.forEach(function(U){!U||!U.credentialId||nt.has(U.credentialId)||x.has(U.credentialId)||(W.push({credentialId:U.credentialId,deviceLabel:U.deviceLabel||"(inne urz\u0105dzenie)",createdAtISO:U.createdAtISO||new Date().toISOString(),roaming:U.roaming===!0}),C++)});return C>0||Q>0||R.length!==(Array.isArray(j.passkeyTombstones)?j.passkeyTombstones.length:0)?Object.assign({},j,{passkeys:W,passkeyTombstones:R}):null},e);Bmk_w&&await ln(b)}catch{}let J=0;try{const P=t&&typeof t.userPreferences=="object"&&t.userPreferences||{},F=Object.keys(P);if(F.length>0){const Bmk_ap=[],Bmk_w=await Bmk_zmien(b,function(j){if(!j)return null;J=0,Bmk_ap.length=0;const W=j.userPreferences&&typeof j.userPreferences=="object"?Object.assign({},j.userPreferences):{};let X=!1;for(let K=0;K<F.length;K++){const H=F[K],R=P[H];if(!R||typeof R!="object"||!R.updatedAtISO)continue;const x=W[H];/* P-HISTORIA-ZWIJANA (uwaga Codex do #479): advHistoryCollapsed to mapa per pacjent ({id:{z:1|deleted,updatedAtISO}}) - scalana per wpis jak wlsched/wllists, zeby zmiany roznych pacjentow na dwoch urzadzeniach offline nie nadpisywaly sie nawzajem; wynik trafia tez do lokalnej preferencji (applyPreferenceFromCloud), bo ta preferencja zyje w VildaPersistence, nie tylko w sejfie. */if(H==="wlsched"||H==="wllists"||H==="advHistoryCollapsed"){const Az=Ak(x,R);Az&&(W[H]=Az,X=!0,J++),Az&&H==="advHistoryCollapsed"&&Bmk_ap.push([H,Az.value]);continue}if(!x||!x.updatedAtISO||R.updatedAtISO>x.updatedAtISO){W[H]={value:String(R.value),updatedAtISO:R.updatedAtISO},X=!0,J++,Bmk_ap.push([H,R.value])}}return X?Object.assign({},j,{userPreferences:W}):null},e);Bmk_w&&Bmk_ap.forEach(function(Bmk_p){try{v.VildaPersistence&&typeof v.VildaPersistence.applyPreferenceFromCloud=="function"&&v.VildaPersistence.applyPreferenceFromCloud(Bmk_p[0],Bmk_p[1])}catch(Y){}})}}catch{}let $=0,tt=0,wt=0;try{const P=I();if(P&&typeof P.listNotesForUser=="function"&&typeof P.putNoteForUser=="function"&&typeof P.removeNoteForUser=="function"){let x=function(S,g){!S||!g||(!R[S]||g>R[S])&&(R[S]=g)},nt=function(S,g){!S||!g||(!Y[S]||g>Y[S])&&(Y[S]=g)};const j=Array.isArray(t.notes)?t.notes:[],W=Array.isArray(t.noteTombstones)?t.noteTombstones:[],X=await P.listNotesForUser(b),K=typeof P.listNoteTombstonesForUser=="function"?await P.listNoteTombstonesForUser(b):[],H=Object.create(null);X.forEach(function(S){S&&S.id&&(H[S.id]=S)});const R=Object.create(null);W.forEach(function(S){S&&x(S.id,S.deletedAtISO)}),K.forEach(function(S){S&&x(S.id,S.deletedAtISO)});const Y=Object.create(null);X.forEach(function(S){S&&nt(S.id,S.updatedAtISO)}),j.forEach(function(S){S&&nt(S.id,S.updatedAtISO)});const U=new Set;Object.keys(R).forEach(function(S){const g=Y[S]||null;(!g||R[S]>=g)&&U.add(S)});for(let S=0;S<j.length;S+=1){const g=j[S];if(!g||!g.id||!g.updatedAtISO||U.has(g.id))continue;const M=H[g.id];if(!(!M||!M.updatedAtISO||g.updatedAtISO>M.updatedAtISO))continue;await Ac("lib:"+g.id,async function(){Bses_pilnuj(e);let Qm0=M;try{Qm0=await P.getNoteForUser(b,g.id)}catch{}if(Qm0&&Qm0.updatedAtISO&&!(g.updatedAtISO>Qm0.updatedAtISO))return;const et={title:Z(typeof g.title=="string"?g.title:""),category:Mn(g.category),body:Z(typeof g.body=="string"?g.body:""),pinned:g.pinned===!0,order:Number.isFinite(g.order)?g.order:0},_t=await V(et);await P.putNoteForUser(b,{id:g.id,noteCipher:_t,createdAtISO:g.createdAtISO||g.updatedAtISO,updatedAtISO:g.updatedAtISO}),Qm0?tt++:$++})}if(typeof P.putNoteTombstoneForUser=="function"){const S=Array.from(U);for(let g=0;g<S.length;g+=1){const M=S[g];await Ac("lib:"+M,async function(){Bses_pilnuj(e);let Qm1;try{Qm1=await P.getNoteForUser(b,M)}catch{Qm1=H[M]||null}Qm1&&(await P.removeNoteForUser(b,M),wt++),await P.putNoteTombstoneForUser(b,{id:M,deletedAtISO:R[M]})})}if(typeof P.removeNoteTombstoneForUser=="function")for(let g=0;g<K.length;g+=1){const M=K[g];Bses_pilnuj(e),M&&M.id&&!U.has(M.id)&&await P.removeNoteTombstoneForUser(b,M.id)}}}}catch{}let Et=0,Nt=0,Tt=0;/* P-NOTATKI-2 (G14, decyzja wlasciciela D10): scalanie z innego urzadzenia nie zglaszalo zadnej
    zmiany notatki pacjenta (qr wolane bylo tylko przy zapisie i kasowaniu na TYM urzadzeniu).
    Otwarty edytor nie mial jak sie dowiedziec, ze jego notatka zmienila sie w miedzyczasie. */
 var Qch=[];try{const P=I();if(P&&typeof P.listPatientNotesForUser=="function"&&typeof P.putPatientNoteForUser=="function"&&typeof P.removePatientNoteForUser=="function"){let x=function(S,g){!S||!g||(!R[S]||g>R[S])&&(R[S]=g)},nt=function(S,g){!S||!g||(!Y[S]||g>Y[S])&&(Y[S]=g)};const j=Array.isArray(t.patientNotes)?t.patientNotes:[],W=Array.isArray(t.patientNoteTombstones)?t.patientNoteTombstones:[],X=await P.listPatientNotesForUser(b),K=typeof P.listPatientNoteTombstonesForUser=="function"?await P.listPatientNoteTombstonesForUser(b):[],H=Object.create(null);X.forEach(function(S){S&&S.id&&(H[S.id]=S)});/* P-NOTATKI-1 (G5, 2026-09-18): zbior pacjentow z nagrobkiem (lokalnych i z ladunku) — notatka scalonego duplikatu nie moze wrocic pod usuniete zrodlo tylko dlatego, ze drugie urzadzenie edytowalo ja rownolegle. */const Qpt=new Set;try{if(typeof P.listTombstonesForUser=="function"){const Qtl=await P.listTombstonesForUser(b);for(let Qi=0;Qi<Qtl.length;Qi+=1){const Qe=Qtl[Qi];Qe&&Qe.patientId&&Qpt.add(Qe.patientId)}}}catch{}try{const Qti=Array.isArray(t.tombstones)?t.tombstones:[];for(let Qi=0;Qi<Qti.length;Qi+=1){const Qe=Qti[Qi];Qe&&Qe.patientId&&Qpt.add(Qe.patientId)}}catch{}const R=Object.create(null);W.forEach(function(S){S&&x(S.id,S.deletedAtISO)}),K.forEach(function(S){S&&x(S.id,S.deletedAtISO)});const Y=Object.create(null);X.forEach(function(S){S&&nt(S.id,S.updatedAtISO)}),j.forEach(function(S){S&&nt(S.id,S.updatedAtISO)});/* P-NOTATKI-1 (G6): najwyzszy znany rev per notatka — nagrobek go niesie dalej. */const Qrev=Object.create(null),Qrv=function(S,g){!S||typeof g!="number"||!isFinite(g)||(!Qrev[S]||g>Qrev[S])&&(Qrev[S]=g)};W.forEach(function(S){S&&Qrv(S.id,S.rev)}),K.forEach(function(S){S&&Qrv(S.id,S.rev)}),X.forEach(function(S){S&&Qrv(S.id,S.rev)});/* P-NOTATKI-ZA-KARTA (D-21 A): krata kopii nagrobka (Bnp_zlacz) i decyzja po fazie kart (Bnp_stan). Karta pacjenta z pola czytana leniwie, tylko dla kandydatow (R >= Y, jest wersja, jest pole, brak recznego usuniecia M >= Y; przeglad 1: takze Y w pasmie ratunku albo zwyciezca sprzed usuniecia, oba przy polu), raz na pacjenta. RATUNEK i CZEKA nie trafiaja do U: wersja z ladunku wchodzi zwykla regula. */const U=new Set,Qkn=Bnp_zlacz(W.concat(K)),Qwy=Bnp_zwyciezcy(X,j),Qkr=Object.create(null),Qrt=new Set,Qcz=new Set,Qdn=new Set;for(const S of Object.keys(R)){const g=Y[S]||null;let Qs=Bnp_stan(Qkn[S],g,void 0,Qwy[S]);if(Qs==="karta"){const Qp=Qkn[S].pole.patientId;Qp in Qkr||(Qkr[Qp]=await Bnp_karta(P,Qp));Qs=Bnp_stan(Qkn[S],g,Qkr[Qp],Qwy[S])}Qs==="ratunek"?Qrt.add(S):Qs==="czeka"?Qcz.add(S):Qs!=="notatka"&&U.add(S)}for(let S=0;S<j.length;S+=1){const g=j[S];if(!g||!g.id||!g.updatedAtISO||U.has(g.id)||typeof g.patientId!="string"||!g.patientId.length)continue;const Ej=H[g.id],Ev=Ej&&typeof Ej.rev=="number"&&isFinite(Ej.rev)?Ej.rev:0,Ew=typeof g.rev=="number"&&isFinite(g.rev)?g.rev:0,Ex=g.updatedAtISO||"",Ey=Ej&&Ej.updatedAtISO||"";if(!(!Ej||Ew>Ev||Ew===Ev&&Ex>Ey))continue;await Ac(g.id,async function(){Bses_pilnuj(e);let Ek=Ej;try{Ek=await P.getPatientNoteForUser(b,g.id)}catch{}if(Ej&&!Ek)return;const M=Ek||null,rt=M&&typeof M.rev=="number"&&isFinite(M.rev)?M.rev:0,et=typeof g.rev=="number"&&isFinite(g.rev)?g.rev:0,_t=g.updatedAtISO||"",ce=M&&M.updatedAtISO||"";if(!(!M||et>rt||et===rt&&_t>ce))return;let RemB22MergedContext=null;let Lt=null,Mt=null,D=null,k=null,q=null,pt=null,ue=null,Xt=null,zt=null;if(M)try{const z=await G(M.bodyCipher.iv,M.bodyCipher.data);RemB22MergedContext=RemB22Context(z&&z.reminderContext);z&&typeof z.externalName=="string"&&z.externalName&&(Lt=z.externalName),z&&typeof z.dueTime=="string"&&/^([01]\d|2[0-3]):[0-5]\d$/.test(z.dueTime)&&(Mt=z.dueTime),z&&typeof z.durationMin=="number"&&isFinite(z.durationMin)&&z.durationMin>=5&&z.durationMin<=1440&&(D=Math.round(z.durationMin)),k=Ce(z&&z.igf1),q=At(z&&z.medication!=null?z.medication:M.medication),pt=kt(z&&z.labResult!=null?z.labResult:M.labResult),ue=Ct(z&&z.clinicalDateISO!=null?z.clinicalDateISO:M.clinicalDateISO),Xt=ae(z&&z.procedureType!=null?z.procedureType:M.procedureType),zt=oe(z&&z.waitlistPriority!=null?z.waitlistPriority:M.waitlistPriority)}catch{}const ze={title:Z(typeof g.title=="string"?g.title:""),body:Z(typeof g.body=="string"?g.body:""),externalName:Object.prototype.hasOwnProperty.call(g,"externalName")?typeof g.externalName=="string"&&g.externalName.trim()&&Z(g.externalName).trim().slice(0,120)||null:Lt,dueTime:Object.prototype.hasOwnProperty.call(g,"dueTime")?typeof g.dueTime=="string"&&/^([01]\d|2[0-3]):[0-5]\d$/.test(g.dueTime)?g.dueTime:null:Mt,durationMin:Object.prototype.hasOwnProperty.call(g,"durationMin")?typeof g.durationMin=="number"&&isFinite(g.durationMin)&&g.durationMin>=5&&g.durationMin<=1440?Math.round(g.durationMin):null:D,igf1:Object.prototype.hasOwnProperty.call(g,"igf1")?Ce(g.igf1):k,medication:Object.prototype.hasOwnProperty.call(g,"medication")?At(g.medication):q,labResult:Object.prototype.hasOwnProperty.call(g,"labResult")?kt(g.labResult):pt,clinicalDateISO:Object.prototype.hasOwnProperty.call(g,"clinicalDateISO")?Ct(g.clinicalDateISO):ue,procedureType:Object.prototype.hasOwnProperty.call(g,"procedureType")?ae(g.procedureType):Xt,waitlistPriority:Object.prototype.hasOwnProperty.call(g,"waitlistPriority")?oe(g.waitlistPriority):zt};const RemB22IncomingContext=Object.prototype.hasOwnProperty.call(g,"reminderContext")?RemB22Context(g.reminderContext):RemB22MergedContext;if(RemB22IncomingContext)ze.reminderContext=RemB22IncomingContext;ze.labResult=LabReconcileSnapshots(pt,ze.labResult,ue,ze.clinicalDateISO,true);const ti=await V(ze);await P.putPatientNoteForUser(b,{id:g.id,patientId:Qpt.has(g.patientId)&&M&&typeof M.patientId=="string"&&M.patientId&&M.patientId!==g.patientId?M.patientId:g.patientId,bodyCipher:ti,category:Un(g.category),dueDateISO:Cn(g.dueDateISO),completedAtISO:(function(){const z=re(g.completedAtISO),xe=M?re(M.completedAtISO):null;return!z&&xe&&et<=rt?xe:z})(),noShowAtISO:(function(){const z=Object.prototype.hasOwnProperty.call(g,"noShowAtISO")?re(g.noShowAtISO):M?re(M.noShowAtISO):null,xe=M?re(M.noShowAtISO):null;return!z&&xe&&et<=rt?xe:z})(),linkedAgeMonths:ye(g.linkedAgeMonths),clinicalDateISO:null,medication:null,labResult:null,ghPointId:we(g.ghPointId),recheckDays:rn(g.recheckDays),procedureType:null,waitlistPriority:null,seriesId:Object.prototype.hasOwnProperty.call(g,"seriesId")?he(g.seriesId):M?he(M.seriesId):null,seriesRule:Object.prototype.hasOwnProperty.call(g,"seriesRule")?Ue(g.seriesRule):M?Ue(M.seriesRule):null,createdAtISO:g.createdAtISO||g.updatedAtISO,updatedAtISO:g.updatedAtISO,rev:Math.max(et,rt)}),Qch.push({id:g.id,patientId:g.patientId,action:"merge"}),M?Nt++:Et++,Qdn.add(g.id)})}/* P-NOTATKI-ZA-KARTA (D-21 A): RATUNEK pod blokada pacjenta (R + 1 ms + h, rev bez zmian, nagrobek zdjety) i CZEKA (kanon nagrobka zapisany obok notatki), po petli przyjmowania, przed zapisem nagrobkow. */Nt+=await Bnp_ratuj(P,{kanon:Qkn,ratunek:Qrt,czeka:Qcz,rev:Qrev,liczone:Qdn,zdarzenia:Qch,nagrobki:K},e);/* Przeglad P1 (F1): nagrobki U pod blokada notatki na swiezym rekordzie nagrobka (Bnp_nagrobekScalania: krata z kopiami tego id z ladunku i z K, rev = max) — reczne usuniecie albo „Usun pacjenta” w oknie scalania nie jest nadpisywane stanem z poczatku sekcji; zdejmowanie nagrobkow ponizej (decyzja „notatka”) tak samo (weryfikacja 2, W1). */if(typeof P.putPatientNoteTombstoneForUser=="function"){const S=Array.from(U),Qkp=Bnp_wgId(W.concat(K));for(let g=0;g<S.length;g+=1){const M=S[g];await Ac(M,async function(){Bses_pilnuj(e);let Eu=H[M];try{Eu=await P.getPatientNoteForUser(b,M)}catch{}Eu&&(await P.removePatientNoteForUser(b,M),Tt++,Qch.push({id:M,patientId:Eu&&Eu.patientId||null,action:"merge-delete"})),await Bnp_nagrobekScalania(P,M,Qkp.get(M)||[],R[M],Qkn[M]&&Qkn[M].pole||null,Eu&&typeof Eu.rev=="number"&&isFinite(Eu.rev)&&Eu.rev>(Qrev[M]||0)?Eu.rev:Qrev[M]||0)})}/* Weryfikacja 2 przegladu P1 (W1): zdjecie nagrobka po decyzji „notatka” pod blokada notatki na swiezym rekordzie (Bnp_zdejmijPoScaleniu) — nagrobek z okna scalania nowszy niz R zostaje. */if(typeof P.removePatientNoteTombstoneForUser=="function")for(let g=0;g<K.length;g+=1){const M=K[g];Bses_pilnuj(e),M&&M.id&&!U.has(M.id)&&!Qrt.has(M.id)&&!Qcz.has(M.id)&&await Ac(M.id,function(){return Bnp_zdejmijPoScaleniu(P,M.id,R[M.id])})}}}}catch{}try{for(let Qi=0;Qi<Qch.length;Qi+=1)qr(Qch[Qi])}catch{}let St=0,Dt=0,dt=0;try{const P=I();if(P&&typeof P.listPatientListsForUser=="function"&&typeof P.putPatientListForUser=="function"&&typeof P.removePatientListForUser=="function"){let x=function(S,g){!S||!g||(!R[S]||g>R[S])&&(R[S]=g)},nt=function(S,g){!S||!g||(!Y[S]||g>Y[S])&&(Y[S]=g)};const j=Array.isArray(t.patientLists)?t.patientLists:[],W=Array.isArray(t.patientListTombstones)?t.patientListTombstones:[],X=await P.listPatientListsForUser(b),K=typeof P.listPatientListTombstonesForUser=="function"?await P.listPatientListTombstonesForUser(b):[],H=Object.create(null);X.forEach(function(S){S&&S.id&&(H[S.id]=S)});const R=Object.create(null);W.forEach(function(S){S&&x(S.id,S.deletedAtISO)}),K.forEach(function(S){S&&x(S.id,S.deletedAtISO)});const Y=Object.create(null);X.forEach(function(S){S&&nt(S.id,S.updatedAtISO)}),j.forEach(function(S){S&&nt(S.id,S.updatedAtISO)});const U=new Set;Object.keys(R).forEach(function(S){const g=Y[S]||null;(!g||R[S]>=g)&&U.add(S)});for(let S=0;S<j.length;S+=1){const g=j[S];if(!g||!g.id||!g.updatedAtISO||U.has(g.id))continue;const M=H[g.id],rt=M&&typeof M.rev=="number"&&isFinite(M.rev)?M.rev:0,et=typeof g.rev=="number"&&isFinite(g.rev)?g.rev:0,_t=g.updatedAtISO||"",ce=M&&M.updatedAtISO||"";if(!(!M||et>rt||et===rt&&_t>ce))continue;const Lt=Z(typeof g.name=="string"?g.name:"").trim().slice(0,jr);if(!Lt)continue;const Mt=await V({name:Lt,description:Z(typeof g.description=="string"?g.description:"").trim().slice(0,Rr),rule:zr(g.rule),memberIds:ge(g.memberIds),excludeIds:ge(g.excludeIds),pinned:g.pinned===!0});Bses_pilnuj(e);await P.putPatientListForUser(b,{id:g.id,bodyCipher:Mt,createdAtISO:g.createdAtISO||g.updatedAtISO,updatedAtISO:g.updatedAtISO,rev:Math.max(et,rt)}),M?Dt++:St++}if(typeof P.putPatientListTombstoneForUser=="function"){const S=Array.from(U);for(let g=0;g<S.length;g+=1){const M=S[g];Bses_pilnuj(e),H[M]&&(await P.removePatientListForUser(b,M),dt++),await P.putPatientListTombstoneForUser(b,{id:M,deletedAtISO:R[M]})}if(typeof P.removePatientListTombstoneForUser=="function")for(let g=0;g<K.length;g+=1){const M=K[g];Bses_pilnuj(e),M&&M.id&&!U.has(M.id)&&await P.removePatientListTombstoneForUser(b,M.id)}}if(St||Dt||dt)try{jn({action:"merge"})}catch{}}}catch{}let Gd2;try{Gd2=await Gc1(t&&t.credential,e)}catch{Gd2=!1}return typeof t.exportedAtISO=="string"&&t.exportedAtISO&&await Gx(i,e),Bses_pilnuj(e),r("done",o.length,o.length),{credentialUpdated:Gd2,staleDevice:Gz(Gp,Gq,Date.parse(i)),clockSkew:Gcs(t&&t.exportedAtISO,Date.parse(i)),mergedPatientCount:c,addedPatientCount:l,addedSnapshotCount:y,skippedSnapshotCount:d,updatedSnapshotCount:p,deletedPatientCount:w,addedPasskeyCount:C,removedPasskeyCount:Q,updatedPreferenceCount:J,addedNoteCount:$,updatedNoteCount:tt,deletedNoteCount:wt,addedPatientNoteCount:Et,updatedPatientNoteCount:Nt,deletedPatientNoteCount:Tt,addedPatientListCount:St,updatedPatientListCount:Dt,deletedPatientListCount:dt,trashedSnapshotCount:Bkz_n,prunedSnapshotCount:Bkz_S.przyciete||0}}function Wr(t){return t&&typeof t=="object"&&!t.format&&!t.kind&&typeof t.name=="string"&&t.name.trim().length>0&&t.user&&typeof t.user=="object"}async function fs(t,e){if(!T())throw new Error("Zaloguj si\u0119 przed importem.");let n;if(typeof t=="string")try{n=JSON.parse(t)}catch{const a=new Error("Nieprawid\u0142owy plik JSON.");throw a.code="BAD_JSON",a}else n=t;if(!Wr(n)){const o=new Error("Plik nie wygl\u0105da na zapis pacjenta z aplikacji wagaiwzrost.pl.");throw o.code="NOT_LEGACY_PAYLOAD",o}const r=await _e(n,Object.assign({},e||{},{_import:!0}));return{patientId:r.patientId,snapshotId:r.snapshotId,isNew:r.isNew,addedSnapshots:1,skippedSnapshots:0,totalSnapshots:r.snapshotCount,snapshotCount:r.snapshotCount,headerName:r.header&&r.header.name||null,header:r.header,savedAtISO:r.savedAtISO,shortHash:r.shortHash}}const Zr=[];function ys(t){typeof t=="function"&&Zr.push(t)}function Vn(t){Dn(),Zr.forEach(function(e){try{e(t)}catch{}})}const Gr=[];function hs(t){typeof t=="function"&&Gr.push(t)}function ws(t){Gr.forEach(function(e){try{e(t)}catch{}})}const Jr=[];function gs(t){typeof t=="function"&&Jr.push(t)}function Qr(t){Jr.forEach(function(e){try{e(t)}catch{}})}const Xr=[];function ms(t){typeof t=="function"&&Xr.push(t)}var me=null;try{typeof v.BroadcastChannel=="function"&&(me=new v.BroadcastChannel("vilda-notes"))}catch{me=null}var Ss=String(Date.now())+"-"+Math.random().toString(36).slice(2),bs="vilda-note-changed-ping-v1";function Is(t){var e={type:"note-changed",ts:Date.now(),sender:Ss,action:t&&t.action||null};if(me)try{me.postMessage(e)}catch{}try{v.localStorage&&v.localStorage.setItem(bs,JSON.stringify(e))}catch{}}function qr(t){Xr.forEach(function(e){try{e(t)}catch{}});try{Is(t)}catch{}}const $r=[];function Os(t){typeof t=="function"&&$r.push(t)}function vs(t){$r.forEach(function(e){try{e(t)}catch{}})}async function Ps(t,e){try{if(!T()||!b)return null;const o=new Date().toISOString();return await Bmk_zmien(b,function(n){if(!n)return null;const r=Object.assign({},typeof n.userPreferences=="object"&&n.userPreferences||{});return r[t]={value:String(e),updatedAtISO:o},{...n,userPreferences:r}})?o:null}catch{return null}}(function(){try{v.VildaPersistence&&typeof v.VildaPersistence.onPreferenceWrite=="function"&&v.VildaPersistence.onPreferenceWrite(async function(e){!e||!e.key||(await Ps(e.key,e.value),vs(e))})}catch(e){}})();const ta=[];function As(t){typeof t=="function"&&ta.push(t)}function Yn(t){ta.forEach(function(e){try{e(t)}catch{}});try{v.VildaSync&&typeof v.VildaSync.syncPush=="function"&&Promise.resolve(v.VildaSync.syncPush()).catch(function(){})}catch(e){}}function ea(t){typeof t=="number"&&t>0&&(Oe=t),Hn(),typeof v.setTimeout=="function"&&(Ye=v.setTimeout(function(){kn("idle")},Oe))}function Hn(){Ye!=null&&typeof v.clearTimeout=="function"&&v.clearTimeout(Ye),Ye=null}function ks(){T()&&ea(Oe)}function Es(t){typeof t=="function"&&$n.push(t)}function Ns(t){typeof t=="function"&&qn.push(t)}async function ln(t){try{const e=await I().getUserMeta(t),n=e&&Array.isArray(e.passkeys)?e.passkeys.length:0;return await I().updateRegistryEntry(t,{passkeyCount:n}),n}catch(e){try{console.warn("[vault] _syncPasskeyCount failed for "+t+":",e&&e.message)}catch{}return-1}}async function Ts(){return L().isPrfSupported()}async function _s(t){const e=L();if(!T()||!B)throw new Error("Zaloguj si\u0119 przed rejestracj\u0105 biometrii.");const n=b,r=window.location.hostname||"localhost",o=t||e.generateDeviceLabel(),a=await I().getUserMeta(n),s=a&&Array.isArray(a.passkeys)?a.passkeys:[],i=s.filter(function(u){return u&&u.encryptedMasterByPasskey&&u.encryptedMasterByPasskey.iv}),c=s.filter(function(u){return u&&!u.encryptedMasterByPasskey});if(i.length===0&&c.length>0){const u=new Error("Masz ju\u017C biometri\u0119 dla tego konta zsynchronizowan\u0105 z innego urz\u0105dzenia (przez iCloud Keychain). Aktywuj j\u0105 na tym urz\u0105dzeniu zamiast rejestrowa\u0107 now\u0105.");throw u.code="PASSKEY_NEEDS_ADOPTION",u.adoptableCredentialIds=c.map(function(f){return f.credentialId}),u}const l=i.map(function(u){return u.credentialId}).filter(Boolean);let y;try{({credentialId:y}=await e.createPasskeyAndGetPrfSecret(n,r,st,o,l))}catch(u){if(u&&u.name==="InvalidStateError"){const f=new Error("Na tym urz\u0105dzeniu jest ju\u017C zarejestrowana biometria dla tego konta.");throw f.code="PASSKEY_ALREADY_EXISTS",f}throw u}const{prfSecretBytes:d}=await e.getPasskeyPrfSecret(y,r,null),p=await e.deriveKeyFromPrfSecret(d),w=await e.encryptBytes(p,B);return await Bmk_zmien(n,function(h){const O=Array.isArray(h.passkeys)?h.passkeys.slice():[];return O.push({credentialId:y,deviceLabel:o,createdAtISO:new Date().toISOString(),encryptedMasterByPasskey:w,wrapVersion:2}),{...h,passkeys:O}},{wymagajSesji:!0,limitMs:3e4}),await ln(n),Yn({action:"register",credentialId:y}),{credentialId:y,deviceLabel:o}}async function Ms(t){const e=L();if(!T()||!B)throw new Error("Zaloguj si\u0119 has\u0142em przed aktywacj\u0105 biometrii.");if(typeof t!="string"||!t.length)throw new Error("adoptSyncedPasskey: brak credentialId.");const n=b,r=window.location.hostname||"localhost",o=await I().getUserMeta(n);if(!o||!Array.isArray(o.passkeys))throw new Error("Brak metadanych u\u017Cytkownika.");const a=o.passkeys.findIndex(function(d){return d&&d.credentialId===t});if(a<0){const d=new Error("adoptSyncedPasskey: passkey o tym credentialId nie istnieje w meta.");throw d.code="PASSKEY_NOT_FOUND",d}const s=o.passkeys[a];if(s.encryptedMasterByPasskey&&s.encryptedMasterByPasskey.iv){const d=new Error("Ten klucz biometryczny jest ju\u017C aktywny na tym urz\u0105dzeniu.");throw d.code="PASSKEY_ALREADY_ADOPTED",d}let i;try{({prfSecretBytes:i}=await e.getPasskeyPrfSecret(t,r,null))}catch(d){if(d&&d.name==="NotAllowedError"){const p=new Error("Aktywacja biometrii nie powiod\u0142a si\u0119 \u2014 autoryzacja zosta\u0142a anulowana lub nie powiod\u0142a si\u0119.");throw p.code="ADOPT_NOT_ALLOWED",p}throw d}const c=await e.deriveKeyFromPrfSecret(i),l=await e.encryptBytes(c,B);let Bmk_k=null;return await Bmk_zmien(n,function(Bmk_m){const y=Array.isArray(Bmk_m.passkeys)?Bmk_m.passkeys.slice():[],Bmk_i=y.findIndex(function(d){return d&&d.credentialId===t});if(Bmk_i<0)throw Bmk_blad("Ten klucz biometryczny usuni\u0119to w mi\u0119dzyczasie (w innej karcie albo na innym urz\u0105dzeniu). Nic nie zmieniono.","PASSKEY_NOT_FOUND");if(y[Bmk_i].encryptedMasterByPasskey&&y[Bmk_i].encryptedMasterByPasskey.iv)throw Bmk_blad("Ten klucz biometryczny jest ju\u017C aktywny na tym urz\u0105dzeniu.","PASSKEY_ALREADY_ADOPTED");return y[Bmk_i]=Bmk_k=Object.assign({},y[Bmk_i],{encryptedMasterByPasskey:l,wrapVersion:2,adoptedOnDeviceISO:new Date().toISOString()}),Object.assign({},Bmk_m,{passkeys:y})},{wymagajSesji:!0,limitMs:3e4}),{credentialId:t,deviceLabel:Bmk_k.deviceLabel||"(klucz zsynchronizowany)",adoptedOnDeviceISO:Bmk_k.adoptedOnDeviceISO}}async function Us(){if(!T())return[];const t=await I().getUserMeta(b);return!t||!Array.isArray(t.passkeys)?[]:t.passkeys.filter(function(e){return e&&!e.encryptedMasterByPasskey}).map(function(e){return{credentialId:e.credentialId,deviceLabel:e.deviceLabel||"(klucz zsynchronizowany)",createdAtISO:e.createdAtISO}})}function na(t){if(typeof t!="string")return"";const e=t.trim().split(/\s+/).filter(Boolean);let n="";for(let r=0;r<e.length&&n.length<2;r++){const o=e[r].charAt(0);/\p{L}/u.test(o)&&(n+=o)}try{return n.toLocaleUpperCase("pl-PL")}catch{return n.toUpperCase()}}async function Cs(t){const e=L();if(!T()||!B)throw new Error("Zaloguj si\u0119 przed rejestracj\u0105 biometrii.");const n=b,r=typeof window<"u"&&window.location&&window.location.hostname||"localhost",o=t||e.generateDeviceLabel(),a=await I().getUserMeta(n),s=a&&Array.isArray(a.passkeys)?a.passkeys.map(function(A){return A.credentialId}).filter(Boolean):[];let i,c,l;try{({credentialId:i,publicKeyRawB64u:c,prfInputB64u:l}=await e.createRoamingPasskeyAndGetPrfSecret(n,r,st,o,s))}catch(A){if(A&&A.name==="InvalidStateError"){const N=new Error("Na tym urz\u0105dzeniu jest ju\u017C zarejestrowana biometria dla tego konta.");throw N.code="PASSKEY_ALREADY_EXISTS",N}throw A}const{prfSecretBytes:y}=await e.getPasskeyPrfSecret(i,r),d=await e.deriveKeyFromPrfSecret(y),p=await e.encryptBytes(d,B),w=na(st);let h=null;w&&(h=await e.encryptBytes(d,new TextEncoder().encode(w)));await Bmk_zmien(n,function(O){const u=Array.isArray(O.passkeys)?O.passkeys.slice():[];return u.push({credentialId:i,deviceLabel:o,createdAtISO:new Date().toISOString(),encryptedMasterByPasskey:p,encryptedInitials:h,publicKeyB64u:c,wrapVersion:2,roaming:!0}),{...O,passkeys:u}},{wymagajSesji:!0,limitMs:3e4}),await ln(n),Yn({action:"register-roaming",credentialId:i});let f;try{f=await Hr()}catch{const N=new Error("Biometria zapisana lokalnie, ale brak materia\u0142u sync do escrow.");throw N.code="ESCROW_NO_SYNC",N}const m=(typeof window<"u"&&window.VILDA_SYNC_WORKER_URL||"https://vilda-sync.maciej-4b9.workers.dev").replace(/\/$/,""),E={encryptedMasterByPasskey:{iv:e.bytesToBase64url(p.iv),data:e.bytesToBase64url(p.data)},prfSalt:l,hkdfInfo:"wagaiwzrost.pl:wrapping-key:v1",wrapVersion:2,publicKeyB64u:c};h&&(E.encryptedInitials={iv:e.bytesToBase64url(h.iv),data:e.bytesToBase64url(h.data)});let _;try{_=await fetch(m+"/v1/slots/"+f.slotId+"/passkey/"+encodeURIComponent(i),{method:"PUT",headers:{"Content-Type":"application/json",Authorization:"Bearer "+f.authToken},body:JSON.stringify(E)})}catch{const N=new Error("Biometria zapisana lokalnie, ale nie uda\u0142o si\u0119 wys\u0142a\u0107 danych do chmury (brak sieci).");throw N.code="ESCROW_UPLOAD_FAILED",N}if(!_.ok){const A=new Error("Serwer odrzuci\u0142 zapis koperty biometrii ("+_.status+").");throw A.code="ESCROW_UPLOAD_REJECTED",A}return{credentialId:i,deviceLabel:o,escrowed:!0}}async function Fs(t,e,n){const r=L();if(typeof t!="string"||!t.length)throw new Error("Nieprawid\u0142owy userId.");const o=await I().getUserMeta(t);if(!o||!Array.isArray(o.passkeys)||!o.passkeys.length)throw new Error("Ten u\u017Cytkownik nie ma zarejestrowanej biometrii.");const a=window.location.hostname||"localhost",{credentialId:s,prfSecretBytes:i}=await r.getPasskeyPrfSecret(e||null,a,n||null);if(n&&n.aborted){const w=new Error("AbortError: passkey authentication aborted");throw w.name="AbortError",w}const c=o.passkeys.find(w=>w.credentialId===s);if(!c)throw new Error("Nieznany credentialId \u2014 biometria nie jest zarejestrowana dla tego konta.");if(!c.encryptedMasterByPasskey||!c.encryptedMasterByPasskey.iv){const w=new Error("Ten klucz biometryczny jest zsynchronizowany z innego urz\u0105dzenia, ale nie zosta\u0142 jeszcze aktywowany tutaj. Zaloguj si\u0119 has\u0142em i aktywuj biometri\u0119 na tym urz\u0105dzeniu.");throw w.code="PASSKEY_NOT_LOCAL",w.credentialId=s,w}const l=await r.deriveKeyFromPrfSecret(i);let y;try{y=await r.decryptBytes(l,c.encryptedMasterByPasskey.iv,c.encryptedMasterByPasskey.data)}catch{const h=c&&typeof c.wrapVersion=="number"?c.wrapVersion:1,O=new Error("Nie uda\u0142o si\u0119 odblokowa\u0107 konta biometri\u0105.");throw O.code="PASSKEY_DECRYPT_FAILED",O.wrapVersion=h,O.diagnostic=h>=2?"envelope-current-prf-mismatch":"envelope-legacy-create-prf",O}const d=await I().getRegistryEntry(t),p=d&&d.label||"U\u017Cytkownik";await Ut(y,t,p),await I().updateRegistryEntry(t,{lastLoginAtISO:new Date().toISOString()})}async function js(t){const e=L(),n=typeof window<"u"&&window.location&&window.location.hostname||"localhost",r=await e.getConditionalPasskeyAssertion(n,t||null);if(!r)return null;if(t&&t.aborted){const d=new Error("AbortError: conditional passkey aborted");throw d.name="AbortError",d}let o;try{o=new TextDecoder().decode(r.userHandleBytes)}catch{throw new Error("Conditional UI: nie uda\u0142o si\u0119 odkodowa\u0107 userHandle z asercji.")}if(!o||typeof o!="string")throw new Error("Conditional UI: pusty lub niepoprawny userHandle w asercji.");const a=await I().getUserMeta(o);if(!a||!Array.isArray(a.passkeys)||!a.passkeys.length)throw new Error("Konto wybrane przez autofill nie istnieje lub nie ma zarejestrowanej biometrii.");const s=a.passkeys.find(d=>d.credentialId===r.credentialId);if(!s)throw new Error("Wybrany passkey nie pasuje do \u017Cadnego wpisu w lokalnym koncie.");const i=await e.deriveKeyFromPrfSecret(r.prfSecretBytes);let c;try{c=await e.decryptBytes(i,s.encryptedMasterByPasskey.iv,s.encryptedMasterByPasskey.data)}catch{const p=s&&typeof s.wrapVersion=="number"?s.wrapVersion:1,w=new Error("Nie uda\u0142o si\u0119 odblokowa\u0107 konta biometri\u0105 (conditional UI).");throw w.code="PASSKEY_CONDITIONAL_DECRYPT_FAILED",w.wrapVersion=p,w}const l=await I().getRegistryEntry(o),y=l&&l.label||"U\u017Cytkownik";return await Ut(c,o,y),await I().updateRegistryEntry(o,{lastLoginAtISO:new Date().toISOString()}),{userId:o,label:y}}async function ra(){try{v.VildaSync&&typeof v.VildaSync.syncPull=="function"&&await v.VildaSync.syncPull()}catch(t){}}async function aa(t){const e=L(),n=t&&typeof t=="object"?t:{};let r=!1;try{r=await e.isPrfSupported()}catch{r=!1}if(!r){const w=new Error("Ta przegl\u0105darka nie obs\u0142uguje logowania biometrycznego. U\u017Cyj logowania QR.");throw w.code="EPH_PRF_UNSUPPORTED",w}const o=typeof window<"u"&&window.location&&window.location.hostname||"localhost",a=(typeof window<"u"&&window.VILDA_SYNC_WORKER_URL||"https://vilda-sync.maciej-4b9.workers.dev").replace(/\/$/,"");let s;try{const w=await fetch(a+"/v1/passkey/challenge",{method:"POST",headers:{"Content-Type":"application/json"}});if(!w.ok)throw new Error("challenge http "+w.status);s=(await w.json()).challenge}catch{const h=new Error("Nie uda\u0142o si\u0119 nawi\u0105za\u0107 po\u0142\u0105czenia z serwerem. Sprawd\u017A internet.");throw h.code="EPH_CHALLENGE_FAILED",h}const i=e.base64urlToBytes(s),c=await e.getPasskeyAssertionAndPrf(n.credentialId||null,o,i,n.signal||null);if(n.signal&&n.signal.aborted){const w=new Error("AbortError: passkey authentication aborted");throw w.name="AbortError",w}let l;try{const w=await fetch(a+"/v1/passkey/"+encodeURIComponent(c.credentialId)+"/unlock",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({clientDataJSON:c.clientDataJSONB64u,authenticatorData:c.authenticatorDataB64u,signature:c.signatureB64u})});if(w.status===404){const h=new Error("Ten passkey nie jest skonfigurowany do logowania na obcym komputerze.");throw h.code="EPH_NO_ENVELOPE",h}if(!w.ok){const h=new Error("Serwer odrzuci\u0142 logowanie biometryczne ("+w.status+").");throw h.code="EPH_UNLOCK_REJECTED",h}l=await w.json()}catch(w){if(w&&w.code)throw w;const h=new Error("B\u0142\u0105d sieci przy pobieraniu danych logowania.");throw h.code="EPH_UNLOCK_NETWORK",h}const y=await e.deriveKeyFromPrfSecret(c.prfSecretBytes);let d;try{const w=e.base64urlToBytes(l.encryptedMasterByPasskey.iv),h=e.base64urlToBytes(l.encryptedMasterByPasskey.data);d=await e.decryptBytes(y,w,h)}catch{const h=l&&typeof l.wrapVersion=="number"?l.wrapVersion:1,O=new Error("Nie uda\u0142o si\u0119 odszyfrowa\u0107 danych tym passkey.");O.code="EPH_DECRYPT_FAILED",O.wrapVersion=h,O.diagnostic=h>=2?"envelope-current-prf-mismatch":"envelope-legacy-create-prf";try{typeof console<"u"&&console.warn&&console.warn("[Vilda passkey] EPH_DECRYPT_FAILED: wrapVersion="+h+" diagnostic="+O.diagnostic+(h>=2?' \u2192 koperta AKTUALNA (PRF z get()); sekret PRF z logowania nie pasuje. Prawdopodobna niesp\xF3jno\u015B\u0107 authenticatora (np. Apple Passwords lokalnie vs telefon). Zaloguj si\u0119 przez \u201EU\u017Cyj telefonu".':" \u2192 koperta STARSZA (sprzed poprawki create\u2192get). Zarejestruj passkey ponownie na zaufanym urz\u0105dzeniu, potem zaloguj si\u0119 jeszcze raz."))}catch(u){}throw O}let p="Konto (passkey)";try{if(l.encryptedInitials&&l.encryptedInitials.iv&&l.encryptedInitials.data){const w=await e.decryptBytes(y,e.base64urlToBytes(l.encryptedInitials.iv),e.base64urlToBytes(l.encryptedInitials.data)),h=new TextDecoder().decode(w).trim();h&&(p=h)}}catch(w){}return{masterBytes:d,credentialId:c.credentialId,ephLabel:p}}async function Rs(t){try{v.VildaPersistence&&v.VildaPersistence.purgeEphemeralData&&v.VildaPersistence.purgeEphemeralData()}catch(r){}Pe(!0);const e=await aa(t),n="eph:"+e.credentialId.slice(0,32);return await Ut(e.masterBytes,n,e.ephLabel),await ra(),{ok:!0,ephemeral:!0,credentialId:e.credentialId,userId:n}}async function Ds(t,e){if(T())throw new Error("VildaVault.unlockWithPasskeyAndPersist: vault musi by\u0107 zablokowany.");Ie(t,"Has\u0142o");const n=L(),r=e&&typeof e=="object"?e:{},o=await aa(r),a=ve(),s=n.KDF_ITERATIONS,i=n.generateSalt(),c=n.generateSalt(),l=n.generateRecoveryKey(),y=await n.deriveKey(t,i,s),d=await n.encryptBytes(y,o.masterBytes),p=await n.deriveKeyFromRecoveryKey(l,c,s),w=await n.encryptBytes(p,o.masterBytes);let h=typeof r.label=="string"&&r.label.trim().length?r.label.trim():"";h||(h=o.ephLabel||qt);const O=new Date().toISOString(),u={schemaVersion:at,createdAtISO:O,kdfName:n.KDF_NAME,kdfHash:n.KDF_HASH,kdfIterations:s,passwordKdfIterations:s,passwordUpdatedAtISO:null,passwordSalt:n.bytesToBase64(i),recoverySalt:n.bytesToBase64(c),encryptedMasterByPassword:{iv:n.bytesToBase64(d.iv),data:n.bytesToBase64(d.data)},encryptedMasterByRecovery:{iv:n.bytesToBase64(w.iv),data:n.bytesToBase64(w.data)},restoredFromPasskey:!0,needsPasswordReset:!1},f=be(r.storageMode);return await I().putUserMeta(a,u),await I().putRegistryEntry({userId:a,label:h,createdAtISO:O,lastLoginAtISO:O,storageMode:f}),lt=f,await Ut(o.masterBytes,a,h),{userId:a,label:h,recoveryKey:l,storageMode:f}}async function Ls(t,e,n){const r=L();try{v.VildaPersistence&&v.VildaPersistence.purgeEphemeralData&&v.VildaPersistence.purgeEphemeralData()}catch(l){}Pe(!0);let o;try{o=await r.importECDHPrivateKey(t)}catch{const y=new Error("completeQRLoginEphemeral: b\u0142\u0105d klucza prywatnego.");throw y.code="EPH_QR_KEY",y}let a;try{a=await r.decryptFromTransfer(o,e)}catch{const y=new Error("completeQRLoginEphemeral: b\u0142\u0105d deszyfrowania transferu.");throw y.code="EPH_QR_DECRYPT",y}const s="eph-qr:"+Date.now().toString(36),i=na(n);return await Ut(a,s,i||"Konto (QR)"),await ra(),{ok:!0,ephemeral:!0,userId:s}}async function zs(t){const e=await I().getUserMeta(t);return!e||!Array.isArray(e.passkeys)?[]:e.passkeys.map(n=>({credentialId:n.credentialId,deviceLabel:n.deviceLabel,createdAtISO:n.createdAtISO,roaming:n.roaming===!0,isRemote:!n.encryptedMasterByPasskey}))}async function xs(t,e){if(!await Bmk_zmien(t,function(n){if(!n||!Array.isArray(n.passkeys))return null;const r=n.passkeys.filter(a=>a.credentialId!==e),o=Array.isArray(n.passkeyTombstones)?n.passkeyTombstones.slice():[];return o.some(function(a){return a&&a.credentialId===e})||o.push({credentialId:e,deletedAtISO:new Date().toISOString()}),{...n,passkeys:r,passkeyTombstones:o}},{limitMs:3e4}))return;await ln(t),Yn({action:"remove",credentialId:e})}async function Bs(t){if(!T())throw new Error("VildaVault.exportSyncCode: vault nie jest odblokowany.");if(typeof t!="string"||t.length<Yt)throw new Error("VildaVault.exportSyncCode: nieprawid\u0142owe has\u0142o.");const e=L(),n=await I().getUserMeta(b);if(!n)throw new Error("VildaVault.exportSyncCode: brak metadanych u\u017Cytkownika.");const r=await e.deriveKey(t,n.passwordSalt,Gc2(n));try{await e.decryptBytes(r,n.encryptedMasterByPassword.iv,n.encryptedMasterByPassword.data)}catch{throw new Error("VildaVault.exportSyncCode: nieprawid\u0142owe has\u0142o.")}return e.encryptSyncCodeBundle({dek:B,sis:it||B},t)}async function Ks(t,e,n){if(T())throw new Error("VildaVault.importSyncCode: wyloguj si\u0119 przed odtwarzaniem kodu synchronizacji.");if(typeof e!="string"||e.length<Yt)throw new Error("VildaVault.importSyncCode: has\u0142o musi mie\u0107 minimum "+Yt+" znak\xF3w.");const r=L(),o=n&&typeof n=="object"?n:{};let a,s;try{const E=await r.decryptSyncCodeBundle(t,e);a=E.dek,s=E.sis}catch(E){throw new Error("VildaVault.importSyncCode: "+(E.message||"nieprawid\u0142owy kod lub has\u0142o."))}const i=ve(),c=r.KDF_ITERATIONS,l=r.generateSalt(),y=r.generateSalt(),d=r.generateRecoveryKey(),p=await r.deriveKey(e,l,c),w=await r.deriveKeyFromRecoveryKey(d,y,c),h=await r.encryptBytes(p,a),O=await r.encryptBytes(w,a);let u=typeof o.label=="string"&&o.label.trim().length?o.label.trim():"";if(!u){const E=await Ee();u=qt+(E.length>0?" "+(E.length+1):"")}const f=new Date().toISOString(),m={schemaVersion:at,createdAtISO:f,kdfName:r.KDF_NAME,kdfHash:r.KDF_HASH,kdfIterations:c,passwordKdfIterations:c,passwordUpdatedAtISO:null,passwordSalt:r.bytesToBase64(l),recoverySalt:r.bytesToBase64(y),encryptedMasterByPassword:{iv:r.bytesToBase64(h.iv),data:r.bytesToBase64(h.data)},encryptedMasterByRecovery:{iv:r.bytesToBase64(O.iv),data:r.bytesToBase64(O.data)},restoredFromSyncCode:!0};try{const E=await r.importMasterKeyFromBytes(a),_=await r.encryptBytes(E,s);m.encryptedSisByMaster={iv:r.bytesToBase64(_.iv),data:r.bytesToBase64(_.data)},m.bundleSchemaVersion=1}catch{}return await I().putUserMeta(i,m),await I().putRegistryEntry({userId:i,label:u,createdAtISO:f,lastLoginAtISO:f}),await Ut(a,i,u),s&&Zt(s),{userId:i,label:u,recoveryKey:d}}var Vs="https://vilda-sync.maciej-4b9.workers.dev";function Ys(){var t=typeof window<"u"&&window.VILDA_SYNC_WORKER_URL;return(t||Vs).replace(/\/$/,"")}async function dn(t,e){var n=Ys()+t,r=new AbortController,o=setTimeout(function(){r.abort()},15e3);try{return await fetch(n,Object.assign({signal:r.signal},e))}finally{clearTimeout(o)}}async function Hs(){const t=L();if(!t||typeof t.generateECDHKeypair!="function")throw new Error("VildaVault.initiateQRLogin: VildaCrypto nie obs\u0142uguje ECDH.");const{privateKey:e,publicKeyB64u:n}=await t.generateECDHKeypair();let r;try{r=await dn("/v1/transfer",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({ecdhPublicKeyB64u:n})})}catch(i){throw new Error("VildaVault.initiateQRLogin: b\u0142\u0105d sieci \u2014 "+(i.message||i))}if(!r.ok){const i=await r.json().catch(function(){return{}});throw new Error("VildaVault.initiateQRLogin: serwer "+r.status+" \u2014 "+(i&&i.error&&i.error.message||"nieznany b\u0142\u0105d"))}const o=await r.json(),a=o.transferToken,s=await t.exportECDHPrivateKey(e);return{qrData:"vsc1-qr:"+a,transferToken:a,privateKeyB64u:s,expiresIn:o.expiresIn||120}}async function Ws(t){let e;try{e=await dn("/v1/transfer/"+t,{method:"GET"})}catch{return null}if(!e.ok)return null;const n=await e.json().catch(function(){return null});return n&&n.status==="ready"&&n.encryptedPayload?{encryptedPayload:n.encryptedPayload,label:n.accountLabel||null}:null}async function Zs(t,e,n){if(T())throw new Error("VildaVault.completeQRLogin: vault musi by\u0107 zablokowany przed importem QR.");const r=L();let o;try{o=await r.importECDHPrivateKey(t)}catch(A){throw new Error("VildaVault.completeQRLogin: b\u0142\u0105d odczytu klucza prywatnego \u2014 "+(A.message||A))}let a;try{a=await r.decryptFromTransfer(o,e)}catch(A){throw new Error("VildaVault.completeQRLogin: b\u0142\u0105d deszyfrowania \u2014 "+(A.message||A))}const s=n&&typeof n=="object"?n:{},i=ve(),c=r.KDF_ITERATIONS,l=r.generateSalt(),y=r.generateSalt(),d=r.generateRecoveryKey();let p=null;typeof s.newPassword=="string"&&s.newPassword.length>0&&(Ie(s.newPassword,"Nowe has\u0142o"),p=s.newPassword);let w=null,h=null;if(p)h=await r.deriveKey(p,l,c),w=await r.encryptBytes(h,a);else{const A=r.bytesToBase64url(r.generateSalt());h=await r.deriveKey(A,l,c),w=await r.encryptBytes(h,a)}const O=await r.deriveKeyFromRecoveryKey(d,y,c),u=await r.encryptBytes(O,a);let f=typeof s.label=="string"&&s.label.trim().length?s.label.trim():"";if(!f){const A=await Ee();f=qt+(A.length>0?" "+(A.length+1):"")}const m=new Date().toISOString(),E={schemaVersion:at,createdAtISO:m,kdfName:r.KDF_NAME,kdfHash:r.KDF_HASH,kdfIterations:c,passwordKdfIterations:c,passwordUpdatedAtISO:null,passwordSalt:r.bytesToBase64(l),recoverySalt:r.bytesToBase64(y),encryptedMasterByPassword:{iv:r.bytesToBase64(w.iv),data:r.bytesToBase64(w.data)},encryptedMasterByRecovery:{iv:r.bytesToBase64(u.iv),data:r.bytesToBase64(u.data)},restoredFromQR:!0,needsPasswordReset:!p},_=be(s.storageMode);return await I().putUserMeta(i,E),await I().putRegistryEntry({userId:i,label:f,createdAtISO:m,lastLoginAtISO:m,storageMode:_}),lt=_,await Ut(a,i,f),{userId:i,label:f,recoveryKey:d,needsPasswordReset:!p,storageMode:_}}async function Gs(t,e){if(!T()||!B)throw new Error("VildaVault.approveQRLogin: vault musi by\u0107 odblokowany.");if(typeof e!="string"||e.length<Yt)throw new Error("VildaVault.approveQRLogin: nieprawid\u0142owe has\u0142o.");const n=L(),r=await I().getUserMeta(b);if(!r)throw new Error("VildaVault.approveQRLogin: brak metadanych u\u017Cytkownika.");const o=await n.deriveKey(e,r.passwordSalt,Gc2(r));try{await n.decryptBytes(o,r.encryptedMasterByPassword.iv,r.encryptedMasterByPassword.data)}catch{const d=new Error("VildaVault.approveQRLogin: nieprawid\u0142owe has\u0142o.");throw d.code="BAD_PASSWORD",d}let a;try{a=await dn("/v1/transfer/"+t,{method:"GET"})}catch(y){throw new Error("VildaVault.approveQRLogin: b\u0142\u0105d sieci \u2014 "+(y.message||y))}if(a.status===404)throw new Error("VildaVault.approveQRLogin: kod QR wygas\u0142 lub jest nieprawid\u0142owy.");if(!a.ok)throw new Error("VildaVault.approveQRLogin: b\u0142\u0105d serwera "+a.status);const s=await a.json();if(s.status==="ready")throw new Error("VildaVault.approveQRLogin: ten kod QR zosta\u0142 ju\u017C wykorzystany.");const i=s.ecdhPublicKeyB64u;if(!i)throw new Error("VildaVault.approveQRLogin: serwer nie zwr\xF3ci\u0142 klucza publicznego.");let c;try{c=await n.encryptForTransfer(B,i)}catch(y){throw new Error("VildaVault.approveQRLogin: b\u0142\u0105d szyfrowania \u2014 "+(y.message||y))}let l;try{l=await dn("/v1/transfer/"+t,{method:"PUT",headers:{"Content-Type":"application/json"},body:JSON.stringify(Object.assign({},c,{accountLabel:st||null}))})}catch(y){throw new Error("VildaVault.approveQRLogin: b\u0142\u0105d sieci przy wysy\u0142aniu \u2014 "+(y.message||y))}if(l.status===409)throw new Error("VildaVault.approveQRLogin: ten kod QR zosta\u0142 ju\u017C wykorzystany.");if(!l.ok){const y=await l.json().catch(function(){return{}});throw new Error("VildaVault.approveQRLogin: serwer "+l.status+" \u2014 "+(y&&y.error&&y.error.message||"nieznany b\u0142\u0105d"))}return{ok:!0}}async function pn(t){if(typeof t!="string"||!t.length)return gt;try{const e=await I().getRegistryEntry(t);return be(e&&e.storageMode)}catch{return gt}}async function Js(t,e){if(typeof t!="string"||!t.length)throw new Error("Nieprawid\u0142owy userId.");const n=be(e);if(!await I().getRegistryEntry(t))throw new Error("U\u017Cytkownik nie istnieje.");return await I().updateRegistryEntry(t,{storageMode:n}),b===t&&(lt=n),{userId:t,storageMode:n}}async function Qs(){return b?pn(b):gt}let lt=gt;function Xs(){return lt}function qs(){return lt===Se}const $s={__vildaVault:!0,VERSION:sa,STEP:ia,SCHEMA_VERSION:at,REGISTRY_DB_NAME:Wn,USER_DB_PREFIX:yn,DEFAULT_IDLE_LOCK_MS:Zn,CLOUD_ONLY_IDLE_LOCK_MS:da,MIN_PASSWORD_LENGTH:Yt,PASSWORD_REQUIRED_VARIETY_TYPES:Be,validatePasswordStrength:Ke,generateStrongPassword:fa,setStorageAdapter:te,createInMemoryAdapter:Ze,listUsers:Ee,isUnlocked:T,getCurrentUser:Ma,getStatus:Ua,getLoginThrottleStatus:ma,tryRestoreSession:_a,createUser:Ca,unlockUser:Fa,unlockUserWithRecoveryKey:ja,lock:kn,changePassword:Ra,resetPasswordWhileUnlocked:Da,regenerateRecoveryKey:La,rotateSyncIdentity:za,removeUser:xa,listPatients:Xe,listExternalPatients:Tn,findSameNamePatients:Ga,migratePatientNamesSplit:Ja,saveExternalPatient:pr,countLegacyExternalNotes:Qa,legacyExternalSummary:Xa,migrateExternalNotesToRegistry:qa,mergeExternalIntoPatient:$a,mergePatients:Bsc0,promoteExternalToBase:to,savePatient:_e,setSaveConflictResolver:Bb8,setPatientIdentityResolver:Bz2,getPatient:ct,getLatestSnapshot:hr,restoreSnapshotAsNew:ro,setSnapshotPinned:ao,pruneSnapshotsForPatient:wr,updateSnapshotPayload:$e,deleteSnapshot:Ar,moveSnapshotToTrash:Bkz_doKosza,listTrashedSnapshots:Bkz_lista,restoreTrashedSnapshot:Bkz_przywroc,updateMeasurementRow:so,deleteMeasurementRow:io,removePatient:_n,getCurrentUserStats:co,exportPatientEnvelope:ts,previewPatientEnvelope:es,importPatientFromEnvelope:ns,exportVaultBackup:rs,restoreVaultBackup:as,importLegacyJsonPatient:fs,looksLikeLegacyPayload:Wr,shortHashOfPatientId:cn,onPatientSaved:ys,onPatientDeleted:hs,onPasskeyChanged:As,onCredentialChanged:Qe1,onPreferenceChanged:Os,listNotes:uo,getNote:lo,saveNote:po,removeNote:fo,onNoteChanged:gs,NOTE_CATEGORIES:kr,sanitizeNoteText:Z,saveReminderOutcome:RemB22SaveOutcome,savePatientNote:ie,savePatientNoteOnce:VildaSavePatientNoteOnce,updateExistingPatientNote:VildaUpdateExistingPatientNote,getPatientNote:Fe,listPatientNotesForPatient:Fn,sanitizeClinicalDateISO:Ct,sanitizeMedication:At,sanitizeLabResult:kt,listMedicationNamesForCurrentUser:Io,listLabTestNamesForCurrentUser:Oo,listAllPatientNotes:ht,removePatientNote:$o,removeExistingPatientNote:VildaRemoveExistingPatientNote,onPatientNoteChanged:ms,PATIENT_NOTE_CATEGORIES:Nr,CLINICAL_NOTE_CATEGORIES:Er,completePatientNote:ko,uncompletePatientNote:No,noShowPatientNote:Eo,snoozePatientNote:To,listPatientNotesDueByDate:_o,listPatientNotesInRange:Mo,listReminderHistory:RemA8History,savePatientList:on,listPatientLists:Rn,getPatientList:sn,deletePatientList:Lo,addPatientToList:Wo,removePatientFromList:Zo,evaluatePatientListRule:De,getPatientListMembers:Vo,previewPatientListRule:Yo,patientListRuleHasUnknownFields:Ro,listPatientListsForPatient:Ho,onPatientListChanged:Do,PATIENT_LIST_GH_PROGRAMS:Dr,PATIENT_LIST_OBESITY_DRUGS:Lr,listProcedureWaitlist:Xo,getWaitlistSchedules:Br,setWaitlistSchedule:Go,getWaitlistLists:xn,addWaitlistList:Jo,removeWaitlistList:Qo,searchPatientNotes:So,EXTERNAL_PATIENT_ID:jt,ACTIVITY_PATIENT_ID:se,listPatientNotesBySeries:bo,listPatientTimelineEvents:qo,_extractSnapshotMeasurements:Bn,listPatientLabSeries:Po,listPatientTreatmentPeriods:Ao,_extractMeasurementHistory:Bn,_generateObservations:Vr,ageMonthsFromForm:Bag,sanitizeDobISO:ut,normalizePatientName:Ne,calcAgeFromDOB:En,resolvePatientAge:Ba,formatDobForDisplay:Ka,parseDobFromDisplay:Va,startIdleTimer:ea,stopIdleTimer:Hn,resetIdleTimer:ks,setIdleConfigProvider:Na,refreshPersistedSession:Ta,onUnlock:Es,onLock:Ns,previewVaultBackupMerge:os,mergeVaultBackup:ss,exportSyncCode:Bs,importSyncCode:Ks,getSyncMaterial:Hr,exportSyncPayload:is,mergeSyncPayload:Le,getSyncStaleness:Gm,buildNoteDelta:cs,buildTombstoneDelta:us,buildNoteTombstoneDelta:ls,buildLibraryNoteDelta:Qb0,buildLibraryNoteTombstoneDelta:Qb1,buildPatientDelta:ds,applyEncryptedDelta:ps,encryptPayloadForCurrentUser:V,decryptPayloadForCurrentUser:G,isPrfSupported:Ts,registerPasskey:_s,registerPasskeyForRoaming:Cs,unlockWithPasskey:Fs,unlockWithPasskeyConditional:js,unlockWithPasskeyEphemeral:Rs,unlockWithPasskeyAndPersist:Ds,completeQRLoginEphemeral:Ls,listPasskeys:zs,removePasskey:xs,adoptSyncedPasskey:Ms,listAdoptablePasskeys:Us,initiateQRLogin:Hs,pollQRLoginStatus:Ws,completeQRLogin:Zs,approveQRLogin:Gs,setEphemeralMode:Pe,isEphemeralMode:ka,setStorageAdapter:te,getStorageMode:pn,setStorageMode:Js,getCurrentStorageMode:Qs,getCurrentStorageModeSync:Xs,isCloudOnlyMode:qs,isCloudOnlyAdapterActive:Pa,canWarmStartCloudOnly:Aa,isPersistentCloudCacheEnabled:Je,STORAGE_MODE_LOCAL:gt,STORAGE_MODE_CLOUD_ONLY:Se};v.VildaVault=$s})(typeof window<"u"?window:typeof globalThis<"u"?globalThis:null);

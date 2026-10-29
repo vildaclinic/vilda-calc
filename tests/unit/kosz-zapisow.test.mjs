@@ -620,3 +620,93 @@ describe('strażniki interfejsu', () => {
     expect(dz).toContain('"snapshot.restore":"Przywr\\xF3cenie zapisu z kosza"');
   });
 });
+
+describe('„Przywróć” zapisu, który leży pod inną kartą (P-KOSZ-PO-KLUCZU)', () => {
+  function modulZSejfem(wynik) {
+    const zdarzenia = [], dziennik = [];
+    const win = {
+      document: { readyState: 'complete', getElementById: () => null, addEventListener() {}, dispatchEvent(e) { zdarzenia.push(e); } },
+      addEventListener() {},
+      CustomEvent: class { constructor(typ, o) { this.type = typ; this.detail = o && o.detail; } },
+      VildaVault: { restoreTrashedSnapshot: async () => wynik },
+      VildaAuditLog: { log: (z, d) => { dziennik.push([z, d]); } },
+    };
+    win.window = win;
+    loadBrowserScript('vilda_kosz_zapisow.js', win);
+    return { K: win.VildaKoszZapisow, zdarzenia, dziennik };
+  }
+
+  it('wynik z inną kartą (przywrócenie w miejscu, po „Scal pacjentów”): dziennik i zdarzenie wskazują tę kartę, kartaWpisu — kartę wpisu kosza', async () => {
+    const m = modulZSejfem({ patientId: 'karta-Y', snapshotId: 'zapis-x' });
+    await m.K.przywroc('karta-X', 'zapis-x');
+    expect(m.dziennik).toEqual([['snapshot.restore', { patientId: 'karta-Y', snapshotId: 'zapis-x', kartaWpisu: 'karta-X' }]]);
+    expect(m.zdarzenia.map((e) => e.detail)).toEqual([{ akcja: 'przywroc', patientId: 'karta-Y', snapshotId: 'zapis-x', juzWKarcie: false, kartaWpisu: 'karta-X' }]);
+  });
+
+  it('wynik z kartą wpisu: jak dotąd, bez kartaWpisu', async () => {
+    const m = modulZSejfem({ patientId: 'karta-X', snapshotId: 'zapis-x' });
+    await m.K.przywroc('karta-X', 'zapis-x');
+    expect(m.dziennik).toEqual([['snapshot.restore', { patientId: 'karta-X', snapshotId: 'zapis-x' }]]);
+    expect(m.zdarzenia.map((e) => e.detail)).toEqual([{ akcja: 'przywroc', patientId: 'karta-X', snapshotId: 'zapis-x', juzWKarcie: false }]);
+  });
+
+  // Historia wersji karty X (wstawDoHistorii): komunikat po kliknięciu „Przywróć” dla każdego kształtu wyniku sejfu.
+  // Zapis bywa w innej karcie niż wpis kosza w obu kierunkach scalenia (karta docelowa „Scal pacjentów” albo — po
+  // przerwanym scaleniu — stara karta), więc komunikat o innej karcie nie mówi, w którą stronę szło scalenie.
+  function atrapaDom() {
+    const mk = (tag) => {
+      const e = {
+        tag, children: [], parentNode: null, listeners: {}, attrs: {}, textContent: '', className: '', disabled: false,
+        appendChild(c) { c.parentNode = e; e.children.push(c); return c; },
+        addEventListener(t, f) { (e.listeners[t] || (e.listeners[t] = [])).push(f); },
+        setAttribute(k, v) { e.attrs[k] = String(v); }, getAttribute(k) { return k in e.attrs ? e.attrs[k] : null; },
+      };
+      return e;
+    };
+    return {
+      readyState: 'complete', getElementById: () => null, addEventListener() {}, dispatchEvent() { return true; },
+      createElement: mk, createElementNS: (ns, t) => mk(t), createTextNode: (t) => ({ textContent: t }),
+    };
+  }
+  async function komunikatHistorii(wynik) {
+    const win = {
+      addEventListener() {},
+      CustomEvent: class { constructor(typ, o) { this.type = typ; this.detail = o && o.detail; } },
+      VildaVault: {
+        isUnlocked: () => true,
+        listTrashedSnapshots: async () => [{
+          patientId: 'karta-X', snapshotId: 'zapis-x', patientExists: true, savedAtISO: '2026-10-01T10:00:00.000Z',
+          deletedAtISO: '2026-10-02T10:00:00.000Z', expiresAtISO: '2026-11-01T10:00:00.000Z', payload: { user: { name: 'Testowy Jan' } },
+        }],
+        restoreTrashedSnapshot: async () => wynik,
+      },
+      VildaAuditLog: { log() {} },
+    };
+    win.document = atrapaDom();
+    win.window = win;
+    loadBrowserScript('vilda_kosz_zapisow.js', win);
+    const kontener = win.document.createElement('div');
+    const reload = [];
+    win.VildaKoszZapisow.wstawDoHistorii(kontener, { patientId: 'karta-X', reload: (s, b) => reload.push([s, b]) });
+    const tiki = async () => { for (let i = 0; i < 20; i += 1) await new Promise((r) => { setImmediate(r); }); };
+    await tiki();
+    const przyciski = (n) => (n.tag === 'button' ? [n] : []).concat(...n.children.map(przyciski));
+    const [b] = przyciski(kontener);
+    b.listeners.click.forEach((f) => f());
+    await tiki();
+    expect(reload.length).toBe(1);
+    expect(reload[0][0]).toBe('zapis-x');
+    return reload[0][1].text;
+  }
+
+  it('historia wersji: komunikat po „Przywróć” — ta sama karta, inna karta, „już w karcie” w tej i w innej karcie', async () => {
+    expect(await komunikatHistorii({ patientId: 'karta-X', snapshotId: 'zapis-x' })).toBe('Przywrócono zapis z kosza.');
+    expect(await komunikatHistorii({ patientId: 'karta-Y', snapshotId: 'zapis-x' }))
+      .toBe('Przywrócono zapis z kosza — jest w innej karcie tego pacjenta (po „Scal pacjentów”).');
+    expect(await komunikatHistorii({ patientId: 'karta-X', snapshotId: 'zapis-x', alreadyInCard: true }))
+      .toBe('Ten zapis jest już w karcie w nowszej postaci — usunięto go z kosza.');
+    expect(await komunikatHistorii({ patientId: 'karta-Y', snapshotId: 'zapis-x', alreadyInCard: true }))
+      .toBe('Ten zapis jest już w nowszej postaci w innej karcie tego pacjenta (po „Scal pacjentów”) — usunięto go z kosza.');
+    expect(await komunikatHistorii(undefined), 'wynik bez karty: jak dotąd').toBe('Przywrócono zapis z kosza.');
+  });
+});
