@@ -19843,7 +19843,7 @@ a lekarz poprawia jedno z miejsc. Wartość dni spoza 0–6 w rekordzie nie jest
 
 **Wersje.** `sga_birth_module.js?v=10→11`; SW 1.1.168 → **1.1.169**.
 
-## Wizyta dana do kosza znika też ze starej karty po „Scal pacjentów”, a zostawiona ostatnia wizyta karty dostaje nowszą treść (P-KOSZ-PO-KLUCZU, PR-E3, SW 1.1.406, `vilda_vault.js` 232, 2026-10-29)
+## Wizyta dana do kosza znika też ze starej karty po „Scal pacjentów”, a zostawiona ostatnia wizyta karty dostaje nowszą treść (P-KOSZ-PO-KLUCZU, PR-E3, SW 1.1.407, `vilda_vault.js` 232, 2026-10-29)
 
 **Zmiana kliniczna: tak** — wzory, progi, jednostki i interpretacje bez zmian; zmienia się, które wizyty i z jaką treścią
 (masa, wzrost, gwiazdka) zostają w kartach i w koszu po synchronizacji, gdy: (1) wizytę dano do kosza w karcie
@@ -20244,8 +20244,8 @@ testów i dokumentacji), mutacje, równoważność wobec 230 (zmiany 231 nie dot
   opis ograniczenia. Sprawdzenia sesji z ostatniego przeglądu: 25 mutantów (usunięcie po jednym sprawdzeniu) — 24 zabite
   nowymi testami, jeden (sprawdzenie sprzed tej zmiany) pilnują inne pliki; testy sesji tej zmiany na 230 — czerwone
   wszystkie (43).
-- Pełny przebieg (po scaleniu `audyt` z #818): 17 775 testów w 596 plikach, lint, składnia (1537 plików), polityka
-  repozytorium (2281 plików), testy dostępu Pro — zielone. E2E (desktop Chromium): 47 z 47 w 12 plikach (kosz zapisów, spójność zapisów, cień w IndexedDB,
+- Pełny przebieg (po scaleniu `audyt` z #818 i #821): 17 785 testów w 597 plikach, lint, składnia (1541 plików), polityka
+  repozytorium (2285 plików), testy dostępu Pro — zielone. E2E (desktop Chromium): 47 z 47 w 12 plikach (kosz zapisów, spójność zapisów, cień w IndexedDB,
   blokady zapisu wersji i usuwania, właściciel wersji, jednorazowe bez przywracania, wersjonowane klucze PWA, kopia konta,
   blokada scalania, scalanie duplikatów).
 
@@ -20276,8 +20276,8 @@ przełączenia), `kosz-zapisow.test.mjs` („Przywróć” wizyty pod inną kart
 i `zmiana-w-karcie.test.mjs` (strażniki: stempel „Przywróć” w karcie, w której wizyta leży), `scalanie-blokada.test.mjs`
 (dwa testy czekają na pytanie bramy zamiast stałych 20 ms — pod pełnym obciążeniem zapis nie zdążał złapać blokady).
 
-**Wersje.** `vilda_vault.js` 231 → 232 (z nim odwołania w `vilda_chrome.js` 190 i `vilda_session_bridge.js` 112),
-`vilda_kosz_zapisow.js` 4 → 5; SW 1.1.405 → **1.1.406**. Zmiany sejfu 231 (przypomnienia, #817) nie dotyczą scalania —
+**Wersje.** `vilda_vault.js` 231 → 232 (z nim odwołania w `vilda_chrome.js` 191 i `vilda_session_bridge.js` 113),
+`vilda_kosz_zapisow.js` 4 → 5; SW 1.1.406 → **1.1.407**. Zmiany sejfu 231 (przypomnienia, #817) nie dotyczą scalania —
 porównania „dotąd” zmierzone na 230 (8240e0df) obowiązują.
 
 ## W koszu zostaje poprawka wizyty zrobiona przed „Scal pacjentów” na innym urządzeniu (P-KOSZ-USUWANEJ-KARTY, PR-E4a, SW 1.1.396, `vilda_vault.js` 230, 2026-10-28)

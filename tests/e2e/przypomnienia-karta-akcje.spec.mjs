@@ -87,34 +87,34 @@ const wierszObs = (page) => page.locator('#remindersInline .vild-rem-row', { has
 test('klik w pozycję karty otwiera pełny B2.2 z treścią, terminem i akcjami', async ({ page }) => {
   await otworzZDanymi(page); const row = wierszObs(page); await expect(row).toHaveCount(1);
   await expect(row).not.toContainText('odstawić wapń'); await row.click();
-  const dialog = page.locator('dialog.vb22'); await expect(dialog).toBeVisible();
-  for (const text of ['Densyta Dorota','Obserwacja','Umówić densytometr',DLUGA_TRESC,'Termin']) await expect(dialog).toContainText(text);
+  const dialog = page.locator('dialog.vb22-modal'); await expect(dialog).toBeVisible();
+  for (const text of ['Densyta Dorota','Obserwacja','Umówić densytometr',DLUGA_TRESC,'Szczegóły wydarzenia']) await expect(dialog).toContainText(text);
   const geometry = await dialog.evaluate(node => { const r = node.getBoundingClientRect(); return { position: getComputedStyle(node).position, cx: r.x+r.width/2, cy:r.y+r.height/2, w:r.width, h:r.height, vw:innerWidth,vh:innerHeight }; });
   expect(geometry.position).toBe('fixed'); expect(Math.abs(geometry.cx-geometry.vw/2)).toBeLessThan(40); expect(Math.abs(geometry.cy-geometry.vh/2)).toBeLessThan(60);
-  expect(geometry.w).toBeLessThanOrEqual(1161); expect(geometry.w).toBeGreaterThan(700); expect(geometry.h).toBeLessThanOrEqual(geometry.vh);
-  await expect(dialog.getByRole('button',{name:/otwórz Kartę pacjenta/})).toBeVisible();
+  expect(geometry.w).toBeLessThanOrEqual(1281); expect(geometry.w).toBeGreaterThan(700); expect(geometry.h).toBeLessThanOrEqual(geometry.vh);
+  await expect(dialog.getByRole('button',{name:/[Oo]twórz Kartę pacjenta/})).toBeVisible();
   for (const name of ['Oznacz jako wykonane','Przełóż termin','Nie zgłosił się']) await expect(dialog.getByRole('button',{name,exact:true})).toBeVisible();
   await page.keyboard.press('Escape'); await expect(dialog).toHaveCount(0);
 });
 
 test('B2.2: wykonanie zachowuje opis, a przełożenie zachowuje zadanie z nowym terminem', async ({ page }) => {
-  const ids=await otworzZDanymi(page); await wierszObs(page).click(); const dialog=page.locator('dialog.vb22');
+  const ids=await otworzZDanymi(page); await wierszObs(page).click(); const dialog=page.locator('dialog.vb22-modal');
   await expect(dialog).toContainText(DLUGA_TRESC);
   for(const name of ['Oznacz jako wykonane','Przełóż termin','Nie zgłosił się']) await expect(dialog.getByRole('button',{name,exact:true})).toBeVisible();
   await dialog.getByRole('button',{name:'Oznacz jako wykonane',exact:true}).click();
-  await dialog.getByLabel('Co zostało zrobione? (opcjonalnie)',{exact:true}).fill('Fikcyjny zapis wykonania densytometrii.');
-  await dialog.getByRole('button',{name:'Zapisz wykonanie',exact:true}).click();
+  await page.locator('dialog.vb22-outcome').getByLabel('Co zostało zrobione? (opcjonalnie)',{exact:true}).fill('Fikcyjny zapis wykonania densytometrii.');
+  await page.locator('dialog.vb22-outcome').getByRole('button',{name:'Zapisz wykonanie',exact:true}).click();
   await expect.poll(async()=>!!(await notatka(page,ids.obs)).completedAtISO).toBe(true);
   expect((await notatka(page,ids.obs)).body).toContain(DLUGA_TRESC); expect((await notatka(page,ids.obs)).body).toContain('Fikcyjny zapis wykonania');
   await expect(wierszObs(page)).toHaveCount(0); await dialog.getByRole('button',{name:'Zamknij Przypomnienia',exact:true}).click();
   const control=page.locator('#remindersInline .vild-rem-row',{hasText:'Wizyta kontrolna'}); await expect(control).toHaveCount(1); await control.click();
   await dialog.getByRole('button',{name:'Przełóż termin',exact:true}).click();
-  const tomorrow=await dataWPrzegladarce(page,1); await dialog.getByLabel('Nowy termin',{exact:true}).fill(tomorrow.slice(0,10));
-  await dialog.getByLabel('Powód zmiany (opcjonalnie)',{exact:true}).fill('Fikcyjnie ustalony nowy termin.');
-  await dialog.getByRole('button',{name:'Zapisz nowy termin',exact:true}).click();
+  const tomorrow=await dataWPrzegladarce(page,1); await page.locator('dialog.vb22-outcome').getByLabel('Nowy termin',{exact:true}).fill(tomorrow.slice(0,10));
+  await page.locator('dialog.vb22-outcome').getByLabel('Powód zmiany (opcjonalnie)',{exact:true}).fill('Fikcyjnie ustalony nowy termin.');
+  await page.locator('dialog.vb22-outcome').getByRole('button',{name:'Zapisz nowy termin',exact:true}).click();
   await expect.poll(async()=>(await notatka(page,ids.kontrola)).dueDateISO).toBe(tomorrow);
   expect((await notatka(page,ids.kontrola)).completedAtISO).toBeNull(); expect((await notatka(page,ids.kontrola)).body).toContain('Fikcyjnie ustalony nowy termin.');
-  await expect(control).toHaveCount(1); // Wszystkie includes the future appointment; Dziś does not.
+  await expect(control).toHaveCount(0); // Przyszły termin pozostaje przy pacjencie; aktywne przypomnienia obejmują dziś i zaległe.
   await dialog.getByRole('button',{name:'Zamknij Przypomnienia',exact:true}).click();
   await page.locator('#remindersInline [data-filter=today]').click(); await expect(control).toHaveCount(0);
 });
