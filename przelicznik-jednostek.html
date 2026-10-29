@@ -832,9 +832,11 @@
       },
       onPatientChange: function () { if (isPubertySubstance(currentSubstance)) valueEl.value = ''; },
       onAssessmentPreview: function (evaluation) {
-        // This also follows a pin-preview render; the canonical evaluation is
-        // returned unchanged and the source presentation never enters history.
-        updateLifespan(currentSubstance, evaluation);
+        // Reapply only an active infant presentation after the live pin render.
+        // Reading any other assessment must not redraw or move its chart.
+        if (typeof femaleTtInfantUpperUI !== 'undefined' && femaleTtInfantUpperUI && femaleTtInfantUpperUI.getState()) {
+          updateLifespan(currentSubstance, evaluation);
+        }
       },
       onChange: function () {
         if (isPubertySubstance(currentSubstance)) {

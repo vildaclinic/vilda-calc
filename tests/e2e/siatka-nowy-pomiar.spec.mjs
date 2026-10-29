@@ -94,7 +94,12 @@ test('Start: zapisany pacjent i Nowy pomiar pokazują prawdziwą historię i adn
   expect(await frame.evaluate(() => window.__siatkaE2eTexts.includes('E2E-LIVE-A')), 'adnotacje powstają dopiero po powiększeniu').toBe(false);
   expect(await frame.evaluate(() => window.chartCreatorData)).toEqual(patients.a.chartCreator);
 
-  await expect.poll(() => frame.evaluate(() => window.intakeHistory == null && window.intakeEstimatedKcalPerDay == null)).toBe(true);
+  // custom-fixes kończy synchronizację pól zdarzeniami change po 3200 ms;
+  // dopiero ten przebieg zeruje spożycie przed kontrolą braku mutacji.
+  await expect.poll(() => frame.evaluate(() => window.intakeHistory == null && window.intakeEstimatedKcalPerDay == null), {
+    timeout: 30_000,
+    message: 'Nowy pomiar kończy odroczony reset spożycia przed kontrolą braku mutacji',
+  }).toBe(true);
   const before = await clinicalFingerprint(frame, ids.a);
   const { point, target, pane } = await hoverPoint(page, frame, card, 'height');
   expect(point.value).toBe(141);
@@ -255,8 +260,12 @@ test('SPA: Start i DocPro przenoszą tę samą kartę do host fullscreen, zachow
   const { frame: start, ids } = await createFictionalVault(page, { shell: true });
   await loadPatient(start, ids.a);
   await readyPanel(start, ids.a);
-  // Start kończy istniejący odroczony reset wyników spożycia po Nowym pomiarze.
-  await expect.poll(() => start.evaluate(() => window.intakeHistory == null && window.intakeEstimatedKcalPerDay == null)).toBe(true);
+  // custom-fixes kończy synchronizację pól zdarzeniami change po 3200 ms;
+  // gotowa siatka nie oznacza jeszcze zakończenia odroczonego resetu spożycia.
+  await expect.poll(() => start.evaluate(() => window.intakeHistory == null && window.intakeEstimatedKcalPerDay == null), {
+    timeout: 30_000,
+    message: 'Nowy pomiar kończy odroczony reset spożycia przed kontrolą braku mutacji',
+  }).toBe(true);
   const before = await clinicalFingerprint(start, ids.a);
   const initial = await start.locator(CARD).boundingBox();
   await start.evaluate(() => { window.__siatkaOriginalCard = document.querySelector('.vilda-centile-live-card'); });
