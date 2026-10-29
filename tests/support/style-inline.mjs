@@ -13,7 +13,8 @@ export const korzen = path.resolve(path.dirname(fileURLToPath(import.meta.url)),
 /** Arkusz powłoki osadzonej: app.html osadza strony w ramkach i daje <html> klasę vilda-embedded. Ten sam blok stoi
  * jako pierwsze źródło stylów na 10 stronach (terminarz.html dokłada po nim jedną regułę) — idzie do jednego arkusza. */
 export const ARKUSZ_WSPOLNY = 'vilda_embedded.css';
-export const BLOK_WSPOLNY = '.vilda-embedded header,\n.vilda-embedded .sidebar,\n.vilda-embedded #mobileBottomDock,\n'
+// Only the page-level header belongs to the shell; component headers must remain visible.
+export const BLOK_WSPOLNY = '.vilda-embedded body>header,\n.vilda-embedded .sidebar,\n.vilda-embedded #mobileBottomDock,\n'
   + '.vilda-embedded #scrollTopBtn{display:none!important}'
   + '.vilda-embedded body.liquid-ios26::before{display:none!important}'
   + '.vilda-embedded .desktop-layout{display:block!important;padding-top:0!important}'

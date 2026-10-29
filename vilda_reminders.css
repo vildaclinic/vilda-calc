@@ -224,15 +224,19 @@
 }
 
 .vb22 .vb22-list-pane {
+  display: flex;
+  flex-direction: column;
   background: #fff;
   border-right: var(--border-emphasis) solid #c7dcd6;
   padding: var(--space-12px) var(--space-14px);
-  overflow: auto;
+  overflow: hidden;
   min-height: 0;
-  min-width: 0;
-  overscroll-behavior: contain;
-  scrollbar-width: thin;
-  scrollbar-color: #bed1d1 transparent
+  min-width: 0
+}
+
+.vb22 .vb22-list-tools {
+  flex-shrink: 0;
+  min-width: 0
 }
 
 .vb22 .vb22-search {
@@ -254,7 +258,13 @@
 .vb22 .vb22-list,
 .vb22 .vb22-mini-list {
   display: flex;
-  flex-direction: column
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  scrollbar-color: #bed1d1 transparent
 }
 
 .vb22 .vb22-row {
@@ -665,6 +675,10 @@
   padding: var(--space-18px)
 }
 
+.vb22 .vb22-form.vb22-reminder-form {
+  padding: var(--space-18px)
+}
+
 .vb22 .vb22-form h3,
 .vb22 .vb22-form h4 {
   margin: 0 0 var(--space-4px);
@@ -672,6 +686,33 @@
   font-weight: 500;
   line-height: 1.3;
   letter-spacing: -.15px
+}
+
+.vb22 .vb22-form-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-12px);
+  padding: var(--space-12px) var(--space-18px);
+  border-bottom: var(--border-hairline) solid var(--vb-line)
+}
+
+.vb22 .vb22-form-head h3 {
+  margin: 0;
+  min-width: 0
+}
+
+.vb22.vb22-form-editing .vb22-detail-label,
+.vb22.vb22-form-editing .vb22-back {
+  display: none
+}
+
+.vb22.vb22-form-editing .vb22-detail {
+  padding-top: 0
+}
+
+.vb22.vb22-form-editing .vb22-detail>.vb22-form {
+  margin-top: 0
 }
 
 .vb22 .vb22-patient-picker {
@@ -913,15 +954,17 @@ dialog.vb22::backdrop {
 }
 
 .vb22-inline .vb22-layout {
-  display: block;
-  overflow: auto
+  display: flex;
+  flex-direction: column;
+  overflow: hidden
 }
 
 .vb22-inline .vb22-list-pane {
   background: #fff;
   border-right: 0;
   padding: 2px var(--space-14px) var(--space-8px);
-  overflow: visible
+  overflow: hidden;
+  flex: 1 1 auto
 }
 
 .vb22-inline .vb22-row {
@@ -1211,7 +1254,7 @@ dialog.vb22.vb22-outcome[open] {
     max-height: none;
     padding: var(--space-12px) var(--space-10px);
     border-right: 0;
-    overflow: auto
+    overflow: hidden
   }
   dialog.vb22.vb22-modal .vb22-detail {
     height: 100%;
@@ -1260,7 +1303,7 @@ dialog.vb22.vb22-outcome[open] {
     padding: 15px
   }
   .vb22-inline .vb22-layout {
-    overflow: auto
+    overflow: hidden
   }
   .vb22-inline .vb22-list-pane {
     max-height: none;
@@ -1370,7 +1413,7 @@ html.vilda-phone dialog.vb22.vb22-modal .vb22-list-pane {
   height: 100%;
   max-height: none;
   border-right: 0;
-  overflow: auto
+  overflow: hidden
 }
 
 html.vilda-phone dialog.vb22.vb22-modal .vb22-detail {
@@ -1492,6 +1535,18 @@ html.vilda-phone .vb22 .vb22-outcome-actions .vb22-primary {
   color: #627f83!important
 }
 
+.vb22.vb22 .vb22-form-close {
+  width: 44px!important;
+  min-width: 44px!important;
+  height: 44px;
+  min-height: 44px;
+  flex-shrink: 0;
+  border: 0!important;
+  border-radius: var(--radius-12)!important;
+  background: #f3f7f5!important;
+  color: #627f83!important
+}
+
 .vb22.vb22 .vb22-text,
 .vb22.vb22 .vb22-add,
 .vb22.vb22 .vb22-patient-link {
@@ -1573,7 +1628,8 @@ html.vilda-phone .vb22 .vb22-outcome-actions .vb22-primary {
 }
 
 .vb22 .vb22-head,
-.vb22 .vb22-outcome-head {
+.vb22 .vb22-outcome-head,
+.vb22 .vb22-form-head {
   position: static!important;
   top: auto!important;
   width: auto!important;
@@ -1584,7 +1640,8 @@ html.vilda-phone .vb22 .vb22-outcome-actions .vb22-primary {
   -webkit-backdrop-filter: none!important;
   border-radius: 0!important;
   border: 0!important;
-  background: #fff!important
+  background: #fff!important;
+  min-height: 0!important
 }
 
 .vb22 .vb22-outcome-head {
@@ -1593,4 +1650,13 @@ html.vilda-phone .vb22 .vb22-outcome-actions .vb22-primary {
 
 .vb22-modal .vb22-head {
   border-bottom: var(--border-hairline) solid #e5eded!important
+}
+
+/* The add form scrolls inside details, while its cancel button remains reachable. */
+.vb22 .vb22-form-head {
+  position: sticky!important;
+  top: 0!important;
+  z-index: var(--z-dropdown)!important;
+  margin: calc(-1*var(--space-18px)) calc(-1*var(--space-18px)) var(--space-18px)!important;
+  border-bottom: var(--border-hairline) solid var(--vb-line)!important
 }

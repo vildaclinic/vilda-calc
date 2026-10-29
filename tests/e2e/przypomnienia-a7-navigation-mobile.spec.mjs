@@ -57,7 +57,7 @@ test('A7 touch navigation preserves filter, search, scroll and selection across 
   await seed(page, true); await open(page); await listPage(page); await noPhoneExpander(page);
   expect(await page.evaluate(() => navigator.maxTouchPoints > 0 && matchMedia('(pointer:coarse)').matches)).toBe(true);
 
-  const workspace = page.locator(WORKSPACE), pane = workspace.locator('.vb22-list-pane');
+  const workspace = page.locator(WORKSPACE), pane = workspace.locator('.vb22-list');
   const search = workspace.getByRole('searchbox', { name: 'Szukaj pacjenta lub sprawy' });
   await workspace.locator('[data-filter=overdue]').tap();
   await search.fill('nawigacja MR');

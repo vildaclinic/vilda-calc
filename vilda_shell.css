@@ -113,7 +113,8 @@ html.vilda-shell-host body {
   cursor: pointer
 }
 
-.vilda-embedded header,
+/* The shell owns page chrome. Headers inside cards and dialogs remain visible. */
+.vilda-embedded body>header,
 .vilda-embedded .sidebar,
 .vilda-embedded #mobileBottomDock {
   display: none!important
