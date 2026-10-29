@@ -176,12 +176,42 @@ for (const entry of historicalCases) test(`Historical DZM replay: ${entry.formul
   }
   const captured = await page.evaluate(({ formula, field, source, flag }) => {
     const points = window.ClcrVisitSave.collectActiveDatapoints(document, { formulaId: formula });
+    const confirmation = window.__vildaClcrVersionValueVault?.[flag];
+    const options = { fieldId: field, sourceId: source };
+    const duration = window.ClcrCollectionDuration.readFromDocument(document, options);
+    let confirmationPaths;
+    if (formula === 'PO4_mgkg') {
+      const session = window.buildClcrSessionSnapshot();
+      // Current pages serialize a hidden input as a string. Older pages can
+      // keep only the boolean in their value vault. Read the latter through
+      // the production readers with the actual controls and captured session.
+      const vaultDocument = {
+        defaultView: { __vildaClcrVersionValueVault: { ...session.preservedInputs, ...session.inputs, [flag]: false } },
+        getElementById: id => id === flag ? null : document.getElementById(id),
+      };
+      const readPath = (doc, raw) => {
+        const input = window.VildaClcrPo4Dzm.readInputFromDocument(doc);
+        return { raw, duration: window.ClcrCollectionDuration.readFromDocument(doc, options),
+          input: { hours: input.hours, durationSource: input.durationSource, durationNeedsConfirmation: input.durationNeedsConfirmation } };
+      };
+      confirmationPaths = { dom: readPath(document, document.getElementById(flag).value),
+        vault: readPath(vaultDocument, vaultDocument.defaultView.__vildaClcrVersionValueVault[flag]) };
+    }
     return { points: points.map(point => ({ hours: point.capture?.values?.[field], source: point.capture?.values?.[source] })),
-      confirmation: window.__vildaClcrVersionValueVault?.[flag] };
+      confirmation, duration, confirmationPaths };
   }, entry);
   expect(captured.points.length).toBeGreaterThan(0);
   expect(captured.points.every(point => point.hours === '12' && point.source === 'hours')).toBe(true);
-  expect(captured.confirmation).toBe(false);
+  expect([false, 'false']).toContain(captured.confirmation);
+  expect(captured.duration).toMatchObject({ valid: true, hours: 12, source: 'hours', assumed: false });
+  if (entry.formula === 'PO4_mgkg') {
+    expect(captured.confirmationPaths.dom.raw).toBe('false');
+    expect(captured.confirmationPaths.vault.raw).toBe(false);
+    for (const path of Object.values(captured.confirmationPaths)) {
+      expect(path.duration).toMatchObject({ valid: true, hours: 12, source: 'hours', assumed: false });
+      expect(path.input).toEqual({ hours: '12', durationSource: 'hours', durationNeedsConfirmation: false });
+    }
+  }
   await page.locator('#clearBtn').click();
   await page.waitForFunction(() => window.clcrIsResetting !== true);
   await expect(hours).toHaveValue('24'); await expect(source).toHaveValue('assumed-24h');
