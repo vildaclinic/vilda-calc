@@ -70,7 +70,7 @@ const KOD = {};
 const kod = (f) => (KOD[f] || (KOD[f] = readFileSync(path.join(repo, f), 'utf8')));
 // Wiersz kodu sejfu w stosie wywołań: new Function dokleja dwa wiersze nagłówka.
 const wiersze = (re) => kod(SEJF.N).split('\n').flatMap((l, i) => (re.test(l) ? [i + 3] : []));
-const W_KARTA = wiersze(/^ {4}const obecna = \(await I\(\)\.listSnapshotsForUser\(b, patientId\)\)\.find\(function \(x\) \{ return x\.snapshotId === snapshotId; \}\);$/);
+const W_KARTA = wiersze(/^ {4}let obecna = \(await I\(\)\.listSnapshotsForUser\(b, patientId\)\)\.find\(function \(x\) \{ return x\.snapshotId === snapshotId; \}\);$/);
 const W_TRESC_KOSZA = wiersze(/^ {4}try \{ tresc = await G\(e\.payloadCipher\.iv, e\.payloadCipher\.data\); st = Bgw_stan\(e, tresc\); \} catch \{ tresc = null; \}$/);
 const W_TRESC_KARTY = wiersze(/^ {6}try \{ tk = await G\(obecna\.payloadCipher\.iv, obecna\.payloadCipher\.data\); \} catch \{ tk = null; \}$/);
 // Odczyt listy pod blokadą metadanych (Bmk_zmien) — w zapisie listy kosza.

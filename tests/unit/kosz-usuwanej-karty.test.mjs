@@ -35,23 +35,27 @@
 //              bez chwili zmianaISO z poprawki P — przycięcie nie bierze wkładu wersji karty usuwanej)
 //   E4a-kp-ret K: kosz x w X; P poprawia x później; C (bez wiedzy) przycina x; K: scalenia → kosz 23 r0 w 6 z 8, nagrobek
 //              retencji r1 w P←C,P←K i C←P,C←K — tak samo jak dotąd (późniejsze wersje nie dochodzą do wpisu kosza)
-//   znane ograniczenia (opis w ALGORITHMS, P-KOSZ-USUWANEJ-KARTY) — E4a-kp, E4a-ret-pin i E4a-kontrola-Cpin bez zmian,
-//   zielone także na 25dfbbe0; E4a-Cpin i E4a-Cpin-przed zmienione, zależne od kolejności (czerwone na 25dfbbe0 w 4 z 8
-//   i 7 z 8):
+//   znane ograniczenie (opis w ALGORITHMS, P-KOSZ-USUWANEJ-KARTY) — E4a-kp bez zmian, zielone także na 25dfbbe0:
 //   E4a-kp     K: kosz x w X; P (bez wiedzy) poprawia x na 74; K: X → Y → Z           → kosz 23 r0 — poprawka późniejsza
 //              niż kosz przegrywa z „Scal pacjentów”: wpis kosza wskazuje X, a żadne urządzenie nie zna karty docelowej
 //              (bez scaleń poprawka wygrywa: karta X 74)
-//   E4a-ret-pin P poprawia x na 74 i przypina; K: X → Y → Z, retencja przycina x       → brak — przypięta wizyta znika
-//              (bez scaleń zostaje: karta X 74*); przycięcie nie jest koszem, a decyzja dotyczy tylko kosza
-//   E4a-Cpin   P poprawia x na 74; K: X → Y → Z, K→C, kosz x; C (bez wiedzy o koszu) przypina x pod Z → wynik zależy od
-//              kolejności: karta Z 74* (P←K,K←C; K←P,K←C; C←P,C←K; C←K,C←P) albo karta Z 23* (pozostałe); dotąd 23*
-//              w 8 z 8 (poprawka ginęła zawsze). Gdy gwiazdka C spotka P wcześniej niż kosz, wersję spod X przenosi pod Z
-//              reguła wersji wspólnej dwóm kartom (Bsw_rekord: cały rekord nowszy po chwili zmiany, bez łączenia treści
-//              i gwiazdki między kartami) — rekord złożony między kartami to PR-E3. Nigdy gorzej niż dotąd.
-//   E4a-Cpin-przed jak E4a-Cpin, ale C przypina przed koszem K (K o gwiazdce nie wie) → kosz 74* w 7 z 8, kosz 23*
-//              w P←C,P←K (dotąd kosz 23* w 8 z 8)
-//   E4a-kontrola-Cpin jak E4a-Cpin bez kosza → karta Z 74* w 3 z 8, 23* w 5 z 8 — tak samo jak dotąd (zależność od
-//              kolejności istniała wcześniej)
+//   domknięte przez P-KOSZ-PO-KLUCZU (np-ret-A1, Bsw_przezyteRetencji): wersja karty usuwanej, która wygrywa ze swoim
+//   wpisem retencji, przechodzi pod kartę docelową (tu karta wpisu Z) zamiast zginąć z kartą:
+//   E4a-ret-pin P poprawia x na 74 i przypina; K: X → Y → Z, retencja przycina x       → karta Z 74* w 8 z 8, nagrobek
+//              retencji zna wersję (zmiana t+2, A3a) (8240e0df, 25dfbbe0 i E3 bez reguły np-ret-A1: brak — przypięta
+//              wizyta znikała na trzech)
+//   gwiazdka C pod kartą docelową i poprawka P w starej karcie — domknięte przez P-KOSZ-PO-KLUCZU (PR-E3, sejf 231):
+//   wersję wspólną dwóm kartom składa reguła W3 (treść po chwili treści S4, gwiazdka po rejestrze — Bsw_rekordW3),
+//   a nie cały rekord nowszy po chwili zmiany (Bsw_rekord). Widok (karta albo kosz z gwiazdką) we wszystkich
+//   8 kolejnościach ten sam; w E4a-Cpin-przed rev wpisu kosza i _pinned w jego treści nadal zależą od kolejności
+//   (P←C,P←K: rev 4, treść złożona z gwiazdką; pozostałe: rev 3, gwiazdka tylko w rejestrze wpisu):
+//   E4a-Cpin   P poprawia x na 74; K: X → Y → Z, K→C, kosz x; C (bez wiedzy o koszu) przypina x pod Z → karta Z 74*
+//              z rev 4 w 8 z 8 (25dfbbe0: 23* w 8 z 8; 8240e0df, E4a: 74* z rev 4 w 4 z 8, 23* z rev 3 w pozostałych)
+//   E4a-Cpin-przed jak E4a-Cpin, ale C przypina przed koszem K (K o gwiazdce nie wie) → kosz 74* w 8 z 8; wpis rev 3
+//              bez _pinned w treści w 7 z 8, w P←C,P←K rev 4 z _pinned (25dfbbe0: kosz 23* w 8 z 8; 8240e0df: kosz 74*,
+//              wpis rev 3 bez _pinned w 7 z 8, w P←C,P←K kosz 23*, wpis rev 3 z _pinned)
+//   E4a-kontrola-Cpin jak E4a-Cpin bez kosza → karta Z 74* z rev 4 w 8 z 8 (25dfbbe0 i 8240e0df: 74* z rev 4 w 3 z 8,
+//              23* z rev 3 w 5 z 8)
 // E4a, E4a-1 i E4a-kontrola — w polkrata-katalog.test.mjs; K6 (E4a) — w kosz-nowsza-tresc.test.mjs; przerwane scalenie,
 // zmiana sesji, strona ładunku i wersja nieczytelna — w kosz-usuwanej-karty-sesja.test.mjs; flota mieszana z 221 —
 // w kosz-usuwanej-karty-flota.test.mjs.
@@ -67,10 +71,7 @@ afterEach(() => { vi.useRealTimers(); });
 const usunPacjenta = async (u, n, karta) => { await u[n].removePatient(u[karta]); przesunZegar(60e3); };
 const XYZ = async (u) => { await scalPacjentow(u, 'K', 'X', 'Y'); await scalPacjentow(u, 'K', 'Y', 'Z'); };
 const KOSZ = (masa, rev, pin = false) => ({ status: 'kosz', karta: null, kosz: { masa, pin }, n: { masa, rev, pin, powod: null } });
-const KARTA = (masa, pin) => ({ status: 'karta', karta: { masa, pin }, kosz: null, n: null });
-// E4a-Cpin: kolejności z 74* (poprawka dochodzi do wpisu kosza, zanim gwiazdka C go pokona); E4a-kontrola-Cpin — jak dotąd.
-const CPIN_74 = new Set(['P←K,K←C', 'K←P,K←C', 'C←P,C←K', 'C←K,C←P']);
-const KCPIN_74 = new Set(['P←K,K←C', 'C←P,C←K', 'C←K,C←P']);
+const KARTA = (masa, pin, rev) => ({ status: 'karta', karta: rev === undefined ? { masa, pin } : { masa, pin, rev }, kosz: null, n: null });
 
 const SCEN = {
   'E4a-C': [async (u) => { await popraw(u, 'C', 74); await XYZ(u); await doKosza(u, 'K'); }, KOSZ(74, 2)],
@@ -104,18 +105,20 @@ const SCEN = {
     (kol) => (['P←C,P←K', 'C←P,C←K'].includes(kol)
       ? { status: 'brak', karta: null, kosz: null, n: { masa: null, rev: 1, powod: 'retencja' } }
       : { status: 'kosz', karta: null, kosz: { masa: 23, pin: false }, n: { masa: 23, rev: 0, powod: null } })],
-  // znane ograniczenia
+  // znane ograniczenie
   'E4a-kp': [async (u) => { await doKosza(u, 'K'); await popraw(u, 'P', 74); await XYZ(u); }, KOSZ(23, 0)],
+  // domknięte przez np-ret-A1: przypięta wersja karty usuwanej przechodzi pod kartę docelową Z
   'E4a-ret-pin': [async (u) => { await popraw(u, 'P', 74); await przypnij(u, 'P', true); await XYZ(u); await przytnij(u, 'K'); },
-    { status: 'brak', karta: null, kosz: null, n: { masa: null, rev: 2, pin: null, powod: 'retencja', zmiana: null } }],
+    { status: 'karta', karta: { masa: 74, pin: true }, kosz: null, n: { masa: null, rev: 2, pin: null, powod: 'retencja', zmiana: '2' } }],
+  // domknięte przez P-KOSZ-PO-KLUCZU (W3 między kartami)
   'E4a-Cpin': [async (u) => { await popraw(u, 'P', 74); await XYZ(u); await sync(u.K, u.C); await doKosza(u, 'K'); await przypnij(u, 'C', true); },
-    (kol) => KARTA((CPIN_74.has(kol) ? 74 : 23), true)],
+    KARTA(74, true, 4)],
+  // widok kosza 74* w 8 z 8 (decyduje rejestr gwiazdki); rev wpisu i _pinned w jego treści zależą od kolejności:
+  // w P←C,P←K rekord złożony W3 (Bsw_rekordW3: treść P, gwiazdka C, rev = max + 1) dochodzi do wpisu, w pozostałych — tylko rejestr
   'E4a-Cpin-przed': [async (u) => { await popraw(u, 'P', 74); await XYZ(u); await sync(u.K, u.C); await przypnij(u, 'C', true); await doKosza(u, 'K'); },
-    (kol) => (kol === 'P←C,P←K'
-      ? { status: 'kosz', karta: null, kosz: { masa: 23, pin: true }, n: { masa: 23, rev: 3, pin: true, powod: null } }
-      : { status: 'kosz', karta: null, kosz: { masa: 74, pin: true }, n: { masa: 74, rev: 3, pin: false, powod: null } })],
+    (kol) => ({ status: 'kosz', karta: null, kosz: { masa: 74, pin: true }, n: { masa: 74, rev: kol === 'P←C,P←K' ? 4 : 3, pin: kol === 'P←C,P←K', powod: null } })],
   'E4a-kontrola-Cpin': [async (u) => { await popraw(u, 'P', 74); await XYZ(u); await sync(u.K, u.C); await przypnij(u, 'C', true); },
-    (kol) => KARTA((KCPIN_74.has(kol) ? 74 : 23), true)],
+    KARTA(74, true, 4)],
 };
 
 const podzbior = (o, wzor) => (o ? Object.fromEntries(Object.keys(wzor).map((k) => [k, o[k]])) : o);
@@ -131,7 +134,7 @@ describe('P-KOSZ-USUWANEJ-KARTY — rodzina E4a, „Usuń pacjenta”, kontrole 
           const s = r.st[n];
           const wynik = {
             status: s.status,
-            karta: s.karta ? { masa: s.karta.masa, pin: s.karta.pin } : null,
+            karta: s.karta ? (oczekiwany.karta && 'rev' in oczekiwany.karta ? { masa: s.karta.masa, pin: s.karta.pin, rev: s.karta.rev } : { masa: s.karta.masa, pin: s.karta.pin }) : null,
             kosz: s.kosz ? { masa: s.kosz.masa, pin: s.kosz.pin } : null,
             n: oczekiwany.n ? podzbior(s.nagrobek, oczekiwany.n) : s.nagrobek,
           };
