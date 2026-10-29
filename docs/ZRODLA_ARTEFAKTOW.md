@@ -1424,8 +1424,9 @@ czytelnymi blokami bez ponownej minifikacji pozostałej części artefaktów.
   referencja przechodzą tę samą projekcję w `te`.
 - Protokół referencji rozdziela publikację po zapisie/wczytaniu od odczytu po
   odtworzeniu. `reconcileFromSharedReference` nie zapisuje formularza ani
-  magazynu. Referencja niesie `patientId`, a późna ramka w stanie `hidden`
-  nie usuwa jej. Osobny timer uzgodnienia nie anuluje obsługi rzeczywistej
+  magazynu. Publikacja w pamięci wiąże pacjenta, sekwencję i generację,
+  a późna ramka w stanie `hidden` nie usuwa referencji. Osobny timer
+  uzgodnienia nie anuluje obsługi rzeczywistej
   edycji; gotowość obejmuje odtworzenie, odblokowanie i publikację bazy.
 - Powłoka wybiera gotowe źródło stanu właściwego pacjenta również na trasach
   bez własnego wskaźnika. Nagłówek i proxy korzystają z tego samego źródła.

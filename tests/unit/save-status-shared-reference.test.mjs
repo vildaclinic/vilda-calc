@@ -137,6 +137,96 @@ describe('P-CHIP-POWŁOKA — referencja współdzielona między dokumentami', (
     expect(JSON.parse(shared.storage.get('vilda-save-ref-v1')).patientId).toBe('fictional-other-patient');
   });
 
+  it('referencja statusu nie powiela trwałego identyfikatora pacjenta', () => {
+    const shared = tab();
+    const first = frame(shared);
+    first.saved();
+    const reference = shared.storage.get('vilda-save-ref-v1');
+    expect(JSON.parse(reference)).not.toHaveProperty('patientId');
+    expect(reference).not.toContain(PID);
+    first.editWeight(42);
+    first.compare();
+    expect(shared.storage.get('vilda-save-ref-v1')).not.toContain(PID);
+  });
+
+  it('spóźniona publikacja pacjenta A nie zastępuje referencji już wczytanego pacjenta B', () => {
+    const shared = tab();
+    const first = frame(shared);
+    first.saved();
+    first.emit('vilda:patient-loaded', { patientId: PID, applySequence: 1, name: shared.session.name });
+    shared.storage.set('vildaCurrentPatientId', 'fictional-patient-b');
+    shared.session = { name: 'Fikcyjny Drugi', user: { age: 9, height: 134, weight: 30, sex: 'F' } };
+    first.win.VildaPanelPacjent = { nieaktualny: () => true };
+    const second = frame(shared);
+    second.emit('vilda:patient-loaded', { patientId: 'fictional-patient-b', applySequence: 1, name: shared.session.name });
+    vi.advanceTimersByTime(150);
+    const referenceB = shared.storage.get('vilda-save-ref-v1');
+    expect(second.indicator.getState()).toBe('saved');
+    expect(JSON.parse(referenceB).patientName).toBe('Fikcyjny Drugi');
+    first.indicator.reconcileFromSharedReference();
+    expect(first.indicator.isReadyForSharedReference()).toBe(false);
+    expect(shared.storage.get('vilda-save-ref-v1')).toBe(referenceB);
+    expect(first.indicator.getReferenceFingerprint()).not.toBe(second.indicator.getReferenceFingerprint());
+  });
+
+  it('szybkie A→B→A przed uzgodnieniem nie wskrzesza odroczonej edycji pacjenta A', () => {
+    const shared = tab();
+    const first = frame(shared);
+    first.saved();
+    first.persist.mockClear();
+    first.win.__vildaPersistPauseUntil = Date.now() + 900;
+    first.editWeight(42, { persisted: false });
+    first.emit('input', undefined, true);
+    shared.storage.set('vildaCurrentPatientId', 'fictional-patient-b');
+    first.emit('vilda:persist-restored');
+    shared.storage.set('vildaCurrentPatientId', PID);
+    first.emit('vilda:persist-restored');
+    vi.advanceTimersByTime(900);
+    expect(first.persist).not.toHaveBeenCalled();
+    expect(shared.session.user.weight).toBe(41);
+    expect(first.indicator.getState()).toBe('saved');
+  });
+
+  it.each(['restore', 'queued-storage'])('A→B→A anuluje także oczekującą publikację G przez %s', signal => {
+    const shared = tab();
+    const first = frame(shared);
+    first.saved();
+    first.editWeight(42);
+    first.persist.mockClear();
+    const reference = shared.storage.get('vilda-save-ref-v1');
+    first.emit('vilda:patient-loaded', { patientId: PID, applySequence: 1, name: shared.session.name, snapshotCount: 2 });
+    if (signal === 'restore') {
+      shared.storage.set('vildaCurrentPatientId', 'fictional-patient-b');
+      first.emit('vilda:persist-restored');
+      shared.storage.set('vildaCurrentPatientId', PID);
+      first.emit('vilda:persist-restored');
+    } else {
+      // Karta zdążyła wrócić do A, zanim przeglądarka doręczyła oba zdarzenia.
+      first.emitWindow('storage', { key: 'vildaCurrentPatientId', newValue: 'fictional-patient-b' });
+      first.emitWindow('storage', { key: 'vildaCurrentPatientId', newValue: PID });
+    }
+    vi.advanceTimersByTime(150);
+    expect(shared.storage.get('vilda-save-ref-v1')).toBe(reference);
+    expect(first.persist).not.toHaveBeenCalled();
+    vi.advanceTimersByTime(50);
+    expect(first.indicator.getState()).toBe('dirty');
+    expect(first.indicator.getLastSnapshotCount()).toBe(1);
+  });
+
+  it('G przed nadaniem ID akceptuje własne przejście od początkowego do docelowego właściciela', () => {
+    const shared = tab();
+    shared.storage.delete('vildaCurrentPatientId');
+    const first = frame(shared);
+    first.emit('vilda:patient-loaded', { patientId: PID, applySequence: 1, name: shared.session.name, snapshotCount: 1 });
+    first.emit('vilda:persist-restored'); // Początkowy null jest jeszcze poprawny.
+    shared.storage.set('vildaCurrentPatientId', PID);
+    first.emit('vilda:persist-restored'); // Setter własnego loadera został wykonany.
+    vi.advanceTimersByTime(150);
+    expect(first.indicator.getState()).toBe('saved');
+    expect(first.indicator.getReferenceFingerprint()).toBe(first.indicator._computeCanonicalFingerprint());
+    expect(first.indicator.getLastSnapshotCount()).toBe(1);
+  });
+
   it.each(['saving', 'error'])('uzgodnienie przy nawigacji zachowuje rzeczywisty stan %s', state => {
     const shared = tab();
     const first = frame(shared);

@@ -174,8 +174,10 @@ z identyfikatorem pacjenta i sekwencją importu dopiero po archiwizacji poprzedn
 pomiaru. Wskaźnik ustanawia wtedy bazę dla tej operacji; samo odświeżenie strony
 nie zatwierdza niezapisanych edycji.
 
-Referencja `vilda-save-ref-v1` jest wspólna dla ramek tej samej karty i zawiera
-identyfikator pacjenta. Lokalne `hidden` nie uprawnia do jej usunięcia.
+Referencja `vilda-save-ref-v1` jest wspólna dla ramek tej samej karty.
+Publikacja wiąże w pamięci identyfikator pacjenta, sekwencję i generację
+operacji; dokumenty dodatkowo chroni protokół właściciela panelu.
+Lokalne `hidden` nie uprawnia do usunięcia referencji.
 `reconcileFromSharedReference()` przejmuje aktualny odcisk i metadane oraz
 porównuje wspólną sesję bez zapisywania formularza. Dotyczy to również ponownego
 zapisu tego samego pacjenta w innej ramce. Uzgodnienie czeka na odtworzenie

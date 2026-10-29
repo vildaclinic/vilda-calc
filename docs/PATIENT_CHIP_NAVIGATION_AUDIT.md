@@ -113,8 +113,9 @@ nieaktualna ramka również nie może ustanawiać wspólnej bazy.
 
 - Nawigacja i odtworzenie odczytują wspólną referencję; nie ustanawiają nowego
   zapisu i nie zapisują starego formularza ukrytej ramki.
-- Referencja identyfikuje pacjenta. Zapis tego samego pacjenta w innej ramce
-  odświeża zarówno odcisk, jak i numer oraz czas zapisu.
+- Publikacja jest przypisana w pamięci do pacjenta, sekwencji i generacji
+  operacji. Zapis tego samego pacjenta w innej ramce odświeża zarówno odcisk,
+  jak i numer oraz czas zapisu.
 - Lokalne `hidden` nie usuwa wspólnej referencji. Jawne czyszczenie i blokada
   sejfu zachowują własne ścieżki unieważniania.
 - Powłoka wybiera gotowy wskaźnik właściwego pacjenta również na trasie bez
