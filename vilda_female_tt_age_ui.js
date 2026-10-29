@@ -16,9 +16,17 @@
     Object.keys(value).forEach(function (key) { result[key] = copy(value[key]); });
     return result;
   }
-  function format(value, digits) {
-    return new Intl.NumberFormat('pl-PL', { maximumSignificantDigits: digits || 4,
-      useGrouping: false, notation: Math.abs(value) >= 1e6 || value !== 0 && Math.abs(value) < 1e-6 ? 'scientific' : 'standard' }).format(value);
+  function format(value, unit) {
+    var digits = unit === 'ng/mL' ? 3 : 2;
+    return new Intl.NumberFormat('pl-PL', { minimumFractionDigits: digits, maximumFractionDigits: digits,
+      useGrouping: false, notation: Math.abs(value) >= 1e6 || value !== 0 && Math.abs(value) < .5 * Math.pow(10, -digits)
+        ? 'scientific' : 'standard' }).format(value);
+  }
+  function convert(value, sourceUnit, displayUnit) {
+    var converter = root && root.VildaLabTestosterone;
+    if (!converter || typeof converter.convertMeasurement !== 'function' || !finite(value)) return null;
+    var result = converter.convertMeasurement(String(value), sourceUnit, displayUnit);
+    return result && result.status === 'valid' && finite(result.value) ? result.value : null;
   }
   function sourceText(value) {
     if (typeof value === 'string') return value;
@@ -33,21 +41,28 @@
     var bundle = root.VildaHormoneLifespanData;
     var data = Object.prototype.hasOwnProperty.call(opts, 'data') ? opts.data : bundle && bundle.femaleTtAgeData;
     var policy = Object.prototype.hasOwnProperty.call(opts, 'policy') ? opts.policy : bundle && bundle.femaleTtAgePolicy;
+    var under6Data = Object.prototype.hasOwnProperty.call(opts, 'under6Data') ? opts.under6Data : bundle && bundle.femaleTtUnder6Data;
+    var under6Policy = Object.prototype.hasOwnProperty.call(opts, 'under6Policy') ? opts.under6Policy : bundle && bundle.femaleTtUnder6Policy;
     var engine = opts.engine || root.VildaFemaleTTAge;
     var current = null, rendered = null, sourceKey = null, destroyed = false, resizeFrame = null;
     var dialog = null, placeholder = null, fullscreenIntent = 0, nativeIntent = null;
     host.innerHTML = '<section class="vilda-female-tt-age" aria-labelledby="' + id + '-heading">' +
       '<div class="vfta-heading"><div><h3 id="' + id + '-heading">Testosteron całkowity</h3>' +
-      '<p>Dziewczęta · 6–18 lat</p></div><button type="button" class="vfta-expand" data-female-tt-age="expand" ' +
+      '<p data-female-tt-age="subtitle">Dziewczęta · 6–18 lat</p></div><button type="button" class="vfta-expand" data-female-tt-age="expand" ' +
       'aria-label="Powiększ wykres" title="Powiększ wykres">' +
       '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true">' +
       '<path d="M9 3H3v6M15 3h6v6M21 15v6h-6M9 21H3v-6"/></svg></button></div>' +
-      '<div data-female-tt-age="content"><div class="vfta-legend"><span><i class="vfta-source-key" aria-hidden="true"></i>Mediana modelu</span>' +
+      '<div data-female-tt-age="content"><div class="vfta-alert" data-female-tt-age="alert" role="status" hidden>' +
+      '<span class="vfta-alert-icon" aria-hidden="true">!</span><div class="vfta-alert-copy"><p class="vfta-alert-title">Powyżej zakresu referencyjnego</p>' +
+      '<div class="vfta-alert-measurement"><strong data-female-tt-age="alert-value"></strong><span data-female-tt-age="alert-unit"></span>' +
+      '<span class="vfta-alert-ratio" data-female-tt-age="alert-ratio"></span></div><p class="vfta-alert-reference" data-female-tt-age="alert-reference"></p></div></div>' +
+      '<div class="vfta-legend"><span><i class="vfta-source-key" aria-hidden="true"></i><span data-female-tt-age="source-legend">Mediana modelu</span></span>' +
       '<span data-female-tt-age="patient-legend"><i class="vfta-patient-key" aria-hidden="true"></i>Wynik pacjentki</span></div>' +
       '<div class="vfta-plot"><svg data-female-tt-age="chart" role="img" aria-labelledby="' + id + '-title ' + id + '-description"></svg></div>' +
       '<div class="vfta-reading"><div><span data-female-tt-age="age-label">Mediana dla wpisanego wieku</span>' +
       '<strong data-female-tt-age="median"></strong></div><p data-female-tt-age="state" aria-live="polite"></p></div>' +
-      '<p class="vfta-chart-note">Mediana pokazuje środek modelu wieku. Ocena normy jest podana przy wyniku.</p></div>' +
+      '<p class="vfta-chart-note" data-female-tt-age="chart-note">Mediana pokazuje środek modelu wieku. Ocena normy jest podana przy wyniku.</p>' +
+      '<a class="vfta-inline-source" data-female-tt-age="inline-source" target="_blank" rel="noopener noreferrer" hidden></a></div>' +
       '<div class="vfta-empty" data-female-tt-age="empty" hidden><span aria-hidden="true">—</span>' +
       '<h4 data-female-tt-age="empty-title"></h4><p data-female-tt-age="empty-text"></p></div>' +
       '<details class="vfta-sources" data-female-tt-age="sources"><summary>O wykresie i źródła<span aria-hidden="true">⌄</span></summary>' +
@@ -122,11 +137,14 @@
       } else openDialog();
     }
     function emptyNumbers() {
-      ['median', 'state', 'age-label', 'empty-title', 'empty-text'].forEach(function (name) { node(name).replaceChildren(); });
+      ['median', 'state', 'age-label', 'empty-title', 'empty-text', 'alert-value', 'alert-unit', 'alert-ratio', 'alert-reference'].forEach(function (name) { node(name).replaceChildren(); });
       ['data-source-value', 'data-source-unit', 'data-display-value', 'data-display-unit', 'data-age-years'].forEach(function (key) {
         node('median').removeAttribute(key);
       });
       svg.replaceChildren(); svg.removeAttribute('viewBox');
+      node('alert').hidden = true; node('alert-ratio').hidden = true;
+      panel.classList.remove('vfta-above-range');
+      node('inline-source').hidden = true; node('inline-source').removeAttribute('href'); node('inline-source').textContent = '';
       node('patient-legend').hidden = true;
       panel.setAttribute('data-patient-point', 'false');
     }
@@ -135,61 +153,117 @@
       current = null; rendered = null; sourceKey = null;
       emptyNumbers(); host.hidden = true;
       sources.open = false; node('source-copy').replaceChildren();
-      ['data-source-id', 'data-status', 'data-reason', 'data-display-unit'].forEach(function (key) { panel.removeAttribute(key); });
+      ['data-source-id', 'data-status', 'data-reason', 'data-display-unit', 'data-render-mode'].forEach(function (key) { panel.removeAttribute(key); });
     }
+    function grouped(result) { return result && result.renderMode === 'age-groups'; }
     function geometry(result) {
       var p = result && result.plot;
       if (!p || ![p.ageMin, p.ageMax, p.valueMin, p.valueMax].every(finite) || p.ageMax <= p.ageMin ||
         p.valueMax <= p.valueMin || typeof p.unit !== 'string' || !p.unit || !Array.isArray(p.ageTicks) || !p.ageTicks.every(finite) ||
-        !Array.isArray(p.valueTicks) || !p.valueTicks.every(finite) || !Array.isArray(result.curve) || result.curve.length < 2 ||
+        !Array.isArray(p.valueTicks) || !p.valueTicks.every(finite)) return null;
+      if (grouped(result)) {
+        if (!Array.isArray(result.groups) || !result.groups.length || !result.groups.every(function (group, index) {
+          return group && group.index === index && finite(group.minAgeYears) && finite(group.maxAgeYears) &&
+            group.maxAgeYears > group.minAgeYears && finite(group.value) && group.value > 0 && group.unit === p.unit &&
+            typeof group.label === 'string' && typeof group.axisLabel === 'string';
+        }) || !result.median || !Number.isInteger(result.median.groupIndex) || !result.groups[result.median.groupIndex]) return null;
+      } else if (!Array.isArray(result.curve) || result.curve.length < 2 ||
         !result.curve.every(function (point) { return point && finite(point.ageYears) && finite(point.value); })) return null;
       return p;
     }
+    // This is only presentation of the current laboratory engine's verdict.
+    // Neither the median nor the ceiling of the illustration classify a result.
+    function assessment(result) {
+      var preview = current && current.referencePreview && current.referencePreview.byAge;
+      var range = preview && preview.range, m = current && current.measurement;
+      var upper = range && range.bounds && range.bounds.upper && range.bounds.upper.value;
+      if (!preview || preview.status !== 'above' || !range || !finite(upper) || upper <= 0 ||
+        !m || m.status !== 'valid' || !finite(m.value) || !m.unit) return null;
+      var upperDisplay = convert(upper, range.unit, result.unit), valueDisplay = convert(m.value, m.unit, result.unit);
+      if (!finite(upperDisplay) || !finite(valueDisplay)) return null;
+      var exact = m.isExact === true && (m.operator === '=' || m.operator == null);
+      var rangeValue = exact ? convert(m.value, m.unit, range.unit) : null;
+      return { value: valueDisplay, unit: result.unit, operator: m.operator || '=', upper: upperDisplay,
+        ratio: finite(rangeValue) ? rangeValue / upper : null,
+        source: range.source && range.source.organization === 'Mayo Clinic Laboratories' ? 'Mayo TTST' : sourceText(range.source) };
+    }
+    function renderAssessment(result) {
+      var value = assessment(result);
+      if (!value) return;
+      node('alert').hidden = false; panel.classList.add('vfta-above-range');
+      node('alert-value').textContent = (value.operator === '=' ? '' : value.operator) + format(value.value, value.unit);
+      node('alert-unit').textContent = value.unit;
+      node('alert-ratio').hidden = !finite(value.ratio);
+      node('alert-ratio').textContent = finite(value.ratio) ? '≈' + format(value.ratio) + ' × górna granica' : '';
+      node('alert-reference').textContent = 'Górna granica: ' + format(value.upper, value.unit) + ' ' + value.unit +
+        (value.source ? ' · ' + value.source : '');
+    }
     function draw(result) {
-      var p = geometry(result), median = result && result.median;
+      var p = geometry(result), median = result && result.median, isGroup = grouped(result);
       if (!p || !median || !finite(median.ageYears) || !finite(median.value) || median.unit !== p.unit) return false;
       var plotHost = node('chart').parentElement;
-      // Use the rendered plot width, including a narrow SPA pane. A larger
-      // minimum viewBox would scale 10px axis labels down on small screens.
       var availableWidth = plotHost.getBoundingClientRect().width || plotHost.clientWidth || panel.clientWidth || 320;
       var width = Math.max(120, availableWidth), height = width < 450 ? 258 : 290;
-      var left = width < 450 ? 36 : 56, right = width - (width < 450 ? 12 : 18), top = 26, bottom = height - 42;
+      var left = width < 450 ? 36 : 56, right = width - (width < 450 ? 12 : 18), top = 26, bottom = height - (isGroup ? 48 : 42);
       function x(age) { return left + (age - p.ageMin) / (p.ageMax - p.ageMin) * (right - left); }
+      function groupX(index) { return left + (index + .5) / result.groups.length * (right - left); }
       function y(value) { return bottom - (value - p.valueMin) / (p.valueMax - p.valueMin) * (bottom - top); }
       var point = result.comparison && result.comparison.status === 'ready' && result.comparison.patientPoint;
       if (point && point.unit !== p.unit) return false;
-      var canonicalPlot = result.policy && result.policy.plot;
+      var canonicalPlot = result.policy && result.policy.plot, above = !!assessment(result);
+      var medianX = isGroup ? groupX(median.groupIndex) : x(median.ageYears);
       svg.setAttribute('viewBox', '0 0 ' + width + ' ' + height);
-      svg.replaceChildren(element('title', { id: id + '-title' }, 'Testosteron całkowity dziewcząt 6–18 lat'),
-        element('desc', { id: id + '-description' }, 'Mediana modelu Madsen 2022 dla wpisanego wieku: ' + format(median.value) + ' ' + p.unit +
-          (point ? '. Czerwony znacznik przedstawia wynik pacjentki, bez oceny normy z krzywej.' : '. Dokładny punkt wyniku nie został przypisany.')));
+      svg.replaceChildren(element('title', { id: id + '-title' }, isGroup ? 'Testosteron całkowity dziewcząt od 6 miesięcy do 6 lat' : 'Testosteron całkowity dziewcząt 6–18 lat'),
+        element('desc', { id: id + '-description' }, (isGroup ? 'Mediana grupy wieku ' + median.groupLabel : 'Mediana modelu Madsen 2022 dla wpisanego wieku') + ': ' + format(median.value, p.unit) + ' ' + p.unit +
+          (point ? '. Czerwony znacznik przedstawia rzeczywisty wynik pacjentki.' : '. Dokładny punkt wyniku nie został przypisany.') +
+          (above ? ' Wynik powyżej zakresu referencyjnego według odrębnej oceny laboratoryjnej.' : '')));
+      if (isGroup) {
+        var step = (right - left) / result.groups.length;
+        svg.append(element('rect', { x: medianX - step * .46, y: top, width: step * .92, height: bottom - top,
+          rx: 7, class: 'vfta-group-highlight', 'data-female-tt-age-selected-group': median.groupIndex }));
+      }
       p.valueTicks.forEach(function (value, index) {
         var attrs = { x: left - 9, y: y(value) + 4, 'text-anchor': 'end', class: 'vfta-axis-text',
           'data-female-tt-age-axis': 'y', 'data-axis-value': value };
         if (canonicalPlot && canonicalPlot.valueTicks && finite(canonicalPlot.valueTicks[index])) attrs['data-source-axis-value'] = canonicalPlot.valueTicks[index];
         svg.append(element('line', { x1: left, x2: right, y1: y(value), y2: y(value), class: 'vfta-grid' }),
-          element('text', attrs, format(value, 3)));
+          element('text', attrs, format(value, p.unit)));
       });
-      p.ageTicks.forEach(function (age) {
-        svg.append(element('text', { x: x(age), y: height - 20, 'text-anchor': 'middle', class: 'vfta-axis-text',
-          'data-female-tt-age-axis': 'x', 'data-axis-value': age }, format(age)));
-      });
-      svg.append(element('text', { x: left, y: 13, class: 'vfta-axis-title' }, p.unit),
-        element('text', { x: right, y: height - 1, 'text-anchor': 'end', class: 'vfta-axis-title' }, 'Wiek [lata]'),
-        element('line', { x1: x(median.ageYears), x2: x(median.ageYears), y1: top, y2: bottom, class: 'vfta-age-guide' }),
-        element('path', { d: result.curve.map(function (item, index) {
-          return (index ? 'L' : 'M') + x(item.ageYears).toFixed(3) + ',' + y(item.value).toFixed(3);
-        }).join(' '), class: 'vfta-source-curve', 'data-female-tt-age-curve': 'source' }));
-      (result.knots || []).forEach(function (knot) {
-        var value = finite(knot.value) ? knot.value : knot.median;
-        if (finite(knot.ageYears) && finite(value)) svg.append(element('circle', { cx: x(knot.ageYears), cy: y(value), r: 2.2, class: 'vfta-knot' }));
-      });
-      svg.append(element('circle', { cx: x(median.ageYears), cy: y(median.value), r: 6,
-        class: 'vfta-source-marker', 'data-female-tt-age-marker': 'source', 'data-source-value': median.sourceValue,
-        'data-source-unit': median.sourceUnit, 'data-display-value': median.value, 'data-display-unit': median.unit,
-        'data-age-years': median.ageYears }));
+      svg.append(element('text', { x: left, y: 13, class: 'vfta-axis-title' }, p.unit));
+      if (isGroup) {
+        result.groups.forEach(function (group) {
+          var selected = group.index === median.groupIndex;
+          var attrs = { cx: groupX(group.index), cy: y(group.value), r: selected ? 7 : 5,
+            class: selected ? 'vfta-source-marker' : 'vfta-group-marker', 'data-female-tt-age-group': group.id,
+            'data-group-index': group.index, 'data-source-value': group.sourceValue, 'data-source-unit': group.sourceUnit,
+            'data-display-value': group.value, 'data-display-unit': group.unit, 'data-age-min-years': group.minAgeYears, 'data-age-max-years': group.maxAgeYears };
+          if (selected) { attrs['data-female-tt-age-marker'] = 'source'; attrs['data-age-years'] = median.ageYears; }
+          svg.append(element('circle', attrs), element('text', { x: groupX(group.index), y: y(group.value) - 16,
+            class: selected ? 'vfta-group-text vfta-group-text-selected' : 'vfta-group-text', 'text-anchor': 'middle' }, '≈' + format(group.value, p.unit)),
+          element('text', { x: groupX(group.index), y: bottom + 20, 'text-anchor': 'middle', class: 'vfta-axis-text vfta-group-axis',
+            'data-female-tt-age-axis': 'x', 'data-axis-value': group.minAgeYears, 'data-group-index': group.index }, group.axisLabel));
+        });
+      } else {
+        p.ageTicks.forEach(function (age) {
+          svg.append(element('text', { x: x(age), y: height - 20, 'text-anchor': 'middle', class: 'vfta-axis-text',
+            'data-female-tt-age-axis': 'x', 'data-axis-value': age }, String(age)));
+        });
+        svg.append(element('line', { x1: medianX, x2: medianX, y1: top, y2: bottom, class: 'vfta-age-guide' }),
+          element('path', { d: result.curve.map(function (item, index) {
+            return (index ? 'L' : 'M') + x(item.ageYears).toFixed(3) + ',' + y(item.value).toFixed(3);
+          }).join(' '), class: 'vfta-source-curve', 'data-female-tt-age-curve': 'source' }));
+        (result.knots || []).forEach(function (knot) {
+          var value = finite(knot.value) ? knot.value : knot.median;
+          if (finite(knot.ageYears) && finite(value)) svg.append(element('circle', { cx: x(knot.ageYears), cy: y(value), r: 2.2, class: 'vfta-knot' }));
+        });
+        svg.append(element('circle', { cx: medianX, cy: y(median.value), r: 6,
+          class: 'vfta-source-marker', 'data-female-tt-age-marker': 'source', 'data-source-value': median.sourceValue,
+          'data-source-unit': median.sourceUnit, 'data-display-value': median.value, 'data-display-unit': median.unit,
+          'data-age-years': median.ageYears }));
+      }
+      svg.append(element('text', { x: right, y: height - 1, 'text-anchor': 'end', class: 'vfta-axis-title' }, isGroup ? 'Grupy wieku [lata]' : 'Wiek [lata]'));
       if (point && finite(point.ageYears) && finite(point.value)) {
-        var px = x(point.ageYears), noise = Number.EPSILON * Math.max(1, Math.abs(point.value), Math.abs(p.valueMax)) * 2;
+        var px = isGroup ? medianX : x(point.ageYears), noise = Number.EPSILON * Math.max(1, Math.abs(point.value), Math.abs(p.valueMax)) * 2;
         var overflow = point.value > p.valueMax && point.value - p.valueMax > noise;
         var py = overflow ? top : y(Math.min(point.value, p.valueMax));
         svg.append(element('line', { x1: px, x2: px, y1: y(median.value), y2: py, class: 'vfta-connector' }));
@@ -197,16 +271,27 @@
           'data-female-tt-age-marker': overflow ? 'overflow' : 'patient', 'data-source-value': point.sourceValue,
           'data-source-unit': point.sourceUnit, 'data-display-value': point.value, 'data-display-unit': point.unit,
           'data-age-years': point.ageYears };
+        if (isGroup) patientAttrs['data-group-index'] = median.groupIndex;
         if (overflow) {
-          patientAttrs.d = 'M' + (px - 6) + ',' + (py + 10) + 'L' + px + ',' + py + 'L' + (px + 6) + ',' + (py + 10);
+          svg.append(element('circle', { cx: px, cy: top + 12, r: above ? 21 : 17, class: 'vfta-overflow-halo' }));
+          patientAttrs.d = 'M' + (px - 8) + ',' + (top + 13) + 'L' + px + ',' + (top + 5) + 'L' + (px + 8) + ',' + (top + 13) +
+            'M' + px + ',' + (top + 6) + 'L' + px + ',' + (top + 27);
           svg.append(element('path', patientAttrs));
+          var label = format(point.value, point.unit) + ' ' + point.unit;
+          var labelWidth = Math.min(right - left, Math.max(114, label.length * 7.2 + 24));
+          var labelX = Math.max(left, Math.min(right - labelWidth, px - labelWidth / 2)), labelY = top + 33;
+          svg.append(element('rect', { x: labelX, y: labelY, width: labelWidth, height: 45, rx: 9,
+            class: 'vfta-overflow-label', 'data-female-tt-age-overflow-label': 'true' }),
+          element('text', { x: labelX + labelWidth / 2, y: labelY + 19, 'text-anchor': 'middle', class: 'vfta-overflow-value' }, label),
+          element('text', { x: labelX + labelWidth / 2, y: labelY + 35, 'text-anchor': 'middle', class: 'vfta-overflow-description' }, 'ponad skalą wykresu'));
         } else {
-          patientAttrs.cx = px; patientAttrs.cy = py; patientAttrs.r = 6;
+          if (above) svg.append(element('circle', { cx: px, cy: py, r: 16, class: 'vfta-patient-halo' }));
+          patientAttrs.cx = px; patientAttrs.cy = py; patientAttrs.r = above ? 8 : 6;
           svg.append(element('circle', patientAttrs));
+          var leftLabel = px > (left + right) / 2;
+          svg.append(element('text', { x: px + (leftLabel ? -11 : 11), y: py < top + 20 ? py + 25 : py - 11,
+            'text-anchor': leftLabel ? 'end' : 'start', class: 'vfta-patient-text' }, format(point.value, point.unit)));
         }
-        var leftLabel = px > (left + right) / 2;
-        svg.append(element('text', { x: px + (leftLabel ? -11 : 11), y: py < top + 20 ? py + 25 : py - 11,
-          'text-anchor': leftLabel ? 'end' : 'start', class: 'vfta-patient-text' }, format(point.value, 6)));
       }
       return true;
     }
@@ -223,19 +308,26 @@
       var next = JSON.stringify([source, age]);
       if (next === sourceKey) return;
       sourceKey = next;
-      var statistic = sourceText(source.statistic);
+      var statistic = sourceText(source.statistic), isGroup = source.statistic === 'approximate-group-median';
       if (!statistic || statistic === 'model-p50') statistic = 'Modelowana mediana zależna od wieku, a nie granica normy lub rozpoznanie.';
+      if (isGroup) statistic = 'Orientacyjna mediana całej grupy wieku, odczytana z ryciny źródłowej. Nie jest zakresem referencyjnym ani medianą dokładnego dnia.';
       var specimen = sourceText(source.specimen);
       if (specimen === 'serum') specimen = 'surowica';
       var paragraphs = [paragraph(source.label || 'Madsen i wsp. 2022.', sourceText(source.population)),
         paragraph('Co przedstawia mediana?', statistic),
         paragraph('Metoda i materiał.', [sourceText(source.method), specimen].filter(Boolean).join(' '))];
       if (source.limitsDescription) paragraphs.push(paragraph('Granice oznaczenia.', sourceText(source.limitsDescription)));
-      if (age) paragraphs.push(paragraph('Wiek.', 'Cały podany przedział musi mieścić się w zakresie publikacji. Odczyt dotyczy wpisanej dolnej granicy wieku; nie wybieramy środka przedziału.'));
-      paragraphs.push(paragraph('Interpolacja.', '13 rocznych węzłów P50 połączono metodą PCHIP. To interpolacja aplikacji, a nie odzyskany ciągły model autorów.'),
+      if (age) paragraphs.push(paragraph('Wiek.', isGroup
+        ? 'Cały podany przedział wieku mieści się w jednej grupie. Nie tworzymy dokładnej daty ani mediany konkretnego dnia.'
+        : 'Cały podany przedział musi mieścić się w zakresie publikacji. Odczyt dotyczy wpisanej dolnej granicy wieku; nie wybieramy środka przedziału.'));
+      if (source.sourceLocation) paragraphs.push(paragraph('Lokalizacja danych.', sourceText(source.sourceLocation)));
+      if (isGroup) paragraphs.push(paragraph('Sposób prezentacji.', 'Każdy jasny punkt przedstawia medianę całej grupy wieku. Nie łączymy grup linią ani z modelem Madsen od 6 lat. Różnica między źródłami nie jest fizjologicznym spadkiem stężenia.'));
+      else paragraphs.push(paragraph('Interpolacja.', '13 rocznych węzłów P50 połączono metodą PCHIP. To interpolacja aplikacji, a nie odzyskany ciągły model autorów.'),
         paragraph('Pokwitanie.', 'Model wieku łączy różne stadia. Nie wymaga dodatkowego wyboru Th lub P.'));
       (source.limitations || []).forEach(function (limitation) { paragraphs.push(paragraph('', sourceText(limitation))); });
-      paragraphs.push(paragraph('Zakres danych.', 'Nie przedłużamy modelu poniżej 6 lub powyżej 18 lat. Zapis „18 lat” w pełnych latach obejmuje także wiek poza końcem modelu.'));
+      paragraphs.push(paragraph('Zakres danych.', isGroup
+        ? 'Mediany dotyczą grup od 6 miesięcy do poniżej 6 lat. Młodszym pacjentkom nie przypisujemy zastępczej mediany; od 6 lat pozostaje odrębny model Madsen.'
+        : 'Nie przedłużamy modelu poniżej 6 lub powyżej 18 lat. Zapis „18 lat” w pełnych latach obejmuje także wiek poza końcem modelu.'));
       if (source.citation) paragraphs.push(paragraph('', source.citation));
       var links = doc.createElement('p');
       [['url', 'Publikacja źródłowa'], ['supplementUrl', 'Suplement LMS']].forEach(function (entry) {
@@ -248,6 +340,7 @@
       node('source-copy').replaceChildren.apply(node('source-copy'), paragraphs);
     }
     function emptyText(reason) {
+      if (reason === 'ambiguous-age-group') return ['Brak jednej mediany dla podanego wieku', 'Znany przedział wieku obejmuje różne grupy. Nie przypisujemy jednej mediany.'];
       if (reason === 'missing-age' || reason === 'ambiguous-age') return ['Brak wieku z formularza', 'Dostępny kontekst nie pozwala dobrać mediany wieku.'];
       if (reason === 'contraindicated' || reason === 'incompatible-reproductive-context') {
         var ocp = current && current.treatment && current.treatment.cocp;
@@ -259,6 +352,7 @@
       if (reason === 'unsupported-display-unit') return ['Brak wykresu w tej jednostce', 'Wybrana jednostka nie pozwala przedstawić tego modelu. Wynik pozostaje dostępny w przeliczniku.'];
       if (reason === 'invalid-context') return ['Brak jednoznacznego odniesienia', 'Dostępne dane nie pozwalają na porównanie z tym modelem wieku.'];
       if (current && current.ageYears === 18 && finite(current.ageUpperYears) && current.ageUpperYears > 18) return ['Brak odniesienia dla tego wieku', 'Zapis „18 lat” obejmuje także wiek poza końcem danych. Nie przedłużamy modelu.'];
+      if (rendered && rendered.source && rendered.source.statistic === 'approximate-group-median') return ['Brak mediany dla tego wieku', 'To odniesienie jest dostępne od 6 miesięcy do poniżej 6 lat. Wynik i przeliczenia pozostają dostępne.'];
       return ['Brak odniesienia dla tego wieku', 'Publikacja obejmuje wiek 6–18 lat. Dla tej pacjentki nie podajemy zastępczej mediany.'];
     }
     function render(result) {
@@ -267,6 +361,12 @@
       panel.setAttribute('data-source-id', result.source.id || '');
       panel.setAttribute('data-status', result.status); panel.setAttribute('data-reason', result.reason || '');
       panel.setAttribute('data-display-unit', result.unit || '');
+      var isGroup = grouped(result) || result.source.statistic === 'approximate-group-median';
+      panel.setAttribute('data-render-mode', isGroup ? 'age-groups' : 'model-curve');
+      node('subtitle').textContent = isGroup ? 'Dziewczęta · od 6 miesięcy do <6 lat' : 'Dziewczęta · 6–18 lat';
+      node('source-legend').textContent = isGroup ? 'Mediany grup wieku' : 'Mediana modelu';
+      node('chart-note').textContent = isGroup ? 'Mediany dotyczą całych grup wieku. Ocena zakresu znajduje się przy wyniku.'
+        : 'Mediana pokazuje środek modelu wieku. Ocena normy jest podana przy wyniku.';
       renderSource(result);
       var ready = result.status === 'ready' && geometry(result) && result.median;
       node('content').hidden = !ready; node('empty').hidden = !!ready;
@@ -276,8 +376,8 @@
         return true;
       }
       var median = result.median, comparison = result.comparison || {}, point = comparison.status === 'ready' && comparison.patientPoint;
-      node('age-label').textContent = 'Mediana dla wpisanego wieku';
-      node('median').textContent = '≈ ' + format(median.value) + ' ' + median.unit;
+      node('age-label').textContent = isGroup ? 'Mediana grupy wieku · ' + median.groupLabel : 'Mediana dla wpisanego wieku';
+      node('median').textContent = '≈ ' + format(median.value, median.unit) + ' ' + median.unit;
       node('median').setAttribute('data-source-value', median.sourceValue);
       node('median').setAttribute('data-source-unit', median.sourceUnit);
       node('median').setAttribute('data-display-value', median.value);
@@ -285,9 +385,15 @@
       node('median').setAttribute('data-age-years', median.ageYears);
       node('patient-legend').hidden = !point;
       panel.setAttribute('data-patient-point', point ? 'true' : 'false');
-      node('state').textContent = point ? 'Wynik: ' + format(point.value, 6) + ' ' + point.unit + ' · Madsen 2022'
+      node('state').textContent = point ? 'Wynik: ' + format(point.value, point.unit) + ' ' + point.unit + (isGroup ? ' · Kushnir 2010' : ' · Madsen 2022')
         : comparison.reason === 'non-exact-measurement' ? 'Wynik z nierównością nie wyznacza pojedynczego punktu.'
         : 'Wpisz wynik, aby zobaczyć jego położenie.';
+      renderAssessment(result);
+      if (typeof result.source.url === 'string' && /^https:\/\//.test(result.source.url)) {
+        node('inline-source').href = result.source.url;
+        node('inline-source').textContent = (isGroup ? 'Kushnir i wsp. 2010 · przybliżone mediany' : 'Madsen i wsp. 2022') + ' ↗';
+        node('inline-source').hidden = false;
+      }
       if (!draw(result)) { clear(); return false; }
       return true;
     }
@@ -299,7 +405,9 @@
       }
       current = next;
       if (!engine || typeof engine.evaluate !== 'function') { clear(); return null; }
-      var result = engine.evaluate(data, policy, current);
+      var modelMin = data && data.ageDomain && data.ageDomain.min;
+      var useGroup = under6Data && under6Policy && finite(modelMin) && finite(current.ageYears) && current.ageYears < modelMin;
+      var result = engine.evaluate(useGroup ? under6Data : data, useGroup ? under6Policy : policy, current);
       render(result);
       return copy(result);
     }

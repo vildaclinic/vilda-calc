@@ -21,8 +21,14 @@ export function beforeInfantLhTailBundle(data) {
 
 // This later TT permission contains no new source concentration or profile.
 // Remove only that block when proving frozen earlier runtime hashes.
+// The isolated later female TT group source and policy do not alter older data.
+export function beforeFemaleTtUnder6Runtime(runtime) {
+  const { femaleTtUnder6Data: _femaleTtUnder6Data, femaleTtUnder6Policy: _femaleTtUnder6Policy, ...prior } = runtime;
+  return prior;
+}
+
 export function beforeInfantTtResultOnlyRuntime(runtime) {
-  const { infantTtResultOnlyPolicy: _infantTtResultOnlyPolicy, ...prior } = runtime;
+  const { infantTtResultOnlyPolicy: _infantTtResultOnlyPolicy, ...prior } = beforeFemaleTtUnder6Runtime(runtime);
   return prior;
 }
 

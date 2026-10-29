@@ -70,7 +70,7 @@
   <link href="vilda_fsh_source_ui.css?v=1" rel="stylesheet">
   <link href="vilda_fsh_d3_ui.css?v=1" rel="stylesheet">
   <link href="vilda_e2_d3_ui.css?v=1" rel="stylesheet">
-  <link href="vilda_female_tt_age_ui.css?v=1" rel="stylesheet">
+  <link href="vilda_female_tt_age_ui.css?v=2" rel="stylesheet">
   <link href="vilda_male_e2_age_ui.css?v=1" rel="stylesheet">
   <link href="lab_history_strip.css?v=2" rel="stylesheet">
 
@@ -78,7 +78,7 @@
   <script src="vilda_html.js?v=5"></script>
   <script src="vilda_schowek.js?v=5"></script>
   <script src="vilda_persistence_adapter.js?v=32"></script>
-  <script src="vilda_session_bridge.js?v=110"></script>
+  <script src="vilda_session_bridge.js?v=111"></script>
   <script src="vilda_init.js?v=4"></script>
   <script src="vilda_deps.js?v=98"></script>
   <script>
@@ -115,7 +115,7 @@
 
   <link href="inline_przelicznik_jednostek_00.css?v=7" rel="stylesheet">
 
-  <script src="vilda_chrome.js?v=188"></script>
+  <script src="vilda_chrome.js?v=189"></script>
   <script src="lucide.min.js?v=1" defer></script>
   <script defer src="vilda_frame_sync.js?v=2"></script>
   <link rel="stylesheet" href="vilda_phone_landscape.css?v=2">
@@ -486,17 +486,17 @@
   <script src="vilda_hormone_reference_snapshot.js?v=1"></script>
   <script src="vilda_lab_range_snapshot.js?v=2"></script>
   <script src="vilda_hormone_reference_ui.js?v=1"></script>
-  <script src="vilda_lab_assessment_ui.js?v=18"></script>
+  <script src="vilda_lab_assessment_ui.js?v=19"></script>
   <script src="vilda_lab_profile_preferences.js?v=1"></script>
   <script src="vilda_puberty_assessment.js?v=3"></script>
   <script src="vilda_puberty_assessment_context.js?v=1"></script>
   <link rel="stylesheet" href="vilda_puberty_assessment_ui.css?v=1">
   <script src="vilda_puberty_assessment_ui.js?v=1"></script>
-  <script src="vilda_lab_puberty_ui.js?v=20"></script>
+  <script src="vilda_lab_puberty_ui.js?v=21"></script>
   <script src="vilda_zrodla_pacjenta.js?v=1"></script>
   <script src="vilda_puberty_source.js?v=13"></script>
   <script src="vilda_lab_neonatal_context.js?v=4"></script>
-  <script src="vilda_hormone_lifespan_data.js?v=47"></script>
+  <script src="vilda_hormone_lifespan_data.js?v=48"></script>
   <script src="vilda_hormone_lifespan_reference.js?v=10"></script>
   <script src="vilda_hormone_lifespan_observations.js?v=1"></script>
   <script src="vilda_hormone_lifespan_display.js?v=16"></script>
@@ -514,8 +514,8 @@
   <script src="vilda_fsh_d3_ui.js?v=1"></script>
   <script src="vilda_e2_d3.js?v=1"></script>
   <script src="vilda_e2_d3_ui.js?v=1"></script>
-  <script src="vilda_female_tt_age.js?v=1"></script>
-  <script src="vilda_female_tt_age_ui.js?v=1"></script>
+  <script src="vilda_female_tt_age.js?v=2"></script>
+  <script src="vilda_female_tt_age_ui.js?v=2"></script>
   <script src="vilda_male_e2_age.js?v=2"></script>
   <script src="vilda_male_e2_age_ui.js?v=2"></script>
   <script src="lab_pin_result.js?v=11"></script>
@@ -1411,11 +1411,12 @@
         if (isPubertyReferenceSubstance(substance)) {
           input = evaluation && evaluation.input;
           resolved = evaluation && evaluation.ageAtSample;
-          if (substance.id === 'testosterone_total' && resolved && resolved.source === 'neonatal-days'
+          if (substance.id === 'testosterone_total' && input && input.sex !== 'F'
+              && resolved && resolved.source === 'neonatal-days'
               && window.VildaLabPuberty && typeof window.VildaLabPuberty.resolveAge === 'function') {
-            // Mayo's completed-month qualification has its own conservative
-            // calendar envelope. The existing educational diagram continues
-            // to position reported days using its original chronological age.
+            // Existing male diagrams retain their chronological day placement.
+            // Female age-group comparisons must keep the TT resolver's calendar
+            // envelope so uncertain completed months cannot qualify a group.
             resolved = window.VildaLabPuberty.resolveAge(input);
           }
           var infantLhChronology = lifespanInfantLhChronology(source, input, substance);
@@ -1523,12 +1524,13 @@
         identityKey: source.identityKey || ''
       };
       lastLifespanContext = context;
-      // The approved female TT card has its own source-limited 6–18 axis.
+      // Female TT uses separate source-limited grouped and model age views.
       // It does not borrow a missing lifetime curve, register a new ordinary
       // profile or modify the independent laboratory assessment.
       var femaleTtMode = !!(typeof femaleTtAgeUI !== 'undefined' && femaleTtAgeUI && context.analyte === 'testosterone_total'
         && context.sex === 'female' && context.sourceStatus === 'ready'
-        && context.contextBasis === 'current-patient' && !context.sampleDateISO);
+        && context.contextBasis === 'current-patient' && !context.sampleDateISO
+        && context.identityKey === currentPatientIdentity());
       var maleE2Mode = !!(typeof maleE2AgeUI !== 'undefined' && maleE2AgeUI && context.analyte === 'estradiol'
         && context.sex === 'male' && context.sourceStatus === 'ready'
         && context.contextBasis === 'current-patient' && !context.sampleDateISO
@@ -1540,6 +1542,10 @@
         femaleTtAgeUI.update(Object.assign({}, context, {
           displayUnit: unitTargetEl.value || unitEl.value,
           measurement: evaluation && evaluation.measurement || null,
+          // Display the existing assessment for this exact current person.
+          // A detached copy prevents the chart from mutating RI or snapshots.
+          referencePreview: evaluation && evaluation.referencePreview
+            ? JSON.parse(JSON.stringify(evaluation.referencePreview)) : null,
           treatment: input && input.treatment || null,
           pregnancy: input && input.pregnancy || null,
           reproductiveContext: input && input.reproductiveContext || null,

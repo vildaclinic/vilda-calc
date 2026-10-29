@@ -42110,6 +42110,265 @@ const femaleTtAgePolicy = {
     "none"
   ]
 };
+const femaleTtUnder6Data = {
+  "schemaVersion": 1,
+  "kind": "published-age-group-median-data",
+  "id": "kushnir2010-female-total-testosterone-age-groups",
+  "version": "2026-10-28.1",
+  "analyte": "testosterone_total",
+  "sex": "female",
+  "unit": "nmol/L",
+  "ageDomain": {
+    "min": 0.5,
+    "max": 6,
+    "minimumInclusive": true,
+    "maximumInclusive": false
+  },
+  "source": {
+    "id": "kushnir2010-female-total-testosterone-age-groups",
+    "label": "Kushnir 2010 · dziewczęta",
+    "citation": "Kushnir MM i wsp. Liquid Chromatography–Tandem Mass Spectrometry Assay for Androstenedione, Dehydroepiandrosterone, and Testosterone with Pediatric and Adult Reference Intervals. Clinical Chemistry 2010;56(7):1138–1147. DOI 10.1373/clinchem.2010.143222.",
+    "url": "https://doi.org/10.1373/clinchem.2010.143222",
+    "population": "Dziewczęta bez znanych chorób i leków na receptę; młodsze dzieci pobierane po wprowadzeniu do znieczulenia przed planowym zabiegiem.",
+    "method": "Derywatyzacja i dwuwymiarowa LC-MS/MS",
+    "specimen": "serum",
+    "unit": "nmol/L",
+    "statistic": "approximate-group-median",
+    "approximate": true,
+    "sourceLocation": "Rycina 4A (żeńska), s. 1146; sześć grup od 6 miesięcy do 6 lat.",
+    "limits": {
+      "lod": 0.017335,
+      "loq": 0.03467,
+      "unit": "nmol/L",
+      "sourceLodNgL": 5,
+      "sourceLoqNgL": 10,
+      "censoringRule": null
+    },
+    "limitsDescription": "Źródłowe LOD 5 ng/L i LOQ 10 ng/L (TT). Przybliżone odczyty median 20–30 ng/L; reguła postępowania z indywidualnymi wynikami poniżej LOQ niepodana. Granice metody źródłowej nie są granicami oznaczenia próbki pacjentki.",
+    "limitations": [
+      "To przybliżone mediany całych grup, odczytane z ryciny, a nie dokładne wartości tabelaryczne, model dokładnego wieku lub norma. Znak ≈ pozostaje częścią prezentacji.",
+      "Konserwatywna wrażliwość odczytu grafiki około ±9 ng/L (około ±0,03 nmol/L) nie jest przedziałem ufności, błędem oznaczenia ani zmiennością biologiczną.",
+      "N rocznych grup ryciny nie podano. Tabela 2 używa innych przedziałów wieku; nie przypisujemy jej liczebności do tych punktów.",
+      "Pobranie po indukcji znieczulenia przed zabiegiem; autorzy omówili 24 nietypowo wysokie stężenia TT w łącznej młodej kohorcie. Dodatkowy centralny 90% zakres referencyjny nie jest skorygowaną medianą. Nie usuwamy obserwacji ani nie przeliczamy median.",
+      "Publikacja nie opisuje pełnych zasad cenzurowania lub imputacji niskich wyników ani kryteriów wieku ciążowego. Nie tworzymy profilu wcześniactwa i nie podstawiamy wieku skorygowanego lub PMA.",
+      "Półotwarte granice grup są jawną polityką aplikacji, a nie odzyskanymi nierównościami autorów. Cały znany przedział wieku musi mieścić się w jednej grupie.",
+      "Nie wymagamy Th1 ani nie wyznaczamy stadium Tannera z wieku. Grupy najmłodszych są grupami wieku, nie kohortą Th1.",
+      "Nie łączymy grup linią i nie łączymy ich z modelem Madsen w wieku 6 lat. Różnica między źródłami nie oznacza fizjologicznego spadku.",
+      "Zakresy Mayo, ocena laboratoryjna, wynik i historia pozostają niezależne. Mediana nie wyznacza prawidłowości, SDS, centyla ani diagnozy."
+    ]
+  },
+  "groups": [
+    {
+      "id": "female-tt-age-group-1",
+      "minAgeYears": 0.5,
+      "maxAgeYears": 1,
+      "minimumInclusive": true,
+      "maximumInclusive": false,
+      "label": "6 mies.–<1 rok",
+      "axisLabel": "0,5–<1",
+      "sourceAgeLabel": "6 months to 1 year",
+      "value": 0.06934,
+      "approximateReadoutNgL": 20,
+      "individualGroupN": null
+    },
+    {
+      "id": "female-tt-age-group-2",
+      "minAgeYears": 1,
+      "maxAgeYears": 2,
+      "minimumInclusive": true,
+      "maximumInclusive": false,
+      "label": "1–<2 lata",
+      "axisLabel": "1–<2",
+      "sourceAgeLabel": "1 to 2 years",
+      "value": 0.06934,
+      "approximateReadoutNgL": 20,
+      "individualGroupN": null
+    },
+    {
+      "id": "female-tt-age-group-3",
+      "minAgeYears": 2,
+      "maxAgeYears": 3,
+      "minimumInclusive": true,
+      "maximumInclusive": false,
+      "label": "2–<3 lata",
+      "axisLabel": "2–<3",
+      "sourceAgeLabel": "2 to 3 years",
+      "value": 0.06934,
+      "approximateReadoutNgL": 20,
+      "individualGroupN": null
+    },
+    {
+      "id": "female-tt-age-group-4",
+      "minAgeYears": 3,
+      "maxAgeYears": 4,
+      "minimumInclusive": true,
+      "maximumInclusive": false,
+      "label": "3–<4 lata",
+      "axisLabel": "3–<4",
+      "sourceAgeLabel": "3 to 4 years",
+      "value": 0.086675,
+      "approximateReadoutNgL": 25,
+      "individualGroupN": null
+    },
+    {
+      "id": "female-tt-age-group-5",
+      "minAgeYears": 4,
+      "maxAgeYears": 5,
+      "minimumInclusive": true,
+      "maximumInclusive": false,
+      "label": "4–<5 lat",
+      "axisLabel": "4–<5",
+      "sourceAgeLabel": "4 to 5 years",
+      "value": 0.10401,
+      "approximateReadoutNgL": 30,
+      "individualGroupN": null
+    },
+    {
+      "id": "female-tt-age-group-6",
+      "minAgeYears": 5,
+      "maxAgeYears": 6,
+      "minimumInclusive": true,
+      "maximumInclusive": false,
+      "label": "5–<6 lat",
+      "axisLabel": "5–<6",
+      "sourceAgeLabel": "5 to 6 years",
+      "value": 0.10401,
+      "approximateReadoutNgL": 30,
+      "individualGroupN": null
+    }
+  ],
+  "provenance": {
+    "doi": "10.1373/clinchem.2010.143222",
+    "articleSha256": "25132120d7379f5d1e94dc6a6381e4de6550d901121afcd70b3bd987d457442d",
+    "articleReadScope": "Pełna końcowa wersja artykułu: 10 stron PDF, metody, tabele i ryciny.",
+    "sourceFigure": "4A",
+    "printedPage": 1146,
+    "pdfPageIndex": 8,
+    "sourceAxisUnit": "µg/L",
+    "readoutUnit": "ng/L",
+    "readoutValues": [
+      20,
+      20,
+      20,
+      25,
+      30,
+      30
+    ],
+    "readoutMethod": "Współrzędne wektorowych trójkątów Te na rycinie żeńskiej; środek bbox, kalibracja liniowa 0–0,8 µg/L, zaokrąglenie do 5 ng/L. Sprawdzono centroid i dopasowanie wszystkich pięciu ticków.",
+    "readoutConservativeSensitivityNgL": 9,
+    "readoutConservativeSensitivityNmolL": 0.031203,
+    "readoutSensitivityIsClinicalInterval": false,
+    "conversion": "Istniejąca produkcyjna VildaLabTestosterone.convertMeasurement: 1 ng/L = 1 pg/mL; bez zmiany przelicznika TT.",
+    "dataBoundaryConventionIsApplicationPolicy": true,
+    "ownerApproval": "28.10.2026: po ocenie makiety oraz trzech alternatyw właściciel wybrał pierwotną koncepcję i polecił implementację. Nie oznacza walidacji klinicznej."
+  }
+};
+const femaleTtUnder6Policy = {
+  "schemaVersion": 1,
+  "kind": "educational-female-tt-group-comparison",
+  "version": "2026-10-28.1",
+  "sourceId": "kushnir2010-female-total-testosterone-age-groups",
+  "analyte": "testosterone_total",
+  "sex": "female",
+  "contextBasis": "current-patient",
+  "clinicalReferenceActivation": false,
+  "patientComparisonEnabled": true,
+  "notLaboratoryReference": true,
+  "noClinicalClassification": true,
+  "noHistoryWrite": true,
+  "fullAgeIntervalRequired": true,
+  "ordinaryOnly": true,
+  "interpolation": "none-discrete-age-groups",
+  "ageReferenceBasis": "whole-age-group",
+  "chartSelectionKey": "t",
+  "allowedViews": [
+    "life",
+    "age"
+  ],
+  "displayUnits": [
+    "nmol/L",
+    "ng/dL",
+    "ng/mL",
+    "pg/mL"
+  ],
+  "allowedAssayMethodIds": [
+    "lc-ms/ms",
+    "lc-ms-ms",
+    "lcmsms"
+  ],
+  "allowedSpecimens": [
+    "serum",
+    "surowica"
+  ],
+  "excludedCyclePhases": [
+    "pregnancy",
+    "pregnancy_t1",
+    "pregnancy_t2",
+    "pregnancy_t3",
+    "postmenopause"
+  ],
+  "excludedReproductiveContexts": [
+    "pregnancy",
+    "postmenopause"
+  ],
+  "excludedPositiveFlags": [
+    "pregnancy",
+    "hormonalTreatment",
+    "stimulation",
+    "gnrha"
+  ],
+  "excludedTreatmentContexts": [
+    "hormonal",
+    "stimulation",
+    "gnrh-stimulation",
+    "hcg-stimulation"
+  ],
+  "excludedTreatmentFlags": [
+    "gnrha",
+    "sexSteroids",
+    "cocp",
+    "exogenousTestosterone"
+  ],
+  "allowedMeasurementKinds": [
+    "basal"
+  ],
+  "plot": {
+    "ageMin": 0.5,
+    "ageMax": 6,
+    "ageTicks": [
+      0.5,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6
+    ],
+    "valueMin": 0,
+    "valueMax": 0.8,
+    "valueTicks": [
+      0,
+      0.2,
+      0.4,
+      0.6,
+      0.8
+    ],
+    "unit": "nmol/L",
+    "independentOfPatient": true,
+    "ageAxis": "categorical-groups"
+  },
+  "knownExclusionPolicy": "Znane leczenie, stymulacja, ciąża lub niezgodny materiał/metoda wstrzymują porównanie. Nieznany wywiad nie staje się potwierdzeniem braku leczenia. Dane źródłowe nie wymagają dodatkowego wyboru Th lub P.",
+  "allowedTreatmentContexts": [
+    "none"
+  ],
+  "renderMode": "age-groups",
+  "sourceSelection": "whole-chronological-age-interval",
+  "groupBoundaryConvention": "lower-inclusive-upper-exclusive",
+  "fullSourceAgeIntervalRequired": true,
+  "requiresTannerStage": false,
+  "notExactAgeMedian": true,
+  "notContinuousCurve": true
+};
 const maleE2AgeData = {
   "schemaVersion": 1,
   "kind": "published-age-p50-data",
@@ -45972,6 +46231,8 @@ return {
   insl3AgeSourcePolicy: insl3AgeSourcePolicy,
   femaleTtAgeData: femaleTtAgeData,
   femaleTtAgePolicy: femaleTtAgePolicy,
+  femaleTtUnder6Data: femaleTtUnder6Data,
+  femaleTtUnder6Policy: femaleTtUnder6Policy,
   maleE2AgeData: maleE2AgeData,
   maleE2AgePolicy: maleE2AgePolicy,
   maleE2AdultAgeData: maleE2AdultAgeData,

@@ -145,7 +145,7 @@ test('płeć F z niepodanym wiekiem zachowuje konwersję bez normy dorosłych i 
   expect(result.ageAtSample.status).toBe('unknown');
   expect(references(result).byAge.status).toBe('unavailable');
   await expect(host(page).locator('.vilda-lab-axis')).toHaveCount(0);
-  await expect(page.locator('#labResultBig')).toContainText('1,0401');
+  await expect(page.locator('#labResultBig')).toContainText('1,04');
   await expect(page.locator('#labResultStatus')).not.toContainText(/w zakresie normy/);
   await expect(page.locator('#labRangeBlock')).not.toContainText(/0,3–2,4/);
 });
@@ -209,7 +209,7 @@ test('wiekowe zakresy żeńskie zaczynają się od sześciu miesięcy i zmieniaj
   await page.locator('#labUnitTarget').selectOption('nmol/L');
   await bounds(page, 0.27736, 2.0802);
   await expect(axis(page)).toHaveAttribute('data-patient-value', '2.0802');
-  await expect(page.locator('#labResultBig')).toContainText('2,0802');
+  await expect(page.locator('#labResultBig')).toContainText('2,08');
   expect((await recorded(page)).evaluation).toEqual(before);
   await page.locator('#labUnit').selectOption('nmol/L');
   await page.locator('#labValue').fill('2,2');
@@ -254,7 +254,7 @@ test('żeński dolny kraniec <7 nie jest zerem ani LOD, a operatory nie dostają
     expect(result.measurement).toMatchObject({ raw, operator: '<', unit: 'nmol/L', sourceUnit: 'ng/dL', isExact: false, plotValue: null });
     await expect(host(page).locator('.vilda-lab-axis-marker')).toHaveCount(0);
     await expect(axis(page)).not.toHaveAttribute('data-patient-value', /.+/);
-    await expect(page.locator('#labResultBig')).toContainText(raw === '<7' ? /<\s*0,24269/ : '<LOD');
+    await expect(page.locator('#labResultBig')).toContainText(raw === '<7' ? /<\s*0,24/ : '<LOD');
     await expect(page.locator('#labHormoneLifespan [data-patient-concentration="t"] [data-result-point]')).toHaveCount(0);
   }
 });

@@ -1,0 +1,106 @@
+{
+  "schemaVersion": 1,
+  "kind": "educational-female-tt-group-comparison",
+  "version": "2026-10-28.1",
+  "sourceId": "kushnir2010-female-total-testosterone-age-groups",
+  "analyte": "testosterone_total",
+  "sex": "female",
+  "contextBasis": "current-patient",
+  "clinicalReferenceActivation": false,
+  "patientComparisonEnabled": true,
+  "notLaboratoryReference": true,
+  "noClinicalClassification": true,
+  "noHistoryWrite": true,
+  "fullAgeIntervalRequired": true,
+  "ordinaryOnly": true,
+  "interpolation": "none-discrete-age-groups",
+  "ageReferenceBasis": "whole-age-group",
+  "chartSelectionKey": "t",
+  "allowedViews": [
+    "life",
+    "age"
+  ],
+  "displayUnits": [
+    "nmol/L",
+    "ng/dL",
+    "ng/mL",
+    "pg/mL"
+  ],
+  "allowedAssayMethodIds": [
+    "lc-ms/ms",
+    "lc-ms-ms",
+    "lcmsms"
+  ],
+  "allowedSpecimens": [
+    "serum",
+    "surowica"
+  ],
+  "excludedCyclePhases": [
+    "pregnancy",
+    "pregnancy_t1",
+    "pregnancy_t2",
+    "pregnancy_t3",
+    "postmenopause"
+  ],
+  "excludedReproductiveContexts": [
+    "pregnancy",
+    "postmenopause"
+  ],
+  "excludedPositiveFlags": [
+    "pregnancy",
+    "hormonalTreatment",
+    "stimulation",
+    "gnrha"
+  ],
+  "excludedTreatmentContexts": [
+    "hormonal",
+    "stimulation",
+    "gnrh-stimulation",
+    "hcg-stimulation"
+  ],
+  "excludedTreatmentFlags": [
+    "gnrha",
+    "sexSteroids",
+    "cocp",
+    "exogenousTestosterone"
+  ],
+  "allowedMeasurementKinds": [
+    "basal"
+  ],
+  "plot": {
+    "ageMin": 0.5,
+    "ageMax": 6,
+    "ageTicks": [
+      0.5,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6
+    ],
+    "valueMin": 0,
+    "valueMax": 0.8,
+    "valueTicks": [
+      0,
+      0.2,
+      0.4,
+      0.6,
+      0.8
+    ],
+    "unit": "nmol/L",
+    "independentOfPatient": true,
+    "ageAxis": "categorical-groups"
+  },
+  "knownExclusionPolicy": "Znane leczenie, stymulacja, ciąża lub niezgodny materiał/metoda wstrzymują porównanie. Nieznany wywiad nie staje się potwierdzeniem braku leczenia. Dane źródłowe nie wymagają dodatkowego wyboru Th lub P.",
+  "allowedTreatmentContexts": [
+    "none"
+  ],
+  "renderMode": "age-groups",
+  "sourceSelection": "whole-chronological-age-interval",
+  "groupBoundaryConvention": "lower-inclusive-upper-exclusive",
+  "fullSourceAgeIntervalRequired": true,
+  "requiresTannerStage": false,
+  "notExactAgeMedian": true,
+  "notContinuousCurve": true
+}

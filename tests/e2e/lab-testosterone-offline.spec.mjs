@@ -219,7 +219,7 @@ async function expectFemaleComparison(page) {
   expect(result.provenance.sourceIds).toContain('mayo-ttst-8533-female');
   expect(result.measurement).toMatchObject({ unit: 'nmol/L', sourceValue: 75, sourceUnit: 'ng/dL', isExact: true });
   expect(result.measurement.value).toBeCloseTo(2.60025, 10);
-  await expect(page.locator('#labResultBig')).toContainText('2,60025');
+  await expect(page.locator('#labResultBig')).toContainText('2,60');
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true);
   return result;
 }
@@ -310,7 +310,7 @@ for (const upgrade of [false, true]) test(`TT women and male control survive ${u
       await page.locator('#labValue').fill(raw);
       expect((await evaluation(page)).measurement).toMatchObject({ raw, operator: '<', isExact: false, plotValue: null });
       await expect(host(page).locator('.vilda-lab-axis-marker')).toHaveCount(0);
-      await expect(page.locator('#labResultBig')).toContainText(raw === '<7' ? /<\s*0[,.]24269/ : '<LOD');
+      await expect(page.locator('#labResultBig')).toContainText(raw === '<7' ? /<\s*0[,.]24/ : '<LOD');
     }
     expect(await noNetwork(), 'male age/G, female age, source conversion and censored results all remain offline').toBe(true);
   } finally {
