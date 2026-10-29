@@ -88,6 +88,22 @@ async function zepsujTresc(v, pid, sid) {
   expect((await wersja(v, pid, sid)).payload, 'kontrola: treść wersji w karcie nieczytelna').toBeNull();
 }
 
+// P-KOSZ-PO-KLUCZU (E3, Q8, sejf 231): ostatnia wersja karty, którą nagrobek oszczędza, przyjmuje w scaleniu nowszą
+// treść kosza (późniejsza chwila treści S4) i późniejszy rejestr gwiazdki. Stan „w karcie starsza treść albo gwiazdka
+// niż w koszu” powstaje więc już głównie na urządzeniu, które dostało kosz jeszcze na sejfie 230 (przed aktualizacją
+// aplikacji), a poza tym przy nieczytelnej wersji w karcie (Q8 jej nie rusza), przerwanym scaleniu albo treści kosza
+// starszej niż 30 dni (wpis bez treści) — od takiego stanu (230) zaczynają testy z odbiorNa230; te same kroki na sejfie
+// 231 bez odbiorNa230 sprawdzają kontrole „sejf 231” (N10 kontrola, N-odepnij). Odtwarzamy go tak: po scaleniu rekord
+// wersji sid wraca do stanu sprzed scalenia (scalenie 230 go nie zmieniało). Zmierzone na 8240e0df (sejf 230) dla
+// wszystkich stanów początkowych z odbiorNa230 w tym pliku: magazyn odbiorcy po scaleniu 230 = magazyn po scaleniu 231
+// z tym rekordem sprzed scalenia (karta, nagłówek, kosz, lista kosza, rekordy wersji; poza losowymi wektorami IV
+// i losowymi milisekundami stempla „Odepnij i usuń”).
+async function odbiorNa230(na, pid, sid, scal) {
+  const rek = (await na.__px.listSnapshotsForUser(na.__uid, pid)).find((s) => s.snapshotId === sid);
+  await scal();
+  await na.__px.putSnapshotForUser(na.__uid, rek);
+}
+
 // Stan PRZ0 na P (opis w nagłówku pliku); opcjePoprawki — opcje poprawki 78 kg na P.
 async function prz0(opcjePoprawki) {
   sztucznyZegar();
@@ -168,14 +184,21 @@ describe('P-PRZYWROC-Z-KARTY: „Przywróć” wersji, która jest w karcie i w 
     expect({ karta: opis(naK), sav: naK && naK.savedAtISO }, 'K po synchronizacji').toEqual({ karta: { masa: 78, pin: false, rev: 2 }, sav: d.karta.savedAtISO });
   });
 
-  it('N10 kontrola: treść kosza nowsza (K poprawia na 74 po poprawce P z nową chwilą zapisu i daje do kosza) → przywrócone 74 z savedAtISO wpisu kosza, jak dotąd', async () => {
+  // Stan N10 kontrola: P poprawia s2 na 78 z nową chwilą zapisu (s2 ostatnią wersją karty P), K później na 74 i daje
+  // do kosza; P dostaje kosz K — na sejfie 230 (odbiorNa230) albo 231.
+  async function stanN10k(na230) {
     sztucznyZegar();
     const d = await jan2();
     przesunZegar(M); await d.P.moveSnapshotToTrash(d.pid, d.s1);
     przesunZegar(M); const karta = await popraw(d.P, d.pid, d.sid, 78, { preserveSavedAt: false });
-    przesunZegar(M); await popraw(d.K, d.pid, d.sid, 74);
+    przesunZegar(M); const naK = await popraw(d.K, d.pid, d.sid, 74);
     przesunZegar(M); await d.K.moveSnapshotToTrash(d.pid, d.sid);
-    await sync(d.K, d.P);
+    if (na230) await odbiorNa230(d.P, d.pid, d.sid, () => sync(d.K, d.P)); else await sync(d.K, d.P);
+    return { d, karta, naK };
+  }
+
+  it('N10 kontrola: treść kosza nowsza (K poprawia na 74 po poprawce P z nową chwilą zapisu i daje do kosza; P dostaje kosz na sejfie 230) → przywrócone 74 z savedAtISO wpisu kosza, jak dotąd', async () => {
+    const { d, karta } = await stanN10k(true);
     const k = await wKoszu(d.P, d.sid);
     expect({ karta: opis(await wersja(d.P, d.pid, d.sid)), kosz: k.payload.user.weight, rozne: k.savedAtISO !== karta.savedAtISO },
       'kontrola: w karcie 78 (rev 1), w koszu 74, różne chwile zapisu')
@@ -185,6 +208,25 @@ describe('P-PRZYWROC-Z-KARTY: „Przywróć” wersji, która jest w karcie i w 
     const po = await wersja(d.P, d.pid, d.sid);
     expect({ juz: w.alreadyInCard === true, karta: opis(po), sav: po.savedAtISO })
       .toEqual({ juz: false, karta: { masa: 74, pin: false, rev: 2 }, sav: k.savedAtISO });
+  });
+
+  // Kontrola sejfu 231 (bez odbiorNa230): Q8 już w scaleniu daje ostatniej wersji karty P rekord całej nowszej wersji
+  // z kosza K — 74, rev 1 (= max, bez +1), chwila zmiany i zapisu poprawki K, nie poprawki P. „Przywróć” daje potem to
+  // samo co na 230. 8240e0df (sejf 230): przed „Przywróć” karta 78 z rev 1 — czerwony na kontroli.
+  it('N10 kontrola, sejf 231 (bez odbiorNa230): P dostaje kosz K → w karcie od razu 74 z rev 1 i chwilami poprawki K (Q8), w koszu 74; „Przywróć” → 74 z rev 2 i savedAtISO wpisu kosza; na trzech karta 74', async () => {
+    const { d, naK } = await stanN10k(false);
+    const k = await wKoszu(d.P, d.sid);
+    const przed = await wersja(d.P, d.pid, d.sid);
+    expect({ karta: opis(przed), kosz: k && k.payload.user.weight, upd: przed.updatedAtISO, sav: przed.savedAtISO },
+      'kontrola sejfu 231: w karcie 74 (rev 1) z chwilą zmiany i zapisu poprawki K, w koszu 74')
+      .toEqual({ karta: { masa: 74, pin: false, rev: 1 }, kosz: 74, upd: naK.updatedAtISO, sav: naK.savedAtISO });
+    przesunZegar(M);
+    const w = await d.P.restoreTrashedSnapshot(d.pid, d.sid);
+    const po = await wersja(d.P, d.pid, d.sid);
+    expect({ juz: w.alreadyInCard === true, karta: opis(po), sav: po.savedAtISO, kosz: !!(await wKoszu(d.P, d.sid)) })
+      .toEqual({ juz: false, karta: { masa: 74, pin: false, rev: 2 }, sav: k.savedAtISO, kosz: false });
+    await rundy(d.urz, 3);
+    expect(await widoki({ P: d.P, K: d.K, C: d.C }, d.sid)).toEqual({ P: 'karta 74', K: 'karta 74', C: 'karta 74' });
   });
 
   it('N11 PRZ0, skutki na P: jedno onPatientSaved { snapshotId, isSnapshotRestore: true }, lastSavedAtISO karty ≥ chwila przywrócenia, _contentAtISO = updatedAtISO, _pinnedState zgodny z gwiazdką', async () => {
@@ -205,7 +247,7 @@ describe('P-PRZYWROC-Z-KARTY: „Przywróć” wersji, która jest w karcie i w 
       .toEqual({ pinned: false, _pinned: false, rejestr: false });
   });
 
-  it('N12 treść kosza nowsza niż karta (P 78 — rev 1; K później 73, 74 — rev 2, potem kosz) → zapis 74 (kontrola, jak dotąd), rev = max(2, 1) + 1 = 3; na trzech karta 74', async () => {
+  it('N12 treść kosza nowsza niż karta (P 78 — rev 1; K później 73, 74 — rev 2, potem kosz; P dostaje kosz na sejfie 230) → zapis 74 (kontrola, jak dotąd), rev = max(2, 1) + 1 = 3; na trzech karta 74', async () => {
     sztucznyZegar();
     const d = await jan2();
     przesunZegar(M); await d.P.moveSnapshotToTrash(d.pid, d.s1);
@@ -213,7 +255,7 @@ describe('P-PRZYWROC-Z-KARTY: „Przywróć” wersji, która jest w karcie i w 
     przesunZegar(M); await popraw(d.K, d.pid, d.sid, 73);
     przesunZegar(M); await popraw(d.K, d.pid, d.sid, 74);
     przesunZegar(M); await d.K.moveSnapshotToTrash(d.pid, d.sid);
-    await sync(d.K, d.P);
+    await odbiorNa230(d.P, d.pid, d.sid, () => sync(d.K, d.P));
     const k = await wKoszu(d.P, d.sid);
     expect({ karta: opis(await wersja(d.P, d.pid, d.sid)), kosz: k && k.payload.user.weight, revWpisu: (await wpis(d.P, d.sid)).rev },
       'kontrola: w karcie 78 (rev 1), w koszu 74 (rev 2)')
@@ -230,13 +272,13 @@ describe('P-PRZYWROC-Z-KARTY: „Przywróć” wersji, która jest w karcie i w 
 
   // Kolejność: P dostaje kosz K, POTEM przypina. Gwiazdka przed odbiorem kosza (wersja P zmieniona po usunięciu K) —
   // scalenie S4 samo składa 78* (Bgw_zloz) i zdejmuje nagrobek: nie byłoby czego przywracać.
-  it('N16 tylko gwiazdka po usunięciu, treść kosza nowsza: K poprawia na 78 i daje do kosza; P (karta 23, bez poprawki) dostaje kosz i przypina PO chwili usunięcia → zapis 78* (treść z kosza, gwiazdka P — najpóźniejszy rejestr), rev 2; na K i C karta 78*', async () => {
+  it('N16 tylko gwiazdka po usunięciu, treść kosza nowsza: K poprawia na 78 i daje do kosza; P (karta 23, bez poprawki) dostaje kosz na sejfie 230 i przypina PO chwili usunięcia → zapis 78* (treść z kosza, gwiazdka P — najpóźniejszy rejestr), rev 2; na K i C karta 78*', async () => {
     sztucznyZegar();
     const d = await jan2();
     przesunZegar(M); await d.P.moveSnapshotToTrash(d.pid, d.s1);
     przesunZegar(M); await popraw(d.K, d.pid, d.sid, 78);
     przesunZegar(M); await d.K.moveSnapshotToTrash(d.pid, d.sid);
-    await sync(d.K, d.P);
+    await odbiorNa230(d.P, d.pid, d.sid, () => sync(d.K, d.P));
     przesunZegar(M); await d.P.setSnapshotPinned(d.pid, d.sid, true);
     const przed = await wersja(d.P, d.pid, d.sid);
     const e = await wpis(d.P, d.sid);
@@ -358,14 +400,21 @@ describe('P-PRZYWROC-Z-KARTY: przycięcie, gwiazdka, chwila zmiany i seq (testy 
   // M19 (gwiazdka tylko z karty, bez rejestru treści kosza i nagrobka): na P zostaje 78* — odpięcie K (późniejsze)
   // ginie na P aż do następnej synchronizacji (katalog PRZ-odp sprawdza tylko stan po rundach). Baza: treść wybierana
   // po chwili zmiany rekordu — 23 z rev 3 (utrata poprawki 78) — czerwony.
-  it('N-odepnij (PRZ-odp): P przypina s2 (K zna gwiazdkę), daje s1 do kosza, poprawia s2 na 78; K (zegar +10 min) „Odepnij i usuń” s2; P dostaje kosz K → tuż po „Przywróć” na P 78 bez gwiazdki z rev 3', async () => {
+  // Stan N-odepnij: P przypina s2 (K zna gwiazdkę), daje s1 do kosza, poprawia s2 na 78; K (zegar +10 min) „Odepnij
+  // i usuń” s2; P dostaje kosz K — na sejfie 230 (odbiorNa230) albo 231.
+  async function stanNOdepnij(na230) {
     sztucznyZegar();
     const d = await jan2();
     przesunZegar(M); await d.P.setSnapshotPinned(d.pid, d.sid, true); await sync(d.P, d.K);
     przesunZegar(M); await d.P.moveSnapshotToTrash(d.pid, d.s1);
     przesunZegar(M); await popraw(d.P, d.pid, d.sid, 78);
     przesunZegar(M); await naZegarze(10 * M, () => d.K.moveSnapshotToTrash(d.pid, d.sid, { odepnij: true }));
-    await sync(d.K, d.P);
+    if (na230) await odbiorNa230(d.P, d.pid, d.sid, () => sync(d.K, d.P)); else await sync(d.K, d.P);
+    return d;
+  }
+
+  it('N-odepnij (PRZ-odp): P przypina s2 (K zna gwiazdkę), daje s1 do kosza, poprawia s2 na 78; K (zegar +10 min) „Odepnij i usuń” s2; P dostaje kosz K na sejfie 230 → tuż po „Przywróć” na P 78 bez gwiazdki z rev 3', async () => {
+    const d = await stanNOdepnij(true);
     const k = await wKoszu(d.P, d.sid);
     expect({ karta: opis(await wersja(d.P, d.pid, d.sid)), kosz: k && k.payload.user.weight, koszGwiazdka: k && k.pinned },
       'kontrola: na P karta 78* (rev 2), w koszu 23 bez gwiazdki').toEqual({ karta: { masa: 78, pin: true, rev: 2 }, kosz: 23, koszGwiazdka: false });
@@ -374,6 +423,30 @@ describe('P-PRZYWROC-Z-KARTY: przycięcie, gwiazdka, chwila zmiany i seq (testy 
     const po = await wersja(d.P, d.pid, d.sid);
     expect({ juz: w.alreadyInCard === true, karta: opis(po), rejestr: po.payload._pinnedState && po.payload._pinnedState.pin, _pinned: po.payload._pinned === true })
       .toEqual({ juz: false, karta: { masa: 78, pin: false, rev: 3 }, rejestr: false, _pinned: false });
+  });
+
+  // Kontrola sejfu 231 (bez odbiorNa230): Q8 składa już w scaleniu rekord z treści P (78, późniejsza chwila treści niż
+  // kosz 23) i rejestru odpięcia K z nagrobka — 78 bez gwiazdki, rev 2 (= max, bez +1), chwila zmiany = chwila odpięcia
+  // K (późniejsza z prawdziwych chwil), nie później niż usunięcie (wizyta nie wraca nad nagrobek). „Przywróć” daje potem
+  // to samo co na 230. 8240e0df (sejf 230): przed „Przywróć” karta 78* — czerwony na kontroli.
+  it('N-odepnij, sejf 231 (bez odbiorNa230): P dostaje kosz K → w karcie od razu 78 bez gwiazdki z rev 2, chwila zmiany = chwila odpięcia K, nie później niż usunięcie (Q8); „Przywróć” → 78 bez gwiazdki z rev 3; na trzech karta 78', async () => {
+    const d = await stanNOdepnij(false);
+    const k = await wKoszu(d.P, d.sid);
+    const e = await wpis(d.P, d.sid);
+    const przed = await wersja(d.P, d.pid, d.sid);
+    const rej = przed.payload._pinnedState || {};
+    expect({
+      karta: opis(przed), kosz: k && k.payload.user.weight, koszGwiazdka: k && k.pinned, rejestr: rej.pin,
+      zmianaJakOdpiecie: przed.updatedAtISO === rej.at, poUsunieciu: przed.updatedAtISO > e.deletedAtISO,
+    }, 'kontrola sejfu 231: na P karta 78 bez gwiazdki (rev 2) z chwilą odpięcia K, w koszu 23 bez gwiazdki')
+      .toEqual({ karta: { masa: 78, pin: false, rev: 2 }, kosz: 23, koszGwiazdka: false, rejestr: false, zmianaJakOdpiecie: true, poUsunieciu: false });
+    przesunZegar(M);
+    const w = await d.P.restoreTrashedSnapshot(d.pid, d.sid);
+    const po = await wersja(d.P, d.pid, d.sid);
+    expect({ juz: w.alreadyInCard === true, karta: opis(po), rejestr: po.payload._pinnedState && po.payload._pinnedState.pin, _pinned: po.payload._pinned === true })
+      .toEqual({ juz: false, karta: { masa: 78, pin: false, rev: 3 }, rejestr: false, _pinned: false });
+    await rundy(d.urz, 3);
+    expect(await widoki({ P: d.P, K: d.K, C: d.C }, d.sid)).toEqual({ P: 'karta 78', K: 'karta 78', C: 'karta 78' });
   });
 
   // M12a (rejestr gwiazdki z karty zamiast z treści kosza, nagrobek dalej) i M19: 23* na P, a po rundach 23* na trzech —
@@ -405,14 +478,14 @@ describe('P-PRZYWROC-Z-KARTY: przycięcie, gwiazdka, chwila zmiany i seq (testy 
 
   // M28 (bez rejestru nagrobka, Bgw_zWpisu(e)): na P 78 bez gwiazdki tuż po „Przywróć” (dopiero rundy składają 78*).
   // Baza: zielony.
-  it('N-rejestr-nagrobka: P daje s1 do kosza; K poprawia s2 na 78; C (bez wiedzy) przypina s2; K (zegar +10 min) daje s2 do kosza; P dostaje kosz K i wersję C → treść kosza 78 bez gwiazdki, rejestr nagrobka przypięty → tuż po „Przywróć” na P 78* z rev 2', async () => {
+  it('N-rejestr-nagrobka: P daje s1 do kosza; K poprawia s2 na 78; C (bez wiedzy) przypina s2; K (zegar +10 min) daje s2 do kosza; P dostaje kosz K i wersję C na sejfie 230 → treść kosza 78 bez gwiazdki, rejestr nagrobka przypięty → tuż po „Przywróć” na P 78* z rev 2', async () => {
     sztucznyZegar();
     const d = await jan2();
     przesunZegar(M); await d.P.moveSnapshotToTrash(d.pid, d.s1);
     przesunZegar(M); await popraw(d.K, d.pid, d.sid, 78);
     przesunZegar(M); await d.C.setSnapshotPinned(d.pid, d.sid, true);
     przesunZegar(M); await naZegarze(10 * M, () => d.K.moveSnapshotToTrash(d.pid, d.sid));
-    await sync(d.K, d.P); await sync(d.C, d.P);
+    await odbiorNa230(d.P, d.pid, d.sid, async () => { await sync(d.K, d.P); await sync(d.C, d.P); });
     const e = await wpis(d.P, d.sid);
     const k = await wKoszu(d.P, d.sid);
     expect({
@@ -465,13 +538,13 @@ describe('P-PRZYWROC-Z-KARTY: przycięcie, gwiazdka, chwila zmiany i seq (testy 
 
   // M31 (Bpp_chwilaZmiany bez chwili zmiany wersji w karcie): stempel przywrócenia z zegara P (teraz) — wcześniejszy niż
   // wersja w karcie, którą zastępuje. Baza: „już w karcie”, 23* z rev 1 — czerwony.
-  it('N-zegar-karty: K poprawia s2 na 78 i daje do kosza; P dostaje kosz i przypina s2 z zegarem +10 min → zapis 78* z rev 2 ze stemplem później niż wersja w karcie, choć zegar P już wrócił; na trzech karta 78*', async () => {
+  it('N-zegar-karty: K poprawia s2 na 78 i daje do kosza; P dostaje kosz na sejfie 230 i przypina s2 z zegarem +10 min → zapis 78* z rev 2 ze stemplem później niż wersja w karcie, choć zegar P już wrócił; na trzech karta 78*', async () => {
     sztucznyZegar();
     const d = await jan2();
     przesunZegar(M); await d.P.moveSnapshotToTrash(d.pid, d.s1);
     przesunZegar(M); await popraw(d.K, d.pid, d.sid, 78);
     przesunZegar(M); await d.K.moveSnapshotToTrash(d.pid, d.sid);
-    await sync(d.K, d.P);
+    await odbiorNa230(d.P, d.pid, d.sid, () => sync(d.K, d.P));
     przesunZegar(M); await naZegarze(10 * M, () => d.P.setSnapshotPinned(d.pid, d.sid, true));
     const przed = await wersja(d.P, d.pid, d.sid);
     expect({ karta: opis(przed), wPrzyszlosci: przed.updatedAtISO > new Date(zegar.t + 2 * M).toISOString() },
@@ -501,7 +574,7 @@ describe('P-PRZYWROC-Z-KARTY: przycięcie, gwiazdka, chwila zmiany i seq (testy 
     przesunZegar(M); await P.moveSnapshotToTrash(pid, s1.snapshotId);
     if (kontrola) { przesunZegar(M); await popraw(P, pid, sid, 78); przesunZegar(M); await popraw(K, pid, sid, 73); przesunZegar(M); await popraw(K, pid, sid, 74); }
     przesunZegar(M); await naZegarze(10 * M, () => K.moveSnapshotToTrash(pid, sid));
-    await sync(K, P);
+    if (kontrola) await odbiorNa230(P, pid, sid, () => sync(K, P)); else await sync(K, P);
     if (!kontrola) { przesunZegar(M); await popraw(P, pid, sid, 78); }
     przesunZegar(M); await P.mergePatients(o1.patientId, pid);
     const rek = await surowa(P, pid, sid);
@@ -519,7 +592,7 @@ describe('P-PRZYWROC-Z-KARTY: przycięcie, gwiazdka, chwila zmiany i seq (testy 
     expect({ juz: w.alreadyInCard === true, karta: opis(await wersja(d.P, d.pid, d.sid)), seq: po.seq })
       .toEqual({ juz: false, karta: { masa: 78, pin: false, rev: 2 }, seq: 3 });
   });
-  it('N-seq kontrola: treść z kosza (74 nowsza niż karta 78) → przywrócona wersja ma seq wpisu kosza (2), jak dotąd', async () => {
+  it('N-seq kontrola: treść z kosza (74 nowsza niż karta 78, P dostaje kosz na sejfie 230) → przywrócona wersja ma seq wpisu kosza (2), jak dotąd', async () => {
     const d = await zeScaleniem(true);
     const w = await d.P.restoreTrashedSnapshot(d.pid, d.sid);
     const po = await surowa(d.P, d.pid, d.sid);
@@ -646,7 +719,7 @@ describe('P-PRZYWROC-Z-KARTY: rejestr gwiazdki z jego chwilą i nieczytelna tre�
   // To samo w gałęzi treści z karty: D daje s1 do kosza (s2 ostatnią wersją D) i poprawia s2 na 60, K odpina i daje do
   // kosza później; D dostaje kosz K (karta 60 + kosz 44) — „Przywróć” na D zapisuje 60 z rejestrem odpięcia K.
   // Baza: „już w karcie” (karta D 60 r1); po rundach P, K i C sam kosz 60, D karta 60* i kosz 60 — czerwony.
-  it('N-rejestr-chwila (treść z karty, 4 urządzenia): P przypina s2; C (bez wiedzy) poprawia na 44; D poprawia na 60 jako ostatnią wersję; K „Odepnij i usuń”; „Przywróć” na D → 60 bez gwiazdki z rejestrem odpięcia K; po rundach na czterech karta 60', async () => {
+  it('N-rejestr-chwila (treść z karty, 4 urządzenia): P przypina s2; C (bez wiedzy) poprawia na 44; D poprawia na 60 jako ostatnią wersję; K „Odepnij i usuń”; D dostaje kosz na sejfie 230; „Przywróć” na D → 60 bez gwiazdki z rejestrem odpięcia K; po rundach na czterech karta 60', async () => {
     sztucznyZegar();
     const d = await jan2();
     const D = await urzadzenie('D');
@@ -659,7 +732,7 @@ describe('P-PRZYWROC-Z-KARTY: rejestr gwiazdki z jego chwilą i nieczytelna tre�
     przesunZegar(M); await popraw(D, d.pid, d.sid, 60);
     przesunZegar(M); await d.K.moveSnapshotToTrash(d.pid, d.sid, { odepnij: true });
     przesunZegar(M); await sync(d.C, d.K);
-    przesunZegar(M); await sync(d.K, D);
+    przesunZegar(M); await odbiorNa230(D, d.pid, d.sid, () => sync(d.K, D));
     const e = await wpis(D, d.sid);
     expect({ karta: opis(await wersja(D, d.pid, d.sid)), kosz: (await wKoszu(D, d.sid)).payload.user.weight, nagrobek: e.gwiazdka && e.gwiazdka.pin },
       'kontrola: D — karta 60 i kosz 44, rejestr nagrobka — odpięcie K').toEqual({ karta: { masa: 60, pin: false, rev: 1 }, kosz: 44, nagrobek: false });
@@ -686,14 +759,14 @@ describe('P-PRZYWROC-Z-KARTY: rejestr gwiazdki z jego chwilą i nieczytelna tre�
       ? { ...x, payloadCipher: { ...x.payloadCipher, iv: rek.payloadCipher.iv } } : x)) });
     expect((await wKoszu(d.P, d.sid)).payload, 'kontrola: treść wpisu kosza na P nieczytelna').toBeNull();
   }
-  it('N-kosz-nieczytelny: P (karta 78, ostatnia wersja) dostaje kosz K z późniejszą poprawką 74, treść wpisu kosza na P nieczytelna → odmowa bez zapisu; „Przywróć” na K → na trzech karta 74', async () => {
+  it('N-kosz-nieczytelny: P (karta 78, ostatnia wersja) dostaje kosz K z późniejszą poprawką 74 na sejfie 230, treść wpisu kosza na P nieczytelna → odmowa bez zapisu; „Przywróć” na K → na trzech karta 74', async () => {
     sztucznyZegar();
     const d = await jan2();
     przesunZegar(M); await d.P.moveSnapshotToTrash(d.pid, d.s1);
     przesunZegar(M); await popraw(d.P, d.pid, d.sid, 78);
     przesunZegar(M); await popraw(d.K, d.pid, d.sid, 74);
     przesunZegar(M); await d.K.moveSnapshotToTrash(d.pid, d.sid);
-    await sync(d.K, d.P);
+    await odbiorNa230(d.P, d.pid, d.sid, () => sync(d.K, d.P));
     await koszNieczytelny(d);
     const przed = { karta: opis(await wersja(d.P, d.pid, d.sid)), lista: JSON.stringify(await lista(d.P)) };
     expect(przed.karta, 'kontrola: P — karta 78').toEqual({ masa: 78, pin: false, rev: 1 });

@@ -2099,8 +2099,11 @@ describe('P-SYNC-WLASCICIEL — łańcuch „Scal pacjentów” a późniejsza z
   // zabezpieczeń świeżego odczytu” (bez warunku „treść z ładunku nadal późniejsza” i bez Bsw_rekord na świeżym
   // rekordzie) — czerwony] Decyzja 'tresc' zapada pod blokadą karty z ładunku; zanim faza przeniesień przeczyta x1 pod
   // Z (w realnym przebiegu: zanim weźmie blokady — np. poprawka x1 pod Z w innej karcie przeglądarki), zapisuje się tu
-  // nowsza zmiana x1 (pułapka magazynu, zapis wprost: rev 3, późniejsza chwila zmiany). Faza na świeżym odczycie widzi
-  // późniejszą treść tutejszą (Bsw_nowszaTresc) i nie nadpisuje jej treścią z ładunku.
+  // nowsza zmiana x1: prawdziwa poprawka na A (updateSnapshotPayload, z chwilą treści S4), zrobiona po poprawce B;
+  // rekord sprzed niej wraca do magazynu przed scaleniem, a poprawiony wpisujemy w pułapce fazy przeniesień. Faza na
+  // świeżym odczycie widzi późniejszą treść tutejszą i nie nadpisuje jej treścią z ładunku. Od P-KOSZ-PO-KLUCZU (W3
+  // między kartami, Bsw_rekordW3) treść wybiera chwila treści S4, a nie chwila zmiany rekordu — dawny zapis wprost
+  // (szyfr x2 z nową chwilą zmiany i rev 3, bez nowej chwili treści) nie jest już „nowszą zmianą”.
   it('decyzja „treść” a zmiana x1 pod Z między decyzją a fazą przeniesień: nowsza zmiana zostaje', async () => {
     const A = await urzadzenie('A'), B = await urzadzenie('B');
     const { X, Y, Z, et, x1 } = await trzyKarty([A, B]);
@@ -2111,20 +2114,22 @@ describe('P-SYNC-WLASCICIEL — łańcuch „Scal pacjentów” a późniejsza z
     await chwila(5);
     await B.v.updateSnapshotPayload(X, x1, zapis([61]), { preserveSavedAt: false });
     const [dX] = await delty(B, [X]);
+    // „Nowsza zmiana” x1 pod Z: poprawka na A na treść 60, 66 (później niż poprawka z B); do scalenia — rekord sprzed niej.
+    const przedA = (await A.baza.listSnapshotsForUser(A.uid, Z)).find((s) => s.snapshotId === x1);
+    await chwila(5);
+    await A.v.updateSnapshotPayload(Z, x1, zapis([60, 66]), { preserveSavedAt: true });
+    const poA = (await A.baza.listSnapshotsForUser(A.uid, Z)).find((s) => s.snapshotId === x1);
+    await A.baza.putSnapshotForUser(A.uid, przedA);
     // Pierwszy odczyt wersji karty Z w tym scalaniu to świeży odczyt fazy przeniesień (delta niesie tylko X).
     const p = A.pulapka('listSnapshotsForUser', (uid, pid) => pid === Z);
     const scalanie = A.v.mergeSyncPayload(dX);
     const krok = await Promise.race([p.osiagnieta.then(() => 'faza przeniesień'), scalanie.then(() => 'koniec scalania')]);
-    await chwila(5);
-    const wersjeZ = await A.baza.listSnapshotsForUser(A.uid, Z);
-    const w1 = wersjeZ.find((s) => s.snapshotId === x1), w2 = wersjeZ.find((s) => s.snapshotId === idPo(et, 'x2'));
-    // „Nowsza zmiana” x1: treść x2 (60, 66), rev 3, chwila zmiany = teraz (później niż poprawka z B).
-    await A.baza.putSnapshotForUser(A.uid, Object.assign({}, w1, { payloadCipher: w2.payloadCipher, rev: 3, updatedAtISO: new Date().toISOString() }));
+    await A.baza.putSnapshotForUser(A.uid, poA);
     p.zwolnij();
     await scalanie;
     expect(krok, 'x1 czekała na fazę przeniesień').toBe('faza przeniesień');
     expect(await wersjaNa(A, x1, et)).toEqual({ karta: 'Z', tresc: '60:120,66:123' });
-    expect((await A.baza.listSnapshotsForUser(A.uid, Z)).find((s) => s.snapshotId === x1).rev).toBe(3);
+    expect((await A.baza.listSnapshotsForUser(A.uid, Z)).find((s) => s.snapshotId === x1).rev, 'rekord poprawki A bez zmian').toBe(poA.rev);
   }, CZAS);
 
   /* Uwaga przeglądu końcowego do 69e41d1 (waga wysoka): bieżąca wersja karty scalonej. Trzy duplikaty „Testowy Jan”:
@@ -2732,22 +2737,33 @@ describe('strażniki źródła (P-SYNC-WLASCICIEL)', () => {
     const f = src.slice(src.indexOf('async function Bsl_przeniesWersje('), src.indexOf('async function Bsw_przenies('));
     expect(f.length).toBeGreaterThan(100);
     expect(f).toContain('const para = F < G ? [F, G] : [G, F];');
-    const i0 = f.indexOf('Bsl_podBlokada(para[0],'), i1 = f.indexOf('Bsl_podBlokada(para[1],'), ip = f.indexOf('Bsw_przenies(p, teraz, ctx)');
+    const i0 = f.indexOf('Bsl_podBlokada(para[0],'), i1 = f.indexOf('Bsl_podBlokada(para[1],'), ip = f.indexOf('Bsw_przenies(p, teraz, ctx, opcje)');
     expect(i0).toBeGreaterThan(0);
     expect(i1).toBeGreaterThan(i0);
     expect(ip).toBeGreaterThan(i1);
     // zapisy przeniesienia (Bsw_przenies) i poprawki treści pod kartą G (Bsw_poprawTresc, decyzja 'tresc') wołane
     // wyłącznie z wnętrza obu blokad
-    expect(f).toContain('return p.tylkoTresc ? Bsw_poprawTresc(p, teraz) : Bsw_przenies(p, teraz, ctx);');
-    expect(f.indexOf('Bsw_poprawTresc(p, teraz)')).toBeGreaterThan(i1);
+    expect(f).toContain('return p.tylkoTresc ? Bsw_poprawTresc(p, teraz, opcje) : Bsw_przenies(p, teraz, ctx, opcje);');
+    expect(f.indexOf('Bsw_poprawTresc(p, teraz, opcje)')).toBeGreaterThan(i1);
     expect(src.match(/Bsw_przenies\(/g)).toHaveLength(2);
     expect(src.match(/Bsw_poprawTresc\(/g)).toHaveLength(2);
-    // karta oddająca wersję (licznik albo usunięcie pustej karty) — tylko z Bsw_przenies, czyli pod obiema blokadami
-    expect(src.match(/Bsw_poOddaniu\(/g)).toHaveLength(2);
+    // karta oddająca wersję (licznik albo usunięcie pustej karty) — tylko z Bsw_przenies i z Bsw_przeniesPrzezyta
+    // (np-ret-A1: wersja karty ze zbioru N, która wygrywa z wpisem retencji), w obu pod blokadami obu kart
+    expect(src.match(/Bsw_poOddaniu\(/g)).toHaveLength(3);
+    const fr = src.slice(src.indexOf('async function Bsw_przeniesPrzezyta('), src.indexOf('// Decyzja \'tresc\' (Bsw_decyzja), pod blokadami obu kart'));
+    expect(fr).toContain('const X = k.X, H = k.H, para = X < H ? [X, H] : [H, X];');
+    const r0 = fr.indexOf('Bsl_podBlokada(para[0],'), r1 = fr.indexOf('Bsl_podBlokada(para[1],'), rz = fr.indexOf('await I().putSnapshotForUser(b, Object.assign(Bm1(g), g, { patientId: H }));');
+    expect(r0).toBeGreaterThan(0);
+    expect(r1).toBeGreaterThan(r0);
+    expect(rz).toBeGreaterThan(r1);
+    expect(fr.indexOf('Bsw_poOddaniu(X, rekX, pozostale.length, pozostale, opcje)')).toBeGreaterThan(rz);
+    expect(fr).toMatch(/Bses_pilnuj\(opcje\);[^\n]*\n {6}await I\(\)\.putSnapshotForUser\(b, Object\.assign\(Bm1\(g\), g, \{ patientId: H \}\)\);/);
     const fp = src.slice(src.indexOf('async function Bsw_przenies('), src.indexOf('async function Bsw_poOddaniu('));
-    expect(fp).toContain('usunieta: await Bsw_poOddaniu(G, rekG, wersjeG.length - 1, wersjeG.filter(function (s) { return s && s.snapshotId !== p.S.snapshotId; }))');
+    expect(fp).toContain('usunieta: await Bsw_poOddaniu(G, rekG, wersjeG.length - 1, wersjeG.filter(function (s) { return s && s.snapshotId !== p.S.snapshotId; }), opcje)');
     const fo = src.slice(src.indexOf('async function Bsw_poOddaniu('), src.indexOf('// Najnowszy lokalny nagrobek pacjenta'));
     expect(fo).toContain('else await I().removePatientForUser(b, G);');
+    // P-KOSZ-PO-KLUCZU (P-CHMURA-OPIS): karta G po oddaniu wersji — zapis albo usunięcie tylko w sesji scalania, bez await przed nim
+    expect(fo).toMatch(/Bses_pilnuj\(opcje\);[^\n]*\n {2}if \(zostalo > 0\) await I\(\)\.putPatientForUser/);
     expect(fo).not.toContain('putTombstoneForUser');
   });
 
@@ -2767,7 +2783,9 @@ describe('strażniki źródła (P-SYNC-WLASCICIEL)', () => {
 
   it('Le: N w kontekście, faza przeniesień po pętli pacjentów, przed usuwaniem kart i końcem scalania kosza', () => {
     const le = src.slice(src.indexOf('async function Le(t,e){'), src.indexOf('prunedSnapshotCount:Bkz_S.przyciete||0}'));
-    expect(le).toContain('(!F||m[P]>=F)&&N.add(P)});Bkz_S.Bsw_N=N;Bkz_S.Bsw_pusto=!a.length;for(let P=0;P<o.length;P++){');
+    expect(le).toContain('(!F||m[P]>=F)&&N.add(P)});Bkz_S.Bsw_N=N;');
+    // np-ret-A1: chwile nagrobków kart dla Bsw_przezyteRetencji tylko z magazynem nagrobków i poza importem
+    expect(le).toContain('*/Bkz_S.Bsw_m=O&&!Bses_imp?m:null;Bkz_S.Bsw_pusto=!a.length;for(let P=0;P<o.length;P++){');
     // `a` w Le to lista kart konta na starcie scalania (konto bez kart: pierwsze pobranie, bez odczytów po kluczu)
     expect(le).toContain(',a=await I().listPatientsForUser(b);const Bkz_S=await Bkz_scalStart(t);');
     const iPetla = le.indexOf('const Bsl_w=await Bsl_scalPacjenta(F,j,H,R,Bkz_S,i,e);');
@@ -2804,7 +2822,12 @@ describe('strażniki źródła (P-SYNC-WLASCICIEL)', () => {
     const fp = src.slice(src.indexOf('async function Bsw_przenies('), src.indexOf('async function Bsw_poOddaniu('));
     expect(fp).toContain('const wersjeG = await I().listSnapshotsForUser(b, G);');
     expect(fp).toContain('if (!g || !p.zabierz && (mt(g) !== p.rev || Bsw_zmiana(g) !== p.zmiana)) return null;');
-    expect(fp).toContain('Bsw_rekord(p.F, p.S, p.szyfr, teraz, g)');
+    // P-KOSZ-PO-KLUCZU (A4): rekord wersji wspólnej dwóm kartom wg W3; straż sesji tuż przed zapisem (bez await między nimi).
+    expect(fp).toContain('const rek = await Bsw_rekordW3(p.F, p.S, p.szyfr, teraz, g);');
+    expect(fp).toMatch(/Bses_pilnuj\(opcje\);[^\n]*\n {2}await I\(\)\.putSnapshotForUser\(b, Object\.assign\(rek, Bm1\(p\.S\)\)\);/);
+    const ft = src.slice(src.indexOf('async function Bsw_poprawTresc('), src.indexOf('async function Bsw_przenies('));
+    expect(ft).toContain('const Bsw_r3 = await Bsw_rekordW3({ patientId: p.G }, p.S, p.szyfr, teraz, g, true);');
+    expect(ft).toMatch(/Bses_pilnuj\(opcje\);[^\n]*\n {2}await I\(\)\.putSnapshotForUser\(b, Bng_dopisz\(Bng_zap, Bng_j, Object\.assign\(Bsw_r3,/);
     expect(src).toContain("tylkoTresc: d.co === 'tresc', zabierz: d.co === 'zabierz',");
     const le = src.slice(src.indexOf('async function Le(t,e){'), src.indexOf('prunedSnapshotCount:Bkz_S.przyciete||0}'));
     expect(le).toContain('l+=Bsw_f.dodane,w+=Bsw_f.usuniete;y+=Bsw_f.zabrane;');
