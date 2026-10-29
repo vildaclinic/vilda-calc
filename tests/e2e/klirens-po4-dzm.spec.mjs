@@ -19,9 +19,11 @@ async function geometry(page, width) {
         id: node.id || node.textContent.trim(), font: parseFloat(getComputedStyle(node).fontSize),
         height: node.getBoundingClientRect().height, left: node.getBoundingClientRect().left, right: node.getBoundingClientRect().right,
       })),
-      numbers: [...document.querySelectorAll('#clcrResultReport .clcr-result-value,#clcrResultReport .po4-dzm-reference-value')].map(node => {
+      numbers: [...document.querySelectorAll('#clcrResultReport .clcr-result-value,#clcrResultReport .po4-dzm-reference-value')].flatMap(node =>
+        node.classList.contains('po4-dzm-reference-value') && node.dataset.long === 'true' && node.querySelector('.po4-dzm-reference-bound')
+          ? [...node.querySelectorAll('.po4-dzm-reference-bound')] : [node]).map(node => {
         const range = document.createRange(); range.selectNodeContents(node);
-        const text = range.getBoundingClientRect(), box = node.getBoundingClientRect(), tops = [];
+        const text = range.getBoundingClientRect(), box = (node.classList.contains('po4-dzm-reference-bound') ? node.parentElement : node).getBoundingClientRect(), tops = [];
         const walker = document.createTreeWalker(node, NodeFilter.SHOW_TEXT);
         while (walker.nextNode()) for (let index = 0; index < walker.currentNode.length; index += 1) {
           if (!/\S/.test(walker.currentNode.textContent[index])) continue;
@@ -90,6 +92,9 @@ for (const width of [1440, 390, 320]) {
   test(`PO4 DZM: dwa pola, jedna liczba i stała geometria ${width}px`, async ({ page }, testInfo) => {
     const errors = []; page.on('pageerror', error => errors.push(error.message));
     await openCalculator(page, width);
+    // CI's Linux fallback is wider than some local system fonts. Exercise it
+    // explicitly so per-character fit checks detect real overflow everywhere.
+    await page.addStyleTag({ content: '.po4-dzm-proposal-card :is(.clcr-result-value,.po4-dzm-reference-value) { font-family: "DejaVu Sans", sans-serif !important; }' });
     await restore(page, { PO4_concentration: '', PO4_volume: '' });
     await expectBlocked(page);
     await expect(page.locator('#po4DzmInputCard input:visible')).toHaveCount(2);
@@ -119,6 +124,19 @@ for (const width of [1440, 390, 320]) {
     const shot = testInfo.outputPath(`po4-dzm-${width}.png`);
     await page.locator('#clcrWorkspace').screenshot({ path: shot });
     await testInfo.attach(`po4-dzm-${width}`, { path: shot, contentType: 'image/png' });
+    // Converted nearby limits may wrap between their two bounds; each complete
+    // number must still fit on one line inside the same reference column.
+    await page.locator('[data-po4-dzm-output-unit]').selectOption('mmol/24h');
+    await expect.poll(async () => card(page).getAttribute('data-clcr-display-unit')).toBe('mmol/24 h');
+    sameWidths(initial, await geometry(page, width));
+    await restore(page, { PO4_inputMode: 'concentration', PO4_concentration: '13.000000000000002',
+      PO4_concentrationUnit: 'mgP/L', PO4_volume: '9.999999999999998', PO4_volumeUnit: 'L', PO4_outputUnit: 'mgP/24h' });
+    const exact = await expectResult(page, { raw: 130, status: 'low', tone: 'warning' });
+    expect(exact.presentation.valueText).not.toBe('130');
+    sameWidths(initial, await geometry(page, width));
+    const exactShot = testInfo.outputPath(`po4-dzm-exact-${width}.png`);
+    await page.locator('#clcrWorkspace').screenshot({ path: exactShot });
+    await testInfo.attach(`po4-dzm-exact-${width}`, { path: exactShot, contentType: 'image/png' });
     await page.locator('#clearBtn').click();
     await page.waitForFunction(() => window.clcrIsResetting !== true);
     await choose(page, 'PO4_mgkg');

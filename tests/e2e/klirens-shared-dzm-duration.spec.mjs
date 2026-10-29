@@ -2,7 +2,7 @@ import { expect, test } from '@playwright/test';
 import { openCalculator, applySession } from '../support/klirens-mg-dzm-browser.mjs';
 
 // All inputs are fictional; the real vault remains locked. Each selected
-// legacy module must agree on new/default, blank, explicit and reset duration.
+// timed module must agree on new/default, blank, explicit and reset duration.
 const specimen = {
   age: '45', ageMonths: '0', ageDays: '', sex: 'F', weight: '60', height: '165',
   Ucr: '100', Scr: '1', ScrUnit: 'mg/dl', V24: '1440',
@@ -18,21 +18,35 @@ const specimen = {
 };
 const formulas = ['cl24', 'PO4_mgkg', 'Prot_mgkg', 'Na_mmol_d', 'K_mmol_d', 'Ox_mgkg', 'Cit_mgkg', 'pH24'];
 
+function durationControls(formula) {
+  return formula === 'PO4_mgkg'
+    ? { field: 'PO4_collectionHours', source: 'PO4_collectionSource', panel: '#po4DzmInputCard',
+        change: '[aria-controls="po4DzmDurationEditor"]', summary: '#po4DzmInputCard .po4-dzm-context-row strong' }
+    : { field: 'Cl24DurationHours', source: 'Cl24DurationSource', panel: '#clcrCommonDuration',
+        change: '#clcrCommonDuration .clcr-duration-change', summary: '#clcrCommonDuration strong' };
+}
 async function restore(page, formula, patch = {}) {
-  await applySession(page, { version: 2, currentVersion: 'advanced', selectedFormula: formula,
-    inputs: { ...specimen, currentVersion: 'advanced', formulaPicker: formula,
-      Cl24DurationHours: '', Cl24DurationSource: 'assumed-24h', ...patch } }, formula);
+  const version = 'advanced';
+  const dedicated = formula === 'PO4_mgkg' ? {
+    PO4_inputMode: 'concentration', PO4_concentration: '50', PO4_concentrationUnit: 'mgP/dL',
+    PO4_volume: '1440', PO4_volumeUnit: 'mL', PO4_collectionHours: '', PO4_collectionSource: 'assumed-24h',
+    PO4_reportedValue: '', PO4_reportedUnit: 'mgP/24h', PO4_outputUnit: 'mgP/24h', PO4_unitConversions: '',
+  } : {};
+  await applySession(page, { version: 2, currentVersion: version, selectedFormula: formula,
+    inputs: { ...specimen, currentVersion: version, formulaPicker: formula,
+      Cl24DurationHours: '', Cl24DurationSource: 'assumed-24h', ...dedicated, ...patch } }, formula);
 }
 async function state(page, formula) {
-  return page.evaluate(id => ({
-    duration: window.ClcrCollectionDuration.readFromDocument(document),
-    ready: window.canComputeFormula(id),
-    points: window.ClcrVisitSave.collectActiveDatapoints(document, { formulaId: id }).map(point => ({
+  const { field, source } = durationControls(formula);
+  return page.evaluate(({ formula, field, source }) => ({
+    duration: window.ClcrCollectionDuration.readFromDocument(document, { fieldId: field, sourceId: source }),
+    ready: window.canComputeFormula(formula),
+    points: window.ClcrVisitSave.collectActiveDatapoints(document, { formulaId: formula }).map(point => ({
       key: point.seriesKey, output: point.outputId, value: point.rawValue ?? point.valueNum,
-      captureSource: point.capture?.values?.Cl24DurationSource,
-      captureHours: point.capture?.values?.Cl24DurationHours,
+      captureSource: point.capture?.values?.[source],
+      captureHours: point.capture?.values?.[field],
     })),
-  }), formula);
+  }), { formula, field, source });
 }
 async function expectReady(page, formula) {
   await expect.poll(async () => (await state(page, formula)).ready).toBe(true);
@@ -45,18 +59,25 @@ async function expectReady(page, formula) {
 for (const formula of formulas) test(`Shared DZM: ${formula} defaults, blank, invalid and clear`, async ({ page }) => {
   const errors = []; page.on('pageerror', error => errors.push(error.message));
   await openCalculator(page); await restore(page, formula);
-  await expect(page.locator('#Cl24DurationHours')).toHaveValue('24');
-  await expect(page.locator('#clcrCommonDuration')).toBeVisible();
+  const controls = durationControls(formula);
+  const hours = page.locator('#' + controls.field), source = page.locator('#' + controls.source), summary = page.locator(controls.summary);
+  await expect(hours).toHaveValue('24');
+  await expect(page.locator(controls.panel)).toBeVisible();
+  if (formula === 'PO4_mgkg') {
+    await expect(page.locator('#clcrCommonDuration')).toBeHidden();
+    expect(await page.evaluate(() => window.currentVersion)).toBe('advanced');
+    await expect(page.locator('#version-advanced')).toHaveClass(/selected/);
+  }
   const baseline = await expectReady(page, formula);
   expect(baseline.duration).toMatchObject({ valid: true, hours: 24, source: 'assumed-24h', complete: true });
   expect(baseline.points.every(point => point.captureSource === 'assumed-24h' && point.captureHours === '24')).toBe(true);
   for (const id of ['collectionStartAt', 'collectionEndAt', 'collectionNoMissedVoids']) await expect(page.locator(`#${id}`)).toBeHidden();
 
-  await page.locator('#clcrCommonDuration .clcr-duration-change').click();
-  const hours = page.locator('#Cl24DurationHours'); await expect(hours).toBeVisible();
+  await page.locator(controls.change).click();
+  await expect(hours).toBeVisible();
   await hours.fill('12');
-  await expect(page.locator('#clcrCommonDuration strong')).toHaveText('12 godz.');
-  await expect(page.locator('#Cl24DurationSource')).toHaveValue('hours');
+  await expect(summary).toHaveText('12 godz.');
+  await expect(source).toHaveValue('hours');
   const half = await expectReady(page, formula);
   expect(half.duration).toMatchObject({ valid: true, hours: 12, source: 'hours', assumed: false });
   expect(half.points.every(point => point.captureSource === 'hours' && point.captureHours === '12')).toBe(true);
@@ -66,8 +87,8 @@ for (const formula of formulas) test(`Shared DZM: ${formula} defaults, blank, in
   await hours.fill('');
   expect((await expectReady(page, formula)).duration).toMatchObject({ valid: true, hours: 24, source: 'assumed-24h' });
   await hours.blur(); await expect(hours).toHaveValue('24');
-  await expect(page.locator('#clcrCommonDuration strong')).toHaveText('24 godz.');
-  await expect(page.locator('#Cl24DurationSource')).toHaveValue('assumed-24h');
+  await expect(summary).toHaveText('24 godz.');
+  await expect(source).toHaveValue('assumed-24h');
   const restored = await expectReady(page, formula);
   expect(restored.duration).toMatchObject({ valid: true, hours: 24, source: 'assumed-24h', assumed: true });
   expect(restored.points).toEqual(baseline.points);
@@ -81,7 +102,7 @@ for (const formula of formulas) test(`Shared DZM: ${formula} defaults, blank, in
   await hours.fill('12'); await expectReady(page, formula);
   await page.locator('#clearBtn').click();
   await page.waitForFunction(() => window.clcrIsResetting !== true);
-  await expect(page.locator('#Cl24DurationHours')).toHaveValue('24');
+  await expect(hours).toHaveValue('24');
   expect((await state(page, formula)).duration).toMatchObject({ valid: true, hours: 24, source: 'assumed-24h' });
   expect(errors).toEqual([]);
 });
@@ -89,10 +110,10 @@ for (const formula of formulas) test(`Shared DZM: ${formula} defaults, blank, in
 const historicalCases = [
   { formula: 'Na_mmol_d', field: 'Cl24DurationHours', source: 'Cl24DurationSource', flag: 'durationNeedsConfirmation',
     editor: '#clcrCommonDurationEditor', summary: '#clcrCommonDuration strong', width: 390, values: {} },
-  ...[['Ca_mgkg', 'CA', 'caDzm', 'ca-dzm', 1440], ['UA_mgkg', 'UA', 'ua', 'ua', 390], ['Mg_mgkg', 'MG', 'mgDzm', 'mg-dzm', 320]].map(([formula, prefix, name, css, width]) => ({
+  ...[['Ca_mgkg', 'CA', 'caDzm', 'ca-dzm', 1440], ['UA_mgkg', 'UA', 'ua', 'ua', 390], ['Mg_mgkg', 'MG', 'mgDzm', 'mg-dzm', 320], ['PO4_mgkg', 'PO4', 'po4Dzm', 'po4-dzm', 390]].map(([formula, prefix, name, css, width]) => ({
     formula, field: `${prefix}_collectionHours`, source: `${prefix}_collectionSource`, flag: `${prefix}_durationNeedsConfirmation`,
     editor: `#${name}DurationEditor`, summary: `#${name}InputCard .${css}-context-row:has-text("Czas zbiórki") strong`, width,
-    values: { [`${prefix}_inputMode`]: 'concentration', [`${prefix}_concentration`]: '20', [`${prefix}_concentrationUnit`]: 'mg/L',
+    values: { [`${prefix}_inputMode`]: 'concentration', [`${prefix}_concentration`]: '20', [`${prefix}_concentrationUnit`]: prefix === 'PO4' ? 'mgP/L' : 'mg/L',
       [`${prefix}_volume`]: '1500', [`${prefix}_volumeUnit`]: 'mL' },
   })),
 ];
@@ -108,11 +129,11 @@ for (const entry of historicalCases) test(`Historical DZM replay: ${entry.formul
   const values = await page.evaluate(({ formula, original }) => {
     const api = window.ClcrSavedCalculation;
     const point = { id: formula, sourceFormulaId: formula, testKey: 'clcr:' + formula, label: 'Fikcyjny zapis historyczny',
-      valueNum: 1, rawValue: 1, displayValue: '1', unit: formula === 'Na_mmol_d' ? 'mmol/24 h' : 'mg/kg/24 h', norm: '', tone: 'neutral' };
+      valueNum: 1, rawValue: 1, displayValue: '1', unit: formula === 'Na_mmol_d' ? 'mmol/24 h' : formula === 'PO4_mgkg' ? 'mg P/24 h' : 'mg/kg/24 h', norm: '', tone: 'neutral' };
     const snapshot = api.createSnapshot(point, { capture: { formulaId: formula, ageYears: 45, values: original,
       fields: Object.keys(original).map(id => ({ id, label: id, type: 'text' })) }, clinicalDateISO: '2026-10-24' });
     if (!snapshot) throw new Error('Could not create the fictional historical envelope');
-    // Older notes predate the typed Ca/UA/Mg snapshot required by today's new
+    // Older notes predate the typed Ca/UA/Mg/PO4 snapshot required by today's new
     // write path. Model that old note explicitly, then use production readers.
     const note = { id: 'fictional-duration-history-note', patientId: 'fictional-duration-history-only', category: 'wynik-klirens',
       clinicalDateISO: '2026-10-24', body: 'Fikcyjny starszy pomiar',
@@ -124,9 +145,10 @@ for (const entry of historicalCases) test(`Historical DZM replay: ${entry.formul
     return described.values;
   }, { formula: entry.formula, original });
   expect(values).toMatchObject({ [entry.field]: '', [entry.source]: 'historical-missing', [entry.flag]: true });
-  const version = entry.formula === 'Na_mmol_d' ? 'advanced' : 'pro';
+  const version = ['Na_mmol_d', 'PO4_mgkg'].includes(entry.formula) ? 'advanced' : 'pro';
   await applySession(page, { version: 2, currentVersion: version, selectedFormula: entry.formula,
     inputs: { ...values, currentVersion: version, formulaPicker: entry.formula } }, entry.formula);
+  if (entry.formula === 'PO4_mgkg') expect(await page.evaluate(() => window.currentVersion)).toBe('advanced');
   const hours = page.locator('#' + entry.field), source = page.locator('#' + entry.source), summary = page.locator(entry.summary);
   const expectUnknown = async value => {
     await expect(hours).toBeVisible(); await expect(hours).toHaveValue(value);

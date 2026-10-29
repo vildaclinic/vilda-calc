@@ -33,10 +33,10 @@ html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .po4-dzm-propo
 html[data-clcr-workflow-ui="1"] #clcrResultReport .po4-dzm-result-status { margin: 0 0 var(--space-20px); color: var(--clcr-result-color); font-size: 15px; line-height: 1.5; }
 .po4-dzm-result-main { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: var(--space-16px); }
 html[data-clcr-workflow-ui="1"] #clcrResultReport .po4-dzm-proposal-card :is(.clcr-result-patient-label, .clcr-result-reference-label) { min-height: 22px; margin: 0 0 var(--space-8px); color: var(--clcr-muted); font-size: 12px; line-height: 1.5; }
-html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .po4-dzm-proposal-card .clcr-result-value { display: flex; align-items: center; min-height: 58px; font-size: 49px !important; line-height: 1.2; letter-spacing: -1.3px; color: var(--clcr-result-color) !important; white-space: normal; overflow-wrap: anywhere; }
-html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .po4-dzm-proposal-card .clcr-result-value[data-long="true"] { font-size: 31px !important; letter-spacing: -.4px; }
+html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .po4-dzm-proposal-card .clcr-result-value { display: flex; align-items: center; min-height: 58px; font-size: 49px !important; line-height: 1.2; letter-spacing: -1.3px; color: var(--clcr-result-color) !important; white-space: nowrap; overflow-wrap: normal; }
+html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .po4-dzm-proposal-card .clcr-result-value[data-long="true"] { font-size: 26px !important; letter-spacing: -.4px; }
 html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .po4-dzm-proposal-card .clcr-result-value[data-dense="true"] { font-size: 23px !important; }
-html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .po4-dzm-proposal-card .po4-dzm-reference-value { display: flex; align-items: center; min-height: 58px; padding: 0; color: var(--clcr-heading) !important; font-size: 28px !important; line-height: 1.3; letter-spacing: -.5px; white-space: normal; overflow-wrap: anywhere; word-break: normal; }
+html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .po4-dzm-proposal-card .po4-dzm-reference-value { display: flex; align-items: center; min-height: 58px; padding: 0; color: var(--clcr-heading) !important; font-size: 28px !important; line-height: 1.3; letter-spacing: -.5px; white-space: nowrap; overflow-wrap: normal; word-break: normal; }
 html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .po4-dzm-proposal-card .clcr-result-reference--unavailable .po4-dzm-reference-value { white-space: normal; font-size: 14px !important; }
 .po4-dzm-reference-hint { margin: var(--space-4px) 0 0; color: var(--clcr-muted); font-size: 11px; line-height: 1.55; }
 .po4-dzm-result-copy { margin: var(--space-18px) 0 0; color: var(--clcr-heading); font-size: 13px; font-weight: 400; line-height: 1.65; }
@@ -69,9 +69,9 @@ html[data-clcr-workflow-ui="1"][data-clcr-po4-dzm-active="1"] #po4DzmInputCard {
   .po4-dzm-result-main { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: var(--space-12px); }
   html[data-clcr-workflow-ui="1"] #clcrResultReport .po4-dzm-proposal-card :is(.clcr-result-patient-label, .clcr-result-reference-label) { font-size: 11px; }
   html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .po4-dzm-proposal-card .clcr-result-value { min-height: 51px; font-size: 41px !important; letter-spacing: -1px; }
-  html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .po4-dzm-proposal-card .clcr-result-value[data-long="true"] { font-size: 29px !important; letter-spacing: -.4px; }
-  html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .po4-dzm-proposal-card .clcr-result-value[data-dense="true"] { font-size: 22px !important; }
-  html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .po4-dzm-proposal-card .po4-dzm-reference-value { min-height: 51px; font-size: 27px !important; }
+  html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .po4-dzm-proposal-card .clcr-result-value[data-long="true"] { font-size: 22px !important; letter-spacing: -.4px; }
+  html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .po4-dzm-proposal-card .clcr-result-value[data-dense="true"] { font-size: 20px !important; }
+  html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .po4-dzm-proposal-card .po4-dzm-reference-value { min-height: 51px; font-size: 22px !important; }
   .po4-dzm-result-copy { font-size: 12px; }
 }
 @media (max-width: 360px) {
@@ -82,8 +82,8 @@ html[data-clcr-workflow-ui="1"][data-clcr-po4-dzm-active="1"] #po4DzmInputCard {
   html[data-clcr-workflow-ui="1"] #clcrResultReport .po4-dzm-proposal-card :is(.clcr-result-patient-label, .clcr-result-reference-label) { min-height: 3em; }
   html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .po4-dzm-proposal-card .clcr-result-value { font-size: 37px !important; }
   html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .po4-dzm-proposal-card .clcr-result-value[data-long="true"] { font-size: 20px !important; }
-  html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .po4-dzm-proposal-card .clcr-result-value[data-dense="true"] { font-size: 20px !important; }
-  html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .po4-dzm-proposal-card .po4-dzm-reference-value { font-size: 24px !important; }
+  html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .po4-dzm-proposal-card .clcr-result-value[data-dense="true"] { font-size: 18px !important; font-stretch: condensed; letter-spacing: -1px; }
+  html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .po4-dzm-proposal-card .po4-dzm-reference-value { font-size: 20px !important; }
 }
 @media (min-width: 980px) {
   html[data-clcr-workflow-ui="1"][data-clcr-po4-dzm-active="1"] #clcrWorkspace { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
@@ -146,9 +146,14 @@ html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .po4-dzm-resul
   .po4-dzm-result-unit, .po4-dzm-reference-unit { font-size: 11px; }
 }
 
-/* Long exact decimals keep their digits together within the same result card. */
-@media (max-width: 760px) {
-  .po4-dzm-result-main:has(.clcr-result-value[data-dense="true"]) { grid-template-columns: minmax(0, 1fr); gap: var(--space-20px); }
-  html[data-clcr-workflow-ui="1"] #clcrResultReport .po4-dzm-result-main:has(.clcr-result-value[data-dense="true"]) :is(.clcr-result-patient-label, .clcr-result-reference-label) { min-height: 0; }
-  html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .po4-dzm-proposal-card .clcr-result-value { white-space: nowrap; overflow-wrap: normal; }
+/* Exact long values stay together in the same fixed-width result card. */
+.po4-dzm-result-main:has(.clcr-result-value[data-dense="true"]),
+.po4-dzm-result-main:has(.clcr-result-reference:not(.clcr-result-reference--unavailable) .po4-dzm-reference-value[data-long="true"]) { grid-template-columns: minmax(0, 1fr); gap: var(--space-20px); }
+html[data-clcr-workflow-ui="1"] #clcrResultReport .po4-dzm-result-main:has(.clcr-result-value[data-dense="true"]) :is(.clcr-result-patient-label, .clcr-result-reference-label) { min-height: 0; }
+@media (max-width: 360px) {
+  .po4-dzm-result-main:has(.clcr-result-value[data-long="true"]),
+  .po4-dzm-result-main:has(.clcr-result-reference:not(.clcr-result-reference--unavailable) .po4-dzm-reference-value[data-compact="false"]) { grid-template-columns: minmax(0, 1fr); gap: var(--space-20px); }
 }
+
+.po4-dzm-reference-bound { display: inline-block; white-space: nowrap; }
+html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .po4-dzm-reference-value[data-long="true"] { flex-wrap: wrap; align-content: center; }

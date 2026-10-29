@@ -21,7 +21,7 @@ describe('PO4 DZM — one card and the actual production assessment', () => {
     expect(main).toContain(`data-clcr-display-value="${shown.valueText}"`);
     expect(main).toContain(`data-clcr-display-unit="${shown.unitText}"`);
     expect(main).toContain(`>${shown.valueText}</strong>`);
-    expect(main).toContain(`>${shown.referenceValue}</strong>`);
+    expect(main.replace(/<[^>]*>/g, "")).toContain(shown.referenceValue);
     expect(main).toContain(`class="po4-dzm-reference-unit">${shown.unitText}</span>`);
     expect(main).toContain('6–12 lat');
     expect(main.match(/class="clcr-result-value"/g)).toHaveLength(1);
@@ -57,7 +57,7 @@ describe('PO4 DZM — one card and the actual production assessment', () => {
     expect(main).toContain('data-clcr-assessment="unassessed"');
     expect(main).toContain('data-clcr-tone="neutral"');
     expect(main).toContain('Brak normy do porównania');
-    expect(main).not.toContain('>130–941</strong>');
+    expect(main.replace(/<[^>]*>/g, '')).not.toContain('130–941');
   });
 
   it('reported daily result retains known 12-hour context without scaling or a reference', () => {
@@ -81,7 +81,7 @@ describe('PO4 DZM — one card and the actual production assessment', () => {
     expect(Number(model.presentation.valueText.replace(',', '.'))).toBeLessThanOrEqual(130);
     expect(model.presentation.valueText).not.toBe('130');
     expect(main).toContain(`>${model.presentation.valueText}</strong>`);
-    expect(main).toContain('>130–941</strong>');
+    expect(main.replace(/<[^>]*>/g, '')).toContain('130–941');
     expect(main).toContain('data-clcr-value="130"');
     expect(main).toContain('data-clcr-tone="warning"');
     expect(persistence.readSnapshot(attribute(html, 'data-clcr-po4-dzm-snapshot'))).not.toBeNull();
