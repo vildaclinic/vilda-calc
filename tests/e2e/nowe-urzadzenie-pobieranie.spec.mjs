@@ -83,6 +83,15 @@ test('Komputer prywatny (powłoka PWA): pobieranie rusza samo, bez pytania; krok
   // inne pobrania — arkusz przypomnień 3 s po odblokowaniu (ten dokument), panele powłoki ładowane w tle (Start,
   // Terminarz — swoje ramki). Dotąd każde z nich pobierało ten sam blob równolegle; teraz czekają, a blob idzie raz.
   const zwyklePobranie = page.evaluate(() => window.VildaSync.syncPull().then((w) => w.action));
+  // W tym samym dokumencie pobranie czeka najpierw na lokalną obietnicę,
+  // więc nie musi jeszcze figurować w kolejce Web Locks. Uruchom osobno
+  // rzeczywiste pobranie w ramce, zamiast polegać na jej timerze integracji.
+  await page.waitForFunction(() => {
+    const panel = document.querySelector('iframe.app-pane[title="Start"]')?.contentWindow;
+    return Boolean(panel?.VildaSync?.syncPull && panel.VildaVault?.isUnlocked());
+  });
+  const pobranieWPanelu = page.locator('iframe.app-pane[title="Start"]').evaluate((ramka) =>
+    ramka.contentWindow.VildaSync.syncPull().then((w) => w.action));
   await expect.poll(() => czekajaceNaPierwsze(page), { message: 'pobranie w ramce panelu czeka na blokadę', timeout: 15_000 }).toBeGreaterThanOrEqual(1);
   expect(bloby(zadania), 'w trakcie — jedno pobranie bloba').toBe(1);
 
@@ -97,6 +106,7 @@ test('Komputer prywatny (powłoka PWA): pobieranie rusza samo, bez pytania; krok
   await expect(okno(page)).toBeVisible();
   expect(await czyAktywne(page)).toBe(true);
   expect(await zwyklePobranie, 'zwykłe pobranie w tym dokumencie czekało na pierwsze').toBe('up-to-date');
+  expect(await pobranieWPanelu, 'pobranie w ramce czekało na pierwsze').toBe('up-to-date');
   expect(bloby(zadania), 'czekające pobrania widzą zapisany ETag — bez drugiego bloba').toBe(1);
   expect(await czekajaceNaPierwsze(page)).toBe(0);
   await okno(page).getByRole('button', { name: 'Przejdź do aplikacji' }).click();
