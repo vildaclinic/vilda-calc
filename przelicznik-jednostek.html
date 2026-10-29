@@ -71,6 +71,7 @@
   <link href="vilda_fsh_d3_ui.css?v=1" rel="stylesheet">
   <link href="vilda_e2_d3_ui.css?v=1" rel="stylesheet">
   <link href="vilda_female_tt_age_ui.css?v=2" rel="stylesheet">
+  <link href="vilda_female_tt_infant_upper_ui.css?v=1" rel="stylesheet">
   <link href="vilda_male_e2_age_ui.css?v=1" rel="stylesheet">
   <link href="lab_history_strip.css?v=2" rel="stylesheet">
 
@@ -113,7 +114,7 @@
   <link rel="icon" type="image/png" sizes="48x48" href="/pwa-icons/icon-48x48.png">
   <link rel="icon" type="image/png" sizes="96x96" href="/pwa-icons/icon-96x96.png">
 
-  <link href="inline_przelicznik_jednostek_00.css?v=7" rel="stylesheet">
+  <link href="inline_przelicznik_jednostek_00.css?v=8" rel="stylesheet">
 
   <script src="vilda_chrome.js?v=194"></script>
   <script src="lucide.min.js?v=1" defer></script>
@@ -358,6 +359,7 @@
             <div id="labFshD3" hidden></div>
             <div id="labE2D3" hidden></div>
             <div id="labFemaleTtAge" hidden></div>
+            <div id="labFemaleTtInfantUpper" hidden></div>
             <div id="labMaleE2Age" hidden></div>
             <div id="labAmhAgeReference" hidden></div>
             <section id="labHormoneLifespan" hidden aria-label="Hormony w ciągu życia"></section>
@@ -492,11 +494,11 @@
   <script src="vilda_puberty_assessment_context.js?v=1"></script>
   <link rel="stylesheet" href="vilda_puberty_assessment_ui.css?v=1">
   <script src="vilda_puberty_assessment_ui.js?v=1"></script>
-  <script src="vilda_lab_puberty_ui.js?v=21"></script>
+  <script src="vilda_lab_puberty_ui.js?v=22"></script>
   <script src="vilda_zrodla_pacjenta.js?v=1"></script>
   <script src="vilda_puberty_source.js?v=13"></script>
-  <script src="vilda_lab_neonatal_context.js?v=4"></script>
-  <script src="vilda_hormone_lifespan_data.js?v=48"></script>
+  <script src="vilda_lab_neonatal_context.js?v=5"></script>
+  <script src="vilda_hormone_lifespan_data.js?v=49"></script>
   <script src="vilda_hormone_lifespan_reference.js?v=10"></script>
   <script src="vilda_hormone_lifespan_observations.js?v=1"></script>
   <script src="vilda_hormone_lifespan_display.js?v=16"></script>
@@ -516,6 +518,9 @@
   <script src="vilda_e2_d3_ui.js?v=1"></script>
   <script src="vilda_female_tt_age.js?v=2"></script>
   <script src="vilda_female_tt_age_ui.js?v=2"></script>
+  <script src="vilda_female_tt_infant_context.js?v=1"></script>
+  <script src="vilda_female_tt_infant_upper.js?v=1"></script>
+  <script src="vilda_female_tt_infant_upper_ui.js?v=1"></script>
   <script src="vilda_male_e2_age.js?v=2"></script>
   <script src="vilda_male_e2_age_ui.js?v=2"></script>
   <script src="lab_pin_result.js?v=11"></script>
@@ -716,8 +721,12 @@
       });
       var includeMinipubertyDays = typeof currentSubstance !== 'undefined' && currentSubstance
         && ['lh', 'fsh', 'amh', 'testosterone_total'].includes(currentSubstance.id);
+      var neonatalOptions = { includeMinipuberty: !!includeMinipubertyDays };
+      if (includeMinipubertyDays && currentSubstance.id === 'testosterone_total' && sex === 'F') {
+        neonatalOptions.includeFemaleTtCalendarAge = true;
+      }
       var neonatalAge = window.VildaLabNeonatalContext
-        ? window.VildaLabNeonatalContext.read(shared, identity, source, { includeMinipuberty: !!includeMinipubertyDays }) : null;
+        ? window.VildaLabNeonatalContext.read(shared, identity, source, neonatalOptions) : null;
       var pretermRule = window.VildaLabPubertyData && window.VildaLabPubertyData.biochemicalPolicy
         && window.VildaLabPubertyData.biochemicalPolicy.pretermGestationalWeeks;
       var testosteroneContext = typeof currentSubstance !== 'undefined' && currentSubstance
@@ -822,6 +831,13 @@
         return known;
       },
       onPatientChange: function () { if (isPubertySubstance(currentSubstance)) valueEl.value = ''; },
+      onAssessmentPreview: function (evaluation) {
+        // Reapply only an active infant presentation after the live pin render.
+        // Reading any other assessment must not redraw or move its chart.
+        if (typeof femaleTtInfantUpperUI !== 'undefined' && femaleTtInfantUpperUI && femaleTtInfantUpperUI.getState()) {
+          updateLifespan(currentSubstance, evaluation);
+        }
+      },
       onChange: function () {
         if (isPubertySubstance(currentSubstance)) {
           if (currentSubstance.id === 'testosterone_total') renderInfo(currentSubstance);
@@ -902,6 +918,17 @@
       }
     });
     window.VildaFemaleTTAgeRuntime = femaleTtAgeUI || null;
+    var femaleTtInfantUpperUI = window.VildaFemaleTTInfantUpperUI && window.VildaFemaleTTInfantUpperUI.mount({
+      host: document.getElementById('labFemaleTtInfantUpper'),
+      onResult: applyFemaleTtInfantPresentation,
+      onActivity: function () {
+        try {
+          var auth = window.VildaAuthUI;
+          if (auth && typeof auth.recordActivity === 'function') auth.recordActivity();
+        } catch (_) { /* A source comparison cannot interrupt frame closing. */ }
+      }
+    });
+    window.VildaFemaleTTInfantUpperRuntime = femaleTtInfantUpperUI || null;
     var maleE2AgeUI = window.VildaMaleE2AgeUI && window.VildaMaleE2AgeUI.mount({
       host: document.getElementById('labMaleE2Age'),
       onActivity: function () {
@@ -941,6 +968,35 @@
       femaleTtAgeUI.clear();
       var host = document.getElementById('labHormoneLifespan');
       if (host) host.hidden = false;
+    }
+    function resetFemaleTtInfantUpper() {
+      if (typeof femaleTtInfantUpperUI !== 'undefined' && femaleTtInfantUpperUI) femaleTtInfantUpperUI.clear();
+    }
+    function applyFemaleTtInfantPresentation(result, presentation) {
+      // Only this live DOM receives the upper-only presentation. The shared
+      // assessment renderer and its serialized reference remain independent.
+      var status = document.getElementById('labResultStatus');
+      if (status) status.querySelectorAll('[data-female-tt-infant-status]').forEach(function (node) { node.remove(); });
+      var block = document.querySelector('#labRangeBlock [data-reference-block="true"]');
+      if (block) block.hidden = !!presentation;
+      var value = document.querySelector('#labResultBig .lab-result-big-value');
+      if (value && value.dataset.femaleTtInfantValue) {
+        value.classList.remove('is-above');
+        delete value.dataset.femaleTtInfantValue;
+      }
+      if (!presentation) return;
+      if (status && presentation.hasResult) {
+        var badge = document.createElement('span');
+        badge.className = 'lab-range-status' + (presentation.status === 'above-upper' ? ' is-above' : '');
+        badge.dataset.femaleTtInfantStatus = 'true';
+        badge.textContent = presentation.statusLabel;
+        status.replaceChildren(badge);
+      }
+      if (value && presentation.hasResult && presentation.displayValue) {
+        value.dataset.femaleTtInfantValue = 'true';
+        value.textContent = presentation.displayValue;
+        value.classList.toggle('is-above', presentation.status === 'above-upper');
+      }
     }
     function resetMaleE2Age() {
       if (typeof maleE2AgeUI === 'undefined' || !maleE2AgeUI) return;
@@ -1083,6 +1139,7 @@
       resetFshD3Context();
       resetE2D3Context();
       resetFemaleTtAge();
+      resetFemaleTtInfantUpper();
       resetMaleE2Age();
       return true;
     }
@@ -1104,6 +1161,7 @@
         resetFshD3Context();
         resetE2D3Context();
         resetFemaleTtAge();
+        resetFemaleTtInfantUpper();
         resetMaleE2Age();
       });
     }
@@ -1399,6 +1457,7 @@
         resetFshD3Context();
         resetE2D3Context();
         resetFemaleTtAge();
+        resetFemaleTtInfantUpper();
         resetMaleE2Age();
         return;
       }
@@ -1539,7 +1598,7 @@
         resetMaleE2Age();
         lifespanUI.clear();
         document.getElementById('labHormoneLifespan').hidden = true;
-        femaleTtAgeUI.update(Object.assign({}, context, {
+        var femaleTtContext = Object.assign({}, context, {
           displayUnit: unitTargetEl.value || unitEl.value,
           measurement: evaluation && evaluation.measurement || null,
           // Display the existing assessment for this exact current person.
@@ -1551,9 +1610,23 @@
           reproductiveContext: input && input.reproductiveContext || null,
           measurementKind: input && input.measurementKind || null,
           contraindicated: context.contraindicated || lifespanAnonymousMainTreatment(source, input)
-        }));
+        });
+        // An infant upper percentile is a separate source contract. Keep the
+        // existing calendar-month age and all six-month protections intact.
+        var infantPolicy = window.VildaHormoneLifespanData && window.VildaHormoneLifespanData.femaleTtInfantUpperPolicy;
+        var infantMode = typeof femaleTtInfantUpperUI !== 'undefined' && femaleTtInfantUpperUI && infantPolicy && Number.isFinite(context.ageYears)
+          && context.ageYears <= infantPolicy.applicationAgeDomain.max;
+        if (infantMode) {
+          femaleTtAgeUI.clear();
+          var infantContext = window.VildaFemaleTTInfantContext.adapt(femaleTtContext, source, evaluation);
+          femaleTtInfantUpperUI.update(infantContext);
+        } else {
+          resetFemaleTtInfantUpper();
+          femaleTtAgeUI.update(femaleTtContext);
+        }
       } else if (maleE2Mode) {
         resetFemaleTtAge();
+        resetFemaleTtInfantUpper();
         lifespanUI.clear();
         document.getElementById('labHormoneLifespan').hidden = true;
         // Reuse the E2 lexer with this analyte's unit map. Exact measurements
@@ -1568,6 +1641,7 @@
         }));
       } else {
         resetFemaleTtAge();
+        resetFemaleTtInfantUpper();
         resetMaleE2Age();
         lifespanUI.update(context);
       }
@@ -4898,6 +4972,7 @@
         resetFshD3Context();
         resetE2D3Context();
         resetFemaleTtAge();
+        resetFemaleTtInfantUpper();
         resetMaleE2Age();
       }
       if (pubertyUI) pubertyUI.setAnalyte(isPubertySubstance(substance) ? substance.id : null);
@@ -5454,6 +5529,7 @@
       resetFshD3Context();
       resetE2D3Context();
       resetFemaleTtAge();
+      resetFemaleTtInfantUpper();
       resetMaleE2Age();
       // Świeża sesja = puste formularze. Pole „Substancja" mogło zostać
       // wypełnione przy inicjalizacji podstrony ze starej preferencji
@@ -5482,6 +5558,7 @@
       resetFshD3Context();
       resetE2D3Context();
       resetFemaleTtAge();
+      resetFemaleTtInfantUpper();
       resetMaleE2Age();
       if (pubertyUI) pubertyUI.reset();
       if (isLifespanSubstance(currentSubstance)) { valueEl.value = ''; showError(''); }
@@ -5491,6 +5568,7 @@
       resetFshD3Context();
       resetE2D3Context();
       resetFemaleTtAge();
+      resetFemaleTtInfantUpper();
       resetMaleE2Age();
       refreshPatientContext();
     });
@@ -5498,6 +5576,7 @@
       resetFshD3Context();
       resetE2D3Context();
       resetFemaleTtAge();
+      resetFemaleTtInfantUpper();
       resetMaleE2Age();
       refreshPatientContext();
     });

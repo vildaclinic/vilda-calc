@@ -1,5 +1,6 @@
 import { expect, test } from '../support/test-czas.mjs';
 import { quickSelect, closePatientEditor } from '../support/lab-puberty-quick.mjs';
+import { expectNoInfantReference } from '../support/female-tt-infant-upper.mjs';
 import {
   host, card, median, sources, curve, patientPoint, sourcePoint, overflowPoint, runtimeState,
   prepare, choose, setQuickAge, loadPatient, expectMedian, expectNoMedian,
@@ -161,7 +162,9 @@ test('female TT source choice follows the full reported age, with no bridge at s
     expect((await runtimeState(page)).context.identityKey).toBe(identity);
   }
   await setQuickAge(page, 0, 5);
-  await expectNoMedian(page);
+  // [5,6) completed months lies outside the new whole-age infant policy too.
+  await expectNoMedian(page, { hidden: true });
+  await expectNoInfantReference(page);
   await expect(alert(page)).toBeHidden();
   await setQuickAge(page, 6, 0);
   await expectMedian(page, .055406420261450574);
