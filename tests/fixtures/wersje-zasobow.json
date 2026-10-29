@@ -876,8 +876,8 @@
   "sha256": "56a45a8d3f3cc4d1428bf902d43f91350b22bbf9f590f42d7e4efe5b85b2cf01"
  },
  "vilda_auth_ui.js": {
-  "v": 514,
-  "sha256": "5f0b2817e71e57e5f59ae7530f26c83515adab136b30eca6084f6e12363f6ff0"
+  "v": 515,
+  "sha256": "b584f920c75a43deca5066a0e59fe77b256b4bb41ce36d5faef1bf12ff402d20"
  },
  "vilda_b64_checklist.js": {
   "v": 2,
@@ -960,8 +960,8 @@
   "sha256": "620b1e147449b87920a9ae5b756bbf62dee9928571838e794e449b680080f63c"
  },
  "vilda_chrome.js": {
-  "v": 193,
-  "sha256": "b25e9cf2798136fb0c521f401b52ceecc6bb9743a9be9ec34678c5a5d8057791"
+  "v": 194,
+  "sha256": "3a6ed6d9381c9ba1146d83d6fc518630a49e4d168e5d279f88df047e68287e9f"
  },
  "vilda_cloud_cache_warm.js": {
   "v": 2,
@@ -1040,8 +1040,8 @@
   "sha256": "5c1a1b10d3c64aea51355e8c9bca9b82948825d3d8f4c5d54b5143f90cc54555"
  },
  "vilda_embedded.css": {
-  "v": 1,
-  "sha256": "bdf475c244ae17c8e9ab3e65eeb40fd80690b5f041b63e3628e5c654b9904039"
+  "v": 2,
+  "sha256": "e4260690eeb2fee98b127f7bb12bedf7e67d7c34b7276a19df0ff9f54e27a9ae"
  },
  "vilda_epicrisis.js": {
   "v": 27,
@@ -1544,8 +1544,8 @@
   "sha256": "fb08b8aa168a2faa7b99b86e261ce8c96c0a4e65947fced039d4ec1d68392181"
  },
  "vilda_reminders.css": {
-  "v": 3,
-  "sha256": "77b292bad2f51aefcf79886884174e2db8cc0cb438f8f0e6e490657be9281f36"
+  "v": 4,
+  "sha256": "798e6dfc16acbf9bfe840303497ba2bfd0b99d8b8e727f6caecd7c7f94906e3d"
  },
  "vilda_reminders_collapse.js": {
   "v": 2,
@@ -1580,16 +1580,16 @@
   "sha256": "bf561188adfe403fa735bef0b88bd2297144ec1fe7909582e0dbb50cd6c99c97"
  },
  "vilda_session_bridge.js": {
-  "v": 116,
-  "sha256": "8b837190e953a9439d121df0a5a94d5e397fcc48ce40174e8802a22186334790"
+  "v": 117,
+  "sha256": "3aa7c130d3e4fe49eaaf94b27044854236579bda06a9bdc29b7098936e08689a"
  },
  "vilda_sga_catchup.js": {
   "v": 2,
   "sha256": "88df01a254e7e660ef2f0394df67320ab93dda66a265b706d99d10fc04a191f8"
  },
  "vilda_shell.css": {
-  "v": 22,
-  "sha256": "7305098b3b3bc523a7ffa424c6caae24375fb6807be47a9be0ebf0c711d36210"
+  "v": 23,
+  "sha256": "40518bc875ca702813fab49ce9d0f50b11bb0afc91eeb952f8ebc9536104acd4"
  },
  "vilda_shell.js": {
   "v": 71,
