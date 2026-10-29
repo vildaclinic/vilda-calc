@@ -19,7 +19,7 @@
  *   bo i tak chcemy zwracać HTML z cache natychmiast.
  */
 
-const SW_VERSION = '1.1.410';
+const SW_VERSION = '1.1.411';
 const CACHE_PREFIX = 'pwa-kalorii';
 const SHELL_CACHE = `${CACHE_PREFIX}-shell-v${SW_VERSION}`;
 const RUNTIME_CACHE = `${CACHE_PREFIX}-runtime`;
@@ -1950,6 +1950,7 @@ const CORE_SHELL_URLS = [
   '/vilda_save_status_indicator.js?v=29',
   '/vilda_save_status_indicator.js?v=30',
   '/vilda_save_status_indicator.js?v=31',
+  '/vilda_save_status_indicator.js?v=32',
   '/vilda_unsaved_guard.js?v=1',
   '/vilda_unsaved_guard.js?v=2',
   '/vilda_unsaved_guard.js?v=3',
@@ -2689,6 +2690,7 @@ const OPTIONAL_ASSETS = [
   '/vilda_shell.js?v=68',
   '/vilda_shell.js?v=69',
   '/vilda_shell.js?v=70',
+  '/vilda_shell.js?v=71',
   '/vilda_shell.css',
   '/vilda_shell.css?v=1',
   '/vilda_shell.css?v=2',
@@ -2911,6 +2913,7 @@ const OPTIONAL_ASSETS = [
   '/custom-fixes.js?v=75',
   '/custom-fixes.js?v=76',
   '/custom-fixes.js?v=77',
+  '/custom-fixes.js?v=78',
   '/reposition.js?v=7',
   '/vilda_klawiatura.js?v=1',
   '/vilda_klawiatura.js?v=2',
@@ -3240,6 +3243,7 @@ const OPTIONAL_ASSETS = [
   '/vilda_data_import_export.js?v=109',
   '/vilda_data_import_export.js?v=110',
   '/vilda_data_import_export.js?v=111',
+  '/vilda_data_import_export.js?v=112',
   '/vilda_baseline_pacjenta.js?v=1',
   '/vilda_baseline_pacjenta.js?v=2',
   '/vilda_baseline_pacjenta.js?v=3',
@@ -3940,6 +3944,7 @@ const OPTIONAL_ASSETS = [
   '/vilda_session_bridge.js?v=113',
   '/vilda_session_bridge.js?v=114',
   '/vilda_session_bridge.js?v=115',
+  '/vilda_session_bridge.js?v=116',
   '/vilda_data_safety_explainer.js?v=5',
   '/vilda_obesity_banner.css?v=6',
   '/vilda_obesity_banner.css?v=7',

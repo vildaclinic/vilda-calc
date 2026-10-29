@@ -1411,3 +1411,92 @@ starcie strony nie zastępuje wieku i daty dawnej wizyty bieżącym dniem. Jawne
 czyszczenie i ochrona przed zapisem kolejki innego pacjenta zachowują swoje reguły.
 Test produkcyjnego adaptera, runtime i modułu daty:
 `tests/unit/persist-loaded-comparison-order.test.mjs`.
+
+## Łatka P-CHIP-POWLOKA / P-CHIP-KLIRENS (2026-10-29)
+
+Zmiany w `vilda_save_status_indicator.js` i `vilda_shell.js` pozostają
+czytelnymi blokami bez ponownej minifikacji pozostałej części artefaktów.
+
+- `normalizeClcrStatusInputs` normalizuje wyłącznie kopie do porównania:
+  domyślne kontrolki pustych kalkulatorów i domyślną 24-godzinną zbiórkę
+  z pochodzeniem `assumed-24h`. Odmienny lub ręcznie podany czas, pochodzenie
+  i wartości badań nadal uczestniczą w porównaniu. Bieżący odcisk i starsza
+  referencja przechodzą tę samą projekcję w `te`.
+- Protokół referencji rozdziela publikację po zapisie/wczytaniu od odczytu po
+  odtworzeniu. `reconcileFromSharedReference` nie zapisuje formularza ani
+  magazynu. Publikacja w pamięci wiąże pacjenta, sekwencję i generację,
+  a późna ramka w stanie `hidden` nie usuwa referencji. Osobny timer
+  uzgodnienia nie anuluje obsługi rzeczywistej
+  edycji; gotowość obejmuje odtworzenie, odblokowanie i publikację bazy.
+- Powłoka wybiera gotowe źródło stanu właściwego pacjenta również na trasach
+  bez własnego wskaźnika. Nagłówek i proxy korzystają z tego samego źródła.
+  Usunięto narzucanie `_forceTransition` ukrytym ramkom bez ich referencji.
+- `vilda_session_bridge.js` doładowuje wskaźnik na pozostałych stronach po
+  modułach auth. Wskaźnik przejmuje tryb tylko do odczytu przed inicjalizacją;
+  nie publikuje ani nie usuwa referencji i nie zatwierdza wspólnych edycji po
+  zapisie karty. Sprawdzanie istnienia natywnego wskaźnika i klasy hosta
+  zachowuje istniejące formularze oraz proxy powłoki.
+- `vilda_data_import_export.js`: `readCurrentClcrCarrier` odczytuje i klonuje
+  bieżący szkic, `preserveCurrentClcrInMainSession` zachowuje całą jego sekcję
+  po scalaniu sesji głównej, a `currentClcrForSessionRestore` wybiera istniejący
+  szkic wyłącznie przy odtwarzaniu sesji. Jawny import pacjenta i odtworzenie
+  zapisanego rekordu zachowują dotychczasową drogę. Regresje producenta sesji,
+  jawnego importu, starszego zapisu i odtworzenia wykonują rzeczywisty importer
+  w `tests/unit/main-session-klirens-authority.test.mjs`.
+- Importer zachowuje czytelny blok własności pól sesji: kopia świeżo wczytanego
+  rekordu jest przypisana do operacji i konsumowana po udanym zapisie.
+  Uzupełniane są tylko pola nieposiadane przez stronę; jawne puste wartości
+  formularza nie są zastępowane. Blok zachowuje częściowe sekcje, historie,
+  wrapper pokwitania i własne pola rozszerzeń. Brakujący PAL starszego rekordu
+  korzysta z istniejących API; uzgodnienie po „Nowym pomiarze” obejmuje tylko
+  wartość wytworzoną przez tę operację. Regresje:
+  `tests/unit/main-session-owned-sections.test.mjs`.
+- Reset DOB jawnego importu używa istniejącego `Bdob0`; odtworzenie sesji
+  czyści własne skalary przy `null` lub pustym tekście, zachowując brakujące
+  klucze starszego formatu i zero. Rzeczywisty moduł DOB oraz importer sprawdza
+  `tests/unit/patient-load-dob-reset.test.mjs`.
+- Projekcja SSI pomija dokładne ustawienia domyślne pustych kart Start oraz
+  trzy techniczne pola rekordu sejfu. Działa symetrycznie na kopiach bieżącej
+  sesji i starszej referencji; nie normalizuje PAL i nie zmienia zapisu.
+  Regresje: `tests/unit/save-status-main-ui-defaults.test.mjs` oraz
+  `tests/e2e/patient-chip-load-origin.spec.mjs` (DocPro → Start → F5).
+- `restoreMainSessionClinicalFields` odtwarza obecne własne pola sekcji do
+  istniejących kontrolek przed pierwszym zapisem sesji. Zachowuje settery i
+  wartości domyślne istniejącego `restoreLoadedState`, bez wywoływania jego
+  operacji wizyty i referencji. Osobne testy:
+  `tests/unit/main-session-clinical-fields-restore.test.mjs`.
+- Własność runtime historii odpowiada kontenerom edytorów oraz istniejącym
+  API danych urodzeniowych/adnotacji, a nie samym globalnym `null`/`[]`.
+  Regresje rzeczywistego kolektora:
+  `tests/unit/main-session-runtime-placeholder.test.mjs`.
+- `normalizeIncomingMainSessionHistory` pracuje wyłącznie na klonie świeżego
+  rekordu. Używa istniejącego sanitizera obserwacji oraz materializuje brakujący
+  widok podstawowy zgodnie z obecną regułą parowania profesjonalnego formularza;
+  wymaga braku `growthBasic` lub własnego `data`, `zscore.resultsMode === true`,
+  niepustych obserwacji zaawansowanych i skończonego wieku poniżej 18 lat.
+  Nie zastępuje jawnie pustych ani niezależnych historii.
+- `completeNativeCurrentVisitAge` i `headlessDobAgeWeeks` delegują do istniejących
+  publicznych metod DOB. Bieżąca i historyczna wizyta zachowują swoje odrębne
+  ścieżki; brakujących pól formularza nie zastępuje nowy wzór ani próg.
+- SSI normalizuje na klonach dokładny pusty model BA, automatyczną dietę zgodnie
+  z istniejącym kontraktem sejfu oraz indeks DOM równy pozycji obserwacji.
+  Nie pomija historii podstawowej. Ręczna dieta, badanie BA i rzeczywista edycja
+  pomiaru nadal zmieniają odcisk. Próby pickera Klirensu i istniejącego Restore:
+  `tests/e2e/patient-chip-klirens-load-origin.spec.mjs`.
+- Autosave sprawdza aktualność panelu przed ścieżką pustego formularza
+  prowadzącą do `clearMainSession`. Jest to ten sam kontrakt co istniejąca
+  odmowa zapisu przez adapter; sam adapter oraz jawny/globalny reset nie
+  otrzymują nowej blokady. Regresja rzeczywistego importera, adaptera i protokołu:
+  `tests/unit/main-session-clear-owner.test.mjs`.
+- `prepareNewMeasurementBasicArchive` używa najnowszego modelu sesji i istniejącego
+  `ensureCurrentMeasurementInHistory` na odłączonej kopii. Jego jednorazowy zapis
+  po zwalidowanym wyborze New kończy się przed referencją SSI. Sprawdza także
+  niezmienność podstawy transakcji, aby ponowienie po błędzie nie przywróciło
+  historii wyczyszczonej w międzyczasie. Test produkcyjnego kolektora, archiwizacji
+  i zdarzenia: `tests/unit/new-measurement-basic-archive.test.mjs`.
+- `custom-fixes.js`: archiwum podstawowe aktualizuje `window.basicGrowthData`,
+  czyli model czytany przez kolektor. Poprzedni alias `growthBasicData` nie był
+  jego źródłem; zmianę ograniczono do tego bloku, bez ponownej minifikacji.
+
+Szczegóły diagnozy i rozdzielenie obserwacji przeglądarkowych od deterministycznej
+regresji wyścigu: `docs/PATIENT_CHIP_NAVIGATION_AUDIT.md`.
