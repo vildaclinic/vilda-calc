@@ -77,6 +77,9 @@ test('A7 cold offline: current assets, native completion, next step and persiste
     await outcome.getByLabel('Termin kolejnego kroku', { exact: true }).fill('2027-02-02');
     await outcome.getByRole('button', { name: 'Zapisz wykonanie', exact: true }).click();
     await expect(dialog.locator('.vb22-notice')).toContainText('Zapisano w Karcie pacjenta');
+    await expect(dialog.locator('[data-tab=active]')).toHaveAttribute('aria-pressed', 'true');
+    await expect(dialog.locator('[data-tab=history]')).toHaveAttribute('aria-pressed', 'false');
+    await expect(dialog.locator('.vb22-detail-title')).toHaveText('Fikcyjne MR offline B22');
     const html = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
     const auth = fs.readFileSync(path.join(root, 'vilda_auth_ui.js'), 'utf8');
     const cssEntry = auth.match(/link\.href = '(vilda_reminders\.css\?v=\d+)'/);
@@ -99,6 +102,7 @@ test('A7 cold offline: current assets, native completion, next step and persiste
     await page.waitForFunction(() => window.VildaVault?.isUnlocked());
     const stored = await page.evaluate(async ({ id, patientId }) => ({
       parent: await window.VildaVault.getPatientNote(id), notes: await window.VildaVault.listPatientNotesForPatient(patientId),
+      history: await window.VildaVault.listReminderHistory(),
     }), { id, patientId: ids.a });
     expect(stored.parent.completedAtISO).toBeTruthy();
     expect(stored.parent.body).toContain('Fikcyjny pierwotny opis offline.');
@@ -107,6 +111,8 @@ test('A7 cold offline: current assets, native completion, next step and persiste
       patientId: ids.a, title: 'Fikcyjna kontrola po MR offline', completedAtISO: null,
       reminderContext: { parentId: id },
     });
+    expect(stored.history.map(note => note.id)).toEqual([id]);
+    expect(stored.history[0]).toMatchObject({ patientId: ids.a, patientName: 'Fikcyjny Antoni', body: stored.parent.body });
     await expect(page.locator('dialog.vb22')).toHaveCount(0);
   } finally {
     if (context) await context.close().catch(() => {});
