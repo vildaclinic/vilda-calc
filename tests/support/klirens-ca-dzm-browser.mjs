@@ -1,5 +1,5 @@
 import { expect } from '@playwright/test';
-import { enterGuest, prepareBrowser } from './klirens-patient-record.mjs';
+import { enterGuest, prepareBrowser, waitForCalculatorReady } from './klirens-patient-record.mjs';
 
 // Fictional inputs only. Real encrypted vault objects remain locked throughout.
 export const card = page => page.locator('#clcrResultReport .clcr-result-card[data-clcr-series="Ca_mgkg"]');
@@ -29,6 +29,7 @@ export async function openCalculator(page, width = 1440) {
 }
 
 export async function applySession(page, session, formulaId = 'Ca_mgkg') {
+  await waitForCalculatorReady(page);
   expect(await page.evaluate(value => window.applyClcrSessionSnapshot(value, {
     source: 'e2e-ca-dzm-fictional-only', update: true, dispatchEvents: false, preserveAcrossVersions: true,
   }), session)).toBe(true);

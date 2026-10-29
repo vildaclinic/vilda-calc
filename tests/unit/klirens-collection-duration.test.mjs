@@ -54,6 +54,52 @@ function mountedDurationView(initialSource = 'assumed-24h', initialHours = '24',
 }
 
 describe('Shared DZM numeric duration — new collections versus historical edits', () => {
+  it('captures reset/new blanks as the same24h used by production readers without mutating the editor values', () => {
+    const api = harness().ClcrCollectionDuration;
+    const values = { Scr: '0.4', formulaPicker: 'ckid_u25', Cl24DurationHours: '24', Cl24DurationSource: 'assumed-24h',
+      CA_collectionHours: '', CA_collectionSource: 'assumed-24h', UA_collectionHours: '', UA_collectionSource: 'assumed-24h',
+      MG_collectionHours: '', MG_collectionSource: 'assumed-24h', PO4_collectionHours: '', PO4_collectionSource: 'assumed-24h', PO4_durationNeedsConfirmation: 'false' };
+    const original = structuredClone(values), captured = api.normalizeCapturedInputs(values);
+    expect(values).toEqual(original);
+    expect(captured).not.toBe(values);
+    expect([captured.Scr, captured.formulaPicker]).toEqual(['0.4', 'ckid_u25']);
+    for (const fieldId of api.HOURS_FIELDS) {
+      const flag = fieldId === 'Cl24DurationHours' ? 'durationNeedsConfirmation' : fieldId.split('_')[0] + '_durationNeedsConfirmation';
+      expect(captured[fieldId]).toBe('24');
+      expect(captured[api.SOURCES[fieldId]]).toBe('assumed-24h');
+      expect(captured[flag]).toBe(fieldId === 'PO4_collectionHours' ? 'false' : false);
+      expect(api.fromValues(captured, {}, { fieldId })).toMatchObject({ valid: true, hours: 24, assumed: true });
+      expect(api.fromValues(values, {}, { fieldId })).toMatchObject({ valid: true, hours: 24, assumed: true });
+    }
+    expect(api.normalizeCapturedInputs(captured)).toEqual(captured);
+  });
+  it('capture does not invent unrelated duration fields in a minimal or old input set', () => {
+    const api = harness().ClcrCollectionDuration;
+    const old = { Scr: '0.4', collectionStartAt: '2026-10-24T08:00', collectionEndAt: '2026-10-25T08:00' };
+    expect(api.normalizeCapturedInputs(old)).toEqual(old);
+    expect(api.normalizeCapturedInputs({})).toEqual({});
+  });
+  it.each(['Cl24DurationHours', 'CA_collectionHours', 'UA_collectionHours', 'MG_collectionHours', 'PO4_collectionHours'])('%s capture keeps explicit invalid and historical duration evidence without substituting24h', fieldId => {
+    const api = harness().ClcrCollectionDuration, sourceId = api.SOURCES[fieldId];
+    const flag = fieldId === 'Cl24DurationHours' ? 'durationNeedsConfirmation' : fieldId.split('_')[0] + '_durationNeedsConfirmation';
+    for (const raw of ['0', '-1', 'invalid', '1e-9999']) {
+      const captured = api.normalizeCapturedInputs({ [fieldId]: raw, [sourceId]: 'hours' });
+      expect(captured).toEqual({ [fieldId]: raw, [sourceId]: 'hours', [flag]: false });
+      expect(api.fromValues(captured, {}, { fieldId })).toMatchObject({ valid: false, invalid: true });
+    }
+    for (const raw of ['', '0', '-1', 'invalid']) {
+      const values = { [fieldId]: raw, [sourceId]: 'historical-missing', [flag]: true };
+      expect(api.normalizeCapturedInputs(values)).toEqual(values);
+      expect(api.fromValues(api.normalizeCapturedInputs(values), {}, { fieldId }).valid).toBe(false);
+    }
+    const unknown = api.normalizeCapturedInputs({ [fieldId]: '', [sourceId]: 'historical-missing' });
+    expect(unknown).toEqual({ [fieldId]: '', [sourceId]: 'historical-missing', [flag]: true });
+    expect(api.fromValues(unknown, {}, { fieldId })).toMatchObject({ valid: false, missing: true });
+    for (const metadata of [false, 'false', true, 'true']) {
+      const values = { [fieldId]: '', [sourceId]: metadata === true || metadata === 'true' ? 'historical-missing' : 'assumed-24h', [flag]: metadata };
+      expect(api.normalizeCapturedInputs(values)[flag]).toBe(metadata);
+    }
+  });
   it.each([undefined, null, '', '   '])('new blank %s really resolves to assumed24h', value => {
     const api = harness().ClcrCollectionDuration;
     expect(api.resolveHours(value)).toMatchObject({ valid: true, hours: 24, minutes: 1440, source: 'assumed-24h', assumed: true, missing: false, invalid: false });
@@ -130,7 +176,7 @@ describe('Shared DZM numeric duration — new collections versus historical edit
     hours.value = '24'; hours.emit('input');
     expect(computed[2]).toMatchObject({ valid: true, hours: 24, source: 'hours', assumed: false, confirmation: false });
   });
-  it.each(['Cl24DurationHours', 'CA_collectionHours', 'UA_collectionHours', 'MG_collectionHours'])('%s requires a positive historical duration before blank can default again and resets without leaking the old flag', fieldId => {
+  it.each(['Cl24DurationHours', 'CA_collectionHours', 'UA_collectionHours', 'MG_collectionHours', 'PO4_collectionHours'])('%s requires a positive historical duration before blank can default again and resets without leaking the old flag', fieldId => {
     const api = harness().ClcrCollectionDuration, ui = controls();
     const sourceId = api.SOURCES[fieldId], flagId = fieldId === 'Cl24DurationHours' ? 'durationNeedsConfirmation' : fieldId.split('_')[0] + '_durationNeedsConfirmation';
     const hours = ui.add(fieldId, ''), source = ui.add(sourceId, 'historical-missing');
@@ -205,12 +251,19 @@ describe('Shared DZM numeric duration — new collections versus historical edit
     expect(result.measuredClearanceReference.durationSource).toBe('assumed-24h');
     expect(() => w.ClcrSavedLegacyCalculator.recalculate('cl24', { ...specimen, Ucr: '100', Scr: '1', ScrUnit: 'mg/dl', Cl24DurationHours: '0' })).toThrow('większy od 0');
   });
-  it.each([['Na_mmol_d', 75], ['K_mmol_d', 30], ['PO4_mgkg', 750], ['Prot_mgkg', 240], ['Ox_mgkg', 1.25], ['Cit_mgkg', 1.25]])('actual legacy %s producer no longer needs dates or six answers', (formula, expected) => {
+  it.each([['Na_mmol_d', 75], ['K_mmol_d', 30], ['Prot_mgkg', 240], ['Ox_mgkg', 1.25], ['Cit_mgkg', 1.25]])('actual legacy %s producer no longer needs dates or six answers', (formula, expected) => {
     const w = harness();
     expect(w.ClcrSavedLegacyCalculator.recalculate(formula, specimen).valueNum).toBe(expected);
     expect(w.ClcrSavedLegacyCalculator.recalculate(formula, { ...specimen, Cl24DurationHours: '12' }).valueNum).toBe(expected * 2);
     expect(() => w.ClcrSavedLegacyCalculator.recalculate(formula, { ...specimen, Cl24DurationHours: '', Cl24DurationSource: 'historical-missing' })).toThrow('nie został utrwalony');
     expect(() => w.ClcrSavedLegacyCalculator.recalculate(formula, { ...specimen, ui_collectionNoMissedVoids_answer: 'no' })).toThrow();
+  });
+  it('audited phosphorus editing preserves captured hours and requires an unknown historical duration', () => {
+    const api = harness().ClcrSavedLegacyCalculator;
+    expect(api.recalculate('PO4_mgkg', { ...specimen, PO4_collectionHours: '24' }).valueNum).toBe(750);
+    expect(api.recalculate('PO4_mgkg', { ...specimen, Cl24DurationHours: '12' }).valueNum).toBe(1500);
+    expect(() => api.recalculate('PO4_mgkg', specimen)).toThrow(/czas/i);
+    expect(() => api.recalculate('PO4_mgkg', { ...specimen, PO4_collectionHours: '24', ui_collectionNoMissedVoids_answer: 'no' })).toThrow();
   });
   it('never normalizes measured pH by time', () => {
     const w = harness();

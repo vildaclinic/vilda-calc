@@ -180,6 +180,18 @@
   }
   function recalculate(formulaId, values = {}, parameterKey = formulaId, context = {}) {
     parameterKey = String(parameterKey).replace(/^clcr:/, "");
+    if (formulaId === "PO4_mgkg") {
+      const engine = requiredModule("VildaClcrPo4Dzm"), policy = requiredModule("ClcrPo4DzmReferenceData").DEFAULT_POLICY;
+      const persistence = requiredModule("ClcrPo4DzmPersistence");
+      const capturedProfile = context.referenceProfileId || context.profileId;
+      if (capturedProfile && ![root.ClcrPo4DzmReferenceData.DEFAULT_POLICY.id, root.ClcrResultReferenceData?.PROFILE?.id].includes(capturedProfile)) throw new Error("Zapisany profil odniesienia nie jest dostępny do edycji tego pomiaru.");
+      const prepared = persistence.prepareValues(values, context);
+      const result = engine.evaluate(engine.inputFromValues(prepared, context), policy);
+      if (!result.valid) throw new Error(result.error || "Sprawdź dane potrzebne do obliczenia wydalania fosforanów.");
+      const datapoint = { id: parameterKey, sourceFormulaId: formulaId, label: "Wydalanie fosforanów (Pi, DZM)", testKey: "clcr:PO4_mgkg", category: null, comparator: "", po4DzmSnapshot: result };
+      persistence.augmentDatapoint({ getAttribute: () => JSON.stringify(result) }, datapoint);
+      return datapoint;
+    }
     if (formulaId === "Mg_mgkg") {
       const engine = requiredModule("VildaClcrMgDzm"), policy = requiredModule("ClcrMgDzmReferenceData").DEFAULT_POLICY;
       const persistence = requiredModule("ClcrMgDzmPersistence");

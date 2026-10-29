@@ -26,6 +26,9 @@
     // interpretation. Editing it is an explicit correction, not a new
     // specimen checklist or an inferred patient diagnosis.
     if (formulaId === "Ca_mgkg" && field.id === "CA_clinicalMode") return true;
+    // Phosphorus stores an explicit unit for every quantity. A correction in
+    // Details must let the clinician fix a mis-entered laboratory unit too.
+    if (formulaId === "PO4_mgkg" && ["PO4_concentrationUnit", "PO4_volumeUnit", "PO4_reportedUnit", "PO4_outputUnit"].includes(field.id)) return true;
     if (["age", "ageMonths", "sex"].includes(field.id) || field.id === "ageDays" && formulaId !== "neonatal_egfr" || unitIds.has(field.id)) return false;
     if (/unit|Assay|Standardization|creatinineState|suspectedAKI|collectionSource|DurationSource|durationNeedsConfirmation/i.test(field.id) || /_entry_mode$/i.test(field.id)) return false;
     // Routine assumptions and optional specimen/therapy facts stay exactly as

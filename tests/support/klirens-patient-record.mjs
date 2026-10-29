@@ -1,8 +1,9 @@
 import { expect } from '@playwright/test';
 
 // Only fictional patient data. These tests never create/unlock a real vault.
-// The explicit facade replaces I/O only; production clinical code, note writers,
-// shared saved-result readers, renderers and navigation remain untouched.
+// The explicit facade replaces encrypted I/O and its session-presence probe;
+// production clinical code, note writers, shared saved-result readers,
+// renderers and navigation remain untouched.
 export const PATIENT_ID = 'fictional-klirens-record-patient';
 export const OTHER_PATIENT_ID = 'fictional-klirens-record-other';
 export const PATIENT = {
@@ -43,10 +44,15 @@ export async function enterGuest(scope, { calculator = false } = {}) {
   const guest = scope.getByRole('button', { name: 'Korzystaj bez logowania', exact: true });
   if (await guest.isVisible()) await guest.evaluate(button => button.click());
   await scope.waitForFunction(() => !document.documentElement.classList.contains('vilda-auth-locked'));
-  if (calculator) await scope.waitForFunction(() => document.documentElement.classList.contains('clcr-workflow-ready') &&
-    typeof window.applyClcrSessionSnapshot === 'function' && Boolean(window.ClcrVisitSave) && window.clcrIsResetting !== true);
+  if (calculator) await waitForCalculatorReady(scope);
   const decline = scope.locator('#consent-decline');
   if (await decline.isVisible()) await decline.click();
+}
+
+export async function waitForCalculatorReady(scope) {
+  await scope.waitForFunction(() => document.documentElement.classList.contains('clcr-workflow-ready') &&
+    typeof window.applyClcrSessionSnapshot === 'function' && Boolean(window.ClcrUiWorkflow && window.ClcrVisitSave) &&
+    window.clcrIsResetting !== true);
 }
 
 export async function installMemoryVault(scope, { patientId = PATIENT_ID, select = true } = {}) {
@@ -198,6 +204,11 @@ export async function installMemoryVault(scope, { patientId = PATIENT_ID, select
     // Align its public UI state without invoking a real login/logout transition;
     // the original encrypted vault objects remain locked and are checked below.
     window.VildaGuestMode = false;
+    // Frame sync compares these two public authentication predicates on every
+    // sibling auth ping. The fictional vault and its session must agree or a
+    // delayed guest-mode ping reloads this document and discards the fixture.
+    // This facade exposes presence only; no real session key is created.
+    window.VildaSession.hasSessionKey = () => store.unlocked;
     // A private UI fixture does not create real audit-log writes.
     window.VildaAuditLog = { log: () => {} };
     window.__clcrRecordFixture = {
@@ -285,6 +296,9 @@ export async function saveVisible(scope, clinicalDateISO = '2026-10-25') {
 export async function shellFrame(page, title) {
   const iframe = page.locator(`iframe.app-pane[title="${title}"]`);
   await expect(iframe).toBeVisible();
+  // The shell shows an iframe before its document has loaded. Its own loading
+  // overlay is cleared by the active pane's production load handler.
+  await page.waitForFunction(() => document.getElementById('appShellSkeleton')?.hidden === true);
   const frame = await (await iframe.elementHandle()).contentFrame();
   if (!frame) throw new Error(`Missing actual app frame: ${title}`);
   return frame;
@@ -303,7 +317,8 @@ export async function openShellCalculator(page, { width = 1440, select = true } 
   const start = await shellFrame(page, 'Start');
   await enterGuest(start); await installMemoryVault(start, { select });
   await page.evaluate(() => { window.location.hash = '#/klirens'; });
-  await expect(page.locator('iframe.app-pane[title="Kalkulator klirensu"]')).toBeVisible();
+  await shellFrame(page, 'Kalkulator klirensu');
+  await waitForCalculatorReady(calculator);
   return { calculator, start };
 }
 
