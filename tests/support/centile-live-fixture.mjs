@@ -93,7 +93,11 @@ export async function shellFrame(page, title = 'Start') {
 
 export async function readyForPatient(frame) {
   await frame.waitForFunction(() => window.VildaVault?.isUnlocked()
-    && window.VildaAuthUI && typeof window.collectUserData === 'function'
+    && window.VildaAuthUI?.isBootReady()
+    && window.VildaPersistRuntime?.getSnapshot().initialized
+    && ['app:main-session-restore-init', 'app:estimated-intake-init', 'app:intake-live-wiring']
+      .every(name => window.VildaInit?.isInitialized(name))
+    && typeof window.collectUserData === 'function'
     && typeof window.applyLoadedData === 'function' && typeof window.clearAllData === 'function'
     && !document.documentElement.classList.contains('vilda-auth-locked'));
   await czekajNaOdtworzenieSesji(frame);
@@ -107,6 +111,15 @@ export async function readyForPatient(frame) {
       mode.dispatchEvent(new Event('change', { bubbles: true }));
     }
   });
+  // The restore finalizer uses another animation frame and setTimeout(0)
+  // after the session helper's two frames. PRO setup can also queue work.
+  // Load the patient only after these real startup guards have cleared.
+  await frame.waitForFunction(() => !window.__vildaPersistRestoring && !window.__vildaLustroWpis
+    && !window.__vildaSuspendIntakeUserReset
+    && !window.VildaDataImportExport.isMainSessionRestorePending()
+    && !window.VildaDataImportExport.isMainSessionAutosavePaused()
+    && !window.VildaPersistence.isAutosaveSuppressed()
+    && !window.VildaDobAge.restorePending());
 }
 
 export async function createFictionalVault(page, { shell = false } = {}) {
