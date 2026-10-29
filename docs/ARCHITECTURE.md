@@ -174,6 +174,93 @@ z identyfikatorem pacjenta i sekwencją importu dopiero po archiwizacji poprzedn
 pomiaru. Wskaźnik ustanawia wtedy bazę dla tej operacji; samo odświeżenie strony
 nie zatwierdza niezapisanych edycji.
 
+Referencja `vilda-save-ref-v1` jest wspólna dla ramek tej samej karty.
+Publikacja wiąże w pamięci identyfikator pacjenta, sekwencję i generację
+operacji; dokumenty dodatkowo chroni protokół właściciela panelu.
+Lokalne `hidden` nie uprawnia do usunięcia referencji.
+`reconcileFromSharedReference()` przejmuje aktualny odcisk i metadane oraz
+porównuje wspólną sesję bez zapisywania formularza. Dotyczy to również ponownego
+zapisu tego samego pacjenta w innej ramce. Uzgodnienie czeka na odtworzenie
+sesji i zakończenie publikacji bazy, nie anuluje kolejki rzeczywistej edycji
+i zachowuje stan trwającego zapisu lub błędu. Powłoka odzwierciedla gotowy
+wskaźnik właściwego pacjenta także na trasach bez własnego wskaźnika;
+nie wymusza stanów ukrytych ramek przez `_forceTransition()`.
+Autosave importera również sprawdza `VildaPanelPacjent.nieaktualny()` przed
+oceną pustego formularza. Nieaktualny panel nie może po `visibilitychange`
+przejść do automatycznego usunięcia aktualnej sesji głównej. Jawne czyszczenie
+i globalny reset konta zachowują odrębne dotychczasowe ścieżki adaptera.
+
+Puste kalkulatory Klirensu materializują domyślne kontrolki przy otwarciu.
+W projekcji porównawczej domyślny tryb stężenia, nieokreślone metadane i
+24 godziny z pochodzeniem `assumed-24h` odpowiadają brakowi tych kontrolek.
+Ręczny czas zbiórki (także 24 godziny), jego pochodzenie, odmienne ustawienia
+i oznaczenia nadal są porównywane. Normalizacja dotyczy wyłącznie kopii
+odcisku bieżącego i referencyjnego. Analiza przyczyn i zakres sprawdzenia:
+[Chip pacjenta i nawigacja powłoki](PATIENT_CHIP_NAVIGATION_AUDIT.md).
+
+`vilda_session_bridge.js` doładowuje wspólny wskaźnik i jego CSS na stronach
+bez formularza po gotowości modułów auth, w trybie `__vildaSaveStatusReadOnly`.
+Taki odbiorca nie publikuje ani nie usuwa referencji, nie zapisuje formularza
+i nie zatwierdza sesji po powiadomieniach o zapisie karty. Host `app.html`
+zachowuje własne proxy, a istniejące wskaźniki formularzy zachowują swój tryb.
+Mostek sprawdza także istniejący tag natywnego skryptu, który jeszcze się nie
+wykonał: `defer` działa przy `readyState=interactive`, a wcześniejsze
+powiadomienie auth nie może przełączyć formularza w tryb tylko do odczytu.
+
+Dedykowana sesja Klirensu jest autorytatywna względem swojej kopii w sesji
+głównej. `saveMainSessionNow` po uzupełnieniu pól innych stron zachowuje jej
+aktualną całą sekcję, także puste wejścia i wyczyszczone wyniki. Odtwarzanie
+sesji głównej korzysta z istniejącego bieżącego szkicu Klirensu; brak takiego
+szkicu zachowuje zgodność ze starszym zapisem tylko w sesji głównej. Jawne
+wczytanie pacjenta i „Odtwórz zapis” nadal przyjmują wybrany rekord.
+
+Przy jawnym wczytaniu importer zachowuje w pamięci kopię wybranego rekordu
+przypisaną do operacji. Pierwszy zapis sesji uzupełnia z niej tylko pola,
+których bieżąca strona nie posiada. Własne kontrolki, również jawnie puste,
+mają pierwszeństwo; poprzedni pacjent nie jest źródłem uzupełnienia. Dotyczy
+to zwłaszcza wczytania na DocPro i powrotu na Start. Brakujący w starszym
+rekordzie PAL korzysta z istniejących API, a automatyczna wartość wytworzona
+przy imporcie jest uzgadniana przed referencją „Nowego pomiaru”. Istniejące
+i ręczne wartości pozostają zachowane.
+
+Wyjątek dla potraw zachowuje wcześniejszy kontrakt zgodnej sesji: na stronie
+bez edytora brak `foods` albo pusty wrapper `snacks`/`meals` nie usuwa nowszych
+potraw osoby o zgodnej nazwie i dacie urodzenia. Niepusty rekord, jawne
+wyczyszczenie i bieżący edytor mają pierwszeństwo. Ten wyjątek nie obejmuje
+pozostałych sekcji; ponowienie odczytuje najnowszą sesję, bez zachowywania
+przestarzałej kopii potraw w źródle importu.
+
+Sama obecność globalnej pustej listy terapii nie dowodzi wyczyszczenia:
+monitory tworzą takie listy również przed odczytem magazynu. Brak klucza lub
+API zachowuje dotychczasowe uzupełnienie z sesji; jawne `[]` właściwego modułu
+pozwala zachować usunięcie ostatniego punktu. GH zachowuje własną istniejącą
+regułę pierwszeństwa magazynu modułu.
+
+Odtwarzanie skalarów rozróżnia brak klucza od jawnego `null`/pustej wartości:
+te ostatnie czyszczą rozgrzany formularz. Jawna zmiana rekordu resetuje DOB
+przed jego zastosowaniem, również gdy nowy rekord nie zawiera daty.
+Domyślne ustawienia pustych kart Start i techniczne metadane sejfu są
+normalizowane wyłącznie na kopii do porównania; PAL nadal jest porównywany.
+Tak samo traktowane są pusty model BA, automatyczny `dietLevel` według
+istniejącej semantyki sejfu i liczbowy `domIndex` równy pozycji wiersza.
+Ręczny wybór diety, rzeczywiste badanie BA, kolejność i dane pomiarów pozostają
+porównywane. Historia podstawowa nie jest pomijana nawet przy identycznej kopii
+historii zaawansowanej; jej osobne wyczyszczenie nadal stanowi zmianę.
+
+Brakująca sekcja starszego zapisu jest inicjalizowana na kopii świeżego rekordu
+przed pierwszą referencją, zgodnie z istniejącą normalizacją i parowaniem historii:
+tylko brak `growthBasic` lub jego własnego `data`, profesjonalny tryb
+`zscore.resultsMode === true`, niepusta historia zaawansowana i skończony wiek
+poniżej 18 lat spełniają warunki tej materializacji.
+Jawne `null`, puste listy i niezależne pomiary nie są takim brakiem.
+Strona bez pola DOB używa istniejącego API wieku i tygodni bieżącej wizyty;
+odtworzenie zapisanej wizyty zachowuje jej historyczny wiek.
+Po „Nowym pomiarze” bieżący punkt jest archiwizowany także w podstawowym modelu
+przed zapisem referencji, również na DocPro bez edytora tej historii.
+Jednorazowy zapis korzysta z najnowszej historii i istniejącej funkcji
+archiwizacji; zmiana podstawy, pacjenta lub sekwencji unieważnia oczekującą
+transakcję. Nie kopiuje całej historii zaawansowanej na niezależną podstawową.
+
 `vilda_persist_runtime.js` przyjmuje zapisany kontekst wizyty przed odtwarzaniem
 pól i przeliczaniem wieku. Brak `lastLoadedData` przed pierwszą próbą odtworzenia
 lub podczas trwającego odtwarzania nie usuwa zachowanego `loadedComparisonData`.

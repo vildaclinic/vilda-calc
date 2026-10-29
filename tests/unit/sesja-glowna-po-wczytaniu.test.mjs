@@ -209,7 +209,7 @@ describe('P-POWLOKA-PANELE — sesja główna po wczytaniu nie czeka na zdarzeni
     // pagehide z force
     expect(ie).toContain('r.addEventListener("pagehide",()=>oe(Object.assign({},t,{force:!0})),{capture:!0})');
     // strażnicy zapisu: odtwarzanie w toku, sesja jeszcze nieodtworzona, pauza tylko dla zwykłego zapisu
-    expect(ie).toContain('function oe(e){const t=pe(e),a=!!(t&&t.force);if(!ge(t)||Gp_r(t)||Gp_k(t)||!a&&Be(t))return!1;');
+    expect(ie).toContain('function oe(e){const t=pe(e),a=!!(t&&t.force);if(mainSessionPanelIsStale())return!1;if(!ge(t)||Gp_r(t)||Gp_k(t)||!a&&Be(t))return!1;');
     expect(ie).toContain('function Gp_k(e){if(Ke)return!1;');
     expect(ie).toContain('if(!Re(n))return a?!1:(re(t),!1);');
     // planowanie zapisu z input/change dokładnie jak w audyt — bez ponawiania w oknie zawieszenia
