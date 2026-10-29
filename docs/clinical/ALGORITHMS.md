@@ -19863,6 +19863,443 @@ a lekarz poprawia jedno z miejsc. Wartość dni spoza 0–6 w rekordzie nie jest
 
 **Wersje.** `sga_birth_module.js?v=10→11`; SW 1.1.168 → **1.1.169**.
 
+## Wizyta dana do kosza znika też ze starej karty po „Scal pacjentów”, a zostawiona ostatnia wizyta karty dostaje nowszą treść (P-KOSZ-PO-KLUCZU, PR-E3, SW 1.1.407, `vilda_vault.js` 232, 2026-10-29)
+
+**Zmiana kliniczna: tak** — wzory, progi, jednostki i interpretacje bez zmian; zmienia się, które wizyty i z jaką treścią
+(masa, wzrost, gwiazdka) zostają w kartach i w koszu po synchronizacji, gdy: (1) wizytę dano do kosza w karcie
+scalonej („Scal pacjentów”), a inne urządzenie, które o scaleniu nie wiedziało, ma ją jeszcze w starej karcie
+(duplikacie); (2) wpis kosza oszczędza wizytę, bo jest ostatnią wersją karty; (3) tę samą wizytę poprawiono w jednej
+karcie, a przypięto w drugiej; (4) wizytę przypiętą (albo poprawioną później) w starej karcie przycięła retencja na
+innym urządzeniu, a trzecie urządzenie scaliło karty; (5) „Przywróć” wizyty, którą żywa karta docelowa scalenia trzyma
+jako ostatnią wersję (przywrócenie w miejscu, bez pustej karty). Serwer, `vilda_sync.js`, schemat IndexedDB (wersja bazy
+5), format listy nagrobków i ładunku, sygnatura API `window.VildaVault`, import i moduły kosza bez zmian; zmienia się
+scalanie synchronizacji (`Bkz_scalKoniec`, faza przeniesień wersji wspólnej dwóm kartom, licznik usuniętych kart w `Le`)
+i „Przywróć” wizyty, która leży na urządzeniu pod inną kartą niż karta jej wpisu kosza.
+
+**Decyzja właściciela.** D7 = a (2026-10-21, decyzje S4: „E3: następny PR po S4, przed etapem 2 synchronizacji”) i Q8
+(„wersja zostawiona wyjątkiem ostatniej wersji karty przyjmuje nowszą treść?” — rekomendacja „tak”, przyjęte „tak,
+akceptuję wszystko”). Kolejność PR-S4 → PR-PRZ0 → PR-E4a → PR-E3; start: „A potem ruszaj z PR-E3” (2026-10-28, po
+scaleniu PR-E4a). **Przyjęte przez właściciela** (2026-10-29, „ok, przyjmuję P1-P7”): P1 — stary duplikat karty, któremu inne urządzenie dało
+do kosza ostatnią wizytę, znika z listy pacjentów na wszystkich urządzeniach (wizyta z poprawką jest w koszu, „Przywróć”
+oddaje ją do karty scalonej; inne wizyty, które to urządzenie dało do kosza w starym duplikacie, zostają w koszu
+bez karty i bez „Przywróć” — jak dotąd przy koszu przed scaleniem); P2 — przycięcie (retencja) karty scalonej usuwa te same nieprzypięte wizyty także ze
+starego duplikatu (i odwrotnie), a wizyta przypięta albo poprawiona później niż przycięcie zostaje — także wtedy, gdy
+przypięto ją w starym duplikacie na urządzeniu, które o scaleniu nie wiedziało: przechodzi wtedy do karty scalonej;
+P3 — poprawka i gwiazdka tej samej wizyty z dwóch kart łączą się jak w jednej karcie
+(E4a-Cpin; przy odmowie — wycofanie samej tej reguły osobną zmianą); P4 — wybór, którą z dwóch wizyt zostawić, gdy dwa
+urządzenia offline dają do kosza różne wizyty jedynej pary (E1) — poza tym PR; P5 — kosz-po-2 (niżej) zostaje znanym
+ograniczeniem; P6 — notatki dopisane do starej karty na urządzeniu, które o scaleniu nie wiedziało, zostają bez karty
+(niżej), przeniesienie ich do karty scalonej — osobna decyzja; N1 (informacja) — w jednym scenariuszu zestawu
+równoważności (we wszystkich jego 30 kolejnościach) późniejsza poprawka z innego urządzenia (58 kg) nie jest już
+nadpisywana starszą treścią z kosza (52 kg): zostaje 58 kg z gwiazdką; P7 — wizyta przypięta (albo poprawiona)
+w duplikacie, który wrócił po „Scal pacjentów” i który lekarz potem świadomie usunął („Usuń pacjenta”), wraca do karty
+scalonej, gdy trzecie urządzenie przycięło historię tego duplikatu (niżej, „Ograniczenia”) — przyjęte zgodnie
+z rekomendacją (ten sam pacjent, nic nie ginie, wizytę można znów dać do kosza; alternatywą było wycofanie reguły
+„wizyta, która przeżywa przycięcie, idzie za scaleniem”, a wtedy przypięta wizyta w przypadku np-ret-A1 ginęłaby na
+wszystkich urządzeniach).
+
+**Co było** (`audyt` `8240e0df`, wydanie E4a: `vilda_vault.js` 230; prawdziwy sejf, magazyny w pamięci, sztuczny zegar,
+dane fikcyjne; 8 kolejności pierwszych scaleń × 2 porządki rund, 30 kolejności poza repozytorium). Trzy urządzenia: P, K,
+C; „Testowy Jan” — karta X z trzema wizytami (x1, x = druga, 125 cm / 23 kg, x3), „Testowa Ola” — karty Y i Z; komplet na
+każdym urządzeniu.
+- **E4b** (E3 z P-ZMIANA-W-KARCIE-2, K5 z P-POZNIEJSZA-POPRAWKA): K robi „Scal pacjentów” X → Y i Y → Z, P (bez wiedzy
+  o scaleniach) poprawia x w starej X na 74 kg, K daje x do kosza (pod Z). Kosz 74 na trzech, ale w 16 z 16 przebiegów
+  rozjazd kart: P zostaje z kartą X z x 74 kg (bez nagrobka X, obok kosza), C w części kolejności też — w 3 z 16 ze
+  **starą treścią 23 kg**. Stan stały (0 zapisów w rundzie kontrolnej), „Testowy Jan” podwójny na liście pacjentów
+  części urządzeń. Przyczyna: nagrobek wersji działał tylko na kartę wpisu (Z), a x leżała pod X; strona ładunku
+  (`Bkz_pomin`) dopasowywała wersje po kluczu od zawsze, strona tutejsza — nie.
+- To samo przy jednym scaleniu, przy gwiazdce zamiast poprawki, przy poprawce na C, przy nowej wizycie w X (X zostaje,
+  ale na C z x 23 kg w 8 z 16), przy koszu przed albo po scaleniu na innym urządzeniu (kosz-przed, kosz-po: K i C ze
+  starą x 23 kg pod kartą docelową Y) i przy retencji zamiast kosza (P i C z X[x3, x, x1]).
+- **Ostatnia wersja karty, którą nagrobek oszczędza** (E1, PRZ0 bez „Przywróć”): P daje s1 do kosza (x zostaje ostatnią
+  wersją karty P), K daje x do kosza, a C wcześniej poprawił x na 74 kg — P trzymało x z **23 kg** w 14 z 16 przebiegów,
+  choć kosz na wszystkich urządzeniach miał 74 kg (PRZ0 bez „Przywróć”: C z 23 kg zamiast 78 kg w 7 z 16).
+  Wyjątek ostatniej wersji karty (P-KOSZ-ZAPISOW) był gołym pominięciem: zostawiona wersja nie przyjmowała nowszej treści.
+- **Poprawka i gwiazdka z dwóch kart** (E4a-Cpin, PR-E4a „Ograniczenia”): karta Z 74\* albo 23\* zależnie od kolejności.
+- **Przypięta wizyta starej karty i retencja na innym urządzeniu** (np-ret-A1, fuzz wielu kart): P przypina x w X (albo
+  poprawia x później niż przycięcie), C (bez wiedzy) przycina X retencją, K (bez wiedzy o obu) scala X → Y — rozjazd
+  w 16 z 16: w 6 (przy poprawce w 8) K zostaje z x 23 kg bez gwiazdki, a P i C bez x. Gdy przycina K pod Y
+  (npret-K — E4a-ret-pin z jednym scaleniem), x nie ma w żadnej karcie w 16 z 16. Pierwsza wersja tej zmiany (A1 bez reguły
+  niżej) gubiła x na wszystkich urządzeniach także tam, gdzie 230 zostawiał starą kopię na K (4 z 8 kolejności).
+
+**Reguła po zmianie** (ten sam pełny stan na wszystkich urządzeniach w każdej kolejności — wyjątki w „Ograniczeniach”):
+- **Nagrobek wersji szuka wersji po kluczu, nie tylko pod kartą wpisu** (A1). W pełnym scalaniu wpis kosza albo
+  retencji, którego wersji nie ma pod jego kartą, sprawdza po kluczu (`snapshotId`), czy leży ona tu pod inną kartą
+  (zwykle pod starą kartą X, którą inne urządzenie scaliło) — dla wszystkich takich wpisów razem, po pętli kart (niżej
+  „Koszt”); od razu, jednym odczytem po kluczu, tylko wpis z przypiętym rejestrem gwiazdki, bo od odpowiedzi zależy
+  odtworzenie wersji z cienia. Taka wersja przechodzi tę samą decyzję co pod
+  kartą wpisu: zmiana później niż usunięcie wygrywa (W3: przyjmuje rejestr gwiazdki i nowszą treść nagrobka), przypięta
+  przeżywa retencję (A3a), nieczytelna przy retencji zostaje; pokonana oddaje wpisowi zmianę, opis, `rev` i treść
+  (P-KOSZ-POLKRATA — w koszu poprawka 74 kg); wersja nieczytelna na tym urządzeniu oddaje zmianę, opis i `rev`,
+  ale bez treści, żeby jej szyfr nie zastąpił czytelnej treści kosza. Dla takiego wpisu szukanie idzie przed odtworzeniem
+  przypiętej wersji z cienia, więc cień nie zapisze kopii pod kartą wpisu, gdy ta wizyta leży tu pod inną kartą. Karty przegranej z nagrobkiem
+  pacjenta nie dotyka — to P-KOSZ-USUWANEJ-KARTY (też po kluczu); taka karta zapisana w tym czasie w innej karcie
+  przeglądarki czeka z wersjami spod innych kart do następnego scalenia. Delta (jedna karta, bez listy kosza) nie szuka —
+  każda wersja z delty i tak przechodzi `Bkz_pomin` po kluczu — poza jednym przypadkiem: zanim odtworzy przypiętą wersję
+  z cienia (wpis, który nie jest ważnym koszem, z przypiętym rejestrem gwiazdki i cieniem, a wersji nie ma pod kartą
+  wpisu), sprawdza jednym odczytem po kluczu, czy wersja nie leży tu pod inną kartą; jeśli leży — nic nie zapisuje,
+  a rozstrzyga ją najbliższe pełne scalanie. Dotąd delta przenosiła ją z cienia pod kartę wpisu i zostawiała starą kartę
+  z 1 wizytą na liście i bez żadnej w karcie, czego pełne scalania już nie naprawiały.
+- **Usunięcie dopiero po zapisie listy kosza.** Pokonane wersje spod innych kart znikają po udanym końcowym zapisie listy
+  (z ich treścią), pod blokadą karty i na świeżym odczycie — tylko wersje w tym samym rekordzie co przy decyzji (zmienione
+  w międzyczasie zostają do następnego scalenia). Karta, która zostaje bez żadnej wersji, znika jednym
+  usunięciem razem z wersjami tylko wtedy, gdy decyzja szła przez zdjęty wyjątek ostatniej wersji (stary duplikat —
+  niżej). Nowego nagrobka nie ma: urządzenie zachowuje u siebie nagrobek „Scal pacjentów”, na którym oparła się decyzja
+  (z ładunku albo tutejszy, z tą samą chwilą usunięcia), i wysyła go dalej w swoim ładunku — tak jak urządzenie, na
+  którym stara karta przegrała ze swoim nagrobkiem. Dzięki temu duplikat znika też na urządzeniu, które wymienia dane
+  już tylko z tym urządzeniem (urządzenie, które scaliło karty, więcej się nie synchronizuje). Chwila nagrobka to
+  chwila „Scal pacjentów”, nie „teraz”: wizyta zapisana w starej karcie później niż scalenie, na urządzeniu, które o nim
+  nie wiedziało, nadal z nim wygrywa (D-4 A bez zmian). Gdy w chwili usuwania w karcie zostały już tylko wizyty do
+  usunięcia, ale decyzja zapadła, kiedy karta miała jeszcze inną wizytę (w tym czasie druga karta przeglądarki dała ją
+  do kosza), karta nie znika: ostatnia z tych wizyt zostaje w karcie i jest też w koszu, a najbliższe pełne scalanie
+  rozstrzyga ją zwykłym wyjątkiem ostatniej wersji (Q8). Lista pacjentów odświeża się (licznik usuniętych kart
+  w wyniku scalania). Karta z innymi wizytami zostaje, z przebudowanym nagłówkiem (`lastSavedAtISO` nie rośnie ponad
+  chwilę zapisu najnowszej wersji). Nieudany zapis listy (błąd magazynu) albo przerwanie przed usunięciem — wizyta
+  zostaje do następnego scalenia, nic nie ginie.
+- **Wyjątek ostatniej wersji karty pod inną kartą** nie obowiązuje tylko dla starego duplikatu: karta, w której wizyta
+  leży, ma znany nagrobek pacjenta (z ładunku albo tutejszy — „Scal pacjentów” na innym urządzeniu), a karta wpisu jest
+  na tym urządzeniu (to dom wizyty: tam oddaje ją „Przywróć”) — duplikat znika. W każdym innym razie wizyta zostaje jako
+  ostatnia wersja i przyjmuje najnowszą treść (Q8): gdy karty wpisu tu nie ma, a także gdy to karta wpisu jest starym
+  duplikatem, który wrócił na innym urządzeniu z nową wizytą, a wizyta leży w żywej karcie docelowej scalenia — żywa
+  karta nie znika.
+- **„Przywróć” wizyty, która leży tu pod inną kartą.** Gdy wizyta z kosza leży na urządzeniu pod inną istniejącą kartą
+  niż karta wpisu, a karta wpisu jest — typowo wyjątek ostatniej wersji pod inną kartą: żywa karta docelowa „Scal
+  pacjentów” Y trzyma x, a wpis x wskazuje starą kartę X, która wróciła z nową wizytą — „Przywróć” przywraca ją
+  w miejscu, w tamtej karcie: ta sama reguła co w karcie wpisu („już w karcie” albo zapis przywrócenia z nową chwilą
+  zmiany), z nagłówkiem tamtej karty i powiadomieniem o niej (synchronizacja wysyła tę kartę). Dotąd zapis szedł pod
+  kartę wpisu z tym samym identyfikatorem wersji i zabierał wizytę z tamtej karty bez jej licznika i nagłówka: Y zostawała
+  na liście pacjentów z 1 wizytą i bez żadnej w karcie (na zawsze), a urządzenia rozjeżdżały się. Teraz po rundach
+  X[nowa] i Y[x] na trzech (8 z 8 kolejności, przywrócenie na K albo na C). Miejsce wizyty: jeden odczyt po kluczu przed
+  blokadami i ponownie pod blokadami obu kart (w kolejności rosnących identyfikatorów, jak „Scal pacjentów”); gdy
+  w międzyczasie inna karta przeglądarki przeniosła wizytę gdzie indziej, „Przywróć” sprawdza od nowa (najwyżej trzy
+  razy, potem komunikat „Ten zapis zmienił miejsce w trakcie przywracania (synchronizacja) — nic nie zostało
+  przywrócone. Spróbuj ponownie.”). Karty wpisu na urządzeniu nie ma — jak dotąd „Karta tego zapisu została usunięta”.
+- **Ostatnia wersja karty przyjmuje najnowszą treść** (A3, Q8). Wersja, którą nagrobek pokonał, ale która zostaje jako
+  ostatnia wersja karty, bierze treść o ściśle późniejszej chwili treści (W3, jak `Bgw_zloz`) — z treści wpisu kosza
+  (albo cienia) lub z kopii z ładunku, która przegrała z tym wpisem — i najpóźniejszy rejestr gwiazdki (D1 = C, D2 = a).
+  Cała nowsza kopia: `rev` = wyższa z `rev` tej kopii i wersji tutejszej (bez +1), chwile tej kopii; rekord złożony (treść z jednej kopii, gwiazdka
+  z drugiej): chwila zmiany = późniejsza z prawdziwych chwil (D3 = a), `rev` = najwyższa znana (bez +1 — inaczej `rev`
+  zależałby od kolejności). Chwila zmiany nigdy nie później niż usunięcie, które pokonało wersję (wizyta nie wraca nad
+  nagrobek), `lastSavedAtISO` karty bez zmian, treść szyfrowana od nowa. Bez wkładu do wpisu kosza — kosz poznaje nowszą
+  treść zostawionej wizyty, jak dotąd, z ładunku tego urządzenia. Nieczytelna wersja — bez zmian.
+- **Wizyta, która przeżywa przycięcie, idzie za scaleniem** (np-ret-A1, P2). Gdy stara karta (duplikat) znika przez
+  nagrobek „Scal pacjentów”, a ma wizytę, która wygrywa z wpisem przycięcia (przypiętą albo zmienioną później niż
+  przycięcie), wizyta nie znika razem z kartą: przechodzi do karty docelowej scalenia z tym samym zapisem (treść,
+  gwiazdka, `rev` i chwile bez zmian — jak wtedy, gdy przenosi ją ładunek urządzenia, które scaliło). Kartę docelową
+  poznajemy bez zmiany formatu: karta wpisu przycięcia, gdy to inna żywa karta; inaczej karta, do której to scalenie
+  przenosi inne wizyty tej karty; a gdy żadnej nie przenosi — karta wpisu kosza albo przycięcia innej wizyty tej karty
+  albo karta z ładunku, w której leżą jej wizyty. Tylko gdy to jedna karta; dwie różne albo żadna — bez przeniesienia,
+  jak dotąd. Ta wizyta przechodzi pierwsza, przed pozostałymi wizytami starej karty: scalenie przerwane w połowie
+  (zmiana sesji, karta zapisywana w innej karcie przeglądarki, zamknięcie aplikacji) nie gubi karty docelowej.
+  Potem działa zwykła reguła: przypięta zostaje, a wpis przycięcia zna jej gwiazdkę;
+  późniejsza poprawka zdejmuje wpis; ładunek niesie wizytę na pozostałe urządzenia. Przycięcie nieprzypiętych wizyt
+  zmienionych przed nim, kosz i ostatnia wersja karty — bez zmian. Ta reguła nie pomija żadnego przycięcia.
+- **Wersja wspólna dwóm kartom według W3** (A4, P3). Wizyta pod dwiema kartami („Scal pacjentów” na innym urządzeniu)
+  bierze treść po chwili treści, a gwiazdkę po rejestrze — jak w jednej karcie (P-PRZYPIETA-POLKRATA) — a nie cały rekord
+  kopii o późniejszej chwili zmiany (`Bsw_rekord`). Rekord złożony: chwila zmiany = późniejsza z prawdziwych chwil,
+  `rev` = najwyższa + 1 (Q5: starsza aplikacja, która czyta najpierw `rev`, przyjmuje go). Przypisanie karty (najpierw
+  `rev`, P-SYNC-WLASCICIEL) bez zmian; gdy żadna kopia nie ma rejestru gwiazdki, a różnią się
+  tylko gwiazdką (albo są nieczytelne lub w pełni równe) — reguła dotychczasowa (cały rekord), poza tym W3 także bez
+  rejestru (np. późniejsza treść bez gwiazdki i wcześniejsza kopia z gwiazdką dają rekord złożony z gwiazdką).
+- **Sesja** (P-CHMURA-OPIS): każdy odczyt wyszukania po kluczu (odczyt po kluczu, lista kart, listy wersji kart —
+  sprawdzenie sesji tuż przed odczytem, a wynik trafia do decyzji dopiero po ponownym sprawdzeniu), odczyt wersji karty
+  i każda decyzja, usunięcie wersji i karty spod innej karty, nagrobek usuniętego duplikatu, zbiór kart usuniętych, zapis zostawionej ostatniej wersji i zapis rekordu W3 — tylko w sesji scalania
+  (sprawdzenie tuż przed zapisem, bez oczekiwania pomiędzy); przy okazji dodatkowe sprawdzenia sesji w fazie przeniesień
+  wersji wspólnej dwóm kartom, w scalaniu karty z ładunku (nowa wersja, rekord karty, zdjęcie nagrobka) i przy nagrobku
+  pacjenta (licznik karty, która zostaje, zdjęcie przegranego nagrobka); przeniesienie wizyty, która przeżywa przycięcie
+  (odczyty pod blokadami, zapis pod kartą docelową, nagłówek, stara karta, zbiór kart usuniętych). „Przywróć”: odczyt miejsca wizyty po kluczu (przed blokadami i pod nimi) tylko
+  w sesji kliknięcia, jak zapisy; w delcie odczyt po kluczu przed odtworzeniem przypiętej wersji z cienia — tylko w sesji
+  scalania. Zmiana sesji w trakcie kończy scalanie jak dotąd (`SESSION_CHANGED`), bez zapisu po
+  zmianie.
+
+**Format.** Bez zmian: ten sam kształt listy nagrobków, wersji i ładunku, bez nowych pól; nowe komunikaty „Przywróć”
+(wizyta zmieniła miejsce w trakcie przywracania; w historii wersji, gdy wizyta jest w innej karcie niż karta wpisu:
+„Przywrócono zapis z kosza — jest w innej karcie tego pacjenta (po „Scal pacjentów”).” i „Ten zapis jest już w nowszej
+postaci w innej karcie tego pacjenta (po „Scal pacjentów”) — usunięto go z kosza.” — bez wskazywania kierunku scalenia,
+bo po przerwanym scaleniu wizyta bywa w starej karcie; dziennik i zdarzenie zmiany wskazują kartę, w której wizyta jest).
+Urządzenia ze starszą aplikacją czytają wynik bez różnicy.
+
+**Przypadki** (`tests/unit/kosz-po-kluczu.test.mjs`; P, K, C; 8 kolejności pierwszych scaleń × 2 porządki rund — katalog
+s4d7 i `cel.md`; widok: karty z wersjami, kosz, nagrobki pacjentów; m1, m2 — głowy „Scal pacjentów”):
+
+| Przypadek | Kroki | Dotąd (230) | Teraz (16 z 16, ten sam pełny stan na trzech; w wierszach E1 i Q8 — poza obecnością wizyty, E1) |
+|---|---|---|---|
+| E4b | K: X → Y, Y → Z; P: x → 74 w starej X; K: kosz x | rozjazd 16/16: P X[x 74], C X[x 23] w 3/16 | **Z[m2,m1,z,y,x3,x1], kosz x 74 `rev` 2, nagrobki X, Y** |
+| E4b-1 | jak E4b, jedno scalenie X → Y | rozjazd 16/16, C X[x 23] w 3/16 | **kosz x 74 `rev` 1, bez X** |
+| E4b-pin | jak E4b, P przypina x zamiast poprawki | rozjazd 16/16 | **kosz x 23\*, bez X** |
+| E4b-C | jak E4b, poprawka na C | rozjazd 16/16, P X[x 23] w 2/16 | **kosz x 74, bez X** |
+| E4b-2w | jak E4b, P dopisuje do X nową wizytę | rozjazd 16/16, C X[nowa, x 23] w 8/16 | **X[nowa], kosz x 74, nagrobek Y** |
+| kosz-przed | P: kosz x w X; K (bez wiedzy): X → Y | K i (4/16) C: Y[…, x 23, …] | **x tylko w koszu (23)** |
+| kosz-po | K: X → Y; P (bez wiedzy): kosz x w X | jak wyżej | **x tylko w koszu (23)** |
+| E4b-ret | jak E4b, retencja K przycina Z zamiast kosza | P X[x3, x 74, x1], C w 7/16 | **Z[m2], x w żadnej karcie, nagrobki X, Y** |
+| E4b-ret-pin | P przypina x w X, retencja K przycina Z | P i (12/16) C X[x3, x 23\*, x1], K X[x 23\*] | **X[x 23\*] na trzech** (przypięta przeżywa retencję) |
+| E1-C | C: x → 74; P: kosz s1; K: kosz x | P x 23 w 14/16 (kosz 74) | **x w karcie zawsze 74** (obecność — E1) |
+| E1-popr-C | jak E1-C, kosz K z zegarem +10 min | P x 23 w 14/16 | **x w karcie zawsze 74** |
+| PRZ0-bez | P: kosz s1; K (+10 min): kosz x; P←K; P: x → 78 | C x 23 w 7/16 | **x w karcie zawsze 78** |
+| E1-C-sav | jak E1-C, poprawka C z nową chwilą zapisu | P x 23 `rev` 0 w 14/16 | **x 74 `rev` 1 z chwilami poprawki C** |
+| Q8-obca-2 | P: X → Y, kosz y, x1 i głowy (Y = [x3, x]); K (bez wiedzy): kosz x i x3 w X | P Y[x3, x 23], K bez nagrobka X | **P Y[x3], kosz i nagrobek X na trzech; karta Y nie znika** (obecność — E1) |
+| npret-pin | P: gwiazdka x w X; C (bez wiedzy): retencja X; K (bez wiedzy o obu): X → Y | rozjazd 16/16; w 6/16 tylko K z x 23 bez gwiazdki | **Y[…, x 23\*] na trzech, nagrobek X** |
+| npret-popr | C: retencja X; P: x → 74 (później); K: X → Y | rozjazd 16/16; w 8/16 tylko K z x 23 | **Y[…, x 74]** |
+| npret-K | P: gwiazdka x w X; K: X → Y, retencja K przycina Y | x w żadnej karcie 16/16 | **Y[m2, x 23\*]** |
+| npret-kosz3-K | jak npret-pin, K daje x3 do kosza pod Y | rozjazd 16/16; w 6/16 tylko K z x 23 | **Y[…, x 23\*], kosz x3** |
+| npret-nowaW | jak npret-pin, karta docelowa W nowa (P i C jej nie znają) | rozjazd 16/16; w 6/16 tylko K z x 23 | **W[…, x 23\*]** |
+| E4a-ret-pin | P: x → 74 i gwiazdka; K: X → Y → Z, retencja przycina x (`kosz-usuwanej-karty.test.mjs`) | x w żadnej karcie 8/8 | **karta Z 74\* w 8 z 8** |
+| npret-kosz3-P (ograniczenie) | P: gwiazdka x i kosz x3 w X; C: retencja X; K: X → Y | rozjazd 16/16; w 6/16 tylko K z x 23 | Y[…, x 23\*] w 12/16; w 4/16 x w żadnej karcie (niżej) |
+| E4a-Cpin, -przed, kontrola-Cpin | P: x → 74 w X; K: scalenia, K→C; C przypina x pod Z (z koszem K albo bez) | 74\* albo 23\* zależnie od kolejności | **74\* w 8 z 8** (`kosz-usuwanej-karty.test.mjs`) |
+| E4b-bez-kosza, PRZ0, PRZ, E1-dwa (kontrole) | — | — | bez zmian |
+| kosz-po-2 (ograniczenie) | K: X → Y → Z; C: x → 74 w X; P (bez wiedzy): kosz x w X | K x pod Z (23 albo 74) w 16/16 | P i K bez x, kosz 74; C w 8/16 X[x 74] |
+
+Przerwane scalenie, sesja i błąd zapisu (`tests/unit/kosz-po-kluczu-sesja.test.mjs`): zalogowanie od nowa po zapisie listy,
+przed usunięciem — `SESSION_CHANGED` bez zapisu po przełączeniu, na P karta X z x 74 i kosz 74, po rundach zbieżnie;
+przełączenie na inne konto z kopią tych kart po świeżym odczycie przed usunięciem (karta pusta i karta z inną wizytą) albo
+przy odczycie po kluczu — tamto konto bez zmian; błąd zapisu listy raz albo trwale — wizyta zostaje w X, inne urządzenie
+bierze 74 z ładunku, po ustąpieniu błędu zbieżnie; przełączenie w szyfrowaniu treści zostawionej ostatniej wersji (Q8:
+z kopii z ładunku i z samego wpisu kosza), przy odczycie wersji innej karty przed decyzją, w zapisie rekordu W3 (A4,
+delta i pełny ładunek) i w dalszych zapisach fazy przeniesień — żadnego zapisu w tamtym koncie po przełączeniu
+(dodatkowe sprawdzenia sesji); nowszy rekord zapisany w trakcie przez drugą kartę przeglądarki — zostaje
+(świeży odczyt przed usunięciem); przeniesienie przypiętej wizyty pod kartę docelową (np-ret-A1): zalogowanie od nowa
+zaraz po zapisie wizyty pod Y albo przełączenie na inne konto po świeżym odczycie wersji starej karty — żadnego zapisu
+po przełączeniu, tamto konto bez zmian, to samo scalenie od nowa daje x 23\* pod Y; przełączenie na inne konto zaraz po odczycie wersji karty
+w pętli kart (także dla wpisu z przypiętym rejestrem, szukanego od razu) albo zaraz po liście kart w wyszukaniu po pętli
+— `SESSION_CHANGED`, po przełączeniu żadnego wywołania magazynu tamtego konta, także odczytu; przełączenie na inne konto
+zaraz po usunięciu karty opróżnionej w fazie przeniesień — tamto konto bez zmian.
+
+**Krawędzie** (`tests/unit/kosz-po-kluczu-krawedzie.test.mjs`; każdy przypadek zabija co najmniej jedną zmianę kodu E3
+z pomiaru mutacji): przypięta wizyta pod starą kartą, której wpis retencji ma cień z poprawką — zostaje pod starą kartą
+z gwiazdką, bez pustej karty; żywa karta docelowa „Scal pacjentów” zostaje, gdy jej ostatnią wizytę daje do kosza
+urządzenie ze starą kartą (notatki widoczne pod nią na trzech); dwie wizyty starej karty dane do kosza — ostatnia
+zostaje, karta nie znika; notatki dopisane do starej karty (P6); nieczytelna wersja pod starą kartą — kosz czytelny
+z ładunku, „Przywróć” oddaje wizytę; liczniki usuniętych kart i wersji w wyniku scalania; „Odepnij i usuń” wizyty
+poprawionej na innym urządzeniu (78 kg bez gwiazdki, `rev` 2, chwila zmiany = chwila usunięcia); chwile całej nowszej
+wersji (Q8) ze źródła; A4 przez deltę i pełny ładunek, także z urządzeniem 221; poprawka po koszu (zostaje w starej
+karcie, kosz zdjęty); retencja przez duplikat (P2) i wpis kosza starszy niż 30 dni; druga karta przeglądarki daje do kosza inną wizytę karty
+w trakcie zapisu listy — karta zostaje z ostatnią wizytą, „Przywróć” działa, po rundach ten sam stan na trzech;
+urządzenie, z którego zniknął stary duplikat, zachowuje nagrobek „Scal pacjentów” z chwilą z ładunku — przy samych
+rundach z trzecim urządzeniem duplikat znika i tam, a wizyta dopisana do starej karty po scaleniu nadal wygrywa (D-4 A);
+remis chwili kosza i poprawki, zostawiona wersja po kilku scaleniach na innych urządzeniach, nagłówek karty po zmianie
+daty urodzenia, dwa cele scalenia z gwiazdką (luki z pomiaru mutacji).
+
+**„Przywróć” i delta** (`tests/unit/kosz-po-kluczu-przywroc.test.mjs`): „Przywróć” wizyty, którą żywa karta docelowa
+trzyma jako ostatnią wersję (8 kolejności × przywrócenie na K i na C) — w miejscu, bez pustej karty, po rundach ten sam
+stan na trzech, powiadomienie o karcie, w której leży; przywrócenie na urządzeniu bez tej wizyty w karcie (E1 —
+ograniczenie); „Przywróć” po scaleniu przerwanym po zapisie listy; wyścig z drugą kartą przeglądarki, która w trakcie
+scala kartę z wizytą dalej (sprawdzenie od nowa, przywrócenie w nowej karcie); przełączenie konta pod blokadami —
+żadnego odczytu po kluczu ani zapisu po przełączeniu; delta po stanie z przypiętą wizytą pod starą kartą — bez pustej
+karty, zbieżnie; delta, gdy wersji nie ma w żadnej karcie — odtworzenie z cienia jak dotąd; wpisy kosza duplikatu,
+który zniknął — bez karty i bez „Przywróć” na trzech, jak przy koszu przed scaleniem (ograniczenie).
+
+**Flota mieszana** (`tests/unit/kosz-po-kluczu-flota.test.mjs`, kopia 221). Starsza aplikacja nie szuka wersji po kluczu
+i zostawia starą treść w ostatniej wersji karty, ale czyta wynik nowej bez różnicy: na każdym urządzeniu każda część
+widoku (karty, kosz, nagrobki) jak we flocie samych starszych aplikacji albo jak we flocie nowej (w tej samej kolejności),
+nigdy gorzej; zapisów w rundzie kontrolnej nie więcej niż we flocie samych starszych. Typowo urządzenie 221 z poprawką
+zostaje ze starą kartą X[x 74] (E4b), a w E1 urządzenie 221 bez poprawki trzyma w karcie starą treść x 23 kg
+(PRZ0-bez: C w 6 z 8 kolejności, E1-popr-C: P w 7 z 8); kosz z poprawką mają wszystkie (flota samych 221 w E4b: kosz 23).
+To „nigdy gorzej” dotyczy przypadków tego testu (bez przycięcia); przy przycięciu i gwiazdce na urządzeniu 221 — wyjątek
+w „Ograniczeniach” (10 z 40).
+Urządzenie 221 zaktualizowane przed pierwszym scaleniem — jak flota nowa. Cofnięcie wydania: wynik zostaje.
+
+**Nota przy wydaniu** (do wklejenia): „Gdy na jednym urządzeniu połączono karty pacjenta („Scal pacjentów”), a wizytę
+potem przeniesiono do kosza, stara karta-duplikat znika także z innych urządzeń, a w koszu jest poprawiona treść
+wizyty. Wizyta przypięta w starej karcie nie znika, gdy inne urządzenie przytnie historię — przechodzi do karty
+scalonej. Zaktualizuj aplikację na wszystkich urządzeniach.”
+
+**Tryb chmurowy.** Odczyt po kluczu i usunięcia idą przez ten sam magazyn sesji co reszta scalania; lista kosza — metadane
+konta, jak dotąd. Delty na żywo (`applyEncryptedDelta` → `Le`) szukają po kluczu tylko przed odtworzeniem przypiętej wersji
+z cienia (jeden odczyt na taki wpis; bez listy kosza w delcie).
+
+**Koszt.** Pełne scalenie szuka wersji wpisów kosza i retencji, których nie ma pod ich kartą, raz, po pętli kart:
+najpierw w listach wersji kart, które pętla i tak przeczytała (bez odczytu), a pozostałych — jedną listą kart konta,
+potem odczytem po kluczu każdego z nich albo listą wersji każdej karty, której pętla nie czytała (co mniej odczytów;
+magazyn bez odczytu po kluczu — zawsze listy, a dla wpisu z przypiętym rejestrem jak dotąd mapa właścicieli wersji,
+raz na scalanie). Koszt: 0, gdy nie ma czego szukać; inaczej 1 + mniejsza z liczb (wpisy do szukania, karty bez
+wpisów) — najwyżej jeden odczyt na kartę konta i najwyżej o jeden więcej niż jeden odczyt po kluczu na wpis,
+niezależnie od liczby wpisów retencji (żyją 365 dni). Zmierzone (magazyn w pamięci, odczyty wyszukania na pełne
+scalenie; w nawiasie — jeden odczyt po kluczu na wpis, jak w pierwszej wersji tej zmiany; 230 — 0): 40 kart × 3
+wizyty, 30 wpisów kosza — 11 (30); 3 wpisy kosza — 4 (3); 60 wpisów kosza kart usuniętych („Usuń pacjenta”) — 11 (60);
+retencja na 40 kartach po 12 wizyt (450 wpisów), stan zbieżny — 1 (450), z 20 kartami jednowizytowymi — 21 (450);
+440 wpisów retencji i 3 żywe stare duplikaty z wizytą w koszu pod kartą docelową — 4 (443), następne scalenie — 1
+(443); 3 żywe stare duplikaty z własnym wpisem kosza — 4 (6). Odczyty list wersji w pętli kart bez zmian; delta —
+0 odczytów z tego wyszukania, poza jednym na wpis, który odtworzyłby przypiętą wersję z cienia (rzadki); pierwsze
+pobranie na puste urządzenie — 0; stan zbieżny — 0 zapisów (`tests/unit/kosz-po-kluczu-koszt.test.mjs`). Wyszukanie
+nie patrzy na nagrobki pacjenta: wersja leży pod inną kartą także wtedy, gdy nagrobka „Scal pacjentów” tu nie znamy
+(przegrał z późniejszym zapisem starej karty — D-4 A); taki filtr zostawiał wizytę w starej karcie na zawsze.
+„Przywróć” — zawsze jeden odczyt po kluczu przed blokadami, a drugi pod blokadami tylko wtedy, gdy wizyty nie ma
+w karcie wpisu.
+Wizyty, które przeżywają przycięcie: scalenie (pełne i delta) z co najmniej jednym wpisem przycięcia czyta jedną listę
+kart konta, a kartę i jej wersje tylko dla kart ze znanym nagrobkiem pacjenta, które są tu jeszcze (stare duplikaty);
+nagrobki kart, których tu nie ma, nic nie kosztują (konto 200 kart, 50 nagrobków „Scal pacjentów”: delta 321 odczytów
+wobec 320 na 230); bez wpisu przycięcia — 0; 0 zapisów w stanie zbieżnym.
+
+**Ograniczenia (czego zmiana nie robi).**
+- **E1 — obecność wizyty przy dwóch koszach offline.** Dwa urządzenia dają do kosza różne wizyty jedynej pary karty: każde
+  zostawia inną (nagrobek nigdy nie usuwa ostatniej wersji karty pod jej kartą). Obie treści są w koszu na wszystkich
+  urządzeniach; zostawiona wizyta ma teraz najnowszą treść (Q8). Wybór, którą wizytę zostawić — osobna decyzja (P4).
+- **kosz-po-2.** K scala X → Y → Z; C (bez wiedzy) poprawia x w starej X; P (też bez wiedzy) daje x do kosza w X: P i K bez
+  x, kosz 74 na trzech, ale C w 8 z 16 przebiegów zostaje ze starą kartą X z x 74 kg obok nagrobka Y (wpis kosza wskazuje
+  X, x jest na C ostatnią wersją karty X, a karta X przeżywa na C nagrobek „Scal pacjentów”, bo poprawka C jest
+  późniejsza niż scalenie — wcześniejsza niż kosz P). Domknięcie wymaga celu scalenia w nagrobku (zmiana formatu, P5).
+- **E4a-kp** (kosz przed scaleniem, poprawka później na urządzeniu bez wiedzy): poprawka ginie jak dotąd — teraz
+  zbieżnie, w koszu stara treść na wszystkich urządzeniach (dotąd urządzenie scalające w części kolejności zostawało
+  ze starą treścią w karcie). Rozszerzenie reguły „wizyta, która przeżywa przycięcie, idzie za scaleniem” na wpisy kosza
+  domyka ten przypadek w pomiarze (8 z 8), ale poszerza też P7 — osobna decyzja. **E4a-ret-pin** — domknięte
+  (wizyta, która przeżywa przycięcie, idzie za scaleniem).
+- **Przypięta wizyta starej karty, gdy nic nie wskazuje karty docelowej** (np-ret-A1, reszta). Wizytę przenosi tylko
+  urządzenie, które ją przypięło albo poprawiło, i tylko wtedy, gdy wie, dokąd scalono kartę. Nie wie, gdy żadna inna
+  wizyta starej karty nie doszła do karty scalonej: urządzenie scalające zna już przycięcie i kosz (albo przycięcie)
+  wszystkich pozostałych wizyt starej karty, zanim to urządzenie zobaczy jego ładunek (npret-kosz3-P: 4 z 16
+  przebiegów; łańcuch Z → X przed przycięciem: 4 z 8), albo nagrobek scalenia przyszedł deltą na żywo przed wpisem
+  przycięcia. Wtedy wizyta ginie na wszystkich urządzeniach, jak w pierwszej wersji tej zmiany (230: zostawała tylko na
+  urządzeniu scalającym, ze starą treścią i bez gwiazdki, albo — w części kolejności — z gwiazdką na trzech;
+  pierwsza wersja tej zmiany: x w żadnej karcie w 8 z 16).
+  Tak samo, gdy starą kartę scalono na dwóch urządzeniach z dwiema różnymi kartami (dwie karty docelowe): reguła nie
+  wybiera między nimi i wizyta ginie na wszystkich urządzeniach (230 też ją gubiła).
+  Urządzenie z gwiazdką ze starszą aplikacją (221/230) wizyty nie przenosi: w 10 z 40 przebiegów takiej floty wizyty
+  nie ma na żadnym urządzeniu, choć flota samych 221 trzyma ją gdzieś (przed tą poprawką 16 z 40).
+  Domknięcie wymaga celu scalenia w nagrobku (zmiana formatu, P5).
+- **„Usuń pacjenta” zwróconego duplikatu z przypiętą wizytą** (P7). K scala X → Y; P (bez wiedzy) przypina x w X, więc
+  X wraca na K (zapis później niż scalenie — D-4 A); C (bez wiedzy) przycina historię X; K świadomie usuwa X („Usuń
+  pacjenta”). Na P x wygrywa z przycięciem C, a X przegrywa z nagrobkiem — reguła „wizyta, która przeżywa przycięcie,
+  idzie za scaleniem” przenosi x do Y: po rundach x z gwiazdką w Y na trzech urządzeniach (6 z 8 kolejności; na 230 —
+  x nigdzie). Bez przycięcia na C x nie wraca. Nagrobek pacjenta nie mówi, czy kartę scalono, czy usunięto (rozróżnienie
+  wymaga zmiany formatu, P5). Zawsze ten sam pacjent (karta scalona), nic nie ginie; wizytę można znów dać do kosza.
+- **Urządzenie ze starszą aplikacją** zostawia u siebie stary duplikat i starą treść ostatniej wersji — patrz „Flota
+  mieszana”; nota: aktualizacja wszystkich urządzeń. Stan „w karcie starsza treść niż w koszu” zostaje też na urządzeniu,
+  które dostało kosz przed aktualizacją, do jego najbliższego scalenia — „Przywróć” w tym czasie działa jak dotąd
+  (P-PRZYWROC-Z-KARTY).
+- **Przerwane scalenie po zapisie listy, a przed usunięciem** (zmiana sesji, zamknięcie aplikacji, błąd zapisu listy):
+  do następnego scalenia wizyta jest i w starej karcie, i w koszu (z poprawką); ładunek wysłany w tym czasie pokazuje ją
+  innym urządzeniom chwilowo w obu miejscach — po rundach wszędzie ten sam wynik. To samo, gdy w tym czasie druga
+  karta przeglądarki da do kosza inną wizytę tej samej karty: wizyta, którą scalanie miało usunąć, zostaje ostatnią
+  wersją karty do następnego scalenia (karta nie znika, „Przywróć” wizyty danej do kosza w drugiej karcie przeglądarki
+  działa). „Przywróć” tej wizyty w tym czasie zostawia ją w starej karcie, w której leży, a stara karta — zapisana teraz
+  później niż „Scal pacjentów” — wraca na wszystkich urządzeniach z tą wizytą (D-4 A, jak po każdym zapisie w starej
+  karcie). Przywrócenie w miejscu nie zostawia pustej starej karty.
+- **Notatki dopisane do starej karty** na urządzeniu, które o scaleniu nie wiedziało: jak dotąd przy karcie przegranej
+  z nagrobkiem pacjenta — zostają w magazynie i w synchronizacji, ale bez karty (w karcie pacjenta ich nie widać); teraz
+  także na tym urządzeniu, gdy stary duplikat znika (dotąd w E4b widoczne tam przy starej karcie X). Notatki sprzed
+  scalenia idą za „Scal pacjentów” jak dotąd. Przeniesienie takich notatek do karty scalonej — osobna decyzja (P6).
+- **Retencja przez duplikat w obie strony** (P2): przycięcie starej karty-duplikatu na urządzeniu, które o scaleniu nie
+  wiedziało, usuwa te same nieprzypięte wizyty z karty scalonej na pozostałych urządzeniach — tak jak przycięcie
+  w jednej karcie (zmiana wcześniejsza niż przycięcie przegrywa; przypięta zostaje). Przypięta albo poprawiona później
+  w starym duplikacie na urządzeniu, które o scaleniu nie wiedziało, przechodzi do karty scalonej (wyżej).
+- **Wpis kosza starszy niż 30 dni** (bez treści): stary duplikat z poprawką zrobioną przed koszem znika, a poprawka nie
+  trafia już do kosza — jak w jednej karcie (kosz trzyma treść 30 dni); dotąd zostawała na tym jednym urządzeniu.
+- **Karta wpisu nieobecna na urządzeniu.** K scala X → Y i daje x do kosza (wpis pod Y); P (bez wiedzy) poprawia x
+  w starej X, a potem sam scala Y → Z: na P karty Y już nie ma, więc wyjątek ostatniej wersji pod inną kartą zostaje
+  i P trzyma X z x 74 kg (najnowsza treść) — tam „Przywróć” nie miałby dokąd oddać wizyty; na K x jest tylko w koszu,
+  C jedno z dwóch. Stan stały (0 zapisów w rundzie kontrolnej), bez starej treści (dotąd C w 3 z 8 przebiegów z 23 kg).
+  Usunięcie X także tu zbiegłoby karty, ale x nie dałoby się już przywrócić na żadnym urządzeniu.
+- **Wizyty dane do kosza w starym duplikacie, który potem znika.** K scala X → Y → Z; P (bez wiedzy) daje do kosza
+  w starej karcie X inne wizyty (x1, x3), a K daje do kosza ostatnią wizytę X (x) pod Z. Po synchronizacji X znika z P
+  (stary duplikat — wyżej), a wpisy kosza x1 i x3 wskazują kartę, której nie ma na żadnym urządzeniu: kosz ich nie
+  pokazuje (pokazuje tylko zapisy kart, które są na urządzeniu), a „Przywróć” odpowiada „Karta tego zapisu została
+  usunięta”; treść zostaje w koszu 30 dni, ale do karty wrócić nie może. Dotąd (230) P i C zostawały ze starą kartą X
+  obok kosza x (rozjazd E4b) i tam dało się je przywrócić — do starego duplikatu. Tak samo jak dotąd, gdy wizytę dano do
+  kosza w karcie przed jej scaleniem albo w starym duplikacie, który przegrał ze swoim nagrobkiem: przywrócić jej nie
+  można na żadnym urządzeniu. Karty docelowej scalenia urządzenie w chwili „Przywróć” nie zna (nagrobek pacjenta niesie
+  tylko identyfikator i chwilę); przywrócenie do karty scalonej wymaga celu scalenia w nagrobku (zmiana formatu, P5).
+  Zostawienie duplikatu, dopóki w koszu są jego wizyty, przywróciłoby rozjazd E4b na 30 dni (sprawdzone).
+- **„Przywróć” na urządzeniu, które trzyma w karcie docelowej inną wizytę daną do kosza** (E1, stan „żywa Y”: K i C
+  Y[x], P Y[y]). „Przywróć” x na P (P nie ma x w żadnej karcie) oddaje ją do karty wpisu X; K i C przenoszą wtedy x
+  z Y do X, a pusta Y znika u nich bez nagrobka; P zostaje z Y[y] (y jest w koszu na wszystkich urządzeniach). Stan
+  stały, bez pustej karty — rozjazd obecności jak E1, jak dotąd. Na K albo na C (x leży w Y) „Przywróć” przywraca ją
+  w miejscu i urządzenia się zbiegają (wyżej).
+- **Nieczytelna wersja pod kartą wpisu** — jak dotąd: gdy wersja z szyfrem nieczytelnym na tym urządzeniu trafi pod
+  kartę wpisu, zanim przyjdzie kosz (kolejność scaleń), kosz na tym urządzeniu jest nieczytelny, a „Przywróć” zgłasza
+  nieczytelną treść. Reguła „bez treści z wersji nieczytelnej” (wyżej) obejmuje wersje spod innej karty.
+- **Numer kolejny opisu w eksporcie** (`seq`): po koszu przed albo po scaleniu kart na innym urządzeniu (kosz-przed,
+  kosz-po) wpis kosza z urządzenia, które scaliło karty, może nieść `seq`, a z pozostałych nie. Bez widocznej różnicy:
+  karty, kosz, `rev`, chwile i treść te same, 0 zapisów w rundzie kontrolnej; `seq` rozstrzyga tylko remis chwil
+  w tej samej milisekundzie.
+- **Stary duplikat opróżniony przez fazę przeniesień** (P-SYNC-WLASCICIEL: ładunek przenosi każdą jego wersję do karty
+  docelowej): urządzenie, z którego zniknął w ten sposób, wysyła do następnej wymiany ładunek bez nagrobka starej karty
+  (dostaje go z kolejnym ładunkiem) — bez wpływu na wynik, jak dotąd. Gdy duplikat znika przez zdjęty wyjątek ostatniej
+  wersji (E4b, P←K), nagrobek „Scal pacjentów” zostaje na urządzeniu od razu.
+- **Pełny remis poprawek z dwóch kart** (ta sama chwila zmiany co do milisekundy, ten sam `rev` i rejestr gwiazdki,
+  różna treść): każde urządzenie zostawia swoją treść — jak w jednej karcie i jak dotąd.
+- **Gwiazdka postawiona na urządzeniu ze starszą aplikacją** (bez rejestru gwiazdki W3) liczy się jak zmiana treści
+  w chwili przypięcia: wcześniejsza poprawka z innej karty przegrywa z nią — tak samo we flocie samych starszych.
+
+**Wpływ kliniczny.** Po „Scal pacjentów” na jednym urządzeniu nie zostaje na innych stary duplikat pacjenta z wizytą,
+którą lekarz dał do kosza — ani ze starą masą (23 kg zamiast poprawionych 74 kg, różnica zmieniająca centyl, BMI i ocenę
+przyrostu), ani podwójnie na liście pacjentów. Gdy wizytę, którą zostawia wyjątek ostatniej wersji karty, poprawiono na
+innym urządzeniu, karta pokazuje poprawioną treść. Wizyta przypięta (albo poprawiona) w starym duplikacie nie znika
+przez to, że inne urządzenie przycięło historię, a trzecie scaliło karty — jest w karcie scalonej z gwiazdką albo
+poprawką. Nic, co lekarz dał do kosza, nie wraca do karty (zostaje w niej
+tylko jako ostatnia wersja karty, jak dotąd — E1, Q8), a każda wizyta jest w karcie albo w koszu na każdym urządzeniu —
+poza ograniczeniami wyżej (przycięcie przez duplikat, kosz starszy niż 30 dni, brak karty docelowej, wizyty dane do
+kosza w duplikacie, który zniknął — są w koszu, ale bez karty, więc widok kosza ich nie pokazuje).
+
+**Walidacja.** Prawdziwy `vilda_vault.js`, sejfy w pamięci, sztuczny zegar, dane fikcyjne; sześć rund przeglądu
+adwersarza z weryfikacją (poprawność i zbieżność, klinika, sesja i konta, blokady i współbieżność, koszt, jakość
+testów i dokumentacji), mutacje, równoważność wobec 230 (zmiany 231 nie dotyczą scalania), flota mieszana z 221.
+- Pomiary niżej (równoważność, fuzzy, flota, sesja i blokady) — na wersji po piątej rundzie przeglądu; późniejsze zmiany
+  (dodatkowe sprawdzenia sesji, tańsza faza przeżytych przycięć, komunikaty „Przywróć”) nie zmieniają wyniku scalania:
+  112 przebiegów porównania obu wersji (7 scenariuszy × 8 kolejności × 2 porządki rund) identycznych poza remisem
+  identyfikatorów kart, testy E3 bez zmian oczekiwań.
+- Katalog `kosz-po-kluczu` (25 scenariuszy × 8 kolejności × 2 porządki rund = 400 przebiegów): stabilnie 400, 0 zapisów
+  w rundzie kontrolnej, pełny stan zbieżny 296 (pozostałe — ograniczenia wyżej: obecność E1 i Q8 80, Q8-obca-2 16,
+  kosz-po-2 8); na 230 zbieżne tylko 64 (kontrole). Widoki kontroli (E4b-bez-kosza, PRZ0, PRZ, E1-dwa) identyczne z 230.
+- Równoważność poza repozytorium (katalog półkraty i E4a, 43 scenariusze, 1268 przebiegów): zbieżnie, stabilnie i bez
+  zapisów w rundzie kontrolnej wszystkie; wobec 230 różnice tylko w 91 przebiegach rodzin Q8 i W3 między kartami
+  (PRZ-K7, PRZ-kontrola, EQ-gw-po-koszu, EQ-gw-po-koszu-P — w tym N1), 0 niespodziewanych. Katalog E3 w 30 kolejnościach
+  (570 + 750 przebiegów): 0 zapisów w rundzie kontrolnej, różnice wobec 230 tylko oczekiwane.
+- Zgodność z celem W3 (25 scenariuszy × 8 kolejności): 200 z 200, 25 scenariuszy w 8 z 8 (230: 192 z 200, 24).
+- Fuzz praw łączenia F1–F7 (300 programów × 6 harmonogramów): wyniki identyczne z 230. Fuzz praw z „Scal pacjentów”
+  S1–S4 (160 programów × 6): ziarna z naruszeniem prawa 69 → 31, żaden stan końcowy gorszy; jedyny nowy widok pośredni
+  (S4 7030) to ziarno, w którym 230 gubi przypiętą wizytę na stałe.
+- Fuzz zbieżności fz-d7 (A 1200, B 800 przebiegów): rozjazd widoku 282 → 0 i 237 → 2, wskrzeszone wizyty 172 → 0
+  i 75 → 0, przypięta wizyta zgubiona 25 → 16 i 30 → 8; 0 kluczy gorszych niż na 230.
+- Fuzz wielu kart (`kosz-po-kluczu-fuzz`, ziarna 1–600): 0 czerwonych.
+- Flota mieszana z 221 (`kosz-po-kluczu-flota` i pozostałe pliki flot, 328 testów): zielone. Rozjazd widoku: flota nowa
+  16 z 48, z jednym urządzeniem 221 29–32 z 48, flota samych 221 48 z 48; 23 kg w karcie: nowa 0, z jednym urządzeniem
+  221 0–9, same 221 19 (wyjątek — gwiazdka na urządzeniu ze starszą aplikacją, „Ograniczenia”).
+- Sesja i blokady: dwie karty przeglądarki ze wspólnymi Web Locks (fuzz 3200 kroków) i jedno okno bez Web Locks (3200
+  kroków): 0 zawieszeń, 0 odwróconych kolejności blokad, 0 naruszeń spójności magazynu (230: 79 i 75 — wada „Przywróć”
+  wizyty spod innej karty, naprawiona tutaj); „Przywróć” wobec „Scal pacjentów”, „Usuń pacjenta” i scalania w drugiej
+  karcie — 12 z 12. Testy `kosz-po-kluczu-sesja` na 230 — czerwone.
+- Koszt (200 kart × 6 wizyt, przycięcie na wszystkich, 50 nagrobków „Scal pacjentów”): pełne scalenie 1116 → 1118
+  odczytów, delta 320 → 321, zapisy bez zmian.
+- Mutacje: cztery rundy na kolejnych wersjach; każdy mutant, który przeżył, dostał test, uzasadnienie równoważności albo
+  opis ograniczenia. Sprawdzenia sesji z ostatniego przeglądu: 25 mutantów (usunięcie po jednym sprawdzeniu) — 24 zabite
+  nowymi testami, jeden (sprawdzenie sprzed tej zmiany) pilnują inne pliki; testy sesji tej zmiany na 230 — czerwone
+  wszystkie (43).
+- Pełny przebieg (po scaleniu `audyt` z #818 i #821): 17 785 testów w 597 plikach, lint, składnia (1541 plików), polityka
+  repozytorium (2285 plików), testy dostępu Pro — zielone. E2E (desktop Chromium): 47 z 47 w 12 plikach (kosz zapisów, spójność zapisów, cień w IndexedDB,
+  blokady zapisu wersji i usuwania, właściciel wersji, jednorazowe bez przywracania, wersjonowane klucze PWA, kopia konta,
+  blokada scalania, scalanie duplikatów).
+
+**Kod.** `vilda_vault.js`: `Bkz_gdzieIndziej`, `Bkz_obceKarty`, `Bkz_usunZObcych`, `Bkz_zostawOstatnia` (nowe),
+`Bkz_scalStart` (`ctx.pelny`), `Bkz_scalKoniec` (wyszukanie po kluczu przed `Bgw_wskrzes` tylko dla wpisu z przypiętym
+rejestrem, reszta po pętli kart, faza wersji spod innych kart,
+Q8 w wyjątku ostatniej wersji, usunięcie po zapisie listy), `Bsw_w3`, `Bsw_wklad`, `Bsw_rekordW3` (nowe), `Bsw_decyzja`,
+`Bsw_poprawTresc`, `Bsw_przenies`, `Bsw_doF` (W3 i straż sesji), `Bsw_poOddaniu` (straż sesji), `Le` (licznik usuniętych
+kart, zbiór kart z nagrobkiem pacjenta `Bkz_nagrKart`, `ctx.Bsw_m`);
+`Bsw_przezyteRetencji`, `Bsw_przeniesPrzezyta`, `Bsw_zLadunku` (nowe), `Bsl_przeniesWersje` (najpierw wizyty, które
+przeżywają przycięcie; karta docelowa zakładana w pętli — po niej), `Bsl_scalPacjenta` (karta z ładunku każdej wersji, straż sesji przed zapisami); `Bkz_doWskrzeszenia`, `Bkz_gdzieIndziejRazem` (nowe: wyszukanie po
+pętli kart), `Bkz_przywroc` (miejsce wizyty po kluczu, przywrócenie w miejscu), `Bkz_gdzieLezy` (nowe), `Bgw_wskrzes` (w delcie
+odczyt po kluczu przed zapisem z cienia), `Bsl_usunPacjenta` i `Bsl_zdejmijNagrobek` (straż sesji); `vilda_kosz_zapisow.js`
+(„Przywróć”: dziennik, zdarzenie i komunikat wskazują kartę, w której wizyta jest). Testy:
+`tests/unit/kosz-po-kluczu.test.mjs`, `kosz-po-kluczu-wspolne.mjs`, `kosz-po-kluczu-sesja.test.mjs`,
+`kosz-po-kluczu-flota.test.mjs`, `kosz-po-kluczu-koszt.test.mjs`, `kosz-po-kluczu-krawedzie.test.mjs`,
+`kosz-po-kluczu-przywroc.test.mjs`, `kosz-po-kluczu-fuzz.test.mjs` (fuzz wielu kart: trzy urządzenia, dwa łańcuchy
+„Scal pacjentów”, prawa Z1–Z7); zmienione oczekiwania:
+`kosz-usuwanej-karty.test.mjs` (E4a-Cpin, -przed, kontrola-Cpin — 74\* w 8 z 8; E4a-ret-pin — karta 74\* w 8 z 8),
+`przywroc-z-karty.test.mjs` (9 testów
+startuje ze stanu „P dostał kosz na sejfie 230” — od 231 ten stan powstaje głównie na urządzeniu, które dostało kosz
+przed aktualizacją aplikacji (poza tym przy nieczytelnej wersji w karcie, przerwanym scaleniu albo treści kosza starszej
+niż 30 dni); równoważność z prawdziwym 230 zmierzona; oraz dwa testy tych samych kroków na samym 231), `przywroc-z-karty-flota.test.mjs` (F4: nigdy gorzej niż flota samych 221),
+`sync-wlasciciel-wersji.test.mjs` („nowsza zmiana” jako prawdziwa poprawka z chwilą treści; strażniki źródła, także
+`Bsw_przeniesPrzezyta` i `Le`),
+`kosz-nowsza-tresc.test.mjs` (K5: bez karty X, nagrobki X i Y), `przywroc-z-karty-sesja.test.mjs` (wiersz punktu
+przełączenia), `kosz-zapisow.test.mjs` („Przywróć” wizyty pod inną kartą: dziennik, zdarzenie i komunikaty historii wersji), `pozniejsza-poprawka.test.mjs`
+i `zmiana-w-karcie.test.mjs` (strażniki: stempel „Przywróć” w karcie, w której wizyta leży), `scalanie-blokada.test.mjs`
+(dwa testy czekają na pytanie bramy zamiast stałych 20 ms — pod pełnym obciążeniem zapis nie zdążał złapać blokady).
+
+**Wersje.** `vilda_vault.js` 231 → 232 (z nim odwołania w `vilda_chrome.js` 191 i `vilda_session_bridge.js` 113),
+`vilda_kosz_zapisow.js` 4 → 5; SW 1.1.406 → **1.1.407**. Zmiany sejfu 231 (przypomnienia, #817) nie dotyczą scalania —
+porównania „dotąd” zmierzone na 230 (8240e0df) obowiązują.
+
 ## W koszu zostaje poprawka wizyty zrobiona przed „Scal pacjentów” na innym urządzeniu (P-KOSZ-USUWANEJ-KARTY, PR-E4a, SW 1.1.396, `vilda_vault.js` 230, 2026-10-28)
 
 **Zmiana kliniczna: tak** — wzory, progi, jednostki i interpretacje bez zmian; zmienia się, jaka treść wizyty (masa,
@@ -19881,6 +20318,7 @@ zostaje teraz nowsza treść z innego urządzenia (74 zamiast 23 kg; w U1 `rev` 
 wracają, a bez wpisu kosza nic nowego nie powstaje; (2) znane ograniczenia E4a-kp i E4a-ret-pin (niżej) — bez zmian
 w tym PR, ewentualnie osobne decyzje; (3) E4a-Cpin (niżej) — gdy trzecie urządzenie przypnie tę wizytę na karcie
 docelowej, wynik zależy od kolejności synchronizacji (74\* albo 23\*, dotąd zawsze 23\*); domknięcie w PR-E3.
+*(Aktualizacja 2026-10-28, P-KOSZ-PO-KLUCZU: domknięte — 74\* w 8 z 8.)*
 
 **Co było** (`audyt` `25dfbbe0`, wydanie PRZ0: `vilda_vault.js` 229; prawdziwy sejf, magazyny w pamięci, sztuczny zegar,
 dane fikcyjne; 8 kolejności katalogu, 30 poza repozytorium). Trzy urządzenia: P, K, C; „Testowy Jan” — karta X z trzema
@@ -19954,12 +20392,14 @@ kolejności ten sam pełny stan na trzech, stan stabilny, 0 zapisów listy, wers
 | E4a-ret (kontrola) | P: x → 74; K: scalenia, retencja przycina x (zamiast kosza) | brak | brak (bez zmian; nagrobek retencji bez treści, cienia i zmiany z P) |
 | E4a-kp-ret (kontrola) | K: kosz x w X; P: x → 74 później; C przycina x; K: scalenia | kosz 23 w 6 z 8, retencja w 2 z 8 | bez zmian |
 | E4a-kontrola | jak E4a bez kosza | karta Z 74 `rev` 2 | bez zmian |
-| E4b (K5) | poprawka w starej X PO scaleniach, kosz | kosz 74 (+ rozjazd karty X, E3) | bez zmian |
+| E4b (K5) | poprawka w starej X PO scaleniach, kosz | kosz 74 (+ rozjazd karty X, E3) | bez zmian *(P-KOSZ-PO-KLUCZU: bez rozjazdu karty X)* |
 | E4a-kp (ograniczenie) | K: kosz x w X; P: x → 74 później; K: scalenia | kosz 23 `rev` 0 | bez zmian |
-| E4a-ret-pin (ograniczenie) | P: x → 74 i gwiazdka; K: scalenia, retencja | brak | bez zmian |
+| E4a-ret-pin (ograniczenie) | P: x → 74 i gwiazdka; K: scalenia, retencja | brak | bez zmian *(Aktualizacja 2026-10-29, P-KOSZ-PO-KLUCZU: domknięte — karta Z 74\* w 8 z 8)* |
 | E4a-Cpin (ograniczenie) | P: x → 74; K: scalenia, K→C, kosz x; C (bez wiedzy o koszu) przypina x pod Z | karta Z 23\* w 8 z 8 | karta Z **74\*** w 4 z 8, 23\* w 4 z 8 |
 | E4a-Cpin-przed (ograniczenie) | jak wyżej, C przypina przed koszem K | kosz 23\* w 8 z 8 | kosz **74\*** w 7 z 8, 23\* w 1 z 8 |
 | E4a-kontrola-Cpin | jak E4a-Cpin bez kosza | karta Z 74\* w 3 z 8, 23\* w 5 z 8 | bez zmian |
+
+*(Aktualizacja 2026-10-28, P-KOSZ-PO-KLUCZU: E4a-Cpin, E4a-Cpin-przed i E4a-kontrola-Cpin — 74\* w 8 z 8: wersja wspólna dwóm kartom według W3.)*
 
 Przerwane scalenie, sesja i błąd zapisu (`tests/unit/kosz-usuwanej-karty-sesja.test.mjs`):
 - zalogowanie od nowa zaraz po usunięciu karty X na urządzeniu z poprawką — scalenie kończy się `SESSION_CHANGED` bez
@@ -20008,7 +20448,8 @@ samo konto i na inne (także z kopią kart) — po przełączeniu żadnego zapis
 - **E4a-ret-pin — przypięta wizyta i retencja.** P poprawia i przypina x w starej X, K scala i retencja przycina x (nie
   kosz): przypięta wizyta znika na trzech (bez scalenia zostaje: karta X 74\*). Istniało wcześniej; decyzja dotyczy tylko
   kosza (przycięcie nie robi cienia karty usuwanej, decyzja 1). Domknięcie (przeniesienie takiej wersji pod kartę wpisu)
-  — osobna decyzja.
+  — osobna decyzja. *(Aktualizacja 2026-10-29, P-KOSZ-PO-KLUCZU: domknięte — wizyta, która przeżywa przycięcie, idzie za
+  scaleniem do karty docelowej: karta Z 74\* w 8 z 8.)*
 - **E4a-Cpin — gwiazdka z trzeciego urządzenia na karcie docelowej.** P poprawia x w starej X, K scala X → Y → Z i daje
   x do kosza, a C, które zna scalenia, ale nie kosz, przypina x pod Z: wynik zależy od kolejności synchronizacji — karta
   Z 74\* w 4 z 8 albo 23\* w 4 z 8 (dotąd 23\* zawsze; bez scaleń karta X 74\*); przy gwiazdce przed koszem kosz 74\*
@@ -20016,7 +20457,8 @@ samo konto i na inne (także z kopią kart) — po przełączeniu żadnego zapis
   dojdzie do niego poprawka, wersję spod X przenosi pod Z reguła wersji wspólnej dwóm kartom (`Bsw_rekord`: cały rekord
   nowszy po chwili zmiany, bez łączenia treści i gwiazdki między kartami) — ta sama przyczyna co zależność od kolejności
   bez kosza (E4a-kontrola-Cpin: 74\* w 3 z 8 już dotąd). Domknięcie: rekord złożony między kartami (treść po chwili
-  treści, gwiazdka po rejestrze) — PR-E3.
+  treści, gwiazdka po rejestrze) — PR-E3. *(Aktualizacja 2026-10-28, P-KOSZ-PO-KLUCZU: zamknięte — 74\* w 8 z 8, także z gwiazdką przed koszem
+  i bez kosza.)*
 - **Urządzenie z poprawką ze starszą aplikacją** — patrz „Flota mieszana” (4 z 8); nota: aktualizacja wszystkich urządzeń.
 - **Przerwane scalenie po zapisie listy, a przed usunięciem karty** (zmiana sesji, zamknięcie aplikacji) albo nieudany
   zapis listy: do następnego scalenia na tym urządzeniu wizyta jest i w starej karcie X, i w koszu (z poprawką). „Przywróć”
@@ -20037,7 +20479,7 @@ samo konto i na inne (także z kopią kart) — po przełączeniu żadnego zapis
 - **Delta nagrobka bez karty docelowej** (starsza aplikacja nadawcy, przekroczony limit, karta docelowa scalona dalej)
   usuwa wersje przed nadejściem listy kosza — bez zmian (P-SYNC-WLASCICIEL-2, „Ograniczenia”).
 - E4b / E3 (rozjazd karty X po „Scal pacjentów”) — bez zmian, następny PR (D7 = a). Rekord złożony (treść z jednej karty,
-  gwiazdka z drugiej) w obrębie dwóch kart — bez zmian (S4, „Ograniczenia”).
+  gwiazdka z drugiej) w obrębie dwóch kart — bez zmian (S4, „Ograniczenia”). *(Aktualizacja 2026-10-28, P-KOSZ-PO-KLUCZU: zamknięte jedno i drugie.)*
 - Nagrobki pacjentów zapisują się w każdym scaleniu jak dotąd (licznik zapisów „inne” w rundzie kontrolnej bez zmian).
 
 **Wpływ kliniczny.** Poprawka masy albo wzrostu wizyty sprzed „Scal pacjentów” na innym urządzeniu nie przepada, gdy tę
@@ -20256,7 +20698,8 @@ po blokadzie („idle”) i ponownym zalogowaniu P dostaje 78 r2 z synchronizacj
 - **Import pliku karty i „Scal kopię konta”** (`Bkz_poImporcie`): rejestr gwiazdki jak dotąd (przy tej samej gwiazdce
   starsza chwila); stan „w karcie i w koszu” import pomija (wersje, które karta ma, R2-K1) — osobny PR.
 - **Przed kliknięciem (E1, E3).** Do „Przywróć” kosz P pokazuje starszą treść (23), a C może mieć w karcie 23 kg —
-  PR-E3.
+  PR-E3. *(Aktualizacja 2026-10-28, P-KOSZ-PO-KLUCZU: C ma w karcie nowszą treść, nie 23 kg — ostatnia wersja karty przyjmuje nowszą treść
+  kosza (Q8); kosz P do „Przywróć” — jak dotąd, a obecność wizyty w karcie dalej zależy od urządzenia (E1).)*
 - **Ponowne przypięcie przy rozjeździe zegarów** po „Odepnij i usuń” z urządzenia z zegarem do przodu może przegrać
   z odpięciem — jak D1 = C bez kosza.
 - **Wskaźnik zapisu formularza** (`vilda_save_status_indicator.js`): każde `onPatientSaved`, także z „Przywróć”,
@@ -21008,7 +21451,8 @@ tak samo, od razu i na każdym urządzeniu (dotąd gwiazdka widoczna po imporcie
 - **Rekord złożony tylko w obrębie karty.** Wersja wspólna dwóm kartom (P-SYNC-WLASCICIEL, „Scal pacjentów”) dalej
   przechodzi cała, z nowszą treścią (`Bsw_rekord`) — E3/E4a, osobne PR *(Aktualizacja 2026-10-28, P-KOSZ-USUWANEJ-KARTY:
   E4a — treść wersji karty przegranej z nagrobkiem pacjenta trafia do kosza; rekord złożony między dwiema kartami — bez
-  zmian)*. Dotyczy to też wizyty przypiętej po „Scal
+  zmian)* *(Aktualizacja 2026-10-28, P-KOSZ-PO-KLUCZU: zamknięte — wersja wspólna dwóm kartom według W3: treść po chwili treści, gwiazdka po
+  rejestrze; poprawka i późniejsza gwiazdka na karcie docelowej — 74\* w 8 z 8)*. Dotyczy to też wizyty przypiętej po „Scal
   pacjentów”: poprawka z urządzenia, które o scaleniu nie wie, przegrywa z późniejszą gwiazdką na karcie docelowej (22*,
   jak `f612fe09`; *(Aktualizacja 2026-10-28, P-KOSZ-USUWANEJ-KARTY: zależnie od kolejności — bez kosza 74\* w 3 z 8 już
   wcześniej, z koszem teraz 74\* w 4 z 8, E4a-Cpin)*), a droga ratunku przez cień nagrobka retencji z trzeciego urządzenia, które tę wizytę przycięło
@@ -21016,7 +21460,7 @@ tak samo, od razu i na każdym urządzeniu (dotąd gwiazdka widoczna po imporcie
   przychodzi przed poprawką (W5P-1).
 - **Bez zmian:** E4a (poprawka sprzed „Scal pacjentów” w koszu ginie; *(Aktualizacja 2026-10-28, P-KOSZ-USUWANEJ-KARTY:
   zamknięte)*), E4b/E3 (rozjazd karty po „Scal pacjentów”, 12
-  zapisów na rundę), PRZ0 („Przywróć”, gdy wersja jest w karcie i w koszu; *(Aktualizacja 2026-10-27, P-PRZYWROC-Z-KARTY: zamknięte)*), F2
+  zapisów na rundę; *(Aktualizacja 2026-10-28, P-KOSZ-PO-KLUCZU: zamknięte; na 230 rozjazd był już stały, bez zapisów w rundzie kontrolnej)*), PRZ0 („Przywróć”, gdy wersja jest w karcie i w koszu; *(Aktualizacja 2026-10-27, P-PRZYWROC-Z-KARTY: zamknięte)*), F2
   (rozjazd zegarów ze starszą aplikacją).
 
 **Nota wydania (D8 = a, uzupełniona po decyzjach 2, 4 i 5b z 2026-10-26, poprawiona 2026-10-27: Ustawienia nie pokazują
@@ -22255,7 +22699,8 @@ wizyta 125 cm / 24 kg).
 - K1: dwie poprawki na P (78 kg, `rev` 2), później jedna na K (74 kg, `rev` 1), kosz na C, które nic nie wie, 8
   kolejności → w koszu 74 kg na trzech (dotąd 78 kg).
 - K5 (E4b): „Scal pacjentów” X → Y → Z na K, P bez wiedzy poprawia x w starej X, K później daje x do kosza → kosz
-  z poprawką na trzech w 8 z 8 kolejności.
+  z poprawką na trzech w 8 z 8 kolejności. *(Aktualizacja 2026-10-28, P-KOSZ-PO-KLUCZU: także x w żadnej karcie, bez karty X, z nagrobkami X i Y
+  na trzech.)*
 - K1r: jak K1 → w koszu 74 kg z `rev` 2 (wyższa z pary) na trzech, w 8 z 8 kolejności.
 - K7: ta sama wersja w karcie (78 kg, `rev` 2, wcześniej) i w koszu (74 kg, `rev` 1, później), „Przywróć” → 74 kg,
   `rev` 3, zbieżnie (dotąd „już w karcie”, zostawało 78 kg).
@@ -22904,7 +23349,8 @@ w międzyczasie usunęło scalanie” w `Bkz_doKosza`, `savedAtISO` treści w `B
 **Ograniczenia (czego zmiana nie robi).**
 - **E3, scalenie, kosz i poprawka.** K scala X → Y i przenosi zapis S spod Y do kosza, a P poprawia S w starej X.
   P trzyma X z jedyną wersją S (ostatniej wersji karty nie usuwa żaden nagrobek), K nie ma X. Kosz na obu ma poprawkę.
-  Rozjazd do domknięcia osobnym PR (nagrobek wersji po `snapshotId`).
+  Rozjazd do domknięcia osobnym PR (nagrobek wersji po `snapshotId`). *(Aktualizacja 2026-10-28, P-KOSZ-PO-KLUCZU: zamknięte — nagrobek wersji
+  szuka wersji po `snapshotId`: P usuwa S ze starej X, a pustą X bez nagrobka; na obu kosz z poprawką.)*
 - **E4, dwa scalenia kontra poprawka.** Wersja przeniesiona dwoma scaleniami ma `rev` 2, poprawka w starej karcie
   `rev` 1, więc kosz trzyma treść z `rev` 2, czyli bez poprawki. Zamyka to dopiero D-7 wariant 2 (późniejsza poprawka
   wygrywa), który musi zmienić `Bkz_nowszaWersja` razem z regułą wersji w `Bsl_scalPacjenta`. *(Aktualizacja 2026-10-21, P-POZNIEJSZA-POPRAWKA (D-7 wariant 2): zamknięte E4b —
@@ -22930,6 +23376,8 @@ w międzyczasie usunęło scalanie” w `Bkz_doKosza`, `savedAtISO` treści w `B
     nie usuwa żaden nagrobek, więc A trzyma [s1], B trzyma [s2] (tak samo przed zmianą). Gdy B usunie przy tym
     pacjenta, A trzyma X = [s1], a B i nowe urządzenie nie mają X, do następnej zmiany X na A. Obie treści są w koszu na
     wszystkich urządzeniach, nic nie ginie. Domknięcie razem z E3 (deterministyczny wybór ocalałej wersji).
+    *(Aktualizacja 2026-10-28, P-KOSZ-PO-KLUCZU: obecność bez zmian — wybór ocalałej wersji poza PR-E3, osobna decyzja (P4); zostawiona
+    wersja przyjmuje nowszą treść kosza i późniejszą gwiazdkę (Q8).)*
   - **Zegar urządzenia przestawiony do przodu.** Zmiana w karcie albo kosz na takim urządzeniu daje chwilę zapisu
     karty z przyszłości, która nigdy nie maleje. „Usuń pacjenta” na urządzeniu z dobrym zegarem przed tą chwilą
     przegrywa i pacjent wraca. Tak było już dotąd przy nowej wizycie; zmiana dokłada wyzwalacze.
@@ -23119,7 +23567,10 @@ rundach chmury (fuzz: 32 z 1100 przebiegów, zawsze kosz albo „Przywróć” n
 `32b6557` kosz w tym oknie odmawiał („brak”), ale ten sam rozjazd powstaje tam przy koszu x2 w X przed synchronizacją B,
 więc przyczyna jest starsza: nagrobek wersji działa tylko na kartę o swoim `patientId` (tak samo „Scal pacjentów”
 X → W i kosz x1 spod W w oknie: A i B — x1 w Y i w koszu, C — tylko w koszu). Naprawa przyczyny (nagrobek odszukuje
-wersję po kluczu, niezależnie od karty) zmienia regułę kosza dla każdego scalania — osobna decyzja, poza tą poprawką;
+wersję po kluczu, niezależnie od karty) zmienia regułę kosza dla każdego scalania — osobna decyzja, poza tą poprawką
+*(Aktualizacja 2026-10-28, P-KOSZ-PO-KLUCZU: w pełnym scalaniu nagrobek wersji odszukuje ją po kluczu; pod inną kartą wyjątek ostatniej wersji karty
+nie obowiązuje tylko dla starego duplikatu (karta z nagrobkiem pacjenta, karta nagrobka jest tu) — inaczej wersja zostaje
+z nowszą treścią, Q8)*;
 (e) pusta karta X znika już w fazie przeniesień (`Bsw_poOddaniu`), a nie dopiero przy usuwaniu zbioru N, więc
 „Przywróć z kosza” i „Scal pacjentów” na X w oknie faza → usuwanie N kończą się błędem („Karta tego zapisu została
 usunięta.”, „brak rekordu źródłowego”) — na `32b6557` wykonywały się na karcie, która zaraz znikała. Bez utraty: wpis
@@ -23312,7 +23763,8 @@ otwarciu pacjenta i podstawa następnego zapisu — zostaje głową scalenia.
 - **Remis milisekundy.** Gdy ostatni zapis źródła i głowa scalenia wypadną w tej samej milisekundzie, kolejność wersji
   (`yr`) stawia wyżej dawną głowę źródła (`rev` 1) jako bieżącą wersję celu. Ręcznie nieosiągalne; w testach odstęp.
 - **Kosz-przed i kosz-po, osobna wada.** Wersja usunięta do kosza na jednym urządzeniu przed albo po „Scal pacjentów” na
-  drugim zostaje aktywna pod kartą docelową na urządzeniu scalającym — jak na `2df41a8`.
+  drugim zostaje aktywna pod kartą docelową na urządzeniu scalającym — jak na `2df41a8`. *(Aktualizacja 2026-10-28, P-KOSZ-PO-KLUCZU: zamknięte —
+  wersja tylko w koszu na wszystkich urządzeniach, 16 z 16 przebiegów.)*
 - **Flota mieszana.** Urządzenie na starym kodzie dalej przepina wersje i psuje swoje liczniki; jego „Scal pacjentów”
   nie podbija `rev`, więc gdy X ma mniejszy id, odbiorca po zmianie zostawia wersje przy X, a delta nagrobka je usuwa —
   wracają z pełnym stanem urządzenia scalającego (trwale giną tylko, gdy zniknie ono przed wysyłką; nie mierzone).
@@ -25442,7 +25894,7 @@ usunięciu, więc nie przechowuje stanu sprzed niego.
   dotkniętych kart i zwraca `trashedSnapshotCount`.
 - Reguła konfliktu jak u pacjentów: nagrobek wygrywa z wersją, której ostatnia zmiana (`updatedAtISO`, bez niej `savedAtISO`)
   nie jest późniejsza niż usunięcie. Wersja zmieniona później (przypięcie, poprawka pomiaru, przywrócenie) zostaje, a nagrobek
-  znika. Nagrobek nigdy nie usuwa ostatniej wersji karty. *(Aktualizacja 2026-10-20, P-KOSZ-NOWSZA-TRESC: gdy obie strony usunęły ten sam zapis albo pominięta wersja jest nowsza niż treść kosza, kosz trzyma nowszą z dwóch treści — wyższa `rev`, przy równej późniejsza chwila zmiany.)*
+  znika. Nagrobek nigdy nie usuwa ostatniej wersji karty. *(Aktualizacja 2026-10-28, P-KOSZ-PO-KLUCZU: w pełnym scalaniu nagrobek działa na wersję także pod inną kartą niż jego — odczyt po kluczu; tam wyjątek ostatniej wersji nie obowiązuje tylko dla starego duplikatu (karta z nagrobkiem pacjenta, karta nagrobka jest tu); zostawiona ostatnia wersja przyjmuje nowszą treść i późniejszą gwiazdkę, Q8.)* *(Aktualizacja 2026-10-20, P-KOSZ-NOWSZA-TRESC: gdy obie strony usunęły ten sam zapis albo pominięta wersja jest nowsza niż treść kosza, kosz trzyma nowszą z dwóch treści — wyższa `rev`, przy równej późniejsza chwila zmiany.)*
 - Jawny import (`importPatientFromEnvelope`, scalenie kopii konta) zdejmuje nagrobki importowanych wersji i nadaje im nową
   chwilę zmiany — jak import zdejmuje nagrobek pacjenta.
 - Bez zmian: retencja i `deleteSnapshot` (bez nagrobka, jak dotąd); format zapisu pacjenta; kopia konta. Od SW 1.1.129

@@ -417,7 +417,7 @@ describe('strażnik źródła P-POZNIEJSZA-POPRAWKA', () => {
     expect(przywroc).not.toContain('mt(obecna) > revUsuniecia');
     expect(przywroc).toContain("Bpp_chwilaZmiany(Bkz_znanaZmiana(e), obecna ? Bkz_zmiana(obecna) : '', Bkz_ostatnie(e))");
     expect(przywroc).toContain('updatedAtISO: zmiana,');
-    expect(przywroc).toContain('Bkz_przebudujNaglowek(patientId, zmiana, Bses_o)');
+    expect(przywroc).toContain('Bkz_przebudujNaglowek(karta, zmiana, Bses_o)'); // P-KOSZ-PO-KLUCZU: stempel w karcie, w której wizyta leży
     const poImporcie = czesc('async function Bkz_poImporcie(', '\n}\n');
     expect(poImporcie).toContain('Bpp_chwilaZmiany(wersja.updatedAtISO, wersja.savedAtISO, Bkz_znanaZmiana(e), Bkz_ostatnie(e))');
     expect(poImporcie).not.toContain('updatedAtISO: teraz');
