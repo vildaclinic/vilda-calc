@@ -1,0 +1,24 @@
+{
+  "provenance": {
+    "commit": "eee483016505f3267c61629af3db1216c5d79fe2",
+    "serializerSha256": "36a850159b6e11b3db429249f257d61ba4065d257c767d26f723d0aaf3dec093",
+    "indicatorSha256": "a72746d34bfc411a1f7eb75a93f98f1e854909e8e947a4ec6010bb6ff0ee718d",
+    "method": "Complete shipped inline_kalkulator_klirens_07.js buildClcrSessionSnapshot and vilda_save_status_indicator.js _onPatientLoaded, using the synthetic reset controls below. Empty dynamic hours model a native form.reset; no clinical engine is executed."
+  },
+  "patientId": "fictional-update-id",
+  "main": { "name": "Fikcyjny update", "user": { "age": 10, "height": 135, "weight": 30 } },
+  "resetInputs": {
+    "formulaPicker": "ckid_u25", "Scr": "0.4",
+    "Cl24DurationHours": "24", "Cl24DurationSource": "assumed-24h",
+    "CA_collectionHours": "", "CA_collectionSource": "assumed-24h",
+    "MG_collectionHours": "", "MG_collectionSource": "assumed-24h",
+    "UA_collectionHours": "", "UA_collectionSource": "assumed-24h"
+  },
+  "reference": {
+    "fp": "{\"clcr\":{\"inputs\":{\"CA_collectionSource\":\"assumed-24h\",\"Cl24DurationHours\":\"24\",\"Cl24DurationSource\":\"assumed-24h\",\"MG_collectionSource\":\"assumed-24h\",\"Scr\":\"0.4\",\"UA_collectionSource\":\"assumed-24h\"}},\"core\":{\"name\":\"Fikcyjny update\",\"user\":{\"age\":10,\"height\":135,\"weight\":30}}}",
+    "dirty": false,
+    "savedAtISO": null,
+    "snapshotCount": null,
+    "patientName": "Fikcyjny update"
+  }
+}

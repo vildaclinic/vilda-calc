@@ -12818,6 +12818,45 @@ nawigacji: [analiza chipa i powłoki](../PATIENT_CHIP_NAVIGATION_AUDIT.md).
 Wynik końcowych kontroli jest podany w PR; akceptacja do publikacji pozostaje
 decyzją właściciela.
 
+### P-CHIP-AKTUALIZACJA — zachowanie wejść podczas aktualizacji PWA (2026-10-29)
+
+Korekta cyklu zapisu nie zmienia wzorów, norm, jednostek ani reguł wieku
+DOB-AGE-1/2 i P-ODTWORZ-WIEK. Przy aktualizacji ukryta ramka tego samego pacjenta
+mogła nadpisać nowszą sesję. Potwierdzony przebieg przeglądarkowy usuwał datę
+pomiaru, a rzeczywiste moduły zapisu odtworzyły także nadpisanie ciśnienia
+120 przez starsze 118. Skorygowane wejścia mogą więc zmienić wynik, który
+wcześniej korzystał z nieaktualnych danych; nie jest to walidacja medyczna.
+
+Koordynator używa istniejącego zapisu aktywnego formularza. Następnie tymczasowo
+blokuje zapisy zamykanych dokumentów przez protokół panelu i przeładowuje host.
+Nie ustanawia nowej referencji SSI ani nie przepisuje rekordu sejfu.
+Wspólne przygotowanie uruchamia też `host.pagehide` zwykłego F5; powrót
+`pageshow.persisted` zdejmuje blokadę przed dotychczasową obsługą powłoki.
+Starsza reprezentacja pustej założonej doby jest normalizowana tylko na kopii
+porównawczej zgodnie z istniejącym `ClcrCollectionDuration.fromValues()`.
+
+Próba pierwszego upgrade już uruchomionego `989830ce`/SW 1.1.411 do nowego
+klienta potwierdziła, że stary listener przed jego załadowaniem nadal potrafi
+nadpisać BP 120 → 118 i usunąć datę. Nowa wersja nie może retroaktywnie
+zatrzymać starego kodu. Pierwsze przejście należy przeprowadzić po zakończeniu
+pracy z pacjentem. Nie zastosowano automatycznego przywracania z sejfu ani
+zatwierdzania odcisku bieżącej sesji, które mogłyby utracić prawdziwe edycje.
+
+Przypadki syntetyczne: zapisane BP 120 i starszy ukryty formularz 118 → po
+aktualizacji nadal 120 i `saved`; rzeczywista edycja do 121 → po aktualizacji
+121 i `dirty`. Masa 47 kg i pewna data 29.10.2026 → aktualizacja zachowuje oba
+wejścia. Historyczny odcisk z `Scr: '0.4'` i pustymi godzinami założonej doby
+→ nowy serializer zachowuje `Scr: '0.4'`, a zgodne dane pozostają `saved`;
+nowe `Scr: '0.5'` nadal daje `dirty`. Ręczny czas i wymagane potwierdzenia
+pozostają porównywane.
+
+Regresje używają rzeczywistych funkcji produkcyjnych:
+`save-status-update-migration.test.mjs`, `shell-app-update-reload.test.mjs`,
+`patient-status-pwa-update-lifecycle.test.mjs` oraz prawdziwa aktualizacja SW
+w `patient-status-pwa-update.spec.mjs`. Pełny opis dowodów:
+[analiza chipa i powłoki](../PATIENT_CHIP_NAVIGATION_AUDIT.md).
+Akceptacja funkcjonalnego wpływu i publikacja pozostają decyzją właściciela.
+
 ### P-ODTWORZ-WIEK-2 — data pomiaru po usunięciu, po północy, przy ponownym zapisie, z klirensu i po poprawce w Karcie (SW 1.1.201, 2026-10-08, przegląd po P-ODTWORZ-WIEK)
 
 **Skąd.** Trzecia runda przeglądu adwersaryjnego kodu P-ODTWORZ-WIEK po scaleniu (7 znalezisk, każde potwierdzone przez dwóch niezależnych weryfikatorów na prawdziwej stronie z przesuniętym zegarem). Dwa to regresje P-ODTWORZ-WIEK (formularz główny zaczął zapisywać `user.measuredAtISO` także zwykłym wizytom), pięć to luki, przez które gwarancja „odtworzona wizyta liczy się w wieku pomiaru" nie obejmowała wszystkich ścieżek. Właściciel wybrał pełną poprawkę jednym PR.
