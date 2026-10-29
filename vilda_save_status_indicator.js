@@ -246,11 +246,14 @@ function normalizeClcrStatusInputs(session){
     ACR_entry_mode:"concentration",PCR_entry_mode:"concentration",
     CaCr_entry_mode:"concentration",OxCr_entry_mode:"concentration",CitCr_entry_mode:"concentration",
     CitCr_reported_basis:"unknown",citrateSpotReportingEntity:"unknown",creatinineState:"unknown",
-    CA_inputMode:"concentration",CA_clinicalMode:"general",MG_inputMode:"concentration",UA_inputMode:"concentration"
+    CA_inputMode:"concentration",CA_clinicalMode:"general",MG_inputMode:"concentration",UA_inputMode:"concentration",PO4_inputMode:"concentration"
   };
   Object.keys(defaults).forEach(function(key){if(inputs[key]===defaults[key])delete inputs[key]});
+  // PO4 uses a hidden text control; its exact default is the string false.
+  if(inputs.PO4_durationNeedsConfirmation==="false")delete inputs.PO4_durationNeedsConfirmation;
   [["Cl24DurationHours","Cl24DurationSource"],["CA_collectionHours","CA_collectionSource"],
-    ["MG_collectionHours","MG_collectionSource"],["UA_collectionHours","UA_collectionSource"]].forEach(function(pair){
+    ["MG_collectionHours","MG_collectionSource"],["UA_collectionHours","UA_collectionSource"],
+    ["PO4_collectionHours","PO4_collectionSource"]].forEach(function(pair){
     var value=inputs[pair[0]],source=inputs[pair[1]],present=value!==null&&value!==undefined&&String(value).trim()!=="";
     // This is the existing durationFields migration: an entered historical
     // duration without a provenance field is manual, including an explicit 24.

@@ -47,6 +47,12 @@ Porównanie musi traktować brak kalkulatora i jego puste ustawienia domyślne
 jednakowo. Ręcznie podany czas zbiórki, jego pochodzenie, odmienne ustawienia
 i rzeczywiste oznaczenia nadal muszą uczestniczyć w porównaniu.
 
+Dotyczy to także nowego formularza fosforanów z aktualnej bazy: pusty tryb
+stężenia, założone 24 godziny i dokładna flaga `PO4_durationNeedsConfirmation`
+równa `false` są ustawieniami interfejsu. Oznaczenie, objętość, wynik wpisany
+ręcznie, przeliczenia jednostek, potwierdzenie i historycznie brakujący czas
+nadal uczestniczą w porównaniu.
+
 ### Lokalny `hidden` może usunąć wspólną referencję
 
 W bazowej funkcji `B()` wskaźnika gałąź `hidden` z niepustymi danymi woła

@@ -23,9 +23,10 @@ function harness(hours, { absent = false } = {}) {
   for (const file of ['clcr_collection_duration.js', 'clcr_extended_egfr.js',
     'clcr_mg_dzm_reference_data.js', 'clcr_mg_dzm.js',
     'clcr_ca_dzm_reference_data.js', 'clcr_ca_dzm.js',
+    'clcr_po4_dzm_reference_data.js', 'clcr_po4_dzm.js',
     'clcr_ua_reference_data.js', 'clcr_ua.js']) loadBrowserScript(file, w);
   const values = { age: '45', ageMonths: '0', weight: '60', height: '165', sex: 'F',
-    U_Mg: '100', U_Ca: '2.5', U_UA: '20', V24: '1000',
+    U_Mg: '100', U_Ca: '2.5', U_UA: '20', U_PO4: '50', V24: '1000',
     Cl24DurationSource: absent ? 'assumed-24h' : 'hours', ...(!absent ? { Cl24DurationHours: hours } : {}) };
   const doc = { getElementById: id => Object.hasOwn(values, id) ? { value: values[id], type: 'text' } : null };
   const evaluate = name => new Function('window', 'document', '$',
@@ -34,7 +35,7 @@ function harness(hours, { absent = false } = {}) {
 }
 
 describe('Actual generic readiness gate agrees with the shared duration module', () => {
-  const timed = ['PO4_mgkg', 'Prot_mgkg', 'Na_mmol_d', 'K_mmol_d', 'Ox_mgkg', 'Cit_mgkg', 'pH24'];
+  const timed = ['Prot_mgkg', 'Na_mmol_d', 'K_mmol_d', 'Ox_mgkg', 'Cit_mgkg', 'pH24'];
   function canCompute(formula, hours, knownProblem = false) {
     const w = {}; loadBrowserScript('clcr_collection_duration.js', w);
     const values = { age: '45', weight: '60', height: '165', V24: '1440', U_Na: '50', U_K: '20',
@@ -86,7 +87,7 @@ describe('Actual result cleanup accepts IDs and DOM nodes', () => {
     expect(() => h.clearClcrResultElement(null)).not.toThrow();
   });
 
-  it.each(['Mg_mgkg', 'Ca_mgkg', 'UA_mgkg'])('%s retains one original result plus Details and removes separate BSA/dormant cards', formula => {
+  it.each(['Mg_mgkg', 'Ca_mgkg', 'UA_mgkg', 'PO4_mgkg'])('%s retains one original result plus Details and removes separate BSA/dormant cards', formula => {
     const h = setup();
     const containers = Object.fromEntries(['clcrInfo', 'elecInfo', 'stoneInfo'].map(id => {
       const host = h.node('div', { id }); h.doc.body.appendChild(host); return [id, host];
@@ -119,6 +120,7 @@ describe.each([
   ['Mg', 'evaluateClcrMgDzm', 'MG_collectionHours'],
   ['Ca', 'evaluateClcrCaDzm', 'CA_collectionHours'],
   ['UA', 'evaluateClcrUa', 'UA_collectionHours'],
+  ['PO4', 'evaluateClcrPo4Dzm', 'PO4_collectionHours'],
 ])('Actual broad %s adapter retains shared duration validation', (_label, name, field) => {
   it.each(['0', '-1', 'abc'])('rejects explicit invalid common hours %s without assuming 24', hours => {
     const h = harness(hours), result = h.evaluate(name);

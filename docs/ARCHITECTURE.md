@@ -223,6 +223,13 @@ rekordzie PAL korzysta z istniejących API, a automatyczna wartość wytworzona
 przy imporcie jest uzgadniana przed referencją „Nowego pomiaru”. Istniejące
 i ręczne wartości pozostają zachowane.
 
+Wyjątek dla potraw zachowuje wcześniejszy kontrakt zgodnej sesji: na stronie
+bez edytora brak `foods` albo pusty wrapper `snacks`/`meals` nie usuwa nowszych
+potraw osoby o zgodnej nazwie i dacie urodzenia. Niepusty rekord, jawne
+wyczyszczenie i bieżący edytor mają pierwszeństwo. Ten wyjątek nie obejmuje
+pozostałych sekcji; ponowienie odczytuje najnowszą sesję, bez zachowywania
+przestarzałej kopii potraw w źródle importu.
+
 Sama obecność globalnej pustej listy terapii nie dowodzi wyczyszczenia:
 monitory tworzą takie listy również przed odczytem magazynu. Brak klucza lub
 API zachowuje dotychczasowe uzupełnienie z sesji; jawne `[]` właściwego modułu

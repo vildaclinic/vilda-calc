@@ -29,7 +29,6 @@ const calculate = (id, patch = {}, output = id, context = {}) => engine.recalcul
 
 describe('Saved Klirens: existing timed-urine production arithmetic', () => {
   it.each([
-    ['PO4_mgkg', 150, 'mg P/24 h'],
     ['Ox_mgkg', 0.06, 'mg/kg/24 h'], ['Cit_mgkg', 1.5, 'mg/kg/24 h'],
     ['Na_mmol_d', 90, 'mmol/24 h'], ['K_mmol_d', 60, 'mmol/24 h'],
     ['KM_Cr', 0.2, 'mg/mg'], ['Ca_Cr', 0.08, 'mg/mg'], ['Mg_Ca', 0.25, 'mg/mg'],
@@ -40,6 +39,13 @@ describe('Saved Klirens: existing timed-urine production arithmetic', () => {
     expect(result.valueNum).toBeCloseTo(expected, 12);
     expect(result.unit).toBe(unit);
     expect(result).toMatchObject({ sourceFormulaId: id, comparator: '', tone: 'neutral', norm: '', outOfRange: null, category: null });
+  });
+
+  it('phosphorus keeps its original P mass and uses the age/sex reference only with captured numeric hours', () => {
+    const result = calculate('PO4_mgkg', { PO4_collectionHours: '24' });
+    expect(result).toMatchObject({ valueNum: 150, unit: 'mg P/24 h', norm: '390–1425 mg P/24 h', outOfRange: true,
+      po4DzmSnapshot: { dailyMg: 150, status: 'low', input: { hours: '24' } } });
+    expect(() => calculate('PO4_mgkg')).toThrow(/czas/i);
   });
 
   it('magnesium uses its audited daily unit and frozen reference; legacy dates alone do not supply hours', () => {
@@ -74,8 +80,8 @@ describe('Saved Klirens: existing timed-urine production arithmetic', () => {
   });
 
   it('uses the existing phosphorus producer for an exact zero, without changing zero rules of other formulas', () => {
-    expect(calculate('PO4_mgkg', { U_PO4: '0' }).valueNum).toBe(0);
-    expect(() => calculate('PO4_mgkg', { U_PO4: '-1' })).toThrow();
+    expect(calculate('PO4_mgkg', { U_PO4: '0', PO4_collectionHours: '24' }).valueNum).toBe(0);
+    expect(() => calculate('PO4_mgkg', { U_PO4: '-1', PO4_collectionHours: '24' })).toThrow();
     expect(() => calculate('Ca_mgkg', { U_Ca: '0' })).toThrow();
   });
 
@@ -161,6 +167,6 @@ describe('Saved Klirens: measured clearance, CG and dialysis reuse actual produc
     expect(fields.UreaPost).toBe(36);
   });
   it('rejects an unavailable frozen reference profile rather than using a new policy', () => {
-    expect(() => calculate('PO4_mgkg', {}, 'PO4_mgkg', { profileId: 'unknown-version' })).toThrow(/profil/);
+    expect(() => calculate('PO4_mgkg', { PO4_collectionHours: '24' }, 'PO4_mgkg', { profileId: 'unknown-version' })).toThrow(/profil/);
   });
 });

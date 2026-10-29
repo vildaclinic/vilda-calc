@@ -322,7 +322,8 @@ describe('Klirens — centralny model przepływu UI', () => {
     expect(byId('UA_mgkg')?.requires).not.toEqual(expect.arrayContaining(timedProtocol));
     expect(byId('Ca_mgkg')?.requires).toEqual(['CA_concentration', 'CA_concentrationUnit', 'CA_volume', 'CA_volumeUnit', 'CA_collectionHours']);
     expect(byId('Mg_mgkg')?.requires).toEqual(['MG_concentration', 'MG_concentrationUnit', 'MG_volume', 'MG_volumeUnit', 'MG_collectionHours']);
-    for (const formulaId of ['PO4_mgkg', 'Prot_mgkg', 'Na_mmol_d', 'K_mmol_d', 'Ox_mgkg', 'Cit_mgkg', 'pH24']) {
+    expect(byId('PO4_mgkg')?.requires).toEqual(['PO4_concentration', 'PO4_concentrationUnit', 'PO4_volume', 'PO4_volumeUnit', 'PO4_collectionHours']);
+    for (const formulaId of ['Prot_mgkg', 'Na_mmol_d', 'K_mmol_d', 'Ox_mgkg', 'Cit_mgkg', 'pH24']) {
       expect(byId(formulaId)?.requires, formulaId).toContain('Cl24DurationHours');
       for (const id of timedProtocol) expect(byId(formulaId)?.requires, formulaId).not.toContain(id);
     }
@@ -684,22 +685,22 @@ describe('Klirens — centralny model przepływu UI', () => {
     );
 
     expect(html).toContain('clcr_ui_workflow.css?v=19');
-    expect(html).toContain('clcr_ui_workflow.js?v=32');
-    expect(html).toContain('inline_kalkulator_klirens_02.js?v=25');
-    expect(html).toContain('inline_kalkulator_klirens_04.js?v=32');
-    expect(html).toContain('inline_kalkulator_klirens_07.js?v=21');
+    expect(html).toContain('clcr_ui_workflow.js?v=33');
+    expect(html).toContain('inline_kalkulator_klirens_02.js?v=26');
+    expect(html).toContain('inline_kalkulator_klirens_04.js?v=33');
+    expect(html).toContain('inline_kalkulator_klirens_07.js?v=22');
     expect(html).toContain('clcr_result_reference_data.js?v=7');
     expect(html).toContain('clcr_result_presentation.js?v=8');
-    expect(serviceWorker).toContain("const SW_VERSION = '1.1.409'");
+    expect(serviceWorker).toContain("const SW_VERSION = '1.1.410'");
     expect(html).toContain('clcr_calculation_assumptions.js?v=2');
     expect(serviceWorker).toContain("'/clcr_calculation_assumptions.js?v=2'");
     expect(serviceWorker).toContain("'/clcr_clinical_safety.js?v=13'");
     expect(serviceWorker).toContain("'/clcr_result_reference_data.js?v=7'");
     expect(serviceWorker).toContain("'/clcr_result_presentation.js?v=8'");
     expect(serviceWorker).toContain("'/clcr_ui_workflow.css?v=19'");
-    expect(serviceWorker).toContain("'/clcr_ui_workflow.js?v=32'");
-    expect(serviceWorker).toContain("'/inline_kalkulator_klirens_02.js?v=25'");
-    expect(serviceWorker).toContain("'/inline_kalkulator_klirens_04.js?v=32'");
+    expect(serviceWorker).toContain("'/clcr_ui_workflow.js?v=33'");
+    expect(serviceWorker).toContain("'/inline_kalkulator_klirens_02.js?v=26'");
+    expect(serviceWorker).toContain("'/inline_kalkulator_klirens_04.js?v=33'");
     expect(html).toContain('clcr_acr_ui.js?v=2');
     expect(serviceWorker).toContain("'/clcr_acr_ui.js?v=2'");
     expect(html).toContain('vilda_unsaved_guard.js?v=7');
