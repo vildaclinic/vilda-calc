@@ -97,7 +97,7 @@ test('powłoka: sidebar wraca po wejściu w kartę pacjenta z pełnoekranowych P
 
   // „Pokaż wszystkie" → natywny dialog powłoki, bez drugiego okna wewnątrz ramki.
   await ramkaStart(page).evaluate(() => document.querySelector('#remindersInline .vild-rem-all').click());
-  const dialog = page.locator('dialog.vb22');
+  const dialog = page.locator('dialog.vb22-modal');
   await expect(dialog.locator('.vilda-reminders-row')).toHaveCount(1);
   expect(await widokPowloki(page), 'modal blokuje tło — tak ma być').toMatchObject({
     sidebarZablokowany: true, remindersOpen: true, nakladki: 1, natywnyModal: true,
@@ -106,7 +106,7 @@ test('powłoka: sidebar wraca po wejściu w kartę pacjenta z pełnoekranowych P
 
   // W B2.2 klik wybiera szczegóły, a link otwiera natywną Kartę Pacjenta w powłoce.
   await dialog.locator('.vilda-reminders-row').click();
-  await dialog.getByRole('button', { name: /otwórz Kartę pacjenta/ }).click();
+  await dialog.getByRole('button', { name: /[Oo]twórz Kartę pacjenta/ }).click();
   await expect(dialog).toHaveCount(0);
   const poKliku = await widokPowloki(page);
   expect(poKliku.nakladki, 'nakładka zdjęta').toBe(0);
