@@ -57,8 +57,9 @@ o zapisie całej karty.
 
 Ścieżkę usuwania potwierdza regresja uruchamiająca rzeczywisty kod wskaźnika
 z dwoma dokumentami i wspólnym magazynem, zarówno dla danych zapisanych, jak
-i rzeczywiście zmienionych. Osobna próba przeglądarkowa potwierdza stos
-`U → N → B → ue` po wejściu w ten lokalny stan. W początkowych sześciu próbach
+i rzeczywiście zmienionych. Osobna kontrolowana próba przeglądarkowa po
+wywołaniu `_forceTransition('hidden')` potwierdza stos `U → N → B → ue`.
+W początkowych sześciu próbach
 samego F5 na Start nie wystąpił naturalnie fioletowy stan; nie są one dowodem
 wykluczającym wyścig odtwarzania.
 
@@ -109,6 +110,41 @@ ustawiało `saved` także w niezapisanym formularzu pacjenta A. Referencja
 otrzymywała przy tym metadane B. Powiadomienie musi być przypisane do pacjenta;
 nieaktualna ramka również nie może ustanawiać wspólnej bazy.
 
+### Nieaktualny panel usuwa sesję podczas ukrywania
+
+Celowana próba rzeczywistego pickera Klirensu uchwyciła fizyczne usunięcie
+sesji głównej 69 ms po poprawnym zapisie pacjenta C na Start. Sprawcą był
+pusty, nieaktualny panel Klirensu: jego właściciel był `null`, protokół zgłaszał
+`nieaktualny() === true`, a wybranym pacjentem pozostawał C. Stos wywołania:
+`visibilitychange → Kt → oe → re → clearMainSession → Storage.removeItem`.
+
+Adapter odrzuca zapisy nieaktualnych paneli, lecz autosave wcześniej sprawdzał
+znaczenie pustego formularza i przechodził bezpośrednio do usunięcia sesji.
+Późniejszy poprawny zapis czasem odtwarzał sesję; końcowy stan tej kontrolowanej
+próby był nawet zielony, mimo potwierdzonego usunięcia i przejściowych odczytów
+`null`. Wyjaśnia to nieregularność objawów i potrzebę deterministycznego testu
+zdarzenia ukrywania, poza sprawdzaniem samego stanu końcowego.
+
+Autosave odrzuca teraz nieaktualny panel przed oceną pustego formularza.
+Jawne czyszczenie sesji oraz globalne czyszczenie przy blokadzie/wylogowaniu
+zachowują dotychczasowy kontrakt; nie dodano ogólnej blokady do adaptera.
+
+```mermaid
+sequenceDiagram
+    participant S as Start
+    participant M as Wspólna sesja główna
+    participant K as Nieaktualny panel Klirensu
+    S->>M: Zapis danych C
+    K->>K: visibilitychange: hidden
+    alt Przed poprawką
+        K->>M: Pusty formularz → usuń sesję
+        M-->>S: null przy kolejnym odczycie
+    else Po poprawce
+        K->>K: nieaktualny() → zakończ autosave
+        M-->>S: Nadal pełne dane C
+    end
+```
+
 ### Wczytanie na DocPro pomija pola innych kart
 
 Pełny zapis pacjenta C na Start, wczytanie B, a następnie ponowne wczytanie C
@@ -141,6 +177,27 @@ przed zastosowaniem C. Moduł wieku mógł więc użyć daty B zamiast ręcznego
 Jawny import resetuje DOB przez istniejącą funkcję przed odtworzeniem nowego
 rekordu. Odtwarzanie tej samej sesji zachowuje wpisaną datę.
 
+### Archiwum „Nowego pomiaru” trafia do innego modelu niż kolektor
+
+Pełne scenariusze DocPro ujawniły kolejną rozbieżność: po „Nowym pomiarze”
+historia zaawansowana zawierała poprzedni bieżący punkt, a referencja historii
+podstawowej jeszcze go nie miała. Dopiero Start/F5 dopisywał go również do
+sesji głównej, zmieniając chip na `dirty`.
+
+Odczyty po obsłudze wyboru potwierdziły: kopia archiwizacji i globalny alias
+`growthBasicData` miały wiersze 120 i 160 miesięcy, natomiast używany przez
+kolektor `basicGrowthData` oraz sesja główna nadal miały tylko wiersz 120.
+Skrypt aktualizował niewłaściwy alias. Na Start model otrzymywał oba wiersze,
+a zapis sesji dopiero przy odświeżeniu ujawniał różnicę.
+
+Poprawka aktualizuje właściwy model oraz domyka jego jeden zapis po zdarzeniu
+wyboru, przed ustanowieniem referencji przez SSI. Istniejąca funkcja archiwizacji
+dopisuje poprzedni punkt do najnowszej historii podstawowej. Niezależne wiersze
+pozostają zachowane; jawne wyczyszczenie nie może odtworzyć starszych wierszy
+z rekordu źródłowego. Transakcja jest przypisana do pacjenta, sekwencji i
+aktualnej podstawy zapisu, a ponowienie po nieudanym zapisie nie może nadpisać
+historii zmienionej w międzyczasie.
+
 ### Domyślne kontrolki Start i metadane sejfu w odcisku
 
 Puste karty materializują także dokładnie określone domyślne ustawienia Start:
@@ -148,10 +205,31 @@ wytyczną ESC, populację zdrową i kontekst oddechowy healthy/awake. Projekcja
 porównawcza utożsamia je z brakiem tych ustawień; odmienne wartości pozostają
 porównywane. PAL nadal uczestniczy w porównaniu.
 
-Pola techniczne rekordu sejfu `_contentAtISO`, `_pinnedState.h` i `_pinned`
+Pola techniczne rekordu sejfu `_contentAtISO`, `_pinnedState` i `_pinned`
 mogły trafić do pierwszej sesji, a zniknąć po F5. Są pomijane wyłącznie na
 kopii do porównania, tak samo dla bieżącej i starszej referencji. Nie zmienia
 to zapisu, eksportu ani przypięcia rekordu.
+
+### Sesja ma dane, których formularz Start nie odtworzył
+
+Samodzielny picker Klirensu i późniejsze wejście na Start ujawniły brak
+odtwarzania kontrolek tętna, ciśnienia i oddechów z sesji głównej. Klirens nie
+ma tych kontrolek, więc nie zapisuje ich także w mapie pól wspólnego runtime.
+Sesja główna zawiera dane C i chip początkowo pokazuje `saved`, lecz formularz
+Start nadal ma puste wartości. Kolejny zapis strony zastępuje nimi dane C,
+a F5 ujawnia różnicę. Przywrócenie musi objąć właściwe kontrolki przed pierwszym
+zapisem; sama obecność sekcji w JSON nie oznacza odtworzenia formularza.
+
+Podobnie obecność globalnego modelu historii nie oznacza własności danych.
+Start, DocPro i Klirens ładują część tych samych skryptów, choć tylko niektóre
+strony mają tabele wzrastania lub spożycia. Skrypt może zainicjować globalne
+`null`/`[]` bez takiej tabeli. Odtworzenie nie może potraktować tego jako
+świadomego usunięcia historii. Warunek własności musi odpowiadać kontenerowi
+edytora lub autorytatywnemu odczytowi właściwego modułu.
+
+Macierz sprawdza dane również po każdym przejściu przygotowującym i powrocie
+na Start, przed kolejnym zapisem. Zapis kontrolny nie może zatwierdzić historii,
+która zniknęła już podczas przygotowania scenariusza.
 
 ## Kontrakt poprawki
 

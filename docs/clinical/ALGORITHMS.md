@@ -12766,6 +12766,38 @@ Stąd kumulacja: pierwszy błąd tworzył warunki dla wszystkich następnych. Da
 
 **Do decyzji właściciela.** (1) Akceptacja kliniczna reguły dla formularza głównego. (2) Brzmienie notki. (3) Reguła „nowa masa albo wzrost po odtworzeniu = nowy pomiar na dziś": poprawka literówki w pomiarze starej wizyty też przełączy wiek na dziś (jak przed zmianą); inne pola (obwody, talia, ciśnienie) wpisane do odtworzonej wizyty liczą się w wieku tej wizyty i dostają jej datę. (4) Poprawka daty urodzenia w Karcie zostawia zapisany wiek wizyty (reguła Karty); wiek na dziś daje „Nowy pomiar". (5) Kolektor formularza głównego zapisuje `user.measuredAtISO` (tylko pewną datę) — nowe użycie istniejącego pola rekordu.
 
+### P-CHIP-SESJA — wiek i dane wejściowe po zmianie strony (2026-10-29)
+
+Naprawa techniczna odtwarzania wejść nie zmienia reguł DOB-AGE-1/2 ani
+P-ODTWORZ-WIEK. Bieżąca wizyta z datą urodzenia używa istniejącego
+`VildaDobAge.ageFromDobISO()` oraz `weeksApplicable()` także na Klirensie,
+który nie montuje pola daty. Odtworzony lub zapisany pomiar zachowuje własny
+wiek i tygodnie; F5 nie rozpoczyna nowej wizyty. Źródłowy zapis pozostaje
+niezmieniony. Brak daty zachowuje dotychczasową obsługę ręcznych tygodni.
+
+Przykład syntetyczny przy lokalnej dacie 29.10.2026: DOB 29.08.2026,
+poprzedni pomiar 29.09.2026 z wiekiem 1 mies./4 tyg. Domyślna bieżąca wizyta
+na Klirensie daje 2 mies./8 tyg. z rzeczywistego API kalendarzowego; nie
+przenosi 4 tygodni z poprzedniej wizyty. „Odtwórz zapis” nadal daje wiek
+poprzedniego pomiaru. Dla DOB 01.06.2026 API wyklucza obecne tygodnie z rekordu
+zgodnie z istniejącym oknem; nie dodano nowego progu ani przelicznika.
+
+Sesja główna odtwarza również istniejące kontrolki BP/HR, oddechów i pozostałych
+sekcji przed pierwszym zapisem. Jawne `null`/`false` są odróżniane od braku pola
+w starszym formacie. Strona bez edytora nie zastępuje historii pustym modelem
+inicjalizacyjnym. Może to skorygować wynik, który wcześniej po nawigacji korzystał
+z danych innej wizyty, pustych wejść albo starego wieku; wzory, normy, jednostki,
+interpolacja i reguły interpretacji pozostają bez zmian.
+
+Testy wywołują produkcyjny importer, kolektor i moduł DOB:
+`main-session-owned-sections.test.mjs`, `patient-load-dob-reset.test.mjs`,
+`main-session-runtime-placeholder.test.mjs`,
+`main-session-clinical-fields-restore.test.mjs` oraz rzeczywiste ścieżki
+przeglądarkowe `patient-chip-*-load-origin.spec.mjs`. Pełny kontrakt i zakres
+nawigacji: [analiza chipa i powłoki](../PATIENT_CHIP_NAVIGATION_AUDIT.md).
+Wynik końcowych kontroli jest podany w PR; akceptacja do publikacji pozostaje
+decyzją właściciela.
+
 ### P-ODTWORZ-WIEK-2 — data pomiaru po usunięciu, po północy, przy ponownym zapisie, z klirensu i po poprawce w Karcie (SW 1.1.201, 2026-10-08, przegląd po P-ODTWORZ-WIEK)
 
 **Skąd.** Trzecia runda przeglądu adwersaryjnego kodu P-ODTWORZ-WIEK po scaleniu (7 znalezisk, każde potwierdzone przez dwóch niezależnych weryfikatorów na prawdziwej stronie z przesuniętym zegarem). Dwa to regresje P-ODTWORZ-WIEK (formularz główny zaczął zapisywać `user.measuredAtISO` także zwykłym wizytom), pięć to luki, przez które gwarancja „odtworzona wizyta liczy się w wieku pomiaru" nie obejmowała wszystkich ścieżek. Właściciel wybrał pełną poprawkę jednym PR.

@@ -151,6 +151,9 @@ describe('main-session persistence respects partial-page ownership and the actua
     h.win.advancedGrowthData = {}; h.win.intakeHistory = [];
     h.win.intakeEstimatedKcalPerDay = null; h.win.ghTherapyPoints = [];
     h.win.obesityTherapyPoints = []; h.win.vildaBirthData = null;
+    h.fields.set('advMeasurements', { id: 'advMeasurements' });
+    h.fields.set('intakeMeasurements', { id: 'intakeMeasurements' });
+    h.win.vildaSgaBirthPersistApi = { captureState: () => null };
     h.modules.set('GH_THERAPY_POINTS', []); h.modules.set('OBESITY_THERAPY_POINTS', []);
     const old = h.main(); old.ghTherapyPoints = [{ ageMonths: 120 }];
     old.obesityTherapyPoints = [{ ageMonths: 121 }]; old.birth = { weightGrams: 3000 };
@@ -417,5 +420,108 @@ describe('main-session persistence respects partial-page ownership and the actua
     h.load(source); h.current(partial(source)); h.newChoice(); h.save();
     expect(h.main().plan).toMatchObject({ palFactor: 1.8, palWybrany: true });
     expect(h.main().intake.pal).toBe('1.8');
+  });
+
+  it.each([false, true])('a native default visit resolves DOB age before saving and preserves real PAL choices (%s)', manualPal => {
+    const source = record(), h = harness();
+    if (!manualPal) { delete source.plan; delete source.intake; }
+    for (const id of ['dobInput', 'customGoalKg', 'bpSystolic', 'bpDiastolic', 'advMotherHeight']) h.fields.delete(id);
+    loadBrowserScript('vilda_dob_age.js', h.win);
+    const model = oknoZSilnikiem({ document: h.win.document });
+    wczytajDoOkna(model, 'vilda_diet_plan_ui.js');
+    h.win.energyDefaultPlanPal = model.energyDefaultPlanPal;
+    h.win.energyNormalizePal = model.energyNormalizePal;
+    const expectedAge = h.win.VildaDobAge.ageFromDobISO(source.user.dobISO);
+    h.load(source, { collectUserData: () => h.api.collectUserData() });
+    expect(h.main().user).toMatchObject({ age: expectedAge.years, ageMonths: expectedAge.ageMonths, height: null, weight: null });
+    expect(h.writes[0].user).toMatchObject({ age: expectedAge.years, ageMonths: expectedAge.ageMonths });
+    expect(h.main().plan.palFactor).toBe(manualPal ? 1.8 : model.energyDefaultPlanPal(expectedAge.years + expectedAge.ageMonths / 12,
+      expectedAge.ageMonths, { sex: source.user.sex, weightKg: null, heightCm: null }));
+    expect(h.main().intake.pal).toBe(manualPal ? '1.8' : '1.6');
+  });
+
+  it('the native default age path does not replace a session measurement with today', () => {
+    const source = record(), h = harness(); source.user.age = 7; source.user.ageMonths = 3;
+    h.fields.delete('dobInput'); loadBrowserScript('vilda_dob_age.js', h.win);
+    let calls = 0;
+    h.win.VildaDobAge.ageFromDobISO = () => { calls += 1; throw new Error('Session age must remain authoritative'); };
+    h.load(source, { isSessionRestore: true });
+    expect(h.fields.get('age').value).toBe('7');
+    expect(h.fields.get('ageMonths').value).toBe('3');
+    expect(calls).toBe(0);
+  });
+
+  it('the native default visit does not invent age when the public DOB API is unavailable', () => {
+    const source = record(), h = harness(); h.fields.delete('dobInput');
+    h.load(source, { collectUserData: () => h.api.collectUserData() });
+    expect(h.main().user.age).toBeNull();
+    expect(h.main().plan.palFactor).toBe(1.8);
+    expect(h.main().intake.pal).toBe('1.8');
+  });
+
+  it('a missing legacy professional basic view is materialized from normalized advanced observations before the first write', () => {
+    const source = record(), original = clone(source), h = harness(); source.zscore = { resultsMode: true };
+    original.zscore = clone(source.zscore);
+    h.fields.delete('dobInput'); loadBrowserScript('vilda_dob_age.js', h.win);
+    h.load(source, { collectUserData: () => h.api.collectUserData() });
+    const advanced = h.api.sanitizeAdvancedMeasurementEntries(clone(source.advanced.data.measurements));
+    const basic = advanced.map(({ ageMonths, ageYears, height, weight }) => ({ ageMonths, ageYears, height, weight }));
+    expect(h.writes[0].advanced.data.measurements).toEqual(advanced);
+    expect(h.writes[0].growthBasic.data.measurements).toEqual(basic);
+    expect(source).toEqual(original);
+    expect(source).not.toHaveProperty('growthBasic');
+  });
+
+  it.each([null, { measurements: [] }, { measurements: [{ ageMonths: 132, ageYears: 11, height: 147, weight: 38, ghId: 'fictional-independent-gh' }] }])('an explicit basic model %j is not replaced by the advanced mirror', data => {
+    const source = record(), h = harness(); source.zscore = { resultsMode: true }; source.growthBasic = { data };
+    h.fields.delete('dobInput'); loadBrowserScript('vilda_dob_age.js', h.win);
+    h.load(source, { collectUserData: () => h.api.collectUserData() });
+    expect(h.writes[0].growthBasic.data).toEqual(data);
+  });
+
+  it('materializing the missing basic data preserves its own JSON wrapper extensions', () => {
+    const source = record(), h = harness(); source.zscore = { resultsMode: true };
+    source.growthBasic = JSON.parse('{"__proto__":{"fictionalBasicWrapper":"data"},"futureExtension":{"source":"fictional"}}');
+    const wrapper = clone(source.growthBasic);
+    h.fields.delete('dobInput'); loadBrowserScript('vilda_dob_age.js', h.win);
+    h.load(source, { collectUserData: () => h.api.collectUserData() });
+    expect(Object.hasOwn(h.main().growthBasic, '__proto__')).toBe(true);
+    expect(h.main().growthBasic.__proto__).toEqual(wrapper.__proto__);
+    expect(h.main().growthBasic.futureExtension).toEqual(wrapper.futureExtension);
+    expect(h.main().growthBasic.data.measurements).toHaveLength(1);
+    expect(Object.prototype).not.toHaveProperty('fictionalBasicWrapper');
+    expect(source.growthBasic).toEqual(wrapper);
+    expect(source.growthBasic).not.toHaveProperty('data');
+  });
+
+  it('an explicit basic array shape is not converted into a mirrored object', () => {
+    const source = record(), h = harness(); source.zscore = { resultsMode: true }; source.growthBasic = [];
+    const current = partial(source); current.growthBasic = []; h.current(current);
+    h.fields.delete('dobInput'); loadBrowserScript('vilda_dob_age.js', h.win);
+    h.load(source);
+    expect(h.main().growthBasic).toEqual([]);
+    expect(source.growthBasic).toEqual([]);
+  });
+
+  it.each(['standard', 'adult', 'manual-age-default'])('the missing basic view respects the existing %s UI support condition', reason => {
+    const source = record(), h = harness(); source.zscore = { resultsMode: reason !== 'standard' };
+    if (reason === 'adult') { source.user.age = 56; source.user.dobISO = '1970-06-17'; }
+    if (reason === 'manual-age-default') delete source.user.dobISO;
+    h.fields.delete('dobInput'); loadBrowserScript('vilda_dob_age.js', h.win);
+    h.load(source, { collectUserData: () => h.api.collectUserData() });
+    expect(h.writes[0].growthBasic.data.measurements).toEqual([]);
+  });
+
+  it('a cleared native form keeps a newly entered manual age without the previous DOB', () => {
+    const source = record(), h = harness(); h.fields.delete('dobInput');
+    loadBrowserScript('vilda_dob_age.js', h.win);
+    h.load(source, { collectUserData: () => h.api.collectUserData() });
+    h.api.clearAllData();
+    for (const [id, value] of Object.entries({ name: 'Fikcyjny Pacjent D', age: '16', ageMonths: '2', weight: '44', height: '156' })) {
+      h.fields.get(id).value = value;
+    }
+    expect(h.api.saveMainSessionNow({ force: true, collectUserData: () => h.api.collectUserData() })).toBe(true);
+    expect(h.main().user).toMatchObject({ age: 16, ageMonths: 2, weight: 44, height: 156 });
+    expect(h.main().user).not.toHaveProperty('dobISO');
   });
 });

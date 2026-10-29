@@ -183,3 +183,185 @@ describe('P-CHIP-NAWIGACJA — nieznane rozszerzenia są porównywane jako dane'
     expect(Object.prototype).not.toHaveProperty('fictionalPrototypeMarker');
   });
 });
+
+describe('P-CHIP-NAWIGACJA — dokładnie pusty kontekst wieku kostnego', () => {
+  it('pusty model rzeczywistego modułu nie oznacza nowego badania i nie zmienia payloadu', () => {
+    const env = environment(base());
+    loadBrowserScript('vilda_bone_age.js', env.win);
+    const empty = env.win.VildaBoneAge.capture();
+    expect(empty).toEqual({ version: 1, current: null, last: null });
+    expect(env.win.VildaBoneAge.normaliseContext({ version: 1 })).toEqual(empty);
+    const changed = { ...base(), advanced: { boneAgeContext: empty } };
+    env.replace(changed);
+    env.compare();
+    expect(env.indicator.getState()).toBe('saved');
+    expect(env.current()).toEqual(changed);
+  });
+
+  it.each([false, true])('brak i dokładny model {version:1} są równoważne (odwrotnie=%s)', reverse => {
+    const minimal = base();
+    const populated = { ...base(), advanced: { boneAgeContext: { version: 1 } } };
+    const env = environment(reverse ? populated : minimal);
+    env.replace(reverse ? minimal : populated);
+    env.compare();
+    expect(env.indicator.getState()).toBe('saved');
+  });
+
+  it.each([
+    { version: 2 }, { version: '1' },
+    { version: 1, current: { years: 12, atAgeMonths: 156, source: 'measured' }, last: null },
+    { version: 1, current: null, last: { years: 11, atAgeMonths: 144, source: 'history' } },
+    { version: 1, extra: 'Fikcyjne rozszerzenie' }, { version: 1, extra: false },
+    { version: 1, current: {} },
+  ])('kontekst %j nadal jest informacją do zapisania', context => {
+    const env = environment(base());
+    const changed = { ...base(), advanced: { boneAgeContext: context } };
+    env.replace(changed);
+    env.compare();
+    expect(env.indicator.getState()).toBe('dirty');
+    expect(env.current()).toEqual(changed);
+  });
+
+  it('historyczna referencja pomija ten sam dokładnie pusty model', () => {
+    const env = environment(base());
+    env.storage.set('vilda-save-ref-v1', JSON.stringify({ fp: JSON.stringify({ core: {
+      ...base(), advanced: { boneAgeContext: { version: 1, current: null, last: null } },
+    } }), dirty: true }));
+    env.indicator._onUnlock();
+    env.compare();
+    expect(env.indicator.getState()).toBe('saved');
+    expect(env.indicator.getReferenceFingerprint()).toBe(env.indicator._computeCanonicalFingerprint());
+  });
+});
+
+describe('P-CHIP-NAWIGACJA — dieta automatyczna i świadomy wybór lekarza', () => {
+  it.each([false, undefined])('automatyczna materializacja diety nie zmienia danych (dietaWybrana=%s)', flag => {
+    const original = { ...base(), plan: { dietLevel: null, dietaWybrana: flag } };
+    const env = environment(original);
+    const changed = { ...base(), plan: { dietLevel: 'moderate', dietaWybrana: flag } };
+    env.replace(changed);
+    env.compare();
+    expect(env.indicator.getState()).toBe('saved');
+    expect(env.current()).toEqual(clone(changed));
+  });
+
+  it('zmiana wyłącznie automatycznej rekomendacji nie jest świadomą edycją', () => {
+    const env = environment({ ...base(), plan: { dietLevel: 'light', dietaWybrana: false } });
+    const changed = { ...base(), plan: { dietLevel: 'moderate', dietaWybrana: false } };
+    env.replace(changed);
+    env.compare();
+    expect(env.indicator.getState()).toBe('saved');
+    expect(env.current()).toEqual(changed);
+  });
+
+  it.each([false, undefined])('historyczna referencja bez manualtrue zachowuje semantykę automatu (flag=%s)', flag => {
+    const env = environment(base());
+    env.storage.set('vilda-save-ref-v1', JSON.stringify({ fp: JSON.stringify({ core: {
+      ...base(), plan: { dietLevel: 'moderate', dietaWybrana: flag },
+    } }), dirty: true }));
+    env.indicator._onUnlock();
+    env.compare();
+    expect(env.indicator.getState()).toBe('saved');
+    expect(env.indicator.getReferenceFingerprint()).toBe(env.indicator._computeCanonicalFingerprint());
+  });
+
+  it('świadoma edycja zachowuje dietLevel i manualtrue w odcisku', () => {
+    const env = environment({ ...base(), plan: { dietLevel: 'moderate', dietaWybrana: false } });
+    env.replace({ ...base(), plan: { dietLevel: 'light', dietaWybrana: true } });
+    env.indicator._debouncedOnFormChange({ isTrusted: true });
+    vi.advanceTimersByTime(400);
+    expect(env.indicator.getState()).toBe('dirty');
+    expect(JSON.parse(env.indicator._computeCanonicalFingerprint()).core.plan)
+      .toEqual({ dietLevel: 'light', dietaWybrana: true });
+  });
+
+  it.each([
+    { dietLevel: 'intense', dietaWybrana: true },
+    { dietLevel: 'moderate', dietaWybrana: false },
+    { dietLevel: 'light' },
+  ])('zmiana zapisanego ręcznego wyboru na %j pozostaje niezapisana', changedPlan => {
+    const env = environment({ ...base(), plan: { dietLevel: 'light', dietaWybrana: true } });
+    env.replace({ ...base(), plan: changedPlan });
+    env.compare();
+    expect(env.indicator.getState()).toBe('dirty');
+  });
+
+  it('manualtrue pozostaje decyzją także dla wartości równej rekomendacji', () => {
+    const env = environment({ ...base(), plan: { dietLevel: 'moderate', dietaWybrana: false } });
+    env.replace({ ...base(), plan: { dietLevel: 'moderate', dietaWybrana: true } });
+    env.compare();
+    expect(env.indicator.getState()).toBe('dirty');
+  });
+
+  it('nie pomija PAL, celu ani nieznanych pól planu przy diecie automatycznej', () => {
+    const original = { ...base(), plan: { dietLevel: 'light', dietaWybrana: false, palFactor: 1.6, customGoalKg: 45, extension: 'A' } };
+    for (const [field, value] of [['palFactor', 1.8], ['customGoalKg', 44], ['extension', 'B']]) {
+      const env = environment(original);
+      env.replace({ ...original, plan: { ...original.plan, [field]: value } });
+      env.compare();
+      expect(env.indicator.getState(), field).toBe('dirty');
+    }
+  });
+});
+
+describe('P-CHIP-NAWIGACJA — tylko zgodny z pozycją indeks DOM wiersza', () => {
+  const rows = () => [
+    { ageMonths: 84, ageYears: 7, height: 123.6, weight: 23.9 },
+    { ageMonths: 108, ageYears: 9, height: 135, weight: 29.9 },
+  ];
+
+  it.each(['advanced', 'growthBasic'])('%s: dodanie zgodnych indeksów DOM nie jest edycją i nie zmienia sesji', section => {
+    const original = { ...base(), [section]: { data: { measurements: rows() } } };
+    const env = environment(original);
+    const changed = { ...base(), [section]: { data: {
+      measurements: rows().map((row, index) => ({ ...row, domIndex: index })),
+    } } };
+    env.replace(changed);
+    env.compare();
+    expect(env.indicator.getState()).toBe('saved');
+    expect(env.current()).toEqual(changed);
+  });
+
+  it('historyczna referencja pomija tylko te same zgodne indeksy DOM', () => {
+    const original = { ...base(), advanced: { data: { measurements: rows() } } };
+    const env = environment(original);
+    env.storage.set('vilda-save-ref-v1', JSON.stringify({ fp: JSON.stringify({ core: {
+      ...base(), advanced: { data: { measurements: rows().map((row, index) => ({ ...row, domIndex: index })) } },
+    } }), dirty: true }));
+    env.indicator._onUnlock();
+    env.compare();
+    expect(env.indicator.getState()).toBe('saved');
+  });
+
+  it.each([9, -1, 0.5, '0'])('niezgodny lub nienumeryczny domIndex=%j pozostaje informacją do zapisania', index => {
+    const env = environment({ ...base(), advanced: { data: { measurements: rows() } } });
+    const changedRows = rows();
+    changedRows[0].domIndex = index;
+    env.replace({ ...base(), advanced: { data: { measurements: changedRows } } });
+    env.compare();
+    expect(env.indicator.getState()).toBe('dirty');
+  });
+
+  it.each(['weight', 'order', 'extra', 'ageYears'])('zgodne indeksy DOM nie ukrywają zmiany %s', edit => {
+    const env = environment({ ...base(), advanced: { data: { measurements: rows() } } });
+    let changedRows = rows();
+    if (edit === 'weight') changedRows[0].weight += 1;
+    else if (edit === 'order') changedRows.reverse();
+    else if (edit === 'extra') changedRows[0].extension = 'Fikcyjna informacja';
+    else changedRows[0].ageYears += 1;
+    changedRows = changedRows.map((row, index) => ({ ...row, domIndex: index }));
+    env.replace({ ...base(), advanced: { data: { measurements: changedRows } } });
+    env.compare();
+    expect(env.indicator.getState()).toBe('dirty');
+  });
+
+  it('wyczyszczenie basic pozostaje edycją również przy identycznej historii advanced', () => {
+    const original = { ...base(), advanced: { data: { measurements: rows() } }, growthBasic: { data: { measurements: rows() } } };
+    const env = environment(original);
+    env.replace({ ...original, growthBasic: { data: { measurements: [] } } });
+    env.indicator._debouncedOnFormChange({ isTrusted: true });
+    vi.advanceTimersByTime(400);
+    expect(env.indicator.getState()).toBe('dirty');
+    expect(env.current().growthBasic.data.measurements).toEqual([]);
+  });
+});

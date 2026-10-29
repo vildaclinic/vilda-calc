@@ -185,6 +185,10 @@ sesji i zakończenie publikacji bazy, nie anuluje kolejki rzeczywistej edycji
 i zachowuje stan trwającego zapisu lub błędu. Powłoka odzwierciedla gotowy
 wskaźnik właściwego pacjenta także na trasach bez własnego wskaźnika;
 nie wymusza stanów ukrytych ramek przez `_forceTransition()`.
+Autosave importera również sprawdza `VildaPanelPacjent.nieaktualny()` przed
+oceną pustego formularza. Nieaktualny panel nie może po `visibilitychange`
+przejść do automatycznego usunięcia aktualnej sesji głównej. Jawne czyszczenie
+i globalny reset konta zachowują odrębne dotychczasowe ścieżki adaptera.
 
 Puste kalkulatory Klirensu materializują domyślne kontrolki przy otwarciu.
 W projekcji porównawczej domyślny tryb stężenia, nieokreślone metadane i
@@ -230,6 +234,25 @@ te ostatnie czyszczą rozgrzany formularz. Jawna zmiana rekordu resetuje DOB
 przed jego zastosowaniem, również gdy nowy rekord nie zawiera daty.
 Domyślne ustawienia pustych kart Start i techniczne metadane sejfu są
 normalizowane wyłącznie na kopii do porównania; PAL nadal jest porównywany.
+Tak samo traktowane są pusty model BA, automatyczny `dietLevel` według
+istniejącej semantyki sejfu i liczbowy `domIndex` równy pozycji wiersza.
+Ręczny wybór diety, rzeczywiste badanie BA, kolejność i dane pomiarów pozostają
+porównywane. Historia podstawowa nie jest pomijana nawet przy identycznej kopii
+historii zaawansowanej; jej osobne wyczyszczenie nadal stanowi zmianę.
+
+Brakująca sekcja starszego zapisu jest inicjalizowana na kopii świeżego rekordu
+przed pierwszą referencją, zgodnie z istniejącą normalizacją i parowaniem historii:
+tylko brak `growthBasic` lub jego własnego `data`, profesjonalny tryb
+`zscore.resultsMode === true`, niepusta historia zaawansowana i skończony wiek
+poniżej 18 lat spełniają warunki tej materializacji.
+Jawne `null`, puste listy i niezależne pomiary nie są takim brakiem.
+Strona bez pola DOB używa istniejącego API wieku i tygodni bieżącej wizyty;
+odtworzenie zapisanej wizyty zachowuje jej historyczny wiek.
+Po „Nowym pomiarze” bieżący punkt jest archiwizowany także w podstawowym modelu
+przed zapisem referencji, również na DocPro bez edytora tej historii.
+Jednorazowy zapis korzysta z najnowszej historii i istniejącej funkcji
+archiwizacji; zmiana podstawy, pacjenta lub sekwencji unieważnia oczekującą
+transakcję. Nie kopiuje całej historii zaawansowanej na niezależną podstawową.
 
 `vilda_persist_runtime.js` przyjmuje zapisany kontekst wizyty przed odtwarzaniem
 pól i przeliczaniem wieku. Brak `lastLoadedData` przed pierwszą próbą odtworzenia

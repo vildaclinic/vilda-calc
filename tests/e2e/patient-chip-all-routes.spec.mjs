@@ -181,10 +181,12 @@ test('powłoka: wszystkie 110 skierowanych par tras zachowują rzeczywisty zapis
   expect(await page.evaluate(() => Object.keys(window.VildaShell.routes).sort())).toEqual(ROUTES.map(route => route.id).sort());
   for (const route of ROUTES) {
     console.info(`P-CHIP-TRASY: warm ${route.id}`);
-    await activate(page, route);
+    const owner = await activate(page, route);
+    await assertSaved(page, owner, fixture.expected, `warm:${route.id}`);
     console.info(`P-CHIP-TRASY: ready ${route.id}`);
   }
   let owner = await activate(page, ROUTES[0]);
+  await assertSaved(page, owner, fixture.expected, 'warm:powrot:start');
   // Faktyczna nowa wartość i zapis tego samego PID muszą dotrzeć do już
   // rozgrzanych sibling SSI, nie tylko podmienić ich klasę na saved.
   await owner.locator('#weight').fill('47');
