@@ -215,7 +215,8 @@ test('pH próbki: norma ogólna nie wymaga wieku i nie zmienia się w zależnoś
 test('pH próbki: przełączenie nie przenosi normy ani walidacji do pH dobowej zbiórki', async ({ page }) => {
   await openCalculator(page);
   const inputs = { ...base, currentVersion: 'pro', formulaPicker: 'pH24', U_pH: '8.1', pH24: '5.4',
-    age: '40', sex: 'F', collectionStartAt: '2026-10-24T08:00', collectionEndAt: '2026-10-25T08:00' };
+    age: '40', sex: 'F', Cl24DurationHours: '24', Cl24DurationSource: 'hours',
+    collectionStartAt: '2026-10-24T08:00', collectionEndAt: '2026-10-25T08:00' };
   for (const id of ['collectionStartVoidDiscarded', 'collectionFinalVoidIncluded', 'collectionNoMissedVoids',
     'collectionNoSpillage', 'collectionNoExtraVoids', 'collectionStorageFollowed', 'stoneMetabolicEvaluationContext',
     'stoneCollectionPlausibilityReviewed', 'stoneTwoCollectionsConfirmed', 'stonePhPersistent']) {

@@ -1586,7 +1586,7 @@
   }
 
   function groupCollapsibleContextFields() {
-    if (["cl24", "ACR", "PCR", "CaCr_spot", "OxCr_spot", "CitCr_spot", "FENa_spot", "FEK_spot", "FECl_spot", "FEHCO3_spot", "AGu_spot", "TMP_GFR", "pH_spot", "UA_mgkg", "Ca_mgkg"].includes(state.activeFormulaId) && !state.legacyBroad) return;
+    if (["cl24", "ACR", "PCR", "CaCr_spot", "OxCr_spot", "CitCr_spot", "FENa_spot", "FEK_spot", "FECl_spot", "FEHCO3_spot", "AGu_spot", "TMP_GFR", "pH_spot", "UA_mgkg", "Ca_mgkg", "Mg_mgkg"].includes(state.activeFormulaId) && !state.legacyBroad) return;
     const groups = new Map();
     const sharedFieldset = ["egfr_cr_cys", "ckid_u25_cys", "ckid_u25_cr_cys"].includes(state.activeFormulaId)
       ? documentRef.getElementById("serumSet") : null;
@@ -1881,6 +1881,14 @@
   });
 
   function activeSetsForFormula(formula) {
+    if (formula.id === "Mg_mgkg") {
+      const reported = fieldValue("MG_inputMode") === "reported";
+      const required = new Set(reported
+        ? ["MG_reportedValue", "MG_reportedUnit"]
+        : ["MG_concentration", "MG_concentrationUnit", "MG_volume", "MG_volumeUnit", "MG_collectionHours"]);
+      const optional = new Set(["weight", "height"]);
+      return { active: new Set([...required, ...optional]), required, interpretation: new Set(), optional };
+    }
     if (formula.id === "Ca_mgkg") {
       const reported = fieldValue("CA_inputMode") === "reported";
       const required = new Set(reported
@@ -2040,6 +2048,7 @@
     if (state.legacyBroad || formula?.id !== "TMP_GFR") global.ClcrTmpGfrUi?.sync(documentRef, { active: false, fieldViews: state.fieldViews });
     if (state.legacyBroad || formula?.id !== "UA_mgkg") global.ClcrUaUi?.sync(documentRef, { active: false, fieldViews: state.fieldViews });
     if (state.legacyBroad || formula?.id !== "Ca_mgkg") global.ClcrCaDzmUi?.sync(documentRef, { active: false, fieldViews: state.fieldViews });
+    if (state.legacyBroad || formula?.id !== "Mg_mgkg") global.ClcrMgDzmUi?.sync(documentRef, { active: false, fieldViews: state.fieldViews });
     if (state.legacyBroad || formula?.id !== "pH_spot") global.ClcrPhUi?.sync(documentRef, { active: false, fieldViews: state.fieldViews });
     // Same-formula refresh must not reparent a focused correction control.
     // syncNeonatalAgeCorrection releases it once the correction loses focus.
@@ -2121,8 +2130,11 @@
     global.ClcrPhUi?.sync(documentRef, { active: formula?.id === "pH_spot", fieldViews: state.fieldViews });
     global.ClcrUaUi?.sync(documentRef, { active: formula?.id === "UA_mgkg", fieldViews: state.fieldViews });
     global.ClcrCaDzmUi?.sync(documentRef, { active: formula?.id === "Ca_mgkg", fieldViews: state.fieldViews });
+    global.ClcrMgDzmUi?.sync(documentRef, { active: formula?.id === "Mg_mgkg", fieldViews: state.fieldViews });
+    global.ClcrCollectionDuration?.syncDurationView(documentRef, { active: formula?.id === "cl24" || TIMED_VALUE_FORMULAS.has(formula?.id) && !["Ca_mgkg", "UA_mgkg", "Mg_mgkg"].includes(formula?.id), fieldViews: state.fieldViews });
     syncFieldsetVisibility();
     renderReadiness();
+    updateRequiredHighlights();
   }
 
   function broadFormulaIds(level) {
@@ -2137,6 +2149,8 @@
   function renderLegacyBroad(level) {
     global.ClcrUaUi?.sync(documentRef, { active: false, fieldViews: state.fieldViews });
     global.ClcrCaDzmUi?.sync(documentRef, { active: false, fieldViews: state.fieldViews });
+    global.ClcrMgDzmUi?.sync(documentRef, { active: false, fieldViews: state.fieldViews });
+    global.ClcrCollectionDuration?.syncDurationView(documentRef, { active: false, fieldViews: state.fieldViews });
     global.ClcrAcrUi?.sync({ document: documentRef, active: false, fieldViews: state.fieldViews });
     global.ClcrPcrUi?.sync(documentRef, { active: false, fieldViews: state.fieldViews });
     global.ClcrCacrUi?.sync(documentRef, { active: false, fieldViews: state.fieldViews });
@@ -2157,7 +2171,7 @@
     delete documentRef.documentElement.dataset.clcrActiveModule;
     const active = new Set();
     state.fieldViews.forEach((_view, id) => {
-      if (!id.startsWith("UA_") && !id.startsWith("CA_") && !["Cl24DurationHours", "Cl24CollectionProblem", "ACR_reported", "ACR_reported_unit", "ACR_same_specimen", "PCR_reported", "PCR_reported_unit", "PCR_same_specimen", "U_Prot_spot_unit", "CaCr_reported", "CaCr_reported_unit", "CaCr_same_specimen", "OxCr_reported", "OxCr_reported_unit", "OxCr_same_specimen", "oxalateSpotReportingEntity", "CitCr_reported", "CitCr_reported_unit", "CitCr_reported_basis", "CitCr_same_specimen", "citrateSpotReportingEntity", "tmpBurosumab", "tmpDaysSinceDose"].includes(id)) active.add(id);
+      if (!id.startsWith("UA_") && !id.startsWith("CA_") && !id.startsWith("MG_") && !["Cl24DurationHours", "Cl24CollectionProblem", "ACR_reported", "ACR_reported_unit", "ACR_same_specimen", "PCR_reported", "PCR_reported_unit", "PCR_same_specimen", "U_Prot_spot_unit", "CaCr_reported", "CaCr_reported_unit", "CaCr_same_specimen", "OxCr_reported", "OxCr_reported_unit", "OxCr_same_specimen", "oxalateSpotReportingEntity", "CitCr_reported", "CitCr_reported_unit", "CitCr_reported_basis", "CitCr_same_specimen", "citrateSpotReportingEntity", "tmpBurosumab", "tmpDaysSinceDose"].includes(id)) active.add(id);
     });
     state.activeFieldIds = active;
     state.requiredFieldIds = new Set();
@@ -2205,6 +2219,10 @@
         : { missing: true, reason: "Wymagane jest potwierdzenie." };
     }
     const value = control.value == null ? "" : String(control.value).trim();
+    if (fieldId === "Cl24DurationHours" && global.ClcrCollectionDuration) {
+      const duration = global.ClcrCollectionDuration.readFromDocument(documentRef);
+      return duration.valid ? { missing: false } : { missing: true, blocked: duration.invalid, reason: duration.error };
+    }
     if (value === "") return { missing: true, reason: "Uzupełnij pole." };
     if (String(control.type).toLowerCase() === "number" || fieldId === "Cl24DurationHours") {
       const numeric = fieldId === "Cl24DurationHours"
@@ -2473,6 +2491,12 @@
   }
 
   function evaluateFormulaOutcome(formula) {
+    if (formula?.id === "Mg_mgkg" && typeof global.evaluateClcrMgDzm === "function") {
+      const outcome = global.evaluateClcrMgDzm();
+      return outcome.valid
+        ? { ok: true, outcome, blockers: [], limitations: [] }
+        : semanticBlock(outcome.errorCode || "MG_INVALID", outcome.error || "Sprawdź dane wydalania magnezu.", outcome.invalidIds?.[0] || outcome.missingIds?.[0] || "", outcome);
+    }
     if (formula?.id === "Ca_mgkg" && typeof global.evaluateClcrCaDzm === "function") {
       const outcome = global.evaluateClcrCaDzm();
       return outcome.valid
@@ -2704,26 +2728,13 @@
         );
       }
     } else if (TIMED_VALUE_FORMULAS.has(formula.id)) {
-      const duration =
-        typeof global.readClcrCollectionDurationMinutes === "function"
-          ? global.readClcrCollectionDurationMinutes()
-          : (() => {
-              const start = Date.parse(fieldValue("collectionStartAt"));
-              const end = Date.parse(fieldValue("collectionEndAt"));
-              return Number.isFinite(start) &&
-                Number.isFinite(end) &&
-                end > start
-                ? (end - start) / 60000
-                : null;
-            })();
-      if (!(duration > 0)) {
-        return semanticBlock(
-          "COLLECTION_TIME_INVALID",
-          "Koniec zbiórki musi przypadać po jej początku. Sprawdź obie daty i godziny.",
-          "collectionEndAt",
-        );
+      const collection = global.ClcrCollectionDuration?.readFromDocument(documentRef);
+      if (!collection?.valid || !collection.complete) {
+        return semanticBlock(collection?.complete === false ? "COLLECTION_KNOWN_PROBLEM" : "COLLECTION_TIME_INVALID",
+          collection?.complete === false ? "Zgłoszono niepełną lub błędną zbiórkę moczu." : collection?.error || "Wpisz prawidłowy czas zbiórki większy od 0 godzin.",
+          collection?.complete === false ? "Cl24CollectionProblem" : "Cl24DurationHours");
       }
-      outcome = { ok: true, durationMinutes: duration };
+      outcome = { ok: true, durationMinutes: collection.minutes };
     }
 
     const limitations = [];
@@ -2793,7 +2804,7 @@
     }
     // These ratios use the same production reader as their result card.
     // Legacy generic maxima and >0 analyte checks do not qualify this model.
-    const ratioEvaluator = { CaCr_spot: global.evaluateClcrCacr, OxCr_spot: global.evaluateClcrOxcr, CitCr_spot: global.evaluateClcrCitcr, FENa_spot: global.evaluateClcrFena, FEK_spot: global.evaluateClcrFek, FECl_spot: global.evaluateClcrFecl, FEHCO3_spot: global.evaluateClcrFehco3, AGu_spot: global.evaluateClcrUag, TMP_GFR: global.evaluateClcrTmpGfr, pH_spot: global.evaluateClcrPh, UA_mgkg: global.evaluateClcrUa, Ca_mgkg: global.evaluateClcrCaDzm }[formula.id];
+    const ratioEvaluator = { CaCr_spot: global.evaluateClcrCacr, OxCr_spot: global.evaluateClcrOxcr, CitCr_spot: global.evaluateClcrCitcr, FENa_spot: global.evaluateClcrFena, FEK_spot: global.evaluateClcrFek, FECl_spot: global.evaluateClcrFecl, FEHCO3_spot: global.evaluateClcrFehco3, AGu_spot: global.evaluateClcrUag, TMP_GFR: global.evaluateClcrTmpGfr, pH_spot: global.evaluateClcrPh, UA_mgkg: global.evaluateClcrUa, Ca_mgkg: global.evaluateClcrCaDzm, Mg_mgkg: global.evaluateClcrMgDzm }[formula.id];
     if (typeof ratioEvaluator === "function") {
       const semantic = evaluateFormulaOutcome(formula);
       const outcome = semantic.outcome;
@@ -3018,6 +3029,7 @@
     if (state.activeFormulaId === "pH_spot") global.ClcrPhUi?.refresh(documentRef);
     if (state.activeFormulaId === "UA_mgkg") global.ClcrUaUi?.refresh(documentRef);
     if (state.activeFormulaId === "Ca_mgkg") global.ClcrCaDzmUi?.refresh(documentRef);
+    if (state.activeFormulaId === "Mg_mgkg") global.ClcrMgDzmUi?.refresh(documentRef);
     syncAssayOptions();
     syncNeonatalAgeCorrection();
     syncMeasuredProblem();
@@ -3047,7 +3059,7 @@
     }
     const readiness = getFormulaReadiness(formula.id);
     documentRef.documentElement.dataset.clcrReady = String(readiness.valueReady);
-    if (["CaCr_spot", "OxCr_spot", "CitCr_spot", "FENa_spot", "FEK_spot", "FECl_spot", "FEHCO3_spot", "AGu_spot", "TMP_GFR", "pH_spot", "UA_mgkg", "Ca_mgkg"].includes(formula.id)) {
+    if (["CaCr_spot", "OxCr_spot", "CitCr_spot", "FENa_spot", "FEK_spot", "FECl_spot", "FEHCO3_spot", "AGu_spot", "TMP_GFR", "pH_spot", "UA_mgkg", "Ca_mgkg", "Mg_mgkg"].includes(formula.id)) {
       // Empty, invalid and qualified states belong to the single result card.
       state.readiness.hidden = true;
       global.ClcrLayout?.refresh?.();
@@ -3132,6 +3144,7 @@
     readinessFrame = global.requestAnimationFrame(() => {
       readinessFrame = 0;
       renderReadiness();
+      updateRequiredHighlights();
     });
   }
 
@@ -3313,12 +3326,227 @@
     }
   }
 
-  function selectFormula(formulaId) {
+  // One owner for the transient search popup. The query and selected formula
+  // are calculation context; popup visibility is not persisted patient state.
+  function closeSearch(reason = "dismiss") {
+    const search = state.search;
+    cancelSelectionGuidance();
+    documentRef.documentElement.classList.remove("clcr-search-open");
+    const live = search?.live || documentRef.getElementById("formulaLive");
+    const input = search?.input || documentRef.getElementById("formulaSearch");
+    if (live) {
+      live.hidden = true;
+      live.style.display = "none";
+      live.querySelectorAll(".clcr-search-result").forEach(row => row.setAttribute("aria-selected", "false"));
+    }
+    input?.setAttribute("aria-expanded", "false");
+    input?.removeAttribute("aria-activedescendant");
+    if (search) { search.open = false; search.active = -1; search.reason = reason; }
+  }
+
+  function positionSearchResults() {
+    const search = state.search;
+    if (!search?.open) return;
+    const box = search.box.getBoundingClientRect();
+    const viewport = global.visualViewport;
+    const top = viewport?.offsetTop || 0;
+    let bottom = top + (viewport?.height || global.innerHeight);
+    const dock = documentRef.getElementById("mobileBottomDock");
+    if (dock && dock.getClientRects().length) {
+      const rect = dock.getBoundingClientRect();
+      if (rect.height > 0 && rect.top > top) bottom = Math.min(bottom, rect.top);
+    }
+    if (box.bottom < top + 20 || box.top > bottom - 20) { closeSearch("anchor-offscreen"); return; }
+    const below = bottom - box.bottom - 20;
+    const above = box.top - top - 20;
+    const placement = below < 160 && above > below ? "above" : "below";
+    search.live.dataset.placement = placement;
+    search.live.style.setProperty("--clcr-search-height", Math.max(80, Math.min(440, placement === "above" ? above : below)) + "px");
+  }
+
+  function activateSearchOption(index) {
+    const search = state.search;
+    if (!search?.open || !search.rows.length) return;
+    search.active = Math.max(0, Math.min(search.rows.length - 1, index));
+    search.rows.forEach((row, i) => row.setAttribute("aria-selected", String(i === search.active)));
+    const row = search.rows[search.active];
+    search.input.setAttribute("aria-activedescendant", row.id);
+    const bounds = search.live.getBoundingClientRect(), rect = row.getBoundingClientRect();
+    // Scroll the popup itself. A global legacy policy intentionally disables
+    // Element.scrollIntoView on mobile; it must not break combobox navigation.
+    if (rect.top < bounds.top + 8) search.live.scrollTop += rect.top - bounds.top - 8;
+    else if (rect.bottom > bounds.bottom - 8) search.live.scrollTop += rect.bottom - bounds.bottom + 8;
+  }
+
+  function bindSearchDismissal() {
+    const search = state.search;
+    if (!search) return;
+    const dismissParent = () => closeSearch("parent-pointer");
+    let parentDocument = null;
+    const detachParent = () => {
+      if (parentDocument) parentDocument.removeEventListener("pointerdown", dismissParent, true);
+      parentDocument = null;
+    };
+    const attachParent = () => {
+      detachParent();
+      try {
+        if (global.parent !== global && global.parent.document) {
+          parentDocument = global.parent.document;
+          parentDocument.addEventListener("pointerdown", dismissParent, true);
+        }
+      } catch (_) { /* A cross-origin embed owns its own navigation. */ }
+    };
+    documentRef.addEventListener("pointerdown", event => {
+      if (!event.composedPath().includes(search.box)) closeSearch("outside-pointer");
+    }, true);
+    search.box.addEventListener("focusout", event => {
+      if (event.relatedTarget && !search.box.contains(event.relatedTarget)) closeSearch("focus-left");
+    });
+    const hide = () => { closeSearch("pagehide"); detachParent(); };
+    global.addEventListener("pagehide", hide);
+    global.addEventListener("pageshow", () => { closeSearch("pageshow"); attachParent(); });
+    global.addEventListener("blur", () => closeSearch("window-blur"));
+    documentRef.addEventListener("visibilitychange", () => { if (documentRef.visibilityState === "hidden") closeSearch("document-hidden"); });
+    global.addEventListener("resize", positionSearchResults);
+    global.addEventListener("scroll", positionSearchResults, { passive: true });
+    global.visualViewport?.addEventListener("resize", positionSearchResults);
+    attachParent();
+  }
+
+  // Selection guidance deliberately uses rendered control geometry rather than
+  // old requires arrays or display:contents labels in the compact input cards.
+  const guidance = { generation: 0, frames: [], armed: false, lastTarget: "", lastFormula: "", navigationCount: 0 };
+  state.selectionGuidance = guidance;
+  function cancelSelectionGuidance() {
+    guidance.generation += 1;
+    guidance.frames.forEach(frame => global.cancelAnimationFrame?.(frame));
+    guidance.frames = [];
+  }
+  function controlIsActionable(control) {
+    if (!control || control.disabled || control.readOnly || control.type === "hidden" || control.closest("[hidden]")) return false;
+    const rect = control.getBoundingClientRect();
+    const style = global.getComputedStyle(control);
+    return rect.width > 0 && rect.height > 0 && style.display !== "none" && style.visibility !== "hidden";
+  }
+  function guidanceCandidates() {
+    const readiness = getFormulaReadiness();
+    if (readiness.valueReady) return [];
+    const ids = new Set([
+      ...(readiness.missingFieldIds || []), ...(readiness.activeErrors || []),
+      ...(readiness.outcome?.missingIds || []), ...(readiness.outcome?.invalidIds || []),
+      ...(readiness.blockers || []).map(item => item.fieldId).filter(Boolean),
+    ]);
+    state.requiredFieldIds.forEach(id => { if (requirementState(id).missing) ids.add(id); });
+    const entries = [];
+    ids.forEach(id => {
+      if (!state.activeFieldIds.has(id)) return;
+      const view = state.fieldViews.get(id);
+      const control = view?.answerSelect || view?.control || documentRef.getElementById(id);
+      if (controlIsActionable(control)) entries.push({ id, control });
+      else if (DZM_QUALITY_FIELDS.includes(id) && state.dzmQualityGroup && controlIsActionable(state.dzmQualityGroup.confirmAll)) {
+        if (!entries.some(entry => entry.id === DZM_QUALITY_GROUP_FOCUS_ID)) entries.push({ id: DZM_QUALITY_GROUP_FOCUS_ID, control: state.dzmQualityGroup.confirmAll });
+      }
+    });
+    return entries.sort((a, b) => a.control === b.control ? 0 : a.control.compareDocumentPosition(b.control) & 2 ? 1 : -1);
+  }
+  function updateRequiredHighlights() {
+    if (!guidance.armed || state.legacyBroad) return [];
+    const form = documentRef.getElementById("clcrForm");
+    if (!form) return [];
+    form.querySelectorAll(".clcr-missing-input,.must-fill,.must-fill-group").forEach(node => {
+      node.classList.remove("clcr-missing-input", "must-fill", "must-fill-group");
+    });
+    const entries = guidanceCandidates();
+    entries.forEach(({ control }) => {
+      const value = String(control.value ?? "").trim();
+      if (control.type === "checkbox" ? !control.checked : !value) control.classList.add("clcr-missing-input");
+    });
+    return entries;
+  }
+  function scrollToGuidanceTarget(control) {
+    const rect = control.getBoundingClientRect();
+    const header = documentRef.querySelector(".vilda-chrome-header,header");
+    const headerRect = header?.getBoundingClientRect();
+    const visibleHeader = headerRect && headerRect.bottom > 0 && headerRect.top < 100 ? headerRect.bottom : 0;
+    const topMargin = Math.max(64, visibleHeader + 64);
+    const behavior = global.matchMedia?.("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth";
+    let ancestor = control.parentElement;
+    while (ancestor && ancestor !== documentRef.body && ancestor !== documentRef.documentElement) {
+      const style = global.getComputedStyle(ancestor);
+      if (/(auto|scroll)/.test(style.overflowY) && ancestor.scrollHeight > ancestor.clientHeight + 1) {
+        const bounds = ancestor.getBoundingClientRect();
+        ancestor.scrollTo({ top: ancestor.scrollTop + rect.top - bounds.top - 28, behavior });
+        return;
+      }
+      ancestor = ancestor.parentElement;
+    }
+    // custom-fixes disables all scrollIntoView calls below700px. This one
+    // explicit selection action is permitted to scroll; live typing is not.
+    global.scrollTo({ top: Math.max(0, global.scrollY + rect.top - topMargin), behavior });
+  }
+  function requestSelectionGuidance(formulaId) {
+    cancelSelectionGuidance();
+    if (global.__vildaPersistRestoring || state.legacyBroad) return;
+    guidance.armed = true;
+    const token = guidance.generation;
+    const frame = callback => { const id = global.requestAnimationFrame(callback); guidance.frames.push(id); };
+    frame(() => frame(() => {
+      if (token !== guidance.generation || state.activeFormulaId !== formulaId || global.__vildaPersistRestoring) return;
+      global.ClcrLayout?.refresh?.();
+      const entries = updateRequiredHighlights();
+      const target = entries[0]?.control || documentRef.getElementById("clcrResultReport") || state.readiness;
+      if (!target || !target.getClientRects().length) return;
+      guidance.navigationCount += 1;
+      guidance.lastFormula = formulaId;
+      guidance.lastTarget = entries[0]?.id || "result";
+      scrollToGuidanceTarget(target);
+      const heading = entries.length
+        ? target.closest(".clcr-field")?.querySelector(".clcr-field__name") || state.activePanel?.querySelector("h2")
+        : documentRef.getElementById("clcrResultTitle");
+      if (heading) { heading.setAttribute("tabindex", "-1"); heading.focus({ preventScroll: true }); }
+      guidance.frames = [];
+    }));
+  }
+
+  let legacySelectFormula = null;
+  function installSelectionCompatibility() {
+    legacySelectFormula = global.selectClcrFormula;
+    if (typeof legacySelectFormula === "function") {
+      global.selectClcrFormula = function (formulaId) {
+        if (global.__vildaPersistRestoring) {
+          const formula = formulaById(formulaId);
+          if (!formula) return false;
+          ensurePickerOption(formula);
+          const picker = documentRef.getElementById("formulaPicker");
+          if (picker) picker.value = formulaId;
+          closeSearch("restored-state");
+          syncFromPicker();
+          return true;
+        }
+        return selectFormula(formulaId);
+      };
+    }
+    const original = global.highlightFields;
+    if (typeof original === "function") {
+      global.highlightFields = function (formula, autoScroll) {
+        // The legacy picker may still reset values when switching unaudited
+        // cards. Keep that behavior, but remove its multiple early scrolls.
+        return original.call(this, formula, state.legacyBroad ? autoScroll : false);
+      };
+    }
+  }
+
+  let selectionSequence = 0;
+
+  function selectFormula(formulaId, options = {}) {
     const formula = formulaById(formulaId);
     const module = getModuleForFormula(formulaId);
     if (!formula || !module || HISTORICAL_FORMULA_IDS.includes(formulaId)) return false;
+    const selection = ++selectionSequence;
+    closeSearch("selection");
+    if (documentRef.activeElement === state.search?.input) state.search.input.blur();
     const sameSpotWorkspace = getModuleForFormula(state.activeFormulaId)?.path === "spot" && module.path === "spot";
-    const preserveCalculationInputs = sameSpotWorkspace || ["cl24", "ACR", "PCR", "CaCr_spot", "OxCr_spot", "CitCr_spot", "FENa_spot", "FEK_spot", "FECl_spot", "FEHCO3_spot", "AGu_spot", "TMP_GFR", "pH_spot", "UA_mgkg", "Ca_mgkg"].includes(state.activeFormulaId) || ["cl24", "ACR", "PCR", "CaCr_spot", "OxCr_spot", "CitCr_spot", "FENa_spot", "FEK_spot", "FECl_spot", "FEHCO3_spot", "AGu_spot", "TMP_GFR", "pH_spot", "UA_mgkg", "Ca_mgkg"].includes(formulaId);
+    const preserveCalculationInputs = sameSpotWorkspace || ["cl24", "ACR", "PCR", "CaCr_spot", "OxCr_spot", "CitCr_spot", "FENa_spot", "FEK_spot", "FECl_spot", "FEHCO3_spot", "AGu_spot", "TMP_GFR", "pH_spot", "UA_mgkg", "Ca_mgkg", "Mg_mgkg"].includes(state.activeFormulaId) || ["cl24", "ACR", "PCR", "CaCr_spot", "OxCr_spot", "CitCr_spot", "FENa_spot", "FEK_spot", "FECl_spot", "FEHCO3_spot", "AGu_spot", "TMP_GFR", "pH_spot", "UA_mgkg", "Ca_mgkg", "Mg_mgkg"].includes(formulaId);
     state.legacyBroad = false;
     state.mobileModulesExpanded = false;
     documentRef.documentElement.classList.remove("clcr-mobile-modules-expanded");
@@ -3341,75 +3569,55 @@
       global.highlightFields?.(formula, false);
       if (typeof global.clcrUpdate === "function") global.clcrUpdate();
       else if (typeof global.update === "function") global.update();
-    } else if (typeof global.selectClcrFormula === "function") {
-      global.selectClcrFormula(formulaId);
+    } else if (typeof legacySelectFormula === "function") {
+      legacySelectFormula(formulaId);
     } else if (picker) {
       picker.dispatchEvent(new Event("change", { bubbles: true }));
     }
+    const completionGeneration = guidance.generation;
     global.setTimeout(() => {
+      if (selection !== selectionSequence || completionGeneration !== guidance.generation) return;
       state.legacyBroad = false;
       state.activeFormulaId = formulaId;
       renderModules();
       renderActiveFields();
+      if (options.guide !== false) requestSelectionGuidance(formulaId);
     }, 0);
     return true;
   }
 
   function renderSearchResults(query) {
-    const live = documentRef.getElementById("formulaLive");
-    if (!live) return;
+    const search = state.search;
+    if (!search || !String(query || "").trim()) { closeSearch("empty"); return; }
+    const { live, input } = search;
     live.replaceChildren();
-    const results = formulaSearch(query, global.FORMULAS);
-    if (!String(query || "").trim()) {
-      documentRef.documentElement.classList.remove("clcr-search-open");
-      live.hidden = true;
-      live.style.display = "none";
-      return;
-    }
+    const results = formulaSearch(query, global.FORMULAS).slice(0, 12);
+    search.rows = [];
+    search.active = -1;
+    search.open = true;
     documentRef.documentElement.classList.add("clcr-search-open");
     live.hidden = false;
     live.style.display = "";
-    live.setAttribute("role", "listbox");
-    if (!results.length) {
-      live.appendChild(
-        createElement(
-          "p",
-          "clcr-search-empty",
-          "Nie znaleziono formuły. Spróbuj nazwy, skrótu, analitu albo materiału.",
-        ),
-      );
-      return;
-    }
-    results.slice(0, 12).forEach(({ formula, module }) => {
+    input.setAttribute("aria-expanded", "true");
+    input.removeAttribute("aria-activedescendant");
+    if (!results.length) live.appendChild(createElement("p", "clcr-search-empty", "Nie znaleziono formuły. Spróbuj nazwy, skrótu, analitu albo materiału."));
+    results.forEach(({ formula, module }, index) => {
       const button = createElement("button", "clcr-search-result");
       button.type = "button";
+      button.tabIndex = -1;
+      button.id = `clcr-search-option-${index}`;
       button.dataset.formulaId = formula.id;
       button.setAttribute("role", "option");
+      button.setAttribute("aria-selected", "false");
       const name = createElement("strong", "clcr-search-result__name", formula.label);
-      const meta = createElement(
-        "span",
-        "clcr-search-result__meta",
-        `${module.title} · ${
-          module.path === "spot"
-            ? "Próbka moczu"
-            : module.level === "basic"
-              ? "Podstawowy"
-              : module.level === "advanced"
-                ? "Zaawansowany"
-                : "Profesjonalny"
-        }`,
-      );
+      const meta = createElement("span", "clcr-search-result__meta", `${module.title} · ${module.path === "spot" ? "Próbka moczu" : module.level === "basic" ? "Podstawowy" : module.level === "advanced" ? "Zaawansowany" : "Profesjonalny"}`);
       button.append(name, meta);
-      button.addEventListener("click", () => {
-        selectFormula(formula.id);
-        const search = documentRef.getElementById("formulaSearch");
-        if (search) search.value = formula.label;
-        documentRef.documentElement.classList.remove("clcr-search-open");
-        live.hidden = true;
-        live.style.display = "none";
-      });
+      button.addEventListener("pointerdown", event => { if (event.pointerType === "mouse") event.preventDefault(); });
+      button.addEventListener("click", () => { input.value = formula.label; selectFormula(formula.id); });
       live.appendChild(button);
+      search.rows.push(button);
     });
+    positionSearchResults();
   }
 
   function buildShell(form) {
@@ -3445,27 +3653,42 @@
       search.removeAttribute("style");
       searchLabel.setAttribute("for", search.id);
       searchBox.append(searchLabel, search);
-      search.addEventListener("input", () => renderSearchResults(search.value));
-      search.addEventListener("keydown", (event) => {
+      search.setAttribute("role", "combobox");
+      search.setAttribute("aria-autocomplete", "list");
+      search.setAttribute("aria-controls", "formulaLive");
+      search.setAttribute("aria-expanded", "false");
+      search.addEventListener("input", event => {
+        if (event.isTrusted) renderSearchResults(search.value);
+        else closeSearch("programmatic-input");
+      });
+      search.addEventListener("click", () => renderSearchResults(search.value));
+      searchBox.addEventListener("keydown", event => {
         if (event.key === "Escape") {
-          search.value = "";
-          renderSearchResults("");
-        }
-        if (event.key === "ArrowDown") {
-          const first = live && live.querySelector(".clcr-search-result");
-          if (first) {
-            event.preventDefault();
-            first.focus();
-          }
+          event.preventDefault();
+          closeSearch("escape");
+          search.focus({ preventScroll: true });
+        } else if (event.key === "Tab") {
+          closeSearch("tab");
+        } else if (event.target === search && ["ArrowDown", "ArrowUp"].includes(event.key)) {
+          event.preventDefault();
+          if (!state.search?.open) renderSearchResults(search.value);
+          if (state.search?.open && state.search.rows.length) activateSearchOption(state.search.active < 0 ? event.key === "ArrowDown" ? 0 : state.search.rows.length - 1 : state.search.active + (event.key === "ArrowDown" ? 1 : -1));
+        } else if (event.target === search && event.key === "Enter" && state.search?.open && state.search.rows.length) {
+          event.preventDefault();
+          state.search.rows[state.search.active < 0 ? 0 : state.search.active].click();
         }
       });
     }
     if (live) {
       live.removeAttribute("style");
       live.hidden = true;
+      live.setAttribute("role", "listbox");
+      live.setAttribute("aria-label", "Formuły do obliczenia");
       searchBox.appendChild(live);
     }
+    state.search = { input: search, live, box: searchBox, open: false, active: -1, rows: [], reason: "initial" };
     shell.appendChild(searchBox);
+    bindSearchDismissal();
 
     const levelHeading = createElement(
       "h2",
@@ -3587,7 +3810,8 @@
       .forEach((control) => {
         if (
           [
-            "UA_inputMode", "CA_inputMode",
+            "UA_inputMode", "CA_inputMode", "MG_inputMode",
+            "UA_collectionSource", "CA_collectionSource", "MG_collectionSource",
             "formulaSearch",
             "formulaPicker",
             "samePatientMode",
@@ -3633,26 +3857,30 @@
     const form = documentRef.getElementById("clcrForm");
     if (!form || documentRef.documentElement.dataset.clcrWorkflowUi !== "1") return;
     buildShell(form);
+    installSelectionCompatibility();
     initFields(form);
     groupUnitPairs();
 
     const picker = documentRef.getElementById("formulaPicker");
-    if (picker) picker.addEventListener("change", () => global.setTimeout(syncFromPicker, 0));
-    form.addEventListener("input", scheduleReadiness, true);
+    if (picker) {
+      picker.addEventListener("change", event => {
+        if (global.__vildaPersistRestoring) return;
+        event.stopImmediatePropagation();
+        selectFormula(picker.value);
+      }, true);
+      picker.addEventListener("change", () => global.setTimeout(syncFromPicker, 0));
+    }
+    form.addEventListener("input", event => { if (event.isTrusted) cancelSelectionGuidance(); scheduleReadiness(); }, true);
     // Dedicated UA controls are created after legacy direct listeners mount.
     ["input", "change"].forEach(type => form.addEventListener(type, event => {
-      if ((event.target?.id?.startsWith("UA_") || event.target?.id?.startsWith("CA_")) && typeof global.clcrUpdate === "function") global.clcrUpdate();
+      if ((event.target?.id?.startsWith("UA_") || event.target?.id?.startsWith("CA_") || event.target?.id?.startsWith("MG_")) && typeof global.clcrUpdate === "function") global.clcrUpdate();
     }));
     form.addEventListener("input", (event) => {
       if (event.target?.id === "Cl24CollectionProblem" && !event.target.checked) clearMeasuredProblemAnswers();
-      if (event.target?.id === "Cl24DurationHours") {
-        const source = documentRef.getElementById("Cl24DurationSource");
-        if (source) source.value = String(event.target.value || "").trim() ? "hours" : "";
-      }
     }, true);
-    form.addEventListener("change", scheduleReadiness, true);
+    form.addEventListener("change", event => { if (event.isTrusted) cancelSelectionGuidance(); scheduleReadiness(); }, true);
     form.addEventListener("change", (event) => {
-      if (["ACR_entry_mode", "PCR_entry_mode", "CaCr_entry_mode", "OxCr_entry_mode", "CitCr_entry_mode", "UA_inputMode", "UA_reportedUnit", "CA_inputMode", "CA_reportedUnit"].includes(event.target?.id)) {
+      if (["ACR_entry_mode", "PCR_entry_mode", "CaCr_entry_mode", "OxCr_entry_mode", "CitCr_entry_mode", "UA_inputMode", "UA_reportedUnit", "CA_inputMode", "CA_reportedUnit", "MG_inputMode", "MG_reportedUnit"].includes(event.target?.id)) {
         syncFromPicker();
         if (typeof global.clcrUpdate === "function") global.clcrUpdate();
       }
@@ -3663,6 +3891,7 @@
     form.addEventListener("reset", () => global.setTimeout(scheduleReadiness, 0));
     ["vilda:persist-restored", "vilda:patient-loaded"].forEach((eventName) => {
       documentRef.addEventListener(eventName, () => {
+        closeSearch("restored-state");
         scheduleReadiness();
       });
     });
@@ -3722,7 +3951,7 @@
         const clearedFormula = event.clcrClearedFormula;
         global.setTimeout(() => {
           if (resumeCitcr) {
-            selectFormula(clearedFormula);
+            selectFormula(clearedFormula, { guide: false });
             return;
           }
           state.activeFormulaId = "";
@@ -3765,6 +3994,8 @@
     if (formulaId === "TMP_GFR") (global.VildaClcrTmpGfr?.FIELD_IDS || []).forEach(id => ids.add(id));
     if (formulaId === "UA_mgkg") [...(global.VildaClcrUa?.FIELD_IDS || []), ...(global.VildaClcrUa?.CONTEXT_FIELD_IDS || [])].forEach(id => ids.add(id));
     if (formulaId === "Ca_mgkg") [...(global.VildaClcrCaDzm?.FIELD_IDS || []), ...(global.VildaClcrCaDzm?.CONTEXT_FIELD_IDS || [])].forEach(id => ids.add(id));
+    if (formulaId === "Mg_mgkg") [...(global.VildaClcrMgDzm?.FIELD_IDS || []), ...(global.VildaClcrMgDzm?.CONTEXT_FIELD_IDS || [])].forEach(id => ids.add(id));
+    if (formulaId === "cl24" || TIMED_VALUE_FORMULAS.has(formulaId)) ["Cl24DurationHours", "Cl24DurationSource", "Cl24CollectionProblem", ...DZM_PROTOCOL_FIELDS, ...DZM_PROTOCOL_FIELDS.map(id => "ui_" + id + "_answer")].forEach(id => ids.add(id));
     if (formulaId === "pH_spot") [...(global.VildaClcrPh?.FIELD_IDS || []), ...(global.VildaClcrPh?.CONTEXT_FIELD_IDS || [])].forEach(id => ids.add(id));
     [...ids].forEach(id => {
       if (UNIT_PAIRS[id]) ids.add(UNIT_PAIRS[id]);
@@ -3780,6 +4011,7 @@
         if (formulaId === "pH_spot" && id !== "U_pH") return [];
         if (formulaId === "UA_mgkg" && !id.startsWith("UA_") && id !== "weight") return [];
         if (formulaId === "Ca_mgkg" && !id.startsWith("CA_") && id !== "weight") return [];
+        if (formulaId === "Mg_mgkg" && !id.startsWith("MG_") && !["weight", "height"].includes(id)) return [];
         const control = documentRef.getElementById(id);
         if (!control) return [];
         if (String(control.type).toLowerCase() === "hidden") return [];
@@ -3800,6 +4032,7 @@
     state,
     selectLevel: chooseLevel,
     selectFormula,
+    closeSearch,
     search: (query) => formulaSearch(query, global.FORMULAS),
     refresh: syncFromPicker,
     getFormulaReadiness,
@@ -3810,7 +4043,7 @@
     openMeasuredReferenceFields,
     hasBlockingValidationError() {
       // FENa owns a concrete empty/error card from its semantic engine.
-      if (["FENa_spot", "FEK_spot", "FECl_spot", "FEHCO3_spot", "AGu_spot", "TMP_GFR", "pH_spot", "UA_mgkg", "Ca_mgkg"].includes(state.activeFormulaId)) return false;
+      if (["FENa_spot", "FEK_spot", "FECl_spot", "FEHCO3_spot", "AGu_spot", "TMP_GFR", "pH_spot", "UA_mgkg", "Ca_mgkg", "Mg_mgkg"].includes(state.activeFormulaId)) return false;
       return Array.from(state.requiredFieldIds).some((fieldId) => {
         const control = documentRef.getElementById(fieldId);
         return Boolean(control && control.classList.contains("error"));
@@ -4194,6 +4427,10 @@
       if (dp.sourceFormulaId === "TMP_GFR") {
         global.ClcrTmpGfrPersistence?.augmentDatapoint(el, dp);
         if (!dp.tmpGfrSnapshot) continue;
+      }
+      if (dp.sourceFormulaId === "Mg_mgkg") {
+        global.ClcrMgDzmPersistence?.augmentDatapoint(el, dp);
+        if (!dp.mgDzmSnapshot) continue;
       }
       if (dp.sourceFormulaId === "Ca_mgkg") {
         global.ClcrCaDzmPersistence?.augmentDatapoint(el, dp);
@@ -4583,7 +4820,7 @@
         s.points.forEach((p) => {
           byDate[p.dateISO] = {
             valueNum: p.valueNum,
-            outOfRange: ["ACR", "PCR", "CaCr_spot", "OxCr_spot", "CitCr_spot", "FENa_spot", "FEK_spot", "FECl_spot", "FEHCO3_spot", "AGu_spot", "TMP_GFR", "pH_spot", "Ca_mgkg"].includes(s.sourceFormulaId) ? p.outOfRange : !!p.outOfRange,
+            outOfRange: ["ACR", "PCR", "CaCr_spot", "OxCr_spot", "CitCr_spot", "FENa_spot", "FEK_spot", "FECl_spot", "FEHCO3_spot", "AGu_spot", "TMP_GFR", "pH_spot", "Ca_mgkg", "Mg_mgkg"].includes(s.sourceFormulaId) ? p.outOfRange : !!p.outOfRange,
           };
           if (s.sourceFormulaId === "ACR") Object.assign(byDate[p.dateISO], {
             displayValue: p.displayValue, comparator: p.comparator,
@@ -4688,14 +4925,14 @@
     if (!doc) return [];
     const candidates = new Map();
     spec?.fields?.forEach(field => {
-      if (field.historicalContext || ["UA_collectionHours", "CA_collectionHours"].includes(field.id) || !["number", "text", "textarea"].includes(field.type)) return;
+      if (field.historicalContext || ["Cl24DurationHours", "UA_collectionHours", "CA_collectionHours", "MG_collectionHours"].includes(field.id) || !["number", "text", "textarea"].includes(field.type)) return;
       const control = doc.getElementById(field.id);
       if (control) candidates.set(field.id, control);
     });
     const historical = new Set(PATIENT_FACT_FIELDS);
     const form = doc.getElementById?.("clcrForm");
     Array.from(form?.querySelectorAll?.('input[type="number"][id], input[type="text"][id], textarea[id]') || []).forEach(control => {
-      if (!historical.has(control.id) && !["formulaSearch", "U_ACR", "U_PCR", "UA_collectionHours", "CA_collectionHours"].includes(control.id)) candidates.set(control.id, control);
+      if (!historical.has(control.id) && !["formulaSearch", "U_ACR", "U_PCR", "Cl24DurationHours", "UA_collectionHours", "CA_collectionHours", "MG_collectionHours"].includes(control.id)) candidates.set(control.id, control);
     });
     return [...candidates.values()].filter(control => !control.readOnly && String(control.value || "").trim() !== "");
   }
@@ -5904,7 +6141,7 @@
     rail.dataset.clcrHasResult = String(hasResult);
     reportActions.hidden = !hasResult;
     const resultBody = reportSection.querySelector(".clcr-result-extra");
-    if (resultBody) resultBody.hidden = !["CitCr_spot", "FENa_spot", "FEK_spot", "FECl_spot", "FEHCO3_spot", "AGu_spot", "TMP_GFR", "pH_spot", "UA_mgkg", "Ca_mgkg"].includes(formulaId) && Boolean(readiness && !readiness.valueReady);
+    if (resultBody) resultBody.hidden = !["CitCr_spot", "FENa_spot", "FEK_spot", "FECl_spot", "FEHCO3_spot", "AGu_spot", "TMP_GFR", "pH_spot", "UA_mgkg", "Ca_mgkg", "Mg_mgkg"].includes(formulaId) && Boolean(readiness && !readiness.valueReady);
   }
 
   function scheduleRefresh() {

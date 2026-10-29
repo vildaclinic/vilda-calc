@@ -29,7 +29,7 @@ const calculate = (id, patch = {}, output = id, context = {}) => engine.recalcul
 
 describe('Saved Klirens: existing timed-urine production arithmetic', () => {
   it.each([
-    ['Mg_mgkg', 0.6, 'mg/kg/24 h'], ['PO4_mgkg', 150, 'mg P/24 h'],
+    ['PO4_mgkg', 150, 'mg P/24 h'],
     ['Ox_mgkg', 0.06, 'mg/kg/24 h'], ['Cit_mgkg', 1.5, 'mg/kg/24 h'],
     ['Na_mmol_d', 90, 'mmol/24 h'], ['K_mmol_d', 60, 'mmol/24 h'],
     ['KM_Cr', 0.2, 'mg/mg'], ['Ca_Cr', 0.08, 'mg/mg'], ['Mg_Ca', 0.25, 'mg/mg'],
@@ -40,6 +40,13 @@ describe('Saved Klirens: existing timed-urine production arithmetic', () => {
     expect(result.valueNum).toBeCloseTo(expected, 12);
     expect(result.unit).toBe(unit);
     expect(result).toMatchObject({ sourceFormulaId: id, comparator: '', tone: 'neutral', norm: '', outOfRange: null, category: null });
+  });
+
+  it('magnesium uses its audited daily unit and frozen reference; legacy dates alone do not supply hours', () => {
+    const result = calculate('Mg_mgkg', { MG_collectionHours: '24' });
+    expect(result).toMatchObject({ valueNum: 30, unit: 'mg/24 h', norm: '51–269 mg/24 h', outOfRange: true,
+      mgDzmSnapshot: { dailyMg: 30, perKg: 0.6, status: 'low', input: { hours: '24' } } });
+    expect(() => calculate('Mg_mgkg')).toThrow(/czas/i);
   });
 
   it('calcium uses the audited converter and source-native adult daily unit', () => {
@@ -97,7 +104,8 @@ describe('Saved Klirens: existing timed-urine production arithmetic', () => {
     expect(ph.tone).toBe('success');
     expect(ph.reference.kind).toBe('stone-target');
     expect(ph.norm).toContain('7,5');
-    expect(() => calculate('pH24', { pH24: 6.1, collectionNoSpillage: false })).toThrow(/protokół/);
+    expect(calculate('pH24', { pH24: 6.1, collectionNoSpillage: false }).valueNum).toBe(6.1);
+    expect(() => calculate('pH24', { pH24: 6.1, collectionNoSpillage: false, ui_collectionNoSpillage_answer: 'no' })).toThrow(/błędną/);
   });
 
   it('uses the actual TmP/GFR producer without saving TRP as a second output', () => {
@@ -133,7 +141,8 @@ describe('Saved Klirens: measured clearance, CG and dialysis reuse actual produc
     expect(result.measuredClearanceReference.absoluteRange.lower).toBeCloseTo(86.53155171550813, 10);
     expect(() => calculate('cl24', { Cl24DurationHours: '24', Cl24CollectionProblem: true })).toThrow();
     expect(() => calculate('cl24', { Cl24DurationHours: '24', ui_collectionNoMissedVoids_answer: 'no' })).toThrow();
-    expect(() => calculate('cl24', { Cl24DurationHours: '' })).toThrow();
+    expect(calculate('cl24', { Cl24DurationHours: '' }).measuredClearanceReference.inputs.durationMinutes).toBe(1440);
+    expect(() => calculate('cl24', { Cl24DurationHours: '', Cl24DurationSource: 'historical-missing' })).toThrow(/czas/i);
   });
   it('recomputes the requested dialysis metric, preserving source sampling and target rules', () => {
     const fields = { age: '50', ageMonths: '0', ktvModality: 'IHD', ktvSessionsPerWeek: 3, ktvPidiDays: '2', UreaPre: 120, UreaPost: 36, ktvUreaAnalyte: 'BUN', ktvUreaUnit: 'mg/dL', ktvDurationMinutes: 240, ktvUF: 2, ktvW: 70, ktvAccessType: 'AVF/AVG', ktvTreatmentsDelivered: true, ktvSameSession: true, ktvPreBeforeDialysis: true, ktvPreNoDilution: true, ktvPostMethod: 'slow_flow_100ml_15s' };
@@ -152,6 +161,6 @@ describe('Saved Klirens: measured clearance, CG and dialysis reuse actual produc
     expect(fields.UreaPost).toBe(36);
   });
   it('rejects an unavailable frozen reference profile rather than using a new policy', () => {
-    expect(() => calculate('Mg_mgkg', {}, 'Mg_mgkg', { profileId: 'unknown-version' })).toThrow(/profil/);
+    expect(() => calculate('PO4_mgkg', {}, 'PO4_mgkg', { profileId: 'unknown-version' })).toThrow(/profil/);
   });
 });

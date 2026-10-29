@@ -105,6 +105,7 @@ function clinicalReadinessHarness(formulaId, values) {
       getElementById: id => controls.get(id) || null,
     },
   };
+  loadBrowserScript('clcr_collection_duration.js', browserGlobal);
   loadBrowserScript('clcr_clinical_safety.js', browserGlobal);
   if (formulaId === 'UA_mgkg') {
     loadBrowserScript('clcr_ua_reference_data.js', browserGlobal);
@@ -152,12 +153,30 @@ describe('Klirens — centralny model przepływu UI', () => {
     expect(readiness.outcome.absoluteMlMin).toBe(100);
   });
 
-  it.each(['', '0', '-1', '1e2', '23,5,1'])('czas zbiórki %j nie kończy gotowości i nie przyjmuje 24 h domyślnie', duration => {
+  it.each(['0', '-1', '23,5,1'])('jawny błędny czas %j nie kończy gotowości i nie staje się 24 h', duration => {
     const { workflow } = clinicalReadinessHarness('cl24', {
       Scr: '1', ScrUnit: 'mg/dl', Ucr: '100', V24: '1440', Cl24DurationHours: duration,
     });
     expect(workflow.getFormulaReadiness('cl24')).toMatchObject({
       valueReady: false, missingFieldIds: ['Cl24DurationHours'],
+    });
+  });
+
+  it.each([['', 24, 'assumed-24h', 100], ['1e2', 100, 'hours', 24], ['+12', 12, 'hours', 200]])('czas %j ma spójną reprezentację godzin bez dodatkowego brakującego pola', (value, hours, source, expected) => {
+    const { browserGlobal, workflow } = clinicalReadinessHarness('cl24', {
+      Scr: '1', ScrUnit: 'mg/dl', Ucr: '100', V24: '1440', Cl24DurationHours: value,
+    });
+    loadBrowserScript('clcr_calculation_assumptions.js', browserGlobal);
+    browserGlobal.readCl24CalculationInput = () => ({
+      urineCreatinineMgDl: 100, serumCreatinineMgDl: 1, volumeMl: 1440,
+      durationMinutes: browserGlobal.ClcrCollectionDuration.readFromDocument(browserGlobal.document).minutes,
+      protocolMode: 'assumed-complete', collectionProblem: false,
+    });
+    const readiness = workflow.getFormulaReadiness('cl24');
+    expect(readiness).toMatchObject({ valueReady: true, missingFieldIds: [] });
+    expect(readiness.outcome.absoluteMlMin).toBe(expected);
+    expect(browserGlobal.ClcrCollectionDuration.readFromDocument(browserGlobal.document)).toMatchObject({
+      valid: true, hours, source, assumed: source === 'assumed-24h',
     });
   });
 
@@ -301,20 +320,11 @@ describe('Klirens — centralny model przepływu UI', () => {
 
     expect(byId('UA_mgkg')?.requires).toEqual(['UA_concentration', 'UA_concentrationUnit', 'UA_volume', 'UA_volumeUnit', 'UA_collectionHours', 'weight']);
     expect(byId('UA_mgkg')?.requires).not.toEqual(expect.arrayContaining(timedProtocol));
-    for (const formulaId of [
-      'Ca_mgkg',
-      'Mg_mgkg',
-      'PO4_mgkg',
-      'Prot_mgkg',
-      'Na_mmol_d',
-      'K_mmol_d',
-      'Ox_mgkg',
-      'Cit_mgkg',
-      'pH24',
-    ]) {
-      expect(byId(formulaId)?.requires, formulaId).toEqual(
-        expect.arrayContaining(timedProtocol)
-      );
+    expect(byId('Ca_mgkg')?.requires).toEqual(['CA_concentration', 'CA_concentrationUnit', 'CA_volume', 'CA_volumeUnit', 'CA_collectionHours']);
+    expect(byId('Mg_mgkg')?.requires).toEqual(['MG_concentration', 'MG_concentrationUnit', 'MG_volume', 'MG_volumeUnit', 'MG_collectionHours']);
+    for (const formulaId of ['PO4_mgkg', 'Prot_mgkg', 'Na_mmol_d', 'K_mmol_d', 'Ox_mgkg', 'Cit_mgkg', 'pH24']) {
+      expect(byId(formulaId)?.requires, formulaId).toContain('Cl24DurationHours');
+      for (const id of timedProtocol) expect(byId(formulaId)?.requires, formulaId).not.toContain(id);
     }
 
     expect(byId('Ca_Cr')?.requires).not.toEqual(
@@ -673,23 +683,23 @@ describe('Klirens — centralny model przepływu UI', () => {
       'utf8'
     );
 
-    expect(html).toContain('clcr_ui_workflow.css?v=18');
-    expect(html).toContain('clcr_ui_workflow.js?v=31');
-    expect(html).toContain('inline_kalkulator_klirens_02.js?v=24');
-    expect(html).toContain('inline_kalkulator_klirens_04.js?v=31');
-    expect(html).toContain('inline_kalkulator_klirens_07.js?v=20');
+    expect(html).toContain('clcr_ui_workflow.css?v=19');
+    expect(html).toContain('clcr_ui_workflow.js?v=32');
+    expect(html).toContain('inline_kalkulator_klirens_02.js?v=25');
+    expect(html).toContain('inline_kalkulator_klirens_04.js?v=32');
+    expect(html).toContain('inline_kalkulator_klirens_07.js?v=21');
     expect(html).toContain('clcr_result_reference_data.js?v=7');
     expect(html).toContain('clcr_result_presentation.js?v=8');
-    expect(serviceWorker).toContain("const SW_VERSION = '1.1.403'");
+    expect(serviceWorker).toContain("const SW_VERSION = '1.1.405'");
     expect(html).toContain('clcr_calculation_assumptions.js?v=2');
     expect(serviceWorker).toContain("'/clcr_calculation_assumptions.js?v=2'");
     expect(serviceWorker).toContain("'/clcr_clinical_safety.js?v=13'");
     expect(serviceWorker).toContain("'/clcr_result_reference_data.js?v=7'");
     expect(serviceWorker).toContain("'/clcr_result_presentation.js?v=8'");
-    expect(serviceWorker).toContain("'/clcr_ui_workflow.css?v=18'");
-    expect(serviceWorker).toContain("'/clcr_ui_workflow.js?v=31'");
-    expect(serviceWorker).toContain("'/inline_kalkulator_klirens_02.js?v=24'");
-    expect(serviceWorker).toContain("'/inline_kalkulator_klirens_04.js?v=31'");
+    expect(serviceWorker).toContain("'/clcr_ui_workflow.css?v=19'");
+    expect(serviceWorker).toContain("'/clcr_ui_workflow.js?v=32'");
+    expect(serviceWorker).toContain("'/inline_kalkulator_klirens_02.js?v=25'");
+    expect(serviceWorker).toContain("'/inline_kalkulator_klirens_04.js?v=32'");
     expect(html).toContain('clcr_acr_ui.js?v=2');
     expect(serviceWorker).toContain("'/clcr_acr_ui.js?v=2'");
     expect(html).toContain('vilda_unsaved_guard.js?v=7');
@@ -706,8 +716,9 @@ describe('Klirens — centralny model przepływu UI', () => {
       'clcr_uag_reference_data.js', 'clcr_uag.js', 'clcr_uag_ui.js', 'clcr_uag_ui.css', 'clcr_uag_persistence.js',
       'clcr_ua_reference_data.js', 'clcr_ua.js', 'clcr_ua_ui.js', 'clcr_ua_ui.css', 'clcr_ua_persistence.js',
     ]) {
-      expect(html).toContain(`${file}?v=1`);
-      expect(serviceWorker).toContain(`'/${file}?v=1'`);
+      const version = ["clcr_ua.js", "clcr_ua_ui.js"].includes(file) ? 2 : 1;
+      expect(html).toContain(`${file}?v=${version}`);
+      expect(serviceWorker).toContain(`'/${file}?v=${version}'`);
     }
     expect(serviceWorker).toContain("'/clcr_result_reference_data.js?v=1'");
     expect(serviceWorker).toContain("'/clcr_result_presentation.js?v=1'");

@@ -1313,3 +1313,101 @@ git log origin/audyt --format='%h %s' ad98909a..origin/audyt -- <plik>     # zmi
 Czytelne źródła bez bundlera: `clcr_ca_dzm.js` (dokładny producent), `clcr_ca_dzm_reference_data.js` (wersjonowane dane), `clcr_ca_dzm_ui.js`/`.css` (formularz i kartaB), `clcr_ca_dzm_persistence.js` (zamrożona ocena, jawna edycja). Integracja pozostaje w czytelnych inline02/inline04, `clcr_ui_workflow.js` i adapterach zapisu. Klinika: `docs/clinical/CA_DZM.md`.
 
 Producent fragmentu sesji: `tools/patch-klirens-ca-dzm-session.mjs`; `node tools/patch-klirens-ca-dzm-session.mjs inline_kalkulator_klirens_07.js` wstawia lub sprawdza dokładny fragment `KLIRENS-CA-DZM-SESSION` i jednoznaczne haki. Poprzednie patchery pozostają idempotentne. Wersje końcowe ustawia `npm run podbij-wersje`.
+
+### Dobowe wydalanie magnezu i wspólny czas zbiórki — 28.10.2026
+
+Czytelne źródła bez bundlera: `clcr_mg_dzm.js` (producent wyniku),
+`clcr_mg_dzm_reference_data.js` (wersjonowane źródła i polityka),
+`clcr_mg_dzm_ui.js`/`.css` (kontrolki, formularz i karta wyniku) oraz
+`clcr_mg_dzm_persistence.js` (odczyt zamrożonej oceny). Wspólny liczbowy czas
+zbiórki i pochodzenie 24 h są w `clcr_collection_duration.js`/`.css`.
+Integracja kalkulatora pozostaje w czytelnych fragmentach
+`inline_kalkulator_klirens_02.js`, `inline_kalkulator_klirens_04.js`,
+`clcr_ui_workflow.js` oraz istniejących adapterach zapisu, historii i edycji.
+Nie odtwarzano wzoru z dawnego zminifikowanego buildu. Klinika i ograniczenia:
+`docs/clinical/MG_DZM.md`, `docs/clinical/DZM_COLLECTION_DURATION.md`.
+
+Producent fragmentu sesji to `tools/patch-klirens-mg-dzm-session.mjs`:
+
+```bash
+node tools/patch-klirens-mg-dzm-session.mjs inline_kalkulator_klirens_07.js
+```
+
+Polecenie wstawia lub sprawdza dokładny, czytelny fragment
+`KLIRENS-MG-DZM-SESSION` i pojedynczy hook materializacji kontrolek przy
+przechwytywaniu sesji. Eksportowany `patchMgDzmSessionHooks(source)` odrzuca
+niejednoznaczny punkt wpięcia albo rozbieżność z producentem. Adapter dodaje
+obsługę Mg, pochodzenia czasu i resetu, zachowując wcześniejsze łatki sesji.
+Liczbowy czas dawnej zbiórki pozostaje utrwalonym czasem; niejednoznaczne stare
+daty nie są ponownie interpretowane w strefie urządzenia ani zastępowane 24 h.
+Regresje uruchamiają rzeczywisty adapter:
+`tests/unit/klirens-mg-dzm-session.test.mjs`.
+
+### Czytelne wyniki Klirensu w Notatkach — 28.10.2026
+
+Czytelne źródła bez bundlera: `clcr_notes_view.js`/`.css`. Widok korzysta z
+istniejących `ClcrSavedResults.projectPatientNotes` i
+`ClcrSavedCalculation.readSaved`; nie przelicza historycznych pomiarów ani nie
+zmienia treści zapisanych notatek. `clcr_record_resources.js` udostępnia leniwe
+`ensureNotes()`; silniki i edytor są ładowane dopiero po jawnej akcji otwarcia
+szczegółów. Kontrakt widoku, komentarzy i kanonicznej edycji/usuwania:
+`docs/clinical/KLIRENS_NOTES.md`.
+
+Wąskie podpięcie do zachowanego artefaktu auth odtwarza:
+
+```bash
+node tools/patch-klirens-notes-view.mjs
+```
+
+Skrypt dotyczy wyłącznie `vilda_auth_ui.js`. Wstawia czytelny blok oznaczony
+`KLIRENS-NOTES-VIEW` oraz trzy jednoznaczne warunki dla kategorii
+`wynik-klirens`: tytuł `Jo`, karta notatki `h` w `Xo` i wejście ogólnego edytora
+`ga`. Pozostałe notatki, przypomnienia i istniejący kod auth pozostają
+dotychczasowe. Ponowne wywołanie nie dodaje drugiego bloku ani hooka;
+niejednoznaczny lub zmieniony punkt wpięcia zgłasza błąd. Wynik pomiaru trafia
+do istniejących `ClcrResultDetails` oraz transakcji tego samego identyfikatora,
+bez edytora tekstowego technicznej koperty.
+
+Regresje: `tests/unit/klirens-notes-view.test.mjs`,
+`tests/unit/klirens-notes-resources.test.mjs` i
+`tests/e2e/klirens-notes-view.spec.mjs`. Dane są jednoznacznie fikcyjne;
+załączniki właściciela i dane realnego sejfu nie są źródłem fixture.
+Nowe zasoby wymagają jawnych wpisów ładowania/precache; końcowe wersje znanych
+zasobów ustawia `npm run podbij-wersje`, bez przebudowy artefaktów z dawnych
+źródeł.
+
+## Łatka P-CHIP-NAWIGACJA — odcisk wejść po wczytaniu pacjenta (2026-10-28)
+
+Zmiany są czytelnymi blokami w `vilda_save_status_indicator.js` i w obsłudze
+przycisku `#vildaLcmNew` w `custom-fixes.js`; bez ponownej minifikacji artefaktów.
+
+- `normalizeStatusInputs` usuwa z kopii porównawczej wyliczone
+  `intake.estKcalPerDay` oraz zwykłe wiersze `intake.history` powtarzające pełną
+  krotkę wieku w miesiącach, wzrostu i masy z `user`, `advanced` lub `growthBasic`.
+  Niezależne wiersze i dodatkowa treść pozostają porównywane. Rekurencyjna
+  normalizacja `M` sortuje klucze obiektów, zachowując kolejność tablic.
+- `te` stosuje tę projekcję przed usuwaniem pustych wartości, a `k` przepuszcza
+  przez nią również zapisaną referencję starszej wersji. Projekcja nie zapisuje
+  zmienionego payloadu do sesji, eksportu ani sejfu.
+- Obsługa „Nowy pomiar” po archiwizacji poprzedniego pomiaru, odtworzeniu historii
+  i aktualizacji wieku emituje `vilda:load-choice-applied`. Identyfikator pacjenta
+  i sekwencja importu pochodzą z chwili otwarcia okna wyboru, a ich aktualność jest
+  sprawdzana przed zmianą danych. Wskaźnik przyjmuje tylko `choice: 'new'` z
+  bieżącym identyfikatorem i sekwencją, ustanawiając bazę synchronicznie przed
+  pierwszą edycją lekarza i zachowując czas oraz numer zapisu.
+
+Regresje wykonujące kod produkcyjny: `tests/unit/save-status-navigation.test.mjs`
+i `tests/e2e/patient-chip-navigation.spec.mjs`. Scenariusze przeglądarkowe korzystają
+wyłącznie z fikcyjnego sejfu i obejmują oba wybory wczytania, samodzielne strony,
+powłokę, nawigację oraz F5 po rzeczywistej edycji.
+
+Kontekst odtworzonej wizyty zachowuje `vilda_persist_runtime.js`:
+`comparisonRestorePending` chroni istniejące `loadedComparisonData` przed
+usunięciem przy pustym `lastLoadedData` przed pierwszą próbą odtworzenia i podczas
+trwających odtworzeń. `restoreSharedStateImmediately` przyjmuje raz zwalidowaną,
+sklonowaną bazę przed wpisywaniem pól i wywoływaniem obliczeń; istniejący blok
+podsumowania korzysta z tej samej bazy. Dzięki temu wpisanie daty urodzenia przy
+starcie strony nie zastępuje wieku i daty dawnej wizyty bieżącym dniem. Jawne
+czyszczenie i ochrona przed zapisem kolejki innego pacjenta zachowują swoje reguły.
+Test produkcyjnego adaptera, runtime i modułu daty:
+`tests/unit/persist-loaded-comparison-order.test.mjs`.

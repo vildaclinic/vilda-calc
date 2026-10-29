@@ -79,22 +79,27 @@ test('Komputer prywatny (powłoka PWA): pobieranie rusza samo, bez pytania; krok
   expect(ramka).toMatchObject({ x: 0, y: 0, height: ekran.height });
   expect(ramka.width).toBeGreaterThanOrEqual(ekran.width - 20);
 
-  // Pierwsze pobranie ma wyłączność (czerwony E2E odłamek 1/3 w CI #652): włączona przez nie synchronizacja budzi
-  // inne pobrania — arkusz przypomnień 3 s po odblokowaniu (ten dokument), panele powłoki ładowane w tle (Start,
-  // Terminarz — swoje ramki). Dotąd każde z nich pobierało ten sam blob równolegle; teraz czekają, a blob idzie raz.
-  // W tym samym dokumencie syncPull czeka najpierw na lokalną obietnicę pierwszego pobrania — nie ma go jeszcze
-  // w kolejce Web Locks. Uruchamiamy też prawdziwe pobranie w odblokowanym panelu Start, zamiast liczyć na jego
-  // przypadkowe zadanie w tle. To ono ma czekać na współdzieloną blokadę między dokumentami.
+  // Pierwsze pobranie ma wyłączność także wobec innych dokumentów. Host czeka najpierw
+  // na własną obietnicę pobrania, więc nie tworzy oczekującej blokady Web Locks. Panel
+  // embedded z BroadcastChannel nie pobiera sam przy starcie, a przypomnienia otwieramy
+  // teraz jawnie. Uruchamiamy zatem rzeczywiste pobranie w gotowym panelu, zamiast
+  // uzależniać tę kontrolę od przypadkowego zdarzenia startowego innego modułu.
   let zwyklePobranieZakonczone = false;
   const zwyklePobranie = page.evaluate(() => window.VildaSync.syncPull().then((w) => w.action)).then((action) => {
     zwyklePobranieZakonczone = true;
     return action;
   });
-  const panelStart = page.frameLocator('#appPanes > iframe.app-pane[src^="index.html"]');
-  await expect.poll(() => panelStart.locator('html').evaluate(() => Boolean(window.VildaSync && window.VildaVault?.isUnlocked())), {
-    message: 'panel Start ma rzeczywisty moduł synchronizacji i odblokowany sejf', timeout: 15_000,
-  }).toBe(true);
-  const pobranieWPanelu = panelStart.locator('html').evaluate(() => window.VildaSync.syncPull().then((w) => w.action));
+  await page.waitForFunction(() => {
+    const frame = document.querySelector('iframe.app-pane[title="Start"]');
+    const win = frame && frame.contentWindow;
+    return Boolean(frame && !frame.hidden && win
+      && /\/index\.html$/.test(win.location.pathname)
+      && new URLSearchParams(win.location.search).get('embedded') === '1'
+      && win.VildaVault && win.VildaVault.isUnlocked()
+      && win.VildaSync && typeof win.VildaSync.syncPull === 'function');
+  });
+  const panel = await (await page.locator('iframe.app-pane[title="Start"]').elementHandle()).contentFrame();
+  const pobranieWPanelu = panel.evaluate(() => window.VildaSync.syncPull().then((w) => w.action));
   await expect.poll(() => czekajaceNaPierwsze(page), { message: 'pobranie w ramce panelu czeka na blokadę', timeout: 15_000 }).toBeGreaterThanOrEqual(1);
   expect(zwyklePobranieZakonczone, 'pobranie w tym samym dokumencie nadal czeka na pierwszy blob').toBe(false);
   expect(bloby(zadania), 'w trakcie — jedno pobranie bloba').toBe(1);

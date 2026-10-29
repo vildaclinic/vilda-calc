@@ -1,0 +1,73 @@
+/* Compact note presentation of one shared, frozen Klirens measurement. */
+.vilda-patient-note-card.vilda-clcr-note {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  gap: 0;
+  padding: 22px;
+  color: #173e43;
+  background: #fff;
+  border: var(--border-hairline) solid #d1e3e6;
+  border-radius: var(--radius-16);
+}
+.vilda-clcr-note * { box-sizing: border-box; }
+.clcr-note-meta { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: var(--space-10px); margin-bottom: var(--space-14px); color: #617c82; font-size: 12px; }
+.clcr-note-kind { padding: 5px 9px; color: #006e77; background: #edf7f8; border-radius: 7px; font-weight: 650; }
+.vilda-clcr-note .clcr-note-title { margin: 0 0 var(--space-16px); color: #173e43; font-size: 18px; font-weight: 700; line-height: 1.4; overflow-wrap: anywhere; }
+.clcr-note-main { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: var(--space-20px); padding: var(--space-18px) var(--space-20px); background: #f4f7f8; border-left: 4px solid #a9bec2; border-radius: var(--radius-12); }
+.clcr-note-main[data-tone="success"], .clcr-note-main[data-tone="normal"] { background: #eef8f8; border-left-color: var(--primary); }
+.clcr-note-main[data-tone="warning"] { background: #fff7e6; border-left-color: #a56400; }
+.clcr-note-main[data-tone="danger"] { background: #fff0ef; border-left-color: #b33428; }
+.clcr-note-column { min-width: 0; }
+.clcr-note-caption { display: block; min-height: 17px; margin-bottom: var(--space-10px); color: #617c82; font-size: 11px; font-weight: 650; line-height: 1.5; }
+.vilda-clcr-note .clcr-note-value, .vilda-clcr-note .clcr-note-reference { display: block; color: #173e43; font-size: 28px; font-weight: 750; line-height: 1.4; overflow-wrap: anywhere; font-variant-numeric: tabular-nums; }
+.clcr-note-main[data-tone="warning"] .clcr-note-value { color: #975a00; }
+.clcr-note-main[data-tone="danger"] .clcr-note-value { color: #b33428; }
+.vilda-clcr-note .clcr-note-reference-empty { padding-top: 7px; font-size: 15px; font-weight: 650; }
+.clcr-note-unit { display: block; margin-top: 7px; color: #173e43; font-size: 13px; font-weight: 650; line-height: 1.5; overflow-wrap: anywhere; }
+.vilda-clcr-note .clcr-note-status { margin: var(--space-16px) 0 var(--space-6px); color: #173e43; font-size: 14px; font-weight: 650; line-height: 1.5; }
+.vilda-clcr-note .clcr-note-interpretation { margin: 0; color: #3c6067; font-size: 13px; line-height: 1.65; }
+.clcr-note-boundary { display: block; margin-top: var(--space-8px); color: #3c6067; font-size: 11px; line-height: 1.5; }
+.vilda-clcr-note .clcr-note-caution { margin: var(--space-8px) 0 0; color: #3c6067; font-size: 12px; line-height: 1.6; }
+.clcr-note-comment { margin-top: var(--space-16px); padding-top: var(--space-14px); border-top: var(--border-hairline) solid #e1edef; font-size: 13px; color: #3c6067; line-height: 1.6; }
+.clcr-note-comment strong { display: block; margin-bottom: var(--space-4px); color: #173e43; }
+.clcr-note-comment p { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; }
+.clcr-note-actions { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: var(--space-12px); margin-top: var(--space-18px); }
+.vilda-clcr-note .clcr-note-button, .vilda-clcr-note .clcr-note-link {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  width: auto !important;
+  min-width: 0 !important;
+  min-height: 48px !important;
+  height: auto !important;
+  padding: 11px var(--space-16px) !important;
+  margin: 0 !important;
+  color: #006d76 !important;
+  background: #fff !important;
+  border: var(--border-hairline) solid #d1e3e6 !important;
+  border-radius: var(--radius-11) !important;
+  box-shadow: none !important;
+  transform: none !important;
+  font-family: inherit !important;
+  font-size: 13px !important;
+  font-weight: 650 !important;
+  line-height: 1.5 !important;
+  text-align: center !important;
+  cursor: pointer;
+}
+.vilda-clcr-note .clcr-note-link { justify-content: flex-start !important; padding: var(--space-10px) 0 !important; color: #007b85 !important; border: 0 !important; text-decoration: underline; text-underline-offset: 3px; }
+.vilda-clcr-note .clcr-note-button:focus-visible, .vilda-clcr-note .clcr-note-link:focus-visible { outline: var(--border-pro) solid #62b9c2 !important; outline-offset: 3px; }
+.vilda-clcr-note .clcr-note-button:disabled { cursor: wait; opacity: .65; }
+.clcr-note-notice { margin: var(--space-12px) 0 0; color: #617c82; font-size: 12px; line-height: 1.5; }
+@media (max-width: 700px) {
+  .vilda-patient-note-card.vilda-clcr-note { padding: var(--space-18px); }
+  .vilda-clcr-note .clcr-note-title { font-size: 17px; }
+  .clcr-note-main { gap: var(--space-12px); padding: var(--space-16px) var(--space-12px); }
+  .clcr-note-caption { min-height: 30px; font-size: 10px; }
+  .vilda-clcr-note .clcr-note-value, .vilda-clcr-note .clcr-note-reference { font-size: 25px; }
+  .vilda-clcr-note .clcr-note-reference-empty { font-size: 14px; }
+  .clcr-note-unit { font-size: 12px; }
+  .clcr-note-actions { align-items: stretch; flex-direction: column; gap: 2px; }
+}

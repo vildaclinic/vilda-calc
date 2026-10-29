@@ -106,16 +106,11 @@ function readClcrOptionalNumber(e) {
   return Number.isFinite(o) ? o : null;
 }
 function readClcrCollectionDurationMinutes() {
-  const e = document.getElementById("collectionStartAt"),
-    n = document.getElementById("collectionEndAt"),
-    t = e && e.value ? Date.parse(e.value) : NaN,
-    o = n && n.value ? Date.parse(n.value) : NaN;
-  if (!Number.isFinite(t) || !Number.isFinite(o) || !(o > t)) return null;
-  const a = (o - t) / 6e4;
-  return Number.isFinite(a) && a > 0 ? a : null;
+  const result = window.ClcrCollectionDuration?.readFromDocument(document);
+  return result?.valid ? result.minutes : null;
 }
 // This adapter is shared by the cl24 readiness check and actual calculation.
-// It deliberately leaves the dated collection used by other formulas intact.
+// All timed calculations use the same numeric duration; dated history stays frozen.
 function readCl24CalculationInput() {
   function number(id) {
     const raw = String($(id)?.value ?? "").trim();
@@ -123,9 +118,8 @@ function readCl24CalculationInput() {
     const value = Number(raw.replace(",", "."));
     return Number.isFinite(value) ? value : null;
   }
-  const hoursRaw = String($("Cl24DurationHours")?.value ?? "").trim();
-  const hours = /^(?:\d+(?:[.,]\d*)?|[.,]\d+)$/.test(hoursRaw)
-    ? number("Cl24DurationHours") : null;
+  const collectionTime = window.ClcrCollectionDuration?.readFromDocument(document);
+  const hours = collectionTime?.valid ? collectionTime.hours : null;
   const age = readClcrFormulaAge("cl24");
   // Completed age 0 already excludes this reference source (which starts at
   // age 3). Missing months must not turn that fact into an unknown age. This
@@ -166,8 +160,7 @@ function readCl24CalculationInput() {
   return {
     urineCreatinineMgDl: number("Ucr"), serumCreatinineMgDl, volumeMl: number("V24"),
     durationMinutes: hours !== null && hours > 0 ? hours * 60 : null,
-    durationSource: hours !== null && hours > 0
-      ? ($("Cl24DurationSource")?.value === "legacy-dates" ? "legacy-dates" : "hours") : "missing",
+    durationSource: collectionTime?.valid ? collectionTime.source : "missing",
     bsaM2, bsaMethod, weightKg, heightCm, ageYears, ageEligibilityOnly, sex: $("sex")?.value || "",
     protocolMode: "assumed-complete", protocol, collectionProblem, knownProblems,
     collectionAssumptions: {
@@ -455,6 +448,12 @@ function validateField(e) {
   const n = e.id,
     t = parseFloat(e.value),
     o = e.parentNode.querySelector(".validation-message");
+  if ($("formulaPicker")?.value === "Mg_mgkg" && (["weight", "height"].includes(n) || n.startsWith("MG_"))) {
+    const outcome = evaluateClcrMgDzm(), invalid = outcome.invalidIds?.includes(n) === true;
+    if (o) o.textContent = invalid ? outcome.error : "";
+    e.classList.toggle("error", invalid);
+    return !invalid;
+  }
   if ($("formulaPicker")?.value === "Ca_mgkg" && (n === "weight" || n.startsWith("CA_"))) {
     const outcome = evaluateClcrCaDzm(), invalid = outcome.invalidIds?.includes(n) === true;
     if (o) o.textContent = invalid ? outcome.error : "";
@@ -570,7 +569,7 @@ function validateField(e) {
 function validateClcrAgeContext(e) {
   // Cit/Cr reference bands use completed years; zero years needs no extra
   // months or days to select the source's birth–<3-years interval.
-  if (["CitCr_spot", "FENa_spot", "FEK_spot", "FECl_spot", "FEHCO3_spot", "AGu_spot", "TMP_GFR", "pH_spot", "UA_mgkg", "Ca_mgkg"].includes($("formulaPicker")?.value)) return;
+  if (["CitCr_spot", "FENa_spot", "FEK_spot", "FECl_spot", "FEHCO3_spot", "AGu_spot", "TMP_GFR", "pH_spot", "UA_mgkg", "Ca_mgkg", "Mg_mgkg"].includes($("formulaPicker")?.value)) return;
   const n = document.getElementById("age"),
     t = document.getElementById("ageMonths");
   if (!n || (n.value || "").trim() === "") return;
@@ -599,6 +598,7 @@ function canComputeFormula(e) {
   if (e === "TMP_GFR") return evaluateClcrTmpGfr().valid === true;
   if (e === "pH_spot") return evaluateClcrPh().valid === true;
   if (e === "Ca_mgkg") return evaluateClcrCaDzm().valid === true;
+  if (e === "Mg_mgkg") return evaluateClcrMgDzm().valid === true;
   if (e === "UA_mgkg") return evaluateClcrUa().valid === true;
   if (
     window.ClcrClinicalSafety &&
@@ -623,6 +623,10 @@ function canComputeFormula(e) {
   return n.requires.every((t) => {
         const o = document.getElementById(t);
         if (!o) return !1;
+        if (t === "Cl24DurationHours") {
+          const timing = window.ClcrCollectionDuration?.readFromDocument(document);
+          return timing?.valid === true && timing.complete === true;
+        }
         if (e === "AGu_spot" && t === "spotSameSpecimen") {
           return typeof window.ClcrUiWorkflow?.uagSpecimenConfirmed === "function"
             ? window.ClcrUiWorkflow.uagSpecimenConfirmed()
@@ -729,13 +733,34 @@ function evaluateClcrUag() {
     || { valid: false, errorCode: "UAG_UNAVAILABLE", error: "Nie można obliczyć UAG. Odśwież aplikację." };
 }
 
+function evaluateClcrMgDzm() {
+  const engine = window.VildaClcrMgDzm;
+  if (!engine) return { valid: false, errorCode: "MG_UNAVAILABLE", error: "Nie można obliczyć wydalania magnezu. Odśwież aplikację." };
+  let input = engine.readInputFromDocument(document);
+  if (window.ClcrUiWorkflow?.state.legacyBroad) {
+    // The historical workspace owns canonical legacy concentration and mL
+    // controls. Never substitute dormant values from a dedicated form. The live
+    // duration is frozen in the new record, not recomputed when reading it.
+    const vault = window.__vildaClcrVersionValueVault || {};
+    const values = Object.fromEntries(engine.CONTEXT_FIELD_IDS.flatMap(id => {
+      const control = $(id);
+      return control ? [[id, control.type === "checkbox" ? control.checked : control.value]] : Object.hasOwn(vault, id) ? [[id, vault[id]]] : [];
+    }));
+    const minutes = readClcrCollectionDurationMinutes();
+    Object.assign(values, { MG_inputMode: "concentration", MG_concentration: $("U_Mg")?.value || "", MG_concentrationUnit: "mg/L",
+      MG_volume: $("V24")?.value || "", MG_volumeUnit: "mL", MG_collectionHours: $("Cl24DurationHours")?.value ?? (minutes ? String(minutes / 60) : ""), MG_collectionSource: $("Cl24DurationSource")?.value || "assumed-24h" });
+    input = engine.inputFromValues(values);
+  }
+  return engine.evaluate(input, window.ClcrMgDzmReferenceData?.DEFAULT_POLICY);
+}
+
 function evaluateClcrCaDzm() {
   const engine = window.VildaClcrCaDzm;
   if (!engine) return { valid: false, errorCode: "CA_UNAVAILABLE", error: "Nie można obliczyć wydalania wapnia. Odśwież aplikację." };
   let input = engine.readInputFromDocument(document);
   if (window.ClcrUiWorkflow?.state.legacyBroad) {
-    // The historical workspace owns canonical mg/dL and mL controls. Never
-    // substitute dormant values from the separate audited UA form. The live
+    // The historical workspace owns canonical legacy concentration and mL
+    // controls. Never substitute dormant values from a dedicated form. The live
     // duration is frozen in the new record, not recomputed when reading it.
     const vault = window.__vildaClcrVersionValueVault || {};
     const values = Object.fromEntries(engine.CONTEXT_FIELD_IDS.flatMap(id => {
@@ -744,7 +769,7 @@ function evaluateClcrCaDzm() {
     }));
     const minutes = readClcrCollectionDurationMinutes();
     Object.assign(values, { CA_inputMode: "concentration", CA_concentration: $("U_Ca")?.value || "", CA_concentrationUnit: "mmol/L",
-      CA_volume: $("V24")?.value || "", CA_volumeUnit: "mL", CA_collectionHours: minutes ? String(minutes / 60) : "" });
+      CA_volume: $("V24")?.value || "", CA_volumeUnit: "mL", CA_collectionHours: $("Cl24DurationHours")?.value ?? (minutes ? String(minutes / 60) : ""), CA_collectionSource: $("Cl24DurationSource")?.value || "assumed-24h" });
     input = engine.inputFromValues(values);
   }
   return engine.evaluate(input, window.ClcrCaDzmReferenceData?.DEFAULT_POLICY);
@@ -755,8 +780,8 @@ function evaluateClcrUa() {
   if (!engine) return { valid: false, errorCode: "UA_UNAVAILABLE", error: "Nie można obliczyć wydalania kwasu moczowego. Odśwież aplikację." };
   let input = engine.readInputFromDocument(document);
   if (window.ClcrUiWorkflow?.state.legacyBroad) {
-    // The historical workspace owns canonical mg/dL and mL controls. Never
-    // substitute dormant values from the separate audited UA form. The live
+    // The historical workspace owns canonical legacy concentration and mL
+    // controls. Never substitute dormant values from a dedicated form. The live
     // duration is frozen in the new record, not recomputed when reading it.
     const vault = window.__vildaClcrVersionValueVault || {};
     const values = Object.fromEntries(engine.CONTEXT_FIELD_IDS.flatMap(id => {
@@ -765,7 +790,7 @@ function evaluateClcrUa() {
     }));
     const minutes = readClcrCollectionDurationMinutes();
     Object.assign(values, { UA_inputMode: "concentration", UA_concentration: $("U_UA")?.value || "", UA_concentrationUnit: "mg/dL",
-      UA_volume: $("V24")?.value || "", UA_volumeUnit: "mL", UA_collectionHours: minutes ? String(minutes / 60) : "" });
+      UA_volume: $("V24")?.value || "", UA_volumeUnit: "mL", UA_collectionHours: $("Cl24DurationHours")?.value ?? (minutes ? String(minutes / 60) : ""), UA_collectionSource: $("Cl24DurationSource")?.value || "assumed-24h" });
     input = engine.inputFromValues(values);
   }
   return engine.evaluate(input, window.ClcrUaReferenceData?.DEFAULT_POLICY);
@@ -804,7 +829,7 @@ function isFiniteNum(e) {
   return e != null && Number.isFinite(e);
 }
 function clearClcrResultElement(e) {
-  const n = $(e);
+  const n = typeof e === "string" ? $(e) : e;
   if (n)
     try {
       clcrClearElement(n);
@@ -838,14 +863,14 @@ function packClcrSupplementaryMarkup(markup, formulaId) {
   clcrSetTrustedMarkup(staging, markup, "clcr-result-presentation-staging");
   const nodes = [...staging.children];
   const primary = nodes.find((node) => node.classList.contains("clcr-result-card") && node.dataset.clcrFormula === formulaId);
-  if (!primary && ["CitCr_spot", "FENa_spot", "FEK_spot", "FECl_spot", "FEHCO3_spot", "AGu_spot", "TMP_GFR", "pH_spot", "UA_mgkg", "Ca_mgkg"].includes(formulaId)) {
-    const pending = nodes.filter((node) => node.dataset.clcrFormula === formulaId && node.matches(".citcr-result-empty, .citcr-result-error, .fena-result-empty, .fena-result-error, .fek-result-empty, .fek-result-error, .fecl-result-empty, .fecl-result-error, .fehco3-result-empty, .fehco3-result-error, .uag-result-empty, .uag-result-error, .tmp-gfr-result-empty, .tmp-gfr-result-error, .ph-result-empty, .ph-result-error, .ua-result-empty, .ua-result-error, .ca-dzm-result-empty, .ca-dzm-result-error"));
+  if (!primary && ["CitCr_spot", "FENa_spot", "FEK_spot", "FECl_spot", "FEHCO3_spot", "AGu_spot", "TMP_GFR", "pH_spot", "UA_mgkg", "Ca_mgkg", "Mg_mgkg"].includes(formulaId)) {
+    const pending = nodes.filter((node) => node.dataset.clcrFormula === formulaId && node.matches(".citcr-result-empty, .citcr-result-error, .fena-result-empty, .fena-result-error, .fek-result-empty, .fek-result-error, .fecl-result-empty, .fecl-result-error, .fehco3-result-empty, .fehco3-result-error, .uag-result-empty, .uag-result-error, .tmp-gfr-result-empty, .tmp-gfr-result-error, .ph-result-empty, .ph-result-error, .ua-result-empty, .ua-result-error, .ca-dzm-result-empty, .ca-dzm-result-error, .mg-dzm-result-empty, .mg-dzm-result-error"));
     if (pending.length) return pending.map((node) => node.outerHTML).join("");
   }
   if (!primary) return markup;
   const details = nodes.find((node) => node.classList.contains("clcr-result-details") && node.dataset.clcrFormula === formulaId);
   if (!details) return markup;
-  if (["OxCr_spot", "CitCr_spot", "FENa_spot", "FEK_spot", "FECl_spot", "FEHCO3_spot", "AGu_spot", "TMP_GFR", "pH_spot", "UA_mgkg", "Ca_mgkg"].includes(formulaId)) {
+  if (["OxCr_spot", "CitCr_spot", "FENa_spot", "FEK_spot", "FECl_spot", "FEHCO3_spot", "AGu_spot", "TMP_GFR", "pH_spot", "UA_mgkg", "Ca_mgkg", "Mg_mgkg"].includes(formulaId)) {
     // This card already carries its complete source and specimen context.
     // Unrelated stone-panel EAU notes must not label a Fimlab/NHS reference.
     nodes.filter((node) => node !== primary && node !== details &&
@@ -877,7 +902,7 @@ function packClcrSupplementaryMarkup(markup, formulaId) {
 function consolidateClcrEngineOutputs(formulaId) {
   if (!formulaId || !window.ClcrResultPresentation) return;
   const containers = [$("clcrInfo"), $("elecInfo"), $("stoneInfo")].filter(Boolean);
-  if (["UA_mgkg", "Ca_mgkg"].includes(formulaId)) {
+  if (["UA_mgkg", "Ca_mgkg", "Mg_mgkg"].includes(formulaId)) {
     // Also isolate empty/error states; a dormant legacy collection must never
     // remain visible when the active UA calculation is incomplete or invalid.
     containers.filter(node => node !== $("elecInfo")).forEach(clearClcrResultElement);
@@ -891,7 +916,7 @@ function consolidateClcrEngineOutputs(formulaId) {
   containers.filter((other) => other !== container).forEach((other) => {
     // The audited UA card already owns its exact duration, value and sources.
     // Legacy stone/DZM output can describe a different, dormant collection.
-    if (["UA_mgkg", "Ca_mgkg"].includes(formulaId)) { clearClcrResultElement(other); return; }
+    if (["UA_mgkg", "Ca_mgkg", "Mg_mgkg"].includes(formulaId)) { clearClcrResultElement(other); return; }
     [...other.children].forEach((node) => {
       if (node.dataset.clcrFormula !== formulaId && node.dataset.clcrComparisonFor !== formulaId) {
         node.remove();
@@ -1011,7 +1036,8 @@ function update() {
     uagEvaluation = evaluateClcrUag(),
     phEvaluation = evaluateClcrPh(),
     uaEvaluation = evaluateClcrUa(),
-    caDzmEvaluation = evaluateClcrCaDzm();
+    caDzmEvaluation = evaluateClcrCaDzm(),
+    mgDzmEvaluation = evaluateClcrMgDzm();
   acrRatio
     ? ((j = acrRatio.mgG),
       ($("U_ACR").value = j.toFixed(1)))
@@ -1034,19 +1060,9 @@ function update() {
   refRanges.Ca_Cr_spot = {};
   const R = +$("V24").value,
     collectionDurationMinutes = readClcrCollectionDurationMinutes();
-  const urineCollectionProtocol = {
-      startVoidDiscarded: !!$(
-        "collectionStartVoidDiscarded",
-      )?.checked,
-      finalVoidIncluded: !!$("collectionFinalVoidIncluded")?.checked,
-      noMissedVoids: !!$("collectionNoMissedVoids")?.checked,
-      noSpillage: !!$("collectionNoSpillage")?.checked,
-      noExtraVoids: !!$("collectionNoExtraVoids")?.checked,
-      storageFollowed: !!$("collectionStorageFollowed")?.checked,
-    },
-    urineCollectionProtocolComplete = Object.values(
-      urineCollectionProtocol,
-    ).every(Boolean),
+  const collectionTiming = window.ClcrCollectionDuration?.readFromDocument(document),
+    urineCollectionProtocol = collectionTiming?.protocol || {},
+    urineCollectionProtocolComplete = collectionTiming?.complete === true,
     collectionDailyVolume =
       R > 0 &&
       collectionDurationMinutes &&
@@ -1087,7 +1103,7 @@ function update() {
   }
   const rt = o && d,
     dt = [...document.querySelectorAll("#clcrForm input")].some((i) =>
-      (i.type === "hidden" || ["UA_collectionHours", "CA_collectionHours", "CA_clinicalMode"].includes(i.id)) ? false : i.type === "checkbox" ? i.checked : (i.value || "").trim() !== "",
+      (i.type === "hidden" || ["Cl24DurationHours", "UA_collectionHours", "CA_collectionHours", "CA_clinicalMode", "MG_collectionHours"].includes(i.id)) ? false : i.type === "checkbox" ? i.checked : (i.value || "").trim() !== "",
     );
   let Ne = !1;
   {
@@ -2206,7 +2222,6 @@ function update() {
     wt = ratio(ft, c),
     ht = ratio(pt, c),
     Te = excr_mgkg(pe, collectionDailyVolume, ie),
-    xt = excr_mgkg(Ue, collectionDailyVolume, ie),
     phosphorusDzm =
       window.ClcrClinicalSafety &&
       typeof window.ClcrClinicalSafety.computePhosphorusDzm == "function"
@@ -2305,6 +2320,11 @@ function update() {
     }
     ve += `<div class="result-box${m ? "" : " out-of-range"}"${Sa}><strong>${q}:</strong> ${l.toFixed(L)} ${u}${V}</div>`;
   }
+  if (_e === "Mg_mgkg" || window.ClcrUiWorkflow?.state.legacyBroad && mgDzmEvaluation.valid) {
+    ve += window.ClcrMgDzmUi
+      ? window.ClcrMgDzmUi.renderResult(mgDzmEvaluation)
+      : '<div class="mg-dzm-result-error" data-clcr-formula="Mg_mgkg"><strong>Nie można wyświetlić wyniku</strong><p>Odśwież aplikację, aby wczytać moduł magnezu.</p></div>';
+  }
   if (_e === "Ca_mgkg" || window.ClcrUiWorkflow?.state.legacyBroad && caDzmEvaluation.valid) {
     ve += window.ClcrCaDzmUi
       ? window.ClcrCaDzmUi.renderResult(caDzmEvaluation)
@@ -2317,7 +2337,6 @@ function update() {
   }
   (
     /* Calcium is rendered by its dedicated exact engine above. */
-    y("Wydalanie magnezu", xt, "mg/kg/24 h", "Mg_mgkg", "Mg_mgkg"),
     y(
       "Wydalanie fosforu nieorganicznego (P\u1D62)",
       Ct,
@@ -2416,14 +2435,14 @@ function update() {
   });
   if (timedCollectionAnalyteProvided && !collectionDurationMinutes) {
     ve +=
-      '<div class="result-box warn-yellow"><strong>Zbiórka czasowa:</strong> nie obliczono wartości /24 h bez prawidłowej daty i godziny początku oraz końca zbiórki.</div>';
+      '<div class="result-box warn-yellow"><strong>Zbiórka czasowa:</strong> wpisz prawidłowy czas zbiórki większy od 0 godzin.</div>';
   } else if (
     timedCollectionAnalyteProvided &&
     collectionDurationMinutes &&
     !urineCollectionProtocolComplete
   ) {
     ve +=
-      '<div class="result-box warn-yellow"><strong>Nie obliczono wartości /24 h:</strong> nie potwierdzono kompletnego protokołu czasowej zbiórki moczu. Pominięcie, rozlanie lub dodanie porcji unieważnia ilościowe wyniki dobowe.</div>';
+      '<div class="result-box warn-yellow"><strong>Nie obliczono wartości /24 h:</strong> zgłoszono niepełną lub błędną zbiórkę moczu. Nie można traktować jej jako miarodajnej pełnej zbiórki.</div>';
   } else if (
     timedCollectionAnalyteProvided &&
     collectionDurationMinutes &&
@@ -2441,6 +2460,7 @@ function update() {
   const fehco3DetailsOpen = _e === "FEHCO3_spot" && $("clcr-fehco3-details")?.open === true;
   const uagDetailsOpen = _e === "AGu_spot" && $("clcr-uag-details")?.open === true;
   const caDzmDetailsOpen = _e === "Ca_mgkg" && $("clcr-ca-dzm-details")?.open === true;
+  const mgDzmDetailsOpen = _e === "Mg_mgkg" && $("clcr-mg-dzm-details")?.open === true;
   const uaDetailsOpen = _e === "UA_mgkg" && $("clcr-ua-details")?.open === true;
   (clcrSetTrustedMarkup($("elecInfo"), packClcrSupplementaryMarkup(ve, _e), "electrolyte result html"),
     ($("elecCard").style.display = ve ? "block" : "none"));
@@ -2448,6 +2468,7 @@ function update() {
   if (fehco3DetailsOpen && $("clcr-fehco3-details")) $("clcr-fehco3-details").open = true;
   if (uagDetailsOpen && $("clcr-uag-details")) $("clcr-uag-details").open = true;
   if (caDzmDetailsOpen && $("clcr-ca-dzm-details")) $("clcr-ca-dzm-details").open = true;
+  if (mgDzmDetailsOpen && $("clcr-mg-dzm-details")) $("clcr-mg-dzm-details").open = true;
   if (uaDetailsOpen && $("clcr-ua-details")) $("clcr-ua-details").open = true;
   if (tmpGfrDetailsOpen && $("clcr-tmp-gfr-details")) $("clcr-tmp-gfr-details").open = true;
   let he = "";
@@ -2844,7 +2865,7 @@ function update() {
     ) {
       appendStoneValue(
         "pH dobowej zbiórki \u2014 interpretacja wstrzymana",
-        "Podaj prawidłowy czas i potwierdź kompletny protokół zbiórki.",
+        "Sprawdź czas zbiórki i zgłoszony problem jej kompletności.",
         "warn-yellow",
       );
     }
@@ -3870,6 +3891,14 @@ const clearBtn = document.getElementById("clearBtn");
 clearBtn &&
   clearBtn.addEventListener("click", (event) => {
     event.clcrClearedFormula = $("formulaPicker")?.value || "";
+    if (event.clcrClearedFormula === "Mg_mgkg") {
+      const vault = window.__vildaClcrVersionValueVault;
+      event.clcrPreservedMgDzmContext = Object.fromEntries((window.ClcrMgDzmSession?.CONTEXT_IDS || []).flatMap(id => {
+        const control = $(id);
+        if (control) return [[id, control.type === "checkbox" ? control.checked : control.value]];
+        return vault && Object.hasOwn(vault, id) ? [[id, vault[id]]] : [];
+      }));
+    }
     if (event.clcrClearedFormula === "Ca_mgkg") {
       const vault = window.__vildaClcrVersionValueVault;
       event.clcrPreservedCaDzmContext = Object.fromEntries((window.ClcrCaDzmSession?.CONTEXT_IDS || []).flatMap(id => {

@@ -1,0 +1,156 @@
+/* Magnesium DZM: approved integrated result, fixed input widths and reusable patient data. */
+html[data-clcr-workflow-ui="1"][data-clcr-mg-dzm-active="1"] { scrollbar-gutter: stable; }
+html[data-clcr-mg-dzm-active="1"] #clcrWorkspace,
+html[data-clcr-mg-dzm-active="1"] #clcrWorkspace *,
+html[data-clcr-mg-dzm-active="1"] #clcrWorkspace *::before,
+html[data-clcr-mg-dzm-active="1"] #clcrWorkspace *::after { box-sizing: border-box; }
+html[data-clcr-workflow-ui="1"][data-clcr-mg-dzm-active="1"] #clcrWorkspace { width: 100%; min-width: 0; gap: var(--space-20px); row-gap: var(--space-24px); align-items: start; }
+html[data-clcr-workflow-ui="1"][data-clcr-mg-dzm-active="1"] #clcrForm.flex { width: 100%; min-width: 0; max-width: 100%; flex-wrap: nowrap; align-items: stretch; gap: var(--space-16px); }
+html[data-clcr-workflow-ui="1"][data-clcr-mg-dzm-active="1"] #clcrForm.flex > *,
+html[data-clcr-workflow-ui="1"][data-clcr-mg-dzm-active="1"] #clcrResultRail,
+html[data-clcr-workflow-ui="1"][data-clcr-mg-dzm-active="1"] #clcrResultReport { width: 100%; min-width: 0; max-width: 100%; }
+html[data-clcr-workflow-ui="1"][data-clcr-mg-dzm-active="1"] #clcrForm > .clcr-workflow__utilities:empty { display: none; }
+html[data-clcr-workflow-ui="1"][data-clcr-mg-dzm-active="1"] #clcrResultReport { margin: 0; padding: var(--space-20px); }
+html[data-clcr-mg-dzm-active="1"] #clcrWorkspace :is(button, input, select),
+html[data-clcr-mg-dzm-active="1"] :is(.mg-dzm-input-card, .mg-dzm-proposal-card, #clcrVisitSaveCard) { transform: none !important; }
+.mg-dzm-input-card { padding: var(--space-16px); border: var(--border-hairline) solid var(--clcr-border-soft); border-radius: var(--clcr-radius-card); background: var(--clcr-surface); box-shadow: var(--clcr-shadow-card); }
+.mg-dzm-input-field { width: 100%; min-width: 0; }
+html[data-clcr-workflow-ui="1"] #clcrForm .mg-dzm-entry-field { display: flex; flex-direction: column; gap: var(--space-8px); width: 100%; min-width: 0; min-height: 0; margin: 0; padding: 0; background: transparent; border: 0; box-shadow: none; }
+html[data-clcr-workflow-ui="1"] #clcrForm .mg-dzm-entry-field .clcr-field__heading { display: block; margin: 0; padding: 0; }
+html[data-clcr-workflow-ui="1"] #clcrForm .mg-dzm-entry-field .clcr-field__name { color: var(--clcr-text); font-size: 14px; line-height: 1.5; font-weight: 650; }
+html[data-clcr-workflow-ui="1"] #clcrForm .mg-dzm-input-card :is(.clcr-field__status, .clcr-info-button, .clcr-field__note) { display: none; }
+html[data-clcr-workflow-ui="1"] #clcrForm .mg-dzm-entry-field :is(input, select) { display: block; width: 100%; min-width: 0; max-width: 100%; height: 48px; min-height: 48px; margin: 0; padding: var(--space-10px) var(--space-12px); border: var(--border-hairline) solid var(--clcr-border); border-radius: var(--radius-12); background: var(--clcr-surface); color: var(--clcr-text); font: 400 16px/24px Inter, system-ui, sans-serif; font-variant-numeric: tabular-nums; box-shadow: none; }
+html[data-clcr-workflow-ui="1"] #clcrForm .mg-dzm-entry-field :is(input, select):not([aria-invalid="true"]) { border-color: var(--clcr-border) !important; background: var(--clcr-surface) !important; box-shadow: none !important; }
+html[data-clcr-workflow-ui="1"] #clcrForm .mg-dzm-entry-field :is(input, select)[aria-invalid="true"] { border-color: var(--clcr-error) !important; background: var(--clcr-error-bg) !important; box-shadow: none !important; }
+.mg-dzm-field-hint { margin: var(--space-8px) 0 0; color: var(--clcr-muted); font-size: 12px; line-height: 1.6; }
+.mg-dzm-field-error { margin: var(--space-8px) 0 0; color: var(--clcr-error); font-size: 12px; line-height: 1.6; }
+.mg-dzm-readiness { display: flex; justify-content: space-between; gap: var(--space-12px); margin: var(--space-20px) 0 0; color: var(--clcr-muted); font-size: 12px; line-height: 1.5; }
+.mg-dzm-readiness[data-complete="true"] { color: var(--clcr-primary-dark); }
+.mg-dzm-readiness strong { font-variant-numeric: tabular-nums; }
+html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .mg-dzm-proposal-card { --clcr-result-color: #566f77; --clcr-result-bg: #f4f7f8; --clcr-result-border: #ccd9dc; padding: var(--space-20px) !important; }
+html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .mg-dzm-proposal-card[data-clcr-tone="normal"] { --clcr-result-color: var(--clcr-primary-dark); --clcr-result-bg: #eef8f8; --clcr-result-border: #bbdadd; }
+html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .mg-dzm-proposal-card[data-clcr-tone="warning"] { --clcr-result-color: var(--clcr-warning); --clcr-result-bg: var(--clcr-warning-bg); --clcr-result-border: #ead2a3; }
+html[data-clcr-workflow-ui="1"] #clcrResultReport .mg-dzm-result-status { margin: 0 0 var(--space-20px); color: var(--clcr-result-color); font-size: 15px; line-height: 1.5; }
+.mg-dzm-result-main { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: var(--space-16px); }
+html[data-clcr-workflow-ui="1"] #clcrResultReport .mg-dzm-proposal-card :is(.clcr-result-patient-label, .clcr-result-reference-label) { min-height: 22px; margin: 0 0 var(--space-8px); color: var(--clcr-muted); font-size: 12px; line-height: 1.5; }
+html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .mg-dzm-proposal-card .clcr-result-value { display: flex; align-items: center; min-height: 58px; font-size: 49px !important; line-height: 1.2; letter-spacing: -1.3px; color: var(--clcr-result-color) !important; white-space: normal; overflow-wrap: anywhere; }
+html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .mg-dzm-proposal-card .clcr-result-value[data-long="true"] { font-size: 31px !important; letter-spacing: -.4px; }
+html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .mg-dzm-proposal-card .clcr-result-value[data-dense="true"] { font-size: 23px !important; }
+html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .mg-dzm-proposal-card .mg-dzm-reference-value { display: flex; align-items: center; min-height: 58px; padding: 0; color: var(--clcr-heading) !important; font-size: 28px !important; line-height: 1.3; letter-spacing: -.5px; white-space: normal; overflow-wrap: anywhere; word-break: normal; }
+html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .mg-dzm-proposal-card .clcr-result-reference--unavailable .mg-dzm-reference-value { white-space: normal; font-size: 14px !important; }
+.mg-dzm-reference-hint { margin: var(--space-4px) 0 0; color: var(--clcr-muted); font-size: 11px; line-height: 1.55; }
+.mg-dzm-result-copy { margin: var(--space-18px) 0 0; color: var(--clcr-heading); font-size: 13px; font-weight: 400; line-height: 1.65; }
+.mg-dzm-result-caution { margin: var(--space-14px) 0 0; padding-top: var(--space-12px); border-top: var(--border-hairline) solid var(--clcr-result-border); color: var(--clcr-heading); font-size: 12px; line-height: 1.6; }
+.mg-dzm-reference-source { margin: var(--space-14px) 0 0; color: var(--clcr-muted); font-size: 11px; line-height: 1.55; }
+.mg-dzm-range-visual { margin: var(--space-20px) 0 0; }
+.mg-dzm-range-graphic { display: block; width: 100%; height: 78px; overflow: visible; }
+.mg-dzm-range-marker-label { fill: var(--clcr-result-color); font-size: 11px; font-weight: 650; text-anchor: middle; }
+.mg-dzm-range-track { fill: #dde6e7; }
+.mg-dzm-range-normal { fill: #a6c9c4; }
+.mg-dzm-range-boundary { stroke: #46746c; stroke-width: var(--border-emphasis); stroke-dasharray: 2 2; }
+.mg-dzm-range-marker { fill: var(--clcr-result-color); }
+.mg-dzm-range-label { fill: var(--clcr-heading); font-size: 11px; font-variant-numeric: tabular-nums; text-anchor: middle; }
+.mg-dzm-range-caption { margin: var(--space-4px) 0 0; color: var(--clcr-muted); font-size: 11px; text-align: center; }
+.mg-dzm-result-empty,
+.mg-dzm-result-error { min-height: 260px; padding: var(--space-20px); border: var(--border-hairline) dashed var(--clcr-border); border-radius: var(--radius-14); background: var(--clcr-surface-soft); color: var(--clcr-muted); font-size: 13px; line-height: 1.65; }
+.mg-dzm-result-empty strong,
+.mg-dzm-result-error strong { display: block; color: var(--clcr-heading); font-size: 16px; line-height: 1.5; }
+.mg-dzm-result-empty p,
+.mg-dzm-result-error p { margin: var(--space-12px) 0 0; }
+.mg-dzm-result-error { border-style: solid; border-color: #efbaba; background: var(--clcr-error-bg); color: var(--clcr-error); }
+.mg-dzm-result-error strong { color: var(--clcr-error); }
+.mg-dzm-proposal-details { width: 100%; min-width: 0; }
+html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .mg-dzm-proposal-details .clcr-result-category-table { width: 100%; table-layout: fixed; font-size: 11px; line-height: 1.6; }
+html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .mg-dzm-proposal-details .clcr-result-category-table :is(th, td) { padding: var(--space-8px); font-size: inherit; line-height: inherit; white-space: normal; overflow-wrap: anywhere; }
+html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .mg-dzm-proposal-details .clcr-result-category-table :is(th, td):first-child { width: 52%; }
+html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .mg-dzm-proposal-details .clcr-result-category-table :is(th, td):last-child { width: 48%; }
+.mg-dzm-source-links { padding-left: var(--space-16px); }
+.mg-dzm-source-links li { margin: var(--space-6px) 0; }
+.mg-dzm-source-links a { overflow-wrap: anywhere; }
+.mg-dzm-source-links small { display: block; color: var(--clcr-muted); font-size: 11px; line-height: 1.6; }
+html[data-clcr-workflow-ui="1"][data-clcr-mg-dzm-active="1"] #clearContainer { margin: 0 !important; padding: 0; border: 0; background: none; box-shadow: none; }
+html[data-clcr-workflow-ui="1"][data-clcr-mg-dzm-active="1"] #clearBtn { display: block; width: 100%; min-height: 48px; margin: 0; padding: var(--space-10px) var(--space-12px); font: 400 16px/24px Inter, system-ui, sans-serif; }
+html[data-clcr-workflow-ui="1"][data-clcr-mg-dzm-active="1"] #clcrVisitSaveCard :is(h2, .cvs-hint) { text-align: center; }
+html[data-clcr-workflow-ui="1"][data-clcr-mg-dzm-active="1"] #clcrActivePanel { padding: var(--space-16px) var(--space-16px) 0; border-bottom: 0; border-radius: var(--clcr-radius-card) var(--clcr-radius-card) 0 0; box-shadow: none; }
+html[data-clcr-workflow-ui="1"][data-clcr-mg-dzm-active="1"] #mgDzmInputCard { margin-top: calc(-1 * var(--space-16px)); border-top: 0; border-radius: 0 0 var(--clcr-radius-card) var(--clcr-radius-card); box-shadow: none; }
+@media (max-width: 700px) {
+  html[data-clcr-workflow-ui="1"][data-clcr-mg-dzm-active="1"] #clcrResultReport { padding: var(--space-16px); }
+  html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .mg-dzm-proposal-card { padding: var(--space-16px) !important; }
+  .mg-dzm-result-main { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: var(--space-12px); }
+  html[data-clcr-workflow-ui="1"] #clcrResultReport .mg-dzm-proposal-card :is(.clcr-result-patient-label, .clcr-result-reference-label) { font-size: 11px; }
+  html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .mg-dzm-proposal-card .clcr-result-value { min-height: 51px; font-size: 41px !important; letter-spacing: -1px; }
+  html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .mg-dzm-proposal-card .clcr-result-value[data-long="true"] { font-size: 29px !important; letter-spacing: -.4px; }
+  html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .mg-dzm-proposal-card .clcr-result-value[data-dense="true"] { font-size: 22px !important; }
+  html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .mg-dzm-proposal-card .mg-dzm-reference-value { min-height: 51px; font-size: 27px !important; }
+  .mg-dzm-result-copy { font-size: 12px; }
+}
+@media (max-width: 360px) {
+  html[data-clcr-workflow-ui="1"][data-clcr-mg-dzm-active="1"] #clcrResultReport { padding: var(--space-14px); }
+  html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .mg-dzm-proposal-card { padding: var(--space-14px) !important; }
+  .mg-dzm-result-main { gap: var(--space-10px); }
+  html[data-clcr-workflow-ui="1"] #clcrResultReport .mg-dzm-result-status { font-size: 13px; }
+  html[data-clcr-workflow-ui="1"] #clcrResultReport .mg-dzm-proposal-card :is(.clcr-result-patient-label, .clcr-result-reference-label) { min-height: 3em; }
+  html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .mg-dzm-proposal-card .clcr-result-value { font-size: 37px !important; }
+  html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .mg-dzm-proposal-card .clcr-result-value[data-long="true"] { font-size: 27px !important; }
+  html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .mg-dzm-proposal-card .clcr-result-value[data-dense="true"] { font-size: 20px !important; }
+  html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .mg-dzm-proposal-card .mg-dzm-reference-value { font-size: 24px !important; }
+}
+@media (min-width: 980px) {
+  html[data-clcr-workflow-ui="1"][data-clcr-mg-dzm-active="1"] #clcrWorkspace { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+}
+
+/* All geometry remains in CSS; mode switches never change the workspace width. */
+.mg-dzm-input-card { min-width: 0; }
+.mg-dzm-input-mode { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-4px); padding: var(--space-4px); margin-bottom: var(--space-20px); border: var(--border-hairline) solid var(--clcr-border); border-radius: var(--radius-12); background: var(--clcr-surface-soft); }
+html[data-clcr-workflow-ui="1"] #clcrForm .mg-dzm-input-mode button { width: 100%; min-width: 0; min-height: 48px; margin: 0; padding: var(--space-8px); border: 0 !important; border-radius: var(--radius-8) !important; color: var(--clcr-muted) !important; background: transparent !important; box-shadow: none !important; font: 650 16px/1.35 Inter, system-ui, sans-serif; }
+html[data-clcr-workflow-ui="1"] #clcrForm .mg-dzm-input-mode button[aria-pressed="true"] { color: var(--clcr-surface) !important; background: var(--clcr-primary) !important; }
+.mg-dzm-mode-fields { display: grid; gap: var(--space-16px); min-width: 0; }
+.mg-dzm-value-row { display: grid; grid-template-columns: minmax(0, 1fr) 112px; gap: var(--space-8px); min-width: 0; align-items: end; }
+.mg-dzm-value-row--reported { grid-template-columns: minmax(0, 1fr) 132px; }
+html[data-clcr-workflow-ui="1"] #clcrForm .mg-dzm-unit-field .clcr-field__heading { display: none; }
+html[data-clcr-workflow-ui="1"] #clcrForm .mg-dzm-unit-field :is(select, input) { padding-inline: var(--space-8px); }
+html[data-clcr-workflow-ui="1"] #clcrForm .mg-dzm-input-card .clcr-field__validation:empty { display: none; }
+.mg-dzm-context-row { display: flex; justify-content: space-between; align-items: center; gap: var(--space-12px); margin-top: var(--space-20px); padding-top: var(--space-16px); border-top: var(--border-hairline) solid var(--clcr-border-soft); }
+.mg-dzm-context-row > div { min-width: 0; }
+.mg-dzm-context-label { display: block; margin-bottom: var(--space-4px); color: var(--clcr-muted); font-size: 12px; line-height: 1.5; }
+.mg-dzm-context-value { color: var(--clcr-heading); font-size: 14px; line-height: 1.5; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+html[data-clcr-workflow-ui="1"] #clcrForm .mg-dzm-context-button { flex: 0 0 auto; width: auto; min-height: 48px; margin: 0; padding: var(--space-8px) var(--space-12px); border: var(--border-hairline) solid var(--clcr-border) !important; border-radius: var(--radius-10); color: var(--clcr-primary-dark) !important; background: var(--clcr-surface) !important; box-shadow: none !important; font: 650 16px/1.4 Inter, system-ui, sans-serif; }
+.mg-dzm-inline-editor { margin-top: var(--space-14px); padding: var(--space-14px); border: var(--border-hairline) solid var(--clcr-border-soft); border-radius: var(--radius-12); background: var(--clcr-surface-soft); }
+.mg-dzm-assumption { margin: var(--space-16px) 0 0; color: var(--clcr-muted); font-size: 12px; line-height: 1.6; }
+.mg-dzm-mode-fields[hidden], .mg-dzm-inline-editor[hidden], .mg-dzm-context-row[hidden], .mg-dzm-control-registry[hidden] { display: none !important; }
+.mg-dzm-result-unit, .mg-dzm-reference-unit { display: block; margin-top: var(--space-6px); font-size: 13px; line-height: 1.5; font-weight: 650; }
+html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .mg-dzm-result-unit { color: var(--clcr-result-color); }
+html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .mg-dzm-reference-unit { color: var(--clcr-heading); }
+html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .mg-dzm-reference-value[data-long="true"] { font-size: 24px !important; letter-spacing: -.6px; }
+.mg-dzm-equivalent { margin: var(--space-16px) 0 0; padding-top: var(--space-12px); border-top: var(--border-hairline) solid var(--clcr-result-border); color: var(--clcr-muted); font-size: 12px; line-height: 1.6; }
+html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .mg-dzm-equivalent strong { color: var(--clcr-heading) !important; font-weight: 650; }
+html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .mg-dzm-proposal-details .mg-dzm-current-reference td { color: var(--clcr-primary-dark); background: var(--clcr-surface-tint); font-weight: 750; }
+.mg-dzm-proposal-details td span { display: block; color: var(--clcr-muted); font-size: 10px; }
+.mg-dzm-table-source { display: block; color: var(--clcr-muted); font-size: 10px; font-weight: 400; line-height: 1.5; }
+.mg-dzm-proposal-details h3 { line-height: 1.5; }
+@media (max-width: 760px) {
+  html[data-clcr-workflow-ui="1"][data-clcr-mg-dzm-active="1"] #clcrWorkspace { row-gap: var(--space-24px); }
+  .mg-dzm-input-mode button { font-size: 16px; }
+}
+@media (max-width: 420px) {
+  .mg-dzm-value-row { grid-template-columns: minmax(0, 1fr) 105px; }
+  .mg-dzm-value-row--reported { grid-template-columns: minmax(0, 1fr) 125px; }
+  html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .mg-dzm-reference-value[data-long="true"] { font-size: 21px !important; }
+}
+@media (max-width: 340px) {
+  .mg-dzm-value-row { grid-template-columns: minmax(0, 1fr) 99px; }
+  .mg-dzm-value-row--reported { grid-template-columns: minmax(0, 1fr) 121px; }
+  html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .mg-dzm-reference-value[data-long="true"] { font-size: 18px !important; }
+}
+
+
+.mg-dzm-interpretation-context { font-size: 11px; color: var(--clcr-muted); line-height: 1.5; margin: 0 0 var(--space-8px); }
+html[data-clcr-workflow-ui="1"] #clcrForm #mgDzmPatientDataEditor { display: grid; gap: var(--space-16px); min-width: 0; }
+html[data-clcr-workflow-ui="1"] #clcrForm #mgDzmPatientDataEditor[hidden] { display: none !important; }
+html[data-clcr-workflow-ui="1"] #clcrResultReport .mg-dzm-proposal-card :is(.clcr-result-patient-label, .clcr-result-reference-label) { min-height: 3em; }
+.mg-dzm-result-unit, .mg-dzm-reference-unit { min-height: 3em; overflow-wrap: anywhere; }
+@media (max-width: 760px) {
+  html[data-clcr-workflow-ui="1"] #clcrResultReport .mg-dzm-proposal-card :is(.clcr-result-patient-label, .clcr-result-reference-label) { min-height: 4.5em; }
+  .mg-dzm-result-unit, .mg-dzm-reference-unit { min-height: 3.2em; font-size: 12px; }
+}
+@media (max-width: 340px) { .mg-dzm-result-unit, .mg-dzm-reference-unit { font-size: 11px; } }

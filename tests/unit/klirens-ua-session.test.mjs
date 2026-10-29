@@ -84,10 +84,10 @@ describe('UA DZM — production session replacement, exact inputs and duration',
     expect(snapshot(result)).toMatchObject({ formulaPicker: 'UA_mgkg', UA_inputMode: 'reported', UA_reportedValue: '300.000', UA_reportedUnit: 'mg/24h' });
   });
 
-  it('explicit blanks override preserved UA measurements and duration', () => {
+  it('explicit specimen blanks override preserved values and blank duration uses the new24h default', () => {
     const result = restore({ selectedFormula: 'UA_mgkg', inputs: { UA_concentration: '', UA_collectionHours: '' },
       preservedInputs: { UA_concentration: '30', UA_collectionHours: '24' } });
-    expect(snapshot(result)).toMatchObject({ UA_concentration: '', UA_collectionHours: '' });
+    expect(snapshot(result)).toMatchObject({ UA_concentration: '', UA_collectionHours: '24', UA_collectionSource: 'assumed-24h' });
   });
 
   it('legacy UA migrates only its canonical concentration and volume without changing other DZM inputs', () => {
