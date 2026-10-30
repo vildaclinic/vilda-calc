@@ -235,3 +235,52 @@ test('a delayed native-detail read cannot close or overwrite a new unsaved care-
   await form.getByRole('button', { name: 'Anuluj formularz planu', exact: true }).click();
   expect(await notesFor(created.frame, created.ids.a)).toEqual(before);
 });
+
+test('a background refresh captures the latest selected plan and original result after its final delayed timeline read', async ({ page }) => {
+  const created = await resultFixture(page);
+  const next = await mutatePlan(created.frame, created.ids.a, null, 'create', { title: 'Fikcyjny drugi plan tego pacjenta' });
+  const step = await mutatePlan(created.frame, created.ids.a, next.planId, 'addStep', {
+    step: { title: 'Fikcyjny wynik drugiego planu', kind: 'Oczekujący wynik', state: 'waiting', reminderDateISO: '2026-10-28' },
+  });
+  await mutatePlan(created.frame, created.ids.a, next.planId, 'result', {
+    stepId: step.stepId, text: 'Fikcyjna pełna treść wyniku wybranego podczas odczytu.', dateISO: '2026-10-28', continuation: 'later', decisionDateISO: '2026-11-05',
+  });
+  const nextPlan = await readPlan(created.frame, next.planId);
+  const nextResult = await created.frame.evaluate(id => window.VildaVault.getPatientNote(id), nextPlan.steps.find(item => item.id === step.stepId).resultNoteId);
+  await created.frame.evaluate(id => window.VildaAuthUI.showPatientCard(id, null, null, { activeTab: 'care' }), created.ids.a);
+  const patient = created.frame.locator('.vilda-auth-patient-card'), panel = patient.locator('.vcp');
+  await selectPlan(panel, created.plan.id);
+  await panel.locator(`[data-step-id="${created.steps.awaiting}"]`).getByRole('button', { name: 'Otwórz wynik', exact: true }).click();
+  await expect(panel.locator(`.vcp-record[data-note-id="${created.result.id}"] .vcp-record-body`)).toHaveText(created.result.body);
+  await patient.evaluate(node => { node.dataset.fictionalLateTimelineCard = '1'; });
+  await created.frame.evaluate(patientId => {
+    const original = window.VildaVault.listPatientTimelineEvents;
+    window.__fictionalLateTimelineReadCount = 0;
+    window.__fictionalHoldLateTimeline = true;
+    const gate = new Promise(resolve => { window.__fictionalReleaseLateTimeline = () => { window.__fictionalHoldLateTimeline = false; resolve(); }; });
+    window.VildaVault.listPatientTimelineEvents = async function (id, ...args) {
+      const events = await original.call(this, id, ...args);
+      if (id === patientId && window.__fictionalHoldLateTimeline) {
+        window.__fictionalLateTimelineReadCount += 1;
+        await gate;
+      }
+      return events;
+    };
+  }, created.ids.a);
+  await created.frame.evaluate(async patientId => {
+    await window.VildaVault.savePatientNote({ patientId, title: 'Fikcyjna notatka wyzwalająca końcowy odczyt', body: 'Fikcyjna niezależna treść synchronizacji.', category: 'observation' });
+    document.dispatchEvent(new CustomEvent('vilda:sync-merged'));
+  }, created.ids.a);
+  await created.frame.waitForFunction(() => window.__fictionalLateTimelineReadCount > 0);
+  const before = await notesFor(created.frame, created.ids.a);
+  await selectPlan(panel, nextPlan.id);
+  await panel.locator(`[data-step-id="${step.stepId}"]`).getByRole('button', { name: 'Otwórz wynik', exact: true }).click();
+  await expect(panel.locator(`.vcp-record[data-note-id="${nextResult.id}"] .vcp-record-body`)).toHaveText(nextResult.body);
+  await expect(patient).toHaveAttribute('data-fictional-late-timeline-card', '1');
+  await created.frame.evaluate(() => window.__fictionalReleaseLateTimeline());
+  await expect(patient).not.toHaveAttribute('data-fictional-late-timeline-card', '1');
+  await expect(panel.locator(`[data-plan-id="${nextPlan.id}"]`)).toHaveAttribute('aria-current', 'true');
+  await expect(panel.locator(`.vcp-record[data-note-id="${nextResult.id}"] .vcp-record-body`)).toHaveText(nextResult.body);
+  await expect(panel.locator(`.vcp-record[data-note-id="${created.result.id}"]`)).toHaveCount(0);
+  expect(await notesFor(created.frame, created.ids.a)).toEqual(before);
+});
