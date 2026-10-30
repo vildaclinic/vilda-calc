@@ -67,8 +67,16 @@
     var caption = doc.createElement('span'); caption.textContent = 'Użyj ikony oka, aby pokazać Przypomnienia.'; node.appendChild(caption);
     return node;
   }
+  function label(view, masked) {
+    // Accessible-name references can include hidden referenced text. Remove
+    // those references as well as shielding the visual/accessibility subtree.
+    attr(view.root, 'aria-label', masked ? 'Przypomnienia — treść ukryta' : view.label.label);
+    attr(view.root, 'aria-labelledby', masked ? null : view.label.labelledby);
+    attr(view.root, 'aria-describedby', masked ? null : view.label.describedby);
+  }
   function update(view) {
     var active = doc.activeElement, moveFocus = false;
+    label(view, hidden);
     view.parts.forEach(function (part) {
       var node = part.node;
       if (hidden && contains(node, active)) moveFocus = true;
@@ -121,6 +129,7 @@
     if (!options.root) return function () {};
     var root = options.root, mask = options.cover || cover(), ownCover = !options.cover;
     var view = { root: root, cover: mask, header: options.header || null, buttons: list(options.buttons || options.button),
+      label: { label: root.getAttribute('aria-label'), labelledby: root.getAttribute('aria-labelledby'), describedby: root.getAttribute('aria-describedby') },
       parts: list(options.content).map(function (node) {
         node.classList.add('vb22-private-content');
         return { node: node, ariaHidden: node.getAttribute('aria-hidden'), inert: !!node.inert, visibility: node.style.visibility || '' };
@@ -143,6 +152,7 @@
         part.node.classList.remove('vb22-private-content'); part.node.inert = part.inert;
         attr(part.node, 'aria-hidden', part.ariaHidden); part.node.style.visibility = part.visibility;
       });
+      label(view, false);
       root.classList.remove('vilda-reminders-private-surface');
       if (ownCover) mask.remove();
     };

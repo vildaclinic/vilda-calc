@@ -186,6 +186,27 @@ describe('lokalna osłona Przypomnień', () => {
     stop(); expect(dialog.children).toEqual([form]);
   });
 
+  it('usuwa identyfikujące referencje nazwy i opisu okna dla czytnika, po czym dokładnie je przywraca', () => {
+    const context = browser(), root = context.doc.createElement('dialog'), body = context.doc.createElement('div');
+    root.setAttribute('role', 'dialog'); root.setAttribute('aria-modal', 'true');
+    root.setAttribute('aria-label', 'Fikcyjna nazwa sprawy');
+    root.setAttribute('aria-labelledby', 'fictional-secret-title'); root.setAttribute('aria-describedby', 'fictional-secret-patient');
+    root.appendChild(body); const stop = context.api.register({ root, content: body });
+    context.api.setHidden(true);
+    expect(root.getAttribute('aria-label')).toBe('Przypomnienia — treść ukryta');
+    expect(root.getAttribute('aria-labelledby')).toBeNull(); expect(root.getAttribute('aria-describedby')).toBeNull();
+    expect(root.getAttribute('role')).toBe('dialog'); expect(root.getAttribute('aria-modal')).toBe('true');
+    context.api.setHidden(false);
+    expect(root.getAttribute('aria-label')).toBe('Fikcyjna nazwa sprawy');
+    expect(root.getAttribute('aria-labelledby')).toBe('fictional-secret-title');
+    expect(root.getAttribute('aria-describedby')).toBe('fictional-secret-patient');
+    context.api.setHidden(true); stop();
+    expect(root.getAttribute('aria-label')).toBe('Fikcyjna nazwa sprawy');
+    expect(root.getAttribute('aria-labelledby')).toBe('fictional-secret-title');
+    expect(root.getAttribute('aria-describedby')).toBe('fictional-secret-patient');
+    expect(root.getAttribute('role')).toBe('dialog'); expect(root.getAttribute('aria-modal')).toBe('true');
+  });
+
   it('odmontowanie przywraca poprzednią dostępność i usuwa nasłuchy bez przełączania innych kart', () => {
     const context = browser(), surface = view(context);
     context.api.setHidden(true); surface.stop(); surface.stop();

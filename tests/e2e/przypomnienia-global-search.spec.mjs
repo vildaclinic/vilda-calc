@@ -7,6 +7,8 @@ test.setTimeout(180000);
 
 async function assertShield(surface) {
   await expect(surface.locator('.vilda-reminders-private-cover')).toBeVisible();
+  await expect(surface).toHaveAccessibleName('Przypomnienia — treść ukryta');
+  await expect(surface).toHaveAccessibleDescription('');
   const protectedParts = surface.locator('.vb22-private-content');
   expect(await protectedParts.count()).toBeGreaterThan(0);
   expect(await protectedParts.evaluateAll(nodes => nodes.every(node => node.inert && node.getAttribute('aria-hidden') === 'true' && getComputedStyle(node).visibility === 'hidden'))).toBe(true);
