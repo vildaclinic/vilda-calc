@@ -58,10 +58,11 @@ async function VildaChangeExistingPatientNote(payload, remove) {
     if (careNote.careContext && ['step', 'calendar'].indexOf(careNote.careContext.role) >= 0) {
       if (remove) {
         const handled = await CareMvpLegacyDelete(next.id, next.baseRev); assertSession();
-        return handled ? { id: next.id, removed: true } : Object.assign(result, { conflict: true, reason: 'conflict' });
+        if (handled !== null) return handled ? { id: next.id, removed: true } : Object.assign(result, { conflict: true, reason: 'conflict' });
+      } else {
+        const handled = await CareMvpLegacyWrite(next); assertSession();
+        if (handled) return handled;
       }
-      const handled = await CareMvpLegacyWrite(next); assertSession();
-      if (handled) return handled;
     }
     const guard = { token: VildaExistingNoteUpdateToken, beforeCommit: assertSession, account, adapter };
     if (remove) {

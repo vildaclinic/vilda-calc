@@ -414,15 +414,42 @@
         var chosen = options.patientId ? state.patients.find(function (entry) { return entry.patientId === options.patientId; }) : null;
         var picker = node('section', 'vcp-picker'), patientSearch = field(picker, 'Szukaj pacjenta', 'search', '', false); patientSearch.placeholder = 'Nazwisko lub imię…'; patientSearch.autocomplete = 'off';
         var selection = node('div', 'vcp-selected-patient'), results = node('div', 'vcp-patient-results'), status = node('p', 'vcp-help'); status.setAttribute('role', 'status'); picker.appendChild(selection); picker.appendChild(status); picker.appendChild(results); model.body.appendChild(picker);
+        function birthDate(record) {
+          var value = record && record.header && record.header.dobISO;
+          if (typeof value !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return '';
+          var parts = value.split('-').map(Number), parsed = new Date(value + 'T12:00:00Z');
+          return !isNaN(parsed.getTime()) && parsed.getUTCFullYear() === parts[0] && parsed.getUTCMonth() + 1 === parts[1] && parsed.getUTCDate() === parts[2] ? value : '';
+        }
+        function patientIdentity(record) {
+          var recordName = patientName(record), dob = birthDate(record), id = String(record.patientId || '');
+          var peers = state.patients.filter(function (entry) { return searchKey(patientName(entry)) === searchKey(recordName); });
+          var identity = dob ? 'ur. ' + date(dob) : 'Brak daty urodzenia';
+          if (!dob || peers.some(function (entry) { return entry.patientId !== record.patientId && birthDate(entry) === dob; })) {
+            var length = Math.min(8, id.length);
+            while (length < id.length && peers.some(function (entry) { return entry.patientId !== record.patientId && String(entry.patientId || '').slice(0, length) === id.slice(0, length); })) length = Math.min(id.length, length + 4);
+            identity += ' · ID wpisu: ' + id.slice(0, length);
+          }
+          return { text: identity, label: recordName + (peers.length > 1 ? ' · ' + identity : '') };
+        }
+        function patientSummary(record, target) {
+          var identity = patientIdentity(record), summary = node('span', 'vcp-patient-summary'), details = node('span', 'vcp-help vcp-patient-identity', identity.text);
+          details.id = 'vcp-patient-identity-' + ++serial;
+          summary.appendChild(node('span', 'vcp-patient', patientName(record))); summary.appendChild(details); target.appendChild(summary);
+          return { label: identity.label, descriptionId: details.id };
+        }
         function renderPatients() {
           clear(selection); clear(results); patientSearch.parentElement.hidden = !!chosen; selection.hidden = !chosen;
           if (chosen) {
-            selection.appendChild(node('span', 'vcp-patient', patientName(chosen)));
+            patientSummary(chosen, selection);
             if (!options.patientId) selection.appendChild(button('Wyczyść wybór', 'vcp-text', function () { chosen = null; patientSearch.value = ''; renderPatients(); patientSearch.focus({ preventScroll: true }); }));
             status.textContent = 'Plan zostanie zapisany w Karcie wybranego pacjenta.';
           } else {
             var query = searchKey(patientSearch.value), matches = state.patients.filter(function (record) { return searchKey(patientName(record)).includes(query); });
-            matches.slice(0, 20).forEach(function (record) { var item = button(patientName(record), 'vcp-patient-option', function () { chosen = record; patientSearch.setCustomValidity(''); renderPatients(); }); item.dataset.patientId = record.patientId; results.appendChild(item); });
+            matches.slice(0, 20).forEach(function (record) {
+              var item = button('', 'vcp-patient-option', function () { chosen = record; patientSearch.setCustomValidity(''); renderPatients(); });
+              var identity = patientSummary(record, item); item.setAttribute('aria-label', identity.label); item.setAttribute('aria-describedby', identity.descriptionId);
+              item.dataset.patientId = record.patientId; results.appendChild(item);
+            });
             status.textContent = matches.length ? matches.length > 20 ? 'Pokazano 20 wyników. Wpisz więcej znaków, aby zawęzić listę.' : 'Wybierz pacjenta z listy.' : 'Brak pasujących pacjentów.';
           }
           model.save.disabled = !chosen || state.busy;
@@ -443,15 +470,22 @@
       controls.reminder = field(parent, 'Dzień przypomnienia / sprawdzenia', 'date', day(value.reminderDateISO), false);
       help(parent, 'Przyszły krok będzie w planie od razu, a w Do wykonania dopiero w swoim dniu. Termin możesz pozostawić pusty.');
       controls.calendar = check(parent, 'Mam ustalony termin wydarzenia', !!value.eventDateISO, false);
+      controls.existingCalendarId = value.calendarNoteId || null;
+      controls.detachRequested = false;
+      var detachNotice = node('p', 'vcp-help', 'Termin zostanie odłączony od planu. Rezerwacja pozostanie w Terminarzu.'); detachNotice.setAttribute('role', 'status'); parent.appendChild(detachNotice);
       var eventFields = node('div', 'vcp-event-fields'); parent.appendChild(eventFields);
       controls.eventDate = field(eventFields, 'Termin wydarzenia', 'date', day(value.eventDateISO), true);
       controls.eventTime = field(eventFields, 'Godzina (opcjonalnie)', 'time', value.eventTime || '', false);
       if (value.calendarNoteId) help(parent, 'Zmiana dnia przypomnienia nie przesuwa terminu wydarzenia. Termin zmieniasz w osobnym polu.');
       controls.description = field(parent, 'Ustalenia (opcjonalnie)', 'textarea', value.description || '', false); controls.description.maxLength = 20000;
-      controls.sync = function () { eventFields.hidden = !controls.calendar.checked; controls.eventDate.disabled = controls.eventTime.disabled = !controls.calendar.checked; };
-      controls.calendar.addEventListener('change', controls.sync); controls.sync(); return controls;
+      controls.sync = function () { eventFields.hidden = !controls.calendar.checked; controls.eventDate.disabled = controls.eventTime.disabled = !controls.calendar.checked; detachNotice.hidden = !controls.detachRequested; };
+      controls.calendar.addEventListener('change', function () { controls.detachRequested = !!controls.existingCalendarId && !controls.calendar.checked; controls.sync(); }); controls.sync(); return controls;
     }
-    function stepValue(controls) { return { title: controls.title.value.trim(), kind: controls.kind.value, state: controls.state.value, reminderDateISO: controls.reminder.value || null, eventDateISO: controls.calendar.checked ? controls.eventDate.value : null, eventTime: controls.calendar.checked ? controls.eventTime.value || null : null, description: controls.description.value.trim() }; }
+    function stepValue(controls) {
+      var value = { title: controls.title.value.trim(), kind: controls.kind.value, state: controls.state.value, reminderDateISO: controls.reminder.value || null, eventDateISO: controls.calendar.checked ? controls.eventDate.value : null, eventTime: controls.calendar.checked ? controls.eventTime.value || null : null, description: controls.description.value.trim() };
+      if (controls.detachRequested) value.detachEvent = true;
+      return value;
+    }
     function stepForm(plan, step) {
       if (closed(plan)) return;
       showEditor(step ? 'Edytuj krok' : 'Dodaj krok do planu', plan, function (model) { notice(model.body, plan.title + '\nKroki mogą być realizowane równolegle. Każdy zachowuje własny termin i stan.'); model.fields = stepFields(model.body, step); model.sync = model.fields.sync; }, step ? 'Zapisz zmianę' : 'Dodaj krok', function (model) { return { action: step ? 'editStep' : 'addStep', stepId: step && step.id, step: stepValue(model.fields) }; });
@@ -490,6 +524,7 @@
         notice(model.body, step.title + '\n' + (result ? 'Wynik będzie dostępny w planie i Badaniach Karty pacjenta. Zakończenie kroku pozostawi plan otwarty.' : wait ? 'Badanie zostanie zakończone. Dodamy osobny krok oczekiwania na wynik.' : 'Opis wykonania pozostanie w przebiegu planu.'));
         model.text = field(model.body, result ? 'Treść wyniku' : 'Co wykonano / jakie są ustalenia?', 'textarea', '', true); model.text.maxLength = 20000;
         model.date = field(model.body, result ? 'Data otrzymania wyniku' : 'Data wykonania', 'date', today(), true);
+        model.date.max = today();
         if (wait) { model.check = field(model.body, 'Kiedy sprawdzić dostępność wyniku?', 'date', '', true); help(model.body, 'To dzień przypomnienia, odrębny od terminu badania.'); }
         else model.continuation = continuationFields(model, plan, step);
       }, result ? 'Zapisz wynik' : wait ? 'Zapisz i oczekuj' : 'Zapisz wykonanie', function (model) { return Object.assign({ action: action, stepId: step.id, text: model.text.value.trim(), dateISO: model.date.value, checkDateISO: wait ? model.check.value : null }, wait ? {} : model.continuation()); });
@@ -498,7 +533,7 @@
       showEditor('Nazwa i cel planu', plan, function (model) { model.title = field(model.body, 'Nazwa planu', 'text', plan.title, true); model.title.maxLength = 240; model.goal = field(model.body, 'Cel i ustalenia (opcjonalnie)', 'textarea', plan.goal, false); model.goal.maxLength = 20000; }, 'Zapisz', function (model) { return { action: 'edit', title: model.title.value.trim(), goal: model.goal.value.trim() }; });
     }
     function addNote(plan) {
-      showEditor('Zapisz ustalenie', plan, function (model) { notice(model.body, 'Wpis będzie dostępny w przebiegu planu.'); model.text = field(model.body, 'Co ustalono?', 'textarea', '', true); model.text.maxLength = 20000; model.date = field(model.body, 'Data ustalenia', 'date', today(), true); }, 'Zapisz ustalenie', function (model) { return { action: 'addNote', text: model.text.value.trim(), dateISO: model.date.value }; });
+      showEditor('Zapisz ustalenie', plan, function (model) { notice(model.body, 'Wpis będzie dostępny w przebiegu planu.'); model.text = field(model.body, 'Co ustalono?', 'textarea', '', true); model.text.maxLength = 20000; model.date = field(model.body, 'Data ustalenia', 'date', today(), true); model.date.max = today(); }, 'Zapisz ustalenie', function (model) { return { action: 'addNote', text: model.text.value.trim(), dateISO: model.date.value }; });
     }
     function closePlan(plan) {
       if (plan.syncNeedsReview) { notify('Najpierw sprawdź kroki i ustalenia oraz potwierdź przegląd planu po synchronizacji.'); return; }
@@ -528,7 +563,7 @@
         help(form.body, 'Dzień przypomnienia może różnić się od terminu wydarzenia.'); form.status = node('p', 'vcp-help', 'Wczytywanie terminów…'); form.status.setAttribute('role', 'status'); form.body.appendChild(form.status); form.save.disabled = true; form.notes = [];
         form.render = function () {
           var query = searchKey(form.search.value), before = form.options.value; clear(form.options);
-          var choices = form.notes.filter(function (note) { return !query || searchKey(note.title || note.body).includes(query); });
+          var choices = form.notes.filter(function (note) { return !query || searchKey((note.title || '') + ' ' + (note.body || '')).includes(query); });
           choices.forEach(function (note) { var option = node('option', '', date(note.dueDateISO) + (note.dueTime ? ' · ' + note.dueTime : '') + ' · ' + (note.title || 'Wydarzenie')); option.value = note.id; form.options.appendChild(option); });
           if (choices.some(function (note) { return note.id === before; })) form.options.value = before;
           form.status.textContent = choices.length ? 'Wybierz istniejący termin tego pacjenta.' : 'Brak pasujących niepowiązanych terminów.'; form.save.disabled = !choices.length || state.busy;

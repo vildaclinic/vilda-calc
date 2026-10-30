@@ -135,6 +135,9 @@ dialog.vcp.vcp-dialog::backdrop { background: #1a3b4445; backdrop-filter: blur(3
 .vcp .vcp-patient-results { max-height: 200px; overflow: auto; margin-top: var(--space-8px); border-bottom: var(--border-hairline) solid var(--vcp-line); }
 .vcp .vcp-patient-option { display: block; border: 0; width: 100%; text-align: left; padding: var(--space-10px) var(--space-8px); font-size: 16.8px; font-weight: 400; }
 .vcp .vcp-selected-patient { display: flex; align-items: center; justify-content: space-between; gap: var(--space-12px); background: #edf6f3; border-radius: var(--radius-9); padding: var(--space-12px); }
+.vcp .vcp-patient-summary { display: block; min-width: 0; overflow-wrap: anywhere; }
+.vcp .vcp-patient-identity { display: block; margin-top: var(--space-4px); }
+.vcp .vcp-selected-patient > .vcp-text { flex-shrink: 0; }
 @media (max-width: 700px) {
   .vcp .vcp-layout { display: block; }
   .vcp .vcp-list-pane { height: 100%; width: 100%; border-right: 0; }
