@@ -33,6 +33,10 @@
 // daną odpowiedź (B12). Nowe warianty E2-PR1 (flaga brak / '0') dziedziczą oczekiwania po swoim trybie.
 // W każdym: żadne /v1/health, żadne limit=, brak naruszeń atrapy i strażnika (sprzatnijUrzadzenia).
 //
+// E2-PR1: warianty flagi '0' i nadpisania globalnego (vilda-sync-paged-v1 = '1' przy VILDA_SYNC_PAGED = false); oczekiwania
+// bez zmian; nowe warianty zielone przed i po zmianie produktu (sprawdzone na 9d01ca45 przed zmianą vilda_sync.js). Wariant
+// '1' (włączone stronicowanie) zmienia żądania i należy do tests/unit/sync-dziennik-drenaz.test.mjs.
+//
 // Czerwone na bazie: żadne — zapis bazowy, zielony na e49ff33e.
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { utworzAtrapeWorkera, zegarSterowany } from '../support/atrapa-workera-sync.mjs';
@@ -47,18 +51,29 @@ afterEach(async () => {
 const WARIANTY = [
   { nazwa: 'v37a (produkcja, EVENTS_ENABLED=0)', atrapa: { tryb: 'v37a', eventsEnabled: false } },
   { nazwa: 'v36', atrapa: { tryb: 'v36' } }, // dzisiejszy klient nie rozróżnia — te same oczekiwania
+  // E2-PR1: flaga vilda-sync-paged-v1 wyłączona jawnie i nadpisanie globalne false — te same oczekiwania co wyżej.
+  { nazwa: "v37a, vilda-sync-paged-v1 = '0'", atrapa: { tryb: 'v37a', eventsEnabled: false }, flaga: '0' },
+  { nazwa: "v36, vilda-sync-paged-v1 = '0'", atrapa: { tryb: 'v36' }, flaga: '0' },
+  { nazwa: "v37a, vilda-sync-paged-v1 = '1' i VILDA_SYNC_PAGED = false", atrapa: { tryb: 'v37a', eventsEnabled: false }, flaga: '1', globalna: false },
 ];
+// Flaga klienta (poza pokrętłami atrapy) na każdym urządzeniu zaraz po utworzeniu — przed znacznikMagazynu(), więc poza
+// rzutem magazynu. Bliźniak B dostaje klon 'sejf' (bez kopii localStorage A), więc flaga ustawiana osobno.
+function flagaKlienta(w, d) {
+  if (w.flaga != null) d.win.localStorage.setItem('vilda-sync-paged-v1', w.flaga);
+  if (w.globalna !== undefined) d.win.VILDA_SYNC_PAGED = w.globalna;
+  return d;
+}
 
 // ── Świat: atrapa, A (nowe konto, karta 1), B (bliźniak A przed jakąkolwiek synchronizacją), C (inne konto, leniwie) ──
 async function swiat(w) {
   const atrapa = utworzAtrapeWorkera({ ...w.atrapa, zegar: zegarSterowany() });
-  const A = await utworzUrzadzenie({ atrapa, nazwa: 'A' });
-  const B = await utworzUrzadzenie({ atrapa, nazwa: 'B', zBlizniaka: A });
+  const A = flagaKlienta(w, await utworzUrzadzenie({ atrapa, nazwa: 'A' }));
+  const B = flagaKlienta(w, await utworzUrzadzenie({ atrapa, nazwa: 'B', zBlizniaka: A }));
   await A.zapiszKarte(1);
   const s = { atrapa, A, B, karty: {}, C: null };
   s.daj = async (nazwa) => {
     if (nazwa !== 'C') return s[nazwa];
-    if (!s.C) s.C = await utworzUrzadzenie({ atrapa, nazwa: 'C', haslo: HASLO_B });
+    if (!s.C) s.C = flagaKlienta(w, await utworzUrzadzenie({ atrapa, nazwa: 'C', haslo: HASLO_B }));
     return s.C;
   };
   s.wszystkie = () => [s.A, s.B, s.C].filter(Boolean);

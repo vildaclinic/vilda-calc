@@ -30,6 +30,7 @@
 //   U13 d.zamknij() bez sprzątania: blokady zwolnione, połączenie odłączone.
 //   U14 bliźniak tuż po zapisie karty ma tę kartę (migawka z flushPersist).
 //   U15 operacja uśpiona po 412: cisza i sprzątanie czekają na jej koniec, krótki limit zgłasza operację w toku.
+//   U16 (E2-PR1) konto chmurowe przez opcję konto: isCloudOnlyMode() = true, rejestracja, delta i pobranie bez naruszeń.
 //
 // Czerwone na bazie: żadne — test narzędzi, zielony na e49ff33e.
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -404,5 +405,26 @@ describe('E2-PR0: uprząż urządzeń synchronizacji', () => {
     expect(B.rzutOsi().filter((l) => /^(start|koniec|blad) push/.test(l))).toEqual(['start push', 'koniec push uploaded']);
     expect(B.zadania().filter((z) => z.trasa === 'blob-put').map((z) => z.status)).toEqual([412, 200]);
     expect(straznik().naruszenia).toEqual([]);
+  });
+
+  it('U16: konto chmurowe (konto: { storageMode: \'cloud-only\' }) — VildaVault.isCloudOnlyMode() = true, rejestracja, delta i pobranie przez atrapę bez naruszeń', async () => {
+    const atrapa = utworzAtrapeWorkera();
+    const A = await utworzUrzadzenie({ atrapa, nazwa: 'A', konto: { storageMode: 'cloud-only' } });
+    const P = await utworzUrzadzenie({ atrapa, nazwa: 'P' });
+    expect(A.vault.isCloudOnlyMode()).toBe(true);
+    expect(P.vault.isCloudOnlyMode()).toBe(false);
+    await A.zapiszKarte(1);
+    expect((await A.sync.syncPush()).action).toBe('registered');
+    const k = await A.zapiszKarte(2);
+    expect(await A.wyslijDelteKarty(k.patientId)).toBe(true);
+    await cisza([A]);
+    // Tryb chmurowy trzyma ETag tylko w pamięci sesji (K() → M), więc pierwsze pobranie po rejestracji scala blob.
+    expect((await A.sync.syncPull()).action).toBe('merged');
+    await cisza([A]);
+    expect((await A.sync.syncPull()).action).toBe('up-to-date');
+    await cisza([A]);
+    expect(A.zadania().filter((z) => z.trasa === 'changes').map((z) => z.zapytanie)).toEqual(['?since=0', '?since=1']);
+    expect(A.kursor()).toBe(1);
+    expect(atrapa.naruszenia).toEqual([]);
   });
 });
