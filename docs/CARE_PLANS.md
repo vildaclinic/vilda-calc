@@ -32,6 +32,7 @@ Publiczne API sejfu:
 
 - `listCarePlans({patientId?})` — plany konta lub danego pacjenta;
 - `getCarePlan(planId)` — aktualny plan;
+- `getCarePlanSyncReview(context, title)` — czysta, odczytowa projekcja zachowanych wersji zmian; nie odczytuje magazynu i nie zmienia kontekstu;
 - `needsCarePlanSyncRepair()` — odczytowe sprawdzenie, czy zapis planu utracił strukturę podczas obsługi przez starszego klienta;
 - `mutateCarePlan({planId?, patientId, baseRev, operationId, action, ...})` — zapis, wykonanie, wynik, powiązanie i zamknięcie.
 
@@ -43,7 +44,15 @@ Równoczesne zmiany tego samego planu na różnych urządzeniach zachowują krok
 
 ## Synchronizacja między urządzeniami
 
+Plan przechowuje osobno ostatnie 100 odpowiedzi na operacje (`operations`) oraz trwałą wiedzę o pochodzeniu zmian (`causality`). Usunięcie odpowiedzi z krótkiej pamięci ponowień nie usuwa identyfikatora z historii pochodzenia. Sama liczba rewizji, data zapisu lub wspólne operacje z ostatniej setki nie dowodzą, że jedna wersja zawiera drugą. Potwierdzony potomek zastępuje przodka także po długiej pracy bez synchronizacji; ponowne dostarczenie przodka nie otwiera zamkniętego planu ani nie dodaje nowej rewizji.
+
+Pierwszy świadomy zapis starszego planu wyznacza punkt początkowy historii na podstawie skrótu jego dokładnego, znormalizowanego stanu, bez identyfikatora lokalnego konta urządzenia. Sam odczyt nie migruje danych. Scalenie zachowuje pochodzenie znanych kopii i nie tworzy fikcyjnej operacji lekarza. Nie odtwarzamy brakującego pochodzenia z tytułów, dat ani podobieństwa treści. Historia jest częścią zaszyfrowanego kontekstu i przechodzi przez istniejące kopie, eksport/import, pełną synchronizację i delty. Osiągnięcie jej limitu przerywa zapis z komunikatem; historia nie jest po cichu przycinana. Ponowienie operacji znanej wyłącznie z trwałej historii, której odpowiedź już wygasła, wymaga ponownego odczytu zamiast ponownego wykonania lub potwierdzenia nieznanej treści.
+
+Brak wystarczających danych o pochodzeniu jest odróżniany od potwierdzonej równoległej edycji. Oba przypadki zachowują dostępne kroki i ustalenia oraz wymagają przeglądu. Niepotwierdzone pochodzenie nie wznawia samoczynnie zamkniętego planu. Zadanie „Przejrzyj plan po synchronizacji” pozostaje dostępne w „Do wykonania” także dla zamkniętego planu. Jeżeli zachowano w nim otwarte kroki, lekarz jawnie wznawia plan albo potwierdza ich zakończenie bez wykonania z uzasadnieniem. Samo potwierdzenie przeglądu nie może ukryć nierozstrzygniętej pracy. Powiązane rezerwacje pozostają w Terminarzu. Zachowane wersje można rozwinąć w podglądzie przeglądu, wraz z datami, godzinami i odnośnikami do oryginalnych dokumentów. Potwierdzenie zachowuje rozstrzygnięte wersje w historii planu; nie tworzy kopii wyników ani ponownych Notatek pacjenta.
+
 Plan i jego powiązane wpisy mają osobne zaszyfrowane delty. Większy plan może przekroczyć łączny limit 64 KiB kanału `sendBeacon`, mimo że krótkie notatki kroków przejdą. `vilda_sync_integration.js` po odrzuceniu lub wyjątku beacona wysyła tę samą zaszyfrowaną deltę zwykłym `fetch`, bez limitu `keepalive`. Prawidłowo przyjętego beacona nie wysyła ponownie.
+
+Nieprawidłowa lub przekraczająca limit historia pochodzenia przerywa przyjęcie delty. Synchronizacja zachowuje kursor przed nieprzyjętą zmianą i nie stosuje późniejszych delt z tej partii. Istniejąca obsługa błędów pokazuje kod i komunikat problemu; następna próba może ponownie pobrać tę samą zmianę. Sukces sprawdzenia głównej kopii w chmurze nie usuwa późniejszego błędu pobierania delt.
 
 Klient sprzed wprowadzenia planów pomijał nieznane `careContext`, zachowując identyfikator, tekst i wersję notatki. Po aktualizacji równy numer rewizji i data nie mogą blokować odzyskania samego brakującego rozszerzenia. Sejf uzupełnia je pod blokadą wpisu, wyłącznie gdy pozostała treść i metadane zgadzają się z nienaruszoną kopią. Zachowuje rewizję, daty, treść kliniczną i nieznane pola zaszyfrowanego zapisu. Obejmuje to także role powiązanych wpisów, aby nie zamieniły się w niezależne przypomnienia lub podwójne wydarzenia.
 
@@ -58,5 +67,7 @@ Testy `care-plans-vault.test.mjs` wywołują rzeczywisty sejf i sprawdzają atom
 Regresje synchronizacji obejmują duży zaszyfrowany plan przy odrzuconym beaconie, odzyskanie wszystkich ról przy niezmienionej wersji, ochronę zmienionej treści i usunięć oraz pełne odczyty przy tym samym ETagu. `care-plans-sync.spec.mjs` używa osobnych kontekstów komputera i telefonu ze wspólną fikcyjną tożsamością szyfrowania, rzeczywistych modułów synchronizacji i lokalnie przechwyconego serwera. Sprawdza wymianę delty w obie strony, odświeżenie już otwartej listy i odzysk po aktualizacji/F5.
 
 Regresje przepływu sprawdzają odłączenie bez utraty rezerwacji, zachowanie klinicznych faktów przy zmianach Terminarza, daty faktów i przyszłe planowanie, rozróżnianie pacjentów oraz wyszukiwanie opisu wydarzenia. Scenariusz zimnego startu offline sprawdza także utrwalenie pochodzenia otrzymanego wyniku i jawnego odłączenia rezerwacji po ponownym wczytaniu z produkcyjnego cache.
+
+Testy pochodzenia zmian obejmują 99–200 operacji, trzy urządzenia, różne kolejności scalania, ponowienia po przeglądzie, niezgodne wartości i historię oraz zmianę konta, sesji i magazynu. Test rzeczywistej pętli `/changes` sprawdza zatrzymanie kursora, widoczny błąd i ponowne przyjęcie tej samej zaszyfrowanej delty. Zgodność tekstowej historii jest sprawdzana na rzeczywistym poprzednim `vilda_vault.js` z przypiętego commita `b461364002cbd3f652728b7db38dce0f1f0d9264`; przygotowanie CI zapewnia ten obiekt Git bez dostępu do sieci z samego testu. Starszy klient nie odtwarza nowych metadanych, ale zachowuje czytelne ustalenia i odnośniki do oryginalnych dokumentów.
 
 MVP nie obejmuje automatycznych szablonów diagnostycznych, wymagań zależnych między krokami, pracy zespołowej, importu dokumentów ani dodatkowych kanałów powiadomień.
