@@ -216,12 +216,18 @@ test('prezentuje białko, Pᵢ i lukę anionową w spójnych jednostkach', async
   await page.locator('#S_Cl').fill('104');
   await page.locator('#S_HCO3').fill('24');
 
-  await expect(page.locator('#elecInfo')).toContainText(/1000[.,]0\s*mg\/24\s*h/);
-  await expect(page.locator('#elecInfo')).toContainText(/1[.,]0\s*g\/24\s*h/);
+  const protein = page.locator('#elecInfo .clcr-result-card[data-clcr-series="Prot_mg24"]');
+  await expect(protein).toHaveCount(1);
+  await expect(protein.locator('.clcr-result-value')).toHaveCount(1);
+  await expect(protein.locator('.clcr-result-value')).toHaveText('1000');
+  await expect(protein).toHaveAttribute('data-clcr-display-unit', 'mg/24 h');
+  await expect(protein.locator('.protein-dzm-reference-value')).toHaveText('<150');
+  await expect(protein).toHaveAttribute('data-clcr-tone', 'warning');
   await expect(page.locator('#stoneInfo')).toContainText(/34[.,]997\s*mmol\/24\s*h/);
   await expect(page.locator('#elecInfo')).toContainText(/12[.,]0\s*mmol\/L/);
   await expect(page.locator('#elecInfo')).not.toContainText('mg/kg');
-  await expect(page.locator('#elecInfo .out-of-range')).toHaveCount(0);
+  await expect(protein).toHaveClass(/out-of-range/);
+  await expect(page.locator('#elecInfo .out-of-range')).toHaveCount(1);
 
   await page.locator('#S_K').fill('6');
   await expect(page.locator('#elecInfo')).toContainText(/12[.,]0\s*mmol\/L/);

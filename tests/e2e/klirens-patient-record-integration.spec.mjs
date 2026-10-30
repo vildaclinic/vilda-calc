@@ -173,27 +173,24 @@ test('save guards: no patient/locked and duplicate clicks; a patient switch duri
 // are covered by the independent vault tests, rather than copied into this UI suite.
 
 
-test('partial multi-output retry keeps successful protein notes and writes only the missing output', async ({ page }) => {
+test('protein creates one canonical measurement and a failed first write retries that same measurement', async ({ page }) => {
   await openCalculator(page);
   await applyProtein(page);
-  await configureMemory(page, { failBefore: [2] });
+  await configureMemory(page, { failBefore: [1] });
   await page.locator('#clcrVisitDate').fill('2026-10-25');
   await page.locator('#clcrVisitSaveBtn').click();
-  await expect.poll(async () => (await memory(page)).saves.length).toBeGreaterThanOrEqual(2);
+  await expect.poll(async () => (await memory(page)).saves.length).toBe(1);
   await expect(page.locator('#clcrVisitSaveBtn')).toBeEnabled();
-  const partial = await memory(page);
-  expect(partial.notes.length).toBeGreaterThan(0);
-  expect(partial.notes.length).toBeLessThan(3);
+  expect((await memory(page)).notes).toHaveLength(0);
   await page.locator('#clcrVisitSaveBtn').click();
-  await expect.poll(async () => (await memory(page)).notes.length).toBe(3);
+  await expect.poll(async () => (await memory(page)).notes.length).toBe(1);
   await expect(page.locator('#clcrVisitStatus')).toContainText('Zapisano');
   const finished = await memory(page);
-  expect(new Set(finished.notes.map(note => note.id)).size).toBe(3);
-  for (const note of partial.notes) expect(finished.notes.find(saved => saved.id === note.id)).toEqual(note);
+  expect(new Set(finished.notes.map(note => note.id)).size).toBe(1);
   await page.locator('#clcrOpenBadaniaBtn').click();
-  await expect(renal(page).locator('tr[data-note-id]')).toHaveCount(3);
+  await expect(renal(page).locator('tr[data-note-id]')).toHaveCount(1);
   const outputs = await page.evaluate(notes => window.ClcrSavedResults.projectPatientNotes(notes).measurements.map(point => point.parameterKey), finished.notes);
-  expect(new Set(outputs)).toEqual(new Set(['clcr:Prot_mg24', 'clcr:Prot_g24', 'clcr:Prot_bsa']));
+  expect(new Set(outputs)).toEqual(new Set(['clcr:Prot_mg24']));
   expect(finished.originalsLocked).toBe(true);
 });
 

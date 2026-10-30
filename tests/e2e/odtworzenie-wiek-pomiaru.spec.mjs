@@ -37,10 +37,14 @@ const gotowa = async (page) => {
 
 async function zalogujPoSkokuZegara(page) {
   // Miesiąc później sesja logowania wygasła także dla nowych ramek powłoki.
-  // Najpierw usuwamy stare ramki: ich opóźniony ping wygaszenia sesji może
-  // przeładować także rodzica w trakcie unlockUser (vilda_frame_sync.js).
+  // Usuwamy stare ramki PRZED skokiem czasu: ich ping wygaszenia sesji może
+  // przeładować rodzica, przerywając nawet pierwszą nawigację na index.html.
+  // Pusta strona nie ma timerów logowania; zapisane konto i sesja pozostają,
+  // więc nowy index.html nadal musi obsłużyć rzeczywiście wygasłą sesję.
   // Logujemy fikcyjne konto na samodzielnej stronie, a świeża powłoka odtwarza
   // gotową sesję zwykłą ścieżką boot. Poprzednie uchwyty Frame już nie obowiązują.
+  await page.goto('about:blank', { waitUntil: 'load' });
+  await page.clock.setSystemTime(new Date(MIESIAC_POZNIEJ));
   await page.goto('/index.html', { waitUntil: 'load' });
   await page.waitForFunction(() => Boolean(window.VildaVault));
   await page.evaluate(async (pw) => {
@@ -424,7 +428,6 @@ test('powłoka: „Odtwórz zapis" na Start i przejście na DocPro — DocPro te
   const pid = await zapiszPacjenta(start, NASTOLATEK);
   await start.evaluate(() => window.clearAllData());
 
-  await page.clock.setSystemTime(new Date(MIESIAC_POZNIEJ));
   start = await zalogujPoSkokuZegara(page);
   await wczytaj(start, pid, 'odtworz');
   await expect.poll(() => start.evaluate(() => [document.getElementById('age').value, document.getElementById('ageMonths').value])).toEqual(['16', '10']);
@@ -766,7 +769,6 @@ test('P-ODTWORZ-WIEK-3: powłoka — poprawka w Karcie na Start dochodzi do DocP
   const pid = await zapiszPacjenta(start, NASTOLATEK);
   await start.evaluate(() => window.clearAllData());
 
-  await page.clock.setSystemTime(new Date(MIESIAC_POZNIEJ));
   start = await zalogujPoSkokuZegara(page);
   await wczytaj(start, pid, 'odtworz');
   // DocPro otwarty przed poprawką i widoczny dłużej niż ok. 3,2 s — wtedy custom-fixes.js rozsyła
@@ -856,7 +858,6 @@ test('P-ODTWORZ-WIEK-4: powłoka — poprawka w Karcie na Start, DocPro nieodwie
   const pid = await zapiszPacjenta(start, NASTOLATEK);
   await start.evaluate(() => window.clearAllData());
 
-  await page.clock.setSystemTime(new Date(MIESIAC_POZNIEJ));
   start = await zalogujPoSkokuZegara(page);
   await wczytaj(start, pid, 'odtworz');
   // DocPro otwarty na chwilę (jego ramka zostaje w tle ze swoją bazą), potem powrót na Start.
@@ -915,7 +916,6 @@ test('P-ODTWORZ-WIEK-4 (przegląd): ukryty DocPro ze starszą bazą nie nadpisuj
   await start.evaluate(() => window.clearAllData());
 
   // 10-07: „Nowy pomiar"; DocPro otwarty na chwilę (zostaje w tle z bazą A), powrót na Start.
-  await page.clock.setSystemTime(new Date(MIESIAC_POZNIEJ));
   start = await zalogujPoSkokuZegara(page);
   await wczytaj(start, pid, 'nowy');
   await page.evaluate(() => window.VildaShell.navigate('docpro'));

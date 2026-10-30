@@ -22,6 +22,9 @@ function durationControls(formula) {
   return formula === 'PO4_mgkg'
     ? { field: 'PO4_collectionHours', source: 'PO4_collectionSource', panel: '#po4DzmInputCard',
         change: '[aria-controls="po4DzmDurationEditor"]', summary: '#po4DzmInputCard .po4-dzm-context-row strong' }
+    : formula === 'Prot_mgkg'
+      ? { field: 'Prot_collectionHours', source: 'Prot_collectionSource', panel: '#proteinDzmInputCard',
+          change: '[aria-controls="proteinDzmDurationEditor"]', summary: '#proteinDzmInputCard .protein-dzm-context-row strong' }
     : { field: 'Cl24DurationHours', source: 'Cl24DurationSource', panel: '#clcrCommonDuration',
         change: '#clcrCommonDuration .clcr-duration-change', summary: '#clcrCommonDuration strong' };
 }
@@ -31,6 +34,11 @@ async function restore(page, formula, patch = {}) {
     PO4_inputMode: 'concentration', PO4_concentration: '50', PO4_concentrationUnit: 'mgP/dL',
     PO4_volume: '1440', PO4_volumeUnit: 'mL', PO4_collectionHours: '', PO4_collectionSource: 'assumed-24h',
     PO4_reportedValue: '', PO4_reportedUnit: 'mgP/24h', PO4_outputUnit: 'mgP/24h', PO4_unitConversions: '',
+  } : formula === 'Prot_mgkg' ? {
+    Prot_inputMode: 'concentration', Prot_concentration: '1000', Prot_concentrationUnit: 'mg/L',
+    Prot_volume: '1000', Prot_volumeUnit: 'mL', Prot_collectionHours: '', Prot_collectionSource: 'assumed-24h',
+    Prot_reportedValue: '', Prot_reportedUnit: 'mg/24h', Prot_outputUnit: 'mg/24h', Prot_unitConversions: '',
+    Prot_durationNeedsConfirmation: false,
   } : {};
   await applySession(page, { version: 2, currentVersion: version, selectedFormula: formula,
     inputs: { ...specimen, currentVersion: version, formulaPicker: formula,
@@ -96,7 +104,11 @@ test('DZM session capture after formula reset is stable without changing an edit
   });
   expect(result.restored).toBe(true);
   expect(result.after).toEqual(result.before);
-  expect(Object.values(result.before).filter(value => value === '')).toHaveLength(4);
+  const expectedFields = ['Cl24DurationHours', 'CA_collectionHours', 'UA_collectionHours',
+    'MG_collectionHours', 'PO4_collectionHours', 'Prot_collectionHours'];
+  expect(result.fields.map(({ field }) => field)).toEqual(expectedFields);
+  expect(result.before).toEqual(Object.fromEntries(expectedFields.map(field => [field, field === 'Cl24DurationHours' ? '24' : ''])));
+  expect(Object.values(result.before).filter(value => value === '')).toHaveLength(5);
   expect(result.replay).toEqual(result.initial);
   expect(result.invalidAfter).toEqual(result.invalidBefore);
   expect(result.historicalAfter).toEqual(result.historicalBefore);
@@ -119,7 +131,7 @@ for (const formula of formulas) test(`Shared DZM: ${formula} defaults, blank, in
   const hours = page.locator('#' + controls.field), source = page.locator('#' + controls.source), summary = page.locator(controls.summary);
   await expect(hours).toHaveValue('24');
   await expect(page.locator(controls.panel)).toBeVisible();
-  if (formula === 'PO4_mgkg') {
+  if (['PO4_mgkg', 'Prot_mgkg'].includes(formula)) {
     await expect(page.locator('#clcrCommonDuration')).toBeHidden();
     expect(await page.evaluate(() => window.currentVersion)).toBe('advanced');
     await expect(page.locator('#version-advanced')).toHaveClass(/selected/);
@@ -128,6 +140,20 @@ for (const formula of formulas) test(`Shared DZM: ${formula} defaults, blank, in
   expect(baseline.duration).toMatchObject({ valid: true, hours: 24, source: 'assumed-24h', complete: true });
   expect(baseline.points.every(point => point.captureSource === 'assumed-24h' && point.captureHours === '24')).toBe(true);
   for (const id of ['collectionStartAt', 'collectionEndAt', 'collectionNoMissedVoids']) await expect(page.locator(`#${id}`)).toBeHidden();
+  if (formula === 'Prot_mgkg') {
+    // Other legacy analytes remain populated. An incomplete active protein
+    // form must show its own empty state, never a neighbouring calculation.
+    await page.locator('#Prot_concentration').fill('');
+    await expect.poll(async () => (await state(page, formula)).ready).toBe(false);
+    expect((await state(page, formula)).points).toEqual([]);
+    await expect(page.locator('#clcrResultReport .protein-dzm-result-empty')).toHaveCount(1);
+    await expect(page.locator('#clcrResultReport .protein-dzm-result-empty')).toBeVisible();
+    await expect(page.locator('#clcrResultReport .clcr-result-card')).toHaveCount(0);
+    await expect(page.locator('#elecInfo [data-clcr-series]')).toHaveCount(0);
+    await expect(page.locator('#U_Na')).toHaveValue('50');
+    await page.locator('#Prot_concentration').fill('1000');
+    expect((await expectReady(page, formula)).points).toEqual(baseline.points);
+  }
 
   await page.locator(controls.change).click();
   await expect(hours).toBeVisible();
@@ -153,6 +179,12 @@ for (const formula of formulas) test(`Shared DZM: ${formula} defaults, blank, in
   await expect.poll(async () => (await state(page, formula)).ready).toBe(false);
   expect((await state(page, formula)).duration).toMatchObject({ valid: false, invalid: true });
   expect((await state(page, formula)).points).toEqual([]);
+  if (formula === 'Prot_mgkg') {
+    await expect(page.locator('#clcrResultReport .protein-dzm-result-error')).toHaveCount(1);
+    await expect(page.locator('#clcrResultReport .protein-dzm-result-error')).toBeVisible();
+    await expect(page.locator('#clcrResultReport .clcr-result-card')).toHaveCount(0);
+    await expect(page.locator('#elecInfo [data-clcr-series]')).toHaveCount(0);
+  }
   await hours.blur(); await expect(hours).toHaveValue('0');
 
   await hours.fill('12'); await expectReady(page, formula);

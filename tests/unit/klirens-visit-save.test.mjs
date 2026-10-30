@@ -29,6 +29,16 @@ function fakeEl(series, value, { visible = true, attributes = {} } = {}) {
   };
 }
 
+function proteinCard(g, { value = '1500', outputUnit = 'mg/24h' } = {}) {
+  for (const file of ['clcr_extended_egfr.js', 'clcr_protein_dzm_data.js', 'clcr_protein_dzm.js', 'clcr_protein_dzm_persistence.js', 'clcr_saved_results.js']) loadBrowserScript(file, g);
+  const model = g.VildaClcrProteinDzm.evaluate({ mode: 'reported', reportedValue: value, outputUnit, ageYears: 45 }, g.ClcrProteinDzmReferenceData.DEFAULT_POLICY);
+  expect(model.valid).toBe(true);
+  return fakeEl('Prot_mg24', String(model.rawValue), { attributes: {
+    'data-clcr-formula': 'Prot_mgkg', 'data-clcr-unit': model.presentation.unitText,
+    'data-clcr-protein-dzm-snapshot': JSON.stringify(model), 'data-clcr-protein-dzm-output-unit': outputUnit,
+  } });
+}
+
 function fakeRoot(els) {
   return {
     querySelectorAll() {
@@ -103,7 +113,7 @@ describe('Klirens — ClcrVisitSave (Faza 1: zapis do karty)', () => {
     });
     expect(dp.valueNum).toBeCloseTo(91.6914, 4);
 
-    // seria wieloczłonowa: białko rozbite
+    // Kanoniczny klucz białka zachowuje zgodność ze starszym słownikiem.
     expect(vs.mapDatapoint('Prot_mg24', '1500').testKey).toBe('clcr:Prot_mg24');
     expect(vs.mapDatapoint('KTV_urr', '65').unit).toBe('%');
 
@@ -118,7 +128,7 @@ describe('Klirens — ClcrVisitSave (Faza 1: zapis do karty)', () => {
       fakeEl('egfr', '91.6'),
       fakeEl('cg', '100'),
       fakeEl('egfr', '92.1'), // duplikat serii → pomiń
-      fakeEl('Prot_mg24', '1500'),
+      proteinCard(g),
       fakeEl('nie-istnieje', '5'), // spoza słownika → pomiń
       fakeEl('Ca_mgkg', '3', { visible: false }), // ukryte → pomiń
     ]);
@@ -356,15 +366,35 @@ describe('Klirens — ClcrVisitSave (Faza 1: zapis do karty)', () => {
     expect(JSON.stringify(notes)).toBe(before);
   });
 
-  it('collectActiveDatapoints: białko DZM — wybór modułu zapisuje 3 serie (①)', () => {
-    const vs = g.ClcrVisitSave;
-    const root = fakeRoot([
-      fakeEl('Prot_mg24', '1500'),
-      fakeEl('Prot_g24', '1.5'),
-      fakeEl('Prot_bsa', '850'),
-    ]);
-    const dps = vs.collectActiveDatapoints(root, { formulaId: 'Prot_mgkg' });
-    expect(dps.map((d) => d.id).sort()).toEqual(['Prot_bsa', 'Prot_g24', 'Prot_mg24']);
+  it('collectActiveDatapoints: białko DZM zapisuje jeden rzeczywisty wynik z przeliczeniami w snapshot', () => {
+    for (const file of ['clcr_extended_egfr.js', 'clcr_protein_dzm_data.js', 'clcr_protein_dzm.js', 'clcr_protein_dzm_persistence.js', 'clcr_saved_results.js']) loadBrowserScript(file, g);
+    const model = g.VildaClcrProteinDzm.evaluate({ concentration: '1000', volume: '1500', ageYears: 10, weightKg: '30', heightCm: '140' }, g.ClcrProteinDzmReferenceData.DEFAULT_POLICY);
+    expect(model.valid).toBe(true);
+    const root = fakeRoot([fakeEl('Prot_mg24', String(model.rawValue), { attributes: {
+      'data-clcr-formula': 'Prot_mgkg', 'data-clcr-unit': 'mg/24 h',
+      'data-clcr-protein-dzm-snapshot': JSON.stringify(model), 'data-clcr-protein-dzm-output-unit': 'mg/24h',
+    } })]);
+    const dps = g.ClcrVisitSave.collectActiveDatapoints(root, { formulaId: 'Prot_mgkg' });
+    expect(dps).toHaveLength(1);
+    expect(dps[0]).toMatchObject({ id: 'Prot_mg24', valueNum: 1500, unit: 'mg/24 h', sourceFormulaId: 'Prot_mgkg', norm: '<150 mg/24 h', outOfRange: true });
+    expect(dps[0].proteinDzmSnapshot.indexed).toBeCloseTo(1399.555093912691, 8);
+  });
+
+  it('białko DZM: trzy dawne jednostki pozostają osobnymi odczytywalnymi pomiarami bez nowej normy', () => {
+    for (const file of ['clcr_protein_dzm_persistence.js', 'clcr_saved_results.js']) loadBrowserScript(file, g);
+    const rows = [
+      ['Białko w DZM [mg/24 h]', 'mg/24 h', 1500],
+      ['Białko w DZM [g/24 h]', 'g/24 h', 1.5],
+      ['Białko w DZM / BSA [mg/m²/24 h]', 'mg/m²/24 h', 850],
+    ];
+    const notes = rows.map(([test, unit, valueNum], index) => ({ id: 'fictional-old-protein-' + index, patientId: 'fictional-old-protein-patient', category: 'wynik-klirens', clinicalDateISO: '2020-01-01', body: 'Kalkulator klirensu · dawny wynik', labResult: { test, unit, value: String(valueNum), valueNum } }));
+    const before = JSON.stringify(notes);
+    const projection = g.ClcrSavedResults.projectPatientNotes(notes, { patientId: 'fictional-old-protein-patient' });
+    expect(projection.measurements).toHaveLength(3);
+    expect(projection.series).toHaveLength(3);
+    expect(projection.measurements.map(point => point.valueNum)).toEqual([1500, 1.5, 850]);
+    projection.measurements.forEach(point => expect(point).toMatchObject({ outOfRange: null, norm: '', assessment: 'unassessed' }));
+    expect(JSON.stringify(notes)).toBe(before);
   });
 
   it('normalizeDateISO / formatValueString / seriesWord', () => {
@@ -429,8 +459,8 @@ describe('Klirens — ClcrVisitSave (Faza 1: zapis do karty)', () => {
 
     const root = fakeRoot([
       fakeEl('egfr', '91.6914'),
-      fakeEl('Prot_mg24', '1500'),
-      fakeEl('Prot_g24', '1.5'),
+      proteinCard(g),
+      fakeEl('cg', '100'),
     ]);
     const res = await vs.saveActiveResultToCard({
       root,
@@ -452,13 +482,13 @@ describe('Klirens — ClcrVisitSave (Faza 1: zapis do karty)', () => {
     });
     expect(egfr.labResult.valueNum).toBeCloseTo(91.6914, 4);
 
-    // białko: dwie osobne serie z tą samą datą (jedna wizyta), różne etykiety/jednostki
-    const prot = calls.filter((c) => c.labResult.test.startsWith('Białko w DZM'));
-    expect(prot).toHaveLength(2);
-    expect(new Set(prot.map((p) => p.labResult.unit))).toEqual(
-      new Set(['mg/24 h', 'g/24 h']),
-    );
-    expect(prot.every((p) => p.clinicalDateISO === '2026-08-01')).toBe(true);
+    // Jedno badanie białka, bez dodatkowej notatki dla przeliczenia na gramy.
+    const prot = calls.filter((c) => c.labResult.test === 'Białko całkowite w DZM');
+    expect(prot).toHaveLength(1);
+    expect(prot[0].labResult).toMatchObject({ unit: 'mg/24 h', valueNum: 1500, testKey: 'clcr-protein-dzm' });
+    expect(prot[0].clinicalDateISO).toBe('2026-08-01');
+    expect(prot[0].body).toContain('Norma użyta przy zapisie: <150 mg/24 h.');
+    expect(calls.some(note => note.labResult.test === 'Klirens kreatyniny — dorośli (ml/min)')).toBe(true);
   });
 
   it('saveActiveResultToCard: domyślna data = LOKALNY dzień, nie dzień UTC', async () => {

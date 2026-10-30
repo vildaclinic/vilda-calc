@@ -379,7 +379,10 @@ test('ilości dobowe zakładają pełną zbiórkę 24 h bez Scr i blokują jawny
     'collectionNoMissedVoids', 'collectionNoSpillage',
     'collectionNoExtraVoids', 'collectionStorageFollowed'
   ]) await expect(page.locator(`#${id}`)).not.toBeChecked();
-  await expect(page.locator('#elecInfo')).toContainText(/1000[.,]0\s*mg\/24\s*h/);
+  const protein = page.locator('#elecInfo .clcr-result-card[data-clcr-series="Prot_mg24"]');
+  await expect(protein).toHaveCount(1);
+  await expect(protein.locator('.clcr-result-value')).toHaveText('1000');
+  await expect(protein).toHaveAttribute('data-clcr-display-unit', 'mg/24 h');
   await expect(page.locator('#Scr')).toHaveValue('');
   await expect(page.locator('#serumSampleDuringCollection')).not.toBeChecked();
 
@@ -392,14 +395,15 @@ test('ilości dobowe zakładają pełną zbiórkę 24 h bez Scr i blokują jawny
     window.clcrUpdate();
   });
   await expect(page.locator('#elecInfo')).toContainText('Nie obliczono wartości /24 h');
-  await expect(page.locator('#elecInfo')).not.toContainText(/1000[.,]0\s*mg\/24\s*h/);
+  await expect(protein).toHaveCount(0);
   await page.evaluate(() => {
     const control = document.getElementById('Cl24CollectionProblem');
     control.checked = false;
     control.dispatchEvent(new Event('change', { bubbles: true }));
     window.clcrUpdate();
   });
-  await expect(page.locator('#elecInfo')).toContainText(/1000[.,]0\s*mg\/24\s*h/);
+  await expect(protein).toHaveCount(1);
+  await expect(protein.locator('.clcr-result-value')).toHaveText('1000');
 });
 
 test('czas pobrania Scr poza zbiórką nie blokuje uproszczonego CrCl ani nie zmienia dawnych danych', async ({ page }) => {

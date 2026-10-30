@@ -154,6 +154,43 @@ krzywicy hipofosfatemicznej/XLH i burosumabu należy do zwiniętych
 **Szczegółów**, z odnośnikiem do TmP/GFR. Nie dodawaj selektora choroby,
 nowych pól krwi, dawki ani ankiety. Pełne źródła i reguły: [PO4_DZM.md](PO4_DZM.md).
 
+## Białko całkowite w DZM — decyzja 29.10.2026
+
+Dla `Prot_mgkg` pierwszą, domyślną opcją jest **„Oblicz ze stężenia”**
+(białko w `mg/L`, `mg/dL` lub `g/L` i objętość w `mL` albo `L`), drugą
+**„Gotowy wynik”** z jedną ilością dobową. Główny wynik pozostaje w
+`mg/24 h` lub `g/24 h` u wszystkich pacjentów. Masa i wzrost nie blokują
+liczby; znane dane pacjenta wykorzystuje się do porównania przez BSA.
+
+Główna karta B ma prostą etykietę **„Norma dla pacjenta”**, zgodną także
+z raportem i zapisem. Status poniżej przyjętej granicy brzmi
+**„W przyjętej normie”**. Nie wracają etykiety „Próg oceny”, „Próg wg KDIGO”
+ani dodatkowy wiersz „Oceniaj jego utrzymywanie się i kontekst kliniczny.”.
+Wynik i norma mają tę samą jednostkę; liczby normy są neutralne,
+zwiększone wydalanie bursztynowe, a zakres nerczycowy czerwony.
+
+Od 6 miesięcy do <18 lat przyjęta granica to
+**`min(150 × BSA, 150) mg/24 h`**, z nierównością **`<`**. Dla BSA 0,7 m²
+pokazuje się <105 mg/24 h, a dla BSA 1,0 lub 1,5 m² <150 mg/24 h.
+Jeżeli ograniczono przeliczenie, krótki dopisek wyjaśnia użycie limitu
+dorosłych. Szczegóły pokazują Haycock BSA, przeliczenie przed limitem,
+zastosowaną granicę i źródła. Całkowity limit jest decyzją właściciela,
+nie dosłownym zapisem KDIGO; rozbieżność z AEP `<100 mg/m²/24 h`
+pozostaje jawna. Limit nie przełącza pediatrycznego progu nerczycowego
+na dorosły. Pełna polityka i ograniczenia: [PROTEIN_DZM.md](PROTEIN_DZM.md).
+
+Przeliczenie na m² jest zwykłym wierszem Szczegółów tego samego wyniku,
+nie osobną kartą i nie kolejnym badaniem. Nowy zapis tworzy jeden pomiar;
+dawne serie zachowują zgodność. Zero jest liczbą neutralną z uwagą
+o raporcie, mała dodatnia wartość nie staje się zerem, a brak oceny
+pozostaje brakiem oceny. Nie dodawaj pytań do „pełnej interpretacji”.
+
+Nowe 24 h jest rzeczywiście wpisane z opcją **Zmień**. Znana błędna
+zbiórka blokuje oba tryby; znany inny czas pozostawia ograniczenie bez
+normy pełnej DZM. Gotowa ilość dobowa nie jest skalowana drugi raz,
+a historycznie nieznany czas nie dostaje domyślnego 24 h.
+Nie reinterpretuj dawnego `U_Prot`, które oznacza masę całej zbiórki.
+
 ## Makieta i sprawdzenie przed przekazaniem
 
 Każdą kolejną zmianę wizualną w audycie przedstaw najpierw do akceptacji jako

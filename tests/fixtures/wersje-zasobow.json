@@ -116,8 +116,8 @@
   "sha256": "84a3364dce08b84a0e0db962cd489b6c7b335caebd30c178c49bc15317044857"
  },
  "clcr_collection_duration.js": {
-  "v": 2,
-  "sha256": "9f4bb5ed0c755f13e7a2f598a92f75d1c25d593cf7ff21cf6a9864dec7d5724a"
+  "v": 3,
+  "sha256": "2ebc3d04ed74e18efa7d0aca35350d12d9764f5a65be3155729c4d172b037e70"
  },
  "clcr_dialysis_safety.js": {
   "v": 1,
@@ -319,17 +319,37 @@
   "v": 1,
   "sha256": "2a864ad2b2ef73cb18c05cd0737a7be2f5e5c9b7c0ce5e7e7b40cbaa81056d8a"
  },
+ "clcr_protein_dzm.css": {
+  "v": 1,
+  "sha256": "5809378f31f2aa174ac3a8227b8ff5976656e0af0c22cab313386852bf6638e3"
+ },
+ "clcr_protein_dzm.js": {
+  "v": 1,
+  "sha256": "ef7b4406b450bc20aedfedd80b93b2248ec6a04eb48081aee7d5153959626f5e"
+ },
+ "clcr_protein_dzm_data.js": {
+  "v": 1,
+  "sha256": "c966e454dee47cbdddb7b496524865bb304c9748e2b57e7d1d35969a78c13127"
+ },
+ "clcr_protein_dzm_persistence.js": {
+  "v": 1,
+  "sha256": "67073671c015dd7af24d1dbd9f5c978395196402c597d37b131f9dfc3dc38453"
+ },
+ "clcr_protein_dzm_ui.js": {
+  "v": 1,
+  "sha256": "ed9f8f8a64c5d6dad028f4050a09ec0d6e80a09b6985712176c8f1604f976e77"
+ },
  "clcr_record_resources.js": {
-  "v": 8,
-  "sha256": "be24cfcb7709851608a048c1c3604509e0ead9957971b446f3b030619c27e9c6"
+  "v": 9,
+  "sha256": "03e739613413638f1fadb73345ded76ae66723da39ac642d85932f18bf341831"
  },
  "clcr_result_details.css": {
   "v": 1,
   "sha256": "c6a6944cee9d50e2556eab5b643c42febfba817595531a3727e9a6fcee21610f"
  },
  "clcr_result_details.js": {
-  "v": 4,
-  "sha256": "11f778df5f46f8ecae4cd5936a9814b8fff7967a22b3b5d64e50d79d3ca1d776"
+  "v": 5,
+  "sha256": "42c18e893f8392c837486a2dfa4588a33c8ac68e7864b08b8c4358d3920dbb03"
  },
  "clcr_result_presentation.js": {
   "v": 8,
@@ -340,16 +360,16 @@
   "sha256": "1ad049ce05fd63ba7783d052c43576e9a2e80b2115c9eda5d7ff5bc2d8df952e"
  },
  "clcr_saved_calculation.js": {
-  "v": 8,
-  "sha256": "4d288e83aeba80ac7cd6154229fa4b58a3c11cfcffae90a7599db82e1fdbd25d"
+  "v": 9,
+  "sha256": "3d38fd42afd7ee02e8278cece27a8ce9ef96aea88b25f511a942868d14a5cb8f"
  },
  "clcr_saved_legacy_calculator.js": {
-  "v": 8,
-  "sha256": "ee4cea63f50c07a4125a10d44cf61caeb6667735ae5be385a6e0b58afd59e8da"
+  "v": 9,
+  "sha256": "c93d5329e9c433e2dae473b910493b962bc4e856b8fd9c77614a2c2100ca7459"
  },
  "clcr_saved_results.js": {
-  "v": 8,
-  "sha256": "fd720e1140a80b5f0359e9109043729cf072296a1327b7292b5bb0b586a25598"
+  "v": 9,
+  "sha256": "d26ef668f6eb9a886ca67faf692bd92c5414b355a05a29ba459ea2f3561ce91b"
  },
  "clcr_saved_results_view.css": {
   "v": 1,
@@ -432,8 +452,8 @@
   "sha256": "c8b0d88904175b49f69bffe8bcfc857a84e643f039b7e339981003c195e213f8"
  },
  "clcr_ui_workflow.js": {
-  "v": 33,
-  "sha256": "108c5802541112b8e979808bcb33e584a5eca9f1daf1afc8918d45ee20f22f70"
+  "v": 34,
+  "sha256": "4aacdbf97395b753709ac8260e46e72d364fba419acf50a557668927609c7e79"
  },
  "cukrzyca.js": {
   "v": 30,
@@ -580,16 +600,16 @@
   "sha256": "1f7f4555b11c7bc28a7e1cb47e01a7c19dfe9184e706dbb462a5145543d29a19"
  },
  "inline_kalkulator_klirens_02.js": {
-  "v": 26,
-  "sha256": "4abdbe02997d18d8b026e34ab0b2a23f80e8dd0e7e364a7081777d868d26e367"
+  "v": 27,
+  "sha256": "c924a34842490a4578f5eb0b13479df7ba1a9de16240329ca28089b5d0c64c82"
  },
  "inline_kalkulator_klirens_03.js": {
   "v": 1,
   "sha256": "e001befeb185ae42780ecb51a5046c463b1691adea99292fd911b62e090919d6"
  },
  "inline_kalkulator_klirens_04.js": {
-  "v": 33,
-  "sha256": "253ea3cc74cd03648e0f8fe94d45bdd8d6b0cf05c73d59ee976c44f5e64e2b94"
+  "v": 34,
+  "sha256": "479cc3395b5f331cb5a67640ab5de14928efe3da690a8a36397e80d53ce04070"
  },
  "inline_kalkulator_klirens_05.js": {
   "v": 1,
@@ -600,8 +620,8 @@
   "sha256": "555ca77dae012c28f79c6cd419963ab20f651a77ab20d04b49640b6fc4214abf"
  },
  "inline_kalkulator_klirens_07.js": {
-  "v": 22,
-  "sha256": "e39719b1a9bdc565d5a1cebecb3e98747521494403ef0e4b8b55a9658cf72432"
+  "v": 23,
+  "sha256": "8306cb76e852a84feca82085877e1a697d019d730c280726908ddff140e386d0"
  },
  "inline_kalkulator_klirens_08.js": {
   "v": 1,
@@ -876,8 +896,8 @@
   "sha256": "02b3c5874e32d9b3b2243144910488b26fbf71bdedd275f03540c444fd297d22"
  },
  "vilda_auth_ui.js": {
-  "v": 518,
-  "sha256": "c08d87c70f534b39bf9aabe298c685d3a7b35d4c421d9763c2afa30520d83def"
+  "v": 519,
+  "sha256": "f92c69a305dd897c3108de3a139fcd9c1632c48121e4a5fc86ee2d58355c39c5"
  },
  "vilda_b64_checklist.js": {
   "v": 2,
@@ -968,8 +988,8 @@
   "sha256": "620b1e147449b87920a9ae5b756bbf62dee9928571838e794e449b680080f63c"
  },
  "vilda_chrome.js": {
-  "v": 198,
-  "sha256": "da5db87b007f5282baba85e1e9b325306862c20e3cf815aafac38d33a3fdecf6"
+  "v": 199,
+  "sha256": "4ab0c5540c38819bd30b7b34ad37f80b42eaadc8f62dcc18e706632f529aa303"
  },
  "vilda_cloud_cache_warm.js": {
   "v": 2,
@@ -1308,8 +1328,8 @@
   "sha256": "ae2d4a8f8f6d6397b102eae26696c7725d2986447e99da17e9df8f279d7f6cd9"
  },
  "vilda_lab_history_tab.js": {
-  "v": 15,
-  "sha256": "1072d69132ff713632058e24f7b843269ae3e91a14f18135d45cf7a15d57fd69"
+  "v": 16,
+  "sha256": "d8e968c042b4afd7511aaba55793449834dbe4eae99fda51b8cebaffd4722fae"
  },
  "vilda_lab_inhibin_b.js": {
   "v": 1,
@@ -1592,8 +1612,8 @@
   "sha256": "5caeafa2dcc83cbaa98ce7add635ee15addfeec802d98065fe0877372c1f2af7"
  },
  "vilda_save_status_indicator.js": {
-  "v": 33,
-  "sha256": "b565a2e4784fad091d9487d63b52556e0798263f687814677d4bcd116509d702"
+  "v": 34,
+  "sha256": "051aa46caea957f2fd896ff63597266f66ce5581155f9b33bf19abd917e18bdb"
  },
  "vilda_schowek.js": {
   "v": 5,
@@ -1604,8 +1624,8 @@
   "sha256": "bf561188adfe403fa735bef0b88bd2297144ec1fe7909582e0dbb50cd6c99c97"
  },
  "vilda_session_bridge.js": {
-  "v": 122,
-  "sha256": "8bf8cc36625ce7604bb7ad1682ef0b2cf2b3479ece7ba0e65764ee523d98b720"
+  "v": 123,
+  "sha256": "627f4fdec3b1ce55d2ce8fc1d657fe86bc66d158c4980f74cdac08fd361c4b95"
  },
  "vilda_sga_catchup.js": {
   "v": 2,
