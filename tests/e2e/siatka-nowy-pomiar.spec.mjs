@@ -1,5 +1,6 @@
 import { expect, test } from '../support/test-czas.mjs';
 import { createFictionalVault, loadPatient, readyForPatient, shellFrame, clinicalFingerprint, fictionalPatient } from '../support/centile-live-fixture.mjs';
+import { performance } from 'node:perf_hooks';
 export { fictionalPatient, fixturePreferences, createFictionalVault, loadPatient, readyForPatient, shellFrame, clinicalFingerprint } from '../support/centile-live-fixture.mjs';
 
 // Wyłącznie fikcyjny, zaszyfrowany sejf w efemerycznym profilu Playwrighta.
@@ -36,6 +37,62 @@ async function readyPanel(frame, patientId, source = 'OLAF') {
     await test.info().attach('live-centile-state.json', { body: JSON.stringify(diagnostics, null, 2), contentType: 'application/json' });
     throw error;
   }
+}
+
+async function settledClinicalFingerprint(frame, patientId) {
+  await readyPanel(frame, patientId);
+  let lastFingerprint, lastSerialized, stableSince;
+  const transitions = [];
+  try {
+    await expect.poll(async () => {
+      const startup = await frame.evaluate(() => ({
+        patientId: sessionStorage.getItem('vildaCurrentPatientId'),
+        mode: sessionStorage.getItem('vildaLoadChoiceV1'),
+        owner: window.VildaPanelPacjent?.wlasciciel?.(),
+        stale: window.VildaPanelPacjent?.nieaktualny?.(),
+        restoring: !!window.__vildaPersistRestoring,
+        mirroring: !!window.__vildaLustroWpis,
+        suspendIntake: !!window.__vildaSuspendIntakeUserReset,
+        pending: window.VildaDataImportExport.isMainSessionRestorePending(),
+        paused: window.VildaDataImportExport.isMainSessionAutosavePaused(),
+        suppressed: window.VildaPersistence.isAutosaveSuppressed(),
+        dobPending: window.VildaDobAge.restorePending(),
+        panel: window.VildaCentileLivePanel.getState(),
+        intakeHistory: window.intakeHistory,
+        intakeEstimatedKcalPerDay: window.intakeEstimatedKcalPerDay,
+      }));
+      const ready = startup.patientId === patientId && startup.mode === 'new'
+        && startup.owner === patientId && !startup.stale
+        && !startup.restoring && !startup.mirroring && !startup.suspendIntake
+        && !startup.pending && !startup.paused && !startup.suppressed && !startup.dobPending
+        && startup.panel.eligible && startup.panel.status === 'ready' && startup.panel.patientId === patientId;
+      const fingerprint = await clinicalFingerprint(frame, patientId);
+      const serialized = JSON.stringify(fingerprint);
+      const now = performance.now();
+      if (!ready || serialized !== lastSerialized || stableSince === undefined) {
+        stableSince = ready ? now : undefined;
+        transitions.push({ at: now, ready, startup, fingerprint });
+        if (transitions.length > 20) transitions.shift();
+      }
+      lastFingerprint = fingerprint;
+      lastSerialized = serialized;
+      // custom-fixes dispatches delayed change events after 3200 ms. A ready
+      // chart can precede them; the intake globals can be initialized or cleared.
+      // Wait for the entire clinical state to settle beyond that event horizon,
+      // rather than requiring a particular representation of another card.
+      return ready && stableSince !== undefined && now - stableSince >= 3500;
+    }, {
+      timeout: 30_000,
+      intervals: [100, 250],
+      message: 'Dane i właściciel pacjenta są stabilne po odroczonej synchronizacji przed kontrolą braku mutacji',
+    }).toBe(true);
+  } catch (error) {
+    await test.info().attach('live-centile-startup-transitions.json', {
+      body: JSON.stringify({ patientId, transitions }, null, 2), contentType: 'application/json',
+    });
+    throw error;
+  }
+  return lastFingerprint;
 }
 
 async function productionPoint(frame, metric, ageMonths) {
@@ -94,13 +151,7 @@ test('Start: zapisany pacjent i Nowy pomiar pokazują prawdziwą historię i adn
   expect(await frame.evaluate(() => window.__siatkaE2eTexts.includes('E2E-LIVE-A')), 'adnotacje powstają dopiero po powiększeniu').toBe(false);
   expect(await frame.evaluate(() => window.chartCreatorData)).toEqual(patients.a.chartCreator);
 
-  // custom-fixes kończy synchronizację pól zdarzeniami change po 3200 ms;
-  // dopiero ten przebieg zeruje spożycie przed kontrolą braku mutacji.
-  await expect.poll(() => frame.evaluate(() => window.intakeHistory == null && window.intakeEstimatedKcalPerDay == null), {
-    timeout: 30_000,
-    message: 'Nowy pomiar kończy odroczony reset spożycia przed kontrolą braku mutacji',
-  }).toBe(true);
-  const before = await clinicalFingerprint(frame, ids.a);
+  const before = await settledClinicalFingerprint(frame, ids.a);
   const { point, target, pane } = await hoverPoint(page, frame, card, 'height');
   expect(point.value).toBe(141);
   await expect(pane.locator('.vilda-centile-live-tooltip-reading')).toContainText('141 cm');
@@ -260,13 +311,7 @@ test('SPA: Start i DocPro przenoszą tę samą kartę do host fullscreen, zachow
   const { frame: start, ids } = await createFictionalVault(page, { shell: true });
   await loadPatient(start, ids.a);
   await readyPanel(start, ids.a);
-  // custom-fixes kończy synchronizację pól zdarzeniami change po 3200 ms;
-  // gotowa siatka nie oznacza jeszcze zakończenia odroczonego resetu spożycia.
-  await expect.poll(() => start.evaluate(() => window.intakeHistory == null && window.intakeEstimatedKcalPerDay == null), {
-    timeout: 30_000,
-    message: 'Nowy pomiar kończy odroczony reset spożycia przed kontrolą braku mutacji',
-  }).toBe(true);
-  const before = await clinicalFingerprint(start, ids.a);
+  const before = await settledClinicalFingerprint(start, ids.a);
   const initial = await start.locator(CARD).boundingBox();
   await start.evaluate(() => { window.__siatkaOriginalCard = document.querySelector('.vilda-centile-live-card'); });
   await start.getByRole('button', { name: 'Powiększ siatkę na pełny ekran', exact: true }).click();

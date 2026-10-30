@@ -21,6 +21,7 @@ Publiczne API sejfu:
 
 - `listCarePlans({patientId?})` — plany konta lub danego pacjenta;
 - `getCarePlan(planId)` — aktualny plan;
+- `needsCarePlanSyncRepair()` — odczytowe sprawdzenie, czy zapis planu utracił strukturę podczas obsługi przez starszego klienta;
 - `mutateCarePlan({planId?, patientId, baseRev, operationId, action, ...})` — zapis, wykonanie, wynik, powiązanie i zamknięcie.
 
 Zmiana porównuje rewizję planu i wszystkich zmienianych wpisów w jednej transakcji. Sprawdza aktualne konto i sesję, obecność pacjenta, usunięcia oraz ponowienie operacji. Błąd zapisu nie może zakończyć kroku bez zapisania wyniku lub kolejnego działania. Eksport/import i synchronizacja przenoszą kontekst w istniejących kopertach notatek. Dotychczasowe operacje na powiązanych notatkach aktualizują plan przez ten sam mechanizm.
@@ -29,8 +30,20 @@ Równoczesne zmiany tego samego planu na różnych urządzeniach zachowują krok
 
 `vilda_care_plans.js` odpowiada za interfejs, `vilda_care_plans.css` za jego style. `vilda_auth_ui.js` montuje moduł w karcie i oknie Przypomnień oraz w Karcie pacjenta. Zasoby są ładowane na stronach z interfejsem sejfu, w obu loaderach i przez precache PWA.
 
+## Synchronizacja między urządzeniami
+
+Plan i jego powiązane wpisy mają osobne zaszyfrowane delty. Większy plan może przekroczyć łączny limit 64 KiB kanału `sendBeacon`, mimo że krótkie notatki kroków przejdą. `vilda_sync_integration.js` po odrzuceniu lub wyjątku beacona wysyła tę samą zaszyfrowaną deltę zwykłym `fetch`, bez limitu `keepalive`. Prawidłowo przyjętego beacona nie wysyła ponownie.
+
+Klient sprzed wprowadzenia planów pomijał nieznane `careContext`, zachowując identyfikator, tekst i wersję notatki. Po aktualizacji równy numer rewizji i data nie mogą blokować odzyskania samego brakującego rozszerzenia. Sejf uzupełnia je pod blokadą wpisu, wyłącznie gdy pozostała treść i metadane zgadzają się z nienaruszoną kopią. Zachowuje rewizję, daty, treść kliniczną i nieznane pola zaszyfrowanego zapisu. Obejmuje to także role powiązanych wpisów, aby nie zamieniły się w niezależne przypomnienia lub podwójne wydarzenia.
+
+Jeżeli telefon zna już ten sam ETag chmury, `vilda_sync.js` wykrywa brak struktury i jednokrotnie ponawia pełny odczyt tego bloba. Nieudany odczyt lub scalenie pozostają do ponowienia. Równoległe odczyty w jednym dokumencie współdzielą próbę. Poprawny wynik braku luki jest zapamiętany do zmiany notatek, sesji lub ETagu; zwykłe sprawdzanie synchronizacji nie odszyfrowuje planów przy każdym odpytaniu.
+
+Odzyskanie wymaga nienaruszonej struktury w chmurze lub na drugim urządzeniu. Nie rekonstruujemy decyzji lekarza z luźnych notatek, nie cofamy rzeczywistej późniejszej edycji i nie nadpisujemy istniejącego kontekstu. Wszystkie urządzenia powinny używać bieżącej wersji aplikacji; starszy klient nadal nie zna struktury planu.
+
 ## Walidacja
 
 Testy `care-plans-vault.test.mjs` wywołują rzeczywisty sejf i sprawdzają atomowość, konflikt edycji, usunięcie, zmianę konta/sesji, ponowienie, integrację Terminarza oraz transport kontekstu przez kopie i synchronizację. Testy `care-plans*.spec.mjs` sprawdzają pełny interfejs, mobilną nawigację, powłokę aplikacji i zimny start offline. Dane testowe są wyłącznie fikcyjne.
+
+Regresje synchronizacji obejmują duży zaszyfrowany plan przy odrzuconym beaconie, odzyskanie wszystkich ról przy niezmienionej wersji, ochronę zmienionej treści i usunięć oraz pełne odczyty przy tym samym ETagu. `care-plans-sync.spec.mjs` używa osobnych kontekstów komputera i telefonu ze wspólną fikcyjną tożsamością szyfrowania, rzeczywistych modułów synchronizacji i lokalnie przechwyconego serwera. Sprawdza wymianę delty w obie strony, odświeżenie już otwartej listy i odzysk po aktualizacji/F5.
 
 MVP nie obejmuje automatycznych szablonów diagnostycznych, wymagań zależnych między krokami, pracy zespołowej, importu dokumentów ani dodatkowych kanałów powiadomień.

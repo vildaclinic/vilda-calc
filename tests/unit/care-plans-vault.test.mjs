@@ -752,3 +752,153 @@ describe('Plany opieki — real encrypted vault and shared patient records', () 
     expect(await d.adapter.getPatientNoteForUser(d.userId, plan.id)).toEqual(corrupt);
   });
 });
+
+// vilda_vault.js from release #829 (5620803e) was exercised against the same
+// records: it keeps their versions, text and categories but drops careContext
+// on import/export. Recreate that historical wire shape without shipping a
+// second, obsolete copy of the vault in this suite.
+async function legacyCarePair(encrypted = false) {
+  const a = await device(), added = await add(a, await create(a), { eventDateISO: '2026-11-03' });
+  await mutate(a, added.plan, 'addNote', { text: 'Fikcyjny opis ustaleń w planie.', dateISO: DAY });
+  const payload = await a.vault.exportSyncPayload(), legacy = structuredClone(payload), b = await device();
+  if (encrypted) {
+    const code = await a.vault.exportSyncCode(a.password);
+    b.vault.lock('manual'); await b.vault.importSyncCode(code, a.password, { label: 'Fikcyjny telefon po aktualizacji' });
+    b.userId = b.vault.getCurrentUser().userId; b.password = a.password;
+  }
+  legacy.patientNotes.forEach(note => { delete note.careContext; });
+  await b.vault.mergeSyncPayload(legacy);
+  return { a, b, payload, planId: added.plan.id };
+}
+const careOnly = (payload, notes) => ({ ...payload, patients: [], patientNotes: notes });
+
+describe('care sync recovery after an older client imported notes without the extension', () => {
+  it('hydrates the aggregate and every linked role at the same version without changing clinical fields or creating revisions', async () => {
+    const { b, payload, planId } = await legacyCarePair();
+    expect(await b.vault.listCarePlans()).toEqual([]);
+    const before = await rawNotes(b), beforePlain = new Map();
+    for (const note of before) {
+      const plain = await b.vault.decryptPayloadForCurrentUser(note.bodyCipher.iv, note.bodyCipher.data);
+      // Unknown encrypted fields must also survive; rebuilding the public DTO
+      // would silently remove them during this compatibility repair.
+      plain.fictionalFutureField = { noteId: note.id, values: ['Fikcyjny zapis', 0, null] };
+      await b.adapter.putPatientNoteForUser(b.userId, { ...note, bodyCipher: await b.vault.encryptPayloadForCurrentUser(plain) });
+      beforePlain.set(note.id, plain);
+    }
+    const prepared = await rawNotes(b), changed = [];
+    b.vault.onPatientNoteChanged(event => changed.push(event));
+    expect(await b.vault.needsCarePlanSyncRepair()).toBe(true);
+    expect(await rawNotes(b)).toEqual(prepared);
+    await b.vault.mergeSyncPayload(payload);
+    expect((await b.vault.getCarePlan(planId)).steps).toEqual(payload.patientNotes.find(note => note.id === planId).careContext.steps);
+    expect((await b.vault.listCarePlans()).map(plan => plan.id)).toEqual([planId]);
+    for (const expected of payload.patientNotes) {
+      const stored = await b.adapter.getPatientNoteForUser(b.userId, expected.id);
+      expect({ ...stored, bodyCipher: null }).toEqual({ ...prepared.find(note => note.id === expected.id), bodyCipher: null });
+      expect(await b.vault.decryptPayloadForCurrentUser(stored.bodyCipher.iv, stored.bodyCipher.data))
+        .toEqual({ ...beforePlain.get(expected.id), careContext: expected.careContext });
+      expect(await b.vault.getPatientNote(expected.id)).toEqual(expected);
+    }
+    expect(changed.map(event => event.id).sort()).toEqual(payload.patientNotes.map(note => note.id).sort());
+    expect(await b.vault.needsCarePlanSyncRepair()).toBe(false);
+    const recovered = await rawNotes(b), eventCount = changed.length;
+    await b.vault.mergeSyncPayload(payload);
+    expect(await rawNotes(b)).toEqual(recovered); expect(changed).toHaveLength(eventCount);
+  });
+
+  it('also recovers through real encrypted per-note deltas, with arbitrary delivery order and idempotent repeats', async () => {
+    const { a, b, payload, planId } = await legacyCarePair(true);
+    const deltas = [];
+    for (const note of [...payload.patientNotes].reverse()) deltas.push(await a.vault.buildNoteDelta(note.id));
+    for (const delta of deltas) await b.vault.applyEncryptedDelta(delta);
+    expect((await b.vault.getCarePlan(planId)).steps).toEqual((await a.vault.getCarePlan(planId)).steps);
+    for (const note of payload.patientNotes) expect(await b.vault.getPatientNote(note.id)).toEqual(note);
+    const before = await rawNotes(b);
+    for (const delta of deltas) await b.vault.applyEncryptedDelta(delta);
+    expect(await rawNotes(b)).toEqual(before);
+  });
+
+  it.each(['rev', 'updatedAtISO', 'patientId', 'body', 'clinicalDateISO', 'completedAtISO'])(
+  'does not hydrate a tied-looking record with a different %s', async (field) => {
+    const { b, payload, planId } = await legacyCarePair(), raw = await b.adapter.getPatientNoteForUser(b.userId, planId);
+    const incoming = structuredClone(payload.patientNotes.find(note => note.id === planId));
+    if (field === 'rev') incoming.rev -= 1;
+    else if (field === 'updatedAtISO') incoming.updatedAtISO = '2000-01-01T00:00:00.000Z';
+    else if (field === 'patientId') incoming.patientId = b.patientId;
+    else if (field === 'body') incoming.body += '\nFikcyjna inna treść kliniczna.';
+    else if (field === 'clinicalDateISO') incoming.clinicalDateISO = '2026-11-03';
+    else incoming.completedAtISO = '2026-11-03T12:00:00.000Z';
+    await b.vault.mergeSyncPayload(careOnly(payload, [incoming]));
+    expect(await b.adapter.getPatientNoteForUser(b.userId, planId)).toEqual(raw);
+    expect(await b.vault.getCarePlan(planId)).toBeNull();
+  });
+
+  it('does not replace a linked context that already exists, nor accept an invalid incoming extension', async () => {
+    const { b, payload } = await legacyCarePair();
+    const step = payload.patientNotes.find(note => note.careContext?.role === 'step');
+    const raw = await b.adapter.getPatientNoteForUser(b.userId, step.id);
+    const plain = await b.vault.decryptPayloadForCurrentUser(raw.bodyCipher.iv, raw.bodyCipher.data);
+    const stored = { ...raw, bodyCipher: await b.vault.encryptPayloadForCurrentUser({ ...plain, careContext: { ...step.careContext, state: 'done' } }) };
+    await b.adapter.putPatientNoteForUser(b.userId, stored);
+    await b.vault.mergeSyncPayload(careOnly(payload, [step]));
+    expect(await b.adapter.getPatientNoteForUser(b.userId, step.id)).toEqual(stored);
+    const parent = payload.patientNotes.find(note => note.careContext?.role === 'plan'), before = await b.adapter.getPatientNoteForUser(b.userId, parent.id);
+    await b.vault.mergeSyncPayload(careOnly(payload, [{ ...parent, careContext: { ...parent.careContext, version: 2 } }]));
+    expect(await b.adapter.getPatientNoteForUser(b.userId, parent.id)).toEqual(before);
+  });
+
+  it('does not resurrect a locally deleted plan from an unchanged intact cloud record', async () => {
+    const { b, payload, planId } = await legacyCarePair();
+    await b.vault.removePatientNote(planId);
+    const before = await b.adapter.listPatientNoteTombstonesForUser(b.userId);
+    await b.vault.mergeSyncPayload(payload);
+    expect(await b.vault.getCarePlan(planId)).toBeNull();
+    expect(await b.adapter.getPatientNoteForUser(b.userId, planId)).toBeUndefined();
+    expect(await b.adapter.listPatientNoteTombstonesForUser(b.userId)).toEqual(before);
+  });
+
+  it('leaves an existing explicit null extension untouched instead of treating it as absent legacy data', async () => {
+    const { b, payload, planId } = await legacyCarePair(), raw = await b.adapter.getPatientNoteForUser(b.userId, planId);
+    const plain = await b.vault.decryptPayloadForCurrentUser(raw.bodyCipher.iv, raw.bodyCipher.data);
+    const stored = { ...raw, bodyCipher: await b.vault.encryptPayloadForCurrentUser({ ...plain, careContext: null }) };
+    await b.adapter.putPatientNoteForUser(b.userId, stored);
+    await b.vault.mergeSyncPayload(payload);
+    expect(await b.adapter.getPatientNoteForUser(b.userId, planId)).toEqual(stored);
+  });
+
+  it('checks only aggregate care bodies and rejects a stale session while detecting a gap', async () => {
+    const d = await device();
+    const note = await d.vault.savePatientNote({ patientId: d.patientId, title: 'Fikcyjna zwykła notatka', body: 'Fikcyjna treść', category: 'observation' });
+    const raw = await d.adapter.getPatientNoteForUser(d.userId, note.id);
+    await d.adapter.putPatientNoteForUser(d.userId, { ...raw, bodyCipher: { ...raw.bodyCipher, data: 'AA==' } });
+    expect(await d.vault.needsCarePlanSyncRepair()).toBe(false);
+    await create(d); expect(await d.vault.needsCarePlanSyncRepair()).toBe(false);
+    const original = d.adapter.listPatientNotesForUser; let release, enter;
+    const entered = new Promise(resolve => { enter = resolve; });
+    d.adapter.listPatientNotesForUser = async user => { const notes = await original(user); await new Promise(resolve => { release = resolve; enter(); }); return notes; };
+    const pending = d.vault.needsCarePlanSyncRepair();
+    await entered;
+    d.vault.lock('manual'); release();
+    await expect(pending).rejects.toThrow('Sesja zmieniła się');
+    expect(await d.vault.needsCarePlanSyncRepair()).toBe(false);
+  });
+
+  it('does not report another adapter’s gap after storage changes while the old read is pending', async () => {
+    const { b } = await legacyCarePair();
+    const original = b.adapter.listPatientNotesForUser; let release, enter;
+    const entered = new Promise(resolve => { enter = resolve; });
+    b.adapter.listPatientNotesForUser = async user => { const notes = await original(user); await new Promise(resolve => { release = resolve; enter(); }); return notes; };
+    const pending = b.vault.needsCarePlanSyncRepair();
+    await entered;
+    b.vault.setStorageAdapter(b.vault.createInMemoryAdapter()); release();
+    await expect(pending).rejects.toThrow('Sesja zmieniła się');
+  });
+
+  it('rejects a corrupt aggregate instead of guessing a missing extension or modifying its ciphertext', async () => {
+    const d = await device(), plan = await create(d), raw = await d.adapter.getPatientNoteForUser(d.userId, plan.id);
+    const corrupt = { ...raw, bodyCipher: { ...raw.bodyCipher, data: 'AA==' } };
+    await d.adapter.putPatientNoteForUser(d.userId, corrupt);
+    await expect(d.vault.needsCarePlanSyncRepair()).rejects.toThrow();
+    expect(await d.adapter.getPatientNoteForUser(d.userId, plan.id)).toEqual(corrupt);
+  });
+});
