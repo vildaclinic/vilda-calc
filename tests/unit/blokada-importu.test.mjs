@@ -416,13 +416,15 @@ describe('Strażnik: pominięcie końca scalania kosza tylko w imporcie', () => 
     const { readFileSync } = await import('node:fs');
     const src = readFileSync(new URL('../../vilda_vault.js', import.meta.url), 'utf8');
     expect(src).toContain('const Bpb_IMPORT=Object.freeze({});');
-    // Le z tym znacznikiem: wewnętrzne scalanie notatek w ns i danych konta w ss — i nic więcej.
-    expect(src.match(/\},Bpb_IMPORT\)/g)).toHaveLength(2);
+    // Le z tym znacznikiem: wewnętrzne scalanie notatek w ns i danych konta w ss — i nic więcej. Import karty (ns) podaje
+    // go w opcjach razem z sesją importu (P-SESJA-ZAPISU, przegląd 4: { Bpb_imp: Bpb_IMPORT, Bses_s }).
+    expect(src.match(/\},Bpb_IMPORT\)/g)).toHaveLength(1);
     const ns = src.slice(src.indexOf('async function ns('), src.indexOf('async function rs('));
     const ss = src.slice(src.indexOf('async function ss('));
-    expect(ns).toContain('patientNoteTombstones:[]},Bpb_IMPORT)');
+    expect(ns).toContain('patientNoteTombstones:[]},{Bpb_imp:Bpb_IMPORT,Bses_s:Bpi_s.Bses_s})');
     expect(ss.slice(0, ss.indexOf('mergedPatientCount'))).toContain('},Bpb_IMPORT)');
-    // Publiczne API nie wystawia znacznika.
-    expect(src).not.toMatch(/:\s*Bpb_IMPORT\s*[,}]/);
+    // Publiczne API nie wystawia znacznika: jedyne pole z nim to opcje wewnętrznego Le w ns.
+    expect(src.match(/:\s*Bpb_IMPORT\s*[,}]/g)).toEqual([':Bpb_IMPORT,']);
+    expect(src.match(/Bpb_imp:Bpb_IMPORT/g)).toHaveLength(1);
   });
 });

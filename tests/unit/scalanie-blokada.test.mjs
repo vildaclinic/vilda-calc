@@ -468,8 +468,9 @@ describe('strażniki źródła', () => {
     expect(le).toContain('w+=await Bsl_usunPacjenta(j,m[j],e,Bses_imp?null:Bkz_S)');
     // P-BLOKADA-IMPORT: wewnętrzne scalanie importu (Bpb_IMPORT) pomija koniec scalania kosza; synchronizacja nie.
     // P-CHMURA-OPIS: Le podmienia opcje na kopię z sesją startu, więc import rozpoznaje po tożsamości zapamiętanej
-    // przed podmianą (Bses_imp); zmiana sesji (SESSION_CHANGED) kończy scalanie jak zajęta blokada.
-    expect(le).toContain('const Bses_imp=e===Bpb_IMPORT;e=Bses_opcje(e);');
+    // przed podmianą (Bses_imp); zmiana sesji (SESSION_CHANGED) kończy scalanie jak zajęta blokada. P-SESJA-ZAPISU
+    // (przegląd 4): import karty (ns) podaje znacznik w opcjach z sesją importu ({ Bpb_imp: Bpb_IMPORT, Bses_s }).
+    expect(le).toContain('const Bses_imp=e===Bpb_IMPORT||!!(e&&e.Bpb_imp===Bpb_IMPORT),Bses_zew=Bses_imp&&e!==Bpb_IMPORT?e.Bses_s:null;e=Bses_opcje(Bses_imp?null:e);if(Bses_zew)e.Bses_s=Bses_zew;');
     expect(le).toContain('Bkz_n=Bses_imp?0:await Bkz_scalKoniec(Bkz_S,e)}catch(Bkz_e){if(Bkz_e&&(Bkz_e.vildaMergeBusy||Bkz_e.code==="SESSION_CHANGED"))throw Bkz_e;');
     for (const f of ['Bsl_scalPacjenta', 'Bsl_usunPacjenta']) {
       const cialo = src.slice(src.indexOf(`async function ${f}(`));
