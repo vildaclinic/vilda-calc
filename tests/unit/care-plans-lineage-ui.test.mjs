@@ -136,8 +136,9 @@ describe('Care plan review renders complete typed changes and original document 
     expect(decisionGroup.textContent).toContain('Bez terminu'); expect(decisionGroup.textContent).toContain('20.01.2027'); d.controller.destroy();
   });
 
-  it('retains the same review in history after acknowledgment and reads the current original on demand', async () => {
-    const snapshot = stepReview(), d = editorWithResponse({}, { log: [{ dateISO: '2026-10-29', text: 'Fikcyjne potwierdzenie przeglądu.', resolution: snapshot }] });
+  it.each([false, true])('retains the same review in history across background refresh and reads the current original on demand (legacy=%s)', async legacy => {
+    const snapshot = stepReview(); if (!legacy) snapshot.resolvedBy = 'fictional-review-operation';
+    const d = editorWithResponse({}, { log: [{ dateISO: '2026-10-29', text: 'Fikcyjne potwierdzenie przeglądu.', resolution: snapshot }] });
     const original = { id: 'fictional-alternate-result', patientId: d.plan.patientId, title: 'Fikcyjny oryginalny wynik', body: 'Fikcyjna bieżąca treść oryginału.',
       careContext: { version: 1, role: 'result', planId: d.plan.id, stepId: snapshot.components[0].stepId } };
     d.vault.getPatientNote = vi.fn(async () => structuredClone(original)); await settle();
@@ -149,8 +150,20 @@ describe('Care plan review renders complete typed changes and original document 
     versions.querySelector('[data-record-id="fictional-alternate-result"]').click(); await settle();
     expect(d.vault.getPatientNote).toHaveBeenCalledWith(original.id);
     expect(d.host.querySelector('.vcp-record-body').textContent).toBe(original.body);
+    if (legacy) d.plan.log[0].resolution = { components: structuredClone(snapshot.components), version: 1 };
+    await d.controller.refresh();
     findButton(d.host, '← Wróć do planu').click();
     expect(d.host.querySelector('.vcp-history .vcp-sync-versions').open).toBe(true);
+    expect(d.vault.mutateCarePlan).not.toHaveBeenCalled(); d.controller.destroy();
+  });
+
+  it('keeps a collapsed current review collapsed after an equivalent refresh and re-render', async () => {
+    const snapshot = stepReview(), d = editorWithResponse({}, { syncNeedsReview: true, syncReview: snapshot }); await settle();
+    const versions = d.host.querySelector('.vcp-sync-review .vcp-sync-versions');
+    versions.open = false; versions.dispatch('toggle');
+    d.plan.syncReview = { components: structuredClone(snapshot.components), version: 1 };
+    await d.controller.refresh(); await d.controller.select(d.plan.id);
+    expect(d.host.querySelector('.vcp-sync-review .vcp-sync-versions').open).toBe(false);
     expect(d.vault.mutateCarePlan).not.toHaveBeenCalled(); d.controller.destroy();
   });
 

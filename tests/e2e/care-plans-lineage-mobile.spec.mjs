@@ -10,7 +10,10 @@ test('care plans lineage mobile: preserved closed work requires explicit reopeni
   const panel = await openReviewReminder(page, plan);
   for (const step of plan.steps) await expect(panel.locator(`[data-step-id="${step.id}"]`)).toContainText(step.title);
   await noHorizontalOverflow(page);
-  await expect(panel.locator('.vcp-sync-review .vcp-sync-versions')).toBeVisible();
+  const versions = panel.locator('.vcp-sync-review .vcp-sync-versions');
+  await expect(versions).toBeVisible();
+  await versions.locator('summary').scrollIntoViewIfNeeded();
+  await expect(versions.locator('summary')).toBeInViewport();
   await page.screenshot({ path: testInfo.outputPath('retained-versions-mobile.png') });
   await panel.locator('.vcp-sync-review').getByRole('button', { name: 'Potwierdzam przegląd planu', exact: true }).click();
   const form = page.locator(CARE_FORM);

@@ -83,6 +83,15 @@
     var components = reviewComponents(snapshot);
     return components.length > 0 && components.length === snapshot.components.length;
   }
+  function reviewStateSnapshot(value) {
+    if (Array.isArray(value)) return value.map(reviewStateSnapshot);
+    if (value && typeof value === 'object') {
+      var sorted = Object.create(null);
+      Object.keys(value).sort().forEach(function (key) { sorted[key] = reviewStateSnapshot(value[key]); });
+      return sorted;
+    }
+    return value;
+  }
   function visibleHistory(plan) {
     var entries = Array.isArray(plan.log) ? plan.log : [], resolved = new Set();
     entries.forEach(function (entry) {
@@ -161,7 +170,7 @@
     var account = vault && vault.getCurrentUser && vault.getCurrentUser(), accountId = account && account.userId;
     var state = { plans: [], patients: [], names: new Map(), selected: options.planId || null, filter: 'all', query: '', loading: false, busy: false, editing: false, detail: typeof options.detail === 'boolean' ? options.detail : !!(options.full && options.planId), stale: false, loaded: false };
     var editor = null, unsubscribe = [], selectedOrigin = null, lifecycleObserver = null;
-    var syncVersionState = new WeakMap();
+    var syncVersionState = new Map();
     var record = null, recordNoteId = null, recordError = null, recordSequence = 0, selectionSequence = 0, recordOrigin = null, initialRecord = options.noteId || null;
     function current() { var user = vault && vault.getCurrentUser && vault.getCurrentUser(); return !destroyed && host.isConnected && vault && vault.isUnlocked() && user && user.userId === accountId && (!options.isCurrent || options.isCurrent()); }
     function node(tag, className, text) { var element = doc.createElement(tag); if (className) element.className = className; if (text != null) element.textContent = text; return element; }
@@ -332,10 +341,16 @@
       }
       parent.appendChild(version);
     }
-    function renderSyncVersions(parent, snapshot, archived) {
+    function renderSyncVersions(parent, snapshot, archived, planId) {
       var components = reviewComponents(snapshot); if (!components.length) return;
-      var versions = node('details', 'vcp-sync-versions'); versions.open = syncVersionState.has(snapshot) ? syncVersionState.get(snapshot) : !archived;
-      versions.addEventListener('toggle', function () { if (current()) syncVersionState.set(snapshot, versions.open); });
+      var identity = archived && recordId(snapshot.resolvedBy) ? snapshot.resolvedBy : JSON.stringify(reviewStateSnapshot(snapshot));
+      var stateKey = planId + (archived ? ':archived:' : ':current:') + identity;
+      var versions = node('details', 'vcp-sync-versions'); versions.open = syncVersionState.has(stateKey) ? syncVersionState.get(stateKey) : !archived;
+      versions.addEventListener('toggle', function () {
+        if (!current()) return;
+        syncVersionState.delete(stateKey); syncVersionState.set(stateKey, versions.open);
+        if (syncVersionState.size > 128) syncVersionState.delete(syncVersionState.keys().next().value);
+      });
       versions.appendChild(node('summary', '', 'Zachowane wersje zmian'));
       if (archived) versions.appendChild(node('p', 'vcp-help', 'Wartości zachowane przed zapisaniem zmian. Późniejsze zmiany są widoczne w bieżącym planie.'));
       components.forEach(function (component) {
@@ -405,7 +420,7 @@
         review.appendChild(node('p', '', reviewExplanation(plan)));
         if (closed(plan)) review.appendChild(node('p', '', openSteps(plan).length ? 'Plan pozostaje zamknięty, ale zachowano w nim nierozstrzygnięte kroki. Są widoczne poniżej. Wznów plan albo potwierdź zakończenie tych kroków bez wykonania z uzasadnieniem.' : 'Plan pozostaje zamknięty. Potwierdzenie przeglądu nie wznowi jego realizacji.'));
         else review.appendChild(node('p', '', 'Sprawdź kroki i ustalenia oraz popraw ewentualne rozbieżności przed potwierdzeniem przeglądu.'));
-        renderSyncVersions(review, plan.syncReview, false);
+        renderSyncVersions(review, plan.syncReview, false, plan.id);
         review.appendChild(button('Potwierdzam przegląd planu', 'vcp-outline', function () { acknowledgeMerge(plan); })); detail.appendChild(review);
       }
       if (closed(plan)) {
@@ -424,7 +439,7 @@
       var history = node('details', 'vcp-history'); history.open = true; history.appendChild(node('summary', '', 'Przebieg planu · ' + historyEntries.length + ' wpisów'));
       var timeline = node('div', 'vcp-timeline'); historyEntries.slice().reverse().forEach(function (entry) {
         var item = node('div', 'vcp-timeline-entry'); item.appendChild(node('time', '', date(entry.dateISO || entry.date || entry.atISO))); item.appendChild(node('p', '', entry.text || 'Zaktualizowano plan.'));
-        renderSyncVersions(item, entry.resolution, true);
+        renderSyncVersions(item, entry.resolution, true, plan.id);
         if (entry.noteId || entry.resultNoteId) item.appendChild(recordLink('Otwórz wpis', entry.noteId || entry.resultNoteId)); timeline.appendChild(item);
       }); history.appendChild(timeline); detail.appendChild(history); detail.scrollTop = scroll;
     }
@@ -719,7 +734,7 @@
       }).catch(function (error) { if (current() && editor === model) { clear(model.errors); errorBox(error, model.errors); model.status.textContent = 'Nie udało się wczytać terminów. Anuluj formularz i spróbuj ponownie.'; } });
     }
     function destroy() {
-      if (destroyed) return; destroyed = true; sequence += 1; selectionSequence += 1; resetRecord(); if (refreshTimer) win.clearTimeout(refreshTimer);
+      if (destroyed) return; destroyed = true; sequence += 1; selectionSequence += 1; resetRecord(); syncVersionState.clear(); if (refreshTimer) win.clearTimeout(refreshTimer);
       if (lifecycleObserver) lifecycleObserver.disconnect();
       if (editor) {
         if (typeof editor.onDialogClose === 'function') editor.onDialogClose();

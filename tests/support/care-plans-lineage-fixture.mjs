@@ -51,8 +51,16 @@ export async function concurrentDocumentReview(created) {
   });
   const base = await created.frame.evaluate(id => window.VildaVault.getPatientNote(id), saved.planId);
   async function branch(title, eventDateISO, eventTime, reminderTime, text) {
-    await mutatePlan(created.frame, created.ids.a, saved.planId, 'editStep', { stepId: added.stepId,
+    const edited = await mutatePlan(created.frame, created.ids.a, saved.planId, 'editStep', { stepId: added.stepId,
       step: { title, eventDateISO, eventTime, reminderTime, description: 'Fikcyjny oryginalny opis: ' + title } });
+    const calendarId = edited.plan.steps.find(step => step.id === added.stepId).calendarNoteId;
+    const calendarBody = 'Fikcyjna oryginalna rezerwacja: ' + title + '.';
+    expect(await created.frame.evaluate(async ({ calendarId, calendarBody }) => {
+      const note = await window.VildaVault.getPatientNote(calendarId);
+      await window.VildaVault.savePatientNote({ id: note.id, patientId: note.patientId,
+        baseRev: note.rev, title: note.title, body: calendarBody });
+      return (await window.VildaVault.getPatientNote(calendarId)).body;
+    }, { calendarId, calendarBody })).toBe(calendarBody);
     await mutatePlan(created.frame, created.ids.a, saved.planId, 'result', { stepId: added.stepId,
       dateISO: '2026-10-29', text, continuation: 'later', decisionDateISO: '2027-01-20' });
   }
