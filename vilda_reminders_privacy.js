@@ -47,6 +47,10 @@
     style.textContent =
       'html.' + CLASS + ' .vb22-private-content,html.' + CLASS + ' .vb22-subtitle{visibility:hidden!important;pointer-events:none!important;}' +
       '.vb22-inline.vilda-reminders-private-surface{position:relative;}' +
+      // Native headers inherit a global z-index even as static flex items.
+      // Keep each protected block (including its header descendants) in its
+      // own lower layer, so it cannot intercept the eye or paint over the mask.
+      '.vilda-reminders-private-surface>.vb22-private-content{isolation:isolate;z-index:0!important;}' +
       '.vilda-reminders-private-cover{position:absolute;inset:0;z-index:20;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;overflow:hidden;padding:24px;background:#f5f8f8;color:#607b81;text-align:center;box-sizing:border-box;font:400 14.4px/1.5 Inter,sans-serif;}' +
       '.vilda-reminders-private-cover[hidden]{display:none!important;}' +
       '.vilda-reminders-private-cover strong{font-size:17px;font-weight:500;color:#29464d;}' +

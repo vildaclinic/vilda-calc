@@ -877,7 +877,7 @@
  },
  "vilda_auth_ui.js": {
   "v": 517,
-  "sha256": "6f45c9f54ecfcba9c081053fb5c0b56898f744b2894ae8393227505483234054"
+  "sha256": "c982118e680bb932b33203de4287236cea2bd51415ac3e5d0ca0fbc7ca5e7591"
  },
  "vilda_b64_checklist.js": {
   "v": 2,
@@ -1201,7 +1201,7 @@
  },
  "vilda_global_search_view.js": {
   "v": 1,
-  "sha256": "5c0b76bf0225b867741b8d8964fdb7f7198674b2fb3c6f2a3749b28e00fab57c"
+  "sha256": "e7b0fab1abbcc4d485b1a7f97eb916be558ad2e6fd3a49f77e485b044cad5ac5"
  },
  "vilda_growth_card_c.js": {
   "v": 27,
@@ -1573,7 +1573,7 @@
  },
  "vilda_reminders_privacy.js": {
   "v": 1,
-  "sha256": "a72b1ff741d9a84384ea7f805ae7be56dcaadd582ff4cbfdd3e13c92a9ffe4a1"
+  "sha256": "c1bcc070ef34849c4f524fbd66a7400e671c325b2608553efa23c0da5edc98f2"
  },
  "vilda_retention.js": {
   "v": 1,

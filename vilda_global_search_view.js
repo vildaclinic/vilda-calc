@@ -193,6 +193,7 @@
       invalidate: function () { if (service) service.invalidate('view'); else invalidated('view'); },
       request: request,
       select: select,
+      backToList: back,
       setVisible: function (value) { visible = !!value; if (visible && stale && !state.loading) refresh(); },
       getContext: context,
       destroy: function () { destroyed = true; sequence += 1; requests += 1; if (timer) win.clearTimeout(timer); if (service) service.destroy(); state.rows = []; state.query = ''; state.id = null; root.remove(); }

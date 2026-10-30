@@ -179,6 +179,10 @@ test('a delayed Search index read cannot undo newer navigation or replace an add
   await page.evaluate(() => window.__releaseB22History());
   await expect(dialog.getByLabel('Treść przypomnienia', { exact: true })).toHaveValue('Fikcyjny nowy opis podczas odczytu historii');
   await expect(dialog.getByRole('button', { name: 'Zapisz przypomnienie', exact: true })).toBeVisible();
+  await dialog.getByRole('button', { name: 'Anuluj', exact: true }).click();
+  await expect(dialog.locator('[data-tab=search]')).toHaveAttribute('aria-pressed', 'true');
+  await expect(dialog.locator('.vgs-query')).toHaveValue('Fikcyj');
+  await expect(dialog.getByLabel('Treść przypomnienia', { exact: true })).toHaveCount(0);
 });
 
 test('closing through the existing cross-tab signal restores navigation before reopening', async ({ page }) => {

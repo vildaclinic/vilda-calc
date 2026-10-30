@@ -841,10 +841,11 @@ function remB22Create(host, full, options) {
       state.selected = rows[index] ? rows[index].n.id : null;
     }
     render();
+    if (state.tab === 'search' && searchView) searchView.backToList();
     if (context) list.scrollTop = context.scrollTop;
     listContext = null;
     var selectedNode = Array.from(list.querySelectorAll('[data-note-id]')).find(function (node) { return node.dataset.noteId === state.selected; });
-    if (selectedNode) selectedNode.focus({ preventScroll: true });
+    if (selectedNode && state.tab !== 'search') selectedNode.focus({ preventScroll: true });
     if (state.stale) await refresh();
   }
   function status(row) {
