@@ -2833,15 +2833,18 @@ describe('strażniki źródła (P-SYNC-WLASCICIEL)', () => {
     expect(le).toContain('l+=Bsw_f.dodane,w+=Bsw_f.usuniete;y+=Bsw_f.zabrane;');
   });
 
-  it('integracja: delta karty (gt) i delta nagrobka pacjenta (At) przez Bsb_wyslij (fetch po odrzuconym beaconie); delty notatek bez zmian', () => {
+  it('integracja: karta, nagrobek pacjenta i notatka używają fallbacku; pozostałe beacony zachowują dotychczasową ścieżkę', () => {
     const integ = readFileSync(path.join(repoRoot, 'vilda_sync_integration.js'), 'utf8');
     const funkcja = (nazwa) => integ.slice(integ.indexOf(`function ${nazwa}(t){`), integ.indexOf('}catch{}}', integ.indexOf(`function ${nazwa}(t){`)) + 9);
-    for (const f of ['At', 'gt']) {
-      expect(funkcja(f), f).toContain('l=typeof n.Blob=="function"?new n.Blob([a],{type:"text/plain"}):a;Bsb_wyslij(u,l)');
+    for (const f of ['At', 'gt', 'Bt']) {
+      const wysylka = f === 'Bt' ? 'try{Bsb_wyslij(u,l)}catch{}' : 'Bsb_wyslij(u,l)';
+      expect(funkcja(f), f).toContain('l=typeof n.Blob=="function"?new n.Blob([a],{type:"text/plain"}):a;' + wysylka);
       expect(funkcja(f), f).not.toContain('n.navigator.sendBeacon(u,l)');
     }
     expect(integ).toContain('function Bsb_wyslij(u,l){var ok=!1;try{ok=n.navigator.sendBeacon(u,l)===!0}catch{}if(ok||typeof n.fetch!="function")return ok;');
-    expect(integ.split('try{n.navigator.sendBeacon(u,l)}catch{}').length - 1, 'Bt, Ut, Qv0, Qv1 bez zmian').toBe(4);
+    for (const f of ['Ut', 'Qv0', 'Qv1']) {
+      expect(funkcja(f), f).toContain('try{n.navigator.sendBeacon(u,l)}catch{}');
+    }
   });
 
   it('„Scal pacjentów” zapisuje przeniesioną wersję przez Bsw_poScaleniu; adaptery mają odczyt wersji po kluczu', () => {
