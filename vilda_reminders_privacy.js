@@ -47,10 +47,11 @@
     style.textContent =
       'html.' + CLASS + ' .vb22-private-content,html.' + CLASS + ' .vb22-subtitle{visibility:hidden!important;pointer-events:none!important;}' +
       '.vb22-inline.vilda-reminders-private-surface{position:relative;}' +
+      '.vilda-reminders-private-body{position:relative;display:flex;flex:1 1 auto;flex-direction:column;min-width:0;min-height:0;overflow:hidden;isolation:isolate;}' +
       // Native headers inherit a global z-index even as static flex items.
       // Keep each protected block (including its header descendants) in its
       // own lower layer, so it cannot intercept the eye or paint over the mask.
-      '.vilda-reminders-private-surface>.vb22-private-content{isolation:isolate;z-index:0!important;}' +
+      '.vilda-reminders-private-surface>.vb22-private-content,.vilda-reminders-private-body>.vb22-private-content{isolation:isolate;z-index:0!important;}' +
       '.vilda-reminders-private-cover{position:absolute;inset:0;z-index:20;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;overflow:hidden;padding:24px;background:#f5f8f8;color:#607b81;text-align:center;box-sizing:border-box;font:400 14.4px/1.5 Inter,sans-serif;}' +
       '.vilda-reminders-private-cover[hidden]{display:none!important;}' +
       '.vilda-reminders-private-cover strong{font-size:17px;font-weight:500;color:#29464d;}' +
@@ -82,10 +83,8 @@
       if (hidden && contains(node, active)) moveFocus = true;
       node.inert = hidden || part.inert;
       attr(node, 'aria-hidden', hidden ? 'true' : part.ariaHidden);
-      node.style.visibility = hidden ? 'hidden' : part.visibility;
     });
     view.cover.hidden = !hidden;
-    if (view.header) view.cover.style.top = Math.max(0, view.header.offsetHeight || 0) + 'px';
     view.buttons.forEach(function (button) {
       button.classList.add('vilda-reminders-private-eye'); button.innerHTML = icon(hidden);
       button.setAttribute('aria-label', hidden ? 'Pokaż treść Przypomnień' : 'Ukryj treść Przypomnień');
@@ -128,33 +127,47 @@
     options = options || {};
     if (!options.root) return function () {};
     var root = options.root, mask = options.cover || cover(), ownCover = !options.cover;
+    var maskOrigin = { parent: mask.parentNode, next: mask.nextSibling };
     var view = { root: root, cover: mask, header: options.header || null, buttons: list(options.buttons || options.button),
       label: { label: root.getAttribute('aria-label'), labelledby: root.getAttribute('aria-labelledby'), describedby: root.getAttribute('aria-describedby') },
       parts: list(options.content).map(function (node) {
         node.classList.add('vb22-private-content');
-        return { node: node, ariaHidden: node.getAttribute('aria-hidden'), inert: !!node.inert, visibility: node.style.visibility || '' };
+        return { node: node, parent: node.parentNode, next: node.nextSibling, ariaHidden: node.getAttribute('aria-hidden'), inert: !!node.inert };
       }) };
     root.classList.add('vilda-reminders-private-surface'); mask.classList.add('vilda-reminders-private-cover');
-    if (ownCover) root.appendChild(mask);
+    // The body defines the cover's geometry in normal flex layout. The header
+    // stays outside it, including when a closed dialog has no measured height.
+    var body = null;
+    if (view.header) {
+      body = doc.createElement('div'); body.className = 'vilda-reminders-private-body';
+      var first = view.parts[0] && view.parts[0].node;
+      root.insertBefore(body, first && first.parentNode === root ? first : null);
+      view.parts.forEach(function (part) { body.appendChild(part.node); });
+      body.appendChild(mask);
+    } else if (ownCover) root.appendChild(mask);
     view.buttons.forEach(function (button) { button.addEventListener('click', toggle); });
     views.push(view); update(view);
-    var observer = null;
-    if (view.header && typeof w.ResizeObserver === 'function') {
-      observer = new w.ResizeObserver(function () { update(view); }); observer.observe(view.header);
-    }
     var stopped = false;
     return function () {
       if (stopped) return; stopped = true;
-      if (observer) observer.disconnect();
       views = views.filter(function (entry) { return entry !== view; });
       view.buttons.forEach(function (button) { button.removeEventListener('click', toggle); });
       view.parts.forEach(function (part) {
         part.node.classList.remove('vb22-private-content'); part.node.inert = part.inert;
-        attr(part.node, 'aria-hidden', part.ariaHidden); part.node.style.visibility = part.visibility;
+        attr(part.node, 'aria-hidden', part.ariaHidden);
+      });
+      if (body) view.parts.slice().reverse().forEach(function (part) {
+        if (part.parent) part.parent.insertBefore(part.node, part.next && part.next.parentNode === part.parent ? part.next : null);
+        else part.node.remove();
       });
       label(view, false);
       root.classList.remove('vilda-reminders-private-surface');
       if (ownCover) mask.remove();
+      else if (body) {
+        if (maskOrigin.parent) maskOrigin.parent.insertBefore(mask, maskOrigin.next && maskOrigin.next.parentNode === maskOrigin.parent ? maskOrigin.next : null);
+        else mask.remove();
+      }
+      if (body) body.remove();
     };
   }
   function protectDialog(dialog) {

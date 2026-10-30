@@ -27,7 +27,12 @@ class Element {
   setAttribute(key, value) { this.attributes.set(key, String(value)); }
   getAttribute(key) { return this.attributes.get(key) ?? null; }
   removeAttribute(key) { this.attributes.delete(key); }
-  appendChild(child) { child.parentNode = this; this.children.push(child); return child; }
+  appendChild(child) { child.remove(); child.parentNode = this; this.children.push(child); return child; }
+  insertBefore(child, anchor) {
+    child.remove(); const index = anchor ? this.children.indexOf(anchor) : -1;
+    child.parentNode = this; if (index < 0) this.children.push(child); else this.children.splice(index, 0, child); return child;
+  }
+  get nextSibling() { return this.parentNode ? this.parentNode.children[this.parentNode.children.indexOf(this) + 1] || null : null; }
   remove() { if (this.parentNode) this.parentNode.children = this.parentNode.children.filter((child) => child !== this); this.parentNode = null; }
   contains(node) { return node === this || this.children.some((child) => child.contains(node)); }
   focus() { this.ownerDocument.activeElement = this; }
@@ -65,7 +70,8 @@ function view(context) {
   const content = doc.createElement('div'), input = doc.createElement('input'); input.value = 'Fikcyjny opis'; content.appendChild(input); root.appendChild(content);
   doc.body.appendChild(root);
   const stop = api.register({ root, header, content, button });
-  return { root, header, content, input, button, stop, cover: root.children.at(-1) };
+  const body = root.children.at(-1);
+  return { root, header, content, input, button, stop, body, cover: body.children.at(-1) };
 }
 
 describe('lokalna osłona Przypomnień', () => {
@@ -81,16 +87,16 @@ describe('lokalna osłona Przypomnień', () => {
   it('klik ukrywa tekst, wyłącza interakcję i czytnik oraz zachowuje treść formularza', () => {
     const context = browser(), surface = view(context); surface.input.focus(); surface.button.click();
     expect(context.doc.documentElement.classList.contains('vilda-reminders-private')).toBe(true);
-    expect(surface.content.style.visibility).toBe('hidden');
+    expect(surface.content.classList.contains('vb22-private-content')).toBe(true);
     expect(surface.content.inert).toBe(true);
     expect(surface.content.getAttribute('aria-hidden')).toBe('true');
     expect(surface.cover.hidden).toBe(false);
-    expect(surface.cover.style.top).toBe('70px');
+    expect(surface.cover.parentNode).toBe(surface.body);
     expect(context.doc.activeElement).toBe(surface.button);
     expect(surface.input.value).toBe('Fikcyjny opis');
     expect(surface.button.getAttribute('aria-label')).toBe('Pokaż treść Przypomnień');
     surface.button.click();
-    expect(surface.content.style.visibility).toBe('');
+    expect(surface.content.style.visibility).toBeUndefined();
     expect(surface.content.inert).toBe(false);
     expect(surface.content.getAttribute('aria-hidden')).toBeNull();
     expect(surface.input.value).toBe('Fikcyjny opis');
@@ -107,24 +113,35 @@ describe('lokalna osłona Przypomnień', () => {
     expect(surface.content.inert).toBe(true); expect(surface.cover.hidden).toBe(false);
   });
 
-  it('przesuwa osłonę pod nagłówek po pokazaniu wcześniej zamkniętego dialogu', () => {
+  it('osłona od początku zajmuje osobne ciało pod nagłówkiem, również przed pokazaniem dialogu', () => {
     const context = browser(); context.api.setHidden(true);
     const root = context.doc.createElement('dialog'), header = context.doc.createElement('header'), body = context.doc.createElement('div'), eye = context.doc.createElement('button');
     header.offsetHeight = 0; header.appendChild(eye); root.appendChild(header); root.appendChild(body);
-    const stop = context.api.register({ root, header, content: body, button: eye }), mask = root.children.at(-1);
-    expect(mask.style.top).toBe('0px');
+    const stop = context.api.register({ root, header, content: body, button: eye }), shieldBody = root.children.at(-1), mask = shieldBody.children.at(-1);
+    expect(root.children).toEqual([header, shieldBody]); expect(shieldBody.children).toEqual([body, mask]);
+    expect(shieldBody.classList.contains('vilda-reminders-private-body')).toBe(true);
     header.offsetHeight = 76; context.api.refresh(root);
-    expect(mask.style.top).toBe('76px'); expect(mask.hidden).toBe(false); expect(body.inert).toBe(true);
+    expect(mask.parentNode).toBe(shieldBody); expect(mask.hidden).toBe(false); expect(body.inert).toBe(true);
     header.offsetHeight = 90; context.win.dispatchEvent({ type: 'resize' });
-    expect(mask.style.top).toBe('90px'); stop();
+    expect(root.children).toEqual([header, shieldBody]); expect(mask.style).toEqual({}); stop();
+    expect(root.children).toEqual([header, body]);
   });
 
-  it('obserwuje zmiany wysokości nagłówka i zwalnia obserwatora przy odmontowaniu', () => {
-    const context = browser(); let onResize; const disconnect = vi.fn(), observe = vi.fn();
-    context.win.ResizeObserver = class { constructor(callback) { onResize = callback; } observe = observe; disconnect = disconnect; };
-    const surface = view(context); expect(observe).toHaveBeenCalledWith(surface.header);
-    surface.header.offsetHeight = 94; onResize(); expect(surface.cover.style.top).toBe('94px');
-    surface.stop(); expect(disconnect).toHaveBeenCalledOnce();
+  it('zachowuje kolejność istniejących pól i oddaje dostarczoną osłonę bez utraty jej treści', () => {
+    const context = browser(), root = context.doc.createElement('section'), header = context.doc.createElement('header');
+    const first = context.doc.createElement('div'), untouched = context.doc.createElement('aside'), second = context.doc.createElement('div'), supplied = context.doc.createElement('div');
+    supplied.textContent = 'Dostarczona neutralna osłona';
+    first.style.visibility = 'visible';
+    [header, first, untouched, second, supplied].forEach(node => root.appendChild(node));
+    const stop = context.api.register({ root, header, content: [first, second], cover: supplied });
+    const shieldBody = root.children.find(node => node.classList.contains('vilda-reminders-private-body'));
+    expect(shieldBody.children).toEqual([first, second, supplied]);
+    context.api.setHidden(true); expect(first.inert).toBe(true); expect(first.style.visibility).toBe('visible');
+    const dynamic = context.doc.createElement('p'); first.appendChild(dynamic); context.api.refresh(root);
+    expect(dynamic.parentNode).toBe(first); expect(shieldBody.children).toEqual([first, second, supplied]);
+    stop(); expect(root.children).toEqual([header, first, untouched, second, supplied]);
+    expect(supplied.textContent).toBe('Dostarczona neutralna osłona');
+    expect(first.style.visibility).toBe('visible');
   });
 
   it('pozostaje wyłącznie na urządzeniu również w trybie chmurowym i jednorazowym', () => {
@@ -179,7 +196,7 @@ describe('lokalna osłona Przypomnień', () => {
     input.value = 'Fikcyjny szkic'; form.appendChild(input); dialog.appendChild(form); context.doc.body.appendChild(dialog);
     const stop = context.api.protectDialog(dialog);
     context.api.setHidden(true);
-    expect(form.inert).toBe(true); expect(form.style.visibility).toBe('hidden');
+    expect(form.inert).toBe(true); expect(form.classList.contains('vb22-private-content')).toBe(true);
     const eye = dialog.children.find((node) => node.classList.contains('vilda-reminders-dialog-eye'));
     eye.click();
     expect(form.inert).toBe(false); expect(input.value).toBe('Fikcyjny szkic');
