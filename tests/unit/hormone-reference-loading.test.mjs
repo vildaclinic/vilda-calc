@@ -144,7 +144,9 @@ it('restored-session bootstrap loads missing AMH helpers before reporting auth r
   expect(env.events.get('DOMContentLoaded')).toBeTypeOf('function');
   env.events.get('DOMContentLoaded')();
   await env.win.VildaSession.ensureAuthLoaded();
-  expect(env.appended.filter(src => src.endsWith('.js?v=1'))).toEqual([
+  // Other independent page loaders can also request v=1 assets (e.g. sodium
+  // quantity support for SSI); this bootstrap contract concerns AMH helpers.
+  expect(env.appended.filter(src => src.startsWith('vilda_hormone_reference_'))).toEqual([
     'vilda_hormone_reference_snapshot.js?v=1', 'vilda_hormone_reference_ui.js?v=1',
   ]);
   expect(typeof env.win.VildaHormoneReferenceSnapshot.normalize).toBe('function');

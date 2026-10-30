@@ -38,6 +38,17 @@ describe('Sodium DZM — one integrated result and frozen reference', () => {
     expect(main).not.toContain('norm-label--zero');
     expect(plain(main)).toContain('58');
     expect(plain(main)).toContain('337');
+    // The registered single inline style carries only continuous axis data;
+    // every static appearance rule remains in the component stylesheet.
+    const inlineStyles = [...main.matchAll(/\sstyle="([^"]+)"/g)];
+    expect(inlineStyles).toHaveLength(1);
+    const parameters = inlineStyles[0][1].split(';').map(value => value.split(':'));
+    expect(parameters.map(([name]) => name)).toEqual(['--low', '--high', '--point']);
+    for (const [, value] of parameters) {
+      expect(value).toMatch(/^\d+(?:\.\d+)?%$/);
+      expect(Number.parseFloat(value)).toBeGreaterThanOrEqual(0);
+      expect(Number.parseFloat(value)).toBeLessThanOrEqual(100);
+    }
   });
 
   it.each(['57.999999999999999999', '337.000000000000000001'])('retains an amber exact outside-boundary assessment for %s', reportedValue => {

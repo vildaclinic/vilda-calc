@@ -226,6 +226,21 @@ Notatki i eksport, zmianę pacjenta, prowadzenie do wymaganych pól,
 stałą geometrię desktop/390/320 px oraz prawdziwe uruchomienie i aktualizację
 PWA offline. Końcowe wyniki testów i kontroli aktualnego SHA podaje PR.
 
+## Zgodność interfejsu z design systemem
+
+Progi responsywne **350 px i 430 px** pochodzą z zaakceptowanej makiety
+sodu. Wpisy w `tests/fixtures/breakpointy.json` rejestrują te granice bez
+zmiany zachowania formularza przy żadnej szerokości okna. Stałe odstępy
+i promienie korzystają z istniejących tokenów o identycznych wartościach.
+
+Jedyny wpis nowego renderera w `tests/fixtures/style-elementow.json`
+dotyczy jednego atrybutu `style` zawierającego wyłącznie trzy skończone,
+liczbowe parametry położenia osi: `--low`, `--high` i `--point`. Ciągła
+geometria wynika z utrwalonego pomiaru i granic; kolory, typografia oraz
+układ pozostają w arkuszu. Test rzeczywistego renderera pilnuje dokładnie
+tego zestawu parametrów i zakresu 0–100%. Strażniki oraz dotychczasowe
+limity innych plików nie zostały zmienione.
+
 ## Źródła
 
 Pełne materiały odczytano w audycie 30.10.2026:

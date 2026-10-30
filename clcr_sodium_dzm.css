@@ -62,7 +62,7 @@ html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .sodium-dzm-pr
 .sodium-dzm-reference-bound { display: inline-block; white-space: nowrap; }
 html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .sodium-dzm-proposal-card .sodium-dzm-reference-value[data-long="true"] { font-size: 20px !important; }
 html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .sodium-dzm-proposal-card .clcr-result-reference--unavailable .sodium-dzm-reference-value { font-size: 14px !important; line-height: 1.5; }
-.sodium-dzm-result-unit, .sodium-dzm-reference-unit { display: block; min-height: 24px; margin-top: 4px; color: var(--clcr-heading) !important; font-size: 12px; font-weight: 650; line-height: 1.5; }
+.sodium-dzm-result-unit, .sodium-dzm-reference-unit { display: block; min-height: 24px; margin-top: var(--space-4px); color: var(--clcr-heading) !important; font-size: 12px; font-weight: 650; line-height: 1.5; }
 .sodium-dzm-reference-hint { min-height: 32px; margin: var(--space-4px) 0 0; color: var(--clcr-muted); font-size: 11px; line-height: 1.6; }
 .sodium-dzm-result-copy { margin: var(--space-18px) 0 0; color: var(--clcr-heading); font-size: 12px; font-weight: 400; line-height: 1.7; }
 .sodium-dzm-result-caution { margin: var(--space-14px) 0 0; padding-top: var(--space-12px); border-top: var(--border-hairline) solid var(--clcr-result-border); color: var(--clcr-heading); font-size: 12px; line-height: 1.6; }
@@ -72,19 +72,19 @@ html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .sodium-dzm-pr
 html[data-clcr-workflow-ui="1"][data-clcr-sodium-dzm-active="1"] #clcrResultReport .clcr-result-report__head { display: flex; justify-content: space-between; align-items: center; gap: var(--space-12px); min-height: 48px; }
 html[data-clcr-workflow-ui="1"][data-clcr-sodium-dzm-active="1"] #clcrResultReport .clcr-result-report__head .sodium-dzm-output-picker { flex: 0 0 auto; margin: 0; font-size: 10px; }
 .sodium-dzm-norm-axis { position: relative; margin-top: 23px; padding-top: 34px; }
-.sodium-dzm-norm-track { position: relative; height: 12px; border: var(--border-hairline) solid #c8d5d8; border-radius: 8px; background: linear-gradient(to right, #efdfbe 0 var(--low), #b9dfe0 var(--low) var(--high), #efdfbe var(--high) 100%); }
+.sodium-dzm-norm-track { position: relative; height: 12px; border: var(--border-hairline) solid #c8d5d8; border-radius: var(--radius-8); background: linear-gradient(to right, #efdfbe 0 var(--low), #b9dfe0 var(--low) var(--high), #efdfbe var(--high) 100%); }
 .sodium-dzm-norm-boundary { position: absolute; top: -5px; height: 20px; border-left: var(--border-hairline) solid #778a8f; }
 .sodium-dzm-norm-boundary--low { left: var(--low); }
 .sodium-dzm-norm-boundary--high { left: var(--high); }
 .sodium-dzm-norm-band-title { position: absolute; top: 0; left: calc((var(--low) + var(--high)) / 2); transform: translateX(-50%); color: var(--clcr-heading); font-size: 10px; font-weight: 700; white-space: nowrap; }
 .sodium-dzm-norm-point { position: absolute; top: -10px; left: var(--point); width: 3px; height: 28px; transform: translateX(-50%); background: var(--clcr-result-color); }
-.sodium-dzm-norm-point::before { position: absolute; top: -4px; left: -3px; width: 9px; height: 9px; border-radius: 50%; background: var(--clcr-result-color); content: ""; }
+.sodium-dzm-norm-point::before { position: absolute; top: -4px; left: -3px; width: 9px; height: 9px; border-radius: var(--radius-circle); background: var(--clcr-result-color); content: ""; }
 .sodium-dzm-norm-labels { position: relative; height: 23px; margin-top: 7px; color: var(--clcr-heading); font-size: 10px; }
 .sodium-dzm-norm-labels span { position: absolute; transform: translateX(-50%); white-space: nowrap; }
 .sodium-dzm-norm-label--low { left: var(--low); }
 .sodium-dzm-norm-label--high { left: var(--high); }
 .sodium-dzm-norm-axis-caption { margin: 3px 0 0 !important; color: var(--clcr-muted); font-size: 10px !important; line-height: 1.6; }
-.sodium-dzm-rounding-note { margin: 12px 0 0; color: var(--clcr-muted); font-size: 10px; line-height: 1.6; overflow-wrap: anywhere; }
+.sodium-dzm-rounding-note { margin: var(--space-12px) 0 0; color: var(--clcr-muted); font-size: 10px; line-height: 1.6; overflow-wrap: anywhere; }
 .sodium-dzm-result-empty, .sodium-dzm-result-error { min-height: 260px; padding: var(--space-20px); border: var(--border-hairline) dashed var(--clcr-border); border-radius: var(--radius-14); background: var(--clcr-surface-soft); color: var(--clcr-muted); font-size: 13px; line-height: 1.65; }
 .sodium-dzm-result-empty strong, .sodium-dzm-result-error strong { display: block; color: var(--clcr-heading); font-size: 16px; line-height: 1.5; }
 .sodium-dzm-result-empty p, .sodium-dzm-result-error p { margin: var(--space-12px) 0 0; }

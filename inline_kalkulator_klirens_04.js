@@ -769,11 +769,15 @@ function evaluateClcrSodiumDzm() {
       const control = $(id);
       return control ? [[id, control.type === "checkbox" ? control.checked : control.value]] : Object.hasOwn(vault, id) ? [[id, vault[id]]] : [];
     }));
-    const minutes = readClcrCollectionDurationMinutes();
+    const duration = window.ClcrCollectionDuration?.readFromDocument(document);
+    const rawHours = $("Cl24DurationHours")?.value;
+    const rawSource = $("Cl24DurationSource")?.value;
     Object.assign(values, { Na_inputMode: "concentration", Na_concentration: $("U_Na")?.value || "",
       Na_volume: $("V24")?.value || "", Na_volumeUnit: "mL", Na_outputUnit: "mmol/24h",
-      Na_collectionHours: $("Cl24DurationHours")?.value ?? (minutes ? String(minutes / 60) : ""),
-      Na_collectionSource: $("Cl24DurationSource")?.value || "legacy-unknown" });
+      // Only the shared adapter can qualify a blank NEW clock as 24 h.
+      // Preserve explicit text (including invalid/tiny values) and old gaps.
+      Na_collectionHours: String(rawHours ?? "").trim() ? rawHours : duration?.valid ? String(duration.hours) : "",
+      Na_collectionSource: rawSource === "invalid" ? rawSource : duration?.source || rawSource || "historical-missing" });
     input = engine.inputFromValues(values);
   }
   return engine.evaluate(input, window.ClcrSodiumDzmReferenceData?.DEFAULT_POLICY);
