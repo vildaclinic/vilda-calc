@@ -417,8 +417,8 @@
         function birthDate(record) {
           var value = record && record.header && record.header.dobISO;
           if (typeof value !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return '';
-          var parsed = new Date(value + 'T12:00:00Z');
-          return !isNaN(parsed.getTime()) && parsed.toISOString().slice(0, 10) === value ? value : '';
+          var parts = value.split('-').map(Number), parsed = new Date(value + 'T12:00:00Z');
+          return !isNaN(parsed.getTime()) && parsed.getUTCFullYear() === parts[0] && parsed.getUTCMonth() + 1 === parts[1] && parsed.getUTCDate() === parts[2] ? value : '';
         }
         function patientIdentity(record) {
           var recordName = patientName(record), dob = birthDate(record), id = String(record.patientId || '');
