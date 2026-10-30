@@ -17,6 +17,12 @@ function environment(missing = [], restoredSession = false) {
     VildaLabRangeSnapshot: {},
     // LAB-HISTORIA PR2: moduły zakładki „Badania” są w tym samym stosie; tu gotowe (ich ładowanie: lab-history-tab-loading).
     VildaLabHistory: {}, VildaLabHistoryTab: {}, VildaPubertyAssessment: {}, VildaLabTestosteroneUnits: {},
+    // Plany opieki are an independent ready dependency here. Missing/partial
+    // readiness of that module is covered by care-plans-loader.test.mjs.
+    VildaCarePlans: {},
+    // Search/privacy have their own missing-dependency loader regressions in
+    // care-plans-loader.test.mjs; hormone cases start with that UI stack ready.
+    VildaRemindersPrivacy: {}, VildaGlobalSearch: {}, VildaGlobalSearchView: {},
     sessionStorage: { getItem: key => key === 'vilda-vault-session-v2' && restoredSession ? 'fictional-session' : null },
     CustomEvent: class { constructor(type, options) { this.type = type; this.detail = options?.detail; } },
   };

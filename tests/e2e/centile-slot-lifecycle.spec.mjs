@@ -402,3 +402,70 @@ test('wyczyszczenie pacjenta lub blokada usuwa rysunek i fullscreen przed spóź
   await expect(page.locator(CARD)).toHaveCount(0);
   await expect(page.locator('.vilda-centile-live-dialog')).toHaveCount(0);
 });
+
+for (const shell of [false, true]) {
+  for (const route of ['start', 'docpro']) {
+    for (const choice of ['new', 'restore']) {
+      test(`${shell ? 'SPA' : 'Samodzielnie'} / ${route} / ${choice}: Wyczyść nie rezerwuje pustej siatki w oknie ochrony zapisu`, async ({ page }) => {
+        const fixture = await createFictionalVault(page, { shell });
+        let owner = fixture.frame;
+        if (route === 'docpro') {
+          if (shell) {
+            await page.evaluate(() => window.VildaShell.navigate('docpro'));
+            owner = await shellFrame(page, 'DocPro');
+          } else {
+            await page.goto('/docpro.html', { waitUntil: 'load' });
+            owner = page;
+          }
+          await readyForPatient(owner);
+          const confirmation = owner.locator('#professionalConfirmBtn');
+          if (await confirmation.isVisible()) await confirmation.click();
+        }
+        await loadPatient(owner, fixture.ids.a, choice);
+        if (choice === 'restore') {
+          await expect(owner.locator('#vildaSummaryChartTab')).toBeVisible();
+          await owner.locator('#vildaSummaryChartTab').click();
+        }
+        await ready(owner, fixture.ids.a);
+        await expect(owner.locator(CARD)).toBeVisible();
+        await owner.evaluate(() => {
+          window.__terminalClearEvent = null;
+          window.addEventListener('vilda:user-state-cleared', () => {
+            window.__terminalClearEvent = {
+              fenceRemaining: Number(window.__vildaPersistClearUntil) - Date.now(),
+              slot: window.VildaCentileLivePanel.getState().slotStatus,
+              dedicated: window.VildaCentileLiveData.getEligibility(),
+              summary: window.VildaCentileLiveData.getEligibility({ mode: 'summary' }),
+              mountHidden: document.getElementById('vildaCentileLiveMount').hidden,
+            };
+          }, { once: true });
+        });
+        await resetProbe(page);
+        await owner.locator('#clearAllDataBtn').click();
+        const immediate = await owner.evaluate(() => window.__terminalClearEvent);
+        expect(immediate.fenceRemaining, 'kwarantanna zapisu nadal chroni pusty formularz').toBeGreaterThan(2000);
+        expect(immediate).toMatchObject({ slot: 'ineligible', mountHidden: true,
+          dedicated: { status: 'ineligible', reason: 'cleared' },
+          summary: { status: 'ineligible', reason: 'cleared' } });
+        await expect(owner.locator(MOUNT)).toBeHidden();
+        if (route === 'start') await expect(owner.locator('#remindersInline')).toBeVisible();
+        // Observe real paints throughout the unchanged fence, including the
+        // old 1200 ms loading-label delay and the first paint after it expires.
+        await owner.waitForFunction(() => Date.now() > Number(window.__vildaPersistClearUntil || 0));
+        await paintedFrames(page, 40);
+        const result = await page.evaluate(() => window.__centileSlotPaint);
+        await test.info().attach('wyczyszczony-formularz-kazda-klatka.json', {
+          body: JSON.stringify({ immediate, ...result }, null, 2), contentType: 'application/json',
+        });
+        expect(result.errors).toEqual([]);
+        const emptyFrames = result.frames.filter(frame => !frame.patientId && frame.form);
+        expect(emptyFrames.length).toBeGreaterThan(30);
+        expect(emptyFrames.filter(frame => frame.mount || frame.loading || frame.card
+          || /vilda-centile-live-(?:reserved|booting)/u.test(frame.classes)),
+        'żadna klatka nie pokazuje pustej siatki ani etykiety ładowania').toEqual([]);
+        if (route === 'start') expect(emptyFrames.some(frame => frame.reminder)).toBe(true);
+        else expect(emptyFrames.filter(frame => frame.reminder)).toEqual([]);
+      });
+    }
+  }
+}

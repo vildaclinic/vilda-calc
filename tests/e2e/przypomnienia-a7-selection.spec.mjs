@@ -5,7 +5,7 @@ test.use({ serviceWorkers: 'block', reducedMotion: 'reduce' });
 test.setTimeout(120000);
 
 const WORKSPACE = 'dialog.vb22-modal';
-const title = page => page.locator(`${WORKSPACE} .vb22-detail-title`);
+const title = page => page.locator(`${WORKSPACE} .vb22-detail:not(.vgs-detail) .vb22-detail-title`);
 const row = (page, id) => page.locator(`${WORKSPACE} [data-note-id="${id}"]`);
 
 async function fixture(page) {
@@ -23,7 +23,7 @@ async function fixture(page) {
     const historical = await vault.savePatientNote({ patientId: ids.a, title: 'Fikcyjna zakończona sprawa C', body: 'Stary zakończony opis C.', category: 'reminder-task', dueDateISO: day(-3), completedAtISO: new Date().toISOString() });
     return { parentA: parentA.id, parentB: parentB.id, futureA: futureA.id, futureB: futureB.id, historical: historical.id, futureDayA: day(7), futureDayC: day(9) };
   }, created.ids);
-  await expect(page.locator('#remindersInline .vb22-row')).toHaveCount(2);
+  await expect(page.locator('#remindersInline .vb22-row:not(.vgs-row)')).toHaveCount(2);
   await page.locator('#vildaRemindersBtn').click();
   await expect(page.locator(WORKSPACE)).toBeVisible();
   return { ...created, ...records };
@@ -85,10 +85,12 @@ test('A7 a delayed future read cannot erase a newer future selection during the 
 
 test('A7 a cached historical version cannot replace a reopened future note in explicit details', async ({ page }) => {
   const records = await fixture(page);
-  await page.locator(WORKSPACE).getByRole('button', { name: 'Historia', exact: true }).click();
-  await row(page, records.historical).click();
+  await page.locator(WORKSPACE).getByRole('button', { name: 'Szukaj', exact: true }).click();
+  await page.locator(WORKSPACE).getByRole('combobox', { name: 'Stan spraw', exact: true }).selectOption('completed');
+  await page.locator(`${WORKSPACE} .vgs [data-search-id="note:${records.historical}"]`).click();
+  await page.locator(`${WORKSPACE} .vgs`).getByRole('button', { name: 'Otwórz sprawę', exact: true }).click();
   await expect(title(page)).toHaveText('Fikcyjna zakończona sprawa C');
-  await expect(page.locator(`${WORKSPACE} .vb22-body`)).toHaveText('Stary zakończony opis C.');
+  await expect(page.locator(`${WORKSPACE} .vb22-detail:not(.vgs-detail) .vb22-body`)).toHaveText('Stary zakończony opis C.');
   await page.locator(WORKSPACE).getByRole('button', { name: 'Do wykonania', exact: true }).click();
   await page.evaluate(async ({ noteId, parentId, patientId, futureDay }) => {
     await window.VildaVault.savePatientNote({
@@ -104,7 +106,7 @@ test('A7 a cached historical version cannot replace a reopened future note in ex
   await row(page, records.parentA).click();
   await page.locator(WORKSPACE).getByRole('button', { name: 'Otwórz kolejny krok →', exact: true }).click();
   await expect(title(page)).toHaveText('Fikcyjna ponownie otwarta sprawa C');
-  await expect(page.locator(`${WORKSPACE} .vb22-body`)).toHaveText('Nowy aktualny opis przyszłej sprawy C.');
+  await expect(page.locator(`${WORKSPACE} .vb22-detail:not(.vgs-detail) .vb22-body`)).toHaveText('Nowy aktualny opis przyszłej sprawy C.');
   await expect(page.locator(WORKSPACE).getByRole('button', { name: 'Oznacz jako wykonane', exact: true })).toBeVisible();
   await expect(page.locator(`${WORKSPACE} .vb22-notice`)).toContainText('Zapisano na przyszły termin');
   await expect(row(page, records.historical)).toHaveCount(0);
@@ -137,10 +139,12 @@ test('A7 mobile Back reloads History after another historical task was reopened 
     return sibling.id;
   }, { historicalId: records.historical, futureId: records.futureA, patientA: records.ids.a, patientB: records.ids.b });
   await page.setViewportSize({ width: 393, height: 852 });
-  await page.locator(WORKSPACE).getByRole('button', { name: 'Historia', exact: true }).click();
-  await expect(row(page, siblingId)).toBeVisible();
-  await row(page, records.historical).click();
-  await expect(page.locator(`${WORKSPACE} .vb22-list-pane`)).toBeHidden();
+  await page.locator(WORKSPACE).getByRole('button', { name: 'Szukaj', exact: true }).click();
+  await page.locator(WORKSPACE).getByRole('combobox', { name: 'Stan spraw', exact: true }).selectOption('completed');
+  await expect(page.locator(`${WORKSPACE} .vgs [data-search-id="note:${siblingId}"]`)).toBeVisible();
+  await page.locator(`${WORKSPACE} .vgs [data-search-id="note:${records.historical}"]`).click();
+  await page.locator(`${WORKSPACE} .vgs`).getByRole('button', { name: 'Otwórz sprawę', exact: true }).click();
+  await expect(page.locator(`${WORKSPACE} .vb22-layout:not(.vgs-layout) .vb22-list-pane`)).toBeHidden();
   await page.locator(WORKSPACE).getByRole('button', { name: 'Otwórz kolejny krok →', exact: true }).click();
   await expect(title(page)).toHaveText('Fikcyjny kolejny krok A');
   await page.evaluate(({ id, patientId, futureDay }) => window.VildaVault.savePatientNote({
@@ -149,11 +153,13 @@ test('A7 mobile Back reloads History after another historical task was reopened 
   }), { id: siblingId, patientId: records.ids.b, futureDay: records.futureDayC });
   await refreshParentB(page, records);
   await page.locator(WORKSPACE).getByRole('button', { name: '← Lista spraw', exact: true }).click();
-  await expect(page.locator(WORKSPACE).getByRole('button', { name: 'Historia', exact: true })).toHaveAttribute('aria-pressed', 'true');
-  await expect(page.locator(`${WORKSPACE} .vb22-list-pane`)).toBeVisible();
-  await expect(row(page, records.historical)).toBeVisible();
-  await expect(row(page, siblingId)).toHaveCount(0);
-  await expect(page.locator(`${WORKSPACE} .vb22-row`)).toHaveCount(1);
+  await expect(page.locator(WORKSPACE).getByRole('button', { name: 'Szukaj', exact: true })).toHaveAttribute('aria-pressed', 'true');
+  const results = page.locator(`${WORKSPACE} .vgs`);
+  await expect(results.locator('.vgs-list-pane')).toBeVisible();
+  await expect(results.getByRole('combobox', { name: 'Stan spraw', exact: true })).toHaveValue('completed');
+  await expect(results.locator(`[data-search-id="note:${records.historical}"]`)).toBeVisible();
+  await expect(results.locator(`[data-search-id="note:${siblingId}"]`)).toHaveCount(0);
+  await expect(results.locator('.vgs-row')).toHaveCount(1);
   const reopened = await page.evaluate(id => window.VildaVault.getPatientNote(id), siblingId);
   expect(reopened.completedAtISO).toBeNull();
   expect(reopened.body).toBe('Nowy aktualny opis ponownie otwartej sprawy D.');

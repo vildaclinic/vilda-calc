@@ -892,12 +892,12 @@
   "sha256": "6dbe83c388d8156ec43acc298702d8221895b94109edb49c5f38776cc435ba0f"
  },
  "vilda_auth_ui.css": {
-  "v": 79,
-  "sha256": "56a45a8d3f3cc4d1428bf902d43f91350b22bbf9f590f42d7e4efe5b85b2cf01"
+  "v": 80,
+  "sha256": "02b3c5874e32d9b3b2243144910488b26fbf71bdedd275f03540c444fd297d22"
  },
  "vilda_auth_ui.js": {
-  "v": 516,
-  "sha256": "eb4c561e8f5282361add91ff8dd428a44875f398382de04be156ab9cfefa1149"
+  "v": 518,
+  "sha256": "52c944a6cf0a7034a33215f117654c14f8d1a6e5f16b38b1eb70bfffcdbb7e56"
  },
  "vilda_b64_checklist.js": {
   "v": 2,
@@ -927,6 +927,14 @@
   "v": 1,
   "sha256": "bb12c11c757fdd4838991e041d1634490140b4bab36619d5280ed962033f66b3"
  },
+ "vilda_care_plans.css": {
+  "v": 2,
+  "sha256": "aad62871b2e5aae0c67256f04407d7b2c6df6dfc3b3c6bcfb6f73a36c162547b"
+ },
+ "vilda_care_plans.js": {
+  "v": 2,
+  "sha256": "664dec0613e4615df3d2670f87d18f0eafbd2bf8907b3b1ee11fbcf20a3b7351"
+ },
  "vilda_centile_chart_header.js": {
   "v": 1,
   "sha256": "2ae116a081cb801a073e4de00f39f56c5951d88e396878cecafa58c69cde5bbf"
@@ -948,8 +956,8 @@
   "sha256": "4c500eb2d05220adf9e905e38048fb6aa2cc57edea196062af10f61f6b195abc"
  },
  "vilda_centile_live_data.js": {
-  "v": 7,
-  "sha256": "69cccdb9507a4eccb5f746324826c091fa81e61929dfe23e53879c2df7d2c567"
+  "v": 8,
+  "sha256": "3caf930eeb1205a38c6a2bdb452e63c5806a13809cfcc922e13b6db96c457946"
  },
  "vilda_centile_live_host.js": {
   "v": 1,
@@ -980,8 +988,8 @@
   "sha256": "620b1e147449b87920a9ae5b756bbf62dee9928571838e794e449b680080f63c"
  },
  "vilda_chrome.js": {
-  "v": 195,
-  "sha256": "0906a192bf9601da327062a84e6e9e2b3de701739b71da11964dd03eef5e40b7"
+  "v": 197,
+  "sha256": "69e6b752d512d70df59b46191bc43f8bf246070d12cc74066f2353e23c76776a"
  },
  "vilda_cloud_cache_warm.js": {
   "v": 2,
@@ -1202,6 +1210,18 @@
  "vilda_gh_therapy_resource_audit.js": {
   "v": 36,
   "sha256": "7ba746d5cb19960a18f08d4eec85b0f9d161481f4cf8e8fd49873b35d2e92685"
+ },
+ "vilda_global_search.css": {
+  "v": 1,
+  "sha256": "27d9425a2a898e1aa93965727a8f8569a1ba67f534896fc1e681fea8b5cd8b40"
+ },
+ "vilda_global_search.js": {
+  "v": 1,
+  "sha256": "d79404838ecc4722726bc175ab85f96fab9e5a3ebc3cf0b37f8ccec7510a0cdf"
+ },
+ "vilda_global_search_view.js": {
+  "v": 1,
+  "sha256": "e7b0fab1abbcc4d485b1a7f97eb916be558ad2e6fd3a49f77e485b044cad5ac5"
  },
  "vilda_growth_card_c.js": {
   "v": 27,
@@ -1448,8 +1468,8 @@
   "sha256": "2dab3193f7b8907d6cf5cf436b38bc066071b307f154a1fcc245a77e67fed241"
  },
  "vilda_persistence_adapter.js": {
-  "v": 32,
-  "sha256": "86d51cd5cf86ec841dc76c2246814a29e23f7b1a75dc90c5fe68e6e18669b49d"
+  "v": 33,
+  "sha256": "53b3ba9e3c1b016820f38bd38d32fc1927a89572834e5186ae95372a2ad82fd8"
  },
  "vilda_phone_landscape.css": {
   "v": 2,
@@ -1564,12 +1584,16 @@
   "sha256": "fb08b8aa168a2faa7b99b86e261ce8c96c0a4e65947fced039d4ec1d68392181"
  },
  "vilda_reminders.css": {
-  "v": 4,
-  "sha256": "798e6dfc16acbf9bfe840303497ba2bfd0b99d8b8e727f6caecd7c7f94906e3d"
+  "v": 6,
+  "sha256": "6392f1f16d217a6dbeb0ca3ac9557a3efbfb4af7cc4d74cfdc10ceb67a4c476b"
  },
  "vilda_reminders_collapse.js": {
   "v": 2,
   "sha256": "93f0c086342241db7d6ebd6d1775ba43a0ff9e6f159e3dc9d6ed5cbd2ee71c37"
+ },
+ "vilda_reminders_privacy.js": {
+  "v": 1,
+  "sha256": "52889106990d00b5655f55b6bbfb429fd26575fbaa5a90ce4b5cd04e48a475a2"
  },
  "vilda_retention.js": {
   "v": 1,
@@ -1600,8 +1624,8 @@
   "sha256": "bf561188adfe403fa735bef0b88bd2297144ec1fe7909582e0dbb50cd6c99c97"
  },
  "vilda_session_bridge.js": {
-  "v": 119,
-  "sha256": "a4ffd18ee546f98923e735869581d419a6b96607919cca4e85a082bb052d038c"
+  "v": 121,
+  "sha256": "ddfe022a12b14568fd890c504394626a3dea96971dcbee474b8c622e62ee4b9f"
  },
  "vilda_sga_catchup.js": {
   "v": 2,
@@ -1692,8 +1716,8 @@
   "sha256": "59ee39776162dde3f0f8beb5d779ae68323128e2d7bd4c4fa21ce897f56f942e"
  },
  "vilda_vault.js": {
-  "v": 233,
-  "sha256": "c0e129d66ea213e597ecaaa70ebbbeafe8a45dfb624a9bf6f7e8089d4b2dff67"
+  "v": 234,
+  "sha256": "9419ffa3b4d845f2000f276ec8d690a2a2c9e114a38502035732e2d6aff3b2c8"
  },
  "vilda_version_history_ui.js": {
   "v": 15,

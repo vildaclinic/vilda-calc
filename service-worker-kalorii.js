@@ -19,7 +19,7 @@
  *   bo i tak chcemy zwracać HTML z cache natychmiast.
  */
 
-const SW_VERSION = '1.1.414';
+const SW_VERSION = '1.1.416';
 const CACHE_PREFIX = 'pwa-kalorii';
 const SHELL_CACHE = `${CACHE_PREFIX}-shell-v${SW_VERSION}`;
 const RUNTIME_CACHE = `${CACHE_PREFIX}-runtime`;
@@ -620,6 +620,7 @@ const CORE_SHELL_URLS = [
   '/vilda_persistence_adapter.js?v=30',
   '/vilda_persistence_adapter.js?v=31',
   '/vilda_persistence_adapter.js?v=32',
+  '/vilda_persistence_adapter.js?v=33',
   '/vilda_panel_pacjent.js?v=1',
   '/vilda_panel_pacjent.js?v=2',
   '/vilda_init.js',
@@ -935,6 +936,16 @@ const CORE_SHELL_URLS = [
   '/vilda_reminders.css?v=2',
   '/vilda_reminders.css?v=3',
   '/vilda_reminders.css?v=4',
+  '/vilda_reminders.css?v=5',
+  '/vilda_reminders.css?v=6',
+  '/vilda_reminders_privacy.js?v=1',
+  '/vilda_global_search.css?v=1',
+  '/vilda_global_search.js?v=1',
+  '/vilda_global_search_view.js?v=1',
+  '/vilda_care_plans.css?v=1',
+  '/vilda_care_plans.css?v=2',
+  '/vilda_care_plans.js?v=1',
+  '/vilda_care_plans.js?v=2',
     '/vilda_auth_ui.js?v=16',
   '/vilda_auth_ui.js?v=17',
   '/vilda_auth_ui.js?v=18',
@@ -1472,6 +1483,8 @@ const CORE_SHELL_URLS = [
   '/vilda_chrome.js?v=193',
   '/vilda_chrome.js?v=194',
   '/vilda_chrome.js?v=195',
+  '/vilda_chrome.js?v=196',
+  '/vilda_chrome.js?v=197',
   '/vilda_realtime.js?v=1',
   '/vilda_realtime.js?v=2',
   '/vilda_realtime.js?v=3',
@@ -1735,6 +1748,7 @@ const CORE_SHELL_URLS = [
   '/vilda_auth_ui.css?v=77',
   '/vilda_auth_ui.css?v=78',
   '/vilda_auth_ui.css?v=79',
+  '/vilda_auth_ui.css?v=80',
   '/vilda_urodzeniowe_rozbieznosc.css?v=1',
   '/vilda_file_export.js',
   '/vilda_file_export.js?v=4',
@@ -2257,6 +2271,7 @@ const OPTIONAL_ASSETS = [
   '/vilda_centile_live_data.js?v=5',
   '/vilda_centile_live_data.js?v=6',
   '/vilda_centile_live_data.js?v=7',
+  '/vilda_centile_live_data.js?v=8',
   '/vilda_centile_live_render.js?v=1',
   '/vilda_centile_live_render.js?v=2',
   '/vilda_centile_live_render.js?v=3',
@@ -3536,6 +3551,7 @@ const OPTIONAL_ASSETS = [
   '/vilda_vault.js?v=231',
   '/vilda_vault.js?v=232',
   '/vilda_vault.js?v=233',
+  '/vilda_vault.js?v=234',
   '/vilda_auth_ui.js?v=431',
   '/vilda_trajectory_analysis.js?v=24',
   '/vilda_trajectory_analysis.js?v=25',
@@ -3740,6 +3756,8 @@ const OPTIONAL_ASSETS = [
   '/vilda_auth_ui.js?v=514',
   '/vilda_auth_ui.js?v=515',
   '/vilda_auth_ui.js?v=516',
+  '/vilda_auth_ui.js?v=517',
+  '/vilda_auth_ui.js?v=518',
   '/app.js?v=205',
   '/app.js?v=206',
   '/app.js?v=207',
@@ -3976,6 +3994,8 @@ const OPTIONAL_ASSETS = [
   '/vilda_session_bridge.js?v=117',
   '/vilda_session_bridge.js?v=118',
   '/vilda_session_bridge.js?v=119',
+  '/vilda_session_bridge.js?v=120',
+  '/vilda_session_bridge.js?v=121',
   '/vilda_data_safety_explainer.js?v=5',
   '/vilda_obesity_banner.css?v=6',
   '/vilda_obesity_banner.css?v=7',
@@ -4636,7 +4656,7 @@ async function openReusablePreviousShellCaches() {
   return reusable;
 }
 
-async function fetchAndStorePrecacheUrl(url, { required = false, previousShellCaches = [] } = {}) {
+async function fetchAndStorePrecacheUrl(url, { required = false, previousShellCaches = [], freshResponses = null } = {}) {
   const cache = await caches.open(SHELL_CACHE);
   const pathname = getPathname(url);
   const cacheKey = DOCUMENT_PATHS.has(pathname)
@@ -4655,6 +4675,15 @@ async function fetchAndStorePrecacheUrl(url, { required = false, previousShellCa
     }
   }
 
+  // Hosting podaje ten sam arkusz pod wszystkimi siedmioma adresami edu-video-ui.css.
+  // W obrębie jednej instalacji dzielimy tylko ŚWIEŻĄ odpowiedź sieci, zachowując każdy klucz.
+  // Dokładny niezmienny wpis poprzedniej pamięci ma pierwszeństwo i nie zasila tej mapy.
+  const sharedFreshResponse = pathname === '/edu-video-ui.css' ? freshResponses?.get(pathname) : null;
+  if (cacheKey && sharedFreshResponse) {
+    await cache.put(cacheKey, sharedFreshResponse.clone());
+    return;
+  }
+
   // PWA-SUBPATH: fetch pod realny URL w zasięgu SW; klucz cache zostaje w „/x".
   const request = new Request(scopeHref(url), { cache: 'reload', redirect: 'follow' });
   const response = await fetch(request);
@@ -4669,18 +4698,22 @@ async function fetchAndStorePrecacheUrl(url, { required = false, previousShellCa
     return;
   }
 
+  // Cache.put zużywa treść odpowiedzi: klon powstaje przed zapisem, ale udostępniamy go dopiero po sukcesie.
+  const freshResponse = pathname === '/edu-video-ui.css' && freshResponses ? safeResponse.clone() : null;
   await cache.put(cacheKey, safeResponse);
+  if (freshResponse) freshResponses.set(pathname, freshResponse);
 }
 
 async function installShell() {
   // P-SW-PRECACHE: najpierw miejsce (historia starszych pamięci powłoki do kosza), potem pamięci do kopiowania.
   await pruneHistoryInPreviousShellCaches();
   const previousShellCaches = await openReusablePreviousShellCaches();
+  const freshResponses = new Map();
 
   // Najpierw minimalny shell – jeśli to się nie uda, nowa wersja SW nie powinna wejść.
   // P-SW-PRECACHE: tylko wpisy bieżące rdzenia (INSTALL_CORE_URLS).
   for (const url of INSTALL_CORE_URLS) {
-    await fetchAndStorePrecacheUrl(url, { required: true, previousShellCaches });
+    await fetchAndStorePrecacheUrl(url, { required: true, previousShellCaches, freshResponses });
   }
 
   // Następnie dodatkowe strony i zasoby pobieramy spokojnie, jeden po drugim,
@@ -4688,7 +4721,7 @@ async function installShell() {
   // P-SW-DOCPRO: najpierw dokumenty i wersje bieżące (patrz orderOptionalPrecacheUrls); P-SW-PRECACHE: bez historii.
   for (const url of INSTALL_OPTIONAL_URLS) {
     try {
-      await fetchAndStorePrecacheUrl(url, { required: false, previousShellCaches });
+      await fetchAndStorePrecacheUrl(url, { required: false, previousShellCaches, freshResponses });
     } catch (_) {
     void _;
   }

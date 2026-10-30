@@ -61,9 +61,9 @@ test('A7 touch navigation preserves filter, search, scroll and selection across 
   const search = workspace.getByRole('searchbox', { name: 'Szukaj pacjenta lub sprawy' });
   await workspace.locator('[data-filter=overdue]').tap();
   await search.fill('nawigacja MR');
-  await expect(workspace.locator('.vb22-row')).toHaveCount(26);
-  const listIds = await workspace.locator('.vb22-row').evaluateAll(nodes => nodes.map(node => node.dataset.noteId));
-  const row = workspace.locator('.vb22-row').nth(18);
+  await expect(workspace.locator('.vb22-row:not(.vgs-row)')).toHaveCount(26);
+  const listIds = await workspace.locator('.vb22-row:not(.vgs-row)').evaluateAll(nodes => nodes.map(node => node.dataset.noteId));
+  const row = workspace.locator('.vb22-row:not(.vgs-row)').nth(18);
   await row.scrollIntoViewIfNeeded();
   const selectedId = await row.getAttribute('data-note-id');
   const scrollBefore = await pane.evaluate(node => node.scrollTop);
@@ -111,13 +111,13 @@ test('A7 touch navigation preserves filter, search, scroll and selection across 
   await expect(page.locator(OUTCOME)).toHaveCount(0);
   await expect(workspace.locator('.vb22-detail-title')).toHaveText(title);
   await expect(workspace.locator('[data-tab=active]')).toHaveAttribute('aria-pressed', 'true');
-  await expect(workspace.locator('[data-tab=history]')).toHaveAttribute('aria-pressed', 'false');
+  await expect(workspace.locator('[data-tab=search]')).toHaveAttribute('aria-pressed', 'false');
   await expect(workspace.locator('[data-filter=overdue]')).toHaveAttribute('aria-pressed', 'true');
   await expect(workspace.locator('.vb22-search')).toHaveValue('nawigacja MR');
   await workspace.locator('.vb22-back').tap(); await listPage(page);
   await expect(workspace.locator('[data-filter=overdue]')).toHaveAttribute('aria-pressed', 'true');
   await expect(search).toHaveValue('nawigacja MR');
-  await expect(workspace.locator('.vb22-row')).toHaveCount(25);
+  await expect(workspace.locator('.vb22-row:not(.vgs-row)')).toHaveCount(25);
   await expect(workspace.locator(`[data-note-id="${selectedId}"]`)).toHaveCount(0);
   const survivingIds = listIds.filter(id => id !== selectedId);
   const nearestId = survivingIds[Math.min(listIds.indexOf(selectedId), survivingIds.length - 1)];

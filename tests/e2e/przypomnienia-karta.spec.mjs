@@ -287,7 +287,7 @@ test('P4 — wpis aktywności bez miejsca pokazuje tytuł, nie „—" z awatare
   expect(wiersz.nazwa, 'etykieta zamiast pustego nazwiska').toBe('Dyżur');
   expect(wiersz.nazwa).not.toBe('—');
   expect(wiersz.tytul, 'zwięzły wiersz nie gubi treści aktywności').not.toContain('?');
-  await page.locator('#remindersInline .vb22-row', { hasText: 'Dyżur nocny' }).click();
+  await page.locator('#remindersInline .vb22-row:not(.vgs-row)', { hasText: 'Dyżur nocny' }).click();
   await expect(page.locator('dialog.vb22-modal .vb22-meta .vb22-category'), 'kategoria jest w szczegółach').toContainText('Dyżur');
 });
 
@@ -339,10 +339,10 @@ test('P8 — A7: patient-first card and full workspace preserve matching content
     { name: 'Celina Obserwacja', title: 'Wpis obserwacji', dniTemu: 0, category: 'observation' },
     { name: 'Damian Klirens', title: 'Wpis klirensu', dniTemu: 0, category: 'wynik-klirens' },
   ], { dyzur: true });
-  const small = await collectA7(page, '#remindersInline .vb22-row');
+  const small = await collectA7(page, '#remindersInline .vb22-row:not(.vgs-row)');
   await page.locator('#vildaRemindersBtn').click();
-  await expect(page.locator('dialog.vb22-modal .vb22-row')).toHaveCount(5);
-  const big = await collectA7(page, 'dialog.vb22-modal .vb22-row');
+  await expect(page.locator('dialog.vb22-modal .vb22-row:not(.vgs-row)')).toHaveCount(5);
+  const big = await collectA7(page, 'dialog.vb22-modal .vb22-row:not(.vgs-row)');
   expect(small).toHaveLength(5); expect(big).toHaveLength(5);
   const keyed = Object.fromEntries(big.map(row => [row.id, row])), categories = [];
   for (const row of small) {
@@ -363,9 +363,9 @@ test('P9 — A7 retains Polish procedure/reservation labels in details and the o
     { name: 'Ewa Biopsja', title: 'Biopsja tarczycy (BACC)', dniTemu: 0, category: 'procedura' },
     { name: 'Filip Kontrola', title: 'Wpis kontrolny', dniTemu: 0, category: 'followup' },
   ], { rezerwacja: true });
-  const small = await collectA7(page, '#remindersInline .vb22-row');
-  await page.locator('#vildaRemindersBtn').click(); await expect(page.locator('dialog.vb22-modal .vb22-row')).toHaveCount(3);
-  const big = await collectA7(page, 'dialog.vb22-modal .vb22-row');
+  const small = await collectA7(page, '#remindersInline .vb22-row:not(.vgs-row)');
+  await page.locator('#vildaRemindersBtn').click(); await expect(page.locator('dialog.vb22-modal .vb22-row:not(.vgs-row)')).toHaveCount(3);
+  const big = await collectA7(page, 'dialog.vb22-modal .vb22-row:not(.vgs-row)');
   expect(small).toHaveLength(3); expect(big).toHaveLength(3);
   for (const row of small) {
     const other = big.find(item => item.id === row.id); expect(other).toBeTruthy();

@@ -8,11 +8,11 @@ test.use({ serviceWorkers: 'block' });
 
 const bezTwardejSpacji = (t) => t.replace(/\u00a0/g, ' ');
 
-test('pięć zakładek; Badania: podsumowanie, panele, oczekujące, karty z wartościami jak zapisano', async ({ page }) => {
+test('sześć zakładek z Planami opieki; Badania: podsumowanie, panele, oczekujące, karty z wartościami jak zapisano', async ({ page }) => {
   const patientId = await otworzSejf(page);
   await zapiszHistorie(page, patientId);
   await page.evaluate((pid) => window.VildaAuthUI.showPatientCard(pid), patientId);
-  await expect(page.locator('.vilda-patient-tabs > .vilda-patient-tab')).toHaveText(['Status', 'Siatki centylowe', 'Notatki', 'Historia', 'Badania']);
+  await expect(page.locator('.vilda-patient-tabs > .vilda-patient-tab')).toHaveText(['Status', 'Siatki centylowe', 'Notatki', 'Historia', 'Badania', 'Plany opieki']);
   await page.locator('.vilda-patient-tab[data-tab="lab"]').click();
   await czekajNaBadania(page);
   const badania = sekcjaBadan(page);
@@ -141,18 +141,22 @@ test('pacjent bez wyników: stan pusty; Historia bez odnośnika', async ({ page 
   await expect(sekcjaHistorii(page).locator('.vilda-lab-trend-link')).toHaveCount(0);
 });
 
-test('okno 1100 px (karta ok. 675 px): pięć zakładek w jednym wierszu bez uciętych etykiet', async ({ page }) => {
+test('okna 1100 i 1440 px: sześć zakładek w jednym wierszu bez uciętych etykiet', async ({ page }) => {
   await page.setViewportSize({ width: 1100, height: 900 });
   const patientId = await otworzSejf(page);
-  await page.evaluate((pid) => window.VildaAuthUI.showPatientCard(pid), patientId);
-  const zakladki = page.locator('.vilda-patient-tabs > .vilda-patient-tab');
-  await expect(zakladki).toHaveCount(5);
-  const pomiar = await page.evaluate(() => {
-    const tabs = [...document.querySelectorAll('.vilda-patient-tabs > .vilda-patient-tab')];
-    return {
-      wiersze: new Set(tabs.map((t) => Math.round(t.getBoundingClientRect().top))).size,
-      uciete: tabs.map((t) => t.querySelector('.vilda-patient-tab-lbl')).filter((l) => l.scrollWidth > l.clientWidth + 1).map((l) => l.textContent),
-    };
-  });
-  expect(pomiar).toEqual({ wiersze: 1, uciete: [] });
+  for (const width of [1100, 1440]) {
+    await page.setViewportSize({ width, height: 900 });
+    await page.evaluate((pid) => window.VildaAuthUI.showPatientCard(pid), patientId);
+    const zakladki = page.locator('.vilda-patient-tabs > .vilda-patient-tab');
+    await expect(zakladki).toHaveCount(6);
+    await expect(zakladki.locator('.vilda-patient-tab-lbl')).toHaveCount(6);
+    const pomiar = await page.evaluate(() => {
+      const tabs = [...document.querySelectorAll('.vilda-patient-tabs > .vilda-patient-tab')];
+      return {
+        wiersze: new Set(tabs.map((t) => Math.round(t.getBoundingClientRect().top))).size,
+        uciete: tabs.map((t) => t.querySelector('.vilda-patient-tab-lbl')).filter((l) => l.scrollWidth > l.clientWidth + 1).map((l) => l.textContent),
+      };
+    });
+    expect(pomiar, `etykiety zakładek przy szerokości okna ${width} px`).toEqual({ wiersze: 1, uciete: [] });
+  }
 });

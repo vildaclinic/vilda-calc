@@ -57,6 +57,18 @@
   outline-offset: 2px
 }
 
+.vb22 .vb22-search:focus,
+.vb22 .vb22-search:focus-visible {
+  outline: none;
+  box-shadow: none;
+  border-color: var(--vb-line)
+}
+
+body:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3).liquid-ios26 .vb22 .vb22-search:focus-visible {
+  outline: none!important;
+  box-shadow: none!important
+}
+
 .vb22 [hidden] {
   display: none!important
 }
@@ -847,23 +859,6 @@
   opacity: 1
 }
 
-.vb22 .vb22-check {
-  display: flex;
-  gap: var(--space-8px);
-  align-items: center;
-  font-size: 14.4px;
-  font-weight: 500;
-  margin-top: var(--space-18px)
-}
-
-.vb22 .vb22-check input {
-  width: 18px;
-  height: 18px;
-  min-height: 0;
-  margin: 0;
-  accent-color: var(--vb-teal)
-}
-
 .vb22 .vb22-next {
   padding-top: 1px
 }
@@ -1179,6 +1174,18 @@ dialog.vb22.vb22-outcome[open] {
   }
 }
 
+/* The compact desktop header precedes the phone rules, which own 700px. */
+@media(max-height:500px) and (min-width:700px) {
+  .vb22 .vb22-head {
+    padding-top: var(--space-12px);
+    padding-bottom: var(--space-12px)
+  }
+  .vb22 .vb22-filters {
+    padding-top: var(--space-8px);
+    padding-bottom: var(--space-8px)
+  }
+}
+
 @media(max-width:700px) {
   .vb22 .vb22-action-row {
     display: grid;
@@ -1378,17 +1385,6 @@ dialog.vb22.vb22-outcome[open] {
   }
   .vb22 .vb22-outcome-head h2 {
     font-size: 18px
-  }
-}
-
-@media(max-height:500px) and (min-width:701px) {
-  .vb22 .vb22-head {
-    padding-top: var(--space-12px);
-    padding-bottom: var(--space-12px)
-  }
-  .vb22 .vb22-filters {
-    padding-top: var(--space-8px);
-    padding-bottom: var(--space-8px)
   }
 }
 
@@ -1659,4 +1655,30 @@ html.vilda-phone .vb22 .vb22-outcome-actions .vb22-primary {
   z-index: var(--z-dropdown)!important;
   margin: calc(-1*var(--space-18px)) calc(-1*var(--space-18px)) var(--space-18px)!important;
   border-bottom: var(--border-hairline) solid var(--vb-line)!important
+}
+
+/* Care plans occupy the same fixed card/dialog body as the reminder list. */
+.vb22 .vb22-care-host {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+.vb22 .vb22-global-search-host {
+  display: flex;
+  flex: 1 1 auto;
+  min-height: 0;
+  min-width: 0;
+  overflow: hidden;
+}
+.vb22.vb22-inline.vb22-plans {
+  display: flex;
+  flex-direction: column;
+}
+.vilda-patient-care-section {
+  min-width: 0;
+}
+@media (max-width: 700px) {
+  .vb22 .vb22-tabs {
+    gap: var(--space-18px);
+  }
 }

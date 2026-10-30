@@ -27,7 +27,7 @@ async function fixture(page) {
     }
     return records;
   }, created.ids);
-  await expect(page.locator('#remindersInline .vb22-row')).toHaveCount(6);
+  await expect(page.locator('#remindersInline .vb22-row:not(.vgs-row)')).toHaveCount(6);
   return { ...created, notes };
 }
 
@@ -38,7 +38,7 @@ async function open(page) {
 
 test('A7 patient-first typography, calendar-day color boundaries and due-only counters match the accepted card', async ({ page }) => {
   const { notes } = await fixture(page);
-  const css = await page.locator('#remindersInline .vb22-row').first().evaluate(row => {
+  const css = await page.locator('#remindersInline .vb22-row:not(.vgs-row)').first().evaluate(row => {
     const style = node => {
       const value = getComputedStyle(node);
       return { family: value.fontFamily, size: value.fontSize, weight: value.fontWeight };

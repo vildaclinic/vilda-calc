@@ -56,7 +56,7 @@ async function pokazKarte(page) {
     window.VildaProAccess.hasAccess = () => true;
     window.dispatchEvent(new CustomEvent('vildaProAccessChanged', { detail: { plan: 'pro' } }));
   });
-  await page.waitForSelector('#remindersInline .vb22-row', {
+  await page.waitForSelector('#remindersInline .vb22-row:not(.vgs-row)', {
     state: 'attached', timeout: 20000,
   });
 }
@@ -74,7 +74,7 @@ for (const [key,label,count] of [['all','Wszystkie',4],['overdue','Zaległe',2],
   await otworz(page,DATA); const root=card(page);
   await expect(root.locator('.vb22-count')).toHaveText(['4','2','2','1']);
   await root.locator('[data-filter='+key+']').click();
-  await expect(root.locator('.vb22-row')).toHaveCount(count);
+  await expect(root.locator('.vb22-row:not(.vgs-row)')).toHaveCount(count);
   await expect(root.locator('.vb22-count')).toHaveText(['4','2','2','1']);
   await expect(root.locator('[data-filter='+key+']')).toHaveAttribute('aria-pressed','true');
   const selected=await root.locator('[data-filter][aria-pressed=true]').count();expect(selected).toBe(1);
@@ -86,38 +86,38 @@ for (const [key,label,count] of [['all','Wszystkie',4],['overdue','Zaległe',2],
 }
 
 test('A7 filtry i dzwonek obejmują sprawy do dziś; przyszłe przypomnienie pozostaje zapisane',async({page})=>{
- await otworz(page,DATA);await expect(card(page).locator('.vb22-row')).toHaveCount(4);
+ await otworz(page,DATA);await expect(card(page).locator('.vb22-row:not(.vgs-row)')).toHaveCount(4);
  await expect(card(page)).not.toContainText('Przyszła kontrola');
  expect(await page.evaluate(async()=>{const records=await window.VildaVault.listPatients();for(const record of records){const notes=await window.VildaVault.listPatientNotesForPatient(record.patientId);if(notes.some(note=>note.title==='Przyszła kontrola'))return true;}return false;})).toBe(true);
  await expect(page.locator('#vildaRemindersBtn')).toHaveAttribute('data-count','4');
- await card(page).locator('[data-filter=today]').click();await expect(card(page).locator('.vb22-row')).toHaveCount(2);
+ await card(page).locator('[data-filter=today]').click();await expect(card(page).locator('.vb22-row:not(.vgs-row)')).toHaveCount(2);
  await expect(card(page)).not.toContainText('Przyszła kontrola');await pokazKarte(page);
- await expect(card(page).locator('.vb22-row')).toHaveCount(4);await expect(card(page).locator('.vb22-count')).toHaveText(['4','2','2','1']);
+ await expect(card(page).locator('.vb22-row:not(.vgs-row)')).toHaveCount(4);await expect(card(page).locator('.vb22-count')).toHaveText(['4','2','2','1']);
  await expect(page.locator('#vildaRemindersBtn')).toHaveAttribute('data-count','4');
 });
 
 test('A7 zero oczekujących wyników jest odrębne od pustej całej listy',async({page})=>{
  await otworz(page,DATA);await page.evaluate(async()=>{const groups=await window.VildaVault.listPatientNotesDueByDate();for(const g of groups)for(const n of g.notes)if(n.category==='wynik-badania')await window.VildaVault.completePatientNote(n.id);});
  await expect(card(page).locator('.vb22-count')).toHaveText(['3','2','1','0']);await card(page).locator('[data-filter=pending]').click();
- await expect(card(page).locator('.vb22-row')).toHaveCount(0);await expect(card(page)).toContainText('Brak spraw w tym filtrze');
+ await expect(card(page).locator('.vb22-row:not(.vgs-row)')).toHaveCount(0);await expect(card(page)).toContainText('Brak spraw w tym filtrze');
  await expect(card(page)).not.toContainText('Brak przypomnień na dziś');await card(page).locator('[data-filter=all]').click();
- await expect(card(page).locator('.vb22-row')).toHaveCount(3);await expect(page.locator('#vildaRemindersBtn')).toHaveAttribute('data-count','3');
+ await expect(card(page).locator('.vb22-row:not(.vgs-row)')).toHaveCount(3);await expect(page.locator('#vildaRemindersBtn')).toHaveAttribute('data-count','3');
 });
 
 test('A7 pełny i mały widok mają niezależne filtry nad tym samym zbiorem',async({page})=>{
  await otworz(page,DATA);await card(page).locator('[data-filter=pending]').click();await page.locator('#vildaRemindersBtn').click();const dialog=page.locator('dialog.vb22-modal');
- await expect(dialog.locator('.vb22-row')).toHaveCount(4);await expect(dialog.locator('.vb22-count')).toHaveText(['4','2','2','1']);
- await dialog.locator('[data-filter=overdue]').click();await expect(dialog.locator('.vb22-row')).toHaveCount(2);await expect(card(page).locator('.vb22-row')).toHaveCount(1);
+ await expect(dialog.locator('.vb22-row:not(.vgs-row)')).toHaveCount(4);await expect(dialog.locator('.vb22-count')).toHaveText(['4','2','2','1']);
+ await dialog.locator('[data-filter=overdue]').click();await expect(dialog.locator('.vb22-row:not(.vgs-row)')).toHaveCount(2);await expect(card(page).locator('.vb22-row:not(.vgs-row)')).toHaveCount(1);
  await dialog.getByRole('button',{name:'Zamknij Przypomnienia',exact:true}).click();await expect(dialog).toHaveCount(0);
- await expect(card(page).locator('[data-filter=pending]')).toHaveAttribute('aria-pressed','true');await expect(card(page).locator('.vb22-row')).toHaveCount(1);
+ await expect(card(page).locator('[data-filter=pending]')).toHaveAttribute('aria-pressed','true');await expect(card(page).locator('.vb22-row:not(.vgs-row)')).toHaveCount(1);
 });
 
 test('A7 wyszukiwanie pacjenta aktualizuje licznik i nie miesza szczegółów innej osoby',async({page})=>{
  await otworz(page,DATA);await page.locator('#vildaRemindersBtn').click();const dialog=page.locator('dialog.vb22-modal');
- await dialog.getByRole('searchbox',{name:'Szukaj pacjenta lub sprawy'}).fill('Gabriela');await expect(dialog.locator('.vb22-row')).toHaveCount(1);
+ await dialog.getByRole('searchbox',{name:'Szukaj pacjenta lub sprawy'}).fill('Gabriela');await expect(dialog.locator('.vb22-row:not(.vgs-row)')).toHaveCount(1);
  await expect(dialog.locator('.vb22-count')).toHaveText(['1','0','1','1']);await expect(dialog.locator('.vb22-detail-title')).toHaveText('Wynik oczekiwany dziś');
  await expect(dialog.locator('.vb22-detail')).toContainText('Fikcyjna Gabriela');await expect(dialog.locator('.vb22-detail')).not.toContainText('Filip');
- await dialog.getByRole('searchbox').fill('nieistniejący fikcyjny pacjent');await expect(dialog.locator('.vb22-row')).toHaveCount(0);
+ await dialog.getByRole('searchbox').fill('nieistniejący fikcyjny pacjent');await expect(dialog.locator('.vb22-row:not(.vgs-row)')).toHaveCount(0);
  await expect(dialog.locator('.vb22-count')).toHaveText(['0','0','0','0']);await expect(dialog.locator('.vb22-detail')).toContainText('Wybierz sprawę');
 });
 
@@ -127,5 +127,5 @@ test('A7 wybór filtrów nie zmienia notatek ani historycznych preferencji synch
  for(const key of ['pending','overdue','today','all'])await card(page).locator('[data-filter='+key+']').click();
  const after=await page.evaluate(async()=>{const p=await window.VildaVault.exportSyncPayload();return {notes:p.patientNotes.map(n=>({id:n.id,rev:n.rev,body:n.body,updatedAtISO:n.updatedAtISO})),prefs:window.VildaPersistence.readPreferenceJSON('remindersCollapsedCategories',null),sync:p.userPreferences};});
  expect(after.notes).toEqual(before);expect(after.prefs).toEqual(['followup']);expect(after.sync.remindersCollapsedCategories).toBeTruthy();
- await expect(card(page).locator('.vb22-row')).toHaveCount(4);await expect(card(page).locator('.vb22-count')).toHaveText(['4','2','2','1']);
+ await expect(card(page).locator('.vb22-row:not(.vgs-row)')).toHaveCount(4);await expect(card(page).locator('.vb22-count')).toHaveText(['4','2','2','1']);
 });
