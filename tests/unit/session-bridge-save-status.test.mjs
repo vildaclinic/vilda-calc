@@ -53,8 +53,9 @@ function environment({ host = false, native = false, pendingNative = false, auth
         appendChild(element) {
           appended.push(element);
           queueMicrotask(() => {
-            if (element.src?.startsWith('vilda_save_status_indicator.js')) {
-              loadBrowserScript('vilda_save_status_indicator.js', win);
+            const source = element.src?.split('?')[0];
+            if (['clcr_sodium_dzm_data.js', 'clcr_sodium_dzm.js', 'vilda_save_status_indicator.js'].includes(source)) {
+              loadBrowserScript(source, win);
             }
             element.listeners.load?.();
           });
@@ -85,8 +86,12 @@ describe('P-CHIP-STRONY — wskaźnik na stronie bez formularza', () => {
     await vi.waitFor(() => expect(env.win.VildaSaveStatusIndicator?.getState()).toBe('saved'));
     expect(env.appended.map(element => element.src || element.href)).toEqual([
       expect.stringMatching(/^vilda_save_status_indicator\.css\?v=/u),
+      expect.stringMatching(/^clcr_sodium_dzm_data\.js\?v=/u),
+      expect.stringMatching(/^clcr_sodium_dzm\.js\?v=/u),
       expect.stringMatching(/^vilda_save_status_indicator\.js\?v=/u),
     ]);
+    expect(typeof env.win.VildaClcrSodiumDzm?.inputFromValues).toBe('function');
+    expect(typeof env.win.VildaClcrSodiumDzm?.convertUnitInput).toBe('function');
     expect(env.win.__vildaSaveStatusReadOnly).toBe(true);
     expect(env.chip.className).toContain('vilda-save-state--saved');
     expect(env.win.sessionStorage.setItem).not.toHaveBeenCalled();
@@ -99,7 +104,7 @@ describe('P-CHIP-STRONY — wskaźnik na stronie bez formularza', () => {
     expect(env.appended).toEqual([]);
     env.authLoaded(); env.authLoaded(); env.authLoaded();
     await vi.waitFor(() => expect(env.win.VildaSaveStatusIndicator?.getState()).toBe('saved'));
-    expect(env.appended).toHaveLength(2);
+    expect(env.appended).toHaveLength(4);
   });
 
   it('zachowuje natywny wskaźnik strony z formularzem', async () => {

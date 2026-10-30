@@ -202,6 +202,16 @@
       persistence.augmentDatapoint({ getAttribute: () => JSON.stringify(result) }, datapoint);
       return datapoint;
     }
+    if (formulaId === "Na_mmol_d") {
+      const engine = requiredModule("VildaClcrSodiumDzm"), policy = requiredModule("ClcrSodiumDzmReferenceData").DEFAULT_POLICY;
+      const persistence = requiredModule("ClcrSodiumDzmPersistence");
+      const prepared = persistence.prepareValues(values, context);
+      const result = engine.evaluate(engine.inputFromValues(prepared, context), policy);
+      if (!result.valid) throw new Error(result.error || "Sprawdź dane potrzebne do obliczenia wydalania sodu.");
+      const datapoint = { id: parameterKey, sourceFormulaId: formulaId, label: "Wydalanie sodu (DZM)", testKey: "clcr:Na_mmol_d", category: null, comparator: "", sodiumDzmSnapshot: result };
+      persistence.augmentDatapoint({ getAttribute: name => name === "data-clcr-sodium-dzm-snapshot" ? JSON.stringify(result) : null }, datapoint);
+      return datapoint;
+    }
     if (formulaId === "Ca_mgkg") {
       const engine = requiredModule("VildaClcrCaDzm"), policy = requiredModule("ClcrCaDzmReferenceData").DEFAULT_POLICY;
       const persistence = requiredModule("ClcrCaDzmPersistence");
@@ -292,7 +302,7 @@
       return modeled(formulaId, parameterKey, value, "", 2, values, context, { presentation, referenceContext: { stone: interpreted } });
     }
     const sample = collection(values, context), daily = sample.dailyVolume;
-    if (["Mg_mgkg", "Ox_mgkg", "Cit_mgkg", "Na_mmol_d", "K_mmol_d", "PO4_mgkg", "Prot_mgkg"].includes(formulaId) && !sample.valid) throw new Error(sample.error);
+    if (["Mg_mgkg", "Ox_mgkg", "Cit_mgkg", "K_mmol_d", "PO4_mgkg", "Prot_mgkg"].includes(formulaId) && !sample.valid) throw new Error(sample.error);
     const weight = number(values, "weight"), urineCr = number(values, "Ucr");
     const calcium = calciumMgDl(number(values, "U_Ca")), magnesium = magnesiumMgDl(number(values, "U_Mg"));
     let value, unit = "mg/mg", digits = 3;
@@ -300,8 +310,8 @@
     if (own(analytes, formulaId)) {
       const concentration = formulaId === "Ca_mgkg" ? calcium : formulaId === "Mg_mgkg" ? magnesium : number(values, analytes[formulaId]);
       value = excr_mgkg(concentration, daily, weight); unit = "mg/kg/24 h"; digits = 1;
-    } else if (["Na_mmol_d", "K_mmol_d"].includes(formulaId)) {
-      value = excr_mmol_d(number(values, formulaId === "Na_mmol_d" ? "U_Na" : "U_K"), daily); unit = "mmol/24 h"; digits = 1;
+    } else if (formulaId === "K_mmol_d") {
+      value = excr_mmol_d(number(values, "U_K"), daily); unit = "mmol/24 h"; digits = 1;
     } else if (formulaId === "PO4_mgkg") {
       const result = safety.computePhosphorusDzm({ concentrationMgDl: number(values, "U_PO4"), volumeMl: daily });
       value = result?.totalMg24h ?? null; unit = "mg P/24 h"; digits = 1;

@@ -165,11 +165,13 @@ describe('Magnesium DZM — one frozen record across notes, history, series and 
     const snapshot = w.ClcrSavedCalculation.createSnapshot(dp, { capture: capture(values) });
     const note = { category: 'wynik-klirens', patientId: PATIENT, clinicalDateISO: '2020-01-01', labResult: { test: dp.label, value: '150', valueNum: 150, unit: dp.unit }, body: w.ClcrSavedCalculation.serializeSnapshot(snapshot, { patientId: PATIENT, clinicalDateISO: '2020-01-01', labResult: { test: dp.label, value: '150', valueNum: 150, unit: dp.unit } }) };
     const saved = w.ClcrSavedCalculation.readSaved(note), description = w.ClcrSavedCalculation.describe(note);
-    expect(description).toMatchObject({ editable: true, values: { Cl24DurationHours: '', Cl24DurationSource: 'historical-missing' } });
-    expect(description.fields.some(f => f.id === 'Cl24DurationHours' && f.required)).toBe(true);
+    expect(description).toMatchObject({ editable: true, values: { Na_inputMode: 'concentration', Na_concentration: '100', Na_volume: '1500', Na_collectionHours: '', Na_collectionSource: 'historical-missing', Na_durationNeedsConfirmation: true } });
+    expect(description.fields.some(f => f.id === 'Na_collectionHours' && f.type === 'number' && f.required)).toBe(true);
+    expect(description.fields.some(f => f.id === 'Cl24DurationHours' || f.id.startsWith('ui_collection'))).toBe(false);
     expect(description.fields.some(f => f.id.startsWith('collection'))).toBe(false);
     expect(() => w.ClcrSavedCalculation.recalculate(saved)).toThrow();
-    expect(w.ClcrSavedCalculation.recalculate(saved, { values: { Cl24DurationHours: '24' } }).rawValue).toBe(150);
+    expect(w.ClcrSavedCalculation.recalculate(saved, { values: { Na_collectionHours: '24' } }).rawValue).toBe(150);
+    expect(w.ClcrSavedCalculation.recalculate(saved, { values: { Na_collectionHours: '12' } }).rawValue).toBe(300);
     expect(w.ClcrSavedCalculation.recalculate(saved, { values: { Cl24DurationHours: '12' } }).rawValue).toBe(300);
     delete w.ClcrCollectionDuration;
     expect(w.ClcrSavedCalculation.describe(note)).toMatchObject({ editable: false, reason: 'Nie wczytano modułu czasu zbiórki. Odśwież aplikację.' });

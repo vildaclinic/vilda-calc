@@ -54,7 +54,7 @@ function uruchomSW({ caches = null, fetch = null } = {}) {
   const wykonaj = new Function('self', 'caches', 'fetch', `${ZRODLO_SW}
 return { CORE_SHELL_URLS, OPTIONAL_DOCUMENTS, OPTIONAL_ASSETS, DOCUMENT_PATHS, OPTIONAL_PRECACHE_ORDER,
   orderOptionalPrecacheUrls, installShell, readFromShellCache, INSTALL_CORE_URLS, INSTALL_OPTIONAL_URLS,
-  isCurrentPrecacheUrl, SHELL_CACHE };`);
+  isCurrentPrecacheUrl, fetchAndStorePrecacheUrl, SHELL_CACHE };`);
   return wykonaj(self, caches, fetch);
 }
 
@@ -280,13 +280,23 @@ describe('P-SW-PRECACHE: instalacja bez historii, kopia z poprzedniej pamięci, 
   const arkuszEdu = (adres) => adres.split('?')[0] === '/edu-video-ui.css';
   const aliasyEdu = () => doInstalacji().filter(arkuszEdu);
   const cssEdu = fs.readFileSync(path.join(korzen, 'edu-video-ui.css'), 'utf8');
+  const wspoldzieloneArkusze = new Set(['/edu-video-ui.css', '/style.css', '/vilda_chrome.css']);
+  const oczekiwanePobraniaSwiezychArkuszy = () => {
+    const widziane = new Set();
+    return doInstalacji().filter((adres) => {
+      const sciezka = adres.split('?')[0];
+      if (!wspoldzieloneArkusze.has(sciezka)) return true;
+      if (widziane.has(sciezka)) return false;
+      widziane.add(sciezka); return true;
+    });
+  };
 
-  it('instalacja zapisuje każdy bieżący klucz, dzieli tylko świeży arkusz edu i mieści się w budżecie 5 minut na wolnym łączu', async () => {
+  it('instalacja zapisuje każdy bieżący klucz, dzieli tylko świeże trzy arkusze CSS i mieści się w budżecie 5 minut na wolnym łączu', async () => {
     const { caches, wpisy } = pamiec();
     const { pobrane, fetch } = siecLiczaca();
     await uruchomSW({ caches, fetch }).installShell();
 
-    const oczekiwanePobrania = doInstalacji().filter((adres) => !arkuszEdu(adres) || adres === aliasyEdu()[0]);
+    const oczekiwanePobrania = oczekiwanePobraniaSwiezychArkuszy();
     expect([...pobrane].sort(), 'każdy pozostały adres idzie z sieci dokładnie raz').toEqual(oczekiwanePobrania.sort());
     expect([...wpisy.keys()].sort(), 'wszystkie istniejące wpisy bieżące zachowują własne klucze offline')
       .toEqual(doInstalacji().filter((adres) => rozmiarPliku(adres) !== null).sort());
@@ -315,7 +325,7 @@ describe('P-SW-PRECACHE: instalacja bez historii, kopia z poprzedniej pamięci, 
 
     expect(aliasyEdu()).toHaveLength(7);
     expect(pobrane.filter(arkuszEdu)).toEqual([aliasyEdu()[0]]);
-    expect(pobrane).toHaveLength(doInstalacji().length - 6);
+    expect(pobrane).toHaveLength(oczekiwanePobraniaSwiezychArkuszy().length);
     expect(odpowiedzi[0].bodyUsed, 'zapis naprawdę zużył odpowiedź sieci').toBe(true);
     for (const adres of aliasyEdu()) {
       const zapisana = await sluzba.readFromShellCache(new Request(`${POCHODZENIE}${adres}`));
@@ -396,6 +406,72 @@ describe('P-SW-PRECACHE: instalacja bez historii, kopia z poprzedniej pamięci, 
     }
   });
 
+  it.each(['/style.css', '/vilda_chrome.css'])('bieżące aliasy %s dostają pełną świeżą treść z jednego pobrania', async (sciezka) => {
+    const magazyn = pamiec(Infinity, { zuzywajOdpowiedzi: true });
+    const aliasy = doInstalacji().filter(adres => adres.split('?')[0] === sciezka);
+    const tresc = fs.readFileSync(path.join(korzen, sciezka.slice(1)), 'utf8');
+    const pobrane = [], odpowiedzi = [];
+    const fetch = async request => {
+      const u = new URL(request.url);
+      if (u.pathname !== sciezka) return siec(request);
+      pobrane.push(`${u.pathname}${u.search}`);
+      const odpowiedz = new Response(tresc); odpowiedzi.push(odpowiedz); return odpowiedz;
+    };
+    const sluzba = uruchomSW({ caches: magazyn.caches, fetch });
+    await sluzba.installShell();
+    expect(aliasy).toHaveLength(2);
+    expect(pobrane).toEqual([aliasy[0]]);
+    expect(odpowiedzi[0].bodyUsed).toBe(true);
+    for (const adres of aliasy) expect(await (await sluzba.readFromShellCache(new Request(`${POCHODZENIE}${adres}`))).text()).toBe(tresc);
+  });
+
+  it.each([
+    ['/style.css', '1.1.104'], ['/vilda_chrome.css', '1.1.104'],
+    ['/style.css', '1.1.65'], ['/vilda_chrome.css', '1.1.65']
+  ])('dokładny alias %s z pamięci %s nie zasila adresu bez wersji', async (sciezka, wersja) => {
+    const magazyn = pamiec(Infinity, { zuzywajOdpowiedzi: true });
+    const wersjonowanyAlias = doInstalacji().find(adres => adres.startsWith(sciezka + '?v='));
+    const staryCss = '/* niezmienna treść poprzedniego wydania */';
+    await magazyn.otworz(`pwa-kalorii-shell-v${wersja}`).put(wersjonowanyAlias, new Response(staryCss));
+    const swiezyCss = '/* treść z sieci dla adresu bez wersji */';
+    const pobrane = [];
+    const fetch = async request => {
+      const u = new URL(request.url);
+      if (u.pathname !== sciezka) return siec(request);
+      pobrane.push(`${u.pathname}${u.search}`); return new Response(swiezyCss);
+    };
+    const sluzba = uruchomSW({ caches: magazyn.caches, fetch });
+    await sluzba.installShell();
+    expect(pobrane).toEqual([sciezka]);
+    expect(await (await sluzba.readFromShellCache(new Request(`${POCHODZENIE}${sciezka}`))).text()).toBe(swiezyCss);
+    expect(await (await sluzba.readFromShellCache(new Request(`${POCHODZENIE}${wersjonowanyAlias}`))).text()).toBe(wersja === '1.1.104' ? staryCss : swiezyCss);
+  });
+
+  it.each([
+    ['/style.css', 'sieć'], ['/style.css', '503'], ['/style.css', 'cache.put'],
+    ['/vilda_chrome.css', 'sieć'], ['/vilda_chrome.css', '503'], ['/vilda_chrome.css', 'cache.put']
+  ])('nieudana pierwsza próba %s (%s) nie udostępnia odpowiedzi kolejnemu aliasowi', async (sciezka, awaria) => {
+    const magazyn = pamiec(Infinity, { zuzywajOdpowiedzi: true });
+    const cache = magazyn.otworz(sw.SHELL_CACHE), zapisz = cache.put;
+    const aliasy = doInstalacji().filter(adres => adres.split('?')[0] === sciezka);
+    const swieze = new Map(), pobrane = [];
+    cache.put = async (adres, odpowiedz) => { if (awaria === 'cache.put' && adres === aliasy[0]) throw new Error('odrzucony pierwszy zapis'); return zapisz(adres, odpowiedz); };
+    const fetch = async request => {
+      const u = new URL(request.url); pobrane.push(`${u.pathname}${u.search}`);
+      if (pobrane.length === 1 && awaria === 'sieć') throw new TypeError('sieć niedostępna');
+      return new Response(pobrane.length === 1 ? '/* nie zapisano */' : '/* pobrano ponownie */', { status: pobrane.length === 1 && awaria === '503' ? 503 : 200 });
+    };
+    const sluzba = uruchomSW({ caches: magazyn.caches, fetch });
+    const pierwszaProba = sluzba.fetchAndStorePrecacheUrl(aliasy[0], { freshResponses: swieze });
+    if (awaria === '503') await expect(pierwszaProba).resolves.toBeUndefined();
+    else await expect(pierwszaProba).rejects.toThrow(awaria === 'sieć' ? 'sieć niedostępna' : 'odrzucony pierwszy zapis');
+    expect(swieze.size).toBe(0);
+    await sluzba.fetchAndStorePrecacheUrl(aliasy[1], { freshResponses: swieze });
+    expect(pobrane).toEqual(aliasy);
+    expect(await (await cache.match(aliasy[1])).text()).toBe('/* pobrano ponownie */');
+    expect(magazyn.wpisy.has(aliasy[0])).toBe(false);
+  });
+
   it('aktualizacja kopiuje niezmienne wpisy ?v= z poprzedniej pamięci powłoki; dokumenty i adresy bez ?v= pobiera', async () => {
     const magazyn = pamiec();
     const stara = magazyn.otworz('pwa-kalorii-shell-v1.1.104');
@@ -420,7 +496,8 @@ describe('P-SW-PRECACHE: instalacja bez historii, kopia z poprzedniej pamięci, 
     await uruchomSW({ caches: magazyn.caches, fetch }).installShell();
 
     const zSieci = new Set(pobrane);
-    expect(wersjonowane.filter((adres) => !arkuszEdu(adres) && !zSieci.has(adres)), 'każdy inny wpis ?v= z sieci').toEqual([]);
+    expect(wersjonowane.filter((adres) => !wspoldzieloneArkusze.has(adres.split('?')[0]) && !zSieci.has(adres)), 'każdy inny wpis ?v= z sieci').toEqual([]);
+    expect([...zSieci].sort(), 'stara pamięć nie zastępuje świeżych odpowiedzi trzech arkuszy').toEqual(oczekiwanePobraniaSwiezychArkuszy().sort());
     expect(pobrane.filter(arkuszEdu), 'arkusz edu pochodzi ze świeżego pobrania, nie ze starej pamięci').toEqual([aliasyEdu()[0]]);
     expect(doInstalacji().filter((adres) => rozmiarPliku(adres) !== null && !magazyn.wpisy.has(adres)), 'komplet wpisów bieżących').toEqual([]);
   });

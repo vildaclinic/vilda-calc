@@ -151,9 +151,10 @@
       },
       {
         id: "Na_mmol_d",
-        label: "Wydalanie\xA0sodu (mmol/d)",
+        label: "Dobowe wydalanie sodu",
         version: "advanced",
-        requires: [ "U_Na", "V24", ...timedCollectionDurationFields],
+        requires: ["Na_concentration", "Na_volume", "Na_volumeUnit", "Na_collectionHours"],
+        note: "Stężenie i objętość albo gotowy wynik dobowy. Przyjmujemy pełne 24 h; znane dane pacjenta służą dobraniu zakresu laboratoryjnego.",
       },
       {
         id: "K_mmol_d",
