@@ -191,6 +191,54 @@ normy pełnej DZM. Gotowa ilość dobowa nie jest skalowana drugi raz,
 a historycznie nieznany czas nie dostaje domyślnego 24 h.
 Nie reinterpretuj dawnego `U_Prot`, które oznacza masę całej zbiórki.
 
+## Dobowe wydalanie sodu — decyzja 30.10.2026
+
+Dla `Na_mmol_d` pierwszą, domyślną opcją jest **„Oblicz ze stężenia”**:
+sód w `mmol/L` oraz objętość całej zbiórki w `mL` albo `L`. Drugą jest
+**„Gotowy wynik”** w `mmol/24 h`, `mg Na/24 h` albo `g Na/24 h`.
+Nie powielaj `mEq/L` w selektorze — dla sodu jest liczbowo równe mmol/L.
+Główny wynik ma jedną jednostkę: domyślnie `mmol/24 h`, opcjonalnie
+`g Na/24 h`. Masa, wzrost, wiek i płeć nie blokują liczby; znany wiek
+i potrzebna płeć służą wyłącznie doborowi normy, bez nowej ankiety.
+
+Jedna karta B łączy wynik z etykietą **„Norma dla wieku”** i zakresem
+w tej samej jednostce. **„W zakresie laboratoryjnym”** nie oznacza celu
+diety. Odchylenia są bursztynowe, norma neutralna. Krótki komentarz
+w zakresie: **„Zakres laboratoryjny nie jest celem spożycia soli.”**
+Obie granice osi muszą być nazwane. Długi zakres może się zawinąć na
+separatorze, zachowując obie granice i czytelny związek z jednostką.
+Stała szerokość karty obowiązuje również przy bardzo długiej wartości,
+zmianie jednostek, błędzie i otwartych Szczegółach. Skrócona liczba ma
+**≈**, krótką uwagę i pełny zapis w Szczegółach; nigdy nie zmienia to oceny.
+
+Automatyczny zakres pochodzi z jednego profilu Labcorp 003178:
+dziewczynki 6–12 lat **33–185**, obie płcie 13–17 lat **30–250**,
+mężczyźni 18–80 lat **58–337**, kobiety 18–80 lat **39–258**,
+od 81 lat obie płcie **23–207 mmol/24 h**, z obiema granicami włączonymi.
+To jawne przedziały ukończonych lat, bez interpolacji i zaokrąglania wieku
+w górę. Identyczne zakresy obu płci działają także przy nieznanej płci.
+Luka wieku/płci pozostawia neutralną liczbę z konkretnym powodem,
+bez zastępczej normy dorosłych lub uzupełniania tabeli innym laboratorium.
+Pełna polityka, źródła i ograniczenia: [SODIUM_DZM.md](SODIUM_DZM.md).
+
+Dokładne zero pozostaje neutralne z uwagą o raporcie/oznaczalności;
+dostępna norma nadal jest widoczna, bez klasyfikowania zera jako niskiego.
+Mała dodatnia ilość nie może zostać pokazana lub zapisana jako zero.
+Brak oceny pozostaje `null`, nie „w normie”. Nowa zbiórka ma rzeczywiście
+wpisane 24 h z opcją **Zmień**. Znany inny czas zachowuje ograniczenie
+normy, gotowej ilości nie skaluje się drugi raz, a historycznie nieznany
+czas nie dostaje nowego domyślnego 24 h. Znane błędy zbiórki nadal blokują
+oba tryby i zapis.
+
+Odpowiednik NaCl, cele spożycia WHO/EAU, związek soli z kalciurią oraz
+ograniczenia pojedynczej zbiórki należą wyłącznie do zwiniętych
+**Szczegółów i źródeł**. Nie dodawaj selektora diety, choroby przytarczyc,
+kamicy lub leczenia. Sam wynik nie określa natremii, spożycia soli
+konkretnej osoby ani skuteczności leczenia. Zachowaj jeden pomiar
+`Na_mmol_d`; zmiana jednostki i odpowiednik soli nie tworzą nowego badania.
+Wynik, norma, Notatka, raport i zamrożona historia przedstawiają tę samą
+ocenę, bez technicznego JSON w treści Notatki.
+
 ## Makieta i sprawdzenie przed przekazaniem
 
 Każdą kolejną zmianę wizualną w audycie przedstaw najpierw do akceptacji jako

@@ -102,6 +102,9 @@ jobs:
     steps:
       - name: Pobierz repozytorium
         uses: actions/checkout@v4
+        with:
+          # Sodium PWA tests install an actual archived previous application.
+          fetch-depth: 0
       - name: Skonfiguruj Node.js
         uses: actions/setup-node@v4
         with:

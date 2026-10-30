@@ -4,7 +4,7 @@ import { atrapaDokumentu } from '../support/atrapa-dom-lekka.mjs';
 
 function harness() {
   const w = {};
-  for (const file of ['clcr_collection_duration.js', 'clcr_clinical_safety.js', 'clcr_extended_egfr.js', 'clcr_calculation_assumptions.js', 'clcr_result_reference_data.js', 'clcr_result_presentation.js', 'clcr_stone_safety.js', 'clcr_measured_clearance_reference_data.js', 'clcr_measured_clearance_reference.js', 'clcr_saved_results.js', 'clcr_ca_dzm_reference_data.js', 'clcr_ca_dzm.js', 'clcr_ca_dzm_persistence.js', 'clcr_ua_reference_data.js', 'clcr_ua.js', 'clcr_ua_persistence.js', 'clcr_saved_legacy_calculator.js']) loadBrowserScript(file, w);
+  for (const file of ['clcr_collection_duration.js', 'clcr_clinical_safety.js', 'clcr_extended_egfr.js', 'clcr_calculation_assumptions.js', 'clcr_result_reference_data.js', 'clcr_result_presentation.js', 'clcr_stone_safety.js', 'clcr_measured_clearance_reference_data.js', 'clcr_measured_clearance_reference.js', 'clcr_saved_results.js', 'clcr_ca_dzm_reference_data.js', 'clcr_ca_dzm.js', 'clcr_ca_dzm_persistence.js', 'clcr_ua_reference_data.js', 'clcr_ua.js', 'clcr_ua_persistence.js', 'clcr_sodium_dzm_data.js', 'clcr_sodium_dzm.js', 'clcr_sodium_dzm_persistence.js', 'clcr_saved_legacy_calculator.js']) loadBrowserScript(file, w);
   return w;
 }
 const specimen = { age: '45', sex: 'F', weight: '60', height: '165', V24: '1500', U_Na: '50', U_K: '20', U_PO4: '50', U_Prot: '240', U_Ox: '5', U_Cit: '5', pH24: '5.5' };
@@ -59,7 +59,7 @@ describe('Shared DZM numeric duration — new collections versus historical edit
     const values = { Scr: '0.4', formulaPicker: 'ckid_u25', Cl24DurationHours: '24', Cl24DurationSource: 'assumed-24h',
       CA_collectionHours: '', CA_collectionSource: 'assumed-24h', UA_collectionHours: '', UA_collectionSource: 'assumed-24h',
       MG_collectionHours: '', MG_collectionSource: 'assumed-24h', PO4_collectionHours: '', PO4_collectionSource: 'assumed-24h', PO4_durationNeedsConfirmation: 'false',
-      Prot_collectionHours: '', Prot_collectionSource: 'assumed-24h' };
+      Prot_collectionHours: '', Prot_collectionSource: 'assumed-24h', Na_collectionHours: '', Na_collectionSource: 'assumed-24h' };
     const original = structuredClone(values), captured = api.normalizeCapturedInputs(values);
     expect(values).toEqual(original);
     expect(captured).not.toBe(values);
@@ -252,12 +252,36 @@ describe('Shared DZM numeric duration — new collections versus historical edit
     expect(result.measuredClearanceReference.durationSource).toBe('assumed-24h');
     expect(() => w.ClcrSavedLegacyCalculator.recalculate('cl24', { ...specimen, Ucr: '100', Scr: '1', ScrUnit: 'mg/dl', Cl24DurationHours: '0' })).toThrow('większy od 0');
   });
-  it.each([['Na_mmol_d', 75], ['K_mmol_d', 30], ['Prot_mgkg', 240], ['Ox_mgkg', 1.25], ['Cit_mgkg', 1.25]])('actual legacy %s producer no longer needs dates or six answers', (formula, expected) => {
+  it.each([['K_mmol_d', 30], ['Prot_mgkg', 240], ['Ox_mgkg', 1.25], ['Cit_mgkg', 1.25]])('actual legacy %s producer no longer needs dates or six answers', (formula, expected) => {
     const w = harness();
     expect(w.ClcrSavedLegacyCalculator.recalculate(formula, specimen).valueNum).toBe(expected);
     expect(w.ClcrSavedLegacyCalculator.recalculate(formula, { ...specimen, Cl24DurationHours: '12' }).valueNum).toBe(expected * 2);
     expect(() => w.ClcrSavedLegacyCalculator.recalculate(formula, { ...specimen, Cl24DurationHours: '', Cl24DurationSource: 'historical-missing' })).toThrow('nie został utrwalony');
     expect(() => w.ClcrSavedLegacyCalculator.recalculate(formula, { ...specimen, ui_collectionNoMissedVoids_answer: 'no' })).toThrow();
+  });
+  it('audited sodium legacy editing preserves the actual duration and requires an unknown old clock', () => {
+    const api = harness().ClcrSavedLegacyCalculator, input = { ...specimen, Cl24DurationHours: '24', Cl24DurationSource: 'hours' }, original = structuredClone(input);
+    const result = api.recalculate('Na_mmol_d', input);
+    expect(result.valueNum).toBe(75);
+    expect(result.sodiumDzmSnapshot).toMatchObject({ valid: true, rawValue: 75, full24Hours: true, input: { hours: '24', concentration: '50', volume: '1500' } });
+    expect(input).toEqual(original);
+    expect(api.recalculate('Na_mmol_d', { ...input, Cl24DurationHours: '12' })).toMatchObject({ valueNum: 150, outOfRange: null, sodiumDzmSnapshot: { full24Hours: false } });
+    expect(() => api.recalculate('Na_mmol_d', specimen)).toThrow(/czas/i);
+    expect(() => api.recalculate('Na_mmol_d', { ...input, Cl24DurationHours: '', Cl24DurationSource: 'historical-missing' })).toThrow(/czas/i);
+    expect(() => api.recalculate('Na_mmol_d', { ...input, ui_collectionNoMissedVoids_answer: 'no' })).toThrow();
+  });
+  it('sodium actual legacy producer retains a small positive amount and zero and rejects negatives', () => {
+    const api = harness().ClcrSavedLegacyCalculator, input = { ...specimen, Cl24DurationHours: '24', Cl24DurationSource: 'hours' };
+    expect(api.recalculate('Na_mmol_d', { ...input, U_Na: '0.01' })).toMatchObject({ valueNum: 0.015, sodiumDzmSnapshot: { rawValue: 0.015 } });
+    expect(api.recalculate('Na_mmol_d', { ...input, U_Na: '0' })).toMatchObject({ valueNum: 0, outOfRange: null, sodiumDzmSnapshot: { status: 'zero' } });
+    expect(() => api.recalculate('Na_mmol_d', { ...input, U_Na: '-1' })).toThrow();
+  });
+  it('sodium ready daily amounts stay unscaled with a different or unknown clock but known invalid collections still block', () => {
+    const api = harness().ClcrSavedLegacyCalculator, input = { Na_inputMode: 'reported', Na_reportedValue: '150', Na_reportedUnit: 'mmol/24h', age: '45', sex: 'F' };
+    expect(api.recalculate('Na_mmol_d', input)).toMatchObject({ valueNum: 150, outOfRange: null, sodiumDzmSnapshot: { hours: null } });
+    expect(api.recalculate('Na_mmol_d', { ...input, Na_collectionHours: '12' })).toMatchObject({ valueNum: 150, outOfRange: null, sodiumDzmSnapshot: { hours: 12 } });
+    expect(() => api.recalculate('Na_mmol_d', { ...input, Na_collectionHours: '0' })).toThrow();
+    expect(() => api.recalculate('Na_mmol_d', { ...input, Cl24CollectionProblem: true })).toThrow();
   });
   it('audited phosphorus editing preserves captured hours and requires an unknown historical duration', () => {
     const api = harness().ClcrSavedLegacyCalculator;

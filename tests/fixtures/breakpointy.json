@@ -2,9 +2,11 @@
   "opis": "Progi szerokości (min-width/max-width) używane w @media w arkuszach i blokach <style>. Nowa reguła używa progu z tej listy; nowy próg to decyzja (zmiana układu przy części szerokości okna) — po niej: node tests/scripts/breakpointy-css.mjs --zapisz. Krok 6 planu P-STYLE.",
   "progi": [
     "340px",
+    "350px",
     "360px",
     "380px",
     "420px",
+    "430px",
     "480px",
     "520px",
     "540px",

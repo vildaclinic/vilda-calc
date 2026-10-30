@@ -1,0 +1,148 @@
+/* Sodium DZM: the approved integrated card and stable value/unit columns. */
+html[data-clcr-workflow-ui="1"][data-clcr-sodium-dzm-active="1"] { scrollbar-gutter: stable; }
+html[data-clcr-sodium-dzm-active="1"] #clcrWorkspace,
+html[data-clcr-sodium-dzm-active="1"] #clcrWorkspace *,
+html[data-clcr-sodium-dzm-active="1"] #clcrWorkspace *::before,
+html[data-clcr-sodium-dzm-active="1"] #clcrWorkspace *::after { box-sizing: border-box; }
+html[data-clcr-workflow-ui="1"][data-clcr-sodium-dzm-active="1"] #clcrWorkspace { width: 100%; min-width: 0; gap: var(--space-20px); row-gap: var(--space-24px); align-items: start; }
+html[data-clcr-workflow-ui="1"][data-clcr-sodium-dzm-active="1"] #clcrForm.flex { width: 100%; min-width: 0; max-width: 100%; flex-wrap: nowrap; align-items: stretch; gap: var(--space-16px); }
+html[data-clcr-workflow-ui="1"][data-clcr-sodium-dzm-active="1"] #clcrForm.flex > *,
+html[data-clcr-workflow-ui="1"][data-clcr-sodium-dzm-active="1"] #clcrResultRail,
+html[data-clcr-workflow-ui="1"][data-clcr-sodium-dzm-active="1"] #clcrResultReport { width: 100%; min-width: 0; max-width: 100%; }
+html[data-clcr-workflow-ui="1"][data-clcr-sodium-dzm-active="1"] #clcrForm > .clcr-workflow__utilities:empty { display: none; }
+html[data-clcr-workflow-ui="1"][data-clcr-sodium-dzm-active="1"] #clcrResultReport { margin: 0; padding: var(--space-20px); }
+html[data-clcr-sodium-dzm-active="1"] #clcrWorkspace :is(button, input, select),
+html[data-clcr-sodium-dzm-active="1"] :is(.sodium-dzm-input-card, .sodium-dzm-proposal-card, #clcrVisitSaveCard) { transform: none !important; }
+.sodium-dzm-input-card { min-width: 0; padding: var(--space-16px); border: var(--border-hairline) solid var(--clcr-border-soft); border-radius: var(--clcr-radius-card); background: var(--clcr-surface); box-shadow: var(--clcr-shadow-card); }
+html[data-clcr-workflow-ui="1"][data-clcr-sodium-dzm-active="1"] #clcrActivePanel { padding: var(--space-16px) var(--space-16px) 0; border-bottom: 0; border-radius: var(--clcr-radius-card) var(--clcr-radius-card) 0 0; box-shadow: none; }
+html[data-clcr-workflow-ui="1"][data-clcr-sodium-dzm-active="1"] #sodiumDzmInputCard { margin-top: calc(-1 * var(--space-16px)); border-top: 0; border-radius: 0 0 var(--clcr-radius-card) var(--clcr-radius-card); box-shadow: none; }
+.sodium-dzm-input-mode { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-4px); padding: var(--space-4px); margin-bottom: var(--space-20px); border: var(--border-hairline) solid var(--clcr-border); border-radius: var(--radius-12); background: var(--clcr-surface-soft); }
+html[data-clcr-workflow-ui="1"] #clcrForm .sodium-dzm-input-mode button { width: 100%; min-width: 0; min-height: 52px; margin: 0; padding: var(--space-8px); border: 0 !important; border-radius: var(--radius-8) !important; color: var(--clcr-muted) !important; background: transparent !important; box-shadow: none !important; font: 650 16px/1.35 Inter, system-ui, sans-serif; }
+html[data-clcr-workflow-ui="1"] #clcrForm .sodium-dzm-input-mode button[aria-pressed="true"] { color: var(--clcr-surface) !important; background: var(--clcr-primary) !important; }
+.sodium-dzm-mode-fields { display: grid; gap: var(--space-16px); min-width: 0; }
+.sodium-dzm-input-field { width: 100%; min-width: 0; }
+.sodium-dzm-value-row,
+.sodium-dzm-value-row--reported { --sodium-dzm-unit-width: 130px; display: grid; grid-template-columns: minmax(0, 1fr) var(--sodium-dzm-unit-width); gap: var(--space-8px); min-width: 0; align-items: end; }
+html[data-clcr-workflow-ui="1"] #clcrForm .sodium-dzm-entry-field { display: flex; flex-direction: column; gap: var(--space-8px); width: 100%; min-width: 0; min-height: 0; margin: 0; padding: 0; background: transparent; border: 0; box-shadow: none; }
+html[data-clcr-workflow-ui="1"] #clcrForm .sodium-dzm-entry-field .clcr-field__heading { display: block; margin: 0; padding: 0; }
+html[data-clcr-workflow-ui="1"] #clcrForm .sodium-dzm-value-row > .sodium-dzm-entry-field:not(.sodium-dzm-unit-field) .clcr-field__heading { width: calc(100% + var(--sodium-dzm-unit-width) + var(--space-8px)); max-width: none; }
+html[data-clcr-workflow-ui="1"] #clcrForm .sodium-dzm-entry-field .clcr-field__name { color: var(--clcr-text); font-size: 14px; line-height: 1.5; font-weight: 650; }
+html[data-clcr-workflow-ui="1"] #clcrForm .sodium-dzm-input-card :is(.clcr-field__status, .clcr-info-button, .clcr-field__note) { display: none; }
+html[data-clcr-workflow-ui="1"] #clcrForm .sodium-dzm-entry-field :is(input, select) { display: block; width: 100%; min-width: 0; max-width: 100%; height: 48px; min-height: 48px; margin: 0; padding: var(--space-10px) var(--space-12px); border: var(--border-hairline) solid var(--clcr-border); border-radius: var(--radius-12); background: var(--clcr-surface); color: var(--clcr-text); font: 400 16px/24px Inter, system-ui, sans-serif; font-variant-numeric: tabular-nums; box-shadow: none; }
+html[data-clcr-workflow-ui="1"] #clcrForm .sodium-dzm-entry-field :is(input, select):not([aria-invalid="true"]) { border-color: var(--clcr-border) !important; background: var(--clcr-surface) !important; box-shadow: none !important; }
+html[data-clcr-workflow-ui="1"] #clcrForm .sodium-dzm-entry-field :is(input, select)[aria-invalid="true"] { border-color: var(--clcr-error) !important; background: var(--clcr-error-bg) !important; box-shadow: none !important; }
+html[data-clcr-workflow-ui="1"] #clcrForm .sodium-dzm-unit-field .clcr-field__heading { display: none; }
+html[data-clcr-workflow-ui="1"] #clcrForm .sodium-dzm-unit-field :is(select, input) { padding-inline: var(--space-8px); }
+html[data-clcr-workflow-ui="1"] #clcrForm .sodium-dzm-input-card .clcr-field__validation:empty { display: none; }
+.sodium-dzm-fixed-unit { display: flex; align-items: center; width: 100%; min-width: 0; height: 48px; justify-content: center; padding: var(--space-10px) var(--space-12px); border: var(--border-hairline) solid var(--clcr-border-soft); border-radius: var(--radius-12); color: var(--clcr-muted); background: var(--clcr-surface-soft); font-size: 16px; line-height: 24px; }
+.sodium-dzm-field-hint, .sodium-dzm-assumption { margin: var(--space-8px) 0 0; color: var(--clcr-muted); font-size: 12px; line-height: 1.6; }
+.sodium-dzm-assumption { margin-top: var(--space-16px); }
+.sodium-dzm-field-error { margin: var(--space-8px) 0 0; color: var(--clcr-error); font-size: 12px; line-height: 1.6; }
+.sodium-dzm-readiness { margin: var(--space-20px) 0 0; color: var(--clcr-muted); font-size: 12px; line-height: 1.5; }
+.sodium-dzm-readiness[data-complete="true"] { color: var(--clcr-primary-dark); }
+.sodium-dzm-context-row { display: flex; justify-content: space-between; align-items: center; gap: var(--space-12px); margin-top: var(--space-20px); padding-top: var(--space-16px); border-top: var(--border-hairline) solid var(--clcr-border-soft); }
+.sodium-dzm-context-row > div { min-width: 0; }
+.sodium-dzm-context-label { display: block; margin-bottom: var(--space-4px); color: var(--clcr-muted); font-size: 12px; line-height: 1.5; }
+.sodium-dzm-context-value { color: var(--clcr-heading); font-size: 14px; line-height: 1.5; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+html[data-clcr-workflow-ui="1"] #clcrForm .sodium-dzm-context-button { flex: 0 0 auto; width: auto; min-height: 48px; margin: 0; padding: var(--space-8px) var(--space-12px); border: var(--border-hairline) solid var(--clcr-border) !important; border-radius: var(--radius-10); color: var(--clcr-primary-dark) !important; background: var(--clcr-surface) !important; box-shadow: none !important; font: 650 16px/1.4 Inter, system-ui, sans-serif; }
+.sodium-dzm-inline-editor { margin-top: var(--space-14px); padding: var(--space-14px); border: var(--border-hairline) solid var(--clcr-border-soft); border-radius: var(--radius-12); background: var(--clcr-surface-soft); }
+.sodium-dzm-mode-fields[hidden], .sodium-dzm-inline-editor[hidden], .sodium-dzm-context-row[hidden], .sodium-dzm-assumption[hidden], .sodium-dzm-field-error[hidden] { display: none; }
+/* The single result uses neutral reference numbers in every assessment state. */
+html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .sodium-dzm-proposal-card { --clcr-result-color: var(--clcr-heading); --clcr-result-bg: #f4f7f8; --clcr-result-border: #ccd9dc; min-height: 314px; padding: var(--space-20px) !important; }
+html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .sodium-dzm-proposal-card[data-clcr-tone="normal"] { --clcr-result-color: var(--clcr-primary-dark); --clcr-result-bg: #eef8f8; --clcr-result-border: #bbdadd; }
+html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .sodium-dzm-proposal-card[data-clcr-tone="warning"] { --clcr-result-color: var(--clcr-warning); --clcr-result-bg: var(--clcr-warning-bg); --clcr-result-border: #ead2a3; }
+html[data-clcr-workflow-ui="1"] #clcrResultReport .sodium-dzm-result-status { min-height: 42px; margin: 0 0 15px; color: var(--clcr-result-color); font-size: 14px; font-weight: 750; line-height: 1.5; }
+.sodium-dzm-result-main { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.05fr); gap: var(--space-16px); }
+.sodium-dzm-result-main > div { min-width: 0; }
+html[data-clcr-workflow-ui="1"] #clcrResultReport .sodium-dzm-proposal-card :is(.clcr-result-patient-label, .clcr-result-reference-label) { min-height: 22px; margin: 0 0 9px; color: var(--clcr-muted); font-size: 11px; line-height: 1.5; }
+html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .sodium-dzm-proposal-card .clcr-result-value { display: flex; align-items: center; min-height: 56px; max-width: 100%; font-size: 43px !important; font-weight: 750; line-height: 1.2; letter-spacing: -1.3px; color: var(--clcr-result-color) !important; white-space: nowrap; overflow-wrap: normal; }
+html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .sodium-dzm-proposal-card .clcr-result-value[data-long="true"] { font-size: 27px !important; letter-spacing: -.4px; }
+html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .sodium-dzm-proposal-card .clcr-result-value[data-dense="true"] { font-size: 21px !important; }
+html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .sodium-dzm-proposal-card .sodium-dzm-reference-value { display: flex; flex-wrap: wrap; align-content: center; min-height: 56px; margin: 0; padding: 0; color: var(--clcr-heading) !important; font-size: 24px !important; line-height: 1.3; letter-spacing: -.4px; white-space: normal; overflow-wrap: normal; word-break: normal; }
+.sodium-dzm-reference-bound { display: inline-block; white-space: nowrap; }
+html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .sodium-dzm-proposal-card .sodium-dzm-reference-value[data-long="true"] { font-size: 20px !important; }
+html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .sodium-dzm-proposal-card .clcr-result-reference--unavailable .sodium-dzm-reference-value { font-size: 14px !important; line-height: 1.5; }
+.sodium-dzm-result-unit, .sodium-dzm-reference-unit { display: block; min-height: 24px; margin-top: var(--space-4px); color: var(--clcr-heading) !important; font-size: 12px; font-weight: 650; line-height: 1.5; }
+.sodium-dzm-reference-hint { min-height: 32px; margin: var(--space-4px) 0 0; color: var(--clcr-muted); font-size: 11px; line-height: 1.6; }
+.sodium-dzm-result-copy { margin: var(--space-18px) 0 0; color: var(--clcr-heading); font-size: 12px; font-weight: 400; line-height: 1.7; }
+.sodium-dzm-result-caution { margin: var(--space-14px) 0 0; padding-top: var(--space-12px); border-top: var(--border-hairline) solid var(--clcr-result-border); color: var(--clcr-heading); font-size: 12px; line-height: 1.6; }
+.sodium-dzm-output-picker { display: flex; justify-content: flex-end; align-items: center; gap: var(--space-8px); margin: 0 0 var(--space-16px); color: var(--clcr-muted); font-size: 12px; }
+.sodium-dzm-output-picker select { width: 130px; min-width: 0; height: 48px; padding: var(--space-8px); border: var(--border-hairline) solid var(--clcr-border); border-radius: var(--radius-10); background: var(--clcr-surface); color: var(--clcr-heading); font: 400 16px/24px Inter, system-ui, sans-serif; }
+/* The live picker is adopted into the existing result heading in natural flow. */
+html[data-clcr-workflow-ui="1"][data-clcr-sodium-dzm-active="1"] #clcrResultReport .clcr-result-report__head { display: flex; justify-content: space-between; align-items: center; gap: var(--space-12px); min-height: 48px; }
+html[data-clcr-workflow-ui="1"][data-clcr-sodium-dzm-active="1"] #clcrResultReport .clcr-result-report__head .sodium-dzm-output-picker { flex: 0 0 auto; margin: 0; font-size: 10px; }
+.sodium-dzm-norm-axis { position: relative; margin-top: 23px; padding-top: 34px; }
+.sodium-dzm-norm-track { position: relative; height: 12px; border: var(--border-hairline) solid #c8d5d8; border-radius: var(--radius-8); background: linear-gradient(to right, #efdfbe 0 var(--low), #b9dfe0 var(--low) var(--high), #efdfbe var(--high) 100%); }
+.sodium-dzm-norm-boundary { position: absolute; top: -5px; height: 20px; border-left: var(--border-hairline) solid #778a8f; }
+.sodium-dzm-norm-boundary--low { left: var(--low); }
+.sodium-dzm-norm-boundary--high { left: var(--high); }
+.sodium-dzm-norm-band-title { position: absolute; top: 0; left: calc((var(--low) + var(--high)) / 2); transform: translateX(-50%); color: var(--clcr-heading); font-size: 10px; font-weight: 700; white-space: nowrap; }
+.sodium-dzm-norm-point { position: absolute; top: -10px; left: var(--point); width: 3px; height: 28px; transform: translateX(-50%); background: var(--clcr-result-color); }
+.sodium-dzm-norm-point::before { position: absolute; top: -4px; left: -3px; width: 9px; height: 9px; border-radius: var(--radius-circle); background: var(--clcr-result-color); content: ""; }
+.sodium-dzm-norm-labels { position: relative; height: 23px; margin-top: 7px; color: var(--clcr-heading); font-size: 10px; }
+.sodium-dzm-norm-labels span { position: absolute; transform: translateX(-50%); white-space: nowrap; }
+.sodium-dzm-norm-label--low { left: var(--low); }
+.sodium-dzm-norm-label--high { left: var(--high); }
+.sodium-dzm-norm-axis-caption { margin: 3px 0 0 !important; color: var(--clcr-muted); font-size: 10px !important; line-height: 1.6; }
+.sodium-dzm-rounding-note { margin: var(--space-12px) 0 0; color: var(--clcr-muted); font-size: 10px; line-height: 1.6; overflow-wrap: anywhere; }
+.sodium-dzm-result-empty, .sodium-dzm-result-error { min-height: 260px; padding: var(--space-20px); border: var(--border-hairline) dashed var(--clcr-border); border-radius: var(--radius-14); background: var(--clcr-surface-soft); color: var(--clcr-muted); font-size: 13px; line-height: 1.65; }
+.sodium-dzm-result-empty strong, .sodium-dzm-result-error strong { display: block; color: var(--clcr-heading); font-size: 16px; line-height: 1.5; }
+.sodium-dzm-result-empty p, .sodium-dzm-result-error p { margin: var(--space-12px) 0 0; }
+.sodium-dzm-result-error { border-style: solid; border-color: #efbaba; background: var(--clcr-error-bg); color: var(--clcr-error); }
+.sodium-dzm-result-error strong { color: var(--clcr-error); }
+.sodium-dzm-proposal-details { width: 100%; min-width: 0; }
+.sodium-dzm-proposal-details p, .sodium-dzm-proposal-details li { max-width: 100%; overflow-wrap: anywhere; word-break: normal; white-space: normal; }
+.sodium-dzm-proposal-details h3 { line-height: 1.5; }
+.sodium-dzm-table-caption { color: var(--clcr-muted); font-size: 11px; line-height: 1.6; }
+html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .sodium-dzm-proposal-details .clcr-result-category-table { width: 100%; table-layout: fixed; font-size: 11px; line-height: 1.6; }
+html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .sodium-dzm-proposal-details .clcr-result-category-table :is(th, td) { padding: var(--space-8px); font-size: inherit; line-height: inherit; white-space: normal; overflow-wrap: anywhere; color: var(--clcr-heading); }
+html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .sodium-dzm-proposal-details .clcr-result-category-table :is(th, td):first-child { width: 28%; }
+html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .sodium-dzm-proposal-details .clcr-result-category-table :is(th, td):nth-child(n+2) { width: 36%; }
+.sodium-dzm-proposal-details td.sodium-dzm-current-cell { box-shadow: inset 0 -3px 0 var(--clcr-primary); font-weight: 800; }
+.sodium-dzm-source-links { padding-left: var(--space-16px); }
+.sodium-dzm-source-links li { margin: var(--space-6px) 0; }
+.sodium-dzm-source-links a { overflow-wrap: anywhere; }
+.sodium-dzm-source-links small { display: block; color: var(--clcr-muted); font-size: 11px; line-height: 1.6; }
+.sodium-dzm-unrounded-result { max-width: 100%; padding: var(--space-10px); border: var(--border-hairline) solid var(--clcr-border-soft); border-radius: var(--radius-10); background: var(--clcr-surface-soft); font-size: 11px; line-height: 1.6; overflow-wrap: anywhere; }
+html[data-clcr-workflow-ui="1"][data-clcr-sodium-dzm-active="1"] #clearContainer { margin: 0 !important; padding: 0; border: 0; background: none; box-shadow: none; }
+html[data-clcr-workflow-ui="1"][data-clcr-sodium-dzm-active="1"] #clearBtn { display: block; width: 100%; min-height: 48px; margin: 0; padding: var(--space-10px) var(--space-12px); font: 400 16px/24px Inter, system-ui, sans-serif; }
+html[data-clcr-workflow-ui="1"][data-clcr-sodium-dzm-active="1"] #clcrVisitSaveCard :is(h2, .cvs-hint) { text-align: center; }
+@media (min-width: 980px) {
+  html[data-clcr-workflow-ui="1"][data-clcr-sodium-dzm-active="1"] #clcrWorkspace { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+}
+@media (max-width: 700px) {
+  html[data-clcr-workflow-ui="1"][data-clcr-sodium-dzm-active="1"] #clcrResultReport { padding: var(--space-16px); }
+  html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .sodium-dzm-proposal-card { min-height: 318px; padding: var(--space-16px) !important; }
+  .sodium-dzm-value-row, .sodium-dzm-value-row--reported { --sodium-dzm-unit-width: 116px; }
+  .sodium-dzm-result-main { gap: 13px; }
+  html[data-clcr-workflow-ui="1"] #clcrResultReport .sodium-dzm-proposal-card :is(.clcr-result-patient-label, .clcr-result-reference-label) { min-height: 3em; font-size: 11px; }
+  html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .sodium-dzm-proposal-card .clcr-result-value { min-height: 56px; font-size: 43px !important; letter-spacing: -1px; }
+  html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .sodium-dzm-proposal-card .clcr-result-value[data-long="true"] { font-size: 27px !important; letter-spacing: -.4px; }
+  html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .sodium-dzm-proposal-card .clcr-result-value[data-dense="true"] { font-size: 23px !important; }
+  html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .sodium-dzm-proposal-card .clcr-result-value[data-extra-dense="true"] { font-size: 16px !important; letter-spacing: -.7px; }
+  html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .sodium-dzm-proposal-card .sodium-dzm-reference-value { min-height: 56px; font-size: 25px !important; }
+  html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .sodium-dzm-proposal-card .sodium-dzm-reference-value[data-long="true"] { font-size: 19px !important; }
+  .sodium-dzm-result-copy { font-size: 12px; line-height: 1.7; }
+  .sodium-dzm-result-unit, .sodium-dzm-reference-unit { font-size: 12px; }
+  html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .sodium-dzm-proposal-details .clcr-result-category-table :is(th, td) { padding: 9px 5px; font-size: 10px; }
+}
+@media (max-width: 430px) {
+  .sodium-dzm-output-picker > span { display: none; }
+}
+@media (max-width: 350px) {
+  html[data-clcr-workflow-ui="1"][data-clcr-sodium-dzm-active="1"] #clcrResultReport { padding: var(--space-14px); }
+  html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .sodium-dzm-proposal-card { padding: var(--space-14px) !important; }
+  .sodium-dzm-value-row, .sodium-dzm-value-row--reported { --sodium-dzm-unit-width: 108px; }
+  .sodium-dzm-result-main { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 11px; }
+  html[data-clcr-workflow-ui="1"] #clcrResultReport .sodium-dzm-result-status { font-size: 13px; }
+  html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .sodium-dzm-proposal-card .clcr-result-value { font-size: 38px !important; }
+  html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .sodium-dzm-proposal-card .clcr-result-value[data-long="true"] { font-size: 23px !important; }
+  html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .sodium-dzm-proposal-card .clcr-result-value[data-dense="true"] { font-size: 20px !important; letter-spacing: -.7px; }
+  html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .sodium-dzm-proposal-card .clcr-result-value[data-extra-dense="true"] { font-size: 13px !important; letter-spacing: -.7px; }
+  html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .sodium-dzm-proposal-card .sodium-dzm-reference-value { font-size: 22px !important; }
+  html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .sodium-dzm-proposal-card .sodium-dzm-reference-value[data-long="true"] { font-size: 17px !important; }
+  html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .sodium-dzm-proposal-card .clcr-result-reference--unavailable .sodium-dzm-reference-value { font-size: 14px !important; }
+  .sodium-dzm-output-picker select { width: 116px; }
+  .sodium-dzm-result-copy { font-size: 11px; }
+  .sodium-dzm-norm-axis-caption { font-size: 9px !important; }
+}

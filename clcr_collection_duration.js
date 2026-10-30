@@ -9,8 +9,10 @@
   "use strict";
   const HOURS_ID = "Cl24DurationHours";
   const SOURCE_ID = "Cl24DurationSource";
-  const HOURS_FIELDS = Object.freeze([HOURS_ID, "CA_collectionHours", "UA_collectionHours", "MG_collectionHours", "PO4_collectionHours", "Prot_collectionHours"]);
-  const SOURCES = Object.freeze({ [HOURS_ID]: SOURCE_ID, CA_collectionHours: "CA_collectionSource", UA_collectionHours: "UA_collectionSource", MG_collectionHours: "MG_collectionSource", PO4_collectionHours: "PO4_collectionSource", Prot_collectionHours: "Prot_collectionSource" });
+  const HOURS_FIELDS = Object.freeze([HOURS_ID, "CA_collectionHours", "UA_collectionHours", "MG_collectionHours", "PO4_collectionHours", "Prot_collectionHours", "Na_collectionHours"]);
+  const SOURCES = Object.freeze({ [HOURS_ID]: SOURCE_ID, CA_collectionHours: "CA_collectionSource", UA_collectionHours: "UA_collectionSource", MG_collectionHours: "MG_collectionSource", PO4_collectionHours: "PO4_collectionSource", Prot_collectionHours: "Prot_collectionSource", Na_collectionHours: "Na_collectionSource" });
+  const FORMULA_FIELDS = Object.freeze({ Na_mmol_d: Object.freeze({ fieldId: "Na_collectionHours", sourceId: "Na_collectionSource", modeId: "Na_inputMode",
+    concentration: Object.freeze(["Na_concentration", "Na_volume", "Na_collectionHours"]), reported: Object.freeze(["Na_reportedValue"]) }) });
   const PROTOCOL_IDS = Object.freeze(["collectionStartVoidDiscarded", "collectionFinalVoidIncluded", "collectionNoMissedVoids", "collectionNoSpillage", "collectionNoExtraVoids", "collectionStorageFollowed"]);
   const PROTOCOL_KEYS = Object.freeze(["startVoidDiscarded", "finalVoidIncluded", "noMissedVoids", "noSpillage", "noExtraVoids", "storageFollowed"]);
   const bindings = new WeakMap(), layouts = new WeakMap();
@@ -25,7 +27,7 @@
     const sourceId = SOURCES[control?.id], flagId = confirmationId(control?.id || HOURS_ID);
     const source = doc?.getElementById?.(sourceId)?.value ?? vault[sourceId];
     const flag = doc?.getElementById?.(flagId);
-    return source === "historical-missing" || confirmed(flag ? flag.type === "checkbox" ? flag.checked : flag.value : vault[flagId]);
+    return source === "historical-missing" || control?.id === "Na_collectionHours" && source === "invalid" || confirmed(flag ? flag.type === "checkbox" ? flag.checked : flag.value : vault[flagId]);
   }
   function updateDurationSummary(layout, duration) {
     const unresolved = !duration.valid && historicalControl(layout.control);
@@ -68,7 +70,8 @@
   function fromValues(values = {}, context = {}, options = {}) {
     const fieldId = options.fieldId || HOURS_ID, sourceId = options.sourceId || SOURCES[fieldId] || SOURCE_ID;
     const flagId = confirmationId(fieldId);
-    const historical = options.historical === true || confirmed(values.durationNeedsConfirmation) || confirmed(values[flagId]) || values[sourceId] === "historical-missing" || context.durationHistorical === true || context.durationNeedsConfirmation === true;
+    const explicitInvalid = fieldId === "Na_collectionHours" && values[sourceId] === "invalid";
+    const historical = options.historical === true || confirmed(values.durationNeedsConfirmation) || confirmed(values[flagId]) || values[sourceId] === "historical-missing" || explicitInvalid || context.durationHistorical === true || context.durationNeedsConfirmation === true;
     let hours, source;
     const needsCapturedFallback = !own(values, fieldId) || historical && absent(values[fieldId]) && absent(values[sourceId]);
     if (!needsCapturedFallback) { hours = values[fieldId]; source = values[sourceId]; }
@@ -78,7 +81,10 @@
       const minutes = [context.durationMinutes, context.collectionDurationMinutes, context.collectionAnalysis?.durationMinutes].find(value => finite(value) && value > 0);
       if (minutes !== undefined) { hours = minutes / 60; source = "captured"; }
     }
-    return { ...resolveHours(hours, { historical, source }), ...collectionFacts(values, context) };
+    const duration = resolveHours(hours, { historical, source });
+    if (explicitInvalid) Object.assign(duration, { valid: false, hours: null, minutes: null, assumed: false, source: "invalid", missing: false, invalid: true,
+      error: "Wpisz prawidłowy czas zbiórki większy od 0 godzin." });
+    return { ...duration, ...collectionFacts(values, context) };
   }
   function readFromDocument(documentRef, options = {}) {
     const doc = documentRef || root.document, values = {}, vault = doc?.defaultView?.__vildaClcrVersionValueVault || {};
@@ -100,7 +106,8 @@
       if (!own(values, fieldId)) continue;
       const sourceId = SOURCES[fieldId], flagId = confirmationId(fieldId);
       const historical = values[sourceId] === "historical-missing" || confirmed(values[flagId]);
-      if (absent(values[fieldId]) && !historical) {
+      const explicitInvalid = fieldId === "Na_collectionHours" && values[sourceId] === "invalid";
+      if (absent(values[fieldId]) && !historical && !explicitInvalid) {
         result[fieldId] = "24";
         result[sourceId] = "assumed-24h";
       }
@@ -109,6 +116,11 @@
       if (!own(values, flagId)) result[flagId] = historical;
     }
     return result;
+  }
+  function resolveFormulaFields(formulaId) { return FORMULA_FIELDS[formulaId] || null; }
+  function requiredFields(formulaId, values = {}) {
+    const fields = resolveFormulaFields(formulaId);
+    return fields ? fields[values[fields.modeId] === "reported" ? "reported" : "concentration"].slice() : null;
   }
   function bindControl(control, options = {}) {
     if (!control) return control;
@@ -199,5 +211,5 @@
     bindControl(control);
   }
   if (root.document?.addEventListener) root.document.addEventListener("DOMContentLoaded", () => ensureDefaults(root.document));
-  return Object.freeze({ HOURS_ID, SOURCE_ID, HOURS_FIELDS, PROTOCOL_IDS, SOURCES, parseHours, resolveHours, collectionFacts, fromValues, readFromDocument, normalizeCapturedInputs, bindControl, ensureDefaults, syncDurationView });
+  return Object.freeze({ HOURS_ID, SOURCE_ID, HOURS_FIELDS, PROTOCOL_IDS, SOURCES, FORMULA_FIELDS, resolveFormulaFields, requiredFields, parseHours, resolveHours, collectionFacts, fromValues, readFromDocument, normalizeCapturedInputs, bindControl, ensureDefaults, syncDurationView });
 });

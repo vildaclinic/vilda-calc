@@ -19,7 +19,7 @@
  *   bo i tak chcemy zwracać HTML z cache natychmiast.
  */
 
-const SW_VERSION = '1.1.419';
+const SW_VERSION = '1.1.420';
 const CACHE_PREFIX = 'pwa-kalorii';
 const SHELL_CACHE = `${CACHE_PREFIX}-shell-v${SW_VERSION}`;
 const RUNTIME_CACHE = `${CACHE_PREFIX}-runtime`;
@@ -297,6 +297,7 @@ const CORE_SHELL_URLS = [
   '/clcr_collection_duration.js?v=1',
   '/clcr_collection_duration.js?v=2',
   '/clcr_collection_duration.js?v=3',
+  '/clcr_collection_duration.js?v=4',
   '/clcr_collection_duration.css?v=1',
   '/clcr_mg_dzm_reference_data.js?v=1',
   '/clcr_mg_dzm.js?v=1',
@@ -313,6 +314,11 @@ const CORE_SHELL_URLS = [
   '/clcr_protein_dzm_ui.js?v=1',
   '/clcr_protein_dzm.css?v=1',
   '/clcr_protein_dzm_persistence.js?v=1',
+  '/clcr_sodium_dzm_data.js?v=1',
+  '/clcr_sodium_dzm.js?v=1',
+  '/clcr_sodium_dzm_ui.js?v=1',
+  '/clcr_sodium_dzm.css?v=1',
+  '/clcr_sodium_dzm_persistence.js?v=1',
   '/clcr_notes_view.js?v=1',
   '/clcr_notes_view.css?v=1',
   '/clcr_result_reference_data.js?v=1',
@@ -355,6 +361,7 @@ const CORE_SHELL_URLS = [
   '/inline_kalkulator_klirens_02.js?v=25',
   '/inline_kalkulator_klirens_02.js?v=26',
   '/inline_kalkulator_klirens_02.js?v=27',
+  '/inline_kalkulator_klirens_02.js?v=28',
   '/inline_kalkulator_klirens_03.js?v=1',
   '/inline_kalkulator_klirens_04.js?v=1',
   '/inline_kalkulator_klirens_04.js?v=4',
@@ -388,6 +395,7 @@ const CORE_SHELL_URLS = [
   '/inline_kalkulator_klirens_04.js?v=32',
   '/inline_kalkulator_klirens_04.js?v=33',
   '/inline_kalkulator_klirens_04.js?v=34',
+  '/inline_kalkulator_klirens_04.js?v=35',
   '/inline_kalkulator_klirens_05.js?v=1',
   '/inline_kalkulator_klirens_06.js?v=1',
   '/inline_kalkulator_klirens_07.js?v=1',
@@ -413,6 +421,7 @@ const CORE_SHELL_URLS = [
   '/inline_kalkulator_klirens_07.js?v=21',
   '/inline_kalkulator_klirens_07.js?v=22',
   '/inline_kalkulator_klirens_07.js?v=23',
+  '/inline_kalkulator_klirens_07.js?v=24',
   '/inline_kalkulator_klirens_08.js?v=1',
   '/inline_kalkulator_klirens_09.js?v=1',
   '/clcr_ui_workflow.css?v=1',
@@ -468,6 +477,7 @@ const CORE_SHELL_URLS = [
   '/clcr_ui_workflow.js?v=32',
   '/clcr_ui_workflow.js?v=33',
   '/clcr_ui_workflow.js?v=34',
+  '/clcr_ui_workflow.js?v=35',
   '/clcr_record_resources.js?v=1',
   '/clcr_record_resources.js?v=2',
   '/clcr_record_resources.js?v=3',
@@ -477,6 +487,7 @@ const CORE_SHELL_URLS = [
   '/clcr_record_resources.js?v=7',
   '/clcr_record_resources.js?v=8',
   '/clcr_record_resources.js?v=9',
+  '/clcr_record_resources.js?v=10',
   '/clcr_saved_calculation.js?v=1',
   '/clcr_saved_calculation.js?v=2',
   '/clcr_saved_calculation.js?v=3',
@@ -486,6 +497,7 @@ const CORE_SHELL_URLS = [
   '/clcr_saved_calculation.js?v=7',
   '/clcr_saved_calculation.js?v=8',
   '/clcr_saved_calculation.js?v=9',
+  '/clcr_saved_calculation.js?v=10',
   '/clcr_saved_legacy_calculator.js?v=1',
   '/clcr_saved_legacy_calculator.js?v=2',
   '/clcr_saved_legacy_calculator.js?v=3',
@@ -495,6 +507,7 @@ const CORE_SHELL_URLS = [
   '/clcr_saved_legacy_calculator.js?v=7',
   '/clcr_saved_legacy_calculator.js?v=8',
   '/clcr_saved_legacy_calculator.js?v=9',
+  '/clcr_saved_legacy_calculator.js?v=10',
   '/clcr_saved_results.js?v=1',
   '/clcr_saved_results.js?v=2',
   '/clcr_saved_results.js?v=3',
@@ -504,6 +517,7 @@ const CORE_SHELL_URLS = [
   '/clcr_saved_results.js?v=7',
   '/clcr_saved_results.js?v=8',
   '/clcr_saved_results.js?v=9',
+  '/clcr_saved_results.js?v=10',
   '/clcr_saved_results_view.js?v=1',
   '/clcr_saved_results_view.js?v=2',
   '/clcr_saved_results_view.css?v=1',
@@ -512,6 +526,7 @@ const CORE_SHELL_URLS = [
   '/clcr_result_details.js?v=3',
   '/clcr_result_details.js?v=4',
   '/clcr_result_details.js?v=5',
+  '/clcr_result_details.js?v=6',
   '/clcr_result_details.css?v=1',
   '/inline_notatki_00.js?v=2',
   '/inline_notatki_00.js?v=3',
@@ -736,6 +751,7 @@ const CORE_SHELL_URLS = [
   '/vilda_lab_history_tab.js?v=14',
   '/vilda_lab_history_tab.js?v=15',
   '/vilda_lab_history_tab.js?v=16',
+  '/vilda_lab_history_tab.js?v=17',
   '/vilda_lab_history_tab.css?v=1',
   '/vilda_lab_history_tab.css?v=2',
   '/vilda_lab_history_tab.css?v=3',
@@ -1490,6 +1506,7 @@ const CORE_SHELL_URLS = [
   '/vilda_chrome.js?v=198',
   '/vilda_chrome.js?v=199',
   '/vilda_chrome.js?v=200',
+  '/vilda_chrome.js?v=201',
   '/vilda_realtime.js?v=1',
   '/vilda_realtime.js?v=2',
   '/vilda_realtime.js?v=3',
@@ -1993,6 +2010,7 @@ const CORE_SHELL_URLS = [
   '/vilda_save_status_indicator.js?v=32',
   '/vilda_save_status_indicator.js?v=33',
   '/vilda_save_status_indicator.js?v=34',
+  '/vilda_save_status_indicator.js?v=35',
   '/vilda_unsaved_guard.js?v=1',
   '/vilda_unsaved_guard.js?v=2',
   '/vilda_unsaved_guard.js?v=3',
@@ -3768,6 +3786,7 @@ const OPTIONAL_ASSETS = [
   '/vilda_auth_ui.js?v=518',
   '/vilda_auth_ui.js?v=519',
   '/vilda_auth_ui.js?v=520',
+  '/vilda_auth_ui.js?v=521',
   '/app.js?v=205',
   '/app.js?v=206',
   '/app.js?v=207',
@@ -4013,6 +4032,7 @@ const OPTIONAL_ASSETS = [
   '/vilda_session_bridge.js?v=122',
   '/vilda_session_bridge.js?v=123',
   '/vilda_session_bridge.js?v=124',
+  '/vilda_session_bridge.js?v=125',
   '/vilda_data_safety_explainer.js?v=5',
   '/vilda_obesity_banner.css?v=6',
   '/vilda_obesity_banner.css?v=7',
@@ -4673,6 +4693,10 @@ async function openReusablePreviousShellCaches() {
   return reusable;
 }
 
+// Static hosting serves identical bytes for these CSS query aliases. Only a
+// response freshly fetched during this installation may seed another alias.
+const FRESH_CSS_ALIAS_PATHS = new Set(['/edu-video-ui.css', '/style.css', '/vilda_chrome.css']);
+
 async function fetchAndStorePrecacheUrl(url, { required = false, previousShellCaches = [], freshResponses = null } = {}) {
   const cache = await caches.open(SHELL_CACHE);
   const pathname = getPathname(url);
@@ -4692,10 +4716,10 @@ async function fetchAndStorePrecacheUrl(url, { required = false, previousShellCa
     }
   }
 
-  // Hosting podaje ten sam arkusz pod wszystkimi siedmioma adresami edu-video-ui.css.
+  // Hosting podaje ten sam arkusz pod bieżącymi aliasami z jawnej listy CSS.
   // W obrębie jednej instalacji dzielimy tylko ŚWIEŻĄ odpowiedź sieci, zachowując każdy klucz.
   // Dokładny niezmienny wpis poprzedniej pamięci ma pierwszeństwo i nie zasila tej mapy.
-  const sharedFreshResponse = pathname === '/edu-video-ui.css' ? freshResponses?.get(pathname) : null;
+  const sharedFreshResponse = FRESH_CSS_ALIAS_PATHS.has(pathname) ? freshResponses?.get(pathname) : null;
   if (cacheKey && sharedFreshResponse) {
     await cache.put(cacheKey, sharedFreshResponse.clone());
     return;
@@ -4716,7 +4740,7 @@ async function fetchAndStorePrecacheUrl(url, { required = false, previousShellCa
   }
 
   // Cache.put zużywa treść odpowiedzi: klon powstaje przed zapisem, ale udostępniamy go dopiero po sukcesie.
-  const freshResponse = pathname === '/edu-video-ui.css' && freshResponses ? safeResponse.clone() : null;
+  const freshResponse = FRESH_CSS_ALIAS_PATHS.has(pathname) && freshResponses ? safeResponse.clone() : null;
   await cache.put(cacheKey, safeResponse);
   if (freshResponse) freshResponses.set(pathname, freshResponse);
 }

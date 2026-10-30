@@ -17,6 +17,11 @@ const specimen = {
   ui_collectionNoExtraVoids_answer: '', ui_collectionStorageFollowed_answer: '',
 };
 const formulas = ['cl24', 'PO4_mgkg', 'Prot_mgkg', 'Na_mmol_d', 'K_mmol_d', 'Ox_mgkg', 'Cit_mgkg', 'pH24'];
+const sodiumInputs = {
+  Na_inputMode: 'concentration', Na_concentration: '50', Na_volume: '1440', Na_volumeUnit: 'mL',
+  Na_collectionHours: '', Na_collectionSource: 'assumed-24h', Na_durationNeedsConfirmation: false,
+  Na_reportedValue: '', Na_reportedUnit: 'mmol/24h', Na_outputUnit: 'mmol/24h', Na_unitConversions: '',
+};
 
 function durationControls(formula) {
   return formula === 'PO4_mgkg'
@@ -25,6 +30,9 @@ function durationControls(formula) {
     : formula === 'Prot_mgkg'
       ? { field: 'Prot_collectionHours', source: 'Prot_collectionSource', panel: '#proteinDzmInputCard',
           change: '[aria-controls="proteinDzmDurationEditor"]', summary: '#proteinDzmInputCard .protein-dzm-context-row strong' }
+    : formula === 'Na_mmol_d'
+      ? { field: 'Na_collectionHours', source: 'Na_collectionSource', panel: '#sodiumDzmInputCard',
+          change: '[aria-controls="sodiumDzmDurationEditor"]', summary: '#sodiumDzmInputCard .sodium-dzm-context-row strong' }
     : { field: 'Cl24DurationHours', source: 'Cl24DurationSource', panel: '#clcrCommonDuration',
         change: '#clcrCommonDuration .clcr-duration-change', summary: '#clcrCommonDuration strong' };
 }
@@ -39,7 +47,7 @@ async function restore(page, formula, patch = {}) {
     Prot_volume: '1000', Prot_volumeUnit: 'mL', Prot_collectionHours: '', Prot_collectionSource: 'assumed-24h',
     Prot_reportedValue: '', Prot_reportedUnit: 'mg/24h', Prot_outputUnit: 'mg/24h', Prot_unitConversions: '',
     Prot_durationNeedsConfirmation: false,
-  } : {};
+  } : formula === 'Na_mmol_d' ? sodiumInputs : {};
   await applySession(page, { version: 2, currentVersion: version, selectedFormula: formula,
     inputs: { ...specimen, currentVersion: version, formulaPicker: formula,
       Cl24DurationHours: '', Cl24DurationSource: 'assumed-24h', ...dedicated, ...patch } }, formula);
@@ -105,10 +113,10 @@ test('DZM session capture after formula reset is stable without changing an edit
   expect(result.restored).toBe(true);
   expect(result.after).toEqual(result.before);
   const expectedFields = ['Cl24DurationHours', 'CA_collectionHours', 'UA_collectionHours',
-    'MG_collectionHours', 'PO4_collectionHours', 'Prot_collectionHours'];
+    'MG_collectionHours', 'PO4_collectionHours', 'Prot_collectionHours', 'Na_collectionHours'];
   expect(result.fields.map(({ field }) => field)).toEqual(expectedFields);
   expect(result.before).toEqual(Object.fromEntries(expectedFields.map(field => [field, field === 'Cl24DurationHours' ? '24' : ''])));
-  expect(Object.values(result.before).filter(value => value === '')).toHaveLength(5);
+  expect(Object.values(result.before).filter(value => value === '')).toHaveLength(6);
   expect(result.replay).toEqual(result.initial);
   expect(result.invalidAfter).toEqual(result.invalidBefore);
   expect(result.historicalAfter).toEqual(result.historicalBefore);
@@ -131,7 +139,7 @@ for (const formula of formulas) test(`Shared DZM: ${formula} defaults, blank, in
   const hours = page.locator('#' + controls.field), source = page.locator('#' + controls.source), summary = page.locator(controls.summary);
   await expect(hours).toHaveValue('24');
   await expect(page.locator(controls.panel)).toBeVisible();
-  if (['PO4_mgkg', 'Prot_mgkg'].includes(formula)) {
+  if (['PO4_mgkg', 'Prot_mgkg', 'Na_mmol_d'].includes(formula)) {
     await expect(page.locator('#clcrCommonDuration')).toBeHidden();
     expect(await page.evaluate(() => window.currentVersion)).toBe('advanced');
     await expect(page.locator('#version-advanced')).toHaveClass(/selected/);
@@ -196,8 +204,8 @@ for (const formula of formulas) test(`Shared DZM: ${formula} defaults, blank, in
 });
 
 const historicalCases = [
-  { formula: 'Na_mmol_d', field: 'Cl24DurationHours', source: 'Cl24DurationSource', flag: 'durationNeedsConfirmation',
-    editor: '#clcrCommonDurationEditor', summary: '#clcrCommonDuration strong', width: 390, values: {} },
+  { formula: 'Na_mmol_d', field: 'Na_collectionHours', source: 'Na_collectionSource', flag: 'Na_durationNeedsConfirmation',
+    editor: '#sodiumDzmDurationEditor', summary: '#sodiumDzmInputCard .sodium-dzm-context-row strong', width: 390, values: {} },
   ...[['Ca_mgkg', 'CA', 'caDzm', 'ca-dzm', 1440], ['UA_mgkg', 'UA', 'ua', 'ua', 390], ['Mg_mgkg', 'MG', 'mgDzm', 'mg-dzm', 320], ['PO4_mgkg', 'PO4', 'po4Dzm', 'po4-dzm', 390]].map(([formula, prefix, name, css, width]) => ({
     formula, field: `${prefix}_collectionHours`, source: `${prefix}_collectionSource`, flag: `${prefix}_durationNeedsConfirmation`,
     editor: `#${name}DurationEditor`, summary: `#${name}InputCard .${css}-context-row:has-text("Czas zbiórki") strong`, width,
@@ -305,7 +313,7 @@ for (const entry of historicalCases) test(`Historical DZM replay: ${entry.formul
   await expect(hours).toHaveValue('24'); await expect(source).toHaveValue('assumed-24h');
   // Apply a new incoming context into those same mounted controls.
   await applySession(page, { version: 2, currentVersion: version, selectedFormula: entry.formula,
-    inputs: { ...specimen, ...entry.values, formulaPicker: entry.formula, currentVersion: version } }, entry.formula);
+    inputs: { ...specimen, ...entry.values, ...(entry.formula === 'Na_mmol_d' ? sodiumInputs : {}), formulaPicker: entry.formula, currentVersion: version } }, entry.formula);
   await expect(hours).toHaveValue('24'); await expect(source).toHaveValue('assumed-24h');
   await expect(summary).toHaveText('24 godz.');
   const actual = await page.evaluate(fieldId => window.ClcrCollectionDuration.readFromDocument(document, { fieldId }), entry.field);

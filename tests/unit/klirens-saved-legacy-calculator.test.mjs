@@ -30,7 +30,7 @@ const calculate = (id, patch = {}, output = id, context = {}) => engine.recalcul
 describe('Saved Klirens: existing timed-urine production arithmetic', () => {
   it.each([
     ['Ox_mgkg', 0.06, 'mg/kg/24 h'], ['Cit_mgkg', 1.5, 'mg/kg/24 h'],
-    ['Na_mmol_d', 90, 'mmol/24 h'], ['K_mmol_d', 60, 'mmol/24 h'],
+    ['K_mmol_d', 60, 'mmol/24 h'],
     ['KM_Cr', 0.2, 'mg/mg'], ['Ca_Cr', 0.08, 'mg/mg'], ['Mg_Ca', 0.25, 'mg/mg'],
     ['PO4_Cr', 0.1, 'mg/mg'], ['B_Cr', 0.2, 'mg/mg'], ['Ca_Cit', 1.6, 'mg/mg'],
     ['K_frac', 40, '%'],
@@ -39,6 +39,15 @@ describe('Saved Klirens: existing timed-urine production arithmetic', () => {
     expect(result.valueNum).toBeCloseTo(expected, 12);
     expect(result.unit).toBe(unit);
     expect(result).toMatchObject({ sourceFormulaId: id, comparator: '', tone: 'neutral', norm: '', outOfRange: null, category: null });
+  });
+
+  it('sodium retains the legacy concentration quantity with an explicit clock and uses its typed reference', () => {
+    const result = calculate('Na_mmol_d', { Cl24DurationHours: '24', Cl24DurationSource: 'hours' });
+    expect(result).toMatchObject({ sourceFormulaId: 'Na_mmol_d', valueNum: 90, rawValue: 90,
+      testKey: 'clcr:Na_mmol_d', unit: 'mmol/24 h', tone: 'success', norm: '58–337 mmol/24 h',
+      outOfRange: false, category: null, sodiumDzmSnapshot: { dailyMmol: 90, status: 'within', input: { hours: '24' } } });
+    // Local historic dates do not prove elapsed collection hours across time zones/DST.
+    expect(() => calculate('Na_mmol_d')).toThrow(/czas/i);
   });
 
   it('phosphorus keeps its original P mass and uses the age/sex reference only with captured numeric hours', () => {
