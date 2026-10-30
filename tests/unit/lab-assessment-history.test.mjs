@@ -83,11 +83,15 @@ function setup() {
     renderAssessment: vi.fn((host, assessment) => { host.textContent = `saved:${assessment?.status || 'unavailable'}`; }),
   };
   const vault = {
+    isUnlocked: vi.fn(() => true),
+    getCurrentUser: vi.fn(() => ({ userId: 'fictional-assessment-account' })),
     getPatient: vi.fn(async () => ({ snapshots: [{ payload: { user: { sex: 'F', age: 17 } } }] })),
     listPatientNotesForPatient: vi.fn(async () => []),
     listPatientLabSeries: vi.fn(async () => []),
   };
   const source = [
+    // Use the real ownership guard used by the production Notes reader.
+    between(auth, 'var remReadEpoch =', 'function remInlineState('),
     between(auth, 'function Lh3HasAssessment(', 'async function Xo('),
     between(auth, 'async function Xo(', '// Rata D (P6)'),
     between(auth, 'function $r(', 'var Ta='),
@@ -318,11 +322,27 @@ describe('LH/FSH clinical history and trends', () => {
       { id: 'old', title: 'Stare badanie', category: 'wynik-badania', clinicalDateISO: '2026-06-16', labResult: { test: 'LH', value: '2 IU/L', valueNum: 2, unit: 'IU/L' } },
     ]);
     const host = new Element();
+    host.isConnected = true; // A mounted patient-card tab in this lightweight DOM.
     await hooks.noteList(host, 'fictional-patient');
     expect(byClass(host, 'vilda-patient-note-card')).toHaveLength(2);
     expect(byClass(host, 'vilda-saved-lab-assessment')).toHaveLength(1);
     expect(win.VildaLabAssessmentUI.renderAssessment).toHaveBeenCalledOnce();
     expect(win.VildaLabAssessmentUI.renderAssessment.mock.calls[0][1]).toBe(assessment);
+  });
+
+  it.each(['lock', 'detach'])('does not render delayed saved assessment after %s', async reason => {
+    const { win, vault, hooks, snapshot } = setup();
+    const assessment = snapshot();
+    let release;
+    vault.listPatientNotesForPatient.mockImplementationOnce(() => new Promise(resolve => { release = resolve; }));
+    const host = new Element(); host.isConnected = true;
+    const pending = hooks.noteList(host, 'fictional-patient');
+    if (reason === 'lock') vault.isUnlocked.mockReturnValue(false);
+    else host.isConnected = false;
+    release([{ id: 'fictional-delayed-assessment', patientId: 'fictional-patient', category: 'wynik-badania', labResult: lab(assessment) }]);
+    await pending;
+    expect(byClass(host, 'vilda-patient-note-card')).toHaveLength(0);
+    expect(win.VildaLabAssessmentUI.renderAssessment).not.toHaveBeenCalled();
   });
 
   it('renders a series containing only censored or unreadable assessments without numeric points', async () => {

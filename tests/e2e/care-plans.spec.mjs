@@ -78,9 +78,11 @@ test('care plans: biopsy result is in the real patient record and adds a future 
   const due = await created.frame.evaluate(async () => (await window.VildaVault.listPatientNotesDueByDate()).flatMap(group => group.notes || []));
   expect(due.some(note => note.id === control.reminderNoteId || note.id === received.reminderNoteId)).toBe(false);
   expect(await clinicalFingerprint(created.frame, created.ids.a)).toEqual(clinical);
-  await panel.locator(`[data-step-id="${received.id}"]`).getByRole('button', { name: /Wynik.*kartotece|Wynik.*Badaniach/ }).click();
-  await expect(page.locator('.vilda-auth-patient-card')).toBeVisible();
-  await expect(page.getByText('Fikcyjny wynik biopsji: dokumentację omówiono z rodzicem.', { exact: false }).first()).toBeVisible();
+  await panel.locator(`[data-step-id="${received.id}"]`).getByRole('button', { name: 'Otwórz wynik', exact: true }).click();
+  const preview = panel.locator(`.vcp-record[data-note-id="${result.id}"]`);
+  await expect(preview).toBeVisible();
+  await expect(preview.locator('.vcp-record-body')).toHaveText(result.body);
+  expect(await created.frame.evaluate(id => window.VildaVault.getPatientNote(id), result.id)).toEqual(result);
 });
 
 test('care plans: a received MR result preserves parallel GH steps and a deferred decision remains explicitly open', async ({ page }) => {
