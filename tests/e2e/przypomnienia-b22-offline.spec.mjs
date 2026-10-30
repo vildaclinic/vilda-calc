@@ -84,7 +84,9 @@ test('A7 cold offline: current assets, native completion, next step and persiste
     const auth = fs.readFileSync(path.join(root, 'vilda_auth_ui.js'), 'utf8');
     const cssEntry = auth.match(/link\.href = '(vilda_reminders\.css\?v=\d+)'/);
     expect(cssEntry, 'reminders stylesheet has an actual versioned runtime entry').toBeTruthy();
-    const resources = [cssEntry[1], ...['vilda_auth_ui.js', 'vilda_vault.js'].map(name => {
+    const searchCssEntry = html.match(/href="(vilda_global_search\.css\?v=\d+)"/);
+    expect(searchCssEntry, 'Search stylesheet has an actual versioned entry in index').toBeTruthy();
+    const resources = [cssEntry[1], searchCssEntry[1], ...['vilda_auth_ui.js', 'vilda_vault.js', 'vilda_global_search.js', 'vilda_global_search_view.js', 'vilda_reminders_privacy.js'].map(name => {
       const match = html.match(new RegExp(`src="(${name.replaceAll('.', '\\.')}\\?v=[^"]+)"`));
       expect(match, `${name} has an actual versioned entry in index`).toBeTruthy(); return match[1];
     })];
@@ -114,6 +116,24 @@ test('A7 cold offline: current assets, native completion, next step and persiste
     expect(stored.history.map(note => note.id)).toEqual([id]);
     expect(stored.history[0]).toMatchObject({ patientId: ids.a, patientName: 'Fikcyjny Antoni', body: stored.parent.body });
     await expect(page.locator('dialog.vb22')).toHaveCount(0);
+    await page.locator('#vildaRemindersBtn').click();
+    const reopened = page.locator('dialog.vb22-modal');
+    await reopened.locator('[data-tab=search]').click();
+    const search = reopened.locator('.vgs');
+    await search.getByRole('searchbox', { name: 'Szukaj we wszystkich pacjentach i sprawach', exact: true }).fill('Fikcyjna kontrola po MR offline');
+    const future = search.locator(`[data-search-id="note:${stored.parent.reminderContext.nextId}"]`);
+    await expect(future).toBeVisible(); await future.click();
+    await expect(search.locator('.vb22-detail-title')).toHaveText('Fikcyjna kontrola po MR offline');
+    await expect(search.locator('.vgs-detail')).toContainText('02.02.2027');
+    await reopened.getByRole('button', { name: 'Ukryj treść Przypomnień', exact: true }).click();
+    await expect(reopened.locator('.vilda-reminders-private-cover')).toBeVisible();
+    await expect(search).toBeHidden();
+    await page.reload({ waitUntil: 'load' });
+    await page.waitForFunction(() => window.VildaVault?.isUnlocked());
+    await page.locator('#vildaRemindersBtn').click();
+    await expect(page.locator('dialog.vb22-modal .vilda-reminders-private-cover')).toBeVisible();
+    await page.locator('dialog.vb22-modal').getByRole('button', { name: 'Pokaż treść Przypomnień', exact: true }).click();
+    await expect(page.locator('dialog.vb22-modal .vilda-reminders-private-cover')).toBeHidden();
   } finally {
     if (context) await context.close().catch(() => {});
     await server.stop(); fs.rmSync(profile, { recursive: true, force: true });
