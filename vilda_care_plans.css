@@ -71,6 +71,9 @@ body:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3).
 .vcp .vcp-step-title { font-size: 15px; font-weight: 500; line-height: 1.45; overflow-wrap: anywhere; }
 .vcp .vcp-step-meta { font-size: 12px; color: var(--vcp-muted); line-height: 1.6; margin-top: var(--space-6px); }
 .vcp .vcp-description { font-size: 13px; line-height: 1.6; color: #587278; margin-top: var(--space-8px); white-space: pre-line; overflow-wrap: anywhere; }
+.vcp .vcp-record-plan { color: var(--vcp-muted); margin-top: var(--space-6px); overflow-wrap: anywhere; }
+.vcp .vcp-record-body { margin: var(--space-18px) 0; white-space: pre-wrap; overflow-wrap: anywhere; line-height: 1.6; }
+.vcp .vcp-record-lab { margin-top: var(--space-12px); overflow-wrap: anywhere; }
 .vcp .vcp-step-actions { display: flex; flex-wrap: wrap; gap: var(--space-6px) var(--space-16px); margin-top: 9px; align-items: center; }
 .vcp .vcp-step-actions button { min-height: 29px; font-size: 12px; padding: var(--space-4px) 0;     text-align: left; }
 .vcp .vcp-step-actions .vcp-action { padding: var(--space-6px) var(--space-10px); border: var(--border-hairline) solid #d4e7e1; background: #eef7f4; }
