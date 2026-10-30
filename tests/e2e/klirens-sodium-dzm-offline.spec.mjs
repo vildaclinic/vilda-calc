@@ -39,6 +39,19 @@ function resourcesFor(tree = root, preceding = false) {
   })];
 }
 
+// These two unchanged Start dependencies exposed a harness race when Chromium
+// restored its previous Start tab and the test navigated that loading tab away.
+// Keep their full-cache availability and actual SW delivery independently visible.
+function startupResourcesFor() {
+  const index = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
+  const report = /["'](vilda_patient_report\.js\?v=\d+)["']/.exec(index)?.[1];
+  if (!report) throw new Error('Brak produkcyjnego adresu raportu pacjenta Start');
+  return [
+    { url: '/micronorms_norms.json', sha256: sha256(fs.readFileSync(path.join(root, 'micronorms_norms.json'))) },
+    { url: '/' + report, sha256: sha256(fs.readFileSync(path.join(root, 'vilda_patient_report.js'))) },
+  ];
+}
+
 // The update must use an actual production tree. A fabricated preceding SW
 // header over current bytes cannot detect a missing newly introduced module.
 function productionBaseline() {
@@ -149,7 +162,14 @@ async function updateWorker(page, deployment) {
 }
 
 async function offlinePage(context, origin, resources) {
-  const page = context.pages()[0] || await context.newPage();
+  // A persistent browser can automatically restore the previous Start tab.
+  // Own a new blank target instead of cancelling that restored document with
+  // goto(). Close restored tabs before collecting target request failures; no
+  // error codes or application URLs are filtered from the target assertions.
+  const restored = context.pages();
+  const restoredTabs = restored.map(page => page.url());
+  const page = await context.newPage();
+  await Promise.all(restored.map(previous => previous.close()));
   const loaded = new Map(), failed = [], externalFailed = [], errors = [];
   page.on('response', response => {
     const url = new URL(response.url()), key = url.pathname + url.search;
@@ -167,7 +187,7 @@ async function offlinePage(context, origin, resources) {
   await enterGuest(page, { calculator: true });
   expect(await page.evaluate(() => new URL(navigator.serviceWorker.controller.scriptURL).pathname)).toBe('/service-worker-kalorii.js');
   expect(await page.evaluate(() => fetch(`/__sodium-dzm-offline-probe-${Date.now()}`).then(() => false, () => true)), 'Fizycznie wyłączony serwer nie odpowiada').toBe(true);
-  return { page, failed, externalFailed, errors, loaded };
+  return { page, failed, externalFailed, errors, loaded, restoredTabs };
 }
 
 async function assertResourceDelivery(page, resources, loaded, { alreadyLoaded = true } = {}) {
@@ -267,6 +287,7 @@ for (const upgrade of [false, true]) {
   test(`Sód DZM/Notes: ${upgrade ? 'aktualizacja produkcyjnego SW' : 'pełna świeża instalacja'} i dwa zimne starty offline przed pierwszą wizytą`, async ({ playwright, browserName, launchOptions }, testInfo) => {
     test.setTimeout(180_000);
     const resources = resourcesFor();
+    const startupResources = startupResourcesFor();
     const deployment = await deploymentServer(upgrade);
     const profile = fs.mkdtempSync(path.join(os.tmpdir(), 'vilda-sodium-dzm-offline-'));
     const launch = () => playwright[browserName].launchPersistentContext(profile, {
@@ -276,7 +297,7 @@ for (const upgrade of [false, true]) {
     let context;
     const proof = { baseline: upgrade ? deployment.baseline : 'fresh-current-production-install',
       baselineSha: upgrade ? deployment.baselineSha : null, workerVersion: deployment.version, previousVersion: upgrade ? deployment.previousVersion : null,
-      resources, precacheBeforeFirstCalculatorVisit: true, coldBrowserRestarts: 2, offlinePages: [] };
+      resources, startupResources, precacheBeforeFirstCalculatorVisit: true, coldBrowserRestarts: 2, offlinePages: [] };
     try {
       context = await launch();
       const installer = context.pages()[0] || await context.newPage();
@@ -284,6 +305,8 @@ for (const upgrade of [false, true]) {
       if (upgrade) await updateWorker(installer, deployment);
       proof.precache = await cacheHashes(installer, deployment.version, resources);
       expect(proof.precache).toEqual(resources);
+      proof.startupPrecache = await cacheHashes(installer, deployment.version, startupResources);
+      expect(proof.startupPrecache).toEqual(startupResources);
       expect(deployment.workerResponses).toContainEqual({ version: deployment.version, sha256: deployment.currentWorkerHash });
       if (upgrade) expect(deployment.workerResponses).toContainEqual({ version: deployment.previousVersion, sha256: deployment.previousWorkerHash });
       proof.calculatorNavigationsBeforeStop = deployment.navigations();
@@ -297,19 +320,21 @@ for (const upgrade of [false, true]) {
         await context.addInitScript(() => {
           localStorage.setItem('vilda-terms-accepted-v1', JSON.stringify({ version: 1, acceptedAtISO: new Date().toISOString() }));
         });
-        const offline = await offlinePage(context, deployment.origin, resources);
+        const offline = await offlinePage(context, deployment.origin, [...resources, ...startupResources]);
         const result = await fictionalSodiumAndNotes(offline.page);
         await assertResourceDelivery(offline.page, resources, offline.loaded);
         const [savedNote] = (await memory(offline.page)).notes;
         const lazyStart = await lazyStartAndNotes(offline.page, deployment.origin, savedNote, resources, offline.loaded);
+        await assertResourceDelivery(offline.page, startupResources, offline.loaded);
         const clinicalProof = { result, lazyStart };
         if (previous) expect(clinicalProof).toEqual(previous); else previous = clinicalProof;
         expect(offline.failed, 'Brak utraconych zasobów aplikacji').toEqual([]);
         expect(offline.errors).toEqual([]);
-        proof.offlinePages.push({ result, lazyStart, failedApplicationRequests: offline.failed, externalRequestFailures: offline.externalFailed, pageErrors: offline.errors });
+        proof.offlinePages.push({ result, lazyStart, restoredTabsClosedBeforeTarget: offline.restoredTabs, startupResourcesVerified: startupResources, failedApplicationRequests: offline.failed, externalRequestFailures: offline.externalFailed, pageErrors: offline.errors });
         await context.close(); context = null;
       }
       expect(resourcesFor(), 'Źródła nie zmieniły się w trakcie próby').toEqual(resources);
+      expect(startupResourcesFor(), 'Zasoby Start nie zmieniły się w trakcie próby').toEqual(startupResources);
       const proofPath = testInfo.outputPath('sodium-notes-production-offline-proof.json');
       fs.writeFileSync(proofPath, JSON.stringify(proof, null, 2));
       await testInfo.attach('sodium-notes-production-offline-proof', { path: proofPath, contentType: 'application/json' });
