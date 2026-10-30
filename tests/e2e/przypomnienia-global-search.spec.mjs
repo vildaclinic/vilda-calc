@@ -17,6 +17,11 @@ async function assertShield(surface) {
 test('Search covers all fictional patients, external people, future events, undated notes, descriptive results and care plans without changing the loaded patient', async ({ page }) => {
   const created = await globalSearchFixture(page);
   await loadPatient(created.frame, created.ids.a, 'restore');
+  // Identity is ready before the legacy custom-fixes.js compatibility refresh:
+  // its 3200 ms timer dispatches core-field changes even without interaction.
+  // Finish that existing refresh before measuring read-only Search; compare the
+  // complete raw fingerprint below, including derived intake and saved status.
+  await page.waitForTimeout(4500);
   const before = await clinicalFingerprint(created.frame, created.ids.a);
   const search = await openGlobalSearch(page);
   await queryGlobal(search, 'NOWAK');
