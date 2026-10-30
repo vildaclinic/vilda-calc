@@ -97,6 +97,7 @@ body:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3).
 .vcp .vcp-timeline-entry .vcp-text { font-size: 11px; }
 .vcp .vcp-empty { padding: 30px 15px; color: var(--vcp-muted); font-size: 13px; text-align: center; line-height: 1.7; }
 .vcp .vcp-back { display: none; margin-bottom: var(--space-16px); }
+.vcp .vcp-record .vcp-back { display: block; }
 .vcp .vcp-feedback { margin: 0 var(--space-20px) var(--space-8px); padding: 9px var(--space-12px); border: var(--border-hairline) solid #d4e7e1; border-radius: var(--radius-8); background: #f3f9f6; color: var(--vcp-teal); font-size: 12px; line-height: 1.6; flex-shrink: 0; }
 .vcp .vcp-error { padding: var(--space-12px); border: var(--border-hairline) solid #e9bdc4; border-radius: var(--radius-8); background: #fff4f5; color: #a03647; font-size: 13px; line-height: 1.6; margin-bottom: var(--space-12px); }
 .vcp.vcp-inline .vcp-layout { display: flex; }

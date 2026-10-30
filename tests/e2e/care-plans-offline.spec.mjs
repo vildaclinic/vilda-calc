@@ -132,6 +132,12 @@ test('care plans cold offline: native plan, narrative result and future step per
     await expect(preview).toBeVisible();
     await expect(preview.locator('.vcp-record-body')).toHaveText(result.body);
     await expect(patient.locator('.vilda-patient-care-section')).toBeVisible();
+    await preview.getByRole('button', { name: '← Wróć do planu', exact: true }).click();
+    await expect(preview).toHaveCount(0);
+    const care = patient.locator('.vilda-patient-care-section');
+    await expect(care.locator('.vcp-detail .vcp-title')).toHaveText(saved.title);
+    await care.locator(`[data-step-id="${received.id}"]`).getByRole('button', { name: 'Otwórz wynik', exact: true }).click();
+    await expect(preview.locator('.vcp-record-body')).toHaveText(result.body);
     expect(await page.evaluate(id => window.VildaVault.getPatientNote(id), result.id)).toEqual(result);
     expect(await page.evaluate(async patientId =>
       (await window.VildaVault.listPatientNotesForPatient(patientId)).sort((a, b) => a.id.localeCompare(b.id)), created.ids.a)).toEqual(notesBeforeViews);

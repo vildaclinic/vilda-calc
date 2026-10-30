@@ -159,6 +159,10 @@ test('a plan result stays in Badania and its exact current original can be read 
   await historyResult.click();
   await expect(patient.locator(`.vcp-record[data-note-id="${changed.id}"] .vcp-record-body`)).toHaveText(changed.body);
 
+  // Finish the patient-card dialog before opening a separate top-level
+  // workspace; the card intentionally shields the header from pointer input.
+  await created.frame.evaluate(() => window.VildaAuthUI.hide());
+  await expect(patient).toBeHidden();
   await page.locator('#vildaRemindersBtn').click();
   const workspace = page.locator(CARE_WORKSPACE);
   await workspace.locator('[data-tab=search]').click();
