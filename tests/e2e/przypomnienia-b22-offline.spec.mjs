@@ -78,7 +78,7 @@ test('A7 cold offline: current assets, native completion, next step and persiste
     await outcome.getByRole('button', { name: 'Zapisz wykonanie', exact: true }).click();
     await expect(dialog.locator('.vb22-notice')).toContainText('Zapisano w Karcie pacjenta');
     await expect(dialog.locator('[data-tab=active]')).toHaveAttribute('aria-pressed', 'true');
-    await expect(dialog.locator('[data-tab=history]')).toHaveAttribute('aria-pressed', 'false');
+    await expect(dialog.locator('[data-tab=search]')).toHaveAttribute('aria-pressed', 'false');
     await expect(dialog.locator('.vb22-detail-title')).toHaveText('Fikcyjne MR offline B22');
     const html = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
     const auth = fs.readFileSync(path.join(root, 'vilda_auth_ui.js'), 'utf8');

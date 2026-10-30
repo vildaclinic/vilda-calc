@@ -48,7 +48,7 @@ async function openFull(page) {
   const workspace = page.locator(WORKSPACE); await expect(workspace).toBeVisible(); return workspace;
 }
 
-test('A9 actual desktop inline headers survive embedded-page styles and History searches beyond the first page', async ({ page }) => {
+test('A9 actual desktop inline headers survive embedded-page styles and Search finds completed matters beyond the first page', async ({ page }) => {
   const created = await seed(page);
   for (const embedded of [false, true]) {
     let frame = page;
@@ -59,7 +59,7 @@ test('A9 actual desktop inline headers survive embedded-page styles and History 
       await expect(frame.locator('body > header')).toBeHidden();
     }
     const card = frame.locator('#remindersInline');
-    await expect(card.locator('.vb22-row')).toHaveCount(created.notes.active.length);
+    await expect(card.locator('.vb22-row:not(.vgs-row)')).toHaveCount(created.notes.active.length);
     const inputBox = await frame.locator('#userSection').boundingBox(), cardBox = await card.boundingBox();
     expect(cardBox.x, 'the reminder card is in the real second column').toBeGreaterThan(inputBox.x + inputBox.width - 2);
     const heading = card.locator('.vb22-head h2'), tabs = card.locator('.vb22-tabs');
@@ -71,16 +71,19 @@ test('A9 actual desktop inline headers survive embedded-page styles and History 
       const hit = await hittable(card.getByRole('button', { name, exact: true }));
       expect(hit.inViewport).toBe(true); expect(hit.hit).toBe(true);
     }
-    await card.locator('[data-tab=history]').click(); await expect(card.locator('.vb22-row')).toHaveCount(50);
-    const visible = new Set(await card.locator('[data-note-id]').evaluateAll(nodes => nodes.map(node => node.dataset.noteId)));
-    const beyondFirstPage = created.notes.history.find(note => !visible.has(note.id)); expect(beyondFirstPage).toBeTruthy();
-    const search = card.getByRole('searchbox', { name: SEARCH, exact: true }); await expect(search).toBeVisible();
+    await card.locator('[data-tab=search]').click();
+    const global = card.locator('.vgs');
+    await global.getByRole('combobox', { name: 'Stan spraw', exact: true }).selectOption('completed');
+    await expect(global.locator('.vgs-row')).toHaveCount(50);
+    const visible = new Set(await global.locator('[data-search-id]').evaluateAll(nodes => nodes.map(node => node.dataset.searchId)));
+    const beyondFirstPage = created.notes.history.find(note => !visible.has('note:' + note.id)); expect(beyondFirstPage).toBeTruthy();
+    const search = global.getByRole('searchbox', { name: 'Szukaj we wszystkich pacjentach i sprawach', exact: true }); await expect(search).toBeVisible();
     await search.fill(beyondFirstPage.title);
-    await expect(card.locator('.vb22-row')).toHaveCount(1);
-    await expect(card.locator(`[data-note-id="${beyondFirstPage.id}"]`)).toBeVisible();
+    await expect(global.locator('.vgs-row')).toHaveCount(1);
+    await expect(global.locator(`[data-search-id="note:${beyondFirstPage.id}"]`)).toBeVisible();
     await card.getByRole('button', { name: 'Powiększ Przypomnienia', exact: true }).click();
     await expect(page.locator(WORKSPACE)).toBeVisible();
-    await expect(page.locator(WORKSPACE).locator('[data-tab=history]')).toHaveAttribute('aria-pressed', 'true');
+    await expect(page.locator(WORKSPACE).locator('[data-tab=search]')).toHaveAttribute('aria-pressed', 'true');
     await page.locator(WORKSPACE).getByRole('button', { name: 'Zamknij Przypomnienia', exact: true }).click();
     await expect(heading).toBeVisible();
   }
@@ -96,10 +99,13 @@ test('A9 full desktop search stays fixed while the active and historical lists s
       const confirmation = page.locator('#professionalConfirmBtn'); if (await confirmation.isVisible()) await confirmation.click();
     }
     const workspace = await openFull(page);
-    for (const [tab, count] of [['active', created.notes.active.length], ['history', 50]]) {
-      await workspace.locator(`[data-tab=${tab}]`).click(); await expect(workspace.locator('.vb22-row')).toHaveCount(count);
-      const search = workspace.getByRole('searchbox', { name: SEARCH, exact: true });
-      const list = workspace.locator('.vb22-list'), pane = workspace.locator('.vb22-list-pane');
+    for (const [tab, count] of [['active', created.notes.active.length], ['search', 50]]) {
+      await workspace.locator(`[data-tab=${tab}]`).click();
+      if (tab === 'search') await workspace.locator('.vgs').getByRole('combobox', { name: 'Stan spraw', exact: true }).selectOption('completed');
+      const scope = tab === 'search' ? workspace.locator('.vgs') : workspace.locator('.vb22-layout:not(.vgs-layout)');
+      await expect(scope.locator('.vb22-row')).toHaveCount(count);
+      const search = tab === 'search' ? scope.getByRole('searchbox', { name: 'Szukaj we wszystkich pacjentach i sprawach', exact: true }) : scope.getByRole('searchbox', { name: SEARCH, exact: true });
+      const list = scope.locator('.vb22-list'), pane = scope.locator('.vb22-list-pane');
       const before = await search.boundingBox();
       await list.hover(); await page.mouse.wheel(0, 1400);
       await expect.poll(() => list.evaluate(node => node.scrollTop)).toBeGreaterThan(100);

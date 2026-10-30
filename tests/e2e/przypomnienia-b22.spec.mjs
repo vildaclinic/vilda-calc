@@ -20,7 +20,7 @@ async function setup(page) {
     for (const [title, category, date, patientId] of fixtures) records.push((await window.VildaVault.savePatientNote({ title, category, patientId, body: 'Pierwotna fikcyjna treść.', dueDateISO: ymd(date) })).id);
     return records;
   }, result.ids);
-  await expect(page.locator('#remindersInline .vb22-row')).toHaveCount(4);
+  await expect(page.locator('#remindersInline .vb22-row:not(.vgs-row)')).toHaveCount(4);
   return { ...result, notes };
 }
 async function open(page) { await page.locator('#vildaRemindersBtn').click(); await expect(page.locator(DIALOG)).toBeVisible(); }
@@ -37,8 +37,8 @@ async function choosePatient(page, patientId) {
 test('A7 shows due-only header filters, counts all matches, and retains compact rows', async ({ page }) => {
   await setup(page); await open(page);
   await expect(page.locator(`${DIALOG} .vb22-count`)).toHaveText(['4', '2', '2', '2']);
-  await page.locator(`${DIALOG} [data-filter=pending]`).click(); await expect(page.locator(`${DIALOG} .vb22-row`)).toHaveCount(2);
-  await page.locator(`${DIALOG} [data-filter=today]`).click(); await expect(page.locator(`${DIALOG} .vb22-row`)).toHaveCount(2);
+  await page.locator(`${DIALOG} [data-filter=pending]`).click(); await expect(page.locator(`${DIALOG} .vb22-row:not(.vgs-row)`)).toHaveCount(2);
+  await page.locator(`${DIALOG} [data-filter=today]`).click(); await expect(page.locator(`${DIALOG} .vb22-row:not(.vgs-row)`)).toHaveCount(2);
   const color = await page.locator(`${DIALOG} .vb22-count`).first().evaluate(n => getComputedStyle(n).color);
   expect(color).toBe('rgb(152, 92, 101)');
   await page.screenshot({ path: test.info().outputPath('reminders-b22-desktop.png') });
@@ -69,7 +69,7 @@ test('completion and next step survive reload and remain linked in the patient n
   await page.locator(OUTCOME).getByRole('button', { name: 'Zapisz wykonanie', exact: true }).click();
   await expect(page.locator(`${DIALOG} .vb22-notice`)).toContainText('Zapisano w Karcie pacjenta');
   await expect(page.locator(`${DIALOG} [data-tab=active]`)).toHaveAttribute('aria-pressed', 'true');
-  await expect(page.locator(`${DIALOG} [data-tab=history]`)).toHaveAttribute('aria-pressed', 'false');
+  await expect(page.locator(`${DIALOG} [data-tab=search]`)).toHaveAttribute('aria-pressed', 'false');
   await expect(page.locator(`${DIALOG} [data-filter=overdue]`)).toHaveAttribute('aria-pressed', 'true');
   await expect(page.locator(`${DIALOG} .vb22-search`)).toHaveValue('Fikcyjne umówienie MR');
   await expect(page.locator(`${DIALOG} .vb22-detail-title`)).toHaveText('Fikcyjne umówienie MR');
@@ -92,7 +92,7 @@ test('narrative biopsy saves its full text at the patient and closes the waiting
   await page.locator(OUTCOME).getByRole('button', { name: 'Zapisz wynik', exact: true }).click();
   await expect(page.locator(`${DIALOG} .vb22-notice`)).toContainText('Wynik zapisany');
   await expect(page.locator(`${DIALOG} [data-tab=active]`)).toHaveAttribute('aria-pressed', 'true');
-  await expect(page.locator(`${DIALOG} [data-tab=history]`)).toHaveAttribute('aria-pressed', 'false');
+  await expect(page.locator(`${DIALOG} [data-tab=search]`)).toHaveAttribute('aria-pressed', 'false');
   await expect(page.locator(`${DIALOG} [data-filter=pending]`)).toHaveAttribute('aria-pressed', 'true');
   await expect(page.locator(`${DIALOG} .vb22-search`)).toHaveValue('Fikcyjny wynik biopsji');
   await expect(page.locator(`${DIALOG} .vb22-detail-title`)).toHaveText('Fikcyjny wynik biopsji');
@@ -153,24 +153,26 @@ test('an agreed appointment date is kept at the patient separately from the remi
   await expect(page.locator('.vilda-auth-patient-card')).toContainText('02.02.2027');
 });
 
-test('a delayed history read cannot undo newer navigation or replace an add form', async ({ page }) => {
+test('a delayed Search index read cannot undo newer navigation or replace an add form', async ({ page }) => {
   await setup(page); await open(page);
   await page.evaluate(() => {
-    const native = window.VildaVault.listReminderHistory;
-    window.VildaVault.listReminderHistory = async (...args) => {
+    const native = window.VildaVault.listAllPatientNotes;
+    window.VildaVault.listAllPatientNotes = async (...args) => {
       const notes = await native(...args);
       await new Promise(resolve => { window.__releaseB22History = resolve; });
       return notes;
     };
   });
   const dialog = page.locator(DIALOG);
-  await dialog.getByRole('button', { name: 'Historia', exact: true }).click();
+  await dialog.getByRole('button', { name: 'Szukaj', exact: true }).click();
+  await dialog.locator('.vgs-query').fill('Fikcyj');
   await page.waitForFunction(() => Boolean(window.__releaseB22History));
   await dialog.getByRole('button', { name: /^Do wykonania/ }).click();
   await page.evaluate(() => { window.__releaseB22History(); window.__releaseB22History = null; });
   await expect(dialog.getByRole('button', { name: /^Do wykonania/ })).toHaveClass(/is-active/);
-  await expect(dialog.locator('.vb22-row')).toHaveCount(4);
-  await dialog.getByRole('button', { name: 'Historia', exact: true }).click();
+  await expect(dialog.locator('.vb22-row:not(.vgs-row)')).toHaveCount(4);
+  await dialog.getByRole('button', { name: 'Szukaj', exact: true }).click();
+  await page.evaluate(() => document.dispatchEvent(new CustomEvent('vilda:sync-merged')));
   await page.waitForFunction(() => Boolean(window.__releaseB22History));
   await dialog.getByRole('button', { name: 'Dodaj przypomnienie', exact: true }).click();
   await dialog.getByLabel('Treść przypomnienia', { exact: true }).fill('Fikcyjny nowy opis podczas odczytu historii');

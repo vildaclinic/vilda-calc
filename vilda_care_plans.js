@@ -80,9 +80,9 @@
     }
     var root = node('section', 'vcp ' + (options.full ? 'vcp-full' : 'vcp-inline'));
     root.setAttribute('aria-label', 'Plany opieki'); root.classList.toggle('vcp-show-detail', state.detail);
-    var tools = node('div', 'vcp-tools'), scope = node('p', 'vcp-scope', 'Także przyszłe kroki i plany bez terminu.'); tools.appendChild(scope);
+    var tools = node('div', 'vcp-tools');
     var createButton = button('+ Nowy plan', 'vcp-text vcp-create', create); createButton.setAttribute('aria-label', 'Nowy plan');
-    if (options.showCreateButton !== false) tools.appendChild(createButton); root.appendChild(tools);
+    if (options.showCreateButton !== false) { tools.appendChild(createButton); root.appendChild(tools); }
     var feedback = node('div', 'vcp-feedback'); feedback.setAttribute('role', 'status'); feedback.setAttribute('aria-live', 'polite'); feedback.hidden = true; root.appendChild(feedback);
     var layout = node('div', 'vcp-layout'), left = node('section', 'vcp-list-pane'), fixed = node('div', 'vcp-list-fixed');
     var search = node('input', 'vcp-search'); search.type = 'search'; search.placeholder = 'Szukaj pacjenta lub planu…'; search.setAttribute('aria-label', 'Szukaj pacjenta lub planu');
@@ -259,6 +259,7 @@
       editor = model; busy(false, true); doc.body.appendChild(dialog);
       function cancel() {
         if (state.busy) return;
+        if (typeof model.onDialogClose === 'function') { model.onDialogClose(); model.onDialogClose = null; }
         if (dialog.open) dialog.close(); dialog.remove(); if (editor === model) editor = null; busy(false, false); render();
         if (origin && origin.isConnected && origin.focus) origin.focus({ preventScroll: true });
         if (state.stale) refresh();
@@ -286,7 +287,9 @@
           if (options.onChange) options.onChange(result); await refresh();
         } catch (error) { if (current() && editor === model) { setWorking(false); errorBox(error, errors); errors.scrollIntoView({ block: 'nearest' }); } }
       });
-      build(model); dialog.showModal(); body.scrollTop = 0;
+      build(model);
+      if (typeof options.onDialog === 'function') model.onDialogClose = options.onDialog(dialog);
+      dialog.showModal(); body.scrollTop = 0;
       var first = body.querySelector('input:not([type=checkbox]):not([type=radio]),textarea,select'); if (first) first.focus({ preventScroll: true });
       return model;
     }
@@ -430,7 +433,10 @@
     function destroy() {
       if (destroyed) return; destroyed = true; sequence += 1; if (refreshTimer) win.clearTimeout(refreshTimer);
       if (lifecycleObserver) lifecycleObserver.disconnect();
-      if (editor) { if (editor.dialog.open) editor.dialog.close(); editor.dialog.remove(); editor = null; }
+      if (editor) {
+        if (typeof editor.onDialogClose === 'function') editor.onDialogClose();
+        if (editor.dialog.open) editor.dialog.close(); editor.dialog.remove(); editor = null;
+      }
       unsubscribe.forEach(function (fn) { try { if (typeof fn === 'function') fn(); } catch {} });
       doc.removeEventListener('vilda:sync-merged', scheduleRefresh); root.remove(); if (options.onBusy) options.onBusy(false, false);
     }
