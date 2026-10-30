@@ -5,7 +5,7 @@ test.use({ serviceWorkers: 'block', reducedMotion: 'reduce' });
 test.setTimeout(120000);
 const WORKSPACE = 'dialog.vb22-modal';
 
-test('A8 a sync interruption and failed refresh finish History loading, and read-only retry recovers', async ({ page }) => {
+test('A8 Search discards a delayed pre-sync index, exposes a current read failure and recovers by read-only retry', async ({ page }) => {
   await page.clock.setFixedTime(new Date('2026-10-29T10:00:00+01:00'));
   const { ids } = await createFictionalVault(page);
   const noteId = await page.evaluate(async patientId => {
@@ -13,58 +13,48 @@ test('A8 a sync interruption and failed refresh finish History loading, and read
     const saved = await vault.savePatientNote({ patientId, category: 'reminder-task',
       title: 'Fikcyjna zamknięta sprawa A8 po synchronizacji', body: 'Fikcyjne ustalenia.',
       dueDateISO: '2026-10-20', completedAtISO: '2026-10-21T09:00:00.000Z' });
-    const history = vault.listReminderHistory;
-    window.__a8ReadErrorHistoryCalls = 0;
-    vault.listReminderHistory = async function (...args) {
-      window.__a8ReadErrorHistoryCalls += 1;
-      const notes = await history.apply(this, args);
-      if (window.__a8ReadErrorHistoryCalls === 1) {
-        await new Promise(resolve => { window.__a8ReadErrorRelease = resolve; });
-      }
+    const allNotes = vault.listAllPatientNotes;
+    window.__a8ReadErrorIndexCalls = 0; window.__a8ReadErrorFailedCalls = 0;
+    vault.listAllPatientNotes = async function (...args) {
+      window.__a8ReadErrorIndexCalls += 1;
+      const call = window.__a8ReadErrorIndexCalls;
+      const notes = await allNotes.apply(this, args);
+      if (call === 1) await new Promise(resolve => { window.__a8ReadErrorRelease = resolve; });
+      if (call === 2) { window.__a8ReadErrorFailedCalls += 1; throw new Error('FICTIONAL_SEARCH_INDEX_FAILURE_A8'); }
       return notes;
-    };
-    const due = vault.listPatientNotesDueByDate;
-    window.__a8ReadErrorFailDue = false; window.__a8ReadErrorFailedCalls = 0;
-    vault.listPatientNotesDueByDate = async function (...args) {
-      if (window.__a8ReadErrorFailDue) {
-        window.__a8ReadErrorFailDue = false; window.__a8ReadErrorFailedCalls += 1;
-        throw new Error('FICTIONAL_REFRESH_READ_FAILURE_A8');
-      }
-      return due.apply(this, args);
     };
     return saved.id;
   }, ids.a);
   await page.locator('#vildaRemindersBtn').click();
-  const workspace = page.locator(WORKSPACE), history = workspace.locator('[data-tab=history]');
-  const list = workspace.locator('.vb22-list');
-  const search = workspace.getByRole('searchbox', { name: 'Szukaj pacjenta lub sprawy' });
-  await history.click();
-  await expect(history).toHaveAttribute('aria-pressed', 'true');
-  await expect(list).toHaveAttribute('aria-busy', 'true');
-  await expect(search).toBeDisabled();
-  await page.waitForFunction(() => typeof window.__a8ReadErrorRelease === 'function');
-  await page.evaluate(() => {
-    window.__a8ReadErrorFailDue = true;
-    document.dispatchEvent(new CustomEvent('vilda:sync-merged'));
-  });
-  await expect(workspace.getByRole('alert')).toContainText('Nie udało się wczytać przypomnień.');
-  await expect(list).toHaveAttribute('aria-busy', 'false');
+  const workspace = page.locator(WORKSPACE), searchTab = workspace.locator('[data-tab=search]');
+  await searchTab.click();
+  const global = workspace.locator('.vgs');
+  const search = global.getByRole('searchbox', { name: 'Szukaj we wszystkich pacjentach i sprawach', exact: true });
+  await search.fill('Fikcyjna zamknięta');
+  await expect(searchTab).toHaveAttribute('aria-pressed', 'true');
+  await expect(global).toHaveAttribute('aria-busy', 'true');
   await expect(search).toBeEnabled();
-  await expect(workspace.getByText('Wczytywanie historii…', { exact: true })).toHaveCount(0);
-  await expect(history).toHaveAttribute('aria-pressed', 'true');
+  await page.waitForFunction(() => typeof window.__a8ReadErrorRelease === 'function');
+  await page.evaluate(() => document.dispatchEvent(new CustomEvent('vilda:sync-merged')));
+  await expect(global.getByRole('alert')).toContainText('Nie udało się przeszukać danych.');
+  await expect(global).toHaveAttribute('aria-busy', 'false');
+  await expect(search).toBeEnabled();
+  await expect(global.getByRole('status')).not.toHaveText('Wyszukiwanie…');
+  await expect(searchTab).toHaveAttribute('aria-pressed', 'true');
 
-  // The older successful response must not erase the newer failure or insert stale rows.
+  // Deliver the older successful read only after the new request has failed:
+  // it must not clear the current error or insert stale results.
   await page.evaluate(() => window.__a8ReadErrorRelease());
-  await expect(workspace.getByRole('alert')).toContainText('Nie udało się wczytać przypomnień.');
-  await expect(list).toHaveAttribute('aria-busy', 'false');
-  await expect(list.locator('[data-note-id]')).toHaveCount(0);
-  await workspace.getByRole('button', { name: 'Spróbuj ponownie', exact: true }).click();
-  await expect(workspace.locator(`[data-note-id="${noteId}"]`)).toBeVisible();
-  await expect(workspace.getByRole('alert')).toHaveCount(0);
-  await expect(list).toHaveAttribute('aria-busy', 'false');
+  await expect(global.getByRole('alert')).toContainText('Nie udało się przeszukać danych.');
+  await expect(global).toHaveAttribute('aria-busy', 'false');
+  await expect(global.locator('.vgs-row')).toHaveCount(0);
+  await global.getByRole('button', { name: 'Spróbuj ponownie', exact: true }).click();
+  await expect(global.locator(`[data-search-id="note:${noteId}"]`)).toBeVisible();
+  await expect(global.getByRole('alert')).toHaveCount(0);
+  await expect(global).toHaveAttribute('aria-busy', 'false');
   await expect(search).toBeEnabled();
   expect(await page.evaluate(() => window.__a8ReadErrorFailedCalls)).toBe(1);
-  expect(await page.evaluate(() => window.__a8ReadErrorHistoryCalls)).toBe(2);
+  expect(await page.evaluate(() => window.__a8ReadErrorIndexCalls)).toBe(3);
   const saved = await page.evaluate(id => window.VildaVault.getPatientNote(id), noteId);
   expect(saved.completedAtISO).toBe('2026-10-21T09:00:00.000Z');
   expect(saved.body).toBe('Fikcyjne ustalenia.');
@@ -117,7 +107,7 @@ test('A8 fast Back after a committed completion refreshes a new step due today',
   await expect(workspace.locator(`[data-note-id="${nextId}"]`)).toBeVisible();
   await expect(workspace.locator(`[data-note-id="${parentId}"]`)).toHaveCount(0);
   await expect(workspace.locator('[data-tab=active]')).toHaveAttribute('aria-pressed', 'true');
-  await expect(workspace.locator('[data-tab=history]')).toHaveAttribute('aria-pressed', 'false');
+  await expect(workspace.locator('[data-tab=search]')).toHaveAttribute('aria-pressed', 'false');
   expect(await page.evaluate(() => window.__a8BackGroupsAfterCommit)).toBeGreaterThanOrEqual(2);
   await page.evaluate(() => window.__a8BackReleaseGroups());
   await expect(workspace.locator(`[data-note-id="${nextId}"]`)).toBeVisible();

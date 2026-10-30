@@ -30,7 +30,7 @@ test('A7 mobile: completion form remains usable through portrait/landscape and s
   await page.screenshot({ path: test.info().outputPath('b22-phone-completion.png') });
   await page.locator(OUTCOME).getByRole('button', { name: 'Zapisz wykonanie', exact: true }).click(); await expect(page.locator(`${DIALOG} .vb22-notice`)).toContainText('Zapisano');
   await expect(page.locator(`${DIALOG} [data-tab=active]`)).toHaveAttribute('aria-pressed', 'true');
-  await expect(page.locator(`${DIALOG} [data-tab=history]`)).toHaveAttribute('aria-pressed', 'false');
+  await expect(page.locator(`${DIALOG} [data-tab=search]`)).toHaveAttribute('aria-pressed', 'false');
   await expect(page.locator(`${DIALOG} .vb22-detail-title`)).toHaveText('Fikcyjne mobilne MR B22');
   await expect(page.locator(`${DIALOG} .vb22-list-pane`)).toBeHidden();
   const record = await page.evaluate(async ({ id, patientId }) => { const parent = await window.VildaVault.getPatientNote(id); return { parent, all: await window.VildaVault.listPatientNotesForPatient(patientId) }; }, { id: noteId, patientId: ids.a });

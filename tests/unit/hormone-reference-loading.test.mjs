@@ -20,6 +20,9 @@ function environment(missing = [], restoredSession = false) {
     // Plany opieki are an independent ready dependency here. Missing/partial
     // readiness of that module is covered by care-plans-loader.test.mjs.
     VildaCarePlans: {},
+    // Search/privacy have their own missing-dependency loader regressions in
+    // care-plans-loader.test.mjs; hormone cases start with that UI stack ready.
+    VildaRemindersPrivacy: {}, VildaGlobalSearch: {}, VildaGlobalSearchView: {},
     sessionStorage: { getItem: key => key === 'vilda-vault-session-v2' && restoredSession ? 'fictional-session' : null },
     CustomEvent: class { constructor(type, options) { this.type = type; this.detail = options?.detail; } },
   };

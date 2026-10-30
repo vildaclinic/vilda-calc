@@ -23,6 +23,7 @@
   var hadSelectedPatient = !!patientId();
   var draftAllowed = !hadSelectedPatient;
   var clearingPatientId = null;
+  var terminalClear = false;
   var deletedPatientId = null;
   var startupSettled = !(d && typeof d.readyState === 'string' && w.VildaInit);
   var startupScheduled = false;
@@ -113,7 +114,15 @@
     // clearUserState dispatches before the sidebar removes its patient ID.
     // Subscribers may inspect eligibility in that same event stack. Seeing the
     // outgoing ID must not revoke the explicit transition to a new draft.
-    if (id !== clearingPatientId) draftAllowed = false;
+    if (id !== clearingPatientId) { draftAllowed = false; terminalClear = false; }
+  }
+
+  function clearedDuringQuarantine() {
+    // The persistence fence prevents late writers from reviving cleared data;
+    // it does not mean that another chart is loading. Keep this explicit-clear
+    // marker independently of the outgoing ID, which the sidebar removes later
+    // in the clear event stack. Actual restoration/adoption keeps its own gates.
+    return terminalClear && Number(w.__vildaPersistClearUntil || 0) > Date.now();
   }
 
   function requestedMode(options) { return options && options.mode === 'summary' ? 'summary' : 'dedicated'; }
@@ -195,6 +204,7 @@
       if (!activeRoute()) return eligibility('ineligible', 'inactive-document');
       var id = patientId(), dob = w.VildaDobAge;
       observePatientIdentity(id);
+      if (clearedDuringQuarantine()) return eligibility('ineligible', 'cleared');
       if (startupPending()) return eligibility('pending', 'startup');
       var auth = w.VildaAuthUI;
       if (auth && typeof auth.isBootReady === 'function' && !auth.isBootReady()) {
@@ -231,6 +241,7 @@
       if (!activeRoute()) return eligibility('ineligible', 'inactive-document');
       var id = patientId();
       observePatientIdentity(id);
+      if (clearedDuringQuarantine()) return eligibility('ineligible', 'cleared');
       // An initial guest has never owned a chart. Guest form/DOB restoration
       // must not reserve a chart slot; this flag carries no patient data and
       // does not grant permission to retain a snapshot.
@@ -688,6 +699,7 @@
   listen(d, 'vilda:patient-loaded', function (event) {
     if (event && event.detail && event.detail.patientId) {
       clearingPatientId = null;
+      terminalClear = false;
       draftAllowed = false;
       if (event.detail.patientId !== deletedPatientId) deletedPatientId = null;
     }
@@ -705,6 +717,7 @@
   });
   function cleared() {
     clearingPatientId = patientId();
+    terminalClear = true;
     draftAllowed = true;
     deletedPatientId = null;
     invalidate('clear', true);

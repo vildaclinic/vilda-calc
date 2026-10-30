@@ -1341,6 +1341,74 @@ describe('Panel nowego pomiaru — oczekiwanie na główną sesję po logowaniu'
     expect(h.writes).not.toHaveBeenCalled();
   });
 
+  it.each(['/index.html', '/docpro.html'].flatMap(route => ['new', 'restore'].flatMap(choice =>
+    [false, true].map(framed => ({ route, choice, framed })))))('$route / $choice / ramka=$framed: Wyczyść kończy widoczność siatki podczas całej kwarantanny zapisu', async ({ route, choice, framed }) => {
+    const h = setup({ framed }); h.win.location.pathname = route;
+    h.values.set('vildaLoadChoiceV1', choice);
+    h.win.lastLoadedData = { user: { age: 13, height: 158, weight: 46 } };
+    const mode = choice === 'restore' ? { mode: 'summary' } : undefined;
+    const before = await h.api.getSnapshot(mode);
+    expect(before).not.toBeNull();
+    const fence = Date.now() + 2500;
+    h.win.__vildaPersistClearUntil = fence;
+    h.api.subscribe(event => {
+      if (event.reason !== 'clear') return;
+      // The actual clear event precedes the sidebar removing the outgoing PID
+      // and clearAllData emptying the fields. No old data may reserve a slot.
+      expect(h.values.get('vildaCurrentPatientId')).toBe('fikcyjny-a');
+      expect(h.api.getEligibility()).toEqual({ status: 'ineligible', reason: 'cleared' });
+      expect(h.api.getEligibility({ mode: 'summary' })).toEqual({ status: 'ineligible', reason: 'cleared' });
+      expect(h.api.isCurrent(before)).toBe(false);
+    });
+    h.emit('vilda:user-state-cleared');
+    h.values.delete('vildaCurrentPatientId'); h.values.delete('vildaLoadChoiceV1');
+    h.state.owner = null; h.win.lastLoadedData = null;
+    h.fields.age.value = ''; h.fields.ageMonths.value = '';
+    for (let read = 0; read < 3; read++) {
+      expect(await h.api.getResult()).toEqual({ status: 'ineligible', reason: 'cleared' });
+      expect(await h.api.getResult({ mode: 'summary' })).toEqual({ status: 'ineligible', reason: 'cleared' });
+    }
+    expect(h.win.__vildaPersistClearUntil).toBe(fence);
+    expect(h.writes).not.toHaveBeenCalled();
+  });
+
+  it('jawne Wyczyść nie zatrzymuje przyjęcia pacjenta B ani późniejszego anonimowego formularza', async () => {
+    const h = setup(), before = await h.api.getSnapshot();
+    h.win.__vildaPersistClearUntil = Date.now() + 2500;
+    h.emit('vilda:user-state-cleared');
+    h.values.delete('vildaCurrentPatientId'); h.state.owner = null;
+    expect(h.api.getEligibility().reason).toBe('cleared');
+    h.values.set('vildaCurrentPatientId', 'fikcyjny-b'); h.state.owner = 'fikcyjny-b';
+    h.state.sequence += 1;
+    h.doc.emit('vilda:patient-loaded', { patientId: 'fikcyjny-b', source: 'load' });
+    // applyLoadedData ends its own clear fence; genuine restoring gates remain.
+    expect(h.api.getEligibility()).toEqual({ status: 'pending', reason: 'restoring' });
+    h.win.__vildaPersistClearUntil = 0;
+    const next = await h.api.getSnapshot();
+    expect(next.patientId).toBe('fikcyjny-b');
+    expect(h.api.isCurrent(before)).toBe(false);
+    h.emit('vilda:user-state-cleared');
+    h.values.delete('vildaCurrentPatientId'); h.values.delete('vildaLoadChoiceV1'); h.state.owner = null;
+    h.win.advancedGrowthData = { measurements: [] }; h.win.chartCreatorData = {};
+    h.fields.height.value = '140';
+    const draft = await h.api.getSnapshot({ mode: 'summary' });
+    expect(draft).toMatchObject({ patientId: null, currentHeight: 140, measurements: [] });
+    expect(h.api.isCurrent(next)).toBe(false);
+    expect(h.writes).not.toHaveBeenCalled();
+  });
+
+  it('sama bariera zapisu i przejściowo brakujące ID nadal czekają na rzeczywiste przyjęcie pacjenta', async () => {
+    const h = setup(), before = await h.api.getSnapshot();
+    h.values.delete('vildaCurrentPatientId');
+    h.win.__vildaPersistClearUntil = Date.now() + 2500;
+    // No terminal clear was announced: this could be an intermediate adoption
+    // state. It must not release the reserved slot as if the user cleared it.
+    expect(await h.api.getResult()).toEqual({ status: 'pending', reason: 'restoring' });
+    expect(await h.api.getResult({ mode: 'summary' })).toEqual({ status: 'pending', reason: 'restoring' });
+    expect(h.api.isCurrent(before)).toBe(false);
+    expect(h.writes).not.toHaveBeenCalled();
+  });
+
   it('starszy niezależny konsument bez nowego API zachowuje dotychczasowy kontrakt', async () => {
     const h = setup();
     delete h.win.VildaDataImportExport.isMainSessionRestorePending;

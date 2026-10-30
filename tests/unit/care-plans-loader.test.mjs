@@ -6,13 +6,22 @@ const DEPENDENCIES = [
   'VildaCrypto', 'VildaLabSnapshot', 'VildaLabTestosteroneUnits', 'VildaLabAssessmentUI',
   'VildaHormoneReferenceSnapshot', 'VildaLabRangeSnapshot', 'VildaHormoneReferenceUI',
   'VildaLabHistory', 'VildaLabHistoryTab', 'VildaPubertyAssessment', 'VildaProAccess',
+  'VildaRemindersPrivacy', 'VildaGlobalSearch', 'VildaGlobalSearchView',
 ];
 
-function environment(careReady = false) {
+const REMINDER_MODULES = [
+  ['VildaRemindersPrivacy', 'vilda_reminders_privacy.js'],
+  ['VildaGlobalSearch', 'vilda_global_search.js'],
+  ['VildaGlobalSearchView', 'vilda_global_search_view.js'],
+];
+
+function environment(careReady = false, missingReminderModule = null) {
   const documentListeners = new Map(), appended = [], existing = [
     { href: 'vilda_auth_ui.css?v=existing' },
     { href: 'vilda_lab_assessment_ui.css?v=existing' },
     { href: 'vilda_lab_history_tab.css?v=existing' },
+    { href: 'vilda_global_search.css?v=existing' },
+    { href: 'vilda_reminders.css?v=existing' },
   ];
   const startup = vi.fn();
   const win = {
@@ -42,6 +51,9 @@ function environment(careReady = false) {
           appended.push(element);
           queueMicrotask(() => {
             if (element.src?.startsWith('vilda_care_plans.js?')) win.VildaCarePlans = { mount() {} };
+            for (const [global, file] of REMINDER_MODULES) {
+              if (element.src?.startsWith(file + '?')) win[global] = { ready: true };
+            }
             element.listeners.load?.();
           });
         },
@@ -49,7 +61,11 @@ function environment(careReady = false) {
     },
   };
   DEPENDENCIES.forEach(key => { win[key] = {}; });
-  if (careReady) win.VildaCarePlans = { mount() {} };
+  if (missingReminderModule) delete win[missingReminderModule];
+  if (careReady) {
+    win.VildaCarePlans = { mount() {} };
+    existing.push({ href: 'vilda_care_plans.css?v=existing' });
+  }
   return {
     win, appended, startup,
     ready() { (documentListeners.get('DOMContentLoaded') || []).forEach(callback => callback({})); },
@@ -127,5 +143,30 @@ describe('care plans dependency loading on already initialized auth pages', () =
     clickChromeAccount(env);
     await vi.waitFor(() => expect(env.startup).toHaveBeenCalledOnce());
     expect(env.appended).toEqual([]);
+  });
+
+  it.each(REMINDER_MODULES)('session bridge fills missing %s even with auth and care plans ready', async (global, file) => {
+    const env = environment(true, global);
+    loadBrowserScript('vilda_session_bridge.js', env.win);
+    const pending = env.win.VildaSession.ensureAuthLoaded();
+    expect(env.win.VildaSession.ensureAuthLoaded()).toBe(pending);
+    await pending;
+    expect(env.win[global]).toEqual({ ready: true });
+    expect(env.appended.map(element => element.src || element.href)).toEqual([
+      expect.stringMatching(new RegExp('^' + file.replaceAll('.', '\\.') + '\\?v=\\d+$')),
+    ]);
+    await env.win.VildaSession.ensureAuthLoaded();
+    expect(env.appended).toHaveLength(1);
+  });
+
+  it.each(REMINDER_MODULES)('chrome waits for missing %s even with auth and care plans ready', async (global, file) => {
+    const env = environment(true, global);
+    clickChromeAccount(env);
+    expect(env.startup).not.toHaveBeenCalled();
+    await vi.waitFor(() => expect(env.startup).toHaveBeenCalledOnce());
+    expect(env.win[global]).toEqual({ ready: true });
+    expect(env.appended.map(element => element.src || element.href)).toEqual([
+      expect.stringMatching(new RegExp('^' + file.replaceAll('.', '\\.') + '\\?v=\\d+$')),
+    ]);
   });
 });

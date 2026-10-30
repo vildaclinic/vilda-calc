@@ -1,0 +1,197 @@
+/* Szukaj shares native reminder typography and list/detail components. */
+.vb22 .vgs {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-height: 0;
+  min-width: 0;
+  overflow: hidden
+}
+
+.vb22 .vgs-toolbar {
+  display: grid;
+  grid-template-columns: minmax(0,1fr) minmax(170px,210px) minmax(165px,200px);
+  gap: var(--space-10px);
+  padding: var(--space-12px) var(--space-14px) var(--space-10px);
+  flex-shrink: 0
+}
+
+.vb22 .vgs-toolbar .vgs-query {
+  margin: 0
+}
+
+.vb22 .vgs-select {
+  min-width: 0;
+  width: 100%;
+  min-height: 44px;
+  height: 44px;
+  padding: var(--space-8px) var(--space-10px);
+  margin: 0;
+  border: var(--border-hairline) solid var(--vb-line);
+  border-radius: var(--radius-9);
+  background: #fff;
+  color: var(--vb-ink);
+  font-size: 14.4px;
+  font-weight: 400;
+  box-shadow: none
+}
+
+.vb22 .vgs-announcement {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0
+}
+
+.vb22 .vgs-list-pane {
+  padding-top: 0
+}
+
+.vb22 .vgs-item {
+  flex-shrink: 0;
+  min-width: 0
+}
+
+.vb22 .vgs-kind {
+  margin-left: auto;
+  min-width: 0;
+  max-width: 65%;
+  text-align: right;
+  overflow-wrap: anywhere
+}
+
+.vb22 .vgs-title {
+  margin-top: var(--space-12px)
+}
+
+.vb22 .vgs-status {
+  margin-top: var(--space-8px)
+}
+
+.vb22 .vgs-dates {
+  display: grid;
+  grid-template-columns: minmax(0,1fr) auto;
+  gap: var(--space-6px) var(--space-14px);
+  margin: var(--space-18px) 0;
+  color: var(--vb-muted);
+  font-size: 14.4px
+}
+
+.vb22 .vgs-dates dt,
+.vb22 .vgs-dates dd {
+  margin: 0;
+  min-width: 0;
+  overflow-wrap: anywhere
+}
+
+.vb22 .vgs-dates dd {
+  text-align: right;
+  font-variant-numeric: tabular-nums
+}
+
+.vb22 .vgs-back {
+  display: none
+}
+
+.vb22 .vgs-more {
+  margin: var(--space-12px);
+  min-height: 44px
+}
+
+.vb22 .vgs-inline .vgs-toolbar {
+  grid-template-columns: minmax(0,1fr) minmax(0,1fr);
+  gap: var(--space-8px)
+}
+
+.vb22 .vgs-inline .vgs-query {
+  grid-column: 1/-1
+}
+
+@media(max-width:700px) {
+  .vb22 .vgs-toolbar {
+    grid-template-columns: minmax(0,1fr) minmax(0,1fr);
+    gap: var(--space-8px);
+    padding: var(--space-12px) var(--space-10px) var(--space-10px)
+  }
+  .vb22 .vgs-query {
+    grid-column: 1/-1
+  }
+  .vb22 .vgs-layout {
+    display: block;
+    position: relative;
+    overflow: hidden
+  }
+  .vb22 .vgs-list-pane {
+    height: 100%;
+    border-right: 0;
+    padding: 0 var(--space-10px) var(--space-10px)
+  }
+  .vb22 .vgs-detail {
+    display: none
+  }
+  .vb22 .vgs-show-detail .vgs-list-pane {
+    visibility: hidden
+  }
+  dialog.vb22.vb22-modal .vgs-show-detail .vgs-detail {
+    display: block;
+    position: absolute;
+    inset: 0;
+    background: #fff;
+    padding: 22px 19px
+  }
+  .vb22 .vgs-back {
+    display: block;
+    min-height: 44px;
+    margin-bottom: var(--space-12px)
+  }
+}
+
+/* Keep phone list navigation in landscape, matching the reminder workspace. */
+html.vilda-phone .vb22 .vgs-toolbar {
+  grid-template-columns: minmax(0,1fr) minmax(0,1fr);
+  gap: var(--space-8px);
+  padding: var(--space-12px) var(--space-10px) var(--space-10px)
+}
+
+html.vilda-phone .vb22 .vgs-query {
+  grid-column: 1/-1
+}
+
+html.vilda-phone dialog.vb22.vb22-modal .vgs-layout {
+  display: block;
+  position: relative;
+  overflow: hidden
+}
+
+html.vilda-phone dialog.vb22.vb22-modal .vgs-list-pane {
+  height: 100%;
+  border-right: 0;
+  padding: 0 var(--space-10px) var(--space-10px)
+}
+
+html.vilda-phone dialog.vb22.vb22-modal .vgs-detail {
+  display: none
+}
+
+html.vilda-phone dialog.vb22.vb22-modal .vgs-show-detail .vgs-list-pane {
+  visibility: hidden
+}
+
+html.vilda-phone dialog.vb22.vb22-modal .vgs-show-detail .vgs-detail {
+  display: block;
+  position: absolute;
+  inset: 0;
+  background: #fff;
+  padding: 22px 19px
+}
+
+html.vilda-phone .vb22 .vgs-back {
+  display: block;
+  min-height: 44px;
+  margin-bottom: var(--space-12px)
+}
