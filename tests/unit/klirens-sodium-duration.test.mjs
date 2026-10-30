@@ -50,3 +50,76 @@ describe('shared duration — sodium-only adapter', () => {
     expect(result).toMatchObject({ valid: true, complete: false, knownProblems: ['collectionNoMissedVoids'] });
   });
 });
+
+describe('sodium live document reader — shared new-collection default', () => {
+  function setup(patch = {}, { shared = true, omit = [] } = {}) {
+    const win = { __vildaClcrVersionValueVault: { unrelatedMeasurement: 'unchanged' } };
+    for (const file of [...(shared ? ['clcr_collection_duration.js'] : []), 'clcr_sodium_dzm_data.js', 'clcr_sodium_dzm.js']) loadBrowserScript(file, win);
+    const values = { Na_inputMode: 'concentration', Na_concentration: '50', Na_volume: '1440', Na_volumeUnit: 'mL',
+      Na_collectionHours: '', Na_collectionSource: 'assumed-24h', Na_durationNeedsConfirmation: 'false', ...patch };
+    const fields = Object.fromEntries(Object.entries(values).filter(([id]) => !omit.includes(id)).map(([id, value]) =>
+      [id, { id, type: typeof value === 'boolean' ? 'checkbox' : 'text', value, checked: value === true }]));
+    const document = { defaultView: win, getElementById: id => fields[id] || null };
+    const capture = () => ({ controls: structuredClone(fields), vault: structuredClone(win.__vildaClcrVersionValueVault) });
+    return { win, document, capture, engine: win.VildaClcrSodiumDzm, policy: win.ClcrSodiumDzmReferenceData.DEFAULT_POLICY };
+  }
+
+  it('computes through a blank new clock while preserving raw controls and the value vault', () => {
+    const { win, document, capture, engine, policy } = setup();
+    const before = capture();
+    expect(win.ClcrCollectionDuration.readFromDocument(document, { fieldId: 'Na_collectionHours', sourceId: 'Na_collectionSource' }))
+      .toMatchObject({ valid: true, assumed: true, hours: 24 });
+    const input = engine.readInputFromDocument(document);
+    expect(input).toMatchObject({ hours: '24', durationSource: 'assumed-24h', durationNeedsConfirmation: false });
+    expect(engine.evaluate(input, policy)).toMatchObject({ valid: true, rawValue: 72, hours: 24 });
+    expect(capture()).toEqual(before);
+    // The pure historical adapter must retain its original evidence contract.
+    expect(engine.evaluate(engine.inputFromValues({ Na_concentration: '50', Na_volume: '1440', Na_collectionSource: 'assumed-24h' }), policy))
+      .toMatchObject({ valid: false, errorCode: 'missing-hours' });
+  });
+
+  it.each(['', 'unknown', 'hours', 'captured', 'historical-missing', 'invalid'])('does not infer a day from unknown or non-default source %j', source => {
+    const { document, capture, engine, policy } = setup({ Na_collectionSource: source });
+    const before = capture(), input = engine.readInputFromDocument(document);
+    expect(input.hours).toBe('');
+    expect(engine.evaluate(input, policy).valid).toBe(false);
+    expect(capture()).toEqual(before);
+  });
+
+  it.each([true, 'true'])('preserves unresolved historical confirmation %j even with default provenance', flag => {
+    const { document, capture, engine, policy } = setup({ Na_durationNeedsConfirmation: flag });
+    const before = capture(), input = engine.readInputFromDocument(document);
+    expect(input).toMatchObject({ hours: '', durationSource: 'historical-missing', durationNeedsConfirmation: true });
+    expect(engine.evaluate(input, policy)).toMatchObject({ valid: false, errorCode: 'missing-hours' });
+    expect(capture()).toEqual(before);
+  });
+
+  it.each(['0', '-12', 'invalid', '1e-400', '0.000000000001', '1e1'])('preserves explicit clock bytes %s and the actual engine decision', hours => {
+    const { document, capture, engine, policy } = setup({ Na_collectionHours: hours });
+    const before = capture(), input = engine.readInputFromDocument(document);
+    expect(input.hours).toBe(hours);
+    const expected = engine.evaluate(engine.inputFromValues({ Na_inputMode: 'concentration', Na_concentration: '50',
+      Na_volume: '1440', Na_volumeUnit: 'mL', Na_collectionHours: hours, Na_collectionSource: 'assumed-24h' }), policy);
+    expect(engine.evaluate(input, policy)).toEqual(expected);
+    expect(capture()).toEqual(before);
+  });
+
+  it.each([
+    { shared: false, omit: [] },
+    { shared: true, omit: ['Na_collectionHours'] },
+  ])('does not manufacture a duration without the shared qualifier or its control %j', options => {
+    const { document, capture, engine, policy } = setup({}, options);
+    const before = capture(), input = engine.readInputFromDocument(document);
+    expect(input.hours).toBe('');
+    expect(engine.evaluate(input, policy)).toMatchObject({ valid: false, errorCode: 'missing-hours' });
+    expect(capture()).toEqual(before);
+  });
+
+  it('keeps known collection problems blocking after qualifying the new clock', () => {
+    const { document, capture, engine, policy } = setup({ ui_collectionNoMissedVoids_answer: 'no' });
+    const before = capture(), input = engine.readInputFromDocument(document);
+    expect(input.hours).toBe('24');
+    expect(engine.evaluate(input, policy)).toMatchObject({ valid: false, blocked: true });
+    expect(capture()).toEqual(before);
+  });
+});

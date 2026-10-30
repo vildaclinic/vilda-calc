@@ -7,7 +7,8 @@ Plany opieki są zakładką Przypomnień i Karty pacjenta. Jeden pacjent może m
 - Dotychczasowe Przypomnienia zachowują kwalifikację do końca bieżącego lokalnego dnia. Przyszłe kroki i kroki bez daty są dostępne w planach. Samodzielne przypomnienie nie wymaga planu; przy dodawaniu można wskazać otwarty plan wybranego pacjenta.
 - Termin wydarzenia, dzień przypomnienia/sprawdzenia wyniku i data rzeczywistego wykonania/otrzymania są osobne. Dołączenie istniejącego terminu zachowuje jego identyfikator.
 - Zapis wykonania lub wyniku kończy wybrany krok. Lekarz pozostawia pozostałe kroki, dodaje kolejny albo ustala dzień powrotu do decyzji. Plan pozostaje otwarty.
-- Wynik opisowy trafia do Notatek i Badań Karty pacjenta. Nie jest przeliczany na wynik liczbowy; data otrzymania nie staje się datą pobrania próbki. Główne Notatki pozostają biblioteką szablonów lekarza.
+- Notatki w Karcie pacjenta pomijają dokumentację należącą do prawidłowo odczytanego planu opieki. Kroki, ustalenia i opisy wykonania są dostępne w planie, terminy w Terminarzu, a wyniki w Badaniach oraz przez pełny podgląd z planu. Dotyczy to otwartych i zamkniętych planów oraz istniejącego terminu dołączonego później do planu. Dokumentacja niezwiązana z planem zachowuje dotychczasowe miejsce w Notatkach.
+- Podgląd wpisu z planu odczytuje bieżącą treść oryginalnego rekordu. Edycja wyniku w Badaniach jest widoczna po ponownym otwarciu go z planu; wcześniejszy opis kroku lub zapis w przebiegu planu nie zastępuje aktualnej treści wyniku. Wynik opisowy nie jest przeliczany na wynik liczbowy; data otrzymania nie staje się datą pobrania próbki. Główne Notatki pozostają biblioteką szablonów lekarza.
 - Zamknięcie wymaga powodu i opisu. Otwarte kroki wymagają jawnej zgody na zakończenie bez wykonania. Powiązane wydarzenia pozostają w Terminarzu; zamknięcie planu nie odwołuje ich automatycznie. Wznowienie zachowuje historię i wykonane kroki.
 - Na telefonie obowiązuje lista → szczegóły → powrót do zachowanej pozycji. Nie dodajemy pośredniego przycisku pełnego ekranu.
 
@@ -15,7 +16,9 @@ Plany opieki są zakładką Przypomnień i Karty pacjenta. Jeden pacjent może m
 
 `vilda_vault.js` przechowuje plan jako notatkę pacjenta kategorii `care-plan`. Wersjonowany `careContext` jest częścią zaszyfrowanej treści, razem z listą kroków, historią i identyfikatorami operacji. Nie powstaje nowy magazyn bazy ani jawny zapis planów w localStorage. Zewnętrzny `patientId` pozostaje jedynym właścicielem rekordu; kontekst nie utrwala jego osobnej kopii.
 
-Powiązane notatki mają role `step`, `decision`, `calendar`, `result` lub `note`. Pomocniczy rekord kroku/decyzji zasila Przypomnienia. Faktyczne wydarzenie zasila Terminarz. Rozdzielenie tych ról zapobiega podwójnym wydarzeniom przy różnych dniach badania i przypomnienia. Techniczne rekordy planu i kroków nie są edytowane przez ogólny edytor Notatek pacjenta; właściwe wyniki i ustalenia pozostają widoczne w kartotece.
+Powiązane notatki mają role `step`, `decision`, `calendar`, `result` lub `note`. Pomocniczy rekord kroku/decyzji zasila Przypomnienia. Faktyczne wydarzenie zasila Terminarz. Rozdzielenie tych ról zapobiega podwójnym wydarzeniom przy różnych dniach badania i przypomnienia. Techniczne rekordy planu i kroków nie są edytowane przez ogólny edytor Notatek pacjenta; właściwe wyniki i ustalenia pozostają dostępne z planu oraz odpowiednich widoków kartoteki.
+
+Pomijanie dokumentacji planu dotyczy wyłącznie widoku Notatek wraz z jego licznikami i stanem pustym. Nie filtruje wspólnego API sejfu, nie usuwa istniejących wpisów, nie zmienia identyfikatorów, treści, rewizji ani dat i nie wykonuje migracji. Badania, Terminarz, Historia, wyszukiwarka i synchronizacja nadal korzystają z pełnych rekordów. Odnośnik do dokumentacji planu otwiera jej właściwe miejsce zamiast niewidocznego wiersza Notatek. Wpis z brakującym, nieczytelnym lub nieprawidłowym powiązaniem pozostaje dostępny w Notatkach, dopóki nie można bezpiecznie odczytać go przez plan tego samego pacjenta.
 
 Publiczne API sejfu:
 

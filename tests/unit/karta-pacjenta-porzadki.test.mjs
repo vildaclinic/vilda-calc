@@ -85,7 +85,13 @@ describe('drobne', () => {
     // lekarza na zakładkę Notatki — inaczej lądował tam, gdzie nic nie jest wskazane.
     expect(kod, 'wpis bez identyfikatora dostaje treść na miejscu')
       .toContain('if(!f.noteId){Gd5(f.title||"Wpis",f.body||f.description||"");return}');
-    expect(kod, 'prawdziwa notatka nadal jest wskazywana po przejściu').toContain('L.click(),Gd6(f.noteId)');
+    // Wspólny resolver kieruje dokumentację planu do oryginalnego wpisu w planie,
+    // a niezależną notatkę wskazuje wyłącznie w bieżącej karcie i sesji.
+    expect(kod, 'Historia przekazuje dokładny identyfikator do wspólnej nawigacji')
+      .toContain('se(a,r,o,{activeTab:"notes",focusNoteId:f.noteId})');
+    expect(kod).toContain('CareModule.resolveNoteDestination(GdNotatki,CareFocused,t)');
+    expect(kod).toContain('CareFocusNote(CareFocusId,Eo,CareReadOwner)');
+    expect(kod).toContain('if(!card.isConnected||!remReadCurrent(owner))return');
     expect(kod).toContain('else Gd5(f.title||"Wpis",f.description||"")');
     expect(kod, 'karta notatki niesie swój identyfikator').toContain('"data-note-id":S.id||""');
   });

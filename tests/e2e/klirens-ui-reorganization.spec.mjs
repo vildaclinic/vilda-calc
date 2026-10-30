@@ -218,9 +218,11 @@ test('wyszukanie KT/V otwiera formularz PRO bez widocznego przełącznika', asyn
   );
 });
 
+// Potassium still uses the shared legacy DZM form. Sodium has a dedicated
+// audited form whose fields and clock are covered by klirens-sodium-dzm.
 test('DZM przyjmuje 24 h bez ankiety, zapisuje źródło czasu i blokuje jawną negatywną informację', async ({ page }) => {
   await openCalculator(page);
-  await selectFromSearch(page, 'wydalanie sodu', 'Na_mmol_d');
+  await selectFromSearch(page, 'wydalanie potasu', 'K_mmol_d');
   const hours = page.locator('#Cl24DurationHours');
   await expect(hours).toHaveValue('24');
   await expect(hours).toBeHidden();
@@ -238,12 +240,12 @@ test('DZM przyjmuje 24 h bez ankiety, zapisuje źródło czasu i blokuje jawną 
     await expect(page.locator('#' + id)).not.toBeChecked();
     await expect(page.locator('#ui_' + id + '_answer')).toBeHidden();
   }
-  const readiness = await page.evaluate(() => window.getClcrFormulaReadiness('Na_mmol_d'));
+  const readiness = await page.evaluate(() => window.getClcrFormulaReadiness('K_mmol_d'));
   for (const id of ['collectionStartAt', 'collectionEndAt', ...qualityIds]) expect(readiness.missingFieldIds).not.toContain(id);
   await expect(page.locator('#clcrReadiness')).not.toContainText('Jakość czasowej lub dobowej zbiórki moczu');
-  await page.locator('#U_Na').fill('100');
+  await page.locator('#U_K').fill('100');
   await page.locator('#V24').fill('1000');
-  const capture = () => page.evaluate(() => window.ClcrVisitSave.collectActiveDatapoints(document, { formulaId: 'Na_mmol_d' })
+  const capture = () => page.evaluate(() => window.ClcrVisitSave.collectActiveDatapoints(document, { formulaId: 'K_mmol_d' })
     .map(point => ({ value: point.rawValue ?? point.valueNum, hours: point.capture?.values?.Cl24DurationHours, source: point.capture?.values?.Cl24DurationSource })));
   await expect.poll(capture).toEqual([{ value: 100, hours: '24', source: 'assumed-24h' }]);
   expect(await page.evaluate(() => window.ClcrCollectionDuration.readFromDocument(document))).toMatchObject({ valid: true, complete: true, assumed: true, protocolMode: 'assumed-complete' });
@@ -264,7 +266,7 @@ test('DZM przyjmuje 24 h bez ankiety, zapisuje źródło czasu i blokuje jawną 
     return window.applyClcrSessionSnapshot(snapshot, { source: 'e2e-known-collection-problem', update: true });
   });
   expect(applied).toBe(true);
-  await expect.poll(async () => page.evaluate(() => window.canComputeFormula('Na_mmol_d'))).toBe(false);
+  await expect.poll(async () => page.evaluate(() => window.canComputeFormula('K_mmol_d'))).toBe(false);
   await expect.poll(capture).toEqual([]);
   expect(await page.evaluate(() => window.ClcrCollectionDuration.readFromDocument(document))).toMatchObject({ complete: false, knownProblems: ['collectionStartVoidDiscarded'] });
   expect((await page.evaluate(() => window.buildClcrSessionSnapshot())).inputs).toMatchObject({ Cl24DurationHours: '12', Cl24DurationSource: 'hours', ui_collectionStartVoidDiscarded_answer: 'no' });
@@ -275,7 +277,7 @@ test('pojedyncza widoczna kolumna DZM zajmuje całą szerokość przy 1600 px', 
 }) => {
   await page.setViewportSize({ width: 1600, height: 1000 });
   await openCalculator(page);
-  await selectFromSearch(page, 'wydalanie sodu', 'Na_mmol_d');
+  await selectFromSearch(page, 'wydalanie potasu', 'K_mmol_d');
 
   const columns = page.locator('#clcrForm > .param-row > .param-col');
   await expect(columns).toHaveCount(2);
@@ -303,7 +305,7 @@ test('DZM inicjalizuje pełną szerokość bez przewijania przy 320 px', async (
 }) => {
   await page.setViewportSize({ width: 320, height: 760 });
   await openCalculator(page);
-  await selectFromSearch(page, 'wydalanie sodu', 'Na_mmol_d');
+  await selectFromSearch(page, 'wydalanie potasu', 'K_mmol_d');
 
   const columns = page.locator('#clcrForm > .param-row > .param-col');
   await expect(columns.nth(0)).toBeHidden();
@@ -329,7 +331,7 @@ test('DZM inicjalizuje pełną szerokość bez przewijania przy 320 px', async (
 
 test('po restore korekta zapisanej odpowiedzi DZM nie wraca do starego vaultu', async ({ page }) => {
   await openCalculator(page);
-  await selectFromSearch(page, 'wydalanie sodu', 'Na_mmol_d');
+  await selectFromSearch(page, 'wydalanie potasu', 'K_mmol_d');
   await page.waitForFunction(() => typeof window.applyClcrSessionSnapshot === 'function');
   const qualityIds = [
     'collectionStartVoidDiscarded', 'collectionFinalVoidIncluded',
@@ -337,7 +339,7 @@ test('po restore korekta zapisanej odpowiedzi DZM nie wraca do starego vaultu', 
     'collectionNoExtraVoids', 'collectionStorageFollowed',
   ];
   const applied = await page.evaluate(ids => {
-    const inputs = { currentVersion: 'advanced', formulaPicker: 'Na_mmol_d', age: '10', ageMonths: '0', U_Na: '100', V24: '1000',
+    const inputs = { currentVersion: 'advanced', formulaPicker: 'K_mmol_d', age: '10', ageMonths: '0', U_K: '100', V24: '1000',
       Cl24DurationHours: '24', Cl24DurationSource: 'captured',
       collectionStartAt: '2026-07-27T08:00', collectionEndAt: '2026-07-28T08:00' };
     ids.forEach((id, index) => {
@@ -345,7 +347,7 @@ test('po restore korekta zapisanej odpowiedzi DZM nie wraca do starego vaultu', 
       inputs[id] = answer === 'yes';
       inputs['ui_' + id + '_answer'] = answer;
     });
-    return window.applyClcrSessionSnapshot({ version: 2, currentVersion: 'advanced', selectedFormula: 'Na_mmol_d',
+    return window.applyClcrSessionSnapshot({ version: 2, currentVersion: 'advanced', selectedFormula: 'K_mmol_d',
       preserveAcrossVersions: true, preservedInputs: { ...inputs }, inputs },
     { source: 'e2e-dzm-restore', update: true, dispatchEvents: false, preserveAcrossVersions: true });
   }, qualityIds);
@@ -357,8 +359,8 @@ test('po restore korekta zapisanej odpowiedzi DZM nie wraca do starego vaultu', 
   await expect(page.locator('#ui_collectionFinalVoidIncluded_answer')).toBeHidden();
   await expect(page.locator('#Cl24DurationHours')).toHaveValue('24');
   await expect(page.locator('#Cl24DurationSource')).toHaveValue('captured');
-  expect(await page.evaluate(() => window.canComputeFormula('Na_mmol_d'))).toBe(false);
-  expect(await page.evaluate(() => window.ClcrVisitSave.collectActiveDatapoints(document, { formulaId: 'Na_mmol_d' }))).toEqual([]);
+  expect(await page.evaluate(() => window.canComputeFormula('K_mmol_d'))).toBe(false);
+  expect(await page.evaluate(() => window.ClcrVisitSave.collectActiveDatapoints(document, { formulaId: 'K_mmol_d' }))).toEqual([]);
 
   // A corrected incoming record is the editing path for historical protocol
   // facts. It must replace the old negative fact in both DOM and the vault.
@@ -370,14 +372,14 @@ test('po restore korekta zapisanej odpowiedzi DZM nie wraca do starego vaultu', 
     }
     return window.applyClcrSessionSnapshot(snapshot, { source: 'e2e-corrected-dzm-record', update: true, preserveAcrossVersions: true });
   }, qualityIds)).toBe(true);
-  await expect.poll(async () => page.evaluate(() => window.getClcrFormulaReadiness('Na_mmol_d'))).toMatchObject({ valueReady: true, missingFieldIds: [], hasBlockedProtocol: false });
+  await expect.poll(async () => page.evaluate(() => window.getClcrFormulaReadiness('K_mmol_d'))).toMatchObject({ valueReady: true, missingFieldIds: [], hasBlockedProtocol: false });
   for (const id of qualityIds) {
     await expect(page.locator('#' + id)).toBeChecked();
     await expect(page.locator('#ui_' + id + '_answer')).toBeHidden();
   }
   await page.evaluate(() => window.ClcrUiWorkflow.refresh());
   const restored = await page.evaluate(() => ({ snapshot: window.buildClcrSessionSnapshot(), vault: window.__vildaClcrVersionValueVault,
-    points: window.ClcrVisitSave.collectActiveDatapoints(document, { formulaId: 'Na_mmol_d' }) }));
+    points: window.ClcrVisitSave.collectActiveDatapoints(document, { formulaId: 'K_mmol_d' }) }));
   for (const id of qualityIds) {
     expect(restored.snapshot.inputs[id]).toBe(true);
     expect(restored.snapshot.inputs['ui_' + id + '_answer']).toBe('yes');
@@ -503,9 +505,9 @@ test('każdy widoczny przycisk Info ma dostępny i niepusty opis', async ({ page
   await openCalculator(page);
   // The simplified collection form has two required inputs and an optional
   // duration editor. Every visible help button still needs real source text.
-  await selectFromSearch(page, 'Na_mmol_d', 'Na_mmol_d');
+  await selectFromSearch(page, 'K_mmol_d', 'K_mmol_d');
   await page.locator('#clcrCommonDuration').getByRole('button', { name: 'Zmień', exact: true }).click();
-  for (const id of ['U_Na', 'V24', 'Cl24DurationHours']) {
+  for (const id of ['U_K', 'V24', 'Cl24DurationHours']) {
     await expect(page.locator('[data-clcr-field-id="' + id + '"] .clcr-info-button')).toBeVisible();
   }
   for (const details of await page.locator('details.clcr-context-details:visible, details.clcr-dzm-quality__details:visible').all()) {

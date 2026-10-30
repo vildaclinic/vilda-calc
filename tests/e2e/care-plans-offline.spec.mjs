@@ -79,7 +79,7 @@ test('care plans cold offline: native plan, narrative result and future step per
     await form.getByLabel('Przypomnij w dniu', { exact: true }).fill('2027-04-29');
     await form.getByRole('button', { name: 'Zapisz wynik', exact: true }).click();
     await expect(form).toHaveCount(0);
-    for (const resource of ['vilda_care_plans.js', 'vilda_care_plans.css', 'vilda_vault.js']) {
+    for (const resource of ['vilda_care_plans.js', 'vilda_care_plans.css', 'vilda_auth_ui.js', 'vilda_vault.js']) {
       const entry = [...served].find(([url]) => url.split('?')[0] === '/' + resource);
       expect(entry, `${resource} was actually requested after the cold browser restart`).toBeTruthy();
       expect(entry[1], `${resource} came from the production service worker with the server stopped`).toBe(true);
@@ -90,7 +90,7 @@ test('care plans cold offline: native plan, narrative result and future step per
         const digest = await crypto.subtle.digest('SHA-256', await response.arrayBuffer());
         return Array.from(new Uint8Array(digest), byte => byte.toString(16).padStart(2, '0')).join('');
       }, entry[0]);
-      expect(actual).toBe(expected);
+      expect(actual, `${resource} cached bytes match the current production source`).toBe(expected);
     }
     await page.reload({ waitUntil: 'load' }); await readyForPatient(page);
     const saved = await readPlan(page, plan.planId);
@@ -104,6 +104,44 @@ test('care plans cold offline: native plan, narrative result and future step per
     expect(result.clinicalDateISO).toBeNull();
     const due = await page.evaluate(async () => (await window.VildaVault.listPatientNotesDueByDate()).flatMap(group => group.notes || []));
     expect(due.some(note => [received.reminderNoteId, control.reminderNoteId].includes(note.id))).toBe(false);
+    const notesBeforeViews = await page.evaluate(async patientId =>
+      (await window.VildaVault.listPatientNotesForPatient(patientId)).sort((a, b) => a.id.localeCompare(b.id)), created.ids.a);
+    expect(notesBeforeViews.some(note => note.id === result.id)).toBe(true);
+
+    await page.evaluate(patientId => window.VildaAuthUI.showPatientCard(patientId, null, null, { activeTab: 'notes' }), created.ids.a);
+    const patient = page.locator('.vilda-auth-patient-card');
+    const notes = patient.locator('.vilda-patient-notes-section');
+    await expect(notes).toBeVisible();
+    await expect(notes.locator('[data-note-id]')).toHaveCount(0);
+    await expect(notes.locator('.vilda-patient-empty-msg')).toContainText('Brak notatek dla tego pacjenta.');
+
+    await patient.getByRole('button', { name: 'Badania', exact: true }).click();
+    const lab = patient.locator('.vilda-patient-lab-section');
+    const labEntry = lab.locator(`[data-note-id="${result.id}"]`);
+    await expect(labEntry).toBeVisible();
+    await labEntry.click();
+    const editor = page.locator('.vilda-patient-note-editor-overlay');
+    await expect(editor.locator('textarea').first()).toHaveValue(result.body);
+    await editor.getByRole('button', { name: 'Anuluj', exact: true }).click();
+    await expect(editor).toHaveCount(0);
+
+    await page.evaluate(({ patientId, noteId }) => window.VildaAuthUI.showPatientCard(patientId, null, null, {
+      activeTab: 'notes', focusNoteId: noteId,
+    }), { patientId: created.ids.a, noteId: result.id });
+    const preview = patient.locator(`.vcp-record[data-note-id="${result.id}"]`);
+    await expect(preview).toBeVisible();
+    await expect(preview.locator('.vcp-record-body')).toHaveText(result.body);
+    await expect(patient.locator('.vilda-patient-care-section')).toBeVisible();
+    await preview.getByRole('button', { name: '← Wróć do planu', exact: true }).click();
+    await expect(preview).toHaveCount(0);
+    const care = patient.locator('.vilda-patient-care-section');
+    await expect(care.locator('.vcp-detail .vcp-title')).toHaveText(saved.title);
+    await care.locator(`[data-step-id="${received.id}"]`).getByRole('button', { name: 'Otwórz wynik', exact: true }).click();
+    await expect(preview.locator('.vcp-record-body')).toHaveText(result.body);
+    expect(await page.evaluate(id => window.VildaVault.getPatientNote(id), result.id)).toEqual(result);
+    expect(await page.evaluate(async patientId =>
+      (await window.VildaVault.listPatientNotesForPatient(patientId)).sort((a, b) => a.id.localeCompare(b.id)), created.ids.a)).toEqual(notesBeforeViews);
+    expect(await page.evaluate(() => fetch(`/__care-offline-probe-after-views-${Date.now()}`).then(() => false, () => true))).toBe(true);
   } finally {
     if (context) await context.close().catch(() => {});
     await server.stop(); fs.rmSync(profile, { recursive: true, force: true });

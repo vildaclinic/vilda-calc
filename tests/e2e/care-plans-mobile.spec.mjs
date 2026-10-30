@@ -99,3 +99,55 @@ test('care plans mobile: returning from a due care step restores the original re
   expect(await created.frame.evaluate(id => window.VildaVault.getPatientNote(id), step.reminderNoteId)).toEqual(beforeNote);
   await noHorizontalOverflow(page);
 });
+
+test('care plans mobile: the full current result preview stays inside the shielded shell workspace and returns to the selected plan without a write', async ({ page }) => {
+  const created = await careFixture(page, { shell: true });
+  await mutatePlan(created.frame, created.ids.a, created.plans.biopsy, 'result', {
+    stepId: created.steps.awaiting, text: 'Fikcyjny pełny wynik telefonu.\nDrugi wiersz dokumentacji.',
+    dateISO: '2026-10-28', continuation: 'later', decisionDateISO: '2026-11-03',
+  });
+  const before = await readPlan(created.frame, created.plans.biopsy);
+  const resultId = before.steps.find(step => step.id === created.steps.awaiting).resultNoteId;
+  const result = await created.frame.evaluate(id => window.VildaVault.getPatientNote(id), resultId);
+  const panel = await openCarePlans(page), workspace = page.locator(CARE_WORKSPACE);
+  await panel.locator('.vcp-search').fill('biopsji');
+  await selectPlan(panel, before.id);
+  await panel.locator(`[data-step-id="${created.steps.awaiting}"]`).getByRole('button', { name: 'Otwórz wynik', exact: true }).click();
+  const preview = panel.locator(`.vcp-record[data-note-id="${resultId}"]`);
+  await expect(preview).toBeVisible();
+  await expect(preview.locator('.vcp-record-body')).toHaveText(result.body);
+  await workspace.getByRole('button', { name: 'Ukryj treść Przypomnień', exact: true }).click();
+  await expect(workspace.locator('.vilda-reminders-private-cover')).toBeVisible();
+  await expect(preview).toBeHidden();
+  expect(await preview.evaluate(node => {
+    const protectedRoot = node.closest('.vb22-private-content');
+    return Boolean(protectedRoot?.inert && protectedRoot.getAttribute('aria-hidden') === 'true' && getComputedStyle(node).visibility === 'hidden');
+  })).toBe(true);
+  await workspace.getByRole('button', { name: 'Pokaż treść Przypomnień', exact: true }).click();
+  await expect(preview.locator('.vcp-record-body')).toHaveText(result.body);
+  await panel.getByRole('button', { name: '← Wróć do planu', exact: true }).click();
+  await expect(panel.locator('.vcp-title')).toHaveText(before.title);
+  await panel.locator('.vcp-back').click();
+  await expect(panel.locator('.vcp-list')).toBeVisible();
+  await expect(panel.locator('.vcp-search')).toHaveValue('biopsji');
+  await expect(panel.locator('[data-plan-id]')).toHaveCount(1);
+  await selectPlan(panel, before.id);
+  await panel.locator(`[data-step-id="${created.steps.awaiting}"]`).getByRole('button', { name: 'Otwórz wynik', exact: true }).click();
+  await preview.getByRole('button', { name: 'Szczegóły wpisu', exact: true }).click();
+  const editor = page.locator('.vilda-patient-note-editor-overlay');
+  const editorBody = editor.getByRole('textbox', { name: 'Treść', exact: true });
+  await expect(editorBody).toHaveValue(result.body);
+  await editorBody.fill('Fikcyjny niezapisany szkic edycji wyniku.');
+  await editor.getByRole('button', { name: 'Ukryj treść Przypomnień', exact: true }).click();
+  await expect(editor.locator('.vilda-reminders-private-cover')).toBeVisible();
+  await expect(editorBody).toBeHidden();
+  await editor.getByRole('button', { name: 'Pokaż treść Przypomnień', exact: true }).click();
+  await expect(editorBody).toHaveValue('Fikcyjny niezapisany szkic edycji wyniku.');
+  page.once('dialog', dialog => dialog.accept());
+  await editor.getByRole('button', { name: 'Anuluj', exact: true }).click();
+  await expect(editor).toHaveCount(0);
+  await expect(workspace.locator(`.vcp-record[data-note-id="${resultId}"] .vcp-record-body`)).toHaveText(result.body);
+  expect(await readPlan(created.frame, before.id)).toEqual(before);
+  expect(await created.frame.evaluate(id => window.VildaVault.getPatientNote(id), resultId)).toEqual(result);
+  await noHorizontalOverflow(page);
+});

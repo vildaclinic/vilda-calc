@@ -13,7 +13,7 @@ test.use({ serviceWorkers: 'allow', actionTimeout: 15_000 });
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const sha256 = bytes => createHash('sha256').update(bytes).digest('hex');
 const versionOf = source => /const SW_VERSION = '([^']+)'/.exec(source)[1];
-const UPDATE_BASE_SHA = 'e49ff33eef89db636926666557f1c40380430eb5';
+const UPDATE_BASE_SHA = '21a499cf7ce78e2050e1a62ed9f8cbe23602fdb6';
 const names = [
   'clcr_sodium_dzm_data.js', 'clcr_sodium_dzm.js', 'clcr_sodium_dzm_ui.js',
   'clcr_sodium_dzm.css', 'clcr_sodium_dzm_persistence.js',

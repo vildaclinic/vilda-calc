@@ -228,10 +228,10 @@ async function fictionalPo4SharedAndNotes(page) {
   await page.evaluate(() => window.VildaAuthUI.hide());
   await expect(page.locator('.vilda-auth-patient-card')).toBeHidden();
 
-  // The shared adapter must normalize the actual rendered legacy Na result,
+  // The shared adapter must normalize the actual rendered legacy potassium result,
   // without asking for start/end dates or resetting an explicit shorter time.
-  const sharedInputs = { currentVersion: 'advanced', formulaPicker: 'Na_mmol_d', age: '45', sex: 'F',
-    weight: '60', height: '165', U_Na: '50', V24: '1440',
+  const sharedInputs = { currentVersion: 'advanced', formulaPicker: 'K_mmol_d', age: '45', sex: 'F',
+    weight: '60', height: '165', U_K: '50', V24: '1440',
     Cl24DurationHours: '', Cl24DurationSource: 'assumed-24h',
     collectionStartAt: '', collectionEndAt: '', Cl24CollectionProblem: false,
     collectionStartVoidDiscarded: false, collectionFinalVoidIncluded: false,
@@ -241,10 +241,10 @@ async function fictionalPo4SharedAndNotes(page) {
     ui_collectionNoMissedVoids_answer: '', ui_collectionNoSpillage_answer: '',
     ui_collectionNoExtraVoids_answer: '', ui_collectionStorageFollowed_answer: '',
   };
-  await applySession(page, { version: 2, currentVersion: 'advanced', selectedFormula: 'Na_mmol_d', inputs: sharedInputs }, 'Na_mmol_d');
+  await applySession(page, { version: 2, currentVersion: 'advanced', selectedFormula: 'K_mmol_d', inputs: sharedInputs }, 'K_mmol_d');
   const readShared = () => page.evaluate(() => ({
-    duration: window.ClcrCollectionDuration.readFromDocument(document), ready: window.canComputeFormula('Na_mmol_d'),
-    values: window.ClcrVisitSave.collectActiveDatapoints(document, { formulaId: 'Na_mmol_d' }).map(point => point.valueNum ?? point.rawValue),
+    duration: window.ClcrCollectionDuration.readFromDocument(document), ready: window.canComputeFormula('K_mmol_d'),
+    values: window.ClcrVisitSave.collectActiveDatapoints(document, { formulaId: 'K_mmol_d' }).map(point => point.valueNum ?? point.rawValue),
   }));
   await expect(page.locator('#Cl24DurationHours')).toHaveValue('24');
   await expect.poll(async () => (await readShared()).ready).toBe(true);

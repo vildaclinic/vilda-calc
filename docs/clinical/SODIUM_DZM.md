@@ -218,6 +218,7 @@ Poniższe przypadki mają wywoływać rzeczywistych producentów, nie kopię wzo
 | 100 mmol/L ×1 L /12 h | **200 mmol/24 h**, oszacowanie bez normy pełnej DZM. |
 | Gotowe 100 mmol/24 h przy znanych 12 h | **100**, bez ponownego skalowania i bez normy pełnej DZM. |
 | Historycznie nieznany czas: stężenie /gotowa ilość dobowa | Stężenie wymaga czasu; gotowa ilość dostępna neutralnie, bez normy. |
+| Nowa zbiórka, 50 mmol/L ×1440 mL; czas ręcznie wyczyszczony przy źródle `assumed-24h` | Nadal **72 mmol/24 h** podczas edycji: wspólny adapter potwierdza domyślne 24 h w kopii danych. Odczyt nie zmienia DOM ani vaulta; historyczna luka, nieznane źródło i jawnie błędny czas nie uzyskują tego domniemania. |
 | Jawny czas 0, ujemny lub błędny; znana błędna zbiórka | Blokada obu trybów i zapisu. |
 | Minimalnie poniżej/powyżej granicy, także po zmianie jednostki | Ocena według dokładnej ilości, bez epsilon i bez porównania zaokrąglonej prezentacji. |
 

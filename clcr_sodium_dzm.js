@@ -215,6 +215,17 @@
       if (control) values[id] = control.type === "checkbox" || control.type === "radio" ? control.checked === true : control.value;
       else if (own(vault, id)) values[id] = vault[id];
     }
+    // A blank, focused new-collection editor still means the shared 24 h
+    // default. Qualify that meaning in this copy without changing the DOM,
+    // the value vault, explicit input or a historical unknown duration.
+    if (own(values, "Na_collectionHours") && absent(values.Na_collectionHours) && values.Na_collectionSource === "assumed-24h") {
+      const durationApi = doc?.defaultView?.ClcrCollectionDuration || root?.ClcrCollectionDuration;
+      const duration = durationApi?.readFromDocument?.(doc, { fieldId: "Na_collectionHours", sourceId: "Na_collectionSource" });
+      if (duration?.valid && duration.assumed && duration.hours === 24) {
+        values.Na_collectionHours = "24";
+        values.Na_collectionSource = "assumed-24h";
+      }
+    }
     return inputFromValues(values, context);
   }
   const INPUT_LABELS = Object.freeze({ concentration: "stężenie sodu", volume: "objętość zbiórki", hours: "czas zbiórki", reportedValue: "gotowe wydalanie" });
