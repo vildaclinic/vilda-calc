@@ -30,7 +30,8 @@
 //        ładunek i sama delta karty docelowej; kosz starej kopii 23 jak f612fe09 — z powrotem źródła i bez), krawędzie
 //        D-21 (karta albo źródło zostaje — cień zostaje; karta wraca — kosz 23 jak f612fe09), zbiór czyszczony blokadą,
 //        ważny kosz karty usuniętej unieważniony w scaleniu (M11h, W5P-3: cień zdjęty także z wyniku złączenia, L3);
-//        adapter bez magazynu;
+//        adapter bez magazynu; P-SESJA-ZAPISU: blokada w zdjęciu cienia źródła „Scal pacjentów” (M11i), przełączenie na
+//        konto z kartą o tym samym patientId po usunięciu rekordu źródła — cień karty tego konta zostaje (M11j);
 //   K  — koszt deterministycznie: scalenie bez zmian 0 zapisów rekordów cienia, rekord metadanych bez pełnych szyfrów.
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
@@ -951,6 +952,113 @@ describe('P-CIEN-POZA-LISTA: cień kart usuniętych w tej sesji (W3P-1, decyzja 
       przesunZegar(M); await P.mergeSyncPayload(JSON.parse(JSON.stringify(lad)));
       expect(l.lista, 'L3: ponowne scalenie tego samego ładunku — 0 zapisów listy').toBe(0);
       expect(await karta(P, pid)).toEqual(bezCienia(bezMagazynu));
+    }, 180_000);
+  }
+
+  // P-SESJA-ZAPISU (przegląd 3, P2-1): „Scal pacjentów” tutaj, źródło z cieniem — zdjęcie cienia przy usunięciu karty
+  // źródłowej (Bpu_usun → Bkz_zmienListe) idzie w sesji scalania. Blokada sejfu pod blokadą metadanych, po odczycie
+  // metadanych (drugi odczyt po usunięciu rekordu źródła; pierwszy to przygotowanie Z4): SESSION_CHANGED, bez zapisu listy
+  // i bez zapisów magazynu cienia po blokadzie — cień zostaje, jak przy błędzie zdjęcia cienia. Na kodzie rundy 2 przeglądu
+  // PR-S lista i rekordy cienia zapisywały się po blokadzie (uid konta z wejścia do zmiany listy). Kontrola bez blokady:
+  // cień źródła zdjęty od razu.
+  for (const blokada of [true, false]) {
+    it(`M11i${blokada ? '' : ' (kontrola)'}: „Scal pacjentów” tutaj, źródło z cieniem — ${blokada ? 'blokada sejfu w zdjęciu cienia źródła: SESSION_CHANGED, po blokadzie bez zapisu listy i magazynu cienia, cień zostaje (11)' : 'bez blokady: cień źródła zdjęty od razu'}`, async () => {
+      const { u, pid: S } = await janZCieniem(false);
+      const { P } = u;
+      const T = (await zapisz(P, jan(140, 40))).patientId;
+      const px = P.__px, poBlokadzie = [];
+      let poUsunieciu = false, odczyty = 0, okno = false;
+      const hak = new Proxy(px, { get(cel, k) {
+        const f = cel[k];
+        if (typeof f !== 'function') return f;
+        return async (...a) => {
+          if (okno && /^(put|write|remove|delete|update)/.test(String(k))) poBlokadzie.push(String(k));
+          const r = await f.apply(cel, a);
+          if (k === 'removePatientForUser' && a[1] === S) poUsunieciu = true;
+          if (blokada && poUsunieciu && !okno && k === 'getUserMeta' && (odczyty += 1) === 2) { okno = true; P.lock('manual'); }
+          return r;
+        };
+      } });
+      P.setStorageAdapter(hak); P.__px = hak;
+      let blad = null;
+      try { przesunZegar(M); await P.mergePatients(S, T); } catch (er) { blad = (er && er.code) || String(er && er.message); }
+      okno = false;
+      P.setStorageAdapter(px); P.__px = px;
+      expect(poUsunieciu, 'scalanie doszło do usunięcia karty źródłowej').toBe(true);
+      if (!blokada) {
+        expect(blad, 'scalanie bez blokady').toBe(null);
+        expect(await karta(P, S), 'cień źródła zdjęty od razu').toEqual(bezCienia(false));
+        expect(await wiszace(P)).toBe(0);
+        return;
+      }
+      expect(odczyty, 'blokada pod blokadą metadanych przy zdjęciu cienia').toBe(2);
+      expect(blad, 'scalanie przerwane blokadą').toBe('SESSION_CHANGED');
+      expect(poBlokadzie, 'po blokadzie bez zapisu listy i magazynu cienia').toEqual([]);
+      expect(await karta(P, S), 'cień źródła zostaje (jak przy błędzie zdjęcia cienia)').toEqual({ zaslepki: 11, pelnyCien: 0, rekordy: 11, koszZTrescia: 0 });
+      expect(await wiszace(P)).toBe(0);
+    }, 180_000);
+  }
+});
+
+// P-SESJA-ZAPISU (przegląd 4, M3-01): zbiór kart usuniętych w tej sesji (Bpc_usuniete) trzyma wpisy „konto|karta”.
+// Czerwony na audycie sprzed zmiany (c209fa6b: scalanie kończy się bez SESSION_CHANGED) i na mutancie sprawdzenia po
+// usunięciu rekordu karty źródłowej; kontrola zielona wszędzie.
+// „Scal pacjentów” w koncie A przerwane przełączeniem na konto B zaraz po usunięciu rekordu karty źródłowej nie dopisuje
+// wpisu „B|karta”: konto B ma kartę o tym samym patientId (import pliku karty zachowuje patientId), a taki wpis zdejmował
+// przy każdej następnej zmianie listy w B cień wersji tej karty B (jak „Usuń pacjenta” w B). Kontrola bez scalania w A.
+async function cienKarty(px, uid, pid) {
+  const m = (await px.getUserMeta(uid)) || {};
+  const lista = (m.snapshotTombstones || []).filter((e) => e.patientId === pid);
+  let rekordy = 0;
+  for (const k of await px.listSnapshotShadowKeysForUser(uid)) if ((await px.getSnapshotShadowForUser(uid, k)).patientId === pid) rekordy += 1;
+  const t = (e) => (e.Bpk && e.Bpk.t && e.Bpk.t.c) || null;
+  return { zaslepki: lista.filter((e) => t(e) && t(e).cien === 1).length, rekordy };
+}
+describe('P-SESJA-ZAPISU: przerwane „Scal pacjentów” w innym koncie nie zdejmuje cienia karty bieżącego konta (M11j)', () => {
+  for (const zPrzelaczeniem of [true, false]) {
+    it(`M11j${zPrzelaczeniem ? '' : ' (kontrola bez scalania w A)'}: cień karty B o tym samym patientId zostaje po zmianie listy w B`, async () => {
+      zegarRano();
+      const { u, pid, sid } = await urzadzenia(['P', 'K', 'C']);
+      const P = u.P, px = P.__px, X = P.__uid;
+      przesunZegar(M); await poprawMase(P, sid, 58);
+      przesunZegar(M); await sync(P, u.C);
+      przesunZegar(M); await przytnij(u.C, sid);
+      przesunZegar(M); await sync(u.C, P);
+      expect(await cienKarty(px, X, pid), 'przed: cień 11 wersji Jana w koncie B (X)').toEqual({ zaslepki: 11, rekordy: 11 });
+
+      if (zPrzelaczeniem) {
+        // Plik karty Jana z B, import do nowego konta A na tym samym urządzeniu (ten sam patientId).
+        const plik = await P.exportPatientEnvelope(pid);
+        P.lock('manual');
+        const A = (await P.createUser('Fikcyjne#M11j!2026aaA', { label: 'Fikcyjna Lekarka M11j', iterations: 10000 })).userId;
+        const imp = await P.importPatientFromEnvelope(plik, P.__haslo);
+        expect(imp && imp.patientId, 'import zachowuje patientId').toBe(pid);
+        const T = (await zapisz(P, jan(140, 40))).patientId;
+        let przelaczone = false;
+        const hak = new Proxy(px, { get(cel, k) {
+          const f = cel[k];
+          if (typeof f !== 'function') return f;
+          return async (...a) => {
+            const r = await f.apply(cel, a);
+            if (!przelaczone && k === 'removePatientForUser' && a[0] === A && a[1] === pid) {
+              przelaczone = true; P.lock('manual'); await P.unlockUser(X, P.__haslo);
+            }
+            return r;
+          };
+        } });
+        P.setStorageAdapter(hak);
+        let blad = null;
+        try { przesunZegar(M); await P.mergePatients(pid, T); } catch (er) { blad = (er && er.code) || String(er && er.message); }
+        P.setStorageAdapter(px);
+        expect(przelaczone, 'scalanie w A doszło do usunięcia rekordu karty źródłowej').toBe(true);
+        expect(blad, 'scalanie przerwane zmianą sesji').toBe('SESSION_CHANGED');
+        expect(P.getCurrentUser().userId, 'zalogowane konto B').toBe(X);
+      }
+      // Zwykła zmiana listy w B (inna karta do kosza).
+      const z = await zapisz(P, jan(150, 50));
+      await zapisz(P, jan(151, 51), { patientId: z.patientId });
+      przesunZegar(M); await doKosza(P, z.snapshotId);
+      expect(await cienKarty(px, X, pid), 'cień karty Jana w B zostaje po zmianie listy w B').toEqual({ zaslepki: 11, rekordy: 11 });
     }, 180_000);
   }
 });

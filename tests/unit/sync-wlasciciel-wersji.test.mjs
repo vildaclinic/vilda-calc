@@ -2849,8 +2849,10 @@ describe('strażniki źródła (P-SYNC-WLASCICIEL)', () => {
 
   it('„Scal pacjentów” zapisuje przeniesioną wersję przez Bsw_poScaleniu; adaptery mają odczyt wersji po kluczu', () => {
     expect(src).toContain('await I().putSnapshotForUser(b,Object.assign({},o[d],Bsw_poScaleniu(o[d],e),Bm1(o[d])))');
-    // cel scalenia zapamiętany przed usunięciem karty źródłowej (zdarzenie onPatientDeleted -> delta nagrobka)
-    expect(src).toContain('}catch{}Bsw_zapamietajCel(t,e);await Bpu_usun(t);return{targetPatientId:e,');
+    // cel scalenia zapamiętany przed usunięciem karty źródłowej (zdarzenie onPatientDeleted -> delta nagrobka); przed
+    // nimi sprawdzenie sesji „Scal pacjentów” (P-SESJA-ZAPISU); usunięcie karty źródłowej w tej sesji i sprawdzenie po nim
+    // (przegląd 3)
+    expect(src).toContain('}catch{}Bpz_pilnuj(Bsc_s);Bsw_zapamietajCel(t,e);await Bpu_usun(t,Bsc_s);Bpz_pilnuj(Bsc_s);return{targetPatientId:e,');
     expect(src).toContain('const n=typeof e=="string"&&e?e:new Date().toISOString();return await Bsw_deltaNagrobka(t,{schemaVersion:at,patients:[],tombstones:[{patientId:t,deletedAtISO:n}],');
     expect(src).toContain('async getSnapshotForUser(o,a){const i=(await r(o)).transaction(It,"readonly").objectStore(It);return await t(i.get(a))||null}');
     expect(src).toContain('getSnapshotForUser:function(n,r){return e.getSnapshotForUser(n,r)}');

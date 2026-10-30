@@ -500,6 +500,71 @@ describe('S4 po P-CHMURA-OPIS: obca zaślepka sprawdzona przed zapisem nowych re
   }
 });
 
+// P-SESJA-ZAPISU (przegląd 4, M3-03): druga próba zmiany listy kosza (Bkz_zmienListe) po zmianie sesji. Obca zaślepka
+// Jana bez rekordu w magazynie (druga karta zdjęła ją z listy i usunęła rekord): Bpc_przedZapisem → bezRekordu → druga
+// próba. Przełączenie przy sprawdzeniu obcej zaślepki: druga próba kończy się przed żądaniem blokady metadanych konta
+// (bez limitu czekania), bez odczytów i zapisów. Kontrola bez przełączenia: scalanie kończy się powodzeniem. Oba
+// warianty czerwone na audycie sprzed zmiany (c209fa6b) i na mutancie sprawdzenia tylko w pierwszej próbie.
+function locksZRejestrem() {
+  const l = atrapaLocks(); const rej = [];
+  return { rej, czekajacych: l.czekajacych, request(n, o, cb) { rej.push(n); return l.request(n, o, cb); } };
+}
+async function scenObcaBezRekordu(locks) {
+  sztucznyZegar();
+  const P = await urzadzenieH('P', { locks }), K = await urzadzenie('K'), C = await urzadzenie('C');
+  const karta12 = async (f) => {
+    let pid = null; const ids = [];
+    for (let i = 0; i < 12; i += 1) { const r = await zapisz(K, f(100 + i, 20 + i), pid ? { patientId: pid } : {}); pid = r.patientId; ids.push(r.snapshotId); }
+    return { pid, sid: ids[3] };
+  };
+  const J = await karta12(jan), O = await karta12(ola);
+  przesunZegar(M); await sync(K, P); await sync(K, C);
+  przesunZegar(M); await poprawMase(P, J.sid, 58);
+  przesunZegar(M); await sync(P, C);
+  przesunZegar(M); await przytnij(C, J.sid);
+  przesunZegar(M); await sync(C, P);
+  przesunZegar(M); await doKosza(K, O.sid);
+  przesunZegar(M); await sync(K, P);
+  przesunZegar(M); await P.pruneSnapshotsForPatient(O.pid, { recentHours: 0 });
+  przesunZegar(M); await poprawMase(C, O.sid, 74);
+  przesunZegar(M); await przytnij(C, O.sid);
+  przesunZegar(M);
+  P.__hak.dodatkowe.push({ kiedy: (r, k) => r === 'magazyn' && k === 'listSnapshotsForUser', akcja: async () => {
+    const m = await P.__baza.getUserMeta(P.__uid);
+    const e0 = m.snapshotTombstones.find((e) => e.snapshotId === J.sid);
+    const iv = e0 && e0.Bpk && e0.Bpk.t && e0.Bpk.t.c && e0.Bpk.t.c.iv;
+    const lista = m.snapshotTombstones.map((e) => (e.snapshotId === J.sid ? { ...e, Bpk: { ...e.Bpk, t: { ...e.Bpk.t, c: null } } } : e));
+    await P.__baza.putUserMeta(P.__uid, { ...m, snapshotTombstones: lista });
+    if (iv) await P.__baza.writeSnapshotShadowsForUser(P.__uid, [], [iv]);
+  } });
+  return { v: P, u: { P, K, C }, J, O, sid: O.sid, lad: await ladunek(C) };
+}
+describe('S4 po P-CHMURA-OPIS: druga próba zmiany listy kosza po zmianie sesji (Bkz_zmienListe, M3-03)', () => {
+  it('Q03 (kontrola): bez przełączenia — obca zaślepka bez rekordu, druga próba, scalanie kończy się powodzeniem', async () => {
+    const locks = locksZRejestrem();
+    const d = await scenObcaBezRekordu(locks);
+    const od = d.v.__wyw.length;
+    const w = await scal(d.v, d.lad);
+    expect(w.ok, String(w.e && w.e.message)).toBe(true);
+    expect(d.v.__hak.dodatkowe).toEqual([]);
+    expect(d.v.__wyw.slice(od).filter(([k]) => k === 'getSnapshotShadowForUser').length, 'obca zaślepka sprawdzona w magazynie').toBeGreaterThanOrEqual(1);
+  }, 120_000);
+  for (const [opis, naB] of WARIANTY) {
+    it(`Q03: ${opis} w sprawdzeniu obcej zaślepki bez rekordu: SESSION_CHANGED, bez zapisów i bez żądania blokady po zmianie sesji`, async () => {
+      const locks = locksZRejestrem();
+      const d = await scenObcaBezRekordu(locks);
+      const st = przelacz(d.v, (r, k, a, s) => r === 'magazyn' && k === 'getSnapshotShadowForUser' && wFunkcji('Bpc_przedZapisem')(s), naB);
+      let odL = -1; const stara = d.v.__hak.akcja;
+      d.v.__hak.akcja = async () => { await stara(); odL = locks.rej.length; };
+      const w = await scal(d.v, d.lad);
+      expect(st.zrobione, 'przełączenie przy sprawdzeniu obcej zaślepki').toBe(true);
+      expect(w.kod, String(w.e && w.e.message)).toBe('SESSION_CHANGED');
+      expect(zapisyPo(d.v, st), 'żaden zapis po zmianie sesji').toEqual([]);
+      expect(locks.rej.slice(odL), 'po zmianie sesji żadnego żądania blokady').toEqual([]);
+    }, 120_000);
+  }
+});
+
 /* Wyjątek P-CHMURA-OPIS (lista kosza po usunięciu wersji, bez sprawdzania sesji): rekordy cienia, sprzątanie i odczyt treści
    kosza z cienia idą do konta i magazynu z chwili usunięcia wersji. */
 describe('S4 po P-CHMURA-OPIS: lista kosza po usunięciu wersji — cień w koncie i magazynie z chwili usunięcia', () => {

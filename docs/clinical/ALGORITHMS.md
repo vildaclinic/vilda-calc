@@ -20025,6 +20025,108 @@ a lekarz poprawia jedno z miejsc. Wartość dni spoza 0–6 w rekordzie nie jest
 
 **Wersje.** `sga_birth_module.js?v=10→11`; SW 1.1.168 → **1.1.169**.
 
+## Zapis karty i okna zapisu kończą się w sesji, w której ruszyły, a pobranie z chmury — w sesji swojego konta (P-SESJA-ZAPISU, PR-S, SW 1.1.417, `vilda_vault.js` 236, `vilda_auth_ui.js` 518, `vilda_data_import_export.js` 113, `vilda_sync.js` 41, `vilda_sync_integration.js` 53, 2026-10-30)
+
+**Zmiana kliniczna: NIE** — wzory, progi, jednostki i interpretacje bez zmian. Format rekordów, ładunku i delt, schemat
+IndexedDB, serwer i reguły scalania bez zmian. Zapis i synchronizacja w jednej sesji działają jak dotąd. Dodatkowe
+sprawdzenia sesji przy zapisie karty, w operacjach, które zapisują kartę, przy pełnym pobraniu i w powiadomieniach
+scalania; okna zapisu zamykają się przy blokadzie.
+
+**Reguła.** Dla zapisu karty, okien zapisu i powiadomień scalania sesja to konto i klucz z chwili rozpoczęcia operacji
+(jak w P-CHMURA-OPIS, P-PRZYWROC-Z-KARTY). Zablokowanie sejfu, wylogowanie, zalogowanie innego konta albo ponowne
+zalogowanie tego samego konta przerywa ją: bez dalszych zapisów i bez powiadomień w nowej sesji. Pełne pobranie z chmury
+sprawdza samo konto (niżej).
+- **Zapis pacjenta** (`savePatient` i wszystko, co z niego korzysta: „Zapisz dane”, „Edytuj pacjenta”, szybki pomiar
+  (nowy pomiar bieżący), „Dodaj pacjenta”, „Dodaj do bazy” osoby spoza bazy, „Przywróć tę wersję” (nowa bieżąca wersja
+  tej samej karty), import starego pliku, zapasowa ścieżka poprawki nazwiska oraz „Scal pacjentów”). Sprawdzenie sesji
+  po każdym oczekiwaniu (okna pytań, blokada karty), przed każdym zapisem magazynu i po każdym odczycie pod blokadą
+  karty oraz przed powiadomieniem `onPatientSaved`. Przerwanie kończy się błędem `SESSION_CHANGED` („W trakcie zapisu
+  zablokowano sejf albo przełączono konto. Zapis przerwany.”). Ten sam kod daje każdy inny błąd po zmianie sesji, np.
+  limit czekania na zapis w innej karcie przeglądarki albo „anuluj” z okna zamkniętego przy blokadzie, oraz błąd
+  magazynu z tym kodem. Sejf zablokowany już na wejściu odmawia jak dotąd („Zaloguj się, by zapisać pacjenta.”).
+- **Operacje, które przed zapisem karty czytają karty** („Scal pacjentów”, „Przywróć tę wersję”, „Dodaj do bazy”, „Scal
+  z istniejącym” osoby spoza bazy) biorą sesję z chwili wejścia do operacji i sprawdzają ją po odczycie kart, po
+  czekaniu na blokady kart i przed każdym kolejnym krokiem; „Scal pacjentów” także między przeniesieniem wersji, zapisem
+  karty docelowej, poprawką licznika wersji, przeniesieniem notatek, zmianą list i usunięciem karty źródłowej, a „Scal z
+  istniejącym” — między przeniesieniem notatek, zmianą list i usunięciem osoby spoza bazy. W przeniesieniu każdej
+  notatki, zmianie każdej listy i usunięciu karty źródłowej albo osoby spoza bazy (razem z nagrobkami notatek) — po
+  czekaniu na blokadę notatki albo karty, po każdym odczycie i odszyfrowaniu, przed szyfrowaniem, przed każdym zapisem i
+  przed powiadomieniem. Przerwanie — ten sam błąd `SESSION_CHANGED`.
+- **Import pliku karty** (także każdy plik w „Importuj”) bierze sesję z chwili wejścia do importu i sprawdza ją po
+  odszyfrowaniu pliku i zaszyfrowaniu jego nagłówka, po czekaniu na blokadę karty, pod nią po odczycie karty i listy jej
+  wersji, po zaszyfrowaniu każdej wersji z pliku i nagłówka karty, przed zapisem każdej wersji z pliku i karty, przed
+  zdjęciem nagrobków karty i jej notatek oraz przed scaleniem notatek z pliku, które idzie w tej samej sesji. Przerwanie
+  — ten sam błąd `SESSION_CHANGED`. Krok przywrócenia z kosza wersji z pliku, która tam leżała, idzie jak dotąd, bez
+  sprawdzeń sesji w środku.
+- **Okna pytań zapisu** („Który to pacjent?”, „Ktoś inny zmienił ten rekord po wczytaniu danych”, „Dane pacjenta
+  zmieniły się od otwarcia edycji”, „Scalić w jeden rekord?”, „Ten pacjent może już być w bazie” na ekranach „Dodaj
+  pacjenta” i „Dodaj do bazy”) oraz okno szybkiego pomiaru zamykają się przy blokadzie sejfu, jak formularz i edytor
+  notatki. Okno otwierane, gdy sejf jest już zablokowany, zamyka się od razu. Okno rozstrzyga się jak „Anuluj”: zapis,
+  który na nie czekał, kończy się od razu (okno konfliktu zwalnia przy tym blokadę karty), a „Edytuj pacjenta”, „Scal
+  pacjentów”, „Dodaj pacjenta” i „Dodaj do bazy” nie ruszają. Blokada sejfu w czasie wyszukiwania pacjentów o tym samym
+  nazwisku na ekranach „Dodaj pacjenta” i „Dodaj do bazy” kończy je bez okna i bez zapisu (przycisk znów aktywny).
+  Rejestracja na blokadę jest jedna na dokument.
+- **„Importuj”** kilku plików kończy się przy blokadzie sejfu: plik w trakcie kończy się w sesji, w której ruszył,
+  a następne pliki nie ruszają; bez podsumowania.
+- **„Zapisz dane”**: zapis przerwany zmianą sesji nie pokazuje komunikatu ani czerwonego wskaźnika „Pacjent”, bo należał
+  do poprzedniej sesji. Formularz i bieżący pacjent bez zmian (formularz i tak czyści się przy blokadzie).
+- **Pełne pobranie z chmury** scala tylko wtedy, gdy zalogowane jest konto, którego materiałem pobrano kopię (liczy się
+  konto, nie klucz). Konto jest sprawdzane po odpowiedzi serwera o stan kopii (przed jej obsługą, także odpowiedzi
+  z błędem, i przed pobraniem kopii), po sprawdzeniu, czy baza na urządzeniu jest pusta, po odpowiedzi na pobranie kopii
+  (także „bez zmian” i „brak kopii”) i przed scaleniem; błąd pobrania po zmianie konta też kończy się tym błędem.
+  Jeśli zalogowane jest inne konto albo sejf jest zablokowany, pobranie kończy się błędem `SESSION_CHANGED` („VildaSync:
+  pobieranie przerwane — w trakcie zablokowano sejf albo przełączono konto. Nic nie scalono.”), bez scalenia, bez
+  pobierania zmian przyrostowych tego konta i bez wysyłki tej synchronizacji. Stan synchronizacji tego konta na
+  urządzeniu się nie zmienia, więc następna synchronizacja tego konta pobiera od nowa. Pobieranie zmian przyrostowych
+  kopii konta po pobraniu rusza tylko w sesji tego konta, a zalogowanie innego konta w jego trakcie kończy je bez
+  stosowania dalszych zmian i bez przesunięcia miejsca, od którego są pobierane; po powrocie do tego konta zmiany
+  przychodzą jeszcze raz. Po ponownym zalogowaniu tego samego konta pobranie przebiega jak dotąd.
+- **Wskaźnik synchronizacji**: synchronizacja przerwana zmianą sesji należy do poprzedniej sesji — bez wpisu ostatniego
+  błędu synchronizacji i wpisu w dzienniku dostępu w bieżącym koncie, bez stanu „błąd” i bez komunikatu o nieudanym
+  pobraniu w trybie chmurowym. Tak samo błąd pobrania (np. odpowiedź serwera z błędem albo brak sieci), który przyszedł
+  już po zalogowaniu innego konta albo blokadzie: pobranie kończy się `SESSION_CHANGED`. Ekran ładowania trybu
+  chmurowego kończy się bez komunikatu, gdy przerwane pobranie się zakończy, a gdy nowa sesja też jest w trybie
+  chmurowym — po jej własnym pobraniu. Inne błędy synchronizacji — jak dotąd.
+- **Scalanie z chmury**: powiadomienia o notatkach pacjentów, listach pacjentów i zmianie hasła na innym urządzeniu
+  (także zapis tej informacji w preferencjach) idą tylko w sesji, w której scalanie ruszyło.
+
+**Bez zmian.** Sygnatury `window.VildaVault` dla wołających (dochodzi tylko kod błędu w istniejących wywołaniach),
+kolejność zapisów, komunikaty powodzenia i odmów (`PATIENT_DELETED`, zajęta karta, anulowanie w tej samej sesji).
+
+**Ograniczenia.**
+1. Ponowne zalogowanie tego samego konta w trakcie zapisu albo operacji, która zapisuje kartę, też ją przerywa (nowy
+   klucz to nowa sesja), jak w scalaniu i „Przywróć”. Pełne pobranie z chmury w takim przypadku scala (liczy się konto).
+2. Przerwanie dokładnie między zapisem wersji a nagłówkiem karty (milisekundy) zostawia w koncie wersję bez podbicia
+   licznika w nagłówku, a przy nowej karcie — wersję bez karty, niewidoczną na liście; tak samo jak zamknięcie karty
+   przeglądarki w tym miejscu.
+3. Przerwanie po zapisie nagłówka karty: wersja i nagłówek są w koncie, ale bez powiadomienia i bez retencji tego
+   zapisu; szybka delta nie wyjdzie od razu — wyśle ją najbliższa pełna synchronizacja tego konta. Jeśli zapis szedł do
+   karty z nagrobkiem (import starego pliku), nagrobek zostaje do następnego zapisu tej karty.
+4. Przerwanie „Scal pacjentów” zostawia w koncie kroki wykonane przed przerwaniem (np. przeniesione wersje, zapisaną
+   kartę docelową obok karty źródłowej, część przeniesionych notatek albo usuniętą kartę źródłową bez jej nagrobka), tak
+   samo jak zamknięcie karty przeglądarki w tym miejscu. Tak samo przerwanie „Scal z istniejącym” (np. przeniesione
+   notatki obok osoby spoza bazy) i importu pliku (np. zapisane wersje albo karta bez notatek z pliku).
+   Import kilku plików przerwany blokadą zostawia w koncie pliki zapisane przed blokadą.
+5. Zapis rozpoczęty już w nowej sesji jest dla sejfu zwykłym zapisem tej sesji.
+6. Po zmianie sesji zapis albo operacja może jeszcze dokończyć jeden odczyt z odszyfrowaniem w pamięci (np. karty,
+   notatki albo listy) albo jedno szyfrowanie w pamięci — bez zapisu i bez powiadomienia; wynik jest odrzucany.
+   Import pliku może tak samo dokończyć wyszukanie karty po nazwisku i odczyt notatek przed ich scaleniem.
+   Pobranie, które już ściąga treść kopii, dokończy ściąganie i odszyfrowanie w pamięci, ale niczego nie scali.
+7. Ta sama reguła dla pozostałych operacji na danych konta i pozostałych okien — osobno, do decyzji (lista u
+   właściciela).
+
+**Testy.** `tests/unit/zapis-karty-sesja.test.mjs`, `zapis-karty-sesja-punkty.test.mjs`,
+`zapis-karty-sesja-import.test.mjs`, `okna-zapisu-blokada.test.mjs`, `pobranie-po-przelogowaniu.test.mjs`,
+`scalanie-emisje-sesja.test.mjs`, `zapis-przerwany-formularz.test.mjs` (wspólna uprząż `sesja-zapisu-uprzaz.mjs`
+z własnym testem), M11i i M11j w `polkrata-cien.test.mjs`, druga próba zmiany listy kosza w `polkrata-sesja.test.mjs`,
+e2e `tests/e2e/okna-zapisu-blokada.spec.mjs`. Na kodzie audytu sprzed zmiany czerwone są przypadki ze zmianą sesji lub
+blokadą, rejestracja okien w UI i strażniki źródła; kontrole w jednej sesji i test uprzęży — zielone. Usunięcie
+któregokolwiek z nowych sprawdzeń, poza równoważnymi, zaczerwienia co najmniej jeden test.
+
+**Wersje.** `vilda_vault.js` 235 → 236, `vilda_auth_ui.js` 517 → 518, `vilda_data_import_export.js` 112 → 113,
+`vilda_sync.js` 40 → 41, `vilda_sync_integration.js` 52 → 53 (z nimi odwołania w `vilda_chrome.js` 197 → 198
+i `vilda_session_bridge.js` 121 → 122); SW 1.1.416 → **1.1.417**.
+
 ## Wizyta dana do kosza znika też ze starej karty po „Scal pacjentów”, a zostawiona ostatnia wizyta karty dostaje nowszą treść (P-KOSZ-PO-KLUCZU, PR-E3, SW 1.1.407, `vilda_vault.js` 232, 2026-10-29)
 
 **Zmiana kliniczna: tak** — wzory, progi, jednostki i interpretacje bez zmian; zmienia się, które wizyty i z jaką treścią

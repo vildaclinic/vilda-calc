@@ -4002,13 +4002,14 @@ describe('P-NOTATKI-ZA-KARTA — strażniki źródła', () => {
     expect(notatki.indexOf('Bnp_ratuj(')).toBeGreaterThan(notatki.indexOf('M?Nt++:Et++,Qdn.add(g.id)'));
   });
   it('Bpu_usun: jedna chwila e przed pętlą notatek, Eb z polem; Eb i $o; ls czyta rekord ze sklepu; adaptery bez zmian strzeżonych napisów', () => {
-    const bpu = sekcja('async function Bpu_usun(t){', 'async function co(');
+    // P-SESJA-ZAPISU (PR-S, przegląd 3): Bpu_usun dostaje opcjonalną sesję „Scal pacjentów” (Bpu_s) i podaje ją dalej.
+    const bpu = sekcja('async function Bpu_usun(t,Bpu_s){', 'async function co(');
     // przegląd 1: lista nagrobków notatek raz (F3), odnowienie nagrobków bez notatek przed nagrobkiem karty (F1)
     expect(bpu.indexOf('const e=new Date().toISOString(),Qnm=await Bnp_mapaNagrobkow(I()),Qnd=new Set;')).toBeGreaterThan(-1);
     // uwaga Codexa P1: notatka z pętli przez Bnp_usunZPacjentem (blokada notatki, świeży odczyt), nie Eb z mapą
-    expect(bpu.indexOf('const e=new Date().toISOString(),')).toBeLessThan(bpu.indexOf('await Bnp_usunZPacjentem(Qd0,Qd4.id,t,e)'));
-    expect(bpu.indexOf('await Bnp_usunZPacjentem(Qd0,Qd4.id,t,e)')).toBeLessThan(bpu.indexOf('await Bnp_odnow(I(),t,e,Qnm,Qnd);'));
-    expect(bpu.indexOf('await Bnp_odnow(I(),t,e,Qnm,Qnd);')).toBeLessThan(bpu.indexOf('putTombstoneForUser(b,{patientId:t,deletedAtISO:e})'));
+    expect(bpu.indexOf('const e=new Date().toISOString(),')).toBeLessThan(bpu.indexOf('await Bnp_usunZPacjentem(Qd0,Qd4.id,t,e,Bpu_s)'));
+    expect(bpu.indexOf('await Bnp_usunZPacjentem(Qd0,Qd4.id,t,e,Bpu_s)')).toBeLessThan(bpu.indexOf('await Bnp_odnow(I(),t,e,Qnm,Qnd,Bpu_s);'));
+    expect(bpu.indexOf('await Bnp_odnow(I(),t,e,Qnm,Qnd,Bpu_s);')).toBeLessThan(bpu.indexOf('putTombstoneForUser(b,{patientId:t,deletedAtISO:e})'));
     expect(bpu.split('new Date().toISOString()').length - 1, 'jedna chwila').toBe(1);
     expect(bpu).not.toContain('listPatientNoteTombstonesForUser');
     // Care-owned notes dispatch inside the original Ac note lock; ordinary
@@ -4017,7 +4018,9 @@ describe('P-NOTATKI-ZA-KARTA — strażniki źródła', () => {
     // Klirens adds a private, opt-in fourth argument. Ordinary $o and the
     // patient-deletion loop still call Eb without it; retain their storage,
     // tombstone fields and historical error policy rather than matching only
-    // the former three-argument spelling of the declaration.
+    // the former three-argument spelling of the declaration. P-SESJA-ZAPISU
+    // (PR-S, przegląd 3): the patient-deletion loop passes only the optional
+    // fifth argument (the „Scal pacjentów” session; undefined otherwise).
     const eb = sekcja('async function Eb(t,Qwp,Qwm,Qwf){', 'async function ts(');
     expect(eb).toContain('const Qwg=Qwf&&Qwf.token===VildaExistingNoteUpdateToken?Qwf:null;');
     expect(eb).toContain('await (Qwg?Qwg.adapter:I()).getPatientNoteForUser(Qwg?Qwg.account:b,t)');
@@ -4038,8 +4041,9 @@ describe('P-NOTATKI-ZA-KARTA — strażniki źródła', () => {
   });
   it('przegląd 2: zapis notatki (Ad) przez Bnp_poZapisie, bez ślepego zdjęcia nagrobka; pętla CZEKA ze świeżym nagrobkiem i chwilą zapisu; chwila rekordu w Bnp_pole', () => {
     const ad = sekcja('async function Ad(t,e){', 'async function bo(');
-    expect(ad.indexOf('await I().putPatientNoteForUser(b,nt);')).toBeLessThan(ad.indexOf('await Bnp_poZapisie(s,$,J+1,t.patientId);'));
-    expect(ad.indexOf('await Bnp_poZapisie(s,$,J+1,t.patientId);')).toBeGreaterThan(-1);
+    // P-SESJA-ZAPISU (PR-S, przegląd 2): Bnp_poZapisie dostaje też opcje zapisu notatki (sesja „Scal pacjentów”).
+    expect(ad.indexOf('await I().putPatientNoteForUser(b,nt);')).toBeLessThan(ad.indexOf('await Bnp_poZapisie(s,$,J+1,t.patientId,e);'));
+    expect(ad.indexOf('await Bnp_poZapisie(s,$,J+1,t.patientId,e);')).toBeGreaterThan(-1);
     expect(ad).not.toContain('removePatientNoteTombstoneForUser');
     const ratuj = sekcja('async function Bnp_ratuj(', '/* P-KOPIA-DANE-KONTA');
     const czeka = ratuj.slice(ratuj.indexOf('for (const id of czeka) {'));
@@ -4050,13 +4054,13 @@ describe('P-NOTATKI-ZA-KARTA — strażniki źródła', () => {
   it('uwaga Codexa P1: „Usuń pacjenta” — Eb pod blokadą notatki, bez mapy nagrobków; brak notatki → odnowienie nagrobka z polem', () => {
     const uz = sekcja('async function Bnp_usunZPacjentem(', '\n}\n');
     expect(uz).toContain('return Ac(id, async function () {');
-    expect(uz).toContain('if (odczyt && !n) { await Bnp_odnowJeden(h, id, t, e); return; }');
+    expect(uz).toContain('if (odczyt && !n) { await Bnp_odnowJeden(h, id, t, e, o); return; }');
     expect(uz).toContain('if (odczyt && n.patientId !== t) return;');
-    expect(uz).toContain('await Eb(id, { patientId: t, deletedAtISO: e });');
+    expect(uz).toContain('await Eb(id, { patientId: t, deletedAtISO: e }, undefined, undefined, o);');
     expect(uz.indexOf('if (odczyt && !n)')).toBeLessThan(uz.indexOf('await Eb(id,'));
     const od = sekcja('async function Bnp_odnow(', '\n}\n');
-    expect(od).toContain('if (n.patientId === t) await Eb(id, { patientId: t, deletedAtISO: e });');
-    expect(od).toContain('await Bnp_odnowJeden(h, id, t, e);');
+    expect(od).toContain('if (n.patientId === t) await Eb(id, { patientId: t, deletedAtISO: e }, undefined, undefined, o);');
+    expect(od).toContain('await Bnp_odnowJeden(h, id, t, e, o);');
     expect(sekcja('async function Bnp_odnowJeden(', '\n}\n')).toContain('const nag = await Bnp_nagrobek(h, id), p = Bnp_pole(nag);');
     // przegląd poprawki P1 (R2): nagrobek z polem innego pacjenta zostaje bez zmian (P1-8)
     expect(sekcja('async function Bnp_odnowJeden(', '\n}\n')).toContain('if (!p || p.patientId !== t) return;');

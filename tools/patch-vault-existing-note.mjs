@@ -149,6 +149,8 @@ export const existingNoteCommitReplacement = 'if(e&&e.token===VildaExistingNoteU
 export const existingNoteDeleteAnchor = 'async function Eb(t,Qwp,Qwm){';
 export const existingNoteDeleteReplacement = 'async function Eb(t,Qwp,Qwm,Qwf){const Qwg=Qwf&&Qwf.token===VildaExistingNoteUpdateToken?Qwf:null;';
 
+// P-SESJA-ZAPISU (PR-S, przegląd 3): Bpz_pilnuj(Qws) w Eb (sesja „Scal pacjentów”, 5. argument) stoi w kotwicach
+// usunięcia i powiadomienia — przed sprawdzeniem tokenu i po zapisie nagrobka.
 // Only the opted-in call captures its account/adapter across awaits, runs a
 // final session check, and propagates read/tombstone errors. With no private
 // guard token the old remover follows exactly the same expressions/catches.
@@ -157,10 +159,10 @@ export function patchExistingNoteDeleteWriter(block) {
   const mutations = [
     [existingNoteDeleteAnchor, existingNoteDeleteReplacement],
     ['await I().getPatientNoteForUser(b,t)', 'await (Qwg?Qwg.adapter:I()).getPatientNoteForUser(Qwg?Qwg.account:b,t)'],
-    ['}catch{}await I().removePatientNoteForUser(b,t);', '}catch(Qwe){if(Qwg)throw Qwe}if(Qwg)Qwg.beforeCommit();await (Qwg?Qwg.adapter:I()).removePatientNoteForUser(Qwg?Qwg.account:b,t);'],
+    ['}catch{}Bpz_pilnuj(Qws);await I().removePatientNoteForUser(b,t);', '}catch(Qwe){if(Qwg)throw Qwe}Bpz_pilnuj(Qws);if(Qwg)Qwg.beforeCommit();await (Qwg?Qwg.adapter:I()).removePatientNoteForUser(Qwg?Qwg.account:b,t);'],
     ['try{const r=I();r&&typeof r.putPatientNoteTombstoneForUser', 'try{const r=Qwg?Qwg.adapter:I();r&&typeof r.putPatientNoteTombstoneForUser'],
     ['r.putPatientNoteTombstoneForUser(b,', 'r.putPatientNoteTombstoneForUser(Qwg?Qwg.account:b,'],
-    ['}catch{}qr({id:t,patientId:e,action:"delete"', '}catch(Qwe){if(Qwg)throw Qwe}qr({id:t,patientId:e,action:"delete"'],
+    ['}catch{}Bpz_pilnuj(Qws);qr({id:t,patientId:e,action:"delete"', '}catch(Qwe){if(Qwg)throw Qwe}Bpz_pilnuj(Qws);qr({id:t,patientId:e,action:"delete"'],
   ];
   let updated = block;
   for (const [anchor, replacement] of mutations) {
@@ -172,10 +174,10 @@ export function patchExistingNoteDeleteWriter(block) {
 export function unpatchExistingNoteDeleteWriter(block) {
   return block.replace(existingNoteDeleteReplacement, existingNoteDeleteAnchor)
     .replace('await (Qwg?Qwg.adapter:I()).getPatientNoteForUser(Qwg?Qwg.account:b,t)', 'await I().getPatientNoteForUser(b,t)')
-    .replace('}catch(Qwe){if(Qwg)throw Qwe}if(Qwg)Qwg.beforeCommit();await (Qwg?Qwg.adapter:I()).removePatientNoteForUser(Qwg?Qwg.account:b,t);', '}catch{}await I().removePatientNoteForUser(b,t);')
+    .replace('}catch(Qwe){if(Qwg)throw Qwe}Bpz_pilnuj(Qws);if(Qwg)Qwg.beforeCommit();await (Qwg?Qwg.adapter:I()).removePatientNoteForUser(Qwg?Qwg.account:b,t);', '}catch{}Bpz_pilnuj(Qws);await I().removePatientNoteForUser(b,t);')
     .replace('try{const r=Qwg?Qwg.adapter:I();r&&typeof r.putPatientNoteTombstoneForUser', 'try{const r=I();r&&typeof r.putPatientNoteTombstoneForUser')
     .replace('r.putPatientNoteTombstoneForUser(Qwg?Qwg.account:b,', 'r.putPatientNoteTombstoneForUser(b,')
-    .replace('}catch(Qwe){if(Qwg)throw Qwe}qr({id:t,patientId:e,action:"delete"', '}catch{}qr({id:t,patientId:e,action:"delete"');
+    .replace('}catch(Qwe){if(Qwg)throw Qwe}Bpz_pilnuj(Qws);qr({id:t,patientId:e,action:"delete"', '}catch{}Bpz_pilnuj(Qws);qr({id:t,patientId:e,action:"delete"');
 }
 
 export function patchVaultExistingNote(source) {

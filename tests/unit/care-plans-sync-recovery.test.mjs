@@ -157,7 +157,9 @@ describe('Care-plan recovery from an already acknowledged cloud version', () => 
     else f.state.account = 'fictional-changed-account';
     release();
     const results = await both;
-    expect(results[1]).toMatchObject({ status: 'rejected', reason: { code: 'VAULT_LOCKED' } });
+    // P-SESJA-ZAPISU: pobranie przerwane przez inne zalogowane konto kończy się kodem SESSION_CHANGED.
+    const code = boundary === 'account' ? 'SESSION_CHANGED' : 'VAULT_LOCKED';
+    expect(results[1]).toMatchObject({ status: 'rejected', reason: { code } });
     expect(f.blobGets()).toHaveLength(1);
   });
 
@@ -166,7 +168,8 @@ describe('Care-plan recovery from an already acknowledged cloud version', () => 
     f.vault.needsCarePlanSyncRepair.mockImplementationOnce(async () => {
       f.state.account = 'fictional-changed-account'; return false;
     });
-    await expect(f.sync.syncPull()).rejects.toMatchObject({ code: 'VAULT_LOCKED' });
+    // P-SESJA-ZAPISU: pobranie przerwane przez inne zalogowane konto kończy się kodem SESSION_CHANGED.
+    await expect(f.sync.syncPull()).rejects.toMatchObject({ code: 'SESSION_CHANGED' });
     expect(f.blobGets()).toHaveLength(0);
   });
 
