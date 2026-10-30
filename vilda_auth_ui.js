@@ -487,7 +487,7 @@ function ClcrNotesResources() {
   if (ClcrNotesBootstrapPromise) return ClcrNotesBootstrapPromise;
   ClcrNotesBootstrapPromise = new Promise(function (resolve, reject) {
     var doc = i.document, finished = false, timer = null;
-    var url = new URL("clcr_record_resources.js?v=8", i.location.href);
+    var url = new URL("clcr_record_resources.js?v=9", i.location.href);
     var script = Array.from(doc.querySelectorAll("script[src]")).find(function (node) {
       try { return new URL(node.getAttribute("src"), i.location.href).href === url.href; } catch (_) { return false; }
     });

@@ -77,7 +77,7 @@ async function siec(request) {
 // Atrapa Cache Storage: osobne pamięci pod nazwami, jeden limit bajtów na całe źródło (jak quota) — put ponad limit
 // jest odrzucany, delete zwalnia miejsce. Klucz to ścieżka z query (adres względny albo pełny w tym samym źródle).
 // `wpisy` to pamięć powłoki instalowanej wersji SW.
-function pamiec(limit = Infinity) {
+function pamiec(limit = Infinity, { zuzywajOdpowiedzi = false } = {}) {
   const pamieci = new Map();
   let zajete = 0;
   const klucz = (k) => { const u = new URL(typeof k === 'string' ? k : k.url, POCHODZENIE); return `${u.pathname}${u.search}`; };
@@ -91,10 +91,12 @@ function pamiec(limit = Infinity) {
           const kk = klucz(k);
           const poprzedni = wpisy.has(kk) ? rozmiarOdp(wpisy.get(kk)) : 0;
           if (zajete - poprzedni + rozmiarOdp(odpowiedz) > limit) throw new DOMException('Quota exceeded', 'QuotaExceededError');
-          wpisy.set(kk, odpowiedz);
+          const zapisana = zuzywajOdpowiedzi ? odpowiedz.clone() : odpowiedz;
+          if (zuzywajOdpowiedzi) await odpowiedz.arrayBuffer();
+          wpisy.set(kk, zapisana);
           zajete += rozmiarOdp(odpowiedz) - poprzedni;
         },
-        async match(k) { return wpisy.get(klucz(k)); },
+        async match(k) { const odpowiedz = wpisy.get(klucz(k)); return zuzywajOdpowiedzi ? odpowiedz?.clone() : odpowiedz; },
         async keys() { return [...wpisy.keys()].map((kk) => new Request(`${POCHODZENIE}${kk}`)); },
         async delete(k) { const kk = klucz(k); if (!wpisy.has(kk)) return false; zajete -= rozmiarOdp(wpisy.get(kk)); wpisy.delete(kk); return true; },
       });
@@ -275,19 +277,123 @@ describe('P-SW-PRECACHE: instalacja bez historii, kopia z poprzedniej pamięci, 
   };
   const doInstalacji = () => [...new Set([...sw.INSTALL_CORE_URLS, ...sw.INSTALL_OPTIONAL_URLS])];
   const wersjonowany = (adres) => /\?v=/.test(adres) && !sw.DOCUMENT_PATHS.has(adres.split('?')[0]);
+  const arkuszEdu = (adres) => adres.split('?')[0] === '/edu-video-ui.css';
+  const aliasyEdu = () => doInstalacji().filter(arkuszEdu);
+  const cssEdu = fs.readFileSync(path.join(korzen, 'edu-video-ui.css'), 'utf8');
 
-  it('instalacja pobiera dokładnie wpisy bieżące, bez historii, w budżecie, który mieści się w limicie 5 minut na wolnym łączu', async () => {
-    const { caches } = pamiec();
+  it('instalacja zapisuje każdy bieżący klucz, dzieli tylko świeży arkusz edu i mieści się w budżecie 5 minut na wolnym łączu', async () => {
+    const { caches, wpisy } = pamiec();
     const { pobrane, fetch } = siecLiczaca();
     await uruchomSW({ caches, fetch }).installShell();
 
-    expect([...new Set(pobrane)].sort()).toEqual(doInstalacji().sort());
+    const oczekiwanePobrania = doInstalacji().filter((adres) => !arkuszEdu(adres) || adres === aliasyEdu()[0]);
+    expect([...pobrane].sort(), 'każdy pozostały adres idzie z sieci dokładnie raz').toEqual(oczekiwanePobrania.sort());
+    expect([...wpisy.keys()].sort(), 'wszystkie istniejące wpisy bieżące zachowują własne klucze offline')
+      .toEqual(doInstalacji().filter((adres) => rozmiarPliku(adres) !== null).sort());
     expect(pobrane.filter(historyczny), 'żaden adres historyczny nie jest pobierany').toEqual([]);
     // Budżet: dziś ok. 390 adresów i 24 MB. Chromium przerywa zdarzenie install po 5 minutach — przy 8 Mb/s i 80 ms
     // opóźnienia na żądanie 24 MB zajęło 64 s, a 474 MB (historia) nie mieściło się nawet przy 20 Mb/s.
     const bajty = pobrane.reduce((suma, adres) => suma + (rozmiarPliku(adres) || 0), 0);
     expect(bajty, `instalacja pobiera ${(bajty / 1e6).toFixed(1)} MB`).toBeLessThan(40e6);
     expect(pobrane.length, `instalacja wysyła ${pobrane.length} żądań`).toBeLessThan(600);
+  });
+
+  it('siedem kluczy arkusza edu dostaje pełną treść z jednego pobrania mimo zużywania odpowiedzi przez cache.put', async () => {
+    const magazyn = pamiec(Infinity, { zuzywajOdpowiedzi: true });
+    const pobrane = [];
+    const odpowiedzi = [];
+    const fetch = async (request) => {
+      const u = new URL(request.url);
+      pobrane.push(`${u.pathname}${u.search}`);
+      if (!arkuszEdu(u.pathname)) return siec(request);
+      const odpowiedz = new Response(cssEdu);
+      odpowiedzi.push(odpowiedz);
+      return odpowiedz;
+    };
+    const sluzba = uruchomSW({ caches: magazyn.caches, fetch });
+    await sluzba.installShell();
+
+    expect(aliasyEdu()).toHaveLength(7);
+    expect(pobrane.filter(arkuszEdu)).toEqual([aliasyEdu()[0]]);
+    expect(pobrane).toHaveLength(doInstalacji().length - 6);
+    expect(odpowiedzi[0].bodyUsed, 'zapis naprawdę zużył odpowiedź sieci').toBe(true);
+    for (const adres of aliasyEdu()) {
+      const zapisana = await sluzba.readFromShellCache(new Request(`${POCHODZENIE}${adres}`));
+      expect(await zapisana.text(), adres).toBe(cssEdu);
+    }
+  });
+
+  it.each(['1.1.104', '1.1.65'])('dokładny stary alias z pamięci %s nie zasila nowych aliasów ani adresu bez wersji', async (wersja) => {
+    const magazyn = pamiec(Infinity, { zuzywajOdpowiedzi: true });
+    const stara = magazyn.otworz(`pwa-kalorii-shell-v${wersja}`);
+    const staryAlias = '/edu-video-ui.css?v=20261001v4';
+    const staryCss = '/* poprzednie wydanie */';
+    await stara.put(staryAlias, new Response(staryCss));
+    const pobraneEdu = [];
+    const fetch = async (request) => {
+      const u = new URL(request.url);
+      if (!arkuszEdu(u.pathname)) return siec(request);
+      pobraneEdu.push(`${u.pathname}${u.search}`);
+      return new Response(cssEdu);
+    };
+    const sluzba = uruchomSW({ caches: magazyn.caches, fetch });
+    await sluzba.installShell();
+
+    expect(pobraneEdu).toEqual([aliasyEdu()[0]]);
+    for (const adres of aliasyEdu()) {
+      const zapisana = await sluzba.readFromShellCache(new Request(`${POCHODZENIE}${adres}`));
+      const oczekiwanyCss = wersja === '1.1.104' && adres === staryAlias ? staryCss : cssEdu;
+      expect(await zapisana.text(), adres).toBe(oczekiwanyCss);
+    }
+  });
+
+  it.each(['sieć', 'odpowiedź 503', 'cache.put'])('nieudany pierwszy zapis arkusza edu (%s) nie zatruwa kolejnych aliasów', async (awaria) => {
+    const magazyn = pamiec(Infinity, { zuzywajOdpowiedzi: true });
+    const cache = magazyn.otworz(sw.SHELL_CACHE);
+    const zapisz = cache.put;
+    const pobraneEdu = [];
+    cache.put = async (klucz, odpowiedz) => {
+      if (awaria === 'cache.put' && klucz === aliasyEdu()[0]) throw new Error('pierwszy zapis odrzucony');
+      return zapisz(klucz, odpowiedz);
+    };
+    const fetch = async (request) => {
+      const u = new URL(request.url);
+      if (!arkuszEdu(u.pathname)) return siec(request);
+      pobraneEdu.push(`${u.pathname}${u.search}`);
+      if (pobraneEdu.length === 1) {
+        if (awaria === 'sieć') throw new TypeError('sieć niedostępna');
+        return new Response('/* nieudana pierwsza próba */', { status: awaria === 'odpowiedź 503' ? 503 : 200 });
+      }
+      return new Response(cssEdu);
+    };
+    const sluzba = uruchomSW({ caches: magazyn.caches, fetch });
+    await sluzba.installShell();
+
+    expect(pobraneEdu).toEqual(aliasyEdu().slice(0, 2));
+    expect(magazyn.wpisy.has(aliasyEdu()[0]), 'opcjonalny nieudany wpis nie został zapisany').toBe(false);
+    for (const adres of aliasyEdu().slice(1)) {
+      const zapisana = await sluzba.readFromShellCache(new Request(`${POCHODZENIE}${adres}`));
+      expect(await zapisana.text(), adres).toBe(cssEdu);
+    }
+  });
+
+  it('świeża odpowiedź arkusza edu jest współdzielona wyłącznie w jednej instalacji', async () => {
+    const magazyn = pamiec(Infinity, { zuzywajOdpowiedzi: true });
+    let pobraniaEdu = 0;
+    const fetch = async (request) => {
+      if (!arkuszEdu(new URL(request.url).pathname)) return siec(request);
+      pobraniaEdu += 1;
+      return new Response(`/* pobranie ${pobraniaEdu} */`);
+    };
+    const sluzba = uruchomSW({ caches: magazyn.caches, fetch });
+    await sluzba.installShell();
+    await sluzba.installShell();
+
+    expect(pobraniaEdu).toBe(2);
+    for (const adres of aliasyEdu()) {
+      const zapisana = await sluzba.readFromShellCache(new Request(`${POCHODZENIE}${adres}`));
+      expect(await zapisana.text(), adres).toBe('/* pobranie 2 */');
+    }
   });
 
   it('aktualizacja kopiuje niezmienne wpisy ?v= z poprzedniej pamięci powłoki; dokumenty i adresy bez ?v= pobiera', async () => {
@@ -314,7 +420,9 @@ describe('P-SW-PRECACHE: instalacja bez historii, kopia z poprzedniej pamięci, 
     await uruchomSW({ caches: magazyn.caches, fetch }).installShell();
 
     const zSieci = new Set(pobrane);
-    expect(wersjonowane.filter((adres) => !zSieci.has(adres)), 'każdy wpis ?v= z sieci').toEqual([]);
+    expect(wersjonowane.filter((adres) => !arkuszEdu(adres) && !zSieci.has(adres)), 'każdy inny wpis ?v= z sieci').toEqual([]);
+    expect(pobrane.filter(arkuszEdu), 'arkusz edu pochodzi ze świeżego pobrania, nie ze starej pamięci').toEqual([aliasyEdu()[0]]);
+    expect(doInstalacji().filter((adres) => rozmiarPliku(adres) !== null && !magazyn.wpisy.has(adres)), 'komplet wpisów bieżących').toEqual([]);
   });
 
   it('przed instalacją historia w starszych pamięciach powłoki idzie do kosza; najwyższy ?v= i adresy bez ?v= zostają', async () => {

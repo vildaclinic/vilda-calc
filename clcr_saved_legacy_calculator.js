@@ -319,7 +319,7 @@
     else if (formulaId === "B_Cr") value = proteinCreatinineRatio(number(values, "U_Prot"), urineCr, sample.volume);
     else if (formulaId === "K_frac") { value = K_frac(number(values, "U_K"), number(values, "U_Na")); unit = "%"; digits = 1; }
     else return null;
-    return modeled(formulaId, parameterKey, value, unit, digits, values, context);
+    return modeled(formulaId, parameterKey, value, unit, digits, values, context, formulaId === "Prot_mgkg" ? { displayValue: String(value).replace(".", ","), datapoint: { assessment: "unassessed", outOfRange: null, norm: "", tone: "neutral" } } : {});
   }
   return Object.freeze({ math, recalculate });
 });

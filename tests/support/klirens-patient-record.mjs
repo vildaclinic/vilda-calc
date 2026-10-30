@@ -326,8 +326,11 @@ export async function applyProtein(scope) {
   await scope.evaluate(() => window.ClcrUiWorkflow.selectFormula('Prot_mgkg'));
   await scope.waitForFunction(() => window.ClcrUiWorkflow.state.activeFormulaId === 'Prot_mgkg' && window.clcrIsResetting !== true);
   await scope.evaluate(() => {
-    const values = { age: '10', ageMonths: '', ageDays: '', sex: 'F', weight: '30', height: '140', U_Prot: '1500',
-      collectionStartAt: '2026-10-24T08:00', collectionEndAt: '2026-10-25T08:00' };
+    const values = { age: '10', ageMonths: '', ageDays: '', sex: 'F', weight: '30', height: '140', U_Prot: '',
+      Prot_inputMode: 'concentration', Prot_concentration: '1000', Prot_concentrationUnit: 'mg/L',
+      Prot_volume: '1500', Prot_volumeUnit: 'mL', Prot_collectionHours: '24', Prot_collectionSource: 'hours',
+      Prot_reportedValue: '', Prot_reportedUnit: 'mg/24h', Prot_outputUnit: 'mg/24h',
+      collectionStartAt: '', collectionEndAt: '' };
     for (const [id, value] of Object.entries(values)) {
       const element = document.getElementById(id); if (!element) throw new Error(`Missing protein fixture field ${id}`);
       element.value = value; element.dispatchEvent(new Event('change', { bubbles: true }));
@@ -340,5 +343,5 @@ export async function applyProtein(scope) {
     }
     window.clcrUpdate();
   });
-  await expect.poll(() => scope.evaluate(() => window.ClcrVisitSave.collectActiveDatapoints(document, { formulaId: 'Prot_mgkg' }).length)).toBe(3);
+  await expect.poll(() => scope.evaluate(() => window.ClcrVisitSave.collectActiveDatapoints(document, { formulaId: 'Prot_mgkg' }).length)).toBe(1);
 }

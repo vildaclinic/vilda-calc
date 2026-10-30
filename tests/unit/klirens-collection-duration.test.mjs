@@ -58,7 +58,8 @@ describe('Shared DZM numeric duration — new collections versus historical edit
     const api = harness().ClcrCollectionDuration;
     const values = { Scr: '0.4', formulaPicker: 'ckid_u25', Cl24DurationHours: '24', Cl24DurationSource: 'assumed-24h',
       CA_collectionHours: '', CA_collectionSource: 'assumed-24h', UA_collectionHours: '', UA_collectionSource: 'assumed-24h',
-      MG_collectionHours: '', MG_collectionSource: 'assumed-24h', PO4_collectionHours: '', PO4_collectionSource: 'assumed-24h', PO4_durationNeedsConfirmation: 'false' };
+      MG_collectionHours: '', MG_collectionSource: 'assumed-24h', PO4_collectionHours: '', PO4_collectionSource: 'assumed-24h', PO4_durationNeedsConfirmation: 'false',
+      Prot_collectionHours: '', Prot_collectionSource: 'assumed-24h' };
     const original = structuredClone(values), captured = api.normalizeCapturedInputs(values);
     expect(values).toEqual(original);
     expect(captured).not.toBe(values);
