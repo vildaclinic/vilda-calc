@@ -1339,7 +1339,7 @@ function remB22Create(host, full, options) {
     form.insertBefore(eventFields, body.parentElement); category.addEventListener('change', function () { eventFields.hidden = category.value !== 'reminder-exam' && category.value !== 'followup'; });
     form.appendChild(make('p', 'vb22-help', 'Przypomnienie i późniejszy opis wykonania pozostaną w Karcie pacjenta.'));
     var controls = formActions(form, 'Zapisz przypomnienie', function () {
-      if (returnToSearch) { state.tab = 'search'; listContext = null; root.classList.remove('vb22-show-detail'); render(); }
+      if (returnToSearch) { clear(detail); state.tab = 'search'; listContext = null; root.classList.remove('vb22-show-detail'); render(); }
       else if (wasDetail) render(); else return backToList();
     }); controls[0].disabled = true; detail.appendChild(form); detail.scrollTop = 0;
     var noteId = 'reminder-' + operationId();
