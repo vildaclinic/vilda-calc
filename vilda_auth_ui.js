@@ -1219,7 +1219,7 @@ function remB22Create(host, full, options) {
     nextTitle.placeholder = 'Np. Sprawdzić, czy jest wynik MR';
     nextStep.appendChild(nextWrap); if (kind !== 'reschedule') body.appendChild(nextStep);
     nextStep.addEventListener('toggle', function () { nextTitle.required = nextDate.required = nextStep.open; });
-    body.appendChild(make('p', 'vb22-help', kind === 'result' ? 'Data otrzymania nie jest datą pobrania badania. Zapis pozostanie w Karcie pacjenta i w Historii.' : kind === 'reschedule' ? 'Przypomnienie pozostanie przy pacjencie z nowym terminem.' : 'Zapis pozostanie w Historii. Samo umówienie badania nie oznacza jego wykonania.'));
+    body.appendChild(make('p', 'vb22-help', kind === 'result' ? 'Data otrzymania nie jest datą pobrania badania. Zapis pozostanie w Karcie pacjenta i w zakładce Szukaj.' : kind === 'reschedule' ? 'Przypomnienie pozostanie przy pacjencie z nowym terminem.' : 'Zapis pozostanie w zakładce Szukaj. Samo umówienie badania nie oznacza jego wykonania.'));
     var footer = make('footer', 'vb22-outcome-actions'), cancel = btn('Anuluj', '', cancelOutcome);
     var save = make('button', 'vb22-primary', kind === 'result' ? 'Zapisz wynik' : kind === 'reschedule' ? 'Zapisz nowy termin' : 'Zapisz wykonanie'); save.type = 'submit'; footer.appendChild(cancel); footer.appendChild(save); form.appendChild(body); form.appendChild(footer); dialog.appendChild(form);
     var controls = [save, cancel, closeButton];
