@@ -47,6 +47,16 @@ async function rejected(write) {
   try { expect((await write).saved).toBe(false); }
   catch (error) { if (error && error.name === 'AssertionError') throw error; expect(error).toBeInstanceOf(Error); }
 }
+async function withCareClock(instant, timezone, run) {
+  const RealDate = globalThis.Date, previousTimezone = process.env.TZ;
+  if (timezone) process.env.TZ = timezone;
+  globalThis.Date = class FixedCareDate extends RealDate {
+    constructor(...args) { super(...(args.length ? args : [instant])); }
+    static now() { return RealDate.parse(instant); }
+  };
+  try { return await run(); }
+  finally { globalThis.Date = RealDate; process.env.TZ = previousTimezone; }
+}
 
 describe('Plany opieki — real encrypted vault and shared patient records', () => {
   it('keeps several independent plans for one patient and filters by the owning patient', async () => {
@@ -900,5 +910,220 @@ describe('care sync recovery after an older client imported notes without the ex
     await d.adapter.putPatientNoteForUser(d.userId, corrupt);
     await expect(d.vault.needsCarePlanSyncRepair()).rejects.toThrow();
     expect(await d.adapter.getPatientNoteForUser(d.userId, plan.id)).toEqual(corrupt);
+  });
+});
+
+describe('care-plan flow repairs preserve independent calendar and clinical facts', () => {
+  it('keeps waiting for a result through calendar completion, undo and no-show without receiving a result', async () => {
+    const d = await device(), { plan, stepId } = await add(d, await create(d), { state: 'waiting', eventDateISO: DAY });
+    const step = plan.steps[0];
+    for (const action of ['completePatientNote', 'uncompletePatientNote', 'noShowPatientNote']) {
+      await d.vault[action](step.calendarNoteId);
+      const changed = await d.vault.getCarePlan(plan.id);
+      expect(changed.steps.find(item => item.id === stepId)).toMatchObject({ state: 'waiting', completedDateISO: null, resultNoteId: null });
+      expect(changed.needsDecision).toBe(false);
+      expect((await dueNotes(d)).some(note => note.id === step.reminderNoteId)).toBe(true);
+      expect((await d.vault.listPatientNotesForPatient(d.patientId)).filter(note => note.careContext?.role === 'result')).toHaveLength(0);
+    }
+  });
+
+  it.each(['result', 'complete'])('preserves the recorded %s and its date through every calendar status toggle', async action => {
+    const d = await device(), { plan, stepId } = await add(d, await create(d), { eventDateISO: DAY, description: 'Fikcyjny pierwotny opis wizyty.' });
+    const completed = await mutate(d, plan, action, { stepId, dateISO: DAY, text: 'Fikcyjny zapis kliniczny, który musi pozostać.', continuation: 'later' });
+    const original = completed.plan.steps[0];
+    for (const change of ['completePatientNote', 'uncompletePatientNote', 'noShowPatientNote']) {
+      await d.vault[change](original.calendarNoteId);
+      const next = (await d.vault.getCarePlan(plan.id)).steps[0];
+      expect(next).toMatchObject({ state: 'done', completedDateISO: DAY, completionSource: action === 'result' ? 'result' : 'performance', description: original.description });
+      expect(next.resultNoteId).toBe(original.resultNoteId);
+    }
+  });
+
+  it('still reverses a new completion that came only from the calendar', async () => {
+    const d = await device(), { plan } = await add(d, await create(d), { eventDateISO: DAY });
+    await d.vault.completePatientNote(plan.steps[0].calendarNoteId);
+    expect((await d.vault.getCarePlan(plan.id)).steps[0]).toMatchObject({ state: 'done', completionSource: 'calendar' });
+    await d.vault.uncompletePatientNote(plan.steps[0].calendarNoteId);
+    const reopened = (await d.vault.getCarePlan(plan.id)).steps[0];
+    expect(reopened).toMatchObject({ state: 'pending', completedDateISO: null });
+    expect(reopened).not.toHaveProperty('completionSource');
+  });
+
+  it('preserves an ambiguous legacy completion after an old client strips the source marker', async () => {
+    const d = await device(), { plan } = await add(d, await create(d), { eventDateISO: DAY });
+    await d.vault.completePatientNote(plan.steps[0].calendarNoteId);
+    const raw = await d.adapter.getPatientNoteForUser(d.userId, plan.id), plain = await d.vault.decryptPayloadForCurrentUser(raw.bodyCipher.iv, raw.bodyCipher.data);
+    delete plain.careContext.steps[0].completionSource;
+    await d.adapter.putPatientNoteForUser(d.userId, { ...raw, bodyCipher: await d.vault.encryptPayloadForCurrentUser(plain) });
+    const before = (await d.vault.getCarePlan(plan.id)).steps[0];
+    await d.vault.uncompletePatientNote(before.calendarNoteId);
+    const after = (await d.vault.getCarePlan(plan.id)).steps[0];
+    expect(after.state).toBe('done'); expect(after.completedDateISO).toBe(before.completedDateISO);
+    expect(after).not.toHaveProperty('completionSource');
+  });
+
+  it.each(['waiting', 'done', 'closed'])('records native calendar performance separately when clinical state is %s', async state => {
+    const d = await device(), added = await add(d, await create(d), { state: 'waiting', eventDateISO: DAY });
+    let plan = added.plan;
+    if (state === 'done') plan = (await mutate(d, plan, 'result', { stepId: added.stepId, dateISO: DAY, text: 'Fikcyjny otrzymany wynik.', continuation: 'later' })).plan;
+    if (state === 'closed') plan = (await mutate(d, plan, 'close', { reason: 'Fikcyjne przekazanie opieki', text: 'Fikcyjne zamknięcie z zachowaniem rezerwacji.', cancelOpen: true })).plan;
+    const before = plan.steps[0], calendar = await d.vault.getPatientNote(before.calendarNoteId);
+    const saved = await d.vault.saveReminderOutcome({ id: calendar.id, patientId: d.patientId, baseRev: calendar.rev, operationId: operation(), action: 'complete', dateISO: DAY, text: 'Fikcyjne wykonanie rzeczywistej wizyty.' });
+    expect(saved.saved).toBe(true);
+    const after = await d.vault.getCarePlan(plan.id);
+    expect(after.status).toBe(plan.status); expect(after.steps[0]).toEqual(before); expect(after.needsDecision).toBe(plan.needsDecision);
+    const notes = await d.vault.listPatientNotesForPatient(d.patientId);
+    const performance = notes.find(note => note.careContext?.role === 'note' && note.careContext.stepId === added.stepId && note.body.includes('Fikcyjne wykonanie rzeczywistej wizyty.'));
+    expect(performance).toBeTruthy(); expect(performance.clinicalDateISO).toBe(DAY);
+    expect((await d.vault.getPatientNote(calendar.id)).completedAtISO).toBe(DAY + 'T12:00:00.000Z');
+    expect(after.steps).toHaveLength(1);
+  });
+
+  it('does not complete a waiting step through a direct generic complete action', async () => {
+    const d = await device(), { plan, stepId } = await add(d, await create(d), { state: 'waiting' }), before = await rawNotes(d);
+    await expect(mutate(d, plan, 'complete', { stepId, dateISO: DAY, text: 'Fikcyjne omyłkowe zakończenie.' })).rejects.toThrow('oczekuje na wynik');
+    expect(await rawNotes(d)).toEqual(before);
+  });
+
+  it('detaches the event in one transaction while retaining all appointment fields and unknown encrypted metadata', async () => {
+    const d = await device(), { plan, stepId } = await add(d, await create(d), { eventDateISO: '2026-11-03', eventTime: '10:30' });
+    const id = plan.steps[0].calendarNoteId, raw = await d.adapter.getPatientNoteForUser(d.userId, id);
+    const plain = await d.vault.decryptPayloadForCurrentUser(raw.bodyCipher.iv, raw.bodyCipher.data);
+    plain.opaqueCalendarClinicalField = { marker: 'Fikcyjne metadane zachowane bez interpretacji' };
+    const originalRaw = { ...raw, opaqueEnvelopeField: 'Fikcyjne pole koperty', bodyCipher: await d.vault.encryptPayloadForCurrentUser(plain) };
+    await d.adapter.putPatientNoteForUser(d.userId, originalRaw);
+    const original = await d.vault.getPatientNote(id);
+    const detached = await mutate(d, plan, 'editStep', { stepId, step: { detachEvent: true, eventDateISO: null, eventTime: null } });
+    expect(detached.saved).toBe(true);
+    expect(detached.plan.steps[0]).toMatchObject({ calendarNoteId: null, eventDateISO: null, eventTime: null, state: 'pending', reminderDateISO: DAY });
+    const event = await d.vault.getPatientNote(id);
+    expect(event).toMatchObject({ ...original, careContext: null, rev: original.rev + 1, updatedAtISO: event.updatedAtISO });
+    expect(event.updatedAtISO >= original.updatedAtISO).toBe(true);
+    const savedRaw = await d.adapter.getPatientNoteForUser(d.userId, id), savedPlain = await d.vault.decryptPayloadForCurrentUser(savedRaw.bodyCipher.iv, savedRaw.bodyCipher.data);
+    expect(savedRaw.opaqueEnvelopeField).toBe(originalRaw.opaqueEnvelopeField);
+    expect(savedPlain).toEqual({ ...plain, careContext: null });
+    expect((await d.vault.listPatientNotesInRange('2026-11-01', '2026-11-30T23:59:59.999Z')).filter(note => note.id === id)).toHaveLength(1);
+    expect((await dueNotes(d)).some(note => note.id === plan.steps[0].reminderNoteId)).toBe(true);
+  });
+
+  it('does not treat an unspecified null event date as permission to clear the reservation time', async () => {
+    const d = await device(), { plan, stepId } = await add(d, await create(d), { eventDateISO: '2026-11-03', eventTime: '10:30' });
+    const result = await mutate(d, plan, 'editStep', { stepId, step: { eventDateISO: null, eventTime: null } });
+    expect(result.plan.steps[0]).toMatchObject({ eventDateISO: '2026-11-03', eventTime: '10:30', calendarNoteId: plan.steps[0].calendarNoteId });
+    expect((await d.vault.getPatientNote(plan.steps[0].calendarNoteId)).dueTime).toBe('10:30');
+  });
+
+  it('rolls back detachment when a concurrent calendar edit wins during preparation', async () => {
+    const d = await device(), { plan, stepId } = await add(d, await create(d), { eventDateISO: '2026-11-03', eventTime: '10:30' });
+    const id = plan.steps[0].calendarNoteId, commit = d.adapter.commitCarePlanForUser.bind(d.adapter);
+    d.adapter.commitCarePlanForUser = async (user, change) => { const raw = await d.adapter.getPatientNoteForUser(user, id); await d.adapter.putPatientNoteForUser(user, { ...raw, rev: raw.rev + 1 }); return commit(user, change); };
+    const result = await mutate(d, plan, 'editStep', { stepId, step: { detachEvent: true } });
+    expect(result).toMatchObject({ saved: false, conflict: true });
+    expect(await d.vault.getCarePlan(plan.id)).toEqual(plan);
+    expect((await d.vault.getPatientNote(id)).careContext).toMatchObject({ role: 'calendar', planId: plan.id });
+  });
+
+  it('does not write a detached record into either adapter after storage switches during preparation', async () => {
+    const d = await device(), { plan, stepId } = await add(d, await create(d), { eventDateISO: '2026-11-03' });
+    const id = plan.steps[0].calendarNoteId, before = await rawNotes(d), replacement = d.vault.createInMemoryAdapter();
+    const get = d.adapter.getPatientNoteForUser.bind(d.adapter);
+    d.adapter.getPatientNoteForUser = async (user, noteId) => {
+      const record = await get(user, noteId);
+      if (noteId === id) d.vault.setStorageAdapter(replacement);
+      return record;
+    };
+    await expect(mutate(d, plan, 'editStep', { stepId, step: { detachEvent: true } })).rejects.toThrow('Sesja zmieniła się');
+    expect(await rawNotes(d)).toEqual(before);
+    expect(await replacement.listPatientNotesForUser(d.userId)).toEqual([]);
+  });
+
+  it('keeps explicit detachment through full synchronization and later ordinary calendar edits', async () => {
+    const a = await device(), { plan, stepId } = await add(a, await create(a), { eventDateISO: '2026-11-03', eventTime: '10:30' }), b = await device();
+    await b.vault.mergeSyncPayload(await a.vault.exportSyncPayload());
+    const id = plan.steps[0].calendarNoteId;
+    await mutate(a, plan, 'editStep', { stepId, step: { detachEvent: true } });
+    await b.vault.mergeSyncPayload(await a.vault.exportSyncPayload());
+    expect((await b.vault.getPatientNote(id)).careContext).toBeNull();
+    const before = await b.vault.getCarePlan(plan.id);
+    await b.vault.savePatientNote({ id, patientId: a.patientId, dueTime: '11:55', body: 'Fikcyjna aktualizacja samodzielnej rezerwacji.' });
+    expect(await b.vault.getCarePlan(plan.id)).toEqual(before);
+    expect((await b.vault.getPatientNote(id)).careContext).toBeNull();
+    await a.vault.mergeSyncPayload(await b.vault.exportSyncPayload());
+    expect((await a.vault.getPatientNote(id)).careContext).toBeNull();
+    expect((await a.vault.getPatientNote(id)).dueTime).toBe('11:55');
+  });
+
+  it('keeps detachment through actual encrypted deltas in either parent/event delivery order', async () => {
+    const a = await device(), { plan, stepId } = await add(a, await create(a), { eventDateISO: '2026-11-03' }), b = await device();
+    const code = await a.vault.exportSyncCode(a.password); b.vault.lock('manual'); await b.vault.importSyncCode(code, a.password, { label: 'Fikcyjny telefon odpięcia' }); b.userId = b.vault.getCurrentUser().userId;
+    await b.vault.mergeSyncPayload(await a.vault.exportSyncPayload());
+    const id = plan.steps[0].calendarNoteId;
+    await mutate(a, plan, 'editStep', { stepId, step: { detachEvent: true } });
+    const parentDelta = await a.vault.buildNoteDelta(plan.id), eventDelta = await a.vault.buildNoteDelta(id);
+    await b.vault.applyEncryptedDelta(parentDelta);
+    // The parent may arrive first while the calendar still has its stale link.
+    const before = await b.vault.getCarePlan(plan.id);
+    await b.vault.savePatientNote({ id, patientId: a.patientId, dueTime: '11:15' });
+    expect(await b.vault.getCarePlan(plan.id)).toEqual(before);
+    expect((await b.vault.getPatientNote(id)).careContext).toBeNull();
+    await b.vault.applyEncryptedDelta(eventDelta);
+    // The local edit has its own higher revision. Its ordinary-event treatment
+    // must still leave the canonical plan unchanged.
+    expect((await b.vault.getCarePlan(plan.id)).steps[0].calendarNoteId).toBeNull();
+    const c = await device(); c.vault.lock('manual'); await c.vault.importSyncCode(code, a.password, { label: 'Fikcyjne drugie urządzenie odpięcia' }); c.userId = c.vault.getCurrentUser().userId;
+    await c.vault.mergeSyncPayload({ ...(await a.vault.exportSyncPayload()), patientNotes: (await b.vault.exportSyncPayload()).patientNotes.filter(note => note.id !== id) });
+    await c.vault.applyEncryptedDelta(eventDelta); await c.vault.applyEncryptedDelta(parentDelta);
+    expect((await c.vault.getPatientNote(id)).careContext).toBeNull();
+    expect((await c.vault.getCarePlan(plan.id)).steps[0].calendarNoteId).toBeNull();
+  });
+
+  it('retains detachment through patient export/import and whole-account backup', async () => {
+    const a = await device(), { plan, stepId } = await add(a, await create(a), { eventDateISO: '2026-11-03' }), id = plan.steps[0].calendarNoteId;
+    await mutate(a, plan, 'editStep', { stepId, step: { detachEvent: true } });
+    const b = await device(); await b.vault.importPatientFromEnvelope(await a.vault.exportPatientEnvelope(a.patientId), a.password);
+    expect((await b.vault.getPatientNote(id)).careContext).toBeNull();
+    const c = await device(); await c.vault.restoreVaultBackup(await a.vault.exportVaultBackup(), a.password);
+    expect((await c.vault.getPatientNote(id)).careContext).toBeNull();
+  });
+
+  it.each(['result', 'complete', 'wait', 'addNote'])('rejects future factual date for %s without partial records', async action => {
+    const d = await device(), { plan, stepId } = await add(d, await create(d)), before = await rawNotes(d);
+    await expect(mutate(d, plan, action, { stepId, dateISO: '2999-12-31', text: 'Fikcyjny przyszły fakt.', checkDateISO: '2999-12-31' })).rejects.toThrow('nie może być przyszła');
+    expect(await rawNotes(d)).toEqual(before);
+  });
+
+  it('rejects a future changed calendar completion but permits an ordinary edit retaining an old incorrect future flag', async () => {
+    const d = await device(), { plan } = await add(d, await create(d), { eventDateISO: '2999-12-31' }), id = plan.steps[0].calendarNoteId, before = await rawNotes(d);
+    await expect(d.vault.savePatientNote({ id, patientId: d.patientId, completedAtISO: '2999-12-31T12:00:00.000Z' })).rejects.toThrow('nie może być przyszła');
+    expect(await rawNotes(d)).toEqual(before);
+    const raw = await d.adapter.getPatientNoteForUser(d.userId, id);
+    await d.adapter.putPatientNoteForUser(d.userId, { ...raw, completedAtISO: '2999-12-31T12:00:00.000Z' });
+    await d.vault.savePatientNote({ id, patientId: d.patientId, body: 'Fikcyjna zwykła edycja istniejącego wpisu.', completedAtISO: '2999-12-31T12:00:00.000Z' });
+    expect((await d.vault.getPatientNote(id)).body).toContain('zwykła edycja');
+  });
+
+  it.each([
+    ['Pacific/Kiritimati', '2026-10-30T00:30:00+14:00', '2026-10-30'],
+    ['America/Los_Angeles', '2026-10-29T23:30:00-07:00', '2026-10-29'],
+  ])('uses the local day of an actual completion instant in %s', async (timezone, instant, expected) => {
+    await withCareClock(instant, timezone, async () => {
+      const d = await device(), { plan } = await add(d, await create(d), { eventDateISO: '2026-11-03' });
+      await d.vault.completePatientNote(plan.steps[0].calendarNoteId);
+      expect((await d.vault.getCarePlan(plan.id)).steps[0]).toMatchObject({ completedDateISO: expected, completionSource: 'calendar' });
+    });
+  });
+
+  it.each(['result', 'waiting'])('review does not invent or undo calendar performance for %s', async kind => {
+    const d = await device(), { plan, stepId } = await add(d, await create(d), { state: 'waiting', eventDateISO: DAY });
+    if (kind === 'result') await mutate(d, plan, 'result', { stepId, dateISO: DAY, text: 'Fikcyjny otrzymany opis.', continuation: 'later' });
+    else await d.vault.completePatientNote(plan.steps[0].calendarNoteId);
+    const raw = await d.adapter.getPatientNoteForUser(d.userId, plan.id), plain = await d.vault.decryptPayloadForCurrentUser(raw.bodyCipher.iv, raw.bodyCipher.data);
+    plain.careContext.syncNeedsReview = true;
+    await d.adapter.putPatientNoteForUser(d.userId, { ...raw, bodyCipher: await d.vault.encryptPayloadForCurrentUser(plain) });
+    const current = await d.vault.getCarePlan(plan.id), eventBefore = await d.vault.getPatientNote(plan.steps[0].calendarNoteId);
+    await mutate(d, current, 'acknowledgeMerge');
+    const after = await d.vault.getPatientNote(eventBefore.id);
+    expect(after.completedAtISO).toBe(eventBefore.completedAtISO); expect(after.noShowAtISO).toBe(eventBefore.noShowAtISO);
+    expect((await d.vault.getCarePlan(plan.id)).steps[0].state).toBe(kind === 'result' ? 'done' : 'waiting');
   });
 });

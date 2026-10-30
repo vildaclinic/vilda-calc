@@ -142,6 +142,42 @@ test('care plans cold offline: native plan, narrative result and future step per
     expect(await page.evaluate(async patientId =>
       (await window.VildaVault.listPatientNotesForPatient(patientId)).sort((a, b) => a.id.localeCompare(b.id)), created.ids.a)).toEqual(notesBeforeViews);
     expect(await page.evaluate(() => fetch(`/__care-offline-probe-after-views-${Date.now()}`).then(() => false, () => true))).toBe(true);
+
+    // An explicit unlink must survive a cold cached read as an independent
+    // reservation. Omitting the context would let legacy repair restore it.
+    const scheduled = await mutatePlan(page, created.ids.a, plan.planId, 'addStep', {
+      step: { title: 'Fikcyjna rezerwacja odłączana offline', kind: 'Konsultacja', state: 'pending',
+        reminderDateISO: '2026-11-01', eventDateISO: '2026-11-12', eventTime: '11:30',
+        description: 'Fikcyjna treść rezerwacji zachowana po odłączeniu.' },
+    });
+    const scheduledStep = scheduled.plan.steps.find(item => item.id === scheduled.stepId);
+    const reservationBefore = await page.evaluate(id => window.VildaVault.getPatientNote(id), scheduledStep.calendarNoteId);
+    await mutatePlan(page, created.ids.a, plan.planId, 'editStep', {
+      stepId: scheduledStep.id, step: { title: scheduledStep.title, state: 'pending',
+        eventDateISO: null, eventTime: null, detachEvent: true },
+    });
+    const detached = await readPlan(page, plan.planId);
+    expect(detached.steps.find(item => item.id === scheduledStep.id)).toMatchObject({
+      calendarNoteId: null, eventDateISO: null, eventTime: null, reminderDateISO: '2026-11-01',
+    });
+    await expect(mutatePlan(page, created.ids.a, plan.planId, 'complete', {
+      stepId: scheduledStep.id, dateISO: '2030-01-01', text: 'Fikcyjne przyszłe wykonanie, którego zapis musi zostać odrzucony.',
+    })).rejects.toThrow();
+    expect(await readPlan(page, plan.planId)).toEqual(detached);
+    await page.reload({ waitUntil: 'load' }); await readyForPatient(page);
+    const afterReload = await readPlan(page, plan.planId);
+    expect(afterReload.steps.find(item => item.id === received.id)).toMatchObject({
+      state: 'done', resultNoteId: result.id, completionSource: 'result',
+    });
+    expect(afterReload.steps.find(item => item.id === scheduledStep.id)).toMatchObject({
+      state: 'pending', calendarNoteId: null, eventDateISO: null, eventTime: null,
+    });
+    const reservationAfter = await page.evaluate(id => window.VildaVault.getPatientNote(id), reservationBefore.id);
+    expect(reservationAfter.careContext).toBeNull();
+    for (const key of ['id', 'patientId', 'title', 'body', 'dueDateISO', 'dueTime', 'completedAtISO', 'noShowAtISO']) {
+      expect(reservationAfter[key], `offline detach preserves ${key}`).toEqual(reservationBefore[key]);
+    }
+    expect(await page.evaluate(() => fetch(`/__care-offline-probe-after-detach-${Date.now()}`).then(() => false, () => true))).toBe(true);
   } finally {
     if (context) await context.close().catch(() => {});
     await server.stop(); fs.rmSync(profile, { recursive: true, force: true });
