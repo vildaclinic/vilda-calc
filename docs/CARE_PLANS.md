@@ -9,6 +9,7 @@ Plany opieki są zakładką Przypomnień i Karty pacjenta. Jeden pacjent może m
 - W edycji kroku świadome odznaczenie ustalonego terminu odłącza rezerwację od planu. Wydarzenie pozostaje w Terminarzu z tym samym identyfikatorem, treścią, datą, godziną i stanem. Odłączenie nie oznacza odwołania wizyty ani usunięcia przypomnienia kroku.
 - Zapis wykonania lub wyniku kończy wybrany krok. Lekarz pozostawia pozostałe kroki, dodaje kolejny albo ustala dzień powrotu do decyzji. Plan pozostaje otwarty.
 - Oznaczenie wizyty jako wykonanej nie kończy kroku oczekującego na wynik. Cofnięcie statusu wizyty ani oznaczenie niestawienia nie cofają otrzymania wyniku lub udokumentowanego wykonania. Przegląd po synchronizacji także nie zastępuje daty wykonania datą otrzymania wyniku.
+- Edycja lub zapis wykonania terminu zachowanego w historii po przeglądzie dotyczy jego oryginalnego rekordu. Nie przestawia bieżącego kroku, dalszego postępowania ani statusu planu. Taki oryginał pozostaje dokumentacją planu; świadome odłączenie nadal nadaje mu status samodzielnego wydarzenia, także gdy informacja rodzica dotrze przed aktualizacją samego wydarzenia.
 - Faktyczne wykonanie, otrzymanie wyniku i zapis ustalenia nie mogą mieć daty późniejszej niż bieżący lokalny dzień. Ograniczenie obowiązuje w formularzu oraz w sejfie. Przyszłe daty rezerwacji i przypomnień pozostają dozwolone; zwykła edycja dawnego wpisu nie przepisuje jego historycznych dat.
 - Wybór pacjenta pokazuje datę urodzenia. Przy identycznej nazwie i dacie albo braku daty dodatkowo pokazuje jednoznaczny identyfikator wpisu, również po wyborze. Wyszukiwanie dołączanych terminów obejmuje łącznie tytuł i opis wydarzenia.
 - Notatki w Karcie pacjenta pomijają dokumentację należącą do prawidłowo odczytanego planu opieki. Kroki, ustalenia i opisy wykonania są dostępne w planie, terminy w Terminarzu, a wyniki w Badaniach oraz przez pełny podgląd z planu. Dotyczy to otwartych i zamkniętych planów oraz istniejącego terminu dołączonego później do planu. Dokumentacja niezwiązana z planem zachowuje dotychczasowe miejsce w Notatkach.
@@ -33,6 +34,7 @@ Publiczne API sejfu:
 - `listCarePlans({patientId?})` — plany konta lub danego pacjenta;
 - `getCarePlan(planId)` — aktualny plan;
 - `getCarePlanSyncReview(context, title)` — czysta, odczytowa projekcja zachowanych wersji zmian; nie odczytuje magazynu i nie zmienia kontekstu;
+- `getCarePlanCalendarRelations(context, title)` / `getCarePlanCalendarRelation(context, title, noteId, stepId)` — odczytowe rozróżnienie bieżącego, historycznego i odłączonego terminu; nie zmienia planu ani wydarzenia;
 - `needsCarePlanSyncRepair()` — odczytowe sprawdzenie, czy zapis planu utracił strukturę podczas obsługi przez starszego klienta;
 - `mutateCarePlan({planId?, patientId, baseRev, operationId, action, ...})` — zapis, wykonanie, wynik, powiązanie i zamknięcie.
 

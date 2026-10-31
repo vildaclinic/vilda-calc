@@ -70,6 +70,56 @@ function stepReview() {
 }
 
 describe('Care plan review renders complete typed changes and original document links', () => {
+  it('shows identical clinical values once despite distinct writers, including a complete archived value', async () => {
+    const decision = { needsDecision: false, decisionDueDateISO: null };
+    const metadata = { title: 'Fikcyjny wspólny tytuł', goal: 'Fikcyjny wspólny cel.', metadataUpdatedBy: 'fictional-author-a' };
+    const step = fullStep({ updatedBy: 'fictional-author-a' });
+    const snapshot = { version: 1, resolvedBy: 'fictional-resolved-operation', components: [
+      { key: 'decision', current: decision, projected: false, variants: [
+        { id: 'fictional-author-a', value: decision, selected: true },
+        { id: 'fictional-author-b', value: { ...decision }, selected: true },
+      ] },
+      { key: 'metadata', current: metadata, projected: false, variants: [
+        { id: 'fictional-author-b', value: { ...metadata, metadataUpdatedBy: 'fictional-author-b' }, selected: false },
+        { id: 'fictional-author-a', value: metadata, selected: true },
+      ] },
+      { key: 'step', stepId: step.id, current: step, projected: false, variants: [
+        { id: 'fictional-author-b', value: { ...step, updatedBy: 'fictional-author-b' }, selected: false },
+        { id: 'fictional-author-a', value: step, selected: true },
+      ] },
+    ] }, before = JSON.stringify(snapshot);
+    const live = editorWithResponse({}, { syncNeedsReview: true, syncReview: snapshot }); await settle();
+    for (const group of live.host.querySelectorAll('.vcp-sync-component')) {
+      expect(group.querySelectorAll('.vcp-sync-version')).toHaveLength(1);
+      expect(group.querySelector('.vcp-sync-version-title').textContent).toBe('Bieżący stan planu');
+    }
+    expect(live.host.querySelector('[data-review-key="decision"]').textContent).toContain('Przypomnienie o decyzji: Bez terminu');
+    live.controller.destroy();
+    const archived = editorWithResponse({}, { log: [{ dateISO: '2026-10-29', text: 'Fikcyjne rozstrzygnięcie.', resolution: snapshot }] }); await settle();
+    for (const group of archived.host.querySelectorAll('.vcp-sync-component')) {
+      expect(group.querySelectorAll('.vcp-sync-version')).toHaveLength(1);
+      expect(group.querySelector('.vcp-sync-version-title').textContent).toBe('Stan planu przed zapisaniem zmian');
+    }
+    expect(archived.host.querySelector('[data-review-key="step"]').textContent).toContain('Fikcyjny opis bieżącej wersji.');
+    expect(JSON.stringify(snapshot)).toBe(before); archived.controller.destroy();
+  });
+
+  it('keeps distinct result, calendar and reminder references as separate full values', async () => {
+    const current = fullStep({ resultNoteId: 'fictional-current-result', updatedBy: 'fictional-author-a' });
+    const snapshot = { version: 1, components: [{ key: 'step', stepId: current.id, current, projected: false, variants: [
+      { id: 'fictional-author-a', value: current, selected: true },
+      { id: 'fictional-author-b', value: { ...current, resultNoteId: 'fictional-other-result', updatedBy: 'fictional-author-b' }, selected: false },
+      { id: 'fictional-author-c', value: { ...current, calendarNoteId: 'fictional-other-calendar', updatedBy: 'fictional-author-c' }, selected: false },
+      { id: 'fictional-author-d', value: { ...current, reminderNoteId: 'fictional-other-reminder', updatedBy: 'fictional-author-d' }, selected: false },
+    ] }] }, before = JSON.stringify(snapshot);
+    const d = editorWithResponse({}, { syncNeedsReview: true, syncReview: snapshot }); await settle();
+    const group = d.host.querySelector('.vcp-sync-component');
+    expect(group.querySelectorAll('.vcp-sync-version')).toHaveLength(4);
+    expect(group.querySelector('[data-record-id="fictional-other-result"]')).not.toBeNull();
+    expect(group.querySelector('[data-record-id="fictional-other-calendar"]')).not.toBeNull();
+    expect(JSON.stringify(snapshot)).toBe(before); expect(d.vault.mutateCarePlan).not.toHaveBeenCalled(); d.controller.destroy();
+  });
+
   it('shows dates, both times, completion origins and existing documents without technical identities', async () => {
     const snapshot = stepReview(), d = editorWithResponse({}, { syncNeedsReview: true, syncReview: snapshot }); await settle();
     const review = d.host.querySelector('.vcp-sync-review'), versions = review.querySelector('.vcp-sync-versions');
@@ -192,7 +242,45 @@ function membershipFixture({ archived = false, snapshot = stepReview() } = {}) {
   return { ...d, parent, result, calendar, patientId };
 }
 
+function calendarBatch(extra = {}) {
+  return { version: 1, stepIds: ['fictional-lineage-step'], current: [], historical: [], detached: [], historicalNoteIds: [], ...extra };
+}
+const alternateCalendarPair = { noteId: 'fictional-alternate-calendar', stepId: 'fictional-lineage-step' };
+
 describe('Patient Notes retain exact membership of typed current and archived review documents', () => {
+  it('uses the public batch once per plan and gives parent detach precedence over retained references', () => {
+    const d = membershipFixture({ archived: true });
+    d.parent.careContext.log.push({ dateISO: '2026-10-29', text: 'Fikcyjny dawny termin.', noteId: d.calendar.id });
+    let batch = calendarBatch({ detached: [alternateCalendarPair], historical: [alternateCalendarPair], historicalNoteIds: [d.calendar.id] });
+    d.vault.getCarePlanCalendarRelations = vi.fn(() => structuredClone(batch));
+    const source = [d.parent, d.calendar], before = JSON.stringify(source);
+    expect(d.api.projectPatientNotes(source, d.patientId)).toEqual([d.calendar]);
+    expect(d.vault.getCarePlanCalendarRelations).toHaveBeenCalledTimes(1);
+    expect(d.api.resolveNoteDestination(source, d.calendar, d.patientId)).toEqual({ kind: 'notes', noteId: d.calendar.id });
+    batch = { ...batch, current: [alternateCalendarPair] };
+    expect(d.api.projectPatientNotes(source, d.patientId)).toEqual([]);
+    expect(JSON.stringify(source)).toBe(before);
+    d.calendar.careContext = null;
+    expect(d.api.projectPatientNotes(source, d.patientId)).toEqual([d.calendar]); d.controller.destroy();
+  });
+
+  it.each(['typed-history', 'flat-history'])('keeps an original calendar in its plan through %s from the public reader', mode => {
+    const d = membershipFixture({ archived: true });
+    d.vault.getCarePlanCalendarRelations = vi.fn(() => calendarBatch(mode === 'typed-history'
+      ? { historical: [alternateCalendarPair] } : { historicalNoteIds: [d.calendar.id] }));
+    const source = [d.parent, d.calendar];
+    expect(d.api.projectPatientNotes(source, d.patientId)).toEqual([]);
+    expect(d.api.resolveNoteDestination(source, d.calendar, d.patientId)).toEqual({ kind: 'calendar', role: 'calendar', planId: d.parent.id, noteId: d.calendar.id }); d.controller.destroy();
+  });
+
+  it.each(['malformed', 'throws'])('keeps calendar documentation visible when the public reader %s', mode => {
+    const d = membershipFixture({ archived: true });
+    d.vault.getCarePlanCalendarRelations = vi.fn(() => { if (mode === 'throws') throw Error('Fikcyjny błąd metadanych.'); return calendarBatch({ historical: null }); });
+    const source = [d.parent, d.calendar];
+    expect(d.api.projectPatientNotes(source, d.patientId)).toEqual([d.calendar]);
+    expect(d.api.resolveNoteDestination(source, d.calendar, d.patientId)).toEqual({ kind: 'notes', noteId: d.calendar.id }); d.controller.destroy();
+  });
+
   it.each([false, true])('routes original records before/after acknowledgment (archived=%s) without duplicating Notes', archived => {
     const d = membershipFixture({ archived }), source = [d.parent, d.result, d.calendar], before = JSON.stringify(source);
     expect(d.api.projectPatientNotes(source, d.patientId)).toEqual([]);
@@ -256,6 +344,61 @@ describe('Patient Notes retain exact membership of typed current and archived re
     if (change === 'step') d.result.careContext.stepId = 'fictional-unrelated-step';
     const source = [d.parent, d.result];
     expect(d.api.projectPatientNotes(source, d.patientId)).toEqual([d.result]); d.controller.destroy();
+  });
+});
+
+function calendarPreviewFixture(batch) {
+  const snapshot = stepReview(), d = editorWithResponse({}, { steps: [snapshot.components[0].current],
+    log: [{ dateISO: '2026-10-29', text: 'Fikcyjny zatwierdzony przegląd.', resolution: snapshot }] });
+  const parent = { id: d.plan.id, patientId: d.plan.patientId, title: d.plan.title, category: 'care-plan',
+    careContext: { version: 1, role: 'plan', status: 'active', steps: d.plan.steps, log: structuredClone(d.plan.log) } };
+  const calendar = { id: alternateCalendarPair.noteId, patientId: d.plan.patientId, title: 'Fikcyjny historyczny termin', body: 'Fikcyjna bieżąca treść oryginalnego terminu.',
+    careContext: { version: 1, role: 'calendar', planId: parent.id, stepId: alternateCalendarPair.stepId } };
+  d.vault.getCarePlanCalendarRelations = vi.fn(() => structuredClone(batch));
+  d.vault.getPatientNote = vi.fn(async id => structuredClone(id === parent.id ? parent : calendar));
+  return { ...d, parent, calendar };
+}
+
+describe('Calendar preview checks the fresh parent through the public reader', () => {
+  it('opens an original historical calendar after acknowledgment without changing its record', async () => {
+    const d = calendarPreviewFixture(calendarBatch({ historical: [alternateCalendarPair] })); await settle();
+    const before = JSON.stringify([d.parent, d.calendar]);
+    await d.controller.openRecord(d.calendar.id);
+    expect(d.host.querySelector('.vcp-record-body').textContent).toBe(d.calendar.body);
+    expect(d.vault.getPatientNote.mock.calls.map(call => call[0])).toEqual([d.calendar.id, d.parent.id]);
+    expect(d.vault.getCarePlanCalendarRelations).toHaveBeenCalledWith(d.parent.careContext, d.parent.title);
+    expect(JSON.stringify([d.parent, d.calendar])).toBe(before);
+    expect(d.vault.mutateCarePlan).not.toHaveBeenCalled(); d.controller.destroy();
+  });
+
+  it.each(['detached', 'unknown'])('does not open a stale-linked child when the fresh parent says %s', async relation => {
+    const d = calendarPreviewFixture(calendarBatch(relation === 'detached' ? { detached: [alternateCalendarPair], historical: [alternateCalendarPair] } : {}));
+    d.parent.careContext.log.push({ dateISO: '2026-10-29', text: 'Fikcyjne świadome odłączenie.',
+      calendarDetach: { version: 1, noteId: d.calendar.id, stepId: alternateCalendarPair.stepId } });
+    await settle(); await d.controller.openRecord(d.calendar.id);
+    expect(d.host.querySelector('.vcp-record-body')).toBeNull();
+    expect(d.host.querySelector('.vcp-record [role="alert"]').textContent).toContain('nie należy już do tego planu');
+    expect(d.vault.getCarePlanCalendarRelations).toHaveBeenCalledWith(d.parent.careContext, d.parent.title);
+    expect(d.vault.mutateCarePlan).not.toHaveBeenCalled(); d.controller.destroy();
+  });
+
+  it('requires the fresh parent to be owned by the same patient', async () => {
+    const d = calendarPreviewFixture(calendarBatch({ historical: [alternateCalendarPair] })); d.parent.patientId = 'fictional-other-patient';
+    await settle(); await d.controller.openRecord(d.calendar.id);
+    expect(d.host.querySelector('.vcp-record-body')).toBeNull();
+    expect(d.vault.getCarePlanCalendarRelations).not.toHaveBeenCalled(); d.controller.destroy();
+  });
+
+  it('ignores a delayed parent read after selection changes while the original is loading', async () => {
+    const d = calendarPreviewFixture(calendarBatch({ historical: [alternateCalendarPair] })); await settle();
+    let finishParent;
+    const parentRead = new Promise(resolve => { finishParent = resolve; });
+    d.vault.getPatientNote.mockImplementation(async id => id === d.parent.id ? parentRead : structuredClone(d.calendar));
+    const opened = d.controller.openRecord(d.calendar.id); await settle();
+    expect(d.vault.getPatientNote).toHaveBeenCalledWith(d.parent.id);
+    await d.controller.select(d.plan.id); finishParent(structuredClone(d.parent)); await opened;
+    expect(d.host.querySelector('.vcp-record')).toBeNull();
+    expect(d.vault.mutateCarePlan).not.toHaveBeenCalled(); d.controller.destroy();
   });
 });
 

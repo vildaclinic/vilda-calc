@@ -108,13 +108,33 @@
     if (!note.careContext.syncNeedsReview || !win.VildaVault || typeof win.VildaVault.getCarePlanSyncReview !== 'function') return null;
     try { return win.VildaVault.getCarePlanSyncReview(note.careContext, note.title); } catch { return null; }
   }
+  function calendarRelations(context, title, vault) {
+    if (!vault || typeof vault.getCarePlanCalendarRelations !== 'function') return null;
+    try {
+      var value = vault.getCarePlanCalendarRelations(context, title);
+      if (!value || value.version !== 1 || !Array.isArray(value.stepIds) || !value.stepIds.every(recordId)
+        || !Array.isArray(value.historicalNoteIds) || !value.historicalNoteIds.every(recordId)
+        || !['current', 'historical', 'detached'].every(function (key) { return Array.isArray(value[key]) && value[key].every(function (entry) { return entry && recordId(entry.noteId) && recordId(entry.stepId); }); })) return { known: false };
+      var result = { known: true, stepIds: new Set(value.stepIds), historicalNoteIds: new Set(value.historicalNoteIds) };
+      ['current', 'historical', 'detached'].forEach(function (key) { result[key] = new Set(value[key].map(function (entry) { return entry.noteId + ':' + entry.stepId; })); });
+      return result;
+    } catch { return { known: false }; }
+  }
+  function calendarRelation(relations, noteId, stepId) {
+    if (!relations || !relations.known || !recordId(noteId) || !recordId(stepId)) return 'unknown';
+    var key = noteId + ':' + stepId;
+    if (relations.current.has(key)) return 'current';
+    if (relations.detached.has(key)) return 'detached';
+    if (relations.historical.has(key) || relations.stepIds.has(stepId) && relations.historicalNoteIds.has(noteId)) return 'historical';
+    return 'unknown';
+  }
   function patientPlans(notes, patientId) {
     var plans = new Map();
     (Array.isArray(notes) ? notes : []).forEach(function (note) {
       if (!readablePlan(note, patientId)) return;
       var reviews = reviewComponents(currentSyncReview(note));
       note.careContext.log.forEach(function (entry) { reviewComponents(entry && entry.resolution).forEach(function (component) { reviews.push(component); }); });
-      plans.set(note.id, { context: note.careContext, reviews: reviews });
+      plans.set(note.id, { context: note.careContext, reviews: reviews, calendarRelations: calendarRelations(note.careContext, note.title, win.VildaVault) });
     });
     return plans;
   }
@@ -123,6 +143,10 @@
     var link = note.careContext;
     if (link.role === 'decision') return note.id === 'care-decision-' + link.planId;
     if (link.role === 'note') return context.log.some(function (entry) { return entry && (entry.noteId === note.id || entry.resultNoteId === note.id); });
+    if (link.role === 'calendar' && plan.calendarRelations !== null) {
+      var relation = calendarRelation(plan.calendarRelations, note.id, link.stepId);
+      return relation === 'current' || relation === 'historical';
+    }
     var field = { step: 'reminderNoteId', calendar: 'calendarNoteId', result: 'resultNoteId' }[link.role];
     return context.steps.some(function (step) { return step && step[field] === note.id && (!link.stepId || step.id === link.stepId); })
       || link.role === 'result' && context.log.some(function (entry) { return entry && (entry.noteId === note.id || entry.resultNoteId === note.id); })
@@ -287,6 +311,13 @@
         var context = original && original.careContext;
         if (!original || original.id !== noteId || original.patientId !== patientId || !context || context.version !== 1
           || context.planId !== planId || !['result', 'note', 'calendar'].includes(context.role)) throw new Error('Ten wpis jest niedostępny lub nie należy już do tego planu. Sprawdź dokumentację pacjenta.');
+        if (context.role === 'calendar' && typeof vault.getCarePlanCalendarRelations === 'function') {
+          var parent = await vault.getPatientNote(planId);
+          if (!current() || ticket !== recordSequence || state.selected !== planId || recordNoteId !== noteId) return;
+          if (!parent || parent.id !== planId || !readablePlan(parent, patientId)) throw new Error('Ten wpis jest niedostępny lub nie należy już do tego planu. Sprawdź dokumentację pacjenta.');
+          var relation = calendarRelation(calendarRelations(parent.careContext, parent.title, vault), original.id, context.stepId);
+          if (relation !== 'current' && relation !== 'historical') throw new Error('Ten wpis jest niedostępny lub nie należy już do tego planu. Sprawdź dokumentację pacjenta.');
+        }
         record = original; renderDetail();
         if (!refreshing) { var heading = detail.querySelector('.vcp-record h2'); if (heading) heading.focus({ preventScroll: true }); }
       } catch (error) {
@@ -358,8 +389,21 @@
         var headings = { metadata: 'Nazwa i cel planu', status: 'Status planu', decision: 'Dalsze postępowanie' };
         group.appendChild(node('h4', 'vcp-sync-component-heading', headings[component.key] || 'Krok: ' + component.current.title));
         var currentLabel = archived ? 'Stan planu przed zapisaniem zmian' : 'Bieżący stan planu';
-        if (component.projected || !component.variants.some(function (variant) { return variant.selected; })) reviewVersion(group, component, component.current, currentLabel);
-        component.variants.forEach(function (variant, index) { reviewVersion(group, component, variant.value, !component.projected && variant.selected ? currentLabel : 'Zachowana wersja ' + (index + 1)); });
+        var displayed = new Map();
+        function displayKey(value) {
+          var copy = Object.assign({}, value); delete copy.updatedBy; delete copy.metadataUpdatedBy;
+          return JSON.stringify(reviewStateSnapshot(copy));
+        }
+        component.variants.forEach(function (variant) {
+          var key = displayKey(variant.value), entry = displayed.get(key);
+          if (!entry) { entry = { value: variant.value, selected: false }; displayed.set(key, entry); }
+          entry.selected = entry.selected || variant.selected;
+        });
+        var showCurrent = component.projected || !component.variants.some(function (variant) { return variant.selected; });
+        var sameCurrent = displayed.get(displayKey(component.current));
+        if (showCurrent && sameCurrent) { sameCurrent.selected = true; showCurrent = false; }
+        if (showCurrent) reviewVersion(group, component, component.current, currentLabel);
+        Array.from(displayed.values()).forEach(function (variant, index) { reviewVersion(group, component, variant.value, variant.selected ? currentLabel : 'Zachowana wersja ' + (index + 1)); });
         versions.appendChild(group);
       }); parent.appendChild(versions);
     }
