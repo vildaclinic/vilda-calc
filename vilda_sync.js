@@ -73,4 +73,517 @@ function Bpw_inneKonto(t,kto){return Bpw_konto(t)!==kto}
 function Bpw_przerwane(){return u("VildaSync: pobieranie przerwane \u2014 w trakcie zablokowano sejf albo prze\u0142\u0105czono konto. Nic nie scalono.","SESSION_CHANGED")}
 function Bpw_sejfKonta(t,kto){if(!t||typeof t.applyEncryptedDelta!="function")return t;return{isUnlocked:function(){return!(typeof t.isUnlocked=="function"&&!t.isUnlocked())&&!Bpw_inneKonto(t,kto)},applyEncryptedDelta:function(x){return t.applyEncryptedDelta(x)}}}
 function Bpw_dren(a,r,i,t,kto){Bpw_inneKonto(t,kto)||B(a,r,i,Bpw_sejfKonta(t,kto)).catch(function(){})}
-async function Bpw_pull(){var CareReplay=null,CareReplayed=false;var t=I(),Bpw_kto=Bpw_konto(t);y(L,{operation:"pull"});var e;try{e=await t.getSyncMaterial()}catch(E){throw y(k,{operation:"pull",error:E}),E}var a=e.slotId,r=e.authToken,n=e.syncEncKey,i=j(),c=m(a);K()&&M==null&&(M=Pt(a,t));try{Brv_stop(a);if(c.registered){var S=await f(i+"/v1/slots/"+a+"/status",{method:"GET",headers:{Authorization:"Bearer "+r}});if(Bpw_inneKonto(t,Bpw_kto))throw Bpw_przerwane();if(S.status===401)throw C(a),u("VildaSync: b\u0142\u0105d uwierzytelnienia przy pull. Slot m\xF3g\u0142 zosta\u0107 usuni\u0119ty.","AUTH_FAILED");if(!S.ok)throw u("VildaSync: b\u0142\u0105d odczytu statusu ("+S.status+").","STATUS_FAILED",{httpStatus:S.status});var w=await S.json();if(Bpw_inneKonto(t,Bpw_kto))throw Bpw_przerwane()}else{var l=await f(i+"/v1/slots/"+a+"/status",{method:"GET",headers:{Authorization:"Bearer "+r}});if(Bpw_inneKonto(t,Bpw_kto))throw Bpw_przerwane();if(!l.ok){P();var d={action:"not-registered",httpStatus:l.status};return y(p,{operation:"pull",result:d}),d}var s=await l.json();if(Bpw_inneKonto(t,Bpw_kto))throw Bpw_przerwane();c.registered=!0,c.localEtag=null,M=null,vt(a),St(a),T(a,c);var w=s}var h=K()?M:c.localEtag;CareReplay=h&&h===w.etag?await CareSyncReplay(t,a,w.etag):null;if(h&&h===w.etag&&!CareReplay){var D=await Vt();if(Bpw_inneKonto(t,Bpw_kto))throw Bpw_przerwane();if(D)c.localEtag=null,M=null,vt(a),St(a);else{P();var _={action:"up-to-date",etag:w.etag};return Bpw_dren(a,r,i,t,Bpw_kto),y(p,{operation:"pull",result:_}),_}}var g={Authorization:"Bearer "+r},v=CareReplay?null:K()?M:c.localEtag;v&&(g["If-None-Match"]='"'+v+'"');var A=await f(i+"/v1/slots/"+a+"/blob",{method:"GET",headers:g},Bgz_czas({byteLength:w&&typeof w.size=="number"?w.size:0}));if(Bpw_inneKonto(t,Bpw_kto))throw Bpw_przerwane();if(A.status===304){P();var F={action:"up-to-date",etag:v};return Bpw_dren(a,r,i,t,Bpw_kto),y(p,{operation:"pull",result:F}),F}if(A.status===401)throw u("VildaSync: b\u0142\u0105d uwierzytelnienia przy pobieraniu bloba.","AUTH_FAILED");if(A.status===404){P();var H={action:"no-remote-blob"};return Bpw_dren(a,r,i,t,Bpw_kto),y(p,{operation:"pull",result:H}),H}if(!A.ok)throw u("VildaSync: b\u0142\u0105d pobierania danych ("+A.status+").","DOWNLOAD_FAILED",{httpStatus:A.status});var x=await Bnd_czytaj(A,w&&typeof w.size=="number"?w.size:0),W;Bnd_zglos({phase:"decrypt"});try{W=await ut(x,n)}catch{throw u("VildaSync: b\u0142\u0105d odszyfrowania danych. Mo\u017Cliwa zmiana masterKey lub uszkodzenie danych.","DECRYPT_FAILED")}W=await Bgz_rozpakuj(W);var U;try{U=JSON.parse(new TextDecoder().decode(W))}catch{throw u("VildaSync: uszkodzone dane sync (nieprawid\u0142owy format JSON).","PARSE_FAILED")}if(Bpw_inneKonto(t,Bpw_kto))throw Bpw_przerwane();var et=await t.mergeSyncPayload(U,{onProgress:function(E){try{typeof o.document<"u"&&o.document.dispatchEvent&&o.document.dispatchEvent(new CustomEvent("vilda:vault-merge-progress",{detail:E,bubbles:!1}))}catch{}}}),V=Lt(A.headers.get("ETag"))||w.etag;CareReplayed=true;c.localEtag=V,c.rawSize=W.byteLength,c.rawEtag=V,c.lastSyncAt=new Date().toISOString(),M=V,ft(a,V,t),T(a,c),P();var J={action:"merged",etag:V,mergeResult:et,staleDevice:et&&et.staleDevice||null};return Nv(J.staleDevice),Qcs(et&&et.clockSkew||null),Bpw_dren(a,r,i,t,Bpw_kto),y(p,{operation:"pull",result:J}),J}catch(E){/* P-SESJA-ZAPISU (przeglad 4, ADW4-3): blad pobrania po zalogowaniu innego konta albo blokadzie (np. /status 500, siec, limit czasu) — SESSION_CHANGED: nalezy do poprzedniej sesji. */var Bpw_e=Bpw_inneKonto(t,Bpw_kto)?Bpw_przerwane():E;throw y(k,{operation:"pull",error:Bpw_e}),Bpw_e}finally{CareSyncReplayDone(CareReplay,CareReplayed)}}async function Ht(){I(),y(L,{operation:"full"});try{var t=await Y(),e=await ht(),a={pull:t,push:e};return y(p,{operation:"full",result:a}),a}catch(r){throw y(k,{operation:"full",error:r}),r}}async function xt(){var t=I(),e=await t.getSyncMaterial();return m(e.slotId)}async function Wt(){var t=I(),e=await t.getSyncMaterial();C(e.slotId)}async function Jt(){var t=I(),e=await t.getSyncMaterial(),a=e.slotId,r=m(a);if(!r.registered)return{action:"not-registered"};var n=await f(j()+"/v1/slots/"+a,{method:"DELETE",headers:{Authorization:"Bearer "+e.authToken}});if(n.status===204||n.status===401)return C(a),{action:"deleted"};throw u("VildaSync: b\u0142\u0105d usuwania slotu ("+n.status+").","DELETE_FAILED",{httpStatus:n.status})}/* P-NOWE-URZADZENIE (decyzja wlasciciela 2026-10-12, etap 1): sonda bez rozstrzygniecia oddaje inconclusive:true - sejf zablokowany, brak tozsamosci synchronizacji, blad sieci, timeout, zadanie przerwane (np. przeladowanie karty w trakcie sondy) albo odpowiedz /status inna niz 200 i 404. Pewne "nie" zostaje bez tego pola: urzadzenie zna slot (albo slot obrocono w innej karcie) lub serwer nie ma slotu (404). Integracja odhacza sonde w karcie (vilda-probe-done-v1) tylko po pewnym "nie". Dotad kazdy blad dawal to samo "nie", a przeladowanie w trakcie sondy gubilo pytanie o pobranie danych. */async function Xt(){var Pn0={isNewDevice:!1,lastModified:null,inconclusive:!0},t;try{t=I()}catch{return Pn0}var e;try{e=await t.getSyncMaterial()}catch{return Pn0}var a=e.slotId,r=m(a);if(r.registered||Brv_jest(a))return{isNewDevice:!1,lastModified:null};try{var n=await f(j()+"/v1/slots/"+a+"/status",{method:"GET",headers:{Authorization:"Bearer "+e.authToken}});if(n.status===404)return{isNewDevice:!1,lastModified:null};if(!n.ok)return Pn0;var i=await n.json();return{isNewDevice:!0,lastModified:i.lastModified||i.updatedAt||null}}catch{return Pn0}}async function pt(t,e,a,r){Brv_stop(t);var n=j(),i=await f(n+"/v1/slots/"+t+"/register",{method:"POST",headers:{"Content-Type":"application/octet-stream","X-Auth-Token-Hash":a},body:r},Bgz_czas(r));if(i.status===201){var c=await i.json().catch(function(){return{}});return{action:"registered",etag:c.etag||null}}if(i.status===409){var l=await f(n+"/v1/slots/"+t+"/blob",{method:"PUT",headers:{"Content-Type":"application/octet-stream",Authorization:"Bearer "+e},body:r},Bgz_czas(r));if(l.status===200){var d=await l.json().catch(function(){return{}});return{action:"uploaded",etag:d.etag||null}}throw u("VildaSync.uploadToSlot: b\u0142\u0105d uploadu na istniej\u0105cy slot ("+l.status+").","UPLOAD_FAILED",{httpStatus:l.status})}throw u("VildaSync.uploadToSlot: b\u0142\u0105d rejestracji slotu ("+i.status+").","REGISTER_FAILED",{httpStatus:i.status})}async function _t(t,e){var a=await f(j()+"/v1/slots/"+t,{method:"DELETE",headers:{Authorization:"Bearer "+e}});if(a.status===204)return{action:"deleted"};if(a.status===401||a.status===404)return{action:"absent"};throw u("VildaSync.deleteSlotWithMaterial: b\u0142\u0105d kasacji slotu ("+a.status+").","DELETE_FAILED",{httpStatus:a.status})}async function $t(t){var e=I();if(typeof e.rotateSyncIdentity!="function")throw u("VildaSync.revokeAllDevices: vault nie wspiera rotacji to\u017Csamo\u015Bci.","NOT_SUPPORTED");y(L,{operation:"revoke"});try{var a=await e.getSyncMaterial(),r=a.slotId,n=a.authToken;/* P-SYNC-ROTACJA-KART: karta z poprzednia tozsamoscia nie obraca jej drugi raz (odswiezenie strony wczytuje biezaca). Znacznik zaraz po rotacji, przed rejestracja nowego slotu i kasowaniem starego, wiec obowiazuje takze, gdy ktorys z tych krokow sie nie uda. */Brv_stop(r);var i=await e.rotateSyncIdentity(t),c=await e.getSyncMaterial(),l=c.slotId;l!==r&&Brv_oznacz(r);var d=await e.exportSyncPayload(),s=new TextEncoder().encode(JSON.stringify(d)),w=await G(await Bgz_pakuj(s),c.syncEncKey),S=await pt(l,c.authToken,c.authTokenHash,w),h=m(l)||{};h.registered=!0,h.localEtag=S.etag||null,h.lastSyncAt=new Date().toISOString(),T(l,h);var D=!1;try{var _=await _t(r,n);D=_.action==="deleted"||_.action==="absent"}catch{D=!1}C(r);var g={recoveryKey:i.recoveryKey,oldSlotId:r,newSlotId:l,oldSlotRevoked:D};return y(p,{operation:"revoke",result:g}),g}catch(v){throw y(k,{operation:"revoke",error:v}),v}}async function qt(){var t=I();y(L,{operation:"restore-prev"});try{var e=await t.getSyncMaterial(),a=e.slotId,r=e.authToken;Brv_stop(a);var n=j(),i=await f(n+"/v1/slots/"+a+"/blob/restore-prev",{method:"POST",headers:{Authorization:"Bearer "+r}});if(i.status===404)throw u("VildaSync: brak zarchiwizowanej poprzedniej wersji na serwerze.","NO_ARCHIVE");if(i.status===401)throw u("VildaSync: b\u0142\u0105d uwierzytelnienia przy przywracaniu.","AUTH_FAILED");if(!i.ok){var c=await i.json().catch(function(){return{}});throw u("VildaSync: przywracanie nieudane ("+i.status+"): "+(c.error&&c.error.message||""),"RESTORE_FAILED",{httpStatus:i.status})}var l=await i.json(),d=m(a);d.localEtag=null,T(a,d);var s=await Y(),w={restored:l,pull:s};return y(p,{operation:"restore-prev",result:w}),w}catch(S){throw y(k,{operation:"restore-prev",error:S}),S}}function Zt(t){typeof t=="function"&&L.push(t)}function Qt(t){typeof t=="function"&&p.push(t)}function Rt(t){typeof t=="function"&&k.push(t)}o.VildaSync={syncPush:ht,syncPull:Y,syncFull:Ht,resetSessionPullGuard:Ut,getSyncStatus:xt,clearSyncState:Wt,deleteSyncSlot:Jt,onSyncStart:Zt,onSyncComplete:Qt,onSyncError:Rt,probeNewDevice:Xt,restorePrevBlob:qt,revokeAllDevices:$t,uploadToSlot:pt,deleteSlotWithMaterial:_t,_loadSyncState:m,_saveSyncState:T,_clearSyncStateForSlot:C}})(typeof window<"u"?window:typeof globalThis<"u"?globalThis:null);
+async function Bpw_pull(){var CareReplay=null,CareReplayed=false;var t=I(),Bpw_kto=Bpw_konto(t);y(L,{operation:"pull"});var e;try{e=await t.getSyncMaterial()}catch(E){throw y(k,{operation:"pull",error:E}),E}var a=e.slotId,r=e.authToken,n=e.syncEncKey,i=j(),c=m(a);K()&&M==null&&(M=Pt(a,t));try{Brv_stop(a);if(c.registered){var S=await f(i+"/v1/slots/"+a+"/status",{method:"GET",headers:{Authorization:"Bearer "+r}});if(Bpw_inneKonto(t,Bpw_kto))throw Bpw_przerwane();if(S.status===401)throw C(a),u("VildaSync: b\u0142\u0105d uwierzytelnienia przy pull. Slot m\xF3g\u0142 zosta\u0107 usuni\u0119ty.","AUTH_FAILED");if(!S.ok)throw u("VildaSync: b\u0142\u0105d odczytu statusu ("+S.status+").","STATUS_FAILED",{httpStatus:S.status});var w=await S.json();if(Bpw_inneKonto(t,Bpw_kto))throw Bpw_przerwane()}else{var l=await f(i+"/v1/slots/"+a+"/status",{method:"GET",headers:{Authorization:"Bearer "+r}});if(Bpw_inneKonto(t,Bpw_kto))throw Bpw_przerwane();if(!l.ok){P();var d={action:"not-registered",httpStatus:l.status};return y(p,{operation:"pull",result:d}),d}var s=await l.json();if(Bpw_inneKonto(t,Bpw_kto))throw Bpw_przerwane();c.registered=!0,c.localEtag=null,M=null,vt(a),St(a),T(a,c);var w=s}var h=K()?M:c.localEtag;CareReplay=h&&h===w.etag?await CareSyncReplay(t,a,w.etag):null;if(h&&h===w.etag&&!CareReplay){var D=await Vt();if(Bpw_inneKonto(t,Bpw_kto))throw Bpw_przerwane();if(D)c.localEtag=null,M=null,vt(a),St(a);else{P();var _={action:"up-to-date",etag:w.etag};return Bpw_dren(a,r,i,t,Bpw_kto),y(p,{operation:"pull",result:_}),_}}var g={Authorization:"Bearer "+r},v=CareReplay?null:K()?M:c.localEtag;v&&(g["If-None-Match"]='"'+v+'"');var A=await f(i+"/v1/slots/"+a+"/blob",{method:"GET",headers:g},Bgz_czas({byteLength:w&&typeof w.size=="number"?w.size:0}));if(Bpw_inneKonto(t,Bpw_kto))throw Bpw_przerwane();if(A.status===304){P();var F={action:"up-to-date",etag:v};return Bpw_dren(a,r,i,t,Bpw_kto),y(p,{operation:"pull",result:F}),F}if(A.status===401)throw u("VildaSync: b\u0142\u0105d uwierzytelnienia przy pobieraniu bloba.","AUTH_FAILED");if(A.status===404){P();var H={action:"no-remote-blob"};return Bpw_dren(a,r,i,t,Bpw_kto),y(p,{operation:"pull",result:H}),H}if(!A.ok)throw u("VildaSync: b\u0142\u0105d pobierania danych ("+A.status+").","DOWNLOAD_FAILED",{httpStatus:A.status});var x=await Bnd_czytaj(A,w&&typeof w.size=="number"?w.size:0),W;Bnd_zglos({phase:"decrypt"});try{W=await ut(x,n)}catch{throw u("VildaSync: b\u0142\u0105d odszyfrowania danych. Mo\u017Cliwa zmiana masterKey lub uszkodzenie danych.","DECRYPT_FAILED")}W=await Bgz_rozpakuj(W);var U;try{U=JSON.parse(new TextDecoder().decode(W))}catch{throw u("VildaSync: uszkodzone dane sync (nieprawid\u0142owy format JSON).","PARSE_FAILED")}if(Bpw_inneKonto(t,Bpw_kto))throw Bpw_przerwane();var et=await t.mergeSyncPayload(U,{onProgress:function(E){try{typeof o.document<"u"&&o.document.dispatchEvent&&o.document.dispatchEvent(new CustomEvent("vilda:vault-merge-progress",{detail:E,bubbles:!1}))}catch{}}}),V=Lt(A.headers.get("ETag"))||w.etag;CareReplayed=true;c.localEtag=V,c.rawSize=W.byteLength,c.rawEtag=V,c.lastSyncAt=new Date().toISOString(),M=V,ft(a,V,t),T(a,c),P();var J={action:"merged",etag:V,mergeResult:et,staleDevice:et&&et.staleDevice||null};return Nv(J.staleDevice),Qcs(et&&et.clockSkew||null),Bpw_dren(a,r,i,t,Bpw_kto),y(p,{operation:"pull",result:J}),J}catch(E){/* P-SESJA-ZAPISU (przeglad 4, ADW4-3): blad pobrania po zalogowaniu innego konta albo blokadzie (np. /status 500, siec, limit czasu) — SESSION_CHANGED: nalezy do poprzedniej sesji. */var Bpw_e=Bpw_inneKonto(t,Bpw_kto)?Bpw_przerwane():E;throw y(k,{operation:"pull",error:Bpw_e}),Bpw_e}finally{CareSyncReplayDone(CareReplay,CareReplayed)}}async function Ht(){I(),y(L,{operation:"full"});try{var t=await Y(),e=await ht(),a={pull:t,push:e};return y(p,{operation:"full",result:a}),a}catch(r){throw y(k,{operation:"full",error:r}),r}}async function xt(){var t=I(),e=await t.getSyncMaterial();return m(e.slotId)}async function Wt(){var t=I(),e=await t.getSyncMaterial();C(e.slotId)}async function Jt(){
+  var ticket=TLibOperationContext(),vault=I(),material=await vault.getSyncMaterial();
+  TLibFence(ticket.ctx,ticket.token);
+  var assertCurrent=await TLibGuardLegacyDelete(material.slotId,material.authToken,ticket);
+  assertCurrent();
+  var state=m(material.slotId);
+  if(!state.registered)return{action:"not-registered"};
+  var response=await f(j()+"/v1/slots/"+material.slotId,{method:"DELETE",headers:{Authorization:"Bearer "+material.authToken}});
+  assertCurrent();
+  if(response.status===204||response.status===401)return C(material.slotId),{action:"deleted"};
+  throw u("VildaSync: błąd usuwania slotu ("+response.status+").","DELETE_FAILED",{httpStatus:response.status});
+}/* P-NOWE-URZADZENIE (decyzja wlasciciela 2026-10-12, etap 1): sonda bez rozstrzygniecia oddaje inconclusive:true - sejf zablokowany, brak tozsamosci synchronizacji, blad sieci, timeout, zadanie przerwane (np. przeladowanie karty w trakcie sondy) albo odpowiedz /status inna niz 200 i 404. Pewne "nie" zostaje bez tego pola: urzadzenie zna slot (albo slot obrocono w innej karcie) lub serwer nie ma slotu (404). Integracja odhacza sonde w karcie (vilda-probe-done-v1) tylko po pewnym "nie". Dotad kazdy blad dawal to samo "nie", a przeladowanie w trakcie sondy gubilo pytanie o pobranie danych. */async function Xt(){var Pn0={isNewDevice:!1,lastModified:null,inconclusive:!0},t;try{t=I()}catch{return Pn0}var e;try{e=await t.getSyncMaterial()}catch{return Pn0}var a=e.slotId,r=m(a);if(r.registered||Brv_jest(a))return{isNewDevice:!1,lastModified:null};try{var n=await f(j()+"/v1/slots/"+a+"/status",{method:"GET",headers:{Authorization:"Bearer "+e.authToken}});if(n.status===404)return{isNewDevice:!1,lastModified:null};if(!n.ok)return Pn0;var i=await n.json();return{isNewDevice:!0,lastModified:i.lastModified||i.updatedAt||null}}catch{return Pn0}}async function pt(t,e,a,r){Brv_stop(t);var n=j(),i=await f(n+"/v1/slots/"+t+"/register",{method:"POST",headers:{"Content-Type":"application/octet-stream","X-Auth-Token-Hash":a},body:r},Bgz_czas(r));if(i.status===201){var c=await i.json().catch(function(){return{}});return{action:"registered",etag:c.etag||null}}if(i.status===409){var l=await f(n+"/v1/slots/"+t+"/blob",{method:"PUT",headers:{"Content-Type":"application/octet-stream",Authorization:"Bearer "+e},body:r},Bgz_czas(r));if(l.status===200){var d=await l.json().catch(function(){return{}});return{action:"uploaded",etag:d.etag||null}}throw u("VildaSync.uploadToSlot: b\u0142\u0105d uploadu na istniej\u0105cy slot ("+l.status+").","UPLOAD_FAILED",{httpStatus:l.status})}throw u("VildaSync.uploadToSlot: b\u0142\u0105d rejestracji slotu ("+i.status+").","REGISTER_FAILED",{httpStatus:i.status})}async function _t(t,e){
+  var assertCurrent=await TLibGuardLegacyDelete(t,e);
+  assertCurrent();
+  var a=await f(j()+"/v1/slots/"+t,{method:"DELETE",headers:{Authorization:"Bearer "+e}});
+  assertCurrent();
+  if(a.status===204)return{action:"deleted"};
+  if(a.status===401||a.status===404)return{action:"absent"};
+  throw u("VildaSync.deleteSlotWithMaterial: błąd kasacji slotu ("+a.status+").","DELETE_FAILED",{httpStatus:a.status});
+}async function $t(t){var e=I();if(typeof e.rotateSyncIdentity!="function")throw u("VildaSync.revokeAllDevices: vault nie wspiera rotacji to\u017Csamo\u015Bci.","NOT_SUPPORTED");y(L,{operation:"revoke"});try{var a=await e.getSyncMaterial(),r=a.slotId,n=a.authToken;/* P-SYNC-ROTACJA-KART: karta z poprzednia tozsamoscia nie obraca jej drugi raz (odswiezenie strony wczytuje biezaca). Znacznik zaraz po rotacji, przed rejestracja nowego slotu i kasowaniem starego, wiec obowiazuje takze, gdy ktorys z tych krokow sie nie uda. */Brv_stop(r);var i=await e.rotateSyncIdentity(t),c=await e.getSyncMaterial(),l=c.slotId;l!==r&&Brv_oznacz(r);var d=await e.exportSyncPayload(),s=new TextEncoder().encode(JSON.stringify(d)),w=await G(await Bgz_pakuj(s),c.syncEncKey),S=await pt(l,c.authToken,c.authTokenHash,w),h=m(l)||{};h.registered=!0,h.localEtag=S.etag||null,h.lastSyncAt=new Date().toISOString(),T(l,h);var D=!1;try{var _=await _t(r,n);D=_.action==="deleted"||_.action==="absent"}catch{D=!1}C(r);var g={recoveryKey:i.recoveryKey,oldSlotId:r,newSlotId:l,oldSlotRevoked:D};return y(p,{operation:"revoke",result:g}),g}catch(v){throw y(k,{operation:"revoke",error:v}),v}}async function qt(){var t=I();y(L,{operation:"restore-prev"});try{var e=await t.getSyncMaterial(),a=e.slotId,r=e.authToken;Brv_stop(a);var n=j(),i=await f(n+"/v1/slots/"+a+"/blob/restore-prev",{method:"POST",headers:{Authorization:"Bearer "+r}});if(i.status===404)throw u("VildaSync: brak zarchiwizowanej poprzedniej wersji na serwerze.","NO_ARCHIVE");if(i.status===401)throw u("VildaSync: b\u0142\u0105d uwierzytelnienia przy przywracaniu.","AUTH_FAILED");if(!i.ok){var c=await i.json().catch(function(){return{}});throw u("VildaSync: przywracanie nieudane ("+i.status+"): "+(c.error&&c.error.message||""),"RESTORE_FAILED",{httpStatus:i.status})}var l=await i.json(),d=m(a);d.localEtag=null,T(a,d);var s=await Y(),w={restored:l,pull:s};return y(p,{operation:"restore-prev",result:w}),w}catch(S){throw y(k,{operation:"restore-prev",error:S}),S}}function Zt(t){typeof t=="function"&&L.push(t)}function Qt(t){typeof t=="function"&&p.push(t)}function Rt(t){typeof t=="function"&&k.push(t)}/* Care-template relay: explicit opt-in, one coalesced phase beside the existing
+ * public sync cycle. Patient transport and its exact returned promise stay intact.
+ * Pending operations and their once-encrypted wire identity belong to the library DB. */
+var TLibActive = null , TLibFlight = null , TLibGeneration = 0 , TLibObserved = new WeakSet ( ) , TLibStatus = {
+  state : "inactive"
+}
+;
+function TLibCurrent ( ctx ) {
+  return ! ! ( ctx && ctx === TLibActive && o . VildaVault === ctx . vault && ctx . vault . isUnlocked ( ) && Bpw_konto ( ctx . vault ) === ctx . userId )
+}
+function TLibAuthorityCurrent(ctx) {
+  return !!(ctx && ctx.authorityOnly === true && o.VildaVault === ctx.vault &&
+    ctx.vault.isUnlocked() && Bpw_konto(ctx.vault) === ctx.userId);
+}
+function TLibError ( code , status ) {
+  return u ( "Nie udało się zsynchronizować biblioteki szablonów." , code , status ? {
+    httpStatus : status
+  }
+  : null )
+}
+function TLibPublish ( ctx , value ) {
+  if ( ! TLibCurrent ( ctx ) ) return ;
+  TLibStatus = Object . assign ( {
+    state : "idle"
+  }
+  , value ) ;
+  try {
+    var E = o . CustomEvent || ( typeof CustomEvent === "function" ? CustomEvent : null ) ;
+    E && o . document && o . document . dispatchEvent && o . document . dispatchEvent ( new E ( "vilda:template-library-sync-status" , {
+      detail : TLibGetStatus ( ) , bubbles : false
+    }
+    ) )
+  }
+  catch {
+  }
+}
+function TLibGetStatus ( ) {
+  if ( ! TLibCurrent ( TLibActive ) ) return {
+    state : "inactive"
+  }
+  ;
+  var result = Object . assign ( {
+  }
+  , TLibStatus ) ;
+  result . error && ( result . error = Object . assign ( {
+  }
+  , result . error ) ) ;
+  return result
+}
+function TLibEnabled ( ) {
+  try {
+    var integration = o . VildaSyncIntegration ;
+    return integration && typeof integration . isSyncEnabled === "function" ? integration . isSyncEnabled ( ) : ! ! ( o . localStorage && o . localStorage . getItem ( "vilda-sync-enabled-v1" ) === "true" )
+  }
+  catch {
+    return false
+  }
+}
+function TLibDeactivate ( ) {
+  var ctx = TLibActive ;
+  TLibActive = null ;
+  TLibStatus = {
+    state : "inactive"
+  }
+  ;
+  if ( ctx && ctx . unsubscribe ) try {
+    ctx . unsubscribe ( )
+  }
+  catch {
+  }
+}
+function TLibWake ( ) {
+  if ( ! TLibCurrent ( TLibActive ) || ! TLibEnabled ( ) ) return ;
+  TLibStart ( ) . catch ( function ( ) {
+  }
+  )
+}
+function TLibActivate ( ) {
+  var vault = I ( ) , uid = Bpw_konto ( vault ) ;
+  if ( ! uid || typeof vault . captureCareTemplateSession !== "function" ) throw TLibError ( "CARE_TEMPLATE_API_UNAVAILABLE" ) ;
+  if ( TLibCurrent ( TLibActive ) ) return TLibGetStatus ( ) ;
+  TLibDeactivate ( ) ;
+  var ctx = {
+    vault : vault , userId : uid , generation : ++ TLibGeneration , unsubscribe : null , pending : null
+  }
+  ;
+  TLibActive = ctx ;
+  TLibStatus = {
+    state : "idle"
+  }
+  ;
+  if ( ! TLibObserved . has ( vault ) && typeof vault . onLock === "function" ) {
+    TLibObserved . add ( vault ) ;
+    vault . onLock ( function ( ) {
+      TLibActive && TLibActive . vault === vault && TLibDeactivate ( )
+    }
+    )
+  }
+  if ( typeof vault . onCarePlanTemplateChanged === "function" ) ctx . unsubscribe = vault . onCarePlanTemplateChanged ( function ( event ) {
+    if ( event && event . source === "local" && TLibCurrent ( ctx ) ) {
+      ctx . pending = true ;
+      TLibWake ( )
+    }
+  }
+  ) ;
+  return TLibGetStatus ( )
+}
+function TLibFence ( ctx , token ) {
+  if (ctx && ctx.operationOnly === true) {
+    if (o.VildaVault !== ctx.vault) throw TLibError("SESSION_CHANGED");
+    ctx.vault.assertSyncOperationSession(token);
+    return;
+  }
+  if ( ! ( ctx && ctx.authorityOnly === true ? TLibAuthorityCurrent(ctx) : TLibCurrent(ctx) ) ) throw TLibError ( "SESSION_CHANGED" ) ;
+  TLibMaterial(token);
+  ctx . vault . assertCareTemplateSession ( token ) ;
+  Brv_stop ( token . slotId )
+}
+function TLibMaterial(material) {
+  if (!material || !/^[a-f0-9]{64}$/.test(material.slotId || "") ||
+      typeof material.authToken !== "string" || !material.authToken) throw TLibError("CARE_TEMPLATE_IDENTITY_INVALID");
+}
+function TLibInteger ( value , min ) {
+  return Number . isSafeInteger ( value ) && value >= min
+}
+function TLibReceipt ( value , token ) {
+  if ( ! value || value . ok !== true || value . namespace !== "care-template-library" || value . protocol !== 1 || value . slotId !== token . slotId || typeof value . initialized !== "boolean" || ! TLibInteger ( value . epoch , value . initialized ? 1 : 0 ) || ! TLibInteger ( value . headSeq , 0 ) || ! TLibInteger ( value . floorSeq , 0 ) || value . floorSeq > value . headSeq || ( ! value . initialized && ( value . epoch !== 0 || value . headSeq !== 0 || value . floorSeq !== 0 ) ) ) throw TLibError ( "CARE_TEMPLATE_PROTOCOL_UNSUPPORTED" ) ;
+  return value
+}
+async function TLibHash ( text ) {
+  var bytes = new Uint8Array ( await o . crypto . subtle . digest ( "SHA-256" , new TextEncoder ( ) . encode ( text ) ) ) ;
+  return Array . prototype . map . call ( bytes , function ( b ) {
+    return b . toString ( 16 ) . padStart ( 2 , "0" )
+  }
+  ) . join ( "" )
+}
+/* One request deadline includes headers and body. This is not a scheduler:
+ * it uses the existing HTTP budget and never changes the patient request helper. */
+async function TLibHTTP(ctx, token, url, options) {
+  TLibFence(ctx, token);
+  var controller=new AbortController(), timer=null, expired=false, reader=null;
+  var maxBytes=1048576+65536;
+  function current() {
+    TLibFence(ctx, token);
+    if (expired) throw TLibError("CARE_TEMPLATE_TIMEOUT");
+  }
+  var deadline=new Promise(function(resolve,reject) {
+    timer=setTimeout(function() {
+      expired=true;
+      controller.abort();
+      var error=TLibError("CARE_TEMPLATE_TIMEOUT");
+      try { TLibFence(ctx,token); } catch(changed) { error=changed; }
+      reject(error);
+    },Mt);
+  });
+  var work=Promise.resolve().then(async function() {
+    var response=await fetch(url,Object.assign({cache:"no-store",credentials:"omit"},options,{signal:controller.signal}));
+    current();
+    var declared=Number(response.headers&&response.headers.get("Content-Length"));
+    if (Number.isFinite(declared)&&declared>maxBytes) throw TLibError("CARE_TEMPLATE_RESPONSE_TOO_LARGE");
+    var bytes;
+    if (response.body&&typeof response.body.getReader==="function") {
+      reader=response.body.getReader();
+      var parts=[],size=0;
+      for (;;) {
+        var part=await reader.read();
+        current();
+        if (part.done) break;
+        var chunk=new Uint8Array(part.value);
+        size+=chunk.byteLength;
+        if (size>maxBytes) throw TLibError("CARE_TEMPLATE_RESPONSE_TOO_LARGE");
+        parts.push(chunk);
+      }
+      bytes=new Uint8Array(size);
+      for (var index=0,offset=0;index<parts.length;index++) { bytes.set(parts[index],offset); offset+=parts[index].length; }
+    } else {
+      bytes=new Uint8Array(await response.arrayBuffer());
+      current();
+      if (bytes.byteLength>maxBytes) throw TLibError("CARE_TEMPLATE_RESPONSE_TOO_LARGE");
+    }
+    current();
+    var value;
+    try { value=JSON.parse(new TextDecoder("utf-8",{fatal:true}).decode(bytes)); }
+    catch { throw TLibError("CARE_TEMPLATE_PROTOCOL_UNSUPPORTED",response.status); }
+    current();
+    return {response:response,value:value};
+  });
+  try { return await Promise.race([work,deadline]); }
+  finally {
+    clearTimeout(timer);
+    controller.abort();
+    if (reader) {
+      try { Promise.resolve(reader.cancel()).catch(function(){}); } catch {}
+      try { reader.releaseLock(); } catch {}
+    }
+  }
+}
+async function TLibRequest ( ctx , token , path , body , target ) {
+  TLibFence ( ctx , token ) ;
+  var material=target||token;
+  TLibMaterial(material);
+  var options = {
+    method : body === undefined ? "GET" : "POST" , headers : {
+      Authorization : "Bearer " + material . authToken
+    }
+  }
+  ;
+  if ( body !== undefined ) {
+    options . headers [ "Content-Type" ] = "application/json" ;
+    options . body = JSON . stringify ( body )
+  }
+  var packet = await TLibHTTP(ctx,token,j()+"/v1/slots/"+material.slotId+"/template-library/"+path,options);
+  TLibFence(ctx,token);
+  var response=packet.response,value=packet.value;
+  if ( ! response . ok ) {
+    if ( response . status === 429 ) ctx . retryAt = Date . now ( ) + yt ( response ) ;
+    var typed = value && value . namespace === "care-template-library" && value . protocol === 1 && value . slotId === material . slotId ;
+    var code = typed && value . error && typeof value . error . code === "string" ? value . error . code : "unsupported" ;
+    var error = TLibError ( code === "epoch_mismatch" ? "CARE_TEMPLATE_EPOCH_CHANGED" : code === "identity_required" ? "CARE_TEMPLATE_IDENTITY_REQUIRED" : code === "unsupported" ? "CARE_TEMPLATE_PROTOCOL_UNSUPPORTED" : "CARE_TEMPLATE_REMOTE_" + code . toUpperCase ( ) . replace ( /[^A-Z0-9_]/g , "" ) . slice ( 0 , 48 ) , response . status ) ;
+    if ( typed && code === "identity_required" && response . status === 409 && value . initialized === false && value . epoch === 0 ) error . identityRequired = true ;
+    throw error
+  }
+  return TLibReceipt ( value , material )
+}
+async function TLibIdentity ( ctx , token ) {
+  TLibFence ( ctx , token ) ;
+  var hash = await TLibHash ( token . authToken ) ;
+  TLibFence ( ctx , token ) ;
+  var packet=await TLibHTTP(ctx,token,j()+"/v1/slots/"+token.slotId+"/register-identity",{method:"POST",headers:{"X-Auth-Token-Hash":hash}});
+  TLibFence(ctx,token);
+  var response=packet.response,receipt=packet.value;
+  if(response.status!==200&&response.status!==201)throw TLibError("CARE_TEMPLATE_IDENTITY_REGISTER_FAILED",response.status);
+  if ( ! receipt || receipt . ok !== true || receipt . slotId !== token . slotId ) throw TLibError ( "CARE_TEMPLATE_PROTOCOL_UNSUPPORTED" , response . status )
+}
+function TLibWire ( event ) {
+  return event && typeof event . eid === "string" && /^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$/ . test ( event . eid ) && event . body && typeof event . body . iv === "string" && typeof event . body . data === "string"
+}
+async function TLibPull ( ctx , token , remote , local ) {
+  var cursor = local . cursor , observedHead = remote . headSeq ;
+  if ( ! TLibInteger ( cursor , remote . floorSeq ) ) throw TLibError ( "CARE_TEMPLATE_INVALID_PAGE" ) ;
+  for ( var pages = 0 ;
+  pages <= 16384 ;
+  pages ++ ) {
+    var page = await TLibRequest ( ctx , token , "changes?epoch=" + remote . epoch + "&since=" + cursor + "&limit=64" ) ;
+    if ( page . epoch !== remote . epoch ) throw TLibError ( "CARE_TEMPLATE_EPOCH_CHANGED" ) ;
+    if ( page . floorSeq !== remote . floorSeq || page . headSeq < observedHead ) throw TLibError ( "CARE_TEMPLATE_INVALID_PAGE" ) ;
+    observedHead = page . headSeq ;
+    if ( ! Array . isArray ( page . events ) || page . events . length > 200 || typeof page . hasMore !== "boolean" || ! TLibInteger ( page . cursor , 0 ) || page . cursor < cursor || page . cursor > page . headSeq ) throw TLibError ( "CARE_TEMPLATE_INVALID_PAGE" ) ;
+    var previous = Math . max ( cursor , page . floorSeq ) , ids = Object . create ( null ) ;
+    for ( var index = 0 ;
+    index < page . events . length ;
+    index ++ ) {
+      var event = page . events [ index ] ;
+      if ( ! TLibWire ( event ) || ! TLibInteger ( event . seq , 1 ) || event . seq !== previous + 1 || ids [ event . eid ] || ! /^[a-f0-9]{64}$/ . test ( event . digest || "" ) ) throw TLibError ( "CARE_TEMPLATE_INVALID_PAGE" ) ;
+      ids [ event . eid ] = true ;
+      previous = event . seq
+    }
+    if ( page . cursor !== previous || ( ! page . events . length && page . headSeq > previous ) || page . hasMore !== ( page . cursor < page . headSeq ) ) throw TLibError ( "CARE_TEMPLATE_INVALID_PAGE" ) ;
+    TLibFence ( ctx , token ) ;
+    await ctx . vault . applyCareTemplateEvents ( token , {
+      epoch : remote . epoch , expectedCursor : cursor , cursor : page . cursor , events : page . events
+    }
+    ) ;
+    TLibFence ( ctx , token ) ;
+    cursor = page . cursor ;
+    if ( ! page . hasMore ) return cursor
+  }
+  throw TLibError ( "CARE_TEMPLATE_PAGE_LIMIT" )
+}
+async function TLibPush ( ctx , token , remote ) {
+  var limits = remote . limits ;
+  if ( ! limits || ! TLibInteger ( limits . maxBodyBytes , 1024 ) || ! TLibInteger ( limits . maxBatchEvents , 1 ) ) throw TLibError ( "CARE_TEMPLATE_PROTOCOL_UNSUPPORTED" ) ;
+  var maxBytes = Math . min ( 1048576 , limits . maxBodyBytes ) , limit = Math . min ( 64 , 200 , limits . maxBatchEvents ) ;
+  for ( var batches = 0 ;
+  batches <= 16384 ;
+  batches ++ ) {
+    TLibFence ( ctx , token ) ;
+    var pending = await ctx . vault . prepareCareTemplatePending ( token , {
+      epoch : remote . epoch , maxWireBytes : maxBytes - 512 , limit : limit
+    }
+    ) ;
+    TLibFence ( ctx , token ) ;
+    if ( ! pending || pending . epoch !== remote . epoch || ! Array . isArray ( pending . events ) || pending . events . length > limit || ! pending . events . every ( TLibWire ) ) throw TLibError ( "CARE_TEMPLATE_INVALID_PENDING" ) ;
+    if ( ! pending . events . length ) return ;
+    var sent = pending . events , body = {
+      namespace : "care-template-library" , protocol : 1 , epoch : remote . epoch , events : sent
+    }
+    ;
+    if ( new TextEncoder ( ) . encode ( JSON . stringify ( body ) ) . byteLength > maxBytes ) throw TLibError ( "CARE_TEMPLATE_PAYLOAD_TOO_LARGE" ) ;
+    var receipt = await TLibRequest ( ctx , token , "events" , body ) ;
+    if ( receipt . epoch !== remote . epoch ) throw TLibError ( "CARE_TEMPLATE_EPOCH_CHANGED" ) ;
+    if ( receipt . stored !== true || ! Array . isArray ( receipt . accepted ) || receipt . accepted . length !== sent . length ) throw TLibError ( "CARE_TEMPLATE_INVALID_ACK" ) ;
+    var accepted = Object . create ( null ) ;
+    for ( var i = 0 ;
+    i < receipt . accepted . length ;
+    i ++ ) {
+      var ack = receipt . accepted [ i ] ;
+      if ( ! ack || typeof ack . eid !== "string" || accepted [ ack . eid ] || ! TLibInteger ( ack . seq , 1 ) || ack . seq > receipt . headSeq || typeof ack . dup !== "boolean" || ! /^[a-f0-9]{64}$/ . test ( ack . digest || "" ) ) throw TLibError ( "CARE_TEMPLATE_INVALID_ACK" ) ;
+      accepted [ ack . eid ] = ack
+    }
+    for ( var k = 0 ;
+    k < sent . length ;
+    k ++ ) {
+      var item = sent [ k ] , match = accepted [ item . eid ] , digest = await TLibHash ( JSON . stringify ( {
+        iv : item . body . iv , data : item . body . data
+      }
+      ) ) ;
+      TLibFence ( ctx , token ) ;
+      if ( ! match || match . digest !== digest ) throw TLibError ( "CARE_TEMPLATE_INVALID_ACK" )
+    }
+    await ctx . vault . ackCareTemplateEvents ( token , {
+      epoch : remote . epoch , sent : sent , accepted : receipt . accepted
+    }
+    ) ;
+    TLibFence ( ctx , token )
+  }
+  throw TLibError ( "CARE_TEMPLATE_BATCH_LIMIT" )
+}
+async function TLibRun ( ctx ) {
+  var token = await ctx . vault . captureCareTemplateSession ( ) ;
+  TLibFence ( ctx , token ) ;
+  var local = await ctx . vault . getCareTemplateSyncState ( token ) ;
+  TLibFence ( ctx , token ) ;
+  ctx . pending = !! local . dirty ;
+  TLibPublish ( ctx , {
+    state : "syncing" , epoch : local . epoch , cursor : local . cursor , pending : ! ! local . dirty
+  }
+  ) ;
+  var remote ;
+  try {
+    remote = await TLibRequest ( ctx , token , "state" )
+  }
+  catch ( error ) {
+    if ( ! error . identityRequired || ! local . initializeIntent || local . epoch !== null ) throw error ;
+    await TLibIdentity ( ctx , token ) ;
+    remote = await TLibRequest ( ctx , token , "state" )
+  }
+  if ( ! remote . initialized ) {
+    if ( local . epoch !== null ) throw TLibError ( "CARE_TEMPLATE_EPOCH_CHANGED" ) ;
+    if ( ! local . initializeIntent ) {
+      var empty = {
+        state : "ready" , epoch : null , cursor : 0 , pending : false
+      }
+      ;
+      TLibPublish ( ctx , empty ) ;
+      return empty
+    }
+    remote = await TLibRequest ( ctx , token , "initialize" , {
+      namespace : "care-template-library" , protocol : 1
+    }
+    ) ;
+    if ( ! remote . initialized ) throw TLibError ( "CARE_TEMPLATE_PROTOCOL_UNSUPPORTED" )
+  }
+  if ( local . epoch !== null && local . epoch !== remote . epoch ) throw TLibError ( "CARE_TEMPLATE_EPOCH_CHANGED" ) ;
+  if ( local . epoch === null || local . needsBootstrap === true ) {
+    await ctx . vault . bindCareTemplateEpoch ( token , {
+      epoch : remote . epoch , floorSeq : remote . floorSeq , slotId : token . slotId
+    }
+    ) ;
+    TLibFence ( ctx , token ) ;
+    local = await ctx . vault . getCareTemplateSyncState ( token ) ;
+    TLibFence ( ctx , token )
+  }
+  await TLibPull ( ctx , token , remote , local ) ;
+  await TLibPush ( ctx , token , remote ) ;
+  TLibFence ( ctx , token ) ;
+  var final = await ctx . vault . getCareTemplateSyncState ( token ) ;
+  TLibFence ( ctx , token ) ;
+  ctx . pending = !! final . dirty ;
+  var result = {
+    state : final . dirty ? "pending" : "ready" , epoch : final . epoch , cursor : final . cursor , pending : ! ! final . dirty
+  }
+  ;
+  TLibPublish ( ctx , result ) ;
+  return result
+}
+function TLibStart ( ) {
+  var ctx = TLibActive ;
+  if ( ! TLibCurrent ( ctx ) ) return Promise . reject ( TLibError ( "SESSION_CHANGED" ) ) ;
+  if ( ! TLibEnabled ( ) ) {
+    var disabled = {
+      state : "disabled" , pending : ctx . pending
+    }
+    ;
+    TLibPublish ( ctx , disabled ) ;
+    return Promise . resolve ( disabled )
+  }
+  if ( TLibFlight && TLibFlight . ctx === ctx ) return TLibFlight . promise ;
+  if ( ctx . retryAt && Date . now ( ) < ctx . retryAt ) return Promise . reject ( TLibError ( "CARE_TEMPLATE_RATE_LIMITED" , 429 ) ) ;
+  var flight = {
+    ctx : ctx , promise : null
+  }
+  ;
+  flight . promise = Promise . resolve ( ) . then ( function ( ) {
+    return TLibRun ( ctx )
+  }
+  ) . catch ( function ( error ) {
+    TLibPublish ( ctx , {
+      state : error && error . code === "CARE_TEMPLATE_EPOCH_CHANGED" ? "blocked" : "error" , pending : ctx . pending , error : {
+        code : error && error . code || "CARE_TEMPLATE_SYNC_FAILED" , httpStatus : error && error . httpStatus || null
+      }
+    }
+    ) ;
+    throw error
+  }
+  ) ;
+  TLibFlight = flight ;
+  var clear = function ( ) {
+    TLibFlight === flight && ( TLibFlight = null )
+  }
+  ;
+  flight . promise . then ( clear , clear ) ;
+  return flight . promise
+}
+/* A read-only session fence does not authorize deletion: the exact target
+ * credentials must independently obtain a verified protected-state receipt. */
+function TLibOperationContext() {
+  var vault=o.VildaVault;
+  if (!vault || typeof vault.captureSyncOperationSession!=="function" ||
+      typeof vault.assertSyncOperationSession!=="function") throw TLibError("CARE_TEMPLATE_AUTHORITY_UNAVAILABLE");
+  var ticket={ctx:{vault:vault,operationOnly:true},token:vault.captureSyncOperationSession()};
+  TLibFence(ticket.ctx,ticket.token);
+  return ticket;
+}
+async function TLibReadAuthority(ctx,token,target) {
+  TLibFence(ctx,token);
+  TLibMaterial(target);
+  var state;
+  try { state=await TLibRequest(ctx,token,"state",undefined,target); }
+  catch(error) {
+    TLibFence(ctx,token);
+    if (!error.identityRequired) throw error;
+    return {initialized:false,epoch:0,eventsStored:0,bytesStored:0,slotId:target.slotId};
+  }
+  TLibFence(ctx,token);
+  if (!TLibInteger(state.eventsStored,0) || !TLibInteger(state.bytesStored,0) ||
+      state.eventsStored!==state.headSeq-state.floorSeq ||
+      (state.eventsStored===0)!==(state.bytesStored===0)) throw TLibError("CARE_TEMPLATE_PROTOCOL_UNSUPPORTED");
+  return {initialized:state.initialized,epoch:state.epoch,eventsStored:state.eventsStored,
+    bytesStored:state.bytesStored,slotId:target.slotId};
+}
+async function TLibGuardLegacyDelete(slotId,authToken,ticket) {
+  var target={slotId:slotId,authToken:authToken}, operation=ticket||TLibOperationContext();
+  TLibFence(operation.ctx,operation.token);
+  var authority=await TLibReadAuthority(operation.ctx,operation.token,target);
+  TLibFence(operation.ctx,operation.token);
+  if (authority.initialized) throw u("Nie usunięto danych synchronizacji: konto ma chronioną bibliotekę szablonów.",
+    "CARE_TEMPLATE_CLOUD_DELETE_BLOCKED");
+  return function() { TLibFence(operation.ctx,operation.token); };
+}
+/* Explicit lifecycle guards need fresh authority even on a new device. This
+ * probe neither opts into authoring nor reads or initializes the library DB. */
+async function TLibInspectAuthority() {
+  var vault=I(), userId=Bpw_konto(vault), ctx={vault:vault,userId:userId,authorityOnly:true};
+  if (!userId || !TLibAuthorityCurrent(ctx)) throw TLibError("SESSION_CHANGED");
+  if (!o.VildaCareTemplateModel || !o.VildaCareTemplateStore) {
+    var plans=o.VildaCarePlans;
+    if (!plans || typeof plans.ensureTemplateLibrary!=="function") throw TLibError("CARE_TEMPLATE_API_UNAVAILABLE");
+    try { await plans.ensureTemplateLibrary({ui:false}); }
+    catch {
+      if (!TLibAuthorityCurrent(ctx)) throw TLibError("SESSION_CHANGED");
+      throw TLibError("CARE_TEMPLATE_API_UNAVAILABLE");
+    }
+    if (!TLibAuthorityCurrent(ctx)) throw TLibError("SESSION_CHANGED");
+  }
+  if (!o.VildaCareTemplateModel || !o.VildaCareTemplateStore ||
+      typeof vault.captureCareTemplateSession!=="function" || typeof vault.assertCareTemplateSession!=="function") {
+    throw TLibError("CARE_TEMPLATE_API_UNAVAILABLE");
+  }
+  var token=await vault.captureCareTemplateSession();
+  TLibFence(ctx,token);
+  return TLibReadAuthority(ctx,token,token);
+}
+function TLibExplicit ( ) {
+  if ( ! TLibCurrent ( TLibActive ) ) TLibActivate ( ) ;
+  return TLibStart ( )
+}
+function TLibAutomatic ( ) {
+  if ( TLibCurrent ( TLibActive ) ) TLibStart ( ) . catch ( function ( ) {
+  }
+  )
+}
+function TLibPullCycle ( options ) {
+  TLibAutomatic ( ) ;
+  return Y ( options )
+}
+function TLibPushCycle ( options ) {
+  TLibAutomatic ( ) ;
+  return ht ( options )
+}
+function TLibFullCycle ( ) {
+  TLibAutomatic ( ) ;
+  return Ht ( )
+}
+o.VildaSync={syncPush:TLibPushCycle,syncPull:TLibPullCycle,syncFull:TLibFullCycle,activateTemplateLibrarySync:TLibActivate,deactivateTemplateLibrarySync:TLibDeactivate,syncTemplateLibrary:TLibExplicit,getTemplateLibrarySyncStatus:TLibGetStatus,continueTemplateLibrarySync:TLibAutomatic,inspectTemplateLibraryAuthority:TLibInspectAuthority,resetSessionPullGuard:Ut,getSyncStatus:xt,clearSyncState:Wt,deleteSyncSlot:Jt,onSyncStart:Zt,onSyncComplete:Qt,onSyncError:Rt,probeNewDevice:Xt,restorePrevBlob:qt,revokeAllDevices:$t,uploadToSlot:pt,deleteSlotWithMaterial:_t,_loadSyncState:m,_saveSyncState:T,_clearSyncStateForSlot:C}})(typeof window<"u"?window:typeof globalThis<"u"?globalThis:null);

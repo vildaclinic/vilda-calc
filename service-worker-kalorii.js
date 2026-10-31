@@ -19,7 +19,7 @@
  *   bo i tak chcemy zwracać HTML z cache natychmiast.
  */
 
-const SW_VERSION = '1.1.424';
+const SW_VERSION = '1.1.425';
 const CACHE_PREFIX = 'pwa-kalorii';
 const SHELL_CACHE = `${CACHE_PREFIX}-shell-v${SW_VERSION}`;
 const RUNTIME_CACHE = `${CACHE_PREFIX}-runtime`;
@@ -559,6 +559,7 @@ const CORE_SHELL_URLS = [
   '/inline_ustawienia_04.js?v=14',
   '/inline_ustawienia_04.js?v=15',
   '/inline_ustawienia_04.js?v=16',
+  '/inline_ustawienia_04.js?v=17',
   '/jsQR.min.js?v=1',
   '/jszip.min.js?v=1',
   '/pdfmake.min.js?v=1',
@@ -965,12 +966,19 @@ const CORE_SHELL_URLS = [
   '/vilda_care_plans.css?v=5',
   '/vilda_care_plans.css?v=6',
   '/vilda_care_plan_model.js?v=1',
+  // Template editing is loaded on demand; keep its complete bundle available
+  // for a first library visit after a genuine offline restart.
+  '/vilda_care_template_model.js?v=1',
+  '/vilda_care_template_store.js?v=1',
+  '/vilda_care_templates.css?v=1',
+  '/vilda_care_templates.js?v=1',
   '/vilda_care_plans.js?v=1',
   '/vilda_care_plans.js?v=2',
   '/vilda_care_plans.js?v=3',
   '/vilda_care_plans.js?v=4',
   '/vilda_care_plans.js?v=5',
   '/vilda_care_plans.js?v=6',
+  '/vilda_care_plans.js?v=7',
     '/vilda_auth_ui.js?v=16',
   '/vilda_auth_ui.js?v=17',
   '/vilda_auth_ui.js?v=18',
@@ -1518,6 +1526,7 @@ const CORE_SHELL_URLS = [
   '/vilda_chrome.js?v=203',
   '/vilda_chrome.js?v=204',
   '/vilda_chrome.js?v=205',
+  '/vilda_chrome.js?v=206',
   '/vilda_realtime.js?v=1',
   '/vilda_realtime.js?v=2',
   '/vilda_realtime.js?v=3',
@@ -3593,6 +3602,7 @@ const OPTIONAL_ASSETS = [
   '/vilda_vault.js?v=238',
   '/vilda_vault.js?v=239',
   '/vilda_vault.js?v=240',
+  '/vilda_vault.js?v=241',
   '/vilda_auth_ui.js?v=431',
   '/vilda_trajectory_analysis.js?v=24',
   '/vilda_trajectory_analysis.js?v=25',
@@ -3802,6 +3812,7 @@ const OPTIONAL_ASSETS = [
   '/vilda_auth_ui.js?v=519',
   '/vilda_auth_ui.js?v=520',
   '/vilda_auth_ui.js?v=521',
+  '/vilda_auth_ui.js?v=522',
   '/app.js?v=205',
   '/app.js?v=206',
   '/app.js?v=207',
@@ -3916,6 +3927,7 @@ const OPTIONAL_ASSETS = [
   '/vilda_sync.js?v=41',
   '/vilda_sync.js?v=42',
   '/vilda_sync.js?v=43',
+  '/vilda_sync.js?v=44',
   '/vilda_sync_integration.js?v=45',
   '/vilda_sync_integration.js?v=46',
   '/vilda_sync_integration.js?v=47',
@@ -3925,6 +3937,7 @@ const OPTIONAL_ASSETS = [
   '/vilda_sync_integration.js?v=51',
   '/vilda_sync_integration.js?v=52',
   '/vilda_sync_integration.js?v=53',
+  '/vilda_sync_integration.js?v=54',
   '/vilda_nowe_urzadzenie.js?v=1',
   '/vilda_nowe_urzadzenie.js?v=2',
   '/vilda_session_bridge.js?v=3',
@@ -4054,6 +4067,7 @@ const OPTIONAL_ASSETS = [
   '/vilda_session_bridge.js?v=127',
   '/vilda_session_bridge.js?v=128',
   '/vilda_session_bridge.js?v=129',
+  '/vilda_session_bridge.js?v=130',
   '/vilda_data_safety_explainer.js?v=5',
   '/vilda_obesity_banner.css?v=6',
   '/vilda_obesity_banner.css?v=7',
@@ -4714,9 +4728,13 @@ async function openReusablePreviousShellCaches() {
   return reusable;
 }
 
-// Static hosting serves identical bytes for these CSS query aliases. Only a
-// response freshly fetched during this installation may seed another alias.
-const FRESH_CSS_ALIAS_PATHS = new Set(['/edu-video-ui.css', '/style.css', '/vilda_chrome.css']);
+// Static hosting serves the same file for these explicit current query aliases.
+// Only a response freshly fetched during this installation may seed another alias;
+// an exact immutable entry copied from a previous cache never seeds this map.
+const FRESH_STATIC_ALIAS_PATHS = new Set([
+  '/edu-video-ui.css', '/style.css', '/vilda_chrome.css',
+  '/vilda_auth_ui.css', '/ios26-v2.css', '/vilda_shell.css', '/vilda_vault.js'
+]);
 
 async function fetchAndStorePrecacheUrl(url, { required = false, previousShellCaches = [], freshResponses = null } = {}) {
   const cache = await caches.open(SHELL_CACHE);
@@ -4737,10 +4755,10 @@ async function fetchAndStorePrecacheUrl(url, { required = false, previousShellCa
     }
   }
 
-  // Hosting podaje ten sam arkusz pod bieżącymi aliasami z jawnej listy CSS.
+  // Hosting podaje ten sam plik pod bieżącymi aliasami z jawnej listy zasobów.
   // W obrębie jednej instalacji dzielimy tylko ŚWIEŻĄ odpowiedź sieci, zachowując każdy klucz.
   // Dokładny niezmienny wpis poprzedniej pamięci ma pierwszeństwo i nie zasila tej mapy.
-  const sharedFreshResponse = FRESH_CSS_ALIAS_PATHS.has(pathname) ? freshResponses?.get(pathname) : null;
+  const sharedFreshResponse = FRESH_STATIC_ALIAS_PATHS.has(pathname) ? freshResponses?.get(pathname) : null;
   if (cacheKey && sharedFreshResponse) {
     await cache.put(cacheKey, sharedFreshResponse.clone());
     return;
@@ -4761,7 +4779,7 @@ async function fetchAndStorePrecacheUrl(url, { required = false, previousShellCa
   }
 
   // Cache.put zużywa treść odpowiedzi: klon powstaje przed zapisem, ale udostępniamy go dopiero po sukcesie.
-  const freshResponse = FRESH_CSS_ALIAS_PATHS.has(pathname) && freshResponses ? safeResponse.clone() : null;
+  const freshResponse = FRESH_STATIC_ALIAS_PATHS.has(pathname) && freshResponses ? safeResponse.clone() : null;
   await cache.put(cacheKey, safeResponse);
   if (freshResponse) freshResponses.set(pathname, freshResponse);
 }

@@ -85,7 +85,7 @@ Odzyskanie wymaga nienaruszonej struktury w chmurze lub na drugim urządzeniu. N
 
 ## Podstawa etapów — odczyt bez migracji
 
-`vilda_care_plan_model.js` jest czystym, wersjonowanym kodekiem i projekcją danych. Nie odczytuje zegara, DOM, magazynu ani sieci. Jest ładowany przed sejfem na stronach z kontem oraz przez oba loadery i precache. Dotychczasowy interfejs nadal używa API i zapisu V1; kreator, biblioteka szablonów oraz zapis V2 nie są jeszcze uruchomione.
+`vilda_care_plan_model.js` jest czystym, wersjonowanym kodekiem i projekcją danych. Nie odczytuje zegara, DOM, magazynu ani sieci. Jest ładowany przed sejfem na stronach z kontem oraz przez oba loadery i precache. Dotychczasowy interfejs pacjenta nadal używa API i zapisu V1. Osobna [biblioteka własnych szablonów i kreator](CARE_PLAN_TEMPLATES.md) przechowuje ogólne definicje konta; nie uruchamia zapisu planów pacjenta w V2.
 
 Nowe API `VildaVault.getCarePlanView(planId, {todayLocalDateISO?})` odczytuje zaszyfrowany oryginał i tworzy odłączony widok. Sprawdza konto, sesję i adapter po operacjach asynchronicznych. Dzień przekazany do projekcji służy tylko etykietom przypomnień. Odczyt nie zmienia kontekstu, szyfrogramu, rewizji, historii, stanu zapisu pacjenta ani kolejki synchronizacji. Przy znacznikach usunięcia wykorzystuje istniejące reguły wyboru żywego rekordu i retencji; sam nie wykonuje odzyskania, przeniesienia ani czyszczenia danych.
 

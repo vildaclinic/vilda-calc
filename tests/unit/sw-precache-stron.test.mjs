@@ -280,23 +280,25 @@ describe('P-SW-PRECACHE: instalacja bez historii, kopia z poprzedniej pamięci, 
   const arkuszEdu = (adres) => adres.split('?')[0] === '/edu-video-ui.css';
   const aliasyEdu = () => doInstalacji().filter(arkuszEdu);
   const cssEdu = fs.readFileSync(path.join(korzen, 'edu-video-ui.css'), 'utf8');
-  const wspoldzieloneArkusze = new Set(['/edu-video-ui.css', '/style.css', '/vilda_chrome.css']);
-  const oczekiwanePobraniaSwiezychArkuszy = () => {
+  const dodatkoweWspoldzieloneZasoby = ['/vilda_auth_ui.css', '/ios26-v2.css', '/vilda_shell.css', '/vilda_vault.js'];
+  const wspoldzielonePary = ['/style.css', '/vilda_chrome.css', ...dodatkoweWspoldzieloneZasoby];
+  const wspoldzieloneZasoby = new Set(['/edu-video-ui.css', ...wspoldzielonePary]);
+  const oczekiwanePobraniaSwiezychZasobow = () => {
     const widziane = new Set();
     return doInstalacji().filter((adres) => {
       const sciezka = adres.split('?')[0];
-      if (!wspoldzieloneArkusze.has(sciezka)) return true;
+      if (!wspoldzieloneZasoby.has(sciezka)) return true;
       if (widziane.has(sciezka)) return false;
       widziane.add(sciezka); return true;
     });
   };
 
-  it('instalacja zapisuje każdy bieżący klucz, dzieli tylko świeże trzy arkusze CSS i mieści się w budżecie 5 minut na wolnym łączu', async () => {
+  it('instalacja zapisuje każdy bieżący klucz, dzieli tylko wskazane świeże zasoby i mieści się w budżecie 5 minut na wolnym łączu', async () => {
     const { caches, wpisy } = pamiec();
     const { pobrane, fetch } = siecLiczaca();
     await uruchomSW({ caches, fetch }).installShell();
 
-    const oczekiwanePobrania = oczekiwanePobraniaSwiezychArkuszy();
+    const oczekiwanePobrania = oczekiwanePobraniaSwiezychZasobow();
     expect([...pobrane].sort(), 'każdy pozostały adres idzie z sieci dokładnie raz').toEqual(oczekiwanePobrania.sort());
     expect([...wpisy.keys()].sort(), 'wszystkie istniejące wpisy bieżące zachowują własne klucze offline')
       .toEqual(doInstalacji().filter((adres) => rozmiarPliku(adres) !== null).sort());
@@ -305,10 +307,13 @@ describe('P-SW-PRECACHE: instalacja bez historii, kopia z poprzedniej pamięci, 
     // opóźnienia na żądanie 24 MB zajęło 64 s, a 474 MB (historia) nie mieściło się nawet przy 20 Mb/s.
     const bajty = pobrane.reduce((suma, adres) => suma + (rozmiarPliku(adres) || 0), 0);
     expect(bajty, `instalacja pobiera ${(bajty / 1e6).toFixed(1)} MB`).toBeLessThan(40e6);
-    // Nowy, wymagany przed sejfem model dodaje dokładnie jedno pobranie:
-    // baza 599 → 600. Logika instalacji i współdzielenia aliasów jest bez zmian;
-    // nie rozszerzamy budżetu bajtów ani nie dopuszczamy powtórnego pobrania modelu.
+    // Biblioteka dodaje cztery zasoby do bazy 600 żądań. Cztery kolejne jawne pary
+    // aliasów dzielą świeżą odpowiedź, więc pozostaje 600 żądań i wszystkie klucze offline.
+    // Budżety bajtów/żądań pozostają bez zmian; wymagane modele nadal idą z sieci raz.
     expect(pobrane.filter(adres => adres.split('?')[0] === '/vilda_care_plan_model.js')).toHaveLength(1);
+    for (const plik of ['/vilda_care_template_model.js', '/vilda_care_template_store.js', '/vilda_care_templates.js', '/vilda_care_templates.css']) {
+      expect(pobrane.filter(adres => adres.split('?')[0] === plik), plik).toHaveLength(1);
+    }
     expect(pobrane.length, `instalacja wysyła ${pobrane.length} żądań`).toBeLessThanOrEqual(600);
   });
 
@@ -329,7 +334,7 @@ describe('P-SW-PRECACHE: instalacja bez historii, kopia z poprzedniej pamięci, 
 
     expect(aliasyEdu()).toHaveLength(7);
     expect(pobrane.filter(arkuszEdu)).toEqual([aliasyEdu()[0]]);
-    expect(pobrane).toHaveLength(oczekiwanePobraniaSwiezychArkuszy().length);
+    expect(pobrane).toHaveLength(oczekiwanePobraniaSwiezychZasobow().length);
     expect(odpowiedzi[0].bodyUsed, 'zapis naprawdę zużył odpowiedź sieci').toBe(true);
     for (const adres of aliasyEdu()) {
       const zapisana = await sluzba.readFromShellCache(new Request(`${POCHODZENIE}${adres}`));
@@ -410,7 +415,7 @@ describe('P-SW-PRECACHE: instalacja bez historii, kopia z poprzedniej pamięci, 
     }
   });
 
-  it.each(['/style.css', '/vilda_chrome.css'])('bieżące aliasy %s dostają pełną świeżą treść z jednego pobrania', async (sciezka) => {
+  it.each(wspoldzielonePary)('bieżące aliasy %s dostają pełną świeżą treść z jednego pobrania', async (sciezka) => {
     const magazyn = pamiec(Infinity, { zuzywajOdpowiedzi: true });
     const aliasy = doInstalacji().filter(adres => adres.split('?')[0] === sciezka);
     const tresc = fs.readFileSync(path.join(korzen, sciezka.slice(1)), 'utf8');
@@ -429,10 +434,7 @@ describe('P-SW-PRECACHE: instalacja bez historii, kopia z poprzedniej pamięci, 
     for (const adres of aliasy) expect(await (await sluzba.readFromShellCache(new Request(`${POCHODZENIE}${adres}`))).text()).toBe(tresc);
   });
 
-  it.each([
-    ['/style.css', '1.1.104'], ['/vilda_chrome.css', '1.1.104'],
-    ['/style.css', '1.1.65'], ['/vilda_chrome.css', '1.1.65']
-  ])('dokładny alias %s z pamięci %s nie zasila adresu bez wersji', async (sciezka, wersja) => {
+  it.each(wspoldzielonePary.flatMap(sciezka => ['1.1.104', '1.1.65'].map(wersja => [sciezka, wersja])))('dokładny alias %s z pamięci %s nie zasila adresu bez wersji', async (sciezka, wersja) => {
     const magazyn = pamiec(Infinity, { zuzywajOdpowiedzi: true });
     const wersjonowanyAlias = doInstalacji().find(adres => adres.startsWith(sciezka + '?v='));
     const staryCss = '/* niezmienna treść poprzedniego wydania */';
@@ -451,10 +453,7 @@ describe('P-SW-PRECACHE: instalacja bez historii, kopia z poprzedniej pamięci, 
     expect(await (await sluzba.readFromShellCache(new Request(`${POCHODZENIE}${wersjonowanyAlias}`))).text()).toBe(wersja === '1.1.104' ? staryCss : swiezyCss);
   });
 
-  it.each([
-    ['/style.css', 'sieć'], ['/style.css', '503'], ['/style.css', 'cache.put'],
-    ['/vilda_chrome.css', 'sieć'], ['/vilda_chrome.css', '503'], ['/vilda_chrome.css', 'cache.put']
-  ])('nieudana pierwsza próba %s (%s) nie udostępnia odpowiedzi kolejnemu aliasowi', async (sciezka, awaria) => {
+  it.each(wspoldzielonePary.flatMap(sciezka => ['sieć', '503', 'cache.put'].map(awaria => [sciezka, awaria])))('nieudana pierwsza próba %s (%s) nie udostępnia odpowiedzi kolejnemu aliasowi', async (sciezka, awaria) => {
     const magazyn = pamiec(Infinity, { zuzywajOdpowiedzi: true });
     const cache = magazyn.otworz(sw.SHELL_CACHE), zapisz = cache.put;
     const aliasy = doInstalacji().filter(adres => adres.split('?')[0] === sciezka);
@@ -474,6 +473,48 @@ describe('P-SW-PRECACHE: instalacja bez historii, kopia z poprzedniej pamięci, 
     expect(pobrane).toEqual(aliasy);
     expect(await (await cache.match(aliasy[1])).text()).toBe('/* pobrano ponownie */');
     expect(magazyn.wpisy.has(aliasy[0])).toBe(false);
+  });
+
+  it.each(dodatkoweWspoldzieloneZasoby)('świeża odpowiedź %s nie przechodzi do kolejnej instalacji', async sciezka => {
+    const magazyn = pamiec(Infinity, { zuzywajOdpowiedzi: true });
+    const aliasy = doInstalacji().filter(adres => adres.split('?')[0] === sciezka); let pobrania = 0;
+    const fetch = async request => {
+      if (new URL(request.url).pathname !== sciezka) return siec(request);
+      pobrania++; return new Response(`/* świeże pobranie ${pobrania} */`);
+    };
+    const sluzba = uruchomSW({ caches: magazyn.caches, fetch });
+    await sluzba.installShell(); await sluzba.installShell();
+    expect(pobrania).toBe(2);
+    for (const adres of aliasy) expect(await (await sluzba.readFromShellCache(new Request(`${POCHODZENIE}${adres}`))).text(), adres).toBe('/* świeże pobranie 2 */');
+  });
+
+  it('skrypt spoza jawnej listy nadal pobiera każdy bieżący alias osobno', async () => {
+    const sciezka = '/app.js', magazyn = pamiec(Infinity, { zuzywajOdpowiedzi: true }), pobrane = [];
+    const aliasy = doInstalacji().filter(adres => adres.split('?')[0] === sciezka);
+    const fetch = async request => {
+      const u = new URL(request.url); if (u.pathname !== sciezka) return siec(request);
+      pobrane.push(`${u.pathname}${u.search}`); return new Response(`/* osobne pobranie ${pobrane.length} */`);
+    };
+    const sluzba = uruchomSW({ caches: magazyn.caches, fetch }); await sluzba.installShell();
+    expect(aliasy).toHaveLength(2); expect(pobrane).toEqual(aliasy);
+    for (let i = 0; i < aliasy.length; i++) expect(await (await sluzba.readFromShellCache(new Request(`${POCHODZENIE}${aliasy[i]}`))).text(), aliasy[i]).toBe(`/* osobne pobranie ${i + 1} */`);
+  });
+
+  it.each(['sieć', '503', 'cache.put'])('wymagany rdzeń vault nadal przerywa instalację po pierwszej awarii (%s)', async awaria => {
+    const sciezka = '/vilda_vault.js', magazyn = pamiec(Infinity, { zuzywajOdpowiedzi: true }), pobrane = [];
+    expect(sw.INSTALL_CORE_URLS).toContain(sciezka);
+    const cache = magazyn.otworz(sw.SHELL_CACHE), zapisz = cache.put;
+    cache.put = async (adres, odpowiedz) => { if (awaria === 'cache.put' && adres === sciezka) throw new Error('wymagany zapis odrzucony'); return zapisz(adres, odpowiedz); };
+    const fetch = async request => {
+      const u = new URL(request.url); if (u.pathname !== sciezka) return siec(request);
+      pobrane.push(`${u.pathname}${u.search}`);
+      if (awaria === 'sieć') throw new TypeError('wymagana sieć niedostępna');
+      return new Response('/* nieudany rdzeń */', { status: awaria === '503' ? 503 : 200 });
+    };
+    await expect(uruchomSW({ caches: magazyn.caches, fetch }).installShell()).rejects.toThrow();
+    expect(pobrane).toEqual([sciezka]);
+    expect(magazyn.wpisy.has(sciezka)).toBe(false);
+    expect(doInstalacji().filter(adres => adres.startsWith(sciezka + '?v=')).every(adres => !magazyn.wpisy.has(adres))).toBe(true);
   });
 
   it('aktualizacja kopiuje niezmienne wpisy ?v= z poprzedniej pamięci powłoki; dokumenty i adresy bez ?v= pobiera', async () => {
@@ -500,8 +541,8 @@ describe('P-SW-PRECACHE: instalacja bez historii, kopia z poprzedniej pamięci, 
     await uruchomSW({ caches: magazyn.caches, fetch }).installShell();
 
     const zSieci = new Set(pobrane);
-    expect(wersjonowane.filter((adres) => !wspoldzieloneArkusze.has(adres.split('?')[0]) && !zSieci.has(adres)), 'każdy inny wpis ?v= z sieci').toEqual([]);
-    expect([...zSieci].sort(), 'stara pamięć nie zastępuje świeżych odpowiedzi trzech arkuszy').toEqual(oczekiwanePobraniaSwiezychArkuszy().sort());
+    expect(wersjonowane.filter((adres) => !wspoldzieloneZasoby.has(adres.split('?')[0]) && !zSieci.has(adres)), 'każdy inny wpis ?v= z sieci').toEqual([]);
+    expect([...zSieci].sort(), 'stara pamięć nie zastępuje świeżych odpowiedzi jawnej listy zasobów').toEqual(oczekiwanePobraniaSwiezychZasobow().sort());
     expect(pobrane.filter(arkuszEdu), 'arkusz edu pochodzi ze świeżego pobrania, nie ze starej pamięci').toEqual([aliasyEdu()[0]]);
     expect(doInstalacji().filter((adres) => rozmiarPliku(adres) !== null && !magazyn.wpisy.has(adres)), 'komplet wpisów bieżących').toEqual([]);
   });

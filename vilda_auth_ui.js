@@ -915,6 +915,7 @@ function remB22Create(host, full, options) {
     if (state.tab === 'plans') { if (!full) remB22Request({ carePlans: true, newCarePlan: true }); else if (careView) careView.create(); return; }
     if (!full) remB22Request({ newReminder: true }); else addReminder();
   }); tools.appendChild(addButton); addButton.setAttribute('aria-label', 'Dodaj przypomnienie');
+  var templateButton = btn('Moje szablony', 'vb22-add', function () { if (state.tab !== 'plans' || state.editing || state.busy) return; if (careView && typeof careView.openTemplates === 'function') careView.openTemplates(); }); templateButton.hidden = true; tools.appendChild(templateButton);
   tools.appendChild(btn(full ? '×' : '⛶', 'vb22-icon', full ? closed : function () { remB22Request({ globalSearch: state.tab === 'search' && searchView ? searchView.getContext() : state.tab === 'history', carePlans: state.tab === 'plans' }); }));
   tools.lastChild.setAttribute('aria-label', full ? 'Zamknij Przypomnienia' : 'Powiększ Przypomnienia');
   header.appendChild(tools); root.appendChild(header);
@@ -1041,6 +1042,7 @@ function remB22Create(host, full, options) {
     plansTab.classList.toggle('is-active', state.tab === 'plans'); plansTab.setAttribute('aria-pressed', String(state.tab === 'plans')); plansTab.disabled = state.editing;
     addButton.textContent = full ? state.tab === 'plans' ? '+ Nowy plan' : '+ Dodaj przypomnienie' : '+';
     addButton.setAttribute('aria-label', state.tab === 'plans' ? 'Nowy plan opieki' : 'Dodaj przypomnienie'); addButton.disabled = state.editing;
+    templateButton.hidden = state.tab !== 'plans'; templateButton.disabled = state.editing || state.busy;
     search.disabled = state.editing || state.tab === 'history' && state.historyLoading;
     searchTools.hidden = !full && state.tab !== 'history';
     filters.hidden = state.tab !== 'active'; layout.hidden = state.tab === 'plans' || state.tab === 'search'; footer.hidden = state.tab !== 'active'; careHost.hidden = state.tab !== 'plans'; globalSearchHost.hidden = state.tab !== 'search'; root.classList.toggle('vb22-plans', state.tab === 'plans');

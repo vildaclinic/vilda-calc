@@ -123,6 +123,12 @@ function okno(locks) {
   win.localStorage.setItem('vildaRetention', '0');
   loadBrowserScript('vilda_crypto.js', win);
   loadBrowserScript('vilda_vault.js', win);
+  // PR5: explicit SIS replacement now requires a readonly protected-authority absence proof.
+  // This fictional fixture has no template authority; derive its target from the real current SIS.
+  win.VildaSync = { async inspectTemplateLibraryAuthority() {
+    const material = await win.VildaVault.getSyncMaterial();
+    return { initialized: false, epoch: 0, eventsStored: 0, bytesStored: 0, slotId: material.slotId };
+  } };
   win.VildaVault.__win = win;
   return win.VildaVault;
 }

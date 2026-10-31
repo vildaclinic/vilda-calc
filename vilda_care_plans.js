@@ -4,7 +4,45 @@
 (function (win) {
   'use strict';
   if (!win || !win.document) return;
-  var serial = 0, vaultObservers = new WeakMap();
+  var serial = 0, vaultObservers = new WeakMap(), templateCorePromise = null, templateUiPromise = null;
+  function templateAsset(path, ready, stylesheet) {
+    if (ready && ready()) return Promise.resolve();
+    var doc = win.document;
+    if (stylesheet && doc.querySelectorAll) {
+      var existing = Array.from(doc.querySelectorAll('link[rel="stylesheet"]')).find(function (link) { return link.getAttribute('href') === path; });
+      if (existing && (existing.sheet || existing.getAttribute('data-vct-loaded') === 'true')) return Promise.resolve();
+    }
+    return new Promise(function (resolve, reject) {
+      var element = doc.createElement(stylesheet ? 'link' : 'script');
+      if (stylesheet) { element.rel = 'stylesheet'; element.href = path; }
+      else { element.src = path; element.async = false; }
+      element.onload = function () {
+        if (ready && !ready()) { element.remove(); reject(new Error('Nie udało się wczytać biblioteki szablonów. Odśwież aplikację.')); return; }
+        element.setAttribute('data-vct-loaded', 'true'); resolve();
+      };
+      element.onerror = function () { element.remove(); reject(new Error('Nie udało się wczytać biblioteki szablonów. Spróbuj ponownie.')); };
+      (doc.head || doc.body || doc.documentElement).appendChild(element);
+    });
+  }
+  function ensureTemplateLibrary(options) {
+    if (!templateCorePromise) templateCorePromise = templateAsset('vilda_care_template_model.js?v=1', function () { return !!win.VildaCareTemplateModel; })
+      .then(function () { return templateAsset('vilda_care_template_store.js?v=1', function () { return !!win.VildaCareTemplateStore; }); })
+      .catch(function (error) { templateCorePromise = null; throw error; });
+    if (options && options.ui === false) return templateCorePromise;
+    if (!templateUiPromise) templateUiPromise = templateCorePromise.then(function () { return Promise.all([
+      templateAsset('vilda_care_templates.css?v=1', null, true),
+      templateAsset('vilda_care_templates.js?v=1', function () { return !!win.VildaCareTemplates; })
+    ]); }).catch(function (error) { templateUiPromise = null; throw error; });
+    return templateUiPromise;
+  }
+  async function openTemplates(options) {
+    options = options || {}; var vault = options.vault || win.VildaVault, owner = vault && vault.getCurrentUser && vault.getCurrentUser(), ownerId = owner && owner.userId, valid = true;
+    function current() { var user = vault && vault.getCurrentUser && vault.getCurrentUser(); return valid && vault && vault.isUnlocked() && ownerId && user && user.userId === ownerId && (!options.isCurrent || options.isCurrent()); }
+    if (!current()) return null;
+    var stop = observeVault(vault, function () {}, function () { valid = false; });
+    try { await ensureTemplateLibrary(); if (!current()) return null; return win.VildaCareTemplates.open(Object.assign({}, options, { vault: vault })); }
+    finally { stop(); }
+  }
   // Legacy vault hooks do not return unsubscribe functions. Subscribe once per
   // vault and keep only live views in this module-owned registry.
   function observeVault(vault, change, lock) {
@@ -193,7 +231,7 @@
     var doc = host.ownerDocument, vault = options.vault || win.VildaVault, destroyed = false, sequence = 0, refreshTimer = null;
     var account = vault && vault.getCurrentUser && vault.getCurrentUser(), accountId = account && account.userId;
     var state = { plans: [], patients: [], names: new Map(), selected: options.planId || null, filter: 'all', query: '', loading: false, busy: false, editing: false, detail: typeof options.detail === 'boolean' ? options.detail : !!(options.full && options.planId), stale: false, loaded: false };
-    var editor = null, unsubscribe = [], selectedOrigin = null, lifecycleObserver = null;
+    var editor = null, unsubscribe = [], selectedOrigin = null, lifecycleObserver = null, templateView = null;
     var syncVersionState = new Map();
     var record = null, recordNoteId = null, recordStepId = null, recordError = null, recordSequence = 0, selectionSequence = 0, recordOrigin = null, initialRecord = options.noteId || null;
     var omissionSnapshot = null, omissionSequence = 0;
@@ -220,7 +258,7 @@
     root.setAttribute('aria-label', 'Plany opieki'); root.classList.toggle('vcp-show-detail', state.detail);
     var tools = node('div', 'vcp-tools');
     var createButton = button('+ Nowy plan', 'vcp-text vcp-create', create); createButton.setAttribute('aria-label', 'Nowy plan');
-    if (options.showCreateButton !== false) { tools.appendChild(createButton); root.appendChild(tools); }
+    if (options.showCreateButton !== false) { tools.appendChild(createButton); tools.appendChild(button('Moje szablony', 'vcp-text', function () { openTemplateLibrary(); })); root.appendChild(tools); }
     var feedback = node('div', 'vcp-feedback'); feedback.setAttribute('role', 'status'); feedback.setAttribute('aria-live', 'polite'); feedback.hidden = true; root.appendChild(feedback);
     var layout = node('div', 'vcp-layout'), left = node('section', 'vcp-list-pane'), fixed = node('div', 'vcp-list-fixed');
     var search = node('input', 'vcp-search'); search.type = 'search'; search.placeholder = 'Szukaj pacjenta lub planu…'; search.setAttribute('aria-label', 'Szukaj pacjenta lub planu');
@@ -486,6 +524,7 @@
       patient.appendChild(node('p', 'vcp-detail-date', 'Plan od ' + date(plan.createdAtISO))); top.appendChild(patient);
       var menu = node('details', 'vcp-menu'); menu.open = menuOpen; var summary = node('summary', '', '⋯'); summary.setAttribute('aria-label', 'Opcje planu'); menu.appendChild(summary);
       var actions = node('div', 'vcp-menu-items'); actions.appendChild(button('Edytuj nazwę i cel', '', function () { menu.open = false; editPlan(plan); }));
+      var copyTemplate = button('Zapisz układ jako szablon', '', function () { menu.open = false; openTemplateLibrary(plan.id); }); copyTemplate.disabled = !!plan.syncNeedsReview; if (copyTemplate.disabled) copyTemplate.title = 'Najpierw potwierdź przegląd zmian po synchronizacji.'; actions.appendChild(copyTemplate);
       if (!closed(plan)) actions.appendChild(button('Dołącz istniejący termin', '', function () { menu.open = false; linkEvent(plan); }));
       actions.appendChild(button('Dodaj ustalenie', '', function () { menu.open = false; addNote(plan); }));
       var finish = button(closed(plan) ? 'Wznów plan' : 'Zamknij plan', '', function () { menu.open = false; if (closed(plan)) reopen(plan); else closePlan(plan); });
@@ -930,8 +969,22 @@
         model.notes = (notes || []).filter(function (note) { return note && note.dueDateISO && !note.completedAtISO && !note.noShowAtISO && !used.has(note.id) && !(note.careContext && (note.careContext.planId || ['plan', 'step', 'decision'].includes(note.careContext.role))); }).sort(function (a, b) { return String(a.dueDateISO).localeCompare(String(b.dueDateISO)); }); model.render();
       }).catch(function (error) { if (current() && editor === model) { clear(model.errors); errorBox(error, model.errors); model.status.textContent = 'Nie udało się wczytać terminów. Anuluj formularz i spróbuj ponownie.'; } });
     }
+    async function openTemplateLibrary(sourcePlanId) {
+      if (!current() || state.editing || state.busy) return;
+      busy(true, true);
+      try {
+        var view = await openTemplates({ vault: vault, sourcePlanId: sourcePlanId || null, isCurrent: current,
+          onDialog: options.onDialog,
+          onBusy: function (working) { if (current()) busy(working, true); },
+          onClose: function () { templateView = null; if (current()) { busy(false, false); render(); if (state.stale) refresh(); } }
+        });
+        if (!current()) { if (view) view.destroy(); return; }
+        templateView = view; if (!view) busy(false, false);
+      } catch (error) { if (current()) { busy(false, false); notify(error && error.message || 'Nie udało się otworzyć szablonów.'); } }
+    }
     function destroy() {
       if (destroyed) return; destroyed = true; sequence += 1; selectionSequence += 1; resetRecord(); syncVersionState.clear(); if (refreshTimer) win.clearTimeout(refreshTimer);
+      if (templateView) { templateView.destroy(); templateView = null; }
       if (lifecycleObserver) lifecycleObserver.disconnect();
       if (editor) {
         if (typeof editor.onDialogClose === 'function') editor.onDialogClose();
@@ -946,8 +999,8 @@
       lifecycleObserver = new win.MutationObserver(function () { if (!current()) destroy(); });
       lifecycleObserver.observe(doc.body, { childList: true, subtree: true });
     }
-    var controller = { refresh: refresh, destroy: destroy, create: create, select: select, openRecord: openRecord, isEditing: function () { return state.editing || state.busy; }, getSelected: function () { return state.selected; }, getContext: function () { return { planId: state.selected, noteId: recordNoteId, detail: state.detail }; } };
+    var controller = { refresh: refresh, destroy: destroy, create: create, select: select, openRecord: openRecord, openTemplates: openTemplateLibrary, isEditing: function () { return state.editing || state.busy; }, getSelected: function () { return state.selected; }, getContext: function () { return { planId: state.selected, noteId: recordNoteId, detail: state.detail }; } };
     refresh(); return controller;
   }
-  win.VildaCarePlans = { mount: mount, projectPatientNotes: projectPatientNotes, resolveNoteDestination: resolveNoteDestination };
+  win.VildaCarePlans = { mount: mount, projectPatientNotes: projectPatientNotes, resolveNoteDestination: resolveNoteDestination, ensureTemplateLibrary: ensureTemplateLibrary, openTemplates: openTemplates };
 })(typeof window !== 'undefined' ? window : null);

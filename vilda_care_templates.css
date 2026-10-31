@@ -1,0 +1,86 @@
+/* The template library shares the approved care-plan controls and colour tokens. */
+dialog.vct-dialog { width: min(1160px, calc(100vw - 32px)); height: min(850px, calc(100dvh - 44px)); max-width: calc(100vw - 32px); max-height: calc(100dvh - 44px); padding: 0; margin: auto; border: var(--border-hairline) solid var(--vcp-line); border-radius: var(--radius-14); overflow: hidden; box-shadow: 0 22px 80px #183c4433; }
+dialog.vct-dialog::backdrop { background: #1a3b4445; backdrop-filter: blur(3px); }
+.vct { display: flex; flex-direction: column; height: 100%; min-height: 0; overflow: hidden; }
+.vct .vct-header { display: flex; justify-content: space-between; align-items: center; flex-shrink: 0; gap: var(--space-12px); padding: var(--space-16px) var(--space-24px); border-bottom: var(--border-hairline) solid var(--vcp-line); position: static; width: auto; margin: 0; height: auto; min-height: 0; border-radius: 0; background: #fff; box-shadow: none; }
+.vct .vct-header h2 { font-size: 21px; font-weight: 500; line-height: 1.4; }
+.vct .vct-workspace { display: flex; flex: 1 1 auto; flex-direction: column; min-height: 0; min-width: 0; overflow: hidden; }
+.vct .vct-feedback { margin-top: var(--space-8px); flex-shrink: 0; }
+.vct .vct-errors { flex-shrink: 0; max-height: 25%; overflow: auto; }
+.vct .vct-errors .vcp-error { margin: var(--space-8px) var(--space-16px); }
+.vct .vct-library-tools { display: flex; align-items: center; flex-wrap: wrap; gap: var(--space-12px); padding: var(--space-14px) var(--space-24px); flex-shrink: 0; border-bottom: var(--border-hairline) solid var(--vcp-line); }
+.vct .vct-library-tools .vcp-search { flex: 1 1 230px; width: auto!important; }
+.vct .vct-library-tools .vcp-filters { padding: 0; flex-shrink: 0; }
+.vct .vct-library-list, .vct .vct-scroll-pane { min-height: 0; min-width: 0; overflow: auto; padding: var(--space-18px) var(--space-24px); overscroll-behavior: contain; flex: 1 1 auto; }
+.vct .vct-template-row { display: flex; gap: var(--space-16px); justify-content: space-between; align-items: center; border: var(--border-hairline) solid var(--vcp-line); border-radius: var(--radius-9); padding: var(--space-16px); margin-bottom: var(--space-12px); }
+.vct .vct-template-copy { min-width: 0; overflow-wrap: anywhere; }
+.vct .vct-template-copy h3 { font-size: 16px; font-weight: 500; }
+.vct .vct-row-actions, .vct .vct-detail-actions { display: flex; flex-wrap: wrap; gap: var(--space-10px); }
+.vct .vct-detail-actions { flex-shrink: 0; padding: var(--space-12px) var(--space-24px); border-top: var(--border-hairline) solid var(--vcp-line); }
+.vct .vct-breadcrumb, .vct .vct-workspace > .vcp-text { margin: var(--space-12px) var(--space-24px) var(--space-8px); flex-shrink: 0; align-self: flex-start; }
+.vct .vct-wizard-steps { display: flex; gap: var(--space-24px); padding: 0 var(--space-24px); border-bottom: var(--border-hairline) solid var(--vcp-line); flex-shrink: 0; }
+.vct.vcp .vct-wizard-steps button { border: 0!important; border-bottom: var(--border-emphasis) solid transparent!important; border-radius: 0!important; background: transparent!important; padding: var(--space-10px) 0!important; font-size: 13px; color: var(--vcp-muted)!important; }
+.vct.vcp .vct-wizard-steps button.is-active { border-bottom-color: var(--vcp-teal)!important; color: var(--vcp-teal)!important; }
+.vct .vct-name-pane { width: min(760px, 100%); align-self: center; }
+.vct .vct-editor-layout { display: grid; grid-template-columns: 235px minmax(0, 1fr); min-height: 0; flex: 1 1 auto; overflow: hidden; }
+.vct .vct-stage-sidebar { min-height: 0; overflow: auto; padding: var(--space-16px); border-right: var(--border-hairline) solid var(--vcp-line); }
+.vct.vcp .vct-stage-sidebar > button { display: block; width: 100%!important; text-align: left; margin-bottom: var(--space-8px); border: 0!important; background: #fff!important; overflow-wrap: anywhere; }
+.vct.vcp .vct-stage-sidebar > button.is-active { background: var(--vcp-soft)!important; color: var(--vcp-teal)!important; }
+.vct .vct-editor-main { min-width: 0; min-height: 0; overflow: auto; padding: var(--space-18px) var(--space-24px); overscroll-behavior: contain; }
+.vct .vct-mobile-stage { display: none; }
+.vct .vct-stage-heading, .vct .vct-step-heading, .vct .vct-preview-heading { display: flex; align-items: center; justify-content: space-between; gap: var(--space-12px); }
+.vct .vct-stage-heading > .vcp-field { flex: 1; min-width: 0; margin-top: 0; }
+.vct .vct-order-actions { display: flex; flex-shrink: 0; gap: 2px; }
+.vct.vcp .vct-order-actions button { border: 0!important; min-width: 32px!important; padding: var(--space-6px)!important; }
+.vct .vct-step-card, .vct .vct-stage-preview, .vct .vct-conflict-version { border: var(--border-hairline) solid var(--vcp-line); border-radius: var(--radius-9); margin-top: var(--space-14px); overflow: hidden; }
+.vct .vct-step-heading { padding: var(--space-8px) var(--space-12px); }
+.vct.vcp .vct-step-toggle { border: 0!important; padding: var(--space-6px) 0!important; flex: 1; text-align: left; min-width: 0; overflow-wrap: anywhere; font-weight: 500!important; }
+.vct .vct-step-body { padding: 0 var(--space-16px) var(--space-16px); border-top: var(--border-hairline) solid var(--vcp-line); }
+.vct .vct-step-card > .vcp-help { padding: 0 var(--space-12px) var(--space-12px); }
+.vct .vct-step-options { margin-top: var(--space-14px); font-size: 12px; }
+.vct .vct-step-options summary { cursor: pointer; min-height: 32px; padding-top: var(--space-6px); color: var(--vcp-teal); }
+.vct .vct-stage-preview, .vct .vct-conflict-version { padding: var(--space-16px); }
+.vct .vct-stage-preview h3 { font-size: 15px; font-weight: 500; overflow-wrap: anywhere; }
+.vct .vct-preview-step { border-top: var(--border-hairline) solid var(--vcp-line); margin-top: var(--space-12px); padding-top: var(--space-12px); overflow-wrap: anywhere; }
+.vct .vct-preview-step h4 { font-size: 14px; font-weight: 500; }
+.vct .vct-confirmation { padding: var(--space-24px); overflow: auto; }
+.vct .vct-confirmation button { margin-top: var(--space-16px); margin-right: var(--space-10px); }
+.vct .vct-footer { display: flex; align-items: center; justify-content: space-between; gap: var(--space-12px); padding: var(--space-12px) var(--space-24px); border-top: var(--border-hairline) solid var(--vcp-line); background: #fff; flex-shrink: 0; }
+.vct .vct-footer > .vcp-help { margin: 0; }
+.vct .vct-footer-actions { display: flex; align-items: center; justify-content: flex-end; gap: var(--space-10px); flex-wrap: wrap; }
+@media (max-width: 700px) {
+  dialog.vct-dialog { width: calc(100vw - 12px); max-width: calc(100vw - 12px); height: calc(100dvh - 16px); max-height: calc(100dvh - 16px); border-radius: var(--radius-10); }
+  .vct .vct-header, .vct .vct-library-tools, .vct .vct-library-list, .vct .vct-scroll-pane, .vct .vct-editor-main { padding: var(--space-14px) var(--space-16px); }
+  .vct .vct-header h2 { font-size: 19px; }
+  .vct .vct-library-tools { gap: var(--space-8px); }
+  .vct .vct-library-tools .vcp-search { flex-basis: 100%; }
+  .vct .vct-template-row { align-items: flex-start; flex-wrap: wrap; }
+  .vct .vct-row-actions { margin-left: auto; }
+  .vct .vct-editor-layout { display: flex; flex-direction: column; }
+  .vct .vct-stage-sidebar { display: none; }
+  .vct .vct-mobile-stage { display: flex; gap: var(--space-10px); align-items: flex-end; margin-bottom: var(--space-16px); }
+  .vct .vct-mobile-stage > .vcp-field { flex: 1; margin: 0; }
+  .vct .vct-stage-heading { align-items: flex-end; gap: var(--space-8px); }
+  .vct.vcp .vct-order-actions button { min-width: 44px!important; min-height: 44px!important; }
+  .vct .vct-wizard-steps { justify-content: space-between; gap: var(--space-10px); padding: 0 var(--space-16px); }
+  .vct.vcp .vct-wizard-steps button { font-size: 11px; min-height: 44px; }
+  .vct .vct-step-body .vcp-field-pair { grid-template-columns: 1fr; }
+  .vct .vct-footer { padding: var(--space-10px) var(--space-16px) max(var(--space-10px), env(safe-area-inset-bottom)); align-items: flex-end; }
+  .vct .vct-footer > .vcp-help { max-width: 110px; font-size: 10px; }
+  .vct .vct-footer-actions { gap: var(--space-8px); }
+  .vct .vct-footer-actions button { min-height: 44px; font-size: 12px; }
+}
+@media (max-height: 500px) and (max-width: 1000px) and (orientation: landscape) {
+  dialog.vct-dialog { width: calc(100vw - 16px); max-width: calc(100vw - 16px); height: calc(100dvh - 8px); max-height: calc(100dvh - 8px); }
+  .vct .vct-header { padding: var(--space-4px) var(--space-14px); }
+  .vct .vct-header h2 { font-size: 18px; }
+  .vct .vct-breadcrumb, .vct .vct-workspace > .vcp-text { margin: 0 var(--space-14px); padding: 2px 0; min-height: 24px; font-size: 11px; }
+  .vct .vct-wizard-steps { padding: 0 var(--space-14px); }
+  .vct.vcp .vct-wizard-steps button { padding: 5px 0!important; min-height: 30px; font-size: 12px; }
+  .vct .vct-library-list, .vct .vct-scroll-pane, .vct .vct-editor-main { padding: var(--space-8px) var(--space-14px); }
+  .vct .vct-scroll-pane > h2 { font-size: 20px; }
+  .vct .vct-stage-preview { padding: var(--space-10px); margin-top: var(--space-8px); }
+  .vct .vct-footer { padding: 2px var(--space-14px); }
+  .vct .vct-footer-actions { gap: var(--space-8px); }
+  .vct .vct-footer-actions button { min-height: 40px; }
+}
