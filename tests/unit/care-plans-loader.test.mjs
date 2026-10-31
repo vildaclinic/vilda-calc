@@ -3,13 +3,14 @@ import { describe, expect, it, vi } from 'vitest';
 import { loadBrowserScript } from '../support/load-browser-script.mjs';
 
 const DEPENDENCIES = [
-  'VildaCrypto', 'VildaLabSnapshot', 'VildaLabTestosteroneUnits', 'VildaLabAssessmentUI',
+  'VildaCrypto', 'VildaCarePlanModel', 'VildaLabSnapshot', 'VildaLabTestosteroneUnits', 'VildaLabAssessmentUI',
   'VildaHormoneReferenceSnapshot', 'VildaLabRangeSnapshot', 'VildaHormoneReferenceUI',
   'VildaLabHistory', 'VildaLabHistoryTab', 'VildaPubertyAssessment', 'VildaProAccess',
   'VildaRemindersPrivacy', 'VildaGlobalSearch', 'VildaGlobalSearchView',
 ];
 
 const REMINDER_MODULES = [
+  ['VildaCarePlanModel', 'vilda_care_plan_model.js'],
   ['VildaRemindersPrivacy', 'vilda_reminders_privacy.js'],
   ['VildaGlobalSearch', 'vilda_global_search.js'],
   ['VildaGlobalSearchView', 'vilda_global_search_view.js'],

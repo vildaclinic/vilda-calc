@@ -853,7 +853,8 @@ describe('care sync recovery after an older client imported notes without the ex
     await b.vault.mergeSyncPayload(careOnly(payload, [step]));
     expect(await b.adapter.getPatientNoteForUser(b.userId, step.id)).toEqual(stored);
     const parent = payload.patientNotes.find(note => note.careContext?.role === 'plan'), before = await b.adapter.getPatientNoteForUser(b.userId, parent.id);
-    await b.vault.mergeSyncPayload(careOnly(payload, [{ ...parent, careContext: { ...parent.careContext, version: 2 } }]));
+    await expect(b.vault.mergeSyncPayload(careOnly(payload, [{ ...parent, careContext: { ...parent.careContext, version: 2 } }])))
+      .rejects.toMatchObject({ code: 'CARE_FORMAT_UNSUPPORTED', vildaMergeBusy: true });
     expect(await b.adapter.getPatientNoteForUser(b.userId, parent.id)).toEqual(before);
   });
 

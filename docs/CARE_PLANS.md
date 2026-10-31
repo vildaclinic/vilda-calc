@@ -62,6 +62,31 @@ Jeżeli telefon zna już ten sam ETag chmury, `vilda_sync.js` wykrywa brak struk
 
 Odzyskanie wymaga nienaruszonej struktury w chmurze lub na drugim urządzeniu. Nie rekonstruujemy decyzji lekarza z luźnych notatek, nie cofamy rzeczywistej późniejszej edycji i nie nadpisujemy istniejącego kontekstu. Wszystkie urządzenia powinny używać bieżącej wersji aplikacji; starszy klient nadal nie zna struktury planu.
 
+## Podstawa etapów — odczyt bez migracji
+
+`vilda_care_plan_model.js` jest czystym, wersjonowanym kodekiem i projekcją danych. Nie odczytuje zegara, DOM, magazynu ani sieci. Jest ładowany przed sejfem na stronach z kontem oraz przez oba loadery i precache. Dotychczasowy interfejs nadal używa API i zapisu V1; kreator, biblioteka szablonów oraz zapis V2 nie są jeszcze uruchomione.
+
+Nowe API `VildaVault.getCarePlanView(planId, {todayLocalDateISO?})` odczytuje zaszyfrowany oryginał i tworzy odłączony widok. Sprawdza konto, sesję i adapter po operacjach asynchronicznych. Dzień przekazany do projekcji służy tylko etykietom przypomnień. Odczyt nie zmienia kontekstu, szyfrogramu, rewizji, historii, stanu zapisu pacjenta ani kolejki synchronizacji. Przy znacznikach usunięcia wykorzystuje istniejące reguły wyboru żywego rekordu i retencji; sam nie wykonuje odzyskania, przeniesienia ani czyszczenia danych.
+
+V1 otrzymuje wyłącznie wirtualną grupę „Dotychczasowy plan”, z kluczem widoku zamiast zapisanego identyfikatora etapu. Zachowuje oryginalne identyfikatory, równoległe kroki, bezwzględne daty i godziny, odnośniki oraz historię. Dawne `done` nie tworzy nowego faktu wykonania, otrzymania wyniku ani decyzji. Zapisane pochodzenie pozostaje widoczne jako zastane dane; brakujące pochodzenie pozostaje nieznane. Nazwy podobnych kroków nie są podstawą ich łączenia. Normalizacja i zobowiązania SHA V1 pozostają bez zmian.
+
+Uśpiony odczyt V2 rozdziela:
+
+- sterowanie etapem `planned` / `active` / `reviewed` od faktów `performance` / `resultReceipt` / `decision`;
+- faktyczny dzień zdarzenia od technicznego czasu jego zapisania;
+- powiązanie z oryginalnym wynikiem lub rezerwacją od własności i treści tego oryginału;
+- gotowość do przeglądu od świadomego zatwierdzenia oraz od osobnego uruchomienia następnego etapu.
+
+Wynik powiązany z przyszłym etapem nie uruchamia go i nie tworzy przypomnień. Powiązanie wyniku i terminu jest niezależne od kolejności tych czynności. Aktywna nierozstrzygnięta praca bez terminu jest obecna w projekcji z `dueDateISO: null`, bez oznaczenia zaległości. Przyszłe nieuruchomione kroki nie zasilają bieżącej pracy. Po ostatnim zatwierdzeniu otwarty plan wymaga osobnej decyzji o dalszym postępowaniu; nie zamyka się automatycznie.
+
+Pierwszy model przypomnienia obsługuje brak terminu albo przesunięcie o dni, tygodnie lub miesiące od jawnej daty ręcznego uruchomienia etapu. Arytmetyka jest kalendarzowa, niezależna od strefy czasowej i zmiany czasu. Koniec miesiąca jest ograniczany w miesiącu docelowym: 31.01 + 1 miesiąc daje 28/29.02, a + 2 miesiące daje 31.03. Odczyt reguły nie utrwala żadnej daty ani nie przesuwa wizyty.
+
+Każdy nowy widok jest `readOnly: true`, `provenanceVerified: false`. Walidacja struktury nie jest weryfikacją kryptograficznego pochodzenia. `VildaCarePlanModel.getWriteCapability()` i `VildaVault.getCarePlanWriteCapability()` zwracają stałe niedostępne uprawnienie `CARE_V2_WRITER_DISABLED`; argument wywołującego nie może włączyć zapisu. Niepuste korekty faktów oraz zapisany etap legacy V2 są na tym etapie jawnie nieobsługiwane, zamiast być interpretowane przez zgadywanie. Obsługa zmian zatwierdzonych etapów i promocji starych planów pozostaje zadaniem kolejnych etapów wdrożenia. Przekroczenie budżetu samej projekcji zwraca osobny stan `limited` z `CARE_MODEL_JSON_LIMIT`; nie zmienia formatu na nieobsługiwany i nie zwraca przyciętych danych. Oryginał oraz dotychczasowe API V1 pozostają zachowane.
+
+Nieobsługiwany `careContext` jest jawnie rozpoznawany. Nowy odczyt udostępnia bezpieczny widok tylko do odczytu; starsze ścieżki zapisu i transportu zgłaszają `CARE_FORMAT_UNSUPPORTED`, zamiast usuwać nieznane pola albo zwracać pozornie pustą dokumentację. Preflight sprawdza całą paczkę wejściową i istniejące rekordy objęte operacją przed pierwszym zapisem. Pojedyncza delta obejmuje swój zakres, w tym powiązania i odpowiednie usunięcia; nie wymusza odszyfrowania całego konta. Zatrzymany transport zachowuje kursor oraz pokazuje błąd przez istniejącą diagnostykę. Zablokowana migracja w tle nie zapisuje danych ani flagi ukończenia i pozostawia komunikat diagnostyczny.
+
+To zabezpieczenie rekordów nie jest jeszcze globalną blokadą starszych klientów. Przed aktywacją V2 konieczny jest osobno sprawdzony most zgodności: ochrona lokalnego formatu i otwartych kart, pełny bootstrap tożsamości, chroniona przestrzeń synchronizacji z trwałą polityką i epoką, kontrola importu oraz rzeczywiste testy dawnych klientów i dozwolonych wersji serwera. Tryby chmurowy i jednorazowy wymagają także dowodu bezpieczeństwa ich cache i czyszczenia sesji. Ten etap nie podnosi wersji IndexedDB, nie zmienia kopert plików, nie migruje kont i nie wdraża serwera.
+
 ## Walidacja
 
 Testy `care-plans-vault.test.mjs` wywołują rzeczywisty sejf i sprawdzają atomowość, konflikt edycji, usunięcie, zmianę konta/sesji, ponowienie, integrację Terminarza oraz transport kontekstu przez kopie i synchronizację. Testy `care-plans*.spec.mjs` sprawdzają pełny interfejs, mobilną nawigację, powłokę aplikacji i zimny start offline. Dane testowe są wyłącznie fikcyjne.

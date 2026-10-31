@@ -147,44 +147,61 @@ export const existingNoteRemoveExportAnchor = 'removePatientNote:$o,onPatientNot
 export const existingNoteRemoveExportReplacement = 'removePatientNote:$o,removeExistingPatientNote:VildaRemoveExistingPatientNote,onPatientNoteChanged:ms';
 export const existingNoteCommitAnchor = 'await I().putPatientNoteForUser(b,nt);';
 export const existingNoteCommitReplacement = 'if(e&&e.token===VildaExistingNoteUpdateToken){e.beforeCommit();if(e.prepareOnly)return nt;}' + existingNoteCommitAnchor;
-export const existingNoteDeleteAnchor = 'async function Eb(t,Qwp,Qwm){';
-export const existingNoteDeleteReplacement = 'async function Eb(t,Qwp,Qwm,Qwf){const Qwg=Qwf&&Qwf.token===VildaExistingNoteUpdateToken?Qwf:null;';
+// The format guard belongs to the current base remover, not to this conditional
+// note addition. Retain it in the reconstructed prior source and in the result.
+// These explicit source anchors deliberately do not read the deployed artifact
+// to derive their own expected text.
+const existingNoteDeleteFormatGuard = 'const CareMvpDeleteAccount=b,CareMvpDeleteSession=ot,CareMvpDeleteAdapter=I(),CareMvpDeleteGuard=function(){if(!T()||b!==CareMvpDeleteAccount||ot!==CareMvpDeleteSession||I()!==CareMvpDeleteAdapter)throw Bses_blad();};';
+export const existingNoteDeleteAnchor = 'async function Eb(t,Qwp,Qwm){' + existingNoteDeleteFormatGuard;
+export const existingNoteDeleteReplacement = 'async function Eb(t,Qwp,Qwm,Qwf){' + existingNoteDeleteFormatGuard + 'const Qwg=Qwf&&Qwf.token===VildaExistingNoteUpdateToken?Qwf:null;';
 
 // P-SESJA-ZAPISU (PR-S, przegląd 3): Bpz_pilnuj(Qws) w Eb (sesja „Scal pacjentów”, 5. argument) stoi w kotwicach
 // usunięcia i powiadomienia — przed sprawdzeniem tokenu i po zapisie nagrobka.
 // Only the opted-in call captures its account/adapter across awaits, runs a
 // final session check, and propagates read/tombstone errors. With no private
 // guard token the old remover follows exactly the same expressions/catches.
+const existingNoteDeleteSessionChecks = 'Bpz_pilnuj(Qws);CareMvpDeleteGuard();';
+const existingNoteConditionalSessionChecks = 'if(Qwg)Qwg.beforeCommit();' + existingNoteDeleteSessionChecks;
+const existingNoteDeleteMutations = [
+  [existingNoteDeleteAnchor, existingNoteDeleteReplacement],
+  ['await I().getPatientNoteForUser(b,t);' + existingNoteDeleteSessionChecks,
+    'await (Qwg?Qwg.adapter:I()).getPatientNoteForUser(Qwg?Qwg.account:b,t);' + existingNoteConditionalSessionChecks],
+  ['const CareMvpRemovedPlain=await G(r.bodyCipher.iv,r.bodyCipher.data);' + existingNoteDeleteSessionChecks,
+    'const CareMvpRemovedPlain=await G(r.bodyCipher.iv,r.bodyCipher.data);' + existingNoteConditionalSessionChecks],
+  ['}catch(Qwe){' + existingNoteDeleteSessionChecks + 'CareMvpRethrowLineage(Qwe);}CareMvpDeleteGuard();Bpz_pilnuj(Qws);await I().removePatientNoteForUser(b,t);',
+    '}catch(Qwe){' + existingNoteConditionalSessionChecks + 'CareMvpRethrowLineage(Qwe);if(Qwg)throw Qwe}CareMvpDeleteGuard();Bpz_pilnuj(Qws);if(Qwg)Qwg.beforeCommit();await (Qwg?Qwg.adapter:I()).removePatientNoteForUser(Qwg?Qwg.account:b,t);'],
+  ['try{const r=I();r&&typeof r.putPatientNoteTombstoneForUser', 'try{const r=Qwg?Qwg.adapter:I();r&&typeof r.putPatientNoteTombstoneForUser'],
+  ['r.putPatientNoteTombstoneForUser(b,', 'r.putPatientNoteTombstoneForUser(Qwg?Qwg.account:b,'],
+  ['}catch(Qwe){CareMvpRethrowLineage(Qwe);}Bpz_pilnuj(Qws);qr({id:t,patientId:e,action:"delete"',
+    '}catch(Qwe){CareMvpRethrowLineage(Qwe);if(Qwg)throw Qwe}Bpz_pilnuj(Qws);qr({id:t,patientId:e,action:"delete"'],
+];
+
 export function patchExistingNoteDeleteWriter(block) {
   if (!block.startsWith(existingNoteDeleteAnchor)) throw new Error('Unexpected note remover.');
-  const mutations = [
-    [existingNoteDeleteAnchor, existingNoteDeleteReplacement],
-    ['await I().getPatientNoteForUser(b,t)', 'await (Qwg?Qwg.adapter:I()).getPatientNoteForUser(Qwg?Qwg.account:b,t)'],
-    ['}catch{}Bpz_pilnuj(Qws);await I().removePatientNoteForUser(b,t);', '}catch(Qwe){if(Qwg)throw Qwe}Bpz_pilnuj(Qws);if(Qwg)Qwg.beforeCommit();await (Qwg?Qwg.adapter:I()).removePatientNoteForUser(Qwg?Qwg.account:b,t);'],
-    ['try{const r=I();r&&typeof r.putPatientNoteTombstoneForUser', 'try{const r=Qwg?Qwg.adapter:I();r&&typeof r.putPatientNoteTombstoneForUser'],
-    ['r.putPatientNoteTombstoneForUser(b,', 'r.putPatientNoteTombstoneForUser(Qwg?Qwg.account:b,'],
-    ['}catch{}Bpz_pilnuj(Qws);qr({id:t,patientId:e,action:"delete"', '}catch(Qwe){if(Qwg)throw Qwe}Bpz_pilnuj(Qws);qr({id:t,patientId:e,action:"delete"'],
-  ];
   let updated = block;
-  for (const [anchor, replacement] of mutations) {
+  for (const [anchor, replacement] of existingNoteDeleteMutations) {
     if (updated.split(anchor).length !== 2) throw new Error(`Expected one remover anchor: ${anchor}`);
     updated = updated.replace(anchor, replacement);
   }
   return updated;
 }
 export function unpatchExistingNoteDeleteWriter(block) {
-  return block.replace(existingNoteDeleteReplacement, existingNoteDeleteAnchor)
-    .replace('await (Qwg?Qwg.adapter:I()).getPatientNoteForUser(Qwg?Qwg.account:b,t)', 'await I().getPatientNoteForUser(b,t)')
-    .replace('}catch(Qwe){if(Qwg)throw Qwe}Bpz_pilnuj(Qws);if(Qwg)Qwg.beforeCommit();await (Qwg?Qwg.adapter:I()).removePatientNoteForUser(Qwg?Qwg.account:b,t);', '}catch{}Bpz_pilnuj(Qws);await I().removePatientNoteForUser(b,t);')
-    .replace('try{const r=Qwg?Qwg.adapter:I();r&&typeof r.putPatientNoteTombstoneForUser', 'try{const r=I();r&&typeof r.putPatientNoteTombstoneForUser')
-    .replace('r.putPatientNoteTombstoneForUser(Qwg?Qwg.account:b,', 'r.putPatientNoteTombstoneForUser(b,')
-    .replace('}catch(Qwe){if(Qwg)throw Qwe}Bpz_pilnuj(Qws);qr({id:t,patientId:e,action:"delete"', '}catch{}Bpz_pilnuj(Qws);qr({id:t,patientId:e,action:"delete"');
+  if (!block.startsWith(existingNoteDeleteReplacement)) throw new Error('Unexpected conditional note remover.');
+  let updated = block;
+  for (const [anchor, replacement] of existingNoteDeleteMutations.slice().reverse()) {
+    if (updated.split(replacement).length !== 2) throw new Error(`Expected one conditional remover anchor: ${replacement}`);
+    updated = updated.replace(replacement, anchor);
+  }
+  return updated;
 }
 
 export function patchVaultExistingNote(source) {
   const targetAnchor = source.includes(careInsertionAnchor) ? careInsertionAnchor : source.includes(remindersInsertionAnchor) ? remindersInsertionAnchor : insertionAnchor;
   const marks = [existingNoteUpdateSource, existingNoteExportReplacement, existingNoteRemoveExportReplacement, existingNoteCommitReplacement, existingNoteDeleteReplacement];
-  if (marks.every(mark => source.includes(mark))) return source;
+  if (marks.every(mark => source.includes(mark))) {
+    for (const mark of marks) if (source.split(mark).length !== 2) throw new Error(`Expected one applied vault anchor: ${mark}`);
+    return source;
+  }
   if (marks.some(mark => source.includes(mark)) || source.includes('function VildaChangeExistingPatientNote(')) {
     throw new Error('Partially applied or changed existing-note mutation: review the artifact first.');
   }
