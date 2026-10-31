@@ -17,9 +17,9 @@ function environment(missing = [], restoredSession = false) {
     VildaLabRangeSnapshot: {},
     // LAB-HISTORIA PR2: moduły zakładki „Badania” są w tym samym stosie; tu gotowe (ich ładowanie: lab-history-tab-loading).
     VildaLabHistory: {}, VildaLabHistoryTab: {}, VildaPubertyAssessment: {}, VildaLabTestosteroneUnits: {},
-    // Plany opieki are an independent ready dependency here. Missing/partial
-    // readiness of that module is covered by care-plans-loader.test.mjs.
-    VildaCarePlans: {},
+    // The independent care-plan model and UI are already ready here. Their
+    // missing/partial readiness is covered by care-plans-loader.test.mjs.
+    VildaCarePlanModel: {}, VildaCarePlans: {},
     // Search/privacy have their own missing-dependency loader regressions in
     // care-plans-loader.test.mjs; hormone cases start with that UI stack ready.
     VildaRemindersPrivacy: {}, VildaGlobalSearch: {}, VildaGlobalSearchView: {},

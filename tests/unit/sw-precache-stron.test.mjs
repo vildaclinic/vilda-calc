@@ -305,7 +305,11 @@ describe('P-SW-PRECACHE: instalacja bez historii, kopia z poprzedniej pamięci, 
     // opóźnienia na żądanie 24 MB zajęło 64 s, a 474 MB (historia) nie mieściło się nawet przy 20 Mb/s.
     const bajty = pobrane.reduce((suma, adres) => suma + (rozmiarPliku(adres) || 0), 0);
     expect(bajty, `instalacja pobiera ${(bajty / 1e6).toFixed(1)} MB`).toBeLessThan(40e6);
-    expect(pobrane.length, `instalacja wysyła ${pobrane.length} żądań`).toBeLessThan(600);
+    // Nowy, wymagany przed sejfem model dodaje dokładnie jedno pobranie:
+    // baza 599 → 600. Logika instalacji i współdzielenia aliasów jest bez zmian;
+    // nie rozszerzamy budżetu bajtów ani nie dopuszczamy powtórnego pobrania modelu.
+    expect(pobrane.filter(adres => adres.split('?')[0] === '/vilda_care_plan_model.js')).toHaveLength(1);
+    expect(pobrane.length, `instalacja wysyła ${pobrane.length} żądań`).toBeLessThanOrEqual(600);
   });
 
   it('siedem kluczy arkusza edu dostaje pełną treść z jednego pobrania mimo zużywania odpowiedzi przez cache.put', async () => {

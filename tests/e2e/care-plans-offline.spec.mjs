@@ -7,6 +7,7 @@ import { fileURLToPath } from 'node:url';
 import { expect, test } from '@playwright/test';
 import { createFictionalVault, readyForPatient } from '../support/centile-live-fixture.mjs';
 import { CARE_FORM, mutatePlan, openCarePlans, readPlan, selectPlan } from '../support/care-plans-fixture.mjs';
+import { rawCareStorage } from '../support/care-plans-model-fixture.mjs';
 
 test.use({ serviceWorkers: 'allow' });
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
@@ -79,7 +80,7 @@ test('care plans cold offline: native plan, narrative result and future step per
     await form.getByLabel('Przypomnij w dniu', { exact: true }).fill('2027-04-29');
     await form.getByRole('button', { name: 'Zapisz wynik', exact: true }).click();
     await expect(form).toHaveCount(0);
-    for (const resource of ['vilda_care_plans.js', 'vilda_care_plans.css', 'vilda_auth_ui.js', 'vilda_vault.js']) {
+    for (const resource of ['vilda_care_plan_model.js', 'vilda_care_plans.js', 'vilda_care_plans.css', 'vilda_auth_ui.js', 'vilda_vault.js']) {
       const entry = [...served].find(([url]) => url.split('?')[0] === '/' + resource);
       expect(entry, `${resource} was actually requested after the cold browser restart`).toBeTruthy();
       expect(entry[1], `${resource} came from the production service worker with the server stopped`).toBe(true);
@@ -94,6 +95,12 @@ test('care plans cold offline: native plan, narrative result and future step per
     }
     await page.reload({ waitUntil: 'load' }); await readyForPatient(page);
     const saved = await readPlan(page, plan.planId);
+    const storageBeforeModelRead = await rawCareStorage(page);
+    const modelView = await page.evaluate(id => window.VildaVault.getCarePlanView(id, { todayLocalDateISO: '2026-10-29' }), plan.planId);
+    expect(modelView).toMatchObject({ readOnly: true, writeCapability: { available: false, code: 'CARE_V2_WRITER_DISABLED' } });
+    expect(modelView.stages).toHaveLength(1);
+    expect(modelView.stages[0]).toMatchObject({ kind: 'legacy', control: null });
+    expect(await rawCareStorage(page)).toEqual(storageBeforeModelRead);
     expect(saved).toMatchObject({ status: 'active', needsDecision: false });
     expect(saved.steps).toHaveLength(2);
     const received = saved.steps.find(s => s.id === step.stepId), control = saved.steps.find(s => s.id !== step.stepId);

@@ -49,8 +49,8 @@ function environment(missing) {
   const appended = [];
   const win = { VildaCrypto: {}, VildaLabSnapshot: {}, VildaLabAssessmentUI: {}, VildaVault: {}, VildaAuthUI: {}, VildaProAccess: {},
     VildaHormoneReferenceSnapshot: {}, VildaHormoneReferenceUI: {}, VildaLabRangeSnapshot: {}, VildaLabHistory: {}, VildaLabHistoryTab: {}, VildaPubertyAssessment: {}, VildaLabTestosteroneUnits: {},
-    // Independent care-plan readiness is tested in care-plans-loader.test.mjs.
-    VildaCarePlans: {},
+    // Independent care-plan model/UI readiness is tested in care-plans-loader.test.mjs.
+    VildaCarePlanModel: {}, VildaCarePlans: {},
     // Independent search/privacy readiness is covered by the same loader suite.
     VildaRemindersPrivacy: {}, VildaGlobalSearch: {}, VildaGlobalSearchView: {},
     sessionStorage: { getItem: () => null },

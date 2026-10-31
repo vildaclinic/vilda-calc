@@ -1,4 +1,4 @@
-import { devices, expect } from '@playwright/test';
+import { devices, expect, test } from '@playwright/test';
 import { readyForPatient } from './centile-live-fixture.mjs';
 
 // Fresh synthetic accounts only. Every request to the production worker URL is
@@ -124,11 +124,39 @@ export async function careSyncPair({ page, context, browser, baseURL }) {
 }
 
 export async function pullUntilPlan(page, id, check) {
-  await expect.poll(async () => {
-    await page.evaluate(() => window.VildaSync.syncPull());
-    const plan = await page.evaluate(id => window.VildaVault.getCarePlan(id), id);
-    return check(plan);
-  }, { timeout: 15000, intervals: [100, 250, 500] }).toBe(true);
+  try {
+    await expect.poll(async () => {
+      await page.evaluate(() => window.VildaSync.syncPull());
+      const plan = await page.evaluate(id => window.VildaVault.getCarePlan(id), id);
+      return check(plan);
+    }, { timeout: 15000, intervals: [100, 250, 500] }).toBe(true);
+  } catch (error) {
+    // Observe a stalled pull before the caller closes its fictional devices.
+    // Do not acquire a writer lock, retry a pull or alter the failed assertion.
+    let diagnostic, timer;
+    try {
+      diagnostic = await Promise.race([page.evaluate(async () => {
+        const states = [];
+        for (let index = 0; index < localStorage.length; index++) {
+          const key = localStorage.key(index);
+          if (!key.startsWith('vilda-sync-state-v1:')) continue;
+          try {
+            const state = JSON.parse(localStorage.getItem(key));
+            states.push(Object.fromEntries(['registered', 'localEtag', 'lastSyncAt', 'lastError', 'changesSeq', 'headSeq']
+              .filter(field => Object.prototype.hasOwnProperty.call(state, field)).map(field => [field, state[field]])));
+          } catch { states.push({ unreadable: true }); }
+        }
+        const sync = window.VildaSyncIntegration;
+        return { locks: await navigator.locks.query(), states,
+          syncEnabled: sync?.isSyncEnabled?.(), startupSyncInProgress: sync?.isStartupSyncInProgress?.() };
+      }), new Promise(resolve => { timer = setTimeout(() => resolve({ diagnostic: 'page-read-pending' }), 1000); })]);
+    } catch (diagnosticError) { diagnostic = { diagnosticError: diagnosticError.message }; }
+    finally { clearTimeout(timer); }
+    console.warn('Care-plan pull failure, read-only diagnostic:', JSON.stringify(diagnostic));
+    try { await test.info().attach('care-plan-pull-diagnostic', { body: JSON.stringify(diagnostic, null, 2), contentType: 'application/json' }); }
+    catch { /* Diagnostic attachment must not replace the original error. */ }
+    throw error;
+  }
 }
 
 export async function watchCareBeacons(page, rejectLarge) {
