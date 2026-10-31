@@ -74,6 +74,9 @@ body:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3).
 .vcp .vcp-record-plan { color: var(--vcp-muted); margin-top: var(--space-6px); overflow-wrap: anywhere; }
 .vcp .vcp-record-body { margin: var(--space-18px) 0; white-space: pre-wrap; overflow-wrap: anywhere; line-height: 1.6; }
 .vcp .vcp-record-lab { margin-top: var(--space-12px); overflow-wrap: anywhere; }
+.vcp .vcp-result-preview { margin-top: var(--space-16px); padding: var(--space-12px); border: var(--border-hairline) solid var(--vcp-line); border-radius: var(--radius-9); background: #f6faf9; overflow-wrap: anywhere; }
+.vcp .vcp-result-preview h3 { font-size: 14px; font-weight: 500; line-height: 1.5; }
+.vcp .vcp-result-preview .vcp-record-body { max-height: 200px; overflow: auto; margin: var(--space-12px) 0 0; font-size: 13px; overscroll-behavior: contain; }
 .vcp .vcp-step-actions { display: flex; flex-wrap: wrap; gap: var(--space-6px) var(--space-16px); margin-top: 9px; align-items: center; }
 .vcp .vcp-step-actions button { min-height: 29px; font-size: 12px; padding: var(--space-4px) 0;     text-align: left; }
 .vcp .vcp-step-actions .vcp-action { padding: var(--space-6px) var(--space-10px); border: var(--border-hairline) solid #d4e7e1; background: #eef7f4; }
