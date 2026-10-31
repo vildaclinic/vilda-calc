@@ -21,9 +21,14 @@ export function beforeInfantLhTailBundle(data) {
 
 // The infant source adds exactly two standalone fields, without changing
 // earlier data. Remove only these additions to restore frozen runtime hashes.
+export function beforeFemaleTtInfantMedianRuntime(runtime) {
+  const { femaleTtInfantMedianData: _data, femaleTtInfantMedianPolicy: _policy, ...prior } = runtime;
+  return prior;
+}
+
 export function beforeFemaleTtInfantUpperRuntime(runtime) {
   const { femaleTtInfantUpperData: _femaleTtInfantUpperData,
-    femaleTtInfantUpperPolicy: _femaleTtInfantUpperPolicy, ...prior } = runtime;
+    femaleTtInfantUpperPolicy: _femaleTtInfantUpperPolicy, ...prior } = beforeFemaleTtInfantMedianRuntime(runtime);
   return prior;
 }
 

@@ -1,5 +1,15 @@
 # Pokrycie odniesień hormonalnych — stan 24 października 2026
 
+**Uzupełnienie 1.11.2026 — mediany niemowlęcego TT dziewczynek:**
+po dostarczeniu pełnego Busch 2025 i arkusza S3 właściciel zaakceptował
+makietę trzech opublikowanych median 0,19/0,13/0,08 nmol/L.
+[Aktualny kontrakt](FEMALE_TT_INFANT_MEDIAN.md) ogranicza nową kartę
+do całego PNA 5–184 dni i całego wieku <6 miesięcy kalendarzowych,
+z pełną kwalifikacją kontekstu i bez nowych RI, interpolacji lub historii.
+To odrębna informacja poza rejestrem 85 profili; Johannsen upper oraz
+Kushnir od 6 miesięcy pozostają niezależne. Historycznych tabel, hashy i ich
+ówczesnych rekomendacji poniżej nie przepisujemy.
+
 **Decyzje po tym audycie — 25–26.10.2026:**
 [LH dzieci z PR #790](../LH_CHILDHOOD_REFERENCE.md) ma osobne orientacyjne
 odniesienie i punkt samego wyniku w luce, bez dokładnej P50. Następnie

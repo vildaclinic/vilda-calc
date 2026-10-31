@@ -19,7 +19,7 @@
  *   bo i tak chcemy zwracać HTML z cache natychmiast.
  */
 
-const SW_VERSION = '1.1.425';
+const SW_VERSION = '1.1.426';
 const CACHE_PREFIX = 'pwa-kalorii';
 const SHELL_CACHE = `${CACHE_PREFIX}-shell-v${SW_VERSION}`;
 const RUNTIME_CACHE = `${CACHE_PREFIX}-runtime`;
@@ -2399,6 +2399,7 @@ const OPTIONAL_ASSETS = [
   '/vilda_hormone_lifespan_data.js?v=47',
   '/vilda_hormone_lifespan_data.js?v=48',
   '/vilda_hormone_lifespan_data.js?v=49',
+  '/vilda_hormone_lifespan_data.js?v=50',
   '/vilda_hormone_lifespan_reference.js?v=1',
   '/vilda_hormone_lifespan_reference.js?v=2',
   '/vilda_hormone_lifespan_reference.js?v=3',
@@ -2436,9 +2437,13 @@ const OPTIONAL_ASSETS = [
   '/vilda_female_tt_age_ui.css?v=1',
   '/vilda_female_tt_age_ui.css?v=2',
   '/vilda_female_tt_infant_context.js?v=1',
+  '/vilda_female_tt_infant_context.js?v=2',
   '/vilda_female_tt_infant_upper.js?v=1',
   '/vilda_female_tt_infant_upper_ui.js?v=1',
   '/vilda_female_tt_infant_upper_ui.css?v=1',
+  '/vilda_female_tt_infant_median.js?v=1',
+  '/vilda_female_tt_infant_median_ui.js?v=1',
+  '/vilda_female_tt_infant_median_ui.css?v=1',
   '/vilda_male_e2_age.js?v=1',
   '/vilda_male_e2_age.js?v=2',
   '/vilda_male_e2_age_ui.js?v=1',
@@ -4113,6 +4118,7 @@ const OPTIONAL_ASSETS = [
   '/inline_przelicznik_jednostek_00.css?v=6',
   '/inline_przelicznik_jednostek_00.css?v=7',
   '/inline_przelicznik_jednostek_00.css?v=8',
+  '/inline_przelicznik_jednostek_00.css?v=9',
   '/inline_regulamin_00.css?v=1',
   '/inline_steroidy_00.css?v=1',
   '/inline_subskrypcja_00.css?v=1',

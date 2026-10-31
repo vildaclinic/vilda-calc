@@ -14,6 +14,17 @@ Profil męski zachowuje własną wersję `2026-10-15.1`; nowy profil żeński
 `testosterone-sex-specific-source-selection` nie wybiera źródła według
 wartości wyniku.
 
+**Uzupełnienie 1.11.2026 — osobne mediany niemowlęce:** po akceptacji
+makiety nowa karta używa trzech dosłownych median żeńskiego TT Busch 2025/S3
+0,19/0,13/0,08 nmol/L dla nazwanych grup dni. Nowa karta wymaga całego
+PNA 5–184 dni i całego wieku <6 miesięcy kalendarzowych; dopuszcza
+konserwatywną obwiednię istniejącego wieku miesięcznego, bez nowego
+DOB. Nie tworzy laboratoryjnego RI, SDS lub historii; przy brakach
+GA/metody/materiału pozostaje informacją źródłową. Johannsen upper,
+kanoniczna ocena Mayo, Kushnir od kwalifikowanych 6 miesięcy i Madsen
+zachowują własne reguły. Pełna polityka i odrębność mediany od normy:
+[FEMALE_TT_INFANT_MEDIAN.md](hormone-lifespan/FEMALE_TT_INFANT_MEDIAN.md).
+
 ## Źródła i zakres odczytu
 
 | Źródło | Wersja i sprawdzone miejsce | Zastosowanie |

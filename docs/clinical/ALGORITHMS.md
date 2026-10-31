@@ -2935,6 +2935,84 @@ desktop/mobile, pełny ekran, PWA z zimnym startem offline i niezmienione
 historyczne hashe. Wykonane wyniki oraz wszystkie kontrole GitHub dla
 końcowego SHA podaje PR; sama lista nie jest deklaracją zaliczenia.
 
+### HORMONE-FEMALE-TT-INFANT-MEDIAN — mediany grup Busch, 2026-11-01
+
+**Decyzja i wpływ kliniczny:** po pełnym odczycie dostarczonego artykułu,
+arkusza S3 i akceptacji prywatnej makiety właściciel polecił wdrożenie
+median grup przed sześcioma miesiącami kalendarzowymi. Nowa informacja
+źródłowa i dokładny punkt/krotność wymagają własnej kwalifikacji;
+nie powstaje RI, SDS, diagnoza, ocena pilności lub nowa ocena historii.
+
+**Źródło:** Busch AS i wsp., EJE 2025;193:403–411,
+DOI [10.1093/ejendo/lvaf193](https://doi.org/10.1093/ejendo/lvaf193),
+Methods s.404–405, ryc.2/s.407, arkusz **Table S3!F78/F79/F80**
+z dostarczonego Supplementary Tables_R2_TableS3.xlsx.
+Dosłowne żeńskie **Testosterone**, nmol/L: **0–30 dni → 0,19;
+31–180 → 0,13; 181–400 → 0,08**. Jednostkę potwierdza PDF;
+Free Testosterone jest osobnym analitem w pmol/L. To mediana
+opublikowana dla grupy wieku, nie dokładna P50 każdego dnia lub
+odtworzony LMS. Kolumny ±SD nie są CI mediany i nie są aktywowane.
+
+**Populacja:** zdrowe kaukaskie dzieci z ciąż pojedynczych, bez
+wcześniactwa i SGA/LGA: 88 dziewczynek/101 chłopców, 446 powtarzanych
+pobrań. S3 nie podaje N poszczególnych grup. To te same niemowlęce
+dane, które opisano ogólnie w Frederiksen 2024, a nie niezależna
+replikacja. Surowica, izotopowa TurboFlow-LC-MS/MS. Cytowana metoda
+ma LOD 0,031/LOQ 0,10 nmol/L; 0,08 nie jest podmieniane na limit lub
+jego połowę. Pełny ZIP i S1/S2 pozostają nieodczytane; nie są źródłem
+tych trzech literalnych komórek.
+
+**Kontrakt:** osobne dane i polityka female-tt-infant-median-*.json,
+czysty VildaFemaleTTInfantMedian.evaluate(data, policy, context),
+dwa osobne pola runtime poza rejestrem 85 profili. Cały PNA musi
+mieścić się w jednej grupie i być **≥5 dni**, a cały możliwy wiek
+musi być **<6 miesięcy kalendarzowych**. 5 dni to jawna konserwatywna
+decyzja na podstawie minimum całej kohorty, nie zmiana etykiety 0–30
+w źródle ani dowód żeńskiego minimum. Sześć miesięcy nie oznacza
+180 dni; trzecią grupę wykorzystuje się wyłącznie przed tą granicą.
+Dodatkowa osłona całego PNA ≤184 dni wynika z istniejącego
+maxMonthSpanDays[6]; jest polityką produktu, nie źródłową granicą 400.
+
+Adapter adaptMedian zachowuje pełny aktualny PNA i zgodność osoby;
+dotychczasowy adapt Johannsen pozostaje niezależny. Bez PNA może
+użyć bieżącego ukończonego wieku miesięcznego z istniejącą obwiednią
+postnatalCalendarAge TT, bez DOB lub stałej długości miesiąca:
+3 miesiące → **89–123 dni → 0,13**. 1 miesiąc → 28–62 i 5 miesięcy
+→ 150–184 przecinają grupy. **[30,31]** daje 0,19/0,13,
+**[180,181]** daje 0,13/0,08; bez jednej mediany, punktu i ilorazu.
+Nieaktualny PNA nie zastępuje aktualnej korekty wieku.
+
+Cały znany GA **259–294 dni, 37+0–42+0**, jest konserwatywną polityką
+produktu, nie odczytaną konwencją dnia źródłowego. Zgłoszona surowica
+i LC-MS/MS nie są wnioskowane z metody publikacji. Nieznane
+GA/materiał/metoda → informacja źródłowa bez porównania. Znane
+wcześniactwo, SGA/LGA, niezgodność lub leczenie/stymulacja wyłączają;
+nieznany wywiad nie jest ujemny. Bez nowej ankiety lub Tannera.
+
+Skala zaakceptowanej karty to **0–3 × wybrana mediana**, niezależna
+od wyniku. Dokładne stężenie daje punkt i krotność; operatory i
+zapisy poniżej LOD/LOQ nie stają się dokładnym punktem. Odczyt ponad medianą
+nie jest rozpoznaniem ani statusem poza normą. Dotychczasowy
+przelicznik, Johannsen upper, Mayo i kwalifikowany Kushnir od
+6 miesięcy oraz późniejszy Madsen pozostają odrębne. Nie łączymy
+górnej wartości jednej pracy z medianą drugiej w jeden zakres.
+
+| Fikcyjne wejście przy zgodnym kontekście | Oczekiwany wynik produkcyjnych funkcji/UI |
+| --- | --- |
+| F12 dni / PNA 11–12 / TT 0,18 | Mediana 0,19, dokładny punkt; bez nowego werdyktu normy |
+| F3 ukończone miesiące bez DOB lub PNA / TT 0,26 | Istniejąca obwiednia 89–123; mediana 0,13, krotność 2 |
+| F5 mies. 29 dni, PNA 181–182, cały wiek <6 mies. / TT 0,09 | Mediana 0,08, bez podniesienia do LOQ lub zastępczego Kushnir |
+| [30,31] / [180,181] / 1 albo 5 miesięcy bez PNA | Oddzielne mediany dwóch grup; brak pojedynczej kropki/krotności |
+| Brak GA/metody/materiału / znana niezgodność / operator | Informacja źródłowa / wyłączenie / bez dokładnego punktu i ilorazu |
+| Historia, pacjent A→B, płeć, analit, lock | Bez ponownej oceny i zapisu nowej mediany; stare porównanie usunięte |
+
+Pełny kontrakt, hashe, ograniczenia i zakres regresji:
+[FEMALE_TT_INFANT_MEDIAN.md](hormone-lifespan/FEMALE_TT_INFANT_MEDIAN.md).
+Regresje używają rzeczywistych funkcji, obejmują pełny wiek, kontekst,
+nierówności, mobilny ekran/pełny ekran oraz aktualizację i zimny start
+PWA offline. Faktyczne wyniki i wszystkie kontrole końcowego SHA
+podaje PR; dokumentacja sama nie deklaruje zaliczenia.
+
 ### HORMONE-MALE-E2-AGE — osobna mediana E2 chłopców 6–18, 2026-10-25
 
 **Decyzja i wpływ kliniczny:** właściciel zaakceptował prywatną makietę

@@ -1,0 +1,349 @@
+{
+  "schemaVersion": 1,
+  "auditDate": "2026-11-01",
+  "kind": "sanitized-female-infant-tt-published-group-median-audit",
+  "decision": {
+    "ownerApprovedPrivateMock": true,
+    "productionScope": "Female total testosterone, whole PNA 5–184 days and whole chronological calendar age before 6 months; three literal Table S3 median values only.",
+    "clinicalChange": "Source median information and qualified exact patient comparison; no laboratory RI, SDS, diagnosis, urgency rule or historical reassessment.",
+    "clinicalValidationEstablished": false
+  },
+  "sources": [
+    {
+      "id": "busch2025",
+      "doi": "10.1093/ejendo/lvaf193",
+      "pmid": "40974100",
+      "title": "Serum steroid metabolome dynamics in infancy: a longitudinal cohort study of healthy infants",
+      "journal": "European Journal of Endocrinology 2025;193(4):403–411",
+      "version": "User-supplied final published/paginated PDF",
+      "bytes": 1103947,
+      "sha256": "b6b01d485ce67e61e57945e30bd64cfd316f306ab0cf5dec0a29b59697298470",
+      "pages": 9,
+      "locations": {
+        "populationAndAssay": "p404/PDF2",
+        "statistics": "p405/PDF3",
+        "referenceFigure": "Figure 2, p407/PDF5",
+        "referenceToTableS3": "p408/PDF6",
+        "limitations": "pp409–410/PDF7–8"
+      },
+      "fullMainRead": true
+    },
+    {
+      "id": "busch2025-table-s3",
+      "fileName": "Supplementary Tables_R2_TableS3.xlsx",
+      "version": "User-supplied extract from the published supplement; title/labels agree with main reference to Table S3.",
+      "bytes": 13908,
+      "sha256": "3545cc135c50896f96607a299ff2efd144180900c95c40da16ba0cda9e7ee32b",
+      "sheet": "Table S3",
+      "title": "Suppl. Table S3 - Reference ranges stratified by sex and age bin.",
+      "dimensions": "A1:H98",
+      "mergedRanges": [
+        "A1:H1"
+      ],
+      "columns": [
+        "Age_bin",
+        "Hormone",
+        "Sex",
+        "-2SD",
+        "-1SD",
+        "median",
+        "+1SD",
+        "+2SD"
+      ],
+      "allCellsRead": true,
+      "hiddenRowsOrColumns": false,
+      "formulas": 0,
+      "comments": 0,
+      "definedNames": 0,
+      "macroOrExternalLinkParts": false,
+      "unitPrintedInWorkbook": false
+    },
+    {
+      "id": "frederiksen2024-assay",
+      "doi": "10.1016/j.cca.2024.119852",
+      "pmid": "38977173",
+      "title": "Sex- and age-specific reference intervals of 16 steroid metabolites quantified simultaneously by LC-MS/MS in sera from 2458 healthy subjects aged 0 to 77 years",
+      "main": {
+        "pages": 10,
+        "bytes": 4350341,
+        "sha256": "7f9a7d683f2607588fc140451892bb975b88082bc5a982ae04333b9118bcf9a4"
+      },
+      "supplement": {
+        "pages": 19,
+        "bytes": 3775666,
+        "sha256": "984f6d2b5576341cf74d9ceef731635ec71a7fc9fd83ca3acff24c028c0ffbce"
+      },
+      "fullMainAndSupplementRead": true,
+      "role": "Analytical method cited by Busch 2025 and prior coarse-grained analysis of the same infant measurements; not independent replication."
+    }
+  ],
+  "literalMedians": [
+    {
+      "sheet": "Table S3",
+      "row": 78,
+      "sexCell": "C78",
+      "sex": "Female",
+      "analyteCell": "B78",
+      "analyte": "Testosterone",
+      "ageCell": "A78",
+      "ageBin": "0-30",
+      "medianCell": "F78",
+      "median": 0.19
+    },
+    {
+      "sheet": "Table S3",
+      "row": 79,
+      "sexCell": "C79",
+      "sex": "Female",
+      "analyteCell": "B79",
+      "analyte": "Testosterone",
+      "ageCell": "A79",
+      "ageBin": "31-180",
+      "medianCell": "F79",
+      "median": 0.13
+    },
+    {
+      "sheet": "Table S3",
+      "row": 80,
+      "sexCell": "C80",
+      "sex": "Female",
+      "analyteCell": "B80",
+      "analyte": "Testosterone",
+      "ageCell": "A80",
+      "ageBin": "181-400",
+      "medianCell": "F80",
+      "median": 0.08
+    }
+  ],
+  "statistic": {
+    "unit": "nmol/L from main assay/Figure 2 caption; FT in pmol/L is separate.",
+    "preferredDescription": "Mediana opublikowana dla grupy wieku",
+    "sourcePrecision": "Literal source TT medians use two decimals; no graph digitization or author export needed.",
+    "rawEmpiricalMedianConfirmed": false,
+    "exactDailyP50": false,
+    "continuousAgeCurve": false,
+    "interpolation": false,
+    "normalRangeFromOtherColumns": false,
+    "sdColumnsAreCiOfMedian": false,
+    "doNotInferExact2Point5And97Point5FromPlusMinus2Sd": true,
+    "sourceGroupN": "Not reported in the supplied Table S3/main article; entire ZIP not read.",
+    "sumOfAllFemaleSamplesNotPerBinN": true
+  },
+  "population": {
+    "location": "Copenhagen, Denmark",
+    "recruitment": "2016–2018",
+    "description": "Healthy Caucasian singleton infants",
+    "girls": 88,
+    "boys": 101,
+    "serumObservations": 446,
+    "femaleSerumObservationsFromFrederiksen2024": 204,
+    "maleSerumObservationsFromFrederiksen2024": 242,
+    "not446IndependentInfants": true,
+    "observedAgeAllSexDays": [
+      5,
+      485
+    ],
+    "exactFemaleAgeExtrema": "not reported",
+    "sourceExclusions": [
+      "Birth before 37 weeks",
+      "Birth after 42 weeks",
+      "SGA",
+      "LGA"
+    ],
+    "sgalgaDefinition": "not stated in supplied S3/main; no new threshold inferred",
+    "sampleTime": {
+      "median": "12:40",
+      "range": [
+        "10:00",
+        "16:50"
+      ]
+    },
+    "sourceMaterial": "Serum from clotted blood, stored at −20°C",
+    "method": "Isotope-dilution online TurboFlow-LC-MS/MS"
+  },
+  "analytical": {
+    "ttLodNmolPerL": 0.031,
+    "ttLoqNmolPerL": 0.1,
+    "limitsLocation": "Verified Frederiksen 2024 main Table 1 and supplement Table 6; cited method of Busch 2025. Busch Table S1 not read.",
+    "loqDefinition": "ICH regression 10*SEintercept/slope; not an empirically selected CV20% concentration.",
+    "publishedPrecision": {
+      "lowestInterdayTtMeanNmolPerL": 0.25,
+      "rsdPercent": 4.8,
+      "source": "Frederiksen 2024 supplement Table 8, p13"
+    },
+    "thirdMedianBelowLoqIsNotAutomaticRejection": true,
+    "noMedianClippingToLoqOrLimitHalf": true,
+    "buschBelowLodReporting": "LOD/2; exact low-value fitting treatment not fully specified in 2025 main.",
+    "doNotAssert2024LeftCensoredFitWasReusedUnchanged": true,
+    "sourceLimitsNotPatientLimits": true,
+    "sourceLcmsDoesNotEstablishPatientAssayIdentity": true,
+    "methodQualifications": {
+      "matrixResponseSlope": 0.911,
+      "matrixResponseSlope95Ci": [
+        0.905,
+        0.917
+      ],
+      "source": "Frederiksen 2024 supplement Table 6; no self-correction of source medians.",
+      "bernComparison": "Different adult/control method comparison in supplement Figure 3 is not a neonatal conversion formula."
+    }
+  },
+  "applicationPolicy": {
+    "referenceOnlyForCurrentFemaleTotalTt": true,
+    "minimumWholePnaDays": 5,
+    "minimumBasis": "Conservative product domain using whole-cohort observed minimum; not stated female TT minimum.",
+    "maximumWholePnaDaysInclusive": 184,
+    "maximumPnaBasis": "Explicit conservative product guard using existing maxMonthSpanDays[6]; not a published source age-bin limit and not a substitute for whole chronological calendar age before 6 months.",
+    "sourceFirstBinPreserved": "0–30",
+    "sourceBinsNotRenamedAsAuthorThresholds": true,
+    "maximumWholeCalendarMonths": 6,
+    "maximumCalendarExclusive": true,
+    "calendarSixMonthsNot180Days": true,
+    "onlyPartOf181To400BeforeSixMonthsUsed": true,
+    "gestationalAgeDays": {
+      "min": 259,
+      "max": 294,
+      "minInclusive": true,
+      "maxInclusive": true,
+      "basis": "Explicit conservative product 37+0–42+0 cutoff; precise day notation not recovered from source wording."
+    },
+    "requireWholeAgeInterval": true,
+    "requireSingleSourceGroupForPoint": true,
+    "unknownGestationalAgeOrSpecimenOrMethod": "source-info; no patient point or ratio",
+    "knownIncompatibility": "exclude; no alternative-source substitution",
+    "knownSourceBirthSizeIncompatibilityPreserved": true,
+    "contextReuse": {
+      "matchedCurrentMainPna": "Preserve full numeric interval and identity guards.",
+      "withoutPna": "Only current reported completed-month age at years 0 may use already existing clinicalTtData.automaticReferencePolicy.postnatalCalendarAge span tables.",
+      "sourceLabel": "reported-calendar-month-envelope",
+      "newBirthDateOrSampleDate": false,
+      "fixedMonthLength": false,
+      "midpoint": false,
+      "examples": {
+        "month1": [
+          28,
+          62
+        ],
+        "month2": [
+          59,
+          92
+        ],
+        "month3": [
+          89,
+          123
+        ],
+        "month4": [
+          120,
+          153
+        ],
+        "month5": [
+          150,
+          184
+        ]
+      },
+      "sameGroupExample": "3 months, 89–123 days => 0.13",
+      "splitExamples": [
+        "1 month, 28–62 days => 0.19/0.13",
+        "5 months, 150–184 days => 0.13/0.08"
+      ],
+      "stalePnaCannotOverrideCurrentReportedAge": true
+    },
+    "splitPnaExamples": [
+      {
+        "interval": [
+          30,
+          31
+        ],
+        "medians": [
+          0.19,
+          0.13
+        ]
+      },
+      {
+        "interval": [
+          180,
+          181
+        ],
+        "medians": [
+          0.13,
+          0.08
+        ]
+      }
+    ],
+    "newQuestionnaire": false,
+    "tannerRequired": false,
+    "interpolation": false,
+    "noNewLaboratoryStatus": true,
+    "exactOnlyPatientPointAndRatio": true,
+    "censoredPatientResultNeverMadeExact": true,
+    "sourceMedianNotChosenByPatientValue": true,
+    "plot": {
+      "min": 0,
+      "maxMedianMultiplier": 3,
+      "patientIndependent": true,
+      "normalBand": false,
+      "ageCurve": false
+    },
+    "existingSources": {
+      "johannsenUpper": "Independent unchanged source and eligibility; not joined into one RI.",
+      "kushnirAtSixCalendarMonths": "Existing qualified route preserved.",
+      "madsenAtSixYears": "Existing route preserved.",
+      "mayo": "Canonical laboratory evaluation remains independent."
+    },
+    "historyWrites": false,
+    "reassessSavedAssessment": false
+  },
+  "syntheticCases": [
+    {
+      "input": "F, PNA 11–12 days, calendar age fully <6 months, compatible GA/serum/LCMS, TT 0.18 nmol/L",
+      "expected": "Source 0.19, single exact point and ratio; no laboratory normal verdict."
+    },
+    {
+      "input": "F, 3 completed months, current month precision, no dates or PNA, compatible context, TT 0.26",
+      "expected": "Existing calendar span tables give 89–123 days; source 0.13, ratio 2."
+    },
+    {
+      "input": "F, 5 months 29 days, PNA 181–182, calendar age fully before 6 months, TT 0.09",
+      "expected": "Source 0.08; not clipped to 0.10 or automatically replaced by Kushnir."
+    },
+    {
+      "input": "PNA 30–31 or 180–181",
+      "expected": "Two literal medians; no single median, point or ratio."
+    },
+    {
+      "input": "1 or 5 completed months without PNA",
+      "expected": "Envelopes 28–62 or 150–184; split medians, no single comparison."
+    },
+    {
+      "input": "PNA 0–4, PNA extending beyond 184, or calendar age crosses 6 months",
+      "expected": "No new median for only covered part of possible age."
+    },
+    {
+      "input": "Unknown GA/material/method",
+      "expected": "Source information only, no exact patient point or ratio."
+    },
+    {
+      "input": "Known preterm, incompatible assay/material, therapy/stimulation",
+      "expected": "Source comparison excluded without fallback."
+    },
+    {
+      "input": "<0.10, >0.20, <LOD",
+      "expected": "Preserve true operator; source M may be shown, but no exact point or ratio."
+    },
+    {
+      "input": "Patient/sex/analyte change, lock, history restore",
+      "expected": "Remove old live comparison; no reassessment or history writes."
+    }
+  ],
+  "sourceLimitations": {
+    "entireLargeZipRead": false,
+    "figuresS1S2Read": false,
+    "theseNotNeededForLiteralThreeCells": true,
+    "individualRecordsIncluded": false,
+    "protectedFullFilesIncluded": false
+  },
+  "verification": {
+    "sourceFactsCrossCheckedIndependently": true,
+    "productionTestsRequired": true,
+    "actualTestAndCiResults": "Reported by final PR, not inferred from this contract."
+  }
+}

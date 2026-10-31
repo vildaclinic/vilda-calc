@@ -2146,7 +2146,7 @@
          formularza, więc tylko karta kończąca się na tym wierszu może mieć
          przyklejony formularz: tu bez wykresu, w trzech kolumnach zawsze.
          Z wykresem pod spodem formularz nachodziłby na wykres. */
-      .lab-smart-card:not(:has(> .lab-pane--chart :is(#labFshD3:not([hidden]), #labFemaleTtAge:not([hidden]), #labFemaleTtInfantUpper:not([hidden]), #labMaleE2Age:not([hidden]), #labAmhAgeReference:not([hidden]), #labHormoneLifespan:not([hidden]) > .vilda-hormone-lifespan:not([hidden])))) > .lab-pane--form[data-przyklejony] {
+      .lab-smart-card:not(:has(> .lab-pane--chart :is(#labFshD3:not([hidden]), #labFemaleTtAge:not([hidden]), #labFemaleTtInfantMedian:not([hidden]), #labFemaleTtInfantUpper:not([hidden]), #labMaleE2Age:not([hidden]), #labAmhAgeReference:not([hidden]), #labHormoneLifespan:not([hidden]) > .vilda-hormone-lifespan:not([hidden])))) > .lab-pane--form[data-przyklejony] {
         position: sticky;
         top: var(--lab-sticky-top);
       }
@@ -2189,10 +2189,10 @@
         margin-top: 0;
       }
       /* Bez wykresu panel znika, a karta kończy się na formularzu i wyniku. */
-      .lab-smart-card:not(:has(> .lab-pane--chart :is(#labFshD3:not([hidden]), #labFemaleTtAge:not([hidden]), #labFemaleTtInfantUpper:not([hidden]), #labMaleE2Age:not([hidden]), #labAmhAgeReference:not([hidden]), #labHormoneLifespan:not([hidden]) > .vilda-hormone-lifespan:not([hidden])))) {
+      .lab-smart-card:not(:has(> .lab-pane--chart :is(#labFshD3:not([hidden]), #labFemaleTtAge:not([hidden]), #labFemaleTtInfantMedian:not([hidden]), #labFemaleTtInfantUpper:not([hidden]), #labMaleE2Age:not([hidden]), #labAmhAgeReference:not([hidden]), #labHormoneLifespan:not([hidden]) > .vilda-hormone-lifespan:not([hidden])))) {
         grid-template-areas: "title title" "form result";
       }
-      .lab-smart-card:not(:has(> .lab-pane--chart :is(#labFshD3:not([hidden]), #labFemaleTtAge:not([hidden]), #labFemaleTtInfantUpper:not([hidden]), #labMaleE2Age:not([hidden]), #labAmhAgeReference:not([hidden]), #labHormoneLifespan:not([hidden]) > .vilda-hormone-lifespan:not([hidden])))) > .lab-pane--chart {
+      .lab-smart-card:not(:has(> .lab-pane--chart :is(#labFshD3:not([hidden]), #labFemaleTtAge:not([hidden]), #labFemaleTtInfantMedian:not([hidden]), #labFemaleTtInfantUpper:not([hidden]), #labMaleE2Age:not([hidden]), #labAmhAgeReference:not([hidden]), #labHormoneLifespan:not([hidden]) > .vilda-hormone-lifespan:not([hidden])))) > .lab-pane--chart {
         display: none;
       }
       .lab-suggest-field { max-width: var(--content-narrow-max-width); }
@@ -2205,14 +2205,14 @@
         top: var(--lab-sticky-top);
       }
       /* Z wykresem: formularz | wynik | wykres od jednej linii pod tytułem. */
-      .lab-grid:has(> .lab-smart-card > .lab-pane--chart :is(#labFshD3:not([hidden]), #labFemaleTtAge:not([hidden]), #labFemaleTtInfantUpper:not([hidden]), #labMaleE2Age:not([hidden]), #labAmhAgeReference:not([hidden]), #labHormoneLifespan:not([hidden]) > .vilda-hormone-lifespan:not([hidden]))) {
+      .lab-grid:has(> .lab-smart-card > .lab-pane--chart :is(#labFshD3:not([hidden]), #labFemaleTtAge:not([hidden]), #labFemaleTtInfantMedian:not([hidden]), #labFemaleTtInfantUpper:not([hidden]), #labMaleE2Age:not([hidden]), #labAmhAgeReference:not([hidden]), #labHormoneLifespan:not([hidden]) > .vilda-hormone-lifespan:not([hidden]))) {
         max-width: var(--lab-workspace-wide-max-width);
       }
-      .lab-smart-card:has(> .lab-pane--chart :is(#labFshD3:not([hidden]), #labFemaleTtAge:not([hidden]), #labFemaleTtInfantUpper:not([hidden]), #labMaleE2Age:not([hidden]), #labAmhAgeReference:not([hidden]), #labHormoneLifespan:not([hidden]) > .vilda-hormone-lifespan:not([hidden]))) {
+      .lab-smart-card:has(> .lab-pane--chart :is(#labFshD3:not([hidden]), #labFemaleTtAge:not([hidden]), #labFemaleTtInfantMedian:not([hidden]), #labFemaleTtInfantUpper:not([hidden]), #labMaleE2Age:not([hidden]), #labAmhAgeReference:not([hidden]), #labHormoneLifespan:not([hidden]) > .vilda-hormone-lifespan:not([hidden]))) {
         grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr) minmax(var(--lab-chart-min-width), 1.6fr);
         grid-template-areas: "title title title" "form result chart";
       }
-      .lab-smart-card:has(> .lab-pane--chart :is(#labFshD3:not([hidden]), #labFemaleTtAge:not([hidden]), #labFemaleTtInfantUpper:not([hidden]), #labMaleE2Age:not([hidden]), #labAmhAgeReference:not([hidden]), #labHormoneLifespan:not([hidden]) > .vilda-hormone-lifespan:not([hidden]))) > .lab-pane--chart {
+      .lab-smart-card:has(> .lab-pane--chart :is(#labFshD3:not([hidden]), #labFemaleTtAge:not([hidden]), #labFemaleTtInfantMedian:not([hidden]), #labFemaleTtInfantUpper:not([hidden]), #labMaleE2Age:not([hidden]), #labAmhAgeReference:not([hidden]), #labHormoneLifespan:not([hidden]) > .vilda-hormone-lifespan:not([hidden]))) > .lab-pane--chart {
         border-top: 0;
         border-left: var(--lab-pane-divider);
         padding: var(--space-1-25) 1.7rem 1.6rem;
@@ -2225,14 +2225,14 @@
          zostają zwarte. Wcięcie panelu (1.7rem) subgrid daje tylko skrajnym
          krawędziom — przy linii środkowej dokładają je reguły poniżej.
          Bez subgrid zostaje proporcja 1 : 1,6. */
-      .lab-grid:not(:has(> .lab-smart-card > .lab-pane--chart :is(#labFshD3:not([hidden]), #labFemaleTtAge:not([hidden]), #labFemaleTtInfantUpper:not([hidden]), #labMaleE2Age:not([hidden]), #labAmhAgeReference:not([hidden]), #labHormoneLifespan:not([hidden]) > .vilda-hormone-lifespan:not([hidden])))):has(#labInfoCard:not([hidden], .lab-puberty-suppressed)) {
+      .lab-grid:not(:has(> .lab-smart-card > .lab-pane--chart :is(#labFshD3:not([hidden]), #labFemaleTtAge:not([hidden]), #labFemaleTtInfantMedian:not([hidden]), #labFemaleTtInfantUpper:not([hidden]), #labMaleE2Age:not([hidden]), #labAmhAgeReference:not([hidden]), #labHormoneLifespan:not([hidden]) > .vilda-hormone-lifespan:not([hidden])))):has(#labInfoCard:not([hidden], .lab-puberty-suppressed)) {
         max-width: var(--lab-workspace-wide-max-width);
       }
-      .lab-smart-card:not(:has(> .lab-pane--chart :is(#labFshD3:not([hidden]), #labFemaleTtAge:not([hidden]), #labFemaleTtInfantUpper:not([hidden]), #labMaleE2Age:not([hidden]), #labAmhAgeReference:not([hidden]), #labHormoneLifespan:not([hidden]) > .vilda-hormone-lifespan:not([hidden])))):has(#labInfoCard:not([hidden], .lab-puberty-suppressed)) {
+      .lab-smart-card:not(:has(> .lab-pane--chart :is(#labFshD3:not([hidden]), #labFemaleTtAge:not([hidden]), #labFemaleTtInfantMedian:not([hidden]), #labFemaleTtInfantUpper:not([hidden]), #labMaleE2Age:not([hidden]), #labAmhAgeReference:not([hidden]), #labHormoneLifespan:not([hidden]) > .vilda-hormone-lifespan:not([hidden])))):has(#labInfoCard:not([hidden], .lab-puberty-suppressed)) {
         grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr) minmax(var(--lab-chart-min-width), 1.6fr);
         grid-template-areas: "title title title" "form result result";
       }
-      .lab-smart-card:not(:has(> .lab-pane--chart :is(#labFshD3:not([hidden]), #labFemaleTtAge:not([hidden]), #labFemaleTtInfantUpper:not([hidden]), #labMaleE2Age:not([hidden]), #labAmhAgeReference:not([hidden]), #labHormoneLifespan:not([hidden]) > .vilda-hormone-lifespan:not([hidden])))):has(#labInfoCard:not([hidden], .lab-puberty-suppressed)) > .lab-pane--result {
+      .lab-smart-card:not(:has(> .lab-pane--chart :is(#labFshD3:not([hidden]), #labFemaleTtAge:not([hidden]), #labFemaleTtInfantMedian:not([hidden]), #labFemaleTtInfantUpper:not([hidden]), #labMaleE2Age:not([hidden]), #labAmhAgeReference:not([hidden]), #labHormoneLifespan:not([hidden]) > .vilda-hormone-lifespan:not([hidden])))):has(#labInfoCard:not([hidden], .lab-puberty-suppressed)) > .lab-pane--result {
         display: grid;
         grid-template-columns: minmax(0, 1fr) minmax(0, 1.6fr);
         grid-template-columns: subgrid;
@@ -2241,14 +2241,14 @@
         align-content: start;
         align-items: start;
       }
-      .lab-smart-card:not(:has(> .lab-pane--chart :is(#labFshD3:not([hidden]), #labFemaleTtAge:not([hidden]), #labFemaleTtInfantUpper:not([hidden]), #labMaleE2Age:not([hidden]), #labAmhAgeReference:not([hidden]), #labHormoneLifespan:not([hidden]) > .vilda-hormone-lifespan:not([hidden])))):has(#labInfoCard:not([hidden], .lab-puberty-suppressed)) > .lab-pane--result > :not(#labInfoCard) {
+      .lab-smart-card:not(:has(> .lab-pane--chart :is(#labFshD3:not([hidden]), #labFemaleTtAge:not([hidden]), #labFemaleTtInfantMedian:not([hidden]), #labFemaleTtInfantUpper:not([hidden]), #labMaleE2Age:not([hidden]), #labAmhAgeReference:not([hidden]), #labHormoneLifespan:not([hidden]) > .vilda-hormone-lifespan:not([hidden])))):has(#labInfoCard:not([hidden], .lab-puberty-suppressed)) > .lab-pane--result > :not(#labInfoCard) {
         grid-column: 1;
         margin-right: 1.7rem;
       }
-      .lab-smart-card:not(:has(> .lab-pane--chart :is(#labFshD3:not([hidden]), #labFemaleTtAge:not([hidden]), #labFemaleTtInfantUpper:not([hidden]), #labMaleE2Age:not([hidden]), #labAmhAgeReference:not([hidden]), #labHormoneLifespan:not([hidden]) > .vilda-hormone-lifespan:not([hidden])))):has(#labInfoCard:not([hidden], .lab-puberty-suppressed)) > .lab-pane--result > #labResultSection {
+      .lab-smart-card:not(:has(> .lab-pane--chart :is(#labFshD3:not([hidden]), #labFemaleTtAge:not([hidden]), #labFemaleTtInfantMedian:not([hidden]), #labFemaleTtInfantUpper:not([hidden]), #labMaleE2Age:not([hidden]), #labAmhAgeReference:not([hidden]), #labHormoneLifespan:not([hidden]) > .vilda-hormone-lifespan:not([hidden])))):has(#labInfoCard:not([hidden], .lab-puberty-suppressed)) > .lab-pane--result > #labResultSection {
         margin-right: 0;
       }
-      .lab-smart-card:not(:has(> .lab-pane--chart :is(#labFshD3:not([hidden]), #labFemaleTtAge:not([hidden]), #labFemaleTtInfantUpper:not([hidden]), #labMaleE2Age:not([hidden]), #labAmhAgeReference:not([hidden]), #labHormoneLifespan:not([hidden]) > .vilda-hormone-lifespan:not([hidden])))):has(#labInfoCard:not([hidden], .lab-puberty-suppressed)) > .lab-pane--result > #labInfoCard {
+      .lab-smart-card:not(:has(> .lab-pane--chart :is(#labFshD3:not([hidden]), #labFemaleTtAge:not([hidden]), #labFemaleTtInfantMedian:not([hidden]), #labFemaleTtInfantUpper:not([hidden]), #labMaleE2Age:not([hidden]), #labAmhAgeReference:not([hidden]), #labHormoneLifespan:not([hidden]) > .vilda-hormone-lifespan:not([hidden])))):has(#labInfoCard:not([hidden], .lab-puberty-suppressed)) > .lab-pane--result > #labInfoCard {
         grid-column: 2;
         grid-row: 1 / -1;
         align-self: stretch;
