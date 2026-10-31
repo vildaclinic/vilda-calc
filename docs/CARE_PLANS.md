@@ -17,6 +17,20 @@ Plany opieki są zakładką Przypomnień i Karty pacjenta. Jeden pacjent może m
 - Zamknięcie wymaga powodu i opisu. Otwarte kroki wymagają jawnej zgody na zakończenie bez wykonania. Powiązane wydarzenia pozostają w Terminarzu; zamknięcie planu nie odwołuje ich automatycznie. Wznowienie zachowuje historię i wykonane kroki.
 - Na telefonie obowiązuje lista → szczegóły → powrót do zachowanej pozycji. Nie dodajemy pośredniego przycisku pełnego ekranu.
 
+### Pominięcie kroku i powiązanie istniejącego wyniku
+
+Pojedynczy otwarty krok można pominąć z obowiązkowym uzasadnieniem i datą decyzji. Pominięcie kończy pracę nad tym krokiem, zachowując jego identyfikator, wcześniejsze fakty i dokumenty. Nie potwierdza wykonania, otrzymania wyniku ani niestawienia się i nie odwołuje rezerwacji. Uzasadnienie powstaje jako jeden oryginalny wpis dokumentacji planu; nie jest dodatkową samodzielną Notatką pacjenta. Pozostałe kroki pozostają bez zmian, a rozstrzygnięcie ostatniego kroku pozostawia plan otwarty do decyzji lekarza.
+
+Zmiany statusu i treści wydarzenia w Terminarzu zachowują świadome pominięcie. Zwykłe cofnięcie administracyjnego niestawienia nadal może przywrócić otwarty krok. Wznowienie pominiętego kroku wymaga osobnej decyzji, uzasadnienia, daty i wyboru stanu do wykonania lub oczekiwania na wynik; zachowuje oryginalne dokumenty i historię. Dawny stan `cancelled` sam w sobie nie dowodzi pominięcia. Etykieta „Pominięty” i bieżący powód wymagają sprawdzonego powiązania z decyzją; nie odtwarzamy ich z tytułów, treści ani samej obecności dawnego uzasadnienia.
+
+Zamknięcie planu, zakończenie otwartych kroków podczas przeglądu zamkniętego planu i usunięcie przypomnienia nie zastępują wcześniej zapisanej daty klinicznej dzisiejszym dniem. Gdy zachowano jawny fakt bez znanej daty, data nadal pozostaje nieznana. Dzień decyzji organizacyjnej nie staje się dniem wykonania lub otrzymania wyniku.
+
+Istniejący wynik można podpiąć po obejrzeniu oryginału, potwierdzeniu jego związku z krokiem i wpisaniu rzeczywistej daty otrzymania. Formularz nie wyznacza jej z daty badania, próbki ani technicznego czasu zapisu. Wybór obejmuje samodzielne wyniki opisowe i strukturalne tego pacjenta; wewnętrzne przypomnienia i oczekujące zlecenia nie są otrzymanymi wynikami. Projekcje wyników z dokumentów leczenia i odrębne wyniki Klirensu nie są elementami tego wyboru.
+
+Powiązanie zachowuje oryginalny identyfikator, szyfrogram, rewizję, daty, treść oraz ewentualną przynależność wyniku do innego planu. Nie tworzy kopii wyniku i nie przepisuje go do nowego planu. Podgląd wskazuje bieżący oryginał; późniejsza edycja w Badaniach jest widoczna po ponownym otwarciu. Odnośniki z zachowanych wersji zmian są sprawdzane względem właściwego planu, kroku i historii, osobno od bieżącego powiązania.
+
+Klient sprzed historii pochodzenia może zachować czytelne dokumenty, a usunąć ich nowsze dowody powiązania. Brak tych dowodów nie tworzy potwierdzonego pominięcia ani prawa do zewnętrznego wyniku. Przy nierozstrzygniętej historii pominięcia zmiana wydarzenia zatrzymuje się z jawnym błędem, bez zapisu i bez przypisania dawnego powodu do bieżącego stanu. Samo potwierdzenie przeglądu nie odtwarza utraconego pochodzenia; potrzebna jest nienaruszona kopia lub nowa świadoma decyzja organizacyjna. Własne dawne wyniki planu zachowują odczyt przez ścisłe istniejące powiązanie dokumentu z tym planem i krokiem.
+
 ## Zapis i integracje
 
 `vilda_vault.js` przechowuje plan jako notatkę pacjenta kategorii `care-plan`. Wersjonowany `careContext` jest częścią zaszyfrowanej treści, razem z listą kroków, historią i identyfikatorami operacji. Nie powstaje nowy magazyn bazy ani jawny zapis planów w localStorage. Zewnętrzny `patientId` pozostaje jedynym właścicielem rekordu; kontekst nie utrwala jego osobnej kopii.
@@ -35,10 +49,17 @@ Publiczne API sejfu:
 - `getCarePlan(planId)` — aktualny plan;
 - `getCarePlanSyncReview(context, title)` — czysta, odczytowa projekcja zachowanych wersji zmian; nie odczytuje magazynu i nie zmienia kontekstu;
 - `getCarePlanCalendarRelations(context, title)` / `getCarePlanCalendarRelation(context, title, noteId, stepId)` — odczytowe rozróżnienie bieżącego, historycznego i odłączonego terminu; nie zmienia planu ani wydarzenia;
+- `getCarePlanStepOmissions(planId)` — odczytowa ocena bieżących pominięć, dostępności uzasadnień i ochrony przed zmianą przez status wydarzenia;
+- `listCarePlanResultCandidates({planId, stepId, query?})` / `getCarePlanResultCandidate({planId, stepId, noteId, linkedRev?, linkedUpdatedAtISO?})` — wybór i świeży podgląd oryginalnego wyniku przed powiązaniem;
+- `getCarePlanResultReference({planId, stepId, noteId})` — sprawdzony odczyt oryginału z bieżącego powiązania, przeglądu lub historii;
 - `needsCarePlanSyncRepair()` — odczytowe sprawdzenie, czy zapis planu utracił strukturę podczas obsługi przez starszego klienta;
 - `mutateCarePlan({planId?, patientId, baseRev, operationId, action, ...})` — zapis, wykonanie, wynik, powiązanie i zamknięcie.
 
 Zmiana porównuje rewizję planu i wszystkich zmienianych wpisów w jednej transakcji. Sprawdza aktualne konto i sesję, obecność pacjenta, usunięcia oraz ponowienie operacji. Błąd zapisu nie może zakończyć kroku bez zapisania wyniku lub kolejnego działania. Eksport/import i synchronizacja przenoszą kontekst w istniejących kopertach notatek. Dotychczasowe operacje na powiązanych notatkach aktualizują plan przez ten sam mechanizm.
+
+`omitStep` przyjmuje `stepId`, `text` i `dateISO`. `linkResult` przyjmuje `stepId`, oryginalne `noteId`, wybraną rewizję `linkedRev`, znacznik `linkedUpdatedAtISO`, jawną datę otrzymania `dateISO` i potwierdzenie `confirmReceived: true`. Świadome wznowienie używa `editStep` z żądaniem `restoreOmitted: true`, uzasadnieniem i datą; zwykła edycja zakończonego kroku zachowuje dotychczasowe ograniczenia. Są to argumenty operacji, a nie nowe pola utrwalonego formatu V1.
+
+Podpinany oryginał jest wyłącznie zależnością odczytu transakcji. Oba adaptery sprawdzają jego pacjenta, kategorię, rewizję, czas aktualizacji, szyfrogram i usunięcia przed pierwszym zapisem planu lub jego wpisów. Oryginał nie trafia do listy zapisów ani powiadomień synchronizacji. Równoległa zmiana lub usunięcie wyniku powoduje konflikt bez częściowego zapisu; formularz zachowuje wpisane wartości i wymaga ponownego sprawdzenia dokumentu przez lekarza.
 
 Równoczesne zmiany tego samego planu na różnych urządzeniach zachowują kroki i przebieg obu gałęzi. Plan oznaczony do przeglądu pokazuje komunikat i wymaga jawnego potwierdzenia przed zamknięciem. Moduł nie rozstrzyga za lekarza sprzecznych ustaleń. Potwierdzenie przeglądu jest osobną operacją z kontrolą rewizji i pozostaje w historii. Po poprawieniu ewentualnych rozbieżności lekarz potwierdza widoczny plan; ta sama transakcja uzgadnia daty i stany jego przypomnień oraz powiązanych wydarzeń. Treść dokumentacji pozostaje zachowana, a niewykonany krok nie oznacza automatycznego odwołania wydarzenia w Terminarzu.
 

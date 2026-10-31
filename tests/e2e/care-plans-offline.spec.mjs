@@ -8,6 +8,8 @@ import { expect, test } from '@playwright/test';
 import { createFictionalVault, readyForPatient } from '../support/centile-live-fixture.mjs';
 import { CARE_FORM, mutatePlan, openCarePlans, readPlan, selectPlan } from '../support/care-plans-fixture.mjs';
 import { rawCareStorage } from '../support/care-plans-model-fixture.mjs';
+import { expectOriginalPreview, getNote, omissionsFor, ordinaryResult, rawNote, selectExistingResult,
+  stepFor, submitExistingResult, submitOmission } from '../support/care-plans-step-actions-fixture.mjs';
 
 test.use({ serviceWorkers: 'allow' });
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
@@ -185,6 +187,43 @@ test('care plans cold offline: native plan, narrative result and future step per
       expect(reservationAfter[key], `offline detach preserves ${key}`).toEqual(reservationBefore[key]);
     }
     expect(await page.evaluate(() => fetch(`/__care-offline-probe-after-detach-${Date.now()}`).then(() => false, () => true))).toBe(true);
+
+    // Exercise the new step actions in this same cold, serverless profile.
+    // The pre-existing narrative-result and detach checks above stay intact.
+    const external = await ordinaryResult(page, created.ids.a, 'podpinany offline');
+    const externalRaw = await rawNote(page, external.id);
+    const omitOffline = await mutatePlan(page, created.ids.a, plan.planId, 'addStep', {
+      step: { title: 'Fikcyjny krok pomijany offline', kind: 'Konsultacja', state: 'pending',
+        reminderDateISO: '2026-10-29', eventDateISO: '2026-11-05', eventTime: '09:30' },
+    });
+    const linkOffline = await mutatePlan(page, created.ids.a, plan.planId, 'addStep', {
+      step: { title: 'Fikcyjny krok z oryginalnym wynikiem offline', kind: 'Oczekujący wynik', state: 'waiting' },
+    });
+    const omittedBookingId = linkOffline.plan.steps.find(item => item.id === omitOffline.stepId).calendarNoteId;
+    const omittedBookingRaw = await rawNote(page, omittedBookingId);
+    const newPanel = await openCarePlans(page); await selectPlan(newPanel, plan.planId);
+    const offlineReason = 'Fikcyjna jawna decyzja o pominięciu jednego kroku bez sieci.';
+    await submitOmission(page, newPanel, omitOffline.stepId, offlineReason, '2026-10-28');
+    const linkForm = await selectExistingResult(page, newPanel, linkOffline.stepId, external);
+    await submitExistingResult(linkForm, '2026-10-28');
+    expect(await rawNote(page, external.id)).toEqual(externalRaw);
+    expect(await rawNote(page, omittedBookingId)).toEqual(omittedBookingRaw);
+    const omissionProof = (await omissionsFor(page, plan.planId)).omissions[omitOffline.stepId];
+    expect(omissionProof).toMatchObject({ confirmed: true, protected: true,
+      reason: offlineReason, dateISO: '2026-10-28' });
+    const omissionOriginal = await getNote(page, omissionProof.noteId);
+    const actionsBeforeReload = await readPlan(page, plan.planId);
+    await page.reload({ waitUntil: 'load' }); await readyForPatient(page);
+    expect(await readPlan(page, plan.planId)).toEqual(actionsBeforeReload);
+    expect((await omissionsFor(page, plan.planId)).omissions[omitOffline.stepId]).toEqual(omissionProof);
+    expect(await getNote(page, omissionProof.noteId)).toEqual(omissionOriginal);
+    expect(await rawNote(page, external.id)).toEqual(externalRaw);
+    expect(await rawNote(page, omittedBookingId)).toEqual(omittedBookingRaw);
+    const reloadedPanel = await openCarePlans(page); await selectPlan(reloadedPanel, plan.planId);
+    await expect(stepFor(reloadedPanel, omitOffline.stepId).locator('.vcp-step-top')).toContainText('Pominięty');
+    await expectOriginalPreview(reloadedPanel, linkOffline.stepId, external);
+    expect(await getNote(page, external.id)).toEqual(external);
+    expect(await page.evaluate(() => fetch(`/__care-offline-probe-after-actions-${Date.now()}`).then(() => false, () => true))).toBe(true);
   } finally {
     if (context) await context.close().catch(() => {});
     await server.stop(); fs.rmSync(profile, { recursive: true, force: true });

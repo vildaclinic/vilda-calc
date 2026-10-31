@@ -96,10 +96,10 @@ async function openDevice(page, code) {
   await page.waitForFunction(() => Boolean(window.VildaCarePlans?.mount));
 }
 
-export async function careSyncPair({ page, context, browser, baseURL }) {
+export async function careSyncPair({ page, context, browser, baseURL, mobileTimezoneId = 'Europe/Warsaw' }) {
   const cloud = fictionalCareCloud();
   const mobileContext = await browser.newContext({ ...devices['iPhone 15 Pro'], baseURL,
-    locale: 'pl-PL', timezoneId: 'Europe/Warsaw', serviceWorkers: 'block', reducedMotion: 'reduce' });
+    locale: 'pl-PL', timezoneId: mobileTimezoneId, serviceWorkers: 'block', reducedMotion: 'reduce' });
   try {
     await cloud.attach(context); await cloud.attach(mobileContext);
     await openDevice(page);

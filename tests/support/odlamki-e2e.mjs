@@ -196,10 +196,57 @@ export function podziel(pliki, { odlamki, workery = WORKERY_NA_ODLAMEK, maksKrok
   }
   grupy = grupy.map((g) => g.sort(wgPoz));
 
+  // Kandydaci usunięcia/zamiany różnią się dopiero od pierwszej zmienionej
+  // pozycji. Stan workerów przed nią jest dokładnie taki jak w zwykłej kolejce.
+  // Grupy są już posortowane, a po przyjęciu zmiany oba modyfikowane odłamki
+  // dostają nowe tablice przed push/sort. WeakMap wiąże więc prefiksy z jednym
+  // niezmiennym obrazem grupy tylko w tym wywołaniu podziel().
+  const prefiksy = new WeakMap();
+  const wez = (wolny, sekundy) => {
+    let i = 0;
+    for (let k = 1; k < wolny.length; k += 1) if (wolny[k] < wolny[i]) i = k;
+    wolny[i] += sekundy;
+  };
+  const liczCzas = (lista, pomin = null, dodaj = null) => {
+    let zapis = prefiksy.get(lista);
+    if (!zapis) {
+      const wolny = new Array(Math.max(1, workery)).fill(0);
+      const stany = [wolny.slice()], pozycje = new Map();
+      lista.forEach((p, i) => {
+        pozycje.set(p, i);
+        wez(wolny, p.sekundy);
+        stany.push(wolny.slice());
+      });
+      zapis = { stany, pozycje };
+      prefiksy.set(lista, zapis);
+    }
+    let od = zapis.pozycje.get(pomin) ?? lista.length;
+    if (dodaj) {
+      // Oryginał wstawia przed pierwszym p z dodaj.poz < p.poz, zatem po
+      // wszystkich równych pozycjach. Nie zmieniamy kolejności remisów.
+      let lewo = 0, prawo = lista.length;
+      while (lewo < prawo) {
+        const srodek = Math.floor((lewo + prawo) / 2);
+        if (lista[srodek].poz <= dodaj.poz) lewo = srodek + 1;
+        else prawo = srodek;
+      }
+      od = Math.min(od, lewo);
+    }
+    const wolny = zapis.stany[od].slice();
+    let wstawiony = !dodaj;
+    for (let i = od; i < lista.length; i += 1) {
+      const p = lista[i];
+      if (!wstawiony && dodaj.poz < p.poz) { wez(wolny, dodaj.sekundy); wstawiony = true; }
+      if (p !== pomin) wez(wolny, p.sekundy);
+    }
+    if (!wstawiony) wez(wolny, dodaj.sekundy);
+    return Math.max(...wolny);
+  };
+
   // 2) Poprawa wg zasymulowanego czasu: przeniesienie pliku z najdłuższego odłamka albo zamiana
   //    pary plików — pierwsza zmiana, która skraca przydział (porównanie `lepszy`). Każdy krok
   //    ściśle poprawia przydział, więc pętla się kończy; `maksKrokow` to tylko bezpiecznik.
-  const czasy = grupy.map((g) => czasKolejki(g, workery));
+  const czasy = grupy.map((g) => liczCzas(g));
   for (let krok = 0; krok < maksKrokow; krok += 1) {
     const obecny = klucz(czasy);
     let zrodlo = 0;
@@ -212,14 +259,14 @@ export function podziel(pliki, { odlamki, workery = WORKERY_NA_ODLAMEK, maksKrok
         // dla --test-list, a skrypt CI odmawia takiej listy.
         if (grupy[zrodlo].length > 1) {
           const proba = [...czasy];
-          proba[zrodlo] = czasKolejki(grupy[zrodlo], workery, a);
-          proba[cel] = czasKolejki(grupy[cel], workery, null, a);
+          proba[zrodlo] = liczCzas(grupy[zrodlo], a);
+          proba[cel] = liczCzas(grupy[cel], null, a);
           if (lepszy(klucz(proba), obecny)) { zmiana = { a, b: null, cel, proba }; break szukaj; }
         }
         for (const b of grupy[cel]) {
           const zamiana = [...czasy];
-          zamiana[zrodlo] = czasKolejki(grupy[zrodlo], workery, a, b);
-          zamiana[cel] = czasKolejki(grupy[cel], workery, b, a);
+          zamiana[zrodlo] = liczCzas(grupy[zrodlo], a, b);
+          zamiana[cel] = liczCzas(grupy[cel], b, a);
           if (lepszy(klucz(zamiana), obecny)) { zmiana = { a, b, cel, proba: zamiana }; break szukaj; }
         }
       }

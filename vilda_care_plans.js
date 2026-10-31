@@ -195,7 +195,8 @@
     var state = { plans: [], patients: [], names: new Map(), selected: options.planId || null, filter: 'all', query: '', loading: false, busy: false, editing: false, detail: typeof options.detail === 'boolean' ? options.detail : !!(options.full && options.planId), stale: false, loaded: false };
     var editor = null, unsubscribe = [], selectedOrigin = null, lifecycleObserver = null;
     var syncVersionState = new Map();
-    var record = null, recordNoteId = null, recordError = null, recordSequence = 0, selectionSequence = 0, recordOrigin = null, initialRecord = options.noteId || null;
+    var record = null, recordNoteId = null, recordStepId = null, recordError = null, recordSequence = 0, selectionSequence = 0, recordOrigin = null, initialRecord = options.noteId || null;
+    var omissionSnapshot = null, omissionSequence = 0;
     function current() { var user = vault && vault.getCurrentUser && vault.getCurrentUser(); return !destroyed && host.isConnected && vault && vault.isUnlocked() && user && user.userId === accountId && (!options.isCurrent || options.isCurrent()); }
     function node(tag, className, text) { var element = doc.createElement(tag); if (className) element.className = className; if (text != null) element.textContent = text; return element; }
     function clear(element) { while (element.firstChild) element.removeChild(element.firstChild); }
@@ -276,6 +277,8 @@
       selectedOrigin = { scrollTop: list.scrollTop, query: state.query, filter: state.filter, id: planId };
       state.selected = planId; if (closed(activePlan())) state.filter = 'closed'; state.detail = true; root.classList.add('vcp-show-detail'); render(); detail.scrollTop = 0;
       var back = detail.querySelector('.vcp-back'); if (back && mobile()) back.focus({ preventScroll: true });
+      await loadOmissions(activePlan());
+      if (selection !== selectionSequence || !current() || state.selected !== planId) return;
       if (noteId) await openRecord(noteId);
     }
     function mobile() { return win.document.documentElement.classList.contains('vilda-phone') || !!(win.matchMedia && win.matchMedia('(max-width:700px)').matches); }
@@ -287,7 +290,34 @@
       var row = Array.from(list.querySelectorAll('[data-plan-id]')).find(function (item) { return item.dataset.planId === state.selected; }); if (row) row.focus({ preventScroll: true });
     }
     function openPatient(plan, noteId) { if (!state.editing && !state.busy && options.openPatient) options.openPatient(plan.patientId, noteId || null); }
-    function resetRecord() { recordSequence += 1; record = null; recordNoteId = null; recordError = null; recordOrigin = null; }
+    function resetRecord() { recordSequence += 1; record = null; recordNoteId = null; recordStepId = null; recordError = null; recordOrigin = null; }
+    function omissionFor(plan, step) {
+      return omissionSnapshot && omissionSnapshot.planId === plan.id && omissionSnapshot.rev === plan.rev
+        && omissionSnapshot.omissions && Object.prototype.hasOwnProperty.call(omissionSnapshot.omissions, step.id) && omissionSnapshot.omissions[step.id] || null;
+    }
+    function confirmedOmission(value) {
+      return !!(value && value.protected === true && value.confirmed === true && value.reasonAvailable === true
+        && recordId(value.noteId) && typeof value.reason === 'string' && value.reason.trim()
+        && typeof value.dateISO === 'string' && nullableDate(value.dateISO));
+    }
+    async function loadOmissions(plan) {
+      var ticket = ++omissionSequence; omissionSnapshot = null;
+      if (!plan || !current() || typeof vault.getCarePlanStepOmissions !== 'function' || !steps(plan).some(function (step) { return step.state === 'cancelled'; })) return;
+      try {
+        var value = await vault.getCarePlanStepOmissions(plan.id);
+        if (!current() || ticket !== omissionSequence || state.selected !== plan.id || !activePlan() || activePlan().rev !== plan.rev) return;
+        if (value && value.planId === plan.id && value.rev === plan.rev && value.omissions && typeof value.omissions === 'object' && !Array.isArray(value.omissions)) omissionSnapshot = value;
+      } catch { /* A missing proof keeps the neutral cancelled label. */ }
+      if (current() && ticket === omissionSequence && !state.editing && !state.busy) renderDetail();
+    }
+    function referencedResultStep(plan, noteId) {
+      var match = steps(plan).find(function (step) { return step.resultNoteId === noteId; });
+      if (match) return match.id;
+      var reviews = reviewComponents(plan.syncReview);
+      (Array.isArray(plan.log) ? plan.log : []).forEach(function (entry) { reviewComponents(entry && entry.resolution).forEach(function (component) { reviews.push(component); }); });
+      var component = reviews.find(function (entry) { return entry.key === 'step' && [entry.current].concat(entry.variants.map(function (variant) { return variant.value; })).some(function (value) { return value.resultNoteId === noteId; }); });
+      return component && component.stepId || null;
+    }
     function returnToPlan() {
       var origin = recordOrigin; resetRecord(); renderDetail();
       if (origin) {
@@ -297,21 +327,24 @@
         if (button) button.focus({ preventScroll: true });
       }
     }
-    async function openRecord(noteId, refreshing) {
+    async function openRecord(noteId, refreshing, stepId) {
       var plan = activePlan();
       if (!current() || state.editing || state.busy || !plan || !recordId(noteId)) return;
       if (!options.full && options.requestExpand) { options.requestExpand(plan.id, false, noteId); return; }
       if (!refreshing) recordOrigin = { scrollTop: detail.scrollTop, id: noteId };
       var ticket = ++recordSequence, planId = plan.id, patientId = plan.patientId;
+      recordStepId = stepId || referencedResultStep(plan, noteId);
       recordNoteId = noteId; record = null; recordError = null; renderDetail();
       if (!refreshing) detail.scrollTop = 0;
       try {
-        var original = await vault.getPatientNote(noteId);
+        var scopedResult = recordStepId && typeof vault.getCarePlanResultReference === 'function';
+        var reference = scopedResult ? await vault.getCarePlanResultReference({ planId: planId, stepId: recordStepId, noteId: noteId }) : null;
+        var original = scopedResult ? reference && reference.note : await vault.getPatientNote(noteId);
         if (!current() || ticket !== recordSequence || state.selected !== planId || recordNoteId !== noteId) return;
         var context = original && original.careContext;
-        if (!original || original.id !== noteId || original.patientId !== patientId || !context || context.version !== 1
-          || context.planId !== planId || !['result', 'note', 'calendar'].includes(context.role)) throw new Error('Ten wpis jest niedostępny lub nie należy już do tego planu. Sprawdź dokumentację pacjenta.');
-        if (context.role === 'calendar' && typeof vault.getCarePlanCalendarRelations === 'function') {
+        if (!original || original.id !== noteId || original.patientId !== patientId || scopedResult && !['current', 'review', 'history'].includes(reference.relation)
+          || !scopedResult && (!context || context.version !== 1 || context.planId !== planId || !['result', 'note', 'calendar'].includes(context.role))) throw new Error('Ten wpis jest niedostępny lub nie należy już do tego planu. Sprawdź dokumentację pacjenta.');
+        if (!scopedResult && context.role === 'calendar' && typeof vault.getCarePlanCalendarRelations === 'function') {
           var parent = await vault.getPatientNote(planId);
           if (!current() || ticket !== recordSequence || state.selected !== planId || recordNoteId !== noteId) return;
           if (!parent || parent.id !== planId || !readablePlan(parent, patientId)) throw new Error('Ten wpis jest niedostępny lub nie należy już do tego planu. Sprawdź dokumentację pacjenta.');
@@ -325,8 +358,8 @@
         recordError = error; renderDetail();
       }
     }
-    function recordLink(label, noteId) {
-      var item = button(label, 'vcp-text', function () { openRecord(noteId); }); item.dataset.recordId = noteId; return item;
+    function recordLink(label, noteId, stepId) {
+      var item = button(label, 'vcp-text', function () { openRecord(noteId, false, stepId); }); item.dataset.recordId = noteId; return item;
     }
     function reviewField(parent, label, value) {
       var field = node('p', 'vcp-sync-field'); field.appendChild(node('span', 'vcp-sync-field-label', label + ': '));
@@ -340,8 +373,8 @@
       return pad(parsed.getDate()) + '.' + pad(parsed.getMonth() + 1) + '.' + parsed.getFullYear() + ' · '
         + pad(parsed.getHours()) + ':' + pad(parsed.getMinutes()) + ':' + pad(parsed.getSeconds()) + ' (czas urządzenia)';
     }
-    function reviewDocument(parent, label, noteId, empty, action) {
-      var field = reviewField(parent, label, noteId ? '' : empty); if (noteId) field.appendChild(recordLink(action, noteId));
+    function reviewDocument(parent, label, noteId, empty, action, stepId) {
+      var field = reviewField(parent, label, noteId ? '' : empty); if (noteId) field.appendChild(recordLink(action, noteId, stepId));
     }
     function reviewVersion(parent, component, value, label) {
       var version = node('article', 'vcp-sync-version'); version.appendChild(node('h5', 'vcp-sync-version-title', label));
@@ -367,7 +400,7 @@
         reviewField(version, 'Data zakończenia', value.completedDateISO ? date(value.completedDateISO) : 'Brak daty zakończenia');
         reviewField(version, 'Rodzaj zakończenia', sources[completionSource] || (value.state === 'done' ? 'Nie zapisano źródła zakończenia' : value.state === 'cancelled' ? 'Zakończono bez wykonania' : 'Krok niezakończony'));
         reviewField(version, 'Przypomnienie kroku', value.reminderNoteId ? 'Powiązane z planem' : 'Brak powiązanego przypomnienia');
-        reviewDocument(version, 'Wynik', value.resultNoteId, 'Brak powiązanego wyniku', 'Otwórz wynik');
+        reviewDocument(version, 'Wynik', value.resultNoteId, 'Brak powiązanego wyniku', 'Otwórz wynik', component.stepId);
         reviewDocument(version, 'Wydarzenie w Terminarzu', value.calendarNoteId, 'Brak powiązanego wydarzenia', 'Otwórz termin');
       }
       parent.appendChild(version);
@@ -407,6 +440,18 @@
         versions.appendChild(group);
       }); parent.appendChild(versions);
     }
+    function originalContent(parent, original) {
+      if (original.dueDateISO) parent.appendChild(node('p', 'vcp-step-meta', 'Termin wydarzenia: ' + date(original.dueDateISO) + (original.dueTime ? ' · ' + original.dueTime : '')));
+      if (original.clinicalDateISO) parent.appendChild(node('p', 'vcp-step-meta', 'Data badania / ustalenia: ' + date(original.clinicalDateISO)));
+      if (original.labResult) {
+        var lab = original.labResult, value = typeof lab.valueNum === 'number' && isFinite(lab.valueNum) ? String(lab.valueNum) : lab.value;
+        var result = node('div', 'vcp-record-lab');
+        if (lab.test) result.appendChild(node('p', '', 'Badanie: ' + lab.test));
+        if (value) result.appendChild(node('p', '', 'Zapisany wynik: ' + value + (lab.unit ? ' ' + lab.unit : '')));
+        if (lab.norm) result.appendChild(node('p', '', 'Zapisana norma: ' + lab.norm)); parent.appendChild(result);
+      }
+      parent.appendChild(node('div', 'vcp-record-body', original.body || 'Brak dodatkowej treści.'));
+    }
     function renderRecord(plan) {
       var section = node('section', 'vcp-record'); section.dataset.noteId = recordNoteId; section.setAttribute('aria-label', 'Wpis planu opieki');
       section.appendChild(button('← Wróć do planu', 'vcp-back vcp-text', returnToPlan));
@@ -417,17 +462,8 @@
       } else if (!record) { var loading = node('p', 'vcp-empty', 'Wczytywanie wpisu…'); loading.setAttribute('role', 'status'); section.appendChild(loading); }
       else {
         var heading = node('h2', 'vcp-title', record.title || 'Wpis planu opieki'); heading.tabIndex = -1; section.appendChild(heading);
-        if (record.dueDateISO) section.appendChild(node('p', 'vcp-step-meta', 'Termin wydarzenia: ' + date(record.dueDateISO) + (record.dueTime ? ' · ' + record.dueTime : '')));
-        if (record.clinicalDateISO) section.appendChild(node('p', 'vcp-step-meta', 'Data badania / ustalenia: ' + date(record.clinicalDateISO)));
-        if (record.labResult) {
-          var lab = record.labResult, value = typeof lab.valueNum === 'number' && isFinite(lab.valueNum) ? String(lab.valueNum) : lab.value;
-          var result = node('div', 'vcp-record-lab');
-          if (lab.test) result.appendChild(node('p', '', 'Badanie: ' + lab.test));
-          if (value) result.appendChild(node('p', '', 'Zapisany wynik: ' + value + (lab.unit ? ' ' + lab.unit : '')));
-          if (lab.norm) result.appendChild(node('p', '', 'Zapisana norma: ' + lab.norm)); section.appendChild(result);
-        }
-        section.appendChild(node('div', 'vcp-record-body', record.body || 'Brak dodatkowej treści.'));
-        if (record.careContext.role === 'result') section.appendChild(node('p', 'vcp-help', 'Wynik jest również dostępny w Badaniach Karty pacjenta.'));
+        originalContent(section, record);
+        if (record.careContext && record.careContext.role === 'result') section.appendChild(node('p', 'vcp-help', 'Wynik jest również dostępny w Badaniach Karty pacjenta.'));
         if (options.openRecordDetails) section.appendChild(button('Szczegóły wpisu', 'vcp-text', async function () {
           if (!current() || !record) return;
           var noteId = recordNoteId, ticket = recordSequence;
@@ -489,24 +525,33 @@
     }
     function stepNode(plan, step, index) {
       var item = node('article', 'vcp-step'); item.dataset.stepId = step.id;
+      var omission = step.state === 'cancelled' && omissionFor(plan, step), omitted = confirmedOmission(omission);
       item.appendChild(node('span', 'vcp-step-marker vcp-step-' + step.state, step.state === 'done' ? '✓' : step.state === 'waiting' ? '◷' : step.state === 'cancelled' ? '−' : String(index + 1)));
       var content = node('div', 'vcp-step-content'), top = node('div', 'vcp-step-top'); top.appendChild(node('h4', 'vcp-step-title', step.title));
-      var labels = { pending: 'Do wykonania', waiting: 'Oczekuję na wynik', done: 'Zakończony', cancelled: 'Niewykonany' }; top.appendChild(badge(labels[step.state] || 'Do wykonania', step.state === 'waiting' ? 'waiting' : step.state === 'done' ? 'done' : 'planned')); content.appendChild(top);
+      var labels = { pending: 'Do wykonania', waiting: 'Oczekuję na wynik', done: 'Zakończony', cancelled: 'Niewykonany' }; top.appendChild(badge(omitted ? 'Pominięty' : labels[step.state] || 'Do wykonania', step.state === 'waiting' ? 'waiting' : step.state === 'done' ? 'done' : 'planned')); content.appendChild(top);
       var meta = [];
       if (step.state === 'done') meta.push('Zakończono: ' + date(step.completedDateISO));
-      else if (step.state === 'cancelled') meta.push('Krok zakończony bez wykonania');
+      else if (step.state === 'cancelled') meta.push(omitted ? 'Decyzja o pominięciu: ' + date(omission.dateISO) : 'Krok zakończony bez wykonania');
       else meta.push((step.state === 'waiting' ? 'Sprawdź wynik: ' : 'Przypomnij: ') + date(step.reminderDateISO));
       if (step.kind) meta.push(step.kind);
       if (step.eventDateISO) meta.push('Termin wydarzenia: ' + date(step.eventDateISO) + (step.eventTime ? ' · ' + step.eventTime : ''));
       content.appendChild(node('p', 'vcp-step-meta', meta.join(' · '))); if (step.description) content.appendChild(node('p', 'vcp-description', step.description));
+      if (omitted) content.appendChild(node('p', 'vcp-description vcp-omission-reason', 'Powód pominięcia: ' + omission.reason));
       var actions = node('div', 'vcp-step-actions');
       if (!closed(plan) && step.state !== 'done' && step.state !== 'cancelled') {
         actions.appendChild(button(step.state === 'waiting' ? 'Wpisz wynik' : 'Zapisz wykonanie', 'vcp-action', function () { outcome(plan, step, step.state === 'waiting' ? 'result' : 'complete'); }));
         if (step.state !== 'waiting') actions.appendChild(button('Czekam na wynik', '', function () { outcome(plan, step, 'wait'); }));
+        var link = button('Podepnij istniejący wynik', '', function () { linkResult(plan, step); });
+        link.disabled = !!plan.syncNeedsReview; if (link.disabled) link.title = 'Najpierw potwierdź przegląd zmian po synchronizacji.';
+        actions.appendChild(link);
         actions.appendChild(button('Edytuj', 'vcp-subtle', function () { stepForm(plan, step); }));
+        var omit = button('Pomiń krok', 'vcp-subtle', function () { omitStep(plan, step); });
+        omit.disabled = !!plan.syncNeedsReview; if (omit.disabled) omit.title = 'Najpierw potwierdź przegląd zmian po synchronizacji.';
+        actions.appendChild(omit);
       }
+      if (!closed(plan) && !plan.syncNeedsReview && step.state === 'cancelled' && omission && omission.protected === true) actions.appendChild(button(omitted ? 'Wznów pominięty krok' : 'Wznów krok', 'vcp-subtle', function () { restoreOmittedStep(plan, step, omitted); }));
       if (step.calendarNoteId && options.openCalendar) actions.appendChild(button('Otwórz termin ↗', '', function () { options.openCalendar(step.calendarNoteId); }));
-      if (step.resultNoteId) actions.appendChild(recordLink('Otwórz wynik', step.resultNoteId));
+      if (step.resultNoteId) actions.appendChild(recordLink('Otwórz wynik', step.resultNoteId, step.id));
       content.appendChild(actions); item.appendChild(content); return item;
     }
     async function refresh() {
@@ -530,8 +575,10 @@
         return;
       } finally { if (ticket === sequence) state.loading = false; }
       if (current() && ticket === sequence) {
-        if (recordNoteId && activePlan()) { if (changed) render(); await openRecord(recordNoteId, true); }
-        else if (changed) render();
+        if (changed) render();
+        await loadOmissions(activePlan());
+        if (!current() || ticket !== sequence) return;
+        if (recordNoteId && activePlan()) await openRecord(recordNoteId, true, recordStepId);
         if (initialRecord) { var firstRecord = initialRecord; initialRecord = null; await openRecord(firstRecord); }
       }
     }
@@ -587,7 +634,7 @@
           else if (result.planId) state.selected = result.planId;
           if (savedPlan && closed(savedPlan)) state.filter = 'closed'; else state.filter = 'all';
           state.query = ''; search.value = ''; state.detail = !!options.full; root.classList.toggle('vcp-show-detail', state.detail);
-          state.stale = false; setWorking(false); cancel(); notify(request.action === 'result' ? 'Wynik zapisany w kartotece. Plan pozostaje otwarty.' : request.action === 'close' ? 'Zapisano zamknięcie i powód zakończenia planu.' : request.action === 'acknowledgeMerge' ? 'Zapisano potwierdzenie przeglądu planu.' : 'Zapisano zmiany planu.');
+          state.stale = false; setWorking(false); cancel(); notify(request.action === 'result' ? 'Wynik zapisany w kartotece. Plan pozostaje otwarty.' : request.action === 'linkResult' ? 'Podpięto oryginalny wynik. Plan pozostaje otwarty.' : request.action === 'omitStep' ? 'Zapisano pominięcie kroku z uzasadnieniem. Plan pozostaje otwarty.' : request.restoreOmitted ? 'Wznowiono krok z zachowaniem dokumentacji i rezerwacji.' : request.action === 'close' ? 'Zapisano zamknięcie i powód zakończenia planu.' : request.action === 'acknowledgeMerge' ? 'Zapisano potwierdzenie przeglądu planu.' : 'Zapisano zmiany planu.');
           if (options.onChange) options.onChange(result); await refresh();
         } catch (error) { if (current() && editor === model) { setWorking(false); errorBox(error, errors); errors.scrollIntoView({ block: 'nearest' }); } }
       });
@@ -720,6 +767,112 @@
         if (wait) { model.check = field(model.body, 'Kiedy sprawdzić dostępność wyniku?', 'date', '', true); help(model.body, 'To dzień przypomnienia, odrębny od terminu badania.'); }
         else model.continuation = continuationFields(model, plan, step);
       }, result ? 'Zapisz wynik' : wait ? 'Zapisz i oczekuj' : 'Zapisz wykonanie', function (model) { return Object.assign({ action: action, stepId: step.id, text: model.text.value.trim(), dateISO: model.date.value, checkDateISO: wait ? model.check.value : null }, wait ? {} : model.continuation()); });
+    }
+    function actualDateValid(model, control, message) {
+      if (control.value && nullableDate(control.value) && control.value >= '1900-01-01' && control.value <= today()) return true;
+      errorBox(new Error(message), model.errors); control.focus({ preventScroll: true }); return false;
+    }
+    function omitStep(plan, step) {
+      if (closed(plan) || plan.syncNeedsReview || step.state === 'done' || step.state === 'cancelled') return;
+      showEditor('Pomiń krok', plan, function (model) {
+        notice(model.body, step.title + '\nPominięcie zakończy oczekiwanie na ten krok. Dotychczasowe wykonanie, wyniki i rezerwacja w Terminarzu pozostaną zachowane.');
+        model.text = field(model.body, 'Powód pominięcia', 'textarea', '', true); model.text.maxLength = 20000;
+        model.date = field(model.body, 'Data decyzji', 'date', today(), true); model.date.min = '1900-01-01'; model.date.max = today();
+        help(model.body, 'Uzasadnienie i data decyzji pozostaną w przebiegu planu. Plan pozostanie otwarty.');
+        model.validate = function () {
+          if (!model.text.value.trim() || model.text.value.length > 20000) { errorBox(new Error('Podaj powód pominięcia (do 20 000 znaków).'), model.errors); model.text.focus({ preventScroll: true }); return false; }
+          return actualDateValid(model, model.date, 'Podaj prawidłową datę decyzji, nie późniejszą niż dzisiaj.');
+        };
+      }, 'Zapisz pominięcie', function (model) { return { action: 'omitStep', stepId: step.id, text: model.text.value.trim(), dateISO: model.date.value }; });
+    }
+    function restoreOmittedStep(plan, step, confirmed) {
+      var omission = omissionFor(plan, step);
+      if (closed(plan) || plan.syncNeedsReview || step.state !== 'cancelled' || !omission || omission.protected !== true) return;
+      showEditor(confirmed ? 'Wznów pominięty krok' : 'Wznów krok', plan, function (model) {
+        notice(model.body, step.title + '\nDotychczasowe wykonanie, wyniki i rezerwacja w Terminarzu pozostaną zachowane.');
+        model.restoreState = selectField(model.body, 'Stan po wznowieniu', [['', 'Wybierz stan'], ['pending', 'Do wykonania'], ['waiting', 'Oczekuję na wynik']], ''); model.restoreState.required = true;
+        model.text = field(model.body, 'Powód wznowienia kroku', 'textarea', '', true); model.text.maxLength = 20000;
+        model.date = field(model.body, 'Data wznowienia kroku', 'date', today(), true); model.date.min = '1900-01-01'; model.date.max = today();
+        help(model.body, 'Krok zachowa dotychczasowy termin przypomnienia. Po wznowieniu możesz go zmienić w edycji kroku.');
+        model.validate = function () {
+          if (!['pending', 'waiting'].includes(model.restoreState.value)) { errorBox(new Error('Wybierz stan kroku po wznowieniu.'), model.errors); model.restoreState.focus({ preventScroll: true }); return false; }
+          if (!model.text.value.trim() || model.text.value.length > 20000) { errorBox(new Error('Podaj powód wznowienia kroku (do 20 000 znaków).'), model.errors); model.text.focus({ preventScroll: true }); return false; }
+          return actualDateValid(model, model.date, 'Podaj prawidłową datę wznowienia, nie późniejszą niż dzisiaj.');
+        };
+      }, 'Wznów krok', function (model) { return { action: 'editStep', restoreOmitted: true, stepId: step.id, step: { state: model.restoreState.value }, text: model.text.value.trim(), dateISO: model.date.value }; });
+    }
+    function linkResult(plan, step) {
+      if (closed(plan) || plan.syncNeedsReview || step.state === 'done' || step.state === 'cancelled') return;
+      var model = showEditor('Podepnij istniejący wynik', plan, function (form) {
+        notice(form.body, step.title + '\nPlan otrzyma odnośnik do oryginalnego wyniku w Badaniach. Treść i daty oryginału pozostaną zachowane.');
+        form.search = field(form.body, 'Szukaj wyniku', 'search', '', false); form.search.placeholder = 'Nazwa lub rodzaj badania…';
+        form.options = field(form.body, 'Wybierz wynik', 'select', '', true);
+        form.status = node('p', 'vcp-help', 'Wczytywanie wyników…'); form.status.setAttribute('role', 'status'); form.body.appendChild(form.status);
+        form.preview = node('section', 'vcp-result-preview'); form.preview.setAttribute('aria-label', 'Podgląd wybranego wyniku'); form.preview.setAttribute('role', 'region'); form.preview.hidden = true; form.body.appendChild(form.preview);
+        form.date = field(form.body, 'Data otrzymania wyniku', 'date', '', true); form.date.min = '1900-01-01'; form.date.max = today();
+        help(form.body, 'Wpisz dzień rzeczywistego otrzymania tego wyniku. Data badania widoczna w podglądzie pozostaje datą oryginału.');
+        form.confirm = check(form.body, 'Potwierdzam, że to otrzymany wynik tego kroku', false, true);
+        form.continuation = continuationFields(form, plan, step);
+        var continuationSync = form.sync;
+        form.notes = []; form.selected = null; form.loading = true; form.previewLoading = false; form.previewTicket = 0; form.listTicket = 0;
+        form.sync = function () {
+          continuationSync(); form.search.disabled = form.options.disabled = state.busy || form.loading || form.previewLoading;
+          form.date.disabled = form.confirm.disabled = state.busy || !form.selected;
+          form.save.disabled = state.busy || form.loading || form.previewLoading || !form.selected;
+        };
+        function resetSelection() { form.previewTicket += 1; form.selected = null; form.previewLoading = false; form.preview.hidden = true; clear(form.preview); form.preview.removeAttribute('data-note-id'); form.confirm.checked = false; form.date.value = ''; }
+        form.render = function () {
+          var query = searchKey(form.search.value), before = form.options.value;
+          var choices = form.notes.filter(function (note) { return !query || searchKey((note.title || '') + ' ' + (note.labResult && note.labResult.test || '')).includes(query); });
+          clear(form.options); var placeholder = node('option', '', 'Wybierz wynik pacjenta'); placeholder.value = ''; form.options.appendChild(placeholder);
+          choices.forEach(function (note) {
+            var title = note.title || 'Wynik pacjenta', clinicalDay = day(note.clinicalDateISO), label = title + (clinicalDay ? ' · badanie / ustalenie: ' + date(clinicalDay) : '');
+            if (choices.some(function (other) { return other.id !== note.id && (other.title || 'Wynik pacjenta') === title && day(other.clinicalDateISO) === clinicalDay; })) label += ' · ID wpisu: ' + note.id;
+            var option = node('option', '', label); option.value = note.id; form.options.appendChild(option);
+          });
+          form.options.value = choices.some(function (note) { return note.id === before; }) ? before : '';
+          if (!form.options.value && (form.selected || form.previewLoading)) resetSelection();
+          form.status.textContent = form.loading ? 'Wczytywanie wyników…' : choices.length ? 'Wybierz wynik i sprawdź jego oryginalną treść.' : 'Brak pasujących wyników do podpięcia.';
+          form.sync();
+        };
+        form.search.addEventListener('input', form.render);
+        form.options.addEventListener('change', async function () {
+          if (!current() || editor !== form || state.busy) return;
+          resetSelection(); clear(form.errors);
+          var candidate = form.notes.find(function (note) { return note.id === form.options.value; });
+          if (!candidate) { form.sync(); return; }
+          var ticket = ++form.previewTicket; form.previewLoading = true; form.preview.hidden = false;
+          form.preview.appendChild(node('p', 'vcp-help', 'Wczytywanie wyniku…')); form.sync();
+          try {
+            var original = await vault.getCarePlanResultCandidate({ planId: plan.id, stepId: step.id, noteId: candidate.id, linkedRev: candidate.rev, linkedUpdatedAtISO: candidate.updatedAtISO });
+            if (!current() || editor !== form || ticket !== form.previewTicket) return;
+            if (!original || original.id !== candidate.id || original.patientId !== plan.patientId) throw new Error('Ten wynik jest niedostępny. Odśwież listę i wybierz go ponownie.');
+            form.selected = original; clear(form.preview); form.preview.dataset.noteId = original.id;
+            form.preview.appendChild(node('h3', '', original.title || 'Wynik pacjenta')); originalContent(form.preview, original);
+          } catch (error) {
+            if (!current() || editor !== form || ticket !== form.previewTicket) return;
+            form.preview.hidden = true; clear(form.preview); errorBox(error, form.errors);
+          } finally { if (current() && editor === form && ticket === form.previewTicket) { form.previewLoading = false; form.sync(); } }
+        });
+        form.validate = function () {
+          if (!form.selected || form.selected.id !== form.options.value) { errorBox(new Error('Wybierz wynik i sprawdź jego podgląd.'), form.errors); form.options.focus({ preventScroll: true }); return false; }
+          if (!form.confirm.checked) { errorBox(new Error('Potwierdź, że wybrany dokument zawiera otrzymany wynik tego kroku.'), form.errors); form.confirm.focus({ preventScroll: true }); return false; }
+          return actualDateValid(form, form.date, 'Podaj prawidłową datę otrzymania wyniku, nie późniejszą niż dzisiaj.');
+        };
+        form.reload = async function () {
+          if (!current() || editor !== form || state.busy) return;
+          var ticket = ++form.listTicket; resetSelection(); form.options.value = ''; form.loading = true; form.render(); clear(form.errors);
+          try {
+            if (typeof vault.listCarePlanResultCandidates !== 'function' || typeof vault.getCarePlanResultCandidate !== 'function') throw new Error('Odśwież aplikację, aby podpiąć istniejący wynik.');
+            var notes = await vault.listCarePlanResultCandidates({ planId: plan.id, stepId: step.id });
+            if (!current() || editor !== form || ticket !== form.listTicket) return;
+            form.notes = (Array.isArray(notes) ? notes : []).filter(function (note) { return note && recordId(note.id) && note.patientId === plan.patientId; });
+          } catch (error) { if (current() && editor === form && ticket === form.listTicket) { form.notes = []; errorBox(error, form.errors); } }
+          finally { if (current() && editor === form && ticket === form.listTicket) { form.loading = false; form.render(); } }
+        };
+        form.body.appendChild(button('Odśwież listę wyników', 'vcp-text', form.reload)); form.sync();
+      }, 'Podepnij wynik', function (form) { return Object.assign({ action: 'linkResult', stepId: step.id, noteId: form.selected.id, linkedRev: form.selected.rev, linkedUpdatedAtISO: form.selected.updatedAtISO, dateISO: form.date.value, confirmReceived: form.confirm.checked === true }, form.continuation()); });
+      if (model) model.reload();
     }
     function editPlan(plan) {
       showEditor('Nazwa i cel planu', plan, function (model) { model.title = field(model.body, 'Nazwa planu', 'text', plan.title, true); model.title.maxLength = 240; model.goal = field(model.body, 'Cel i ustalenia (opcjonalnie)', 'textarea', plan.goal, false); model.goal.maxLength = 20000; }, 'Zapisz', function (model) { return { action: 'edit', title: model.title.value.trim(), goal: model.goal.value.trim() }; });
