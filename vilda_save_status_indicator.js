@@ -25,17 +25,18 @@ function sameDecisionOwner(a,b,expectedPatientId){
 }
 function decisionReady(owner,afterSave){
   if(owner.guest||!owner.unlocked)return true;
-  if(!D||n.__vildaPersistRestoring===true||n.__vildaLustroWpis===true||Date.now()<Number(n.__vildaPersistClearUntil||0))return false;
+  // A completed synchronous clear leaves an autosave quarantine. This live
+  // read performs no write and must still inspect any newly entered fields.
+  if(!D||n.__vildaPersistRestoring===true||n.__vildaLustroWpis===true)return false;
   if(s===i.SAVING&&!afterSave)return false;
   if(statusPublicationScope&&!(afterSave&&statusPublicationScope.kind==="save"&&
     statusPublicationScope.patientId===owner.patientId&&statusPublicationScope.sequence===owner.applySequence))return false;
-  var auth=n.VildaAuthUI,api=n.VildaDataImportExport,dob=n.VildaDobAge,panel=n.VildaPanelPacjent,persistence=n.VildaPersistence;
+  var auth=n.VildaAuthUI,api=n.VildaDataImportExport,dob=n.VildaDobAge,panel=n.VildaPanelPacjent;
   return !(auth&&typeof auth.isBootReady==="function"&&!auth.isBootReady())&&
     !(api&&typeof api.isSaveUserDataPending==="function"&&api.isSaveUserDataPending())&&
     !(api&&typeof api.isMainSessionRestorePending==="function"&&api.isMainSessionRestorePending())&&
     !(dob&&typeof dob.restorePending==="function"&&dob.restorePending())&&
-    !(panel&&typeof panel.nieaktualny==="function"&&panel.nieaktualny())&&
-    !(persistence&&typeof persistence.isClearInProgress==="function"&&persistence.isClearInProgress());
+    !(panel&&typeof panel.nieaktualny==="function"&&panel.nieaktualny());
 }
 function decisionClone(value){return value==null?value:JSON.parse(JSON.stringify(value))}
 function decisionAssessmentHasData(value){

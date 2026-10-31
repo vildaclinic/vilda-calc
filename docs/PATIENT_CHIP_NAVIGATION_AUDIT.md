@@ -407,6 +407,12 @@ Sam brak gotowości podczas odtwarzania lub zapisu anuluje bieżącą akcję
 z krótkim komunikatem; nie uruchamia później samoczynnego czyszczenia.
 Dotychczasowe zachowanie formularza gościa pozostaje zachowane.
 
+Okno kwarantanny po synchronicznym czyszczeniu nadal blokuje autosave.
+Nie oznacza aktywnego resetu: nowa decyzja może pozwolić na natychmiastowe
+wczytanie pacjenta po Clear, a pola wpisane w tym oknie nadal odczytuje
+jako bieżące dane. Nie zmienia deadline, referencji ani zapisu sesji.
+Dotychczasowa publikacja statusu nadal respektuje tę kwarantannę.
+
 „Zapisz i wyczyść” wymaga receipt konkretnego zakończonego zapisu, a nie
 dowolnego zdarzenia `onPatientSaved` lub samego rozwiązania Promise.
 `saveUserDataWithReceipt()` korzysta z tego samego pipeline co zwykły zapis;
