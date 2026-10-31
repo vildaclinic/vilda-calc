@@ -76,7 +76,7 @@ jobs:
   browser:
     # Nazwa jest widoczna dla właściciela jako odłamek, a wymagany status w regułach gałęzi
     # to job „Testy przeglądarkowe i PWA" niżej, który zbiera wyniki wszystkich odłamków.
-    name: E2E odłamek ${{ matrix.shard }}/3
+    name: E2E odłamek ${{ matrix.shard }}/4
     runs-on: ubuntu-latest
     # Po „Squash and merge" e2e nie idą drugi raz. Reguła gałęzi „Require branches to be
     # up to date before merging" gwarantuje, że drzewo po squashu jest tym samym drzewem,
@@ -84,14 +84,14 @@ jobs:
     # Lint i testy jednostkowe (job wyżej) na push zostają: kosztują minutę i dają gałęzi
     # własną historię zielone/czerwone. Pełny zestaw na audyt: ręcznie (workflow_dispatch).
     if: github.event_name != 'push'
-    # Trzy runnery naraz, każdy z czterema workerami — dla repozytorium publicznego minuty
+    # Cztery runnery naraz, każdy z czterema workerami — dla repozytorium publicznego minuty
     # Actions nic nie kosztują, a zestaw dzieli się plikami między maszyny. Nie czeka na
     # job jednostkowy: ten i tak kończy się po minucie, a czekanie dokładało tę minutę do
     # każdego PR-a; przy czerwonym lincie e2e idą na darmo, ale nic nie kosztują.
     strategy:
       fail-fast: false
       matrix:
-        shard: [1, 2, 3]
+        shard: [1, 2, 3, 4]
     # W PR #793 limit 40 min przerwał aktywny przebieg przy 699/722 uruchomionych
     # testach bez zgłoszonych błędów; pozostałe odłamki potrzebowały ok. 39 min.
     # W PR #802 limit 45 min przerwał odłamek 2/3 przy 753/769 testach,
@@ -99,6 +99,9 @@ jobs:
     # W PR #823 limit 50 min przerwał odłamek 3/3 przy 807/810 testach
     # z ciągłym postępem i bez błędu asercji; pozostałe trwały 43,2 i 47,4 min.
     # W PR #826 limit 50 min przerwał odłamek 1/3 przy 901/915 testach.
+    # W PR #841 limit 60 min przerwał odłamek 1/3 przy liczniku 759/888 uruchomionych testów,
+    # z ciągłym postępem i bez błędu asercji. Zestaw 2670 testów dzielimy na
+    # cztery części; nie zwiększamy limitu joba ani limitów pojedynczych testów.
     # Budżet obejmuje instalację Chromium, testy i raport. Limity pojedynczych
     # testów, liczba workerów i wymagane asercje pozostają bez zmian.
     timeout-minutes: 60
@@ -120,7 +123,7 @@ jobs:
       # projekt mobilny. Każdy runner liczy ten sam deterministyczny podział i bierze swoją
       # część; skrypt sam sprawdza, że Playwright z tą listą widzi dokładnie te pliki.
       - name: Wybierz pliki odłamka
-        run: node tests/scripts/odlamki-e2e.mjs --odlamek=${{ matrix.shard }}/3 --zapisz="$RUNNER_TEMP/odlamek-e2e.txt"
+        run: node tests/scripts/odlamki-e2e.mjs --odlamek=${{ matrix.shard }}/4 --zapisz="$RUNNER_TEMP/odlamek-e2e.txt"
       - name: Zainstaluj Chromium
         run: |
           # HTTP Azure potrafi wyczerpać limit joba podczas pobierania pakietów.
@@ -135,8 +138,8 @@ jobs:
           npx playwright install --with-deps chromium
       - name: Uruchom testy Playwright
         run: npm run test:e2e -- --test-list="$RUNNER_TEMP/odlamek-e2e.txt"
-      - name: Zachowaj raport po niepowodzeniu
-        if: failure()
+      - name: Zachowaj raport Playwright
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: playwright-report-${{ matrix.shard }}
