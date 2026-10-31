@@ -160,20 +160,21 @@ export const existingNoteDeleteReplacement = 'async function Eb(t,Qwp,Qwm,Qwf){'
 // Only the opted-in call captures its account/adapter across awaits, runs a
 // final session check, and propagates read/tombstone errors. With no private
 // guard token the old remover follows exactly the same expressions/catches.
-const existingNoteDeleteSessionChecks = 'Bpz_pilnuj(Qws);CareMvpDeleteGuard();';
-const existingNoteConditionalSessionChecks = 'if(Qwg)Qwg.beforeCommit();' + existingNoteDeleteSessionChecks;
+// The base remover first captures its legacy metadata, then guards the already
+// read encrypted row outside the legacy read catch. Conditional callers add
+// their own session check to that existing closure; the format check remains.
+const existingNoteDeleteAssertAnchor = 'const CareMvpDeleteAssert=function(){Bpz_pilnuj(Qws);CareMvpDeleteGuard();};';
+const existingNoteDeleteAssertReplacement = 'const CareMvpDeleteAssert=function(){if(Qwg)Qwg.beforeCommit();Bpz_pilnuj(Qws);CareMvpDeleteGuard();};';
 const existingNoteDeleteMutations = [
   [existingNoteDeleteAnchor, existingNoteDeleteReplacement],
-  ['await I().getPatientNoteForUser(b,t);' + existingNoteDeleteSessionChecks,
-    'await (Qwg?Qwg.adapter:I()).getPatientNoteForUser(Qwg?Qwg.account:b,t);' + existingNoteConditionalSessionChecks],
-  ['const CareMvpRemovedPlain=await G(r.bodyCipher.iv,r.bodyCipher.data);' + existingNoteDeleteSessionChecks,
-    'const CareMvpRemovedPlain=await G(r.bodyCipher.iv,r.bodyCipher.data);' + existingNoteConditionalSessionChecks],
-  ['}catch(Qwe){' + existingNoteDeleteSessionChecks + 'CareMvpRethrowLineage(Qwe);}CareMvpDeleteGuard();Bpz_pilnuj(Qws);await I().removePatientNoteForUser(b,t);',
-    '}catch(Qwe){' + existingNoteConditionalSessionChecks + 'CareMvpRethrowLineage(Qwe);if(Qwg)throw Qwe}CareMvpDeleteGuard();Bpz_pilnuj(Qws);if(Qwg)Qwg.beforeCommit();await (Qwg?Qwg.adapter:I()).removePatientNoteForUser(Qwg?Qwg.account:b,t);'],
+  ['await I().getPatientNoteForUser(b,t)', 'await (Qwg?Qwg.adapter:I()).getPatientNoteForUser(Qwg?Qwg.account:b,t)'],
+  ['}catch{}const CareMvpDeleteAssert=function(){', '}catch(Qwe){if(Qwg)throw Qwe}const CareMvpDeleteAssert=function(){'],
+  [existingNoteDeleteAssertAnchor, existingNoteDeleteAssertReplacement],
+  ['Bpz_pilnuj(Qws);await I().removePatientNoteForUser(b,t);', 'Bpz_pilnuj(Qws);if(Qwg)Qwg.beforeCommit();await (Qwg?Qwg.adapter:I()).removePatientNoteForUser(Qwg?Qwg.account:b,t);'],
   ['try{const r=I();r&&typeof r.putPatientNoteTombstoneForUser', 'try{const r=Qwg?Qwg.adapter:I();r&&typeof r.putPatientNoteTombstoneForUser'],
   ['r.putPatientNoteTombstoneForUser(b,', 'r.putPatientNoteTombstoneForUser(Qwg?Qwg.account:b,'],
-  ['}catch(Qwe){CareMvpRethrowLineage(Qwe);}Bpz_pilnuj(Qws);qr({id:t,patientId:e,action:"delete"',
-    '}catch(Qwe){CareMvpRethrowLineage(Qwe);if(Qwg)throw Qwe}Bpz_pilnuj(Qws);qr({id:t,patientId:e,action:"delete"'],
+  ['}catch{}Bpz_pilnuj(Qws);qr({id:t,patientId:e,action:"delete"',
+    '}catch(Qwe){if(Qwg)throw Qwe}Bpz_pilnuj(Qws);qr({id:t,patientId:e,action:"delete"'],
 ];
 
 export function patchExistingNoteDeleteWriter(block) {

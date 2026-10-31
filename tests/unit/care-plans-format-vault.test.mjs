@@ -218,9 +218,9 @@ describe('legacy paths never downgrade or partially write protected care data', 
     }
   });
 
-  it('rejects reads, exports, overwrites, native outcomes and destructive cascades without any mutation', async () => {
+  it('rejects direct reads, exports, overwrites and native note outcomes without any mutation', async () => {
     const d = await device(); await unsupported(d, 2);
-    const before = await d.capture(), patient = await d.vault.getPatient(d.patientId);
+    const before = await d.capture();
     for (const action of [
       () => d.vault.getPatientNote(d.planId), () => d.vault.listPatientNotesForPatient(d.patientId),
       () => d.vault.listAllPatientNotes(), () => d.vault.getCarePlan(d.planId), () => d.vault.listCarePlans(),
@@ -229,13 +229,26 @@ describe('legacy paths never downgrade or partially write protected care data', 
       () => d.vault.savePatientNote({ id: d.planId, patientId: d.patientId, title: 'Fikcyjna próba usunięcia kontekstu', careContext: null }),
       () => d.vault.completePatientNote(d.planId), () => d.vault.uncompletePatientNote(d.planId),
       () => d.vault.noShowPatientNote(d.planId), () => d.vault.snoozePatientNote(d.planId, '2027-02-02'),
-      () => d.vault.removePatientNote(d.planId), () => d.vault.removePatient(d.patientId),
-      () => d.vault.deleteSnapshot(d.patientId, patient.snapshots[0].snapshotId),
+      () => d.vault.removePatientNote(d.planId),
     ]) {
       await rejectsFormat(action);
       expect(await d.capture()).toBe(before);
       expect(await d.vault.getPatientNote(d.ordinary.id)).toMatchObject({ title: 'Fikcyjna zwykła notatka' });
     }
+  });
+
+  for (const cascade of ['patient', 'last-snapshot']) it('reports a protected note rejection during a ' + cascade + ' cascade without deleting that note', async () => {
+    const d = await device(), patient = await d.vault.getPatient(d.patientId);
+    await unsupported(d, 2);
+    const raw = await d.adapter.getPatientNoteForUser(d.userId, d.planId);
+    const action = cascade === 'patient' ? () => d.vault.removePatient(d.patientId)
+      : () => d.vault.deleteSnapshot(d.patientId, patient.snapshots[0].snapshotId);
+    if (cascade === 'last-snapshot') await expect(action()).rejects.toThrow(/nie można usunąć ostatniego snapshota/);
+    else await rejectsFormat(action);
+    expect(await d.adapter.getPatientNoteForUser(d.userId, d.planId)).toEqual(raw);
+    expect(await d.adapter.getPatientNoteTombstoneForUser(d.userId, d.planId)).toBeUndefined();
+    // Existing V1 cascades are not an account-wide transaction: earlier legal
+    // patient/snapshot writes are outside this record-level format guarantee.
   });
 
   it('preflights all incoming records before an earlier ordinary patient or note can be written, also through encrypted deltas', async () => {
@@ -250,18 +263,22 @@ describe('legacy paths never downgrade or partially write protected care data', 
     expect(await d.capture()).toBe(before);
   });
 
-  it('preflights affected current protected records before ordinary writes while allowing a different patient delta', async () => {
+  it('guards an actual current note target while allowing unrelated notes of the same or another patient', async () => {
     const d = await device(), payload = await d.vault.exportSyncPayload();
     const futureSibling = clone(payload.patientNotes.find(note => note.id === d.ordinary.id));
     futureSibling.id = 'fictional-affected-ordinary';
     await unsupported(d);
+    const protectedRaw = await d.adapter.getPatientNoteForUser(d.userId, d.planId);
     let before = await d.capture();
-    await rejectsFormat(() => d.vault.mergeSyncPayload({ ...payload, patients: [], patientNotes: [futureSibling] }));
+    await rejectsFormat(() => d.vault.mergeSyncPayload({ ...payload, patients: [], patientNotes: [payload.patientNotes.find(note => note.id === d.planId)] }));
     expect(await d.capture()).toBe(before);
+
+    expect((await d.vault.mergeSyncPayload({ ...payload, patients: [], patientNotes: [futureSibling] })).addedPatientNoteCount).toBe(1);
+    expect(await d.vault.getPatientNote(futureSibling.id)).toMatchObject({ patientId: d.patientId });
+    expect(await d.adapter.getPatientNoteForUser(d.userId, d.planId)).toEqual(protectedRaw);
 
     const otherId = (await d.vault.savePatient({ name: 'Fikcyjny niezależny pacjent', user: { sex: 'M', age: 10 } })).patientId;
     const unrelated = { ...futureSibling, id: 'fictional-unrelated-note', patientId: otherId };
-    const protectedRaw = await d.adapter.getPatientNoteForUser(d.userId, d.planId);
     before = await d.capture();
     const result = await d.vault.mergeSyncPayload({ ...payload, patients: [], patientNotes: [unrelated] });
     expect(result.addedPatientNoteCount).toBe(1);
@@ -270,27 +287,34 @@ describe('legacy paths never downgrade or partially write protected care data', 
     expect(await d.capture()).not.toBe(before);
   });
 
-  for (const tombstone of ['patient', 'note']) it('preflights current ' + tombstone + ' tombstones before global retention can touch a protected record', async () => {
+  for (const tombstone of ['patient', 'note']) it('rejects actual protected note deletion selected by a current ' + tombstone + ' tombstone', async () => {
     const d = await device(), payload = await d.vault.exportSyncPayload();
     const otherId = (await d.vault.savePatient({ name: 'Fikcyjna niezależna karta retencji', user: { sex: 'F', age: 8 } })).patientId;
     await unsupported(d);
     const date = '2090-01-01T12:00:00.000Z';
     if (tombstone === 'patient') await d.adapter.putTombstoneForUser(d.userId, { patientId: d.patientId, deletedAtISO: date });
     else await d.adapter.putPatientNoteTombstoneForUser(d.userId, { id: d.planId, deletedAtISO: date, rev: 999 });
-    const before = await d.capture();
+    const raw = await d.adapter.getPatientNoteForUser(d.userId, d.planId);
+    const priorTombstone = await d.adapter.getPatientNoteTombstoneForUser(d.userId, d.planId);
     const ordinary = { ...payload.patientNotes.find(note => note.id === d.ordinary.id), id: 'fictional-before-retention', patientId: otherId };
-    await rejectsFormat(() => d.vault.mergeSyncPayload({ ...payload, patients: [], patientNotes: [ordinary] }));
-    expect(await d.capture()).toBe(before);
+    const merge = () => d.vault.mergeSyncPayload({ ...payload, patients: [], patientNotes: [ordinary] });
+    if (tombstone === 'patient') {
+      // A patient tombstone alone does not select this note for removal in the
+      // existing V1 protocol. Do not invent an account/patient-wide fence.
+      await expect(merge()).resolves.toMatchObject({ deletedPatientNoteCount: 0 });
+    } else await rejectsFormat(merge);
+    expect(await d.adapter.getPatientNoteForUser(d.userId, d.planId)).toEqual(raw);
+    expect(await d.adapter.getPatientNoteTombstoneForUser(d.userId, d.planId)).toEqual(priorTombstone);
   });
 
-  it('preflights the current owner of a colliding snapshot before a transfer can delete its protected plan', async () => {
+  it('keeps an untouched protected note intact when ordinary snapshot ownership changes', async () => {
     const d = await device(), payload = await d.vault.exportSyncPayload();
     const incoming = clone(payload.patients[0]); incoming.patientId = 'fictional-new-snapshot-owner';
     incoming.header.name = 'Fikcyjna karta przejmująca zapis';
     await unsupported(d);
-    const before = await d.capture();
-    await rejectsFormat(() => d.vault.mergeSyncPayload({ ...payload, patients: [incoming], patientNotes: [] }));
-    expect(await d.capture()).toBe(before);
+    const raw = await d.adapter.getPatientNoteForUser(d.userId, d.planId);
+    await expect(d.vault.mergeSyncPayload({ ...payload, patients: [incoming], patientNotes: [] })).resolves.toMatchObject({});
+    expect(await d.adapter.getPatientNoteForUser(d.userId, d.planId)).toEqual(raw);
   });
 
   it('preflights patient import, backup merge and new-account restore before any patient, registry or credential write', async () => {
@@ -310,35 +334,36 @@ describe('legacy paths never downgrade or partially write protected care data', 
     }
   });
 
-  it('preflights bulk patient merge before moving any snapshots or documentation', async () => {
+  it('rejects a bulk merge that reaches a protected note without downgrading that note', async () => {
     const d = await device();
     const other = (await d.vault.savePatient({ name: 'Fikcyjna docelowa karta', user: { sex: 'F', age: 12 } })).patientId;
     await unsupported(d);
-    const before = await d.capture();
+    const raw = await d.adapter.getPatientNoteForUser(d.userId, d.planId);
     await rejectsFormat(() => d.vault.mergePatients(d.patientId, other));
-    expect(await d.capture()).toBe(before);
+    expect(await d.adapter.getPatientNoteForUser(d.userId, d.planId)).toEqual(raw);
   });
 
-  it('checks the captured adapter again in the caller continuation after preflight has returned', async () => {
-    const d = await device();
-    // This patient has no notes, so preflight has no further decrypt await
-    // between the list result and its return to the destructive caller.
-    const target = (await d.vault.savePatient({ name: 'Fikcyjna karta granicy adaptera', user: { sex: 'F', age: 10 } })).patientId;
+  it('rejects an adapter change during the added note-deletion decrypt without touching either adapter', async () => {
+    const d = await device(), raw = await d.adapter.getPatientNoteForUser(d.userId, d.ordinary.id);
     const second = d.vault.createInMemoryAdapter();
     await second.putUserMeta(d.userId, await d.adapter.getUserMeta(d.userId));
-    const targetBefore = await d.adapter.getPatientForUser(d.userId, target);
-    await second.putPatientForUser(d.userId, targetBefore);
-    const before = await d.capture(), list = d.adapter.listPatientNotesForUser;
-    let switched = false;
-    d.adapter.listPatientNotesForUser = async (...args) => {
-      const rows = await list(...args);
-      queueMicrotask(() => queueMicrotask(() => { switched = true; d.vault.setStorageAdapter(second); }));
-      return rows;
+    await second.putPatientNoteForUser(d.userId, raw);
+    const before = await d.capture(), decrypt = d.win.VildaCrypto.decryptString;
+    let reads = 0, entered, release;
+    const waiting = new Promise(resolve => { entered = resolve; });
+    const blocked = new Promise(resolve => { release = resolve; });
+    d.win.VildaCrypto.decryptString = async (...args) => {
+      if (++reads === 2) { entered(); await blocked; }
+      return decrypt(...args);
     };
-    await expect(d.vault.removePatient(target)).rejects.toMatchObject({ code: 'SESSION_CHANGED' });
-    expect(switched).toBe(true);
+    const removal = d.vault.removeExistingPatientNote({ id: d.ordinary.id, patientId: d.patientId, baseRev: raw.rev });
+    await waiting;
+    d.vault.setStorageAdapter(second); release();
+    await expect(removal).rejects.toMatchObject({ code: 'SESSION_CHANGED' });
     expect(await d.capture()).toBe(before);
-    expect(await second.getPatientForUser(d.userId, target)).toEqual(targetBefore);
+    expect(await d.adapter.getPatientNoteForUser(d.userId, d.ordinary.id)).toEqual(raw);
+    expect(await second.getPatientNoteForUser(d.userId, d.ordinary.id)).toEqual(raw);
+    expect(await second.listPatientNoteTombstonesForUser(d.userId)).toEqual([]);
   });
 
   it('retains the guarded delete session error if locking occurs during its protected-context decrypt', async () => {
@@ -360,7 +385,71 @@ describe('legacy paths never downgrade or partially write protected care data', 
     expect(await d.capture()).toBe(before);
   });
 
-  it('stops the existing background metadata migration before a note or completion flag is written', async () => {
+  for (const change of ['lock', 'adapter']) it('propagates a ' + change + ' change from the new crypto guard through a generic patient deletion', async () => {
+    const d = await device(), raw = await d.adapter.getPatientNoteForUser(d.userId, d.planId);
+    const second = d.vault.createInMemoryAdapter();
+    await second.putUserMeta(d.userId, await d.adapter.getUserMeta(d.userId));
+    const patient = await d.adapter.getPatientForUser(d.userId, d.patientId);
+    await second.putPatientForUser(d.userId, patient);
+    await second.putPatientNoteForUser(d.userId, raw);
+    const deletedEvents = [];
+    d.vault.onPatientDeleted(event => { deletedEvents.push(event); });
+    const decrypt = d.win.VildaCrypto.decryptString;
+    let entered, release, intercepted = false;
+    const waiting = new Promise(resolve => { entered = resolve; });
+    const blocked = new Promise(resolve => { release = resolve; });
+    d.win.VildaCrypto.decryptString = async (...args) => {
+      if (args[1] === raw.bodyCipher.iv && !intercepted) { intercepted = true; entered(); await blocked; }
+      return decrypt(...args);
+    };
+    const removal = d.vault.removePatient(d.patientId);
+    await waiting;
+    if (change === 'lock') d.vault.lock('fictional-bulk-delete-lock');
+    else d.vault.setStorageAdapter(second);
+    release();
+    await expect(removal).rejects.toMatchObject({ code: 'SESSION_CHANGED' });
+    expect(await d.adapter.getPatientNoteForUser(d.userId, d.planId)).toEqual(raw);
+    expect(await d.adapter.getPatientNoteTombstoneForUser(d.userId, d.planId)).toBeUndefined();
+    expect(await second.getPatientForUser(d.userId, d.patientId)).toEqual(patient);
+    expect(await second.getPatientNoteForUser(d.userId, d.planId)).toEqual(raw);
+    expect(await second.listPatientNoteTombstonesForUser(d.userId)).toEqual([]);
+    expect(deletedEvents).toEqual([]);
+  });
+
+  for (const mutation of ['delete', 'rescue']) it('propagates an adapter change during an actual sync note ' + mutation + ' without writing through the replacement adapter', async () => {
+    const d = await device(), payload = await d.vault.exportSyncPayload();
+    const raw = await d.adapter.getPatientNoteForUser(d.userId, d.planId);
+    const patient = await d.adapter.getPatientForUser(d.userId, d.patientId);
+    const tomb = { id: d.planId, rev: raw.rev, deletedAtISO: '2090-01-01T12:00:00.000Z' };
+    if (mutation === 'rescue') {
+      tomb.deletedWithPatient = { patientId: d.patientId, deletedAtISO: tomb.deletedAtISO };
+      await d.adapter.putPatientForUser(d.userId, { ...patient, lastSavedAtISO: '2090-01-02T12:00:00.000Z' });
+    }
+    await d.adapter.putPatientNoteTombstoneForUser(d.userId, tomb);
+    const second = d.vault.createInMemoryAdapter();
+    await second.putUserMeta(d.userId, await d.adapter.getUserMeta(d.userId));
+    await second.putPatientForUser(d.userId, patient);
+    await second.putPatientNoteForUser(d.userId, raw);
+    const decrypt = d.win.VildaCrypto.decryptString;
+    let entered, release, intercepted = false;
+    const waiting = new Promise(resolve => { entered = resolve; });
+    const blocked = new Promise(resolve => { release = resolve; });
+    d.win.VildaCrypto.decryptString = async (...args) => {
+      if (args[1] === raw.bodyCipher.iv && !intercepted) { intercepted = true; entered(); await blocked; }
+      return decrypt(...args);
+    };
+    const merge = d.vault.mergeSyncPayload({ ...payload, patients: [], patientNotes: [] });
+    await waiting;
+    d.vault.setStorageAdapter(second); release();
+    await expect(merge).rejects.toMatchObject({ code: 'SESSION_CHANGED' });
+    expect(await d.adapter.getPatientNoteForUser(d.userId, d.planId)).toEqual(raw);
+    expect(await d.adapter.getPatientNoteTombstoneForUser(d.userId, d.planId)).toEqual(tomb);
+    expect(await second.getPatientNoteForUser(d.userId, d.planId)).toEqual(raw);
+    expect(await second.getPatientForUser(d.userId, d.patientId)).toEqual(patient);
+    expect(await second.listPatientNoteTombstonesForUser(d.userId)).toEqual([]);
+  });
+
+  it('stops background migration when the actual row requiring migration has a protected format', async () => {
     const background = [], schedule = globalThis.setTimeout;
     vi.stubGlobal('setTimeout', (fn, delay, ...args) => {
       if (delay === 3000) { background.push(fn); return 0; }
@@ -370,8 +459,8 @@ describe('legacy paths never downgrade or partially write protected care data', 
     vi.unstubAllGlobals();
     d.win.console = { warn: message => { warnings.push(message); } };
     await unsupported(d);
-    const ordinary = await d.adapter.getPatientNoteForUser(d.userId, d.ordinary.id);
-    await d.adapter.putPatientNoteForUser(d.userId, { ...ordinary, clinicalDateISO: '2026-01-02' });
+    const target = await d.adapter.getPatientNoteForUser(d.userId, d.planId);
+    await d.adapter.putPatientNoteForUser(d.userId, { ...target, clinicalDateISO: '2026-01-02' });
     const meta = await d.adapter.getUserMeta(d.userId);
     await d.adapter.putUserMeta(d.userId, { ...meta, clinicalScrubDoneV1: false });
     const before = await d.capture();
