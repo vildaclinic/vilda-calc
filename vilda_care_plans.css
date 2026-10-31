@@ -178,6 +178,14 @@ dialog.vcp.vcp-dialog::backdrop { background: #1a3b4445; backdrop-filter: blur(3
 .vcp .vcp-sync-review { border: var(--border-hairline) solid #edddbd; border-radius: var(--radius-10); background: #fff8ed; padding: 15px; margin-top: var(--space-18px); font-size: 13px; line-height: 1.6; }
 .vcp .vcp-sync-review strong { display: block; color: #8d5817; margin-bottom: 5px; font-weight: 600; }
 .vcp .vcp-sync-review p { margin-bottom: var(--space-12px); }
+.vcp .vcp-sync-versions { margin: var(--space-12px) 0; padding-top: var(--space-10px); border-top: var(--border-hairline) solid var(--vcp-line); }
+.vcp .vcp-sync-versions > summary { cursor: pointer; color: var(--vcp-teal); font-size: 13px; font-weight: 500; }
+.vcp .vcp-sync-component { margin-top: var(--space-14px); }
+.vcp .vcp-sync-component-heading { font-size: 13px; font-weight: 600; line-height: 1.6; }
+.vcp .vcp-sync-version { border-left: var(--border-hairline) solid #c8dddd; margin-top: var(--space-10px); padding-left: var(--space-12px); }
+.vcp .vcp-sync-version-title { margin: 0 0 var(--space-6px); color: var(--vcp-ink); font-size: 12px; font-weight: 600; line-height: 1.6; }
+.vcp .vcp-sync-versions .vcp-sync-field { margin: var(--space-4px) 0; white-space: pre-line; overflow-wrap: anywhere; }
+.vcp .vcp-sync-field-label { font-weight: 500; }
 
 /* Native glass styles and the reminders host use !important on every button.
  * Keep the approved plan controls flat in both hosts and in body-level forms. */

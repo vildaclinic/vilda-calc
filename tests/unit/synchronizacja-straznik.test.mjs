@@ -363,7 +363,7 @@ describe('strażniki źródła', () => {
   });
 
   it('kursor delt rusza tylko, gdy partia nie skończyła się MERGE_BUSY', () => {
-    expect(SYNC).toContain('catch(Bsd){if(Bsd&&Bsd.vildaMergeBusy){Bsp=!0;break}}');
+    expect(SYNC).toContain('catch(Bsd){if(Bsd&&Bsd.vildaMergeBusy){Bsp=!0;if(typeof Bsd.code=="string"&&Bsd.code.indexOf("CARE_LINEAGE_")===0&&!Bul())y(k,{operation:"pull",error:Bsd});break}}');
     // P-SYNC-KURSOR: kursor idzie na najwyższą zwróconą deltę (nie na headSeq), nadal tylko bez MERGE_BUSY.
     expect(SYNC).toContain('Bkm>n&&!Bsp&&Kt(t,Bkm)');
   });

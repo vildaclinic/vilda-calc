@@ -26,6 +26,9 @@ jobs:
           # Krok wersji niżej. PR: commit scalenia z rodzicami, HEAD^1 to audyt, do którego PR wejdzie.
           # workflow_dispatch na gałęzi (np. „Wygląd” po odświeżeniu wzorców): pełna historia z origin/audyt.
           fetch-depth: ${{ github.event_name == 'workflow_dispatch' && github.ref != 'refs/heads/audyt' && '0' || '2' }}
+      - name: Pobierz przypięty historyczny klient do testu zgodności planów
+        run: |
+          git cat-file -e 'b461364002cbd3f652728b7db38dce0f1f0d9264^{commit}' || git fetch --no-tags --depth=1 origin b461364002cbd3f652728b7db38dce0f1f0d9264
       - name: Skonfiguruj Node.js
         uses: actions/setup-node@v4
         with:
