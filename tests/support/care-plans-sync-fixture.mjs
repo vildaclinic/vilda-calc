@@ -11,7 +11,7 @@ const CORS = {
   'access-control-expose-headers': 'ETag',
 };
 
-export function fictionalCareCloud() {
+export function fictionalCareCloud({ preserveSyncPreference = false } = {}) {
   const cloud = { blob: null, etag: 'care-E0', revision: 0, deltas: [], requests: [], pendingUploads: 0 };
   let gate = null, release = null;
   cloud.pauseUploads = () => { gate = new Promise(resolve => { release = resolve; }); };
@@ -60,13 +60,13 @@ export function fictionalCareCloud() {
       return json(404, {});
     });
     await context.routeWebSocket(/vilda-sync\.maciej-4b9\.workers\.dev/, ws => ws.close());
-    await context.addInitScript(() => {
+    await context.addInitScript(({ preserveSyncPreference }) => {
       localStorage.setItem('vilda-terms-accepted-v1', JSON.stringify({ version: 1, acceptedAtISO: new Date().toISOString() }));
       localStorage.setItem('analyticsConsent', 'denied');
       localStorage.setItem('pwzNumber', '0000000');
       // Startup/new-device dialogs are outside this scenario. Explicit pulls
       // below still execute the production synchronizer and merge guards.
-      localStorage.setItem('vilda-sync-enabled-v1', 'false');
+      if (!preserveSyncPreference || localStorage.getItem('vilda-sync-enabled-v1') === null) localStorage.setItem('vilda-sync-enabled-v1', 'false');
       sessionStorage.setItem('vilda-new-device-restore-shown-v1', '1');
       sessionStorage.setItem('vilda-probe-done-v1', '1');
       const pro = () => { if (window.VildaProAccess) {
@@ -75,7 +75,7 @@ export function fictionalCareCloud() {
       } };
       document.addEventListener('DOMContentLoaded', pro, { once: true });
       document.addEventListener('vilda:session-changed', pro);
-    });
+    }, { preserveSyncPreference });
   };
   return cloud;
 }

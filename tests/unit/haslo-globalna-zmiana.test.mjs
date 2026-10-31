@@ -67,14 +67,16 @@ let licznik = 0;
 async function paraUrzadzen(haslo) {
   licznik += 1;
   const A = loadDevice();
-  const utworzone = await A.createUser(haslo, { label: `A${licznik}`, iterations: ITER });
+  await A.createUser(haslo, { label: `A${licznik}`, iterations: ITER });
   const B = loadDevice();
-  await B.createUser(haslo, {
-    label: `B${licznik}`,
-    iterations: ITER,
-    recoveryKey: utworzone.recoveryKey,
-  });
-  return { A, B, recoveryKey: utworzone.recoveryKey };
+  // Real second device: the public full sync code restores the same DEK and SIS.
+  // Independent createUser calls produce unrelated keys, even with the same recovery text.
+  const restored = await B.importSyncCode(await A.exportSyncCode(haslo), haslo, { label: `B${licznik}` });
+  expect((await B.getSyncMaterial()).slotId, 'oba urządzenia mają tę samą tożsamość synchronizacji').toBe((await A.getSyncMaterial()).slotId);
+  const proof = { fictional: 'Wspólny klucz tego samego konta', devicePair: licznik };
+  const cipher = await A.encryptPayloadForCurrentUser(proof);
+  expect(await B.decryptPayloadForCurrentUser(cipher.iv, cipher.data), 'drugi sejf odczytuje prawdziwy szyfrogram pierwszego').toEqual(proof);
+  return { A, B, recoveryKey: restored.recoveryKey };
 }
 
 const meta = async (v) => v.__adapter.getUserMeta(v.getCurrentUser().userId);

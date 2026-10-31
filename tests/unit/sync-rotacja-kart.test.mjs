@@ -9,6 +9,9 @@ import { loadBrowserScript } from '../support/load-browser-script.mjs';
 //
 // Prawdziwe vilda_sync.js w dwóch oknach ze wspólnym localStorage (osobne sessionStorage, jak dwie karty).
 // Serwer synchronizacji i sejf to atrapy (serwera nie ma w repozytorium). Dane wyłącznie FIKCYJNE.
+// Jawne usuwanie ma obecnie dodatkowy, odczytowy kontrakt chronionej biblioteki.
+// Te scenariusze nie mają biblioteki: atrapa potwierdza wyłącznie typed ABSENT dla
+// uwierzytelnionego slotu. Żadnego init/zapisu; wszystkie żądania zostają w logu.
 
 const STARY = 'a'.repeat(64);
 const NOWY = 'b'.repeat(64);
@@ -59,6 +62,12 @@ async function serwer(klucz, { staryIstnieje = true } = {}) {
     const m = new URL(url).pathname.match(/^\/v1\/slots\/([^/]+)\/?(.*)$/);
     const slot = m[1]; const sc = m[2]; const met = init.method || 'GET'; const h = init.headers || {};
     srv.log.push(`${met} ${NAZWY[slot] || slot}${sc ? `/${sc}` : ''}`);
+    if (sc === 'template-library/state' && met === 'GET') {
+      const receipt = { namespace: 'care-template-library', protocol: 1, slotId: slot, initialized: false, epoch: 0 };
+      if (!srv.sloty.has(slot)) return new Response(JSON.stringify({ ...receipt, error: { code: 'identity_required' } }), { status: 409 });
+      if (h.Authorization !== `Bearer TOK-${NAZWY[slot]}`) return new Response(JSON.stringify({ ...receipt, error: { code: 'invalid_credentials' } }), { status: 401 });
+      return new Response(JSON.stringify({ ...receipt, ok: true, headSeq: 0, floorSeq: 0, eventsStored: 0, bytesStored: 0 }), { status: 200 });
+    }
     if (sc === 'register') {
       const blokada = srv.wstrzymane.get(slot);
       if (blokada) await blokada.promise;
@@ -104,6 +113,8 @@ async function serwer(klucz, { staryIstnieje = true } = {}) {
    Sejf-atrapa trzyma tożsamość w pamięci karty, jak getSyncMaterial() prawdziwego sejfu. */
 function karta(ls, { slot, nastepny, klucz, chmurowy = false, sesja = {} }) {
   let mat = material(slot, klucz);
+  let sessionVersion = 0;
+  const operationSessions = new WeakMap();
   const sejf = {
     rotacje: 0,
     eksporty: 0,
@@ -111,7 +122,12 @@ function karta(ls, { slot, nastepny, klucz, chmurowy = false, sesja = {} }) {
     isUnlocked: () => true,
     isCloudOnlyMode: () => chmurowy,
     getSyncMaterial: async () => mat,
-    rotateSyncIdentity: async () => { sejf.rotacje += 1; mat = material(nastepny, klucz); return { recoveryKey: 'FIKCYJNY-KLUCZ' }; },
+    captureSyncOperationSession: () => { const token = Object.freeze({}); operationSessions.set(token, sessionVersion); return token; },
+    assertSyncOperationSession: token => {
+      if (!operationSessions.has(token) || operationSessions.get(token) !== sessionVersion) throw Object.assign(new Error('Fikcyjna sesja zmieniona'), { code: 'SESSION_CHANGED' });
+      return true;
+    },
+    rotateSyncIdentity: async () => { sejf.rotacje += 1; sessionVersion++; mat = material(nastepny, klucz); return { recoveryKey: 'FIKCYJNY-KLUCZ' }; },
     exportSyncPayload: async () => {
       sejf.eksporty += 1;
       if (sejf.wstrzymajEksport) await sejf.wstrzymajEksport;
@@ -310,6 +326,6 @@ describe('Bez zmian: zwykła synchronizacja', () => {
     const { A, srv } = await dwieKarty();
     const r = await A.sync.revokeAllDevices('FIKCYJNE-haslo');
     expect(r).toEqual({ recoveryKey: 'FIKCYJNY-KLUCZ', oldSlotId: STARY, newSlotId: NOWY, oldSlotRevoked: true });
-    expect(srv.log).toEqual(['POST NOWY/register', 'DELETE STARY']);
+    expect(srv.log).toEqual(['POST NOWY/register', 'GET STARY/template-library/state', 'DELETE STARY']);
   });
 });

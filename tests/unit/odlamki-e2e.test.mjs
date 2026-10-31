@@ -20,7 +20,7 @@ import {
 
 // E2E-ODŁAMKI (zlecenie właściciela 2026-10-08): CI dzieli e2e na odłamki po zmierzonym czasie
 // plików, a nie po liczbie testów (`--shard`). Ten plik pilnuje, że podział jest PODZIAŁEM — każdy
-// plik w dokładnie jednym odłamku, nic nie ginie — że jest deterministyczny (trzy runnery liczą go
+// plik w dokładnie jednym odłamku, nic nie ginie — że jest deterministyczny (runnery liczą go
 // osobno i muszą dostać to samo) i że CI naprawdę z niego korzysta.
 
 const plik = (nazwa, sekundy, poz, testy = 1) => ({ plik: nazwa, sekundy, poz, testy, zmierzony: true });
@@ -268,8 +268,8 @@ describe('tabela czasów i ten zestaw e2e', () => {
     for (const s of wartosci) expect(Number.isFinite(s) && s >= 0).toBe(true);
   });
 
-  it('podział wszystkich plików e2e z dysku na 3 odłamki jest pełny i rozłączny', () => {
-    const odlamki = podziel(szacujCzasy(naDysku.map((n) => ({ plik: n, testy: 1 })), czasy.pliki), { odlamki: 3 });
+  it.each([3, 4])('podział wszystkich plików e2e z dysku na %i odłamki jest pełny i rozłączny', (n) => {
+    const odlamki = podziel(szacujCzasy(naDysku.map((n) => ({ plik: n, testy: 1 })), czasy.pliki), { odlamki: n });
     expect(odlamki.flatMap((o) => o.pliki.map((p) => p.plik)).sort()).toEqual(naDysku);
   });
 
@@ -292,27 +292,28 @@ describe('CI dzieli e2e tym podziałem', () => {
     expect(macierz, 'macierz odłamków w ci.yml').not.toBeNull();
     const numery = macierz[1].split(',').map((s) => Number(s.trim()));
     const n = Number(ci.match(/--odlamek=\$\{\{ matrix\.shard \}\}\/(\d+)/)[1]);
+    expect(numery).toEqual([1, 2, 3, 4]);
     expect(numery).toEqual(Array.from({ length: n }, (_, i) => i + 1));
     expect(ci).toContain(`name: E2E odłamek \${{ matrix.shard }}/${n}`);
   });
 });
 
 describe('skrypt z prawdziwym Playwrightem', () => {
-  // Jeden odłamek przez CLI: liczy podział z `playwright test --list`, zapisuje listę i sam
+  // Pierwszy odłamek dla 3 i 4 części przez CLI: liczy podział z `playwright test --list`, zapisuje listę i sam
   // sprawdza, że Playwright z `--test-list` widzi dokładnie te pliki. Łapie np. aktualizację
   // Playwrighta, która zmieni rozumienie ścieżek w liście — wtedy odłamek dostałby 0 testów.
-  it('--odlamek=1/3 zapisuje listę, którą Playwright rozpoznaje w całości', () => {
+  it.each([3, 4])('--odlamek=1/%i zapisuje listę, którą Playwright rozpoznaje w całości', (n) => {
     const katalog = fs.mkdtempSync(path.join(os.tmpdir(), 'odlamki-test-'));
     try {
       const lista = path.join(katalog, 'odlamek.txt');
-      const wynik = spawnSync(process.execPath, ['tests/scripts/odlamki-e2e.mjs', '--odlamek=1/3', `--zapisz=${lista}`], {
+      const wynik = spawnSync(process.execPath, ['tests/scripts/odlamki-e2e.mjs', `--odlamek=1/${n}`, `--zapisz=${lista}`], {
         cwd: korzen,
         encoding: 'utf8'
       });
       expect(wynik.status, wynik.stderr).toBe(0);
       const pliki = fs.readFileSync(lista, 'utf8').split('\n').filter((l) => l && !l.startsWith('#'));
       expect(pliki.length).toBeGreaterThan(10);
-      expect(wynik.stdout).toMatch(/Odłamek 1\/3: \d+ plików, \d+ z \d+ testów/);
+      expect(wynik.stdout).toMatch(new RegExp(`Odłamek 1/${n}: \\d+ plików, \\d+ z \\d+ testów`));
     } finally {
       fs.rmSync(katalog, { recursive: true, force: true });
     }

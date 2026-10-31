@@ -90,7 +90,7 @@
 <script defer src="vilda_html.js?v=5"></script>
 <script defer src="vilda_persistence_adapter.js?v=33"></script>
 <script src="vilda_reminders_privacy.js?v=1"></script>
-<script defer src="vilda_session_bridge.js?v=129"></script>
+<script defer src="vilda_session_bridge.js?v=130"></script>
 <script defer src="vilda_init.js?v=4"></script>
 <script defer src="vilda_crypto.js?v=15"></script>
 <script defer src="vilda_retention.js?v=1"></script>
@@ -104,10 +104,10 @@
 <script defer src="vilda_lab_history.js?v=5"></script>
 <script defer src="vilda_lab_history_tab.js?v=17"></script>
 <script defer src="vilda_care_plan_model.js?v=1"></script>
-<script defer src="vilda_vault.js?v=240"></script>
+<script defer src="vilda_vault.js?v=241"></script>
 <script defer src="vilda_frame_sync.js?v=2"></script>
-<script defer src="vilda_sync.js?v=43"></script>
-<script defer src="vilda_sync_integration.js?v=53"></script>
+<script defer src="vilda_sync.js?v=44"></script>
+<script defer src="vilda_sync_integration.js?v=54"></script>
 <script defer src="vilda_realtime.js?v=7"></script>
 <script defer src="vilda_nowe_urzadzenie.js?v=2"></script>
 <script defer src="qrcode.min.js?v=1"></script>
@@ -125,12 +125,12 @@
 <script defer src="vilda_werdykt.js?v=7"></script>
 <script defer src="vilda_trajectory_analysis.js?v=44"></script>
 <link rel="stylesheet" href="vilda_care_plans.css?v=6">
-<script defer src="vilda_care_plans.js?v=6"></script>
+<script defer src="vilda_care_plans.js?v=7"></script>
 <link rel="stylesheet" href="vilda_reminders.css?v=6" data-reminders-b22="true">
 <link rel="stylesheet" href="vilda_global_search.css?v=1">
 <script defer src="vilda_global_search.js?v=1"></script>
 <script defer src="vilda_global_search_view.js?v=1"></script>
-<script defer src="vilda_auth_ui.js?v=521"></script>
+<script defer src="vilda_auth_ui.js?v=522"></script>
 <script defer src="vilda_urodzeniowe_rozbieznosc.js?v=1"></script>
 <script defer src="vilda_cykle_leczenia.js?v=3"></script>
 <script defer src="vilda_version_history_ui.js?v=15"></script>
@@ -149,7 +149,7 @@
   <!-- Ładujemy bibliotekę ikon Lucide do wyświetlania ikon w menu bocznym -->
   <script src="lucide.min.js?v=1" defer></script>
   <script src="ios26-ui.js?v=46" defer></script>
-<script defer src="vilda_chrome.js?v=205"></script>
+<script defer src="vilda_chrome.js?v=206"></script>
 <link href="vilda_lab_assessment_ui.css?v=13" rel="stylesheet">
 <link href="vilda_lab_history_tab.css?v=4" rel="stylesheet">
   <link rel="stylesheet" href="vilda_phone_landscape.css?v=2">
@@ -606,14 +606,14 @@
                   <!-- Eksport wszystkich danych (RODO art. 20 — przenoszalność) -->
                   <div class="settings-control-card settings-control-card--wide" id="exportAllDataCard">
                     <div class="settings-control-header">
-                      <h3 class="settings-control-title">Eksport wszystkich moich danych</h3>
+                      <h3 class="settings-control-title">Eksport danych (JSON)</h3>
                     </div>
                     <p class="settings-control-desc">
-                      Pobierz komplet swoich danych (pacjenci, pomiary, notatki, wyniki, leczenie) w jednym pliku JSON — odszyfrowanym lokalnie. Format maszynowo-czytelny (przenoszalność danych, RODO art. 20). Plik zawiera dane wrażliwe — przechowuj bezpiecznie.
+                      Pobierz dane konta i pacjentów (m.in. pomiary, notatki, wyniki i leczenie) w jednym pliku JSON — odszyfrowanym lokalnie. Format maszynowo-czytelny (przenoszalność danych, RODO art. 20). Bibliotekę własnych szablonów planów eksportujesz osobno. Plik JSON zawiera dane wrażliwe — przechowuj bezpiecznie.
                     </p>
                     <div class="settings-card-toggle-row settings-backup-btn-row">
                       <button type="button" id="exportAllDataBtn" class="vilda-auth-btn vilda-auth-btn-primary vilda-auth-btn-small settings-backup-btn" disabled>
-                        Eksportuj wszystkie moje dane (JSON)
+                        Eksportuj dane (JSON)
                       </button>
                     </div>
                     <p class="settings-inline-note settings-backup-note" id="exportAllDataStatus">Zaloguj się, aby wyeksportować dane.</p>
@@ -625,7 +625,7 @@
                       <h3 class="settings-control-title">Importuj kopie i pojedynczych pacjentów</h3>
                     </div>
                     <p class="settings-control-desc">
-                      Wczytaj pliki kopii całego konta (.wiw) lub pojedynczych pacjentów zapisanych do pliku (.json) i zaimportuj wybrane do swojego sejfu. Pliki .wiw ze starego konta wymagają hasła, którym je zaszyfrowano — pliki .json pojedynczych pacjentów nie wymagają hasła. Import scala dane lokalnie — zero-knowledge (nic nie idzie na serwer).
+                      Wczytaj pliki kopii konta (.wiw) lub pojedynczych pacjentów zapisanych do pliku (.json) i zaimportuj wybrane do swojego sejfu. Pliki .wiw ze starego konta wymagają hasła, którym je zaszyfrowano — pliki .json pojedynczych pacjentów nie wymagają hasła. Import scala dane lokalnie — zero-knowledge (nic nie idzie na serwer). Kopię biblioteki szablonów importujesz w bibliotece.
                     </p>
                     <div class="settings-card-toggle-row settings-backup-btn-row">
                       <button type="button" id="importPatientsBtn" class="vilda-auth-btn vilda-auth-btn-primary vilda-auth-btn-small settings-backup-btn">
@@ -678,22 +678,24 @@
 
                     <div class="settings-backup-sep" role="separator"></div>
 
-                    <!-- ── Podsekcja 2: Pełna kopia konta ── -->
+                    <!-- ── Podsekcja 2: Kopia konta .wiw ── -->
                     <div class="settings-backup-section" id="vaultBackupCard">
                       <div class="settings-control-header">
-                        <h3 class="settings-control-title">Pełna kopia konta (jeden plik)</h3>
+                        <h3 class="settings-control-title">Kopia konta .wiw</h3>
                         <span class="settings-tag">Backup</span>
                       </div>
                       <p class="settings-control-desc">
-                        Zapisz pełną kopię konta razem z kluczami szyfrującymi do jednego pliku <code>.wiw</code>.
-                        Restore z takiego pliku odtwarza identyczne konto na innym urządzeniu (po wyczyszczeniu przeglądarki) <strong>jednym kliknięciem</strong>,
-                        bez konieczności podawania starego hasła do każdego pacjenta osobno.
+                        Zapisz pacjentów, dokumentację, Notatki i listy konta wraz z danymi potrzebnymi do ich odtworzenia do jednego pliku <code>.wiw</code>.
                       </p>
                       <div class="settings-card-toggle-row settings-backup-btn-row">
                         <button type="button" id="downloadVaultBackupBtn" class="vilda-auth-btn vilda-auth-btn-primary vilda-auth-btn-small settings-backup-btn">
-                          Pobierz pełną kopię konta
+                          Pobierz kopię konta .wiw
                         </button>
                       </div>
+                      <p class="settings-inline-note settings-backup-note" id="careTemplateBackupScope">
+                        Własne szablony planów opieki wymagają osobnej kopii.
+                        <button type="button" id="openCareTemplateLibraryBtn" class="vilda-auth-btn vilda-auth-btn-ghost vilda-auth-btn-small">Biblioteka szablonów</button>
+                      </p>
                       <p class="settings-inline-note settings-backup-note" id="vaultBackupStatus">
                         Plik trafi do wybranego folderu kopii (jeśli ustawiony) lub do folderu Pobrane.
                       </p>
@@ -2414,7 +2416,7 @@
   </script>
 
   <script defer src="jsQR.min.js?v=1"></script>
-  <script defer src="inline_ustawienia_04.js?v=16"></script>
+  <script defer src="inline_ustawienia_04.js?v=17"></script>
 
   <script defer src="inline_ustawienia_05.js?v=2"></script>
 

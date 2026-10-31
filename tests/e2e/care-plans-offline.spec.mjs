@@ -6,10 +6,13 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { expect, test } from '@playwright/test';
 import { createFictionalVault, readyForPatient } from '../support/centile-live-fixture.mjs';
-import { CARE_FORM, mutatePlan, openCarePlans, readPlan, selectPlan } from '../support/care-plans-fixture.mjs';
+import { CARE_FORM, CARE_WORKSPACE, mutatePlan, openCarePlans, readPlan, selectPlan } from '../support/care-plans-fixture.mjs';
 import { rawCareStorage } from '../support/care-plans-model-fixture.mjs';
 import { expectOriginalPreview, getNote, omissionsFor, ordinaryResult, rawNote, selectExistingResult,
   stepFor, submitExistingResult, submitOmission } from '../support/care-plans-step-actions-fixture.mjs';
+import { fictionalTemplateCloud } from '../support/care-templates-cloud-fixture.mjs';
+import { ensureTemplates, getTemplate, listTemplates, openTemplate, openTemplates, rawTemplateStorage,
+  saveSimpleTemplate } from '../support/care-templates-fixture.mjs';
 
 test.use({ serviceWorkers: 'allow' });
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
@@ -43,8 +46,10 @@ test('care plans cold offline: native plan, narrative result and future step per
     locale: 'pl-PL', timezoneId: 'Europe/Warsaw', viewport: { width: 1440, height: 1000 },
   });
   let context;
+  const cloud = fictionalTemplateCloud(); cloud.setTemplateUnavailable(true);
   try {
     context = await launch();
+    await cloud.attach(context);
     const installer = context.pages()[0] || await context.newPage();
     await installer.goto('/tests/fixtures/service-worker-runner.html');
     expect(await installer.evaluate(async () => {
@@ -58,6 +63,7 @@ test('care plans cold offline: native plan, narrative result and future step per
     await context.close(); context = null;
     await server.stop();
     context = await launch();
+    await cloud.attach(context);
     const page = context.pages()[0] || await context.newPage();
     const served = new Map();
     page.on('response', response => {
@@ -224,6 +230,45 @@ test('care plans cold offline: native plan, narrative result and future step per
     await expectOriginalPreview(reloadedPanel, linkOffline.stepId, external);
     expect(await getNote(page, external.id)).toEqual(external);
     expect(await page.evaluate(() => fetch(`/__care-offline-probe-after-actions-${Date.now()}`).then(() => false, () => true))).toBe(true);
+
+    // Private authoring remains durably local and explicitly pending when the
+    // isolated protected service is unavailable. All worker traffic is mocked,
+    // including both persistent-context launches above.
+    await page.locator(CARE_WORKSPACE).getByRole('button', { name: 'Zamknij Przypomnienia', exact: true }).click();
+    const clinicalBeforeTemplate = await rawCareStorage(page);
+    const templates = await openTemplates(page);
+    const template = await saveSimpleTemplate(templates, page, 'Fikcyjny własny schemat zapisany offline');
+    await expect(templates.getByRole('status')).toContainText('Zapisano zmiany na tym urządzeniu.');
+    const offlineTemplate = await getTemplate(page, template.templateId);
+    expect(offlineTemplate.syncState).toMatchObject({ pending: true, persistence: 'local', state: 'pending' });
+    const encryptedLibrary = await rawTemplateStorage(page);
+    expect(encryptedLibrary.stores.templates).toHaveLength(1);
+    expect(encryptedLibrary.stores.events).toHaveLength(1);
+    expect(encryptedLibrary.stores.events[0].pending).toBe(1);
+    expect(encryptedLibrary.stores.events[0].accepted).toBeUndefined();
+    for (const resource of ['vilda_care_template_model.js', 'vilda_care_template_store.js', 'vilda_care_templates.js', 'vilda_care_templates.css']) {
+      const entry = [...served].find(([url]) => url.split('?')[0] === '/' + resource);
+      expect(entry, `${resource} was actually requested after the cold restart`).toBeTruthy();
+      expect(entry[1], `${resource} came from the production service worker with the server stopped`).toBe(true);
+      const expected = createHash('sha256').update(fs.readFileSync(path.join(root, resource))).digest('hex');
+      const actual = await page.evaluate(async url => {
+        const response = await fetch(url);
+        if (!response.ok) throw Error('Missing cold template resource: ' + url);
+        const digest = await crypto.subtle.digest('SHA-256', await response.arrayBuffer());
+        return Array.from(new Uint8Array(digest), byte => byte.toString(16).padStart(2, '0')).join('');
+      }, entry[0]);
+      expect(actual, `${resource} cached bytes match the current production source`).toBe(expected);
+    }
+    expect(await rawCareStorage(page)).toEqual(clinicalBeforeTemplate);
+    await page.reload({ waitUntil: 'load' }); await readyForPatient(page); await ensureTemplates(page);
+    expect((await listTemplates(page)).map(item => item.templateId)).toEqual([template.templateId]);
+    expect((await getTemplate(page, template.templateId)).definition).toEqual(offlineTemplate.definition);
+    expect((await getTemplate(page, template.templateId)).syncState).toMatchObject({ pending: true, persistence: 'local', state: 'pending' });
+    expect(await rawTemplateStorage(page)).toEqual(encryptedLibrary);
+    const reopenedTemplates = await openTemplates(page); await openTemplate(reopenedTemplates, template.templateId);
+    await expect(reopenedTemplates.getByRole('heading', { name: offlineTemplate.definition.name, exact: true })).toBeVisible();
+    expect(await rawCareStorage(page)).toEqual(clinicalBeforeTemplate);
+    expect(await page.evaluate(() => fetch(`/__care-offline-probe-after-library-${Date.now()}`).then(() => false, () => true))).toBe(true);
   } finally {
     if (context) await context.close().catch(() => {});
     await server.stop(); fs.rmSync(profile, { recursive: true, force: true });

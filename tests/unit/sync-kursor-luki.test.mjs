@@ -454,6 +454,15 @@ async function serwerSlotow(kluczStary) {
     const m = new URL(url).pathname.match(/^\/v1\/slots\/([^/]+)\/?(.*)$/);
     const slot = m[1]; const sc = m[2]; const met = init.method || 'GET'; const h = init.headers || {};
     const st = srv.sloty.get(slot);
+    // These rotation fixtures have no protected library. The new destructive
+    // action guard still needs an authenticated, typed read; never a fallback.
+    if (sc === 'template-library/state' && met === 'GET') {
+      const receipt = { namespace: 'care-template-library', protocol: 1, slotId: slot, initialized: false, epoch: 0 };
+      if (!st) return new Response(JSON.stringify({ ...receipt, error: { code: 'identity_required' } }), { status: 409 });
+      const expectedToken = slot === STARY ? 'TOK-STARY' : 'TOK-NOWY';
+      if (h.Authorization !== `Bearer ${expectedToken}`) return new Response(JSON.stringify({ ...receipt, error: { code: 'invalid_credentials' } }), { status: 401 });
+      return new Response(JSON.stringify({ ...receipt, ok: true, headSeq: 0, floorSeq: 0, eventsStored: 0, bytesStored: 0 }), { status: 200 });
+    }
     if (sc === 'register') {
       if (st) return odp(409, {});
       srv.sloty.set(slot, { etag: `R${srv.sloty.size}`, hash: h['X-Auth-Token-Hash'], body: init.body });
@@ -486,11 +495,18 @@ async function urzadzenieZRotacja() {
   const kStary = await crypto.subtle.generateKey({ name: 'AES-GCM', length: 256 }, false, ['encrypt', 'decrypt']);
   const kNowy = await crypto.subtle.generateKey({ name: 'AES-GCM', length: 256 }, false, ['encrypt', 'decrypt']);
   let mat = { slotId: STARY, authToken: 'TOK-STARY', authTokenHash: 'HASH-STARY', syncEncKey: kStary };
+  let sessionVersion = 0;
+  const operationSessions = new WeakMap();
   const sejf = {
     isUnlocked: () => true,
     isCloudOnlyMode: () => false,
     getSyncMaterial: async () => mat,
-    rotateSyncIdentity: async () => { mat = { slotId: NOWY, authToken: 'TOK-NOWY', authTokenHash: 'HASH-NOWY', syncEncKey: kNowy }; return { recoveryKey: 'FIKCYJNY' }; },
+    captureSyncOperationSession: () => { const token = Object.freeze({}); operationSessions.set(token, sessionVersion); return token; },
+    assertSyncOperationSession: token => {
+      if (!operationSessions.has(token) || operationSessions.get(token) !== sessionVersion) throw Object.assign(new Error('Fikcyjna sesja zmieniona'), { code: 'SESSION_CHANGED' });
+      return true;
+    },
+    rotateSyncIdentity: async () => { sessionVersion++; mat = { slotId: NOWY, authToken: 'TOK-NOWY', authTokenHash: 'HASH-NOWY', syncEncKey: kNowy }; return { recoveryKey: 'FIKCYJNY' }; },
     exportSyncPayload: async () => ({ patients: [{ patientId: 'FIKCYJNY-1' }] }),
     listPatients: async () => [{ patientId: 'FIKCYJNY-1' }],
     mergeSyncPayload: async () => ({}),
