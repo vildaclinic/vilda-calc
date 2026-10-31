@@ -100,11 +100,12 @@
   // date of this visit, also after the physician corrects the age field later.
   // Axes outside currentAxes are history and keep their own age and date. An
   // observation with another declared source keeps its explicit values.
-  function anchorToVisit(reference) {
-    if (!state || !state.visit || !state.raw || !state.raw.observations || !reference) return false;
+  function anchorToVisit(reference, target) {
+    var carrier = target || state;
+    if (!carrier || !carrier.visit || !carrier.raw || !carrier.raw.observations || !reference) return false;
     var changed = false;
-    state.visit.currentAxes.forEach(function (axis) {
-      var observation = state.raw.observations[axis];
+    carrier.visit.currentAxes.forEach(function (axis) {
+      var observation = carrier.raw.observations[axis];
       if (!observation || typeof observation !== 'object' || observation.source !== 'clinician-entry') return;
       var age = reference.ageMonths == null ? null : reference.ageMonths;
       var date = reference.measuredAtISO == null ? null : reference.measuredAtISO;
@@ -214,24 +215,24 @@
     catch (_) { return null; }
   }
 
-  function eligible() {
+  function eligible(readOnly) {
     if (!state) return false;
-    bindVault();
+    if (!readOnly) bindVault();
     try {
       var panel = w.VildaPanelPacjent;
-      if (panel && typeof panel.nieaktualny === 'function' && panel.nieaktualny()) { clear(false); return false; }
+      if (panel && typeof panel.nieaktualny === 'function' && panel.nieaktualny()) { if (!readOnly) clear(false); return false; }
       if (state.patientId !== identity()) {
         // A patient-loaded listener can finish assigning storage AFTER another
         // consumer reads this carrier in that very same dispatch. Do not expose
         // it under the previous ID, and do not destroy the authorized handoff.
         if (state.identityHandoff && state.identityHandoff.previousId === identity() &&
             state.identityHandoff.targetId === state.patientId) return false;
-        clear(false);
+        if (!readOnly) clear(false);
         return false;
       }
       if (state.vault && (state.vault !== w.VildaVault ||
           typeof state.vault.isUnlocked !== 'function' || !state.vault.isUnlocked())) {
-        clear(false);
+        if (!readOnly) clear(false);
         return false;
       }
     } catch (_) { return false; }
@@ -484,18 +485,19 @@
     return function () { subscribers = subscribers.filter(function (item) { return item !== listener; }); };
   }
 
-  function invalidateIncompatibleAxes(currentSex) {
-    if (!state || !eligible() || !state.visit || !state.raw || !state.raw.observations) return false;
-    var before = state.visit.currentAxes;
+  function invalidateIncompatibleAxes(currentSex, target) {
+    var carrier = target || state;
+    if (!carrier || !target && !eligible() || !carrier.visit || !carrier.raw || !carrier.raw.observations) return false;
+    var before = carrier.visit.currentAxes;
     var filtered = before.filter(function (axis) {
-      var observation = state.raw.observations[axis];
-      var sourceSex = observation && (owns(observation, 'sex') ? observation.sex : state.raw.sex);
+      var observation = carrier.raw.observations[axis];
+      var sourceSex = observation && (owns(observation, 'sex') ? observation.sex : carrier.raw.sex);
       return observation && sourceSex === currentSex &&
         (axis !== 'G' || currentSex === 'M') && (axis !== 'Th' || currentSex === 'F');
     });
     if (before.length === filtered.length) return false;
-    state.visit.currentAxes = filtered;
-    state.visitRaw = clone(state.visit);
+    carrier.visit.currentAxes = filtered;
+    carrier.visitRaw = clone(carrier.visit);
     return true;
   }
 
@@ -517,6 +519,30 @@
     else delete user.pubertyAssessment;
     if (value.visitPresent) user.pubertyAssessmentVisit = value.visitRaw;
     else delete user.pubertyAssessmentVisit;
+  }
+
+  // Project the active examination for the serializer without anchoring the
+  // carrier, changing activity, binding listeners or clearing another owner.
+  function captureForUserReadOnly(user) {
+    if (!state) return { owned: initialized, present: false, raw: null, visitPresent: false, visitRaw: null };
+    if (!eligible(true)) {
+      var unavailable = new Error('CURRENT_DATA_CAPTURE_UNAVAILABLE: puberty owner is not current');
+      unavailable.code = 'CURRENT_DATA_CAPTURE_UNAVAILABLE'; throw unavailable;
+    }
+    var next = { present: state.present, raw: clone(state.raw), visitPresent: state.visitPresent,
+      visitRaw: clone(state.visitRaw), visit: clone(state.visit) };
+    if (next.visit) {
+      invalidateIncompatibleAxes(sex(user && user.sex), next);
+      next.visit.reference = payloadContext({ user: user });
+      anchorToVisit(next.visit.reference, next);
+      if (!editBlocked()) {
+        next.visit.reference = visitContext();
+        anchorToVisit(next.visit.reference, next);
+      }
+      next.visitRaw = clone(next.visit);
+    }
+    return { owned: true, present: next.present, raw: next.present ? next.raw : null,
+      visitPresent: next.visitPresent, visitRaw: next.visitPresent ? next.visitRaw : null };
   }
 
   // The existing DocPro/clearance session merge fills empty fields recursively.
@@ -602,7 +628,7 @@
   bindVault();
 
   w.VildaPubertyAssessmentState = Object.freeze({ VERSION: '3', load: load,
-    capture: capture, applyToUser: applyToUser, clear: clear, mergeSession: mergeSession,
+    capture: capture, captureForUserReadOnly: captureForUserReadOnly, applyToUser: applyToUser, clear: clear, mergeSession: mergeSession,
     read: read, subscribe: subscribe, editObservation: editObservation, visitContext: visitContext,
     getActivityRevision: getActivityRevision,
     restoreSessionIfUninitialized: restoreSessionIfUninitialized });

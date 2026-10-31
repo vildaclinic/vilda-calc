@@ -5,6 +5,124 @@ var confirmedApplySequence=0,statusGeneration=0,statusPublicationScope=null,stat
 // P-KREATOR-ZAPIS-PAUZA: tylko edycja po opublikowaniu bazy może czekać
 // na koniec pauzy. Kolejka nie ustanawia nowej bazy i nie przeżywa operacji.
 var readyStatusScope=null,pausedStatusEdit=null,pausedStatusTimer=null,sharedStatusTimer=null;
+// Destructive actions inspect the live owner once, without flushing autosave or
+// publishing a new status/reference. The existing header keeps its debounce.
+var decisionOwnerGeneration=0,decisionScopes=new WeakMap();
+function decisionOwnerBoundary(){decisionOwnerGeneration+=1}
+function decisionOwner(){
+  var vault=n.VildaVault,unlocked=!!(vault&&typeof vault.isUnlocked==="function"&&vault.isUnlocked()),user=null;
+  if(unlocked&&typeof vault.getCurrentUser==="function"){var current=vault.getCurrentUser();user=current&&current.userId||null}
+  var token=vault&&typeof vault.captureSyncOperationSession==="function"&&typeof vault.assertSyncOperationSession==="function"?vault.captureSyncOperationSession():null;
+  return {generation:decisionOwnerGeneration,vault:vault,userId:user,unlocked:unlocked,guest:n.VildaGuestMode===true,syncToken:token,
+    patientId:statusPatientId(),applySequence:currentApplySequence()};
+}
+function sameDecisionOwner(a,b,expectedPatientId){
+  if(a&&a.syncToken)try{a.vault.assertSyncOperationSession(a.syncToken)}catch{return false}
+  return !!(a&&b&&a.generation===b.generation&&a.vault===b.vault&&a.userId===b.userId&&
+    a.unlocked===b.unlocked&&a.guest===b.guest&&a.applySequence===b.applySequence&&
+    (expectedPatientId===undefined?a.patientId===b.patientId:
+      b.patientId===expectedPatientId&&(a.patientId===null||a.patientId===expectedPatientId)));
+}
+function decisionReady(owner,afterSave){
+  if(owner.guest||!owner.unlocked)return true;
+  if(!D||n.__vildaPersistRestoring===true||n.__vildaLustroWpis===true||Date.now()<Number(n.__vildaPersistClearUntil||0))return false;
+  if(s===i.SAVING&&!afterSave)return false;
+  if(statusPublicationScope&&!(afterSave&&statusPublicationScope.kind==="save"&&
+    statusPublicationScope.patientId===owner.patientId&&statusPublicationScope.sequence===owner.applySequence))return false;
+  var auth=n.VildaAuthUI,api=n.VildaDataImportExport,dob=n.VildaDobAge,panel=n.VildaPanelPacjent,persistence=n.VildaPersistence;
+  return !(auth&&typeof auth.isBootReady==="function"&&!auth.isBootReady())&&
+    !(api&&typeof api.isSaveUserDataPending==="function"&&api.isSaveUserDataPending())&&
+    !(api&&typeof api.isMainSessionRestorePending==="function"&&api.isMainSessionRestorePending())&&
+    !(dob&&typeof dob.restorePending==="function"&&dob.restorePending())&&
+    !(panel&&typeof panel.nieaktualny==="function"&&panel.nieaktualny())&&
+    !(persistence&&typeof persistence.isClearInProgress==="function"&&persistence.isClearInProgress());
+}
+function decisionClone(value){return value==null?value:JSON.parse(JSON.stringify(value))}
+function decisionAssessmentHasData(value){
+  if(value==null||value==="")return false;
+  if(typeof value!=="object")return true;
+  if(value.version!==undefined&&value.version!==1)return true;
+  var copy=decisionClone(value);delete copy.version;delete copy.sex;
+  return M(copy)!==undefined;
+}
+function decisionHasData(value){
+  var copy=decisionClone(value),user=copy&&copy.user||{},puberty=copy&&copy.puberty;
+  var assessment=decisionAssessmentHasData(user.pubertyAssessment),legacy=user.tannerStage!=null&&String(user.tannerStage).trim()!=="";
+  if(!assessment)delete user.pubertyAssessment;
+  var additional=assessment||legacy||!!(puberty&&typeof puberty==="object"&&M(puberty)!==undefined);
+  if(typeof n.hasMeaningfulMainSessionData==="function")return ae(copy)||additional;
+  return statusSharedSessionHasPatient(copy)||additional;
+}
+function decisionFingerprint(value){
+  var core=P(decisionClone(value)),ownsClcr=!!(n.document&&typeof n.document.getElementById==="function"&&n.document.getElementById("clcrForm"));
+  // E() deliberately reads the separate renal session on other pages. A stale
+  // nested main draft must not become a new renal edit merely by opening Clear.
+  var clcr=ownsClcr?core&&core.clcr:ne();
+  if(core&&Object.prototype.hasOwnProperty.call(core,"clcr"))delete core.clcr;
+  b(core);
+  return JSON.stringify(te({core:core,clcr:clcr?X(P(decisionClone(clcr))):null}));
+}
+function readCurrentDecision(afterSave){
+  var owner,generation=statusGeneration,state=i.HIDDEN,reference=null,fingerprint=null,ready=false;
+  try{
+    owner=decisionOwner();
+    if(owner.guest||!owner.unlocked){ready=true}
+    else if(decisionReady(owner,afterSave)){
+      var persistence=n.VildaPersistence,base=persistence&&typeof persistence.readMainSession==="function"?decisionClone(persistence.readMainSession()):null;
+      var api=n.VildaDataImportExport,value;
+      if(api&&typeof api.captureCurrentUserDataReadOnly==="function")value=api.captureCurrentUserDataReadOnly({base:base});
+      else if(statusReadOnly&&typeof n.collectUserData!=="function")value=base;
+      else throw new Error("Bieżący odczyt formularza jest niedostępny.");
+      if(!value||typeof value!=="object")throw new Error("Brak bieżącego odczytu formularza.");
+      var ref=k();
+      if(!owner.patientId||ref&&typeof ref.patientId==="string"&&ref.patientId&&ref.patientId!==owner.patientId)ref=null;
+      reference=ref&&typeof ref.fp==="string"&&ref.fp?ref.fp:null;
+      fingerprint=decisionFingerprint(value);
+      state=reference!==null?(fingerprint===reference?i.SAVED:i.DIRTY):(decisionHasData(value)?i.NEW_PATIENT:i.HIDDEN);
+      ready=sameDecisionOwner(owner,decisionOwner())&&generation===statusGeneration&&decisionReady(owner,afterSave);
+    }
+  }catch{ready=false}
+  var scope=Object.freeze({});
+  decisionScopes.set(scope,{owner:owner,generation:generation,reference:reference,fingerprint:fingerprint,ready:ready,state:state});
+  return Object.freeze({ready:ready,state:state,scope:scope});
+}
+function getCurrentDecision(){return readCurrentDecision(false)}
+function isCurrentDecision(scope){
+  var original=decisionScopes.get(scope);
+  if(!original||!original.ready)return false;
+  var latest=readCurrentDecision(false),current=decisionScopes.get(latest.scope);
+  return latest.ready&&sameDecisionOwner(original.owner,current.owner)&&original.generation===current.generation&&
+    original.reference===current.reference&&original.fingerprint===current.fingerprint;
+}
+function isCurrentDecisionOwner(scope){
+  var original=decisionScopes.get(scope);
+  if(!original||!original.ready)return false;
+  try{return sameDecisionOwner(original.owner,decisionOwner())}catch{return false}
+}
+function decisionContentAfterSave(original,current,receipt){
+  if(original.fingerprint===current.fingerprint&&current.reference===current.fingerprint)return true;
+  // The actual new-patient save binds this existing examination to its new PID.
+  // Only that confirmed handoff may add its owner on detached comparisons.
+  if(!receipt||receipt.saved!==true||original.owner.patientId!==null||original.state!==i.NEW_PATIENT)return false;
+  try{
+    var before=JSON.parse(original.fingerprint),after=JSON.parse(current.fingerprint),reference=JSON.parse(current.reference);
+    function visit(value){return value&&value.core&&value.core.user&&value.core.user.pubertyAssessmentVisit}
+    var a=visit(before),b=visit(after),r=visit(reference),patientId=receipt.patientId;
+    if(!a||!b||!r||a.version!==1||b.version!==1||r.version!==1||
+      typeof a.visitId!=="string"||!a.visitId||a.visitId!==b.visitId||a.visitId!==r.visitId||
+      a.ownerPatientId!=null||b.ownerPatientId!==patientId||r.ownerPatientId!=null&&r.ownerPatientId!==patientId)return false;
+    a.ownerPatientId=patientId;r.ownerPatientId=patientId;
+    return JSON.stringify(te(before))===current.fingerprint&&JSON.stringify(te(reference))===current.fingerprint;
+  }catch{return false}
+}
+function isCurrentDecisionAfterSave(scope,receipt){
+  var original=decisionScopes.get(scope),patientId=receipt&&receipt.patientId;
+  if(!original||!original.ready||!original.owner||!original.owner.unlocked||original.owner.guest||
+    typeof patientId!=="string"||!patientId)return false;
+  var latest=readCurrentDecision(true),current=decisionScopes.get(latest.scope);
+  return latest.ready&&sameDecisionOwner(original.owner,current.owner,patientId)&&
+    decisionContentAfterSave(original,current,receipt);
+}
 function captureStatusScope(){
   return {patientId:statusPatientId(),applySequence:currentApplySequence(),generation:statusGeneration,fingerprint:f};
 }
@@ -106,9 +224,9 @@ function observeSharedStatusPatient(id){
     // Własny loader może nadać docelowy identyfikator po zdarzeniu G.
     // Po jego przyjęciu powrót do poprzedniego właściciela jest nową zmianą.
     if(id===publication.patientId)publication.observedPatientId=id;
-    else if(id!==publication.observedPatientId)invalidateStatusPublication();
+    else if(id!==publication.observedPatientId){decisionOwnerBoundary();invalidateStatusPublication();}
   }
-  if(readyStatusScope&&readyStatusScope.patientId!==id)invalidateStatusPublication();
+  if(readyStatusScope&&readyStatusScope.patientId!==id){decisionOwnerBoundary();invalidateStatusPublication();}
 }
 function sharedStatusStorageChanged(event){
   var key=event&&event.key;
@@ -135,9 +253,9 @@ function obsoleteImport(detail){
     (sequence<=confirmedApplySequence||sequence!==currentApplySequence());
 }
 function invalidateStatusPublication(){statusGeneration+=1;statusPublicationScope=null;readyStatusScope=null;clearPausedStatusEdit()}
-function publishStatusLater(callback,expectedPatientId){
+function publishStatusLater(callback,expectedPatientId,kind){
   var generation=statusGeneration,sequence=currentApplySequence();
-  var publication={generation:generation,sequence:sequence,patientId:expectedPatientId,observedPatientId:statusPatientId()};
+  var publication={generation:generation,sequence:sequence,patientId:expectedPatientId,observedPatientId:statusPatientId(),kind:kind||"load"};
   statusPublicationScope=publication;
   n.setTimeout(function(){
     if(statusPublicationScope===publication)statusPublicationScope=null;
@@ -230,7 +348,7 @@ function statusLoadChoiceApplied(detail){
   if(!detail||detail.choice!=="new"||typeof detail.patientId!=="string"||!detail.patientId||
     detail.patientId!==statusPatientId()||!Number.isSafeInteger(detail.applySequence)||
     detail.applySequence<0||detail.applySequence!==currentApplySequence())return;
-  invalidateStatusPublication();confirmApplySequence(detail);h=null;
+  decisionOwnerBoundary();invalidateStatusPublication();confirmApplySequence(detail);h=null;
   if(o){clearTimeout(o);o=null}
   // Wybranie wizyty zakończyło już synchroniczną synchronizację. Ustal bazę
   // teraz, zanim lekarz zacznie wpisywać pierwszy pomiar.
@@ -336,7 +454,7 @@ function w(e){
   if(f===null){c(i.NEW_PATIENT);return}
   c(p?i.DIRTY:i.SAVED);
 }
-function V(){invalidateStatusPublication(),D=!0,j()}function Y(){invalidateStatusPublication(),confirmApplySequence(),D=!1,N(),l=null,d=null,v=null,S=null,h=null,c(i.HIDDEN)}function W(e){
+function V(){decisionOwnerBoundary();invalidateStatusPublication(),D=!0,j()}function Y(){decisionOwnerBoundary();invalidateStatusPublication(),confirmApplySequence(),D=!1,N(),l=null,d=null,v=null,S=null,h=null,c(i.HIDDEN)}function W(e){
   if(statusReadOnly){scheduleSharedStatusReconcile();return}
   var savedPatient=e&&typeof e.patientId==="string"&&e.patientId?e.patientId:null,currentPatient=statusPatientId();
   // Powiadomienie sejfu obejmuje też zmianę innej karty pacjenta.
@@ -349,18 +467,19 @@ function V(){invalidateStatusPublication(),D=!0,j()}function Y(){invalidateStatu
   // A save confirms the form captured when that save began, not a newer import.
   if(e&&e.source==="save"&&(!Number.isSafeInteger(sequence)||sequence<0))return;
   if(Number.isSafeInteger(sequence)&&sequence!==latest)return;
+  if(!e||e.source!=="save")decisionOwnerBoundary();
   invalidateStatusPublication(),confirmApplySequence(e,!!(e&&e.source==="save"));
   l=e&&e.savedAtISO||null,d=e&&e.snapshotCount||null,v=e&&e.name||null,h=null;
   o&&(clearTimeout(o),o=null);
   var target=e&&typeof e.patientId==="string"?e.patientId:statusPatientId();
-  publishStatusLater(function(){C(),f=E(),p=!1,I(),markStatusReferenceReady(),c(i.SAVED)},target);
+  publishStatusLater(function(){C(),f=E(),p=!1,I(),markStatusReferenceReady(),c(i.SAVED)},target,e&&e.source==="save"?"save":"load");
 }function x(e){
   if(statusReadOnly){scheduleSharedStatusReconcile();return}
   if(obsoleteImport(e))return;
-  invalidateStatusPublication(),l=null,d=null,v=e&&e.name||null,h=null,N();
+  decisionOwnerBoundary();invalidateStatusPublication(),l=null,d=null,v=e&&e.name||null,h=null,N();
   o&&(clearTimeout(o),o=null);
   publishStatusLater(function(){if(_()){c(i.HIDDEN);return}c(i.NEW_PATIENT)},statusPatientId());
-}function Z(){if(statusReadOnly){scheduleSharedStatusReconcile();return}invalidateStatusPublication(),confirmApplySequence(),h=null,o&&(clearTimeout(o),o=null),publishStatusLater(function(){C(),f=E(),p=!1,I(),markStatusReferenceReady(),c(i.SAVED)},statusPatientId())}function K(){invalidateStatusPublication(),confirmApplySequence(),N(),l=null,d=null,v=null,S=null,h=null,o&&(clearTimeout(o),o=null),c(i.HIDDEN),setTimeout(function(){s!==i.HIDDEN&&_()&&c(i.HIDDEN)},300)}function F(){if(statusReadOnly)return;(s===i.DIRTY||s===i.NEW_PATIENT||s===i.ERROR)&&(invalidateStatusPublication(),c(i.SAVING))}function g(){try{n.__vildaSaveStatusState={state:s,lastSavedAtISO:l,lastSnapshotCount:d,lastPatientName:v,dirtyStartedAt:S,lastError:h,relativeTimeStr:l?R(l):null}}catch{}if(!(typeof n.document>"u")){var e=n.document.getElementById("vildaPatientChip");if(e){for(var t=(e.className||"").split(/\s+/),r=[],a=0;a<t.length;a++){var u=t[a];u&&u.indexOf("vilda-save-state--")!==0&&r.push(u)}s&&r.push("vilda-save-state--"+s);var m=r.join(" ");e.className!==m&&(e.className=m);var y=H(s);y?e.getAttribute("title")!==y&&e.setAttribute("title",y):e.hasAttribute("title")&&e.removeAttribute("title")}}}function $(){var e=n.VildaVault;e&&(typeof e.onUnlock=="function"&&e.onUnlock(function(){V()}),typeof e.onLock=="function"&&e.onLock(function(){Y()}),typeof e.onPatientSaved=="function"&&e.onPatientSaved(function(t){W(t)}))}function se(){if(!(typeof n.document>"u")){n.document.addEventListener("input",w,!0),n.document.addEventListener("change",w,!0),["saveDataBtnSidebar"].forEach(function(r){var a=n.document.getElementById(r);a&&a.addEventListener("click",F)}),n.document.addEventListener("vilda:patient-loaded",function(r){try{G(r&&r.detail||{})}catch{}}),/* P-PRZEJECIE-MODULY (2026-10-06): panel powloki przejmuje pacjenta wczytanego w innej ramce (vildaPersistRestoreAll, P-POWLOKA-ID) bez vilda:patient-loaded; wskaznik zostawal przy nazwie, numerze zapisu i odcisku formularza poprzedniego pacjenta. Po zmianie pacjenta sesji karty wskaznik zapomina wlasny punkt odniesienia i bierze wspolny (vilda-save-ref-v1), zapisany przez ramke, ktora pacjenta wczytala - jak przy starcie strony. */n.document.addEventListener("vilda:persist-restored",function(){
+}function Z(){decisionOwnerBoundary();if(statusReadOnly){scheduleSharedStatusReconcile();return}invalidateStatusPublication(),confirmApplySequence(),h=null,o&&(clearTimeout(o),o=null),publishStatusLater(function(){C(),f=E(),p=!1,I(),markStatusReferenceReady(),c(i.SAVED)},statusPatientId())}function K(){decisionOwnerBoundary();invalidateStatusPublication(),confirmApplySequence(),N(),l=null,d=null,v=null,S=null,h=null,o&&(clearTimeout(o),o=null),c(i.HIDDEN),setTimeout(function(){s!==i.HIDDEN&&_()&&c(i.HIDDEN)},300)}function F(){if(statusReadOnly)return;(s===i.DIRTY||s===i.NEW_PATIENT||s===i.ERROR)&&(invalidateStatusPublication(),c(i.SAVING))}function g(){try{n.__vildaSaveStatusState={state:s,lastSavedAtISO:l,lastSnapshotCount:d,lastPatientName:v,dirtyStartedAt:S,lastError:h,relativeTimeStr:l?R(l):null}}catch{}if(!(typeof n.document>"u")){var e=n.document.getElementById("vildaPatientChip");if(e){for(var t=(e.className||"").split(/\s+/),r=[],a=0;a<t.length;a++){var u=t[a];u&&u.indexOf("vilda-save-state--")!==0&&r.push(u)}s&&r.push("vilda-save-state--"+s);var m=r.join(" ");e.className!==m&&(e.className=m);var y=H(s);y?e.getAttribute("title")!==y&&e.setAttribute("title",y):e.hasAttribute("title")&&e.removeAttribute("title")}}}function $(){var e=n.VildaVault;e&&(typeof e.onUnlock=="function"&&e.onUnlock(function(){V()}),typeof e.onLock=="function"&&e.onLock(function(){Y()}),typeof e.onPatientSaved=="function"&&e.onPatientSaved(function(t){W(t)}))}function se(){if(!(typeof n.document>"u")){n.document.addEventListener("input",w,!0),n.document.addEventListener("change",w,!0),["saveDataBtnSidebar"].forEach(function(r){var a=n.document.getElementById(r);a&&a.addEventListener("click",F)}),n.document.addEventListener("vilda:patient-loaded",function(r){try{G(r&&r.detail||{})}catch{}}),/* P-PRZEJECIE-MODULY (2026-10-06): panel powloki przejmuje pacjenta wczytanego w innej ramce (vildaPersistRestoreAll, P-POWLOKA-ID) bez vilda:patient-loaded; wskaznik zostawal przy nazwie, numerze zapisu i odcisku formularza poprzedniego pacjenta. Po zmianie pacjenta sesji karty wskaznik zapomina wlasny punkt odniesienia i bierze wspolny (vilda-save-ref-v1), zapisany przez ramke, ktora pacjenta wczytala - jak przy starcie strony. */n.document.addEventListener("vilda:persist-restored",function(){
   // Także zapis tego samego pacjenta w innej ramce zmienia bazę/metadane.
   // Samo odtworzenie nigdy nie usuwa wspólnej referencji.
   try{scheduleSharedStatusReconcile()}catch{}
@@ -368,4 +487,4 @@ function V(){invalidateStatusPublication(),D=!0,j()}function Y(){invalidateStatu
   try{scheduleSharedStatusReconcile()}catch{}
 }),n.document.addEventListener("vilda:session-changed",function(){
   if(typeof n.collectUserData!=="function")try{scheduleSharedStatusReconcile()}catch{}
-}),typeof n.addEventListener==="function"&&n.addEventListener("storage",sharedStatusStorageChanged),n.document.addEventListener("vilda:json-imported",function(r){try{x(r&&r.detail||{})}catch{}}),n.document.addEventListener("vilda:state-restored",function(r){try{Z(r&&r.detail||{})}catch{}}),n.document.addEventListener("vilda:load-choice-applied",function(r){try{statusLoadChoiceApplied(r&&r.detail)}catch{}}),/* P-POKWITANIE-WIZYTA (2026-10-15): przyciski G/Th/P nie generuja input/change, wiec chip zostawal „zapisane" po zmianie stadium, a straznik niezapisanych zmian (czyta ten stan) nie pytal o zapis. Swiadoma edycja oceny przelicza odcisk ta sama droga, co pole formularza. */n.document.addEventListener("vilda:puberty-assessment-changed",function(r){try{r&&r.detail&&r.detail.reason==="edit"&&w({isTrusted:!0})}catch{}}),typeof n.addEventListener=="function"&&n.addEventListener("vilda:user-state-cleared",function(){try{K()}catch{}});var e=0,t=setInterval(function(){var r=!1;["saveDataBtnSidebar"].forEach(function(a){var u=n.document.getElementById(a);u&&!u.__vildaSSIBound&&(u.addEventListener("click",F),u.__vildaSSIBound=!0,r=!0)}),e++,(r||e>50)&&clearInterval(t)},100)}}function ce(){z||(z=setInterval(function(){(s===i.SAVED||s===i.DIRTY)&&g()},3e4))}function q(){if(typeof n.document>"u"){$();return}if(n.document.readyState==="loading"){n.document.addEventListener("DOMContentLoaded",q,{once:!0});return}$(),se(),ce();var e=n.VildaVault;e&&typeof e.isUnlocked=="function"&&e.isUnlocked()&&V(),typeof n.addEventListener=="function"&&n.addEventListener("load",function(){try{var t=n.VildaVault;t&&typeof t.isUnlocked=="function"&&t.isUnlocked()&&!D?V():g()}catch{}},{once:!0})}n.VildaSaveStatusIndicator={STATES:i,reconcileFromSharedReference:reconcileFromSharedReference,isReadyForSharedReference:isReadyForSharedReference,notifySaveFailed:function(e){h=e?String(e):null;c(i.ERROR)},getState:function(){return s},getReferenceFingerprint:function(){return f},getLastSavedAtISO:function(){return l},getLastSnapshotCount:function(){return d},getLastPatientName:function(){return v},notifyExternalChange:function(t){try{if(n.__vildaPersistRestoring===!0)return}catch{}o&&clearTimeout(o),o=setTimeout(ue,400)},_onFormChange:J,_debouncedOnFormChange:w,_onUnlock:V,_onLock:Y,_onPatientSaved:W,_onPatientLoaded:G,_onJsonImported:x,_onStateRestored:Z,_onUserStateCleared:K,_onSaveClicked:F,_computeFormFingerprint:Q,_computeCanonicalFingerprint:E,_reconcileState:j,_readPersistedRef:k,_writePersistedRef:U,_clearPersistedRef:N,_setReferenceFingerprint:function(e){f=e},_forceTransition:function(e){c(e)},_relativeTime:R,_buildTitleAttr:H,_setLastSavedAtISO:function(e){l=e},_setLastSnapshotCount:function(e){d=e},_setLastPatientName:function(e){v=e},_setDirtyStartedAt:function(e){S=e},_setLastError:function(e){h=e}},typeof n<"u"&&(n.__vildaSaveStatusDebug=function(){var e=n.VildaVault,t=n.document&&n.document.getElementById("vildaPatientChip"),r={state:s,vaultUnlocked:!!(e&&typeof e.isUnlocked=="function"&&e.isUnlocked()),myVaultUnlockedFlag:D,referenceFingerprint:f?"["+f.length+" znak\xF3w]":null,lastSavedAtISO:l,lastSnapshotCount:d,lastPatientName:v,chipExists:!!t,chipClasses:t?t.className:null,chipTitle:t?t.getAttribute("title"):null,collectUserDataExists:typeof n.collectUserData,formMostlyEmpty:null};try{if(typeof n.collectUserData=="function"){var a=n.collectUserData({source:"debug"});r.formData=a?{name:a.name,user:a.user}:null,r.formMostlyEmpty=_()}}catch(u){r.formDataError=String(u)}return console.table(r),r}),q()})(typeof window<"u"?window:globalThis);
+}),typeof n.addEventListener==="function"&&n.addEventListener("storage",sharedStatusStorageChanged),n.document.addEventListener("vilda:json-imported",function(r){try{x(r&&r.detail||{})}catch{}}),n.document.addEventListener("vilda:state-restored",function(r){try{Z(r&&r.detail||{})}catch{}}),n.document.addEventListener("vilda:load-choice-applied",function(r){try{statusLoadChoiceApplied(r&&r.detail)}catch{}}),/* P-POKWITANIE-WIZYTA (2026-10-15): przyciski G/Th/P nie generuja input/change, wiec chip zostawal „zapisane" po zmianie stadium, a straznik niezapisanych zmian (czyta ten stan) nie pytal o zapis. Swiadoma edycja oceny przelicza odcisk ta sama droga, co pole formularza. */n.document.addEventListener("vilda:puberty-assessment-changed",function(r){try{r&&r.detail&&r.detail.reason==="edit"&&w({isTrusted:!0})}catch{}}),typeof n.addEventListener=="function"&&n.addEventListener("vilda:user-state-cleared",function(){try{K()}catch{}});var e=0,t=setInterval(function(){var r=!1;["saveDataBtnSidebar"].forEach(function(a){var u=n.document.getElementById(a);u&&!u.__vildaSSIBound&&(u.addEventListener("click",F),u.__vildaSSIBound=!0,r=!0)}),e++,(r||e>50)&&clearInterval(t)},100)}}function ce(){z||(z=setInterval(function(){(s===i.SAVED||s===i.DIRTY)&&g()},3e4))}function q(){if(typeof n.document>"u"){$();return}if(n.document.readyState==="loading"){n.document.addEventListener("DOMContentLoaded",q,{once:!0});return}$(),se(),ce();var e=n.VildaVault;e&&typeof e.isUnlocked=="function"&&e.isUnlocked()&&V(),typeof n.addEventListener=="function"&&n.addEventListener("load",function(){try{var t=n.VildaVault;t&&typeof t.isUnlocked=="function"&&t.isUnlocked()&&!D?V():g()}catch{}},{once:!0})}n.VildaSaveStatusIndicator={STATES:i,getCurrentDecision:getCurrentDecision,isCurrentDecision:isCurrentDecision,isCurrentDecisionOwner:isCurrentDecisionOwner,isCurrentDecisionAfterSave:isCurrentDecisionAfterSave,reconcileFromSharedReference:reconcileFromSharedReference,isReadyForSharedReference:isReadyForSharedReference,notifySaveFailed:function(e){h=e?String(e):null;c(i.ERROR)},getState:function(){return s},getReferenceFingerprint:function(){return f},getLastSavedAtISO:function(){return l},getLastSnapshotCount:function(){return d},getLastPatientName:function(){return v},notifyExternalChange:function(t){try{if(n.__vildaPersistRestoring===!0)return}catch{}o&&clearTimeout(o),o=setTimeout(ue,400)},_onFormChange:J,_debouncedOnFormChange:w,_onUnlock:V,_onLock:Y,_onPatientSaved:W,_onPatientLoaded:G,_onJsonImported:x,_onStateRestored:Z,_onUserStateCleared:K,_onSaveClicked:F,_computeFormFingerprint:Q,_computeCanonicalFingerprint:E,_reconcileState:j,_readPersistedRef:k,_writePersistedRef:U,_clearPersistedRef:N,_setReferenceFingerprint:function(e){f=e},_forceTransition:function(e){c(e)},_relativeTime:R,_buildTitleAttr:H,_setLastSavedAtISO:function(e){l=e},_setLastSnapshotCount:function(e){d=e},_setLastPatientName:function(e){v=e},_setDirtyStartedAt:function(e){S=e},_setLastError:function(e){h=e}},typeof n<"u"&&(n.__vildaSaveStatusDebug=function(){var e=n.VildaVault,t=n.document&&n.document.getElementById("vildaPatientChip"),r={state:s,vaultUnlocked:!!(e&&typeof e.isUnlocked=="function"&&e.isUnlocked()),myVaultUnlockedFlag:D,referenceFingerprint:f?"["+f.length+" znak\xF3w]":null,lastSavedAtISO:l,lastSnapshotCount:d,lastPatientName:v,chipExists:!!t,chipClasses:t?t.className:null,chipTitle:t?t.getAttribute("title"):null,collectUserDataExists:typeof n.collectUserData,formMostlyEmpty:null};try{if(typeof n.collectUserData=="function"){var a=n.collectUserData({source:"debug"});r.formData=a?{name:a.name,user:a.user}:null,r.formMostlyEmpty=_()}}catch(u){r.formDataError=String(u)}return console.table(r),r}),q()})(typeof window<"u"?window:globalThis);

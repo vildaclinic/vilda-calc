@@ -375,3 +375,54 @@ zmienione dane w powłoce i samodzielnie, a także zwykłe F5 rozgrzanej powłok
 z zachowaniem snapshotów sejfu. Testy aktualizacji wykonują nowego klienta
 przechodzącego na kolejny SW; nie stanowią dowodu retroaktywnej ochrony
 listenerów starego klienta. Historyczny odcisk bada osobny test migracji.
+
+## Bieżąca decyzja przed wyczyszczeniem i wczytaniem
+
+Szybkie kliknięcie „Wyczyść wszystkie pola” po edycji może poprzedzać zapis
+sesji i odświeżenie wskaźnika. Potwierdzona regresja dotyczyła formularza
+z samymi danymi pokwitania: wpisane pola zostały wyczyszczone, gdy zapamiętany
+stan wskaźnika nadal miał wartość `hidden`.
+
+`VildaSaveStatusIndicator.getCurrentDecision()` odczytuje w chwili działania
+aktualne dane oraz zakres konta, pacjenta i operacji odtwarzania. Zwraca
+`{ready, state, scope}`. Wskaźnik w nagłówku zachowuje dotychczasowy mechanizm
+odświeżania i kanonizację; odczyt decyzji nie ustanawia referencji zapisu.
+
+Osobny `captureCurrentUserDataReadOnly({base})` używa bieżących pól należących
+do danego dokumentu lub modułu. Nieobecne edytory zachowują dane ze sprawdzonej
+bazy tego samego pacjenta, a jawne puste wartości własnych pól pozostają
+wyczyszczeniem. Dotyczy to również częściowych widoków DocPro i Klirensu.
+Odczyt korzysta z osobnych ścieżek Klirensu, oceny pokwitania, wieku kostnego
+i danych urodzeniowych SGA: nie zapisuje sesji, nie publikuje referencji,
+nie tworzy kotwic obserwacji i nie zmienia kontrolek. Brak wybranej wersji
+Klirensu pozostaje odczytywalnym stanem, także po zwinięciu wersji
+z zachowaną formułą; odczyt nie wybiera domyślnego wzoru. Selektor wzoru
+jest odczytywany z bieżącego dokumentu, ponieważ interfejs Klirensu celowo
+przenosi go do paska przed formularzem. Zwykły serializer zapisu zachowuje
+swój dotychczasowy kontrakt.
+
+Guard używa tej samej decyzji przy przechwyceniu kliknięcia i otwieraniu
+dialogu. Przed odrzuceniem sprawdza ponownie właściciela oraz treść formularza.
+Sam brak gotowości podczas odtwarzania lub zapisu anuluje bieżącą akcję
+z krótkim komunikatem; nie uruchamia później samoczynnego czyszczenia.
+Dotychczasowe zachowanie formularza gościa pozostaje zachowane.
+
+„Zapisz i wyczyść” wymaga receipt konkretnego zakończonego zapisu, a nie
+dowolnego zdarzenia `onPatientSaved` lub samego rozwiązania Promise.
+`saveUserDataWithReceipt()` korzysta z tego samego pipeline co zwykły zapis;
+niepowodzenie, zmiana zakresu i obcy zapis nie potwierdzają tej operacji.
+Odpowiedź poprzedniego konta nie publikuje PID ani referencji w nowym kontekście.
+
+Po własnym poprawnym zapisie guard czeka na rzeczywiste zakończenie
+odtwarzania DOB (`vilda:dob-restored`), zachowując jeden limit ośmiu sekund,
+a następnie sprawdza konto, pacjenta i treść. Dozwolone przypisanie nowego PID
+dotyczy wyłącznie potwierdzonego własnego zapisu oraz tej samej wizyty.
+Spóźniona odpowiedź, zmiana danych lub konta nie uruchamiają starego Clear.
+
+Regresje obejmują opóźnione rzeczywiste callbacki sesji i wskaźnika, dane
+pokwitaniowe bez antropometrii, anulowanie i odrzucenie, własny zapis,
+obce potwierdzenie, zmianę konta oraz niezmienione dane w powłoce i na
+stronach samodzielnych. Nowe scenariusze są w
+`tests/e2e/clear-current-state.spec.mjs`; istniejące asercje resetu panelu
+pokwitania pozostają częścią sprawdzeń. Wzory, normy i interpretacje nie
+są zmieniane przez tę poprawkę.

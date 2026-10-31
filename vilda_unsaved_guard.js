@@ -52,4 +52,203 @@ function VildaKlirensGuardNote(reason) {
     " odrzuci obliczenie także po zapisie danych pacjenta. Wróć do obliczenia, aby je zachować.";
 }
 
-var b=!1;function I(e){e=e||{};var t=typeof e.onProceed=="function"?e.onProceed:function(){},a=typeof e.onCancel=="function"?e.onCancel:function(){},i=e.reason||"load",s=_(),clcrPending=(i==="load"||i==="clear")&&VildaKlirensGuardHasPending();if(S(s)==="proceed"&&!clcrPending){t();return}B();var o=p();if(!o||!o.body){t();return}if(b)return;var d=s==="new_patient",u=N(i,d),y=J(e.patientLabel);if(clcrPending)u=VildaKlirensGuardCopy(i,k(s),u);var clcrNote=[e.extraNote,clcrPending&&k(s)?VildaKlirensGuardNote(i):""].filter(Boolean).join(" ");P(),b=!0;var m=n("div",{class:"vug-err",role:"alert"}),l=n("button",{class:"vug-btn vug-primary",type:"button",text:u.primary}),g=n("button",{class:"vug-btn vug-danger",type:"button",text:u.discard}),c=n("button",{class:"vug-btn vug-ghost",type:"button",text:u.cancel}),O=d?n("div",{class:"vug-who"},[n("span",{class:"dot newp"}),n("span",{},[n("span",{text:"W formularzu: "}),n("b",{text:"nowy pacjent (bez karty)"})])]):y?n("div",{class:"vug-who"},[n("span",{class:"dot dirty"}),n("span",{},[n("span",{text:"Otwarty: "}),n("b",{text:y})])]):null,V=n("div",{class:"vug"+(clcrPending?" vug--klirens":""),role:"dialog","aria-modal":"true","aria-label":u.title},[n("div",{class:"vug-head"},[n("div",{class:"vug-ic "+u.variant,"aria-hidden":"true",text:d?"\uFF0B":"\u270E"}),n("div",{},[n("div",{class:"vug-kicker "+u.variant,text:u.kicker}),n("div",{class:"vug-ttl",text:u.title})])]),n("p",{class:"vug-body",text:u.body}),clcrNote?n("p",{class:"vug-body vug-note",text:String(clcrNote)}):null,O,m,n("div",{class:"vug-actions"},[l,g,c])]),x=n("div",{class:"vug-backdrop"},V);l.hidden=!u.primary;o.body.appendChild(x);function ee(){b=!1;try{x.parentNode&&x.parentNode.removeChild(x)}catch{}try{o.removeEventListener("keydown",Z,!0)}catch{}}function h(r){if(ee(),typeof r=="function")try{r()}catch{}}function te(r){m.textContent=r,m.className="vug-err show"}function U(r){l.disabled=r,g.disabled=r,c.disabled=r,r&&(l.textContent="Zapisywanie\u2026")}l.addEventListener("click",function(){if(!l.disabled){if(d&&!G()){h(null),Y();try{f.alert}catch{}return}m.className="vug-err",U(!0),Q(function(){h(t)},function(r){U(!1),l.textContent=u.primary,te(r)})}}),g.addEventListener("click",function(){g.disabled||h(t)}),c.addEventListener("click",function(){c.disabled||h(a)});function Z(r){r&&r.key==="Escape"&&(r.stopPropagation(),c.disabled||h(a))}o.addEventListener("keydown",Z,!0),x.addEventListener("click",function(r){r.target===x&&!c.disabled&&h(a)});try{(l.hidden?g:l).focus()}catch{}V.addEventListener("keydown",function(r){if(r.key==="Tab"){var w=[l,g,c].filter(function(ne){return!ne.disabled&&!ne.hidden});if(w.length){var F=w[0],M=w[w.length-1],K=o.activeElement;r.shiftKey&&K===F?(r.preventDefault(),M.focus()):!r.shiftKey&&K===M&&(r.preventDefault(),F.focus())}}})}function X(e){e=e||{};var t=typeof e.onProceed=="function"?e.onProceed:function(){},a=typeof e.onCancel=="function"?e.onCancel:function(){},i=p();if(!i||!i.body){t();return}if(b)return;P(),b=!0;var clcrPending=VildaKlirensGuardHasPending(),s=e.patientLabel&&String(e.patientLabel).trim()||"",o=n("button",{class:"vug-btn vug-primary",type:"button",text:clcrPending?"Odrzuć obliczenie i wczytaj ponownie":"Wczytaj ponownie"}),d=n("button",{class:"vug-btn vug-ghost",type:"button",text:clcrPending?"Wróć do obliczenia":"Anuluj"}),u=n("div",{class:"vug"+(clcrPending?" vug--klirens":""),role:"dialog","aria-modal":"true","aria-label":"Ten pacjent jest ju\u017C wczytany"},[n("div",{class:"vug-head"},[n("div",{class:"vug-ic same","aria-hidden":"true",text:"\u2139"}),n("div",{},[n("div",{class:"vug-kicker same",text:"Pacjent ju\u017C wczytany"}),n("div",{class:"vug-ttl",text:"Ten pacjent jest ju\u017C wczytany"})])]),n("p",{class:"vug-body",text:"Wybrany pacjent jest ju\u017C wczytany w tej karcie. Ponowne wczytanie przywr\xF3ci ostatni zapis z karty pacjenta (np. zmiany zapisane w innej karcie)."}),clcrPending?n("p",{class:"vug-body vug-note",text:"Ponowne wczytanie odrzuci niezapisane oznaczenia i wynik Klirensu. Wróć do obliczenia, aby je zachować."}):null,s?n("div",{class:"vug-who"},[n("span",{class:"dot same"}),n("span",{},[n("span",{text:"Pacjent: "}),n("b",{text:s})])]):null,n("div",{class:"vug-actions"},[o,d])]),y=n("div",{class:"vug-backdrop"},u);i.body.appendChild(y);function m(){b=!1;try{y.parentNode&&y.parentNode.removeChild(y)}catch{}try{i.removeEventListener("keydown",g,!0)}catch{}}function l(c){if(m(),typeof c=="function")try{c()}catch{}}o.addEventListener("click",function(){l(t)}),d.addEventListener("click",function(){l(a)});function g(c){c&&c.key==="Escape"&&(c.stopPropagation(),l(a))}i.addEventListener("keydown",g,!0),y.addEventListener("click",function(c){c.target===y&&l(a)});try{d.focus()}catch{}}function $(e){var t=e&&e.target;if(!t)return null;if(typeof t.closest=="function")try{return t.closest("#clearAllDataBtn, #clearBtn")}catch{return null}var a=t.id;return a==="clearAllDataBtn"||a==="clearBtn"?t:null}function T(e){try{var t=$(e);if(!t)return;if(t.id==="clearBtn"&&p()?.getElementById?.("clcrForm"))return;if(t.__vugClearBypass){t.__vugClearBypass=!1;return}if(e&&e.isTrusted===!1||!k(_())&&!VildaKlirensGuardHasPending())return;typeof e.preventDefault=="function"&&e.preventDefault(),typeof e.stopImmediatePropagation=="function"&&e.stopImmediatePropagation(),I({reason:"clear",onProceed:function(){try{t.__vugClearBypass=!0,t.click()}catch{}}})}catch{}}function D(e){try{/* P-POWLOKA-OBCY (2026-10-06): dokument nieaktualny (inna ramka powloki wczytala innego pacjenta) nie zapisze juz zmian, a powloka przeladowuje go przy pokazaniu - natywne okno "Opuscic strone?" zatrzymaloby panel na "Ladowanie". Rejestr: docs/clinical/ALGORITHMS.md, P-POWLOKA-OBCY. */var Gq5v=f.VildaPanelPacjent;if(Gq5v&&typeof Gq5v.nieaktualny=="function"&&Gq5v.nieaktualny())return}catch{}try{if(k(_()))return e&&typeof e.preventDefault=="function"&&e.preventDefault(),e&&(e.returnValue=""),""}catch{}}var A=!1;function C(){if(!A){var e=p();if(!(!e||typeof e.addEventListener!="function")){A=!0,e.addEventListener("click",T,!0);try{typeof f.addEventListener=="function"&&f.addEventListener("beforeunload",D)}catch{}}}}try{var z=p();z&&typeof z.addEventListener=="function"&&(z.readyState==="loading"?z.addEventListener("DOMContentLoaded",C,{once:!0}):C())}catch{}var W={run:I,confirmSamePatientReload:X,STYLE_ID:j,install:C,_decide:S,_hasPendingKlirens:VildaKlirensGuardHasPending,_hasUnsaved:k,_copy:N,_onClearCaptureClick:T,_onBeforeUnload:D};try{f&&(f.VildaUnsavedGuard=W)}catch{}typeof module<"u"&&module.exports&&(module.exports=W)})(typeof window<"u"?window:typeof globalThis<"u"?globalThis:this);
+var b=!1;
+/* Destructive actions inspect the current form. Reading this decision never
+ * flushes autosave, publishes a new saved reference, or waits for debounce. */
+function VildaGuardCurrentDecision() {
+  var indicator = L();
+  if (!indicator || typeof indicator.getCurrentDecision !== "function")
+    return { ready: true, state: _(), legacy: true };
+  try {
+    var decision = indicator.getCurrentDecision();
+    return { ready: !!(decision && decision.ready === true), state: decision && decision.state,
+      scope: decision && decision.scope, indicator: indicator, legacy: false };
+  } catch (_) { return { ready: false, legacy: false }; }
+}
+function VildaGuardDecisionCurrent(decision, receipt) {
+  if (decision.legacy) return true;
+  if (!decision.ready || L() !== decision.indicator) return false;
+  try {
+    return receipt
+      ? typeof decision.indicator.isCurrentDecisionAfterSave === "function" &&
+        decision.indicator.isCurrentDecisionAfterSave(decision.scope, receipt) === true
+      : typeof decision.indicator.isCurrentDecision === "function" &&
+        decision.indicator.isCurrentDecision(decision.scope) === true;
+  } catch (_) { return false; }
+}
+function VildaGuardDecisionOwner(decision) {
+  if (decision.legacy) return true;
+  try {
+    return decision.ready && L() === decision.indicator &&
+      typeof decision.indicator.isCurrentDecisionOwner === "function" &&
+      decision.indicator.isCurrentDecisionOwner(decision.scope) === true;
+  } catch (_) { return false; }
+}
+function VildaGuardUnavailable(changed) {
+  try {
+    if (typeof f.alert === "function") f.alert(changed
+      ? "Formularz zmienił się. Wykonaj tę czynność ponownie."
+      : "Trwa przygotowanie lub zapis danych. Spróbuj ponownie za chwilę.");
+  } catch (_) { /* The action remains cancelled if a notification is unavailable. */ }
+}
+function I(options) { return VildaGuardRunDecision(options, VildaGuardCurrentDecision()); }
+function VildaGuardRunDecision(options, decision) {
+  options = options || {};
+  var proceed = typeof options.onProceed === "function" ? options.onProceed : function () {};
+  var cancel = typeof options.onCancel === "function" ? options.onCancel : function () {};
+  if (!decision.ready || !VildaGuardDecisionCurrent(decision)) {
+    cancel(); VildaGuardUnavailable(decision.ready); return;
+  }
+  var reason = options.reason || "load", state = decision.state;
+  var clcrPending = (reason === "load" || reason === "clear") && VildaKlirensGuardHasPending();
+  if (S(state) === "proceed" && !clcrPending) { proceed(); return; }
+  if (decision.legacy) B();
+  var doc = p();
+  if (!doc || !doc.body) { proceed(); return; }
+  if (b) return;
+  var isNew = state === "new_patient", copy = N(reason, isNew), patient = J(options.patientLabel);
+  if (clcrPending) copy = VildaKlirensGuardCopy(reason, k(state), copy);
+  var note = [options.extraNote, clcrPending && k(state) ? VildaKlirensGuardNote(reason) : ""].filter(Boolean).join(" ");
+  P(); b = true;
+  var error = n("div", { class: "vug-err", role: "alert" });
+  var save = n("button", { class: "vug-btn vug-primary", type: "button", text: copy.primary });
+  var discard = n("button", { class: "vug-btn vug-danger", type: "button", text: copy.discard });
+  var back = n("button", { class: "vug-btn vug-ghost", type: "button", text: copy.cancel });
+  var who = isNew
+    ? n("div", { class: "vug-who" }, [n("span", { class: "dot newp" }), n("span", {}, [n("span", { text: "W formularzu: " }), n("b", { text: "nowy pacjent (bez karty)" })])])
+    : patient ? n("div", { class: "vug-who" }, [n("span", { class: "dot dirty" }), n("span", {}, [n("span", { text: "Otwarty: " }), n("b", { text: patient })])]) : null;
+  var dialog = n("div", { class: "vug" + (clcrPending ? " vug--klirens" : ""), role: "dialog", "aria-modal": "true", "aria-label": copy.title }, [
+    n("div", { class: "vug-head" }, [n("div", { class: "vug-ic " + copy.variant, "aria-hidden": "true", text: isNew ? "＋" : "✎" }),
+      n("div", {}, [n("div", { class: "vug-kicker " + copy.variant, text: copy.kicker }), n("div", { class: "vug-ttl", text: copy.title })])]),
+    n("p", { class: "vug-body", text: copy.body }), note ? n("p", { class: "vug-body vug-note", text: String(note) }) : null,
+    who, error, n("div", { class: "vug-actions" }, [save, discard, back])
+  ]);
+  var backdrop = n("div", { class: "vug-backdrop" }, dialog), pending = null, closed = false;
+  save.hidden = !copy.primary; doc.body.appendChild(backdrop);
+  function releaseRequest(request) {
+    f.clearTimeout(request.timer);
+    if (request.restoreListener) {
+      doc.removeEventListener("vilda:dob-restored", request.restoreListener);
+      request.restoreListener = null;
+    }
+  }
+  function close() {
+    if (closed) return;
+    closed = true; b = false;
+    if (pending) { releaseRequest(pending); pending = null; }
+    try { if (backdrop.parentNode) backdrop.parentNode.removeChild(backdrop); } catch (_) {}
+    try { doc.removeEventListener("keydown", escape, true); } catch (_) {}
+  }
+  function finish(callback) { close(); if (typeof callback === "function") try { callback(); } catch (_) {} }
+  function stale() { finish(cancel); VildaGuardUnavailable(true); }
+  function showError(message) { error.textContent = message; error.className = "vug-err show"; }
+  function saving(value) { save.disabled = value; discard.disabled = value; back.disabled = value; save.textContent = value ? "Zapisywanie…" : copy.primary; }
+  function startOwnSave() {
+    var api = f.VildaDataImportExport;
+    if (!api || typeof api.saveUserDataWithReceipt !== "function") {
+      saving(false); showError("Nie udało się uruchomić zapisu. Odśwież aplikację i spróbuj ponownie."); return;
+    }
+    var request = { timer: null, receipt: null, restoreListener: null }; pending = request;
+    function active() { return !closed && pending === request; }
+    request.timer = f.setTimeout(function () {
+      if (!settled()) return;
+      if (request.receipt) { finish(cancel); VildaGuardUnavailable(false); return; }
+      if (!VildaGuardDecisionOwner(decision)) { stale(); return; }
+      saving(false);
+      showError("Nie udało się potwierdzić zapisu w wyznaczonym czasie. Sprawdź dane i spróbuj ponownie.");
+    }, H);
+    function settled() {
+      if (!active()) return false;
+      releaseRequest(request); pending = null; return true;
+    }
+    function continueAfterSave() {
+      if (!active()) return;
+      try {
+        var dob = f.VildaDobAge;
+        if (dob && typeof dob.restorePending === "function" && dob.restorePending()) {
+          if (!request.restoreListener) {
+            request.restoreListener = continueAfterSave;
+            doc.addEventListener("vilda:dob-restored", request.restoreListener);
+            // The existing boundary may have settled just before registration.
+            // Recheck its counter; an event alone never authorizes the replay.
+            continueAfterSave();
+          }
+          return;
+        }
+      } catch (_) {
+        if (settled()) { finish(cancel); VildaGuardUnavailable(false); }
+        return;
+      }
+      if (!settled()) return;
+      if (!VildaGuardDecisionCurrent(decision, request.receipt)) { stale(); return; }
+      finish(proceed);
+    }
+    var promise;
+    try { promise = api.saveUserDataWithReceipt({ showTooltip: typeof f.showTooltip === "function" ? f.showTooltip : null }); }
+    catch (failure) {
+      if (settled()) {
+        if (!VildaGuardDecisionOwner(decision)) { stale(); return; }
+        saving(false); showError(failure && failure.message || "Nie udało się zapisać danych. Spróbuj ponownie.");
+      }
+      return;
+    }
+    Promise.resolve(promise).then(function (receipt) {
+      if (!active()) return;
+      if (!receipt || receipt.saved !== true || typeof receipt.patientId !== "string" || !receipt.patientId) {
+        if (!settled()) return;
+        if (!VildaGuardDecisionOwner(decision)) { stale(); return; }
+        saving(false); showError("Nie potwierdzono zapisu danych. Sprawdź formularz i spróbuj ponownie."); return;
+      }
+      request.receipt = receipt;
+      continueAfterSave();
+    }, function (failure) {
+      if (settled()) {
+        if (!VildaGuardDecisionOwner(decision)) { stale(); return; }
+        saving(false); showError(failure && failure.message || "Nie udało się zapisać danych. Spróbuj ponownie.");
+      }
+    });
+  }
+  save.addEventListener("click", function () {
+    if (save.disabled) return;
+    if (!VildaGuardDecisionCurrent(decision)) { stale(); return; }
+    if (isNew && !G()) { finish(null); Y(); return; }
+    error.className = "vug-err"; saving(true);
+    if (decision.legacy) Q(function () { finish(proceed); }, function (message) { saving(false); showError(message); });
+    else startOwnSave();
+  });
+  discard.addEventListener("click", function () {
+    if (discard.disabled) return;
+    if (!VildaGuardDecisionCurrent(decision)) { stale(); return; }
+    finish(proceed);
+  });
+  back.addEventListener("click", function () { if (!back.disabled) finish(cancel); });
+  function escape(event) { if (event && event.key === "Escape") { event.stopPropagation(); if (!back.disabled) finish(cancel); } }
+  doc.addEventListener("keydown", escape, true);
+  backdrop.addEventListener("click", function (event) { if (event.target === backdrop && !back.disabled) finish(cancel); });
+  try { (save.hidden ? discard : save).focus(); } catch (_) {}
+  dialog.addEventListener("keydown", function (event) {
+    if (event.key !== "Tab") return;
+    var buttons = [save, discard, back].filter(function (button) { return !button.disabled && !button.hidden; });
+    if (!buttons.length) return;
+    var first = buttons[0], last = buttons[buttons.length - 1], active = doc.activeElement;
+    if (event.shiftKey && active === first) { event.preventDefault(); last.focus(); }
+    else if (!event.shiftKey && active === last) { event.preventDefault(); first.focus(); }
+  });
+}
+function X(e){e=e||{};var t=typeof e.onProceed=="function"?e.onProceed:function(){},a=typeof e.onCancel=="function"?e.onCancel:function(){},i=p();if(!i||!i.body){t();return}if(b)return;P(),b=!0;var clcrPending=VildaKlirensGuardHasPending(),s=e.patientLabel&&String(e.patientLabel).trim()||"",o=n("button",{class:"vug-btn vug-primary",type:"button",text:clcrPending?"Odrzuć obliczenie i wczytaj ponownie":"Wczytaj ponownie"}),d=n("button",{class:"vug-btn vug-ghost",type:"button",text:clcrPending?"Wróć do obliczenia":"Anuluj"}),u=n("div",{class:"vug"+(clcrPending?" vug--klirens":""),role:"dialog","aria-modal":"true","aria-label":"Ten pacjent jest ju\u017C wczytany"},[n("div",{class:"vug-head"},[n("div",{class:"vug-ic same","aria-hidden":"true",text:"\u2139"}),n("div",{},[n("div",{class:"vug-kicker same",text:"Pacjent ju\u017C wczytany"}),n("div",{class:"vug-ttl",text:"Ten pacjent jest ju\u017C wczytany"})])]),n("p",{class:"vug-body",text:"Wybrany pacjent jest ju\u017C wczytany w tej karcie. Ponowne wczytanie przywr\xF3ci ostatni zapis z karty pacjenta (np. zmiany zapisane w innej karcie)."}),clcrPending?n("p",{class:"vug-body vug-note",text:"Ponowne wczytanie odrzuci niezapisane oznaczenia i wynik Klirensu. Wróć do obliczenia, aby je zachować."}):null,s?n("div",{class:"vug-who"},[n("span",{class:"dot same"}),n("span",{},[n("span",{text:"Pacjent: "}),n("b",{text:s})])]):null,n("div",{class:"vug-actions"},[o,d])]),y=n("div",{class:"vug-backdrop"},u);i.body.appendChild(y);function m(){b=!1;try{y.parentNode&&y.parentNode.removeChild(y)}catch{}try{i.removeEventListener("keydown",g,!0)}catch{}}function l(c){if(m(),typeof c=="function")try{c()}catch{}}o.addEventListener("click",function(){l(t)}),d.addEventListener("click",function(){l(a)});function g(c){c&&c.key==="Escape"&&(c.stopPropagation(),l(a))}i.addEventListener("keydown",g,!0),y.addEventListener("click",function(c){c.target===y&&l(a)});try{d.focus()}catch{}}function $(e){var t=e&&e.target;if(!t)return null;if(typeof t.closest=="function")try{return t.closest("#clearAllDataBtn, #clearBtn")}catch{return null}var a=t.id;return a==="clearAllDataBtn"||a==="clearBtn"?t:null}function T(event) {
+  try {
+    var button = $(event);
+    if (!button) return;
+    if (button.id === "clearBtn" && p()?.getElementById?.("clcrForm")) return;
+    if (button.__vugClearBypass) { button.__vugClearBypass = false; return; }
+    if (event && event.isTrusted === false) return;
+    var decision = VildaGuardCurrentDecision();
+    if (decision.ready && !k(decision.state) && !VildaKlirensGuardHasPending()) return;
+    if (typeof event.preventDefault === "function") event.preventDefault();
+    if (typeof event.stopImmediatePropagation === "function") event.stopImmediatePropagation();
+    if (!decision.ready) { VildaGuardUnavailable(false); return; }
+    VildaGuardRunDecision({ reason: "clear", onProceed: function () {
+      try { button.__vugClearBypass = true; button.click(); } catch (_) {}
+    } }, decision);
+  } catch (_) { /* A failed interception cannot authorize a destructive replay. */ }
+}function D(e){try{/* P-POWLOKA-OBCY (2026-10-06): dokument nieaktualny (inna ramka powloki wczytala innego pacjenta) nie zapisze juz zmian, a powloka przeladowuje go przy pokazaniu - natywne okno "Opuscic strone?" zatrzymaloby panel na "Ladowanie". Rejestr: docs/clinical/ALGORITHMS.md, P-POWLOKA-OBCY. */var Gq5v=f.VildaPanelPacjent;if(Gq5v&&typeof Gq5v.nieaktualny=="function"&&Gq5v.nieaktualny())return}catch{}try{if(k(_()))return e&&typeof e.preventDefault=="function"&&e.preventDefault(),e&&(e.returnValue=""),""}catch{}}var A=!1;function C(){if(!A){var e=p();if(!(!e||typeof e.addEventListener!="function")){A=!0,e.addEventListener("click",T,!0);try{typeof f.addEventListener=="function"&&f.addEventListener("beforeunload",D)}catch{}}}}try{var z=p();z&&typeof z.addEventListener=="function"&&(z.readyState==="loading"?z.addEventListener("DOMContentLoaded",C,{once:!0}):C())}catch{}var W={run:I,confirmSamePatientReload:X,STYLE_ID:j,install:C,_decide:S,_hasPendingKlirens:VildaKlirensGuardHasPending,_hasUnsaved:k,_copy:N,_onClearCaptureClick:T,_onBeforeUnload:D};try{f&&(f.VildaUnsavedGuard=W)}catch{}typeof module<"u"&&module.exports&&(module.exports=W)})(typeof window<"u"?window:typeof globalThis<"u"?globalThis:this);

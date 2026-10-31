@@ -640,8 +640,8 @@
   "sha256": "555ca77dae012c28f79c6cd419963ab20f651a77ab20d04b49640b6fc4214abf"
  },
  "inline_kalkulator_klirens_07.js": {
-  "v": 24,
-  "sha256": "e4976a094b26cbd1384a2dd35578aa934dac56d6356c585641cb582725b349a1"
+  "v": 25,
+  "sha256": "52e7c56f76196cc174c44ec27b8c50b6e4b80346763db76b17fecedc735d0a9e"
  },
  "inline_kalkulator_klirens_08.js": {
   "v": 1,
@@ -836,8 +836,8 @@
   "sha256": "a17c0e0ec94f5e9654c8007ec22bcce5efcc8ecc9829de748db2f582ab3fd09c"
  },
  "sga_birth_module.js": {
-  "v": 11,
-  "sha256": "622ba25930dbd5376a15f95036b8b1693371433ea8747c54ff0392c5c4f1d7fb"
+  "v": 12,
+  "sha256": "4012a18ccea85cfbbfcae8a3dd4df986f46a37e2ab5d7e2497b6045fcdb877d0"
  },
  "style.css": {
   "v": 93,
@@ -944,8 +944,8 @@
   "sha256": "8755d9d0107606617e45faafda4d2898f15c0ad29ad853c2f44c90e87d308c55"
  },
  "vilda_bone_age.js": {
-  "v": 1,
-  "sha256": "bb12c11c757fdd4838991e041d1634490140b4bab36619d5280ed962033f66b3"
+  "v": 2,
+  "sha256": "90def4bb1b19aae95ba6d8b887741a8e2f9703e4c21959d6b79ac539656873df"
  },
  "vilda_care_plan_model.js": {
   "v": 1,
@@ -1048,8 +1048,8 @@
   "sha256": "93104c7afce5beeb1e48c586bcfe22b857d05c0ca75fbbd2c98d260bb69148a7"
  },
  "vilda_data_import_export.js": {
-  "v": 113,
-  "sha256": "ed1160d460bc5f29e24458f5fbac2dc8fc3ba1b6848daf91730879ae14339955"
+  "v": 114,
+  "sha256": "1ab367cb331ef6ccf487070b338d1332b60ac4df97726a04cc8c3f2ba95d5a29"
  },
  "vilda_data_safety_explainer.js": {
   "v": 5,
@@ -1584,8 +1584,8 @@
   "sha256": "49a8e576e512d01870fe61936ff0c884c869ba01825f740c17da76b79932a0ca"
  },
  "vilda_puberty_assessment_state.js": {
-  "v": 3,
-  "sha256": "5edb0fefcc990a22cb8d212005a5763572234120d6a323792840849840af5abd"
+  "v": 4,
+  "sha256": "fe924be7ce8ea3a2681b221493628255b93702d6f56fc30a0af46a9d87b43203"
  },
  "vilda_puberty_assessment_ui.css": {
   "v": 1,
@@ -1652,8 +1652,8 @@
   "sha256": "5caeafa2dcc83cbaa98ce7add635ee15addfeec802d98065fe0877372c1f2af7"
  },
  "vilda_save_status_indicator.js": {
-  "v": 35,
-  "sha256": "56fac123cfb098264da01f49674e718910c57a2638656dfd84321add696ae180"
+  "v": 36,
+  "sha256": "61abf05bce2308bb0dac4218092465f18f2f56b686486731e06bdf4db7b518cf"
  },
  "vilda_schowek.js": {
   "v": 5,
@@ -1664,8 +1664,8 @@
   "sha256": "bf561188adfe403fa735bef0b88bd2297144ec1fe7909582e0dbb50cd6c99c97"
  },
  "vilda_session_bridge.js": {
-  "v": 130,
-  "sha256": "a11c1ce0c1c177c4134f6f4ef6ed1502ae23295cac2b11dffa988b798b26b133"
+  "v": 131,
+  "sha256": "4a1077fc8a4738837e1515770a8c5702d81d715b02212e487f576346a7e2d085"
  },
  "vilda_sga_catchup.js": {
   "v": 2,
@@ -1736,8 +1736,8 @@
   "sha256": "3a9bbaf88de76369f2c62c68e43081d506ea0e2f6662f6e7f34b1bb304e4892d"
  },
  "vilda_unsaved_guard.js": {
-  "v": 7,
-  "sha256": "133a2be900cbd16881139cd7001fc9ef8b0a1eb801a8d6240b8f7366ab362c70"
+  "v": 8,
+  "sha256": "b9305e0abfa3dcdbfc0478de63fa5652e09bf5252d249130c248aa70e7bbddea"
  },
  "vilda_update_hooks.js": {
   "v": 7,
