@@ -35,6 +35,11 @@
   const NA_CONTEXT_FIELDS = Object.freeze({ ageYears: "ageYears", agePrecision: "agePrecision", sex: "sex", collectionHours: "hours", durationSource: "durationSource" });
   const NA_CAPTURE_FIELDS = Object.freeze({ Na_inputMode: "mode", Na_concentration: "concentration", Na_volume: "volume", Na_volumeUnit: "volumeUnit", Na_reportedValue: "reportedValue", Na_reportedUnit: "reportedUnit", Na_collectionHours: "hours", Na_collectionSource: "durationSource", Na_durationNeedsConfirmation: "durationNeedsConfirmation", Na_outputUnit: "outputUnit" });
 
+  const K_AGE_FIELDS = PO4_AGE_FIELDS;
+  const K_PROTOCOL_FIELDS = PO4_PROTOCOL_FIELDS;
+  const K_CONTEXT_FIELDS = Object.freeze({ ageYears: "ageYears", agePrecision: "agePrecision", sex: "sex", collectionHours: "hours", durationSource: "durationSource" });
+  const K_CAPTURE_FIELDS = Object.freeze({ K_inputMode: "mode", K_concentration: "concentration", K_volume: "volume", K_volumeUnit: "volumeUnit", K_reportedValue: "reportedValue", K_reportedUnit: "reportedUnit", K_collectionHours: "hours", K_collectionSource: "durationSource", K_durationNeedsConfirmation: "durationNeedsConfirmation", K_outputUnit: "outputUnit" });
+
   function safeTree(value, depth = 0) {
     if (depth > 18) return false;
     if (primitive(value)) return typeof value !== "number" || Number.isFinite(value);
@@ -110,6 +115,20 @@
       values.Na_unitConversions = JSON.stringify(input.unitConversions || {});
       fields = normalizeFields(root.ClcrSodiumDzmPersistence.captureFields(values, fields), values);
     }
+    const potassiumDzm = formulaId === "K_mmol_d" && root.ClcrPotassiumDzmPersistence?.readSnapshot?.(JSON.stringify(datapoint.potassiumDzmSnapshot));
+    if (formulaId === "K_mmol_d" && datapoint.potassiumDzmSnapshot && !potassiumDzm) return null;
+    if (potassiumDzm) {
+      const input = potassiumDzm.input;
+      const fieldMap = K_CAPTURE_FIELDS;
+      // The rendered typed result owns its inputs. In the legacy broad form,
+      // dormant dedicated controls may contain values from a prior session.
+      for (const [id, key] of Object.entries(fieldMap)) values[id] = input[key] ?? "";
+      for (const id of [...K_AGE_FIELDS, ...K_PROTOCOL_FIELDS]) delete values[id];
+      for (const [id, value] of Object.entries(input.knownFacts)) if (primitive(value)) values[id] = value;
+      values.sex = input.sex ?? "";
+      values.K_unitConversions = JSON.stringify(input.unitConversions || {});
+      fields = normalizeFields(root.ClcrPotassiumDzmPersistence.captureFields(values, fields), values);
+    }
     const mgDzm = formulaId === "Mg_mgkg" && root.ClcrMgDzmPersistence?.readSnapshot?.(JSON.stringify(datapoint.mgDzmSnapshot));
     if (formulaId === "Mg_mgkg" && datapoint.mgDzmSnapshot && !mgDzm) return null;
     if (mgDzm) {
@@ -155,6 +174,7 @@
     if (po4Dzm) for (const [id, key] of Object.entries(PO4_CONTEXT_FIELDS)) context[id] = po4Dzm.input[key];
     if (proteinDzm) for (const [id, key] of Object.entries(PROT_CONTEXT_FIELDS)) context[id] = proteinDzm.input[key] ?? null;
     if (sodiumDzm) for (const [id, key] of Object.entries(NA_CONTEXT_FIELDS)) context[id] = sodiumDzm.input[key] ?? null;
+    if (potassiumDzm) for (const [id, key] of Object.entries(K_CONTEXT_FIELDS)) context[id] = potassiumDzm.input[key] ?? null;
     if (typeof options.clinicalDateISO === "string") context.clinicalDateISO = options.clinicalDateISO.slice(0, 10);
     const snapshot = { schema: "vilda-clcr-calculation", version: 1, formulaId, parameterKey, values, fields, capturedContext: context, assessment: assessmentCopy(datapoint) };
     return JSON.stringify(snapshot).length <= MAX_LENGTH - 3000 ? snapshot : null;
@@ -194,14 +214,14 @@
   }
   function canonical(snapshot) {
     const dp = snapshot.assessment;
-    const typed = dp.acrSnapshot || dp.pcrSnapshot || dp.cacrSnapshot || dp.oxcrSnapshot || dp.citcrSnapshot || dp.fenaSnapshot || dp.fekSnapshot || dp.feclSnapshot || dp.fehco3Snapshot || dp.uagSnapshot || dp.tmpGfrSnapshot || dp.phSnapshot || dp.uaSnapshot || dp.caDzmSnapshot || dp.mgDzmSnapshot || dp.po4DzmSnapshot || dp.proteinDzmSnapshot || dp.sodiumDzmSnapshot;
+    const typed = dp.acrSnapshot || dp.pcrSnapshot || dp.cacrSnapshot || dp.oxcrSnapshot || dp.citcrSnapshot || dp.fenaSnapshot || dp.fekSnapshot || dp.feclSnapshot || dp.fehco3Snapshot || dp.uagSnapshot || dp.tmpGfrSnapshot || dp.phSnapshot || dp.uaSnapshot || dp.caDzmSnapshot || dp.mgDzmSnapshot || dp.po4DzmSnapshot || dp.proteinDzmSnapshot || dp.sodiumDzmSnapshot || dp.potassiumDzmSnapshot;
     const model = dp.model || dp.resultModel;
     const category = dp.category?.code || dp.category || typed?.category || null;
     const toneValue = dp.tone || typed?.tone || model?.tone || "neutral";
     const tone = toneValue === "normal" ? "success" : ["success", "warning", "danger"].includes(toneValue) ? toneValue : "neutral";
     const storedStatus = snapshot.formulaId === "Mg_mgkg" && typed?.status === "boundary" && typed?.reference?.kind === "lower" ? "below" : ({ low: "below", high: "above", nephrotic: "above", boundary: "above", "criterion-met": "above" })[typed?.status] || typed?.status;
     const status = ["within", "above", "below", "unassessed"].includes(dp.assessment) ? dp.assessment : storedStatus && ["within", "above", "below", "unassessed"].includes(storedStatus) ? storedStatus : model?.reference?.snapshot?.status || "unassessed";
-    const raw = snapshot.formulaId === "Na_mmol_d" && !dp.sodiumDzmSnapshot && finite(dp.valueNum) ? dp.valueNum : finite(dp.rawValue) ? dp.rawValue : finite(dp.valueNum) ? dp.valueNum : typed?.rawValue;
+    const raw = ["Na_mmol_d", "K_mmol_d"].includes(snapshot.formulaId) && !dp.sodiumDzmSnapshot && !dp.potassiumDzmSnapshot && finite(dp.valueNum) ? dp.valueNum : finite(dp.rawValue) ? dp.rawValue : finite(dp.valueNum) ? dp.valueNum : typed?.rawValue;
     const comparator = dp.comparator || typed?.comparator || "";
     const norm = text(dp.norm);
     const range = dp.measuredClearanceReference?.absoluteRange || model?.reference?.snapshot?.absoluteRange;
@@ -213,14 +233,15 @@
     if (snapshot.formulaId === "PO4_mgkg" && typed?.presentation && typed.referenceActive) exactBounds = { low: typed.presentation.lower, high: typed.presentation.upper, lowInclusive: typed.reference.lowerInclusive, highInclusive: typed.reference.upperInclusive };
     if (snapshot.formulaId === "Prot_mgkg" && typed?.presentation && typed.referenceActive) exactBounds = { low: typed.presentation.lower, high: typed.presentation.upper, lowInclusive: typed.reference.lowerInclusive, highInclusive: typed.reference.upperInclusive };
     if (snapshot.formulaId === "Na_mmol_d" && typed?.presentation && typed.referenceAvailable) exactBounds = { low: typed.presentation.lower, high: typed.presentation.upper, lowInclusive: typed.reference.lowerInclusive, highInclusive: typed.reference.upperInclusive };
+    if (snapshot.formulaId === "K_mmol_d" && typed?.presentation && typed.referenceAvailable) exactBounds = { low: typed.presentation.lower, high: typed.presentation.upper, lowInclusive: typed.reference.lowerInclusive, highInclusive: typed.reference.upperInclusive };
     const sourceIds = typed?.reference?.sourceIds || [];
     const selectedSources = sourceIds.map(id => typed?.sources?.find(item => item.id === id)).filter(Boolean);
     const availableSources = selectedSources.length ? selectedSources : typed?.sources || [];
-    const source = (["UA_mgkg", "Ca_mgkg", "Mg_mgkg", "PO4_mgkg", "Prot_mgkg", "Na_mmol_d"].includes(snapshot.formulaId) ? null : dp.source || dp.reference?.source || typed?.source || model?.reference?.source) || (availableSources.length === 1 ? availableSources[0] : availableSources.length ? { ids: availableSources.map(item => item.id), label: availableSources.map(item => item.label).filter(Boolean).join(" · "), sources: availableSources } : null);
+    const source = (["UA_mgkg", "Ca_mgkg", "Mg_mgkg", "PO4_mgkg", "Prot_mgkg", "Na_mmol_d", "K_mmol_d"].includes(snapshot.formulaId) ? null : dp.source || dp.reference?.source || typed?.source || model?.reference?.source) || (availableSources.length === 1 ? availableSources[0] : availableSources.length ? { ids: availableSources.map(item => item.id), label: availableSources.map(item => item.label).filter(Boolean).join(" · "), sources: availableSources } : null);
     const version = dp.referenceProfileVersion ?? typed?.profileVersion ?? typed?.policy?.version ?? null;
     const profileVersion = version !== null && /^\d+$/.test(String(version)) ? Number(version) : version;
     const reference = norm ? { text: norm, bounds: exactBounds || root.ClcrSavedResults?.referenceBounds?.(norm, text(dp.unit)) || null, kind: typedReference?.kind === "criterion" ? "recorded-criterion" : "recorded", source, population: dp.reference?.population || typed?.population || model?.reference?.population || null, profileId: dp.referenceProfileId || typed?.profileId || typed?.policy?.id || null, profileVersion } : null;
-    const outOfRange = ["pH_spot", "UA_mgkg", "Ca_mgkg", "Mg_mgkg", "PO4_mgkg", "Prot_mgkg", "Na_mmol_d"].includes(snapshot.formulaId) && status === "unassessed" ? null : typeof dp.outOfRange === "boolean" ? dp.outOfRange : typeof typed?.outOfRange === "boolean" ? typed.outOfRange : status === "within" ? false : ["above", "below"].includes(status) ? true : null;
+    const outOfRange = ["pH_spot", "UA_mgkg", "Ca_mgkg", "Mg_mgkg", "PO4_mgkg", "Prot_mgkg", "Na_mmol_d", "K_mmol_d"].includes(snapshot.formulaId) && status === "unassessed" ? null : typeof dp.outOfRange === "boolean" ? dp.outOfRange : typeof typed?.outOfRange === "boolean" ? typed.outOfRange : status === "within" ? false : ["above", "below"].includes(status) ? true : null;
     const basis = typeof dp.basis === "string" ? dp.basis : typeof typed?.basis === "string" ? typed.basis : typed?.reportingEntity || "";
     const interpretation = text(dp.interpretation || typed?.interpretation || typed?.categoryDescription || model?.interpretation);
     const comment = [...new Set([typed?.qualification?.note, typed?.interpretation, ...(typed?.cautions || []), ...(model?.reasons || []), ...(dp.warnings || [])].filter(value => typeof value === "string" && value && value !== interpretation))].join(" ");
@@ -245,8 +266,9 @@
     if (snapshot.formulaId === "PO4_mgkg" && !dp.po4DzmSnapshot && finite(raw) && raw >= 0) result.displayValue = String(raw).replace(".", ",");
     if (snapshot.formulaId === "Prot_mgkg" && dp.proteinDzmSnapshot) Object.assign(result.context, { ageYears: dp.proteinDzmSnapshot.input.ageYears, sex: dp.proteinDzmSnapshot.input.sex, weightKg: dp.proteinDzmSnapshot.input.weightKg, hours: dp.proteinDzmSnapshot.input.hours, durationSource: dp.proteinDzmSnapshot.input.durationSource, heightCm: dp.proteinDzmSnapshot.input.heightCm, bsaM2: dp.proteinDzmSnapshot.bsaM2, bsaMethod: dp.proteinDzmSnapshot.bsaMethod });
     if (snapshot.formulaId === "Na_mmol_d" && dp.sodiumDzmSnapshot) Object.assign(result.context, { ageYears: dp.sodiumDzmSnapshot.input.ageYears, sex: dp.sodiumDzmSnapshot.input.sex, hours: dp.sodiumDzmSnapshot.input.hours, durationSource: dp.sodiumDzmSnapshot.input.durationSource });
+    if (snapshot.formulaId === "K_mmol_d" && dp.potassiumDzmSnapshot) Object.assign(result.context, { ageYears: dp.potassiumDzmSnapshot.input.ageYears, sex: dp.potassiumDzmSnapshot.input.sex, hours: dp.potassiumDzmSnapshot.input.hours, durationSource: dp.potassiumDzmSnapshot.input.durationSource });
     if (snapshot.formulaId === "Prot_mgkg" && !dp.proteinDzmSnapshot) Object.assign(result, { assessment: "unassessed", status: "unassessed", category: null, tone: "neutral", outOfRange: null, norm: "", reference: null, source: null, interpretation: "Brak zapisanej oceny" });
-    if (snapshot.formulaId === "Na_mmol_d" && !dp.sodiumDzmSnapshot) Object.assign(result, { assessment: "unassessed", status: "unassessed", category: null, tone: "neutral", outOfRange: null, source: null, interpretation: "Brak zapisanej oceny" });
+    if (["Na_mmol_d", "K_mmol_d"].includes(snapshot.formulaId) && !dp.sodiumDzmSnapshot && !dp.potassiumDzmSnapshot) Object.assign(result, { assessment: "unassessed", status: "unassessed", category: null, tone: "neutral", outOfRange: null, source: null, interpretation: "Brak zapisanej oceny" });
     if (snapshot.formulaId === "Prot_mgkg" && !dp.proteinDzmSnapshot && finite(raw) && raw >= 0) result.displayValue = String(raw).replace(".", ",");
     if (snapshot.formulaId === "Mg_mgkg" && !dp.mgDzmSnapshot && finite(raw) && raw !== 0 && /^[+-]?0+(?:[.,]0+)?$/.test(displayValue.trim().replace(/−/g, "-"))) result.displayValue = String(raw).replace(".", ",");
     return result;
@@ -327,6 +349,23 @@
       const recordedTone = recorded.tone === "normal" ? "success" : recorded.tone;
       if (snapshot.assessment.valueNum !== root.ClcrSodiumDzmPersistence.valueNum(recorded) || snapshot.assessment.rawValue !== root.ClcrSodiumDzmPersistence.valueNum(recorded) || snapshot.assessment.unit !== root.ClcrSodiumDzmPersistence.unitText(recorded) || snapshot.assessment.displayValue !== recorded.displayValue || snapshot.assessment.norm !== recorded.norm || snapshot.assessment.outOfRange !== recorded.outOfRange || snapshot.assessment.assessment !== recordedStatus || snapshot.assessment.tone !== recordedTone || snapshot.assessment.interpretation !== recorded.interpretation) return invalid("Wartość sodu nie odpowiada utrwalonemu wynikowi.");
     }
+    if (snapshot.formulaId === "K_mmol_d" && snapshot.assessment.potassiumDzmSnapshot) {
+      const recorded = root.ClcrPotassiumDzmPersistence?.savedAssessment?.(note);
+      if (!recorded || !root.ClcrPotassiumDzmPersistence.readSnapshot(JSON.stringify(snapshot.assessment.potassiumDzmSnapshot))) return invalid("Dane potasu nie odpowiadają utrwalonej ocenie tego pomiaru.");
+      const frozen = { ...recorded };
+      for (const key of ["displayValue", "comparator", "norm"]) delete frozen[key];
+      if (JSON.stringify(frozen) !== JSON.stringify(snapshot.assessment.potassiumDzmSnapshot)) return invalid("Dane potasu nie odpowiadają utrwalonej ocenie tego pomiaru.");
+      if (Object.entries(K_CAPTURE_FIELDS).some(([id, key]) => JSON.stringify(snapshot.values[id]) !== JSON.stringify(recorded.input[key] ?? ""))) return invalid("Dane wejściowe potasu nie odpowiadają utrwalonemu obliczeniu.");
+      if (JSON.stringify(snapshot.values.sex) !== JSON.stringify(recorded.input.sex ?? "")) return invalid("Płeć nie odpowiada utrwalonemu obliczeniu potasu.");
+      if (Object.entries(K_CONTEXT_FIELDS).some(([id, key]) => JSON.stringify(snapshot.capturedContext[id]) !== JSON.stringify(recorded.input[key] ?? null))) return invalid("Kontekst pacjenta lub czasu nie odpowiada utrwalonemu obliczeniu potasu.");
+      if (Object.entries(recorded.input.knownFacts).some(([id, value]) => JSON.stringify(snapshot.values[id]) !== JSON.stringify(value))) return invalid("Dane pacjenta lub zbiórki nie odpowiadają utrwalonemu obliczeniu potasu.");
+      if ([...K_AGE_FIELDS, ...K_PROTOCOL_FIELDS].some(id => !own(recorded.input.knownFacts, id) && own(snapshot.values, id))) return invalid("Dodatkowe dane pacjenta lub zbiórki nie należą do utrwalonego obliczenia potasu.");
+      if (own(snapshot.capturedContext, "clinicalDateISO") && snapshot.capturedContext.clinicalDateISO !== current.dateISO) return invalid("Data kontekstu nie odpowiada dacie pomiaru potasu.");
+      if (snapshot.values.K_unitConversions !== JSON.stringify(recorded.input.unitConversions || {})) return invalid("Przeliczenia jednostek potasu nie odpowiadają utrwalonemu obliczeniu.");
+      const recordedStatus = root.ClcrPotassiumDzmPersistence.assessment(recorded);
+      const recordedTone = recorded.tone === "normal" ? "success" : recorded.tone;
+      if (snapshot.assessment.valueNum !== root.ClcrPotassiumDzmPersistence.valueNum(recorded) || snapshot.assessment.rawValue !== root.ClcrPotassiumDzmPersistence.valueNum(recorded) || snapshot.assessment.unit !== root.ClcrPotassiumDzmPersistence.unitText(recorded) || snapshot.assessment.displayValue !== recorded.displayValue || snapshot.assessment.norm !== recorded.norm || snapshot.assessment.outOfRange !== recorded.outOfRange || snapshot.assessment.assessment !== recordedStatus || snapshot.assessment.tone !== recordedTone || snapshot.assessment.interpretation !== recorded.interpretation || String(snapshot.assessment.boundary || "") !== root.ClcrPotassiumDzmPersistence.boundaryText(recorded)) return invalid("Wartość potasu nie odpowiada utrwalonemu wynikowi.");
+    }
     if (snapshot.formulaId === "Mg_mgkg" && snapshot.assessment.mgDzmSnapshot) {
       const recorded = root.ClcrMgDzmPersistence?.savedAssessment?.(note);
       if (!recorded || !root.ClcrMgDzmPersistence.readSnapshot(JSON.stringify(snapshot.assessment.mgDzmSnapshot))) return invalid("Dane magnezu nie odpowiadają utrwalonej ocenie tego pomiaru.");
@@ -360,12 +399,22 @@
       if (snapshot.assessment.valueNum !== recorded.rawValue || snapshot.assessment.rawValue !== recorded.rawValue || snapshot.assessment.unit !== recorded.unit || snapshot.assessment.displayValue !== recorded.displayValue || snapshot.assessment.norm !== recorded.norm || snapshot.assessment.outOfRange !== recorded.outOfRange || snapshot.assessment.assessment !== recordedStatus || snapshot.assessment.tone !== recordedTone || snapshot.assessment.interpretation !== recorded.interpretation) return invalid("Wartość kwasu moczowego nie odpowiada utrwalonemu wynikowi.");
     }
     const result = canonical(snapshot);
-    if (!finite(result.rawValue) || ["PO4_mgkg", "Prot_mgkg", "Na_mmol_d"].includes(snapshot.formulaId) && result.rawValue < 0 || !result.unit || !result.method) return invalid("Brak kompletnej wartości obliczenia.");
+    if (!finite(result.rawValue) || ["PO4_mgkg", "Prot_mgkg", "Na_mmol_d", "K_mmol_d"].includes(snapshot.formulaId) && result.rawValue < 0 || !result.unit || !result.method) return invalid("Brak kompletnej wartości obliczenia.");
     return { valid: true, snapshot, ...result };
   }
   function preparedDedicatedValues(snapshot, name, prefix, snapshotKey) {
     const persistence = root[name];
-    const base = prefix === "Na" && !snapshot.assessment[snapshotKey] && !own(snapshot.values, "Na_collectionHours") ? prepareTimedValues(snapshot) : snapshot.values;
+    let sourceValues = snapshot.values;
+    if (prefix === "K" && !snapshot.assessment[snapshotKey]) {
+      // A historical broad calculation recorded U_K and V24, even when dormant
+      // dedicated fields were captured alongside them.
+      sourceValues = { ...sourceValues };
+      for (const key of Object.keys(sourceValues)) if (key.startsWith("K_")) delete sourceValues[key];
+    }
+    const base = ["Na", "K"].includes(prefix) && !snapshot.assessment[snapshotKey] && !own(sourceValues, prefix + "_collectionHours") ? prepareTimedValues({ ...snapshot, values: sourceValues }) : sourceValues;
+    // Keep the captured decimal clock for K. The shared duration resolver's
+    // Number is useful for eligibility, but can round a near24h clock to24.
+    if (prefix === "K" && !snapshot.assessment[snapshotKey] && own(sourceValues, "Cl24DurationHours")) base.Cl24DurationHours = sourceValues.Cl24DurationHours;
     const values = persistence.prepareValues(base, snapshot.capturedContext, snapshot.assessment[snapshotKey]);
     if (!snapshot.assessment[snapshotKey] && String(values[prefix + "_collectionHours"] ?? "").trim() === "") {
       values[prefix + "_durationNeedsConfirmation"] = true;
@@ -424,6 +473,16 @@
       // Protocol facts remain in values for provenance, without becoming a
       // mandatory questionnaire when correcting a saved measurement.
       migrated.fields = root.ClcrSodiumDzmPersistence.captureFields(migrated.values, snapshot.fields);
+      return { editable: true, reason: "", snapshot: migrated, fields: copy(fields), values: copy(migrated.values), context: copy(snapshot.capturedContext) };
+    }
+    if (snapshot.formulaId === "K_mmol_d" && root.ClcrPotassiumDzmPersistence) {
+      const migrated = copy(snapshot);
+      try { migrated.values = preparedDedicatedValues(snapshot, "ClcrPotassiumDzmPersistence", "K", "potassiumDzmSnapshot"); }
+      catch (error) { return { editable: false, reason: error.message || "Nie można odtworzyć danych tego obliczenia." }; }
+      const fields = root.ClcrPotassiumDzmPersistence.editableFields(migrated.values);
+      // Protocol facts remain in values for provenance, without becoming a
+      // mandatory questionnaire when correcting a saved measurement.
+      migrated.fields = root.ClcrPotassiumDzmPersistence.captureFields(migrated.values, snapshot.fields);
       return { editable: true, reason: "", snapshot: migrated, fields: copy(fields), values: copy(migrated.values), context: copy(snapshot.capturedContext) };
     }
     if (snapshot.formulaId === "Mg_mgkg" && root.ClcrMgDzmPersistence) {
@@ -653,6 +712,36 @@
     persistence.augmentDatapoint({ getAttribute: name => name === "data-clcr-sodium-dzm-snapshot" ? JSON.stringify(result) : null }, dp);
     return dp;
   }
+  function potassiumDzmCalculation(snapshot, values, edited, context) {
+    if (snapshot.formulaId !== "K_mmol_d") return null;
+    const engine = root.VildaClcrPotassiumDzm, persistence = root.ClcrPotassiumDzmPersistence;
+    const prior = snapshot.assessment.potassiumDzmSnapshot;
+    const policy = prior?.referencePolicy || root.ClcrPotassiumDzmReferenceData?.DEFAULT_POLICY;
+    if (!engine?.evaluate || !persistence || !policy) throw new Error("Brak modułu obliczenia. Odśwież aplikację.");
+    const capturedProfile = context.referenceProfileId || context.profileId;
+    if (!snapshot.assessment.potassiumDzmSnapshot && capturedProfile && ![policy.id, root.ClcrResultReferenceData?.PROFILE?.id].includes(capturedProfile)) throw new Error("Zapisany profil odniesienia nie jest dostępny do edycji tego pomiaru.");
+    if (edited.has("K_collectionHours") || edited.has("Cl24DurationHours")) {
+      values.K_durationNeedsConfirmation = false;
+      values.K_collectionSource = "hours";
+    }
+    const priorAge = prior?.input?.ageYears;
+    const input = engine.inputFromValues(values, { ...context, ageYears: context.ageYears ?? priorAge ?? null });
+    if (prior?.input) {
+      if (!K_AGE_FIELDS.some(field => edited.has(field))) { input.ageYears = prior.input.ageYears; input.agePrecision = prior.input.agePrecision; }
+      if (!edited.has("sex")) input.sex = prior.input.sex;
+    }
+    if (object(prior?.input?.knownFacts)) {
+      input.knownFacts ||= {};
+      for (const [field, value] of Object.entries(prior.input.knownFacts)) {
+        if (!edited.has(field) && !edited.has(`ui_${field}_answer`) && primitive(value)) input.knownFacts[field] = value;
+      }
+    }
+    const result = engine.evaluate(input, policy);
+    if (!result.valid) throw new Error(result.error || "Sprawdź dane potrzebne do obliczenia wydalania potasu.");
+    const dp = { ...baseDatapoint(snapshot), label: "Wydalanie potasu (DZM)", potassiumDzmSnapshot: copy(result) };
+    persistence.augmentDatapoint({ getAttribute: name => name === "data-clcr-potassium-dzm-snapshot" ? JSON.stringify(result) : null }, dp);
+    return dp;
+  }
   function mgDzmCalculation(snapshot, values, edited, context) {
     if (snapshot.formulaId !== "Mg_mgkg") return null;
     const engine = root.VildaClcrMgDzm, persistence = root.ClcrMgDzmPersistence;
@@ -774,12 +863,17 @@
     const snapshot = snapshotOrSaved.snapshot || snapshotOrSaved;
     if (!validShape(snapshot)) throw new Error("Brak kompletnych danych obliczenia.");
     const changedValues = draft.values || draft.fields || {};
-    const initialValues = snapshot.formulaId === "Na_mmol_d" && root.ClcrSodiumDzmPersistence ? preparedDedicatedValues(snapshot, "ClcrSodiumDzmPersistence", "Na", "sodiumDzmSnapshot") : snapshot.formulaId === "Prot_mgkg" && snapshot.assessment.proteinDzmSnapshot && root.ClcrProteinDzmPersistence ? preparedDedicatedValues(snapshot, "ClcrProteinDzmPersistence", "Prot", "proteinDzmSnapshot") : snapshot.formulaId === "PO4_mgkg" && root.ClcrPo4DzmPersistence ? preparedDedicatedValues(snapshot, "ClcrPo4DzmPersistence", "PO4", "po4DzmSnapshot") : snapshot.formulaId === "Mg_mgkg" && root.ClcrMgDzmPersistence ? preparedDedicatedValues(snapshot, "ClcrMgDzmPersistence", "MG", "mgDzmSnapshot") : snapshot.formulaId === "Ca_mgkg" && root.ClcrCaDzmPersistence ? preparedDedicatedValues(snapshot, "ClcrCaDzmPersistence", "CA", "caDzmSnapshot") : snapshot.formulaId === "UA_mgkg" && root.ClcrUaPersistence ? preparedDedicatedValues(snapshot, "ClcrUaPersistence", "UA", "uaSnapshot") : LEGACY_TIMED_FORMULAS.has(snapshot.formulaId) ? prepareTimedValues(snapshot) : snapshot.values;
+    const initialValues = snapshot.formulaId === "K_mmol_d" && root.ClcrPotassiumDzmPersistence ? preparedDedicatedValues(snapshot, "ClcrPotassiumDzmPersistence", "K", "potassiumDzmSnapshot") : snapshot.formulaId === "Na_mmol_d" && root.ClcrSodiumDzmPersistence ? preparedDedicatedValues(snapshot, "ClcrSodiumDzmPersistence", "Na", "sodiumDzmSnapshot") : snapshot.formulaId === "Prot_mgkg" && snapshot.assessment.proteinDzmSnapshot && root.ClcrProteinDzmPersistence ? preparedDedicatedValues(snapshot, "ClcrProteinDzmPersistence", "Prot", "proteinDzmSnapshot") : snapshot.formulaId === "PO4_mgkg" && root.ClcrPo4DzmPersistence ? preparedDedicatedValues(snapshot, "ClcrPo4DzmPersistence", "PO4", "po4DzmSnapshot") : snapshot.formulaId === "Mg_mgkg" && root.ClcrMgDzmPersistence ? preparedDedicatedValues(snapshot, "ClcrMgDzmPersistence", "MG", "mgDzmSnapshot") : snapshot.formulaId === "Ca_mgkg" && root.ClcrCaDzmPersistence ? preparedDedicatedValues(snapshot, "ClcrCaDzmPersistence", "CA", "caDzmSnapshot") : snapshot.formulaId === "UA_mgkg" && root.ClcrUaPersistence ? preparedDedicatedValues(snapshot, "ClcrUaPersistence", "UA", "uaSnapshot") : LEGACY_TIMED_FORMULAS.has(snapshot.formulaId) ? prepareTimedValues(snapshot) : snapshot.values;
     const values = { ...initialValues, ...changedValues };
     if (snapshot.formulaId === "Na_mmol_d" && !own(snapshot.values, "Na_inputMode")) {
       if (own(changedValues, "U_Na") && !own(changedValues, "Na_concentration")) values.Na_concentration = changedValues.U_Na;
       if (own(changedValues, "V24") && !own(changedValues, "Na_volume")) values.Na_volume = changedValues.V24;
       if (own(changedValues, "Cl24DurationHours") && !own(changedValues, "Na_collectionHours")) values.Na_collectionHours = changedValues.Cl24DurationHours;
+    }
+    if (snapshot.formulaId === "K_mmol_d" && !snapshot.assessment.potassiumDzmSnapshot) {
+      if (own(changedValues, "U_K") && !own(changedValues, "K_concentration")) values.K_concentration = changedValues.U_K;
+      if (own(changedValues, "V24") && !own(changedValues, "K_volume")) values.K_volume = changedValues.V24;
+      if (own(changedValues, "Cl24DurationHours") && !own(changedValues, "K_collectionHours")) values.K_collectionHours = changedValues.Cl24DurationHours;
     }
     if (snapshot.formulaId === "PO4_mgkg" && !own(snapshot.values, "PO4_inputMode")) {
       if (own(changedValues, "U_PO4") && !own(changedValues, "PO4_concentration")) values.PO4_concentration = changedValues.U_PO4;
@@ -810,19 +904,19 @@
       const years = Math.floor(age), months = (age - years) * 12;
       if (Math.abs(months - Math.round(months)) > 0.000001) throw new Error("Podaj wiek z dokładnością do pełnego miesiąca.");
       values.age = String(years); values.ageMonths = String(Math.round(months));
-      if (["UA_mgkg", "Ca_mgkg", "Mg_mgkg", "PO4_mgkg", "Prot_mgkg", "Na_mmol_d"].includes(snapshot.formulaId)) ["age", "ageMonths", "ageDays"].forEach(field => edited.add(field));
+      if (["UA_mgkg", "Ca_mgkg", "Mg_mgkg", "PO4_mgkg", "Prot_mgkg", "Na_mmol_d", "K_mmol_d"].includes(snapshot.formulaId)) ["age", "ageMonths", "ageDays"].forEach(field => edited.add(field));
       if (years > 0 || months > 0) values.ageDays = "";
     }
-    if (own(draft, "sex")) { values.sex = draft.sex; if (["UA_mgkg", "Ca_mgkg", "Mg_mgkg", "PO4_mgkg", "Prot_mgkg", "Na_mmol_d"].includes(snapshot.formulaId)) edited.add("sex"); }
+    if (own(draft, "sex")) { values.sex = draft.sex; if (["UA_mgkg", "Ca_mgkg", "Mg_mgkg", "PO4_mgkg", "Prot_mgkg", "Na_mmol_d", "K_mmol_d"].includes(snapshot.formulaId)) edited.add("sex"); }
     const context = { ...snapshot.capturedContext };
     const date = draft.clinicalDateISO || draft.dateISO || context.clinicalDateISO;
     if (date && ["KTV", "TMP_GFR"].includes(snapshot.formulaId)) context.clinicalDateISO = date;
     if (date && snapshot.formulaId === "KTV") context.evaluationDate = date;
-    const dp = sodiumDzmCalculation(snapshot, values, edited, context) || proteinDzmCalculation(snapshot, values, edited, context) || po4DzmCalculation(snapshot, values, edited, context) || mgDzmCalculation(snapshot, values, edited, context) || caDzmCalculation(snapshot, values, edited, context) || uaCalculation(snapshot, values, edited, context) || ratioCalculation({ ...snapshot, capturedContext: context }, values, edited) || gfrCalculation(snapshot, values) || root.ClcrSavedLegacyCalculator?.recalculate(snapshot.formulaId, values, snapshot.parameterKey, context);
+    const dp = potassiumDzmCalculation(snapshot, values, edited, context) || sodiumDzmCalculation(snapshot, values, edited, context) || proteinDzmCalculation(snapshot, values, edited, context) || po4DzmCalculation(snapshot, values, edited, context) || mgDzmCalculation(snapshot, values, edited, context) || caDzmCalculation(snapshot, values, edited, context) || uaCalculation(snapshot, values, edited, context) || ratioCalculation({ ...snapshot, capturedContext: context }, values, edited) || gfrCalculation(snapshot, values) || root.ClcrSavedLegacyCalculator?.recalculate(snapshot.formulaId, values, snapshot.parameterKey, context);
     if (!dp || !finite(dp.valueNum)) throw new Error("Brak poprawnego wyniku dla podanych danych.");
-    const typed = dp.acrSnapshot || dp.pcrSnapshot || dp.cacrSnapshot || dp.oxcrSnapshot || dp.citcrSnapshot || dp.fenaSnapshot || dp.fekSnapshot || dp.feclSnapshot || dp.fehco3Snapshot || dp.uagSnapshot || dp.tmpGfrSnapshot || dp.phSnapshot || dp.uaSnapshot || dp.caDzmSnapshot || dp.mgDzmSnapshot || dp.po4DzmSnapshot || dp.proteinDzmSnapshot || dp.sodiumDzmSnapshot;
+    const typed = dp.acrSnapshot || dp.pcrSnapshot || dp.cacrSnapshot || dp.oxcrSnapshot || dp.citcrSnapshot || dp.fenaSnapshot || dp.fekSnapshot || dp.feclSnapshot || dp.fehco3Snapshot || dp.uagSnapshot || dp.tmpGfrSnapshot || dp.phSnapshot || dp.uaSnapshot || dp.caDzmSnapshot || dp.mgDzmSnapshot || dp.po4DzmSnapshot || dp.proteinDzmSnapshot || dp.sodiumDzmSnapshot || dp.potassiumDzmSnapshot;
     const ageYears = typed?.input && own(typed.input, "ageYears") ? typed.input.ageYears : typed?.context && own(typed.context, "ageYears") ? typed.context.ageYears : ageOf(values);
-    return { ...baseDatapoint(snapshot), ...dp, id: snapshot.assessment.id || snapshot.parameterKey, sourceFormulaId: snapshot.formulaId, capture: { ...copy(context), formulaId: snapshot.formulaId, values, fields: snapshot.formulaId === "Na_mmol_d" && dp.sodiumDzmSnapshot ? root.ClcrSodiumDzmPersistence.captureFields(values, snapshot.fields) : snapshot.formulaId === "Prot_mgkg" && dp.proteinDzmSnapshot ? root.ClcrProteinDzmPersistence.captureFields(values, snapshot.fields) : snapshot.formulaId === "PO4_mgkg" ? root.ClcrPo4DzmPersistence.captureFields(values, snapshot.fields) : snapshot.formulaId === "Mg_mgkg" ? root.ClcrMgDzmPersistence.captureFields(values, snapshot.fields) : snapshot.formulaId === "Ca_mgkg" ? root.ClcrCaDzmPersistence.captureFields(values, snapshot.fields) : snapshot.formulaId === "UA_mgkg" ? root.ClcrUaPersistence.captureFields(values, snapshot.fields) : LEGACY_TIMED_FORMULAS.has(snapshot.formulaId) ? timedEditFields(snapshot.fields) : copy(snapshot.fields), ageYears } };
+    return { ...baseDatapoint(snapshot), ...dp, id: snapshot.assessment.id || snapshot.parameterKey, sourceFormulaId: snapshot.formulaId, capture: { ...copy(context), formulaId: snapshot.formulaId, values, fields: snapshot.formulaId === "K_mmol_d" && dp.potassiumDzmSnapshot ? root.ClcrPotassiumDzmPersistence.captureFields(values, snapshot.fields) : snapshot.formulaId === "Na_mmol_d" && dp.sodiumDzmSnapshot ? root.ClcrSodiumDzmPersistence.captureFields(values, snapshot.fields) : snapshot.formulaId === "Prot_mgkg" && dp.proteinDzmSnapshot ? root.ClcrProteinDzmPersistence.captureFields(values, snapshot.fields) : snapshot.formulaId === "PO4_mgkg" ? root.ClcrPo4DzmPersistence.captureFields(values, snapshot.fields) : snapshot.formulaId === "Mg_mgkg" ? root.ClcrMgDzmPersistence.captureFields(values, snapshot.fields) : snapshot.formulaId === "Ca_mgkg" ? root.ClcrCaDzmPersistence.captureFields(values, snapshot.fields) : snapshot.formulaId === "UA_mgkg" ? root.ClcrUaPersistence.captureFields(values, snapshot.fields) : LEGACY_TIMED_FORMULAS.has(snapshot.formulaId) ? timedEditFields(snapshot.fields) : copy(snapshot.fields), ageYears } };
   }
   return Object.freeze({ START, END, MAX_LENGTH, createSnapshot, serializeSnapshot, readSaved, hasSaved, stripSnapshot, describe, recalculate, normBounds });
 });

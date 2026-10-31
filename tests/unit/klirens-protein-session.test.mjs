@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
 import vm from 'node:vm';
 import { patchProteinDzmSessionHooks, proteinDzmSessionSource } from '../../tools/patch-klirens-protein-dzm-session.mjs';
+import { patchPotassiumDzmSessionHooks, potassiumDzmSessionSource } from '../../tools/patch-klirens-potassium-dzm-session.mjs';
 
 const source = readFileSync(new URL('../../inline_kalkulator_klirens_07.js', import.meta.url), 'utf8');
 const durationSource = readFileSync(new URL('../../clcr_collection_duration.js', import.meta.url), 'utf8');
@@ -216,8 +217,10 @@ describe('Protein DZM — complete production session runtime', () => {
 
   it('reconstructs the shipped additive adapter and capture hook from readable source', () => {
     expect(patchProteinDzmSessionHooks(source)).toBe(source);
-    const preceding = source.replace(proteinDzmSessionSource, '').replace('try{window.ClcrProteinDzmUi?.ensureControls?.(document)}catch{}', '');
-    expect(patchProteinDzmSessionHooks(preceding)).toBe(source);
+    const beforePotassium = source.replace(potassiumDzmSessionSource, '').replace('try{window.ClcrPotassiumDzmUi?.ensureControls?.(document)}catch{}', '');
+    const preceding = beforePotassium.replace(proteinDzmSessionSource, '').replace('try{window.ClcrProteinDzmUi?.ensureControls?.(document)}catch{}', '');
+    expect(patchProteinDzmSessionHooks(preceding)).toBe(beforePotassium);
+    expect(patchPotassiumDzmSessionHooks(patchProteinDzmSessionHooks(preceding))).toBe(source);
     expect(() => patchProteinDzmSessionHooks(preceding.replace('(function(){const b="vildaClcrSessionV1";', ''))).toThrow('Ambiguous protein session integration anchor');
   });
 });

@@ -31,6 +31,7 @@
     if (formulaId === "PO4_mgkg" && ["PO4_concentrationUnit", "PO4_volumeUnit", "PO4_reportedUnit", "PO4_outputUnit"].includes(field.id)) return true;
     if (formulaId === "Prot_mgkg" && ["Prot_concentrationUnit", "Prot_volumeUnit", "Prot_reportedUnit", "Prot_outputUnit"].includes(field.id)) return true;
     if (formulaId === "Na_mmol_d" && ["Na_volumeUnit", "Na_reportedUnit", "Na_outputUnit"].includes(field.id)) return true;
+    if (formulaId === "K_mmol_d" && field.id === "K_volumeUnit") return true;
     if (["age", "ageMonths", "sex"].includes(field.id) || field.id === "ageDays" && formulaId !== "neonatal_egfr" || unitIds.has(field.id)) return false;
     if (/unit|Assay|Standardization|creatinineState|suspectedAKI|collectionSource|DurationSource|durationNeedsConfirmation/i.test(field.id) || /_entry_mode$/i.test(field.id)) return false;
     // Routine assumptions and optional specimen/therapy facts stay exactly as

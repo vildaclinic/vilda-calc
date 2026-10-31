@@ -4,6 +4,7 @@ import vm from 'node:vm';
 import { patchPo4DzmSessionHooks, po4DzmSessionSource } from '../../tools/patch-klirens-po4-dzm-session.mjs';
 import { patchProteinDzmSessionHooks, proteinDzmSessionSource } from '../../tools/patch-klirens-protein-dzm-session.mjs';
 import { patchSodiumDzmSessionHooks, sodiumDzmSessionSource } from '../../tools/patch-klirens-sodium-dzm-session.mjs';
+import { patchPotassiumDzmSessionHooks, potassiumDzmSessionSource } from '../../tools/patch-klirens-potassium-dzm-session.mjs';
 import { patchMgDzmSessionHooks } from '../../tools/patch-klirens-mg-dzm-session.mjs';
 import { patchCaDzmSessionHooks } from '../../tools/patch-klirens-ca-dzm-session.mjs';
 import { patchUaSessionHooks } from '../../tools/patch-klirens-ua-session.mjs';
@@ -71,7 +72,8 @@ describe('PO4 DZM — complete production session runtime', () => {
     const resetHours = { Cl24DurationHours: '24', Cl24DurationSource: 'assumed-24h',
       CA_collectionHours: '', CA_collectionSource: 'assumed-24h', UA_collectionHours: '', UA_collectionSource: 'assumed-24h',
       MG_collectionHours: '', MG_collectionSource: 'assumed-24h', PO4_collectionHours: '', PO4_collectionSource: 'assumed-24h',
-      Prot_collectionHours: '', Prot_collectionSource: 'assumed-24h', Na_collectionHours: '', Na_collectionSource: 'assumed-24h' };
+      Prot_collectionHours: '', Prot_collectionSource: 'assumed-24h', Na_collectionHours: '', Na_collectionSource: 'assumed-24h',
+      K_collectionHours: '', K_collectionSource: 'assumed-24h' };
     const result = runtime({ formulaPicker: 'ckid_u25', ...resetHours, PO4_durationNeedsConfirmation: 'false',
       collectionStartAt: '', collectionEndAt: '', Cl24CollectionProblem: false });
     // The existing capture lazily allocates an empty vault. Seed that same
@@ -254,19 +256,21 @@ describe('PO4 DZM — portable collection provenance', () => {
 
   it('all preceding readable session patches remain byte-for-byte idempotent', () => {
     expect(source).toContain(po4DzmSessionSource);
-    for (const patch of [patchPo4DzmSessionHooks, patchMgDzmSessionHooks, patchCaDzmSessionHooks, patchUaSessionHooks, patchPhSessionHooks, patchTmpGfrSessionHooks, patchUagSessionHooks, patchProteinDzmSessionHooks, patchSodiumDzmSessionHooks]) expect(patch(source)).toBe(source);
+    for (const patch of [patchPo4DzmSessionHooks, patchMgDzmSessionHooks, patchCaDzmSessionHooks, patchUaSessionHooks, patchPhSessionHooks, patchTmpGfrSessionHooks, patchUagSessionHooks, patchProteinDzmSessionHooks, patchSodiumDzmSessionHooks, patchPotassiumDzmSessionHooks]) expect(patch(source)).toBe(source);
     expect(po4DzmSessionSource).not.toContain('Date.parse');
     expect(() => patchPo4DzmSessionHooks(source.replace('try{window.ClcrPo4DzmUi?.ensureControls?.(document)}catch{}', ''))).toThrow('Missing or duplicate phosphorus session capture hook');
   });
 
   it('reproduces the shipped adapter from the preceding audited session source', () => {
-    const beforeSodium = source.replace(sodiumDzmSessionSource, '').replace('try{window.ClcrSodiumDzmUi?.ensureControls?.(document)}catch{}', '');
+    const beforePotassium = source.replace(potassiumDzmSessionSource, '').replace('try{window.ClcrPotassiumDzmUi?.ensureControls?.(document)}catch{}', '');
+    const beforeSodium = beforePotassium.replace(sodiumDzmSessionSource, '').replace('try{window.ClcrSodiumDzmUi?.ensureControls?.(document)}catch{}', '');
     const beforeProtein = beforeSodium.replace(proteinDzmSessionSource, '').replace('try{window.ClcrProteinDzmUi?.ensureControls?.(document)}catch{}', '');
     const preceding = beforeProtein.replace(po4DzmSessionSource, '').replace('try{window.ClcrPo4DzmUi?.ensureControls?.(document)}catch{}', '')
       .replace('o.inputs=window.ClcrCollectionDuration?.normalizeCapturedInputs?.(o.inputs)||o.inputs,', '');
     expect(patchPo4DzmSessionHooks(preceding)).toBe(beforeProtein);
     expect(patchProteinDzmSessionHooks(patchPo4DzmSessionHooks(preceding))).toBe(beforeSodium);
-    expect(patchSodiumDzmSessionHooks(patchProteinDzmSessionHooks(patchPo4DzmSessionHooks(preceding)))).toBe(source);
+    expect(patchSodiumDzmSessionHooks(patchProteinDzmSessionHooks(patchPo4DzmSessionHooks(preceding)))).toBe(beforePotassium);
+    expect(patchPotassiumDzmSessionHooks(patchSodiumDzmSessionHooks(patchProteinDzmSessionHooks(patchPo4DzmSessionHooks(preceding))))).toBe(source);
     expect(() => patchPo4DzmSessionHooks(preceding.replace('(function(){const b="vildaClcrSessionV1";', ''))).toThrow('Ambiguous phosphorus session integration anchor');
     expect(() => patchPo4DzmSessionHooks(preceding.replace('o.inputs.formulaPicker=r,o}', 'o.inputs.formulaPicker=r}'))).toThrow('Ambiguous captured duration normalization anchor');
   });

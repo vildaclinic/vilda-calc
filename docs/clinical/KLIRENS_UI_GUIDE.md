@@ -239,6 +239,28 @@ konkretnej osoby ani skuteczności leczenia. Zachowaj jeden pomiar
 Wynik, norma, Notatka, raport i zamrożona historia przedstawiają tę samą
 ocenę, bez technicznego JSON w treści Notatki.
 
+## Dobowe wydalanie potasu — decyzja 31.10.2026
+
+Dla `K_mmol_d` domyślnie wystarczą stężenie **mmol/L** i objętość całej
+zbiórki **mL/L**; alternatywą jest jeden gotowy wynik **mmol/24 h**.
+Wynik ma stałą jednostkę **mmol/24 h**. Dla K⁺ mEq jest liczbowo równe mmol:
+krótka uwaga zastępuje duplikaty jednostek. Nie dodawaj pytań o dane pacjenta
+lub potas we krwi. Znany wiek i płeć służą wyłącznie dobraniu normy.
+
+Jedna karta B pokazuje **Norma dla wieku · Labcorp**, neutralne granice,
+bursztynowe odchylenie i obie nazwane granice osi. **W zakresie laboratoryjnym**
+nie wyklucza nadmiernej utraty potasu przez nerki przy hipokaliemii.
+Sam wynik nie rozpoznaje hipo- lub hiperkaliemii. Tabela wieku/płci i kontekst
+kliniczny należą do zwiniętych Szczegółów. Nie mieszaj źródeł do uzupełniania
+luk: <6 lat lub nieznany wiek/płeć pozostawiają liczbę bez oceny.
+
+Nowa zbiórka ma jawne24 h z opcją Zmień. Nie wymyślaj historycznego czasu,
+nie skaluj ponownie gotowej ilości, nie usuwaj znanych błędów zbiórki.
+Zero neutralne, mała dodatnia wartość pozostaje dodatnia, brak oceny `null`.
+Skrócona liczba ma **≈** i pełny zapis w Szczegółach oraz historii.
+Jednostki wyniku i normy mają wspólny poziom również przy zawijaniu podpisów.
+Źródła i kontrakt: [POTASSIUM_DZM.md](POTASSIUM_DZM.md).
+
 ## Makieta i sprawdzenie przed przekazaniem
 
 Każdą kolejną zmianę wizualną w audycie przedstaw najpierw do akceptacji jako

@@ -31873,3 +31873,15 @@ w `tests/e2e/odtworzenie-sesji-swieze-wczytanie.spec.mjs`.
 - Nie używaj prawdziwych przypadków pacjentów jako przykładów regresyjnych.
 
 Szczegółowy format wpisu i statusy opisuje `docs/clinical/README.md`.
+
+## K-DZM — dobowe wydalanie potasu (31.10.2026)
+
+Właściciel zaakceptował [makietę desktop/mobile](https://vilda-k-dzm-20261030.maciej-flader.chatgpt.site) i polecił kodowanie. Implementacja od aktualnego `audyt` `67f0b21b3b3c2a2c32256218d2b620030c6f2940`. Pełne źródła, lokalizatory, populacje, jednostki, ograniczenia i regresje: [POTASSIUM_DZM.md](POTASSIUM_DZM.md). Zmiana kliniczna i funkcjonalna; testy nie nadają statusu walidacji klinicznej.
+
+Domyślnie stężenie potasu mmol/L i objętość mL/L, alternatywnie jedna gotowa ilość mmol/24 h. Jeden wynik mmol/24 h; mEq jest dla K⁺ liczbowo równe mmol, bez duplikowania wyborów. Czas nowej zbiórki rzeczywiście24 h z opcją Zmień; historycznie nieznany nie jest zgadywany. Znany inny czas daje oszacowanie bez normy pełnej DZM, gotowej ilości nie skaluje się ponownie, znana błędna zbiórka blokuje oba tryby. Brak wieku/płci nie blokuje liczby, nie dodaje nowych pytań.
+
+Normy są danymi w `clcr_potassium_dzm_data.js`, przekazywanymi do `clcr_potassium_dzm.js`: jeden profil **Labcorp003186**, pełny katalog / Reference Range odczyt30.10.2026. Grupy źródłowe6–17 /18–80 />80 mapuje się jawnie według ukończonych lat na **[6,18) /[18,81) /≥81**. Mężczyźni odpowiednio **11–88 /20–116 /16–83**, kobiety **10–70 /14–95 /6–67 mmol/24 h**. Obie granice włączone; precyzja wieku i inkluzywność są konwencją aplikacji, nie dodatkowym twierdzeniem katalogu. <6/nieznana płeć/wiek: brak normy, bez mieszania Mayo lub Alder Hey. Katalog nie ujawnia kohorty, diety i wersji ustalenia norm; porównanie pozostaje orientacyjne, ze źródłem i populacją w wyniku.
+
+Jedna karta B: Norma dla wieku · Labcorp, neutralne liczby normy, bursztynowe odchylenie. W zakresie laboratoryjnym nie wyklucza nadmiernej utraty nerkowej przy hipokaliemii. Sam niski/wysoki wynik nie rozpoznaje hipo-/hiperkaliemii. Brak automatycznego progu utraty nerkowej lub nowego pola potasu we krwi. Zero neutralne z uwagą o raporcie; mały dodatni wynik nie zmienia się w0. Usunięto nieuzasadniony limit stężenia200 mmol/L i rozbieżność readiness/renderera. Ujemne dane są odrzucane także w edycji i zapisie. Dokładna ilość jest oceniana przed skróceniem prezentacji, operandy/wynik muszą być skończone; dodatni underflow/overflow blokują wynik. Przykład M40,100 mmol/L×1500mL/24h→150 mmol/24h, powyżej20–116; 0,001×1500mL→0,0015, nigdy0.
+
+Jeden kanoniczny pomiar `K_mmol_d` / `clcr:K_mmol_d`; migawka `clcr-potassium-dzm`v1 zamraża dokładną ilość, wejścia/proweniencję, czas, kontekst, źródło/populację, normę i ocenę. Badania, Notatki i historia pozostają zgodne. Brak normy ma `outOfRange:null`, bez fałszywego „W zakresie”. Odczyt nie reinterpretuje dawnej historii, świadoma edycja zachowuje ID i nie dopisuje historycznego24h. Zapis tylko do zapisanej wybranej karty pacjenta. Kliniczne źródła i komplet testów rzeczywistych funkcji opisano w dokumentacji modułu.

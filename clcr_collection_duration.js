@@ -9,10 +9,12 @@
   "use strict";
   const HOURS_ID = "Cl24DurationHours";
   const SOURCE_ID = "Cl24DurationSource";
-  const HOURS_FIELDS = Object.freeze([HOURS_ID, "CA_collectionHours", "UA_collectionHours", "MG_collectionHours", "PO4_collectionHours", "Prot_collectionHours", "Na_collectionHours"]);
-  const SOURCES = Object.freeze({ [HOURS_ID]: SOURCE_ID, CA_collectionHours: "CA_collectionSource", UA_collectionHours: "UA_collectionSource", MG_collectionHours: "MG_collectionSource", PO4_collectionHours: "PO4_collectionSource", Prot_collectionHours: "Prot_collectionSource", Na_collectionHours: "Na_collectionSource" });
+  const HOURS_FIELDS = Object.freeze([HOURS_ID, "CA_collectionHours", "UA_collectionHours", "MG_collectionHours", "PO4_collectionHours", "Prot_collectionHours", "Na_collectionHours", "K_collectionHours"]);
+  const SOURCES = Object.freeze({ [HOURS_ID]: SOURCE_ID, CA_collectionHours: "CA_collectionSource", UA_collectionHours: "UA_collectionSource", MG_collectionHours: "MG_collectionSource", PO4_collectionHours: "PO4_collectionSource", Prot_collectionHours: "Prot_collectionSource", Na_collectionHours: "Na_collectionSource", K_collectionHours: "K_collectionSource" });
   const FORMULA_FIELDS = Object.freeze({ Na_mmol_d: Object.freeze({ fieldId: "Na_collectionHours", sourceId: "Na_collectionSource", modeId: "Na_inputMode",
-    concentration: Object.freeze(["Na_concentration", "Na_volume", "Na_collectionHours"]), reported: Object.freeze(["Na_reportedValue"]) }) });
+    concentration: Object.freeze(["Na_concentration", "Na_volume", "Na_collectionHours"]), reported: Object.freeze(["Na_reportedValue"]) }),
+    K_mmol_d: Object.freeze({ fieldId: "K_collectionHours", sourceId: "K_collectionSource", modeId: "K_inputMode",
+      concentration: Object.freeze(["K_concentration", "K_volume", "K_collectionHours"]), reported: Object.freeze(["K_reportedValue"]) }) });
   const PROTOCOL_IDS = Object.freeze(["collectionStartVoidDiscarded", "collectionFinalVoidIncluded", "collectionNoMissedVoids", "collectionNoSpillage", "collectionNoExtraVoids", "collectionStorageFollowed"]);
   const PROTOCOL_KEYS = Object.freeze(["startVoidDiscarded", "finalVoidIncluded", "noMissedVoids", "noSpillage", "noExtraVoids", "storageFollowed"]);
   const bindings = new WeakMap(), layouts = new WeakMap();
@@ -27,7 +29,7 @@
     const sourceId = SOURCES[control?.id], flagId = confirmationId(control?.id || HOURS_ID);
     const source = doc?.getElementById?.(sourceId)?.value ?? vault[sourceId];
     const flag = doc?.getElementById?.(flagId);
-    return source === "historical-missing" || control?.id === "Na_collectionHours" && source === "invalid" || confirmed(flag ? flag.type === "checkbox" ? flag.checked : flag.value : vault[flagId]);
+    return source === "historical-missing" || ["Na_collectionHours", "K_collectionHours"].includes(control?.id) && source === "invalid" || control?.id === "K_collectionHours" && absent(control.value) && source !== "assumed-24h" || confirmed(flag ? flag.type === "checkbox" ? flag.checked : flag.value : vault[flagId]);
   }
   function updateDurationSummary(layout, duration) {
     const unresolved = !duration.valid && historicalControl(layout.control);
@@ -70,8 +72,8 @@
   function fromValues(values = {}, context = {}, options = {}) {
     const fieldId = options.fieldId || HOURS_ID, sourceId = options.sourceId || SOURCES[fieldId] || SOURCE_ID;
     const flagId = confirmationId(fieldId);
-    const explicitInvalid = fieldId === "Na_collectionHours" && values[sourceId] === "invalid";
-    const historical = options.historical === true || confirmed(values.durationNeedsConfirmation) || confirmed(values[flagId]) || values[sourceId] === "historical-missing" || explicitInvalid || context.durationHistorical === true || context.durationNeedsConfirmation === true;
+    const explicitInvalid = ["Na_collectionHours", "K_collectionHours"].includes(fieldId) && values[sourceId] === "invalid";
+    const historical = options.historical === true || fieldId !== "K_collectionHours" && confirmed(values.durationNeedsConfirmation) || confirmed(values[flagId]) || values[sourceId] === "historical-missing" || explicitInvalid || fieldId === "K_collectionHours" && absent(values[fieldId]) && values[sourceId] !== "assumed-24h" || context.durationHistorical === true || context.durationNeedsConfirmation === true;
     let hours, source;
     const needsCapturedFallback = !own(values, fieldId) || historical && absent(values[fieldId]) && absent(values[sourceId]);
     if (!needsCapturedFallback) { hours = values[fieldId]; source = values[sourceId]; }
@@ -106,8 +108,8 @@
       if (!own(values, fieldId)) continue;
       const sourceId = SOURCES[fieldId], flagId = confirmationId(fieldId);
       const historical = values[sourceId] === "historical-missing" || confirmed(values[flagId]);
-      const explicitInvalid = fieldId === "Na_collectionHours" && values[sourceId] === "invalid";
-      if (absent(values[fieldId]) && !historical && !explicitInvalid) {
+      const explicitInvalid = ["Na_collectionHours", "K_collectionHours"].includes(fieldId) && values[sourceId] === "invalid";
+      if (absent(values[fieldId]) && !historical && !explicitInvalid && (fieldId !== "K_collectionHours" || values[sourceId] === "assumed-24h")) {
         result[fieldId] = "24";
         result[sourceId] = "assumed-24h";
       }
@@ -161,6 +163,7 @@
       if (!control) continue;
       const source = doc.getElementById(SOURCES[id]);
       if (historicalControl(control)) { bindControl(control, { sourceControl: source }); continue; }
+      if (id === "K_collectionHours" && doc.activeElement === control && absent(control.value)) { bindControl(control, { sourceControl: source }); continue; }
       if (absent(control.value)) { control.value = "24"; if (source) source.value = "assumed-24h"; }
       else if (source && (absent(source.value) || source.value === "assumed-24h" && parseHours(control.value) !== 24)) source.value = "hours";
       bindControl(control, { sourceControl: source });
