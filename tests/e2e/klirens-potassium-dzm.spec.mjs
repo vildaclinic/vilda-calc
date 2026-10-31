@@ -419,3 +419,37 @@ test('Potas DZM: długa dokładna wartość poniżej granicy nie staje się norm
     expect(normalized.exactMain).toEqual(boundary.exactMain);
   }
 });
+
+test('Potas DZM: zmiana mL/L po zapisie zachowuje potwierdzenie bez drugiej notatki', async ({ page }) => {
+  await openCalculator(page); await installMemoryVault(page); await restore(page);
+  await expectResult(page, { guest: false });
+  const date = '2026-10-31', [saved] = await saveVisible(page, date);
+  const save = page.locator('#clcrVisitSaveBtn');
+  await expect(save).toBeDisabled(); await expect(save).toHaveText('Zapisano w Badaniach');
+  expect(await page.evaluate(() => window.ClcrVisitSave.hasUnsavedMeasurement())).toBe(false);
+  const baseline = await card(page).evaluate(node => JSON.parse(node.dataset.clcrPotassiumDzmSnapshot).exactMain);
+  for (const unit of ['L', 'mL', 'L']) {
+    await chooseNativeUnit(page, '#K_volumeUnit', unit);
+    await expect.poll(() => card(page).evaluate(node => JSON.parse(node.dataset.clcrPotassiumDzmSnapshot).exactMain)).toEqual(baseline);
+    await expect(save).toBeDisabled(); await expect(save).toHaveText('Zapisano w Badaniach');
+    expect(await page.evaluate(() => window.ClcrVisitSave.hasUnsavedMeasurement())).toBe(false);
+    const receipt = await page.evaluate(clinicalDateISO => window.ClcrVisitSave.saveActiveResultToCard({ clinicalDateISO }), date);
+    expect(receipt).toMatchObject({ ok: true, noteIds: [saved.id] });
+    const stored = await memory(page);
+    expect(stored.notes).toEqual([saved]); expect(stored.saves).toHaveLength(1);
+  }
+  await page.locator('#K_concentration').fill('101'); await expectResult(page, { raw: 151.5, guest: false });
+  expect(await page.evaluate(() => window.ClcrVisitSave.hasUnsavedMeasurement())).toBe(true);
+  const [changed] = await saveVisible(page, date);
+  expect(changed.id).not.toBe(saved.id); expect(changed.labResult.valueNum).toBe(151.5);
+  // Equal final excretion does not make a changed specimen the same input:
+  // preserve real concentration and collection-volume edits in the guard.
+  await page.locator('#K_volume').fill('2'); await page.locator('#K_concentration').fill('75');
+  await expectResult(page, { raw: 150, guest: false });
+  expect(await page.evaluate(() => window.ClcrVisitSave.hasUnsavedMeasurement())).toBe(true);
+  const [differentSpecimen] = await saveVisible(page, date), final = await memory(page);
+  expect(new Set([saved.id, changed.id, differentSpecimen.id]).size).toBe(3);
+  expect(differentSpecimen.labResult.valueNum).toBe(150);
+  expect(final.notes).toHaveLength(3); expect(final.saves).toHaveLength(3); expect(final.originalsLocked).toBe(true);
+  expect(await page.evaluate(() => window.ClcrVisitSave.hasUnsavedMeasurement())).toBe(false);
+});

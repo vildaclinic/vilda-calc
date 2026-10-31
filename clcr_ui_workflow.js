@@ -4757,6 +4757,48 @@
     return payload;
   }
 
+  // A native mL/L change preserves one specimen. Compare only that volume
+  // in litres; concentration, time, mode and every other captured fact keep
+  // their own identity. The original captured fields remain in the record.
+  function normalizedPotassiumVolume(values, context = {}, capturedInput = false) {
+    const engine = global.VildaClcrPotassiumDzm;
+    if (!values || typeof values !== "object" || !engine?.inputFromValues || !engine?.compute) return null;
+    try {
+      const conversionField = capturedInput ? "unitConversions" : "K_unitConversions";
+      const supplied = values[conversionField];
+      const conversions = typeof supplied === "string" ? supplied.trim() ? JSON.parse(supplied) : {} : supplied ?? {};
+      if (!conversions || typeof conversions !== "object" || Array.isArray(conversions) || Object.keys(conversions).some(key => key !== "volume")) return null;
+      const input = capturedInput ? values : engine.inputFromValues(values, context);
+      const computed = engine.compute(input);
+      if (!computed.valid || computed.input.mode !== "concentration" || !computed.exactVolumeLitres) return null;
+      // Invalid or stale provenance must stay distinguishable from a valid
+      // conversion. Never ignore metadata that the engine declined to accept.
+      const accepted = computed.input.unitConversions || {};
+      if (Object.keys(conversions).length !== Object.keys(accepted).length) return null;
+      if (conversions.volume) {
+        const entry = conversions.volume, retained = accepted.volume;
+        if (!entry || !retained || Object.keys(entry).length !== 4 || ["originalValue", "originalUnit", "convertedValue", "convertedUnit"].some(key => JSON.stringify(entry[key]) !== JSON.stringify(retained[key]))) return null;
+      }
+      const result = { ...values }, prefix = capturedInput ? "" : "K_";
+      const quantity = computed.exactVolumeLitres;
+      result[prefix + "volume"] = quantity.numerator + "/" + quantity.denominator;
+      delete result[prefix + "volumeUnit"];
+      delete result[conversionField];
+      return { values: result, quantity };
+    } catch (_) { return null; }
+  }
+
+  function potassiumDatapointIdentity(identity, datapoint) {
+    if (datapoint.sourceFormulaId !== "K_mmol_d" || !datapoint.potassiumDzmSnapshot?.input) return identity;
+    const snapshot = normalizedPotassiumVolume(datapoint.potassiumDzmSnapshot.input, {}, true);
+    const captured = identity.capture?.values ? normalizedPotassiumVolume(identity.capture.values, identity.capture) : null;
+    if (!snapshot || identity.capture?.values && (!captured || JSON.stringify(captured.quantity) !== JSON.stringify(snapshot.quantity))) return identity;
+    return { ...identity,
+      potassiumDzmSnapshot: { ...datapoint.potassiumDzmSnapshot, input: snapshot.values },
+      ...(captured ? { capture: { ...identity.capture, values: captured.values } } : {}),
+    };
+  }
+
   function saveRequest(options) {
     const opts = options || {};
     const patientId = opts.patientId || resolveCurrentPatientId();
@@ -4781,7 +4823,7 @@
         delete identity.tmpGfrSnapshot.treatment;
         delete identity.tmpGfrSnapshot.therapy;
       }
-      return identity;
+      return potassiumDatapointIdentity(identity, dp);
     })]);
     return { patientId, patientName: opts.patientName || state.patientName || readPatientName(), clinicalDateISO, datapoints, key };
   }
@@ -5083,11 +5125,15 @@
       for (const output of operation.outputs) {
         const capture = output.dp.capture;
         if (!output.completed || !capture?.values || !capture.fields) continue;
-        const matches = Object.entries(capture.values).every(([id, value]) => {
+        const currentValues = Object.fromEntries(Object.keys(capture.values).map(id => {
           const control = doc?.getElementById?.(id);
-          const current = control ? control.type === "checkbox" ? !!control.checked : String(control.value ?? "") : preserved[id];
-          return current != null && String(current) === String(value);
-        });
+          return [id, control ? control.type === "checkbox" ? !!control.checked : String(control.value ?? "") : preserved[id]];
+        }));
+        const savedVolume = output.dp.sourceFormulaId === "K_mmol_d" ? normalizedPotassiumVolume(capture.values, capture) : null;
+        const currentVolume = savedVolume ? normalizedPotassiumVolume(currentValues, capture) : null;
+        const comparableSaved = savedVolume && currentVolume ? savedVolume.values : capture.values;
+        const comparableCurrent = savedVolume && currentVolume ? currentVolume.values : currentValues;
+        const matches = Object.entries(comparableSaved).every(([id, value]) => comparableCurrent[id] != null && String(comparableCurrent[id]) === String(value));
         if (!matches) continue;
         capture.fields.forEach(field => {
           if (!field.historicalContext && ["number", "text", "textarea"].includes(field.type)) covered.add(field.id);
@@ -5113,7 +5159,9 @@
     if (formula !== spec.formulaId) return null;
     const demographic = new Set(["fullName", "age", "ageMonths", "ageDays", "sex", "weight", "height"]);
     const fields = [...new Set(spec.fieldIds || [])].filter(id => !demographic.has(id)).sort();
-    return JSON.stringify([formula, fields.map(id => [id, input[id] == null ? "" : String(input[id])])]);
+    const volume = spec.formulaId === "K_mmol_d" ? normalizedPotassiumVolume(input) : null;
+    const comparable = volume ? volume.values : input;
+    return JSON.stringify([formula, fields.map(id => [id, comparable[id] == null ? "" : String(comparable[id])])]);
   }
 
   function isCurrentSaveReceipt(detail, sourceWindow) {
