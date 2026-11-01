@@ -114,7 +114,7 @@
     'vilda_tw2_prediction.js?v=4',
     'vilda_puberty_profile.js?v=3',
     'vilda_ree_rownania_data.js?v=3',
-    'vilda_diet_plan_ui.js?v=44',
+    'vilda_diet_plan_ui.js?v=45',
     'vilda_bmi_journey.js?v=28',
     'vilda_estimated_intake_ui.js?v=3',
     'vilda_estimated_intake_runtime.js?v=1',

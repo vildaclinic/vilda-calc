@@ -3719,6 +3719,7 @@ const OPTIONAL_ASSETS = [
   '/vilda_diet_plan_ui.js?v=42',
   '/vilda_diet_plan_ui.js?v=43',
   '/vilda_diet_plan_ui.js?v=44',
+  '/vilda_diet_plan_ui.js?v=45',
   '/vilda_diet_recommendations.js?v=27',
   '/vilda_diet_recommendations.js?v=28',
   '/vilda_diet_recommendations.js?v=29',

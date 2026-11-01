@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test';
+import { openFictionalClearAccount, readyClearPage } from '../support/clear-current-state-fixture.mjs';
 
 // Testy regresyjne etapu 1 naprawy karty „Plan odchudzania":
 //  - dorośli dostają liczbowy czas do górnej granicy normy BMI (cel z
@@ -454,15 +455,18 @@ test('PLAN-PAL-DEFAULT-ADULT: dorosły bez otyłości dostaje PAL 1,6 z jednej t
   expect(out.pal).toBe('1.6');
 });
 
-test('PLAN-PAL-TOUCHED-KEPT: jawny wybór 1,8 u nastolatka przeżywa kolejne przeliczenia (bez nadpisania wartością domyślną)', async ({ page }) => {
+test('PLAN-PAL-TOUCHED-KEPT: jawny wybór 1,8 u nastolatka przeżywa kolejne przeliczenia (bez nadpisania wartością domyślną)', async ({ page, context }) => {
   test.setTimeout(90_000);
+  await openFictionalClearAccount(page, context);
   await openIndex(page);
+  await readyClearPage(page);
   await renderPlan(page, { age: 12, months: 0, sex: 'M', weight: 70, height: 150 });
+  // Rzeczywisty wybór w panelu PAL; zdarzenie z evaluate nie oznacza działania lekarza.
+  await page.waitForFunction(() => window.VildaBmiJourney?.getSnapshot().mounted === true);
+  await expect(page.locator('#toNormCard')).toBeVisible();
+  await page.locator('#toNormCard [data-journey="pal"][data-key="1.8"]').click();
   const out = await page.evaluate(() => {
     const sel = document.getElementById('palFactor');
-    // Świadomy wybór jak z UI: zmiana wartości + natywne zdarzenie 'change'.
-    sel.value = '1.8';
-    sel.dispatchEvent(new Event('change', { bubbles: true }));
     window.update();
     window.update(); // drugie przeliczenie — wartość ma przetrwać
     return {

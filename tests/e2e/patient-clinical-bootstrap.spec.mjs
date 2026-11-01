@@ -320,6 +320,52 @@ test('locking the account cancels an in-flight checkpoint before any destination
   expect(result.names).not.toContain(DATABASE); expect(result.after).toEqual(result.before); expect(result.changes).toEqual([]);
 });
 
+test('native database deletion stays pending while a held connection blocks it and succeeds after close', async ({ page }) => {
+  await page.goto(COLD_PAGE);
+  const result = await page.evaluate(async () => {
+    const name = 'fictional-native-delete-blocked-' + crypto.randomUUID();
+    let held;
+    try {
+      held = await new Promise((resolve, reject) => {
+        const request = indexedDB.open(name);
+        request.onupgradeneeded = () => request.result.createObjectStore('fictional');
+        request.onsuccess = () => resolve(request.result);
+        request.onerror = () => reject(request.error);
+      });
+      const existedBefore = (await indexedDB.databases()).some(database => database.name === name);
+      let versionChangeObserved = false;
+      // Intentionally retain this native connection after the deletion notice.
+      held.onversionchange = () => { versionChangeObserved = true; };
+      const events = [];
+      let state = 'pending', firstEvent, complete, fail;
+      const first = new Promise(resolve => { firstEvent = resolve; });
+      const completion = new Promise((resolve, reject) => { complete = resolve; fail = reject; });
+      // The error still rejects the awaited completion below, even when it is
+      // delivered before the first-event barrier resumes this task.
+      completion.catch(() => {});
+      const request = indexedDB.deleteDatabase(name);
+      request.addEventListener('blocked', () => { events.push('blocked'); firstEvent('blocked'); }, { once: true });
+      request.addEventListener('success', () => {
+        events.push('success'); state = 'success'; firstEvent('success'); complete();
+      }, { once: true });
+      request.addEventListener('error', () => {
+        events.push('error'); state = 'error'; firstEvent('error'); fail(request.error);
+      }, { once: true });
+      const firstKind = await first;
+      const stateWhileHeld = state, eventsWhileHeld = events.slice();
+      held.close(); held = null;
+      await completion;
+      return { existedBefore, versionChangeObserved, firstKind, stateWhileHeld, eventsWhileHeld,
+        state, events, existsAfter: (await indexedDB.databases()).some(database => database.name === name) };
+    } finally { if (held) held.close(); }
+  });
+  expect(result.existedBefore).toBe(true); expect(result.versionChangeObserved).toBe(true);
+  expect(result.firstKind).toBe('blocked'); expect(result.stateWhileHeld).toBe('pending');
+  expect(result.eventsWhileHeld).toEqual(['blocked']);
+  expect(result.state).toBe('success'); expect(result.events).toEqual(['blocked', 'success']);
+  expect(result.existsAfter).toBe(false);
+});
+
 test('cold recovery retains every typed record after the immutable old client actually deletes the legacy account', async ({ playwright, browserName, launchOptions, baseURL }, testInfo) => {
   const provenance = ['vilda_crypto.js', 'vilda_vault.js'].map(file => {
     const bytes = historicalSource(file);
@@ -342,8 +388,8 @@ test('cold recovery retains every typed record after the immutable old client ac
         record: await f.observer.checkpoint(receipt.binding, receipt.id) };
     }, { password: RECOVERY_PASSWORD, id: CHECKPOINT_ID });
     // Finish the first browser process, including its native IDB connections,
-    // before the old client opens the retained profile. Page.close() alone can
-    // leave a transient connection alive long enough to block deleteDatabase.
+    // before the old client opens the retained profile. The old client's own
+    // closing connection may still emit a transient blocked before success.
     await context.close(); context = null;
     context = await launch(); await routeHarness(context);
     page = context.pages()[0] || await context.newPage(); await page.goto(OLD_PAGE);
@@ -354,12 +400,12 @@ test('cold recovery retains every typed record after the immutable old client ac
       const before = await vault.getPatient((await vault.listPatients())[0].patientId);
       const nativeDelete = indexedDB.deleteDatabase.bind(indexedDB), deletions = [], completions = [];
       indexedDB.deleteDatabase = function (name) {
-        const entry = { name, success: false, blocked: false }; deletions.push(entry);
+        const entry = { name, success: false, events: [] }; deletions.push(entry);
         const request = nativeDelete(name);
         completions.push(new Promise((resolve, reject) => {
-          request.addEventListener('success', () => { entry.success = true; resolve(); }, { once: true });
-          request.addEventListener('blocked', () => { entry.blocked = true; }, { once: true });
-          request.addEventListener('error', () => reject(request.error), { once: true });
+          request.addEventListener('success', () => { entry.events.push('success'); entry.success = true; resolve(); }, { once: true });
+          request.addEventListener('blocked', () => { entry.events.push('blocked'); }, { once: true });
+          request.addEventListener('error', () => { entry.events.push('error'); reject(request.error); }, { once: true });
         }));
         return request;
       };
@@ -386,7 +432,9 @@ test('cold recovery retains every typed record after the immutable old client ac
       return { patientExisted: Boolean(before), removed, deletions, registry, record, names };
     }, { userId: source.userId, password: PASSWORD, database: DATABASE });
     expect(deletion.patientExisted).toBe(true); expect(deletion.removed).toBe(true);
-    expect(deletion.deletions).toEqual([{ name: source.name, success: true, blocked: false }]);
+    expect(deletion.deletions).toHaveLength(1);
+    expect(deletion.deletions[0].name).toBe(source.name); expect(deletion.deletions[0].success).toBe(true);
+    expect([['success'], ['blocked', 'success']]).toContainEqual(deletion.deletions[0].events);
     expect(deletion.registry).toEqual([]); expect(deletion.names).not.toContain(source.name);
     expect(deletion.record).toEqual([source.record]);
     await context.close(); context = null;

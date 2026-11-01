@@ -21,7 +21,8 @@ async function stan(page, s) {
     set('name', 'Testowy Fikcyjny'); set('age', s.age); set('ageMonths', s.months || 0); set('sex', s.sex); set('weight', s.w); set('height', s.h);
     if (typeof window.ensureDietRecommendationsElements === 'function') window.ensureDietRecommendationsElements();
     window.update();
-    if (s.pal) { const sel = document.getElementById('palFactor'); sel.value = s.pal; sel.dispatchEvent(new Event('change', { bubbles: true })); window.update(); }
+    // Jawna konfiguracja danych do obliczeń; nie symulujemy zaufanego zdarzenia UI.
+    if (s.pal) { window.__vildaPlanPalTouched = true; document.getElementById('palFactor').value = s.pal; window.update(); }
     await new Promise((r) => { setTimeout(r, 400); });
     const dane = window.buildDietEnergyRecommendationResult().dane;
     const m = window.patientReportBuildModel();

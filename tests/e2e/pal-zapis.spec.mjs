@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test';
+import { openFictionalClearAccount, readyClearPage } from '../support/clear-current-state-fixture.mjs';
 
 // P-PAL-ZAPIS (zgłoszenie i decyzja właściciela 2026-09-29) — PRAWDZIWA strona index.html, dane FIKCYJNE.
 // Chłopiec 13 l. 2 mies., 76 kg, 168 cm (nadwaga, OLAF) wczytany z zapisu sprzed P-DIETA-STAB rata 3 miał w stabilizacji
@@ -72,11 +73,15 @@ test.describe('P-PAL-ZAPIS — zapisany PAL: wybór lekarza czy wartość domyś
     expect(s).toMatchObject({ pal: '1.8', wybrany: true, palUzyty: 1.8, palDomyslny: false });
   });
 
-  test('PZ-4: lekarz wybiera 1,6 → zapis palWybrany: true → po wczytaniu 1,6 zostaje (także przy wczytaniu sesji)', async ({ page }) => {
+  test('PZ-4: lekarz wybiera 1,6 → zapis palWybrany: true → po wczytaniu 1,6 zostaje (także przy wczytaniu sesji)', async ({ page, context }) => {
     test.setTimeout(120_000);
+    await openFictionalClearAccount(page, context);
     await otworz(page);
-    // select PAL jest w zwiniętej karcie — wybór jak z niej: zmiana wartości i zdarzenie change (onchange → debouncedUpdate)
-    await page.evaluate(() => { const el = document.getElementById('palFactor'); el.value = '1.6'; el.dispatchEvent(new Event('change', { bubbles: true })); });
+    await readyClearPage(page);
+    // Rzeczywisty wybór lekarza w widocznym panelu, nie syntetyczne change ukrytego selecta.
+    await page.waitForFunction(() => window.VildaBmiJourney?.getSnapshot().mounted === true);
+    await expect(page.locator('#toNormCard')).toBeVisible();
+    await page.locator('#toNormCard [data-journey="pal"][data-key="1.6"]').click();
     await page.waitForTimeout(800);
     const s = await stan(page);
     expect(s).toMatchObject({ pal: '1.6', wybrany: true, palUzyty: 1.6, palDomyslny: false });

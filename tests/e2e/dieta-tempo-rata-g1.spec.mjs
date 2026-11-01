@@ -44,7 +44,8 @@ async function stan(page, s) {
     window.update();
     await new Promise((r) => { setTimeout(r, 700); });
     if (typeof window.ensureDietRecommendationsElements === 'function') window.ensureDietRecommendationsElements();
-    if (s.pal) set('palFactor', s.pal);
+    // Jawna konfiguracja PAL w danych przypadku obliczeniowego, bez sztucznego change.
+    if (s.pal) { window.__vildaPlanPalTouched = true; document.getElementById('palFactor').value = String(s.pal); }
     if (s.redukcja) {
       window.__vildaDietStrategyTouched = true;
       const rt = document.getElementById('reduceToggle'), sb = document.getElementById('stabilizationToggle');

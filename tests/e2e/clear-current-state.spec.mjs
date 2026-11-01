@@ -123,6 +123,43 @@ test('Clear does not invent changes for a loaded legacy patient or defaults on S
   }
 });
 
+test('restoring the loaded record preserves a saved default PAL through Klirens and Clear', async ({ page, context }) => {
+  await openFictionalClearAccount(page, context);
+  const patientId = await page.evaluate(async () => (await window.VildaVault.savePatient({
+    version: 1, name: 'Fikcyjna PAL Odtworzenie',
+    user: { firstName: 'PAL Odtworzenie', lastName: 'Fikcyjna', sex: 'F', age: 12, height: 150, weight: 40 },
+    plan: { palFactor: 1.4, palWybrany: false, dietLevel: 'moderate', dietaWybrana: false },
+  }, { dedup: false })).patientId);
+  await loadPatient(page, patientId, 'new');
+  await readyClearPage(page);
+  const original = await page.evaluate(id => window.VildaVault.getPatient(id), patientId);
+  const before = await page.evaluate(() => ({ chosen: window.__vildaPlanPalTouched === true,
+    offset: window.__clearInputActivity.length }));
+  // Run the public operation used by the saved-record button. Its own PAL
+  // input/change events must not change the meaning of the saved choice.
+  page.once('dialog', dialog => dialog.accept());
+  await page.evaluate(data => window.VildaDataImportExport.restoreLoadedState({ data }), original.snapshots[0].payload);
+  const restored = await page.evaluate(offset => {
+    const select = document.getElementById('palFactor');
+    return { value: select.value, chosen: window.__vildaPlanPalTouched === true,
+      events: window.__clearInputActivity.slice(offset).filter(event => event.field === 'palFactor') };
+  }, before.offset);
+  expect(before.chosen).toBe(false);
+  expect(restored.events.map(event => ({ type: event.type, trusted: event.trusted })))
+    .toEqual([{ type: 'input', trusted: false }, { type: 'change', trusted: false }]);
+  expect(restored.chosen).toBe(false);
+  await readyClearPage(page);
+  await expect(page.locator('#palFactor')).not.toHaveValue('');
+  await expect.poll(() => page.evaluate(() => window.VildaSaveStatusIndicator.getCurrentDecision().state)).toBe('saved');
+  await page.goto('/kalkulator-klirens.html', { waitUntil: 'load' });
+  await readyClearPage(page);
+  await expect.poll(() => page.evaluate(() => window.VildaSaveStatusIndicator.getCurrentDecision().state)).toBe('saved');
+  await page.locator('#clearBtn').click();
+  await expect(page.getByRole('dialog', { name: CLEAR_DIALOG })).toHaveCount(0);
+  await expect(page.locator('#height')).toHaveValue('');
+  expect(await page.evaluate(id => window.VildaVault.getPatient(id), patientId)).toEqual(original);
+});
+
 for (const existing of [false, true]) {
   test(`Save and Clear awaits its own real durable return and preserves puberty (${existing ? 'existing patient' : 'new patient'})`, async ({ page, context }) => {
     await openFictionalClearAccount(page, context);

@@ -26584,6 +26584,15 @@ były domyślne) są traktowane jako domyślne i przeliczane według aktualnej r
 | lekarz wybiera 1,6 → zapis → wczytanie | 1,6 | 1,6 (`palWybrany: true`) |
 | odtworzenie sesji z `palWybrany: false`, potem masa 52 kg | PAL zostaje 1,4 | PAL idzie za regułą (1,6 przy masie prawidłowej) |
 
+**Uzupełnienie 2026-11-01 — pochodzenie zdarzenia PAL.** `restoreLoadedState` po odczycie znacznika wysyła
+programowe `input/change`, także dla `palFactor`. Końcowy handler `vilda_diet_plan_ui.js` uznawał każde `change`
+za ręczny wybór, co mogło ponownie ustawić `palWybrany: true` i oznaczyć niezmienionego pacjenta jako niezapisanego.
+Handler przyjmuje teraz tylko zaufane zdarzenie użytkownika. Jawne znaczniki importu i przycisków panelu pozostają
+bez zmian. Wzory, wartości domyślne, tabela PAL i reguła odczytu starszych zapisów są niezmienione.
+Regresje obejmują rzeczywisty handler (programowe odtworzenie zachowuje `false`, ręczny wybór ustawia `true`),
+przycisk „Odtwórz zapis”, przejście do Klirensu i czyszczenie bez zmiany zachowanego rekordu, a także rzeczywiste
+kliknięcie PAL i zachowanie wyboru po ponownym wczytaniu.
+
 **Co pozostaje decyzją właściciela.** Scalenie i wdrożenie.
 
 ## Nastolatek z nadwagą: REE wg Molnára 1995 i domyślny PAL 1,4 jak przy otyłości (10–18 lat), kategoria z siatki karty „Centyle i BMI” (P-DIETA-STAB rata 3, SW 1.1.99, 2026-09-29)
