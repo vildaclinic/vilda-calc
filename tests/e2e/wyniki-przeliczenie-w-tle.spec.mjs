@@ -75,8 +75,19 @@ async function wynikiGotowe(start) {
   await expect(start.locator('#metabolicSummaryBtn')).toBeVisible({ timeout: 15000 });
   await expect(start.locator('#dietRecommendationsBtn')).toBeVisible();
   await expect(start.locator('#bmiResult .result-number')).toHaveText('21,9', { timeout: 15000 });
-  // Animacje pierwszego pokazania (wjazd 0,45 s, odliczanie 0,6 s) mają się skończyć przed pomiarem.
-  await start.waitForTimeout(1500);
+  // Samo BMI jest takie samo w obu trybach. Czekamy na właściwy widok
+  // profesjonalny, który update() buduje po przełączeniu w kolejnej klatce.
+  await expect(start.locator('#whResult')).toContainText('wSDS');
+  await expect(start.locator('#whResult')).toContainText('hSDS');
+  await expect(start.locator('#bmiResult')).toContainText('bmiSDS');
+  // Rejestrator zaczyna pomiar po zakończeniu istniejących wjazdów/błysków.
+  // Obietnice przeglądarki obejmują także animacje oczekujące na pierwszy start.
+  await start.evaluate(async (nazwy) => {
+    const poczatkowe = document.getAnimations().filter((animacja) =>
+      nazwy.includes(animacja.animationName)
+      && animacja.effect.getComputedTiming().iterations !== Infinity);
+    await Promise.all(poczatkowe.map((animacja) => animacja.finished.catch(() => null)));
+  }, WJAZDY);
 }
 
 async function odtworzWczytanyPomiar(start) {
