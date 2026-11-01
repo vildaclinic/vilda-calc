@@ -388,6 +388,9 @@ test('E2 D3 reuses the main form inside the application shell without asking for
   const start = await startHandle.contentFrame();
   await start.waitForFunction(() => window.VildaVault?.isUnlocked() && window.VildaPersistence && window.VildaDobAge
     && typeof window.collectUserData === 'function' && !document.documentElement.classList.contains('vilda-auth-locked'));
+  // The initial restore is queued before its active flags become true.
+  const restored = await start.evaluate(() => window.VildaDataImportExport.whenInitialMainSessionRestoreSettled());
+  expect(restored.ready).toBe(true);
   await start.waitForFunction(() => !window.VildaPersistence.isAutosaveSuppressed() && !window.VildaPersistence.isRestoring()
     && !window.VildaDobAge.restorePending());
   // The saved patient supplies sex; the main form intentionally locks this identity field.
@@ -395,7 +398,11 @@ test('E2 D3 reuses the main form inside the application shell without asking for
   await start.locator('#age').fill('40');
   await start.locator('#ageMonths').fill('0');
   await start.locator('#ageMonths').dispatchEvent('change');
-  await expect.poll(() => start.evaluate(() => Number(window.VildaPersistence.readShared()?.age))).toBe(40);
+  await expect.poll(() => start.evaluate(() => {
+    const shared = window.VildaPersistence.readShared();
+    return { form: document.getElementById('age').value, shared: Number(shared?.age),
+      restoredField: Number(shared?._vildaPersist?.byId?.age) };
+  })).toEqual({ form: '40', shared: 40, restoredField: 40 });
   await page.locator('.sidebar-nav a[href="przelicznik-jednostek.html"]').click();
   const labIframe = page.locator('iframe.app-pane[title="Jednostki laboratoryjne"]');
   await expect(labIframe).toBeVisible();
@@ -410,6 +417,7 @@ test('E2 D3 reuses the main form inside the application shell without asking for
   const data = await start.evaluate(() => window.VildaPersistence.readShared());
   expect(data).toMatchObject({ sex: 'F' });
   expect(Number(data.age)).toBe(40);
+  await expect(start.locator('#age')).toHaveValue('40');
 });
 
 test.describe('E2 D3 offline', () => {
