@@ -36,13 +36,24 @@ function clean(value) {
 const digest = node => createHash('sha256').update(JSON.stringify(clean(node))).digest('hex');
 const additions = {
   "variable:PatientClinicalObservations": "3f4f2271646d5c6fb2415d0147353a0906b2e2abdb217ac8bcb5a9f94e094c1f",
+  "variable:PatientClinicalRecoveryPins": "2cb5ab54146fd933414412aeec35ac5cc62851b92c01ac18aa6da78724f5fc66",
   "variable:PatientClinicalLegacy": "6e8aedb041e0f17b0f9e55b34d4d404b98769aa050ae37c56bef508e315fff5e",
   "variable:PatientClinicalMetadataOptions,PatientClinicalMetadataRecords": "800c3565212aca12c0a72da2dbee3d210033b5178178b3913e0651b113b68745",
   "function:PatientClinicalUnavailable": "bb37996b6a5dab74ac8b00963134ec574223528b1ac884c0245a57720114682c",
-  "function:PatientClinicalScopeCurrent": "5dd0a1e435bdf26eee30255f2f695084d0ab950de689949c4a59400db397e9ad",
-  "function:PatientClinicalSelectionFor": "64502aa5f71dab8e5791ff553917b0050e86b03e6fbccb2e0d873e0904244ca6",
+  "function:PatientClinicalScopeCurrent": "2b6340f2fe55006ee8b37bad73b0378b3bd4574a3598312c50d521c32bab34ea",
+  "function:PatientClinicalSelectionFor": "fef10bbe9ea1e419579b065e4a78f9b3c739247945e4e975a8136a6c1900185a",
   "function:PatientClinicalSelect": "2803ee5fcb7f42f4cfbf3c150c547537dd6ab3c429c21299a09bfc0030630aa3",
-  "function:PatientClinicalInspect": "2abaf9835e0d2389413dd5acf0af1ef48b08cd97ee331b6d2563647c0ff66431",
+  "function:PatientClinicalBeginInspection": "9f0f1132e6f7e8482f7946e921406d7b1c68ee0dd5f807f66680290324aa7ee2",
+  "function:PatientClinicalAssertInspection": "fa8af5cde22df4d696e2d5844eb1b445f8bd377e50652eebec7b504d990a6351",
+  "function:PatientClinicalStaleInspection": "6ca457c7ec359859ecdc73b31165f07954917ae81aa6c02b152d5dd629673b1d",
+  "function:PatientClinicalInspect": "25a5666b92c37cd14ff491aac47239b77b554d58a2fe5200f64eee82d52ea8b2",
+  "variable:PatientClinicalRecoveryCodes": "34367fdfb12dce0300101a92c81ae27bfedb87f43fd3c60074d1a0aa352732fc",
+  "function:PatientClinicalRecoveryFailure": "4dc51cad139f60bbb61961ac661e4ffacb7838e7af5807214d32b10d6c63a257",
+  "function:PatientClinicalRecoveryErrorCode": "3b92370cffc9697137a322c12b20583bbf6d41ff30bd48f4dd598f8aafb47176",
+  "function:PatientClinicalRecoveryExpected": "804be44caef79d050cfc88195bad2928e5f1fb737afea0c6266fd9fde4def780",
+  "function:PatientClinicalPinnedRecoveryExpected": "a60b29f42836f18f15972891269aed5f866c4d71f4c6fab11cb6d60f9f1b7c1a",
+  "function:PatientClinicalPinRecovery": "0b48560953c51d0b7ea618ac0495089eddeeb872a183071315ca19bbd65e6346",
+  "function:PatientClinicalInspectRecovery": "8a3f57201c4bcc1dfd3615e6971bb66802ff7498e69a9157626251cedd03010a",
   "function:PatientClinicalGuard": "b81a694a06de80c3ba8330ee7124f3ba1ec91f1f00cded38b60c28e285c69e34",
   "function:PatientClinicalWriteValue": "1223613aa11a71b00c3513ad536362f73b9f948941ae8fc0e0070aa72bd3f4f1",
   "function:PatientClinicalMetadataValue": "39888e827c7f229148c167373307acbea5119bc5d49316825e7f187fa518d922",
@@ -288,7 +299,7 @@ if (!apiValue || apiValue.type !== 'ObjectExpression') throw new Error('Missing 
 const removeApi = apiValue.properties.filter(item => item.key.name === 'removeUser');
 if (removeApi.length !== 1 || removeApi[0].value.name !== 'PatientCheckpointRemoveUser') throw new Error('Unexpected checkpoint removal wrapper.');
 removeApi[0].value.name = 'CareTplRemoveUser';
-for (const [key, value] of [['createPatientClinicalCheckpoint', 'PatientCheckpointCreate'], ['inspectPatientAuthority', 'PatientClinicalInspect'], ['selectPatientClinicalRoute', 'PatientClinicalSelect']]) {
+for (const [key, value] of [['createPatientClinicalCheckpoint', 'PatientCheckpointCreate'], ['inspectPatientAuthority', 'PatientClinicalInspect'], ['inspectPatientAuthorityRecovery', 'PatientClinicalInspectRecovery'], ['selectPatientClinicalRoute', 'PatientClinicalSelect']]) {
   const matches = apiValue.properties.filter(item => item.key.name === key);
   if (matches.length !== 1 || matches[0].value.name !== value) throw new Error('Unexpected public clinical boundary: ' + key);
   apiValue.properties = apiValue.properties.filter(item => item.key.name !== key);

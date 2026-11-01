@@ -62,6 +62,12 @@ async function wpiszIZapisz(page, dane = PIERWSZY) {
   }, { message: 'rzeczywisty zapis nowego fikcyjnego pacjenta w sejfie' }).toBeTruthy();
   await expect.poll(() => page.evaluate(() => window.sessionStorage.getItem('vildaCurrentPatientId')))
     .toBe(id);
+  // Persisted rows precede save completion and the status publication. Clear
+  // deliberately rejects a click until the current form has a ready decision.
+  await expect.poll(() => page.evaluate(() => {
+    const decision = window.VildaSaveStatusIndicator.getCurrentDecision();
+    return { ready: decision.ready, state: decision.state };
+  })).toEqual({ ready: true, state: 'saved' });
   return id;
 }
 
@@ -135,8 +141,16 @@ test('zmiana pacjenta: po wyczyszczeniu i zapisie drugiego chip otwiera drugiego
   await otworzKonto(page);
   const pierwszyId = await wpiszIZapisz(page);
   await page.locator('#clearAllDataBtn').click();
-  await expect.poll(() => page.evaluate(() => window.VildaPersistence.isClearInProgress())).toBe(false);
   await expect(page.locator('#lastName')).toHaveValue('');
+  // Autosave quarantine may outlive the synchronous clear. Inspect the form
+  // and its patient ownership rather than treating that timer as completion.
+  await expect.poll(() => page.evaluate(() => {
+    const decision = window.VildaSaveStatusIndicator.getCurrentDecision();
+    return { patientId: window.sessionStorage.getItem('vildaCurrentPatientId'),
+      panelOwner: window.VildaPanelPacjent.wlasciciel(),
+      restoring: window.VildaDataImportExport.isMainSessionRestorePending(),
+      ready: decision.ready, state: decision.state };
+  })).toEqual({ patientId: null, panelOwner: null, restoring: false, ready: true, state: 'hidden' });
   const drugiId = await wpiszIZapisz(page, DRUGI);
   expect(drugiId).not.toBe(pierwszyId);
   await otworzPrzezChip(page);

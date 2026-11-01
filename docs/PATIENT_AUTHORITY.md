@@ -49,6 +49,12 @@ Etap 6c przygotowuje [samodzielnie odszyfrowywalny lokalny punkt przywracania](P
 przed przyszłą migracją. Nie zamienia kandydata SIS w potwierdzoną tożsamość i nadal
 nie włącza żadnego wyłącznika zapisu planów V2.
 
+Etap 6d dodaje [jawny odczyt zachowanego powiązania i weryfikację odzyskanej
+tożsamości](PATIENT_IDENTITY_RECOVERY.md). Wymaga niezależnie zachowanego oczekiwania;
+nie zakłada zakotwiczenia bieżących kont, nie tworzy powiązań i nadal pozostawia
+odczyt oraz zapis klinicznego V2 wyłączone. Zapamiętane progi liczników istnieją
+wyłącznie w RAM bieżącego konta i sesji.
+
 Dopiero po tych warunkach zastosowanie szablonu utworzy własne identyfikatory pacjenta i niezmienny zapis wybranej wersji. Wymagane będą wybrane kroki, brak pustych etapów, jawne uruchomienie i ręczny przegląd. Dopisane etapy pozostaną zaplanowane; wynik nie uruchomi automatycznie kolejnego etapu ani nie zamknie planu.
 
 ## Odtwarzalna kontrola zmian artefaktów

@@ -42,11 +42,35 @@ function deferred() {
   const promise = new Promise(done => { resolve = done; });
   return { promise, resolve };
 }
+// Only platform promises are gated. Production vault, protocol, transport and
+// cryptographic functions remain intact throughout recovery integration tests.
+function recoveryPlatform() {
+  const platform = { enabled: false, events: [], pause: null };
+  platform.boundary = function (label, operation) {
+    if (!platform.enabled) return operation();
+    const index = platform.events.push(label) - 1, pause = platform.pause;
+    return Promise.resolve(operation()).then(async value => {
+      if (pause && pause.index === index) {
+        pause.entered.resolve(); await pause.release.promise;
+        if (pause.reject) throw new Error('Fictional private platform rejection must not escape');
+      }
+      return value;
+    });
+  };
+  platform.crypto = { getRandomValues: crypto.getRandomValues.bind(crypto), subtle: new Proxy(crypto.subtle, {
+    get(target, name) {
+      const value = Reflect.get(target, name, target);
+      return typeof value === 'function' ? (...args) => platform.boundary('crypto:' + String(name), () => value.apply(target, args)) : value;
+    },
+  }) };
+  return platform;
+}
 function browser() {
   const timers = new Map(), preferenceWriters = [];
+  const platform = recoveryPlatform();
   let timer = 0;
   const win = {
-    ...events(), crypto, TextEncoder, TextDecoder, btoa, atob,
+    ...events(), crypto: platform.crypto, TextEncoder, TextDecoder, btoa, atob, AbortController,
     localStorage: storage(), sessionStorage: storage(),
     setTimeout: vi.fn((callback, delay) => { timers.set(++timer, { callback, delay }); return timer; }),
     clearTimeout: vi.fn(id => timers.delete(id)),
@@ -64,11 +88,13 @@ function browser() {
     navigator: { sendBeacon: vi.fn() },
   };
   win.window = win; win.self = win; win.top = win;
-  for (const file of ['vilda_crypto.js', 'vilda_care_plan_model.js', 'vilda_vault_protocol.js', 'vilda_vault.js']) {
+  for (const file of ['vilda_crypto.js', 'vilda_care_plan_model.js', 'vilda_vault_protocol.js', 'vilda_clinical_crypto.js',
+    'vilda_patient_identity_protocol.js', 'vilda_patient_identity_transport.js', 'vilda_vault.js']) {
     loadBrowserScript(file, win);
   }
   // Exercise the production registration path: Ps is private, not a public API.
   win.fictionalPreferenceWriters = preferenceWriters;
+  win.fictionalRecoveryPlatform = platform;
   devices.push(win.VildaVault);
   return win;
 }
@@ -134,6 +160,53 @@ async function rewriteEnvelope(d, envelope, change) {
   change(plain);
   return d.win.VildaCrypto.buildEnvelope({ ...parsed, salt: parsed.kdf.salt,
     iterations: parsed.kdf.iterations, payload: await d.win.VildaCrypto.encryptJson(key, plain) });
+}
+
+function recoveryResponse(platform, label, status, value, url) {
+  const bytes = new TextEncoder().encode(JSON.stringify(value));
+  let sent = false;
+  return { status, url, redirected: false, headers: { get: name => name.toLowerCase() === 'content-length' ? String(bytes.length) : null },
+    body: { getReader: () => ({
+      read: () => platform.boundary('stream:' + label, () => Promise.resolve(sent ? { done: true } : (sent = true, { done: false, value: bytes }))),
+      cancel: vi.fn(() => Promise.resolve()), releaseLock: vi.fn(),
+    }) } };
+}
+async function anchored(d) {
+  const c = d.win.VildaClinicalCrypto, legacyCrypto = d.win.VildaCrypto, platform = d.win.fictionalRecoveryPlatform;
+  const meta = await d.adapter.getUserMeta(d.userId);
+  const passwordKey = await legacyCrypto.deriveKey(d.password, meta.passwordSalt, meta.passwordKdfIterations);
+  const dek = new Uint8Array(await legacyCrypto.decryptBytes(passwordKey, meta.encryptedMasterByPassword.iv, meta.encryptedMasterByPassword.data));
+  const bundle = { dek, sis: new Uint8Array(32).fill(157) };
+  const material = await c.deriveRecoveryLocator(dek);
+  const identity = await c.deriveRecoveryIdentity(bundle);
+  const context = { namespace: 'patient-clinical-vault', protocol: 1, locatorId: material.locatorId,
+    slotId: identity.slotId, authorityId: 'fictional-retained-authority', keyBinding: identity.keyBinding, epoch: 4, generation: 2 };
+  const envelope = await c.sealIdentityCapsule(material, context, bundle);
+  const digest = await c.digestIdentityCapsule(envelope);
+  const expected = { namespace: 'patient-clinical-identity-locator', protocol: 1, locatorId: material.locatorId,
+    revision: 3, generation: 2, slotId: identity.slotId, authorityId: context.authorityId, keyBinding: identity.keyBinding,
+    epoch: 4, capsuleDigest: digest.ciphertextDigest, formatFloor: 2, headSeq: 90, floorSeq: 40 };
+  const fixture = { expected, identity, readCapability: material.readCapability, locatorStatus: 200, authorityStatus: 200,
+    locator: { ok: true, namespace: expected.namespace, protocol: 1, locatorId: expected.locatorId, state: 'active', revision: 3, generation: 2,
+      slotId: expected.slotId, authorityId: expected.authorityId, keyBinding: expected.keyBinding, epoch: 4,
+      capsule: { ...digest, envelope } },
+    authority: { ok: true, namespace: 'patient-clinical-vault', protocol: 1, slotId: expected.slotId, authorityId: expected.authorityId,
+      keyBinding: expected.keyBinding, initialized: true, epoch: 4, formatFloor: 2, headSeq: 100, floorSeq: 50,
+      manifest: { id: 'fictional-head', sequence: 100, format: 'vilda-clinical-vault/v2', ciphertextDigest: 'c'.repeat(64), bytes: 512 } },
+  };
+  d.win.fetch.mockImplementation((url, request) => {
+    const label = url.includes('/recovery-locators/') ? 'locator' : 'authority';
+    return platform.boundary('fetch:' + label, () => Promise.resolve(recoveryResponse(platform, label,
+      fixture[label + 'Status'], fixture[label], url)));
+  });
+  c.destroyRecoveryLocator(material); dek.fill(0); bundle.sis.fill(0);
+  return fixture;
+}
+const verifiedRecovery = { ok: true, kind: 'recovery-verified', code: 'IDENTITY_RECOVERY_VERIFIED_WRITER_OFF',
+  recoveryVerified: true, receipt: null, authorityVerified: false, readAvailable: false, writeAvailable: false, preserveLocal: true };
+const recoveryRoute = code => ({ mode: 'protected-unavailable', code, writeAvailable: false });
+function setAuthorityHead(fixture, head, floor = 50) {
+  fixture.authority.headSeq = head; fixture.authority.floorSeq = floor; fixture.authority.manifest.sequence = head;
 }
 
 afterEach(() => {
@@ -270,6 +343,187 @@ describe('private patient authority selection', () => {
     expect(d.vault.selectPatientClinicalRoute()).toEqual(stale);
     await d.vault.setStorageMode(d.userId, d.vault.STORAGE_MODE_LOCAL);
     expect(d.vault.selectPatientClinicalRoute()).toEqual(stale);
+  });
+});
+
+describe('explicit retained identity recovery stays inactive', () => {
+  it('retains default bootstrap behavior and rejects missing, forged and getter expectations before any platform I/O', async () => {
+    const d = await device(), fixture = await anchored(d), platform = d.win.fictionalRecoveryPlatform;
+    expect(d.vault.selectPatientClinicalRoute()).toEqual(legacy);
+    platform.enabled = true; d.win.fetch.mockClear();
+    expect(await d.vault.inspectPatientAuthority()).toMatchObject({ code: 'IDENTITY_BOOTSTRAP_UNVERIFIED' });
+    const getter = vi.fn(() => { throw new Error('Fictional expectation getter must remain inert'); });
+    const wrappedGetter = {}; Object.defineProperty(wrappedGetter, 'expected', { enumerable: true, get: getter });
+    const invalid = [undefined, {}, { expected: null }, wrappedGetter, { expected: fixture.expected, writeAvailable: true },
+      { expected: { ...fixture.expected, authorityId: 'local-checkpoint:fictional-checkpoint' } }];
+    for (const options of invalid) {
+      await expect(d.vault.inspectPatientAuthorityRecovery(options)).resolves.toMatchObject({ ok: false, code: 'IDENTITY_ANCHOR_INVALID', writeAvailable: false });
+      expect(d.vault.selectPatientClinicalRoute()).toEqual(recoveryRoute('IDENTITY_ANCHOR_INVALID'));
+    }
+    expect(getter).not.toHaveBeenCalled(); expect(platform.events).toEqual([]); expect(d.win.fetch).not.toHaveBeenCalled();
+  });
+
+  it('verifies an independently anchored DEK-only device without installing credentials or releasing any legacy writer', async () => {
+    const d = await device(), fixture = await anchored(d), backup = await d.vault.exportVaultBackup();
+    const legacyMaterial = await d.vault.getSyncMaterial(), before = await d.capture();
+    expect(legacyMaterial.slotId).not.toBe(fixture.expected.slotId);
+    const storageBefore = [d.win.localStorage.snapshot(), d.win.sessionStorage.snapshot()];
+    const io = observeIO(d);
+    const pending = d.vault.inspectPatientAuthorityRecovery({ expected: fixture.expected });
+    expect(d.vault.selectPatientClinicalRoute()).toEqual(denied);
+    const report = await pending;
+    expect(report).toEqual(verifiedRecovery); expect(Object.isFrozen(report)).toBe(true);
+    expect(d.vault.selectPatientClinicalRoute()).toEqual(recoveryRoute(report.code));
+    expect(d.win.fetch.mock.calls.map(([url]) => new URL(url).pathname)).toEqual([
+      '/v1/patient-clinical-vault/recovery-locators/' + fixture.expected.locatorId + '/state',
+      '/v1/slots/' + fixture.expected.slotId + '/patient-clinical-vault/state',
+    ]);
+    const [locatorRequest, authorityRequest] = d.win.fetch.mock.calls.map(([, request]) => request);
+    expect(locatorRequest.headers.Authorization).toBe('Bearer ' + fixture.readCapability);
+    expect(authorityRequest.headers.Authorization).toBe('Bearer ' + fixture.identity.authToken);
+    expect(authorityRequest.headers['X-Vilda-Clinical-Key-Binding']).toBe(fixture.expected.keyBinding);
+    const publicText = JSON.stringify(report);
+    for (const secret of [fixture.readCapability, fixture.identity.authToken, fixture.expected.slotId, fixture.expected.capsuleDigest]) expect(publicText).not.toContain(secret);
+    expect(await d.vault.getSyncMaterial()).toEqual(legacyMaterial);
+    expect([d.win.localStorage.snapshot(), d.win.sessionStorage.snapshot()]).toEqual(storageBefore);
+    const actions = [
+      () => d.vault.savePatient(clone(d.payload), { patientId: d.patientId }), () => d.vault.removePatient(d.patientId),
+      () => d.vault.setSnapshotPinned(d.patientId, d.snapshotId, true), () => d.vault.updateSnapshotPayload(d.patientId, d.snapshotId, clone(d.payload)),
+      () => d.vault.savePatientNote({ id: d.note.id, patientId: d.patientId, title: 'Fikcyjna zmiana' }), () => d.vault.removePatientNote(d.note.id),
+      () => d.vault.mutateCarePlan({ patientId: d.patientId, action: 'create', operationId: 'fictional-recovery-blocked', title: 'Fikcyjny plan' }),
+      () => d.vault.saveNote({ id: d.libraryNote.id, title: 'Fikcyjna zmiana' }), () => d.vault.removeNote(d.libraryNote.id),
+      () => d.vault.savePatientList({ id: d.list.id, name: 'Fikcyjna zmiana' }), () => d.vault.deletePatientList(d.list.id),
+      () => d.vault.setWaitlistSchedule('Fikcyjna procedura', { dateISO: '2027-02-02' }),
+      () => d.vault.addWaitlistList('Fikcyjna procedura'), () => d.vault.removeWaitlistList('Fikcyjna procedura'),
+      () => d.vault.mergeSyncPayload({ patients: [], patientNotes: [] }), () => d.vault.exportSyncPayload(),
+      () => d.vault.importLegacyJsonPatient(clone(d.payload)), () => d.vault.mergeVaultBackup(backup, d.password),
+      () => d.vault.restoreVaultBackup(backup, d.password), () => d.vault.removeUser(d.userId, d.password),
+    ];
+    for (const action of actions) await expect(action()).rejects.toMatchObject({ code: 'PATIENT_AUTHORITY_UNAVAILABLE', authorityCode: report.code });
+    for (const get of [d.vault.getCarePlanWriteCapability, d.win.VildaCarePlanModel.getWriteCapability]) expect(get(report)).toMatchObject({ available: false, code: 'CARE_V2_WRITER_DISABLED' });
+    expect(io.mutations()).toEqual([]); expect(await d.capture()).toBe(before);
+    expect([d.savedEvents, d.deletedEvents, d.noteEvents, d.listEvents]).toEqual([[], [], [], []]);
+  });
+
+  for (const [status, code, publicCode] of [[404, 'locator_missing', 'IDENTITY_LOCATOR_MISSING'], [409, 'locator_pending', 'IDENTITY_LOCATOR_PENDING'],
+    [410, 'locator_revoked', 'IDENTITY_LOCATOR_REVOKED'], [503, 'locator_corrupt', 'IDENTITY_LOCATOR_CORRUPT']]) {
+    it('keeps typed ' + code + ' protected and never requests a guessed canonical authority', async () => {
+      const d = await device(), fixture = await anchored(d), before = await d.capture();
+      fixture.locatorStatus = status; fixture.locator = { ok: false, namespace: fixture.expected.namespace, protocol: 1, error: { code } };
+      expect(await d.vault.inspectPatientAuthorityRecovery({ expected: fixture.expected })).toMatchObject({ ok: false, code: publicCode });
+      expect(d.win.fetch).toHaveBeenCalledTimes(1); expect(d.vault.selectPatientClinicalRoute()).toEqual(recoveryRoute(publicCode));
+      await expect(d.vault.saveNote({ title: 'Fikcyjna blokowana zmiana' })).rejects.toMatchObject({ code: 'PATIENT_AUTHORITY_UNAVAILABLE' });
+      expect(await d.capture()).toBe(before);
+    });
+  }
+
+  it('rejects alternate authority, empty authority and damaged capsules while preserving the DEK-only session', async () => {
+    const changes = [
+      fixture => { fixture.authority.authorityId = 'fictional-alternate-authority'; },
+      fixture => { fixture.authority.headSeq = fixture.authority.floorSeq = 0; fixture.authority.manifest = null; },
+      fixture => { fixture.authority.initialized = false; fixture.authority.authorityId = null; fixture.authority.epoch = fixture.authority.formatFloor = fixture.authority.headSeq = fixture.authority.floorSeq = 0; fixture.authority.manifest = null; },
+      fixture => { fixture.locator.capsule.envelope = { ...fixture.locator.capsule.envelope, data: 'A'.repeat(106) + 'A=' }; },
+    ];
+    for (const change of changes) {
+      const d = await device(), fixture = await anchored(d), before = await d.capture();
+      const legacyMaterial = await d.vault.getSyncMaterial(); change(fixture);
+      const report = await d.vault.inspectPatientAuthorityRecovery({ expected: fixture.expected });
+      expect(report.ok).toBe(false); expect(report).toMatchObject({ authorityVerified: false, readAvailable: false, writeAvailable: false, preserveLocal: true });
+      expect(d.vault.selectPatientClinicalRoute().mode).toBe('protected-unavailable');
+      expect(await d.vault.getSyncMaterial()).toEqual(legacyMaterial); expect(await d.capture()).toBe(before);
+    }
+  });
+
+  it('keeps independently pinned authority identity and verified sequence highwater across failed and ordinary inspections', async () => {
+    const d = await device(), fixture = await anchored(d);
+    const inspect = expected => d.vault.inspectPatientAuthorityRecovery({ expected: expected || fixture.expected });
+    expect(await inspect()).toEqual(verifiedRecovery);
+    await d.vault.inspectPatientAuthority();
+    setAuthorityHead(fixture, 95, 45);
+    expect(await inspect()).toMatchObject({ ok: false, code: 'CLINICAL_AUTHORITY_STALE' });
+    fixture.locatorStatus = 503;
+    expect((await inspect()).ok).toBe(false);
+    fixture.locatorStatus = 200;
+    expect(await inspect()).toMatchObject({ code: 'CLINICAL_AUTHORITY_STALE' });
+    const previousCalls = d.win.fetch.mock.calls.length;
+    for (const field of ['revision', 'generation', 'epoch']) {
+      expect(await inspect({ ...fixture.expected, [field]: fixture.expected[field] + 1 })).toMatchObject({ ok: false, code: 'IDENTITY_ANCHOR_MISMATCH' });
+      expect(await inspect({ ...fixture.expected, [field]: fixture.expected[field] - 1 })).toMatchObject({ ok: false, code: 'IDENTITY_ANCHOR_MISMATCH' });
+    }
+    expect(d.win.fetch.mock.calls.length).toBe(previousCalls);
+    setAuthorityHead(fixture, 110, 60); expect(await inspect()).toEqual(verifiedRecovery);
+    setAuthorityHead(fixture, 105, 55); expect(await inspect()).toMatchObject({ code: 'CLINICAL_AUTHORITY_STALE' });
+    d.vault.lock('fictional-new-session'); await d.vault.unlockUser(d.userId, d.password);
+    expect(d.vault.selectPatientClinicalRoute()).toEqual(stale);
+    expect(await inspect()).toEqual(verifiedRecovery); // Pins have session lifetime; the supplied expectation remains mandatory.
+  });
+
+  it('fences fulfilled and rejected settlement at every actual recovery platform boundary', async () => {
+    const d = await device(), fixture = await anchored(d), platform = d.win.fictionalRecoveryPlatform;
+    platform.enabled = true;
+    expect(await d.vault.inspectPatientAuthorityRecovery({ expected: fixture.expected })).toEqual(verifiedRecovery);
+    const boundaries = [...platform.events]; platform.enabled = false;
+    expect(boundaries).toContain('fetch:locator'); expect(boundaries).toContain('fetch:authority');
+    expect(boundaries).toContain('crypto:decrypt'); expect(boundaries).toContain('stream:authority');
+    for (const reject of [false, true]) for (let index = 0; index < boundaries.length; index++) {
+      const entered = deferred(), release = deferred();
+      platform.events = []; platform.pause = { index, entered, release, reject }; platform.enabled = true;
+      const pending = d.vault.inspectPatientAuthorityRecovery({ expected: fixture.expected });
+      await entered.promise;
+      expect(platform.events[index]).toBe(boundaries[index]);
+      d.vault.lock('fictional-cancel-boundary-' + index); release.resolve();
+      const report = await pending;
+      expect(report).toMatchObject({ ok: false, code: 'CLINICAL_AUTHORITY_STALE', readAvailable: false, writeAvailable: false });
+      expect(JSON.stringify(report)).not.toContain('private platform rejection');
+      expect(platform.events.length).toBe(index + 1);
+      platform.enabled = false; platform.pause = null;
+      await d.vault.unlockUser(d.userId, d.password);
+      expect(d.vault.selectPatientClinicalRoute()).toEqual(stale);
+    }
+  }, 60000);
+
+  it('keeps newer success or denial when older recovery calls complete in reverse order, including ordinary inspection overlap', async () => {
+    const d = await device(), fixture = await anchored(d), platform = d.win.fictionalRecoveryPlatform;
+    platform.enabled = true;
+    expect(await d.vault.inspectPatientAuthorityRecovery({ expected: fixture.expected })).toEqual(verifiedRecovery);
+    const index = platform.events.indexOf('fetch:authority');
+    for (const newer of ['recovery', 'invalid', 'ordinary']) {
+      const entered = deferred(), release = deferred();
+      platform.events = []; platform.pause = { index, entered, release };
+      const older = d.vault.inspectPatientAuthorityRecovery({ expected: fixture.expected }); await entered.promise;
+      platform.pause = null;
+      const newest = newer === 'recovery' ? await d.vault.inspectPatientAuthorityRecovery({ expected: fixture.expected })
+        : newer === 'invalid' ? await d.vault.inspectPatientAuthorityRecovery({ expected: null }) : await d.vault.inspectPatientAuthority();
+      release.resolve();
+      expect(await older).toMatchObject({ code: 'CLINICAL_AUTHORITY_STALE' });
+      expect(d.vault.selectPatientClinicalRoute()).toEqual(recoveryRoute(newest.code));
+    }
+    platform.enabled = false;
+    const ordinary = d.vault.inspectPatientAuthority();
+    const newest = d.vault.inspectPatientAuthorityRecovery({ expected: fixture.expected });
+    expect(await ordinary).toMatchObject({ code: 'CLINICAL_AUTHORITY_STALE' });
+    expect(await newest).toEqual(verifiedRecovery);
+    expect(d.vault.selectPatientClinicalRoute()).toEqual(recoveryRoute(verifiedRecovery.code));
+  });
+
+  it('does not accept adapter or mode changes restored before a held recovery settles', async () => {
+    const d = await device(), fixture = await anchored(d), platform = d.win.fictionalRecoveryPlatform;
+    platform.enabled = true;
+    expect(await d.vault.inspectPatientAuthorityRecovery({ expected: fixture.expected })).toEqual(verifiedRecovery);
+    const index = platform.events.indexOf('fetch:locator');
+    for (const change of ['adapter', 'mode']) {
+      const entered = deferred(), release = deferred(); platform.events = []; platform.pause = { index, entered, release };
+      const pending = d.vault.inspectPatientAuthorityRecovery({ expected: fixture.expected }); await entered.promise;
+      if (change === 'adapter') {
+        d.vault.setStorageAdapter(d.vault.createInMemoryAdapter()); d.vault.setStorageAdapter(d.adapter);
+      } else {
+        await d.vault.setStorageMode(d.userId, d.vault.STORAGE_MODE_CLOUD_ONLY);
+        await d.vault.setStorageMode(d.userId, d.vault.STORAGE_MODE_LOCAL);
+      }
+      release.resolve(); expect(await pending).toMatchObject({ code: 'CLINICAL_AUTHORITY_STALE' });
+      expect(d.vault.selectPatientClinicalRoute()).toEqual(stale);
+      platform.pause = null;
+    }
   });
 });
 

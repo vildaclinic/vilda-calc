@@ -5,6 +5,7 @@ import { loadBrowserScript } from '../support/load-browser-script.mjs';
 const DEPENDENCIES = [
   'VildaVaultProtocol',
   'VildaClinicalCrypto', 'VildaPatientCheckpointStore', 'VildaPatientCheckpoint',
+  'VildaPatientIdentityProtocol', 'VildaPatientIdentityTransport',
   'VildaCrypto', 'VildaCarePlanModel', 'VildaLabSnapshot', 'VildaLabTestosteroneUnits', 'VildaLabAssessmentUI',
   'VildaHormoneReferenceSnapshot', 'VildaLabRangeSnapshot', 'VildaHormoneReferenceUI',
   'VildaLabHistory', 'VildaLabHistoryTab', 'VildaPubertyAssessment', 'VildaProAccess',

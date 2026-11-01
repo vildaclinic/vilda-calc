@@ -19,7 +19,7 @@
  *   bo i tak chcemy zwracać HTML z cache natychmiast.
  */
 
-const SW_VERSION = '1.1.430';
+const SW_VERSION = '1.1.431';
 const CACHE_PREFIX = 'pwa-kalorii';
 const SHELL_CACHE = `${CACHE_PREFIX}-shell-v${SW_VERSION}`;
 const RUNTIME_CACHE = `${CACHE_PREFIX}-runtime`;
@@ -99,9 +99,12 @@ const CORE_SHELL_URLS = [
   ROOT_DOCUMENT,
   '/manifest.json',
   '/vilda_clinical_crypto.js?v=1',
+  '/vilda_clinical_crypto.js?v=2',
   '/vilda_patient_checkpoint_store.js?v=1',
   '/vilda_patient_checkpoint.js?v=1',
   '/vilda_vault_protocol.js?v=1',
+  '/vilda_patient_identity_protocol.js?v=1',
+  '/vilda_patient_identity_transport.js?v=1',
   // Wyłącznik awaryjny trwałego cache (kill-switch) — musi być dostępny także offline,
   // by na każdym wejściu zgasić „Opcję A” i posprzątać bazę vilda-cloud-cache.
   '/vilda_cloud_cache_warm.js?v=2',
@@ -1557,6 +1560,7 @@ const CORE_SHELL_URLS = [
   '/vilda_chrome.js?v=208',
   '/vilda_chrome.js?v=209',
   '/vilda_chrome.js?v=210',
+  '/vilda_chrome.js?v=211',
   '/vilda_realtime.js?v=1',
   '/vilda_realtime.js?v=2',
   '/vilda_realtime.js?v=3',
@@ -3644,6 +3648,7 @@ const OPTIONAL_ASSETS = [
   '/vilda_vault.js?v=241',
   '/vilda_vault.js?v=242',
   '/vilda_vault.js?v=243',
+  '/vilda_vault.js?v=244',
   '/vilda_auth_ui.js?v=431',
   '/vilda_trajectory_analysis.js?v=24',
   '/vilda_trajectory_analysis.js?v=25',
@@ -4118,6 +4123,7 @@ const OPTIONAL_ASSETS = [
   '/vilda_session_bridge.js?v=132',
   '/vilda_session_bridge.js?v=133',
   '/vilda_session_bridge.js?v=134',
+  '/vilda_session_bridge.js?v=135',
   '/vilda_data_safety_explainer.js?v=5',
   '/vilda_obesity_banner.css?v=6',
   '/vilda_obesity_banner.css?v=7',
@@ -4790,7 +4796,10 @@ const FRESH_STATIC_ALIAS_PATHS = new Set([
   '/vilda_app_helpers.js', '/vilda_frame_sync.js',
   // The three checkpoint modules fit the existing installation request budget
   // by sharing fresh current aliases of these unchanged static dependencies.
-  '/vilda_crypto.js', '/vilda_persistence_adapter.js', '/vilda_crypto_strength_explainer.js'
+  '/vilda_crypto.js', '/vilda_persistence_adapter.js', '/vilda_crypto_strength_explainer.js',
+  // Recovery keeps the same cold-install budget by sharing only fresh bytes
+  // between the two current aliases of these unchanged bootstrap scripts.
+  '/vilda_deps.js', '/vilda_update_hooks.js'
 ]);
 
 async function fetchAndStorePrecacheUrl(url, { required = false, previousShellCaches = [], freshResponses = null } = {}) {

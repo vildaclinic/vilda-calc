@@ -10,6 +10,10 @@ const MODULES = [
 const PAGES = ['app.html', 'index.html', 'docpro.html', 'kalkulator-klirens.html',
   'notatki.html', 'terminarz.html', 'ustawienia.html', 'subskrypcja.html'];
 const read = file => readFileSync(new URL('../../' + file, import.meta.url), 'utf8');
+// Asset revisions follow the shared fixture: 6d advances clinical crypto while
+// the checkpoint protocol and the other checkpoint modules remain unchanged.
+const resourceVersions = JSON.parse(read('tests/fixtures/wersje-zasobow.json'));
+const moduleUrl = dependency => dependency.file + '?v=' + resourceVersions[dependency.file].v;
 
 // Read production files inside the test, including modules that another owner
 // may still be generating when this suite is first discovered.
@@ -127,14 +131,14 @@ function ensureFrom(loader, sources, env) {
 }
 
 describe('inactive patient checkpoint dependencies', () => {
-  it('loads each new v1 module once, in dependency order before vault on all eight pages', () => {
+  it('loads each checkpoint module once, in dependency order before vault on all eight pages', () => {
     for (const file of PAGES) {
       const tags = [...read(file).matchAll(/<script\b[^>]*\bsrc=["']([^"']+)["'][^>]*>/gi)];
       const vault = tags.findIndex(match => /^vilda_vault\.js\?v=\d+$/.test(match[1]));
       expect(vault, file).toBeGreaterThan(-1);
       let preceding = -1;
       for (const dependency of MODULES) {
-        const matches = tags.filter(match => match[1] === dependency.file + '?v=1');
+        const matches = tags.filter(match => match[1] === moduleUrl(dependency));
         expect(matches, file + ': ' + dependency.file).toHaveLength(1);
         expect(matches[0][0], file + ': deferred ' + dependency.file).toMatch(/\bdefer\b/i);
         const index = tags.indexOf(matches[0]);
@@ -144,7 +148,7 @@ describe('inactive patient checkpoint dependencies', () => {
       }
     }
     const serviceWorker = read('service-worker-kalorii.js');
-    for (const dependency of MODULES) expect(serviceWorker).toContain("'/" + dependency.file + "?v=1'");
+    for (const dependency of MODULES) expect(serviceWorker).toContain("'/" + moduleUrl(dependency) + "'");
   });
 
   it.each(['chrome', 'session'])('%s declares each new module before the same vault dependency', loader => {
@@ -156,7 +160,7 @@ describe('inactive patient checkpoint dependencies', () => {
     expect(vault).toBeGreaterThan(-1);
     let preceding = -1;
     for (const dependency of MODULES) {
-      const url = dependency.file + '?v=1';
+      const url = moduleUrl(dependency);
       expect(urls.filter(value => value === url)).toHaveLength(1);
       expect(urls.indexOf(url)).toBeGreaterThan(preceding);
       expect(urls.indexOf(url)).toBeLessThan(vault);
