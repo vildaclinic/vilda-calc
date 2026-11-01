@@ -157,7 +157,8 @@ test.describe('A3 — karta „Normy żywieniowe” liczy energię jak plan', ()
     test.setTimeout(120_000);
     await otworz(page);
     await wpisz(page, { sex: 'M', age: 40, weight: 80, height: 180 });
-    await page.evaluate(() => { const el = document.getElementById('palFactor'); el.value = '1.2'; el.dispatchEvent(new Event('change', { bubbles: true })); window.update(); });
+    // Jawna konfiguracja planu do porównania obliczeń, nie zdarzenie użytkownika.
+    await page.evaluate(() => { window.__vildaPlanPalTouched = true; document.getElementById('palFactor').value = '1.2'; window.update(); });
     await page.waitForTimeout(800);
     const k = await karta(page);
     expect(k.energia.pal).toBe(1.2);
@@ -212,7 +213,8 @@ test.describe('A5/A8 — dorosły bez miejsca na deficyt; tytuł PDF przy przyro
     test.setTimeout(120_000);
     await otworz(page);
     await wpisz(page, { sex: 'F', age: 70, weight: 64, height: 145 });
-    await page.evaluate(() => { const el = document.getElementById('palFactor'); el.value = '1.2'; el.dispatchEvent(new Event('change', { bubbles: true })); window.update(); });
+    // Jawna konfiguracja planu do obliczenia minimum energii, nie zdarzenie użytkownika.
+    await page.evaluate(() => { window.__vildaPlanPalTouched = true; document.getElementById('palFactor').value = '1.2'; window.update(); });
     await page.waitForTimeout(800);
     const r = await stan(page);
     expect(r.dane.energia.dietaKlucz).toBeFalsy();

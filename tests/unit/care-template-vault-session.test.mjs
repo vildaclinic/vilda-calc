@@ -8,7 +8,8 @@ async function device() {
   const win = { crypto, TextEncoder, TextDecoder, btoa, atob, localStorage: storage(), sessionStorage: storage(), setTimeout, clearTimeout,
     addEventListener() {}, removeEventListener() {}, document: { hidden: false, addEventListener() {}, removeEventListener() {} } };
   win.window = win; win.self = win; win.top = win;
-  for (const file of ['vilda_crypto.js', 'vilda_care_template_model.js', 'vilda_care_template_store.js', 'vilda_vault.js']) loadBrowserScript(file, win);
+  for (const file of ['vilda_crypto.js', 'vilda_clinical_crypto.js', 'vilda_patient_checkpoint_store.js',
+    'vilda_patient_checkpoint.js', 'vilda_care_template_model.js', 'vilda_care_template_store.js', 'vilda_vault.js']) loadBrowserScript(file, win);
   const vault = win.VildaVault; vault.setEphemeralMode(true); const adapter = vault.createInMemoryAdapter(); vault.setStorageAdapter(adapter);
   const password = 'Fictional#TemplateSession!' + ++serial;
   await vault.createUser(password, { iterations: 1000, label: 'Fikcyjny sejf biblioteki', deferServerContact: true }); devices.push(vault);
@@ -67,7 +68,16 @@ describe('actual template vault session and key lifecycle fences', () => {
   });
   it('retains an account key when an existing protected database has a newer unknown schema', async () => {
     const d = await device(), token = await d.vault.captureCareTemplateSession(), before = clone(await d.adapter.getUserMeta(d.userId)); let closed = 0, scans = 0;
-    d.win.indexedDB = { async databases() { return [{ name: 'vilda_template_library_v1_' + token.keyBinding, version: 2 }]; }, open() {
+    d.win.indexedDB = { async databases() { return [{ name: 'vilda_template_library_v1_' + token.keyBinding, version: 2 }]; }, open(name) {
+      if (name === 'clinical-authority-checkpoints-v1') {
+        // The separate checkpoint domain is absent in this library-only test.
+        // Its real reader aborts creation before reaching the retained library.
+        const request = { error: { name: 'AbortError' }, transaction: {
+          abort() { queueMicrotask(() => request.onerror()); }
+        } };
+        queueMicrotask(() => request.onupgradeneeded({ oldVersion: 0 }));
+        return request;
+      }
       const request = { result: { version: 2, objectStoreNames: { contains() { return true; } }, close() { closed++; }, transaction() { scans++; const tx = { objectStore(name) { return name === 'meta' ? { get() { return { result: { ownerUserIds: [d.userId] } }; } } : { count() { return { result: 0 }; } }; } }; queueMicrotask(() => tx.oncomplete()); return tx; } } };
       queueMicrotask(() => request.onsuccess()); return request;
     } };

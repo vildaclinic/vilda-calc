@@ -12,6 +12,7 @@ const chromeLoader = chrome.slice(chromeStart, chromeEnd);
 function environment(missing = [], restoredSession = false) {
   const events = new Map(), appended = [];
   const win = { VildaCrypto: {}, VildaLabSnapshot: {}, VildaLabAssessmentUI: {}, VildaVaultProtocol: {}, VildaVault: {},
+    VildaClinicalCrypto: {}, VildaPatientCheckpointStore: {}, VildaPatientCheckpoint: {},
     VildaAuthUI: {}, VildaProAccess: {}, VildaHormoneReferenceSnapshot: {}, VildaHormoneReferenceUI: {},
     // Decyzja 6.3: zakres zapisany z wynikiem — moduł transportu obok odniesienia AMH.
     VildaLabRangeSnapshot: {},

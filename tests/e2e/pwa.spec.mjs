@@ -52,10 +52,41 @@ test('produkcyjna logika service workera uruchamia stronę główną offline', a
   await expect.poll(() => page.evaluate(() => Boolean(
     window.VildaVaultProtocol
     && typeof window.VildaVaultProtocol.validateStateReceipt === 'function'
+    && window.VildaClinicalCrypto
+    && typeof window.VildaClinicalCrypto.wrapBundle === 'function'
+    && window.VildaPatientCheckpointStore
+    && typeof window.VildaPatientCheckpointStore.createIndexedDBStore === 'function'
+    && window.VildaPatientCheckpoint
+    && typeof window.VildaPatientCheckpoint.decodeSnapshot === 'function'
     && window.VildaVault
     && typeof window.VildaVault.selectPatientClinicalRoute === 'function'
+    && typeof window.VildaVault.createPatientClinicalCheckpoint === 'function'
   ))).toBe(true);
   expect(await page.evaluate(() => window.VildaVault.selectPatientClinicalRoute().mode)).toBe('legacy');
+  const checkpoint = await page.evaluate(async () => {
+    const database = 'clinical-authority-checkpoints-v1';
+    const createdOnBoot = (await indexedDB.databases()).some(entry => entry.name === database);
+    const vault = window.VildaVault;
+    await vault.createUser('Fikcyjne#KontoOffline2026!', {
+      iterations: 100000, label: 'Fikcyjny test odzyskiwania offline', deferServerContact: true
+    });
+    await vault.savePatient({ name: 'Fikcyjny pacjent odzyskiwania offline',
+      user: { sex: 'F', age: 12, height: 150, weight: 40 } });
+    const savedEvents = [];
+    // This legacy hook has no unsubscribe return value; the test context owns it.
+    vault.onPatientSaved(event => savedEvents.push(event));
+    const receipt = await vault.createPatientClinicalCheckpoint('Fikcyjne#OdzyskiwanieOffline2026!', {
+      id: 'fictional-offline-checkpoint'
+    });
+    return { createdOnBoot, receipt, savedEvents, mode: vault.selectPatientClinicalRoute().mode,
+      retained: (await indexedDB.databases()).some(entry => entry.name === database) };
+  });
+  expect(checkpoint.createdOnBoot).toBe(false);
+  expect(checkpoint.receipt).toMatchObject({ id: 'fictional-offline-checkpoint',
+    status: 'checkpoint-only', origin: 'legacy-unverified', authorityVerified: false, writeAvailable: false });
+  expect(checkpoint.retained).toBe(true);
+  expect(checkpoint.savedEvents).toEqual([]);
+  expect(checkpoint.mode).toBe('legacy');
   // Stronę offline obsłużył produkcyjny SW, a nie inny zarejestrowany wariant.
   expect(await page.evaluate(() => navigator.serviceWorker.controller && new URL(navigator.serviceWorker.controller.scriptURL).pathname))
     .toBe('/service-worker-kalorii.js');

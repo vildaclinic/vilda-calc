@@ -54,3 +54,52 @@ describe('P-PAL-ZAPIS: czy zapisany PAL jest wyborem lekarza', () => {
     expect(wybrany(null)).toBe(false);
   });
 });
+
+// The complete production UI module registers this handler. A synthetic replay
+// from persistence is not the physician selecting a PAL, even when its value
+// differs from an earlier DOM value.
+function handlerPal() {
+  const win = okno(), listeners = [];
+  win.document.addEventListener = (type, listener, capture) => {
+    if (type === 'change') listeners.push({ listener, capture });
+  };
+  const source = fs.readFileSync(path.join(korzen, 'vilda_diet_plan_ui.js'), 'utf8');
+  new Function('window', 'globalThis', 'document', source)(win, win, win.document);
+  expect(win.VildaDietPlanUI).toBeDefined();
+  expect(listeners.length).toBeGreaterThan(0);
+  const change = (id, isTrusted) => {
+    for (const { listener } of listeners) listener({ target: { id, value: '1.6' }, isTrusted });
+  };
+  return { win, change };
+}
+
+describe('P-PAL-ZAPIS: rzeczywisty handler rozróżnia odtworzenie od wyboru lekarza', () => {
+  it('syntetyczna zmiana podczas odtworzenia pozostawia domyślny PAL niewybrany', () => {
+    const { win, change } = handlerPal();
+    win.__vildaPlanPalTouched = win.vildaPalZapisuWybrany({ palFactor: 1.4, palWybrany: false });
+    win.__vildaPersistRestoring = true;
+    change('palFactor', false);
+    expect(win.__vildaPlanPalTouched).toBe(false);
+  });
+
+  it('syntetyczna zmiana nie kasuje jawnego wyboru z zapisanego pacjenta', () => {
+    const { win, change } = handlerPal();
+    win.__vildaPlanPalTouched = win.vildaPalZapisuWybrany({ palFactor: 1.6, palWybrany: true });
+    change('palFactor', false);
+    expect(win.__vildaPlanPalTouched).toBe(true);
+  });
+
+  it('rzeczywista ręczna zmiana PAL oznacza świadomy wybór', () => {
+    const { win, change } = handlerPal();
+    win.__vildaPlanPalTouched = false;
+    change('palFactor', true);
+    expect(win.__vildaPlanPalTouched).toBe(true);
+  });
+
+  it('ręczna zmiana innego pola nie oznacza wyboru PAL', () => {
+    const { win, change } = handlerPal();
+    win.__vildaPlanPalTouched = false;
+    change('weight', true);
+    expect(win.__vildaPlanPalTouched).toBe(false);
+  });
+});

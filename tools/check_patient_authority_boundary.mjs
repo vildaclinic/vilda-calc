@@ -78,6 +78,43 @@ const preferencePublicationPins = {
     "after": "5b1d272ede97f779d9ccc3d17c87235506a2a995dbe78446cc30c7d9c4e18128"
   }
 };
+// Checkpoint helpers and five existing functions are pinned separately. The
+// reduction below removes only the reviewed native marker/cancellation additions;
+// the original patient-authority proof still compares all remaining V1 syntax.
+const checkpointAdditions = {
+  "variable:PatientCheckpointNativeAdapters": "f4d9cc06fe3fe4151f7471d2b3b1f16dfb27e40f49418afc830a593662cf66e9",
+  "variable:PatientCheckpointScopes": "839e2c0a9dc3c438a11ec90734f88656ab80a0dca8257d915ca29ba44b2e4271",
+  "variable:PatientCheckpointHooks": "70940a0a7d3675ab5c11b02c991ac7a87f5b9e60aa902913cf8b7591db9beeaf",
+  "function:PatientCheckpointError": "341bf0f7cf53d06d171c1d62365f2cbfba009844ace758470bcd5c7e7a57a96e",
+  "function:PatientCheckpointCancelChanged": "8eb79c586fc94a5a6db2b9422ca677e756124f7d930f7b6f7a6840b8545d0a41",
+  "function:PatientCheckpointScope": "470efed21e8c636e09447701d1b6521bb1db128aa65906b8a0d61a66eba4ca08",
+  "function:PatientCheckpointModules": "4402e8864bc2649a43353749119a2cffac01a4973d331c99f274975162a3bdc7",
+  "function:PatientCheckpointCreate": "014176633cc2e948b9b87019f92e797dfa5b1679db31650c6e3ae9bbd7030015",
+  "function:PatientCheckpointRetained": "382bc1a68f18c3376726a72544e07154c6fc5bdddea8a9ab94cc454e9c7f3648",
+  "function:PatientCheckpointRemoveUser": "8155cd8431084f065119f7e0ceca4ef889d72beb564821ded4280a05dc8c3a15"
+};
+const checkpointTransforms = {
+  "Sa": {
+    "before": "6df7c50e3903b3862942b6309c65c9b745f2732609b8e69ad88c56dc40f27c2e",
+    "after": "34f86320bed2ae5d9f4db7b5e5bca3033001c18622714114afa6ffde83bf5a5a"
+  },
+  "te": {
+    "before": "b02ecf5a563410ba33c39dc2cb5cca0ad323ffdecd76fb0c0ad9d3eaf851b1f4",
+    "after": "19e3f18b7ce14d4d3620ca6e303e169e26d953990d68486d5c192bde113fce9c"
+  },
+  "kn": {
+    "before": "1682e79139397c4b42dbf7256349727352a9a04579d648e43a200163d4e51e04",
+    "after": "5e6fedbd6203b816876a8f2fa6b9abbd377f20feccf5eb9e1c9312994fc6f1f3"
+  },
+  "Ut": {
+    "before": "532fb8ba63c7f7dbf2fae3f5fa97634035dcb2995670743bbad7b2b69d963dde",
+    "after": "e89fdbd7b15790dd8b8c2926430680fe54e91ad951e54c853e9c630b28fabbcc"
+  },
+  "Js": {
+    "before": "d830cc8d8a25efbc904d8eafcee8b8cef366da6befc4418892222f4351ca729d",
+    "after": "252d1cdf90deca540d1b832762db2573d528f1514235bc6da2574139bab7576e"
+  }
+};
 const dataImportPin = '830137c2367020f4bae67e761212e48357a21cf7ed9af4d71381d9e3d9813648';
 const clinical = (node, names) => node && node.type === 'CallExpression'
   && node.callee.type === 'Identifier' && names.includes(node.callee.name);
@@ -174,6 +211,44 @@ function failDifferent(before, after, file) {
 const vaultBefore = syntax(baseSource('vilda_vault.js'));
 const vaultSource = readFileSync(resolve(root, 'vilda_vault.js'), 'utf8');
 const vaultAfter = syntax(vaultSource), beforeBody = iifeBody(vaultBefore), afterBody = iifeBody(vaultAfter);
+const checkpointFound = new Set();
+function checkpointKey(node) {
+  if (node.type === 'FunctionDeclaration' && node.id.name.startsWith('PatientCheckpoint')) return 'function:' + node.id.name;
+  if (node.type === 'VariableDeclaration' && node.declarations.some(item => item.id.name && item.id.name.startsWith('PatientCheckpoint'))) return 'variable:' + node.declarations.map(item => item.id.name).join(',');
+  return null;
+}
+afterBody.splice(0, afterBody.length, ...afterBody.filter(node => {
+  const key = checkpointKey(node);
+  if (!key) return true;
+  if (!checkpointAdditions[key] || checkpointFound.has(key) || digest(node) !== checkpointAdditions[key]) throw new Error('Unexpected checkpoint addition: ' + key);
+  checkpointFound.add(key); return false;
+}));
+if (checkpointFound.size !== Object.keys(checkpointAdditions).length) throw new Error('A reviewed checkpoint helper is missing.');
+function removeCheckpointCancellation(node) {
+  if (!node || typeof node !== 'object') return node;
+  if (Array.isArray(node)) return node.map(removeCheckpointCancellation).filter(item => item !== null);
+  if (node.type === 'ExpressionStatement' && clinical(node.expression, ['PatientCheckpointCancelChanged'])) return null;
+  if (clinical(node, ['PatientCheckpointCancelChanged'])) return null;
+  if (node.type === 'SequenceExpression') {
+    const expressions = node.expressions.map(removeCheckpointCancellation).filter(item => item !== null);
+    return expressions.length === 1 ? expressions[0] : { ...node, expressions };
+  }
+  return Object.fromEntries(Object.entries(node).map(([key, value]) => [key, removeCheckpointCancellation(value)]));
+}
+for (const [name, pins] of Object.entries(checkpointTransforms)) {
+  const index = afterBody.findIndex(node => node.type === 'FunctionDeclaration' && node.id.name === name);
+  const node = afterBody[index];
+  if (!node || digest(node) !== pins.after) throw new Error('Unexpected checkpoint integration: ' + name);
+  if (name === 'Sa') {
+    const statements = node.body.body;
+    const marker = statements.findIndex(item => item.type === 'VariableDeclaration' && item.declarations.length === 1 && item.declarations[0].id.name === 'PatientCheckpointNativeAdapter');
+    if (marker < 0 || statements[marker].declarations[0].init.type !== 'ObjectExpression'
+      || statements[marker + 1].type !== 'ExpressionStatement' || statements[marker + 2].type !== 'ReturnStatement'
+      || statements[marker + 2].argument.name !== 'PatientCheckpointNativeAdapter') throw new Error('Native adapter marker changed.');
+    statements.splice(marker, 3, { type: 'ReturnStatement', argument: statements[marker].declarations[0].init });
+  } else afterBody[index] = removeCheckpointCancellation(node);
+  if (digest(afterBody[index]) !== pins.before) throw new Error('Existing function differs beyond checkpoint integration: ' + name);
+}
 const found = new Set();
 afterBody.splice(0, afterBody.length, ...afterBody.filter(node => {
   const key = additionKey(node);
@@ -210,7 +285,10 @@ for (const name of ['Ps', 'registration']) {
 const api = afterBody.find(node => node.type === 'VariableDeclaration' && node.declarations.some(item => item.id.name === '$s'));
 const apiValue = api && api.declarations.find(item => item.id.name === '$s').init;
 if (!apiValue || apiValue.type !== 'ObjectExpression') throw new Error('Missing original vault API.');
-for (const [key, value] of [['inspectPatientAuthority', 'PatientClinicalInspect'], ['selectPatientClinicalRoute', 'PatientClinicalSelect']]) {
+const removeApi = apiValue.properties.filter(item => item.key.name === 'removeUser');
+if (removeApi.length !== 1 || removeApi[0].value.name !== 'PatientCheckpointRemoveUser') throw new Error('Unexpected checkpoint removal wrapper.');
+removeApi[0].value.name = 'CareTplRemoveUser';
+for (const [key, value] of [['createPatientClinicalCheckpoint', 'PatientCheckpointCreate'], ['inspectPatientAuthority', 'PatientClinicalInspect'], ['selectPatientClinicalRoute', 'PatientClinicalSelect']]) {
   const matches = apiValue.properties.filter(item => item.key.name === key);
   if (matches.length !== 1 || matches[0].value.name !== value) throw new Error('Unexpected public clinical boundary: ' + key);
   apiValue.properties = apiValue.properties.filter(item => item.key.name !== key);

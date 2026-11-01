@@ -19,7 +19,7 @@
  *   bo i tak chcemy zwracać HTML z cache natychmiast.
  */
 
-const SW_VERSION = '1.1.428';
+const SW_VERSION = '1.1.429';
 const CACHE_PREFIX = 'pwa-kalorii';
 const SHELL_CACHE = `${CACHE_PREFIX}-shell-v${SW_VERSION}`;
 const RUNTIME_CACHE = `${CACHE_PREFIX}-runtime`;
@@ -98,6 +98,9 @@ const SW_FETCH_CACHE_STRATEGY_AUDIT = Object.freeze({
 const CORE_SHELL_URLS = [
   ROOT_DOCUMENT,
   '/manifest.json',
+  '/vilda_clinical_crypto.js?v=1',
+  '/vilda_patient_checkpoint_store.js?v=1',
+  '/vilda_patient_checkpoint.js?v=1',
   '/vilda_vault_protocol.js?v=1',
   // Wyłącznik awaryjny trwałego cache (kill-switch) — musi być dostępny także offline,
   // by na każdym wejściu zgasić „Opcję A” i posprzątać bazę vilda-cloud-cache.
@@ -1553,6 +1556,7 @@ const CORE_SHELL_URLS = [
   '/vilda_chrome.js?v=207',
   '/vilda_chrome.js?v=208',
   '/vilda_chrome.js?v=209',
+  '/vilda_chrome.js?v=210',
   '/vilda_realtime.js?v=1',
   '/vilda_realtime.js?v=2',
   '/vilda_realtime.js?v=3',
@@ -3638,6 +3642,7 @@ const OPTIONAL_ASSETS = [
   '/vilda_vault.js?v=240',
   '/vilda_vault.js?v=241',
   '/vilda_vault.js?v=242',
+  '/vilda_vault.js?v=243',
   '/vilda_auth_ui.js?v=431',
   '/vilda_trajectory_analysis.js?v=24',
   '/vilda_trajectory_analysis.js?v=25',
@@ -3714,6 +3719,7 @@ const OPTIONAL_ASSETS = [
   '/vilda_diet_plan_ui.js?v=42',
   '/vilda_diet_plan_ui.js?v=43',
   '/vilda_diet_plan_ui.js?v=44',
+  '/vilda_diet_plan_ui.js?v=45',
   '/vilda_diet_recommendations.js?v=27',
   '/vilda_diet_recommendations.js?v=28',
   '/vilda_diet_recommendations.js?v=29',
@@ -4110,6 +4116,7 @@ const OPTIONAL_ASSETS = [
   '/vilda_session_bridge.js?v=131',
   '/vilda_session_bridge.js?v=132',
   '/vilda_session_bridge.js?v=133',
+  '/vilda_session_bridge.js?v=134',
   '/vilda_data_safety_explainer.js?v=5',
   '/vilda_obesity_banner.css?v=6',
   '/vilda_obesity_banner.css?v=7',
@@ -4779,7 +4786,10 @@ const FRESH_STATIC_ALIAS_PATHS = new Set([
   // Five new potassium resources keep the same request budget. These explicit
   // current aliases share only this installation's freshly fetched bytes.
   '/vilda_logger.js', '/vilda_html.js', '/vilda_init.js',
-  '/vilda_app_helpers.js', '/vilda_frame_sync.js'
+  '/vilda_app_helpers.js', '/vilda_frame_sync.js',
+  // The three checkpoint modules fit the existing installation request budget
+  // by sharing fresh current aliases of these unchanged static dependencies.
+  '/vilda_crypto.js', '/vilda_persistence_adapter.js', '/vilda_crypto_strength_explainer.js'
 ]);
 
 async function fetchAndStorePrecacheUrl(url, { required = false, previousShellCaches = [], freshResponses = null } = {}) {

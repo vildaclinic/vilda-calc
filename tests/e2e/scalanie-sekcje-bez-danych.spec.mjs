@@ -85,12 +85,12 @@ test.describe('P-SCALANIE-SEKCJE — „Scal pacjentów” z prawdziwym zapisem 
     const y = await page.evaluate(async () => (await window.VildaVault.listPatients())[0].patientId);
     expect(await planGlowy(page, y), 'kontrola: zapis Y niesie plan-obiekt z wartością domyślną').toMatchObject({ palFactor: 1.6, palWybrany: false });
 
-    // X: to samo dziecko w drugiej karcie (z datą urodzenia), lekarz WYBRAŁ PAL 1,8 w #palFactor. Karta planu jest
-    // w trybie profesjonalnym, więc wybór idzie tym samym zdarzeniem „change”, które łapie vilda_diet_plan_ui.js.
+    // X: jawnie skonfigurowany zapis z wybranym PAL 1,8. Ten test sprawdza scalanie
+    // danych, więc ustawiamy znacznik wyboru zamiast udawać zaufane zdarzenie UI.
     await page.evaluate(() => {
       const s = document.getElementById('palFactor');
+      window.__vildaPlanPalTouched = true;
       s.value = '1.8';
-      s.dispatchEvent(new Event('change', { bubbles: true }));
     });
     const zapisX = await page.evaluate(() => window.collectUserData());
     expect(zapisX.plan, 'kontrola: wybór lekarza w zapisie X').toMatchObject({ palFactor: 1.8, palWybrany: true });
