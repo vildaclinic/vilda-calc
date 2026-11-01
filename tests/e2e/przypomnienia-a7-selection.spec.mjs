@@ -152,9 +152,14 @@ test('A7 mobile Back reloads History after another historical task was reopened 
     body: 'Nowy aktualny opis ponownie otwartej sprawy D.',
   }), { id: siblingId, patientId: records.ids.b, futureDay: records.futureDayC });
   await refreshParentB(page, records);
-  await page.locator(WORKSPACE).getByRole('button', { name: '← Lista spraw', exact: true }).click();
+  await page.locator(WORKSPACE).getByRole('button', { name: '← Wróć do Szukaj', exact: true }).click();
   await expect(page.locator(WORKSPACE).getByRole('button', { name: 'Szukaj', exact: true })).toHaveAttribute('aria-pressed', 'true');
   const results = page.locator(`${WORKSPACE} .vgs`);
+  await expect(results).toHaveClass(/vgs-show-detail/);
+  await expect(results.locator('.vgs-title')).toHaveText('Fikcyjna zakończona sprawa C');
+  await expect(results.locator('.vgs-detail .vb22-body')).toHaveText('Stary zakończony opis C.');
+  await expect(results.locator(`[data-search-id="note:${records.historical}"]`)).toHaveAttribute('aria-current', 'true');
+  await results.getByRole('button', { name: '← Wyniki wyszukiwania', exact: true }).click();
   await expect(results.locator('.vgs-list-pane')).toBeVisible();
   await expect(results.getByRole('combobox', { name: 'Stan spraw', exact: true })).toHaveValue('completed');
   await expect(results.locator(`[data-search-id="note:${records.historical}"]`)).toBeVisible();
