@@ -81,7 +81,7 @@ describe('podziel — każdy plik w dokładnie jednym odłamku', () => {
   // Proste, powtarzalne liczby pseudolosowe (bez Math.random — wynik testu ma być stały).
   const generator = (ziarno) => () => { ziarno = (ziarno * 1103515245 + 12345) % 2147483648; return ziarno / 2147483648; };
 
-  it.each([1, 2, 3, 4, 5])('%i odłamki: podział pełny i rozłączny dla 60 plików o różnych czasach', (n) => {
+  it.each([1, 2, 3, 4, 5, 8])('%i odłamki: podział pełny i rozłączny dla 60 plików o różnych czasach', (n) => {
     const los = generator(n * 7919);
     const wejscie = Array.from({ length: 60 }, (_, i) => plik(`p${String(i).padStart(2, '0')}.spec.mjs`, Math.round(los() * 300 * 10) / 10, i, 1 + Math.floor(los() * 10)));
     const odlamki = podziel(wejscie, { odlamki: n });
@@ -268,7 +268,7 @@ describe('tabela czasów i ten zestaw e2e', () => {
     for (const s of wartosci) expect(Number.isFinite(s) && s >= 0).toBe(true);
   });
 
-  it.each([3, 4])('podział wszystkich plików e2e z dysku na %i odłamki jest pełny i rozłączny', (n) => {
+  it.each([3, 4, 8])('podział wszystkich plików e2e z dysku na %i odłamki jest pełny i rozłączny', (n) => {
     const odlamki = podziel(szacujCzasy(naDysku.map((n) => ({ plik: n, testy: 1 })), czasy.pliki), { odlamki: n });
     expect(odlamki.flatMap((o) => o.pliki.map((p) => p.plik)).sort()).toEqual(naDysku);
   });
@@ -292,17 +292,17 @@ describe('CI dzieli e2e tym podziałem', () => {
     expect(macierz, 'macierz odłamków w ci.yml').not.toBeNull();
     const numery = macierz[1].split(',').map((s) => Number(s.trim()));
     const n = Number(ci.match(/--odlamek=\$\{\{ matrix\.shard \}\}\/(\d+)/)[1]);
-    expect(numery).toEqual([1, 2, 3, 4]);
+    expect(numery).toEqual([1, 2, 3, 4, 5, 6, 7, 8]);
     expect(numery).toEqual(Array.from({ length: n }, (_, i) => i + 1));
     expect(ci).toContain(`name: E2E odłamek \${{ matrix.shard }}/${n}`);
   });
 });
 
 describe('skrypt z prawdziwym Playwrightem', () => {
-  // Pierwszy odłamek dla 3 i 4 części przez CLI: liczy podział z `playwright test --list`, zapisuje listę i sam
+  // Pierwszy odłamek dla 3, 4 i 8 części przez CLI: liczy podział z `playwright test --list`, zapisuje listę i sam
   // sprawdza, że Playwright z `--test-list` widzi dokładnie te pliki. Łapie np. aktualizację
   // Playwrighta, która zmieni rozumienie ścieżek w liście — wtedy odłamek dostałby 0 testów.
-  it.each([3, 4])('--odlamek=1/%i zapisuje listę, którą Playwright rozpoznaje w całości', (n) => {
+  it.each([3, 4, 8])('--odlamek=1/%i zapisuje listę, którą Playwright rozpoznaje w całości', (n) => {
     const katalog = fs.mkdtempSync(path.join(os.tmpdir(), 'odlamki-test-'));
     try {
       const lista = path.join(katalog, 'odlamek.txt');
