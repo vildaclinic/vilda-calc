@@ -27644,6 +27644,30 @@ jawne wyczyszczenie, konflikt DOM, brak pola, blokada oraz zmiana `patientId`, t
 przy identycznej nazwie dwóch fikcyjnych osób. Przed poprawką siedem nowych przypadków
 było czerwonych. Wynik końcowej walidacji E2E/PWA i CI podaje PR.
 
+### P-SHARED-FORM-COHERENCE — wiek nie cofa się przy odtworzeniu przed autozapisem, 2026-11-01
+
+`userData.js` publikuje pola podstawowe od razu, a `vilda_persist_runtime.js`
+zapisuje ich kopię `_vildaPersist.byId` z opóźnieniem. Test rzeczywistych modułów
+potwierdził: wiek 30 → edycja 40 → odtworzenie przed timerem daje formularz 30
+przy wspólnym wieku 40, ponieważ odtworzenie czyta starsze `byId.age`.
+
+Publikacja `userData` uzgadnia teraz także **istniejące własne** wpisy `byId`
+dla odczytywanych pól DOM w tym samym zapisie. Nie tworzy metadanych ani
+brakujących pól, zachowuje blokady zapisu, puste wartości i zero. Nie zmienia
+kolejności odtwarzania, priorytetu aktywnego formularza, wieku zapisanej wizyty,
+wzorów, interpolacji ani danych referencyjnych.
+
+`shared-form-coherence.test.mjs` sprawdza prawdziwy adapter, runtime i `userData`:
+natychmiastowe odtworzenie po edycji lat/miesięcy, brak części wieku, zero,
+blokadę zapisu i zachowanie innych danych. Przed poprawką 6 z 8 przypadków
+było czerwonych. Test E2 D3 czeka na zakończenie początkowego odtworzenia i
+sprawdza zgodność formularza ze stanem oraz odniesienie **71,202** dla wieku 40.
+
+Ograniczenie dowodu: sporadyczny ślad CI E2 D3 miał tę samą rozbieżność 30/40,
+ale nie zapisał stosu wywołań zmiany pola. Piętnaście prób jego oryginalnej
+kolejności nie powtórzyło usterki. Deterministyczny test dowodzi opisanej luki;
+nie identyfikuje po fakcie dokładnego wywołania ze starego przebiegu CI.
+
 ## Stan kart DocPro należy do pacjenta; ramka DocPro w tle czyści karty po zmianie pacjenta w innej ramce (P-TOZSAMOSC-RAMEK, SW 1.1.119, `docpro_state_persist.js` 6, 2026-09-30)
 
 **Zgłoszenie.** Punkt 1 „Czego to nie naprawia” w P-TOZSAMOSC-RAMKI. Ramki powłoki `app.html` dzielą `sessionStorage`
