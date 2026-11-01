@@ -119,3 +119,7 @@ Regresje przepływu sprawdzają odłączenie bez utraty rezerwacji, zachowanie k
 Testy pochodzenia zmian obejmują 99–200 operacji, trzy urządzenia, różne kolejności scalania, ponowienia po przeglądzie, niezgodne wartości i historię oraz zmianę konta, sesji i magazynu. Test rzeczywistej pętli `/changes` sprawdza zatrzymanie kursora, widoczny błąd i ponowne przyjęcie tej samej zaszyfrowanej delty. Zgodność tekstowej historii jest sprawdzana na rzeczywistym poprzednim `vilda_vault.js` z przypiętego commita `b461364002cbd3f652728b7db38dce0f1f0d9264`; przygotowanie CI zapewnia ten obiekt Git bez dostępu do sieci z samego testu. Starszy klient nie odtwarza nowych metadanych, ale zachowuje czytelne ustalenia i odnośniki do oryginalnych dokumentów.
 
 MVP nie obejmuje automatycznych szablonów diagnostycznych, wymagań zależnych między krokami, pracy zespołowej, importu dokumentów ani dodatkowych kanałów powiadomień.
+
+## Przygotowanie zastosowania szablonu — etap 6a
+
+[Kontrakt chronionej domeny pacjentów](PATIENT_AUTHORITY.md) określa wybór formatu, granice tożsamości i warunki bezpiecznego zastosowania szablonu. Zapis planów V2 i zastosowanie szablonu do pacjenta pozostają wyłączone w tej części. Nie ma migracji danych ani inicjalizacji zaplecza przy odczycie.

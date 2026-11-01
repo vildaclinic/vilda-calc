@@ -19,7 +19,7 @@
  *   bo i tak chcemy zwracać HTML z cache natychmiast.
  */
 
-const SW_VERSION = '1.1.426';
+const SW_VERSION = '1.1.427';
 const CACHE_PREFIX = 'pwa-kalorii';
 const SHELL_CACHE = `${CACHE_PREFIX}-shell-v${SW_VERSION}`;
 const RUNTIME_CACHE = `${CACHE_PREFIX}-runtime`;
@@ -98,6 +98,7 @@ const SW_FETCH_CACHE_STRATEGY_AUDIT = Object.freeze({
 const CORE_SHELL_URLS = [
   ROOT_DOCUMENT,
   '/manifest.json',
+  '/vilda_vault_protocol.js?v=1',
   // Wyłącznik awaryjny trwałego cache (kill-switch) — musi być dostępny także offline,
   // by na każdym wejściu zgasić „Opcję A” i posprzątać bazę vilda-cloud-cache.
   '/vilda_cloud_cache_warm.js?v=2',
@@ -1533,6 +1534,7 @@ const CORE_SHELL_URLS = [
   '/vilda_chrome.js?v=205',
   '/vilda_chrome.js?v=206',
   '/vilda_chrome.js?v=207',
+  '/vilda_chrome.js?v=208',
   '/vilda_realtime.js?v=1',
   '/vilda_realtime.js?v=2',
   '/vilda_realtime.js?v=3',
@@ -1540,6 +1542,7 @@ const CORE_SHELL_URLS = [
   '/vilda_realtime.js?v=5',
   '/vilda_realtime.js?v=6',
   '/vilda_realtime.js?v=7',
+  '/vilda_realtime.js?v=8',
   '/vilda_terminarz.js?v=1',
   '/vilda_terminarz.js?v=2',
   '/vilda_terminarz.js?v=3',
@@ -3340,6 +3343,7 @@ const OPTIONAL_ASSETS = [
   '/vilda_data_import_export.js?v=112',
   '/vilda_data_import_export.js?v=113',
   '/vilda_data_import_export.js?v=114',
+  '/vilda_data_import_export.js?v=115',
   '/vilda_baseline_pacjenta.js?v=1',
   '/vilda_baseline_pacjenta.js?v=2',
   '/vilda_baseline_pacjenta.js?v=3',
@@ -3614,6 +3618,7 @@ const OPTIONAL_ASSETS = [
   '/vilda_vault.js?v=239',
   '/vilda_vault.js?v=240',
   '/vilda_vault.js?v=241',
+  '/vilda_vault.js?v=242',
   '/vilda_auth_ui.js?v=431',
   '/vilda_trajectory_analysis.js?v=24',
   '/vilda_trajectory_analysis.js?v=25',
@@ -3940,6 +3945,7 @@ const OPTIONAL_ASSETS = [
   '/vilda_sync.js?v=42',
   '/vilda_sync.js?v=43',
   '/vilda_sync.js?v=44',
+  '/vilda_sync.js?v=45',
   '/vilda_sync_integration.js?v=45',
   '/vilda_sync_integration.js?v=46',
   '/vilda_sync_integration.js?v=47',
@@ -3950,6 +3956,7 @@ const OPTIONAL_ASSETS = [
   '/vilda_sync_integration.js?v=52',
   '/vilda_sync_integration.js?v=53',
   '/vilda_sync_integration.js?v=54',
+  '/vilda_sync_integration.js?v=55',
   '/vilda_nowe_urzadzenie.js?v=1',
   '/vilda_nowe_urzadzenie.js?v=2',
   '/vilda_session_bridge.js?v=3',
@@ -4081,6 +4088,7 @@ const OPTIONAL_ASSETS = [
   '/vilda_session_bridge.js?v=129',
   '/vilda_session_bridge.js?v=130',
   '/vilda_session_bridge.js?v=131',
+  '/vilda_session_bridge.js?v=132',
   '/vilda_data_safety_explainer.js?v=5',
   '/vilda_obesity_banner.css?v=6',
   '/vilda_obesity_banner.css?v=7',

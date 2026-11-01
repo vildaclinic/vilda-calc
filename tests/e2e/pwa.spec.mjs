@@ -48,6 +48,14 @@ test('produkcyjna logika service workera uruchamia stronę główną offline', a
 
   await expect(page).toHaveTitle(/wagaiwzrost\.pl/i);
   await expect(page.locator('body')).toBeVisible();
+  // Nowy protokół musi być dostępny z produkcyjnego cache także po przeładowaniu offline.
+  await expect.poll(() => page.evaluate(() => Boolean(
+    window.VildaVaultProtocol
+    && typeof window.VildaVaultProtocol.validateStateReceipt === 'function'
+    && window.VildaVault
+    && typeof window.VildaVault.selectPatientClinicalRoute === 'function'
+  ))).toBe(true);
+  expect(await page.evaluate(() => window.VildaVault.selectPatientClinicalRoute().mode)).toBe('legacy');
   // Stronę offline obsłużył produkcyjny SW, a nie inny zarejestrowany wariant.
   expect(await page.evaluate(() => navigator.serviceWorker.controller && new URL(navigator.serviceWorker.controller.scriptURL).pathname))
     .toBe('/service-worker-kalorii.js');

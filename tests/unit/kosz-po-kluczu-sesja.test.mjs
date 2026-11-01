@@ -164,8 +164,9 @@ function wierszW(funkcja, re) {
 // Znaczniki wierszy — liczone dopiero w teście, który ich używa.
 const znak = {
   usunOdczyt: () => wierszW('Bkz_usunZObcych', /await I\(\)\.listSnapshotsForUser\(b, karta\)/),
-  usunKarte: () => wierszW('Bkz_usunZObcych', /await I\(\)\.removePatientForUser\(b, karta\)/),
-  obceKarta: () => wierszW('Bkz_obceKarty', /await I\(\)\.getPatientForUser\(b, karta\)\)\) return;/),
+  // Te same operacje magazynu; argument i wynik mają teraz synchroniczną blokadę protokołu.
+  usunKarte: () => wierszW('Bkz_usunZObcych', /await I\(\)\.removePatientForUser\(b, PatientClinicalWriteValue\(b,karta\)\)/),
+  obceKarta: () => wierszW('Bkz_obceKarty', /await I\(\)\.getPatientForUser\(b, karta\)\)\) return PatientClinicalWriteValue\(PatientClinicalOperationAccount,undefined\);/),
   obceTresc: () => wierszW('Bkz_obceKarty', /tresc = await G\(lokalna\.payloadCipher\.iv, lokalna\.payloadCipher\.data\)/),
 };
 
@@ -802,7 +803,7 @@ describe('P-KOSZ-PO-KLUCZU — np-ret-A1: zmiana sesji w przeniesieniu wersji, k
     await rundy(u.urz, 1);
     expect(zapisy(u.urz), 'runda kontrolna bez zapisów').toEqual(bezZapisow(u.urz));
   }
-  const zapisPodY = () => wierszW('Bsw_przeniesPrzezyta', /await I\(\)\.putSnapshotForUser\(b, Object\.assign\(Bm1\(g\), g, \{ patientId: H \}\)\);/);
+  const zapisPodY = () => wierszW('Bsw_przeniesPrzezyta', /await I\(\)\.putSnapshotForUser\(b, PatientClinicalWriteValue\(b,Object\.assign\(Bm1\(g\), g, \{ patientId: H \}\)\)\);/);
   const odczytX = () => wierszW('Bsw_przeniesPrzezyta', /const wX = await I\(\)\.listSnapshotsForUser\(b, X\);/);
 
   it('NR-S1: zalogowanie od nowa zaraz po zapisie x pod Y — SESSION_CHANGED, żadnego zapisu po przełączeniu; to samo scalenie od nowa: x 23* pod Y, bez X; po rundach na trzech', async () => {

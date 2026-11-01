@@ -47,7 +47,7 @@ describe('stosy auth: moduły zakładki Badania', () => {
 
 function environment(missing) {
   const appended = [];
-  const win = { VildaCrypto: {}, VildaLabSnapshot: {}, VildaLabAssessmentUI: {}, VildaVault: {}, VildaAuthUI: {}, VildaProAccess: {},
+  const win = { VildaCrypto: {}, VildaLabSnapshot: {}, VildaLabAssessmentUI: {}, VildaVaultProtocol: {}, VildaVault: {}, VildaAuthUI: {}, VildaProAccess: {},
     VildaHormoneReferenceSnapshot: {}, VildaHormoneReferenceUI: {}, VildaLabRangeSnapshot: {}, VildaLabHistory: {}, VildaLabHistoryTab: {}, VildaPubertyAssessment: {}, VildaLabTestosteroneUnits: {},
     // Independent care-plan model/UI readiness is tested in care-plans-loader.test.mjs.
     VildaCarePlanModel: {}, VildaCarePlans: {},

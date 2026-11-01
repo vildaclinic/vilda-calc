@@ -71,3 +71,7 @@ Izolacja szyfrogramów od starszej wersji aplikacji nie jest gwarancją odzyskan
 Testy wykorzystują wyłącznie fikcyjne konta i dane. Obejmują kodek oraz granice rozmiaru, niezmienność historii, konflikty między urządzeniami, dokładne ponowienia, rzeczywiste transakcje magazynu, zmiany sesji i klucza, osobny kanał synchronizacji, starsze klienty i serwer, kopie oraz kreator na komputerze i telefonie. Scenariusz offline wymaga rzeczywistego cache produkcyjnych zasobów i wyłączonego serwera.
 
 Wyniki końcowych przebiegów i ograniczenia wdrożenia są wpisywane do PR. Testy nie stanowią walidacji medycznej schematów wpisywanych przez lekarza.
+
+## Przygotowanie zastosowania szablonu — etap 6a
+
+[Kontrakt chronionej domeny pacjentów](PATIENT_AUTHORITY.md) określa wybór formatu, granice tożsamości i warunki bezpiecznego zastosowania szablonu. Zapis planów V2 i zastosowanie szablonu do pacjenta pozostają wyłączone w tej części. Nie ma migracji danych ani inicjalizacji zaplecza przy odczycie.
