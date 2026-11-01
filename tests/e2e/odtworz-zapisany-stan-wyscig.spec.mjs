@@ -107,6 +107,7 @@ test('„Odtwórz zapis” w trakcie powolnego importu punktów GH: przycisk „
       return new Promise((resolve) => { setTimeout(async () => { try { resolve(await orig.apply(this, arguments)); } catch (e) { resolve(null); } }, 1500); });
     };
   });
+  await expect.poll(() => page.evaluate(() => window.VildaSaveStatusIndicator.getCurrentDecision().ready)).toBe(true);
   await page.getByRole('button', { name: 'Wczytaj tego pacjenta' }).click();
   await expect(page.locator('#vildaLoadChoiceModal')).toBeVisible();
   expect(await page.evaluate(() => window.__e2eImportCalls), 'mostek wystartował przy wczytaniu, z przyciskiem widocznym').toBeGreaterThan(0);
@@ -134,6 +135,7 @@ test('kolejne wczytanie pacjenta znów proponuje wybór — zapamiętany wybór 
     await koniecCzyszczenia(page);
     await page.evaluate((id) => window.VildaAuthUI.showPatientCard(id, (rekord) => { if (rekord) window.applyLoadedData(rekord); }, null), pid);
     await expect(page.locator('.vhv-tile')).toBeVisible();
+    await expect.poll(() => page.evaluate(() => window.VildaSaveStatusIndicator.getCurrentDecision().ready)).toBe(true);
     await page.getByRole('button', { name: 'Wczytaj tego pacjenta' }).click();
     await expect(page.locator('#vildaLoadChoiceModal')).toBeVisible();
   };
@@ -167,6 +169,7 @@ test('F5 po „Odtwórz zapis” u pacjenta z punktami GH: przycisk nie wraca �
   await koniecCzyszczenia(page);
   await page.evaluate((id) => window.VildaAuthUI.showPatientCard(id, (rekord) => { if (rekord) window.applyLoadedData(rekord); }, null), pid);
   await expect(page.locator('.vhv-tile')).toBeVisible();
+  await expect.poll(() => page.evaluate(() => window.VildaSaveStatusIndicator.getCurrentDecision().ready)).toBe(true);
   await page.getByRole('button', { name: 'Wczytaj tego pacjenta' }).click();
   await expect(page.locator('#vildaLoadChoiceModal')).toBeVisible();
   await page.locator('#vildaLcmRestore').click();

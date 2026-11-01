@@ -26,7 +26,7 @@
   }
   function ensureTemplateLibrary(options) {
     if (!templateCorePromise) templateCorePromise = templateAsset('vilda_care_template_model.js?v=1', function () { return !!win.VildaCareTemplateModel; })
-      .then(function () { return templateAsset('vilda_care_template_store.js?v=1', function () { return !!win.VildaCareTemplateStore; }); })
+      .then(function () { return templateAsset('vilda_care_template_store.js?v=2', function () { return !!win.VildaCareTemplateStore; }); })
       .catch(function (error) { templateCorePromise = null; throw error; });
     if (options && options.ui === false) return templateCorePromise;
     if (!templateUiPromise) templateUiPromise = templateCorePromise.then(function () { return Promise.all([

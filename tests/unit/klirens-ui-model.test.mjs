@@ -688,10 +688,10 @@ describe('Klirens — centralny model przepływu UI', () => {
     expect(html).toContain('clcr_ui_workflow.js?v=36');
     expect(html).toContain('inline_kalkulator_klirens_02.js?v=29');
     expect(html).toContain('inline_kalkulator_klirens_04.js?v=36');
-    expect(html).toContain('inline_kalkulator_klirens_07.js?v=25');
+    expect(html).toContain('inline_kalkulator_klirens_07.js?v=26');
     expect(html).toContain('clcr_result_reference_data.js?v=7');
     expect(html).toContain('clcr_result_presentation.js?v=8');
-    expect(serviceWorker).toContain("const SW_VERSION = '1.1.426'");
+    expect(serviceWorker).toContain("const SW_VERSION = '1.1.427'");
     expect(html).toContain('clcr_calculation_assumptions.js?v=2');
     expect(serviceWorker).toContain("'/clcr_calculation_assumptions.js?v=2'");
     expect(serviceWorker).toContain("'/clcr_clinical_safety.js?v=13'");
@@ -708,8 +708,9 @@ describe('Klirens — centralny model przepływu UI', () => {
     }
     expect(html).toContain('clcr_acr_ui.js?v=2');
     expect(serviceWorker).toContain("'/clcr_acr_ui.js?v=2'");
-    expect(html).toContain('vilda_unsaved_guard.js?v=7');
+    expect(html).toContain('vilda_unsaved_guard.js?v=8');
     expect(serviceWorker).toContain("'/vilda_unsaved_guard.js?v=7'");
+    expect(serviceWorker).toContain("'/vilda_unsaved_guard.js?v=8'");
     for (const file of [
       'clcr_measured_clearance_reference_data.js', 'clcr_measured_clearance_reference.js',
       'clcr_acr_reference_data.js', 'clcr_acr.js', 'clcr_acr_ui.css',
@@ -733,6 +734,7 @@ describe('Klirens — centralny model przepływu UI', () => {
     expect(serviceWorker).toContain("'/clcr_ui_workflow.css?v=11'");
     expect(serviceWorker).toContain("'/clcr_ui_workflow.js?v=35'");
     expect(serviceWorker).toContain("'/inline_kalkulator_klirens_07.js?v=24'");
+    expect(serviceWorker).toContain("'/inline_kalkulator_klirens_07.js?v=25'");
     expect(serviceWorker).toContain("'/clcr_ui_workflow.css?v=1'");
     expect(serviceWorker).toContain("'/clcr_ui_workflow.css?v=2'");
     expect(serviceWorker).toContain("'/clcr_ui_workflow.css?v=3'");

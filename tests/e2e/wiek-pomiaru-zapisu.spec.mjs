@@ -93,6 +93,7 @@ async function otworzKarte(page, pid) {
 
 async function wczytajJakoNowyPomiar(page, pid) {
   await otworzKarte(page, pid);
+  await expect.poll(() => page.evaluate(() => window.VildaSaveStatusIndicator.getCurrentDecision().ready)).toBe(true);
   await page.getByRole('button', { name: 'Wczytaj tego pacjenta' }).click();
   await page.waitForSelector('#vildaLoadChoiceModal', { state: 'visible', timeout: 8000 });
   await page.click('#vildaLcmNew');

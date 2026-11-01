@@ -134,6 +134,7 @@ async function odpowiedzStraznikowi(ctx, gdzie) {
 async function wczytajZListy(page, ctx, nazwa, wybor) {
   await page.locator('#patientsListBtnSidebar').click();
   await ctx.locator('.pt-rcard2', { hasText: nazwa }).first().click();
+  await expect.poll(() => ctx.evaluate(() => window.VildaSaveStatusIndicator.getCurrentDecision().ready)).toBe(true);
   await ctx.getByRole('button', { name: 'Wczytaj tego pacjenta' }).click();
   await ctx.waitForSelector(`#vildaLoadChoiceModal, ${STRAZNIK}`, { state: 'visible', timeout: 10000 });
   if (await ctx.locator(STRAZNIK).isVisible()) await odpowiedzStraznikowi(ctx, `wczytanie ${nazwa} z listy`);

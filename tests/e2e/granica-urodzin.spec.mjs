@@ -108,6 +108,7 @@ test('zapisany pomiar z dnia 3. urodzin: kafelki Karty pacjenta, schowek i „Po
   expect(centylSchowka(tekst, 'Wzrost'), tekst).toBe(wzorzec.ht);
   expect(centylSchowka(tekst, 'BMI'), tekst).toBe(wzorzec.bmi);
 
+  await expect.poll(() => page.evaluate(() => window.VildaSaveStatusIndicator.getCurrentDecision().ready)).toBe(true);
   await page.getByRole('button', { name: 'Wczytaj tego pacjenta' }).click();
   await page.waitForSelector('#vildaLoadChoiceModal', { state: 'visible', timeout: 8000 });
   await page.click('#vildaLcmNew');

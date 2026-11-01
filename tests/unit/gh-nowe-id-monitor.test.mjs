@@ -40,9 +40,11 @@ describe('P-GH-NOWE-ID-MONITOR: monitor GH nadaje id nowym punktom przez VildaGh
     expect(tekst.split(ID_KARTY).length - 1).toBe(1);
     expect(tekst.split(ID_WSTECZNEGO).length - 1).toBe(1);
     expect(tekst).not.toContain('Math.random');
-    // Jedyne Date.now() w monitorze to wiek wpisu skoku z Karty pacjenta (vilda:gh-jump), nie id punktu.
-    expect(tekst.split('Date.now()').length - 1).toBe(1);
-    expect(tekst.split('Date.now()-n.ts>6e4').length - 1).toBe(1);
+    // Oba odczyty zegara dotyczą wyłącznie ważności zamiaru GH, nie id punktu:
+    // sprawdzenia na wejściu i wygaśnięcia oczekiwania przed pierwszym guardem.
+    expect(tekst.split('Date.now()').length - 1).toBe(2);
+    expect(tekst.split('if(typeof n.ts==="number"&&Date.now()-n.ts>60000){removeExact();return}').length - 1).toBe(1);
+    expect(tekst.split('if(typeof intent.ts==="number")claim.expiry=window.setTimeout(cancel,Math.max(0,Math.min(60000,60000-(Date.now()-intent.ts))));').length - 1).toBe(1);
   });
 
   it('k-ty nowy punkt (z karty albo wsteczny) ma id wydane w tej chwili przez noweId() modułu: idDeterministyczne(k)', () => {

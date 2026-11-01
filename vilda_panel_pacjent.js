@@ -160,6 +160,21 @@
     stan.koncowy = false;
   }
 
+  // Wczesne zdarzenie Clear może jeszcze nieść wychodzący PID. Tylko
+  // producent zakończonego czyszczenia potwierdza jego usunięcie; zwykły
+  // odczyt ani zniknięcie PID w innej ramce nie kończą nieaktualności.
+  function zakonczWyczyszczenie() {
+    var storage, id;
+    try {
+      storage = w.sessionStorage;
+      if (!storage || typeof storage.getItem !== 'function') return false;
+      id = storage.getItem(KLUCZ);
+    } catch (_) { return false; }
+    if (id !== null && id !== '') return false;
+    odNowa(null);
+    return true;
+  }
+
   function wlasneWczytanie(e) {
     var d = e && e.detail;
     odNowa(d && typeof d.patientId === 'string' && d.patientId ? d.patientId : pacjentKarty());
@@ -183,6 +198,7 @@
     cel: function (domyslny) { ocen(); return stan.nieaktualny ? stan.wlasciciel : domyslny; },
     /* początek własnego wczytania (applyLoadedData poza odtworzeniem sesji): zapisy wczytania mają przejść */
     wczytanie: function () { odNowa(pacjentKarty()); },
+    zakonczWyczyszczenie: zakonczWyczyszczenie,
     /* powłoka przeładowuje ramkę: powrót karty do pacjenta dokumentu nie kończy już stanu nieaktualnego */
     utrwal: function () { if (ocen() && stan.nieaktualny) stan.koncowy = true; return stan.koncowy; },
     pacjentKarty: pacjentKarty,

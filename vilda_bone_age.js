@@ -216,6 +216,36 @@
     return clone(state);
   }
 
+  // Same projection as capture(), on a detached context. A silent DOM change
+  // requiring a new observation identity is not an authorized examination edit.
+  function captureReadOnly() {
+    var input = field('advBoneAge');
+    var next = clone(state || normaliseContext(w.vildaBoneAgeContext) || contextFrom(w.advancedGrowthData));
+    var snapshot = fieldSnapshot;
+    if (!next) {
+      next = empty();
+      var initial = years(input && input.value);
+      if (initial !== null) next.current = observation({ years: initial, atAgeMonths: currentAge(), source: 'legacy' });
+      snapshot = input ? String(input.value || '') : '';
+    }
+    if (applying || w.__vildaPersistRestoring) return next;
+    var value = input ? String(input.value || '') : snapshot;
+    if (input && value !== snapshot) {
+      var ba = years(value);
+      if (ba === null) next.current = null;
+      else if (!next.current || next.current.years !== ba) {
+        var unavailable = new Error('CURRENT_DATA_CAPTURE_UNAVAILABLE: bone-age observation is not ready');
+        unavailable.code = 'CURRENT_DATA_CAPTURE_UNAVAILABLE'; throw unavailable;
+      }
+    }
+    var at = currentAge();
+    if (next.current && next.current.atAgeMonths === null && next.current.source === 'measured' && at !== null) next.current.atAgeMonths = at;
+    if (next.current && at !== null && next.current.atAgeMonths !== null && at !== next.current.atAgeMonths) {
+      next.last = clone(next.current); next.current = null;
+    }
+    return next;
+  }
+
   function load(payload, options) {
     var next = readPayload(payload);
     if (!(options && options.restore === true)) next = { version: 1, current: null, last: clone(next.current || next.last) };
@@ -285,7 +315,15 @@
 
   function applyToAdvanced(advanced, atAgeMonths) {
     if (!advanced || typeof advanced !== 'object') return advanced;
-    var ctx = capture();
+    return applyContextToAdvanced(advanced, atAgeMonths, capture());
+  }
+
+  function applyToAdvancedReadOnly(advanced, atAgeMonths) {
+    if (!advanced || typeof advanced !== 'object') return advanced;
+    return applyContextToAdvanced(advanced, atAgeMonths, captureReadOnly());
+  }
+
+  function applyContextToAdvanced(advanced, atAgeMonths, ctx) {
     advanced.boneAgeContext = ctx;
     advanced.boneAgeYears = currentYearsFor(advanced, atAgeMonths);
     if (advanced.data && typeof advanced.data === 'object') {
@@ -328,6 +366,7 @@
     load: load,
     restoreContext: restoreContext,
     capture: capture,
+    captureReadOnly: captureReadOnly,
     effective: effective,
     currentAge: currentAge,
     currentYearsFor: currentYearsFor,
@@ -335,6 +374,7 @@
     normContextFor: normContextFor,
     normContext: normContext,
     applyToAdvanced: applyToAdvanced,
+    applyToAdvancedReadOnly: applyToAdvancedReadOnly,
     clear: clear
   };
   boot();

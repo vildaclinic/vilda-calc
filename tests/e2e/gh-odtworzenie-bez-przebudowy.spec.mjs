@@ -155,6 +155,7 @@ async function wczytajDoWyboru(page, pid) {
   await page.evaluate((id) => window.VildaAuthUI.showPatientCard(id, (rekord) => {
     if (rekord) window.applyLoadedData(rekord);
   }, null), pid);
+  await expect.poll(() => page.evaluate(() => window.VildaSaveStatusIndicator.getCurrentDecision().ready)).toBe(true);
   await page.getByRole('button', { name: 'Wczytaj tego pacjenta' }).click();
   await expect(page.locator('#vildaLoadChoiceModal')).toBeVisible();
   // Wczytanie (z importem punktów terapii) ma się zakończyć przed liczeniem wyboru.

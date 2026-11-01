@@ -457,6 +457,7 @@ test.describe('Ten sam pacjent — ta sama liczba w każdym miejscu', () => {
     await expect(kafelek).toContainText('+2,2');
     await expect(kafelek).toContainText('99 centyl');
 
+    await expect.poll(() => page.evaluate(() => window.VildaSaveStatusIndicator.getCurrentDecision().ready)).toBe(true);
     await page.getByRole('button', { name: 'Wczytaj tego pacjenta' }).click();
     await page.waitForFunction(() => !document.querySelector('.vilda-auth-screen'));
     // Wczytanie zostawia wiek, masę i wzrost puste — to dzisiejszy pomiar, lekarz wpisuje go sam.
@@ -490,6 +491,7 @@ test.describe('Ten sam pacjent — ta sama liczba w każdym miejscu', () => {
     await expect(kafelek).toBeVisible();
     await expect(kafelek).toContainText('+2,2');
 
+    await expect.poll(() => page.evaluate(() => window.VildaSaveStatusIndicator.getCurrentDecision().ready)).toBe(true);
     await page.getByRole('button', { name: 'Wczytaj tego pacjenta' }).click();
     await expect(page.locator('#vildaLoadChoiceModal')).toBeVisible();
     await page.locator('#vildaLcmRestore').click();

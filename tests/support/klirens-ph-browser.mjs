@@ -1,4 +1,5 @@
 import { expect } from '@playwright/test';
+import { prepareBrowser } from './klirens-patient-record.mjs';
 
 // Synthetic inputs only; the original encrypted vault stays locked throughout.
 export const card = page => page.locator('#clcrResultReport .clcr-result-card[data-clcr-series="pH_spot"]');
@@ -12,8 +13,8 @@ export const base = {
 };
 
 export async function openCalculator(page, width = 1440) {
+  await prepareBrowser(page);
   await page.setViewportSize({ width, height: 1000 });
-  await page.route(/^https:\/\/(?:fonts\.googleapis\.com|fonts\.gstatic\.com|cdn\.sheetjs\.com|cdn\.jsdelivr\.net)\//, route => route.abort());
   await page.goto('/kalkulator-klirens.html', { waitUntil: 'domcontentloaded' });
   const guest = page.getByRole('button', { name: 'Korzystaj bez logowania', exact: true });
   await guest.waitFor({ state: 'visible' });

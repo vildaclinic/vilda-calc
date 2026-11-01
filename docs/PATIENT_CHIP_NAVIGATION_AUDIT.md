@@ -375,3 +375,110 @@ zmienione dane w powłoce i samodzielnie, a także zwykłe F5 rozgrzanej powłok
 z zachowaniem snapshotów sejfu. Testy aktualizacji wykonują nowego klienta
 przechodzącego na kolejny SW; nie stanowią dowodu retroaktywnej ochrony
 listenerów starego klienta. Historyczny odcisk bada osobny test migracji.
+
+## Bieżąca decyzja przed wyczyszczeniem i wczytaniem
+
+Szybkie kliknięcie „Wyczyść wszystkie pola” po edycji może poprzedzać zapis
+sesji i odświeżenie wskaźnika. Potwierdzona regresja dotyczyła formularza
+z samymi danymi pokwitania: wpisane pola zostały wyczyszczone, gdy zapamiętany
+stan wskaźnika nadal miał wartość `hidden`.
+
+`VildaSaveStatusIndicator.getCurrentDecision()` odczytuje w chwili działania
+aktualne dane oraz zakres konta, pacjenta i operacji odtwarzania. Zwraca
+`{ready, state, scope}`. Wskaźnik w nagłówku zachowuje dotychczasowy mechanizm
+odświeżania i kanonizację; odczyt decyzji nie ustanawia referencji zapisu.
+
+Osobny `captureCurrentUserDataReadOnly({base})` używa bieżących pól należących
+do danego dokumentu lub modułu. Nieobecne edytory zachowują dane ze sprawdzonej
+bazy tego samego pacjenta, a jawne puste wartości własnych pól pozostają
+wyczyszczeniem. Dotyczy to również częściowych widoków DocPro i Klirensu.
+Odczyt korzysta z osobnych ścieżek Klirensu, oceny pokwitania, wieku kostnego
+i danych urodzeniowych SGA: nie zapisuje sesji, nie publikuje referencji,
+nie tworzy kotwic obserwacji i nie zmienia kontrolek. Brak wybranej wersji
+Klirensu pozostaje odczytywalnym stanem, także po zwinięciu wersji
+z zachowaną formułą; odczyt nie wybiera domyślnego wzoru. Selektor wzoru
+jest odczytywany z bieżącego dokumentu, ponieważ interfejs Klirensu celowo
+przenosi go do paska przed formularzem. Zwykły serializer zapisu zachowuje
+swój dotychczasowy kontrakt.
+
+Puste własne pole lat z domyślnym zerem miesięcy nie tworzy w tym odczycie
+wieku noworodka. Jawne zero, dodatnie miesiące, podstawa tygodniowa i DOB
+pozostają zachowane. Skasowanie wcześniej zapisanego jawnego zera jest zmianą.
+Dotychczasowy serializer może przy własnym zapisie utrwalić domyślne zero,
+pozostawiając puste pole lat. Ten przypadek rozpoznaje wyłącznie prywatny
+świadek zakończonego zapisu w RAM: obejmuje początkowe i końcowe pola, zakres
+sesji, PID, operację wczytania oraz pełny faktycznie zapisany payload.
+Wyjątek wymaga zgodności całego jego odcisku z referencją. Dopuszcza jedynie
+potwierdzone przypisanie tej samej nowej wizyty do nadanego PID, zgodnie
+z istniejącą regułą własnego zapisu; pozostałe pola muszą być zgodne. Zmienia tylko
+odłączone porównanie bieżącej decyzji; nie przepisuje danych pacjenta,
+referencji w magazynie ani stanu nagłówka. Nowe wczytanie, czyszczenie,
+zmiana sesji lub niezgodne dane unieważniają taki dowód.
+
+Guard używa tej samej decyzji przy przechwyceniu kliknięcia i otwieraniu
+dialogu. Przed odrzuceniem sprawdza ponownie właściciela oraz treść formularza.
+Sam brak gotowości podczas odtwarzania lub zapisu anuluje bieżącą akcję
+z krótkim komunikatem; nie uruchamia później samoczynnego czyszczenia.
+Dotychczasowe zachowanie formularza gościa pozostaje zachowane.
+
+Skok z Terminarza do punktu GH w nowo otwartym DocPro czeka przed pierwszą
+decyzją guarda na `whenInitialMainSessionRestoreSettled()`. Sygnał producenta
+obejmuje oczekiwanie na start aplikacji, dwie zaplanowane klatki i końcowy
+callback odtwarzania; sam brak flagi odtwarzania przed jego rozpoczęciem nie
+jest gotowością. Brak sesji i świadome pominięcie formularza również kończą
+oczekiwanie, a błędy nie dają zgody na wczytanie. Jawne czyszczenie, wczytanie
+lub zapis zastępują start i anulują wcześniejszy oczekujący skok.
+
+Koordynator GH rozpatruje dokładnie przechwycony zamiar i nie usuwa jego
+nowszego zastępstwa. Sprawdza konto, sesję, źródłowego pacjenta i aktywny
+dokument przed odczytem celu i pokazaniem guarda. Późniejsze wykonanie nadal
+podlega jego sprawdzeniu treści oraz zakresu; legalny własny zapis nowego
+pacjenta może nadać PID. Anulowanie lub opuszczenie strony nie wznawia starej
+akcji. Dotychczasowe 60 sekund dotyczy oczekującego zamiaru, a nie czasu
+odpowiedzi lekarza po otwarciu dialogu. Brak modułu guarda nie omija ochrony.
+
+Okno kwarantanny po synchronicznym czyszczeniu nadal blokuje autosave.
+Nie oznacza aktywnego resetu: nowa decyzja może pozwolić na natychmiastowe
+wczytanie pacjenta po Clear, a pola wpisane w tym oknie nadal odczytuje
+jako bieżące dane. Nie zmienia deadline, referencji ani zapisu sesji.
+Dotychczasowa publikacja statusu nadal respektuje tę kwarantannę.
+
+Zdarzenie rozpoczęcia Clear poprzedza usunięcie pól i PID. Panel dokumentów
+może w jego obsłudze zapytać powłokę o właściciela jeszcze przy wychodzącym PID.
+Dlatego `clearAllData()` po zakończeniu dotychczasowego resetu jawnie wywołuje
+`VildaPanelPacjent.zakonczWyczyszczenie()`. Panel resetuje własność dopiero po
+sprawdzonym usunięciu PID; niedostępny magazyn lub nadal wybrany pacjent
+uniemożliwiają potwierdzenie. Zwykły odczyt, upływ kwarantanny ani usunięcie PID
+w innej ramce nie kończą nieaktualności. Blokada aktualizacji aplikacji pozostaje
+niezależna. Starszy Panel bez tej metody zachowuje dotychczasowy protokół.
+
+„Zapisz i wyczyść” wymaga receipt konkretnego zakończonego zapisu, a nie
+dowolnego zdarzenia `onPatientSaved` lub samego rozwiązania Promise.
+`saveUserDataWithReceipt()` korzysta z tego samego pipeline co zwykły zapis;
+niepowodzenie, zmiana zakresu i obcy zapis nie potwierdzają tej operacji.
+Odpowiedź poprzedniego konta nie publikuje PID ani referencji w nowym kontekście.
+
+Po własnym poprawnym zapisie guard czeka na rzeczywiste zakończenie
+odtwarzania DOB (`vilda:dob-restored`), zachowując jeden limit ośmiu sekund,
+a następnie sprawdza konto, pacjenta i treść. Dozwolone przypisanie nowego PID
+dotyczy wyłącznie potwierdzonego własnego zapisu oraz tej samej wizyty.
+Spóźniona odpowiedź, zmiana danych lub konta nie uruchamiają starego Clear.
+
+Regresje obejmują opóźnione rzeczywiste callbacki sesji i wskaźnika, dane
+pokwitaniowe bez antropometrii, anulowanie i odrzucenie, własny zapis,
+obce potwierdzenie, zmianę konta oraz niezmienione dane w powłoce i na
+stronach samodzielnych. Nowe scenariusze są w
+`tests/e2e/clear-current-state.spec.mjs`; istniejące asercje resetu panelu
+pokwitania pozostają częścią sprawdzeń. Wzory, normy i interpretacje nie
+są zmieniane przez tę poprawkę.
+
+
+### Anulowanie końca odtwarzania sesji
+
+Anulowanie timera między klatką `Mt` a jego końcowym callbackiem pozostawiało prywatny stan odtwarzania i `__vildaPersistRestoring` bez wykonawcy, który mógłby je zwolnić. Decyzja o niezapisanych danych pozostawała wtedy niedostępna.
+
+Producent ma teraz własny token w RAM od synchronicznego zastosowania sesji przez klatkę do timera. Jawne czyszczenie, nowe wczytanie i własny zapis anulują jego oba uchwyty i zwalniają wyłącznie jego flagi. Starsze callbacki i bloki `finally` nie mogą zakończyć nowszego odtwarzania. Wcześniejsza zewnętrzna flaga odtwarzania pozostaje zachowana. Zakończenie oczekiwania uwzględnia rzeczywisty wynik jawnej operacji; nieudana operacja nie pozostawia oczekiwania bez producenta.
+
+Regresje wywołują rzeczywiste publiczne API: Clear przed i po klatce, nowe i zagnieżdżone odtwarzanie, oczekiwanie na auth, nieudane wczytanie, błąd planowania i odzyskanie gotowości dla nowych żądań. Osobny kontrolowany scenariusz wykazał, że jedno rzeczywiste czyszczenie może wysłać kilka historycznych powiadomień po oknie deduplikacji adaptera. Test liczy więc także wejścia do publicznej akcji Clear, zachowując zakaz jakiegokolwiek powiadomienia przed własnym potwierdzeniem zapisu.
+
+Świeże publiczne wywołanie finalizera nie przejmuje flag wywołującego. Znacznik własności flag pozwala zachować to zachowanie także przy zastąpieniu i anulowaniu takiego wywołania; przekazanie aktywnego producenta `Fe` nadal zachowuje jego blokadę. Historyczny końcowy callback przywraca przekazaną wcześniejszą wartość jak dotąd.

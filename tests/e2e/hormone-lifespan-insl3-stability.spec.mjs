@@ -66,8 +66,14 @@ function smooth(d) {
 
 // Measure the production SVG itself, not a copy of the display spline.
 async function heights(page, ages) {
-  return line(page).evaluate((path, ages) => {
-    const svg = path.ownerSVGElement;
+  // render() replaces SVG groups/paths; the panel itself is retained.
+  // Select and measure its current path in one synchronous browser callback.
+  return panel(page).evaluate((root, ages) => {
+    const paths = root.querySelectorAll('[data-line="insl3"]');
+    if (paths.length !== 1) throw new Error('Expected one current INSL3 path');
+    const path = paths[0], svg = path.ownerSVGElement;
+    if (!path.isConnected || !svg || !root.contains(svg))
+      throw new Error('INSL3 path must belong to the live panel SVG');
     const mini = svg.querySelector('[data-sector="mini"]');
     const puberty = svg.querySelector('[data-sector="puberty"]');
     const total = path.getTotalLength();
