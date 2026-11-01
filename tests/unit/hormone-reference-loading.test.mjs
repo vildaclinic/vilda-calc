@@ -13,6 +13,7 @@ function environment(missing = [], restoredSession = false) {
   const events = new Map(), appended = [];
   const win = { VildaCrypto: {}, VildaLabSnapshot: {}, VildaLabAssessmentUI: {}, VildaVaultProtocol: {}, VildaVault: {},
     VildaClinicalCrypto: {}, VildaPatientCheckpointStore: {}, VildaPatientCheckpoint: {},
+    VildaPatientIdentityProtocol: {}, VildaPatientIdentityTransport: {},
     VildaAuthUI: {}, VildaProAccess: {}, VildaHormoneReferenceSnapshot: {}, VildaHormoneReferenceUI: {},
     // Decyzja 6.3: zakres zapisany z wynikiem — moduł transportu obok odniesienia AMH.
     VildaLabRangeSnapshot: {},

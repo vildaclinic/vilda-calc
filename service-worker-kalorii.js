@@ -4796,7 +4796,10 @@ const FRESH_STATIC_ALIAS_PATHS = new Set([
   '/vilda_app_helpers.js', '/vilda_frame_sync.js',
   // The three checkpoint modules fit the existing installation request budget
   // by sharing fresh current aliases of these unchanged static dependencies.
-  '/vilda_crypto.js', '/vilda_persistence_adapter.js', '/vilda_crypto_strength_explainer.js'
+  '/vilda_crypto.js', '/vilda_persistence_adapter.js', '/vilda_crypto_strength_explainer.js',
+  // Recovery keeps the same cold-install budget by sharing only fresh bytes
+  // between the two current aliases of these unchanged bootstrap scripts.
+  '/vilda_deps.js', '/vilda_update_hooks.js'
 ]);
 
 async function fetchAndStorePrecacheUrl(url, { required = false, previousShellCaches = [], freshResponses = null } = {}) {

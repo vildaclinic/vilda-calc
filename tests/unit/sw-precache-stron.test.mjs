@@ -282,7 +282,8 @@ describe('P-SW-PRECACHE: instalacja bez historii, kopia z poprzedniej pamięci, 
   const cssEdu = fs.readFileSync(path.join(korzen, 'edu-video-ui.css'), 'utf8');
   const dodatkoweWspoldzieloneZasoby = ['/vilda_auth_ui.css', '/ios26-v2.css', '/vilda_shell.css', '/vilda_vault.js', '/vilda_chrome.js',
     '/vilda_logger.js', '/vilda_html.js', '/vilda_init.js', '/vilda_app_helpers.js', '/vilda_frame_sync.js',
-    '/vilda_crypto.js', '/vilda_persistence_adapter.js', '/vilda_crypto_strength_explainer.js'];
+    '/vilda_crypto.js', '/vilda_persistence_adapter.js', '/vilda_crypto_strength_explainer.js',
+    '/vilda_deps.js', '/vilda_update_hooks.js'];
   const wspoldzielonePary = ['/style.css', '/vilda_chrome.css', ...dodatkoweWspoldzieloneZasoby];
   const wspoldzieloneZasoby = new Set(['/edu-video-ui.css', ...wspoldzielonePary]);
   const oczekiwanePobraniaSwiezychZasobow = () => {
@@ -314,7 +315,8 @@ describe('P-SW-PRECACHE: instalacja bez historii, kopia z poprzedniej pamięci, 
     // Budżety bajtów/żądań pozostają bez zmian; wymagane modele nadal idą z sieci raz.
     // Protokół dodaje jedno żądanie; dodatkowa para aliasów chrome dzieli świeżą odpowiedź.
     expect(pobrane.filter(adres => adres.split('?')[0] === '/vilda_vault_protocol.js')).toHaveLength(1);
-    for (const plik of ['/vilda_clinical_crypto.js', '/vilda_patient_checkpoint_store.js', '/vilda_patient_checkpoint.js']) {
+    for (const plik of ['/vilda_clinical_crypto.js', '/vilda_patient_checkpoint_store.js', '/vilda_patient_checkpoint.js',
+      '/vilda_patient_identity_protocol.js', '/vilda_patient_identity_transport.js']) {
       expect(pobrane.filter(adres => adres.split('?')[0] === plik), plik).toHaveLength(1);
     }
     expect(pobrane.filter(adres => adres.split('?')[0] === '/vilda_care_plan_model.js')).toHaveLength(1);
