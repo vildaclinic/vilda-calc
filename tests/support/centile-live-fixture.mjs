@@ -65,8 +65,6 @@ export async function fixturePreferences(page) {
           applying: window.__vildaPersistRestoring, mirror: window.__vildaLustroWpis,
           clearUntil: window.__vildaPersistClearUntil,
           pending: window.VildaDobAge?.restorePending?.(),
-          owner: window.VildaPanelPacjent?.wlasciciel?.(),
-          stale: window.VildaPanelPacjent?.nieaktualny?.(),
         });
         if (window.__siatkaE2eLifecycle.length > 100) window.__siatkaE2eLifecycle.shift();
       });

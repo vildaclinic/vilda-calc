@@ -217,7 +217,22 @@ describe('P-POWLOKA-PANELE — sesja główna po wczytaniu nie czeka na zdarzeni
     expect(ie).toContain('return $&&clearTimeout($),$=setTimeout(()=>{$=null,!Be(a)&&oe(a)},300),!0}');
     expect(ie).not.toContain('Gp_t');
     // finalizacja odtworzenia sesji odświeża kartę podsumowania po zapisie
-    expect(ie).toContain('try{oe(a)}catch(i){l("vilda_data_import_export:finalizeMainSessionRestore:saveNow",i)}Gp_o(),dispatchMainSessionRestored()};');
+    const poczatekFinalizacji = ie.indexOf('function Mt(');
+    const koniecFinalizacji = ie.indexOf('function Bwczytany0(', poczatekFinalizacji);
+    expect(poczatekFinalizacji, 'funkcja finalizacji sesji istnieje').toBeGreaterThanOrEqual(0);
+    expect(koniecFinalizacji, 'ograniczenie do funkcji Mt').toBeGreaterThan(poczatekFinalizacji);
+    const finalizacja = ie.slice(poczatekFinalizacji, koniecFinalizacji);
+    expect(finalizacja).toContain('try{oe(a)}catch(i){l("vilda_data_import_export:finalizeMainSessionRestore:saveNow",i)}Gp_o(),dispatchMainSessionRestored();');
+    let poprzedniEtapFinalizacji = -1;
+    for (const etap of [
+      'try{oe(a)}', 'Gp_o()', 'dispatchMainSessionRestored()',
+      'if(initialOutcome)settleInitialMainSessionRestore(initialOutcome.ready,initialOutcome.reason)',
+    ]) {
+      const pozycja = finalizacja.indexOf(etap);
+      expect(pozycja, `finalizacja odtworzenia: ${etap}`).toBeGreaterThan(poprzedniEtapFinalizacji);
+      poprzedniEtapFinalizacji = pozycja;
+    }
+    expect(finalizacja).toContain('const n=()=>{try{ae=setTimeout(o,0)}catch(error){if(initialOutcome)settleInitialMainSessionRestore(false,"schedule-failed");throw error}}');
     expect(ie).toContain('function Gp_o(){try{typeof r.updateProfessionalSummaryCard=="function"&&r.updateProfessionalSummaryCard()}');
     const sh = czytaj('vilda_shell.js');
     expect(sh).toContain('P-POWLOKA-PANELE (zgloszenie wlasciciela 2026-09-28)');

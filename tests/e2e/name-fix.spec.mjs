@@ -588,6 +588,10 @@ test.describe('„Wyczyść wszystkie pola” zamyka pytanie i komunikat korekty
     await expect.poll(() => page.evaluate(() => window.__vnfZapis.wejscia), { timeout: 15000 }).toBe(1);
 
     await page.locator('#clearAllDataBtn').click();
+    const guard = page.getByRole('dialog', { name: 'Zapisać zmiany przed wyczyszczeniem?', exact: true });
+    await expect(guard).toBeVisible();
+    await guard.getByRole('button', { name: 'Odrzuć zmiany i wyczyść', exact: true }).click();
+    await expect(guard).toHaveCount(0);
     await expect(done).toBeHidden();
 
     await zwolnijZapisKorekty(page);

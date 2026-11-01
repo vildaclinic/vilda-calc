@@ -401,17 +401,56 @@ jest odczytywany z bieżącego dokumentu, ponieważ interfejs Klirensu celowo
 przenosi go do paska przed formularzem. Zwykły serializer zapisu zachowuje
 swój dotychczasowy kontrakt.
 
+Puste własne pole lat z domyślnym zerem miesięcy nie tworzy w tym odczycie
+wieku noworodka. Jawne zero, dodatnie miesiące, podstawa tygodniowa i DOB
+pozostają zachowane. Skasowanie wcześniej zapisanego jawnego zera jest zmianą.
+Dotychczasowy serializer może przy własnym zapisie utrwalić domyślne zero,
+pozostawiając puste pole lat. Ten przypadek rozpoznaje wyłącznie prywatny
+świadek zakończonego zapisu w RAM: obejmuje początkowe i końcowe pola, zakres
+sesji, PID, operację wczytania oraz pełny faktycznie zapisany payload.
+Wyjątek wymaga zgodności całego jego odcisku z referencją. Dopuszcza jedynie
+potwierdzone przypisanie tej samej nowej wizyty do nadanego PID, zgodnie
+z istniejącą regułą własnego zapisu; pozostałe pola muszą być zgodne. Zmienia tylko
+odłączone porównanie bieżącej decyzji; nie przepisuje danych pacjenta,
+referencji w magazynie ani stanu nagłówka. Nowe wczytanie, czyszczenie,
+zmiana sesji lub niezgodne dane unieważniają taki dowód.
+
 Guard używa tej samej decyzji przy przechwyceniu kliknięcia i otwieraniu
 dialogu. Przed odrzuceniem sprawdza ponownie właściciela oraz treść formularza.
 Sam brak gotowości podczas odtwarzania lub zapisu anuluje bieżącą akcję
 z krótkim komunikatem; nie uruchamia później samoczynnego czyszczenia.
 Dotychczasowe zachowanie formularza gościa pozostaje zachowane.
 
+Skok z Terminarza do punktu GH w nowo otwartym DocPro czeka przed pierwszą
+decyzją guarda na `whenInitialMainSessionRestoreSettled()`. Sygnał producenta
+obejmuje oczekiwanie na start aplikacji, dwie zaplanowane klatki i końcowy
+callback odtwarzania; sam brak flagi odtwarzania przed jego rozpoczęciem nie
+jest gotowością. Brak sesji i świadome pominięcie formularza również kończą
+oczekiwanie, a błędy nie dają zgody na wczytanie. Jawne czyszczenie, wczytanie
+lub zapis zastępują start i anulują wcześniejszy oczekujący skok.
+
+Koordynator GH rozpatruje dokładnie przechwycony zamiar i nie usuwa jego
+nowszego zastępstwa. Sprawdza konto, sesję, źródłowego pacjenta i aktywny
+dokument przed odczytem celu i pokazaniem guarda. Późniejsze wykonanie nadal
+podlega jego sprawdzeniu treści oraz zakresu; legalny własny zapis nowego
+pacjenta może nadać PID. Anulowanie lub opuszczenie strony nie wznawia starej
+akcji. Dotychczasowe 60 sekund dotyczy oczekującego zamiaru, a nie czasu
+odpowiedzi lekarza po otwarciu dialogu. Brak modułu guarda nie omija ochrony.
+
 Okno kwarantanny po synchronicznym czyszczeniu nadal blokuje autosave.
 Nie oznacza aktywnego resetu: nowa decyzja może pozwolić na natychmiastowe
 wczytanie pacjenta po Clear, a pola wpisane w tym oknie nadal odczytuje
 jako bieżące dane. Nie zmienia deadline, referencji ani zapisu sesji.
 Dotychczasowa publikacja statusu nadal respektuje tę kwarantannę.
+
+Zdarzenie rozpoczęcia Clear poprzedza usunięcie pól i PID. Panel dokumentów
+może w jego obsłudze zapytać powłokę o właściciela jeszcze przy wychodzącym PID.
+Dlatego `clearAllData()` po zakończeniu dotychczasowego resetu jawnie wywołuje
+`VildaPanelPacjent.zakonczWyczyszczenie()`. Panel resetuje własność dopiero po
+sprawdzonym usunięciu PID; niedostępny magazyn lub nadal wybrany pacjent
+uniemożliwiają potwierdzenie. Zwykły odczyt, upływ kwarantanny ani usunięcie PID
+w innej ramce nie kończą nieaktualności. Blokada aktualizacji aplikacji pozostaje
+niezależna. Starszy Panel bez tej metody zachowuje dotychczasowy protokół.
 
 „Zapisz i wyczyść” wymaga receipt konkretnego zakończonego zapisu, a nie
 dowolnego zdarzenia `onPatientSaved` lub samego rozwiązania Promise.

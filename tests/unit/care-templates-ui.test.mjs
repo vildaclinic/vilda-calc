@@ -355,7 +355,7 @@ describe('Care-template assets load only on explicit use', () => {
     const first = d.api.ensureTemplateLibrary({ ui: false }), second = d.api.ensureTemplateLibrary({ ui: false }); expect(first).toBe(second);
     expect(d.requests.map(element => element.src || element.href)).toEqual(['vilda_care_template_model.js?v=1']);
     d.win.VildaCareTemplateModel = {}; d.requests[0].onload(); await settle();
-    expect(d.requests[1].src).toBe('vilda_care_template_store.js?v=1'); d.win.VildaCareTemplateStore = {}; d.requests[1].onload(); await first;
+    expect(d.requests[1].src).toBe('vilda_care_template_store.js?v=2'); d.win.VildaCareTemplateStore = {}; d.requests[1].onload(); await first;
     const ui = d.api.ensureTemplateLibrary(); await settle(); expect(d.requests).toHaveLength(4);
     d.requests[2].onload(); d.win.VildaCareTemplates = { open: vi.fn() }; d.requests[3].onload(); await ui;
     await d.api.ensureTemplateLibrary(); expect(d.requests).toHaveLength(4);

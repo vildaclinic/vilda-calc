@@ -19,6 +19,9 @@ export async function prepareBrowser(page) {
     // installed. Actual browser startup and guest mode still use the original
     // locked vault; the wrapper only records public subscription callbacks.
     window.__clcrEarlyNoteListeners = new Set();
+    // Match actual onUnlock/onLock registration: ordered arrays, no immediate
+    // callback and no unsubscribe value. The original encrypted vault stays locked.
+    window.__clcrVaultLifecycleListeners = { onUnlock: [], onLock: [] };
     let exportedVault;
     Object.defineProperty(window, 'VildaVault', {
       configurable: true,
@@ -31,6 +34,16 @@ export async function prepareBrowser(page) {
           window.__clcrEarlyNoteListeners.add(listener);
           return subscribe(listener);
         };
+        if (!value.__clcrMemoryLifecycle) {
+          for (const method of ['onUnlock', 'onLock']) {
+            if (typeof value[method] !== 'function') continue;
+            const register = value[method].bind(value);
+            value[method] = listener => {
+              if (typeof listener === 'function') window.__clcrVaultLifecycleListeners[method].push(listener);
+              return register(listener);
+            };
+          }
+        }
         Object.defineProperty(value, '__clcrSubscriptionProbe', { value: true });
       },
     });
@@ -141,6 +154,9 @@ export async function installMemoryVault(scope, { patientId = PATIENT_ID, select
       return { id: note.id, isNew: !previous, updatedAtISO: note.updatedAtISO, ...(once ? { saved: true, reused: false } : {}) };
     };
     window.VildaVault = {
+      __clcrMemoryLifecycle: true,
+      onUnlock: listener => { if (typeof listener === 'function') window.__clcrVaultLifecycleListeners.onUnlock.push(listener); },
+      onLock: listener => { if (typeof listener === 'function') window.__clcrVaultLifecycleListeners.onLock.push(listener); },
       isUnlocked: () => store.unlocked,
       getCurrentUser: () => ({ userId: store.userId }),
       getPatient: async id => {
@@ -211,6 +227,15 @@ export async function installMemoryVault(scope, { patientId = PATIENT_ID, select
     window.VildaSession.hasSessionKey = () => store.unlocked;
     // A private UI fixture does not create real audit-log writes.
     window.VildaAuditLog = { log: () => {} };
+    // This facade represents an already authenticated restored session. Deliver
+    // the same public unlock payload after account/session presence is aligned.
+    // No real vault is unlocked and no private UI/status setter is invoked.
+    const restored = { userId: store.userId, label: 'Fikcyjne konto Klirensu', trigger: 'restore' };
+    const listeners = [...window.__clcrVaultLifecycleListeners.onUnlock];
+    for (const listener of listeners) {
+      try { listener(restored); }
+      catch (error) { store.observerErrors.push('onUnlock: ' + String(error)); }
+    }
     window.__clcrRecordFixture = {
       snapshot: () => ({ notes: clone([...store.notes.values()]), saves: clone(store.saves), updates: clone(store.updates),
         deletes: clone(store.deletes), noteReads: [...store.noteReads], patientReads: [...store.patientReads],

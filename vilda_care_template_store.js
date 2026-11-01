@@ -4,6 +4,10 @@
   const NAMESPACE = 'care-template-library', VERSION = 1, EID = /^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$/;
   const copy = value => value == null ? value : JSON.parse(JSON.stringify(value));
   const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
+  // Verified full aggregates ignore object-key order; wire/event CAS stays exact.
+  const aggregateKey = value => Array.isArray(value) ? "[" + value.map(aggregateKey).join(",") + "]"
+    : value && typeof value === "object" ? "{" + Object.keys(value).sort().map(key => JSON.stringify(key) + ":" + aggregateKey(value[key])).join(",") + "}"
+    : JSON.stringify(value);
   const bytes = value => new TextEncoder().encode(JSON.stringify(value)).length;
   const error = (code, message) => Object.assign(new Error(message), { code });
   const MAX_STORAGE_BYTES = 268435456, MAX_EVENT_BYTES = 67108864, MAX_RECORDS = 16384;
@@ -238,21 +242,23 @@
       const ids = new Set(); let lastSeq = settings.expectedCursor;
       for (const incoming of settings.events) { if (!incoming || !validEid(incoming.eid) || ids.has(incoming.eid) || !Number.isSafeInteger(incoming.seq) || incoming.seq !== lastSeq + 1 || incoming.seq > settings.cursor || bytes(incoming.body) > 1048576) throw error('CARE_TEMPLATE_INVALID_CURSOR', 'Nieprawidłowa kolejność operacji biblioteki.'); ids.add(incoming.eid); lastSeq = incoming.seq; }
       if (lastSeq !== settings.cursor) throw error('CARE_TEMPLATE_INVALID_CURSOR', 'Kursor pomija operacje biblioteki.');
-      const templateRows = new Map(), records = new Map(), eventChecks = [], events = [];
+      const templateRows = new Map(), originalKeys = new Map(), records = new Map(), eventChecks = [], events = [];
       for (const incoming of settings.events) {
         if (!incoming || !incoming.body || await checked(wireDigest(incoming.body)) !== incoming.digest) throw error('CARE_TEMPLATE_INVALID_EVENT', 'Niezgodny skrót przesyłki biblioteki.');
         const packet = await checked(decryptWire(incoming.body, incoming.eid, meta.wireBinding));
         if (!packet || !packet.operation || packet.operation.id !== incoming.eid || !Array.isArray(packet.operation.parents) || packet.operation.parents.some(id => !validEid(id))) throw error('CARE_TEMPLATE_INVALID_EVENT', 'Nieprawidłowa tożsamość operacji biblioteki.');
         const original = await checked(backend.readEvent(incoming.eid)); eventChecks.push({ id: incoming.eid, row: original });
         if (original && (original.templateId !== packet.templateId || original.fingerprint !== packet.operation.fingerprint || original.wire && !same(original.wire.body, incoming.body))) throw error('CARE_TEMPLATE_OPERATION_COLLISION', 'Niezgodne kopie tej samej operacji biblioteki.');
-        if (!records.has(packet.templateId)) { const row = await checked(backend.readTemplate(packet.templateId)); templateRows.set(packet.templateId, row); records.set(packet.templateId, await recordOf(row)); }
+        if (!records.has(packet.templateId)) { const row = await checked(backend.readTemplate(packet.templateId)), record = await recordOf(row); templateRows.set(packet.templateId, row); originalKeys.set(packet.templateId, aggregateKey(record)); records.set(packet.templateId, record); }
         const merged = await checked(model.applyTemplateEvent(records.get(packet.templateId), packet));
         if (!merged.ok && merged.kind !== 'incomplete') fail(merged);
         const record = merged.record || merged.raw; if (!record) fail(merged); records.set(packet.templateId, record);
         const row = original ? Object.assign({}, original) : { eid: incoming.eid, templateId: packet.templateId, fingerprint: packet.operation.fingerprint, localCipher: await checked(encryptLocal(packet, 'event', incoming.eid)) };
         row.capacityBytes = row.capacityBytes || bytes(row.localCipher); row.pending = 0; row.wire = { epoch: settings.epoch, slotId: meta.wireBinding.slotId, body: copy(incoming.body), digest: incoming.digest }; row.accepted = { epoch: settings.epoch, seq: incoming.seq, digest: incoming.digest }; delete row.proposedCipher; events.push(row);
       }
-      const templates = []; for (const [id, record] of records) templates.push(await rowOf(record, templateRows.get(id)));
+      // An accepted echo can change receipts/cursor without changing the full aggregate.
+      // Keep its physical row stable while retaining every existing transaction CAS.
+      const templates = []; for (const [id, record] of records) if (aggregateKey(record) !== originalKeys.get(id)) templates.push(await rowOf(record, templateRows.get(id)));
       const saved = await checked(backend.commit({ assertCurrent, ownerUserIds: ownerUserId ? [ownerUserId] : [], expectedEpoch: settings.epoch, expectedCursor: settings.expectedCursor, templateChecks: Array.from(templateRows, ([id, row]) => ({ id, revision: row ? row.revision : undefined })), eventChecks, events, templates, meta: { cursor: settings.cursor } }));
       if (!saved.saved) throw error('CARE_TEMPLATE_CONFLICT', 'Biblioteka zmieniła się podczas pobierania.');
       if (emit && events.length) emit({ source: 'remote' }); return { applied: true, count: events.length, cursor: settings.cursor };

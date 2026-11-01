@@ -63,6 +63,34 @@ function decisionFingerprint(value){
   b(core);
   return JSON.stringify(te({core:core,clcr:clcr?X(P(decisionClone(clcr))):null}));
 }
+function decisionOwnSaveReference(value,owner,reference,api){
+  // Match the complete actual committed payload before aliasing one legacy
+  // fallback on detached comparison data. Stored/header references stay exact.
+  try{
+    if(!value.user||value.user.age!==null||!reference||!api||typeof api.getOwnSaveBlankAgeComparison!=="function")return reference;
+    var witness=api.getOwnSaveBlankAgeComparison();
+    if(!witness||witness.patientId!==owner.patientId)return reference;
+    var savedFingerprint=decisionFingerprint(witness.payload);
+    if(savedFingerprint!==reference){
+      // The existing new-patient save handoff may bind this exact examination
+      // in the normal session publisher before this detached age comparison.
+      if(witness.sourcePatientId!==null)return reference;
+      var saved=JSON.parse(savedFingerprint),raw=JSON.parse(reference);
+      var beforeVisit=saved&&saved.core&&saved.core.user&&saved.core.user.pubertyAssessmentVisit;
+      var referenceVisit=raw&&raw.core&&raw.core.user&&raw.core.user.pubertyAssessmentVisit;
+      var liveVisit=value.user.pubertyAssessmentVisit;
+      if(!beforeVisit||!referenceVisit||!liveVisit||beforeVisit.version!==1||referenceVisit.version!==1||liveVisit.version!==1||
+        typeof beforeVisit.visitId!=="string"||!beforeVisit.visitId||beforeVisit.visitId!==referenceVisit.visitId||beforeVisit.visitId!==liveVisit.visitId||
+        beforeVisit.ownerPatientId!=null||referenceVisit.ownerPatientId!==owner.patientId||liveVisit.ownerPatientId!==owner.patientId)return reference;
+      beforeVisit.ownerPatientId=owner.patientId;
+      if(JSON.stringify(te(saved))!==reference)return reference;
+    }
+    var copy=JSON.parse(reference),user=copy&&copy.core&&copy.core.user;
+    if(!user||user.age!==0)return reference;
+    delete user.age;
+    return JSON.stringify(te(copy));
+  }catch{return reference}
+}
 function readCurrentDecision(afterSave){
   var owner,generation=statusGeneration,state=i.HIDDEN,reference=null,fingerprint=null,ready=false;
   try{
@@ -78,6 +106,7 @@ function readCurrentDecision(afterSave){
       var ref=k();
       if(!owner.patientId||ref&&typeof ref.patientId==="string"&&ref.patientId&&ref.patientId!==owner.patientId)ref=null;
       reference=ref&&typeof ref.fp==="string"&&ref.fp?ref.fp:null;
+      reference=decisionOwnSaveReference(value,owner,reference,api);
       fingerprint=decisionFingerprint(value);
       state=reference!==null?(fingerprint===reference?i.SAVED:i.DIRTY):(decisionHasData(value)?i.NEW_PATIENT:i.HIDDEN);
       ready=sameDecisionOwner(owner,decisionOwner())&&generation===statusGeneration&&decisionReady(owner,afterSave);
