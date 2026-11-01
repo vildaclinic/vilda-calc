@@ -59,6 +59,34 @@ flowchart LR
 
 Zielone CI nie zatwierdza medycznie wzoru. Potwierdza jedynie to, co test został zaprojektowany sprawdzić.
 
+## Czas pełnego E2E
+
+Pełny zestaw jest dzielony po plikach na **osiem runnerów**, po cztery workery
+Playwrighta na każdym. Każdy runner wyznacza ten sam deterministyczny podział
+z `tests/fixtures/czasy-e2e.json`. Skrypt sprawdza listę przez rzeczywiste
+`playwright test --list`; testy jednostkowe pilnują pełnego, rozłącznego pokrycia.
+Wymagany status `Testy przeglądarkowe i PWA` przechodzi dopiero po wszystkich częściach.
+
+Punkt odniesienia: [CI PR #847](https://github.com/vildaclinic/vilda-calc/actions/runs/41332488215),
+head PR `a873c1f2`, testowany merge commit `e11e505a`, 2728 przypadków.
+Na czterech runnerach same testy trwały
+42,18 / 41,37 / 43,27 / 41,60 min. Przygotowanie zajmowało 51–63 s,
+a raport i sprzątanie około 4 s. Obciążenie było wyrównane; główne ograniczenie
+stanowiła liczba maszyn wykonujących testy równolegle.
+
+Zmiana czterech części na osiem zachowuje wszystkie przypadki, projekty desktop/mobile,
+izolację kontekstów i sejfów, kolejność wewnątrz plików, asercje, limity,
+ponowienia i ślady pierwszego błędu. Szacunek 22–25 min wymaga potwierdzenia
+pełnym CI; zmierzony wynik i liczbę przypadków zapisujemy w opisie PR.
+Porównujemy najdłuższy job, czas samych testów, oczekiwanie na runner,
+powtórki i pokrycie zestawu. Jeden przebieg daje obserwację, a nie gwarancję czasu
+każdego kolejnego PR-a.
+
+Większa równoległość wymaga większej liczby dostępnych runnerów; przy limicie konta
+części mogą czekać w kolejce. Aktualizacja tabeli czasów z pełnych raportów CI
+poprawia dalsze planowanie. Zmiana cache, nagrywania śladów lub przygotowania kont
+testowych wymaga osobnego pomiaru i sprawdzenia zachowania izolacji oraz PWA.
+
 ## Kilka wątków naraz
 
 Kilka wątków (sesji agentów) może pracować równolegle. Ich PR-y wchodzą jednak do `audyt` **po kolei**, bo prawie każdy zmienia te same linie:
