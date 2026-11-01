@@ -516,8 +516,8 @@
       var scroll = detail.scrollTop, menuOpen = !!detail.querySelector('.vcp-menu[open]'); clear(detail);
       var selected = activePlan();
       if (recordNoteId && selected) { renderRecord(selected); detail.scrollTop = scroll; return; }
-      var backLabel = typeof options.backLabel === 'function' ? options.backLabel() : options.backLabel;
-      detail.appendChild(button(backLabel || '← Lista planów', 'vcp-back vcp-text', back));
+      var parentBack = button('← Lista planów', 'vcp-back vcp-text', back);
+      parentBack.setAttribute('data-vcp-parent-back', 'true'); detail.appendChild(parentBack); refreshNavigation();
       var plan = activePlan(); if (!plan) { detail.appendChild(node('p', 'vcp-empty', 'Wybierz plan z listy albo dodaj nowy plan opieki.')); return; }
       var top = node('div', 'vcp-detail-top'), patient = node('div', '');
       patient.appendChild(options.openPatient ? button(name(plan) + ' ↗', 'vcp-patient-link', function () { openPatient(plan); }) : node('h3', 'vcp-patient', name(plan)));
@@ -993,13 +993,21 @@
       unsubscribe.forEach(function (fn) { try { if (typeof fn === 'function') fn(); } catch {} });
       doc.removeEventListener('vilda:sync-merged', scheduleRefresh); root.remove(); if (options.onBusy) options.onBusy(false, false);
     }
+    function refreshNavigation() {
+      if (!current()) return;
+      var hasReturn = typeof options.hasReturn === 'function' && options.hasReturn() === true;
+      var label = typeof options.backLabel === 'function' ? options.backLabel() : options.backLabel;
+      Array.from(detail.querySelectorAll('[data-vcp-parent-back]')).forEach(function (item) {
+        item.classList.toggle('vcp-parent-return', hasReturn); item.textContent = label || '← Lista planów';
+      });
+    }
     unsubscribe.push(observeVault(vault, scheduleRefresh, destroy));
     doc.addEventListener('vilda:sync-merged', scheduleRefresh);
     if (typeof win.MutationObserver === 'function' && doc.body) {
       lifecycleObserver = new win.MutationObserver(function () { if (!current()) destroy(); });
       lifecycleObserver.observe(doc.body, { childList: true, subtree: true });
     }
-    var controller = { refresh: refresh, destroy: destroy, create: create, select: select, openRecord: openRecord, openTemplates: openTemplateLibrary, isEditing: function () { return state.editing || state.busy; }, getSelected: function () { return state.selected; }, getContext: function () { return { planId: state.selected, noteId: recordNoteId, detail: state.detail }; } };
+    var controller = { refresh: refresh, refreshNavigation: refreshNavigation, destroy: destroy, create: create, select: select, openRecord: openRecord, openTemplates: openTemplateLibrary, isEditing: function () { return state.editing || state.busy; }, getSelected: function () { return state.selected; }, getContext: function () { return { planId: state.selected, noteId: recordNoteId, detail: state.detail }; } };
     refresh(); return controller;
   }
   win.VildaCarePlans = { mount: mount, projectPatientNotes: projectPatientNotes, resolveNoteDestination: resolveNoteDestination, ensureTemplateLibrary: ensureTemplateLibrary, openTemplates: openTemplates };
