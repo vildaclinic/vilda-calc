@@ -44,6 +44,8 @@ W trybie prywatnym potwierdzony zapis lokalny jest trwały, a oczekujące operac
 
 Synchronizacja biblioteki korzysta z istniejącego cyklu synchronizacji aplikacji, z osobnym wynikiem tej domeny. Nie ma drugiego klinicznego harmonogramu. Operacje zależne są wysyłane po potwierdzonych poprzednikach. Potwierdzenie dotyczy dokładnego identyfikatora operacji, szyfrogramu i generacji biblioteki. Zmiana generacji zatrzymuje stare oczekujące operacje; nie oznacza ich automatycznie nową generacją.
 
+Odebranie własnej, już zapisanej operacji nadal zapisuje potwierdzenie i przesuwa kursor synchronizacji. Jeśli pełny zweryfikowany agregat szablonu pozostaje identyczny, magazyn zachowuje jego szyfrogram i lokalną rewizję. Zapobiega to fałszywemu konfliktowi z nowym zapisem przygotowywanym w tej samej chwili. Porównanie uwzględnia całą historię operacji i wersji, z zachowaniem kolejności tablic; kolejność kluczy obiektu JSON nie zmienia treści. Nowa operacja, również bez zmiany samej definicji, nadal zmienia agregat. Kontrole rewizji, zdarzeń, tożsamości, generacji i kursora pozostają częścią tej samej transakcji.
+
 Obsługa synchronizacji wymaga zgodnego zaplecza `care-template-library`, z osobno sprawdzaną tożsamością, generacją i dziennikiem niezmiennych szyfrogramów. Brak usługi, nieobsługiwana odpowiedź lub błąd uwierzytelnienia nie powodują przesłania danych biblioteki dawnym kanałem pacjentów ani wyświetlenia pozornie pustej biblioteki.
 
 Kod zaplecza jest przygotowywany i testowany w `vildaclinic/vilda-source`. Scalenie samej zmiany strony nie wdraża workera. Przegląd, wdrożenie zaplecza i operacje na rzeczywistym koncie wymagają osobnej decyzji właściciela. Sam raport zdrowia serwera nie jest potwierdzeniem obsługi biblioteki.

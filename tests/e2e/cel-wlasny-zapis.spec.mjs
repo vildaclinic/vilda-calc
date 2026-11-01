@@ -100,6 +100,7 @@ async function wczytajIOdtworz(page, pid, masa) {
   await page.evaluate((id) => window.VildaAuthUI.showPatientCard(id, (rekord) => {
     if (rekord) window.applyLoadedData(rekord);
   }, null), pid);
+  await expect.poll(() => page.evaluate(() => window.VildaSaveStatusIndicator.getCurrentDecision().ready)).toBe(true);
   await page.getByRole('button', { name: 'Wczytaj tego pacjenta' }).click();
   await expect(page.locator('#vildaLoadChoiceModal')).toBeVisible();
   await page.locator('#vildaLcmRestore').click();
@@ -113,6 +114,7 @@ async function wczytajNowyPomiar(page, pid) {
   await page.evaluate((id) => window.VildaAuthUI.showPatientCard(id, (rekord) => {
     if (rekord) window.applyLoadedData(rekord);
   }, null), pid);
+  await expect.poll(() => page.evaluate(() => window.VildaSaveStatusIndicator.getCurrentDecision().ready)).toBe(true);
   await page.getByRole('button', { name: 'Wczytaj tego pacjenta' }).click();
   await expect(page.locator('#vildaLoadChoiceModal')).toBeVisible();
   await page.locator('#vildaLcmNew').click();

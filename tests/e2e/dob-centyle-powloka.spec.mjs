@@ -47,11 +47,15 @@ async function centyleISchowek(frame) {
 }
 
 async function odtworzZOpóźnieniem(frame, patientId) {
+  // This scenario isolates delayed DOB acceptance after the initial session.
+  const initial = await frame.evaluate(() => window.VildaDataImportExport.whenInitialMainSessionRestoreSettled());
+  expect(initial.ready, 'initial main-session restore has completed successfully').toBe(true);
   await frame.evaluate((id) => {
     window.clearAllData();
     window.__vildaDobRestoreGate.pause();
     window.VildaAuthUI.showPatientCard(id, (record) => { if (record) window.applyLoadedData(record); }, null);
   }, patientId);
+  await expect.poll(() => frame.evaluate(() => window.VildaSaveStatusIndicator.getCurrentDecision().ready)).toBe(true);
   await frame.getByRole('button', { name: 'Wczytaj tego pacjenta' }).click();
   const wybor = frame.locator('#vildaLoadChoiceModal');
   const straznik = frame.getByRole('dialog', { name: /^Zapisać (wpisane dane|zmiany) przed wczytaniem\?$/ });

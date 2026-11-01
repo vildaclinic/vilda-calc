@@ -119,6 +119,7 @@ test.describe('P-SCALANIE-SEKCJE — „Scal pacjentów” z prawdziwym zapisem 
     await druga.evaluate((id) => window.VildaAuthUI.showPatientCard(id, (rekord) => {
       if (rekord) window.applyLoadedData(rekord);
     }, null), y);
+    await expect.poll(() => druga.evaluate(() => window.VildaSaveStatusIndicator.getCurrentDecision().ready)).toBe(true);
     await druga.getByRole('button', { name: 'Wczytaj tego pacjenta' }).click();
     await expect(druga.locator('#vildaLoadChoiceModal')).toBeVisible();
     await druga.locator('#vildaLcmNew').click();
@@ -205,6 +206,7 @@ test.describe('P-SCALANIE-SEKCJE — kalkulator klirensu: ponowienie zapisu po s
     await A.reload({ waitUntil: 'load' });
     await gotowyKlirens(A);
     await A.evaluate((id) => window.VildaAuthUI.showPatientCard(id, (r) => { if (r) window.applyLoadedData(r); }, null), x);
+    await expect.poll(() => A.evaluate(() => window.VildaSaveStatusIndicator.getCurrentDecision().ready)).toBe(true);
     await A.getByRole('button', { name: 'Wczytaj tego pacjenta' }).click();
     await A.waitForTimeout(800);
     if (await A.locator('#vildaLoadChoiceModal').count()) await A.locator('#vildaLcmNew').click();
@@ -271,6 +273,7 @@ async function kartaKlirensu(context) {
 
 async function wczytajZKartyPacjenta(karta, id) {
   await karta.evaluate((pid) => window.VildaAuthUI.showPatientCard(pid, (r) => { if (r) window.applyLoadedData(r); }, null), id);
+  await expect.poll(() => karta.evaluate(() => window.VildaSaveStatusIndicator.getCurrentDecision().ready)).toBe(true);
   await karta.getByRole('button', { name: 'Wczytaj tego pacjenta' }).click();
   await karta.waitForTimeout(800);
   if (await karta.locator('#vildaLoadChoiceModal').count()) await karta.locator('#vildaLcmNew').click();

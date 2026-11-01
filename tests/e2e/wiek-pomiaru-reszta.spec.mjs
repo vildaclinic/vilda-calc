@@ -32,9 +32,15 @@ async function otworzZKontem(page) {
   await page.reload({ waitUntil: 'load' });
   await page.waitForFunction(() => Boolean(window.VildaVault) && window.VildaVault.isUnlocked()
     && !document.documentElement.classList.contains('vilda-auth-locked')
-    && Boolean(window.VildaAuthUI) && typeof window.calcPercentileStats === 'function'
+    && Boolean(window.VildaAuthUI) && window.VildaAuthUI.isBootReady() && typeof window.calcPercentileStats === 'function'
     && Boolean(window.VildaPatientSummaryCopy) && Boolean(window.VildaDobAge) && Boolean(window.VildaSummaryCards),
   null, { timeout: 30000 });
+  const initial = await page.evaluate(() => {
+    const api = window.VildaDataImportExport;
+    return typeof api?.whenInitialMainSessionRestoreSettled === 'function'
+      ? api.whenInitialMainSessionRestoreSettled() : null;
+  });
+  if (initial) expect(initial.ready, 'initial main-session restore has completed successfully').toBe(true);
 }
 
 async function trybPro(page) {
@@ -81,6 +87,7 @@ async function otworzKarte(page, pid, wczytaj = true) {
 
 async function wczytajJakoNowyPomiar(page, pid) {
   await otworzKarte(page, pid);
+  await expect.poll(() => page.evaluate(() => window.VildaSaveStatusIndicator.getCurrentDecision().ready)).toBe(true);
   await page.getByRole('button', { name: 'Wczytaj tego pacjenta' }).click();
   await page.waitForSelector('#vildaLoadChoiceModal', { state: 'visible', timeout: 8000 });
   await page.click('#vildaLcmNew');

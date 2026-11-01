@@ -95,6 +95,6 @@ describe('Nie wymyślamy sekcji, której nie ma', () => {
 
 describe('Okablowanie kolektora', () => {
   it('payload kolektora niesie sekcję okołoporodową obok urodzeniowej i pokwitaniowej', () => {
-    expect(src).toContain('birth:Bf0(),perinatal:Bper0(),puberty:Bq1()');
+    expect(src).toContain('birth:Bf0(readOnlyCapture),perinatal:Bper0(),puberty:Bq1()');
   });
 });

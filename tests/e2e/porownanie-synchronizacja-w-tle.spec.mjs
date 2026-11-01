@@ -126,6 +126,7 @@ async function pacjentZPorownaniem(page) {
   await page.evaluate((id) => window.VildaAuthUI.showPatientCard(id, (r) => { if (r) window.applyLoadedData(r); }, null), pid);
   const wczytaj = page.getByRole('button', { name: 'Wczytaj tego pacjenta' });
   await wczytaj.waitFor({ state: 'visible', timeout: 20000 });
+  await expect.poll(() => page.evaluate(() => window.VildaSaveStatusIndicator.getCurrentDecision().ready)).toBe(true);
   await wczytaj.click();
   await page.waitForSelector('#vildaLoadChoiceModal', { state: 'visible', timeout: 8000 });
   await page.click('#vildaLcmNew');

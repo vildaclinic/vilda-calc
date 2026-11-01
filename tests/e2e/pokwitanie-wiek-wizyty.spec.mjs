@@ -97,6 +97,7 @@ test('chip pacjenta w nagłówku pokazuje niezapisane zmiany po samym kliknięci
     name: 'Fikcyjny Aleksander', user: { lastName: 'Fikcyjny', firstName: 'Aleksander', sex: 'M', age: 12, ageMonths: 0, height: 150, weight: 40 }
   }, { dedup: false })).patientId);
   await page.evaluate(pid => window.VildaAuthUI.showPatientCard(pid, record => { if (record) window.applyLoadedData(record); }, null), id);
+  await expect.poll(() => page.evaluate(() => window.VildaSaveStatusIndicator.getCurrentDecision().ready)).toBe(true);
   await page.getByRole('button', { name: 'Wczytaj tego pacjenta' }).click();
   await expect(page.locator('#vildaLoadChoiceModal')).toBeVisible();
   await page.locator('#vildaLcmRestore').click();
