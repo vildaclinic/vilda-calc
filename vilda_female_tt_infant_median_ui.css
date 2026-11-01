@@ -1,0 +1,322 @@
+/* A group median is a neutral source statistic, separate from the laboratory RI. */
+.vilda-female-tt-infant-median {
+  box-sizing: border-box;
+  min-width: 0;
+  width: 100%;
+  border-top: var(--border-hairline) solid #dce7ea;
+  padding-top: var(--space-18px);
+  color: var(--text-color, #183c48);
+  overflow-wrap: anywhere;
+}
+.vilda-female-tt-infant-median [hidden] {
+  display: none !important;
+}
+.vilda-female-tt-infant-median .vftim-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-10px);
+}
+.vilda-female-tt-infant-median .vftim-heading h3 {
+  font-family: inherit;
+  font-size: 12px;
+  line-height: 1.5;
+  font-weight: 600;
+  color: #6d8189;
+  margin: 2px 0 0;
+  letter-spacing: 0;
+  text-transform: none;
+}
+.vilda-female-tt-infant-median .vftim-age {
+  color: #5c7680;
+  background: #f0f5f6;
+  border-radius: var(--radius-6);
+  padding: var(--space-4px) 7px;
+  font-size: 10px;
+  line-height: 1.5;
+}
+.vilda-female-tt-infant-median .vftim-rows {
+  margin-top: var(--space-12px);
+}
+.vilda-female-tt-infant-median .vftim-number {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 3px 7px;
+  font-variant-numeric: tabular-nums;
+}
+.vilda-female-tt-infant-median .vftim-number strong {
+  font-size: 27px;
+  line-height: 1.35;
+  font-weight: 600;
+  color: #294c59;
+  letter-spacing: -.5px;
+}
+.vilda-female-tt-infant-median .vftim-number span {
+  font-size: 15px;
+  color: #6a818a;
+}
+.vilda-female-tt-infant-median .vftim-rows[data-multiple-rows="true"] {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-12px);
+}
+.vilda-female-tt-infant-median .vftim-rows[data-multiple-rows="true"] .vftim-row {
+  min-width: 0;
+  padding: var(--space-12px);
+  border: var(--border-hairline) solid #e3ecee;
+  border-radius: var(--radius-9);
+  background: #f6f9fa;
+}
+.vilda-female-tt-infant-median .vftim-row>p {
+  font-size: 11px;
+  line-height: 1.5;
+  color: #677f89;
+  margin: 0 0 5px;
+}
+.vilda-female-tt-infant-median .vftim-context {
+  font-size: 11px;
+  line-height: 1.5;
+  color: #6b818b;
+  margin: var(--space-4px) 0 0;
+}
+.vilda-female-tt-infant-median .vftim-legend {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 17px;
+  margin-top: var(--space-18px);
+  color: #6c7f87;
+  font-size: 10px;
+  line-height: 1.5;
+}
+.vilda-female-tt-infant-median .vftim-legend>span {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+.vilda-female-tt-infant-median .vftim-patient-key {
+  width: 8px;
+  height: 8px;
+  border-radius: var(--radius-circle);
+  background: #2c7a9b;
+}
+.vilda-female-tt-infant-median .vftim-source-key {
+  width: 0;
+  height: 11px;
+  border-left: var(--border-emphasis) dashed #7b929a;
+}
+.vilda-female-tt-infant-median .vftim-gauge>svg {
+  display: block;
+  width: 100%;
+  overflow: visible;
+  font-family: inherit;
+}
+.vilda-female-tt-infant-median .vftim-track {
+  stroke: #dfe9eb;
+  stroke-width: 7;
+  stroke-linecap: round;
+}
+.vilda-female-tt-infant-median .vftim-median {
+  stroke: #8198a1;
+  stroke-width: 2;
+  stroke-dasharray: 3 3;
+}
+.vilda-female-tt-infant-median .vftim-tick {
+  stroke: #b7c8ce;
+  stroke-width: 1;
+}
+.vilda-female-tt-infant-median .vftim-axis,
+.vilda-female-tt-infant-median .vftim-source-label {
+  fill: #69818b;
+  font-family: inherit;
+  font-size: 10px;
+}
+.vilda-female-tt-infant-median .vftim-source-label {
+  font-size: 12px;
+}
+.vilda-female-tt-infant-median .vftim-patient-label {
+  fill: #287c99;
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 600;
+}
+.vilda-female-tt-infant-median .vftim-patient-halo {
+  fill: #287c99;
+  opacity: .13;
+}
+.vilda-female-tt-infant-median .vftim-patient {
+  fill: #fff;
+  stroke: #287c99;
+  stroke-width: 3;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+}
+.vilda-female-tt-infant-median [data-female-tt-infant-median-marker="overflow"] {
+  fill: none;
+}
+.vilda-female-tt-infant-median .vftim-comparison,
+.vilda-female-tt-infant-median .vftim-overflow {
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1.55;
+  margin: 0;
+  color: #355d6b;
+  font-variant-numeric: tabular-nums;
+}
+.vilda-female-tt-infant-median .vftim-overflow {
+  font-size: 11px;
+  margin: -5px 0 var(--space-8px);
+}
+.vilda-female-tt-infant-median .vftim-note,
+.vilda-female-tt-infant-median .vftim-footnote {
+  font-size: 11px;
+  color: #748890;
+  line-height: 1.55;
+  margin: var(--space-10px) 0 3px;
+}
+.vilda-female-tt-infant-median .vftim-link {
+  display: inline-block;
+  color: var(--primary);
+  text-decoration: none;
+  font-size: 11px;
+  line-height: 1.6;
+  text-underline-offset: 3px;
+}
+.vilda-female-tt-infant-median .vftim-link:hover {
+  text-decoration: underline;
+}
+.vilda-female-tt-infant-median .vftim-method {
+  font-size: 10px;
+  line-height: 1.5;
+  color: #7a8d93;
+  margin: var(--space-4px) 0 17px;
+}
+.vilda-female-tt-infant-median .vftim-sources {
+  border-top: var(--border-hairline) solid #e0e9eb;
+  margin-top: 15px;
+}
+.vilda-female-tt-infant-median .vftim-sources>summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-12px);
+  min-height: 46px;
+  padding-top: var(--space-8px);
+  color: #54737e;
+  font-size: 11px;
+  cursor: pointer;
+  list-style: none;
+}
+.vilda-female-tt-infant-median .vftim-sources>summary::-webkit-details-marker {
+  display: none;
+}
+.vilda-female-tt-infant-median .vftim-sources>summary:focus-visible {
+  outline: var(--border-emphasis) solid var(--primary);
+  outline-offset: 3px;
+  border-radius: var(--radius-6);
+}
+.vilda-female-tt-infant-median .vftim-source-copy {
+  color: #637c86;
+  font-size: 11px;
+  line-height: 1.6;
+}
+.vilda-female-tt-infant-median .vftim-source-copy p {
+  margin: var(--space-10px) 0;
+}
+/* The independent upper comparison remains available below the median.
+ * When both cards are present, one concentration gauge is enough. */
+#labFemaleTtInfantMedian:not([hidden]) + #labFemaleTtInfantUpper .vilda-female-tt-infant-upper {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: start;
+  column-gap: var(--space-12px);
+  margin-top: var(--space-18px);
+  border: var(--border-hairline) solid #dde7e9;
+  border-radius: var(--radius-9);
+  padding: var(--space-12px) var(--space-16px);
+  background: #f8fbfb;
+}
+#labFemaleTtInfantMedian:not([hidden]) + #labFemaleTtInfantUpper .vilda-female-tt-infant-upper>* {
+  grid-column: 1 / -1;
+}
+#labFemaleTtInfantMedian:not([hidden]) + #labFemaleTtInfantUpper .vftiu-heading {
+  grid-column: 1;
+  grid-row: 1;
+  display: block;
+}
+#labFemaleTtInfantMedian:not([hidden]) + #labFemaleTtInfantUpper .vftiu-heading h3 {
+  font-size: 11px;
+}
+#labFemaleTtInfantMedian:not([hidden]) + #labFemaleTtInfantUpper .vftiu-age {
+  display: inline-block;
+  font-size: 9px;
+  margin-top: var(--space-4px);
+}
+#labFemaleTtInfantMedian:not([hidden]) + #labFemaleTtInfantUpper .vftiu-rows {
+  grid-column: 2;
+  grid-row: 1;
+  margin-top: 0;
+}
+#labFemaleTtInfantMedian:not([hidden]) + #labFemaleTtInfantUpper [data-mode="split"] .vftiu-heading,
+#labFemaleTtInfantMedian:not([hidden]) + #labFemaleTtInfantUpper [data-mode="split"] .vftiu-rows {
+  grid-column: 1 / -1;
+  grid-row: auto;
+}
+#labFemaleTtInfantMedian:not([hidden]) + #labFemaleTtInfantUpper [data-mode="split"] .vftiu-rows {
+  margin-top: var(--space-8px);
+}
+#labFemaleTtInfantMedian:not([hidden]) + #labFemaleTtInfantUpper .vftiu-number {
+  justify-content: flex-end;
+  gap: var(--space-4px);
+}
+#labFemaleTtInfantMedian:not([hidden]) + #labFemaleTtInfantUpper .vftiu-number strong {
+  font-size: 18px;
+  letter-spacing: 0;
+}
+#labFemaleTtInfantMedian:not([hidden]) + #labFemaleTtInfantUpper .vftiu-number span {
+  font-size: 11px;
+}
+#labFemaleTtInfantMedian:not([hidden]) + #labFemaleTtInfantUpper [data-female-tt-infant="gauge-wrap"] {
+  display: none !important;
+}
+#labFemaleTtInfantMedian:not([hidden]) + #labFemaleTtInfantUpper .vftiu-note {
+  font-size: 11px;
+  margin: var(--space-8px) 0;
+}
+#labFemaleTtInfantMedian:not([hidden]) + #labFemaleTtInfantUpper .vftiu-method {
+  margin-bottom: 0;
+}
+#labFemaleTtInfantMedian:not([hidden]) + #labFemaleTtInfantUpper .vftiu-sources {
+  margin-top: var(--space-8px);
+}
+#labFemaleTtInfantMedian:not([hidden]) + #labFemaleTtInfantUpper .vftiu-sources>summary {
+  min-height: var(--brand-logo-size);
+}
+#labFemaleTtInfantMedian:not([hidden]) + #labFemaleTtInfantUpper .vilda-female-tt-infant-upper[data-status="above-upper"] {
+  background: #fcf5f6;
+  border-color: #e7c7d0;
+}
+#labFemaleTtInfantMedian:not([hidden]) + #labFemaleTtInfantUpper [data-status="above-upper"] .vftiu-number strong {
+  color: #a94357;
+}
+@media (max-width: 600px) {
+  .vilda-female-tt-infant-median .vftim-heading h3 {
+    font-size: 11px;
+  }
+  .vilda-female-tt-infant-median .vftim-age {
+    font-size: 9px;
+  }
+  .vilda-female-tt-infant-median .vftim-legend {
+    font-size: 9px;
+    gap: var(--space-12px);
+  }
+  .vilda-female-tt-infant-median .vftim-rows[data-multiple-rows="true"] {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+@media print {
+  .vilda-female-tt-infant-median {
+    break-inside: avoid;
+  }
+}

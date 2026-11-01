@@ -46,8 +46,55 @@ function fixture(extra = {}) {
 }
 
 const adapt = ({ context, source, evaluation }) => adapter.adapt(context, source, evaluation);
+const adaptMedian = ({ context, source, evaluation }, calendar = ttData.automaticReferencePolicy.postnatalCalendarAge) =>
+  adapter.adaptMedian(context, source, evaluation, calendar);
 const compare = value => upper.evaluate(data, policy, value);
 afterEach(() => vi.useRealTimers());
+
+describe('female infant TT — median-only PNA adapter', () => {
+  it('forwards only the current matching source days without changing the upper adapter or assessment', () => {
+    const f = fixture(), before = clone(f), upperContext = adapt(f);
+    expect(adaptMedian(f)).toEqual({ ...upperContext, postnatalDays: pna });
+    expect(adapt(f)).toEqual(upperContext);
+    expect(f).toEqual(before);
+  });
+
+  it.each([[2, 59, 92], [3, 89, 123], [4, 120, 153], [5, 150, 184]])(
+    'uses the existing conservative calendar envelope for %s completed months without a DOB', (months, lower, upper) => {
+      const f = fixture({ age: age(months), neonatalAge: { gestationalDays: ga } }), before = clone(f);
+      const result = adaptMedian(f);
+      expect(result.postnatalDays).toEqual({ lower, upper, source: 'reported-calendar-month-envelope' });
+      expect(result.ageYears).toBe(months / 12);
+      expect(result.ageUpperYears).toBe(f.evaluation.ageAtSample.upperYears);
+      expect(result.ageUpperInclusive).toBe(false);
+      expect(f).toEqual(before);
+    });
+
+  it('does not recover removed days from a stale main cache after a local month edit', () => {
+    const f = fixture({ neonatalAge: { gestationalDays: ga } });
+    f.source.neonatalAge.postnatalDays = { ...pna, lower: 5, upper: 6 };
+    expect(adaptMedian(f).postnatalDays).toEqual({ lower: 89, upper: 123, source: 'reported-calendar-month-envelope' });
+  });
+
+  it.each([
+    f => { f.source.identityKey = 'fictional-other'; },
+    f => { f.context.currentIdentityKey = 'fictional-other'; },
+    f => { f.context.sourceStatus = 'loading'; },
+    f => { f.context.contextBasis = 'sample'; },
+    f => { f.source.neonatalAge.postnatalDays.upper += 1; },
+  ])('never supplies days from an unavailable, mismatched or dated context %#', change => {
+    const f = fixture(); change(f);
+    expect(adaptMedian(f).postnatalDays).toBeUndefined();
+  });
+
+  it('does not invent a calendar conversion when the existing policy is absent', () => {
+    const f = fixture({ neonatalAge: { gestationalDays: ga } });
+    expect(adaptMedian(f, null).postnatalDays).toBeUndefined();
+    const policy = clone(ttData.automaticReferencePolicy.postnatalCalendarAge);
+    policy.minMonthSpanDays[3] = -1;
+    expect(adaptMedian(f, policy).postnatalDays).toBeUndefined();
+  });
+});
 
 describe('female infant TT — source-only chronological calendar adapter', () => {
   it('refines the actual DOB/PNA interval while preserving every canonical TT and history field', () => {

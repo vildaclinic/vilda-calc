@@ -1,0 +1,154 @@
+{
+  "schemaVersion": 1,
+  "kind": "published-postnatal-age-group-median-data",
+  "id": "busch2025-female-total-testosterone-infant-group-medians",
+  "version": "2026-11-01.1",
+  "analyte": "testosterone_total",
+  "sex": "female",
+  "unit": "nmol/L",
+  "ageDomain": {
+    "unit": "postnatal-days",
+    "min": 0,
+    "max": 400,
+    "minimumInclusive": true,
+    "maximumInclusive": true
+  },
+  "population": {
+    "minGestationalAgeDays": 259,
+    "maxGestationalAgeDays": 294,
+    "sourceGestationalAgeExclusionLiteral": "before 37 weeks or after 42 weeks of gestation",
+    "gestationalAgeBoundaryBasis": "Conservative application interval 37+0–42+0; exact weeks+days notation was not printed in source.",
+    "femaleInfantsN": 88,
+    "maleInfantsN": 101,
+    "allRepeatedSamplesN": 446,
+    "femaleSamplesInRelated2024": 204,
+    "femaleAgeGroupNReported": false,
+    "femaleTtExactObservedAgeExtremaReported": false,
+    "observedAllSexPostnatalDayRange": [
+      5,
+      485
+    ],
+    "singleton": true,
+    "sgaExcluded": true,
+    "lgaExcluded": true
+  },
+  "source": {
+    "id": "busch2025-female-total-testosterone-infant-group-medians",
+    "label": "Busch 2025 · dziewczynki",
+    "citation": "Busch AS i wsp. Serum steroid metabolome dynamics in infancy: a longitudinal cohort study of healthy infants. Eur J Endocrinol. 2025;193:403–411. DOI 10.1093/ejendo/lvaf193.",
+    "url": "https://doi.org/10.1093/ejendo/lvaf193",
+    "population": "Zdrowe donoszone niemowlęta z pojedynczych ciąż, bez SGA/LGA, w prospektywnej kohorcie COPENHAGEN Minipuberty Study. 88 dziewczynek i 101 chłopców; 446 powtarzanych próbek.",
+    "method": "Izotopowo rozcieńczana on-line TurboFlow LC-MS/MS; Rigshospitalet, Kopenhaga.",
+    "specimen": "serum",
+    "unit": "nmol/L",
+    "statistic": "published-age-group-median",
+    "approximate": false,
+    "sourceLocation": "Supplementary Tables_R2_TableS3.xlsx, arkusz Table S3, kolumna F median; żeński Testosterone, wiersze 78–80. Artykuł: Methods s.404–405, rycina 2 s.407.",
+    "limits": {
+      "lod": 0.031,
+      "loq": 0.1,
+      "unit": "nmol/L",
+      "basis": "Frederiksen 2024, metoda cytowana jako ref.21 w Busch 2025, tabela 1.",
+      "patientImputationAllowed": false
+    },
+    "lowerLimit": null,
+    "upperLimit": null,
+    "limitations": [
+      "To dosłowne mediany kolumny median tabeli S3 dla grup wieku. Nie są medianą dokładnego dnia, ciągłą krzywą, normą laboratoryjną, SDS ani rozpoznaniem. Nie interpolujemy między grupami.",
+      "Tabela nie opisuje dokładnego sposobu agregacji wartości w grupie; nie nazywamy tych liczb potwierdzonymi surowymi medianami empirycznymi. Liczebności żeńskich grup tabeli nie podano.",
+      "Oryginalna pierwsza etykieta to 0–30 dni, lecz obserwowany wiek obu płci zaczyna się od 5. dnia. Aplikacja ogranicza całą reprezentację PNA do co najmniej 5 dni; nie twierdzi, że jest to dokładne minimum żeńskiego TT.",
+      "Cały możliwy przedział PNA musi mieścić się w jednej grupie. Wiek obejmujący granicę 30/31 lub 180/181 dni otrzymuje oddzielne dosłowne mediany, bez pojedynczego punktu i ilorazu.",
+      "Zastosowanie jest ograniczone do całego wieku przed 6 miesiącami kalendarzowymi. Dni po urodzeniu nie zastępują kalendarzowej granicy; grupa 181–400 nie rozszerza tej decyzji po 6. miesiącu. Aplikacja odrzuca także PNA powyżej 184 dni jako sprzeczne z konserwatywną obwiednią 6 miesięcy z istniejącej polityki kalendarzowej TT.",
+      "Źródło wykluczało urodzenie przed 37 lub po 42 tygodniach oraz SGA/LGA. Domknięcie zakresu GA na dokładnych dniach 259–294 to jawna konserwatywna polityka aplikacji, a nie wydrukowane przez autorów granice w formacie tygodnie+dni.",
+      "Kohorta obejmowała 88 dziewczynek i 101 chłopców, 446 powtarzanych próbek. Pokrewne opracowanie Frederiksen 2024 opisuje 204 próbki żeńskie, nie 204 niezależne dziewczynki ani podane N każdej grupy tabeli S3.",
+      "Wynik 0,08 nmol/L jest literalną medianą tabeli, powyżej źródłowego LOD 0,031 i poniżej LOQ 0,10. Nie zastępujemy jej zerem, LOD/2 lub LOQ; granice metody źródła nie są granicami oznaczenia próbki pacjentki.",
+      "Pobrania przypadały najczęściej około południa; nie oceniono systematycznie rytmu dobowego. Wyniki zdrowej kohorty nie są celem terapii lub testu stymulacyjnego.",
+      "Nowy odczyt wykorzystuje ten sam materiał i analizę LC-MS/MS co Frederiksen 2024. Nie przedstawiamy go jako niezależnej replikacji i nie uśredniamy go z Johannsen lub Kushnir.",
+      "Nieznany GA, metoda lub materiał pozwalają wyłącznie pokazać informację o źródle. Metoda źródła nie staje się metodą pacjentki; nie dodajemy obowiązkowych pytań.",
+      "Znane wcześniactwo, SGA/LGA, leczenie, stymulacja lub niezgodność metody/materiału wstrzymują zestawienie. Wyniki z nierównością nie otrzymują dokładnego punktu lub ilorazu."
+    ],
+    "display": {
+      "sourceLabel": "Busch i wsp., 2025 · tabela S3",
+      "citationLabel": "Busch i wsp., 2025 · tabela S3",
+      "sourceMethodLabel": "Surowica · LC-MS/MS · zdrowe donoszone niemowlęta",
+      "sourceInfoNote": "Źródło opisuje zdrowe donoszone niemowlęta, surowicę i oznaczenie LC-MS/MS.",
+      "notes": [
+        "Mediana podana w tabeli dla grupy wieku.",
+        "Mediana nie wyznacza granicy normy."
+      ],
+      "details": [
+        "To dosłowne mediany kolumny median tabeli S3 dla grup wieku. Nie są medianą dokładnego dnia, ciągłą krzywą, normą laboratoryjną, SDS ani rozpoznaniem. Nie interpolujemy między grupami.",
+        "Tabela nie opisuje dokładnego sposobu agregacji wartości w grupie; nie nazywamy tych liczb potwierdzonymi surowymi medianami empirycznymi. Liczebności żeńskich grup tabeli nie podano.",
+        "Oryginalna pierwsza etykieta to 0–30 dni, lecz obserwowany wiek obu płci zaczyna się od 5. dnia. Aplikacja ogranicza całą reprezentację PNA do co najmniej 5 dni; nie twierdzi, że jest to dokładne minimum żeńskiego TT.",
+        "Cały możliwy przedział PNA musi mieścić się w jednej grupie. Wiek obejmujący granicę 30/31 lub 180/181 dni otrzymuje oddzielne dosłowne mediany, bez pojedynczego punktu i ilorazu.",
+        "Zastosowanie jest ograniczone do całego wieku przed 6 miesiącami kalendarzowymi. Dni po urodzeniu nie zastępują kalendarzowej granicy; grupa 181–400 nie rozszerza tej decyzji po 6. miesiącu. Aplikacja odrzuca także PNA powyżej 184 dni jako sprzeczne z konserwatywną obwiednią 6 miesięcy z istniejącej polityki kalendarzowej TT.",
+        "Źródło wykluczało urodzenie przed 37 lub po 42 tygodniach oraz SGA/LGA. Domknięcie zakresu GA na dokładnych dniach 259–294 to jawna konserwatywna polityka aplikacji, a nie wydrukowane przez autorów granice w formacie tygodnie+dni.",
+        "Kohorta obejmowała 88 dziewczynek i 101 chłopców, 446 powtarzanych próbek. Pokrewne opracowanie Frederiksen 2024 opisuje 204 próbki żeńskie, nie 204 niezależne dziewczynki ani podane N każdej grupy tabeli S3.",
+        "Wynik 0,08 nmol/L jest literalną medianą tabeli, powyżej źródłowego LOD 0,031 i poniżej LOQ 0,10. Nie zastępujemy jej zerem, LOD/2 lub LOQ; granice metody źródła nie są granicami oznaczenia próbki pacjentki.",
+        "Pobrania przypadały najczęściej około południa; nie oceniono systematycznie rytmu dobowego. Wyniki zdrowej kohorty nie są celem terapii lub testu stymulacyjnego.",
+        "Nowy odczyt wykorzystuje ten sam materiał i analizę LC-MS/MS co Frederiksen 2024. Nie przedstawiamy go jako niezależnej replikacji i nie uśredniamy go z Johannsen lub Kushnir.",
+        "Nieznany GA, metoda lub materiał pozwalają wyłącznie pokazać informację o źródle. Metoda źródła nie staje się metodą pacjentki; nie dodajemy obowiązkowych pytań.",
+        "Znane wcześniactwo, SGA/LGA, leczenie, stymulacja lub niezgodność metody/materiału wstrzymują zestawienie. Wyniki z nierównością nie otrzymują dokładnego punktu lub ilorazu."
+      ]
+    }
+  },
+  "groups": [
+    {
+      "id": "busch2025-female-total-testosterone-infant-group-medians-0-30",
+      "label": "0–30 dni",
+      "sourceAgeLabel": "0-30",
+      "minPostnatalDays": 0,
+      "maxPostnatalDays": 30,
+      "minimumInclusive": true,
+      "maximumInclusive": true,
+      "median": 0.19,
+      "medianCell": "F78",
+      "individualGroupN": null
+    },
+    {
+      "id": "busch2025-female-total-testosterone-infant-group-medians-31-180",
+      "label": "31–180 dni",
+      "sourceAgeLabel": "31-180",
+      "minPostnatalDays": 31,
+      "maxPostnatalDays": 180,
+      "minimumInclusive": true,
+      "maximumInclusive": true,
+      "median": 0.13,
+      "medianCell": "F79",
+      "individualGroupN": null
+    },
+    {
+      "id": "busch2025-female-total-testosterone-infant-group-medians-181-400",
+      "label": "181–400 dni",
+      "sourceAgeLabel": "181-400",
+      "minPostnatalDays": 181,
+      "maxPostnatalDays": 400,
+      "minimumInclusive": true,
+      "maximumInclusive": true,
+      "median": 0.08,
+      "medianCell": "F80",
+      "individualGroupN": null
+    }
+  ],
+  "provenance": {
+    "doi": "10.1093/ejendo/lvaf193",
+    "pmid": "40974100",
+    "sourceWorkbook": "Supplementary Tables_R2_TableS3.xlsx",
+    "sheet": "Table S3",
+    "medianColumn": "F",
+    "femaleTtRows": [
+      78,
+      79,
+      80
+    ],
+    "mainPdfSha256": "b6b01d485ce67e61e57945e30bd64cfd316f306ab0cf5dec0a29b59697298470",
+    "workbookSha256": "3545cc135c50896f96607a299ff2efd144180900c95c40da16ba0cda9e7ee32b",
+    "workbookBytes": 13908,
+    "workbookUnitsExplicit": false,
+    "unitBasis": "Main Figure2 caption, printed407/PDF5: nmol/L except calculatedfreeT inpmol/L.",
+    "workbookFormulaCount": 0,
+    "workbookHiddenSheets": 0,
+    "ageBinAggregationMethodReported": false,
+    "ownerApproval": "Po audycie plików źródłowych właściciel zaakceptował prywatną makietę i polecił wdrożenie. Akceptacja nie stanowi walidacji klinicznej."
+  }
+}

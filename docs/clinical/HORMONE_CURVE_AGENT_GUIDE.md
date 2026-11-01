@@ -1045,6 +1045,46 @@ PR raportuje wykonane regresje, mobile/fullscreen i zimny start PWA
 offline oraz wszystkie kontrole końcowego SHA. Akceptacja i zielone
 testy nie nadają statusu walidacji klinicznej.
 
+## TT dziewczynek — mediany grup przed 6 miesiącami, 1 listopada 2026
+
+Po audycie i akceptacji prywatnej makiety właściciel polecił wdrożenie
+trzech dosłownych median Busch 2025, Table S3!F78/F79/F80:
+**0,19 / 0,13 / 0,08 nmol/L** dla źródłowych 0–30/31–180/181–400
+dni. To osobna informacja grupowa; bez dziennej interpolacji,
+wyliczania LMS, normy ±SD, nowej krzywej życia lub historii.
+
+- Cały PNA **5–184 dni** i cały wiek **<6 miesięcy kalendarzowych**.
+  Maksimum 184 to osłona produktu z istniejącego maxMonthSpanDays[6],
+  a nie nowa granica źródłowej grupy 181–400.
+  Minimum 5 dni jest konserwatywną decyzją produktu, nie żeńskim minimum
+  potwierdzonym w tabeli 0–30. Trzecia grupa nie rozszerza karty do 400 dni.
+- Brak PNA może być zastąpiony tylko konserwatywną obwiednią
+  aktualnie podanych miesięcy z istniejącej polityki TT: 3 miesiące → 89–123
+  → 0,13; 1 miesiąc → 28–62 i 5 miesięcy → 150–184 dają dwie grupy,
+  bez jednego punktu.
+  Bez DOB, stałych dni miesiąca, środka wieku lub starego PNA.
+- [30,31] i [180,181] zachowują dwie dosłowne mediany, bez średniej,
+  pojedynczej kropki i ilorazu. Nie przycinaj niepokrytego wieku.
+- Pełny znany GA 259–294 dni to jawna konserwatywna polityka produktu.
+  Brak GA/metody/materiału → informacja o źródle bez punktu. Znana
+  niezgodność, wcześniactwo, SGA/LGA i leczenie/stymulacja wyłączają.
+  Metoda publikacji nie potwierdza próbki; bez nowej ankiety i Tannera.
+- Skala **0–3 × wybrana mediana** jest niezależna od wyniku. Dokładny
+  wynik daje punkt i krotność; nierówność nie staje się dokładna.
+  Ponad medianą nie oznacza poza normą ani pilności.
+- Johannsen upper zachowuje osobną kwalifikację; nie twórz wspólnego
+  RI z górnej i mediany innych źródeł. Kwalifikowany Kushnir od 6 miesięcy
+  i Madsen pozostają; samo PNA 181 dni nie rozstrzyga 6 miesięcy kalendarzowych.
+
+Nowa informacja bazuje na medianie jawnie podpisanej w dostarczonym
+arkuszu, bez odczytu ryciny lub eksportu od autorów. Arkusz nie podaje N grup;
+88 dziewczynek/204 próbek żeńskich nie jest N każdego wiersza.
+0,08 poniżej LOQ cytowanej metody nie jest automatycznie nieważną
+medianą i nie jest podnoszone do 0,10. Pełny kontrakt i hashe:
+[FEMALE_TT_INFANT_MEDIAN.md](hormone-lifespan/FEMALE_TT_INFANT_MEDIAN.md).
+Wyniki wymaganych regresji i PWA oraz wszystkich kontroli GitHub
+końcowego SHA podaje PR; akceptacja nie jest walidacją kliniczną.
+
 ## E2 chłopców — zaakceptowana karta 6–18, 25 października 2026
 
 Właściciel zaakceptował osobną prywatną makietę i polecił wdrożenie.

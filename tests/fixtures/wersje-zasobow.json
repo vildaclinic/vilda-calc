@@ -676,8 +676,8 @@
   "sha256": "22c5b3ec86177c574023351c8d5a0576a49652efbc28df0df99288778cfc526d"
  },
  "inline_przelicznik_jednostek_00.css": {
-  "v": 8,
-  "sha256": "bc656d8f15e3ab15dd0c10ba097ef63b0a007bcb4b93c7256bfdda6a097cec39"
+  "v": 9,
+  "sha256": "35b5a4258ef22b6eb5c40f3df10af30c679d1b28d147b1b6b5e280c7f64bc478"
  },
  "inline_regulamin_00.css": {
   "v": 1,
@@ -1156,8 +1156,20 @@
   "sha256": "932803d6e29a15eb8d8e470e916557e27bdd44dd78996c68e708d68581ae702c"
  },
  "vilda_female_tt_infant_context.js": {
+  "v": 2,
+  "sha256": "575d60819126c2a588332e469c1b0fe1acd7868b440d8280b33f4bcc02a1e8b5"
+ },
+ "vilda_female_tt_infant_median.js": {
   "v": 1,
-  "sha256": "6bb8856ad3d7fc432f47055c83c59a0554bcf4bc44027d6ff2a19c17444fa8da"
+  "sha256": "052a8565dce14c4bdf4160d6cf1e81e3f6eb2235329f65f44822b9c82cb6d81c"
+ },
+ "vilda_female_tt_infant_median_ui.css": {
+  "v": 1,
+  "sha256": "9cb38e969a1ac4c777f0653eadfcc64e4c8d298a0e56444b09483e4870005fa4"
+ },
+ "vilda_female_tt_infant_median_ui.js": {
+  "v": 1,
+  "sha256": "5c5d76f22e5f89f72f0a638e9f17fa1c8b43558ea167852ae6aac2b85b682f06"
  },
  "vilda_female_tt_infant_upper.js": {
   "v": 1,
@@ -1300,8 +1312,8 @@
   "sha256": "d5eb76469a5803dcb35c1b257c1221f62c2a1c0b2dadb386cda0b8321914353b"
  },
  "vilda_hormone_lifespan_data.js": {
-  "v": 49,
-  "sha256": "e638d2daecd8ee2c9a682393a639f8d01c579e586107e53c85ef2f433f0bfd61"
+  "v": 50,
+  "sha256": "7bb887d406aa1581d5e76dfd106aa4365d9d127f90221917299982f178794d8d"
  },
  "vilda_hormone_lifespan_display.js": {
   "v": 16,

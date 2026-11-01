@@ -42,6 +42,8 @@ def build():
     female_tt_under6_policy = json.loads((ROOT / 'female-tt-under6-policy.json').read_text(encoding='utf-8'))
     female_tt_infant_upper_data = json.loads((ROOT / 'female-tt-infant-upper-data.json').read_text(encoding='utf-8'))
     female_tt_infant_upper_policy = json.loads((ROOT / 'female-tt-infant-upper-policy.json').read_text(encoding='utf-8'))
+    female_tt_infant_median_data = json.loads((ROOT / 'female-tt-infant-median-data.json').read_text(encoding='utf-8'))
+    female_tt_infant_median_policy = json.loads((ROOT / 'female-tt-infant-median-policy.json').read_text(encoding='utf-8'))
     male_e2_age_data = json.loads((ROOT / 'male-e2-age-data.json').read_text(encoding='utf-8'))
     male_e2_age_policy = json.loads((ROOT / 'male-e2-age-policy.json').read_text(encoding='utf-8'))
     male_e2_adult_age_data = json.loads((ROOT / 'male-e2-adult-age-data.json').read_text(encoding='utf-8'))
@@ -142,6 +144,8 @@ def build():
     female_tt_under6_policy_js = json.dumps(female_tt_under6_policy, ensure_ascii=False, indent=2)
     female_tt_infant_upper_data_js = json.dumps(female_tt_infant_upper_data, ensure_ascii=False, indent=2)
     female_tt_infant_upper_policy_js = json.dumps(female_tt_infant_upper_policy, ensure_ascii=False, indent=2)
+    female_tt_infant_median_data_js = json.dumps(female_tt_infant_median_data, ensure_ascii=False, indent=2)
+    female_tt_infant_median_policy_js = json.dumps(female_tt_infant_median_policy, ensure_ascii=False, indent=2)
     male_e2_age_data_js = json.dumps(male_e2_age_data, ensure_ascii=False, indent=2)
     male_e2_age_policy_js = json.dumps(male_e2_age_policy, ensure_ascii=False, indent=2)
     male_e2_adult_age_data_js = json.dumps(male_e2_adult_age_data, ensure_ascii=False, indent=2)
@@ -198,6 +202,8 @@ def build():
         f'const femaleTtUnder6Policy = {female_tt_under6_policy_js};\n'
         f'const femaleTtInfantUpperData = {female_tt_infant_upper_data_js};\n'
         f'const femaleTtInfantUpperPolicy = {female_tt_infant_upper_policy_js};\n'
+        f'const femaleTtInfantMedianData = {female_tt_infant_median_data_js};\n'
+        f'const femaleTtInfantMedianPolicy = {female_tt_infant_median_policy_js};\n'
         f'const maleE2AgeData = {male_e2_age_data_js};\n'
         f'const maleE2AgePolicy = {male_e2_age_policy_js};\n'
         f'const maleE2AdultAgeData = {male_e2_adult_age_data_js};\n'
@@ -243,6 +249,8 @@ def build():
         '  femaleTtUnder6Policy: femaleTtUnder6Policy,\n'
         '  femaleTtInfantUpperData: femaleTtInfantUpperData,\n'
         '  femaleTtInfantUpperPolicy: femaleTtInfantUpperPolicy,\n'
+        '  femaleTtInfantMedianData: femaleTtInfantMedianData,\n'
+        '  femaleTtInfantMedianPolicy: femaleTtInfantMedianPolicy,\n'
         '  maleE2AgeData: maleE2AgeData,\n'
         '  maleE2AgePolicy: maleE2AgePolicy,\n'
         '  maleE2AdultAgeData: maleE2AdultAgeData,\n'

@@ -2408,6 +2408,7 @@ const OPTIONAL_ASSETS = [
   '/vilda_hormone_lifespan_data.js?v=47',
   '/vilda_hormone_lifespan_data.js?v=48',
   '/vilda_hormone_lifespan_data.js?v=49',
+  '/vilda_hormone_lifespan_data.js?v=50',
   '/vilda_hormone_lifespan_reference.js?v=1',
   '/vilda_hormone_lifespan_reference.js?v=2',
   '/vilda_hormone_lifespan_reference.js?v=3',
@@ -2445,9 +2446,13 @@ const OPTIONAL_ASSETS = [
   '/vilda_female_tt_age_ui.css?v=1',
   '/vilda_female_tt_age_ui.css?v=2',
   '/vilda_female_tt_infant_context.js?v=1',
+  '/vilda_female_tt_infant_context.js?v=2',
   '/vilda_female_tt_infant_upper.js?v=1',
   '/vilda_female_tt_infant_upper_ui.js?v=1',
   '/vilda_female_tt_infant_upper_ui.css?v=1',
+  '/vilda_female_tt_infant_median.js?v=1',
+  '/vilda_female_tt_infant_median_ui.js?v=1',
+  '/vilda_female_tt_infant_median_ui.css?v=1',
   '/vilda_male_e2_age.js?v=1',
   '/vilda_male_e2_age.js?v=2',
   '/vilda_male_e2_age_ui.js?v=1',
@@ -4126,6 +4131,7 @@ const OPTIONAL_ASSETS = [
   '/inline_przelicznik_jednostek_00.css?v=6',
   '/inline_przelicznik_jednostek_00.css?v=7',
   '/inline_przelicznik_jednostek_00.css?v=8',
+  '/inline_przelicznik_jednostek_00.css?v=9',
   '/inline_regulamin_00.css?v=1',
   '/inline_steroidy_00.css?v=1',
   '/inline_subskrypcja_00.css?v=1',
@@ -4746,7 +4752,8 @@ async function openReusablePreviousShellCaches() {
 // an exact immutable entry copied from a previous cache never seeds this map.
 const FRESH_STATIC_ALIAS_PATHS = new Set([
   '/edu-video-ui.css', '/style.css', '/vilda_chrome.css',
-  '/vilda_auth_ui.css', '/ios26-v2.css', '/vilda_shell.css', '/vilda_vault.js'
+  '/vilda_auth_ui.css', '/ios26-v2.css', '/vilda_shell.css', '/vilda_vault.js',
+  '/lab_units_data.js', '/lab_unit_converter.js', '/vilda_init.js'
 ]);
 
 async function fetchAndStorePrecacheUrl(url, { required = false, previousShellCaches = [], freshResponses = null } = {}) {

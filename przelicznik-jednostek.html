@@ -72,6 +72,7 @@
   <link href="vilda_e2_d3_ui.css?v=1" rel="stylesheet">
   <link href="vilda_female_tt_age_ui.css?v=2" rel="stylesheet">
   <link href="vilda_female_tt_infant_upper_ui.css?v=1" rel="stylesheet">
+  <link href="vilda_female_tt_infant_median_ui.css?v=1" rel="stylesheet">
   <link href="vilda_male_e2_age_ui.css?v=1" rel="stylesheet">
   <link href="lab_history_strip.css?v=2" rel="stylesheet">
 
@@ -115,7 +116,7 @@
   <link rel="icon" type="image/png" sizes="48x48" href="/pwa-icons/icon-48x48.png">
   <link rel="icon" type="image/png" sizes="96x96" href="/pwa-icons/icon-96x96.png">
 
-  <link href="inline_przelicznik_jednostek_00.css?v=8" rel="stylesheet">
+  <link href="inline_przelicznik_jednostek_00.css?v=9" rel="stylesheet">
 
   <script src="vilda_chrome.js?v=207"></script>
   <script src="lucide.min.js?v=1" defer></script>
@@ -360,6 +361,7 @@
             <div id="labFshD3" hidden></div>
             <div id="labE2D3" hidden></div>
             <div id="labFemaleTtAge" hidden></div>
+            <div id="labFemaleTtInfantMedian" hidden></div>
             <div id="labFemaleTtInfantUpper" hidden></div>
             <div id="labMaleE2Age" hidden></div>
             <div id="labAmhAgeReference" hidden></div>
@@ -499,7 +501,7 @@
   <script src="vilda_zrodla_pacjenta.js?v=1"></script>
   <script src="vilda_puberty_source.js?v=13"></script>
   <script src="vilda_lab_neonatal_context.js?v=5"></script>
-  <script src="vilda_hormone_lifespan_data.js?v=49"></script>
+  <script src="vilda_hormone_lifespan_data.js?v=50"></script>
   <script src="vilda_hormone_lifespan_reference.js?v=10"></script>
   <script src="vilda_hormone_lifespan_observations.js?v=1"></script>
   <script src="vilda_hormone_lifespan_display.js?v=16"></script>
@@ -519,9 +521,11 @@
   <script src="vilda_e2_d3_ui.js?v=1"></script>
   <script src="vilda_female_tt_age.js?v=2"></script>
   <script src="vilda_female_tt_age_ui.js?v=2"></script>
-  <script src="vilda_female_tt_infant_context.js?v=1"></script>
+  <script src="vilda_female_tt_infant_context.js?v=2"></script>
   <script src="vilda_female_tt_infant_upper.js?v=1"></script>
   <script src="vilda_female_tt_infant_upper_ui.js?v=1"></script>
+  <script src="vilda_female_tt_infant_median.js?v=1"></script>
+  <script src="vilda_female_tt_infant_median_ui.js?v=1"></script>
   <script src="vilda_male_e2_age.js?v=2"></script>
   <script src="vilda_male_e2_age_ui.js?v=2"></script>
   <script src="lab_pin_result.js?v=11"></script>
@@ -835,7 +839,8 @@
       onAssessmentPreview: function (evaluation) {
         // Reapply only an active infant presentation after the live pin render.
         // Reading any other assessment must not redraw or move its chart.
-        if (typeof femaleTtInfantUpperUI !== 'undefined' && femaleTtInfantUpperUI && femaleTtInfantUpperUI.getState()) {
+        if (typeof femaleTtInfantUpperUI !== 'undefined' && femaleTtInfantUpperUI && femaleTtInfantUpperUI.getState() ||
+            typeof femaleTtInfantMedianUI !== 'undefined' && femaleTtInfantMedianUI && femaleTtInfantMedianUI.getState()) {
           updateLifespan(currentSubstance, evaluation);
         }
       },
@@ -919,6 +924,16 @@
       }
     });
     window.VildaFemaleTTAgeRuntime = femaleTtAgeUI || null;
+    var femaleTtInfantMedianUI = window.VildaFemaleTTInfantMedianUI && window.VildaFemaleTTInfantMedianUI.mount({
+      host: document.getElementById('labFemaleTtInfantMedian'),
+      onActivity: function () {
+        try {
+          var auth = window.VildaAuthUI;
+          if (auth && typeof auth.recordActivity === 'function') auth.recordActivity();
+        } catch (_) { /* A source comparison cannot interrupt frame closing. */ }
+      }
+    });
+    window.VildaFemaleTTInfantMedianRuntime = femaleTtInfantMedianUI || null;
     var femaleTtInfantUpperUI = window.VildaFemaleTTInfantUpperUI && window.VildaFemaleTTInfantUpperUI.mount({
       host: document.getElementById('labFemaleTtInfantUpper'),
       onResult: applyFemaleTtInfantPresentation,
@@ -972,6 +987,7 @@
     }
     function resetFemaleTtInfantUpper() {
       if (typeof femaleTtInfantUpperUI !== 'undefined' && femaleTtInfantUpperUI) femaleTtInfantUpperUI.clear();
+      if (typeof femaleTtInfantMedianUI !== 'undefined' && femaleTtInfantMedianUI) femaleTtInfantMedianUI.clear();
     }
     function applyFemaleTtInfantPresentation(result, presentation) {
       // Only this live DOM receives the upper-only presentation. The shared
@@ -998,6 +1014,27 @@
         value.textContent = presentation.displayValue;
         value.classList.toggle('is-above', presentation.status === 'above-upper');
       }
+      // The same display-only precision exception applies to conversions:
+      // a proven exceedance must not round to the upper value in another row.
+      var measured = result && result.comparison && result.comparison.measurement;
+      var tt = window.VildaLabTestosterone;
+      if (presentation.status !== 'above-upper' || !measured || !measured.isExact || !result.upper || !tt) return;
+      document.querySelectorAll('#labResultsBody tr').forEach(function (row) {
+        var unitNode = row.querySelector('.lab-unit'), cell = row.querySelector('.lab-value');
+        if (!unitNode || !cell) return;
+        var unit = unitNode.textContent.trim();
+        var converted = tt.convertMeasurement(String(measured.sourceValue), measured.sourceUnit, unit);
+        var upper = tt.convertMeasurement(String(result.upper.sourceUpper), result.sourceUnit, unit);
+        if (!converted || converted.status !== 'valid' || !upper || upper.status !== 'valid') return;
+        var digits = unit === 'ng/mL' ? 3 : 2, ordinary = digits;
+        while (digits < 10 && converted.value.toFixed(digits) === upper.value.toFixed(digits)) digits++;
+        if (digits === ordinary) return;
+        var formatted = new Intl.NumberFormat('pl-PL', { minimumFractionDigits: digits, maximumFractionDigits: digits,
+          useGrouping: false }).format(converted.value);
+        cell.textContent = formatted;
+        cell.dataset.copyText = formatted + ' ' + unit;
+        cell.setAttribute('aria-label', 'Skopiuj: ' + formatted + ' ' + unit);
+      });
     }
     function resetMaleE2Age() {
       if (typeof maleE2AgeUI === 'undefined' || !maleE2AgeUI) return;
@@ -1612,15 +1649,23 @@
           measurementKind: input && input.measurementKind || null,
           contraindicated: context.contraindicated || lifespanAnonymousMainTreatment(source, input)
         });
-        // An infant upper percentile is a separate source contract. Keep the
-        // existing calendar-month age and all six-month protections intact.
-        var infantPolicy = window.VildaHormoneLifespanData && window.VildaHormoneLifespanData.femaleTtInfantUpperPolicy;
-        var infantMode = typeof femaleTtInfantUpperUI !== 'undefined' && femaleTtInfantUpperUI && infantPolicy && Number.isFinite(context.ageYears)
-          && context.ageYears <= infantPolicy.applicationAgeDomain.max;
+        // Group medians and the upper percentile remain independent sources.
+        // Only this read-only view receives derived PNA/calendar refinements;
+        // the laboratory assessment and its history are never reevaluated.
+        var infantMedianPolicy = window.VildaHormoneLifespanData && window.VildaHormoneLifespanData.femaleTtInfantMedianPolicy;
+        var infantAdapter = window.VildaFemaleTTInfantContext;
+        var infantCandidate = typeof femaleTtInfantMedianUI !== 'undefined' && femaleTtInfantMedianUI && infantMedianPolicy
+          && infantAdapter && typeof infantAdapter.adaptMedian === 'function' && Number.isFinite(context.ageYears)
+          && context.ageYears <= infantMedianPolicy.applicationAgeDomain.max;
+        var ttCalendarPolicy = window.VildaLabTestosteroneData && window.VildaLabTestosteroneData.automaticReferencePolicy
+          && window.VildaLabTestosteroneData.automaticReferencePolicy.postnatalCalendarAge;
+        var infantContext = infantCandidate ? infantAdapter.adaptMedian(femaleTtContext, source, evaluation, ttCalendarPolicy) : femaleTtContext;
+        var infantMode = infantCandidate && Number.isFinite(infantContext.ageYears)
+          && infantContext.ageYears < infantMedianPolicy.applicationAgeDomain.max;
         if (infantMode) {
           femaleTtAgeUI.clear();
-          var infantContext = window.VildaFemaleTTInfantContext.adapt(femaleTtContext, source, evaluation);
-          femaleTtInfantUpperUI.update(infantContext);
+          femaleTtInfantMedianUI.update(infantContext);
+          if (femaleTtInfantUpperUI) femaleTtInfantUpperUI.update(infantContext);
         } else {
           resetFemaleTtInfantUpper();
           femaleTtAgeUI.update(femaleTtContext);
