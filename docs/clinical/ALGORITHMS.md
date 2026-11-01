@@ -11124,6 +11124,66 @@ preferencje pozostają zachowane.
 
 Testy: `tests/unit/reminders-read-state.test.mjs` wycina i uruchamia rzeczywiste funkcje z artefaktów przez AST, z kontrolowanymi odpowiedziami odczytu; `tests/e2e/przypomnienia-stabilnosc.spec.mjs` sprawdza rzeczywistą aplikację i syntetyczny sejf. Dotychczasowe testy dat, kategorii, akcji i synchronizacji pozostają obowiązujące.
 
+### P-SZUKAJ-PREZENTACJA — zapisane wyniki i dawki zgodne z Notatkami (2026-11-01)
+
+**Zakres.** Pierwsza z czterech części naprawy Szukaj w Przypomnieniach po
+dwóch audytach właściciela. Naprawa odczytu i prezentacji, bez zmiany wzorów,
+progów, populacji, jednostek źródłowych, zapisu danych lub reguł synchronizacji.
+Nie wprowadza nowych reguł zaokrąglania. Zachowuje zapisany tekst dawki;
+fallback starszej liczbowej dawki GH korzysta z istniejącej prezentacji historii.
+
+**Wyniki Klirensu.** `ClcrNotesView.summary()` odczytuje istniejący `model()`,
+ten sam co Notatki. Szukaj wykorzystuje skrót jako treść podglądu i indeksu.
+Pełne drzewa techniczne i snapshot pozostają nienaruszone w źródle. Stan
+nieaktualnej lub niedostępnej oceny zachowuje reguły czytnika: norma,
+kategoria i interpretacja nie są przywracane z dawnego `body`.
+Ładowanie `ensureNotes()` następuje leniwie, z ponowną kontrolą sesji po
+odczycie; nie wywołuje silników klinicznych ani aktualnej polityki norm.
+
+**Pozostałe wpisy.** Jedna zapisana reprezentacja wyniku przez
+`VildaLabAssessmentUI.formatResult()` zamiast `value + valueNum`. Zapisane
+oceny i odniesienia hormonalne korzystają z istniejących rendererów Notatek.
+Gotowa linia dawki nie jest dublowana przez surową liczbę i częstość. Zwykłe
+pola źródłowe pozostają w prywatnym indeksie wyszukiwania.
+
+**Przypadki fikcyjne → oczekiwana prezentacja.**
+
+- zapisane `Dawka: 0,028 mg/kg/d (0,70 mg/d)` + liczbowe
+  `0.028340080971659923` → jedna zapisana dawka, bez dopisanej surowej liczby;
+- dawka `5 mg na dzień` + `doseNum=5` → jeden tekst dawki;
+- zapisane `<0,03 IU/L`, `0,00 mg/L` i wynik jakościowy → zachowane operatory,
+  dokładność tekstu i treść; brak drugiej liczby;
+- fikcyjny utrwalony Ca `2,77 mg/kg/24 h` i ACR `45 mg/g`, `A2` → ten sam
+  wynik, odniesienie i interpretacja co model Notatek;
+- zmieniona liczba lub data oraz uszkodzony snapshot → komunikat niedostępnej
+  oceny, bez starej normy i interpretacji;
+- blokada, zmiana konta lub unieważnienie podczas ładowania czytnika → brak
+  opublikowania spóźnionego wyniku.
+
+Regresje uruchamiają rzeczywisty model, czytnik i writer zapisanych wyników,
+nie kopię wzoru: `klirens-search-summary.test.mjs`,
+`global-search-presentation.test.mjs`, `przypomnienia-search-presentation.spec.mjs`
+oraz zimny start offline w `przypomnienia-search-presentation-offline.spec.mjs`.
+Próby porównują stan zapisanych notatek i danych pacjenta przed oraz po
+wyszukiwaniu; dodatkowo sprawdzają brak załadowania silników i bieżących norm.
+
+**Pełny zakres modułów.** `klirens-search-all-formulas.test.mjs` porównuje
+przypadki z rzeczywistym rejestrem 45 parametrów / 41 formuł. Obejmuje
+108 zapisów, 45 odczytów starszych rekordów bez capture i dodatkowe strażniki
+kompletności oraz odczytu bez aktywnych silników. Nie zmienia utrwalonej
+precyzji starszych wyników. `search-note-producers.test.mjs` obejmuje wszystkie
+34 anality wspólnego przypięcia, operatory, utrwalony zakres oraz rzeczywiste
+zapisy pozostałych rodzin notatek, przypomnień i planów.
+`search-docpro-presentation.test.mjs` uruchamia produkcyjny scheduler kontroli
+DocPro dla leku dobowego, tygodniowego i mekaserminy. Punkty monitorów,
+wiek kostny i pokwitanie przechowywane wyłącznie w snapshotach nie są
+przedstawiane jako już istniejące notatki Szukaj.
+
+`przypomnienia-search-module-coverage.spec.mjs` otwiera cały zestaw 111 wpisów
+na Start przy 1440 px i w powłoce aplikacji przy 390 px. Pokrycie V8 potwierdza
+wykonanie historycznego `readSaved` oraz zero wywołań klinicznych
+`evaluate/recalculate`, przy niezmienionych danych i braku zasobów edytora.
+
 ### P-PRZYPOMNIENIA-ECHO — karta „Przypomnienia” nie przebudowuje się od własnego pingu licznika (SW 1.1.263, 2026-10-13, polecenie właściciela)
 
 **Skąd.** Test „„⋮” przy pozycji ma rozmiar jak w widoku pełnoekranowym i otwiera to samo okno z akcjami” (`tests/e2e/przypomnienia-karta-akcje.spec.mjs`) padał w CI (m.in. na #652), a lokalnie przechodził: `boundingBox()` przycisku „⋮” dawał `null`, choć na zrzucie przycisk był widoczny. Na #652 ustalono, że karta przebudowuje się w całości chwilę po pierwszym renderze, także na czystym `audyt`. Właściciel polecił naprawę 2026-10-13 („napraw niestabilny test przypomnień”). Zmiana niekliniczna: nie zmienia wyników, jednostek, progów, danych, zapisu ani synchronizacji.

@@ -487,7 +487,7 @@ function ClcrNotesResources() {
   if (ClcrNotesBootstrapPromise) return ClcrNotesBootstrapPromise;
   ClcrNotesBootstrapPromise = new Promise(function (resolve, reject) {
     var doc = i.document, finished = false, timer = null;
-    var url = new URL("clcr_record_resources.js?v=11", i.location.href);
+    var url = new URL("clcr_record_resources.js?v=12", i.location.href);
     var script = Array.from(doc.querySelectorAll("script[src]")).find(function (node) {
       try { return new URL(node.getAttribute("src"), i.location.href).href === url.href; } catch (_) { return false; }
     });
@@ -951,6 +951,17 @@ function remB22Create(host, full, options) {
       var module = i.VildaGlobalSearchView;
       if (!module || typeof module.mount !== 'function') { clear(globalSearchHost); globalSearchHost.appendChild(make('p', 'vb22-empty', 'Wyszukiwarka jest niedostępna. Odśwież aplikację.')); return; }
       searchView = module.mount(globalSearchHost, { full: full, vault: vault, isCurrent: alive,
+        prepareNotes: function () { return ClcrNotesResources().then(function (resources) { return resources.ensureNotes(); }); },
+        formatMedicationDose: function (note) {
+          var medication = note && note.medication || {};
+          if (medication.dose) return String(medication.dose);
+          if (medication.doseUnit && /mg\/kg/.test(String(medication.doseUnit))) {
+            var recorded = Jr(note.body);
+            return Gwl_hist(note, recorded) || recorded.dose || (typeof medication.doseNum === 'number' && isFinite(medication.doseNum) ? qt(medication.doseNum, 3) + ' ' + medication.doseUnit : '');
+          }
+          return '';
+        },
+        renderLabContext: function (host, lab) { Lh3SavedAssessment(host, lab); HrSavedReference(host, lab); },
         requestExpand: function (context) { remB22Request({ globalSearch: context || true }); },
         openPatient: function (patientId, noteId, row) {
           if (!alive() || state.editing || state.busy) return;

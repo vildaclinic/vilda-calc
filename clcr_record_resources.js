@@ -145,7 +145,7 @@
     if (!notesPromise) {
       notesPromise = ensureReader().then(() => Promise.all([
         load("clcr_notes_view.css?v=1", null, true),
-        load("clcr_notes_view.js?v=2", "ClcrNotesView"),
+        load("clcr_notes_view.js?v=3", "ClcrNotesView"),
       ])).then(() => root.ClcrNotesView);
       notesPromise.catch(() => { notesPromise = null; });
     }

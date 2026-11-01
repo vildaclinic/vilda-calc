@@ -77,6 +77,21 @@
     return record ? `${record.label}: ${record.display}${record.unit ? " " + record.unit : ""}` : "";
   }
 
+  // Search transports the same historical presentation as Notes. Its plain
+  // text must never fall back to the persisted calculation envelope or tree.
+  function summary(note, options = {}) {
+    const record = model(note, options);
+    if (!record) return "";
+    const lines = [`Wynik: ${record.display}${record.unit ? " " + record.unit : ""}`];
+    if (record.norm) lines.push(`${record.referenceLabel}: ${record.norm}`);
+    if (record.status) lines.push(record.status);
+    if (record.interpretation) lines.push(record.interpretation);
+    if (record.boundary) lines.push(`${record.boundaryLabel}: ${record.boundary}.`);
+    if (record.caution) lines.push(record.caution);
+    if (record.comment) lines.push(`\nKomentarz lekarza\n${record.comment}`);
+    return lines.join("\n");
+  }
+
   function add(parent, tag, className, content) {
     const node = parent.ownerDocument.createElement(tag);
     if (className) node.className = className;
@@ -234,5 +249,5 @@
     return { get record() { return record; }, host };
   }
 
-  return Object.freeze({ CATEGORY, model, title, humanBody, render, openDetails });
+  return Object.freeze({ CATEGORY, model, title, summary, humanBody, render, openDetails });
 });
