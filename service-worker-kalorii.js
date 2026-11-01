@@ -4739,7 +4739,8 @@ async function openReusablePreviousShellCaches() {
 // an exact immutable entry copied from a previous cache never seeds this map.
 const FRESH_STATIC_ALIAS_PATHS = new Set([
   '/edu-video-ui.css', '/style.css', '/vilda_chrome.css',
-  '/vilda_auth_ui.css', '/ios26-v2.css', '/vilda_shell.css', '/vilda_vault.js'
+  '/vilda_auth_ui.css', '/ios26-v2.css', '/vilda_shell.css', '/vilda_vault.js',
+  '/lab_units_data.js', '/lab_unit_converter.js', '/vilda_init.js'
 ]);
 
 async function fetchAndStorePrecacheUrl(url, { required = false, previousShellCaches = [], freshResponses = null } = {}) {

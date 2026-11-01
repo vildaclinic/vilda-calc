@@ -1652,11 +1652,15 @@
         // Group medians and the upper percentile remain independent sources.
         // Only this read-only view receives derived PNA/calendar refinements;
         // the laboratory assessment and its history are never reevaluated.
+        var infantMedianPolicy = window.VildaHormoneLifespanData && window.VildaHormoneLifespanData.femaleTtInfantMedianPolicy;
+        var infantAdapter = window.VildaFemaleTTInfantContext;
+        var infantCandidate = typeof femaleTtInfantMedianUI !== 'undefined' && femaleTtInfantMedianUI && infantMedianPolicy
+          && infantAdapter && typeof infantAdapter.adaptMedian === 'function' && Number.isFinite(context.ageYears)
+          && context.ageYears <= infantMedianPolicy.applicationAgeDomain.max;
         var ttCalendarPolicy = window.VildaLabTestosteroneData && window.VildaLabTestosteroneData.automaticReferencePolicy
           && window.VildaLabTestosteroneData.automaticReferencePolicy.postnatalCalendarAge;
-        var infantContext = window.VildaFemaleTTInfantContext.adaptMedian(femaleTtContext, source, evaluation, ttCalendarPolicy);
-        var infantMedianPolicy = window.VildaHormoneLifespanData && window.VildaHormoneLifespanData.femaleTtInfantMedianPolicy;
-        var infantMode = typeof femaleTtInfantMedianUI !== 'undefined' && femaleTtInfantMedianUI && infantMedianPolicy && Number.isFinite(infantContext.ageYears)
+        var infantContext = infantCandidate ? infantAdapter.adaptMedian(femaleTtContext, source, evaluation, ttCalendarPolicy) : femaleTtContext;
+        var infantMode = infantCandidate && Number.isFinite(infantContext.ageYears)
           && infantContext.ageYears < infantMedianPolicy.applicationAgeDomain.max;
         if (infantMode) {
           femaleTtAgeUI.clear();

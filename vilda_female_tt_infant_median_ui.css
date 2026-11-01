@@ -291,7 +291,7 @@
   margin-top: var(--space-8px);
 }
 #labFemaleTtInfantMedian:not([hidden]) + #labFemaleTtInfantUpper .vftiu-sources>summary {
-  min-height: 38px;
+  min-height: var(--brand-logo-size);
 }
 #labFemaleTtInfantMedian:not([hidden]) + #labFemaleTtInfantUpper .vilda-female-tt-infant-upper[data-status="above-upper"] {
   background: #fcf5f6;
