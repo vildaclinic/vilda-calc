@@ -2752,16 +2752,16 @@ describe('strażniki źródła (P-SYNC-WLASCICIEL)', () => {
     expect(src.match(/Bsw_poOddaniu\(/g)).toHaveLength(3);
     const fr = src.slice(src.indexOf('async function Bsw_przeniesPrzezyta('), src.indexOf('// Decyzja \'tresc\' (Bsw_decyzja), pod blokadami obu kart'));
     expect(fr).toContain('const X = k.X, H = k.H, para = X < H ? [X, H] : [H, X];');
-    const r0 = fr.indexOf('Bsl_podBlokada(para[0],'), r1 = fr.indexOf('Bsl_podBlokada(para[1],'), rz = fr.indexOf('await I().putSnapshotForUser(b, Object.assign(Bm1(g), g, { patientId: H }));');
+    const r0 = fr.indexOf('Bsl_podBlokada(para[0],'), r1 = fr.indexOf('Bsl_podBlokada(para[1],'), rz = fr.indexOf('await I().putSnapshotForUser(b, PatientClinicalWriteValue(b,Object.assign(Bm1(g), g, { patientId: H })));');
     expect(r0).toBeGreaterThan(0);
     expect(r1).toBeGreaterThan(r0);
     expect(rz).toBeGreaterThan(r1);
     expect(fr.indexOf('Bsw_poOddaniu(X, rekX, pozostale.length, pozostale, opcje)')).toBeGreaterThan(rz);
-    expect(fr).toMatch(/Bses_pilnuj\(opcje\);[^\n]*\n {6}await I\(\)\.putSnapshotForUser\(b, Object\.assign\(Bm1\(g\), g, \{ patientId: H \}\)\);/);
+    expect(fr).toMatch(/Bses_pilnuj\(opcje\);[^\n]*\n {6}await I\(\)\.putSnapshotForUser\(b, PatientClinicalWriteValue\(b,Object\.assign\(Bm1\(g\), g, \{ patientId: H \}\)\)\);/);
     const fp = src.slice(src.indexOf('async function Bsw_przenies('), src.indexOf('async function Bsw_poOddaniu('));
     expect(fp).toContain('usunieta: await Bsw_poOddaniu(G, rekG, wersjeG.length - 1, wersjeG.filter(function (s) { return s && s.snapshotId !== p.S.snapshotId; }), opcje)');
     const fo = src.slice(src.indexOf('async function Bsw_poOddaniu('), src.indexOf('// Najnowszy lokalny nagrobek pacjenta'));
-    expect(fo).toContain('else await I().removePatientForUser(b, G);');
+    expect(fo).toContain('else await I().removePatientForUser(b, PatientClinicalWriteValue(b,G));');
     // P-KOSZ-PO-KLUCZU (P-CHMURA-OPIS): karta G po oddaniu wersji — zapis albo usunięcie tylko w sesji scalania, bez await przed nim
     expect(fo).toMatch(/Bses_pilnuj\(opcje\);[^\n]*\n {2}if \(zostalo > 0\) await I\(\)\.putPatientForUser/);
     expect(fo).not.toContain('putTombstoneForUser');
@@ -2770,7 +2770,7 @@ describe('strażniki źródła (P-SYNC-WLASCICIEL)', () => {
   it('Bsl_usunPacjenta (przegląd poprawki P1 D-21, F2): pod blokadą pacjenta najpierw lokalny nagrobek karty (późniejsza chwila wygrywa), potem świeży rekord', () => {
     const f = src.slice(src.indexOf('async function Bsl_usunPacjenta('), src.indexOf('function yr(t,e){'));
     expect(f.length).toBeGreaterThan(100);
-    const iBlok = f.indexOf('return Bsl_podBlokada(patientId, async function () {');
+    const iBlok = f.indexOf('return PatientClinicalWriteValue(PatientClinicalOperationAccount,Bsl_podBlokada(patientId, async function () {');
     const iNag = f.indexOf('const Bsl_lok = await Bpu_nagrobek(patientId);');
     const iMax = f.indexOf('if (Bsl_lok && Bsl_lok.deletedAtISO > deletedAtISO) deletedAtISO = Bsl_lok.deletedAtISO;');
     const iRek = f.indexOf('const rekord = await I().getPatientForUser(b, patientId);');
@@ -2778,7 +2778,7 @@ describe('strażniki źródła (P-SYNC-WLASCICIEL)', () => {
     expect(iNag).toBeGreaterThan(iBlok);
     expect(iMax).toBeGreaterThan(iNag);
     expect(iRek).toBeGreaterThan(iMax);
-    expect(f).toContain('await I().putTombstoneForUser(b, { patientId: patientId, deletedAtISO: deletedAtISO });');
+    expect(f).toContain('await I().putTombstoneForUser(b, PatientClinicalWriteValue(b,{ patientId: patientId, deletedAtISO: deletedAtISO }));');
   });
 
   it('Le: N w kontekście, faza przeniesień po pętli pacjentów, przed usuwaniem kart i końcem scalania kosza', () => {
@@ -2811,23 +2811,23 @@ describe('strażniki źródła (P-SYNC-WLASCICIEL)', () => {
     const odloz = "if (d.co === 'tresc' || d.co === 'przenies' || d.co === 'zabierz') Bsw_odloz(ctx, F, naglowek, S, szyfry[k], d);";
     expect(f.split(odloz).length - 1).toBe(2);
     // D-3 A (P-NAGLOWEK-NAJNOWSZEJ): zapisany rekord trafia też do listy wersji po zapisie (Bng_dopisz) — nagłówek z najnowszej.
-    expect(f).toContain("if (d.co !== 'nowa') continue;\n        await I().putSnapshotForUser(b, Bng_dopisz(Bng_zap, Bng_j, Object.assign(Bsw_rekord(F, S, szyfry[k], teraz, d.g), Bm1(S)), S.payload || {}, szyfry[k]));");
-    expect(f).toContain("if (d.co !== 'nowa') { czekaja += 1; continue; }\n      await I().putSnapshotForUser(b, Bng_dopisz(Bng_zap, Bng_j, Object.assign(Bsw_rekord(F, S, szyfry[k], teraz, d.g), Bm1(S)), S.payload || {}, szyfry[k]));");
+    expect(f).toContain("if (d.co !== 'nowa') continue;\n        await I().putSnapshotForUser(b, PatientClinicalWriteValue(b,Bng_dopisz(Bng_zap, Bng_j, Object.assign(Bsw_rekord(F, S, szyfry[k], teraz, d.g), Bm1(S)), S.payload || {}, szyfry[k])));");
+    expect(f).toContain("if (d.co !== 'nowa') { czekaja += 1; continue; }\n      await I().putSnapshotForUser(b, PatientClinicalWriteValue(b,Bng_dopisz(Bng_zap, Bng_j, Object.assign(Bsw_rekord(F, S, szyfry[k], teraz, d.g), Bm1(S)), S.payload || {}, szyfry[k])));");
     // P-REV-MAX: czwarty zapis to podniesienie rev wersji tej samej karty przy odrzuceniu (gałąź ids.has), nie wersja spod innej karty.
     // P-PRZYPIETA-POLKRATA (S4 krok 2, W3): piąty — rekord złożony wersji tej samej karty (gałąź ids.has, Bgw_scal).
     expect(f.match(/putSnapshotForUser\(/g), 'zapis wersji spod innej karty tylko w fazie przeniesień (+1: podniesienie rev, P-REV-MAX; +1: rekord złożony W3)').toHaveLength(5);
-    expect(f).toContain('await I().putSnapshotForUser(b, Bng_dopisz(Bng_zap, Bng_j, Object.assign(Bgw_w.rekord, Bm1(g, S)), Bgw_w.tresc, Bgw_w.rekord.payloadCipher));');
-    expect(f).toContain('await I().putSnapshotForUser(b, Bng_dopisz(Bng_zap, Bng_j, Object.assign({}, g, { rev: mt(S) }, Bm1(g, S)), null, g.payloadCipher));');
+    expect(f).toContain('await I().putSnapshotForUser(b, PatientClinicalWriteValue(b,Bng_dopisz(Bng_zap, Bng_j, Object.assign(Bgw_w.rekord, Bm1(g, S)), Bgw_w.tresc, Bgw_w.rekord.payloadCipher)));');
+    expect(f).toContain('await I().putSnapshotForUser(b, PatientClinicalWriteValue(b,Bng_dopisz(Bng_zap, Bng_j, Object.assign({}, g, { rev: mt(S) }, Bm1(g, S)), null, g.payloadCipher)));');
     // faza przeniesień: 'zabierz' nie sprawdza rewizji z chwili decyzji, ale czyta wersję świeżo pod obiema blokadami
     const fp = src.slice(src.indexOf('async function Bsw_przenies('), src.indexOf('async function Bsw_poOddaniu('));
     expect(fp).toContain('const wersjeG = await I().listSnapshotsForUser(b, G);');
     expect(fp).toContain('if (!g || !p.zabierz && (mt(g) !== p.rev || Bsw_zmiana(g) !== p.zmiana)) return null;');
     // P-KOSZ-PO-KLUCZU (A4): rekord wersji wspólnej dwóm kartom wg W3; straż sesji tuż przed zapisem (bez await między nimi).
     expect(fp).toContain('const rek = await Bsw_rekordW3(p.F, p.S, p.szyfr, teraz, g);');
-    expect(fp).toMatch(/Bses_pilnuj\(opcje\);[^\n]*\n {2}await I\(\)\.putSnapshotForUser\(b, Object\.assign\(rek, Bm1\(p\.S\)\)\);/);
+    expect(fp).toMatch(/Bses_pilnuj\(opcje\);[^\n]*\n {2}await I\(\)\.putSnapshotForUser\(b, PatientClinicalWriteValue\(b,Object\.assign\(rek, Bm1\(p\.S\)\)\)\);/);
     const ft = src.slice(src.indexOf('async function Bsw_poprawTresc('), src.indexOf('async function Bsw_przenies('));
     expect(ft).toContain('const Bsw_r3 = await Bsw_rekordW3({ patientId: p.G }, p.S, p.szyfr, teraz, g, true);');
-    expect(ft).toMatch(/Bses_pilnuj\(opcje\);[^\n]*\n {2}await I\(\)\.putSnapshotForUser\(b, Bng_dopisz\(Bng_zap, Bng_j, Object\.assign\(Bsw_r3,/);
+    expect(ft).toMatch(/Bses_pilnuj\(opcje\);[^\n]*\n {2}await I\(\)\.putSnapshotForUser\(b, PatientClinicalWriteValue\(b,Bng_dopisz\(Bng_zap, Bng_j, Object\.assign\(Bsw_r3,/);
     expect(src).toContain("tylkoTresc: d.co === 'tresc', zabierz: d.co === 'zabierz',");
     const le = src.slice(src.indexOf('async function Le(t,e){'), src.indexOf('prunedSnapshotCount:Bkz_S.przyciete||0}'));
     expect(le).toContain('l+=Bsw_f.dodane,w+=Bsw_f.usuniete;y+=Bsw_f.zabrane;');
@@ -2841,18 +2841,18 @@ describe('strażniki źródła (P-SYNC-WLASCICIEL)', () => {
       expect(funkcja(f), f).toContain('l=typeof n.Blob=="function"?new n.Blob([a],{type:"text/plain"}):a;' + wysylka);
       expect(funkcja(f), f).not.toContain('n.navigator.sendBeacon(u,l)');
     }
-    expect(integ).toContain('function Bsb_wyslij(u,l){var ok=!1;try{ok=n.navigator.sendBeacon(u,l)===!0}catch{}if(ok||typeof n.fetch!="function")return ok;');
+    expect(integ).toContain('function Bsb_wyslij(u,l){if(!PatientClinicalLegacyAllowed("direct-delta"))return!1;var ok=!1;try{ok=n.navigator.sendBeacon(u,l)===!0}catch{}if(ok||typeof n.fetch!="function")return ok;');
     for (const f of ['Ut', 'Qv0', 'Qv1']) {
-      expect(funkcja(f), f).toContain('try{n.navigator.sendBeacon(u,l)}catch{}');
+      expect(funkcja(f), f).toContain('try{if(PatientClinicalLegacyAllowed("direct-delta"))n.navigator.sendBeacon(u,l)}catch{}');
     }
   });
 
   it('„Scal pacjentów” zapisuje przeniesioną wersję przez Bsw_poScaleniu; adaptery mają odczyt wersji po kluczu', () => {
-    expect(src).toContain('await I().putSnapshotForUser(b,Object.assign({},o[d],Bsw_poScaleniu(o[d],e),Bm1(o[d])))');
+    expect(src).toContain('await I().putSnapshotForUser(b,PatientClinicalWriteValue(b,Object.assign({},o[d],Bsw_poScaleniu(o[d],e),Bm1(o[d]))))');
     // cel scalenia zapamiętany przed usunięciem karty źródłowej (zdarzenie onPatientDeleted -> delta nagrobka); przed
     // nimi sprawdzenie sesji „Scal pacjentów” (P-SESJA-ZAPISU); usunięcie karty źródłowej w tej sesji i sprawdzenie po nim
     // (przegląd 3)
-    expect(src).toContain('}catch{}Bpz_pilnuj(Bsc_s);Bsw_zapamietajCel(t,e);await Bpu_usun(t,Bsc_s);Bpz_pilnuj(Bsc_s);return{targetPatientId:e,');
+    expect(src).toContain('}catch(PatientClinicalCaught){PatientClinicalRethrow(PatientClinicalCaught);}Bpz_pilnuj(Bsc_s);Bsw_zapamietajCel(t,e);await Bpu_usun(t,Bsc_s);Bpz_pilnuj(Bsc_s);return PatientClinicalWriteValue(PatientClinicalOperationAccount,{targetPatientId:e,');
     expect(src).toContain('const n=typeof e=="string"&&e?e:new Date().toISOString();return await Bsw_deltaNagrobka(t,{schemaVersion:at,patients:[],tombstones:[{patientId:t,deletedAtISO:n}],');
     expect(src).toContain('async getSnapshotForUser(o,a){const i=(await r(o)).transaction(It,"readonly").objectStore(It);return await t(i.get(a))||null}');
     expect(src).toContain('getSnapshotForUser:function(n,r){return e.getSnapshotForUser(n,r)}');

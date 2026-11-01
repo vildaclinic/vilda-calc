@@ -13,7 +13,7 @@ describe('shared duration — sodium-only adapter', () => {
     expect(duration.requiredFields('Na_mmol_d')).toEqual(['Na_concentration', 'Na_volume', 'Na_collectionHours']);
     expect(duration.requiredFields('Na_mmol_d', { Na_inputMode: 'reported' })).toEqual(['Na_reportedValue']);
     expect(duration.resolveFormulaFields('FENa_spot')).toBeNull();
-    expect(duration.requiredFields('K_mmol_d')).toBeNull();
+    expect(duration.requiredFields('ACR')).toBeNull();
   });
 
   it('captures a new sodium blank as24h in a copy without touching other calculators', () => {

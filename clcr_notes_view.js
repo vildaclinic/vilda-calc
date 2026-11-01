@@ -66,6 +66,7 @@
       referenceLabel: norm ? criterion ? "Próg przy zapisie" : "Norma przy zapisie" : "Odniesienie",
       tone, category, outOfRange, status, interpretation,
       boundary: available ? decimal(text(point.boundary)) : "",
+      boundaryLabel: point?.sourceFormulaId === "K_mmol_d" ? "Wartość przed zaokrągleniem" : "Granica przed zaokrągleniem",
       caution: available && text(point.comment) !== interpretation ? text(point.comment) : "",
       comment: humanBody(note),
     };
@@ -162,7 +163,7 @@
     add(value, "span", "clcr-note-caption", "Wynik pacjenta");
     add(value, "strong", "clcr-note-value", record.display);
     if (record.unit) add(value, "span", "clcr-note-unit", record.unit);
-    if (record.boundary) add(value, "span", "clcr-note-boundary", `Granica przed zaokrągleniem: ${record.boundary}.`);
+    if (record.boundary) add(value, "span", "clcr-note-boundary", `${record.boundaryLabel}: ${record.boundary}.`);
     const reference = add(main, "div", "clcr-note-column");
     add(reference, "span", "clcr-note-caption", record.referenceLabel);
     const limit = add(reference, "strong", "clcr-note-reference", record.referenceValue || "Nie zapisano");

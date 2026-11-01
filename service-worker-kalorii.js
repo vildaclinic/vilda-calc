@@ -19,7 +19,7 @@
  *   bo i tak chcemy zwracać HTML z cache natychmiast.
  */
 
-const SW_VERSION = '1.1.427';
+const SW_VERSION = '1.1.428';
 const CACHE_PREFIX = 'pwa-kalorii';
 const SHELL_CACHE = `${CACHE_PREFIX}-shell-v${SW_VERSION}`;
 const RUNTIME_CACHE = `${CACHE_PREFIX}-runtime`;
@@ -299,6 +299,7 @@ const CORE_SHELL_URLS = [
   '/clcr_collection_duration.js?v=2',
   '/clcr_collection_duration.js?v=3',
   '/clcr_collection_duration.js?v=4',
+  '/clcr_collection_duration.js?v=5',
   '/clcr_collection_duration.css?v=1',
   '/clcr_mg_dzm_reference_data.js?v=1',
   '/clcr_mg_dzm.js?v=1',
@@ -320,7 +321,13 @@ const CORE_SHELL_URLS = [
   '/clcr_sodium_dzm_ui.js?v=1',
   '/clcr_sodium_dzm.css?v=1',
   '/clcr_sodium_dzm_persistence.js?v=1',
+  '/clcr_potassium_dzm_data.js?v=1',
+  '/clcr_potassium_dzm.js?v=1',
+  '/clcr_potassium_dzm_ui.js?v=1',
+  '/clcr_potassium_dzm.css?v=1',
+  '/clcr_potassium_dzm_persistence.js?v=1',
   '/clcr_notes_view.js?v=1',
+  '/clcr_notes_view.js?v=2',
   '/clcr_notes_view.css?v=1',
   '/clcr_result_reference_data.js?v=1',
   '/clcr_result_reference_data.js?v=2',
@@ -363,6 +370,7 @@ const CORE_SHELL_URLS = [
   '/inline_kalkulator_klirens_02.js?v=26',
   '/inline_kalkulator_klirens_02.js?v=27',
   '/inline_kalkulator_klirens_02.js?v=28',
+  '/inline_kalkulator_klirens_02.js?v=29',
   '/inline_kalkulator_klirens_03.js?v=1',
   '/inline_kalkulator_klirens_04.js?v=1',
   '/inline_kalkulator_klirens_04.js?v=4',
@@ -397,6 +405,7 @@ const CORE_SHELL_URLS = [
   '/inline_kalkulator_klirens_04.js?v=33',
   '/inline_kalkulator_klirens_04.js?v=34',
   '/inline_kalkulator_klirens_04.js?v=35',
+  '/inline_kalkulator_klirens_04.js?v=36',
   '/inline_kalkulator_klirens_05.js?v=1',
   '/inline_kalkulator_klirens_06.js?v=1',
   '/inline_kalkulator_klirens_07.js?v=1',
@@ -424,6 +433,7 @@ const CORE_SHELL_URLS = [
   '/inline_kalkulator_klirens_07.js?v=23',
   '/inline_kalkulator_klirens_07.js?v=24',
   '/inline_kalkulator_klirens_07.js?v=25',
+  '/inline_kalkulator_klirens_07.js?v=26',
   '/inline_kalkulator_klirens_08.js?v=1',
   '/inline_kalkulator_klirens_09.js?v=1',
   '/clcr_ui_workflow.css?v=1',
@@ -480,6 +490,7 @@ const CORE_SHELL_URLS = [
   '/clcr_ui_workflow.js?v=33',
   '/clcr_ui_workflow.js?v=34',
   '/clcr_ui_workflow.js?v=35',
+  '/clcr_ui_workflow.js?v=36',
   '/clcr_record_resources.js?v=1',
   '/clcr_record_resources.js?v=2',
   '/clcr_record_resources.js?v=3',
@@ -490,6 +501,7 @@ const CORE_SHELL_URLS = [
   '/clcr_record_resources.js?v=8',
   '/clcr_record_resources.js?v=9',
   '/clcr_record_resources.js?v=10',
+  '/clcr_record_resources.js?v=11',
   '/clcr_saved_calculation.js?v=1',
   '/clcr_saved_calculation.js?v=2',
   '/clcr_saved_calculation.js?v=3',
@@ -500,6 +512,7 @@ const CORE_SHELL_URLS = [
   '/clcr_saved_calculation.js?v=8',
   '/clcr_saved_calculation.js?v=9',
   '/clcr_saved_calculation.js?v=10',
+  '/clcr_saved_calculation.js?v=11',
   '/clcr_saved_legacy_calculator.js?v=1',
   '/clcr_saved_legacy_calculator.js?v=2',
   '/clcr_saved_legacy_calculator.js?v=3',
@@ -510,6 +523,7 @@ const CORE_SHELL_URLS = [
   '/clcr_saved_legacy_calculator.js?v=8',
   '/clcr_saved_legacy_calculator.js?v=9',
   '/clcr_saved_legacy_calculator.js?v=10',
+  '/clcr_saved_legacy_calculator.js?v=11',
   '/clcr_saved_results.js?v=1',
   '/clcr_saved_results.js?v=2',
   '/clcr_saved_results.js?v=3',
@@ -520,6 +534,7 @@ const CORE_SHELL_URLS = [
   '/clcr_saved_results.js?v=8',
   '/clcr_saved_results.js?v=9',
   '/clcr_saved_results.js?v=10',
+  '/clcr_saved_results.js?v=11',
   '/clcr_saved_results_view.js?v=1',
   '/clcr_saved_results_view.js?v=2',
   '/clcr_saved_results_view.css?v=1',
@@ -529,6 +544,7 @@ const CORE_SHELL_URLS = [
   '/clcr_result_details.js?v=4',
   '/clcr_result_details.js?v=5',
   '/clcr_result_details.js?v=6',
+  '/clcr_result_details.js?v=7',
   '/clcr_result_details.css?v=1',
   '/inline_notatki_00.js?v=2',
   '/inline_notatki_00.js?v=3',
@@ -757,6 +773,7 @@ const CORE_SHELL_URLS = [
   '/vilda_lab_history_tab.js?v=15',
   '/vilda_lab_history_tab.js?v=16',
   '/vilda_lab_history_tab.js?v=17',
+  '/vilda_lab_history_tab.js?v=18',
   '/vilda_lab_history_tab.css?v=1',
   '/vilda_lab_history_tab.css?v=2',
   '/vilda_lab_history_tab.css?v=3',
@@ -1535,6 +1552,7 @@ const CORE_SHELL_URLS = [
   '/vilda_chrome.js?v=206',
   '/vilda_chrome.js?v=207',
   '/vilda_chrome.js?v=208',
+  '/vilda_chrome.js?v=209',
   '/vilda_realtime.js?v=1',
   '/vilda_realtime.js?v=2',
   '/vilda_realtime.js?v=3',
@@ -2041,6 +2059,7 @@ const CORE_SHELL_URLS = [
   '/vilda_save_status_indicator.js?v=34',
   '/vilda_save_status_indicator.js?v=35',
   '/vilda_save_status_indicator.js?v=36',
+  '/vilda_save_status_indicator.js?v=37',
   '/vilda_unsaved_guard.js?v=1',
   '/vilda_unsaved_guard.js?v=2',
   '/vilda_unsaved_guard.js?v=3',
@@ -3830,6 +3849,7 @@ const OPTIONAL_ASSETS = [
   '/vilda_auth_ui.js?v=520',
   '/vilda_auth_ui.js?v=521',
   '/vilda_auth_ui.js?v=522',
+  '/vilda_auth_ui.js?v=523',
   '/app.js?v=205',
   '/app.js?v=206',
   '/app.js?v=207',
@@ -4089,6 +4109,7 @@ const OPTIONAL_ASSETS = [
   '/vilda_session_bridge.js?v=130',
   '/vilda_session_bridge.js?v=131',
   '/vilda_session_bridge.js?v=132',
+  '/vilda_session_bridge.js?v=133',
   '/vilda_data_safety_explainer.js?v=5',
   '/vilda_obesity_banner.css?v=6',
   '/vilda_obesity_banner.css?v=7',
@@ -4754,7 +4775,11 @@ async function openReusablePreviousShellCaches() {
 // an exact immutable entry copied from a previous cache never seeds this map.
 const FRESH_STATIC_ALIAS_PATHS = new Set([
   '/edu-video-ui.css', '/style.css', '/vilda_chrome.css',
-  '/vilda_auth_ui.css', '/ios26-v2.css', '/vilda_shell.css', '/vilda_vault.js'
+  '/vilda_auth_ui.css', '/ios26-v2.css', '/vilda_shell.css', '/vilda_vault.js', '/vilda_chrome.js',
+  // Five new potassium resources keep the same request budget. These explicit
+  // current aliases share only this installation's freshly fetched bytes.
+  '/vilda_logger.js', '/vilda_html.js', '/vilda_init.js',
+  '/vilda_app_helpers.js', '/vilda_frame_sync.js'
 ]);
 
 async function fetchAndStorePrecacheUrl(url, { required = false, previousShellCaches = [], freshResponses = null } = {}) {

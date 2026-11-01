@@ -3986,17 +3986,17 @@ describe('P-NOTATKI-ZA-KARTA — strażniki źródła', () => {
     expect(notatki).toContain('await Bnp_nagrobekScalania(P,M,Qkp.get(M)||[],R[M],Qkn[M]&&Qkn[M].pole||null,');
     expect(notatki).not.toContain('await P.putPatientNoteTombstoneForUser(b,{id:M,deletedAtISO:R[M]');
     const ns = sekcja('async function Bnp_nagrobekScalania(', '\n}\n');
-    expect(ns).toContain('try { swiezy = await Bnp_nagrobek(h, id); } catch { swiezy = null; }');
+    expect(ns).toContain("try { swiezy = await Bnp_nagrobek(h, id); } catch(PatientClinicalCaught) {PatientClinicalRethrow(PatientClinicalCaught); swiezy = null; }");
     expect(ns).toContain('const k = Bnp_zlacz((kopie || []).concat([swiezy]))[id];');
     expect(ns).toContain('if (k) { D = k.R; p = k.pole; }');
     expect(ns).toContain('if (Bnp_rev(swiezy) > r) r = Bnp_rev(swiezy);');
     // weryfikacja 2 przeglądu P1 (W1): zdjęcie nagrobka po decyzji „notatka” pod blokadą notatki, na świeżym rekordzie
-    expect(notatki).toContain('!U.has(M.id)&&!Qrt.has(M.id)&&!Qcz.has(M.id)&&await Ac(M.id,function(){return Bnp_zdejmijPoScaleniu(P,M.id,R[M.id])})');
+    expect(notatki).toContain("!U.has(M.id)&&!Qrt.has(M.id)&&!Qcz.has(M.id)&&await Ac(M.id,function(){return PatientClinicalWriteValue(PatientClinicalOperationAccount,Bnp_zdejmijPoScaleniu(P,M.id,R[M.id]))})");
     expect(notatki).not.toContain('&&await P.removePatientNoteTombstoneForUser(b,M.id)');
     const zd = sekcja('async function Bnp_zdejmijPoScaleniu(', '\n}\n');
-    expect(zd).toContain('try { swiezy = await Bnp_nagrobek(h, id); } catch { swiezy = null; }');
-    expect(zd).toContain("if (swiezy && typeof swiezy.deletedAtISO === 'string' && swiezy.deletedAtISO > (R || '')) return;");
-    expect(zd).toContain('await h.removePatientNoteTombstoneForUser(b, id);');
+    expect(zd).toContain("try { swiezy = await Bnp_nagrobek(h, id); } catch(PatientClinicalCaught) {PatientClinicalRethrow(PatientClinicalCaught); swiezy = null; }");
+    expect(zd).toContain("if (swiezy && typeof swiezy.deletedAtISO === 'string' && swiezy.deletedAtISO > (R || '')) return PatientClinicalWriteValue(PatientClinicalOperationAccount,undefined);");
+    expect(zd).toContain("await h.removePatientNoteTombstoneForUser(b, PatientClinicalWriteValue(b,id));");
     expect(notatki).not.toContain('listPatientsForUser');
     expect(notatki.indexOf('Bnp_stan(')).toBeLessThan(notatki.indexOf('for(let S=0;S<j.length;S+=1)'));
     expect(notatki.indexOf('Bnp_ratuj(')).toBeGreaterThan(notatki.indexOf('M?Nt++:Et++,Qdn.add(g.id)'));
@@ -4009,7 +4009,7 @@ describe('P-NOTATKI-ZA-KARTA — strażniki źródła', () => {
     // uwaga Codexa P1: notatka z pętli przez Bnp_usunZPacjentem (blokada notatki, świeży odczyt), nie Eb z mapą
     expect(bpu.indexOf('const e=new Date().toISOString(),')).toBeLessThan(bpu.indexOf('await Bnp_usunZPacjentem(Qd0,Qd4.id,t,e,Bpu_s)'));
     expect(bpu.indexOf('await Bnp_usunZPacjentem(Qd0,Qd4.id,t,e,Bpu_s)')).toBeLessThan(bpu.indexOf('await Bnp_odnow(I(),t,e,Qnm,Qnd,Bpu_s);'));
-    expect(bpu.indexOf('await Bnp_odnow(I(),t,e,Qnm,Qnd,Bpu_s);')).toBeLessThan(bpu.indexOf('putTombstoneForUser(b,{patientId:t,deletedAtISO:e})'));
+    expect(bpu.indexOf('await Bnp_odnow(I(),t,e,Qnm,Qnd,Bpu_s);')).toBeLessThan(bpu.indexOf("putTombstoneForUser(b,PatientClinicalWriteValue(b,{patientId:t,deletedAtISO:e}))"));
     expect(bpu.split('new Date().toISOString()').length - 1, 'jedna chwila').toBe(1);
     expect(bpu).not.toContain('listPatientNoteTombstonesForUser');
     // Care-owned notes dispatch inside the original Ac note lock; ordinary
@@ -4024,10 +4024,10 @@ describe('P-NOTATKI-ZA-KARTA — strażniki źródła', () => {
     const eb = sekcja('async function Eb(t,Qwp,Qwm,Qwf){', 'async function ts(');
     expect(eb).toContain('const Qwg=Qwf&&Qwf.token===VildaExistingNoteUpdateToken?Qwf:null;');
     expect(eb).toContain('await (Qwg?Qwg.adapter:I()).getPatientNoteForUser(Qwg?Qwg.account:b,t)');
-    expect(eb).toContain('if(Qwg)Qwg.beforeCommit();await (Qwg?Qwg.adapter:I()).removePatientNoteForUser(Qwg?Qwg.account:b,t);');
+    expect(eb).toContain("if(Qwg)Qwg.beforeCommit();await (Qwg?Qwg.adapter:I()).removePatientNoteForUser(Qwg?Qwg.account:b,PatientClinicalWriteValue(Qwg?Qwg.account:b,t));");
     expect(eb).toContain('const r=Qwg?Qwg.adapter:I();');
-    expect(eb).toContain('r.putPatientNoteTombstoneForUser(Qwg?Qwg.account:b,{id:t,deletedAtISO:n,rev:Qd5,deletedWithPatient:Qwq})');
-    expect(eb.split('catch(Qwe){if(Qwg)throw Qwe}').length - 1, 'old read/tombstone catches only rethrow for the private guarded call').toBe(2);
+    expect(eb).toContain("r.putPatientNoteTombstoneForUser(Qwg?Qwg.account:b,PatientClinicalWriteValue(Qwg?Qwg.account:b,{id:t,deletedAtISO:n,rev:Qd5,deletedWithPatient:Qwq}))");
+    expect(eb.split("catch(Qwe){PatientClinicalRethrow(Qwe);if(Qwg)throw Qwe}").length - 1, 'read/tombstone catches propagate clinical guards and preserve the private guarded rethrow').toBe(2);
     expect(src).toContain('await Bnp_poleEb(t,Qwp,n,Qwm)');
     expect(sekcja('async function ls(t,e){', 'async function ds(')).toContain('const Qx=await Bnp_nagrobek(I(),t)');
     expect(src).toContain('typeof a.rev=="number"&&isFinite(a.rev)&&a.rev>0&&(c.rev=a.rev)');
@@ -4042,13 +4042,14 @@ describe('P-NOTATKI-ZA-KARTA — strażniki źródła', () => {
   it('przegląd 2: zapis notatki (Ad) przez Bnp_poZapisie, bez ślepego zdjęcia nagrobka; pętla CZEKA ze świeżym nagrobkiem i chwilą zapisu; chwila rekordu w Bnp_pole', () => {
     const ad = sekcja('async function Ad(t,e){', 'async function bo(');
     // P-SESJA-ZAPISU (PR-S, przegląd 2): Bnp_poZapisie dostaje też opcje zapisu notatki (sesja „Scal pacjentów”).
-    expect(ad.indexOf('await I().putPatientNoteForUser(b,nt);')).toBeLessThan(ad.indexOf('await Bnp_poZapisie(s,$,J+1,t.patientId,e);'));
+    expect(ad).toContain("await I().putPatientNoteForUser(b,PatientClinicalWriteValue(b,nt));");
+    expect(ad.indexOf("await I().putPatientNoteForUser(b,PatientClinicalWriteValue(b,nt));")).toBeLessThan(ad.indexOf('await Bnp_poZapisie(s,$,J+1,t.patientId,e);'));
     expect(ad.indexOf('await Bnp_poZapisie(s,$,J+1,t.patientId,e);')).toBeGreaterThan(-1);
     expect(ad).not.toContain('removePatientNoteTombstoneForUser');
     const ratuj = sekcja('async function Bnp_ratuj(', '/* P-KOPIA-DANE-KONTA');
     const czeka = ratuj.slice(ratuj.indexOf('for (const id of czeka) {'));
     expect(czeka).toContain("n.updatedAtISO > k.R ? n.updatedAtISO : k.R;");
-    expect(czeka).toContain('const nag = await Bnp_nagrobek(h, id);\n        if (nag && nag.deletedAtISO > R) return;');
+    expect(czeka).toContain("const nag = await Bnp_nagrobek(h, id);\n        if (nag && nag.deletedAtISO > R) return PatientClinicalWriteValue(PatientClinicalOperationAccount,undefined);");
     expect(sekcja('function Bnp_pole(', '\n}\n')).toContain('!Bnp_iso(n.deletedAtISO) || n.deletedAtISO >= Bnp_R_MAX');
   });
   it('uwaga Codexa P1: „Usuń pacjenta” — Eb pod blokadą notatki, bez mapy nagrobków; brak notatki → odnowienie nagrobka z polem', () => {
@@ -4063,7 +4064,7 @@ describe('P-NOTATKI-ZA-KARTA — strażniki źródła', () => {
     expect(od).toContain('await Bnp_odnowJeden(h, id, t, e, o);');
     expect(sekcja('async function Bnp_odnowJeden(', '\n}\n')).toContain('const nag = await Bnp_nagrobek(h, id), p = Bnp_pole(nag);');
     // przegląd poprawki P1 (R2): nagrobek z polem innego pacjenta zostaje bez zmian (P1-8)
-    expect(sekcja('async function Bnp_odnowJeden(', '\n}\n')).toContain('if (!p || p.patientId !== t) return;');
+    expect(sekcja('async function Bnp_odnowJeden(', '\n}\n')).toContain("if (!p || p.patientId !== t) return PatientClinicalWriteValue(PatientClinicalOperationAccount,undefined);");
     // mapa nagrobków sprzed listy tylko jako lista kandydatów odnowienia: żadne Eb w źródle nie dostaje mapy
     expect(src.match(/\bEb\([^()]*\{[^{}]*\},\s*(Qnm|mapa)\)/g), 'Eb z mapą').toBe(null);
   });

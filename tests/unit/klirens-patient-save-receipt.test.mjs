@@ -14,12 +14,22 @@ function eventDocument() {
 // Initializes the complete production workflow and exercises its real
 // non-bubbling sibling-document event registration. Only the Start record,
 // its load-sequence reader and encrypted account boundary are synthetic.
-function harness({ initialReader = true, initialSequence = 4, initialReaderThrows = false } = {}) {
+function harness({ initialReader = true, initialSequence = 4, initialReaderThrows = false, potassium = false } = {}) {
   const ownDocument = eventDocument(), startDocument = eventDocument(), parentDocument = eventDocument();
   const patientId = 'fictional-new-persisted-patient';
   const account = 'fictional-same-account';
   const state = { sequence: initialSequence, ownSequence: 4, account, unlocked: true, readerThrows: initialReaderThrows, writes: [] };
-  const controls = {
+  const formulaId = potassium ? 'K_mmol_d' : 'ACR';
+  const controls = potassium ? {
+    K_inputMode: { id: 'K_inputMode', type: 'select', value: 'concentration' },
+    K_concentration: { id: 'K_concentration', type: 'number', value: '100' },
+    K_volume: { id: 'K_volume', type: 'number', value: '1500' },
+    K_volumeUnit: { id: 'K_volumeUnit', type: 'select', value: 'mL' },
+    K_unitConversions: { id: 'K_unitConversions', type: 'hidden', value: '' },
+    K_collectionHours: { id: 'K_collectionHours', type: 'number', value: '24' },
+    K_collectionSource: { id: 'K_collectionSource', type: 'hidden', value: 'hours' },
+    ui_collectionNoMissedVoids_answer: { id: 'ui_collectionNoMissedVoids_answer', type: 'hidden', value: 'unknown' },
+  } : {
     U_Alb: { id: 'U_Alb', type: 'number', value: '45' },
     U_Alb_unit: { id: 'U_Alb_unit', type: 'select', value: 'mg/L' },
     Ucr_spot: { id: 'Ucr_spot', type: 'number', value: '100' },
@@ -28,7 +38,7 @@ function harness({ initialReader = true, initialSequence = 4, initialReaderThrow
   const form = eventDocument();
   form.querySelectorAll = () => Object.values(controls).filter(control => control.type === 'number');
   ownDocument.getElementById = id => id === 'clcrForm' ? form : controls[id] || null;
-  const ownSession = { selectedFormula: 'ACR', inputs: Object.fromEntries(Object.values(controls).map(field => [field.id, field.value])) };
+  const ownSession = { selectedFormula: formulaId, inputs: Object.fromEntries(Object.values(controls).map(field => [field.id, field.value])) };
   const source = {
     document: startDocument,
     VildaVault: { isUnlocked: () => state.unlocked, getCurrentUser: () => ({ userId: state.account }) },
@@ -43,10 +53,11 @@ function harness({ initialReader = true, initialSequence = 4, initialReaderThrow
     VildaDataImportExport: { getApplyLoadedDataSequence: () => state.ownSequence },
     VildaClcrSessionRuntime: { collectCurrentSession: () => ownSession },
   };
+  if (potassium) loadBrowserScript('clcr_potassium_dzm.js', global);
   loadBrowserScript('clcr_ui_workflow.js', global);
   global.ClcrUiWorkflow = {
-    state: { activeFormulaId: 'ACR' },
-    getCalculationFieldSpec: () => ({ formulaId: 'ACR', fieldIds: Object.keys(controls),
+    state: { activeFormulaId: formulaId },
+    getCalculationFieldSpec: () => ({ formulaId, fieldIds: Object.keys(controls),
       fields: Object.values(controls).map(field => ({ id: field.id, type: field.type })) }),
   };
   ownDocument.dispatch('DOMContentLoaded');
@@ -62,6 +73,32 @@ function harness({ initialReader = true, initialSequence = 4, initialReaderThrow
 }
 
 describe('Klirens — dowód zapisu tej samej roboczej karty w Start', () => {
+  it('accepts a K receipt when its exact volume changed only between mL and L', () => {
+    const h = harness({ potassium: true });
+    const converted = h.global.VildaClcrPotassiumDzm.convertUnitInput('1500', 'mL', 'L', 'volume');
+    const patch = { K_volume: converted.text, K_volumeUnit: 'L', K_unitConversions: JSON.stringify({ volume: {
+      originalValue: '1500', originalUnit: 'mL', convertedValue: converted.text, convertedUnit: 'L',
+    } }) };
+    for (const [id, value] of Object.entries(patch)) { h.ownSession.inputs[id] = value; h.ownDocument.getElementById(id).value = value; }
+    const before = JSON.parse(JSON.stringify([h.ownSession, h.source.lastLoadedData]));
+    h.saved();
+    expect(h.global.ClcrVisitSave.resolveCurrentPatientId()).toBe(h.patientId);
+    expect([h.ownSession, h.source.lastLoadedData]).toEqual(before);
+    expect(h.state.writes).toEqual([]);
+  });
+
+  it.each([
+    { K_concentration: '101' }, { K_volume: '2', K_volumeUnit: 'L' }, { K_collectionHours: '12' },
+    { K_collectionSource: 'captured' }, { ui_collectionNoMissedVoids_answer: 'yes' },
+    { K_volume: '2', K_volumeUnit: 'L', K_concentration: '75' },
+  ])('rejects a changed K specimen in a patient-save receipt: %j', patch => {
+    const h = harness({ potassium: true });
+    for (const [id, value] of Object.entries(patch)) { h.ownSession.inputs[id] = value; h.ownDocument.getElementById(id).value = value; }
+    h.saved();
+    expect(h.global.ClcrVisitSave.resolveCurrentPatientId()).toBeNull();
+    expect(h.state.writes).toEqual([]);
+  });
+
   it.each([0, 4])('accepts a new persisted patient ID when Start has not changed sequence %s', initialSequence => {
     const h = harness({ initialSequence });
     expect(h.global.ClcrVisitSave.resolveCurrentPatientId()).toBeNull();

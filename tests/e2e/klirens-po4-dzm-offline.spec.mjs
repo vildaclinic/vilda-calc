@@ -228,10 +228,10 @@ async function fictionalPo4SharedAndNotes(page) {
   await page.evaluate(() => window.VildaAuthUI.hide());
   await expect(page.locator('.vilda-auth-patient-card')).toBeHidden();
 
-  // The shared adapter must normalize the actual rendered legacy potassium result,
+  // The shared adapter must normalize the actual rendered legacy citrate result,
   // without asking for start/end dates or resetting an explicit shorter time.
-  const sharedInputs = { currentVersion: 'advanced', formulaPicker: 'K_mmol_d', age: '45', sex: 'F',
-    weight: '60', height: '165', U_K: '50', V24: '1440',
+  const sharedInputs = { currentVersion: 'advanced', formulaPicker: 'Cit_mgkg', age: '45', sex: 'F',
+    weight: '60', height: '165', U_Cit: '50', V24: '1440',
     Cl24DurationHours: '', Cl24DurationSource: 'assumed-24h',
     collectionStartAt: '', collectionEndAt: '', Cl24CollectionProblem: false,
     collectionStartVoidDiscarded: false, collectionFinalVoidIncluded: false,
@@ -241,21 +241,21 @@ async function fictionalPo4SharedAndNotes(page) {
     ui_collectionNoMissedVoids_answer: '', ui_collectionNoSpillage_answer: '',
     ui_collectionNoExtraVoids_answer: '', ui_collectionStorageFollowed_answer: '',
   };
-  await applySession(page, { version: 2, currentVersion: 'advanced', selectedFormula: 'K_mmol_d', inputs: sharedInputs }, 'K_mmol_d');
+  await applySession(page, { version: 2, currentVersion: 'advanced', selectedFormula: 'Cit_mgkg', inputs: sharedInputs }, 'Cit_mgkg');
   const readShared = () => page.evaluate(() => ({
-    duration: window.ClcrCollectionDuration.readFromDocument(document), ready: window.canComputeFormula('K_mmol_d'),
-    values: window.ClcrVisitSave.collectActiveDatapoints(document, { formulaId: 'K_mmol_d' }).map(point => point.valueNum ?? point.rawValue),
+    duration: window.ClcrCollectionDuration.readFromDocument(document), ready: window.canComputeFormula('Cit_mgkg'),
+    values: window.ClcrVisitSave.collectActiveDatapoints(document, { formulaId: 'Cit_mgkg' }).map(point => point.valueNum ?? point.rawValue),
   }));
   await expect(page.locator('#Cl24DurationHours')).toHaveValue('24');
   await expect.poll(async () => (await readShared()).ready).toBe(true);
   const default24 = await readShared();
   expect(default24.duration).toMatchObject({ valid: true, hours: 24, assumed: true });
-  expect(default24.values).toEqual([72]);
+  expect(default24.values).toEqual([12]);
   await page.locator('#clcrCommonDuration .clcr-duration-change').click();
   await page.locator('#Cl24DurationHours').fill('12');
   await expect(page.locator('#clcrCommonDuration .clcr-duration-row strong')).toHaveText('12 godz.');
   await expect(page.locator('#Cl24DurationHours')).toBeFocused();
-  await expect.poll(async () => (await readShared()).values).toEqual([144]);
+  await expect.poll(async () => (await readShared()).values).toEqual([24]);
   const explicit12 = await readShared();
   expect(explicit12.duration).toMatchObject({ valid: true, hours: 12, assumed: false });
   expect((await memory(page)).originalsLocked).toBe(true);

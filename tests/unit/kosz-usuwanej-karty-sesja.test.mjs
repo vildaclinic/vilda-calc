@@ -418,12 +418,12 @@ describe('P-KOSZ-USUWANEJ-KARTY — strażniki źródła', () => {
   const src = kod(SEJF.N);
   it('S6: Bsl_usunPacjenta — decyzja kosza przed usunięciem karty; usunięcie, zbiór kart usuniętych i nagrobek pod Bses_pilnuj bez await pomiędzy', () => {
     const f = src.slice(src.indexOf('async function Bsl_usunPacjenta('), src.indexOf('function yr(t,e){'));
-    const iKosz = f.indexOf('if (ctx && !(await Bsl_koszUsuwanejKarty(ctx, patientId, opcje))) return 0;');
+    const iKosz = f.indexOf('if (ctx && !(await Bsl_koszUsuwanejKarty(ctx, patientId, opcje))) return PatientClinicalWriteValue(PatientClinicalOperationAccount,0);');
     const iUsun = f.indexOf('Bses_pilnuj(opcje); // P-CHMURA-OPIS: usuniecie karty tylko w sesji scalania');
-    const iRemove = f.indexOf('await I().removePatientForUser(b, patientId);');
+    const iRemove = f.indexOf('await I().removePatientForUser(b, PatientClinicalWriteValue(b,patientId));');
     const iNagr = f.indexOf('Bses_pilnuj(opcje); // P-CHMURA-OPIS: zbior kart usunietych i nagrobek karty tylko w sesji scalania');
     const iZbior = f.indexOf('Bpc_usunieta(patientId);');
-    const iPut = f.indexOf('await I().putTombstoneForUser(b, { patientId: patientId, deletedAtISO: deletedAtISO });');
+    const iPut = f.indexOf('await I().putTombstoneForUser(b, PatientClinicalWriteValue(b,{ patientId: patientId, deletedAtISO: deletedAtISO }));');
     const bezAwait = (a, z) => f.slice(a, z).replace(/\/\/[^\n]*/g, '').replace(/^\s*Bses_pilnuj\(opcje\);/, '');
     expect(iKosz).toBeGreaterThan(0);
     expect(iUsun).toBeGreaterThan(iKosz);

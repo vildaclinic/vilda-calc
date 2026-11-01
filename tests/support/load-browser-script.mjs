@@ -23,7 +23,7 @@ const ZALEZNOSCI = {
   // and frozen-note decoder; emulate their declared browser dependencies.
   'clcr_ui_workflow.js': ['clcr_saved_results.js'],
   'inline_kalkulator_klirens_04.js': ['clcr_saved_legacy_calculator.js'],
-  'clcr_saved_legacy_calculator.js': ['clcr_collection_duration.js', 'clcr_mg_dzm_reference_data.js', 'clcr_mg_dzm.js', 'clcr_mg_dzm_persistence.js', 'clcr_po4_dzm_reference_data.js', 'clcr_po4_dzm.js', 'clcr_po4_dzm_persistence.js', 'clcr_sodium_dzm_data.js', 'clcr_sodium_dzm.js', 'clcr_sodium_dzm_persistence.js'],
+  'clcr_saved_legacy_calculator.js': ['clcr_collection_duration.js', 'clcr_mg_dzm_reference_data.js', 'clcr_mg_dzm.js', 'clcr_mg_dzm_persistence.js', 'clcr_po4_dzm_reference_data.js', 'clcr_po4_dzm.js', 'clcr_po4_dzm_persistence.js', 'clcr_sodium_dzm_data.js', 'clcr_sodium_dzm.js', 'clcr_sodium_dzm_persistence.js', 'clcr_potassium_dzm_data.js', 'clcr_potassium_dzm.js', 'clcr_potassium_dzm_persistence.js'],
   'clcr_mg_dzm.js': ['clcr_extended_egfr.js'],
   'vilda_trajectory_analysis.js': ['vilda_werdykt.js', 'vilda_cykle_leczenia.js'],
   'vilda_postepy_doroslego.js': [

@@ -145,15 +145,15 @@ export const existingNoteExportAnchor = 'savePatientNote:ie,getPatientNote:Fe';
 export const existingNoteExportReplacement = 'savePatientNote:ie,savePatientNoteOnce:VildaSavePatientNoteOnce,updateExistingPatientNote:VildaUpdateExistingPatientNote,getPatientNote:Fe';
 export const existingNoteRemoveExportAnchor = 'removePatientNote:$o,onPatientNoteChanged:ms';
 export const existingNoteRemoveExportReplacement = 'removePatientNote:$o,removeExistingPatientNote:VildaRemoveExistingPatientNote,onPatientNoteChanged:ms';
-export const existingNoteCommitAnchor = 'await I().putPatientNoteForUser(b,nt);';
-export const existingNoteCommitReplacement = 'if(e&&e.token===VildaExistingNoteUpdateToken){e.beforeCommit();if(e.prepareOnly)return nt;}' + existingNoteCommitAnchor;
+export const existingNoteCommitAnchor = 'await I().putPatientNoteForUser(b,PatientClinicalWriteValue(b,nt));';
+export const existingNoteCommitReplacement = 'if(e&&e.token===VildaExistingNoteUpdateToken){e.beforeCommit();if(e.prepareOnly)return PatientClinicalWriteValue(PatientClinicalOperationAccount,nt);}' + existingNoteCommitAnchor;
 // The format guard belongs to the current base remover, not to this conditional
 // note addition. Retain it in the reconstructed prior source and in the result.
 // These explicit source anchors deliberately do not read the deployed artifact
 // to derive their own expected text.
 const existingNoteDeleteFormatGuard = 'const CareMvpDeleteAccount=b,CareMvpDeleteSession=ot,CareMvpDeleteAdapter=I(),CareMvpDeleteGuard=function(){if(!T()||b!==CareMvpDeleteAccount||ot!==CareMvpDeleteSession||I()!==CareMvpDeleteAdapter)throw Bses_blad();};';
-export const existingNoteDeleteAnchor = 'async function Eb(t,Qwp,Qwm){' + existingNoteDeleteFormatGuard;
-export const existingNoteDeleteReplacement = 'async function Eb(t,Qwp,Qwm,Qwf){' + existingNoteDeleteFormatGuard + 'const Qwg=Qwf&&Qwf.token===VildaExistingNoteUpdateToken?Qwf:null;';
+export const existingNoteDeleteAnchor = 'async function Eb(t,Qwp,Qwm){const PatientClinicalOperationAccount=b;PatientClinicalGuard(PatientClinicalOperationAccount);' + existingNoteDeleteFormatGuard;
+export const existingNoteDeleteReplacement = 'async function Eb(t,Qwp,Qwm,Qwf){const PatientClinicalOperationAccount=b;PatientClinicalGuard(PatientClinicalOperationAccount);' + existingNoteDeleteFormatGuard + 'const Qwg=Qwf&&Qwf.token===VildaExistingNoteUpdateToken?Qwf:null;';
 
 // P-SESJA-ZAPISU (PR-S, przegląd 3): Bpz_pilnuj(Qws) w Eb (sesja „Scal pacjentów”, 5. argument) stoi w kotwicach
 // usunięcia i powiadomienia — przed sprawdzeniem tokenu i po zapisie nagrobka.
@@ -168,13 +168,13 @@ const existingNoteDeleteAssertReplacement = 'const CareMvpDeleteAssert=function(
 const existingNoteDeleteMutations = [
   [existingNoteDeleteAnchor, existingNoteDeleteReplacement],
   ['await I().getPatientNoteForUser(b,t)', 'await (Qwg?Qwg.adapter:I()).getPatientNoteForUser(Qwg?Qwg.account:b,t)'],
-  ['}catch{}const CareMvpDeleteAssert=function(){', '}catch(Qwe){if(Qwg)throw Qwe}const CareMvpDeleteAssert=function(){'],
+  ['}catch(Qwe){PatientClinicalRethrow(Qwe);}const CareMvpDeleteAssert=function(){', '}catch(Qwe){PatientClinicalRethrow(Qwe);if(Qwg)throw Qwe}const CareMvpDeleteAssert=function(){'],
   [existingNoteDeleteAssertAnchor, existingNoteDeleteAssertReplacement],
-  ['Bpz_pilnuj(Qws);await I().removePatientNoteForUser(b,t);', 'Bpz_pilnuj(Qws);if(Qwg)Qwg.beforeCommit();await (Qwg?Qwg.adapter:I()).removePatientNoteForUser(Qwg?Qwg.account:b,t);'],
+  ['Bpz_pilnuj(Qws);await I().removePatientNoteForUser(b,PatientClinicalWriteValue(b,t));', 'Bpz_pilnuj(Qws);if(Qwg)Qwg.beforeCommit();await (Qwg?Qwg.adapter:I()).removePatientNoteForUser(Qwg?Qwg.account:b,PatientClinicalWriteValue(Qwg?Qwg.account:b,t));'],
   ['try{const r=I();r&&typeof r.putPatientNoteTombstoneForUser', 'try{const r=Qwg?Qwg.adapter:I();r&&typeof r.putPatientNoteTombstoneForUser'],
-  ['r.putPatientNoteTombstoneForUser(b,', 'r.putPatientNoteTombstoneForUser(Qwg?Qwg.account:b,'],
-  ['}catch{}Bpz_pilnuj(Qws);qr({id:t,patientId:e,action:"delete"',
-    '}catch(Qwe){if(Qwg)throw Qwe}Bpz_pilnuj(Qws);qr({id:t,patientId:e,action:"delete"'],
+  ['r.putPatientNoteTombstoneForUser(b,PatientClinicalWriteValue(b,', 'r.putPatientNoteTombstoneForUser(Qwg?Qwg.account:b,PatientClinicalWriteValue(Qwg?Qwg.account:b,'],
+  ['}catch(Qwe){PatientClinicalRethrow(Qwe);}Bpz_pilnuj(Qws);qr({id:t,patientId:e,action:"delete"',
+    '}catch(Qwe){PatientClinicalRethrow(Qwe);if(Qwg)throw Qwe}Bpz_pilnuj(Qws);qr({id:t,patientId:e,action:"delete"'],
 ];
 
 export function patchExistingNoteDeleteWriter(block) {

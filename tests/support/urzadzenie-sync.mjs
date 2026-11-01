@@ -269,7 +269,15 @@ function dokumentZOsia(zapisz) {
     },
   };
 }
-const WYSLIJ_DELTE = (win) => new Function('n', wytnijFunkcje(zrodlo('vilda_sync_integration.js'), 'Bsb_wyslij') + ';return Bsb_wyslij')(win);
+// This test-only closure uses the actual helper and its actual clinical-route
+// dependencies. The legacy path remains unchanged; an unavailable selection
+// still runs the real guard and real status publisher rather than a bypass.
+const WYSLIJ_DELTE = (win) => {
+  const source = zrodlo('vilda_sync_integration.js');
+  const functions = ['v', 'PatientClinicalRouteFailure', 'PatientClinicalLegacyAllowed', 'Bsb_wyslij']
+    .map(name => wytnijFunkcje(source, name)).join('\n');
+  return new Function('n', functions + ';return Bsb_wyslij')(win);
+};
 
 export async function utworzUrzadzenie(o = {}) {
   const atrapa = o.atrapa;

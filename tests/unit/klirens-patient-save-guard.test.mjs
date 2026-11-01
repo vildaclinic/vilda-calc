@@ -50,6 +50,26 @@ describe('Klirens — zapis wyłącznie do istniejącej wybranej karty pacjenta'
     expect(h.workflow.hasUnsavedMeasurement()).toBe(false);
   });
 
+  it('does not treat the new K collection clock as a specimen before patient selection', async () => {
+    const controls = {
+      K_collectionHours: { id: 'K_collectionHours', type: 'number', value: '24' },
+      K_concentration: { id: 'K_concentration', type: 'number', value: '' },
+      K_volume: { id: 'K_volume', type: 'number', value: '' },
+    };
+    const form = { querySelectorAll: () => Object.values(controls) };
+    const document = { readyState: 'loading', addEventListener() {},
+      getElementById: id => id === 'clcrForm' ? form : controls[id] || null, querySelectorAll: () => [] };
+    const h = harness({ document });
+    h.global.ClcrUiWorkflow = { state: { activeFormulaId: 'K_mmol_d' },
+      getCalculationFieldSpec: () => ({ fields: Object.keys(controls).map(id => ({ id, type: 'number' })) }) };
+    expect(h.workflow.hasUnsavedMeasurement()).toBe(false);
+    h.select();
+    await h.workflow.ensurePersistedPatient();
+    expect(h.workflow.getPatientSaveState()).toMatchObject({ patientId: h.patientId, status: 'ready' });
+    controls.K_concentration.value = '0';
+    expect(h.workflow.hasUnsavedMeasurement()).toBe(true);
+  });
+
   it('permits anonymous calculations but rejects a save even when a caller supplies a real patient ID', async () => {
     const h = harness();
     expect(h.options.datapoints[0].valueNum).toBe(95);
