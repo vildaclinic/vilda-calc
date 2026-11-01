@@ -9,6 +9,8 @@ async function nativeTemplateVault(page, { seedTemplate = true } = {}) {
     body: '<!doctype html><meta charset="utf-8"><title>Fikcyjny sejf szablonów</title>'
       + '<script>localStorage.setItem("vildaRetention", "0")</script>'
       + '<script src="/vilda_crypto.js"></script><script src="/vilda_retention.js"></script>'
+      + '<script src="/vilda_clinical_crypto.js"></script>'
+      + '<script src="/vilda_patient_checkpoint_store.js"></script><script src="/vilda_patient_checkpoint.js"></script>'
       + '<script src="/vilda_care_plan_model.js"></script>'
       + '<script src="/vilda_care_template_model.js"></script>'
       + '<script src="/vilda_care_template_store.js"></script><script src="/vilda_vault.js"></script>',

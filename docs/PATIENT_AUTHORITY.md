@@ -44,6 +44,11 @@ Kolejne części etapu 6 muszą dostarczyć zgodne zaplecze, pełny bootstrap to
 
 Backendowy PR #29 dotyczy biblioteki szablonów. Jego scalenie lub wdrożenie nie uruchamia klinicznego V2. Kod, scalenie, wdrożenie i uwierzytelnione potwierdzenie zgodności są oddzielnymi faktami. Ten etap nie wykonuje wdrożenia ani operacji na rzeczywistym koncie.
 
+Etap 6b, scalony w backendowym PR #30, dodaje osobny odczyt stanu chronionej domeny.
+Etap 6c przygotowuje [samodzielnie odszyfrowywalny lokalny punkt przywracania](PATIENT_CHECKPOINTS.md)
+przed przyszłą migracją. Nie zamienia kandydata SIS w potwierdzoną tożsamość i nadal
+nie włącza żadnego wyłącznika zapisu planów V2.
+
 Dopiero po tych warunkach zastosowanie szablonu utworzy własne identyfikatory pacjenta i niezmienny zapis wybranej wersji. Wymagane będą wybrane kroki, brak pustych etapów, jawne uruchomienie i ręczny przegląd. Dopisane etapy pozostaną zaplanowane; wynik nie uruchomi automatycznie kolejnego etapu ani nie zamknie planu.
 
 ## Odtwarzalna kontrola zmian artefaktów
