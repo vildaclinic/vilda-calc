@@ -163,6 +163,7 @@ async function wczytaj(page, id) {
   await page.evaluate((pid) => window.VildaAuthUI.showPatientCard(pid, (rekord) => {
     if (rekord) window.applyLoadedData(rekord);
   }, null), id);
+  await expect.poll(() => page.evaluate(() => window.VildaSaveStatusIndicator.getCurrentDecision().ready)).toBe(true);
   await page.getByRole('button', { name: 'Wczytaj tego pacjenta' }).click();
   await page.waitForFunction(() => !document.querySelector('.vilda-auth-screen'));
   await expect.poll(() => page.evaluate(() => window._vildaCurrentPatientId)).toBe(id);

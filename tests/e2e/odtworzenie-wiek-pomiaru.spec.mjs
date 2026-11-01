@@ -111,6 +111,7 @@ async function otworzWybor(page, pid) {
   await page.evaluate((id) => window.VildaAuthUI.showPatientCard(id, (r) => { if (r) window.applyLoadedData(r); }, null), pid);
   const wczytajBtn = page.getByRole('button', { name: 'Wczytaj tego pacjenta' });
   await expect(wczytajBtn).toBeVisible({ timeout: 15000 });
+  await expect.poll(() => page.evaluate(() => window.VildaSaveStatusIndicator.getCurrentDecision().ready)).toBe(true);
   await wczytajBtn.click();
   await expect(page.locator('#vildaLoadChoiceModal')).toBeVisible();
 }
@@ -381,6 +382,7 @@ test('zapis z kalkulatora klirensu przenosi datę pomiaru odtworzonej wizyty', a
   await page.evaluate((id) => window.VildaAuthUI.showPatientCard(id, (r) => { if (r) window.applyLoadedData(r); }, null), pid);
   const wczytajBtn = page.getByRole('button', { name: 'Wczytaj tego pacjenta' });
   await expect(wczytajBtn).toBeVisible({ timeout: 15000 });
+  await expect.poll(() => page.evaluate(() => window.VildaSaveStatusIndicator.getCurrentDecision().ready)).toBe(true);
   await wczytajBtn.click();
   await page.waitForTimeout(1500);
   await page.evaluate(() => { window.confirm = () => true; window.restoreLoadedState(); });
@@ -679,6 +681,7 @@ test('G5: wizyta sprzed wdrożenia (bez measuredAtISO) zapisana ponownie z kalku
   await page.evaluate((id) => window.VildaAuthUI.showPatientCard(id, (r) => { if (r) window.applyLoadedData(r); }, null), pid);
   const wczytajBtn = page.getByRole('button', { name: 'Wczytaj tego pacjenta' });
   await expect(wczytajBtn).toBeVisible({ timeout: 15000 });
+  await expect.poll(() => page.evaluate(() => window.VildaSaveStatusIndicator.getCurrentDecision().ready)).toBe(true);
   await wczytajBtn.click();
   await page.waitForTimeout(1500);
   await page.evaluate(() => { window.confirm = () => true; window.restoreLoadedState(); });

@@ -155,6 +155,7 @@ export async function loadPatient(frame, patientId, choice = 'new', { clear = fa
       if (record) window.applyLoadedData(record);
     }, null);
   }, { patientId, clear });
+  await expect.poll(() => frame.evaluate(() => window.VildaSaveStatusIndicator.getCurrentDecision().ready)).toBe(true);
   await frame.getByRole('button', { name: 'Wczytaj tego pacjenta' }).click();
   const choices = frame.locator('#vildaLoadChoiceModal');
   const guard = frame.getByRole('dialog', { name: /^Zapisać (wpisane dane|zmiany) przed wczytaniem\?$/ });

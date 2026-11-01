@@ -106,6 +106,9 @@ async function odtworzWczytanyPomiar(start) {
 const wlaczRejestrator = (fr) => fr.evaluate(async (pulsy) => {
   if (window.__rej) { window.__rej.mo.forEach((m) => m.disconnect()); document.removeEventListener('animationstart', window.__rej.naStart, true); }
   const R = { mo: [], starty: [], schowania: 0, wstawienia: [], liczby: [], polozenie: null, obrys: null, naStart: null, pulsy: [], pulsyTeraz: null };
+  const identyfikatoryPulsow = new WeakMap();
+  let nastepnyPuls = 0;
+  const skonczonaLiczba = (n) => Number.isFinite(n) ? n : null;
   // Zapętlone pulsowania ostrzeżeń: miejsce (element albo rodzic nakładki .pro-overlay, pseudoelement) i faza, czyli
   // przesunięcie startu względem zegara dokumentu modulo czas cyklu. Świeża animacja czeka na start (startTime null),
   // więc faza jest czytana po Animation.ready — to obietnica przeglądarki, nie odliczanie klatek.
@@ -117,8 +120,17 @@ const wlaczRejestrator = (fr) => fr.evaluate(async (pulsy) => {
       const t = a.effect.target;
       const miejsce = t.id ? '#' + t.id : (t.parentElement && t.parentElement.id ? '#' + t.parentElement.id + ' > ' : '') + '.' + String(t.className).trim().split(/\s+/)[0];
       const d = a.effect.getComputedTiming().duration;
-      const faza = (((document.timeline.currentTime - a.currentTime) % d) + d) % d;
-      return { a, klucz: a.animationName + ' ' + miejsce + (a.effect.pseudoElement || ''), faza, d };
+      const czasDokumentu = document.timeline.currentTime;
+      const czasAnimacji = a.currentTime;
+      const faza = (((czasDokumentu - czasAnimacji) % d) + d) % d;
+      if (!identyfikatoryPulsow.has(a)) identyfikatoryPulsow.set(a, ++nastepnyPuls);
+      if (!identyfikatoryPulsow.has(t)) identyfikatoryPulsow.set(t, ++nastepnyPuls);
+      const surowe = { uid: identyfikatoryPulsow.get(a), targetUid: identyfikatoryPulsow.get(t),
+        timeline: skonczonaLiczba(czasDokumentu), currentTime: skonczonaLiczba(czasAnimacji),
+        startTime: skonczonaLiczba(a.startTime), playbackRate: skonczonaLiczba(a.playbackRate),
+        pending: a.pending, wspolnaOsCzasu: a.timeline === document.timeline,
+        duration: skonczonaLiczba(d), faza: skonczonaLiczba(faza) };
+      return { a, klucz: a.animationName + ' ' + miejsce + (a.effect.pseudoElement || ''), faza, d, surowe };
     });
   };
   R.pulsy = await R.pulsyTeraz();
@@ -169,9 +181,9 @@ const odczytajRejestrator = (fr) => fr.evaluate(async () => {
   const stare = new Set(R.pulsy.map((p) => p.a));
   const odtworzone = (await R.pulsyTeraz()).filter((p) => !stare.has(p.a)).map((p) => {
     const poprzednik = R.pulsy.find((q) => q.klucz === p.klucz);
-    if (!poprzednik) return { klucz: p.klucz, roznica: null };
+    if (!poprzednik) return { klucz: p.klucz, roznica: null, przed: null, po: p.surowe };
     const r = Math.abs(p.faza - poprzednik.faza) % p.d;
-    return { klucz: p.klucz, roznica: Math.round(Math.min(r, p.d - r)) };
+    return { klucz: p.klucz, roznica: Math.round(Math.min(r, p.d - r)), przed: poprzednik.surowe, po: p.surowe };
   });
   return {
     starty: R.starty,
@@ -198,7 +210,7 @@ function sprawdzSpokoj(stan, liczbaBmi) {
   expect(stan.po, 'przyciski podsumowania i karta „Centyle i BMI” stoją w miejscu').toEqual(stan.przed);
   for (const p of stan.odtworzone) {
     expect(p.roznica, `${p.klucz}: odtworzone pulsowanie ma poprzednika w tym samym miejscu`).not.toBeNull();
-    expect(p.roznica, `${p.klucz}: odtworzone pulsowanie kontynuuje fazę poprzednika (bez startu od zera)`).toBeLessThanOrEqual(2);
+    expect(p.roznica, `${p.klucz}: odtworzone pulsowanie kontynuuje fazę poprzednika (bez startu od zera); ${JSON.stringify({ przed: p.przed, po: p.po })}`).toBeLessThanOrEqual(2);
   }
   for (const l of stan.liczby) expect(l, 'liczba BMI nie odlicza się od zera').toBe(liczbaBmi);
 }

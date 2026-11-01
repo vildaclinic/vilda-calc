@@ -55,6 +55,7 @@ async function odtworzZOpóźnieniem(frame, patientId) {
     window.__vildaDobRestoreGate.pause();
     window.VildaAuthUI.showPatientCard(id, (record) => { if (record) window.applyLoadedData(record); }, null);
   }, patientId);
+  await expect.poll(() => frame.evaluate(() => window.VildaSaveStatusIndicator.getCurrentDecision().ready)).toBe(true);
   await frame.getByRole('button', { name: 'Wczytaj tego pacjenta' }).click();
   const wybor = frame.locator('#vildaLoadChoiceModal');
   const straznik = frame.getByRole('dialog', { name: /^Zapisać (wpisane dane|zmiany) przed wczytaniem\?$/ });

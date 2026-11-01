@@ -408,6 +408,7 @@ test('pending pacjent i blokada odrzucają spóźniony odczyt prawdziwego rekord
   await frame.evaluate(patientId => window.VildaAuthUI.showPatientCard(patientId, record => {
     if (record) window.applyLoadedData(record);
   }, null), ids.b);
+  await expect.poll(() => page.evaluate(() => window.VildaSaveStatusIndicator.getCurrentDecision().ready)).toBe(true);
   await page.getByRole('button', { name: 'Wczytaj tego pacjenta' }).click();
   const choices = page.locator('#vildaLoadChoiceModal');
   const guard = page.getByRole('dialog', { name: /^Zapisać (wpisane dane|zmiany) przed wczytaniem\?$/ });

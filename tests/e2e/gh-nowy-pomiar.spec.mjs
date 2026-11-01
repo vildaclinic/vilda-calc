@@ -117,6 +117,7 @@ async function wizytaPierwsza(page, punkty) {
 async function nowyPomiar(page, pid) {
   await page.evaluate(() => window.clearAllData());
   await page.evaluate((id) => window.VildaAuthUI.showPatientCard(id, (r) => { if (r) window.applyLoadedData(r); }, null), pid);
+  await expect.poll(() => page.evaluate(() => window.VildaSaveStatusIndicator.getCurrentDecision().ready)).toBe(true);
   await page.getByRole('button', { name: 'Wczytaj tego pacjenta' }).click();
   await expect(page.locator('#vildaLoadChoiceModal')).toBeVisible();
   await page.locator('#vildaLcmNew').click();

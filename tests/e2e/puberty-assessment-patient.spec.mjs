@@ -36,6 +36,7 @@ async function loadPatient(page, id, choice) {
   await page.evaluate(pid => window.VildaAuthUI.showPatientCard(pid, record => {
     if (record) window.applyLoadedData(record);
   }, null), id);
+  await expect.poll(() => page.evaluate(() => window.VildaSaveStatusIndicator.getCurrentDecision().ready)).toBe(true);
   await page.getByRole('button', { name: 'Wczytaj tego pacjenta' }).click();
   await expect(page.locator('#vildaLoadChoiceModal')).toBeVisible();
   await page.locator(choice === 'restore' ? '#vildaLcmRestore' : '#vildaLcmNew').click();
