@@ -3,10 +3,12 @@ import vm from 'node:vm';
 import { createRequire } from 'node:module';
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import { loadBrowserScript } from '../support/load-browser-script.mjs';
+import { authProductionReturnProgram } from '../support/search-return-auth-harness.mjs';
 
 const require = createRequire(import.meta.url);
 const { parse } = require('espree');
 const source = fs.readFileSync(new URL('../../vilda_auth_ui.js', import.meta.url), 'utf8');
+const searchReturnCode = authProductionReturnProgram(source);
 const ast = parse(source, { ecmaVersion: 'latest' });
 function visit(node, callback) {
   if (!node || typeof node !== 'object') return;
@@ -57,7 +59,7 @@ function surface(name) {
     remMaybeForced: null, remMaybeReadSequence: 0, Fa: () => '2026-10-28', wn() {},
     Ot: (_label, error) => errors.push(error), remInlineError() {}, remShowReadError() {},
   });
-  vm.runInContext(productionFunction(name), context);
+  vm.runInContext(searchReturnCode + '\n' + productionFunction(name), context);
   return { run: () => name === 'Br' ? context.Br(host) : context.tn({ force: true }),
     groups: () => rendered, errors };
 }

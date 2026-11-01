@@ -111,6 +111,28 @@ function mounted(options = {}) {
 const settled = () => new Promise(resolve => { setTimeout(resolve, 0); });
 
 describe('Care plan preview reads exact current documentation with lifecycle guards', () => {
+  it('exposes the existing parent return control only while the parent explicitly owns a return destination', async () => {
+    let hasReturn = true;
+    const onReturn = vi.fn(() => hasReturn);
+    const d = mounted({ hasReturn: () => hasReturn, backLabel: () => hasReturn ? '← Szukaj' : '← Lista planów', onReturnToReminders: onReturn });
+    await settled();
+    const back = d.host.querySelector('[data-vcp-parent-back]');
+    expect(back.textContent).toBe('← Szukaj');
+    expect(back.classList.contains('vcp-parent-return')).toBe(true);
+    back.click();
+    expect(onReturn).toHaveBeenCalledTimes(1);
+    hasReturn = false; d.controller.refreshNavigation();
+    expect(back.textContent).toBe('← Lista planów');
+    expect(back.classList.contains('vcp-parent-return')).toBe(false);
+    await d.controller.select(d.parent.id);
+    d.host.querySelector('[data-vcp-parent-back]').click();
+    expect(onReturn).toHaveBeenCalledTimes(2);
+    expect(d.controller.getContext()).toEqual({ planId: d.parent.id, noteId: null, detail: false });
+    expect(d.vault.mutateCarePlan).not.toHaveBeenCalled();
+    expect(d.vault.savePatientNote).not.toHaveBeenCalled();
+    d.controller.destroy();
+  });
+
   it('exposes only detached navigation IDs and list/detail state for background card restoration', async () => {
     const d = mounted(); await settled();
     expect(d.controller.getContext()).toEqual({ planId: d.parent.id, noteId: null, detail: true });

@@ -428,6 +428,9 @@ function Sn_closeFormulaSearch(route,reason){
 }
 function Sn_quietClose(route){
   Sn_closeFormulaSearch(route,"shell-route-departure");
+  // The expanded reminders workspace and cards opened from it live in top,
+  // independently of the outgoing route's iframe.
+  try{if(a.VildaAuthUI&&typeof a.VildaAuthUI.closeSearchNavigation==="function")a.VildaAuthUI.closeSearchNavigation()}catch{}
   try{var pane=l[route],win=pane&&pane.frame.contentWindow;
     if(win&&win.VildaAuthUI&&typeof win.VildaAuthUI.hide==="function")win.VildaAuthUI.hide({shellNavigation:true});
   }catch{}

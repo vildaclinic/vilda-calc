@@ -2,6 +2,7 @@ import fs from 'node:fs';
 import { describe, expect, it, vi } from 'vitest';
 
 import { nasluchy, powloka } from '../support/powloka-harness.mjs';
+import { authProductionReturnProgram } from '../support/search-return-auth-harness.mjs';
 
 describe('Powłoka: aktualna intencja listy i karty', () => {
   it('odblokowany Start czeka na koniec auth boot i dostarcza tylko najnowszą kartę', () => {
@@ -116,6 +117,7 @@ describe('Powłoka: jawny link kliniczny', () => {
 });
 
 const authKod = fs.readFileSync(new URL('../../vilda_auth_ui.js', import.meta.url), 'utf8');
+const authSearchReturn = authProductionReturnProgram(authKod);
 // Produkcyjny stos historii i jego listener. Renderery są zależnościami atrapy;
 // nie kopiujemy reguł sentinela, cofania ani delegowania do rodzica.
 const authHistoria = authKod.slice(authKod.indexOf('var mr=!1'), authKod.indexOf('// Rata D (P1+P4)'));
@@ -130,7 +132,7 @@ function historiaAuth(shell) {
   const renderList = vi.fn(), close = vi.fn();
   const root = { style: { display: 'block' }, querySelector: () => ({}) };
   const api = new Function('i', 'Rt', 'Gd7', 'Be', 'ze', 'se', 'ln', 'fi', '$t', 'Ot',
-    `${authHistoria}${authPop};return {enter:ia,release:Qn,popup:gr};`)(
+    `${authHistoria}\n${authSearchReturn}\n${authPop};return {enter:ia,release:Qn,popup:gr};`)(
     win, root, () => {}, renderList, () => {}, () => {}, () => {}, () => {}, close, () => {},
   );
   const settle = () => { for (let n = 0; timery.length && n < 30; n += 1) timery.shift()(); };
