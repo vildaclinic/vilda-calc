@@ -1048,12 +1048,12 @@
   "sha256": "620b1e147449b87920a9ae5b756bbf62dee9928571838e794e449b680080f63c"
  },
  "vilda_chrome.js": {
-  "v": 210,
-  "sha256": "c5536307a6fb67ba77415c8a98c32925615e23e76bb187dd37dc671a1f2f1ae3"
+  "v": 211,
+  "sha256": "24f4376bc183a85d5d5392965233fab0304dfa1a2fa18033cfed7f3c712d0b08"
  },
  "vilda_clinical_crypto.js": {
-  "v": 1,
-  "sha256": "49ad5b2de894e96ffc8c768039a62f7170986d1e160a15fb6c15531b5ceebc93"
+  "v": 2,
+  "sha256": "fc65cd6c7026c3fdda0b1d018f292de0db3c697965dbf1d74bbc153e6ec06dde"
  },
  "vilda_cloud_cache_warm.js": {
   "v": 2,
@@ -1515,6 +1515,14 @@
   "v": 1,
   "sha256": "95da5e840e376c4e6d47ee92d79192a1f22b05781db6d3ec953430b2ab0e86d6"
  },
+ "vilda_patient_identity_protocol.js": {
+  "v": 1,
+  "sha256": "4f4984deaf32709231418727adbe34889d8e3b2a95a0d40b051003cb40ccdcda"
+ },
+ "vilda_patient_identity_transport.js": {
+  "v": 1,
+  "sha256": "bcd3b701ba1f734fa17a67c6ac6f1d1937e7634d21f52b65445d09ea8a82aafa"
+ },
  "vilda_patient_narrative.js": {
   "v": 22,
   "sha256": "ca9db876437313c82b40f300869a02ef34b77134a8768b1b55a0f7cd899b70bd"
@@ -1696,8 +1704,8 @@
   "sha256": "bf561188adfe403fa735bef0b88bd2297144ec1fe7909582e0dbb50cd6c99c97"
  },
  "vilda_session_bridge.js": {
-  "v": 134,
-  "sha256": "f8ca64fab9b30bd2cac95e2e67eef9f473bf406cae7759213c6723f797d7a4a8"
+  "v": 135,
+  "sha256": "d6694ca8deb1e33247453a2ec5266351a9ec1c461e6ba1af170b7a9cd12e8c5b"
  },
  "vilda_sga_catchup.js": {
   "v": 2,
@@ -1788,8 +1796,8 @@
   "sha256": "59ee39776162dde3f0f8beb5d779ae68323128e2d7bd4c4fa21ce897f56f942e"
  },
  "vilda_vault.js": {
-  "v": 243,
-  "sha256": "1c2985c82786975fed0e91c1dab8999a12a187f380f6c725b867fdbf5393aa13"
+  "v": 244,
+  "sha256": "94ba64a9793da5f21dc2424da59d7c3c9bc50555ea34325f059d6b3be0978645"
  },
  "vilda_vault_protocol.js": {
   "v": 1,

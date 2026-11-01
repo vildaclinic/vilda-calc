@@ -22,6 +22,14 @@
   const CREDENTIAL_CONTEXT_FIELDS = ['binding', 'slotId', 'keyBinding'];
   const ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
   const materials = new WeakMap();
+  const recoveryMaterials = new WeakMap();
+  const IDENTITY_CAPSULE_FORMAT = 'vilda-clinical-vault/identity-capsule/v1';
+  const RECOVERY_HKDF_SALT = 'vilda-clinical-vault/recovery-locator/v1';
+  const RECOVERY_LOCATOR_INFO = 'patient-clinical-vault:locator-id:v1';
+  const RECOVERY_READ_INFO = 'patient-clinical-vault:locator-read-capability:v1';
+  const RECOVERY_KEY_INFO = 'patient-clinical-vault:identity-capsule-key:v1';
+  const IDENTITY_CONTEXT_FIELDS = ['namespace', 'protocol', 'locatorId', 'slotId',
+    'authorityId', 'keyBinding', 'epoch', 'generation'];
   const objectSource = Function.prototype.toString.call(Object);
   const typedPrototype = Object.getPrototypeOf(Uint8Array.prototype);
   const typedLength = Object.getOwnPropertyDescriptor(typedPrototype, 'length').get;
@@ -381,13 +389,237 @@
     return utf8(JSON.stringify({ binding: r.binding, id: r.id, credentialEnvelope, snapshotEnvelope }));
   }
 
+  // The recovery boundary is deliberately separate from the 6c password capsule.
+  // A successful operation proves consistency with supplied retained bindings;
+  // neither these primitives nor their public handles prove historical origin.
+  function recoveryFence(options) {
+    if (options === undefined) return () => {};
+    const fields = options && own(options, 'assertCurrent') ? ['assertCurrent'] : [];
+    const value = record(options, fields);
+    if (!fields.length) return () => {};
+    if (typeof value.assertCurrent !== 'function') invalid();
+    return value.assertCurrent;
+  }
+
+  function wipeBuffer(value) { new Uint8Array(value).fill(0); }
+
+  // Check both outcomes, including a rejected platform promise. The caller also
+  // checks after awaiting this helper, before its own continuation can proceed.
+  async function recoveryStep(check, operation, wipe) {
+    try {
+      const value = await operation();
+      try { check(); } catch (error) { if (wipe) wipe(value); throw error; }
+      return value;
+    } catch (error) { check(); throw error; }
+  }
+
+  function identityContext(input) {
+    const c = record(input, IDENTITY_CONTEXT_FIELDS);
+    if (c.namespace !== NAMESPACE || c.protocol !== 1 || !hex(c.locatorId)
+      || !hex(c.slotId) || !hex(c.keyBinding) || !identifier(c.authorityId)
+      || c.authorityId.startsWith('local-checkpoint:')
+      || !integer(c.epoch, 1) || !integer(c.generation, 1)) invalid();
+    return Object.freeze({ namespace: NAMESPACE, protocol: 1, locatorId: c.locatorId,
+      slotId: c.slotId, authorityId: c.authorityId, keyBinding: c.keyBinding,
+      epoch: c.epoch, generation: c.generation });
+  }
+
+  function inspectIdentityCapsule(input) {
+    const e = record(input, SNAPSHOT_FIELDS);
+    if (e.format !== IDENTITY_CAPSULE_FORMAT || e.cipher !== CIPHER) unsupported();
+    const context = identityContext(e.context);
+    // Enforce encoded length before scanning or decoding hostile payloads.
+    if (typeof e.iv !== 'string' || e.iv.length !== 16
+      || typeof e.data !== 'string' || e.data.length !== 108
+      || base64Length(e.iv) !== 12 || base64Length(e.data) !== 80) invalid();
+    const envelope = Object.freeze({ format: IDENTITY_CAPSULE_FORMAT, cipher: CIPHER,
+      context, iv: e.iv, data: e.data });
+    metadataBudget(envelope);
+    return envelope;
+  }
+
+  function canonicalIdentityCapsuleBytes(input) {
+    return utf8(JSON.stringify(inspectIdentityCapsule(input)));
+  }
+
+  async function digestIdentityCapsule(input, options) {
+    const check = recoveryFence(options); check();
+    const bytes = canonicalIdentityCapsuleBytes(input);
+    let digest;
+    try {
+      digest = await recoveryStep(check, () => cryptoApi().subtle.digest('SHA-256', bytes), wipeBuffer); check();
+      const result = Object.freeze({ ciphertextDigest: toHex(new Uint8Array(digest)), bytes: bytes.length });
+      check(); return result;
+    } catch (error) { check(); throw error; }
+    finally { bytes.fill(0); if (digest) wipeBuffer(digest); }
+  }
+
+  function recoveryMaterialRecord(material) {
+    const value = material && recoveryMaterials.get(material);
+    if (!value) fail('CLINICAL_KEY_MATERIAL_INVALID', 'Brak lokalnego materiału odzyskiwania.');
+    return value;
+  }
+
+  function requireRecoveryContext(material, context) {
+    if (material.locatorId !== context.locatorId) mismatch();
+  }
+
+  function requireLookupDek(material, dek) {
+    let difference = 0;
+    for (let i = 0; i < 32; i++) difference |= material.dek[i] ^ dek[i];
+    if (difference !== 0) mismatch();
+  }
+
+  function activeRecoveryFence(material, externalCheck) {
+    return () => { externalCheck(); recoveryMaterialRecord(material); };
+  }
+
+  async function deriveRecoveryLocator(input, options) {
+    const check = recoveryFence(options); check();
+    const dek = copyBytes(input, 32);
+    let locatorBytes, readBytes, released = false;
+    try {
+      const subtle = cryptoApi().subtle;
+      const source = await recoveryStep(check,
+        () => subtle.importKey('raw', dek, 'HKDF', false, ['deriveBits', 'deriveKey'])); check();
+      const params = { name: 'HKDF', hash: 'SHA-256', salt: utf8(RECOVERY_HKDF_SALT) };
+      locatorBytes = await recoveryStep(check,
+        () => subtle.deriveBits({ ...params, info: utf8(RECOVERY_LOCATOR_INFO) }, source, 256), wipeBuffer); check();
+      readBytes = await recoveryStep(check,
+        () => subtle.deriveBits({ ...params, info: utf8(RECOVERY_READ_INFO) }, source, 256), wipeBuffer); check();
+      const key = await recoveryStep(check,
+        () => subtle.deriveKey({ ...params, info: utf8(RECOVERY_KEY_INFO) }, source,
+          { name: 'AES-GCM', length: 256 }, false, ['encrypt', 'decrypt'])); check();
+      const locatorId = toHex(new Uint8Array(locatorBytes));
+      const material = Object.freeze({ locatorId, readCapability: toHex(new Uint8Array(readBytes)) });
+      check(); recoveryMaterials.set(material, { key, subtle, locatorId, dek });
+      released = true; return material;
+    } catch (error) { check(); throw error; }
+    finally {
+      if (!released) dek.fill(0);
+      if (locatorBytes) wipeBuffer(locatorBytes);
+      if (readBytes) wipeBuffer(readBytes);
+    }
+  }
+
+  function destroyRecoveryLocator(material) {
+    const value = material && recoveryMaterials.get(material);
+    if (value) { value.dek.fill(0); recoveryMaterials.delete(material); }
+  }
+
+  async function deriveRecoveryIdentity(input, options) {
+    const check = recoveryFence(options); check();
+    const bundle = copyBundle(input);
+    let combined, slotBytes, authBytes, bindingBytes;
+    try {
+      const subtle = cryptoApi().subtle;
+      const sis = await recoveryStep(check,
+        () => subtle.importKey('raw', bundle.sis, 'HKDF', false, ['deriveBits'])); check();
+      const sync = { name: 'HKDF', hash: 'SHA-256', salt: utf8('wagaiwzrost.pl:sync:v1') };
+      slotBytes = await recoveryStep(check,
+        () => subtle.deriveBits({ ...sync, info: utf8('wagaiwzrost.pl:sync:slot-id:v1') }, sis, 256), wipeBuffer); check();
+      authBytes = await recoveryStep(check,
+        () => subtle.deriveBits({ ...sync, info: utf8('wagaiwzrost.pl:sync:auth-token:v1') }, sis, 256), wipeBuffer); check();
+      combined = join(bundle.dek, bundle.sis);
+      const full = await recoveryStep(check,
+        () => subtle.importKey('raw', combined, 'HKDF', false, ['deriveBits'])); check();
+      bindingBytes = await recoveryStep(check,
+        () => subtle.deriveBits({ name: 'HKDF', hash: 'SHA-256', salt: utf8(HKDF_SALT),
+          info: utf8(HKDF_BINDING_INFO) }, full, 256), wipeBuffer); check();
+      const result = Object.freeze({ slotId: toHex(new Uint8Array(slotBytes)),
+        keyBinding: toHex(new Uint8Array(bindingBytes)),
+        authToken: encode64(new Uint8Array(authBytes)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '') });
+      check(); return result;
+    } catch (error) { check(); throw error; }
+    finally {
+      bundle.dek.fill(0); bundle.sis.fill(0);
+      if (combined) combined.fill(0);
+      if (slotBytes) wipeBuffer(slotBytes);
+      if (authBytes) wipeBuffer(authBytes);
+      if (bindingBytes) wipeBuffer(bindingBytes);
+    }
+  }
+
+  function identityAad(context) {
+    return utf8(JSON.stringify([IDENTITY_CAPSULE_FORMAT, CIPHER,
+      ...IDENTITY_CONTEXT_FIELDS.map(key => context[key])]));
+  }
+
+  async function sealIdentityCapsule(material, expectedContext, input, options) {
+    const check = activeRecoveryFence(material, recoveryFence(options)); check();
+    const m = recoveryMaterialRecord(material), context = identityContext(expectedContext);
+    requireRecoveryContext(m, context);
+    const bundle = copyBundle(input);
+    let combined, ciphertext;
+    try {
+      requireLookupDek(m, bundle.dek);
+      const identity = await deriveRecoveryIdentity(bundle, { assertCurrent: check }); check();
+      requireMaterialContext(identity, context);
+      combined = join(bundle.dek, bundle.sis);
+      const iv = random(cryptoApi(), 12);
+      ciphertext = await recoveryStep(check, () => m.subtle.encrypt({ name: 'AES-GCM', iv,
+        additionalData: identityAad(context), tagLength: 128 }, m.key, combined), wipeBuffer); check();
+      const envelope = inspectIdentityCapsule({ format: IDENTITY_CAPSULE_FORMAT, cipher: CIPHER,
+        context, iv: encode64(iv), data: encode64(new Uint8Array(ciphertext)) });
+      check(); return envelope;
+    } catch (error) { check(); throw error; }
+    finally {
+      bundle.dek.fill(0); bundle.sis.fill(0);
+      if (combined) combined.fill(0);
+      if (ciphertext) wipeBuffer(ciphertext);
+    }
+  }
+
+  async function openIdentityCapsule(material, expectedContext, input, options) {
+    const check = activeRecoveryFence(material, recoveryFence(options)); check();
+    const m = recoveryMaterialRecord(material), context = identityContext(expectedContext);
+    requireRecoveryContext(m, context);
+    const envelope = inspectIdentityCapsule(input);
+    sameContext(context, envelope.context, IDENTITY_CONTEXT_FIELDS);
+    let plaintext, bundle, locatorBytes, released = false;
+    try {
+      try {
+        plaintext = await recoveryStep(check, () => m.subtle.decrypt({ name: 'AES-GCM', iv: decode64(envelope.iv),
+          additionalData: identityAad(context), tagLength: 128 }, m.key, decode64(envelope.data)), wipeBuffer); check();
+      } catch (_) { check(); fail('CLINICAL_CRYPTO_AUTH_FAILED', 'Nie można uwierzytelnić kapsuły tożsamości.'); }
+      const bytes = new Uint8Array(plaintext);
+      if (bytes.length !== 64) invalid();
+      bundle = { dek: bytes.slice(0, 32), sis: bytes.slice(32) };
+      requireLookupDek(m, bundle.dek);
+      // Independently derive the lookup locator again from the recovered DEK.
+      const source = await recoveryStep(check,
+        () => m.subtle.importKey('raw', bundle.dek, 'HKDF', false, ['deriveBits'])); check();
+      locatorBytes = await recoveryStep(check,
+        () => m.subtle.deriveBits({ name: 'HKDF', hash: 'SHA-256', salt: utf8(RECOVERY_HKDF_SALT),
+          info: utf8(RECOVERY_LOCATOR_INFO) }, source, 256), wipeBuffer); check();
+      if (toHex(new Uint8Array(locatorBytes)) !== context.locatorId) mismatch();
+      const identity = await deriveRecoveryIdentity(bundle, { assertCurrent: check }); check();
+      requireMaterialContext(identity, context);
+      check(); released = true; return Object.freeze(bundle);
+    } catch (error) { check(); throw error; }
+    finally {
+      if (plaintext) wipeBuffer(plaintext);
+      if (locatorBytes) wipeBuffer(locatorBytes);
+      if (bundle && !released) { bundle.dek.fill(0); bundle.sis.fill(0); }
+    }
+  }
+
   const contract = Object.freeze({ namespace: NAMESPACE, protocol: 1,
     snapshotFormat: SNAPSHOT_FORMAT, credentialFormat: CREDENTIAL_FORMAT, cipher: CIPHER,
     ivBytes: 12, saltBytes: 16, tagBytes: 16, keyBundleBytes: 64,
     defaultIterations: DEFAULT_ITERATIONS, minIterations: MIN_ITERATIONS,
     maxIterations: MAX_ITERATIONS, metadataMaxBytes: MAX_METADATA_BYTES,
     identityVerified: false, writeAvailable: false });
+  const recoveryContract = Object.freeze({ namespace: 'patient-clinical-identity-locator', protocol: 1,
+    capsuleFormat: IDENTITY_CAPSULE_FORMAT, cipher: CIPHER,
+    hkdfSalt: RECOVERY_HKDF_SALT, locatorInfo: RECOVERY_LOCATOR_INFO,
+    readCapabilityInfo: RECOVERY_READ_INFO, capsuleKeyInfo: RECOVERY_KEY_INFO,
+    ivBytes: 12, tagBytes: 16, keyBundleBytes: 64, metadataMaxBytes: MAX_METADATA_BYTES,
+    identityVerified: false, writeAvailable: false });
   root.VildaClinicalCrypto = Object.freeze({ getContract: () => contract, deriveLocalBinding,
     deriveKeyMaterial, sealBytes, openBytes, wrapBundle, unwrapBundle,
-    inspectSnapshotEnvelope, inspectCredentialEnvelope, canonicalEnvelopeBytes, canonicalCheckpointBytes });
+    inspectSnapshotEnvelope, inspectCredentialEnvelope, canonicalEnvelopeBytes, canonicalCheckpointBytes,
+    getRecoveryContract: () => recoveryContract, deriveRecoveryLocator, destroyRecoveryLocator,
+    inspectIdentityCapsule, canonicalIdentityCapsuleBytes, digestIdentityCapsule,
+    sealIdentityCapsule, openIdentityCapsule, deriveRecoveryIdentity });
 })(typeof window !== 'undefined' ? window : typeof globalThis !== 'undefined' ? globalThis : null);
