@@ -232,7 +232,17 @@ describe('P-POWLOKA-PANELE — sesja główna po wczytaniu nie czeka na zdarzeni
       expect(pozycja, `finalizacja odtworzenia: ${etap}`).toBeGreaterThan(poprzedniEtapFinalizacji);
       poprzedniEtapFinalizacji = pozycja;
     }
-    expect(finalizacja).toContain('const n=()=>{try{ae=setTimeout(o,0)}catch(error){if(initialOutcome)settleInitialMainSessionRestore(false,"schedule-failed");throw error}}');
+    expect(finalizacja).toContain([
+      'const n=()=>{',
+      '    if(mainSessionRestoreOwner!==owner)return;',
+      '    owner.frame=null;',
+      '    try{owner.timer=ae=setTimeout(o,0)}catch(error){',
+      '      const released=releaseMainSessionRestoreOwner(owner,true);',
+      '      if(released&&initialOutcome)settleInitialMainSessionRestore(false,"schedule-failed");',
+      '      throw error;',
+      '    }',
+      '  };',
+    ].join('\n'));
     expect(ie).toContain('function Gp_o(){try{typeof r.updateProfessionalSummaryCard=="function"&&r.updateProfessionalSummaryCard()}');
     const sh = czytaj('vilda_shell.js');
     expect(sh).toContain('P-POWLOKA-PANELE (zgloszenie wlasciciela 2026-09-28)');

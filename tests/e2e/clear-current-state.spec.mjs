@@ -24,7 +24,8 @@ test.afterEach(async ({ page }, info) => {
       fields: Object.fromEntries(['name', 'firstName', 'lastName', 'age', 'height', 'weight', 'sex',
         'pubertyMenarcheAge', 'pubertyGnrhaStatus'].map(id => [id, owner.document.getElementById(id)?.value])),
       save: owner.__clearSaveProbe && { savedId: owner.__clearSaveProbe.savedId, returned: owner.__clearSaveProbe.returned,
-        receiptFinished: owner.__clearSaveProbe.receiptFinished, clears: owner.__clearSaveProbe.clears },
+        receiptFinished: owner.__clearSaveProbe.receiptFinished, clears: owner.__clearSaveProbe.clears,
+        actualClears: owner.__clearSaveProbe.actualClears },
     };
   });
   await info.attach('clear-read-only-failure-state', { body: JSON.stringify(diagnostic, null, 2), contentType: 'application/json' });
@@ -145,6 +146,7 @@ for (const existing of [false, true]) {
     await expect(dialog).toBeVisible();
     await expect(stage(page, 'Th', 3)).toHaveAttribute('aria-pressed', 'true');
     expect(await page.evaluate(() => window.__clearSaveProbe.clears)).toBe(0);
+    expect(await page.evaluate(() => window.__clearSaveProbe.actualClears)).toBe(0);
     const savedId = await page.evaluate(() => window.__clearSaveProbe.savedId);
     const saved = await page.evaluate(id => window.VildaVault.getPatient(id), savedId);
     expect(saved.snapshots[0].payload.user.pubertyAssessment).toEqual(before.puberty.raw);
@@ -154,10 +156,12 @@ for (const existing of [false, true]) {
     }, { dedup: false }));
     await expect(dialog).toBeVisible();
     expect(await page.evaluate(() => window.__clearSaveProbe.clears)).toBe(0);
+    expect(await page.evaluate(() => window.__clearSaveProbe.actualClears)).toBe(0);
     await finishOwnReceipt(page);
     await expect(dialog).toHaveCount(0);
     await expectPubertyCleared(page);
-    expect(await page.evaluate(() => window.__clearSaveProbe.clears)).toBe(1);
+    expect(await page.evaluate(() => window.__clearSaveProbe.actualClears)).toBe(1);
+    expect(await page.evaluate(() => window.__clearSaveProbe.clears)).toBeGreaterThanOrEqual(1);
     expect(await page.evaluate(id => window.VildaVault.getPatient(id), savedId)).toEqual(saved);
   });
 }
@@ -175,6 +179,7 @@ test('a delayed real save return cannot replay Clear after a lock and a differen
   await page.waitForFunction(() => window.__clearSaveProbe.pending);
   await expect(dialog).toBeVisible();
   expect(await page.evaluate(() => window.__clearSaveProbe.clears)).toBe(0);
+  expect(await page.evaluate(() => window.__clearSaveProbe.actualClears)).toBe(0);
   await page.evaluate(async () => {
     window.VildaVault.lock();
     await window.VildaVault.createUser('Fikcyjny#DrugiOwnerClear2026!aA', { label: 'Drugi fikcyjny właściciel', iterations: 10000 });
@@ -182,8 +187,10 @@ test('a delayed real save return cannot replay Clear after a lock and a differen
   await readyClearPage(page);
   await page.locator('#firstName').fill('Nowy właściciel — zachowaj');
   const before = await patientState(page), clears = await page.evaluate(() => window.__clearSaveProbe.clears);
+  const actualClears = await page.evaluate(() => window.__clearSaveProbe.actualClears);
   await finishOwnReceipt(page);
   await expect(page.locator('#firstName')).toHaveValue('Nowy właściciel — zachowaj');
   expect(await page.evaluate(() => window.__clearSaveProbe.clears)).toBe(clears);
+  expect(await page.evaluate(() => window.__clearSaveProbe.actualClears)).toBe(actualClears);
   expect((await patientState(page)).patientId).toBe(before.patientId);
 });

@@ -47,6 +47,9 @@ async function centyleISchowek(frame) {
 }
 
 async function odtworzZOpóźnieniem(frame, patientId) {
+  // This scenario isolates delayed DOB acceptance after the initial session.
+  const initial = await frame.evaluate(() => window.VildaDataImportExport.whenInitialMainSessionRestoreSettled());
+  expect(initial.ready, 'initial main-session restore has completed successfully').toBe(true);
   await frame.evaluate((id) => {
     window.clearAllData();
     window.__vildaDobRestoreGate.pause();

@@ -471,3 +471,14 @@ stronach samodzielnych. Nowe scenariusze są w
 `tests/e2e/clear-current-state.spec.mjs`; istniejące asercje resetu panelu
 pokwitania pozostają częścią sprawdzeń. Wzory, normy i interpretacje nie
 są zmieniane przez tę poprawkę.
+
+
+### Anulowanie końca odtwarzania sesji
+
+Anulowanie timera między klatką `Mt` a jego końcowym callbackiem pozostawiało prywatny stan odtwarzania i `__vildaPersistRestoring` bez wykonawcy, który mógłby je zwolnić. Decyzja o niezapisanych danych pozostawała wtedy niedostępna.
+
+Producent ma teraz własny token w RAM od synchronicznego zastosowania sesji przez klatkę do timera. Jawne czyszczenie, nowe wczytanie i własny zapis anulują jego oba uchwyty i zwalniają wyłącznie jego flagi. Starsze callbacki i bloki `finally` nie mogą zakończyć nowszego odtwarzania. Wcześniejsza zewnętrzna flaga odtwarzania pozostaje zachowana. Zakończenie oczekiwania uwzględnia rzeczywisty wynik jawnej operacji; nieudana operacja nie pozostawia oczekiwania bez producenta.
+
+Regresje wywołują rzeczywiste publiczne API: Clear przed i po klatce, nowe i zagnieżdżone odtwarzanie, oczekiwanie na auth, nieudane wczytanie, błąd planowania i odzyskanie gotowości dla nowych żądań. Osobny kontrolowany scenariusz wykazał, że jedno rzeczywiste czyszczenie może wysłać kilka historycznych powiadomień po oknie deduplikacji adaptera. Test liczy więc także wejścia do publicznej akcji Clear, zachowując zakaz jakiegokolwiek powiadomienia przed własnym potwierdzeniem zapisu.
+
+Świeże publiczne wywołanie finalizera nie przejmuje flag wywołującego. Znacznik własności flag pozwala zachować to zachowanie także przy zastąpieniu i anulowaniu takiego wywołania; przekazanie aktywnego producenta `Fe` nadal zachowuje jego blokadę. Historyczny końcowy callback przywraca przekazaną wcześniejszą wartość jak dotąd.

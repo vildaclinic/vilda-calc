@@ -106,12 +106,31 @@ export async function openFictionalClearAccount(page, context, { path = '/index.
     await readyClearPage(owner);
   } else if (path !== '/index.html') { await page.goto(path, { waitUntil: 'load' }); await readyClearPage(page); }
   if (path === '/docpro.html') await prepareDocProUserFlow(owner);
+  // Finish the owning producer and any already-created clinical sibling before
+  // the first edit. Their startup callbacks can write the same shared session.
+  await readyClearPage(owner);
+  if (shell) {
+    const panes = page.locator('iframe.app-pane[title="Start"],iframe.app-pane[title="DocPro"],iframe.app-pane[title="Kalkulator klirensu"]');
+    for (const pane of await panes.elementHandles()) {
+      const sibling = await pane.contentFrame();
+      if (sibling && sibling !== owner) await readyClearPage(sibling);
+    }
+  }
   await expect.poll(() => owner.evaluate(() => window.VildaSaveStatusIndicator.getState())).toBe('hidden');
   await owner.waitForFunction(() => window.__clearDebounceProbe.pending() === 0);
   return { network, owner };
 }
 
 export async function readyClearPage(page) {
+  await page.waitForFunction(() => Boolean(window.VildaDataImportExport));
+  const initial = await page.evaluate(() => {
+    const api = window.VildaDataImportExport;
+    // The immutable RED runtime predates this public observer; retain its
+    // existing live-flag checks without inventing a successful settlement.
+    return typeof api.whenInitialMainSessionRestoreSettled === 'function'
+      ? api.whenInitialMainSessionRestoreSettled() : null;
+  });
+  if (initial) expect(initial.ready, 'initial main-session restore has completed successfully').toBe(true);
   await page.waitForFunction(() => window.VildaVault?.isUnlocked() && window.VildaAuthUI?.isBootReady()
     && !document.documentElement.classList.contains('vilda-auth-locked')
     && window.VildaSaveStatusIndicator && window.VildaDataImportExport
@@ -312,7 +331,7 @@ export async function fillValidPatient(page, firstName = 'Alicja Wyczyść') {
 export async function holdRealSaveReturn(page) {
   await page.evaluate(() => {
     const vault = window.VildaVault, original = vault.savePatient;
-    const probe = window.__clearSaveProbe = { holdNext: true, pending: false, savedId: null, returned: false, receiptFinished: false, clears: 0 };
+    const probe = window.__clearSaveProbe = { holdNext: true, pending: false, savedId: null, returned: false, receiptFinished: false, clears: 0, actualClears: 0 };
     let release;
     window.addEventListener('vilda:user-state-cleared', () => { probe.clears++; });
     vault.savePatient = async function (...args) {
@@ -327,6 +346,13 @@ export async function holdRealSaveReturn(page) {
       return result;
     };
     const importer = window.VildaDataImportExport, receipt = importer.saveUserDataWithReceipt;
+    const clear = importer.clearAllData;
+    // Legacy Clear listeners can emit multiple notifications after the adapter's
+    // 150 ms deduplication window. Count the real public Clear entry separately.
+    importer.clearAllData = function (...args) {
+      probe.actualClears++;
+      return clear.apply(this, args);
+    };
     if (typeof receipt === 'function') importer.saveUserDataWithReceipt = async function (...args) {
       try { return await receipt.apply(importer, args); }
       finally { probe.receiptFinished = true; }

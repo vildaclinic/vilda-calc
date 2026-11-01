@@ -1,4 +1,5 @@
 import { expect } from '@playwright/test';
+import { prepareBrowser } from './klirens-patient-record.mjs';
 
 // Only synthetic data. Saving is tested through an isolated in-memory adapter;
 // no test unlocks, reads, or writes a real patient vault.
@@ -25,8 +26,8 @@ export async function enterGuest(page) {
 }
 
 export async function openCalculator(page, width = 1440) {
+  await prepareBrowser(page);
   await page.setViewportSize({ width, height: 1000 });
-  await page.route(/^https:\/\/(?:fonts\.googleapis\.com|fonts\.gstatic\.com|cdn\.sheetjs\.com|cdn\.jsdelivr\.net)\//, route => route.abort());
   await page.goto('/kalkulator-klirens.html', { waitUntil: 'domcontentloaded' });
   await page.getByRole('button', { name: 'Korzystaj bez logowania', exact: true }).waitFor({ state: 'visible' });
   await enterGuest(page);
