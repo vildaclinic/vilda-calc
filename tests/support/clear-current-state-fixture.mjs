@@ -1,5 +1,5 @@
 import { expect, test } from './test-czas.mjs';
-import { fixturePreferences, loadPatient, readyForPatient, shellFrame } from './centile-live-fixture.mjs';
+import { fixturePreferences, loadPatient as loadPatientBase, readyForPatient, shellFrame } from './centile-live-fixture.mjs';
 
 const PASSWORD = 'Fikcyjny#ClearCurrent2026!aA';
 export const CLEAR_DIALOG = /^Zapisać (wpisane dane|zmiany) przed wyczyszczeniem\?$/u;
@@ -119,6 +119,52 @@ export async function openFictionalClearAccount(page, context, { path = '/index.
   await expect.poll(() => owner.evaluate(() => window.VildaSaveStatusIndicator.getState())).toBe('hidden');
   await owner.waitForFunction(() => window.__clearDebounceProbe.pending() === 0);
   return { network, owner };
+}
+
+async function loadPatient(frame, patientId, choice = 'new', options = {}) {
+  // Arm before the click: the restore event is synchronous, whereas a cached
+  // "saved" label can still belong to the initial, incomplete load state.
+  const witness = await frame.evaluateHandle(({ patientId, choice }) => {
+    const initialSequence = window.VildaDataImportExport.getApplyLoadedDataSequence();
+    if (!Number.isSafeInteger(initialSequence)) throw Error('Missing initial patient-load sequence');
+    const type = choice === 'new' ? 'vilda:load-choice-applied' : 'vilda:state-restored';
+    let listener, complete;
+    const dispose = () => {
+      if (listener) document.removeEventListener(type, listener);
+      listener = null;
+    };
+    const promise = new Promise(resolve => { complete = resolve; });
+    listener = event => {
+      const detail = event.detail || {};
+      const currentPatient = sessionStorage.getItem('vildaCurrentPatientId');
+      const sequence = window.VildaDataImportExport.getApplyLoadedDataSequence();
+      if (currentPatient !== patientId || !Number.isSafeInteger(sequence) || sequence <= initialSequence) return;
+      if (choice === 'new') {
+        if (detail.choice !== 'new' || detail.patientId !== patientId || detail.applySequence !== sequence) return;
+      } else {
+        if (detail.source !== 'restoreLoadedState') return;
+        if (detail.patientId !== undefined && detail.patientId !== patientId) return;
+        if (detail.applySequence !== undefined && detail.applySequence !== sequence) return;
+      }
+      dispose();
+      complete({ patientId, applySequence: sequence });
+    };
+    document.addEventListener(type, listener);
+    return { promise, dispose };
+  }, { patientId, choice });
+  try {
+    await loadPatientBase(frame, patientId, choice, options);
+    const completed = await witness.evaluate(value => value.promise);
+    await expect.poll(() => frame.evaluate(() => {
+      const decision = window.VildaSaveStatusIndicator.getCurrentDecision();
+      return { patientId: sessionStorage.getItem('vildaCurrentPatientId'),
+        applySequence: window.VildaDataImportExport.getApplyLoadedDataSequence(),
+        ready: decision.ready, state: decision.state };
+    })).toEqual({ ...completed, ready: true, state: 'saved' });
+  } finally {
+    try { await witness.evaluate(value => value.dispose()); }
+    finally { await witness.dispose(); }
+  }
 }
 
 export async function readyClearPage(page) {

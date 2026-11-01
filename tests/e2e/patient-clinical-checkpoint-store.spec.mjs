@@ -497,23 +497,32 @@ test('historical real account deletion preserves complete encrypted recovery acr
         const request = indexedDB.open(legacyName); request.onsuccess = () => resolve(request.result); request.onerror = () => reject(request.error);
       });
       extra.close();
-      const deleteDatabase = indexedDB.deleteDatabase.bind(indexedDB), deletes = [];
+      const deleteDatabase = indexedDB.deleteDatabase.bind(indexedDB), deletes = [], completions = [];
       indexedDB.deleteDatabase = function (name) {
-        const entry = { name, success: false, blocked: false }; deletes.push(entry);
+        const entry = { name, success: false, events: [] }; deletes.push(entry);
         const request = deleteDatabase(name);
-        request.addEventListener('success', () => { entry.success = true; }, { once: true });
-        request.addEventListener('blocked', () => { entry.blocked = true; }, { once: true });
+        completions.push(new Promise((resolve, reject) => {
+          request.addEventListener('success', () => { entry.events.push('success'); entry.success = true; resolve(); }, { once: true });
+          request.addEventListener('blocked', () => { entry.events.push('blocked'); }, { once: true });
+          request.addEventListener('error', () => { entry.events.push('error'); reject(request.error); }, { once: true });
+        }));
         return request;
       };
       let removed;
-      try { removed = await vault.removeUser(userId); }
+      try {
+        removed = await vault.removeUser(userId);
+        // A transient blocked is not terminal; require the native deletion success.
+        await Promise.all(completions);
+      }
       finally { indexedDB.deleteDatabase = deleteDatabase; }
       const registry = await vault.listUsers(), after = await f.raw(), databases = await f.names();
       sessionStorage.clear(); localStorage.clear(); f.materials.clear();
       return { removed, userId, patientCreated: Boolean(patient.patientId), deletes, registry, before, after, databases };
     }, PASSWORD);
     expect(deletion.patientCreated).toBe(true); expect(deletion.removed).toBe(true);
-    expect(deletion.deletes).toEqual([{ name: 'vilda_user_' + deletion.userId, success: true, blocked: false }]);
+    expect(deletion.deletes).toHaveLength(1);
+    expect(deletion.deletes[0].name).toBe('vilda_user_' + deletion.userId); expect(deletion.deletes[0].success).toBe(true);
+    expect([['success'], ['blocked', 'success']]).toContainEqual(deletion.deletes[0].events);
     expect(deletion.registry).toEqual([]); expect(deletion.databases).not.toContain('vilda_user_' + deletion.userId);
     expect(deletion.after).toEqual(deletion.before);
     await context.close(); context = null;
