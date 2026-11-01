@@ -1,0 +1,789 @@
+{
+  "version": 1,
+  "baseline": "28e7ddb87ee3088fa869c47a6c61fb7a97c32be6",
+  "offsetUnit": "UTF-16 JavaScript string indices",
+  "explanation": "Literal baseline function overlays, one readable helper insertion, and only the sync metadata export aliases. No other source byte may differ.",
+  "files": [
+    {
+      "path": "vilda_sync.js",
+      "beforeSha256": "292711f73d065d8f874bcd817e6737a2583652e659591fa1b24ebad9cceec724",
+      "afterSha256": "3bf226c86bbf6dec549d98b385ac03ccdebeca8fec25eb5c9a5725de6d384bbc",
+      "changedFunctions": [
+        "m",
+        "T",
+        "Brv_oznacz",
+        "C",
+        "f",
+        "ft",
+        "ht",
+        "Bht0",
+        "Kt",
+        "wt",
+        "Yt",
+        "Y",
+        "Bpw_pull",
+        "Ht",
+        "xt",
+        "Wt",
+        "Jt",
+        "Xt",
+        "pt",
+        "_t",
+        "$t",
+        "qt"
+      ],
+      "functionPins": [
+        {
+          "function": "m",
+          "beforeSha256": "82ae478fe14544626d11493935919032f6b83f0e761f1b8976785e00e270ed47",
+          "afterSha256": "0a21943cf3c635f57185dac9eacae09a984a8a2036ec34b2f8a0eeac30f1f5ab",
+          "beforeCharacters": 266,
+          "afterCharacters": 314
+        },
+        {
+          "function": "T",
+          "beforeSha256": "8cb1da9e0ef72cc56126eb5a05f62a7f26d35a6c31b948767c49adce3d24e6d9",
+          "afterSha256": "9580526d9c4187382ac4a9b6bb5be76b601919ac5a797e5a6a4566679679d491",
+          "beforeCharacters": 75,
+          "afterCharacters": 124
+        },
+        {
+          "function": "Brv_oznacz",
+          "beforeSha256": "f0ce67502b5313bfdf4978a666a6452b211aa35890ecd2a0ade631ac7ca1b1ec",
+          "afterSha256": "8e1fc626fa0fe69af8d924eb0f376ec524bc49cc64103730a51edaddc979656a",
+          "beforeCharacters": 106,
+          "afterCharacters": 159
+        },
+        {
+          "function": "C",
+          "beforeSha256": "a7801addc0b3b14ef843a75f82892871dd29a4bf152761177f8b602c3e0260ef",
+          "afterSha256": "495989438327c35358ab0cba6909103210466f5163d779d56d976c07db92df64",
+          "beforeCharacters": 58,
+          "afterCharacters": 107
+        },
+        {
+          "function": "f",
+          "beforeSha256": "f1c1ad37205751cfee289f9cfe089339e37715f3500580318ccd726f30096a7d",
+          "afterSha256": "bf3140313ce5ccb02a9cc8045acf47f2f4dd866b06b5aa811bd7a8ac452d2d84",
+          "beforeCharacters": 549,
+          "afterCharacters": 685
+        },
+        {
+          "function": "ft",
+          "beforeSha256": "da0dd02214229ed3ef2137e9458ac8d219b52e8015fb47d6bed0e6a0b535fc0b",
+          "afterSha256": "00b7167a7a88818c573d1aee6aa6ded82bc9704d60182d17d45a21cb81744787",
+          "beforeCharacters": 155,
+          "afterCharacters": 204
+        },
+        {
+          "function": "ht",
+          "beforeSha256": "0342598f5a2bee7828fac33d35191b3c8993ff70002f5a129d2aea188da30caa",
+          "afterSha256": "2ab4b5d9a494b02b6922251e92042a77cd5eeaa4630959a312a7a0b1b5df532b",
+          "beforeCharacters": 838,
+          "afterCharacters": 964
+        },
+        {
+          "function": "Bht0",
+          "beforeSha256": "aa5b7f4fc1acd560409b8f57b4046e764e5582f16a05888c1a4c4cf05a1dff55",
+          "afterSha256": "52850d70d1db8b66697a5491082053bab8a6bc4666fc5c8525f576cf604b68d6",
+          "beforeCharacters": 6116,
+          "afterCharacters": 6284
+        },
+        {
+          "function": "Kt",
+          "beforeSha256": "7c7fd1acb5e9a8e94ed40f4733f8966d3a024ce3122b9a93265266ef97165676",
+          "afterSha256": "71447b542d0e6fc4b3195f3226148291fe1b3bd2d7bc5dc4cf117228271e37b7",
+          "beforeCharacters": 126,
+          "afterCharacters": 176
+        },
+        {
+          "function": "wt",
+          "beforeSha256": "6ee2e57ad837367d245d35f40fff71203caff6709c97847f4531ba1fd9f849da",
+          "afterSha256": "6f43c487ec52e422965b42b75dc867c5bb644824c717bca1a162e16526f1c9bd",
+          "beforeCharacters": 1101,
+          "afterCharacters": 1305
+        },
+        {
+          "function": "Yt",
+          "beforeSha256": "bcecf6b63e931fd24c2d15f710c7faac0277221f4c45897f1e04d47263e6287b",
+          "afterSha256": "072f56e75f8a3f7e045c5cb8fb9e21f9dfbb83ae7f39b08dbbf597b920c1b7f1",
+          "beforeCharacters": 1094,
+          "afterCharacters": 1138
+        },
+        {
+          "function": "Y",
+          "beforeSha256": "02d99c8dcb3186f13c3dd577374f9b17f83da2816fc35e124479224597e68748",
+          "afterSha256": "a31f9250360b64d063f3fa2de7467cd6b430145709fa68729de7b5e8c585dc91",
+          "beforeCharacters": 148,
+          "afterCharacters": 274
+        },
+        {
+          "function": "Bpw_pull",
+          "beforeSha256": "d4c10890d165c323b236bb8ba2af68960470be5e65eaba19036b2761df69acce",
+          "afterSha256": "9500e87a36dacd810e2de3bb43f9b032019534118f27c3d45719f0796020d8dc",
+          "beforeCharacters": 3693,
+          "afterCharacters": 4261
+        },
+        {
+          "function": "Ht",
+          "beforeSha256": "1571aacadeac547ed8135ce38eaaeb1ea5ae0ab198dcc03369aa02dcba1872f7",
+          "afterSha256": "7fe8b63659057be6dfd6409ee64044922dfbdc47733058d9db27dd5813f801a7",
+          "beforeCharacters": 191,
+          "afterCharacters": 275
+        },
+        {
+          "function": "xt",
+          "beforeSha256": "848f00139cfd5385aa23d3582764914a1e9602e7f450fb92cce42232fad5a8e5",
+          "afterSha256": "0ff1659b5788c7033f7701e2ea62f50d0f82878e48317bc84c235abe794c4b0c",
+          "beforeCharacters": 77,
+          "afterCharacters": 165
+        },
+        {
+          "function": "Wt",
+          "beforeSha256": "51769930eaf664e5dbdbdbc9d9f59276d2382c7004634be78842462a04d09d0b",
+          "afterSha256": "4d6c13e63ca451182f338953d1c0bfe707d28480cc035cfe26d7fb5242939bc9",
+          "beforeCharacters": 70,
+          "afterCharacters": 168
+        },
+        {
+          "function": "Jt",
+          "beforeSha256": "fc81eaee7f2c98ef0923195f5b00f5b7be697242a8fba38e8a3ae582bf45ea58",
+          "afterSha256": "096123619ecbf096bdc72ab42a7376ec4c3001748e6e926b813d95f30c282652",
+          "beforeCharacters": 702,
+          "afterCharacters": 898
+        },
+        {
+          "function": "Xt",
+          "beforeSha256": "35f70c253e56ed6ec8ffaddfeb52b33512a901b312a29b73051c49a95850b32f",
+          "afterSha256": "f8846ada17d8a2324b6ef2c095970e772769b5bc3545b364987da4b13b533414",
+          "beforeCharacters": 552,
+          "afterCharacters": 761
+        },
+        {
+          "function": "pt",
+          "beforeSha256": "a4c3c58053bd39a17a01f6e4886b0e4633ca253191ceb0c28c2e2a8dcfcf4492",
+          "afterSha256": "25f217c5054b4a43bf0faaf358cf828b7c0545142542878ef545bc9ee577926e",
+          "beforeCharacters": 855,
+          "afterCharacters": 996
+        },
+        {
+          "function": "_t",
+          "beforeSha256": "0943e60f310afa71c776461886f523b209e788a9e4ce39a372c464f0b1f50561",
+          "afterSha256": "f7c05a7f581a9808d6ceef334bbe5371635ff04365fcdb225b55c57c861c7b40",
+          "beforeCharacters": 436,
+          "afterCharacters": 610
+        },
+        {
+          "function": "$t",
+          "beforeSha256": "e271410447dc207002fae520486f3033694ae94a779050d73a4262d18a7f852b",
+          "afterSha256": "4f5b766c0db789d68fd6eefb79b3d18ee52ad2a7e3c84eec56068dd087f708ae",
+          "beforeCharacters": 1162,
+          "afterCharacters": 1484
+        },
+        {
+          "function": "qt",
+          "beforeSha256": "b38eb62e0a198a0b486ef6485a28f94dc18f526546b2b6abc2002120bce022e3",
+          "afterSha256": "03e5afcb12f9d271fbffda6a7f5d302f04bdd56efb0d011bac2606629b52b421",
+          "beforeCharacters": 845,
+          "afterCharacters": 949
+        }
+      ],
+      "patches": [
+        {
+          "kind": "existing-metadata-export-guard-wrappers",
+          "start": 60396,
+          "end": 60454,
+          "before": "_loadSyncState:m,_saveSyncState:T,_clearSyncStateForSlot:C",
+          "after": "_loadSyncState:PatientClinicalLoadState,_saveSyncState:PatientClinicalSaveState,_clearSyncStateForSlot:PatientClinicalClearState"
+        },
+        {
+          "kind": "existing-function-additive-boundary",
+          "function": "qt",
+          "start": 36974,
+          "end": 37819,
+          "before": "async function qt(){var t=I();y(L,{operation:\"restore-prev\"});try{var e=await t.getSyncMaterial(),a=e.slotId,r=e.authToken;Brv_stop(a);var n=j(),i=await f(n+\"/v1/slots/\"+a+\"/blob/restore-prev\",{method:\"POST\",headers:{Authorization:\"Bearer \"+r}});if(i.status===404)throw u(\"VildaSync: brak zarchiwizowanej poprzedniej wersji na serwerze.\",\"NO_ARCHIVE\");if(i.status===401)throw u(\"VildaSync: b\\u0142\\u0105d uwierzytelnienia przy przywracaniu.\",\"AUTH_FAILED\");if(!i.ok){var c=await i.json().catch(function(){return{}});throw u(\"VildaSync: przywracanie nieudane (\"+i.status+\"): \"+(c.error&&c.error.message||\"\"),\"RESTORE_FAILED\",{httpStatus:i.status})}var l=await i.json(),d=m(a);d.localEtag=null,T(a,d);var s=await Y(),w={restored:l,pull:s};return y(p,{operation:\"restore-prev\",result:w}),w}catch(S){throw y(k,{operation:\"restore-prev\",error:S}),S}}",
+          "after": "async function qt(){PatientClinicalRequireLegacy(\"restore-prev-blob\");var t=I();y(L,{operation:\"restore-prev\"});try{var e=await t.getSyncMaterial(),a=e.slotId,r=e.authToken;Brv_stop(a);var n=j(),i=await f(n+\"/v1/slots/\"+a+\"/blob/restore-prev\",{method:\"POST\",headers:{Authorization:\"Bearer \"+r}});if(i.status===404)throw u(\"VildaSync: brak zarchiwizowanej poprzedniej wersji na serwerze.\",\"NO_ARCHIVE\");if(i.status===401)throw u(\"VildaSync: b\\u0142\\u0105d uwierzytelnienia przy przywracaniu.\",\"AUTH_FAILED\");if(!i.ok){var c=await i.json().catch(function(){return{}});throw u(\"VildaSync: przywracanie nieudane (\"+i.status+\"): \"+(c.error&&c.error.message||\"\"),\"RESTORE_FAILED\",{httpStatus:i.status})}var l=await i.json();PatientClinicalRequireLegacy(\"restore-prev-blob\");var d=m(a);d.localEtag=null,T(a,d);var s=await Y(),w={restored:l,pull:s};return y(p,{operation:\"restore-prev\",result:w}),w}catch(S){throw y(k,{operation:\"restore-prev\",error:S}),S}}"
+        },
+        {
+          "kind": "existing-function-additive-boundary",
+          "function": "$t",
+          "start": 35812,
+          "end": 36974,
+          "before": "async function $t(t){var e=I();if(typeof e.rotateSyncIdentity!=\"function\")throw u(\"VildaSync.revokeAllDevices: vault nie wspiera rotacji to\\u017Csamo\\u015Bci.\",\"NOT_SUPPORTED\");y(L,{operation:\"revoke\"});try{var a=await e.getSyncMaterial(),r=a.slotId,n=a.authToken;/* P-SYNC-ROTACJA-KART: karta z poprzednia tozsamoscia nie obraca jej drugi raz (odswiezenie strony wczytuje biezaca). Znacznik zaraz po rotacji, przed rejestracja nowego slotu i kasowaniem starego, wiec obowiazuje takze, gdy ktorys z tych krokow sie nie uda. */Brv_stop(r);var i=await e.rotateSyncIdentity(t),c=await e.getSyncMaterial(),l=c.slotId;l!==r&&Brv_oznacz(r);var d=await e.exportSyncPayload(),s=new TextEncoder().encode(JSON.stringify(d)),w=await G(await Bgz_pakuj(s),c.syncEncKey),S=await pt(l,c.authToken,c.authTokenHash,w),h=m(l)||{};h.registered=!0,h.localEtag=S.etag||null,h.lastSyncAt=new Date().toISOString(),T(l,h);var D=!1;try{var _=await _t(r,n);D=_.action===\"deleted\"||_.action===\"absent\"}catch{D=!1}C(r);var g={recoveryKey:i.recoveryKey,oldSlotId:r,newSlotId:l,oldSlotRevoked:D};return y(p,{operation:\"revoke\",result:g}),g}catch(v){throw y(k,{operation:\"revoke\",error:v}),v}}",
+          "after": "async function $t(t){PatientClinicalRequireLegacy(\"revoke-all-devices\");var e=I();if(typeof e.rotateSyncIdentity!=\"function\")throw u(\"VildaSync.revokeAllDevices: vault nie wspiera rotacji to\\u017Csamo\\u015Bci.\",\"NOT_SUPPORTED\");y(L,{operation:\"revoke\"});try{var a=await e.getSyncMaterial();PatientClinicalRequireLegacy(\"revoke-all-devices\");var r=a.slotId,n=a.authToken;/* P-SYNC-ROTACJA-KART: karta z poprzednia tozsamoscia nie obraca jej drugi raz (odswiezenie strony wczytuje biezaca). Znacznik zaraz po rotacji, przed rejestracja nowego slotu i kasowaniem starego, wiec obowiazuje takze, gdy ktorys z tych krokow sie nie uda. */Brv_stop(r);var i=await e.rotateSyncIdentity(t);PatientClinicalRequireLegacy(\"revoke-all-devices\");var c=await e.getSyncMaterial();PatientClinicalRequireLegacy(\"revoke-all-devices\");var l=c.slotId;l!==r&&Brv_oznacz(r);var d=await e.exportSyncPayload(),s=new TextEncoder().encode(JSON.stringify(d)),w=await G(await Bgz_pakuj(s),c.syncEncKey),S=await pt(l,c.authToken,c.authTokenHash,w);PatientClinicalRequireLegacy(\"revoke-all-devices\");var h=m(l)||{};h.registered=!0,h.localEtag=S.etag||null,h.lastSyncAt=new Date().toISOString(),T(l,h);var D=!1;try{var _=await _t(r,n);D=_.action===\"deleted\"||_.action===\"absent\"}catch{D=!1}PatientClinicalRequireLegacy(\"revoke-all-devices\");C(r);var g={recoveryKey:i.recoveryKey,oldSlotId:r,newSlotId:l,oldSlotRevoked:D};return y(p,{operation:\"revoke\",result:g}),g}catch(v){throw y(k,{operation:\"revoke\",error:v}),v}}"
+        },
+        {
+          "kind": "existing-function-additive-boundary",
+          "function": "_t",
+          "start": 35376,
+          "end": 35812,
+          "before": "async function _t(t,e){\n  var assertCurrent=await TLibGuardLegacyDelete(t,e);\n  assertCurrent();\n  var a=await f(j()+\"/v1/slots/\"+t,{method:\"DELETE\",headers:{Authorization:\"Bearer \"+e}});\n  assertCurrent();\n  if(a.status===204)return{action:\"deleted\"};\n  if(a.status===401||a.status===404)return{action:\"absent\"};\n  throw u(\"VildaSync.deleteSlotWithMaterial: błąd kasacji slotu (\"+a.status+\").\",\"DELETE_FAILED\",{httpStatus:a.status});\n}",
+          "after": "async function _t(t,e){PatientClinicalRequireLegacy(\"delete-slot-with-material\");\n  var assertCurrent=await TLibGuardLegacyDelete(t,e);\n  PatientClinicalRequireLegacy(\"delete-slot-with-material\");assertCurrent();\n  var a=await f(j()+\"/v1/slots/\"+t,{method:\"DELETE\",headers:{Authorization:\"Bearer \"+e}});\n  PatientClinicalRequireLegacy(\"delete-slot-with-material\");assertCurrent();\n  if(a.status===204)return{action:\"deleted\"};\n  if(a.status===401||a.status===404)return{action:\"absent\"};\n  throw u(\"VildaSync.deleteSlotWithMaterial: błąd kasacji slotu (\"+a.status+\").\",\"DELETE_FAILED\",{httpStatus:a.status});\n}"
+        },
+        {
+          "kind": "existing-function-additive-boundary",
+          "function": "pt",
+          "start": 34521,
+          "end": 35376,
+          "before": "async function pt(t,e,a,r){Brv_stop(t);var n=j(),i=await f(n+\"/v1/slots/\"+t+\"/register\",{method:\"POST\",headers:{\"Content-Type\":\"application/octet-stream\",\"X-Auth-Token-Hash\":a},body:r},Bgz_czas(r));if(i.status===201){var c=await i.json().catch(function(){return{}});return{action:\"registered\",etag:c.etag||null}}if(i.status===409){var l=await f(n+\"/v1/slots/\"+t+\"/blob\",{method:\"PUT\",headers:{\"Content-Type\":\"application/octet-stream\",Authorization:\"Bearer \"+e},body:r},Bgz_czas(r));if(l.status===200){var d=await l.json().catch(function(){return{}});return{action:\"uploaded\",etag:d.etag||null}}throw u(\"VildaSync.uploadToSlot: b\\u0142\\u0105d uploadu na istniej\\u0105cy slot (\"+l.status+\").\",\"UPLOAD_FAILED\",{httpStatus:l.status})}throw u(\"VildaSync.uploadToSlot: b\\u0142\\u0105d rejestracji slotu (\"+i.status+\").\",\"REGISTER_FAILED\",{httpStatus:i.status})}",
+          "after": "async function pt(t,e,a,r){PatientClinicalRequireLegacy(\"upload-to-slot\");Brv_stop(t);var n=j(),i=await f(n+\"/v1/slots/\"+t+\"/register\",{method:\"POST\",headers:{\"Content-Type\":\"application/octet-stream\",\"X-Auth-Token-Hash\":a},body:r},Bgz_czas(r));if(i.status===201){var c=await i.json().catch(function(){return{}});PatientClinicalRequireLegacy(\"upload-to-slot\");return{action:\"registered\",etag:c.etag||null}}if(i.status===409){var l=await f(n+\"/v1/slots/\"+t+\"/blob\",{method:\"PUT\",headers:{\"Content-Type\":\"application/octet-stream\",Authorization:\"Bearer \"+e},body:r},Bgz_czas(r));if(l.status===200){var d=await l.json().catch(function(){return{}});PatientClinicalRequireLegacy(\"upload-to-slot\");return{action:\"uploaded\",etag:d.etag||null}}throw u(\"VildaSync.uploadToSlot: b\\u0142\\u0105d uploadu na istniej\\u0105cy slot (\"+l.status+\").\",\"UPLOAD_FAILED\",{httpStatus:l.status})}throw u(\"VildaSync.uploadToSlot: b\\u0142\\u0105d rejestracji slotu (\"+i.status+\").\",\"REGISTER_FAILED\",{httpStatus:i.status})}"
+        },
+        {
+          "kind": "existing-function-additive-boundary",
+          "function": "Xt",
+          "start": 33969,
+          "end": 34521,
+          "before": "async function Xt(){var Pn0={isNewDevice:!1,lastModified:null,inconclusive:!0},t;try{t=I()}catch{return Pn0}var e;try{e=await t.getSyncMaterial()}catch{return Pn0}var a=e.slotId,r=m(a);if(r.registered||Brv_jest(a))return{isNewDevice:!1,lastModified:null};try{var n=await f(j()+\"/v1/slots/\"+a+\"/status\",{method:\"GET\",headers:{Authorization:\"Bearer \"+e.authToken}});if(n.status===404)return{isNewDevice:!1,lastModified:null};if(!n.ok)return Pn0;var i=await n.json();return{isNewDevice:!0,lastModified:i.lastModified||i.updatedAt||null}}catch{return Pn0}}",
+          "after": "async function Xt(){PatientClinicalRequireLegacy(\"probe-new-device\");var Pn0={isNewDevice:!1,lastModified:null,inconclusive:!0},t;try{t=I()}catch{return Pn0}var e;try{e=await t.getSyncMaterial()}catch{return Pn0}PatientClinicalRequireLegacy(\"probe-new-device\");var a=e.slotId,r=m(a);if(r.registered||Brv_jest(a))return{isNewDevice:!1,lastModified:null};try{var n=await f(j()+\"/v1/slots/\"+a+\"/status\",{method:\"GET\",headers:{Authorization:\"Bearer \"+e.authToken}});if(n.status===404)return{isNewDevice:!1,lastModified:null};if(!n.ok)return Pn0;var i=await n.json();PatientClinicalRequireLegacy(\"probe-new-device\");return{isNewDevice:!0,lastModified:i.lastModified||i.updatedAt||null}}catch(error){if(error&&error.patientClinicalUnavailable)throw error;return Pn0}}"
+        },
+        {
+          "kind": "existing-function-additive-boundary",
+          "function": "Jt",
+          "start": 32670,
+          "end": 33372,
+          "before": "async function Jt(){\n  var ticket=TLibOperationContext(),vault=I(),material=await vault.getSyncMaterial();\n  TLibFence(ticket.ctx,ticket.token);\n  var assertCurrent=await TLibGuardLegacyDelete(material.slotId,material.authToken,ticket);\n  assertCurrent();\n  var state=m(material.slotId);\n  if(!state.registered)return{action:\"not-registered\"};\n  var response=await f(j()+\"/v1/slots/\"+material.slotId,{method:\"DELETE\",headers:{Authorization:\"Bearer \"+material.authToken}});\n  assertCurrent();\n  if(response.status===204||response.status===401)return C(material.slotId),{action:\"deleted\"};\n  throw u(\"VildaSync: błąd usuwania slotu (\"+response.status+\").\",\"DELETE_FAILED\",{httpStatus:response.status});\n}",
+          "after": "async function Jt(){PatientClinicalRequireLegacy(\"delete-sync-slot\");\n  var ticket=TLibOperationContext(),vault=I(),material=await vault.getSyncMaterial();\n  PatientClinicalRequireLegacy(\"delete-sync-slot\");TLibFence(ticket.ctx,ticket.token);\n  var assertCurrent=await TLibGuardLegacyDelete(material.slotId,material.authToken,ticket);\n  PatientClinicalRequireLegacy(\"delete-sync-slot\");assertCurrent();\n  var state=m(material.slotId);\n  if(!state.registered)return{action:\"not-registered\"};\n  var response=await f(j()+\"/v1/slots/\"+material.slotId,{method:\"DELETE\",headers:{Authorization:\"Bearer \"+material.authToken}});\n  PatientClinicalRequireLegacy(\"delete-sync-slot\");assertCurrent();\n  if(response.status===204||response.status===401)return C(material.slotId),{action:\"deleted\"};\n  throw u(\"VildaSync: błąd usuwania slotu (\"+response.status+\").\",\"DELETE_FAILED\",{httpStatus:response.status});\n}"
+        },
+        {
+          "kind": "existing-function-additive-boundary",
+          "function": "Wt",
+          "start": 32600,
+          "end": 32670,
+          "before": "async function Wt(){var t=I(),e=await t.getSyncMaterial();C(e.slotId)}",
+          "after": "async function Wt(){PatientClinicalRequireLegacy(\"sync-state-clear\");var t=I(),e=await t.getSyncMaterial();PatientClinicalRequireLegacy(\"sync-state-clear\");C(e.slotId)}"
+        },
+        {
+          "kind": "existing-function-additive-boundary",
+          "function": "xt",
+          "start": 32523,
+          "end": 32600,
+          "before": "async function xt(){var t=I(),e=await t.getSyncMaterial();return m(e.slotId)}",
+          "after": "async function xt(){PatientClinicalRequireLegacy(\"sync-status\");var t=I(),e=await t.getSyncMaterial();PatientClinicalRequireLegacy(\"sync-status\");return m(e.slotId)}"
+        },
+        {
+          "kind": "existing-function-additive-boundary",
+          "function": "Ht",
+          "start": 32332,
+          "end": 32523,
+          "before": "async function Ht(){I(),y(L,{operation:\"full\"});try{var t=await Y(),e=await ht(),a={pull:t,push:e};return y(p,{operation:\"full\",result:a}),a}catch(r){throw y(k,{operation:\"full\",error:r}),r}}",
+          "after": "async function Ht(){PatientClinicalRequireLegacy(\"sync-full\");I(),y(L,{operation:\"full\"});try{var t=await Y(),e=await ht(),a={pull:t,push:e};PatientClinicalRequireLegacy(\"sync-full\");return y(p,{operation:\"full\",result:a}),a}catch(r){throw y(k,{operation:\"full\",error:r}),r}}"
+        },
+        {
+          "kind": "existing-function-additive-boundary",
+          "function": "Bpw_pull",
+          "start": 28639,
+          "end": 32332,
+          "before": "async function Bpw_pull(){var CareReplay=null,CareReplayed=false;var t=I(),Bpw_kto=Bpw_konto(t);y(L,{operation:\"pull\"});var e;try{e=await t.getSyncMaterial()}catch(E){throw y(k,{operation:\"pull\",error:E}),E}var a=e.slotId,r=e.authToken,n=e.syncEncKey,i=j(),c=m(a);K()&&M==null&&(M=Pt(a,t));try{Brv_stop(a);if(c.registered){var S=await f(i+\"/v1/slots/\"+a+\"/status\",{method:\"GET\",headers:{Authorization:\"Bearer \"+r}});if(Bpw_inneKonto(t,Bpw_kto))throw Bpw_przerwane();if(S.status===401)throw C(a),u(\"VildaSync: b\\u0142\\u0105d uwierzytelnienia przy pull. Slot m\\xF3g\\u0142 zosta\\u0107 usuni\\u0119ty.\",\"AUTH_FAILED\");if(!S.ok)throw u(\"VildaSync: b\\u0142\\u0105d odczytu statusu (\"+S.status+\").\",\"STATUS_FAILED\",{httpStatus:S.status});var w=await S.json();if(Bpw_inneKonto(t,Bpw_kto))throw Bpw_przerwane()}else{var l=await f(i+\"/v1/slots/\"+a+\"/status\",{method:\"GET\",headers:{Authorization:\"Bearer \"+r}});if(Bpw_inneKonto(t,Bpw_kto))throw Bpw_przerwane();if(!l.ok){P();var d={action:\"not-registered\",httpStatus:l.status};return y(p,{operation:\"pull\",result:d}),d}var s=await l.json();if(Bpw_inneKonto(t,Bpw_kto))throw Bpw_przerwane();c.registered=!0,c.localEtag=null,M=null,vt(a),St(a),T(a,c);var w=s}var h=K()?M:c.localEtag;CareReplay=h&&h===w.etag?await CareSyncReplay(t,a,w.etag):null;if(h&&h===w.etag&&!CareReplay){var D=await Vt();if(Bpw_inneKonto(t,Bpw_kto))throw Bpw_przerwane();if(D)c.localEtag=null,M=null,vt(a),St(a);else{P();var _={action:\"up-to-date\",etag:w.etag};return Bpw_dren(a,r,i,t,Bpw_kto),y(p,{operation:\"pull\",result:_}),_}}var g={Authorization:\"Bearer \"+r},v=CareReplay?null:K()?M:c.localEtag;v&&(g[\"If-None-Match\"]='\"'+v+'\"');var A=await f(i+\"/v1/slots/\"+a+\"/blob\",{method:\"GET\",headers:g},Bgz_czas({byteLength:w&&typeof w.size==\"number\"?w.size:0}));if(Bpw_inneKonto(t,Bpw_kto))throw Bpw_przerwane();if(A.status===304){P();var F={action:\"up-to-date\",etag:v};return Bpw_dren(a,r,i,t,Bpw_kto),y(p,{operation:\"pull\",result:F}),F}if(A.status===401)throw u(\"VildaSync: b\\u0142\\u0105d uwierzytelnienia przy pobieraniu bloba.\",\"AUTH_FAILED\");if(A.status===404){P();var H={action:\"no-remote-blob\"};return Bpw_dren(a,r,i,t,Bpw_kto),y(p,{operation:\"pull\",result:H}),H}if(!A.ok)throw u(\"VildaSync: b\\u0142\\u0105d pobierania danych (\"+A.status+\").\",\"DOWNLOAD_FAILED\",{httpStatus:A.status});var x=await Bnd_czytaj(A,w&&typeof w.size==\"number\"?w.size:0),W;Bnd_zglos({phase:\"decrypt\"});try{W=await ut(x,n)}catch{throw u(\"VildaSync: b\\u0142\\u0105d odszyfrowania danych. Mo\\u017Cliwa zmiana masterKey lub uszkodzenie danych.\",\"DECRYPT_FAILED\")}W=await Bgz_rozpakuj(W);var U;try{U=JSON.parse(new TextDecoder().decode(W))}catch{throw u(\"VildaSync: uszkodzone dane sync (nieprawid\\u0142owy format JSON).\",\"PARSE_FAILED\")}if(Bpw_inneKonto(t,Bpw_kto))throw Bpw_przerwane();var et=await t.mergeSyncPayload(U,{onProgress:function(E){try{typeof o.document<\"u\"&&o.document.dispatchEvent&&o.document.dispatchEvent(new CustomEvent(\"vilda:vault-merge-progress\",{detail:E,bubbles:!1}))}catch{}}}),V=Lt(A.headers.get(\"ETag\"))||w.etag;CareReplayed=true;c.localEtag=V,c.rawSize=W.byteLength,c.rawEtag=V,c.lastSyncAt=new Date().toISOString(),M=V,ft(a,V,t),T(a,c),P();var J={action:\"merged\",etag:V,mergeResult:et,staleDevice:et&&et.staleDevice||null};return Nv(J.staleDevice),Qcs(et&&et.clockSkew||null),Bpw_dren(a,r,i,t,Bpw_kto),y(p,{operation:\"pull\",result:J}),J}catch(E){/* P-SESJA-ZAPISU (przeglad 4, ADW4-3): blad pobrania po zalogowaniu innego konta albo blokadzie (np. /status 500, siec, limit czasu) — SESSION_CHANGED: nalezy do poprzedniej sesji. */var Bpw_e=Bpw_inneKonto(t,Bpw_kto)?Bpw_przerwane():E;throw y(k,{operation:\"pull\",error:Bpw_e}),Bpw_e}finally{CareSyncReplayDone(CareReplay,CareReplayed)}}",
+          "after": "async function Bpw_pull(){PatientClinicalRequireLegacy(\"sync-pull\");var CareReplay=null,CareReplayed=false;var t=I(),Bpw_kto=Bpw_konto(t);y(L,{operation:\"pull\"});var e;try{e=await t.getSyncMaterial()}catch(E){throw y(k,{operation:\"pull\",error:E}),E}PatientClinicalRequireLegacy(\"sync-pull\");var a=e.slotId,r=e.authToken,n=e.syncEncKey,i=j(),c=m(a);K()&&M==null&&(M=Pt(a,t));try{Brv_stop(a);if(c.registered){var S=await f(i+\"/v1/slots/\"+a+\"/status\",{method:\"GET\",headers:{Authorization:\"Bearer \"+r}});if(Bpw_inneKonto(t,Bpw_kto))throw Bpw_przerwane();PatientClinicalRequireLegacy(\"sync-pull\");if(S.status===401)throw C(a),u(\"VildaSync: b\\u0142\\u0105d uwierzytelnienia przy pull. Slot m\\xF3g\\u0142 zosta\\u0107 usuni\\u0119ty.\",\"AUTH_FAILED\");if(!S.ok)throw u(\"VildaSync: b\\u0142\\u0105d odczytu statusu (\"+S.status+\").\",\"STATUS_FAILED\",{httpStatus:S.status});var w=await S.json();if(Bpw_inneKonto(t,Bpw_kto))throw Bpw_przerwane();PatientClinicalRequireLegacy(\"sync-pull\")}else{var l=await f(i+\"/v1/slots/\"+a+\"/status\",{method:\"GET\",headers:{Authorization:\"Bearer \"+r}});if(Bpw_inneKonto(t,Bpw_kto))throw Bpw_przerwane();PatientClinicalRequireLegacy(\"sync-pull\");if(!l.ok){P();var d={action:\"not-registered\",httpStatus:l.status};return y(p,{operation:\"pull\",result:d}),d}var s=await l.json();if(Bpw_inneKonto(t,Bpw_kto))throw Bpw_przerwane();PatientClinicalRequireLegacy(\"sync-pull\");c.registered=!0,c.localEtag=null,M=null,vt(a),St(a),T(a,c);var w=s}var h=K()?M:c.localEtag;CareReplay=h&&h===w.etag?await CareSyncReplay(t,a,w.etag):null;PatientClinicalRequireLegacy(\"sync-pull\");if(h&&h===w.etag&&!CareReplay){var D=await Vt();if(Bpw_inneKonto(t,Bpw_kto))throw Bpw_przerwane();PatientClinicalRequireLegacy(\"sync-pull\");if(D)c.localEtag=null,M=null,vt(a),St(a);else{P();var _={action:\"up-to-date\",etag:w.etag};return Bpw_dren(a,r,i,t,Bpw_kto),y(p,{operation:\"pull\",result:_}),_}}var g={Authorization:\"Bearer \"+r},v=CareReplay?null:K()?M:c.localEtag;v&&(g[\"If-None-Match\"]='\"'+v+'\"');var A=await f(i+\"/v1/slots/\"+a+\"/blob\",{method:\"GET\",headers:g},Bgz_czas({byteLength:w&&typeof w.size==\"number\"?w.size:0}));if(Bpw_inneKonto(t,Bpw_kto))throw Bpw_przerwane();PatientClinicalRequireLegacy(\"sync-pull\");if(A.status===304){P();var F={action:\"up-to-date\",etag:v};return Bpw_dren(a,r,i,t,Bpw_kto),y(p,{operation:\"pull\",result:F}),F}if(A.status===401)throw u(\"VildaSync: b\\u0142\\u0105d uwierzytelnienia przy pobieraniu bloba.\",\"AUTH_FAILED\");if(A.status===404){P();var H={action:\"no-remote-blob\"};return Bpw_dren(a,r,i,t,Bpw_kto),y(p,{operation:\"pull\",result:H}),H}if(!A.ok)throw u(\"VildaSync: b\\u0142\\u0105d pobierania danych (\"+A.status+\").\",\"DOWNLOAD_FAILED\",{httpStatus:A.status});var x=await Bnd_czytaj(A,w&&typeof w.size==\"number\"?w.size:0),W;PatientClinicalRequireLegacy(\"sync-pull\");Bnd_zglos({phase:\"decrypt\"});try{W=await ut(x,n)}catch{throw u(\"VildaSync: b\\u0142\\u0105d odszyfrowania danych. Mo\\u017Cliwa zmiana masterKey lub uszkodzenie danych.\",\"DECRYPT_FAILED\")}W=await Bgz_rozpakuj(W);var U;try{U=JSON.parse(new TextDecoder().decode(W))}catch{throw u(\"VildaSync: uszkodzone dane sync (nieprawid\\u0142owy format JSON).\",\"PARSE_FAILED\")}if(Bpw_inneKonto(t,Bpw_kto))throw Bpw_przerwane();PatientClinicalRequireLegacy(\"sync-pull\");PatientClinicalRequireLegacy(\"apply-sync-payload\");var et=await t.mergeSyncPayload(U,{onProgress:function(E){try{typeof o.document<\"u\"&&o.document.dispatchEvent&&o.document.dispatchEvent(new CustomEvent(\"vilda:vault-merge-progress\",{detail:E,bubbles:!1}))}catch{}}});PatientClinicalRequireLegacy(\"apply-sync-payload\");var V=Lt(A.headers.get(\"ETag\"))||w.etag;CareReplayed=true;c.localEtag=V,c.rawSize=W.byteLength,c.rawEtag=V,c.lastSyncAt=new Date().toISOString(),M=V,ft(a,V,t),T(a,c),P();var J={action:\"merged\",etag:V,mergeResult:et,staleDevice:et&&et.staleDevice||null};return Nv(J.staleDevice),Qcs(et&&et.clockSkew||null),Bpw_dren(a,r,i,t,Bpw_kto),y(p,{operation:\"pull\",result:J}),J}catch(E){/* P-SESJA-ZAPISU (przeglad 4, ADW4-3): blad pobrania po zalogowaniu innego konta albo blokadzie (np. /status 500, siec, limit czasu) — SESSION_CHANGED: nalezy do poprzedniej sesji. */var Bpw_e=Bpw_inneKonto(t,Bpw_kto)?Bpw_przerwane():E;throw y(k,{operation:\"pull\",error:Bpw_e}),Bpw_e}finally{CareSyncReplayDone(CareReplay,CareReplayed)}}"
+        },
+        {
+          "kind": "existing-function-additive-boundary",
+          "function": "Y",
+          "start": 26954,
+          "end": 27102,
+          "before": "function Y(t){if(t&&t.pierwszePobranie===!0)return Bpw_wylacznie(Bpw_pull);var e=Bpw_lk();return!Bpw_w&&!e?Bpw_pull():Bpw_bariera(e).then(Bpw_pull)}",
+          "after": "function Y(t){var PatientClinicalRejection=PatientClinicalRejected(\"sync-pull\");if(PatientClinicalRejection)return PatientClinicalRejection;if(t&&t.pierwszePobranie===!0)return Bpw_wylacznie(Bpw_pull);var e=Bpw_lk();return!Bpw_w&&!e?Bpw_pull():Bpw_bariera(e).then(Bpw_pull)}"
+        },
+        {
+          "kind": "existing-function-additive-boundary",
+          "function": "Yt",
+          "start": 19053,
+          "end": 20147,
+          "before": "async function Yt(t,e,a,r){Bsp=!1;var n=bt(t),i=await f(a+\"/v1/slots/\"+t+\"/changes?since=\"+n,{method:\"GET\",headers:{Authorization:\"Bearer \"+e}},ct);if(!(!i||!i.ok)){var c=await i.json(),l=c&&Array.isArray(c.deltas)?c.deltas:[],s=l.length?await wt(l,r):!1;/* P-SYNC-KURSOR (plan synchronizacji przyrostowej, etap 0): kursor idzie na najwyzszy numer delty, ktora ta partia naprawde zwrocila, a nie na headSeq. Worker v36 nadaje numer w SlotHub przed zapisem delty do R2 (zapis po odpowiedzi, w waitUntil), a blad listy R2 daje pusta liste z biezacym headSeq. Dotad kursor przeskakiwal wtedy na headSeq i delt, ktorych jeszcze nie bylo w dzienniku, nikt juz nie pobieral. Teraz nastepne pobranie pyta od ostatniej zwroconej. Luka u dolu (dziennik przyciety: 200 delt, 3 dni) nie zatrzymuje kursora; tresc takiej delty przychodzi z pelna wysylka nadawcy, ktora Y() pobiera po zmianie ETagu. MERGE_BUSY jak dotad: kursor stoi. */for(var Bkm=n,Bki=0;Bki<l.length;Bki++){var Bks=l[Bki]&&l[Bki].seq;typeof Bks==\"number\"&&isFinite(Bks)&&Bks>Bkm&&(Bkm=Bks)}Bkm>n&&!Bsp&&Kt(t,Bkm),s&&Et(\"changes-drain\")}}",
+          "after": "async function Yt(t,e,a,r){Bsp=!1;var n=bt(t),i=await f(a+\"/v1/slots/\"+t+\"/changes?since=\"+n,{method:\"GET\",headers:{Authorization:\"Bearer \"+e}},ct);if(!(!i||!i.ok)){var c=await i.json(),l=c&&Array.isArray(c.deltas)?c.deltas:[],s=l.length?await wt(l,r):!1;/* P-SYNC-KURSOR (plan synchronizacji przyrostowej, etap 0): kursor idzie na najwyzszy numer delty, ktora ta partia naprawde zwrocila, a nie na headSeq. Worker v36 nadaje numer w SlotHub przed zapisem delty do R2 (zapis po odpowiedzi, w waitUntil), a blad listy R2 daje pusta liste z biezacym headSeq. Dotad kursor przeskakiwal wtedy na headSeq i delt, ktorych jeszcze nie bylo w dzienniku, nikt juz nie pobieral. Teraz nastepne pobranie pyta od ostatniej zwroconej. Luka u dolu (dziennik przyciety: 200 delt, 3 dni) nie zatrzymuje kursora; tresc takiej delty przychodzi z pelna wysylka nadawcy, ktora Y() pobiera po zmianie ETagu. MERGE_BUSY jak dotad: kursor stoi. */for(var Bkm=n,Bki=0;Bki<l.length;Bki++){var Bks=l[Bki]&&l[Bki].seq;typeof Bks==\"number\"&&isFinite(Bks)&&Bks>Bkm&&(Bkm=Bks)}PatientClinicalRequireLegacy(\"sync-cursor\");Bkm>n&&!Bsp&&Kt(t,Bkm),s&&Et(\"changes-drain\")}}"
+        },
+        {
+          "kind": "existing-function-additive-boundary",
+          "function": "wt",
+          "start": 17363,
+          "end": 18464,
+          "before": "async function wt(t,e){Bsp=!1;/* P-SYNC-KURSOR (przeglad adwersarza; plan: kursor := max zastosowanego): zablokowany sejf nie stosuje delt (applyEncryptedDelta oddaje null albo zwykly blad), a drenaz idzie w tle po pobraniu. Gdy sejf zablokuje sie w trakcie partii, partia konczy sie jak przy MERGE_BUSY i kursor stoi; po odblokowaniu nastepne pobranie stosuje ja od nowa. */var Bul=function(){return typeof e.isUnlocked==\"function\"&&!e.isUnlocked()};for(var a=!1,r=0;r<t.length;r++){if(Bul()){Bsp=!0;break}var n=t[r];if(!(!n||!n.payload))try{var i=await e.applyEncryptedDelta(n.payload);i&&((i.addedPatientCount||0)>0||(i.deletedPatientCount||0)>0||(i.addedPatientNoteCount||0)>0||(i.updatedPatientNoteCount||0)>0||(i.deletedPatientNoteCount||0)>0||(i.mergedPatientCount||0)>0||(i.addedNoteCount||0)>0||(i.updatedNoteCount||0)>0||(i.deletedNoteCount||0)>0)&&(a=!0)}catch(Bsd){if(Bsd&&Bsd.vildaMergeBusy){Bsp=!0;if(typeof Bsd.code==\"string\"&&(Bsd.code.indexOf(\"CARE_LINEAGE_\")===0||Bsd.code.indexOf(\"CARE_FORMAT_\")===0)&&!Bul())y(k,{operation:\"pull\",error:Bsd});break}}}!Bsp&&Bul()&&(Bsp=!0);return a}",
+          "after": "async function wt(t,e){PatientClinicalRequireLegacy(\"apply-sync-delta\");Bsp=!1;/* P-SYNC-KURSOR (przeglad adwersarza; plan: kursor := max zastosowanego): zablokowany sejf nie stosuje delt (applyEncryptedDelta oddaje null albo zwykly blad), a drenaz idzie w tle po pobraniu. Gdy sejf zablokuje sie w trakcie partii, partia konczy sie jak przy MERGE_BUSY i kursor stoi; po odblokowaniu nastepne pobranie stosuje ja od nowa. */var Bul=function(){return typeof e.isUnlocked==\"function\"&&!e.isUnlocked()};for(var a=!1,r=0;r<t.length;r++){if(Bul()){Bsp=!0;break}var n=t[r];if(!(!n||!n.payload))try{PatientClinicalRequireLegacy(\"apply-sync-delta\");var i=await e.applyEncryptedDelta(n.payload);PatientClinicalRequireLegacy(\"apply-sync-delta\");i&&((i.addedPatientCount||0)>0||(i.deletedPatientCount||0)>0||(i.addedPatientNoteCount||0)>0||(i.updatedPatientNoteCount||0)>0||(i.deletedPatientNoteCount||0)>0||(i.mergedPatientCount||0)>0||(i.addedNoteCount||0)>0||(i.updatedNoteCount||0)>0||(i.deletedNoteCount||0)>0)&&(a=!0)}catch(Bsd){if(Bsd&&Bsd.patientClinicalUnavailable){Bsp=!0;throw Bsd}if(Bsd&&Bsd.vildaMergeBusy){Bsp=!0;if(typeof Bsd.code==\"string\"&&(Bsd.code.indexOf(\"CARE_LINEAGE_\")===0||Bsd.code.indexOf(\"CARE_FORMAT_\")===0)&&!Bul())y(k,{operation:\"pull\",error:Bsd});break}}}!Bsp&&Bul()&&(Bsp=!0);return a}"
+        },
+        {
+          "kind": "existing-function-additive-boundary",
+          "function": "Kt",
+          "start": 16606,
+          "end": 16732,
+          "before": "function Kt(t,e){try{o.localStorage&&typeof e==\"number\"&&isFinite(e)&&e>=0&&o.localStorage.setItem(tt+t,String(e))}catch(a){}}",
+          "after": "function Kt(t,e){PatientClinicalRequireLegacy(\"sync-cursor-write\");try{o.localStorage&&typeof e==\"number\"&&isFinite(e)&&e>=0&&o.localStorage.setItem(tt+t,String(e))}catch(a){}}"
+        },
+        {
+          "kind": "existing-function-additive-boundary",
+          "function": "Bht0",
+          "start": 10107,
+          "end": 16223,
+          "before": "async function Bht0(t){var e=I();y(L,{operation:\"push\"});var a=!!(t&&t.keepalive),r;try{r=await e.getSyncMaterial()}catch(O){throw y(k,{operation:\"push\",error:O}),O}var n=r.slotId,i=r.authToken,c=r.authTokenHash,l=r.syncEncKey,d=j(),s=m(n),Bss=!1;try{Brv_stop(n);for(var w=await e.exportSyncPayload(),S=new TextEncoder().encode(JSON.stringify(w)),h=await G(await Bgz_pakuj(S),l),D=R(w),_=S.length,g=1;g<=N;g++){/* P-SYNC-KURSOR: wysylka czyta tozsamosc synchronizacji raz, na starcie, a revokeAllDevices nie czeka na trwajaca wysylke (odstep po 412 wydluzyl jej czas). Przed kazda ponowna proba (po 412 albo 429) wysylka sprawdza, czy tozsamosc jest ta sama; po zmianie konczy sie SYNC_IDENTITY_CHANGED i nie wraca do starego slotu. Nastepna wysylka idzie na nowy slot. */if(g>1){var Bim=await e.getSyncMaterial();if(!Bim||Bim.slotId!==n)throw u(\"VildaSync: wysy\\u0142ka przerwana \\u2014 to\\u017Csamo\\u015B\\u0107 synchronizacji zmieni\\u0142a si\\u0119 w trakcie (wylogowanie wszystkich urz\\u0105dze\\u0144). Nast\\u0119pna wysy\\u0142ka idzie ju\\u017C na nowy slot.\",\"SYNC_IDENTITY_CHANGED\")}if(!s.registered){Brv_stop(n);var v=await f(d+\"/v1/slots/\"+n+\"/register\",{method:\"POST\",headers:{\"Content-Type\":\"application/octet-stream\",\"X-Auth-Token-Hash\":c},body:h},Bgz_czas(h));if(v.status===201){var A=await v.json();/* P-SYNC-ROTACJA-KART: znacznik pojawil sie w trakcie rejestracji - slot jest kasowany jak w revokeAllDevices. */if(Brv_jest(n)){await _t(n,i).catch(function(){});C(n);Brv_stop(n)}s.registered=!0,s.localEtag=A.etag,s.rawSize=_,s.rawEtag=A.etag,s.lastSyncAt=new Date().toISOString(),T(n,s);var F={action:\"registered\",etag:A.etag,bytes:h.byteLength};return y(p,{operation:\"push\",result:F}),F}if(v.status===409){/* P-SYNC-STRAZNIK (decyzja wlasciciela 2026-10-05). Slot juz istnieje, a to urzadzenie nie ma jego stanu (nowe urzadzenie albo „Zresetuj stan synchronizacji”). Dotad wysylka brala ETag z /status, a scalenie bloba szlo w catch{}: blad scalania (MERGE_BUSY, siec, odszyfrowanie) nie przerywal wysylki i PUT z tym ETagiem nadpisywal chmure stanem, w ktorym nic z niej nie scalono. Teraz pelne pobranie (Y: status, blob, scalenie, ETag scalonej tresci) — jego blad przerywa wysylke. */await Y(),Bss=!0;var E=await e.exportSyncPayload(),rt=new TextEncoder().encode(JSON.stringify(E));h=await G(await Bgz_pakuj(rt),l),D=R(E),_=rt.length,s=m(n)}else if(v.status===429){if(g<N){await lt(yt(v));continue}throw u(\"VildaSync: zbyt wiele \\u017C\\u0105da\\u0144 rejestracji. Spr\\xF3buj za chwil\\u0119.\",\"RATE_LIMITED\")}else if(!v.ok){var gt=await v.json().catch(function(){return{}});throw u(\"VildaSync: b\\u0142\\u0105d rejestracji slotu (\"+v.status+\"): \"+(gt.error&&gt.error.message||\"\"),\"REGISTER_FAILED\",{httpStatus:v.status})}}/* P-SYNC-STRAZNIK: ETag z /status bez scalenia to nadpisanie chmury. Strazniki ponizej (STALE_DEVICE_GUARD: pobranie w tej SESJI, nie tego ETagu) tego nie lapaly. Bez ETagu wysylka najpierw pobiera i scala w tej samej operacji; ETag z /status zostaje tylko po udanym pobraniu, ktore go nie dalo (brak bloba). */if(!s.localEtag&&!Bss){await Y(),Bss=!0;var Bse=await e.exportSyncPayload(),Bsr=new TextEncoder().encode(JSON.stringify(Bse));h=await G(await Bgz_pakuj(Bsr),l),D=R(Bse),_=Bsr.length,s=m(n)}if(!s.localEtag){var nt=await f(d+\"/v1/slots/\"+n+\"/status\",{method:\"GET\",headers:{Authorization:\"Bearer \"+i}});if(nt.status===401)throw C(n),u(\"VildaSync: b\\u0142\\u0105d uwierzytelnienia. Dane sync mog\\u0142y zosta\\u0107 usuni\\u0119te.\",\"AUTH_FAILED\");if(nt.ok){var ta=await nt.json();s.localEtag=ta.etag||null,T(n,s)}}if(!Ft()&&s.registered&&s.localEtag)throw u(\"VildaSync: wstrzymano wysy\\u0142k\\u0119 \\u2014 najpierw pobierz \\u015Bwie\\u017Cy stan z chmury (to urz\\u0105dzenie nie wykona\\u0142o jeszcze synchronizacji w tej sesji).\",\"STALE_DEVICE_GUARD\");if(D===0&&s.registered&&s.localEtag){var At=await f(d+\"/v1/slots/\"+n+\"/status\",{method:\"GET\",headers:{Authorization:\"Bearer \"+i}});if(At.ok){var it=await At.json().catch(function(){return{}}),X=it&&typeof it.size==\"number\"?it.size:0;/* P-SYNC-MOST-STOPKA (uwaga Codex P1 do #573): size z /status to rozmiar bloba po kompresji, a _ to surowe bajty JSON. Gdy urzadzenie zna surowy rozmiar tego samego bloba (rawSize/rawEtag z ostatniego scalenia, wysylki albo rejestracji przy tym samym ETagu), straznik porownuje surowe z surowym, jak przed kompresja. */it&&s.rawEtag&&it.etag===s.rawEtag&&typeof s.rawSize==\"number\"&&s.rawSize>X&&(X=s.rawSize);if(X>=Ot&&_<X/4)throw u(\"VildaSync: zablokowano wysy\\u0142k\\u0119 stanu bez pacjent\\xF3w \\u2014 serwer ma \"+X+\" B danych (lokalnie tylko \"+_+\" B). Najpierw wykonaj pe\\u0142ne pobranie (pull).\",\"WIPE_GUARD\",{serverSize:X,localBytes:_})}}var Tt={\"Content-Type\":\"application/octet-stream\",Authorization:\"Bearer \"+i};s.localEtag&&(Tt[\"If-Match\"]='\"'+s.localEtag+'\"');Brv_stop(n);var mt={method:\"PUT\",headers:Tt,body:h};try{a&&h&&h.byteLength<=6e4&&(mt.keepalive=!0)}catch{}var z=await f(d+\"/v1/slots/\"+n+\"/blob\",mt,Bgz_czas(h));if(z.status===200){var ot=await z.json();s.localEtag=ot.etag,s.rawSize=_,s.rawEtag=ot.etag,K()&&ft(n,ot.etag,e),s.lastSyncAt=new Date().toISOString(),T(n,s);var It={action:\"uploaded\",etag:ot.etag,bytes:h.byteLength};return y(p,{operation:\"push\",result:It}),It}if(z.status===412){if(g<N){await lt(Bod(g)),await Y(),Bss=!0;var Dt=await e.exportSyncPayload(),zt=new TextEncoder().encode(JSON.stringify(Dt));h=await G(await Bgz_pakuj(zt),l),D=R(Dt),_=zt.length,s=m(n);continue}throw u(\"VildaSync: konflikt danych po \"+N+\" pr\\xF3bach scalenia. Spr\\xF3buj ponownie za chwil\\u0119.\",\"CONFLICT\")}if(z.status===429){if(g<N){await lt(yt(z));continue}throw u(\"VildaSync: zbyt wiele \\u017C\\u0105da\\u0144 uploadu. Spr\\xF3buj za chwil\\u0119.\",\"RATE_LIMITED\")}if(z.status===401)throw C(n),u(\"VildaSync: b\\u0142\\u0105d uwierzytelnienia przy upload.\",\"AUTH_FAILED\");var kt=await z.json().catch(function(){return{}});throw u(\"VildaSync: upload nieudany (\"+z.status+\"): \"+(kt.error&&kt.error.message||\"\"),\"UPLOAD_FAILED\",{httpStatus:z.status})}throw u(\"VildaSync: przekroczono limit pr\\xF3b push.\",\"MAX_RETRIES_EXCEEDED\")}catch(O){throw y(k,{operation:\"push\",error:O}),O}}",
+          "after": "async function Bht0(t){PatientClinicalRequireLegacy(\"sync-push\");var e=I();y(L,{operation:\"push\"});var a=!!(t&&t.keepalive),r;try{r=await e.getSyncMaterial()}catch(O){throw y(k,{operation:\"push\",error:O}),O}var n=r.slotId,i=r.authToken,c=r.authTokenHash,l=r.syncEncKey,d=j(),s=m(n),Bss=!1;try{Brv_stop(n);for(var w=await e.exportSyncPayload(),S=new TextEncoder().encode(JSON.stringify(w)),h=await G(await Bgz_pakuj(S),l),D=R(w),_=S.length,g=1;g<=N;g++){/* P-SYNC-KURSOR: wysylka czyta tozsamosc synchronizacji raz, na starcie, a revokeAllDevices nie czeka na trwajaca wysylke (odstep po 412 wydluzyl jej czas). Przed kazda ponowna proba (po 412 albo 429) wysylka sprawdza, czy tozsamosc jest ta sama; po zmianie konczy sie SYNC_IDENTITY_CHANGED i nie wraca do starego slotu. Nastepna wysylka idzie na nowy slot. */if(g>1){var Bim=await e.getSyncMaterial();if(!Bim||Bim.slotId!==n)throw u(\"VildaSync: wysy\\u0142ka przerwana \\u2014 to\\u017Csamo\\u015B\\u0107 synchronizacji zmieni\\u0142a si\\u0119 w trakcie (wylogowanie wszystkich urz\\u0105dze\\u0144). Nast\\u0119pna wysy\\u0142ka idzie ju\\u017C na nowy slot.\",\"SYNC_IDENTITY_CHANGED\")}if(!s.registered){Brv_stop(n);var v=await f(d+\"/v1/slots/\"+n+\"/register\",{method:\"POST\",headers:{\"Content-Type\":\"application/octet-stream\",\"X-Auth-Token-Hash\":c},body:h},Bgz_czas(h));if(v.status===201){var A=await v.json();PatientClinicalRequireLegacy(\"sync-push\");/* P-SYNC-ROTACJA-KART: znacznik pojawil sie w trakcie rejestracji - slot jest kasowany jak w revokeAllDevices. */if(Brv_jest(n)){await _t(n,i).catch(function(){});C(n);Brv_stop(n)}s.registered=!0,s.localEtag=A.etag,s.rawSize=_,s.rawEtag=A.etag,s.lastSyncAt=new Date().toISOString(),T(n,s);var F={action:\"registered\",etag:A.etag,bytes:h.byteLength};return y(p,{operation:\"push\",result:F}),F}if(v.status===409){/* P-SYNC-STRAZNIK (decyzja wlasciciela 2026-10-05). Slot juz istnieje, a to urzadzenie nie ma jego stanu (nowe urzadzenie albo „Zresetuj stan synchronizacji”). Dotad wysylka brala ETag z /status, a scalenie bloba szlo w catch{}: blad scalania (MERGE_BUSY, siec, odszyfrowanie) nie przerywal wysylki i PUT z tym ETagiem nadpisywal chmure stanem, w ktorym nic z niej nie scalono. Teraz pelne pobranie (Y: status, blob, scalenie, ETag scalonej tresci) — jego blad przerywa wysylke. */await Y(),Bss=!0;var E=await e.exportSyncPayload(),rt=new TextEncoder().encode(JSON.stringify(E));h=await G(await Bgz_pakuj(rt),l),D=R(E),_=rt.length,s=m(n)}else if(v.status===429){if(g<N){await lt(yt(v));continue}throw u(\"VildaSync: zbyt wiele \\u017C\\u0105da\\u0144 rejestracji. Spr\\xF3buj za chwil\\u0119.\",\"RATE_LIMITED\")}else if(!v.ok){var gt=await v.json().catch(function(){return{}});throw u(\"VildaSync: b\\u0142\\u0105d rejestracji slotu (\"+v.status+\"): \"+(gt.error&&gt.error.message||\"\"),\"REGISTER_FAILED\",{httpStatus:v.status})}}/* P-SYNC-STRAZNIK: ETag z /status bez scalenia to nadpisanie chmury. Strazniki ponizej (STALE_DEVICE_GUARD: pobranie w tej SESJI, nie tego ETagu) tego nie lapaly. Bez ETagu wysylka najpierw pobiera i scala w tej samej operacji; ETag z /status zostaje tylko po udanym pobraniu, ktore go nie dalo (brak bloba). */if(!s.localEtag&&!Bss){await Y(),Bss=!0;var Bse=await e.exportSyncPayload(),Bsr=new TextEncoder().encode(JSON.stringify(Bse));h=await G(await Bgz_pakuj(Bsr),l),D=R(Bse),_=Bsr.length,s=m(n)}if(!s.localEtag){var nt=await f(d+\"/v1/slots/\"+n+\"/status\",{method:\"GET\",headers:{Authorization:\"Bearer \"+i}});if(nt.status===401)throw C(n),u(\"VildaSync: b\\u0142\\u0105d uwierzytelnienia. Dane sync mog\\u0142y zosta\\u0107 usuni\\u0119te.\",\"AUTH_FAILED\");if(nt.ok){var ta=await nt.json();PatientClinicalRequireLegacy(\"sync-push\");s.localEtag=ta.etag||null,T(n,s)}}if(!Ft()&&s.registered&&s.localEtag)throw u(\"VildaSync: wstrzymano wysy\\u0142k\\u0119 \\u2014 najpierw pobierz \\u015Bwie\\u017Cy stan z chmury (to urz\\u0105dzenie nie wykona\\u0142o jeszcze synchronizacji w tej sesji).\",\"STALE_DEVICE_GUARD\");if(D===0&&s.registered&&s.localEtag){var At=await f(d+\"/v1/slots/\"+n+\"/status\",{method:\"GET\",headers:{Authorization:\"Bearer \"+i}});if(At.ok){var it=await At.json().catch(function(){return{}}),X=it&&typeof it.size==\"number\"?it.size:0;/* P-SYNC-MOST-STOPKA (uwaga Codex P1 do #573): size z /status to rozmiar bloba po kompresji, a _ to surowe bajty JSON. Gdy urzadzenie zna surowy rozmiar tego samego bloba (rawSize/rawEtag z ostatniego scalenia, wysylki albo rejestracji przy tym samym ETagu), straznik porownuje surowe z surowym, jak przed kompresja. */it&&s.rawEtag&&it.etag===s.rawEtag&&typeof s.rawSize==\"number\"&&s.rawSize>X&&(X=s.rawSize);if(X>=Ot&&_<X/4)throw u(\"VildaSync: zablokowano wysy\\u0142k\\u0119 stanu bez pacjent\\xF3w \\u2014 serwer ma \"+X+\" B danych (lokalnie tylko \"+_+\" B). Najpierw wykonaj pe\\u0142ne pobranie (pull).\",\"WIPE_GUARD\",{serverSize:X,localBytes:_})}}var Tt={\"Content-Type\":\"application/octet-stream\",Authorization:\"Bearer \"+i};s.localEtag&&(Tt[\"If-Match\"]='\"'+s.localEtag+'\"');Brv_stop(n);var mt={method:\"PUT\",headers:Tt,body:h};try{a&&h&&h.byteLength<=6e4&&(mt.keepalive=!0)}catch{}var z=await f(d+\"/v1/slots/\"+n+\"/blob\",mt,Bgz_czas(h));if(z.status===200){var ot=await z.json();PatientClinicalRequireLegacy(\"sync-push\");s.localEtag=ot.etag,s.rawSize=_,s.rawEtag=ot.etag,K()&&ft(n,ot.etag,e),s.lastSyncAt=new Date().toISOString(),T(n,s);var It={action:\"uploaded\",etag:ot.etag,bytes:h.byteLength};return y(p,{operation:\"push\",result:It}),It}if(z.status===412){if(g<N){await lt(Bod(g)),await Y(),Bss=!0;var Dt=await e.exportSyncPayload(),zt=new TextEncoder().encode(JSON.stringify(Dt));h=await G(await Bgz_pakuj(zt),l),D=R(Dt),_=zt.length,s=m(n);continue}throw u(\"VildaSync: konflikt danych po \"+N+\" pr\\xF3bach scalenia. Spr\\xF3buj ponownie za chwil\\u0119.\",\"CONFLICT\")}if(z.status===429){if(g<N){await lt(yt(z));continue}throw u(\"VildaSync: zbyt wiele \\u017C\\u0105da\\u0144 uploadu. Spr\\xF3buj za chwil\\u0119.\",\"RATE_LIMITED\")}if(z.status===401)throw C(n),u(\"VildaSync: b\\u0142\\u0105d uwierzytelnienia przy upload.\",\"AUTH_FAILED\");var kt=await z.json().catch(function(){return{}});throw u(\"VildaSync: upload nieudany (\"+z.status+\"): \"+(kt.error&&kt.error.message||\"\"),\"UPLOAD_FAILED\",{httpStatus:z.status})}throw u(\"VildaSync: przekroczono limit pr\\xF3b push.\",\"MAX_RETRIES_EXCEEDED\")}catch(O){throw y(k,{operation:\"push\",error:O}),O}}"
+        },
+        {
+          "kind": "existing-function-additive-boundary",
+          "function": "ht",
+          "start": 9269,
+          "end": 10107,
+          "before": "function ht(t){/* P-SYNC-KURSOR (przeglad adwersarza): nowa wysylka rusza tylko, gdy nie trwa zadna i nie czeka kolejka. Wywolanie w chwili miedzy koncem wysylki (Bpf=null) a startem kolejki dolacza do kolejki, zamiast wysylac osobno bez keepalive. */if(!Bpf&&!Bpq){Bpf=Bht0(t);var x=function(){Bpf=null};Bpf.then(x,x);return Bpf}/* P-SYNC-KURSOR (uwaga Codex P2 do #574): wywolanie z keepalive (chowanie karty, M() integracji) moglo trafic do kolejki zalozonej wczesniej przez zwykle wywolanie. Kolejka brala opcje pierwszego wywolania, wiec flaga ginela. Teraz keepalive sumuje sie dla wszystkich wywolan scalonych w kolejce (PUT dostaje keepalive tylko do 60 000 B, jak dotad). */t&&t.keepalive&&(Bpk=!0);if(!Bpq){Bpq=Bpf.then(null,function(){}).then(function(){var Bkk=Bpk;Bpq=null,Bpk=!1;return ht(Bkk?{keepalive:!0}:t)})}return Bpq}",
+          "after": "function ht(t){var PatientClinicalRejection=PatientClinicalRejected(\"sync-push\");if(PatientClinicalRejection)return PatientClinicalRejection;/* P-SYNC-KURSOR (przeglad adwersarza): nowa wysylka rusza tylko, gdy nie trwa zadna i nie czeka kolejka. Wywolanie w chwili miedzy koncem wysylki (Bpf=null) a startem kolejki dolacza do kolejki, zamiast wysylac osobno bez keepalive. */if(!Bpf&&!Bpq){Bpf=Bht0(t);var x=function(){Bpf=null};Bpf.then(x,x);return Bpf}/* P-SYNC-KURSOR (uwaga Codex P2 do #574): wywolanie z keepalive (chowanie karty, M() integracji) moglo trafic do kolejki zalozonej wczesniej przez zwykle wywolanie. Kolejka brala opcje pierwszego wywolania, wiec flaga ginela. Teraz keepalive sumuje sie dla wszystkich wywolan scalonych w kolejce (PUT dostaje keepalive tylko do 60 000 B, jak dotad). */t&&t.keepalive&&(Bpk=!0);if(!Bpq){Bpq=Bpf.then(null,function(){}).then(function(){var Bkk=Bpk;Bpq=null,Bpk=!1;return ht(Bkk?{keepalive:!0}:t)})}return Bpq}"
+        },
+        {
+          "kind": "existing-function-additive-boundary",
+          "function": "ft",
+          "start": 7992,
+          "end": 8147,
+          "before": "function ft(t,e,a){try{if(!dt(a)||typeof o.localStorage>\"u\"||!o.localStorage)return;e?o.localStorage.setItem(b+t,e):o.localStorage.removeItem(b+t)}catch{}}",
+          "after": "function ft(t,e,a){PatientClinicalRequireLegacy(\"cloud-etag-write\");try{if(!dt(a)||typeof o.localStorage>\"u\"||!o.localStorage)return;e?o.localStorage.setItem(b+t,e):o.localStorage.removeItem(b+t)}catch{}}"
+        },
+        {
+          "kind": "existing-function-additive-boundary",
+          "function": "f",
+          "start": 5896,
+          "end": 6445,
+          "before": "async function f(t,e,a){var r=new AbortController,n=typeof a==\"number\"&&a>0?a:Mt,i=setTimeout(function(){r.abort()},n);try{return await fetch(t,Object.assign({cache:\"no-store\"},e,{signal:r.signal}))}catch(l){if(l.name===\"AbortError\"){var Bgb=e&&e.body&&typeof e.body.byteLength==\"number\"?e.body.byteLength:0,c=new Error(\"VildaSync: timeout \\u017C\\u0105dania do serwera (\"+n+\" ms\"+(Bgb?\", \"+(Bgb>=1048576?(Bgb/1048576).toFixed(1)+\" MB\":Math.ceil(Bgb/1024)+\" kB\"):\"\")+\").\");throw c.code=\"TIMEOUT\",Bgb&&(c.bytes=Bgb),c}throw l}finally{clearTimeout(i)}}",
+          "after": "async function f(t,e,a){PatientClinicalRequireLegacy(\"sync-http\");var r=new AbortController,n=typeof a==\"number\"&&a>0?a:Mt,i=setTimeout(function(){r.abort()},n);try{var PatientClinicalResponse=await fetch(t,Object.assign({cache:\"no-store\"},e,{signal:r.signal}));PatientClinicalRequireLegacy(\"sync-http\");return PatientClinicalResponse}catch(l){if(l.name===\"AbortError\"){var Bgb=e&&e.body&&typeof e.body.byteLength==\"number\"?e.body.byteLength:0,c=new Error(\"VildaSync: timeout \\u017C\\u0105dania do serwera (\"+n+\" ms\"+(Bgb?\", \"+(Bgb>=1048576?(Bgb/1048576).toFixed(1)+\" MB\":Math.ceil(Bgb/1024)+\" kB\"):\"\")+\").\");throw c.code=\"TIMEOUT\",Bgb&&(c.bytes=Bgb),c}throw l}finally{clearTimeout(i)}}"
+        },
+        {
+          "kind": "existing-function-additive-boundary",
+          "function": "C",
+          "start": 5771,
+          "end": 5829,
+          "before": "function C(t){try{var e=q();e&&e.removeItem($(t))}catch{}}",
+          "after": "function C(t){PatientClinicalRequireLegacy(\"sync-state-clear\");try{var e=q();e&&e.removeItem($(t))}catch{}}"
+        },
+        {
+          "kind": "existing-function-additive-boundary",
+          "function": "Brv_oznacz",
+          "start": 5304,
+          "end": 5410,
+          "before": "function Brv_oznacz(t){try{o.localStorage&&o.localStorage.setItem(Brv+t,new Date().toISOString())}catch{}}",
+          "after": "function Brv_oznacz(t){PatientClinicalRequireLegacy(\"sync-identity-marker\");try{o.localStorage&&o.localStorage.setItem(Brv+t,new Date().toISOString())}catch{}}"
+        },
+        {
+          "kind": "existing-function-additive-boundary",
+          "function": "T",
+          "start": 4688,
+          "end": 4763,
+          "before": "function T(t,e){try{var a=q();a&&a.setItem($(t),JSON.stringify(e))}catch{}}",
+          "after": "function T(t,e){PatientClinicalRequireLegacy(\"sync-state-write\");try{var a=q();a&&a.setItem($(t),JSON.stringify(e))}catch{}}"
+        },
+        {
+          "kind": "existing-function-additive-boundary",
+          "function": "m",
+          "start": 4422,
+          "end": 4688,
+          "before": "function m(t){try{var e=q(),a=e&&e.getItem($(t));if(!a)return{registered:!1,localEtag:null,lastSyncAt:null};var r=JSON.parse(a);return r&&typeof r==\"object\"?r:{registered:!1,localEtag:null,lastSyncAt:null}}catch{return{registered:!1,localEtag:null,lastSyncAt:null}}}",
+          "after": "function m(t){PatientClinicalRequireLegacy(\"sync-state-read\");try{var e=q(),a=e&&e.getItem($(t));if(!a)return{registered:!1,localEtag:null,lastSyncAt:null};var r=JSON.parse(a);return r&&typeof r==\"object\"?r:{registered:!1,localEtag:null,lastSyncAt:null}}catch{return{registered:!1,localEtag:null,lastSyncAt:null}}}"
+        },
+        {
+          "kind": "readable-patient-clinical-helper-insertion",
+          "start": 26,
+          "end": 26,
+          "before": "",
+          "after": "\n/* The vault owns clinical format selection. A public receipt or the independent\n * template-library channel never authorizes a clinical transport. The absent\n * method is only compatibility with old bundles/test doubles; a present method\n * returning anything other than the explicit legacy descriptor fails closed.\n * The ordinary inactive path is synchronous and does no identity/storage I/O. */\nfunction PatientClinicalRouteFailure(operation) {\n  var vault = o && o.VildaVault;\n  if (!vault) return null;\n  var code = \"PATIENT_AUTHORITY_UNAVAILABLE\";\n  try {\n    var select = vault.selectPatientClinicalRoute;\n    if (select === undefined) return null;\n    var selection = typeof select === \"function\" ? select.call(vault, operation) : null;\n    if (selection && selection.mode === \"legacy\" && selection.writeAvailable === false) return null;\n    if (selection && typeof selection.code === \"string\" && selection.code) code = selection.code;\n  } catch (cause) {\n    if (cause && cause.code === \"SESSION_CHANGED\") code = \"SESSION_CHANGED\";\n  }\n  var error = new Error(\"Ta operacja wymaga zgodnego formatu danych pacjentów.\");\n  error.code = code;\n  error.patientClinicalUnavailable = true;\n  error.operation = operation;\n  return error;\n}\nfunction PatientClinicalRequireLegacy(operation) {\n  var error = PatientClinicalRouteFailure(operation);\n  if (error) throw error;\n}\nfunction PatientClinicalRejected(operation) {\n  var error = PatientClinicalRouteFailure(operation);\n  return error ? Promise.reject(error) : null;\n}\nfunction PatientClinicalLoadState(slotId) {\n  PatientClinicalRequireLegacy(\"sync-state-read\");\n  return m(slotId);\n}\nfunction PatientClinicalSaveState(slotId, state) {\n  PatientClinicalRequireLegacy(\"sync-state-write\");\n  return T(slotId, state);\n}\nfunction PatientClinicalClearState(slotId) {\n  PatientClinicalRequireLegacy(\"sync-state-clear\");\n  return C(slotId);\n}\n"
+        }
+      ]
+    },
+    {
+      "path": "vilda_sync_integration.js",
+      "beforeSha256": "8af74defb812c7f55c565522ddd8f6b9f316b7030775a74453f3c8da5137a17a",
+      "afterSha256": "df769a9e91c40d287167d8b6798ac9753158f11b3899d2232c576902b6c740d6",
+      "changedFunctions": [
+        "I",
+        "V",
+        "M",
+        "K",
+        "Qd0",
+        "J",
+        "U",
+        "S",
+        "ot",
+        "G",
+        "Bsb_wyslij",
+        "Bt",
+        "Ut",
+        "At",
+        "gt",
+        "Qv0",
+        "Qv1",
+        "Ft"
+      ],
+      "functionPins": [
+        {
+          "function": "I",
+          "beforeSha256": "d8a32beab0da37f97b43fdc516cc8bc2f77933877678110e55b7300121db8333",
+          "afterSha256": "f4e920f33db7bee4096de58344f1fc158f7b419862fca0a4d6bb69e47b70bf79",
+          "beforeCharacters": 553,
+          "afterCharacters": 659
+        },
+        {
+          "function": "V",
+          "beforeSha256": "cb5774b13ee81add788eb4f7a5d03dcc7feaea2536ea656a852f16443a2101df",
+          "afterSha256": "db351ebb6ef531104fd58f252ca4f2883f9907e0662f09df8362d2443c25bcf8",
+          "beforeCharacters": 289,
+          "afterCharacters": 342
+        },
+        {
+          "function": "M",
+          "beforeSha256": "d48acc053b84e2448dae23148d0cde91c40e51936ce6b065772cd2b452a3d728",
+          "afterSha256": "348007a612db66b914198287952710707483385e197072941669d331d8ff08b4",
+          "beforeCharacters": 199,
+          "afterCharacters": 257
+        },
+        {
+          "function": "K",
+          "beforeSha256": "c160b151c47233979729c4af5a6a4f09c3b0683c386e900cce725db1c83112a1",
+          "afterSha256": "ff5522abb48357b6161cc9ab2711a25a7310b13662fed0a93104418ba818a351",
+          "beforeCharacters": 604,
+          "afterCharacters": 875
+        },
+        {
+          "function": "Qd0",
+          "beforeSha256": "f98ded60df6a42343dffc4f2732f0cab90ffadcca231e404b4b306d8bc2d7313",
+          "afterSha256": "06f3ccf6ea3d6c0cdb397f8ee4f2fa2365cd5fd2f94c986e49453b726c8da942",
+          "beforeCharacters": 431,
+          "afterCharacters": 815
+        },
+        {
+          "function": "J",
+          "beforeSha256": "64909362ef359c0c23d7271c6271824d096e33bbb63de758f092424517c1b580",
+          "afterSha256": "9288437874aef898d5f202d01172ad28c929da77e70eb940fc15a0b6f0d48741",
+          "beforeCharacters": 981,
+          "afterCharacters": 1373
+        },
+        {
+          "function": "U",
+          "beforeSha256": "1ddd8f37aee058b53858144f74acbb22738e38704c375ad7bcf31b8d55482b2b",
+          "afterSha256": "1b26e672c87b17426b267f59b172e6d91b0463021e73bed50e502ab1b3d5b79e",
+          "beforeCharacters": 216,
+          "afterCharacters": 274
+        },
+        {
+          "function": "S",
+          "beforeSha256": "b2e6e9a53978cd44dabca84a01a766a2664d2530b78da7f8ac52e3dc127dc8ad",
+          "afterSha256": "7e3b0fe0d5188fda1cdae93a9a7cca3d41e54c2a7c440415c1a2cd3c1f85a9bb",
+          "beforeCharacters": 298,
+          "afterCharacters": 356
+        },
+        {
+          "function": "ot",
+          "beforeSha256": "37e79972bd612429ade565b07e91a1f110e8b0c6fb5f93682fad78557df5d288",
+          "afterSha256": "7567ea941c43e75e2b4b2238b548b357a4f5e2bc3d0ce7951b5a3a7f0a9a8779",
+          "beforeCharacters": 194,
+          "afterCharacters": 252
+        },
+        {
+          "function": "G",
+          "beforeSha256": "eb98deddcb3538fa5739091fa2e5112f6100ae4e4570ec97c2c11c6cc764b786",
+          "afterSha256": "3434ddb8d0cb011736a9a1909669a1f92de77d9ae3c11fb7fce09ac4bba723d2",
+          "beforeCharacters": 2515,
+          "afterCharacters": 2731
+        },
+        {
+          "function": "Bsb_wyslij",
+          "beforeSha256": "427b35b40bb9c9cb92f6673c19a785907c211c747e8fa036bc7c1ef361a98be8",
+          "afterSha256": "461b7aef154a13510d7f4e9df1abb15fbc84e1bb519809feffba102f09d201de",
+          "beforeCharacters": 251,
+          "afterCharacters": 367
+        },
+        {
+          "function": "Bt",
+          "beforeSha256": "b97d24c147993a277fe2529da69d0360a8a88aad242189c28b0fb90aac0a7edd",
+          "afterSha256": "c8e1fa4b0293d0d8f562fe930dcf6633f03cc0a0f8994f7e0cb04bb547db7e0b",
+          "beforeCharacters": 649,
+          "afterCharacters": 817
+        },
+        {
+          "function": "Ut",
+          "beforeSha256": "2c2154070e473dcc01545084b0d2575dc58d440d0331921f45230e7d6ac0f5f5",
+          "afterSha256": "3f0156b0fb854b27030ab759cbcf060e35dfd91882e41dc3ba5d016aca764aab",
+          "beforeCharacters": 694,
+          "afterCharacters": 910
+        },
+        {
+          "function": "At",
+          "beforeSha256": "14502c29d517224d13b1761d17fa727156c4f6dd0a7b22cac2fef126a5caf6ee",
+          "afterSha256": "e743970f9688a956f3f3e645b137129a958e7120c5df524050c2ace36ad0e689",
+          "beforeCharacters": 650,
+          "afterCharacters": 818
+        },
+        {
+          "function": "gt",
+          "beforeSha256": "88cdbbb4c16a5d7b9bf30577277e3ddbb926bf69a6a33ee4a7a6d06f93fc0180",
+          "afterSha256": "aec04b50dd86e883b4e71edeba558bde1ebd853f8d9e3fe393aa6cb9e7673634",
+          "beforeCharacters": 650,
+          "afterCharacters": 818
+        },
+        {
+          "function": "Qv0",
+          "beforeSha256": "afa2d41b1f49fb160f24b31b91012b3c833bf2f5ce3302c9909e2100f7bb4add",
+          "afterSha256": "65c13c5fa3961c82e07f48d3fb3d45cff8c4706b8664975feedf914cb6c49843",
+          "beforeCharacters": 698,
+          "afterCharacters": 914
+        },
+        {
+          "function": "Qv1",
+          "beforeSha256": "9608ca71cf5df4a326aa073ada93b6e210e5b4a4c5224d368033125673d56e05",
+          "afterSha256": "ba5f6dfa3cb51eb501d841d9320bc4f115d7583265188c47841e0ebbeda9731f",
+          "beforeCharacters": 731,
+          "afterCharacters": 947
+        },
+        {
+          "function": "Ft",
+          "beforeSha256": "36f96abfd27941904db00b34a0e79bbdbc9e6167f9288270dec95d33f1478cdf",
+          "afterSha256": "875fe5775be427be7b0cc918a0c76e71b430a66f1d51d2dcf32039281a087e17",
+          "beforeCharacters": 438,
+          "afterCharacters": 558
+        }
+      ],
+      "patches": [
+        {
+          "kind": "existing-function-additive-boundary",
+          "function": "Ft",
+          "start": 26321,
+          "end": 26759,
+          "before": "function Ft(t){try{var r=s();if(!r||typeof r.applyEncryptedDelta!=\"function\"||!t)return;Promise.resolve(r.applyEncryptedDelta(t)).then(function(e){if(e&&((e.updatedPatientNoteCount||0)>0||(e.addedPatientNoteCount||0)>0||(e.deletedPatientNoteCount||0)>0||(e.deletedPatientCount||0)>0||(e.addedPatientCount||0)>0||(e.addedNoteCount||0)>0||(e.updatedNoteCount||0)>0||(e.deletedNoteCount||0)>0))try{nt()}catch{}}).catch(function(){})}catch{}}",
+          "after": "function Ft(t){try{if(!PatientClinicalLegacyAllowed(\"apply-sync-delta\"))return;var r=s();if(!r||typeof r.applyEncryptedDelta!=\"function\"||!t)return;Promise.resolve(r.applyEncryptedDelta(t)).then(function(e){if(!PatientClinicalLegacyAllowed(\"apply-sync-delta\"))return;if(e&&((e.updatedPatientNoteCount||0)>0||(e.addedPatientNoteCount||0)>0||(e.deletedPatientNoteCount||0)>0||(e.deletedPatientCount||0)>0||(e.addedPatientCount||0)>0||(e.addedNoteCount||0)>0||(e.updatedNoteCount||0)>0||(e.deletedNoteCount||0)>0))try{nt()}catch{}}).catch(function(){})}catch{}}"
+        },
+        {
+          "kind": "existing-function-additive-boundary",
+          "function": "Qv1",
+          "start": 25590,
+          "end": 26321,
+          "before": "function Qv1(t){try{if(!f()||c||y()>0||!t||t.action!==\"delete\")return;var r=t.id;if(!r||typeof n.navigator>\"u\"||typeof n.navigator.sendBeacon!=\"function\")return;var e=s();if(!e||typeof e.buildLibraryNoteTombstoneDelta!=\"function\"||typeof e.getSyncMaterial!=\"function\")return;Promise.resolve(e.getSyncMaterial()).then(function(i){if(!(!i||!i.slotId||!i.authToken))return Promise.resolve(e.buildLibraryNoteTombstoneDelta(r,t.deletedAtISO)).then(function(o){if(!(!o||!o.iv||!o.data)&&!(o.data.length>6e4)){var u=A()+\"/v1/slots/\"+i.slotId+\"/delta\",a=JSON.stringify({token:i.authToken,payload:o}),l=typeof n.Blob==\"function\"?new n.Blob([a],{type:\"text/plain\"}):a;try{n.navigator.sendBeacon(u,l)}catch{}}})}).catch(function(){})}catch{}}",
+          "after": "function Qv1(t){try{if(!PatientClinicalLegacyAllowed(\"direct-delta\"))return;if(!f()||c||y()>0||!t||t.action!==\"delete\")return;var r=t.id;if(!r||typeof n.navigator>\"u\"||typeof n.navigator.sendBeacon!=\"function\")return;var e=s();if(!e||typeof e.buildLibraryNoteTombstoneDelta!=\"function\"||typeof e.getSyncMaterial!=\"function\")return;Promise.resolve(e.getSyncMaterial()).then(function(i){if(!PatientClinicalLegacyAllowed(\"direct-delta\"))return;if(!(!i||!i.slotId||!i.authToken))return Promise.resolve(e.buildLibraryNoteTombstoneDelta(r,t.deletedAtISO)).then(function(o){if(!PatientClinicalLegacyAllowed(\"direct-delta\"))return;if(!(!o||!o.iv||!o.data)&&!(o.data.length>6e4)){var u=A()+\"/v1/slots/\"+i.slotId+\"/delta\",a=JSON.stringify({token:i.authToken,payload:o}),l=typeof n.Blob==\"function\"?new n.Blob([a],{type:\"text/plain\"}):a;try{if(PatientClinicalLegacyAllowed(\"direct-delta\"))n.navigator.sendBeacon(u,l)}catch{}}})}).catch(function(){})}catch{}}"
+        },
+        {
+          "kind": "existing-function-additive-boundary",
+          "function": "Qv0",
+          "start": 24892,
+          "end": 25590,
+          "before": "function Qv0(t){try{if(!f()||c||y()>0||!t||t.action===\"delete\")return;var r=t.id;if(!r||typeof n.navigator>\"u\"||typeof n.navigator.sendBeacon!=\"function\")return;var e=s();if(!e||typeof e.buildLibraryNoteDelta!=\"function\"||typeof e.getSyncMaterial!=\"function\")return;Promise.resolve(e.getSyncMaterial()).then(function(i){if(!(!i||!i.slotId||!i.authToken))return Promise.resolve(e.buildLibraryNoteDelta(r)).then(function(o){if(!(!o||!o.iv||!o.data)&&!(o.data.length>6e4)){var u=A()+\"/v1/slots/\"+i.slotId+\"/delta\",a=JSON.stringify({token:i.authToken,payload:o}),l=typeof n.Blob==\"function\"?new n.Blob([a],{type:\"text/plain\"}):a;try{n.navigator.sendBeacon(u,l)}catch{}}})}).catch(function(){})}catch{}}",
+          "after": "function Qv0(t){try{if(!PatientClinicalLegacyAllowed(\"direct-delta\"))return;if(!f()||c||y()>0||!t||t.action===\"delete\")return;var r=t.id;if(!r||typeof n.navigator>\"u\"||typeof n.navigator.sendBeacon!=\"function\")return;var e=s();if(!e||typeof e.buildLibraryNoteDelta!=\"function\"||typeof e.getSyncMaterial!=\"function\")return;Promise.resolve(e.getSyncMaterial()).then(function(i){if(!PatientClinicalLegacyAllowed(\"direct-delta\"))return;if(!(!i||!i.slotId||!i.authToken))return Promise.resolve(e.buildLibraryNoteDelta(r)).then(function(o){if(!PatientClinicalLegacyAllowed(\"direct-delta\"))return;if(!(!o||!o.iv||!o.data)&&!(o.data.length>6e4)){var u=A()+\"/v1/slots/\"+i.slotId+\"/delta\",a=JSON.stringify({token:i.authToken,payload:o}),l=typeof n.Blob==\"function\"?new n.Blob([a],{type:\"text/plain\"}):a;try{if(PatientClinicalLegacyAllowed(\"direct-delta\"))n.navigator.sendBeacon(u,l)}catch{}}})}).catch(function(){})}catch{}}"
+        },
+        {
+          "kind": "existing-function-additive-boundary",
+          "function": "gt",
+          "start": 24242,
+          "end": 24892,
+          "before": "function gt(t){try{if(!f()||c||y()>0)return;var r=t&&t.patientId;if(!r||typeof n.navigator>\"u\"||typeof n.navigator.sendBeacon!=\"function\")return;var e=s();if(!e||typeof e.buildPatientDelta!=\"function\"||typeof e.getSyncMaterial!=\"function\")return;Promise.resolve(e.getSyncMaterial()).then(function(i){if(!(!i||!i.slotId||!i.authToken))return Promise.resolve(e.buildPatientDelta(r)).then(function(o){if(!(!o||!o.iv||!o.data)&&!(o.data.length>6e4)){var u=A()+\"/v1/slots/\"+i.slotId+\"/delta\",a=JSON.stringify({token:i.authToken,payload:o}),l=typeof n.Blob==\"function\"?new n.Blob([a],{type:\"text/plain\"}):a;Bsb_wyslij(u,l)}})}).catch(function(){})}catch{}}",
+          "after": "function gt(t){try{if(!PatientClinicalLegacyAllowed(\"direct-delta\"))return;if(!f()||c||y()>0)return;var r=t&&t.patientId;if(!r||typeof n.navigator>\"u\"||typeof n.navigator.sendBeacon!=\"function\")return;var e=s();if(!e||typeof e.buildPatientDelta!=\"function\"||typeof e.getSyncMaterial!=\"function\")return;Promise.resolve(e.getSyncMaterial()).then(function(i){if(!PatientClinicalLegacyAllowed(\"direct-delta\"))return;if(!(!i||!i.slotId||!i.authToken))return Promise.resolve(e.buildPatientDelta(r)).then(function(o){if(!PatientClinicalLegacyAllowed(\"direct-delta\"))return;if(!(!o||!o.iv||!o.data)&&!(o.data.length>6e4)){var u=A()+\"/v1/slots/\"+i.slotId+\"/delta\",a=JSON.stringify({token:i.authToken,payload:o}),l=typeof n.Blob==\"function\"?new n.Blob([a],{type:\"text/plain\"}):a;Bsb_wyslij(u,l)}})}).catch(function(){})}catch{}}"
+        },
+        {
+          "kind": "existing-function-additive-boundary",
+          "function": "At",
+          "start": 23592,
+          "end": 24242,
+          "before": "function At(t){try{if(!f()||c||y()>0)return;var r=t&&t.patientId;if(!r||typeof n.navigator>\"u\"||typeof n.navigator.sendBeacon!=\"function\")return;var e=s();if(!e||typeof e.buildTombstoneDelta!=\"function\"||typeof e.getSyncMaterial!=\"function\")return;Promise.resolve(e.getSyncMaterial()).then(function(i){if(!(!i||!i.slotId||!i.authToken))return Promise.resolve(e.buildTombstoneDelta(r,t&&t.deletedAtISO)).then(function(o){if(!(!o||!o.iv||!o.data)){var u=A()+\"/v1/slots/\"+i.slotId+\"/delta\",a=JSON.stringify({token:i.authToken,payload:o}),l=typeof n.Blob==\"function\"?new n.Blob([a],{type:\"text/plain\"}):a;Bsb_wyslij(u,l)}})}).catch(function(){})}catch{}}",
+          "after": "function At(t){try{if(!PatientClinicalLegacyAllowed(\"direct-delta\"))return;if(!f()||c||y()>0)return;var r=t&&t.patientId;if(!r||typeof n.navigator>\"u\"||typeof n.navigator.sendBeacon!=\"function\")return;var e=s();if(!e||typeof e.buildTombstoneDelta!=\"function\"||typeof e.getSyncMaterial!=\"function\")return;Promise.resolve(e.getSyncMaterial()).then(function(i){if(!PatientClinicalLegacyAllowed(\"direct-delta\"))return;if(!(!i||!i.slotId||!i.authToken))return Promise.resolve(e.buildTombstoneDelta(r,t&&t.deletedAtISO)).then(function(o){if(!PatientClinicalLegacyAllowed(\"direct-delta\"))return;if(!(!o||!o.iv||!o.data)){var u=A()+\"/v1/slots/\"+i.slotId+\"/delta\",a=JSON.stringify({token:i.authToken,payload:o}),l=typeof n.Blob==\"function\"?new n.Blob([a],{type:\"text/plain\"}):a;Bsb_wyslij(u,l)}})}).catch(function(){})}catch{}}"
+        },
+        {
+          "kind": "existing-function-additive-boundary",
+          "function": "Ut",
+          "start": 22898,
+          "end": 23592,
+          "before": "function Ut(t){try{if(!f()||c||y()>0||!t||t.action!==\"delete\")return;var r=t.id;if(!r||typeof n.navigator>\"u\"||typeof n.navigator.sendBeacon!=\"function\")return;var e=s();if(!e||typeof e.buildNoteTombstoneDelta!=\"function\"||typeof e.getSyncMaterial!=\"function\")return;Promise.resolve(e.getSyncMaterial()).then(function(i){if(!(!i||!i.slotId||!i.authToken))return Promise.resolve(e.buildNoteTombstoneDelta(r,t.deletedAtISO)).then(function(o){if(!(!o||!o.iv||!o.data)){var u=A()+\"/v1/slots/\"+i.slotId+\"/delta\",a=JSON.stringify({token:i.authToken,payload:o}),l=typeof n.Blob==\"function\"?new n.Blob([a],{type:\"text/plain\"}):a;try{n.navigator.sendBeacon(u,l)}catch{}}})}).catch(function(){})}catch{}}",
+          "after": "function Ut(t){try{if(!PatientClinicalLegacyAllowed(\"direct-delta\"))return;if(!f()||c||y()>0||!t||t.action!==\"delete\")return;var r=t.id;if(!r||typeof n.navigator>\"u\"||typeof n.navigator.sendBeacon!=\"function\")return;var e=s();if(!e||typeof e.buildNoteTombstoneDelta!=\"function\"||typeof e.getSyncMaterial!=\"function\")return;Promise.resolve(e.getSyncMaterial()).then(function(i){if(!PatientClinicalLegacyAllowed(\"direct-delta\"))return;if(!(!i||!i.slotId||!i.authToken))return Promise.resolve(e.buildNoteTombstoneDelta(r,t.deletedAtISO)).then(function(o){if(!PatientClinicalLegacyAllowed(\"direct-delta\"))return;if(!(!o||!o.iv||!o.data)){var u=A()+\"/v1/slots/\"+i.slotId+\"/delta\",a=JSON.stringify({token:i.authToken,payload:o}),l=typeof n.Blob==\"function\"?new n.Blob([a],{type:\"text/plain\"}):a;try{if(PatientClinicalLegacyAllowed(\"direct-delta\"))n.navigator.sendBeacon(u,l)}catch{}}})}).catch(function(){})}catch{}}"
+        },
+        {
+          "kind": "existing-function-additive-boundary",
+          "function": "Bt",
+          "start": 22249,
+          "end": 22898,
+          "before": "function Bt(t){try{if(!f()||c||y()>0||!t||t.action===\"delete\")return;var r=t.id;if(!r||typeof n.navigator>\"u\"||typeof n.navigator.sendBeacon!=\"function\")return;var e=s();if(!e||typeof e.buildNoteDelta!=\"function\"||typeof e.getSyncMaterial!=\"function\")return;Promise.resolve(e.getSyncMaterial()).then(function(i){if(!(!i||!i.slotId||!i.authToken))return Promise.resolve(e.buildNoteDelta(r)).then(function(o){if(!(!o||!o.iv||!o.data)){var u=A()+\"/v1/slots/\"+i.slotId+\"/delta\",a=JSON.stringify({token:i.authToken,payload:o}),l=typeof n.Blob==\"function\"?new n.Blob([a],{type:\"text/plain\"}):a;try{Bsb_wyslij(u,l)}catch{}}})}).catch(function(){})}catch{}}",
+          "after": "function Bt(t){try{if(!PatientClinicalLegacyAllowed(\"direct-delta\"))return;if(!f()||c||y()>0||!t||t.action===\"delete\")return;var r=t.id;if(!r||typeof n.navigator>\"u\"||typeof n.navigator.sendBeacon!=\"function\")return;var e=s();if(!e||typeof e.buildNoteDelta!=\"function\"||typeof e.getSyncMaterial!=\"function\")return;Promise.resolve(e.getSyncMaterial()).then(function(i){if(!PatientClinicalLegacyAllowed(\"direct-delta\"))return;if(!(!i||!i.slotId||!i.authToken))return Promise.resolve(e.buildNoteDelta(r)).then(function(o){if(!PatientClinicalLegacyAllowed(\"direct-delta\"))return;if(!(!o||!o.iv||!o.data)){var u=A()+\"/v1/slots/\"+i.slotId+\"/delta\",a=JSON.stringify({token:i.authToken,payload:o}),l=typeof n.Blob==\"function\"?new n.Blob([a],{type:\"text/plain\"}):a;try{Bsb_wyslij(u,l)}catch{}}})}).catch(function(){})}catch{}}"
+        },
+        {
+          "kind": "existing-function-additive-boundary",
+          "function": "Bsb_wyslij",
+          "start": 21998,
+          "end": 22249,
+          "before": "function Bsb_wyslij(u,l){var ok=!1;try{ok=n.navigator.sendBeacon(u,l)===!0}catch{}if(ok||typeof n.fetch!=\"function\")return ok;try{Promise.resolve(n.fetch(u,{method:\"POST\",body:l,mode:\"no-cors\",credentials:\"omit\"})).catch(function(){})}catch{}return!1}",
+          "after": "function Bsb_wyslij(u,l){if(!PatientClinicalLegacyAllowed(\"direct-delta\"))return!1;var ok=!1;try{ok=n.navigator.sendBeacon(u,l)===!0}catch{}if(ok||typeof n.fetch!=\"function\")return ok;if(!PatientClinicalLegacyAllowed(\"direct-delta\"))return!1;try{Promise.resolve(n.fetch(u,{method:\"POST\",body:l,mode:\"no-cors\",credentials:\"omit\"})).catch(function(){})}catch{}return!1}"
+        },
+        {
+          "kind": "existing-function-additive-boundary",
+          "function": "G",
+          "start": 17993,
+          "end": 20508,
+          "before": "function G(){var t=s();if(!t||F)return;F=!0;function r(){TLibResumeStored();c=!1,It(),Ct(),Nt(),Tt(),Ot(),ct();var e=h();if(e){if(typeof t.isCloudOnlyMode==\"function\"&&t.isCloudOnlyMode()){if(T()&&_()){Y=!0;return}J();return}T()||(Qn1(),setTimeout(function(){try{if(!c){if(Qd2())return;var i=y();if(i>0){n.setTimeout(function(){D(),U()},i+1200);return}var o=!1;try{o=!!(n.sessionStorage&&n.sessionStorage.getItem(q))}catch{}if(o){f()&&typeof e.syncFull==\"function\"&&Qn3(e.syncFull()).catch(function(){});return}var u=!1;try{u=!!(n.sessionStorage&&n.sessionStorage.getItem(\"vilda-probe-done-v1\"))}catch{}if(u||typeof e.probeNewDevice!=\"function\"||!Bsz_dozwolony()){f()&&typeof e.syncFull==\"function\"&&Qn3(e.syncFull()).catch(function(){});return}Qn3(e.probeNewDevice().then(function(a){if(!c)if(a&&a.isNewDevice){try{typeof n.document<\"u\"&&n.document.dispatchEvent(new CustomEvent(\"vilda:new-device-restore-available\",{detail:{lastModified:a.lastModified||null},bubbles:!1}))}catch{}}else{if(!(a&&a.inconclusive))try{n.sessionStorage&&n.sessionStorage.setItem(\"vilda-probe-done-v1\",\"1\")}catch{}f()&&!c&&typeof e.syncFull==\"function\"&&Qn3(e.syncFull()).catch(function(){})}})).catch(function(){f()&&!c&&typeof e.syncFull==\"function\"&&Qn3(e.syncFull()).catch(function(){})})}}finally{Qn2()}},lt))}}typeof t.onUnlock==\"function\"&&t.onUnlock(r);try{typeof t.isUnlocked==\"function\"&&t.isUnlocked()&&r()}catch{}typeof t.onPatientSaved==\"function\"&&t.onPatientSaved(function(e){f()&&(c||(m({delay:w}),gt(e)))}),typeof t.onPatientDeleted==\"function\"&&t.onPatientDeleted(function(e){f()&&(c||(m({immediate:!0}),At(e)))}),typeof t.onPasskeyChanged==\"function\"&&t.onPasskeyChanged(function(){f()&&(c||m({delay:$}))}),typeof t.onCredentialChanged==\"function\"&&t.onCredentialChanged(function(Gs0){Gs0&&Gs0.action===\"password-changed-remotely\"||f()&&(c||m({immediate:!0,fast:!0}))}),typeof t.onPreferenceChanged==\"function\"&&t.onPreferenceChanged(function(){f()&&(c||m({delay:w}))}),typeof t.onNoteChanged==\"function\"&&t.onNoteChanged(function(e){if(f()&&!c){var i=e&&e.action===\"delete\"?$:w;m({delay:i,fast:!0}),Qv0(e),Qv1(e)}}),typeof t.onPatientNoteChanged==\"function\"&&t.onPatientNoteChanged(function(e){f()&&(c||(e&&typeof e.action==\"string\"&&e.action.indexOf(\"merge\")===0||m({immediate:!0}),Bt(e),Ut(e)))}),typeof t.onPatientListChanged==\"function\"&&t.onPatientListChanged(function(e){f()&&(c||e&&e.action===\"merge\"||m({delay:w}))}),typeof t.onLock==\"function\"&&t.onLock(function(){clearTimeout(d),d=null,Qw6=0,Qw8=0,ut()})}",
+          "after": "function G(){var t=s();if(!t||F)return;F=!0;function r(){TLibResumeStored();c=!1,It(),Ct(),Nt(),Tt(),Ot(),ct();var e=h();if(e){if(!PatientClinicalLegacyAllowed(\"startup\"))return;if(typeof t.isCloudOnlyMode==\"function\"&&t.isCloudOnlyMode()){if(T()&&_()){Y=!0;return}J();return}T()||(Qn1(),setTimeout(function(){try{if(!PatientClinicalLegacyAllowed(\"startup\"))return;if(!c){if(Qd2())return;var i=y();if(i>0){n.setTimeout(function(){D(),U()},i+1200);return}var o=!1;try{o=!!(n.sessionStorage&&n.sessionStorage.getItem(q))}catch{}if(o){f()&&typeof e.syncFull==\"function\"&&Qn3(e.syncFull()).catch(function(){});return}var u=!1;try{u=!!(n.sessionStorage&&n.sessionStorage.getItem(\"vilda-probe-done-v1\"))}catch{}if(u||typeof e.probeNewDevice!=\"function\"||!Bsz_dozwolony()){f()&&typeof e.syncFull==\"function\"&&Qn3(e.syncFull()).catch(function(){});return}Qn3(e.probeNewDevice().then(function(a){if(!PatientClinicalLegacyAllowed(\"startup-probe\"))return;if(!c)if(a&&a.isNewDevice){try{typeof n.document<\"u\"&&n.document.dispatchEvent(new CustomEvent(\"vilda:new-device-restore-available\",{detail:{lastModified:a.lastModified||null},bubbles:!1}))}catch{}}else{if(!(a&&a.inconclusive))try{n.sessionStorage&&n.sessionStorage.setItem(\"vilda-probe-done-v1\",\"1\")}catch{}f()&&!c&&typeof e.syncFull==\"function\"&&Qn3(e.syncFull()).catch(function(){})}})).catch(function(){if(!PatientClinicalLegacyAllowed(\"startup-probe\"))return;f()&&!c&&typeof e.syncFull==\"function\"&&Qn3(e.syncFull()).catch(function(){})})}}finally{Qn2()}},lt))}}typeof t.onUnlock==\"function\"&&t.onUnlock(r);try{typeof t.isUnlocked==\"function\"&&t.isUnlocked()&&r()}catch{}typeof t.onPatientSaved==\"function\"&&t.onPatientSaved(function(e){f()&&(c||(m({delay:w}),gt(e)))}),typeof t.onPatientDeleted==\"function\"&&t.onPatientDeleted(function(e){f()&&(c||(m({immediate:!0}),At(e)))}),typeof t.onPasskeyChanged==\"function\"&&t.onPasskeyChanged(function(){f()&&(c||m({delay:$}))}),typeof t.onCredentialChanged==\"function\"&&t.onCredentialChanged(function(Gs0){Gs0&&Gs0.action===\"password-changed-remotely\"||f()&&(c||m({immediate:!0,fast:!0}))}),typeof t.onPreferenceChanged==\"function\"&&t.onPreferenceChanged(function(){f()&&(c||m({delay:w}))}),typeof t.onNoteChanged==\"function\"&&t.onNoteChanged(function(e){if(f()&&!c){var i=e&&e.action===\"delete\"?$:w;m({delay:i,fast:!0}),Qv0(e),Qv1(e)}}),typeof t.onPatientNoteChanged==\"function\"&&t.onPatientNoteChanged(function(e){f()&&(c||(e&&typeof e.action==\"string\"&&e.action.indexOf(\"merge\")===0||m({immediate:!0}),Bt(e),Ut(e)))}),typeof t.onPatientListChanged==\"function\"&&t.onPatientListChanged(function(e){f()&&(c||e&&e.action===\"merge\"||m({delay:w}))}),typeof t.onLock==\"function\"&&t.onLock(function(){clearTimeout(d),d=null,Qw6=0,Qw8=0,ut()})}"
+        },
+        {
+          "kind": "existing-function-additive-boundary",
+          "function": "ot",
+          "start": 12484,
+          "end": 12678,
+          "before": "function ot(){_()||TLibContinueCycle();if(!(p||!tt())){var t=h();!t||typeof t.syncPull!=\"function\"||(O=Date.now(),p=!0,Promise.resolve(t.syncPull()).catch(function(){}).then(function(){p=!1}))}}",
+          "after": "function ot(){_()||TLibContinueCycle();if(!PatientClinicalLegacyAllowed(\"lifecycle-pull\"))return;if(!(p||!tt())){var t=h();!t||typeof t.syncPull!=\"function\"||(O=Date.now(),p=!0,Promise.resolve(t.syncPull()).catch(function(){}).then(function(){p=!1}))}}"
+        },
+        {
+          "kind": "existing-function-additive-boundary",
+          "function": "S",
+          "start": 12186,
+          "end": 12484,
+          "before": "function S(){TLibContinueCycle();if(!Lt())return;var t=Date.now(),r=h();if(!r||typeof r.syncPull!=\"function\")return;if(p||t-O<1500){if(!Qw7){var e=1500-(t-O);Qw7=setTimeout(function(){Qw7=null,S()},e>0?e:200)}return}O=t,p=!0,Promise.resolve(r.syncPull()).catch(function(){}).then(function(){p=!1})}",
+          "after": "function S(){TLibContinueCycle();if(!PatientClinicalLegacyAllowed(\"lifecycle-pull\"))return;if(!Lt())return;var t=Date.now(),r=h();if(!r||typeof r.syncPull!=\"function\")return;if(p||t-O<1500){if(!Qw7){var e=1500-(t-O);Qw7=setTimeout(function(){Qw7=null,S()},e>0?e:200)}return}O=t,p=!0,Promise.resolve(r.syncPull()).catch(function(){}).then(function(){p=!1})}"
+        },
+        {
+          "kind": "existing-function-additive-boundary",
+          "function": "U",
+          "start": 11957,
+          "end": 12173,
+          "before": "function U(){_()||TLibContinueCycle();if(!(p||!tt())){var t=Date.now();if(!(t-O<pt)){var r=h();!r||typeof r.syncPull!=\"function\"||(O=t,p=!0,Promise.resolve(r.syncPull()).catch(function(){}).then(function(){p=!1}))}}}",
+          "after": "function U(){_()||TLibContinueCycle();if(!PatientClinicalLegacyAllowed(\"lifecycle-pull\"))return;if(!(p||!tt())){var t=Date.now();if(!(t-O<pt)){var r=h();!r||typeof r.syncPull!=\"function\"||(O=t,p=!0,Promise.resolve(r.syncPull()).catch(function(){}).then(function(){p=!1}))}}}"
+        },
+        {
+          "kind": "existing-function-additive-boundary",
+          "function": "J",
+          "start": 7627,
+          "end": 8608,
+          "before": "function J(){Qn1();function t(){k(\"pulling\",null),v({state:\"syncing\"});var o=y();if(o>0){Qn1(),n.setTimeout(function(){D(),J(),Qn2()},o+1500);return}Qn3(K()).then(function(){k(\"complete\",null),v({state:\"ok\"})}).catch(function(u){/* P-SESJA-ZAPISU: pobranie startowe przerwane zmiana sesji — bez „failed”; stan ekranu ladowania konczy Bsz_przerwanyStart. */if(u&&u.cause&&u.cause.code===\"SESSION_CHANGED\"){Bsz_przerwanyStart();return}k(\"failed\",{code:u&&u.code||\"CLOUD_ONLY_PULL_FAILED\",message:u&&u.message||\"Nie uda\\u0142o si\\u0119 pobra\\u0107 danych z chmury.\"}),v({state:\"error\"})})}function r(){k(\"complete\",{warm:!0}),v({state:\"syncing\"});var o=function(){Qn3(K()).then(function(){v({state:\"ok\"})}).catch(function(){v({state:\"ok\"})})},u=y();u>0?(Qn1(),n.setTimeout(function(){D(),o(),Qn2()},u+1500)):o()}var e=s(),i=e&&typeof e.canWarmStartCloudOnly==\"function\"?e.canWarmStartCloudOnly():Promise.resolve(!1);i.then(function(o){o?r():t()}).catch(function(){t()}).then(Qn2,Qn2)}",
+          "after": "function J(){if(!PatientClinicalLegacyAllowed(\"startup-pull\"))return;Qn1();function t(){if(!PatientClinicalLegacyAllowed(\"startup-pull\"))return;k(\"pulling\",null),v({state:\"syncing\"});var o=y();if(o>0){Qn1(),n.setTimeout(function(){D(),J(),Qn2()},o+1500);return}Qn3(K()).then(function(){if(!PatientClinicalLegacyAllowed(\"startup-pull\"))return;k(\"complete\",null),v({state:\"ok\"})}).catch(function(u){if(!PatientClinicalLegacyAllowed(\"startup-pull\"))return;/* P-SESJA-ZAPISU: pobranie startowe przerwane zmiana sesji — bez „failed”; stan ekranu ladowania konczy Bsz_przerwanyStart. */if(u&&u.cause&&u.cause.code===\"SESSION_CHANGED\"){Bsz_przerwanyStart();return}k(\"failed\",{code:u&&u.code||\"CLOUD_ONLY_PULL_FAILED\",message:u&&u.message||\"Nie uda\\u0142o si\\u0119 pobra\\u0107 danych z chmury.\"}),v({state:\"error\"})})}function r(){if(!PatientClinicalLegacyAllowed(\"startup-pull\"))return;k(\"complete\",{warm:!0}),v({state:\"syncing\"});var o=function(){Qn3(K()).then(function(){if(!PatientClinicalLegacyAllowed(\"startup-pull\"))return;v({state:\"ok\"})}).catch(function(){if(!PatientClinicalLegacyAllowed(\"startup-pull\"))return;v({state:\"ok\"})})},u=y();u>0?(Qn1(),n.setTimeout(function(){D(),o(),Qn2()},u+1500)):o()}var e=s(),i=e&&typeof e.canWarmStartCloudOnly==\"function\"?e.canWarmStartCloudOnly():Promise.resolve(!1);i.then(function(o){o?r():t()}).catch(function(){t()}).then(Qn2,Qn2)}"
+        },
+        {
+          "kind": "existing-function-additive-boundary",
+          "function": "Qd0",
+          "start": 6480,
+          "end": 6911,
+          "before": "function Qd0(){var t=h();if(!t||typeof t.syncPull!=\"function\"){var r=new Error(\"Modu\\u0142 synchronizacji niedost\\u0119pny.\");return r.code=\"SYNC_NO_API\",Promise.reject(r)}return new Promise(function(e,i){(function u(){if(p){n.setTimeout(u,250);return}p=!0,O=Date.now();Promise.resolve().then(function(){return t.syncPull({pierwszePobranie:!0})}).then(function(a){p=!1,O=Date.now(),e(a)},function(a){p=!1,O=Date.now(),i(a)})})()})}",
+          "after": "function Qd0(){var PatientClinicalError=PatientClinicalRouteFailure(\"new-device-pull\");if(PatientClinicalError)return Promise.reject(PatientClinicalError);var t=h();if(!t||typeof t.syncPull!=\"function\"){var r=new Error(\"Modu\\u0142 synchronizacji niedost\\u0119pny.\");return r.code=\"SYNC_NO_API\",Promise.reject(r)}return new Promise(function(e,i){(function u(){var error=PatientClinicalRouteFailure(\"new-device-pull\");if(error){i(error);return}if(p){n.setTimeout(u,250);return}p=!0,O=Date.now();Promise.resolve().then(function(){var error=PatientClinicalRouteFailure(\"new-device-pull\");if(error)throw error;return t.syncPull({pierwszePobranie:!0})}).then(function(a){p=!1,O=Date.now();var error=PatientClinicalRouteFailure(\"new-device-pull\");if(error){i(error);return}e(a)},function(a){p=!1,O=Date.now(),i(a)})})()})}"
+        },
+        {
+          "kind": "existing-function-additive-boundary",
+          "function": "K",
+          "start": 3330,
+          "end": 3934,
+          "before": "function K(){return new Promise(function(t,r){if(!f()){const i=new Error(\"Tryb chmurowy wymaga w\\u0142\\u0105czonej synchronizacji. W\\u0142\\u0105cz j\\u0105 w Ustawieniach.\");i.code=\"CLOUD_ONLY_NO_SYNC\",r(i);return}const e=h();if(!e||typeof e.syncPull!=\"function\"){const i=new Error(\"Modu\\u0142 synchronizacji niedost\\u0119pny.\");i.code=\"CLOUD_ONLY_NO_API\",r(i);return}Promise.resolve().then(function(){return e.syncPull()}).then(function(i){t(i)}).catch(function(i){const o=new Error(i&&i.message||\"Nie uda\\u0142o si\\u0119 pobra\\u0107 danych z chmury.\");o.code=\"CLOUD_ONLY_PULL_FAILED\",o.cause=i,r(o)})})}",
+          "after": "function K(){return new Promise(function(t,r){var PatientClinicalError=PatientClinicalRouteFailure(\"sync-pull\");if(PatientClinicalError){r(PatientClinicalError);return}if(!f()){const i=new Error(\"Tryb chmurowy wymaga w\\u0142\\u0105czonej synchronizacji. W\\u0142\\u0105cz j\\u0105 w Ustawieniach.\");i.code=\"CLOUD_ONLY_NO_SYNC\",r(i);return}const e=h();if(!e||typeof e.syncPull!=\"function\"){const i=new Error(\"Modu\\u0142 synchronizacji niedost\\u0119pny.\");i.code=\"CLOUD_ONLY_NO_API\",r(i);return}Promise.resolve().then(function(){var error=PatientClinicalRouteFailure(\"sync-pull\");if(error)throw error;return e.syncPull()}).then(function(i){var error=PatientClinicalRouteFailure(\"sync-pull\");if(error){r(error);return}t(i)}).catch(function(i){const o=new Error(i&&i.message||\"Nie uda\\u0142o si\\u0119 pobra\\u0107 danych z chmury.\");o.code=\"CLOUD_ONLY_PULL_FAILED\",o.cause=i,r(o)})})}"
+        },
+        {
+          "kind": "existing-function-additive-boundary",
+          "function": "M",
+          "start": 2387,
+          "end": 2586,
+          "before": "function M(){if(!(!N||c)&&!(y()>0)){clearTimeout(d),N=!1,Qw6=0,Qw8=0;var t=h();if(t&&typeof t.syncPush==\"function\")try{t.syncPush({keepalive:!0}).then(function(){Qw5=!1},function(){Qw5=!0})}catch{}}}",
+          "after": "function M(){if(!PatientClinicalLegacyAllowed(\"sync-keepalive\"))return;if(!(!N||c)&&!(y()>0)){clearTimeout(d),N=!1,Qw6=0,Qw8=0;var t=h();if(t&&typeof t.syncPush==\"function\")try{t.syncPush({keepalive:!0}).then(function(){Qw5=!1},function(){Qw5=!0})}catch{}}}"
+        },
+        {
+          "kind": "existing-function-additive-boundary",
+          "function": "V",
+          "start": 2098,
+          "end": 2387,
+          "before": "function V(){if(!(!f()||c)){var t=h();if(!(!t||typeof t.syncPush!=\"function\")){clearTimeout(d),d=null,N=!1,Qw6=0,Qw8=0;var r=y();if(r>0){I(r+1e3);return}if(H){W=!0;return}H=!0,Promise.resolve(t.syncPush()).then(function(){Qw5=!1},function(){Qw5=!0}).then(function(){H=!1,W&&(W=!1,V())})}}}",
+          "after": "function V(){if(!PatientClinicalLegacyAllowed(\"sync-push\"))return;if(!(!f()||c)){var t=h();if(!(!t||typeof t.syncPush!=\"function\")){clearTimeout(d),d=null,N=!1,Qw6=0,Qw8=0;var r=y();if(r>0){I(r+1e3);return}if(H){W=!0;return}H=!0,Promise.resolve(t.syncPush()).then(function(){Qw5=!1},function(){Qw5=!0}).then(function(){H=!1,W&&(W=!1,V())})}}}"
+        },
+        {
+          "kind": "existing-function-additive-boundary",
+          "function": "I",
+          "start": 1531,
+          "end": 2084,
+          "before": "function I(t){if(!(!f()||c)){var r=h();if(!r||typeof r.syncPush!=\"function\")return;var Qt=Date.now(),Rt=Qt+t;N&&Qw6>0&&Qw6<Rt&&(Rt=Qw6);N=!0,Qw6=Rt,clearTimeout(d),d=setTimeout(function e(){if(c)return;var i=y();if(i>0){d=setTimeout(e,i+1e3);return}var o=h();if(!o||typeof o.syncPush!=\"function\"){N=!1,Qw6=0,Qw8=0;return}Promise.resolve(o.syncPush()).then(function(){N=!1,Qw6=0,Qw8=0,Qw5=!1},function(){if(c||++Qw8>=Qw9){N=!1,Qw6=0,Qw8=0,Qw5=!0;return}var Ut=Math.min(3e4,2e3*Math.pow(2,Qw8-1));Qw6=Date.now()+Ut,d=setTimeout(e,Ut)})},Rt-Qt>0?Rt-Qt:0)}}",
+          "after": "function I(t){if(!PatientClinicalLegacyAllowed(\"sync-push\"))return;if(!(!f()||c)){var r=h();if(!r||typeof r.syncPush!=\"function\")return;var Qt=Date.now(),Rt=Qt+t;N&&Qw6>0&&Qw6<Rt&&(Rt=Qw6);N=!0,Qw6=Rt,clearTimeout(d),d=setTimeout(function e(){if(!PatientClinicalLegacyAllowed(\"sync-push\"))return;if(c)return;var i=y();if(i>0){d=setTimeout(e,i+1e3);return}var o=h();if(!o||typeof o.syncPush!=\"function\"){N=!1,Qw6=0,Qw8=0;return}Promise.resolve(o.syncPush()).then(function(){N=!1,Qw6=0,Qw8=0,Qw5=!1},function(){if(c||++Qw8>=Qw9){N=!1,Qw6=0,Qw8=0,Qw5=!0;return}var Ut=Math.min(3e4,2e3*Math.pow(2,Qw8-1));Qw6=Date.now()+Ut,d=setTimeout(e,Ut)})},Rt-Qt>0?Rt-Qt:0)}}"
+        },
+        {
+          "kind": "readable-patient-clinical-helper-insertion",
+          "start": 110,
+          "end": 110,
+          "before": "",
+          "after": "\n/* All clinical lanes share the vault's synchronous format selection. This also\n * covers direct deltas, which do not pass through VildaSync's HTTP wrappers.\n * The ordinary inactive path performs no I/O; library continuation is separate. */\nfunction PatientClinicalRouteFailure(operation) {\n  var vault = n && n.VildaVault;\n  if (!vault) return null;\n  var code = \"PATIENT_AUTHORITY_UNAVAILABLE\";\n  try {\n    var select = vault.selectPatientClinicalRoute;\n    if (select === undefined) return null;\n    var selection = typeof select === \"function\" ? select.call(vault, operation) : null;\n    if (selection && selection.mode === \"legacy\" && selection.writeAvailable === false) return null;\n    if (selection && typeof selection.code === \"string\" && selection.code) code = selection.code;\n  } catch (cause) {\n    if (cause && cause.code === \"SESSION_CHANGED\") code = \"SESSION_CHANGED\";\n  }\n  var error = new Error(\"Ta operacja wymaga zgodnego formatu danych pacjentów.\");\n  error.code = code;\n  error.patientClinicalUnavailable = true;\n  return error;\n}\nfunction PatientClinicalLegacyAllowed(operation) {\n  var error = PatientClinicalRouteFailure(operation);\n  if (!error) return true;\n  v({state:\"error\",code:error.code,message:error.message,operation:operation});\n  return false;\n}\n"
+        }
+      ]
+    },
+    {
+      "path": "vilda_realtime.js",
+      "beforeSha256": "a26618beb0e56e10210b395af98b15f53d473a5d0e1934181e91d3f5927b6362",
+      "afterSha256": "28b709d89ae7b9d960a015aed59f628e1fab43a44e5b7764990ea2c4708b40b5",
+      "changedFunctions": [
+        "J",
+        "V",
+        "M",
+        "l",
+        "K"
+      ],
+      "functionPins": [
+        {
+          "function": "J",
+          "beforeSha256": "ce317c2964570665e5bc380dc00ca6c3df2400a1a56110e9c2711962c447bbef",
+          "afterSha256": "253e325e4bf5be26e67e5e491a49fcbcf611f63fe333a6b2f1598439c2ad43c4",
+          "beforeCharacters": 229,
+          "afterCharacters": 283
+        },
+        {
+          "function": "V",
+          "beforeSha256": "15838a9ce9e61c521b8335d1f1654b9e5740b05311394d374b4b704a59d738ec",
+          "afterSha256": "81438feb3531a44d83074b5d475996ecda1fe3ad06f3522f8f19c8769cf4a75a",
+          "beforeCharacters": 1326,
+          "afterCharacters": 1989
+        },
+        {
+          "function": "M",
+          "beforeSha256": "83d5717eace2c2168da3c0b9b933a55b734f54fc3a514b992f88c751674cda1a",
+          "afterSha256": "0d7fea8da8824de30607d639832200d22cb0920d775d6b00c66c92cfd92a2c52",
+          "beforeCharacters": 113,
+          "afterCharacters": 151
+        },
+        {
+          "function": "l",
+          "beforeSha256": "cdc7fff01a5c38d24d2cc7cb4e96e6b92229821d24274e0b1ca1f1d9cb9a9743",
+          "afterSha256": "08321656e7fdd8ef71ac09715abd8449a278e92605bb7188bce5d24a60f48d33",
+          "beforeCharacters": 100,
+          "afterCharacters": 157
+        },
+        {
+          "function": "K",
+          "beforeSha256": "4886f22d7a91150456180b26c72599ded196509116ee062ec4d0a57a7ff38742",
+          "afterSha256": "3ddafde4bd1c8bde3459f8c9b6e36d1fea3c530f34646bc05103cb432a10131f",
+          "beforeCharacters": 271,
+          "afterCharacters": 325
+        }
+      ],
+      "patches": [
+        {
+          "kind": "existing-function-additive-boundary",
+          "function": "K",
+          "start": 2644,
+          "end": 2915,
+          "before": "function K(){if(!(!d()||!O()||!E()||!D())){if(i!==\"open\"||!e||e.readyState!==1){l();return}try{e.send(JSON.stringify({type:\"ping\",ts:Date.now()}))}catch{try{e.close()}catch{}return}if(r)try{t.clearTimeout(r)}catch{}r=t.setTimeout(function(){try{e&&e.close()}catch{}},P)}}",
+          "after": "function K(){if(PatientClinicalStopBlocked(\"realtime-send\"))return;if(!(!d()||!O()||!E()||!D())){if(i!==\"open\"||!e||e.readyState!==1){l();return}try{e.send(JSON.stringify({type:\"ping\",ts:Date.now()}))}catch{try{e.close()}catch{}return}if(r)try{t.clearTimeout(r)}catch{}r=t.setTimeout(function(){try{e&&e.close()}catch{}},P)}}"
+        },
+        {
+          "kind": "existing-function-additive-boundary",
+          "function": "l",
+          "start": 2544,
+          "end": 2644,
+          "before": "function l(){if(!(i===\"open\"||i===\"connecting\")){if(f=p,c){try{t.clearTimeout(c)}catch{}c=null}V()}}",
+          "after": "function l(){if(PatientClinicalStopBlocked(\"realtime-connect\"))return;if(!(i===\"open\"||i===\"connecting\")){if(f=p,c){try{t.clearTimeout(c)}catch{}c=null}V()}}"
+        },
+        {
+          "kind": "existing-function-additive-boundary",
+          "function": "M",
+          "start": 2431,
+          "end": 2544,
+          "before": "function M(){if(h=!0,c){try{t.clearTimeout(c)}catch{}c=null}if(k(),e){try{e.close()}catch{}e=null}i=\"closed\",f=p}",
+          "after": "function M(){PatientClinicalConnectionGeneration++;if(h=!0,c){try{t.clearTimeout(c)}catch{}c=null}if(k(),e){try{e.close()}catch{}e=null}i=\"closed\",f=p}"
+        },
+        {
+          "kind": "existing-function-additive-boundary",
+          "function": "V",
+          "start": 1105,
+          "end": 2431,
+          "before": "function V(){if(!(!d()||!O()||!E()||!D())&&!(i===\"open\"||i===\"connecting\")&&typeof t.WebSocket==\"function\"){var n=t.VildaVault;if(!(!n||typeof n.getSyncMaterial!=\"function\")){var y=Date.now();if(y-L<A){!c&&!h&&(c=t.setTimeout(function(){c=null,V()},A));return}L=y,h=!1,i=\"connecting\",Promise.resolve(n.getSyncMaterial()).then(function(v){if(!v||!v.slotId||!v.authToken){i=\"closed\",w();return}if(!E()||!d()){i=\"closed\";return}var H=B()+\"/v1/slots/\"+v.slotId+\"/socket\",u;try{u=new t.WebSocket(H,[\"vilda-auth\",v.authToken])}catch{i=\"closed\",w();return}e=u,u.onopen=function(){i=\"open\",f=p,C++,m=null,J();try{var Z=t.VildaSyncIntegration;Z&&typeof Z.pullNow==\"function\"&&Z.pullNow()}catch{}},u.onmessage=function(o){var a=null;try{a=JSON.parse(o.data)}catch{a=null}if(a){if(a.type===\"changed\"){T=Date.now();try{var R=t.VildaSyncIntegration;R&&typeof R.pullNow==\"function\"&&R.pullNow()}catch{}}else if(a.type===\"delta\"){T=Date.now();try{var s=t.VildaSyncIntegration;s&&typeof s.applyDelta==\"function\"?s.applyDelta(a.payload):s&&typeof s.pullNow==\"function\"&&s.pullNow()}catch{}}else if(a.type===\"pong\"&&r){try{t.clearTimeout(r)}catch{}r=null}}},u.onclose=function(o){e===u&&(e=null),i=\"closed\",m=o&&o.code?\"close:\"+o.code:\"close\",k(),w()},u.onerror=function(){m=\"error\";try{u.close()}catch{}}}).catch(function(){i=\"closed\",w()})}}}",
+          "after": "function V(){if(PatientClinicalStopBlocked(\"realtime-connect\"))return;if(!(!d()||!O()||!E()||!D())&&!(i===\"open\"||i===\"connecting\")&&typeof t.WebSocket==\"function\"){var n=t.VildaVault;if(!(!n||typeof n.getSyncMaterial!=\"function\")){var y=Date.now();if(y-L<A){!c&&!h&&(c=t.setTimeout(function(){c=null,V()},A));return}L=y,h=!1,i=\"connecting\";var PatientClinicalAttempt=++PatientClinicalConnectionGeneration;Promise.resolve(n.getSyncMaterial()).then(function(v){if(PatientClinicalAttempt!==PatientClinicalConnectionGeneration)return;if(PatientClinicalStopBlocked(\"realtime-connect\"))return;if(!v||!v.slotId||!v.authToken){i=\"closed\",w();return}if(!E()||!d()){i=\"closed\";return}var H=B()+\"/v1/slots/\"+v.slotId+\"/socket\",u;try{u=new t.WebSocket(H,[\"vilda-auth\",v.authToken])}catch{i=\"closed\",w();return}e=u,u.onopen=function(){if(e!==u)return;if(PatientClinicalStopBlocked(\"realtime-open\"))return;i=\"open\",f=p,C++,m=null,J();try{var Z=t.VildaSyncIntegration;Z&&typeof Z.pullNow==\"function\"&&Z.pullNow()}catch{}},u.onmessage=function(o){if(e!==u)return;if(PatientClinicalStopBlocked(\"realtime-receive\"))return;var a=null;try{a=JSON.parse(o.data)}catch{a=null}if(a){if(a.type===\"changed\"){T=Date.now();try{var R=t.VildaSyncIntegration;R&&typeof R.pullNow==\"function\"&&R.pullNow()}catch{}}else if(a.type===\"delta\"){T=Date.now();try{var s=t.VildaSyncIntegration;s&&typeof s.applyDelta==\"function\"?s.applyDelta(a.payload):s&&typeof s.pullNow==\"function\"&&s.pullNow()}catch{}}else if(a.type===\"pong\"&&r){try{t.clearTimeout(r)}catch{}r=null}}},u.onclose=function(o){if(e!==u)return;if(PatientClinicalStopBlocked(\"realtime-close\"))return;e===u&&(e=null),i=\"closed\",m=o&&o.code?\"close:\"+o.code:\"close\",k(),w()},u.onerror=function(){if(e!==u)return;if(PatientClinicalStopBlocked(\"realtime-error\"))return;m=\"error\";try{u.close()}catch{}}}).catch(function(){if(PatientClinicalAttempt!==PatientClinicalConnectionGeneration)return;if(PatientClinicalStopBlocked(\"realtime-connect\"))return;i=\"closed\",w()})}}}"
+        },
+        {
+          "kind": "existing-function-additive-boundary",
+          "function": "J",
+          "start": 783,
+          "end": 1012,
+          "before": "function J(){k(),_=t.setInterval(function(){if(!(!e||e.readyState!==1)){try{e.send(JSON.stringify({type:\"ping\",ts:Date.now()}))}catch{}if(r)try{t.clearTimeout(r)}catch{}r=t.setTimeout(function(){try{e&&e.close()}catch{}},F)}},W)}",
+          "after": "function J(){k(),_=t.setInterval(function(){if(PatientClinicalStopBlocked(\"realtime-send\"))return;if(!(!e||e.readyState!==1)){try{e.send(JSON.stringify({type:\"ping\",ts:Date.now()}))}catch{}if(r)try{t.clearTimeout(r)}catch{}r=t.setTimeout(function(){try{e&&e.close()}catch{}},F)}},W)}"
+        },
+        {
+          "kind": "readable-patient-clinical-helper-insertion",
+          "start": 89,
+          "end": 89,
+          "before": "",
+          "after": "\n/* A socket opened in the legacy lane must not deliver or send frames after the\n * vault selects an unavailable protected clinical format. Reuse its existing\n * disconnect/lifecycle machinery; the inactive route adds no network or timer. */\nvar PatientClinicalDisconnecting = false, PatientClinicalConnectionGeneration = 0;\nfunction PatientClinicalRouteFailure(operation) {\n  var vault = t && t.VildaVault;\n  if (!vault) return null;\n  var code = \"PATIENT_AUTHORITY_UNAVAILABLE\";\n  try {\n    var select = vault.selectPatientClinicalRoute;\n    if (select === undefined) return null;\n    var selection = typeof select === \"function\" ? select.call(vault, operation) : null;\n    if (selection && selection.mode === \"legacy\" && selection.writeAvailable === false) return null;\n    if (selection && typeof selection.code === \"string\" && selection.code) code = selection.code;\n  } catch (cause) {\n    if (cause && cause.code === \"SESSION_CHANGED\") code = \"SESSION_CHANGED\";\n  }\n  var error = new Error(\"Ta operacja wymaga zgodnego formatu danych pacjentów.\");\n  error.code = code;\n  error.patientClinicalUnavailable = true;\n  return error;\n}\nfunction PatientClinicalStopBlocked(operation) {\n  var error = PatientClinicalRouteFailure(operation);\n  if (!error) return false;\n  if (!PatientClinicalDisconnecting) {\n    PatientClinicalDisconnecting = true;\n    try { M(); m = error.code; }\n    finally { PatientClinicalDisconnecting = false; }\n  }\n  return true;\n}\n"
+        }
+      ]
+    }
+  ]
+}

@@ -471,10 +471,13 @@ describe('strażniki źródła', () => {
     // przed podmianą (Bses_imp); zmiana sesji (SESSION_CHANGED) kończy scalanie jak zajęta blokada. P-SESJA-ZAPISU
     // (przegląd 4): import karty (ns) podaje znacznik w opcjach z sesją importu ({ Bpb_imp: Bpb_IMPORT, Bses_s }).
     expect(le).toContain('const Bses_imp=e===Bpb_IMPORT||!!(e&&e.Bpb_imp===Bpb_IMPORT),Bses_zew=Bses_imp&&e!==Bpb_IMPORT?e.Bses_s:null;e=Bses_opcje(Bses_imp?null:e);if(Bses_zew)e.Bses_s=Bses_zew;');
-    expect(le).toContain('Bkz_n=Bses_imp?0:await Bkz_scalKoniec(Bkz_S,e)}catch(Bkz_e){if(Bkz_e&&(Bkz_e.vildaMergeBusy||Bkz_e.code==="SESSION_CHANGED"))throw Bkz_e;');
+    expect(le).toContain('Bkz_n=Bses_imp?0:await Bkz_scalKoniec(Bkz_S,e)}catch(Bkz_e){PatientClinicalRethrow(Bkz_e);if(Bkz_e&&(Bkz_e.vildaMergeBusy||Bkz_e.code==="SESSION_CHANGED"))throw Bkz_e;');
     for (const f of ['Bsl_scalPacjenta', 'Bsl_usunPacjenta']) {
-      const cialo = src.slice(src.indexOf(`async function ${f}(`));
-      expect(cialo.slice(0, 200), f).toMatch(/return Bsl_podBlokada\(/);
+      const poczatek = src.indexOf(`async function ${f}(`);
+      const koniecNaglowka = src.indexOf('\n', poczatek);
+      expect(src.slice(poczatek, koniecNaglowka), f).toMatch(/^async function Bsl_(?:scal|usun)Pacjenta\([^{}\n]*\) \{const PatientClinicalOperationAccount=b;PatientClinicalGuard\(PatientClinicalOperationAccount\);$/);
+      const cialo = src.slice(koniecNaglowka + 1);
+      expect(cialo.slice(0, 200), f).toMatch(/return PatientClinicalWriteValue\(PatientClinicalOperationAccount,Bsl_podBlokada\(/);
     }
   });
 
@@ -483,6 +486,6 @@ describe('strażniki źródła', () => {
     const ps = src.slice(src.indexOf('async function ps(t){'));
     // P-CHMURA-OPIS: zmiana sesji (po odszyfrowaniu albo w scalaniu) — błąd SESSION_CHANGED oznaczony jak zajęta
     // blokada (Bses_delta: vildaMergeBusy), żeby pętla delt w vilda_sync.js nie przesunęła kursora.
-    expect(ps.slice(0, 500)).toContain('if(Bses_zmieniona(Bses_d))throw Bses_delta(Bses_blad());if(!e||typeof e!="object")return null;try{return await Le(e)}catch(Bses_x){throw Bses_delta(Bses_x)}}');
+    expect(ps.slice(0, 500)).toContain('if(Bses_zmieniona(Bses_d))throw Bses_delta(Bses_blad());if(!e||typeof e!="object")return null;try{return await Le(e)}catch(Bses_x){PatientClinicalRethrow(Bses_x);throw Bses_delta(Bses_x)}}');
   });
 });

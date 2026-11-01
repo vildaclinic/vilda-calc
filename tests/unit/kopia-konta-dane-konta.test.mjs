@@ -1222,7 +1222,7 @@ describe('P-KOPIA-DANE-KONTA — odmiana i źródło', () => {
     expect(ss).not.toContain('Bks_planDanych');
     // Uwaga recenzji (wyścig, runda 2): wynik dostaje ładunek kopii, by liczyć tylko zmiany list oczekujących z kopii.
     expect(ss).toContain('foreignSnapshotCount:Bks_k.obceId.size,...Bks_wynikDanych(h,Bks_mp,await Bks_mapyOczekujacych(),a)}');
-    expect(ss, 'mergedPatientCount tylko dla kart z nowymi wersjami').toContain('lastSavedAtISO:tt||l}));y++}}else{');
+    expect(ss, 'mergedPatientCount tylko dla kart z nowymi wersjami').toContain('lastSavedAtISO:tt||l})));y++}}else{');
     // Plan i wynik tylko czytają: żadnego put/remove w czytelnym bloku planu, odczytu map i wyniku.
     const plan = src.slice(src.indexOf('function Bks_najnowsza('), src.indexOf('async function Bsl_zdejmijNagrobek('));
     expect(plan).toContain('function Bks_wynikDanych(');

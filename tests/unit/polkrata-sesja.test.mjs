@@ -28,7 +28,7 @@ const kod = (f) => (KOD[f] || (KOD[f] = readFileSync(path.join(repo, f), 'utf8')
 const wiersze = (re) => kod(SEJF.N).split('\n').flatMap((l, i) => (re.test(l) ? [i + 3] : []));
 // Koniec scalania kosza: odczyt wersji karty (pierwszy await kroku) i odczyt treści wersji tutejszej.
 const W_WERSJE = wiersze(/const wersje = nagrobki\.length \|\| Bgw_tu\.length \? await I\(\)\.listSnapshotsForUser\(b, patientId\) : \[\];/);
-const W_TRESC = wiersze(/^ {10}try \{ tresc = await G\(lokalna\.payloadCipher\.iv, lokalna\.payloadCipher\.data\); \} catch \{ tresc = null; \}$/);
+const W_TRESC = wiersze(/^ {10}try \{ tresc = await G\(lokalna\.payloadCipher\.iv, lokalna\.payloadCipher\.data\); \} catch\(PatientClinicalCaught\) \{PatientClinicalRethrow\(PatientClinicalCaught\); tresc = null; \}$/);
 const wWierszu = (w) => (s) => s.includes('<anonymous>:' + w + ':');
 const wFunkcji = (f) => (s) => s.includes('at ' + f + ' (') || s.includes('at async ' + f + ' (');
 

@@ -280,7 +280,7 @@ describe('P-SW-PRECACHE: instalacja bez historii, kopia z poprzedniej pamięci, 
   const arkuszEdu = (adres) => adres.split('?')[0] === '/edu-video-ui.css';
   const aliasyEdu = () => doInstalacji().filter(arkuszEdu);
   const cssEdu = fs.readFileSync(path.join(korzen, 'edu-video-ui.css'), 'utf8');
-  const dodatkoweWspoldzieloneZasoby = ['/vilda_auth_ui.css', '/ios26-v2.css', '/vilda_shell.css', '/vilda_vault.js',
+  const dodatkoweWspoldzieloneZasoby = ['/vilda_auth_ui.css', '/ios26-v2.css', '/vilda_shell.css', '/vilda_vault.js', '/vilda_chrome.js',
     '/vilda_logger.js', '/vilda_html.js', '/vilda_init.js', '/vilda_app_helpers.js', '/vilda_frame_sync.js'];
   const wspoldzielonePary = ['/style.css', '/vilda_chrome.css', ...dodatkoweWspoldzieloneZasoby];
   const wspoldzieloneZasoby = new Set(['/edu-video-ui.css', ...wspoldzielonePary]);
@@ -311,6 +311,8 @@ describe('P-SW-PRECACHE: instalacja bez historii, kopia z poprzedniej pamięci, 
     // Pięć modułów potasu dodaje pięć żądań do bazy600. Pięć jawnych par
     // aliasów dzieli wyłącznie świeżą odpowiedź: nadal ≤600 i wszystkie klucze offline.
     // Budżety bajtów/żądań pozostają bez zmian; wymagane modele nadal idą z sieci raz.
+    // Protokół dodaje jedno żądanie; dodatkowa para aliasów chrome dzieli świeżą odpowiedź.
+    expect(pobrane.filter(adres => adres.split('?')[0] === '/vilda_vault_protocol.js')).toHaveLength(1);
     expect(pobrane.filter(adres => adres.split('?')[0] === '/vilda_care_plan_model.js')).toHaveLength(1);
     for (const plik of ['/vilda_care_template_model.js', '/vilda_care_template_store.js', '/vilda_care_templates.js', '/vilda_care_templates.css']) {
       expect(pobrane.filter(adres => adres.split('?')[0] === plik), plik).toHaveLength(1);

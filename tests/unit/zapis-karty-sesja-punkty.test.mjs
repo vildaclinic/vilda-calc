@@ -263,7 +263,7 @@ describe('P-SESJA-ZAPISU: strażnik źródła sejfu (vilda_vault.js)', () => {
     expect(src.includes('async function Bpz_zapisWSesji('), 'rdzeń zapisu Bpz_zapisWSesji w vilda_vault.js').toBe(true);
     const rdzen = wytnijFunkcje(src, 'Bpz_zapisWSesji');
 
-    const zapisy = wszystkie(rdzen, /await\s+I\(\)\.(put\w*)\([^)]*\)\s*;/);
+    const zapisy = wszystkie(rdzen, /await\s+I\(\)\.(put\w*)\(\s*b\s*,\s*PatientClinicalWriteValue\(\s*b\s*,[^)]*\)\s*\)\s*;/);
     expect(zapisy.map((m) => m[1]), 'zapisy magazynu w rdzeniu').toEqual(expect.arrayContaining(['putSnapshotForUser', 'putPatientForUser']));
     for (const m of zapisy) {
       expect(przedKomentarzami(rdzen.slice(0, m.index)).endsWith(PILNUJ), `Bpz_pilnuj tuż przed await I().${m[1]}`).toBe(true);

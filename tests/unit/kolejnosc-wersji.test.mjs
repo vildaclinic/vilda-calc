@@ -206,7 +206,11 @@ describe('Żadne miejsce zapisu wersji nie gubi numeru', () => {
       // Dwa miejsca dostają gotowy rekord, który numer już ma: świeżo utworzona wersja
       // (`w`) i wiersz zbudowany wcześniej w pętli importu (`O[A]`).
       && !frag.startsWith('putSnapshotForUser(b,w)')
-      && !frag.startsWith('putSnapshotForUser(b,O[A])'));
+      && !frag.startsWith('putSnapshotForUser(b,O[A])')
+      // Ta sama para gotowych rekordów przechodzi przez prywatną bramę,
+      // która zwraca dokładnie przekazany rekord, zachowując jego numer.
+      && !frag.startsWith('putSnapshotForUser(b,PatientClinicalWriteValue(b,w))')
+      && !frag.startsWith('putSnapshotForUser(b,PatientClinicalWriteValue(b,O[A]))'));
     expect(bezNumeru, bezNumeru.map((f) => f.slice(0, 90)).join('\n')).toEqual([]);
   });
 
