@@ -1,6 +1,6 @@
 /* Global patient and matter search. Read-only, decrypted RAM index.
- * Dates and saved clinical text are transported as stored; no clinical values
- * are inferred, interpreted or written by this module.
+ * Saved calculations use the same frozen presentation model as Notes. No
+ * clinical engine, current policy or patient write is used while searching.
  */
 (function (win) {
   'use strict';
@@ -39,12 +39,59 @@
     return function () { registry.delete(listener); };
   }
   function dateEntry(kind, value) { return day(value) ? { kind: kind, dateISO: value } : null; }
-  function noteDetails(note) {
+  function noteIndexDetails(note) {
     var details = [], lab = note.labResult, medication = note.medication, igf = note.igf1;
     if (lab) details.push(['Badanie:', text(lab.test), text(lab.value), text(lab.valueNum), text(lab.unit), text(lab.norm)].filter(Boolean).join(' '));
     if (medication) details.push(['Leczenie:', text(medication.name), text(medication.dose), text(medication.doseNum), text(medication.doseUnit), text(medication.freq)].filter(Boolean).join(' '));
     if (igf) details.push(['IGF-1:', text(igf.value), text(igf.unit)].filter(Boolean).join(' '));
     return details.join('\n');
+  }
+  function appendUnit(value, unit) {
+    if (!value || !unit || normalize(value).indexOf(normalize(unit)) >= 0 || /\s=\s/.test(value)) return value;
+    return value + ' ' + unit;
+  }
+  function frequencyInDose(dose, frequency) {
+    frequency = frequency.trim();
+    if (!frequency || normalize(dose).indexOf(normalize(frequency)) >= 0) return true;
+    if (/^(?:dzień|dzien|doba|dobę|dobe|dziennie|dobowo|na dzień|na dzien)$/i.test(frequency)) return /\/(?:d|24\s*h|dobę|dobe)(?=$|\s|[).,])/i.test(dose);
+    if (/^(?:tydzień|tydzien|tygodniowo|na tydzień|na tydzien)$/i.test(frequency)) return /\/tydz\.?\b/i.test(dose);
+    if (/^(?:miesiąc|miesiac|miesięcznie|miesiecznie|na miesiąc|na miesiac)$/i.test(frequency)) return /\/mies\.?(?=$|\s|[).,])/i.test(dose);
+    return false;
+  }
+  function noteBody(note, formatMedicationDose) {
+    var body = text(note.body), content = normalize([text(note.title), body].join('\n')), details = [];
+    function covered(value) {
+      var needle = normalize(value), offset = -1, word = /[\p{L}\p{N}]/u;
+      if (!needle) return false;
+      while ((offset = content.indexOf(needle, offset + 1)) >= 0) {
+        var before = content.charAt(offset - 1), after = content.charAt(offset + needle.length);
+        if (word.test(needle.charAt(0)) && word.test(before) || word.test(needle.charAt(needle.length - 1)) && word.test(after)) continue;
+        if (/^\d/.test(needle) && /[\d.,+\-−<>=≤≥][ \t]*$/.test(content.slice(0, offset))) continue;
+        if (/\d$/.test(needle) && /^(?:[.,]\d|[ \t]+\d)/.test(content.slice(offset + needle.length))) continue;
+        return true;
+      }
+      return false;
+    }
+    function append(label, values) { var parts = values.filter(function (value) { return !!value && !covered(value); }); if (parts.length) details.push(label + ' ' + parts.join(' ')); }
+    var lab = note.labResult, medication = note.medication, igf = note.igf1;
+    if (lab) {
+      var formatter = win.VildaLabAssessmentUI, value = text(lab.value) || text(lab.raw) || text(lab.valueNum).replace('.', ',');
+      var result = formatter && typeof formatter.formatResult === 'function' ? formatter.formatResult(lab) : appendUnit(value, text(lab.unit));
+      append('Badanie:', [text(lab.test), result, text(lab.norm) ? 'Norma: ' + text(lab.norm) : '']);
+    }
+    if (medication) {
+      var hasRecordedDose = /^\s*(?:Dawka|Nowa dawka)\s*:/im.test(body), dose = '';
+      if (!hasRecordedDose) {
+        dose = typeof formatMedicationDose === 'function' ? text(formatMedicationDose(note)) : '';
+        if (!dose) dose = text(medication.dose) || appendUnit(text(medication.doseNum).replace('.', ','), text(medication.doseUnit));
+        // A textual dose is already assembled by the note editor. Add frequency
+        // only to the numeric fallback, without repeating a per-day/week unit.
+        if (!text(medication.dose) && dose && !frequencyInDose(dose, text(medication.freq))) dose += ' ' + text(medication.freq);
+      }
+      append('Leczenie:', [text(medication.name), dose]);
+    }
+    if (igf) append('IGF-1:', [appendUnit(typeof igf.value === 'number' ? text(igf.value).replace('.', ',') : text(igf.value), text(igf.unit))]);
+    return [body, details.join('\n')].filter(Boolean).join('\n\n');
   }
   function noteStatus(note) {
     if (note.noShowAtISO) return ['no-show', 'Nie zgłosił się'];
@@ -58,7 +105,7 @@
     if ((plan.steps || []).some(function (step) { return step.state === 'waiting'; })) return ['waiting', 'Oczekuję na wynik'];
     return ['open', 'Otwarty'];
   }
-  function build(patients, external, notes, plans, vault) {
+  function build(patients, external, notes, plans, vault, presentation) {
     var names = new Map(), externalIds = new Set((external || []).filter(Boolean).map(function (patient) { return patient.patientId; })), rows = [], keys = new Map();
     function add(row, extra) {
       // Keep the normalized index private, outside the rendering contract.
@@ -88,17 +135,19 @@
       var kind = note.labResult || note.igf1 ? 'lab' : note.dueDateISO ? 'event' : 'note';
       var reminder = role !== 'calendar' && (note.reminderContext && note.reminderContext.kind === 'reminder' || /^reminder-/.test(note.category || ''));
       var label = kind === 'lab' ? 'Badanie' : kind === 'event' ? reminder ? 'Przypomnienie' : 'Wydarzenie' : 'Notatka';
-      var status = noteStatus(note), detail = noteDetails(note), category = Object.prototype.hasOwnProperty.call(categories, note.category) ? categories[note.category] : text(note.category);
+      var status = noteStatus(note), clinical = note.category === 'wynik-klirens';
+      var body = clinical ? presentation.klirens.summary(note, { patientId: note.patientId }) : noteBody(note, presentation.formatMedicationDose);
+      var category = Object.prototype.hasOwnProperty.call(categories, note.category) ? categories[note.category] : text(note.category);
       var dates = [dateEntry(reminder ? 'reminder' : 'event', note.dueDateISO), dateEntry('clinical', note.clinicalDateISO)].filter(Boolean);
       add({ id: 'note:' + note.id, kind: kind, label: label, title: text(note.title) || category || label,
-        body: [text(note.body), detail].filter(Boolean).join('\n\n'), patientId: note.patientId, patientName: name,
+        body: body, patientId: note.patientId, patientName: name,
         noteId: note.id, planId: context && context.planId || null, dueDateISO: note.dueDateISO || null,
         eventDateISO: !reminder && note.dueDateISO || null, reminderDateISO: reminder && note.dueDateISO || null, clinicalDateISO: note.clinicalDateISO || null,
         completedAtISO: note.completedAtISO || null, noShowAtISO: note.noShowAtISO || null,
         status: status[0], statusLabel: status[1], categoryLabel: category, procedureType: text(note.procedureType),
         isActivity: activity, isExternal: legacyExternal || externalIds.has(note.patientId), isReminder: !!reminder,
         canOpenPatient: !activity && !legacyExternal, dates: dates, source: note },
-      [category, text(note.procedureType), text(note.externalName)].filter(Boolean).join(' '));
+      [category, text(note.procedureType), text(note.externalName), clinical ? '' : [text(note.body), noteIndexDetails(note)].filter(Boolean).join('\n')].filter(Boolean).join(' '));
     });
     (plans || []).forEach(function (plan) {
       if (!plan || !plan.id || !names.has(plan.patientId)) return;
@@ -158,7 +207,13 @@
         // keystroke. No getPatient()/snapshot payload is needed for a result.
         var sources = await Promise.all([vault.listPatients(), vault.listExternalPatients(), vault.listAllPatientNotes(), vault.listCarePlans()]);
         assertCurrent(stamp);
-        var next = build(sources[0], sources[1], sources[2], sources[3], vault);
+        var klirens = win.ClcrNotesView;
+        if (sources[2].some(function (note) { return note && note.category === 'wynik-klirens'; })) {
+          if (typeof options.prepareNotes === 'function') klirens = await options.prepareNotes();
+          assertCurrent(stamp);
+          if (!klirens || typeof klirens.summary !== 'function') throw error('GLOBAL_SEARCH_UNAVAILABLE', 'Nie można odczytać zapisanych wyników. Odśwież aplikację i spróbuj ponownie.');
+        }
+        var next = build(sources[0], sources[1], sources[2], sources[3], vault, { klirens: klirens, formatMedicationDose: options.formatMedicationDose });
         assertCurrent(stamp); cached = next; return next.rows;
       })();
       pending = request;

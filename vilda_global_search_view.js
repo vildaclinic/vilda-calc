@@ -128,6 +128,7 @@
       dateLine('Wykonano', row.completedAtISO); dateLine('Nie zgłosił się', row.noShowAtISO);
       if (dates.childNodes.length) detail.appendChild(dates);
       if (row.body) detail.appendChild(node('p', 'vb22-body', row.body));
+      if (row.kind === 'lab' && row.source && row.source.category !== 'wynik-klirens' && options.renderLabContext) options.renderLabContext(detail, row.source.labResult);
       var actions = node('div', 'vb22-actions vgs-actions');
       var source = row.source || {}, reminder = row.isReminder || !!source.reminderContext || ['followup', 'treatment', 'observation', 'wynik-badania', 'reminder-exam', 'procedura'].indexOf(source.category) >= 0;
       if (row.noteId && day(source.dueDateISO) && reminder && !(source.careContext && source.careContext.planId) && options.openReminder) actions.appendChild(button('Otwórz sprawę', 'vb22-primary', function () { navigate(function () { return options.openReminder(row.noteId, row); }); }));
@@ -186,7 +187,7 @@
       search.value = state.query; time.value = state.time; status.value = state.status;
       await refresh(); if (ticket === requests && requestedId && current()) select(requestedId);
     }
-    if (win.VildaGlobalSearch && typeof win.VildaGlobalSearch.create === 'function') service = win.VildaGlobalSearch.create({ vault: vault, document: doc, onInvalidate: invalidated });
+    if (win.VildaGlobalSearch && typeof win.VildaGlobalSearch.create === 'function') service = win.VildaGlobalSearch.create({ vault: vault, document: doc, onInvalidate: invalidated, prepareNotes: options.prepareNotes, formatMedicationDose: options.formatMedicationDose });
     render();
     return {
       refresh: refresh,
