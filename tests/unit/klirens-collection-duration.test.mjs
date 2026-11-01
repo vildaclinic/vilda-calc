@@ -59,7 +59,8 @@ describe('Shared DZM numeric duration — new collections versus historical edit
     const values = { Scr: '0.4', formulaPicker: 'ckid_u25', Cl24DurationHours: '24', Cl24DurationSource: 'assumed-24h',
       CA_collectionHours: '', CA_collectionSource: 'assumed-24h', UA_collectionHours: '', UA_collectionSource: 'assumed-24h',
       MG_collectionHours: '', MG_collectionSource: 'assumed-24h', PO4_collectionHours: '', PO4_collectionSource: 'assumed-24h', PO4_durationNeedsConfirmation: 'false',
-      Prot_collectionHours: '', Prot_collectionSource: 'assumed-24h', Na_collectionHours: '', Na_collectionSource: 'assumed-24h' };
+      Prot_collectionHours: '', Prot_collectionSource: 'assumed-24h', Na_collectionHours: '', Na_collectionSource: 'assumed-24h',
+      K_collectionHours: '', K_collectionSource: 'assumed-24h' };
     const original = structuredClone(values), captured = api.normalizeCapturedInputs(values);
     expect(values).toEqual(original);
     expect(captured).not.toBe(values);
@@ -252,12 +253,20 @@ describe('Shared DZM numeric duration — new collections versus historical edit
     expect(result.measuredClearanceReference.durationSource).toBe('assumed-24h');
     expect(() => w.ClcrSavedLegacyCalculator.recalculate('cl24', { ...specimen, Ucr: '100', Scr: '1', ScrUnit: 'mg/dl', Cl24DurationHours: '0' })).toThrow('większy od 0');
   });
-  it.each([['K_mmol_d', 30], ['Prot_mgkg', 240], ['Ox_mgkg', 1.25], ['Cit_mgkg', 1.25]])('actual legacy %s producer no longer needs dates or six answers', (formula, expected) => {
+  it.each([['Prot_mgkg', 240], ['Ox_mgkg', 1.25], ['Cit_mgkg', 1.25]])('actual legacy %s producer no longer needs dates or six answers', (formula, expected) => {
     const w = harness();
     expect(w.ClcrSavedLegacyCalculator.recalculate(formula, specimen).valueNum).toBe(expected);
     expect(w.ClcrSavedLegacyCalculator.recalculate(formula, { ...specimen, Cl24DurationHours: '12' }).valueNum).toBe(expected * 2);
     expect(() => w.ClcrSavedLegacyCalculator.recalculate(formula, { ...specimen, Cl24DurationHours: '', Cl24DurationSource: 'historical-missing' })).toThrow('nie został utrwalony');
     expect(() => w.ClcrSavedLegacyCalculator.recalculate(formula, { ...specimen, ui_collectionNoMissedVoids_answer: 'no' })).toThrow();
+  });
+  it('audited potassium legacy editing requires an actual historical clock and preserves non24 estimates', () => {
+    const api = harness().ClcrSavedLegacyCalculator, input = { ...specimen, Cl24DurationHours: '24', Cl24DurationSource: 'hours' };
+    expect(api.recalculate('K_mmol_d', input)).toMatchObject({ valueNum: 30, potassiumDzmSnapshot: { full24Hours: true, input: { hours: '24' } } });
+    expect(api.recalculate('K_mmol_d', { ...input, Cl24DurationHours: '12' })).toMatchObject({ valueNum: 60, outOfRange: null, potassiumDzmSnapshot: { full24Hours: false } });
+    expect(() => api.recalculate('K_mmol_d', specimen)).toThrow(/czas/i);
+    expect(() => api.recalculate('K_mmol_d', { ...input, Cl24DurationHours: '', Cl24DurationSource: 'historical-missing' })).toThrow(/czas/i);
+    expect(() => api.recalculate('K_mmol_d', { ...input, ui_collectionNoMissedVoids_answer: 'no' })).toThrow();
   });
   it('audited sodium legacy editing preserves the actual duration and requires an unknown old clock', () => {
     const api = harness().ClcrSavedLegacyCalculator, input = { ...specimen, Cl24DurationHours: '24', Cl24DurationSource: 'hours' }, original = structuredClone(input);

@@ -77,7 +77,7 @@ test.describe('etykiety pól Klirensu wskazują pole, nie przycisk „i"', () =>
     const { liczba, zle } = await zlyCelEtykiet(page);
     expect(liczba, 'kontrola sensu: strona ma udekorowane pola').toBeGreaterThan(50);
     expect(zle, JSON.stringify(zle.slice(0, 8))).toEqual([]);
-    for (const id of ['CA_collectionSource', 'UA_collectionSource', 'MG_collectionSource']) {
+    for (const id of ['CA_collectionSource', 'UA_collectionSource', 'MG_collectionSource', 'K_reportedUnit']) {
       await expect(page.locator('#' + id)).toHaveAttribute('type', 'hidden');
       await expect(page.locator(`label.clcr-field[data-clcr-field-id="${id}"]`)).toHaveCount(0);
     }

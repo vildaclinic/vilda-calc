@@ -212,6 +212,22 @@
       persistence.augmentDatapoint({ getAttribute: name => name === "data-clcr-sodium-dzm-snapshot" ? JSON.stringify(result) : null }, datapoint);
       return datapoint;
     }
+    if (formulaId === "K_mmol_d") {
+      const engine = requiredModule("VildaClcrPotassiumDzm"), policy = requiredModule("ClcrPotassiumDzmReferenceData").DEFAULT_POLICY;
+      const persistence = requiredModule("ClcrPotassiumDzmPersistence");
+      // Broad calculations own U_K/V24/shared duration. Dormant dedicated
+      // controls must never replace that selected formula's inputs.
+      const selected = { ...values };
+      if (own(values, "U_K") && own(values, "V24")) {
+        for (const key of Object.keys(selected)) if (key.startsWith("K_")) delete selected[key];
+      }
+      const prepared = persistence.prepareValues(selected, context);
+      const result = engine.evaluate(engine.inputFromValues(prepared, context), policy);
+      if (!result.valid) throw new Error(result.error || "Sprawdź dane potrzebne do obliczenia wydalania potasu.");
+      const datapoint = { id: parameterKey, sourceFormulaId: formulaId, label: "Wydalanie potasu (DZM)", testKey: "clcr:K_mmol_d", category: null, comparator: "", potassiumDzmSnapshot: result };
+      persistence.augmentDatapoint({ getAttribute: name => name === "data-clcr-potassium-dzm-snapshot" ? JSON.stringify(result) : null }, datapoint);
+      return datapoint;
+    }
     if (formulaId === "Ca_mgkg") {
       const engine = requiredModule("VildaClcrCaDzm"), policy = requiredModule("ClcrCaDzmReferenceData").DEFAULT_POLICY;
       const persistence = requiredModule("ClcrCaDzmPersistence");
@@ -310,8 +326,6 @@
     if (own(analytes, formulaId)) {
       const concentration = formulaId === "Ca_mgkg" ? calcium : formulaId === "Mg_mgkg" ? magnesium : number(values, analytes[formulaId]);
       value = excr_mgkg(concentration, daily, weight); unit = "mg/kg/24 h"; digits = 1;
-    } else if (formulaId === "K_mmol_d") {
-      value = excr_mmol_d(number(values, "U_K"), daily); unit = "mmol/24 h"; digits = 1;
     } else if (formulaId === "PO4_mgkg") {
       const result = safety.computePhosphorusDzm({ concentrationMgDl: number(values, "U_PO4"), volumeMl: daily });
       value = result?.totalMg24h ?? null; unit = "mg P/24 h"; digits = 1;

@@ -158,9 +158,10 @@
       },
       {
         id: "K_mmol_d",
-        label: "Wydalanie\xA0potasu (mmol/d)",
+        label: "Dobowe wydalanie potasu",
         version: "advanced",
-        requires: [ "U_K", "V24", ...timedCollectionDurationFields],
+        requires: ["K_concentration", "K_volume", "K_volumeUnit", "K_collectionHours"],
+        note: "Stężenie i objętość albo gotowy wynik dobowy. Przyjmujemy pełne 24 h; znane dane pacjenta służą dobraniu zakresu laboratoryjnego.",
       },
       {
         id: "KM_Cr",

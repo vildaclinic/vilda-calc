@@ -1,5 +1,6 @@
 import { expect, test } from '@playwright/test';
 import { openCalculator, restore } from '../support/klirens-ca-dzm-browser.mjs';
+import { openCalculator as openPotassium, restore as restorePotassium, expectResult as expectPotassium } from './potassium-dzm.helpers.mjs';
 
 async function guidance(page) {
   return page.evaluate(() => { const state = window.ClcrUiWorkflow.state.selectionGuidance; return { count: state.navigationCount, target: state.lastTarget, formula: state.lastFormula }; });
@@ -86,3 +87,42 @@ test('Publiczny wybór kompatybilności prowadzi na mobile do brakującej kreaty
   await page.evaluate(() => { window.__vildaPersistRestoring = true; try { window.selectClcrFormula('Ca_mgkg'); } finally { window.__vildaPersistRestoring = false; } });
   expect((await guidance(page)).count).toBe(before.count);
 });
+
+for (const width of [1440, 390]) {
+  test(`Wybór potasu DZM prowadzi do własnych braków w obu trybach ${width}px`, async ({ page }) => {
+    await page.emulateMedia({ reducedMotion: 'reduce' }); await openPotassium(page, width);
+    await restorePotassium(page, { K_concentration: '', K_volume: '', Scr: '0.7', U_Alb: '42' });
+    const protectedIds = ['age', 'sex', 'weight', 'height', 'Scr', 'U_Alb'];
+    const context = () => page.evaluate(ids => Object.fromEntries(ids.map(id => [id, document.getElementById(id).value])), protectedIds);
+    const original = await context(), initial = await guidance(page);
+    await page.evaluate(() => window.scrollTo(0, 0));
+    await chooseFromSearch(page, 'wydalanie potasu', 'K_mmol_d');
+    await expect.poll(async () => (await guidance(page)).count).toBe(initial.count + 1);
+    expect((await guidance(page)).target).toBe('K_concentration');
+    await visibleTarget(page, 'K_concentration');
+    await expect(page.locator('#clcr-label-K_concentration')).toBeFocused();
+    await expect(page.locator('#K_concentration')).toHaveClass(/clcr-missing-input/);
+    await expect(page.locator('#K_volume')).toHaveClass(/clcr-missing-input/);
+    await expect(page.locator('#clcrForm .clcr-missing-input:visible')).toHaveCount(2);
+    expect(await context()).toEqual(original);
+    const count = (await guidance(page)).count;
+    await page.locator('#K_concentration').fill('100');
+    await expect(page.locator('#K_concentration')).not.toHaveClass(/clcr-missing-input/);
+    expect((await guidance(page)).count).toBe(count);
+    await page.locator('[data-potassium-dzm-mode="reported"]').click();
+    await expect(page.locator('#K_reportedValue')).toHaveClass(/clcr-missing-input/);
+    await expect(page.locator('#K_volume')).not.toHaveClass(/clcr-missing-input/);
+    await expect(page.locator('#clcrForm .clcr-missing-input:visible')).toHaveCount(1);
+    expect((await guidance(page)).count).toBe(count);
+    await page.evaluate(() => window.scrollTo(0, 0));
+    await chooseFromSearch(page, 'wydalanie potasu', 'K_mmol_d');
+    await expect.poll(async () => (await guidance(page)).count).toBe(count + 1);
+    expect((await guidance(page)).target).toBe('K_reportedValue');
+    await visibleTarget(page, 'K_reportedValue');
+    await expect(page.locator('#clcr-label-K_reportedValue')).toBeFocused();
+    await page.locator('#K_reportedValue').fill('150'); await expectPotassium(page);
+    await expect(page.locator('#clcrForm .clcr-missing-input:visible')).toHaveCount(0);
+    expect((await guidance(page)).count).toBe(count + 1);
+    expect(await context()).toEqual(original);
+  });
+}

@@ -280,7 +280,8 @@ describe('P-SW-PRECACHE: instalacja bez historii, kopia z poprzedniej pamięci, 
   const arkuszEdu = (adres) => adres.split('?')[0] === '/edu-video-ui.css';
   const aliasyEdu = () => doInstalacji().filter(arkuszEdu);
   const cssEdu = fs.readFileSync(path.join(korzen, 'edu-video-ui.css'), 'utf8');
-  const dodatkoweWspoldzieloneZasoby = ['/vilda_auth_ui.css', '/ios26-v2.css', '/vilda_shell.css', '/vilda_vault.js'];
+  const dodatkoweWspoldzieloneZasoby = ['/vilda_auth_ui.css', '/ios26-v2.css', '/vilda_shell.css', '/vilda_vault.js',
+    '/vilda_logger.js', '/vilda_html.js', '/vilda_init.js', '/vilda_app_helpers.js', '/vilda_frame_sync.js'];
   const wspoldzielonePary = ['/style.css', '/vilda_chrome.css', ...dodatkoweWspoldzieloneZasoby];
   const wspoldzieloneZasoby = new Set(['/edu-video-ui.css', ...wspoldzielonePary]);
   const oczekiwanePobraniaSwiezychZasobow = () => {
@@ -307,11 +308,14 @@ describe('P-SW-PRECACHE: instalacja bez historii, kopia z poprzedniej pamięci, 
     // opóźnienia na żądanie 24 MB zajęło 64 s, a 474 MB (historia) nie mieściło się nawet przy 20 Mb/s.
     const bajty = pobrane.reduce((suma, adres) => suma + (rozmiarPliku(adres) || 0), 0);
     expect(bajty, `instalacja pobiera ${(bajty / 1e6).toFixed(1)} MB`).toBeLessThan(40e6);
-    // Biblioteka dodaje cztery zasoby do bazy 600 żądań. Cztery kolejne jawne pary
-    // aliasów dzielą świeżą odpowiedź, więc pozostaje 600 żądań i wszystkie klucze offline.
+    // Pięć modułów potasu dodaje pięć żądań do bazy600. Pięć jawnych par
+    // aliasów dzieli wyłącznie świeżą odpowiedź: nadal ≤600 i wszystkie klucze offline.
     // Budżety bajtów/żądań pozostają bez zmian; wymagane modele nadal idą z sieci raz.
     expect(pobrane.filter(adres => adres.split('?')[0] === '/vilda_care_plan_model.js')).toHaveLength(1);
     for (const plik of ['/vilda_care_template_model.js', '/vilda_care_template_store.js', '/vilda_care_templates.js', '/vilda_care_templates.css']) {
+      expect(pobrane.filter(adres => adres.split('?')[0] === plik), plik).toHaveLength(1);
+    }
+    for (const plik of ['/clcr_potassium_dzm_data.js', '/clcr_potassium_dzm.js', '/clcr_potassium_dzm_ui.js', '/clcr_potassium_dzm.css', '/clcr_potassium_dzm_persistence.js']) {
       expect(pobrane.filter(adres => adres.split('?')[0] === plik), plik).toHaveLength(1);
     }
     expect(pobrane.length, `instalacja wysyła ${pobrane.length} żądań`).toBeLessThanOrEqual(600);
