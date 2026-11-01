@@ -52,7 +52,7 @@ html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .potassium-dzm
 html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .potassium-dzm-proposal-card[data-clcr-tone="normal"] { --clcr-result-color: var(--clcr-primary-dark); --clcr-result-bg: #eef8f8; --clcr-result-border: #bbdadd; }
 html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .potassium-dzm-proposal-card[data-clcr-tone="warning"] { --clcr-result-color: var(--clcr-warning); --clcr-result-bg: var(--clcr-warning-bg); --clcr-result-border: #ead2a3; }
 html[data-clcr-workflow-ui="1"] #clcrResultReport .potassium-dzm-result-status { min-height: 42px; margin: 0 0 15px; color: var(--clcr-result-color); font-size: 14px; font-weight: 750; line-height: 1.5; }
-.potassium-dzm-result-main { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.05fr); grid-template-rows: minmax(36px, auto) minmax(56px, auto) minmax(24px, auto) auto; column-gap: var(--space-16px); row-gap: 0; }
+.potassium-dzm-result-main { container-type: inline-size; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.05fr); grid-template-rows: minmax(36px, auto) minmax(56px, auto) minmax(24px, auto) auto; column-gap: var(--space-16px); row-gap: 0; }
 .potassium-dzm-result-main > div { display: grid; grid-template-rows: subgrid; grid-row: 1 / span 4; min-width: 0; }
 .potassium-dzm-result-main > .clcr-result-patient { grid-column: 1; }
 .potassium-dzm-result-main > .clcr-result-reference { grid-column: 2; }
@@ -138,3 +138,9 @@ html[data-clcr-workflow-ui="1"][data-clcr-potassium-dzm-active="1"] #clcrVisitSa
   .potassium-dzm-result-copy { font-size: 11px; }
   .potassium-dzm-norm-axis-caption { font-size: 9px !important; }
 }
+
+/* Size long values from the fixed result grid, including fallback fonts. */
+html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .potassium-dzm-proposal-card .clcr-result-value[data-long="true"] { font-size: min(27px, 8cqi) !important; }
+html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .potassium-dzm-proposal-card .clcr-result-value[data-dense="true"] { font-size: min(21px, 5cqi) !important; }
+html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .potassium-dzm-proposal-card .clcr-result-value[data-extra-dense="true"] { font-size: min(16px, 4.5cqi) !important; }
+html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .potassium-dzm-proposal-card:is([data-clcr-value-length="4"], [data-clcr-value-length="5"]) .clcr-result-value[data-long="true"] { font-size: min(43px, 12cqi) !important; }

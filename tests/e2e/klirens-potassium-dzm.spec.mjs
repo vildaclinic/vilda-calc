@@ -60,6 +60,10 @@ async function geometry(page, width) {
     expect(number.left, number.text).toBeGreaterThanOrEqual(number.boxLeft - 1);
     expect(number.right, number.text).toBeLessThanOrEqual(number.boxRight + 1);
     expect(number.lines).toHaveLength(1);
+    for (const line of number.lines) {
+      expect(line.left, number.text).toBeGreaterThanOrEqual(number.boxLeft - 1);
+      expect(line.right, number.text).toBeLessThanOrEqual(number.boxRight + 1);
+    }
   }
   if (result.units.length === 2) expect(Math.abs(result.units[0] - result.units[1])).toBeLessThanOrEqual(1);
   if (result.axis) {
@@ -147,6 +151,19 @@ for (const width of [1440, 390, 320]) {
     await testInfo.attach(`potassium-dzm-${width}`, { path: screenshot, contentType: 'image/png' });
     await page.locator('#K_reportedValue').fill('-1'); await expectBlocked(page);
     sameWidths(initial, await geometry(page, width));
+    for (const family of ['Arial, sans-serif', '"DejaVu Sans", sans-serif', '"Liberation Sans", sans-serif', 'cursive']) {
+      await page.addStyleTag({ content: `.potassium-dzm-proposal-card :is(.clcr-result-value,.potassium-dzm-reference-value) { font-family: ${family} !important; }` });
+      await restore(page, { K_inputMode: 'reported', K_reportedValue: '150' });
+      for (const K_reportedValue of ['150', '1000', '99999', '150.5', '1.7976931348623157e308']) {
+        await page.locator('#K_reportedValue').fill(K_reportedValue);
+        await expectResult(page, { raw: Number(K_reportedValue) });
+        sameWidths(initial, await geometry(page, width));
+      }
+      await restore(page, { K_concentration: '1e-300' });
+      const tiny = await expectResult(page, { raw: 1.5e-300, status: 'low', tone: 'warning' });
+      expect(tiny.rawValue).toBeGreaterThan(0);
+      sameWidths(initial, await geometry(page, width));
+    }
     await page.locator('#clearBtn').click(); await page.waitForFunction(() => window.clcrIsResetting !== true);
     await choose(page); await expectBlocked(page); await expect(page.locator('#K_collectionHours')).toHaveValue('24');
     sameWidths(initial, await geometry(page, width));

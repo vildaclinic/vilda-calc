@@ -321,7 +321,7 @@
  },
  "clcr_potassium_dzm.css": {
   "v": 1,
-  "sha256": "0e6d6a8345509c66270f1b7e0991e35c7743b2e752f08732f6130b4c12ef6aff"
+  "sha256": "7279c0af59e618a4ff0011d38e7a1087fd3d2016aeef37a75e48ec4433d646e9"
  },
  "clcr_potassium_dzm.js": {
   "v": 1,
@@ -337,7 +337,7 @@
  },
  "clcr_potassium_dzm_ui.js": {
   "v": 1,
-  "sha256": "58bc3d8d8ec1604f82b1a871ca40dda33141d89099e5c8a16cc2c62b5acf1ab3"
+  "sha256": "98bb303b9ae9cc6db460b8bb2837c4b4d49374e87fb64fad11210fdb0b58e483"
  },
  "clcr_protein_dzm.css": {
   "v": 1,
@@ -493,7 +493,7 @@
  },
  "clcr_ui_workflow.js": {
   "v": 36,
-  "sha256": "40a716b625725b21649006d03b70b5b1992f718067d75a07e751f1df1cff0932"
+  "sha256": "d3d7d8a59593f2421a51e6b64ed484279e7a4ed9d566b0e69bcddb5897e94208"
  },
  "cukrzyca.js": {
   "v": 30,

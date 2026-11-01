@@ -3891,7 +3891,7 @@
       .forEach((control) => {
         if (
           [
-            "UA_inputMode", "CA_inputMode", "MG_inputMode", "PO4_inputMode", "PO4_outputUnit", "PO4_durationNeedsConfirmation", "PO4_unitConversions", "Prot_inputMode", "Prot_outputUnit", "Prot_durationNeedsConfirmation", "Prot_unitConversions", "Na_inputMode", "Na_outputUnit", "Na_durationNeedsConfirmation", "Na_unitConversions", "K_inputMode", "K_outputUnit", "K_durationNeedsConfirmation", "K_unitConversions",
+            "UA_inputMode", "CA_inputMode", "MG_inputMode", "PO4_inputMode", "PO4_outputUnit", "PO4_durationNeedsConfirmation", "PO4_unitConversions", "Prot_inputMode", "Prot_outputUnit", "Prot_durationNeedsConfirmation", "Prot_unitConversions", "Na_inputMode", "Na_outputUnit", "Na_durationNeedsConfirmation", "Na_unitConversions", "K_inputMode", "K_reportedUnit", "K_outputUnit", "K_durationNeedsConfirmation", "K_unitConversions",
             "UA_collectionSource", "CA_collectionSource", "MG_collectionSource", "PO4_collectionSource", "Prot_collectionSource", "Na_collectionSource", "K_collectionSource",
             "formulaSearch",
             "formulaPicker",
