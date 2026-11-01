@@ -22,6 +22,33 @@ async function bind(f) { expect((await f.store.bind({ slotId: 'fictional-slot', 
 async function page(f, events, firstSeq = 1) { return Promise.all(events.map(async (event, index) => ({ ...event, seq: firstSeq + index, digest: await f.digest(event.body) }))); }
 const snapshot = async f => clone({ meta: await f.backend.readMeta(), templates: await f.backend.listTemplates(), events: await f.backend.listEvents() });
 
+// Real codec/AES/backend; only the commit order is controlled by these helpers.
+function reverseObjectKeyText(value) {
+  if (Array.isArray(value)) return '[' + value.map(reverseObjectKeyText).join(',') + ']';
+  if (value && typeof value === 'object') return '{' + Object.keys(value).reverse().map(key => JSON.stringify(key) + ':' + reverseObjectKeyText(value[key])).join(',') + '}';
+  return JSON.stringify(value);
+}
+async function seedEchoIntent(f, { acknowledge = true, pull = false } = {}) {
+  expect(await f.store.operate(f.request(), DATE)).toMatchObject({ ok: true }); await bind(f);
+  const sent = (await f.store.pending({ epoch: 1 })).events;
+  const receipt = { eid: sent[0].eid, seq: 1, digest: await f.digest(sent[0].body) };
+  const echo = await page(f, sent), beforeAck = await f.store.exportRaw();
+  if (acknowledge) expect(await f.store.acknowledge({ epoch: 1, sent, accepted: [receipt] })).toEqual({ acknowledged: 1 });
+  if (pull) await f.store.apply({ epoch: 1, expectedCursor: 0, cursor: 1, events: echo });
+  return { echo, receipt, beforeAck };
+}
+function holdTemplateOperationCommit(f, operationId) {
+  const commit = f.backend.commit.bind(f.backend); let entered, release, change, armed = true;
+  const reached = new Promise(resolve => { entered = resolve; }), held = new Promise(resolve => { release = resolve; });
+  f.backend.commit = async next => {
+    if (armed && next.events?.some(row => row.eid === operationId)) {
+      armed = false; change = clone(next); entered(); await held;
+    }
+    return commit(next);
+  };
+  return { reached: local => Promise.race([reached, local.then(result => { throw new Error('Local operation completed before controlled commit: ' + JSON.stringify(result)); })]), release, change: () => change };
+}
+
 describe('isolated encrypted template store with real pure codec', () => {
   it('atomically keeps one immutable revision and durable receipt, with no plaintext definitions in raw rows', async () => {
     const f = await fixture(), saved = await f.store.operate(f.request(), DATE);
@@ -218,5 +245,97 @@ describe('isolated encrypted template store with real pure codec', () => {
     const row = await f.backend.readTemplate('fictional-template');
     const first = await f.backend.commit({ assertCurrent() {}, templateChecks: [{ id: row.templateId, revision: row.revision }], templates: [{ ...row, revision: row.revision + 1 }], events: [] }); expect(first.saved).toBe(true);
     const before = await snapshot(f); expect(await f.backend.commit({ assertCurrent() {}, templateChecks: [{ id: row.templateId, revision: row.revision }], templates: [row], events: [], meta: { cursor: 99 } })).toMatchObject({ saved: false, reason: 'conflict' }); expect(await snapshot(f)).toEqual(before);
+  });
+  it.each([false, true])('keeps an identical full aggregate stable during an ACKed echo (reordered keys: %s)', async reordered => {
+    const f = await fixture(), original = await seedEchoIntent(f);
+    const originalEvents = await f.backend.listEvents();
+    if (reordered) {
+      const row = await f.backend.readTemplate('fictional-template'), plain = await f.plain(row.cipher, 'template', row.templateId);
+      const variant = JSON.parse(reverseObjectKeyText(plain));
+      expect(JSON.stringify(variant)).not.toBe(JSON.stringify(plain));
+      expect(await f.model.verifyTemplateRecord(variant)).toMatchObject({ ok: true });
+      expect(await f.backend.commit({ assertCurrent() {}, templateChecks: [{ id: row.templateId, revision: row.revision }],
+        templates: [{ ...row, revision: row.revision + 1, cipher: await f.cipher(variant, 'template', row.templateId) }], events: [] })).toMatchObject({ saved: true });
+      expect(await f.backend.listEvents()).toEqual(originalEvents);
+    }
+    const before = await snapshot(f), beforeView = await f.store.read('fictional-template');
+    const request = f.request({ operationId: 'fictional-after-ack', baseToken: beforeView.baseToken });
+    request.definition.purpose = 'Fikcyjna druga lokalna intencja';
+    const gate = holdTemplateOperationCommit(f, request.operationId), local = f.store.operate(request, DATE);
+    await gate.reached(local);
+    let afterEcho;
+    try {
+      await f.store.apply({ epoch: 1, expectedCursor: 0, cursor: 1, events: original.echo });
+      afterEcho = await snapshot(f);
+      expect(afterEcho.events).toEqual(before.events);
+      expect(await f.plain(afterEcho.templates[0].cipher, 'template', 'fictional-template')).toEqual(await f.plain(before.templates[0].cipher, 'template', 'fictional-template'));
+      expect((await f.store.read('fictional-template')).baseToken).toBe(beforeView.baseToken);
+      expect(afterEcho.meta.cursor).toBe(1);
+    } finally { gate.release(); }
+    expect(await local).toMatchObject({ ok: true, pending: true });
+    expect(afterEcho.templates).toEqual(before.templates);
+    expect((await f.backend.readEvent(request.operationId)).localCipher).toEqual(gate.change().events[0].localCipher);
+    expect((await f.store.read('fictional-template')).revisions).toHaveLength(2);
+    expect((await f.store.readMeta()).cursor).toBe(1);
+  });
+  it('commits a real echo ACK without resurrecting an older outbox or replacing a durable pending ciphertext', async () => {
+    const f = await fixture(), original = await seedEchoIntent(f, { acknowledge: false });
+    const accepted = { epoch: 1, seq: original.receipt.seq, digest: original.receipt.digest };
+    const oldEvent = await f.backend.readEvent('fictional-create'), view = await f.store.read('fictional-template');
+    const request = f.request({ operationId: 'fictional-during-ack', baseToken: view.baseToken });
+    request.definition.purpose = 'Fikcyjna druga lokalna intencja';
+    const gate = holdTemplateOperationCommit(f, request.operationId), local = f.store.operate(request, DATE);
+    await gate.reached(local);
+    try {
+      await f.store.apply({ epoch: 1, expectedCursor: 0, cursor: 1, events: original.echo });
+      const acked = await f.backend.readEvent('fictional-create');
+      expect(acked.eid).toBe('fictional-create'); expect(acked.pending).toBe(0);
+      expect(acked.accepted).toEqual(accepted);
+      expect(acked.localCipher).toEqual(oldEvent.localCipher); expect(acked.wire).toEqual(oldEvent.wire);
+      expect((await f.store.readMeta()).cursor).toBe(1);
+    } finally { gate.release(); }
+    expect(await local).toMatchObject({ ok: true, pending: true });
+    expect((await f.backend.readEvent(request.operationId)).localCipher).toEqual(gate.change().events[0].localCipher);
+    const beforeReplay = await snapshot(f);
+    expect(await f.store.operate(request, DATE)).toMatchObject({ ok: true, reused: true, pending: true });
+    expect(await snapshot(f)).toEqual(beforeReplay);
+    const pending = await f.store.pending({ epoch: 1 }), pendingRow = await f.backend.readEvent(request.operationId);
+    expect(pending.events.map(row => row.eid)).toEqual([request.operationId]);
+    await f.store.importRaw(original.beforeAck);
+    const retainedAck = await f.backend.readEvent('fictional-create');
+    expect(retainedAck.eid).toBe('fictional-create'); expect(retainedAck.pending).toBe(0);
+    expect(retainedAck.accepted).toEqual(accepted);
+    expect(retainedAck.localCipher).toEqual(oldEvent.localCipher); expect(retainedAck.wire).toEqual(oldEvent.wire);
+    expect(await f.backend.readEvent(request.operationId)).toEqual(pendingRow);
+    expect(await f.store.pending({ epoch: 1 })).toEqual(pending);
+    expect((await f.store.readMeta()).cursor).toBe(1);
+    const beforeInvalid = await snapshot(f);
+    await expect(f.store.apply({ epoch: 2, expectedCursor: 1, cursor: 1, events: [] })).rejects.toMatchObject({ code: 'CARE_TEMPLATE_CONFLICT' });
+    expect(await snapshot(f)).toEqual(beforeInvalid);
+  });
+  it.each(['revise', 'noop'])('retains full-record CAS when a real remote %s operation races a local save', async kind => {
+    const f = await fixture(); await seedEchoIntent(f, { pull: true });
+    const remote = await fixture('private', f.key); await remote.store.importRaw(await f.store.exportRaw());
+    const base = await remote.store.read('fictional-template'), remoteId = 'fictional-remote-' + kind;
+    const remoteRequest = remote.request({ operationId: remoteId, baseToken: base.baseToken });
+    if (kind === 'revise') remoteRequest.definition.purpose = 'Fikcyjna równoległa zmiana z innego urządzenia';
+    expect(await remote.store.operate(remoteRequest, DATE)).toMatchObject({ ok: true });
+    const incoming = (await remote.store.pending({ epoch: 1 })).events.find(row => row.eid === remoteId);
+    expect(incoming).toBeTruthy();
+    const view = await f.store.read('fictional-template'), request = f.request({ operationId: 'fictional-stale-local', baseToken: view.baseToken });
+    request.definition.purpose = 'Fikcyjna druga lokalna intencja';
+    const gate = holdTemplateOperationCommit(f, request.operationId), local = f.store.operate(request, DATE);
+    await gate.reached(local);
+    let afterRemote;
+    try {
+      await f.store.apply({ epoch: 1, expectedCursor: 1, cursor: 2, events: await page(f, [incoming], 2) });
+      afterRemote = await snapshot(f);
+      expect((await f.store.read('fictional-template')).baseToken).not.toBe(request.baseToken);
+    } finally { gate.release(); }
+    expect(await local).toEqual({ ok: false, reason: 'conflict' });
+    expect(await f.backend.readEvent(request.operationId)).toBeNull();
+    expect(await snapshot(f)).toEqual(afterRemote);
+    expect((await f.store.readMeta()).cursor).toBe(2);
+    expect((await f.backend.readEvent(remoteId)).pending).toBe(0);
   });
 });

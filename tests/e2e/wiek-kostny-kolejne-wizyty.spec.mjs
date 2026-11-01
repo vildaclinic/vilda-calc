@@ -134,6 +134,7 @@ async function wczytaj(page, id, wybor = 'new') {
   await page.evaluate(() => window.clearAllData());
   await page.evaluate((patientId) => window.VildaAuthUI.showPatientCard(patientId,
     (r) => { if (r) window.applyLoadedData(r); }, null), id);
+  await expect.poll(() => page.evaluate(() => window.VildaSaveStatusIndicator.getCurrentDecision().ready)).toBe(true);
   await page.getByRole('button', { name: 'Wczytaj tego pacjenta' }).click();
   await expect(page.locator('#vildaLoadChoiceModal')).toBeVisible();
   await page.locator(wybor === 'restore' ? '#vildaLcmRestore' : '#vildaLcmNew').click();

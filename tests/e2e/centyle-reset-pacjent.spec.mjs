@@ -92,6 +92,7 @@ async function zapisz(page) {
 
 async function wczytajDoWyboru(page, pid) {
   await page.evaluate((id) => window.VildaAuthUI.showPatientCard(id, (r) => { if (r) window.applyLoadedData(r); }, null), pid);
+  await expect.poll(() => page.evaluate(() => window.VildaSaveStatusIndicator.getCurrentDecision().ready)).toBe(true);
   await page.getByRole('button', { name: 'Wczytaj tego pacjenta' }).click();
   const ponownie = page.getByRole('button', { name: 'Wczytaj ponownie' });
   const okno = page.locator('#vildaLoadChoiceModal');

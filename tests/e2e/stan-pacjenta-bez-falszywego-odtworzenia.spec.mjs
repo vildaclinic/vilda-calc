@@ -120,6 +120,7 @@ async function zapiszIWczytaj(start, wybor) {
     if (rekord) window.applyLoadedData(rekord);
   }, null), pid);
   await expect(start.getByRole('button', { name: 'Wczytaj tego pacjenta' })).toBeVisible();
+  await expect.poll(() => start.evaluate(() => window.VildaSaveStatusIndicator.getCurrentDecision().ready)).toBe(true);
   await start.getByRole('button', { name: 'Wczytaj tego pacjenta' }).click();
   await expect(start.locator('#vildaLoadChoiceModal')).toBeVisible();
   await start.locator(wybor === 'restore' ? '#vildaLcmRestore' : '#vildaLcmNew').click();

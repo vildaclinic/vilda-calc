@@ -149,6 +149,7 @@ async function zapiszIOtworzKarte(page) {
   const kafelek = page.locator('.vhv-tile');
   await expect(kafelek).toBeVisible();
   await expect(kafelek, 'kafelek Karty pacjenta niesie liczbę z punktu terapii').toContainText('+2,5');
+  await expect.poll(() => page.evaluate(() => window.VildaSaveStatusIndicator.getCurrentDecision().ready)).toBe(true);
   await page.getByRole('button', { name: 'Wczytaj tego pacjenta' }).click();
   await expect(page.locator('#vildaLoadChoiceModal')).toBeVisible();
 }

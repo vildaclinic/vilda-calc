@@ -142,7 +142,10 @@ test('A7 is shared by DocPro and required narrative validation protects the pati
   await page.goto('/docpro.html');
   await page.waitForFunction(() => window.VildaVault?.isUnlocked() && window.VildaAuthUI);
   const professionalConfirm = page.locator('#professionalConfirmBtn');
-  if (await professionalConfirm.isVisible()) await professionalConfirm.click();
+  // This fresh fictional account has no saved professional confirmation.
+  // Wait for the actual deferred consent instead of checking visibility once.
+  await professionalConfirm.click();
+  await expect(page.locator('#professionalOverlay')).toBeHidden();
   await open(page);
   const noteId = notes.find(note => note.days === 15).id;
   await page.locator(`${WORKSPACE} [data-note-id="${noteId}"]`).click();

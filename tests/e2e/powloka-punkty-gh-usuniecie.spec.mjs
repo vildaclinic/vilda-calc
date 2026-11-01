@@ -103,6 +103,7 @@ async function wczytajPacjenta(page, fr) {
   await fr.evaluate((id) => window.VildaAuthUI.showPatientCard(id, (r) => { if (r) window.applyLoadedData(r); }, null), pid);
   await fr.getByRole('button', { name: 'Wczytaj tego pacjenta' }).waitFor({ state: 'visible', timeout: 15000 });
   await fr.evaluate(() => { const b = document.getElementById('consent-banner'); if (b) b.remove(); });
+  await expect.poll(() => fr.evaluate(() => window.VildaSaveStatusIndicator.getCurrentDecision().ready)).toBe(true);
   await fr.evaluate(() => { [...document.querySelectorAll('button')].find((b) => b.textContent.trim() === 'Wczytaj tego pacjenta').click(); });
   await fr.waitForSelector('#vildaLoadChoiceModal', { state: 'visible', timeout: 8000 });
   await fr.evaluate(() => document.getElementById('vildaLcmRestore').click());

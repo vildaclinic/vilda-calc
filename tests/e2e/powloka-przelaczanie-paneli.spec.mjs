@@ -119,6 +119,7 @@ async function wczytajZKarty(page, start, pid, wybor) {
   await gotowa(start);
   await start.evaluate((id) => window.VildaAuthUI.showPatientCard(id, (r) => { if (r) window.applyLoadedData(r); }, null), pid);
   await start.waitForSelector('.vhv-tile', { state: 'visible' });
+  await expect.poll(() => start.evaluate(() => window.VildaSaveStatusIndicator.getCurrentDecision().ready)).toBe(true);
   await start.getByRole('button', { name: 'Wczytaj tego pacjenta' }).click();
   await start.waitForSelector('#vildaLoadChoiceModal', { state: 'visible', timeout: 8000 });
   await start.click(wybor === 'nowy' ? '#vildaLcmNew' : '#vildaLcmRestore');
@@ -138,6 +139,7 @@ async function wczytajZKartyWolnyOdczyt(page, start, pid, wybor, ms) {
   await start.evaluate((id) => window.VildaAuthUI.showPatientCard(id, (r) => { if (r) window.applyLoadedData(r); }, null), pid);
   await start.waitForSelector('.vhv-tile', { state: 'visible' });
   await opoznijOdczytPacjenta(start, ms);
+  await expect.poll(() => start.evaluate(() => window.VildaSaveStatusIndicator.getCurrentDecision().ready)).toBe(true);
   await start.getByRole('button', { name: 'Wczytaj tego pacjenta' }).click();
   await start.waitForSelector('#vildaLoadChoiceModal', { state: 'visible', timeout: 8000 });
   await start.click(wybor === 'nowy' ? '#vildaLcmNew' : '#vildaLcmRestore');
@@ -294,6 +296,7 @@ test('DocPro pokazał kartę porównania przed „Odtwórz zapis”: po wyborze 
   await gotowa(start);
   await start.evaluate((id) => window.VildaAuthUI.showPatientCard(id, (r) => { if (r) window.applyLoadedData(r); }, null), pid);
   await start.waitForSelector('.vhv-tile', { state: 'visible' });
+  await expect.poll(() => start.evaluate(() => window.VildaSaveStatusIndicator.getCurrentDecision().ready)).toBe(true);
   await start.getByRole('button', { name: 'Wczytaj tego pacjenta' }).click();
   await start.waitForSelector('#vildaLoadChoiceModal', { state: 'visible', timeout: 8000 });
   await expect.poll(() => start.evaluate(() => sessionStorage.getItem('vildaPrevSummaryPid')), { message: 'odczyt dla karty porównania wrócił' }).not.toBeNull();

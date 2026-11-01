@@ -118,6 +118,8 @@ test('host 393 px: wybór nowej i aktualnej trasy zamyka menu, focus oddaje pane
     await expect(page).toHaveURL(new RegExp(`#/${key}$`));
     await expect(page.locator('iframe.app-pane:not([hidden])')).toHaveAttribute('title', title);
     await zamkniete(page);
+    // Route/title are set before the frame loads; focus is handed over on load.
+    await page.locator('#appShellSkeleton').waitFor({ state: 'hidden' });
     await expect.poll(() => page.evaluate(() => {
       const iframe = document.querySelector('iframe.app-pane:not([hidden])');
       return document.activeElement === iframe;

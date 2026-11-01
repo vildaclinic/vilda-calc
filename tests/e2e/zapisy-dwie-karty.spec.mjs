@@ -89,6 +89,7 @@ async function kolejnaKarta(context, userId) {
 async function wczytaj(page, patientId) {
   await page.evaluate((id) => window.VildaAuthUI.showPatientCard(id,
     (rekord) => { if (rekord) window.applyLoadedData(rekord); }, null), patientId);
+  await expect.poll(() => page.evaluate(() => window.VildaSaveStatusIndicator.getCurrentDecision().ready)).toBe(true);
   await page.getByRole('button', { name: 'Wczytaj tego pacjenta' }).click();
   await expect(page.locator('#vildaLoadChoiceModal')).toBeVisible();
   await page.locator('#vildaLcmNew').click();
