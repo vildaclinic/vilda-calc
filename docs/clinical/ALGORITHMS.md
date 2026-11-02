@@ -20330,8 +20330,8 @@ Kwarantanna i zatrzymanie kursora przy błędzie zastosowania (decyzja 6) — z 
 **Dziura w numeracji** (w v37a numery są ciągłe; dziura to anomalia): kursor zatrzymuje się przed nią. Licznik w
 `vilda-sync-dziura-v1:<slot>` (`localStorage`: `{od, do, proby, pierwszaISO}`; przeżywa przejścia między stronami i
 restart aplikacji; usuwany, gdy kursor minie dziurę). Przy trzecim drenażu, który trafia na tę samą dziurę, kursor
-przeskakuje brakujące numery — ich treść, jeśli istniała, niesie pełny blob nadawcy. **Odstępstwo od planu (D-PR1-4, do
-potwierdzenia właściciela):** plan (3.3, krok 3) mówi „jak `requiresBase`, kursor bez zmian”; wymuszone pełne pobranie i
+przeskakuje brakujące numery — ich treść, jeśli istniała, niesie pełny blob nadawcy. **Odstępstwo od planu (D-PR1-4,
+przyjęte przez właściciela 2026-11-02):** plan (3.3, krok 3) mówi „jak `requiresBase`, kursor bez zmian”; wymuszone pełne pobranie i
 ślad `sync.gap` dochodzą w E2-PR4, a do tego czasu przeskok po trzech próbach zamiast stania bez końca. Dotyczy tylko
 włączonej flagi.
 
@@ -20434,6 +20434,140 @@ albo podwójne, bez przerwy 429 i pierwszeństwa `Retry-After`, health w `localS
 usuwają sprawdzenia nadmiarowe, przed którymi nie ma żądania ani wywołania sejfu — zostają jako obrona.
 
 **Wpływ kliniczny: brak.** **Wersje.** `vilda_sync.js?v=45→46` (8 stron); SW 1.1.435 → **1.1.436**.
+
+## Linia „Wersja aplikacji” w Ustawieniach (P-WERSJA-APLIKACJI, E2-PR1w, SW 1.1.438, `inline_ustawienia_07.js` 3, `ustawienia.css` 19, 2026-11-02)
+
+**Zmiana kliniczna: NIE** — wzory, progi, jednostki, interpretacje, zapis i synchronizacja bez zmian. Linia tylko pokazuje
+numer wersji.
+
+**Skąd.** Decyzja właściciela 4 z 2026-10-29: linia z `SW_VERSION` w Ustawieniach, widoczna zawsze; plan
+(`docs/SYNC_PRZYROSTOWA_PLAN.md`, 3.8 krok 3): właściciel sprawdza wersję na każdym urządzeniu przed włączeniami etapu 2.
+Decyzje właściciela z 2026-11-02 (po scaleniu E2-PR1, vildaclinic/vilda-calc#855): osobny PR E2-PR1w (linia wydzielona
+z E2-PR1 2026-10-30); **bez nowego pliku** — kod linii w istniejącym pliku strony, limit instalacji service workera
+(600 żądań, `tests/unit/sw-precache-stron.test.mjs`) bez zmian; przyjęte teksty i źródło numeru (wiadomość do SW, niżej);
+8 wzorców zrzutów Ustawień odświeżonych w tym samym PR.
+
+**Co pokazuje.** Numer service workera, który naprawdę obsługuje stronę (pamięć offline). Strona wysyła
+`{type:'VILDA_WERSJA'}` przez `MessageChannel` do `navigator.serviceWorker.controller`, a SW odpowiada na porcie własną
+stałą `SW_VERSION`; strona nie ma kopii numeru, więc nie ma czego podbijać. Oczekujący SW (`registration.waiting`, po
+wdrożeniu, przed „Aktualizuj”) pytany osobno tą samą wiadomością. `registration.active` nie jest pytany: bez kontrolera
+linia mówi „nieustalona”. Odpowiedź spoza wzoru wersji (litery, cyfry, `.+_-`, do 64 znaków, pierwszy znak litera albo
+cyfra) liczy się jak brak odpowiedzi; limit odpowiedzi 2 s.
+
+| Stan (cała linia: „Wersja aplikacji: …”) | Tekst wartości |
+|---|---|
+| przed pierwszym wynikiem (zwykle ułamek sekundy; do 2 s, gdy kontroler albo oczekujący milczy) | `sprawdzam…` (tekst startowy w HTML) |
+| kontroler odpowiada | `1.1.438` |
+| i oczekujący odpowiada | `1.1.438 · gotowa aktualizacja 1.1.439` |
+| i oczekujący milczy (np. cofnięcie wydania do SW bez tej obsługi) | `1.1.438 · gotowa aktualizacja` |
+| i instaluje się nowy SW, bez oczekującego | `1.1.438 · pobieranie aktualizacji…` |
+| instaluje się nowy i jest oczekujący | jak przy oczekującym (pierwszeństwo „gotowej aktualizacji”) |
+| kontroler milczy dłużej niż 2 s albo odpowiada spoza wzoru (SW sprzed tej zmiany) | `starsza wersja (numer nieznany)` (+ dopiski jak wyżej) |
+| brak kontrolera albo SW (pierwsza wizyta przed przejęciem strony, Shift+F5, przeglądarka bez SW albo bez `MessageChannel`, testy z zablokowanym SW) | `nieustalona` (+ dopiski jak wyżej, gdy jest rejestracja) |
+
+Teksty „Wersja aplikacji: 1.1.436”, „… · gotowa aktualizacja 1.1.437”, „… · pobieranie aktualizacji…”, „starsza wersja
+(numer nieznany)” i „nieustalona” przyjął właściciel 2026-11-02 (numery w jego przykładzie są tylko ilustracją). Sam
+dopisek „ · gotowa aktualizacja” bez numeru przy milczącym oczekującym to skrót przyjętego tekstu: linia mówi wtedy to samo
+co baner aktualizacji, który reaguje na samo `registration.waiting` (`ios26-ui.js`); od tego wydania każdy nowy SW
+odpowiada, więc to przypadek brzegowy.
+
+**Pierwsze wydanie.** SW 1.1.437 i starsze nie znają `VILDA_WERSJA`. Pierwsze otwarcie po wdrożeniu na urządzeniu z takim SW może
+jeszcze pokazać Ustawienia bez linii: stary SW podaje stronę z pamięci offline, a nowy dopiero się pobiera. Linia pojawia
+się po „Aktualizuj” w banerze albo po ponownym otwarciu strony. W tym drugim przypadku (nowy HTML pod starym SW) pokazuje
+najpierw „sprawdzam…”, a po 2 s „starsza wersja (numer nieznany)” z dopiskiem „ · pobieranie aktualizacji…” albo „ · gotowa aktualizacja 1.1.438”,
+a po „Aktualizuj” — „1.1.438” (sprawdzone w przeglądarce z prawdziwymi SW obu wersji). Numery 1.1.436 i 1.1.437 z przykładu
+właściciela nie pojawią się nigdzie (ich SW nie znają pytania); pierwszy widoczny numer to 1.1.438.
+
+**Kiedy odczyt.** Przy starcie strony (plik jest `defer`, więc DOM jest gotowy; ten odczyt idzie zwykle przed
+`register()` z `ios26-ui.js`, który startuje po `DOMContentLoaded`, ale rejestracja z poprzednich wizyt już istnieje, a
+przy pierwszej wizycie odczyt powtarzają `ready` i `controllerchange`), przy przejęciu strony (`controllerchange` —
+także pierwsza wizyta po `clients.claim()`, P-SW-PIERWSZA-WIZYTA, i aktualizacja z innej karty), po
+`serviceWorker.ready`, przy `updatefound` rejestracji i `statechange` instalowanego SW (`installing → installed` daje
+„gotowa aktualizacja”, `redundant` zdejmuje dopisek) oraz przy powrocie do widocznej karty (`visibilitychange`). Nasłuch
+`statechange` dokłada każdy odczyt, który zastanie `registration.installing` (także odczyt po `updatefound` i po
+`ready`; ta sama funkcja, więc bez duplikatów). Nasłuch powstaje zaraz po odczycie rejestracji, przed pytaniem
+workerów (do 2 s), więc zmiana stanu w trakcie pytania nie wpada w lukę (W14e, W14f). Działa to także przy pierwszej
+wizycie, zanim `ready` się rozwiąże (`ready` czeka na aktywny SW) — gdy Ustawienia otwarto w trakcie pierwszej instalacji
+rozpoczętej przez powłokę (`app.html`) albo inną stronę, lub gdy instalację złapał powrót do karty: gdy pierwsza
+instalacja padnie (`redundant`, np. przerwane pobieranie pamięci offline), linia wraca od razu do „nieustalona” bez
+dopisku. Gdy pierwszą stroną jest sama `ustawienia.html`, odczyt startowy idzie przed `register()` i do przejęcia strony
+linia mówi „nieustalona” bez dopisku. Nowszy odczyt wygrywa ze starszym; tekst zapisywany tylko przy zmianie. Linia pokazuje stan, baner pyta: po
+„Pobierz później” albo przy zamkniętej bramce banera (P-AKTUALIZACJA-BRAMKA) linia nadal mówi „gotowa aktualizacja”. Po
+wdrożeniu nowy HTML może chwilę działać pod starym SW (odświeżanie w tle), więc numer mówi o pamięci offline, a nie o
+każdym pliku strony; po „Aktualizuj” odczyt jest dokładny.
+
+**Gdzie.** Ostatni akapit `.settings-content` w `ustawienia.html` (`#settingsAppVersion`, wartość `#settingsAppVersionValue`
+z `translate="no"`, które obejmuje całą wartość z dopiskami, bo zapis idzie jednym `textContent`; strona jest tylko po
+polsku), po strefie niebezpiecznej, poza akordeonami i poza kłódką: widoczny bez logowania, w trybie gościa
+(kłódka chowa strefę niebezpieczną, linia zostaje) i w ramce powłoki; nie zależy od trybu („Komputer prywatny / w pracy /
+jednorazowo”) i nie czyta sejfu. Akapit ma `aria-live="polite"` i `aria-atomic="true"`: czytnik ekranu ogłasza całą linię
+z kontekstem, gdy „sprawdzam…” zmienia się w wynik. Styl: klasa `settings-inline-note` (kolor `#586d72`, w wysokim
+kontraście `--hc-muted`), nowa reguła `.settings-content>.settings-app-version` (odstęp z tokenu `--space-2`,
+`overflow-wrap: anywhere` na wąskim ekranie) i przy ciemnym tle 2 kolor `--text-2` (`#44535c`; reguła
+`body.dark-bg-level-2 .settings-content>.settings-app-version`). Kontrast tekstu do tła (kolory i tła zmierzone
+w przeglądarce): przy pełnej szerokości komputera (1440 px) linia leży na białym `.main-content` — 5,46:1 w trybie
+jasnym, w szkle i przy ciemnym tle 1, 7,96:1 przy ciemnym tle 2. W układzie wąskim (telefon, a także ramka powłoki,
+na komputerze ok. 853 px) linia leży na tle `body`: biel w trybie jasnym i w szkle (5,46:1), `#f5f5f5` przy ciemnym tle 1
+(5,01:1), `#e0e0e0` przy ciemnym tle 2 (6,03:1 z `--text-2`; sam `#586d72` dawał tu 4,14:1, poniżej progu 4,5:1).
+W wysokim kontraście 1–3 8,2–12,2:1 na białym tle; `--hc-muted` z `!important` wygrywa także z regułą ciemnego tła 2,
+a przy ciemnym tle 2 w układzie wąskim wychodzi 6,2–9,3:1 (zmierzone 7,54:1 przy kontraście 2). Schemat ciemny systemu
+nie zmienia tych kolorów. Tylko odczyt: bez zapisów w magazynach, bez żądań sieciowych, bez czytania nazw
+pamięci; tekst wyłącznie przez `textContent`. Gdy sam odczyt `navigator.serviceWorker` rzuca (np. ramka z `sandbox` bez
+`allow-same-origin`), czytnik traktuje to jak brak SW: „nieustalona”, bez wyjątku przy ładowaniu (W24).
+
+**Dlaczego w `inline_ustawienia_07.js`.** Instalacja SW pobiera tylko bieżący wpis każdej ścieżki (P-SW-PRECACHE), więc
+nowe `?v=` istniejącego pliku wypiera poprzednie: 600 żądań instalacji przed zmianą i po niej (zmierzone tą samą regułą co
+`sw-precache-stron`), a nowy plik `vilda_wersja_aplikacji.js` z pierwotnego projektu E2-PR1w (2026-10-30, poza repozytorium; jego
+założenia wymienia akapit „Różnice…” niżej) dawał 601. Spośród plików ładowanych
+tylko przez Ustawienia 07 to moduł dołu strony (kłódka i chowanie `.settings-danger-zone`, po której stoi linia), ostatni
+skrypt strony i plik z najmniejszym sprzężeniem z testami. Czytnik to osobna IIFE dopisana na końcu pliku, między
+znacznikami `/* P-WERSJA-APLIKACJI … */` i `/* /P-WERSJA-APLIKACJI */`, czysto ASCII jak cały plik (`·` i `…` jako sekwencje
+`\u00b7` i `\u2026`), z dostępem do okna wyłącznie przez parametr `w` (test powłoki wykonuje cały plik w `vm` z oknem bez
+`document` i `navigator`), bez zapisów stylu (fixture `style-elementow.json` bez zmian). Publiczne API:
+`window.VildaWersjaAplikacji` (`odczytaj`, `tekst`, `odswiez`, zamrożone).
+
+**Service worker.** W nasłuchu `message` jedna nowa gałąź `else if` po `SKIP_WAITING`: `VILDA_WERSJA` z portem → na port
+`{type:'VILDA_WERSJA', wersja: SW_VERSION}`. Pytanie o wersję nie woła `skipWaiting`, bez portu nic się nie dzieje,
+`SKIP_WAITING` działa jak dotąd; strategia pamięci, listy precache i cykl życia bez zmian. W SW jest nadal dokładnie jeden
+tekst `const SW_VERSION = '` (podmieniają go `podbij-wersje` i serwery testowe). Projekt z 2026-10-30 zakładał brak zmian
+w SW poza wersjami; decyzja z 2026-11-02 (numer z wiadomości do SW) dopuszcza tę jedną gałąź `message`.
+
+**Różnice wobec projektu z 2026-10-30.** Kod w istniejącym pliku zamiast nowego; pytany tylko kontroler (projekt bez
+kontrolera pytał `registration.active`); milczący oczekujący daje sam dopisek (projekt nie dawał dopisku); limit 2 s
+zamiast 3 s; akapit z `aria-live` (projekt: bez).
+
+**Testy.** `tests/unit/wersja-aplikacji.test.mjs` — 44 przypadki; cały prawdziwy `inline_ustawienia_07.js` (kłódka i
+czytnik) w `vm` z atrapą okna, prawdziwy `service-worker-kalorii.js` przez `new Function` z przechwyconym nasłuchem
+`message`: wszystkie teksty i dopiski, przejścia (`updatefound` → `installed` → `controllerchange`, `redundant`,
+`visibilitychange`, pierwsza wizyta po `ready`, pierwsza wizyta z nieudaną pierwszą instalacją bez `ready`, nasłuch bez
+duplikatów, zmiana stanu w trakcie pytania wolnego albo milczącego kontrolera), pokolenie odczytów, limit 2 s, zamykanie portów i zegara, odpowiedzi spoza wzoru, brak `MessageChannel`,
+odrzucone `getRegistration()`, `serviceWorker` bez `getRegistration` (kontroler niepytany), rzucający odczyt
+`navigator.serviceWorker`, okno bez `document`/`navigator`, gość (strefa schowana, linia zostaje), czytnik połączony z prawdziwym nasłuchem SW (numer z
+pliku) i SW bez nowej gałęzi (pierwsze wydanie); strażniki źródła (blok między znacznikami na końcu 07, cały 07 ASCII,
+bez `?v=` i literału wersji w bloku, bez gołego `document`/`navigator`, jeden `const SW_VERSION = '`, brak
+`vilda_wersja_aplikacji` w SW i na dysku) i miejsca akapitu (rodzeństwo strefy niebezpiecznej, ostatni w
+`.settings-content`, poza `details`, bez `style=`, z `aria-live`; 07 ostatnim skryptem strony, bez nowego tagu; reguły
+CSS, w tym kolor przy ciemnym tle 2). Czerwone na bazie (pliki strony i SW z `origin/audyt`): 43 z 44 (poza SW2 — `SKIP_WAITING` działa i dziś).
+Mutanty czytnika, gałęzi SW, HTML i CSS: każdy nierównoważny daje czerwony test (w tym brak strażnika `getRegistration`
+— W2b, brak śledzenia instalacji w odczycie albo nasłuch jako nowe domknięcie — W14d, nasłuch dopiero po pytaniu — W14e
+i W14f, odczyt `navigator.serviceWorker` bez osłony — W24, brak koloru przy ciemnym tle 2 — S2); równoważne są brak
+`if (koniec) return;` w zakończeniu pytania (obietnica rozwiązuje się raz, `clearTimeout` i `close` są idempotentne)
+i brak `port1.onmessage = null` (zamknięty port nic nie dostarcza), a nieszkodliwe — śledzenie `statechange` także
+oczekującego (dodatkowy odczyt, ten sam tekst). E2E `tests/e2e/wersja-aplikacji.spec.mjs` (desktop: gość przy zablokowanym SW
+na `ustawienia.html` i w ramce `app.html#/ustawienia`; kontrast ≥ 4,5:1 w trybie jasnym, przy ciemnym tle 2 ze schematem
+ciemnym i w wysokim kontraście 2 oraz w ramce powłoki (układ wąski) przy ciemnym tle 2; prawdziwy SW z serwera
+aktualizacji — numer, obca pamięć bez wpływu, „gotowa aktualizacja”, „Aktualizuj” w banerze, bez sieci) i
+`tests/e2e/wersja-aplikacji-mobile.spec.mjs` (telefon 393 px, potem 320 i 430 px: linia na dole, ostatnia, w szerokości
+treści i okna, bez poziomego przewijania strony, także z najdłuższym przyjętym tekstem i z długą wersją testową;
+kontrast ≥ 4,5:1 na tle `body` na stronie przy ciemnym tle 1 i 2 oraz w ramce powłoki przy ciemnym tle 2). Kontrast w układzie wąskim przy
+ciemnym tle 2 jest czerwony bez reguły `--text-2` (4,14:1). Istniejące testy bez zmian oczekiwań
+(`powloka-ustawienia-konto`, U4 w `ustawienia-nawigacja-i-klodka`, `css-*`, `sw-precache-stron` — dalej 600 żądań).
+Wzorce zrzutów Ustawień (8: komputer i telefon × tryby jasny, szkło 4, kontrast 2, ciemne tło 1; dół strony z „Wersja
+aplikacji: nieustalona”, bo zrzuty idą z zablokowanym SW) odświeża w tym PR workflow „Wygląd” (`aktualizuj_wzorce`), nie
+agent lokalnie.
+
+**Wpływ kliniczny: brak.** **Wersje.** Bez nowego pliku: `inline_ustawienia_07.js?v=2→3`, `ustawienia.css?v=18→19`,
+`ustawienia.html` w pamięci SW; SW 1.1.437 → **1.1.438** (`npm run podbij-wersje`); żądania instalacji SW 600 → 600.
 
 ## Zapis karty i okna zapisu kończą się w sesji, w której ruszyły, a pobranie z chmury — w sesji swojego konta (P-SESJA-ZAPISU, PR-S, SW 1.1.418, `vilda_vault.js` 236, `vilda_auth_ui.js` 519, `vilda_data_import_export.js` 113, `vilda_sync.js` 41, `vilda_sync_integration.js` 53, 2026-10-30)
 
