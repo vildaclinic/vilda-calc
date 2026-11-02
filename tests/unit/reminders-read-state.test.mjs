@@ -3,10 +3,12 @@ import vm from 'node:vm';
 import { setImmediate as settle } from 'node:timers/promises';
 import { createRequire } from 'node:module';
 import { describe, expect, it, vi } from 'vitest';
+import { authProductionReturnProgram } from '../support/search-return-auth-harness.mjs';
 
 const require = createRequire(import.meta.url);
 const { parse } = require('espree');
 const auth = fs.readFileSync(new URL('../../vilda_auth_ui.js', import.meta.url), 'utf8');
+const searchReturnCode = authProductionReturnProgram(auth);
 const chrome = fs.readFileSync(new URL('../../vilda_chrome.js', import.meta.url), 'utf8');
 function production(source, name, parentName) {
   const found = [];
@@ -65,7 +67,7 @@ function environment(code = inlineCode) {
     H: () => false, _t: vi.fn(), ve: vi.fn(), Nq: () => 'wpisów',
     clearTimeout: () => {}, setTimeout: fn => { timers.push(fn); return timers.length; },
   });
-  vm.runInContext(code, context);
+  vm.runInContext(code + '\n' + searchReturnCode, context);
   return { context, host, button, badge, vault, state, classes, lock, unlock,
     flush: () => { while (frames.length) frames.shift()(); },
     flushTimers: () => { while (timers.length) timers.shift()(); } };

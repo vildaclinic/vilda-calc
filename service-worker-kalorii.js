@@ -19,7 +19,7 @@
  *   bo i tak chcemy zwracać HTML z cache natychmiast.
  */
 
-const SW_VERSION = '1.1.432';
+const SW_VERSION = '1.1.433';
 const CACHE_PREFIX = 'pwa-kalorii';
 const SHELL_CACHE = `${CACHE_PREFIX}-shell-v${SW_VERSION}`;
 const RUNTIME_CACHE = `${CACHE_PREFIX}-runtime`;
@@ -991,12 +991,14 @@ const CORE_SHELL_URLS = [
   '/vilda_global_search.js?v=2',
   '/vilda_global_search_view.js?v=1',
   '/vilda_global_search_view.js?v=2',
+  '/vilda_global_search_view.js?v=3',
   '/vilda_care_plans.css?v=1',
   '/vilda_care_plans.css?v=2',
   '/vilda_care_plans.css?v=3',
   '/vilda_care_plans.css?v=4',
   '/vilda_care_plans.css?v=5',
   '/vilda_care_plans.css?v=6',
+  '/vilda_care_plans.css?v=7',
   '/vilda_care_plan_model.js?v=1',
   // Template editing is loaded on demand; keep its complete bundle available
   // for a first library visit after a genuine offline restart.
@@ -1013,6 +1015,7 @@ const CORE_SHELL_URLS = [
   '/vilda_care_plans.js?v=6',
   '/vilda_care_plans.js?v=7',
   '/vilda_care_plans.js?v=8',
+  '/vilda_care_plans.js?v=9',
     '/vilda_auth_ui.js?v=16',
   '/vilda_auth_ui.js?v=17',
   '/vilda_auth_ui.js?v=18',
@@ -1567,6 +1570,7 @@ const CORE_SHELL_URLS = [
   '/vilda_chrome.js?v=210',
   '/vilda_chrome.js?v=211',
   '/vilda_chrome.js?v=212',
+  '/vilda_chrome.js?v=213',
   '/vilda_realtime.js?v=1',
   '/vilda_realtime.js?v=2',
   '/vilda_realtime.js?v=3',
@@ -2821,6 +2825,7 @@ const OPTIONAL_ASSETS = [
   '/vilda_shell.js?v=70',
   '/vilda_shell.js?v=71',
   '/vilda_shell.js?v=72',
+  '/vilda_shell.js?v=73',
   '/vilda_shell.css',
   '/vilda_shell.css?v=1',
   '/vilda_shell.css?v=2',
@@ -3869,6 +3874,7 @@ const OPTIONAL_ASSETS = [
   '/vilda_auth_ui.js?v=522',
   '/vilda_auth_ui.js?v=523',
   '/vilda_auth_ui.js?v=524',
+  '/vilda_auth_ui.js?v=525',
   '/app.js?v=205',
   '/app.js?v=206',
   '/app.js?v=207',
@@ -4132,6 +4138,7 @@ const OPTIONAL_ASSETS = [
   '/vilda_session_bridge.js?v=134',
   '/vilda_session_bridge.js?v=135',
   '/vilda_session_bridge.js?v=136',
+  '/vilda_session_bridge.js?v=137',
   '/vilda_data_safety_explainer.js?v=5',
   '/vilda_obesity_banner.css?v=6',
   '/vilda_obesity_banner.css?v=7',

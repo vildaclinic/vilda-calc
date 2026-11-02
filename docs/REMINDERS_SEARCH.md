@@ -25,7 +25,44 @@ interpretuje ponownie wyników klinicznych.
 
 `vilda_global_search_view.js` udostępnia podgląd. Wybranie wyniku nie wczytuje
 pacjenta do formularza; przejście do karty, sprawy, wydarzenia lub planu wymaga
-osobnego przycisku. Na telefonie powrót zachowuje zapytanie, filtry i pozycję listy.
+osobnego przycisku. Powrót zachowuje zapytanie, filtry, wybrany wynik,
+liczbę pokazanych pozycji oraz przewinięcie listy i podglądu.
+
+## Nawigacja i powrót do wyszukiwania
+
+Karta pacjenta oraz karta osoby spoza bazy otwarte z Szukaj mają przycisk
+**← Wróć do Szukaj**. Wstecz w przeglądarce respektuje wewnętrzne kroki karty,
+a na granicy jej otwarcia wraca do źródła. Escape w karcie wraca do Szukaj;
+zagnieżdżony edytor zamyka najpierw siebie, zachowując dotychczasowe
+potwierdzenie odrzucenia niezapisanej treści.
+
+Sprawa i plan opieki mają jawny powrót także na komputerze. Zagnieżdżone
+przejścia zachowują rodzica: `Szukaj → sprawa → karta → sprawa → Szukaj`
+oraz `Szukaj → plan → edytor → plan → Szukaj`. Otwieranie nagłówka pacjenta
+wybiera istniejącą zakładkę Antropometria. Wskazana kontrolna notatka DocPro
+z `ghPointId` jest dostępna tylko do odczytu w Notatkach tego pacjenta;
+zwykła projekcja Notatek nadal pomija pozostałe takie wpisy.
+
+`getContext()/request()` widoku przenoszą wersjonowany snapshot UI złożony
+wyłącznie z wartości skalarnych. Obejmuje również kontekst powrotu z podglądu
+do listy. Nie przenosi wyników, notatek ani migawek pacjenta. Dane są czytane
+ponownie z aktualnego sejfu. Usunięty lub wykluczony przez filtr wynik daje
+neutralną informację i zachowuje zapytanie; nie jest zastępowany innym wpisem.
+Zwykłe odświeżenie utrzymuje pozycję i nie odbiera fokusu wpisywanemu zapytaniu.
+
+AuthUI utrzymuje jeden jednorazowy bilet powrotny w RAM, związany z obiektem
+sejfu, użytkownikiem i epoką odblokowania. Nowa jawna nawigacja, blokada,
+ponowne odblokowanie lub zmiana konta unieważnia bilet i oczekujący powrót.
+Przy nawigacji i odtwarzaniu Szukaj po asynchronicznym odczycie sprawdzana
+jest bieżąca intencja; dotyczy to również obsługi błędu. Zapytanie nie trafia do URL, `history.state`,
+preferencji ani synchronizacji. Powłoka zamyka także powierzchnię AuthUI
+w najwyższym oknie przy zmianie trasy, bez wymuszania dodatkowego Wstecz.
+
+W tej części przycisk „Otwórz w Terminarzu” nadal korzysta z dotychczasowego
+edytora wydarzenia; anulowanie i zapis odtwarzają właściwe źródło.
+Rzeczywiste przejście do kalendarza z wyróżnieniem wydarzenia jest osobną
+częścią naprawy. Bilet RAM nie oznacza odtworzenia wyszukiwania po pełnym
+przeładowaniu dokumentu lub ponownym uruchomieniu aplikacji.
 
 ## Prezentacja zapisanych wyników i dawek
 

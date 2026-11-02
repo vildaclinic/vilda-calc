@@ -11184,6 +11184,47 @@ na Start przy 1440 px i w powłoce aplikacji przy 390 px. Pokrycie V8 potwierdza
 wykonanie historycznego `readSaved` oraz zero wywołań klinicznych
 `evaluate/recalculate`, przy niezmienionych danych i braku zasobów edytora.
 
+### P-SZUKAJ-POWROT — zachowanie miejsca wyszukiwania przy nawigacji (2026-11-01)
+
+**Zakres.** Druga z czterech części naprawy po scaleniu #850. Zmiana UI:
+zachowanie zapytania, filtrów, zaznaczenia, limitu i pozycji przewijania przy
+otwieraniu pacjenta, osoby spoza bazy, sprawy, planu i istniejącego edytora.
+Nie zmienia obliczeń, dawek, interpretacji, dat, danych klinicznych, zapisu
+ani synchronizacji. Wszystkie próby używają fikcyjnych danych.
+
+**Kontrakt.** Wersjonowany snapshot widoku zawiera wyłącznie skalarny stan UI.
+Jeden bilet RAM AuthUI należy do bieżącego sejfu/użytkownika/epoki i jest
+zużywany przed asynchronicznym odtworzeniem. Nowa intencja, blokada,
+odblokowanie i zmiana konta odrzucają stare callbacki. Widok po powrocie
+czyta aktualne rekordy. Zapytanie nie jest zapisywane w URL, historii strony
+ani trwałym storage. Powrót z zagnieżdżonego edytora zachowuje rodzica
+oraz istniejącą ochronę niezapisanej treści. Kontrolna notatka DocPro wskazana
+przez dokładny `focusNoteId` jest wyjątkowo widoczna tylko do odczytu;
+pozostałe wpisy `ghPointId` zachowują dotychczasową projekcję Notatek.
+
+**Przypadki fikcyjne → oczekiwany efekt.**
+
+- 96 wyników, wybrany 81., filtry przyszłe/otwarte i dodatnie oba scrolle
+  → karta pacjenta → powrót odtwarza ten sam podgląd i wcześniejszą listę;
+- nagłówek pacjenta → prawdziwa zakładka `antro`, bez nieobsługiwanego `status`;
+- rzeczywista kontrola DocPro z `ghPointId` → dokładnie ta zapisana notatka
+  w karcie, bez zastępowania wirtualnym punktem pomiaru;
+- sprawa → karta → sprawa oraz plan → edytor → plan → zachowane źródło Search;
+- odmowa odrzucenia szkicu → edytor pozostaje; akceptacja → zamyka się tylko
+  edytor, kolejny powrót opuszcza kartę;
+- zmiana/usunięcie rekordu w tle → aktualna treść lub neutralna informacja,
+  zachowane filtry, bez otwarcia innego wyniku w zastępstwie;
+- blokada/ponowne odblokowanie, nowsza nawigacja lub odejście do innej trasy
+  podczas oczekiwania → brak spóźnionego widoku, także przy odrzuconym odczycie.
+
+Regresje uruchamiają produkcyjne funkcje przez AST oraz rzeczywistą aplikację
+na desktopie i telefonie: `global-search-return-state.test.mjs`,
+`search-return-auth.test.mjs`, `przypomnienia-search-return.spec.mjs` i zimny
+start produkcyjnego PWA w `przypomnienia-search-return-offline.spec.mjs`.
+Porównanie fingerprintów notatek i pacjenta sprawdza brak zapisów klinicznych
+przy samej nawigacji. Faktyczne otwieranie Terminarza i pełny cykl indeksu
+pozostają odrębnymi częściami naprawy.
+
 ### P-PRZYPOMNIENIA-ECHO — karta „Przypomnienia” nie przebudowuje się od własnego pingu licznika (SW 1.1.263, 2026-10-13, polecenie właściciela)
 
 **Skąd.** Test „„⋮” przy pozycji ma rozmiar jak w widoku pełnoekranowym i otwiera to samo okno z akcjami” (`tests/e2e/przypomnienia-karta-akcje.spec.mjs`) padał w CI (m.in. na #652), a lokalnie przechodził: `boundingBox()` przycisku „⋮” dawał `null`, choć na zrzucie przycisk był widoczny. Na #652 ustalono, że karta przebudowuje się w całości chwilę po pierwszym renderze, także na czystym `audyt`. Właściciel polecił naprawę 2026-10-13 („napraw niestabilny test przypomnień”). Zmiana niekliniczna: nie zmienia wyników, jednostek, progów, danych, zapisu ani synchronizacji.

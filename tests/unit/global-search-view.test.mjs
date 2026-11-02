@@ -56,7 +56,10 @@ describe('global search view production module', () => {
     expect(e.doc.activeElement).toBe(e.host.querySelector('.vgs-back'));
     e.host.querySelector('.vgs-back').click();
     expect(e.host.querySelector('.vgs').classList.contains('vgs-show-detail')).toBe(false);
-    expect(e.view.getContext()).toEqual({ query: 'biopsja', time: 'future', status: 'open', id: 'note:fictional-note' });
+    expect(e.view.getContext()).toEqual({ version: 1, query: 'biopsja', time: 'future', status: 'open', id: 'note:fictional-note',
+      mode: 'list', limit: 50, listScrollTop: 145, detailScrollTop: 0,
+      origin: { query: 'biopsja', time: 'future', status: 'open', id: 'note:fictional-note', limit: 50, listScrollTop: 145 },
+      focus: 'row:note:fictional-note' });
     expect(list.scrollTop).toBe(145); expect(e.doc.activeElement.dataset.searchId).toBe('note:fictional-note');
     expect(e.options.openReminder).not.toHaveBeenCalled();
   });
@@ -70,7 +73,9 @@ describe('global search view production module', () => {
     expect(e.options.requestExpand).toHaveBeenCalledTimes(1);
     older.resolve([record('older')]); await first;
     expect(e.options.requestExpand).toHaveBeenCalledTimes(1);
-    expect(e.options.requestExpand).toHaveBeenCalledWith({ query: 'nowszy', time: 'all', status: 'all', id: 'note:newer' });
+    expect(e.options.requestExpand).toHaveBeenCalledWith({ version: 1, query: 'nowszy', time: 'all', status: 'all', id: 'note:newer',
+      mode: 'detail', limit: 50, listScrollTop: 0, detailScrollTop: 0,
+      origin: { query: 'nowszy', time: 'all', status: 'all', id: 'note:newer', limit: 50, listScrollTop: 0 }, focus: 'list' });
     expect(e.host.querySelectorAll('.vgs-row').map(node => node.dataset.searchId)).toEqual(['note:newer']);
   });
 
@@ -80,7 +85,8 @@ describe('global search view production module', () => {
     expect(e.host.textContent).toContain('Fikcyjny Nowak');
     e.service.search.mockImplementationOnce(() => pending.promise);
     const read = e.view.refresh(); e.status.unlocked = false; e.invalidate('lock');
-    expect(e.view.getContext()).toEqual({ query: '', time: 'all', status: 'all', id: null });
+    expect(e.view.getContext()).toEqual({ version: 1, query: '', time: 'all', status: 'all', id: null,
+      mode: 'list', limit: 50, listScrollTop: 0, detailScrollTop: 0, origin: null, focus: null });
     expect(e.host.textContent).not.toContain('Fikcyjny Nowak');
     pending.resolve([record('late')]); await read;
     expect(e.host.textContent).not.toContain('Fikcyjny Nowak');
