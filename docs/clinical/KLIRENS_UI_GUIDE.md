@@ -261,6 +261,39 @@ Skrócona liczba ma **≈** i pełny zapis w Szczegółach oraz historii.
 Jednostki wyniku i normy mają wspólny poziom również przy zawijaniu podpisów.
 Źródła i kontrakt: [POTASSIUM_DZM.md](POTASSIUM_DZM.md).
 
+## KM/Cr — decyzja 02.11.2026
+
+Zachowaj jedną pozycję `KM_Cr` przy stosunkach do kreatyniny w obliczeniach
+z próbki moczu. Pierwsze, domyślne **„Oblicz ze stężeń”** ma dwa pola:
+**Kwas moczowy w moczu** i **Kreatynina w moczu**, każde z jednostką.
+Drugie **„Gotowy wynik KM/Cr”** wymaga jednego stosunku. Czas, objętość,
+masa, wzrost, płeć i krew nie są potrzebne; wiek bierze się z już znanych
+danych wyłącznie do normy. Nie dodawaj pytań o AKI lub IFCC.
+
+Krótki odczyt **„Rodzaj próbki: Próbka jednorazowa · Zmień”** zastępuje
+stały dodatkowy selektor. Opcja DZM zachowuje te same pola i szerokości,
+lecz nie otrzymuje automatycznie zakresu próbki punktowej. Historycznie
+nieznany materiał pozostaje nieznany. Wybór jednostki interpretuje wpis
+zgodnie z raportem, bez samoczynnego przeskalowania wartości pola.
+
+Jeden wynik i **„Norma dla wieku · Newcastle NHS”** są zawsze w
+**mmol/mmol**. Nie pokazuj równoległego głównego wyniku mg/mg.
+Neutralne granice i ich jednostka są wizualnie zintegrowane z liczbą
+pacjenta; obie granice osi mają czytelne oznaczenia, odchylenia są
+bursztynowe. Brak wieku lub normy dla danego materiału nie blokuje liczby
+i nie tworzy pytania do „pełnej interpretacji”. Dokładne zero pozostaje
+neutralne, mała dodatnia liczba nie staje się zerem; znak **≈** musi
+odnosić się do dokładnej wartości, również przy skrócie na granicy normy.
+
+Komentarz podwyższonego wyniku ma brzmieć wyłącznie:
+**„Podwyższony KM/Cr może wskazywać na zwiększone wydalanie kwasu moczowego.”**
+Właściciel usunął dodatkowe zdanie o kamicy i wydalaniu dobowym z treści
+głównego wyniku. Tabela wieku, pochodzenie norm, jawna konwencja 2 lat,
+ograniczenia i pozostały kontekst należą do zwiniętych Szczegółów.
+Użyta norma, źródło i pełna precyzja pozostają zgodne w Badaniach,
+Notatkach, raporcie i zamrożonej historii. Kontrakt:
+[URATE_CREATININE.md](URATE_CREATININE.md).
+
 ## Makieta i sprawdzenie przed przekazaniem
 
 Każdą kolejną zmianę wizualną w audycie przedstaw najpierw do akceptacji jako

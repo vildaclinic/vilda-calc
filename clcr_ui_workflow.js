@@ -75,7 +75,6 @@
         "Prot_mgkg",
         "Na_mmol_d",
         "K_mmol_d",
-        "KM_Cr",
         "Ca_Cr",
         "Mg_Ca",
         "PO4_Cr",
@@ -141,11 +140,11 @@
       id: "spot-stone-ratios",
       path: "spot",
       level: "spot",
-      title: "Ca/Ox/Cit do kreatyniny",
+      title: "Stosunki do kreatyniny",
       description: "Wskaźniki punktowe pomocne w ocenie ryzyka kamicy.",
       keywords:
-        "wapń wapn calcium szczawiany oxalate cytryniany citrate kamica kreatynina mocz",
-      formulaIds: ["CaCr_spot", "OxCr_spot", "CitCr_spot"],
+        "wapń wapn calcium szczawiany oxalate cytryniany citrate kwas moczowy urate km cr kamica kreatynina mocz",
+      formulaIds: ["CaCr_spot", "OxCr_spot", "CitCr_spot", "KM_Cr"],
     },
     {
       id: "spot-fe-uag",
@@ -244,6 +243,7 @@
   ]);
 
   const FORMULA_CONTEXT = Object.freeze({
+    KM_Cr: { interpretation: [], optional: [] },
     egfr: {
       interpretation: [],
       optional: ["weight", "height"],
@@ -507,6 +507,9 @@
   });
 
   const UNIT_PAIRS = Object.freeze({
+    URCR_uricAcid: "URCR_uricAcidUnit",
+    URCR_creatinine: "URCR_creatinineUnit",
+    URCR_reportedValue: "URCR_reportedUnit",
     Scr: "ScrUnit",
     S_PO4: "S_PO4_unit",
     S_Ca: "S_Ca_unit",
@@ -537,6 +540,7 @@
   });
 
   const NON_NEGATIVE_REQUIRED_FIELDS = new Set([
+    "URCR_uricAcid", "URCR_reportedValue",
     "age",
     "ageMonths",
     "ageDays",
@@ -1596,7 +1600,7 @@
   }
 
   function groupCollapsibleContextFields() {
-    if (["cl24", "ACR", "PCR", "CaCr_spot", "OxCr_spot", "CitCr_spot", "FENa_spot", "FEK_spot", "FECl_spot", "FEHCO3_spot", "AGu_spot", "TMP_GFR", "pH_spot", "UA_mgkg", "Ca_mgkg", "Mg_mgkg", "PO4_mgkg", "Prot_mgkg", "Na_mmol_d", "K_mmol_d"].includes(state.activeFormulaId) && !state.legacyBroad) return;
+    if (["cl24", "ACR", "PCR", "CaCr_spot", "OxCr_spot", "CitCr_spot", "FENa_spot", "FEK_spot", "FECl_spot", "FEHCO3_spot", "AGu_spot", "TMP_GFR", "pH_spot", "UA_mgkg", "Ca_mgkg", "Mg_mgkg", "PO4_mgkg", "Prot_mgkg", "Na_mmol_d", "K_mmol_d", "KM_Cr"].includes(state.activeFormulaId) && !state.legacyBroad) return;
     const groups = new Map();
     const sharedFieldset = ["egfr_cr_cys", "ckid_u25_cys", "ckid_u25_cr_cys"].includes(state.activeFormulaId)
       ? documentRef.getElementById("serumSet") : null;
@@ -1881,6 +1885,7 @@
   }
 
   const FORMULA_REFERENCE_FIELDS = Object.freeze({
+      KM_Cr: ["age", "ageMonths", "ageDays"],
       cl24: ["age", "sex", "weight", "height", "Cl24CollectionProblem"],
       UA_mgkg: ["age", "sex"], Ca_mgkg: ["age", "ageMonths"],
       Mg_mgkg: ["age", "ageMonths"], PO4_mgkg: ["age", "ageMonths", "sex"],
@@ -1892,6 +1897,13 @@
   });
 
   function activeSetsForFormula(formula) {
+    if (formula.id === "KM_Cr") {
+      const reported = fieldValue("URCR_inputMode") === "reported";
+      const required = new Set(reported ? ["URCR_reportedValue", "URCR_reportedUnit"]
+        : ["URCR_uricAcid", "URCR_uricAcidUnit", "URCR_creatinine", "URCR_creatinineUnit"]);
+      const optional = new Set(["URCR_specimen"]);
+      return { active: new Set([...required, ...optional]), required, interpretation: new Set(), optional };
+    }
     if (formula.id === "K_mmol_d") {
       const reported = fieldValue("K_inputMode") === "reported";
       const required = new Set(reported ? ["K_reportedValue", "K_reportedUnit"]
@@ -2087,6 +2099,7 @@
     if (state.legacyBroad || formula?.id !== "Ca_mgkg") global.ClcrCaDzmUi?.sync(documentRef, { active: false, fieldViews: state.fieldViews });
     if (state.legacyBroad || formula?.id !== "PO4_mgkg") global.ClcrPo4DzmUi?.sync(documentRef, { active: false, fieldViews: state.fieldViews });
     if (state.legacyBroad || formula?.id !== "Prot_mgkg") global.ClcrProteinDzmUi?.sync(documentRef, { active: false, fieldViews: state.fieldViews });
+    if (state.legacyBroad || formula?.id !== "KM_Cr") global.ClcrUrateCreatinineUi?.sync(documentRef, { active: false, fieldViews: state.fieldViews });
     if (state.legacyBroad || formula?.id !== "K_mmol_d") global.ClcrPotassiumDzmUi?.sync(documentRef, { active: false, fieldViews: state.fieldViews });
     if (state.legacyBroad || formula?.id !== "Na_mmol_d") global.ClcrSodiumDzmUi?.sync(documentRef, { active: false, fieldViews: state.fieldViews });
     if (state.legacyBroad || formula?.id !== "Mg_mgkg") global.ClcrMgDzmUi?.sync(documentRef, { active: false, fieldViews: state.fieldViews });
@@ -2173,10 +2186,11 @@
     global.ClcrCaDzmUi?.sync(documentRef, { active: formula?.id === "Ca_mgkg", fieldViews: state.fieldViews });
     global.ClcrPo4DzmUi?.sync(documentRef, { active: formula?.id === "PO4_mgkg", fieldViews: state.fieldViews });
     global.ClcrProteinDzmUi?.sync(documentRef, { active: formula?.id === "Prot_mgkg", fieldViews: state.fieldViews });
+    global.ClcrUrateCreatinineUi?.sync(documentRef, { active: formula?.id === "KM_Cr", fieldViews: state.fieldViews });
     global.ClcrPotassiumDzmUi?.sync(documentRef, { active: formula?.id === "K_mmol_d", fieldViews: state.fieldViews });
     global.ClcrSodiumDzmUi?.sync(documentRef, { active: formula?.id === "Na_mmol_d", fieldViews: state.fieldViews });
     global.ClcrMgDzmUi?.sync(documentRef, { active: formula?.id === "Mg_mgkg", fieldViews: state.fieldViews });
-    global.ClcrCollectionDuration?.syncDurationView(documentRef, { active: formula?.id === "cl24" || TIMED_VALUE_FORMULAS.has(formula?.id) && !["Ca_mgkg", "UA_mgkg", "Mg_mgkg", "PO4_mgkg", "Prot_mgkg", "Na_mmol_d", "K_mmol_d"].includes(formula?.id), fieldViews: state.fieldViews });
+    global.ClcrCollectionDuration?.syncDurationView(documentRef, { active: formula?.id === "cl24" || TIMED_VALUE_FORMULAS.has(formula?.id) && !["Ca_mgkg", "UA_mgkg", "Mg_mgkg", "PO4_mgkg", "Prot_mgkg", "Na_mmol_d", "K_mmol_d", "KM_Cr"].includes(formula?.id), fieldViews: state.fieldViews });
     syncFieldsetVisibility();
     renderReadiness();
     updateRequiredHighlights();
@@ -2196,6 +2210,7 @@
     global.ClcrCaDzmUi?.sync(documentRef, { active: false, fieldViews: state.fieldViews });
     global.ClcrPo4DzmUi?.sync(documentRef, { active: false, fieldViews: state.fieldViews });
     global.ClcrProteinDzmUi?.sync(documentRef, { active: false, fieldViews: state.fieldViews });
+    global.ClcrUrateCreatinineUi?.sync(documentRef, { active: false, fieldViews: state.fieldViews });
     global.ClcrPotassiumDzmUi?.sync(documentRef, { active: false, fieldViews: state.fieldViews });
     global.ClcrSodiumDzmUi?.sync(documentRef, { active: false, fieldViews: state.fieldViews });
     global.ClcrMgDzmUi?.sync(documentRef, { active: false, fieldViews: state.fieldViews });
@@ -2540,6 +2555,11 @@
   }
 
   function evaluateFormulaOutcome(formula) {
+    if (formula?.id === "KM_Cr" && typeof global.evaluateClcrUrateCreatinine === "function") {
+      const outcome = global.evaluateClcrUrateCreatinine();
+      return outcome.valid ? { ok: true, outcome, blockers: [], limitations: [] }
+        : semanticBlock(outcome.errorCode || "URCR_INVALID", outcome.error || "Sprawdź dane KM/Cr.", outcome.invalidIds?.[0] || outcome.missingIds?.[0] || "", outcome);
+    }
     if (formula?.id === "K_mmol_d" && typeof global.evaluateClcrPotassiumDzm === "function") {
       const outcome = global.evaluateClcrPotassiumDzm();
       return outcome.valid
@@ -2877,7 +2897,7 @@
     }
     // These ratios use the same production reader as their result card.
     // Legacy generic maxima and >0 analyte checks do not qualify this model.
-    const ratioEvaluator = { CaCr_spot: global.evaluateClcrCacr, OxCr_spot: global.evaluateClcrOxcr, CitCr_spot: global.evaluateClcrCitcr, FENa_spot: global.evaluateClcrFena, FEK_spot: global.evaluateClcrFek, FECl_spot: global.evaluateClcrFecl, FEHCO3_spot: global.evaluateClcrFehco3, AGu_spot: global.evaluateClcrUag, TMP_GFR: global.evaluateClcrTmpGfr, pH_spot: global.evaluateClcrPh, UA_mgkg: global.evaluateClcrUa, Ca_mgkg: global.evaluateClcrCaDzm, Mg_mgkg: global.evaluateClcrMgDzm, PO4_mgkg: global.evaluateClcrPo4Dzm, Prot_mgkg: global.evaluateClcrProteinDzm, Na_mmol_d: global.evaluateClcrSodiumDzm, K_mmol_d: global.evaluateClcrPotassiumDzm }[formula.id];
+    const ratioEvaluator = { KM_Cr: global.evaluateClcrUrateCreatinine, CaCr_spot: global.evaluateClcrCacr, OxCr_spot: global.evaluateClcrOxcr, CitCr_spot: global.evaluateClcrCitcr, FENa_spot: global.evaluateClcrFena, FEK_spot: global.evaluateClcrFek, FECl_spot: global.evaluateClcrFecl, FEHCO3_spot: global.evaluateClcrFehco3, AGu_spot: global.evaluateClcrUag, TMP_GFR: global.evaluateClcrTmpGfr, pH_spot: global.evaluateClcrPh, UA_mgkg: global.evaluateClcrUa, Ca_mgkg: global.evaluateClcrCaDzm, Mg_mgkg: global.evaluateClcrMgDzm, PO4_mgkg: global.evaluateClcrPo4Dzm, Prot_mgkg: global.evaluateClcrProteinDzm, Na_mmol_d: global.evaluateClcrSodiumDzm, K_mmol_d: global.evaluateClcrPotassiumDzm }[formula.id];
     if (typeof ratioEvaluator === "function") {
       const semantic = evaluateFormulaOutcome(formula);
       const outcome = semantic.outcome;
@@ -3104,6 +3124,7 @@
     if (state.activeFormulaId === "Ca_mgkg") global.ClcrCaDzmUi?.refresh(documentRef);
     if (state.activeFormulaId === "PO4_mgkg") global.ClcrPo4DzmUi?.refresh(documentRef);
     if (state.activeFormulaId === "Prot_mgkg") global.ClcrProteinDzmUi?.refresh(documentRef);
+    if (state.activeFormulaId === "KM_Cr") global.ClcrUrateCreatinineUi?.refresh(documentRef);
     if (state.activeFormulaId === "K_mmol_d") global.ClcrPotassiumDzmUi?.refresh(documentRef);
     if (state.activeFormulaId === "Na_mmol_d") global.ClcrSodiumDzmUi?.refresh(documentRef);
     if (state.activeFormulaId === "Mg_mgkg") global.ClcrMgDzmUi?.refresh(documentRef);
@@ -3136,7 +3157,7 @@
     }
     const readiness = getFormulaReadiness(formula.id);
     documentRef.documentElement.dataset.clcrReady = String(readiness.valueReady);
-    if (["CaCr_spot", "OxCr_spot", "CitCr_spot", "FENa_spot", "FEK_spot", "FECl_spot", "FEHCO3_spot", "AGu_spot", "TMP_GFR", "pH_spot", "UA_mgkg", "Ca_mgkg", "Mg_mgkg", "PO4_mgkg", "Prot_mgkg", "Na_mmol_d", "K_mmol_d"].includes(formula.id)) {
+    if (["CaCr_spot", "OxCr_spot", "CitCr_spot", "FENa_spot", "FEK_spot", "FECl_spot", "FEHCO3_spot", "AGu_spot", "TMP_GFR", "pH_spot", "UA_mgkg", "Ca_mgkg", "Mg_mgkg", "PO4_mgkg", "Prot_mgkg", "Na_mmol_d", "K_mmol_d", "KM_Cr"].includes(formula.id)) {
       // Empty, invalid and qualified states belong to the single result card.
       state.readiness.hidden = true;
       global.ClcrLayout?.refresh?.();
@@ -3623,7 +3644,7 @@
     closeSearch("selection");
     if (documentRef.activeElement === state.search?.input) state.search.input.blur();
     const sameSpotWorkspace = getModuleForFormula(state.activeFormulaId)?.path === "spot" && module.path === "spot";
-    const preserveCalculationInputs = sameSpotWorkspace || ["cl24", "ACR", "PCR", "CaCr_spot", "OxCr_spot", "CitCr_spot", "FENa_spot", "FEK_spot", "FECl_spot", "FEHCO3_spot", "AGu_spot", "TMP_GFR", "pH_spot", "UA_mgkg", "Ca_mgkg", "Mg_mgkg", "PO4_mgkg", "Prot_mgkg", "Na_mmol_d", "K_mmol_d"].includes(state.activeFormulaId) || ["cl24", "ACR", "PCR", "CaCr_spot", "OxCr_spot", "CitCr_spot", "FENa_spot", "FEK_spot", "FECl_spot", "FEHCO3_spot", "AGu_spot", "TMP_GFR", "pH_spot", "UA_mgkg", "Ca_mgkg", "Mg_mgkg", "PO4_mgkg", "Prot_mgkg", "Na_mmol_d", "K_mmol_d"].includes(formulaId);
+    const preserveCalculationInputs = sameSpotWorkspace || ["cl24", "ACR", "PCR", "CaCr_spot", "OxCr_spot", "CitCr_spot", "FENa_spot", "FEK_spot", "FECl_spot", "FEHCO3_spot", "AGu_spot", "TMP_GFR", "pH_spot", "UA_mgkg", "Ca_mgkg", "Mg_mgkg", "PO4_mgkg", "Prot_mgkg", "Na_mmol_d", "K_mmol_d", "KM_Cr"].includes(state.activeFormulaId) || ["cl24", "ACR", "PCR", "CaCr_spot", "OxCr_spot", "CitCr_spot", "FENa_spot", "FEK_spot", "FECl_spot", "FEHCO3_spot", "AGu_spot", "TMP_GFR", "pH_spot", "UA_mgkg", "Ca_mgkg", "Mg_mgkg", "PO4_mgkg", "Prot_mgkg", "Na_mmol_d", "K_mmol_d", "KM_Cr"].includes(formulaId);
     state.legacyBroad = false;
     state.mobileModulesExpanded = false;
     documentRef.documentElement.classList.remove("clcr-mobile-modules-expanded");
@@ -3884,6 +3905,7 @@
     global.ClcrCaDzmUi?.ensureControls(documentRef);
     global.ClcrPo4DzmUi?.ensureControls(documentRef);
     global.ClcrProteinDzmUi?.ensureControls(documentRef);
+    global.ClcrUrateCreatinineUi?.ensureControls(documentRef);
     global.ClcrPotassiumDzmUi?.ensureControls(documentRef);
     global.ClcrSodiumDzmUi?.ensureControls(documentRef);
     form
@@ -3891,6 +3913,7 @@
       .forEach((control) => {
         if (
           [
+            "URCR_inputMode", "URCR_outputUnit",
             "UA_inputMode", "CA_inputMode", "MG_inputMode", "PO4_inputMode", "PO4_outputUnit", "PO4_durationNeedsConfirmation", "PO4_unitConversions", "Prot_inputMode", "Prot_outputUnit", "Prot_durationNeedsConfirmation", "Prot_unitConversions", "Na_inputMode", "Na_outputUnit", "Na_durationNeedsConfirmation", "Na_unitConversions", "K_inputMode", "K_reportedUnit", "K_outputUnit", "K_durationNeedsConfirmation", "K_unitConversions",
             "UA_collectionSource", "CA_collectionSource", "MG_collectionSource", "PO4_collectionSource", "Prot_collectionSource", "Na_collectionSource", "K_collectionSource",
             "formulaSearch",
@@ -3961,7 +3984,7 @@
     }, true);
     form.addEventListener("change", event => { if (event.isTrusted) cancelSelectionGuidance(); scheduleReadiness(); }, true);
     form.addEventListener("change", (event) => {
-      if (["ACR_entry_mode", "PCR_entry_mode", "CaCr_entry_mode", "OxCr_entry_mode", "CitCr_entry_mode", "UA_inputMode", "UA_reportedUnit", "CA_inputMode", "CA_reportedUnit", "MG_inputMode", "MG_reportedUnit", "PO4_inputMode", "PO4_reportedUnit", "Prot_inputMode", "Prot_reportedUnit", "Na_inputMode", "Na_reportedUnit", "K_inputMode", "K_reportedUnit"].includes(event.target?.id)) {
+      if (["URCR_inputMode", "URCR_specimen", "URCR_uricAcidUnit", "URCR_creatinineUnit", "URCR_reportedUnit", "ACR_entry_mode", "PCR_entry_mode", "CaCr_entry_mode", "OxCr_entry_mode", "CitCr_entry_mode", "UA_inputMode", "UA_reportedUnit", "CA_inputMode", "CA_reportedUnit", "MG_inputMode", "MG_reportedUnit", "PO4_inputMode", "PO4_reportedUnit", "Prot_inputMode", "Prot_reportedUnit", "Na_inputMode", "Na_reportedUnit", "K_inputMode", "K_reportedUnit"].includes(event.target?.id)) {
         syncFromPicker();
         if (typeof global.clcrUpdate === "function") global.clcrUpdate();
       }
@@ -4028,7 +4051,7 @@
     const clear = documentRef.getElementById("clearBtn");
     if (clear) {
       clear.addEventListener("click", (event) => {
-        const resumeCitcr = ["CitCr_spot", "FENa_spot", "FEK_spot", "FECl_spot", "FEHCO3_spot", "AGu_spot", "TMP_GFR", "pH_spot", "Prot_mgkg", "Na_mmol_d", "K_mmol_d"].includes(event.clcrClearedFormula);
+        const resumeCitcr = ["CitCr_spot", "FENa_spot", "FEK_spot", "FECl_spot", "FEHCO3_spot", "AGu_spot", "TMP_GFR", "pH_spot", "Prot_mgkg", "Na_mmol_d", "K_mmol_d", "KM_Cr"].includes(event.clcrClearedFormula);
         const clearedFormula = event.clcrClearedFormula;
         global.setTimeout(() => {
           if (resumeCitcr) {
@@ -4077,6 +4100,7 @@
     if (formulaId === "Ca_mgkg") [...(global.VildaClcrCaDzm?.FIELD_IDS || []), ...(global.VildaClcrCaDzm?.CONTEXT_FIELD_IDS || [])].forEach(id => ids.add(id));
     if (formulaId === "PO4_mgkg") [...(global.VildaClcrPo4Dzm?.FIELD_IDS || []), ...(global.VildaClcrPo4Dzm?.CONTEXT_FIELD_IDS || []), "PO4_outputUnit"].forEach(id => ids.add(id));
     if (formulaId === "Prot_mgkg") [...(global.VildaClcrProteinDzm?.FIELD_IDS || []), ...(global.VildaClcrProteinDzm?.CONTEXT_FIELD_IDS || []), "Prot_outputUnit"].forEach(id => ids.add(id));
+    if (formulaId === "KM_Cr") [...(global.VildaClcrUrateCreatinine?.FIELD_IDS || []), ...(global.VildaClcrUrateCreatinine?.CONTEXT_FIELD_IDS || [])].forEach(id => ids.add(id));
     if (formulaId === "K_mmol_d") [...(global.VildaClcrPotassiumDzm?.FIELD_IDS || []), ...(global.VildaClcrPotassiumDzm?.CONTEXT_FIELD_IDS || []), "K_outputUnit"].forEach(id => ids.add(id));
     if (formulaId === "Na_mmol_d") [...(global.VildaClcrSodiumDzm?.FIELD_IDS || []), ...(global.VildaClcrSodiumDzm?.CONTEXT_FIELD_IDS || []), "Na_outputUnit"].forEach(id => ids.add(id));
     if (formulaId === "Mg_mgkg") [...(global.VildaClcrMgDzm?.FIELD_IDS || []), ...(global.VildaClcrMgDzm?.CONTEXT_FIELD_IDS || [])].forEach(id => ids.add(id));
@@ -4098,6 +4122,7 @@
         if (formulaId === "Ca_mgkg" && !id.startsWith("CA_") && id !== "weight") return [];
         if (formulaId === "PO4_mgkg" && !id.startsWith("PO4_")) return [];
         if (formulaId === "Prot_mgkg" && !id.startsWith("Prot_")) return [];
+        if (formulaId === "KM_Cr" && (!id.startsWith("URCR_") || id === "URCR_sameUrineSample")) return [];
         if (formulaId === "K_mmol_d" && !id.startsWith("K_")) return [];
         if (formulaId === "Na_mmol_d" && !id.startsWith("Na_")) return [];
         if (formulaId === "Mg_mgkg" && !id.startsWith("MG_") && !["weight", "height"].includes(id)) return [];
@@ -4132,7 +4157,7 @@
     openMeasuredReferenceFields,
     hasBlockingValidationError() {
       // FENa owns a concrete empty/error card from its semantic engine.
-      if (["FENa_spot", "FEK_spot", "FECl_spot", "FEHCO3_spot", "AGu_spot", "TMP_GFR", "pH_spot", "UA_mgkg", "Ca_mgkg", "Mg_mgkg", "PO4_mgkg", "Prot_mgkg", "Na_mmol_d", "K_mmol_d"].includes(state.activeFormulaId)) return false;
+      if (["FENa_spot", "FEK_spot", "FECl_spot", "FEHCO3_spot", "AGu_spot", "TMP_GFR", "pH_spot", "UA_mgkg", "Ca_mgkg", "Mg_mgkg", "PO4_mgkg", "Prot_mgkg", "Na_mmol_d", "K_mmol_d", "KM_Cr"].includes(state.activeFormulaId)) return false;
       return Array.from(state.requiredFieldIds).some((fieldId) => {
         const control = documentRef.getElementById(fieldId);
         return Boolean(control && control.classList.contains("error"));
@@ -4458,7 +4483,7 @@
       }
       // Audited measurements preserve the raw value: rounding can cross a
       // clinical threshold. The display and any inequality are kept apart.
-      if (!["ACR", "PCR", "CaCr_spot", "OxCr_spot", "CitCr_spot", "FENa_spot", "FEK_spot", "FECl_spot", "FEHCO3_spot", "AGu_spot", "TMP_GFR", "pH_spot", "PO4_mgkg", "Prot_mgkg", "Na_mmol_d", "K_mmol_d"].includes(dp.sourceFormulaId)) dp.valueNum = displayedNumber(el, dp.valueNum);
+      if (!["ACR", "PCR", "CaCr_spot", "OxCr_spot", "CitCr_spot", "FENa_spot", "FEK_spot", "FECl_spot", "FEHCO3_spot", "AGu_spot", "TMP_GFR", "pH_spot", "PO4_mgkg", "Prot_mgkg", "Na_mmol_d", "K_mmol_d", "KM_Cr"].includes(dp.sourceFormulaId)) dp.valueNum = displayedNumber(el, dp.valueNum);
       dp.norm = readRangeText(el);
       dp.outOfRange = elementOutOfRange(el);
       if (dp.sourceFormulaId === "ACR") {
@@ -4520,6 +4545,10 @@
       if (dp.sourceFormulaId === "Prot_mgkg") {
         global.ClcrProteinDzmPersistence?.augmentDatapoint(el, dp);
         if (!dp.proteinDzmSnapshot) continue;
+      }
+      if (dp.sourceFormulaId === "KM_Cr") {
+        global.ClcrUrateCreatininePersistence?.augmentDatapoint(el, dp);
+        if (!dp.urateCreatinineSnapshot) continue;
       }
       if (dp.sourceFormulaId === "K_mmol_d") {
         global.ClcrPotassiumDzmPersistence?.augmentDatapoint(el, dp);
@@ -4626,6 +4655,13 @@
       } catch (_) { /* Legacy cards may have only visible reference text. */ }
     }
     if (!datapoint.norm) return null;
+    if (datapoint.urateCreatinineSnapshot?.referenceAvailable) {
+      const snapshot = datapoint.urateCreatinineSnapshot, reference = snapshot.reference, shown = snapshot.presentation;
+      const source = snapshot.sources?.find(item => item.id === reference.sourceId);
+      return copyData({ ...reference, lower: shown.lower ?? reference.lower, upper: shown.upper ?? reference.upper,
+        min: shown.lower ?? reference.lower, max: shown.upper ?? reference.upper, exactLower: shown.exactLower, exactUpper: shown.exactUpper,
+        unit: shown.unitText, text: shown.referenceText, source: source || { id: reference.sourceId, label: reference.sourceLabel }, population: snapshot.population });
+    }
     if (datapoint.potassiumDzmSnapshot?.referenceAvailable) {
       const snapshot = datapoint.potassiumDzmSnapshot, reference = snapshot.reference, shown = snapshot.presentation;
       const source = snapshot.sources?.find(item => item.id === reference.sourceId);
@@ -4995,7 +5031,7 @@
         s.points.forEach((p) => {
           byDate[p.dateISO] = {
             valueNum: p.valueNum,
-            outOfRange: ["ACR", "PCR", "CaCr_spot", "OxCr_spot", "CitCr_spot", "FENa_spot", "FEK_spot", "FECl_spot", "FEHCO3_spot", "AGu_spot", "TMP_GFR", "pH_spot", "Ca_mgkg", "Mg_mgkg", "PO4_mgkg", "Prot_mgkg", "Na_mmol_d", "K_mmol_d"].includes(s.sourceFormulaId) ? p.outOfRange : !!p.outOfRange,
+            outOfRange: ["ACR", "PCR", "CaCr_spot", "OxCr_spot", "CitCr_spot", "FENa_spot", "FEK_spot", "FECl_spot", "FEHCO3_spot", "AGu_spot", "TMP_GFR", "pH_spot", "Ca_mgkg", "Mg_mgkg", "PO4_mgkg", "Prot_mgkg", "Na_mmol_d", "K_mmol_d", "KM_Cr"].includes(s.sourceFormulaId) ? p.outOfRange : !!p.outOfRange,
           };
           if (s.sourceFormulaId === "ACR") Object.assign(byDate[p.dateISO], {
             displayValue: p.displayValue, comparator: p.comparator,
@@ -5109,7 +5145,9 @@
     Array.from(form?.querySelectorAll?.('input[type="number"][id], input[type="text"][id], textarea[id]') || []).forEach(control => {
       if (!historical.has(control.id) && !["formulaSearch", "U_ACR", "U_PCR", "Cl24DurationHours", "UA_collectionHours", "CA_collectionHours", "MG_collectionHours", "PO4_collectionHours", "Prot_collectionHours", "Na_collectionHours", "K_collectionHours"].includes(control.id)) candidates.set(control.id, control);
     });
-    return [...candidates.values()].filter(control => !control.readOnly && String(control.value || "").trim() !== "");
+    const legacyAliases = global.ClcrUrateCreatinineSession?.legacyAliasValues?.() || {};
+    return [...candidates.values()].filter(control => !control.readOnly && String(control.value || "").trim() !== "" &&
+      !(Object.hasOwn(legacyAliases, control.id) && String(control.value) === String(legacyAliases[control.id])));
   }
 
   function hasMeasurementInputs() { return measurementInputControls().length > 0; }
@@ -6325,7 +6363,7 @@
     rail.dataset.clcrHasResult = String(hasResult);
     reportActions.hidden = !hasResult;
     const resultBody = reportSection.querySelector(".clcr-result-extra");
-    if (resultBody) resultBody.hidden = !["CitCr_spot", "FENa_spot", "FEK_spot", "FECl_spot", "FEHCO3_spot", "AGu_spot", "TMP_GFR", "pH_spot", "UA_mgkg", "Ca_mgkg", "Mg_mgkg", "PO4_mgkg", "Prot_mgkg", "Na_mmol_d", "K_mmol_d"].includes(formulaId) && Boolean(readiness && !readiness.valueReady);
+    if (resultBody) resultBody.hidden = !["CitCr_spot", "FENa_spot", "FEK_spot", "FECl_spot", "FEHCO3_spot", "AGu_spot", "TMP_GFR", "pH_spot", "UA_mgkg", "Ca_mgkg", "Mg_mgkg", "PO4_mgkg", "Prot_mgkg", "Na_mmol_d", "K_mmol_d", "KM_Cr"].includes(formulaId) && Boolean(readiness && !readiness.valueReady);
   }
 
   function scheduleRefresh() {

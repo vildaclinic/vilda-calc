@@ -7335,6 +7335,116 @@ Regresje wywołują rzeczywisty silnik, sesję, zapis i historię, z fikcyjnymi
 danymi. Wyniki wykonań i kontroli CI podaje PR. Akceptacja polityki źródłowej
 i zielone testy nie nadają statusu nowej walidacji klinicznej.
 
+#### P-KLIRENS-KMCR-2026-11-02 — prosty KM/Cr, normy Newcastle i zachowany materiał
+
+**Cel, zakres i akceptacja:** `KM_Cr`, kwas moczowy/kreatynina w moczu.
+Właściciel zaakceptował [makietę desktop/mobile](https://vilda-kmcr-20261101.maciej-flader.chatgpt.site)
+i kodowanie 02.11.2026, z usunięciem dodatkowego zdania o kamicy i ocenie
+wydalania dobowego z głównego wyniku. Komentarz podwyższonego wyniku:
+„Podwyższony KM/Cr może wskazywać na zwiększone wydalanie kwasu moczowego.”
+Implementacja od odświeżonego `audyt` `6298d776630dead4a45f2d6b4b3c54d5285cd309`.
+Zmiana kliniczna i funkcjonalna; akceptacja makiety i testy nie są
+niezależną walidacją kliniczną. Pełne źródła, lokalizatory, ograniczenia
+i kontrakty regresji: [URATE_CREATININE.md](URATE_CREATININE.md).
+
+**Źródło i populacja:** jeden profil z publicznego katalogu
+[Newcastle Hospitals Laboratories, Urate, urine](https://laboratories.newcastle-hospitals.nhs.uk/test-directory/urate-urine/),
+aktualizacja 24.12.2024, pełny odczyt 01.11.2026, sekcja
+`Reference ranges → Random urine sample`. Tabela dotyczy próbki jednorazowej,
+w mmol/mmol kreatyniny, bez podziału płci. Nie podaje kohorty, metody,
+percentyli ani daty wyznaczenia przedziałów; porównanie jest orientacyjne.
+Dane w `clcr_urate_creatinine_data.js` są przekazywane do bezstanowego
+`VildaClcrUrateCreatinine.compute(input, policy)` w
+`clcr_urate_creatinine.js`. Wynik niesie źródło/populację, wersję polityki,
+materiał, granice, inkluzywność i oryginalny `sourceAgeLabel`.
+
+Grupy źródła `Up to 2 /2 to 5 /6 to 9 /10 to 17 />17 years` odwzorowuje się
+na **[0,2) /[2,6) /[6,10) /[10,18) /≥18 lat**; zakresy odpowiednio
+**0,42–1,53 /0,57–1,35 /0,39–0,85 /0,15–0,67 /0,11–0,53 mmol/mmol**.
+Dokładnie 2 lata przypisuje się do grupy zaczynającej się od 2 lat.
+Ukończone lata i obie granice wyniku włączone są jawną konwencją aplikacji
+zaakceptowaną wraz z makietą, nie dodatkową precyzją źródła. Nie interpoluje
+się między grupami, nie uzupełnia ich Mayo/Gloucester/Seattle i nie zgaduje
+wieku. Brak wieku nie blokuje liczby i nie uruchamia normy dorosłych.
+
+**Minimum danych i jednostki:** pierwsze, domyślne „Oblicz ze stężeń”
+wymaga UA i Cr z tej samej próbki moczu; „Gotowy wynik KM/Cr” jednego
+stosunku. Stężenia: mg/dL, mg/L, mmol/L, µmol/L; gotowy stosunek:
+mmol/mmol, mg/mg, mg/g. Wybór jednostki interpretuje wpis zgodnie z raportem,
+bez samoczynnego przeskalowania pola. Wiek pobiera się z istniejącego
+kontekstu wyłącznie do normy. Bez masy, wzrostu, płci, krwi, czasu,
+objętości, ankiety AKI/IFCC. Wspólna próbka jest jawnym założeniem;
+znana sprzeczność pochodzenia nie staje się potwierdzeniem zgodności.
+
+`R_mol = UA[mmol/L] / Cr[mmol/L]`; dla zgodnych stężeń masowych
+`R_mol = (UA/Cr)[mg/mg] ×113,12/168,11`, a mg/g najpierw dzieli się przez1000.
+Stała jednostka głównego wyniku i normy to **mmol/mmol**. Masy molowe
+168,11 i113,12 g/mol są spójnymi zaokrągleniami
+[NIST dla kwasu moczowego](https://webbook.nist.gov/cgi/cbook.cgi?ID=69-93-2)
+i [kreatyniny](https://webbook.nist.gov/cgi/cbook.cgi?ID=60-27-5), bez mieszania
+z niezależnie zaokrąglonymi przelicznikami. Objętość i czas skracają się
+w ilorazie obu ilości; wynik nie jest wydalaniem mmol/24 h.
+
+**Materiał i historia:** jedna pozycja KM/Cr przy stosunkach do kreatyniny,
+domyślnie „Próbka jednorazowa · Zmień” na DZM. Iloraz w DZM istnieje
+([LOINC13820-6](https://loinc.org/13820-6/)), lecz nie otrzymuje przez to
+normy Newcastle dla próbki punktowej. DZM i nieznany dawny materiał
+pozostawiają liczbę bez automatycznej normy. Jeden kanoniczny pomiar
+`KM_Cr` / `clcr:KM_Cr`, migawka `clcr-urate-creatinine` v1 /
+`urateCreatinineSnapshot`, zachowuje surowe wejścia, jednostki, dokładną
+wartość, materiał/fakty, wiek/dokładność, źródło, normę i ocenę.
+Badania, Notatki, raport i historia są zgodne; brak oceny ma
+`outOfRange:null`. Odczyt dawnych zapisów zachowuje ich mg/mg, etykietę DZM
+i ocenę bez przeliczania aktualnym pacjentem lub normą. Dopiero świadoma
+edycja może przejść na nowy model; brak starego materiału pozostaje
+nieznany, a nie domyślnie punktowy. Edycja/usunięcie dotyczą tego samego ID;
+zapis wymaga zapisanej, wybranej karty pacjenta.
+
+**Dokładność i wpływ względem poprzedniej wersji:** wcześniejszy iloraz
+stężeń mg/dL był arytmetycznie poprawny. Naprawiana ścieżka odrzucała
+jednak dokładne zero, przyjmowała ujemne operandy w zapisanej edycji,
+pokazywała dodatnie0,0004 jako0,000 i mogła zapisać tekstowe zero mimo
+dodatniego `valueNum`. Operandy UA≥0 iCr>0 sprawdza się osobno; także dwa
+ujemne stężenia są błędem. Nowa ścieżka KM/Cr nie stosuje dawnych stałych
+limitów200/500 mg/dL. Oryginalne operandy i wynik muszą być skończone;
+dodatni underflow/overflow blokują wynik zamiast tworzyć zero. Zero
+pozostaje neutralne z uwagą o oznaczalności. Ocena dokładnego ułamka
+poprzedza skrócenie do trzech miejsc lub zapisu naukowego; **≈** sygnalizuje
+rzeczywiste skrócenie także tuż przy granicy. Pełna precyzja zostaje
+w Szczegółach i zapisie. Nierówności raportu nie stają się dokładnymi punktami.
+Jedna karta B łączy wynik i neutralną normę, z bursztynowym odchyleniem
+i obiema podpisanymi granicami. Nie stosuje się uniwersalnego progu AKI
+`>1 mg/mg`, diagnozy kamicy ani warunku „bez AKI”.
+
+**Budżet instalacji PWA:** pięć nowych zasobów KM/Cr podniosło zimną instalację
+do 605 żądań przy limicie 600. Do istniejącego `FRESH_STATIC_ALIAS_PATHS`
+dodano pięć niezmienionych zależności: `vilda_shell.js`, `vilda_persist_runtime.js`,
+`vilda_name_fix.js`, `vilda_file_export.js`, `vilda_pro_ui.js`. Bieżący alias
+wersjonowany i bez wersji zachowują osobne klucze, współdzieląc wyłącznie
+udaną świeżą odpowiedź z tej samej instalacji. Dokładny niezmienny wpis ze
+starej pamięci zachowuje priorytet kopiowania, ale nie zasila nowego aliasu;
+mapa nie przechodzi między instalacjami ani nie przyjmuje nieudanych odpowiedzi.
+Nie zmieniono historii adresów ani limitów 600 żądań /40 MiB /5 minut.
+Pomiar naprawy przed końcowym wyliczeniem wersji: **605→600 żądań**,
+**31 985 982→31 815 800 B** (−170 182 B), zachowane 624 dostępne lokalnie
+klucze przy 629 bieżących adresach kolejki. `sw-precache-stron.test.mjs`:
+**183/183 PASS**, w tym 35 nowych przypadków świeżości, starej pamięci i awarii.
+Wszystkie 20 plików sesji Klirensu: **713/713 PASS**; testy odtwarzania PO4
+i białka uzupełniają kompozycję źródła o nowy adapter, bez zmiany ich obliczeń.
+
+**Syntetyczne kontrakty rzeczywistych funkcji:** UA100/Cr100 mg/dL daje
+**11312/16811 mmol/mmol**, czyli **≈0,6728927487954316**: powyżej normy
+dla40lat, w zakresie dla8lat.
+Gotowe1mg/mg i1000mg/g dają ten sam wynik. Dla dorosłego0,11 i0,53 są
+włączone, dokładne0,5300000000000000000001 jest wysokie mimo skrótu≈0,53,
+a0,1099999999999999999999 niskie mimo≈0,11. Dokładnie2lata/0,57 daje
+dolną włączoną granicę grupy2–<6. UA0/Cr100 daje neutralne0;
+UA0,04/Cr100 daje dodatnie0,0002691570995…, nigdy0. Kontrakty obejmują
+wszystkie jednostki/grupy, znany i nieznany materiał, błędne operandy,
+utrwalenie/legacy/edycję i rzeczywisty PWA offline. Końcowy wynik testów,
+aktualny commit i PR podaje opis PR. Ponowny przegląd: po zmianie katalogu
+lub przed rozszerzeniem na inne źródło, populację albo materiał.
+
 #### P-KLIRENS-FENA-2026-10-25 — cztery stężenia, warunkowe progi AKI i dokładny zapis
 
 Właściciel zaakceptował 25.10.2026

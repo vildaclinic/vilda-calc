@@ -165,9 +165,10 @@
       },
       {
         id: "KM_Cr",
-        label: "KM/Cr (kw.\xA0moczowy/kreatynina)",
-        version: "advanced",
-        requires: [ "U_UA", "Ucr"],
+        label: "KM/Cr — kwas moczowy/kreatynina",
+        version: "spot",
+        requires: ["URCR_uricAcid", "URCR_uricAcidUnit", "URCR_creatinine", "URCR_creatinineUnit"],
+        note: "Dwa stężenia z tej samej próbki albo gotowy stosunek. Znany wiek służy dobraniu normy dla próbki jednorazowej; czas i objętość nie są potrzebne.",
       },
       {
         id: "Ca_Cr",
@@ -426,7 +427,6 @@
       "Prot_mgkg",
       "Na_mmol_d",
       "K_mmol_d",
-      "KM_Cr",
       "Ca_Cr",
       "Mg_Ca",
       "PO4_Cr",
@@ -435,6 +435,7 @@
       "K_frac",
     ]),
     "Pr\xF3bka moczu (spot)": new Set([
+      "KM_Cr",
       "ACR",
       "PCR",
       "CaCr_spot",

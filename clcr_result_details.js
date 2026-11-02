@@ -32,6 +32,7 @@
     if (formulaId === "Prot_mgkg" && ["Prot_concentrationUnit", "Prot_volumeUnit", "Prot_reportedUnit", "Prot_outputUnit"].includes(field.id)) return true;
     if (formulaId === "Na_mmol_d" && ["Na_volumeUnit", "Na_reportedUnit", "Na_outputUnit"].includes(field.id)) return true;
     if (formulaId === "K_mmol_d" && field.id === "K_volumeUnit") return true;
+    if (formulaId === "KM_Cr" && /^URCR_/.test(field.id) && field.id !== "URCR_outputUnit") return true;
     if (["age", "ageMonths", "sex"].includes(field.id) || field.id === "ageDays" && formulaId !== "neonatal_egfr" || unitIds.has(field.id)) return false;
     if (/unit|Assay|Standardization|creatinineState|suspectedAKI|collectionSource|DurationSource|durationNeedsConfirmation/i.test(field.id) || /_entry_mode$/i.test(field.id)) return false;
     // Routine assumptions and optional specimen/therapy facts stay exactly as
@@ -132,6 +133,32 @@
       if (typeof age === "number" && age < 1 && Number(values.age) === 0 && Number(values.ageMonths || 0) === 0 && values.ageDays != null && values.ageDays !== "") return "Wiek w dniu badania: " + values.ageDays + " dni życia";
       return (Number.isFinite(age) ? "Wiek w dniu badania: " + decimal(age) + " lat" : "Nie zapisano wieku") + (values.sex ? " · płeć: " + (values.sex === "F" ? "kobieta" : "mężczyzna") : "");
     }
+    function renderEditInputFields(values, fields) {
+      const unitIds = new Set(fields.map(field => field.unitFieldId).filter(Boolean));
+      const visible = fields.filter(field => editableInput(field, draft.description.snapshot.formulaId, unitIds));
+      $("editInputFields").innerHTML = visible.map(field => {
+        const id = "editField-" + field.id, unit = unitText(field, values, fields);
+        const attributes = `id="${escape(id)}" data-clcr-edit-field="${escape(field.id)}"${field.required ? " required" : ""}`;
+        let control;
+        if (field.type === "select") control = `<select ${attributes}>${field.options.map(option => `<option value="${escape(option.value)}"${String(option.value) === String(values[field.id]) ? " selected" : ""}>${escape(option.label)}</option>`).join("")}</select>`;
+        else if (field.type === "checkbox") control = `<input ${attributes} type="checkbox"${values[`ui_${field.id}_answer`] === "yes" || !values[`ui_${field.id}_answer`] && values[field.id] ? " checked" : ""}>`;
+        else control = `<div class="clcr-record-control"><input ${attributes} type="${["date", "datetime-local"].includes(field.type) ? field.type : "text"}"${["date", "datetime-local"].includes(field.type) ? "" : ' inputmode="decimal"'} value="${escape(values[field.id])}">${unit ? `<span>${escape(unit)}</span>` : ""}</div>`;
+        return `<div class="clcr-record-field"><label for="${escape(id)}">${escape(field.label)}</label>${control}</div>`;
+      }).join("");
+      $("editInputFields").querySelectorAll("[data-clcr-edit-field]").forEach(control => control.addEventListener("input", () => {
+        if (!draft) return;
+        draft.changedFields.add(control.dataset.clcrEditField);
+        if (draft.description.snapshot.formulaId === "KM_Cr") {
+          draft.description.values[control.dataset.clcrEditField]=control.type === "checkbox" ? control.checked : control.value;
+          if (control.dataset.clcrEditField === "URCR_inputMode") {
+            const nextValues=draft.description.values;
+            draft.description.fields=root.ClcrUrateCreatininePersistence.editableFields(nextValues);
+            renderEditInputFields(nextValues,draft.description.fields);
+            host.querySelector(nextValues.URCR_inputMode === "reported" ? "#editField-URCR_reportedValue" : "#editField-URCR_uricAcid")?.focus();
+          }
+        }
+      }));
+    }
     function openEditor() {
       if (pending || !currentNote) return;
       const description = root.ClcrSavedCalculation?.describe(currentNote);
@@ -148,18 +175,7 @@
       $("editSex").value = values.sex || "";
       $("editSexField").hidden = !Object.prototype.hasOwnProperty.call(values, "sex");
       $("changeHistoricalContext").hidden = !Object.prototype.hasOwnProperty.call(values, "age") && !Object.prototype.hasOwnProperty.call(values, "sex");
-      const unitIds = new Set(fields.map(field => field.unitFieldId).filter(Boolean));
-      const visible = fields.filter(field => editableInput(field, description.snapshot.formulaId, unitIds));
-      $("editInputFields").innerHTML = visible.map(field => {
-        const id = "editField-" + field.id, unit = unitText(field, values, fields);
-        const attributes = `id="${escape(id)}" data-clcr-edit-field="${escape(field.id)}"${field.required ? " required" : ""}`;
-        let control;
-        if (field.type === "select") control = `<select ${attributes}>${field.options.map(option => `<option value="${escape(option.value)}"${String(option.value) === String(values[field.id]) ? " selected" : ""}>${escape(option.label)}</option>`).join("")}</select>`;
-        else if (field.type === "checkbox") control = `<input ${attributes} type="checkbox"${values[`ui_${field.id}_answer`] === "yes" || !values[`ui_${field.id}_answer`] && values[field.id] ? " checked" : ""}>`;
-        else control = `<div class="clcr-record-control"><input ${attributes} type="${["date", "datetime-local"].includes(field.type) ? field.type : "text"}"${["date", "datetime-local"].includes(field.type) ? "" : ' inputmode="decimal"'} value="${escape(values[field.id])}">${unit ? `<span>${escape(unit)}</span>` : ""}</div>`;
-        return `<div class="clcr-record-field"><label for="${escape(id)}">${escape(field.label)}</label>${control}</div>`;
-      }).join("");
-      $("editInputFields").querySelectorAll("[data-clcr-edit-field]").forEach(control => control.addEventListener("input", () => { if (draft) draft.changedFields.add(control.dataset.clcrEditField); }));
+      renderEditInputFields(values, fields);
       $("editError").hidden = true;
       show("editDialog");
     }

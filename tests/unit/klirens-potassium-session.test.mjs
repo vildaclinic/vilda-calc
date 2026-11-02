@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
 import vm from 'node:vm';
 import { patchPotassiumDzmSessionHooks, potassiumDzmSessionSource } from '../../tools/patch-klirens-potassium-dzm-session.mjs';
+import { patchUrateCreatinineSessionHooks, urateCreatinineSessionSource } from '../../tools/patch-klirens-urate-creatinine-session.mjs';
 
 const source = readFileSync(new URL('../../inline_kalkulator_klirens_07.js', import.meta.url), 'utf8');
 const defaults = { K_inputMode: 'concentration', K_concentration: '', K_volume: '', K_volumeUnit: 'mL', K_reportedValue: '',
@@ -233,8 +234,11 @@ describe('Potassium DZM — complete shipped session boundary', () => {
 
   it('reproduces exactly the production adapter and capture hook from readable source', () => {
     expect(patchPotassiumDzmSessionHooks(source)).toBe(source);
-    const preceding = source.replace(potassiumDzmSessionSource, '').replace('try{window.ClcrPotassiumDzmUi?.ensureControls?.(document)}catch{}', '');
-    expect(patchPotassiumDzmSessionHooks(preceding)).toBe(source);
+    // Rebuild the previous adapter first, then its newer outer session layer.
+    // The exact complete shipped source remains the expected result.
+    const withoutOuter = source.replace(urateCreatinineSessionSource, '').replace('try{window.ClcrUrateCreatinineUi?.ensureControls?.(document)}catch{}', '');
+    const preceding = withoutOuter.replace(potassiumDzmSessionSource, '').replace('try{window.ClcrPotassiumDzmUi?.ensureControls?.(document)}catch{}', '');
+    expect(patchUrateCreatinineSessionHooks(patchPotassiumDzmSessionHooks(preceding))).toBe(source);
     expect(() => patchPotassiumDzmSessionHooks(preceding.replace('(function(){const b="vildaClcrSessionV1";', ''))).toThrow('Ambiguous potassium session integration anchor');
   });
 });

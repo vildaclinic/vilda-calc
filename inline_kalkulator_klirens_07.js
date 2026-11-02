@@ -1660,7 +1660,160 @@ function restoreClearedCaDzmContext(event) {
   const priorRestoreCa = restoreClearedCaDzmContext;
   replaceBinding("restoreClearedCaDzmContext", function restorePotassiumAfterCa(event) { priorRestoreCa(event); restoreClearedPotassium(event); });
 })();
-(function(){const b="vildaClcrSessionV1";function y(){try{if(typeof window<"u"&&window.VildaPersistence)return window.VildaPersistence}catch{}return null}function z(){try{const e=y();return e&&typeof e.isAutosaveSuppressed=="function"&&e.isAutosaveSuppressed()?!0:typeof window>"u"?!1:!!window.__vildaPersistRestoring||Number(window.__vildaPersistPauseUntil||0)>Date.now()}catch{return!1}}function h(){try{window.ClcrUaUi?.ensureControls?.(document)}catch{}const e=document.getElementById("clcrForm");try{window.ClcrMgDzmUi?.ensureControls?.(document)}catch{}try{window.ClcrPo4DzmUi?.ensureControls?.(document)}catch{}try{window.ClcrProteinDzmUi?.ensureControls?.(document)}catch{}try{window.ClcrSodiumDzmUi?.ensureControls?.(document)}catch{}try{window.ClcrPotassiumDzmUi?.ensureControls?.(document)}catch{}if(!e)return[];try{return Array.from(e.querySelectorAll("input, select, textarea"))}catch{return Array.from(e.elements||[])}}function _(e){if(!e||e.dataset&&e.dataset.clcrDerivedControl==="true")return"";const t=String(e.type||"").toLowerCase();return t==="button"||t==="submit"||t==="reset"||t==="file"?"":e.id||e.name||""}function j(){try{const e=document.querySelector(".version-option.selected[data-version]");if(e&&e.dataset&&e.dataset.version)return String(e.dataset.version)}catch{}try{if(typeof window<"u"&&window.currentVersion)return String(window.currentVersion)}catch{}return""}function k(e){if(!e)return null;const t=String(e.type||"").toLowerCase();return t==="checkbox"?!!e.checked:t==="radio"?e.checked?e.value:void 0:e.value==null?"":String(e.value)}function v(e,t){if(!e)return;const r=String(e.type||"").toLowerCase();r==="checkbox"?e.checked=!!t:r==="radio"?e.checked=String(e.value)===String(t)||t===!0:e.value=t==null?"":String(t)}function V(e,t){return!!e&&Object.prototype.hasOwnProperty.call(e,t)}function F(e){return e==null||typeof e=="string"&&e.trim()===""}function p(){try{return typeof window>"u"?{}:((!window.__vildaClcrVersionValueVault||typeof window.__vildaClcrVersionValueVault!="object")&&(window.__vildaClcrVersionValueVault={}),window.__vildaClcrVersionValueVault)}catch{return{}}}function q(){try{const e=p();return Object.keys(e).length>0}catch{return!1}}function C(){try{return!!(window.__vildaClcrPreserveVersionValues||q())}catch{return!1}}function P(e){try{let t=e;const r=document;for(;t&&t!==r;){if(t.style&&t.style.display==="none"||t.hidden)return!1;t=t.parentElement||t.parentNode}}catch{}return!0}function H(e,t){const r=t&&typeof t=="object"?t:{},n=e&&typeof e=="object"?e:{};try{typeof window<"u"&&(window.__vildaClcrVersionValueVault={})}catch{}const o=p();Object.keys(n).forEach(i=>{!i||i==="currentVersion"||(o[i]=n[i])});try{window.__vildaClcrPreserveVersionValues=r.preserve!==!1}catch{}return o}function S(){try{typeof window<"u"&&(window.__vildaClcrVersionValueVault={},window.__vildaClcrPreserveVersionValues=!1)}catch{}return!0}function g(e){const t=e&&typeof e=="object"?e:{};try{if(!t.force&&window.__vildaPersistRestoring)return null}catch{}if(!t.force&&!C())return null;const r=p();h().forEach(n=>{const o=_(n);if(!o||o==="currentVersion")return;const i=k(n);if(i===void 0)return;const u=P(n),c=F(i);!u&&c&&V(r,o)||!u&&c&&!V(r,o)||(r[o]=i)});try{window.__vildaClcrPreserveVersionValues=!0}catch{}return r}function N(e){const t=e&&typeof e=="object"?e:{};if(!C())return!1;const r=p();let n=!1;return h().forEach(o=>{const i=_(o);!i||!V(r,i)||t.visibleOnly!==!1&&!P(o)||(v(o,r[i]),n=!0)}),n}function J(e){!e||typeof e.dispatchEvent!="function"||["input","change"].forEach(t=>{try{e.dispatchEvent(new Event(t,{bubbles:!0}))}catch{}})}function m(e){const t=document.getElementById(e);if(!t||!t.children)return[];const r=[];return Array.from(t.children).forEach(n=>{const o=(n.textContent||"").trim().replace(/\u00A0/g," ");if(!o)return;const i=n.classList.contains("out-of-range")||n.classList.contains("warn-orange")||n.classList.contains("warn-yellow");r.push({text:o,isOut:i})}),r}function I(){if(!document.getElementById("clcrForm"))return null;const t=j(),r=(document.getElementById("formulaPicker")||{}).value||"";if(C())try{g({reason:"build-snapshot"})}catch{}const n=p(),o={version:2,legacyVersion:1,source:"kalkulator-klirens.html",savedAtISO:new Date().toISOString(),currentVersion:t,selectedFormula:r,preserveAcrossVersions:!!C(),preservedInputs:Object.assign({},n),inputs:{},summary:{clcr:m("clcrInfo"),elec:m("elecInfo"),stone:m("stoneInfo"),ktv:[].concat(m("ktvResult")).concat(m("ektvResult"))}};return Object.keys(n||{}).forEach(i=>{!i||i==="currentVersion"||(o.inputs[i]=n[i])}),h().forEach(i=>{const u=_(i);if(!u)return;const c=k(i);if(c===void 0)return;const d=P(i),w=F(c);(d||!w||!V(o.inputs,u))&&(o.inputs[u]=c)}),o.inputs.currentVersion=t,o.inputs.formulaPicker=r,o.inputs=window.ClcrCollectionDuration?.normalizeCapturedInputs?.(o.inputs)||o.inputs,o}
+/* KLIRENS-URATE-CREATININE-SESSION: source tools/patch-klirens-urate-creatinine-session.mjs */
+(function installUrateCreatinineSessionAdapter() {
+  "use strict";
+  const DEFAULTS = Object.freeze({ URCR_inputMode: "concentration", URCR_uricAcid: "", URCR_uricAcidUnit: "mg/dL",
+    URCR_creatinine: "", URCR_creatinineUnit: "mg/dL", URCR_reportedValue: "", URCR_reportedUnit: "mmol/mmol",
+    URCR_specimen: "random", URCR_outputUnit: "mmol/mmol" });
+  const CONTEXT_IDS = Object.freeze(["age", "ageMonths", "ageDays", "sex", "weight", "height", "newbornContext"]);
+  const originals = new WeakMap();
+  let restoredAliases = {};
+  const object = value => value && typeof value === "object" && !Array.isArray(value);
+  const own = (value, key) => Object.prototype.hasOwnProperty.call(value || {}, key);
+  const absent = value => value == null || typeof value === "string" && !value.trim();
+  const primitive = value => value == null ? "" : ["string", "number", "boolean"].includes(typeof value) ? String(value) : "";
+  const incoming = session => ({ ...(object(session.preservedInputs) ? session.preservedInputs : {}), ...(object(session.inputs) ? session.inputs : {}) });
+  const selected = (session, values) => session.selectedFormula || values.formulaPicker || "";
+  function aliasValues(raw) {
+    let value = raw;
+    if (typeof value === "string") { try { value = JSON.parse(value); } catch { return null; } }
+    if (!object(value) || !Object.keys(value).length || Object.keys(value).some(key => !["U_UA", "Ucr"].includes(key))) return null;
+    const result = {};
+    for (const [key, item] of Object.entries(value)) {
+      if (!["string", "number"].includes(typeof item) || typeof item === "number" && !Number.isFinite(item)) return null;
+      const text = primitive(item);
+      if (!text.trim() || text.length > 512) return null;
+      result[key] = text;
+    }
+    return result;
+  }
+  function metadataText(value) {
+    if (typeof value === "string") return value;
+    try { return JSON.stringify(value); } catch { return "[invalid metadata]"; }
+  }
+  function legacyAliasValues(doc = document) {
+    if (doc.getElementById("formulaPicker")?.value !== "KM_Cr") return {};
+    const vault = window.__vildaClcrVersionValueVault;
+    const captured = object(vault) && own(vault, "URCR_legacyAliases") ? aliasValues(vault.URCR_legacyAliases) : restoredAliases;
+    return Object.freeze({ ...(captured || {}) });
+  }
+  function setControls(fields) {
+    for (const [id, value] of Object.entries(fields)) {
+      const control = document.getElementById(id);
+      if (control) {
+        if (control.type === "checkbox") control.checked = value === true || value === "true";
+        else control.value = primitive(value);
+      }
+    }
+  }
+  function sourceContexts(session, active) {
+    const typed = [session.urateCreatinineSnapshot?.input, session.context?.urateCreatinine,
+      session.sourceContext?.urateCreatinine, session.context?.urateCreatinineSnapshot?.input].filter(object);
+    return active ? [...typed, session.context, session.sourceContext].filter(object) : typed;
+  }
+  function specimenValue(value) {
+    const text = primitive(value).trim().toLowerCase();
+    if (["random", "spot", "single", "random-urine"].includes(text)) return "random";
+    if (["timed", "24h", "24-hour", "24h-urine", "dzm"].includes(text)) return "timed";
+    return "unknown";
+  }
+  function specimenFor(session, values, active, measured) {
+    if (own(values, "URCR_specimen")) return specimenValue(values.URCR_specimen);
+    for (const context of sourceContexts(session, active)) {
+      for (const key of ["specimen", "specimenType", "sampleType", "urineSpecimenType"]) {
+        if (own(context, key)) return specimenValue(context[key]);
+      }
+    }
+    // Old measurements have no evidence of a random sample. Only a genuinely
+    // blank new form gets the new default; an old numeric result stays unknown.
+    return measured ? "unknown" : "random";
+  }
+  function capturedSameSample(session, values, active) {
+    let answer = own(values, "URCR_sameUrineSample") ? values.URCR_sameUrineSample : undefined;
+    for (const context of sourceContexts(session, active)) {
+      const facts = object(context.knownFacts) ? context.knownFacts : {};
+      if (context.sameUrineSample === false || facts.sameUrineSample === false) return false;
+      if (answer === undefined && (context.sameUrineSample === true || facts.sameUrineSample === true)) answer = true;
+    }
+    return answer;
+  }
+  function normalizeUrateCreatinine(session) {
+    const values = originals.get(session) || incoming(session), formula = selected(session, values), active = formula === "KM_Cr";
+    window.ClcrUrateCreatinineUi?.ensureControls?.(document);
+    const fields = Object.fromEntries(Object.entries(DEFAULTS).map(([id, fallback]) => [id, own(values, id) ? primitive(values[id]) : fallback]));
+    const hasDedicated = Object.keys(DEFAULTS).some(id => own(values, id));
+    const legacy = active && !hasDedicated && (!absent(values.U_UA) || !absent(values.Ucr));
+    if (legacy) {
+      if (own(values, "U_UA")) fields.URCR_uricAcid = primitive(values.U_UA);
+      if (own(values, "Ucr")) fields.URCR_creatinine = primitive(values.Ucr);
+    }
+    const measured = legacy || ["URCR_uricAcid", "URCR_creatinine", "URCR_reportedValue"].some(id => !absent(values[id]));
+    fields.URCR_specimen = specimenFor(session, values, active, measured);
+    setControls(fields);
+    const applicable = Object.fromEntries(Object.entries(fields).filter(([id]) => active || own(values, id) || document.getElementById(id)));
+    const next = { ...(object(session.inputs) ? session.inputs : {}), ...applicable };
+    for (const id of CONTEXT_IDS) if (own(values, id)) next[id] = values[id];
+    const matched = capturedSameSample(session, values, active);
+    if (matched !== undefined && ["boolean", "string"].includes(typeof matched)) next.URCR_sameUrineSample = matched;
+    else delete next.URCR_sameUrineSample;
+    if (active) { session.selectedFormula = "KM_Cr"; session.currentVersion = "spot"; next.currentVersion = "spot"; }
+    // The legacy fields remain source evidence for undo/export. They never
+    // seed this form merely because the doctor changes the selected formula.
+    if (legacy) for (const id of ["U_UA", "Ucr"]) if (own(values, id)) next[id] = values[id];
+    const aliases = legacy ? Object.fromEntries(["U_UA", "Ucr"].filter(id => own(values, id) && !absent(values[id])).map(id => [id, primitive(values[id])])) : null;
+    const encodedAliases = aliases && Object.keys(aliases).length ? JSON.stringify(aliases)
+      : own(values, "URCR_legacyAliases") ? metadataText(values.URCR_legacyAliases) : undefined;
+    restoredAliases = aliasValues(encodedAliases) || {};
+    if (encodedAliases !== undefined) next.URCR_legacyAliases = encodedAliases;
+    else delete next.URCR_legacyAliases;
+    session.inputs = next;
+  }
+  function clearUrateCreatinine() {
+    window.ClcrUrateCreatinineUi?.ensureControls?.(document);
+    setControls(DEFAULTS);
+    const vault = window.__vildaClcrVersionValueVault;
+    restoredAliases = {};
+    if (object(vault)) { delete vault.URCR_sameUrineSample; delete vault.URCR_legacyAliases; }
+  }
+  function restoreClearedUrateCreatinine(event) {
+    clearUrateCreatinine();
+    if (event?.clcrClearedFormula !== "KM_Cr") return;
+    const saved = event.clcrPreservedUrateCreatinineContext;
+    if (!object(saved)) return;
+    const fields = Object.fromEntries(CONTEXT_IDS.filter(id => own(saved, id) &&
+      (typeof saved[id] === "string" || typeof saved[id] === "boolean" || typeof saved[id] === "number" && Number.isFinite(saved[id])))
+      .map(id => [id, saved[id]]));
+    Object.assign(fields, DEFAULTS);
+    setControls(fields);
+    const vault = object(window.__vildaClcrVersionValueVault) ? window.__vildaClcrVersionValueVault : (window.__vildaClcrVersionValueVault = {});
+    Object.assign(vault, fields);
+    setTimeout(() => { try { window.ClcrUiWorkflow?.refresh?.(); window.clcrUpdate?.(); } catch {} }, 0);
+  }
+  window.ClcrUrateCreatinineSession = Object.freeze({ DEFAULTS, CONTEXT_IDS, legacyAliasValues });
+  window.ClcrUrateCreatinineUi?.ensureControls?.(document);
+  const replaceBinding = (name, implementation) => {
+    if (!Reflect.set(globalThis, name, implementation)) throw new Error("Nie można zainstalować adaptera sesji: " + name);
+  };
+  const priorPrepareUa = prepareUaSession;
+  replaceBinding("prepareUaSession", function prepareUrateCreatinineSession(session) {
+    const prepared = priorPrepareUa(session);
+    if (!object(prepared)) return prepared;
+    if (selected(prepared, incoming(prepared)) !== "KM_Cr") return prepared;
+    return { ...prepared, currentVersion: "spot", selectedFormula: "KM_Cr",
+      inputs: { ...(object(prepared.inputs) ? prepared.inputs : {}), currentVersion: "spot" },
+      preservedInputs: object(prepared.preservedInputs) ? { ...prepared.preservedInputs } : prepared.preservedInputs };
+  });
+  const priorNormalizeCl24 = normalizeCl24SessionInputs;
+  replaceBinding("normalizeCl24SessionInputs", function captureUrateCreatinineBeforeNormalization(session) { originals.set(session, incoming(session)); priorNormalizeCl24(session); });
+  const priorNormalizeCa = normalizeCaDzmSessionInputs;
+  replaceBinding("normalizeCaDzmSessionInputs", function normalizeUrateCreatinineAfterCa(session) { priorNormalizeCa(session); normalizeUrateCreatinine(session); });
+  const priorClearCa = clearCaDzmInputContext;
+  replaceBinding("clearCaDzmInputContext", function clearUrateCreatinineAfterCa() { priorClearCa(); clearUrateCreatinine(); });
+  const priorRestoreCa = restoreClearedCaDzmContext;
+  replaceBinding("restoreClearedCaDzmContext", function restoreUrateCreatinineAfterCa(event) { priorRestoreCa(event); restoreClearedUrateCreatinine(event); });
+})();
+(function(){const b="vildaClcrSessionV1";function y(){try{if(typeof window<"u"&&window.VildaPersistence)return window.VildaPersistence}catch{}return null}function z(){try{const e=y();return e&&typeof e.isAutosaveSuppressed=="function"&&e.isAutosaveSuppressed()?!0:typeof window>"u"?!1:!!window.__vildaPersistRestoring||Number(window.__vildaPersistPauseUntil||0)>Date.now()}catch{return!1}}function h(){try{window.ClcrUaUi?.ensureControls?.(document)}catch{}const e=document.getElementById("clcrForm");try{window.ClcrMgDzmUi?.ensureControls?.(document)}catch{}try{window.ClcrPo4DzmUi?.ensureControls?.(document)}catch{}try{window.ClcrProteinDzmUi?.ensureControls?.(document)}catch{}try{window.ClcrSodiumDzmUi?.ensureControls?.(document)}catch{}try{window.ClcrPotassiumDzmUi?.ensureControls?.(document)}catch{}try{window.ClcrUrateCreatinineUi?.ensureControls?.(document)}catch{}if(!e)return[];try{return Array.from(e.querySelectorAll("input, select, textarea"))}catch{return Array.from(e.elements||[])}}function _(e){if(!e||e.dataset&&e.dataset.clcrDerivedControl==="true")return"";const t=String(e.type||"").toLowerCase();return t==="button"||t==="submit"||t==="reset"||t==="file"?"":e.id||e.name||""}function j(){try{const e=document.querySelector(".version-option.selected[data-version]");if(e&&e.dataset&&e.dataset.version)return String(e.dataset.version)}catch{}try{if(typeof window<"u"&&window.currentVersion)return String(window.currentVersion)}catch{}return""}function k(e){if(!e)return null;const t=String(e.type||"").toLowerCase();return t==="checkbox"?!!e.checked:t==="radio"?e.checked?e.value:void 0:e.value==null?"":String(e.value)}function v(e,t){if(!e)return;const r=String(e.type||"").toLowerCase();r==="checkbox"?e.checked=!!t:r==="radio"?e.checked=String(e.value)===String(t)||t===!0:e.value=t==null?"":String(t)}function V(e,t){return!!e&&Object.prototype.hasOwnProperty.call(e,t)}function F(e){return e==null||typeof e=="string"&&e.trim()===""}function p(){try{return typeof window>"u"?{}:((!window.__vildaClcrVersionValueVault||typeof window.__vildaClcrVersionValueVault!="object")&&(window.__vildaClcrVersionValueVault={}),window.__vildaClcrVersionValueVault)}catch{return{}}}function q(){try{const e=p();return Object.keys(e).length>0}catch{return!1}}function C(){try{return!!(window.__vildaClcrPreserveVersionValues||q())}catch{return!1}}function P(e){try{let t=e;const r=document;for(;t&&t!==r;){if(t.style&&t.style.display==="none"||t.hidden)return!1;t=t.parentElement||t.parentNode}}catch{}return!0}function H(e,t){const r=t&&typeof t=="object"?t:{},n=e&&typeof e=="object"?e:{};try{typeof window<"u"&&(window.__vildaClcrVersionValueVault={})}catch{}const o=p();Object.keys(n).forEach(i=>{!i||i==="currentVersion"||(o[i]=n[i])});try{window.__vildaClcrPreserveVersionValues=r.preserve!==!1}catch{}return o}function S(){try{typeof window<"u"&&(window.__vildaClcrVersionValueVault={},window.__vildaClcrPreserveVersionValues=!1)}catch{}return!0}function g(e){const t=e&&typeof e=="object"?e:{};try{if(!t.force&&window.__vildaPersistRestoring)return null}catch{}if(!t.force&&!C())return null;const r=p();h().forEach(n=>{const o=_(n);if(!o||o==="currentVersion")return;const i=k(n);if(i===void 0)return;const u=P(n),c=F(i);!u&&c&&V(r,o)||!u&&c&&!V(r,o)||(r[o]=i)});try{window.__vildaClcrPreserveVersionValues=!0}catch{}return r}function N(e){const t=e&&typeof e=="object"?e:{};if(!C())return!1;const r=p();let n=!1;return h().forEach(o=>{const i=_(o);!i||!V(r,i)||t.visibleOnly!==!1&&!P(o)||(v(o,r[i]),n=!0)}),n}function J(e){!e||typeof e.dispatchEvent!="function"||["input","change"].forEach(t=>{try{e.dispatchEvent(new Event(t,{bubbles:!0}))}catch{}})}function m(e){const t=document.getElementById(e);if(!t||!t.children)return[];const r=[];return Array.from(t.children).forEach(n=>{const o=(n.textContent||"").trim().replace(/\u00A0/g," ");if(!o)return;const i=n.classList.contains("out-of-range")||n.classList.contains("warn-orange")||n.classList.contains("warn-yellow");r.push({text:o,isOut:i})}),r}function I(){if(!document.getElementById("clcrForm"))return null;const t=j(),r=(document.getElementById("formulaPicker")||{}).value||"";if(C())try{g({reason:"build-snapshot"})}catch{}const n=p(),o={version:2,legacyVersion:1,source:"kalkulator-klirens.html",savedAtISO:new Date().toISOString(),currentVersion:t,selectedFormula:r,preserveAcrossVersions:!!C(),preservedInputs:Object.assign({},n),inputs:{},summary:{clcr:m("clcrInfo"),elec:m("elecInfo"),stone:m("stoneInfo"),ktv:[].concat(m("ktvResult")).concat(m("ektvResult"))}};return Object.keys(n||{}).forEach(i=>{!i||i==="currentVersion"||(o.inputs[i]=n[i])}),h().forEach(i=>{const u=_(i);if(!u)return;const c=k(i);if(c===void 0)return;const d=P(i),w=F(c);(d||!w||!V(o.inputs,u))&&(o.inputs[u]=c)}),o.inputs.currentVersion=t,o.inputs.formulaPicker=r,o.inputs=window.ClcrCollectionDuration?.normalizeCapturedInputs?.(o.inputs)||o.inputs,o}
 // Action-boundary capture reads existing controls and a detached vault copy.
 // Unlike the ordinary save builder it never mounts controls, initializes the
 // version vault, persists a session or changes the preservation/restoring flags.
