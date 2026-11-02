@@ -20271,6 +20271,170 @@ a lekarz poprawia jedno z miejsc. Wartość dni spoza 0–6 w rekordzie nie jest
 
 **Wersje.** `sga_birth_module.js?v=10→11`; SW 1.1.168 → **1.1.169**.
 
+## Pobieranie dziennika zmian stronami za flagą, uśpione (P-SYNC-STRONY, E2-PR1, SW 1.1.436, `vilda_sync.js` 46, 2026-11-02)
+
+**Zmiana kliniczna: NIE** — wzory, progi, jednostki i interpretacje bez zmian. Reguły scalania (`Le`, `ps`, `wt`), format
+delt, sejf i integracja bez zmian; strażniki formatu klinicznego (wybór trasy w sejfie, PR planów opieki) obowiązują
+przy włączonej fladze tak samo jak dziś (niżej). Przy wyłączonej fladze żądania, ich kolejność i zapisy kluczy są takie
+jak dotąd (zapis bazowy `tests/unit/sync-zadania-bazowe.test.mjs`, teraz także w wariantach flagi `'0'` i `'1'` z
+`window.VILDA_SYNC_PAGED = false`).
+
+**Skąd.** Etap 2 planu (`docs/SYNC_PRZYROSTOWA_PLAN.md`, 3.3 „drainChanges”, tabela etapu 2, E2-PR1). Decyzje
+właściciela z 2026-10-29 nr 1 i 2: seria uśpionych PR; pobieranie stronami najpierw wyłączone, domyślnie włącza je
+osobny E2-PR1b. Dotąd jedno pobranie czytało jedną stronę legacy (do 200 delt), a 401, 429 i 503 przechodziły bez śladu.
+
+**Kiedy działa.** Wszystkie warunki naraz: `vilda-sync-paged-v1 = "1"` w `localStorage` (albo
+`window.VILDA_SYNC_PAGED === true`; `false` wyłącza mimo klucza; każda inna wartość klucza — `"0"`, pusta, `"true"` —
+to wyłączone); `/changes` włączone (`vilda-incr-sync-v1` różne od `"0"`); tryb „Komputer prywatny” (nie „Komputer w
+pracy”, nie „Zaloguj jednorazowo” — w tych trybach dzisiejsza ścieżka przy każdej wartości flagi, sprawdzane przy każdym
+drenażu tymi samymi sygnałami co magazyn stanu slotu); `GET /v1/health` bez tokenu (limit 5 s do nagłówków) podaje `features` z
+`changes-paged`. Wynik health jest tylko w pamięci strony: 10 min, gdy zawiera `changes-paged`, 15 s w każdym innym
+wypadku (v36 bez `api`, DO bez SQLite, błąd sieci, zła odpowiedź); jedno żądanie health naraz. Kursor 0 i każdy inny
+wynik health — jedno żądanie legacy jak dotąd (kursor 0: bez health, okno serwera E1-5 przy `blobSeq > 0`, przy
+`blobSeq = 0` od `oldestSeq − 1` po 200 wierszy — znane, wybór „okno w trybie stronicowanym / pełny replay” zostaje w
+planie na później).
+
+**Pętla.** `/changes?since=N&limit=200`, następna strona od razu, dopóki `truncated`. Najwyżej 10 stron albo 20 s na
+pobranie (sprawdzane przed każdym żądaniem; reszta w następnym pobraniu). Numery wierszy muszą iść po kolei od N + 1.
+Zaślepka `{seq, gap:true}` jest pomijana bez scalania. Wiersz z treścią: sejf otwarty przed i po wywołaniu, inaczej
+koniec partii (zastosowanie oddaje „nic” także przy zablokowanym sejfie, więc wiersz „nieczytelny” liczy się tylko przy
+sejfie otwartym przed i po). Jedno `vilda:sync-merged changes-drain` na drenaż, po ostatniej stronie, tylko gdy coś się
+zmieniło (te same 9 liczników co `wt`) i sejf jest dalej otwarty na tym koncie.
+
+| Stop (`getDrainStatus().stop`) | Kiedy | Kursor | Co dalej |
+|---|---|---|---|
+| `head` | strona z `truncated:false` (także pusta) | ostatni przetworzony wiersz | od kursora |
+| `budzet` | 10 stron albo 20 s | ostatni wiersz ostatniej strony | następne pobranie idzie dalej |
+| `busy` | `MERGE_BUSY` (albo zmiana sesji tego samego konta w trakcie scalania) | wiersz przed nim | od tego wiersza |
+| `blokada` | sejf zablokowany albo inne konto: po odpowiedzi health (w obu trybach, także przed żądaniem legacy), przed żądaniem, po odpowiedzi, przed i po wierszu, przed zapisem kursora | bez zapisu z bieżącej strony (wcześniejsze strony zostają) | po odblokowaniu od kursora (strona od nowa; scalanie odporne na powtórzenie) |
+| `dziura` | numer większy niż oczekiwany (1. i 2. drenaż z dziurą od tego samego numeru) | przed dziurą | przy 3. drenażu przeskok nad brakującymi numerami |
+| `ahead` | `cursorAhead` przy `headSeq` < `since` (kursor za `headSeq`, np. slot odtworzony) | `headSeq` (tylko w dół) | od `headSeq` |
+| `base` | `requiresBase` (kursor poniżej `oldestSeq − 1`, np. po wyczyszczeniu dziennika) | `oldestSeq − 1` (nigdy z `nextSince`) | wiersze tej strony w następnym pobraniu |
+| `http-401` | 401 | stoi | bez kasowania stanu slotu i bez `onSyncError`; pełną obsługę robi następne `/status` |
+| `http-429` | 429 | stoi | przerwa w pamięci strony według `Retry-After` (bez nagłówka `error.retryAfterSeconds`, bez obu 30 s; nagłówek ma pierwszeństwo; 1–300 s); w przerwie bez żądań i bez health (`tryb:'pauza'`); bez `vilda-sync-rl-until-v1`; 429 odebrane po blokadzie sejfu: `blokada`, bez przerwy |
+| `http-503` | 503 (`log_import_pending`, `hub_unavailable`, `hub_not_sqlite`) | stoi | ponawia; `hub_not_sqlite` unieważnia wynik health |
+| `http-inny`, `siec` | inny kod (np. 500), błąd sieci albo limit czasu (także w trybie legacy: `tryb:'legacy'`, `stop:'siec'`) | stoi (po poprzednich stronach) | ponawia |
+| `format` | sejf nie wskazuje dzisiejszego formatu klinicznego albo wybór trasy rzuca (`kod` z odmowy, np. `IDENTITY_BOOTSTRAP_UNVERIFIED`, `SESSION_CHANGED`): przy żądaniu i odpowiedzi (health, `/changes`, także legacy przez `Yt`), na początku strony z wierszami, przed i po każdym scaleniu, przed każdym zapisem kursora; także odmowa rzucona ze scalenia | bez zapisu z bieżącej strony (wcześniejsze strony zostają) | bez `onSyncError`; `vilda:sync-merged` tylko za wcześniejsze strony; wynik health z odmowy bez pamięci; po powrocie dzisiejszego formatu strona od nowa |
+| `ksztalt` | odpowiedź bez pól stronicowanych (worker cofnięty do v36 ignoruje `limit`; także brak `truncated` albo `headSeq`), numer malejący, powtórzony albo niecałkowity, `nextSince` różne od ostatniego wiersza, `truncated` bez wierszy (jedno żądanie zamiast pętli), zły JSON; spoza kontraktu v37a: `cursorAhead` przy `headSeq` ≥ `since`, `requiresBase` bez `oldestSeq` albo z `oldestSeq − 1` ≤ `since` | odpowiedź legacy: reguła dotychczasowa (najwyższy numer, gdy partia nie przerwana); inaczej wiersze przed błędem; `cursorAhead`/`requiresBase` spoza kontraktu: stoi | nowe wykrycie health |
+| `since0-legacy`, `legacy` | kursor 0 albo health bez `changes-paged` | jak dotąd | `legacy`: health po 15 s; 401, 429, 503 i inne kody jak dotąd bez śladu (bez przerwy po 429), poza błędem sieci (`siec`) |
+
+**Kursor** (P-SYNC-KURSOR): najwyższy wiersz o rozstrzygniętym wyniku — zastosowany, bez zmian, nieczytelny (zła
+koperta, odszyfrowanie), z błędem zastosowania albo zaślepka; zapis tylko w górę (inna karta mogła pójść dalej).
+Wyjątki: `cursorAhead` → `headSeq` (tylko w dół: przy `headSeq` ≥ `since` odpowiedź jest spoza kontraktu i kursor
+stoi, bo w górę przeskoczyłby niepobrane wiersze), `requiresBase` → `oldestSeq − 1`, nigdy z `nextSince` (pusta strona po
+wyczyszczeniu dziennika ma `nextSince = since`). Błąd zastosowania wiersza innego niż `MERGE_BUSY` liczy się w `bledy` i
+kursor idzie za nim (jak `wt`, decyzja 7); licznik dziury dotyczy jednego miejsca (dziura od innego numeru liczy od 1). Nieczytelne i błędne wiersze przechodzą jak dotąd w `wt`; to bezpieczne,
+dopóki działa pełna wysyłka i pełne pobranie (decyzja 7: przez cały etap 2), bo ich treść niesie pełny blob nadawcy.
+Kwarantanna i zatrzymanie kursora przy błędzie zastosowania (decyzja 6) — z `applyEncryptedEvent` w E2-PR2 i E2-PR4.
+
+**Dziura w numeracji** (w v37a numery są ciągłe; dziura to anomalia): kursor zatrzymuje się przed nią. Licznik w
+`vilda-sync-dziura-v1:<slot>` (`localStorage`: `{od, do, proby, pierwszaISO}`; przeżywa przejścia między stronami i
+restart aplikacji; usuwany, gdy kursor minie dziurę). Przy trzecim drenażu, który trafia na tę samą dziurę, kursor
+przeskakuje brakujące numery — ich treść, jeśli istniała, niesie pełny blob nadawcy. **Odstępstwo od planu (D-PR1-4, do
+potwierdzenia właściciela):** plan (3.3, krok 3) mówi „jak `requiresBase`, kursor bez zmian”; wymuszone pełne pobranie i
+ślad `sync.gap` dochodzą w E2-PR4, a do tego czasu przeskok po trzech próbach zamiast stania bez końca. Dotyczy tylko
+włączonej flagi.
+
+**Sesja** (P-SESJA-ZAPISU): drenaż kończy się w sesji konta, którym ruszył — przed każdym żądaniem (także po odpowiedzi
+health, w obu trybach: na nagłówki `GET /v1/health` drenaż czeka do 5 s, a health bez `changes-paged` daje żądanie legacy), po odpowiedzi
+(także 401, 429 i 503), po odczycie jej treści, przed i po każdym wierszu i przed zapisem kursora sejf musi być otwarty na tym
+samym koncie; inaczej koniec ze stopem `blokada`, bez zapisu kursora z bieżącej strony, bez przerwy po 429, bez dalszych
+żądań i bez `vilda:sync-merged`. Przy wyłączonej fladze tego okna nie ma: żądanie legacy rusza zaraz po sprawdzeniu konta
+w `Bpw_dren`, bez health.
+
+**Format kliniczny** (strażniki `PatientClinicalRequireLegacy` z PR planów opieki): o trasie decyduje sejf
+(`selectPatientClinicalRoute`); drenaż stronami ma te same strażniki co dzisiejsze `wt` i `Yt` — `"sync-http"` przy
+każdym żądaniu (w `f`), `"apply-sync-delta"` na początku strony z wierszami oraz przed i po każdym scaleniu,
+`"sync-cursor"` przed każdym zapisem kursora (także `cursorAhead`, `requiresBase` i przeskok dziury; `Kt` ma dodatkowo
+własny `"sync-cursor-write"`). Odmowa — także rzucona ze scalenia (`patientClinicalUnavailable`), sprawdzana przed
+blokadą, jak w `wt` — kończy drenaż stopem `format`: kursor bez zapisu z bieżącej strony (wiersze tej strony
+zastosowane przed odmową wracają w następnym drenażu; scalanie jest odporne na powtórzenie), bez `onSyncError` i bez
+`vilda:sync-merged` za tę stronę (zmiana z wierszy strony liczy się dopiero po zapisie kursora, także w odpowiedzi
+legacy na żądanie z `limit`, więc tak samo przy odmowie samego `"sync-cursor-write"`). To jest dzisiejsze zachowanie:
+`wt` albo `Yt` rzuca przed zapisem kursora i przed `vilda:sync-merged` (w `Yt` `Kt` stoi przed `Et`), a `B` połyka
+wyjątek (bez `onSyncError`; zgłoszenie odmowy należy do ścieżek, które ją widzą wprost, np. `syncPull` odrzucone przed
+pobraniem). Strony zapisane wcześniej w tym samym drenażu zostają i niosą swoje
+`vilda:sync-merged` — dziś byłyby osobnymi pobraniami. Wynik health przy odmowie (legacy) nie jest zapamiętywany, żeby
+po powrocie formatu nie iść 15 s jedną stroną legacy. `vildaMergeBusy` z kodem `CARE_LINEAGE_*` albo `CARE_FORMAT_*`
+przy sejfie otwartym na tym koncie: ten sam `onSyncError` (`operation:'pull'`) co w `wt`, potem zwykły stop `busy`.
+
+**Kolejność.** `onSyncComplete` w dzisiejszym miejscu: pobranie kończy się przed drenażem, a drenaż biegnie w tle jak
+dotąd. Na koniec drenażu czeka tylko `syncPull({czekajNaDrenaz:true})` (dla przepływu kolejki w E2-PR4; w E2-PR1 nikt w
+aplikacji go nie woła) — po zwolnieniu blokady pierwszego pobrania i po zakończeniu powtórki CareSync (`CareSyncReplayDone` w `Bpw_pull`); wynik to kopia wyniku pobrania z
+polem `drain` (`null` przy wyłączonej fladze albo bez drenażu); obiekt przekazany `onSyncComplete` pola `drain` nie ma.
+Wysyłka, `syncFull` i `restorePrevBlob` nie czekają na drenaż. Jeden drenaż naraz w dokumencie (wspólny znacznik z
+dotychczasowym drenażem, także przy przełączeniu flagi w trakcie): drugie pobranie tego samego slotu w trakcie nie wysyła
+drugiego `/changes` i przy `czekajNaDrenaz` dostaje wynik trwającego; nie zleca drenażu po nim, więc wiersz dopisany po
+odpowiedzi ostatniej strony czeka na następne pobranie (jak dotąd), a `drain.headSeq` może być starszy niż stan serwera w
+chwili tego pobrania. Pobranie innego slotu (inne konto w tym dokumencie) w czasie drenażu: bez drenażu i `drain: null`
+(jak dotąd: znacznik zajęty), nie wynik cudzego slotu. Opcja `czekajNaDrenaz` działa tylko przy wartości `true`.
+`vilda:sync-merged changes-drain` w trybie stronami idzie po zapisie wyniku i zwolnieniu znacznika (słuchacz, który woła
+`getDrainStatus`, dostaje bieżący wynik z `trwa:false`); w trybie legacy wysyła je `Yt` jak dotąd, przed zapisem wyniku
+(słuchacz widzi poprzedni wynik z `trwa:true`). Nowe API (tylko odczyt, bez zapisów w magazynach):
+`VildaSync.detectApi(url?)` (kopia wyniku health; bez ważnego wyniku w pamięci wysyła `GET /v1/health`, także przy
+wyłączonej fladze — aplikacja go w E2-PR1 nie woła, strażnik D39), `getDrainStatus(slotId)` (kopia ostatniego wyniku
+drenażu z polem `trwa` — `true` tylko dla slotu trwającego drenażu; argument nie-tekst → `null`), `getChangesCursor(slotId)`.
+
+**Gdzie w kodzie.** `vilda_sync.js`: czytelny blok `Bdz_*` w liniach 121–462 (`Bdz_wlaczone` 157:1, `Bdz_stopWyjatku`
+205:1, `Bdz_zastosuj` 222:1, `Bdz_kursorWGore` 242:1, `Bdz_drenaz` 288:1, `Bdz_wykonaj` 385:1, `Bdz_B` 427:1,
+`Bdz_syncPull` 443:1); `Bpw_dren` 120:1 wybiera `Bdz_B` albo dotychczasowe `B` i zapamiętuje obietnicę drenażu dla
+wyniku pobrania; cztery wywołania w `Bpw_pull` (463:1813, 463:2262, 463:2496, 463:3860) podają wynik pobrania; eksport
+`syncPull:TLibPullCycle` (977:37) woła `Bdz_syncPull` (`TLibPullCycle` 964:1); trzy nowe funkcje w eksporcie (977:694).
+`B`, `Yt`, `wt`, `Y` i kursor (`bt`, `Kt`; linia 49, linia 107) bez zmian względem `origin/audyt` (strażnik D36 w
+teście: sha256 całych funkcji).
+
+**Czego to nie zmienia / co dalej.** E2-PR1b: włączenie domyślne (`'0'` wyłącza), polling 60 s przy WS i odstęp
+ponownego połączenia — budżet 120 żądań na minutę na slot. E2-PR4: wymuszone `GET /blob` przy `requiresBase`,
+`cursorAhead` i dziurze, statusy `applyEncryptedEvent`, kwarantanna, rozszerzone liczniki `wt`/`Ft`, `markSyncCaughtUp`,
+ślady P-SYNC-SLAD; przepływ kolejki nie może zakładać, że po `czekajNaDrenaz` kursor sięga `headSeq` z chwili wywołania
+(drugie pobranie w trakcie i pobranie innego slotu — wyżej): E2-PR4 dokłada jeden drenaż po trwającym albo jawne pole
+wyniku. Przerwa po 429 i wynik health żyją w pamięci strony: nowy kontekst (przejście między stronami) może raz
+zapytać i dostać 429 z nowym `Retry-After` — świadomie. Limit czasu żądania (`f`) kończy się z nagłówkami, jak w
+dzisiejszym `Yt`: zawieszona treść odpowiedzi health albo strony `/changes` trzyma drenaż i wspólny znacznik do
+przeładowania strony, a `syncPull({czekajNaDrenaz:true})` się wtedy nie rozstrzyga; limit odczytu treści dokłada
+E2-PR4, zanim przepływ kolejki zacznie czekać na drenaż.
+
+| Wejście | Oczekiwany wynik |
+|---|---|
+| flaga brak / `'0'` / `'1'` przy `window.VILDA_SYNC_PAGED = false` — każdy scenariusz zapisu bazowego; `''` / `'true'` / `'TAK'` i odczyt flagi z wyjątkiem — D1, D1c (porównanie `=== '1'`) | żądania, kolejność i klucze jak dotąd; zero `/v1/health`, zero `limit=` |
+| flaga `'1'`, „Komputer w pracy” albo „Zaloguj jednorazowo” (każdy z trzech sygnałów; wyjątek przy odczycie trybu = jednorazowy) | jak przy fladze `'0'` |
+| kursor 1, 450 wierszy w dzienniku | trzy strony w jednym pobraniu, kursor 451 |
+| kursor 1, 2100 zaślepek | 10 stron, kursor 2001, reszta w następnym pobraniu |
+| `MERGE_BUSY` na trzecim wierszu strony | kursor na wierszu przed nim; następne pobranie od niego |
+| sejf zablokowany albo inne konto w trakcie (także w czasie health przy workerze v36) | kursor bez zapisu z bieżącej strony, brak dalszych żądań |
+| `cursorAhead` przy `headSeq` ≥ `since` (spoza kontraktu) | kursor stoi, `ksztalt` |
+| dziura 2–3 przy kursorze 1 | dwa drenaże stoją na 1, trzeci przeskakuje (także w nowej karcie) |
+| kursor 99, `headSeq` 5 | kursor 5 |
+| wyczyszczony dziennik przy kursorze 3 i head 5 | kursor 5 (`oldestSeq − 1`), nie 3 |
+| 429, `Retry-After` 30 (900; bez nagłówka) | 30 s (300 s; 30 s) bez żądań `/changes` |
+| kursor 0 | jedno żądanie legacy bez health, potem stronami |
+| 220 delt, 3 zaślepki i wiersz nieczytelny: legacy w dwóch pobraniach i stronami w jednym | ten sam stan sejfu co nadawca |
+| sejf odmawia dzisiejszego formatu klinicznego w czasie odpowiedzi `/changes` (albo wybór trasy rzuca) | nic nie zastosowane, kursor stoi, `format`, bez `onSyncError` |
+| odmowa po zastosowaniu 1. wiersza strony | kursor na początku strony; po powrocie formatu strona od nowa, stan jak u nadawcy |
+| odmowa tylko zapisu kursora (`"sync-cursor"` albo `"sync-cursor-write"` w `Kt`), flaga `'1'` i `'0'`; to samo w odpowiedzi legacy na żądanie z `limit` | wiersze zastosowane, kursor stoi, bez `vilda:sync-merged` |
+| `CARE_FORMAT_UNSUPPORTED` / `CARE_LINEAGE_INVALID` z `vildaMergeBusy` na 2. wierszu | `onSyncError` pull jak w `wt`; `MERGE_BUSY` i blokada w czasie scalenia — bez |
+
+**Testy.** `tests/unit/sync-dziennik-drenaz.test.mjs` (125 przypadków; czerwone na bazie — `vilda_sync.js` z `origin/audyt` bez tej zmiany, sprawdzone na 75102672: 83 z pierwszych 95 —
+wszystkie poza D1, D1c, D2, D3, D4, D14e i strażnikami D36, D39. Po przeniesieniu na `origin/audyt`: 28 nowych
+przypadków formatu klinicznego D40–D48, w tym strażnik źródła D46 i odmowa samego `"sync-cursor-write"` w D43 i D45b —
+bez strażników w bloku `Bdz_` czerwone 21 z 28, zielone tylko kontrole „jak dziś” przy fladze `'0'`, z `MERGE_BUSY` i z
+blokadą; 15 mutantów tych strażników — każdy daje czerwony test, także po przestawieniu zmiany w `Bdz_legacyStrona` za
+zapis kursora (strażnik `"sync-cursor"` tuż za `wt` łapie wtedy D45c: partia przerwana, bez zapisu kursora); D13f (dwa warianty) — blokada w czasie odczytu treści odpowiedzi 429 i 503: stop `blokada` bez
+przerwy; D21 kasuje
+slot wprost w atrapie, bo `deleteSyncSlot` pyta teraz o bibliotekę szablonów spoza modelu atrapy; D36 porównuje sha256
+całych funkcji `B`, `Y`, `Yt`, `wt`, `bt` i `Kt` z `origin/audyt` — zmiana bajtu w komentarzu w środku `Yt`, w `bt` albo
+w `Kt` daje czerwony test), `tests/unit/sync-zadania-bazowe.test.mjs` (trzy nowe warianty flagi wyłączonej, oczekiwania
+bez zmian, zielone przed i po zmianie), `tests/unit/urzadzenie-sync.test.mjs` U16 (uprząż: konto chmurowe przez opcję
+`konto`). Mutacje (147 mutantów `vilda_sync.js`, powtórzone po przeniesieniu na `origin/audyt`; 11 dopasowanych do
+nowego tekstu, bez zmiany sensu; m.in. kursor z `headSeq`, bez ciągłości, `requiresBase`/`cursorAhead` z `nextSince`
+albo w górę, zapis kursora przy blokadzie, bez sprawdzenia sesji przed żądaniem i po health, każdy z sygnałów trybu
+jednorazowego, czekanie na drenaż przed `onSyncComplete`, cudzy wynik dla innego slotu, zdarzenie przed zapisem wyniku
+albo podwójne, bez przerwy 429 i pierwszeństwa `Retry-After`, health w `localStorage`, licznik dziury w pamięci,
+„nieczytelne” bez sprawdzenia blokady, licznik mniej): 144 dają czerwony test. Trzy zostają zielone, bo są równoważne:
+usuwają sprawdzenia nadmiarowe, przed którymi nie ma żądania ani wywołania sejfu — zostają jako obrona.
+
+**Wpływ kliniczny: brak.** **Wersje.** `vilda_sync.js?v=45→46` (8 stron); SW 1.1.435 → **1.1.436**.
+
 ## Zapis karty i okna zapisu kończą się w sesji, w której ruszyły, a pobranie z chmury — w sesji swojego konta (P-SESJA-ZAPISU, PR-S, SW 1.1.418, `vilda_vault.js` 236, `vilda_auth_ui.js` 519, `vilda_data_import_export.js` 113, `vilda_sync.js` 41, `vilda_sync_integration.js` 53, 2026-10-30)
 
 **Zmiana kliniczna: NIE** — wzory, progi, jednostki i interpretacje bez zmian. Format rekordów, ładunku i delt, schemat

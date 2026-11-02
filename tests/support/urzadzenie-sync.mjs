@@ -29,7 +29,8 @@
 //       'wszystko' — także localStorage/sessionStorage źródła), haslo (HASLO_A), sync (true — ładuje vilda_sync.js),
 //       beacon (true — navigator.sendBeacon i win.fetch = polaczenie.beacon / fetchOkna), blokady (true — atrapaBlokad),
 //       krypto (false — atrapaKrypto), rejestrMagazynu (true — magazynZRejestrem), dodatki (pola okna), ip,
-//       blokadyWOsi (RegExp, domyślnie /^vilda-sync-/).
+//       blokadyWOsi (RegExp, domyślnie /^vilda-sync-/), konto (opcje createUser nowego konta, np. { storageMode:
+//       'cloud-only' } — tryb „Komputer w pracy” jak w tests/unit/sesja-zapisu-uprzaz.mjs; bliźniak dziedziczy konto).
 //   sprzatnijUrzadzenia({ czekaj = true }) → Promise — afterEach: zwalnia bramy, czeka na ciszę (także na operacje
 //       synchronizacji w toku), zamyka urządzenia, sprawdza naruszenia i żądania w locie wszystkich atrap oraz strażnika;
 //       rzuca z listą (przy limicie ciszy: „operacja synchronizacji w toku: <urządzenie> <operacja>”).
@@ -320,7 +321,7 @@ export async function utworzUrzadzenie(o = {}) {
     await vault.unlockUser(konto.userId, konto.haslo);
   } else {
     const haslo = o.haslo || HASLO_A;
-    const u = await vault.createUser(haslo, { iterations: 1000, label: `Fikcyjna Lekarka ${nazwa}` });
+    const u = await vault.createUser(haslo, { iterations: 1000, label: `Fikcyjna Lekarka ${nazwa}`, ...(o.konto || {}) });
     konto = { userId: u.userId, haslo };
   }
   if (zrodloKlonu && o.klon === 'wszystko') {
