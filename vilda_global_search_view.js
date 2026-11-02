@@ -104,7 +104,11 @@
     }
     function changed() { if (options.onChange) options.onChange(context()); }
     function selected() { return state.rows.find(function (row) { return row.id === state.id; }); }
-    function mobile() { return doc.documentElement.classList.contains('vilda-phone') || !!(win.matchMedia && win.matchMedia('(max-width:700px)').matches); }
+    function mobile() {
+      var panel = options.remindersLayout && host.closest && host.closest('.vb22--stable');
+      var panelWidth = panel && panel.getBoundingClientRect().width;
+      return doc.documentElement.classList.contains('vilda-phone') || !!(win.matchMedia && win.matchMedia('(max-width:700px)').matches) || panelWidth > 0 && panelWidth <= 700;
+    }
     function activeSearch() { return !!state.query.trim() || state.time !== 'all' || state.status !== 'all' || !!state.id; }
     function relativeDates() { return ['future', 'past', 'today'].indexOf(state.time) >= 0; }
     function stopDayTimer() { if (dayTimer !== null) win.clearTimeout(dayTimer); dayTimer = null; }
@@ -168,7 +172,7 @@
     var root = node('section', 'vgs' + (options.full ? ' vgs-full' : ' vgs-inline'));
     root.setAttribute('aria-label', 'Szukaj');
     var toolbar = node('div', 'vgs-toolbar'); toolbar.setAttribute('role', 'search'); toolbar.setAttribute('aria-label', 'Wyszukiwanie pacjentów i spraw');
-    var search = node('input', 'vb22-search vgs-query'); search.type = 'search'; search.autocomplete = 'off'; search.placeholder = 'Szukaj pacjenta lub sprawy…'; search.setAttribute('aria-label', 'Szukaj we wszystkich pacjentach i sprawach');
+    var search = node('input', 'vb22-search vgs-query'); search.type = 'search'; search.autocomplete = 'off'; search.placeholder = 'Szukaj we wszystkich wpisach…'; search.setAttribute('aria-label', 'Szukaj we wszystkich pacjentach i sprawach');
     search.setAttribute('data-vgs-focus', 'query');
     toolbar.appendChild(search);
     function selector(label, values) {

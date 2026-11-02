@@ -4,13 +4,22 @@ import { CARE_FORM, CARE_WORKSPACE, careFixture, mutatePlan, noHorizontalOverflo
 test.use({ serviceWorkers: 'block', reducedMotion: 'reduce' });
 test.setTimeout(180000);
 
+async function searchInWideLayout(page, search, value) {
+  const viewport = page.viewportSize();
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  await expect(search).toBeVisible();
+  await search.fill(value);
+  await page.setViewportSize(viewport);
+  await expect(search).toBeHidden();
+}
+
 test('care plans mobile: bell opens a list, detail and back retain context without an extra full-screen action', async ({ page }) => {
   const created = await careFixture(page);
   const panel = await openCarePlans(page);
   await expect(panel.locator('.vcp-list')).toBeVisible();
   await expect(panel.locator('.vcp-detail')).toBeHidden();
   await expect(panel.getByRole('button', { name: /Powiększ|Pełny widok/ })).toHaveCount(0);
-  await panel.locator('.vcp-search').fill('biopsji');
+  await searchInWideLayout(page, panel.locator('.vcp-search'), 'biopsji');
   await selectPlan(panel, created.plans.biopsy);
   await expect(panel.locator('.vcp-list')).toBeHidden();
   await expect(panel.locator('.vcp-detail')).toContainText('Fikcyjny plan biopsji');
@@ -23,6 +32,7 @@ test('care plans mobile: bell opens a list, detail and back retain context witho
   expect(await readPlan(created.frame, before.id)).toEqual(before);
   await panel.getByRole('button', { name: /Lista planów$/ }).click();
   await expect(panel.locator('.vcp-list')).toBeVisible();
+  await expect(panel.locator('.vcp-search')).toBeHidden();
   await expect(panel.locator('.vcp-search')).toHaveValue('biopsji');
   await expect(panel.locator('[data-plan-id]')).toHaveCount(1);
   await noHorizontalOverflow(page);
@@ -75,8 +85,8 @@ test('care plans mobile: returning from a due care step restores the original re
   const workspace = page.locator(CARE_WORKSPACE);
   await expect(workspace.locator('[data-tab=active]')).toHaveAttribute('aria-pressed', 'true');
   await workspace.locator('[data-filter=overdue]').click();
-  const search = workspace.getByRole('searchbox', { name: 'Szukaj pacjenta lub sprawy', exact: true });
-  await search.fill('Antoni');
+  const search = workspace.locator('.vb22-list-tools .vb22-search');
+  await searchInWideLayout(page, search, 'Antoni');
   const list = workspace.locator('.vb22-list'), row = list.locator(`[data-note-id="${step.reminderNoteId}"]`);
   await expect(list.locator('[data-note-id]')).toHaveCount(13);
   await row.scrollIntoViewIfNeeded();
@@ -90,6 +100,7 @@ test('care plans mobile: returning from a due care step restores the original re
   await panel.locator('.vcp-back').click();
   await expect(workspace.locator('[data-tab=active]')).toHaveAttribute('aria-pressed', 'true');
   await expect(workspace.locator('[data-filter=overdue]')).toHaveAttribute('aria-pressed', 'true');
+  await expect(search).toBeHidden();
   await expect(search).toHaveValue('Antoni');
   await expect(list).toBeVisible();
   await expect(list.locator('[data-note-id]')).toHaveCount(13);
@@ -110,7 +121,7 @@ test('care plans mobile: the full current result preview stays inside the shield
   const resultId = before.steps.find(step => step.id === created.steps.awaiting).resultNoteId;
   const result = await created.frame.evaluate(id => window.VildaVault.getPatientNote(id), resultId);
   const panel = await openCarePlans(page), workspace = page.locator(CARE_WORKSPACE);
-  await panel.locator('.vcp-search').fill('biopsji');
+  await searchInWideLayout(page, panel.locator('.vcp-search'), 'biopsji');
   await selectPlan(panel, before.id);
   await panel.locator(`[data-step-id="${created.steps.awaiting}"]`).getByRole('button', { name: 'Otwórz wynik', exact: true }).click();
   const preview = panel.locator(`.vcp-record[data-note-id="${resultId}"]`);
@@ -129,6 +140,7 @@ test('care plans mobile: the full current result preview stays inside the shield
   await expect(panel.locator('.vcp-title')).toHaveText(before.title);
   await panel.locator('.vcp-back').click();
   await expect(panel.locator('.vcp-list')).toBeVisible();
+  await expect(panel.locator('.vcp-search')).toBeHidden();
   await expect(panel.locator('.vcp-search')).toHaveValue('biopsji');
   await expect(panel.locator('[data-plan-id]')).toHaveCount(1);
   await selectPlan(panel, before.id);

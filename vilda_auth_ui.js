@@ -1220,6 +1220,7 @@ function remB22Create(host, full, options) {
   clear(root);
   if (!full) { root = make('section', 'vild-rem-card vb22 vb22-inline'); host.appendChild(root); }
   else root.classList.add('vilda-reminders-modal-sheet');
+  root.classList.add('vb22--stable');
   var header = make('header', 'vb22-head vild-rem-head'), heading = make('div', 'vb22-heading');
   heading.appendChild(make('h2', 'vild-rem-ttl', 'Przypomnienia'));
   heading.firstChild.tabIndex = -1;
@@ -1227,18 +1228,28 @@ function remB22Create(host, full, options) {
   var tools = make('div', 'vb22-tools');
   var privacyButton = btn('', 'vb22-icon vb22-privacy-toggle', function () {});
   tools.appendChild(privacyButton);
-  var addButton = btn(full ? '+ Dodaj przypomnienie' : '+', full ? 'vb22-add' : 'vb22-icon', function () {
+  var actionZone = make('div', 'vb22-action-zone');
+  var addButton = btn('', 'vb22-add vb22-primary-create', function () {
     if (state.tab === 'plans') { if (!full) remB22Request({ carePlans: true, newCarePlan: true }); else if (careView) careView.create(); return; }
     if (!full) remB22Request({ newReminder: true }); else addReminder();
-  }); tools.appendChild(addButton); addButton.setAttribute('aria-label', 'Dodaj przypomnienie');
-  var templateButton = btn('Moje szablony', 'vb22-add', function () { if (state.tab !== 'plans' || state.editing || state.busy) return; if (careView && typeof careView.openTemplates === 'function') careView.openTemplates(); }); templateButton.hidden = true; tools.appendChild(templateButton);
-  tools.appendChild(btn(full ? '×' : '⛶', 'vb22-icon', full ? closed : function () { remB22Request({ globalSearch: state.tab === 'search' && searchView ? searchView.getContext() : state.tab === 'history', carePlans: state.tab === 'plans' }); }));
+  });
+  var addLabel = make('span', 'vb22-create-label', 'Dodaj +'); addButton.appendChild(addLabel);
+  actionZone.appendChild(addButton); addButton.setAttribute('aria-label', 'Dodaj przypomnienie');
+  function openCareTemplates() {
+    if (!alive() || state.tab !== 'plans' || state.editing || state.busy) return;
+    if (careView && typeof careView.openTemplates === 'function') return careView.openTemplates();
+  }
+  var templateButton = btn('Moje szablony', 'vb22-add vb22-template-open', openCareTemplates); templateButton.hidden = true; actionZone.appendChild(templateButton);
+  tools.appendChild(actionZone);
+  tools.appendChild(btn(full ? '×' : '⛶', 'vb22-icon vb22-exit', full ? closed : function () { remB22Request({ globalSearch: state.tab === 'search' && searchView ? searchView.getContext() : state.tab === 'history', carePlans: state.tab === 'plans' }); }));
   tools.lastChild.setAttribute('aria-label', full ? 'Zamknij Przypomnienia' : 'Powiększ Przypomnienia');
   header.appendChild(tools); root.appendChild(header);
   var tabs = make('nav', 'vb22-tabs'); tabs.setAttribute('aria-label', 'Widok Przypomnień');
-  var activeTab = btn('Do wykonania', 'is-active', function () { switchTab('active'); });
-  var historyTab = btn('Szukaj', '', function () { switchTab('search'); });
-  var plansTab = btn('Plany opieki', '', function () { switchTab('plans'); }); plansTab.dataset.tab = 'plans'; plansTab.setAttribute('aria-label', 'Plany opieki');
+  function tabLabel(text) { var label = make('span', 'vb22-tab-label', text); label.dataset.label = text; return label; }
+  var activeTab = btn('', 'is-active', function () { switchTab('active'); }); activeTab.appendChild(tabLabel('Do wykonania'));
+  var tabCount = make('span', 'vb22-tab-count', '0'); activeTab.appendChild(tabCount);
+  var historyTab = btn('', '', function () { switchTab('search'); }); historyTab.appendChild(tabLabel('Szukaj'));
+  var plansTab = btn('', '', function () { switchTab('plans'); }); plansTab.appendChild(tabLabel('Plany opieki')); plansTab.dataset.tab = 'plans'; plansTab.setAttribute('aria-label', 'Plany opieki');
   activeTab.dataset.tab = 'active'; historyTab.dataset.tab = 'search';
   activeTab.setAttribute('aria-label', 'Do wykonania'); historyTab.setAttribute('aria-label', 'Szukaj');
   tabs.appendChild(activeTab); tabs.appendChild(plansTab); tabs.appendChild(historyTab); root.appendChild(tabs);
@@ -1251,9 +1262,15 @@ function remB22Create(host, full, options) {
   var layout = make('div', 'vb22-layout'), left = make('section', 'vb22-list-pane'), detail = make('section', 'vb22-detail');
   detail.setAttribute('aria-label', 'Szczegóły przypomnienia');
   var search = make('input', 'vb22-search'); search.type = 'search'; search.placeholder = 'Szukaj pacjenta lub sprawy…'; search.setAttribute('aria-label', 'Szukaj pacjenta lub sprawy');
-  search.addEventListener('input', function () { if (state.editing) return; sequence += 1; state.query = search.value; if (!full) state.historyQuery = state.query; state.selected = null; state.detached = null; state.savedOutcome = null; state.historyLimit = 50; render(); });
+  function applyLocalQuery() { if (state.editing) return; sequence += 1; state.query = search.value; if (!full) state.historyQuery = state.query; state.selected = null; state.detached = null; state.savedOutcome = null; state.historyLimit = 50; render(); }
+  search.addEventListener('input', applyLocalQuery);
   var searchTools = make('div', 'vb22-list-tools'); searchTools.setAttribute('role', 'search'); searchTools.setAttribute('aria-label', 'Wyszukiwanie przypomnień'); searchTools.appendChild(search); left.appendChild(searchTools);
   var list = make('div', full ? 'vb22-list' : 'vb22-mini-list'); left.appendChild(list); layout.appendChild(left); if (full) layout.appendChild(detail); root.appendChild(layout);
+  var clearQueryButton = textButton('Wyczyść szukanie', function () {
+    if (!alive() || state.editing) return;
+    search.value = ''; applyLocalQuery();
+    var next = list.querySelector('[data-note-id]') || activeTab; next.focus({ preventScroll: true });
+  }); clearQueryButton.classList.add('vb22-local-query-reset');
   var footer = make('footer', 'vb22-foot'); footer.appendChild(make('span', '', 'Bieżące przypomnienia'));
   if (!full) { var allButton = textButton('Pokaż wszystkie →', function () { remB22Request({ history: state.tab === 'history' }); }); allButton.classList.add('vild-rem-all'); footer.appendChild(allButton); } root.appendChild(footer);
   var careHost = make('section', 'vb22-care-host'), careView = null, careReturn = null; careHost.hidden = true; root.insertBefore(careHost, footer);
@@ -1282,7 +1299,7 @@ function remB22Create(host, full, options) {
     if (!searchView) {
       var module = i.VildaGlobalSearchView;
       if (!module || typeof module.mount !== 'function') { clear(globalSearchHost); globalSearchHost.appendChild(make('p', 'vb22-empty', 'Wyszukiwarka jest niedostępna. Odśwież aplikację.')); return; }
-      searchView = module.mount(globalSearchHost, { full: full, vault: vault, isCurrent: alive,
+      searchView = module.mount(globalSearchHost, { full: full, vault: vault, isCurrent: alive, remindersLayout: true,
         onChange: function (context) {
           if (searchNavigation && searchNavigation.surface !== 'plans' && (context.mode !== 'detail' || context.id !== 'note:' + searchNavigation.noteId)) {
             remSearchDropReturn(); searchNavigation = null;
@@ -1352,8 +1369,9 @@ function remB22Create(host, full, options) {
     if (!careView) {
       var module = i.VildaCarePlans;
       if (!module || typeof module.mount !== 'function') { clear(careHost); careHost.appendChild(make('p', 'vb22-empty', 'Plany opieki są niedostępne. Odśwież aplikację.')); return; }
-      careView = module.mount(careHost, { full: full, vault: vault, planId: planId || null, noteId: recordId || null, showCreateButton: false,
+      careView = module.mount(careHost, { full: full, vault: vault, planId: planId || null, noteId: recordId || null, showCreateButton: false, remindersLayout: true,
         isCurrent: alive,
+        openTemplates: openCareTemplates,
         onDialog: function (dialog) { return privacy ? privacy.protectDialog(dialog) : null; },
         requestExpand: function (selectedPlan, newPlan, recordId) { remB22Request({ carePlans: true, planId: selectedPlan || null, careRecordId:recordId||null, newCarePlan: !!newPlan }); },
         hasReturn: function () { return !!careReturn; },
@@ -1463,13 +1481,13 @@ function remB22Create(host, full, options) {
       button.setAttribute('aria-label', keys[index][1] + ', liczba spraw: ' + count); button.disabled = state.editing;
     });
     subtitle.textContent = full ? 'Sprawy, terminy i historia pacjentów' : state.rows.length + ' spraw · ' + state.rows.filter(function (row) { return matches(row, 'overdue'); }).length + ' po terminie';
-    clear(activeTab); activeTab.appendChild(make('span', '', 'Do wykonania')); activeTab.appendChild(make('span', 'vb22-tab-count', String(state.rows.length)));
-    clear(historyTab); historyTab.appendChild(make('span', '', 'Szukaj'));
+    tabCount.textContent = String(state.rows.length); tabCount.title = String(state.rows.length);
+    activeTab.setAttribute('aria-description', 'Liczba spraw: ' + state.rows.length);
     activeTab.classList.toggle('is-active', state.tab === 'active'); historyTab.classList.toggle('is-active', state.tab === 'history' || state.tab === 'search');
     activeTab.setAttribute('aria-pressed', String(state.tab === 'active')); historyTab.setAttribute('aria-pressed', String(state.tab === 'history' || state.tab === 'search'));
     activeTab.disabled = historyTab.disabled = state.editing;
     plansTab.classList.toggle('is-active', state.tab === 'plans'); plansTab.setAttribute('aria-pressed', String(state.tab === 'plans')); plansTab.disabled = state.editing;
-    addButton.textContent = full ? state.tab === 'plans' ? '+ Nowy plan' : '+ Dodaj przypomnienie' : '+';
+    addLabel.textContent = state.tab === 'plans' ? 'Nowy plan' : 'Dodaj +';
     addButton.setAttribute('aria-label', state.tab === 'plans' ? 'Nowy plan opieki' : 'Dodaj przypomnienie'); addButton.disabled = state.editing;
     templateButton.hidden = state.tab !== 'plans'; templateButton.disabled = state.editing || state.busy;
     search.disabled = state.editing || state.tab === 'history' && state.historyLoading;
@@ -1508,6 +1526,7 @@ function remB22Create(host, full, options) {
     if (state.tab === 'plans') { mountCare(); return; }
     if (state.tab === 'search') { mountGlobalSearch(); return; }
     list.setAttribute('aria-busy', String(state.tab === 'history' && state.historyLoading));
+    if (state.tab === 'active' && state.query.trim()) { clearQueryButton.disabled = state.editing; list.appendChild(clearQueryButton); }
     if (state.tab === 'history' && state.historyLoading) {
       var loading = make('p', 'vb22-empty', 'Wczytywanie historii…'); loading.setAttribute('role', 'status'); list.appendChild(loading);
       if (full && !state.editing) renderDetail(); return;
@@ -1939,7 +1958,7 @@ function remB22Create(host, full, options) {
 function remB22Styles() {
   if (!i.document || !i.document.head || !i.document.createElement) return;
   if (i.document.querySelector('link[href*="vilda_reminders.css"]')) return;
-  var link = i.document.createElement('link'); link.rel = 'stylesheet'; link.href = 'vilda_reminders.css?v=6'; link.dataset.remindersB22 = 'true'; i.document.head.appendChild(link);
+  var link = i.document.createElement('link'); link.rel = 'stylesheet'; link.href = 'vilda_reminders.css?v=7'; link.dataset.remindersB22 = 'true'; i.document.head.appendChild(link);
 }
 remB22Styles();
 

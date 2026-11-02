@@ -1682,3 +1682,284 @@ html.vilda-phone .vb22 .vb22-outcome-actions .vb22-primary {
     gap: var(--space-18px);
   }
 }
+
+/* Approved stable Reminders chrome. The workspace, rather than the viewport,
+ * decides whether its actions fit; patient-card Care and Search stay unchanged. */
+.vb22.vb22--stable {
+  container-type: inline-size;
+  container-name: vb22-reminders;
+}
+
+.vb22.vb22--stable .vb22-head {
+  height: 64px;
+  min-height: 64px!important;
+  padding: 10px 14px;
+  gap: 8px;
+  flex-shrink: 0;
+  overflow: visible;
+}
+
+.vb22.vb22--stable .vb22-head h2 {
+  font-size: 19px;
+  line-height: 28px;
+  font-weight: 600;
+  letter-spacing: -.2px;
+  white-space: nowrap;
+}
+
+.vb22.vb22--stable .vb22-tools {
+  display: grid;
+  grid-template-columns: 44px 44px 44px;
+  align-items: center;
+  gap: 2px;
+  flex-wrap: nowrap;
+  max-width: none;
+  min-width: 0;
+  flex-shrink: 0;
+}
+
+.vb22.vb22--stable .vb22-action-zone {
+  display: grid;
+  grid-template-columns: 44px;
+  align-items: center;
+  gap: 12px;
+  width: 44px;
+  height: 44px;
+  min-height: 44px;
+}
+
+.vb22.vb22--stable .vb22-tools .vb22-icon,
+.vb22.vb22--stable .vb22-primary-create,
+.vb22.vb22--stable .vb22-template-open {
+  width: 44px!important;
+  min-width: 44px!important;
+  height: 44px;
+  min-height: 44px;
+  margin: 0;
+  padding: 0;
+  line-height: 20px;
+  text-align: center;
+  white-space: nowrap;
+  max-width: none;
+}
+
+.vb22.vb22--stable .vb22-primary-create {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+}
+
+.vb22.vb22--stable .vb22-primary-create::before {
+  content: "+";
+  display: block;
+  font-size: 24px;
+  font-weight: 400;
+  line-height: 28px;
+}
+
+.vb22.vb22--stable .vb22-create-label,
+.vb22.vb22--stable .vb22-template-open {
+  display: none;
+}
+
+.vb22.vb22--stable .vb22-tabs {
+  height: 44px;
+  min-height: 44px;
+  padding: 0 14px;
+  gap: 18px;
+  flex-shrink: 0;
+}
+
+.vb22.vb22--stable .vb22-tabs button {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 44px!important;
+  min-height: 44px;
+  height: 44px;
+  margin: 0;
+  padding: 0;
+  flex: 0 0 auto;
+  white-space: nowrap;
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 20px;
+}
+
+.vb22.vb22--stable .vb22-tabs button.is-active {
+  font-weight: 600;
+}
+
+.vb22.vb22--stable .vb22-tab-label {
+  display: inline-grid;
+  white-space: nowrap;
+}
+
+.vb22.vb22--stable .vb22-tab-label::after {
+  content: attr(data-label);
+  height: 0;
+  overflow: hidden;
+  visibility: hidden;
+  font-weight: 600;
+}
+
+.vb22.vb22--stable .vb22-tab-count {
+  width: 4ch;
+  min-width: 4ch;
+  max-width: 4ch;
+  margin: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 12px;
+  font-weight: 400;
+  font-variant-numeric: tabular-nums;
+}
+
+.vb22.vb22--stable .vb22-head button,
+.vb22.vb22--stable .vb22-tabs button,
+.vb22.vb22--stable .vb22-filters button {
+  margin: 0;
+  transform: none!important;
+  transition: none!important;
+  animation: none!important;
+}
+
+.vb22.vb22--stable .vb22-filters {
+  grid-template-columns: 1fr 1fr;
+  padding: 8px 14px 9px;
+}
+
+.vb22.vb22--stable .vb22-filters button {
+  min-height: 44px;
+}
+
+.vb22.vb22--stable .vb22-filters button.is-active>span:first-child {
+  font-weight: 600;
+}
+
+/* Only the local list query is compacted; the new-reminder patient picker and
+ * Search own their input visibility and keep their existing state. */
+.vb22.vb22--stable .vb22-list-tools {
+  display: none;
+  /* The list pane already supplies the 12px top and 14px side insets. */
+  padding: 0 0 10px;
+}
+
+.vb22.vb22--stable .vb22-list-tools .vb22-search {
+  box-sizing: border-box;
+  height: 44px;
+  min-height: 44px;
+  margin: 0;
+  padding: 10px 12px;
+  border-width: 1px;
+  font: 400 16px/22px Inter,sans-serif;
+}
+
+.vb22.vb22--stable .vb22-local-query-reset {
+  min-height: 44px;
+  padding: 4px 0;
+  flex-shrink: 0;
+  transform: none!important;
+  transition: none!important;
+}
+
+@container vb22-reminders (width > 700px) {
+  .vb22.vb22--stable.vb22-modal .vb22-head {
+    height: 68px;
+    min-height: 68px!important;
+    padding: 12px 20px;
+  }
+  .vb22.vb22--stable.vb22-modal .vb22-head h2 {
+    font-size: 22px;
+  }
+  .vb22.vb22--stable.vb22-modal .vb22-tools {
+    grid-template-columns: 44px 244px 44px;
+    gap: 4px;
+  }
+  .vb22.vb22--stable.vb22-modal .vb22-action-zone {
+    width: 244px;
+    grid-template-columns: 110px 122px;
+  }
+  .vb22.vb22--stable.vb22-modal .vb22-primary-create {
+    width: 110px!important;
+  }
+  .vb22.vb22--stable.vb22-modal .vb22-primary-create::before {
+    display: none;
+  }
+  .vb22.vb22--stable.vb22-modal .vb22-create-label {
+    display: inline;
+  }
+  .vb22.vb22--stable.vb22-modal .vb22-template-open {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 122px!important;
+    font-size: 13px;
+  }
+  .vb22.vb22--stable.vb22-modal .vb22-tabs {
+    padding: 0 20px;
+    gap: 24px;
+  }
+  .vb22.vb22--stable.vb22-modal .vb22-tabs button {
+    font-size: 14.4px;
+  }
+  .vb22.vb22--stable.vb22-modal .vb22-tab-count {
+    font-size: 13px;
+  }
+  .vb22.vb22--stable.vb22-modal .vb22-filters {
+    grid-template-columns: 1fr 1fr .75fr 1.6fr;
+    padding: 10px 20px 11px;
+  }
+  .vb22.vb22--stable.vb22-modal .vb22-list-tools {
+    display: block;
+  }
+  .vb22.vb22--stable.vb22-modal .vb22-local-query-reset {
+    display: none;
+  }
+}
+
+@container vb22-reminders (max-width: 350px) {
+  .vb22.vb22--stable .vb22-head {
+    padding-inline: 10px;
+    gap: 4px;
+  }
+  .vb22.vb22--stable .vb22-head h2 {
+    font-size: 18px;
+  }
+  .vb22.vb22--stable .vb22-tools {
+    gap: 0;
+  }
+  .vb22.vb22--stable .vb22-tabs {
+    padding-inline: 10px;
+    gap: 12px;
+  }
+  .vb22.vb22--stable .vb22-tabs button {
+    font-size: 13px;
+    gap: 5px;
+  }
+  .vb22.vb22--stable .vb22-tab-count {
+    font-size: 11px;
+  }
+  .vb22.vb22--stable .vb22-filters {
+    padding-inline: 10px;
+  }
+}
+
+@media (max-height: 500px) {
+  .vb22.vb22--stable .vb22-head,
+  .vb22.vb22--stable.vb22-modal .vb22-head {
+    height: 56px;
+    min-height: 56px!important;
+    padding-block: 6px;
+  }
+  .vb22.vb22--stable .vb22-list-tools,
+  .vb22.vb22--stable.vb22-modal .vb22-list-tools {
+    display: none;
+  }
+  .vb22.vb22--stable .vb22-local-query-reset,
+  .vb22.vb22--stable.vb22-modal .vb22-local-query-reset {
+    display: block;
+  }
+}
