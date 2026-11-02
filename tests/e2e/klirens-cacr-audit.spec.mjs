@@ -268,7 +268,7 @@ for (const width of [1440, 390, 320]) {
   });
 }
 
-test('Ca/Cr 361/375/381px: krótki wynik i pełna norma niemowlęcia mieszczą się przy szerszym kroju pisma', async ({ page }) => {
+test('Ca/Cr 320/361/375/381px: krótki wynik i pełne normy mieszczą się przy szerszym kroju pisma', async ({ page }) => {
   await openCalculator(page, 361);
   await page.addStyleTag({ content: `
     html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .cacr-proposal-card :is(.clcr-result-value, .clcr-result-reference-value) {
@@ -291,6 +291,19 @@ test('Ca/Cr 361/375/381px: krótki wynik i pełna norma niemowlęcia mieszczą s
     expect(await normNumbers(page), 'Obie granice normy niemowlęcia pozostają widoczne').toHaveLength(2);
     await expectReferenceFits(page);
   }
+  // Dziewięcioznakowy górny koniec normy wieku 5 lat wcześniej nie włączał
+  // gęstszego składu i przy DejaVu wykraczał poza kolumnę na ekranie 320 px.
+  await page.setViewportSize({ width: 320, height: 1000 });
+  await restore(page, { age: '5', CaCr_entry_mode: 'direct',
+    CaCr_reported: '1129', CaCr_reported_unit: 'mmol/mol' });
+  await expectResult(page, { raw: 1129, unit: 'mmol/mol', category: 'above' });
+  expect(await normNumbers(page), 'Pełna norma dziecka w tej samej jednostce').toHaveLength(2);
+  await expect(card(page).locator('.clcr-result-reference-unit')).toHaveText('mmol/mol');
+  await expectReferenceFits(page);
+  const unitTops = await card(page).evaluate(node =>
+    ['.clcr-result-unit', '.clcr-result-reference-unit'].map(selector =>
+      node.querySelector(selector).getBoundingClientRect().top));
+  expect(Math.abs(unitTops[0] - unitTops[1]), 'Jednostki wyniku i normy pozostają w jednym wierszu').toBeLessThanOrEqual(1);
 });
 
 test('Ca/Cr: wapń 40 mg/dL jest dopuszczalny, jednostki są równoważne, zero różni się od braku danych', async ({ page }) => {

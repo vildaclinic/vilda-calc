@@ -91,6 +91,10 @@ describe('Ca/Cr DZM — shared B card, independent source and captured precision
     expect(html).toContain('data-clcr-series="CaCr_spot"'); expect(html).toContain('id="clcr-cacr-details"');
     expect(plain(card(html))).toContain('Norma dla wieku · Mayo'); expect(plain(card(html))).toContain('0,01–0,25');
     expect(html).not.toContain('ARUP');
+    const converted = engine.evaluate({ mode: 'direct', reportedValue: '1129', reportedUnit: 'mmol/mol', sampleType: 'random', ageYears: '5' }, mayo);
+    const convertedMain = card(shared.renderResult(converted));
+    expect(plain(convertedMain)).toContain('do ≈846,7488');
+    expect(convertedMain).toContain('data-reference-split="1" data-reference-dense="1"');
   });
   it('renders a frozen captured result without consulting live reference data or an engine', () => {
     const model = JSON.parse(JSON.stringify(result({ ageYears: '8' }))), live = browser.VildaClcrCacr;

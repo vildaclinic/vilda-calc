@@ -201,7 +201,16 @@ test('pediatryczny Ca w DZM zachowuje EAU, a Ca/Cr ma odrębny zakres Mayo takż
   await expect(stone).toContainText('poniżej opublikowanego przez EAU progu 0,1 mmol/kg/24 h');
   await expect(spot).toHaveCount(1);
   await expect(spot).toHaveAttribute('data-clcr-tone', 'success');
-  await expect(spot.locator('.clcr-result-reference-value')).toHaveText('0,02–0,50');
+  await expect(spot.locator('.clcr-result-reference-value')).toHaveText('0,02–0,5');
+  expect(JSON.parse(await spot.getAttribute('data-clcr-cacr-snapshot'))).toMatchObject({
+    valid: true,
+    rawValue: 0.100195,
+    unit: 'mg/mg',
+    status: 'within',
+    profileId: 'MAYO_CACR3_RANDOM_2026_10',
+    source: { id: 'MAYO_CACR3' },
+    reference: { nativeLow: 0.02, nativeHigh: 0.5 }
+  });
   await expect(stone).toContainText('Mayo');
 
   await page.locator('#age').fill('3');
@@ -209,6 +218,13 @@ test('pediatryczny Ca w DZM zachowuje EAU, a Ca/Cr ma odrębny zakres Mayo takż
   await page.locator('#ageMonths').fill('0');
   await expect(spot.locator('.clcr-result-reference-value')).toHaveText('0,02–0,41');
   await expect(spot).toHaveAttribute('data-clcr-tone', 'success');
+  expect(JSON.parse(await spot.getAttribute('data-clcr-cacr-snapshot'))).toMatchObject({
+    rawValue: 0.100195,
+    status: 'within',
+    profileId: 'MAYO_CACR3_RANDOM_2026_10',
+    source: { id: 'MAYO_CACR3' },
+    reference: { nativeLow: 0.02, nativeHigh: 0.41 }
+  });
   await expect(stone).toContainText('poniżej opublikowanego przez EAU progu 0,1 mmol/kg/24 h');
   await expect(stone).not.toContainText('dokładnej granicy 1., 3., 5. lub 7. roku życia');
   await expect(stone.locator('.out-of-range')).toHaveCount(0);
@@ -236,7 +252,7 @@ test('pediatryczny Ca/Cr używa dokładnych mas molowych i odrębnego zakresu Ma
   await expect(stone).toContainText('Mayo');
 });
 
-test('Ca/Cr poniżej dolnej granicy Mayo zachowuje odchylenie mimo zaokrąglenia do granicy', async ({ page }) => {
+test('Ca/Cr poniżej dolnej granicy Mayo zachowuje odchylenie i dokładny wynik', async ({ page }) => {
   await openCalculator(page, 'spot');
   await setPatient(page, {
     age: 8,
@@ -256,8 +272,20 @@ test('Ca/Cr poniżej dolnej granicy Mayo zachowuje odchylenie mimo zaokrąglenia
   await expect(spot).toHaveAttribute('data-clcr-tone', 'warning');
   await expect(spot).toContainText('Poniżej normy dla wieku');
   await expect(spot.locator('.clcr-result-reference-value')).toHaveText('0,01–0,25');
-  await expect(spot).toHaveAttribute('data-clcr-boundary', '<0,01');
-  await expect(spot).toContainText('Przed zaokrągleniem: <0,01 mg/mg');
+  await expect(spot.locator('.clcr-result-value')).toHaveText('0,00996');
+  await expect(spot).toHaveAttribute('data-clcr-boundary', '');
+  await expect(spot.locator('.cacr-boundary-note')).toHaveCount(0);
+  expect(JSON.parse(await spot.getAttribute('data-clcr-cacr-snapshot'))).toMatchObject({
+    valid: true,
+    rawValue: 0.00996,
+    unit: 'mg/mg',
+    status: 'below',
+    category: 'below',
+    profileId: 'MAYO_CACR3_RANDOM_2026_10',
+    source: { id: 'MAYO_CACR3' },
+    reference: { nativeLow: 0.01, nativeHigh: 0.25 },
+    display: { value: '0.00996', text: '0.00996', rounded: false, approximate: false }
+  });
   await expect(stone).toContainText('Mayo');
 });
 

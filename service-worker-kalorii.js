@@ -2136,6 +2136,7 @@ const CORE_SHELL_URLS = [
   '/vilda_save_status_indicator.js?v=36',
   '/vilda_save_status_indicator.js?v=37',
   '/vilda_save_status_indicator.js?v=38',
+  '/vilda_save_status_indicator.js?v=39',
   '/vilda_unsaved_guard.js?v=1',
   '/vilda_unsaved_guard.js?v=2',
   '/vilda_unsaved_guard.js?v=3',
@@ -4900,7 +4901,7 @@ const FRESH_STATIC_ALIAS_PATHS = new Set([
   '/vilda_shell.js', '/vilda_persist_runtime.js', '/vilda_name_fix.js',
   '/vilda_file_export.js', '/vilda_pro_ui.js',
   // Three Ca/Cr DZM resources retain their own requests. Share only freshly
-  // fetched current aliases of these unchanged static UI dependencies.
+  // fetched current aliases of these static UI dependencies.
   '/vilda_centile_chart_header.js', '/vilda_update_prep.js', '/vilda_save_status_indicator.js'
 ]);
 

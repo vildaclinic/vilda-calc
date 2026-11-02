@@ -83,6 +83,8 @@ Badania, Notatki, wyszukiwanie, raport i historia odtwarzają zapis bez przelicz
 
 Dopiero jawne nowe obliczenie lub edycja starego wpisu używa zatwierdzonej nowej konwersji/polityki i utrwala użyty kontekst. Dlatego identyczne stare operandy mogą po świadomej edycji dać inną końcówkę liczby oraz nową ocenę; zwykły odczyt tego nie robi. Edycja i usunięcie dotyczą tego samego pomiaru. Zapis wymaga istniejącej, wcześniej zapisanej karty pacjenta. Audyt nie zmienia prawdziwych danych sejfu.
 
+Puste ustawienia nowego formularza i migracja równoważnych aliasów jednostek nie oznaczają zmiany danych pacjenta. Porównanie statusu zapisu zachowuje rzeczywiste operandy, ich jednostki oraz jawne fakty o próbce; samo porównanie nie modyfikuje sesji ani historycznej migawki. Na wąskim ekranie również dziewięcioznakowa przeliczona granica normy korzysta z istniejącego zwartego wariantu typografii, aby cała liczba mieściła się w kolumnie.
+
 ## Przytarczyce, XLH i burosumab — tylko kontekst w Szczegółach
 
 **Ca/Cr, dobowe wydalanie wapnia i iloraz klirensów CCCR są różnymi wielkościami.** Dobowe wydalanie ma jednostkę mg/24 h lub mg/kg/24 h. CCCR wymaga także równoczesnego wapnia i kreatyniny we krwi: `CCCR = (U_Ca × S_Cr) / (S_Ca × U_Cr)` przy uzgodnionych jednostkach. Nie stosuje się progów CCCR, np. 0,01, do prostego stosunku w moczu.
