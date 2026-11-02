@@ -780,8 +780,8 @@
   "sha256": "e059ba2a629ece3c7f715cc7b09289ec9f8bc5ea2579872dabc34db3e271ffc0"
  },
  "inline_ustawienia_07.js": {
-  "v": 2,
-  "sha256": "befb7b63b5a1e2695a308949d6dc9848ce718cad37deecd0c08e8b8a89840b4e"
+  "v": 3,
+  "sha256": "9dd30f4179bcfceb454f158f2ba13a88565d60930fac4c95771943f847dc6890"
  },
  "ios26-ui.js": {
   "v": 46,
@@ -900,8 +900,8 @@
   "sha256": "7f6c2ece3d13281c2be52b3f3a37d1d7618176a63175e72801dbf2a27685c3bc"
  },
  "ustawienia.css": {
-  "v": 18,
-  "sha256": "57c415a45f0c9ab35ee0108c9434be8055ea4166356498ae5fb9776eaa1d8cbe"
+  "v": 19,
+  "sha256": "9fe352c74a1815dfc9a439290bf2e431270e9827799106601df22eacd1e7a736"
  },
  "vilda_activity_burn.js": {
   "v": 1,

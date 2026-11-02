@@ -19,7 +19,7 @@
  *   bo i tak chcemy zwracać HTML z cache natychmiast.
  */
 
-const SW_VERSION = '1.1.439';
+const SW_VERSION = '1.1.440';
 const CACHE_PREFIX = 'pwa-kalorii';
 const SHELL_CACHE = `${CACHE_PREFIX}-shell-v${SW_VERSION}`;
 const RUNTIME_CACHE = `${CACHE_PREFIX}-runtime`;
@@ -610,6 +610,7 @@ const CORE_SHELL_URLS = [
   '/inline_ustawienia_06.js?v=1',
   '/inline_ustawienia_07.js?v=1',
   '/inline_ustawienia_07.js?v=2',
+  '/inline_ustawienia_07.js?v=3',
 
   '/sidebar.css',
   '/vilda_chrome.css',
@@ -4197,6 +4198,7 @@ const OPTIONAL_ASSETS = [
   '/ustawienia.css?v=16',
   '/ustawienia.css?v=17',
   '/ustawienia.css?v=18',
+  '/ustawienia.css?v=19',
   '/edu-video-ui.css?v=20261002v4',
   '/edu-video-ui.css?v=20261003v4',
   '/edu-video-ui.css?v=20261002v7',
@@ -4863,7 +4865,11 @@ const FRESH_STATIC_ALIAS_PATHS = new Set([
   '/vilda_deps.js', '/vilda_update_hooks.js',
   // The Search handoff adds one resource. Share the two current aliases of
   // the unchanged UI bootstrap to retain the existing cold-install budget.
-  '/ios26-ui.js'
+  '/ios26-ui.js',
+  // Five urate/creatinine resources keep the same request budget. These
+  // unchanged static dependencies share only fresh current-install responses.
+  '/vilda_shell.js', '/vilda_persist_runtime.js', '/vilda_name_fix.js',
+  '/vilda_file_export.js', '/vilda_pro_ui.js'
 ]);
 
 async function fetchAndStorePrecacheUrl(url, { required = false, previousShellCaches = [], freshResponses = null } = {}) {
@@ -5098,5 +5104,8 @@ self.addEventListener('fetch', (event) => {
 self.addEventListener('message', (event) => {
   if (event?.data?.type === 'SKIP_WAITING') {
     self.skipWaiting();
+  } else if (event?.data?.type === 'VILDA_WERSJA' && event.ports && event.ports[0]) {
+    // P-WERSJA-APLIKACJI: Ustawienia pokazują wersję SW, który obsługuje to urządzenie (strona nie ma kopii numeru).
+    event.ports[0].postMessage({ type: 'VILDA_WERSJA', wersja: SW_VERSION });
   }
 });

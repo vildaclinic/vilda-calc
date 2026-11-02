@@ -283,7 +283,8 @@ describe('P-SW-PRECACHE: instalacja bez historii, kopia z poprzedniej pamięci, 
   const dodatkoweWspoldzieloneZasoby = ['/vilda_auth_ui.css', '/ios26-v2.css', '/vilda_shell.css', '/vilda_vault.js', '/vilda_chrome.js',
     '/vilda_logger.js', '/vilda_html.js', '/vilda_init.js', '/vilda_app_helpers.js', '/vilda_frame_sync.js',
     '/vilda_crypto.js', '/vilda_persistence_adapter.js', '/vilda_crypto_strength_explainer.js',
-    '/vilda_deps.js', '/vilda_update_hooks.js', '/ios26-ui.js'];
+    '/vilda_deps.js', '/vilda_update_hooks.js', '/ios26-ui.js',
+    '/vilda_shell.js', '/vilda_persist_runtime.js', '/vilda_name_fix.js', '/vilda_file_export.js', '/vilda_pro_ui.js'];
   const wspoldzielonePary = ['/style.css', '/vilda_chrome.css', ...dodatkoweWspoldzieloneZasoby];
   const wspoldzieloneZasoby = new Set(['/edu-video-ui.css', ...wspoldzielonePary]);
   const oczekiwanePobraniaSwiezychZasobow = () => {
@@ -325,6 +326,11 @@ describe('P-SW-PRECACHE: instalacja bez historii, kopia z poprzedniej pamięci, 
       expect(pobrane.filter(adres => adres.split('?')[0] === plik), plik).toHaveLength(1);
     }
     for (const plik of ['/clcr_potassium_dzm_data.js', '/clcr_potassium_dzm.js', '/clcr_potassium_dzm_ui.js', '/clcr_potassium_dzm.css', '/clcr_potassium_dzm_persistence.js']) {
+      expect(pobrane.filter(adres => adres.split('?')[0] === plik), plik).toHaveLength(1);
+    }
+    // Five KM/Cr resources each retain their own fresh network request. The
+    // explicit static alias pairs above save five duplicate requests instead.
+    for (const plik of ['/clcr_urate_creatinine_data.js', '/clcr_urate_creatinine.js', '/clcr_urate_creatinine_ui.js', '/clcr_urate_creatinine.css', '/clcr_urate_creatinine_persistence.js']) {
       expect(pobrane.filter(adres => adres.split('?')[0] === plik), plik).toHaveLength(1);
     }
     expect(pobrane.length, `instalacja wysyła ${pobrane.length} żądań`).toBeLessThanOrEqual(600);

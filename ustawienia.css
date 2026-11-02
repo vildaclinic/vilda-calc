@@ -1717,6 +1717,15 @@ html:has(#settings-section-account:target) body {
   margin-top: var(--space-2)
 }
 
+.settings-content>.settings-app-version {
+  margin-top: var(--space-2);
+  overflow-wrap: anywhere
+}
+
+body.dark-bg-level-2 .settings-content>.settings-app-version {
+  color: var(--text-2)
+}
+
 @media(max-width:880px) {
   .settings-two-panel {
     display: block

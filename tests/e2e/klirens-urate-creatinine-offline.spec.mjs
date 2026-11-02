@@ -294,6 +294,9 @@ for (const upgrade of [false, true]) {
     let context;
     const proof = { baseline: upgrade ? deployment.baseline : 'fresh-current-production-install',
       baselineSha: upgrade ? deployment.baselineSha : null, workerVersion: deployment.version, previousVersion: upgrade ? deployment.previousVersion : null,
+      currentWorkerSha256: deployment.currentWorkerHash,
+      previousWorkerSha256: upgrade ? deployment.previousWorkerHash : null,
+      workerResponses: deployment.workerResponses,
       resources, startupResources, precacheBeforeFirstCalculatorVisit: true, coldBrowserRestarts: 2, offlinePages: [] };
     try {
       context = await launch();
