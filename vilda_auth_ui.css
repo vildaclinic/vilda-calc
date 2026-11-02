@@ -1974,7 +1974,7 @@ body.liquid-ios26:is(.high-contrast-level-1, .high-contrast-level-2, .high-contr
 }
 
 .vilda-embedded body.vilda-auth-embedded-open .desktop-layout,
-.vilda-embedded body.vilda-auth-embedded-open footer,
+.vilda-embedded body.vilda-auth-embedded-open > footer.site-footer,
 .vilda-embedded body.vilda-auth-embedded-open .cookie-banner,
 .vilda-embedded body.vilda-auth-embedded-open #cookieBanner {
   visibility: hidden
