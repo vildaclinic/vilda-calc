@@ -384,21 +384,70 @@ function Pp_zapisz(e){
     if(y>0)e.przewiniecie={doc:d,y:y};
   }catch{}
 }
-function Pp_odtworz(t,e){
+function Pp_odtworz(t,e,restoreSource){
   var s=e.przewiniecie;
   e.przewiniecie=null;
   try{
     if(!s||!e.loaded||e.frame.contentDocument!==s.doc)return;
     var h=a.history.state;
-    if(h&&h.shellView===t&&Sn_href(t,h.shellHref))return;
+    if(!restoreSource&&h&&h.shellView===t&&Sn_href(t,h.shellHref))return;
     var n=e.frame.contentWindow;
     try{n.scrollTo({top:s.y,behavior:"instant"})}catch{n.scrollTo(0,s.y)}
   }catch{}
 }
-function w(t,Sn_keepRequest){t=y(t);if(Sn_focusTarget&&Sn_focusTarget.route!==t)Sn_cancelPaneFocus();var Gp_c=c;if(c&&c!==t)Dpd_invalidate();if(c&&c!==t){Sn_cancelRequest(Sn_keepRequest);Sn_target=null;Sn_quietClose(c);b=null}c&&c!==t&&Gp_f(c);var e=_(t);if(e){e.stale&&(e.stale=!1,B(t)),c&&c!==t&&l[c]&&(Pp_zapisz(l[c]),l[c].frame.hidden=!0),c&&c!==t&&Pw_start(e),Sn_closeFormulaSearch(t,"shell-route-entry"),e.frame.hidden=!1,c=t;try{var r=o.documentElement;r.className=r.className.replace(/\bvilda-route-[a-z]+\b/g,"").replace(/\s{2,}/g," ").trim(),r.classList.add("vilda-route-"+t)}catch{}Gp_c&&Gp_c!==t&&Pp_odtworz(t,e);try{var n=l.start,i=n&&n.frame?n.frame.contentWindow:null;i&&typeof i.__vildaShellSummaryRefresh=="function"&&i.__vildaShellSummaryRefresh()}catch{}if(t==="start")try{var u=e.frame?e.frame.contentWindow:null;u&&typeof u.__vildaRemindersResync=="function"&&u.__vildaRemindersResync()}catch{}v(),e.loaded?X():(z(),g(t));Gp_c!==t&&Gp_p(t,e);try{o.title=d[t].title+" \u2013 Waga i wzrost"}catch{}et(t),Ct(t),ot(t),at(),ut(),dt(),vt(),Bt(),Y(),ft();try{a.performance&&a.performance.mark&&a.performance.mark("vilda-shell-show-"+t)}catch{}Sn_tryFocusPane()}}function jt(){try{return/iPhone|iPad|iPod/i.test(a.navigator.userAgent||"")?!!(a.matchMedia&&a.matchMedia("(display-mode: standalone)").matches||a.navigator.standalone===!0):!1}catch{return!1}}var A=null;/* P-MODALE (2026-09-17): modal otwarty WEWNATRZ iframe'a nie moze zaslonic docka ani przyciskow powloki — to elementy dokumentu-rodzica, zaden z-index w iframie ich nie przebije. Zmierzone na iPhonie: stopka epikryzy („Anuluj / Dalej") i dol paneli „Jak chronimy dane?" / „Sila szyfrowania" ladowaly pod dockiem. Rozwiazanie w JEDNYM miejscu: powloka patrzy na aktywny panel i gdy widoczna nakladka position:fixed (>=90% szerokosci, >=60% wysokosci okna) siega PONIZEJ gornej krawedzi docka, dodaje sobie klase vilda-pane-modal-open (CSS: dock, FAB i strzalka visibility:hidden — pudelko docka zostaje, wiec pomiary --vilda-shell-dock-h / --vilda-dol-wolny sie nie zmieniaja i nic nie skacze). Arkusze terminarza i ekrany auth koncza sie DOKLADNIE na krawedzi docka (same go mierza), wiec warunek ich nie lapie — ich dock zostaje widoczny, jak dotad. */var Mo=null,Mr=0;function Mw(){var n=!1;try{var t=c&&l[c],e=t&&t.frame?t.frame.contentDocument:null,w=t&&t.frame?t.frame.contentWindow:null,d=o.getElementById("mobileBottomDock");if(e&&e.body&&w&&d){var dr=d.getBoundingClientRect(),fr=t.frame.getBoundingClientRect();if(dr.height>0&&dr.top<fr.bottom){var W=w.innerWidth||0,H=w.innerHeight||0,els=e.querySelectorAll("body > *, body > * > *");for(var i=0;i<els.length&&!n;i++){var el=els[i],cs=w.getComputedStyle(el);if(cs.position==="fixed"&&cs.display!=="none"&&cs.visibility!=="hidden"&&Number(cs.opacity)!==0){var r=el.getBoundingClientRect();r.width>=W*.9&&r.height>=H*.6&&fr.top+r.bottom>dr.top+1&&(n=!0)}}}}}catch{n=!1}try{o.documentElement.classList.toggle("vilda-pane-modal-open",n)}catch{}}function Mz(){Mr||(Mr=a.requestAnimationFrame(function(){Mr=0,Mw()}))}function vt(){try{A&&(A.disconnect(),A=null),Mo&&(Mo.disconnect(),Mo=null);var t=c&&l[c],e=null;try{e=t&&t.frame?t.frame.contentDocument:null}catch{e=null}var r=function(){var n=!1;try{n=!!(e&&e.body&&(e.body.classList.contains("vilda-auth-embedded-open")||e.body.classList.contains("vilda-reminders-open")))}catch{n=!1}try{o.documentElement.classList.toggle("vilda-pane-auth-open",n)}catch{}};if(!e||!e.body||typeof a.MutationObserver!="function"){r(),Mw();return}A=new a.MutationObserver(r),A.observe(e.body,{attributes:!0,attributeFilter:["class"]}),r(),Mo=new a.MutationObserver(Mz),Mo.observe(e.body,{childList:!0,subtree:!0,attributes:!0,attributeFilter:["class","style","hidden"]}),Mw()}catch{}}/* Historia osadzonych ekranów należy do powłoki. Żądania karty/listy
+function w(t,Sn_keepRequest,Sn_searchCalendarTransfer){t=y(t);var Sn_restoreSource=Sn_calendarPreserve(Sn_searchCalendarTransfer);Sn_restoreSource=!!(Sn_restoreSource&&Sn_restoreSource.sourceRoute===t&&Sn_restoreSource.phase!=="forward");if(Sn_focusTarget&&Sn_focusTarget.route!==t)Sn_cancelPaneFocus();var Gp_c=c;if(c&&c!==t)Dpd_invalidate();if(c&&c!==t){Sn_cancelRequest(Sn_keepRequest);Sn_target=null;Sn_quietClose(c,Sn_searchCalendarTransfer);b=null}c&&c!==t&&Gp_f(c);var e=_(t);if(e){e.stale&&(e.stale=!1,B(t)),c&&c!==t&&l[c]&&(Pp_zapisz(l[c]),l[c].frame.hidden=!0),c&&c!==t&&Pw_start(e),Sn_closeFormulaSearch(t,"shell-route-entry"),e.frame.hidden=!1,c=t;try{var r=o.documentElement;r.className=r.className.replace(/\bvilda-route-[a-z]+\b/g,"").replace(/\s{2,}/g," ").trim(),r.classList.add("vilda-route-"+t)}catch{}Gp_c&&Gp_c!==t&&Pp_odtworz(t,e,Sn_restoreSource);try{var n=l.start,i=n&&n.frame?n.frame.contentWindow:null;i&&typeof i.__vildaShellSummaryRefresh=="function"&&i.__vildaShellSummaryRefresh()}catch{}if(t==="start")try{var u=e.frame?e.frame.contentWindow:null;u&&typeof u.__vildaRemindersResync=="function"&&u.__vildaRemindersResync()}catch{}v(),e.loaded?X():(z(),g(t));Gp_c!==t&&Gp_p(t,e);try{o.title=d[t].title+" \u2013 Waga i wzrost"}catch{}et(t),Ct(t),ot(t),at(),ut(),dt(),vt(),Bt(),Y(),ft();try{a.performance&&a.performance.mark&&a.performance.mark("vilda-shell-show-"+t)}catch{}Sn_tryFocusPane()}}function jt(){try{return/iPhone|iPad|iPod/i.test(a.navigator.userAgent||"")?!!(a.matchMedia&&a.matchMedia("(display-mode: standalone)").matches||a.navigator.standalone===!0):!1}catch{return!1}}var A=null;/* P-MODALE (2026-09-17): modal otwarty WEWNATRZ iframe'a nie moze zaslonic docka ani przyciskow powloki — to elementy dokumentu-rodzica, zaden z-index w iframie ich nie przebije. Zmierzone na iPhonie: stopka epikryzy („Anuluj / Dalej") i dol paneli „Jak chronimy dane?" / „Sila szyfrowania" ladowaly pod dockiem. Rozwiazanie w JEDNYM miejscu: powloka patrzy na aktywny panel i gdy widoczna nakladka position:fixed (>=90% szerokosci, >=60% wysokosci okna) siega PONIZEJ gornej krawedzi docka, dodaje sobie klase vilda-pane-modal-open (CSS: dock, FAB i strzalka visibility:hidden — pudelko docka zostaje, wiec pomiary --vilda-shell-dock-h / --vilda-dol-wolny sie nie zmieniaja i nic nie skacze). Arkusze terminarza i ekrany auth koncza sie DOKLADNIE na krawedzi docka (same go mierza), wiec warunek ich nie lapie — ich dock zostaje widoczny, jak dotad. */var Mo=null,Mr=0;function Mw(){var n=!1;try{var t=c&&l[c],e=t&&t.frame?t.frame.contentDocument:null,w=t&&t.frame?t.frame.contentWindow:null,d=o.getElementById("mobileBottomDock");if(e&&e.body&&w&&d){var dr=d.getBoundingClientRect(),fr=t.frame.getBoundingClientRect();if(dr.height>0&&dr.top<fr.bottom){var W=w.innerWidth||0,H=w.innerHeight||0,els=e.querySelectorAll("body > *, body > * > *");for(var i=0;i<els.length&&!n;i++){var el=els[i],cs=w.getComputedStyle(el);if(cs.position==="fixed"&&cs.display!=="none"&&cs.visibility!=="hidden"&&Number(cs.opacity)!==0){var r=el.getBoundingClientRect();r.width>=W*.9&&r.height>=H*.6&&fr.top+r.bottom>dr.top+1&&(n=!0)}}}}}catch{n=!1}try{o.documentElement.classList.toggle("vilda-pane-modal-open",n)}catch{}}function Mz(){Mr||(Mr=a.requestAnimationFrame(function(){Mr=0,Mw()}))}function vt(){try{A&&(A.disconnect(),A=null),Mo&&(Mo.disconnect(),Mo=null);var t=c&&l[c],e=null;try{e=t&&t.frame?t.frame.contentDocument:null}catch{e=null}var r=function(){var n=!1;try{n=!!(e&&e.body&&(e.body.classList.contains("vilda-auth-embedded-open")||e.body.classList.contains("vilda-reminders-open")))}catch{n=!1}try{o.documentElement.classList.toggle("vilda-pane-auth-open",n)}catch{}};if(!e||!e.body||typeof a.MutationObserver!="function"){r(),Mw();return}A=new a.MutationObserver(r),A.observe(e.body,{attributes:!0,attributeFilter:["class"]}),r(),Mo=new a.MutationObserver(Mz),Mo.observe(e.body,{childList:!0,subtree:!0,attributes:!0,attributeFilter:["class","style","hidden"]}),Mw()}catch{}}/* Historia osadzonych ekranów należy do powłoki. Żądania karty/listy
    i jawnego linku obowiązują tylko do następnej intencji nawigacji. */
 var Sn_request=null,Sn_requestSerial=0,Sn_target=null,Sn_entry=null,Sn_navSerial=0;
 var Sn_auth=null,Sn_authSerial=0,Sn_pendingBack=null;
+// A single in-memory transfer belongs to the top AuthUI ticket. Neither the
+// Search context nor the transfer descriptor is stored in browser history.
+var Sn_calendarTransfer=null;
+function Sn_calendarValid(descriptor){
+  try{return !!(descriptor&&typeof descriptor==="object"&&typeof descriptor.token==="string"&&descriptor.token&&descriptor.targetRoute==="terminarz"&&typeof descriptor.sourceRoute==="string"&&Object.prototype.hasOwnProperty.call(d,descriptor.sourceRoute)&&a.VildaAuthUI&&typeof a.VildaAuthUI.isSearchCalendarTransferCurrent==="function"&&a.VildaAuthUI.isSearchCalendarTransferCurrent(descriptor)===true)}catch{return false}
+}
+function Sn_calendarCurrent(transfer){
+  if(!transfer||Sn_calendarTransfer!==transfer||!Sn_calendarValid(transfer.descriptor))return false;
+  try{return !transfer.sourceDoc||(l[transfer.sourceRoute]===transfer.sourcePane&&transfer.sourcePane.frame.isConnected!==false&&transfer.sourcePane.frame.contentWindow===transfer.sourceWin&&transfer.sourcePane.frame.contentDocument===transfer.sourceDoc&&transfer.sourceWin.document===transfer.sourceDoc&&transfer.sourcePane.navigationGeneration===transfer.sourceGeneration)}catch{return false}
+}
+function Sn_calendarPreserve(descriptor){
+  var transfer=Sn_calendarTransfer;
+  return transfer&&transfer.descriptor===descriptor&&Sn_calendarCurrent(transfer)?transfer:null;
+}
+function Sn_calendarHref(href,descriptor){
+  try{var valid=Sn_href("terminarz",href);if(!valid)return false;
+    var url=new a.URL(valid,a.location.href);url.search=url.hash.slice(1);
+    var keys=Array.from(url.searchParams.keys());
+    return keys.length===2&&keys.indexOf("vilda-event")>=0&&keys.indexOf("vilda-search-return")>=0&&!!url.searchParams.get("vilda-event")&&url.searchParams.get("vilda-search-return")===descriptor.token;
+  }catch{return false}
+}
+function Sn_calendarNavigation(route,href,options){
+  var descriptor=options&&options.searchCalendarTransfer,transfer=Sn_calendarPreserve(descriptor),returning=!!(options&&options.searchCalendarReturn);
+  if(transfer&&returning&&route===transfer.sourceRoute&&c==="terminarz"){transfer.phase="returning";return transfer}
+  if(!returning&&route==="terminarz"&&Sn_calendarValid(descriptor)&&Sn_calendarHref(href,descriptor)){
+    if(transfer&&transfer.phase==="forward")return transfer;
+    if(transfer){Sn_calendarTransfer=null;return null}
+    if(descriptor.sourceRoute===c){
+      var pane=l[c],state=Sn_entryState(c);
+      transfer={descriptor:descriptor,sourceRoute:c,sourceEntry:state.shellNavId,sourceHref:Sn_href(c,state.shellHref),sourcePane:pane,sourceWin:pane&&pane.frame.contentWindow,
+        sourceDoc:pane&&pane.loaded?pane.frame.contentDocument:null,sourceGeneration:pane&&pane.navigationGeneration,phase:"forward"};
+      Sn_calendarTransfer=transfer;return transfer;
+    }
+  }
+  Sn_calendarTransfer=null;return null;
+}
+function Sn_calendarResume(transfer){
+  if(!Sn_calendarCurrent(transfer)||c!==transfer.sourceRoute)return false;
+  Sn_calendarTransfer=null;
+  try{var api=a.VildaAuthUI;
+    if(!api||typeof api.resumeSearchCalendarTransfer!=="function")return false;
+    Promise.resolve(api.resumeSearchCalendarTransfer(transfer.descriptor)).catch(function(){});return true;
+  }catch{return false}
+}
+function Sn_returnFromSearchCalendar(descriptor){
+  var transfer=Sn_calendarPreserve(descriptor);
+  if(!transfer||transfer.phase!=="calendar"||c!=="terminarz")return false;
+  P(transfer.sourceRoute,false,null,null,{searchCalendarTransfer:descriptor,searchCalendarReturn:true});return true;
+}
 /* Fokus po menu należy do jednej intencji, także gdy nawigacja czeka na Back
    lub load. Nowszy wybór użytkownika unieważnia również odroczoną intencję. */
 var Sn_focusTarget=null,Sn_focusGeneration=0;
@@ -426,13 +475,15 @@ function Sn_closeFormulaSearch(route,reason){
     if(win&&win.ClcrUiWorkflow&&typeof win.ClcrUiWorkflow.closeSearch==="function")win.ClcrUiWorkflow.closeSearch(reason);
   }catch{}
 }
-function Sn_quietClose(route){
+function Sn_quietClose(route,descriptor){
   Sn_closeFormulaSearch(route,"shell-route-departure");
   // The expanded reminders workspace and cards opened from it live in top,
   // independently of the outgoing route's iframe.
-  try{if(a.VildaAuthUI&&typeof a.VildaAuthUI.closeSearchNavigation==="function")a.VildaAuthUI.closeSearchNavigation()}catch{}
+  var transfer=Sn_calendarPreserve(descriptor);
+  if(!transfer)Sn_calendarTransfer=null;
+  try{if(a.VildaAuthUI&&typeof a.VildaAuthUI.closeSearchNavigation==="function")transfer?a.VildaAuthUI.closeSearchNavigation({searchCalendarTransfer:descriptor}):a.VildaAuthUI.closeSearchNavigation()}catch{}
   try{var pane=l[route],win=pane&&pane.frame.contentWindow;
-    if(win&&win.VildaAuthUI&&typeof win.VildaAuthUI.hide==="function")win.VildaAuthUI.hide({shellNavigation:true});
+    if(win&&win.VildaAuthUI&&typeof win.VildaAuthUI.hide==="function")win.VildaAuthUI.hide(transfer?{shellNavigation:true,searchCalendarTransfer:descriptor}:{shellNavigation:true});
   }catch{}
 }
 function Sn_href(route,href){
@@ -445,13 +496,19 @@ function Sn_href(route,href){
 function Sn_deliverTarget(){
   var target=Sn_target,pane=target&&l[target.route];
   if(!target||target.delivered||target.route!==c||!pane||!pane.loaded||pane.frame.hidden)return;
-  try{var win=pane.frame.contentWindow;
+  try{var win=pane.frame.contentWindow,doc=pane.frame.contentDocument,generation=pane.navigationGeneration;
+    function isCurrent(){
+      try{return Sn_target===target&&target.route===c&&l[target.route]===pane&&pane.loaded&&!pane.frame.hidden&&pane.frame.isConnected!==false&&pane.navigationGeneration===generation&&pane.frame.contentWindow===win&&pane.frame.contentDocument===doc&&win.document===doc}catch{return false}
+    }
     target.delivered=true;
-    win.dispatchEvent(new (win.CustomEvent||a.CustomEvent)("vilda:shell-navigate-target",{detail:{href:target.href}}));
+    win.dispatchEvent(new (win.CustomEvent||a.CustomEvent)("vilda:shell-navigate-target",{detail:{href:target.href,isCurrent:isCurrent}}));
   }catch{target.delivered=false}
 }
-function Sn_setTarget(route,state,force){
+function Sn_setTarget(route,state,force,preservePane){
   var key=state?String(state.shellNavId)+"|"+route+"|"+(state.shellHref||""):null;
+  // Returning to an activated source restores its live pane, not the old link
+  // that originally opened it. Keep only its history key; no target is replayed.
+  if(preservePane){Sn_entry=key;Sn_target=null;return}
   if(key===Sn_entry&&!force)return;
   Sn_entry=key;
   var href=state&&state.shellView===route?Sn_href(route,state.shellHref):null;
@@ -505,8 +562,13 @@ function Sn_historyEvent(){
   var route=W(),state=Sn_entryState(route),auth=Sn_auth,pending=Sn_pendingBack;
   Sn_pendingBack=null;
   var left=auth&&state.shellAuthId!==auth.id;
-  w(route);
-  Sn_setTarget(route,state);
+  var transfer=Sn_calendarTransfer,returning=!!(Sn_calendarCurrent(transfer)&&transfer.phase==="calendar"&&c==="terminarz"&&route===transfer.sourceRoute&&state.shellNavId===transfer.sourceEntry);
+  var queued=pending&&pending.navigation,descriptor=queued&&queued.options&&queued.options.searchCalendarTransfer;
+  if(returning)descriptor=transfer.descriptor;
+  else if(route!==(transfer&&transfer.sourceRoute)||!Sn_calendarPreserve(descriptor))descriptor=null;
+  w(route,null,descriptor);
+  Sn_setTarget(route,state,false,returning||!!(descriptor&&transfer&&route===transfer.sourceRoute));
+  if(returning)Sn_calendarResume(transfer);
   if(!pending&&left&&Sn_auth===auth&&Sn_validAuth(auth)){
     Sn_auth=null;
     try{auth.onBack()}catch{}
@@ -514,7 +576,7 @@ function Sn_historyEvent(){
   }
   if(pending&&pending.navigation){
     var next=pending.navigation,focus=next.options&&next.options.focusPane&&next.options.focusGeneration===Sn_focusGeneration;
-    P(next.route,next.push,next.href,next.request,{focusPane:!!focus});
+    P(next.route,next.push,next.href,next.request,{focusPane:!!focus,searchCalendarTransfer:next.options&&next.options.searchCalendarTransfer,searchCalendarReturn:next.options&&next.options.searchCalendarReturn});
   }else if(pending){Sn_cancelRequest();b=null}
   var current=a.history.state;
   if(current&&current.shellAuthId&&(!Sn_auth||!Sn_isAuthHistoryCurrent(Sn_auth.win))){
@@ -551,30 +613,37 @@ function Sn_openPatient(kind,id,onTimeout,tab){
   retry();
 }
 
-function Nt(t){Sn_quietClose(y(t))}
+function Nt(t,descriptor){Sn_quietClose(y(t),descriptor)}
 function P(t,e,href,request,options){
   t=y(t);Sn_cancelRequest(request);Sn_cancelPaneFocus();
+  var transfer=Sn_calendarNavigation(t,href,options),descriptor=transfer&&transfer.descriptor,returning=!!(transfer&&options&&options.searchCalendarReturn);
+  Sn_target=null;
   var focusPane=!!(options&&options.focusPane);
-  var next={route:t,push:e,href:href,request:request,options:{focusPane:focusPane,focusGeneration:Sn_focusGeneration}};
+  var next={route:t,push:e,href:href,request:request,options:{focusPane:focusPane,focusGeneration:Sn_focusGeneration,searchCalendarTransfer:descriptor,searchCalendarReturn:returning}};
   if(Sn_pendingBack){Sn_pendingBack.navigation=next;return}
   var owned=Sn_auth&&Sn_isAuthHistoryCurrent(Sn_auth.win),same=c===t;
   if(owned&&same){
-    Sn_quietClose(c);
+    Sn_quietClose(c,descriptor);
     Sn_pendingBack={navigation:next};
     try{a.history.back();return}catch{Sn_pendingBack=null}
   }
-  if(c&&c!==t)Sn_quietClose(c);
-  Nt(t);b=null;
-  var state=same?Object.assign({},a.history.state||{}):{};
+  if(c&&c!==t)Sn_quietClose(c,descriptor);
+  Nt(t,descriptor);b=null;
+  var state=returning?{shellView:t,shellNavId:transfer.sourceEntry}:same?Object.assign({},a.history.state||{}):{};
   state.shellView=t;
-  state.shellNavId=same&&state.shellNavId?state.shellNavId:++Sn_navSerial;
+  state.shellNavId=returning?transfer.sourceEntry:same&&!transfer&&state.shellNavId?state.shellNavId:++Sn_navSerial;
   delete state.shellHref;delete state.shellAuthId;delete state.shellAuthOwner;
-  var target=Sn_href(t,href);if(target)state.shellHref=target;
-  try{e===false||same||owned||jt()?a.history.replaceState(state,"","#/"+t):a.history.pushState(state,"","#/"+t)}catch{}
+  var target=Sn_href(t,href);if(target)state.shellHref=target;else if(returning&&transfer.sourceHref)state.shellHref=transfer.sourceHref;
+  // A same-route calendar transfer still needs its own Back boundary.
+  var replaceEntry=e===false||owned||!transfer&&(same||jt());
+  try{replaceEntry?a.history.replaceState(state,"","#/"+t):a.history.pushState(state,"","#/"+t)}catch{}
   if(focusPane)Sn_focusTarget={route:t};
-  w(t,request);
+  w(t,request,descriptor);
   if(request&&Sn_request===request){request.activationReady=true;b=request.origin}
-  Sn_setTarget(t,state,!!target);
+  Sn_setTarget(t,state,!!target,returning);
+  if(transfer&&Sn_calendarCurrent(transfer)){
+    if(returning)Sn_calendarResume(transfer);else transfer.phase="calendar";
+  }
 }
 var ht=12e3,C=150;function mt(){try{var t=l.start;if(!t||!t.loaded||!t.frame)return null;var e=t.frame.contentWindow;if(!e)return null;var r=e.VildaAuthUI&&(typeof e.VildaAuthUI.isBootReady!=="function"||e.VildaAuthUI.isBootReady())&&typeof e.VildaAuthUI.showPatientsList=="function"&&typeof e.applyLoadedData=="function"&&e.VildaVault&&typeof e.VildaVault.isUnlocked=="function"&&e.VildaVault.isUnlocked();return r?e:null}catch{return null}}function xt(t){Sn_openPatient("list",null,t)}
 function Ht(t,opts){if(t)Sn_openPatient("card",t,null,opts&&typeof opts.activeTab==="string"&&opts.activeTab?opts.activeTab:null)}
@@ -586,4 +655,4 @@ function Wt(t){
   var chrome=a.VildaChrome,wasOpen=false,drawer=!!r.closest(".chrome-drawer-nav");
   if(chrome&&typeof chrome.closeDrawer==="function")wasOpen=chrome.closeDrawer({reason:"navigation"});
   P(n,true,r.getAttribute("href"),null,{focusPane:drawer&&wasOpen});
-}function pt(){o.documentElement.classList.add("vilda-shell-host");try{a.history&&"scrollRestoration"in a.history&&(a.history.scrollRestoration="manual")}catch{}J(),o.addEventListener("scroll",function(){j(80)},{passive:!0,capture:!0}),a.addEventListener("pageshow",function(){j(40)});try{o.body&&o.body.classList.remove("js-loading")}catch{}Rt();var t=/^#\//.test(String(a.location.hash||"")),e=t?W():"start";if(!t)try{a.history.replaceState({shellView:e},"","#/"+e)}catch{}w(e),Sn_setTarget(e,Sn_entryState(e)),v();Sl_noteMode();Sl_watchGeometry();o.addEventListener("vilda:phone-layout-changed",Sl_phoneLayout);try{e!=="start"&&a.setTimeout(function(){try{_("start")}catch{}},1200)}catch{}a.addEventListener("pointerdown",Sn_cancelPaneFocus,!0),a.addEventListener("keydown",Sn_cancelPaneFocus,!0),o.addEventListener("click",Wt,!0),a.addEventListener("popstate",Sn_historyEvent),a.addEventListener("hashchange",function(){var i=String(a.location.hash||"").match(/^#\/([a-z]+)/);i&&Object.prototype.hasOwnProperty.call(d,i[1])&&Sn_historyEvent()}),a.addEventListener("vilda:ga-ready",function(){c&&ot(c)});try{typeof a.Proxy=="function"&&!a.VildaSaveStatusIndicator&&(a.VildaSaveStatusIndicator=new a.Proxy({},{get:function(i,u){var s=Dt();if(s!=null){var f=s[u];return typeof f=="function"?f.bind(s):f}if(u==="getState")return function(){return"hidden"}}}))}catch{}a.addEventListener("resize",Sl_resize),a.addEventListener("resize",Mz),a.addEventListener("orientationchange",Sl_orientation),a.visualViewport&&a.visualViewport.addEventListener&&a.visualViewport.addEventListener("resize",Sl_viewportResize),a.addEventListener("pageshow",function(){v(),c&&w(c)}),o.addEventListener("visibilitychange",function(){o.hidden||(v(),Y(),ft())}),a.addEventListener("storage",function(i){try{if(!i||i.key!=="vilda:sharedLoadSeq")return;var u=String(i.newValue||""),s=u.lastIndexOf(":");if(s<=0)return;var f=u.slice(0,s),h="";try{var L=a.VildaPersistence;L&&typeof L.getTabId=="function"&&(h=L.getTabId()),!h&&a.sessionStorage&&(h=a.sessionStorage.getItem("vildaTabIdV1")||"")}catch{h=""}if(!h||f!==h)return;It()}catch{}});var r=0,n=a.setInterval(function(){et(c),Sl_watchGeometry(),v(),r+=1,r>12&&a.clearInterval(n)},150)}o.readyState==="loading"?o.addEventListener("DOMContentLoaded",pt):pt();function Ft(t){var e=b;if(b=null,e&&e!=="start"&&Object.prototype.hasOwnProperty.call(d,e))return P(e,!0),!0;if(typeof t=="function")try{t()}catch{}return!1}function Ut(){return b||null}a.VildaShell={navigate:P,reloadForAppUpdate:Su_reloadForAppUpdate,isAppUpdateReloadPending:Su_isAppUpdateReloadPending,isPatientDocumentsSourceCurrent:Dpd_isSourceCurrent,protokolPanelu:1,cancelPendingPaneFocus:Sn_cancelPaneFocus,show:w,reload:B,routes:d,openPatientsInStart:xt,openPatientCardInStart:Ht,keyForHref:O,returnFromPatientCard:Ft,peekPatientReturnRoute:Ut,ensureAuthHistory:Sn_ensureAuthHistory,releaseAuthHistory:Sn_releaseAuthHistory,isAuthHistoryCurrent:Sn_isAuthHistoryCurrent}})(window);
+}function pt(){o.documentElement.classList.add("vilda-shell-host");try{a.history&&"scrollRestoration"in a.history&&(a.history.scrollRestoration="manual")}catch{}J(),o.addEventListener("scroll",function(){j(80)},{passive:!0,capture:!0}),a.addEventListener("pageshow",function(){j(40)});try{o.body&&o.body.classList.remove("js-loading")}catch{}Rt();var t=/^#\//.test(String(a.location.hash||"")),e=t?W():"start";if(!t)try{a.history.replaceState({shellView:e},"","#/"+e)}catch{}w(e),Sn_setTarget(e,Sn_entryState(e)),v();Sl_noteMode();Sl_watchGeometry();o.addEventListener("vilda:phone-layout-changed",Sl_phoneLayout);try{e!=="start"&&a.setTimeout(function(){try{_("start")}catch{}},1200)}catch{}a.addEventListener("pointerdown",Sn_cancelPaneFocus,!0),a.addEventListener("keydown",Sn_cancelPaneFocus,!0),o.addEventListener("click",Wt,!0),a.addEventListener("popstate",Sn_historyEvent),a.addEventListener("hashchange",function(){var i=String(a.location.hash||"").match(/^#\/([a-z]+)/);i&&Object.prototype.hasOwnProperty.call(d,i[1])&&Sn_historyEvent()}),a.addEventListener("vilda:ga-ready",function(){c&&ot(c)});try{typeof a.Proxy=="function"&&!a.VildaSaveStatusIndicator&&(a.VildaSaveStatusIndicator=new a.Proxy({},{get:function(i,u){var s=Dt();if(s!=null){var f=s[u];return typeof f=="function"?f.bind(s):f}if(u==="getState")return function(){return"hidden"}}}))}catch{}a.addEventListener("resize",Sl_resize),a.addEventListener("resize",Mz),a.addEventListener("orientationchange",Sl_orientation),a.visualViewport&&a.visualViewport.addEventListener&&a.visualViewport.addEventListener("resize",Sl_viewportResize),a.addEventListener("pageshow",function(){v(),c&&w(c)}),o.addEventListener("visibilitychange",function(){o.hidden||(v(),Y(),ft())}),a.addEventListener("storage",function(i){try{if(!i||i.key!=="vilda:sharedLoadSeq")return;var u=String(i.newValue||""),s=u.lastIndexOf(":");if(s<=0)return;var f=u.slice(0,s),h="";try{var L=a.VildaPersistence;L&&typeof L.getTabId=="function"&&(h=L.getTabId()),!h&&a.sessionStorage&&(h=a.sessionStorage.getItem("vildaTabIdV1")||"")}catch{h=""}if(!h||f!==h)return;It()}catch{}});var r=0,n=a.setInterval(function(){et(c),Sl_watchGeometry(),v(),r+=1,r>12&&a.clearInterval(n)},150)}o.readyState==="loading"?o.addEventListener("DOMContentLoaded",pt):pt();function Ft(t){var e=b;if(b=null,e&&e!=="start"&&Object.prototype.hasOwnProperty.call(d,e))return P(e,!0),!0;if(typeof t=="function")try{t()}catch{}return!1}function Ut(){return b||null}a.VildaShell={navigate:P,getCurrentRoute:function(){return c},returnFromSearchCalendar:Sn_returnFromSearchCalendar,reloadForAppUpdate:Su_reloadForAppUpdate,isAppUpdateReloadPending:Su_isAppUpdateReloadPending,isPatientDocumentsSourceCurrent:Dpd_isSourceCurrent,protokolPanelu:1,cancelPendingPaneFocus:Sn_cancelPaneFocus,show:w,reload:B,routes:d,openPatientsInStart:xt,openPatientCardInStart:Ht,keyForHref:O,returnFromPatientCard:Ft,peekPatientReturnRoute:Ut,ensureAuthHistory:Sn_ensureAuthHistory,releaseAuthHistory:Sn_releaseAuthHistory,isAuthHistoryCurrent:Sn_isAuthHistoryCurrent}})(window);

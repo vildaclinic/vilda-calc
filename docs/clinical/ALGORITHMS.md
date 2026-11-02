@@ -11192,7 +11192,8 @@ otwieraniu pacjenta, osoby spoza bazy, sprawy, planu i istniejącego edytora.
 Nie zmienia obliczeń, dawek, interpretacji, dat, danych klinicznych, zapisu
 ani synchronizacji. Wszystkie próby używają fikcyjnych danych.
 
-**Kontrakt.** Wersjonowany snapshot widoku zawiera wyłącznie skalarny stan UI.
+**Kontrakt PR2 (stan na 2026-11-01).** Wersjonowany snapshot widoku zawiera
+wyłącznie skalarny stan UI.
 Jeden bilet RAM AuthUI należy do bieżącego sejfu/użytkownika/epoki i jest
 zużywany przed asynchronicznym odtworzeniem. Nowa intencja, blokada,
 odblokowanie i zmiana konta odrzucają stare callbacki. Widok po powrocie
@@ -11222,8 +11223,65 @@ na desktopie i telefonie: `global-search-return-state.test.mjs`,
 `search-return-auth.test.mjs`, `przypomnienia-search-return.spec.mjs` i zimny
 start produkcyjnego PWA w `przypomnienia-search-return-offline.spec.mjs`.
 Porównanie fingerprintów notatek i pacjenta sprawdza brak zapisów klinicznych
-przy samej nawigacji. Faktyczne otwieranie Terminarza i pełny cykl indeksu
-pozostają odrębnymi częściami naprawy.
+przy samej nawigacji. Na etapie PR2 faktyczne otwieranie Terminarza pozostawało
+osobną częścią naprawy; realizuje je opisany poniżej PR3. Pełny cykl indeksu
+pozostaje odrębnym zakresem.
+
+### P-SZUKAJ-TERMINARZ — rzeczywisty kalendarz i powrót między dokumentami (2026-11-02)
+
+**Zakres.** Trzecia część naprawy po P-SZUKAJ-POWROT. Akcja wyniku Szukaj
+otwiera rzeczywisty Terminarz zamiast popupu/edytora. Nie zmienia wzorów, wyników,
+dawek, interpretacji, danych, terminów, statusów ani synchronizacji. Odczyt,
+wskazanie i powrót nie wywołują klinicznych writerów ani przeliczeń.
+
+**Widok.** `VildaTerminarz.openEvent()` czyta aktualny rekord i zakres
+kalendarza, ustawia dzień z lokalnego `dueDateISO` i wskazuje dokładny
+`noteId`. Wyróżniony blok jest widoczny, otrzymuje obrys, fokus i przewinięcie;
+pasek podaje pełny tytuł, osobę/godzinę oraz powrót do Szukaj. Obsługuje
+kolizje ponad limit widocznych torów, całodzienne wpisy na telefonie,
+nieobecności i początkowy blok wydarzenia przechodzącego przez północ.
+Odświeżenie utrzymuje zaznaczenie bez przejmowania późniejszej interakcji.
+Brak wpisu, terminu lub błąd odczytu daje komunikat z działającym powrotem,
+bez podstawiania innego wydarzenia.
+
+**Powłoka.** Jeden deskryptor należy do biletu najwyższego AuthUI. Shell
+zachowuje go wyłącznie po walidacji właściciela dla konkretnego przejścia do
+Terminarza, także przez odroczone Wstecz. Powrót jawny lub Browser Back do
+źródłowego wpisu historii pokazuje pierwotną trasę i zużywa bilet raz.
+Odbiorca celu łączy kontrolę sesji z guardem dokładnej intencji, dokumentu,
+generacji i widoczności ramki. Nowa zwykła nawigacja nadal odwołuje Search;
+ten sam href nowej intencji nie uprawnia spóźnionego odczytu.
+
+**Strony samodzielne.** `vilda_search_navigation.js`, ładowany po adapterze
+i sejfie, przed AuthUI, przechowuje jeden ograniczony rozmiarem szyfrogram
+kontekstu UI przez najwyżej 30 minut. Korzysta z istniejącej kryptografii
+sejfu i `getStorage('session')`; nie eksportuje klucza i nie tworzy jawnej
+kopii zapytania lub rekordów. Osobna losowa epoka UI w globalnym natywnym
+`sessionStorage` nie zawiera danych konta/pacjenta i odwołuje również stare
+prefiksy trybów pamięci. Odtworzenie sesji zachowuje transport; świeże
+logowanie, blokada, gość, wyczyszczenie użytkownika i nowa intencja go
+unieważniają. Odczyt kalendarza nie zużywa biletu. Dopiero właściwe źródło
+zużywa go przed przywróceniem Szukaj, również po pełnej zmianie dokumentu,
+Browser Back bez BFCache i powrocie do tego samego pliku Terminarza przez
+historię lub fragment adresu. Zapytanie nie trafia do URL, historii,
+preferencji ani synchronizacji. Klucze i ich cykl życia: `docs/ARCHITECTURE.md`.
+
+**Regresje na danych fikcyjnych.** `terminarz-open-event.test.mjs` sprawdza
+rzeczywisty reader/renderer, aktualny dzień, dokładne ID i wyścigi zakresów;
+`shell-search-calendar-transfer.test.mjs` — intencje, dokumenty i historię;
+`search-calendar-auth.test.mjs` — transport oraz jednokrotne odtworzenie.
+`search-navigation.test.mjs` używa prawdziwego sejfu/adaptera w trybach
+lokalnym, cloud-only i jednorazowym, z kontrolą szyfrowania, wygaśnięcia,
+właściciela i zakazanych zapisów. `przypomnienia-search-calendar.spec.mjs`
+obejmuje aplikację na desktopie i telefonie, pełne przeładowania i Browser
+Back, brak popupu/edytora oraz zachowanie kontekstu 81. wyniku z dodatnimi
+przewinięciami. Fingerprinty notatek i pacjenta sprawdzają brak zmian danych.
+Test `przypomnienia-search-calendar-offline.spec.mjs` instaluje produkcyjny
+SW, zamyka przeglądarkę, zatrzymuje serwer i po zimnym restarcie offline
+sprawdza oba powroty, zgodność zasobów z cache i fingerprinty danych.
+Nowy zasób transportu mieści się w dotychczasowym budżecie 600 żądań:
+dwa bieżące aliasy niezmienionego `ios26-ui.js` współdzielą wyłącznie świeżą
+odpowiedź tej instalacji. Historyczne klucze precache pozostają zachowane.
 
 ### P-PRZYPOMNIENIA-ECHO — karta „Przypomnienia” nie przebudowuje się od własnego pingu licznika (SW 1.1.263, 2026-10-13, polecenie właściciela)
 

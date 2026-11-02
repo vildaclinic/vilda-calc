@@ -283,7 +283,7 @@ describe('P-SW-PRECACHE: instalacja bez historii, kopia z poprzedniej pamięci, 
   const dodatkoweWspoldzieloneZasoby = ['/vilda_auth_ui.css', '/ios26-v2.css', '/vilda_shell.css', '/vilda_vault.js', '/vilda_chrome.js',
     '/vilda_logger.js', '/vilda_html.js', '/vilda_init.js', '/vilda_app_helpers.js', '/vilda_frame_sync.js',
     '/vilda_crypto.js', '/vilda_persistence_adapter.js', '/vilda_crypto_strength_explainer.js',
-    '/vilda_deps.js', '/vilda_update_hooks.js'];
+    '/vilda_deps.js', '/vilda_update_hooks.js', '/ios26-ui.js'];
   const wspoldzielonePary = ['/style.css', '/vilda_chrome.css', ...dodatkoweWspoldzieloneZasoby];
   const wspoldzieloneZasoby = new Set(['/edu-video-ui.css', ...wspoldzielonePary]);
   const oczekiwanePobraniaSwiezychZasobow = () => {
@@ -320,6 +320,7 @@ describe('P-SW-PRECACHE: instalacja bez historii, kopia z poprzedniej pamięci, 
       expect(pobrane.filter(adres => adres.split('?')[0] === plik), plik).toHaveLength(1);
     }
     expect(pobrane.filter(adres => adres.split('?')[0] === '/vilda_care_plan_model.js')).toHaveLength(1);
+    expect(pobrane.filter(adres => adres.split('?')[0] === '/vilda_search_navigation.js')).toHaveLength(1);
     for (const plik of ['/vilda_care_template_model.js', '/vilda_care_template_store.js', '/vilda_care_templates.js', '/vilda_care_templates.css']) {
       expect(pobrane.filter(adres => adres.split('?')[0] === plik), plik).toHaveLength(1);
     }
