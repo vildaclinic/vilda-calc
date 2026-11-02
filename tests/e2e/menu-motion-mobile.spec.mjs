@@ -29,7 +29,7 @@ async function prepare(page, profile) {
     const menu = document.querySelector('[data-vilda-chrome-drawer]');
     const panel = menu.querySelector('.chrome-drawer-panel');
     const backdrop = menu.querySelector('.chrome-drawer-backdrop');
-    const trace = window.__menuMotionTrace = { runs: [] };
+    const trace = window.__menuMotionTrace = { runs: [], holdNextEntry: false };
     const channel = new MessageChannel();
     const tasks = [];
     channel.port1.onmessage = () => tasks.shift()?.();
@@ -43,15 +43,16 @@ async function prepare(page, profile) {
       name: animation.animationName,
       duration: animation.effect.getTiming().duration,
     });
-    // Pierwszy proof kontroluje zegar prawdziwej animacji, nie jej CSS ani handler.
-    // Zatrzymanie w animationstart nie zależy od szybkości pierwszej próbki CI.
+    // Kontrolujemy zegar prawdziwej animacji, nie jej CSS ani handler. Pierwszy
+    // proof zaczyna od zera, próba Escape trzyma niedokończone wejście w połowie.
+    // Roundtrip runnera CI nie może skończyć animacji przed wysłaniem Escape.
     menu.addEventListener('animationstart', event => {
       const run = trace.runs.at(-1);
-      if (!run?.controlled || ![panel, backdrop].includes(event.target)) return;
+      if (!(run?.controlled || run?.heldForClose) || ![panel, backdrop].includes(event.target)) return;
       for (const animation of event.target.getAnimations()) {
         if (animation.animationName !== event.animationName) continue;
         animation.pause();
-        animation.currentTime = 0;
+        animation.currentTime = run.heldForClose ? animation.effect.getTiming().duration / 2 : 0;
       }
     });
     let wasOpen = false;
@@ -59,7 +60,8 @@ async function prepare(page, profile) {
       const open = document.body.classList.contains('chrome-drawer-open');
       if (open && !wasOpen) {
         const run = { frames: [], ready: false, done: false, cancelled: false,
-          controlled: trace.runs.length === 0, stage: 'start' };
+          controlled: trace.runs.length === 0, heldForClose: trace.holdNextEntry, stage: 'start' };
+        trace.holdNextEntry = false;
         trace.runs.push(run);
         afterFrame(() => {
           const panelAnimations = panel.getAnimations();
@@ -195,19 +197,40 @@ for (const profile of profiles) {
       await page.keyboard.press('Escape');
       await closed(page);
 
-      // Zamknięcie przy aktywnej animacji; ponowne otwarcie czeka na jej własny koniec,
-      // więc dawny cleanup nie może później schować nowego dialogu.
+      // Rzeczywiste Escape anuluje wejście zatrzymane w połowie. Następne otwarcie
+      // biegnie naturalnie do końca, bez pozostałości wcześniejszego zamknięcia.
+      await page.evaluate(() => { window.__menuMotionTrace.holdNextEntry = true; });
       await open(page);
       await page.waitForFunction(() => {
         const run = window.__menuMotionTrace.runs.at(-1);
         return run?.frames.length && !run.done;
       });
-      const interrupted = await page.evaluate(() => window.__menuMotionTrace.runs.length - 1);
+      const interrupted = await page.evaluate(() => ({
+        index: window.__menuMotionTrace.runs.length - 1,
+        held: window.__menuMotionTrace.runs.at(-1).heldForClose,
+        animations: [...document.querySelectorAll('.chrome-drawer-panel,.chrome-drawer-backdrop')]
+          .flatMap(el => el.getAnimations()).map(animation => ({
+            state: animation.playState, time: animation.currentTime,
+            duration: animation.effect.getTiming().duration,
+          })),
+      }));
+      expect(interrupted.held).toBe(true);
+      expect(interrupted.animations).toHaveLength(2);
+      for (const animation of interrupted.animations) {
+        expect(animation.state).toBe('paused');
+        expect(animation.time).toBe(animation.duration / 2);
+      }
       await page.keyboard.press('Escape');
       await closed(page);
       await open(page);
-      expectEntry(await completed(page));
-      expect(await page.evaluate(index => window.__menuMotionTrace.runs[index].cancelled, interrupted)).toBe(true);
+      const reopened = await completed(page);
+      const interruptedRun = await page.evaluate(index => window.__menuMotionTrace.runs[index], interrupted.index);
+      await testInfo.attach('interrupted-reopen-frames.json', {
+        body: JSON.stringify({ interrupted, interruptedRun, reopened }), contentType: 'application/json',
+      });
+      expectEntry(reopened);
+      expect(reopened.heldForClose).toBe(false);
+      expect(interruptedRun.cancelled).toBe(true);
       await page.keyboard.press('Escape');
       await closed(page);
 
