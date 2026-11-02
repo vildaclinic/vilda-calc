@@ -66,7 +66,11 @@ test('mini-podsumowanie na pasku powłoki znika zaraz po „Wyczyść wszystkie 
     window.VildaProAccess.hasAccess = () => true;
     document.dispatchEvent(new CustomEvent('vildaProAccessChanged', { detail: { plan: 'pro' } }));
   });
-  await page.waitForTimeout(2000);
+  await start.waitForFunction(() => window.VildaAuthUI?.isBootReady()
+    && !window.__vildaPersistRestoring && !window.__vildaLustroWpis
+    && !window.VildaDataImportExport.isMainSessionRestorePending()
+    && !window.VildaDobAge?.restorePending?.()
+    && window.VildaSaveStatusIndicator?.getCurrentDecision().ready === true);
 
   // Dane pacjenta jak w zgłoszeniu (fikcyjne): 16 lat 4 mies., 62 kg, 142 cm → BMI 30,7, BSA 1,56 m².
   await wpisz(start, { sex: 'M', age: '16', ageMonths: '4', weight: '62', height: '142' });
@@ -77,20 +81,50 @@ test('mini-podsumowanie na pasku powłoki znika zaraz po „Wyczyść wszystkie 
   expect(przed.display).toBe('block');
   expect(przed.maTresc).toBe(true);
 
-  // Klik prawdziwego przycisku; straznik niezapisanych zmian może zapytać — wybieramy „bez zapisu".
-  await start.click('#clearAllDataBtn');
-  const straznik = await start.$('.vug-btn.vug-danger');
-  if (straznik) await straznik.click();
-  const t0 = Date.now();
+  // test-czas instaluje sterowany zegar. Jego timery mierzymy tym samym zegarem,
+  // zamiast porównywać ich kolejkę z czasem rzeczywistym obciążonego runnera.
+  // Skok o minutę ustala punkt pomiarowy bez czekania; pauza poprzedza dialog,
+  // więc nie unieważnia już przechwyconej decyzji strażnika niezapisanych zmian.
+  await page.clock.pauseAt(new Date(await page.evaluate(() => Date.now() + 60_000)));
+  await start.waitForFunction(() => {
+    const decyzja = window.VildaSaveStatusIndicator.getCurrentDecision();
+    return decyzja.ready && decyzja.state === 'new_patient';
+  });
 
-  // Przed poprawką: 3203 ms. Budżet 1000 ms zostawia zapas na wolny runner, ale nie zmieści
-  // ani timera lustra (3200 ms), ani niczego, co lekarz odebrałby jako opóźnienie.
-  await expect.poll(async () => (await mini(page)).display, { message: 'podsumowanie znika bez zwłoki', timeout: 1000, intervals: [25, 50, 100] })
-    .toBe('none');
-  const trwalo = Date.now() - t0;
-  expect(trwalo, `znikanie trwało ${trwalo} ms`).toBeLessThan(1000);
+  // Fikcyjny, niezapisany pacjent wymaga potwierdzenia — nie pomijamy dialogu.
+  await start.click('#clearAllDataBtn');
+  const dialog = start.getByRole('dialog', { name: /^Zapisać wpisane dane przed wyczyszczeniem\?$/u });
+  await expect(dialog).toBeVisible();
+  await start.evaluate(() => {
+    const pasek = window.parent.document.getElementById('vildaShellDecor');
+    const pomiar = window.__miniClearTiming = { potwierdzono: null, ukryto: null, zaufanyKlik: false };
+    const odrzuc = document.querySelector('.vug-btn.vug-danger');
+    odrzuc.addEventListener('click', (zdarzenie) => {
+      pomiar.potwierdzono = performance.now();
+      pomiar.zaufanyKlik = zdarzenie.isTrusted;
+    }, { capture: true, once: true });
+    const obserwator = new MutationObserver(() => {
+      const podsumowanie = pasek.querySelector('#miniSummary');
+      if (pomiar.potwierdzono !== null && podsumowanie?.style.display === 'none') {
+        pomiar.ukryto = performance.now();
+        obserwator.disconnect();
+      }
+    });
+    obserwator.observe(pasek, { attributes: true, attributeFilter: ['style'], childList: true, subtree: true });
+  });
+  await dialog.getByRole('button', { name: 'Odrzuć dane i wyczyść', exact: true }).click();
+
+  // Od rzeczywistego kliknięcia potwierdzenia wykonujemy tylko 1000 ms timerów.
+  // Dawny fallback lustra (3200 ms) nie może naprawić wyniku tej próby.
+  await page.clock.runFor(1000);
+  const pomiar = await start.evaluate(() => window.__miniClearTiming);
+  expect(pomiar.zaufanyKlik, 'rzeczywisty klik potwierdzenia').toBe(true);
+  expect(pomiar.potwierdzono).not.toBeNull();
+  expect(pomiar.ukryto, 'podsumowanie znika przed timerem lustra').not.toBeNull();
+  expect(pomiar.ukryto - pomiar.potwierdzono, 'znikanie trwa mniej niż 1000 ms zegara przeglądarki').toBeLessThan(1000);
 
   const po = await mini(page);
+  expect(po.display, 'podsumowanie znika bez zwłoki').toBe('none');
   expect(po.tekst, 'treść wyczyszczona').toBe('');
   expect(po.maTresc, 'pasek wraca do stanu bez treści').toBe(false);
   expect(await start.evaluate(() => ['age', 'ageMonths', 'weight', 'height'].map((id) => document.getElementById(id).value)))
