@@ -10,11 +10,22 @@ const headerSource = source.slice(source.indexOf('function tt('), drawerStart);
 const navigationSource = source.slice(source.indexOf('var qe='), source.indexOf('function Mt('));
 const overlaySource = source.slice(source.indexOf('function he(){'), source.indexOf('function Dt('));
 const actionSource = source.slice(source.indexOf('function et('), source.indexOf('function tt('));
+// The real header binder now initializes menu controls too. Include those
+// production helpers rather than replacing the new initialization with a stub.
+const menuSource = source.slice(source.indexOf('function Cm_menuOwner('), source.indexOf('function Ke('));
+const menuDependencies = [
+  ['function ge(', 'function we('],
+  ['function Ee(', 'function Cm_menuItem('],
+  ['function Xe(', 'function Je('],
+  ['function Ce(', 'function rt('],
+  ['function Ae(', 'function dt('],
+].map(([start, end]) => source.slice(source.indexOf(start), source.indexOf(end, source.indexOf(start)))).join('\n');
 
 function events(target) {
   const listeners = new Map();
   target.addEventListener = (type, fn) => { if (!listeners.has(type)) listeners.set(type, new Set()); listeners.get(type).add(fn); };
   target.removeEventListener = (type, fn) => listeners.get(type)?.delete(fn);
+  target.listenerCount = (type) => listeners.get(type)?.size || 0;
   target.dispatchEvent = (ev) => {
     ev.target ||= target; ev.currentTarget = target;
     ev.preventDefault ||= () => { ev.defaultPrevented = true; }; ev.stopPropagation ||= () => {};
@@ -83,7 +94,7 @@ function environment(nativeInert = true) {
   const last = panel.appendChild(new Element('a')); last.setAttribute('href', 'homa-ir.html');
   const tip = vi.fn(), syncButtons = vi.fn();
   const api = new Function('r', 'o', 'Qdm', 'B', 'F', '_e', 'te', 'le',
-    `var K=false,O=false,h=null,M=null;${drawerSource}${actionSource}${headerSource}${navigationSource}${overlaySource};return {open:nt,close:ee,bind:tt,bindActions:et,navigate:Pt,isOverlayOpen:he};`)(win, doc, syncButtons, () => {}, tip, () => {}, () => {}, () => {});
+    `var K=false,O=false,h=null,M=null;${menuDependencies}${menuSource}${drawerSource}${actionSource}${headerSource}${navigationSource}${overlaySource};return {open:nt,close:ee,bind:tt,bindActions:et,bindMenu:Cm_bindMenuControls,openPatient:Cm_openMenuPatient,navigate:Pt,isOverlayOpen:he};`)(win, doc, syncButtons, () => {}, tip, () => {}, () => {}, () => {});
   api.bind(header);
   return { win, doc, header, trigger, avatar, account, main, input, frame, drawer, panel, close, last, api, tip, observers, Element };
 }
@@ -100,6 +111,26 @@ function exportedEligibility() {
   const attrs = new Map();
   const anchor = { ownerDocument: doc, hasAttribute: (k) => attrs.has(k), getAttribute: (k) => attrs.get(k) ?? null };
   return { qualify, anchor, attrs, win, doc };
+}
+
+function patientMenuEnvironment() {
+  const h = environment();
+  const state = { userId: 'fictional-account-a', unlocked: true, ready: false };
+  const storage = new Map([['vildaCurrentPatientId', 'fictional-patient-a']]);
+  const ui = { isBootReady: () => state.ready, showPatientCard: vi.fn() };
+  h.win.sessionStorage = { getItem: key => storage.get(key) ?? null };
+  h.win.VildaVault = { isUnlocked: () => state.unlocked, getCurrentUser: () => ({ userId: state.userId }) };
+  h.win.VildaSession = { isLoggedIn: () => state.unlocked && h.win.VildaGuestMode !== true };
+  h.win.VildaAuthUI = ui;
+  const opener = h.panel.appendChild(new h.Element('button'));
+  opener.setAttribute('data-menu-patient-card', '');
+  return { ...h, state, storage, ui, opener };
+}
+
+function expectNoBootListeners(h) {
+  expect(h.doc.listenerCount('vilda:auth-boot-settled')).toBe(0);
+  expect(h.doc.listenerCount('vilda:session-changed')).toBe(0);
+  expect(h.win.listenerCount('pagehide')).toBe(0);
 }
 
 describe('Chrome: rzeczywista kwalifikacja nawigacji', () => {
@@ -123,6 +154,134 @@ describe('Chrome: rzeczywista kwalifikacja nawigacji', () => {
     const h = exportedEligibility(); h.attrs.set('target', '_self'); expect(h.qualify({ button: 0 }, h.anchor)).toBe(true);
     h.win.name = 'bieżące'; h.attrs.set('target', 'bieżące'); expect(h.qualify({ button: 0 }, h.anchor)).toBe(true);
     h.attrs.set('target', '_parent'); h.win.parent = {}; expect(h.qualify({ button: 0 }, h.anchor)).toBe(false);
+  });
+});
+
+describe('Chrome: otwarcie Karty czeka na zakończenie startu AuthUI', () => {
+  it('istniejące API nie otwiera Karty przed rzeczywistym zdarzeniem gotowości', async () => {
+    const h = patientMenuEnvironment();
+    h.trigger.click();
+    const pending = h.api.openPatient(false, h.opener);
+    expect(h.ui.showPatientCard).not.toHaveBeenCalled();
+    expect(h.drawer.hidden).toBe(false);
+    expect(h.doc.listenerCount('vilda:auth-boot-settled')).toBe(1);
+    h.state.ready = true;
+    h.doc.dispatchEvent({ type: 'vilda:auth-boot-settled' });
+    expect(await pending).toBe(true);
+    expect(h.ui.showPatientCard).toHaveBeenCalledExactlyOnceWith('fictional-patient-a');
+    expect(h.drawer.hidden).toBe(true);
+    expectNoBootListeners(h);
+  });
+
+  it('nie gubi gotowości osiągniętej pomiędzy pierwszym odczytem a rejestracją listenera', async () => {
+    const h = patientMenuEnvironment();
+    h.ui.isBootReady = vi.fn().mockReturnValueOnce(false).mockReturnValue(true);
+    expect(await h.api.openPatient(false, h.opener)).toBe(true);
+    expect(h.ui.isBootReady.mock.calls.length).toBeGreaterThanOrEqual(2);
+    expect(h.ui.showPatientCard).toHaveBeenCalledExactlyOnceWith('fictional-patient-a');
+    expectNoBootListeners(h);
+  });
+
+  it.each(['account', 'lock', 'guest', 'patient', 'href', 'api'])('odrzuca późną gotowość po zmianie: %s', async condition => {
+    const h = patientMenuEnvironment();
+    const pending = h.api.openPatient(false, h.opener);
+    expect(h.doc.listenerCount('vilda:auth-boot-settled')).toBe(1);
+    if (condition === 'account') h.state.userId = 'fictional-account-b';
+    if (condition === 'lock') h.state.unlocked = false;
+    if (condition === 'guest') h.win.VildaGuestMode = true;
+    if (condition === 'patient') h.storage.set('vildaCurrentPatientId', 'fictional-patient-b');
+    if (condition === 'href') h.win.location.href = 'https://fikcyjne.invalid/ustawienia.html';
+    if (condition === 'api') h.win.VildaAuthUI = { ...h.ui };
+    h.doc.dispatchEvent({ type: 'vilda:session-changed' });
+    expect(await pending).toBe(false);
+    h.state.ready = true;
+    h.doc.dispatchEvent({ type: 'vilda:auth-boot-settled' });
+    expect(h.ui.showPatientCard).not.toHaveBeenCalled();
+    expectNoBootListeners(h);
+  });
+
+  it('Escape zamyka menu i anuluje oczekującą Kartę, która nie wraca po boot', async () => {
+    const h = patientMenuEnvironment();
+    h.trigger.click();
+    const pending = h.api.openPatient(false, h.opener);
+    key(h, 'Escape');
+    expect(await pending).toBe(false);
+    expect(h.drawer.hidden).toBe(true);
+    expect(h.doc.activeElement).toBe(h.trigger);
+    h.state.ready = true;
+    h.doc.dispatchEvent({ type: 'vilda:auth-boot-settled' });
+    expect(h.ui.showPatientCard).not.toHaveBeenCalled();
+    expectNoBootListeners(h);
+  });
+
+  it('pagehide anuluje oczekiwanie i usuwa wszystkie listenery', async () => {
+    const h = patientMenuEnvironment();
+    const pending = h.api.openPatient(false, h.opener);
+    h.win.dispatchEvent({ type: 'pagehide' });
+    expect(await pending).toBe(false);
+    h.state.ready = true;
+    h.doc.dispatchEvent({ type: 'vilda:auth-boot-settled' });
+    expect(h.ui.showPatientCard).not.toHaveBeenCalled();
+    expectNoBootListeners(h);
+  });
+
+  it('nowa próba zastępuje oczekującą i otwiera tylko aktualnego pacjenta', async () => {
+    const h = patientMenuEnvironment();
+    const first = h.api.openPatient(false, h.opener);
+    h.storage.set('vildaCurrentPatientId', 'fictional-patient-b');
+    const second = h.api.openPatient(false, h.opener);
+    expect(await first).toBe(false);
+    expect(h.doc.listenerCount('vilda:auth-boot-settled')).toBe(1);
+    h.state.ready = true;
+    h.doc.dispatchEvent({ type: 'vilda:auth-boot-settled' });
+    expect(await second).toBe(true);
+    expect(h.ui.showPatientCard).toHaveBeenCalledExactlyOnceWith('fictional-patient-b');
+    expectNoBootListeners(h);
+  });
+
+  it('załadowanie brakującego API nadal czeka na jego boot, zamiast utożsamiać load z gotowością', async () => {
+    const h = patientMenuEnvironment();
+    let loaded;
+    delete h.win.VildaAuthUI;
+    h.win.VildaSession.ensureAuthLoaded = vi.fn(() => new Promise(resolve => { loaded = resolve; }));
+    const pending = h.api.openPatient(false, h.opener);
+    expect(h.win.VildaSession.ensureAuthLoaded).toHaveBeenCalledOnce();
+    expect(h.ui.showPatientCard).not.toHaveBeenCalled();
+    h.win.VildaAuthUI = h.ui;
+    loaded();
+    await Promise.resolve();
+    expect(h.doc.listenerCount('vilda:auth-boot-settled')).toBe(1);
+    expect(h.ui.showPatientCard).not.toHaveBeenCalled();
+    h.state.ready = true;
+    h.doc.dispatchEvent({ type: 'vilda:auth-boot-settled' });
+    expect(await pending).toBe(true);
+    expect(h.ui.showPatientCard).toHaveBeenCalledExactlyOnceWith('fictional-patient-a');
+    expectNoBootListeners(h);
+  });
+
+  it.each(['account', 'patient', 'href'])('po lazy load ponownie sprawdza zmianę: %s', async condition => {
+    const h = patientMenuEnvironment();
+    let loaded;
+    delete h.win.VildaAuthUI;
+    h.win.VildaSession.ensureAuthLoaded = () => new Promise(resolve => { loaded = resolve; });
+    const pending = h.api.openPatient(false, h.opener);
+    if (condition === 'account') h.state.userId = 'fictional-account-b';
+    if (condition === 'patient') h.storage.set('vildaCurrentPatientId', 'fictional-patient-b');
+    if (condition === 'href') h.win.location.href = 'https://fikcyjne.invalid/ustawienia.html';
+    h.win.VildaAuthUI = h.ui;
+    h.state.ready = true;
+    loaded();
+    expect(await pending).toBe(false);
+    expect(h.ui.showPatientCard).not.toHaveBeenCalled();
+    expectNoBootListeners(h);
+  });
+
+  it('zachowuje API starszego AuthUI bez isBootReady', async () => {
+    const h = patientMenuEnvironment();
+    delete h.ui.isBootReady;
+    expect(await h.api.openPatient(false, h.opener)).toBe(true);
+    expect(h.ui.showPatientCard).toHaveBeenCalledExactlyOnceWith('fictional-patient-a');
+    expectNoBootListeners(h);
   });
 });
 

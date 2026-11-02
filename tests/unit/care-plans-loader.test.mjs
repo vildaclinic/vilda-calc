@@ -48,6 +48,7 @@ function environment(careReady = false, missingReminderModule = null) {
       querySelector(selector) {
         return existing.concat(appended).find(element => selector.includes((element.src || element.href).split('?')[0])) || null;
       },
+      querySelectorAll() { return []; },
       createElement(tag) {
         return { tagName: tag.toUpperCase(), listeners: {}, addEventListener(type, callback) { this.listeners[type] = callback; } };
       },
@@ -90,7 +91,16 @@ function assertNewCareRequests(env) {
 const chromeSource = fs.readFileSync(new URL('../../vilda_chrome.js', import.meta.url), 'utf8');
 const binderStart = chromeSource.indexOf('function tt(');
 const binderEnd = chromeSource.indexOf('/* P-CHROME-MENU:', binderStart);
-const bindChrome = new Function('r', 'o', 'var K=false; ' + chromeSource.slice(binderStart, binderEnd) + '; return tt;');
+const menuSource = chromeSource.slice(chromeSource.indexOf('function Cm_menuOwner('), chromeSource.indexOf('function Ke('));
+const menuDependencies = [
+  ['function ge(', 'function we('],
+  ['function Ee(', 'function Cm_menuItem('],
+  ['function Xe(', 'function Je('],
+  ['function Ce(', 'function rt('],
+  ['function Ae(', 'function dt('],
+  ['function Qdm(', 'function et('],
+].map(([start, end]) => chromeSource.slice(chromeSource.indexOf(start), chromeSource.indexOf(end, chromeSource.indexOf(start)))).join('\n');
+const bindChrome = new Function('r', 'o', 'var K=false; ' + menuDependencies + menuSource + chromeSource.slice(binderStart, binderEnd) + '; return tt;');
 
 function clickChromeAccount(env) {
   const handlers = {};

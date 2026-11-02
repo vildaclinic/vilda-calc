@@ -8,10 +8,11 @@ import { expect, test } from '../support/test-czas.mjs';
 //   2) klikał ukryty przycisk paska,
 //   3) przez co dymek odmowy rodził się na prostokącie 0×0 — w lewym górnym rogu ekranu,
 //      oderwany od tego, czego lekarz dotknął.
-// Teraz szuflada lustruje `aria-disabled`/`data-tip` i sama pokazuje dymek, bez zamykania.
+// Po zmianie menu globalne dodawanie notatki nie jest dostępne. Ten sam kontrakt
+// lustrzenia i umiejscowienia dymka sprawdzamy na widocznej akcji Zapisz dane.
 
 const HASLO = 'E2e#Szuflada!2026';
-const PRZYCISK = '[data-drawer-btn="addVisitNoteBtnSidebar"]';
+const PRZYCISK = '[data-drawer-btn="saveDataBtnSidebar"]';
 
 async function otworzSzuflade(page) {
   await page.addInitScript(() => {
@@ -40,26 +41,31 @@ async function otworzSzuflade(page) {
   // Bramka musi zdążyć przeliczyć stan „zalogowany, bez pacjenta".
   await expect
     .poll(async () => page.evaluate(() => {
-      const b = document.getElementById('addVisitNoteBtnSidebar');
+      const b = document.getElementById('saveDataBtnSidebar');
       return b ? b.getAttribute('data-tip') : null;
     }), { timeout: 15000 })
-    .toContain('Pacjenci');
+    .toMatch(/wiek.*wag.*wzrost/);
   await page.click('[data-vilda-chrome-menu-btn]');
   await expect(page.locator('[data-vilda-chrome-drawer]')).toHaveAttribute('aria-hidden', 'false');
 }
 
-test('G19 — szuflada lustruje stan przycisku i nie gubi dymka', async ({ page }) => {
+test('G19 — widoczny Zapisz dane lustruje blokadę formularza i nie gubi dymka', async ({ page }) => {
   await otworzSzuflade(page);
 
   const przycisk = page.locator(PRZYCISK);
   await expect(przycisk).toBeVisible();
   // Lustrzenie: szuflada wie, że przycisk jest wyłączony, i zna powód.
   await expect(przycisk).toHaveAttribute('aria-disabled', 'true');
-  await expect(przycisk).toHaveAttribute('data-tip', /Pacjenci/);
+  await expect(przycisk).toHaveAttribute('data-tip', /wiek.*wag.*wzrost/);
+  await expect(page.locator('[data-drawer-btn="addVisitNoteBtnSidebar"]')).toBeHidden();
 
-  // Playwright traktuje `aria-disabled="true"` jak wyłączony i domyślnie odmawia kliknięcia —
-  // palec na telefonie takiej wymówki nie ma, więc wymuszamy dotknięcie.
-  await przycisk.click({ force: true });
+  // Natywne dotknięcie widocznej kontrolki odtwarza palec użytkownika bez
+  // force ani aktywowania ukrytego źródła. aria-disabled nie blokuje DOM eventu.
+  const dotyk = await przycisk.boundingBox();
+  expect(dotyk).not.toBeNull();
+  expect(dotyk.width).toBeGreaterThan(0);
+  expect(dotyk.height).toBeGreaterThan(0);
+  await page.touchscreen.tap(dotyk.x + dotyk.width / 2, dotyk.y + dotyk.height / 2);
 
   // Szuflada zostaje otwarta — nie znika spod palca razem z odpowiedzią.
   await expect(page.locator('[data-vilda-chrome-drawer]')).toHaveAttribute('aria-hidden', 'false');

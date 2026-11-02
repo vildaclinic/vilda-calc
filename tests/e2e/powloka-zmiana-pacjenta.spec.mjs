@@ -116,8 +116,8 @@ async function sciagaB64(ctx) {
   return ctx.evaluate(() => window.__schowek);
 }
 
-/* Pola wieku i wzrostu, które odblokowują „Dodaj notatkę do wizyty" (custom-fixes.js wymaga wieku i wzrostu
-   albo masy). */
+/* Zmiana bieżącego pomiaru po wczytaniu pacjenta. Formularz pozostaje przy
+   tej osobie także przy późniejszym przejściu do Karty i zapisie notatki. */
 async function wypelnijPomiar(ctx, wiek, wzrost) {
   await ctx.evaluate((d) => {
     for (const [id, val] of [['age', d.wiek], ['height', d.wzrost]]) {
@@ -130,16 +130,29 @@ async function wypelnijPomiar(ctx, wiek, wzrost) {
   await ctx.waitForTimeout(800);
 }
 
-/* Do kogo trafi notatka z „Dodaj notatkę do wizyty": prawdziwy przycisk panelu bocznego, a edytor notatki
-   podmieniony na sondę, która zapamiętuje patientId (nic nie zapisuje w sejfie). */
-const celNotatki = (ctx) => ctx.evaluate(() => {
-  const ui = window.VildaAuthUI;
-  const oryginal = ui.showPatientNoteEditor;
-  let cel = 'brak-wywołania';
-  ui.showPatientNoteEditor = (o) => { cel = o && o.patientId; return null; };
-  try { document.getElementById('addVisitNoteBtnSidebar').click(); } finally { ui.showPatientNoteEditor = oryginal; }
-  return cel;
-});
+/* Rzeczywista widoczna ścieżka Karta → Notatki → Dodaj. Odbiorcę sprawdzamy
+   w zapisanym fikcyjnym wpisie, bez podmiany edytora i ukrytego legacy click. */
+async function celNotatki(ctx) {
+  const page = ctx.page();
+  const consent = page.locator('#consent-decline');
+  if (await consent.isVisible()) await consent.click();
+  await page.locator('aside.sidebar [data-menu-patient-card]').click();
+  const start = await ramka(page, 'Start');
+  const card = start.locator('.vilda-auth-patient-card');
+  await expect(card).toBeVisible();
+  await card.locator('.vilda-patient-tab[data-tab="notes"]').click();
+  await card.getByRole('button', { name: '+ Dodaj notatkę', exact: true }).click();
+  const editor = start.locator('.vilda-patient-note-editor-overlay .vilda-pne');
+  await expect(editor).toBeVisible();
+  const body = 'Fikcyjna notatka kontroli tożsamości ramki';
+  await editor.locator('textarea').first().fill(body);
+  await editor.getByRole('button', { name: 'Dodaj notatkę', exact: true }).click();
+  await expect(start.locator('.vilda-patient-note-editor-overlay')).toHaveCount(0);
+  const notes = await start.evaluate(async text => (await window.VildaVault.listAllPatientNotes())
+    .filter(note => note.body === text), body);
+  expect(notes).toHaveLength(1);
+  return notes[0].patientId;
+}
 
 const tozsamoscRamki = (ctx) => ctx.evaluate(() => ({
   okno: window._vildaCurrentPatientId || null,
@@ -223,7 +236,7 @@ test('powłoka: Start z A → wczytanie B w DocPro → powrót na Start — toż
   await page.waitForTimeout(1500);
   expect.soft(await tozsamoscRamki(s2), 'bieżący pacjent ramki Start = B w obu magazynach').toEqual({ okno: idB, sesja: idB });
   await wypelnijPomiar(s2, 11, 142);
-  expect(await celNotatki(s2), '„Dodaj notatkę do wizyty” na Start przy B zapisuje notatkę u B, nie u A').toBe(idB);
+  expect(await celNotatki(s2), 'Karta → Notatki na Start przy B zapisuje wpis u B, nie u A').toBe(idB);
 });
 
 test('powłoka: DocPro z A → wczytanie C na Start → powrót do DocPro — karta SGA i ściąga B.64 bez danych A', async ({ page }) => {

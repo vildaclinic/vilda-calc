@@ -302,7 +302,7 @@ describe('G19 — wyłączony przycisk nie przekazuje kliknięcia dalej', () => 
     const doc = { activeElement: null, body: { classList: { add() {}, remove() {} } },
       getElementById: (id) => id === source.id ? source : null, querySelector: () => trigger, createElement: () => ({}) };
     const api = new Function('o', 'r', 'B', 'Cm_cancelFocus', 'Cm_focusFirst', 'Cm_listen', 'Cm_background', 'Cm_release', 'Cm_focus', 'setTimeout', 'clearTimeout',
-      `var Cm_drawer=null,M=null,Cm_key=function(){},Cm_guardFocus=Cm_key,Cm_guardPointer=Cm_key;${mirrorSource}${drawerSource};return {open:nt,close:ee};`)(
+      `var Cm_drawer=null,M=null,Cm_key=function(){},Cm_guardFocus=Cm_key,Cm_guardPointer=Cm_key,Cm_openMenuPatient=function(){};${mirrorSource}${drawerSource};return {open:nt,close:ee};`)(
       doc, { matchMedia: () => ({ matches: false }) }, () => {}, () => {}, () => {}, () => {}, () => {}, () => {}, () => {},
       (callback) => { callback(); return 0; }, () => {},
     );
@@ -327,8 +327,30 @@ describe('G19 — wyłączony przycisk nie przekazuje kliknięcia dalej', () => 
 
   it('powłoka nie forwarduje kliknięcia wyłączonego przycisku do ramki', () => {
     const shell = zrodlo('vilda_shell.js');
-    expect(shell).toContain('if(r.getAttribute("aria-disabled")==="true"||r.hasAttribute("disabled")){');
-    expect(shell).toContain('a.VildaChrome.showTip(r,r.getAttribute("data-tip")');
+    const start = shell.indexOf('function Mt(');
+    expect(start).toBeGreaterThanOrEqual(0);
+    const source = shell.slice(start, shell.indexOf('function dt(', start));
+    const button = atrapa('addVisitNoteBtnSidebar');
+    let onClick, forwarded = 0, refreshed = 0;
+    const tips = [];
+    button.addEventListener = (type, handler) => { if (type === 'click') onClick = handler; };
+    const bind = new Function('o', 'R', 'st', 'Sm_actionSource', 'Dpd_tip',
+      `var lt=false;${source};return Mt;`)(
+      { getElementById: () => button }, [button.id], () => { refreshed += 1; },
+      () => ({ click: () => { forwarded += 1; } }), (...args) => tips.push(args),
+    );
+    bind(); bind();
+    button.setAttribute('data-tip', 'Fikcyjna blokada');
+    button.setAttribute('aria-disabled', 'true');
+    onClick({ preventDefault() {} });
+    button.removeAttribute('aria-disabled'); button.setAttribute('disabled', '');
+    onClick({ preventDefault() {} });
+    expect(forwarded).toBe(0);
+    expect(tips).toEqual([[button, 'Fikcyjna blokada'], [button, 'Fikcyjna blokada']]);
+    button.removeAttribute('disabled');
+    onClick({ preventDefault() {} });
+    expect(forwarded).toBe(1);
+    expect(refreshed, 'stan źródła jest odświeżany przy każdej próbie').toBe(3);
   });
 
   it('strony bez bramki (bez custom-fixes.js) dostają podpowiedź z vilda_chrome.js', () => {

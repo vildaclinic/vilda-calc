@@ -114,7 +114,13 @@ test('host 393 px: wybór nowej i aktualnej trasy zamyka menu, focus oddaje pane
     ['homa', 'homa-ir.html', 'HOMA-IR'],
   ]) {
     await otworz(page);
-    await page.locator(`${MENU} a[href="${file}"]`).click();
+    const link = page.locator(`${MENU} a[href="${file}"]`);
+    if (!(await link.isVisible())) {
+      const calculators = page.locator(`${MENU} .chrome-menu-calculators-toggle`);
+      await calculators.click();
+      await expect(calculators).toHaveAttribute('aria-expanded', 'true');
+    }
+    await link.click();
     await expect(page).toHaveURL(new RegExp(`#/${key}$`));
     await expect(page.locator('iframe.app-pane:not([hidden])')).toHaveAttribute('title', title);
     await zamkniete(page);
@@ -170,14 +176,13 @@ test('host 393 px: Tab/Shift+Tab, Escape/przycisk/tło i szybkie reopen przywrac
   await zamkniete(page);
 });
 
-test('standalone 320 px reduced motion: blokada akcji zostawia menu, notatka przejmuje focus bez kradzieży przez drawer', async ({ page }) => {
+test('standalone 320 px reduced motion: blokada Dokumentów zostawia menu, Karta prowadzi do edytora notatki bez utraty fokusu', async ({ page }) => {
   await przygotuj(page, { host: false, width: 320, reduce: true });
-  await expect.poll(() => page.locator('#addVisitNoteBtnSidebar').getAttribute('data-tip')).toContain('Pacjenci');
   await otworz(page);
-  const note = page.locator(`${MENU} [data-drawer-btn="addVisitNoteBtnSidebar"]`);
-  await expect(note).toHaveAttribute('aria-disabled', 'true');
+  const documents = page.locator(`${MENU} [data-drawer-btn="patientDocumentsBtnSidebar"]`);
+  await expect(documents).toHaveAttribute('aria-disabled', 'true');
   // aria-disabled nadal przyjmuje rzeczywisty dotyk i ma wyjaśnić blokadę.
-  await note.click({ force: true });
+  await documents.click({ force: true });
   await expect(page.locator('.menu-tooltip, .vilda-tip').first()).toBeVisible();
   await expect(page.locator(MENU)).toHaveAttribute('aria-hidden', 'false');
   await expect(page.locator('.vilda-patient-note-editor-overlay')).toHaveCount(0);
@@ -195,9 +200,13 @@ test('standalone 320 px reduced motion: blokada akcji zostawia menu, notatka prz
   await page.locator('#age').fill('5.5');
   await page.locator('#height').fill('110');
   await page.locator('#weight').fill('19');
-  await expect(page.locator('#addVisitNoteBtnSidebar')).not.toHaveAttribute('aria-disabled', 'true');
   await otworz(page);
-  await note.click();
+  await page.locator(`${MENU} .chrome-menu-patient-open`).click();
+  const card = page.locator('.vilda-auth-patient-card');
+  await expect(card.locator('.vilda-patient-hero-name')).toHaveText('Fikcyjna Pacjentka Menu');
+  await zamkniete(page);
+  await card.locator('button[data-tab="notes"]').click();
+  await card.locator('.vilda-patient-notes-header button').click();
   const modal = page.locator('.vilda-patient-note-editor-overlay .vilda-pne');
   await expect(modal).toBeVisible();
   await zamkniete(page);

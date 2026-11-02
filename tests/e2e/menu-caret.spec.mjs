@@ -74,6 +74,7 @@ test('menu chrome is noneditable while real account and patient names remain sel
   await page.setViewportSize({ width: 390, height: 852 });
   const opener = page.locator('[data-vilda-chrome-menu-btn]'); await opener.click();
   const panel = page.locator('.chrome-drawer-panel'); await expect(panel).toBeVisible();
+  await expect(panel).toHaveCSS('transform', 'none');
   await expectStaticChrome(panel.locator('.chrome-drawer-head'));
   await expectStaticChrome(panel.locator('.chrome-drawer-section-title').first());
   await expect(panel.locator('.chrome-drawer-title')).toHaveText('Menu');
@@ -83,9 +84,11 @@ test('menu chrome is noneditable while real account and patient names remain sel
   expect(controls.length).toBeGreaterThan(0);
   expect(controls.every(node => !node.editable && node.select === 'none')).toBe(true);
 
-  const account = panel.locator('.chrome-drawer-account-value'), patient = panel.locator('.chrome-drawer-patient-value');
+  const account = panel.locator('.chrome-drawer-account-value'), patient = panel.locator('[data-menu-patient-name]');
   await expect(patient).toContainText(created.patients.a.name);
   await dragSelectText(page, account); await dragSelectText(page, patient);
+  await page.evaluate(() => window.VildaChrome.refreshPatientChip());
+  expect(await page.evaluate(() => getSelection().toString().trim())).toBe(created.patients.a.name);
   await page.keyboard.press('Escape'); await expect(panel).toBeHidden(); await expect(opener).toBeFocused();
 
   await page.locator('#vildaRemindersBtn').click();

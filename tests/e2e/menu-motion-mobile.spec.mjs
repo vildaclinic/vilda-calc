@@ -246,6 +246,9 @@ for (const profile of profiles) {
 
       await page.emulateMedia({ reducedMotion: 'no-preference' });
       await open(page);
+      const calculators = page.locator(`${MENU} .chrome-menu-calculators-toggle`);
+      if (await calculators.getAttribute('aria-expanded') !== 'true') await calculators.click();
+      await expect(calculators).toHaveAttribute('aria-expanded', 'true');
       await page.locator(`${MENU} a[href="homa-ir.html"]`).focus();
       await page.keyboard.press('Enter');
       await expect(page).toHaveURL(/#\/homa$/);
