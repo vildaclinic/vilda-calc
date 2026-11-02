@@ -7,6 +7,12 @@ import { loadBrowserScript } from '../support/load-browser-script.mjs';
 // którego tożsamość została obrócona w innej karcie: kończy się SYNC_IDENTITY_CHANGED. Po odświeżeniu karta
 // synchronizuje się z bieżącym slotem.
 //
+// E2-PR1b (P-SYNC-ODPYTYWANIE-WS, W1 z przeglądu): W1, W1b, kontrola — karta, która obróciła tożsamość, przenosi gniazdo
+// na żywo na nowy slot (na końcu pliku; prawdziwe vilda_sync.js i vilda_realtime.js w jednym oknie); W1c — tylko w trybie
+// „Komputer prywatny” („Komputer w pracy” i „Zaloguj jednorazowo”: gniazdo jak dotąd); W1d — rotacja w 1,5 s od
+// poprzedniej próby połączenia: jedna ponowna próba po 1,6 s (później niż odstęp prób 1,5 s); W1e — gdy po rotacji
+// realtime sam zaczął łączyć, bez dodatkowej próby (nowe gniazdo zamknięte przez serwer czeka na odstęp ponownego łączenia).
+//
 // Prawdziwe vilda_sync.js w dwóch oknach ze wspólnym localStorage (osobne sessionStorage, jak dwie karty).
 // Serwer synchronizacji i sejf to atrapy (serwera nie ma w repozytorium). Dane wyłącznie FIKCYJNE.
 // Jawne usuwanie ma obecnie dodatkowy, odczytowy kontrakt chronionej biblioteki.
@@ -111,7 +117,7 @@ async function serwer(klucz, { staryIstnieje = true } = {}) {
 
 /* Karta: prawdziwe vilda_sync.js we własnym oknie; localStorage wspólny dla kart, sessionStorage własny.
    Sejf-atrapa trzyma tożsamość w pamięci karty, jak getSyncMaterial() prawdziwego sejfu. */
-function karta(ls, { slot, nastepny, klucz, chmurowy = false, sesja = {} }) {
+function karta(ls, { slot, nastepny, klucz, chmurowy = false, sesja = {}, dodatki = null }) {
   let mat = material(slot, klucz);
   let sessionVersion = 0;
   const operationSessions = new WeakMap();
@@ -143,7 +149,9 @@ function karta(ls, { slot, nastepny, klucz, chmurowy = false, sesja = {} }) {
     VildaVault: sejf,
   };
   win.window = win; win.self = win; win.top = win;
+  if (dodatki) Object.assign(win, dodatki);
   loadBrowserScript('vilda_sync.js', win);
+  if (dodatki) loadBrowserScript('vilda_realtime.js', win); // jak na stronie: po vilda_sync.js
   return { sync: win.VildaSync, sejf, win };
 }
 
@@ -165,8 +173,8 @@ async function dwieKarty({ chmurowy = false, stanStarego = true, staryIstnieje =
 
 const blad = (p) => p.then(() => null, (e) => e || new Error('pusty błąd'));
 
-async function czekajNa(warunek) {
-  const koniec = performance.now() + 2000;
+async function czekajNa(warunek, ms = 2000) {
+  const koniec = performance.now() + ms;
   while (!warunek() && performance.now() < koniec) await new Promise((r) => { setImmediate(r); });
   expect(warunek()).toBe(true);
 }
@@ -327,5 +335,169 @@ describe('Bez zmian: zwykła synchronizacja', () => {
     const r = await A.sync.revokeAllDevices('FIKCYJNE-haslo');
     expect(r).toEqual({ recoveryKey: 'FIKCYJNY-KLUCZ', oldSlotId: STARY, newSlotId: NOWY, oldSlotRevoked: true });
     expect(srv.log).toEqual(['POST NOWY/register', 'GET STARY/template-library/state', 'DELETE STARY']);
+  });
+});
+
+// E2-PR1b (P-SYNC-ODPYTYWANIE-WS, ustalenie W1 przeglądu z 2026-11-02): karta, która obraca tożsamość, ma gniazdo na żywo
+// otwarte przy poprzedniej tożsamości, które może dalej dostawać `pong`; bez ponownego połączenia
+// VildaRealtime.isLive() zostawałby true, integracja odpytywałaby nowy slot co 60 s zamiast ~20 s, a ramki z nowego
+// slotu by nie dochodziły. Prawdziwe vilda_sync.js i vilda_realtime.js w jednym oknie; gniazdo to atrapa (pong na każdy
+// ping), zegary prawdziwe, fałszywy tylko Date (odstęp prób 1,5 s).
+// Po rundzie poprawek 2 (przegląd: U1, U2): W1c (decyzja 1: „Komputer w pracy” i „Zaloguj jednorazowo” — gniazdo jak
+// dotąd, bez ponownego połączenia) i W1d (ostatnia próba połączenia < 1,5 s przed końcem rotacji: realtime nie łączy i
+// nie stawia zegara, więc vilda_sync.js ponawia connect raz po 1,6 s, tylko gdy gniazdo jest zamknięte). Czerwone bez
+// poprawek tej rundy (vilda_sync.js sprzed K1/K2): W1c ×2 bez K1, W1d bez K2; W1d czerwony także przy ponownej próbie
+// wcześniej niż po 1,5 s, W1e — przy ponownej próbie bez sprawdzenia, że gniazdo jest zamknięte.
+describe('E2-PR1b: gniazdo na żywo po rotacji w tej karcie (P-SYNC-ODPYTYWANIE-WS)', () => {
+  const T0 = Date.parse('2026-11-02T10:00:00.000Z');
+  let sprzataj = null;
+  afterEach(() => { if (sprzataj) sprzataj(); sprzataj = null; vi.useRealTimers(); });
+
+  // chmurowy / sesja: tryb karty jak w karta() („Komputer w pracy” / znacznik sesji „Zaloguj jednorazowo”); wtedy stan
+  // slotu w pamięci karty (tu: jej sessionStorage), jak w dwieKarty. odstep: ile ms fałszywego Date mija między ostatnią
+  // próbą połączenia a rotacją (domyślnie 2000, czyli poza odstępem prób 1,5 s).
+  async function kartaZGniazdem({ chmurowy = false, sesja = null, odstep = 2000 } = {}) {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(T0);
+    const klucz = await crypto.subtle.generateKey({ name: 'AES-GCM', length: 256 }, false, ['encrypt', 'decrypt']);
+    const srv = await serwer(klucz);
+    vi.stubGlobal('fetch', srv.fetch);
+    const stan = { [`vilda-sync-state-v1:${STARY}`]: stanZarejestrowany('S1') };
+    const wPamieci = chmurowy || !!sesja;
+    const ls = magazyn(wPamieci ? {} : stan);
+    const gniazda = [], sluchacze = new Map(), zegary = new Set();
+    class Gniazdo {
+      constructor(url, protocols) {
+        this.url = url; this.protocols = protocols; this.readyState = 0; gniazda.push(this);
+        queueMicrotask(() => { if (this.readyState === 0) { this.readyState = 1; this.onopen?.(); } });
+      }
+      send(m) {
+        if (JSON.parse(m).type !== 'ping') return;
+        queueMicrotask(() => { if (this.readyState === 1) this.onmessage?.({ data: JSON.stringify({ type: 'pong', ts: Date.now() }) }); });
+      }
+      close() { if (this.readyState === 3) return; this.readyState = 3; queueMicrotask(() => this.onclose?.({ code: 1000 })); }
+    }
+    const dodatki = {
+      WebSocket: Gniazdo,
+      navigator: { onLine: true },
+      document: { hidden: false, dispatchEvent() {}, addEventListener() {}, removeEventListener() {} },
+      setTimeout: (fn, ms) => { const id = setTimeout(() => { zegary.delete(id); fn(); }, ms); zegary.add(id); return id; },
+      clearTimeout: (id) => { zegary.delete(id); clearTimeout(id); },
+      setInterval: (fn, ms) => { const id = setInterval(fn, ms); zegary.add(id); return id; },
+      clearInterval: (id) => { zegary.delete(id); clearInterval(id); },
+      addEventListener: (n, fn) => { (sluchacze.get(n) || sluchacze.set(n, []).get(n)).push(fn); },
+      removeEventListener() {},
+      VildaSyncIntegration: { isSyncEnabled: () => true, pullNow: vi.fn(), applyDelta: vi.fn() },
+    };
+    const A = karta(ls, { slot: STARY, nastepny: NOWY, klucz, chmurowy, sesja: wPamieci ? { ...stan, ...(sesja || {}) } : {}, dodatki });
+    const rt = A.win.VildaRealtime;
+    sprzataj = () => { try { rt.disconnect(); } catch { /* atrapa */ } for (const id of zegary) { clearTimeout(id); clearInterval(id); } };
+    const fokus = () => { for (const fn of sluchacze.get('focus') || []) fn(); };
+    // Gniazdo na starym slocie z pong (fokus wysyła ping od razu), potem `odstep` ms (domyślnie 2 s; odstęp prób 1,5 s
+    // jak dotąd). Połączenie z zegara startu modułu (1,2 s), jak na stronie: po nim żaden zegar nie połączy gniazda
+    // ponownie poza testowanym kodem.
+    await czekajNa(() => rt.status() === 'open');
+    fokus();
+    await czekajNa(() => rt.isLive() === true);
+    vi.setSystemTime(T0 + odstep);
+    return { A, rt, srv, gniazda, fokus, pullNow: A.win.VildaSyncIntegration.pullNow };
+  }
+  const naSlot = (slot) => new RegExp(`/v1/slots/${slot}/socket$`);
+
+  it('W1: po revokeAllDevices gniazdo starego slotu zamknięte, nowe na nowym slocie; isLive false do pierwszego pong nowego gniazda', async () => {
+    const { A, rt, srv, gniazda, fokus } = await kartaZGniazdem();
+    expect(gniazda).toHaveLength(1);
+    expect(gniazda[0].url).toMatch(naSlot(STARY));
+    const r = await A.sync.revokeAllDevices('FIKCYJNE-haslo');
+    expect(r.newSlotId).toBe(NOWY);
+    expect(srv.sloty.has(STARY)).toBe(false);
+    await czekajNa(() => gniazda.length === 2 && rt.status() === 'open');
+    expect(gniazda[0].readyState, 'gniazdo starego slotu zamknięte').toBe(3);
+    expect(gniazda[1].url, 'nowe gniazdo na nowym slocie').toMatch(naSlot(NOWY));
+    expect(gniazda[1].protocols).toEqual(['vilda-auth', 'TOK-NOWY']);
+    expect(rt.isLive(), 'nowe gniazdo bez własnego pong: integracja odpytuje co ~20 s').toBe(false);
+    fokus();
+    await czekajNa(() => rt.isLive() === true);
+    expect(gniazda).toHaveLength(2);
+  });
+
+  it('W1b: rotacja w sejfie udana, rejestracja nowego slotu nieudana (503) — gniazdo też przechodzi na nowy slot', async () => {
+    const { A, rt, srv, gniazda } = await kartaZGniazdem();
+    vi.stubGlobal('fetch', async (url, init = {}) => (/\/register$/.test(new URL(url).pathname) ? odp(503, {}) : srv.fetch(url, init)));
+    expect(await blad(A.sync.revokeAllDevices('FIKCYJNE-haslo'))).not.toBeNull();
+    expect(A.sejf.rotacje).toBe(1);
+    await czekajNa(() => gniazda.length === 2 && rt.status() === 'open');
+    expect(gniazda[0].readyState).toBe(3);
+    expect(gniazda[1].url).toMatch(naSlot(NOWY));
+    expect(rt.isLive()).toBe(false);
+  });
+
+  it('W1 kontrola: rotacja odrzucona przez sejf (np. złe hasło) — gniazdo bez zmian', async () => {
+    const { A, rt, gniazda } = await kartaZGniazdem();
+    A.sejf.rotateSyncIdentity = async () => { throw Object.assign(new Error('Fikcyjne złe hasło'), { code: 'BAD_PASSWORD' }); };
+    expect((await blad(A.sync.revokeAllDevices('FIKCYJNE-zle')))?.code).toBe('BAD_PASSWORD');
+    await new Promise((r) => { setTimeout(r, 20); });
+    expect(gniazda).toHaveLength(1);
+    expect(gniazda[0].readyState).toBe(1);
+    expect(rt.isLive()).toBe(true);
+  });
+
+  // Decyzja 1 (tylko „Komputer prywatny”): w pozostałych trybach odpytywanie i tak idzie co ~20 s, więc gniazdo zostaje
+  // jak przed E2-PR1b — przy poprzedniej tożsamości, otwarte, bez nowego /socket i bez nowego pullNow z onopen.
+  it.each([
+    ['„Komputer w pracy” (konto chmurowe)', { chmurowy: true }],
+    ['„Zaloguj jednorazowo” (znacznik sesji vilda-ephemeral-session-v1)', { sesja: { 'vilda-ephemeral-session-v1': '1' } }],
+  ])('W1c: %s — po revokeAllDevices gniazdo jak dotąd (stary slot, otwarte, bez ponownego połączenia)', async (_n, opcje) => {
+    const { A, rt, srv, gniazda, pullNow } = await kartaZGniazdem(opcje);
+    expect(gniazda).toHaveLength(1);
+    expect(gniazda[0].url).toMatch(naSlot(STARY));
+    const przed = pullNow.mock.calls.length;
+    const r = await A.sync.revokeAllDevices('FIKCYJNE-haslo');
+    expect(r.newSlotId).toBe(NOWY);
+    expect(srv.sloty.has(STARY)).toBe(false);
+    await new Promise((res) => { setTimeout(res, 50); });
+    expect(gniazda, 'bez nowego /socket').toHaveLength(1);
+    expect(gniazda[0].readyState, 'gniazdo otwarte').toBe(1);
+    expect(gniazda[0].url, 'na starym slocie, jak dotąd').toMatch(naSlot(STARY));
+    expect(rt.status()).toBe('open');
+    expect(pullNow.mock.calls.length, 'bez nowego pullNow z onopen').toBe(przed);
+  });
+
+  it('W1d: rotacja w tej samej chwili co poprzednia próba połączenia (odstęp prób 1,5 s) — gniazdo zamknięte, potem jedna próba później niż po 1,5 s: nowe na nowym slocie', async () => {
+    const { A, rt, gniazda } = await kartaZGniazdem({ odstep: 0 });
+    expect(gniazda).toHaveLength(1);
+    // Zegary prawdziwe, Date fałszywy: każdy zegar okna przy odpaleniu przesuwa Date o własne opóźnienie, więc ponowna
+    // próba wcześniej niż po 1,5 s trafia w odstęp prób realtime i nie łączy.
+    const st = A.win.setTimeout;
+    A.win.setTimeout = (fn, ms) => st(() => { vi.setSystemTime(Date.now() + (ms || 0)); fn(); }, ms);
+    const r = await A.sync.revokeAllDevices('FIKCYJNE-haslo');
+    expect(r.newSlotId).toBe(NOWY);
+    // Realtime w 1,5 s od poprzedniej próby nie łączy, a po disconnect nie stawia własnego zegara.
+    expect(rt.status(), 'tuż po rotacji: gniazdo zamknięte').toBe('closed');
+    expect(gniazda[0].readyState).toBe(3);
+    await czekajNa(() => gniazda.length === 2 && rt.status() === 'open', 3000);
+    expect(gniazda[1].url, 'nowe gniazdo na nowym slocie').toMatch(naSlot(NOWY));
+    expect(gniazda[1].protocols).toEqual(['vilda-auth', 'TOK-NOWY']);
+    expect(gniazda[1].readyState).toBe(1);
+    expect(rt.isLive(), 'bez własnego pong: integracja odpytuje co ~20 s').toBe(false);
+  });
+
+  it('W1e: po rotacji realtime sam łączy, a serwer od razu zamyka nowe gniazdo — bez dodatkowej próby (czeka odstęp ponownego łączenia)', async () => {
+    const { A, rt, gniazda } = await kartaZGniazdem();
+    const G = A.win.WebSocket;
+    A.win.WebSocket = class extends G {
+      constructor(u, p) {
+        super(u, p);
+        if (naSlot(NOWY).test(u)) { this.readyState = 3; queueMicrotask(() => this.onclose?.({ code: 1008 })); }
+      }
+    };
+    await A.sync.revokeAllDevices('FIKCYJNE-haslo');
+    await czekajNa(() => gniazda.length === 2 && rt.status() === 'closed');
+    expect(gniazda[1].url).toMatch(naSlot(NOWY));
+    // Date poza odstępem prób 1,5 s: dodatkowa próba z vilda_sync.js połączyłaby się od razu (trzecie gniazdo).
+    vi.setSystemTime(T0 + 2000 + 1600);
+    await new Promise((res) => { setTimeout(res, 2500); });
+    expect(gniazda, 'bez dodatkowego /socket: następna próba dopiero po odstępie 10–12 s').toHaveLength(2);
+    expect(rt.status()).toBe('closed');
   });
 });
