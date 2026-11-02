@@ -1,0 +1,48 @@
+/* Ca/Cr DZM: independent controls in the accepted stable calculator layout. */
+html[data-clcr-workflow-ui="1"][data-clcr-cacr-dzm-active="1"] { scrollbar-gutter: stable; --cacr-dzm-unit-width: 124px; }
+html[data-clcr-cacr-dzm-active="1"] #clcrWorkspace,
+html[data-clcr-cacr-dzm-active="1"] #clcrWorkspace *,
+html[data-clcr-cacr-dzm-active="1"] #clcrWorkspace *::before,
+html[data-clcr-cacr-dzm-active="1"] #clcrWorkspace *::after { box-sizing: border-box; }
+html[data-clcr-workflow-ui="1"][data-clcr-cacr-dzm-active="1"] #clcrWorkspace { width: 100%; min-width: 0; gap: var(--space-20px); row-gap: var(--space-24px); align-items: start; }
+html[data-clcr-workflow-ui="1"][data-clcr-cacr-dzm-active="1"] #clcrForm.flex { width: 100%; min-width: 0; max-width: 100%; flex-wrap: nowrap; align-items: stretch; gap: var(--space-16px); }
+html[data-clcr-workflow-ui="1"][data-clcr-cacr-dzm-active="1"] #clcrForm.flex > *,
+html[data-clcr-workflow-ui="1"][data-clcr-cacr-dzm-active="1"] #clcrResultRail,
+html[data-clcr-workflow-ui="1"][data-clcr-cacr-dzm-active="1"] #clcrResultReport { width: 100%; min-width: 0; max-width: 100%; }
+html[data-clcr-workflow-ui="1"][data-clcr-cacr-dzm-active="1"] #clcrForm > .clcr-workflow__utilities:empty { display: none; }
+html[data-clcr-workflow-ui="1"][data-clcr-cacr-dzm-active="1"] #clcrResultReport { margin: 0; padding: var(--space-20px); }
+html[data-clcr-cacr-dzm-active="1"] #clcrWorkspace :is(button, input, select),
+html[data-clcr-cacr-dzm-active="1"] :is(.cacr-dzm-input-card, .cacr-proposal-card, #clcrVisitSaveCard) { transform: none !important; }
+.cacr-dzm-input-card { min-width: 0; padding: var(--space-16px); border: var(--border-hairline) solid var(--clcr-border-soft); border-radius: var(--clcr-radius-card); background: var(--clcr-surface); box-shadow: var(--clcr-shadow-card); }
+html[data-clcr-workflow-ui="1"][data-clcr-cacr-dzm-active="1"] #clcrActivePanel { padding: var(--space-16px) var(--space-16px) 0; border-bottom: 0; border-radius: var(--clcr-radius-card) var(--clcr-radius-card) 0 0; box-shadow: none; }
+html[data-clcr-workflow-ui="1"][data-clcr-cacr-dzm-active="1"] #cacrDzmInputCard { margin-top: calc(-1 * var(--space-16px)); border-top: 0; border-radius: 0 0 var(--clcr-radius-card) var(--clcr-radius-card); box-shadow: none; }
+.cacr-dzm-input-mode { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-4px); padding: var(--space-4px); margin-bottom: var(--space-16px); border: var(--border-hairline) solid var(--clcr-border); border-radius: var(--radius-12); background: var(--clcr-surface-soft); }
+html[data-clcr-workflow-ui="1"] #clcrForm .cacr-dzm-input-mode button { width: 100%; min-width: 0; min-height: 52px; margin: 0; padding: var(--space-8px); border: 0 !important; border-radius: var(--radius-8) !important; color: var(--clcr-muted) !important; background: transparent !important; box-shadow: none !important; font: 650 16px/1.35 Inter, system-ui, sans-serif; }
+html[data-clcr-workflow-ui="1"] #clcrForm .cacr-dzm-input-mode button[aria-pressed="true"] { color: var(--clcr-surface) !important; background: var(--clcr-primary) !important; }
+.cacr-dzm-mode-fields { display: grid; gap: var(--space-20px); min-width: 0; margin-top: var(--space-16px); }
+.cacr-dzm-value-row { display: grid; grid-template-columns: minmax(0, 1fr) var(--cacr-dzm-unit-width, 124px); gap: var(--space-8px); min-width: 0; align-items: end; }
+html[data-clcr-workflow-ui="1"] #clcrForm .cacr-dzm-entry-field { display: flex; flex-direction: column; gap: var(--space-8px); width: 100%; min-width: 0; min-height: 0; margin: 0; padding: 0; background: transparent; border: 0; box-shadow: none; }
+html[data-clcr-workflow-ui="1"] #clcrForm .cacr-dzm-entry-field .clcr-field__heading { display: block; margin: 0; padding: 0; }
+html[data-clcr-workflow-ui="1"] #clcrForm .cacr-dzm-value-row > .cacr-dzm-entry-field:not(.cacr-dzm-unit-field) .clcr-field__heading { width: calc(100% + var(--cacr-dzm-unit-width, 124px) + var(--space-8px)); max-width: none; }
+html[data-clcr-workflow-ui="1"] #clcrForm .cacr-dzm-entry-field .clcr-field__name { color: var(--clcr-text); font-size: 14px; line-height: 1.5; font-weight: 650; }
+html[data-clcr-workflow-ui="1"] #clcrForm .cacr-dzm-input-card :is(.clcr-field__status, .clcr-info-button, .clcr-field__note) { display: none; }
+html[data-clcr-workflow-ui="1"] #clcrForm .cacr-dzm-entry-field :is(input, select) { display: block; width: 100%; min-width: 0; max-width: 100%; height: 48px; min-height: 48px; margin: 0; padding: var(--space-10px) var(--space-12px); border: var(--border-hairline) solid var(--clcr-border); border-radius: var(--radius-12); background: var(--clcr-surface); color: var(--clcr-text); font: 400 16px/24px Inter, system-ui, sans-serif; font-variant-numeric: tabular-nums; box-shadow: none; }
+html[data-clcr-workflow-ui="1"] #clcrForm .cacr-dzm-entry-field :is(input, select):not([aria-invalid="true"]) { border-color: var(--clcr-border) !important; background: var(--clcr-surface) !important; box-shadow: none !important; }
+html[data-clcr-workflow-ui="1"] #clcrForm .cacr-dzm-entry-field :is(input, select)[aria-invalid="true"] { border-color: var(--clcr-error) !important; background: var(--clcr-error-bg) !important; box-shadow: none !important; }
+html[data-clcr-workflow-ui="1"] #clcrForm .cacr-dzm-unit-field .clcr-field__heading { display: none; }
+html[data-clcr-workflow-ui="1"] #clcrForm .cacr-dzm-unit-field :is(select, input) { padding-inline: var(--space-8px); }
+html[data-clcr-workflow-ui="1"] #clcrForm .cacr-dzm-input-card .clcr-field__validation:empty { display: none; }
+.cacr-dzm-field-hint, .cacr-dzm-assumption, .cacr-dzm-known-facts { margin: var(--space-8px) 0 0; color: var(--clcr-muted); font-size: 12px; line-height: 1.6; overflow-wrap: anywhere; }
+.cacr-dzm-assumption { margin-top: var(--space-16px); }
+.cacr-dzm-material { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: baseline; gap: var(--space-8px); margin: var(--space-20px) 0 0; padding-top: var(--space-16px); border-top: var(--border-hairline) solid var(--clcr-border-soft); color: var(--clcr-muted); font-size: 12px; line-height: 1.5; }
+.cacr-dzm-material strong { color: var(--clcr-heading); font-weight: 650; }
+.cacr-dzm-mode-fields[hidden], .cacr-dzm-assumption[hidden], .cacr-dzm-known-facts[hidden], .cacr-dzm-control-registry[hidden] { display: none; }
+html[data-clcr-workflow-ui="1"][data-clcr-cacr-dzm-active="1"] #clearContainer { margin: 0 !important; padding: 0; border: 0; background: none; box-shadow: none; }
+html[data-clcr-workflow-ui="1"][data-clcr-cacr-dzm-active="1"] #clearBtn { width: 100%; min-height: 48px; margin: 0; font-size: 16px; }
+@media (max-width: 700px) {
+  html[data-clcr-workflow-ui="1"][data-clcr-cacr-dzm-active="1"] { --cacr-dzm-unit-width: 108px; }
+  html[data-clcr-workflow-ui="1"][data-clcr-cacr-dzm-active="1"] #clcrResultReport { padding: var(--space-16px); }
+  .cacr-dzm-input-card { padding: var(--space-12px); }
+  html[data-clcr-workflow-ui="1"][data-clcr-cacr-dzm-active="1"] #clcrActivePanel { padding-inline: var(--space-12px); }
+  html[data-clcr-workflow-ui="1"][data-clcr-cacr-dzm-active="1"] #clcrForm { margin-bottom: var(--space-20px); }
+}

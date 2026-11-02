@@ -184,13 +184,19 @@ export const potassiumDzmSessionSource = String.raw`/* KLIRENS-POTASSIUM-DZM-SES
 
 const marker = '/* KLIRENS-SODIUM-DZM-SESSION: source tools/patch-klirens-sodium-dzm-session.mjs */';
 const adapterAnchor = '(function(){const b="vildaClcrSessionV1";';
+const laterAdapters = [
+  '// Ca/Cr DZM owns its operands and specimen facts.',
+  '/* KLIRENS-URATE-CREATININE-SESSION:', adapterAnchor,
+];
 const captureAnchor = 'try{window.ClcrSodiumDzmUi?.ensureControls?.(document)}catch{}';
 const capturePatched = captureAnchor + 'try{window.ClcrPotassiumDzmUi?.ensureControls?.(document)}catch{}';
 export function patchPotassiumDzmSessionHooks(source) {
   let result = source;
   if (!result.includes('/* KLIRENS-POTASSIUM-DZM-SESSION:')) {
     if (result.split(marker).length !== 2 || result.split(adapterAnchor).length !== 2 || result.split(captureAnchor).length !== 2) throw new Error('Ambiguous potassium session integration anchor');
-    result = result.replace(adapterAnchor, potassiumDzmSessionSource + adapterAnchor).replace(captureAnchor, capturePatched);
+    const insertion = laterAdapters.filter(anchor => result.includes(anchor)).sort((a, b) => result.indexOf(a) - result.indexOf(b))[0];
+    if (result.split(insertion).length !== 2) throw new Error('Ambiguous potassium session integration anchor');
+    result = result.replace(insertion, potassiumDzmSessionSource + insertion).replace(captureAnchor, capturePatched);
   }
   if (result.split(potassiumDzmSessionSource).length !== 2) throw new Error('Potassium session source differs from the reproducible patch');
   if (result.split(capturePatched).length !== 2) throw new Error('Missing or duplicate potassium session capture hook');

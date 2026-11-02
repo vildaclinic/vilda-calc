@@ -180,6 +180,18 @@
   }
   function recalculate(formulaId, values = {}, parameterKey = formulaId, context = {}) {
     parameterKey = String(parameterKey).replace(/^clcr:/, "");
+    if (formulaId === "Ca_Cr") {
+      const engine = requiredModule("VildaClcrCacr"), persistence = requiredModule("ClcrCacrDzmPersistence");
+      const policy = requiredModule("VildaClcrCacrReferenceData").getProfile("ARUP_CACR_DZM_2026_11");
+      const prepared = persistence.prepareValues(values, context);
+      const patientContext = { ...context, ageYears: ageOf(values, context), sex: values.sex ?? context.sex ?? "" };
+      if (own(values, "age")) { delete patientContext.ageYearsRaw; delete patientContext.ageExact; }
+      const result = engine.evaluate(engine.inputFromDzmValues(prepared, patientContext), policy);
+      if (!result.valid) throw new Error(result.message || "Sprawdź dane Ca/Cr.");
+      const datapoint = { id: parameterKey, sourceFormulaId: formulaId, label: persistence.LABEL, testKey: "clcr:Ca_Cr" };
+      if (!persistence.augmentDatapoint({ getAttribute: () => JSON.stringify(result.snapshot) }, datapoint)) throw new Error("Nie można utrwalić obliczenia Ca/Cr.");
+      return datapoint;
+    }
     if (formulaId === "PO4_mgkg") {
       const engine = requiredModule("VildaClcrPo4Dzm"), policy = requiredModule("ClcrPo4DzmReferenceData").DEFAULT_POLICY;
       const persistence = requiredModule("ClcrPo4DzmPersistence");
@@ -351,7 +363,6 @@
       // The dedicated path stores the new typed molar result separately.
       return modeled(formulaId,parameterKey,value,"mg/mg",3,values,context,{displayValue:String(value).replace(".",","),datapoint:{assessment:"unassessed",outOfRange:null,norm:"",tone:"neutral"}});
     }
-    else if (formulaId === "Ca_Cr") value = ratio(calcium, urineCr);
     else if (formulaId === "PO4_Cr") value = ratio(number(values, "U_PO4"), urineCr);
     else if (formulaId === "Mg_Ca") value = ratio(magnesium, calcium);
     else if (formulaId === "Ca_Cit") value = ratio(calcium, number(values, "U_Cit"));

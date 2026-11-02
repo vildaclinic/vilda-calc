@@ -234,6 +234,8 @@ describe('Potassium DZM — complete shipped session boundary', () => {
 
   it('reproduces exactly the production adapter and capture hook from readable source', () => {
     expect(patchPotassiumDzmSessionHooks(source)).toBe(source);
+    const onlyPotassiumRemoved = source.replace(potassiumDzmSessionSource, '').replace('try{window.ClcrPotassiumDzmUi?.ensureControls?.(document)}catch{}', '');
+    expect(patchPotassiumDzmSessionHooks(onlyPotassiumRemoved)).toBe(source);
     // Rebuild the previous adapter first, then its newer outer session layer.
     // The exact complete shipped source remains the expected result.
     const withoutOuter = source.replace(urateCreatinineSessionSource, '').replace('try{window.ClcrUrateCreatinineUi?.ensureControls?.(document)}catch{}', '');

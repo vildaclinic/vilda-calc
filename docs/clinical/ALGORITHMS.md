@@ -7053,6 +7053,47 @@ sanitizery i historię na fikcyjnym adapterze. Wyniki wykonań podaje PR.
 Akceptacja właściciela, przegląd źródła i zielone testy nie nadają statusu
 nowej walidacji klinicznej.
 
+#### P-KLIRENS-CACR-DZM-2026-11-02 — osobne Ca/Cr DZM, normy ARUP i spójna historia
+
+Właściciel zaakceptował 02.11.2026 [makietę v2 przed/po desktop/mobile](https://vilda-cacr-dzm-20261102.maciej-flader.chatgpt.site) i polecił kodowanie. Pozostają **dwie osobne pozycje**, `Ca_Cr` (DZM) i `CaCr_spot` (próbka jednorazowa), z własnymi polami, materiałem i historią. W formularzu nie ma przełącznika zmieniającego materiał edytowanego pomiaru. Pełny kontrakt, tabela dziesięciu grup wieku w mg/g i mg/mg oraz źródła: [CACR_DZM.md](CACR_DZM.md).
+
+**Wpływ kliniczny:** dotychczasowe Ca/Cr DZM bez normy otrzymuje orientacyjne porównanie z **ARUP 0020472 / UCA**, składnik **0020721**, LOINC **13717-4**. Odczytano pełny [katalog ARUP](https://ltd.aruplab.com/Tests/Pub/0020472) oraz oba oficjalne [raporty przykładowe](https://ltd.aruplab.com/api/ltd/examplereport?report=0020472,%20Normal.pdf) 02.11.2026. Katalog przyjmuje zbiórkę 24 h i dopuszcza mocz losowy; raporty wydają ratio z normą przy 24 h oraz 25 h. Nie jest to przeniesienie tabeli Mayo. Metoda: ilościowa spektrofotometria; brak opublikowanej kohorty, percentyli, daty wersji tabeli i osobnego profilu wcześniaczego. Zakres laboratorium nie stanowi uniwersalnej normy ani nowej walidacji klinicznej.
+
+Profil `ARUP_CACR_DZM_2026_11` ma źródłową jednostkę **mg/g**, przeliczaną dokładnie przez `÷1000` na mg/mg. Ukończone miesiące/lata mapuje się na `[0,1)`, `[1,2)`, `[2,3)`, `[3,5)`, `[5,7)`, `[7,10)`, `[10,13)`, `[13,16)`, `[16,18)`, `[18,∞)` lat, bez interpolacji. Oba liczbowe końce normy są włączone. Są to jawne konwencje aplikacji, z zachowaniem oryginalnych etykiet źródła. Przed 7 lat zakres obu płci jest identyczny; od 7 lat brak znanej płci pozostawia liczbę bez automatycznej oceny. Nie tworzy się przecięcia M/F ani normy dorosłych w zastępstwie. Brak wieku, nieważny kontekst aplikacji lub znany bieżący kontekst wcześniaczy także nie dostają normy zastępczej. ARUP nie ma górnego limitu wieku; techniczny zakres wieku aplikacji 0–120 lat jest odrębną regułą.
+
+Próbka jednorazowa zachowuje `MAYO_CACR3_RANDOM_2026_10` i jego tabelę, granice wieku oraz tożsamość. Zakresy ARUP mogą inaczej oceniać identyczne ratio niż Mayo, dlatego źródło jest widoczne. Wstępna makieta z Litholink nie jest wdrażanym profilem; nie miesza się jego okna 22–26 h ani granic z ARUP.
+
+**Minimalne dane i czas:** domyślne „Oblicz ze stężeń” wymaga dwóch wartości z jednostkami, alternatywne „Gotowy wynik Ca/Cr” jednego stosunku. Dla stężeń główny wynik ma mg/mg, gotowy stosunek zachowuje skalę raportu; norma i Szczegóły mają tę samą jednostkę. Pięć różnych skal gotowego ratio oraz dwa historyczne aliasy pozostają zgodne. Wiek i płeć pochodzą z istniejącego kontekstu. Bez nowych pytań o chorobę, krew, masę, wzrost, objętość, czas, AKI lub IFCC.
+
+Wspólne czynniki czasu i objętości skracają się w ilorazie; nie mnoży się wyniku przez `24/czas`. Sam nieznany historyczny czas lub znany inny dodatni czas nie wstrzymuje porównania z ogólnym profilem ARUP. To jawna zaakceptowana polityka, nie twierdzenie o zwalidowaniu dowolnej zbiórki. Znany czas zachowuje się bez dopisania potwierdzonych 24 h. Nie pożycza się zegara innego kalkulatora. Znana błędna/niepełna zbiórka wstrzymuje automatyczną ocenę, ale nie poprawną liczbę. Znane różne próbki blokują iloraz stężeń; niezależny gotowy raport pozostaje dostępny, a przeciwne metadane nie znikają po zmianie trybu.
+
+**Konwersja i walidacja:** wspólny silnik `VildaClcrCacr` przyjmuje osobne wersjonowane dane źródłowe. DZM przechodzi z historycznego `1 mmol/L Ca →4 mg/dL` na spójną parę Ca **40,078 mg/mmol** i Cr **113,12 mg/mmol**: `1 mmol/L Ca →4,0078 mg/dL`, czyli zmiana wyniku o 0,195%. Nie jest to samo formatowanie. Każdy operand musi być poprawny i skończony, Ca/gotowy stosunek ≥0, Cr >0; dwa ujemne stężenia nie dają zapisywalnego wyniku. Dodatni underflow/overflow nie staje się zerem lub nieskończonością. Usuwa się jednostkowo niespójne, arbitralne sufity starego DZM. Dodatnia mała liczba nie znika wskutek trzech miejsc po przecinku.
+
+**Zero w obu pozycjach Ca/Cr** ma neutralną uwagę o raporcie/oznaczalności i pozostaje liczbą, bez automatycznej kategorii niskiej lub prawidłowej. To jawna zmiana wspólnego zachowania zaakceptowana wraz z makietą, bez zmiany tabeli Mayo. Nierówności raportu zachowują znaczenie przedziału, bez fikcyjnego punktu na końcu. Ocena jest dokładna przed zaokrągleniem; ≈ oznacza skrót, a pełny zapis/ułamek i operator pozostają utrwalone.
+
+**Wynik i historia:** jedna karta B łączy pacjenta, normę i źródło ARUP. Norma pozostaje neutralna, odchylenia bursztynowe. Zachowane są stałe szerokości, jednostki na wspólnej wysokości, 16 px/48 px pól mobilnych oraz ≥20 px odstępu pod czyszczeniem. Nowa migawka `cacrSnapshot` v2 zachowuje dane wejściowe, dokładną wartość, kontekst próbki, wiek/płeć, politykę/populację/źródło, normę i ocenę. Brak oceny ma `outOfRange:null` we wszystkich projekcjach.
+
+Zwykły READ Badania/Notatek/raportu/historii nie używa bieżącego silnika ani nowych norm i nie przelicza historycznego `×4` na `×4,0078`. Nie dopisuje brakujących danych, precyzji lub normy ARUP. Dopiero jawne nowe obliczenie albo EDIT starszego wpisu używa zatwierdzonej nowej polityki; zachowuje ID pomiaru i jego serię. Nawigacja do drugiej pozycji nie zmienia materiału edytowanego zapisu. Nowy pomiar ma nowe ID, edycja i usunięcie dotyczą tego samego rekordu. Zapis pozostaje związany z wcześniej zapisaną kartą pacjenta.
+
+**Przytarczyce i XLH:** Ca/Cr nie jest dobowym wydalaniem ani CCCR, który wymaga również wapnia i kreatyniny we krwi. Progów CCCR nie stosuje się do tego stosunku. Kontekst PHPT/HypoPT/FHH, ilościowej oceny dobowej i XLH/burosumabu pozostaje w Szczegółach. Sam wynik nie rozpoznaje choroby, wskazania do operacji ani skuteczności burosumabu. Pełne źródła: ARUP, Mayo CACR3, EAU 2026, Fifth International Workshop 2022, PARAT 2021, ESE HypoPT 2025, Haffner i wsp. XLH 2025 oraz deklarowane stałe NIST — opisane w dokumencie modułu.
+
+**Syntetyczne kontrakty wywołań produkcyjnych:**
+
+| Wejście / stan | Oczekiwany wynik |
+| --- | --- |
+| DZM; 40 lat, M; Ca 5 mmol/L / Cr 100 mg/dL | 0,20039 mg/mg, w zakresie ARUP 0,020–0,240. Dawne 0,2 pozostaje 0,2 przy zwykłym READ. |
+| DZM; 8 lat, M; te same stężenia | Ta sama liczba, w zakresie 0,006–0,431 mg/mg. |
+| DZM; 8 lat, F; te same stężenia | W zakresie 0,011–0,457 mg/mg. |
+| DZM; 40 lat, M; Ca 8 mmol/L / Cr 100 mg/dL | 0,320624 mg/mg, powyżej 0,240. |
+| DZM; 8 lat, M; gotowe 300 mg/g | W zakresie ARUP; osobny SPOT Mayo ocenia 0,3 mg/mg powyżej 0,25, bez mieszania serii. |
+| Brak płci przed 7 lat / od 7 lat | Wspólna norma / liczba bez domyślnej kolumny płci. |
+| Ca 0 / mały dodatni Ca 0,0001 mmol/L przy Cr 100 mg/dL | Dokładne neutralne 0 / niezerowe 0,0000040078 mg/mg we wszystkich projekcjach. |
+| Każdy ujemny operand, oba ujemne, Cr 0, dodatni underflow/overflow | Błąd zamiast pozornie poprawnej liczby lub zapisu zera. |
+| Znany inny dodatni czas / czas nieznany / znany problem zbiórki | Ratio bez skalowania / brak dopisanego potwierdzenia 24 h / liczba z wstrzymaną oceną. |
+| Odczyt po zmianie normy, wieku lub silnika | Historyczne liczby, materiał, jednostka i ocena pozostają utrwalone. |
+
+Regresje mają wywoływać rzeczywisty kod dla pełnej tabeli, granic wieku/wyniku, jednostek i aliasów, operatorów, braku danych, zera/tiny, walidacji zapisu/edycji, odczytu historycznego bez bieżącego silnika, izolacji obu pozycji, desktop/mobile i prawdziwej instalacji/aktualizacji offline. Końcowe wyniki testów, SHA i PR podaje opis PR. Akceptacja źródeł i testy nie nadają statusu walidacji klinicznej.
+
 #### P-KLIRENS-OXCR-2026-10-24 — prosty Ox/Cr, jawna postać analitu i orientacyjne normy wieku
 
 Właściciel zaakceptował 24.10.2026

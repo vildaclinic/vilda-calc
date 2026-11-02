@@ -263,6 +263,8 @@ describe('PO4 DZM — portable collection provenance', () => {
   });
 
   it('reproduces the shipped adapter from the preceding audited session source', () => {
+    const onlyPo4Removed = source.replace(po4DzmSessionSource, '').replace('try{window.ClcrPo4DzmUi?.ensureControls?.(document)}catch{}', '');
+    expect(patchPo4DzmSessionHooks(onlyPo4Removed)).toBe(source);
     const withoutOuter = source.replace(urateCreatinineSessionSource, '').replace('try{window.ClcrUrateCreatinineUi?.ensureControls?.(document)}catch{}', '');
     const beforePotassium = withoutOuter.replace(potassiumDzmSessionSource, '').replace('try{window.ClcrPotassiumDzmUi?.ensureControls?.(document)}catch{}', '');
     const beforeSodium = beforePotassium.replace(sodiumDzmSessionSource, '').replace('try{window.ClcrSodiumDzmUi?.ensureControls?.(document)}catch{}', '');

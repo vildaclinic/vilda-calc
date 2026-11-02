@@ -134,6 +134,13 @@ export const po4DzmSessionSource = String.raw`/* KLIRENS-PO4-DZM-SESSION: source
 `;
 
 const marker = '(function(){const b="vildaClcrSessionV1";';
+// Later additive adapters may remain in a reconstruction input. Insert before
+// the first such layer, so rebuilding PO4 never changes their wrapping order.
+const laterAdapters = [
+  '/* KLIRENS-SODIUM-DZM-SESSION:', '/* KLIRENS-PROTEIN-DZM-SESSION:',
+  '/* KLIRENS-POTASSIUM-DZM-SESSION:', '// Ca/Cr DZM owns its operands and specimen facts.',
+  '/* KLIRENS-URATE-CREATININE-SESSION:', marker,
+];
 const captureAnchor = 'function h(){try{window.ClcrUaUi?.ensureControls?.(document)}catch{}const e=document.getElementById("clcrForm");try{window.ClcrMgDzmUi?.ensureControls?.(document)}catch{}';
 const capturePatched = captureAnchor + 'try{window.ClcrPo4DzmUi?.ensureControls?.(document)}catch{}';
 const snapshotAnchor = 'o.inputs.currentVersion=t,o.inputs.formulaPicker=r,o}';
@@ -142,7 +149,9 @@ export function patchPo4DzmSessionHooks(source) {
   let result = source;
   if (!result.includes('/* KLIRENS-PO4-DZM-SESSION:')) {
     if (result.split(marker).length !== 2 || result.split(captureAnchor).length !== 2) throw new Error('Ambiguous phosphorus session integration anchor');
-    result = result.replace(marker, po4DzmSessionSource + marker).replace(captureAnchor, capturePatched);
+    const insertion = laterAdapters.filter(anchor => result.includes(anchor)).sort((a, b) => result.indexOf(a) - result.indexOf(b))[0];
+    if (result.split(insertion).length !== 2) throw new Error('Ambiguous phosphorus session integration anchor');
+    result = result.replace(insertion, po4DzmSessionSource + insertion).replace(captureAnchor, capturePatched);
   }
   if (result.split(po4DzmSessionSource).length !== 2) throw new Error('Phosphorus session source differs from the reproducible patch');
   if (result.split(capturePatched).length !== 2) throw new Error('Missing or duplicate phosphorus session capture hook');

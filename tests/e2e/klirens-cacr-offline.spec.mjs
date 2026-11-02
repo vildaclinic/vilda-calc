@@ -11,7 +11,9 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..')
 const html = fs.readFileSync(path.join(root, 'kalkulator-klirens.html'), 'utf8');
 const workerSource = fs.readFileSync(path.join(root, 'service-worker-kalorii.js'), 'utf8');
 const workerVersion = /const SW_VERSION = '([^']+)'/.exec(workerSource)[1];
-const resourceNames = ['clcr_cacr_reference_data.js', 'clcr_cacr.js', 'clcr_cacr_ui.js', 'clcr_cacr_ui.css'];
+const resourceNames = ['clcr_cacr_reference_data.js', 'clcr_cacr.js', 'clcr_cacr_ui.js', 'clcr_cacr_ui.css',
+  'clcr_cacr_dzm_ui.js', 'clcr_cacr_dzm_persistence.js',
+  ...['clcr_cacr_dzm_ui.css'].filter(name => fs.existsSync(path.join(root, name)))];
 const resourceUrls = [...html.matchAll(/(?:src|href)="([^"]+)"/g)].map(match => match[1]);
 const resources = resourceNames.map(name => {
   const url = resourceUrls.find(value => value.split('?')[0] === name);
@@ -132,17 +134,18 @@ async function fictionalCacr(page) {
   await expect(page.locator('#clcrResultReport .clcr-result-card:visible')).toHaveCount(1);
   await expect(card).toHaveAttribute('data-clcr-value', '0.4');
   await expect(card).toHaveAttribute('data-clcr-tone', 'warning');
-  await expect(card.locator('.clcr-result-value')).toHaveText('0,400');
+  await expect(card.locator('.clcr-result-value')).toHaveText('0,4');
   await expect(card.locator('.clcr-result-unit')).toHaveText('mg/mg');
   const referenceNumbers = async () => (await card.locator('.clcr-result-reference-value').innerText())
     .match(/\d+(?:[,.]\d+)?/g).map(value => Number(value.replace(',', '.')));
   expect(await referenceNumbers()).toEqual([0.01, 0.3]);
-  const source = page.locator('#clcrResultReport .clcr-result-source[data-clcr-formula="CaCr_spot"] a');
+  await expect(card.locator('.clcr-result-reference-label')).toContainText('Mayo');
+  const source = page.locator('#clcrResultReport .clcr-result-details[data-clcr-formula="CaCr_spot"] a[href*="mayocliniclabs.com"]');
   await expect(source.first()).toHaveAttribute('href', /https:\/\/www\.mayocliniclabs\.com\/test-catalog\/Overview\/CACR3/);
   const concentration = JSON.parse(await card.getAttribute('data-clcr-cacr-snapshot'));
   expect(concentration).toMatchObject({ valid: true, mode: 'concentration', rawValue: 0.4, unit: 'mg/mg',
     category: 'above', status: 'above', profileId: 'MAYO_CACR3_RANDOM_2026_10', profileVersion: 1,
-    context: { ageYears: 5, sameSpecimen: 'assumed', sampleType: '', confounders: [] },
+    context: { ageYears: 5, sameSpecimen: 'assumed', sampleType: 'random', sampleAssumption: 'assumed-random', confounders: [] },
   });
   await page.getByRole('button', { name: 'Gotowy wynik Ca/Cr', exact: true }).click();
   await page.locator('#CaCr_reported_unit').selectOption('mg/mmol');

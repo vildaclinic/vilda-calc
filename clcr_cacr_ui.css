@@ -342,10 +342,6 @@ html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .cacr-proposal
   gap: var(--space-16px);
 }
 
-html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .cacr-proposal-main--single {
-  grid-template-columns: minmax(0, 1fr);
-}
-
 html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .cacr-proposal-card :is(.clcr-result-patient-label, .clcr-result-reference-label) {
   display: flex;
   align-items: center;
@@ -404,7 +400,6 @@ html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .cacr-proposal
 }
 
 .cacr-confirmation { margin: var(--space-12px) 0 0; color: var(--clcr-text); font-size: 12px; line-height: 1.55; }
-.cacr-source { margin-top: var(--space-12px); }
 .cacr-proposal-details { margin-top: var(--space-12px); }
 .cacr-proposal-details p { margin: var(--space-12px) 0 0; font-size: 12px; line-height: 1.6; }
 .cacr-proposal-details .clcr-result-category-table { width: 100%; table-layout: fixed; font-size: 11px; }
@@ -450,7 +445,6 @@ html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .cacr-proposal
   html[data-clcr-workflow-ui="1"] #clcrForm .cacr-value-row select { padding-inline: var(--space-4px); }
   html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .cacr-proposal-card { padding: var(--space-16px) !important; }
   html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .cacr-proposal-main { gap: var(--space-8px); grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .cacr-proposal-main--single { grid-template-columns: minmax(0, 1fr); }
   html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .cacr-proposal-card :is(.clcr-result-patient-label, .clcr-result-reference-label) { gap: var(--space-4px); font-size: 10px; }
   html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .cacr-proposal-card .clcr-result-patient-label { flex-wrap: nowrap; font-size: 9.5px; }
   html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .cacr-proposal-card[data-clcr-value-length] .clcr-result-value { font-size: clamp(16px, calc(155px / var(--cacr-value-length, 4)), 40px) !important; }
@@ -713,3 +707,55 @@ html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .cacr-proposal
     letter-spacing: -.15px;
   }
 }
+
+/* B card v2: one common captured view for the separate DZM and random profiles. */
+html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .cacr-proposal-card[data-cacr-presentation="2"] { min-width: 0; container-type: inline-size; }
+html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .cacr-proposal-card[data-cacr-presentation="2"] .cacr-proposal-status { min-height: 42px; margin: 0 0 15px; color: var(--clcr-result-color) !important; font-size: 14px; line-height: 1.5; font-weight: 750; }
+html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .cacr-proposal-card[data-cacr-presentation="2"] .cacr-proposal-main { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); grid-template-rows: minmax(36px, auto) minmax(56px, auto) minmax(24px, auto); column-gap: var(--space-16px); row-gap: 0; align-items: stretch; }
+html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .cacr-proposal-card[data-cacr-presentation="2"] .cacr-proposal-main > div { display: grid; grid-template-rows: subgrid; grid-row: 1 / span 3; min-width: 0; }
+html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .cacr-proposal-card[data-cacr-presentation="2"] .clcr-result-patient { grid-column: 1; }
+html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .cacr-proposal-card[data-cacr-presentation="2"] .cacr-proposal-reference { grid-column: 2; }
+html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .cacr-proposal-card[data-cacr-presentation="2"] :is(.clcr-result-patient-label, .clcr-result-reference-label) { display: block; min-height: 36px; margin: 0 0 9px; color: var(--clcr-muted); font-size: 11px; line-height: 1.5; font-weight: 650; }
+html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .cacr-proposal-card[data-cacr-presentation="2"] .clcr-result-value { display: flex; align-items: center; min-height: 56px; margin: 0; padding: 0; max-width: 100%; color: var(--clcr-result-color) !important; font-size: clamp(25px, 15cqi, 43px) !important; line-height: 1.2; font-weight: 750; letter-spacing: -1.3px; white-space: nowrap; overflow-wrap: normal; }
+html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .cacr-proposal-card[data-cacr-presentation="2"] .clcr-result-value[data-density="medium"] { font-size: clamp(18px, 10.3cqi, 37px) !important; letter-spacing: -.5px; }
+html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .cacr-proposal-card[data-cacr-presentation="2"] .clcr-result-value[data-density="extended"] { font-size: clamp(16px, 8cqi, 29px) !important; letter-spacing: -.5px; }
+html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .cacr-proposal-card[data-cacr-presentation="2"] .clcr-result-value[data-density="long"] { font-size: clamp(16px, 6cqi, 22px) !important; letter-spacing: -.6px; }
+html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .cacr-proposal-card[data-cacr-presentation="2"] .clcr-result-reference-value { display: flex; align-items: center; align-content: center; flex-wrap: wrap; min-height: 56px; margin: 0; padding: 0; color: var(--clcr-heading) !important; font-size: clamp(17px, 7.5cqi, 24px) !important; line-height: 1.3; letter-spacing: -.4px; white-space: normal; overflow-wrap: normal; word-break: normal; }
+html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .cacr-proposal-card[data-cacr-presentation="2"] .clcr-result-reference-value[data-reference-split="1"] { flex-direction: column; align-items: start; justify-content: center; font-size: clamp(13px, 6cqi, 19px) !important; }
+html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .cacr-proposal-card[data-cacr-presentation="2"] .clcr-result-reference--unavailable .clcr-result-reference-value { font-size: 13px !important; line-height: 1.5; letter-spacing: 0; }
+html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .cacr-proposal-card[data-cacr-presentation="2"] :is(.clcr-result-unit, .clcr-result-reference-unit) { min-height: 24px; margin: var(--space-4px) 0 0; padding: 0; color: var(--clcr-heading) !important; font-size: 12px; line-height: 1.5; font-weight: 650; }
+html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .cacr-proposal-card[data-cacr-presentation="2"] .cacr-confirmation { margin-top: var(--space-18px); color: var(--clcr-heading); font-size: 12px; font-weight: 400; line-height: 1.7; }
+.cacr-norm-axis { margin-top: 23px; }
+.cacr-norm-graphic { display: block; width: 100%; height: 76px; overflow: visible; }
+.cacr-norm-background { fill: #e4e9e9; }
+.cacr-norm-band { fill: #b9dfe0; }
+.cacr-norm-track { fill: none; stroke: #c8d5d8; stroke-width: 1; }
+.cacr-norm-boundary { stroke: #778a8f; stroke-width: 1; }
+.cacr-norm-band-title { fill: var(--clcr-heading); font-size: 10px; font-weight: 700; text-anchor: middle; }
+.cacr-norm-point { stroke: var(--clcr-result-color); stroke-width: 3; }
+.cacr-norm-point-cap { fill: var(--clcr-result-color); }
+.cacr-norm-labels { fill: var(--clcr-heading); font-size: 10px; text-anchor: middle; }
+.cacr-norm-label--low { text-anchor: start; }
+.cacr-norm-axis-caption { margin: 3px 0 0 !important; color: var(--clcr-muted); font-size: 10px !important; line-height: 1.6; }
+.cacr-proposal-details { min-width: 0; max-width: 100%; }
+.cacr-proposal-details :is(p, li) { overflow-wrap: anywhere; word-break: normal; }
+.cacr-proposal-details .cacr-reference-table--sex th:first-child { width: 27%; }
+.cacr-proposal-details .cacr-reference-table--sex th:nth-child(2), .cacr-proposal-details .cacr-reference-table--sex th:nth-child(3) { width: 36.5%; }
+.cacr-proposal-details .cacr-reference-table [aria-current="true"] { background: var(--clcr-surface-soft); }
+.cacr-reference-cell--active { font-weight: 750; }
+.cacr-unrounded-result { overflow-wrap: anywhere; font-variant-numeric: tabular-nums; }
+@media (max-width: 700px) {
+  html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .cacr-proposal-card[data-cacr-presentation="2"] { padding: var(--space-16px) !important; }
+  html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .cacr-proposal-card[data-cacr-presentation="2"] .cacr-proposal-main { column-gap: var(--space-12px); }
+}
+.cacr-material { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: var(--space-8px); margin: var(--space-20px) 0 0; padding-top: var(--space-16px); border-top: var(--border-hairline) solid var(--clcr-border-soft); color: var(--clcr-muted); font-size: 12px; line-height: 1.5; }
+.cacr-material strong { color: var(--clcr-heading); font-weight: 650; }
+/* Long converted endpoints retain every significant digit in their fixed column. */
+html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .cacr-proposal-card[data-cacr-presentation="2"] .clcr-result-reference-value[data-reference-split="1"][data-reference-dense="1"] { font-size: clamp(11px, 5.2cqi, 17px) !important; }
+.cacr-boundary-note { margin: var(--space-12px) 0 0; color: var(--clcr-heading); font-size: 12px; line-height: 1.6; }
+
+/* A scientific abbreviation keeps the patient value above the local norm in the hierarchy. */
+html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .cacr-proposal-card[data-cacr-presentation="2"][data-cacr-long-value="true"] .clcr-result-reference-value { font-size: clamp(11px, 4.6cqi, 15px) !important; }
+html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .cacr-proposal-card[data-cacr-presentation="2"] .clcr-result-value[data-scientific="true"] { flex-direction: column; justify-content: center; align-items: flex-start; }
+.cacr-scientific-power { display: block; white-space: nowrap; }
+.cacr-scientific-power sup { font-size: .7em; line-height: 0; vertical-align: super; }

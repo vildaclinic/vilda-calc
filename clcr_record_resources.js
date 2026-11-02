@@ -29,10 +29,11 @@
     ["clcr_sodium_dzm_persistence.js?v=1", "ClcrSodiumDzmPersistence"],
     ["clcr_potassium_dzm_persistence.js?v=1", "ClcrPotassiumDzmPersistence"],
     ["clcr_urate_creatinine_persistence.js?v=1", "ClcrUrateCreatininePersistence"],
+    ["clcr_cacr_dzm_persistence.js?v=1", "ClcrCacrDzmPersistence"],
     // readSaved is pure and needed for the new capture format. Its recalculate
     // method is not called while opening history and resolves engines lazily.
-    ["clcr_saved_calculation.js?v=12", "ClcrSavedCalculation"],
-    ["clcr_saved_results.js?v=12", "ClcrSavedResults"],
+    ["clcr_saved_calculation.js?v=13", "ClcrSavedCalculation"],
+    ["clcr_saved_results.js?v=13", "ClcrSavedResults"],
     ["clcr_saved_results_view.js?v=2", "ClcrSavedResultsView"],
   ];
   const editor = [
@@ -47,8 +48,8 @@
     ["clcr_acr.js?v=1", "VildaClcrAcr"],
     ["clcr_pcr_reference_data.js?v=1", "VildaClcrPcrReferenceData"],
     ["clcr_pcr.js?v=1", "VildaClcrPcr"],
-    ["clcr_cacr_reference_data.js?v=1", "VildaClcrCacrReferenceData"],
-    ["clcr_cacr.js?v=1", "VildaClcrCacr"],
+    ["clcr_cacr_reference_data.js?v=2", "VildaClcrCacrReferenceData"],
+    ["clcr_cacr.js?v=2", "VildaClcrCacr"],
     ["clcr_oxcr_reference_data.js?v=1", "VildaClcrOxcrReferenceData"],
     ["clcr_oxcr.js?v=1", "VildaClcrOxcr"],
     ["clcr_citcr_reference_data.js?v=1", "VildaClcrCitcrReferenceData"],
@@ -86,8 +87,8 @@
     ["clcr_measured_clearance_reference_data.js?v=1", "ClcrMeasuredClearanceReferenceData"],
     ["clcr_measured_clearance_reference.js?v=1", "ClcrMeasuredClearanceReference"],
     ["clcr_result_presentation.js?v=8", "ClcrResultPresentation"],
-    ["clcr_saved_legacy_calculator.js?v=12", "ClcrSavedLegacyCalculator"],
-    ["clcr_result_details.js?v=8", "ClcrResultDetails"],
+    ["clcr_saved_legacy_calculator.js?v=13", "ClcrSavedLegacyCalculator"],
+    ["clcr_result_details.js?v=9", "ClcrResultDetails"],
   ];
   function load(path, name, style = false) {
     if (name && root[name]) return Promise.resolve();
@@ -148,7 +149,7 @@
     if (!notesPromise) {
       notesPromise = ensureReader().then(() => Promise.all([
         load("clcr_notes_view.css?v=1", null, true),
-        load("clcr_notes_view.js?v=4", "ClcrNotesView"),
+        load("clcr_notes_view.js?v=5", "ClcrNotesView"),
       ])).then(() => root.ClcrNotesView);
       notesPromise.catch(() => { notesPromise = null; });
     }
