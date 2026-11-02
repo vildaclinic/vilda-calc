@@ -686,6 +686,21 @@ Inwentarz odświeżono wyłącznie o te cztery miejsca; pozostałe limity pozost
 bez zmian. To część implementacji zatwierdzonych wariantów, bez refaktoryzacji
 istniejących stylów inline.
 
+**Dynamiczna geometria dialogów Przypomnień (2026-11-02, zatwierdzony wariant 2B).**
+Stabilna rama formularza planu i biblioteki szablonów uwzględnia wysokość oraz
+przesunięcie `visualViewport`, także gdy klawiatura zmniejsza widoczny obszar
+bez zmiany media queries. Tylko opcja `remindersLayout` włącza dwa zapisy
+zmiennych CSS w każdym module: `--vcp-dialog-viewport-height` i
+`--vcp-dialog-viewport-top` w `vilda_care_plans.js`, `--vct-reminders-top` i
+`--vct-reminders-height` w `vilda_care_templates.js`. Wartości pochodzą z
+bieżących pomiarów przeglądarki; odstępy, kolory, typografia i pozostałe style
+pozostają w arkuszach. Obsługa `resize`/`scroll` jest usuwana przy zamknięciu
+lub zniszczeniu widoku. Inwentarz obejmuje dokładnie te cztery nowe miejsca;
+nie zmienia limitów innych plików ani reguł strażnika. Test
+`reminders-dialog-viewport-mobile.spec.mjs` sprawdza rzeczywistą geometrię
+dialogów przy zmianie widocznego obszaru i zamknięciu, a testy stabilności
+nagłówka obejmują otwieranie i powrót do Przypomnień.
+
 ### Równoległość zestawu przeglądarkowego (decyzja właściciela 2026-09-11)
 
 Zestaw e2e szedł jednym wątkiem i urósł do 19 minut na CI, aż przestał się mieścić w limicie joba. Teraz **workery biorą po całym pliku**: `workers` w `playwright.config.mjs` to 4 na CI (tyle rdzeni ma runner `ubuntu-latest`), lokalnie decyduje Playwright. Zmienna `PLAYWRIGHT_WORKERS` nadpisuje jedno i drugie — do porównań A/B bez edytowania konfiguracji.

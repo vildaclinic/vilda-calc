@@ -58,9 +58,14 @@ test('A7 touch navigation preserves filter, search, scroll and selection across 
   expect(await page.evaluate(() => navigator.maxTouchPoints > 0 && matchMedia('(pointer:coarse)').matches)).toBe(true);
 
   const workspace = page.locator(WORKSPACE), pane = workspace.locator('.vb22-list');
-  const search = workspace.getByRole('searchbox', { name: 'Szukaj pacjenta lub sprawy' });
+  const search = workspace.locator('.vb22-list-tools .vb22-search');
   await workspace.locator('[data-filter=overdue]').tap();
+  const viewport = page.viewportSize();
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  await expect(search).toBeVisible();
   await search.fill('nawigacja MR');
+  await page.setViewportSize(viewport);
+  await expect(search).toBeHidden();
   await expect(workspace.locator('.vb22-row:not(.vgs-row)')).toHaveCount(26);
   const listIds = await workspace.locator('.vb22-row:not(.vgs-row)').evaluateAll(nodes => nodes.map(node => node.dataset.noteId));
   const row = workspace.locator('.vb22-row:not(.vgs-row)').nth(18);
@@ -94,6 +99,7 @@ test('A7 touch navigation preserves filter, search, scroll and selection across 
   }
   await workspace.locator('.vb22-back').tap(); await listPage(page);
   await expect(workspace.locator('[data-filter=overdue]')).toHaveAttribute('aria-pressed', 'true');
+  await expect(search).toBeHidden();
   await expect(search).toHaveValue('nawigacja MR');
   await expect(workspace.locator('.vb22-row[aria-current=true]')).toHaveAttribute('data-note-id', selectedId);
   expect(Math.abs(await pane.evaluate(node => node.scrollTop) - scrollBefore)).toBeLessThan(2);
@@ -113,9 +119,11 @@ test('A7 touch navigation preserves filter, search, scroll and selection across 
   await expect(workspace.locator('[data-tab=active]')).toHaveAttribute('aria-pressed', 'true');
   await expect(workspace.locator('[data-tab=search]')).toHaveAttribute('aria-pressed', 'false');
   await expect(workspace.locator('[data-filter=overdue]')).toHaveAttribute('aria-pressed', 'true');
-  await expect(workspace.locator('.vb22-search')).toHaveValue('nawigacja MR');
+  await expect(search).toBeHidden();
+  await expect(search).toHaveValue('nawigacja MR');
   await workspace.locator('.vb22-back').tap(); await listPage(page);
   await expect(workspace.locator('[data-filter=overdue]')).toHaveAttribute('aria-pressed', 'true');
+  await expect(search).toBeHidden();
   await expect(search).toHaveValue('nawigacja MR');
   await expect(workspace.locator('.vb22-row:not(.vgs-row)')).toHaveCount(25);
   await expect(workspace.locator(`[data-note-id="${selectedId}"]`)).toHaveCount(0);
