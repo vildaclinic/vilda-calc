@@ -9,14 +9,14 @@ for (const file of ['clcr_clinical_safety.js', 'clcr_cacr_reference_data.js', 'c
 const data = browser.VildaClcrCacrReferenceData;
 const engine = browser.VildaClcrCacr;
 const profile = data.getProfile('MAYO_CACR3_RANDOM_2026_10');
-const example = { mode: 'concentration', calciumValue: '30', calciumUnit: 'mg/dL', creatinineValue: '100', creatinineUnit: 'mg/dL', ageYears: 5 };
+const example = { mode: 'concentration', calciumValue: '30', calciumUnit: 'mg/dL', creatinineValue: '100', creatinineUnit: 'mg/dL', ageYears: 5, sampleType: 'random' };
 const calculate = (patch = {}, selected = profile) => engine.evaluate({ ...example, ...patch }, selected);
-const reported = (reportedValue, reportedUnit = 'mg/mg', patch = {}, selected = profile) => engine.evaluate({ mode: 'direct', reportedValue, reportedUnit, ageYears: 5, ...patch }, selected);
+const reported = (reportedValue, reportedUnit = 'mg/mg', patch = {}, selected = profile) => engine.evaluate({ mode: 'direct', reportedValue, reportedUnit, ageYears: 5, sampleType: 'random', ...patch }, selected);
 
 describe('Ca/Cr — osobny profil Mayo, jedna zamknięta oś masowa', () => {
   it('przechowuje pełne pokrycie, metody i ograniczenia w zamrożonych danych', () => {
     expect(data.getProfile('unknown')).toBeNull();
-    expect(data.listProfiles()).toEqual([profile]);
+    expect(data.listProfiles()).toEqual([profile, data.getProfile('ARUP_CACR_DZM_2026_11')]);
     expect(Object.isFrozen(profile.source.methods)).toBe(true);
     expect(profile.bands.map(row => [row.minimumAgeMonthsInclusive, row.maximumAgeMonths, row.maximumAgeInclusive, row.lower, row.upper])).toEqual([
       [1, 12, false, 0.03, 0.81], [12, 24, false, 0.03, 0.56], [24, 36, false, 0.02, 0.50],
@@ -78,9 +78,9 @@ describe('Ca/Cr — rzeczywiste przeliczenia stężeń', () => {
   });
 
   it('dopuszcza zero wapnia, odróżnia brak i chroni granicę przed zaokrągleniem', () => {
-    expect(calculate({ calciumValue: '0' })).toMatchObject({ valid: true, rawValue: 0, category: 'below', display: { value: '0.000' } });
-    expect(calculate({ calciumValue: '0,999' })).toMatchObject({ rawValue: 0.00999, category: 'below', boundary: '<0,01', display: { value: '0.010' } });
-    expect(calculate({ calciumValue: '30.001' })).toMatchObject({ rawValue: 0.30001, category: 'above', boundary: '>0,3', display: { value: '0.300' } });
+    expect(calculate({ calciumValue: '0' })).toMatchObject({ valid: true, rawValue: 0, zero: true, category: null, status: 'unassessed', tone: 'neutral', referenceAvailable: true, display: { value: '0' } });
+    expect(calculate({ calciumValue: '0,999' })).toMatchObject({ rawValue: 0.00999, category: 'below', boundary: '', display: { value: '0.00999', rounded: false } });
+    expect(calculate({ calciumValue: '30.001' })).toMatchObject({ rawValue: 0.30001, category: 'above', boundary: '', display: { value: '0.30001', rounded: false } });
   });
 
   it.each([
@@ -107,21 +107,26 @@ describe('Ca/Cr — źródłowe granice wieku i oba końce zakresu', () => {
     expect(reported(value, 'mg/mg', { ageYears })).toMatchObject({ valid: true, category, status: category, referenceAvailable: true, reference: { nativeLow: lower, nativeHigh: upper, lowerInclusive: true, upperInclusive: true } });
   });
 
-  it.each([0, 0.08, 83.00000001, 83 + 1 / 12, null, undefined, '', -1, NaN, Infinity, '5'])('dla wieku%s zachowuje liczbę bez zastępczej normy', ageYears => {
+  it.each([0, 0.08, 83.00000001, 83 + 1 / 12, null, undefined, '', -1, NaN, Infinity, '5'])('dla wieku%s respektuje ważność kontekstu i dokładny zapis tekstowy', ageYears => {
+    if (ageYears === '5') {
+      expect(reported('0.2', 'mg/mg', { ageYears })).toMatchObject({ valid: true, rawValue: 0.2, category: 'within', status: 'within', referenceAvailable: true, reference: { nativeLow: 0.01, nativeHigh: 0.3 }, context: { ageYearsRaw: '5' } });
+      return;
+    }
     expect(reported('0.2', 'mg/mg', { ageYears })).toMatchObject({ valid: true, rawValue: 0.2, category: null, status: 'unassessed', tone: 'neutral', referenceAvailable: false, reference: null });
   });
 
   it.each([
-    ['mg/mg', '0.30000', '0.01–0.30'], ['g/g', '0.30000', '0.01–0.30'], ['mg/g', '300.00', '10–300'], ['mg/mmol', '33.936', '≈1.131–33.936'],
+    ['mg/mg', '0.30000', '0.01–0.3'], ['g/g', '0.30000', '0.01–0.3'], ['mg/g', '300.00', '10–300'], ['mg/mmol', '33.936', '1.1312–33.936'],
   ])('zachowuje precyzję i jednostkę%s oraz nativeboundary', (unit, value, range) => {
     const result = reported(value, unit);
-    expect(result).toMatchObject({ category: 'within', classificationValue: 0.3, unit, display: { value, text: value, rounded: false }, reference: { range: range.replaceAll('.', ','), unit, nativeHigh: 0.3 } });
+    const shownUnit = unit === 'g/g' ? 'mg/mg' : unit;
+    expect(result).toMatchObject({ category: 'within', classificationValue: 0.3, unit: shownUnit, input: { reportedUnit: unit }, display: { value, text: value, rounded: false }, reference: { range: range.replaceAll('.', ','), unit: shownUnit, nativeHigh: 0.3 } });
   });
 
   it.each(['mol/mol', 'mmol/mmol', 'mmol/mol'])('przelicza raport%s i normę z tej samej osi mg/mg', unit => {
     const value = unit === 'mmol/mol' ? '600' : '0.6';
     const result = reported(value, unit, { ageYears: 8 });
-    expect(result).toMatchObject({ category: 'within', rawValue: Number(value), unit, reference: { converted: true, nativeHigh: 0.25, display: { approximate: true } } });
+    expect(result).toMatchObject({ category: 'within', rawValue: Number(value), unit: unit === 'mol/mol' ? 'mmol/mmol' : unit, input: { reportedUnit: unit }, reference: { converted: true, nativeHigh: 0.25, display: { approximate: true } } });
     expect(result.classificationValue).toBeCloseTo(0.21257779349363506, 14);
   });
 });
@@ -129,11 +134,16 @@ describe('Ca/Cr — źródłowe granice wieku i oba końce zakresu', () => {
 describe('Ca/Cr — nierówności, fakty i snapshot', () => {
   it.each([
     ['<0.01', 'below'], ['≤0.009', 'below'], ['≤0.01', null], ['<0.3', null], ['>0.3', 'above'], ['≥0.3', null],
-    ['≥0.3000000000001', 'above'], ['>0', null], ['≤0', 'below'], ['<10', 'below', 'mg/g'], ['>33.936', 'above', 'mg/mmol'],
+    ['≥0.3000000000001', 'above'], ['>0', null], ['≤0', null], ['<10', 'below', 'mg/g'], ['>33.936', 'above', 'mg/mmol'],
   ])('ocenia cały przedział%s →%s', (value, category, unit = 'mg/mg') => {
     const result = reported(value, unit);
-    expect(result).toMatchObject({ category, exact: false, status: category || 'unassessed', comparison: category || 'ambiguous', tone: category ? 'warning' : 'neutral' });
-    expect(result.display.text).toBe(value.replace(',', '.'));
+    expect(result).toMatchObject({ category, exact: false, status: category || 'unassessed', comparison: category || (value === '≤0' ? null : 'ambiguous'), tone: category ? 'warning' : 'neutral' });
+    expect(result.display.text).toBe(value === '≥0.3000000000001' ? '≥≈0.3' : value.replace(',', '.'));
+    expect(result.input.reportedValue).toBe(value);
+    if (value === '≥0.3000000000001') {
+      expect(result.display).toMatchObject({ fullValueText: '0.3000000000001', fullValueComplete: true, approximate: true, boundary: '>0,3' });
+      expect(result.boundary).toBe('>0,3');
+    }
   });
 
   it.each(['', '<0', '-1', 'NaN', 'Infinity', '0.3 mg/mg', true])('nie zapisuje niepoprawnego raportu%j', value => expect(reported(value).valid).toBe(false));
@@ -158,7 +168,7 @@ describe('Ca/Cr — nierówności, fakty i snapshot', () => {
     const input = { ...example, calciumValue: '30.001', confounders: ['infection'], knownFacts: { hematuria: false } };
     const result = engine.evaluate(input, profile);
     input.confounders.push('exercise'); input.knownFacts.hematuria = true;
-    expect(result.snapshot).toMatchObject({ schema: 'clcr-cacr', version: 1, rawValue: 0.30001, boundary: '>0,3', category: 'above', context: { ageYears: 5, confounders: ['infection'], knownFacts: { hematuria: false } }, reference: { nativeLow: 0.01, nativeHigh: 0.3, band: { label: '5–<7 lat' } }, profileId: profile.id, profileVersion: 1, source: { id: 'MAYO_CACR3' } });
+    expect(result.snapshot).toMatchObject({ schema: 'clcr-cacr', version: 2, rawValue: 0.30001, boundary: '', category: 'above', exactValue: { numerator: '30001', denominator: '100000' }, context: { ageYears: 5, confounders: ['infection'], knownFacts: { hematuria: false } }, reference: { nativeLow: 0.01, nativeHigh: 0.3, band: { label: '5–<7 lat' } }, profileId: profile.id, profileVersion: 1, source: { id: 'MAYO_CACR3' } });
     expect(JSON.parse(JSON.stringify(result.snapshot))).toEqual(result.snapshot);
     expect(result.snapshot).not.toHaveProperty('snapshot'); expect(Object.isFrozen(result.snapshot.reference.table)).toBe(true); expect(Object.isFrozen(input)).toBe(false);
   });

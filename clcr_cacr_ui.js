@@ -1,8 +1,8 @@
 (function (root, factory) {
-  const api = factory();
-  if (root) root.ClcrCacrUi = api;
+  const api = factory(root);
+  if (root) { root.ClcrCacrUi = api; if (root.document) api.ensureControls(root.document); }
   if (typeof module === "object" && module.exports) module.exports = api;
-})(typeof window !== "undefined" ? window : globalThis, function () {
+})(typeof window !== "undefined" ? window : globalThis, function (root) {
   "use strict";
 
   const layouts = new WeakMap();
@@ -14,6 +14,23 @@
     ["spotDiureticUse", "Stosowanie diuretyków"],
     ["spotKnownCKD", "Znana przewlekła choroba nerek"],
   ]);
+
+  // Install own additional choices before session restoration writes select.value.
+  // Outside this calculator the options stay hidden, without changing a selected
+  // value or assigning a different meaning to a shared creatinine measurement.
+  function ensureControls(doc, options) {
+    const managed = [];
+    [["Ca_spot_unit", "µmol/L"], ["Ucr_spot_unit", "mg/L"]].forEach(([id, value]) => {
+      const control = doc?.getElementById(id); if (!control) return;
+      let option = Array.from(control.children || []).find(item => item.value === value);
+      if (!option) {
+        option = doc.createElement("option"); option.value = value; option.textContent = value;
+        option.setAttribute("data-cacr-extra-unit", "true"); control.appendChild(option);
+      }
+      if (option.hasAttribute("data-cacr-extra-unit")) { option.hidden = options?.active !== true; managed.push(option); }
+    });
+    return managed;
+  }
 
   function emitEdit(layout, control) {
     const EventClass = layout.document.defaultView?.Event;
@@ -81,6 +98,12 @@
 
   function refreshMode(layout) {
     const direct = modeOf(layout) === "direct";
+    const reportedUnit = layout.document.getElementById("CaCr_reported_unit");
+    if (reportedUnit) {
+      const aliases = { "g/g": "mg/mg", "mol/mol": "mmol/mmol" };
+      for (const option of Array.from(reportedUnit.children || [])) if (Object.hasOwn(aliases, option.value)) option.hidden = true;
+      if (Object.hasOwn(aliases, reportedUnit.value)) reportedUnit.value = aliases[reportedUnit.value];
+    }
     layout.concentrationFields.hidden = direct;
     layout.directFields.hidden = !direct;
     layout.assumption.hidden = direct;
@@ -173,7 +196,9 @@
     corrections.appendChild(context);
     const factHint = element(documentRef, "p", "cacr-known-facts-hint", "Zmień tylko wtedy, gdy wiesz, że oznaczenia pochodzą z różnych próbek.");
     details.append(problemLabel, problemSelect, factSummary, factHint, corrections);
-    card.append(modes, concentrationFields, directFields, assumption, details);
+    const material = element(documentRef, "p", "cacr-material");
+    material.append(element(documentRef, "span", "", "Materiał"), element(documentRef, "strong", "", "Próbka jednorazowa"));
+    card.append(modes, concentrationFields, directFields, material, assumption, details);
     const clear = documentRef.getElementById("clearContainer");
     if (clear?.parentNode === form) form.insertBefore(card, clear);
     else form.appendChild(card);
@@ -273,6 +298,7 @@
   }
 
   function restore(documentRef) {
+    ensureControls(documentRef);
     const layout = layouts.get(documentRef);
     if (!layout) {
       documentRef.documentElement?.removeAttribute("data-clcr-cacr-active");
@@ -320,6 +346,7 @@
     layout.onChange = options.onChange;
     if (!layout.fieldViews?.get) return;
     documentRef.documentElement.dataset.clcrCacrActive = "1";
+    ensureControls(documentRef, { active: true });
     mountAgeContext(layout);
     pair(layout, "Ca_spot", "Ca_spot_unit", "Wapń w moczu", layout.concentrationFields);
     pair(layout, "Ucr_spot", "Ucr_spot_unit", "Kreatynina w moczu", layout.concentrationFields);
@@ -347,88 +374,74 @@
       ? `<a href="${escape(source.url)}" target="_blank" rel="noopener noreferrer">${label}</a>` : label;
   }
 
-  function fixedNative(value) {
-    return Number(value).toLocaleString("pl-PL", { minimumFractionDigits: 2, maximumFractionDigits: 2, useGrouping: false });
-  }
-
   function knownFactText(model) {
-    const labels = {
-      menstruation: "Miesiączka", hematuria: "Krwiomocz", infection: "Infekcja",
-      exercise: "Intensywny wysiłek", acuteIllness: "Gorączka / ostra choroba",
-      diuretics: "Stosowanie diuretyków", diureticUse: "Stosowanie diuretyków",
-      knownCKD: "Znana przewlekła choroba nerek", knownCkd: "Znana przewlekła choroba nerek",
-      ...Object.fromEntries(KNOWN_FACTS),
-    };
-    const context = model.context || {};
-    const known = context.knownFacts;
+    const labels = { menstruation: "Miesiączka", hematuria: "Krwiomocz", infection: "Infekcja", exercise: "Intensywny wysiłek", acuteIllness: "Gorączka / ostra choroba", diuretics: "Stosowanie diuretyków", diureticUse: "Stosowanie diuretyków", knownCKD: "Znana przewlekła choroba nerek", knownCkd: "Znana przewlekła choroba nerek", ...Object.fromEntries(KNOWN_FACTS) };
+    const context = model.context || {}, known = context.knownFacts;
     const facts = Array.isArray(known) ? known.filter(value => typeof value === "string")
-      : known && typeof known === "object" ? Object.entries(known).map(([key, value]) => {
-        const label = labels[key] || key;
-        return value === true ? label : value === false ? `${label}: nie`
-          : value == null || value === "unknown" ? `${label}: nie wiadomo` : `${label}: ${value}`;
-      }) : [];
-    (Array.isArray(context.confounders) ? context.confounders : []).forEach(key => {
-      if (!known || Array.isArray(known) || !Object.prototype.hasOwnProperty.call(known, key)) facts.push(labels[key] || key);
-    });
-    const sample = { firstMorning: "pierwszy poranny mocz", secondMorning: "drugi poranny mocz", random: "próbka losowa", timed: "zbiórka czasowa" }[context.sampleType];
-    if (sample) facts.push(`Próbka: ${sample}`);
-    if (model.mode === "concentration") facts.push(context.sameSpecimen === "confirmed"
-      ? "Potwierdzono tę samą próbkę moczu" : "Wspólna próbka moczu jest założeniem obliczenia");
-    return facts.filter((value, index, all) => value && all.indexOf(value) === index).join("; ");
+      : known && typeof known === "object" ? Object.entries(known).map(([key, value]) => `${labels[key] || key}: ${value === true ? "tak" : value === false ? "nie" : value == null ? "nie wiadomo" : value}`) : [];
+    (Array.isArray(context.confounders) ? context.confounders : []).forEach(key => facts.push(labels[key] || key));
+    if (model.mode === "concentration") facts.push(context.sameSpecimen === "confirmed" ? "Potwierdzono tę samą próbkę moczu" : "Wspólna próbka moczu jest założeniem obliczenia");
+    return [...new Set(facts)].join("; ");
   }
-
-  function renderResult(result) {
-    const model = result || {};
+  function shortSource(model) {
+    const source = model.reference?.source || model.source;
+    if (source?.id === "ARUP_0020472") return "ARUP";
+    if (source?.id === "MAYO_CACR3") return "Mayo";
+    return source?.label || source?.title || "";
+  }
+  function tableMarkup(model, formulaId, unit) {
+    const reference = model.reference || {}, rows = model.referenceTable?.length ? model.referenceTable : reference.table || [];
+    if (!rows.length) return "";
+    const sexSpecific = rows.some(row => row.bySex), source = shortSource(model);
+    const rowRange = row => row?.display?.range || row?.range || `${String(row?.lower ?? row?.nativeLow ?? "").replace(".", ",")}–${String(row?.upper ?? row?.nativeHigh ?? "").replace(".", ",")}`;
+    return `<table class="clcr-result-category-table cacr-reference-table${sexSpecific ? " cacr-reference-table--sex" : ""}"><caption>Normy dla wieku · ${escape(source)} · ${escape(rows[0].unit || reference.nativeUnit || "mg/mg")}</caption><thead><tr><th scope="col">Wiek</th>${sexSpecific ? '<th scope="col">Chłopcy / mężczyźni</th><th scope="col">Dziewczęta / kobiety</th>' : '<th scope="col">Zakres</th>'}</tr></thead><tbody>${rows.map(row => {
+      const selected = Boolean(row.selected || row.id && row.id === reference.band?.id);
+      const values = sexSpecific ? [row.bySex?.M, row.bySex?.F] : [row];
+      return `<tr data-clcr-age-row="${escape(row.id || "")}" data-clcr-tone="neutral"${selected ? ' aria-current="true"' : ""}><th scope="row">${escape(row.label || row.sourceAge || "")}${selected ? '<span class="clcr-result-current-label">Wiek pacjenta</span>' : ""}</th>${values.map((value, index) => `<td${selected && sexSpecific && model.context?.sex === (index ? "F" : "M") ? ' class="cacr-reference-cell--active"' : ""}>${escape(rowRange(value))}</td>`).join("")}</tr>`;
+    }).join("")}</tbody></table>`;
+  }
+  function axisMarkup(model, reference, shown, unit) {
+    if (!reference || model.zero || model.comparator || !["below", "within", "above"].includes(model.category)) return "";
+    const lower = reference.lower, upper = reference.upper, raw = model.rawValue;
+    const maximum = Math.max(upper * 1.25, raw * 1.15), low = 100 * lower / maximum, high = 100 * upper / maximum, point = Math.max(1, Math.min(98, 100 * raw / maximum));
+    if (![low, high, point].every(Number.isFinite) || high - low < 30) return "";
+    return `<div class="cacr-norm-axis" role="img" aria-label="Wynik ${escape(shown)} ${escape(unit)}; norma ${escape(reference.display?.range || reference.range)}"><svg class="cacr-norm-graphic" width="100%" height="76" aria-hidden="true" focusable="false"><rect class="cacr-norm-background" x="0" y="34" width="100%" height="12" rx="6"/><rect class="cacr-norm-band" x="${low}%" y="34" width="${high - low}%" height="12"/><rect class="cacr-norm-track" x="0" y="34" width="100%" height="12" rx="6"/><line class="cacr-norm-boundary cacr-norm-boundary--low" x1="${low}%" x2="${low}%" y1="29" y2="49"/><line class="cacr-norm-boundary cacr-norm-boundary--high" x1="${high}%" x2="${high}%" y1="29" y2="49"/><line class="cacr-norm-point" x1="${point}%" x2="${point}%" y1="24" y2="52"/><circle class="cacr-norm-point-cap" cx="${point}%" cy="22" r="4.5"/><text class="cacr-norm-band-title" x="${(low + high) / 2}%" y="12">Norma</text><g class="cacr-norm-labels"><text class="cacr-norm-label--low" x="${low}%" y="61">${escape(reference.display?.lower)}</text><text class="cacr-norm-label--high" x="${high}%" y="61">${escape(reference.display?.upper)}</text></g></svg><p class="cacr-norm-axis-caption">Znacznik pokazuje wynik pacjenta. Pionowe linie wyznaczają normę.</p></div>`;
+  }
+  function precisionMarkup(model, unit) {
+    if (!model.display?.approximate) return "";
+    const full = model.display.fullValueText;
+    const text = model.display.fullValueComplete === false ? `≈${String(model.rawValue).replace(".", ",")}` : String(full || model.rawValue).replace(".", ",");
+    const exact = model.display.fullValueComplete === false && model.exactValue ? `<p class="cacr-unrounded-result">Dokładny ułamek: ${escape(model.exactValue.numerator)}/${escape(model.exactValue.denominator)} ${escape(unit)}.</p>` : "";
+    return `<h3>Wynik przed zaokrągleniem</h3><p class="cacr-unrounded-result">${escape(model.comparator || "")}${escape(text)} ${escape(unit)}</p>${exact}<p>Znak ≈ oznacza skrócenie prezentacji. Ocena korzysta z pełnej wartości.</p>`;
+  }
+  function valueMarkup(shown) {
+    const scientific = shown.length > 9 && /^([<>≤≥]?≈?\d+(?:,\d+)?)[eE]([+-]?\d+)$/.exec(shown);
+    if (!scientific) return { html: escape(shown), scientific: false };
+    return { html: `<span class="cacr-scientific-mantissa">${escape(scientific[1])}</span><span class="cacr-scientific-power">× 10<sup>${escape(scientific[2].replace(/^\+/, ""))}</sup></span>`, scientific: true };
+  }
+  function renderResult(result, options) {
+    const model = result || {}, formulaId = options?.formulaId === "Ca_Cr" ? "Ca_Cr" : "CaCr_spot", timed = formulaId === "Ca_Cr";
     if (!model.valid || !Number.isFinite(model.rawValue)) {
       const missing = ["", "missing-input", "missing-calcium", "missing-creatinine", "missing-reported-value"].includes(model.reasonCode || "");
-      const empty = model.mode === "direct" ? "Wpisz gotowy wskaźnik Ca/Cr z laboratorium i wybierz jego jednostkę."
-        : "Wpisz stężenie wapnia i kreatyniny w moczu. Wiek służy wyłącznie dobraniu normy.";
-      return `<div class="${missing ? "cacr-result-empty" : "cacr-result-error"}" data-clcr-formula="CaCr_spot"><strong>${escape(missing ? "Tutaj pojawi się wynik Ca/Cr" : "Sprawdź dane Ca/Cr")}</strong><p>${escape(model.message || model.qualification?.note || empty)}</p></div>`;
+      const empty = model.mode === "direct" ? "Wpisz gotowy wskaźnik Ca/Cr z laboratorium i wybierz jego jednostkę." : "Wpisz stężenie wapnia i kreatyniny w moczu. Wiek służy wyłącznie dobraniu normy.";
+      return `<div class="${missing ? "cacr-result-empty" : "cacr-result-error"}" data-clcr-formula="${formulaId}"><strong>${escape(missing ? "Tutaj pojawi się wynik Ca/Cr" : "Sprawdź dane Ca/Cr")}</strong><p>${escape(model.message || model.qualification?.note || empty)}</p></div>`;
     }
-    const reference = model.referenceAvailable ? model.reference : null;
-    const category = typeof model.category === "string" ? model.category : "";
-    const tone = ["success", "warning", "danger"].includes(model.tone) ? model.tone : "neutral";
-    const shown = String(model.display?.text ?? model.display?.value ?? model.rawValue).replace(".", ",");
-    const unit = model.display?.unit || model.unit || "";
-    const boundary = model.boundary || model.display?.boundary || "";
-    const nativeRange = ["mg/mg", "g/g"].includes(reference?.unit);
-    const low = reference ? nativeRange ? fixedNative(reference.lower) : reference.display?.lower || String(reference.lower).replace(".", ",") : "";
-    const high = reference ? nativeRange ? fixedNative(reference.upper) : reference.display?.upper || String(reference.upper).replace(".", ",") : "";
-    const approximate = Boolean(reference?.display?.approximate || reference?.converted);
-    const range = `${approximate ? "≈" : ""}${low}–${high}`;
-    // Keep longer converted ranges in the fixed reference column. This is a
-    // presentation of the model's range, never a second classification axis.
-    const splitReference = Boolean(reference && range.length > 10);
-    const rangeMarkup = splitReference
-      ? `<span>od ${approximate ? "≈" : ""}${escape(low)}</span><span>do ${approximate ? "≈" : ""}${escape(high)}</span>` : escape(range);
-    const norm = reference
-      ? `<div class="clcr-result-reference cacr-proposal-reference" data-clcr-reference="cacr" data-clcr-reference-kind="cacr"><p class="clcr-result-reference-label">${escape(reference.label || "Norma dla wieku")}</p><strong class="clcr-result-reference-value" data-reference-split="${splitReference ? "1" : "0"}">${rangeMarkup}</strong><span class="clcr-result-reference-unit">${escape(reference.unit || unit)}</span></div>` : "";
-    const rows = Array.isArray(reference?.table) ? reference.table : [];
-    const table = rows.length
-      ? `<table class="clcr-result-category-table"><caption>Normy dla wieku · mg/mg</caption><thead><tr><th scope="col">Wiek</th><th scope="col">Zakres</th></tr></thead><tbody>${rows.map(entry => {
-        const selected = entry.selected || entry.id && entry.id === reference.band?.id;
-        return `<tr data-clcr-age-row="${escape(entry.id || "")}" data-clcr-tone="neutral"${selected ? ' aria-current="true"' : ""}><th scope="row">${escape(entry.label || entry.sourceAge || "")}</th><td>${escape(fixedNative(entry.nativeLow ?? entry.lower))}–${escape(fixedNative(entry.nativeHigh ?? entry.upper))}${selected ? '<span class="clcr-result-current-label">Wiek pacjenta</span>' : ""}</td></tr>`;
-      }).join("")}</tbody></table>` : "";
-    const source = reference?.source || model.source;
-    const population = reference?.band?.label || reference?.population?.ageBand || "";
-    const sourceLine = reference ? [escape(population), sourceMarkup(source)].filter(Boolean).join(" · ") : "";
-    const notes = model.notes || {};
-    const methods = source?.methods;
-    const methodText = methods ? `Wapń — ${methods.calcium}; kreatynina — ${methods.creatinine}. ${notes.universal || ""}` : "";
-    const facts = knownFactText(model);
-    const details = [
-      ["Źródło i rodzaj normy", notes.source], ["Metody zakresu", methodText],
-      ["Przeliczenia", notes.units], ["Próbka", notes.sample],
-      ["Ograniczenia", notes.diagnosis], ["Potwierdzenie", notes.confirmation],
-      ["Leki i interferencje", notes.interference],
-      ["Obliczenie", model.mode === "concentration" ? notes.concentration : "Oryginalny wynik, jednostka i znak nierówności z laboratorium pozostają częścią oceny."],
-      ["Zakres wieku", notes.agePolicy], ["Znane informacje", facts],
-    ].filter(([, text]) => typeof text === "string" && text);
-    const qualification = model.qualification?.note || "";
-    const comparisonAvailable = Boolean(reference && ["below", "within", "above"].includes(model.comparison));
-    const snapshot = model.snapshot || model;
-    return `<div class="result-box clcr-result-card cacr-proposal-card${["warning", "danger"].includes(tone) ? " out-of-range" : ""}" data-clcr-formula="CaCr_spot" data-clcr-series="CaCr_spot" data-clcr-code="cacr" data-clcr-value="${model.rawValue}" data-clcr-display-value="${escape(model.display?.value ?? model.rawValue)}" data-clcr-value-length="${Math.min(32, shown.length)}" data-clcr-display-unit="${escape(unit)}" data-clcr-display-label="Wapń/kreatynina — Ca/Cr" data-clcr-status="${escape(model.statusText)}" data-clcr-assessment="${escape(model.status)}" data-clcr-comparison="${escape(model.comparison || "")}" data-clcr-comparator="${escape(model.comparator || "")}" data-clcr-category="${escape(category)}" data-clcr-boundary="${escape(boundary)}" data-clcr-tone="${tone}" data-clcr-reference-profile="${escape(model.profileId)}" data-clcr-reference-comparison="${comparisonAvailable}" data-clcr-cacr-snapshot="${escape(JSON.stringify(snapshot))}"><div class="clcr-result-main cacr-proposal-main${reference ? "" : " cacr-proposal-main--single"}"><div class="clcr-result-patient"><p class="clcr-result-patient-label">Wynik pacjenta</p><strong class="clcr-result-value">${escape(shown)}</strong><span class="clcr-result-unit">${escape(unit)}</span>${boundary ? `<small class="clcr-result-boundary">Przed zaokrągleniem: ${escape(boundary)} ${escape(unit)}</small>` : ""}</div>${norm}</div><p class="clcr-result-interpretation cacr-proposal-status">${escape(model.statusText || "Ca/Cr — wynik liczbowy")}</p>${qualification ? `<p class="cacr-confirmation">${escape(qualification)}</p>` : ""}</div>${sourceLine ? `<p class="clcr-result-source cacr-source" data-clcr-formula="CaCr_spot">${sourceLine}</p>` : ""}<details class="clcr-result-details cacr-proposal-details" id="clcr-cacr-details" data-clcr-formula="CaCr_spot" tabindex="-1"><summary>Szczegóły i źródła</summary>${table}${source ? `<p>${sourceMarkup(source)}</p>` : ""}${details.map(([label, text]) => `<p><strong>${escape(label)}:</strong> ${escape(text)}</p>`).join("")}${boundary ? `<p>Wartość użyta do oceny: ${escape(String(model.rawValue).replace(".", ","))} ${escape(unit)}. Ocenę wyznaczamy przed zaokrągleniem.</p>` : ""}</details>`;
+    const reference = model.referenceAvailable ? model.reference : null, category = typeof model.category === "string" ? model.category : "";
+    const tone = model.zero ? "neutral" : ["success", "warning", "danger"].includes(model.tone) ? model.tone : "neutral";
+    const shown = String(model.display?.text ?? model.display?.value ?? model.rawValue).replace(".", ","), unit = model.display?.unit || model.unit || "";
+    const low = reference?.display?.lower || String(reference?.lower ?? "").replace(".", ","), high = reference?.display?.upper || String(reference?.upper ?? "").replace(".", ",");
+    const range = reference?.display?.range || reference?.range || `${low}–${high}`, split = range.length > 10;
+    const normValue = reference ? split ? `<span>od ${escape(low)}</span><span>do ${escape(high)}</span>` : escape(range) : "Brak dobranej normy";
+    const sourceLabel = shortSource(model);
+    const norm = `<div class="clcr-result-reference cacr-proposal-reference${reference ? "" : " clcr-result-reference--unavailable"}" data-clcr-reference="cacr" data-clcr-reference-kind="cacr"><p class="clcr-result-reference-label">Norma dla wieku${sourceLabel ? ` · ${escape(sourceLabel)}` : ""}</p><strong class="clcr-result-reference-value" data-reference-split="${split ? "1" : "0"}" data-reference-dense="${Math.max(low.length, high.length) >= 9 ? "1" : "0"}">${normValue}</strong><span class="clcr-result-reference-unit">${reference ? escape(reference.unit || unit) : ""}</span></div>`;
+    const notes = model.notes || {}, source = reference?.source || model.source, methods = source?.methods;
+    const details = [["Źródło i rodzaj normy", notes.source], ["Metody zakresu", notes.methods || (methods ? `Wapń — ${methods.calcium}; kreatynina — ${methods.creatinine}.` : "")], ["Przeliczenia", notes.units], ["Próbka", notes.sample], ["Zachowany kontekst zbiórki", model.contextNote], ["Ograniczenia", notes.diagnosis], ["Przytarczyce i monitorowanie leczenia", notes.confirmation], ["Leki i interferencje", notes.interference], ["Obliczenie", model.mode === "concentration" ? notes.concentration : "Oryginalny wynik, jednostka i znak nierówności z laboratorium pozostają częścią oceny."], ["Zakres wieku", notes.agePolicy], ["Znane informacje", knownFactText(model)]].filter(([, text]) => typeof text === "string" && text);
+    const qualification = model.qualification?.note || "", description = category && notes[category] || "";
+    const copy = qualification && description && qualification.includes(description) ? qualification : [...new Set([qualification, description].filter(Boolean))].join(" ");
+    const comparison = Boolean(reference && !model.zero && ["below", "within", "above"].includes(model.comparison));
+    const value = valueMarkup(shown);
+    const label = `Wapń/kreatynina — Ca/Cr${timed ? " (DZM)" : ""}`, snapshot = model.snapshot || model;
+    return `<div class="result-box clcr-result-card cacr-proposal-card${["warning", "danger"].includes(tone) ? " out-of-range" : ""}" data-cacr-presentation="2" data-cacr-long-value="${shown.length > 8}" data-clcr-formula="${formulaId}" data-clcr-series="${formulaId}" data-clcr-code="cacr" data-clcr-value="${model.rawValue}" data-clcr-display-value="${escape(model.display?.value ?? model.rawValue)}" data-clcr-value-length="${Math.min(32, shown.length)}" data-clcr-display-unit="${escape(unit)}" data-clcr-display-label="${label}" data-clcr-status="${escape(model.statusText)}" data-clcr-assessment="${escape(model.status)}" data-clcr-comparison="${escape(model.comparison || "")}" data-clcr-comparator="${escape(model.comparator || "")}" data-clcr-category="${escape(category)}" data-clcr-boundary="${escape(model.boundary || "")}" data-clcr-tone="${tone}" data-clcr-reference-profile="${escape(model.profileId)}" data-clcr-reference-comparison="${comparison}" data-clcr-cacr-snapshot="${escape(JSON.stringify(snapshot))}"><p class="clcr-result-interpretation cacr-proposal-status">${escape(model.statusText || "Ca/Cr — wynik liczbowy")}</p><div class="clcr-result-main cacr-proposal-main"><div class="clcr-result-patient"><p class="clcr-result-patient-label">Wynik pacjenta</p><strong class="clcr-result-value" data-scientific="${value.scientific}"${value.scientific ? ` aria-label="${escape(shown)}"` : ""} data-density="${shown.length > 8 ? "long" : shown.length > 7 ? "extended" : shown.length > 5 ? "medium" : "normal"}">${value.html}</strong><span class="clcr-result-unit">${escape(unit)}</span></div>${norm}</div>${model.boundary ? `<p class="cacr-boundary-note">Przed skróceniem: ${escape(model.boundary)} ${escape(unit)}.</p>` : ""}${copy ? `<p class="cacr-confirmation">${escape(copy)}</p>` : ""}${axisMarkup(model, reference, shown, unit)}</div><details class="clcr-result-details cacr-proposal-details" id="${timed ? "clcr-cacr-dzm-details" : "clcr-cacr-details"}" data-clcr-formula="${formulaId}" tabindex="-1"><summary>Szczegóły i źródła</summary>${tableMarkup(model, formulaId, unit)}${precisionMarkup(model, unit)}${source ? `<p>${sourceMarkup(source)}</p>` : ""}${details.map(([heading, text]) => `<p><strong>${escape(heading)}:</strong> ${escape(text)}</p>`).join("")}</details>`;
   }
-
-  return Object.freeze({ sync, restore, refresh, renderResult });
+  return Object.freeze({ ensureControls, sync, restore, refresh, renderResult });
 });

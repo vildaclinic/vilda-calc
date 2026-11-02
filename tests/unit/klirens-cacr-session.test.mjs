@@ -38,6 +38,8 @@ describe('Ca/Cr — rzeczywista migracja sesji', () => {
   });
 
   it.each(units)('dwukrotne rzeczywiste odtworzenie zachowuje wynik ≥0,30001 i jednostkę %s', unit => {
+    const canonicalUnit = ({ 'g/g': 'mg/mg', 'mol/mol': 'mmol/mmol' })[unit] || unit;
+    const originalUnitEvidence = canonicalUnit !== unit ? { CaCr_reported_unit_original: unit } : {};
     const { api } = runtime({ CaCr_entry_mode: 'direct', CaCr_reported: '≥0,30001', CaCr_reported_unit: unit,
       CaCr_same_specimen: 'different', spotSampleKind: 'random', spotInfection: true,
       ACR_entry_mode: 'direct', ACR_reported: '<30', ACR_reported_unit: 'mg/g', ACR_same_specimen: 'confirmed', U_Alb_unit: 'mg/dL',
@@ -49,8 +51,8 @@ describe('Ca/Cr — rzeczywista migracja sesji', () => {
       expect(next.applyClcrSessionSnapshot(incoming, { update: false })).toBe(true);
       expect(incoming).toEqual(saved);
       const restored = next.buildClcrSessionSnapshot();
-      expect(restored.inputs).toEqual(saved.inputs);
-      expect(restored.inputs).toMatchObject({ CaCr_reported: '≥0,30001', CaCr_reported_unit: unit,
+      expect(restored.inputs).toEqual({ ...saved.inputs, CaCr_reported_unit: canonicalUnit, ...originalUnitEvidence });
+      expect(restored.inputs).toMatchObject({ CaCr_reported: '≥0,30001', CaCr_reported_unit: canonicalUnit, ...originalUnitEvidence,
         CaCr_same_specimen: 'different', spotInfection: true, spotSampleKind: 'random',
         ACR_reported: '<30', ACR_same_specimen: 'confirmed', PCR_reported: '≥200' });
       saved = restored;

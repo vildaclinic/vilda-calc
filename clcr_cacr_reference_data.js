@@ -9,7 +9,7 @@
     return value;
   }
   const MAYO_CACR3_RANDOM_2026_10 = freeze({
-    id: "MAYO_CACR3_RANDOM_2026_10", version: 1,
+    id: "MAYO_CACR3_RANDOM_2026_10", version: 1, formulaId: "CaCr_spot",
     quantity: "urine-calcium-creatinine-ratio", label: "Mayo Clinic Laboratories · CACR3", nativeUnit: "mg/mg",
     comparisonMode: "orientational", referenceKind: "two-sided-laboratory-reference-interval",
     population: { label: "Losowa próbka moczu; zakresy Mayo od 1 miesiąca do dokładnego wieku 83 lat", minimumAgeYearsInclusive: 1 / 12, maximumAgeYearsInclusive: 83, sexSpecific: false },
@@ -42,6 +42,7 @@
       above: { code: "above", label: "Powyżej normy dla wieku", tone: "warning" },
     },
     restrictions: {
+      applicableSampleTypes: ["firstMorning", "secondMorning", "random"], missingSamplePolicy: "assumed-random",
       referenceKind: "two-sided-laboratory-reference-interval", comparisonMode: "orientational", patientLaboratoryMatched: false,
       randomSampleAllowed: true, firstMorningRequired: false, fastingRequired: false, sexSpecific: false,
       sameSpecimenRequiredForConcentrationRatio: true, unknownFactsAreConfirmedAbsent: false,
@@ -73,7 +74,77 @@
       interference: "W metodzie źródła gadolinowy Omniscan powyżej stężenia terapeutycznego i Optimark w stężeniu terapeutycznym lub wyższym mogą zakłócać oznaczenie wapnia. Znane tiazydy mogą obniżać wydalanie wapnia; brak informacji nie potwierdza braku leczenia.",
     },
   });
-  const PROFILES = freeze({ MAYO_CACR3_RANDOM_2026_10 });
+  const ARUP_CACR_DZM_2026_11 = freeze({
+    id: "ARUP_CACR_DZM_2026_11", version: 1, formulaId: "Ca_Cr",
+    quantity: "urine-calcium-creatinine-ratio", label: "ARUP Laboratories · 0020472", nativeUnit: "mg/mg",
+    comparisonMode: "orientational", referenceKind: "two-sided-laboratory-reference-interval",
+    population: { label: "Profil laboratoryjny ARUP dla moczu; w aplikacji stosowany do Ca/Cr z DZM, od urodzenia", minimumAgeYearsInclusive: 0, maximumAgeYearsInclusive: null, sexSpecific: true, sexSpecificFromAgeYears: 7 },
+    source: {
+      id: "ARUP_0020472", label: "ARUP Laboratories · 0020472", version: "odczyt 2026-11-02", accessedAt: "2026-11-02",
+      title: "Calcium, Urine", url: "https://ltd.aruplab.com/Tests/Pub/0020472",
+      normalExample: "https://ltd.aruplab.com/api/ltd/examplereport?report=0020472%2C%20Normal.pdf",
+      abnormalExample: "https://ltd.aruplab.com/api/ltd/examplereport?report=0020472%2C%20Abnormal.pdf",
+      componentCode: "0020721", loinc: "13717-4", nativeReportedUnit: "mg/g",
+      section: "Reference Interval: Calcium/Creatinine Ratio, Urine; pełne przykładowe raporty 24 h i 25 h",
+      fullDocumentRead: true, cohortPublished: false, publicationDate: null,
+      methods: { calcium: "ilościowa spektrofotometria — metoda katalogowa badania", creatinine: "nie wyszczególniono osobno w katalogu", ratio: "obliczenie" },
+    },
+    conversionConstants: { calciumMgPerMmol: "40.078", creatinineMgPerMmol: "113.12" },
+    // The source publishes mg/g. These are the same limits divided by 1000,
+    // not a composite profile or a transfer of the Mayo random-urine table.
+    bands: [
+      { id: "arup-cacr-1", minimumAgeMonthsInclusive: 0, maximumAgeMonths: 12, maximumAgeInclusive: false, label: "0–<12 mies.", sourceAge: "0–11 months", bySex: { M: { lower: 0.03, upper: 0.81 }, F: { lower: 0.03, upper: 0.81 } } },
+      { id: "arup-cacr-2", minimumAgeMonthsInclusive: 12, maximumAgeMonths: 24, maximumAgeInclusive: false, label: "12–<24 mies.", sourceAge: "12–23 months", bySex: { M: { lower: 0.03, upper: 0.56 }, F: { lower: 0.03, upper: 0.56 } } },
+      { id: "arup-cacr-3", minimumAgeMonthsInclusive: 24, maximumAgeMonths: 36, maximumAgeInclusive: false, label: "2–<3 lata", sourceAge: "24–35 months", bySex: { M: { lower: 0.02, upper: 0.50 }, F: { lower: 0.02, upper: 0.50 } } },
+      { id: "arup-cacr-4", minimumAgeMonthsInclusive: 36, maximumAgeMonths: 60, maximumAgeInclusive: false, label: "3–<5 lat", sourceAge: "3–4 years", bySex: { M: { lower: 0.02, upper: 0.41 }, F: { lower: 0.02, upper: 0.41 } } },
+      { id: "arup-cacr-5", minimumAgeMonthsInclusive: 60, maximumAgeMonths: 84, maximumAgeInclusive: false, label: "5–<7 lat", sourceAge: "5–6 years", bySex: { M: { lower: 0.01, upper: 0.30 }, F: { lower: 0.01, upper: 0.30 } } },
+      { id: "arup-cacr-6", minimumAgeMonthsInclusive: 84, maximumAgeMonths: 120, maximumAgeInclusive: false, label: "7–<10 lat", sourceAge: "7–9 years", bySex: { M: { lower: 0.006, upper: 0.431 }, F: { lower: 0.011, upper: 0.457 } } },
+      { id: "arup-cacr-7", minimumAgeMonthsInclusive: 120, maximumAgeMonths: 156, maximumAgeInclusive: false, label: "10–<13 lat", sourceAge: "10–12 years", bySex: { M: { lower: 0.008, upper: 0.30 }, F: { lower: 0.012, upper: 0.309 } } },
+      { id: "arup-cacr-8", minimumAgeMonthsInclusive: 156, maximumAgeMonths: 192, maximumAgeInclusive: false, label: "13–<16 lat", sourceAge: "13–15 years", bySex: { M: { lower: 0.006, upper: 0.293 }, F: { lower: 0.008, upper: 0.313 } } },
+      { id: "arup-cacr-9", minimumAgeMonthsInclusive: 192, maximumAgeMonths: 216, maximumAgeInclusive: false, label: "16–<18 lat", sourceAge: "16–17 years", bySex: { M: { lower: 0.01, upper: 0.264 }, F: { lower: 0.02, upper: 0.271 } } },
+      { id: "arup-cacr-10", minimumAgeMonthsInclusive: 216, maximumAgeMonths: null, maximumAgeInclusive: false, label: "≥18 lat", sourceAge: "18 years and older", bySex: { M: { lower: 0.02, upper: 0.24 }, F: { lower: 0.02, upper: 0.30 } } },
+    ],
+    categories: {
+      below: { code: "below", label: "Poniżej normy dla wieku", tone: "warning" },
+      within: { code: "within", label: "W zakresie laboratoryjnym", tone: "success" },
+      above: { code: "above", label: "Powyżej normy dla wieku", tone: "warning" },
+    },
+    restrictions: {
+      applicableSampleTypes: ["timed"], missingSamplePolicy: "unassessed", sourceSampleTypes: ["timed", "random"],
+      referenceKind: "two-sided-laboratory-reference-interval", comparisonMode: "orientational", patientLaboratoryMatched: false,
+      sexSpecific: true, sameSpecimenRequiredForConcentrationRatio: true, unknownFactsAreConfirmedAbsent: false,
+      nativeUnit: "mg/mg", lowerInclusive: true, upperInclusive: true,
+      pretermSpecificReferenceAvailable: false, correctedAgeReferenceAvailable: false,
+      collectionTimeRequiredForRatio: false, collectionVolumeRequiredForRatio: false, normalizeTo24Hours: false,
+      knownCollectionProblemWithholdsComparison: true, otherPositiveDurationWithholdsComparison: false,
+      singleResultDiagnosesHypercalciuria: false, normalResultExcludesStoneDisease: false,
+      terminalAgePolicy: "Źródłowy ostatni przedział ≥18 lat nie ma maksimum; techniczny zakres kontekstu aplikacji 0–120 lat nie jest ograniczeniem ARUP.",
+    },
+    notes: {
+      universal: "Porównanie orientacyjne z profilem laboratoryjnym ARUP.",
+      below: "Mniejszy stosunek wapnia do kreatyniny niż w zakresie laboratorium. Interpretację uzupełnia dobowe wydalanie wapnia.",
+      within: "Wynik mieści się w wybranym zakresie laboratorium dla wieku i danych pacjenta.",
+      above: "Podwyższony Ca/Cr może wiązać się ze zwiększonym wydalaniem wapnia. Warto ocenić także dobowe wydalanie wapnia.",
+      missingAge: "Brak prawidłowego wieku w danych pacjenta. Wynik liczbowy pozostaje dostępny.",
+      underAge: "Nie dobrano normy dla tego wieku.", overAge: "Nieprawidłowy lub nieobsługiwany wiek w danych aplikacji; nie jest to górna granica źródła ARUP.",
+      missingSex: "Od 7. roku życia zakres ARUP zależy od płci, której nie znamy. Wynik liczbowy pozostaje dostępny.",
+      currentPreterm: "Nie dobrano dedykowanego zakresu dla bieżącego kontekstu wcześniaczego. Wynik liczbowy pozostaje dostępny bez korekcji wieku.",
+      censored: "Nierówność z raportu obejmuje więcej niż jeden zakres. Zachowujemy zapis bez przypisywania jednoznacznej oceny.",
+      source: "Orientacyjny dwustronny zakres ARUP dla moczu; katalog przyjmuje DZM i mocz losowy. Oba końce zakresu są włączone jako jawna konwencja aplikacji. Zakres laboratorium wykonującego badanie może się różnić.",
+      methods: "Katalog ARUP podaje ilościową spektrofotometrię. Nie publikuje tu kohorty, percentyli ani osobnego profilu wcześniaczego.",
+      sample: "Przyjmujemy dobową zbiórkę i oba stężenia z tej samej próbki. Sam iloraz nie wymaga czasu ani objętości; nie przeskalowujemy go przez 24/czas. Założenie nie potwierdza kompletności zbiórki.",
+      collectionProblem: "Znany problem lub niepełna zbiórka ogranicza porównanie z normą DZM. Wynik liczbowy pozostaje dostępny.",
+      invalidDuration: "Nieprawidłowy zapis własnego czasu zbiórki ogranicza porównanie. Wynik liczbowy pozostaje dostępny.",
+      knownFacts: "Znane sprzeczności zachowują znaczenie mimo uproszczonego formularza.",
+      diagnosis: "Ca/Cr, dobowe wydalanie wapnia i iloraz klirensów CCCR są różnymi miarami. Do CCCR potrzebne są także równoczesne wyniki surowicy. Nie stosujemy progów CCCR do Ca/Cr.",
+      confirmation: "W chorobach przytarczyc ocenę uzupełnia dobowe wydalanie wapnia. W XLH Ca/Cr może być elementem monitorowania kalciurii; sam wskaźnik nie potwierdza skuteczności burosumabu.",
+      units: "Wynik i wszystkie zakresy mają tę samą jednostkę. Źródłowe mg/g dzielimy przez 1000 do mg/mg. Znak ≈ oznacza skrócenie prezentacji, a ocena korzysta z pełnych wartości.",
+      concentration: "Wapń [mg/L] ÷ kreatynina [mg/L] z tej samej próbki moczu. Czas, objętość, krew, masa i wzrost nie są potrzebne do obliczenia tego wskaźnika.",
+      agePolicy: "Źródłowe całkowite grupy miesięcy i lat mapujemy na ciągły wiek bez interpolacji. Przed 7 lat zakres obu płci jest wspólny; od 7 lat nieznana płeć nie wybiera żadnej kolumny.",
+      interference: "Sam wskaźnik nie rozpoznaje choroby przytarczyc ani FHH i nie określa skuteczności leczenia.",
+    },
+  });
+  const PROFILES = freeze({ MAYO_CACR3_RANDOM_2026_10, ARUP_CACR_DZM_2026_11 });
   function getProfile(id) { return Object.prototype.hasOwnProperty.call(PROFILES, id) ? PROFILES[id] : null; }
   function listProfiles() { return Object.values(PROFILES); }
   return Object.freeze({ PROFILES, getProfile, listProfiles });

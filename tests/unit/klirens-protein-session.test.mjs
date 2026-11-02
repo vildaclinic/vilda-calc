@@ -218,6 +218,8 @@ describe('Protein DZM — complete production session runtime', () => {
 
   it('reconstructs the shipped additive adapter and capture hook from readable source', () => {
     expect(patchProteinDzmSessionHooks(source)).toBe(source);
+    const onlyProteinRemoved = source.replace(proteinDzmSessionSource, '').replace('try{window.ClcrProteinDzmUi?.ensureControls?.(document)}catch{}', '');
+    expect(patchProteinDzmSessionHooks(onlyProteinRemoved)).toBe(source);
     const withoutOuter = source.replace(urateCreatinineSessionSource, '').replace('try{window.ClcrUrateCreatinineUi?.ensureControls?.(document)}catch{}', '');
     const beforePotassium = withoutOuter.replace(potassiumDzmSessionSource, '').replace('try{window.ClcrPotassiumDzmUi?.ensureControls?.(document)}catch{}', '');
     const preceding = beforePotassium.replace(proteinDzmSessionSource, '').replace('try{window.ClcrProteinDzmUi?.ensureControls?.(document)}catch{}', '');

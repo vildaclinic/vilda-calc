@@ -145,13 +145,20 @@ export const proteinDzmSessionSource = String.raw`/* KLIRENS-PROTEIN-DZM-SESSION
 `;
 
 const marker = '(function(){const b="vildaClcrSessionV1";';
+// Preserve the installed order of later wrappers during partial rebuilds.
+const laterAdapters = [
+  '/* KLIRENS-POTASSIUM-DZM-SESSION:', '// Ca/Cr DZM owns its operands and specimen facts.',
+  '/* KLIRENS-URATE-CREATININE-SESSION:', marker,
+];
 const captureAnchor = 'try{window.ClcrPo4DzmUi?.ensureControls?.(document)}catch{}';
 const capturePatched = captureAnchor + 'try{window.ClcrProteinDzmUi?.ensureControls?.(document)}catch{}';
 export function patchProteinDzmSessionHooks(source) {
   let result = source;
   if (!result.includes('/* KLIRENS-PROTEIN-DZM-SESSION:')) {
     if (result.split(marker).length !== 2 || result.split(captureAnchor).length !== 2) throw new Error('Ambiguous protein session integration anchor');
-    result = result.replace(marker, proteinDzmSessionSource + marker).replace(captureAnchor, capturePatched);
+    const insertion = laterAdapters.filter(anchor => result.includes(anchor)).sort((a, b) => result.indexOf(a) - result.indexOf(b))[0];
+    if (result.split(insertion).length !== 2) throw new Error('Ambiguous protein session integration anchor');
+    result = result.replace(insertion, proteinDzmSessionSource + insertion).replace(captureAnchor, capturePatched);
   }
   if (result.split(proteinDzmSessionSource).length !== 2) throw new Error('Protein session source differs from the reproducible patch');
   if (result.split(capturePatched).length !== 2) throw new Error('Missing or duplicate protein session capture hook');

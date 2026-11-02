@@ -158,6 +158,7 @@ async function expectReferenceFits(page) {
     return { reference: { left: reference.left, right: reference.right },
       patient: { left: patient.left, right: patient.right },
       normGlyphs: glyphs('.clcr-result-reference-value'), patientGlyphs: glyphs('.clcr-result-value'),
+      patientDensity: node.querySelector('.clcr-result-value').dataset.density || 'normal',
       patientFont: parseFloat(getComputedStyle(node.querySelector('.clcr-result-value')).fontSize),
       referenceFont: parseFloat(getComputedStyle(node.querySelector('.clcr-result-reference-value')).fontSize) };
   });
@@ -168,6 +169,7 @@ async function expectReferenceFits(page) {
   for (const glyph of fit.patientGlyphs) expect(glyph.right).toBeLessThanOrEqual(fit.patient.right + 0.5);
   expect(fit.patient.right, 'Wynik i norma nie nachodzą na siebie').toBeLessThanOrEqual(fit.reference.left + 0.5);
   expect(fit.patientFont, 'Wynik pacjenta jest większy od normy').toBeGreaterThan(fit.referenceFont);
+  if (fit.patientDensity === 'long') expect(fit.patientFont, 'Długi skrót pozostaje czytelny').toBeGreaterThanOrEqual(16);
 }
 
 for (const width of [1440, 390, 320]) {
@@ -185,9 +187,10 @@ for (const width of [1440, 390, 320]) {
     await page.locator('#Ca_spot').fill('40');
     await page.locator('#Ucr_spot').fill('100');
     const result = await expectResult(page, { raw: 0.4, norm: [0.01, 0.3], category: 'above' });
-    expect(result.context).toMatchObject({ ageYears: 5, sameSpecimen: 'assumed', sampleType: '', confounders: [] });
+    expect(result.context).toMatchObject({ ageYears: 5, sameSpecimen: 'assumed', sampleType: 'random', sampleAssumption: 'assumed-random', confounders: [] });
     expect(result.profileId).toBe('MAYO_CACR3_RANDOM_2026_10');
-    await expect(card(page).locator('.clcr-result-reference-label')).toHaveText('Norma dla wieku');
+    await expect(card(page).locator('.clcr-result-reference-label')).toContainText('Norma dla wieku');
+    await expect(card(page).locator('.clcr-result-reference-label')).toContainText('Mayo');
     const colors = await card(page).evaluate(node => ({
       patient: getComputedStyle(node.querySelector('.clcr-result-value')).color,
       unit: getComputedStyle(node.querySelector('.clcr-result-unit')).color,
@@ -196,7 +199,10 @@ for (const width of [1440, 390, 320]) {
         '.clcr-result-reference-value', '.clcr-result-reference-unit'].map(selector => getComputedStyle(node.querySelector(selector)).color),
     }));
     expect(colors.patient).toBe('rgb(154, 91, 0)');
-    expect(colors.unit).toBe(colors.patient);
+    // In the accepted v2 card both units are neutral; number and status carry
+    // the warning so the reference's unit cannot look abnormal.
+    expect(colors.unit).toBe(colors.reference.at(-1));
+    expect(colors.unit).not.toBe(colors.patient);
     expect(colors.status).toBe(colors.patient);
     for (const color of colors.reference) expect(color, 'Norma i etykiety są neutralne').not.toBe(colors.patient);
     await expectReferenceFits(page);
@@ -219,8 +225,8 @@ for (const width of [1440, 390, 320]) {
     await kliknij(mode(page, true));
     await expect(page.locator('#CaCr_reported')).toBeVisible();
     await expect(page.locator('#Ca_spot')).toBeHidden();
-    for (const [unit, value] of [['mg/mg', '0.4'], ['g/g', '0.4'], ['mg/g', '400'],
-      ['mg/mmol', '45.248'], ['mol/mol', '1.129'], ['mmol/mmol', '1.129'], ['mmol/mol', '1129']]) {
+    for (const [unit, value] of [['mg/mg', '0.4'], ['mg/g', '400'],
+      ['mg/mmol', '45.248'], ['mmol/mmol', '1.129'], ['mmol/mol', '1129']]) {
       await page.locator('#CaCr_reported_unit').selectOption(unit);
       await page.locator('#CaCr_reported').fill(value);
       await expectResult(page, { raw: Number(value), unit, category: 'above' });
@@ -231,7 +237,7 @@ for (const width of [1440, 390, 320]) {
     await openDetails(page);
     await expect(details(page)).toContainText(/Mayo|CACR3/);
     sameWidths(initial, await geometry(page, width));
-    for (const unit of ['mg/mg', 'g/g', 'mg/g', 'mg/mmol', 'mol/mol', 'mmol/mmol', 'mmol/mol']) {
+    for (const unit of ['mg/mg', 'mg/g', 'mg/mmol', 'mmol/mmol', 'mmol/mol']) {
       await page.locator('#CaCr_reported_unit').selectOption(unit);
       await page.locator('#CaCr_reported').fill('12345678.12345678');
       await expectResult(page, { unit, category: 'above' });
@@ -262,7 +268,7 @@ for (const width of [1440, 390, 320]) {
   });
 }
 
-test('Ca/Cr 361/375/381px: krótki wynik i pełna norma niemowlęcia mieszczą się przy szerszym kroju pisma', async ({ page }) => {
+test('Ca/Cr 320/361/375/381px: krótki wynik i pełne normy mieszczą się przy szerszym kroju pisma', async ({ page }) => {
   await openCalculator(page, 361);
   await page.addStyleTag({ content: `
     html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .cacr-proposal-card :is(.clcr-result-value, .clcr-result-reference-value) {
@@ -285,6 +291,19 @@ test('Ca/Cr 361/375/381px: krótki wynik i pełna norma niemowlęcia mieszczą s
     expect(await normNumbers(page), 'Obie granice normy niemowlęcia pozostają widoczne').toHaveLength(2);
     await expectReferenceFits(page);
   }
+  // Dziewięcioznakowy górny koniec normy wieku 5 lat wcześniej nie włączał
+  // gęstszego składu i przy DejaVu wykraczał poza kolumnę na ekranie 320 px.
+  await page.setViewportSize({ width: 320, height: 1000 });
+  await restore(page, { age: '5', CaCr_entry_mode: 'direct',
+    CaCr_reported: '1129', CaCr_reported_unit: 'mmol/mol' });
+  await expectResult(page, { raw: 1129, unit: 'mmol/mol', category: 'above' });
+  expect(await normNumbers(page), 'Pełna norma dziecka w tej samej jednostce').toHaveLength(2);
+  await expect(card(page).locator('.clcr-result-reference-unit')).toHaveText('mmol/mol');
+  await expectReferenceFits(page);
+  const unitTops = await card(page).evaluate(node =>
+    ['.clcr-result-unit', '.clcr-result-reference-unit'].map(selector =>
+      node.querySelector(selector).getBoundingClientRect().top));
+  expect(Math.abs(unitTops[0] - unitTops[1]), 'Jednostki wyniku i normy pozostają w jednym wierszu').toBeLessThanOrEqual(1);
 });
 
 test('Ca/Cr: wapń 40 mg/dL jest dopuszczalny, jednostki są równoważne, zero różni się od braku danych', async ({ page }) => {
@@ -302,7 +321,7 @@ test('Ca/Cr: wapń 40 mg/dL jest dopuszczalny, jednostki są równoważne, zero 
     await expectResult(page, { raw: 0.4 });
   }
   await page.locator('#Ca_spot').fill('0');
-  await expectResult(page, { raw: 0, status: 'below', category: 'below' });
+  await expectResult(page, { raw: 0, tone: 'neutral', status: 'unassessed', category: null });
   for (const value of ['', '-1']) {
     await page.locator('#Ca_spot').fill(value);
     await expect(card(page)).toHaveCount(0);
@@ -319,18 +338,51 @@ test('Ca/Cr: wapń 40 mg/dL jest dopuszczalny, jednostki są równoważne, zero 
   await page.locator('#Ucr_spot_unit').selectOption('mmol/L');
   await page.locator('#Ucr_spot').fill('10');
   await expectResult(page, { raw: 0.3, tone: 'success', status: 'within', category: 'within' });
+  // Native selects must actually contain the new unique concentration units;
+  // a plain-object unit stub cannot detect a silently emptied <select>.
+  await restore(page, { Ca_spot: '5000', Ca_spot_unit: 'µmol/L', Ucr_spot: '1000', Ucr_spot_unit: 'mg/L' });
+  await expect(page.locator('#Ca_spot_unit')).toHaveValue('µmol/L');
+  await expect(page.locator('#Ucr_spot_unit')).toHaveValue('mg/L');
+  await expectResult(page, { raw: 0.20039, tone: 'success', status: 'within', category: 'within' });
+  await page.locator('#Ca_spot_unit').selectOption('mmol/L');
+  await page.locator('#Ca_spot').fill('5');
+  await expectResult(page, { raw: 0.20039, tone: 'success', status: 'within', category: 'within' });
+  for (const [formula, field, amount, evaluator] of [['ACR', 'U_Alb', '45', 'evaluateClcrAcr'], ['PCR', 'U_Prot_spot', '300', 'evaluateClcrPcr']]) {
+    expect(await page.evaluate(id => window.ClcrUiWorkflow.selectFormula(id), formula)).toBe(true);
+    await page.waitForFunction(id => window.ClcrUiWorkflow.state.activeFormulaId === id && window.clcrIsResetting !== true, formula);
+    await page.locator('#' + field).fill(amount);
+    await expect(page.locator('#Ucr_spot_unit')).toHaveValue('mg/L');
+    expect(await page.locator('#Ucr_spot_unit option[value="mg/L"]').evaluate(option => option.hidden)).toBe(true);
+    const guarded = await page.evaluate(({ id, method }) => ({ result: window[method](), points: window.ClcrVisitSave.collectActiveDatapoints(document, { formulaId: id }) }), { id: formula, method: evaluator });
+    expect(guarded.result).toMatchObject({ valid: false, reasonCode: 'invalid-creatinine-unit' });
+    expect(guarded.points).toEqual([]);
+  }
+  expect(await page.evaluate(() => window.ClcrUiWorkflow.selectFormula('CaCr_spot'))).toBe(true);
+  await page.waitForFunction(() => window.ClcrUiWorkflow.state.activeFormulaId === 'CaCr_spot' && window.clcrIsResetting !== true);
+  await expect(page.locator('#Ucr_spot_unit')).toHaveValue('mg/L');
+  await expectResult(page, { raw: 0.20039, tone: 'success', status: 'within', category: 'within' });
 });
 
-test('Ca/Cr: siedem jednostek raportu zachowuje natywną wartość i oddzielne serie po rzeczywistym sanitizerze', async ({ page }) => {
+test('Ca/Cr: pięć jednostek i dwa importowane aliasy zachowują wartość po rzeczywistym sanitizerze', async ({ page }) => {
   await openCalculator(page);
   await restore(page, { CaCr_entry_mode: 'direct' });
   const cases = [['mg/mg', '0.4'], ['g/g', '0.4'], ['mg/g', '400'], ['mg/mmol', '45.248'],
     ['mol/mol', '1.129'], ['mmol/mmol', '1.129'], ['mmol/mol', '1129']];
-  for (const [unit, value] of cases) {
-    await page.locator('#CaCr_reported_unit').selectOption(unit);
-    await page.locator('#CaCr_reported').fill(value);
+  const aliases = { 'g/g': 'mg/mg', 'mol/mol': 'mmol/mmol' };
+  for (const [index, [reportedUnit, value]] of cases.entries()) {
+    const unit = aliases[reportedUnit] || reportedUnit;
+    if (aliases[reportedUnit]) {
+      // Legacy aliases enter through restoration, not a duplicate visible option.
+      await restore(page, { CaCr_entry_mode: 'direct', CaCr_reported: value, CaCr_reported_unit: reportedUnit });
+    } else {
+      await page.locator('#CaCr_reported_unit').selectOption(unit);
+      await page.locator('#CaCr_reported').fill(value);
+    }
     await expectResult(page, { raw: Number(value), unit, category: 'above' });
-    const saved = await captureSave(page, '2026-10-24');
+    // Equivalent imported aliases intentionally have the same canonical unit.
+    // Distinct dates make these seven separate measurements rather than an
+    // idempotent repeat of one clinical save intent.
+    const saved = await captureSave(page, `2026-10-${17 + index}`);
     expect(saved.outcome).toMatchObject({ ok: true, saved: 1 });
     expect(saved.notes).toEqual(saved.rawNotes);
     expect(saved.notes[0].labResult).toMatchObject({ valueNum: Number(value), unit });
@@ -343,19 +395,22 @@ test('Ca/Cr: siedem jednostek raportu zachowuje natywną wartość i oddzielne s
     try { return window.ClcrVisitSave.buildSeriesFromNotes(window.__cacrSyntheticNotes, { formulaId: 'CaCr_spot' }); }
     finally { window.VildaClcrCacr = engine; }
   });
-  expect(series.map(row => row.unit).sort()).toEqual(cases.map(row => row[0]).sort());
-  expect(series.every(row => row.points.length === 1)).toBe(true);
+  expect(series.map(row => row.unit).sort()).toEqual(['mg/mg', 'mg/g', 'mg/mmol', 'mmol/mmol', 'mmol/mol'].sort());
+  for (const row of series) expect(row.points).toHaveLength(['mg/mg', 'mmol/mmol'].includes(row.unit) ? 2 : 1);
+  expect(series.flatMap(row => row.points)).toHaveLength(7);
 });
 
 test('Ca/Cr: 0,30001 i 0,00999 zachowują stronę granicy oraz surową wartość po zapisie i w historii', async ({ page }) => {
   await openCalculator(page);
   for (const [calcium, raw, category, boundary, date] of [
-    ['30.001', 0.30001, 'above', '>0,3', '2026-10-20'],
-    ['0.999', 0.00999, 'below', '<0,01', '2026-10-21'],
+    ['30.001', 0.30001, 'above', '', '2026-10-20'],
+    ['0.999', 0.00999, 'below', '', '2026-10-21'],
   ]) {
     await restore(page, { Ca_spot: calcium, Ucr_spot: '100' });
     await expectResult(page, { raw, category, status: category, norm: [0.01, 0.3] });
     await expect(card(page)).toHaveAttribute('data-clcr-boundary', boundary);
+    // The exact visible number now already communicates its side of the limit.
+    await expect(card(page).locator('.clcr-result-value')).toHaveText(String(raw).replace('.', ','));
     const saved = await captureSave(page, date);
     expect(saved.points).toHaveLength(1);
     expect(saved.points[0]).toMatchObject({ valueNum: raw, unit: 'mg/mg',
@@ -418,7 +473,7 @@ test('Ca/Cr: dokładne granice wieku i oba końce Mayo, bez normy zastępczej dl
   for (const [age, months] of [['', ''], ['0', '0'], ['83', '1'], ['84', '']]) {
     await restore(page, { age, ageMonths: months, CaCr_entry_mode: 'direct', CaCr_reported: '0.4' });
     await expectResult(page, { raw: 0.4, tone: 'neutral', status: 'unassessed', category: null });
-    await expect(card(page).locator('.clcr-result-reference-value')).toHaveCount(0);
+    await expect(card(page).locator('.clcr-result-reference-value')).toHaveText('Brak dobranej normy');
     await expect(card(page)).toContainText(/wiek|mies|83/);
   }
 });
@@ -442,7 +497,7 @@ test('Ca/Cr: znane różne próbki blokują iloraz, bezpośredni raport działa,
     },
   }, { source: 'e2e-cacr-next-fictional-patient', update: true, dispatchEvents: false, preserveAcrossVersions: true }))).toBe(true);
   await expectResult(page, { raw: 0.4, category: 'above' });
-  expect((await snapshot(page)).context).toMatchObject({ sameSpecimen: 'assumed', confounders: [], sampleType: '' });
+  expect((await snapshot(page)).context).toMatchObject({ sameSpecimen: 'assumed', confounders: [], sampleType: 'random', sampleAssumption: 'assumed-random' });
   const fields = await page.evaluate(() => window.buildClcrSessionSnapshot().inputs);
   expect(fields.CaCr_same_specimen).toBe('');
   expect(fields.ui_spotSameSpecimen_answer || '').toBe('');

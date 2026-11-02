@@ -47,15 +47,17 @@ function history(browser, notes) {
 
 describe('Ca/Cr — kolektor, rzeczywiste sanitizery sejfu i historyczna ocena', () => {
   it.each([
-    ['30.001', 0.30001, 'above', '>0,3'], ['29.999', 0.29999, 'within', ''],
-    ['0.999', 0.00999, 'below', '<0,01'], ['1', 0.01, 'within', ''], ['30', 0.3, 'within', ''], ['0', 0, 'below', ''],
+    ['30.001', 0.30001, 'above', ''], ['29.999', 0.29999, 'within', ''],
+    ['0.999', 0.00999, 'below', ''], ['1', 0.01, 'within', ''], ['30', 0.3, 'within', ''], ['0', 0, 'unassessed', ''],
   ])('Ca %s / Cr 100 zachowuje pełną wartość %s i ocenę %s mimo podwójnego zaokrąglania', async (calciumValue, raw, status, boundary) => {
     const context = harness();
     const snapshot = evaluate(context.browser, { mode: 'concentration', calciumValue, calciumUnit: 'mg/dl',
       creatinineValue: '100', creatinineUnit: 'mg/dl', sameSpecimen: 'confirmed', sampleType: 'random' });
     const original = JSON.stringify(snapshot);
     const { point, note } = await save(context, snapshot);
-    expect(point).toMatchObject({ valueNum: raw, unit: 'mg/mg', outOfRange: status !== 'within', norm: '0,01–0,30 mg/mg' });
+    const outside = status === 'unassessed' ? null : status !== 'within';
+    expect(point).toMatchObject({ valueNum: raw, unit: 'mg/mg', outOfRange: outside, norm: '0,01–0,3 mg/mg' });
+    expect(snapshot.boundary).toBe(boundary);
     expect(point.cacrSnapshot).toEqual(snapshot);
     expect(note.labResult).toMatchObject({ valueNum: raw, value: snapshot.display.text.replace('.', ','), unit: 'mg/mg' });
     expect(note.body).toContain(`Wynik przed zaokrągleniem: ${String(raw).replace('.', ',')} mg/mg.`);
@@ -63,8 +65,8 @@ describe('Ca/Cr — kolektor, rzeczywiste sanitizery sejfu i historyczna ocena',
     for (const text of ['Mayo Clinic Laboratories', '2026-10-23', 'MAYO_CACR3_RANDOM_2026_10; wersja 1',
       'Zakres źródłowy: 0,01–0,3 mg/mg; obie granice należą do normy.', 'Wiek użyty przy ocenie: 5 lat.',
       'Potwierdzono, że oznaczenia pochodzą z tej samej próbki', 'NM-BAPTA', 'enzymatyczna', 'Metody laboratorium pacjenta nie zostały potwierdzone.']) expect(note.body).toContain(text);
-    expect(history(context.browser, [note])[0].points[0]).toMatchObject({ valueNum: raw, category: status, assessment: status,
-      outOfRange: status !== 'within', displayValue: snapshot.display.text.replace('.', ','),
+    expect(history(context.browser, [note])[0].points[0]).toMatchObject({ valueNum: raw, category: status === 'unassessed' ? null : status, assessment: status,
+      outOfRange: outside, displayValue: snapshot.display.text.replace('.', ','),
       cacrAssessment: { profileId: 'MAYO_CACR3_RANDOM_2026_10', profileVersion: '1', ageYears: 5 } });
     expect(JSON.stringify(snapshot)).toBe(original);
   });
@@ -92,18 +94,39 @@ describe('Ca/Cr — kolektor, rzeczywiste sanitizery sejfu i historyczna ocena',
     expect(series.points[0].cacrAssessment.ageYears).toBe(83);
   });
 
-  it('siedem jednostek pozostaje siedmioma seriami bez przeliczania historii', async () => {
-    const context = harness();
-    const notes = [];
+  it('siedem jednostek wejścia zachowuje semantykę, a dwa równoważne aliasy normalizują tylko nowe zapisy', async () => {
+    const context = harness(), notes = [];
+    const canonical = unit => ({ 'g/g': 'mg/mg', 'mol/mol': 'mmol/mmol' })[unit] || unit;
     for (const unit of units) notes.push((await save(context, evaluate(context.browser, { reportedUnit: unit, reportedValue: '0,3000100' }))).note);
+    const series = history(context.browser, notes), expectedUnits = [...new Set(units.map(canonical))];
+    expect(series).toHaveLength(5);
+    expect(series.map(value => value.unit)).toEqual(expectedUnits);
+    for (let index = 0; index < units.length; index += 1) {
+      expect(notes[index].labResult).toMatchObject({ value: '0,30001', valueNum: 0.30001, unit: canonical(units[index]) });
+      expect(notes[index].body).toContain('Wynik wpisany z laboratorium: 0,3000100 ' + units[index]);
+      const group = series.find(value => value.unit === canonical(units[index]));
+      expect(group.points).toHaveLength(units.filter(unit => canonical(unit) === group.unit).length);
+      expect(group.points[0]).toMatchObject({ valueNum: 0.30001, unit: group.unit, displayValue: '0,30001' });
+    }
+  });
+
+  it('odczyt starszych siedmiu jednostek pozostawia siedem historycznych osi bez normalizacji', async () => {
+    const context = harness(), notes = [];
+    for (const unit of units) {
+      const snapshot = JSON.parse(JSON.stringify(evaluate(context.browser, { reportedUnit: unit, reportedValue: '0,3000100' })));
+      // The two aliases were literal output units in the version-1 wire format.
+      // They remain historical facts even though new calculations use five choices.
+      snapshot.version = 1; snapshot.unit = unit; snapshot.input.reportedUnit = unit;
+      snapshot.display.value = '0.3000100'; snapshot.display.text = '0.3000100'; snapshot.display.rounded = false;
+      snapshot.display.unit = unit;
+      if (snapshot.reference) snapshot.reference.unit = unit;
+      const { note } = await save(context, snapshot);
+      notes.push(note);
+    }
     const series = history(context.browser, notes);
     expect(series).toHaveLength(7);
     expect(series.map(value => value.unit)).toEqual(units);
-    for (let index = 0; index < units.length; index += 1) {
-      expect(notes[index].labResult).toMatchObject({ value: '0,3000100', valueNum: 0.30001, unit: units[index] });
-      expect(series[index].points).toHaveLength(1);
-      expect(series[index].points[0]).toMatchObject({ valueNum: 0.30001, unit: units[index], displayValue: '0,3000100' });
-    }
+    expect(notes.map(note => note.labResult.unit)).toEqual(units);
   });
 
   it.each(['<0.01', '≤0.009', '>0.3', '≥0.31', '≤0.3', '≥0.3'])(

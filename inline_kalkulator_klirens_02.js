@@ -172,9 +172,10 @@
       },
       {
         id: "Ca_Cr",
-        label: "Ca/Cr (DZM)",
+        label: "Ca/Cr — DZM",
         version: "advanced",
-        requires: [ "U_Ca", "Ucr"],
+        requires: ["CACR_DZM_calcium", "CACR_DZM_calciumUnit", "CACR_DZM_creatinine", "CACR_DZM_creatinineUnit"],
+        note: "Dwa stężenia z tej samej dobowej zbiórki albo gotowy Ca/Cr. Znany wiek i płeć służą dobraniu normy ARUP; czas i objętość nie są potrzebne.",
       },
       {
         id: "Mg_Ca",
@@ -267,7 +268,8 @@
       },
       {
         id: "CaCr_spot",
-        label: "Ca/Cr — wapń/kreatynina (próbka moczu)",
+        label: "Ca/Cr — próbka jednorazowa",
+        searchAliases: ["wapń/kreatynina", "calcium/creatinine"],
         version: "spot",
         requires: [
           "Ca_spot",

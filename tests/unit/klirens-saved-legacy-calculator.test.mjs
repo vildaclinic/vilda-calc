@@ -30,14 +30,15 @@ const calculate = (id, patch = {}, output = id, context = {}) => engine.recalcul
 describe('Saved Klirens: existing timed-urine production arithmetic', () => {
   it.each([
     ['Ox_mgkg', 0.06, 'mg/kg/24 h'], ['Cit_mgkg', 1.5, 'mg/kg/24 h'],
-    ['KM_Cr', 0.2, 'mg/mg'], ['Ca_Cr', 0.08, 'mg/mg'], ['Mg_Ca', 0.25, 'mg/mg'],
+    ['KM_Cr', 0.2, 'mg/mg'], ['Ca_Cr', 0.080156, 'mg/mg'], ['Mg_Ca', 0.25, 'mg/mg'],
     ['PO4_Cr', 0.1, 'mg/mg'], ['B_Cr', 0.2, 'mg/mg'], ['Ca_Cit', 1.6, 'mg/mg'],
     ['K_frac', 40, '%'],
-  ])('%s retains its original source units and numeric value', (id, expected, unit) => {
+  ])('%s uses its own documented production conversion and source units', (id, expected, unit) => {
     const result = calculate(id);
     expect(result.valueNum).toBeCloseTo(expected, 12);
     expect(result.unit).toBe(unit);
-    expect(result).toMatchObject({ sourceFormulaId: id, comparator: '', tone: 'neutral', norm: '', outOfRange: null, category: null });
+    if (id === 'Ca_Cr') expect(result).toMatchObject({ sourceFormulaId: id, comparator: '', tone: 'success', norm: '0,02–0,24 mg/mg', outOfRange: false, category: 'within' });
+    else expect(result).toMatchObject({ sourceFormulaId: id, comparator: '', tone: 'neutral', norm: '', outOfRange: null, category: null });
   });
 
   it('potassium retains the broad concentration quantity with an explicit clock and its selected laboratory reference', () => {
@@ -78,7 +79,7 @@ describe('Saved Klirens: existing timed-urine production arithmetic', () => {
 
   it('normalizes the recorded collection duration, without using a current day', () => {
     expect(calculate('Ca_mgkg', { CA_collectionHours: '12', collectionEndAt: '2026-10-20T20:00' }).valueNum).toBe(240.468);
-    expect(calculate('Ca_Cr', { collectionEndAt: '' }).valueNum).toBe(0.08);
+    expect(calculate('Ca_Cr', { collectionEndAt: '' }).valueNum).toBe(0.080156);
     expect(() => calculate('Ca_mgkg', { collectionEndAt: '' })).toThrow();
     expect(() => calculate('Ca_mgkg', { CA_collectionHours: '24', collectionNoMissedVoids: false, ui_collectionNoMissedVoids_answer: 'no' })).toThrow();
   });

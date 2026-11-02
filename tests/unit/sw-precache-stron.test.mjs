@@ -284,7 +284,8 @@ describe('P-SW-PRECACHE: instalacja bez historii, kopia z poprzedniej pamięci, 
     '/vilda_logger.js', '/vilda_html.js', '/vilda_init.js', '/vilda_app_helpers.js', '/vilda_frame_sync.js',
     '/vilda_crypto.js', '/vilda_persistence_adapter.js', '/vilda_crypto_strength_explainer.js',
     '/vilda_deps.js', '/vilda_update_hooks.js', '/ios26-ui.js',
-    '/vilda_shell.js', '/vilda_persist_runtime.js', '/vilda_name_fix.js', '/vilda_file_export.js', '/vilda_pro_ui.js'];
+    '/vilda_shell.js', '/vilda_persist_runtime.js', '/vilda_name_fix.js', '/vilda_file_export.js', '/vilda_pro_ui.js',
+    '/vilda_centile_chart_header.js', '/vilda_update_prep.js', '/vilda_save_status_indicator.js'];
   const wspoldzielonePary = ['/style.css', '/vilda_chrome.css', ...dodatkoweWspoldzieloneZasoby];
   const wspoldzieloneZasoby = new Set(['/edu-video-ui.css', ...wspoldzielonePary]);
   const oczekiwanePobraniaSwiezychZasobow = () => {
@@ -331,6 +332,11 @@ describe('P-SW-PRECACHE: instalacja bez historii, kopia z poprzedniej pamięci, 
     // Five KM/Cr resources each retain their own fresh network request. The
     // explicit static alias pairs above save five duplicate requests instead.
     for (const plik of ['/clcr_urate_creatinine_data.js', '/clcr_urate_creatinine.js', '/clcr_urate_creatinine_ui.js', '/clcr_urate_creatinine.css', '/clcr_urate_creatinine_persistence.js']) {
+      expect(pobrane.filter(adres => adres.split('?')[0] === plik), plik).toHaveLength(1);
+    }
+    // Each new Ca/Cr DZM asset is still fetched independently. Only the three
+    // explicitly listed static UI alias pairs above save duplicate requests.
+    for (const plik of ['/clcr_cacr_dzm_ui.js', '/clcr_cacr_dzm_ui.css', '/clcr_cacr_dzm_persistence.js']) {
       expect(pobrane.filter(adres => adres.split('?')[0] === plik), plik).toHaveLength(1);
     }
     expect(pobrane.length, `instalacja wysyła ${pobrane.length} żądań`).toBeLessThanOrEqual(600);

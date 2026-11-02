@@ -55,7 +55,9 @@
     const category = available ? text(point.category) : "";
     const outOfRange = available && typeof point.outOfRange === "boolean" ? point.outOfRange : null;
     const tone = available && ["success", "normal", "warning", "danger"].includes(point.tone) ? point.tone : "neutral";
-    const status = category || (criterion ? "Ocena kryterium" : outOfRange === true ? "Wynik poza zakresem" : outOfRange === false ? "W zakresie" : "Bez zapisanej oceny");
+    const ratioCategory = ["Ca_Cr", "CaCr_spot"].includes(point?.sourceFormulaId)
+      ? ({ below: "Poniżej normy", within: "W zakresie", above: "Powyżej normy" })[category] : "";
+    const status = ratioCategory || category || (criterion ? "Ocena kryterium" : outOfRange === true ? "Wynik poza zakresem" : outOfRange === false ? "W zakresie" : "Bez zapisanej oceny");
     const interpretation = available ? text(point.interpretation) : "Zapisana ocena jest niedostępna. Otwórz szczegóły pomiaru.";
     return {
       noteId: text(note.id), patientId, label, display: decimal(display), unit,

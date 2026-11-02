@@ -33,6 +33,7 @@
     if (formulaId === "Na_mmol_d" && ["Na_volumeUnit", "Na_reportedUnit", "Na_outputUnit"].includes(field.id)) return true;
     if (formulaId === "K_mmol_d" && field.id === "K_volumeUnit") return true;
     if (formulaId === "KM_Cr" && /^URCR_/.test(field.id) && field.id !== "URCR_outputUnit") return true;
+    if (formulaId === "Ca_Cr" && /^CACR_DZM_/.test(field.id)) return !["CACR_DZM_sameSpecimen", "CACR_DZM_collectionProblem", "CACR_DZM_collectionHours", "CACR_DZM_durationKnown", "CACR_DZM_currentPreterm"].includes(field.id);
     if (["age", "ageMonths", "sex"].includes(field.id) || field.id === "ageDays" && formulaId !== "neonatal_egfr" || unitIds.has(field.id)) return false;
     if (/unit|Assay|Standardization|creatinineState|suspectedAKI|collectionSource|DurationSource|durationNeedsConfirmation/i.test(field.id) || /_entry_mode$/i.test(field.id)) return false;
     // Routine assumptions and optional specimen/therapy facts stay exactly as
@@ -92,7 +93,14 @@
       if (active?.token === token) active = null;
       focusParent();
     }
-    active = { token, destroy };
+    active = { token, destroy, cancelForFormulaChange(nextFormula) {
+      const owner = root.ClcrSavedCalculation?.readSaved(currentNote)?.snapshot?.formulaId || currentRecord?.sourceFormulaId;
+      if (!["Ca_Cr", "CaCr_spot"].includes(owner) || owner === nextFormula) return true;
+      // A committed transaction keeps its original ID and material. While a
+      // write is in flight, keep its editor alive until the result is known.
+      if (pending) return false;
+      draft = null; destroy(); return true;
+    } };
     const api = { destroy, close: destroy, token };
     function changed(action) {
       try { options.onChanged?.({ patientId, noteId, action }); } catch (_) { /* view may be detached */ }
@@ -148,6 +156,15 @@
       $("editInputFields").querySelectorAll("[data-clcr-edit-field]").forEach(control => control.addEventListener("input", () => {
         if (!draft) return;
         draft.changedFields.add(control.dataset.clcrEditField);
+        if (draft.description.snapshot.formulaId === "Ca_Cr") {
+          draft.description.values[control.dataset.clcrEditField] = control.type === "checkbox" ? control.checked : control.value;
+          if (control.dataset.clcrEditField === "CACR_DZM_inputMode") {
+            const nextValues = draft.description.values;
+            draft.description.fields = root.ClcrCacrDzmPersistence.editableFields(nextValues);
+            renderEditInputFields(nextValues, draft.description.fields);
+            host.querySelector(nextValues.CACR_DZM_inputMode === "direct" ? "#editField-CACR_DZM_reportedValue" : "#editField-CACR_DZM_calcium")?.focus();
+          }
+        }
         if (draft.description.snapshot.formulaId === "KM_Cr") {
           draft.description.values[control.dataset.clcrEditField]=control.type === "checkbox" ? control.checked : control.value;
           if (control.dataset.clcrEditField === "URCR_inputMode") {
@@ -253,5 +270,5 @@
     } catch (cause) { if (ensureAlive()) $("calculationDetails").textContent = cause?.message || "Nie udało się odczytać pomiaru."; }
     return api;
   }
-  return Object.freeze({ open });
+  return Object.freeze({ open, cancelForFormulaChange: nextFormula => active?.cancelForFormulaChange(nextFormula) ?? true });
 });

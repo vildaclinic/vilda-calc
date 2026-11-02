@@ -7,6 +7,7 @@
 })(typeof window !== "undefined" ? window : globalThis, function (global) {
   "use strict";
   const CATEGORY = "wynik-klirens";
+  const isCacrFormula = id => id === "CaCr_spot" || id === "Ca_Cr";
   const PARAM_GROUPS = Object.freeze([
     Object.freeze({ id: "egfr", title: "eGFR i klirensy kreatyniny" }),
     Object.freeze({ id: "dzm-excr", title: "Zbiórka dobowa — wydalania" }),
@@ -375,7 +376,9 @@
     try {
       const snapshot = JSON.parse(encoded);
       if (!snapshot || typeof snapshot !== "object" || Array.isArray(snapshot)) return null;
-      if (snapshot.schema !== "clcr-cacr" || snapshot.version !== 1) return null;
+      if (snapshot.schema !== "clcr-cacr") return null;
+      if (snapshot.version === 2) return global.ClcrCacrDzmPersistence?.readSnapshot(encoded) || null;
+      if (snapshot.version !== 1) return null;
       if (!Number.isFinite(snapshot.rawValue) || snapshot.rawValue < 0) return null;
       if (!["mg/mg", "mg/g", "g/g", "mol/mol", "mmol/mmol", "mmol/mol", "mg/mmol"].includes(snapshot.unit)) return null;
       if (!["", "<", ">", "≤", "≥"].includes(snapshot.comparator || "")) return null;
@@ -390,7 +393,7 @@
 
   function cacrReferenceNote(datapoint) {
     const snapshot = datapoint?.cacrSnapshot;
-    if (datapoint?.sourceFormulaId !== "CaCr_spot" || !snapshot) return "";
+    if (!isCacrFormula(datapoint?.sourceFormulaId) || !snapshot) return "";
     const number = value => Number.isFinite(value) ? String(value).replace(".", ",") : "";
     const string = value => typeof value === "string" ? value.trim() : "";
     const lines = [CACR_NOTE_HEADER,
@@ -571,7 +574,7 @@
       if (target && (!sourceFormulaId || !target.has(sourceFormulaId))) continue;
       const acr = sourceFormulaId === "ACR" ? savedAcrAssessment(note) : null;
       const pcr = sourceFormulaId === "PCR" ? savedPcrAssessment(note) : null;
-      const cacr = sourceFormulaId === "CaCr_spot" ? savedCacrAssessment(note) : null;
+      const cacr = isCacrFormula(sourceFormulaId) ? savedCacrAssessment(note) : null;
       const oxcr = sourceFormulaId === "OxCr_spot" ? global.ClcrOxcrPersistence?.savedAssessment(note) : null;
       const legacyOxcr = sourceFormulaId === "OxCr_spot" && !oxcr ? global.ClcrOxcrPersistence?.legacyPoint(note) : null;
       const citcr = sourceFormulaId === "CitCr_spot" ? global.ClcrCitcrPersistence?.savedAssessment(note) : null;
@@ -608,7 +611,7 @@
       // A later edit can invalidate the old assessment while leaving a valid
       // censored laboratory result. Keep that current text without restoring
       // the original norm/category or turning its endpoint into a point.
-      const signedCacrText = sourceFormulaId === "CaCr_spot" && !cacr && typeof lab.value === "string" && lab.value.length <= 256
+      const signedCacrText = isCacrFormula(sourceFormulaId) && !cacr && typeof lab.value === "string" && lab.value.length <= 256
         ? /^\s*([<>≤≥])\s*((?:\d+(?:[.,]\d*)?|[.,]\d+)(?:[eE][+-]?\d+)?)\s*$/.exec(lab.value) : null;
       const signedCacrValue = signedCacrText ? Number(signedCacrText[2].replace(",", ".")) : NaN;
       const valueNum = urateCreatinine ? global.ClcrUrateCreatininePersistence.valueNum(urateCreatinine) : potassiumDzm ? global.ClcrPotassiumDzmPersistence.valueNum(potassiumDzm) : legacyPotassiumDzm ? legacyPotassiumDzm.rawValue : sodiumDzm ? global.ClcrSodiumDzmPersistence.valueNum(sodiumDzm) : legacySodiumDzm ? legacySodiumDzm.rawValue : proteinDzm ? global.ClcrProteinDzmPersistence.valueNum(proteinDzm) : legacyProteinDzm ? legacyProteinDzm.rawValue : po4Dzm ? global.ClcrPo4DzmPersistence.valueNum(po4Dzm) : legacyPo4Dzm ? legacyPo4Dzm.rawValue : mgDzm ? mgDzm.rawValue : legacyMgDzm ? legacyMgDzm.rawValue : caDzm ? caDzm.rawValue : legacyCaDzm ? legacyCaDzm.rawValue : ua ? ua.rawValue : legacyUa ? legacyUa.rawValue : ph ? ph.rawValue : legacyPh ? legacyPh.rawValue : tmpGfr ? tmpGfr.rawValue : uag ? uag.rawValue : legacyUag ? legacyUag.rawValue : fehco3 ? fehco3.rawValue : legacyFehco3 ? legacyFehco3.rawValue : fecl ? fecl.rawValue : legacyFecl ? legacyFecl.rawValue : fek ? fek.rawValue : legacyFek ? legacyFek.rawValue : fena ? fena.rawValue : legacyFena ? legacyFena.rawValue : ratio ? ratio.rawValue : legacyCitcr ? legacyCitcr.rawValue : legacyOxcr ? legacyOxcr.rawValue :
@@ -619,7 +622,7 @@
       const unit = (ratio?.unit || lab.unit || (entry ? entry.unit : "") || "").trim();
       // Native mg/g and mg/mmol thresholds are deliberately different axes.
       // Never draw a trend through values stored in different native units.
-      const seriesKey = sourceFormulaId === "KM_Cr" ? `${label}\n${unit}\n${urateCreatinine?.input?.specimen || "legacy-unknown"}` : sourceFormulaId === "TMP_GFR" ? `${label}\n${unit}\n${global.ClcrTmpGfrPersistence?.savedMethod(note, tmpGfr) || "legacy-unknown"}` : sourceFormulaId === "CitCr_spot" ? global.ClcrCitcrPersistence?.seriesKey(label, unit, citcr, note) || `${label}\n${unit}\nlegacy-unknown` : sourceFormulaId === "OxCr_spot" ? global.ClcrOxcrPersistence?.seriesKey(label, unit, oxcr, note) || `${label}\n${unit}\nlegacy-unknown` : ["ACR", "PCR", "CaCr_spot", "UA_mgkg", "Ca_mgkg", "Mg_mgkg", "PO4_mgkg", "Prot_mgkg", "Na_mmol_d", "K_mmol_d"].includes(sourceFormulaId) ? `${label}\n${unit}` : label;
+      const seriesKey = isCacrFormula(sourceFormulaId) ? `${label}\n${unit}\n${cacr?.profileId ? `${cacr.profileId}@${cacr.profileVersion ?? "unknown"}` : "legacy-unprofiled"}` : sourceFormulaId === "KM_Cr" ? `${label}\n${unit}\n${urateCreatinine?.input?.specimen || "legacy-unknown"}` : sourceFormulaId === "TMP_GFR" ? `${label}\n${unit}\n${global.ClcrTmpGfrPersistence?.savedMethod(note, tmpGfr) || "legacy-unknown"}` : sourceFormulaId === "CitCr_spot" ? global.ClcrCitcrPersistence?.seriesKey(label, unit, citcr, note) || `${label}\n${unit}\nlegacy-unknown` : sourceFormulaId === "OxCr_spot" ? global.ClcrOxcrPersistence?.seriesKey(label, unit, oxcr, note) || `${label}\n${unit}\nlegacy-unknown` : ["ACR", "PCR", "CaCr_spot", "Ca_Cr", "UA_mgkg", "Ca_mgkg", "Mg_mgkg", "PO4_mgkg", "Prot_mgkg", "Na_mmol_d", "K_mmol_d"].includes(sourceFormulaId) ? `${label}\n${unit}` : label;
       const dateISO =
         legacyNormalizeDateISO(note.clinicalDateISO) ||
         (typeof note.clinicalDateISO === "string"
@@ -640,7 +643,7 @@
         typeof note.body === "string" && note.body.includes(ACR_NOTE_HEADER);
       const stalePcrSnapshot = sourceFormulaId === "PCR" && !pcr &&
         typeof note.body === "string" && note.body.includes(PCR_NOTE_HEADER);
-      const staleCacrSnapshot = sourceFormulaId === "CaCr_spot" && !cacr &&
+      const staleCacrSnapshot = isCacrFormula(sourceFormulaId) && !cacr &&
         typeof note.body === "string" && note.body.includes(CACR_NOTE_HEADER);
       const staleOxcrSnapshot = sourceFormulaId === "OxCr_spot" && !oxcr && global.ClcrOxcrPersistence?.hasSavedAssessment(note);
       const staleCitcrSnapshot = sourceFormulaId === "CitCr_spot" && !citcr && global.ClcrCitcrPersistence?.hasSavedAssessment(note);
@@ -650,10 +653,11 @@
         typeof note.body === "string" &&
         note.body.indexOf("poza zakresem") >= 0;
       const norm = typeof lab.norm === "string" ? lab.norm.trim() : "";
+      const recordedOutOfRange = sourceFormulaId === "Ca_Cr" && !cacr && !norm && outOfRange === false ? null : outOfRange;
       const point = {
         dateISO: dateISO,
         valueNum: valueNum,
-        outOfRange: outOfRange,
+        outOfRange: recordedOutOfRange,
         norm: norm,
         noteId: note.id || null,
       };
@@ -813,7 +817,7 @@
     const series = Array.from(byLabel.values());
     series.forEach((s) => {
       s.points.sort((a, b) => String(a.dateISO).localeCompare(String(b.dateISO)));
-      if (["ACR", "PCR", "CaCr_spot", "OxCr_spot", "CitCr_spot", "FENa_spot", "FEK_spot", "FECl_spot", "FEHCO3_spot", "AGu_spot", "pH_spot", "UA_mgkg", "Ca_mgkg", "Mg_mgkg", "PO4_mgkg", "Prot_mgkg", "Na_mmol_d", "K_mmol_d", "KM_Cr"].includes(s.sourceFormulaId)) {
+      if (["ACR", "PCR", "CaCr_spot", "Ca_Cr", "OxCr_spot", "CitCr_spot", "FENa_spot", "FEK_spot", "FECl_spot", "FEHCO3_spot", "AGu_spot", "pH_spot", "UA_mgkg", "Ca_mgkg", "Mg_mgkg", "PO4_mgkg", "Prot_mgkg", "Na_mmol_d", "K_mmol_d", "KM_Cr"].includes(s.sourceFormulaId)) {
         s.norm = s.points[s.points.length - 1]?.norm || "";
         return;
       }
@@ -834,6 +838,11 @@
     const opts = options || {};
     if (!dp || !Number.isFinite(dp.valueNum)) throw new TypeError("Brak poprawnego wyniku obliczenia do zapisu.");
     if (typeof opts.patientId !== "string" || !opts.patientId) throw new TypeError("Brak pacjenta wyniku.");
+    if (dp.sourceFormulaId === "Ca_Cr" || isCacrFormula(dp.sourceFormulaId) && dp.cacrSnapshot?.version === 2) {
+      const persistence = global.ClcrCacrDzmPersistence;
+      const frozen = persistence?.readSnapshot(JSON.stringify(dp.cacrSnapshot));
+      if (!frozen || !persistence.matchesDatapoint(dp, frozen)) throw new Error("Brak kompletnej oceny Ca/Cr do bezpiecznego zapisu. Oblicz wynik ponownie.");
+    }
     const clinicalDateISO = normalizeDateISO(opts.clinicalDateISO);
     if (!clinicalDateISO) throw new TypeError("Brak poprawnej daty badania.");
     if (dp.sourceFormulaId === "TMP_GFR" && dp.tmpGfrSnapshot?.input?.clinicalDate && dp.tmpGfrSnapshot.input.clinicalDate !== clinicalDateISO) {
@@ -898,7 +907,7 @@
     }
     const labResult = {
       test: dp.label,
-      value: dp.sourceFormulaId === "CaCr_spot" && dp.cacrSnapshot
+      value: isCacrFormula(dp.sourceFormulaId) && dp.cacrSnapshot
         ? dp.displayValue || acrDisplayText(dp.cacrSnapshot) : dp.sourceFormulaId === "PCR" && dp.pcrSnapshot
           ? dp.displayValue || acrDisplayText(dp.pcrSnapshot) : dp.sourceFormulaId === "ACR" && dp.acrSnapshot
             ? dp.displayValue || acrDisplayText(dp.acrSnapshot) : formatValueString(dp.valueNum),
@@ -928,7 +937,7 @@
     // in the ACR snapshot note and understood by this history adapter.
     if (dp.sourceFormulaId === "ACR" && dp.acrSnapshot?.comparator) delete labResult.valueNum;
     if (dp.sourceFormulaId === "PCR" && dp.pcrSnapshot?.comparator) delete labResult.valueNum;
-    if (dp.sourceFormulaId === "CaCr_spot" && dp.cacrSnapshot?.comparator) delete labResult.valueNum;
+    if (isCacrFormula(dp.sourceFormulaId) && dp.cacrSnapshot?.comparator) delete labResult.valueNum;
     // Zakres referencyjny (jeśli silnik go pokazał) — do kolumny „Zakres".
     if (dp.norm) labResult.norm = String(dp.norm).slice(0, 200);
     // Znacznik „poza zakresem" w treści (magazyn nie ma pola boolean) —
@@ -940,7 +949,7 @@
       (typeof dp.assumptions === "string" && dp.assumptions.trim() ? "\n\n" + dp.assumptions.trim() : "") +
       (dp.sourceFormulaId === "ACR" && dp.acrSnapshot ? "\n\n" + acrReferenceNote(dp) : "") +
       (dp.sourceFormulaId === "PCR" && dp.pcrSnapshot ? "\n\n" + pcrReferenceNote(dp) : "") +
-      (dp.sourceFormulaId === "CaCr_spot" && dp.cacrSnapshot ? "\n\n" + cacrReferenceNote(dp) : "") +
+      (isCacrFormula(dp.sourceFormulaId) && dp.cacrSnapshot ? "\n\n" + cacrReferenceNote(dp) : "") +
       (dp.sourceFormulaId === "OxCr_spot" && dp.oxcrSnapshot ? "\n\n" + global.ClcrOxcrPersistence.referenceNote(dp) : "") +
       (dp.sourceFormulaId === "CitCr_spot" && dp.citcrSnapshot ? "\n\n" + global.ClcrCitcrPersistence.referenceNote(dp) : "") +
       (dp.sourceFormulaId === "FENa_spot" && dp.fenaSnapshot ? "\n\n" + global.ClcrFenaPersistence.referenceNote(dp) : "") +
@@ -975,7 +984,7 @@
     FENa_spot: "ClcrFenaPersistence", FEK_spot: "ClcrFekPersistence",
     FECl_spot: "ClcrFeclPersistence", FEHCO3_spot: "ClcrFehco3Persistence", AGu_spot: "ClcrUagPersistence", TMP_GFR: "ClcrTmpGfrPersistence", pH_spot: "ClcrPhPersistence", UA_mgkg: "ClcrUaPersistence", Ca_mgkg: "ClcrCaDzmPersistence", Mg_mgkg: "ClcrMgDzmPersistence", PO4_mgkg: "ClcrPo4DzmPersistence", Prot_mgkg: "ClcrProteinDzmPersistence", Na_mmol_d: "ClcrSodiumDzmPersistence", K_mmol_d: "ClcrPotassiumDzmPersistence", KM_Cr: "ClcrUrateCreatininePersistence",
   });
-  const HEADER_BY_FORMULA = Object.freeze({ ACR: ACR_NOTE_HEADER, PCR: PCR_NOTE_HEADER, CaCr_spot: CACR_NOTE_HEADER });
+  const HEADER_BY_FORMULA = Object.freeze({ ACR: ACR_NOTE_HEADER, PCR: PCR_NOTE_HEADER, CaCr_spot: CACR_NOTE_HEADER, Ca_Cr: CACR_NOTE_HEADER });
 
   function object(value) { return value && typeof value === "object" && !Array.isArray(value) ? value : null; }
   function text(value) { return typeof value === "string" ? value.trim() : ""; }
@@ -1349,7 +1358,9 @@
       // transition must never appear as a biological rise in a single curve.
       // Different specimen types do not form one apparent biological trend.
       const calculationMethod = entry?.sourceFormulaId === "KM_Cr" ? point.calculationMethod || "Typ próbki nieutrwalony" : entry?.sourceFormulaId === "TMP_GFR" ? point.calculationMethod || "legacy-unknown" : null;
-      const key = JSON.stringify([identity, normalizedUnit(point.unit), basis, ...(calculationMethod ? [calculationMethod] : [])]);
+      const cacrProfileId = point.reference?.profileId || point.cacrAssessment?.profileId;
+      const cacrProfile = isCacrFormula(entry?.sourceFormulaId) ? cacrProfileId ? `${cacrProfileId}@${point.reference?.profileVersion ?? point.cacrAssessment?.profileVersion ?? "unknown"}` : "legacy-unprofiled" : null;
+      const key = JSON.stringify([identity, normalizedUnit(point.unit), basis, ...(calculationMethod ? [calculationMethod] : []), ...(cacrProfile ? [cacrProfile] : [])]);
       if (!grouped.has(key)) grouped.set(key, {
         key, seriesKey: key, label, displayLabel: calculationMethod ? `${label} · ${calculationMethod === "legacy-unknown" ? "metoda nieutrwalona" : calculationMethod}` : displayLabel, method: calculationMethod || entry?.method || null,
         unit: point.unit, basis: point.basis, id: entry?.id || null, parameterKey,
