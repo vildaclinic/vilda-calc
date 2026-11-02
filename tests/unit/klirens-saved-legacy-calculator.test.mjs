@@ -30,7 +30,7 @@ const calculate = (id, patch = {}, output = id, context = {}) => engine.recalcul
 describe('Saved Klirens: existing timed-urine production arithmetic', () => {
   it.each([
     ['Ox_mgkg', 0.06, 'mg/kg/24 h'], ['Cit_mgkg', 1.5, 'mg/kg/24 h'],
-    ['KM_Cr', 0.2, 'mg/mg'], ['Ca_Cr', 0.080156, 'mg/mg'], ['Mg_Ca', 0.25, 'mg/mg'],
+    ['KM_Cr', 0.2, 'mg/mg'], ['Ca_Cr', 0.080156, 'mg/mg'], ['Mg_Ca', 5000 / 20039, 'mg/mg'],
     ['PO4_Cr', 0.1, 'mg/mg'], ['B_Cr', 0.2, 'mg/mg'], ['Ca_Cit', 1.6, 'mg/mg'],
     ['K_frac', 40, '%'],
   ])('%s uses its own documented production conversion and source units', (id, expected, unit) => {

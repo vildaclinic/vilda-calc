@@ -181,7 +181,8 @@
         id: "Mg_Ca",
         label: "Mg/Ca (DZM)",
         version: "advanced",
-        requires: ["U_Mg", "U_Ca"],
+        requires: ["MGCA_magnesium", "MGCA_magnesiumUnit", "MGCA_calcium", "MGCA_calciumUnit"],
+        note: "Dwa stężenia z tej samej dobowej zbiórki albo gotowy Mg/Ca. Bez przypisanej normy DZM; wiek, czas i objętość nie są potrzebne.",
       },
       {
         id: "PO4_Cr",
