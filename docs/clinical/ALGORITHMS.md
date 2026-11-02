@@ -10752,7 +10752,7 @@ Właściciel zaakceptował regułę: dymek czeka, dopóki dopisanie cyfr może j
 
 **Zgłoszenie właściciela.** Po P-PANEL-POWROT i P-PANEL-PRZEWINIECIE: „to migotanie/skakanie nadal jest, nawet jak strona »nic« nie robi i nie jest na pierwszym planie na macOS/Windows”. Zmiana niekliniczna: nie zmienia wyników, jednostek, progów, kategorii, ostrzeżeń, zapisu ani synchronizacji.
 
-**Wyzwalacz.** Przy włączonej synchronizacji `vilda_sync_integration.js` pobiera zmiany co ok. 20 s (sprawdza co 10 s, a odstęp między pobraniami ma co najmniej 12 s). Działa tak, dopóki dokument jest widoczny, także w oknie bez fokusu obok innej aplikacji. Pobiera też przy `focus` i powrocie widoczności, a przy utracie fokusu wysyła zaległe zmiany. Każda wymiana to dwa zdarzenia `vilda:sync-status-changed`. Na nie, a także na `vilda:session-changed`, `vilda:auth-hidden` i `storage` (`vildaCurrentPatientId`), reaguje `vilda_puberty_source.js` (`odswiez()`). Moduł czyta wczytanego pacjenta z sejfu od nowa i ogłasza najpierw `loading` bez danych, potem `ready`. `vilda_zrodla_pacjenta.js` widzi dwie zmiany odcisku i zamawia pełne `update()`. Dane pacjenta się przy tym nie zmieniają. Okno w tle nie jest więc osobną przyczyną: to czas, w którym synchronizacja działa sama, bez udziału użytkownika.
+**Wyzwalacz.** Przy włączonej synchronizacji `vilda_sync_integration.js` pobiera zmiany co ok. 20 s (sprawdza co 10 s, a odstęp między pobraniami ma co najmniej 12 s; od E2-PR1b w trybie „Komputer prywatny” przy żywym połączeniu na żywo i pobieraniu stronami co ok. 60 s — P-SYNC-ODPYTYWANIE-WS). Działa tak, dopóki dokument jest widoczny, także w oknie bez fokusu obok innej aplikacji. Pobiera też przy `focus` i powrocie widoczności, a przy utracie fokusu wysyła zaległe zmiany. Każda wymiana to dwa zdarzenia `vilda:sync-status-changed`. Na nie, a także na `vilda:session-changed`, `vilda:auth-hidden` i `storage` (`vildaCurrentPatientId`), reaguje `vilda_puberty_source.js` (`odswiez()`). Moduł czyta wczytanego pacjenta z sejfu od nowa i ogłasza najpierw `loading` bez danych, potem `ready`. `vilda_zrodla_pacjenta.js` widzi dwie zmiany odcisku i zamawia pełne `update()`. Dane pacjenta się przy tym nie zmieniają. Okno w tle nie jest więc osobną przyczyną: to czas, w którym synchronizacja działa sama, bez udziału użytkownika.
 
 **Pomiar przed zmianą.** Playwright na prawdziwej powłoce `app.html`, Chromium, fikcyjny pacjent zapisany w sejfie i wczytany z Karty pacjenta (chłopiec 9 lat, 135 cm, 40 kg), tryb profesjonalny, 1440×1000 i 390×844. Liczone były wszystkie zdarzenia `animationstart` w ramce Start, także animacji zapętlonych. Każde ze zdarzeń `vilda:sync-status-changed` (`syncing`, `idle`) i `vilda:auth-hidden` dawało 1–2 przeliczenia i 16 startów animacji:
 - `#metabolicSummarySection` (przyciski „Podsumowanie wyników” i „Zalecenia dietetyczne”) wjeżdżała od nowa (`fadeSlideUp`: 12 px, od `opacity` 0), a `#intakeCard` — `ios-enter`;
@@ -20422,25 +20422,302 @@ a lekarz poprawia jedno z miejsc. Wartość dni spoza 0–6 w rekordzie nie jest
 
 **Wersje.** `sga_birth_module.js?v=10→11`; SW 1.1.168 → **1.1.169**.
 
-## Pobieranie dziennika zmian stronami za flagą, uśpione (P-SYNC-STRONY, E2-PR1, SW 1.1.436, `vilda_sync.js` 46, 2026-11-02)
+## Odpytywanie co 60 s przy żywym połączeniu na żywo i dłuższy odstęp ponownego łączenia (P-SYNC-ODPYTYWANIE-WS, E2-PR1b, SW 1.1.442, `vilda_sync_integration.js` 56, `vilda_realtime.js` 9, `vilda_sync.js` 47, 2026-11-02)
+
+**Zmiana kliniczna: NIE** — wzory, progi, jednostki, interpretacje, scalanie, zapis, format delt i kursor bez zmian.
+Zmienia się tylko, jak często aplikacja w tle pyta serwer synchronizacji o zmiany i jak szybko ponawia zerwane połączenie
+na żywo (WebSocket). Wpływ kliniczny: brak.
+
+**Skąd.** Plan (`docs/SYNC_PRZYROSTOWA_PLAN.md`) 3.3, punkt 1 („polling lidera co 10 s, a przy otwartym WebSocket z pong
+młodszym niż 45 s co 60 s; zmiana razem z odstępem ponownego połączenia WS od 10 s, najpóźniej z E2-PR1b”) i wiersz 4
+tabeli „Podział etapu 2”. Decyzja 1 z 2026-10-29: tylko „Komputer prywatny”. Decyzja 2: w PR włączającym pobieranie
+stronami (P-SYNC-STRONY-DOMYSLNIE), cofnięcie rewertem.
+
+**Co było (zmierzone na `origin/audyt` 9e431afd, dane fikcyjne).**
+- Zegar tła tyka co 10 s, ale pobiera najwcześniej 12 s po poprzednim pobraniu w tym dokumencie, więc w praktyce co ok.
+  20 s: 3 pobrania na minutę na kartę, także przy działającym połączeniu na żywo (plan zakładał „co 10 s”).
+- Każde pobranie to `GET /status` (worker v37a: kubełek 40 żądań na minutę na slot, wspólny z pełnym pobraniem i wysyłką,
+  otwarciem połączenia na żywo i trasami PRO) i `GET /changes` (licznik 120 na minutę na slot). Wiążący jest więc limit
+  40 na minutę, nie 120.
+- Połączenie na żywo pinguje co 25 s, a worker odpowiada `pong`, ale aplikacja nie zapamiętywała chwili odpowiedzi.
+- Ponowne łączenie: 2 s, potem ×2 do 30 s, bez rozrzutu, bez końca, a krok wracał do 2 s przy każdym otwarciu. Serwer,
+  który przyjmuje i od razu zamyka, dawał z jednej karty 29 połączeń i 29 pobrań na minutę; serwer odrzucający — próbę
+  co 30 s bez końca (2 na minutę na kartę w kubełku 40/min).
+
+**Co jest.**
+1. *Żywotność połączenia* (`vilda_realtime.js`). Każdy `pong` zapisuje chwilę odpowiedzi; zamknięcie gniazda i
+   rozłączenie (blokada sejfu) ją zerują, więc nowe gniazdo zaczyna bez `pong`. `VildaRealtime.isLive()` = gniazdo
+   otwarte i ostatni `pong` młodszy niż 45 s. Nowe pola tylko do odczytu: `getLastPongAt()` (liczba albo `null`),
+   `info().lastPongAt`, `info().live` (dotychczasowe pola `info()` bez zmian — linia „połączono” w Ustawieniach). Ping
+   i jego format bez zmian, worker bez zmian. Przy zdrowym połączeniu wiek `pong` krąży między 0 a 25 s, a brak `pong`
+   zamyka gniazdo po 35 s; próg 45 s przekracza tylko uśpiony zegar (karta w tle, uśpiony komputer).
+2. *Odpytywanie* (`vilda_sync_integration.js`). Ten sam zegar co 10 s i ten sam odstęp 12 s. Gdy `isLive()` i
+   `VildaSync.isPagedActive()` dają `true`, tyknięcie zegara pobiera dopiero wtedy, gdy od poprzedniego pobrania w tym
+   dokumencie minęło co najmniej 55 s, czyli przy tyknięciu co 10 s co 60 s. Próg 60 s dawał na przemian 60 i 70 s
+   (średnio ok. 65 s), bo tyknięcie spóźnia się o kilka ms, a harmonogram zegara nie dryfuje (przegląd, D1; test I1b).
+   Po pobraniu z ramki albo fokusu następne pobranie z zegara przychodzi po 55–65 s. Reguła dotyczy tylko tyknięć
+   zegara: ramka `changed` z gniazda, fokus, powrót do karty, „Synchronizuj teraz”, koniec przerwy po 429 i ponowienie
+   po `WIPE_GUARD` pobierają od razu, jak dotąd. Ramka `delta` niczego nie pobiera: jest stosowana wprost (`applyDelta`),
+   bez pobrania i bez przesunięcia chwili ostatniego pobrania, jak dotąd. Po utracie żywotności (zamknięcie, `pong`
+   starszy niż 45 s) najbliższe tyknięcie (do 10 s) wraca do rytmu ~20 s. Brak funkcji (starszy plik po częściowej
+   aktualizacji), wyjątek albo wartość inna niż `true` — jak dotąd.
+3. *`VildaSync.isPagedActive()`* (`vilda_sync.js`, tylko odczyt, bez żądań i zapisów): `Bdz_wlaczone()` (flaga inna niż
+   `'0'`, `/changes` włączone, tryb „Komputer prywatny”) i ostatni wynik `GET /v1/health` w pamięci strony z
+   `changes-paged` (bez TTL, żeby sygnał nie wymuszał health). Bez wyniku health (kursor 0, np. nowe urządzenie po
+   „Pobierz później”) — `false`, więc pierwsze pobranie ponawia się co ~20 s jak dotąd (P-NOWE-URZADZENIE).
+4. *Odstęp ponownego łączenia, tylko „Komputer prywatny”* (`vilda_realtime.js`): krok 10, 20, 40, 80, 160, 300 s
+   (sufit 5 min), opóźnienie = krok × losowo 0,8–1,2, nie mniej niż 10 s (przy suficie 4–6 min). Wartość poniżej 10 s
+   (zdarza się tylko w pierwszym kroku) jest odbita w górę, więc pierwsza próba rozkłada się równomiernie na 10–12 s.
+   Wcześniej połowa kart łączyła się dokładnie po 10 s, np. wszystkie naraz po wdrożeniu workera (przegląd, D2; test
+   R5b). Krok wraca do 10 s po pierwszym `pong` na gnieździe — nie przy otwarciu, żeby serwer „przyjmij i zamknij” nie
+   dawał pętli. Krok od nowa także przy `online`, odblokowaniu, starcie i fokusie (albo powrocie do karty) przy
+   zamkniętym gnieździe — te łączą jak dotąd: `online` i fokus od razu, odblokowanie po 0,5 s, start po 1,2 s
+   (najmniejszy odstęp prób 1,5 s) — oraz przy rozłączeniu (bez łączenia). Tryb rozpoznają te same sygnały co
+   `vilda_sync.js` (konto chmurowe, trzy sygnały trybu jednorazowego); błąd odczytu trybu = nie prywatny (odstęp jak
+   dotąd).
+5. *Rotacja tożsamości w tym dokumencie, tylko „Komputer prywatny”* (`vilda_sync.js`, `revokeAllDevices`; przegląd,
+   W1; drugi przegląd, U1 i U2). Przed poprawką gniazdo tej karty po rotacji nie łączyło się od nowa, więc żywotność
+   mogła wynikać z gniazda poprzedniej tożsamości. Zegar odpytywałby wtedy nowy slot co 60 s zamiast ~20 s, a ramki z
+   nowego slotu nie dochodziłyby do zamknięcia gniazda.
+   Teraz w trybie „Komputer prywatny” po rotacji w sejfie (udanej albo z błędem w dalszych krokach: rejestracja nowego
+   slotu, kasowanie starego) gniazdo otwarte albo w trakcie łączenia jest rozłączane i łączone od nowa z bieżącą
+   tożsamością. Gdy poprzednia próba połączenia była mniej niż 1,5 s wcześniej, `connect()` nie łączy, a po rozłączeniu
+   realtime nie stawia własnego zegara; wtedy `vilda_sync.js` raz ponawia `connect()` po 1,6 s. Ta próba nic nie robi
+   przy gnieździe otwartym albo w trakcie łączenia i sama sprawdza ramkę, włączoną synchronizację, odblokowany sejf i
+   sieć, więc po blokadzie albo wyłączeniu synchronizacji nic się nie łączy. Do pierwszego `pong` nowego gniazda
+   `isLive()` jest fałszem, więc odpytywanie idzie co ~20 s. Odmowa samej rotacji (np. złe hasło) gniazda nie rusza.
+   Gniazdo zamknięte samo weźmie nową tożsamość przy następnej próbie. Tryb rozpoznają te same sygnały co
+   `Bdz_wlaczone` (konto chmurowe, trzy sygnały trybu jednorazowego; błąd odczytu trybu jednorazowego = jednorazowy).
+   „Komputer w pracy” i „Zaloguj jednorazowo”: gniazdo po rotacji jak dotąd, bez ponownego łączenia (decyzja 1; tam
+   odpytywanie i tak idzie co ~20 s). Flaga `'0'` tego nie zmienia (zachowanie gniazda zależy tylko od trybu).
+
+| Stan | Odpytywanie z zegara | Ponowne łączenie |
+|---|---|---|
+| „Komputer prywatny”, pobieranie stronami (health z `changes-paged`), gniazdo otwarte, `pong` < 45 s | co 60 s | — |
+| j.w., gniazdo otwarte, jeszcze bez `pong` (pierwsze ~25 s) albo `pong` ≥ 45 s | co ~20 s (jak dotąd) | — |
+| j.w., gniazdo zamknięte albo odrzucane | co ~20 s | pierwsza próba 10–12 s, potem krok 20, 40, 80, 160, 300 s × 0,8–1,2; po `pong`, `online`, odblokowaniu, fokusie i rozłączeniu znów od 10 s |
+| „Komputer prywatny” (przy każdej wartości flagi), po rotacji tożsamości w tym dokumencie (`revokeAllDevices`) | co ~20 s do pierwszego `pong` nowego gniazda | gniazdo od razu od nowa, na nowym slocie (w 1,5 s od poprzedniej próby: jedna próba po 1,6 s) |
+| „Komputer prywatny”, flaga `'0'` / `VILDA_SYNC_PAGED = false` / `vilda-incr-sync-v1 = '0'` / kursor 0 bez health / worker bez `changes-paged` | co ~20 s (jak dotąd) | jak przy gnieździe zamkniętym albo odrzucanym (nowy odstęp) |
+| „Komputer w pracy”, „Zaloguj jednorazowo” | co ~20 s (jak dotąd) | jak dotąd: 2 s, ×2 do 30 s, od nowa przy otwarciu; po rotacji tożsamości gniazdo bez zmian |
+| przeglądarka bez WebSocket; starszy `vilda_realtime.js` albo `vilda_sync.js` | co ~20 s (jak dotąd) | — / jak w danym pliku |
+| karta ukryta, sejf zablokowany, ramka powłoki | jak dotąd (zegar stoi; ramka nie ma zegara) | jak dotąd (ukrycie nie zamyka gniazda; blokada rozłącza) |
+
+**Budżet na slot** (żądania w dowolnym oknie 60 s, maksimum w stanie ustalonym; test I11: prawdziwe pliki
+`vilda_sync_integration.js` i `vilda_realtime.js`, atrapa gniazda i pobrania, zegar wirtualny, 10 min; kontekst = karta z
+odblokowanym sejfem; bez pracy, czyli bez wysyłek i ramek `changed`):
+
+| Konteksty | Gniazdo żywe: kubełek 40/min (`/status`, `/socket`) przed → po | Gniazdo żywe: licznik 120/min (`/changes`) przed → po | Serwer odrzuca połączenia: kubełek 40/min przed → po |
+|---|---|---|---|
+| 3 (3 urządzenia × 1 karta) | 9 → 3 | 9 → 3 | 15 → 12 |
+| 4 (4 urządzenia × 1 karta) | 12 → 4 | 12 → 4 | 20 → 16 |
+| 8 (4 urządzenia × 2 karty) | 24 → 8 | 24 → 8 | 40 (limit) → 32 |
+
+Serwer „przyjmij i zamknij”: z jednej karty 29 → najwyżej 3 połączenia w pierwszej minucie (R6). Szacunek (liczony, nie
+zmierzony) przy pracy: każda wysyłka `PUT /blob` dowolnego urządzenia daje ramkę `changed` we wszystkich kontekstach, a
+każdy z nich robi `/status`, `/blob` (poza nadawcą) i `/changes` — bez zmian w E2-PR1b. Przy 4 urządzeniach × 1 karta
+i jednym pracującym (1 wysyłka i 3 delty na minutę): kubełek 40/min ok. 20 → 8–12, licznik 120/min ok. 19 → 7–11 (ramka
+`changed` przesuwa też chwilę ostatniego pobrania, więc odpytywanie z zegara prawie znika). `GET /v1/health` (raz na
+kontekst na 10 min) nie należy do kubełka slotu. Zaległość: do 10 `/changes` na pobranie na kontekst. W pierwszej minucie
+kontekst pobiera do 3 razy (start po odblokowaniu, otwarcie gniazda, tyknięcie po ok. 20 s; gniazdo jest żywe dopiero
+po pierwszym `pong`, po ok. 25 s), a każda karta drenuje osobno. Telefon po tygodniu offline z 2 kartami: do ok. 60
+`/changes` w pierwszej minucie (szacunek liczony; wcześniej podane tu 20 było zaniżone, przegląd D4) — poniżej 120/min.
+Główny koszt przy kilku pracujących
+urządzeniach zostaje po wysyłkach pełnych (`/status` + `/blob` w każdym kontekście) — do etapu 3.
+
+**Ograniczenia.**
+- N kart = N odpytujących i N gniazd (bez wyboru lidera między kartami; jak dotąd).
+- Gdy rozgłoszenie zmiany zawiedzie przy żywym gnieździe, zmiana dochodzi z odpytywaniem do ~60 s zamiast ~20 s.
+- Zaległość większa niż jeden drenaż (10 stron albo 20 s, stop `budzet`) przy żywym gnieździe dochodzi w rytmie
+  odpytywania, czyli ok. 2000 wierszy na 60 s. To ok. 3 razy szybciej niż przed E2-PR1b (jedna strona legacy co ~20 s),
+  ale wolniej, niż pozwala pobieranie stronami (przegląd, U1; bez zmiany, do decyzji właściciela).
+- Gdyby worker przestał odpowiadać `pong` (dziś v36 i v37a odpowiadają), odpytywanie zostaje co ~20 s, ale krok
+  ponownego łączenia rośnie do 5 min, bo zeruje go tylko `pong` albo zdarzenie łączące (`online`, fokus,
+  odblokowanie) (przegląd, U2).
+- Rotacja: inna karta albo ramka powłoki z poprzednią tożsamością trzyma ją do odświeżenia (P-SYNC-ROTACJA-KART); jej
+  pobrania kończą się `SYNC_IDENTITY_CHANGED` bez żądań, więc rytm odpytywania nie ma tam znaczenia. W 1,5 s od
+  poprzedniej próby połączenia `connect()` nie łączy (jak dotąd), więc gniazdo po rotacji łączy się dopiero w jednej
+  ponownej próbie po 1,6 s; do tego czasu (i do pierwszego `pong`) odpytywanie idzie co ~20 s. W „Komputerze w pracy”
+  i „Zaloguj jednorazowo” rotacja gniazda nie rusza (jak dotąd).
+- Przez pierwsze ~25 s po połączeniu (do pierwszego `pong`) rytm jest dotychczasowy.
+- Przy długim odstępie ponownego łączenia (do 6 min) gniazdo nie jest żywe, więc odpytywanie wraca do ~20 s, a
+  `online`, fokus i odblokowanie łączą od razu.
+- Flaga `'0'` przywraca dzisiejsze odpytywanie, ale nie dawny odstęp ponownego łączenia (ten zależy tylko od trybu).
+- `/status` 429 w pobraniu daje `STATUS_FAILED` bez przerwy (poza E2-PR1b, jak dotąd).
+
+| Wejście (test) | Oczekiwany wynik |
+|---|---|
+| gniazdo otwarte, pierwszy `pong` po 25 s (R1) | `isLive` fałsz do `pong`, potem prawda; `info().live`, `lastPongAt` |
+| serwer milknie (R2); `pong` 44,999 s / 45 s przy otwartym gnieździe (R2b) | po zamknięciu fałsz, `getLastPongAt` `null`; prawda / fałsz |
+| gniazdo w stanie CLOSING (`readyState` 2) ze świeżym `pong` (R2c) | fałsz |
+| rozłączenie (R3); nowe gniazdo po zamknięciu (R3b) | fałsz; bez `pong` poprzedniego |
+| serwer odrzuca, rozrzut 1,0 (R4) | odstępy 10, 20, 40, 80, 160, 300, 300 s…; w 20 min ≤ 10 prób (dziś 45) |
+| rozrzut skrajny (R5) | 12, 16, 32 … 240 s albo 12, 24, 48 … 360 s; zawsze 10–360 s |
+| pierwsza próba przy losie 0; 0,125; … 0,5 … 1 (R5b) | 12; 11,5; 11; 10,5; 10; 10,5; 11; 11,5; 12 s |
+| „przyjmij i zamknij” (R6) | ≤ 3 gniazda w minucie, odstępy 10, 20 s (dziś 29) |
+| `pong` po serii odrzuceń (R7); `online` (R8); fokus i powrót do karty przy zamkniętym gnieździe (R8b) | następna próba po 10 s; łączy od razu, potem od 10 s |
+| „Komputer w pracy”, „Zaloguj jednorazowo” (3 sygnały), wyjątek trybu (R9 ×5, R9b ×5: te same tryby) | 2, 4, 8, 16, 30, 30 s; „przyjmij i zamknij” jak dziś (≥ 25 gniazd w minucie) |
+| żywe gniazdo i strony (I1) | pobrania w 1,3 / 20 / 80 / 140 / 200 / 260 s (dziś 16 w 5 min) |
+| j.w., tyknięcia spóźnione o 1–9 ms, 30 min (I1b) | odstępy pobrań z zegara zawsze 60 s (z progiem 60 s: 8 z 27 po 70 s) |
+| `revokeAllDevices` przy żywym gnieździe (W1); rejestracja nowego slotu 503 (W1b); rotacja odrzucona przez sejf (kontrola) | gniazdo starego slotu zamknięte, nowe na nowym slocie, `isLive` fałsz do jego `pong`; to samo; gniazdo bez zmian |
+| `revokeAllDevices` w „Komputerze w pracy” i „Zaloguj jednorazowo” (znacznik sesji) (W1c ×2) | jak dotąd: jedno gniazdo, otwarte, na starym slocie, bez nowego `pullNow` |
+| `revokeAllDevices` w tej samej chwili co poprzednia próba połączenia (W1d) | tuż po rotacji gniazdo zamknięte; jedna próba po 1,6 s (później niż odstęp prób 1,5 s): nowe na nowym slocie, otwarte |
+| po rotacji realtime sam łączy, a serwer od razu zamyka nowe gniazdo (W1e) | bez dodatkowej próby z `vilda_sync.js`; następna dopiero po odstępie 10–12 s |
+| bez stron albo bez `isPagedActive` (I2); bez WebSocket (I2b); bez `pong` (I3); bez `isLive` (I6); wyjątek `isPagedActive` albo `isLive` (I6b ×2); wartość nie-`true` (I6c) | jak dziś: co ~20 s |
+| gniazdo zamknięte w 150 s (I4); `pong` > 45 s przy otwartym (I4b) | pobrania 160, 180, 200 s; najbliższe tyknięcie pobiera |
+| ramka `changed` (I5), `WIPE_GUARD` (I7), fokus (I10) przy żywym gnieździe | pobranie od razu |
+| ramka `changed` w chwili tyknięcia, pobranie trwa 3 s (I8) | jedno pobranie, nigdy dwa naraz, z zegara ≥ 60 s |
+| 3, 4, 8 kontekstów (I11), flaga `'0'` (I11b) | tabela budżetu wyżej; `'0'`: 12 i 12 przy 4 kontekstach |
+| `isPagedActive` na prawdziwym `vilda_sync.js` (D49, D49b, D49c, D50) | fałsz bez health, przy `'0'`, w trybie w pracy i jednorazowym, bez `/changes`, na v36; prawda przy braku klucza, `'1'` i `VILDA_SYNC_PAGED = true`; bez TTL; po 503 `hub_not_sqlite` fałsz; odczyt flagi rzuca → fałsz; wołane tylko z integracji |
+
+**Testy.** Nowy `tests/unit/sync-odpytywanie-ws.test.mjs` (48 przypadków; prawdziwe `vilda_realtime.js` i
+`vilda_sync_integration.js` w jednym sztucznym oknie, zegar wirtualny, atrapa gniazda z trybami serwera `pong`, `cisza`,
+`zamyka`, `odrzuca`); `tests/unit/sync-dziennik-drenaz.test.mjs` D49–D50; `tests/unit/sync-rotacja-kart.test.mjs` W1, W1b,
+kontrola, W1c ×2, W1d i W1e (plik ma 21 przypadków; prawdziwe `vilda_sync.js` i `vilda_realtime.js` w jednym oknie, atrapa
+gniazda odpowiada `pong` na każdy `ping` (nie rozróżnia slotów)). Istniejące testy integracji i realtime
+(`patient-authority-realtime-routing`, `patient-authority-integration-routing`, `nowe-urzadzenie-pobieranie`,
+`synchronizacja-notatek-tempo`) bez zmiany oczekiwań. **Czerwone na bazie** (pliki produktu z `origin/audyt` 9e431afd w
+kopii): `sync-odpytywanie-ws` 26 z 48 — wszystkie poza kontrolami „jak dziś” (R9 ×5, R9b ×5, I2 ×2, I2b, I3, I5, I6,
+I6b ×2, I6c, I7, I10, I11b; z drugiej rundy poprawek doszło 5 kontroli, wszystkie zielone na bazie: R9b ×4 i I6b
+`isLive`); D49–D50 12 z 12; `sync-rotacja-kart` 7 z 21 (W1, W1b, kontrola oraz z drugiej rundy W1c ×2, W1d i W1e: baza nie ma
+`isLive`, którego używa przygotowanie; sonda bez tego warunku: na bazie W1c zielone, czyli gniazdo „jak dotąd”, a W1d
+czerwone, bo gniazdo zostaje na starym slocie). **Czerwone
+bez poprawek po przeglądzie** (pliki produktu sprzed poprawek W1, D1, D2, D3, testy po poprawkach): `sync-rotacja-kart`
+W1, W1b; `sync-odpytywanie-ws` R5, R5b, I1b; `sync-dziennik-drenaz` D5, D5k ×2 (v36, `sqlite` false); R2c i R8b (luki
+testów, przegląd D7) zielone przed poprawkami, czerwone na mutantach. **Czerwone bez poprawek drugiej rundy** (kopia,
+`vilda_sync.js` sprzed ograniczenia do trybu prywatnego i sprzed ponownej próby po 1,6 s, testy po poprawkach):
+`sync-rotacja-kart` W1c ×2 i W1d, reszta pliku (18) zielona; z samym ograniczeniem trybu czerwony tylko W1d, z samą
+ponowną próbą tylko W1c ×2. Mutanty ponownej próby: opóźnienie 1400 ms albo 0 ms (wcześniej niż odstęp prób 1,5 s) —
+czerwony W1d; próba bez sprawdzenia, że gniazdo jest zamknięte — czerwony W1e; bez próby — czerwony W1d; bez
+ograniczenia trybu — czerwone W1c ×2. Nowe kontrole D1d ×2 (`VILDA_SYNC_PAGED` nie-boolean przy braku klucza), I6b (`isLive`
+rzuca) i R9b ×4 (tryby jednorazowe i wyjątek trybu) są zielone przed i po zmianie; zabijają trzy mutanty, które przeżyły
+drugi przegląd: nie-boolean traktowane jak boolean (D1d ×2), wyjątek `isLive` poza `try` w `Bpl_wolniej` (I6b), zerowanie
+odstępu przy otwarciu tylko w trybie chmurowym (R9b ×4). Mutanty (kopia, jedna podmiana na przebieg; 34 z 34 dają czerwony test):
+`vilda_realtime.js` 18 — krok od nowa przy otwarciu (R6), bez dolnej granicy 10 s (R5), `isLive` bez wieku `pong` i próg
+60 s (R2b, I4b), `pong` nie zeruje kroku (R7), nowy odstęp we wszystkich trybach, bez sygnału chmury, sesji jednorazowej
+albo `VildaPersistence`, wyjątek trybu = prywatny (R9, R9b), zamknięcie nie zeruje `pong` (R2, R3b), sufit 30 s i 10 min,
+start 2 s, węższy rozrzut (R4, R5), `connect` nie zeruje kroku (R8), rozłączenie nie zeruje `pong` (R3), `info()` bez
+`live` (R1); `vilda_sync_integration.js` 8 — bez warunku `isPagedActive` (I2), bez `isLive` (I2b, I3, I6), reguła dla
+każdego `U()` (I7), 30 s i 120 s zamiast 60 s, zegar bez `Bpl_tik` (I1, I4), wyjątek = wolniej (I6b), wartość
+prawdziwa zamiast `=== true` (I6c); `vilda_sync.js` 8 — powrót do `=== '1'` (D1d, zapis bazowy, 121 czerwonych),
+porównanie po `trim()` (D1d `' 0'`, `'0 '`), `catch → true` (D1c, D49c), bez `typeof g == 'boolean'` (D1), `isPagedActive`
+bez `Bdz_wlaczone`, z TTL, bez sprawdzenia `changes-paged`, wysyłające health (D49, D49b). Po przeglądzie 10 mutantów,
+9 zabitych: `isLive` bez `readyState === 1` (R2c), fokus przy zamkniętym gnieździe bez zerowania kroku (R8b ×2), próg
+60 s zamiast 55 s (I1b), dolna granica bez odbicia (R5, R5b), rotacja bez ponownego połączenia po sukcesie (W1) albo
+po błędzie dalszych kroków (W1b), samo rozłączenie bez połączenia (W1, W1b), `sqlite` null pamiętane 10 min (D5k
+kontrola, D6), v36 pamiętane 15 s (D5, D5k); przeżył jeden równoważny: bez sprawdzenia stanu gniazda przed ponownym
+połączeniem (gniazdo zamknięte łączy się od razu zamiast przy następnej próbie). Próg z przedziału (50, 55) s jest przy
+tyknięciu co 10 s równoważny 55 s.
+
+**Gdzie w kodzie.** `vilda_realtime.js`: czytelny blok `Brt_*` przed linią z kodem modułu (`Brt_prywatny`,
+`Brt_odstep`, `Brt_pong`, `Brt_zywy`) i chirurgiczne wpięcia w zminifikowaną linię: `w()` (odstęp), `onmessage` (`pong`),
+`onclose`, `M()` (rozłączenie), `l()` (połączenie), eksport (`isLive`, `getLastPongAt`, pola `info()`).
+`vilda_sync_integration.js`: czytelny blok `Bpl_*` przed `U` (`Bpl_WOLNO` 55 s, `Bpl_wolniej`, `Bpl_tik`), w `U` jeden
+warunek za odstępem 12 s, zegar `ct()` woła `Bpl_tik` zamiast `U`. `vilda_sync.js`: `Bdz_isPagedActive` za
+`Bdz_getChangesCursor`, eksport `isPagedActive`; za nim `Bws_poRotacji` (ponowne połączenie gniazda po rotacji, tylko
+„Komputer prywatny”; w 1,5 s od poprzedniej próby jedna ponowna próba po 1,6 s), wołane w
+`$t` (`revokeAllDevices`) przed `return` i w `catch`, gdy rotacja w sejfie już się udała (znacznik `Bws_obrot`).
+
+**Wersje.** `vilda_sync.js?v=46→47`, `vilda_sync_integration.js?v=55→56`, `vilda_realtime.js?v=8→9`; SW 1.1.441 →
+**1.1.442**.
+
+## Pobieranie dziennika zmian stronami, od E2-PR1b domyślnie (P-SYNC-STRONY, E2-PR1, SW 1.1.436, `vilda_sync.js` 46; P-SYNC-STRONY-DOMYSLNIE, E2-PR1b, SW 1.1.442, `vilda_sync.js` 47, 2026-11-02)
 
 **Zmiana kliniczna: NIE** — wzory, progi, jednostki i interpretacje bez zmian. Reguły scalania (`Le`, `ps`, `wt`), format
 delt, sejf i integracja bez zmian; strażniki formatu klinicznego (wybór trasy w sejfie, PR planów opieki) obowiązują
-przy włączonej fladze tak samo jak dziś (niżej). Przy wyłączonej fladze żądania, ich kolejność i zapisy kluczy są takie
-jak dotąd (zapis bazowy `tests/unit/sync-zadania-bazowe.test.mjs`, teraz także w wariantach flagi `'0'` i `'1'` z
-`window.VILDA_SYNC_PAGED = false`).
+przy pobieraniu stronami tak samo jak dziś (niżej). Przy wyłączonej fladze żądania, ich kolejność i zapisy kluczy są takie
+jak przed E2-PR1 (zapis bazowy legacy `tests/unit/sync-zadania-bazowe.test.mjs`: flaga `'0'`, a także `'1'` albo brak
+klucza z `window.VILDA_SYNC_PAGED = false`).
+
+### E2-PR1b: pobieranie stronami domyślnie (P-SYNC-STRONY-DOMYSLNIE, SW 1.1.442, `vilda_sync.js` 47, 2026-11-02)
+
+**Skąd.** Wiersz 4 tabeli „Podział etapu 2” planu (`docs/SYNC_PRZYROSTOWA_PLAN.md`): PR włączający pobieranie stronami
+domyślnie przy `changes-paged`; `vilda-sync-paged-v1 = '0'` wyłącza na urządzeniu. Decyzja 2 z 2026-10-29 (E2-D2):
+prawdziwym testem jest ten PR, cofnięciem rewert. Decyzja 1: tylko „Komputer prywatny”. W tym samym PR odpytywanie
+co 60 s przy żywym połączeniu na żywo i dłuższy odstęp ponownego łączenia (P-SYNC-ODPYTYWANIE-WS, niżej).
+
+**Co się zmienia.** W `Bdz_wlaczone` jedno porównanie: dotąd włączał tylko dokładnie `'1'`, teraz wyłącza tylko dokładnie
+`'0'`. Pozostałe warunki bez zmian: `/changes` włączone, tryb „Komputer prywatny”, `changes-paged` w `GET /v1/health`,
+kursor > 0 (kursor 0: jedno żądanie legacy bez health). `B`, `Yt`, `wt`, `Y`, `bt`, `Kt` bez zmian (strażnik D36).
+
+| Klucz `vilda-sync-paged-v1` / `window.VILDA_SYNC_PAGED` | Do E2-PR1b | Od E2-PR1b |
+|---|---|---|
+| brak klucza (stan każdego urządzenia po aktualizacji) | wyłączone | **włączone** |
+| `'1'` | włączone | włączone |
+| `''`, `'true'`, `'TAK'`, `'false'`, `' 0'`, `'0 '`, każda inna | wyłączone | **włączone** (wyłącza tylko dokładnie `'0'`) |
+| `'0'` | wyłączone | wyłączone |
+| `VILDA_SYNC_PAGED === false` (przy każdym kluczu) | wyłączone | wyłączone |
+| `VILDA_SYNC_PAGED === true` (także przy `'0'`) | włączone | włączone |
+| `VILDA_SYNC_PAGED` nie-boolean (np. `'false'`, `0`) | ignorowane | ignorowane |
+| odczyt klucza rzuca (zablokowany magazyn) | wyłączone | wyłączone |
+| „Komputer w pracy”, „Zaloguj jednorazowo” (każdy sygnał), `vilda-incr-sync-v1 = '0'` | jak przed E2-PR1 | jak przed E2-PR1 (bez health, bez `limit=`) |
+| worker bez `changes-paged`: v36 albo DO bez SQLite (`sqlite: false`) | jedno żądanie legacy | `GET /v1/health` raz na 10 min, potem jedno żądanie legacy |
+| health przejściowy: `sqlite: null` (DO na starym kodzie, nieudana sonda), błąd sieci, odpowiedź nie-OK albo zły JSON | jedno żądanie legacy | `GET /v1/health` (co 15 s), potem jedno żądanie legacy |
+
+**Co widzi użytkownik.** Nic nowego na ekranie. Przy zaległości (np. telefon po kilku dniach offline) jedno pobranie
+czyta do 10 stron po 200 wierszy zamiast jednej strony, więc zmiany z innych urządzeń dochodzą w jednym pobraniu zamiast
+w wielu. Każdy kontekst strony (karta, ramka powłoki), który pobiera z kursorem > 0, wysyła jedno `GET /v1/health`
+(bez tokenu, poza kubełkiem slotu), potem co 10 min; tak samo na workerze bez `changes-paged` (v36,
+`sqlite: false`). Do poprawki po przeglądzie (D3) taki wynik żył 15 s, a zegar pobiera co ~20 s, więc każde pobranie
+na takim workerze wysyłało health (3 żądania zamiast 2). Co 15 s zostaje tylko wynik przejściowy (`sqlite: null`, błąd).
+Żądanie strony wychodzi po `onSyncComplete` (drenaż czeka na wynik health). W `syncFull` wychodzi na pewno przed
+`PUT /blob` tylko przy pamiętanym wyniku health; przy pierwszym health w kontekście (i co 10 min) kolejność zależy od
+czasu odpowiedzi health, więc `PUT /blob` może wyjść wcześniej (w zapisie bazowym B13 atrapa odpowiada od razu;
+przegląd, D6; sprawdzone w kopii z wstrzymanym health). Wynik scalania od tego nie
+zależy (scalanie przemienne, plan 3.3 pkt 6). 401, 429 i 503 na `/changes` trafiają do `getDrainStatus`
+zamiast ciszy (tabela stopów niżej). Zapisy kluczy i kursory są takie jak w legacy we wszystkich 41 przypadkach
+zapisu bazowego DOMYŚLNIE (brak klucza: v37a 14, v36 13; `'1'`: 14).
+
+**Wyłączenie.** Na jednym urządzeniu: `localStorage.setItem('vilda-sync-paged-v1', '0')` w konsoli (dokładnie tekst
+`'0'`; `setItem(…, false)` zapisze `'false'`, czyli włączone); w PWA na iPhonie tylko przez Web Inspector. Dla wszystkich:
+rewert E2-PR1b (decyzja 2). Wyłączenie przywraca też dzisiejsze odpytywanie (P-SYNC-ODPYTYWANIE-WS), ale nie dawny
+odstęp ponownego łączenia.
+
+**Testy E2-PR1b.** `tests/unit/sync-zadania-bazowe.test.mjs`: zapis bazowy legacy tylko w wariantach jawnie wyłączonych
+(4 warianty, oczekiwania bez zmian, dodatkowo zero health, zero `limit=` i `getDrainStatus` `null`); nowy zapis bazowy
+DOMYŚLNIE (brak klucza na v37a i v36 oraz `'1'`): oś różni się tylko w B3, B4, B5, B8, B11, B12 i nowym B13 (`syncFull`
+z kursorem > 0), health raz na kontekst strony bez `Authorization`, `limit=200` przy każdym `/changes` z kursorem > 0
+(v37a), bez `limit=` na v36; dwa przebiegi identyczne; fałszywy `Date`, bo wynik health żyje 10 min (poprawna
+odpowiedź) albo 15 s (przejściowy).
+`tests/unit/sync-dziennik-drenaz.test.mjs` (154 przypadki): domyślna flaga świata z `'1'` na brak klucza (D5–D48 idą ścieżką domyślną),
+D5 (v36: pamięć wyniku 10 min zamiast 15 s), D5k (cztery pobrania co 20 s: jedno health na v36 i na v37a z
+`sqlite: false`, cztery przy `sqlite: null`; po 10 min ponowne wykrycie),
+D1 (wyłączone: `'0'`, `'1'` i brak klucza przy `VILDA_SYNC_PAGED = false`, nie-boolean ignorowane), D1d (włączone: brak
+klucza, `'1'`, `''`, `'true'`, `'TAK'`, `'false'`, `' 0'`, `'0 '`, brak klucza przy `VILDA_SYNC_PAGED = 'false'` i `= 0` —
+nie-boolean ignorowane), D1e (brak klucza, v36: health, potem legacy), D1b
+(`VILDA_SYNC_PAGED = true` także przy `'0'`), D2, D3, D4, D4b, D4c i D3k także bez klucza, D49–D50 (`isPagedActive`,
+P-SYNC-ODPYTYWANIE-WS). `tests/unit/urzadzenie-sync.test.mjs` U8: bliźniak z kursorem 1 → `GET status`, `GET health`,
+`GET changes?since=1&limit=200`. `sync-kursor-luki`, `care-plans-lineage-sync` i `care-plans-format-sync` sprawdzają
+ścieżkę legacy, więc mają teraz jawne `'0'` (ich atrapy nie znają `/v1/health`; po zmianie domyślnej po cichu
+przechodziłyby przez health → legacy). Nowy e2e `tests/e2e/sync-strony-domyslnie.spec.mjs` (prawdziwa przeglądarka, prawdziwy
+sejf i `vilda_sync.js`, atrapa workera v37a przez `page.route`, 250 zaślepek): bez klucza `GET /v1/health` bez tokenu i dwie
+strony `/changes?…&limit=200` w jednym pobraniu, kursor 251; przy `'0'` jedno żądanie legacy, kursor 201 — dotąd żaden
+e2e nie przechodził ścieżki stronami (health trafiał w 404 atrap). **Czerwone na bazie** (pliki produktu z `origin/audyt` 9e431afd w kopii, testy z tej
+zmiany): `sync-dziennik-drenaz` 112 z 154 (z drugiej rundy poprawek doszły D1d ×2, oba czerwone na bazie, bo tam brak
+klucza wyłącza) — zielone 42: kontrole „jak przed E2-PR1” (D1 ×4, D1c, D2, D3, D4, D4b ×4,
+D4c ×2, D14e, D33, D33b, D43, D44, D45c, D47 przy `'0'`), przypadki z jawnym `'1'` albo `VILDA_SYNC_PAGED = true` (D1d `'1'`,
+D1b, D3k `'1'`, D35, D35b, D43, D44, D45c, D47 przy `'1'`), D9, D9b (`detectApi` niezależne od flagi) i strażniki źródła
+D36–D39, D46; czerwone wszystkie przypadki domyślne (brak klucza, w tym D5k ×3) i D49–D50; `sync-zadania-bazowe` 23 z 96 (warianty
+bez klucza: v37a 12 z 14, v36 11 z 13 — wszystkie poza B0 i B7, w tym B1, B2, B6, B9, B10 przez `getDrainStatus`
+`since0-legacy`; wariant `'1'` i 4 warianty legacy zielone, czyli `'1'` na bazie daje to samo co brak klucza po zmianie),
+`urzadzenie-sync` 1 z 19 (U8), e2e `sync-strony-domyslnie` 1 z 2 (kontrola `'0'` zielona); `sync-kursor-luki`, `care-plans-lineage-sync`, `care-plans-format-sync` zielone (jawne `'0'` =
+zachowanie bazy). Mutanty `vilda_sync.js` (powrót do `=== '1'`, porównanie po `trim()`, `catch → true`, bez
+`typeof g == 'boolean'`, cztery mutanty `isPagedActive`): wynik w P-SYNC-ODPYTYWANIE-WS.
+
+### E2-PR1 (P-SYNC-STRONY, SW 1.1.436, `vilda_sync.js` 46, 2026-11-02) — opis pobierania stronami
 
 **Skąd.** Etap 2 planu (`docs/SYNC_PRZYROSTOWA_PLAN.md`, 3.3 „drainChanges”, tabela etapu 2, E2-PR1). Decyzje
 właściciela z 2026-10-29 nr 1 i 2: seria uśpionych PR; pobieranie stronami najpierw wyłączone, domyślnie włącza je
-osobny E2-PR1b. Dotąd jedno pobranie czytało jedną stronę legacy (do 200 delt), a 401, 429 i 503 przechodziły bez śladu.
+osobny E2-PR1b (wyżej). Dotąd jedno pobranie czytało jedną stronę legacy (do 200 delt), a 401, 429 i 503 przechodziły bez śladu.
 
-**Kiedy działa.** Wszystkie warunki naraz: `vilda-sync-paged-v1 = "1"` w `localStorage` (albo
-`window.VILDA_SYNC_PAGED === true`; `false` wyłącza mimo klucza; każda inna wartość klucza — `"0"`, pusta, `"true"` —
-to wyłączone); `/changes` włączone (`vilda-incr-sync-v1` różne od `"0"`); tryb „Komputer prywatny” (nie „Komputer w
+**Kiedy działa.** Wszystkie warunki naraz: flaga włączona — od E2-PR1b brak klucza `vilda-sync-paged-v1` i każda jego
+wartość inna niż `"0"` (do E2-PR1b tylko `"1"`); `window.VILDA_SYNC_PAGED === true` włącza mimo `"0"`, `false` wyłącza
+mimo klucza; `/changes` włączone (`vilda-incr-sync-v1` różne od `"0"`); tryb „Komputer prywatny” (nie „Komputer w
 pracy”, nie „Zaloguj jednorazowo” — w tych trybach dzisiejsza ścieżka przy każdej wartości flagi, sprawdzane przy każdym
 drenażu tymi samymi sygnałami co magazyn stanu slotu); `GET /v1/health` bez tokenu (limit 5 s do nagłówków) podaje `features` z
 `changes-paged`. Wynik health jest tylko w pamięci strony: 10 min, gdy zawiera `changes-paged`, 15 s w każdym innym
-wypadku (v36 bez `api`, DO bez SQLite, błąd sieci, zła odpowiedź); jedno żądanie health naraz. Kursor 0 i każdy inny
+wypadku (v36 bez `api`, DO bez SQLite, błąd sieci, zła odpowiedź); jedno żądanie health naraz. *(Od E2-PR1b, poprawka D3
+z przeglądu: także poprawna odpowiedź bez `changes-paged` — v36 bez `api`, v37a z `sqlite: false` — 10 min; 15 s tylko
+`sqlite: null`, błąd sieci, odpowiedź nie-OK i zły JSON.)* Kursor 0 i każdy inny
 wynik health — jedno żądanie legacy jak dotąd (kursor 0: bez health, okno serwera E1-5 przy `blobSeq > 0`, przy
 `blobSeq = 0` od `oldestSeq − 1` po 200 wierszy — znane, wybór „okno w trybie stronicowanym / pełny replay” zostaje w
 planie na później).
@@ -20467,7 +20744,7 @@ zmieniło (te same 9 liczników co `wt`) i sejf jest dalej otwarty na tym koncie
 | `http-inny`, `siec` | inny kod (np. 500), błąd sieci albo limit czasu (także w trybie legacy: `tryb:'legacy'`, `stop:'siec'`) | stoi (po poprzednich stronach) | ponawia |
 | `format` | sejf nie wskazuje dzisiejszego formatu klinicznego albo wybór trasy rzuca (`kod` z odmowy, np. `IDENTITY_BOOTSTRAP_UNVERIFIED`, `SESSION_CHANGED`): przy żądaniu i odpowiedzi (health, `/changes`, także legacy przez `Yt`), na początku strony z wierszami, przed i po każdym scaleniu, przed każdym zapisem kursora; także odmowa rzucona ze scalenia | bez zapisu z bieżącej strony (wcześniejsze strony zostają) | bez `onSyncError`; `vilda:sync-merged` tylko za wcześniejsze strony; wynik health z odmowy bez pamięci; po powrocie dzisiejszego formatu strona od nowa |
 | `ksztalt` | odpowiedź bez pól stronicowanych (worker cofnięty do v36 ignoruje `limit`; także brak `truncated` albo `headSeq`), numer malejący, powtórzony albo niecałkowity, `nextSince` różne od ostatniego wiersza, `truncated` bez wierszy (jedno żądanie zamiast pętli), zły JSON; spoza kontraktu v37a: `cursorAhead` przy `headSeq` ≥ `since`, `requiresBase` bez `oldestSeq` albo z `oldestSeq − 1` ≤ `since` | odpowiedź legacy: reguła dotychczasowa (najwyższy numer, gdy partia nie przerwana); inaczej wiersze przed błędem; `cursorAhead`/`requiresBase` spoza kontraktu: stoi | nowe wykrycie health |
-| `since0-legacy`, `legacy` | kursor 0 albo health bez `changes-paged` | jak dotąd | `legacy`: health po 15 s; 401, 429, 503 i inne kody jak dotąd bez śladu (bez przerwy po 429), poza błędem sieci (`siec`) |
+| `since0-legacy`, `legacy` | kursor 0 albo health bez `changes-paged` | jak dotąd | `legacy`: health po 15 s (od E2-PR1b po 10 min przy v36 i `sqlite: false`); 401, 429, 503 i inne kody jak dotąd bez śladu (bez przerwy po 429), poza błędem sieci (`siec`) |
 
 **Kursor** (P-SYNC-KURSOR): najwyższy wiersz o rozstrzygniętym wyniku — zastosowany, bez zmian, nieczytelny (zła
 koperta, odszyfrowanie), z błędem zastosowania albo zaślepka; zapis tylko w górę (inna karta mogła pójść dalej).
@@ -20490,8 +20767,8 @@ włączonej flagi.
 health, w obu trybach: na nagłówki `GET /v1/health` drenaż czeka do 5 s, a health bez `changes-paged` daje żądanie legacy), po odpowiedzi
 (także 401, 429 i 503), po odczycie jej treści, przed i po każdym wierszu i przed zapisem kursora sejf musi być otwarty na tym
 samym koncie; inaczej koniec ze stopem `blokada`, bez zapisu kursora z bieżącej strony, bez przerwy po 429, bez dalszych
-żądań i bez `vilda:sync-merged`. Przy wyłączonej fladze tego okna nie ma: żądanie legacy rusza zaraz po sprawdzeniu konta
-w `Bpw_dren`, bez health.
+żądań i bez `vilda:sync-merged`. Przy wyłączonej fladze (`'0'`, tryby w pracy i jednorazowo) tego okna nie ma: żądanie
+legacy rusza zaraz po sprawdzeniu konta w `Bpw_dren`, bez health.
 
 **Format kliniczny** (strażniki `PatientClinicalRequireLegacy` z PR planów opieki): o trasie decyduje sejf
 (`selectPatientClinicalRoute`); drenaż stronami ma te same strażniki co dzisiejsze `wt` i `Yt` — `"sync-http"` przy
@@ -20526,7 +20803,8 @@ chwili tego pobrania. Pobranie innego slotu (inne konto w tym dokumencie) w czas
 wyłączonej fladze — aplikacja go w E2-PR1 nie woła, strażnik D39), `getDrainStatus(slotId)` (kopia ostatniego wyniku
 drenażu z polem `trwa` — `true` tylko dla slotu trwającego drenażu; argument nie-tekst → `null`), `getChangesCursor(slotId)`.
 
-**Gdzie w kodzie.** `vilda_sync.js`: czytelny blok `Bdz_*` w liniach 121–462 (`Bdz_wlaczone` 157:1, `Bdz_stopWyjatku`
+**Gdzie w kodzie** (numery linii i kolumn dla `vilda_sync.js` 46, czyli po E2-PR1; od E2-PR1b są przesunięte, więc
+funkcji szukać po nazwie). `vilda_sync.js`: czytelny blok `Bdz_*` w liniach 121–462 (`Bdz_wlaczone` 157:1, `Bdz_stopWyjatku`
 205:1, `Bdz_zastosuj` 222:1, `Bdz_kursorWGore` 242:1, `Bdz_drenaz` 288:1, `Bdz_wykonaj` 385:1, `Bdz_B` 427:1,
 `Bdz_syncPull` 443:1); `Bpw_dren` 120:1 wybiera `Bdz_B` albo dotychczasowe `B` i zapamiętuje obietnicę drenażu dla
 wyniku pobrania; cztery wywołania w `Bpw_pull` (463:1813, 463:2262, 463:2496, 463:3860) podają wynik pobrania; eksport
@@ -20534,8 +20812,8 @@ wyniku pobrania; cztery wywołania w `Bpw_pull` (463:1813, 463:2262, 463:2496, 4
 `B`, `Yt`, `wt`, `Y` i kursor (`bt`, `Kt`; linia 49, linia 107) bez zmian względem `origin/audyt` (strażnik D36 w
 teście: sha256 całych funkcji).
 
-**Czego to nie zmienia / co dalej.** E2-PR1b: włączenie domyślne (`'0'` wyłącza), polling 60 s przy WS i odstęp
-ponownego połączenia — budżet 120 żądań na minutę na slot. E2-PR4: wymuszone `GET /blob` przy `requiresBase`,
+**Czego to nie zmienia / co dalej.** E2-PR1b (wykonane w tym samym wpisie wyżej i w P-SYNC-ODPYTYWANIE-WS): włączenie
+domyślne (`'0'` wyłącza), odpytywanie co 60 s przy żywym połączeniu na żywo i odstęp ponownego łączenia od 10 s. E2-PR4: wymuszone `GET /blob` przy `requiresBase`,
 `cursorAhead` i dziurze, statusy `applyEncryptedEvent`, kwarantanna, rozszerzone liczniki `wt`/`Ft`, `markSyncCaughtUp`,
 ślady P-SYNC-SLAD; przepływ kolejki nie może zakładać, że po `czekajNaDrenaz` kursor sięga `headSeq` z chwili wywołania
 (drugie pobranie w trakcie i pobranie innego slotu — wyżej): E2-PR4 dokłada jeden drenaż po trwającym albo jawne pole
@@ -20547,8 +20825,9 @@ E2-PR4, zanim przepływ kolejki zacznie czekać na drenaż.
 
 | Wejście | Oczekiwany wynik |
 |---|---|
-| flaga brak / `'0'` / `'1'` przy `window.VILDA_SYNC_PAGED = false` — każdy scenariusz zapisu bazowego; `''` / `'true'` / `'TAK'` i odczyt flagi z wyjątkiem — D1, D1c (porównanie `=== '1'`) | żądania, kolejność i klucze jak dotąd; zero `/v1/health`, zero `limit=` |
-| flaga `'1'`, „Komputer w pracy” albo „Zaloguj jednorazowo” (każdy z trzech sygnałów; wyjątek przy odczycie trybu = jednorazowy) | jak przy fladze `'0'` |
+| od E2-PR1b: flaga `'0'` / `'1'` albo brak klucza przy `window.VILDA_SYNC_PAGED = false` — każdy scenariusz zapisu bazowego legacy; odczyt flagi z wyjątkiem — D1, D1c (porównanie `=== '0'`; do E2-PR1b także brak klucza, `''`, `'true'`, `'TAK'`) | żądania, kolejność i klucze jak przed E2-PR1; zero `/v1/health`, zero `limit=` |
+| od E2-PR1b: brak klucza, `''`, `'true'`, `'TAK'`, `'false'`, `' 0'`, `'0 '` — D1d; zapis bazowy DOMYŚLNIE | jak `'1'`: health, potem stronami |
+| flaga `'1'` albo brak klucza, „Komputer w pracy” albo „Zaloguj jednorazowo” (każdy z trzech sygnałów; wyjątek przy odczycie trybu = jednorazowy) | jak przy fladze `'0'` |
 | kursor 1, 450 wierszy w dzienniku | trzy strony w jednym pobraniu, kursor 451 |
 | kursor 1, 2100 zaślepek | 10 stron, kursor 2001, reszta w następnym pobraniu |
 | `MERGE_BUSY` na trzecim wierszu strony | kursor na wierszu przed nim; następne pobranie od niego |
@@ -20584,7 +20863,8 @@ albo podwójne, bez przerwy 429 i pierwszeństwa `Retry-After`, health w `localS
 „nieczytelne” bez sprawdzenia blokady, licznik mniej): 144 dają czerwony test. Trzy zostają zielone, bo są równoważne:
 usuwają sprawdzenia nadmiarowe, przed którymi nie ma żądania ani wywołania sejfu — zostają jako obrona.
 
-**Wpływ kliniczny: brak.** **Wersje.** `vilda_sync.js?v=45→46` (8 stron); SW 1.1.435 → **1.1.436**.
+**Wpływ kliniczny: brak.** **Wersje.** E2-PR1: `vilda_sync.js?v=45→46` (8 stron); SW 1.1.435 → **1.1.436**. E2-PR1b:
+wersje w P-SYNC-ODPYTYWANIE-WS (jeden PR).
 
 ## Linia „Wersja aplikacji” w Ustawieniach (P-WERSJA-APLIKACJI, E2-PR1w, SW 1.1.439, `inline_ustawienia_07.js` 3, `ustawienia.css` 19, 2026-11-02)
 
@@ -26179,7 +26459,7 @@ Testy: `tests/unit/nowe-urzadzenie-pobieranie.test.mjs` (prawdziwe `vilda_sync.j
 **Wersje.** `vilda_nowe_urzadzenie.js` 1 → 2, `vilda_sync.js` 38 → 39, `vilda_sync_integration.js` 48 → 49, `vilda_auth_ui.css` 77 → 78. Wstrzykujące `vilda_chrome.js` 130 → 131 i `vilda_session_bridge.js` 54 → 55 podbił `npm run podbij-wersje`. `SW_VERSION` 1.1.254 → 1.1.255 (numery 1.1.253 i 1.1.254 nadały równolegle #651 i #653).
 
 **Ryzyko resztkowe.**
-- Po „Pobierz później” integracja ponawia pobranie w tle co około 12 s, a każde pobiera cały blob, dopóki pierwsze się nie uda (jak dotąd na każdym urządzeniu z włączoną synchronizacją i nieudanym pierwszym pobraniem). Na wolnym łączu oznacza to transfer.
+- Po „Pobierz później” integracja ponawia pobranie w tle co około 12 s (w praktyce co ok. 20 s: tyknięcie co 10 s; bez zmian w E2-PR1b, bo nowe urządzenie z kursorem 0 nie ma wyniku health — P-SYNC-ODPYTYWANIE-WS), a każde pobiera cały blob, dopóki pierwsze się nie uda (jak dotąd na każdym urządzeniu z włączoną synchronizacją i nieudanym pierwszym pobraniem). Na wolnym łączu oznacza to transfer.
 - Limit 30 s bez postępu przerywa też łącze, które stoi dłużej, ale potem by ruszyło. Wtedy pojawia się ekran błędu z „Spróbuj ponownie”.
 - Dwie karty otwarte na nowym urządzeniu nie pobierają już bloba równolegle: pierwsze pobranie drugiej karty czeka na blokadę i kończy się bez bloba. Przeglądarka bez Web Locks (Safari przed 15.4) zostaje przy dawnym zachowaniu poza dokumentem okna; scalanie jest odporne na powtórzenie.
 - Zwykłe pobranie, które ruszyło przed pierwszym pobraniem, kończy się równolegle z nim (blokadę bierze się na starcie pobrania). Po starcie aplikacji zwykłe pobrania czekają na włączenie synchronizacji, więc w praktyce dotyczy to tylko innej, już zsynchronizowanej karty.

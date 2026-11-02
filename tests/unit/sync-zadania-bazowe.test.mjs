@@ -29,6 +29,9 @@
 //   B10 błąd /status 500 (B; onSyncError STATUS_FAILED, bez drenażu i zapisów kluczy).
 //   B11 429 na /changes (B; dziś cisza: kursor stoi). B12 503 hub_unavailable na /changes (tylko v37a; dziś cisza).
 //       E2-PR1 zmienia B11 i B12 tylko przy włączonej fladze.
+//   B13 zwykły cykl z kursorem > 0 (A, syncFull; E2-PR1b): /changes przed PUT /blob także przy pobieraniu stronami, ale
+//       tylko dlatego, że atrapa odpowiada na health od razu; przy wolnym health (pierwsze w kontekście, potem co 10 min)
+//       PUT /blob może wyjść wcześniej — bez wpływu na wynik (scalanie przemienne, plan 3.3 pkt 6).
 // Pole kursor może być mapą po trybie (B9: v36 nie ma zaślepek), pole tryby zawęża scenariusz do trybów, które wytwarzają
 // daną odpowiedź (B12). Nowe warianty E2-PR1 (flaga brak / '0') dziedziczą oczekiwania po swoim trybie.
 // W każdym: żadne /v1/health, żadne limit=, brak naruszeń atrapy i strażnika (sprzatnijUrzadzenia).
@@ -37,7 +40,19 @@
 // bez zmian; nowe warianty zielone przed i po zmianie produktu (sprawdzone na 9d01ca45 przed zmianą vilda_sync.js). Wariant
 // '1' (włączone stronicowanie) zmienia żądania i należy do tests/unit/sync-dziennik-drenaz.test.mjs.
 //
-// Czerwone na bazie: żadne — zapis bazowy, zielony na e49ff33e.
+// E2-PR1b (P-SYNC-STRONY-DOMYSLNIE, decyzja 2 z 2026-10-29; zmiana oczekiwań świadoma): pobieranie stronami jest domyślne.
+// Zapis bazowy LEGACY (WARIANTY, oczekiwania z SCENARIUSZE bez zmian) to teraz tylko warianty jawnie wyłączone: flaga '0'
+// (v37a i v36), '1' albo brak klucza przy VILDA_SYNC_PAGED = false; w nich żadne /v1/health, żadne limit= i
+// getDrainStatus null. Dawne warianty „v37a” i „v36” bez klucza przeszły do zapisu bazowego DOMYŚLNIE (WARIANTY_DOMYSLNE,
+// razem z '1'): zapisy kluczy i kursory jak w legacy we wszystkich scenariuszach, a oś różni się tylko w B3, B4, B5, B8,
+// B11, B12, B13 (DOMYSLNIE: GET /v1/health raz na kontekst strony urządzenia B, bez Authorization; v37a: ?since=N&limit=200,
+// żądanie strony po „koniec pull”, bo drenaż czeka na wynik health; v36: health, potem legacy bez limit=; B11/B12 w
+// getDrainStatus zamiast ciszy). Oczekiwania DOMYSLNIE z dwóch identycznych przebiegów na tej zmianie. Warianty
+// domyślne z fałszywym Date (wynik health żyje 10 min albo 15 s czasu ściennego). Czerwone na bazie E2-PR1b (pliki
+// produktu z origin/audyt 9e431afd w kopii): 23 z 96 — warianty bez klucza: v37a 12 z 14, v36 11 z 13 (wszystkie poza B0
+// i B7); wariant '1' i 4 warianty legacy zielone (na bazie '1' daje to samo, co brak klucza po zmianie).
+//
+// Czerwone na bazie (E2-PR0): żadne — zapis bazowy, zielony na e49ff33e.
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { utworzAtrapeWorkera, zegarSterowany } from '../support/atrapa-workera-sync.mjs';
 import { cisza, sprzatnijUrzadzenia, utworzUrzadzenie } from '../support/urzadzenie-sync.mjs';
@@ -45,16 +60,21 @@ import { HASLO_B } from './sesja-zapisu-uprzaz.mjs';
 
 beforeEach(() => { vi.spyOn(Math, 'random').mockReturnValue(0.5); });
 afterEach(async () => {
-  try { await sprzatnijUrzadzenia(); } finally { vi.restoreAllMocks(); }
+  try { await sprzatnijUrzadzenia(); } finally { vi.restoreAllMocks(); vi.useRealTimers(); }
 });
 
+// Zapis bazowy legacy: pobieranie stronami wyłączone jawnie (klient nie rozróżnia v36 i v37a — te same oczekiwania).
 const WARIANTY = [
-  { nazwa: 'v37a (produkcja, EVENTS_ENABLED=0)', atrapa: { tryb: 'v37a', eventsEnabled: false } },
-  { nazwa: 'v36', atrapa: { tryb: 'v36' } }, // dzisiejszy klient nie rozróżnia — te same oczekiwania
-  // E2-PR1: flaga vilda-sync-paged-v1 wyłączona jawnie i nadpisanie globalne false — te same oczekiwania co wyżej.
-  { nazwa: "v37a, vilda-sync-paged-v1 = '0'", atrapa: { tryb: 'v37a', eventsEnabled: false }, flaga: '0' },
+  { nazwa: "v37a (produkcja, EVENTS_ENABLED=0), vilda-sync-paged-v1 = '0'", atrapa: { tryb: 'v37a', eventsEnabled: false }, flaga: '0' },
   { nazwa: "v36, vilda-sync-paged-v1 = '0'", atrapa: { tryb: 'v36' }, flaga: '0' },
   { nazwa: "v37a, vilda-sync-paged-v1 = '1' i VILDA_SYNC_PAGED = false", atrapa: { tryb: 'v37a', eventsEnabled: false }, flaga: '1', globalna: false },
+  { nazwa: 'v37a, brak klucza i VILDA_SYNC_PAGED = false', atrapa: { tryb: 'v37a', eventsEnabled: false }, globalna: false },
+];
+// Zapis bazowy domyślnie (E2-PR1b): brak klucza (stan każdego urządzenia po aktualizacji) i jawne '1' (to samo).
+const WARIANTY_DOMYSLNE = [
+  { nazwa: 'v37a (produkcja, EVENTS_ENABLED=0), brak klucza', atrapa: { tryb: 'v37a', eventsEnabled: false }, domyslnie: true },
+  { nazwa: 'v36, brak klucza', atrapa: { tryb: 'v36' }, domyslnie: true },
+  { nazwa: "v37a, vilda-sync-paged-v1 = '1'", atrapa: { tryb: 'v37a', eventsEnabled: false }, flaga: '1', domyslnie: true },
 ];
 // Flaga klienta (poza pokrętłami atrapy) na każdym urządzeniu zaraz po utworzeniu — przed znacznikMagazynu(), więc poza
 // rzutem magazynu. Bliźniak B dostaje klon 'sejf' (bez kopii localStorage A), więc flaga ustawiana osobno.
@@ -156,6 +176,7 @@ const KROKI = {
     s.atrapa.usterka({ gdy: { trasa: 'changes', urzadzenie: 'B' }, kod: 'hub_unavailable' });
     return zBrama(s, s.B, () => s.B.sync.syncPull(), (r) => r.action);
   },
+  B13: (s) => zBrama(s, s.A, () => s.A.sync.syncFull(), (r) => `${r.pull.action}/${r.push.action}`),
 };
 
 const SCENARIUSZE = [
@@ -311,25 +332,192 @@ const SCENARIUSZE = [
     magazyn: ['set sessionStorage vilda-sync-pulled-v1'],
     kursor: 1,
   },
+  {
+    id: 'B13', nazwa: 'zwykły cykl z kursorem > 0 (A, syncFull: pobranie, drenaż, wysyłka; echo własnej delty karty 3)', przygotuj: ['B0', 'P2', 'B1', 'P4', 'B2', 'P5'], urzadzenie: 'A',
+    os: [
+      'start full', 'blokada vilda-sync-pierwsze-pobranie-v1 shared', 'start pull',
+      '→ GET /v1/slots/<slot>/status [Bearer]', '← 200', '→ GET /v1/slots/<slot>/changes?since=1 [Bearer]',
+      'koniec pull up-to-date', 'start push', '→ PUT /v1/slots/<slot>/blob [Bearer, If-Match]', '← 200',
+      'koniec push uploaded', 'koniec full', 'test: rozstrzygnięte up-to-date/uploaded', '← 200', 'vilda:sync-merged changes-drain',
+    ],
+    magazyn: ['set sessionStorage vilda-sync-pulled-v1', 'set localStorage vilda-sync-state-v1:<slot>', 'set localStorage vilda-sync-cursor-v1:<slot>'],
+    kursor: 2,
+  },
 ];
 
-describe.each(WARIANTY)('E2-PR0 zapis bazowy vilda_sync.js: $nazwa', (w) => {
+// Zapis bazowy DOMYŚLNIE (E2-PR1b): oś tylko tam, gdzie różni się od SCENARIUSZE; drain = getDrainStatus urządzenia
+// scenariusza po kroku (pola tryb, stop, http, kod, od, do, stron; null = bez drenażu w tym dokumencie).
+const DOMYSLNIE = {
+  v37a: {
+    B0: { drain: null },
+    B1: { drain: { tryb: 'legacy', stop: 'since0-legacy', http: null, kod: null, od: 0, do: 1, stron: 0 } },
+    B2: { drain: { tryb: 'legacy', stop: 'since0-legacy', http: null, kod: null, od: 0, do: 1, stron: 0 } },
+    B3: {
+      drain: { tryb: 'strony', stop: 'head', http: null, kod: null, od: 1, do: 2, stron: 1 },
+      os: [
+        'blokada vilda-sync-pierwsze-pobranie-v1 shared', 'start pull', '→ GET /v1/slots/<slot>/status [Bearer]',
+        '← 200', '→ GET /v1/slots/<slot>/blob [Bearer, If-None-Match]', '← 200',
+        'vilda:sync-download-progress download', 'vilda:sync-download-progress decrypt', 'vilda:sync-stale-device',
+        '→ GET /v1/health', '← 200', 'koniec pull merged', 'test: rozstrzygnięte merged',
+        '→ GET /v1/slots/<slot>/changes?since=1&limit=200 [Bearer]', '← 200', 'vilda:sync-merged changes-drain',
+      ],
+    },
+    B4: {
+      drain: { tryb: 'strony', stop: 'head', http: null, kod: null, od: 2, do: 3, stron: 1 },
+      os: [
+        'blokada vilda-sync-pierwsze-pobranie-v1 shared', 'start pull', '→ GET /v1/slots/<slot>/status [Bearer]',
+        '← 200', 'koniec pull up-to-date', '→ GET /v1/slots/<slot>/changes?since=2&limit=200 [Bearer]',
+        'test: rozstrzygnięte up-to-date', '← 200', 'vilda:sync-merged changes-drain',
+      ],
+    },
+    B5: {
+      drain: { tryb: 'strony', stop: 'head', http: null, kod: null, od: 3, do: 3, stron: 1 },
+      os: [
+        'blokada vilda-sync-pierwsze-pobranie-v1 shared', 'start pull', '→ GET /v1/slots/<slot>/status [Bearer]',
+        '← 200', '→ GET /v1/slots/<slot>/blob [Bearer, If-None-Match]', '← 304', 'koniec pull up-to-date',
+        '→ GET /v1/slots/<slot>/changes?since=3&limit=200 [Bearer]', 'test: rozstrzygnięte up-to-date', '← 200',
+      ],
+    },
+    B6: { drain: { tryb: 'legacy', stop: 'since0-legacy', http: null, kod: null, od: 0, do: 0, stron: 0 } },
+    B7: { drain: null },
+    B8: {
+      drain: { tryb: 'strony', stop: 'head', http: null, kod: null, od: 3, do: 4, stron: 1 },
+      os: [
+        'blokada vilda-sync-pierwsze-pobranie-v1 shared', 'start pull', '→ GET /v1/slots/<slot>/status [Bearer]',
+        '← 200', 'koniec pull up-to-date', '→ GET /v1/slots/<slot>/changes?since=3&limit=200 [Bearer]',
+        'test: pierwsze rozstrzygnięte up-to-date', 'blokada vilda-sync-pierwsze-pobranie-v1 shared', 'start pull',
+        '→ GET /v1/slots/<slot>/status [Bearer]', '← 200', 'koniec pull up-to-date',
+        'test: drugie rozstrzygnięte up-to-date', '← 200', 'vilda:sync-merged changes-drain',
+      ],
+    },
+    B9: { drain: { tryb: 'legacy', stop: 'since0-legacy', http: null, kod: null, od: 0, do: 3, stron: 0 } },
+    B10: { drain: { tryb: 'legacy', stop: 'since0-legacy', http: null, kod: null, od: 0, do: 1, stron: 0 } },
+    B11: {
+      drain: { tryb: 'strony', stop: 'http-429', http: 429, kod: 'rate_limited', od: 1, do: 1, stron: 1 },
+      os: [
+        'blokada vilda-sync-pierwsze-pobranie-v1 shared', 'start pull', '→ GET /v1/slots/<slot>/status [Bearer]',
+        '← 200', '→ GET /v1/health', '← 200', 'koniec pull up-to-date', 'test: rozstrzygnięte up-to-date',
+        '→ GET /v1/slots/<slot>/changes?since=1&limit=200 [Bearer]', '← 429 rate_limited',
+      ],
+    },
+    B12: {
+      drain: { tryb: 'strony', stop: 'http-503', http: 503, kod: 'hub_unavailable', od: 1, do: 1, stron: 1 },
+      os: [
+        'blokada vilda-sync-pierwsze-pobranie-v1 shared', 'start pull', '→ GET /v1/slots/<slot>/status [Bearer]',
+        '← 200', '→ GET /v1/health', '← 200', 'koniec pull up-to-date', 'test: rozstrzygnięte up-to-date',
+        '→ GET /v1/slots/<slot>/changes?since=1&limit=200 [Bearer]', '← 503 hub_unavailable',
+      ],
+    },
+    B13: {
+      drain: { tryb: 'strony', stop: 'head', http: null, kod: null, od: 1, do: 2, stron: 1 },
+      // Drenaż czeka na wynik health, więc /changes wychodzi po „start push”; przed PUT /blob tylko przy szybkim health.
+      os: [
+        'start full', 'blokada vilda-sync-pierwsze-pobranie-v1 shared', 'start pull', '→ GET /v1/slots/<slot>/status [Bearer]',
+        '← 200', '→ GET /v1/health', '← 200', 'koniec pull up-to-date', 'start push',
+        '→ GET /v1/slots/<slot>/changes?since=1&limit=200 [Bearer]', '→ PUT /v1/slots/<slot>/blob [Bearer, If-Match]', '← 200',
+        'koniec push uploaded', 'koniec full', 'test: rozstrzygnięte up-to-date/uploaded', '← 200', 'vilda:sync-merged changes-drain',
+      ],
+    },
+  },
+  v36: {
+    B0: { drain: null },
+    B1: { drain: { tryb: 'legacy', stop: 'since0-legacy', http: null, kod: null, od: 0, do: 1, stron: 0 } },
+    B2: { drain: { tryb: 'legacy', stop: 'since0-legacy', http: null, kod: null, od: 0, do: 1, stron: 0 } },
+    B3: {
+      drain: { tryb: 'legacy', stop: 'legacy', http: null, kod: null, od: 1, do: 2, stron: 0 },
+      os: [
+        'blokada vilda-sync-pierwsze-pobranie-v1 shared', 'start pull', '→ GET /v1/slots/<slot>/status [Bearer]',
+        '← 200', '→ GET /v1/slots/<slot>/blob [Bearer, If-None-Match]', '← 200',
+        'vilda:sync-download-progress download', 'vilda:sync-download-progress decrypt', 'vilda:sync-stale-device',
+        '→ GET /v1/health', '← 200', 'koniec pull merged', 'test: rozstrzygnięte merged',
+        '→ GET /v1/slots/<slot>/changes?since=1 [Bearer]', '← 200', 'vilda:sync-merged changes-drain',
+      ],
+    },
+    B4: {
+      drain: { tryb: 'legacy', stop: 'legacy', http: null, kod: null, od: 2, do: 3, stron: 0 },
+      os: [
+        'blokada vilda-sync-pierwsze-pobranie-v1 shared', 'start pull', '→ GET /v1/slots/<slot>/status [Bearer]',
+        '← 200', 'koniec pull up-to-date', '→ GET /v1/slots/<slot>/changes?since=2 [Bearer]',
+        'test: rozstrzygnięte up-to-date', '← 200', 'vilda:sync-merged changes-drain',
+      ],
+    },
+    B5: {
+      drain: { tryb: 'legacy', stop: 'legacy', http: null, kod: null, od: 3, do: 3, stron: 0 },
+      os: [
+        'blokada vilda-sync-pierwsze-pobranie-v1 shared', 'start pull', '→ GET /v1/slots/<slot>/status [Bearer]',
+        '← 200', '→ GET /v1/slots/<slot>/blob [Bearer, If-None-Match]', '← 304', 'koniec pull up-to-date',
+        '→ GET /v1/slots/<slot>/changes?since=3 [Bearer]', 'test: rozstrzygnięte up-to-date', '← 200',
+      ],
+    },
+    B6: { drain: { tryb: 'legacy', stop: 'since0-legacy', http: null, kod: null, od: 0, do: 0, stron: 0 } },
+    B7: { drain: null },
+    B8: {
+      drain: { tryb: 'legacy', stop: 'legacy', http: null, kod: null, od: 3, do: 4, stron: 0 },
+      os: [
+        'blokada vilda-sync-pierwsze-pobranie-v1 shared', 'start pull', '→ GET /v1/slots/<slot>/status [Bearer]',
+        '← 200', 'koniec pull up-to-date', '→ GET /v1/slots/<slot>/changes?since=3 [Bearer]',
+        'test: pierwsze rozstrzygnięte up-to-date', 'blokada vilda-sync-pierwsze-pobranie-v1 shared', 'start pull',
+        '→ GET /v1/slots/<slot>/status [Bearer]', '← 200', 'koniec pull up-to-date',
+        'test: drugie rozstrzygnięte up-to-date', '← 200', 'vilda:sync-merged changes-drain',
+      ],
+    },
+    B9: { drain: { tryb: 'legacy', stop: 'since0-legacy', http: null, kod: null, od: 0, do: 2, stron: 0 } },
+    B10: { drain: { tryb: 'legacy', stop: 'since0-legacy', http: null, kod: null, od: 0, do: 1, stron: 0 } },
+    B11: {
+      drain: { tryb: 'legacy', stop: 'legacy', http: null, kod: null, od: 1, do: 1, stron: 0 },
+      os: [
+        'blokada vilda-sync-pierwsze-pobranie-v1 shared', 'start pull', '→ GET /v1/slots/<slot>/status [Bearer]',
+        '← 200', '→ GET /v1/health', '← 200', 'koniec pull up-to-date', 'test: rozstrzygnięte up-to-date',
+        '→ GET /v1/slots/<slot>/changes?since=1 [Bearer]', '← 429 rate_limited',
+      ],
+    },
+    B13: {
+      drain: { tryb: 'legacy', stop: 'legacy', http: null, kod: null, od: 1, do: 2, stron: 0 },
+      os: [
+        'start full', 'blokada vilda-sync-pierwsze-pobranie-v1 shared', 'start pull', '→ GET /v1/slots/<slot>/status [Bearer]',
+        '← 200', '→ GET /v1/health', '← 200', 'koniec pull up-to-date', 'start push',
+        '→ GET /v1/slots/<slot>/changes?since=1 [Bearer]', '→ PUT /v1/slots/<slot>/blob [Bearer, If-Match]', '← 200',
+        'koniec push uploaded', 'koniec full', 'test: rozstrzygnięte up-to-date/uploaded', '← 200', 'vilda:sync-merged changes-drain',
+      ],
+    },
+  },
+};
+
+describe.each([...WARIANTY, ...WARIANTY_DOMYSLNE])('E2-PR0 zapis bazowy vilda_sync.js: $nazwa', (w) => {
   const scenariusze = SCENARIUSZE.filter((sc) => !sc.tryby || sc.tryby.includes(w.atrapa.tryb));
   it.each(scenariusze.map((sc) => [`${sc.id} ${sc.nazwa}`, sc]))('%s', async (_opis, sc) => {
+    if (w.domyslnie) { vi.useFakeTimers({ toFake: ['Date'] }); vi.setSystemTime(Date.UTC(2026, 10, 2, 9, 0, 0)); }
+    const dom = w.domyslnie ? DOMYSLNIE[w.atrapa.tryb][sc.id] : null;
     const s = await swiat(w);
     for (const k of sc.przygotuj) await KROKI[k](s);
     const d = await s.daj(sc.urzadzenie);
     const z = d.znacznik();
     const zm = d.znacznikMagazynu();
     const r = await KROKI[sc.id](s);
-    expect(d.rzutOsi({ od: z }), `${sc.id}: oś urządzenia ${sc.urzadzenie}`).toEqual(sc.os);
+    expect(d.rzutOsi({ od: z }), `${sc.id}: oś urządzenia ${sc.urzadzenie}`).toEqual(dom && dom.os ? dom.os : sc.os);
     expect(d.rzutMagazynu({ od: zm }), `${sc.id}: zapisy kluczy vilda-sync-* / vilda-cloud-etag-*`).toEqual(sc.magazyn);
     const kursor = sc.kursor && typeof sc.kursor === 'object' ? sc.kursor[w.atrapa.tryb] : sc.kursor;
     if (kursor !== undefined) expect(d.kursor(), `${sc.id}: kursor`).toBe(kursor);
     if (sc.wynik) sc.wynik(r);
     const wszystkie = s.atrapa.zadania;
-    expect(wszystkie.filter((x) => x.sciezka === '/v1/health'), 'klient dziś nie woła /v1/health').toEqual([]);
-    expect(wszystkie.filter((x) => /limit=/.test(x.zapytanie)), 'klient dziś nie wysyła limit=').toEqual([]);
+    const health = wszystkie.filter((x) => x.sciezka === '/v1/health');
+    const zmiany = wszystkie.filter((x) => x.trasa === 'changes');
+    const status = d.sync.getDrainStatus(d.slotId);
+    if (!w.domyslnie) {
+      expect(health, 'legacy: bez /v1/health').toEqual([]);
+      expect(wszystkie.filter((x) => /limit=/.test(x.zapytanie)), 'legacy: bez limit=').toEqual([]);
+      expect(status, 'legacy: bez drenażu stronami (getDrainStatus null)').toBeNull();
+    } else {
+      // Jedno GET /v1/health na kontekst strony, tylko urządzenia, które drenowało z kursorem > 0 (w łańcuchu: B), bez tokenu.
+      expect(health.map((x) => x.urzadzenie), 'domyślnie: health raz na kontekst strony').toEqual(dom.os ? [sc.urzadzenie] : []);
+      for (const x of health) expect(x.naglowki.autoryzacja).toBe('brak');
+      const zKursorem = zmiany.filter((x) => !/since=0(?!\d)/.test(x.zapytanie));
+      if (w.atrapa.tryb === 'v37a') expect(zKursorem.filter((x) => !/&limit=200$/.test(x.zapytanie)).map((x) => x.zapytanie), 'v37a: każde /changes z kursorem > 0 z limit=200').toEqual([]);
+      expect(zmiany.filter((x) => /since=0(?!\d)/.test(x.zapytanie) && /limit=/.test(x.zapytanie)), 'kursor 0: jedno żądanie legacy bez limit=').toEqual([]);
+      if (w.atrapa.tryb === 'v36') expect(wszystkie.filter((x) => /limit=/.test(x.zapytanie)), 'v36: bez limit=').toEqual([]);
+      if (dom.drain === null) expect(status).toBeNull();
+      else expect(status).toMatchObject(dom.drain);
+    }
     expect(wszystkie.filter((x) => x.transport === 'fetch-okna'), 'beacony bez rezerwy fetch okna').toEqual([]);
     expect(wszystkie.filter((x) => x.pozaKontraktem).length, 'usterki POZA KONTRAKTEM tylko jawne (B5)').toBe(sc.pozaKontraktem || 0);
     expect(s.atrapa.naruszenia).toEqual([]);

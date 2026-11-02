@@ -120,10 +120,13 @@ function Bpw_sejfKonta(t,kto){if(!t||typeof t.applyEncryptedDelta!="function")re
 function Bpw_dren(a,r,i,t,kto,Bdz_w){if(Bpw_inneKonto(t,kto))return;var Bdz_s=Bpw_sejfKonta(t,kto),Bdz_p=Bdz_wlaczone()?Bdz_B(a,r,i,Bdz_s):B(a,r,i,Bdz_s).catch(function(){});Bdz_w&&typeof Bdz_w=="object"&&Bdz_wyniki.set(Bdz_w,Bdz_p)}
 /* P-SYNC-STRONY (E2-PR1; plan docs/SYNC_PRZYROSTOWA_PLAN.md 3.3 "drainChanges"; decyzje wlasciciela 2026-10-29 nr 1 i 2):
    dziennik zmian stronami (/changes?since=N&limit=200, petla po truncated, ciaglosc seq) zamiast jednej strony legacy
-   na pobranie. USPIONE: tylko przy vilda-sync-paged-v1 = "1" (albo window.VILDA_SYNC_PAGED === true; false wylacza),
+   na pobranie. Od E2-PR1b (P-SYNC-STRONY-DOMYSLNIE) DOMYSLNIE WLACZONE: wylacza tylko vilda-sync-paged-v1 = "0"
+   (dokladnie ten tekst) albo window.VILDA_SYNC_PAGED === false; VILDA_SYNC_PAGED === true wlacza mimo "0". Dalej tylko
    przy wlaczonym /changes (Gt), w trybie "Komputer prywatny" (nie chmurowym, nie jednorazowym) i gdy GET /v1/health
-   (bez tokenu, wynik tylko w pamieci tej strony) podaje features z "changes-paged". Inaczej B, Yt, Bpw_pull i syncPull
-   dzialaja jak dotad (zapis bazowy tests/unit/sync-zadania-bazowe.test.mjs).
+   (bez tokenu, wynik tylko w pamieci tej strony) podaje features z "changes-paged". Flaga "0", tryb w pracy albo
+   jednorazowy: B, Yt, Bpw_pull i syncPull dzialaja jak przed E2-PR1 (zapis bazowy legacy
+   tests/unit/sync-zadania-bazowe.test.mjs). Worker bez changes-paged: jedno zadanie legacy poprzedzone GET /v1/health
+   (raz na 10 min), os jak w zapisie bazowym DOMYSLNIE v36. Cofniecie dla wszystkich: rewert E2-PR1b (decyzja 2).
    Kursor jak P-SYNC-KURSOR: najwyzszy wiersz o rozstrzygnietym wyniku, zapis tylko w gore. Drenaz konczy sie w sesji
    konta, ktorym ruszyl (P-SESJA-ZAPISU): przed kazdym zadaniem, po odpowiedzi, przed i po kazdym wierszu i przed zapisem
    kursora sejf musi byc odblokowany na tym samym koncie (Bpw_sejfKonta); inaczej koniec bez zapisu kursora z tej strony
@@ -153,35 +156,42 @@ function Bdz_jednorazowy() {
     return !!(o.sessionStorage && o.sessionStorage.getItem('vilda-ephemeral-session-v1') === '1');
   } catch (x) { return true; }
 }
-/* Tylko odczyty; przy wylaczonej fladze nic poza kluczem flagi i VILDA_SYNC_PAGED. */
+/* Tylko odczyty (klucz flagi, VILDA_SYNC_PAGED, potem Gt, K i tryb jednorazowy); przy "0" nic poza kluczem flagi
+   i VILDA_SYNC_PAGED. Brak klucza i kazda wartosc inna niz "0" = wlaczone (E2-PR1b); blad odczytu = wylaczone. */
 function Bdz_wlaczone() {
   try {
     var g = o.VILDA_SYNC_PAGED;
-    var wl = typeof g == 'boolean' ? g : !!(o.localStorage && o.localStorage.getItem(Bdz_KLUCZ) === '1');
+    var wl = typeof g == 'boolean' ? g : !(o.localStorage && o.localStorage.getItem(Bdz_KLUCZ) === '0');
     return wl && Gt() && !K() && !Bdz_jednorazowy();
   } catch (x) { return false; }
 }
 function Bdz_ma(api, nazwa) { return !!api && Array.isArray(api.features) && api.features.indexOf(nazwa) !== -1; }
 /* GET /v1/health bez Authorization (proste zadanie CORS). v36 nie ma pola api; nie-OK, siec, limit czasu i zly JSON
-   daja features [] (legacy). Wynik z changes-paged wazny 10 min, kazdy inny 15 s; odmowa formatu klinicznego (straznik
-   "sync-http" w f) tez daje legacy, ale bez pamieci (nastepny drenaz pyta od nowa). */
+   daja features [] (legacy). Wynik z changes-paged wazny 10 min. Poprawna odpowiedz bez changes-paged (v36 bez pola api,
+   v37a z sqlite true/false) tez 10 min: od E2-PR1b (pobieranie stronami domyslnie) zegar pobiera co ~20 s, a przy 15 s
+   kazde pobranie na takim workerze wysylaloby health (stary izolat zaraz po wdrozeniu v37a odpowiada jak v36: legacy
+   do 10 min). Przejsciowe (sqlite null = DO na starym kodzie albo nieudana sonda, nie-OK, siec, limit czasu, zly JSON)
+   15 s. Odmowa formatu klinicznego (straznik "sync-http" w f) tez daje legacy, ale bez pamieci (nastepny drenaz pyta
+   od nowa). */
 async function Bdz_zapytajHealth(url) {
-  var w = { api: null, sqlite: null, features: [], wersja: null, at: Date.now(), waznyDo: 0 }, odmowa = false;
+  var w = { api: null, sqlite: null, features: [], wersja: null, at: Date.now(), waznyDo: 0 }, odmowa = false, pewny = false;
   try {
     var odp = await f(url + '/v1/health', { method: 'GET' }, Bdz_HEALTH_MS);
     if (odp && odp.ok) {
       var c = await odp.json();
       if (c && typeof c == 'object') {
         w.wersja = typeof c.version == 'string' ? c.version : null;
+        pewny = true; // v36: poprawna odpowiedz bez pola api
         if (Number.isSafeInteger(c.api)) {
           w.api = c.api;
           w.sqlite = typeof c.sqlite == 'boolean' ? c.sqlite : null;
           w.features = Array.isArray(c.features) ? c.features.filter(function (x) { return typeof x == 'string'; }) : [];
+          pewny = w.sqlite !== null;
         }
       }
     }
   } catch (x) { odmowa = !!(x && x.patientClinicalUnavailable); } // legacy
-  w.waznyDo = odmowa ? w.at : w.at + (Bdz_ma(w, 'changes-paged') ? Bdz_TTL_MS : Bdz_TTL_BRAK_MS);
+  w.waznyDo = odmowa ? w.at : w.at + (pewny || Bdz_ma(w, 'changes-paged') ? Bdz_TTL_MS : Bdz_TTL_BRAK_MS);
   return w;
 }
 function Bdz_wykryj(url) {
@@ -240,7 +250,7 @@ async function Bdz_zastosuj(d, r) {
 }
 /* Kazdy zapis kursora z drenazu: najpierw straznik "sync-cursor" jak w Yt (blad leci dalej: stop 'format'). */
 function Bdz_kursorWGore(t, v) { PatientClinicalRequireLegacy('sync-cursor'); if (v > bt(t)) Kt(t, v); }
-/* Licznik dziury w localStorage (przezywa przejscia miedzy stronami i restart aplikacji); tylko przy wlaczonej fladze. */
+/* Licznik dziury w localStorage (przezywa przejscia miedzy stronami i restart aplikacji); tylko przy pobieraniu stronami. */
 function Bdz_dziuraCzytaj(t) {
   try {
     var s = o.localStorage && o.localStorage.getItem(Bdz_KLUCZ_DZIURY + t);
@@ -380,8 +390,8 @@ async function Bdz_drenaz(t, e, a, r, n, w) {
     if (!c.deltas.length) { delete Bdz_api[a]; w.stop = 'ksztalt'; return; } // truncated bez postepu
   }
 }
-/* Start drenazu przy wlaczonej fladze; nigdy nie odrzuca. Kursor 0: jedno zadanie legacy przez Yt (okno E1-5), bez
-   health. Przerwa po 429: bez zadan i bez health. */
+/* Start drenazu przy wlaczonym pobieraniu stronami (Bdz_wlaczone); nigdy nie odrzuca. Kursor 0: jedno zadanie legacy
+   przez Yt (okno E1-5), bez health. Przerwa po 429: bez zadan i bez health. */
 async function Bdz_wykonaj(t, e, a, r) {
   if (!r || typeof r.applyEncryptedDelta != 'function') return null; // jak B
   var n = bt(t), w = null, t0 = Date.now();
@@ -460,6 +470,36 @@ function Bdz_getDrainStatus(t) {
   return c;
 }
 function Bdz_getChangesCursor(t) { return typeof t == 'string' && t ? bt(t) : null; }
+/* P-SYNC-ODPYTYWANIE-WS (E2-PR1b): czy ten dokument pobiera stronami. Tylko odczyt, bez zadan i zapisow:
+   Bdz_wlaczone() i ostatni wynik GET /v1/health w pamieci (bez TTL) z "changes-paged". Integracja zwalnia odpytywanie
+   z zegara do 60 s tylko przy true; brak wyniku health (np. kursor 0), flaga "0", tryb w pracy albo jednorazowy = false. */
+function Bdz_isPagedActive() {
+  try { return Bdz_wlaczone() && Bdz_ma(Bdz_api[j()], 'changes-paged'); } catch (x) { return false; }
+}
+/* P-SYNC-ODPYTYWANIE-WS (E2-PR1b, W1 z przegladu): po rotacji tozsamosci w tym dokumencie (revokeAllDevices, $t) gniazdo
+   na zywo zostaje przy poprzedniej tozsamosci i moze dalej uchodzic za zywe (pong); integracja odpytywalaby wtedy
+   nowy slot co 60 s, bez ramek z nowego slotu. Tylko "Komputer prywatny" (decyzja 1; te same sygnaly trybu co
+   Bdz_wlaczone: K i Bdz_jednorazowy, wyjatek = jednorazowy): "Komputer w pracy" i "Zaloguj jednorazowo" - gniazdo jak
+   dotad (tam odpytywanie i tak idzie co ~20 s). Flaga "0" nie ma tu znaczenia (zachowanie gniazda zalezy tylko od
+   trybu, jak Brt_prywatny). Gniazdo otwarte albo w trakcie laczenia: rozlacz i polacz od nowa (connect bierze biezaca
+   tozsamosc z sejfu; gniazdo nie jest zywe do pierwszego pong nowego polaczenia). W 1,5 s od poprzedniej proby
+   polaczenia connect nie laczy, a po disconnect realtime nie stawia zegara; wtedy jedna ponowna proba connect po 1,6 s
+   (connect nic nie robi przy gniezdzie otwartym albo w trakcie laczenia, a sama proba sprawdza ramke, wlaczona
+   synchronizacje, odblokowany sejf i siec, wiec po blokadzie albo wylaczeniu synchronizacji nic sie nie laczy).
+   Gniazdo zamkniete (np. w odstepie ponownego laczenia) przy nastepnej probie samo wezmie nowa tozsamosc.
+   Brak VildaRealtime (strona bez gniazda, ramka powloki: tam gniazda nie ma) albo wyjatek = bez zmian. Wolane po udanej
+   rotacji i po bledzie dalszych krokow (rejestracja nowego slotu, kasowanie starego), nie po odmowie samej rotacji. */
+function Bws_poRotacji() {
+  try {
+    if (K() || Bdz_jednorazowy()) return;
+    var R = o.VildaRealtime, s = R && typeof R.status == 'function' ? R.status() : null;
+    if ((s === 'open' || s === 'connecting') && typeof R.disconnect == 'function' && typeof R.connect == 'function') {
+      R.disconnect();
+      R.connect();
+      if (R.status() === 'closed') o.setTimeout(function () { try { R.connect(); } catch (x) {} }, 1600);
+    }
+  } catch (x) {}
+}
 async function Bpw_pull(){PatientClinicalRequireLegacy("sync-pull");var CareReplay=null,CareReplayed=false;var t=I(),Bpw_kto=Bpw_konto(t);y(L,{operation:"pull"});var e;try{e=await t.getSyncMaterial()}catch(E){throw y(k,{operation:"pull",error:E}),E}PatientClinicalRequireLegacy("sync-pull");var a=e.slotId,r=e.authToken,n=e.syncEncKey,i=j(),c=m(a);K()&&M==null&&(M=Pt(a,t));try{Brv_stop(a);if(c.registered){var S=await f(i+"/v1/slots/"+a+"/status",{method:"GET",headers:{Authorization:"Bearer "+r}});if(Bpw_inneKonto(t,Bpw_kto))throw Bpw_przerwane();PatientClinicalRequireLegacy("sync-pull");if(S.status===401)throw C(a),u("VildaSync: b\u0142\u0105d uwierzytelnienia przy pull. Slot m\xF3g\u0142 zosta\u0107 usuni\u0119ty.","AUTH_FAILED");if(!S.ok)throw u("VildaSync: b\u0142\u0105d odczytu statusu ("+S.status+").","STATUS_FAILED",{httpStatus:S.status});var w=await S.json();if(Bpw_inneKonto(t,Bpw_kto))throw Bpw_przerwane();PatientClinicalRequireLegacy("sync-pull")}else{var l=await f(i+"/v1/slots/"+a+"/status",{method:"GET",headers:{Authorization:"Bearer "+r}});if(Bpw_inneKonto(t,Bpw_kto))throw Bpw_przerwane();PatientClinicalRequireLegacy("sync-pull");if(!l.ok){P();var d={action:"not-registered",httpStatus:l.status};return y(p,{operation:"pull",result:d}),d}var s=await l.json();if(Bpw_inneKonto(t,Bpw_kto))throw Bpw_przerwane();PatientClinicalRequireLegacy("sync-pull");c.registered=!0,c.localEtag=null,M=null,vt(a),St(a),T(a,c);var w=s}var h=K()?M:c.localEtag;CareReplay=h&&h===w.etag?await CareSyncReplay(t,a,w.etag):null;PatientClinicalRequireLegacy("sync-pull");if(h&&h===w.etag&&!CareReplay){var D=await Vt();if(Bpw_inneKonto(t,Bpw_kto))throw Bpw_przerwane();PatientClinicalRequireLegacy("sync-pull");if(D)c.localEtag=null,M=null,vt(a),St(a);else{P();var _={action:"up-to-date",etag:w.etag};return Bpw_dren(a,r,i,t,Bpw_kto,_),y(p,{operation:"pull",result:_}),_}}var g={Authorization:"Bearer "+r},v=CareReplay?null:K()?M:c.localEtag;v&&(g["If-None-Match"]='"'+v+'"');var A=await f(i+"/v1/slots/"+a+"/blob",{method:"GET",headers:g},Bgz_czas({byteLength:w&&typeof w.size=="number"?w.size:0}));if(Bpw_inneKonto(t,Bpw_kto))throw Bpw_przerwane();PatientClinicalRequireLegacy("sync-pull");if(A.status===304){P();var F={action:"up-to-date",etag:v};return Bpw_dren(a,r,i,t,Bpw_kto,F),y(p,{operation:"pull",result:F}),F}if(A.status===401)throw u("VildaSync: b\u0142\u0105d uwierzytelnienia przy pobieraniu bloba.","AUTH_FAILED");if(A.status===404){P();var H={action:"no-remote-blob"};return Bpw_dren(a,r,i,t,Bpw_kto,H),y(p,{operation:"pull",result:H}),H}if(!A.ok)throw u("VildaSync: b\u0142\u0105d pobierania danych ("+A.status+").","DOWNLOAD_FAILED",{httpStatus:A.status});var x=await Bnd_czytaj(A,w&&typeof w.size=="number"?w.size:0),W;PatientClinicalRequireLegacy("sync-pull");Bnd_zglos({phase:"decrypt"});try{W=await ut(x,n)}catch{throw u("VildaSync: b\u0142\u0105d odszyfrowania danych. Mo\u017Cliwa zmiana masterKey lub uszkodzenie danych.","DECRYPT_FAILED")}W=await Bgz_rozpakuj(W);var U;try{U=JSON.parse(new TextDecoder().decode(W))}catch{throw u("VildaSync: uszkodzone dane sync (nieprawid\u0142owy format JSON).","PARSE_FAILED")}if(Bpw_inneKonto(t,Bpw_kto))throw Bpw_przerwane();PatientClinicalRequireLegacy("sync-pull");PatientClinicalRequireLegacy("apply-sync-payload");var et=await t.mergeSyncPayload(U,{onProgress:function(E){try{typeof o.document<"u"&&o.document.dispatchEvent&&o.document.dispatchEvent(new CustomEvent("vilda:vault-merge-progress",{detail:E,bubbles:!1}))}catch{}}});PatientClinicalRequireLegacy("apply-sync-payload");var V=Lt(A.headers.get("ETag"))||w.etag;CareReplayed=true;c.localEtag=V,c.rawSize=W.byteLength,c.rawEtag=V,c.lastSyncAt=new Date().toISOString(),M=V,ft(a,V,t),T(a,c),P();var J={action:"merged",etag:V,mergeResult:et,staleDevice:et&&et.staleDevice||null};return Nv(J.staleDevice),Qcs(et&&et.clockSkew||null),Bpw_dren(a,r,i,t,Bpw_kto,J),y(p,{operation:"pull",result:J}),J}catch(E){/* P-SESJA-ZAPISU (przeglad 4, ADW4-3): blad pobrania po zalogowaniu innego konta albo blokadzie (np. /status 500, siec, limit czasu) — SESSION_CHANGED: nalezy do poprzedniej sesji. */var Bpw_e=Bpw_inneKonto(t,Bpw_kto)?Bpw_przerwane():E;throw y(k,{operation:"pull",error:Bpw_e}),Bpw_e}finally{CareSyncReplayDone(CareReplay,CareReplayed)}}async function Ht(){PatientClinicalRequireLegacy("sync-full");I(),y(L,{operation:"full"});try{var t=await Y(),e=await ht(),a={pull:t,push:e};PatientClinicalRequireLegacy("sync-full");return y(p,{operation:"full",result:a}),a}catch(r){throw y(k,{operation:"full",error:r}),r}}async function xt(){PatientClinicalRequireLegacy("sync-status");var t=I(),e=await t.getSyncMaterial();PatientClinicalRequireLegacy("sync-status");return m(e.slotId)}async function Wt(){PatientClinicalRequireLegacy("sync-state-clear");var t=I(),e=await t.getSyncMaterial();PatientClinicalRequireLegacy("sync-state-clear");C(e.slotId)}async function Jt(){PatientClinicalRequireLegacy("delete-sync-slot");
   var ticket=TLibOperationContext(),vault=I(),material=await vault.getSyncMaterial();
   PatientClinicalRequireLegacy("delete-sync-slot");TLibFence(ticket.ctx,ticket.token);
@@ -479,7 +519,7 @@ async function Bpw_pull(){PatientClinicalRequireLegacy("sync-pull");var CareRepl
   if(a.status===204)return{action:"deleted"};
   if(a.status===401||a.status===404)return{action:"absent"};
   throw u("VildaSync.deleteSlotWithMaterial: błąd kasacji slotu ("+a.status+").","DELETE_FAILED",{httpStatus:a.status});
-}async function $t(t){PatientClinicalRequireLegacy("revoke-all-devices");var e=I();if(typeof e.rotateSyncIdentity!="function")throw u("VildaSync.revokeAllDevices: vault nie wspiera rotacji to\u017Csamo\u015Bci.","NOT_SUPPORTED");y(L,{operation:"revoke"});try{var a=await e.getSyncMaterial();PatientClinicalRequireLegacy("revoke-all-devices");var r=a.slotId,n=a.authToken;/* P-SYNC-ROTACJA-KART: karta z poprzednia tozsamoscia nie obraca jej drugi raz (odswiezenie strony wczytuje biezaca). Znacznik zaraz po rotacji, przed rejestracja nowego slotu i kasowaniem starego, wiec obowiazuje takze, gdy ktorys z tych krokow sie nie uda. */Brv_stop(r);var i=await e.rotateSyncIdentity(t);PatientClinicalRequireLegacy("revoke-all-devices");var c=await e.getSyncMaterial();PatientClinicalRequireLegacy("revoke-all-devices");var l=c.slotId;l!==r&&Brv_oznacz(r);var d=await e.exportSyncPayload(),s=new TextEncoder().encode(JSON.stringify(d)),w=await G(await Bgz_pakuj(s),c.syncEncKey),S=await pt(l,c.authToken,c.authTokenHash,w);PatientClinicalRequireLegacy("revoke-all-devices");var h=m(l)||{};h.registered=!0,h.localEtag=S.etag||null,h.lastSyncAt=new Date().toISOString(),T(l,h);var D=!1;try{var _=await _t(r,n);D=_.action==="deleted"||_.action==="absent"}catch{D=!1}PatientClinicalRequireLegacy("revoke-all-devices");C(r);var g={recoveryKey:i.recoveryKey,oldSlotId:r,newSlotId:l,oldSlotRevoked:D};return y(p,{operation:"revoke",result:g}),g}catch(v){throw y(k,{operation:"revoke",error:v}),v}}async function qt(){PatientClinicalRequireLegacy("restore-prev-blob");var t=I();y(L,{operation:"restore-prev"});try{var e=await t.getSyncMaterial(),a=e.slotId,r=e.authToken;Brv_stop(a);var n=j(),i=await f(n+"/v1/slots/"+a+"/blob/restore-prev",{method:"POST",headers:{Authorization:"Bearer "+r}});if(i.status===404)throw u("VildaSync: brak zarchiwizowanej poprzedniej wersji na serwerze.","NO_ARCHIVE");if(i.status===401)throw u("VildaSync: b\u0142\u0105d uwierzytelnienia przy przywracaniu.","AUTH_FAILED");if(!i.ok){var c=await i.json().catch(function(){return{}});throw u("VildaSync: przywracanie nieudane ("+i.status+"): "+(c.error&&c.error.message||""),"RESTORE_FAILED",{httpStatus:i.status})}var l=await i.json();PatientClinicalRequireLegacy("restore-prev-blob");var d=m(a);d.localEtag=null,T(a,d);var s=await Y(),w={restored:l,pull:s};return y(p,{operation:"restore-prev",result:w}),w}catch(S){throw y(k,{operation:"restore-prev",error:S}),S}}function Zt(t){typeof t=="function"&&L.push(t)}function Qt(t){typeof t=="function"&&p.push(t)}function Rt(t){typeof t=="function"&&k.push(t)}/* Care-template relay: explicit opt-in, one coalesced phase beside the existing
+}async function $t(t){var Bws_obrot=!1;PatientClinicalRequireLegacy("revoke-all-devices");var e=I();if(typeof e.rotateSyncIdentity!="function")throw u("VildaSync.revokeAllDevices: vault nie wspiera rotacji to\u017Csamo\u015Bci.","NOT_SUPPORTED");y(L,{operation:"revoke"});try{var a=await e.getSyncMaterial();PatientClinicalRequireLegacy("revoke-all-devices");var r=a.slotId,n=a.authToken;/* P-SYNC-ROTACJA-KART: karta z poprzednia tozsamoscia nie obraca jej drugi raz (odswiezenie strony wczytuje biezaca). Znacznik zaraz po rotacji, przed rejestracja nowego slotu i kasowaniem starego, wiec obowiazuje takze, gdy ktorys z tych krokow sie nie uda. */Brv_stop(r);var i=await e.rotateSyncIdentity(t);Bws_obrot=!0;PatientClinicalRequireLegacy("revoke-all-devices");var c=await e.getSyncMaterial();PatientClinicalRequireLegacy("revoke-all-devices");var l=c.slotId;l!==r&&Brv_oznacz(r);var d=await e.exportSyncPayload(),s=new TextEncoder().encode(JSON.stringify(d)),w=await G(await Bgz_pakuj(s),c.syncEncKey),S=await pt(l,c.authToken,c.authTokenHash,w);PatientClinicalRequireLegacy("revoke-all-devices");var h=m(l)||{};h.registered=!0,h.localEtag=S.etag||null,h.lastSyncAt=new Date().toISOString(),T(l,h);var D=!1;try{var _=await _t(r,n);D=_.action==="deleted"||_.action==="absent"}catch{D=!1}PatientClinicalRequireLegacy("revoke-all-devices");C(r);var g={recoveryKey:i.recoveryKey,oldSlotId:r,newSlotId:l,oldSlotRevoked:D};Bws_poRotacji();return y(p,{operation:"revoke",result:g}),g}catch(v){Bws_obrot&&Bws_poRotacji();throw y(k,{operation:"revoke",error:v}),v}}async function qt(){PatientClinicalRequireLegacy("restore-prev-blob");var t=I();y(L,{operation:"restore-prev"});try{var e=await t.getSyncMaterial(),a=e.slotId,r=e.authToken;Brv_stop(a);var n=j(),i=await f(n+"/v1/slots/"+a+"/blob/restore-prev",{method:"POST",headers:{Authorization:"Bearer "+r}});if(i.status===404)throw u("VildaSync: brak zarchiwizowanej poprzedniej wersji na serwerze.","NO_ARCHIVE");if(i.status===401)throw u("VildaSync: b\u0142\u0105d uwierzytelnienia przy przywracaniu.","AUTH_FAILED");if(!i.ok){var c=await i.json().catch(function(){return{}});throw u("VildaSync: przywracanie nieudane ("+i.status+"): "+(c.error&&c.error.message||""),"RESTORE_FAILED",{httpStatus:i.status})}var l=await i.json();PatientClinicalRequireLegacy("restore-prev-blob");var d=m(a);d.localEtag=null,T(a,d);var s=await Y(),w={restored:l,pull:s};return y(p,{operation:"restore-prev",result:w}),w}catch(S){throw y(k,{operation:"restore-prev",error:S}),S}}function Zt(t){typeof t=="function"&&L.push(t)}function Qt(t){typeof t=="function"&&p.push(t)}function Rt(t){typeof t=="function"&&k.push(t)}/* Care-template relay: explicit opt-in, one coalesced phase beside the existing
  * public sync cycle. Patient transport and its exact returned promise stay intact.
  * Pending operations and their once-encrypted wire identity belong to the library DB. */
 var TLibActive = null , TLibFlight = null , TLibGeneration = 0 , TLibObserved = new WeakSet ( ) , TLibStatus = {
@@ -974,4 +1014,4 @@ function TLibFullCycle ( ) {
   TLibAutomatic ( ) ;
   return Ht ( )
 }
-o.VildaSync={syncPush:TLibPushCycle,syncPull:TLibPullCycle,syncFull:TLibFullCycle,activateTemplateLibrarySync:TLibActivate,deactivateTemplateLibrarySync:TLibDeactivate,syncTemplateLibrary:TLibExplicit,getTemplateLibrarySyncStatus:TLibGetStatus,continueTemplateLibrarySync:TLibAutomatic,inspectTemplateLibraryAuthority:TLibInspectAuthority,resetSessionPullGuard:Ut,getSyncStatus:xt,clearSyncState:Wt,deleteSyncSlot:Jt,onSyncStart:Zt,onSyncComplete:Qt,onSyncError:Rt,probeNewDevice:Xt,restorePrevBlob:qt,revokeAllDevices:$t,uploadToSlot:pt,deleteSlotWithMaterial:_t,_loadSyncState:PatientClinicalLoadState,_saveSyncState:PatientClinicalSaveState,_clearSyncStateForSlot:PatientClinicalClearState,detectApi:Bdz_detectApi,getDrainStatus:Bdz_getDrainStatus,getChangesCursor:Bdz_getChangesCursor}})(typeof window<"u"?window:typeof globalThis<"u"?globalThis:null);
+o.VildaSync={syncPush:TLibPushCycle,syncPull:TLibPullCycle,syncFull:TLibFullCycle,activateTemplateLibrarySync:TLibActivate,deactivateTemplateLibrarySync:TLibDeactivate,syncTemplateLibrary:TLibExplicit,getTemplateLibrarySyncStatus:TLibGetStatus,continueTemplateLibrarySync:TLibAutomatic,inspectTemplateLibraryAuthority:TLibInspectAuthority,resetSessionPullGuard:Ut,getSyncStatus:xt,clearSyncState:Wt,deleteSyncSlot:Jt,onSyncStart:Zt,onSyncComplete:Qt,onSyncError:Rt,probeNewDevice:Xt,restorePrevBlob:qt,revokeAllDevices:$t,uploadToSlot:pt,deleteSlotWithMaterial:_t,_loadSyncState:PatientClinicalLoadState,_saveSyncState:PatientClinicalSaveState,_clearSyncStateForSlot:PatientClinicalClearState,detectApi:Bdz_detectApi,getDrainStatus:Bdz_getDrainStatus,getChangesCursor:Bdz_getChangesCursor,isPagedActive:Bdz_isPagedActive}})(typeof window<"u"?window:typeof globalThis<"u"?globalThis:null);

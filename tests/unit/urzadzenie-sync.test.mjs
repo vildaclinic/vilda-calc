@@ -22,7 +22,8 @@
 //       kończy się bez wpływu; kolejka dostaje blokadę po kradnącym; wpisy 'skradziona' / 'kradziez'.
 //   U7c steal niedozwolone (ifAvailable, shared, signal) → NotSupportedError, nic nie przyznane.
 //   U8  bliźniak 'wszystko' (kopia localStorage/sessionStorage): od razu registered z tym samym ETagiem, kursorem i
-//       znacznikiem pobrania w sesji; syncPull → up-to-date bez GET /blob.
+//       znacznikiem pobrania w sesji; syncPull → up-to-date bez GET /blob (od E2-PR1b domyślnie stronami: GET /v1/health,
+//       potem /changes z limit=200).
 //   U9  samokontrola determinizmu: scenariusz U3 dwukrotnie na świeżych atrapach → identyczne rzuty osi i żądań.
 //   U10 cisza czeka na drenaż w locie (opóźniona odpowiedź /changes).
 //   U11 kryteria ciszy na atrapie liczników (każde z osobna wstrzymuje ciszę; domyślne K = 5).
@@ -309,7 +310,8 @@ describe('E2-PR0: uprząż urządzeń synchronizacji', () => {
     const od = B.zadania().length;
     expect((await B.sync.syncPull()).action).toBe('up-to-date');
     await cisza([A, B]);
-    expect(B.zadania().slice(od).map((z) => `${z.metoda} ${z.trasa}${z.zapytanie}`)).toEqual(['GET status', 'GET changes?since=1']);
+    // E2-PR1b: pobieranie stronami domyślnie (kursor 1 > 0): health raz na kontekst strony, potem strona z limit=200.
+    expect(B.zadania().slice(od).map((z) => `${z.metoda} ${z.trasa}${z.zapytanie}`)).toEqual(['GET status', 'GET health', 'GET changes?since=1&limit=200']);
   });
 
   it('U9: samokontrola determinizmu — scenariusz U3 dwa razy na świeżych atrapach daje identyczne rzuty osi i żądań', async () => {
