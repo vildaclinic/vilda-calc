@@ -117,8 +117,350 @@ function Bpw_konto(t){if(!t||typeof t.getCurrentUser!="function")return void 0;t
 function Bpw_inneKonto(t,kto){return Bpw_konto(t)!==kto}
 function Bpw_przerwane(){return u("VildaSync: pobieranie przerwane \u2014 w trakcie zablokowano sejf albo prze\u0142\u0105czono konto. Nic nie scalono.","SESSION_CHANGED")}
 function Bpw_sejfKonta(t,kto){if(!t||typeof t.applyEncryptedDelta!="function")return t;return{isUnlocked:function(){return!(typeof t.isUnlocked=="function"&&!t.isUnlocked())&&!Bpw_inneKonto(t,kto)},applyEncryptedDelta:function(x){return t.applyEncryptedDelta(x)}}}
-function Bpw_dren(a,r,i,t,kto){Bpw_inneKonto(t,kto)||B(a,r,i,Bpw_sejfKonta(t,kto)).catch(function(){})}
-async function Bpw_pull(){PatientClinicalRequireLegacy("sync-pull");var CareReplay=null,CareReplayed=false;var t=I(),Bpw_kto=Bpw_konto(t);y(L,{operation:"pull"});var e;try{e=await t.getSyncMaterial()}catch(E){throw y(k,{operation:"pull",error:E}),E}PatientClinicalRequireLegacy("sync-pull");var a=e.slotId,r=e.authToken,n=e.syncEncKey,i=j(),c=m(a);K()&&M==null&&(M=Pt(a,t));try{Brv_stop(a);if(c.registered){var S=await f(i+"/v1/slots/"+a+"/status",{method:"GET",headers:{Authorization:"Bearer "+r}});if(Bpw_inneKonto(t,Bpw_kto))throw Bpw_przerwane();PatientClinicalRequireLegacy("sync-pull");if(S.status===401)throw C(a),u("VildaSync: b\u0142\u0105d uwierzytelnienia przy pull. Slot m\xF3g\u0142 zosta\u0107 usuni\u0119ty.","AUTH_FAILED");if(!S.ok)throw u("VildaSync: b\u0142\u0105d odczytu statusu ("+S.status+").","STATUS_FAILED",{httpStatus:S.status});var w=await S.json();if(Bpw_inneKonto(t,Bpw_kto))throw Bpw_przerwane();PatientClinicalRequireLegacy("sync-pull")}else{var l=await f(i+"/v1/slots/"+a+"/status",{method:"GET",headers:{Authorization:"Bearer "+r}});if(Bpw_inneKonto(t,Bpw_kto))throw Bpw_przerwane();PatientClinicalRequireLegacy("sync-pull");if(!l.ok){P();var d={action:"not-registered",httpStatus:l.status};return y(p,{operation:"pull",result:d}),d}var s=await l.json();if(Bpw_inneKonto(t,Bpw_kto))throw Bpw_przerwane();PatientClinicalRequireLegacy("sync-pull");c.registered=!0,c.localEtag=null,M=null,vt(a),St(a),T(a,c);var w=s}var h=K()?M:c.localEtag;CareReplay=h&&h===w.etag?await CareSyncReplay(t,a,w.etag):null;PatientClinicalRequireLegacy("sync-pull");if(h&&h===w.etag&&!CareReplay){var D=await Vt();if(Bpw_inneKonto(t,Bpw_kto))throw Bpw_przerwane();PatientClinicalRequireLegacy("sync-pull");if(D)c.localEtag=null,M=null,vt(a),St(a);else{P();var _={action:"up-to-date",etag:w.etag};return Bpw_dren(a,r,i,t,Bpw_kto),y(p,{operation:"pull",result:_}),_}}var g={Authorization:"Bearer "+r},v=CareReplay?null:K()?M:c.localEtag;v&&(g["If-None-Match"]='"'+v+'"');var A=await f(i+"/v1/slots/"+a+"/blob",{method:"GET",headers:g},Bgz_czas({byteLength:w&&typeof w.size=="number"?w.size:0}));if(Bpw_inneKonto(t,Bpw_kto))throw Bpw_przerwane();PatientClinicalRequireLegacy("sync-pull");if(A.status===304){P();var F={action:"up-to-date",etag:v};return Bpw_dren(a,r,i,t,Bpw_kto),y(p,{operation:"pull",result:F}),F}if(A.status===401)throw u("VildaSync: b\u0142\u0105d uwierzytelnienia przy pobieraniu bloba.","AUTH_FAILED");if(A.status===404){P();var H={action:"no-remote-blob"};return Bpw_dren(a,r,i,t,Bpw_kto),y(p,{operation:"pull",result:H}),H}if(!A.ok)throw u("VildaSync: b\u0142\u0105d pobierania danych ("+A.status+").","DOWNLOAD_FAILED",{httpStatus:A.status});var x=await Bnd_czytaj(A,w&&typeof w.size=="number"?w.size:0),W;PatientClinicalRequireLegacy("sync-pull");Bnd_zglos({phase:"decrypt"});try{W=await ut(x,n)}catch{throw u("VildaSync: b\u0142\u0105d odszyfrowania danych. Mo\u017Cliwa zmiana masterKey lub uszkodzenie danych.","DECRYPT_FAILED")}W=await Bgz_rozpakuj(W);var U;try{U=JSON.parse(new TextDecoder().decode(W))}catch{throw u("VildaSync: uszkodzone dane sync (nieprawid\u0142owy format JSON).","PARSE_FAILED")}if(Bpw_inneKonto(t,Bpw_kto))throw Bpw_przerwane();PatientClinicalRequireLegacy("sync-pull");PatientClinicalRequireLegacy("apply-sync-payload");var et=await t.mergeSyncPayload(U,{onProgress:function(E){try{typeof o.document<"u"&&o.document.dispatchEvent&&o.document.dispatchEvent(new CustomEvent("vilda:vault-merge-progress",{detail:E,bubbles:!1}))}catch{}}});PatientClinicalRequireLegacy("apply-sync-payload");var V=Lt(A.headers.get("ETag"))||w.etag;CareReplayed=true;c.localEtag=V,c.rawSize=W.byteLength,c.rawEtag=V,c.lastSyncAt=new Date().toISOString(),M=V,ft(a,V,t),T(a,c),P();var J={action:"merged",etag:V,mergeResult:et,staleDevice:et&&et.staleDevice||null};return Nv(J.staleDevice),Qcs(et&&et.clockSkew||null),Bpw_dren(a,r,i,t,Bpw_kto),y(p,{operation:"pull",result:J}),J}catch(E){/* P-SESJA-ZAPISU (przeglad 4, ADW4-3): blad pobrania po zalogowaniu innego konta albo blokadzie (np. /status 500, siec, limit czasu) — SESSION_CHANGED: nalezy do poprzedniej sesji. */var Bpw_e=Bpw_inneKonto(t,Bpw_kto)?Bpw_przerwane():E;throw y(k,{operation:"pull",error:Bpw_e}),Bpw_e}finally{CareSyncReplayDone(CareReplay,CareReplayed)}}async function Ht(){PatientClinicalRequireLegacy("sync-full");I(),y(L,{operation:"full"});try{var t=await Y(),e=await ht(),a={pull:t,push:e};PatientClinicalRequireLegacy("sync-full");return y(p,{operation:"full",result:a}),a}catch(r){throw y(k,{operation:"full",error:r}),r}}async function xt(){PatientClinicalRequireLegacy("sync-status");var t=I(),e=await t.getSyncMaterial();PatientClinicalRequireLegacy("sync-status");return m(e.slotId)}async function Wt(){PatientClinicalRequireLegacy("sync-state-clear");var t=I(),e=await t.getSyncMaterial();PatientClinicalRequireLegacy("sync-state-clear");C(e.slotId)}async function Jt(){PatientClinicalRequireLegacy("delete-sync-slot");
+function Bpw_dren(a,r,i,t,kto,Bdz_w){if(Bpw_inneKonto(t,kto))return;var Bdz_s=Bpw_sejfKonta(t,kto),Bdz_p=Bdz_wlaczone()?Bdz_B(a,r,i,Bdz_s):B(a,r,i,Bdz_s).catch(function(){});Bdz_w&&typeof Bdz_w=="object"&&Bdz_wyniki.set(Bdz_w,Bdz_p)}
+/* P-SYNC-STRONY (E2-PR1; plan docs/SYNC_PRZYROSTOWA_PLAN.md 3.3 "drainChanges"; decyzje wlasciciela 2026-10-29 nr 1 i 2):
+   dziennik zmian stronami (/changes?since=N&limit=200, petla po truncated, ciaglosc seq) zamiast jednej strony legacy
+   na pobranie. USPIONE: tylko przy vilda-sync-paged-v1 = "1" (albo window.VILDA_SYNC_PAGED === true; false wylacza),
+   przy wlaczonym /changes (Gt), w trybie "Komputer prywatny" (nie chmurowym, nie jednorazowym) i gdy GET /v1/health
+   (bez tokenu, wynik tylko w pamieci tej strony) podaje features z "changes-paged". Inaczej B, Yt, Bpw_pull i syncPull
+   dzialaja jak dotad (zapis bazowy tests/unit/sync-zadania-bazowe.test.mjs).
+   Kursor jak P-SYNC-KURSOR: najwyzszy wiersz o rozstrzygnietym wyniku, zapis tylko w gore. Drenaz konczy sie w sesji
+   konta, ktorym ruszyl (P-SESJA-ZAPISU): przed kazdym zadaniem, po odpowiedzi, przed i po kazdym wierszu i przed zapisem
+   kursora sejf musi byc odblokowany na tym samym koncie (Bpw_sejfKonta); inaczej koniec bez zapisu kursora z tej strony
+   i bez vilda:sync-merged. onSyncComplete zostaje w dzisiejszym miejscu; na koniec drenazu czeka tylko
+   syncPull({czekajNaDrenaz:true}), po zwolnieniu blokady pierwszego pobrania.
+   Format kliniczny jak w wt i Yt (PatientClinicalRequireLegacy; o trasie decyduje sejf): "apply-sync-delta" na
+   poczatku strony z wierszami oraz przed i po kazdym applyEncryptedDelta, "sync-cursor" przed kazdym zapisem kursora.
+   Odmowa (albo blad scalenia z patientClinicalUnavailable) konczy drenaz stopem 'format': bez zapisu kursora z tej
+   strony, bez onSyncError i bez vilda:sync-merged za te strone — jak dzis, gdy wt albo Yt rzuca, a B to polyka.
+   Tabela stopow: ALGORITHMS P-SYNC-STRONY. */
+var Bdz_KLUCZ = 'vilda-sync-paged-v1', Bdz_LIMIT = 200, Bdz_MAX_STRON = 10, Bdz_BUDZET_MS = 20000;
+var Bdz_TTL_MS = 600000, Bdz_TTL_BRAK_MS = 15000, Bdz_HEALTH_MS = 5000;
+var Bdz_429_DOMYSLNIE_S = 30, Bdz_429_SUFIT_S = 300;
+var Bdz_KLUCZ_DZIURY = 'vilda-sync-dziura-v1:', Bdz_DZIURA_PROBY = 3;
+var Bdz_api = Object.create(null);        // url -> wynik health (tylko pamiec, TTL)
+var Bdz_wykrywanie = Object.create(null); // url -> obietnica trwajacego GET /v1/health (jedno naraz)
+var Bdz_przerwaDo = Object.create(null);  // slot -> ms: przerwa po 429 (tylko pamiec)
+var Bdz_status = Object.create(null);     // slot -> ostatni wynik drenazu (getDrainStatus)
+var Bdz_trwa = null, Bdz_trwaSlot = null; // obietnica trwajacego drenazu stronami w tym dokumencie i jego slot
+var Bdz_wyniki = new WeakMap();           // obiekt wyniku pobrania -> obietnica jego drenazu (czekajNaDrenaz)
+/* Tryb jednorazowy: te same trzy sygnaly co q(); wyjatek = jednorazowy (bezpiecznie: bez stronicowania). */
+function Bdz_jednorazowy() {
+  try {
+    var p = o.VildaPersistence, v = o.VildaVault;
+    if (p && typeof p.isEphemeralMode == 'function' && p.isEphemeralMode()) return true;
+    if (v && typeof v.isEphemeralMode == 'function' && v.isEphemeralMode()) return true;
+    return !!(o.sessionStorage && o.sessionStorage.getItem('vilda-ephemeral-session-v1') === '1');
+  } catch (x) { return true; }
+}
+/* Tylko odczyty; przy wylaczonej fladze nic poza kluczem flagi i VILDA_SYNC_PAGED. */
+function Bdz_wlaczone() {
+  try {
+    var g = o.VILDA_SYNC_PAGED;
+    var wl = typeof g == 'boolean' ? g : !!(o.localStorage && o.localStorage.getItem(Bdz_KLUCZ) === '1');
+    return wl && Gt() && !K() && !Bdz_jednorazowy();
+  } catch (x) { return false; }
+}
+function Bdz_ma(api, nazwa) { return !!api && Array.isArray(api.features) && api.features.indexOf(nazwa) !== -1; }
+/* GET /v1/health bez Authorization (proste zadanie CORS). v36 nie ma pola api; nie-OK, siec, limit czasu i zly JSON
+   daja features [] (legacy). Wynik z changes-paged wazny 10 min, kazdy inny 15 s; odmowa formatu klinicznego (straznik
+   "sync-http" w f) tez daje legacy, ale bez pamieci (nastepny drenaz pyta od nowa). */
+async function Bdz_zapytajHealth(url) {
+  var w = { api: null, sqlite: null, features: [], wersja: null, at: Date.now(), waznyDo: 0 }, odmowa = false;
+  try {
+    var odp = await f(url + '/v1/health', { method: 'GET' }, Bdz_HEALTH_MS);
+    if (odp && odp.ok) {
+      var c = await odp.json();
+      if (c && typeof c == 'object') {
+        w.wersja = typeof c.version == 'string' ? c.version : null;
+        if (Number.isSafeInteger(c.api)) {
+          w.api = c.api;
+          w.sqlite = typeof c.sqlite == 'boolean' ? c.sqlite : null;
+          w.features = Array.isArray(c.features) ? c.features.filter(function (x) { return typeof x == 'string'; }) : [];
+        }
+      }
+    }
+  } catch (x) { odmowa = !!(x && x.patientClinicalUnavailable); } // legacy
+  w.waznyDo = odmowa ? w.at : w.at + (Bdz_ma(w, 'changes-paged') ? Bdz_TTL_MS : Bdz_TTL_BRAK_MS);
+  return w;
+}
+function Bdz_wykryj(url) {
+  var m = Bdz_api[url];
+  if (m && Date.now() < m.waznyDo) return Promise.resolve(m);
+  if (!Bdz_wykrywanie[url]) {
+    Bdz_wykrywanie[url] = Bdz_zapytajHealth(url).then(function (w) {
+      Bdz_api[url] = w;
+      delete Bdz_wykrywanie[url];
+      return w;
+    });
+  }
+  return Bdz_wykrywanie[url];
+}
+function Bdz_kopiaApi(a) {
+  if (!a) return null;
+  return { api: a.api, sqlite: a.sqlite, features: a.features.slice(), wersja: a.wersja, at: a.at, waznyDo: a.waznyDo };
+}
+/* Stop po wyjatku: odmowa formatu klinicznego (straznik w f, wt, Yt albo Bdz_*) = 'format'; kazdy inny = 'siec'.
+   Jak dzis rzut z wt/Yt, ktory B polyka: bez onSyncError. */
+function Bdz_stopWyjatku(w, x) {
+  w.stop = x && x.patientClinicalUnavailable ? 'format' : 'siec';
+  w.kod = (x && x.code) || null;
+}
+/* r = opakowanie Bpw_sejfKonta: zablokowany sejf albo inne konto = zamkniety. */
+function Bdz_otwarty(r) { return !(typeof r.isUnlocked == 'function' && !r.isUnlocked()); }
+/* Te same 9 licznikow co wt (straznik rownosci w tests/unit/sync-dziennik-drenaz.test.mjs D37). */
+function Bdz_czyZmiana(i) {
+  return !!i && ((i.addedPatientCount || 0) > 0 || (i.deletedPatientCount || 0) > 0 || (i.addedPatientNoteCount || 0) > 0
+    || (i.updatedPatientNoteCount || 0) > 0 || (i.deletedPatientNoteCount || 0) > 0 || (i.mergedPatientCount || 0) > 0
+    || (i.addedNoteCount || 0) > 0 || (i.updatedNoteCount || 0) > 0 || (i.deletedNoteCount || 0) > 0);
+}
+/* Wynik jednego wiersza z trescia. Zastosowanie (ps) oddaje null takze przy zablokowanym sejfie, wiec "nieczytelne"
+   tylko, gdy sejf byl otwarty przed i po wywolaniu. vildaMergeBusy: MERGE_BUSY albo SESSION_CHANGED tego samego konta.
+   Jak wt: straznik formatu klinicznego przed i po wywolaniu, a jego blad (takze ze scalenia) leci dalej przed
+   sprawdzeniem blokady (stop 'format' w Bdz_wykonaj); busy z kodem CARE_LINEAGE_* albo CARE_FORMAT_* przy otwartym
+   sejfie zglasza ten sam onSyncError co wt. */
+async function Bdz_zastosuj(d, r) {
+  if (!Bdz_otwarty(r)) return 'blokada';
+  var i;
+  try {
+    PatientClinicalRequireLegacy('apply-sync-delta');
+    i = await r.applyEncryptedDelta(d.payload);
+    PatientClinicalRequireLegacy('apply-sync-delta');
+  } catch (x) {
+    if (x && x.patientClinicalUnavailable) throw x;
+    if (!Bdz_otwarty(r)) return 'blokada';
+    if (!(x && x.vildaMergeBusy)) return 'blad';
+    var kod = typeof x.code == 'string' ? x.code : '';
+    if (kod.indexOf('CARE_LINEAGE_') === 0 || kod.indexOf('CARE_FORMAT_') === 0) y(k, { operation: 'pull', error: x });
+    return 'busy';
+  }
+  if (!Bdz_otwarty(r)) return 'blokada';
+  if (i == null) return 'nieczytelne';
+  return Bdz_czyZmiana(i) ? 'zmiana' : 'ok';
+}
+/* Kazdy zapis kursora z drenazu: najpierw straznik "sync-cursor" jak w Yt (blad leci dalej: stop 'format'). */
+function Bdz_kursorWGore(t, v) { PatientClinicalRequireLegacy('sync-cursor'); if (v > bt(t)) Kt(t, v); }
+/* Licznik dziury w localStorage (przezywa przejscia miedzy stronami i restart aplikacji); tylko przy wlaczonej fladze. */
+function Bdz_dziuraCzytaj(t) {
+  try {
+    var s = o.localStorage && o.localStorage.getItem(Bdz_KLUCZ_DZIURY + t);
+    if (!s) return null;
+    var d = JSON.parse(s);
+    return d && Number.isSafeInteger(d.od) && Number.isSafeInteger(d.do) && Number.isSafeInteger(d.proby) ? d : null;
+  } catch (x) { return null; }
+}
+function Bdz_dziuraZapisz(t, d) {
+  try {
+    if (!o.localStorage) return;
+    if (d) o.localStorage.setItem(Bdz_KLUCZ_DZIURY + t, JSON.stringify(d));
+    else if (o.localStorage.getItem(Bdz_KLUCZ_DZIURY + t) != null) o.localStorage.removeItem(Bdz_KLUCZ_DZIURY + t);
+  } catch (x) { /* bez licznika: kazdy drenaz liczy sie jako pierwszy */ }
+}
+/* Odstep po 429: Retry-After (naglowek wystawiony przez CORS v37a), inaczej error.retryAfterSeconds, inaczej 30 s;
+   1-300 s. Tylko w pamieci tej strony (bez wspolnego klucza odstepu integracji "rl-until"). */
+function Bdz_odstep429(odp, cb) {
+  var s;
+  try { s = parseInt(odp.headers.get('Retry-After'), 10); } catch (x) { s = NaN; }
+  if (!isFinite(s) && cb && cb.error && typeof cb.error.retryAfterSeconds == 'number') s = cb.error.retryAfterSeconds;
+  if (!isFinite(s)) s = Bdz_429_DOMYSLNIE_S;
+  return Math.min(Bdz_429_SUFIT_S, Math.max(1, Math.ceil(s))) * 1000;
+}
+function Bdz_wynik(tryb, n) {
+  return {
+    tryb: tryb, stop: null, http: null, kod: null, od: n, do: n, headSeq: null,
+    stron: 0, wierszy: 0, zastosowane: 0, zaslepki: 0, nieczytelne: 0, bledy: 0, zmiana: tryb === 'legacy' ? null : false,
+    dziura: null, przeskok: null, przerwaDoISO: null, startISO: new Date().toISOString(), ms: 0
+  };
+}
+/* Odpowiedz w ksztalcie legacy na zadanie z limit (cofniety v36 ignoruje limit): regula Yt — wt, straznik "sync-cursor",
+   kursor := max seq, gdy partia nie przerwana (Bsp); zmiana dopiero po zapisie kursora (jak w Yt: Kt przed Et). */
+async function Bdz_legacyStrona(t, n, l, r, w) {
+  w.wierszy += l.length;
+  var zm = await wt(l, r);
+  PatientClinicalRequireLegacy('sync-cursor');
+  for (var m = n, k = 0; k < l.length; k++) {
+    var q = l[k] && l[k].seq;
+    if (typeof q == 'number' && isFinite(q) && q > m) m = q;
+  }
+  if (m > n && !Bsp) Bdz_kursorWGore(t, m);
+  if (zm) w.zmiana = true;
+}
+async function Bdz_drenaz(t, e, a, r, n, w) {
+  var t0 = Date.now();
+  for (;;) {
+    if (w.stron >= Bdz_MAX_STRON || Date.now() - t0 >= Bdz_BUDZET_MS) { w.stop = 'budzet'; return; }
+    if (!Bdz_otwarty(r)) { w.stop = 'blokada'; return; } // bez zadania po zmianie sesji
+    var odp;
+    try {
+      odp = await f(a + '/v1/slots/' + t + '/changes?since=' + n + '&limit=' + Bdz_LIMIT,
+        { method: 'GET', headers: { Authorization: 'Bearer ' + e } }, ct);
+    } catch (x) { Bdz_stopWyjatku(w, x); return; }
+    w.stron += 1;
+    if (!Bdz_otwarty(r)) { w.stop = 'blokada'; return; }
+    if (!odp.ok) {
+      var cb;
+      try { cb = await odp.json(); } catch (x) { cb = null; } if (!Bdz_otwarty(r)) { w.stop = 'blokada'; return; } // P-SESJA-ZAPISU: takze po tresci 401/429/503
+      w.http = odp.status;
+      w.kod = cb && cb.error && typeof cb.error.code == 'string' ? cb.error.code : null;
+      if (odp.status === 401) w.stop = 'http-401'; // bez C() i bez onSyncError: pelna obsluga w nastepnym /status
+      else if (odp.status === 429) {
+        Bdz_przerwaDo[t] = Date.now() + Bdz_odstep429(odp, cb);
+        w.przerwaDoISO = new Date(Bdz_przerwaDo[t]).toISOString();
+        w.stop = 'http-429';
+      } else if (odp.status === 503) {
+        if (w.kod === 'hub_not_sqlite') delete Bdz_api[a];
+        w.stop = 'http-503';
+      } else w.stop = 'http-inny';
+      return;
+    }
+    var c;
+    try { c = await odp.json(); }
+    catch (x) {
+      if (x && x.name === 'SyntaxError') { delete Bdz_api[a]; w.stop = 'ksztalt'; } else { w.stop = 'siec'; w.kod = (x && x.code) || null; }
+      return;
+    }
+    if (!Bdz_otwarty(r)) { w.stop = 'blokada'; return; }
+    if (!c || typeof c != 'object' || !Array.isArray(c.deltas) || !Number.isSafeInteger(c.nextSince)
+      || !Number.isSafeInteger(c.headSeq) || typeof c.truncated != 'boolean') {
+      delete Bdz_api[a]; // np. cofniety v36 ignoruje limit: nastepne pobranie wykrywa od nowa
+      w.stop = 'ksztalt';
+      if (c && Array.isArray(c.deltas) && c.deltas.length) await Bdz_legacyStrona(t, n, c.deltas, r, w);
+      return;
+    }
+    w.headSeq = c.headSeq;
+    // ahead i base: Bdz_otwarty sprawdzone po json(), bez await po drodze
+    if (c.cursorAhead === true) {
+      // tylko w dol: cursorAhead przy headSeq >= since jest poza kontraktem (v37a: since > headSeq) i podnioslby kursor
+      // nad wiersze, ktorych nikt juz nie pobierze
+      if (c.headSeq >= n) { delete Bdz_api[a]; w.stop = 'ksztalt'; return; }
+      PatientClinicalRequireLegacy('sync-cursor');
+      Kt(t, c.headSeq);
+      w.stop = 'ahead';
+      return;
+    }
+    if (c.requiresBase === true) {
+      if (!Number.isSafeInteger(c.oldestSeq) || c.oldestSeq - 1 <= n) { delete Bdz_api[a]; w.stop = 'ksztalt'; return; }
+      Bdz_kursorWGore(t, c.oldestSeq - 1); // nigdy z nextSince: pusta strona po /wipe ma nextSince = since
+      w.stop = 'base';
+      return;
+    }
+    // zm: zmiana z wierszy tej strony; do w.zmiana dopiero po zapisie kursora (albo przy blokadzie, jak dotad), wiec
+    // stop 'format' nie wysyla vilda:sync-merged za te strone (jak Yt, gdy wt albo straznik kursora rzuca)
+    var ost = n, oczek = n + 1, sw = null, zm = false;
+    if (c.deltas.length) PatientClinicalRequireLegacy('apply-sync-delta'); // jak poczatek wt
+    for (var k = 0; k < c.deltas.length; k++) {
+      var d = c.deltas[k], s = d && d.seq;
+      if (!Number.isSafeInteger(s) || s < oczek) { sw = 'ksztalt'; break; }
+      if (s > oczek) { // dziura: numery oczek..s-1 nie istnieja (w v37a seq jest ciagly)
+        var dz = Bdz_dziuraCzytaj(t), ta = !!dz && dz.od === oczek, proby = ta ? dz.proby + 1 : 1;
+        Bdz_dziuraZapisz(t, { od: oczek, do: s - 1, proby: proby, pierwszaISO: ta && dz.pierwszaISO ? dz.pierwszaISO : new Date().toISOString() });
+        w.dziura = { od: oczek, do: s - 1, proby: proby };
+        if (proby < Bdz_DZIURA_PROBY) { sw = 'dziura'; break; }
+        w.przeskok = { od: oczek, do: s - 1 }; // trzeci drenaz z ta sama dziura: kursor nad brakujacymi numerami
+        ost = s - 1; // przy busy na tym wierszu kursor stanie nad dziura (blokada i 'format': bez zapisu z tej strony)
+      }
+      w.wierszy += 1;
+      if (!d.payload || d.gap === true) { w.zaslepki += 1; ost = s; oczek = s + 1; continue; } // jak wt: bez scalenia
+      var z = await Bdz_zastosuj(d, r);
+      if (z === 'busy' || z === 'blokada') { sw = z; break; }
+      if (z === 'zmiana') zm = true;
+      if (z === 'zmiana' || z === 'ok') w.zastosowane += 1;
+      else if (z === 'nieczytelne') w.nieczytelne += 1;
+      else w.bledy += 1; // jak dzis w wt: kursor idzie (pelny blob niesie tresc, decyzja 7)
+      ost = s;
+      oczek = s + 1;
+    }
+    // blokada: bez zapisu kursora z tej strony (zmiana jak dotad; vilda:sync-merged tylko przy sejfie otwartym)
+    if (sw === 'blokada' || !Bdz_otwarty(r)) { if (zm) w.zmiana = true; w.stop = 'blokada'; return; }
+    if (ost > n) { Bdz_kursorWGore(t, ost); n = ost; }
+    if (zm) w.zmiana = true;
+    if (sw) { if (sw === 'ksztalt') delete Bdz_api[a]; w.stop = sw; return; }
+    if (c.deltas.length && c.nextSince !== ost) { delete Bdz_api[a]; w.stop = 'ksztalt'; return; }
+    if (!c.truncated) { w.stop = 'head'; return; }
+    if (!c.deltas.length) { delete Bdz_api[a]; w.stop = 'ksztalt'; return; } // truncated bez postepu
+  }
+}
+/* Start drenazu przy wlaczonej fladze; nigdy nie odrzuca. Kursor 0: jedno zadanie legacy przez Yt (okno E1-5), bez
+   health. Przerwa po 429: bez zadan i bez health. */
+async function Bdz_wykonaj(t, e, a, r) {
+  if (!r || typeof r.applyEncryptedDelta != 'function') return null; // jak B
+  var n = bt(t), w = null, t0 = Date.now();
+  try {
+    if (Bdz_przerwaDo[t] && t0 < Bdz_przerwaDo[t]) {
+      w = Bdz_wynik('pauza', n);
+      w.stop = 'http-429';
+      w.http = 429;
+      w.przerwaDoISO = new Date(Bdz_przerwaDo[t]).toISOString();
+    } else if (n === 0) {
+      w = Bdz_wynik('legacy', 0);
+      w.stop = 'since0-legacy';
+      await Yt(t, e, a, r);
+    } else {
+      var api = await Bdz_wykryj(a);
+      if (!Bdz_ma(api, 'changes-paged')) {
+        w = Bdz_wynik('legacy', n);
+        // P-SESJA-ZAPISU: health czeka do 5 s na naglowki, na tresc bez limitu; blokada albo inne konto w tym czasie = bez /changes ze starym tokenem
+        if (!Bdz_otwarty(r)) w.stop = 'blokada';
+        else { w.stop = 'legacy'; await Yt(t, e, a, r); }
+      } else {
+        w = Bdz_wynik('strony', n);
+        await Bdz_drenaz(t, e, a, r, n, w); // sesja sprawdzana na poczatku petli, przed pierwszym zadaniem
+      }
+    }
+  } catch (x) {
+    w = w || Bdz_wynik('strony', n);
+    Bdz_stopWyjatku(w, x);
+  }
+  w.do = bt(t);
+  w.ms = Date.now() - t0;
+  var dz = Bdz_dziuraCzytaj(t);
+  if (dz && w.do >= dz.od) Bdz_dziuraZapisz(t, null); // dziura minieta albo przeskoczona
+  Bdz_status[t] = w;
+  return w;
+}
+/* Jeden drenaz naraz w dokumencie. Drugie pobranie tego samego slotu w trakcie dostaje te sama obietnice (bez drugiego
+   /changes) i nie zleca drenazu po biezacym: wiersz dopisany po odpowiedzi ostatniej strony czeka na nastepne pobranie
+   (jak dotad; E2-PR4). Pobranie innego slotu (inne konto w tym dokumencie) w trakcie — bez drenazu, wynik null, jak dotad
+   przy at. at jest wspolne z B, wiec drenaz legacy i stronami wykluczaja sie takze przy przelaczeniu flagi w trakcie.
+   vilda:sync-merged po zapisie statusu i zwolnieniu znacznikow (sluchacz widzi getDrainStatus z trwa:false), raz na
+   drenaz i nie w nowej sesji; w trybie legacy wysyla je Yt, przed zapisem statusu, jak dotad. */
+function Bdz_B(t, e, a, r) {
+  if (Bdz_trwa) return Bdz_trwaSlot === t ? Bdz_trwa : Promise.resolve(null);
+  if (at) return Promise.resolve(null);
+  at = !0;
+  var p = Bdz_wykonaj(t, e, a, r).then(null, function () { return null; }).then(function (w) {
+    at = !1;
+    if (Bdz_trwa === p) { Bdz_trwa = null; Bdz_trwaSlot = null; }
+    if (w && w.zmiana === true && Bdz_otwarty(r)) Et('changes-drain');
+    return w;
+  });
+  Bdz_trwa = p;
+  Bdz_trwaSlot = t;
+  return p;
+}
+/* Eksport syncPull. Bez opcji ta sama obietnica co Y. czekajNaDrenaz: po Y (blokada pierwszego pobrania zwolniona,
+   CareSyncReplayDone wykonane) czeka na drenaz tego pobrania; kopia wyniku z polem drain (wynik legacy albo brak: null). */
+function Bdz_syncPull(t) {
+  var p = Y(t);
+  if (!(t && t.czekajNaDrenaz === !0)) return p;
+  return p.then(function (w) {
+    var d = w && typeof w == 'object' ? Bdz_wyniki.get(w) : null;
+    return d ? d.then(function (x) { return Object.assign({}, w, { drain: x || null }); }) : Object.assign({}, w, { drain: null });
+  });
+}
+function Bdz_detectApi(u) {
+  var url = typeof u == 'string' && u ? u.replace(/\/$/, '') : j();
+  return Bdz_wykryj(url).then(Bdz_kopiaApi);
+}
+function Bdz_getDrainStatus(t) {
+  var w = typeof t == 'string' ? Bdz_status[t] : null, trwa = !!Bdz_trwa && Bdz_trwaSlot === t;
+  if (!w) return null;
+  var c = JSON.parse(JSON.stringify(w));
+  c.trwa = trwa;
+  return c;
+}
+function Bdz_getChangesCursor(t) { return typeof t == 'string' && t ? bt(t) : null; }
+async function Bpw_pull(){PatientClinicalRequireLegacy("sync-pull");var CareReplay=null,CareReplayed=false;var t=I(),Bpw_kto=Bpw_konto(t);y(L,{operation:"pull"});var e;try{e=await t.getSyncMaterial()}catch(E){throw y(k,{operation:"pull",error:E}),E}PatientClinicalRequireLegacy("sync-pull");var a=e.slotId,r=e.authToken,n=e.syncEncKey,i=j(),c=m(a);K()&&M==null&&(M=Pt(a,t));try{Brv_stop(a);if(c.registered){var S=await f(i+"/v1/slots/"+a+"/status",{method:"GET",headers:{Authorization:"Bearer "+r}});if(Bpw_inneKonto(t,Bpw_kto))throw Bpw_przerwane();PatientClinicalRequireLegacy("sync-pull");if(S.status===401)throw C(a),u("VildaSync: b\u0142\u0105d uwierzytelnienia przy pull. Slot m\xF3g\u0142 zosta\u0107 usuni\u0119ty.","AUTH_FAILED");if(!S.ok)throw u("VildaSync: b\u0142\u0105d odczytu statusu ("+S.status+").","STATUS_FAILED",{httpStatus:S.status});var w=await S.json();if(Bpw_inneKonto(t,Bpw_kto))throw Bpw_przerwane();PatientClinicalRequireLegacy("sync-pull")}else{var l=await f(i+"/v1/slots/"+a+"/status",{method:"GET",headers:{Authorization:"Bearer "+r}});if(Bpw_inneKonto(t,Bpw_kto))throw Bpw_przerwane();PatientClinicalRequireLegacy("sync-pull");if(!l.ok){P();var d={action:"not-registered",httpStatus:l.status};return y(p,{operation:"pull",result:d}),d}var s=await l.json();if(Bpw_inneKonto(t,Bpw_kto))throw Bpw_przerwane();PatientClinicalRequireLegacy("sync-pull");c.registered=!0,c.localEtag=null,M=null,vt(a),St(a),T(a,c);var w=s}var h=K()?M:c.localEtag;CareReplay=h&&h===w.etag?await CareSyncReplay(t,a,w.etag):null;PatientClinicalRequireLegacy("sync-pull");if(h&&h===w.etag&&!CareReplay){var D=await Vt();if(Bpw_inneKonto(t,Bpw_kto))throw Bpw_przerwane();PatientClinicalRequireLegacy("sync-pull");if(D)c.localEtag=null,M=null,vt(a),St(a);else{P();var _={action:"up-to-date",etag:w.etag};return Bpw_dren(a,r,i,t,Bpw_kto,_),y(p,{operation:"pull",result:_}),_}}var g={Authorization:"Bearer "+r},v=CareReplay?null:K()?M:c.localEtag;v&&(g["If-None-Match"]='"'+v+'"');var A=await f(i+"/v1/slots/"+a+"/blob",{method:"GET",headers:g},Bgz_czas({byteLength:w&&typeof w.size=="number"?w.size:0}));if(Bpw_inneKonto(t,Bpw_kto))throw Bpw_przerwane();PatientClinicalRequireLegacy("sync-pull");if(A.status===304){P();var F={action:"up-to-date",etag:v};return Bpw_dren(a,r,i,t,Bpw_kto,F),y(p,{operation:"pull",result:F}),F}if(A.status===401)throw u("VildaSync: b\u0142\u0105d uwierzytelnienia przy pobieraniu bloba.","AUTH_FAILED");if(A.status===404){P();var H={action:"no-remote-blob"};return Bpw_dren(a,r,i,t,Bpw_kto,H),y(p,{operation:"pull",result:H}),H}if(!A.ok)throw u("VildaSync: b\u0142\u0105d pobierania danych ("+A.status+").","DOWNLOAD_FAILED",{httpStatus:A.status});var x=await Bnd_czytaj(A,w&&typeof w.size=="number"?w.size:0),W;PatientClinicalRequireLegacy("sync-pull");Bnd_zglos({phase:"decrypt"});try{W=await ut(x,n)}catch{throw u("VildaSync: b\u0142\u0105d odszyfrowania danych. Mo\u017Cliwa zmiana masterKey lub uszkodzenie danych.","DECRYPT_FAILED")}W=await Bgz_rozpakuj(W);var U;try{U=JSON.parse(new TextDecoder().decode(W))}catch{throw u("VildaSync: uszkodzone dane sync (nieprawid\u0142owy format JSON).","PARSE_FAILED")}if(Bpw_inneKonto(t,Bpw_kto))throw Bpw_przerwane();PatientClinicalRequireLegacy("sync-pull");PatientClinicalRequireLegacy("apply-sync-payload");var et=await t.mergeSyncPayload(U,{onProgress:function(E){try{typeof o.document<"u"&&o.document.dispatchEvent&&o.document.dispatchEvent(new CustomEvent("vilda:vault-merge-progress",{detail:E,bubbles:!1}))}catch{}}});PatientClinicalRequireLegacy("apply-sync-payload");var V=Lt(A.headers.get("ETag"))||w.etag;CareReplayed=true;c.localEtag=V,c.rawSize=W.byteLength,c.rawEtag=V,c.lastSyncAt=new Date().toISOString(),M=V,ft(a,V,t),T(a,c),P();var J={action:"merged",etag:V,mergeResult:et,staleDevice:et&&et.staleDevice||null};return Nv(J.staleDevice),Qcs(et&&et.clockSkew||null),Bpw_dren(a,r,i,t,Bpw_kto,J),y(p,{operation:"pull",result:J}),J}catch(E){/* P-SESJA-ZAPISU (przeglad 4, ADW4-3): blad pobrania po zalogowaniu innego konta albo blokadzie (np. /status 500, siec, limit czasu) — SESSION_CHANGED: nalezy do poprzedniej sesji. */var Bpw_e=Bpw_inneKonto(t,Bpw_kto)?Bpw_przerwane():E;throw y(k,{operation:"pull",error:Bpw_e}),Bpw_e}finally{CareSyncReplayDone(CareReplay,CareReplayed)}}async function Ht(){PatientClinicalRequireLegacy("sync-full");I(),y(L,{operation:"full"});try{var t=await Y(),e=await ht(),a={pull:t,push:e};PatientClinicalRequireLegacy("sync-full");return y(p,{operation:"full",result:a}),a}catch(r){throw y(k,{operation:"full",error:r}),r}}async function xt(){PatientClinicalRequireLegacy("sync-status");var t=I(),e=await t.getSyncMaterial();PatientClinicalRequireLegacy("sync-status");return m(e.slotId)}async function Wt(){PatientClinicalRequireLegacy("sync-state-clear");var t=I(),e=await t.getSyncMaterial();PatientClinicalRequireLegacy("sync-state-clear");C(e.slotId)}async function Jt(){PatientClinicalRequireLegacy("delete-sync-slot");
   var ticket=TLibOperationContext(),vault=I(),material=await vault.getSyncMaterial();
   PatientClinicalRequireLegacy("delete-sync-slot");TLibFence(ticket.ctx,ticket.token);
   var assertCurrent=await TLibGuardLegacyDelete(material.slotId,material.authToken,ticket);
@@ -621,7 +963,8 @@ function TLibAutomatic ( ) {
 }
 function TLibPullCycle ( options ) {
   TLibAutomatic ( ) ;
-  return Y ( options )
+  // P-SYNC-STRONY: Bdz_syncPull bez opcji czekajNaDrenaz zwraca tę samą obietnicę co Y.
+  return Bdz_syncPull ( options )
 }
 function TLibPushCycle ( options ) {
   TLibAutomatic ( ) ;
@@ -631,4 +974,4 @@ function TLibFullCycle ( ) {
   TLibAutomatic ( ) ;
   return Ht ( )
 }
-o.VildaSync={syncPush:TLibPushCycle,syncPull:TLibPullCycle,syncFull:TLibFullCycle,activateTemplateLibrarySync:TLibActivate,deactivateTemplateLibrarySync:TLibDeactivate,syncTemplateLibrary:TLibExplicit,getTemplateLibrarySyncStatus:TLibGetStatus,continueTemplateLibrarySync:TLibAutomatic,inspectTemplateLibraryAuthority:TLibInspectAuthority,resetSessionPullGuard:Ut,getSyncStatus:xt,clearSyncState:Wt,deleteSyncSlot:Jt,onSyncStart:Zt,onSyncComplete:Qt,onSyncError:Rt,probeNewDevice:Xt,restorePrevBlob:qt,revokeAllDevices:$t,uploadToSlot:pt,deleteSlotWithMaterial:_t,_loadSyncState:PatientClinicalLoadState,_saveSyncState:PatientClinicalSaveState,_clearSyncStateForSlot:PatientClinicalClearState}})(typeof window<"u"?window:typeof globalThis<"u"?globalThis:null);
+o.VildaSync={syncPush:TLibPushCycle,syncPull:TLibPullCycle,syncFull:TLibFullCycle,activateTemplateLibrarySync:TLibActivate,deactivateTemplateLibrarySync:TLibDeactivate,syncTemplateLibrary:TLibExplicit,getTemplateLibrarySyncStatus:TLibGetStatus,continueTemplateLibrarySync:TLibAutomatic,inspectTemplateLibraryAuthority:TLibInspectAuthority,resetSessionPullGuard:Ut,getSyncStatus:xt,clearSyncState:Wt,deleteSyncSlot:Jt,onSyncStart:Zt,onSyncComplete:Qt,onSyncError:Rt,probeNewDevice:Xt,restorePrevBlob:qt,revokeAllDevices:$t,uploadToSlot:pt,deleteSlotWithMaterial:_t,_loadSyncState:PatientClinicalLoadState,_saveSyncState:PatientClinicalSaveState,_clearSyncStateForSlot:PatientClinicalClearState,detectApi:Bdz_detectApi,getDrainStatus:Bdz_getDrainStatus,getChangesCursor:Bdz_getChangesCursor}})(typeof window<"u"?window:typeof globalThis<"u"?globalThis:null);
