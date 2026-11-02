@@ -6,6 +6,10 @@
   --chrome-active-bg: linear-gradient(135deg, var(--primary, #00838d), var(--secondary, #00b0a6))}
 :root{
   --vilda-safe-top: env(safe-area-inset-top, 0px)}
+:root{
+  --vilda-safe-left: env(safe-area-inset-left, 0px);
+  --vilda-safe-right: env(safe-area-inset-right, 0px);
+  --vilda-safe-bottom: env(safe-area-inset-bottom, 0px)}
 
 
 /* ——— 1. MainNav — reguły bazowe (style.css 3161-3187) ——— */
@@ -679,9 +683,9 @@ html.vilda-pane-auth-open .desktop-layout>.sidebar{
   -webkit-backdrop-filter:var(--blur-drawer-backdrop);
   cursor:pointer;
   opacity:0;
-  transition:opacity .26s ease;
 }
 .chrome-drawer-panel{
+  --chrome-drawer-enter-x:-100%;
   position:relative;
   width:var(--drawer-width);
   background:#fff;
@@ -691,16 +695,58 @@ html.vilda-pane-auth-open .desktop-layout>.sidebar{
   flex-direction:column;
   box-shadow:4px 0 24px #00323c2e;
   transform:translate(-100%);
-  transition:transform .28s cubic-bezier(.4,0,.2,1);
   will-change:transform;
 }
 body.chrome-drawer-open .chrome-drawer-backdrop{
-  opacity:1}
+  opacity:1;
+  animation:chrome-drawer-backdrop-enter .44s ease-out backwards;
+}
 body.chrome-drawer-open .chrome-drawer-panel{
-  transform:none}
+  transform:none;
+  animation:chrome-drawer-enter .56s cubic-bezier(.22,1,.36,1) backwards;
+}
+@keyframes chrome-drawer-enter{
+  from{transform:translateX(var(--chrome-drawer-enter-x))}
+  to{transform:none}
+}
+@keyframes chrome-drawer-backdrop-enter{
+  from{opacity:0}
+  to{opacity:1}
+}
 @media(prefers-reduced-motion:reduce){
-  .chrome-drawer-backdrop,.chrome-drawer-panel{
-  transition:none}
+  body.chrome-drawer-open .chrome-drawer-backdrop,
+  body.chrome-drawer-open .chrome-drawer-panel{
+    animation:none}
+}
+html.vilda-phone .chrome-drawer-panel{
+  --chrome-drawer-enter-x:calc(-100% - var(--vilda-safe-left) - var(--space-8px));
+  position:absolute;
+  top:calc(var(--vilda-safe-top) + 8px);
+  bottom:calc(var(--vilda-safe-bottom) + 8px);
+  left:calc(var(--vilda-safe-left) + 8px);
+  width:320px;
+  max-width:calc(100% - var(--vilda-safe-left) - var(--vilda-safe-right) - 16px);
+  height:auto;
+  padding-top:0;
+  margin:0;
+  border-radius:var(--radius-18);
+  overflow:hidden;
+  box-shadow:0 15px 55px #173e3a30;
+}
+.chrome-drawer-head,
+.chrome-drawer-section-title,
+.chrome-drawer-nav a,
+.chrome-drawer-nav button,
+.chrome-drawer-account-action,
+.chrome-drawer-account-label,
+.chrome-drawer-patient-label,
+.chrome-drawer-icon{
+  -webkit-user-select:none;
+  user-select:none;
+}
+.chrome-drawer :is(input,textarea,[contenteditable]:not([contenteditable="false"])){
+  -webkit-user-select:text;
+  user-select:text;
 }
 .chrome-drawer-head{
   display:flex;

@@ -154,6 +154,7 @@ Aplikacja jest formularzowo-kartowa i prawie nie ma fotografii. Jedyny portret (
 
 ## Nie zsynchronizowane
 
+- `--chrome-drawer-enter-x`: lokalna współrzędna początku animacji panelu menu, zależna od jego szerokości i geometrii urządzenia. Domyślnie `-100%`, na telefonie `calc(-100% - var(--vilda-safe-left) - var(--space-8px))`. Jest deklarowana w komponencie, bez globalnego tokenu stałej długości.
 - `--chrome-active-bg`: `linear-gradient(135deg, var(--primary, #00838d), var(--secondary, #00b0a6))` z `var()` w wartości; gradient aktywnego linku nawigacji i avatara zalogowanego konta. W komponentach opisuj go jako gradient 135° z `--primary` do `--secondary`.
 - `--contact-primary-border`: wartość domyślna w źródle to `transparent`; token niesie `rgba(0, 0, 0, 0)`, wartości kontrastu `rgba(0, 131, 141, 0.54)` są dosłowne.
 - Łańcuch docka mobilnego z `calc()`/`env()`: `--mobile-dock-anchor-bottom` = `calc(env(safe-area-inset-bottom, 0px) + var(--mobile-dock-bottom-gap) + var(--mobile-dock-extra-offset))`, `--mobile-dock-effective-height` = `var(--mobile-dock-measured-height, var(--mobile-dock-height))`, `--mobile-dock-pinned-visible-lift`, `--mobile-dock-pinned-scroll-top-bottom`; składniki stałe (`--mobile-dock-height`, `--mobile-dock-bottom-gap`, `--mobile-dock-side-gap`, `--mobile-dock-extra-offset`, `--mobile-dock-scroll-top-gap`, `--mobile-dock-visible-lift`) są tokenami.

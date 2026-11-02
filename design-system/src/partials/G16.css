@@ -2516,3 +2516,18 @@ body:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3).
     border-left: var(--lab-pane-divider) !important;
   }
 }
+
+/* Natywne Przypomnienia: tylko kontrakt zaznaczania kontrolek i edytorów.
+ * Powyższy ReminderCard opisuje starszy widok .vild-rem-*; ten dodatek nie
+ * odtwarza całego układu współczesnego panelu .vb22. */
+.vb22 .vb22-head,
+.vb22 .vb22-tabs,
+.vb22 .vb22-filters,
+.vb22 button{
+  -webkit-user-select:none;
+  user-select:none;
+}
+.vb22 :is(input,textarea,[contenteditable]:not([contenteditable="false"])){
+  -webkit-user-select:text;
+  user-select:text;
+}
