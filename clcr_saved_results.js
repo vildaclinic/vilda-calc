@@ -42,7 +42,7 @@
     { id: "K_mmol_d", group: "dzm-excr", label: "Wydalanie potasu (DZM)", unit: "mmol/24 h" },
     // Zbiórka dobowa — wskaźniki (grupa dzm-ratio)
     { id: "Ca_Cr", group: "dzm-ratio", label: "Wapń/kreatynina (DZM)", unit: "mg/mg" },
-    { id: "KM_Cr", group: "dzm-ratio", label: "Kwas moczowy/kreatynina (DZM)", unit: "mg/mg" },
+    { id: "KM_Cr", group: "spot-ratio", label: "Kwas moczowy/kreatynina — KM/Cr", unit: "mmol/mmol" },
     { id: "PO4_Cr", group: "dzm-ratio", label: "Fosforany/kreatynina (Pi, DZM)", unit: "mg/mg" },
     { id: "Mg_Ca", group: "dzm-ratio", label: "Magnez/wapń (DZM)", unit: "mg/mg" },
     { id: "Ca_Cit", group: "dzm-ratio", label: "Wapń/cytryniany (DZM)", unit: "mg/mg" },
@@ -99,6 +99,9 @@
   });
 
   PARAM_BY_LABEL.set("Białko w DZM [mg/24 h]", PARAM_BY_KEY.get("Prot_mg24"));
+  // Preserve the exact legacy label/unit/group without inventing a specimen
+  // or renaming the clinical identity of recorded historical measurements.
+  PARAM_BY_LABEL.set("Kwas moczowy/kreatynina (DZM)", Object.freeze({ ...PARAM_BY_KEY.get("KM_Cr"), group:"dzm-ratio", label:"Kwas moczowy/kreatynina (DZM)", unit:"mg/mg" }));
 
   // Odczyt serii z sejfu grupujemy po PELNEJ etykiecie labResult.test
   // (obejście §2 — magazyn gubi testKey). Mapowanie etykieta → wpis słownika
@@ -600,6 +603,7 @@
       const legacyFehco3 = sourceFormulaId === "FEHCO3_spot" && !fehco3 ? global.ClcrFehco3Persistence?.legacyPoint(note) : null;
       const fecl = sourceFormulaId === "FECl_spot" ? global.ClcrFeclPersistence?.savedAssessment(note) : null;
       const legacyFecl = sourceFormulaId === "FECl_spot" && !fecl ? global.ClcrFeclPersistence?.legacyPoint(note) : null;
+      const urateCreatinine = sourceFormulaId === "KM_Cr" ? global.ClcrUrateCreatininePersistence?.savedAssessment(note) : null;
       const ratio = acr || pcr || cacr || oxcr || citcr;
       // A later edit can invalidate the old assessment while leaving a valid
       // censored laboratory result. Keep that current text without restoring
@@ -607,7 +611,7 @@
       const signedCacrText = sourceFormulaId === "CaCr_spot" && !cacr && typeof lab.value === "string" && lab.value.length <= 256
         ? /^\s*([<>≤≥])\s*((?:\d+(?:[.,]\d*)?|[.,]\d+)(?:[eE][+-]?\d+)?)\s*$/.exec(lab.value) : null;
       const signedCacrValue = signedCacrText ? Number(signedCacrText[2].replace(",", ".")) : NaN;
-      const valueNum = potassiumDzm ? global.ClcrPotassiumDzmPersistence.valueNum(potassiumDzm) : legacyPotassiumDzm ? legacyPotassiumDzm.rawValue : sodiumDzm ? global.ClcrSodiumDzmPersistence.valueNum(sodiumDzm) : legacySodiumDzm ? legacySodiumDzm.rawValue : proteinDzm ? global.ClcrProteinDzmPersistence.valueNum(proteinDzm) : legacyProteinDzm ? legacyProteinDzm.rawValue : po4Dzm ? global.ClcrPo4DzmPersistence.valueNum(po4Dzm) : legacyPo4Dzm ? legacyPo4Dzm.rawValue : mgDzm ? mgDzm.rawValue : legacyMgDzm ? legacyMgDzm.rawValue : caDzm ? caDzm.rawValue : legacyCaDzm ? legacyCaDzm.rawValue : ua ? ua.rawValue : legacyUa ? legacyUa.rawValue : ph ? ph.rawValue : legacyPh ? legacyPh.rawValue : tmpGfr ? tmpGfr.rawValue : uag ? uag.rawValue : legacyUag ? legacyUag.rawValue : fehco3 ? fehco3.rawValue : legacyFehco3 ? legacyFehco3.rawValue : fecl ? fecl.rawValue : legacyFecl ? legacyFecl.rawValue : fek ? fek.rawValue : legacyFek ? legacyFek.rawValue : fena ? fena.rawValue : legacyFena ? legacyFena.rawValue : ratio ? ratio.rawValue : legacyCitcr ? legacyCitcr.rawValue : legacyOxcr ? legacyOxcr.rawValue :
+      const valueNum = urateCreatinine ? global.ClcrUrateCreatininePersistence.valueNum(urateCreatinine) : potassiumDzm ? global.ClcrPotassiumDzmPersistence.valueNum(potassiumDzm) : legacyPotassiumDzm ? legacyPotassiumDzm.rawValue : sodiumDzm ? global.ClcrSodiumDzmPersistence.valueNum(sodiumDzm) : legacySodiumDzm ? legacySodiumDzm.rawValue : proteinDzm ? global.ClcrProteinDzmPersistence.valueNum(proteinDzm) : legacyProteinDzm ? legacyProteinDzm.rawValue : po4Dzm ? global.ClcrPo4DzmPersistence.valueNum(po4Dzm) : legacyPo4Dzm ? legacyPo4Dzm.rawValue : mgDzm ? mgDzm.rawValue : legacyMgDzm ? legacyMgDzm.rawValue : caDzm ? caDzm.rawValue : legacyCaDzm ? legacyCaDzm.rawValue : ua ? ua.rawValue : legacyUa ? legacyUa.rawValue : ph ? ph.rawValue : legacyPh ? legacyPh.rawValue : tmpGfr ? tmpGfr.rawValue : uag ? uag.rawValue : legacyUag ? legacyUag.rawValue : fehco3 ? fehco3.rawValue : legacyFehco3 ? legacyFehco3.rawValue : fecl ? fecl.rawValue : legacyFecl ? legacyFecl.rawValue : fek ? fek.rawValue : legacyFek ? legacyFek.rawValue : fena ? fena.rawValue : legacyFena ? legacyFena.rawValue : ratio ? ratio.rawValue : legacyCitcr ? legacyCitcr.rawValue : legacyOxcr ? legacyOxcr.rawValue :
         Number.isFinite(signedCacrValue) ? signedCacrValue : typeof lab.valueNum === "number" && isFinite(lab.valueNum)
           ? lab.valueNum
           : legacyToNumber(lab.value);
@@ -615,7 +619,7 @@
       const unit = (ratio?.unit || lab.unit || (entry ? entry.unit : "") || "").trim();
       // Native mg/g and mg/mmol thresholds are deliberately different axes.
       // Never draw a trend through values stored in different native units.
-      const seriesKey = sourceFormulaId === "TMP_GFR" ? `${label}\n${unit}\n${global.ClcrTmpGfrPersistence?.savedMethod(note, tmpGfr) || "legacy-unknown"}` : sourceFormulaId === "CitCr_spot" ? global.ClcrCitcrPersistence?.seriesKey(label, unit, citcr, note) || `${label}\n${unit}\nlegacy-unknown` : sourceFormulaId === "OxCr_spot" ? global.ClcrOxcrPersistence?.seriesKey(label, unit, oxcr, note) || `${label}\n${unit}\nlegacy-unknown` : ["ACR", "PCR", "CaCr_spot", "UA_mgkg", "Ca_mgkg", "Mg_mgkg", "PO4_mgkg", "Prot_mgkg", "Na_mmol_d", "K_mmol_d"].includes(sourceFormulaId) ? `${label}\n${unit}` : label;
+      const seriesKey = sourceFormulaId === "KM_Cr" ? `${label}\n${unit}\n${urateCreatinine?.input?.specimen || "legacy-unknown"}` : sourceFormulaId === "TMP_GFR" ? `${label}\n${unit}\n${global.ClcrTmpGfrPersistence?.savedMethod(note, tmpGfr) || "legacy-unknown"}` : sourceFormulaId === "CitCr_spot" ? global.ClcrCitcrPersistence?.seriesKey(label, unit, citcr, note) || `${label}\n${unit}\nlegacy-unknown` : sourceFormulaId === "OxCr_spot" ? global.ClcrOxcrPersistence?.seriesKey(label, unit, oxcr, note) || `${label}\n${unit}\nlegacy-unknown` : ["ACR", "PCR", "CaCr_spot", "UA_mgkg", "Ca_mgkg", "Mg_mgkg", "PO4_mgkg", "Prot_mgkg", "Na_mmol_d", "K_mmol_d"].includes(sourceFormulaId) ? `${label}\n${unit}` : label;
       const dateISO =
         legacyNormalizeDateISO(note.clinicalDateISO) ||
         (typeof note.clinicalDateISO === "string"
@@ -642,7 +646,7 @@
       const staleCitcrSnapshot = sourceFormulaId === "CitCr_spot" && !citcr && global.ClcrCitcrPersistence?.hasSavedAssessment(note);
       // FENa helper thresholds never imply a normal/abnormal verdict. Legacy
       // notes remain historical numbers; no current patient facts are applied.
-      const outOfRange = sourceFormulaId === "K_mmol_d" ? potassiumDzm?.outOfRange ?? null : sourceFormulaId === "Na_mmol_d" ? sodiumDzm?.outOfRange ?? null : sourceFormulaId === "Prot_mgkg" ? proteinDzm?.outOfRange ?? null : sourceFormulaId === "PO4_mgkg" ? po4Dzm?.outOfRange ?? null : sourceFormulaId === "Mg_mgkg" ? mgDzm?.outOfRange ?? null : sourceFormulaId === "Ca_mgkg" ? caDzm?.outOfRange ?? null : sourceFormulaId === "UA_mgkg" ? ua?.outOfRange ?? null : sourceFormulaId === "pH_spot" ? ph?.outOfRange ?? null : ["FECl_spot", "FEHCO3_spot", "AGu_spot"].includes(sourceFormulaId) ? null : sourceFormulaId === "FEK_spot" ? fek?.outOfRange ?? null : sourceFormulaId === "FENa_spot" ? null : ratio ? ratio.status === "unassessed" ? null : ["below", "above"].includes(ratio.status) : staleAcrSnapshot || stalePcrSnapshot || staleCacrSnapshot || staleOxcrSnapshot || staleCitcrSnapshot ? null : ["OxCr_spot", "CitCr_spot"].includes(sourceFormulaId) ? typeof note.body === "string" && note.body.includes("wynik poza zakresem") ? true : null :
+      const outOfRange = sourceFormulaId === "KM_Cr" && urateCreatinine ? urateCreatinine.outOfRange : sourceFormulaId === "K_mmol_d" ? potassiumDzm?.outOfRange ?? null : sourceFormulaId === "Na_mmol_d" ? sodiumDzm?.outOfRange ?? null : sourceFormulaId === "Prot_mgkg" ? proteinDzm?.outOfRange ?? null : sourceFormulaId === "PO4_mgkg" ? po4Dzm?.outOfRange ?? null : sourceFormulaId === "Mg_mgkg" ? mgDzm?.outOfRange ?? null : sourceFormulaId === "Ca_mgkg" ? caDzm?.outOfRange ?? null : sourceFormulaId === "UA_mgkg" ? ua?.outOfRange ?? null : sourceFormulaId === "pH_spot" ? ph?.outOfRange ?? null : ["FECl_spot", "FEHCO3_spot", "AGu_spot"].includes(sourceFormulaId) ? null : sourceFormulaId === "FEK_spot" ? fek?.outOfRange ?? null : sourceFormulaId === "FENa_spot" ? null : ratio ? ratio.status === "unassessed" ? null : ["below", "above"].includes(ratio.status) : staleAcrSnapshot || stalePcrSnapshot || staleCacrSnapshot || staleOxcrSnapshot || staleCitcrSnapshot ? null : ["OxCr_spot", "CitCr_spot"].includes(sourceFormulaId) ? typeof note.body === "string" && note.body.includes("wynik poza zakresem") ? true : null :
         typeof note.body === "string" &&
         note.body.indexOf("poza zakresem") >= 0;
       const norm = typeof lab.norm === "string" ? lab.norm.trim() : "";
@@ -744,6 +748,10 @@
         comparator: "", assessment: global.ClcrPotassiumDzmPersistence.assessment(potassiumDzm),
         category: null, outOfRange: potassiumDzm.outOfRange, norm: potassiumDzm.norm, potassiumDzmAssessment: potassiumDzm,
       });
+      if (urateCreatinine) Object.assign(point, {
+        valueNum:global.ClcrUrateCreatininePersistence.valueNum(urateCreatinine), displayValue:urateCreatinine.displayValue, unit:global.ClcrUrateCreatininePersistence.unitText(urateCreatinine),
+        comparator:"", assessment:global.ClcrUrateCreatininePersistence.assessment(urateCreatinine), category:null, outOfRange:urateCreatinine.outOfRange, norm:urateCreatinine.norm, urateCreatinineAssessment:urateCreatinine,
+      });
       if (legacyPotassiumDzm) Object.assign(point, legacyPotassiumDzm);
       if (sourceFormulaId === "K_mmol_d" && !potassiumDzm) Object.assign(point, { assessment: "unassessed", category: null, outOfRange: null, norm: legacyPotassiumDzm?.norm || text(lab.norm) });
       if (mgDzm) Object.assign(point, {
@@ -805,7 +813,7 @@
     const series = Array.from(byLabel.values());
     series.forEach((s) => {
       s.points.sort((a, b) => String(a.dateISO).localeCompare(String(b.dateISO)));
-      if (["ACR", "PCR", "CaCr_spot", "OxCr_spot", "CitCr_spot", "FENa_spot", "FEK_spot", "FECl_spot", "FEHCO3_spot", "AGu_spot", "pH_spot", "UA_mgkg", "Ca_mgkg", "Mg_mgkg", "PO4_mgkg", "Prot_mgkg", "Na_mmol_d", "K_mmol_d"].includes(s.sourceFormulaId)) {
+      if (["ACR", "PCR", "CaCr_spot", "OxCr_spot", "CitCr_spot", "FENa_spot", "FEK_spot", "FECl_spot", "FEHCO3_spot", "AGu_spot", "pH_spot", "UA_mgkg", "Ca_mgkg", "Mg_mgkg", "PO4_mgkg", "Prot_mgkg", "Na_mmol_d", "K_mmol_d", "KM_Cr"].includes(s.sourceFormulaId)) {
         s.norm = s.points[s.points.length - 1]?.norm || "";
         return;
       }
@@ -850,6 +858,11 @@
     const potassiumDzmNote = dp.sourceFormulaId === "K_mmol_d" ? global.ClcrPotassiumDzmPersistence?.referenceNote(dp) : "";
     if (dp.sourceFormulaId === "K_mmol_d" && (!potassiumDzmNote || dp.valueNum < 0 || dp.valueNum !== global.ClcrPotassiumDzmPersistence.valueNum(dp.potassiumDzmSnapshot) || dp.rawValue !== global.ClcrPotassiumDzmPersistence.valueNum(dp.potassiumDzmSnapshot) || dp.unit !== global.ClcrPotassiumDzmPersistence.unitText(dp.potassiumDzmSnapshot) || String(dp.displayValue) !== global.ClcrPotassiumDzmPersistence.displayText(dp.potassiumDzmSnapshot) || String(dp.norm || "") !== global.ClcrPotassiumDzmPersistence.normText(dp.potassiumDzmSnapshot) || dp.outOfRange !== dp.potassiumDzmSnapshot?.outOfRange || dp.assessment !== global.ClcrPotassiumDzmPersistence.assessment(dp.potassiumDzmSnapshot) || dp.tone !== (dp.potassiumDzmSnapshot?.tone === "normal" ? "success" : dp.potassiumDzmSnapshot?.tone) || dp.interpretation !== dp.potassiumDzmSnapshot?.interpretation || String(dp.boundary || "") !== global.ClcrPotassiumDzmPersistence.boundaryText(dp.potassiumDzmSnapshot))) {
       throw new Error("Brak kompletnej oceny wydalania potasu do bezpiecznego zapisu. Oblicz wynik ponownie.");
+    }
+    const urateCreatinineNote = dp.sourceFormulaId === "KM_Cr" ? global.ClcrUrateCreatininePersistence?.referenceNote(dp) : "";
+    if (dp.sourceFormulaId === "KM_Cr") {
+      const p=global.ClcrUrateCreatininePersistence, frozen=dp.urateCreatinineSnapshot;
+      if (!p || !urateCreatinineNote || dp.label!==p.LABEL || dp.valueNum<0 || dp.valueNum!==p.valueNum(frozen) || dp.rawValue!==p.valueNum(frozen) || dp.unit!==p.unitText(frozen) || String(dp.displayValue)!==p.displayText(frozen) || String(dp.norm || "")!==p.normText(frozen) || dp.outOfRange!==frozen.outOfRange || dp.assessment!==p.assessment(frozen) || dp.tone!==(frozen.tone==="normal"?"success":frozen.tone) || dp.interpretation!==frozen.interpretation || String(dp.boundary || "")!==p.boundaryText(frozen)) throw new Error("Brak kompletnej oceny KM/Cr do bezpiecznego zapisu. Oblicz wynik ponownie.");
     }
     const mgDzmNote = dp.sourceFormulaId === "Mg_mgkg" ? global.ClcrMgDzmPersistence?.referenceNote(dp) : "";
     if (dp.sourceFormulaId === "Mg_mgkg" && (!mgDzmNote || dp.valueNum < 0 || dp.valueNum !== dp.mgDzmSnapshot?.rawValue || dp.rawValue !== dp.mgDzmSnapshot?.rawValue || dp.unit !== dp.mgDzmSnapshot?.unit || String(dp.displayValue) !== global.ClcrMgDzmPersistence.displayText(dp.mgDzmSnapshot) || String(dp.norm || "") !== global.ClcrMgDzmPersistence.normText(dp.mgDzmSnapshot) || dp.outOfRange !== dp.mgDzmSnapshot?.outOfRange)) {
@@ -907,6 +920,7 @@
     if (dp.sourceFormulaId === "PO4_mgkg") global.ClcrPo4DzmPersistence?.applyLabResult(dp, labResult);
     if (dp.sourceFormulaId === "Na_mmol_d") global.ClcrSodiumDzmPersistence?.applyLabResult(dp, labResult);
     if (dp.sourceFormulaId === "K_mmol_d") global.ClcrPotassiumDzmPersistence?.applyLabResult(dp, labResult);
+    if (dp.sourceFormulaId === "KM_Cr") global.ClcrUrateCreatininePersistence?.applyLabResult(dp, labResult);
     if (dp.sourceFormulaId === "Prot_mgkg" && dp.proteinDzmSnapshot) global.ClcrProteinDzmPersistence?.applyLabResult(dp, labResult);
     else if (dp.sourceFormulaId === "Prot_mgkg") labResult.value = String(dp.displayValue ?? dp.valueNum).replace(".", ",");
     // Generic vault charts consume valueNum as an exact measurement. A
@@ -942,6 +956,7 @@
       (proteinDzmNote ? "\n\n" + proteinDzmNote : "") +
       (sodiumDzmNote ? "\n\n" + sodiumDzmNote : "") +
       (potassiumDzmNote ? "\n\n" + potassiumDzmNote : "") +
+      (urateCreatinineNote ? "\n\n" + urateCreatinineNote : "") +
       (mgDzmNote ? "\n\n" + mgDzmNote : "") +
       (dp.sourceFormulaId === "cl24" && dp.measuredClearanceReference ? "\n\n" + measuredReferenceNote(dp) : "") +
       (dp.sourceFormulaId === "cg_norm" && dp.agePolicy === "completed-years" && Number.isInteger(dp.ageUsedYears) && dp.ageUsedYears >= 18
@@ -953,12 +968,12 @@
 
   const ASSESSMENT_FIELDS = Object.freeze([
     "acrAssessment", "pcrAssessment", "cacrAssessment", "oxcrAssessment", "citcrAssessment",
-    "fenaAssessment", "fekAssessment", "feclAssessment", "fehco3Assessment", "uagAssessment", "tmpGfrAssessment", "phAssessment", "uaAssessment", "caDzmAssessment", "mgDzmAssessment", "po4DzmAssessment", "proteinDzmAssessment", "sodiumDzmAssessment", "potassiumDzmAssessment",
+    "fenaAssessment", "fekAssessment", "feclAssessment", "fehco3Assessment", "uagAssessment", "tmpGfrAssessment", "phAssessment", "uaAssessment", "caDzmAssessment", "mgDzmAssessment", "po4DzmAssessment", "proteinDzmAssessment", "sodiumDzmAssessment", "potassiumDzmAssessment", "urateCreatinineAssessment",
   ]);
   const HELPER_BY_FORMULA = Object.freeze({
     OxCr_spot: "ClcrOxcrPersistence", CitCr_spot: "ClcrCitcrPersistence",
     FENa_spot: "ClcrFenaPersistence", FEK_spot: "ClcrFekPersistence",
-    FECl_spot: "ClcrFeclPersistence", FEHCO3_spot: "ClcrFehco3Persistence", AGu_spot: "ClcrUagPersistence", TMP_GFR: "ClcrTmpGfrPersistence", pH_spot: "ClcrPhPersistence", UA_mgkg: "ClcrUaPersistence", Ca_mgkg: "ClcrCaDzmPersistence", Mg_mgkg: "ClcrMgDzmPersistence", PO4_mgkg: "ClcrPo4DzmPersistence", Prot_mgkg: "ClcrProteinDzmPersistence", Na_mmol_d: "ClcrSodiumDzmPersistence", K_mmol_d: "ClcrPotassiumDzmPersistence",
+    FECl_spot: "ClcrFeclPersistence", FEHCO3_spot: "ClcrFehco3Persistence", AGu_spot: "ClcrUagPersistence", TMP_GFR: "ClcrTmpGfrPersistence", pH_spot: "ClcrPhPersistence", UA_mgkg: "ClcrUaPersistence", Ca_mgkg: "ClcrCaDzmPersistence", Mg_mgkg: "ClcrMgDzmPersistence", PO4_mgkg: "ClcrPo4DzmPersistence", Prot_mgkg: "ClcrProteinDzmPersistence", Na_mmol_d: "ClcrSodiumDzmPersistence", K_mmol_d: "ClcrPotassiumDzmPersistence", KM_Cr: "ClcrUrateCreatininePersistence",
   });
   const HEADER_BY_FORMULA = Object.freeze({ ACR: ACR_NOTE_HEADER, PCR: PCR_NOTE_HEADER, CaCr_spot: CACR_NOTE_HEADER });
 
@@ -1131,7 +1146,7 @@
         population: reference?.population || null,
         profileId: reference?.profileId || null, profileVersion: reference?.profileVersion ?? null },
     });
-    if (["AGu_spot", "TMP_GFR", "pH_spot", "UA_mgkg", "Ca_mgkg", "Mg_mgkg", "PO4_mgkg", "Prot_mgkg", "Na_mmol_d", "K_mmol_d"].includes(capture.formulaId)) Object.assign(point, {
+    if (["AGu_spot", "TMP_GFR", "pH_spot", "UA_mgkg", "Ca_mgkg", "Mg_mgkg", "PO4_mgkg", "Prot_mgkg", "Na_mmol_d", "K_mmol_d", "KM_Cr"].includes(capture.formulaId)) Object.assign(point, {
       calculationMethod: capture.calculationMethod || point.calculationMethod,
       comment: text(capture.comment), knownFacts: object(capture.knownFacts),
       contextReferences: Array.isArray(capture.contextReferences) ? capture.contextReferences : [],
@@ -1281,7 +1296,17 @@
       ? { low: Number.isFinite(frozen.reference.lower) ? frozen.reference.lower : null, high: frozen.reference.upper, lowInclusive: frozen.reference.lowerInclusive === true, highInclusive: frozen.reference.upperInclusive === true } : null;
     const phBounds = entry?.sourceFormulaId === "pH_spot" && !isStale && frozen?.referenceActive === true && frozen.reference
       ? { low: frozen.reference.lower, high: frozen.reference.upper, lowInclusive: frozen.reference.lowerInclusive, highInclusive: frozen.reference.upperInclusive } : null;
-    const bounds = potassiumDzmBounds || sodiumDzmBounds || proteinDzmBounds || po4DzmBounds || mgDzmBounds || caDzmBounds || uaBounds || phBounds || object(frozen?.reference?.bounds) || referenceBounds(point.norm, point.unit);
+    if (entry?.sourceFormulaId === "KM_Cr" && frozen && !isStale) {
+      const sources=(frozen.reference?.sourceIds || []).map(id=>frozen.sources?.find(item=>item.id===id)).filter(Boolean);
+      point.source=sources.length===1?sources[0]:sources.length?{ids:sources.map(item=>item.id),label:sources.map(item=>item.label).join(" · "),sources}:null;
+      point.rawValue=global.ClcrUrateCreatininePersistence.valueNum(frozen);
+      point.boundary=global.ClcrUrateCreatininePersistence.boundaryText(frozen);
+      point.context={ageYears:frozen.input?.ageYears??null,specimen:frozen.input?.specimen??"unknown"};
+      point.calculationMethod=({random:"Próbka jednorazowa",timed:"DZM",unknown:"Typ próbki nieutrwalony"})[frozen.input?.specimen]||"Typ próbki nieutrwalony";
+    }
+    const urateCreatinineBounds=entry?.sourceFormulaId==="KM_Cr" && !isStale && frozen?.referenceAvailable===true && frozen.reference
+      ? {low:Number(frozen.reference.lower),high:Number(frozen.reference.upper),lowInclusive:frozen.reference.lowerInclusive===true,highInclusive:frozen.reference.upperInclusive===true}:null;
+    const bounds = urateCreatinineBounds || potassiumDzmBounds || sodiumDzmBounds || proteinDzmBounds || po4DzmBounds || mgDzmBounds || caDzmBounds || uaBounds || phBounds || object(frozen?.reference?.bounds) || referenceBounds(point.norm, point.unit);
     point.source = point.source || (!isStale && frozen ? metadata.source : null);
     point.reference = { text: point.norm, bounds, kind: frozen?.reference?.kind === "criterion" && !isStale ? "recorded-criterion" : bounds ? bounds.low === null || bounds.high === null ? "recorded-threshold" : "recorded-range" : "none",
       source: point.source, population: isStale ? null : frozen?.population || metadata.population || null,
@@ -1322,7 +1347,8 @@
       point.basis = basis;
       // Direct Brodehl and Walton–Bijvoet/Payne are different methods; their
       // transition must never appear as a biological rise in a single curve.
-      const calculationMethod = entry?.sourceFormulaId === "TMP_GFR" ? point.calculationMethod || "legacy-unknown" : null;
+      // Different specimen types do not form one apparent biological trend.
+      const calculationMethod = entry?.sourceFormulaId === "KM_Cr" ? point.calculationMethod || "Typ próbki nieutrwalony" : entry?.sourceFormulaId === "TMP_GFR" ? point.calculationMethod || "legacy-unknown" : null;
       const key = JSON.stringify([identity, normalizedUnit(point.unit), basis, ...(calculationMethod ? [calculationMethod] : [])]);
       if (!grouped.has(key)) grouped.set(key, {
         key, seriesKey: key, label, displayLabel: calculationMethod ? `${label} · ${calculationMethod === "legacy-unknown" ? "metoda nieutrwalona" : calculationMethod}` : displayLabel, method: calculationMethod || entry?.method || null,

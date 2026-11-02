@@ -685,13 +685,13 @@ describe('Klirens — centralny model przepływu UI', () => {
     );
 
     expect(html).toContain('clcr_ui_workflow.css?v=19');
-    expect(html).toContain('clcr_ui_workflow.js?v=36');
-    expect(html).toContain('inline_kalkulator_klirens_02.js?v=29');
-    expect(html).toContain('inline_kalkulator_klirens_04.js?v=36');
-    expect(html).toContain('inline_kalkulator_klirens_07.js?v=26');
+    expect(html).toContain('clcr_ui_workflow.js?v=37');
+    expect(html).toContain('inline_kalkulator_klirens_02.js?v=30');
+    expect(html).toContain('inline_kalkulator_klirens_04.js?v=37');
+    expect(html).toContain('inline_kalkulator_klirens_07.js?v=27');
     expect(html).toContain('clcr_result_reference_data.js?v=7');
     expect(html).toContain('clcr_result_presentation.js?v=8');
-    expect(serviceWorker).toContain("const SW_VERSION = '1.1.438'");
+    expect(serviceWorker).toContain("const SW_VERSION = '1.1.439'");
     expect(html).toContain('clcr_calculation_assumptions.js?v=2');
     expect(serviceWorker).toContain("'/clcr_calculation_assumptions.js?v=2'");
     expect(serviceWorker).toContain("'/clcr_clinical_safety.js?v=13'");
@@ -703,6 +703,11 @@ describe('Klirens — centralny model przepływu UI', () => {
     expect(serviceWorker).toContain("'/inline_kalkulator_klirens_04.js?v=35'");
     for (const file of ['clcr_potassium_dzm_data.js', 'clcr_potassium_dzm.js',
       'clcr_potassium_dzm_ui.js', 'clcr_potassium_dzm.css', 'clcr_potassium_dzm_persistence.js']) {
+      expect(html).toContain(`${file}?v=1`);
+      expect(serviceWorker).toContain(`'/${file}?v=1'`);
+    }
+    for (const file of ['clcr_urate_creatinine_data.js', 'clcr_urate_creatinine.js',
+      'clcr_urate_creatinine_ui.js', 'clcr_urate_creatinine.css', 'clcr_urate_creatinine_persistence.js']) {
       expect(html).toContain(`${file}?v=1`);
       expect(serviceWorker).toContain(`'/${file}?v=1'`);
     }

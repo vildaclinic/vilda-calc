@@ -66,7 +66,7 @@
       referenceLabel: norm ? criterion ? "Próg przy zapisie" : "Norma przy zapisie" : "Odniesienie",
       tone, category, outOfRange, status, interpretation,
       boundary: available ? decimal(text(point.boundary)) : "",
-      boundaryLabel: point?.sourceFormulaId === "K_mmol_d" ? "Wartość przed zaokrągleniem" : "Granica przed zaokrągleniem",
+      boundaryLabel: ["K_mmol_d", "KM_Cr"].includes(point?.sourceFormulaId) ? "Wartość przed zaokrągleniem" : "Granica przed zaokrągleniem",
       caution: available && text(point.comment) !== interpretation ? text(point.comment) : "",
       comment: humanBody(note),
     };

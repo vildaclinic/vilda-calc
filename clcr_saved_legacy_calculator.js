@@ -335,7 +335,22 @@
       if (parameterKey === "Prot_bsa" && (age === null || age >= 18)) throw new Error("To wyjście dotyczy pediatrycznej oceny z powierzchnią ciała.");
       value = parameterKey === "Prot_g24" ? result?.totalG24h : parameterKey === "Prot_bsa" ? result?.mgM2Per24h : result?.totalMg24h;
       unit = parameterKey === "Prot_g24" ? "g/24 h" : parameterKey === "Prot_bsa" ? "mg/m²/24 h" : "mg/24 h"; digits = 1;
-    } else if (formulaId === "KM_Cr") value = ratio(number(values, "U_UA"), urineCr);
+    } else if (formulaId === "KM_Cr") {
+      const operand = raw => {
+        if (!["string","number"].includes(typeof raw)) return null;
+        const entered=String(raw).trim().replace(",",".").replace(/−/g,"-");
+        if (!/^[+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:e[+-]?\d+)?$/i.test(entered)) return null;
+        const parsed=Number(entered);
+        return Number.isFinite(parsed) && !(parsed===0 && /[1-9]/.test(entered.split(/e/i)[0])) ? parsed : null;
+      };
+      const uricAcid=operand(values.U_UA), creatinine=operand(values.Ucr);
+      if (uricAcid===null || uricAcid<0 || creatinine===null || creatinine<=0) throw new Error("Kwas moczowy nie może być ujemny, a kreatynina musi być większa od zera.");
+      value=uricAcid/creatinine;
+      if (!Number.isFinite(value) || uricAcid>0 && value===0) throw new Error("Wynik KM/Cr wykracza poza bezpieczny zakres liczbowy.");
+      // This compatibility producer keeps the historical mass-ratio unit.
+      // The dedicated path stores the new typed molar result separately.
+      return modeled(formulaId,parameterKey,value,"mg/mg",3,values,context,{displayValue:String(value).replace(".",","),datapoint:{assessment:"unassessed",outOfRange:null,norm:"",tone:"neutral"}});
+    }
     else if (formulaId === "Ca_Cr") value = ratio(calcium, urineCr);
     else if (formulaId === "PO4_Cr") value = ratio(number(values, "U_PO4"), urineCr);
     else if (formulaId === "Mg_Ca") value = ratio(magnesium, calcium);

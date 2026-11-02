@@ -28,10 +28,11 @@
     ["clcr_protein_dzm_persistence.js?v=1", "ClcrProteinDzmPersistence"],
     ["clcr_sodium_dzm_persistence.js?v=1", "ClcrSodiumDzmPersistence"],
     ["clcr_potassium_dzm_persistence.js?v=1", "ClcrPotassiumDzmPersistence"],
+    ["clcr_urate_creatinine_persistence.js?v=1", "ClcrUrateCreatininePersistence"],
     // readSaved is pure and needed for the new capture format. Its recalculate
     // method is not called while opening history and resolves engines lazily.
-    ["clcr_saved_calculation.js?v=11", "ClcrSavedCalculation"],
-    ["clcr_saved_results.js?v=11", "ClcrSavedResults"],
+    ["clcr_saved_calculation.js?v=12", "ClcrSavedCalculation"],
+    ["clcr_saved_results.js?v=12", "ClcrSavedResults"],
     ["clcr_saved_results_view.js?v=2", "ClcrSavedResultsView"],
   ];
   const editor = [
@@ -78,13 +79,15 @@
     ["clcr_potassium_dzm_data.js?v=1", "ClcrPotassiumDzmReferenceData"],
     ["clcr_sodium_dzm.js?v=1", "VildaClcrSodiumDzm"],
     ["clcr_potassium_dzm.js?v=1", "VildaClcrPotassiumDzm"],
+    ["clcr_urate_creatinine_data.js?v=1", "ClcrUrateCreatinineReferenceData"],
+    ["clcr_urate_creatinine.js?v=1", "VildaClcrUrateCreatinine"],
     ["clcr_ph_reference_data.js?v=1", "VildaClcrPhReferenceData"],
     ["clcr_ph.js?v=1", "VildaClcrPh"],
     ["clcr_measured_clearance_reference_data.js?v=1", "ClcrMeasuredClearanceReferenceData"],
     ["clcr_measured_clearance_reference.js?v=1", "ClcrMeasuredClearanceReference"],
     ["clcr_result_presentation.js?v=8", "ClcrResultPresentation"],
-    ["clcr_saved_legacy_calculator.js?v=11", "ClcrSavedLegacyCalculator"],
-    ["clcr_result_details.js?v=7", "ClcrResultDetails"],
+    ["clcr_saved_legacy_calculator.js?v=12", "ClcrSavedLegacyCalculator"],
+    ["clcr_result_details.js?v=8", "ClcrResultDetails"],
   ];
   function load(path, name, style = false) {
     if (name && root[name]) return Promise.resolve();
@@ -145,7 +148,7 @@
     if (!notesPromise) {
       notesPromise = ensureReader().then(() => Promise.all([
         load("clcr_notes_view.css?v=1", null, true),
-        load("clcr_notes_view.js?v=3", "ClcrNotesView"),
+        load("clcr_notes_view.js?v=4", "ClcrNotesView"),
       ])).then(() => root.ClcrNotesView);
       notesPromise.catch(() => { notesPromise = null; });
     }

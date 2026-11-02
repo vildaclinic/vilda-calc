@@ -122,6 +122,14 @@ function potassiumProducer(root, entry, values) {
   return point;
 }
 
+function urateCreatinineProducer(root, entry, values) {
+  const result = root.VildaClcrUrateCreatinine.compute(root.VildaClcrUrateCreatinine.inputFromValues(values), root.ClcrUrateCreatinineReferenceData.DATA);
+  if (!result.valid) throw new Error(result.error);
+  const point = { id: entry.id, sourceFormulaId: entry.sourceFormulaId, testKey: entry.testKey, label: entry.label };
+  root.ClcrUrateCreatininePersistence.augmentDatapoint({ getAttribute: key => key === 'data-clcr-urate-creatinine-snapshot' ? JSON.stringify(result) : null }, point);
+  return point;
+}
+
 function variants(root, patientId) {
   const cases = [];
   const add = (key, name, patch, producer) => {
@@ -140,6 +148,19 @@ function variants(root, patientId) {
   add('pH_spot', 'below-recorded-range', { U_pH: '4.4' });
   add('pH_spot', 'above-recorded-range', { U_pH: '8.1' });
   add('AGu_spot', 'exact-zero', { U_Na_spot: '20', U_K_spot: '10', U_Cl_spot: '30' });
+
+  // Keep the registry case on its historical U_UA/Ucr path. These cases use
+  // the live typed calculator and production writer, as the new input card does.
+  const urateCreatinine = { age: '40', ageMonths: '0', ageDays: '0', URCR_inputMode: 'concentration',
+    URCR_uricAcid: '100', URCR_uricAcidUnit: 'mg/dL', URCR_creatinine: '100', URCR_creatinineUnit: 'mg/dL',
+    URCR_specimen: 'random', URCR_outputUnit: 'mmol/mmol' };
+  add('KM_Cr', 'typed-concentration-adult', urateCreatinine, urateCreatinineProducer);
+  add('KM_Cr', 'typed-concentration-child', { ...urateCreatinine, age: '8' }, urateCreatinineProducer);
+  add('KM_Cr', 'typed-concentration-timed', { ...urateCreatinine, URCR_specimen: 'timed' }, urateCreatinineProducer);
+  add('KM_Cr', 'typed-reported-mass-axis', { ...urateCreatinine, URCR_inputMode: 'reported', URCR_reportedValue: '1', URCR_reportedUnit: 'mg/mg' }, urateCreatinineProducer);
+  add('KM_Cr', 'typed-reported-exact-upper-bound', { ...urateCreatinine, URCR_inputMode: 'reported', URCR_reportedValue: '0.53', URCR_reportedUnit: 'mmol/mmol' }, urateCreatinineProducer);
+  add('KM_Cr', 'typed-reported-above-rounded-upper-bound', { ...urateCreatinine, URCR_inputMode: 'reported', URCR_reportedValue: '0.53000001', URCR_reportedUnit: 'mmol/mmol' }, urateCreatinineProducer);
+  add('KM_Cr', 'exact-zero', { ...urateCreatinine, URCR_uricAcid: '0' }, urateCreatinineProducer);
 
   add('ACR', 'direct-mass-axis-censored', { ACR_entry_mode: 'direct', ACR_reported: '<3', ACR_reported_unit: 'mg/g' });
   add('ACR', 'direct-molar-axis', { ACR_entry_mode: 'direct', ACR_reported: '4.5', ACR_reported_unit: 'mg/mmol' });
