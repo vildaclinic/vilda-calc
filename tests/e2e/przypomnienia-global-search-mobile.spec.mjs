@@ -8,7 +8,7 @@ test('mobile Search separates the compact toolbar into two rows and restores que
   const created = await globalSearchFixture(page);
   const search = await openGlobalSearch(page);
   const query = search.getByRole('searchbox', { name: GLOBAL_QUERY, exact: true });
-  const time = search.getByRole('combobox', { name: 'Terminy spraw', exact: true });
+  const time = search.getByRole('combobox', { name: 'Daty wpisów', exact: true });
   const status = search.getByRole('combobox', { name: 'Stan spraw', exact: true });
   const [queryBox, timeBox, statusBox] = await Promise.all([query.boundingBox(), time.boundingBox(), status.boundingBox()]);
   expect(timeBox.y).toBeGreaterThanOrEqual(queryBox.y + queryBox.height);

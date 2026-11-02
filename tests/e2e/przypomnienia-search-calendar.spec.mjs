@@ -316,7 +316,7 @@ for (const [profile, settings] of profiles) test.describe(profile, () => {
     await page.getByRole('button', { name: RETURN_TO_SEARCH, exact: true }).click();
     const restored = await findSearch(page);
     await expect(restored.search.getByRole('searchbox', { name: GLOBAL_QUERY, exact: true })).toHaveValue(before.query);
-    await expect(restored.search.getByRole('combobox', { name: 'Terminy spraw', exact: true })).toHaveValue(before.time);
+    await expect(restored.search.getByRole('combobox', { name: 'Daty wpisów', exact: true })).toHaveValue(before.time);
     await expect(restored.search.getByRole('combobox', { name: 'Stan spraw', exact: true })).toHaveValue(before.status);
     if (change === 'deleted') await expect(resultFor(restored.search, 'note', created.notes.biopsy)).toHaveCount(0);
     expect(await fingerprint(page, created.ids.a)).toBe(changedFingerprint);

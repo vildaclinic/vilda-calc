@@ -12,7 +12,7 @@ zapisane opisy badań, nazwy procedur oraz treść kroków planu. Techniczne
 przypomnienia planu nie tworzą powtórnych wyników tego samego planu.
 
 Wyszukiwanie ignoruje wielkość liter i polskie znaki; wszystkie podane słowa
-muszą wystąpić w wyniku. Filtry terminu i stanu działają niezależnie. Daty
+muszą wystąpić w wyniku. Filtry daty i stanu działają niezależnie. Daty
 wydarzenia, przypomnienia, badania i wykonania mają osobne etykiety.
 
 Indeks powstaje dopiero przy pierwszym zapytaniu lub użyciu filtra. Kolejne
@@ -27,6 +27,51 @@ interpretuje ponownie wyników klinicznych.
 pacjenta do formularza; przejście do karty, sprawy, wydarzenia lub planu wymaga
 osobnego przycisku. Powrót zachowuje zapytanie, filtry, wybrany wynik,
 liczbę pokazanych pozycji oraz przewinięcie listy i podglądu.
+
+### Aktualność i błędy odczytu (PR4)
+
+Otwarta wyszukiwarka odbiera także zmiany notatek, planów i nagłówków
+pacjentów z innych okien. Wspólny rejestr aktywnych odbiorców korzysta
+z istniejącego kanału `vilda-notes`, pingu storage i zdarzenia synchronizacji.
+Sygnał nie zawiera danych pacjenta i powoduje ponowny odczyt własnego sejfu;
+nie otwiera rekordu wskazanego przez nadawcę. Ten sam `changeId` łączy lokalny
+hook, broadcast i storage w jedną invalidację. Odrębne operacje zachowują
+odrębne identyfikatory, nawet w tej samej milisekundzie. Odbiorca nie rozgłasza
+sygnału ponownie. Po zamknięciu ostatniego widoku kanały i listenery są usuwane.
+
+Search używa ścisłego odczytu nagłówków, notatek i planów. Nieudane
+odszyfrowanie lub odczyt źródła nie stają się pustym wpisem ani pozornie
+kompletnym indeksem. Widok pokazuje błąd z **Spróbuj ponownie**; ponowienie
+czyta wszystkie źródła od nowa. Domyślne API sejfu dla innych modułów
+zachowuje dotychczasowe zachowanie. Ścisły odczyt kontroluje sesję oraz
+bieżącą generację przed i po operacjach asynchronicznych, także pomiędzy
+rekordami. Zamknięcie, invalidacja lub zmiana sesji zatrzymują kolejne
+odszyfrowania i odrzucają spóźniony wynik. Uszkodzony wewnętrzny envelope
+Klirensu w poprawnie odczytanej notatce nadal ma kanoniczny podgląd
+niedostępnego wyniku z Notatek; nie jest błędem odczytu całego sejfu.
+
+### Daty i stany
+
+Filtry **Przyszłe daty**, **Przeszłe daty** i **Dzisiaj** uwzględniają dowolną
+zapisaną datę wydarzenia, przypomnienia lub wpisu/badania, a w planie także
+daty kroków i kolejnej decyzji. **Bez daty** oznacza brak tych wszystkich dat.
+Data wykonania i niezgłoszenia się opisują status; nie są datami filtra czasu.
+Pacjent jako osobny wynik nie dziedziczy dat ani statusów swoich notatek.
+
+Przy aktywnym filtrze czasu wiersz pokazuje rodzaj i datę spełniającą filtr.
+Podgląd oznacza ją **pasuje do filtra**. Dla przyszłości wybiera najbliższą
+przyszłą datę, dla przeszłości ostatnią przeszłą, a dla remisu zachowuje
+kolejność wydarzenie → wpis/badanie → przypomnienie. To projekcja danego
+zapytania; nie zmienia źródła ani współdzielonych wierszy indeksu. Stan
+pozostaje niezależny od daty: przeszły termin nie kończy sprawy, a przyszły
+termin nie otwiera zakończonej. **Otwarte** obejmuje również oczekujące;
+niezgłoszenie się ma pierwszeństwo przed zakończeniem.
+
+Lokalna północ i wznowienie widoku ponawiają filtrowanie z pamięci, bez
+nowego odczytu źródeł. Timer wyznacza następną lokalną datę, także w dniach
+23- i 25-godzinnych. Odświeżenie danych lub daty zachowuje zapytanie, limit,
+przewinięcia i nowszy fokus. Nie jest nową nawigacją i nie kasuje biletu
+powrotu z karty lub Terminarza.
 
 ## Nawigacja i powrót do wyszukiwania
 
@@ -133,7 +178,7 @@ w prywatnym indeksie, nawet gdy zduplikowana reprezentacja znika z podglądu.
 
 Ta część naprawy dotyczy odczytu i prezentacji. Nie zmienia zapisów pacjenta,
 snapshotów, wyników obliczeń, progów ani zasad synchronizacji. Nawigację
-opisano powyżej; cykl aktualizacji indeksu pozostaje odrębnym zakresem.
+opisano powyżej; aktualność indeksu i kontrakt filtrów opisuje PR4.
 
 ### Zakres sprawdzonych producentów
 

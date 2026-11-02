@@ -36,14 +36,14 @@ test('Search covers all fictional patients, external people, future events, unda
   await expect(resultFor(search, 'note', created.notes.biopsy)).toBeVisible();
   await expect(resultFor(search, 'note', created.notes.narrative)).toBeVisible();
   await expect(resultFor(search, 'plan', created.planId)).toBeVisible();
-  await search.getByRole('combobox', { name: 'Terminy spraw', exact: true }).selectOption('future');
+  await search.getByRole('combobox', { name: 'Daty wpisów', exact: true }).selectOption('future');
   await expect(resultFor(search, 'note', created.notes.biopsy)).toBeVisible();
   await expect(resultFor(search, 'note', created.notes.narrative)).toHaveCount(0);
   await resultFor(search, 'note', created.notes.biopsy).click();
   await expect(search.locator('.vgs-detail')).toContainText('02.02.2027');
   await expect(search.locator('.vgs-detail')).toContainText('Fikcyjna przyszła procedura do organizacji.');
 
-  await search.getByRole('combobox', { name: 'Terminy spraw', exact: true }).selectOption('all');
+  await search.getByRole('combobox', { name: 'Daty wpisów', exact: true }).selectOption('all');
   await queryGlobal(search, 'REZONANS');
   await expect(resultFor(search, 'note', created.notes.mri)).toBeVisible();
   await expect(resultFor(search, 'note', created.notes.activity)).toBeVisible();
@@ -66,7 +66,7 @@ test('Search uses the approved compact desktop toolbar and all three search fiel
   await globalSearchFixture(page);
   const search = await openGlobalSearch(page), workspace = page.locator(SEARCH_WORKSPACE);
   const query = search.getByRole('searchbox', { name: GLOBAL_QUERY, exact: true });
-  const time = search.getByRole('combobox', { name: 'Terminy spraw', exact: true });
+  const time = search.getByRole('combobox', { name: 'Daty wpisów', exact: true });
   const status = search.getByRole('combobox', { name: 'Stan spraw', exact: true });
   const boxes = await Promise.all([query.boundingBox(), time.boundingBox(), status.boundingBox()]);
   expect(Math.max(...boxes.map(box => box.y)) - Math.min(...boxes.map(box => box.y))).toBeLessThan(2);

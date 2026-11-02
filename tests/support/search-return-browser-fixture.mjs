@@ -38,7 +38,7 @@ export async function searchReturnFixture(page, options = {}) {
 export async function openLongResult(page, created, { search: suppliedSearch, inline = false } = {}) {
   const search = suppliedSearch || await openGlobalSearch(page);
   await queryGlobal(search, LONG_QUERY);
-  await search.getByRole('combobox', { name: 'Terminy spraw', exact: true }).selectOption('future');
+  await search.getByRole('combobox', { name: 'Daty wpisów', exact: true }).selectOption('future');
   await search.getByRole('combobox', { name: 'Stan spraw', exact: true }).selectOption('open');
   await expect(search.locator('.vgs-row')).toHaveCount(50);
   await search.getByRole('button', { name: 'Pokaż kolejne wyniki (46)', exact: true }).click();
@@ -58,7 +58,7 @@ export async function contextAtAction(search, action) {
   await action.scrollIntoViewIfNeeded();
   const state = await search.evaluate(node => ({
     query: node.querySelector('.vgs-query').value,
-    time: node.querySelector('[aria-label="Terminy spraw"]').value,
+    time: node.querySelector('[aria-label="Daty wpisów"]').value,
     status: node.querySelector('[aria-label="Stan spraw"]').value,
     selected: node.querySelector('[aria-current="true"]')?.dataset.searchId,
     count: node.querySelectorAll('.vgs-row').length,
@@ -73,7 +73,7 @@ export async function assertSearchContext(page, expected) {
   const search = page.locator('dialog.vb22-modal .vgs');
   await expect(search).toBeVisible();
   await expect(search.getByRole('searchbox', { name: GLOBAL_QUERY, exact: true })).toHaveValue(expected.query);
-  await expect(search.getByRole('combobox', { name: 'Terminy spraw', exact: true })).toHaveValue(expected.time);
+  await expect(search.getByRole('combobox', { name: 'Daty wpisów', exact: true })).toHaveValue(expected.time);
   await expect(search.getByRole('combobox', { name: 'Stan spraw', exact: true })).toHaveValue(expected.status);
   await expect(search.locator('.vgs-row')).toHaveCount(expected.count);
   if (expected.detail) await expect(search).toHaveClass(/vgs-show-detail/);

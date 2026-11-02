@@ -25,18 +25,74 @@
     return text(header.name) || [text(header.lastName), text(header.firstName)].filter(Boolean).join(' ') || text(record && record.name) || 'Pacjent';
   }
   function error(code, message) { var value = new Error(message); value.code = code; return value; }
-  // The vault's legacy hooks do not unsubscribe. A single hook set per vault
-  // dispatches to live services, so opening/closing the panel retains no index.
-  function observe(vault, listener) {
+  // Legacy vault hooks cannot unsubscribe. Keep one hook set per vault, but
+  // retain external listeners only while at least one service uses the context.
+  function observe(vault, doc, listener) {
     var registry = observers.get(vault);
     if (!registry) {
-      registry = new Set(); observers.set(vault, registry);
+      registry = { listeners: new Set(), contexts: new Map(), documents: new Map(), recent: new Map() };
+      observers.set(vault, registry);
+      registry.emit = function (reason, envelope) {
+        var key = '', signal = envelope && typeof envelope === 'object' ? envelope : null;
+        if (signal && typeof signal.changeId === 'string' && signal.changeId && signal.changeId.length <= 160) key = 'id:' + signal.changeId;
+        else if (signal && typeof signal.sender === 'string' && signal.sender && signal.sender.length <= 160 && typeof signal.ts === 'number' && isFinite(signal.ts) && (signal.action == null || typeof signal.action === 'string' && signal.action.length <= 80)) {
+          key = 'legacy:' + signal.sender + ':' + signal.ts + ':' + text(signal.type) + ':' + text(signal.action);
+        }
+        if (key) {
+          if (registry.recent.has(key)) return;
+          registry.recent.set(key, true);
+          if (registry.recent.size > 256) registry.recent.delete(registry.recent.keys().next().value);
+        }
+        if (reason === 'lock' || reason === 'unlock') registry.recent.clear();
+        Array.from(registry.listeners).forEach(function (callback) { callback(reason); });
+      };
       [['onPatientSaved', 'data'], ['onPatientDeleted', 'data'], ['onPatientNoteChanged', 'data'], ['onUnlock', 'unlock'], ['onLock', 'lock']].forEach(function (entry) {
-        if (typeof vault[entry[0]] === 'function') vault[entry[0]](function () { Array.from(registry).forEach(function (callback) { callback(entry[1]); }); });
+        if (typeof vault[entry[0]] === 'function') vault[entry[0]](function (_, envelope) { registry.emit(entry[1], envelope); });
       });
     }
-    registry.add(listener);
-    return function () { registry.delete(listener); };
+    var context = doc && doc.defaultView || win, contextEntry = registry.contexts.get(context), documentEntry = doc && registry.documents.get(doc);
+    if (!contextEntry) {
+      function changed(event) {
+        var signal = event && event.data;
+        if (signal && signal.type === 'note-changed') registry.emit('data', signal);
+      }
+      function storageChanged(event) {
+        if (!event || event.key !== 'vilda-note-changed-ping-v1' || !event.newValue) return;
+        try { changed({ data: JSON.parse(event.newValue) }); } catch (_) {}
+      }
+      var channel = null;
+      try {
+        if (typeof context.BroadcastChannel === 'function') {
+          channel = new context.BroadcastChannel('vilda-notes');
+          channel.addEventListener('message', changed);
+        }
+      } catch (_) { if (channel) { try { channel.close(); } catch (_) {} } channel = null; }
+      if (typeof context.addEventListener === 'function') context.addEventListener('storage', storageChanged);
+      contextEntry = { count: 0, channel: channel, changed: changed, storageChanged: storageChanged };
+      registry.contexts.set(context, contextEntry);
+    }
+    contextEntry.count += 1;
+    if (doc && typeof doc.addEventListener === 'function') {
+      if (!documentEntry) {
+        documentEntry = { count: 0, changed: function () { registry.emit('sync'); } };
+        doc.addEventListener('vilda:sync-merged', documentEntry.changed);
+        registry.documents.set(doc, documentEntry);
+      }
+      documentEntry.count += 1;
+    }
+    registry.listeners.add(listener);
+    return function () {
+      registry.listeners.delete(listener);
+      if (--contextEntry.count === 0) {
+        if (typeof context.removeEventListener === 'function') context.removeEventListener('storage', contextEntry.storageChanged);
+        if (contextEntry.channel) { contextEntry.channel.removeEventListener('message', contextEntry.changed); contextEntry.channel.close(); }
+        registry.contexts.delete(context);
+      }
+      if (documentEntry && --documentEntry.count === 0) {
+        doc.removeEventListener('vilda:sync-merged', documentEntry.changed); registry.documents.delete(doc);
+      }
+      if (!registry.listeners.size) registry.recent.clear();
+    };
   }
   function dateEntry(kind, value) { return day(value) ? { kind: kind, dateISO: value } : null; }
   function noteIndexDetails(note) {
@@ -187,64 +243,83 @@
       generation += 1; cached = null; pending = null;
       if (options.onInvalidate) { try { options.onInvalidate(reason || 'data'); } catch (_) {} }
     }
-    function assertCurrent(stamp) {
+    function assertCurrent(stamp, session) {
       if (destroyed || stamp !== generation) throw error('STALE_GLOBAL_SEARCH', 'Dane wyszukiwania zmieniły się. Wyszukaj ponownie.');
       var current = vault.getCurrentUser && vault.getCurrentUser();
       if (!vault.isUnlocked || !vault.isUnlocked() || !current) throw error('GLOBAL_SEARCH_LOCKED', 'Odblokuj konto, aby wyszukać pacjentów i sprawy.');
       if (!accountId || current.userId !== accountId) {
         invalidate('session'); throw error('STALE_GLOBAL_SEARCH', 'Konto zmieniło się. Otwórz wyszukiwarkę ponownie.');
       }
+      if (session && typeof vault.assertSyncOperationSession === 'function') {
+        try { vault.assertSyncOperationSession(session); } catch (_) {
+          invalidate('session'); throw error('STALE_GLOBAL_SEARCH', 'Sesja zmieniła się. Otwórz wyszukiwarkę ponownie.');
+        }
+      }
     }
     async function load() {
       var stamp = generation; assertCurrent(stamp);
-      if (cached) return cached.rows;
-      if (pending) return pending;
+      if (cached) { assertCurrent(stamp, cached.session); return cached.rows; }
+      if (pending) { var shared = await pending; assertCurrent(stamp, cached && cached.session); return shared; }
       ['listPatients', 'listExternalPatients', 'listAllPatientNotes', 'listCarePlans'].forEach(function (method) {
         if (typeof vault[method] !== 'function') throw error('GLOBAL_SEARCH_UNAVAILABLE', 'Odśwież aplikację, aby korzystać z wyszukiwarki pacjentów i spraw.');
       });
+      var session = typeof vault.captureSyncOperationSession === 'function' ? vault.captureSyncOperationSession() : null;
+      var readOptions = { strict: true, isCurrent: function () { try { assertCurrent(stamp, session); return true; } catch (_) { return false; } } };
+      function source(read) { return Promise.resolve(read).then(function (value) { assertCurrent(stamp, session); return value; }); }
       var request = (async function () {
-        // Each source is decrypted once per index generation, never once per
-        // keystroke. No getPatient()/snapshot payload is needed for a result.
-        var sources = await Promise.all([vault.listPatients(), vault.listExternalPatients(), vault.listAllPatientNotes(), vault.listCarePlans()]);
-        assertCurrent(stamp);
+        // Read each public source once per generation. Strict reads prevent an
+        // unreadable record from silently becoming a successful partial index.
+        var sources;
+        try {
+          sources = await Promise.all([source(vault.listPatients(readOptions)), source(vault.listExternalPatients(readOptions)), source(vault.listAllPatientNotes(readOptions)), source(vault.listCarePlans(readOptions))]);
+        } catch (cause) {
+          assertCurrent(stamp, session);
+          var failure = error('GLOBAL_SEARCH_READ_FAILED', 'Nie udało się wczytać pełnych wyników. Spróbuj ponownie.');
+          failure.cause = cause; throw failure;
+        }
+        assertCurrent(stamp, session);
         var klirens = win.ClcrNotesView;
         if (sources[2].some(function (note) { return note && note.category === 'wynik-klirens'; })) {
           if (typeof options.prepareNotes === 'function') klirens = await options.prepareNotes();
-          assertCurrent(stamp);
+          assertCurrent(stamp, session);
           if (!klirens || typeof klirens.summary !== 'function') throw error('GLOBAL_SEARCH_UNAVAILABLE', 'Nie można odczytać zapisanych wyników. Odśwież aplikację i spróbuj ponownie.');
         }
         var next = build(sources[0], sources[1], sources[2], sources[3], vault, { klirens: klirens, formatMedicationDose: options.formatMedicationDose });
-        assertCurrent(stamp); cached = next; return next.rows;
+        assertCurrent(stamp, session); next.session = session; cached = next; return next.rows;
       })();
       pending = request;
-      try { return await request; }
+      try { var rows = await request; assertCurrent(stamp, session); return rows; }
       finally { if (pending === request) pending = null; }
     }
     async function search(query, filters) {
-      filters = filters || {}; var stamp = generation, rows = await load(); assertCurrent(stamp);
+      filters = filters || {}; var stamp = generation, rows = await load(); assertCurrent(stamp, cached && cached.session);
       var tokens = normalize(query).split(' ').filter(Boolean), reference = day(filters.today) || today();
       var keys = cached.keys;
-      return rows.filter(function (row) {
-        if (tokens.some(function (token) { return keys.get(row.id).indexOf(token) < 0; })) return false;
-        if (filters.status && filters.status !== 'all') {
-          if (filters.status === 'open' ? row.status !== 'open' && row.status !== 'waiting' : row.status !== filters.status) return false;
+      var result = [];
+      rows.forEach(function (row) {
+        if (tokens.some(function (token) { return keys.get(row.id).indexOf(token) < 0; })) return;
+        if (filters.status && filters.status !== 'all' && (filters.status === 'open' ? row.status !== 'open' && row.status !== 'waiting' : row.status !== filters.status)) return;
+        var dates = row.dates.map(function (entry) { return { kind: entry.kind, dateISO: day(entry.dateISO) }; }).filter(function (entry) { return !!entry.dateISO; });
+        if (filters.time === 'undated') { if (!dates.length) result.push(row); return; }
+        if (filters.time === 'future' || filters.time === 'past' || filters.time === 'today') {
+          var matching = dates.filter(function (entry) { return filters.time === 'future' ? entry.dateISO > reference : filters.time === 'past' ? entry.dateISO < reference : entry.dateISO === reference; });
+          if (!matching.length) return;
+          var order = { event: 0, clinical: 1, reminder: 2 };
+          matching.sort(function (left, right) {
+            var comparison = left.dateISO < right.dateISO ? -1 : left.dateISO > right.dateISO ? 1 : 0;
+            return (filters.time === 'past' ? -comparison : comparison) || order[left.kind] - order[right.kind];
+          });
+          result.push(Object.assign({}, row, { matchedDate: matching[0] })); return;
         }
-        var dates = row.dates.map(function (entry) { return day(entry.dateISO); }).filter(Boolean);
-        if (filters.time === 'undated') return !dates.length;
-        if (filters.time === 'future') return dates.some(function (value) { return value > reference; });
-        if (filters.time === 'past') return dates.some(function (value) { return value < reference; });
-        if (filters.time === 'today') return dates.indexOf(reference) >= 0;
-        return true;
+        result.push(row);
       });
+      return result;
     }
-    var unobserve = observe(vault, invalidate);
-    function syncChanged() { invalidate('sync'); }
-    if (doc && doc.addEventListener) doc.addEventListener('vilda:sync-merged', syncChanged);
+    var unobserve = observe(vault, doc, invalidate);
     return {
       load: load, search: search, invalidate: invalidate,
       destroy: function () {
         if (destroyed) return; destroyed = true; generation += 1; cached = null; pending = null; unobserve();
-        if (doc && doc.removeEventListener) doc.removeEventListener('vilda:sync-merged', syncChanged);
       }
     };
   }
