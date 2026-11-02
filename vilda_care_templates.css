@@ -115,7 +115,7 @@ dialog.vct-reminders-dialog > .vilda-reminders-dialog-eye {
   min-height: 56px;
   max-height: 56px;
   overflow: auto;
-  padding: 8px 16px;
+  padding: var(--space-8px) var(--space-16px);
   overscroll-behavior: contain;
 }
 .vct.vct-reminders-layout .vct-feedback-slot > .vct-feedback {
@@ -134,7 +134,7 @@ dialog.vct-reminders-dialog > .vilda-reminders-dialog-eye {
 }
 /* A keyboard can shrink visualViewport without changing CSS media queries. */
 dialog.vct-reminders-dialog.vct-reminders-compact .vct-header {
-  padding: 4px 14px;
+  padding: var(--space-4px) var(--space-14px);
 }
 dialog.vct-reminders-dialog.vct-reminders-compact .vct-header h2 {
   font-size: 18px;
@@ -146,10 +146,10 @@ dialog.vct-reminders-dialog.vct-reminders-compact .vct-feedback-slot {
   flex-basis: 32px;
   min-height: 32px;
   max-height: 32px;
-  padding: 3px 14px;
+  padding: 3px var(--space-14px);
 }
 dialog.vct-reminders-dialog.vct-reminders-compact .vct-feedback {
-  padding: 2px 8px;
+  padding: 2px var(--space-8px);
   font-size: 11px;
 }
 dialog.vct-reminders-dialog.vct-reminders-compact .vct-workspace {
@@ -157,12 +157,12 @@ dialog.vct-reminders-dialog.vct-reminders-compact .vct-workspace {
   overscroll-behavior: contain;
 }
 dialog.vct-reminders-dialog.vct-reminders-compact .vct-library-tools {
-  padding: 6px 14px;
-  gap: 4px;
+  padding: var(--space-6px) var(--space-14px);
+  gap: var(--space-4px);
 }
 dialog.vct-reminders-dialog.vct-reminders-compact .vct-library-tools .vcp-search {
   min-height: 44px;
-  padding: 6px 10px;
+  padding: var(--space-6px) var(--space-10px);
   font-size: 16px;
 }
 dialog.vct-reminders-dialog.vct-reminders-compact .vct-library-tools button {
@@ -177,28 +177,28 @@ dialog.vct-reminders-dialog.vct-reminders-compact .vct-editor-layout {
 dialog.vct-reminders-dialog.vct-reminders-compact .vct-library-list,
 dialog.vct-reminders-dialog.vct-reminders-compact .vct-scroll-pane,
 dialog.vct-reminders-dialog.vct-reminders-compact .vct-editor-main {
-  padding: 8px 14px;
+  padding: var(--space-8px) var(--space-14px);
 }
 dialog.vct-reminders-dialog.vct-reminders-compact .vct-editor-main,
 dialog.vct-reminders-dialog.vct-reminders-compact .vct-stage-sidebar {
   overflow: visible;
 }
 dialog.vct-reminders-dialog.vct-reminders-compact .vct-breadcrumb {
-  margin: 0 14px;
+  margin: 0 var(--space-14px);
   padding: 2px 0;
 }
 dialog.vct-reminders-dialog.vct-reminders-compact .vct-wizard-steps {
-  padding: 0 14px;
+  padding: 0 var(--space-14px);
 }
 dialog.vct-reminders-dialog.vct-reminders-compact .vct-wizard-steps button {
   min-height: 44px;
-  padding: 4px 0!important;
+  padding: var(--space-4px) 0!important;
 }
 dialog.vct-reminders-dialog.vct-reminders-compact .vct-footer {
   flex-direction: column;
   align-items: stretch;
   gap: 2px;
-  padding: 4px 14px;
+  padding: var(--space-4px) var(--space-14px);
 }
 dialog.vct-reminders-dialog.vct-reminders-compact .vct-footer > .vcp-help {
   max-width: none;
@@ -208,11 +208,11 @@ dialog.vct-reminders-dialog.vct-reminders-compact .vct-footer > .vcp-help {
   line-height: 1.3;
 }
 dialog.vct-reminders-dialog.vct-reminders-compact .vct-footer-actions {
-  gap: 6px;
+  gap: var(--space-6px);
 }
 dialog.vct-reminders-dialog.vct-reminders-compact .vct-footer-actions button {
   min-height: 44px;
   margin: 0;
-  padding: 6px 8px;
+  padding: var(--space-6px) var(--space-8px);
   font-size: 12px;
 }

@@ -199,8 +199,8 @@ html.vilda-phone .vb22 .vgs-back {
 /* Accepted Reminders layout: keep the native controls and their search state
  * inside .vgs, while aligning them with the separate Care Plans toolbar. */
 .vb22.vb22--stable .vgs-toolbar {
-  padding: 12px 14px 10px;
-  gap: 10px
+  padding: var(--space-12px) var(--space-14px) var(--space-10px);
+  gap: var(--space-10px)
 }
 
 .vb22.vb22--stable .vgs-query {
@@ -209,8 +209,8 @@ html.vilda-phone .vb22 .vgs-back {
   height: 44px;
   min-height: 44px;
   margin: 0;
-  padding: 10px 12px;
-  border-width: 1px;
+  padding: var(--space-10px) var(--space-12px);
+  border-width: var(--border-hairline);
   font-family: Inter,sans-serif;
   font-size: 16px;
   line-height: 22px
@@ -226,8 +226,8 @@ html.vilda-phone .vb22 .vgs-back {
   appearance: none;
   height: 44px;
   min-height: 44px;
-  padding: 8px 32px 8px 12px;
-  border-width: 1px;
+  padding: var(--space-8px) 32px var(--space-8px) var(--space-12px);
+  border-width: var(--border-hairline);
   background-color: #fff;
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='m1 1 5 5 5-5' fill='none' stroke='%23607b81' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
   background-repeat: no-repeat;
@@ -266,7 +266,7 @@ html.vilda-phone .vb22 .vgs-back {
   .vb22.vb22--stable .vgs-list-pane {
     height: 100%;
     border-right: 0;
-    padding: 0 14px 10px
+    padding: 0 var(--space-14px) var(--space-10px)
   }
   .vb22.vb22--stable .vgs-detail {
     display: none
@@ -284,6 +284,6 @@ html.vilda-phone .vb22 .vgs-back {
   .vb22.vb22--stable .vgs-back {
     display: block;
     min-height: 44px;
-    margin-bottom: 12px
+    margin-bottom: var(--space-12px)
   }
 }

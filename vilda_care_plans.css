@@ -241,15 +241,15 @@ dialog.vcp.vcp-dialog::backdrop { background: #1a3b4445; backdrop-filter: blur(3
 .vcp.vcp-reminders-layout .vcp-list-fixed {
   display: none;
   flex: 0 0 auto;
-  padding: 12px 14px 10px;
+  padding: var(--space-12px) var(--space-14px) var(--space-10px);
 }
 .vcp.vcp.vcp-reminders-layout .vcp-search {
   width: 100%;
   height: 44px;
   min-height: 44px;
   margin: 0;
-  padding: 10px 12px;
-  border: 1px solid #cbdcdf!important;
+  padding: var(--space-10px) var(--space-12px);
+  border: var(--border-hairline) solid #cbdcdf!important;
   font: 400 16px/22px Inter, sans-serif;
   appearance: auto;
   -webkit-appearance: auto;
@@ -261,19 +261,19 @@ dialog.vcp.vcp-dialog::backdrop { background: #1a3b4445; backdrop-filter: blur(3
   display: flex;
   align-items: center;
   justify-content: flex-end;
-  padding: 2px 4px 10px;
+  padding: 2px var(--space-4px) var(--space-10px);
   flex-shrink: 0;
 }
 .vcp-reminders-layout .vcp-filter-reset {
   display: flex;
   justify-content: flex-end;
-  padding: 0 4px 10px;
+  padding: 0 var(--space-4px) var(--space-10px);
   flex-shrink: 0;
 }
 .vcp.vcp-reminders-layout .vcp-template-button,
 .vcp.vcp-reminders-layout .vcp-clear-filters {
   min-height: 44px;
-  padding: 4px 0;
+  padding: var(--space-4px) 0;
   margin: 0;
   font-size: 12px;
   line-height: 20px;
@@ -302,11 +302,11 @@ dialog.vcp.vcp-dialog.vcp-reminders-dialog {
   dialog.vcp.vcp-dialog.vcp-reminders-dialog { --vcp-dialog-gap: 8px; }
 }
 dialog.vcp.vcp-dialog.vcp-reminders-dialog.vcp-dialog-short { --vcp-dialog-gap: 8px; }
-.vcp-reminders-dialog.vcp-dialog-short .vcp-form-head { padding: 8px 14px; }
+.vcp-reminders-dialog.vcp-dialog-short .vcp-form-head { padding: var(--space-8px) var(--space-14px); }
 .vcp-reminders-dialog.vcp-dialog-short .vcp-form-head h2 { font-size: 18px; line-height: 24px; }
 .vcp-reminders-dialog.vcp-dialog-short .vcp-form-patient { margin-bottom: 2px; font-size: 10px; line-height: 14px; }
-.vcp-reminders-dialog.vcp-dialog-short .vcp-form-body { padding: 10px 14px; }
-.vcp-reminders-dialog.vcp-dialog-short .vcp-form-actions { padding: 6px 14px; }
+.vcp-reminders-dialog.vcp-dialog-short .vcp-form-body { padding: var(--space-10px) var(--space-14px); }
+.vcp-reminders-dialog.vcp-dialog-short .vcp-form-actions { padding: var(--space-6px) var(--space-14px); }
 .vcp.vcp .vcp-primary { background: var(--vcp-teal)!important; border-color: var(--vcp-teal)!important; color: #fff!important; font-weight: 500!important; }
 .vcp.vcp .vcp-primary:hover { background: #066f74!important; border-color: #066f74!important; }
 .vcp.vcp .vcp-outline { background: #fff!important; border-color: #bcd2d5!important; color: var(--vcp-teal)!important; }

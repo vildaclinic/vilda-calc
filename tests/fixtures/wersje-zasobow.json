@@ -973,7 +973,7 @@
  },
  "vilda_care_plans.css": {
   "v": 8,
-  "sha256": "e33b6d195ec285a9d6a6dbf4cd32d699089762c7e7c3e27d0073734690a14620"
+  "sha256": "3f1395e93c2ccfb6fca17ca9e52cecd252c2b0aeef775d16de72080863fd5549"
  },
  "vilda_care_plans.js": {
   "v": 10,
@@ -989,7 +989,7 @@
  },
  "vilda_care_templates.css": {
   "v": 2,
-  "sha256": "4cf51ee8f64c33043d4698c4e2af0b439cdaaac04d75b45ef41cda7c3b6b31e9"
+  "sha256": "37621cd01ac8e6bbb3e2dd6da15e51078cc3a04479ec01da4376e497dd766352"
  },
  "vilda_care_templates.js": {
   "v": 2,
@@ -1277,7 +1277,7 @@
  },
  "vilda_global_search.css": {
   "v": 2,
-  "sha256": "5128767300aa25dcb1ebef786e4b51cb923046fa8d3c9eedd715e2231bbde165"
+  "sha256": "442e604a7559499c8bdb63d2b6e3201acb05767722d7fb21028ccf5cee45a7d6"
  },
  "vilda_global_search.js": {
   "v": 3,
@@ -1665,7 +1665,7 @@
  },
  "vilda_reminders.css": {
   "v": 7,
-  "sha256": "d9d02bc329979ef48b5ba5f14fba63db88890adefdb267ee288b66dc28ce935a"
+  "sha256": "6e4141818c365824672ffa85e84be62c6c15f66532cf052f4a805e87269ecbb8"
  },
  "vilda_reminders_collapse.js": {
   "v": 2,
