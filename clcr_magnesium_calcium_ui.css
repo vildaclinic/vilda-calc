@@ -5,8 +5,8 @@ html[data-clcr-workflow-ui="1"][data-clcr-mgca-active="1"] {
 html[data-clcr-workflow-ui="1"][data-clcr-mgca-active="1"] #clcrWorkspace {
   width: 100%;
   min-width: 0;
-  gap: 20px;
-  row-gap: 24px;
+  gap: var(--space-20px);
+  row-gap: var(--space-24px);
   align-items: start;
 }
 html[data-clcr-workflow-ui="1"][data-clcr-mgca-active="1"] #clcrForm {
@@ -14,7 +14,7 @@ html[data-clcr-workflow-ui="1"][data-clcr-mgca-active="1"] #clcrForm {
   flex-direction: column;
   flex-wrap: nowrap;
   align-items: stretch;
-  gap: 16px;
+  gap: var(--space-16px);
   width: 100%;
   min-width: 0;
 }
@@ -26,14 +26,14 @@ html[data-clcr-workflow-ui="1"][data-clcr-mgca-active="1"] :is(#clcrResultRail, 
   box-sizing: border-box;
 }
 html[data-clcr-workflow-ui="1"][data-clcr-mgca-active="1"] #clcrResultReport {
-  padding: 20px;
+  padding: var(--space-20px);
 }
 html[data-clcr-workflow-ui="1"][data-clcr-mgca-active="1"] #clcrForm :is(input, select, button),
-html[data-clcr-workflow-ui="1"][data-clcr-mgca-active="1"] :is(#mgcaInputCard, #clcrResultReport, #clcrSaveVisitPanel) {
+html[data-clcr-workflow-ui="1"][data-clcr-mgca-active="1"] :is(#mgcaInputCard, #clcrResultReport) {
   transform: none !important;
 }
 html[data-clcr-workflow-ui="1"][data-clcr-mgca-active="1"] #clcrActivePanel {
-  padding: 20px 20px 0;
+  padding: var(--space-20px) var(--space-20px) 0;
   margin-bottom: 0;
   border-bottom: 0;
   border-bottom-left-radius: 0;
@@ -46,7 +46,7 @@ html[data-clcr-workflow-ui="1"][data-clcr-mgca-active="1"] .clcr-result-report__
 html[data-clcr-workflow-ui="1"][data-clcr-mgca-active="1"] :is(#clcrActivePanel .clcr-active-panel__eyebrow, #clcrResultTitle) {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--space-8px);
   min-height: 27px;
 }
 html[data-clcr-workflow-ui="1"][data-clcr-mgca-active="1"] :is(#clcrActivePanel .clcr-active-panel__eyebrow, #clcrResultTitle) .clcr-step-number {
@@ -56,10 +56,10 @@ html[data-clcr-workflow-ui="1"][data-clcr-mgca-active="1"] :is(#clcrActivePanel 
 html[data-clcr-workflow-ui="1"][data-clcr-mgca-active="1"] #mgcaInputCard {
   width: 100%;
   min-width: 0;
-  padding: 20px;
+  padding: var(--space-20px);
   margin-top: -16px;
   background: var(--clcr-surface, #fff);
-  border: 1px solid var(--clcr-border-soft, #d9e5e7);
+  border: var(--border-hairline) solid var(--clcr-border-soft, #d9e5e7);
   border-top: 0;
   border-radius: 0 0 var(--radius-16, 16px) var(--radius-16, 16px);
   box-sizing: border-box;
@@ -67,49 +67,40 @@ html[data-clcr-workflow-ui="1"][data-clcr-mgca-active="1"] #mgcaInputCard {
 .mgca-input-mode {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 4px;
-  padding: 4px;
-  margin-bottom: 16px;
-  border: 1px solid var(--clcr-border, #c8dcdf);
-  border-radius: 12px;
+  gap: var(--space-4px);
+  padding: var(--space-4px);
+  margin-bottom: var(--space-16px);
+  border: var(--border-hairline) solid var(--clcr-border, #c8dcdf);
+  border-radius: var(--radius-12);
   background: var(--clcr-surface-soft, #f7fafb);
 }
 html[data-clcr-workflow-ui="1"] #mgcaInputCard .mgca-input-mode button {
   width: 100%;
   min-width: 0;
   min-height: 52px;
-  padding: 8px;
+  padding: var(--space-8px);
   margin: 0;
-  border: 0;
-  border-radius: 8px;
-  box-shadow: none;
-  background: transparent;
-  color: var(--clcr-muted, #607d85);
   font: 650 16px/1.35 Inter, system-ui, sans-serif;
   white-space: normal;
   letter-spacing: normal;
 }
-html[data-clcr-workflow-ui="1"] #mgcaInputCard .mgca-input-mode button[aria-pressed="true"] {
-  background: var(--clcr-primary, #008996);
-  color: #fff;
-}
 .mgca-mode-fields {
   display: grid;
   min-width: 0;
-  gap: 20px;
-  margin-top: 16px;
+  gap: var(--space-20px);
+  margin-top: var(--space-16px);
 }
 .mgca-value-row {
   display: grid;
   grid-template-columns: minmax(0, 1fr) var(--mgca-unit-width, 124px);
-  gap: 8px;
+  gap: var(--space-8px);
   min-width: 0;
   align-items: end;
 }
 html[data-clcr-workflow-ui="1"] #mgcaInputCard .mgca-entry-field {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: var(--space-8px);
   align-self: end;
   min-width: 0;
   width: 100%;
@@ -143,10 +134,10 @@ html[data-clcr-workflow-ui="1"] #mgcaInputCard :is(input, select) {
   min-width: 0;
   height: 48px;
   min-height: 48px;
-  padding: 10px 12px;
+  padding: var(--space-10px) var(--space-12px);
   margin: 0;
-  border: 1px solid var(--clcr-border, #c8dcdf) !important;
-  border-radius: 12px;
+  border: var(--border-hairline) solid var(--clcr-border, #c8dcdf) !important;
+  border-radius: var(--radius-12);
   background: var(--clcr-surface, #fff);
   color: var(--clcr-text, #173d46);
   font: 400 16px/24px Inter, system-ui, sans-serif;
@@ -160,7 +151,7 @@ html[data-clcr-workflow-ui="1"] #mgcaInputCard .mgca-unit-field .clcr-field__hea
   display: none;
 }
 html[data-clcr-workflow-ui="1"] #mgcaInputCard select {
-  padding-inline: 8px;
+  padding-inline: var(--space-8px);
 }
 .mgca-field-hint,
 .mgca-assumption,
@@ -177,10 +168,10 @@ html[data-clcr-workflow-ui="1"] #mgcaInputCard select {
   flex-wrap: wrap;
   align-items: baseline;
   justify-content: space-between;
-  gap: 4px 12px;
+  gap: var(--space-4px) var(--space-12px);
   padding-top: 17px;
   margin: 21px 0 0;
-  border-top: 1px solid var(--clcr-border-soft, #d9e5e7);
+  border-top: var(--border-hairline) solid var(--clcr-border-soft, #d9e5e7);
   color: var(--clcr-muted, #607d85);
   font-size: 12px;
   line-height: 1.6;
@@ -211,7 +202,7 @@ html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .mgca-result-c
   width: 100%;
   min-width: 0;
   min-height: 310px;
-  padding: 20px !important;
+  padding: var(--space-20px) !important;
   box-sizing: border-box;
 }
 html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .mgca-result-status {
@@ -226,7 +217,7 @@ html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .mgca-result-m
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   grid-template-rows: auto minmax(58px, auto) auto;
-  gap: 0 14px;
+  gap: 0 var(--space-14px);
   align-items: stretch;
   min-width: 0;
   container-type: inline-size;
@@ -333,9 +324,9 @@ html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .mgca-result-m
   width: 100%;
   min-width: 0;
   min-height: 310px;
-  padding: 20px;
-  border: 1px dashed var(--clcr-border, #c8dcdf);
-  border-radius: 14px;
+  padding: var(--space-20px);
+  border: var(--border-hairline) dashed var(--clcr-border, #c8dcdf);
+  border-radius: var(--radius-14);
   background: var(--clcr-surface-soft, #f7fafb);
   color: var(--clcr-muted, #607d85);
   font-size: 13px;
@@ -349,7 +340,7 @@ html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .mgca-result-m
 }
 .mgca-result-empty p,
 .mgca-result-error p {
-  margin: 10px 0 0;
+  margin: var(--space-10px) 0 0;
   overflow-wrap: anywhere;
 }
 .mgca-result-error {
@@ -363,7 +354,7 @@ html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .mgca-result-m
 }
 .mgca-result-details {
   min-width: 0;
-  margin-top: 12px;
+  margin-top: var(--space-12px);
   color: var(--clcr-text, #173d46);
   font-size: 12px;
   line-height: 1.75;
@@ -387,59 +378,54 @@ html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .mgca-result-m
   text-underline-offset: 3px;
 }
 .mgca-unrounded-result {
-  padding: 10px;
-  border: 1px solid var(--clcr-border-soft, #d9e5e7);
-  border-radius: 9px;
+  padding: var(--space-10px);
+  border: var(--border-hairline) solid var(--clcr-border-soft, #d9e5e7);
+  border-radius: var(--radius-9);
   background: var(--clcr-surface-soft, #f7fafb);
   font-size: 12px;
   font-variant-numeric: tabular-nums;
 }
 .mgca-detail-links {
   display: grid;
-  gap: 8px;
+  gap: var(--space-8px);
 }
 html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .mgca-detail-links button {
   width: 100%;
   min-width: 0;
   min-height: 48px;
-  padding: 8px 10px;
+  padding: var(--space-8px) var(--space-10px);
   margin: 0;
-  border: 1px solid var(--clcr-border, #c8dcdf);
-  border-radius: 10px;
-  background: var(--clcr-surface, #fff);
-  color: var(--clcr-primary-dark, #006f7a);
   font-size: 16px;
   line-height: 1.45;
   font-weight: 650;
   text-align: left;
-  white-space: normal;
-  box-shadow: none;
+  white-space: normal
 }
 @media (max-width: 700px) {
   html[data-clcr-workflow-ui="1"][data-clcr-mgca-active="1"] {
     --mgca-unit-width: 108px;
   }
   html[data-clcr-workflow-ui="1"][data-clcr-mgca-active="1"] #clcrForm {
-    margin-bottom: 20px;
+    margin-bottom: var(--space-20px);
   }
   html[data-clcr-workflow-ui="1"][data-clcr-mgca-active="1"] :is(#clcrActivePanel, #mgcaInputCard, #clcrResultReport) {
-    padding-inline: 16px;
+    padding-inline: var(--space-16px);
   }
   html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .mgca-result-card {
-    padding: 16px !important;
+    padding: var(--space-16px) !important;
   }
   html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .mgca-result-main {
-    gap: 0 12px;
+    gap: 0 var(--space-12px);
   }
 }
 @media (max-width: 350px) {
   html[data-clcr-workflow-ui="1"][data-clcr-mgca-active="1"] :is(#clcrActivePanel, #mgcaInputCard, #clcrResultReport) {
-    padding-inline: 12px;
+    padding-inline: var(--space-12px);
   }
   html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .mgca-result-card {
-    padding: 14px !important;
+    padding: var(--space-14px) !important;
   }
   html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .mgca-result-main {
-    gap: 0 10px;
+    gap: 0 var(--space-10px);
   }
 }
