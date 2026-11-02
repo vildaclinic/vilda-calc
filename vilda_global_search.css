@@ -245,7 +245,8 @@ html.vilda-phone .vb22 .vgs-back {
 }
 
 .vb22.vb22--stable.vb22-inline .vgs-select {
-  font-size: 13px
+  font-size: 13px;
+  padding-right: 30px
 }
 
 @container vb22-reminders (max-width:700px) {
@@ -256,7 +257,8 @@ html.vilda-phone .vb22 .vgs-back {
     grid-column: 1/-1
   }
   .vb22.vb22--stable .vgs-select {
-    font-size: 13px
+    font-size: 13px;
+    padding-right: 30px
   }
   .vb22.vb22--stable .vgs-layout {
     display: block;
