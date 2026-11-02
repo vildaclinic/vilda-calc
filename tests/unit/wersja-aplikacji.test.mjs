@@ -36,7 +36,7 @@
 //   SW1 VILDA_WERSJA z portem → {type, wersja = SW_VERSION z pliku}. SW2 SKIP_WAITING bez zmian; nieznany typ bez
 //       odpowiedzi; VILDA_WERSJA bez portów nie rzuca. SW3 VILDA_WERSJA nie woła skipWaiting.
 //   SW4 czytnik strony + prawdziwy nasłuch SW → numer = SW_VERSION z pliku (oczekujący też prawdziwy SW).
-//   SW5 SW bez gałęzi VILDA_WERSJA (jak 1.1.437 i starsze, pierwsze wydanie) + nowy oczekujący → „starsza wersja … · gotowa …”.
+//   SW5 SW bez gałęzi VILDA_WERSJA (jak 1.1.438 i starsze, pierwsze wydanie) + nowy oczekujący → „starsza wersja … · gotowa …”.
 //   S1  strażniki źródła: blok między znacznikami na końcu 07, po kłódce; cały 07 ASCII; blok bez ?v=, literału x.y.z,
 //       SW_VERSION=, caches/fetch/storage/innerHTML/.style, var f=[ i gołego document/navigator; jedno
 //       „const SW_VERSION = '” w SW; brak vilda_wersja_aplikacji w SW i na dysku.

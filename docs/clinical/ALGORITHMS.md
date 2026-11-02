@@ -20435,7 +20435,7 @@ usuwają sprawdzenia nadmiarowe, przed którymi nie ma żądania ani wywołania 
 
 **Wpływ kliniczny: brak.** **Wersje.** `vilda_sync.js?v=45→46` (8 stron); SW 1.1.435 → **1.1.436**.
 
-## Linia „Wersja aplikacji” w Ustawieniach (P-WERSJA-APLIKACJI, E2-PR1w, SW 1.1.438, `inline_ustawienia_07.js` 3, `ustawienia.css` 19, 2026-11-02)
+## Linia „Wersja aplikacji” w Ustawieniach (P-WERSJA-APLIKACJI, E2-PR1w, SW 1.1.439, `inline_ustawienia_07.js` 3, `ustawienia.css` 19, 2026-11-02)
 
 **Zmiana kliniczna: NIE** — wzory, progi, jednostki, interpretacje, zapis i synchronizacja bez zmian. Linia tylko pokazuje
 numer wersji.
@@ -20457,10 +20457,10 @@ cyfra) liczy się jak brak odpowiedzi; limit odpowiedzi 2 s.
 | Stan (cała linia: „Wersja aplikacji: …”) | Tekst wartości |
 |---|---|
 | przed pierwszym wynikiem (zwykle ułamek sekundy; do 2 s, gdy kontroler albo oczekujący milczy) | `sprawdzam…` (tekst startowy w HTML) |
-| kontroler odpowiada | `1.1.438` |
-| i oczekujący odpowiada | `1.1.438 · gotowa aktualizacja 1.1.439` |
-| i oczekujący milczy (np. cofnięcie wydania do SW bez tej obsługi) | `1.1.438 · gotowa aktualizacja` |
-| i instaluje się nowy SW, bez oczekującego | `1.1.438 · pobieranie aktualizacji…` |
+| kontroler odpowiada | `1.1.439` |
+| i oczekujący odpowiada | `1.1.439 · gotowa aktualizacja 1.1.440` |
+| i oczekujący milczy (np. cofnięcie wydania do SW bez tej obsługi) | `1.1.439 · gotowa aktualizacja` |
+| i instaluje się nowy SW, bez oczekującego | `1.1.439 · pobieranie aktualizacji…` |
 | instaluje się nowy i jest oczekujący | jak przy oczekującym (pierwszeństwo „gotowej aktualizacji”) |
 | kontroler milczy dłużej niż 2 s albo odpowiada spoza wzoru (SW sprzed tej zmiany) | `starsza wersja (numer nieznany)` (+ dopiski jak wyżej) |
 | brak kontrolera albo SW (pierwsza wizyta przed przejęciem strony, Shift+F5, przeglądarka bez SW albo bez `MessageChannel`, testy z zablokowanym SW) | `nieustalona` (+ dopiski jak wyżej, gdy jest rejestracja) |
@@ -20471,12 +20471,12 @@ dopisek „ · gotowa aktualizacja” bez numeru przy milczącym oczekującym to
 co baner aktualizacji, który reaguje na samo `registration.waiting` (`ios26-ui.js`); od tego wydania każdy nowy SW
 odpowiada, więc to przypadek brzegowy.
 
-**Pierwsze wydanie.** SW 1.1.437 i starsze nie znają `VILDA_WERSJA`. Pierwsze otwarcie po wdrożeniu na urządzeniu z takim SW może
+**Pierwsze wydanie.** SW 1.1.438 i starsze nie znają `VILDA_WERSJA`. Pierwsze otwarcie po wdrożeniu na urządzeniu z takim SW może
 jeszcze pokazać Ustawienia bez linii: stary SW podaje stronę z pamięci offline, a nowy dopiero się pobiera. Linia pojawia
 się po „Aktualizuj” w banerze albo po ponownym otwarciu strony. W tym drugim przypadku (nowy HTML pod starym SW) pokazuje
-najpierw „sprawdzam…”, a po 2 s „starsza wersja (numer nieznany)” z dopiskiem „ · pobieranie aktualizacji…” albo „ · gotowa aktualizacja 1.1.438”,
-a po „Aktualizuj” — „1.1.438” (sprawdzone w przeglądarce z prawdziwymi SW obu wersji). Numery 1.1.436 i 1.1.437 z przykładu
-właściciela nie pojawią się nigdzie (ich SW nie znają pytania); pierwszy widoczny numer to 1.1.438.
+najpierw „sprawdzam…”, a po 2 s „starsza wersja (numer nieznany)” z dopiskiem „ · pobieranie aktualizacji…” albo „ · gotowa aktualizacja 1.1.439”,
+a po „Aktualizuj” — „1.1.439” (sprawdzone w przeglądarce z prawdziwymi SW obu wersji). Numery 1.1.436 i 1.1.437 z przykładu
+właściciela nie pojawią się nigdzie (ich SW nie znają pytania); pierwszy widoczny numer to 1.1.439.
 
 **Kiedy odczyt.** Przy starcie strony (plik jest `defer`, więc DOM jest gotowy; ten odczyt idzie zwykle przed
 `register()` z `ios26-ui.js`, który startuje po `DOMContentLoaded`, ale rejestracja z poprzednich wizyt już istnieje, a
@@ -20567,7 +20567,7 @@ aplikacji: nieustalona”, bo zrzuty idą z zablokowanym SW) odświeża w tym PR
 agent lokalnie.
 
 **Wpływ kliniczny: brak.** **Wersje.** Bez nowego pliku: `inline_ustawienia_07.js?v=2→3`, `ustawienia.css?v=18→19`,
-`ustawienia.html` w pamięci SW; SW 1.1.437 → **1.1.438** (`npm run podbij-wersje`); żądania instalacji SW 600 → 600.
+`ustawienia.html` w pamięci SW; SW 1.1.438 → **1.1.439** (`npm run podbij-wersje`); żądania instalacji SW 600 → 600.
 
 ## Zapis karty i okna zapisu kończą się w sesji, w której ruszyły, a pobranie z chmury — w sesji swojego konta (P-SESJA-ZAPISU, PR-S, SW 1.1.418, `vilda_vault.js` 236, `vilda_auth_ui.js` 519, `vilda_data_import_export.js` 113, `vilda_sync.js` 41, `vilda_sync_integration.js` 53, 2026-10-30)
 
