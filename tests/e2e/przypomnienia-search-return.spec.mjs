@@ -111,31 +111,45 @@ for (const [profile, settings] of profiles) test.describe(profile, () => {
     await assertSearchContext(page, careContext);
   });
 
-  test('the temporary event editor returns after cancel, Escape and a real saved edit', async ({ page }) => {
-    const created = await searchReturnFixture(page);
-    let { search } = await openLongResult(page, created);
-    const editor = page.locator('.vilda-patient-note-editor-overlay');
-    for (const exit of ['cancel', 'escape', 'save']) {
-      const action = search.getByRole('button', { name: 'Otwórz w Terminarzu ↗', exact: true });
-      const before = await contextAtAction(search, action);
-      await action.click();
-      await expect(editor).toBeVisible();
-      if (exit === 'cancel') await editor.getByRole('button', { name: 'Anuluj', exact: true }).click();
-      else if (exit === 'escape') await page.keyboard.press('Escape');
-      else {
-        await editor.getByLabel('Treść', { exact: true }).fill('Fikcyjny opis zapisany podczas testu powrotu.');
-        await editor.getByRole('button', { name: 'Zapisz zmiany', exact: true }).click();
+  test('the real calendar restores Search after its return button, Browser Back and internal calendar browsing', async ({ playwright, browserName, launchOptions }, testInfo) => {
+    // This case proves encrypted recovery after a full document reload. Keep
+    // BFCache out of that proof and avoid its restored Playwright Clock realm.
+    const isolated = await playwright[browserName].launch({ ...launchOptions,
+      args: [...(launchOptions?.args || []), '--disable-features=BackForwardCache'] });
+    try {
+      const context = await isolated.newContext({ ...settings, baseURL: testInfo.project.use.baseURL,
+        locale: 'pl-PL', timezoneId: 'Europe/Warsaw', serviceWorkers: 'block', reducedMotion: 'reduce' });
+      context.setDefaultTimeout(15000); context.setDefaultNavigationTimeout(30000);
+      const page = await context.newPage();
+      const created = await searchReturnFixture(page);
+      let { search } = await openLongResult(page, created);
+      for (const exit of ['button', 'browser', 'internal']) {
+        const action = search.getByRole('button', { name: 'Otwórz w Terminarzu ↗', exact: true });
+        const before = await contextAtAction(search, action);
+        await action.click();
+        await expect(page).toHaveURL(/\/terminarz\.html(?:[?#]|$)/);
+        const calendar = page.locator('#terminarzRoot');
+        await expect(calendar).toHaveClass(/tz-view-day/);
+        const selected = calendar.locator(`[data-note-id="${created.longNotes[80]}"][aria-current="true"]`);
+        await expect(selected).toBeVisible();
+        await expect(selected).toBeInViewport();
+        await expect(calendar.locator(`[data-tz-selected-summary="${created.longNotes[80]}"]`)).toContainText(`${LONG_QUERY} 081`);
+        await expect(page.locator('.vilda-patient-note-editor-overlay, #tzNewTermOverlay, .tz-pop')).toHaveCount(0);
+        if (exit === 'browser') await page.goBack();
+        else {
+          if (exit === 'internal') {
+            await page.locator('#tzNext').click();
+            await expect(selected).toHaveCount(0);
+            // Day arrows replace the current entry. Changing view adds a real
+            // internal history step, which the explicit return must also cross.
+            await calendar.locator('.tz-switch [data-view="week"]').click();
+            await expect.poll(() => page.evaluate(() => history.state?.vildaSearchCalendarTarget?.steps)).toBe(2);
+          }
+          await calendar.getByRole('button', { name: RETURN_TO_SEARCH, exact: true }).click();
+        }
+        search = await assertSearchContext(page, before);
       }
-      await expect(editor).toHaveCount(0);
-      if (exit === 'save') {
-        // A shorter freshly read body clamps the old offset to its new range.
-        await expect(search.locator('.vb22-body')).toHaveText('Fikcyjny opis zapisany podczas testu powrotu.');
-        const maximum = await search.locator('.vgs-detail').evaluate(node => Math.max(0, node.scrollHeight - node.clientHeight));
-        before.detailScroll = Math.min(before.detailScroll, maximum);
-      }
-      search = await assertSearchContext(page, before);
-      if (exit === 'save') await expect(search.locator('.vb22-body')).toHaveText('Fikcyjny opis zapisany podczas testu powrotu.');
-    }
+    } finally { await isolated.close(); }
   });
 
   test('a saved update rereads the long preview without resetting scroll or taking the query focus', async ({ page }) => {

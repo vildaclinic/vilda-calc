@@ -19,7 +19,7 @@
  *   bo i tak chcemy zwracać HTML z cache natychmiast.
  */
 
-const SW_VERSION = '1.1.433';
+const SW_VERSION = '1.1.434';
 const CACHE_PREFIX = 'pwa-kalorii';
 const SHELL_CACHE = `${CACHE_PREFIX}-shell-v${SW_VERSION}`;
 const RUNTIME_CACHE = `${CACHE_PREFIX}-runtime`;
@@ -992,6 +992,7 @@ const CORE_SHELL_URLS = [
   '/vilda_global_search_view.js?v=1',
   '/vilda_global_search_view.js?v=2',
   '/vilda_global_search_view.js?v=3',
+  '/vilda_search_navigation.js?v=1',
   '/vilda_care_plans.css?v=1',
   '/vilda_care_plans.css?v=2',
   '/vilda_care_plans.css?v=3',
@@ -1571,6 +1572,7 @@ const CORE_SHELL_URLS = [
   '/vilda_chrome.js?v=211',
   '/vilda_chrome.js?v=212',
   '/vilda_chrome.js?v=213',
+  '/vilda_chrome.js?v=214',
   '/vilda_realtime.js?v=1',
   '/vilda_realtime.js?v=2',
   '/vilda_realtime.js?v=3',
@@ -1739,6 +1741,7 @@ const CORE_SHELL_URLS = [
   '/vilda_terminarz.js?v=192',
   '/vilda_terminarz.js?v=193',
   '/vilda_terminarz.js?v=194',
+  '/vilda_terminarz.js?v=195',
   '/vilda_chrome.css?v=11',
   '/vilda_chrome.css?v=12',
   '/vilda_chrome.css?v=15',
@@ -2826,6 +2829,7 @@ const OPTIONAL_ASSETS = [
   '/vilda_shell.js?v=71',
   '/vilda_shell.js?v=72',
   '/vilda_shell.js?v=73',
+  '/vilda_shell.js?v=74',
   '/vilda_shell.css',
   '/vilda_shell.css?v=1',
   '/vilda_shell.css?v=2',
@@ -3875,6 +3879,7 @@ const OPTIONAL_ASSETS = [
   '/vilda_auth_ui.js?v=523',
   '/vilda_auth_ui.js?v=524',
   '/vilda_auth_ui.js?v=525',
+  '/vilda_auth_ui.js?v=526',
   '/app.js?v=205',
   '/app.js?v=206',
   '/app.js?v=207',
@@ -4139,6 +4144,7 @@ const OPTIONAL_ASSETS = [
   '/vilda_session_bridge.js?v=135',
   '/vilda_session_bridge.js?v=136',
   '/vilda_session_bridge.js?v=137',
+  '/vilda_session_bridge.js?v=138',
   '/vilda_data_safety_explainer.js?v=5',
   '/vilda_obesity_banner.css?v=6',
   '/vilda_obesity_banner.css?v=7',
@@ -4814,7 +4820,10 @@ const FRESH_STATIC_ALIAS_PATHS = new Set([
   '/vilda_crypto.js', '/vilda_persistence_adapter.js', '/vilda_crypto_strength_explainer.js',
   // Recovery keeps the same cold-install budget by sharing only fresh bytes
   // between the two current aliases of these unchanged bootstrap scripts.
-  '/vilda_deps.js', '/vilda_update_hooks.js'
+  '/vilda_deps.js', '/vilda_update_hooks.js',
+  // The Search handoff adds one resource. Share the two current aliases of
+  // the unchanged UI bootstrap to retain the existing cold-install budget.
+  '/ios26-ui.js'
 ]);
 
 async function fetchAndStorePrecacheUrl(url, { required = false, previousShellCaches = [], freshResponses = null } = {}) {

@@ -50,19 +50,55 @@ ponownie z aktualnego sejfu. Usunięty lub wykluczony przez filtr wynik daje
 neutralną informację i zachowuje zapytanie; nie jest zastępowany innym wpisem.
 Zwykłe odświeżenie utrzymuje pozycję i nie odbiera fokusu wpisywanemu zapytaniu.
 
-AuthUI utrzymuje jeden jednorazowy bilet powrotny w RAM, związany z obiektem
-sejfu, użytkownikiem i epoką odblokowania. Nowa jawna nawigacja, blokada,
-ponowne odblokowanie lub zmiana konta unieważnia bilet i oczekujący powrót.
+W bieżącym dokumencie AuthUI utrzymuje jeden jednorazowy bilet powrotny w RAM,
+związany z obiektem sejfu, użytkownikiem i epoką odblokowania. Nowa jawna
+nawigacja, blokada, ponowne odblokowanie lub zmiana konta unieważnia bilet
+i oczekujący powrót.
 Przy nawigacji i odtwarzaniu Szukaj po asynchronicznym odczycie sprawdzana
 jest bieżąca intencja; dotyczy to również obsługi błędu. Zapytanie nie trafia do URL, `history.state`,
-preferencji ani synchronizacji. Powłoka zamyka także powierzchnię AuthUI
-w najwyższym oknie przy zmianie trasy, bez wymuszania dodatkowego Wstecz.
+preferencji ani synchronizacji. Zwykła zmiana trasy zamyka także powierzchnię
+AuthUI w najwyższym oknie, bez wymuszania dodatkowego Wstecz.
 
-W tej części przycisk „Otwórz w Terminarzu” nadal korzysta z dotychczasowego
-edytora wydarzenia; anulowanie i zapis odtwarzają właściwe źródło.
-Rzeczywiste przejście do kalendarza z wyróżnieniem wydarzenia jest osobną
-częścią naprawy. Bilet RAM nie oznacza odtworzenia wyszukiwania po pełnym
-przeładowaniu dokumentu lub ponownym uruchomieniu aplikacji.
+### Terminarz i przejście między dokumentami (PR3)
+
+**Otwórz w Terminarzu ↗** otwiera rzeczywisty kalendarz w widoku dnia.
+Dzień pochodzi ze świeżo odczytanego `dueDateISO`; wskazywany jest dokładny
+`noteId`, także gdy termin zmienił się od wyszukania. Wydarzenie otrzymuje
+obrys, fokus i przewinięcie do widocznego bloku. Pasek nad kalendarzem pokazuje
+pełny tytuł, osobę i godzinę oraz **← Wróć do Szukaj**. Odświeżenie zachowuje
+zaznaczenie, lecz nie odbiera fokusu po kolejnej interakcji użytkownika.
+Brak, usunięcie lub brak terminu wpisu daje neutralny komunikat z działającym
+powrotem; nie otwiera sąsiedniego wydarzenia ani edytora.
+
+W powłoce `vilda_shell.js` przenosi tylko deskryptor zatwierdzony przez
+właścicielskie AuthUI. Zachowuje źródłową trasę i jednorazowy bilet podczas
+tego konkretnego przejścia. Jawny powrót oraz Wstecz do źródłowego wpisu
+historii najpierw pokazują właściwą trasę, a potem odtwarzają Szukaj.
+Odbiorca celu sprawdza po odczytach bieżącą intencję, właściciela sesji oraz
+tożsamość dokumentu i generację ramki. Nowa intencja, nawet z takim samym
+adresem, odwołuje poprzednią.
+
+Na stronach samodzielnych `vilda_search_navigation.js` przenosi kontekst przez
+pełną zmianę dokumentu. Przechowuje jeden ograniczony rozmiarem szyfrogram
+UI przez najwyżej 30 minut, bez przedłużania czasu przy odczycie. Korzysta
+z istniejącej kryptografii sejfu i `VildaPersistence.getStorage('session')`;
+nie zapisuje jawnego zapytania ani kopii rekordów. Globalny znacznik epoki UI
+w natywnym `sessionStorage` jest losową wartością bez danych konta lub pacjenta.
+Odtworzenie istniejącej sesji pozwala wrócić po przeładowaniu; świeże logowanie,
+blokada, tryb gościa i nowa zwykła nawigacja unieważniają stary kontekst.
+
+Kalendarz może odczytać szyfrogram bez zużycia. Dopiero właściwa strona
+źródłowa zużywa go raz przed odtworzeniem Szukaj. Obsługiwane są jawny powrót,
+Browser Back bez BFCache oraz powrót, gdy źródłem również był Terminarz,
+w tym zmiana samego fragmentu adresu. URL i historia niosą identyfikatory
+wydarzenia lub powrotu, bez zapytania i treści pacjenta. Brak możliwości
+utrwalenia powrotu pozostawia źródłowe Szukaj otwarte.
+
+PR2 zachowywał kontekst w jednym dokumencie i otwierał edytor wydarzenia.
+PR3 zastępuje tę akcję kalendarzem i dodaje powyższy transport; nie ustanawia
+trwałej historii wyszukiwania ani obietnicy odtwarzania po nowym logowaniu.
+Samo przejście i powrót nie zapisują danych klinicznych, nie przeliczają
+wyników i nie zmieniają dat ani statusu wydarzenia.
 
 ## Prezentacja zapisanych wyników i dawek
 
@@ -95,9 +131,9 @@ Częstość nie powiela już jednostki dobowej lub tygodniowej; `/dL` pozostaje
 jednostką stężenia. Oryginalne pola zwykłych notatek nadal są wyszukiwalne
 w prywatnym indeksie, nawet gdy zduplikowana reprezentacja znika z podglądu.
 
-Zmiana dotyczy odczytu i prezentacji. Nie zmienia zapisów pacjenta, snapshotów,
-wyników obliczeń, progów ani zasad synchronizacji. Nawigacja i cykl aktualizacji
-indeksu są odrębnymi częściami naprawy.
+Ta część naprawy dotyczy odczytu i prezentacji. Nie zmienia zapisów pacjenta,
+snapshotów, wyników obliczeń, progów ani zasad synchronizacji. Nawigację
+opisano powyżej; cykl aktualizacji indeksu pozostaje odrębnym zakresem.
 
 ### Zakres sprawdzonych producentów
 

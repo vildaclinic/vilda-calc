@@ -9,7 +9,7 @@ const DEPENDENCIES = [
   'VildaCrypto', 'VildaCarePlanModel', 'VildaLabSnapshot', 'VildaLabTestosteroneUnits', 'VildaLabAssessmentUI',
   'VildaHormoneReferenceSnapshot', 'VildaLabRangeSnapshot', 'VildaHormoneReferenceUI',
   'VildaLabHistory', 'VildaLabHistoryTab', 'VildaPubertyAssessment', 'VildaProAccess',
-  'VildaRemindersPrivacy', 'VildaGlobalSearch', 'VildaGlobalSearchView',
+  'VildaRemindersPrivacy', 'VildaGlobalSearch', 'VildaGlobalSearchView', 'VildaSearchNavigation',
 ];
 
 const REMINDER_MODULES = [
@@ -17,6 +17,7 @@ const REMINDER_MODULES = [
   ['VildaRemindersPrivacy', 'vilda_reminders_privacy.js'],
   ['VildaGlobalSearch', 'vilda_global_search.js'],
   ['VildaGlobalSearchView', 'vilda_global_search_view.js'],
+  ['VildaSearchNavigation', 'vilda_search_navigation.js'],
 ];
 
 function environment(careReady = false, missingReminderModule = null) {
@@ -100,6 +101,16 @@ function clickChromeAccount(env) {
 }
 
 describe('care plans dependency loading on already initialized auth pages', () => {
+  it('both lazy stacks bind portable Search navigation after the vault and before AuthUI can restore its session', () => {
+    const bridge = fs.readFileSync(new URL('../../vilda_session_bridge.js', import.meta.url), 'utf8');
+    for (const code of [bridge, chromeSource]) {
+      const at = file => code.indexOf(file + '?');
+      expect(at('vilda_vault.js')).toBeGreaterThanOrEqual(0);
+      expect(at('vilda_search_navigation.js')).toBeGreaterThan(at('vilda_vault.js'));
+      expect(at('vilda_search_navigation.js')).toBeLessThan(at('vilda_auth_ui.js'));
+    }
+  });
+
   it('session bridge explicitly loads the missing care CSS/JS and shares an in-flight load', async () => {
     const env = environment();
     loadBrowserScript('vilda_session_bridge.js', env.win);

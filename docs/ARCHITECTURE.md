@@ -322,6 +322,46 @@ Ustalony termin badania/wizyty jest osobną informacją w treści notatki, nieza
 od `dueDateISO` przypomnienia. Data otrzymania opisu wyniku nie jest datą pobrania
 materiału; wynik opisowy nie trafia do liczbowych serii laboratoryjnych.
 
+**Szukaj → Terminarz (PR3).** Indeks i podgląd Szukaj korzystają z aktualnych
+rekordów sejfu; snapshot powrotu zawiera tylko skalarny stan UI, bez wierszy
+indeksu i danych źródłowych. AuthUI jest właścicielem jednego biletu powrotnego.
+`VildaTerminarz.openEvent()` odczytuje wskazaną notatkę i aktualny zakres
+kalendarza, otwiera lokalny dzień `dueDateISO` oraz wyróżnia widoczny blok
+dokładnego `noteId`. Obrys i pasek pełnego tytułu/osoby/godziny są stanem
+prezentacji; nie otwierają edytora i nie zmieniają wpisu. Brak celu pozostawia
+komunikat i powrót. Odczyty, zaznaczenie i fokus są chronione przed nowszą
+intencją, zmianą sesji i spóźnioną odpowiedzią wcześniejszego zakresu.
+
+W powłoce bilet pozostaje w RAM najwyższego AuthUI. Router akceptuje tylko
+bieżący deskryptor tego właściciela do trasy `terminarz`, przekazuje go również
+przez odroczone Wstecz i przy powrocie pokazuje zapamiętaną trasę źródłową.
+Zwykła nawigacja nadal kasuje stary kontekst. Dostarczony cel ma guard
+`isCurrent()` powiązany z konkretną intencją, widoczną ramką, jej dokumentem
+i generacją; identyczny href nowej intencji nie ożywia starego odczytu.
+
+Na stronach samodzielnych `vilda_search_navigation.js` ładuje się po adapterze
+pamięci i sejfie, przed AuthUI, także w stosach leniwego ładowania. Używa
+istniejącego szyfrowania sejfu oraz adapterowego `getStorage('session')`.
+Odtworzenie sesji zachowuje dozwolony transport; świeże logowanie i nowa epoka
+UI go unieważniają. Kalendarz czyta go bez zużycia, a aktywna strona źródłowa
+zużywa raz przed odtworzeniem Search. Powrót obsługuje również Browser Back
+bez BFCache i źródło/kalendarz w tym samym pliku. URL i `history.state`
+zawierają wyłącznie metadane nawigacji, bez zapytania i treści pacjenta.
+
+Inwentaryzacja pamięci tego transportu — oba klucze należą do UI konta/karty
+przeglądarki, nie do sesji formularza pacjenta ani synchronizacji:
+
+| Klucz | Pamięć i zawartość | Czas życia i czyszczenie |
+|---|---|---|
+| `vilda-search-navigation-v1` | Sesyjny stan UI konta i karty przez `getStorage('session')`: wyłącznie `{iv,data}`. Tryby cloud-only i jednorazowy używają istniejącego prefiksu `veph:s:` natywnego `sessionStorage`; rzeczywisty fallback pamięciowy jest odrzucany. | Jeden szyfrogram o ograniczonym rozmiarze, ważny 30 minut od utworzenia, bez przedłużania. Zużycie źródła, nowa intencja, blokada, świeże logowanie, gość i czyszczenie użytkownika usuwają lub unieważniają poprzedni kontekst. |
+| `vilda-search-navigation-session-v1` | Globalny natywny `sessionStorage` tej karty, poza prefiksami trybów: wyłącznie losowa epoka UI, bez konta i pacjenta. | Należy do epoki UI, nie do pacjenta. Zużycie biletu lub granica sesji/intencji kasują znacznik; nowy transport tworzy nowy. Wspólna epoka uniemożliwia odtworzenie szyfrogramu z dawnego prefiksu po zmianie trybu. |
+
+Nie ma zapisu do `localStorage`, preferencji ani rekordów klinicznych.
+Operacje asynchroniczne sprawdzają istniejącą granicę sesji sejfu, konto,
+kartę, epokę UI i tożsamość szyfrogramu. Opuszczenie dokumentu (`pagehide`) anuluje
+trwającą kryptografię, lecz zachowuje wcześniej zatwierdzony transport.
+Szczegóły zachowania i granic: `docs/REMINDERS_SEARCH.md`.
+
 ### Podgląd siatki podczas nowego pomiaru
 
 Przypomnienia w `vilda_auth_ui.js` mają osobny, czytelny blok `P-PRZYPOMNIENIA-STAN`.

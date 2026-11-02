@@ -24,7 +24,7 @@ function environment(missing = [], restoredSession = false) {
     VildaCarePlanModel: {}, VildaCarePlans: {},
     // Search/privacy have their own missing-dependency loader regressions in
     // care-plans-loader.test.mjs; hormone cases start with that UI stack ready.
-    VildaRemindersPrivacy: {}, VildaGlobalSearch: {}, VildaGlobalSearchView: {},
+    VildaRemindersPrivacy: {}, VildaGlobalSearch: {}, VildaGlobalSearchView: {}, VildaSearchNavigation: {},
     sessionStorage: { getItem: key => key === 'vilda-vault-session-v2' && restoredSession ? 'fictional-session' : null },
     CustomEvent: class { constructor(type, options) { this.type = type; this.detail = options?.detail; } },
   };

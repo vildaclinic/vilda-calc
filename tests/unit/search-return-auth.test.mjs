@@ -398,7 +398,7 @@ describe('production AuthUI Back reaches Search at the patient-card boundary', (
 
 function integrationEnvironment() {
   const sourceHost = { alive: true }, viewOptions = [];
-  const close = vi.fn(() => { sourceHost.alive = false; });
+  const close = vi.fn(() => { sourceHost.alive = false; e.context.remB22Full = null; });
   const patient = vi.fn(async () => true), external = vi.fn(async () => true), editor = vi.fn();
   const view = { getContext: () => snapshot(), setVisible: vi.fn(), request: vi.fn(), destroy: vi.fn() };
   const module = { mount: vi.fn((_host, options) => { viewOptions.push(options); return view; }) };
@@ -418,7 +418,12 @@ function integrationEnvironment() {
     Rt: { style: {}, removeAttribute() {} }, xa: null, ee: [], ge: [], Qn: vi.fn(),
     sn: false, pr: vi.fn(), oe: vi.fn(),
   });
-  e.win.history = { state: null, pushState: vi.fn(), back: vi.fn() };
+  e.win.history = { state: null, pushState: vi.fn(), back: vi.fn(), replaceState: vi.fn(value => { e.win.history.state = value; }) };
+  e.win.URL = URL; e.win.URLSearchParams = URLSearchParams;
+  e.win.location = Object.assign(new URL('https://fictional.invalid/index.html'), { assign: vi.fn(), replace: vi.fn() });
+  e.win.VildaAuthUI = { isBootReady: () => true };
+  e.win.VildaSearchNavigation = { prepare: vi.fn(async value => ({ id: value.id })), read: vi.fn(async () => null), clear: vi.fn() };
+  e.context.remB22Full = { close };
   owner = e.owner();
   e.context.vault = e.vault; e.win.VildaGlobalSearchView = module;
   e.vault.getPatientNote = vi.fn(async id => ({ id, patientId, title: 'Fikcyjny cel', category: 'followup' }));
@@ -516,7 +521,8 @@ describe('production AuthUI Search target callbacks', () => {
     expect(e.vault.getPatientNote).toHaveBeenCalledExactlyOnceWith('fictional-return-note');
     waiting.resolve({ id: 'fictional-return-note', patientId, category: 'followup' });
     expect(await pending).toBe(true);
-    expect(e.editor).toHaveBeenCalledOnce();
+    expect(e.win.location.assign).toHaveBeenCalledOnce();
+    expect(e.editor).not.toHaveBeenCalled();
   });
 
   it('a background refresh of the underlying patient cannot cancel the pending event target or its return', async () => {
@@ -526,10 +532,11 @@ describe('production AuthUI Search target callbacks', () => {
     expect(e.context.remSearchPatientReturn('fictional-underlying-patient', true)).toBeNull();
     waiting.resolve({ id: 'fictional-return-note', patientId, title: 'Fikcyjny cel', category: 'followup' });
     expect(await pending).toBe(true);
-    expect(e.editor).toHaveBeenCalledOnce();
-    const editorCallbacks = e.editor.mock.calls[0][0];
-    expect(await editorCallbacks.onCancel()).toBe(true);
-    expect(await editorCallbacks.onSaved()).toBe(false);
+    expect(e.win.location.assign).toHaveBeenCalledOnce();
+    expect(e.editor).not.toHaveBeenCalled();
+    const token = e.context.remSearchPatientReturn(patientId);
+    expect(await e.context.remSearchResume(token)).toBe(true);
+    expect(await e.context.remSearchResume(token)).toBe(false);
     expect(e.open).toHaveBeenCalledExactlyOnceWith(expect.objectContaining({ globalSearch: snapshot() }));
   });
 
