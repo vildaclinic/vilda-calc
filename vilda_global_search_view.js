@@ -107,6 +107,10 @@
     function mobile() {
       var panel = options.remindersLayout && host.closest && host.closest('.vb22--stable');
       var panelWidth = panel && panel.getBoundingClientRect().width;
+      if (panel) {
+        var style = win.getComputedStyle(panel);
+        ['borderLeftWidth', 'borderRightWidth', 'paddingLeft', 'paddingRight'].forEach(function (key) { panelWidth -= parseFloat(style[key]) || 0; });
+      }
       return doc.documentElement.classList.contains('vilda-phone') || !!(win.matchMedia && win.matchMedia('(max-width:700px)').matches) || panelWidth > 0 && panelWidth <= 700;
     }
     function activeSearch() { return !!state.query.trim() || state.time !== 'all' || state.status !== 'all' || !!state.id; }
