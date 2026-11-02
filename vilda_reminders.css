@@ -48,6 +48,21 @@
   opacity: .65
 }
 
+/* Only navigation and actions suppress a text caret. Reminder bodies remain
+ * copyable; inputs also preserve selection inside a nonselectable toolbar. */
+.vb22 .vb22-head,
+.vb22 .vb22-tabs,
+.vb22 .vb22-filters,
+.vb22 button {
+  -webkit-user-select: none;
+  user-select: none
+}
+
+.vb22 :is(input,textarea,[contenteditable]:not([contenteditable="false"])) {
+  -webkit-user-select: text;
+  user-select: text
+}
+
 .vb22 button:focus-visible,
 .vb22 input:focus-visible,
 .vb22 textarea:focus-visible,

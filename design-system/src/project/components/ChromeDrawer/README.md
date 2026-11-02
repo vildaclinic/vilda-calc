@@ -18,10 +18,10 @@ Otwierana przyciskiem MobileTopNav (`[data-vilda-chrome-menu-btn]`) na telefonie
 | Selektor | Wygląd |
 | --- | --- |
 | `.chrome-drawer` | `position:fixed; inset:0; z-index:99999; display:flex`; `[hidden]` — `display:none`. |
-| `.chrome-drawer-backdrop` | `position:absolute; inset:0`, tło `#0f1c1e73`, `backdrop-filter:blur(2px)`, `cursor:pointer`, `opacity:0`, `transition:opacity .26s`. |
-| `.chrome-drawer-panel` | `width:min(86%,320px)`, tło `#fff`, `height:100%`, kolumna flex, cień `4px 0 24px #00323c2e`, `transform:translate(-100%)`, `transition:transform .28s cubic-bezier(.4,0,.2,1)`, `padding-top:var(--vilda-safe-top)` (`env(safe-area-inset-top, 0px)`). |
+| `.chrome-drawer-backdrop` | `position:absolute; inset:0`, tło `#0f1c1e73`, `backdrop-filter:blur(2px)`, `cursor:pointer`, `opacity:0`; przy otwarciu animacja do `opacity:1` trwa 440 ms (`ease-out`). |
+| `.chrome-drawer-panel` | `width:min(86%,320px)`, tło `#fff`, `height:100%`, kolumna flex, cień `4px 0 24px #00323c2e`, `transform:translate(-100%)`; wejście 560 ms (`cubic-bezier(.22,1,.36,1)`), `padding-top:var(--vilda-safe-top)` (`env(safe-area-inset-top, 0px)`). |
 | `body.chrome-drawer-open` | Tło `opacity:1`, panel `transform:none`, `body{overflow:hidden}` (blokada przewijania). |
-| `prefers-reduced-motion` | Tło i panel bez przejść. |
+| `prefers-reduced-motion` | Tło i panel bez animacji wejścia. |
 | `.chrome-drawer-head` | Wiersz `space-between`, `padding:.9rem 1rem`, dolny obrys `1px solid #e5eded`; `.chrome-drawer-title` 700 w `primary`. |
 | `.chrome-drawer-close` | 36×36, `inline-flex`, promień 10px, obrys `1px solid #e5eded`, tło `#fff`, kolor `#08202c` (wszystko `!important`); krzyżyk z dwóch pasków 18×2px `currentColor` obróconych ±45°; hover — kolor i obrys `primary`. |
 | `.chrome-drawer-body` | `overflow-y:auto`, `padding:.5rem .5rem 1.2rem`, `flex:1 1 auto`. |
@@ -42,11 +42,13 @@ Szkło, wysoki kontrast i ciemne tło nie mają reguł dla szuflady; panel jest 
 
 ## Tokeny
 
-`--primary`, `--secondary`, `--text`, `--chrome-label-color`; zmienne lokalne `--chrome-active-bg` (gradient z `var()`) i `--vilda-safe-top` (`env()`).
+`--primary`, `--secondary`, `--text`, `--chrome-label-color`; zmienne lokalne `--chrome-active-bg` (gradient z `var()`) i bezpieczne krawędzie `--vilda-safe-*` (`env()`). `--chrome-drawer-enter-x` jest lokalną współrzędną startu panelu: `-100%`, a na telefonie `calc(-100% - var(--vilda-safe-left) - var(--space-8px))`.
 
 ## Zasady
 
-- Rób: trzymaj `role="dialog"` z `aria-label="Menu"` na panelu i `aria-label="Zamknij menu"` na przycisku bez tekstu; skrypt zamyka szufladę klawiszem Escape oraz kliknięciem w `[data-vilda-chrome-drawer-close]` (tło i przycisk), nie przenosi fokusu.
+Animacje CSS uruchamiają się po zdjęciu `hidden`, także przy dodaniu klasy otwarcia w tym samym zadaniu. `backwards` pozostawia po wejściu `transform:none`. Zamknięcie jest natychmiastowe; nie ma opóźnionego cleanup, który mógłby schować ponownie otwarte menu. Etykiety i kontrolki mają `user-select:none`, a nazwy konta/pacjenta oraz rzeczywiste pola edycji zachowują zaznaczanie.
+
+- Rób: trzymaj `role="dialog"` z `aria-label="Menu"` na panelu i `aria-label="Zamknij menu"` na przycisku bez tekstu; skrypt zamyka szufladę klawiszem Escape oraz kliknięciem w `[data-vilda-chrome-drawer-close]` (tło i przycisk), przenosi fokus do menu i utrzymuje w nim Tab/Shift+Tab. Zamknięcie przez Escape/tło/X oddaje fokus przyciskowi menu; wybór modułu przekazuje go celowi nawigacji.
 - Rób: zamknięty stan to atrybut `hidden` i `aria-hidden="true"` na powłoce, nie tylko `transform` — inaczej linki pozostają w kolejności tabulacji.
 - Rób: pozycje tylko dla zalogowanych ukrywaj `display:none`, nie `aria-disabled` — gość nie powinien ich widzieć.
 - Nie rób: nie wkładaj do szuflady MiniSummary ani skrótów — status pacjenta ogranicza się do wiersza „Pacjent”.

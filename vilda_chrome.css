@@ -715,11 +715,11 @@
   backdrop-filter: var(--blur-drawer-backdrop);
   -webkit-backdrop-filter: var(--blur-drawer-backdrop);
   cursor: pointer;
-  opacity: 0;
-  transition: opacity .26s ease
+  opacity: 0
 }
 
 .chrome-drawer-panel {
+  --chrome-drawer-enter-x: -100%;
   position: relative;
   width: var(--drawer-width);
   background: #fff;
@@ -729,23 +729,65 @@
   flex-direction: column;
   box-shadow: 4px 0 24px #00323c2e;
   transform: translate(-100%);
-  transition: transform .28s cubic-bezier(.4,0,.2,1);
   will-change: transform
 }
 
+/* The drawer leaves [hidden] and receives its open class in the same task.
+ * Keyframes start on every opening without a forced layout or delayed focus.
+ * Backwards fill leaves transform:none after entry; dismiss/navigation stays
+ * synchronous, including reopening before this animation has finished. */
 body.chrome-drawer-open .chrome-drawer-backdrop {
-  opacity: 1
+  opacity: 1;
+  animation: chrome-drawer-backdrop-enter .44s ease-out backwards
 }
 
 body.chrome-drawer-open .chrome-drawer-panel {
-  transform: none
+  transform: none;
+  animation: chrome-drawer-enter .56s cubic-bezier(.22,1,.36,1) backwards
+}
+
+@keyframes chrome-drawer-enter {
+  from {
+    transform: translateX(var(--chrome-drawer-enter-x))
+  }
+  to {
+    transform: none
+  }
+}
+
+@keyframes chrome-drawer-backdrop-enter {
+  from {
+    opacity: 0
+  }
+  to {
+    opacity: 1
+  }
 }
 
 @media(prefers-reduced-motion:reduce) {
-  .chrome-drawer-backdrop,
-  .chrome-drawer-panel {
-    transition: none
+  body.chrome-drawer-open .chrome-drawer-backdrop,
+  body.chrome-drawer-open .chrome-drawer-panel {
+    animation: none
   }
+}
+
+/* UI labels do not accept a text caret, including browser caret navigation.
+ * Account/patient values remain selectable, and real editors keep selection. */
+.chrome-drawer-head,
+.chrome-drawer-section-title,
+.chrome-drawer-nav a,
+.chrome-drawer-nav button,
+.chrome-drawer-account-action,
+.chrome-drawer-account-label,
+.chrome-drawer-patient-label,
+.chrome-drawer-icon {
+  -webkit-user-select: none;
+  user-select: none
+}
+
+.chrome-drawer :is(input,textarea,[contenteditable]:not([contenteditable="false"])) {
+  -webkit-user-select: text;
+  user-select: text
 }
 
 .chrome-drawer-head {
@@ -1641,6 +1683,7 @@ body.chrome-drawer-open {
  * przy obrocie ten sam DOM, fokus i przewijana zawartość pozostają na miejscu.
  */
 html.vilda-phone .chrome-drawer-panel {
+  --chrome-drawer-enter-x: calc(-100% - var(--vilda-safe-left) - var(--space-8px));
   position: absolute;
   top: calc(var(--vilda-safe-top) + 8px);
   bottom: calc(var(--vilda-safe-bottom) + 8px);

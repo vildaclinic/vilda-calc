@@ -1958,7 +1958,7 @@ function remB22Create(host, full, options) {
 function remB22Styles() {
   if (!i.document || !i.document.head || !i.document.createElement) return;
   if (i.document.querySelector('link[href*="vilda_reminders.css"]')) return;
-  var link = i.document.createElement('link'); link.rel = 'stylesheet'; link.href = 'vilda_reminders.css?v=7'; link.dataset.remindersB22 = 'true'; i.document.head.appendChild(link);
+  var link = i.document.createElement('link'); link.rel = 'stylesheet'; link.href = 'vilda_reminders.css?v=8'; link.dataset.remindersB22 = 'true'; i.document.head.appendChild(link);
 }
 remB22Styles();
 
