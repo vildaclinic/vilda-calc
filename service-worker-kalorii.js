@@ -19,7 +19,7 @@
  *   bo i tak chcemy zwracać HTML z cache natychmiast.
  */
 
-const SW_VERSION = '1.1.438';
+const SW_VERSION = '1.1.439';
 const CACHE_PREFIX = 'pwa-kalorii';
 const SHELL_CACHE = `${CACHE_PREFIX}-shell-v${SW_VERSION}`;
 const RUNTIME_CACHE = `${CACHE_PREFIX}-runtime`;
@@ -595,6 +595,7 @@ const CORE_SHELL_URLS = [
   '/inline_ustawienia_06.js?v=1',
   '/inline_ustawienia_07.js?v=1',
   '/inline_ustawienia_07.js?v=2',
+  '/inline_ustawienia_07.js?v=3',
 
   '/sidebar.css',
   '/vilda_chrome.css',
@@ -4177,6 +4178,7 @@ const OPTIONAL_ASSETS = [
   '/ustawienia.css?v=16',
   '/ustawienia.css?v=17',
   '/ustawienia.css?v=18',
+  '/ustawienia.css?v=19',
   '/edu-video-ui.css?v=20261002v4',
   '/edu-video-ui.css?v=20261003v4',
   '/edu-video-ui.css?v=20261002v7',
@@ -5078,5 +5080,8 @@ self.addEventListener('fetch', (event) => {
 self.addEventListener('message', (event) => {
   if (event?.data?.type === 'SKIP_WAITING') {
     self.skipWaiting();
+  } else if (event?.data?.type === 'VILDA_WERSJA' && event.ports && event.ports[0]) {
+    // P-WERSJA-APLIKACJI: Ustawienia pokazują wersję SW, który obsługuje to urządzenie (strona nie ma kopii numeru).
+    event.ports[0].postMessage({ type: 'VILDA_WERSJA', wersja: SW_VERSION });
   }
 });
