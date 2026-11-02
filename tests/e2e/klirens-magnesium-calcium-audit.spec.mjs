@@ -1,6 +1,6 @@
 import fs from 'node:fs/promises';
 import { expect, test } from '@playwright/test';
-import { czekajNaUstabilizowanyUklad } from '../support/uklad-czekanie.mjs';
+import { czekajNaUstabilizowanyUklad, kliknij } from '../support/uklad-czekanie.mjs';
 import { enterGuest, installMemoryVault, memory, prepareBrowser, saveVisible, selectPatient } from '../support/klirens-patient-record.mjs';
 
 // Fictional values. Only encrypted I/O is replaced by the explicit memory vault;
@@ -175,7 +175,7 @@ for (const width of [1440, 390, 320]) {
     await result(page);
     const initial = await geometry(page, width);
     await testInfo.attach(`mgca-concentration-${width}`, { body: await page.screenshot({ fullPage: true }), contentType: 'image/png' });
-    await mode(page, true).click();
+    await kliknij(mode(page, true));
     await expect(inputCard(page).locator('input:visible')).toHaveCount(1);
     await expect(inputCard(page).locator('select:visible')).toHaveCount(1);
     expect(await page.locator('#MGCA_reportedUnit option:not([hidden])').allTextContents()).toEqual(['mg/mg', 'mmol/mmol']);
@@ -183,10 +183,10 @@ for (const width of [1440, 390, 320]) {
     await result(page, { raw: 0.5 });
     sameWidths(initial, await geometry(page, width));
     await testInfo.attach(`mgca-direct-${width}`, { body: await page.screenshot({ fullPage: true }), contentType: 'image/png' });
-    await details(page).locator('summary').click();
+    await kliknij(details(page).locator('summary'));
     sameWidths(initial, await geometry(page, width));
     await testInfo.attach(`mgca-details-${width}`, { body: await page.screenshot({ fullPage: true }), contentType: 'image/png' });
-    await details(page).locator('summary').click();
+    await kliknij(details(page).locator('summary'));
     for (const family of ['Arial', 'DejaVu Sans', 'Liberation Sans']) {
       await page.addStyleTag({ content: `#mgcaInputCard,#mgcaInputCard *,#clcrResultReport,#clcrResultReport * { font-family: "${family}", sans-serif !important; }` });
       sameWidths(initial, await geometry(page, width));
@@ -197,7 +197,7 @@ for (const width of [1440, 390, 320]) {
       }
     }
     await testInfo.attach(`mgca-extreme-${width}`, { body: await page.screenshot({ fullPage: true }), contentType: 'image/png' });
-    await page.locator('#clearBtn').click();
+    await kliknij(page.locator('#clearBtn'));
     await page.waitForFunction(() => window.clcrIsResetting !== true);
     await choose(page, FORMULA);
     await expect(page.locator('#MGCA_magnesium')).toHaveValue('');
@@ -207,22 +207,29 @@ for (const width of [1440, 390, 320]) {
   });
 }
 
-test('Mg/Ca: 16 kombinacji jednostek zachowuje tę samą masową i molową proporcję', async ({ page }) => {
+// Split by the four magnesium units so all sixteen physical equivalences retain
+// the full production assertions within the ordinary 60-second test budget.
+for (const [mgUnit, mg] of [['mg/L', '24.305'], ['mg/dL', '2.4305'], ['mmol/L', '1'], ['µmol/L', '1000']]) {
+  test(`Mg/Ca: magnez ${mgUnit} i cztery jednostki wapnia zachowują tę samą proporcję`, async ({ page }) => {
+    await open(page);
+    await restore(page);
+    // Physical source example: Mg and Ca each 1 mmol/L. This fixed reference is
+    // independent of every converter supplied by the application.
+    for (const [caUnit, ca] of [['mg/L', '40.078'], ['mg/dL', '4.0078'], ['mmol/L', '1'], ['µmol/L', '1000']]) {
+      await page.locator('#MGCA_magnesiumUnit').selectOption(mgUnit);
+      await page.locator('#MGCA_calciumUnit').selectOption(caUnit);
+      await page.locator('#MGCA_magnesium').fill(mg);
+      await page.locator('#MGCA_calcium').fill(ca);
+      const model = await result(page, { raw: 0.6064424372473676 });
+      expect(model.alternateValue).toBeCloseTo(1, 14);
+    }
+  });
+}
+
+test('Mg/Ca: gotowy stosunek masowy i molowy zachowują różne wartości przeliczenia', async ({ page }) => {
   await open(page);
   await restore(page);
-  // Physical source example: Mg and Ca each 1 mmol/L. Fixed expected mass ratio
-  // is independent of any application converter.
-  const magnesium = [['mg/L', '24.305'], ['mg/dL', '2.4305'], ['mmol/L', '1'], ['µmol/L', '1000']];
-  const calcium = [['mg/L', '40.078'], ['mg/dL', '4.0078'], ['mmol/L', '1'], ['µmol/L', '1000']];
-  for (const [mgUnit, mg] of magnesium) for (const [caUnit, ca] of calcium) {
-    await page.locator('#MGCA_magnesiumUnit').selectOption(mgUnit);
-    await page.locator('#MGCA_calciumUnit').selectOption(caUnit);
-    await page.locator('#MGCA_magnesium').fill(mg);
-    await page.locator('#MGCA_calcium').fill(ca);
-    const model = await result(page, { raw: 0.6064424372473676 });
-    expect(model.alternateValue).toBeCloseTo(1, 14);
-  }
-  await mode(page, true).click();
+  await kliknij(mode(page, true));
   await page.locator('#MGCA_reportedValue').fill('0.5');
   const mass = await result(page, { raw: 0.5 });
   await page.locator('#MGCA_reportedUnit').selectOption('mmol/mmol');
@@ -316,7 +323,7 @@ test('Mg/Ca: dopiero zapisany pacjent umożliwia zapis; mały wynik pozostaje do
   await selectPatient(page);
   // A previous unassigned measurement cannot be attributed to a newly loaded
   // patient. Start a fresh measurement through the real Clear action.
-  await page.locator('#clearBtn').click();
+  await kliknij(page.locator('#clearBtn'));
   await page.waitForFunction(() => window.clcrIsResetting !== true);
   await choose(page, FORMULA);
   await page.locator('#MGCA_magnesium').fill('0.00001');
