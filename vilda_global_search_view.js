@@ -7,6 +7,7 @@
 
   function day(value) { return typeof value === 'string' && /^\d{4}-\d{2}-\d{2}/.test(value) ? value.slice(0, 10) : ''; }
   function date(value) { var result = day(value); return result ? result.split('-').reverse().join('.') : ''; }
+  function localDay() { var now = new Date(); return now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0') + '-' + String(now.getDate()).padStart(2, '0'); }
   function mount(host, options) {
     options = options || {};
     if (!host || !host.ownerDocument) throw new Error('Brak miejsca na wyszukiwarkę.');
@@ -16,9 +17,15 @@
     var state = { query: '', time: 'all', status: 'all', id: null, rows: [], limit: 50, loading: false, error: null, detail: false, missing: false };
     var origin = null, pendingRestore = null, focusRevision = 0;
     var position = { list: 0, detail: 0 };
+    var dayTimer = null, observedDay = localDay(), dayStale = false;
+    var frameObserver = null, effectiveShown = null, visibilityContext = null;
     function current() {
       var user = vault && vault.getCurrentUser && vault.getCurrentUser();
       return !destroyed && host.isConnected && vault && vault.isUnlocked() && user && user.userId === accountId && (!options.isCurrent || options.isCurrent());
+    }
+    function surfaceVisible() {
+      if (!visible || doc.hidden) return false;
+      try { return !win.frameElement || !win.frameElement.hidden; } catch (_) { return false; }
     }
     function node(tag, className, text) { var result = doc.createElement(tag); if (className) result.className = className; if (text != null) result.textContent = text; return result; }
     function clear(element) { while (element.firstChild) element.removeChild(element.firstChild); }
@@ -57,7 +64,7 @@
     function context() {
       if (!current()) return snapshot({});
       if (pendingRestore) return snapshot(pendingRestore.snapshot);
-      if (visible && (typeof root.checkVisibility !== 'function' || root.checkVisibility())) {
+      if (surfaceVisible() && (typeof root.checkVisibility !== 'function' || root.checkVisibility())) {
         position.list = offset(list.scrollTop); if (state.detail) position.detail = offset(detail.scrollTop);
       }
       return snapshot({ query: state.query, time: state.time, status: state.status, id: state.id, mode: state.detail ? 'detail' : 'list',
@@ -99,8 +106,52 @@
     function selected() { return state.rows.find(function (row) { return row.id === state.id; }); }
     function mobile() { return doc.documentElement.classList.contains('vilda-phone') || !!(win.matchMedia && win.matchMedia('(max-width:700px)').matches); }
     function activeSearch() { return !!state.query.trim() || state.time !== 'all' || state.status !== 'all' || !!state.id; }
+    function relativeDates() { return ['future', 'past', 'today'].indexOf(state.time) >= 0; }
+    function stopDayTimer() { if (dayTimer !== null) win.clearTimeout(dayTimer); dayTimer = null; }
+    function observeDay() {
+      var value = localDay();
+      if (value !== observedDay) { observedDay = value; if (relativeDates() && activeSearch()) dayStale = true; }
+    }
+    function watchDay() {
+      stopDayTimer();
+      if (!surfaceVisible() || !relativeDates() || !activeSearch() || !current()) return;
+      var now = new Date(), next = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
+      dayTimer = win.setTimeout(dayChanged, Math.max(1, next.getTime() - now.getTime()));
+    }
+    function syncVisibility(remembered) {
+      if (destroyed) return;
+      observeDay();
+      if (!current()) { wipe(true); return; }
+      var shown = surfaceVisible(), previous = effectiveShown;
+      effectiveShown = shown; remembered = remembered || context();
+      if (!shown) {
+        visibilityContext = remembered;
+        if (previous !== false) {
+          sequence += 1; requests += 1;
+          if (state.loading) stale = true;
+        }
+        if (timer) win.clearTimeout(timer); timer = null;
+        stopDayTimer(); state.loading = false; root.setAttribute('aria-busy', 'false');
+        if (pendingRestore) pendingRestore.guard = null;
+        return;
+      }
+      var restore = visibilityContext || remembered; visibilityContext = null;
+      if (dayStale || previous === false && stale && !state.loading) {
+        if (!pendingRestore) pendingRestore = { snapshot: restore, guard: null };
+        refresh();
+      } else if (previous === false && !state.loading) {
+        // Hiding an iframe can zero its internal scroll offsets. The retained
+        // rows need only their positions restored, without rebuilding/focusing.
+        position.list = restore.listScrollTop; position.detail = restore.detailScrollTop;
+        list.scrollTop = position.list; if (options.full) detail.scrollTop = position.detail;
+      }
+      watchDay();
+    }
+    function dayChanged() { syncVisibility(); }
     function wipe(resetQuery) {
       sequence += 1; requests += 1; if (timer) win.clearTimeout(timer); timer = null;
+      stopDayTimer(); dayStale = false; observedDay = localDay();
+      visibilityContext = null;
       state.rows = []; state.id = null; state.loading = false; state.detail = false; state.error = null; state.missing = false; state.limit = 50;
       origin = null; pendingRestore = null; position.list = position.detail = 0;
       if (resetQuery) { state.query = ''; state.time = state.status = 'all'; search.value = ''; time.value = status.value = 'all'; }
@@ -111,8 +162,8 @@
       if (!current() || reason === 'lock' || reason === 'unlock' || reason === 'session') { wipe(true); return; }
       var value = context(), guard = pendingRestore ? pendingRestore.guard : focusGuard(value.focus);
       pendingRestore = { snapshot: value, guard: guard };
-      sequence += 1; requests += 1; state.rows = []; state.error = null; state.loading = visible && activeSearch(); render(value, guard);
-      if (visible) schedule();
+      sequence += 1; requests += 1; state.rows = []; state.error = null; state.loading = surfaceVisible() && activeSearch(); render(value, guard);
+      if (surfaceVisible()) schedule(); else syncVisibility(value);
     }
     var root = node('section', 'vgs' + (options.full ? ' vgs-full' : ' vgs-inline'));
     root.setAttribute('aria-label', 'Szukaj');
@@ -124,7 +175,7 @@
       var result = node('select', 'vgs-select'); result.setAttribute('aria-label', label);
       values.forEach(function (entry) { var option = node('option', '', entry[1]); option.value = entry[0]; result.appendChild(option); }); toolbar.appendChild(result); return result;
     }
-    var time = selector('Terminy spraw', [['all', 'Wszystkie terminy'], ['future', 'Przyszłe sprawy'], ['past', 'Przeszłe sprawy'], ['today', 'Dzisiaj'], ['undated', 'Bez terminu']]);
+    var time = selector('Daty wpisów', [['all', 'Wszystkie daty'], ['future', 'Przyszłe daty'], ['past', 'Przeszłe daty'], ['today', 'Dzisiaj'], ['undated', 'Bez daty']]);
     var status = selector('Stan spraw', [['all', 'Wszystkie stany'], ['open', 'Otwarte'], ['waiting', 'Oczekujące'], ['completed', 'Zakończone'], ['no-show', 'Nie zgłosił się']]);
     time.setAttribute('data-vgs-focus', 'time'); status.setAttribute('data-vgs-focus', 'status');
     root.appendChild(toolbar);
@@ -139,15 +190,17 @@
     root.appendChild(layout); host.appendChild(root);
     function outsideInteraction(event) { if (!event || !owned(event.target)) focusRevision += 1; }
     doc.addEventListener('focusin', outsideInteraction, true); doc.addEventListener('pointerdown', outsideInteraction, true);
-    list.addEventListener('scroll', function () { if (visible && !pendingRestore) position.list = offset(list.scrollTop); });
-    detail.addEventListener('scroll', function () { if (visible && !pendingRestore) position.detail = offset(detail.scrollTop); });
+    list.addEventListener('scroll', function () { if (surfaceVisible() && !pendingRestore) position.list = offset(list.scrollTop); });
+    detail.addEventListener('scroll', function () { if (surfaceVisible() && !pendingRestore) position.detail = offset(detail.scrollTop); });
 
     function edit() {
       state.query = search.value; state.time = time.value; state.status = status.value;
       state.id = null; state.detail = false; state.limit = 50; origin = null; pendingRestore = null; state.rows = []; state.error = null; state.missing = false;
       position.list = position.detail = 0; sequence += 1; requests += 1;
-      state.loading = activeSearch();
-      render(snapshot({ query: state.query, time: state.time, status: state.status, mode: 'list', focus: focused() })); changed(); schedule();
+      observedDay = localDay(); dayStale = false; watchDay();
+      state.loading = surfaceVisible() && activeSearch();
+      render(snapshot({ query: state.query, time: state.time, status: state.status, mode: 'list', focus: focused() })); changed();
+      if (surfaceVisible()) schedule(); else { stale = true; syncVisibility(); }
     }
     search.addEventListener('input', edit); time.addEventListener('change', edit); status.addEventListener('change', edit);
     function schedule() {
@@ -156,6 +209,11 @@
     }
     function empty(text, target) { var result = node('p', 'vb22-empty', text); (target || list).appendChild(result); return result; }
     function primaryDate(row) { return row.eventDateISO || row.clinicalDateISO || row.reminderDateISO || row.dueDateISO || ''; }
+    function matchingDate(row) {
+      var matched = row.matchedDate;
+      return relativeDates() && matched && ['event', 'clinical', 'reminder'].indexOf(matched.kind) >= 0 && day(matched.dateISO) ? matched : null;
+    }
+    function dateKind(kind) { return { event: 'Wydarzenie', clinical: 'Badanie', reminder: 'Przypomnienie' }[kind]; }
     function canOpenPatient(row) {
       return !!row.patientId && row.canOpenPatient !== false && !row.isActivity && row.patientId !== (vault.ACTIVITY_PATIENT_ID || '__vilda_activity__') && row.patientId !== (vault.EXTERNAL_PATIENT_ID || '__vilda_external__');
     }
@@ -165,11 +223,11 @@
       result.dataset.searchId = row.id; result.setAttribute('aria-current', String(state.id === row.id));
       result.setAttribute('data-vgs-focus', 'row:' + row.id);
       result.appendChild(node('span', 'vb22-row-patient', row.patientName || (row.kind === 'patient' ? row.title : 'Sprawa ogólna')));
-      var meta = node('span', 'vb22-row-meta'), when = date(primaryDate(row));
-      meta.appendChild(node('span', 'vb22-row-date', when || (row.kind === 'patient' ? 'Karta pacjenta' : 'Bez terminu')));
+      var meta = node('span', 'vb22-row-meta'), matched = matchingDate(row), when = date(matched ? matched.dateISO : primaryDate(row));
+      meta.appendChild(node('span', 'vb22-row-date', when ? (matched ? dateKind(matched.kind) + ' · ' : '') + when : row.kind === 'patient' ? 'Karta pacjenta' : 'Bez daty'));
       meta.appendChild(node('span', 'vgs-kind', row.label)); result.appendChild(meta);
       if (row.kind !== 'patient') result.appendChild(node('span', 'vb22-row-title', row.title || row.label));
-      result.setAttribute('aria-label', [row.patientName || 'Sprawa ogólna', row.label, row.kind !== 'patient' && row.title, when, row.statusLabel].filter(Boolean).join('. '));
+      result.setAttribute('aria-label', [row.patientName || 'Sprawa ogólna', row.label, row.kind !== 'patient' && row.title, matched && dateKind(matched.kind), when, row.statusLabel].filter(Boolean).join('. '));
       wrapper.appendChild(result); return wrapper;
     }
     function renderList() {
@@ -209,10 +267,18 @@
       if (row.statusLabel) detail.appendChild(node('p', 'vb22-category vgs-status', row.statusLabel));
       var dates = node('dl', 'vgs-dates');
       function dateLine(label, value) { if (!date(value)) return; dates.appendChild(node('dt', '', label)); dates.appendChild(node('dd', '', date(value))); }
-      dateLine('Termin wydarzenia', row.eventDateISO);
-      dateLine('Termin przypomnienia', row.reminderDateISO);
-      dateLine('Data wpisu / badania', row.clinicalDateISO);
-      if (!row.eventDateISO && !row.reminderDateISO && !row.clinicalDateISO) dateLine('Termin', row.dueDateISO);
+      var matched = matchingDate(row), savedDates = [
+        { kind: 'event', label: 'Termin wydarzenia', value: row.eventDateISO },
+        { kind: 'reminder', label: 'Termin przypomnienia', value: row.reminderDateISO },
+        { kind: 'clinical', label: 'Data wpisu / badania', value: row.clinicalDateISO }
+      ];
+      if (!row.eventDateISO && !row.reminderDateISO && !row.clinicalDateISO) savedDates.push({ kind: 'event', label: 'Termin', value: row.dueDateISO });
+      function matches(entry) { return matched && entry.kind === matched.kind && day(entry.value) === day(matched.dateISO); }
+      if (matched) {
+        var represented = savedDates.find(matches);
+        dateLine((represented ? represented.label : { event: 'Data wydarzenia', reminder: 'Data przypomnienia', clinical: 'Data wpisu / badania' }[matched.kind]) + ' · pasuje do filtra', matched.dateISO);
+      }
+      savedDates.forEach(function (entry) { if (!matches(entry)) dateLine(entry.label, entry.value); });
       dateLine('Wykonano', row.completedAtISO); dateLine('Nie zgłosił się', row.noShowAtISO);
       if (dates.childNodes.length) detail.appendChild(dates);
       if (row.body) detail.appendChild(node('p', 'vb22-body', row.body));
@@ -242,7 +308,9 @@
     async function refresh() {
       if (timer) win.clearTimeout(timer); timer = null;
       if (!current()) { wipe(true); return []; }
-      if (!visible) { stale = true; state.loading = false; return []; }
+      observeDay();
+      if (!surfaceVisible()) { stale = true; syncVisibility(); return []; }
+      dayStale = false; watchDay();
       if (!activeSearch()) { state.loading = false; pendingRestore = null; render(); return []; }
       if (!pendingRestore) { var remembered = context(); pendingRestore = { snapshot: remembered, guard: focusGuard(remembered.focus) }; }
       var ticket = ++sequence; state.loading = true; state.error = null; render(pendingRestore.snapshot, pendingRestore.guard);
@@ -250,14 +318,16 @@
         if (!service) throw new Error('Wyszukiwarka jest niedostępna.');
         var rows = await service.search(state.query, { time: state.time, status: state.status });
         if (!current() || ticket !== sequence) return [];
+        if (!surfaceVisible()) { stale = true; syncVisibility(); return []; }
         var restore = pendingRestore || { snapshot: context(), guard: null };
         state.rows = rows; state.loading = false; stale = false;
         reconcile(restore.snapshot); pendingRestore = null;
-        if (state.missing && restore.guard) restore.guard.key = 'list';
+        if (state.missing && restore.guard && restore.guard.key && ['query', 'time', 'status'].indexOf(restore.guard.key) < 0) restore.guard.key = 'list';
         render(restore.snapshot, restore.guard); changed(); return rows;
       } catch (error) {
         if (!current()) { wipe(true); return []; }
         if (ticket !== sequence) return [];
+        if (!surfaceVisible()) { stale = true; syncVisibility(); return []; }
         var failed = pendingRestore ? pendingRestore.snapshot : context();
         state.loading = false; state.rows = []; state.id = null; state.detail = false; state.missing = false; pendingRestore = null;
         failed.id = null; failed.mode = 'list'; failed.detailScrollTop = 0; failed.origin = null; install(failed);
@@ -297,7 +367,7 @@
       pendingRestore = { snapshot: value, guard: focusGuard(value.focus) };
       await refresh();
       if (ticket !== requests || !current()) return false;
-      if (!visible) return false;
+      if (!surfaceVisible()) return false;
       if (!options.full && selected() && value.mode === 'detail' && options.requestExpand) {
         var expanded = context(); expanded.mode = 'detail'; if (!expanded.origin) expanded.origin = listOrigin(expanded);
         options.requestExpand(expanded);
@@ -305,6 +375,15 @@
       return !state.error;
     }
     if (win.VildaGlobalSearch && typeof win.VildaGlobalSearch.create === 'function') service = win.VildaGlobalSearch.create({ vault: vault, document: doc, onInvalidate: invalidated, prepareNotes: options.prepareNotes, formatMedicationDose: options.formatMedicationDose });
+    effectiveShown = surfaceVisible();
+    try {
+      if (win.frameElement && typeof win.MutationObserver === 'function') {
+        frameObserver = new win.MutationObserver(dayChanged);
+        frameObserver.observe(win.frameElement, { attributes: true, attributeFilter: ['hidden'] });
+      }
+    } catch (_) {}
+    doc.addEventListener('visibilitychange', dayChanged);
+    if (win.addEventListener) { win.addEventListener('pageshow', dayChanged); win.addEventListener('focus', dayChanged); }
     render();
     return {
       refresh: refresh,
@@ -314,15 +393,14 @@
       backToList: back,
       handleEscape: function () { if (!current()) { wipe(true); return false; } if (!state.detail) return false; back(); return true; },
       setVisible: function (value) {
-        var previous = visible, remembered = context(); visible = !!value;
-        if (visible && stale && !state.loading) {
-          if (!pendingRestore) pendingRestore = { snapshot: remembered, guard: null };
-          refresh();
-        } else if (visible && !previous && !state.loading) render(remembered);
+        var remembered = context(); visible = !!value; syncVisibility(remembered);
       },
       getContext: context,
-      destroy: function () { destroyed = true; sequence += 1; requests += 1; if (timer) win.clearTimeout(timer); if (service) service.destroy();
-        pendingRestore = null; origin = null; position.list = position.detail = 0; state.rows = []; state.query = ''; state.id = null;
+      destroy: function () { destroyed = true; sequence += 1; requests += 1; if (timer) win.clearTimeout(timer); stopDayTimer(); if (service) service.destroy();
+        if (frameObserver) frameObserver.disconnect(); frameObserver = null;
+        pendingRestore = null; origin = null; visibilityContext = null; position.list = position.detail = 0; state.rows = []; state.query = ''; state.id = null;
+        doc.removeEventListener('visibilitychange', dayChanged);
+        if (win.removeEventListener) { win.removeEventListener('pageshow', dayChanged); win.removeEventListener('focus', dayChanged); }
         doc.removeEventListener('focusin', outsideInteraction, true); doc.removeEventListener('pointerdown', outsideInteraction, true); root.remove(); }
     };
   }

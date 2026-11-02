@@ -1900,13 +1900,15 @@ function remB22Create(host, full, options) {
   }
   function changed() {
     if (!alive()) return;
-    if (searchView) searchView.invalidate();
+    // Search owns its vault/sync signals; refreshing this workspace must not
+    // invalidate the same index a second time or cancel its return context.
     state.historyReady = false; sequence += 1;
     if (state.editing || state.busy) { state.stale = true; return; }
     if (state.tab === 'plans' && careView) careView.refresh();
     if (!timer) timer = i.setTimeout(function () { timer = null; refresh(); }, 0);
   }
   var controller = { root: root, owner: owner, alive: alive, close: close, changed: changed, refresh: refresh, fit: fit,
+    retainHiddenSearch: function () { return !full && alive() && state.tab === 'search' && !!searchView; },
     destroyCare: function () { if (careView) { careView.destroy(); careView = null; } if (searchView) { searchView.destroy(); searchView = null; } if (privacyCleanup) { privacyCleanup(); privacyCleanup = null; } },
     setGroups: function (groups) { if (!alive()) return; state.rows = remB22Flat(groups); if (!state.editing) render(); },
     request: function (request) {
@@ -1994,7 +1996,11 @@ function remInvalidateInline(host) {
 }
 function remInlineHide(host) {
   remInvalidateInline(host);
-  var oldView = typeof remB22Views !== 'undefined' && remB22Views.get(host); if (oldView && oldView.destroyCare) oldView.destroyCare();
+  var oldView = typeof remB22Views !== 'undefined' && remB22Views.get(host);
+  // A retained shell frame is temporarily invisible. Search owns deferring
+  // its reads and restoring its UI; losing eligibility still clears the view.
+  if (Fr() && dl() && !remInlineReserved() && oldView && oldView.retainHiddenSearch && oldView.retainHiddenSearch()) return;
+  if (oldView && oldView.destroyCare) oldView.destroyCare();
   Nr();
   if (host.style.display !== 'none') host.style.display = 'none';
   ['height', 'maxHeight', 'minHeight'].forEach(function (name) { if (host.style[name]) host.style[name] = ''; });

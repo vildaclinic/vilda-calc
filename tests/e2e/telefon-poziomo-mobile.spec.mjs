@@ -89,6 +89,19 @@ test('powłoka: zapisany fikcyjny pacjent, Nowy pomiar, 956/844/1080 px i wszyst
   await dockTab(page, 'docpro', 'DocPro');
   await dockTab(page, 'start', 'Start');
   const docpro = await shellFrame(page, 'DocPro');
+  // The fixture has four historical measurements plus its saved current point.
+  // Wait for the debounced intake commit to match the actual hydrated rows
+  // before recording the baseline; rotation must not be blamed for startup work.
+  await start.waitForFunction(patientId => {
+    if (sessionStorage.getItem('vildaCurrentPatientId') !== patientId
+        || window.__vildaPersistRestoring || window.__vildaSuspendAdvIntakeSync
+        || typeof window.readIntakeRows !== 'function'
+        || !Number.isFinite(window.intakeEstimatedKcalPerDay)) return false;
+    const rows = window.readIntakeRows(), history = window.intakeHistory;
+    const project = values => values.map(row => [row.ageMonths, row.ageYears, row.height, row.weight]);
+    return rows.length === 5 && Array.isArray(history) && history.length === 5
+      && JSON.stringify(project(rows)) === JSON.stringify(project(history));
+  }, ids.a, { timeout: 30_000 });
   const before = await clinicalFingerprint(start, ids.a);
   await rememberInputNodes(start);
   for (const [width, height] of [[956, 440], [844, 390], [1080, 480]]) {

@@ -274,9 +274,13 @@ describe('production encrypted Search UI handoff', () => {
     let second;
     if (boundary === 'consume-twice') second = e.api.read(ticket().id, { consume: true });
     waiting.resolve();
-    const result = await first;
-    if (second) { expect(result).not.toBeNull(); expect(await second).toBeNull(); }
-    else expect(result).toBeNull();
+    if (second) {
+      // WebCrypto does not guarantee completion order. Exactly one current
+      // read may consume the ticket, regardless of which decrypt finishes first.
+      const results = await Promise.all([first, second]);
+      expect(results.filter(value => value !== null)).toEqual([{ ...ticket(), expiresAt: expect.any(Number) }]);
+      expect(results.filter(value => value === null)).toHaveLength(1);
+    } else expect(await first).toBeNull();
     expect(e.store.getItem(KEY)).toBeNull();
   });
 

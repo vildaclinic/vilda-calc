@@ -34,6 +34,53 @@ function environment({ full = true, mobile = false } = {}) {
 }
 
 describe('global search view production module', () => {
+  it('explains a future clinical-date match without replacing source dates or repeating the matched day', async () => {
+    const e = environment();
+    const row = record('fictional-clinical', { kind: 'lab', label: 'Badanie', eventDateISO: '2026-05-20T10:00:00Z',
+      clinicalDateISO: '2027-07-28T09:30:00Z', matchedDate: { kind: 'clinical', dateISO: '2027-07-28T09:30:00Z' } });
+    const before = JSON.stringify(row); e.service.search.mockResolvedValue([row]);
+    await e.view.request({ query: 'Fikcyjna', time: 'future', id: row.id });
+    const rendered = e.host.querySelector('.vgs-row');
+    expect(rendered.querySelector('.vb22-row-date').textContent).toBe('Badanie · 28.07.2027');
+    expect(rendered.getAttribute('aria-label')).toContain('28.07.2027');
+    expect(rendered.querySelector('.vb22-row-meta').textContent).not.toContain('20.05.2026');
+    const dates = e.host.querySelector('.vgs-dates');
+    expect(dates.querySelectorAll('dt').map(node => node.textContent)).toEqual(['Data wpisu / badania · pasuje do filtra', 'Termin wydarzenia']);
+    expect(dates.querySelectorAll('dd').map(node => node.textContent)).toEqual(['28.07.2027', '20.05.2026']);
+    expect(JSON.stringify(row)).toBe(before);
+    expect(JSON.stringify(e.view.getContext())).not.toContain('matchedDate');
+  });
+
+  it('shows a matching plan step date even when its first event and reminder are older', async () => {
+    const e = environment();
+    const row = record('fictional-plan', { id: 'plan:fictional-plan', kind: 'plan', label: 'Plan opieki', planId: 'fictional-plan',
+      eventDateISO: '2026-05-20', reminderDateISO: '2026-05-19', matchedDate: { kind: 'event', dateISO: '2027-08-02' } });
+    e.service.search.mockResolvedValue([row]);
+    await e.view.request({ query: 'Fikcyjny plan', time: 'future', id: row.id });
+    expect(e.host.querySelector('.vb22-row-date').textContent).toBe('Wydarzenie · 02.08.2027');
+    const dates = e.host.querySelector('.vgs-dates');
+    expect(dates.querySelectorAll('dt').map(node => node.textContent)).toEqual(['Data wydarzenia · pasuje do filtra', 'Termin wydarzenia', 'Termin przypomnienia']);
+    expect(dates.querySelectorAll('dd').map(node => node.textContent)).toEqual(['02.08.2027', '20.05.2026', '19.05.2026']);
+  });
+
+  it.each(['all', 'undated'])('does not leak query-specific date explanations into the %s filter', async time => {
+    const e = environment();
+    const row = record('fictional-other-projection', { matchedDate: { kind: 'clinical', dateISO: '2028-07-28' } });
+    e.service.search.mockResolvedValue([row]);
+    await e.view.request({ query: 'Fikcyjny', time, id: row.id });
+    expect(e.host.querySelector('.vb22-row-date').textContent).toBe('02.02.2027');
+    expect(e.host.querySelector('.vgs-dates').textContent).not.toContain('pasuje do filtra');
+    expect(e.host.querySelector('.vgs-dates').textContent).not.toContain('28.07.2028');
+  });
+
+  it('names the time filter for all stored dates and retains the existing scalar values', () => {
+    const e = environment(), filter = e.host.querySelector('.vgs-select');
+    expect(filter.getAttribute('aria-label')).toBe('Daty wpisów');
+    expect(filter.querySelectorAll('option').map(option => [option.value, option.textContent])).toEqual([
+      ['all', 'Wszystkie daty'], ['future', 'Przyszłe daty'], ['past', 'Przeszłe daty'], ['today', 'Dzisiaj'], ['undated', 'Bez daty'],
+    ]);
+  });
+
   it('waits for a query, renders stored text literally and navigates only after the explicit patient action', async () => {
     const e = environment();
     expect(e.service.search).not.toHaveBeenCalled();

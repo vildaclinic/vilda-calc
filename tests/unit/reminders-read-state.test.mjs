@@ -10,6 +10,20 @@ const { parse } = require('espree');
 const auth = fs.readFileSync(new URL('../../vilda_auth_ui.js', import.meta.url), 'utf8');
 const searchReturnCode = authProductionReturnProgram(auth);
 const chrome = fs.readFileSync(new URL('../../vilda_chrome.js', import.meta.url), 'utf8');
+const retainedGuard = (() => {
+  const found = [];
+  function walk(node) {
+    if (!node || typeof node !== 'object') return;
+    if (node.type === 'Property' && node.key?.name === 'retainHiddenSearch') found.push(auth.slice(node.value.start, node.value.end));
+    for (const value of Object.values(node)) {
+      if (Array.isArray(value)) value.forEach(walk);
+      else if (value && typeof value === 'object') walk(value);
+    }
+  }
+  walk(parse(auth, { ecmaVersion: 'latest' }));
+  if (found.length !== 1) throw Error(`retainHiddenSearch: ${found.length}`);
+  return found[0];
+})();
 function production(source, name, parentName) {
   const found = [];
   function walk(node, parent) {
@@ -58,7 +72,7 @@ function environment(code = inlineCode) {
   const win = { document: doc, innerWidth: 1440, VildaVault: vault, requestAnimationFrame: fn => frames.push(fn) };
   const context = vm.createContext({ i: win, r: win, o: doc, jt: () => win.VildaVault,
     Date: class extends Date { constructor(...args) { if (args.length) super(...args); else super(2026, 9, 28, 12, 0, 0); } },
-    dl: () => state.allowed && state.unlocked, Fr: () => false,
+    dl: () => state.allowed && state.unlocked, Fr: () => !!state.hidden,
     Fa: () => '2026-10-28', Jc: () => 0, e: element, ii: '',
     oe: node => { node.children = []; }, Qa9: list => list.map(item => element('row', { text: item.n.title })),
     oi: (kind, label, list) => list.length ? element('section', { text: label }, list) : null,
@@ -74,6 +88,44 @@ function environment(code = inlineCode) {
 }
 
 describe('production inline reminder read boundary', () => {
+  function retainedSearch() {
+    const e = environment(), child = element('section', { text: 'Fikcyjny zachowany wynik' });
+    e.state.hidden = true; e.host.children.push(child);
+    e.host.setAttribute('data-reminders-state', 'ready'); e.host.style.height = '240px';
+    Object.assign(e.context, { root: e.host, owner: e.context.remReadOwner(), full: false, state: { tab: 'search' }, searchView: {} });
+    vm.runInContext(production(auth, 'alive', 'remB22Create') + '\nvar retainedSearchGuard = ' + retainedGuard, e.context);
+    const view = { retainHiddenSearch: vi.fn(() => e.context.retainedSearchGuard()), destroyCare: vi.fn() };
+    e.context.remB22Views = new WeakMap([[e.host, view]]);
+    return { ...e, view, child };
+  }
+
+  it('defers hiding a still-eligible Search in a retained frame without clearing its DOM or scroll container', () => {
+    const e = retainedSearch();
+    e.context.remInlineHide(e.host);
+    expect(e.view.retainHiddenSearch).toHaveBeenCalledOnce();
+    expect(e.view.destroyCare).not.toHaveBeenCalled(); expect(e.context.Nr).not.toHaveBeenCalled();
+    expect(e.host.childNodes).toEqual([e.child]); expect(e.host.style.height).toBe('240px');
+    expect(e.host.getAttribute('data-reminders-state')).toBe('ready');
+    expect(e.context.remInlineState(e.host).sequence).toBe(1);
+  });
+
+  it.each(['visible', 'ineligible', 'locked', 'reserved', 'not-search', 'no-view', 'full', 'new-owner', 'new-epoch', 'disconnected'])('still clears retained Search after %s', reason => {
+    const e = retainedSearch();
+    if (reason === 'visible') e.state.hidden = false;
+    if (reason === 'ineligible') e.state.allowed = false;
+    if (reason === 'locked') e.state.unlocked = false;
+    if (reason === 'reserved') e.classes.add('vilda-centile-live-reserved');
+    if (reason === 'not-search') e.context.state.tab = 'active';
+    if (reason === 'no-view') e.context.searchView = null;
+    if (reason === 'full') e.context.full = true;
+    if (reason === 'new-owner') e.state.userId = 'fictional-other-account';
+    if (reason === 'new-epoch') e.unlock.forEach(callback => callback());
+    if (reason === 'disconnected') e.host.isConnected = false;
+    e.context.remInlineHide(e.host);
+    expect(e.view.destroyCare).toHaveBeenCalledOnce(); expect(e.host.childNodes).toHaveLength(0);
+    expect(e.host.style.display).toBe('none'); expect(e.host.getAttribute('data-reminders-state')).toBeNull();
+  });
+
   it('distinguishes failed storage reads from a legitimately empty list and supports recovery', async () => {
     const e = environment();
     e.vault.listPatientNotesDueByDate.mockRejectedValueOnce(Error('FICTIONAL_READ_FAILURE'));

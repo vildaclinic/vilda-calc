@@ -362,6 +362,38 @@ kartę, epokę UI i tożsamość szyfrogramu. Opuszczenie dokumentu (`pagehide`)
 trwającą kryptografię, lecz zachowuje wcześniej zatwierdzony transport.
 Szczegóły zachowania i granic: `docs/REMINDERS_SEARCH.md`.
 
+**Aktualność Search (PR4).** `vilda_global_search.js` utrzymuje jeden rejestr
+hooków na sejf oraz refcount kontekstów okna/dokumentu. Aktywne usługi odbierają
+istniejące `vilda-notes`, `vilda-note-changed-ping-v1` i `vilda:sync-merged`.
+Nowy niekliniczny `changeId` łączy lokalny callback oraz oba transporty tej
+samej operacji. Drugi argument callbacka niesie tę samą zamrożoną kopertę;
+pierwszy argument i kolejność odbiorców pozostają zachowane. Zapis/usunięcie
+nagłówka pacjenta publikuje sygnał dopiero po udanej operacji. Koperta zawiera
+typ, czas, nadawcę, akcję i niejawny identyfikator operacji, bez danych pacjenta.
+Odbiór nie rozgłasza wiadomości ponownie i czyta wyłącznie własny bieżący sejf.
+Po ostatnim `destroy()` usuwa kanał, listenery i pamięć deduplikacji.
+
+Search przekazuje `strict: true` oraz predykat aktualności generacji do
+`listPatients`, `listExternalPatients`, `listAllPatientNotes` i `listCarePlans`.
+Ścisła ścieżka nie zamienia wyjątku odczytu na placeholder; domyślni konsumenci
+zachowują dotychczasowy kontrakt. Sesja sejfu jest sprawdzana niezależnie od
+predykatu przed i po odczytach/odszyfrowaniach. Błąd nie zatwierdza częściowego
+cache, a retry czyta wszystkie źródła ponownie. Nowa generacja lub zamknięcie
+widoku zatrzymują kolejne operacje starego odczytu. Indeks nie czyta migawek
+klinicznych i pozostaje w RAM. Nie należy utożsamiać generacji indeksu
+z epoką UI ani usuwać szyfrowanego biletu powrotu podczas odświeżenia danych.
+
+`matchedDate` jest projekcją konkretnego zapytania, bez mutacji cached rows.
+Filtr czasu zachowuje OR po zapisanych datach, a status pozostaje niezależny.
+Widok wyjaśnia pasującą datę i ponawia filtrowanie przy lokalnej północy oraz
+po wznowieniu, bez invalidacji danych i ponownego odszyfrowania. Timer bierze
+następną lokalną datę, uwzględnia DST i jest usuwany po ukryciu/zamknięciu.
+Fizycznie ukryta ramka powłoki zachowuje aktywny inline Search, zamiast
+niszczyć go po powiadomieniu danych. Wyjątek wymaga nadal aktualnego
+właściciela i kwalifikacji widoku; blokada, zmiana epoki/konta, odłączenie
+DOM i utrata PRO/layoutu uruchamiają dotychczasowe czyszczenie.
+Szczegóły semantyki oraz regresji: `docs/REMINDERS_SEARCH.md`.
+
 ### Podgląd siatki podczas nowego pomiaru
 
 Przypomnienia w `vilda_auth_ui.js` mają osobny, czytelny blok `P-PRZYPOMNIENIA-STAN`.

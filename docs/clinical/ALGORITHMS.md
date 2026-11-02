@@ -11224,8 +11224,8 @@ na desktopie i telefonie: `global-search-return-state.test.mjs`,
 start produkcyjnego PWA w `przypomnienia-search-return-offline.spec.mjs`.
 Porównanie fingerprintów notatek i pacjenta sprawdza brak zapisów klinicznych
 przy samej nawigacji. Na etapie PR2 faktyczne otwieranie Terminarza pozostawało
-osobną częścią naprawy; realizuje je opisany poniżej PR3. Pełny cykl indeksu
-pozostaje odrębnym zakresem.
+osobną częścią naprawy; realizuje je opisany poniżej PR3. Aktualność indeksu
+domyka PR4 opisany poniżej.
 
 ### P-SZUKAJ-TERMINARZ — rzeczywisty kalendarz i powrót między dokumentami (2026-11-02)
 
@@ -11282,6 +11282,53 @@ sprawdza oba powroty, zgodność zasobów z cache i fingerprinty danych.
 Nowy zasób transportu mieści się w dotychczasowym budżecie 600 żądań:
 dwa bieżące aliasy niezmienionego `ios26-ui.js` współdzielą wyłącznie świeżą
 odpowiedź tej instalacji. Historyczne klucze precache pozostają zachowane.
+
+### P-SZUKAJ-AKTUALNOSC — pełny indeks, sygnały zmian i daty filtrów (2026-11-02)
+
+**Zakres.** Ostatnia część naprawy Szukaj po P-SZUKAJ-TERMINARZ. Zmienia
+aktualizowanie i kompletność odczytu oraz wyjaśnienie daty dopasowanej do
+filtra. Nie zmienia wzorów, norm, dawek, jednostek, zaokrągleń, interpretacji,
+rekordów pacjenta, terminów, statusów ani algorytmu synchronizacji.
+
+**Aktualność.** Rejestr odbiorców `VildaGlobalSearch` łączy lokalne hooki,
+istniejący kanał notatek i ping storage. Ten sam niekliniczny `changeId`
+deduplikuje trzy powiadomienia jednej operacji; różne zapisy w tej samej
+milisekundzie pozostają rozróżnialne. Udane zmiany nagłówków pacjentów
+podstawowych i zewnętrznych emitują ten sam sygnał bez danych pacjenta.
+Sygnał powoduje odczyt własnego sejfu, bez ponownej publikacji. Ostatni
+zamknięty widok usuwa zewnętrzne listenery i kanały.
+
+**Kompletność i generacje.** Ścisłe, opt-in odczyty czterech źródeł nie
+maskują błędu odszyfrowania nagłówka/notatki jako pustego wpisu. Błąd źródła
+nie zatwierdza cache; widok pokazuje możliwość ponowienia całego odczytu.
+Domyślne ścieżki innych konsumentów sejfu zachowują dotychczasowy kontrakt.
+Istniejąca granica sesji sejfu i predykat generacji są sprawdzane przed/po
+operacjach asynchronicznych i pomiędzy rekordami. Zamknięcie, nowa generacja
+lub zmiana sesji nie pozwalają kontynuować kolejnych odszyfrowań ani pokazać
+starego wyniku. To nie zmienia granic dostępu ani źródeł odzyskiwania tożsamości.
+Nieprawidłowy wewnętrzny envelope Klirensu w poprawnie odczytanej notatce
+nadal korzysta z istniejącego modelu niedostępnego wyniku w Notatkach.
+
+**Daty i stany.** Zakres dopasowania pozostaje OR po dacie wydarzenia,
+przypomnienia, wpisu/badania i datach planu. Daty zakończenia/niezgłoszenia się
+nie są datami filtra czasu. `matchedDate` należy do wyniku zapytania,
+nie do źródła lub wspólnego cache: przyszłość wybiera najbliższą przyszłą,
+przeszłość ostatnią przeszłą, a remisy rozstrzyga wydarzenie → wpis/badanie
+→ przypomnienie. Widok wskazuje rodzaj i wartość pasujące do filtra. Stan
+nie jest wyprowadzany z upływu terminu, treści notatki ani obecności wyniku.
+Lokalna północ i wznowienie ponawiają filtr z cache, bez ponownego czytania
+źródeł; timer wyznacza następną lokalną datę także w dniach 23/25-godzinnych.
+Odświeżenie zachowuje kontekst UI i ważny bilet powrotu PR2/PR3.
+
+**Regresje na danych fikcyjnych.** `search-vault-strict.test.mjs` wykonuje
+prawdziwą kryptografię i adapter, uszkadza kopie ciphertextów, sprawdza retry,
+legalny tekst placeholdera, zmianę sesji i anulowanie pomiędzy rekordami.
+`vault-patient-change-signal.test.mjs` sprawdza sygnały tylko po udanych
+mutacjach. `global-search-index-lifecycle.test.mjs` pokrywa deduplikację,
+cleanup, stare generacje i projekcję dat; `global-search-local-day.test.mjs`
+— północ, DST i odtworzenie widoku bez nowych odczytów źródeł. Macierz
+wszystkich producentów Klirensu, 34 analitów i rzeczywistych zapisów DocPro
+oraz wcześniejsze powroty pozostają regresjami tej samej wyszukiwarki.
 
 ### P-PRZYPOMNIENIA-ECHO — karta „Przypomnienia” nie przebudowuje się od własnego pingu licznika (SW 1.1.263, 2026-10-13, polecenie właściciela)
 

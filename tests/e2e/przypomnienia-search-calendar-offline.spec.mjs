@@ -41,7 +41,7 @@ function currentResources() {
     .map(name => fs.readFileSync(path.join(root, name), 'utf8'));
   const loaded = sources.flatMap(source => [...source.matchAll(/["']([^"'\s]+\.(?:js|css)\?v=\d+)["']/g)].map(match => match[1]));
   const resources = ['index.html', 'terminarz.html'].map(name => ({ url: '/' + name, sha256: sha256(fs.readFileSync(path.join(root, name))) }));
-  for (const name of ['vilda_auth_ui.js', 'vilda_search_navigation.js', 'vilda_terminarz.js',
+  for (const name of ['vilda_vault.js', 'vilda_auth_ui.js', 'vilda_search_navigation.js', 'vilda_terminarz.js',
     'vilda_global_search.js', 'vilda_global_search_view.js', 'vilda_global_search.css', 'vilda_reminders.css']) {
     const versions = [...new Set(loaded.filter(value => value.split('?')[0] === name))];
     if (versions.length !== 1) throw new Error(`Expected one current version of ${name}, found: ${versions.join(', ')}`);

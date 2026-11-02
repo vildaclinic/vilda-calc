@@ -100,7 +100,7 @@ for (const [profile, settings] of profiles) test.describe(profile, () => {
     await expect(page.locator(`${SEARCH_WORKSPACE} .vb22-detail:not(.vgs-detail)`)).toContainText(`${LONG_QUERY} 081`);
     await page.locator(SEARCH_WORKSPACE).getByRole('button', { name: RETURN_TO_SEARCH, exact: true }).click();
     search = await assertSearchContext(page, reminderContext);
-    await search.getByRole('combobox', { name: 'Terminy spraw', exact: true }).selectOption('all');
+    await search.getByRole('combobox', { name: 'Daty wpisów', exact: true }).selectOption('all');
     await queryGlobal(search, 'plan dalszego postępowania');
     await resultFor(search, 'plan', created.planId).click();
     action = search.getByRole('button', { name: 'Otwórz plan opieki ↗', exact: true });
