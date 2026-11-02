@@ -20,8 +20,13 @@ test('A8 completing a task keeps the active context and the completed details on
   expect(await workspace.locator('.vb22-list-pane').evaluate(node => getComputedStyle(node).backgroundColor)).toBe('rgb(255, 255, 255)');
   expect(await workspace.getByRole('button', { name: 'Dodaj przypomnienie', exact: true }).evaluate(node => node.matches(':focus-visible'))).toBe(false);
   await workspace.locator('[data-filter=overdue]').tap();
-  const search = workspace.getByRole('searchbox', { name: 'Szukaj pacjenta lub sprawy' });
+  const search = workspace.locator('.vb22-list-tools .vb22-search');
+  const viewport = page.viewportSize();
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  await expect(search).toBeVisible();
   await search.fill('Fikcyjna sprawa mobilna A8');
+  await page.setViewportSize(viewport);
+  await expect(search).toBeHidden();
   await workspace.locator(`[data-note-id="${noteIds[0]}"]`).tap();
   await workspace.getByRole('button', { name: 'Oznacz jako wykonane', exact: true }).tap();
   const form = page.locator('dialog.vb22-outcome');
@@ -34,6 +39,7 @@ test('A8 completing a task keeps the active context and the completed details on
   await expect(workspace.locator('.vb22-body')).toContainText('Fikcyjne MR umówione na 02.02.2027.');
   await expect(workspace.locator('.vb22-notice')).toContainText('Zapisano');
   await workspace.getByRole('button', { name: '← Lista spraw', exact: true }).tap();
+  await expect(search).toBeHidden();
   await expect(search).toHaveValue('Fikcyjna sprawa mobilna A8');
   await expect(workspace.locator('[data-filter=overdue]')).toHaveAttribute('aria-pressed', 'true');
   await expect(workspace.locator('.vb22-row:not(.vgs-row)')).toHaveCount(1);

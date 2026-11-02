@@ -32,9 +32,15 @@ test('A8 a committed outcome remains saved with a working back button when subse
   }, ids.a);
   await page.locator('#vildaRemindersBtn').tap();
   const workspace = page.locator('dialog.vb22-modal');
+  const search = workspace.locator('.vb22-list-tools .vb22-search');
   for (const [index, stage] of ['note', 'groups'].entries()) {
     const title = 'Fikcyjna read-commit A8 ' + stage;
-    await workspace.getByRole('searchbox', { name: 'Szukaj pacjenta lub sprawy' }).fill(title);
+    const viewport = page.viewportSize();
+    await page.setViewportSize({ width: 1440, height: 1000 });
+    await expect(search).toBeVisible();
+    await search.fill(title);
+    await page.setViewportSize(viewport);
+    await expect(search).toBeHidden();
     await workspace.locator(`[data-note-id="${notes[stage]}"]`).tap();
     await page.evaluate(value => { window.__a8ConfiguredFailure = value; }, stage);
     await workspace.getByRole('button', { name: 'Oznacz jako wykonane', exact: true }).tap();
@@ -61,6 +67,7 @@ test('A8 a committed outcome remains saved with a working back button when subse
     const stored = await page.evaluate(id => window.VildaVault.getPatientNote(id), notes[stage]);
     expect(stored.completedAtISO).toBeTruthy(); expect(stored.body).toContain('Fikcyjny opis zapisu A8 ' + stage);
     await back.tap();
-    await expect(workspace.getByRole('searchbox', { name: 'Szukaj pacjenta lub sprawy' })).toHaveValue(title);
+    await expect(search).toBeHidden();
+    await expect(search).toHaveValue(title);
   }
 });

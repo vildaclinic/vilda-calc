@@ -236,6 +236,77 @@ dialog.vcp.vcp-dialog::backdrop { background: #1a3b4445; backdrop-filter: blur(3
   color: var(--vcp-muted)!important;
 }
 .vcp.vcp .vcp-filters button.is-active { background: var(--vcp-soft)!important; color: var(--vcp-teal)!important; }
+
+/* Reminders owns the header geometry; the plan view retains its controls and state. */
+.vcp.vcp-reminders-layout .vcp-list-fixed {
+  display: none;
+  flex: 0 0 auto;
+  padding: var(--space-12px) var(--space-14px) var(--space-10px);
+}
+.vcp.vcp.vcp-reminders-layout .vcp-search {
+  width: 100%;
+  height: 44px;
+  min-height: 44px;
+  margin: 0;
+  padding: var(--space-10px) var(--space-12px);
+  border: var(--border-hairline) solid #cbdcdf!important;
+  font: 400 16px/22px Inter, sans-serif;
+  appearance: auto;
+  -webkit-appearance: auto;
+}
+.vcp.vcp-reminders-layout .vcp-search::-webkit-search-decoration {
+  -webkit-appearance: none;
+}
+.vcp-reminders-layout .vcp-template-entry {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  padding: 2px var(--space-4px) var(--space-10px);
+  flex-shrink: 0;
+}
+.vcp-reminders-layout .vcp-filter-reset {
+  display: flex;
+  justify-content: flex-end;
+  padding: 0 var(--space-4px) var(--space-10px);
+  flex-shrink: 0;
+}
+.vcp.vcp-reminders-layout .vcp-template-button,
+.vcp.vcp-reminders-layout .vcp-clear-filters {
+  min-height: 44px;
+  padding: var(--space-4px) 0;
+  margin: 0;
+  font-size: 12px;
+  line-height: 20px;
+}
+@container vb22-reminders (width > 700px) {
+  .vcp.vcp-reminders-layout.vcp-full .vcp-list-fixed { display: block; }
+  .vcp.vcp-reminders-layout.vcp-full .vcp-template-entry { display: none; }
+  .vcp.vcp-reminders-layout.vcp-full .vcp-filter-reset { display: none; }
+}
+@media (max-height: 500px) {
+  .vcp.vcp-reminders-layout.vcp-full .vcp-list-fixed { display: none; }
+  .vcp.vcp-reminders-layout.vcp-full .vcp-filter-reset { display: flex; }
+}
+/* A fixed dialog frame keeps the header and actions anchored while the picker changes. */
+dialog.vcp.vcp-dialog.vcp-reminders-dialog {
+  --vcp-dialog-gap: 24px;
+  position: fixed;
+  inset: calc(var(--vcp-dialog-viewport-top, 0px) + var(--vcp-dialog-gap)) 0 auto;
+  height: min(740px, calc(var(--vcp-dialog-viewport-height, 100dvh) - 2 * var(--vcp-dialog-gap)));
+  max-height: calc(var(--vcp-dialog-viewport-height, 100dvh) - 2 * var(--vcp-dialog-gap));
+  margin: 0 auto;
+}
+.vcp-reminders-dialog .vcp-form { height: 100%; max-height: none; }
+.vcp-reminders-dialog .vcp-form-body { flex: 1 1 auto; }
+@media (max-width: 700px) {
+  dialog.vcp.vcp-dialog.vcp-reminders-dialog { --vcp-dialog-gap: 8px; }
+}
+dialog.vcp.vcp-dialog.vcp-reminders-dialog.vcp-dialog-short { --vcp-dialog-gap: 8px; }
+.vcp-reminders-dialog.vcp-dialog-short .vcp-form-head { padding: var(--space-8px) var(--space-14px); }
+.vcp-reminders-dialog.vcp-dialog-short .vcp-form-head h2 { font-size: 18px; line-height: 24px; }
+.vcp-reminders-dialog.vcp-dialog-short .vcp-form-patient { margin-bottom: 2px; font-size: 10px; line-height: 14px; }
+.vcp-reminders-dialog.vcp-dialog-short .vcp-form-body { padding: var(--space-10px) var(--space-14px); }
+.vcp-reminders-dialog.vcp-dialog-short .vcp-form-actions { padding: var(--space-6px) var(--space-14px); }
 .vcp.vcp .vcp-primary { background: var(--vcp-teal)!important; border-color: var(--vcp-teal)!important; color: #fff!important; font-weight: 500!important; }
 .vcp.vcp .vcp-primary:hover { background: #066f74!important; border-color: #066f74!important; }
 .vcp.vcp .vcp-outline { background: #fff!important; border-color: #bcd2d5!important; color: var(--vcp-teal)!important; }

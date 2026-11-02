@@ -25,6 +25,7 @@
     options = options || {};
     if (!host || !host.ownerDocument) throw new Error('Brak miejsca na bibliotekę szablonów.');
     var doc = host.ownerDocument, vault = options.vault || win.VildaVault, model = win.VildaCareTemplateModel;
+    var remindersLayout = options.remindersLayout === true;
     if (!model || !vault) throw new Error('Odśwież aplikację, aby otworzyć szablony.');
     var owner = vault.getCurrentUser && vault.getCurrentUser(), ownerId = owner && owner.userId;
     var destroyed = false, sequence = 0, timer = null, lifecycle = null, unsubscribe = [], fields = new Map(), objectURLs = new Set();
@@ -67,17 +68,23 @@
     function kindLabel(value) { var entry = model.TASK_KINDS.find(function (entry) { return entry.value === value; }); return entry ? entry.label : 'Inny krok'; }
     function timing(rule) { return !rule || rule.kind === 'none' ? 'Bez terminu' : rule.amount === 0 ? 'W dniu uruchomienia etapu' : String(rule.amount) + ' ' + ({ day: 'dni', week: 'tygodni', month: 'miesięcy' }[rule.unit] || '') + ' po uruchomieniu etapu'; }
     function capabilityText() { return !state.capability ? '' : !canSave() ? 'Zapisywanie szablonów jest teraz niedostępne. Odśwież bibliotekę, aby ponowić sprawdzenie.' : state.syncInfo || (state.capability.persistence === 'private-local' && !state.capability.syncAvailable ? 'Biblioteka jest zapisywana na tym urządzeniu.' : ''); }
-    var root = node('section', 'vcp vct'); root.setAttribute('aria-label', 'Moje szablony');
+    var root = node('section', 'vcp vct' + (remindersLayout ? ' vct-reminders-layout' : '')); root.setAttribute('aria-label', 'Moje szablony');
     var header = node('header', 'vcp-form-head vct-header'), headerTitle = node('h2', '', 'Moje szablony'); headerTitle.tabIndex = -1; header.appendChild(headerTitle);
     var closeButton = button('×', 'vcp-icon', requestClose, 'Zamknij bibliotekę szablonów'); header.appendChild(closeButton); root.appendChild(header);
-    var feedback = node('div', 'vcp-feedback vct-feedback'); feedback.setAttribute('role', 'status'); feedback.setAttribute('aria-live', 'polite'); feedback.hidden = true; root.appendChild(feedback);
-    var errors = node('div', 'vct-errors'), workspace = node('div', 'vct-workspace'), footer = node('footer', 'vct-footer'); root.appendChild(errors); root.appendChild(workspace); root.appendChild(footer); host.appendChild(root);
+    var feedback = node('div', 'vcp-feedback vct-feedback'); feedback.setAttribute('role', 'status'); feedback.setAttribute('aria-live', 'polite'); feedback.hidden = true;
+    var errors = node('div', 'vct-errors'), workspace = node('div', 'vct-workspace'), footer = node('footer', 'vct-footer'), feedbackSlot = null;
+    if (remindersLayout) {
+      feedbackSlot = node('div', 'vct-feedback-slot'); feedbackSlot.tabIndex = -1;
+      feedbackSlot.appendChild(feedback); feedbackSlot.appendChild(errors);
+    } else { root.appendChild(feedback); root.appendChild(errors); }
+    root.appendChild(workspace); if (feedbackSlot) root.appendChild(feedbackSlot); root.appendChild(footer); host.appendChild(root);
     var importPicker = node('input', ''); importPicker.type = 'file'; importPicker.accept = '.vctlib,application/json,application/octet-stream'; importPicker.hidden = true; importPicker.setAttribute('aria-label', 'Plik biblioteki szablonów'); root.appendChild(importPicker);
     importPicker.addEventListener('change', function () { if (current() && importPicker.files && importPicker.files[0]) importLibrary(importPicker.files[0]); });
     function renderFeedback() {
       feedback.textContent = state.feedback; feedback.hidden = !state.feedback; clear(errors);
       if (state.error) { var error = node('div', 'vcp-error', state.error); error.setAttribute('role', 'alert'); errors.appendChild(error); }
       if (state.issues.length) { var issues = node('div', 'vcp-error', issueMessage(state.issues[0])); issues.setAttribute('role', 'alert'); errors.appendChild(issues); }
+      if (feedbackSlot) feedbackSlot.tabIndex = state.feedback || state.error || state.issues.length ? 0 : -1;
     }
     function issueMessage(issue) {
       var path = String(issue.fieldPath || (issue.path || []).join('.'));
@@ -499,10 +506,30 @@
   }
   function open(options) {
     options = options || {}; var doc = win.document, origin = doc.activeElement, dialog = doc.createElement('dialog'); dialog.className = 'vcp vct-dialog';
+    if (options.remindersLayout === true) dialog.classList.add('vct-reminders-dialog');
     dialog.setAttribute('aria-label', 'Moje szablony'); doc.body.appendChild(dialog);
-    var cleanup = null, controller, closed = false;
-    function closedDialog() { if (closed) return; closed = true; var removePrivacy = cleanup; cleanup = null; if (removePrivacy) removePrivacy(); if (dialog.open) dialog.close(); dialog.remove(); if (origin && origin.isConnected && origin.focus) origin.focus({ preventScroll: true }); if (options.onClose) options.onClose(); }
+    var cleanup = null, stopViewport = null, controller, closed = false;
+    function closedDialog() { if (closed) return; closed = true; if (stopViewport) { stopViewport(); stopViewport = null; } var removePrivacy = cleanup; cleanup = null; if (removePrivacy) removePrivacy(); if (dialog.open) dialog.close(); dialog.remove(); if (origin && origin.isConnected && origin.focus) origin.focus({ preventScroll: true }); if (options.onClose) options.onClose(); }
     try {
+      if (options.remindersLayout === true) {
+        var viewport = win.visualViewport;
+        function fitViewport() {
+          if (closed || !dialog.isConnected) return;
+          var height = viewport && viewport.height > 0 ? viewport.height : win.innerHeight;
+          var compact = height < 500, gap = compact ? 4 : (win.innerWidth || 0) <= 700 ? 8 : 24;
+          var top = (viewport && viewport.offsetTop > 0 ? viewport.offsetTop : 0) + gap;
+          dialog.style.setProperty('--vct-reminders-top', top + 'px');
+          dialog.style.setProperty('--vct-reminders-height', Math.max(1, Math.min(850, height - 2 * gap)) + 'px');
+          dialog.classList.toggle('vct-reminders-compact', compact);
+        }
+        win.addEventListener('resize', fitViewport);
+        if (viewport) { viewport.addEventListener('resize', fitViewport); viewport.addEventListener('scroll', fitViewport); }
+        stopViewport = function () {
+          win.removeEventListener('resize', fitViewport);
+          if (viewport) { viewport.removeEventListener('resize', fitViewport); viewport.removeEventListener('scroll', fitViewport); }
+        };
+        fitViewport();
+      }
       controller = mount(dialog, Object.assign({}, options, { onClose: closedDialog }));
       if (options.onDialog) cleanup = options.onDialog(dialog); dialog.addEventListener('cancel', function (event) { event.preventDefault(); controller.requestClose(); }); dialog.showModal();
       var first = dialog.querySelector('.vcp-search'); if (first) first.focus({ preventScroll: true }); return controller;

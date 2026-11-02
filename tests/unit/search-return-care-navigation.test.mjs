@@ -25,7 +25,7 @@ function environment() {
   const editor = vi.fn(), open = vi.fn(async () => true);
   let fixture, owner;
   const production = [authProductionReturnProgram(source),
-    ...['careSearchNavigationStart', 'careSearchNavigationCurrent', 'mountCare', 'switchTab', 'closed']
+    ...['careSearchNavigationStart', 'careSearchNavigationCurrent', 'openCareTemplates', 'mountCare', 'switchTab', 'closed']
       .map(name => authProductionFunction(source, name, 'remB22Create')),
     authProductionFunction(source, '$t'),
   ].join('\n');

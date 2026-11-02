@@ -30,8 +30,8 @@
       .catch(function (error) { templateCorePromise = null; throw error; });
     if (options && options.ui === false) return templateCorePromise;
     if (!templateUiPromise) templateUiPromise = templateCorePromise.then(function () { return Promise.all([
-      templateAsset('vilda_care_templates.css?v=1', null, true),
-      templateAsset('vilda_care_templates.js?v=1', function () { return !!win.VildaCareTemplates; })
+      templateAsset('vilda_care_templates.css?v=2', null, true),
+      templateAsset('vilda_care_templates.js?v=2', function () { return !!win.VildaCareTemplates; })
     ]); }).catch(function (error) { templateUiPromise = null; throw error; });
     return templateUiPromise;
   }
@@ -227,6 +227,7 @@
   }
   function mount(host, options) {
     options = options || {};
+    var remindersLayout = options.remindersLayout === true;
     if (!host || !host.ownerDocument) throw new Error('Brak miejsca na widok planów opieki.');
     var doc = host.ownerDocument, vault = options.vault || win.VildaVault, destroyed = false, sequence = 0, refreshTimer = null;
     var account = vault && vault.getCurrentUser && vault.getCurrentUser(), accountId = account && account.userId;
@@ -255,6 +256,7 @@
       return badge(day(value) === today() ? 'Na dziś' : 'Zaplanowane', day(value) === today() ? 'near' : 'planned');
     }
     var root = node('section', 'vcp ' + (options.full ? 'vcp-full' : 'vcp-inline'));
+    if (remindersLayout) root.classList.add('vcp-reminders-layout');
     root.setAttribute('aria-label', 'Plany opieki'); root.classList.toggle('vcp-show-detail', state.detail);
     var tools = node('div', 'vcp-tools');
     var createButton = button('+ Nowy plan', 'vcp-text vcp-create', create); createButton.setAttribute('aria-label', 'Nowy plan');
@@ -265,7 +267,26 @@
     search.addEventListener('input', function () { state.query = search.value; renderList(); }); fixed.appendChild(search);
     var filters = node('nav', 'vcp-filters'); filters.setAttribute('aria-label', 'Filtry planów opieki'); fixed.appendChild(filters); left.appendChild(fixed);
     var list = node('div', 'vcp-list'); list.setAttribute('aria-label', 'Lista planów opieki'); left.appendChild(list); layout.appendChild(left);
-    var detail = node('section', 'vcp-detail'); detail.setAttribute('aria-label', 'Szczegóły planu'); if (options.full) layout.appendChild(detail); root.appendChild(layout); host.appendChild(root);
+    var templateEntry = null, templateButton = null, filterReset = null, clearFiltersButton = null;
+    if (remindersLayout) {
+      list.tabIndex = -1;
+      templateEntry = node('div', 'vcp-template-entry');
+      templateButton = button('Moje szablony', 'vcp-text vcp-template-button', function () {
+        if (!current() || state.editing || state.busy) return;
+        if (typeof options.openTemplates === 'function') options.openTemplates(); else openTemplateLibrary();
+      });
+      templateEntry.appendChild(templateButton);
+      filterReset = node('div', 'vcp-filter-reset');
+      clearFiltersButton = button('Wyczyść filtry', 'vcp-text vcp-clear-filters', function () {
+        if (!current() || state.editing || state.busy) return;
+        state.query = ''; search.value = ''; state.filter = 'all'; render();
+        list.focus({ preventScroll: true });
+      });
+      filterReset.appendChild(clearFiltersButton);
+    }
+    var detail = node('section', 'vcp-detail'); detail.setAttribute('aria-label', 'Szczegóły planu'); if (options.full) layout.appendChild(detail); root.appendChild(layout);
+    if (remindersLayout) root.appendChild(feedback);
+    host.appendChild(root);
     var filterLabels = [['all', 'Otwarte'], ['needs', 'Do działania'], ['waiting', 'Oczekuję'], ['closed', 'Zamknięte']];
     function matchFilter(plan, key) {
       if (key === 'closed') return closed(plan);
@@ -287,7 +308,16 @@
       });
     }
     function renderList() {
-      var scroll = list.scrollTop; clear(list);
+      var scroll = list.scrollTop, restoreTemplateFocus = templateButton && doc.activeElement === templateButton; clear(list);
+      if (templateEntry) {
+        templateButton.disabled = state.editing || state.busy;
+        list.appendChild(templateEntry);
+        if (restoreTemplateFocus && !templateButton.disabled) templateButton.focus({ preventScroll: true });
+      }
+      if (filterReset && (state.query.trim() || state.filter !== 'all')) {
+        clearFiltersButton.disabled = state.editing || state.busy;
+        list.appendChild(filterReset);
+      }
       if (state.loading && !state.loaded) { var loading = node('p', 'vcp-empty', 'Wczytywanie planów…'); loading.setAttribute('role', 'status'); list.appendChild(loading); return; }
       var plans = visible();
       if (!state.selected || !state.plans.some(function (plan) { return plan.id === state.selected; })) { resetRecord(); state.selected = plans[0] && plans[0].id || null; }
@@ -635,9 +665,28 @@
       var wrap = node('label', 'vcp-check'), input = node('input', ''); input.type = 'checkbox'; input.checked = !!checked; input.required = !!required; wrap.appendChild(input); wrap.appendChild(node('span', '', label)); parent.appendChild(wrap); return input;
     }
     function notice(parent, text, warning) { var box = node('div', 'vcp-notice' + (warning ? ' vcp-warning' : ''), text); parent.appendChild(box); }
+    function bindRemindersDialogViewport(dialog) {
+      var viewport = win.visualViewport, stopped = false;
+      function fitDialog() {
+        if (stopped) return;
+        var height = viewport && viewport.height || win.innerHeight;
+        dialog.style.setProperty('--vcp-dialog-viewport-height', height + 'px');
+        dialog.style.setProperty('--vcp-dialog-viewport-top', (viewport && viewport.offsetTop || 0) + 'px');
+        dialog.classList.toggle('vcp-dialog-short', height <= 500);
+      }
+      fitDialog();
+      win.addEventListener('resize', fitDialog, { passive: true });
+      if (viewport) { viewport.addEventListener('resize', fitDialog, { passive: true }); viewport.addEventListener('scroll', fitDialog, { passive: true }); }
+      return function () {
+        if (stopped) return; stopped = true;
+        win.removeEventListener('resize', fitDialog);
+        if (viewport) { viewport.removeEventListener('resize', fitDialog); viewport.removeEventListener('scroll', fitDialog); }
+      };
+    }
     function showEditor(title, plan, build, saveLabel, submit) {
       if (!current() || state.editing || state.busy) return null;
       var origin = doc.activeElement, dialog = node('dialog', 'vcp vcp-dialog'), form = node('form', 'vcp-form');
+      if (remindersLayout) dialog.classList.add('vcp-reminders-dialog');
       var header = node('header', 'vcp-form-head'), titleWrap = node('div', '');
       titleWrap.appendChild(node('p', 'vcp-form-patient', plan ? name(plan) : 'Nowy plan opieki'));
       var heading = node('h2', '', title); heading.id = 'vcp-form-title-' + ++serial; titleWrap.appendChild(heading); header.appendChild(titleWrap);
@@ -648,6 +697,7 @@
       editor = model; busy(false, true); doc.body.appendChild(dialog);
       function cancel() {
         if (state.busy) return;
+        if (model.releaseViewport) { model.releaseViewport(); model.releaseViewport = null; }
         if (typeof model.onDialogClose === 'function') { model.onDialogClose(); model.onDialogClose = null; }
         if (dialog.open) dialog.close(); dialog.remove(); if (editor === model) editor = null; busy(false, false); render();
         if (origin && origin.isConnected && origin.focus) origin.focus({ preventScroll: true });
@@ -678,6 +728,7 @@
         } catch (error) { if (current() && editor === model) { setWorking(false); errorBox(error, errors); errors.scrollIntoView({ block: 'nearest' }); } }
       });
       build(model);
+      if (remindersLayout) model.releaseViewport = bindRemindersDialogViewport(dialog);
       if (typeof options.onDialog === 'function') model.onDialogClose = options.onDialog(dialog);
       dialog.showModal(); body.scrollTop = 0;
       var first = body.querySelector('input:not([type=checkbox]):not([type=radio]),textarea,select'); if (first) first.focus({ preventScroll: true });
@@ -973,7 +1024,7 @@
       if (!current() || state.editing || state.busy) return;
       busy(true, true);
       try {
-        var view = await openTemplates({ vault: vault, sourcePlanId: sourcePlanId || null, isCurrent: current,
+        var view = await openTemplates({ vault: vault, sourcePlanId: sourcePlanId || null, isCurrent: current, remindersLayout: remindersLayout,
           onDialog: options.onDialog,
           onBusy: function (working) { if (current()) busy(working, true); },
           onClose: function () { templateView = null; if (current()) { busy(false, false); render(); if (state.stale) refresh(); } }
@@ -987,6 +1038,7 @@
       if (templateView) { templateView.destroy(); templateView = null; }
       if (lifecycleObserver) lifecycleObserver.disconnect();
       if (editor) {
+        if (editor.releaseViewport) editor.releaseViewport();
         if (typeof editor.onDialogClose === 'function') editor.onDialogClose();
         if (editor.dialog.open) editor.dialog.close(); editor.dialog.remove(); editor = null;
       }
