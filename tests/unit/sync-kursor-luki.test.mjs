@@ -96,7 +96,9 @@ async function urzadzenie({ kursor = null, pacjenci = 1, rozmiarNotatki = 0 } = 
       return { mergedPatientCount: 1 };
     },
   };
-  const seed = { [KLUCZ_STANU]: JSON.stringify({ registered: true, localEtag: 'E1', lastSyncAt: null }) };
+  // E2-PR1b: ten plik sprawdza regułę Yt (jedna strona legacy na pobranie), więc pobieranie stronami wyłączone jawnie
+  // (flaga '0'); stronami: tests/unit/sync-dziennik-drenaz.test.mjs.
+  const seed = { [KLUCZ_STANU]: JSON.stringify({ registered: true, localEtag: 'E1', lastSyncAt: null }), 'vilda-sync-paged-v1': '0' };
   if (kursor != null) seed[KLUCZ_KURSORA] = String(kursor);
   const win = {
     localStorage: magazyn(seed),

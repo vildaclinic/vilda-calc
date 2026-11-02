@@ -1,11 +1,12 @@
 // E2-PR1 (P-SYNC-STRONY) — pobieranie dziennika zmian stronami (/changes?since=N&limit=200, pętla po truncated) za
-// flagą vilda-sync-paged-v1, uśpione. Prawdziwy vilda_sync.js i prawdziwy sejf na atrapie workera v37a/v36
+// flagą vilda-sync-paged-v1; od E2-PR1b (P-SYNC-STRONY-DOMYSLNIE) domyślnie włączone ('0' wyłącza). Prawdziwy vilda_sync.js i prawdziwy sejf na atrapie workera v37a/v36
 // (tests/support/atrapa-workera-sync.mjs, wzorzec SHA_WZORCA) przez uprząż urządzeń (tests/support/urzadzenie-sync.mjs);
 // strażnik sieci z uprzęży — żadnego ruchu poza atrapą. Dane wyłącznie FIKCYJNE („Testowy Jan”, „Fikcyjna Lekarka”).
 //
-// Co pilnuje: stronicowanie działa tylko przy fladze '1' (albo window.VILDA_SYNC_PAGED === true), przy włączonym /changes,
-// w trybie „Komputer prywatny” i przy features 'changes-paged' z GET /v1/health; w każdym innym wypadku dzisiejsza
-// ścieżka (zapis bazowy flagi wyłączonej: tests/unit/sync-zadania-bazowe.test.mjs). Kursor jak P-SYNC-KURSOR (najwyższy
+// Co pilnuje: stronicowanie działa przy fladze innej niż '0' (od E2-PR1b także bez klucza; window.VILDA_SYNC_PAGED ===
+// true włącza, === false wyłącza), przy włączonym /changes, w trybie „Komputer prywatny” i przy features 'changes-paged'
+// z GET /v1/health; w każdym innym wypadku ścieżka legacy (zapis bazowy legacy, flaga '0':
+// tests/unit/sync-zadania-bazowe.test.mjs). Kursor jak P-SYNC-KURSOR (najwyższy
 // wiersz o rozstrzygniętym wyniku, tylko w górę; cursorAhead → headSeq, requiresBase → oldestSeq − 1), ciągłość numerów
 // (dziura: stop, przeskok przy trzecim drenażu z licznikiem w localStorage), 401/429/503 w getDrainStatus zamiast ciszy,
 // budżet 10 stron / 20 s, P-SESJA-ZAPISU (blokada sejfu albo inne konto: bez zapisu kursora z bieżącej strony), kolejność
@@ -13,16 +14,22 @@
 // pobrania) i równoważność stanu sejfu: legacy w dwóch pobraniach ≡ stronami w jednym.
 //
 // Świat: atrapa v37a (eventsEnabled false, zegar sterowany), A (nowe konto, karta 1, rejestracja syncPush), B — bliźniak A
-// z flagą '1' po pierwszym pobraniu (delta karty 2 w dzienniku, seq 1; kursor 1), chyba że przypadek mówi inaczej.
+// bez klucza flagi (od E2-PR1b: domyślnie stronami; do E2-PR1b z flagą '1') po pierwszym pobraniu (delta karty 2 w
+// dzienniku, seq 1; kursor 1), chyba że przypadek mówi inaczej.
 // Wiersze z treścią dopisywane do atrapy wprost (prawdziwe delty sejfu A: buildPatientDelta / buildLibraryNoteDelta) albo
 // beaconem (lustro v36). Fałszywy czas tylko Date (vi.useFakeTimers({toFake:['Date']}) przed utworzeniem świata).
 //
 // Przypadki:
-//   Warunki i tryby: D1 (flaga '0', '', 'true', 'TAK'; '1' + VILDA_SYNC_PAGED=false → bez health i limit=), D1b (brak
-//     klucza + VILDA_SYNC_PAGED=true → stronami), D1c (odczyt flagi rzuca → wyłączone), D2 (vilda-incr-sync-v1='0' ≡
-//     flaga '0'), D3 („Komputer w pracy”: flaga '1' ≡ '0'), D4 („Zaloguj jednorazowo”: flaga '1' ≡ '0'), D4b (każdy z
-//     dwóch pozostałych sygnałów trybu jednorazowego osobno, dwa pobrania), D4c (odczyt trybu rzuca → jak jednorazowy).
-//   Wykrycie: D5 (v36: health bez Authorization, legacy, pamięć 15 s), D6 (hub brak: legacy, 15 s), D6b (features bez
+//   Warunki i tryby: D1 (wyłączone: flaga '0'; '1' albo brak klucza + VILDA_SYNC_PAGED=false; VILDA_SYNC_PAGED nie-boolean
+//     ignorowane → bez health i limit=), D1d (E2-PR1b, domyślnie włączone: brak klucza, '1', '', 'true', 'TAK', 'false',
+//     ' 0', '0 ', brak klucza + VILDA_SYNC_PAGED = 'false' albo 0 (nie-boolean ignorowane) → health i limit=200), D1e (brak klucza, v36 → health i legacy), D1b (VILDA_SYNC_PAGED=true przy braku
+//     klucza i przy '0' → stronami), D1c (odczyt flagi rzuca → wyłączone), D2 (vilda-incr-sync-v1='0': '1' i brak klucza
+//     ≡ '0'), D3 („Komputer w pracy”: '1' i brak klucza ≡ '0'), D4 („Zaloguj jednorazowo”: '1' i brak klucza ≡ '0'), D4b
+//     (każdy z dwóch pozostałych sygnałów trybu jednorazowego osobno, '1' i brak klucza, dwa pobrania), D4c (odczyt trybu
+//     rzuca → jak jednorazowy, '1' i brak klucza), D3k (kontrola czułości: konto prywatne, '1' i brak klucza → stronami).
+//   Wykrycie: D5 (v36: health bez Authorization, legacy, pamięć 10 min — od E2-PR1b, wcześniej 15 s), D5k (E2-PR1b: przy
+//     pobraniach co 20 s jedno health na v36 i na v37a z sqlite false, przy sqlite null każde), D6 (hub brak: legacy,
+//     15 s), D6b (features bez
 //     changes-paged; bez pola api → legacy), D7 (health bez sieci: legacy, nic w magazynach), D8 (pamięć 10 min), D9
 //     (detectApi: kopia, bez zapisów), D9b (dwa detectApi naraz → jedno health; końcowy „/”).
 //   Pętla: D10 (3 strony, kursor 451, jedno vilda:sync-merged), D10b (nasłuch: dokładnie jedno zdarzenie na pobranie w
@@ -66,9 +73,19 @@
 //   Strażniki źródła: D36 (B, Y, Yt, wt i kursor — bt, Kt — bez zmian względem origin/audyt: sha256 całych funkcji), D37
 //     (te same 9 liczników w wt i Bdz_czyZmiana), D38 (blok Bdz_ bez vilda-sync-rl-until-v1, wywołania scalenia bloba i
 //     zapisu sessionStorage), D39 (nowe API bez wywołań w plikach produktu poza vilda_sync.js), D46 (strażniki formatu w
-//     bloku Bdz_ równoległe do wt i Yt: te same operacje, kody CARE_*, przed i po scaleniu, przed każdym Kt).
+//     bloku Bdz_ równoległe do wt i Yt: te same operacje, kody CARE_*, przed i po scaleniu, przed każdym Kt), D50 (E2-PR1b:
+//     isPagedActive wołane tylko z integracji, isLive i getLastPongAt tylko z integracji i realtime; isPagedActive bez
+//     żądań i zapisów).
+//   E2-PR1b, sygnał dla odpytywania (P-SYNC-ODPYTYWANIE-WS): D49 (isPagedActive: false bez wyniku health; po health
+//     prawda tylko w trybie prywatnym przy fladze innej niż '0' i changes-paged; bez żądań i zapisów), D49b (po zwykłym
+//     pobraniu stronami prawda, bez TTL; 503 hub_not_sqlite → fałsz), D49c (odczyt flagi rzuca → fałsz).
 //
-// Czerwone na bazie (vilda_sync.js z origin/audyt bez tej zmiany; sprawdzone na 75102672): 83 z 95 — wszystkie poza D1 (5 wariantów), D1c,
+// E2-PR1b (2026-11-02): domyślna flaga świata zmieniona z '1' na brak klucza (D5–D48 idą ścieżką domyślną; przypadki z
+// jawnym '0' / '1' bez zmian). Zmienione oczekiwania: D1 dla '', 'true', 'TAK' przeszły do D1d (włączone); D5 (pamięć
+// poprawnej odpowiedzi bez changes-paged 10 min zamiast 15 s, poprawka D3 z przeglądu E2-PR1b). Czerwone na bazie
+// E2-PR1b (pliki produktu z origin/audyt 9e431afd w kopii): wpisane w ALGORITHMS P-SYNC-STRONY-DOMYSLNIE.
+//
+// Czerwone na bazie E2-PR1 (vilda_sync.js z origin/audyt bez tej zmiany; sprawdzone na 75102672): 83 z 95 — wszystkie poza D1 (5 wariantów), D1c,
 // D2, D3 i D4 (dziś: zawsze legacy, oczekiwania „jak dziś”), D14e (sprawdzenie konta w Bpw_dren jest od PR-S) oraz
 // strażnikami D36 i D39. Kontrola czułości D3k (konto prywatne z flagą '1' idzie stronami) jest czerwona na bazie.
 // Format kliniczny (po przeniesieniu na origin/audyt z PR planów opieki #837–#849): bez strażników w bloku Bdz_ (wersja
@@ -107,7 +124,8 @@ async function swiat(o = {}) {
   const atrapa = utworzAtrapeWorkera({ tryb: 'v37a', eventsEnabled: false, zegar: zegarSterowany(), ...(o.atrapa || {}) });
   const A = await utworzUrzadzenie({ atrapa, nazwa: 'A', konto: o.konto });
   const B = await utworzUrzadzenie({ atrapa, nazwa: 'B', zBlizniaka: A });
-  const flaga = o.flaga === undefined ? '1' : o.flaga;
+  // E2-PR1b: domyślnie brak klucza flagi (pobieranie stronami włączone domyślnie); '1' i '0' tylko jawnie.
+  const flaga = o.flaga === undefined ? null : o.flaga;
   if (flaga !== null) B.win.localStorage.setItem(FLAGA, flaga);
   if (o.przygotujB) o.przygotujB(B);
   const s = { atrapa, A, B, inne: [] };
@@ -222,9 +240,11 @@ const rozstrzygnieta = (p) => { const r = { gotowa: false, w: undefined }; p.the
 
 describe('E2-PR1 P-SYNC-STRONY: warunki włączenia i tryby', () => {
   it.each([
-    ["'0'", { flaga: '0' }], ["''", { flaga: '' }], ["'true'", { flaga: 'true' }], ["'TAK'", { flaga: 'TAK' }],
+    ["'0'", { flaga: '0' }],
     ["'1' + VILDA_SYNC_PAGED = false", { flaga: '1', przygotujB: (B) => { B.win.VILDA_SYNC_PAGED = false; } }],
-  ])('D1: flaga %s — bez GET /v1/health i bez limit=, jedno żądanie legacy jak dziś', async (_n, o) => {
+    ['brak klucza + VILDA_SYNC_PAGED = false', { flaga: null, przygotujB: (B) => { B.win.VILDA_SYNC_PAGED = false; } }],
+    ["'0' + VILDA_SYNC_PAGED = 'false' (nie-boolean: ignorowane)", { flaga: '0', przygotujB: (B) => { B.win.VILDA_SYNC_PAGED = 'false'; } }],
+  ])('D1: flaga %s — wyłączone: bez GET /v1/health i bez limit=, jedno żądanie legacy jak przed E2-PR1', async (_n, o) => {
     const s = await swiat(o);
     await dopiszKarte(s); // seq 2
     const z0 = od(s);
@@ -235,7 +255,38 @@ describe('E2-PR1 P-SYNC-STRONY: warunki włączenia i tryby', () => {
     expect(s.atrapa.naruszenia).toEqual([]);
   });
 
-  it('D1b: brak klucza + VILDA_SYNC_PAGED = true — stronami (health, limit=200)', async () => {
+  // E2-PR1b (P-SYNC-STRONY-DOMYSLNIE): wyłącza tylko dokładnie '0'; brak klucza i każda inna wartość włącza.
+  it.each([
+    ['brak klucza', null], ["'1'", '1'], ["''", ''], ["'true'", 'true'], ["'TAK'", 'TAK'], ["'false'", 'false'], ["' 0'", ' 0'], ["'0 '", '0 '],
+    // VILDA_SYNC_PAGED nie-boolean jest ignorowane także przy braku klucza (wtedy decyduje brak klucza: włączone).
+    ["brak klucza + VILDA_SYNC_PAGED = 'false' (nie-boolean: ignorowane)", null, (B) => { B.win.VILDA_SYNC_PAGED = 'false'; }],
+    ['brak klucza + VILDA_SYNC_PAGED = 0 (nie-boolean: ignorowane)', null, (B) => { B.win.VILDA_SYNC_PAGED = 0; }],
+  ])('D1d: flaga %s — domyślnie włączone: GET /v1/health, potem stronami (limit=200)', async (_n, flaga, przygotujB) => {
+    const s = await swiat({ flaga, przygotujB });
+    await dopiszKarte(s); // seq 2
+    const z0 = od(s);
+    await pobierz(s, s.B);
+    expect(drenazOd(s, z0)).toEqual(['health', 'changes ?since=1&limit=200']);
+    expect(s.B.kursor()).toBe(2);
+    expect(st(s.B)).toMatchObject({ tryb: 'strony', stop: 'head', od: 1, do: 2, stron: 1 });
+    const h = zadaniaOd(s, z0).find((z) => z.trasa === 'health');
+    expect(h.naglowki.autoryzacja, 'health bez tokenu').toBe('brak');
+    expect(s.atrapa.naruszenia).toEqual([]);
+  });
+
+  it('D1e: brak klucza, worker v36 (bez changes-paged) — health, potem jedno żądanie legacy bez limit= (jak przed E2-PR1)', async () => {
+    falszywyCzas();
+    const s = await swiat({ atrapa: { tryb: 'v36' } });
+    await wyslijKarte(s); // lustro, seq 2
+    const z0 = od(s);
+    await pobierz(s, s.B);
+    expect(drenazOd(s, z0)).toEqual(['health', 'changes ?since=1']);
+    expect(st(s.B)).toMatchObject({ tryb: 'legacy', stop: 'legacy', zmiana: null });
+    expect(s.B.kursor()).toBe(2);
+    expect(s.atrapa.zadania.filter((z) => /limit=/.test(z.zapytanie))).toEqual([]);
+  });
+
+  it('D1b: brak klucza + VILDA_SYNC_PAGED = true — stronami (health, limit=200); true wygrywa także z \'0\'', async () => {
     const s = await swiat({ flaga: null, przygotujB: (B) => { B.win.VILDA_SYNC_PAGED = true; } });
     await dopiszKarte(s);
     const z0 = od(s);
@@ -243,6 +294,12 @@ describe('E2-PR1 P-SYNC-STRONY: warunki włączenia i tryby', () => {
     expect(drenazOd(s, z0)).toEqual(['health', 'changes ?since=1&limit=200']);
     expect(s.B.kursor()).toBe(2);
     expect(st(s.B)).toMatchObject({ tryb: 'strony', stop: 'head', od: 1, do: 2, stron: 1 });
+    await sprzatnijUrzadzenia();
+    const s2 = await swiat({ flaga: '0', przygotujB: (B) => { B.win.VILDA_SYNC_PAGED = true; } });
+    await dopiszKarte(s2);
+    const z1 = od(s2);
+    await pobierz(s2, s2.B);
+    expect(drenazOd(s2, z1), "VILDA_SYNC_PAGED = true przy '0'").toEqual(['health', 'changes ?since=1&limit=200']);
   });
 
   it("D1c: odczyt klucza flagi rzuca (zablokowany magazyn) — wyłączone: bez health i limit=, jedno żądanie legacy", async () => {
@@ -257,7 +314,7 @@ describe('E2-PR1 P-SYNC-STRONY: warunki włączenia i tryby', () => {
     expect(s.B.kursor()).toBe(2);
   });
 
-  it("D2: flaga '1' + vilda-incr-sync-v1 = '0' — różnicowo jak flaga '0' (GET /deltas, bez health)", async () => {
+  it("D2: flaga '1' albo brak klucza + vilda-incr-sync-v1 = '0' — różnicowo jak flaga '0' (GET /deltas, bez health)", async () => {
     const przebieg = async (flaga) => {
       const s = await swiat({ flaga, kursor: false, przygotujB: (B) => B.win.localStorage.setItem('vilda-incr-sync-v1', '0') });
       await wyslijKarte(s);
@@ -269,7 +326,10 @@ describe('E2-PR1 P-SYNC-STRONY: warunki włączenia i tryby', () => {
     const zero = await przebieg('0');
     await sprzatnijUrzadzenia();
     const jeden = await przebieg('1');
+    await sprzatnijUrzadzenia();
+    const brak = await przebieg(null);
     expect(jeden).toEqual(zero);
+    expect(brak, 'brak klucza (domyślnie)').toEqual(zero);
     expect(jeden.zadania.some((l) => / GET \/v1\/slots\/<slot>\/deltas /.test(l))).toBe(true);
     expect(jeden.zadania.filter((l) => /\/v1\/health|limit=|\/changes/.test(l))).toEqual([]);
   });
@@ -278,7 +338,7 @@ describe('E2-PR1 P-SYNC-STRONY: warunki włączenia i tryby', () => {
   it.each([
     ['D3', '„Komputer w pracy” (konto chmurowe)', { konto: { storageMode: 'cloud-only' } }, (B) => expect(B.vault.isCloudOnlyMode()).toBe(true)],
     ['D4', '„Zaloguj jednorazowo” (vilda-ephemeral-session-v1)', { przygotujB: (B) => B.win.sessionStorage.setItem('vilda-ephemeral-session-v1', '1') }, () => {}],
-  ])("%s: %s — flaga '1' daje te same żądania, oś i klucze co '0'; zero health i limit=", async (_id, _n, o, sprawdz) => {
+  ])("%s: %s — flaga '1' i brak klucza (domyślnie) dają te same żądania, oś i klucze co '0'; zero health i limit=", async (_id, _n, o, sprawdz) => {
     const przebieg = async (flaga) => {
       const s = await swiat({ ...o, flaga, kursor: false });
       sprawdz(s.B);
@@ -287,15 +347,20 @@ describe('E2-PR1 P-SYNC-STRONY: warunki włączenia i tryby', () => {
       await pobierz(s, s.B);
       await wyslijKarte(s);
       await pobierz(s, s.B);
+      // Zapis samej flagi (ustawia ją test w swiat(), przy braku klucza go nie ma) poza porównaniem.
       return {
-        zadania: s.atrapa.rzutZadan({ urzadzenie: 'B' }), os: s.B.rzutOsi(), magazyn: s.B.rzutMagazynu(), kursor: s.B.kursor(),
+        zadania: s.atrapa.rzutZadan({ urzadzenie: 'B' }), os: s.B.rzutOsi(), kursor: s.B.kursor(),
+        magazyn: s.B.rzutMagazynu().filter((l) => l !== `set localStorage ${FLAGA}`),
         status: s.B.sync.getDrainStatus ? s.B.sync.getDrainStatus(s.B.slotId) : null,
       };
     };
     const zero = await przebieg('0');
     await sprzatnijUrzadzenia();
     const jeden = await przebieg('1');
+    await sprzatnijUrzadzenia();
+    const brak = await przebieg(null);
     expect(jeden).toEqual(zero);
+    expect(brak, 'brak klucza (domyślnie)').toEqual(zero);
     expect(jeden.kursor).toBe(4);
     expect(jeden.status).toBeNull();
     expect(jeden.zadania.filter((l) => /\/v1\/health|limit=/.test(l))).toEqual([]);
@@ -304,10 +369,12 @@ describe('E2-PR1 P-SYNC-STRONY: warunki włączenia i tryby', () => {
   // Każdy z trzech sygnałów trybu jednorazowego osobno (D4: klucz sessionStorage). Sygnał VildaPersistence przenosi też stan
   // slotu do sessionStorage (q()), więc kursor wraca do 0 — dlatego dwa pobrania: kursor 0 (legacy i tak), potem > 0.
   it.each([
-    ['VildaPersistence.isEphemeralMode()', (B) => { B.win.VildaPersistence = { isEphemeralMode: () => true }; }],
-    ['VildaVault.isEphemeralMode()', (B) => { B.vault.isEphemeralMode = () => true; }],
-  ])("D4b: „Zaloguj jednorazowo” przez %s przy fladze '1' — dwa pobrania (kursor 0, potem > 0) bez health i limit=, bez drenażu stronami", async (_n, ustaw) => {
-    const s = await swiat();
+    ['VildaPersistence.isEphemeralMode()', (B) => { B.win.VildaPersistence = { isEphemeralMode: () => true }; }, '1'],
+    ['VildaVault.isEphemeralMode()', (B) => { B.vault.isEphemeralMode = () => true; }, '1'],
+    ['VildaPersistence.isEphemeralMode()', (B) => { B.win.VildaPersistence = { isEphemeralMode: () => true }; }, null],
+    ['VildaVault.isEphemeralMode()', (B) => { B.vault.isEphemeralMode = () => true; }, null],
+  ])("D4b: „Zaloguj jednorazowo” przez %s przy fladze %s (null = brak klucza) — dwa pobrania (kursor 0, potem > 0) bez health i limit=, bez drenażu stronami", async (_n, ustaw, flaga) => {
+    const s = await swiat({ flaga });
     ustaw(s.B);
     const s0 = st(s.B);
     const z0 = od(s);
@@ -321,8 +388,8 @@ describe('E2-PR1 P-SYNC-STRONY: warunki włączenia i tryby', () => {
     expect(st(s.B)).toEqual(s0);
   });
 
-  it("D4c: VildaPersistence.isEphemeralMode() rzuca przy fladze '1' — bezpiecznie jak „Zaloguj jednorazowo”: jedno żądanie legacy, bez health", async () => {
-    const s = await swiat();
+  it.each([['1'], [null]])("D4c: VildaPersistence.isEphemeralMode() rzuca przy fladze %s (null = brak klucza) — bezpiecznie jak „Zaloguj jednorazowo”: jedno żądanie legacy, bez health", async (flaga) => {
+    const s = await swiat({ flaga });
     await dopiszKarte(s);
     s.B.win.VildaPersistence = { isEphemeralMode: () => { throw new Error('fikcyjny błąd trybu'); } };
     const s0 = st(s.B);
@@ -333,8 +400,8 @@ describe('E2-PR1 P-SYNC-STRONY: warunki włączenia i tryby', () => {
     expect(st(s.B)).toEqual(s0);
   });
 
-  it("D3k: kontrola czułości — to samo konto prywatne z flagą '1' idzie stronami", async () => {
-    const s = await swiat({ kursor: false });
+  it.each([['1'], [null]])("D3k: kontrola czułości — to samo konto prywatne z flagą %s (null = brak klucza) idzie stronami", async (flaga) => {
+    const s = await swiat({ flaga, kursor: false });
     await wyslijKarte(s);
     await wyslijKarte(s);
     const z0 = od(s);
@@ -347,7 +414,7 @@ describe('E2-PR1 P-SYNC-STRONY: warunki włączenia i tryby', () => {
 });
 
 describe('E2-PR1 P-SYNC-STRONY: wykrycie zdolności (GET /v1/health)', () => {
-  it('D5: worker v36 — health bez Authorization, legacy bez limit=; pamięć 15 s', async () => {
+  it('D5: worker v36 — health bez Authorization, legacy bez limit=; pamięć 10 min (od E2-PR1b; do E2-PR1b 15 s)', async () => {
     falszywyCzas();
     const s = await swiat({ atrapa: { tryb: 'v36' } });
     await wyslijKarte(s); // lustro, seq 2
@@ -358,14 +425,42 @@ describe('E2-PR1 P-SYNC-STRONY: wykrycie zdolności (GET /v1/health)', () => {
     expect(h.naglowki.autoryzacja).toBe('brak');
     expect(st(s.B)).toMatchObject({ tryb: 'legacy', stop: 'legacy', zmiana: null });
     expect(s.B.kursor()).toBe(2);
-    przesunCzas(14000);
+    przesunCzas(15000);
     const z1 = od(s);
     await pobierz(s, s.B);
-    expect(drenazOd(s, z1)).toEqual(['changes ?since=2']);
-    przesunCzas(1000);
+    expect(drenazOd(s, z1), 'po 15 s wynik v36 jeszcze w pamięci').toEqual(['changes ?since=2']);
+    przesunCzas(10 * 60000 - 15000);
     const z2 = od(s);
     await pobierz(s, s.B);
-    expect(drenazOd(s, z2)).toEqual(['health', 'changes ?since=2']);
+    expect(drenazOd(s, z2), 'po 10 min ponowne wykrycie').toEqual(['health', 'changes ?since=2']);
+  });
+
+  // E2-PR1b (D3 z przeglądu): przy pobieraniu domyślnym zegar pobiera co ~20 s, więc pamięć 15 s dawała GET /v1/health
+  // przy każdym pobraniu na workerze bez changes-paged (3 żądania zamiast 2). Poprawna odpowiedź bez changes-paged (v36 bez
+  // pola api; v37a z sqlite false) pamiętana 10 min; przejściowa (sqlite null, błąd sieci, nie-OK, zły JSON) — 15 s.
+  it.each([
+    ['worker v36 (poprawna odpowiedź bez api)', { atrapa: { tryb: 'v36' } }, null, 1],
+    ["v37a z sqlite false (hub 'kv', features [])", {}, 'kv', 1],
+    ["kontrola: v37a z sqlite null (hub 'brak', sonda DO nieudana — przejściowe)", {}, 'brak', 4],
+  ])('D5k: %s — cztery pobrania co 20 s', async (_n, o, hub, oczek) => {
+    falszywyCzas();
+    const s = await swiat(o);
+    if (hub) s.atrapa.ustaw({ hub });
+    const z0 = od(s);
+    for (let k = 0; k < 4; k++) {
+      if (k) przesunCzas(20_000);
+      await pobierz(s, s.B);
+    }
+    const d = drenazOd(s, z0);
+    expect(d.filter((x) => x === 'health'), d.join(' | ')).toHaveLength(oczek);
+    expect(d.filter((x) => x.startsWith('changes')).every((x) => !x.includes('limit=')), 'legacy bez limit=').toBe(true);
+    expect(st(s.B)).toMatchObject({ tryb: 'legacy', stop: 'legacy' });
+    if (oczek === 1) {
+      przesunCzas(10 * 60_000 - 60_000); // 10 min od health (60 s już minęło)
+      const z1 = od(s);
+      await pobierz(s, s.B);
+      expect(drenazOd(s, z1)[0], 'po 10 min ponowne wykrycie').toBe('health');
+    }
   });
 
   it("D6: v37a bez DO (hub 'brak': sqlite null, features []) — legacy teraz, ponowne wykrycie po 15 s", async () => {
@@ -1822,7 +1917,7 @@ const WT_AUDYT = [
   'd.code.indexOf("CARE_FORMAT_")===0)&&!Bul())y(k,{operation:"pull",error:Bsd});break}}}!Bsp&&Bul()&&(Bsp=!0);',
   'return a}',
 ].join('');
-// sha256 całych funkcji (wytnijFunkcje) z origin/audyt 5306a623 (bez zmian od 4d3ddd22): dzisiejsza ścieżka przy wyłączonej fladze i kursor
+// sha256 całych funkcji (wytnijFunkcje) z origin/audyt 5306a623 (bez zmian od 4d3ddd22): ścieżka legacy (flaga '0', tryby w pracy i jednorazowo, worker bez changes-paged) i kursor
 // (bt, Kt). Zmiana dowolnego bajtu, także w komentarzu w środku Yt, daje czerwony D36. Po zmianie tych funkcji na audyt:
 // przelicz createHash('sha256').update(wytnijFunkcje(ZRODLO, nazwa)).digest('hex') i podmień też WT_AUDYT i literały D36.
 const SHA_AUDYT = Object.freeze({
@@ -1834,7 +1929,7 @@ const SHA_AUDYT = Object.freeze({
   Kt: '71447b542d0e6fc4b3195f3226148291fe1b3bd2d7bc5dc4cf117228271e37b7',
 });
 describe('E2-PR1 P-SYNC-STRONY: strażniki źródła vilda_sync.js', () => {
-  it('D36: B, Y, Yt, wt i kursor (bt, Kt) bez zmian względem origin/audyt (dzisiejsza ścieżka przy wyłączonej fladze bajt w bajt)', () => {
+  it('D36: B, Y, Yt, wt i kursor (bt, Kt) bez zmian względem origin/audyt (ścieżka legacy — flaga "0", tryby w pracy i jednorazowo, worker bez changes-paged — bajt w bajt)', () => {
     for (const [nazwa, sha] of Object.entries(SHA_AUDYT)) {
       expect(createHash('sha256').update(wytnijFunkcje(ZRODLO, nazwa)).digest('hex'), `${nazwa}: sha256 inny niż w migawce SHA_AUDYT (origin/audyt 5306a623). Gdy audyt zmienił tę funkcję: przelicz SHA_AUDYT (createHash('sha256').update(wytnijFunkcje(ZRODLO, nazwa)).digest('hex')), WT_AUDYT i literały toContain w D36; inaczej przywróć funkcję`).toBe(sha);
     }
@@ -1905,5 +2000,70 @@ describe('E2-PR1 P-SYNC-STRONY: strażniki źródła vilda_sync.js', () => {
     expect(pliki.length).toBeGreaterThan(100);
     const zWywolaniem = pliki.filter((n) => /\b(detectApi|getDrainStatus|getChangesCursor)\s*\(|czekajNaDrenaz/.test(fs.readFileSync(path.join(KORZEN, n), 'utf8')));
     expect(zWywolaniem).toEqual([]);
+  });
+});
+
+// E2-PR1b (P-SYNC-ODPYTYWANIE-WS): VildaSync.isPagedActive() — sygnał dla integracji, że ten dokument pobiera stronami
+// (zegar tła co 60 s przy żywym gnieździe). Tylko odczyt: bez żądań i zapisów; bez TTL wyniku health.
+describe('E2-PR1b P-SYNC-ODPYTYWANIE-WS: isPagedActive na prawdziwym vilda_sync.js', () => {
+  // Odczyt bez żądań i bez zapisów w magazynach (trzy wywołania).
+  const czytaj = (s, d) => {
+    const z0 = od(s), zm = d.znacznikMagazynu();
+    const w = [d.sync.isPagedActive(), d.sync.isPagedActive(), d.sync.isPagedActive()];
+    expect(od(s), 'isPagedActive bez żądań').toBe(z0);
+    expect(d.rzutMagazynu({ od: zm }), 'isPagedActive bez zapisów').toEqual([]);
+    expect(new Set(w).size).toBe(1);
+    return w[0];
+  };
+  // Kolejność kolumn: nazwa, oczekiwana wartość, opcje świata (drugie %s w tytule to oczekiwana wartość).
+  it.each([
+    ['brak klucza (domyślnie)', true, {}],
+    ["'1'", true, { flaga: '1' }],
+    ["'0'", false, { flaga: '0' }],
+    ['brak klucza + VILDA_SYNC_PAGED = false', false, { przygotujB: (B) => { B.win.VILDA_SYNC_PAGED = false; } }],
+    ["'0' + VILDA_SYNC_PAGED = true", true, { flaga: '0', przygotujB: (B) => { B.win.VILDA_SYNC_PAGED = true; } }],
+    ['„Komputer w pracy”', false, { konto: { storageMode: 'cloud-only' } }],
+    ['„Zaloguj jednorazowo”', false, { przygotujB: (B) => B.win.sessionStorage.setItem('vilda-ephemeral-session-v1', '1') }],
+    ["vilda-incr-sync-v1 = '0'", false, { przygotujB: (B) => B.win.localStorage.setItem('vilda-incr-sync-v1', '0') }],
+    ['worker v36 (bez changes-paged)', false, { atrapa: { tryb: 'v36' } }],
+  ])('D49: %s — false przed wynikiem health; po GET /v1/health z tym wynikiem: %s', async (_n, oczek, o) => {
+    const s = await swiat({ ...o, kursor: false });
+    expect(czytaj(s, s.B), 'po pierwszym pobraniu (kursor 0: bez health)').toBe(false);
+    await s.B.sync.detectApi();
+    expect(czytaj(s, s.B)).toBe(oczek);
+  });
+
+  it('D49b: domyślnie, po zwykłym pobraniu z kursorem > 0 — true; bez TTL (po 10 min + 1 ms dalej true, bez żądań); hub_not_sqlite → false', async () => {
+    falszywyCzas();
+    const s = await swiat();
+    await dopiszKarte(s);
+    await pobierz(s, s.B);
+    expect(st(s.B)).toMatchObject({ tryb: 'strony', stop: 'head' });
+    expect(czytaj(s, s.B)).toBe(true);
+    przesunCzas(10 * 60000 + 1);
+    expect(czytaj(s, s.B), 'wynik health przeterminowany, ale isPagedActive go nie odświeża').toBe(true);
+    s.atrapa.usterka({ gdy: { trasa: 'changes', urzadzenie: 'B' }, kod: 'hub_not_sqlite' });
+    await dopiszKarte(s);
+    await pobierz(s, s.B);
+    expect(st(s.B)).toMatchObject({ stop: 'http-503', kod: 'hub_not_sqlite' });
+    expect(czytaj(s, s.B), 'po 503 hub_not_sqlite wynik health skasowany').toBe(false);
+  });
+
+  it('D49c: odczyt flagi rzuca — false (jak Bdz_wlaczone: wyłączone)', async () => {
+    const s = await swiat({ kursor: false });
+    await s.B.sync.detectApi();
+    expect(s.B.sync.isPagedActive()).toBe(true);
+    const ls = s.B.win.localStorage;
+    const get = ls.getItem.bind(ls);
+    ls.getItem = (k) => { if (k === FLAGA) throw new Error('fikcyjny błąd magazynu'); return get(k); };
+    expect(s.B.sync.isPagedActive()).toBe(false);
+  });
+
+  it('D50: isPagedActive wołane w produkcie tylko z vilda_sync_integration.js, a isLive i getLastPongAt tylko tam i w vilda_realtime.js', () => {
+    const pliki = fs.readdirSync(KORZEN).filter((n) => /\.(js|html)$/.test(n));
+    const z = (re) => pliki.filter((n) => re.test(fs.readFileSync(path.join(KORZEN, n), 'utf8'))).sort();
+    expect(z(/\bisPagedActive\b/)).toEqual(['vilda_sync.js', 'vilda_sync_integration.js']);
+    expect(z(/\b(isLive|getLastPongAt)\b/)).toEqual(['vilda_realtime.js', 'vilda_sync_integration.js']);
+    expect(wytnijFunkcje(ZRODLO, 'Bdz_isPagedActive')).not.toMatch(/\bf\(|fetch|setItem|removeItem|Bdz_wykryj/);
   });
 });

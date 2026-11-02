@@ -18,7 +18,9 @@ const response = (status, value) => ({ status, ok: status >= 200 && status < 300
 async function fixture(failure) {
   const statuses = [];
   const win = { crypto: globalThis.crypto, TextEncoder, TextDecoder, btoa, atob, AbortController,
-    localStorage: storage({ ['vilda-sync-state-v1:' + SLOT]: JSON.stringify({ registered: true, localEtag: 'E1', lastSyncAt: null }) }),
+    // E2-PR1b: this file covers the legacy /changes lane (wt/Yt), so paged download is switched off explicitly ('0');
+    // the paged lane with the same care-plan guards is covered by sync-dziennik-drenaz D40-D48.
+    localStorage: storage({ ['vilda-sync-state-v1:' + SLOT]: JSON.stringify({ registered: true, localEtag: 'E1', lastSyncAt: null }), 'vilda-sync-paged-v1': '0' }),
     sessionStorage: storage({ 'vilda-sync-pulled-v1': '1' }), setTimeout, clearTimeout,
     setInterval: () => 0, clearInterval() {}, addEventListener() {}, removeEventListener() {},
     document: { hidden: false, readyState: 'complete', addEventListener() {}, removeEventListener() {},
