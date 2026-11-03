@@ -1136,12 +1136,12 @@
   "sha256": "04c805a16cb49ace2761f3b9644665dd99e72f165ebb1c1a8bd747e61c5317a3"
  },
  "vilda_chrome.css": {
-  "v": 51,
-  "sha256": "96d75af69b236bbd57221ae5e588e86a91cab8e1295770b54189af23467d4a25"
+  "v": 52,
+  "sha256": "cb40d69b1a4537bebe01f6f18bddb889c471eae6700b0263337401e73091fcb1"
  },
  "vilda_chrome.js": {
-  "v": 232,
-  "sha256": "e5cf20e5a88a92fe38e187ae7a21821fc18082246ff272e6fdaad84eb5a20e6f"
+  "v": 233,
+  "sha256": "9800fceb9f28dfa9c8ea213bdcffd7e37f7b0aea58bafecee37b22cda49e0b34"
  },
  "vilda_clinical_crypto.js": {
   "v": 2,

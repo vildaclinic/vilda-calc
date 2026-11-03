@@ -741,7 +741,7 @@ function Mt(){try{o.addEventListener("click",Pt,!0)}catch{}}function jt(){try{le
   "use strict";
   var doc=win&&win.document;
   if(!doc||win.VildaHeaderLayout||typeof win.requestAnimationFrame!=="function")return;
-  var scheduled=0,sourceDoc=null,sourceFrame=null,sourceAuthRoot=null,sourceCleanup=[],trackedFrames=[],targets=[],sizeObserver=null;
+  var scheduled=0,sourceDoc=null,sourceFrame=null,sourceAuthRoot=null,sourceCleanup=[],trackedFrames=[],targets=[],sizeObserver=null,footerRail=null;
   function embedded(){return doc.documentElement.classList.contains("vilda-embedded")||doc.documentElement.classList.contains("vilda-shell-embedded")}
   function compact(){return win.innerWidth<992||doc.documentElement.classList.contains("vilda-phone")}
   function formDocument(owner){
@@ -828,6 +828,29 @@ function Mt(){try{o.addEventListener("click",Pt,!0)}catch{}}function jt(){try{le
     if(!sizeObserver)sizeObserver=new win.ResizeObserver(schedule);
     nodes.forEach(function(node){sizeObserver.observe(node)});
   }
+  function syncFooterRail(owner,frameBox,footer,footerBox,authVisible){
+    var rail=doc.querySelector(".desktop-layout>.decor-sidebar"),railBox=rail&&rail.getBoundingClientRect();
+    var eligible=win.innerWidth>=1400&&!compact()&&!authVisible&&!doc.documentElement.classList.contains("vilda-pane-auth-open")
+      &&!doc.documentElement.classList.contains("vilda-auth-locked")&&railBox&&railBox.width>0&&footerBox
+      &&win.getComputedStyle(rail).display!=="none";
+    if(!eligible){if(footerRail)footerRail.hidden=true;return}
+    var style=owner.defaultView.getComputedStyle(footer),offset=frameBox?frameBox.top:0;
+    var originalTop=offset+footerBox.top,top=Math.max(0,originalTop,frameBox?frameBox.top:0);
+    var bottom=Math.min(win.innerHeight,offset+footerBox.bottom,frameBox?frameBox.bottom:win.innerHeight);
+    var left=(frameBox?frameBox.left:0)+footerBox.right,width=railBox.right-left;
+    if(style.visibility==="hidden"||bottom<=top||width<=0){if(footerRail)footerRail.hidden=true;return}
+    if(!footerRail){
+      footerRail=doc.createElement("div");footerRail.id="vildaDecorFooter";
+      footerRail.setAttribute("aria-hidden","true");
+      // Paint below any real content of the sticky decorative sidebar.
+      doc.body.insertBefore(footerRail,doc.querySelector(".desktop-layout"));
+    }
+    footerRail.style.left=pixels(left);footerRail.style.top=pixels(top);
+    footerRail.style.width=pixels(width);footerRail.style.height=pixels(bottom-top);
+    footerRail.style.backgroundColor=style.backgroundColor;
+    footerRail.style.borderTop=top-originalTop<.5?style.borderTop:"0px none transparent";
+    footerRail.hidden=false;
+  }
   function frames(){
     var all=Array.prototype.slice.call(doc.querySelectorAll("#appPanes>iframe.app-pane"));
     trackedFrames.slice().forEach(function(frame){
@@ -884,6 +907,7 @@ function Mt(){try{o.addEventListener("click",Pt,!0)}catch{}}function jt(){try{le
     var footer=owner.querySelector("footer.site-footer"),footerInner=footer&&footer.querySelector(".site-footer__inner");
     watchSizes([target,second,workspace,fallback,footer,footerInner,frame,header,strip,actions]);
     var footerBox=rect(footer),innerBox=rect(footerInner);
+    syncFooterRail(owner,frame?frameBox:null,footer,footerBox,authVisible);
     if(footerBox&&!compact())property("--chrome-menu-footer-height",pixels(Math.max(96,footerBox.height)));
     else property("--chrome-menu-footer-height","96px");
     // CSS variables do not cross iframe documents. The form uses the actual
