@@ -845,10 +845,10 @@ function Mt(){try{o.addEventListener("click",Pt,!0)}catch{}}function jt(){try{le
       // Paint below any real content of the sticky decorative sidebar.
       doc.body.insertBefore(footerRail,doc.querySelector(".desktop-layout"));
     }
-    footerRail.style.left=pixels(left);footerRail.style.top=pixels(top);
-    footerRail.style.width=pixels(width);footerRail.style.height=pixels(bottom-top);
-    footerRail.style.backgroundColor=style.backgroundColor;
-    footerRail.style.borderTop=top-originalTop<.5?style.borderTop:"0px none transparent";
+    property("--chrome-footer-rail-left",pixels(left));property("--chrome-footer-rail-top",pixels(top));
+    property("--chrome-footer-rail-width",pixels(width));property("--chrome-footer-rail-height",pixels(bottom-top));
+    property("--chrome-footer-rail-background",style.backgroundColor);
+    property("--chrome-footer-rail-border",top-originalTop<.5?style.borderTop:"0px none transparent");
     footerRail.hidden=false;
   }
   function frames(){

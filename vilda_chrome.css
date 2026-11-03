@@ -2718,12 +2718,19 @@ html.vilda-form-layout.vilda-form-host-desktop body>footer.site-footer .site-foo
 /* The active pane owns footer content; the host only continues its painted
  * background through the decorative column. It never captures a click. */
 #vildaDecorFooter {
+  display: none;
   position: fixed;
   box-sizing: border-box;
+  left: var(--chrome-footer-rail-left,0px);
+  top: var(--chrome-footer-rail-top,0px);
+  width: var(--chrome-footer-rail-width,0px);
+  height: var(--chrome-footer-rail-height,0px);
+  background-color: var(--chrome-footer-rail-background,transparent);
+  border-top: var(--chrome-footer-rail-border,0px none transparent);
   pointer-events: none
 }
-@media(max-width:1399px),print {
-  #vildaDecorFooter { display: none }
+@media screen and (min-width:1400px) {
+  #vildaDecorFooter { display: block }
 }
 #vildaDecorFooter[hidden],
 html.vilda-phone #vildaDecorFooter,
