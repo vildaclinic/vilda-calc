@@ -35,7 +35,10 @@
 //       synchronizacji w toku), zamyka urządzenia, sprawdza naruszenia i żądania w locie wszystkich atrap oraz strażnika;
 //       rzuca z listą (przy limicie ciszy: „operacja synchronizacji w toku: <urządzenie> <operacja>”).
 //   cisza(lista, { K = 5, limitMs = 5000 }) → Promise<liczba tur>
-//   eksportKanoniczny(ladunek) → JSON do porównań A ≡ B
+//   eksportKanoniczny(ladunek, { pominSeq = false, pominSnapshotCount = false }) → JSON do porównań A ≡ B
+//       Domyślnie jak dotąd (U1–U16). pominSeq — bez snapshotTombstones[].seq (licznik lokalny wpisu kosza, różny na
+//       urządzeniach przy tej samej treści); pominSnapshotCount — bez patients[].snapshotCount (licznik karty, który
+//       zdarzenia jednej encji i pełny ładunek ustalają różnie) — porównanie „modulo seq i snapshotCount” (plan 3.10, E2-PR2a).
 //   atrapaBlokad({ naZadanie, ctx }) — Web Locks ze `steal` (nadzbiór atrapaLocks z sesja-zapisu-uprzaz)
 //   straznik() (z atrapy) — naruszenia globalnego dyspozytora.
 //
@@ -43,7 +46,7 @@
 //   d.nazwa, d.adres, d.polaczenie, d.atrapa, d.win, d.vault, d.sync, d.konto ({ userId, haslo }), d.blokady, d.timery,
 //   d.dziennikMagazynu (zapisy localStorage/sessionStorage z okno()), d.adapter (surowy Ze), d.magazyn (rejestr albo null),
 //   d.slotId (po utworzeniu), d.material(), d.odblokuj(), d.zablokuj(powod), d.zapiszKarte(i, o) → { patientId },
-//   d.wyslijDelteKarty(patientId) → wynik prawdziwego Bsb_wyslij z vilda_sync_integration.js, d.eksportKanoniczny(),
+//   d.wyslijDelteKarty(patientId) → wynik prawdziwego Bsb_wyslij z vilda_sync_integration.js, d.eksportKanoniczny(opcje?),
 //   d.kursor(), d.zadania(), d.rzutOsi(o), d.rzutMagazynu({ od }), d.znacznik() (długość osi), d.znacznikMagazynu(),
 //   d.zaznacz(opis) (wpis 'test'), d.cisza(o), d.migawka() (stan adaptera do klonu), d.zamknij();
 //   d._licz { zdarzenia, scalenia, operacje (Map operacja → liczba w toku) } — liczniki ciszy.
@@ -199,6 +202,8 @@ export function atrapaBlokad({ naZadanie = null, ctx = BEZ_KONTEKSTU } = {}) {
 // ── Eksport kanoniczny (porównania A ≡ B) ────────────────────────────────────────────────────────────────────────────
 // Pomija userId, label, exportedAtISO, lastMergeAtISO (poziom główny) i patients[].header.timestampISO; klucze obiektów
 // sortowane, tablice obiektów po patientId|snapshotId|id|credentialId (bliźniak równy źródłu po klonie i po wymianie — testy U1–U3).
+// Opcje (E2-PR2a, zgodne wstecz — bez opcji wynik bez zmian): pominSeq usuwa snapshotTombstones[].seq,
+// pominSnapshotCount usuwa patients[].snapshotCount.
 const POMIJANE = ['userId', 'label', 'exportedAtISO', 'lastMergeAtISO'];
 const KLUCZE_ID = ['patientId', 'snapshotId', 'id', 'credentialId'];
 function kanon(x) {
@@ -213,10 +218,14 @@ function kanon(x) {
   }
   return x;
 }
-export function eksportKanoniczny(ladunek) {
+export function eksportKanoniczny(ladunek, { pominSeq = false, pominSnapshotCount = false } = {}) {
   const c = structuredClone(ladunek);
   for (const k of POMIJANE) delete c[k];
-  for (const p of c.patients || []) if (p && p.header) delete p.header.timestampISO;
+  for (const p of c.patients || []) {
+    if (p && p.header) delete p.header.timestampISO;
+    if (p && pominSnapshotCount) delete p.snapshotCount;
+  }
+  if (pominSeq) for (const e of c.snapshotTombstones || []) if (e) delete e.seq;
   return JSON.stringify(kanon(c));
 }
 
@@ -380,7 +389,7 @@ export async function utworzUrzadzenie(o = {}) {
       if (!wyslijDelte) wyslijDelte = WYSLIJ_DELTE(win);
       return wyslijDelte(polaczenie.adres + '/v1/slots/' + m.slotId + '/delta', cialo);
     },
-    eksportKanoniczny: async () => eksportKanoniczny(await vault.exportSyncPayload()),
+    eksportKanoniczny: async (opcje) => eksportKanoniczny(await vault.exportSyncPayload(), opcje),
     kursor: () => Number(win.localStorage.getItem('vilda-sync-cursor-v1:' + slotId) || 0),
     zadania: () => atrapa.zadania.filter((z) => z.urzadzenie === nazwa),
     rzutOsi: (op = {}) => atrapa.rzutOsi({ urzadzenie: nazwa, ...op }),
