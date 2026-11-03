@@ -134,9 +134,9 @@
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet" media="print" onload="this.media='all'"/><noscript><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet"/></noscript>
 <!-- Zmieniamy nazwę pliku stylów na style_PWZ.css -->
 <link href="ios26-v2.css?v=26" rel="stylesheet">
-<link href="style.css?v=93" rel="stylesheet">
+<link href="style.css?v=94" rel="stylesheet">
 <link href="sidebar.css" rel="stylesheet">
-<link href="vilda_chrome.css?v=47" rel="stylesheet">
+<link href="vilda_chrome.css?v=48" rel="stylesheet">
 <link href="vilda_auth_ui.css?v=81" rel="stylesheet">
 <link href="vilda_urodzeniowe_rozbieznosc.css?v=1" rel="stylesheet" />
 <link href="vilda_save_status_indicator.css?v=6" rel="stylesheet">
@@ -180,7 +180,7 @@
 <script defer src="vilda_persistence_adapter.js?v=33"></script>
 <script src="vilda_reminders_privacy.js?v=1"></script>
 <script defer src="vilda_panel_pacjent.js?v=3"></script>
-<script defer src="vilda_session_bridge.js?v=145"></script>
+<script defer src="vilda_session_bridge.js?v=146"></script>
 <script defer src="vilda_init.js?v=4"></script>
 <script defer src="vilda_crypto.js?v=15"></script>
 <script defer src="vilda_retention.js?v=1"></script>
@@ -235,7 +235,7 @@
 <script defer src="vilda_global_search.js?v=3"></script>
 <script defer src="vilda_global_search_view.js?v=5"></script>
 <script defer src="vilda_search_navigation.js?v=1"></script>
-<script defer src="vilda_auth_ui.js?v=532"></script>
+<script defer src="vilda_auth_ui.js?v=533"></script>
 <script defer src="vilda_urodzeniowe_rozbieznosc.js?v=1"></script>
 <script defer src="vilda_cykle_leczenia.js?v=3"></script>
 <script defer src="vilda_name_fix.js?v=6"></script>
@@ -438,7 +438,7 @@
         ]
       }
       </script>
-<script defer src="vilda_chrome.js?v=222"></script>
+<script defer src="vilda_chrome.js?v=223"></script>
 <link href="vilda_lab_assessment_ui.css?v=13" rel="stylesheet">
 <link href="vilda_lab_history_tab.css?v=4" rel="stylesheet">
   <link rel="stylesheet" href="vilda_centile_live_panel.css?v=7">
@@ -451,7 +451,7 @@
      aby motyw Liquid Glass był stosowany od samego początku ładowania strony.
      Dzięki temu unikamy krótkiego błysku podstawowych stylów zanim skrypt
      ios26-ui.js?v=46 dołączy klasę dynamicznie. -->
-<body class="js-loading liquid-ios26 has-sidebar">
+<body class="js-loading liquid-ios26 has-sidebar vilda-start-compact">
 
 <header>
 </header>
@@ -482,12 +482,14 @@
       <!-- P-SPLIT (2026-06-23): rozdzielone Nazwisko/Imię. #name pozostaje UKRYTYM
            „kanonem" (czyta je kolektor, restore, autosave i wspólne sharedUserData oraz
            pozostałe strony), synchronizowanym skryptem na końcu strony. -->
-      <label>Nazwisko <span style="font-weight:400;opacity:0.65;">(opcjonalnie)</span>:
-        <input type="text" id="lastName" autocomplete="off">
-      </label>
-      <label>Imię <span style="font-weight:400;opacity:0.65;">(opcjonalnie)</span>:
-        <input type="text" id="firstName" autocomplete="off">
-      </label>
+      <div class="start-field-pair start-name-pair">
+        <label>Nazwisko <span style="font-weight:400;opacity:0.65;">(opcjonalnie)</span>:
+          <input type="text" id="lastName" autocomplete="off">
+        </label>
+        <label>Imię <span style="font-weight:400;opacity:0.65;">(opcjonalnie)</span>:
+          <input type="text" id="firstName" autocomplete="off">
+        </label>
+      </div>
       <input type="hidden" id="name">
       <!-- P-TOZSAMOSC (zlecenie właściciela 2026-09-15): po wczytaniu pacjenta nazwisko, imię
            i płeć są tylko do odczytu (edycja w Karcie Pacjenta) — logika: vilda_pola_tozsamosci.js. -->
@@ -638,12 +640,14 @@
         </details>
       </div>
       <script defer src="inline_index_02.js?v=14"></script>
-      <label>Waga (kg):
-        <!-- Dostosowujemy zakres do niemowląt: mniejsza waga i możliwość wpisywania wartości z dokładnością do 0.1 kg -->
-        <input type="number" id="weight" min="2" max="300" step="0.1" oninput="debouncedUpdate()" required></label>
-      <label>Wzrost (cm):
-        <!-- Dostosowujemy zakres do niemowląt: niższy wzrost i możliwość wpisywania wartości z dokładnością do 0.1 cm -->
-        <input type="number" id="height" min="45" max="250" step="0.1" oninput="debouncedUpdate()" required></label>
+      <div class="start-field-pair start-measure-pair">
+        <label>Waga (kg):
+          <!-- Dostosowujemy zakres do niemowląt: mniejsza waga i możliwość wpisywania wartości z dokładnością do 0.1 kg -->
+          <input type="number" id="weight" min="2" max="300" step="0.1" oninput="debouncedUpdate()" required></label>
+        <label>Wzrost (cm):
+          <!-- Dostosowujemy zakres do niemowląt: niższy wzrost i możliwość wpisywania wartości z dokładnością do 0.1 cm -->
+          <input type="number" id="height" min="45" max="250" step="0.1" oninput="debouncedUpdate()" required></label>
+      </div>
         <!-- Komunikat informujący o wczytaniu danych. Jest domyślnie ukryty, a pojawia się dopiero po
              prawidłowym wczytaniu pliku JSON. Umieszczamy go tuż pod polem wzrostu,
              zgodnie z wymaganiami użytkownika, aby znajdował się pomiędzy polem wzrost
@@ -652,7 +656,7 @@
           Dane zostały wczytane prawidłowo. Wprowadź nowe dane, aby zobaczyć najnowsze wyniki.
         </div>
         <!-- Przyciski usuwające wszystkie dane użytkownika umieszczamy pod ostatnim polem formularza. -->
-        <div style="text-align:center; margin-top:1rem;">
+        <div class="start-form-actions">
           <!-- Pozostawiamy tylko przycisk czyszczący pola w tej sekcji.  Opcje
                zapisywania i wczytywania danych są przeniesione do menu hamburgera powyżej. -->
           <button type="button" id="clearAllDataBtn"><i data-lucide="eraser" aria-hidden="true"></i> Wyczyść wszystkie pola</button>
@@ -1720,24 +1724,11 @@
         <span class="site-footer__brand-name">wagaiwzrost.pl</span>
       </a>
       <p class="site-footer__brand-meta">
-        Vilda Clinic sp. z o.o.<br>
-        Konsultacja merytoryczna: dr&nbsp;n.&nbsp;med.&nbsp;Maciej&nbsp;Flader
+        <span class="site-footer__operator"><span>© 2025 Vilda Clinic sp. z o.o.</span> <a href="https://vildaclinic.pl" target="_blank" rel="noopener noreferrer" class="site-footer__vildaclinic">vildaclinic.pl</a></span>
+        <span class="site-footer__detail">Konsultacja merytoryczna: dr&nbsp;n.&nbsp;med.&nbsp;Maciej&nbsp;Flader</span>
       </p>
     </div>
-    <nav class="site-footer__col" aria-label="Kalkulatory">
-      <h3 class="site-footer__col-title">Kalkulatory</h3>
-      <a href="index.html" class="site-footer__link">Strona główna</a>
-      <a href="homa-ir.html" class="site-footer__link">HOMA-IR</a>
-      <a href="kalkulator-klirens.html" class="site-footer__link">Klirens / eGFR</a>
-    </nav>
-    <nav class="site-footer__col" aria-label="Kalkulatory — ciąg dalszy">
-      <h3 class="site-footer__col-title site-footer__col-title--hidden" aria-hidden="true">&nbsp;</h3>
-      <a href="docpro.html" class="site-footer__link">DocPro</a>
-      <a href="steroidy.html" class="site-footer__link">Steroidy</a>
-      <a href="cukrzyca.html" class="site-footer__link">Cukrzyca</a>
-    </nav>
     <nav class="site-footer__col" aria-label="Informacje">
-      <h3 class="site-footer__col-title">Informacje</h3>
       <a href="o-aplikacji.html" class="site-footer__link">O aplikacji</a>
       <a href="kontakt.html" class="site-footer__link">Kontakt</a>
       <a href="polityka-prywatnosci.html" class="site-footer__link">Polityka prywatności</a>
@@ -1748,10 +1739,6 @@
     <p class="site-footer__disclaimer">
       Narzędzie do celów informacyjnych — nie zastępuje konsultacji lekarskiej ani samodzielnych decyzji klinicznych.
     </p>
-  </div>
-  <div class="site-footer__bottom">
-    <span>© 2025 Vilda Clinic sp. z o.o.</span>
-    <a href="https://vildaclinic.pl" target="_blank" rel="noopener noreferrer" class="site-footer__vildaclinic">vildaclinic.pl</a>
   </div>
 </footer>
 <!-- Uruchamiamy update() po pełnym załadowaniu strony -->

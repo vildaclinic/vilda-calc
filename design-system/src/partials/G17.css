@@ -319,115 +319,186 @@
 }
 }
 
-/* ===================== SiteFooter — reguły bazowe (style.css 146-246) ===================== */
-.site-footer{
-  background:#f4f8f8;
-  border-top:var(--border-hairline) solid #d0e8e8;
-  position:relative;
-  color:#4a7a7a;
+/* ===================== SiteFooter — compact footer (style.css) ===================== */
+.site-footer {
+  container: site-footer / inline-size;
+  position: relative;
+  background: #f4f8f8;
+  border-top: var(--border-hairline) solid #d0e8e8;
+  color: #4a7a7a;
+  flex-shrink: 0
 }
-.site-footer__inner{
-  max-width:var(--container-max-width);
-  margin:0 auto;
-  padding:var(--space-1-5) var(--space-1) var(--space-1-1);
+
+.site-footer__inner {
   display:grid;
-  grid-template-columns:1.5fr 1fr 1fr 1fr;
-  gap:var(--space-1-5);
+  grid-template-columns:minmax(0,1fr) minmax(0,1.2fr);
+  align-items:center;
+  gap:var(--space-24px);
+  padding:var(--space-10px) var(--space-20px) 7px;
   box-sizing:border-box;
 }
-.site-footer__brand-link{
-  display:inline-flex;
-  align-items:center;
-  gap:var(--space-0-45);
-  text-decoration:none;
-  margin-bottom:var(--space-0-45);
+
+.site-footer__brand {
+  min-width: 0
 }
-.site-footer__brand-icon{
-  width:22px;
-  height:22px;
-  border-radius:var(--radius-6);
-  overflow:hidden;
+
+.site-footer__brand-link {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-0-45);
+  margin-bottom: 3px;
+  color: #005a62;
+  text-decoration: none
+}
+
+.site-footer__brand-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 22px;
+  height: 22px;
+  overflow: hidden;
+  border-radius: var(--radius-6)
+}
+
+.site-footer__brand-icon img {
+  display: block;
+  width: 22px;
+  height: 22px
+}
+
+.site-footer__brand-name {
+  font-size: .8rem;
+  font-weight: 600;
+  letter-spacing: .01em
+}
+
+.site-footer__brand-meta {
+  margin: 0;
+  color: #526f77;
+  font-size: .6875rem;
+  line-height: 1.4
+}
+
+.site-footer__operator {
   display:flex;
-  align-items:center;
-  justify-content:center;
-  flex-shrink:0;
-}
-.site-footer__brand-icon img{
-  width:22px;
-  height:22px;
-  display:block}
-.site-footer__brand-name{
-  font-size:.8rem;
-  font-weight:600;
-  color:#005a62;
-  letter-spacing:.01em}
-.site-footer__brand-meta{
-  font-size:.72rem;
-  color:#7a9999;
-  line-height:1.55}
-.site-footer__col-title{
-  font-size:.65rem;
-  font-weight:600;
-  text-transform:uppercase;
-  color:#6fa8a8;
-  margin-bottom:var(--space-0-5);
-}
-.site-footer__col-title--hidden{
-  visibility:hidden}
-.site-footer__link{
-  display:block;
-  font-size:.78rem;
-  color:#4a7a7a;
-  text-decoration:none;
-  padding:.18rem 0;
-  transition:color .15s}
-.site-footer__link:hover{
-  color:var(--primary);
-}
-.site-footer__disclaimer-wrap{
-  background:#00838d0e;
-  border-top:.5px solid rgba(0,131,141,.14);
-  border-bottom:.5px solid rgba(0,131,141,.14)}
-.site-footer__disclaimer{
-  max-width:var(--container-max-width);
-  margin:0 auto;
-  padding:var(--space-0-6) var(--space-1);
-  font-size:.73rem;
-  color:#3a6d6d;
-  line-height:1.55;
-  box-sizing:border-box;
-}
-.site-footer__disclaimer:before{
-  content:"\2695\a0"}
-.site-footer__bottom{
-  max-width:var(--container-max-width);
-  margin:0 auto;
-  padding:var(--space-0-6) var(--space-1);
-  display:flex;
-  justify-content:space-between;
-  align-items:center;
-  font-size:.72rem;
-  color:#a0b8b8;
-  box-sizing:border-box;
-}
-.site-footer__vildaclinic{
-  color:#7ababd;
-  text-decoration:none;
-  font-weight:500}
-.site-footer__vildaclinic:hover{
-  color:var(--primary);
-}
-@media(max-width:700px){
-  .site-footer__inner{
-  grid-template-columns:1fr 1fr 1fr;
-  gap:var(--space-1) var(--space-0-75);
-}
-.site-footer__brand{
-  grid-column:1 / -1}
-.site-footer__bottom{
   flex-wrap:wrap;
-  justify-content:center;
-  gap:.1rem var(--space-0-5);
-  padding:var(--space-0-35) var(--space-1);
+  align-items:baseline;
+  gap:0 var(--space-0-65);
 }
+
+.site-footer__detail {
+  display: block;
+  margin-top: 3px;
+  overflow-wrap: anywhere
+}
+
+.site-footer__col {
+  display:flex;
+  flex-wrap:wrap;
+  align-items:center;
+  justify-content:flex-end;
+  gap:0 var(--space-16px);
+  min-width:0;
+}
+
+.site-footer__link {
+  display: inline-flex;
+  align-items: center;
+  min-height: 36px;
+  padding: 3px 0;
+  color: #4a7a7a;
+  font-size: .75rem;
+  line-height: 1.4;
+  text-decoration: none;
+  overflow-wrap: anywhere;
+  transition: color .15s
+}
+
+.site-footer__vildaclinic {
+  display: inline-flex;
+  align-items: center;
+  color: #4a7a7a;
+  text-decoration: none
+}
+
+.site-footer :is(.site-footer__link,.site-footer__vildaclinic,.site-footer__brand-link):hover {
+  color: var(--primary);
+  text-decoration: underline
+}
+
+.site-footer a:focus-visible {
+  outline:var(--border-emphasis) solid var(--primary);
+  outline-offset:3px;
+  border-radius:3px;
+}
+
+.site-footer__disclaimer-wrap {
+  margin:0 var(--space-20px);
+  border-top:var(--border-hairline) solid #dfeaec;
+}
+
+.site-footer__disclaimer {
+  margin: 0;
+  padding: 7px 0 9px;
+  color: #526f77;
+  font-size: .6875rem;
+  line-height: 1.5;
+  overflow-wrap: anywhere
+}
+
+.site-footer__disclaimer:before {
+  content: "\2695\a0"
+}
+
+@container site-footer (max-width:800px) {
+  .site-footer__inner {
+  gap:var(--space-16px);
+}
+  .site-footer__col {
+  display:grid;
+  grid-template-columns:minmax(0,1fr) minmax(0,1.3fr);
+  gap:0 var(--space-12px);
+}
+  .site-footer__link {
+    min-height: 30px
+  }
+}
+
+@container site-footer (max-width:650px) {
+  .site-footer__inner {
+  grid-template-columns:minmax(0,1fr);
+  gap:var(--space-12px);
+  padding:var(--space-16px) var(--space-20px) var(--space-10px);
+}
+  .site-footer__col {
+  grid-template-columns:minmax(0,1fr) minmax(0,1fr);
+  gap:0 var(--space-16px);
+}
+  .site-footer__link,
+  .site-footer__brand-link,
+  .site-footer__vildaclinic {
+    min-height: 44px
+  }
+  .site-footer__brand-link,
+  .site-footer__vildaclinic {
+    display: inline-flex;
+    align-items: center
+  }
+  .site-footer__operator {
+    align-items: center
+  }
+  .site-footer__disclaimer {
+  padding-top:var(--space-10px);
+  padding-bottom:var(--space-14px);
+}
+}
+
+@media(pointer:coarse) {
+  .site-footer__link,
+  .site-footer__brand-link,
+  .site-footer__vildaclinic {
+    min-height: 44px
+  }
 }
