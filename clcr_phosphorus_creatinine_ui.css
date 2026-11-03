@@ -280,7 +280,7 @@ html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .picr-result-m
   line-height: 1.5;
 }
 
-html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .picr-result-card .clcr-result-value {
+html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .picr-result-card[data-picr-presentation="B"] .clcr-result-value {
   display: flex;
   align-items: center;
   min-width: 0;
@@ -293,16 +293,22 @@ html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .picr-result-c
   white-space: nowrap;
 }
 
-html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .picr-result-card .clcr-result-value[data-density="medium"] {
+/* Six-character decimals also include the approximation sign. Size them for
+   the patient column, including wider system-font fallbacks. */
+html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .picr-result-card[data-picr-presentation="B"][data-clcr-value-length="6"] .clcr-result-value {
+  font-size: clamp(20px, 10cqi, 36px) !important;
+}
+
+html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .picr-result-card[data-picr-presentation="B"] .clcr-result-value[data-density="medium"] {
   font-size: clamp(20px, 8cqi, 30px) !important;
 }
 
-html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .picr-result-card .clcr-result-value[data-density="long"] {
+html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .picr-result-card[data-picr-presentation="B"] .clcr-result-value[data-density="long"] {
   font-size: clamp(16px, 7cqi, 24px) !important;
   letter-spacing: -.25px;
 }
 
-html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .picr-result-card .clcr-result-value[data-scientific="true"] {
+html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .picr-result-card[data-picr-presentation="B"] .clcr-result-value[data-scientific="true"] {
   display: flex;
   flex-wrap: wrap;
   align-content: center;

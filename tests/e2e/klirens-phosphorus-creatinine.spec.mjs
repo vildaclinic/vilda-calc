@@ -626,3 +626,20 @@ test('Pᵢ/Cr: pierwsze kliknięcie Szczegółów po wpisaniu wartości działa 
   await result(page, { raw: .7 });
   await expect(details(page)).toHaveAttribute('open', '');
 });
+
+for (const width of [1440, 390, 320]) {
+  test(`Pᵢ/Cr ${width}px: wynik ze stężeń mieści się w kolumnie także bez fontu Inter`, async ({ page }) => {
+    await open(page, width);
+    await restore(page);
+    await result(page);
+    for (const family of ['Arial', 'DejaVu Sans', 'Liberation Sans']) {
+      const fontOverride = await page.addStyleTag({ content: `#clcrResultReport,#clcrResultReport * { font-family: "${family}", sans-serif !important; }` });
+      await page.evaluate(() => document.fonts.ready);
+      await expect(card(page).locator('.clcr-result-value')).toHaveText('≈0,411');
+      // Keep the native layout and exact Range glyph bounds; the font override
+      // belongs only to this regression, not the normal geometry scenarios.
+      await geometry(page, width);
+      await fontOverride.evaluate(node => node.remove());
+    }
+  });
+}
