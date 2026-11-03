@@ -98,9 +98,11 @@ for (const shell of [false, true]) for (const route of LAYOUT_ROUTES) {
         const r = node.getBoundingClientRect();
         return { left: Math.round(Math.abs(r.left)), right: Math.round(Math.abs(r.right - document.documentElement.clientWidth)) };
       }), { message: 'a real embedded patient card expands the pane across the available shell viewport' }).toEqual({ left: 0, right: 0 });
-      const load = patientCard.getByRole('button', { name: 'Wczytaj tego pacjenta', exact: true });
-      await load.scrollIntoViewIfNeeded();
-      await expect.poll(() => load.evaluate(node => {
+      // This is a read-only preview: the Notes tab exists without a load
+      // callback, whereas the optional patient-load action intentionally does not.
+      const notes = patientCard.getByRole('button', { name: 'Notatki', exact: true });
+      await notes.scrollIntoViewIfNeeded();
+      await expect.poll(() => notes.evaluate(node => {
         const r = node.getBoundingClientRect(), x = r.x + r.width / 2, y = r.y + r.height / 2;
         const pane = window.frameElement, p = pane.getBoundingClientRect();
         return node.contains(document.elementFromPoint(x, y)) && parent.document.elementFromPoint(p.x + x, p.y + y) === pane;

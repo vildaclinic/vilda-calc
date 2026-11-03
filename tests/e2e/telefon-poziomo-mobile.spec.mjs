@@ -71,8 +71,8 @@ async function assertLandscapeGeometry(page, frame, width, height) {
   }
   if (content.form) {
     expect(content.form.width).toBe(width - 136);
-    expect(content.user.width).toBeCloseTo((width - 152) / 2, 0);
-    expect(content.info.x - content.user.right).toBeCloseTo(16, 0);
+    expect(content.user.width).toBeCloseTo((width - 148) / 2, 0);
+    expect(content.info.x - content.user.right).toBeCloseTo(12, 0);
   }
 }
 

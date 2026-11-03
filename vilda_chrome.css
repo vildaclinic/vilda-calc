@@ -2505,7 +2505,6 @@ body.vilda-header-menu .chrome-drawer-head {
   top: 5px
 }
 .vilda-header-menu .chrome-reminders-btn[hidden] {display:none!important}
-.vilda-header-menu .chrome-reminders-label {display:none}
 .vilda-header-menu .chrome-reminders-btn[data-state=empty] .chrome-reminders-badge {display:none!important}
 .vilda-header-menu .chrome-menu-save-status {
   display: flex;
@@ -2787,7 +2786,7 @@ body.vilda-header-menu .chrome-reminders-btn[data-state=loading] .chrome-reminde
   html:not(.vilda-phone) .vilda-header-menu .chrome-chips {
     position: absolute;
     right: var(--chrome-actions-right,16px);
-    gap: 8px;
+    gap: var(--space-8px);
     margin: 0
   }
 }
