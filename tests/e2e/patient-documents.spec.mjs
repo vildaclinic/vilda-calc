@@ -167,6 +167,9 @@ for (const route of ['index', 'docpro']) {
 test('pojedynczy pomiar: opis ma przyczynę niedostępności, raporty zachowują natywne bramki', async ({ page }) => {
   await open(page);
   await fillDraft(page);
+  // The summary can appear before the deferred full update reveals the diet
+  // report. Open the dialog only after this real fixture has finished updating.
+  await expect.poll(() => page.evaluate(() => window.dietRecommendationsHasPdfAvailable?.())).toBe(true);
   await openPatientDocuments(page);
   await expect(page.locator(DOCUMENTS_COPY)).toBeDisabled();
   await expect(page.locator('[data-patient-documents-copy-reason]')).toContainText('co najmniej dwóch pomiarów');
