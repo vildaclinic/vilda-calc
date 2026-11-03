@@ -2708,8 +2708,8 @@ html.vilda-form-layout:not(.vilda-embedded) body.has-vilda-chrome>footer.site-fo
 html.vilda-form-layout.vilda-form-host-desktop body>footer.site-footer .site-footer__inner {
   padding-inline: var(--chrome-form-gap) 0
 }
-/* Only the empty two-column form can grow to the footer. The fields retain
- * their natural height, and populated results/comparison keep their own flow.
+/* Keep the first form row stable when results appear below it. Fields retain
+ * their natural height; additional rows inside the form keep their own flow.
  * The right summary still follows the actual fieldset via its existing model. */
 @media(min-width:700px) {
   html.vilda-form-fit-viewport:not(.vilda-pane-auth-open) #userSection>fieldset.user-card {
@@ -2718,6 +2718,14 @@ html.vilda-form-layout.vilda-form-host-desktop body>footer.site-footer .site-foo
   }
   html.vilda-form-fit-viewport.vilda-embedded:not(.vilda-pane-auth-open) #userSection>fieldset.user-card {
     min-height: calc(100dvh - var(--chrome-form-footer-height,96px) - 24px)
+  }
+  /* Replacing the matched reminders with a summary must keep the same row
+   * height while the result controls below are already interactive. */
+  html.vilda-form-fit-viewport #currentSummaryWrap .current-summary-card:last-child {
+    margin-bottom: 0
+  }
+  html.vilda-form-fit-viewport #calcForm~#results {
+    margin-top: var(--space-1)
   }
 }
 /* With only the patient card visible, the zero-height doctor track must not

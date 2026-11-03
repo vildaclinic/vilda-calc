@@ -741,7 +741,7 @@ function Mt(){try{o.addEventListener("click",Pt,!0)}catch{}}function jt(){try{le
   "use strict";
   var doc=win&&win.document;
   if(!doc||win.VildaHeaderLayout||typeof win.requestAnimationFrame!=="function")return;
-  var scheduled=0,sourceDoc=null,sourceFrame=null,sourceCleanup=[],trackedFrames=[],targets=[],sizeObserver=null;
+  var scheduled=0,sourceDoc=null,sourceFrame=null,sourceAuthRoot=null,sourceCleanup=[],trackedFrames=[],targets=[],sizeObserver=null;
   function embedded(){return doc.documentElement.classList.contains("vilda-embedded")||doc.documentElement.classList.contains("vilda-shell-embedded")}
   function compact(){return win.innerWidth<992||doc.documentElement.classList.contains("vilda-phone")}
   function formDocument(owner){
@@ -757,9 +757,20 @@ function Mt(){try{o.addEventListener("click",Pt,!0)}catch{}}function jt(){try{le
     return /(?:^|\/)app\.html$/.test(location.pathname||"")&&(!location.hash||/^#\/(?:start|docpro|klirens)(?:[/?]|$)/.test(location.hash));
   }
   function schedule(){if(!scheduled)scheduled=win.requestAnimationFrame(update)}
+  function refreshNow(){
+    if(scheduled&&typeof win.cancelAnimationFrame==="function")win.cancelAnimationFrame(scheduled);
+    update();
+  }
   function property(name,value,owner){var html=(owner||doc).documentElement;if(html.style.getPropertyValue(name)!==value)html.style.setProperty(name,value)}
   function marker(html,name,enabled){if(html.classList.contains(name)!==enabled)html.classList.toggle(name,enabled)}
   function pixels(value){return (Math.round(value*100)/100)+"px"}
+  function headerLayoutHeight(header,box){
+    var style=win.getComputedStyle&&win.getComputedStyle(header),top=header.offsetTop||0;
+    // A sticky header's offsetTop follows scroll; its inset is the stable
+    // layout edge, as in the pinned menu's Cm_sidebarPosition measurement.
+    if(style&&(style.position==="sticky"||style.position==="fixed"))top=Math.max(0,parseFloat(style.top)||0);
+    return Math.max(0,top+box.height);
+  }
   function rect(element){
     if(!element||!element.getBoundingClientRect||!element.getClientRects().length)return null;
     var box=element.getBoundingClientRect();return box.width>0&&box.height>0?box:null;
@@ -776,11 +787,10 @@ function Mt(){try{o.addEventListener("click",Pt,!0)}catch{}}function jt(){try{le
     });
   }
   function fitForm(owner){
-    var container=owner.querySelector(".main-content>.container"),form=owner.getElementById("calcForm");
-    var blocks=visibleBlocks(container),columns=visibleBlocks(form);
-    // Short Start/DocPro cards can fill the workspace. Extra results or the
-    // comparison section keep their natural flow; no input is compressed.
-    var fit=blocks.length===1&&blocks[0]===form&&columns.length>=1&&columns.length<=2&&columns.every(function(node){return node.id==="userSection"||node.id==="doctorSection"});
+    var form=owner.getElementById("calcForm"),columns=visibleBlocks(form);
+    // Results below the first row must not shrink it under an active pointer.
+    // Extra rows inside the form (such as comparison) keep their natural flow.
+    var fit=columns.length>=1&&columns.length<=2&&columns.every(function(node){return node.id==="userSection"||node.id==="doctorSection"});
     marker(owner.documentElement,"vilda-form-fit-viewport",fit);
     marker(owner.documentElement,"vilda-form-only-patient",fit&&columns.length===1&&columns[0].id==="userSection");
   }
@@ -789,10 +799,10 @@ function Mt(){try{o.addEventListener("click",Pt,!0)}catch{}}function jt(){try{le
     target.addEventListener(type,handler,options);
     if(cleanup)cleanup.push(function(){target.removeEventListener(type,handler,options)});
   }
-  function observeSource(owner,frame){
-    if(sourceDoc===owner&&sourceFrame===frame)return;
+  function observeSource(owner,frame,authRoot){
+    if(sourceDoc===owner&&sourceFrame===frame&&sourceAuthRoot===authRoot)return;
     sourceCleanup.forEach(function(remove){remove()});sourceCleanup=[];
-    sourceDoc=owner;sourceFrame=frame;
+    sourceDoc=owner;sourceFrame=frame;sourceAuthRoot=authRoot;
     listen(owner.defaultView,"scroll",schedule,{passive:true},sourceCleanup);
     listen(owner.defaultView,"resize",schedule,null,sourceCleanup);
     listen(owner,"vilda:phone-layout-changed",schedule,null,sourceCleanup);
@@ -801,7 +811,10 @@ function Mt(){try{o.addEventListener("click",Pt,!0)}catch{}}function jt(){try{le
       var content=owner.querySelector(".main-content")||owner.body;
       if(content)changes.observe(content,{subtree:true,childList:true,attributes:true,attributeFilter:["hidden","class","style"]});
       if(owner.documentElement)changes.observe(owner.documentElement,{attributes:true,attributeFilter:["class"]});
-      if(owner.body)changes.observe(owner.body,{attributes:true,attributeFilter:["class"]});
+      if(owner.body)changes.observe(owner.body,{attributes:true,attributeFilter:["class"],childList:true});
+      // Patient screens live outside .main-content. Their card can be replaced
+      // without changing the body's open state (tabs, edit, list and return).
+      if(authRoot)changes.observe(authRoot,{subtree:true,childList:true,attributes:true,attributeFilter:["hidden","class","style"]});
       sourceCleanup.push(function(){changes.disconnect()});
     }
     if(owner.fonts&&owner.fonts.ready)owner.fonts.ready.then(schedule).catch(function(){});
@@ -841,10 +854,10 @@ function Mt(){try{o.addEventListener("click",Pt,!0)}catch{}}function jt(){try{le
     if(!strip||!search)return;
     if(strip.classList.contains("chrome-header-actions-before-search"))strip.classList.remove("chrome-header-actions-before-search");
     var header=doc.querySelector("body>header"),headerBox=rect(header);
-    if(headerBox)property("--chrome-layout-header-height",pixels((header.offsetTop||0)+headerBox.height));
+    if(headerBox)property("--chrome-layout-header-height",pixels(headerLayoutHeight(header,headerBox)));
     var frame=frames(),owner=doc,offset=0,verticalOffset=0;
     if(frame)try{
-      if(frame.contentDocument&&frame.contentDocument.body){owner=frame.contentDocument;var frameBox=frame.getBoundingClientRect();offset=frameBox.left;verticalOffset=frameBox.top}
+      if(frame.contentDocument&&frame.contentDocument.body)owner=frame.contentDocument;
     }catch{return}
     var form=formHost(owner,frame);
     marker(doc.documentElement,"vilda-form-layout",form);
@@ -856,11 +869,17 @@ function Mt(){try{o.addEventListener("click",Pt,!0)}catch{}}function jt(){try{le
     if(rootBox)viewport=Math.min(viewport,rootBox.width);
     var scrollbar=frame&&form&&!compact()&&viewport>0?Math.max(0,frame.clientWidth-viewport):0;
     property("--chrome-pane-scrollbar-width",pixels(scrollbar));
-    observeSource(owner,frame);
+    var authRoot=owner.querySelector(".vilda-auth-root"),authVisible=authRoot&&rect(authRoot);
+    if(authVisible&&owner.defaultView&&typeof owner.defaultView.getComputedStyle==="function")authVisible=owner.defaultView.getComputedStyle(authRoot).visibility!=="hidden";
+    var authTarget=authVisible?firstVisible(owner,[".vilda-auth-root .vilda-auth-card"]):null;
+    observeSource(owner,frame,authRoot);
     fitForm(owner);
-    var target=firstVisible(owner,["#userSection fieldset.user-card","#clcrActivePanel","#clcrForm>.patient-card","#clcrForm","#userSection"]);
-    var second=firstVisible(owner,["#doctorSection","#clcrResultRail"]);
-    var workspace=firstVisible(owner,["#calcForm","#clcrWorkspace","#clcrForm"]);
+    // Route markers and the scrollbar compensation can move the iframe.
+    // Read its origin only after those writes, also on synchronous navigation.
+    if(frame){var frameBox=frame.getBoundingClientRect();offset=frameBox.left;verticalOffset=frameBox.top}
+    var target=authTarget||firstVisible(owner,["#userSection fieldset.user-card","#clcrActivePanel","#clcrForm>.patient-card","#clcrForm","#userSection"]);
+    var second=authTarget?null:firstVisible(owner,["#doctorSection","#clcrResultRail"]);
+    var workspace=authTarget||firstVisible(owner,["#calcForm","#clcrWorkspace","#clcrForm"]);
     var fallback=firstVisible(owner,["#proGateBanner",".main-content>.container",".main-content","main"]);
     var footer=owner.querySelector("footer.site-footer"),footerInner=footer&&footer.querySelector(".site-footer__inner");
     watchSizes([target,second,workspace,fallback,footer,footerInner,frame,header,strip,actions]);
@@ -880,6 +899,9 @@ function Mt(){try{o.addEventListener("click",Pt,!0)}catch{}}function jt(){try{le
     var twoColumns=!!(target&&box&&secondBox&&secondBox.left>=box.right-2&&secondBox.left>box.left+1);
     var left=box?offset+box.left:stripBox.left+Math.min(300,win.innerWidth*.3);
     var right=twoColumns?offset+secondBox.right:workspaceBox?offset+workspaceBox.right:stripBox.right-16;
+    // The centered patient card can start before the desktop brand at tablet
+    // widths. Keep both live controls usable while the bell follows the card.
+    if(authTarget){var brandBox=rect(doc.querySelector(".chrome-brand"));if(brandBox)left=Math.max(left,brandBox.right+12)}
     var width=box?box.width:Math.max(0,right-left-108);
     // Two columns match the complete first card. A genuinely full-width,
     // single-column form reserves sync44 + gap8 + bell44, then a 12px gap.
@@ -907,6 +929,6 @@ function Mt(){try{o.addEventListener("click",Pt,!0)}catch{}}function jt(){try{le
   // The embedded document needs its own route marker before the host's next
   // layout pass. The host controls desktop mode, even in a narrow iframe.
   marker(doc.documentElement,"vilda-form-layout",formDocument(doc));
-  win.VildaHeaderLayout={refresh:schedule};
+  win.VildaHeaderLayout={refresh:schedule,refreshNow:refreshNow};
   if(doc.readyState==="loading")doc.addEventListener("DOMContentLoaded",boot,{once:true});else boot();
 })(typeof window!=="undefined"?window:null);

@@ -44,11 +44,21 @@ function form(owner, left = 248, width = 450, right = 1160, kind = 'start') {
   return { target, second, workspace };
 }
 function setup(path = '/index.html', width = 1440, configure = () => {}) {
-  const doc = document(path, width), win = doc.defaultView, pending = [], observers = [];
+  const doc = document(path, width), win = doc.defaultView, pending = new Map(), observers = [], resizeObservers = [];
+  let nextFrame = 0;
   win.innerWidth = width; win.innerHeight = 1000;
-  win.requestAnimationFrame = fn => { pending.push(fn); return pending.length; };
-  win.MutationObserver = class { constructor(fn) { this.fn = fn; observers.push(this); } observe() {} disconnect() { this.disconnected = true; } };
-  win.ResizeObserver = class { constructor(fn) { this.fn = fn; } observe() {} disconnect() {} };
+  win.requestAnimationFrame = fn => { const id = ++nextFrame; pending.set(id, fn); return id; };
+  win.cancelAnimationFrame = id => pending.delete(id);
+  win.MutationObserver = class {
+    constructor(fn) { this.fn = fn; this.observations = []; observers.push(this); }
+    observe(node, options) { this.disconnected = false; this.observations.push({ node, options }); }
+    disconnect() { this.disconnected = true; this.observations = []; }
+  };
+  win.ResizeObserver = class {
+    constructor(fn) { this.fn = fn; this.nodes = []; resizeObservers.push(this); }
+    observe(node) { this.nodes.push(node); }
+    disconnect() { this.nodes = []; }
+  };
   doc.body.classList.add('vilda-header-menu');
   const strip = doc.add('.chrome-strip', element(0, width, 0, 64));
   doc.add('body>header', element(0, width, 0, 66));
@@ -57,9 +67,9 @@ function setup(path = '/index.html', width = 1440, configure = () => {}) {
   footer.add('.site-footer__inner', element(248, 912, 900, 90));
   configure({ doc, win, strip });
   vm.runInNewContext(geometry, { window: win });
-  const flush = () => { let passes = 0; while (pending.length) { if (++passes > 10) throw Error('layout loop'); pending.shift()(); } };
+  const flush = () => { let passes = 0; while (pending.size) { if (++passes > 10) throw Error('layout loop'); const [id, fn] = pending.entries().next().value; pending.delete(id); fn(); } };
   flush();
-  return { doc, win, strip, footer, observers, flush, refresh: () => { win.VildaHeaderLayout.refresh(); flush(); }, value: name => doc.documentElement.style.getPropertyValue(name) };
+  return { doc, win, strip, footer, observers, resizeObservers, pending, flush, refresh: () => { win.VildaHeaderLayout.refresh(); flush(); }, value: name => doc.documentElement.style.getPropertyValue(name) };
 }
 
 describe('production header geometry', () => {
@@ -72,6 +82,43 @@ describe('production header geometry', () => {
     expect(e.value('--chrome-layout-header-height')).toBe('66px');
     expect(e.value('--chrome-menu-footer-height')).toBe('100px');
     expect(e.value('--chrome-form-footer-height')).toBe('100px');
+  });
+
+  it.each([
+    ['sticky', 0, '66px'], ['fixed', 0, '66px'],
+    ['sticky', 59, '125px'], ['fixed', 59, '125px'],
+  ])('keeps the %s header edge at inset %ipx stable across scroll and refresh', (position, inset, expected) => {
+    let header;
+    const e = setup('/index.html', 1440, ({ doc, win }) => {
+      form(doc);
+      header = doc.querySelector('body>header');
+      header.offsetTop = inset; header.top = inset;
+      win.getComputedStyle = () => ({ position, top: `${inset}px` });
+    });
+    expect(e.value('--chrome-layout-header-height')).toBe(expected);
+    // The real listener must reread a sticky header's stable CSS inset, not
+    // publish its growing document offset as the height of the application bar.
+    for (const scroll of [863, 1200, 0]) {
+      e.win.scrollY = scroll; header.offsetTop = inset + scroll;
+      e.win.dispatch('scroll'); e.flush();
+      expect(e.value('--chrome-layout-header-height')).toBe(expected);
+      e.win.VildaHeaderLayout.refreshNow();
+      expect(e.value('--chrome-layout-header-height')).toBe(expected);
+    }
+  });
+
+  it.each(['static', 'relative'])('preserves the actual flow offset for a %s header', position => {
+    let header;
+    const e = setup('/index.html', 1440, ({ doc, win }) => {
+      form(doc);
+      header = doc.querySelector('body>header');
+      header.offsetTop = 17; header.top = 17;
+      win.getComputedStyle = () => ({ position, top: '59px' });
+    });
+    expect(e.value('--chrome-layout-header-height')).toBe('83px');
+    e.win.scrollY = 863; header.top = 17 - 863;
+    e.win.dispatch('scroll'); e.flush();
+    expect(e.value('--chrome-layout-header-height')).toBe('83px');
   });
 
   it('reserves an invariant 108px action slot in a genuinely single-column desktop form', () => {
@@ -97,6 +144,95 @@ describe('production header geometry', () => {
     expect(next.documentElement.classList.contains('vilda-form-host-desktop')).toBe(true);
     expect(next.documentElement.classList.contains('vilda-chrome-wide-host')).toBe(true);
     expect(e.doc.documentElement.classList.contains('vilda-form-layout')).toBe(true);
+  });
+
+  it('prefers the visible patient card to the hidden form and leaves the brand clear at narrow desktop widths', () => {
+    for (const [width, expectedSearchWidth] of [[992, '660px'], [1024, '692px']]) {
+      const child = document('/docpro.html', width - 20);
+      const cards = form(child, 248, 320, width - 40);
+      for (const node of Object.values(cards)) node.visibility = 'hidden';
+      child.defaultView.getComputedStyle = node => ({ visibility: node.visibility || 'visible' });
+      child.add('.vilda-auth-root', element(0, width - 20));
+      child.add('.vilda-auth-root .vilda-auth-card', element(12, width - 44));
+      const frame = element(20, width - 20); frame.contentDocument = child;
+      const e = setup('/app.html', width, ({ doc }) => {
+        doc.frames.push(frame); doc.add('.chrome-brand', element(16, 184));
+      });
+      // The card starts at32px in the host, inside the brand. Its action edge
+      // remains at the card's right border while Search begins after the brand.
+      expect(e.value('--chrome-form-left')).toBe('212px');
+      expect(e.value('--chrome-form-width')).toBe(expectedSearchWidth);
+      expect(e.value('--chrome-actions-right')).toBe('12px');
+    }
+  });
+
+  it('observes a late patient card, its replacement and resize, then restores the form when the card closes', () => {
+    const child = document('/docpro.html', 1178);
+    form(child, 12, 450, 1168);
+    child.add('.main-content', element(12, 1156));
+    child.defaultView.getComputedStyle = node => ({ visibility: node.visibility || 'visible' });
+    const frame = element(248, 1184); frame.contentDocument = child;
+    const e = setup('/app.html', 1440, ({ doc }) => {
+      doc.frames.push(frame); doc.add('.chrome-brand', element(16, 184));
+    });
+    const edges = () => [e.value('--chrome-form-left'), e.value('--chrome-form-width'), e.value('--chrome-actions-right')];
+    const mutate = (node, type = 'childList') => {
+      const observer = e.observers.find(item => !item.disconnected
+        && item.observations.some(entry => entry.node === node && entry.options[type]));
+      expect(observer, `the actual observer watches ${type} on the changed node`).toBeDefined();
+      observer.fn([{ type, target: node }]); e.flush();
+    };
+    expect(edges()).toEqual(['260px', '450px', '24px']);
+    const root = child.add('.vilda-auth-root', element(0, 1178));
+    child.add('.vilda-auth-root .vilda-auth-card', element(20, 900));
+    mutate(child.body);
+    expect(edges()).toEqual(['268px', '792px', '272px']);
+    const replacement = child.add('.vilda-auth-root .vilda-auth-card', element(40, 1000));
+    mutate(root);
+    expect(edges()).toEqual(['288px', '892px', '152px']);
+    replacement.left = 60; replacement.width = 800;
+    const sizeObserver = e.resizeObservers.find(observer => observer.nodes.includes(replacement));
+    expect(sizeObserver, 'the replacement card is observed for real size changes').toBeDefined();
+    sizeObserver.fn([{ target: replacement }]); e.flush();
+    expect(edges()).toEqual(['308px', '692px', '332px']);
+    root.visibility = 'hidden'; mutate(root, 'attributes');
+    expect(edges()).toEqual(['260px', '450px', '24px']);
+    child.add('.vilda-auth-root', null); child.add('.vilda-auth-root .vilda-auth-card', null);
+    mutate(child.body);
+    expect(edges()).toEqual(['260px', '450px', '24px']);
+  });
+
+  it('settles route markers and reads the final iframe origin synchronously before the next frame', () => {
+    const settings = document('/ustawienia.html', 853), start = document('/index.html', 928);
+    settings.add('.main-content', element(0, 853)); form(start, 12, 450, 918);
+    const settingsFrame = element(270, 853), startFrame = element(270, 938);
+    settingsFrame.contentDocument = settings; startFrame.contentDocument = start; startFrame.hidden = true;
+    const e = setup('/app.html', 1440, ({ doc }) => doc.frames.push(settingsFrame, startFrame));
+    // The fake DOM models only CSS reflow: production update must read its
+    // origin after changing both the route marker and scrollbar property.
+    let reads = 0;
+    startFrame.getBoundingClientRect = () => {
+      reads += 1;
+      const settled = e.doc.documentElement.classList.contains('vilda-form-layout')
+        && e.value('--chrome-pane-scrollbar-width') === '10px';
+      return { left: settled ? 258 : 270, width: 938, top: 66, height: 934 };
+    };
+    settingsFrame.hidden = true; startFrame.hidden = false;
+    e.win.VildaHeaderLayout.refresh();
+    expect(e.pending.size).toBe(1);
+    e.win.VildaHeaderLayout.refreshNow();
+    expect(e.pending.size, 'the queued stale layout pass is cancelled').toBe(0);
+    expect(e.doc.documentElement.classList.contains('vilda-form-layout')).toBe(true);
+    expect(start.documentElement.classList.contains('vilda-form-host-desktop')).toBe(true);
+    expect(e.value('--chrome-form-left')).toBe('270px');
+    const synchronousReads = reads;
+    e.flush();
+    expect(reads).toBe(synchronousReads);
+    startFrame.hidden = true; settingsFrame.hidden = false;
+    e.win.VildaHeaderLayout.refreshNow();
+    expect(e.doc.documentElement.classList.contains('vilda-form-layout')).toBe(false);
+    expect(e.value('--chrome-pane-scrollbar-width')).toBe('0px');
+    expect(e.value('--chrome-form-left')).toBe('270px');
   });
 
   it('marks a narrow embedded form using host desktop mode and preserves the actual taller footer', () => {
@@ -168,7 +304,7 @@ describe('production header geometry', () => {
     expect(e.doc.documentElement.classList.contains('vilda-form-layout')).toBe(false);
   });
 
-  it('stretches only the plain two-card form and releases it when results or comparison become visible', () => {
+  it('keeps the two-card form stable when results appear below it and releases it for comparison within the form', () => {
     let container, workspace, results, comparison;
     const e = setup('/docpro.html', 1440, ({ doc }) => {
       const cards = form(doc); workspace = cards.workspace;
@@ -188,9 +324,9 @@ describe('production header geometry', () => {
     workspace.children[1].height = 100; e.refresh();
     expect(e.doc.documentElement.classList.contains('vilda-form-only-patient')).toBe(false);
     results.hidden = false; e.refresh();
-    expect(e.doc.documentElement.classList.contains('vilda-form-fit-viewport')).toBe(false);
+    expect(e.doc.documentElement.classList.contains('vilda-form-fit-viewport')).toBe(true);
     expect(e.doc.documentElement.classList.contains('vilda-form-only-patient')).toBe(false);
-    results.hidden = true; comparison.hidden = false; e.refresh();
+    comparison.hidden = false; e.refresh();
     expect(e.doc.documentElement.classList.contains('vilda-form-fit-viewport')).toBe(false);
     comparison.hidden = true; e.refresh();
     expect(e.doc.documentElement.classList.contains('vilda-form-fit-viewport')).toBe(true);

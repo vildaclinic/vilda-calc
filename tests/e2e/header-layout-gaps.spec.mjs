@@ -62,19 +62,32 @@ for (const shell of [false, true]) for (const route of LAYOUT_ROUTES) {
       await expect.poll(async () => {
         const g = await headerLayout(page); return Math.round(g.footer.y - g.last.bottom);
       }, { message: `${width}px: last visible content card ends 12px before the footer` }).toBe(12);
+      const expectStableHeaderEdge = () => expect.poll(() => page.evaluate(() =>
+        parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--chrome-layout-header-height'))),
+      { message: 'scrolling the document does not add its offset to the sticky header height' }).toBe(geometry.header.bottom);
+      await expectStableHeaderEdge();
+      if (!shell && route.route === 'docpro' && proof.length === 0) {
+        expect(await owner.evaluate(() => scrollY), 'the action is exercised after a real document scroll').toBeGreaterThan(0);
+        await page.locator('#vildaRemindersBtn').click();
+        const reminders = page.locator('dialog.vb22-modal');
+        await expect(reminders).toBeVisible();
+        await reminders.getByRole('button', { name: 'Zamknij Przypomnienia', exact: true }).click();
+        await expect(reminders).toHaveCount(0);
+        await expectStableHeaderEdge();
+      }
       proof.push({ ...geometry, atFooter: await headerLayout(page) });
     }
     if (route.route === 'start') {
       await page.setViewportSize({ width: 1440, height: 1000 });
       await loadPatient(owner, ids.a, 'restore', { clear: true });
       await expect(owner.locator('#bmiCard')).toBeVisible();
-      await expect(owner.locator('html')).not.toHaveClass(/\bvilda-form-fit-viewport\b/);
+      await expect(owner.locator('html')).toHaveClass(/\bvilda-form-fit-viewport\b/);
       const report = owner.locator('#openChartCreatorBtn');
       await report.scrollIntoViewIfNeeded();
       await expect(report).toBeVisible();
       await expect.poll(() => report.evaluate(node => {
         const r = node.getBoundingClientRect(); return node.contains(document.elementFromPoint(r.x + r.width / 2, r.y + r.height / 2));
-      }), { message: 'the calculated document action remains reachable after leaving the short-form state' }).toBe(true);
+      }), { message: 'the calculated document action remains reachable below the stable first row' }).toBe(true);
       await expectReachableFooter(page, owner);
       await expect.poll(async () => {
         const g = await headerLayout(page); return Math.round(g.footer.y - g.last.bottom);
