@@ -21,6 +21,10 @@ html[data-clcr-workflow-ui="1"][data-clcr-picr-active="1"] #clcrForm {
   min-width: 0;
 }
 
+html[data-clcr-workflow-ui="1"][data-clcr-picr-active="1"] #clcrForm > .clcr-workflow__utilities:empty {
+  display: none;
+}
+
 html[data-clcr-workflow-ui="1"][data-clcr-picr-active="1"] #clcrForm > *,
 html[data-clcr-workflow-ui="1"][data-clcr-picr-active="1"] :is(#clcrResultRail, #clcrResultReport) {
   width: 100%;
@@ -151,7 +155,7 @@ html[data-clcr-workflow-ui="1"] #picrInputCard .clcr-field__name {
   line-height: 1.5;
 }
 
-html[data-clcr-workflow-ui="1"] #picrInputCard :is(.clcr-field__status, .clcr-field__info, .clcr-field__note) {
+html[data-clcr-workflow-ui="1"] #picrInputCard :is(.clcr-field__status, .clcr-field__info, .clcr-field__note, .clcr-info-button) {
   display: none;
 }
 
@@ -577,6 +581,10 @@ html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .picr-referenc
   overflow-wrap: anywhere;
   color: var(--clcr-heading);
   background: var(--clcr-surface);
+}
+
+html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .picr-reference-table thead th:first-child {
+  width: 22%;
 }
 
 html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .picr-reference-table thead th {

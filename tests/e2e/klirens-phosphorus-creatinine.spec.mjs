@@ -125,6 +125,7 @@ async function geometry(page, width) {
   expect(Math.abs(boxes.form.width - boxes.input.width)).toBeLessThanOrEqual(1);
   expect(Math.abs(boxes.clear.width - boxes.input.width)).toBeLessThanOrEqual(1);
   expect(boxes.mainFont).toBeGreaterThanOrEqual(16);
+  expect(Math.abs(boxes.input.top - boxes.active.bottom), 'continuous input card border').toBeLessThanOrEqual(1);
   if (boxes.resultUnits.length === 2) expect(Math.abs(boxes.resultUnits[0] - boxes.resultUnits[1]), 'result/reference units aligned').toBeLessThanOrEqual(1);
   expect(boxes.modeButtons).toHaveLength(2);
   const pressed = boxes.modeButtons.filter(button => button.pressed === 'true');
@@ -196,6 +197,7 @@ for (const width of [1440, 390, 320]) {
     await blocked(page);
     await expect(inputCard(page).locator('input:visible')).toHaveCount(2);
     await expect(inputCard(page).locator('select:visible')).toHaveCount(2);
+    await expect(inputCard(page).locator('.clcr-info-button:visible')).toHaveCount(0);
     await expect(page.locator('#age,#sex,#weight,#height,#U_PO4,#Ucr,#V24,#collectionStartAt,#collectionEndAt').filter({ visible: true })).toHaveCount(0);
     await expect(page.locator('#PICR_phosphorusUnit')).toHaveValue('mmol/L');
     await expect(page.locator('#PICR_creatinineUnit')).toHaveValue('mmol/L');
@@ -216,10 +218,21 @@ for (const width of [1440, 390, 320]) {
     await page.locator('#PICR_reportedValue').fill('0.5');
     await result(page, { raw: 0.5 });
     sameWidths(initial, await geometry(page, width));
-    await kliknij(details(page).locator('summary'));
+    await restore(page, { age: '10', sex: 'F', PICR_inputMode: 'direct', PICR_reportedValue: '.5' });
+    await result(page, { raw: .5, status: 'normal', reference: { low: .142, high: 1.321 } });
     sameWidths(initial, await geometry(page, width));
+    await screenshot(page, testInfo, `picr-normal-${width}`);
+    await page.locator('#PICR_reportedValue').fill('2');
+    await result(page, { raw: 2, status: 'high', reference: { low: .142, high: 1.321 } });
+    sameWidths(initial, await geometry(page, width));
+    await screenshot(page, testInfo, `picr-high-${width}`);
+    if (!await details(page).evaluate(node => node.open)) await kliknij(details(page).locator('summary'));
+    await expect(details(page)).toHaveAttribute('open', '');
+    sameWidths(initial, await geometry(page, width));
+    await expect(details(page)).toHaveAttribute('open', '');
     await screenshot(page, testInfo, `picr-details-${width}`);
     await kliknij(details(page).locator('summary'));
+    await restore(page, { PICR_inputMode: 'direct', PICR_reportedValue: '.5' });
     for (const family of ['Arial', 'DejaVu Sans', 'Liberation Sans']) {
       await page.addStyleTag({ content: `#picrInputCard,#picrInputCard *,#clcrResultReport,#clcrResultReport * { font-family: "${family}", sans-serif !important; }` });
       for (const extreme of ['1.7976931348623157e308', '1e-300']) {
@@ -250,7 +263,7 @@ for (const [pUnit, p] of [['mmol/L', '1'], ['µmol/L', '1000'], ['mg P/L', '30.9
       await page.locator('#PICR_creatinineUnit').selectOption(crUnit);
       await page.locator('#PICR_phosphorus').fill(p);
       await page.locator('#PICR_creatinine').fill(cr);
-      await result(page, { raw: 0.27381331327793495 });
+      await result(page, { raw: 0.27381331327793496 });
       if (pUnit.startsWith('mg')) await expect(page.locator('#picrMassHint')).toBeVisible();
       else await expect(page.locator('#picrMassHint')).toBeHidden();
     }
@@ -316,7 +329,7 @@ test('Pᵢ/Cr: zero fosforu, ujemne operandy i skrajne liczby nie tworzą pozorn
     await page.locator('#PICR_creatinine').fill(cr);
     await blocked(page);
   }
-  for (const [p, cr, raw] of [['0', '2', 0], ['0.00001', '1', 2.7381331327793495e-6], ['1e308', '1e308', .27381331327793495]]) {
+  for (const [p, cr, raw] of [['0', '2', 0], ['0.00001', '1', 2.7381331327793495e-6], ['1e308', '1e308', .27381331327793496]]) {
     await page.locator('#PICR_phosphorus').fill(p);
     await page.locator('#PICR_creatinine').fill(cr);
     await result(page, { raw });
@@ -334,7 +347,7 @@ test('Pᵢ/Cr: zero fosforu, ujemne operandy i skrajne liczby nie tworzą pozorn
 test('Pᵢ/Cr: gotowe jednostki przeliczają się do mg/mg przed dokładnym porównaniem z normą', async ({ page }) => {
   await open(page);
   await restore(page, { age: '18', sex: 'M', PICR_inputMode: 'direct' });
-  for (const [value, unit, raw, status] of [['.75', 'mg/mg', .75, 'high'], ['750', 'mg/g', .75, 'high'], ['749.9999999999999', 'mg/g', .7499999999999999, 'normal'], ['1', 'mmol/mmol', .27381331327793495, 'normal']]) {
+  for (const [value, unit, raw, status] of [['.75', 'mg/mg', .75, 'high'], ['750', 'mg/g', .75, 'high'], ['749.9999999999999', 'mg/g', .7499999999999999, 'normal'], ['1', 'mmol/mmol', .27381331327793496, 'normal']]) {
     await page.locator('#PICR_reportedUnit').selectOption(unit);
     await page.locator('#PICR_reportedValue').fill(value);
     await result(page, { raw, status, reference: { low: null, high: .75, upperInclusive: false } });
@@ -589,4 +602,27 @@ test('Pᵢ/Cr: historyczne mg P/dL i mg/dL zachowują zapis; jawna edycja napraw
   expect(edited.labResult.valueNum).toBe(.25);
   expect(edited.id).toBe(originals[0].id);
   expect(stored.notes.find(note => note.id === originals[1].id)).toEqual(originals[1]);
+});
+
+test('Pᵢ/Cr: pierwsze kliknięcie Szczegółów po wpisaniu wartości działa w obu trybach', async ({ page }) => {
+  await open(page, 390);
+  await restore(page, { PICR_phosphorus: '', PICR_creatinine: '10' });
+  await page.locator('#PICR_phosphorus').fill('15');
+  await result(page);
+  await kliknij(details(page).locator('summary'));
+  await expect(details(page)).toHaveAttribute('open', '');
+  await kliknij(details(page).locator('summary'));
+  await expect(details(page)).not.toHaveAttribute('open', '');
+  await kliknij(mode(page, true));
+  await page.locator('#PICR_reportedValue').fill('.5');
+  await result(page, { raw: .5 });
+  await kliknij(details(page).locator('summary'));
+  await expect(details(page)).toHaveAttribute('open', '');
+  // An explicit import/change must still calculate without a preceding input.
+  await page.evaluate(() => {
+    const control = document.getElementById('PICR_reportedValue');
+    control.value = '.7'; control.dispatchEvent(new Event('change', { bubbles: true }));
+  });
+  await result(page, { raw: .7 });
+  await expect(details(page)).toHaveAttribute('open', '');
 });

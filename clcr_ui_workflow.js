@@ -4050,7 +4050,17 @@
     }
     form.addEventListener("input", event => { if (event.isTrusted) cancelSelectionGuidance(); scheduleReadiness(); }, true);
     // Dedicated UA controls are created after legacy direct listeners mount.
+    const picrInputValues = new WeakMap();
     ["input", "change"].forEach(type => form.addEventListener(type, event => {
+      const target = event.target;
+      if (target?.id?.startsWith("PICR_") && target.tagName === "INPUT") {
+        // Native text-input change fires on blur, after input already calculated
+        // this value. Replacing the result between mousedown and mouseup would
+        // discard the doctor's first click on Details. Explicit synthetic
+        // changes still refresh; different values and all selectors do too.
+        if (type === "change" && event.isTrusted && picrInputValues.get(target) === target.value) return;
+        if (type === "input") picrInputValues.set(target, target.value);
+      }
       if ((event.target?.id?.startsWith("PICR_") || event.target?.id?.startsWith("MGCA_") || event.target?.id?.startsWith("UA_") || event.target?.id?.startsWith("CA_") || event.target?.id?.startsWith("MG_") || event.target?.id?.startsWith("PO4_") || event.target?.id?.startsWith("Prot_") || event.target?.id?.startsWith("Na_") || event.target?.id?.startsWith("K_")) && typeof global.clcrUpdate === "function") global.clcrUpdate();
     }));
     form.addEventListener("input", (event) => {
