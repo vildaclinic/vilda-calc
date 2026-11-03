@@ -218,7 +218,9 @@ for (const [profile, settings] of profiles) test.describe(profile, () => {
 });
 
 test.describe('desktop retained inline Search', () => {
-  test.use({ viewport: { width: 1440, height: 800 }, serviceWorkers: 'block', reducedMotion: 'reduce', actionTimeout: 15000, navigationTimeout: 30000 });
+  // Compact Start fits at 800px; a shorter real window exercises document
+  // scrolling as well as the independent result list, without spacer content.
+  test.use({ viewport: { width: 1440, height: 600 }, serviceWorkers: 'block', reducedMotion: 'reduce', actionTimeout: 15000, navigationTimeout: 30000 });
   test.setTimeout(180000);
 
   test('a hidden shell iframe preserves its query, expanded list and scroll without reading until shown again', async ({ page }) => {

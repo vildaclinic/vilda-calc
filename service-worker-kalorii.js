@@ -19,7 +19,7 @@
  *   bo i tak chcemy zwracać HTML z cache natychmiast.
  */
 
-const SW_VERSION = '1.1.445';
+const SW_VERSION = '1.1.446';
 const CACHE_PREFIX = 'pwa-kalorii';
 const SHELL_CACHE = `${CACHE_PREFIX}-shell-v${SW_VERSION}`;
 const RUNTIME_CACHE = `${CACHE_PREFIX}-runtime`;
@@ -164,6 +164,7 @@ const CORE_SHELL_URLS = [
   '/style.css?v=91',
   '/style.css?v=92',
   '/style.css?v=93',
+  '/style.css?v=94',
   '/lab_clinical_panels.js?v=141',
   '/lab_clinical_panels.js?v=143',
   // DEFER-P1c: bloki inline wyniesione do plików defer (39 szt.)
@@ -1642,6 +1643,7 @@ const CORE_SHELL_URLS = [
   '/vilda_chrome.js?v=220',
   '/vilda_chrome.js?v=221',
   '/vilda_chrome.js?v=222',
+  '/vilda_chrome.js?v=223',
   '/vilda_realtime.js?v=1',
   '/vilda_realtime.js?v=2',
   '/vilda_realtime.js?v=3',
@@ -1847,6 +1849,7 @@ const CORE_SHELL_URLS = [
   '/vilda_chrome.css?v=45',
   '/vilda_chrome.css?v=46',
   '/vilda_chrome.css?v=47',
+  '/vilda_chrome.css?v=48',
   '/vilda_auth_ui.css',
   '/vilda_auth_ui.css?v=9',
   '/vilda_auth_ui.css?v=10',
@@ -2430,6 +2433,7 @@ const OPTIONAL_ASSETS = [
   '/vilda_patient_documents.css?v=1',
   '/vilda_patient_documents.css?v=2',
   '/vilda_summary_layout.js?v=1',
+  '/vilda_summary_layout.js?v=2',
   // Read-only new-measurement preview (Start / DocPro / fullscreen shell).
   '/vilda_centile_live_panel.css?v=1',
   '/vilda_centile_live_panel.css?v=2',
@@ -3966,6 +3970,7 @@ const OPTIONAL_ASSETS = [
   '/vilda_auth_ui.js?v=530',
   '/vilda_auth_ui.js?v=531',
   '/vilda_auth_ui.js?v=532',
+  '/vilda_auth_ui.js?v=533',
   '/app.js?v=205',
   '/app.js?v=206',
   '/app.js?v=207',
@@ -4241,6 +4246,7 @@ const OPTIONAL_ASSETS = [
   '/vilda_session_bridge.js?v=143',
   '/vilda_session_bridge.js?v=144',
   '/vilda_session_bridge.js?v=145',
+  '/vilda_session_bridge.js?v=146',
   '/vilda_data_safety_explainer.js?v=5',
   '/vilda_obesity_banner.css?v=6',
   '/vilda_obesity_banner.css?v=7',

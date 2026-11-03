@@ -51,8 +51,10 @@ test('A7 patient-first typography, calendar-day color boundaries and due-only co
     };
   });
   expect(css.children).toEqual(['patient', 'when', 'task']);
-  expect(css.patient).toEqual(css.form);
+  expect(css.patient.family).toBe(css.form.family);
+  expect(css.patient.weight).toBe(css.form.weight);
   expect(css.patient.size).toBe('16.8px'); expect(css.patient.weight).toBe('400');
+  expect(css.form.size).toBe('16px');
   expect(css.task.size).toBe('16px'); expect(css.task.weight).toBe('400');
   const colors = {
     1: ['short', 'rgb(14, 115, 120)'], 3: ['short', 'rgb(14, 115, 120)'],

@@ -142,7 +142,7 @@ for (const route of ['index', 'docpro']) {
     await expectAligned(frame);
     const formHeight = await frame.locator('#userSection fieldset.user-card').evaluate(el => el.getBoundingClientRect().height);
     await expect(frame.locator(`${CONTENT} .professional-summary-main [data-summary-key]`)).toHaveCount(10);
-    expect(await frame.locator(`${CONTENT} [data-summary-key="weight"]`).evaluate(el => getComputedStyle(el).fontSize)).toBe('15px');
+    await expect(frame.locator(`${CONTENT} [data-summary-key="weight"]`)).toHaveCSS('font-size', '15px');
     await frame.locator(`${CONTENT} .professional-summary-extras > summary`).click();
     await expect(frame.locator(`${CONTENT} .professional-summary-extra-body`)).toBeVisible();
     await expectAligned(frame);

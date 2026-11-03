@@ -1,6 +1,7 @@
 :root {
   --chrome-strip-height: 64px;
   --chrome-sidebar-width: 270px;
+  --site-footer-arrow-inset: calc(var(--scroll-top-size, 4rem) + 2rem);
   --chrome-sidebar-pad-x: .85rem;
   --chrome-radius-pill: 999px;
   --chrome-radius-card: 14px;
@@ -2323,5 +2324,155 @@ html.vilda-phone .chrome-menu-account-copy .chrome-drawer-account-value {
 @media(prefers-reduced-motion:reduce) {
   .chrome-menu-calculators-toggle > :last-child {
     transition: none
+  }
+}
+
+/* Compact Start: the original controls and clinical sections retain their DOM
+ * and handlers. Only related fields share a row; growing content stays in the
+ * document flow, so a low window or an expanded assessment remains scrollable. */
+.vilda-start-compact .start-field-pair {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: end;
+  gap: var(--space-12px);
+  margin-top: var(--space-10px)
+}
+
+.vilda-start-compact .start-field-pair > label {
+  min-width: 0;
+  margin-top: 0
+}
+
+.vilda-start-compact #userSection > fieldset.user-card {
+  margin-bottom: 0;
+  padding: var(--space-16px);
+  font-size: 1rem;
+  line-height: 1.35;
+  box-sizing: border-box
+}
+
+/* The compact fieldset has no trailing margin. The comparison wrapper must no
+ * longer cancel that old margin: keep one 1rem gap above the comparison card. */
+.vilda-start-compact #calcForm > #prevSummaryWrap {
+  margin-top: 0
+}
+
+@media(max-width:699px) {
+  .vilda-start-compact #calcForm > #prevSummaryWrap {
+    margin-top: calc(var(--space-1) - var(--space-0-3))
+  }
+}
+
+.vilda-start-compact .start-name-pair {
+  margin-top: 0
+}
+
+.vilda-start-compact .start-name-pair > label > span {
+  font-size: .75rem
+}
+
+.vilda-start-compact #userSection > .user-card > label,
+.vilda-start-compact #userSection > .user-card > .vild-age-row,
+.vilda-start-compact .start-form-actions {
+  margin-top: var(--space-10px)
+}
+
+.vilda-start-compact #userSection > .user-card > .vild-age-row > label {
+  margin-top: 0
+}
+
+.vilda-start-compact .start-form-actions {
+  text-align: center
+}
+
+.vilda-start-compact #userSection :is(#lastName, #firstName, #dobInput, #age, #ageMonths, #ageWeeks, #sex, #weight, #height) {
+  min-height: 44px;
+  padding: var(--space-8px) var(--space-12px);
+  font-size: 1rem;
+  line-height: 1.35;
+  box-sizing: border-box
+}
+
+.vilda-start-compact #clearAllDataBtn {
+  min-height: 44px;
+  margin-top: 0;
+  padding-top: var(--space-8px);
+  padding-bottom: var(--space-8px);
+  font-size: 1rem
+}
+
+@media(min-width:700px) {
+  body.vilda-start-compact {
+    min-height: 100dvh;
+    height: auto
+  }
+  .vilda-start-compact > .desktop-layout {
+    flex: 1 0 auto;
+    align-items: stretch;
+    padding-top: var(--space-8px);
+    padding-bottom: var(--space-8px)
+  }
+  .vilda-start-compact .main-content {
+    display: flex;
+    padding: var(--space-8px) var(--space-12px)
+  }
+  .vilda-start-compact .main-content > .container {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    padding: 0
+  }
+  .vilda-start-compact #calcForm {
+    flex: 1 0 auto
+  }
+}
+
+@media(max-width:360px) {
+  .vilda-start-compact .start-name-pair {
+    grid-template-columns: minmax(0, 1fr)
+  }
+}
+
+/* The site footer belongs to the content column. Embedded documents already
+ * receive that column from the shell and must not reserve the menu twice. */
+@media(min-width:992px) {
+  html:not(.vilda-phone):not(.vilda-embedded):not(.vilda-shell-embedded) body.has-sidebar.has-vilda-chrome>footer.site-footer {
+    margin-inline-start: var(--chrome-sidebar-width)
+  }
+}
+
+/* Keep the compact footer readable beside the floating scroll control without
+ * adding an empty bottom band on desktop. The dock has a separate reserve. */
+html:not(.vilda-embedded):not(.vilda-shell-embedded) body.has-vilda-chrome:not(.user-hides-nav-arrow)>footer.site-footer .site-footer__inner {
+  padding-inline-end: var(--site-footer-arrow-inset)
+}
+/* Embedded panes always hide their own arrow; the host's arrow can still
+ * overlay their footer. The shell already reserves the dock below the iframe. */
+html.vilda-embedded body.has-vilda-chrome>footer.site-footer .site-footer__disclaimer,
+html.vilda-shell-embedded body.has-vilda-chrome>footer.site-footer .site-footer__disclaimer,
+html:not(.vilda-embedded):not(.vilda-shell-embedded) body.has-vilda-chrome:not(.user-hides-nav-arrow)>footer.site-footer .site-footer__disclaimer {
+  padding-inline-end: calc(var(--site-footer-arrow-inset) - 20px)
+}
+
+/* A body padding can fall outside the scrollable area on the legacy full-height
+ * pages. Reserve the optional dock inside the footer, once, including safe area. */
+html:not(.vilda-embedded):not(.vilda-shell-embedded) body.has-mobile-bottom-dock:has(>footer.site-footer) {
+  padding-bottom: 0!important
+}
+html:not(.vilda-embedded):not(.vilda-shell-embedded) body.has-mobile-bottom-dock:not(.user-hides-mobile-dock)>footer.site-footer {
+  padding-bottom: calc(var(--mobile-dock-effective-height, 84px) + var(--mobile-dock-anchor-bottom, 4px) + .75rem)
+}
+html:not(.vilda-embedded):not(.vilda-shell-embedded) body.has-mobile-bottom-dock:not(.user-hides-mobile-dock):not(.user-hides-nav-arrow)>footer.site-footer {
+  padding-bottom: calc(var(--mobile-dock-pinned-scroll-top-bottom, 92px) + var(--scroll-top-size, 4rem) + .75rem)
+}
+@media(max-width:991px) {
+  html:not(.vilda-embedded):not(.vilda-shell-embedded) body.has-vilda-chrome:not(.user-hides-nav-arrow)>footer.site-footer {
+    padding-bottom: calc(var(--scroll-top-size, 4rem) + 2rem)
+  }
+  html:not(.vilda-embedded):not(.vilda-shell-embedded) body.has-vilda-chrome:not(.user-hides-nav-arrow)>footer.site-footer .site-footer__inner {
+    padding-inline-end: var(--space-20px)
+  }
+  html:not(.vilda-embedded):not(.vilda-shell-embedded) body.has-vilda-chrome:not(.user-hides-nav-arrow)>footer.site-footer .site-footer__disclaimer {
+    padding-inline-end: 0
   }
 }

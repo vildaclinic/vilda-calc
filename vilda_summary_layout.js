@@ -95,6 +95,10 @@
   }
   function refresh() {
     if (!started) return;
+    // A hidden shell pane has no layout. Keep its last measured geometry so
+    // showing it cannot expand the form before the shell restores scrolling.
+    // A detached card still releases its constraints below.
+    if (w.frameElement && w.frameElement.hidden && card.isConnected) return;
     if (!card.getClientRects().length || !geometry.twoColumns()) {
       release();
       return;

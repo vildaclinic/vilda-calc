@@ -257,11 +257,15 @@ for (const mobile of [false, true]) {
         await assertSaved(page, owner, fixture.expected, `dock:${route.id}`);
       }
     }
-    // Cukrzyca należy do mapy powłoki, ale nie do jej 10 pozycji sidebar/drawer.
-    // Rzeczywisty odnośnik w stopce ramki także musi przejść przez router hosta.
-    await owner.locator('.site-footer__link[href="cukrzyca.html"]').click();
+    // Po usunięciu powtórzeń kalkulatorów ze stopki Cukrzyca jest dostępna
+    // przez Wiedzę. Rzeczywisty link karty materiału nadal obsługuje router hosta.
+    const knowledge = ROUTES.find(route => route.id === 'edu');
+    await clickRoute(page, knowledge, mobile);
+    owner = await readyRoute(page, knowledge);
+    await assertSaved(page, owner, fixture.expected, 'Wiedza przed Cukrzycą');
+    await owner.locator('.wk-card[href="cukrzyca.html"]').click();
     owner = await readyRoute(page, ROUTES.find(route => route.id === 'cukrzyca'));
-    await assertSaved(page, owner, fixture.expected, 'stopka:Cukrzyca');
+    await assertSaved(page, owner, fixture.expected, 'Wiedza:Cukrzyca');
     const current = new URL(page.url()).hash;
     await page.goBack();
     const previous = ROUTES.find(route => `#/${route.id}` === new URL(page.url()).hash);
