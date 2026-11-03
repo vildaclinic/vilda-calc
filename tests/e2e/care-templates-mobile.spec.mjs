@@ -81,7 +81,9 @@ test('care templates mobile shell keeps a two-stage wizard usable, preserves foc
   await expect(templateRow(reopened, item.templateId)).toHaveCount(0);
   await reopened.getByRole('button', { name: 'Usunięte', exact: true }).click();
   const restore = templateRow(reopened, item.templateId).getByRole('button', { name: /^Przywróć szablon:/ });
-  await restore.scrollIntoViewIfNeeded(); await expect(restore).toBeInViewport();
+  // The post-save sync can replace this row. Trial click re-resolves the
+  // locator during actionability checks without restoring the template.
+  await restore.click({ trial: true }); await expect(restore).toBeInViewport();
   await noHorizontalOverflow(page); await captureTemplateUI(page, 'mobile-removed-template');
   await restore.click(); await reopened.getByRole('button', { name: 'Przywróć', exact: true }).click();
   await expect(templateRow(reopened, item.templateId)).toBeVisible();
