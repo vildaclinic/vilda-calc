@@ -31,6 +31,7 @@
     ["clcr_urate_creatinine_persistence.js?v=1", "ClcrUrateCreatininePersistence"],
     ["clcr_cacr_dzm_persistence.js?v=1", "ClcrCacrDzmPersistence"],
     ["clcr_magnesium_calcium_persistence.js?v=1", "ClcrMagnesiumCalciumPersistence"],
+    ["clcr_phosphorus_creatinine_persistence.js?v=1", "ClcrPhosphorusCreatininePersistence"],
     // readSaved is pure and needed for the new capture format. Its recalculate
     // method is not called while opening history and resolves engines lazily.
     ["clcr_saved_calculation.js?v=14", "ClcrSavedCalculation"],
@@ -52,7 +53,9 @@
     ["clcr_cacr_reference_data.js?v=2", "VildaClcrCacrReferenceData"],
     ["clcr_cacr.js?v=2", "VildaClcrCacr"],
     ["clcr_magnesium_calcium_data.js?v=1", "VildaClcrMagnesiumCalciumData"],
+    ["clcr_phosphorus_creatinine_data.js?v=1", "VildaClcrPhosphorusCreatinineData"],
     ["clcr_magnesium_calcium.js?v=1", "VildaClcrMagnesiumCalcium"],
+    ["clcr_phosphorus_creatinine.js?v=1", "VildaClcrPhosphorusCreatinine"],
     ["clcr_oxcr_reference_data.js?v=1", "VildaClcrOxcrReferenceData"],
     ["clcr_oxcr.js?v=1", "VildaClcrOxcr"],
     ["clcr_citcr_reference_data.js?v=1", "VildaClcrCitcrReferenceData"],
