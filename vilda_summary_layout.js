@@ -6,7 +6,7 @@
   var d = w.document;
 
   function createFormGeometry(form, fieldset, doctor) {
-    var collapsedHeight = 0, lastWidth = 0;
+    var collapsedHeight = 0, lastWidth = 0, lastMinimum = 0;
     function twoColumns() {
       if (!form || !fieldset || !doctor || !form.getClientRects().length) return false;
       var columns = w.getComputedStyle(form).gridTemplateColumns.trim().split(/\s+/);
@@ -16,13 +16,15 @@
     }
     function collapsedBounds() {
       var bounds = fieldset.getBoundingClientRect();
+      var minimum = parseFloat(w.getComputedStyle(fieldset).minHeight) || 0;
       var puberty = d.getElementById('tannerStageWrap');
       var expanded = puberty && puberty.getClientRects().length
         && w.getComputedStyle(puberty).display !== 'none';
       if (!expanded) {
         collapsedHeight = bounds.height;
         lastWidth = bounds.width;
-      } else if (!collapsedHeight || Math.abs(bounds.width - lastWidth) > 1) {
+        lastMinimum = minimum;
+      } else if (!collapsedHeight || Math.abs(bounds.width - lastWidth) > 1 || Math.abs(minimum - lastMinimum) > 1) {
         var styles = w.getComputedStyle(puberty);
         var removed = puberty.getBoundingClientRect().height
           + (parseFloat(styles.marginTop) || 0) + (parseFloat(styles.marginBottom) || 0);
@@ -36,8 +38,12 @@
           var remainingGap = Math.max(0, bottomMargin, topMargin) + Math.min(0, bottomMargin, topMargin);
           removed = after.getBoundingClientRect().top - before.getBoundingClientRect().bottom - remainingGap;
         }
-        collapsedHeight = bounds.height - removed;
+        // A viewport minimum may grow or shrink while Tanner remains open.
+        // Keep the collapsed target, including that floor, without measuring
+        // the overall grid or changing any field's natural height.
+        collapsedHeight = Math.max(minimum, bounds.height - removed);
         lastWidth = bounds.width;
+        lastMinimum = minimum;
       }
       return { top: bounds.top, height: collapsedHeight };
     }
@@ -49,7 +55,7 @@
     }
     return Object.freeze({
       twoColumns: twoColumns, availableHeight: availableHeight,
-      reset: function () { collapsedHeight = 0; lastWidth = 0; }
+      reset: function () { collapsedHeight = 0; lastWidth = 0; lastMinimum = 0; }
     });
   }
 
