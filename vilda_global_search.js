@@ -163,6 +163,16 @@
   }
   function build(patients, external, notes, plans, vault, presentation) {
     var names = new Map(), externalIds = new Set((external || []).filter(Boolean).map(function (patient) { return patient.patientId; })), rows = [], keys = new Map();
+    // The vault derives these IDs from verified removal intents in the plan.
+    // Keep the projection even when an older device sends the child note again
+    // or the plan arrives before its separate note tombstone.
+    var removedNotes = new Map();
+    (plans || []).forEach(function (plan) {
+      if (!plan || !plan.id || !plan.patientId || !Array.isArray(plan.removedNoteIds)) return;
+      var ids = removedNotes.get(plan.patientId) || new Set();
+      plan.removedNoteIds.forEach(function (id) { if (typeof id === 'string' && id) ids.add(id); });
+      removedNotes.set(plan.patientId, ids);
+    });
     function add(row, extra) {
       // Keep the normalized index private, outside the rendering contract.
       keys.set(row.id, normalize([row.patientName, row.title, row.body, row.label, row.statusLabel, extra].filter(Boolean).join(' ')));
@@ -181,6 +191,7 @@
     });
     (notes || []).forEach(function (note) {
       if (!note || !note.id) return;
+      if (removedNotes.has(note.patientId) && removedNotes.get(note.patientId).has(note.id)) return;
       var context = note.careContext, role = context && context.role;
       // Plan and reminder helpers are represented by the canonical plan. Real
       // appointments, result narratives and patient notes remain independent.
@@ -216,7 +227,8 @@
       dates.push(dateEntry('reminder', plan.decisionDueDateISO)); dates = dates.filter(Boolean);
       var firstEvent = steps.find(function (step) { return !!day(step.eventDateISO); });
       var firstReminder = steps.find(function (step) { return !!day(step.reminderDateISO); });
-      var history = (Array.isArray(plan.log) ? plan.log : []).map(function (entry) { return text(entry.text); }).filter(Boolean).join('\n');
+      var removed = new Set(Array.isArray(plan.removedNoteIds) ? plan.removedNoteIds : []);
+      var history = (Array.isArray(plan.log) ? plan.log : []).filter(function (entry) { return entry && !removed.has(entry.noteId); }).map(function (entry) { return text(entry.text); }).filter(Boolean).join('\n');
       add({ id: 'plan:' + plan.id, kind: 'plan', label: 'Plan opieki', title: text(plan.title) || 'Plan opieki',
         body: [text(plan.goal), stepText, history, text(plan.closeReason), text(plan.closeText)].filter(Boolean).join('\n\n'),
         patientId: plan.patientId, patientName: names.get(plan.patientId), planId: plan.id,

@@ -29,6 +29,7 @@ jobs:
       - name: Pobierz przypięty historyczny klient do testu zgodności planów
         run: |
           git cat-file -e 'b461364002cbd3f652728b7db38dce0f1f0d9264^{commit}' || git fetch --no-tags --depth=1 origin b461364002cbd3f652728b7db38dce0f1f0d9264
+          git cat-file -e 'ae903d3e0ab2f0a1c1972b877a9862436b1e2603^{commit}' || git fetch --no-tags --depth=1 origin ae903d3e0ab2f0a1c1972b877a9862436b1e2603
       - name: Skonfiguruj Node.js
         uses: actions/setup-node@v4
         with:

@@ -787,6 +787,36 @@ Ta reguła obowiązuje wstecz przy każdej modyfikacji istniejących modułów r
 z góry przy każdym nowym. Wybór populacji w interfejsie jest osobnym, późniejszym etapem —
 architektura ma być na niego gotowa, zanim powstanie.
 
+## Usuwanie ręcznych ustaleń w planie opieki
+
+„Zapisz ustalenie” tworzy dokument oraz wpis w historii planu. Usunięcie ustalenia
+jest jedną operacją: usuwa bieżący dokument i dopisuje potwierdzenie usunięcia do
+planu. Nie wycina wcześniejszego wpisu z historii, ponieważ starsza kopia mogłaby
+odtworzyć go przy scalaniu. Widok planu i wyszukiwarka pomijają usunięte ustalenie
+na podstawie decyzji potwierdzonej przez vault, także gdy stary dokument dotrze
+przed informacją o jego usunięciu albo zostanie ponownie przesłany przez starsze urządzenie.
+
+Potwierdzenie korzysta ze standardowych pól logu wersji 1, zachowywanych przez
+wcześniejsze klienty. Jego ograniczony, wersjonowany zapis przechowuje identyfikator
+pacjenta z chwili operacji, potrzebny po scaleniu kart. Jest to wyłącznie dane do
+weryfikacji: usunięcie musi mieć zgodny fingerprint operacji oraz powiązanie z logiem
+w historii pochodzenia. Samo wpisanie podobnego tekstu nie oznacza usunięcia.
+
+Można usuwać wyłącznie wpisy o potwierdzonym pochodzeniu z operacji dodania
+ręcznego ustalenia. Sama nazwa, treść, prefiks identyfikatora lub rola dokumentu
+nie uprawniają do usunięcia. Wyniki, kroki i ich uzasadnienia zachowują własne
+reguły. Przed zapisem sprawdzane są konto, wersja planu oraz niezmienność dokumentu
+pokazanego w potwierdzeniu. Edytowany dokument albo niepełny dowód pochodzenia
+nie otrzymuje uprawnienia do usunięcia; wcześniejszy log może nie zawierać wszystkich
+późniejszych zmian jego tytułu i pól klinicznych.
+
+Wcześniejszy zapis pozostaje dostępny przez „Opcje planu → Wcześniejsze wersje
+planu”. Jest to widok pomocniczy; nierozstrzygnięte różnice po synchronizacji
+pozostają widoczne w głównym widoku do czasu ich przeglądu. Starszy interfejs może
+nadal pokazywać oryginalny przebieg, dlatego oba urządzenia powinny korzystać
+z aktualnej aplikacji. Odtworzenie wyłącznie starej kopii na pustym urządzeniu
+nie ujawnia późniejszej decyzji o usunięciu, dopóki urządzenie się nie zsynchronizuje.
+
 ## Dług architektoniczny
 
 - proces źródło → artefakt publiczny nie jest jeszcze automatycznie odtwarzalny z tego repozytorium;

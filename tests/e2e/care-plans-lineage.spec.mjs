@@ -27,7 +27,8 @@ test('care plans lineage: a closed legacy review opens from To do and acknowledg
   expect(await reviewReminders(created.frame, plan.id)).toEqual([]);
   await expect(panel.locator('.vcp-sync-review')).toHaveCount(0);
   await expect(panel.locator('.vcp-history')).not.toContainText('Potwierdzono przegląd planu po scaleniu zmian.');
-  await expect(panel.locator('.vcp-history-archive')).not.toHaveAttribute('open', '');
+  await expect(panel.locator('.vcp-history-archive')).toHaveCount(0);
+  await expect(panel.locator('.vcp-menu').getByRole('button', { name: 'Wcześniejsze wersje planu', exact: true })).toBeHidden();
   await expect(row.locator('.vcp-status')).toHaveText('Zamknięty');
 });
 
@@ -90,20 +91,29 @@ test('care plans lineage: alternate original results and appointments remain rea
   await expect(history).not.toContainText('Potwierdzono przegląd planu po scaleniu zmian.');
   await expect(history).not.toContainText('Zachowana po synchronizacji');
   await expect(history.locator('.vcp-sync-versions')).toHaveCount(0);
-  await expect(archive).not.toHaveAttribute('open', '');
-  await archive.locator(':scope > summary').click();
+  await expect(archive).toHaveCount(0);
+  await panel.locator('.vcp-menu > summary').click();
+  await panel.getByRole('button', { name: 'Wcześniejsze wersje planu', exact: true }).click();
+  await expect(archive.getByRole('heading', { name: 'Wcześniejsze wersje planu', exact: true })).toBeFocused();
+  await expect(history).toHaveCount(0);
   const archived = archive.locator('.vcp-sync-versions');
   await archived.locator('summary').click();
   await expect(archived).toContainText('Stan planu przed zapisaniem zmian');
   for (const record of [original.result, original.calendar]) {
     await archived.locator(`[data-record-id="${record.id}"]`).click();
     await expect(panel.locator('.vcp-record-body')).toHaveText(record.body);
-    await panel.getByRole('button', { name: '← Wróć do planu', exact: true }).click();
+    await panel.getByRole('button', { name: '← Wróć do wcześniejszych wersji', exact: true }).click();
+    await expect(archived.locator(`[data-record-id="${record.id}"]`)).toBeFocused();
     const stored = await created.frame.evaluate(id => window.VildaVault.getPatientNote(id), record.id);
     expect(stored).toEqual(record);
   }
   expect(await readPlan(created.frame, plan.id)).toEqual(after);
-  await expect(panel.locator('.vcp-history-archive')).toHaveAttribute('open', '');
+  await expect(archive).toBeVisible();
+  const archiveBack = archive.getByRole('button', { name: '← Wróć do planu', exact: true });
+  await expect(archiveBack).toBeVisible();
+  await archiveBack.click();
+  await expect(archive).toHaveCount(0); await expect(history).toBeVisible();
+  await expect(panel.locator('.vcp-menu > summary')).toBeFocused();
   expect(await projectedIds()).not.toContain(original.result.id); expect(await projectedIds()).not.toContain(original.calendar.id);
   await created.frame.evaluate(note => window.VildaVault.savePatientNote({
     id: note.id, patientId: note.patientId, title: note.title, body: note.body, careContext: null,
