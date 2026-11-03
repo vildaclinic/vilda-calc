@@ -294,6 +294,37 @@ Użyta norma, źródło i pełna precyzja pozostają zgodne w Badaniach,
 Notatkach, raporcie i zamrożonej historii. Kontrakt:
 [URATE_CREATININE.md](URATE_CREATININE.md).
 
+## Pᵢ/Cr (DZM) — decyzja 03.11.2026
+
+Dla `PO4_Cr` domyślne **„Oblicz ze stężeń”** ma tylko fosfor, następnie
+kreatyninę w tej samej wymieszanej DZM, domyślnie w mmol/L. Alternatywą
+jest jeden **„Gotowy wynik Pᵢ/Cr”** w mg/mg, mg/g lub mmol/mmol. W masowych
+jednostkach fosforu pisz **mg P**, nie mg PO₄. Wiek i płeć wykorzystuj
+z istniejącego kontekstu wyłącznie do normy. Nie dodawaj pytań o czas,
+objętość, krew, masę, wzrost lub chorobę. Czas i objętość skracają się
+w ilorazie; nie skaluj go przez `24/czas`.
+
+Jedna karta B łączy **Wynik pacjenta** i **Normę dla wieku**, zawsze
+w **mg/mg**. Norma z jednostką pozostaje neutralna, odchylenia bursztynowe.
+ARUP obejmuje obie płcie 7–17 lat; Mayo mężczyzn od 18 lat, **<0,75 mg/mg**,
+bez dolnej granicy. Brak odpowiedniego zweryfikowanego profilu pozostawia
+liczbę z konkretnym powodem; nie oznacza, że normy nie istnieją w literaturze.
+Nie twórz zastępczej normy dorosłych ani pytania do „pełnej interpretacji”.
+Tabela Szczegółów ma tę samą jednostkę co główny wynik.
+
+Główna karta ma krótki komentarz do konkretnego wyniku. Wpływ diety
+i leczenia, przydatność TmP/GFR, przytarczyce i XLH/burosumab należą
+do Szczegółów, bez selektora, werdyktu skuteczności leczenia lub doboru dawki.
+Przejście do TmP/GFR nie przenosi automatycznie DZM do porannej próbki na czczo.
+
+Zero ma neutralną uwagę o raporcie/oznaczalności, dostępna norma pozostaje
+widoczna. Mały dodatni wynik nie staje się zerem; **≈** i pełna wartość
+w Szczegółach nie zmieniają oceny. Nierówność nie jest dokładnym punktem
+wykresu. Zachowaj stałe szerokości, wspólny poziom jednostek i równe odstępy
+przy zmianie trybu, błędzie i długiej liczbie. Badania, Notatki i raport
+odczytują zamrożoną normę oraz ocenę, bez dzisiejszego wieku lub nowego źródła.
+Pełny kontrakt: [PHOSPHORUS_CREATININE.md](PHOSPHORUS_CREATININE.md).
+
 ## Makieta i sprawdzenie przed przekazaniem
 
 Każdą kolejną zmianę wizualną w audycie przedstaw najpierw do akceptacji jako

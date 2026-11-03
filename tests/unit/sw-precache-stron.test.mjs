@@ -287,7 +287,9 @@ describe('P-SW-PRECACHE: instalacja bez historii, kopia z poprzedniej pamięci, 
     '/vilda_shell.js', '/vilda_persist_runtime.js', '/vilda_name_fix.js', '/vilda_file_export.js', '/vilda_pro_ui.js',
     '/vilda_centile_chart_header.js', '/vilda_update_prep.js', '/vilda_save_status_indicator.js',
     '/vilda_module_monitor_badges.js', '/reposition.js', '/vilda_estimated_intake_dom_mount.js',
-    '/vilda_estimated_intake_runtime.js', '/vilda_estimated_intake_ui.js'];
+    '/vilda_estimated_intake_runtime.js', '/vilda_estimated_intake_ui.js',
+    '/vilda_macro_practice.js', '/vilda_activity_burn.js', '/vilda_food_summary.js',
+    '/vilda_diet_plan_ui.js', '/vilda_bmi_journey.js'];
   const wspoldzielonePary = ['/style.css', '/vilda_chrome.css', ...dodatkoweWspoldzieloneZasoby];
   const wspoldzieloneZasoby = new Set(['/edu-video-ui.css', ...wspoldzielonePary]);
   const oczekiwanePobraniaSwiezychZasobow = () => {
@@ -332,6 +334,9 @@ describe('P-SW-PRECACHE: instalacja bez historii, kopia z poprzedniej pamięci, 
       expect(pobrane.filter(adres => adres.split('?')[0] === plik), plik).toHaveLength(1);
     }
     for (const plik of ['/clcr_magnesium_calcium_data.js', '/clcr_magnesium_calcium.js', '/clcr_magnesium_calcium_ui.js', '/clcr_magnesium_calcium_ui.css', '/clcr_magnesium_calcium_persistence.js']) {
+      expect(pobrane.filter(adres => adres.split('?')[0] === plik), plik).toHaveLength(1);
+    }
+    for (const plik of ['/clcr_phosphorus_creatinine_data.js', '/clcr_phosphorus_creatinine.js', '/clcr_phosphorus_creatinine_ui.js', '/clcr_phosphorus_creatinine_ui.css', '/clcr_phosphorus_creatinine_persistence.js']) {
       expect(pobrane.filter(adres => adres.split('?')[0] === plik), plik).toHaveLength(1);
     }
     // Five KM/Cr resources each retain their own fresh network request. The

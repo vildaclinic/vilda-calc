@@ -186,9 +186,10 @@
       },
       {
         id: "PO4_Cr",
-        label: "P\u1D62/Cr (DZM) [mg/mg]",
+        label: "Pᵢ/Cr (DZM)",
         version: "advanced",
-        requires: ["U_PO4", "Ucr"],
+        requires: ["PICR_phosphorus", "PICR_phosphorusUnit", "PICR_creatinine", "PICR_creatinineUnit"],
+        note: "Dwa stężenia z tej samej dobowej zbiórki albo gotowy Pᵢ/Cr. Znany wiek i płeć służą dobraniu normy; czas i objętość nie są potrzebne.",
       },
       {
         id: "B_Cr",

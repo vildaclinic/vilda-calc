@@ -190,6 +190,16 @@
       if (!persistence.augmentDatapoint({ getAttribute: () => JSON.stringify(result.snapshot) }, datapoint)) throw new Error("Nie można utrwalić obliczenia Mg/Ca.");
       return datapoint;
     }
+    if (formulaId === "PO4_Cr") {
+      const engine = requiredModule("VildaClcrPhosphorusCreatinine"), persistence = requiredModule("ClcrPhosphorusCreatininePersistence");
+      const policy = requiredModule("VildaClcrPhosphorusCreatinineData").getProfile("PICR_DZM_2026_11");
+      const prepared = own(values, "PICR_inputMode") ? { ...persistence.DEFAULTS, ...values } : persistence.prepareValues(values, context);
+      const result = engine.evaluate(engine.inputFromValues(prepared, { ...context, ageYears: ageOf(values, context), sex: values.sex ?? context.sex ?? null }), policy);
+      if (!result.valid) throw new Error(result.message || "Sprawdź dane Pᵢ/Cr.");
+      const datapoint = { id: parameterKey, sourceFormulaId: formulaId, label: persistence.LABEL, testKey: "clcr:PO4_Cr" };
+      if (!persistence.augmentDatapoint({ getAttribute: () => JSON.stringify(result.snapshot) }, datapoint)) throw new Error("Nie można utrwalić obliczenia Pᵢ/Cr.");
+      return datapoint;
+    }
     if (formulaId === "Ca_Cr") {
       const engine = requiredModule("VildaClcrCacr"), persistence = requiredModule("ClcrCacrDzmPersistence");
       const policy = requiredModule("VildaClcrCacrReferenceData").getProfile("ARUP_CACR_DZM_2026_11");
@@ -373,7 +383,6 @@
       // The dedicated path stores the new typed molar result separately.
       return modeled(formulaId,parameterKey,value,"mg/mg",3,values,context,{displayValue:String(value).replace(".",","),datapoint:{assessment:"unassessed",outOfRange:null,norm:"",tone:"neutral"}});
     }
-    else if (formulaId === "PO4_Cr") value = ratio(number(values, "U_PO4"), urineCr);
     else if (formulaId === "Ca_Cit") value = ratio(calcium, number(values, "U_Cit"));
     else if (formulaId === "B_Cr") value = proteinCreatinineRatio(number(values, "U_Prot"), urineCr, sample.volume);
     else if (formulaId === "K_frac") { value = K_frac(number(values, "U_K"), number(values, "U_Na")); unit = "%"; digits = 1; }

@@ -131,6 +131,14 @@ function clinicalReadinessHarness(formulaId, values) {
       browserGlobal.VildaClcrMagnesiumCalciumData.getProfile('MGCA_DZM_2026_11'),
     );
   }
+  if (formulaId === 'PO4_Cr') {
+    loadBrowserScript('clcr_phosphorus_creatinine_data.js', browserGlobal);
+    loadBrowserScript('clcr_phosphorus_creatinine.js', browserGlobal);
+    browserGlobal.evaluateClcrPhosphorusCreatinine = () => browserGlobal.VildaClcrPhosphorusCreatinine.evaluate(
+      browserGlobal.VildaClcrPhosphorusCreatinine.readInputFromDocument(browserGlobal.document),
+      browserGlobal.VildaClcrPhosphorusCreatinineData.getProfile('PICR_DZM_2026_11'),
+    );
+  }
   loadBrowserScript('clcr_ui_workflow.js', browserGlobal);
   const workflow = browserGlobal.ClcrUiWorkflow;
   workflow.state.activeFormulaId = formulaId;
@@ -146,6 +154,105 @@ function clinicalReadinessHarness(formulaId, values) {
 }
 
 describe('Klirens — centralny model przepływu UI', () => {
+  const phosphorusCreatinineValues = { PICR_inputMode: 'concentration', PICR_phosphorus: '30', PICR_phosphorusUnit: 'mmol/L',
+    PICR_creatinine: '20', PICR_creatinineUnit: 'mmol/L', PICR_reportedValue: '', PICR_reportedUnit: 'mg/mg',
+    PICR_sameSpecimen: 'assumed', PICR_collectionProblem: '', PICR_collectionHours: '', PICR_durationKnown: '',
+    age: '10', ageMonths: '0', ageDays: '', sex: 'M' };
+
+  it.each([['30', 0.4107199699169024, 'normal', false, true], ['0', 0, 'unassessed', null, false]])(
+    'Pᵢ/Cr dla fosforu %s używa rzeczywistego silnika i znanego wieku bez pytań o krew, czas i objętość', (phosphorus, value, status, outOfRange, interpreted) => {
+      const { workflow } = clinicalReadinessHarness('PO4_Cr', { ...phosphorusCreatinineValues, PICR_phosphorus: phosphorus });
+      expect(workflow.getFormulaReadiness('PO4_Cr')).toMatchObject({ valueReady: true, status: 'ready', missingFieldIds: [],
+        interpretationReady: interpreted, interpretationMissingFieldIds: [], limitations: [], blockers: [],
+        outcome: { rawValue: value, unit: 'mg/mg', status, outOfRange, context: { ageYears: 10, sex: 'male' },
+          reference: { low: 0.144, high: 1.234, unit: 'mg/mg' } } });
+      const spec = workflow.getCalculationFieldSpec('PO4_Cr');
+      expect(spec.requiredFieldIds).toEqual(['PICR_phosphorus', 'PICR_phosphorusUnit', 'PICR_creatinine', 'PICR_creatinineUnit']);
+      expect(spec.fieldIds).toEqual(expect.arrayContaining(Object.keys(phosphorusCreatinineValues)));
+      expect(spec.fields.every(field => field.id.startsWith('PICR_'))).toBe(true);
+      expect(spec.fields.some(field => ['PICR_sameSpecimen', 'PICR_collectionProblem', 'PICR_collectionHours', 'PICR_durationKnown'].includes(field.id))).toBe(false);
+    });
+
+  it.each([{ age: '', ageMonths: '' }, { sex: '' }, { age: '5' }, { age: '30', sex: 'F' }])(
+    'Pᵢ/Cr %j pozostaje dostępny bez dodatkowych pytań i bez zmyślonej normy', patch => {
+      const { workflow } = clinicalReadinessHarness('PO4_Cr', { ...phosphorusCreatinineValues, ...patch });
+      expect(workflow.getFormulaReadiness('PO4_Cr')).toMatchObject({ valueReady: true, status: 'ready', missingFieldIds: [],
+        interpretationReady: false, interpretationMissingFieldIds: [], limitations: [], blockers: [],
+        outcome: { rawValue: 0.4107199699169024, status: 'unassessed', outOfRange: null, reference: null, referenceAvailable: false, tone: 'neutral' } });
+    });
+
+  it.each([{ PICR_phosphorus: '-30', PICR_creatinine: '-20' }, { PICR_creatinine: '0' }, { PICR_phosphorus: 'invalid' },
+    { PICR_phosphorus: '1e-300', PICR_creatinine: '1e100' }, { PICR_sameSpecimen: 'different' }])(
+    'Pᵢ/Cr %j nie przechodzi gotowości przy błędnych danych albo różnych próbkach', patch => {
+      const { workflow } = clinicalReadinessHarness('PO4_Cr', { ...phosphorusCreatinineValues, ...patch });
+      expect(workflow.getFormulaReadiness('PO4_Cr')).toMatchObject({ valueReady: false, status: 'blocked', hasBlockedProtocol: true });
+      expect(workflow.hasBlockingValidationError()).toBe(false);
+    });
+
+  it('gotowy Pᵢ/Cr zachowuje znak, przelicza mg/g do mg/mg i nie stosuje sprzeczności nieużytych stężeń', () => {
+    const { workflow } = clinicalReadinessHarness('PO4_Cr', { ...phosphorusCreatinineValues, PICR_inputMode: 'direct',
+      PICR_reportedValue: '≥500,000000000000000000001', PICR_reportedUnit: 'mg/g', PICR_sameSpecimen: 'different' });
+    expect(workflow.getFormulaReadiness('PO4_Cr')).toMatchObject({ valueReady: true, interpretationReady: false,
+      outcome: { comparator: '≥', rawValue: 0.5, pointValue: null, unit: 'mg/mg', status: 'unassessed', outOfRange: null,
+        input: { reportedValue: '≥500,000000000000000000001', reportedUnit: 'mg/g' }, context: { concentrationSameSpecimen: 'different' } } });
+    expect(workflow.getCalculationFieldSpec('PO4_Cr').requiredFieldIds).toEqual(['PICR_reportedValue', 'PICR_reportedUnit']);
+  });
+
+  it('Pᵢ/Cr nie zaokrągla bardzo małego wyniku do zera ani wartości poniżej granicy do normy', () => {
+    const tiny = clinicalReadinessHarness('PO4_Cr', { ...phosphorusCreatinineValues, PICR_phosphorus: '1e-12', PICR_phosphorusUnit: 'mg P/L',
+      PICR_creatinine: '1', PICR_creatinineUnit: 'mg/L' }).workflow.getFormulaReadiness('PO4_Cr');
+    expect(tiny).toMatchObject({ valueReady: true, interpretationReady: true, outcome: { rawValue: 1e-12, zero: false, status: 'low', outOfRange: true } });
+    expect(tiny.outcome.display.text).not.toMatch(/^0(?:[,.]0+)?$/);
+    const boundary = clinicalReadinessHarness('PO4_Cr', { ...phosphorusCreatinineValues, age: '16', PICR_inputMode: 'direct',
+      PICR_reportedValue: '0.06799999999999999999999999999999', PICR_reportedUnit: 'mg/mg' }).workflow.getFormulaReadiness('PO4_Cr');
+    expect(boundary).toMatchObject({ valueReady: true, interpretationReady: true,
+      outcome: { rawValue: 0.068, status: 'low', outOfRange: true, reference: { low: 0.068, high: 0.874 } } });
+  });
+
+  it.each([
+    ['normal', {}, 'within', false, ''],
+    ['without-reference', { age: '5' }, 'unassessed', null, ''],
+    ['zero', { PICR_phosphorus: '0' }, 'unassessed', null, ''],
+    ['inequality', { PICR_inputMode: 'direct', PICR_reportedValue: '≥500,000000000000000000001', PICR_reportedUnit: 'mg/g' }, 'unassessed', null, '≥'],
+    ['tiny', { PICR_inputMode: 'direct', PICR_reportedValue: '1e-12' }, 'below', true, ''],
+    ['exact-boundary', { age: '16', PICR_inputMode: 'direct', PICR_reportedValue: '0.06799999999999999999999999999999' }, 'below', true, ''],
+  ])('kolektor Pᵢ/Cr %s utrzymuje zapisany zakres, dokładność i ocenę w historii oraz byDate mimo obcych atrybutów DOM', async (_name, patch, assessment, outOfRange, comparator) => {
+    const { workflow, browserGlobal, controls } = clinicalReadinessHarness('PO4_Cr', { ...phosphorusCreatinineValues, ...patch });
+    loadBrowserScript('clcr_saved_calculation.js', browserGlobal);
+    const outcome = workflow.getFormulaReadiness('PO4_Cr').outcome;
+    const attrs = { 'data-clcr-series': 'PO4_Cr', 'data-clcr-value': String(outcome.rawValue),
+      'data-clcr-display-value': '999,9', 'data-clcr-norm': '0–999 mg/mg', 'data-clcr-out-of-range': 'false',
+      'data-clcr-phosphorus-creatinine-snapshot': JSON.stringify(outcome.snapshot),
+      'data-clcr-assumptions': 'Obce założenie', 'data-clcr-reference-record': '{"lower":0,"upper":999}',
+      'data-clcr-assumption-provenance': '{"foreign":true}' };
+    const card = { getAttribute: key => attrs[key] ?? null, getClientRects: () => [{}], classList: { contains: () => false }, querySelector: () => null };
+    const root = { querySelectorAll: () => [card] };
+    const [point] = browserGlobal.ClcrVisitSave.collectActiveDatapoints(root, { formulaId: 'PO4_Cr' });
+    expect(point).toMatchObject({ valueNum: outcome.rawValue, rawValue: outcome.rawValue, assessment, outOfRange, comparator,
+      unit: 'mg/mg', reference: outcome.reference, referenceAvailable: outcome.referenceAvailable, phosphorusCreatinineSnapshot: outcome.snapshot });
+    expect(point.displayValue).toBe(outcome.display.text.replace(/\./g, ','));
+    expect(point.assumptions).not.toContain('Obce');
+    expect(point).not.toHaveProperty('assumptionProvenance');
+    expect(Object.keys(point.capture.values).every(id => id.startsWith('PICR_') || ['age', 'ageMonths', 'ageDays', 'sex'].includes(id))).toBe(true);
+    const note = browserGlobal.ClcrSavedResults.buildPatientNotePayload(point, { patientId: 'fictional-picr-workflow', clinicalDateISO: '2026-11-03' });
+    const saved = browserGlobal.ClcrSavedCalculation.createSnapshot(point, { capture: point.capture });
+    expect(saved).not.toBeNull();
+    note.body += '\n\n' + browserGlobal.ClcrSavedCalculation.serializeSnapshot(saved, note);
+    // Later demographics and screen labels cannot rewrite a historical assessment.
+    controls.get('age').value = '30'; controls.get('sex').value = 'F';
+    browserGlobal.VildaVault = { isUnlocked: () => true, listPatientNotesForPatient: async () => [note] };
+    const flow = await browserGlobal.ClcrVisitSave.readPatientFlowsheet('fictional-picr-workflow');
+    expect(flow.parameters).toHaveLength(1);
+    const historical = flow.parameters[0].points[0], dated = flow.parameters[0].byDate['2026-11-03'];
+    expect(historical).toMatchObject({ valueNum: comparator ? null : outcome.rawValue, rawValue: outcome.rawValue, outOfRange, assessment, comparator,
+      displayValue: point.displayValue, norm: point.norm, phosphorusCreatinineAssessment: outcome.snapshot });
+    expect(dated).toMatchObject({ valueNum: comparator ? null : outcome.rawValue, outOfRange, assessment, comparator, displayValue: point.displayValue, phosphorusCreatinineAssessment: outcome.snapshot });
+    expect(historical.phosphorusCreatinineAssessment.reference).toEqual(outcome.reference);
+    if (!outcome.referenceAvailable) expect(point.norm).toBe('');
+    delete attrs['data-clcr-phosphorus-creatinine-snapshot'];
+    expect(browserGlobal.ClcrVisitSave.collectActiveDatapoints(root, { formulaId: 'PO4_Cr' })).toEqual([]);
+  });
+
   const magnesiumCalciumValues = { MGCA_inputMode: 'concentration', MGCA_magnesium: '20', MGCA_magnesiumUnit: 'mg/L',
     MGCA_calcium: '2', MGCA_calciumUnit: 'mmol/L', MGCA_reportedValue: '', MGCA_reportedUnit: 'mg/mg',
     MGCA_sameSpecimen: 'assumed', MGCA_collectionProblem: '', MGCA_collectionHours: '', MGCA_durationKnown: '' };
@@ -757,13 +864,13 @@ describe('Klirens — centralny model przepływu UI', () => {
     );
 
     expect(html).toContain('clcr_ui_workflow.css?v=19');
-    expect(html).toContain('clcr_ui_workflow.js?v=39');
-    expect(html).toContain('inline_kalkulator_klirens_02.js?v=32');
-    expect(html).toContain('inline_kalkulator_klirens_04.js?v=39');
-    expect(html).toContain('inline_kalkulator_klirens_07.js?v=29');
+    expect(html).toContain('clcr_ui_workflow.js?v=40');
+    expect(html).toContain('inline_kalkulator_klirens_02.js?v=33');
+    expect(html).toContain('inline_kalkulator_klirens_04.js?v=40');
+    expect(html).toContain('inline_kalkulator_klirens_07.js?v=30');
     expect(html).toContain('clcr_result_reference_data.js?v=7');
     expect(html).toContain('clcr_result_presentation.js?v=8');
-    expect(serviceWorker).toContain("const SW_VERSION = '1.1.449'");
+    expect(serviceWorker).toContain("const SW_VERSION = '1.1.450'");
     expect(html).toContain('clcr_calculation_assumptions.js?v=2');
     expect(serviceWorker).toContain("'/clcr_calculation_assumptions.js?v=2'");
     expect(serviceWorker).toContain("'/clcr_clinical_safety.js?v=13'");

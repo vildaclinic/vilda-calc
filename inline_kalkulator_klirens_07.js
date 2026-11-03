@@ -1975,6 +1975,163 @@ function restoreClearedCaDzmContext(event) {
   const priorRestoreCa = restoreClearedCaDzmContext;
   replaceBinding("restoreClearedCaDzmContext", function restoreMagnesiumCalciumAfterCa(event) { priorRestoreCa(event); restoreClearedMagnesiumCalcium(event); });
 })();
+// Pᵢ/Cr DZM owns its operands and specimen facts. Only an imported legacy
+// PO4_Cr session may seed them from U_PO4/Ucr; changing the menu never does.
+(function installPhosphorusCreatinineSessionAdapter() {
+  "use strict";
+  const DEFAULTS = Object.freeze({ PICR_inputMode: "concentration", PICR_phosphorus: "", PICR_phosphorusUnit: "mmol/L",
+    PICR_creatinine: "", PICR_creatinineUnit: "mmol/L", PICR_reportedValue: "", PICR_reportedUnit: "mg/mg",
+    PICR_sameSpecimen: "assumed", PICR_collectionProblem: "", PICR_collectionHours: "", PICR_durationKnown: "" });
+  const SAMPLE_IDS = Object.freeze(["PICR_sameSpecimen", "PICR_collectionProblem", "PICR_collectionHours", "PICR_durationKnown"]);
+  const CONTEXT_IDS = Object.freeze(["age", "ageMonths", "ageDays", "sex", "weight", "height", "newbornContext", ...SAMPLE_IDS]);
+  const originals = new WeakMap();
+  let restoredAliases = {};
+  const object = value => value && typeof value === "object" && !Array.isArray(value);
+  const own = (value, key) => Object.prototype.hasOwnProperty.call(value || {}, key);
+  const absent = value => value == null || typeof value === "string" && !value.trim();
+  const primitive = value => value == null ? "" : ["string", "number", "boolean"].includes(typeof value) ? String(value) : "";
+  const incoming = session => ({ ...(object(session.preservedInputs) ? session.preservedInputs : {}), ...(object(session.inputs) ? session.inputs : {}) });
+  const selected = (session, values) => session.selectedFormula || values.formulaPicker || "";
+  function aliasValues(raw) {
+    let value = raw;
+    if (typeof value === "string") { try { value = JSON.parse(value); } catch { return null; } }
+    if (!object(value) || !Object.keys(value).length || Object.keys(value).some(key => !["U_PO4", "Ucr"].includes(key))) return null;
+    const result = {};
+    for (const [key, item] of Object.entries(value)) {
+      if (!["string", "number"].includes(typeof item) || typeof item === "number" && !Number.isFinite(item)) return null;
+      const text = primitive(item);
+      if (!text.trim() || text.length > 512) return null;
+      result[key] = text;
+    }
+    return result;
+  }
+  function metadataText(value) {
+    if (typeof value === "string") return value;
+    try { return JSON.stringify(value); } catch { return "[invalid metadata]"; }
+  }
+  function legacyAliasValues(doc = document) {
+    if (doc.getElementById("formulaPicker")?.value !== "PO4_Cr") return {};
+    const vault = window.__vildaClcrVersionValueVault;
+    const captured = object(vault) && own(vault, "PICR_legacyAliases") ? aliasValues(vault.PICR_legacyAliases) : restoredAliases;
+    return Object.freeze({ ...(captured || {}) });
+  }
+  function setControls(fields) {
+    for (const [id, value] of Object.entries(fields)) {
+      const control = document.getElementById(id);
+      if (control) {
+        if (control.type === "checkbox") control.checked = value === true || value === "true";
+        else control.value = primitive(value);
+      }
+    }
+  }
+  function sourceContexts(session, active) {
+    const belongsToDzm = context => object(context) &&
+      (!["sourceFormula", "sourceFormulaId", "formulaId"].some(key => own(context, key) && context[key] !== "PO4_Cr")) &&
+      (!own(context, "sampleType") || context.sampleType === "timed");
+    const snapshots = [session.phosphorusCreatinineSnapshot, session.context?.phosphorusCreatinineSnapshot, session.sourceContext?.phosphorusCreatinineSnapshot]
+      .filter(snapshot => object(snapshot) && snapshot.schema === "clcr-phosphorus-creatinine" && snapshot.version === 1 && snapshot.sourceFormula === "PO4_Cr")
+      .map(snapshot => snapshot.context);
+    const typed = [...snapshots, session.context?.phosphorusCreatinine,
+      session.sourceContext?.phosphorusCreatinine].filter(belongsToDzm);
+    return active ? [...typed, session.context, session.sourceContext].filter(belongsToDzm) : typed;
+  }
+  function ownSampleFacts(session, values, active) {
+    const fields = {};
+    const aliases = { PICR_sameSpecimen: ["concentrationSameSpecimen", "sameSpecimen", "sameUrineSample"], PICR_collectionProblem: ["collectionProblem"],
+      PICR_collectionHours: ["collectionHours", "durationHours", "hours"], PICR_durationKnown: ["durationKnown"] };
+    for (const id of SAMPLE_IDS) {
+      // An explicitly supplied blank is evidence of unknown, not permission to
+      // recover an answer from an older preserved context.
+      if (own(values, id)) { fields[id] = primitive(values[id]); continue; }
+      for (const context of sourceContexts(session, active)) {
+        const facts = object(context.knownFacts) ? context.knownFacts : {};
+        const source = [context, facts, object(context.clock) ? context.clock : {}]
+          .find(item => own(item, id) || aliases[id].some(key => own(item, key)));
+        if (!source) continue;
+        const key = own(source, id) ? id : aliases[id].find(key => own(source, key));
+        fields[id] = primitive(source[key]);
+        break;
+      }
+    }
+    return fields;
+  }
+  function normalizePhosphorusCreatinine(session) {
+    const values = originals.get(session) || incoming(session), active = selected(session, values) === "PO4_Cr";
+    window.ClcrPhosphorusCreatinineUi?.ensureControls?.(document);
+    const fields = Object.fromEntries(Object.entries(DEFAULTS).map(([id, fallback]) => [id, own(values, id) ? primitive(values[id]) : fallback]));
+    const hasDedicated = Object.keys(values).some(id => id.startsWith("PICR_"));
+    const legacy = active && !hasDedicated && (!absent(values.U_PO4) || !absent(values.Ucr));
+    if (legacy) {
+      // The old shared form reported phosphorus mass in mg P/dL and
+      // creatinine in mg/dL. New molar defaults must not reinterpret them.
+      fields.PICR_phosphorusUnit = "mg P/dL";
+      fields.PICR_creatinineUnit = "mg/dL";
+      if (own(values, "U_PO4")) fields.PICR_phosphorus = primitive(values.U_PO4);
+      if (own(values, "Ucr")) fields.PICR_creatinine = primitive(values.Ucr);
+    }
+    Object.assign(fields, ownSampleFacts(session, values, active));
+    const unitAliases = { "g/g": "mg/mg", "mol/mol": "mmol/mmol" };
+    const originalUnit = fields.PICR_reportedUnit;
+    fields.PICR_reportedUnit = unitAliases[originalUnit] || originalUnit;
+    setControls(fields);
+    const applicable = Object.fromEntries(Object.entries(fields).filter(([id]) => active || own(values, id) || document.getElementById(id)));
+    const next = { ...(object(session.inputs) ? session.inputs : {}), ...applicable };
+    for (const id of CONTEXT_IDS) if (!SAMPLE_IDS.includes(id) && own(values, id)) next[id] = values[id];
+    if (active) session.selectedFormula = "PO4_Cr";
+    if (own(values, "PICR_reportedUnitOriginal")) next.PICR_reportedUnitOriginal = values.PICR_reportedUnitOriginal;
+    else if (unitAliases[originalUnit]) next.PICR_reportedUnitOriginal = originalUnit;
+    const aliases = legacy ? Object.fromEntries(["U_PO4", "Ucr"].filter(id => own(values, id) && !absent(values[id])).map(id => [id, primitive(values[id])])) : null;
+    const encodedAliases = aliases && Object.keys(aliases).length ? JSON.stringify(aliases)
+      : own(values, "PICR_legacyAliases") ? metadataText(values.PICR_legacyAliases) : undefined;
+    restoredAliases = aliasValues(encodedAliases) || {};
+    if (encodedAliases !== undefined) next.PICR_legacyAliases = encodedAliases;
+    else delete next.PICR_legacyAliases;
+    // Shared aliases remain unchanged for historical export/undo. No other
+    // calculator's specimen facts or collection clock is read here.
+    if (legacy) for (const id of ["U_PO4", "Ucr"]) if (own(values, id)) next[id] = values[id];
+    session.inputs = next;
+  }
+  function clearPhosphorusCreatinine() {
+    window.ClcrPhosphorusCreatinineUi?.ensureControls?.(document);
+    setControls(DEFAULTS);
+    restoredAliases = {};
+    const vault = window.__vildaClcrVersionValueVault;
+    if (object(vault)) for (const id of Object.keys(vault)) if (id.startsWith("PICR_")) delete vault[id];
+  }
+  function restoreClearedPhosphorusCreatinine(event) {
+    clearPhosphorusCreatinine();
+    if (event?.clcrClearedFormula !== "PO4_Cr") return;
+    const saved = event.clcrPreservedPhosphorusCreatinineContext;
+    if (!object(saved)) return;
+    const fields = { ...DEFAULTS, ...Object.fromEntries(CONTEXT_IDS.filter(id => own(saved, id) &&
+      (typeof saved[id] === "string" || typeof saved[id] === "boolean" || typeof saved[id] === "number" && Number.isFinite(saved[id])))
+      .map(id => [id, saved[id]])) };
+    setControls(fields);
+    const vault = object(window.__vildaClcrVersionValueVault) ? window.__vildaClcrVersionValueVault : (window.__vildaClcrVersionValueVault = {});
+    Object.assign(vault, fields);
+    setTimeout(() => { try { window.ClcrUiWorkflow?.refresh?.(); window.clcrUpdate?.(); } catch {} }, 0);
+  }
+  window.ClcrPhosphorusCreatinineSession = Object.freeze({ DEFAULTS, CONTEXT_IDS, legacyAliasValues });
+  window.ClcrPhosphorusCreatinineUi?.ensureControls?.(document);
+  const replaceBinding = (name, implementation) => {
+    if (!Reflect.set(globalThis, name, implementation)) throw new Error("Nie można zainstalować adaptera sesji: " + name);
+  };
+  const priorPrepareUa = prepareUaSession;
+  replaceBinding("prepareUaSession", function preparePhosphorusCreatinineSession(session) {
+    const prepared = priorPrepareUa(session);
+    if (!object(prepared) || selected(prepared, incoming(prepared)) !== "PO4_Cr") return prepared;
+    return { ...prepared, selectedFormula: "PO4_Cr", inputs: { ...(object(prepared.inputs) ? prepared.inputs : {}) },
+      preservedInputs: object(prepared.preservedInputs) ? { ...prepared.preservedInputs } : prepared.preservedInputs };
+  });
+  const priorNormalizeCl24 = normalizeCl24SessionInputs;
+  replaceBinding("normalizeCl24SessionInputs", function capturePhosphorusCreatinineBeforeNormalization(session) { originals.set(session, incoming(session)); priorNormalizeCl24(session); });
+  const priorNormalizeCa = normalizeCaDzmSessionInputs;
+  replaceBinding("normalizeCaDzmSessionInputs", function normalizePhosphorusCreatinineAfterCa(session) { priorNormalizeCa(session); normalizePhosphorusCreatinine(session); });
+  const priorClearCa = clearCaDzmInputContext;
+  replaceBinding("clearCaDzmInputContext", function clearPhosphorusCreatinineAfterCa() { priorClearCa(); clearPhosphorusCreatinine(); });
+  const priorRestoreCa = restoreClearedCaDzmContext;
+  replaceBinding("restoreClearedCaDzmContext", function restorePhosphorusCreatinineAfterCa(event) { priorRestoreCa(event); restoreClearedPhosphorusCreatinine(event); });
+})();
 /* KLIRENS-URATE-CREATININE-SESSION: source tools/patch-klirens-urate-creatinine-session.mjs */
 (function installUrateCreatinineSessionAdapter() {
   "use strict";
@@ -2128,7 +2285,7 @@ function restoreClearedCaDzmContext(event) {
   const priorRestoreCa = restoreClearedCaDzmContext;
   replaceBinding("restoreClearedCaDzmContext", function restoreUrateCreatinineAfterCa(event) { priorRestoreCa(event); restoreClearedUrateCreatinine(event); });
 })();
-(function(){const b="vildaClcrSessionV1";function y(){try{if(typeof window<"u"&&window.VildaPersistence)return window.VildaPersistence}catch{}return null}function z(){try{const e=y();return e&&typeof e.isAutosaveSuppressed=="function"&&e.isAutosaveSuppressed()?!0:typeof window>"u"?!1:!!window.__vildaPersistRestoring||Number(window.__vildaPersistPauseUntil||0)>Date.now()}catch{return!1}}function h(){try{window.ClcrUaUi?.ensureControls?.(document)}catch{}const e=document.getElementById("clcrForm");try{window.ClcrMgDzmUi?.ensureControls?.(document)}catch{}try{window.ClcrPo4DzmUi?.ensureControls?.(document)}catch{}try{window.ClcrProteinDzmUi?.ensureControls?.(document)}catch{}try{window.ClcrSodiumDzmUi?.ensureControls?.(document)}catch{}try{window.ClcrPotassiumDzmUi?.ensureControls?.(document)}catch{}try{window.ClcrUrateCreatinineUi?.ensureControls?.(document)}catch{}try{window.ClcrCacrDzmUi?.ensureControls?.(document)}catch{}try{window.ClcrMagnesiumCalciumUi?.ensureControls?.(document)}catch{}if(!e)return[];try{return Array.from(e.querySelectorAll("input, select, textarea"))}catch{return Array.from(e.elements||[])}}function _(e){if(!e||e.dataset&&e.dataset.clcrDerivedControl==="true")return"";const t=String(e.type||"").toLowerCase();return t==="button"||t==="submit"||t==="reset"||t==="file"?"":e.id||e.name||""}function j(){try{const e=document.querySelector(".version-option.selected[data-version]");if(e&&e.dataset&&e.dataset.version)return String(e.dataset.version)}catch{}try{if(typeof window<"u"&&window.currentVersion)return String(window.currentVersion)}catch{}return""}function k(e){if(!e)return null;const t=String(e.type||"").toLowerCase();return t==="checkbox"?!!e.checked:t==="radio"?e.checked?e.value:void 0:e.value==null?"":String(e.value)}function v(e,t){if(!e)return;const r=String(e.type||"").toLowerCase();r==="checkbox"?e.checked=!!t:r==="radio"?e.checked=String(e.value)===String(t)||t===!0:e.value=t==null?"":String(t)}function V(e,t){return!!e&&Object.prototype.hasOwnProperty.call(e,t)}function F(e){return e==null||typeof e=="string"&&e.trim()===""}function p(){try{return typeof window>"u"?{}:((!window.__vildaClcrVersionValueVault||typeof window.__vildaClcrVersionValueVault!="object")&&(window.__vildaClcrVersionValueVault={}),window.__vildaClcrVersionValueVault)}catch{return{}}}function q(){try{const e=p();return Object.keys(e).length>0}catch{return!1}}function C(){try{return!!(window.__vildaClcrPreserveVersionValues||q())}catch{return!1}}function P(e){try{let t=e;const r=document;for(;t&&t!==r;){if(t.style&&t.style.display==="none"||t.hidden)return!1;t=t.parentElement||t.parentNode}}catch{}return!0}function H(e,t){const r=t&&typeof t=="object"?t:{},n=e&&typeof e=="object"?e:{};try{typeof window<"u"&&(window.__vildaClcrVersionValueVault={})}catch{}const o=p();Object.keys(n).forEach(i=>{!i||i==="currentVersion"||(o[i]=n[i])});try{window.__vildaClcrPreserveVersionValues=r.preserve!==!1}catch{}return o}function S(){try{typeof window<"u"&&(window.__vildaClcrVersionValueVault={},window.__vildaClcrPreserveVersionValues=!1)}catch{}return!0}function g(e){const t=e&&typeof e=="object"?e:{};try{if(!t.force&&window.__vildaPersistRestoring)return null}catch{}if(!t.force&&!C())return null;const r=p();h().forEach(n=>{const o=_(n);if(!o||o==="currentVersion")return;const i=k(n);if(i===void 0)return;const u=P(n),c=F(i);!u&&c&&V(r,o)||!u&&c&&!V(r,o)||(r[o]=i)});try{window.__vildaClcrPreserveVersionValues=!0}catch{}return r}function N(e){const t=e&&typeof e=="object"?e:{};if(!C())return!1;const r=p();let n=!1;return h().forEach(o=>{const i=_(o);!i||!V(r,i)||t.visibleOnly!==!1&&!P(o)||(v(o,r[i]),n=!0)}),n}function J(e){!e||typeof e.dispatchEvent!="function"||["input","change"].forEach(t=>{try{e.dispatchEvent(new Event(t,{bubbles:!0}))}catch{}})}function m(e){const t=document.getElementById(e);if(!t||!t.children)return[];const r=[];return Array.from(t.children).forEach(n=>{const o=(n.textContent||"").trim().replace(/\u00A0/g," ");if(!o)return;const i=n.classList.contains("out-of-range")||n.classList.contains("warn-orange")||n.classList.contains("warn-yellow");r.push({text:o,isOut:i})}),r}function I(){if(!document.getElementById("clcrForm"))return null;const t=j(),r=(document.getElementById("formulaPicker")||{}).value||"";if(C())try{g({reason:"build-snapshot"})}catch{}const n=p(),o={version:2,legacyVersion:1,source:"kalkulator-klirens.html",savedAtISO:new Date().toISOString(),currentVersion:t,selectedFormula:r,preserveAcrossVersions:!!C(),preservedInputs:Object.assign({},n),inputs:{},summary:{clcr:m("clcrInfo"),elec:m("elecInfo"),stone:m("stoneInfo"),ktv:[].concat(m("ktvResult")).concat(m("ektvResult"))}};return Object.keys(n||{}).forEach(i=>{!i||i==="currentVersion"||(o.inputs[i]=n[i])}),h().forEach(i=>{const u=_(i);if(!u)return;const c=k(i);if(c===void 0)return;const d=P(i),w=F(c);(d||!w||!V(o.inputs,u))&&(o.inputs[u]=c)}),o.inputs.currentVersion=t,o.inputs.formulaPicker=r,o.inputs=window.ClcrCollectionDuration?.normalizeCapturedInputs?.(o.inputs)||o.inputs,o}
+(function(){const b="vildaClcrSessionV1";function y(){try{if(typeof window<"u"&&window.VildaPersistence)return window.VildaPersistence}catch{}return null}function z(){try{const e=y();return e&&typeof e.isAutosaveSuppressed=="function"&&e.isAutosaveSuppressed()?!0:typeof window>"u"?!1:!!window.__vildaPersistRestoring||Number(window.__vildaPersistPauseUntil||0)>Date.now()}catch{return!1}}function h(){try{window.ClcrUaUi?.ensureControls?.(document)}catch{}const e=document.getElementById("clcrForm");try{window.ClcrMgDzmUi?.ensureControls?.(document)}catch{}try{window.ClcrPo4DzmUi?.ensureControls?.(document)}catch{}try{window.ClcrProteinDzmUi?.ensureControls?.(document)}catch{}try{window.ClcrSodiumDzmUi?.ensureControls?.(document)}catch{}try{window.ClcrPotassiumDzmUi?.ensureControls?.(document)}catch{}try{window.ClcrUrateCreatinineUi?.ensureControls?.(document)}catch{}try{window.ClcrCacrDzmUi?.ensureControls?.(document)}catch{}try{window.ClcrMagnesiumCalciumUi?.ensureControls?.(document)}catch{}try{window.ClcrPhosphorusCreatinineUi?.ensureControls?.(document)}catch{}if(!e)return[];try{return Array.from(e.querySelectorAll("input, select, textarea"))}catch{return Array.from(e.elements||[])}}function _(e){if(!e||e.dataset&&e.dataset.clcrDerivedControl==="true")return"";const t=String(e.type||"").toLowerCase();return t==="button"||t==="submit"||t==="reset"||t==="file"?"":e.id||e.name||""}function j(){try{const e=document.querySelector(".version-option.selected[data-version]");if(e&&e.dataset&&e.dataset.version)return String(e.dataset.version)}catch{}try{if(typeof window<"u"&&window.currentVersion)return String(window.currentVersion)}catch{}return""}function k(e){if(!e)return null;const t=String(e.type||"").toLowerCase();return t==="checkbox"?!!e.checked:t==="radio"?e.checked?e.value:void 0:e.value==null?"":String(e.value)}function v(e,t){if(!e)return;const r=String(e.type||"").toLowerCase();r==="checkbox"?e.checked=!!t:r==="radio"?e.checked=String(e.value)===String(t)||t===!0:e.value=t==null?"":String(t)}function V(e,t){return!!e&&Object.prototype.hasOwnProperty.call(e,t)}function F(e){return e==null||typeof e=="string"&&e.trim()===""}function p(){try{return typeof window>"u"?{}:((!window.__vildaClcrVersionValueVault||typeof window.__vildaClcrVersionValueVault!="object")&&(window.__vildaClcrVersionValueVault={}),window.__vildaClcrVersionValueVault)}catch{return{}}}function q(){try{const e=p();return Object.keys(e).length>0}catch{return!1}}function C(){try{return!!(window.__vildaClcrPreserveVersionValues||q())}catch{return!1}}function P(e){try{let t=e;const r=document;for(;t&&t!==r;){if(t.style&&t.style.display==="none"||t.hidden)return!1;t=t.parentElement||t.parentNode}}catch{}return!0}function H(e,t){const r=t&&typeof t=="object"?t:{},n=e&&typeof e=="object"?e:{};try{typeof window<"u"&&(window.__vildaClcrVersionValueVault={})}catch{}const o=p();Object.keys(n).forEach(i=>{!i||i==="currentVersion"||(o[i]=n[i])});try{window.__vildaClcrPreserveVersionValues=r.preserve!==!1}catch{}return o}function S(){try{typeof window<"u"&&(window.__vildaClcrVersionValueVault={},window.__vildaClcrPreserveVersionValues=!1)}catch{}return!0}function g(e){const t=e&&typeof e=="object"?e:{};try{if(!t.force&&window.__vildaPersistRestoring)return null}catch{}if(!t.force&&!C())return null;const r=p();h().forEach(n=>{const o=_(n);if(!o||o==="currentVersion")return;const i=k(n);if(i===void 0)return;const u=P(n),c=F(i);!u&&c&&V(r,o)||!u&&c&&!V(r,o)||(r[o]=i)});try{window.__vildaClcrPreserveVersionValues=!0}catch{}return r}function N(e){const t=e&&typeof e=="object"?e:{};if(!C())return!1;const r=p();let n=!1;return h().forEach(o=>{const i=_(o);!i||!V(r,i)||t.visibleOnly!==!1&&!P(o)||(v(o,r[i]),n=!0)}),n}function J(e){!e||typeof e.dispatchEvent!="function"||["input","change"].forEach(t=>{try{e.dispatchEvent(new Event(t,{bubbles:!0}))}catch{}})}function m(e){const t=document.getElementById(e);if(!t||!t.children)return[];const r=[];return Array.from(t.children).forEach(n=>{const o=(n.textContent||"").trim().replace(/\u00A0/g," ");if(!o)return;const i=n.classList.contains("out-of-range")||n.classList.contains("warn-orange")||n.classList.contains("warn-yellow");r.push({text:o,isOut:i})}),r}function I(){if(!document.getElementById("clcrForm"))return null;const t=j(),r=(document.getElementById("formulaPicker")||{}).value||"";if(C())try{g({reason:"build-snapshot"})}catch{}const n=p(),o={version:2,legacyVersion:1,source:"kalkulator-klirens.html",savedAtISO:new Date().toISOString(),currentVersion:t,selectedFormula:r,preserveAcrossVersions:!!C(),preservedInputs:Object.assign({},n),inputs:{},summary:{clcr:m("clcrInfo"),elec:m("elecInfo"),stone:m("stoneInfo"),ktv:[].concat(m("ktvResult")).concat(m("ektvResult"))}};return Object.keys(n||{}).forEach(i=>{!i||i==="currentVersion"||(o.inputs[i]=n[i])}),h().forEach(i=>{const u=_(i);if(!u)return;const c=k(i);if(c===void 0)return;const d=P(i),w=F(c);(d||!w||!V(o.inputs,u))&&(o.inputs[u]=c)}),o.inputs.currentVersion=t,o.inputs.formulaPicker=r,o.inputs=window.ClcrCollectionDuration?.normalizeCapturedInputs?.(o.inputs)||o.inputs,o}
 // Action-boundary capture reads existing controls and a detached vault copy.
 // Unlike the ordinary save builder it never mounts controls, initializes the
 // version vault, persists a session or changes the preservation/restoring flags.

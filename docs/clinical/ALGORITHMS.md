@@ -7112,6 +7112,34 @@ Migawka `clcr-magnesium-calcium` v1 utrwala wejście, skalę/operator, dokładn�
 
 **Przypadki produkcyjne:** Mg/Ca po 1 mmol/L lub po 1000 µmol/L → około 0,606442437247368 mg/mg; gotowe 0,5 mmol/mmol → około 0,303221218623684 mg/mg; Mg 0/Ca 2 → neutralne 0; Ca 0 lub dowolny ujemny operand → błąd; Mg 0,00001 mg/L/Ca 1 mmol/L → dodatnie około 2,49513448774889×10⁻⁷ mg/mg; Mg 1e308 mg/L/Ca 1e308 mmol/L → około 0,024951344877489; Mg 1e−300 mg/L/Ca 1e100 mmol/L → brak zapisu pozornego zera. Regresje wywołują rzeczywisty kod, obejmują także historyczny odczyt bez silnika, sprzeczne próbki po zapisie/edycji, walidację migawek, desktop/mobile i offline. Wyniki uruchomień i SHA podaje PR. Akceptacja oraz testy nie nadają statusu walidacji klinicznej.
 
+#### P-KLIRENS-PICR-DZM-2026-11-03 — prosty Pᵢ/Cr i jawne normy DZM
+
+Właściciel zaakceptował [makietę przed/po desktop/mobile](https://vilda-picr-20261103.maciej-flader.chatgpt.site), źródło `1066223a9b91ae335d5bbdaa0d5c219aa9b11e0c`, i polecił kodowanie 03.11.2026. Zakres: `PO4_Cr` / `clcr:PO4_Cr`, stosunek fosforu do kreatyniny z tej samej wymieszanej DZM. Pełny kontrakt, źródła z miejscami odczytu, populacje i ograniczenia: [PHOSPHORUS_CREATININE.md](PHOSPHORUS_CREATININE.md).
+
+**Wpływ kliniczny:** poprawny zwykły iloraz historycznych stężeń mg P/dL i mg Cr/dL otrzymuje orientacyjne porównanie z nazwanym źródłem, nowe jednostki i gotowy raport. Profil `PICR_DZM_2026_11` jest oddzielony od silnika `VildaClcrPhosphorusCreatinine`. To zmiana oceny klinicznej, nie samo formatowanie ani deklaracja walidacji klinicznej.
+
+Domyślne „Oblicz ze stężeń” wymaga tylko fosforu, następnie kreatyniny, domyślnie w mmol/L. Fosfor dopuszcza też µmol/L, mg P/L i mg P/dL, kreatynina µmol/L, mg/L i mg/dL. Alternatywny gotowy wynik ma mg/mg, mg/g lub mmol/mmol. Główny wynik i norma zawsze mają **mg/mg**. Wiek i płeć pochodzą z już znanego kontekstu; brak normy nie blokuje liczby. Bez nowych pytań o czas, objętość, krew, masę, wzrost, terapię, AKI lub IFCC.
+
+`R_mass = U_P[mg P/L]/U_Cr[mg/L]`; gotowe mg/g dzieli się dokładnie przez 1000, a mmol/mmol mnoży przez **30,973761998/113,12**. Stałe: [CIAAW, fosfor, rewizja 2013](https://ciaaw.org/phosphorus.htm) i [PubChem CID 588, kreatynina](https://pubchem.ncbi.nlm.nih.gov/compound/588), odczyt 03.11.2026. **mg P to masa fosforu, nie całego PO₄**. Dokładna arytmetyka korzysta z zadeklarowanych stałych; 113,12 jest klinicznym przybliżeniem masy molowej. Starych `U_PO4` mg P/dL i `Ucr` mg/dL nie interpretuje się jako mmol/L.
+
+**Normy:** pełny [ARUP 0020478, Phosphorus, Urine](https://ltd.aruplab.com/Tests/Pub/0020478), komponent 0020583, LOINC 13795-0, odczyt 03.11.2026, sekcje Specimen Required/Methodology/Reference Interval/Interpretive Data. Preferowana DZM, dopuszczalny mocz losowy, ilościowa spektrofotometria. Źródłowe mg/g dzieli się przez 1000: chłopcy/dziewczynki **7–9 lat 0,165–1,682 /0,153–1,443; 10–12 lat 0,144–1,234 /0,142–1,321; 13–15 lat 0,101–1,134 /0,081–0,930; 16–17 lat 0,068–0,874 /0,058–0,846 mg/mg**. Mapowanie na `[7,10)`, `[10,13)`, `[13,16)`, `[16,18)` i włączenie obu końców są jawnymi konwencjami aplikacji. Bez interpolacji, wspólnej normy z dwóch płci lub wyboru korzystniejszego źródła. Katalog nie ujawnia kohorty wyprowadzenia ani daty wersji tabeli; jest to orientacyjny zakres laboratorium.
+
+**Mężczyźni ≥18 lat:** aktualny [Mayo SUP24](https://www.mayocliniclabs.com/test-catalog/Overview/616180) i pełny [Normal Report z 25.03.2026](https://www.mayocliniclabs.com/-/media/it-mmfiles/test%20notifications/2/9/4/616180-sample.pdf), odczyt 03.11.2026, s. 2 Normalized Values, s. 4 zakres dla mężczyzny 18 lat, s. 5 Adult Male Patients/Normalized Values: **<0,75 mg/mg**, bez dolnej granicy. Dokładnie 0,75 jest poza zakresem. Nie tworzy się normy 0–0,75 ani kategorii „niski” z tego źródła. Nie ustalono niezależnie pierwotnej kohorty P/Cr; przypis 48 mężczyzn/52 kobiet nie jest dowodem jej wielkości.
+
+Brak wieku, wymaganej płci, wiek <7 lat lub dorosła kobieta pozostawiają neutralną liczbę z konkretnym powodem. **To luki zweryfikowanego profilu, nie dowód braku norm w literaturze.** Historyczny oficjalny raport kobiecy Mayo wskazuje tę samą granicę w indeksowanej stronie, lecz pełny plik był niedostępny. Taranta-Janusz 2017, [DOI 10.1111/apa.13856](https://doi.org/10.1111/apa.13856), obejmuje DZM 3913 zdrowych dzieci 2–18 lat, lecz dokładnych tabel suplementu nie zweryfikowano. Nie wymyśla się ich z abstraktu, norm próbki porannej lub ilorazu niezależnych norm dobowych.
+
+Wspólne czas i objętość skracają się; nie skaluje się ratio przez `24/czas`. Sam znany dodatni czas różny od 24 h lub czas nieznany nie wstrzymuje porównania z przyjętym profilem. Znany problem zbiórki pozostawia liczbę, ale wstrzymuje ocenę. Znane różne próbki blokują stężenia, niezależny raport pozostaje dostępny, a przeciwne fakty nie znikają po przełączeniu trybu lub edycji. Nie dopisuje się potwierdzonych 24 h ani zegara innej formuły.
+
+P i gotowy stosunek muszą być ≥0, Cr >0; każdy operand jest sprawdzany osobno. Naprawa obejmuje przyjmowanie ujemnych stężeń przez dawny edytor, niespójne odrzucanie zera, dodatnie wyniki zapisywane jako zero, underflow, rozbieżne sufity walidacji i fałszywe „W zakresie” po zapisie bez normy. **Zero jest neutralną liczbą**, z uwagą o raporcie/oznaczalności; mała dodatnia liczba pozostaje dodatnia. Ocena odbywa się dokładnie przed zaokrągleniem, ≈ oznacza skrót. Nierówność zachowuje przedział i nie jest dokładnym punktem wykresu; w tej wersji wszystkie takie raporty pozostają neutralne z dostępną normą.
+
+Jedna karta B łączy wynik i normę w mg/mg. Norma z jednostką pozostaje neutralna, odchylenia bursztynowe; bez sztucznej dolnej granicy. Szczegóły pokazują grupy wieku w tej samej jednostce, źródła i kontekst. Stałe szerokości, wyrównanie jednostek, symetria, pola mobilne 16 px/48 px i odstęp ≥20 px pod czyszczeniem obowiązują we wszystkich stanach.
+
+**Przytarczyce i XLH:** bez selektora choroby. Pᵢ/Cr nie rozpoznaje PHPT/HypoPT ani skuteczności burosumabu. Porównanie z normą nie potwierdza właściwej reabsorpcji przy hipofosfatemii. Ocenę uzupełniają surowica, TRP/TmP/GFR, klinika i czas względem dawki. Pełne źródła: aktualna polska ChPL Crysvita §4.2/4.4; IWG dzieci i dorośli 2025; Haffner XLH 2025; PHPT Fifth Workshop 2022; ESE HypoPT 2025. ChPL sugeruje kontrolę wapnia/fosforanów w moczu co 3 miesiące, bez wymogu DZM lub progu ratio. Przejście do TmP/GFR nie przenosi automatycznie DZM i niepowiązanej surowicy do protokołu parowanych próbek.
+
+Migawka `clcr-phosphorus-creatinine` v1, `phosphorusCreatinineSnapshot`, utrwala wejście, jednostki/podstawę P, operator, dokładną wartość, próbkę, wiek/płeć, normę z granicami, źródło/wersję i ocenę. Brak oceny ma `outOfRange:null`. Zwykły READ zachowuje historię bez dzisiejszego silnika, wieku i nowych norm; nie naprawia dawnych wartości przez wymyślanie precyzji. Jawny EDIT używa nowej polityki przy zachowaniu kontekstu i ID. Jeden kanoniczny pomiar w mg/mg trafia do zapisanej karty pacjenta; Notatki nie zawierają surowego JSON.
+
+**Syntetyczne kontrakty produkcyjne:** chłopiec 10 lat, P 15/Cr 10 mmol/L → dokładnie `46460642997/113120000000`, około 0,4107199699169024 mg/mg, w zakresie 0,144–1,234; gotowe 411 mg/g →0,411 mg/mg; chłopiec 13 lat, 1134 mg/g → dokładnie 1,134, górna granica włączona; chłopiec 7 lat, P 18,6648 mg P/dL /Cr 10 mmol/L →0,165, dolna granica włączona; mężczyzna 18 lat, 0,74999999999999999 /0,75 → odpowiednio poniżej granicy / poza zakresem. P 0 przy dodatniej Cr daje neutralne zero; P 0,00001 mg P/dL /Cr 100 mg/dL daje dodatnie 0,0000001; ujemny dowolny operand lub dodatni underflow nie daje zapisywalnej liczby. Odczyt bez bieżącego silnika i jawna edycja zachowują odrębne kontrakty. Wyniki rzeczywistych regresji, desktop/mobile, offline i sprawdzony SHA podaje PR; niniejszy opis nie jest deklaracją zakończonych testów.
+
 #### P-KLIRENS-OXCR-2026-10-24 — prosty Ox/Cr, jawna postać analitu i orientacyjne normy wieku
 
 Właściciel zaakceptował 24.10.2026
@@ -20440,7 +20468,7 @@ a lekarz poprawia jedno z miejsc. Wartość dni spoza 0–6 w rekordzie nie jest
 
 **Wersje.** `sga_birth_module.js?v=10→11`; SW 1.1.168 → **1.1.169**.
 
-## Dziennik zdarzeń: koperta, buildery i status zastosowania — uśpione (P-DZIENNIK-ZDARZEN, E2-PR2a, SW 1.1.449, `vilda_vault.js` 247, 2026-11-03)
+## Dziennik zdarzeń: koperta, buildery i status zastosowania — uśpione (P-DZIENNIK-ZDARZEN, E2-PR2a, SW 1.1.450, `vilda_vault.js` 247, 2026-11-03)
 
 **Zmiana kliniczna: NIE** — wzory, progi, jednostki, interpretacje, zapis, scalanie, format kopii i synchronizacja bez
 zmian. Wpis opisuje nowy, uśpiony kod etapu 2 synchronizacji przyrostowej: kod produkcyjny go nie woła, na urządzeniu
@@ -20843,7 +20871,7 @@ komentarze bez znaków diakrytycznych, plik +29 554 B.
 
 W eksporcie `$s` jest jeden nowy klucz na końcu: `_eventLog:Bev_EKSPORT`.
 
-**Wersje.** `vilda_vault.js?v=246 → 247`; `vilda_chrome.js?v=225 → 226` i `vilda_session_bridge.js?v=148 → 149` (tylko odnośnik do `vilda_vault.js`); SW 1.1.448 → **1.1.449**.
+**Wersje.** `vilda_vault.js?v=246 → 247`; `vilda_chrome.js?v=226 → 227` i `vilda_session_bridge.js?v=149 → 150` (tylko odnośnik do `vilda_vault.js`); SW 1.1.449 → **1.1.450**.
 
 ## Odpytywanie co 60 s przy żywym połączeniu na żywo i dłuższy odstęp ponownego łączenia (P-SYNC-ODPYTYWANIE-WS, E2-PR1b, SW 1.1.442, `vilda_sync_integration.js` 56, `vilda_realtime.js` 9, `vilda_sync.js` 47, 2026-11-02)
 
