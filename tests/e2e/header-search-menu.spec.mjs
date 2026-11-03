@@ -2,6 +2,7 @@ import { expect, test } from '@playwright/test';
 import { GLOBAL_QUERY, SEARCH_WORKSPACE, globalSearchFixture, resultFor } from '../support/global-search-fixture.mjs';
 import { RETURN_TO_SEARCH, persistedSearchFingerprint } from '../support/search-return-browser-fixture.mjs';
 import { createFictionalVault, loadPatient } from '../support/centile-live-fixture.mjs';
+import { expectHeaderAlignment, expectBell, expectDesktopSearchControl } from '../support/header-layout-fixture.mjs';
 
 test.use({ serviceWorkers: 'block', reducedMotion: 'reduce' });
 test.setTimeout(120000);
@@ -54,6 +55,7 @@ for (const shell of [false, true]) {
     await closeSearch(page);
     await created.frame.evaluate(() => window.VildaVault.lock('manual'));
     await expect(input).toHaveValue('');
+    await expect(page.locator('#vildaRemindersBtn')).toBeHidden();
     for (const pro of await page.locator('[data-menu-pro]').all()) await expect(pro).toBeHidden();
     const auth = page.locator('#vilda-auth-ui-root');
     await auth.getByRole('button', { name: /Fikcyjny sejf testu panelu siatek/ }).click();
@@ -82,12 +84,11 @@ test('desktop and ultrawide: Search follows the real form edges; save and cloud 
   }
   for (const width of [992, 1024, 1440, 2560, 3440]) {
     await page.setViewportSize({ width, height: 1000 });
-    await expect.poll(() => page.evaluate(() => {
-      const iframe = document.querySelector('iframe.app-pane:not([hidden])');
-      const form = iframe.contentDocument.querySelector('#userSection fieldset.user-card').getBoundingClientRect();
-      const frame = iframe.getBoundingClientRect(), search = document.getElementById('vildaHeaderSearch').getBoundingClientRect();
-      return { left: Math.round(search.left - (frame.left + form.left)), right: Math.round(search.right - (frame.left + form.right)) };
-    }), { message: `${width}px: header Search has the same outer edges as the actual form card` }).toEqual({ left: 0, right: 0 });
+    // At narrow desktop widths the real form can occupy one column. Search then
+    // reserves the fixed action slot, while the bell still ends at the card edge.
+    await expectHeaderAlignment(page);
+    await expectDesktopSearchControl(page);
+    await expectBell(page);
     const actions = await menu.locator('.chrome-menu-save, .chrome-menu-documents').evaluateAll(nodes => nodes.map(node => {
       const r = node.getBoundingClientRect(); return { width: r.width, y: r.y };
     }));
@@ -102,14 +103,18 @@ test('desktop and ultrawide: Search follows the real form edges; save and cloud 
     const r = node.getBoundingClientRect(); return { x: r.x, y: r.y, width: r.width, height: r.height };
   }));
   const before = await geometry();
+  const neutralBell = await expectBell(page);
   await page.evaluate(() => document.dispatchEvent(new CustomEvent('vilda:sync-status-changed', { detail: { state: 'error' } })));
   await expect(page.locator('#vildaSyncBtn')).toBeVisible();
   await expect(status).toHaveAttribute('data-save-state', 'saved');
   await expect(status).toHaveText('Zapisano');
   expect(await geometry()).toEqual(before);
+  expect(await expectBell(page)).toEqual(neutralBell);
   await page.evaluate(() => document.dispatchEvent(new CustomEvent('vilda:sync-status-changed', { detail: { state: 'ok' } })));
   await expect(page.locator('#vildaSyncBtn')).toBeHidden();
   expect(await geometry()).toEqual(before);
+  expect(await expectBell(page)).toEqual(neutralBell);
   await created.frame.locator('#height').fill('157');
   await expect(status).toHaveAttribute('data-save-state', 'dirty');
+  expect(await expectBell(page), 'patient save status does not recolor the reminders action').toEqual(neutralBell);
 });

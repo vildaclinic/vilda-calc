@@ -2507,29 +2507,6 @@ body.vilda-header-menu .chrome-drawer-head {
 .vilda-header-menu .chrome-reminders-btn[hidden] {display:none!important}
 .vilda-header-menu .chrome-reminders-label {display:none}
 .vilda-header-menu .chrome-reminders-btn[data-state=empty] .chrome-reminders-badge {display:none!important}
-@media(min-width:992px) {
-  html:not(.vilda-phone) .vilda-header-menu .chrome-strip:not(.chrome-header-actions-before-search) .chrome-reminders-btn {
-    display: inline-flex;
-    align-items: center;
-    width: auto!important;
-    max-width: none!important;
-    padding: 0 var(--space-12px)!important;
-    flex-basis: auto
-  }
-  html:not(.vilda-phone) .vilda-header-menu .chrome-strip:not(.chrome-header-actions-before-search) .chrome-reminders-inner {gap:var(--space-8px)}
-  html:not(.vilda-phone) .vilda-header-menu .chrome-strip:not(.chrome-header-actions-before-search) .chrome-reminders-label {
-    display:inline;
-    font-size:12px;
-    font-weight:600;
-    white-space:nowrap
-  }
-  html:not(.vilda-phone) .vilda-header-menu .chrome-strip:not(.chrome-header-actions-before-search) .chrome-reminders-badge {
-    position: static;
-    margin-left: 7px;
-    min-width: 19px;
-    height: 19px
-  }
-}
 .vilda-header-menu .chrome-menu-save-status {
   display: flex;
   align-items: center;
@@ -2655,4 +2632,162 @@ body.vilda-header-menu.has-mobile-bottom-dock:not(.user-hides-mobile-dock) #scro
 }
 body.vilda-header-menu #appShellScrollTop {
   bottom: max(calc(var(--vilda-shell-dock-h,84px) + 14px),var(--chrome-footer-arrow-bottom,0px))
+}
+
+/* P-LAYOUT-12: Start, DocPro and Klirens share one outer gutter. The runtime
+ * marks these documents (and their active shell); other tools keep their own
+ * layout. Card interiors, field heights and the 230 px decorative rail remain
+ * unchanged. An embedded document owns its vertical clearance below chrome. */
+html.vilda-form-layout {
+  --chrome-form-gap: 12px
+}
+html.vilda-form-layout body.has-sidebar>.desktop-layout {
+  column-gap: var(--chrome-form-gap);
+  padding-top: var(--chrome-form-gap)!important;
+  padding-bottom: var(--chrome-form-gap);
+  align-items: stretch
+}
+html.vilda-form-layout body.has-sidebar>.desktop-layout>.main-content {
+  margin: 0!important;
+  padding: 0!important;
+  min-width: 0;
+  background: transparent;
+  border-radius: 0;
+  box-shadow: none
+}
+html.vilda-form-layout .main-content>.container {
+  padding-block: 0;
+  max-width: none
+}
+html.vilda-form-layout #calcForm,
+html.vilda-form-layout #results {
+  column-gap: var(--chrome-form-gap)
+}
+html.vilda-form-layout[data-clcr-workflow-ui="1"] .clcr-workspace {
+  column-gap: var(--chrome-form-gap)
+}
+@media(min-width:992px) {
+  html.vilda-form-layout:not(.vilda-phone):not(.vilda-embedded):not(.vilda-pane-auth-open) body.has-sidebar>.desktop-layout {
+    grid-template-columns: var(--chrome-sidebar-width) minmax(0,1fr);
+    padding-inline-end: var(--chrome-form-gap)
+  }
+  html.vilda-form-layout:not(.vilda-phone) .main-content>.container {
+    margin-inline: 0;
+    padding-inline: 0
+  }
+}
+@media(min-width:1400px) {
+  html.vilda-form-layout:not(.vilda-phone):not(.vilda-embedded):not(.vilda-pane-auth-open) body.has-sidebar>.desktop-layout {
+    grid-template-columns: var(--chrome-sidebar-width) minmax(0,1fr) var(--decor-sidebar-width);
+    padding-inline-end: 0
+  }
+  html.vilda-form-layout:not(.vilda-phone) .decor-sidebar {
+    top: calc(var(--chrome-layout-header-height,var(--chrome-strip-height,64px)) + var(--chrome-form-gap))!important
+  }
+  html.vilda-form-layout:not(.vilda-phone):not(.vilda-embedded) body.has-sidebar>footer.site-footer {
+    margin-inline-end: var(--decor-sidebar-width)
+  }
+}
+/* The host width decides whether a pane has a desktop menu. A 1440 px shell
+ * still has a pane narrower than 992 px, so the pane's media query cannot own
+ * this decision. Thin scrollbars stay visible inside the shared 12 px gutter. */
+html.vilda-form-layout.vilda-embedded {
+  scrollbar-width: thin
+}
+/* A wide pane can itself exceed 1400 px. Its host already owns the decorative
+ * column; a second empty aside in the pane would add an invisible 18 px row. */
+html.vilda-form-layout.vilda-embedded .desktop-layout>.decor-sidebar {
+  display: none!important
+}
+html.vilda-form-layout.vilda-form-host-desktop .main-content>.container {
+  margin-inline: 0;
+  padding-inline: var(--chrome-form-gap) 0!important
+}
+html.vilda-form-layout:not(.vilda-embedded) body.has-vilda-chrome>footer.site-footer .site-footer__inner {
+  padding-inline: var(--chrome-form-gap)
+}
+html.vilda-form-layout.vilda-form-host-desktop body>footer.site-footer .site-footer__inner {
+  padding-inline: var(--chrome-form-gap) 0
+}
+/* Only the empty two-column form can grow to the footer. The fields retain
+ * their natural height, and populated results/comparison keep their own flow.
+ * The right summary still follows the actual fieldset via its existing model. */
+@media(min-width:700px) {
+  html.vilda-form-fit-viewport:not(.vilda-pane-auth-open) #userSection>fieldset.user-card {
+    min-height: calc(100dvh - var(--chrome-layout-header-height,66px) - var(--chrome-form-footer-height,96px) - 24px);
+    margin-bottom: 0
+  }
+  html.vilda-form-fit-viewport.vilda-embedded:not(.vilda-pane-auth-open) #userSection>fieldset.user-card {
+    min-height: calc(100dvh - var(--chrome-form-footer-height,96px) - 24px)
+  }
+}
+/* With only the patient card visible, the zero-height doctor track must not
+ * add an empty row gap. This does not hide or move any module or result. */
+html.vilda-form-only-patient:not(.vilda-pane-auth-open) #calcForm {
+  row-gap: 0
+}
+html.vilda-form-only-patient:not(.vilda-pane-auth-open) #userSection>fieldset.user-card {
+  min-height: calc(100dvh - var(--chrome-layout-header-height,66px) - var(--chrome-form-footer-height,96px) - 24px);
+  margin-bottom: 0
+}
+html.vilda-form-only-patient.vilda-embedded:not(.vilda-pane-auth-open) #userSection>fieldset.user-card {
+  min-height: calc(100dvh - var(--chrome-form-footer-height,96px) - 24px)
+}
+/* The workspace has no following content when the optional AI panel is
+ * hidden. Its old 20 px end margin must not double the page's 12 px gutter. */
+html.vilda-form-layout[data-clcr-workflow-ui="1"] #clcrWorkspace {
+  margin-bottom: 0
+}
+/* DocPro's final action row already has the page gutter below it. Retain
+ * button padding and the module grid's own gaps without a second end margin. */
+html.vilda-form-layout #modulesWrapper>#zscoreButtonWrapper,
+html.vilda-form-layout #modulesWrapper>#sgaBirthButtonWrapper {
+  margin-bottom: 0
+}
+
+/* The reminder remains an icon at every width and in every count state.
+ * State/ARIA and the loading spinner are still driven by the existing model. */
+body.has-vilda-chrome.vilda-header-menu .chrome-reminders-btn {
+  color: #6b8289!important;
+  background: #f8fafb!important;
+  border-color: #d6e2e5!important;
+  opacity: 1;
+  transform: none!important
+}
+body.has-vilda-chrome.vilda-header-menu .chrome-reminders-btn:hover {
+  color: #6b8289!important;
+  background: #f0f5f6!important;
+  border-color: #c6d7dc!important
+}
+body.vilda-header-menu .chrome-reminders-btn:not([data-state=loading]) .chrome-reminders-badge {
+  color: #617b82;
+  background: #edf2f3;
+  animation: none;
+  box-shadow: none
+}
+body.vilda-header-menu .chrome-reminders-btn[data-state=loading] .chrome-reminders-badge {
+  border-color: #d6e2e5;
+  border-top-color: #6b8289
+}
+.vilda-header-menu .chrome-header-search button {
+  flex-basis: 42px;
+  width: 42px;
+  min-width: 42px;
+  max-width: 42px;
+  height: 42px;
+  min-height: 42px;
+  max-height: 42px;
+  transform: none!important
+}
+.vilda-header-menu .chrome-header-search button svg {
+  width: 18px;
+  height: 18px
+}
+@media(min-width:992px) {
+  html:not(.vilda-phone) .vilda-header-menu .chrome-chips {
+    position: absolute;
+    right: var(--chrome-actions-right,16px);
+    gap: 8px;
+    margin: 0
+  }
 }

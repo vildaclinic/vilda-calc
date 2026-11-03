@@ -2,6 +2,8 @@ import { expect, test } from '@playwright/test';
 import { GLOBAL_QUERY, SEARCH_WORKSPACE, globalSearchFixture, queryGlobal, resultFor } from '../support/global-search-fixture.mjs';
 import { RETURN_TO_SEARCH, persistedSearchFingerprint } from '../support/search-return-browser-fixture.mjs';
 import { visibleChromeMenu, closeChromeMenu } from '../support/chrome-menu-fixture.mjs';
+import { expectBell, headerLayout, expectReachableFooter } from '../support/header-layout-fixture.mjs';
+import { emulatePhone, expectLandscape } from '../support/telefon-poziomo.mjs';
 
 test.use({ serviceWorkers: 'block', reducedMotion: 'reduce' });
 test.setTimeout(120000);
@@ -11,7 +13,12 @@ for (const shell of [false, true]) test(`${shell ? 'shell' : 'standalone'} phone
   const before = await persistedSearchFingerprint(created.frame, created.ids.a);
   for (const width of [320, 390, 658, 844]) {
     await page.setViewportSize({ width, height: 852 });
+    await created.frame.evaluate(() => scrollTo({ top: 0, behavior: 'instant' }));
+    await expect.poll(async () => {
+      const g = await headerLayout(page); return Math.round(g.topCard.y + g.embeddedScrollY - g.header.bottom);
+    }, { message: `${width}px: first real form card begins 12px below the mobile header` }).toBe(12);
     const controls = page.locator('[data-vilda-chrome-menu-btn], #vildaHeaderSearchBtn, #vildaRemindersBtn');
+    await expectBell(page);
     await expect(controls).toHaveCount(3);
     for (const control of await controls.all()) {
       await expect(control).toBeVisible();
@@ -43,7 +50,20 @@ for (const shell of [false, true]) test(`${shell ? 'shell' : 'standalone'} phone
     expect(actions[0].width).toBeCloseTo(actions[1].width, 0);
     expect(actions[0].y).toBeCloseTo(actions[1].y, 0);
     await closeChromeMenu(page);
+    await expectReachableFooter(page, created.frame);
+    await expect.poll(async () => {
+      const g = await headerLayout(page); return Math.round(g.footer.y - g.last.bottom);
+    }, { message: `${width}px: last real Start block ends 12px above the mobile footer` }).toBe(12);
   }
+  await emulatePhone(page, { width: 844, height: 390 });
+  await expectLandscape(page, true);
+  await expectLandscape(created.frame, true);
+  await expectBell(page);
+  await expect(page.locator('#vildaHeaderSearchBtn')).toHaveCSS('width', '44px');
+  await expect(page.locator('#vildaHeaderSearchBtn svg')).toHaveCSS('width', '21px');
+  expect(await page.evaluate(() => document.documentElement.scrollWidth - innerWidth)).toBeLessThanOrEqual(1);
+  await emulatePhone(page, { width: 390, height: 852, safeArea: { top: 0, right: 0, bottom: 0, left: 0 } });
+  await expectLandscape(page, false);
   await page.setViewportSize({ width: 390, height: 852 });
   const trigger = page.locator('#vildaHeaderSearchBtn');
   await trigger.click();
