@@ -6590,14 +6590,128 @@ async function CareMvpStepOmissions(planId) {
   await scope.assertFresh(); return { planId, rev: scope.stored.rev, omissions };
 }
 
+/* A manual entry is identified by its authored addNote intent and log binding.
+ * Removal keeps the immutable log and records another V1 log binding, so an
+ * older writer can carry the decision without understanding the new action. */
+function CareMvpNoteRemovalIntent(patientId, noteId) { return { action: 'removePlanNote', patientId, noteId }; }
+async function CareMvpRequestDigest(value, assertCurrent) {
+  const bytes = await v.crypto.subtle.digest('SHA-256', new TextEncoder().encode(JSON.stringify(value))); if (assertCurrent) assertCurrent();
+  return Array.from(new Uint8Array(bytes), function (byte) { return byte.toString(16).padStart(2, '0'); }).join('');
+}
+async function CareMvpManualNoteFingerprint(entry, patientId, fingerprint, assertCurrent) {
+  const values = { action: 'addNote', text: entry.text, dateISO: entry.dateISO, patientId }, orders = [];
+  const permute = function (keys, prefix) { if (!keys.length) { orders.push(prefix); return; } keys.forEach(function (key, index) { permute(keys.filter(function (_, at) { return at !== index; }), prefix.concat(key)); }); };
+  permute(['action', 'text', 'dateISO', 'patientId'], []);
+  for (const order of orders) {
+    const request = {}; order.forEach(function (key) { request[key] = values[key]; });
+    if (await CareMvpRequestDigest(request, assertCurrent) === fingerprint) return true;
+  }
+  return false;
+}
+function CareMvpNoteClinicalReference(context, noteId) {
+  const references = function (step) { return !!(step && ['reminderNoteId', 'calendarNoteId', 'resultNoteId'].some(function (key) { return step[key] === noteId; })); };
+  if (context.steps.some(references)) return true;
+  for (const alternative of context.causality ? context.causality.alternatives : []) if (alternative.key.slice(0, 5) === 'step:' && alternative.values.some(function (item) { return references(item.value); })) return true;
+  for (const entry of context.log) {
+    if (entry.calendarDetach && entry.calendarDetach.noteId === noteId) return true;
+    for (const component of entry.resolution ? entry.resolution.components : []) if (component.key === 'step' && [component.current].concat(component.variants.map(function (item) { return item.value; })).some(references)) return true;
+  }
+  return false;
+}
+function CareMvpNoteRemovalScope(text) {
+  if (typeof text !== 'string' || text.length > 512) return null;
+  try {
+    const value = JSON.parse(text);
+    return value && !Array.isArray(value) && Object.keys(value).sort().join(',') === 'kind,patientId,sequence,version'
+      && value.kind === 'care-plan-note-removal' && value.version === 1 && CareMvpId(value.patientId)
+      && Number.isSafeInteger(value.sequence) && value.sequence >= 0 && value.sequence <= 5000 ? value.patientId : null;
+  } catch { return null; }
+}
+async function CareMvpNoteEvidence(context, patientId, assertCurrent, removedOnly) {
+  const manual = new Map(), removed = new Set(), stamp = context.causality && CareMvpCausality(context.causality), graph = stamp && CareMvpGraph(stamp.nodes);
+  if (!stamp || !graph) return { manual, removed };
+  const fingerprints = new Map(CareMvpFingerprints([stamp.fingerprints, context.operations]).map(function (item) { return [item.id, item.values]; })), logWriters = new Map(), digests = new Map();
+  for (const item of stamp.commitments) if (item.key === 'log') {
+    const key = JSON.stringify([item.digest, item.dateISO]); if (!logWriters.has(key)) logWriters.set(key, new Set()); logWriters.get(key).add(item.id);
+  }
+  const writersOf = async function (entry) {
+    const key = JSON.stringify(CareMvpCanonical(entry)); if (!digests.has(key)) digests.set(key, await CareMvpValueDigest(entry, assertCurrent));
+    return logWriters.get(JSON.stringify([digests.get(key), entry.dateISO])) || new Set();
+  };
+  const scopes = new Map();
+  for (const entry of context.log) {
+    const historicalPatientId = CareMvpNoteRemovalScope(entry.text), match = typeof entry.noteId === 'string' && /^care-note-([A-Za-z0-9_-]{1,64})$/.exec(entry.noteId), origin = match && match[1];
+    if (!historicalPatientId || !origin || !graph.map.has(origin) || entry.syncOrigin || entry.reviewFallbackFor || entry.resolution || entry.calendarDetach) continue;
+    const expected = await CareMvpValueDigest(CareMvpNoteRemovalIntent(historicalPatientId, entry.noteId), assertCurrent);
+    for (const writer of await writersOf(entry)) {
+      const known = fingerprints.get(writer);
+      if (writer !== origin && known && known.length === 1 && known[0] === expected && CareMvpAncestor(origin, writer, graph)) {
+        if (!scopes.has(entry.noteId)) scopes.set(entry.noteId, new Set()); scopes.get(entry.noteId).add(historicalPatientId);
+      }
+    }
+  }
+  for (const entry of context.log) {
+    const match = typeof entry.noteId === 'string' && /^care-note-([A-Za-z0-9_-]{1,64})$/.exec(entry.noteId), origin = match && match[1];
+    if (!origin || manual.has(entry.noteId) || removedOnly && !scopes.has(entry.noteId) || entry.syncOrigin || entry.reviewFallbackFor || entry.resolution || entry.calendarDetach || !graph.map.has(origin) || graph.map.get(origin).review) continue;
+    const known = fingerprints.get(origin);
+    if (!known || known.length !== 1 || stamp.commitments.some(function (item) { return item.id === origin && (item.key === 'metadata' || item.key === 'status' || item.key.slice(0, 5) === 'step:'); }) || !(await writersOf(entry)).has(origin)) continue;
+    // The receipt carries the historical patient scope only as data. Both the
+    // removal and the original authored note must prove that same scope.
+    for (const authoredPatientId of new Set([patientId].concat(Array.from(scopes.get(entry.noteId) || [])))) {
+      if (await CareMvpManualNoteFingerprint(entry, authoredPatientId, known[0], assertCurrent)) {
+        manual.set(entry.noteId, { noteId: entry.noteId, origin, text: entry.text, dateISO: entry.dateISO });
+        if (scopes.has(entry.noteId) && scopes.get(entry.noteId).has(authoredPatientId) && !CareMvpNoteClinicalReference(context, entry.noteId)) removed.add(entry.noteId);
+        break;
+      }
+    }
+  }
+  return { manual, removed };
+}
+function CareMvpReadTokenValue(value) {
+  if (!value || typeof value !== 'object') return value;
+  if (ArrayBuffer.isView(value)) return { bytes: Array.from(new Uint8Array(value.buffer, value.byteOffset, value.byteLength)) };
+  if (Object.prototype.toString.call(value) === '[object ArrayBuffer]') return { bytes: Array.from(new Uint8Array(value)) };
+  if (Object.prototype.toString.call(value) === '[object Date]') return { date: value.toISOString() };
+  const copy = Array.isArray(value) ? [] : {}; Object.keys(value).sort().forEach(function (key) { copy[key] = CareMvpReadTokenValue(value[key]); }); return copy;
+}
+async function CareMvpNoteReadToken(parent, original, assertCurrent) { return CareMvpValueDigest(CareMvpReadTokenValue({ parent, original }), assertCurrent); }
+function CareMvpManualNoteOriginal(note, original, planId, patientId) {
+  const link = note && note.careContext;
+  return !!(note && note.id === original.noteId && note.patientId === patientId && note.category === 'observation' && link && link.version === 1 && link.role === 'note' && link.planId === planId && !link.stepId
+    && note.rev === 1 && note.createdAtISO && note.createdAtISO === note.updatedAtISO
+    && note.body === original.text && note.clinicalDateISO === original.dateISO && !note.labResult && !note.medication && !note.dueDateISO && !note.completedAtISO && !note.noShowAtISO);
+}
+async function CareMvpNoteEntries(planId) {
+  const scope = await CareMvpReadScope(planId); if (!scope) return null;
+  const evidence = await CareMvpNoteEvidence(scope.context, scope.stored.patientId, scope.assertCurrent), entries = [];
+  for (const original of evidence.manual.values()) {
+    const removed = evidence.removed.has(original.noteId), item = { noteId: original.noteId, text: original.text, dateISO: original.dateISO, removable: false, removed, linkedRev: null, readToken: null, retainedNote: null };
+    if (removed) { const retained = await scope.read(original.noteId); item.reason = 'removed'; if (retained) item.retainedNote = retained.note; }
+    else if (CareMvpNoteClinicalReference(scope.context, original.noteId)) item.reason = 'referenced';
+    else {
+      const document = await scope.read(original.noteId);
+      if (!document) item.reason = 'unavailable';
+      else if (!CareMvpManualNoteOriginal(document.note, original, planId, scope.stored.patientId)) item.reason = 'changed';
+      else { item.removable = true; item.linkedRev = document.stored.rev || 0; item.readToken = await CareMvpNoteReadToken(scope.stored, document.stored, scope.assertCurrent); }
+    }
+    entries.push(item);
+  }
+  const logDigest = await CareMvpValueDigest(scope.context.log, scope.assertCurrent); await scope.assertFresh();
+  return { planId, patientId: scope.stored.patientId, rev: scope.stored.rev || 0, logDigest, entries, removedNoteIds: Array.from(evidence.removed).sort() };
+}
+async function CareMvpNoteProjection(note, plan, assertCurrent) {
+  if (!plan) return plan; const context = CareMvpContext(note.careContext), evidence = await CareMvpNoteEvidence(context, note.patientId, assertCurrent, true);
+  if (assertCurrent) assertCurrent(); plan.removedNoteIds = Array.from(evidence.removed).sort(); return plan;
+}
+
 function CareMvpCheckCommit(change, parent, existing, deleted, patient) {
   change.assertSession();
   if (deleted || !patient) return { saved: false, reason: 'deleted' };
   const expected = change.expectedRev;
-  if (expected === null ? !!parent : !parent || parent.patientId !== change.parent.patientId || (parent.rev || 0) !== expected) return { saved: false, reason: 'conflict', conflict: true };
+  if ((expected === null ? !!parent : !parent || parent.patientId !== change.parent.patientId || (parent.rev || 0) !== expected) || change.expectedStored && !CareMvpSameStored(change.expectedStored, parent)) return { saved: false, reason: 'conflict', conflict: true };
   for (let index = 0; index < change.writes.length; index += 1) {
     const item = change.writes[index], current = existing[index];
-    if (item.expectedRev === null ? !!current : !current || current.patientId !== item.note.patientId || (current.rev || 0) !== item.expectedRev) return { saved: false, reason: 'conflict', conflict: true };
+    if ((item.expectedRev === null ? !!current : !current || current.patientId !== item.note.patientId || (current.rev || 0) !== item.expectedRev) || item.expectedStored && !CareMvpSameStored(item.expectedStored, current)) return { saved: false, reason: 'conflict', conflict: true };
   }
   return null;
 }
@@ -6619,9 +6733,8 @@ async function CareMvpGet(planId) {
   if(!T()||b!==account||ot!==session)throw new Error('Sesja zmieniła się. Otwórz plan ponownie.');
   if(!patient||tomb)return null;
   await G(stored.bodyCipher.iv, stored.bodyCipher.data);
-  const plan = CareMvpView(await Ft(stored));
-  if (!T() || b !== account || ot !== session) throw new Error('Sesja zmieniła się. Otwórz plan ponownie.');
-  return plan;
+  const decoded = await Ft(stored), assertCurrent = function () { if (!T() || b !== account || ot !== session) throw new Error('Sesja zmieniła się. Otwórz plan ponownie.'); }; assertCurrent();
+  return CareMvpNoteProjection(decoded, CareMvpView(decoded), assertCurrent);
 }
 /* Explicit versioned read path. It never passes unknown content through the
  * V1 normalizer and cannot grant a write capability or migrate a stored plan. */
@@ -6705,7 +6818,8 @@ async function CareMvpList(options) {
     try { decoded = await Ft(note, strictSession ? { strict: true } : null); }
     catch (error) { VaultStrictReadAssert(strictSession); throw error; }
     VaultStrictReadAssert(strictSession);
-    const plan = CareMvpView(decoded); if (plan) plans.push(plan);
+    const assertCurrent = function () { if (!T() || b !== account || ot !== session || I() !== adapter) throw Bses_blad(); VaultStrictReadAssert(strictSession); };
+    const plan = await CareMvpNoteProjection(decoded, CareMvpView(decoded), assertCurrent); if (plan) plans.push(plan);
   }
   if (!T() || b !== account || ot !== session) throw new Error('Sesja zmieniła się. Otwórz Plany opieki ponownie.');
   VaultStrictReadAssert(strictSession);
@@ -6790,7 +6904,7 @@ async function CareMvpMutate(input) {const PatientClinicalOperationAccount=b;Pat
   CareMvpRequireLegacyContext(input); CareMvpRequireLegacyContext(input && input.payload);
   if (!input || typeof input !== 'object' || !CareMvpId(input.operationId) || !/^[A-Za-z0-9_-]{1,64}$/.test(input.operationId)
       || typeof input.patientId !== 'string' || !input.patientId || input.patientId.indexOf('__vilda') === 0
-      || ['create', 'edit', 'addStep', 'editStep', 'linkEvent', 'complete', 'result', 'wait', 'addNote', 'close', 'reopen', 'updateLinked', 'removeLinked', 'acknowledgeMerge', 'omitStep', 'linkResult'].indexOf(input.action) < 0) throw new Error('Niepełne dane planu opieki.');
+      || ['create', 'edit', 'addStep', 'editStep', 'linkEvent', 'complete', 'result', 'wait', 'addNote', 'close', 'reopen', 'updateLinked', 'removeLinked', 'acknowledgeMerge', 'omitStep', 'linkResult', 'removePlanNote'].indexOf(input.action) < 0) throw new Error('Niepełne dane planu opieki.');
   const request = JSON.parse(JSON.stringify(input)), account = b, session = ot, adapter = I();
   [request.text,request.goal,request.step&&request.step.description,request.next&&request.next.description].forEach(function(value){if(typeof value==='string'&&value.length>20000)throw new Error('Opis jest zbyt długi (maksymalnie 20 000 znaków).');});
   [request.title,request.step&&request.step.title,request.next&&request.next.title].forEach(function(value){if(typeof value==='string'&&value.length>240)throw new Error('Nazwa jest zbyt długa (maksymalnie 240 znaków).');});
@@ -6798,7 +6912,7 @@ async function CareMvpMutate(input) {const PatientClinicalOperationAccount=b;Pat
   const planId = CareMvpId(request.planId) || (request.action === 'create' ? 'care-plan-' + request.operationId : null);
   if (!planId || request.action !== 'create' && (!Number.isSafeInteger(request.baseRev) || request.baseRev < 0)) throw new Error('Otwórz aktualną wersję planu opieki.');
   const fingerprintRequest = Object.assign({}, request); delete fingerprintRequest.baseRev; delete fingerprintRequest.operationId; delete fingerprintRequest.planId;
-  const fingerprint = Array.from(new Uint8Array(await v.crypto.subtle.digest('SHA-256', new TextEncoder().encode(JSON.stringify(fingerprintRequest))))).map(function (byte) { return PatientClinicalWriteValue(PatientClinicalOperationAccount,byte.toString(16).padStart(2, '0')); }).join('');
+  const fingerprint = request.action === 'removePlanNote' ? await CareMvpValueDigest(CareMvpNoteRemovalIntent(request.patientId, request.noteId), assertSession) : await CareMvpRequestDigest(fingerprintRequest, assertSession);
   return PatientClinicalWriteValue(PatientClinicalOperationAccount,Ac(planId, async function () {
     assertSession();
     if (typeof adapter.commitCarePlanForUser !== 'function') throw new Error('Odśwież aplikację, aby zapisać plan opieki.');
@@ -6809,10 +6923,10 @@ async function CareMvpMutate(input) {const PatientClinicalOperationAccount=b;Pat
     let context = current && CareMvpContext(current.careContext);
     if (context && context.role !== 'plan') return PatientClinicalWriteValue(PatientClinicalOperationAccount,{ saved: false, reason: 'conflict', conflict: true });
     const prior = context && context.operations.find(function (operation) { return PatientClinicalWriteValue(PatientClinicalOperationAccount,operation.id === request.operationId); });
-    if (prior) return PatientClinicalWriteValue(PatientClinicalOperationAccount,prior.fingerprint === fingerprint ? Object.assign({ saved: true, reused: true, planId, plan: CareMvpView(current) }, prior.stepId ? { stepId: prior.stepId } : {}, prior.resultNoteId ? { resultNoteId: prior.resultNoteId } : {}) : { saved: false, reason: 'operation-mismatch', conflict: true });
-    if (context && context.causality && context.causality.seenOperationIds.indexOf(request.operationId) >= 0) return PatientClinicalWriteValue(PatientClinicalOperationAccount,{ saved: false, reason: 'operation-outcome-expired', needsRefresh: true, planId, plan: CareMvpView(current) });
+    if (prior) return PatientClinicalWriteValue(PatientClinicalOperationAccount,prior.fingerprint === fingerprint ? Object.assign({ saved: true, reused: true, planId, plan: await CareMvpNoteProjection(current, CareMvpView(current), assertSession) }, prior.stepId ? { stepId: prior.stepId } : {}, prior.resultNoteId ? { resultNoteId: prior.resultNoteId } : {}) : { saved: false, reason: 'operation-mismatch', conflict: true });
+    if (context && context.causality && context.causality.seenOperationIds.indexOf(request.operationId) >= 0) return PatientClinicalWriteValue(PatientClinicalOperationAccount,{ saved: false, reason: 'operation-outcome-expired', needsRefresh: true, planId, plan: await CareMvpNoteProjection(current, CareMvpView(current), assertSession) });
     if (request.action === 'create' ? !!raw : !raw || !context) return PatientClinicalWriteValue(PatientClinicalOperationAccount,{ saved: false, reason: raw ? 'conflict' : 'missing', conflict: !!raw });
-    if (raw && raw.rev !== request.baseRev) return PatientClinicalWriteValue(PatientClinicalOperationAccount,{ saved: false, reason: 'conflict', conflict: true, plan: CareMvpView(current) });
+    if (raw && raw.rev !== request.baseRev) return PatientClinicalWriteValue(PatientClinicalOperationAccount,{ saved: false, reason: 'conflict', conflict: true, plan: await CareMvpNoteProjection(current, CareMvpView(current), assertSession) });
     const patient = await adapter.getPatientForUser(account, request.patientId); assertSession();
     if (!patient) return PatientClinicalWriteValue(PatientClinicalOperationAccount,{ saved: false, reason: 'deleted' });
     if (!context) context = { version: 1, role: 'plan', status: 'active', goal: '', needsDecision: true, decisionDueDateISO: CareMvpToday(), steps: [], log: [], operations: [], closedAtISO: null, closeReason: '', closeText: '' };
@@ -6821,8 +6935,8 @@ async function CareMvpMutate(input) {const PatientClinicalOperationAccount=b;Pat
     const beforeContext = JSON.parse(JSON.stringify(context)), beforeTitle = current ? current.title : '', wasActive = context.status === 'active';
     const reviewSnapshot = request.action === 'acknowledgeMerge' ? CareMvpReview(context, beforeTitle) : null;
     const calendarOutcome = request.action === 'complete' && request.calendarOutcome === true;
-    if (context.status === 'closed' && !calendarOutcome && ['reopen', 'updateLinked', 'removeLinked', 'addNote', 'acknowledgeMerge'].indexOf(request.action) < 0) throw new Error('Wznów plan przed dodaniem lub zmianą kroków.');
-    if (context.steps.length >= 500 && ['addStep', 'linkEvent', 'wait'].indexOf(request.action) >= 0 || context.log.length >= 1990 && ['close','acknowledgeMerge'].indexOf(request.action)<0 || context.log.length >= 5000) throw new Error('Plan osiągnął limit wpisów. Zamknij go i utwórz kolejny plan.');
+    if (context.status === 'closed' && !calendarOutcome && ['reopen', 'updateLinked', 'removeLinked', 'addNote', 'acknowledgeMerge', 'removePlanNote'].indexOf(request.action) < 0) throw new Error('Wznów plan przed dodaniem lub zmianą kroków.');
+    if (context.steps.length >= 500 && ['addStep', 'linkEvent', 'wait'].indexOf(request.action) >= 0 || context.log.length >= 1990 && ['close','acknowledgeMerge','removePlanNote'].indexOf(request.action)<0 || context.log.length >= 5000) throw new Error('Plan osiągnął limit wpisów. Zamknij go i utwórz kolejny plan.');
     const prepared = new Map(), detached = new Map(), cache = new Map(), dirty = new Set(), removals = new Set(), readDependencies = [], omissionProof = (['updateLinked', 'acknowledgeMerge'].indexOf(request.action) >= 0 || request.restoreOmitted === true) ? CareMvpProof(context, assertSession, context.causality ? lineage.stamp : null) : null; let title = current ? current.title : '', stepId = null, resultNoteId = null;
     const read = async function (noteId) {
       if (cache.has(noteId)) return PatientClinicalWriteValue(PatientClinicalOperationAccount,cache.get(noteId));
@@ -6958,6 +7072,18 @@ async function CareMvpMutate(input) {const PatientClinicalOperationAccount=b;Pat
       } else if (!calendarFactOnly && (request.continuation === 'later' || !context.steps.some(function (step) { return PatientClinicalWriteValue(PatientClinicalOperationAccount,step.state === 'pending' || step.state === 'waiting'); }))) {
         context.needsDecision = true; context.decisionDueDateISO = requireDate(request.decisionDateISO || CareMvpToday()); appendLog('Dalsze postępowanie do ustalenia: ' + context.decisionDueDateISO + '.');
       }
+    } else if (request.action === 'removePlanNote') {
+      if (!CareMvpId(request.noteId) || !Number.isSafeInteger(request.linkedRev) || request.linkedRev < 0 || !/^[a-f0-9]{64}$/.test(request.readToken || '')) throw new Error('Otwórz aktualne ustalenie przed usunięciem.');
+      const evidence = await CareMvpNoteEvidence(context, request.patientId, assertSession), original = evidence.manual.get(request.noteId); assertSession();
+      if (!original || CareMvpNoteClinicalReference(context, request.noteId)) throw CareMvpActionError('CARE_NOTE_NOT_REMOVABLE', 'Ten wpis dokumentuje zmianę planu lub powiązany krok. Nie można go usunąć jako ręcznego ustalenia.');
+      if (evidence.removed.has(request.noteId)) return PatientClinicalWriteValue(PatientClinicalOperationAccount,{ saved: true, reused: true, planId, plan: await CareMvpNoteProjection(current, CareMvpView(current), assertSession) });
+      const linked = await read(request.noteId), tomb = await adapter.getPatientNoteTombstoneForUser(account, request.noteId); assertSession();
+      if (!linked.stored || linked.stored.rev !== request.linkedRev || !CareMvpManualNoteOriginal(linked.note, original, planId, request.patientId)
+          || request.readToken !== await CareMvpNoteReadToken(raw, linked.stored, assertSession)
+          || !await CareMvpRecordLive(adapter, account, linked.stored, patient, [], tomb, assertSession)) return PatientClinicalWriteValue(PatientClinicalOperationAccount,{ saved: false, reason: 'source-conflict', conflict: true, sourceNoteId: request.noteId });
+      let suffix = 0, marker;
+      do { marker = { dateISO: CareMvpToday(), text: JSON.stringify({ kind: 'care-plan-note-removal', version: 1, patientId: request.patientId, sequence: suffix++ }), noteId: request.noteId }; } while (context.log.some(function (entry) { return JSON.stringify(CareMvpCanonical(entry)) === JSON.stringify(CareMvpCanonical(marker)); }));
+      context.log.push(marker); removals.add(request.noteId);
     } else if (request.action === 'addNote') {
       const text = CareMvpText(request.text, 20000), dateISO = CareMvpFactDate(request.dateISO); if (!text) throw new Error('Wpisz treść ustalenia.');
       const noteId = 'care-note-' + request.operationId; await queue(noteId, { title: 'Ustalenie: ' + title, body: text, category: 'observation', clinicalDateISO: dateISO, careContext: { version: 1, role: 'note', planId } }); appendLog(text, noteId, dateISO);
@@ -7060,7 +7186,7 @@ async function CareMvpMutate(input) {const PatientClinicalOperationAccount=b;Pat
       if (marker) step.updatedBy = request.operationId;
       appendLog('Zmieniono powiązany wpis: ' + step.title + (marker ? ' (wpis ' + (context.log.length + 1) + ').' : '.'), marker);
     }
-    if (context.status === 'active' && !context.steps.some(function (step) { return PatientClinicalWriteValue(PatientClinicalOperationAccount,step.state === 'pending' || step.state === 'waiting'); })) {
+    if (request.action !== 'removePlanNote' && context.status === 'active' && !context.steps.some(function (step) { return PatientClinicalWriteValue(PatientClinicalOperationAccount,step.state === 'pending' || step.state === 'waiting'); })) {
       context.needsDecision = true; context.decisionDueDateISO = context.decisionDueDateISO || CareMvpToday();
     }
     for (const step of context.steps) {
@@ -7071,8 +7197,8 @@ async function CareMvpMutate(input) {const PatientClinicalOperationAccount=b;Pat
         noShowAtISO: null,
         careContext: { version: 1, role: 'step', planId, stepId: step.id, state:step.state } });
     }
-    const decisionId = 'care-decision-' + planId, decisionExisting = await read(decisionId);
-    if (context.needsDecision || decisionExisting.note) await queue(decisionId, { title: 'Ustalić dalsze postępowanie: ' + title, body: context.goal, category: 'reminder-task', dueDateISO: context.needsDecision && context.status === 'active' ? context.decisionDueDateISO : null,
+    const decisionId = 'care-decision-' + planId, decisionExisting = request.action === 'removePlanNote' ? { note: null } : await read(decisionId);
+    if (request.action !== 'removePlanNote' && (context.needsDecision || decisionExisting.note)) await queue(decisionId, { title: 'Ustalić dalsze postępowanie: ' + title, body: context.goal, category: 'reminder-task', dueDateISO: context.needsDecision && context.status === 'active' ? context.decisionDueDateISO : null,
       completedAtISO: null, noShowAtISO: null, careContext: { version: 1, role: 'decision', planId } });
     const operation = { id: request.operationId, fingerprint }; if (stepId) operation.stepId = stepId; if (resultNoteId) operation.resultNoteId = resultNoteId;
     context.operations.push(operation); context.operations = context.operations.slice(-100);
@@ -7090,13 +7216,14 @@ async function CareMvpMutate(input) {const PatientClinicalOperationAccount=b;Pat
       const note = Object.assign({}, original.stored, { bodyCipher, updatedAtISO: new Date().toISOString(), rev: (original.stored.rev || 0) + 1 });
       writes.push({ note, expectedRev: original.stored.rev || 0 });
     }
-    for(const noteId of removals){const original=cache.get(noteId);writes.push({note:{id:noteId,patientId:request.patientId},expectedRev:original.stored.rev||0,remove:true,deletedAtISO:new Date().toISOString()});}
-    const result = await adapter.commitCarePlanForUser(account, PatientClinicalWriteValue(account,{ parent, writes, readDependencies, expectedRev: raw ? raw.rev || 0 : null, assertSession })); assertSession();
+    for(const noteId of removals){const original=cache.get(noteId), now=new Date().toISOString(), write={note:{id:noteId,patientId:request.patientId},expectedRev:original.stored.rev||0,remove:true,deletedAtISO:request.action==='removePlanNote'&&original.stored.updatedAtISO>now?original.stored.updatedAtISO:now};if(request.action==='removePlanNote')write.expectedStored=CareMvpStoredCopy(original.stored);writes.push(write);}
+    const result = await adapter.commitCarePlanForUser(account, PatientClinicalWriteValue(account,{ parent, writes, readDependencies, expectedRev: raw ? raw.rev || 0 : null, expectedStored: request.action === 'removePlanNote' ? CareMvpStoredCopy(raw) : null, assertSession })); assertSession();
     if (!result.saved) return PatientClinicalWriteValue(PatientClinicalOperationAccount,result);
     [parent].concat(writes.filter(function(write){return PatientClinicalWriteValue(PatientClinicalOperationAccount,!write.remove);}).map(function (write) { return PatientClinicalWriteValue(PatientClinicalOperationAccount,write.note); })).forEach(function (note) { qr({ id: note.id, patientId: note.patientId, action: 'save' }); });
     writes.filter(function(write){return PatientClinicalWriteValue(PatientClinicalOperationAccount,write.remove);}).forEach(function(write){qr({id:write.note.id,patientId:request.patientId,action:'delete',deletedAtISO:write.deletedAtISO});});
     try { if (yt && v.VildaSync && typeof v.VildaSync.syncPush === 'function') Promise.resolve(v.VildaSync.syncPush()).catch(function () {}); } catch(PatientClinicalCaught) {PatientClinicalRethrow(PatientClinicalCaught);}
-    return PatientClinicalWriteValue(PatientClinicalOperationAccount,{ saved: true, planId, plan: CareMvpView(await Ft(parent)), stepId, resultNoteId });
+    const savedNote = await Ft(parent); assertSession();
+    return PatientClinicalWriteValue(PatientClinicalOperationAccount,{ saved: true, planId, plan: await CareMvpNoteProjection(savedNote, CareMvpView(savedNote), assertSession), stepId, resultNoteId });
   }));
 }
 
@@ -8154,4 +8281,4 @@ function QrContinuityRestoreSeed(record, ephemeral) {
   } catch (error) { kn('invalid-qr-session'); throw error; }
   finally { Zt(seed); }
 }
-const $s={__vildaVault:!0,VERSION:sa,STEP:ia,SCHEMA_VERSION:at,REGISTRY_DB_NAME:Wn,USER_DB_PREFIX:yn,DEFAULT_IDLE_LOCK_MS:Zn,CLOUD_ONLY_IDLE_LOCK_MS:da,MIN_PASSWORD_LENGTH:Yt,PASSWORD_REQUIRED_VARIETY_TYPES:Be,validatePasswordStrength:Ke,generateStrongPassword:fa,setStorageAdapter:te,createInMemoryAdapter:Ze,listUsers:Ee,isUnlocked:T,getCurrentUser:Ma,getStatus:Ua,getLoginThrottleStatus:ma,tryRestoreSession:_a,createUser:Ca,unlockUser:Fa,unlockUserWithRecoveryKey:ja,lock:kn,changePassword:Ra,resetPasswordWhileUnlocked:Da,regenerateRecoveryKey:La,rotateSyncIdentity:CareTplRotateIdentity,removeUser:PatientCheckpointRemoveUser,listPatients:Xe,listExternalPatients:Tn,findSameNamePatients:Ga,migratePatientNamesSplit:Ja,saveExternalPatient:pr,countLegacyExternalNotes:Qa,legacyExternalSummary:Xa,migrateExternalNotesToRegistry:qa,mergeExternalIntoPatient:$a,mergePatients:Bsc0,promoteExternalToBase:to,savePatient:_e,setSaveConflictResolver:Bb8,setPatientIdentityResolver:Bz2,getPatient:ct,getLatestSnapshot:hr,restoreSnapshotAsNew:ro,setSnapshotPinned:ao,pruneSnapshotsForPatient:wr,updateSnapshotPayload:$e,deleteSnapshot:Ar,moveSnapshotToTrash:Bkz_doKosza,listTrashedSnapshots:Bkz_lista,restoreTrashedSnapshot:Bkz_przywroc,updateMeasurementRow:so,deleteMeasurementRow:io,removePatient:_n,getCurrentUserStats:co,exportPatientEnvelope:ts,previewPatientEnvelope:es,importPatientFromEnvelope:ns,exportVaultBackup:rs,restoreVaultBackup:as,importLegacyJsonPatient:fs,looksLikeLegacyPayload:Wr,shortHashOfPatientId:cn,onPatientSaved:ys,onPatientDeleted:hs,onPasskeyChanged:As,onCredentialChanged:Qe1,onPreferenceChanged:Os,listNotes:uo,getNote:lo,saveNote:po,removeNote:fo,onNoteChanged:gs,NOTE_CATEGORIES:kr,sanitizeNoteText:Z,CARE_TEMPLATE_BACKUP_MAX_BYTES:CareTplBackupMax,exportCarePlanTemplateLibrary:CareTplExport,importCarePlanTemplateLibrary:CareTplImport,getVaultBackupScope:CareTplBackupScope,getCarePlanTemplateCapability:CareTplCapability,listCarePlanTemplates:CareTplList,getCarePlanTemplate:CareTplGet,listCarePlanTemplateRevisions:CareTplRevisions,saveCarePlanTemplateRevision:function(t){return CareTplMutate('save',t)},setCarePlanTemplateArchived:function(t){return CareTplMutate('archive',t)},resolveCarePlanTemplateConflict:function(t){return CareTplMutate('resolve',t)},getCarePlanTemplateOperation:CareTplOperation,getCarePlanTemplateDraftFromPlan:CareTplDraftFromPlan,onCarePlanTemplateChanged:CareTplOnChanged,hasCareTemplateLibraryForCurrentUser:CareTplPresent,captureSyncOperationSession:CareTplCaptureNetworkSession,createPatientClinicalCheckpoint:PatientCheckpointCreate,inspectPatientAuthority:PatientClinicalInspect,inspectPatientAuthorityRecovery:PatientClinicalInspectRecovery,selectPatientClinicalRoute:PatientClinicalSelect,assertSyncOperationSession:CareTplAssertNetworkSession,captureCareTemplateSession:CareTplCapture,assertCareTemplateSession:function(t){CareTplAssert(t);return true;},getCareTemplateSyncState:CareTplSyncState,bindCareTemplateEpoch:CareTplBind,prepareCareTemplatePending:CareTplPending,applyCareTemplateEvents:CareTplApply,ackCareTemplateEvents:CareTplAck,mutateCarePlan:CareMvpMutate,listCarePlans:CareMvpList,getCarePlan:CareMvpGet,getCarePlanView:CareMvpGetView,listCarePlanResultCandidates:CareMvpResultCandidates,getCarePlanResultCandidate:CareMvpResultCandidate,getCarePlanResultReference:CareMvpResultReference,getCarePlanStepOmissions:CareMvpStepOmissions,getCarePlanWriteCapability:CareMvpWriteCapability,getCarePlanSyncReview:CareMvpReview,getCarePlanCalendarRelations:CareMvpCalendarRelations,getCarePlanCalendarRelation:CareMvpCalendarRelation,needsCarePlanSyncRepair:CareMvpNeedsSyncRepair,saveReminderOutcome:RemB22SaveOutcome,savePatientNote:ie,savePatientNoteOnce:VildaSavePatientNoteOnce,updateExistingPatientNote:VildaUpdateExistingPatientNote,getPatientNote:Fe,listPatientNotesForPatient:Fn,sanitizeClinicalDateISO:Ct,sanitizeMedication:At,sanitizeLabResult:kt,listMedicationNamesForCurrentUser:Io,listLabTestNamesForCurrentUser:Oo,listAllPatientNotes:ht,removePatientNote:$o,removeExistingPatientNote:VildaRemoveExistingPatientNote,onPatientNoteChanged:ms,PATIENT_NOTE_CATEGORIES:Nr,CLINICAL_NOTE_CATEGORIES:Er,completePatientNote:ko,uncompletePatientNote:No,noShowPatientNote:Eo,snoozePatientNote:To,listPatientNotesDueByDate:_o,listPatientNotesInRange:Mo,listReminderHistory:RemA8History,savePatientList:on,listPatientLists:Rn,getPatientList:sn,deletePatientList:Lo,addPatientToList:Wo,removePatientFromList:Zo,evaluatePatientListRule:De,getPatientListMembers:Vo,previewPatientListRule:Yo,patientListRuleHasUnknownFields:Ro,listPatientListsForPatient:Ho,onPatientListChanged:Do,PATIENT_LIST_GH_PROGRAMS:Dr,PATIENT_LIST_OBESITY_DRUGS:Lr,listProcedureWaitlist:Xo,getWaitlistSchedules:Br,setWaitlistSchedule:Go,getWaitlistLists:xn,addWaitlistList:Jo,removeWaitlistList:Qo,searchPatientNotes:So,EXTERNAL_PATIENT_ID:jt,ACTIVITY_PATIENT_ID:se,listPatientNotesBySeries:bo,listPatientTimelineEvents:qo,_extractSnapshotMeasurements:Bn,listPatientLabSeries:Po,listPatientTreatmentPeriods:Ao,_extractMeasurementHistory:Bn,_generateObservations:Vr,ageMonthsFromForm:Bag,sanitizeDobISO:ut,normalizePatientName:Ne,calcAgeFromDOB:En,resolvePatientAge:Ba,formatDobForDisplay:Ka,parseDobFromDisplay:Va,startIdleTimer:ea,stopIdleTimer:Hn,resetIdleTimer:ks,setIdleConfigProvider:Na,refreshPersistedSession:Ta,onUnlock:Es,onLock:Ns,previewVaultBackupMerge:os,mergeVaultBackup:ss,exportSyncCode:Bs,importSyncCode:Ks,getSyncMaterial:Hr,exportSyncPayload:is,mergeSyncPayload:Le,getSyncStaleness:Gm,buildNoteDelta:cs,buildTombstoneDelta:us,buildNoteTombstoneDelta:ls,buildLibraryNoteDelta:Qb0,buildLibraryNoteTombstoneDelta:Qb1,buildPatientDelta:ds,applyEncryptedDelta:ps,encryptPayloadForCurrentUser:V,decryptPayloadForCurrentUser:G,isPrfSupported:Ts,registerPasskey:_s,registerPasskeyForRoaming:Cs,unlockWithPasskey:Fs,unlockWithPasskeyConditional:js,unlockWithPasskeyEphemeral:Rs,unlockWithPasskeyAndPersist:Ds,completeQRLoginEphemeral:QrContinuityCompleteEphemeral,listPasskeys:zs,removePasskey:xs,adoptSyncedPasskey:Ms,listAdoptablePasskeys:Us,initiateQRLogin:QrContinuityInitiate,pollQRLoginStatus:QrContinuityPoll,completeQRLogin:QrContinuityComplete,approveQRLogin:QrContinuityApprove,setEphemeralMode:Pe,isEphemeralMode:ka,setStorageAdapter:te,getStorageMode:pn,setStorageMode:Js,getCurrentStorageMode:Qs,getCurrentStorageModeSync:Xs,isCloudOnlyMode:qs,isCloudOnlyAdapterActive:Pa,canWarmStartCloudOnly:Aa,isPersistentCloudCacheEnabled:Je,STORAGE_MODE_LOCAL:gt,STORAGE_MODE_CLOUD_ONLY:Se,_eventLog:Bev_EKSPORT};v.VildaVault=$s})(typeof window<"u"?window:typeof globalThis<"u"?globalThis:null);
+const $s={__vildaVault:!0,VERSION:sa,STEP:ia,SCHEMA_VERSION:at,REGISTRY_DB_NAME:Wn,USER_DB_PREFIX:yn,DEFAULT_IDLE_LOCK_MS:Zn,CLOUD_ONLY_IDLE_LOCK_MS:da,MIN_PASSWORD_LENGTH:Yt,PASSWORD_REQUIRED_VARIETY_TYPES:Be,validatePasswordStrength:Ke,generateStrongPassword:fa,setStorageAdapter:te,createInMemoryAdapter:Ze,listUsers:Ee,isUnlocked:T,getCurrentUser:Ma,getStatus:Ua,getLoginThrottleStatus:ma,tryRestoreSession:_a,createUser:Ca,unlockUser:Fa,unlockUserWithRecoveryKey:ja,lock:kn,changePassword:Ra,resetPasswordWhileUnlocked:Da,regenerateRecoveryKey:La,rotateSyncIdentity:CareTplRotateIdentity,removeUser:PatientCheckpointRemoveUser,listPatients:Xe,listExternalPatients:Tn,findSameNamePatients:Ga,migratePatientNamesSplit:Ja,saveExternalPatient:pr,countLegacyExternalNotes:Qa,legacyExternalSummary:Xa,migrateExternalNotesToRegistry:qa,mergeExternalIntoPatient:$a,mergePatients:Bsc0,promoteExternalToBase:to,savePatient:_e,setSaveConflictResolver:Bb8,setPatientIdentityResolver:Bz2,getPatient:ct,getLatestSnapshot:hr,restoreSnapshotAsNew:ro,setSnapshotPinned:ao,pruneSnapshotsForPatient:wr,updateSnapshotPayload:$e,deleteSnapshot:Ar,moveSnapshotToTrash:Bkz_doKosza,listTrashedSnapshots:Bkz_lista,restoreTrashedSnapshot:Bkz_przywroc,updateMeasurementRow:so,deleteMeasurementRow:io,removePatient:_n,getCurrentUserStats:co,exportPatientEnvelope:ts,previewPatientEnvelope:es,importPatientFromEnvelope:ns,exportVaultBackup:rs,restoreVaultBackup:as,importLegacyJsonPatient:fs,looksLikeLegacyPayload:Wr,shortHashOfPatientId:cn,onPatientSaved:ys,onPatientDeleted:hs,onPasskeyChanged:As,onCredentialChanged:Qe1,onPreferenceChanged:Os,listNotes:uo,getNote:lo,saveNote:po,removeNote:fo,onNoteChanged:gs,NOTE_CATEGORIES:kr,sanitizeNoteText:Z,CARE_TEMPLATE_BACKUP_MAX_BYTES:CareTplBackupMax,exportCarePlanTemplateLibrary:CareTplExport,importCarePlanTemplateLibrary:CareTplImport,getVaultBackupScope:CareTplBackupScope,getCarePlanTemplateCapability:CareTplCapability,listCarePlanTemplates:CareTplList,getCarePlanTemplate:CareTplGet,listCarePlanTemplateRevisions:CareTplRevisions,saveCarePlanTemplateRevision:function(t){return CareTplMutate('save',t)},setCarePlanTemplateArchived:function(t){return CareTplMutate('archive',t)},resolveCarePlanTemplateConflict:function(t){return CareTplMutate('resolve',t)},getCarePlanTemplateOperation:CareTplOperation,getCarePlanTemplateDraftFromPlan:CareTplDraftFromPlan,onCarePlanTemplateChanged:CareTplOnChanged,hasCareTemplateLibraryForCurrentUser:CareTplPresent,captureSyncOperationSession:CareTplCaptureNetworkSession,createPatientClinicalCheckpoint:PatientCheckpointCreate,inspectPatientAuthority:PatientClinicalInspect,inspectPatientAuthorityRecovery:PatientClinicalInspectRecovery,selectPatientClinicalRoute:PatientClinicalSelect,assertSyncOperationSession:CareTplAssertNetworkSession,captureCareTemplateSession:CareTplCapture,assertCareTemplateSession:function(t){CareTplAssert(t);return true;},getCareTemplateSyncState:CareTplSyncState,bindCareTemplateEpoch:CareTplBind,prepareCareTemplatePending:CareTplPending,applyCareTemplateEvents:CareTplApply,ackCareTemplateEvents:CareTplAck,mutateCarePlan:CareMvpMutate,listCarePlans:CareMvpList,getCarePlan:CareMvpGet,getCarePlanView:CareMvpGetView,listCarePlanResultCandidates:CareMvpResultCandidates,getCarePlanResultCandidate:CareMvpResultCandidate,getCarePlanResultReference:CareMvpResultReference,getCarePlanStepOmissions:CareMvpStepOmissions,getCarePlanNoteEntries:CareMvpNoteEntries,getCarePlanWriteCapability:CareMvpWriteCapability,getCarePlanSyncReview:CareMvpReview,getCarePlanCalendarRelations:CareMvpCalendarRelations,getCarePlanCalendarRelation:CareMvpCalendarRelation,needsCarePlanSyncRepair:CareMvpNeedsSyncRepair,saveReminderOutcome:RemB22SaveOutcome,savePatientNote:ie,savePatientNoteOnce:VildaSavePatientNoteOnce,updateExistingPatientNote:VildaUpdateExistingPatientNote,getPatientNote:Fe,listPatientNotesForPatient:Fn,sanitizeClinicalDateISO:Ct,sanitizeMedication:At,sanitizeLabResult:kt,listMedicationNamesForCurrentUser:Io,listLabTestNamesForCurrentUser:Oo,listAllPatientNotes:ht,removePatientNote:$o,removeExistingPatientNote:VildaRemoveExistingPatientNote,onPatientNoteChanged:ms,PATIENT_NOTE_CATEGORIES:Nr,CLINICAL_NOTE_CATEGORIES:Er,completePatientNote:ko,uncompletePatientNote:No,noShowPatientNote:Eo,snoozePatientNote:To,listPatientNotesDueByDate:_o,listPatientNotesInRange:Mo,listReminderHistory:RemA8History,savePatientList:on,listPatientLists:Rn,getPatientList:sn,deletePatientList:Lo,addPatientToList:Wo,removePatientFromList:Zo,evaluatePatientListRule:De,getPatientListMembers:Vo,previewPatientListRule:Yo,patientListRuleHasUnknownFields:Ro,listPatientListsForPatient:Ho,onPatientListChanged:Do,PATIENT_LIST_GH_PROGRAMS:Dr,PATIENT_LIST_OBESITY_DRUGS:Lr,listProcedureWaitlist:Xo,getWaitlistSchedules:Br,setWaitlistSchedule:Go,getWaitlistLists:xn,addWaitlistList:Jo,removeWaitlistList:Qo,searchPatientNotes:So,EXTERNAL_PATIENT_ID:jt,ACTIVITY_PATIENT_ID:se,listPatientNotesBySeries:bo,listPatientTimelineEvents:qo,_extractSnapshotMeasurements:Bn,listPatientLabSeries:Po,listPatientTreatmentPeriods:Ao,_extractMeasurementHistory:Bn,_generateObservations:Vr,ageMonthsFromForm:Bag,sanitizeDobISO:ut,normalizePatientName:Ne,calcAgeFromDOB:En,resolvePatientAge:Ba,formatDobForDisplay:Ka,parseDobFromDisplay:Va,startIdleTimer:ea,stopIdleTimer:Hn,resetIdleTimer:ks,setIdleConfigProvider:Na,refreshPersistedSession:Ta,onUnlock:Es,onLock:Ns,previewVaultBackupMerge:os,mergeVaultBackup:ss,exportSyncCode:Bs,importSyncCode:Ks,getSyncMaterial:Hr,exportSyncPayload:is,mergeSyncPayload:Le,getSyncStaleness:Gm,buildNoteDelta:cs,buildTombstoneDelta:us,buildNoteTombstoneDelta:ls,buildLibraryNoteDelta:Qb0,buildLibraryNoteTombstoneDelta:Qb1,buildPatientDelta:ds,applyEncryptedDelta:ps,encryptPayloadForCurrentUser:V,decryptPayloadForCurrentUser:G,isPrfSupported:Ts,registerPasskey:_s,registerPasskeyForRoaming:Cs,unlockWithPasskey:Fs,unlockWithPasskeyConditional:js,unlockWithPasskeyEphemeral:Rs,unlockWithPasskeyAndPersist:Ds,completeQRLoginEphemeral:QrContinuityCompleteEphemeral,listPasskeys:zs,removePasskey:xs,adoptSyncedPasskey:Ms,listAdoptablePasskeys:Us,initiateQRLogin:QrContinuityInitiate,pollQRLoginStatus:QrContinuityPoll,completeQRLogin:QrContinuityComplete,approveQRLogin:QrContinuityApprove,setEphemeralMode:Pe,isEphemeralMode:ka,setStorageAdapter:te,getStorageMode:pn,setStorageMode:Js,getCurrentStorageMode:Qs,getCurrentStorageModeSync:Xs,isCloudOnlyMode:qs,isCloudOnlyAdapterActive:Pa,canWarmStartCloudOnly:Aa,isPersistentCloudCacheEnabled:Je,STORAGE_MODE_LOCAL:gt,STORAGE_MODE_CLOUD_ONLY:Se,_eventLog:Bev_EKSPORT};v.VildaVault=$s})(typeof window<"u"?window:typeof globalThis<"u"?globalThis:null);
