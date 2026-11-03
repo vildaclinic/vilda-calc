@@ -20440,7 +20440,7 @@ a lekarz poprawia jedno z miejsc. Wartość dni spoza 0–6 w rekordzie nie jest
 
 **Wersje.** `sga_birth_module.js?v=10→11`; SW 1.1.168 → **1.1.169**.
 
-## Dziennik zdarzeń: koperta, buildery i status zastosowania — uśpione (P-DZIENNIK-ZDARZEN, E2-PR2a, SW 1.1.448, `vilda_vault.js` 246, 2026-11-03)
+## Dziennik zdarzeń: koperta, buildery i status zastosowania — uśpione (P-DZIENNIK-ZDARZEN, E2-PR2a, SW 1.1.449, `vilda_vault.js` 247, 2026-11-03)
 
 **Zmiana kliniczna: NIE** — wzory, progi, jednostki, interpretacje, zapis, scalanie, format kopii i synchronizacja bez
 zmian. Wpis opisuje nowy, uśpiony kod etapu 2 synchronizacji przyrostowej: kod produkcyjny go nie woła, na urządzeniu
@@ -20811,7 +20811,7 @@ literał na wynik zgodny.
 Przebiegi `E2_AB_ZIARNA=40` (profil podstawowy) i `E2_AB_ZIARNA=20` (profil pełny) są ręczne, do opisu PR. W CI idą
 ziarna domyślne: 8 w profilu podstawowym i 2 w pełnym.
 
-**Czerwone na bazie** (kopia `origin/audyt` `0bd1380d` z nowymi testami; `vilda_vault.js` i uprząż są tam takie same jak w `ca143ce9`, bazie tego PR): 164 testy — 149 czerwonych, 14 zielonych,
+**Czerwone na bazie** (kopia `origin/audyt` `0bd1380d` z nowymi testami; ten sam wynik powtórzony na `7c4517b7`, bazie tego PR po vildaclinic/vilda-calc#867): 164 testy — 149 czerwonych, 14 zielonych,
 1 pominięty.
 - Czerwone, bo `VildaVault._eventLog` nie istnieje: buildery 32/32, status 18/18, uśpienie 7/10, A ≡ B 92/104.
 - Zielone z natury, bez nowego API:
@@ -20843,7 +20843,7 @@ komentarze bez znaków diakrytycznych, plik +29 554 B.
 
 W eksporcie `$s` jest jeden nowy klucz na końcu: `_eventLog:Bev_EKSPORT`.
 
-**Wersje.** `vilda_vault.js?v=245 → 246`; `vilda_chrome.js?v=224 → 225` i `vilda_session_bridge.js?v=147 → 148` (tylko odnośnik do `vilda_vault.js`); SW 1.1.447 → **1.1.448**.
+**Wersje.** `vilda_vault.js?v=246 → 247`; `vilda_chrome.js?v=225 → 226` i `vilda_session_bridge.js?v=148 → 149` (tylko odnośnik do `vilda_vault.js`); SW 1.1.448 → **1.1.449**.
 
 ## Odpytywanie co 60 s przy żywym połączeniu na żywo i dłuższy odstęp ponownego łączenia (P-SYNC-ODPYTYWANIE-WS, E2-PR1b, SW 1.1.442, `vilda_sync_integration.js` 56, `vilda_realtime.js` 9, `vilda_sync.js` 47, 2026-11-02)
 

@@ -206,7 +206,9 @@ describe('care-template protected transport in the existing sync cycle', () => {
   it('initializes only a doctor save intent, binds the verified epoch and then posts persisted cipher', async () => {
     const d = await device({ localEpoch: null, initialized: false });
     expect(await d.sync.syncTemplateLibrary()).toMatchObject({ state: 'ready', epoch: 1, pending: false });
-    expect(d.calls.map(call => call.path.split('/').at(-1))).toEqual(['state', 'initialize', 'changes', 'events']);
+    expect(d.calls.map(call => call.path.split('/').at(-1))).toEqual(['state', 'initialize', 'events']);
+    expect(d.vault.applyCareTemplateEvents).not.toHaveBeenCalled();
+    expect(d.vault.ackCareTemplateEvents).toHaveBeenCalledTimes(1);
     expect(d.vault.bindCareTemplateEpoch).toHaveBeenCalledWith(expect.anything(), { epoch: 1, floorSeq: 0, slotId: SLOT });
   });
 
@@ -217,7 +219,9 @@ describe('care-template protected transport in the existing sync cycle', () => {
         { ...receipt(), initialized: false, epoch: 0, error: { code: 'identity_required' } }); }
     } });
     await d.sync.syncTemplateLibrary();
-    expect(d.calls.map(call => call.path.split('/').at(-1))).toEqual(['state', 'register-identity', 'state', 'initialize', 'changes', 'events']);
+    expect(d.calls.map(call => call.path.split('/').at(-1))).toEqual(['state', 'register-identity', 'state', 'initialize', 'events']);
+    expect(d.vault.applyCareTemplateEvents).not.toHaveBeenCalled();
+    expect(d.vault.ackCareTemplateEvents).toHaveBeenCalledTimes(1);
     const registration = d.calls.find(call => call.path.endsWith('/register-identity'));
     expect(registration.body).toBeUndefined();
     expect(registration.headers['X-Auth-Token-Hash']).toBe(Buffer.from(await crypto.subtle.digest('SHA-256',
@@ -270,14 +274,20 @@ describe('care-template protected transport in the existing sync cycle', () => {
 
   for (const kind of ['gap', 'empty-head', 'false-more']) it('does not advance the library cursor for malformed ' + kind + ' pages', async () => {
     const d = await device({ intercept: async ({ path, receipt, server }) => {
+      if (path.endsWith('/template-library/state')) { server.headSeq = 2; return response(200, receipt()); }
       if (!path.endsWith('/template-library/changes')) return null;
-      server.headSeq = 2;
-      return response(200, receipt({ events: kind === 'empty-head' ? [] : [{ ...wire('fictional-remote'), seq: 2, digest: 'a'.repeat(64) }],
+      const last = { ...wire('fictional-remote-2'), seq: 2, digest: 'a'.repeat(64) };
+      const events = kind === 'empty-head' ? [] : kind === 'gap' ? [last] : [
+        { ...wire('fictional-remote-1'), seq: 1, digest: 'a'.repeat(64) }, last,
+      ];
+      return response(200, receipt({ events,
         cursor: kind === 'empty-head' ? 0 : 2, hasMore: kind === 'false-more' }));
     } });
     await expect(d.sync.syncTemplateLibrary()).rejects.toMatchObject({ code: 'CARE_TEMPLATE_INVALID_PAGE' });
+    expect(d.calls.map(call => call.path.split('/').at(-1))).toEqual(['state', 'changes']);
+    expect(new URL(d.calls[1].url).searchParams.get('since')).toBe('0');
     expect(d.vault.applyCareTemplateEvents).not.toHaveBeenCalled(); expect(d.local.cursor).toBe(0);
-    expect(d.vault.ackCareTemplateEvents).not.toHaveBeenCalled();
+    expect(d.vault.ackCareTemplateEvents).not.toHaveBeenCalled(); expect(d.pending).toHaveLength(1);
   });
 
   it('rejects a delayed old-account ACK without committing or publishing it in the next account', async () => {
@@ -439,12 +449,15 @@ describe('typed identity, retained history and truthful pending state', () => {
 
   it('rejects an undeclared floor jump instead of acknowledging history it never received', async () => {
     const d = await device({ intercept: async ({ path, receipt, server }) => {
+      if (path.endsWith('/template-library/state')) { server.headSeq = 2; return response(200, receipt()); }
       if (!path.endsWith('/template-library/changes')) return null;
       server.floorSeq = 2; server.headSeq = 2;
       return response(200, receipt({ events: [], cursor: 2, hasMore: false }));
     } });
     await expect(d.sync.syncTemplateLibrary()).rejects.toMatchObject({ code: 'CARE_TEMPLATE_INVALID_PAGE' });
+    expect(d.calls.map(call => call.path.split('/').at(-1))).toEqual(['state', 'changes']);
     expect(d.local.cursor).toBe(0); expect(d.vault.applyCareTemplateEvents).not.toHaveBeenCalled();
+    expect(d.vault.ackCareTemplateEvents).not.toHaveBeenCalled(); expect(d.pending).toHaveLength(1);
   });
 
   it('rejects a truncated page whose head goes backwards from the verified state', async () => {
@@ -467,12 +480,12 @@ describe('typed identity, retained history and truthful pending state', () => {
 });
 
 describe('whole-body request deadlines and bounded parsing', () => {
-  it('a stalled ACK body times out with the original pending operation intact, cleans its deadline and ignores a late body', async () => {
+  it('cleans a stalled ACK deadline, ignores its late body and retries the unchanged operation only after the cooldown', async () => {
     vi.useFakeTimers();
     const late = deferred(), cancel = vi.fn(async () => {}), release = vi.fn();
     let awaitingBody = false, signal;
     const d = await device({ intercept: async ({ path, init }) => {
-      if (!path.endsWith('/template-library/events')) return null;
+      if (!path.endsWith('/template-library/events') || awaitingBody) return null;
       signal = init.signal; awaitingBody = true;
       return { status: 200, ok: true, headers: new Headers(), body: { getReader: () => ({
         read: () => late.promise, cancel, releaseLock: release,
@@ -481,12 +494,13 @@ describe('whole-body request deadlines and bounded parsing', () => {
     const before = JSON.stringify(d.pending);
     const flight = d.sync.syncTemplateLibrary(); flight.catch(() => {});
     await vi.waitFor(() => expect(awaitingBody).toBe(true));
-    await vi.advanceTimersByTimeAsync(30001);
+    await vi.advanceTimersToNextTimerAsync();
     await expect(flight).rejects.toMatchObject({ code: 'CARE_TEMPLATE_TIMEOUT' });
     expect(JSON.stringify(d.pending)).toBe(before);
     expect(d.vault.ackCareTemplateEvents).not.toHaveBeenCalled();
     expect(signal.aborted).toBe(true); expect(cancel).toHaveBeenCalled(); expect(release).toHaveBeenCalled();
-    expect(vi.getTimerCount()).toBe(0);
+    expect(vi.getTimerCount()).toBe(1); // Only the scheduled retry remains; the request deadline was cleared.
+    const failedCalls = d.calls.length;
     late.resolve({ done: false, value: new TextEncoder().encode(JSON.stringify(d.receipt({
       stored: true, headSeq: 1, accepted: [],
     }))) });
@@ -494,6 +508,17 @@ describe('whole-body request deadlines and bounded parsing', () => {
     expect(d.vault.ackCareTemplateEvents).not.toHaveBeenCalled();
     expect(d.sync.getTemplateLibrarySyncStatus()).toMatchObject({ state: 'error', pending: true,
       error: { code: 'CARE_TEMPLATE_TIMEOUT' } });
+    await vi.advanceTimersByTimeAsync(14999);
+    expect(d.calls).toHaveLength(failedCalls);
+    expect(d.vault.ackCareTemplateEvents).not.toHaveBeenCalled();
+    expect(JSON.stringify(d.pending)).toBe(before);
+    await vi.advanceTimersByTimeAsync(1);
+    await vi.waitFor(() => expect(d.vault.ackCareTemplateEvents).toHaveBeenCalledTimes(1));
+    const posts = d.calls.filter(call => call.path.endsWith('/template-library/events'));
+    expect(posts).toHaveLength(2); expect(posts[1].body).toEqual(posts[0].body);
+    expect(d.pending).toEqual([]);
+    expect(d.sync.getTemplateLibrarySyncStatus()).toMatchObject({ state: 'ready', pending: false });
+    expect(vi.getTimerCount()).toBe(0);
   });
 
   it('stops an oversized streaming response before decoding, advancing cursors or acknowledging operations', async () => {
@@ -535,19 +560,37 @@ describe('protected library continuity after clinical authentication suspension'
     // The initial coalesced phase has finished. A later doctor save must not
     // depend on the clinical scheduler resuming its rejected credentials.
     await vi.waitFor(() => expect(d.sync.getTemplateLibrarySyncStatus().state).toBe('ready'));
+    await vi.advanceTimersByTimeAsync(0);
     const later = wire('fictional-after-legacy-auth-failure');
+    const localWriteAt = Date.now(), pollDueAt = localWriteAt + 15000;
     d.pending.push(later); d.notify('local');
     await vi.waitFor(() => expect(d.vault.ackCareTemplateEvents).toHaveBeenCalledTimes(2));
     const posts = d.calls.filter(call => call.path.endsWith('/template-library/events'));
     expect(posts[1].body.events).toEqual([later]);
 
+    const stateCalls = () => d.calls.filter(call => call.path.endsWith('/template-library/state')).length;
+    const afterLocalSave = stateCalls();
     await d.appendRemote('fictional-remote-from-existing-poll');
     await vi.advanceTimersByTimeAsync(10001);
+    expect(stateCalls()).toBe(afterLocalSave);
+    expect(d.changes.some(page => page.events.some(event => event.eid === 'fictional-remote-from-existing-poll'))).toBe(false);
+    await vi.advanceTimersByTimeAsync(pollDueAt - 1 - Date.now());
+    expect(stateCalls()).toBe(afterLocalSave);
+    await vi.advanceTimersByTimeAsync(1);
     await vi.waitFor(() => expect(d.changes.some(page => page.events.some(event => event.eid === 'fictional-remote-from-existing-poll'))).toBe(true));
+    expect(stateCalls()).toBe(afterLocalSave + 1);
 
+    const afterAutomaticPoll = stateCalls();
     await d.appendRemote('fictional-remote-from-existing-focus');
     d.emitWindow('focus');
+    await vi.advanceTimersByTimeAsync(0);
+    expect(stateCalls()).toBe(afterAutomaticPoll);
+    expect(d.changes.some(page => page.events.some(event => event.eid === 'fictional-remote-from-existing-focus'))).toBe(false);
+    await vi.advanceTimersByTimeAsync(pollDueAt + 14999 - Date.now());
+    expect(stateCalls()).toBe(afterAutomaticPoll);
+    await vi.advanceTimersByTimeAsync(1);
     await vi.waitFor(() => expect(d.changes.some(page => page.events.some(event => event.eid === 'fictional-remote-from-existing-focus'))).toBe(true));
+    expect(stateCalls()).toBe(afterAutomaticPoll + 1);
     expect(d.local.cursor).toBe(4);
     expect(d.pending).toEqual([]);
     expect(automaticPull).toHaveBeenCalledTimes(1);
@@ -564,13 +607,20 @@ describe('verified bootstrap of an imported wire-bound generation', () => {
     await d.sync.syncTemplateLibrary();
     expect(d.vault.bindCareTemplateEpoch).toHaveBeenCalledTimes(1);
     expect(d.vault.bindCareTemplateEpoch).toHaveBeenCalledWith(expect.anything(), { epoch: 2, floorSeq: 7, slotId: SLOT });
-    const firstPage = d.calls.find(call => call.path.endsWith('/template-library/changes'));
-    expect(new URL(firstPage.url).searchParams.get('since')).toBe('7');
+    expect(d.calls.map(call => call.path.split('/').at(-1))).toEqual(['state', 'events']);
+    expect(d.vault.applyCareTemplateEvents).not.toHaveBeenCalled();
+    expect(d.local.cursor).toBe(7);
     const post = d.calls.find(call => call.path.endsWith('/template-library/events'));
     expect(JSON.stringify(post.body.events)).toBe(before);
     expect(post.body.epoch).toBe(2);
     expect(d.local.needsBootstrap).toBe(false);
     await d.sync.syncTemplateLibrary();
+    const pages = d.calls.filter(call => call.path.endsWith('/template-library/changes'));
+    expect(pages).toHaveLength(1);
+    expect(new URL(pages[0].url).searchParams.get('since')).toBe('7');
+    expect(d.vault.applyCareTemplateEvents).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({
+      epoch: 2, expectedCursor: 7, cursor: 8, events: [expect.objectContaining({ eid: post.body.events[0].eid, seq: 8 })],
+    }));
     expect(d.vault.bindCareTemplateEpoch).toHaveBeenCalledTimes(1);
     expect(d.local.cursor).toBe(8);
   });

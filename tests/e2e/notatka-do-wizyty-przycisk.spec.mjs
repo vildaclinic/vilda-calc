@@ -83,8 +83,24 @@ async function dodajPrzyPomiarze(page) {
   await otworzKarte(page);
   await page.locator('.vilda-patient-tab[data-tab="timeline"]').click();
   await czekajNaHistorie(page);
-  await page.locator('.vilda-patient-timeline-list').getByRole('button', { name: 'Akcje dla pomiaru', exact: true }).click();
-  await page.locator('.vilda-timeline-measure-menu').getByRole('button', { name: 'Dodaj notatkę', exact: true }).click();
+  const akcje = page.locator('.vilda-patient-timeline-list').getByRole('button', { name: 'Akcje dla pomiaru', exact: true });
+  const menu = page.locator('.vilda-timeline-measure-menu');
+  await akcje.click();
+  await expect(menu).toBeVisible();
+  // Zapis pacjenta uruchamia auto-backup. Jego techniczny klik linku pobrania
+  // nie może zamykać menu, gdy lekarz właśnie wybiera dodanie notatki.
+  const pobranie = page.waitForEvent('download');
+  const kopia = await page.evaluate(() => window.VildaFileExport.tryAutoVaultBackup({ force: true }));
+  expect(kopia).toMatchObject({ skipped: false, method: 'download' });
+  const plik = await pobranie;
+  expect(plik.suggestedFilename()).toBe('wagaiwzrost_konto_Fikcyjne_konto_notatek_wizyty.wiw');
+  expect(await plik.failure()).toBeNull();
+  await expect(menu, 'pobranie kopii konta pozostawia otwarte menu pomiaru').toBeVisible();
+  // Prawdziwy klik poza menu nadal je zamyka; ponowne otwarcie prowadzi do edytora.
+  await page.getByRole('heading', { name: 'Karta pacjenta', exact: true }).click();
+  await expect(menu).toHaveCount(0);
+  await akcje.click();
+  await menu.getByRole('button', { name: 'Dodaj notatkę', exact: true }).click();
 }
 
 for (const strona of ['/index.html', '/docpro.html']) {
