@@ -34,6 +34,7 @@
     if (formulaId === "K_mmol_d" && field.id === "K_volumeUnit") return true;
     if (formulaId === "KM_Cr" && /^URCR_/.test(field.id) && field.id !== "URCR_outputUnit") return true;
     if (formulaId === "Mg_Ca" && /^MGCA_/.test(field.id)) return !["MGCA_sameSpecimen", "MGCA_collectionProblem", "MGCA_collectionHours", "MGCA_durationKnown"].includes(field.id);
+    if (formulaId === "PO4_Cr" && /^PICR_/.test(field.id)) return !["PICR_sameSpecimen", "PICR_collectionProblem", "PICR_collectionHours", "PICR_durationKnown"].includes(field.id);
     if (formulaId === "Ca_Cr" && /^CACR_DZM_/.test(field.id)) return !["CACR_DZM_sameSpecimen", "CACR_DZM_collectionProblem", "CACR_DZM_collectionHours", "CACR_DZM_durationKnown", "CACR_DZM_currentPreterm"].includes(field.id);
     if (["age", "ageMonths", "sex"].includes(field.id) || field.id === "ageDays" && formulaId !== "neonatal_egfr" || unitIds.has(field.id)) return false;
     if (/unit|Assay|Standardization|creatinineState|suspectedAKI|collectionSource|DurationSource|durationNeedsConfirmation/i.test(field.id) || /_entry_mode$/i.test(field.id)) return false;
@@ -96,7 +97,7 @@
     }
     active = { token, destroy, cancelForFormulaChange(nextFormula) {
       const owner = root.ClcrSavedCalculation?.readSaved(currentNote)?.snapshot?.formulaId || currentRecord?.sourceFormulaId;
-      if (!["Ca_Cr", "CaCr_spot", "Mg_Ca"].includes(owner) || owner === nextFormula) return true;
+      if (!["Ca_Cr", "CaCr_spot", "Mg_Ca", "PO4_Cr"].includes(owner) || owner === nextFormula) return true;
       // A committed transaction keeps its original ID and material. While a
       // write is in flight, keep its editor alive until the result is known.
       if (pending) return false;
@@ -121,6 +122,7 @@
       const snapshot = description.snapshot;
       const age = snapshot?.capturedContext?.ageYears ?? saved?.context?.ageYears;
       const values = snapshot?.values || {};
+      const historicalSex = snapshot?.formulaId === "PO4_Cr" ? snapshot.capturedContext.sex : values.sex;
       const hasDays = typeof age === "number" && age < 1 && Number(values.age) === 0 && Number(values.ageMonths || 0) === 0 && values.ageDays != null && values.ageDays !== "";
       const context = hasDays ? "Wiek w dniu badania: " + values.ageDays + " dni życia" : age == null ? "Nie zapisano wieku" : "Wiek w dniu badania: " + decimal(age) + " lat";
       const allFields = snapshot?.fields || [];
@@ -129,7 +131,7 @@
       const record = currentRecord;
       $("calculationDetails").dataset.noteId = noteId;
       $("calculationDetails").dataset.recordId = noteId;
-      $("calculationDetails").innerHTML = `<p class="clcr-record-eyebrow">KLIRENS · ${escape(dateLabel(currentNote.clinicalDateISO))}</p><h3>${escape(record.label || record.method)}</h3><p class="clcr-record-value ${escape(record.tone || "neutral")}">${escape(decimal(valueLabel(record)))} <span>${escape(record.unit)}</span></p>${record.boundary ? `<p>Przed zaokrągleniem: ${escape(record.boundary)}</p>` : ""}<dl class="clcr-record-grid"><div><dt>Dane z dnia badania</dt><dd>${escape(context)}${values.sex ? " · " + (values.sex === "F" ? "kobieta" : "mężczyzna") : ""}</dd></div><div><dt>Zapisana ocena</dt><dd>${record.category ? escape(record.category) + " · " : ""}${escape(record.interpretation || record.description || record.assessmentText || "Brak zapisanej oceny")}</dd></div>${inputRows}<div><dt>Norma przy zapisie</dt><dd>${escape(record.norm || "Brak zapisanej normy")}</dd></div><div><dt>Metoda</dt><dd>${escape(record.label || record.method)}</dd></div></dl>${record.comment ? `<p class="clcr-record-context">${escape(record.comment)}</p>` : ""}${record.assumptions ? `<p class="clcr-record-source">${escape(record.assumptions)}</p>` : ""}${record.source?.label ? `<p class="clcr-record-source">${escape(record.source.label)} · interpretacja zachowana z dnia zapisu.</p>` : ""}`;
+      $("calculationDetails").innerHTML = `<p class="clcr-record-eyebrow">KLIRENS · ${escape(dateLabel(currentNote.clinicalDateISO))}</p><h3>${escape(record.label || record.method)}</h3><p class="clcr-record-value ${escape(record.tone || "neutral")}">${escape(decimal(valueLabel(record)))} <span>${escape(record.unit)}</span></p>${record.boundary ? `<p>Przed zaokrągleniem: ${escape(record.boundary)}</p>` : ""}<dl class="clcr-record-grid"><div><dt>Dane z dnia badania</dt><dd>${escape(context)}${historicalSex ? " · " + (["F", "female"].includes(historicalSex) ? "kobieta" : "mężczyzna") : ""}</dd></div><div><dt>Zapisana ocena</dt><dd>${record.category ? escape(record.category) + " · " : ""}${escape(record.interpretation || record.description || record.assessmentText || "Brak zapisanej oceny")}</dd></div>${inputRows}<div><dt>Norma przy zapisie</dt><dd>${escape(record.norm || "Brak zapisanej normy")}</dd></div><div><dt>Metoda</dt><dd>${escape(record.label || record.method)}</dd></div></dl>${record.comment ? `<p class="clcr-record-context">${escape(record.comment)}</p>` : ""}${record.assumptions ? `<p class="clcr-record-source">${escape(record.assumptions)}</p>` : ""}${record.source?.label ? `<p class="clcr-record-source">${escape(record.source.label)} · interpretacja zachowana z dnia zapisu.</p>` : ""}`;
       $("detailActions").hidden = false;
       $("editMeasurement").disabled = !description.editable;
       $("legacyEditNotice").hidden = description.editable;
@@ -140,7 +142,8 @@
     function historicalSummary(values, context) {
       const age = Object.prototype.hasOwnProperty.call(context, "ageYears") ? context.ageYears : text(values.age).trim() ? Number(values.age) + Number(values.ageMonths || 0) / 12 : null;
       if (typeof age === "number" && age < 1 && Number(values.age) === 0 && Number(values.ageMonths || 0) === 0 && values.ageDays != null && values.ageDays !== "") return "Wiek w dniu badania: " + values.ageDays + " dni życia";
-      return (Number.isFinite(age) ? "Wiek w dniu badania: " + decimal(age) + " lat" : "Nie zapisano wieku") + (values.sex ? " · płeć: " + (values.sex === "F" ? "kobieta" : "mężczyzna") : "");
+      const sex = values.sex || context.sex;
+      return (Number.isFinite(age) ? "Wiek w dniu badania: " + decimal(age) + " lat" : "Nie zapisano wieku") + (sex ? " · płeć: " + (["F", "female"].includes(sex) ? "kobieta" : "mężczyzna") : "");
     }
     function renderEditInputFields(values, fields) {
       const unitIds = new Set(fields.map(field => field.unitFieldId).filter(Boolean));
@@ -173,6 +176,15 @@
             draft.description.fields = root.ClcrMagnesiumCalciumPersistence.editableFields(nextValues);
             renderEditInputFields(nextValues, draft.description.fields);
             host.querySelector(nextValues.MGCA_inputMode === "direct" ? "#editField-MGCA_reportedValue" : "#editField-MGCA_magnesium")?.focus();
+          }
+        }
+        if (draft.description.snapshot.formulaId === "PO4_Cr") {
+          draft.description.values[control.dataset.clcrEditField] = control.type === "checkbox" ? control.checked : control.value;
+          if (control.dataset.clcrEditField === "PICR_inputMode") {
+            const nextValues = draft.description.values;
+            draft.description.fields = root.ClcrPhosphorusCreatininePersistence.editableFields(nextValues);
+            renderEditInputFields(nextValues, draft.description.fields);
+            host.querySelector(nextValues.PICR_inputMode === "direct" ? "#editField-PICR_reportedValue" : "#editField-PICR_phosphorus")?.focus();
           }
         }
         if (draft.description.snapshot.formulaId === "KM_Cr") {

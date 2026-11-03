@@ -617,6 +617,63 @@ function normalizeMagnesiumCalciumStatusInputs(session){
   if(Object.keys(context).length)values.MGCA_contextSemantics=context;
   else delete values.MGCA_contextSemantics;
 }
+function normalizePhosphorusCreatinineStatusInputs(session){
+  if(!session||typeof session!=="object"||Array.isArray(session))return;
+  var values=session.inputs,preserved=session.preservedInputs;
+  var selected=session.selectedFormula||values&&values.formulaPicker||preserved&&preserved.formulaPicker;
+  if((!values||typeof values!=="object"||Array.isArray(values))&&selected==="PO4_Cr"&&preserved&&typeof preserved==="object"&&!Array.isArray(preserved))values=session.inputs=Object.assign({},preserved);
+  if(!values||typeof values!=="object"||Array.isArray(values))return;
+  var own=function(key){return Object.prototype.hasOwnProperty.call(values,key)};
+  var present=function(value){return value!==null&&value!==undefined&&!(typeof value==="string"&&!value.trim())};
+  var canonicalUnit=function(value){return ({"g/g":"mg/mg","mol/mol":"mmol/mmol","mg/dl":"mg/dL","μmol/L":"µmol/L","umol/L":"µmol/L"})[value]||value};
+  var fields=["PICR_inputMode","PICR_phosphorus","PICR_phosphorusUnit","PICR_creatinine","PICR_creatinineUnit","PICR_reportedValue","PICR_reportedUnit"];
+  if(selected==="PO4_Cr"&&!Object.keys(values).some(function(key){return key.indexOf("PICR_")===0})&&(present(values.U_PO4)||present(values.Ucr))){
+    values.PICR_inputMode="concentration";
+    if(own("U_PO4"))values.PICR_phosphorus=values.U_PO4;
+    if(own("Ucr"))values.PICR_creatinine=values.Ucr;
+    values.PICR_phosphorusUnit="mg P/dL";values.PICR_creatinineUnit="mg/dL";
+    ["U_PO4","Ucr"].forEach(function(key){if(typeof values[key]==="number")values[key]=String(values[key])});
+  }
+  if(own("PICR_legacyAliases")){
+    var aliases=values.PICR_legacyAliases;
+    if(typeof aliases==="string")try{aliases=JSON.parse(aliases)}catch{}
+    if(aliases&&typeof aliases==="object"&&!Array.isArray(aliases)&&Object.keys(aliases).length&&Object.keys(aliases).every(function(key){
+      return ["U_PO4","Ucr"].indexOf(key)!==-1&&["string","number"].indexOf(typeof aliases[key])!==-1&&String(aliases[key]).trim()&&
+        String(aliases[key]).length<=512&&(typeof aliases[key]!=="number"||Number.isFinite(aliases[key]));
+    }))delete values.PICR_legacyAliases;
+  }
+  var quantities=[["PICR_phosphorus","PICR_phosphorusUnit","phosphorus","mmol/L"],
+    ["PICR_creatinine","PICR_creatinineUnit","creatinine","mmol/L"],
+    ["PICR_reportedValue","PICR_reportedUnit","reportedValue","mg/mg"]];
+  var prior=values.PICR_unitSemantics,meaning={};
+  if(quantities.some(function(item){return present(values[item[0]])})){
+    if(!own("PICR_inputMode"))values.PICR_inputMode="concentration";
+    quantities.forEach(function(item){
+      if(!present(values[item[0]]))return;
+      if(typeof values[item[0]]==="number")values[item[0]]=String(values[item[0]]);
+      meaning[item[2]]=canonicalUnit(own(item[1])?values[item[1]]:prior&&typeof prior==="object"&&Object.prototype.hasOwnProperty.call(prior,item[2])?prior[item[2]]:item[3]);
+    });
+    values.PICR_unitSemantics=meaning;
+  }else{
+    fields.forEach(function(key){delete values[key]});
+    delete values.PICR_unitSemantics;
+  }
+  if(own("PICR_reportedUnitOriginal")&&["g/g","mol/mol"].indexOf(values.PICR_reportedUnitOriginal)!==-1&&
+    (!present(values.PICR_reportedValue)||canonicalUnit(values.PICR_reportedUnitOriginal)===meaning.reportedValue))delete values.PICR_reportedUnitOriginal;
+  var context=values.PICR_contextSemantics&&typeof values.PICR_contextSemantics==="object"&&!Array.isArray(values.PICR_contextSemantics)?Object.assign({},values.PICR_contextSemantics):{};
+  ["sameSpecimen","collectionProblem","collectionHours","durationKnown"].forEach(function(key){
+    var id="PICR_"+key;
+    if(!own(id))return;
+    var raw=values[id];delete values[id];delete context[key];
+    if(!present(raw)||key==="sameSpecimen"&&raw==="assumed")return;
+    var text=String(raw);
+    if(key==="sameSpecimen")text=["true","yes","confirmed"].indexOf(text)!==-1?"confirmed":["false","no","different"].indexOf(text)!==-1?"different":text;
+    else if(key!=="collectionHours")text=["true","yes"].indexOf(text)!==-1?"true":["false","no"].indexOf(text)!==-1?"false":text;
+    context[key]=text;
+  });
+  if(Object.keys(context).length)values.PICR_contextSemantics=context;
+  else delete values.PICR_contextSemantics;
+}
 function normalizeClcrStatusInputs(session){
   var inputs=session&&session.inputs;
   if(!inputs||typeof inputs!=="object"||Array.isArray(inputs))return;
@@ -648,7 +705,7 @@ function normalizeClcrStatusInputs(session){
     }
   });
 }
-function Q(){if(typeof n.collectUserData!="function")return null;try{var e=n.collectUserData({source:"save-status-indicator"});return e?(delete e.timestampISO,JSON.stringify(e)):null}catch{return null}}function P(e){if(!e||typeof e!="object")return e;var t;try{t=JSON.parse(JSON.stringify(e))}catch{return e}return delete t.timestampISO,delete t.timestamp,delete t.version,delete t.savedAtISO,t}function X(e){if(!e||typeof e!="object")return e;normalizeSodiumStatusQuantities(e);normalizePotassiumStatusQuantities(e);normalizeUrateCreatinineStatusInputs(e);normalizeCacrDzmStatusInputs(e);normalizeMagnesiumCalciumStatusInputs(e);try{["savedAtISO","source","version","legacyVersion","currentVersion","selectedFormula","preserveAcrossVersions","preservedInputs","summary"].forEach(function(t){try{delete e[t]}catch{}}),e.inputs&&typeof e.inputs=="object"&&(["fullName","age","ageMonths","sex","weight","height","formulaSearch","formulaPicker","samePatientMode","currentVersion","version","selectedFormula"].forEach(function(t){try{delete e.inputs[t]}catch{}}),Object.keys(e.inputs).forEach(function(t){if(/unit$/i.test(t))try{delete e.inputs[t]}catch{}}))}catch{}normalizeClcrStatusInputs(e);return e}function b(e){if(!e||typeof e!="object")return e;try{delete e.doctor}catch{}try{delete e.zscore}catch{}try{delete e.bpDataToggle}catch{}try{delete e.bisphos}catch{}return e}function ee(e){try{["advanced","growthBasic"].forEach(function(t){e&&e[t]&&e[t].data&&typeof e[t].data=="object"&&(e[t].data={measurements:e[t].data.measurements})})}catch{}return e}function M(e){if(e!=null){if(Array.isArray(e)){for(var t=[],r=0;r<e.length;r++){var a=M(e[r]);a!==void 0&&t.push(a)}return t.length?t:void 0}if(typeof e=="object"){for(var u=Object.create(null),m=Object.keys(e).sort(),y=0;y<m.length;y++){var T=M(e[m[y]]);T!==void 0&&(u[m[y]]=T)}return Object.keys(u).length?u:void 0}return typeof e=="string"?e.trim()===""?void 0:e:typeof e=="boolean"&&e===!1?void 0:e}}function te(e){try{normalizeStatusInputs(e);normalizeStatusUiDefaults(e);normalizeStatusVaultMetadata(e);normalizeStatusEmptyBoneAge(e);normalizeStatusAutomaticDiet(e);normalizeStatusMeasurementUi(e);e&&e.clcr&&X(e.clcr);e&&e.core&&ee(e.core);var t=M(e);return t===void 0?{}:t}catch{return e}}function ne(){var e=n.VildaPersistence;try{if(e&&typeof e.readClcrSession=="function")return e.readClcrSession()}catch{}return null}function re(){if(typeof n.collectUserData!="function"||typeof n.hasMeaningfulMainSessionData!="function")return!1;try{var e=n.collectUserData({source:"save-status-fullform-check"});return!!(e&&n.hasMeaningfulMainSessionData(e))}catch{return!1}}function C(){if(statusReadOnly)return;if(typeof n.saveMainSessionNow=="function"&&re())try{n.saveMainSessionNow({force:!0})}catch{}}function ie(){var e=n.VildaPersistence;try{if(e&&typeof e.readMainSession=="function"){var t=e.readMainSession();if(t&&typeof t=="object")return P(t)}}catch{}if(typeof n.collectUserData=="function")try{var r=n.collectUserData({source:"save-status-canonical-fallback"});return typeof n.hasMeaningfulMainSessionData=="function"?r&&n.hasMeaningfulMainSessionData(r)?P(r):null:r?P(r):null}catch{}return null}function E(){var e=ie();if(e==null)return null;if(e&&typeof e=="object"&&e.clcr!==void 0)try{delete e.clcr}catch{}b(e);var t=ne(),r=t?X(P(t)):null,a={core:e,clcr:r};a=te(a);try{return JSON.stringify(a)}catch{return null}}var O="vilda-save-ref-v1",L=null;function k(){try{var e=n.sessionStorage;if(!e)return L;var t=e.getItem(O),r=t?JSON.parse(t):null;if(r&&typeof r.fp==="string")try{r.fp=JSON.stringify(te(JSON.parse(r.fp)))}catch{}return r}catch{return L}}function U(e){L=e||null;if(statusReadOnly)return;try{var t=n.sessionStorage;if(!t)return;e?t.setItem(O,JSON.stringify(e)):t.removeItem(O)}catch{}}function I(){U(f?{fp:f,dirty:!!p,savedAtISO:l||null,snapshotCount:d||null,patientName:v||null}:null)}function N(){f=null,p=!1,U(null)}function ae(e){if(!e||typeof n.hasMeaningfulMainSessionData!="function"||!n.hasMeaningfulMainSessionData(e))return!1;var t;try{t=JSON.parse(JSON.stringify(e))}catch{return!0}return delete t.doctor,delete t.zscore,delete t.bpDataToggle,delete t.bisphos,delete t.clcr,delete t.steroid,n.hasMeaningfulMainSessionData(t)}function statusSharedSessionHasPatient(value){
+function Q(){if(typeof n.collectUserData!="function")return null;try{var e=n.collectUserData({source:"save-status-indicator"});return e?(delete e.timestampISO,JSON.stringify(e)):null}catch{return null}}function P(e){if(!e||typeof e!="object")return e;var t;try{t=JSON.parse(JSON.stringify(e))}catch{return e}return delete t.timestampISO,delete t.timestamp,delete t.version,delete t.savedAtISO,t}function X(e){if(!e||typeof e!="object")return e;normalizeSodiumStatusQuantities(e);normalizePotassiumStatusQuantities(e);normalizeUrateCreatinineStatusInputs(e);normalizeCacrDzmStatusInputs(e);normalizeMagnesiumCalciumStatusInputs(e);normalizePhosphorusCreatinineStatusInputs(e);try{["savedAtISO","source","version","legacyVersion","currentVersion","selectedFormula","preserveAcrossVersions","preservedInputs","summary"].forEach(function(t){try{delete e[t]}catch{}}),e.inputs&&typeof e.inputs=="object"&&(["fullName","age","ageMonths","sex","weight","height","formulaSearch","formulaPicker","samePatientMode","currentVersion","version","selectedFormula"].forEach(function(t){try{delete e.inputs[t]}catch{}}),Object.keys(e.inputs).forEach(function(t){if(/unit$/i.test(t))try{delete e.inputs[t]}catch{}}))}catch{}normalizeClcrStatusInputs(e);return e}function b(e){if(!e||typeof e!="object")return e;try{delete e.doctor}catch{}try{delete e.zscore}catch{}try{delete e.bpDataToggle}catch{}try{delete e.bisphos}catch{}return e}function ee(e){try{["advanced","growthBasic"].forEach(function(t){e&&e[t]&&e[t].data&&typeof e[t].data=="object"&&(e[t].data={measurements:e[t].data.measurements})})}catch{}return e}function M(e){if(e!=null){if(Array.isArray(e)){for(var t=[],r=0;r<e.length;r++){var a=M(e[r]);a!==void 0&&t.push(a)}return t.length?t:void 0}if(typeof e=="object"){for(var u=Object.create(null),m=Object.keys(e).sort(),y=0;y<m.length;y++){var T=M(e[m[y]]);T!==void 0&&(u[m[y]]=T)}return Object.keys(u).length?u:void 0}return typeof e=="string"?e.trim()===""?void 0:e:typeof e=="boolean"&&e===!1?void 0:e}}function te(e){try{normalizeStatusInputs(e);normalizeStatusUiDefaults(e);normalizeStatusVaultMetadata(e);normalizeStatusEmptyBoneAge(e);normalizeStatusAutomaticDiet(e);normalizeStatusMeasurementUi(e);e&&e.clcr&&X(e.clcr);e&&e.core&&ee(e.core);var t=M(e);return t===void 0?{}:t}catch{return e}}function ne(){var e=n.VildaPersistence;try{if(e&&typeof e.readClcrSession=="function")return e.readClcrSession()}catch{}return null}function re(){if(typeof n.collectUserData!="function"||typeof n.hasMeaningfulMainSessionData!="function")return!1;try{var e=n.collectUserData({source:"save-status-fullform-check"});return!!(e&&n.hasMeaningfulMainSessionData(e))}catch{return!1}}function C(){if(statusReadOnly)return;if(typeof n.saveMainSessionNow=="function"&&re())try{n.saveMainSessionNow({force:!0})}catch{}}function ie(){var e=n.VildaPersistence;try{if(e&&typeof e.readMainSession=="function"){var t=e.readMainSession();if(t&&typeof t=="object")return P(t)}}catch{}if(typeof n.collectUserData=="function")try{var r=n.collectUserData({source:"save-status-canonical-fallback"});return typeof n.hasMeaningfulMainSessionData=="function"?r&&n.hasMeaningfulMainSessionData(r)?P(r):null:r?P(r):null}catch{}return null}function E(){var e=ie();if(e==null)return null;if(e&&typeof e=="object"&&e.clcr!==void 0)try{delete e.clcr}catch{}b(e);var t=ne(),r=t?X(P(t)):null,a={core:e,clcr:r};a=te(a);try{return JSON.stringify(a)}catch{return null}}var O="vilda-save-ref-v1",L=null;function k(){try{var e=n.sessionStorage;if(!e)return L;var t=e.getItem(O),r=t?JSON.parse(t):null;if(r&&typeof r.fp==="string")try{r.fp=JSON.stringify(te(JSON.parse(r.fp)))}catch{}return r}catch{return L}}function U(e){L=e||null;if(statusReadOnly)return;try{var t=n.sessionStorage;if(!t)return;e?t.setItem(O,JSON.stringify(e)):t.removeItem(O)}catch{}}function I(){U(f?{fp:f,dirty:!!p,savedAtISO:l||null,snapshotCount:d||null,patientName:v||null}:null)}function N(){f=null,p=!1,U(null)}function ae(e){if(!e||typeof n.hasMeaningfulMainSessionData!="function"||!n.hasMeaningfulMainSessionData(e))return!1;var t;try{t=JSON.parse(JSON.stringify(e))}catch{return!0}return delete t.doctor,delete t.zscore,delete t.bpDataToggle,delete t.bisphos,delete t.clcr,delete t.steroid,n.hasMeaningfulMainSessionData(t)}function statusSharedSessionHasPatient(value){
   if(!value||typeof value!=="object")return false;
   var user=value.user||{},name=value.name&&String(value.name).trim();
   return !!(name||user.weight||user.height||user.age!=null&&user.age!=="");
