@@ -201,9 +201,9 @@ describe('patient clinical authority routing in the actual sync module', () => {
     const library = d.sync.syncTemplateLibrary();
     await expect(d.sync.syncPull()).rejects.toMatchObject({ code: BLOCKED.code });
     await expect(library).resolves.toEqual({ state: 'ready', epoch: 1, cursor: 0, pending: false });
-    expect(fetch.mock.calls.map(([url]) => new URL(url).pathname.split('/').at(-1))).toEqual(['state', 'changes']);
+    expect(fetch.mock.calls.map(([url]) => new URL(url).pathname.split('/').at(-1))).toEqual(['state']);
     expect(fetch.mock.calls.every(([, request]) => request.method === 'GET')).toBe(true);
-    expect(d.vault.applyCareTemplateEvents).toHaveBeenCalledTimes(1);
+    expect(d.vault.applyCareTemplateEvents).not.toHaveBeenCalled();
     expect(d.vault.getSyncMaterial).not.toHaveBeenCalled(); expect(d.vault.exportSyncPayload).not.toHaveBeenCalled();
     d.sync.deactivateTemplateLibrarySync();
   });
