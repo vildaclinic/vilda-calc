@@ -207,7 +207,9 @@ async function rotateSplit(page, cdp, { width, height, order, safeArea = width >
   if (landscape && safeArea.left === 62 && safeArea.right === 62) {
     expect(finalWidth).toBe(width - 136);
     for (const sample of samples) {
-      expect(sample.column).toBeCloseTo((width - 152) / 2, 0);
+      // Two 62px safe edges, 6px form padding on each side, and the
+      // approved 12px inter-column gutter leave equal real columns.
+      expect(sample.column).toBeCloseTo((width - 148) / 2, 0);
       expect(sample.header).toBe(52);
     }
   }

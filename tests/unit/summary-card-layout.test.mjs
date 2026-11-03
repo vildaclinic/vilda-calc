@@ -184,6 +184,26 @@ describe('summary card — measured two-column layout', () => {
     expect(e.card.style.getPropertyValue('--vilda-summary-card-height')).toBe('810px');
   });
 
+  it('tracks the viewport minimum while Tanner stays open, including a return below the natural collapsed height', () => {
+    const e = setup();
+    e.fieldset.computed.minHeight = '800px';
+    e.api.refresh();
+    e.puberty.computed.display = 'block';
+    e.fieldset.rect.height = 1120; // 800px collapsed content plus the 320px Tanner panel.
+    e.api.refresh();
+    expect(e.card.style.getPropertyValue('--vilda-summary-card-height')).toBe('760px');
+    for (const [minimum, expanded, expected] of [[1100, 1120, 1060], [1300, 1300, 1260], [700, 1120, 760], [0, 1120, 760]]) {
+      e.fieldset.computed.minHeight = minimum + 'px';
+      e.fieldset.rect.height = expanded;
+      e.event('resize'); e.flush();
+      expect(e.card.style.getPropertyValue('--vilda-summary-card-height')).toBe(expected + 'px');
+    }
+    e.mutations.length = 0;
+    e.api.refresh(); e.resize(); e.flush();
+    expect(e.mutations).toEqual([]);
+    expect(e.fieldset.style.setProperty).not.toHaveBeenCalled();
+  });
+
   it('keeps the card height when selecting the chart, but removes the summary cue and focus stop', () => {
     const e = setup();
     e.content.hidden = true;

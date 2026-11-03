@@ -49,6 +49,45 @@ describe('vilda_shell.js — panel wraca tam, gdzie go zostawiono (P-PANEL-PRZEW
     expect(przewiniecieWChwiliOdtworzeniaSesji, 'odtworzenie sesji przebudowuje treść już przy odtworzonej pozycji').toBe(679);
   });
 
+  it('powrót synchronizuje geometrię widocznej trasy przed przywróceniem przewinięcia', () => {
+    const { p, ramka, w, przewin } = przygotuj('ustawienia');
+    przewin(900);
+    p.shell.navigate('docpro');
+    const order = [];
+    p.win.VildaHeaderLayout = { refreshNow: vi.fn(() => {
+      expect(p.shell.getCurrentRoute()).toBe('ustawienia');
+      expect(p.doc.documentElement.classList.contains('vilda-route-ustawienia')).toBe(true);
+      expect(ramka.hidden).toBe(false);
+      order.push('geometry');
+    }) };
+    const scroll = w.scrollTo.getMockImplementation();
+    w.scrollTo.mockImplementation((...args) => { order.push('scroll'); scroll(...args); });
+    p.shell.navigate('ustawienia');
+    expect(order).toEqual(['geometry', 'scroll']);
+    expect(w.scrollY).toBe(900);
+  });
+
+  it.each(['loaded', 'loading'])('cel dostaje geometrię bieżącego dokumentu, gdy panel jest %s', state => {
+    const { p, ramka, w } = przygotuj('ustawienia');
+    p.shell.navigate('docpro');
+    if (state === 'loading') p.shell.reload('ustawienia');
+    const order = [];
+    p.win.VildaHeaderLayout = { refreshNow: vi.fn(() => {
+      expect(p.shell.getCurrentRoute()).toBe('ustawienia');
+      expect(ramka.hidden).toBe(false);
+      order.push('geometry');
+    }) };
+    w.addEventListener('vilda:shell-navigate-target', () => order.push('target'));
+    p.shell.navigate('ustawienia', true, 'ustawienia.html#settings-section-account');
+    if (state === 'loading') {
+      expect(order).toEqual(['geometry']);
+      order.length = 0;
+      p.load('ustawienia');
+    }
+    expect(order).toEqual(['geometry', 'target']);
+    expect(w.scrollTo).not.toHaveBeenCalled();
+  });
+
   it('kontrola: panel bez przewinięcia — powłoka niczego nie przewija', () => {
     const { p, w } = przygotuj();
     p.shell.navigate('docpro');
