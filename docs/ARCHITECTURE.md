@@ -136,6 +136,12 @@ Do tej warstwy należą m.in.:
   zamrożoną ocenę bez dzisiejszego silnika/wieku. Historyczne `U_Prot` jest masą
   całej zbiórki; konwersja do nowych stężeń należy tylko do świadomej edycji
   z poprawnymi zachowanymi danymi. Kontrakt: [PROTEIN_CREATININE.md](clinical/PROTEIN_CREATININE.md).
+- K/(K+Na) w moczu: `clcr_potassium_index_data.js` zawiera wersjonowaną politykę
+  bez uniwersalnej normy i źródła ograniczonego komentarza klinicznego;
+  `clcr_potassium_index.js` przyjmuje ją jako argument. UI nie dodaje progów
+  prawidłowości. `clcr_potassium_index_persistence.js` czyta utrwalony wynik
+  bez bieżącego silnika; materiał historycznej DZM nie staje się spot wskutek
+  przeniesienia pozycji menu. Kontrakt: [POTASSIUM_INDEX.md](clinical/POTASSIUM_INDEX.md).
 - historia wyników laboratoryjnych: `vilda_lab_history.js` — czysty model widoku historii (bez DOM,
   magazynu i zegara; konwerter, parser normy i „dziś” podaje wołający). Czyta tylko to, co zapisano
   w sejfie, i nie ocenia dawnych wyników dzisiejszymi normami. Oprócz notatek „wynik-badania” czyta

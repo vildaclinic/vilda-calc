@@ -13,6 +13,7 @@
     Object.freeze({ id: "dzm-excr", title: "Zbiórka dobowa — wydalania" }),
     Object.freeze({ id: "dzm-ratio", title: "Zbiórka dobowa — wskaźniki" }),
     Object.freeze({ id: "dzm-protein", title: "Zbiórka dobowa — białko" }),
+    Object.freeze({ id: "urine-index", title: "Wskaźniki z moczu" }),
     Object.freeze({ id: "spot-ratio", title: "Próbka punktowa — wskaźniki" }),
     Object.freeze({ id: "spot-fe", title: "Próbka punktowa — frakcje wydalnicze" }),
     Object.freeze({ id: "spot-other", title: "Próbka punktowa — pozostałe" }),
@@ -48,7 +49,7 @@
     { id: "Mg_Ca", group: "dzm-ratio", label: "Magnez/wapń (DZM)", unit: "mg/mg" },
     { id: "Ca_Cit", group: "dzm-ratio", label: "Wapń/cytryniany (DZM)", unit: "mg/mg" },
     { id: "B_Cr", group: "dzm-ratio", label: "Białko/kreatynina (DZM)", unit: "mg/mg" },
-    { id: "K_frac", group: "dzm-ratio", label: "Udział potasu — K/(K+Na)", unit: "%" },
+    { id: "K_frac", group: "urine-index", label: "Udział potasu — K/(K+Na)", unit: "%" },
     { id: "AGs", group: "dzm-ratio", label: "Luka anionowa surowicy (bez K)", unit: "mmol/L" },
     // Białko DZM: jeden nowy pomiar; dawne przeliczenia zachowane jako serie historyczne.
     { id: "Prot_mg24", group: "dzm-protein", label: "Białko całkowite w DZM", unit: "mg/24 h", sourceFormulaId: "Prot_mgkg" },
@@ -574,8 +575,8 @@
       // The older calculator flowsheet consumes this adapter directly. Reuse
       // the same pure envelope reader as Badania/Notes, including signed
       // reports whose endpoint must not become an exact chart measurement.
-      const dedicatedRatioCapture = ["Mg_Ca", "PO4_Cr", "B_Cr"].includes(sourceFormulaId) ? savedCalculation(note) : null;
-      const dedicatedRatioRecorded = ["Mg_Ca", "PO4_Cr", "B_Cr"].includes(sourceFormulaId) ? recordedMeasurement(lab) : null;
+      const dedicatedRatioCapture = ["Mg_Ca", "PO4_Cr", "B_Cr", "K_frac"].includes(sourceFormulaId) ? savedCalculation(note) : null;
+      const dedicatedRatioRecorded = ["Mg_Ca", "PO4_Cr", "B_Cr", "K_frac"].includes(sourceFormulaId) ? recordedMeasurement(lab) : null;
       if (target && (!sourceFormulaId || !target.has(sourceFormulaId))) continue;
       const acr = sourceFormulaId === "ACR" ? savedAcrAssessment(note) : null;
       const pcr = sourceFormulaId === "PCR" ? savedPcrAssessment(note) : null;
@@ -658,7 +659,7 @@
         typeof note.body === "string" &&
         note.body.indexOf("poza zakresem") >= 0;
       const norm = typeof lab.norm === "string" ? lab.norm.trim() : "";
-      const recordedOutOfRange = (["Mg_Ca", "PO4_Cr", "B_Cr"].includes(sourceFormulaId) || sourceFormulaId === "Ca_Cr" && !cacr) && !norm && outOfRange === false ? null : outOfRange;
+      const recordedOutOfRange = (["Mg_Ca", "PO4_Cr", "B_Cr", "K_frac"].includes(sourceFormulaId) || sourceFormulaId === "Ca_Cr" && !cacr) && !norm && outOfRange === false ? null : outOfRange;
       const point = {
         dateISO: dateISO,
         valueNum: valueNum,
@@ -817,11 +818,12 @@
         point.displayValue = String(lab.value || valueNum).trim();
         point.norm = "";
       }
-      if (["Mg_Ca", "PO4_Cr", "B_Cr"].includes(sourceFormulaId)) {
+      if (["Mg_Ca", "PO4_Cr", "B_Cr", "K_frac"].includes(sourceFormulaId)) {
         Object.assign(point, { rawValue: dedicatedRatioRecorded.rawValue, valueNum: dedicatedRatioRecorded.valueNum, displayValue: dedicatedRatioRecorded.displayValue, comparator: dedicatedRatioRecorded.comparator });
         if (!norm) Object.assign(point, { assessment: "unassessed", category: null, outOfRange: null, tone: "neutral" });
         applySavedCalculation(point, dedicatedRatioCapture, hasSavedCalculation(note));
         if (dedicatedRatioCapture?.valid && dedicatedRatioCapture.snapshot.assessment.magnesiumCalciumSnapshot) point.magnesiumCalciumAssessment = dedicatedRatioCapture.snapshot.assessment.magnesiumCalciumSnapshot;
+        if (dedicatedRatioCapture?.valid && dedicatedRatioCapture.snapshot.assessment.potassiumIndexSnapshot) point.potassiumIndexAssessment = dedicatedRatioCapture.snapshot.assessment.potassiumIndexSnapshot;
         if (dedicatedRatioCapture?.valid && dedicatedRatioCapture.snapshot.assessment.proteinCreatinineSnapshot) point.proteinCreatinineAssessment = dedicatedRatioCapture.snapshot.assessment.proteinCreatinineSnapshot;
         if (dedicatedRatioCapture?.valid && dedicatedRatioCapture.snapshot.assessment.phosphorusCreatinineSnapshot) point.phosphorusCreatinineAssessment = dedicatedRatioCapture.snapshot.assessment.phosphorusCreatinineSnapshot;
       }
@@ -830,7 +832,7 @@
     const series = Array.from(byLabel.values());
     series.forEach((s) => {
       s.points.sort((a, b) => String(a.dateISO).localeCompare(String(b.dateISO)));
-      if (["ACR", "PCR", "CaCr_spot", "Ca_Cr", "OxCr_spot", "CitCr_spot", "FENa_spot", "FEK_spot", "FECl_spot", "FEHCO3_spot", "AGu_spot", "pH_spot", "UA_mgkg", "Ca_mgkg", "Mg_mgkg", "PO4_mgkg", "Prot_mgkg", "Na_mmol_d", "K_mmol_d", "KM_Cr", "PO4_Cr", "B_Cr"].includes(s.sourceFormulaId)) {
+      if (["ACR", "PCR", "CaCr_spot", "Ca_Cr", "OxCr_spot", "CitCr_spot", "FENa_spot", "FEK_spot", "FECl_spot", "FEHCO3_spot", "AGu_spot", "pH_spot", "UA_mgkg", "Ca_mgkg", "Mg_mgkg", "PO4_mgkg", "Prot_mgkg", "Na_mmol_d", "K_mmol_d", "KM_Cr", "PO4_Cr", "B_Cr", "K_frac"].includes(s.sourceFormulaId)) {
         s.norm = s.points[s.points.length - 1]?.norm || "";
         return;
       }
@@ -860,6 +862,11 @@
       const persistence = global.ClcrProteinCreatininePersistence;
       const frozen = persistence?.readSnapshot(JSON.stringify(dp.proteinCreatinineSnapshot));
       if (!frozen || !persistence.matchesDatapoint(dp, frozen)) throw new Error("Brak kompletnego obliczenia B/Cr do bezpiecznego zapisu. Oblicz wynik ponownie.");
+    }
+    if (dp.sourceFormulaId === "K_frac") {
+      const persistence = global.ClcrPotassiumIndexPersistence;
+      const frozen = persistence?.readSnapshot(JSON.stringify(dp.potassiumIndexSnapshot));
+      if (!frozen || !persistence.matchesDatapoint(dp, frozen)) throw new Error("Brak kompletnego obliczenia K/(K+Na) do bezpiecznego zapisu. Oblicz wynik ponownie.");
     }
     if (dp.sourceFormulaId === "PO4_Cr") {
       const persistence = global.ClcrPhosphorusCreatininePersistence;
@@ -935,7 +942,7 @@
     }
     const labResult = {
       test: dp.label,
-      value: ["Mg_Ca", "PO4_Cr", "B_Cr"].includes(dp.sourceFormulaId) ? dp.displayValue : isCacrFormula(dp.sourceFormulaId) && dp.cacrSnapshot
+      value: ["Mg_Ca", "PO4_Cr", "B_Cr", "K_frac"].includes(dp.sourceFormulaId) ? dp.displayValue : isCacrFormula(dp.sourceFormulaId) && dp.cacrSnapshot
         ? dp.displayValue || acrDisplayText(dp.cacrSnapshot) : dp.sourceFormulaId === "PCR" && dp.pcrSnapshot
           ? dp.displayValue || acrDisplayText(dp.pcrSnapshot) : dp.sourceFormulaId === "ACR" && dp.acrSnapshot
             ? dp.displayValue || acrDisplayText(dp.acrSnapshot) : formatValueString(dp.valueNum),
@@ -1008,7 +1015,7 @@
 
   const ASSESSMENT_FIELDS = Object.freeze([
     "acrAssessment", "pcrAssessment", "cacrAssessment", "oxcrAssessment", "citcrAssessment",
-    "fenaAssessment", "fekAssessment", "feclAssessment", "fehco3Assessment", "uagAssessment", "tmpGfrAssessment", "phAssessment", "uaAssessment", "caDzmAssessment", "mgDzmAssessment", "po4DzmAssessment", "proteinDzmAssessment", "sodiumDzmAssessment", "potassiumDzmAssessment", "urateCreatinineAssessment", "magnesiumCalciumAssessment", "phosphorusCreatinineAssessment", "proteinCreatinineAssessment",
+    "fenaAssessment", "fekAssessment", "feclAssessment", "fehco3Assessment", "uagAssessment", "tmpGfrAssessment", "phAssessment", "uaAssessment", "caDzmAssessment", "mgDzmAssessment", "po4DzmAssessment", "proteinDzmAssessment", "sodiumDzmAssessment", "potassiumDzmAssessment", "urateCreatinineAssessment", "magnesiumCalciumAssessment", "phosphorusCreatinineAssessment", "proteinCreatinineAssessment", "potassiumIndexAssessment",
   ]);
   const HELPER_BY_FORMULA = Object.freeze({
     OxCr_spot: "ClcrOxcrPersistence", CitCr_spot: "ClcrCitcrPersistence",
@@ -1186,7 +1193,7 @@
         population: reference?.population || null,
         profileId: reference?.profileId || null, profileVersion: reference?.profileVersion ?? null },
     });
-    if (["AGu_spot", "TMP_GFR", "pH_spot", "UA_mgkg", "Ca_mgkg", "Mg_mgkg", "PO4_mgkg", "Prot_mgkg", "Na_mmol_d", "K_mmol_d", "KM_Cr", "Mg_Ca", "PO4_Cr", "B_Cr"].includes(capture.formulaId)) Object.assign(point, {
+    if (["AGu_spot", "TMP_GFR", "pH_spot", "UA_mgkg", "Ca_mgkg", "Mg_mgkg", "PO4_mgkg", "Prot_mgkg", "Na_mmol_d", "K_mmol_d", "KM_Cr", "Mg_Ca", "PO4_Cr", "B_Cr", "K_frac"].includes(capture.formulaId)) Object.assign(point, {
       calculationMethod: capture.calculationMethod || point.calculationMethod,
       comment: text(capture.comment), knownFacts: object(capture.knownFacts),
       contextReferences: Array.isArray(capture.contextReferences) ? capture.contextReferences : [],
@@ -1388,7 +1395,7 @@
       // Direct Brodehl and Walton–Bijvoet/Payne are different methods; their
       // transition must never appear as a biological rise in a single curve.
       // Different specimen types do not form one apparent biological trend.
-      const calculationMethod = entry?.sourceFormulaId === "KM_Cr" ? point.calculationMethod || "Typ próbki nieutrwalony" : entry?.sourceFormulaId === "TMP_GFR" ? point.calculationMethod || "legacy-unknown" : null;
+      const calculationMethod = entry?.sourceFormulaId === "K_frac" ? global.ClcrPotassiumIndexPersistence?.sampleLabel(point.context?.sampleType) || "Typ próbki nieutrwalony" : entry?.sourceFormulaId === "KM_Cr" ? point.calculationMethod || "Typ próbki nieutrwalony" : entry?.sourceFormulaId === "TMP_GFR" ? point.calculationMethod || "legacy-unknown" : null;
       const cacrProfileId = point.reference?.profileId || point.cacrAssessment?.profileId;
       const cacrProfile = isCacrFormula(entry?.sourceFormulaId) ? cacrProfileId ? `${cacrProfileId}@${point.reference?.profileVersion ?? point.cacrAssessment?.profileVersion ?? "unknown"}` : "legacy-unprofiled" : null;
       const key = JSON.stringify([identity, normalizedUnit(point.unit), basis, ...(calculationMethod ? [calculationMethod] : []), ...(cacrProfile ? [cacrProfile] : [])]);

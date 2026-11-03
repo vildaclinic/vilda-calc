@@ -42,7 +42,7 @@ describe('Klirens Notes lazy read resources', () => {
     const scripts = env.requests.filter(request => request.tag === 'SCRIPT').map(request => request.filename);
     expect(scripts).toEqual([...env.api.manifest.reader.map(([path]) => path.split('?')[0]), 'clcr_notes_view.js']);
     expect(env.requests.filter(request => request.tag === 'LINK').map(request => request.filename)).toEqual(['clcr_saved_results_view.css', 'clcr_notes_view.css']);
-    for (const key of ['VildaClcrAcr', 'VildaClcrMgDzm', 'VildaClcrCaDzm', 'ClcrClinicalSafety', 'ClcrResultDetails', 'ClcrUiWorkflow']) expect(env.win[key]).toBeUndefined();
+    for (const key of ['VildaClcrAcr', 'VildaClcrMgDzm', 'VildaClcrCaDzm', 'VildaClcrPotassiumIndex', 'VildaClcrPotassiumIndexData', 'ClcrClinicalSafety', 'ClcrResultDetails', 'ClcrUiWorkflow']) expect(env.win[key]).toBeUndefined();
     const count = env.requests.length;
     await env.api.ensureNotes();
     expect(env.requests).toHaveLength(count);

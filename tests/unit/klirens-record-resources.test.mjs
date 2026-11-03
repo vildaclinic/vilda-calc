@@ -50,6 +50,9 @@ describe('lazy resources zapisanych obliczeń', () => {
     expect(typeof env.win.ClcrMagnesiumCalciumPersistence.readSnapshot).toBe('function');
     expect(env.win.VildaClcrMagnesiumCalcium).toBeUndefined();
     expect(env.win.VildaClcrMagnesiumCalciumData).toBeUndefined();
+    expect(typeof env.win.ClcrPotassiumIndexPersistence.readSnapshot).toBe('function');
+    expect(env.win.VildaClcrPotassiumIndex).toBeUndefined();
+    expect(env.win.VildaClcrPotassiumIndexData).toBeUndefined();
     expect(env.win.ClcrClinicalSafety).toBeUndefined();
     expect(env.win.ClcrUiWorkflow).toBeUndefined();
     const count = env.requests.length;
@@ -67,6 +70,10 @@ describe('lazy resources zapisanych obliczeń', () => {
     expect(typeof env.win.VildaClcrAcr.evaluate).toBe('function');
     expect(typeof env.win.VildaClcrMagnesiumCalcium.evaluate).toBe('function');
     expect(typeof env.win.VildaClcrMagnesiumCalciumData.getProfile).toBe('function');
+    expect(typeof env.win.VildaClcrPotassiumIndex.evaluate).toBe('function');
+    expect(typeof env.win.VildaClcrPotassiumIndexData.getProfile).toBe('function');
+    expect(env.win.VildaClcrPotassiumIndex.evaluate({ potassiumValue: '0', sodiumValue: '20' }, env.win.VildaClcrPotassiumIndexData.getProfile('KFR_2026_11')))
+      .toMatchObject({ valid: true, rawValue: 0, unit: '%', outOfRange: null });
     const scripts = env.requests.filter((request) => request.tag === 'SCRIPT').map((request) => request.filename);
     expect(scripts).toEqual([...env.api.manifest.reader, ...env.api.manifest.editor].map(([path]) => path.split('?')[0]));
     expect(scripts).not.toContain('inline_kalkulator_klirens_04.js');

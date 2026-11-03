@@ -131,6 +131,14 @@ function clinicalReadinessHarness(formulaId, values) {
       browserGlobal.VildaClcrMagnesiumCalciumData.getProfile('MGCA_DZM_2026_11'),
     );
   }
+  if (formulaId === 'K_frac') {
+    loadBrowserScript('clcr_potassium_index_data.js', browserGlobal);
+    loadBrowserScript('clcr_potassium_index.js', browserGlobal);
+    browserGlobal.evaluateClcrPotassiumIndex = () => browserGlobal.VildaClcrPotassiumIndex.evaluate(
+      browserGlobal.VildaClcrPotassiumIndex.readInputFromDocument(browserGlobal.document),
+      browserGlobal.VildaClcrPotassiumIndexData.getProfile('KFR_2026_11'),
+    );
+  }
   if (formulaId === 'B_Cr') {
     loadBrowserScript('clcr_protein_creatinine_data.js', browserGlobal);
     loadBrowserScript('clcr_protein_creatinine.js', browserGlobal);
@@ -162,6 +170,19 @@ function clinicalReadinessHarness(formulaId, values) {
 }
 
 describe('Klirens — centralny model przepływu UI', () => {
+  it.each([
+    ['60', '20', true, 75], ['0', '20', true, 0], ['60', '0', true, 100],
+    ['1,5', '0,5', true, 75], ['0', '0', false, null], ['-1', '-1', false, null],
+    ['1', '-0.5', false, null], ['', '20', false, null], ['0x10', '20', false, null],
+  ])('K/(K+Na) readiness agrees with production engine for K=%s and Na=%s', (potassium, sodium, ready, expected) => {
+    const { workflow } = clinicalReadinessHarness('K_frac', { U_K: potassium, U_Na: sodium });
+    const result = workflow.getFormulaReadiness();
+    expect(result.valueReady).toBe(ready); expect(result.interpretationReady).toBe(false);
+    expect(result.interpretationMissingFieldIds).toEqual([]);
+    expect(result.outcome.rawValue).toBe(expected);
+    expect(result.outcome.outOfRange).toBeNull();
+  });
+
   const bcrValues = { BCR_inputMode: 'concentration', BCR_protein: '300', BCR_proteinUnit: 'mg/L',
     BCR_creatinine: '100', BCR_creatinineUnit: 'mg/dL', BCR_reportedValue: '', BCR_reportedUnit: 'mg/mg',
     BCR_sameSpecimen: 'assumed', BCR_collectionProblem: '', BCR_collectionHours: '', BCR_durationKnown: '',
@@ -426,7 +447,7 @@ describe('Klirens — centralny model przepływu UI', () => {
   it('mapuje wszystkie 42 formuły dokładnie raz, z jawnym wyjątkiem historycznym', () => {
     expect(formulas).toHaveLength(42);
     expect(new Set(formulas.map(formula => formula.id)).size).toBe(42);
-    expect(model.MODULES).toHaveLength(17);
+    expect(model.MODULES).toHaveLength(18);
     expect(model.HISTORICAL_FORMULA_IDS).toEqual(['sch_var']);
 
     const historicalIds = new Set(model.HISTORICAL_FORMULA_IDS);
@@ -498,6 +519,7 @@ describe('Klirens — centralny model przepływu UI', () => {
       'spot-protein',
       'spot-stone-ratios',
       'spot-fe-uag',
+      'spot-potassium-index',
       'spot-tmp-gfr',
       'spot-ph',
     ]);
@@ -514,6 +536,8 @@ describe('Klirens — centralny model przepływu UI', () => {
     expect(model.getModuleForFormula('sch_idms')?.level).toBe('advanced');
     expect(model.getModuleForFormula('KTV')?.level).toBe('pro');
     expect(model.getModuleForFormula('ACR')?.path).toBe('spot');
+    expect(model.getModuleForFormula('K_frac')?.path).toBe('spot');
+    expect(formulas.find(formula => formula.id === 'K_frac')).toMatchObject({ version: 'spot', requires: ['U_K', 'U_Na'] });
   });
 
   it('oznacza jako wymagane wszystkie warunki, które blokują wartość liczbową', () => {
@@ -900,20 +924,20 @@ describe('Klirens — centralny model przepływu UI', () => {
       'utf8'
     );
 
-    expect(html).toContain('clcr_ui_workflow.css?v=19');
-    expect(html).toContain('clcr_ui_workflow.js?v=41');
-    expect(html).toContain('inline_kalkulator_klirens_02.js?v=34');
-    expect(html).toContain('inline_kalkulator_klirens_04.js?v=41');
-    expect(html).toContain('inline_kalkulator_klirens_07.js?v=31');
+    expect(html).toContain('clcr_ui_workflow.css?v=20');
+    expect(html).toContain('clcr_ui_workflow.js?v=42');
+    expect(html).toContain('inline_kalkulator_klirens_02.js?v=35');
+    expect(html).toContain('inline_kalkulator_klirens_04.js?v=42');
+    expect(html).toContain('inline_kalkulator_klirens_07.js?v=32');
     expect(html).toContain('clcr_result_reference_data.js?v=7');
     expect(html).toContain('clcr_result_presentation.js?v=8');
-    expect(serviceWorker).toContain("const SW_VERSION = '1.1.454'");
+    expect(serviceWorker).toContain("const SW_VERSION = '1.1.455'");
     expect(html).toContain('clcr_calculation_assumptions.js?v=2');
     expect(serviceWorker).toContain("'/clcr_calculation_assumptions.js?v=2'");
     expect(serviceWorker).toContain("'/clcr_clinical_safety.js?v=13'");
     expect(serviceWorker).toContain("'/clcr_result_reference_data.js?v=7'");
     expect(serviceWorker).toContain("'/clcr_result_presentation.js?v=8'");
-    expect(serviceWorker).toContain("'/clcr_ui_workflow.css?v=19'");
+    expect(serviceWorker).toContain("'/clcr_ui_workflow.css?v=20'");
     expect(serviceWorker).toContain("'/clcr_ui_workflow.js?v=35'");
     expect(serviceWorker).toContain("'/inline_kalkulator_klirens_02.js?v=28'");
     expect(serviceWorker).toContain("'/inline_kalkulator_klirens_04.js?v=35'");
