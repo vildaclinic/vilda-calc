@@ -132,14 +132,21 @@
   }
   // This is a display projection only. Old clients need the complete plaintext
   // copies and document links in log; none of them may be removed from storage.
-  function historyProjection(plan, reviewIds) {
+  function removedNotes(plan) { return new Set(Array.isArray(plan.removedNoteIds) && plan.removedNoteIds.every(recordId) ? plan.removedNoteIds : []); }
+  function historyProjection(plan, reviewIds, noteEntries) {
     var result = { clinical: [], archived: [], currentFallbacks: [] }, entries = Array.isArray(plan.log) ? plan.log : [], resolved = new Set();
+    var removed = removedNotes(plan), archivedRemoved = new Set();
     entries.forEach(function (entry) {
       var resolution = entry && entry.resolution;
       if (resolution && recordId(resolution.resolvedBy) && readableReview(resolution)) resolved.add(resolution.resolvedBy);
     });
     entries.forEach(function (entry) {
       if (!entry || typeof entry !== 'object') { result.clinical.push(entry); return; }
+      if (removed.has(entry.noteId)) {
+        var original = noteEntries && noteEntries.find(function (item) { return item.removed && item.noteId === entry.noteId && item.dateISO === entry.dateISO && item.text === entry.text; });
+        if (original && !archivedRemoved.has(entry.noteId)) { result.archived.push({ entry: entry, includeText: true, removed: true, retainedNote: original.retainedNote }); archivedRemoved.add(entry.noteId); }
+        return;
+      }
       var fallback = recordId(entry.reviewFallbackFor);
       var automatic = entry.syncOrigin === 'summary' || entry.syncOrigin === 'alternative' || fallback;
       var acknowledgment = entry.resolution && recordId(entry.resolution.resolvedBy)
@@ -249,8 +256,9 @@
     var state = { plans: [], patients: [], names: new Map(), selected: options.planId || null, filter: 'all', query: '', loading: false, busy: false, editing: false, detail: typeof options.detail === 'boolean' ? options.detail : !!(options.full && options.planId), stale: false, loaded: false };
     var editor = null, unsubscribe = [], selectedOrigin = null, lifecycleObserver = null, templateView = null;
     var syncVersionState = new Map();
-    var record = null, recordNoteId = null, recordStepId = null, recordError = null, recordSequence = 0, selectionSequence = 0, recordOrigin = null, initialRecord = options.noteId || null;
-    var omissionSnapshot = null, omissionSequence = 0, historySnapshot = null, historySequence = 0;
+    var record = null, recordNoteId = null, recordStepId = null, recordError = null, recordRemoved = false, recordSequence = 0, selectionSequence = 0, recordOrigin = null, initialRecord = options.noteId || null;
+    var omissionSnapshot = null, omissionSequence = 0, historySnapshot = null, historySequence = 0, archivePlanId = null, archiveOrigin = null;
+    var noteEntriesSnapshot = null, noteEntriesSequence = 0, noteRemovalSequence = 0;
     function current() { var user = vault && vault.getCurrentUser && vault.getCurrentUser(); return !destroyed && host.isConnected && vault && vault.isUnlocked() && user && user.userId === accountId && (!options.isCurrent || options.isCurrent()); }
     function node(tag, className, text) { var element = doc.createElement(tag); if (className) element.className = className; if (text != null) element.textContent = text; return element; }
     function clear(element) { while (element.firstChild) element.removeChild(element.firstChild); }
@@ -335,7 +343,7 @@
       }
       if (state.loading && !state.loaded) { var loading = node('p', 'vcp-empty', 'Wczytywanie planów…'); loading.setAttribute('role', 'status'); list.appendChild(loading); return; }
       var plans = visible();
-      if (!state.selected || !state.plans.some(function (plan) { return plan.id === state.selected; })) { resetRecord(); state.selected = plans[0] && plans[0].id || null; }
+      if (!state.selected || !state.plans.some(function (plan) { return plan.id === state.selected; })) { resetRecord(); archivePlanId = null; archiveOrigin = null; state.selected = plans[0] && plans[0].id || null; }
       plans.forEach(function (plan) {
         var row = button('', 'vcp-row' + (state.selected === plan.id ? ' is-selected' : ''), function () { select(plan.id); }); row.dataset.planId = plan.id;
         row.appendChild(node('span', 'vcp-patient', name(plan))); row.appendChild(node('span', 'vcp-row-title', plan.title));
@@ -356,11 +364,11 @@
       if (!state.loaded || selection !== selectionSequence) return;
       if (!current() || state.editing || state.busy) return;
       if (!options.full && options.requestExpand) { options.requestExpand(planId, false, noteId || null); return; }
-      resetRecord();
+      resetRecord(); archivePlanId = null; archiveOrigin = null;
       selectedOrigin = { scrollTop: list.scrollTop, query: state.query, filter: state.filter, id: planId };
       state.selected = planId; if (closed(activePlan())) state.filter = 'closed'; state.detail = true; root.classList.add('vcp-show-detail'); render(); detail.scrollTop = 0;
       var back = detail.querySelector('.vcp-back'); if (back && mobile()) back.focus({ preventScroll: true });
-      await Promise.all([loadOmissions(activePlan()), loadHistoryClassification(activePlan())]);
+      await Promise.all([loadOmissions(activePlan()), loadHistoryClassification(activePlan()), loadNoteEntries(activePlan())]);
       if (selection !== selectionSequence || !current() || state.selected !== planId) return;
       if (noteId) await openRecord(noteId);
     }
@@ -373,7 +381,7 @@
       var row = Array.from(list.querySelectorAll('[data-plan-id]')).find(function (item) { return item.dataset.planId === state.selected; }); if (row) row.focus({ preventScroll: true });
     }
     function openPatient(plan, noteId) { if (!state.editing && !state.busy && options.openPatient) options.openPatient(plan.patientId, noteId || null); }
-    function resetRecord() { recordSequence += 1; record = null; recordNoteId = null; recordStepId = null; recordError = null; recordOrigin = null; }
+    function resetRecord() { recordSequence += 1; record = null; recordNoteId = null; recordStepId = null; recordError = null; recordRemoved = false; recordOrigin = null; }
     function omissionFor(plan, step) {
       return omissionSnapshot && omissionSnapshot.planId === plan.id && omissionSnapshot.rev === plan.rev
         && omissionSnapshot.omissions && Object.prototype.hasOwnProperty.call(omissionSnapshot.omissions, step.id) && omissionSnapshot.omissions[step.id] || null;
@@ -394,6 +402,51 @@
       if (current() && ticket === omissionSequence && !state.editing && !state.busy) renderDetail();
     }
     function historyLogKey(plan) { return JSON.stringify(reviewStateSnapshot(plan && plan.log)); }
+    function noteEntriesFor(plan) {
+      return noteEntriesSnapshot && noteEntriesSnapshot.planId === plan.id && noteEntriesSnapshot.patientId === plan.patientId
+        && noteEntriesSnapshot.rev === plan.rev && noteEntriesSnapshot.logKey === historyLogKey(plan) ? noteEntriesSnapshot.entries : null;
+    }
+    async function readNoteEntries(plan) {
+      if (typeof vault.getCarePlanNoteEntries !== 'function' || !win.crypto || !win.crypto.subtle) return null;
+      var logKey = historyLogKey(plan);
+      var result = await Promise.all([vault.getCarePlanNoteEntries(plan.id), win.crypto.subtle.digest('SHA-256', new TextEncoder().encode(logKey))]);
+      if (!current()) return null;
+      var value = result[0], digest = Array.from(new Uint8Array(result[1])).map(function (byte) { return byte.toString(16).padStart(2, '0'); }).join('');
+      if (!value || value.planId !== plan.id || value.patientId !== plan.patientId || !Number.isSafeInteger(value.rev) || value.rev < 0
+        || typeof value.logDigest !== 'string' || !/^[a-f0-9]{64}$/.test(value.logDigest) || !Array.isArray(value.entries)
+        || !Array.isArray(value.removedNoteIds) || !value.removedNoteIds.every(recordId)) return null;
+      var ids = new Set(), removed = new Set(value.removedNoteIds);
+      if (!value.entries.every(function (entry) {
+        if (!entry || !recordId(entry.noteId) || ids.has(entry.noteId) || typeof entry.removable !== 'boolean' || typeof entry.removed !== 'boolean'
+          || entry.removed !== removed.has(entry.noteId) || typeof entry.text !== 'string' || !entry.text.trim() || entry.text.length > 20000
+          || typeof entry.dateISO !== 'string' || !nullableDate(entry.dateISO)
+          || entry.removable && (entry.removed || !Number.isSafeInteger(entry.linkedRev) || entry.linkedRev < 0 || typeof entry.readToken !== 'string' || !/^[a-f0-9]{64}$/.test(entry.readToken))) return false;
+        ids.add(entry.noteId); return true;
+      })) return null;
+      return { planId: value.planId, patientId: value.patientId, rev: value.rev, logKey: logKey, matches: value.rev === plan.rev && value.logDigest === digest,
+        removedNoteIds: value.removedNoteIds.slice(), entries: value.entries.map(function (entry) {
+          var copied = Object.assign({}, entry), retained = entry.retainedNote;
+          copied.retainedNote = entry.removed && retained && retained.id === entry.noteId && retained.patientId === plan.patientId
+            && typeof retained.title === 'string' && typeof retained.body === 'string' ? Object.assign({}, retained) : null;
+          return copied;
+        }) };
+    }
+    async function loadNoteEntries(plan) {
+      var ticket = ++noteEntriesSequence, selection = selectionSequence; noteEntriesSnapshot = null;
+      if (!plan || !current() || typeof vault.getCarePlanNoteEntries !== 'function') return;
+      var logKey = historyLogKey(plan);
+      try {
+        var snapshot = await readNoteEntries(plan);
+        if (!current() || ticket !== noteEntriesSequence || selection !== selectionSequence || state.selected !== plan.id
+          || !activePlan() || activePlan().rev !== plan.rev || historyLogKey(activePlan()) !== logKey) return;
+        if (snapshot && snapshot.matches) noteEntriesSnapshot = snapshot;
+      } catch { /* An unavailable proof never grants a removal control. */ }
+      if (current() && ticket === noteEntriesSequence && selection === selectionSequence && !state.editing && !state.busy) renderDetail();
+    }
+    function removableNote(plan, entry) {
+      var entries = noteEntriesFor(plan);
+      return !plan.syncNeedsReview && entries && entries.find(function (item) { return item.removable && !item.removed && item.noteId === entry.noteId && item.text === entry.text && item.dateISO === entry.dateISO; });
+    }
     function historyReviewIds(plan) {
       return historySnapshot && historySnapshot.planId === plan.id && historySnapshot.patientId === plan.patientId
         && historySnapshot.rev === plan.rev && historySnapshot.logKey === historyLogKey(plan) ? historySnapshot.reviewIds : null;
@@ -432,24 +485,35 @@
       return component && component.stepId || null;
     }
     function returnToPlan() {
-      var origin = recordOrigin; resetRecord(); renderDetail();
+      var origin = recordOrigin; resetRecord();
+      if (origin && !origin.archive) { archivePlanId = null; archiveOrigin = null; }
+      renderDetail();
       if (origin) {
         detail.scrollTop = origin.scrollTop;
-        var candidates = Array.from(detail.querySelectorAll('button'));
-        var button = candidates.find(function (entry) { return entry.dataset.recordId === origin.id; });
+        var candidates = Array.from(detail.querySelectorAll('[data-record-id]'));
+        var button = candidates[origin.linkIndex];
+        if (!button || button.dataset.recordId !== origin.id) button = candidates.find(function (entry) { return entry.dataset.recordId === origin.id; });
         if (button) button.focus({ preventScroll: true });
       }
     }
-    async function openRecord(noteId, refreshing, stepId) {
+    async function openRecord(noteId, refreshing, stepId, source) {
       var plan = activePlan();
       if (!current() || state.editing || state.busy || !plan || !recordId(noteId)) return;
       if (!options.full && options.requestExpand) { options.requestExpand(plan.id, false, noteId); return; }
-      if (!refreshing) recordOrigin = { scrollTop: detail.scrollTop, id: noteId };
+      if (!refreshing) recordOrigin = { scrollTop: detail.scrollTop, id: noteId, archive: archivePlanId === plan.id,
+        linkIndex: source ? Array.from(detail.querySelectorAll('[data-record-id]')).indexOf(source) : -1 };
       var ticket = ++recordSequence, planId = plan.id, patientId = plan.patientId;
       recordStepId = stepId || referencedResultStep(plan, noteId);
-      recordNoteId = noteId; record = null; recordError = null; renderDetail();
+      recordNoteId = noteId; record = null; recordError = null; recordRemoved = removedNotes(plan).has(noteId); renderDetail();
       if (!refreshing) detail.scrollTop = 0;
+      if (recordRemoved) return;
       try {
+        if (noteId.indexOf('care-note-') === 0 && typeof vault.getCarePlanNoteEntries === 'function') {
+          var noteState = await readNoteEntries(plan);
+          if (!current() || ticket !== recordSequence || state.selected !== planId || recordNoteId !== noteId) return;
+          if (noteState && noteState.removedNoteIds.indexOf(noteId) >= 0) { recordRemoved = true; renderDetail(); return; }
+          if (!noteState || !noteState.matches) throw new Error('Nie można potwierdzić aktualnego stanu wpisu. Wróć do planu i odśwież widok.');
+        }
         var scopedResult = recordStepId && typeof vault.getCarePlanResultReference === 'function';
         var reference = scopedResult ? await vault.getCarePlanResultReference({ planId: planId, stepId: recordStepId, noteId: noteId }) : null;
         var original = scopedResult ? reference && reference.note : await vault.getPatientNote(noteId);
@@ -472,7 +536,7 @@
       }
     }
     function recordLink(label, noteId, stepId) {
-      var item = button(label, 'vcp-text', function () { openRecord(noteId, false, stepId); }); item.dataset.recordId = noteId; return item;
+      var item = button(label, 'vcp-text', function () { openRecord(noteId, false, stepId, item); }); item.dataset.recordId = noteId; return item;
     }
     function reviewField(parent, label, value) {
       var field = node('p', 'vcp-sync-field'); field.appendChild(node('span', 'vcp-sync-field-label', label + ': '));
@@ -523,6 +587,7 @@
       var identity = archived && recordId(snapshot.resolvedBy) ? snapshot.resolvedBy : JSON.stringify(reviewStateSnapshot(snapshot));
       var stateKey = planId + (archived ? ':archived:' : ':current:') + identity;
       var versions = node('details', 'vcp-sync-versions'); versions.open = syncVersionState.has(stateKey) ? syncVersionState.get(stateKey) : !archived;
+      versions.vcpFocusKey = stateKey;
       versions.addEventListener('toggle', function () {
         if (!current()) return;
         syncVersionState.delete(stateKey); syncVersionState.set(stateKey, versions.open);
@@ -553,26 +618,48 @@
         versions.appendChild(group);
       }); parent.appendChild(versions);
     }
-    function historyEntry(parent, entry, includeText, includeVersions, planId) {
+    function historyEntry(parent, entry, includeText, includeVersions, planId, removed, retainedNote) {
       entry = entry || {};
       var item = node('div', 'vcp-timeline-entry'); item.appendChild(node('time', '', date(entry.dateISO || entry.date || entry.atISO)));
+      if (removed) item.appendChild(node('strong', 'vcp-removed-note-label', 'Usunięte ustalenie'));
       if (includeText) item.appendChild(node('p', '', entry.text || 'Zaktualizowano plan.'));
       if (includeVersions) renderSyncVersions(item, entry.resolution, true, planId);
-      if (includeText && (entry.noteId || entry.resultNoteId)) item.appendChild(recordLink('Otwórz wpis', entry.noteId || entry.resultNoteId));
+      if (includeText && !removed && (entry.noteId || entry.resultNoteId)) item.appendChild(recordLink('Otwórz wpis', entry.noteId || entry.resultNoteId));
+      var plan = activePlan();
+      if (includeText && !includeVersions && !removed && plan && plan.id === planId && removableNote(plan, entry)) {
+        var remove = button('Usuń wpis', 'vcp-text vcp-remove-note', function () { removePlanNote(plan, entry); }); remove.dataset.removeNoteId = entry.noteId; item.appendChild(remove);
+      }
+      if (removed && retainedNote) {
+        var retained = node('section', 'vcp-retained-note'); retained.appendChild(node('h3', '', 'Wersja zachowana po usunięciu'));
+        if (retainedNote.title) retained.appendChild(node('p', 'vcp-help', retainedNote.title)); originalContent(retained, retainedNote); item.appendChild(retained);
+      }
       parent.appendChild(item);
     }
-    function renderHistoryArchive(plan, entries) {
-      if (!entries.length) return;
-      var archive = node('details', 'vcp-history-archive'), stateKey = plan.id + ':history-archive';
-      archive.open = syncVersionState.get(stateKey) === true;
-      archive.appendChild(node('summary', '', 'Wcześniejsze wersje planu'));
-      archive.addEventListener('toggle', function () {
-        if (!current()) return;
-        syncVersionState.delete(stateKey); syncVersionState.set(stateKey, archive.open);
-        if (syncVersionState.size > 128) syncVersionState.delete(syncVersionState.keys().next().value);
-      });
+    function openHistoryArchive(plan) {
+      if (!current() || state.editing || state.busy || state.selected !== plan.id) return;
+      archiveOrigin = { planId: plan.id, scrollTop: detail.scrollTop }; archivePlanId = plan.id; resetRecord(); renderDetail(); detail.scrollTop = 0;
+      var heading = detail.querySelector('.vcp-history-archive h2'); if (heading) heading.focus({ preventScroll: true });
+    }
+    function returnFromHistoryArchive() {
+      if (!current() || state.editing || state.busy) return;
+      var origin = archiveOrigin; archivePlanId = null; archiveOrigin = null; renderDetail();
+      if (origin && state.selected === origin.planId) detail.scrollTop = origin.scrollTop;
+      var menu = detail.querySelector('.vcp-menu summary'); if (menu) menu.focus({ preventScroll: true });
+    }
+    function renderHistoryArchive(plan) {
+      var noteEntries = noteEntriesFor(plan), entries = historyProjection(plan, historyReviewIds(plan), noteEntries).archived;
+      var archive = node('section', 'vcp-history-archive'); archive.setAttribute('aria-label', 'Wcześniejsze wersje planu');
+      archive.appendChild(button('← Wróć do planu', 'vcp-back vcp-text', returnFromHistoryArchive));
+      archive.appendChild(node('p', 'vcp-patient', name(plan))); archive.appendChild(node('p', 'vcp-record-plan', plan.title));
+      var heading = node('h2', 'vcp-title', 'Wcześniejsze wersje planu'); heading.tabIndex = -1; archive.appendChild(heading);
+      if (plan.syncNeedsReview) archive.appendChild(planBadge(plan));
       var content = node('div', 'vcp-timeline');
-      entries.slice().reverse().forEach(function (item) { historyEntry(content, item.entry, item.includeText, true, plan.id); });
+      entries.slice().reverse().forEach(function (item) { historyEntry(content, item.entry, item.includeText, true, plan.id, item.removed, item.retainedNote); });
+      if (removedNotes(plan).size && !noteEntries) {
+        var unavailable = node('div', 'vcp-notice', 'Nie udało się odczytać wcześniejszych ustaleń.');
+        unavailable.appendChild(button('Spróbuj ponownie', 'vcp-text', function () { loadNoteEntries(plan); })); content.appendChild(unavailable);
+      }
+      if (!entries.length && !removedNotes(plan).size) content.appendChild(node('p', 'vcp-empty', 'Brak wcześniejszych wersji planu.'));
       archive.appendChild(content); detail.appendChild(archive);
     }
     function originalContent(parent, original) {
@@ -589,9 +676,12 @@
     }
     function renderRecord(plan) {
       var section = node('section', 'vcp-record'); section.dataset.noteId = recordNoteId; section.setAttribute('aria-label', 'Wpis planu opieki');
-      section.appendChild(button('← Wróć do planu', 'vcp-back vcp-text', returnToPlan));
+      section.appendChild(button(recordOrigin && recordOrigin.archive ? '← Wróć do wcześniejszych wersji' : '← Wróć do planu', 'vcp-back vcp-text', returnToPlan));
       section.appendChild(node('p', 'vcp-patient', name(plan))); section.appendChild(node('p', 'vcp-record-plan', plan.title));
-      if (recordError) {
+      if (recordRemoved) {
+        section.appendChild(node('h2', 'vcp-title', 'Ustalenie usunięte'));
+        section.appendChild(node('p', '', 'Ten wpis został usunięty z przebiegu planu. Wcześniejszy zapis pozostaje w historii zmian dostępnej w Opcjach planu.'));
+      } else if (recordError) {
         var error = errorBox(recordError, section); error.appendChild(button('Spróbuj ponownie', 'vcp-text', function () { openRecord(recordNoteId, true); }));
         if (options.openPatient) error.appendChild(button('Otwórz Kartę pacjenta ↗', 'vcp-text', function () { openPatient(plan); }));
       } else if (!record) { var loading = node('p', 'vcp-empty', 'Wczytywanie wpisu…'); loading.setAttribute('role', 'status'); section.appendChild(loading); }
@@ -609,13 +699,39 @@
       }
       detail.appendChild(section);
     }
+    function archiveFocusOrigin() {
+      var archive = detail.querySelector('.vcp-history-archive'), focused = doc.activeElement;
+      if (!archive || !focused) return null;
+      if (focused === archive.querySelector('h2')) return { element: focused, kind: 'heading' };
+      if (focused === archive.querySelector('.vcp-back')) return { element: focused, kind: 'back' };
+      var links = Array.from(archive.querySelectorAll('[data-record-id]'));
+      if (links.indexOf(focused) >= 0) return { element: focused, kind: 'document', id: focused.dataset.recordId, label: focused.textContent,
+        index: links.filter(function (link) { return link.dataset.recordId === focused.dataset.recordId && link.textContent === focused.textContent; }).indexOf(focused) };
+      var disclosure = Array.from(archive.querySelectorAll('.vcp-sync-versions')).find(function (item) { return item.querySelector('summary') === focused; });
+      return disclosure ? { element: focused, kind: 'disclosure', key: disclosure.vcpFocusKey } : null;
+    }
+    function restoreArchiveFocus(origin) {
+      if (!origin || doc.activeElement && doc.activeElement !== origin.element && doc.activeElement !== doc.body && doc.activeElement !== doc.documentElement) return;
+      var archive = detail.querySelector('.vcp-history-archive'); if (!archive) return;
+      var target = origin.kind === 'heading' ? archive.querySelector('h2') : origin.kind === 'back' ? archive.querySelector('.vcp-back') : null;
+      if (origin.kind === 'document') target = Array.from(archive.querySelectorAll('[data-record-id]')).filter(function (link) {
+        return link.dataset.recordId === origin.id && link.textContent === origin.label;
+      })[origin.index];
+      if (origin.kind === 'disclosure') {
+        var disclosure = Array.from(archive.querySelectorAll('.vcp-sync-versions')).find(function (item) { return item.vcpFocusKey === origin.key; });
+        target = disclosure && disclosure.querySelector('summary');
+      }
+      if (target) target.focus({ preventScroll: true });
+    }
     function renderDetail() {
-      var scroll = detail.scrollTop, menuOpen = !!detail.querySelector('.vcp-menu[open]'); clear(detail);
+      var scroll = detail.scrollTop, menuOpen = !!detail.querySelector('.vcp-menu[open]'), archiveFocus = archiveFocusOrigin(); clear(detail);
       var selected = activePlan();
       if (recordNoteId && selected) { renderRecord(selected); detail.scrollTop = scroll; return; }
+      if (selected && archivePlanId === selected.id) { renderHistoryArchive(selected); detail.scrollTop = scroll; restoreArchiveFocus(archiveFocus); return; }
       var parentBack = button('← Lista planów', 'vcp-back vcp-text', back);
       parentBack.setAttribute('data-vcp-parent-back', 'true'); detail.appendChild(parentBack); refreshNavigation();
       var plan = activePlan(); if (!plan) { detail.appendChild(node('p', 'vcp-empty', 'Wybierz plan z listy albo dodaj nowy plan opieki.')); return; }
+      var projectedHistory = historyProjection(plan, historyReviewIds(plan), noteEntriesFor(plan));
       var top = node('div', 'vcp-detail-top'), patient = node('div', '');
       patient.appendChild(options.openPatient ? button(name(plan) + ' ↗', 'vcp-patient-link', function () { openPatient(plan); }) : node('h3', 'vcp-patient', name(plan)));
       patient.appendChild(node('p', 'vcp-detail-date', 'Plan od ' + date(plan.createdAtISO))); top.appendChild(patient);
@@ -624,13 +740,13 @@
       var copyTemplate = button('Zapisz układ jako szablon', '', function () { menu.open = false; openTemplateLibrary(plan.id); }); copyTemplate.disabled = !!plan.syncNeedsReview; if (copyTemplate.disabled) copyTemplate.title = 'Najpierw potwierdź przegląd zmian po synchronizacji.'; actions.appendChild(copyTemplate);
       if (!closed(plan)) actions.appendChild(button('Dołącz istniejący termin', '', function () { menu.open = false; linkEvent(plan); }));
       actions.appendChild(button('Dodaj ustalenie', '', function () { menu.open = false; addNote(plan); }));
+      if (projectedHistory.archived.length || removedNotes(plan).size) actions.appendChild(button('Wcześniejsze wersje planu', '', function () { menu.open = false; openHistoryArchive(plan); }));
       var finish = button(closed(plan) ? 'Wznów plan' : 'Zamknij plan', '', function () { menu.open = false; if (closed(plan)) reopen(plan); else closePlan(plan); });
       finish.disabled = !closed(plan) && !!plan.syncNeedsReview; if (finish.disabled) finish.title = 'Najpierw potwierdź przegląd zmian po synchronizacji.'; actions.appendChild(finish); menu.appendChild(actions); top.appendChild(menu); detail.appendChild(top);
       detail.appendChild(node('h2', 'vcp-title', plan.title)); if (plan.goal) detail.appendChild(node('p', 'vcp-goal', plan.goal));
       var strip = node('div', 'vcp-plan-strip'); strip.appendChild(planBadge(plan)); strip.appendChild(node('span', '', doneSteps(plan).length + ' z ' + steps(plan).length + ' kroków zakończonych'));
       var overdue = openSteps(plan).filter(function (step) { return daysLate(step.reminderDateISO) > 0; }).length;
       strip.appendChild(node('span', '', openSteps(plan).length + ' otwarte' + (overdue ? ' · ' + overdue + ' po terminie' : ''))); detail.appendChild(strip);
-      var projectedHistory = historyProjection(plan, historyReviewIds(plan));
       if (plan.syncNeedsReview) {
         var review = node('section', 'vcp-sync-review'); review.setAttribute('aria-label', 'Przegląd zmian po synchronizacji');
         review.appendChild(node('strong', '', 'Plan wymaga przeglądu po synchronizacji'));
@@ -662,7 +778,7 @@
       var history = node('details', 'vcp-history'); history.open = true; history.appendChild(node('summary', '', 'Przebieg planu · ' + historyCount(historyEntries.length)));
       var timeline = node('div', 'vcp-timeline'); historyEntries.slice().reverse().forEach(function (entry) {
         historyEntry(timeline, entry, true, false, plan.id);
-      }); history.appendChild(timeline); detail.appendChild(history); renderHistoryArchive(plan, projectedHistory.archived); detail.scrollTop = scroll;
+      }); history.appendChild(timeline); detail.appendChild(history); detail.scrollTop = scroll;
     }
     function stepNode(plan, step, index) {
       var item = node('article', 'vcp-step'); item.dataset.stepId = step.id;
@@ -717,7 +833,7 @@
       } finally { if (ticket === sequence) state.loading = false; }
       if (current() && ticket === sequence) {
         if (changed) render();
-        await Promise.all([loadOmissions(activePlan()), loadHistoryClassification(activePlan())]);
+        await Promise.all([loadOmissions(activePlan()), loadHistoryClassification(activePlan()), loadNoteEntries(activePlan())]);
         if (!current() || ticket !== sequence) return;
         if (recordNoteId && activePlan()) await openRecord(recordNoteId, true, recordStepId);
         if (initialRecord) { var firstRecord = initialRecord; initialRecord = null; await openRecord(firstRecord); }
@@ -795,7 +911,7 @@
           else if (result.planId) state.selected = result.planId;
           if (savedPlan && closed(savedPlan)) state.filter = 'closed'; else state.filter = 'all';
           state.query = ''; search.value = ''; state.detail = !!options.full; root.classList.toggle('vcp-show-detail', state.detail);
-          state.stale = false; setWorking(false); cancel(); notify(request.action === 'result' ? 'Wynik zapisany w kartotece. Plan pozostaje otwarty.' : request.action === 'linkResult' ? 'Podpięto oryginalny wynik. Plan pozostaje otwarty.' : request.action === 'omitStep' ? 'Zapisano pominięcie kroku z uzasadnieniem. Plan pozostaje otwarty.' : request.restoreOmitted ? 'Wznowiono krok z zachowaniem dokumentacji i rezerwacji.' : request.action === 'close' ? 'Zapisano zamknięcie i powód zakończenia planu.' : request.action === 'acknowledgeMerge' ? 'Zapisano potwierdzenie przeglądu planu.' : 'Zapisano zmiany planu.');
+          state.stale = false; setWorking(false); cancel(); notify(request.action === 'removePlanNote' ? 'Usunięto wpis z przebiegu planu.' : request.action === 'result' ? 'Wynik zapisany w kartotece. Plan pozostaje otwarty.' : request.action === 'linkResult' ? 'Podpięto oryginalny wynik. Plan pozostaje otwarty.' : request.action === 'omitStep' ? 'Zapisano pominięcie kroku z uzasadnieniem. Plan pozostaje otwarty.' : request.restoreOmitted ? 'Wznowiono krok z zachowaniem dokumentacji i rezerwacji.' : request.action === 'close' ? 'Zapisano zamknięcie i powód zakończenia planu.' : request.action === 'acknowledgeMerge' ? 'Zapisano potwierdzenie przeglądu planu.' : 'Zapisano zmiany planu.');
           if (options.onChange) options.onChange(result); await refresh();
         } catch (error) { if (current() && editor === model) { setWorking(false); errorBox(error, errors); errors.scrollIntoView({ block: 'nearest' }); } }
       });
@@ -1039,6 +1155,31 @@
     function editPlan(plan) {
       showEditor('Nazwa i cel planu', plan, function (model) { model.title = field(model.body, 'Nazwa planu', 'text', plan.title, true); model.title.maxLength = 240; model.goal = field(model.body, 'Cel i ustalenia (opcjonalnie)', 'textarea', plan.goal, false); model.goal.maxLength = 20000; }, 'Zapisz', function (model) { return { action: 'edit', title: model.title.value.trim(), goal: model.goal.value.trim() }; });
     }
+    async function removePlanNote(plan, entry) {
+      if (!current() || state.editing || state.busy || state.selected !== plan.id || !activePlan()
+        || activePlan().rev !== plan.rev || historyLogKey(activePlan()) !== historyLogKey(plan) || !removableNote(plan, entry)) return;
+      var ticket = ++noteRemovalSequence, selection = selectionSequence, logKey = historyLogKey(plan);
+      busy(true, false); notify('Sprawdzanie aktualnego wpisu…');
+      try {
+        var snapshot = await readNoteEntries(plan);
+        if (!current() || ticket !== noteRemovalSequence || selection !== selectionSequence || state.selected !== plan.id
+          || !activePlan() || activePlan().rev !== plan.rev || historyLogKey(activePlan()) !== logKey) return;
+        var target = snapshot && snapshot.matches && snapshot.entries.find(function (item) {
+          return item.removable && !item.removed && item.noteId === entry.noteId && item.text === entry.text && item.dateISO === entry.dateISO;
+        });
+        if (!target || activePlan().syncNeedsReview) throw new Error('Wpis zmienił się lub nie można potwierdzić możliwości jego usunięcia. Odśwież plan i spróbuj ponownie.');
+        busy(false, false); notify('');
+        showEditor('Usuń wpis', plan, function (model) {
+          notice(model.body, 'Wpis zniknie z przebiegu planu. Wcześniejszy zapis pozostanie w historii zmian dostępnej w Opcjach planu.');
+          model.body.appendChild(node('p', 'vcp-help', 'Data ustalenia: ' + date(target.dateISO)));
+          model.body.appendChild(node('div', 'vcp-note-removal-text', target.text));
+        }, 'Usuń wpis', function () { return { action: 'removePlanNote', noteId: target.noteId, linkedRev: target.linkedRev, readToken: target.readToken }; });
+      } catch (error) {
+        if (current() && ticket === noteRemovalSequence) notify(error && error.message || 'Nie udało się odczytać wpisu. Spróbuj ponownie.');
+      } finally {
+        if (current() && ticket === noteRemovalSequence && !editor) { busy(false, false); render(); if (state.stale) refresh(); }
+      }
+    }
     function addNote(plan) {
       showEditor('Zapisz ustalenie', plan, function (model) { notice(model.body, 'Wpis będzie dostępny w przebiegu planu.'); model.text = field(model.body, 'Co ustalono?', 'textarea', '', true); model.text.maxLength = 20000; model.date = field(model.body, 'Data ustalenia', 'date', today(), true); model.date.max = today(); }, 'Zapisz ustalenie', function (model) { return { action: 'addNote', text: model.text.value.trim(), dateISO: model.date.value }; });
     }
@@ -1055,7 +1196,7 @@
     function acknowledgeMerge(plan) {
       var resolveClosed = closed(plan) && openSteps(plan).length;
       showEditor('Przegląd planu po synchronizacji', plan, function (model) {
-        notice(model.body, reviewExplanation(plan) + ' Wcześniejsze wersje pozostaną dostępne w szczegółach planu.', true);
+        notice(model.body, reviewExplanation(plan) + ' Wcześniejsze wersje pozostaną dostępne w Opcjach planu.', true);
         if (resolveClosed) {
           notice(model.body, 'W zamkniętym planie zachowano ' + openSteps(plan).length + ' nierozstrzygniętych kroków. Jeśli mają być kontynuowane, wznów plan i osobno potwierdź przegląd.');
           model.body.appendChild(button('Wznów plan', 'vcp-outline', function () { model.cancel(); reopen(plan); }));
@@ -1106,7 +1247,7 @@
       } catch (error) { if (current()) { busy(false, false); notify(error && error.message || 'Nie udało się otworzyć szablonów.'); } }
     }
     function destroy() {
-      if (destroyed) return; destroyed = true; sequence += 1; selectionSequence += 1; historySequence += 1; historySnapshot = null; resetRecord(); syncVersionState.clear(); if (refreshTimer) win.clearTimeout(refreshTimer);
+      if (destroyed) return; destroyed = true; sequence += 1; selectionSequence += 1; historySequence += 1; noteEntriesSequence += 1; noteRemovalSequence += 1; historySnapshot = null; noteEntriesSnapshot = null; archivePlanId = null; archiveOrigin = null; resetRecord(); syncVersionState.clear(); if (refreshTimer) win.clearTimeout(refreshTimer);
       if (templateView) { templateView.destroy(); templateView = null; }
       if (lifecycleObserver) lifecycleObserver.disconnect();
       if (editor) {

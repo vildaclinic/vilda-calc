@@ -4,6 +4,14 @@ import { loadBrowserScript } from '../support/load-browser-script.mjs';
 
 const settle = () => new Promise(resolve => { setTimeout(resolve, 0); });
 const findButton = (root, text) => root.querySelectorAll('button').find(button => button.textContent === text);
+function openArchive(d) {
+  expect(d.host.querySelector('.vcp-history-archive')).toBeNull();
+  const menu = d.host.querySelector('.vcp-menu'); menu.open = true;
+  findButton(menu, 'Wcześniejsze wersje planu').click();
+  const archive = d.host.querySelector('.vcp-history-archive');
+  expect(archive).not.toBeNull(); expect(d.host.querySelector('.vcp-history')).toBeNull();
+  return archive;
+}
 
 function editorWithResponse(response = {}, extraPlan = {}) {
   const doc = atrapaDokumentu(), createElement = doc.createElement;
@@ -96,6 +104,7 @@ describe('Care plan review renders complete typed changes and original document 
     expect(live.host.querySelector('[data-review-key="decision"]').textContent).toContain('Przypomnienie o decyzji: Bez terminu');
     live.controller.destroy();
     const archived = editorWithResponse({}, { log: [{ dateISO: '2026-10-29', text: 'Fikcyjne rozstrzygnięcie.', resolution: snapshot }] }); await settle();
+    openArchive(archived);
     for (const group of archived.host.querySelectorAll('.vcp-sync-component')) {
       expect(group.querySelectorAll('.vcp-sync-version')).toHaveLength(1);
       expect(group.querySelector('.vcp-sync-version-title').textContent).toBe('Stan planu przed zapisaniem zmian');
@@ -193,20 +202,26 @@ describe('Care plan review renders complete typed changes and original document 
       careContext: { version: 1, role: 'result', planId: d.plan.id, stepId: snapshot.components[0].stepId } };
     d.vault.getPatientNote = vi.fn(async () => structuredClone(original)); await settle();
     expect(d.host.querySelector('.vcp-sync-review')).toBeNull();
-    const archive = d.host.querySelector('.vcp-history-archive');
-    expect(archive.open).toBe(false); archive.open = true; archive.dispatch('toggle');
+    const detail = d.host.querySelector('.vcp-detail'); detail.scrollTop = 240;
+    const archive = openArchive(d);
+    expect(d.doc.activeElement).toBe(archive.querySelector('h2')); expect(detail.scrollTop).toBe(0);
     const versions = d.host.querySelector('.vcp-history-archive .vcp-sync-versions');
     expect(versions.open).toBe(false); expect(versions.textContent).toContain('Stan planu przed zapisaniem zmian');
     expect(versions.textContent).toContain('14:45'); expect(versions.textContent).toContain('16:45');
     versions.open = true; versions.dispatch('toggle');
+    detail.scrollTop = 375;
     versions.querySelector('[data-record-id="fictional-alternate-result"]').click(); await settle();
     expect(d.vault.getPatientNote).toHaveBeenCalledWith(original.id);
     expect(d.host.querySelector('.vcp-record-body').textContent).toBe(original.body);
     if (legacy) d.plan.log[0].resolution = { components: structuredClone(snapshot.components), version: 1 };
     await d.controller.refresh();
-    findButton(d.host, '← Wróć do planu').click();
-    expect(d.host.querySelector('.vcp-history-archive').open).toBe(true);
+    findButton(d.host, '← Wróć do wcześniejszych wersji').click();
+    expect(d.host.querySelector('.vcp-history-archive')).not.toBeNull(); expect(detail.scrollTop).toBe(375);
+    expect(d.doc.activeElement.dataset.recordId).toBe(original.id);
     expect(d.host.querySelector('.vcp-history-archive .vcp-sync-versions').open).toBe(true);
+    findButton(d.host, '← Wróć do planu').click();
+    expect(d.host.querySelector('.vcp-history-archive')).toBeNull(); expect(detail.scrollTop).toBe(240);
+    expect(d.doc.activeElement).toBe(d.host.querySelector('.vcp-menu summary'));
     expect(d.vault.mutateCarePlan).not.toHaveBeenCalled(); d.controller.destroy();
   });
 
@@ -220,15 +235,56 @@ describe('Care plan review renders complete typed changes and original document 
     expect(d.vault.mutateCarePlan).not.toHaveBeenCalled(); d.controller.destroy();
   });
 
+  it('leaves the archive when a different plan is selected and never carries its earlier versions across patients', async () => {
+    const d = editorWithResponse({}, { log: [{ dateISO: '2026-10-29', text: 'Fikcyjny przegląd pierwszego planu.', resolution: stepReview() }] }); await settle();
+    const other = { ...structuredClone(d.plan), id: 'fictional-second-plan', patientId: 'fictional-second-patient', title: 'Fikcyjny drugi plan', log: [] };
+    d.vault.listCarePlans.mockResolvedValue([d.plan, other]); await d.controller.refresh(); openArchive(d);
+    await d.controller.select(other.id);
+    expect(d.host.querySelector('.vcp-history-archive')).toBeNull();
+    expect(d.host.querySelector('.vcp-title').textContent).toBe(other.title);
+    expect(findButton(d.host, 'Wcześniejsze wersje planu')).toBeUndefined();
+    await d.controller.select(d.plan.id);
+    expect(d.host.querySelector('.vcp-history-archive')).toBeNull();
+    expect(findButton(d.host, 'Wcześniejsze wersje planu')).toBeDefined();
+    expect(d.vault.mutateCarePlan).not.toHaveBeenCalled(); d.controller.destroy();
+  });
+
+  it.each(['heading', 'back', 'document'])('preserves archive %s focus when a pending auxiliary read finishes after navigation', async target => {
+    const d = editorWithResponse({}, { log: [{ dateISO: '2026-10-29', text: 'Fikcyjny wcześniejszy przegląd.', resolution: stepReview() }] }); await settle();
+    const before = JSON.stringify(d.plan); let finish;
+    d.vault.getCarePlanNoteEntries = vi.fn(() => new Promise(resolve => { finish = resolve; }));
+    const refreshing = d.controller.refresh(); await vi.waitFor(() => expect(d.vault.getCarePlanNoteEntries).toHaveBeenCalledTimes(1));
+    const archive = openArchive(d), detail = d.host.querySelector('.vcp-detail');
+    const selector = target === 'heading' ? 'h2' : target === 'back' ? '.vcp-back' : '[data-record-id="fictional-alternate-result"]';
+    if (target === 'document') { const versions = archive.querySelector('.vcp-sync-versions'); versions.open = true; versions.dispatch('toggle'); }
+    archive.querySelector(selector).focus({ preventScroll: true }); detail.scrollTop = 170;
+    finish(null); await refreshing;
+    expect(d.doc.activeElement === d.host.querySelector('.vcp-history-archive').querySelector(selector)).toBe(true);
+    expect(d.doc.activeElement.isConnected).toBe(true); expect(detail.scrollTop).toBe(170);
+    expect(JSON.stringify(d.plan)).toBe(before); expect(d.vault.mutateCarePlan).not.toHaveBeenCalled(); d.controller.destroy();
+  });
+
+  it('does not take focus from a field outside the archive when a pending auxiliary read completes', async () => {
+    const d = editorWithResponse({}, { log: [{ dateISO: '2026-10-29', text: 'Fikcyjny wcześniejszy przegląd.', resolution: stepReview() }] }); await settle();
+    let finish; d.vault.getCarePlanNoteEntries = vi.fn(() => new Promise(resolve => { finish = resolve; }));
+    const refreshing = d.controller.refresh(); await vi.waitFor(() => expect(d.vault.getCarePlanNoteEntries).toHaveBeenCalledTimes(1));
+    openArchive(d);
+    const form = d.doc.createElement('form'), field = d.doc.createElement('input'); form.appendChild(field); d.doc.body.appendChild(form); field.focus();
+    finish(null); await refreshing;
+    expect(d.doc.activeElement).toBe(field); expect(field.isConnected).toBe(true); d.controller.destroy();
+  });
+
   it('does not imply a completed review for a conflict resolved by editing before acknowledgment', async () => {
     const snapshot = stepReview(), d = editorWithResponse({}, { syncNeedsReview: true, syncReview: snapshot,
       log: [{ dateISO: '2026-10-29', text: 'Zmieniono krok planu.', resolution: snapshot }] }); await settle();
     expect(d.host.querySelector('.vcp-sync-review')).not.toBeNull();
+    openArchive(d);
     const archived = d.host.querySelector('.vcp-history-archive .vcp-sync-versions');
     expect(archived.textContent).toContain('Stan planu przed zapisaniem zmian');
     expect(archived.textContent).toContain('Wartości zachowane przed zapisaniem zmian');
     expect(archived.textContent).not.toContain('przed potwierdzeniem przeglądu');
     expect(archived.textContent).not.toContain('w chwili przeglądu');
+    findButton(d.host, '← Wróć do planu').click(); expect(d.host.querySelector('.vcp-sync-review')).not.toBeNull();
     expect(d.vault.mutateCarePlan).not.toHaveBeenCalled(); d.controller.destroy();
   });
 });
@@ -443,8 +499,8 @@ describe('Plain sync copies stay available without inflating the clinical timeli
     expect(history.textContent).not.toContain('Fikcyjna inna kopia tekstowa.');
     expect(history.querySelector('.vcp-sync-versions')).toBeNull();
     expect(history.querySelectorAll('.vcp-timeline-entry')).toHaveLength(1);
-    const archive = d.host.querySelector('.vcp-history-archive');
-    expect(archive.open).toBe(false); expect(archive.querySelector('.vcp-sync-versions')).not.toBeNull();
+    const archive = openArchive(d);
+    expect(archive.querySelector('.vcp-sync-versions')).not.toBeNull();
     expect(archive.textContent).toContain(fallbackText); expect(archive.textContent).toContain('Fikcyjna inna kopia tekstowa.'); d.controller.destroy();
   });
 
@@ -457,6 +513,7 @@ describe('Plain sync copies stay available without inflating the clinical timeli
     const d = editorWithResponse({}, { log: [
       { dateISO: '2026-10-29', text: 'Fikcyjne rozstrzygnięcie zmian.', resolution: change === 'missing-resolution' ? null : resolution }, entry,
     ] }); await settle();
+    if (change !== 'missing-marker') openArchive(d);
     expect(d.host.querySelector(change === 'missing-marker' ? '.vcp-history' : '.vcp-history-archive').textContent).toContain(fallbackText); d.controller.destroy();
   });
 
@@ -490,20 +547,20 @@ function clinicalHistoryFixture(extra = {}) {
 describe('Clinical history uses read-only evidence to classify review acknowledgments', () => {
   it('counts clinical entries only after acknowledgment and keeps every earlier value available on demand', async () => {
     const d = clinicalHistoryFixture(), before = JSON.stringify([d.plan, d.parent]); await settle();
-    const history = d.host.querySelector('.vcp-history'), archive = d.host.querySelector('.vcp-history-archive');
+    const history = d.host.querySelector('.vcp-history');
     expect(history.querySelector('summary').textContent).toBe('Przebieg planu · 2 wpisy');
     expect(history.textContent).toContain('Fikcyjne utworzenie planu.'); expect(history.textContent).toContain('Fikcyjna edycja terminu.');
     expect(history.textContent).not.toContain('Fikcyjne potwierdzenie bez ustaleń.');
     expect(history.textContent).not.toContain('Fikcyjny opis scalenia.');
     expect(history.querySelector('.vcp-sync-versions')).toBeNull();
-    expect(archive.open).toBe(false); expect(archive.querySelector('summary').textContent).toBe('Wcześniejsze wersje planu');
+    const archive = openArchive(d); expect(archive.querySelector('h2').textContent).toBe('Wcześniejsze wersje planu');
     for (const text of ['Fikcyjna starsza unikatowa wersja.', 'Fikcyjne potwierdzenie bez ustaleń.', 'Fikcyjna tekstowa kopia przeglądu.', 'Fikcyjny opis scalenia.']) expect(archive.textContent).toContain(text);
     expect(archive.querySelectorAll('.vcp-sync-versions')).toHaveLength(2);
     expect(archive.querySelector('[data-record-id="fictional-alternate-result"]')).not.toBeNull();
     expect(archive.querySelector('[data-record-id="fictional-alternate-calendar"]')).not.toBeNull();
-    archive.open = true; archive.dispatch('toggle');
     await d.controller.refresh();
-    expect(d.host.querySelector('.vcp-history-archive').open).toBe(true);
+    expect(d.host.querySelector('.vcp-history-archive')).not.toBeNull();
+    findButton(d.host, '← Wróć do planu').click();
     expect(d.host.querySelector('.vcp-history').querySelector('summary').textContent).toBe('Przebieg planu · 2 wpisy');
     expect(d.vault.getPatientNote).toHaveBeenCalledTimes(1);
     expect(JSON.stringify([d.plan, d.parent])).toBe(before);
@@ -542,6 +599,7 @@ describe('Clinical history uses read-only evidence to classify review acknowledg
     if (failure === 'unknown-review') d.parent.careContext.causality.nodes[1].review = 'future-format';
     await settle();
     expect(d.host.querySelector('.vcp-history').textContent).toContain('Fikcyjne potwierdzenie bez ustaleń.');
+    openArchive(d);
     expect(d.host.querySelector('.vcp-history-archive').textContent).toContain('Fikcyjna starsza unikatowa wersja.');
     expect(d.vault.mutateCarePlan).not.toHaveBeenCalled(); d.controller.destroy();
   });

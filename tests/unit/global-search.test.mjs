@@ -130,6 +130,49 @@ describe('Global search uses the real encrypted patients and matters', () => {
     search.destroy(); changed.mockClear(); await note(d); expect(changed).not.toHaveBeenCalled();
     await expect(search.search('Nowak')).rejects.toMatchObject({ code: 'STALE_GLOBAL_SEARCH' });
   });
+
+  it('removes a manual agreement from cached search, its plan text and a stale child returned before the tombstone', async () => {
+    const d = await device();
+    const created = await d.vault.mutateCarePlan({ action: 'create', operationId: 'fictional-search-removal-plan', patientId: d.first,
+      title: 'Fikcyjny plan porządkowania wpisów', goal: 'Fikcyjny zachowany cel.' });
+    const added = await d.vault.mutateCarePlan({ action: 'addNote', operationId: 'fictional-search-removal-note', patientId: d.first,
+      planId: created.planId, baseRev: created.plan.rev, text: 'Fikcyjna omyłka szmaragdowa.', dateISO: '2026-10-01' });
+    expect(added.saved).toBe(true);
+    const search = create(d), before = await search.search('szmaragdowa');
+    expect(before.filter(row => row.kind === 'plan').map(row => row.planId)).toEqual([created.planId]);
+    const childRow = before.find(row => row.kind === 'note'); expect(childRow).toBeTruthy();
+    const staleChild = structuredClone(childRow.source);
+    const state = await d.vault.getCarePlanNoteEntries(created.planId), entry = state.entries.find(item => item.noteId === staleChild.id);
+    expect(entry.removable).toBe(true);
+    const removed = await d.vault.mutateCarePlan({ action: 'removePlanNote', operationId: 'fictional-search-remove', patientId: d.first,
+      planId: created.planId, baseRev: state.rev, noteId: entry.noteId, linkedRev: entry.linkedRev, readToken: entry.readToken });
+    expect(removed.saved).toBe(true);
+    expect(await search.search('szmaragdowa')).toEqual([]);
+    expect((await search.search('zachowany cel')).map(row => row.planId)).toEqual([created.planId]);
+
+    const currentNotes = await d.vault.listAllPatientNotes();
+    delete staleChild.careContext; // A legacy writer may also omit the extension.
+    vi.spyOn(d.vault, 'listAllPatientNotes').mockResolvedValue([...currentNotes, staleChild]);
+    search.invalidate();
+    expect(await search.search('szmaragdowa')).toEqual([]);
+    expect((await search.load()).some(row => row.noteId === staleChild.id)).toBe(false);
+    const original = await d.vault.getPatientNote(created.planId);
+    expect(original.careContext.log.some(item => item.text === 'Fikcyjna omyłka szmaragdowa.')).toBe(true);
+    search.destroy();
+  });
+
+  it('scopes a verified removed note ID to its patient and does not filter ordinary text by removal wording', async () => {
+    const d = await device();
+    const retained = await note(d, { patientId: d.second, title: 'Fikcyjne zachowane ustalenie', body: 'Usunięto ustalenie.' });
+    const created = await d.vault.mutateCarePlan({ action: 'create', operationId: 'fictional-search-scope-plan', patientId: d.first,
+      title: 'Fikcyjny inny plan', goal: '' });
+    const plans = await d.vault.listCarePlans();
+    vi.spyOn(d.vault, 'listCarePlans').mockResolvedValue(plans.map(plan => plan.id === created.planId
+      ? { ...plan, removedNoteIds: [retained.id] } : plan));
+    const search = create(d);
+    expect((await search.search('Usunięto ustalenie')).map(row => row.noteId)).toEqual([retained.id]);
+    search.destroy();
+  });
 });
 
 describe('Global search rejects data read across a changed or locked session', () => {
