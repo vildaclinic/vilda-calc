@@ -503,7 +503,9 @@ test('focused shell rotation uses current layout height despite stale visualView
     const panel = document.querySelector('.app-shell-main').getBoundingClientRect();
     return { headerTop: header.top, panelTop: panel.top, panelBottom: panel.bottom, hostScrollY: scrollY };
   });
-  const expected = { headerTop: 59, panelTop: 150, panelBottom: 956, hostScrollY: 0 };
+  // Approved single-row header: 64 px content + 2 px border after the 59 px
+  // native safe area. The old duplicated patient row made this edge 150 px.
+  const expected = { headerTop: 59, panelTop: 125, panelBottom: 956, hostScrollY: 0 };
   await expect.poll(shellGeometry, { message: 'ResizeObserver reconciles late native env() insets even with a focused iframe input' }).toEqual(expected);
   const animationCount = (await motion(page)).length;
   // Frame-based negative check spans the old 200 ms delayed resize correction.

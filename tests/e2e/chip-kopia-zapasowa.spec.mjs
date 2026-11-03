@@ -178,7 +178,7 @@ for (const platforma of ['desktop', 'mobile']) {
       // deliberately inert. A real click on the menu background is still outside
       // the legend and must close it without changing patient data or route.
       const drawer = page.locator('[data-vilda-chrome-drawer]');
-      if (await drawer.isVisible()) await drawer.locator('.chrome-menu-actions').click({ position: { x: 1, y: 1 } });
+      if (await drawer.isVisible()) await drawer.locator('.chrome-menu-actions').click({ position: { x: 100, y: 4 } });
       else await page.locator('#height').click();
       await expect(popup).not.toBeVisible();
       await expect(page.locator('#vildaPatientChip')).toHaveAttribute('aria-expanded', 'false');
