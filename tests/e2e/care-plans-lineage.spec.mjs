@@ -26,6 +26,8 @@ test('care plans lineage: a closed legacy review opens from To do and acknowledg
     closedAtISO: plan.closedAtISO, closeReason: plan.closeReason, closeText: plan.closeText });
   expect(await reviewReminders(created.frame, plan.id)).toEqual([]);
   await expect(panel.locator('.vcp-sync-review')).toHaveCount(0);
+  await expect(panel.locator('.vcp-history')).not.toContainText('Potwierdzono przegląd planu po scaleniu zmian.');
+  await expect(panel.locator('.vcp-history-archive')).not.toHaveAttribute('open', '');
   await expect(row.locator('.vcp-status')).toHaveText('Zamknięty');
 });
 
@@ -55,6 +57,7 @@ test('care plans lineage: keeping a merged plan closed requires a reason and exp
   expect(after.steps.map(step => step.id)).toEqual(plan.steps.map(step => step.id));
   expect(after.steps.every(step => step.state === 'cancelled')).toBe(true);
   expect(after.log.some(entry => entry.text.includes('dalsze prowadzenie przejął inny ośrodek'))).toBe(true);
+  await expect(panel.locator('.vcp-history')).toContainText('dalsze prowadzenie przejął inny ośrodek');
   expect(await reviewReminders(created.frame, plan.id)).toEqual([]);
   const calendarAfter = await created.frame.evaluate(id => window.VildaVault.getPatientNote(id), calendarId);
   for (const field of ['id', 'patientId', 'title', 'body', 'dueDateISO', 'dueTime', 'completedAtISO', 'noShowAtISO']) expect(calendarAfter[field]).toEqual(calendarBefore[field]);
@@ -83,7 +86,13 @@ test('care plans lineage: alternate original results and appointments remain rea
   expect(after.syncNeedsReview).toBe(false);
   expect(after.log.some(entry => entry.resolution?.components.some(component => component.key === 'step'
     && component.variants.some(variant => variant.value.resultNoteId === alternate.resultNoteId && variant.value.calendarNoteId === alternate.calendarNoteId)))).toBe(true);
-  const archived = panel.locator('.vcp-history .vcp-sync-versions');
+  const history = panel.locator('.vcp-history'), archive = panel.locator('.vcp-history-archive');
+  await expect(history).not.toContainText('Potwierdzono przegląd planu po scaleniu zmian.');
+  await expect(history).not.toContainText('Zachowana po synchronizacji');
+  await expect(history.locator('.vcp-sync-versions')).toHaveCount(0);
+  await expect(archive).not.toHaveAttribute('open', '');
+  await archive.locator(':scope > summary').click();
+  const archived = archive.locator('.vcp-sync-versions');
   await archived.locator('summary').click();
   await expect(archived).toContainText('Stan planu przed zapisaniem zmian');
   for (const record of [original.result, original.calendar]) {
@@ -93,6 +102,8 @@ test('care plans lineage: alternate original results and appointments remain rea
     const stored = await created.frame.evaluate(id => window.VildaVault.getPatientNote(id), record.id);
     expect(stored).toEqual(record);
   }
+  expect(await readPlan(created.frame, plan.id)).toEqual(after);
+  await expect(panel.locator('.vcp-history-archive')).toHaveAttribute('open', '');
   expect(await projectedIds()).not.toContain(original.result.id); expect(await projectedIds()).not.toContain(original.calendar.id);
   await created.frame.evaluate(note => window.VildaVault.savePatientNote({
     id: note.id, patientId: note.patientId, title: note.title, body: note.body, careContext: null,

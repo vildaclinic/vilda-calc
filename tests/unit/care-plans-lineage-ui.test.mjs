@@ -162,7 +162,7 @@ describe('Care plan review renders complete typed changes and original document 
       variants: [{ id: 'fictional-invalid-date-author', selected: true, value }] }] };
     const d = editorWithResponse({}, { log: [{ dateISO: '2026-10-29', text: 'Fikcyjny historyczny wpis.', resolution: snapshot }] }); await settle();
     expect(d.host.querySelector('.vcp-history').textContent).toContain('Fikcyjny historyczny wpis.');
-    expect(d.host.querySelector('.vcp-history .vcp-sync-versions')).toBeNull();
+    expect(d.host.querySelector('.vcp-history-archive .vcp-sync-versions')).toBeNull();
     expect(d.host.textContent).not.toContain('NaN'); d.controller.destroy();
   });
 
@@ -193,7 +193,9 @@ describe('Care plan review renders complete typed changes and original document 
       careContext: { version: 1, role: 'result', planId: d.plan.id, stepId: snapshot.components[0].stepId } };
     d.vault.getPatientNote = vi.fn(async () => structuredClone(original)); await settle();
     expect(d.host.querySelector('.vcp-sync-review')).toBeNull();
-    const versions = d.host.querySelector('.vcp-history .vcp-sync-versions');
+    const archive = d.host.querySelector('.vcp-history-archive');
+    expect(archive.open).toBe(false); archive.open = true; archive.dispatch('toggle');
+    const versions = d.host.querySelector('.vcp-history-archive .vcp-sync-versions');
     expect(versions.open).toBe(false); expect(versions.textContent).toContain('Stan planu przed zapisaniem zmian');
     expect(versions.textContent).toContain('14:45'); expect(versions.textContent).toContain('16:45');
     versions.open = true; versions.dispatch('toggle');
@@ -203,7 +205,8 @@ describe('Care plan review renders complete typed changes and original document 
     if (legacy) d.plan.log[0].resolution = { components: structuredClone(snapshot.components), version: 1 };
     await d.controller.refresh();
     findButton(d.host, '← Wróć do planu').click();
-    expect(d.host.querySelector('.vcp-history .vcp-sync-versions').open).toBe(true);
+    expect(d.host.querySelector('.vcp-history-archive').open).toBe(true);
+    expect(d.host.querySelector('.vcp-history-archive .vcp-sync-versions').open).toBe(true);
     expect(d.vault.mutateCarePlan).not.toHaveBeenCalled(); d.controller.destroy();
   });
 
@@ -221,7 +224,7 @@ describe('Care plan review renders complete typed changes and original document 
     const snapshot = stepReview(), d = editorWithResponse({}, { syncNeedsReview: true, syncReview: snapshot,
       log: [{ dateISO: '2026-10-29', text: 'Zmieniono krok planu.', resolution: snapshot }] }); await settle();
     expect(d.host.querySelector('.vcp-sync-review')).not.toBeNull();
-    const archived = d.host.querySelector('.vcp-history .vcp-sync-versions');
+    const archived = d.host.querySelector('.vcp-history-archive .vcp-sync-versions');
     expect(archived.textContent).toContain('Stan planu przed zapisaniem zmian');
     expect(archived.textContent).toContain('Wartości zachowane przed zapisaniem zmian');
     expect(archived.textContent).not.toContain('przed potwierdzeniem przeglądu');
@@ -402,11 +405,11 @@ describe('Calendar preview checks the fresh parent through the public reader', (
   });
 });
 
-describe('Plain history fallbacks remain visible until the complete corresponding typed review is readable', () => {
+describe('Plain sync copies stay available without inflating the clinical timeline', () => {
   const fallbackText = 'Fikcyjna pełna kopia tekstowa zachowanej wersji.';
   const fallback = extra => ({ dateISO: '2026-10-29', text: fallbackText, ...extra });
 
-  it('replaces a current alternative fallback with its complete typed review without changing the stored history', async () => {
+  it('keeps unidentifiable older alternatives visible in the current review without changing the stored history', async () => {
     const log = [fallback({ syncOrigin: 'alternative' }), { dateISO: '2026-10-29', text: 'Fikcyjna notatka autorska.' }], before = JSON.stringify(log);
     const d = editorWithResponse({}, { syncNeedsReview: true, syncReview: stepReview(), log }); await settle();
     const history = d.host.querySelector('.vcp-history');
@@ -414,6 +417,7 @@ describe('Plain history fallbacks remain visible until the complete correspondin
     expect(history.textContent).toContain('Fikcyjna notatka autorska.');
     expect(history.querySelectorAll('.vcp-timeline-entry')).toHaveLength(1);
     expect(d.host.querySelector('.vcp-sync-review .vcp-sync-versions')).not.toBeNull();
+    expect(d.host.querySelector('.vcp-sync-review .vcp-review-fallbacks').textContent).toContain(fallbackText);
     expect(JSON.stringify(log)).toBe(before); expect(d.vault.mutateCarePlan).not.toHaveBeenCalled(); d.controller.destroy();
   });
 
@@ -423,10 +427,11 @@ describe('Plain history fallbacks remain visible until the complete correspondin
     if (change === 'partial') snapshot.components.push({ key: 'future-component' });
     if (change === 'missing-marker') delete entry.syncOrigin;
     const d = editorWithResponse({}, { syncNeedsReview: true, syncReview: change === 'missing' ? null : snapshot, log: [entry] }); await settle();
-    expect(d.host.querySelector('.vcp-history').textContent).toContain(fallbackText); d.controller.destroy();
+    expect(d.host.querySelector(change === 'missing-marker' ? '.vcp-history' : '.vcp-sync-review .vcp-review-fallbacks').textContent).toContain(fallbackText);
+    expect(d.host.querySelector('.vcp-sync-review').querySelectorAll('button').at(-1).textContent).toBe('Potwierdzam przegląd planu'); d.controller.destroy();
   });
 
-  it('replaces only the archived fallback whose operation has a complete typed resolution', async () => {
+  it('archives typed versions and all original plaintext, including copies from another operation', async () => {
     const resolvedBy = 'fictional-review-operation', resolution = { ...stepReview(), resolvedBy };
     const d = editorWithResponse({}, { log: [
       { dateISO: '2026-10-29', text: 'Fikcyjne rozstrzygnięcie zmian.', resolution },
@@ -435,9 +440,12 @@ describe('Plain history fallbacks remain visible until the complete correspondin
     ] }); await settle();
     const history = d.host.querySelector('.vcp-history');
     expect(history.textContent).not.toContain(fallbackText);
-    expect(history.textContent).toContain('Fikcyjna inna kopia tekstowa.');
-    expect(history.querySelector('.vcp-sync-versions')).not.toBeNull();
-    expect(history.querySelectorAll('.vcp-timeline-entry')).toHaveLength(2); d.controller.destroy();
+    expect(history.textContent).not.toContain('Fikcyjna inna kopia tekstowa.');
+    expect(history.querySelector('.vcp-sync-versions')).toBeNull();
+    expect(history.querySelectorAll('.vcp-timeline-entry')).toHaveLength(1);
+    const archive = d.host.querySelector('.vcp-history-archive');
+    expect(archive.open).toBe(false); expect(archive.querySelector('.vcp-sync-versions')).not.toBeNull();
+    expect(archive.textContent).toContain(fallbackText); expect(archive.textContent).toContain('Fikcyjna inna kopia tekstowa.'); d.controller.destroy();
   });
 
   it.each(['missing-resolution', 'different-operation', 'future-version', 'partial', 'missing-marker'])('keeps archived plaintext when %s prevents exact typed replacement', async change => {
@@ -449,6 +457,135 @@ describe('Plain history fallbacks remain visible until the complete correspondin
     const d = editorWithResponse({}, { log: [
       { dateISO: '2026-10-29', text: 'Fikcyjne rozstrzygnięcie zmian.', resolution: change === 'missing-resolution' ? null : resolution }, entry,
     ] }); await settle();
-    expect(d.host.querySelector('.vcp-history').textContent).toContain(fallbackText); d.controller.destroy();
+    expect(d.host.querySelector(change === 'missing-marker' ? '.vcp-history' : '.vcp-history-archive').textContent).toContain(fallbackText); d.controller.destroy();
+  });
+
+  it('shows an archived plaintext copy before acknowledgment when its typed version cannot be read', async () => {
+    const d = editorWithResponse({}, { syncNeedsReview: true, syncReview: null, log: [fallback({ reviewFallbackFor: 'fictional-unreadable-resolution' })] }); await settle();
+    expect(d.host.querySelector('.vcp-sync-review .vcp-review-fallbacks').textContent).toContain(fallbackText);
+    expect(d.host.querySelector('.vcp-history-archive')).toBeNull();
+    expect(d.host.querySelector('.vcp-sync-review').querySelectorAll('button').at(-1).textContent).toBe('Potwierdzam przegląd planu'); d.controller.destroy();
+  });
+});
+
+function clinicalHistoryFixture(extra = {}) {
+  const reviewId = 'fictional-acknowledged-operation', editId = 'fictional-edit-operation';
+  const resolution = { ...stepReview(), resolvedBy: reviewId };
+  const d = editorWithResponse({}, { syncNeedsReview: false, log: [
+    { dateISO: '2026-10-29', text: 'Fikcyjne utworzenie planu.' },
+    { dateISO: '2026-10-29', text: 'Fikcyjny opis scalenia.', syncOrigin: 'summary' },
+    { dateISO: '2026-10-29', text: 'Fikcyjna starsza unikatowa wersja.', syncOrigin: 'alternative' },
+    { dateISO: '2026-10-29', text: 'Fikcyjne potwierdzenie bez ustaleń.', resolution },
+    { dateISO: '2026-10-29', text: 'Fikcyjna tekstowa kopia przeglądu.', reviewFallbackFor: reviewId },
+    { dateISO: '2026-10-29', text: 'Fikcyjna edycja terminu.', resolution: { ...stepReview(), resolvedBy: editId } },
+  ], ...extra });
+  const parent = { id: d.plan.id, patientId: d.plan.patientId, title: d.plan.title, rev: d.plan.rev, category: 'care-plan',
+    careContext: { version: 1, role: 'plan', status: d.plan.status, steps: structuredClone(d.plan.steps), log: structuredClone(d.plan.log),
+      causality: { version: 1, nodes: [{ id: 'fictional-history-root', parents: [] },
+        { id: reviewId, parents: ['fictional-history-root'], review: true }, { id: editId, parents: [reviewId] }] } } };
+  d.vault.getPatientNote = vi.fn(async id => id === parent.id ? structuredClone(parent) : null);
+  return { ...d, parent, reviewId, editId };
+}
+
+describe('Clinical history uses read-only evidence to classify review acknowledgments', () => {
+  it('counts clinical entries only after acknowledgment and keeps every earlier value available on demand', async () => {
+    const d = clinicalHistoryFixture(), before = JSON.stringify([d.plan, d.parent]); await settle();
+    const history = d.host.querySelector('.vcp-history'), archive = d.host.querySelector('.vcp-history-archive');
+    expect(history.querySelector('summary').textContent).toBe('Przebieg planu · 2 wpisy');
+    expect(history.textContent).toContain('Fikcyjne utworzenie planu.'); expect(history.textContent).toContain('Fikcyjna edycja terminu.');
+    expect(history.textContent).not.toContain('Fikcyjne potwierdzenie bez ustaleń.');
+    expect(history.textContent).not.toContain('Fikcyjny opis scalenia.');
+    expect(history.querySelector('.vcp-sync-versions')).toBeNull();
+    expect(archive.open).toBe(false); expect(archive.querySelector('summary').textContent).toBe('Wcześniejsze wersje planu');
+    for (const text of ['Fikcyjna starsza unikatowa wersja.', 'Fikcyjne potwierdzenie bez ustaleń.', 'Fikcyjna tekstowa kopia przeglądu.', 'Fikcyjny opis scalenia.']) expect(archive.textContent).toContain(text);
+    expect(archive.querySelectorAll('.vcp-sync-versions')).toHaveLength(2);
+    expect(archive.querySelector('[data-record-id="fictional-alternate-result"]')).not.toBeNull();
+    expect(archive.querySelector('[data-record-id="fictional-alternate-calendar"]')).not.toBeNull();
+    archive.open = true; archive.dispatch('toggle');
+    await d.controller.refresh();
+    expect(d.host.querySelector('.vcp-history-archive').open).toBe(true);
+    expect(d.host.querySelector('.vcp-history').querySelector('summary').textContent).toBe('Przebieg planu · 2 wpisy');
+    expect(d.vault.getPatientNote).toHaveBeenCalledTimes(1);
+    expect(JSON.stringify([d.plan, d.parent])).toBe(before);
+    expect(d.vault.mutateCarePlan).not.toHaveBeenCalled(); d.controller.destroy();
+  });
+
+  it('keeps a clinical reason and original link even when its operation is a review', async () => {
+    const d = clinicalHistoryFixture(), entry = d.plan.log.find(item => item.resolution?.resolvedBy === d.reviewId);
+    entry.noteId = 'fictional-review-reason'; entry.text = 'Fikcyjne uzasadnienie zakończenia kroków bez wykonania.';
+    d.parent.careContext.log = structuredClone(d.plan.log);
+    const original = { id: entry.noteId, patientId: d.plan.patientId, title: 'Fikcyjne uzasadnienie', body: 'Fikcyjny oryginalny opis decyzji.',
+      careContext: { version: 1, role: 'note', planId: d.plan.id } };
+    d.vault.getPatientNote.mockImplementation(async id => structuredClone(id === d.parent.id ? d.parent : original));
+    const before = JSON.stringify([d.plan, d.parent, original]); await settle(); await d.controller.refresh();
+    const history = d.host.querySelector('.vcp-history');
+    expect(history.textContent).toContain(entry.text);
+    expect(history.querySelector('[data-record-id="fictional-review-reason"]')).not.toBeNull();
+    history.querySelector('[data-record-id="fictional-review-reason"]').click(); await settle();
+    expect(d.host.querySelector('.vcp-record-body').textContent).toBe(original.body);
+    expect(JSON.stringify([d.plan, d.parent, original])).toBe(before);
+    expect(d.vault.mutateCarePlan).not.toHaveBeenCalled(); d.controller.destroy();
+  });
+
+  it.each(['missing-reader', 'read-error', 'wrong-id', 'wrong-patient', 'wrong-revision', 'wrong-log', 'wrong-version', 'missing-lineage', 'duplicate-node', 'invalid-parent', 'unknown-review'])('keeps uncertain acknowledgment text in the timeline for %s', async failure => {
+    const d = clinicalHistoryFixture();
+    if (failure === 'missing-reader') delete d.vault.getPatientNote;
+    if (failure === 'read-error') d.vault.getPatientNote.mockRejectedValue(new Error('Fikcyjny błąd odczytu.'));
+    if (failure === 'wrong-id') d.parent.id = 'fictional-other-plan';
+    if (failure === 'wrong-patient') d.parent.patientId = 'fictional-other-patient';
+    if (failure === 'wrong-revision') d.parent.rev += 1;
+    if (failure === 'wrong-log') d.parent.careContext.log[0].text = 'Fikcyjny inny zapis.';
+    if (failure === 'wrong-version') d.parent.careContext.version = 2;
+    if (failure === 'missing-lineage') delete d.parent.careContext.causality;
+    if (failure === 'duplicate-node') d.parent.careContext.causality.nodes.push({ id: d.reviewId, parents: [] });
+    if (failure === 'invalid-parent') d.parent.careContext.causality.nodes[1].parents = ['fictional-missing-parent'];
+    if (failure === 'unknown-review') d.parent.careContext.causality.nodes[1].review = 'future-format';
+    await settle();
+    expect(d.host.querySelector('.vcp-history').textContent).toContain('Fikcyjne potwierdzenie bez ustaleń.');
+    expect(d.host.querySelector('.vcp-history-archive').textContent).toContain('Fikcyjna starsza unikatowa wersja.');
+    expect(d.vault.mutateCarePlan).not.toHaveBeenCalled(); d.controller.destroy();
+  });
+
+  it('does not infer technical entries from wording or malformed markers', async () => {
+    const log = [
+      { dateISO: '2026-10-29', text: 'Potwierdzono przegląd planu po scaleniu zmian.' },
+      { dateISO: '2026-10-29', text: 'Fikcyjny wpis z nieznanym znacznikiem.', syncOrigin: 'future-kind' },
+      { dateISO: '2026-10-29', text: 'Fikcyjny wpis z nieprawidłowym odwołaniem.', reviewFallbackFor: { future: true } },
+    ], before = JSON.stringify(log);
+    const d = editorWithResponse({}, { log }); await settle();
+    expect(d.host.querySelector('.vcp-history').querySelectorAll('.vcp-timeline-entry')).toHaveLength(3);
+    expect(d.host.querySelector('.vcp-history-archive')).toBeNull(); expect(JSON.stringify(log)).toBe(before); d.controller.destroy();
+  });
+
+  it('does not use an earlier revision after an in-flight read completes', async () => {
+    const d = clinicalHistoryFixture(); let finish;
+    d.vault.getPatientNote.mockImplementation(() => new Promise(resolve => { finish = resolve; })); await settle();
+    const oldParent = structuredClone(d.parent);
+    d.plan.rev += 1; d.plan.log.push({ dateISO: '2026-10-30', text: 'Fikcyjny nowszy wpis.' });
+    d.vault.getPatientNote.mockResolvedValue(oldParent);
+    await d.controller.refresh(); finish(oldParent); await settle();
+    expect(d.host.querySelector('.vcp-history').textContent).toContain('Fikcyjne potwierdzenie bez ustaleń.');
+    expect(d.host.querySelector('.vcp-history').textContent).toContain('Fikcyjny nowszy wpis.'); d.controller.destroy();
+  });
+
+  it('never fetches every plan and ignores classification after selecting a different plan', async () => {
+    const d = clinicalHistoryFixture(); let finish;
+    const read = new Promise(resolve => { finish = resolve; }); d.vault.getPatientNote.mockReturnValue(read); await settle();
+    const other = { ...structuredClone(d.plan), id: 'fictional-other-plan', title: 'Fikcyjny drugi plan', log: [{ dateISO: '2026-10-29', text: 'Fikcyjna historia drugiego planu.' }] };
+    d.vault.listCarePlans.mockResolvedValue([d.plan, other]); const refreshing = d.controller.refresh(); await settle();
+    await d.controller.select(other.id); finish(structuredClone(d.parent)); await refreshing; await settle();
+    expect(d.controller.getSelected()).toBe(other.id);
+    expect(d.host.querySelector('.vcp-history').textContent).toContain('Fikcyjna historia drugiego planu.');
+    expect(d.host.querySelector('.vcp-history-archive')).toBeNull();
+    expect(d.vault.getPatientNote.mock.calls.every(call => call[0] === d.plan.id)).toBe(true); d.controller.destroy();
+  });
+
+  it('discards a raw read after the account changes', async () => {
+    const d = clinicalHistoryFixture(); let finish;
+    d.vault.getPatientNote.mockImplementation(() => new Promise(resolve => { finish = resolve; })); await settle();
+    const before = d.host.textContent;
+    d.vault.getCurrentUser = () => ({ userId: 'fictional-different-account' });
+    finish(structuredClone(d.parent)); await settle();
+    expect(d.host.textContent).toBe(before); expect(d.vault.mutateCarePlan).not.toHaveBeenCalled(); d.controller.destroy();
   });
 });

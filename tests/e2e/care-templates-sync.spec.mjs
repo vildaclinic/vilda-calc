@@ -39,6 +39,25 @@ test('care template encrypted desktop-phone sync preserves concurrent revision a
     await syncTemplates(desktop); await pullTemplateUntil(phone, item.templateId, value => value?.status === 'active' && value.definition?.purpose === definition.purpose);
     for (const device of [desktop, phone]) expect(await templateRevisions(device, item.templateId)).toHaveLength(2);
 
+    // Removal is a reversible library operation, visible on both devices.
+    await templateRow(library, item.templateId).getByRole('button', { name: /^Usuń szablon:/ }).click();
+    await library.getByRole('button', { name: 'Usuń szablon', exact: true }).click();
+    await expect(templateRow(library, item.templateId)).toHaveCount(0);
+    await syncTemplates(desktop); await pullTemplateUntil(phone, item.templateId, value => value?.status === 'archived');
+    const phoneLibrary = await openTemplates(phone);
+    await expect(templateRow(phoneLibrary, item.templateId)).toHaveCount(0);
+    await phoneLibrary.getByRole('button', { name: 'Usunięte', exact: true }).click();
+    await templateRow(phoneLibrary, item.templateId).getByRole('button', { name: /^Przywróć szablon:/ }).click();
+    await phoneLibrary.getByRole('button', { name: 'Przywróć', exact: true }).click();
+    await expect(templateRow(phoneLibrary, item.templateId)).toBeVisible();
+    await expect(phoneLibrary.getByRole('button', { name: 'Aktywne', exact: true })).toHaveAttribute('aria-pressed', 'true');
+    await syncTemplates(phone); await pullTemplateUntil(desktop, item.templateId, value => value?.status === 'active');
+    await expect(templateRow(library, item.templateId)).toBeVisible();
+    for (const device of [desktop, phone]) {
+      expect(await templateRevisions(device, item.templateId)).toHaveLength(2);
+      expect((await getTemplate(device, item.templateId)).definition).toEqual(definition);
+    }
+
     // Mutable legacy KV/auth is a different authority. Replacing it must not
     // replace the protected verifier, erase revisions or block library ACKs.
     const state = await templateSyncState(desktop);

@@ -209,9 +209,9 @@ describe('Private template library browsing and revision actions', () => {
     expect(d.vault.listCarePlanTemplates).not.toHaveBeenCalled();
     expect(d.host.textContent).toContain('Nie można teraz odczytać zdalnej biblioteki.');
     expect(findButton(d.host, 'Nowy szablon').disabled).toBe(true);
-    findButton(d.host, 'Archiwum').click();
+    findButton(d.host, 'Usunięte').click();
     expect(d.host.textContent).toContain('Nie można teraz odczytać zdalnej biblioteki.');
-    expect(d.host.textContent).not.toContain('Archiwum jest puste.');
+    expect(d.host.textContent).not.toContain('Nie ma usuniętych szablonów.');
     findButton(d.host, 'Aktywne').click(); change(input(d.host, 'Szukaj własnego szablonu'), 'Fikcyjny');
     expect(d.host.textContent).not.toContain('Brak pasujących szablonów.');
     change(input(d.host, 'Szukaj własnego szablonu'), '');
@@ -237,9 +237,9 @@ describe('Private template library browsing and revision actions', () => {
     expect(d.vault.listCarePlanTemplates).toHaveBeenCalledTimes(1);
     expect(d.host.querySelector('.vct-template-row').textContent).toContain(selected.definition.name);
     expect(d.host.querySelector('[role="alert"]')).not.toBeNull();
-    findButton(d.host, 'Archiwum').click();
+    findButton(d.host, 'Usunięte').click();
     expect(d.host.querySelector('[role="alert"]')).not.toBeNull();
-    expect(d.host.textContent).not.toContain('Archiwum jest puste.');
+    expect(d.host.textContent).not.toContain('Nie ma usuniętych szablonów.');
     findButton(d.host, 'Aktywne').click();
     expect(d.host.querySelector('.vct-template-row').textContent).toContain(selected.definition.name); d.controller.destroy();
   });
@@ -264,14 +264,112 @@ describe('Private template library browsing and revision actions', () => {
     expect(d.vault.resolveCarePlanTemplateConflict).toHaveBeenCalledWith({ templateId: selected.templateId, operationId: expect.any(String), baseToken: selected.baseToken, headRevisionId: 'fictional-head-b', archived: true }); d.controller.destroy();
   });
 
-  it('archives and restores by metadata actions while previewing the original definition', async () => {
+  it('removes from the visible list only after confirmation and restores from Removed without changing the definition', async () => {
     const model = prepareModel(), selected = record(model), d = fixture({ records: [selected] }); await settle();
-    findButton(d.host, 'Podgląd').click(); await settle(); findButton(d.host, 'Archiwizuj').click();
-    expect(d.vault.setCarePlanTemplateArchived).not.toHaveBeenCalled(); findButton(d.host, 'Potwierdź').click(); await settle();
+    const removeLabel = 'Usuń szablon: ' + selected.definition.name;
+    findButton(d.host, removeLabel).click(); await settle();
+    expect(d.host.textContent).toContain('Plany pacjentów utworzone z tego szablonu pozostaną bez zmian.');
+    expect(d.doc.activeElement.textContent).toContain('Usunąć szablon');
+    expect(d.vault.setCarePlanTemplateArchived).not.toHaveBeenCalled();
+    findButton(d.host, 'Anuluj').click(); expect(d.doc.activeElement).toBe(findButton(d.host, removeLabel));
+    expect(d.vault.setCarePlanTemplateArchived).not.toHaveBeenCalled();
+    findButton(d.host, removeLabel).click(); await settle(); findButton(d.host, 'Usuń szablon').click(); await settle();
     expect(d.vault.setCarePlanTemplateArchived.mock.calls[0][0]).toMatchObject({ templateId: selected.templateId, baseToken: selected.baseToken, archived: true });
-    findButton(d.host, 'Podgląd').click(); await settle(); findButton(d.host, 'Przywróć do biblioteki').click(); findButton(d.host, 'Potwierdź').click(); await settle();
+    expect(findButton(d.host, 'Aktywne').getAttribute('aria-pressed')).toBe('true');
+    expect(d.host.querySelector('.vct-template-row')).toBeNull();
+    expect(d.host.textContent).toContain('Możesz go przywrócić w Usuniętych.');
+    findButton(d.host, 'Usunięte').click(); findButton(d.host, 'Przywróć').click(); await settle();
+    expect(d.vault.setCarePlanTemplateArchived).toHaveBeenCalledTimes(1);
+    findButton(d.host, 'Przywróć').click(); await settle();
     expect(d.vault.setCarePlanTemplateArchived.mock.calls[1][0].archived).toBe(false);
+    expect(findButton(d.host, 'Aktywne').getAttribute('aria-pressed')).toBe('true');
+    expect(findButton(d.host, removeLabel)).toBeDefined();
     expect(d.records.get(selected.templateId).definition).toEqual(selected.definition); d.controller.destroy();
+  });
+
+  it('reads the current token before asking to remove from a stale preview', async () => {
+    const selected = record(prepareModel()), d = fixture({ records: [selected] }); await settle();
+    findButton(d.host, 'Podgląd').click(); await settle();
+    const latest = d.records.get(selected.templateId); latest.baseToken = 'fictional-revised-base'; latest.definition.name = 'Fikcyjna zmieniona nazwa';
+    findButton(d.host, 'Usuń szablon').click(); await settle();
+    expect(d.host.textContent).toContain('Usunąć szablon „Fikcyjna zmieniona nazwa”');
+    findButton(d.host, 'Usuń szablon').click(); await settle();
+    expect(d.vault.setCarePlanTemplateArchived).toHaveBeenCalledWith({ templateId: selected.templateId, baseToken: 'fictional-revised-base', operationId: expect.any(String), archived: true });
+    d.controller.destroy();
+  });
+
+  it('retains the confirmed token when a template changes during confirmation and requires an explicit new action', async () => {
+    const selected = record(prepareModel()), latest = { ...selected, baseToken: 'fictional-concurrent-base' };
+    const remove = vi.fn(async () => ({ saved: false, reason: 'conflict', conflict: true, template: latest }));
+    const d = fixture({ records: [selected], overrides: { setCarePlanTemplateArchived: remove } }); await settle();
+    findButton(d.host, 'Usuń szablon').click(); await settle();
+    d.records.set(selected.templateId, latest); findButton(d.host, 'Usuń szablon').click(); await settle();
+    expect(remove).toHaveBeenCalledTimes(1); expect(remove.mock.calls[0][0].baseToken).toBe(selected.baseToken);
+    expect(d.host.textContent).toContain('Sprawdź bieżącą wersję przed ponownym usunięciem.');
+    expect(d.host.textContent).not.toContain('pozostały w formularzu');
+    expect(d.host.querySelector('.vct-confirmation')).toBeNull();
+    expect(d.records.get(selected.templateId).status).toBe('active'); d.controller.destroy();
+  });
+
+  it.each(['conflict', 'archived', 'unsupported'])('does not confirm a removal when a fresh read changes availability to %s', async status => {
+    const selected = record(prepareModel()), d = fixture({ records: [selected] }); await settle();
+    d.records.set(selected.templateId, { ...selected, status, definition: status === 'unsupported' ? null : selected.definition, readOnly: status === 'unsupported' });
+    findButton(d.host, 'Usuń szablon').click(); await settle();
+    expect(d.host.querySelector('.vct-confirmation')).toBeNull();
+    expect(d.host.textContent).toContain('Sprawdź jego bieżącą wersję.');
+    expect(d.vault.setCarePlanTemplateArchived).not.toHaveBeenCalled();
+    expect(d.controller.getContext().view).toBe(status === 'conflict' ? 'resolve' : 'detail'); d.controller.destroy();
+  });
+
+  it('rejects an unrelated template returned by the pre-confirmation read', async () => {
+    const selected = record(prepareModel());
+    const d = fixture({ records: [selected], overrides: { getCarePlanTemplate: vi.fn(async () => ({ ...selected, templateId: 'fictional-unrelated-template' })) } }); await settle();
+    findButton(d.host, 'Usuń szablon').click(); await settle();
+    expect(d.host.querySelector('.vct-confirmation')).toBeNull();
+    expect(d.host.textContent).toContain('Nie można potwierdzić bieżącej wersji tego szablonu.');
+    expect(d.doc.activeElement.getAttribute('role')).toBe('alert');
+    expect(d.doc.activeElement.textContent).toContain('Nie można potwierdzić bieżącej wersji tego szablonu.');
+    expect(d.vault.setCarePlanTemplateArchived).not.toHaveBeenCalled(); d.controller.destroy();
+  });
+
+  it('keeps an open confirmation stable and signals background changes after cancellation', async () => {
+    const selected = record(prepareModel()), d = fixture({ records: [selected] }); await settle();
+    findButton(d.host, 'Usuń szablon').click(); await settle();
+    const title = d.host.querySelector('.vct-confirmation h2');
+    d.vault.onCarePlanTemplateChanged.mock.calls[0][0](); await d.controller.refresh();
+    expect(d.host.querySelector('.vct-confirmation h2')).toBe(title);
+    expect(d.doc.activeElement).toBe(title);
+    findButton(d.host, 'Anuluj').click();
+    expect(d.host.textContent).toContain('Biblioteka zmieniła się w tle.');
+    expect(d.vault.setCarePlanTemplateArchived).not.toHaveBeenCalled(); d.controller.destroy();
+  });
+
+  it('retries the exact uncertain removal and disables additional availability actions', async () => {
+    const selected = record(prepareModel()), removed = { ...selected, status: 'archived' };
+    const remove = vi.fn().mockRejectedValueOnce(new Error('Fikcyjna utrata odpowiedzi.')).mockResolvedValueOnce({ saved: true, template: removed, persistence: 'remote' });
+    const d = fixture({ records: [selected], overrides: { setCarePlanTemplateArchived: remove } }); await settle();
+    findButton(d.host, 'Usuń szablon').click(); await settle(); findButton(d.host, 'Usuń szablon').click(); await settle();
+    expect(findButton(d.host, 'Usuń szablon').disabled).toBe(true);
+    findButton(d.host, 'Usuń szablon').click(); expect(remove).toHaveBeenCalledTimes(1);
+    d.records.set(selected.templateId, removed); findButton(d.host, 'Ponów zapis').click(); await settle();
+    expect(remove).toHaveBeenCalledTimes(2); expect(remove.mock.calls[1][0]).toEqual(remove.mock.calls[0][0]);
+    expect(d.host.querySelector('.vct-template-row')).toBeNull(); d.controller.destroy();
+  });
+
+  it('ignores a pending removal read after an account switch or lock', async () => {
+    let resolveRead, account = 'fictional-template-account';
+    const selected = record(prepareModel()), pending = new Promise(resolve => { resolveRead = resolve; });
+    const d = fixture({ records: [selected], overrides: { getCurrentUser: () => ({ userId: account }), getCarePlanTemplate: vi.fn(() => pending) } }); await settle();
+    findButton(d.host, 'Usuń szablon').click(); account = 'fictional-other-account'; d.lock(); resolveRead(selected); await settle();
+    expect(d.host.querySelector('.vct')).toBeNull(); expect(d.vault.setCarePlanTemplateArchived).not.toHaveBeenCalled();
+  });
+
+  it('does not expose availability actions for unreadable, read-only or conflicted records', async () => {
+    const selected = record(prepareModel());
+    for (const extra of [{ status: 'unsupported' }, { readOnly: true }, { status: 'conflict' }]) {
+      const d = fixture({ records: [{ ...selected, ...extra }], overrides: { listCarePlanTemplates: vi.fn(async () => [{ ...selected, ...extra }]) } }); await settle();
+      expect(findButton(d.host, 'Usuń szablon')).toBeUndefined(); expect(findButton(d.host, 'Przywróć')).toBeUndefined(); d.controller.destroy();
+    }
   });
 
   it('creates independent definition identities when duplicating a stored template', async () => {
@@ -290,7 +388,7 @@ describe('Private template library browsing and revision actions', () => {
     await d.controller.open(selected.templateId, 'fictional-old-revision');
     expect(get).toHaveBeenCalledWith(selected.templateId, { revisionId: 'fictional-old-revision' });
     expect(d.host.textContent).toContain('Fikcyjna dawna nazwa');
-    expect(findButton(d.host, 'Edytuj')).toBeUndefined(); expect(findButton(d.host, 'Archiwizuj')).toBeUndefined();
+    expect(findButton(d.host, 'Edytuj')).toBeUndefined(); expect(findButton(d.host, 'Usuń szablon')).toBeUndefined(); expect(findButton(d.host, 'Przywróć')).toBeUndefined();
     expect(d.vault.saveCarePlanTemplateRevision).not.toHaveBeenCalled(); d.controller.destroy();
   });
 
@@ -298,7 +396,7 @@ describe('Private template library browsing and revision actions', () => {
     const selected = { templateId: 'fictional-unavailable', title: 'Fikcyjna nieobsługiwana wersja', status: 'unsupported', readOnly: true, definition: null, baseToken: null, headRevisionId: null, revisionNumber: null };
     const d = fixture({ records: [selected] }); await settle();
     expect(d.host.textContent).toContain('Nie można odczytać tej wersji szablonu.');
-    expect(d.host.textContent).not.toContain('null etapów'); findButton(d.host, 'Archiwum').click();
+    expect(d.host.textContent).not.toContain('null etapów'); findButton(d.host, 'Usunięte').click();
     expect(d.host.textContent).toContain('Nie można odczytać tej wersji szablonu.'); d.controller.destroy();
   });
 });

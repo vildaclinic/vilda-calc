@@ -125,7 +125,7 @@
     function renderLibrary() {
       headerTitle.textContent = 'Moje szablony';
       var toolbar = node('div', 'vct-library-tools'), search = node('input', 'vcp-search'); search.type = 'search'; search.value = state.query; search.placeholder = 'Szukaj własnego szablonu…'; search.setAttribute('aria-label', 'Szukaj własnego szablonu');
-      var filters = node('div', 'vcp-filters'); [['active', 'Aktywne'], ['archived', 'Archiwum']].forEach(function (entry) {
+      var filters = node('div', 'vcp-filters'); [['active', 'Aktywne'], ['archived', 'Usunięte']].forEach(function (entry) {
         var item = button(entry[1], (state.archived === (entry[0] === 'archived') ? 'is-active' : ''), function () { if (state.busy) return; state.archived = entry[0] === 'archived'; render(); }); item.setAttribute('aria-pressed', String(state.archived === (entry[0] === 'archived'))); filters.appendChild(item);
       }); toolbar.appendChild(search); toolbar.appendChild(filters);
       var create = button('+ Nowy szablon', 'vcp-primary', function () { abandonThen(function () { beginNew(); }); }, 'Nowy szablon'); create.disabled = state.busy || !canSave(); toolbar.appendChild(create); workspace.appendChild(toolbar);
@@ -133,13 +133,15 @@
       function draw() {
         clear(cards); var query = key(state.query), items = state.items.filter(function (item) { return !['active', 'archived'].includes(item.status) || state.archived === (item.status === 'archived'); }).filter(function (item) { return !query || key((item.title || '') + ' ' + (item.labels || []).join(' ')).includes(query); });
         if (!state.loaded && state.loading) cards.appendChild(node('p', 'vcp-empty', 'Wczytywanie szablonów…'));
-        else if (!items.length && !state.error && state.loaded && state.catalogReadable) cards.appendChild(node('p', 'vcp-empty', state.query ? 'Brak pasujących szablonów.' : state.limitedToLocal ? 'Brak szablonów zapisanych na tym urządzeniu.' : state.archived ? 'Archiwum jest puste.' : 'Nie masz jeszcze własnych szablonów.'));
+        else if (!items.length && !state.error && state.loaded && state.catalogReadable) cards.appendChild(node('p', 'vcp-empty', state.query ? 'Brak pasujących szablonów.' : state.limitedToLocal ? 'Brak szablonów zapisanych na tym urządzeniu.' : state.archived ? 'Nie ma usuniętych szablonów.' : 'Nie masz jeszcze własnych szablonów.'));
         items.forEach(function (item) {
           var row = node('article', 'vct-template-row'); row.dataset.templateId = item.templateId;
           var text = node('div', 'vct-template-copy'); heading(text, item.title || 'Szablon do przeglądu', 'h3');
           help(text, item.status === 'conflict' ? 'Wymaga przeglądu zmian' : !['active', 'archived'].includes(item.status) ? 'Nie można odczytać tej wersji szablonu.' : structureCount(item.stageCount, item.stepCount) + ' · Wersja ' + item.revisionNumber);
           if (item.syncState && item.syncState.pending) help(text, 'Oczekuje na synchronizację');
-          var actions = node('div', 'vct-row-actions'); actions.appendChild(button(item.status === 'conflict' ? 'Przejrzyj zmiany' : 'Podgląd', 'vcp-outline', function () { readTemplate(item.templateId); })); row.appendChild(text); row.appendChild(actions); cards.appendChild(row);
+          var actions = node('div', 'vct-row-actions'); actions.appendChild(button(item.status === 'conflict' ? 'Przejrzyj zmiany' : 'Podgląd', 'vcp-outline', function () { readTemplate(item.templateId); }));
+          if (canChangeAvailability(item)) actions.appendChild(availabilityButton(item));
+          row.appendChild(text); row.appendChild(actions); cards.appendChild(row);
         });
       }
       search.addEventListener('input', function () { state.query = search.value; draw(); }); draw();
@@ -169,10 +171,7 @@
       if (!state.historical) { var edit = button('Edytuj', 'vcp-outline', function () { abandonThen(function () { beginEdit(selected); }); }); edit.disabled = !canSave() || selected.status !== 'active'; actions.appendChild(edit); }
       var duplicate = button('Utwórz kopię', 'vcp-outline', function () { abandonThen(function () { beginDuplicate(selected.definition); }); }); duplicate.disabled = !canSave(); actions.appendChild(duplicate);
       actions.appendChild(button('Wersje', 'vcp-text', function () { readRevisions(selected.templateId); }));
-      if (!state.historical) {
-        var archived = selected.status === 'archived', archive = button(archived ? 'Przywróć do biblioteki' : 'Archiwizuj', 'vcp-text', function () { ask(archived ? 'Przywrócić szablon?' : 'Archiwizować szablon?', archived ? 'Szablon wróci do aktywnej biblioteki.' : 'Szablon pozostanie dostępny w archiwum wraz z jego wersjami. Dotychczasowe plany pacjentów pozostaną zachowane.', function () { mutate('archive', { templateId: selected.templateId, baseToken: selected.baseToken, operationId: id(), archived: !archived }); }); });
-        archive.disabled = !canSave(); actions.appendChild(archive);
-      }
+      if (!state.historical && canChangeAvailability(selected)) actions.appendChild(availabilityButton(selected));
       workspace.appendChild(actions);
     }
     function renderHistory() {
@@ -184,6 +183,7 @@
     }
     async function refresh() {
       if (!current() || state.busy) return;
+      if (state.confirmation) { state.stale = true; return; }
       var ticket = ++sequence; state.loading = true; state.catalogReadable = false; state.error = null; if (!state.loaded) render();
       try {
         var capability = await vault.getCarePlanTemplateCapability();
@@ -217,6 +217,35 @@
         state.selected = selected; state.historical = !!revisionId; state.view = selected.status === 'conflict' && !revisionId ? 'resolve' : 'detail'; state.resolveHead = ''; state.resolveArchive = '';
       } catch (error) { if (current() && ticket === sequence) fail(error); }
       finally { if (current() && ticket === sequence) { busy(false); render(); var title = workspace.querySelector('h2') || headerTitle; title.tabIndex = -1; title.focus({ preventScroll: true }); } }
+    }
+    function canChangeAvailability(template) { return !!(template && !template.readOnly && ['active', 'archived'].includes(template.status) && template.baseToken); }
+    function availabilityButton(template) {
+      var archived = template.status === 'archived', label = (archived ? 'Przywróć szablon: ' : 'Usuń szablon: ') + (template.title || template.definition && template.definition.name || 'Szablon');
+      var action = button(archived ? 'Przywróć' : 'Usuń szablon', 'vcp-text', function () { requestAvailability(template.templateId, !archived, label); }, label);
+      action.disabled = state.busy || !!state.pending || state.uncertain || !canSave(); return action;
+    }
+    async function requestAvailability(templateId, archived, returnFocusLabel) {
+      if (!current() || state.busy || state.pending || state.uncertain || !canSave()) return;
+      var ticket = ++sequence, selected = null; busy(true); state.error = null; state.feedback = ''; render();
+      try {
+        var value = await vault.getCarePlanTemplate(templateId, {});
+        if (!current() || ticket !== sequence) return;
+        if (!value || value.templateId !== templateId) throw new Error('Nie można potwierdzić bieżącej wersji tego szablonu. Odśwież bibliotekę.');
+        if (!canChangeAvailability(value) || value.status !== (archived ? 'active' : 'archived')) {
+          if (value) { state.selected = value; state.historical = false; state.view = value.status === 'conflict' ? 'resolve' : 'detail'; state.resolveHead = ''; state.resolveArchive = ''; }
+          throw new Error('Szablon zmienił się lub jest niedostępny. Sprawdź jego bieżącą wersję.');
+        }
+        selected = value; if (state.view === 'detail') state.selected = value;
+      } catch (error) { if (current() && ticket === sequence) fail(error); }
+      finally { if (current() && ticket === sequence) {
+        busy(false); render();
+        if (!selected) { var notice = errors.querySelector('[role="alert"]') || headerTitle; notice.tabIndex = -1; notice.focus({ preventScroll: true }); }
+      } }
+      if (!selected || !current() || ticket !== sequence || !canSave()) return;
+      var title = selected.title || selected.definition && selected.definition.name || 'Szablon';
+      ask((archived ? 'Usunąć szablon „' : 'Przywrócić szablon „') + title + '”?', archived ? 'Szablon trafi do Usuniętych, skąd możesz go przywrócić. Plany pacjentów utworzone z tego szablonu pozostaną bez zmian.' : 'Szablon wróci do aktywnej biblioteki wraz z zachowanymi wersjami.', function () {
+        mutate('archive', { templateId: selected.templateId, baseToken: selected.baseToken, operationId: id(), archived: archived });
+      }, { confirmLabel: archived ? 'Usuń szablon' : 'Przywróć', cancelLabel: 'Anuluj', returnFocusLabel: returnFocusLabel });
     }
     async function readRevisions(templateId) {
       if (!current() || state.busy) return; var ticket = ++sequence; busy(true); state.error = null;
@@ -361,13 +390,22 @@
         var choose = button('Wybierz wersję ' + (index + 1), state.resolveHead === head.revisionId ? 'vcp-primary' : 'vcp-outline', function () { state.resolveHead = head.revisionId; render(); }); choose.disabled = state.busy || state.uncertain || !model.validateDefinition(head.definition).valid; choose.setAttribute('aria-pressed', String(state.resolveHead === head.revisionId)); box.appendChild(choose);
         if (head.definition) preview(box, head.definition, false); else help(box, 'Nie można odczytać treści tej wersji.'); pane.appendChild(box);
       });
-      select(pane, 'Po przeglądzie szablon ma być', [{ value: '', label: 'Wybierz dostępność' }, { value: 'active', label: 'W aktywnej bibliotece' }, { value: 'archived', label: 'W archiwum' }], state.resolveArchive, function (value) { state.resolveArchive = value; }, null, false); workspace.appendChild(pane);
+      select(pane, 'Po przeglądzie szablon ma być', [{ value: '', label: 'Wybierz dostępność' }, { value: 'active', label: 'W aktywnej bibliotece' }, { value: 'archived', label: 'W Usuniętych' }], state.resolveArchive, function (value) { state.resolveArchive = value; }, null, false); workspace.appendChild(pane);
     }
-    function ask(title, text, confirm) { if (!current() || state.busy) return; state.confirmation = { title: title, text: text, confirm: confirm }; render(); }
+    function ask(title, text, confirm, settings) {
+      if (!current() || state.busy) return; state.confirmation = Object.assign({ title: title, text: text, confirm: confirm }, settings || {}); render();
+      var titleNode = workspace.querySelector('h2'); if (titleNode) { titleNode.tabIndex = -1; titleNode.focus({ preventScroll: true }); }
+    }
+    function cancelConfirmation() {
+      var label = state.confirmation && state.confirmation.returnFocusLabel; state.confirmation = null;
+      if (label && state.stale) fail(new Error('Biblioteka zmieniła się w tle. Odśwież ją, aby zobaczyć bieżące dane.'));
+      render();
+      if (label) { var target = Array.from(workspace.querySelectorAll('button')).find(function (item) { return item.getAttribute('aria-label') === label; }); (target || headerTitle).focus({ preventScroll: true }); }
+    }
     function renderConfirmation() {
       var pane = node('section', 'vct-confirmation'); heading(pane, state.confirmation.title); pane.appendChild(node('p', 'vcp-description', state.confirmation.text));
-      pane.appendChild(button('Zostań', 'vcp-outline', function () { state.confirmation = null; render(); }));
-      pane.appendChild(button('Potwierdź', 'vcp-primary', function () { var confirm = state.confirmation.confirm; state.confirmation = null; confirm(); })); workspace.appendChild(pane);
+      pane.appendChild(button(state.confirmation.cancelLabel || 'Zostań', 'vcp-outline', cancelConfirmation));
+      pane.appendChild(button(state.confirmation.confirmLabel || 'Potwierdź', 'vcp-primary', function () { var confirm = state.confirmation.confirm; state.confirmation = null; confirm(); })); workspace.appendChild(pane);
     }
     function abandonThen(fn) {
       if (state.pending) { fail(new Error('Najpierw sprawdź wynik wcześniejszego zapisu.')); render(); return; }
@@ -387,7 +425,13 @@
           stageCount: definition ? definition.stages.length : 0, stepCount: definition ? definition.steps.length : 0, syncState: template.syncState }); state.loaded = true;
       }
       state.view = result.template && result.template.status === 'conflict' ? 'resolve' : 'library';
-      if (pending.kind === 'archive') state.archived = pending.request.archived;
+      if (pending.kind === 'archive') {
+        state.archived = false;
+        if (state.view === 'library') {
+          var place = result.persistence === 'remote' ? '' : ' na tym urządzeniu';
+          state.feedback = pending.request.archived ? 'Usunięto szablon z aktywnej biblioteki' + place + '. Możesz go przywrócić w Usuniętych.' : 'Przywrócono szablon do aktywnej biblioteki' + place + '.';
+        }
+      }
     }
     async function mutate(kind, request, retry) {
       if (!current() || state.busy || !canSave() && !retry) return;
@@ -397,11 +441,14 @@
       try {
         var result = await vault[pending.kind === 'save' ? 'saveCarePlanTemplateRevision' : pending.kind === 'archive' ? 'setCarePlanTemplateArchived' : 'resolveCarePlanTemplateConflict'](clone(pending.request));
         if (!current() || ticket !== sequence || state.pending !== pending) return;
-        if (result && result.saved === true) { saved(result, pending); busy(false); render(); await refresh(); }
+        if (result && result.saved === true) { saved(result, pending); busy(false); render(); headerTitle.focus({ preventScroll: true }); await refresh(); }
         else if (result && (result.conflict || result.reason === 'conflict')) {
           state.pending = null; state.uncertain = false; state.blockedConflict = true; state.stale = true;
-          fail(new Error('Szablon zmienił się na innym urządzeniu. Twoje zmiany pozostały w formularzu. Sprawdź bieżącą wersję przed zapisaniem.'));
-        } else { state.uncertain = true; fail(new Error('Nie można jeszcze potwierdzić zapisu. Formularz został zachowany. Sprawdź wynik zapisu lub ponów tę samą próbę.')); }
+          if (pending.kind === 'archive') {
+            state.selected = result.template || null; state.historical = false; state.view = result.template ? result.template.status === 'conflict' ? 'resolve' : 'detail' : 'library'; state.resolveHead = ''; state.resolveArchive = '';
+            fail(new Error('Szablon zmienił się na innym urządzeniu. Sprawdź bieżącą wersję przed ponownym ' + (pending.request.archived ? 'usunięciem.' : 'przywróceniem.')));
+          } else fail(new Error('Szablon zmienił się na innym urządzeniu. Twoje zmiany pozostały w formularzu. Sprawdź bieżącą wersję przed zapisaniem.'));
+        } else { state.uncertain = true; fail(new Error(pending.kind === 'archive' ? 'Nie można jeszcze potwierdzić ' + (pending.request.archived ? 'usunięcia' : 'przywrócenia') + ' szablonu. Sprawdź wynik zapisu lub ponów tę samą próbę.' : 'Nie można jeszcze potwierdzić zapisu. Formularz został zachowany. Sprawdź wynik zapisu lub ponów tę samą próbę.')); }
       } catch (error) { if (current() && ticket === sequence && state.pending === pending) { state.uncertain = true; fail(error); } }
       finally { if (current() && ticket === sequence) { busy(false); render(); } }
     }
@@ -410,8 +457,8 @@
       try {
         var outcome = await vault.getCarePlanTemplateOperation({ templateId: pending.request.templateId, operationId: pending.request.operationId });
         if (!current() || ticket !== sequence || state.pending !== pending) return;
-        if (outcome && outcome.state === 'committed' && outcome.result && outcome.result.saved === true) { saved(outcome.result, pending); busy(false); render(); await refresh(); }
-        else state.feedback = outcome && outcome.state === 'pending' ? 'Zapis nadal oczekuje na potwierdzenie. Formularz pozostaje zachowany.' : 'Wynik zapisu nie jest jeszcze potwierdzony. Możesz ponowić tę samą próbę.';
+        if (outcome && outcome.state === 'committed' && outcome.result && outcome.result.saved === true) { saved(outcome.result, pending); busy(false); render(); headerTitle.focus({ preventScroll: true }); await refresh(); }
+        else state.feedback = outcome && outcome.state === 'pending' ? pending.kind === 'archive' ? 'Zmiana dostępności szablonu nadal oczekuje na potwierdzenie.' : 'Zapis nadal oczekuje na potwierdzenie. Formularz pozostaje zachowany.' : 'Wynik zapisu nie jest jeszcze potwierdzony. Możesz ponowić tę samą próbę.';
       } catch (error) { if (current() && ticket === sequence) fail(error); }
       finally { if (current() && ticket === sequence) { busy(false); render(); } }
     }
@@ -485,11 +532,11 @@
     }
     function requestClose() {
       if (state.busy) return;
-      if (state.confirmation) { state.confirmation = null; render(); return; }
+      if (state.confirmation) { cancelConfirmation(); return; }
       if (state.draft && state.dirty || state.pending) ask('Zamknąć bibliotekę?', state.pending ? 'Nie potwierdzono jeszcze wyniku zapisu. Wpisana treść zostanie zamknięta; możesz najpierw sprawdzić wynik.' : 'Niezapisane zmiany w szkicu zostaną odrzucone.', destroy);
       else destroy();
     }
-    function changed() { if (!current()) return; if (state.view === 'wizard' || state.busy || state.pending) { state.stale = true; return; } if (timer) win.clearTimeout(timer); timer = win.setTimeout(function () { timer = null; refresh(); }, 80); }
+    function changed() { if (!current()) return; if (state.view === 'wizard' || state.confirmation || state.busy || state.pending) { state.stale = true; return; } if (timer) win.clearTimeout(timer); timer = win.setTimeout(function () { timer = null; refresh(); }, 80); }
     function destroy() {
       if (destroyed) return; destroyed = true; sequence += 1; if (timer) win.clearTimeout(timer); if (lifecycle) lifecycle.disconnect();
       unsubscribe.forEach(function (fn) { if (typeof fn === 'function') fn(); }); doc.removeEventListener('vilda:sync-merged', changed);
