@@ -249,8 +249,13 @@ test('stopka na wszystkich 19 stronach jest obok menu, a jej linki prowadzą do 
   for (const path of FOOTER_PAGES) {
     await page.goto(`/${path}`, { waitUntil: 'load' });
     await page.waitForFunction(() => window.VildaAuthUI?.isBootReady?.() && !document.documentElement.classList.contains('vilda-auth-locked'));
-    const confirm = page.locator('#professionalConfirmBtn');
-    if (await confirm.isVisible()) await confirm.click();
+    // The fresh fixture has not confirmed DocPro yet. Its deferred bootstrap
+    // may show the overlay after auth is ready, so a one-shot isVisible()
+    // can skip the required confirmation and measure the blocked page.
+    if (path === 'docpro.html') {
+      await page.locator('#professionalConfirmBtn').click();
+      await expect(page.locator('#professionalOverlay')).toBeHidden();
+    }
     await footerAtBottom(page);
     const g = await layout(page); proof.push({ path, ...g });
     expect(g.footer.x, `${path}: stopka poza panelem`).toBeGreaterThanOrEqual(g.menu.right);
