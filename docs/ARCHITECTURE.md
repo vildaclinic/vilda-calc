@@ -130,6 +130,12 @@ Do tej warstwy należą m.in.:
 - predykcje wzrostu: `bayley_pinneau_data.js`, `rwt_data.js`, `reinehr_cdgp_data.js`, `advanced_growth_kowd.js`;
 - SGA: `sga_birth_module.js`, `sga_intergrowth_data.js`, `sga_malewski_data.js`;
 - laboratorium i jednostki: `lab_clinical_panels.js`, `lab_units_data.js`, `lab_unit_converter.js`;
+- B/Cr z DZM: `clcr_protein_creatinine_data.js` zawiera wersjonowaną politykę
+  ARUP/KDIGO, a `clcr_protein_creatinine.js` przyjmuje ją jako argument obliczenia.
+  UI nie dobiera własnej normy. `clcr_protein_creatinine_persistence.js` odczytuje
+  zamrożoną ocenę bez dzisiejszego silnika/wieku. Historyczne `U_Prot` jest masą
+  całej zbiórki; konwersja do nowych stężeń należy tylko do świadomej edycji
+  z poprawnymi zachowanymi danymi. Kontrakt: [PROTEIN_CREATININE.md](clinical/PROTEIN_CREATININE.md).
 - historia wyników laboratoryjnych: `vilda_lab_history.js` — czysty model widoku historii (bez DOM,
   magazynu i zegara; konwerter, parser normy i „dziś” podaje wołający). Czyta tylko to, co zapisano
   w sejfie, i nie ocenia dawnych wyników dzisiejszymi normami. Oprócz notatek „wynik-badania” czyta
