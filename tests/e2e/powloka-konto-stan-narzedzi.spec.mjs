@@ -44,11 +44,24 @@ async function ramka(page, title) {
 }
 
 async function nawigacja(page, href) {
-  const sidebar = page.locator(`.sidebar-nav a[href="${href}"]`);
-  if (await sidebar.isVisible()) { await sidebar.click(); return; }
+  const sidebar = page.locator(`.sidebar-inner a[href="${href}"]`);
+  if (await page.locator('aside.sidebar-v2').isVisible()) {
+    if (!(await sidebar.isVisible())) {
+      const calculators = page.locator('.sidebar-inner .chrome-menu-calculators-toggle');
+      await calculators.click();
+      await expect(calculators).toHaveAttribute('aria-expanded', 'true');
+    }
+    await sidebar.click(); return;
+  }
   await page.locator('[data-vilda-chrome-menu-btn]').click();
   const menu = page.locator('[data-vilda-chrome-drawer]');
-  await menu.locator(`.chrome-drawer-nav a[href="${href}"]`).click();
+  const link = menu.locator(`a[href="${href}"]`);
+  if (!(await link.isVisible())) {
+    const calculators = menu.locator('.chrome-menu-calculators-toggle');
+    await calculators.click();
+    await expect(calculators).toHaveAttribute('aria-expanded', 'true');
+  }
+  await link.click();
   // Zamykanie menu ma osobną regresję A5. Bazowy RED A4 musi móc wrócić
   // do formularza także przed naprawą A5, przez istniejący przycisk użytkownika.
   if (await menu.getAttribute('aria-hidden') === 'false') {

@@ -127,7 +127,7 @@ async function sprawdzPustaListe(page) {
   miekko(await page.evaluate(async () => (await window.VildaVault.listPatients()).length),
     'sejf drugiego konta bez kart').toBe(0);
   await page.getByRole('navigation', { name: 'Nawigacja boczna' })
-    .getByRole('button', { name: 'Pacjenci', exact: true }).click({ timeout: 10_000 });
+    .getByRole('button', { name: 'Baza pacjentów', exact: true }).click({ timeout: 10_000 });
   const lista = page.locator('.vilda-auth-patients');
   await expect(lista.locator('.vilda-auth-title', { hasText: 'Pacjenci' })).toBeVisible();
   await miekko(lista.locator('.pt-count'), 'lista pacjentów drugiego konta').toHaveText('Brak zapisanych pacjentów.');

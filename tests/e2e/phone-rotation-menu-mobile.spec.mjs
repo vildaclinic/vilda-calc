@@ -12,6 +12,13 @@ const MENU = '[data-vilda-chrome-drawer]';
 const PANEL = `${MENU} .chrome-drawer-panel`;
 const TRIGGER = '[data-vilda-chrome-menu-btn]';
 const CLOSE = `${MENU} .chrome-drawer-close`;
+const COLLAPSED_MENU_CONTROLS = [
+  'close', 'saveDataBtnSidebar', 'patientDocumentsBtnSidebar', 'patientsListBtnSidebar',
+  'patient-card', 'patient-change', 'terminarz.html', 'notatki.html',
+  'index.html', 'docpro.html', 'przelicznik-jednostek.html', 'calculators',
+  'materialy-edukacyjne.html', 'account', 'ustawienia.html', 'logout',
+];
+const CALCULATOR_DESTINATIONS = ['homa-ir.html', 'kalkulator-klirens.html', 'steroidy.html'];
 
 async function instrumentMotion(page) {
   await page.addInitScript(() => {
@@ -207,20 +214,60 @@ async function rotateSplit(page, cdp, { width, height, order, safeArea = width >
   return samples;
 }
 
-async function assertMenu(page, { width, height, left, right, top, bottom, landscape }) {
+async function assertMenu(page, { width, height, left, right, top, bottom, landscape, expanded = false }) {
   await expect(page.locator(MENU)).toHaveAttribute('aria-hidden', 'false');
-  const geometry = await page.locator(PANEL).evaluate(panel => {
+  const panel = page.locator(PANEL), toggle = panel.locator('.chrome-menu-calculators-toggle');
+  // These are final safe-area geometry checks. Entry keyframes are covered
+  // separately; their fractional tail must not be sampled as the final edge.
+  await expect(panel).toHaveCSS('transform', 'none');
+  const calculators = panel.locator('.chrome-menu-calculators-items');
+  await expect(toggle).toHaveAttribute('aria-expanded', String(expanded));
+  await expect(toggle).toHaveAttribute('aria-controls', 'chrome-drawer-calculators');
+  await expect(calculators).toHaveAttribute('id', 'chrome-drawer-calculators');
+  if (expanded) await expect(calculators).toBeVisible();
+  else await expect(calculators).toBeHidden();
+  await expect(calculators.locator('a')).toHaveCount(3);
+  await expect(panel.locator('span[data-menu-patient-name]')).toHaveText('Wybierz pacjenta');
+  await expect(panel.locator('.chrome-menu-office [data-drawer-btn="patientsListBtnSidebar"]')).toHaveText('Baza pacjentów');
+  await expect(panel.locator('a[href="notatki.html"]')).toHaveText('Notatnik');
+  const measure = () => panel.evaluate(panel => {
     const box = el => { const { x, y, width, height, right, bottom } = el.getBoundingClientRect(); return { x, y, width, height, right, bottom }; };
     const sections = [...panel.querySelectorAll('.chrome-drawer-section')];
-    const items = [...panel.querySelectorAll('.chrome-drawer-nav a, .chrome-drawer-nav button')]
-      .filter(item => item.getClientRects().length && getComputedStyle(item).display !== 'none');
     const targets = [...panel.querySelectorAll('button,a[href]')]
       .filter(item => item.getClientRects().length && getComputedStyle(item).display !== 'none');
+    const identity = item => {
+      if (item.matches('.chrome-drawer-close')) return 'close';
+      if (item.hasAttribute('data-drawer-btn')) return item.getAttribute('data-drawer-btn');
+      if (item.hasAttribute('href')) return item.getAttribute('href');
+      for (const [attribute, name] of [['data-menu-patient-card', 'patient-card'], ['data-menu-patient-change', 'patient-change'], ['data-menu-account', 'account'], ['data-menu-logout', 'logout']]) {
+        if (item.hasAttribute(attribute)) return name;
+      }
+      if (item.matches('.chrome-menu-calculators-toggle')) return 'calculators';
+      return `unexpected:${item.tagName}:${item.textContent.trim()}`;
+    };
+    const pinned = Object.fromEntries(Object.entries({
+      close: '.chrome-drawer-close', actions: '.chrome-menu-actions',
+      save: '.chrome-menu-save', documents: '.chrome-menu-documents', footer: '.chrome-menu-footer',
+      account: '[data-menu-account]', settings: '.chrome-menu-settings', logout: '[data-menu-logout]',
+    }).map(([name, selector]) => [name, box(panel.querySelector(selector))]));
+    const scroll = panel.querySelector('.chrome-menu-scroll');
     return { panel: box(panel), close: box(panel.querySelector('.chrome-drawer-close')),
-      sections: sections.map(box), targets: targets.map(box),
-      links: items.map(item => item.getAttribute('data-drawer-btn') || item.getAttribute('href')).sort(),
+      sections: sections.map(box), sectionNames: sections.map(section => section.querySelector('.chrome-drawer-section-title').textContent.trim()),
+      targets: targets.map(box), controls: targets.map(identity).sort(), pinned, scroll: box(scroll),
+      actionsScroll: scroll.contains(panel.querySelector('.chrome-menu-actions')),
+      footerScroll: scroll.contains(panel.querySelector('.chrome-menu-footer')),
       overflow: panel.scrollWidth - panel.clientWidth };
   });
+  const assertControls = (geometry, isExpanded) => {
+    expect(geometry.controls, 'all B4 destinations, pinned actions, patient controls and footer remain available').toEqual([
+      ...COLLAPSED_MENU_CONTROLS, ...(isExpanded ? CALCULATOR_DESTINATIONS : []),
+    ].sort());
+    for (const target of geometry.targets) {
+      expect(target.height, 'visible menu actions retain a 44 px touch target').toBeGreaterThanOrEqual(44);
+      expect(target.width).toBeGreaterThanOrEqual(44);
+    }
+  };
+  const geometry = await measure();
   expect(geometry.panel.x).toBeGreaterThanOrEqual(left + 8);
   expect(geometry.panel.right).toBeLessThanOrEqual(width - right - 8);
   expect(geometry.panel.y).toBeGreaterThanOrEqual(top + 8);
@@ -229,28 +276,41 @@ async function assertMenu(page, { width, height, left, right, top, bottom, lands
   expect(geometry.overflow).toBeLessThanOrEqual(1);
   expect(geometry.close.y).toBeGreaterThanOrEqual(top + 8);
   expect(geometry.close.bottom).toBeLessThanOrEqual(height - bottom - 8);
-  for (const target of geometry.targets) {
-    expect(target.height, 'visible menu actions retain a 44 px touch target').toBeGreaterThanOrEqual(44);
-    expect(target.width).toBeGreaterThanOrEqual(44);
-  }
-  expect(geometry.links).toEqual([
-    'saveDataBtnSidebar', 'addVisitNoteBtnSidebar', 'patientDocumentsBtnSidebar', 'patientsListBtnSidebar',
-    'index.html', 'docpro.html', 'homa-ir.html', 'kalkulator-klirens.html',
-    'steroidy.html', 'przelicznik-jednostek.html', 'materialy-edukacyjne.html',
-    'notatki.html', 'terminarz.html', 'ustawienia.html',
-  ].sort());
+  assertControls(geometry, expanded);
+  expect(geometry.sectionNames).toEqual(['Gabinet', 'Narzędzia kliniczne']);
+  expect(geometry.actionsScroll, 'form actions stay outside the scrolling destinations').toBe(false);
+  expect(geometry.footerScroll, 'account and settings stay outside the scrolling destinations').toBe(false);
+  expect(geometry.pinned.actions.bottom).toBeLessThanOrEqual(geometry.scroll.y + 1);
+  expect(geometry.scroll.bottom).toBeLessThanOrEqual(geometry.pinned.footer.y + 1);
   if (landscape) {
     expect(geometry.sections[1].x).toBeGreaterThan(geometry.sections[0].right - 1);
-    expect(geometry.sections[2].x).toBe(geometry.sections[0].x);
+    expect(geometry.sections[1].y).toBe(geometry.sections[0].y);
   } else {
     expect(geometry.sections[1].x).toBe(geometry.sections[0].x);
     expect(geometry.sections[1].y).toBeGreaterThan(geometry.sections[0].y);
   }
-  const closeBefore = await page.locator(CLOSE).boundingBox();
-  const last = page.locator(`${MENU} a[href="ustawienia.html"]`);
-  await last.scrollIntoViewIfNeeded();
-  await expect(last).toBeInViewport();
-  expect(await page.locator(CLOSE).boundingBox(), 'close stays in place when the complete menu is scrolled').toEqual(closeBefore);
+  if (!expanded) {
+    await toggle.focus();
+    await toggle.press('Enter');
+  }
+  await expect(toggle).toHaveAttribute('aria-expanded', 'true');
+  await expect(calculators).toBeVisible();
+  const scroll = panel.locator('.chrome-menu-scroll');
+  await scroll.evaluate(node => { node.scrollTop = 0; });
+  const beforeScroll = await measure();
+  assertControls(beforeScroll, true);
+  const scrollSize = await scroll.evaluate(node => ({ height: node.clientHeight, total: node.scrollHeight }));
+  expect(scrollSize.total, 'the expanded complete menu requires a real scroll').toBeGreaterThan(scrollSize.height + 1);
+  await scroll.evaluate(node => { node.scrollTop = node.scrollHeight; });
+  await expect.poll(() => scroll.evaluate(node => node.scrollTop)).toBeGreaterThan(1);
+  await expect(panel.locator('a[href="materialy-edukacyjne.html"]')).toBeInViewport();
+  const afterScroll = await measure();
+  assertControls(afterScroll, true);
+  for (const [name, rect] of Object.entries(beforeScroll.pinned)) {
+    expect(afterScroll.pinned[name], `${name} stays in place when the complete menu is scrolled`).toEqual(rect);
+    expect(rect.y).toBeGreaterThanOrEqual(beforeScroll.panel.y);
+    expect(rect.bottom).toBeLessThanOrEqual(beforeScroll.panel.bottom);
+  }
   await page.locator(CLOSE).focus();
 }
 
@@ -290,7 +350,7 @@ for (const scenario of [
     expect(first[0].frames.map(item => item.opacity)).toEqual(['0.55', '1']);
     expect(first[0].frames.every(item => item.transform === undefined)).toBe(true);
     await rotateSplit(page, cdp, { width: 440, height: 956, order: 'physical-first' });
-    await assertMenu(page, { width: 440, height: 956, ...PORTRAIT_SAFE_AREA, landscape: false });
+    await assertMenu(page, { width: 440, height: 956, ...PORTRAIT_SAFE_AREA, landscape: false, expanded: true });
     expect(await motion(page), 'return to portrait does not create another translucent surface').toHaveLength(1);
     if (hiddenDocpro) await expect(hiddenDocpro.locator('html')).not.toHaveClass(/\bvilda-phone-landscape\b/);
     expect(await page.evaluate(selector => window.__rotationMenu === document.querySelector(selector), PANEL), 'rotation keeps the mounted menu').toBe(true);
@@ -363,9 +423,11 @@ test('smaller landscape, either safe edge, keyboard and reduced motion retain me
   test.setTimeout(150_000);
   const { frame, cdp } = await prepare(page);
   await page.locator(TRIGGER).click();
+  let expanded = false;
   for (const safeArea of [{ top: 0, bottom: 21, left: 62, right: 0 }, { top: 0, bottom: 21, left: 0, right: 62 }]) {
     await rotateSplit(page, cdp, { width: 844, height: 390, order: 'physical-first', safeArea });
-    await assertMenu(page, { width: 844, height: 390, ...safeArea, landscape: true });
+    await assertMenu(page, { width: 844, height: 390, ...safeArea, landscape: true, expanded });
+    expanded = true;
     const disabledSave = page.locator(`${MENU} [data-drawer-btn="saveDataBtnSidebar"]`);
     await disabledSave.scrollIntoViewIfNeeded();
     await disabledSave.click({ force: true }); // aria-disabled deliberately exposes its explanation

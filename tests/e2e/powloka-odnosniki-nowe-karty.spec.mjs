@@ -56,6 +56,7 @@ async function cieplaPowloka(page) {
   await odrzucCookies(page);
   const start = await ramka(page, 'Start');
   await gotowyStart(start);
+  await rozwinKalkulatory(page);
   await page.locator('.sidebar-nav a[href="homa-ir.html"]').click();
   const homa = await ramka(page, 'HOMA-IR');
   const wynik = await wypelnijHoma(homa);
@@ -63,6 +64,12 @@ async function cieplaPowloka(page) {
   await expect(page).toHaveURL(/\/app\.html#\/start$/);
   await expect(page.locator('iframe.app-pane[title="Start"]')).toBeVisible();
   return { start, homa, wynik };
+}
+
+async function rozwinKalkulatory(page) {
+  const toggle = page.locator('.sidebar-inner .chrome-menu-calculators-toggle');
+  if (await toggle.getAttribute('aria-expanded') !== 'true') await toggle.click();
+  await expect(toggle).toHaveAttribute('aria-expanded', 'true');
 }
 
 async function banerCole(start) {
@@ -125,6 +132,7 @@ for (const sposob of sposoby) {
   test(`host: ${sposob.nazwa} otwiera nową kartę i zachowuje powłokę oraz HOMA`, async ({ page, context }) => {
     const { homa, wynik } = await cieplaPowloka(page);
     const przed = await stanDokumentu(page);
+    await rozwinKalkulatory(page);
     const { popup, href } = await otworzNowaKarte(context,
       page.locator('.sidebar-nav a[href="homa-ir.html"]'), sposob);
     expect.soft(await stanDokumentu(page), 'adres i długość historii starej karty pozostają bez zmian').toEqual(przed);

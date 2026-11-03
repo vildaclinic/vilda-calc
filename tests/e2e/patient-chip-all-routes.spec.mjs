@@ -13,7 +13,7 @@ test.setTimeout(240_000);
 const ROUTES = [
   ['start', 'index.html', 'Start'], ['docpro', 'docpro.html', 'DocPro'],
   ['homa', 'homa-ir.html', 'HOMA-IR'], ['steroidy', 'steroidy.html', 'Steroidy'],
-  ['lab', 'przelicznik-jednostek.html', 'Jednostki laboratoryjne'], ['notatki', 'notatki.html', 'Notatki'],
+  ['lab', 'przelicznik-jednostek.html', 'Jednostki laboratoryjne'], ['notatki', 'notatki.html', 'Notatnik'],
   ['terminarz', 'terminarz.html', 'Terminarz'], ['ustawienia', 'ustawienia.html', 'Ustawienia'],
   ['edu', 'materialy-edukacyjne.html', 'Materiały edukacyjne'], ['cukrzyca', 'cukrzyca.html', 'Cukrzyca'],
   ['klirens', 'kalkulator-klirens.html', 'Kalkulator klirensu'],
@@ -162,6 +162,21 @@ async function readyRoute(page, route) {
   return owner;
 }
 
+async function clickRoute(page, route, mobile) {
+  const drawer = page.locator('[data-vilda-chrome-drawer]');
+  if (mobile) await page.locator('[data-vilda-chrome-menu-btn]').click();
+  const menu = mobile ? drawer.locator('.chrome-drawer-panel') : page.locator('aside.sidebar-v2 .sidebar-inner');
+  if (['homa', 'klirens', 'steroidy'].includes(route.id)) {
+    const toggle = menu.locator('.chrome-menu-calculators-toggle');
+    if (await toggle.getAttribute('aria-expanded') !== 'true') await toggle.click();
+    await expect(toggle).toHaveAttribute('aria-expanded', 'true');
+    await expect(menu.locator('.chrome-menu-calculators-items')).toBeVisible();
+  }
+  // Ustawienia należą do przypiętej stopki B4, pozostałe trasy do nawigacji.
+  await menu.locator(`a[href="${route.path}"]`).click();
+  if (mobile) await expect(drawer).toBeHidden();
+}
+
 // Cykl Eulera ma każdą skierowaną krawędź raz: 110 przejść bez dodatkowych
 // przejść przygotowujących, które zaciemniałyby rzeczywiste źródło nawigacji.
 function directedTour(size) {
@@ -228,11 +243,7 @@ for (const mobile of [false, true]) {
     const fixture = await begin(page, true);
     let owner;
     for (const route of ROUTES.filter(route => route.id !== 'cukrzyca')) {
-      if (mobile) {
-        await page.locator('[data-vilda-chrome-menu-btn]').click();
-        await page.locator(`.chrome-drawer-nav a[href="${route.path}"]`).click();
-        await expect(page.locator('[data-vilda-chrome-drawer]')).toBeHidden();
-      } else await page.locator(`.sidebar-nav a[href="${route.path}"]`).click();
+      await clickRoute(page, route, mobile);
       owner = await readyRoute(page, route);
       await assertSaved(page, owner, fixture.expected, `UI:${route.id}`);
     }

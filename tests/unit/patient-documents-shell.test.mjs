@@ -119,6 +119,33 @@ describe('Dokumenty pacjenta: rzeczywisty most powłoki', () => {
     h.ctx.st(); h.buttons.addVisitNoteBtnSidebar.click();
     expect(h.start.children.addVisitNoteBtnSidebar.click).toHaveBeenCalledOnce(); expect(h.tip).toHaveBeenLastCalledWith(h.buttons.addVisitNoteBtnSidebar, 'Najpierw wybierz pacjenta');
   });
+
+  it('Zapisz dane zapisuje widoczne DocPro, bez wywołania ukrytego Start', () => {
+    const h = environment(); h.ctx.c = 'docpro'; h.start.frame.hidden = true;
+    h.ctx.dt(); h.buttons.saveDataBtnSidebar.click();
+    expect(h.docpro.children.saveDataBtnSidebar.click).toHaveBeenCalledOnce();
+    expect(h.start.children.saveDataBtnSidebar.click).not.toHaveBeenCalled();
+  });
+
+  it.each(['other-route', 'loading', 'hidden', 'detached', 'stale', 'wrong-url', 'wrong-document', 'missing-button'])('Zapisz dane ponownie sprawdza źródło w chwili kliknięcia: %s', condition => {
+    const h = environment(); h.ctx.c = 'docpro'; h.start.frame.hidden = true;
+    h.ctx.dt();
+    expect(h.buttons.saveDataBtnSidebar.getAttribute('aria-disabled')).not.toBe('true');
+    const sourceButton = h.docpro.children.saveDataBtnSidebar;
+    if (condition === 'other-route') h.ctx.c = 'lab';
+    if (condition === 'loading') h.docpro.loaded = false;
+    if (condition === 'hidden') h.docpro.frame.hidden = true;
+    if (condition === 'detached') h.docpro.frame.isConnected = false;
+    if (condition === 'stale') h.docpro.frame.contentWindow.stale = true;
+    if (condition === 'wrong-url') h.docpro.frame.contentWindow.location.pathname = '/index.html';
+    if (condition === 'wrong-document') h.docpro.frame.contentWindow.document = {};
+    if (condition === 'missing-button') delete h.docpro.children.saveDataBtnSidebar;
+    h.buttons.saveDataBtnSidebar.click();
+    expect(sourceButton.click).not.toHaveBeenCalled();
+    expect(h.start.children.saveDataBtnSidebar.click).not.toHaveBeenCalled();
+    expect(h.buttons.saveDataBtnSidebar.getAttribute('aria-disabled')).toBe('true');
+    expect(h.tip).toHaveBeenCalledOnce();
+  });
 });
 
 describe('Dokumenty pacjenta: menu standalone i przekazanie z szuflady', () => {
