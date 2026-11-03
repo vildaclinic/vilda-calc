@@ -31,17 +31,16 @@ for (const width of [390, 1024]) {
 
       const geometry = await page.evaluate(id => {
         const active = document.getElementById(id).getBoundingClientRect();
-        const pair = document.querySelector('.start-name-pair').getBoundingClientRect();
         const dropdown = document.querySelector('.vilda-ac-dd').getBoundingClientRect();
         return {
           left: dropdown.left, right: dropdown.right, width: dropdown.width,
-          pairLeft: pair.left, pairWidth: pair.width, top: dropdown.top, inputBottom: active.bottom,
+          inputLeft: active.left, inputWidth: active.width, top: dropdown.top, inputBottom: active.bottom,
           clippedNames: [...document.querySelectorAll('.vilda-ac-nm')]
             .filter(node => node.scrollWidth > node.clientWidth).map(node => node.textContent),
         };
       }, fieldId);
-      expect(Math.abs(geometry.left - geometry.pairLeft), 'lista zaczyna się przy całej parze pól').toBeLessThanOrEqual(1);
-      expect(Math.abs(geometry.width - geometry.pairWidth), 'lista używa szerokości całej pary').toBeLessThanOrEqual(1);
+      expect(Math.abs(geometry.left - geometry.inputLeft), 'lista zaczyna się przy aktywnym polu').toBeLessThanOrEqual(1);
+      expect(Math.abs(geometry.width - geometry.inputWidth), 'lista używa pełnej szerokości aktywnego pola').toBeLessThanOrEqual(1);
       expect(geometry.top).toBeGreaterThanOrEqual(geometry.inputBottom);
       expect(geometry.left).toBeGreaterThanOrEqual(0);
       expect(geometry.right).toBeLessThanOrEqual(width);
