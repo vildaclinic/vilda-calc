@@ -3,7 +3,7 @@ import { loadPatient, readyForPatient, shellFrame } from '../support/centile-liv
 import { noHorizontalOverflow } from '../support/care-plans-fixture.mjs';
 import { rawCareStorage } from '../support/care-plans-model-fixture.mjs';
 import { beginTemplate, captureTemplateUI, ensureTemplates, fillTemplateFirstStep, getTemplate, listTemplates, openTemplate,
-  openTemplates, previewTemplateDraft, rawTemplateStorage, syncTemplates, templateFixture } from '../support/care-templates-fixture.mjs';
+  openTemplates, previewTemplateDraft, rawTemplateStorage, syncTemplates, templateFixture, templateRow } from '../support/care-templates-fixture.mjs';
 
 test.use({ chwila: '2026-10-31T10:00:00+01:00', serviceWorkers: 'block', reducedMotion: 'reduce' });
 test.setTimeout(180000);
@@ -71,6 +71,24 @@ test('care templates mobile shell keeps a two-stage wizard usable, preserves foc
   expect(await rawCareStorage(frame)).toEqual(clinicalBefore);
   const reopened = await openTemplates(page); await openTemplate(reopened, item.templateId);
   await expect(reopened.getByText(longTitle + ' ABC', { exact: true })).toBeVisible();
+  await noHorizontalOverflow(page);
+  const remove = reopened.getByRole('button', { name: /^Usuń szablon:/ });
+  await expect(remove).toBeInViewport(); await remove.click();
+  await expect(reopened.locator('.vct-confirmation h2')).toBeFocused();
+  await reopened.getByRole('button', { name: 'Anuluj', exact: true }).click();
+  await expect(remove).toBeFocused(); expect((await getTemplate(frame, item.templateId)).status).toBe('active');
+  await remove.click(); await reopened.getByRole('button', { name: 'Usuń szablon', exact: true }).click();
+  await expect(templateRow(reopened, item.templateId)).toHaveCount(0);
+  await reopened.getByRole('button', { name: 'Usunięte', exact: true }).click();
+  const restore = templateRow(reopened, item.templateId).getByRole('button', { name: /^Przywróć szablon:/ });
+  // The post-save sync can replace this row. Trial click re-resolves the
+  // locator during actionability checks without restoring the template.
+  await restore.click({ trial: true }); await expect(restore).toBeInViewport();
+  await noHorizontalOverflow(page); await captureTemplateUI(page, 'mobile-removed-template');
+  await restore.click(); await reopened.getByRole('button', { name: 'Przywróć', exact: true }).click();
+  await expect(templateRow(reopened, item.templateId)).toBeVisible();
+  expect((await getTemplate(frame, item.templateId)).definition).toEqual(stored.definition);
+  expect(await rawCareStorage(frame)).toEqual(clinicalBefore);
   await noHorizontalOverflow(page);
   expect(await frame.evaluate(() => window.VildaSaveStatusIndicator.getState())).toBe('saved');
 });

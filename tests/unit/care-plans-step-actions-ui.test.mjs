@@ -316,6 +316,10 @@ describe('Care plan original result previews use the scoped reference API', () =
     const d = view({ planChanges: { steps: [current], log: [{ dateISO: actualDay, text: 'Fikcyjny przegląd.', resolution: snapshot }] }, vaultChanges: {
       getPatientNote: vi.fn(), getCarePlanResultReference: vi.fn(async () => ({ note: original, relation: 'history' })),
     } }); await settle();
+    // History may read its own parent to classify a review. Opening the
+    // original result must still use only the scoped reference API.
+    expect(d.vault.getPatientNote.mock.calls).toEqual([[d.plan.id]]);
+    d.vault.getPatientNote.mockClear();
     d.host.querySelector('[data-record-id="fictional-step-actions-result"]').click(); await settle();
     expect(d.vault.getCarePlanResultReference).toHaveBeenCalledWith({ planId: d.plan.id, stepId: current.id, noteId: original.id });
     expect(d.host.querySelector('.vcp-record-body').textContent).toBe(original.body);

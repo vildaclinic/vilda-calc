@@ -44,5 +44,16 @@ test('care plans lineage mobile: preserved closed work requires explicit reopeni
     .toEqual(plan.steps.map(step => ({ ...step, updatedBy: null })));
   expect(await reviewReminders(created.frame, plan.id)).toEqual([]);
   await expect(panel.locator('.vcp-sync-review')).toHaveCount(0);
+  const history = panel.locator('.vcp-history'), archive = panel.locator('.vcp-history-archive');
+  await expect(history).toContainText('Fikcyjna decyzja o kontynuacji zachowanych kroków.');
+  await expect(history).not.toContainText('Potwierdzono przegląd planu po scaleniu zmian.');
+  await expect(history).not.toContainText('Zachowana po synchronizacji');
+  await expect(history.locator('.vcp-sync-versions')).toHaveCount(0);
+  await expect(archive).not.toHaveAttribute('open', '');
+  await archive.locator(':scope > summary').scrollIntoViewIfNeeded();
+  await archive.locator(':scope > summary').click();
+  await expect(archive).toContainText('Potwierdzono przegląd planu po scaleniu zmian.');
   await noHorizontalOverflow(page);
+  expect(await readPlan(created.frame, plan.id)).toEqual(acknowledged);
+  await page.screenshot({ path: testInfo.outputPath('clinical-history-mobile.png') });
 });
