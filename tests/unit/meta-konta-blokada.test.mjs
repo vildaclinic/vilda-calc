@@ -553,8 +553,16 @@ describe('strażnik źródła', () => {
       wlasciciele.push([...src.slice(0, i).matchAll(/function (\w+)\(/g)].pop()[1]);
     }
     // ba — przelotka adaptera; Ca createUser, as restoreVaultBackup, Ds unlockWithPasskeyAndPersist, Ks importSyncCode,
-    // Zs completeQRLogin — każda zapisuje rekord NOWEGO konta (nowy identyfikator), którego nikt jeszcze nie pisze.
-    expect(wlasciciele.sort()).toEqual(['Bmk_zmien', 'Ca', 'Ds', 'Ks', 'Zs', 'as', 'ba']);
+    // Zs completeQRLogin i QrContinuityComplete — każda zapisuje rekord NOWEGO konta
+    // (nowy identyfikator), którego nikt jeszcze nie pisze.
+    expect(wlasciciele.sort()).toEqual(['Bmk_zmien', 'Ca', 'Ds', 'Ks', 'QrContinuityComplete', 'Zs', 'as', 'ba']);
+    const qrStart = src.indexOf('async function QrContinuityComplete(');
+    const qrEnd = src.indexOf('async function QrContinuityCompleteEphemeral(', qrStart);
+    expect(qrStart).toBeGreaterThan(-1);
+    expect(qrEnd).toBeGreaterThan(qrStart);
+    const qrComplete = src.slice(qrStart, qrEnd);
+    expect(qrComplete).toContain('const userId = ve(),');
+    expect(qrComplete).toContain('await adapter.putUserMeta(userId, metadata); assertCurrent();');
     expect(src).not.toContain("Ac('kosz-zapisow'");
     expect(src).toContain("const BMK_KLUCZ = 'kosz-zapisow';");
   });

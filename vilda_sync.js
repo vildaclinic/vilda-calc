@@ -577,24 +577,58 @@ function TLibEnabled ( ) {
     return false
   }
 }
-function TLibDeactivate ( ) {
-  var ctx = TLibActive ;
-  TLibActive = null ;
-  TLibStatus = {
-    state : "inactive"
-  }
-  ;
-  if ( ctx && ctx . unsubscribe ) try {
-    ctx . unsubscribe ( )
-  }
-  catch {
-  }
+/* Readable template-library scheduling: client/template-device-sync/runtime-sync.fragment.txt */
+var TLibAutomaticDelay = 15000;
+function TLibCancelScheduled(ctx) {
+  if (ctx && ctx.scheduledTimer != null) clearTimeout(ctx.scheduledTimer);
+  if (ctx) { ctx.scheduledTimer = null; ctx.scheduledAt = null; ctx.scheduledUrgent = false; }
 }
-function TLibWake ( ) {
-  if ( ! TLibCurrent ( TLibActive ) || ! TLibEnabled ( ) ) return ;
-  TLibStart ( ) . catch ( function ( ) {
+function TLibSchedule(ctx, at, urgent) {
+  if (!TLibCurrent(ctx) || !TLibEnabled()) return;
+  var due = Math.max(at, ctx.retryAt || 0), wasUrgent = ctx.scheduledUrgent === true;
+  if (ctx.scheduledTimer != null && ctx.scheduledAt <= due) {
+    ctx.scheduledUrgent = wasUrgent || urgent;
+    return;
   }
-  )
+  TLibCancelScheduled(ctx);
+  ctx.scheduledAt = due;
+  ctx.scheduledUrgent = wasUrgent || urgent;
+  ctx.scheduledTimer = setTimeout(function () {
+    var immediate = ctx.scheduledUrgent;
+    TLibCancelScheduled(ctx);
+    if (!TLibCurrent(ctx) || !TLibEnabled()) return;
+    if (o.navigator && o.navigator.onLine === false) {
+      if (ctx.pending) TLibSchedule(ctx, Date.now() + TLibAutomaticDelay, immediate);
+      return;
+    }
+    TLibStart(!immediate).catch(function () {});
+  }, Math.min(2147483647, Math.max(0, due - Date.now())));
+}
+function TLibRetryDelay(response) {
+  var value = response.headers && response.headers.get("Retry-After");
+  if (value && /^\d+$/.test(value.trim())) {
+    var seconds = Number(value);
+    var milliseconds = seconds * 1000;
+    if (Number.isSafeInteger(milliseconds) && Number.isSafeInteger(Date.now() + milliseconds)) return Math.max(1000, milliseconds);
+  }
+  if (value) {
+    var until = Date.parse(value);
+    if (Number.isFinite(until) && until > Date.now()) return until - Date.now();
+  }
+  return st;
+}
+function TLibDeactivate() {
+  var ctx = TLibActive;
+  TLibCancelScheduled(ctx);
+  TLibActive = null;
+  TLibStatus = { state: "inactive" };
+  if (ctx && ctx.unsubscribe) try { ctx.unsubscribe(); } catch {}
+}
+function TLibWake() {
+  var ctx = TLibActive;
+  if (!TLibCurrent(ctx) || !TLibEnabled()) return;
+  ctx.localWakeVersion = (ctx.localWakeVersion || 0) + 1;
+  TLibStart().catch(function () {});
 }
 function TLibActivate ( ) {
   var vault = I ( ) , uid = Bpw_konto ( vault ) ;
@@ -716,77 +750,72 @@ async function TLibHTTP(ctx, token, url, options) {
     }
   }
 }
-async function TLibRequest ( ctx , token , path , body , target ) {
-  TLibFence ( ctx , token ) ;
-  var material=target||token;
+async function TLibRequest(ctx, token, path, body, target) {
+  TLibFence(ctx, token);
+  var material = target || token;
   TLibMaterial(material);
-  var options = {
-    method : body === undefined ? "GET" : "POST" , headers : {
-      Authorization : "Bearer " + material . authToken
-    }
+  var options = { method: body === undefined ? "GET" : "POST", headers: { Authorization: "Bearer " + material.authToken } };
+  if (body !== undefined) {
+    options.headers["Content-Type"] = "application/json";
+    options.body = JSON.stringify(body);
   }
-  ;
-  if ( body !== undefined ) {
-    options . headers [ "Content-Type" ] = "application/json" ;
-    options . body = JSON . stringify ( body )
+  var packet = await TLibHTTP(ctx, token, j() + "/v1/slots/" + material.slotId + "/template-library/" + path, options);
+  TLibFence(ctx, token);
+  var response = packet.response, value = packet.value;
+  if (!response.ok) {
+    if (response.status === 429) ctx.retryAt = Date.now() + TLibRetryDelay(response);
+    var typed = value && value.namespace === "care-template-library" && value.protocol === 1 && value.slotId === material.slotId;
+    var code = typed && value.error && typeof value.error.code === "string" ? value.error.code : "unsupported";
+    var error = TLibError(code === "epoch_mismatch" ? "CARE_TEMPLATE_EPOCH_CHANGED" : code === "identity_required" ? "CARE_TEMPLATE_IDENTITY_REQUIRED" : code === "unsupported" ? "CARE_TEMPLATE_PROTOCOL_UNSUPPORTED" : "CARE_TEMPLATE_REMOTE_" + code.toUpperCase().replace(/[^A-Z0-9_]/g, "").slice(0, 48), response.status);
+    if (typed && code === "identity_required" && response.status === 409 && value.initialized === false && value.epoch === 0) error.identityRequired = true;
+    throw error;
   }
-  var packet = await TLibHTTP(ctx,token,j()+"/v1/slots/"+material.slotId+"/template-library/"+path,options);
-  TLibFence(ctx,token);
-  var response=packet.response,value=packet.value;
-  if ( ! response . ok ) {
-    if ( response . status === 429 ) ctx . retryAt = Date . now ( ) + yt ( response ) ;
-    var typed = value && value . namespace === "care-template-library" && value . protocol === 1 && value . slotId === material . slotId ;
-    var code = typed && value . error && typeof value . error . code === "string" ? value . error . code : "unsupported" ;
-    var error = TLibError ( code === "epoch_mismatch" ? "CARE_TEMPLATE_EPOCH_CHANGED" : code === "identity_required" ? "CARE_TEMPLATE_IDENTITY_REQUIRED" : code === "unsupported" ? "CARE_TEMPLATE_PROTOCOL_UNSUPPORTED" : "CARE_TEMPLATE_REMOTE_" + code . toUpperCase ( ) . replace ( /[^A-Z0-9_]/g , "" ) . slice ( 0 , 48 ) , response . status ) ;
-    if ( typed && code === "identity_required" && response . status === 409 && value . initialized === false && value . epoch === 0 ) error . identityRequired = true ;
-    throw error
-  }
-  return TLibReceipt ( value , material )
+  return TLibReceipt(value, material);
 }
-async function TLibIdentity ( ctx , token ) {
-  TLibFence ( ctx , token ) ;
-  var hash = await TLibHash ( token . authToken ) ;
-  TLibFence ( ctx , token ) ;
-  var packet=await TLibHTTP(ctx,token,j()+"/v1/slots/"+token.slotId+"/register-identity",{method:"POST",headers:{"X-Auth-Token-Hash":hash}});
-  TLibFence(ctx,token);
-  var response=packet.response,receipt=packet.value;
-  if(response.status!==200&&response.status!==201)throw TLibError("CARE_TEMPLATE_IDENTITY_REGISTER_FAILED",response.status);
-  if ( ! receipt || receipt . ok !== true || receipt . slotId !== token . slotId ) throw TLibError ( "CARE_TEMPLATE_PROTOCOL_UNSUPPORTED" , response . status )
+async function TLibIdentity(ctx, token) {
+  TLibFence(ctx, token);
+  var hash = await TLibHash(token.authToken);
+  TLibFence(ctx, token);
+  var packet = await TLibHTTP(ctx, token, j() + "/v1/slots/" + token.slotId + "/register-identity", {
+    method: "POST", headers: { "X-Auth-Token-Hash": hash }
+  });
+  TLibFence(ctx, token);
+  var response = packet.response, receipt = packet.value;
+  if (response.status === 429) ctx.retryAt = Date.now() + TLibRetryDelay(response);
+  if (response.status !== 200 && response.status !== 201) throw TLibError("CARE_TEMPLATE_IDENTITY_REGISTER_FAILED", response.status);
+  if (!receipt || receipt.ok !== true || receipt.slotId !== token.slotId) throw TLibError("CARE_TEMPLATE_PROTOCOL_UNSUPPORTED", response.status);
 }
 function TLibWire ( event ) {
   return event && typeof event . eid === "string" && /^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$/ . test ( event . eid ) && event . body && typeof event . body . iv === "string" && typeof event . body . data === "string"
 }
-async function TLibPull ( ctx , token , remote , local ) {
-  var cursor = local . cursor , observedHead = remote . headSeq ;
-  if ( ! TLibInteger ( cursor , remote . floorSeq ) ) throw TLibError ( "CARE_TEMPLATE_INVALID_PAGE" ) ;
-  for ( var pages = 0 ;
-  pages <= 16384 ;
-  pages ++ ) {
-    var page = await TLibRequest ( ctx , token , "changes?epoch=" + remote . epoch + "&since=" + cursor + "&limit=64" ) ;
-    if ( page . epoch !== remote . epoch ) throw TLibError ( "CARE_TEMPLATE_EPOCH_CHANGED" ) ;
-    if ( page . floorSeq !== remote . floorSeq || page . headSeq < observedHead ) throw TLibError ( "CARE_TEMPLATE_INVALID_PAGE" ) ;
-    observedHead = page . headSeq ;
-    if ( ! Array . isArray ( page . events ) || page . events . length > 200 || typeof page . hasMore !== "boolean" || ! TLibInteger ( page . cursor , 0 ) || page . cursor < cursor || page . cursor > page . headSeq ) throw TLibError ( "CARE_TEMPLATE_INVALID_PAGE" ) ;
-    var previous = Math . max ( cursor , page . floorSeq ) , ids = Object . create ( null ) ;
-    for ( var index = 0 ;
-    index < page . events . length ;
-    index ++ ) {
-      var event = page . events [ index ] ;
-      if ( ! TLibWire ( event ) || ! TLibInteger ( event . seq , 1 ) || event . seq !== previous + 1 || ids [ event . eid ] || ! /^[a-f0-9]{64}$/ . test ( event . digest || "" ) ) throw TLibError ( "CARE_TEMPLATE_INVALID_PAGE" ) ;
-      ids [ event . eid ] = true ;
-      previous = event . seq
+async function TLibPull(ctx, token, remote, local) {
+  var cursor = local.cursor, observedHead = remote.headSeq;
+  if (!TLibInteger(cursor, remote.floorSeq) || cursor > observedHead) throw TLibError("CARE_TEMPLATE_INVALID_PAGE");
+  TLibFence(ctx, token);
+  // TLibRun has already validated the receipt, epoch and any bootstrap binding.
+  // A caught-up state needs no empty changes request and no empty local commit.
+  if (cursor === observedHead) return cursor;
+  for (var pages = 0; pages <= 16384; pages++) {
+    var page = await TLibRequest(ctx, token, "changes?epoch=" + remote.epoch + "&since=" + cursor + "&limit=64");
+    if (page.epoch !== remote.epoch) throw TLibError("CARE_TEMPLATE_EPOCH_CHANGED");
+    if (page.floorSeq !== remote.floorSeq || page.headSeq < observedHead) throw TLibError("CARE_TEMPLATE_INVALID_PAGE");
+    observedHead = page.headSeq;
+    if (!Array.isArray(page.events) || page.events.length > 200 || typeof page.hasMore !== "boolean" || !TLibInteger(page.cursor, 0) || page.cursor < cursor || page.cursor > page.headSeq) throw TLibError("CARE_TEMPLATE_INVALID_PAGE");
+    var previous = Math.max(cursor, page.floorSeq), ids = Object.create(null);
+    for (var index = 0; index < page.events.length; index++) {
+      var event = page.events[index];
+      if (!TLibWire(event) || !TLibInteger(event.seq, 1) || event.seq !== previous + 1 || ids[event.eid] || !/^[a-f0-9]{64}$/.test(event.digest || "")) throw TLibError("CARE_TEMPLATE_INVALID_PAGE");
+      ids[event.eid] = true;
+      previous = event.seq;
     }
-    if ( page . cursor !== previous || ( ! page . events . length && page . headSeq > previous ) || page . hasMore !== ( page . cursor < page . headSeq ) ) throw TLibError ( "CARE_TEMPLATE_INVALID_PAGE" ) ;
-    TLibFence ( ctx , token ) ;
-    await ctx . vault . applyCareTemplateEvents ( token , {
-      epoch : remote . epoch , expectedCursor : cursor , cursor : page . cursor , events : page . events
-    }
-    ) ;
-    TLibFence ( ctx , token ) ;
-    cursor = page . cursor ;
-    if ( ! page . hasMore ) return cursor
+    if (page.cursor !== previous || (!page.events.length && page.headSeq > previous) || page.hasMore !== (page.cursor < page.headSeq)) throw TLibError("CARE_TEMPLATE_INVALID_PAGE");
+    TLibFence(ctx, token);
+    await ctx.vault.applyCareTemplateEvents(token, { epoch: remote.epoch, expectedCursor: cursor, cursor: page.cursor, events: page.events });
+    TLibFence(ctx, token);
+    cursor = page.cursor;
+    if (!page.hasMore) return cursor;
   }
-  throw TLibError ( "CARE_TEMPLATE_PAGE_LIMIT" )
+  throw TLibError("CARE_TEMPLATE_PAGE_LIMIT");
 }
 async function TLibPush ( ctx , token , remote ) {
   var limits = remote . limits ;
@@ -895,43 +924,56 @@ async function TLibRun ( ctx ) {
   TLibPublish ( ctx , result ) ;
   return result
 }
-function TLibStart ( ) {
-  var ctx = TLibActive ;
-  if ( ! TLibCurrent ( ctx ) ) return Promise . reject ( TLibError ( "SESSION_CHANGED" ) ) ;
-  if ( ! TLibEnabled ( ) ) {
-    var disabled = {
-      state : "disabled" , pending : ctx . pending
+function TLibStart() {
+  // Automatic lifecycle triggers share one clock. Explicit UI calls and local
+  // writes bypass that clock, but every caller respects the server's pause.
+  var automatic = arguments[0] === true, ctx = TLibActive;
+  if (!TLibCurrent(ctx)) return Promise.reject(TLibError("SESSION_CHANGED"));
+  if (!TLibEnabled()) {
+    TLibCancelScheduled(ctx);
+    var disabled = { state: "disabled", pending: ctx.pending };
+    TLibPublish(ctx, disabled);
+    return Promise.resolve(disabled);
+  }
+  if (TLibFlight && TLibFlight.ctx === ctx) return TLibFlight.promise;
+  var now = Date.now();
+  if (ctx.retryAt && now < ctx.retryAt) {
+    TLibSchedule(ctx, ctx.retryAt, !automatic);
+    return Promise.reject(TLibError("CARE_TEMPLATE_RATE_LIMITED", 429));
+  }
+  if (automatic && ctx.nextAutomaticAt && now < ctx.nextAutomaticAt) {
+    TLibSchedule(ctx, ctx.nextAutomaticAt, false);
+    return Promise.resolve(TLibGetStatus());
+  }
+  TLibCancelScheduled(ctx);
+  ctx.nextAutomaticAt = now + TLibAutomaticDelay;
+  var flight = { ctx: ctx, promise: null, wakeVersion: ctx.localWakeVersion || 0 };
+  flight.promise = Promise.resolve().then(function () { return TLibRun(ctx); }).catch(function (error) {
+    TLibPublish(ctx, {
+      state: error && error.code === "CARE_TEMPLATE_EPOCH_CHANGED" ? "blocked" : "error",
+      pending: ctx.pending,
+      error: { code: error && error.code || "CARE_TEMPLATE_SYNC_FAILED", httpStatus: error && error.httpStatus || null }
+    });
+    throw error;
+  });
+  TLibFlight = flight;
+  function finish(error) {
+    if (TLibFlight === flight) TLibFlight = null;
+    if (!TLibCurrent(ctx) || !TLibEnabled()) return;
+    if (error) {
+      // A failed request must not turn an urgent local wake into a retry loop.
+      // Pending ciphertext remains untouched until a later genuine ACK.
+      if (ctx.retryAt > Date.now()) TLibSchedule(ctx, ctx.retryAt, true);
+      else if (ctx.pending && error.code !== "CARE_TEMPLATE_EPOCH_CHANGED" && error.code !== "SESSION_CHANGED")
+        TLibSchedule(ctx, Date.now() + TLibAutomaticDelay, true);
+    } else if (ctx.pending || (ctx.localWakeVersion || 0) !== flight.wakeVersion) {
+      // A local event can arrive after the last pending read of this flight.
+      // Preserve that wake even if its caller received the existing promise.
+      TLibSchedule(ctx, Date.now(), true);
     }
-    ;
-    TLibPublish ( ctx , disabled ) ;
-    return Promise . resolve ( disabled )
   }
-  if ( TLibFlight && TLibFlight . ctx === ctx ) return TLibFlight . promise ;
-  if ( ctx . retryAt && Date . now ( ) < ctx . retryAt ) return Promise . reject ( TLibError ( "CARE_TEMPLATE_RATE_LIMITED" , 429 ) ) ;
-  var flight = {
-    ctx : ctx , promise : null
-  }
-  ;
-  flight . promise = Promise . resolve ( ) . then ( function ( ) {
-    return TLibRun ( ctx )
-  }
-  ) . catch ( function ( error ) {
-    TLibPublish ( ctx , {
-      state : error && error . code === "CARE_TEMPLATE_EPOCH_CHANGED" ? "blocked" : "error" , pending : ctx . pending , error : {
-        code : error && error . code || "CARE_TEMPLATE_SYNC_FAILED" , httpStatus : error && error . httpStatus || null
-      }
-    }
-    ) ;
-    throw error
-  }
-  ) ;
-  TLibFlight = flight ;
-  var clear = function ( ) {
-    TLibFlight === flight && ( TLibFlight = null )
-  }
-  ;
-  flight . promise . then ( clear , clear ) ;
-  return flight . promise
+  flight.promise.then(function () { finish(null); }, finish);
+  return flight.promise;
 }
 /* A read-only session fence does not authorize deletion: the exact target
  * credentials must independently obtain a verified protected-state receipt. */
@@ -996,10 +1038,8 @@ function TLibExplicit ( ) {
   if ( ! TLibCurrent ( TLibActive ) ) TLibActivate ( ) ;
   return TLibStart ( )
 }
-function TLibAutomatic ( ) {
-  if ( TLibCurrent ( TLibActive ) ) TLibStart ( ) . catch ( function ( ) {
-  }
-  )
+function TLibAutomatic() {
+  if (TLibCurrent(TLibActive)) TLibStart(true).catch(function () {});
 }
 function TLibPullCycle ( options ) {
   TLibAutomatic ( ) ;
