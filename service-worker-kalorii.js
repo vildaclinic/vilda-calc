@@ -5006,10 +5006,11 @@ const FRESH_STATIC_ALIAS_PATHS = new Set([
   // aliases share only freshly fetched bytes during the current installation.
   '/vilda_macro_practice.js', '/vilda_activity_burn.js', '/vilda_food_summary.js',
   '/vilda_diet_plan_ui.js', '/vilda_bmi_journey.js',
-  // Five B/Cr resources retain separate requests. These unchanged static UI
-  // aliases share only fresh responses from the same installation.
-  '/vilda_schowek.js', '/vilda_plec_z_imienia.js', '/vilda_adv_history_collapse.js',
-  '/vilda_centile_landscape.js', '/vilda_puberty_profile.js'
+  // Five B/Cr resources retain separate requests. These five unchanged UI
+  // dependencies have both current versioned and unversioned install URLs;
+  // share only fresh responses from this installation to keep the 600 budget.
+  '/vilda_centile_landscape.js', '/vilda_summary_cards.js', '/vilda_professional_module.js',
+  '/vilda_gh_therapy_resource_audit.js', '/vilda_patient_report.js'
 ]);
 
 async function fetchAndStorePrecacheUrl(url, { required = false, previousShellCaches = [], freshResponses = null } = {}) {
