@@ -124,7 +124,7 @@ test('powłoka: zapisany fikcyjny pacjent, Nowy pomiar, 956/844/1080 px i wszyst
   await emulatePhone(page, { width: 956, height: 440 });
   await assertLandscapeGeometry(page, start, 956, 440);
   for (const [path, title] of [
-    ['docpro', 'DocPro'], ['notatki', 'Notatki'],
+    ['docpro', 'DocPro'], ['notatki', 'Notatnik'],
     ['lab', 'Jednostki laboratoryjne'], ['terminarz', 'Terminarz'],
     ['start', 'Start'],
   ]) {
