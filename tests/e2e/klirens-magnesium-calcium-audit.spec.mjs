@@ -89,6 +89,11 @@ async function geometry(page, width) {
       form: box('#clcrForm'), active: box('#clcrActivePanel'), input: box('#mgcaInputCard'), clear: box('#clearBtn'), report: box('#clcrResultReport'),
       inputStep: box('#clcrActivePanel .clcr-step-number'), resultStep: box('#clcrResultTitle .clcr-step-number'),
       inputMode: document.getElementById('MGCA_inputMode').value,
+      modeButtons: [...document.querySelectorAll('#mgcaInputCard .mgca-input-mode button')].map(button => {
+        const style = getComputedStyle(button);
+        return { mode: button.getAttribute('data-mgca-mode'), pressed: button.getAttribute('aria-pressed'),
+          background: style.backgroundColor, color: style.color };
+      }),
       controls: [...document.querySelectorAll('#mgcaInputCard input,#mgcaInputCard select,#mgcaInputCard button')]
         .filter(node => node.checkVisibility()).map(node => ({ id: node.id || node.textContent.trim(), kind: node.tagName,
           valueControl: node.tagName !== 'BUTTON' || node.hasAttribute('data-mgca-mode'),
@@ -115,6 +120,14 @@ async function geometry(page, width) {
   expect(Math.abs(boxes.form.width - boxes.input.width)).toBeLessThanOrEqual(1);
   expect(Math.abs(boxes.clear.width - boxes.input.width)).toBeLessThanOrEqual(1);
   expect(boxes.mainFont).toBeGreaterThanOrEqual(16);
+  expect(boxes.modeButtons).toHaveLength(2);
+  const pressed = boxes.modeButtons.filter(button => button.pressed === 'true');
+  const unpressed = boxes.modeButtons.filter(button => button.pressed === 'false');
+  expect(pressed).toHaveLength(1);
+  expect(unpressed).toHaveLength(1);
+  expect(pressed[0].mode).toBe(boxes.inputMode);
+  expect(pressed[0].background).not.toBe(unpressed[0].background);
+  expect(pressed[0].color).not.toBe(unpressed[0].color);
   if (width < 980) expect(boxes.report.top - boxes.clear.bottom).toBeGreaterThanOrEqual(20);
   else {
     expect(Math.abs(boxes.active.top - boxes.report.top)).toBeLessThanOrEqual(1);

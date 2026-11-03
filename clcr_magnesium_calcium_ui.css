@@ -84,6 +84,10 @@ html[data-clcr-workflow-ui="1"] #mgcaInputCard .mgca-input-mode button {
   white-space: normal;
   letter-spacing: normal;
 }
+html[data-clcr-workflow-ui="1"] #mgcaInputCard .mgca-input-mode button[aria-pressed="true"] {
+  color: var(--clcr-surface) !important;
+  background: var(--clcr-primary) !important;
+}
 .mgca-mode-fields {
   display: grid;
   min-width: 0;
