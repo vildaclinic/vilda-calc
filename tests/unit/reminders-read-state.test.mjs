@@ -282,6 +282,23 @@ describe('production fullscreen reminder refresh', () => {
 });
 
 describe('production reminder badge read boundary', () => {
+  it.each(['empty', 'today', 'overdue', 'loading', 'error', 'locked'])('keeps the action tooltip and accessible state after a %s refresh', async state => {
+    const e = environment(badgeCode);
+    if (state === 'empty') e.vault.listPatientNotesDueByDate.mockResolvedValueOnce([]);
+    if (state === 'overdue') e.vault.listPatientNotesDueByDate.mockResolvedValueOnce([{ notes: [{ dueDateISO: '2026-10-27' }] }]);
+    if (state === 'loading') e.context.H = () => true;
+    if (state === 'error') e.vault.listPatientNotesDueByDate.mockRejectedValueOnce(Error('FICTIONAL_READ_FAILURE'));
+    if (state === 'locked') e.state.unlocked = false;
+    await e.context.kt();
+    expect(e.button.getAttribute('title')).toBe('Otwórz przypomnienia');
+    expect(e.button.getAttribute('data-state')).toBe(state === 'locked' ? 'empty' : state);
+    expect(e.button.getAttribute('aria-label')).toBeTruthy();
+    if (state === 'loading') expect(e.button.getAttribute('aria-label')).toContain('Wczytywanie');
+    if (state === 'error') expect(e.button.getAttribute('aria-label')).toContain('Nie udało się');
+    if (state === 'today' || state === 'overdue') expect(e.button.getAttribute('aria-label')).toContain('1');
+    if (state === 'locked') expect(e.button.hidden).toBe(true);
+  });
+
   it('shows an error marker and retains the last count instead of caching a false zero', async () => {
     const e = environment(badgeCode);
     e.vault.listPatientNotesDueByDate.mockRejectedValueOnce(Error('FICTIONAL_READ_FAILURE'));

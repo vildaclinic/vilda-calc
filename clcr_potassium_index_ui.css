@@ -225,7 +225,7 @@ html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .kfr-result-ma
   display: flex;
   align-items: baseline;
   flex-wrap: wrap;
-  gap: 2px 6px;
+  gap: 2px var(--space-6px);
   min-width: 0;
 }
 html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .kfr-result-card .clcr-result-value {
@@ -248,7 +248,7 @@ html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .kfr-result-ca
   display: flex;
   align-items: baseline;
   flex-wrap: wrap;
-  gap: 2px 4px;
+  gap: 2px var(--space-4px);
   white-space: normal;
 }
 .kfr-scientific-mantissa,

@@ -3,6 +3,28 @@ html.vilda-shell-host body {
   height: 100%
 }
 
+/* P-LAYOUT-12: the three form routes put their vertical clearance inside the
+ * pane. The shell adds no second padding or reserved document scrollbar. */
+html.vilda-shell-host.vilda-form-layout {
+  scrollbar-gutter: auto
+}
+html.vilda-shell-host.vilda-form-layout body>.desktop-layout {
+  padding-top: 0!important;
+  padding-bottom: 0!important
+}
+html.vilda-shell-host.vilda-form-layout body>.desktop-layout>.main-content {
+  margin-top: 0!important;
+  padding: 0!important
+}
+@media(min-width:992px) {
+  html.vilda-shell-host.vilda-form-layout:not(.vilda-phone):not(.vilda-pane-auth-open) body>.desktop-layout>.main-content {
+    /* The pane's thin scrollbar occupies the gutter, not the form's width.
+     * Never reclaim more than the gutter if a platform ignores thin bars. */
+    margin-left: calc(-1 * var(--chrome-form-gap,12px))!important;
+    margin-right: calc(-1 * min(var(--chrome-form-gap,12px),var(--chrome-pane-scrollbar-width,0px)))!important
+  }
+}
+
 .vilda-shell-host .desktop-layout {
   padding-top: 0!important
 }
@@ -18,7 +40,7 @@ html.vilda-shell-host body {
   }
   /* Telefon w poziomie korzysta z istniejącego pomiaru JS również powyżej 992 px.
      Nie zastępuj wysokości ramki dvh podczas edycji pola i wysuwania klawiatury. */
-  html.vilda-shell-host:not(.vilda-phone-landscape) .app-shell-main {
+  html.vilda-shell-host:not(.vilda-phone-landscape):not(.vilda-form-layout) .app-shell-main {
     height: calc(100dvh - 80px)!important
   }
 }

@@ -231,11 +231,16 @@ for (const [profile, settings] of profiles) test.describe(profile, () => {
     const created = await globalSearchFixture(page);
     const search = await searchNote(page, created.notes.biopsy, 'badanie ambulatoryjne');
     await search.getByRole('button', { name: 'Otwórz w karcie pacjenta ↗', exact: true }).click();
-    await expect(page.locator('.vilda-auth-patient-card')).toBeVisible();
+    const card = page.locator('.vilda-auth-patient-card');
+    const auth = page.locator('#vilda-auth-ui-root');
+    await expect(card).toBeVisible();
+    // The loading placeholder is also a patient card. Finish opening the
+    // requested note before testing invalidation of its established return.
+    await expect(card.locator(`[data-note-id="${created.notes.biopsy}"]`)).toBeVisible();
+    await expect(auth).not.toHaveAttribute('data-busy', '1');
     await page.evaluate(() => window.VildaVault.lock('manual'));
     await expect(page.locator('.vgs')).toHaveCount(0);
     await expect(page.getByRole('button', { name: RETURN_TO_SEARCH, exact: true })).toHaveCount(0);
-    const auth = page.locator('#vilda-auth-ui-root');
     await auth.getByRole('button', { name: /Fikcyjny sejf testu panelu siatek/ }).click();
     await auth.locator('input[type=password]').fill('E2e#SiatkaNowyPomiar!2026');
     await auth.getByRole('button', { name: 'Zaloguj się', exact: true }).click();

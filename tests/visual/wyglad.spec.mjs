@@ -103,16 +103,23 @@ async function ustabilizowanaWysokosc(page) {
 }
 
 /**
- * Kadr całej strony bez `fullPage`: okno dostaje wysokość treści zaokrągloną w górę do 16 px
- * i zrzut obejmuje dokładnie okno. Dwa powody. Po pierwsze, `fullPage` renderuje stronę w oknie
- * powiększonym tylko na czas zrzutu (captureBeyondViewport), więc wszystko, co zależy od `vh`
- * (przyklejona nawigacja ustawień, `min-height: 100vh`), układa się inaczej niż w chwili pomiaru —
- * w CI dawało to dwa kolejne zrzuty strony ustawień różne o 1 px wysokości i czerwony test bez
- * żadnej zmiany stylów. Po drugie, zaokrąglenie daje obrazowi stałe wymiary: zmiana wysokości
- * treści o piksel jest różnicą pikseli (z progiem z konfiguracji), a nie niezgodnością wymiarów.
+ * Formularz dopasowany do viewportu zachowuje okno projektu: powiększanie okna do wysokości
+ * dokumentu zwiększałoby jego min-height i w każdym przebiegu wydłużało stronę. Natywne
+ * `fullPage` Chromium przechwytuje treść poza oknem bez zmiany viewportu CSS.
+ * Pozostałe strony zachowują dotychczasowy kadr: wysokość treści zaokrąglona w górę do 16 px
+ * i zrzut dokładnie tego okna. Zaokrąglenie daje obrazowi stałe wymiary: zmiana wysokości treści
+ * o piksel jest różnicą pikseli (z progiem z konfiguracji), a nie niezgodnością wymiarów.
  * Zwraca próbki wysokości do logu — przy czerwonym teście widać w CI, czy strona się jeszcze układała.
  */
 async function kadrCalejStrony(page, szerokosc) {
+  const formularzZaleznyOdOkna = await page.evaluate(() => {
+    const karta = document.querySelector('html.vilda-form-fit-viewport #userSection>fieldset.user-card');
+    return Boolean(karta && parseFloat(getComputedStyle(karta).minHeight) > 0);
+  });
+  if (formularzZaleznyOdOkna) {
+    const { probki } = await ustabilizowanaWysokosc(page);
+    return { okno: page.viewportSize().height, probki, fullPage: true };
+  }
   let okno = 0;
   let ostatnie = [];
   for (let i = 0; i < 3; i++) {
@@ -123,7 +130,7 @@ async function kadrCalejStrony(page, szerokosc) {
     okno = nowe;
     await page.setViewportSize({ width: szerokosc, height: okno });
   }
-  return { okno, probki: ostatnie };
+  return { okno, probki: ostatnie, fullPage: false };
 }
 
 for (const strona of STRONY) {
@@ -134,10 +141,10 @@ for (const strona of STRONY) {
       await page.evaluate(() => document.fonts.ready);
       // dławiki odświeżania (odznaki, pasek statusu) kończą pracę w ułamku sekundy
       await page.waitForTimeout(600);
-      const { okno, probki } = await kadrCalejStrony(page, page.viewportSize().width);
+      const { okno, probki, fullPage } = await kadrCalejStrony(page, page.viewportSize().width);
       // ślad do logu CI: wysokości próbek i okno kadru (diagnostyka bez pobierania obrazów)
-      console.log(`[wygląd] ${info.project.name} ${strona.nazwa}/${id}: wysokość ${probki.join('→')} px, okno ${okno} px`);
-      await expect(page).toHaveScreenshot(`${strona.nazwa}--${id}.png`, { fullPage: false });
+      console.log(`[wygląd] ${info.project.name} ${strona.nazwa}/${id}: wysokość ${probki.join('→')} px, okno ${okno} px, fullPage ${fullPage}`);
+      await expect(page).toHaveScreenshot(`${strona.nazwa}--${id}.png`, { fullPage });
     });
   }
 }

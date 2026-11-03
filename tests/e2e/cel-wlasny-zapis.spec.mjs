@@ -125,6 +125,33 @@ async function wczytajNowyPomiar(page, pid) {
 const tekst = (loc) => loc.evaluate((el) => String(el.textContent || '').replace(/[\u00A0\u202F]/g, ' ').replace(/\s+/g, ' ').trim());
 
 test.describe('Cel własny w rekordzie pacjenta', () => {
+  test('pierwsze wyniki nie przesuwają przycisku celu między naciśnięciem a puszczeniem myszy', async ({ page }) => {
+    await otworzZKontem(page);
+    await wpiszPacjentke(page, { nazwisko: 'Testowa', imie: 'Celina', wiek: '35', masa: '66' });
+    const wybor = page.locator('#customGoalWrap [data-cel-wlasny-choice="custom"]');
+    await expect(wybor).toBeVisible();
+    await wybor.evaluate((przycisk) => {
+      window.__customGoalPressGeometry = [];
+      for (const typ of ['pointerdown', 'pointerup']) document.addEventListener(typ, (zdarzenie) => {
+        window.__customGoalPressGeometry.push({
+          typ, trafiony: przycisk.contains(zdarzenie.target), y: przycisk.getBoundingClientRect().top,
+        });
+      }, { capture: true, once: true });
+    });
+    // Zwykłe przytrzymanie myszy, nie oczekiwanie na gotowość: wynik poniżej
+    // formularza musi pozostać na miejscu także podczas pojawiania się podsumowania.
+    await wybor.click({ delay: 80 });
+    const nacisniecie = await page.evaluate(() => window.__customGoalPressGeometry);
+    expect(nacisniecie.map(({ typ, trafiony }) => ({ typ, trafiony }))).toEqual([
+      { typ: 'pointerdown', trafiony: true }, { typ: 'pointerup', trafiony: true },
+    ]);
+    expect(Math.abs(nacisniecie[1].y - nacisniecie[0].y)).toBeLessThanOrEqual(1);
+    await expect(wybor).toHaveAttribute('aria-pressed', 'true');
+    await page.locator('#customGoalKg').fill('62');
+    await page.locator('#customGoalKg').dispatchEvent('change');
+    await expect(page.locator('#bmiJourneyMount')).toContainText('Cel własny: −4,0 kg');
+  });
+
   test('pacjentka zapisana z celem własnym wraca z nim po wczytaniu w nowej karcie', async ({ page, context }) => {
     test.setTimeout(180_000);
     await otworzZKontem(page);

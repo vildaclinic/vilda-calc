@@ -194,7 +194,7 @@ test('P3 — kolejność: data rosnąco, a w obrębie doby całodniowe przed god
   expect(w[3].termin).toContain('09:00'); expect(w[4].termin).toContain('15:30');
 });
 
-test('P2 — tytuł odznaki liczy wszystkie notatki, także po grupie z zaległością', async ({ page }) => {
+test('P2 — licznik i etykieta dostępności odznaki liczą wszystkie notatki, także po grupie z zaległością', async ({ page }) => {
   await page.route('**/*', (route) => {
     const u = route.request().url();
     if (u.startsWith('http://127.0.0.1:') || u.startsWith('data:') || u.startsWith('blob:')) {
@@ -235,7 +235,8 @@ test('P2 — tytuł odznaki liczy wszystkie notatki, także po grupie z zaległo
   // Po decyzji właściciela D2 (2026-09-03) wszystkie liczniki liczą notatki, nie grupy pacjentów.
   // Przed poprawką P2 sumowanie przerywało się na pierwszej grupie z zaległością i wychodziło 3.
   await expect(przycisk, 'odznaka liczy notatki').toHaveAttribute('data-count', '4');
-  await expect(przycisk, 'tytuł nazywa liczbę przypomnień').toHaveAttribute('title', '4 przypomnienia do sprawdzenia');
+  await expect(przycisk, 'etykieta dostępności nazywa pełną liczbę przypomnień').toHaveAttribute('aria-label', '4 przypomnienia do sprawdzenia');
+  await expect(przycisk, 'stała podpowiedź opisuje działanie przycisku').toHaveAttribute('title', 'Otwórz przypomnienia');
 });
 
 test('P5 — chip, stopka i odznaka mówią tę samą liczbę: notatki, nie pacjentów', async ({ page }) => {

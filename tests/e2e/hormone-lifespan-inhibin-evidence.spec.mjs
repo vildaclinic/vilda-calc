@@ -78,13 +78,25 @@ const stableLine = page => panel(page).locator('[data-stable-reference-line="inh
 const patientDot = page => panel(page).locator('[data-patient-concentration="inhb"]');
 
 async function stableGeometry(page) {
-  await expect(stableLine(page)).toHaveCount(1);
-  return stableLine(page).evaluate(line => ({
-    d: line.getAttribute('d'), divisor: Number(line.dataset.divisor),
-    ceiling: Number(line.dataset.ceiling),
-    dash: getComputedStyle(line).strokeDasharray,
-    viewBox: line.ownerSVGElement.getAttribute('viewBox')
-  }));
+  let geometry;
+  await expect.poll(async () => {
+    // Closing fullscreen schedules an SVG rebuild. Resolve the current path
+    // and read its geometry in one DOM task, before a frame can detach it.
+    geometry = await panel(page).evaluate(host => {
+      const lines = host.querySelectorAll('[data-stable-reference-line="inhb"]');
+      const line = lines.length === 1 ? lines[0] : null;
+      const svg = line?.ownerSVGElement;
+      if (!line?.isConnected || !svg?.isConnected) return null;
+      return {
+        d: line.getAttribute('d'), divisor: Number(line.dataset.divisor),
+        ceiling: Number(line.dataset.ceiling),
+        dash: getComputedStyle(line).strokeDasharray,
+        viewBox: svg.getAttribute('viewBox')
+      };
+    });
+    return geometry !== null;
+  }).toBe(true);
+  return geometry;
 }
 
 async function expectStableGeometry(page, expected) {
