@@ -173,8 +173,8 @@ test('Podsumowanie B: oddzielone wyniki bez chipów, turkusowa norma i niezmieni
   for (const key of ['velocity-sds', 'bsa']) {
     await expect(main.locator(`[data-summary-key="${key}"]`)).toHaveAttribute('data-assessment', 'unassessed');
   }
-  expect(await main.locator('[data-summary-key="bsa"]').evaluate(el => getComputedStyle(el).color)).toBe('rgb(38, 63, 69)');
-  expect(await main.locator('[data-summary-key="velocity-sds"]').evaluate(el => getComputedStyle(el).color)).toBe('rgb(98, 118, 122)');
+  await expect(main.locator('[data-summary-key="bsa"]')).toHaveCSS('color', 'rgb(38, 63, 69)');
+  await expect(main.locator('[data-summary-key="velocity-sds"]')).toHaveCSS('color', 'rgb(98, 118, 122)');
   await expect(main.locator('[data-summary-key="prediction"]')).toContainText(/centyl.*18 lat/);
   await expect(main.locator('[data-summary-key="prediction"]')).not.toHaveAttribute('data-assessment', 'unassessed');
   await expect(page.locator(`${CARD} .professional-summary-chip`)).toHaveCount(0);
