@@ -2370,3 +2370,346 @@ html:not(.vilda-embedded):not(.vilda-shell-embedded) body.has-mobile-bottom-dock
     padding-inline-end: 0
   }
 }
+
+/* P-HEADER-MENU: the patient and local-save state belong to the pinned menu.
+ * Native state carriers remain mounted for the existing form/shell protocol. */
+.vilda-header-menu .chrome-legacy-state[hidden] {
+  display: none!important
+}
+.vilda-header-menu>header {
+  min-height: var(--chrome-strip-height);
+  flex-shrink: 0
+}
+.vilda-header-menu .chrome-strip {
+  position: relative;
+  max-width: none;
+  width: 100%;
+  padding-inline: 16px;
+  gap: 12px
+}
+.vilda-header-menu .chrome-mobile-brand-bar {
+  display: none!important
+}
+.vilda-header-menu .chrome-chips {
+  flex: 0 0 auto;
+  gap: 8px;
+  margin-left: auto
+}
+.vilda-header-menu .chrome-header-search {
+  position: absolute;
+  left: var(--chrome-form-left, calc(var(--chrome-sidebar-width) + 24px));
+  width: var(--chrome-form-width, min(45vw,650px));
+  height: 44px;
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 1px solid #cfe1e4;
+  border-radius: 11px;
+  background: #f8fbfb;
+  box-shadow: none
+}
+.vilda-header-menu .chrome-header-search:focus-within {
+  border-color: var(--primary, #00838d);
+  box-shadow: 0 0 0 2px #00838d18
+}
+.vilda-header-menu .chrome-header-search input {
+  flex: 1 1 auto;
+  min-width: 0;
+  width: 0;
+  height: 42px;
+  margin: 0;
+  padding: 0 0 0 14px;
+  border: 0!important;
+  border-radius: 10px 0 0 10px;
+  outline: 0!important;
+  box-shadow: none!important;
+  background: transparent!important;
+  color: var(--text, #29464d);
+  font: 400 16px/1.4 Inter,sans-serif
+}
+.vilda-header-menu .chrome-header-search input::placeholder {
+  color: #6f8a92;
+  opacity: 1
+}
+.vilda-header-menu .chrome-header-search input::-webkit-search-cancel-button {
+  display: none
+}
+.vilda-header-menu .chrome-header-search button,
+.vilda-header-menu .chrome-header-search-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 44px;
+  width: 44px;
+  min-width: 44px;
+  height: 44px;
+  min-height: 44px;
+  margin: 0;
+  padding: 0!important;
+  border: 0!important;
+  border-radius: 10px!important;
+  box-shadow: none!important;
+  background: transparent!important;
+  color: var(--primary, #00838d)!important;
+  cursor: pointer
+}
+.vilda-header-menu .chrome-header-search-btn {
+  display: none
+}
+.vilda-header-menu .chrome-header-search svg,
+.vilda-header-menu .chrome-header-search-btn svg,
+.vilda-header-menu .chrome-mobile-menu-btn svg,
+.vilda-header-menu .chrome-reminders-btn svg,
+.vilda-header-menu .chrome-sync-btn svg {
+  width: 21px;
+  height: 21px
+}
+.vilda-header-menu .chrome-mobile-menu-btn,
+.vilda-header-menu .chrome-reminders-btn,
+.vilda-header-menu .chrome-sync-btn {
+  width: 44px!important;
+  min-width: 44px!important;
+  max-width: 44px!important;
+  height: 44px!important;
+  min-height: 44px!important;
+  max-height: 44px!important;
+  flex: 0 0 44px;
+  padding: 0!important
+}
+.vilda-header-menu .chrome-sync-btn {
+  display: inline-flex!important;
+  visibility: hidden;
+  pointer-events: none
+}
+.vilda-header-menu .chrome-sync-btn[data-header-sync-warning=true] {
+  visibility: visible;
+  pointer-events: auto
+}
+.vilda-header-menu .chrome-header-actions-before-search .chrome-brand-text {
+  display: none
+}
+.vilda-header-menu .chrome-header-actions-before-search .chrome-chips {
+  position: absolute;
+  left: var(--chrome-header-actions-left, 150px);
+  margin: 0
+}
+.vilda-header-menu .chrome-menu-heading,
+.vilda-header-menu .chrome-menu-actions-caption,
+.vilda-header-menu .chrome-drawer-head>strong,
+.vilda-header-menu .chrome-drawer-title {
+  display: none
+}
+.vilda-header-menu .chrome-menu-actions {
+  display: block;
+  padding: 8px;
+  background: #f8fbfb
+}
+body.vilda-header-menu .chrome-drawer-head {
+  position: relative;
+  height: 0;
+  min-height: 0;
+  padding: 0;
+  overflow: visible;
+  border-bottom: 0;
+  z-index: 2
+}
+.vilda-header-menu .chrome-drawer-head .chrome-drawer-close {
+  position: absolute;
+  top: 8px;
+  right: 8px
+}
+.vilda-header-menu .chrome-drawer-body .chrome-menu-patient {
+  margin-right: 44px
+}
+.vilda-header-menu .chrome-menu-patient {
+  position: relative;
+  display: block;
+  min-height: 54px;
+  margin: 0 0 5px;
+  list-style: none
+}
+.vilda-header-menu .chrome-menu-patient .chrome-menu-patient-open {
+  align-items: center;
+  min-height: 54px;
+  padding: 5px 9px
+}
+.vilda-header-menu .chrome-menu-patient-copy {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  gap: 1px
+}
+.vilda-header-menu .chrome-menu-patient-name {
+  position: static;
+  max-width: 100%;
+  color: var(--text, #29464d);
+  font-size: 12px;
+  line-height: 18px;
+  font-weight: 600
+}
+.vilda-header-menu .chrome-menu-patient-copy small {
+  color: #708a91;
+  font-size: 10px;
+  line-height: 16px;
+  font-weight: 400
+}
+.vilda-header-menu .chrome-menu-patient .chrome-menu-patient-change {
+  top: 5px
+}
+.vilda-header-menu .chrome-reminders-btn[hidden] {display:none!important}
+.vilda-header-menu .chrome-reminders-label {display:none}
+.vilda-header-menu .chrome-reminders-btn[data-state=empty] .chrome-reminders-badge {display:none!important}
+@media(min-width:992px) {
+  html:not(.vilda-phone) .vilda-header-menu .chrome-strip:not(.chrome-header-actions-before-search) .chrome-reminders-btn {
+    display: inline-flex;
+    align-items: center;
+    width: auto!important;
+    max-width: none!important;
+    padding: 0 12px!important;
+    flex-basis: auto
+  }
+  html:not(.vilda-phone) .vilda-header-menu .chrome-strip:not(.chrome-header-actions-before-search) .chrome-reminders-inner {gap:8px}
+  html:not(.vilda-phone) .vilda-header-menu .chrome-strip:not(.chrome-header-actions-before-search) .chrome-reminders-label {
+    display:inline;
+    font-size:12px;
+    font-weight:600;
+    white-space:nowrap
+  }
+  html:not(.vilda-phone) .vilda-header-menu .chrome-strip:not(.chrome-header-actions-before-search) .chrome-reminders-badge {
+    position: static;
+    margin-left: 7px;
+    min-width: 19px;
+    height: 19px
+  }
+}
+.vilda-header-menu .chrome-menu-save-status {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  width: 100%;
+  height: 30px;
+  min-height: 30px;
+  margin: 0 0 8px;
+  padding: 0 9px;
+  overflow: hidden;
+  border: 0!important;
+  border-radius: 7px!important;
+  box-shadow: none!important;
+  background: #edf1f2!important;
+  color: #6b7c82!important;
+  font: 500 11px/1.4 Inter,sans-serif;
+  text-align: left;
+  white-space: nowrap;
+  cursor: pointer
+}
+.vilda-header-menu .chrome-drawer-body .chrome-menu-save-status {height:44px;min-height:44px}
+.vilda-header-menu .chrome-menu-save-status::before {
+  content: "";
+  flex: 0 0 7px;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: currentColor
+}
+.vilda-header-menu .chrome-menu-save-status[data-save-state=saved] {background:#eaf6ef!important;color:#287a4f!important}
+.vilda-header-menu .chrome-menu-save-status[data-save-state=dirty] {background:#fff5e2!important;color:#a66a12!important}
+.vilda-header-menu .chrome-menu-save-status[data-save-state=new] {background:#f2ecfb!important;color:#8050bd!important}
+.vilda-header-menu .chrome-menu-save-status[data-save-state=saving] {background:#eaf4fb!important;color:#267caf!important}
+.vilda-header-menu .chrome-menu-save-status[data-save-state=error] {background:#fbedee!important;color:#bc4550!important}
+.vilda-header-menu .chrome-menu-footer {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: center;
+  gap: 0;
+  min-height: 96px;
+  padding: 2px 8px;
+  background: #f8fbfb
+}
+.vilda-header-menu .chrome-menu-account-row,
+.vilda-header-menu .chrome-menu-account-tools {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  min-height: 44px;
+  flex: 0 0 auto
+}
+.vilda-header-menu .chrome-menu-account-tools {
+  border-top: 1px solid #e4eeee
+}
+.vilda-header-menu .chrome-menu-account-row .chrome-menu-account {
+  flex: 1 1 auto
+}
+.vilda-header-menu .chrome-menu-account-copy .chrome-drawer-account-label {
+  display: none
+}
+.vilda-header-menu [data-menu-pro] {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  min-width: 44px;
+  min-height: 44px;
+  padding: 0 4px;
+  border: 0!important;
+  background: transparent!important;
+  box-shadow: none!important;
+  color: #7952b4!important;
+  font-size: 11px;
+  text-decoration: none;
+  white-space: nowrap
+}
+.vilda-header-menu [data-menu-pro][hidden] {display:none!important}
+.vilda-header-menu [data-menu-sync] {
+  display: flex;
+  align-items: center;
+  flex: 1 1 auto;
+  gap: 6px;
+  min-width: 0;
+  min-height: 44px;
+  padding: 0 2px;
+  border: 0!important;
+  background: transparent!important;
+  box-shadow: none!important;
+  color: #708a91!important;
+  font-size: 10px;
+  line-height: 1.35;
+  text-decoration: none
+}
+.vilda-header-menu [data-menu-sync] svg {width:17px;height:17px;flex:0 0 auto}
+.vilda-header-menu [data-menu-sync][data-sync-state=error] {color:#bc4550!important}
+.vilda-header-menu [data-menu-sync][data-offline=true] {color:#a66a12!important}
+.vilda-header-menu [data-menu-sync][data-sync-state=syncing] {color:#267caf!important}
+@media(min-width:992px) {
+  html:not(.vilda-phone) .vilda-header-menu aside.sidebar-v2 .chrome-menu-footer {
+    height: var(--chrome-menu-footer-height,96px)
+  }
+}
+@media(max-width:991px) {
+  .vilda-header-menu .chrome-header-search {display:none}
+  .vilda-header-menu .chrome-header-search-btn {display:inline-flex}
+  .vilda-header-menu .chrome-brand {display:none!important}
+}
+html.vilda-phone body.vilda-header-menu .chrome-header-search,
+html.vilda-phone body.vilda-header-menu .chrome-brand {display:none!important}
+html.vilda-phone body.vilda-header-menu .chrome-header-search-btn {display:inline-flex}
+html.vilda-phone body.vilda-header-menu .chrome-mobile-menu-btn {display:inline-flex!important}
+/* The arrow moves above the visible footer. Only the optional dock needs a
+ * bottom reserve; it is not counted twice by the embedded document. */
+html:not(.vilda-embedded):not(.vilda-shell-embedded) body.has-vilda-chrome.vilda-header-menu>footer.site-footer {
+  padding-bottom: 0
+}
+html:not(.vilda-embedded):not(.vilda-shell-embedded) body.vilda-header-menu.has-mobile-bottom-dock:not(.user-hides-mobile-dock)>footer.site-footer {
+  padding-bottom: calc(var(--mobile-dock-effective-height,84px) + var(--mobile-dock-anchor-bottom,4px) + .75rem)
+}
+body.vilda-header-menu #scrollTopBtn {
+  bottom: max(var(--scroll-top-btn-bottom,1rem),var(--chrome-footer-arrow-bottom,0px))!important
+}
+body.vilda-header-menu.has-mobile-bottom-dock:not(.user-hides-mobile-dock) #scrollTopBtn {
+  bottom: max(var(--mobile-dock-pinned-scroll-top-bottom,1rem),var(--chrome-footer-arrow-bottom,0px))!important
+}
+body.vilda-header-menu #appShellScrollTop {
+  bottom: max(calc(var(--vilda-shell-dock-h,84px) + 14px),var(--chrome-footer-arrow-bottom,0px))
+}

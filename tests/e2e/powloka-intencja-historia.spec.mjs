@@ -1,3 +1,4 @@
+import { openMenuPatient } from '../support/chrome-menu-fixture.mjs';
 import { expect, test } from '../support/test-czas.mjs';
 
 // P-POWLOKA-INTENCJA: zimny Start nie może realizować anulowanej intencji karty/listy.
@@ -76,8 +77,7 @@ async function trasa(page, nazwa, plik) {
 }
 
 async function chip(page) {
-  await page.locator('#vildaPatientChip').click();
-  await page.locator('[data-vilda-open-card]').click();
+  await openMenuPatient(page);
 }
 
 async function bezNakladki(page, trasaNazwa, tytul) {

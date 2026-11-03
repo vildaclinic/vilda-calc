@@ -320,9 +320,11 @@
 }
 
 /* ===================== SiteFooter — compact footer (style.css) ===================== */
+/* P-HEADER-MENU-SEARCH: footer follows the approved compact header layout. */
 .site-footer {
   container: site-footer / inline-size;
   position: relative;
+  min-height: 96px;
   background: #f4f8f8;
   border-top: var(--border-hairline) solid #d0e8e8;
   color: #4a7a7a;
@@ -330,12 +332,13 @@
 }
 
 .site-footer__inner {
-  display:grid;
-  grid-template-columns:minmax(0,1fr) minmax(0,1.2fr);
-  align-items:center;
-  gap:var(--space-24px);
-  padding:var(--space-10px) var(--space-20px) 7px;
-  box-sizing:border-box;
+  display: grid;
+  grid-template-columns: minmax(0,1fr) minmax(0,1.2fr);
+  align-items: center;
+  gap: var(--space-24px);
+  min-height: 95px;
+  padding: var(--space-10px) var(--space-20px) 7px;
+  box-sizing: border-box
 }
 
 .site-footer__brand {
@@ -382,10 +385,10 @@
 }
 
 .site-footer__operator {
-  display:flex;
-  flex-wrap:wrap;
-  align-items:baseline;
-  gap:0 var(--space-0-65);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0 var(--space-0-65)
 }
 
 .site-footer__detail {
@@ -394,19 +397,23 @@
   overflow-wrap: anywhere
 }
 
+.site-footer__mobile-only {
+  display: none
+}
+
 .site-footer__col {
-  display:flex;
-  flex-wrap:wrap;
-  align-items:center;
-  justify-content:flex-end;
-  gap:0 var(--space-16px);
-  min-width:0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0 var(--space-16px);
+  min-width: 0
 }
 
 .site-footer__link {
   display: inline-flex;
   align-items: center;
-  min-height: 36px;
+  min-height: 44px;
   padding: 3px 0;
   color: #4a7a7a;
   font-size: .75rem;
@@ -423,81 +430,128 @@
   text-decoration: none
 }
 
-.site-footer :is(.site-footer__link,.site-footer__vildaclinic,.site-footer__brand-link):hover {
+.site-footer :is(.site-footer__link,.site-footer__vildaclinic):hover {
   color: var(--primary);
   text-decoration: underline
 }
 
 .site-footer a:focus-visible {
-  outline:var(--border-emphasis) solid var(--primary);
-  outline-offset:3px;
-  border-radius:3px;
-}
-
-.site-footer__disclaimer-wrap {
-  margin:0 var(--space-20px);
-  border-top:var(--border-hairline) solid #dfeaec;
-}
-
-.site-footer__disclaimer {
-  margin: 0;
-  padding: 7px 0 9px;
-  color: #526f77;
-  font-size: .6875rem;
-  line-height: 1.5;
-  overflow-wrap: anywhere
-}
-
-.site-footer__disclaimer:before {
-  content: "\2695\a0"
+  outline: var(--border-emphasis) solid var(--primary);
+  outline-offset: 3px;
+  border-radius: 3px
 }
 
 @container site-footer (max-width:800px) {
   .site-footer__inner {
-  gap:var(--space-16px);
-}
+    gap: var(--space-16px)
+  }
   .site-footer__col {
-  display:grid;
-  grid-template-columns:minmax(0,1fr) minmax(0,1.3fr);
-  gap:0 var(--space-12px);
-}
-  .site-footer__link {
-    min-height: 30px
+    display: grid;
+    grid-template-columns: minmax(0,1fr) minmax(0,1.3fr);
+    gap: 0 var(--space-12px)
   }
 }
 
-@container site-footer (max-width:650px) {
-  .site-footer__inner {
-  grid-template-columns:minmax(0,1fr);
-  gap:var(--space-12px);
-  padding:var(--space-16px) var(--space-20px) var(--space-10px);
-}
-  .site-footer__col {
-  grid-template-columns:minmax(0,1fr) minmax(0,1fr);
-  gap:0 var(--space-16px);
-}
-  .site-footer__link,
-  .site-footer__brand-link,
-  .site-footer__vildaclinic {
-    min-height: 44px
+/* The outer shell propagates wide-host mode, so a desktop iframe does not
+ * become a mobile footer merely because its own viewport excludes the menu. */
+@media(max-width:991px) {
+  html:not(.vilda-chrome-wide-host) .site-footer {
+    min-height: 0
   }
-  .site-footer__brand-link,
-  .site-footer__vildaclinic {
-    display: inline-flex;
-    align-items: center
+  html:not(.vilda-chrome-wide-host) .site-footer__inner {
+    grid-template-columns: minmax(0,1fr);
+    gap: var(--space-4px);
+    min-height: 0;
+    padding: var(--space-8px) var(--space-12px) 6px
   }
-  .site-footer__operator {
-    align-items: center
+  html:not(.vilda-chrome-wide-host) .site-footer__brand {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-12px);
+    min-height: 24px
   }
-  .site-footer__disclaimer {
-  padding-top:var(--space-10px);
-  padding-bottom:var(--space-14px);
+  html:not(.vilda-chrome-wide-host) .site-footer__brand-link {
+    margin: 0
+  }
+  html:not(.vilda-chrome-wide-host) .site-footer__operator,
+  html:not(.vilda-chrome-wide-host) .site-footer__detail,
+  html:not(.vilda-chrome-wide-host) .site-footer__desktop-only {
+    display: none
+  }
+  html:not(.vilda-chrome-wide-host) .site-footer__mobile-only {
+    display: inline;
+    white-space: nowrap
+  }
+  html:not(.vilda-chrome-wide-host) .site-footer__col {
+    display: grid;
+    grid-template-columns: repeat(4,minmax(0,1fr));
+    gap: 0 var(--space-4px)
+  }
+  html:not(.vilda-chrome-wide-host) .site-footer__link {
+    justify-content: center;
+    min-height: 44px;
+    padding: 0 3px;
+    font-size: .6875rem
+  }
 }
+
+@media(min-width:600px) and (max-width:991px) {
+  html:not(.vilda-chrome-wide-host) .site-footer__inner {
+    grid-template-columns: minmax(0,1fr) 340px;
+    align-items: center;
+    gap: var(--space-16px)
+  }
+  html:not(.vilda-chrome-wide-host) .site-footer__brand {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0
+  }
+}
+
+/* Physical phones keep the compact footer in wide landscape as well. */
+@media(min-width:992px) {
+  html.vilda-phone .site-footer {
+    min-height: 0
+  }
+  html.vilda-phone .site-footer__inner {
+    grid-template-columns: minmax(0,1fr) 340px;
+    gap: var(--space-16px);
+    min-height: 0;
+    padding: var(--space-8px) var(--space-12px) 6px
+  }
+  html.vilda-phone .site-footer__brand {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0
+  }
+  html.vilda-phone .site-footer__brand-link {
+    margin: 0
+  }
+  html.vilda-phone .site-footer__operator,
+  html.vilda-phone .site-footer__detail,
+  html.vilda-phone .site-footer__desktop-only {
+    display: none
+  }
+  html.vilda-phone .site-footer__mobile-only {
+    display: inline;
+    white-space: nowrap
+  }
+  html.vilda-phone .site-footer__col {
+    display: grid;
+    grid-template-columns: repeat(4,minmax(0,1fr));
+    gap: 0 var(--space-4px)
+  }
+  html.vilda-phone .site-footer__link {
+    justify-content: center;
+    min-height: 44px;
+    padding: 0 3px;
+    font-size: .6875rem
+  }
 }
 
 @media(pointer:coarse) {
-  .site-footer__link,
-  .site-footer__brand-link,
   .site-footer__vildaclinic {
     min-height: 44px
   }

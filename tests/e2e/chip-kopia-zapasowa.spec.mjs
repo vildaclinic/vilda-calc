@@ -1,3 +1,4 @@
+import { openMenuSaveStatus } from '../support/chrome-menu-fixture.mjs';
 import { devices } from '@playwright/test';
 import { expect, test } from '../support/test-czas.mjs';
 
@@ -92,7 +93,7 @@ async function przygotuj(page, kontekst) {
 }
 
 async function otworzPopup(page) {
-  await page.locator('#vildaPatientChip').click();
+  await openMenuSaveStatus(page);
   const popup = page.locator('.vilda-save-popover');
   await expect(popup).toBeVisible();
   await expect(popup).toHaveClass(/\bis-visible\b/);
@@ -173,7 +174,12 @@ for (const platforma of ['desktop', 'mobile']) {
     test('kontrola: prawdziwy klik poza popupem i Escape nadal zamykają', async ({ page }) => {
       await przygotuj(page, 'Start');
       let popup = await otworzPopup(page);
-      await page.locator('#height').click();
+      // On a phone the legend belongs to the open drawer; the patient form is
+      // deliberately inert. A real click on the menu background is still outside
+      // the legend and must close it without changing patient data or route.
+      const drawer = page.locator('[data-vilda-chrome-drawer]');
+      if (await drawer.isVisible()) await drawer.locator('.chrome-menu-actions').click({ position: { x: 1, y: 1 } });
+      else await page.locator('#height').click();
       await expect(popup).not.toBeVisible();
       await expect(page.locator('#vildaPatientChip')).toHaveAttribute('aria-expanded', 'false');
       popup = await otworzPopup(page);

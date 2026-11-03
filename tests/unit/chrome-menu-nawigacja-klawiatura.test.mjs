@@ -94,7 +94,7 @@ function environment(nativeInert = true) {
   const last = panel.appendChild(new Element('a')); last.setAttribute('href', 'homa-ir.html');
   const tip = vi.fn(), syncButtons = vi.fn();
   const api = new Function('r', 'o', 'Qdm', 'B', 'F', '_e', 'te', 'le',
-    `var K=false,O=false,h=null,M=null;${menuDependencies}${menuSource}${drawerSource}${actionSource}${headerSource}${navigationSource}${overlaySource};return {open:nt,close:ee,bind:tt,bindActions:et,bindMenu:Cm_bindMenuControls,openPatient:Cm_openMenuPatient,navigate:Pt,isOverlayOpen:he};`)(win, doc, syncButtons, () => {}, tip, () => {}, () => {}, () => {});
+    `var K=false,O=false,h=null,M=null;${menuDependencies}${menuSource}${drawerSource}${actionSource}${headerSource}${navigationSource}${overlaySource};return {open:nt,close:ee,bind:tt,bindActions:et,bindMenu:Cm_bindMenuControls,openPatient:Cm_openMenuPatient,navigate:Pt,isOverlayOpen:he,bindHeader:Ch_bindHeader,refreshSearch:Ch_refreshSearch,openSearch:Ch_openSearch};`)(win, doc, syncButtons, () => {}, tip, () => {}, () => {}, () => {});
   api.bind(header);
   return { win, doc, header, trigger, avatar, account, main, input, frame, drawer, panel, close, last, api, tip, observers, Element };
 }
@@ -132,6 +132,71 @@ function expectNoBootListeners(h) {
   expect(h.doc.listenerCount('vilda:session-changed')).toBe(0);
   expect(h.win.listenerCount('pagehide')).toBe(0);
 }
+
+function headerSearchEnvironment() {
+  const h = environment(), state = { userId: 'fictional-search-owner-a', unlocked: true, private: false };
+  const lockListeners = [], privacyListeners = [];
+  h.win.VildaVault = {
+    isUnlocked: () => state.unlocked, getCurrentUser: () => ({ userId: state.userId }),
+    onLock: listener => lockListeners.push(listener),
+  };
+  h.win.VildaSession = { isLoggedIn: () => state.unlocked };
+  const ui = { isBootReady: () => true, maybeShowReminders: vi.fn(async () => {}) };
+  h.win.VildaAuthUI = ui;
+  h.win.VildaRemindersPrivacy = {
+    isHidden: () => state.private, subscribe: listener => { privacyListeners.push(listener); return () => {}; },
+  };
+  const form = h.header.appendChild(new h.Element('form')); form.setAttribute('id', 'vildaHeaderSearch');
+  const input = form.appendChild(new h.Element('input')); input.setAttribute('id', 'vildaHeaderSearchInput'); input.value = '';
+  const lupa = h.header.appendChild(new h.Element('button')); lupa.setAttribute('id', 'vildaHeaderSearchBtn');
+  h.api.bindHeader();
+  return { ...h, ui, state, form, input, lupa,
+    type(value) { input.value = value; input.dispatchEvent({ type: 'input' }); },
+    privacy(hidden) { state.private = hidden; privacyListeners.forEach(listener => listener()); },
+    lock() { state.unlocked = false; lockListeners.forEach(listener => listener()); },
+  };
+}
+
+describe('Chrome: rzeczywisty draft Szukaj w nagłówku', () => {
+  it('nie szuka podczas wpisywania; submit przekazuje frazę do natywnego Szukaj, a maska zachowuje ją tylko dla właściciela', async () => {
+    const h = headerSearchEnvironment();
+    h.type('Fikcyjny Nowak');
+    expect(h.ui.maybeShowReminders).not.toHaveBeenCalled();
+    h.privacy(true); expect(h.input.value).toBe(''); expect(h.input.readOnly).toBe(true);
+    h.privacy(false); expect(h.input.value).toBe('Fikcyjny Nowak'); expect(h.input.readOnly).toBe(false);
+    const submit = { type: 'submit', preventDefault: vi.fn() }; h.form.dispatchEvent(submit);
+    await vi.waitFor(() => expect(h.ui.maybeShowReminders).toHaveBeenCalledOnce());
+    expect(submit.preventDefault).toHaveBeenCalledOnce();
+    expect(h.ui.maybeShowReminders.mock.calls[0][0]).toMatchObject({ force: true, globalSearch: { query: 'Fikcyjny Nowak', focus: 'query' } });
+    h.privacy(true); h.state.userId = 'fictional-search-owner-b'; h.api.refreshSearch(); h.privacy(false);
+    expect(h.input.value).toBe('');
+  });
+
+  it('odblokowanie tego samego konta nie wskrzesza szkicu sprzed blokady', () => {
+    const h = headerSearchEnvironment(); h.type('Fikcyjna tajna fraza'); h.lock();
+    expect(h.input.value).toBe(''); expect(h.input.readOnly).toBe(true);
+    h.state.unlocked = true; h.api.refreshSearch();
+    expect(h.input.value).toBe(''); expect(h.input.readOnly).toBe(false);
+  });
+
+  it.each(['load', 'boot'])('opóźnione %s po blokadzie nie otwiera wyszukiwania innej sesji', async phase => {
+    const h = headerSearchEnvironment(); h.type('Fikcyjna fraza przed blokadą');
+    let resolveLoad;
+    if (phase === 'load') {
+      delete h.win.VildaAuthUI;
+      h.win.VildaSession.ensureAuthLoaded = vi.fn(() => new Promise(resolve => { resolveLoad = resolve; }));
+    } else h.ui.isBootReady = () => false;
+    const pending = h.api.openSearch(h.input);
+    if (phase === 'boot') expect(h.doc.listenerCount('vilda:auth-boot-settled')).toBe(2);
+    h.lock();
+    if (resolveLoad) { h.win.VildaAuthUI = h.ui; resolveLoad(); }
+    await expect(pending).resolves.toBe(false);
+    expect(h.ui.maybeShowReminders).not.toHaveBeenCalled();
+    expect(h.input.value).toBe('');
+    // Permanent header listeners remain; the cancelled boot listener does not.
+    expect(h.doc.listenerCount('vilda:auth-boot-settled')).toBe(1);
+  });
+});
 
 describe('Chrome: rzeczywista kwalifikacja nawigacji', () => {
   it.each(['ctrlKey', 'metaKey', 'shiftKey', 'altKey'])('przepuszcza natywny %s', (modifier) => {

@@ -1,3 +1,4 @@
+import { closeChromeMenu, openMenuSaveStatus } from '../support/chrome-menu-fixture.mjs';
 import { expect, test } from '@playwright/test';
 import { createFictionalVault, loadPatient, shellFrame } from '../support/centile-live-fixture.mjs';
 
@@ -121,13 +122,14 @@ async function assertSaved(page, owner, expected, where, { popover = false, snap
     expect(await clinicalState(owner), `${where}: dane pacjenta`).toEqual(expected.clinical);
     if (snapshot) expect(await savedSnapshot(owner, expected.id), `${where}: zapis sejfu`).toEqual(expected.vault);
     if (popover) {
-      await chip.click();
+      await openMenuSaveStatus(page);
       const dialog = page.locator('.vilda-save-popover');
       await expect(dialog).toBeVisible();
-      await expect(dialog.locator('.vsp-hero-title')).toContainText('Zapisane');
+      await expect(dialog.locator('.vsp-hero-title')).toHaveText('Zapisano');
       await expect(dialog).not.toContainText('Brak danych pacjenta');
       await page.keyboard.press('Escape');
       await expect(dialog).toBeHidden();
+      await closeChromeMenu(page);
       await page.mouse.move(0, 0);
     }
   } catch (error) {
