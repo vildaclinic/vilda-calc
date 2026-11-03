@@ -4991,6 +4991,618 @@ async function Bsl_usunPacjenta(patientId, deletedAtISO, opcje, ctx) {const Pati
     return PatientClinicalWriteValue(PatientClinicalOperationAccount,usunieta);
   }, opcje));
 }
+/* P-DZIENNIK-ZDARZEN: poczatek bloku */
+/* Dziennik zdarzen synchronizacji przyrostowej (etap 2, czesc a). USPIONE: kod produkcyjny nie wola zadnej funkcji tego
+ * bloku (dostep tylko przez zamrozony obiekt Bev_EKSPORT w eksporcie sejfu — testy i kolejne etapy); ps, Le i reguly
+ * scalania bez zmian; bez magazynu kolejki, bez zapisow i bez powiadomien. Zawartosc: koperta
+ * zdarzenia jednej encji (tylko jej sekcja i event = { kind, key, atISO, dev, full }), walidacja koperty (Bev_sprawdz),
+ * rozmiar szyfrogramu (Bev_bajty), 14 builderow czytajacych sklep (chwile tylko z rekordow, nigdy z zegara), szyfrowanie
+ * kluczem glownym bez AAD i bez kompresji (Bev_szyfruj) oraz zastosowanie zaszyfrowanego zdarzenia ze statusem
+ * (Bev_zastosuj). Bledy bloku niosa kod i staly komunikat — nigdy tresci ani komunikatu bledu odszyfrowania.
+ * Opis: docs/clinical/ALGORITHMS.md, wpis P-DZIENNIK-ZDARZEN. */
+const Bev_RODZAJE = Object.freeze(['snap', 'pfull', 'ptomb', 'stomb', 'pnote', 'pnotetomb', 'note', 'notetomb', 'plist',
+  'plisttomb', 'pref', 'pk', 'pktomb', 'cred']);
+// Jedyna sekcja ladunku danego rodzaju (stomb moze dodatkowo niesc karte bez wersji w patients).
+const Bev_SEKCJE = Object.freeze({
+  snap: 'patients', pfull: 'patients', ptomb: 'tombstones', stomb: 'snapshotTombstones', pnote: 'patientNotes',
+  pnotetomb: 'patientNoteTombstones', note: 'notes', notetomb: 'noteTombstones', plist: 'patientLists',
+  plisttomb: 'patientListTombstones', pref: 'userPreferences', pk: 'passkeys', pktomb: 'passkeyTombstones',
+  cred: 'credential',
+});
+// Pole identyfikatora encji w jedynym elemencie sekcji (rowne event.key).
+const Bev_ID_SEKCJI = Object.freeze({
+  ptomb: 'patientId', pnote: 'id', pnotetomb: 'id', note: 'id', notetomb: 'id', plist: 'id', plisttomb: 'id',
+  pk: 'credentialId', pktomb: 'credentialId',
+});
+const Bev_POLA_ZDARZENIA = Object.freeze(['kind', 'key', 'atISO', 'dev', 'full']);
+const Bev_POLA_KARTY = Object.freeze(['patientId', 'header', 'snapshots', 'createdAtISO', 'lastSavedAtISO', 'snapshotCount']);
+const Bev_POLA_WERSJI = Object.freeze(['snapshotId', 'savedAtISO', 'rev', 'updatedAtISO', 'payload']);
+const Bev_POLA_KOSZA = Object.freeze(['patientId', 'snapshotId', 'deletedAtISO', 'savedAtISO', 'rev', 'updatedAtISO', 'seq',
+  'powod', 'koszISO', 'przycietoISO', 'revPary', 'zmianaISO', 'gwiazdka', 'payload']);
+// Identyfikator urzadzenia w kopercie: 8 znakow bez mylacych (l, o, 0, 1) albo null.
+const Bev_DEV = /^[a-km-np-z2-9]{8}$/;
+// Limit rozmiaru zdarzenia po stronie serwera (szyfrogram {iv, data} w bajtach UTF-8).
+const Bev_MAX_BAJTOW = 262144;
+const Bev_KOMUNIKATY = Object.freeze({
+  VAULT_LOCKED: 'Dziennik zdarzeń: sejf jest zablokowany.',
+  EVENT_ENVELOPE_INVALID: 'Dziennik zdarzeń: nieprawidłowa koperta zdarzenia.',
+  EVENT_SOURCE_UNREADABLE: 'Dziennik zdarzeń: zapisu nie da się odczytać na tym urządzeniu — zdarzenie nie powstało.',
+});
+// Bledy odszyfrowania dowodzace nieczytelnosci przy biezacym kluczu (sonda w Node i specyfikacje przegladarek):
+// OperationError — zly znacznik GCM, inny klucz, za krotkie dane albo IV (crypto.subtle.decrypt); InvalidCharacterError —
+// zly base64 (atob w vilda_crypto.js); SyntaxError — tresc nie jest JSON (JSON.parse). Kazdy inny blad (np. brak
+// crypto.subtle, TypeError srodowiska) to apply-error: zdarzenie zostaje do ponowienia.
+const Bev_BLEDY_ODCZYTU = Object.freeze(['OperationError', 'InvalidCharacterError', 'SyntaxError']);
+
+function Bev_obiekt(x) {
+  return !!x && typeof x === 'object' && !Array.isArray(x);
+}
+function Bev_id(x) {
+  return typeof x === 'string' && x.length > 0;
+}
+function Bev_ma(o, k) {
+  return Object.prototype.hasOwnProperty.call(o, k);
+}
+function Bev_kluczeW(o, dozwolone) {
+  return Object.keys(o).every(function (k) { return dozwolone.indexOf(k) >= 0; });
+}
+function Bev_kopia(x) {
+  return JSON.parse(JSON.stringify(x));
+}
+function Bev_blad(code) {
+  const e = new Error(Bev_KOMUNIKATY[code]);
+  e.code = code;
+  return e;
+}
+// Rekord nieczytelny lokalnie: tylko kod, rodzaj i klucz encji (bez przyczyny — komunikat bledu odszyfrowania moze
+// zawierac fragment tresci).
+function Bev_nieczytelne(kind, entityKey) {
+  const e = Bev_blad('EVENT_SOURCE_UNREADABLE');
+  e.kind = kind;
+  e.entityKey = entityKey;
+  return e;
+}
+function Bev_devPoprawny(dev) {
+  return dev === null || (typeof dev === 'string' && Bev_DEV.test(dev));
+}
+function Bev_pelnyPoprawny(f) {
+  return Bev_obiekt(f) && Object.keys(f).length === 3 && Bev_kluczeW(f, ['setId', 'i', 'n']) && Bev_id(f.setId) &&
+    Number.isInteger(f.i) && Number.isInteger(f.n) && f.i >= 0 && f.n >= 1 && f.i < f.n;
+}
+
+// Koperta (jawna, przed szyfrowaniem): schemaVersion, event i wylacznie sekcja rodzaju; partialSince, z i aad pominiete.
+function Bev_koperta(kind, key, atISO, dev, sekcje, full) {
+  return Object.assign({
+    schemaVersion: at,
+    event: { kind: kind, key: key, atISO: typeof atISO === 'string' && atISO ? atISO : null, dev: dev, full: full || null },
+  }, sekcje);
+}
+function Bev_kartaPoprawna(p) {
+  return Bev_obiekt(p) && Bev_kluczeW(p, Bev_POLA_KARTY) && Bev_id(p.patientId) && Array.isArray(p.snapshots) &&
+    p.snapshots.every(function (w) { return Bev_obiekt(w) && Bev_kluczeW(w, Bev_POLA_WERSJI) && Bev_id(w.snapshotId); });
+}
+function Bev_sekcjaPoprawna(kind, key, k) {
+  const s = k[Bev_SEKCJE[kind]];
+  if (kind === 'cred') return Bev_obiekt(s);
+  if (kind === 'pref') return Bev_obiekt(s) && Object.keys(s).length === 1 && Bev_ma(s, key);
+  if (!Array.isArray(s) || !s.length || !s.every(function (x) { return Bev_obiekt(x); })) return false;
+  if (kind === 'snap' || kind === 'pfull') {
+    if (s.length !== 1 || !Bev_kartaPoprawna(s[0])) return false;
+    if (kind === 'pfull') return s[0].patientId === key;
+    return s[0].snapshots.length === 1 && key === s[0].patientId + '/' + s[0].snapshots[0].snapshotId;
+  }
+  if (kind === 'stomb') {
+    if (!s.every(function (x) { return Bev_kluczeW(x, Bev_POLA_KOSZA) && x.snapshotId === key; })) return false;
+    if (!Bev_ma(k, 'patients')) return true;
+    const p = k.patients;
+    return Array.isArray(p) && p.length > 0 && p.every(function (x) { return Bev_kartaPoprawna(x) && !x.snapshots.length; });
+  }
+  return s.length === 1 && s[0][Bev_ID_SEKCJI[kind]] === key;
+}
+// Walidacja koperty (encryptEvent i kazdy builder przed oddaniem wyniku): dokladne klucze event, rodzaj z listy,
+// klucz encji, atISO napis albo null, dev, full tylko w pfull, na najwyzszym poziomie wylacznie sekcja rodzaju
+// (credential tylko w cred, snapshotTombstones tylko w stomb; exportedAtISO, lastMergeAtISO, userId, label,
+// partialSince, seq wersji i headerUpdatedAtISO odrzucone). Blad: EVENT_ENVELOPE_INVALID.
+function Bev_sprawdz(k) {
+  if (!Bev_obiekt(k) || k.schemaVersion !== at || !Bev_obiekt(k.event)) throw Bev_blad('EVENT_ENVELOPE_INVALID');
+  const e = k.event;
+  const zdarzenieOk = Bev_kluczeW(e, Bev_POLA_ZDARZENIA) && Bev_POLA_ZDARZENIA.every(function (p) { return Bev_ma(e, p); }) &&
+    Bev_RODZAJE.indexOf(e.kind) >= 0 && Bev_id(e.key) && (e.atISO === null || typeof e.atISO === 'string') &&
+    Bev_devPoprawny(e.dev) && (e.kind === 'pfull' ? Bev_pelnyPoprawny(e.full) : e.full === null);
+  if (!zdarzenieOk) throw Bev_blad('EVENT_ENVELOPE_INVALID');
+  const sekcja = Bev_SEKCJE[e.kind];
+  const dozwolone = ['schemaVersion', 'event', sekcja].concat(e.kind === 'stomb' ? ['patients'] : []);
+  if (!Bev_kluczeW(k, dozwolone) || !Bev_ma(k, sekcja) || !Bev_sekcjaPoprawna(e.kind, e.key, k)) {
+    throw Bev_blad('EVENT_ENVELOPE_INVALID');
+  }
+  return k;
+}
+
+// Dlugosc napisu w bajtach UTF-8 (para zastepcza = 4 B, pojedynczy znak zastepczy jak U+FFFD = 3 B).
+function Bev_utf8(s) {
+  let n = 0;
+  for (let i = 0; i < s.length; i += 1) {
+    const c = s.charCodeAt(i);
+    if (c < 0x80) n += 1;
+    else if (c < 0x800) n += 2;
+    else if (c >= 0xd800 && c <= 0xdbff && i + 1 < s.length && s.charCodeAt(i + 1) >= 0xdc00 && s.charCodeAt(i + 1) <= 0xdfff) {
+      n += 4;
+      i += 1;
+    } else n += 3;
+  }
+  return n;
+}
+// Rozmiar {iv, data} po szyfrowaniu jawnego JSON o dlugosci L (UTF-8): 19 B szkieletu + 16 znakow IV + base64 z
+// (L + 16 B znacznika GCM) — tyle, ile mierzy serwer.
+function Bev_zDlugosci(L) {
+  return 35 + 4 * Math.ceil((L + 16) / 3);
+}
+function Bev_bajty(k) {
+  if (!Bev_obiekt(k)) throw Bev_blad('EVENT_ENVELOPE_INVALID');
+  return Bev_zDlugosci(Bev_utf8(JSON.stringify(k)));
+}
+
+// Wejscie buildera (P-SESJA-ZAPISU, opis ogolny): sejf odblokowany, poprawne dev, sesja, konto i adapter uchwycone raz,
+// straznik tozsamosci chronionego sejfu; po kazdym oczekiwaniu sprawdzenie sesji (Bses_pilnuj).
+function Bev_start(dev) {
+  if (!T()) throw Bev_blad('VAULT_LOCKED');
+  if (!Bev_devPoprawny(dev)) throw Bev_blad('EVENT_ENVELOPE_INVALID');
+  const s = Bses_opcje(null);
+  const u = s.Bses_s.u;
+  PatientClinicalGuard(u);
+  return { s: s, u: u, a: I() };
+}
+// Tresc szyfru albo EVENT_SOURCE_UNREADABLE (brak, zly ksztalt, G zawodzi) — nigdy atrapa tresci.
+async function Bev_odszyfruj(c, szyfr, kind, key) {
+  if (!Bev_obiekt(szyfr) || typeof szyfr.iv !== 'string' || typeof szyfr.data !== 'string') throw Bev_nieczytelne(kind, key);
+  const t = await G(szyfr.iv, szyfr.data).catch(function (x) {
+    PatientClinicalRethrow(x);
+    Bses_pilnuj(c.s);
+    throw Bev_nieczytelne(kind, key);
+  });
+  Bses_pilnuj(c.s);
+  return t;
+}
+// Tresc szyfru albo undefined, bez wyjatku (jak tresc wpisu kosza i naglowek karty w stomb).
+async function Bev_moze(c, szyfr) {
+  let t;
+  if (Bev_obiekt(szyfr)) {
+    try {
+      t = await G(szyfr.iv, szyfr.data);
+    } catch (x) {
+      PatientClinicalRethrow(x); // bez tresci
+    }
+  }
+  Bses_pilnuj(c.s);
+  return t;
+}
+async function Bev_meta(c) {
+  const m = await c.a.getUserMeta(c.u);
+  Bses_pilnuj(c.s);
+  return Bev_obiekt(m) ? m : null;
+}
+// Ksztalt karty i wersji dokladnie jak element exportSyncPayload (kolejnosc kluczy, rev, updatedAtISO, bez seq wersji).
+function Bev_karta(karta, header, snapshots) {
+  return {
+    patientId: karta.patientId, header: header, snapshots: snapshots, createdAtISO: karta.createdAtISO,
+    lastSavedAtISO: karta.lastSavedAtISO, snapshotCount: karta.snapshotCount,
+  };
+}
+function Bev_poprawka(w) {
+  return typeof w.updatedAtISO === 'string' && w.updatedAtISO ? w.updatedAtISO : null;
+}
+function Bev_wersja(w, payload) {
+  return { snapshotId: w.snapshotId, savedAtISO: w.savedAtISO, rev: mt(w), updatedAtISO: Bev_poprawka(w), payload: payload };
+}
+function Bev_poZapisie(f, m) {
+  return f.savedAtISO > m.savedAtISO ? 1 : f.savedAtISO < m.savedAtISO ? -1 : 0;
+}
+
+// 1. snap — wersja pod swoja karta (zapis, poprawka, gwiazdka, „Przywroc”). Wersja pod inna karta (po „Scal pacjentow”)
+// albo brak karty lub wersji: null.
+async function Bev_snap(patientId, snapshotId, dev) {
+  const c = Bev_start(dev);
+  if (!Bev_id(patientId) || !Bev_id(snapshotId)) throw Bev_blad('EVENT_ENVELOPE_INVALID');
+  const key = patientId + '/' + snapshotId;
+  const karta = await c.a.getPatientForUser(c.u, patientId);
+  Bses_pilnuj(c.s);
+  if (!karta) return null;
+  const w = await c.a.getSnapshotForUser(c.u, snapshotId);
+  Bses_pilnuj(c.s);
+  if (!w || w.patientId !== patientId) return null;
+  const header = await Bev_odszyfruj(c, karta.headerCipher, 'snap', key);
+  const payload = await Bev_odszyfruj(c, w.payloadCipher, 'snap', key);
+  return Bev_sprawdz(Bev_koperta('snap', key, Bev_poprawka(w) || w.savedAtISO, dev,
+    { patients: [Bev_karta(karta, header, [Bev_wersja(w, payload)])] }, null));
+}
+
+// Porcje pelnej karty (pfull): wersje (po savedAtISO jak w eksporcie) pakowane zachlannie tak, by rozmiar szyfrogramu
+// OSTATECZNEJ koperty kazdej porcji (z event.full = { setId, i, n }) nie przekroczyl Bev_MAX_BAJTOW. Liczba porcji n
+// zmienia dlugosc pola full, wiec pakowanie powtarza sie z n rownym liczbie porcji poprzedniego przebiegu, az sie
+// ustali (n rosnie, najwyzej do liczby wersji). Wersja sama wieksza niz limit — osobna porcja; jej indeks w polu
+// oversize wyniku (wlasciwosc niewyliczalna tablicy; stan wiersza kolejki to etap 2b).
+function Bev_grupuj(dl, baza) {
+  const grupy = [];
+  const bazy = new Map();
+  const bazaPorcji = function (i) {
+    if (!bazy.has(i)) bazy.set(i, baza(i));
+    return bazy.get(i);
+  };
+  let biezaca = [];
+  let dlugosc = 0;
+  for (let j = 0; j < dl.length; j += 1) {
+    const nowa = biezaca.length ? dlugosc + 1 + dl[j] : dl[j];
+    if (biezaca.length && Bev_zDlugosci(bazaPorcji(grupy.length) + nowa) > Bev_MAX_BAJTOW) {
+      grupy.push(biezaca);
+      biezaca = [j];
+      dlugosc = dl[j];
+    } else {
+      biezaca.push(j);
+      dlugosc = nowa;
+    }
+  }
+  grupy.push(biezaca);
+  return grupy;
+}
+function Bev_porcje(karta, header, wersje, setId, dev) {
+  const koperta = function (snapshots, i, n) {
+    return Bev_koperta('pfull', karta.patientId, karta.lastSavedAtISO, dev,
+      { patients: [Bev_karta(karta, header, snapshots)] }, { setId: setId, i: i, n: n });
+  };
+  const dl = wersje.map(function (w) { return Bev_utf8(JSON.stringify(w)); });
+  let n = 1;
+  let grupy = [];
+  for (let proba = 0; proba < 64; proba += 1) {
+    const m = n;
+    grupy = Bev_grupuj(dl, function (i) { return Bev_utf8(JSON.stringify(koperta([], i, m))); });
+    if (grupy.length === m) break;
+    n = grupy.length;
+  }
+  const ile = grupy.length;
+  const porcje = grupy.map(function (g, i) { return koperta(g.map(function (j) { return wersje[j]; }), i, ile); });
+  const ponad = [];
+  porcje.forEach(function (k, i) {
+    Bev_sprawdz(k);
+    if (Bev_bajty(k) <= Bev_MAX_BAJTOW) return;
+    if (grupy[i].length !== 1) throw Bev_blad('EVENT_ENVELOPE_INVALID');
+    ponad.push(i);
+  });
+  Object.defineProperty(porcje, 'oversize', { value: Object.freeze(ponad), enumerable: false });
+  return porcje;
+}
+// 2. pfull — cala karta ze wszystkimi wersjami w porcjach (hak przegranego nagrobka karty, etap 3b); setId podaje
+// wolajacy (domyslnie losowy). Karta bez wersji: jedna porcja z snapshots: [].
+async function Bev_pfull(patientId, dev, opcje) {
+  const c = Bev_start(dev);
+  const o = Bev_obiekt(opcje) ? opcje : {};
+  if (!Bev_id(patientId) || (o.setId !== undefined && !Bev_id(o.setId))) throw Bev_blad('EVENT_ENVELOPE_INVALID');
+  const karta = await c.a.getPatientForUser(c.u, patientId);
+  Bses_pilnuj(c.s);
+  if (!karta) return null;
+  const header = await Bev_odszyfruj(c, karta.headerCipher, 'pfull', patientId);
+  const lista = await c.a.listSnapshotsForUser(c.u, patientId);
+  Bses_pilnuj(c.s);
+  const wersje = [];
+  for (const w of Array.isArray(lista) ? lista : []) {
+    wersje.push(Bev_wersja(w, await Bev_odszyfruj(c, w && w.payloadCipher, 'pfull', patientId)));
+  }
+  wersje.sort(Bev_poZapisie);
+  return Bev_porcje(karta, header, wersje, o.setId !== undefined ? o.setId : ne(), dev);
+}
+
+// 3. ptomb — nagrobek karty z najpozniejsza chwila (sam nagrobek, bez karty celu „Scal pacjentow”).
+async function Bev_ptomb(patientId, dev) {
+  const c = Bev_start(dev);
+  if (!Bev_id(patientId)) throw Bev_blad('EVENT_ENVELOPE_INVALID');
+  const lista = await c.a.listTombstonesForUser(c.u);
+  Bses_pilnuj(c.s);
+  const n = (Array.isArray(lista) ? lista : []).reduce(function (m, t) {
+    return t && t.patientId === patientId && t.deletedAtISO && (!m || t.deletedAtISO > m.deletedAtISO) ? t : m;
+  }, null);
+  if (!n) return null;
+  return Bev_sprawdz(Bev_koperta('ptomb', patientId, n.deletedAtISO, dev,
+    { tombstones: [{ patientId: patientId, deletedAtISO: n.deletedAtISO }] }, null));
+}
+
+// Wpis kosza w postaci wysylkowej — pole w pole jak element kosza w exportSyncPayload (Bkz_eksport), takze bez payload,
+// gdy tresci nie da sie odszyfrowac.
+async function Bev_wpisKosza(c, e) {
+  const w = {
+    patientId: e.patientId,
+    snapshotId: e.snapshotId,
+    deletedAtISO: e.deletedAtISO,
+    savedAtISO: e.savedAtISO || null,
+    rev: typeof e.rev === 'number' ? e.rev : 0,
+    updatedAtISO: e.updatedAtISO || null,
+  };
+  if (typeof e.seq === 'number' && isFinite(e.seq)) w.seq = e.seq;
+  if (e.powod === 'retencja') {
+    w.powod = 'retencja';
+    if (typeof e.koszISO === 'string' && e.koszISO) w.koszISO = e.koszISO;
+  } else {
+    if (typeof e.przycietoISO === 'string' && e.przycietoISO) w.przycietoISO = e.przycietoISO;
+    if (Array.isArray(e.revPary) && e.revPary.length) w.revPary = e.revPary;
+  }
+  if (typeof e.zmianaISO === 'string' && e.zmianaISO) w.zmianaISO = e.zmianaISO;
+  const gwiazdka = Bgw_zWpisu(e);
+  if (gwiazdka) w.gwiazdka = gwiazdka;
+  if (e.payloadCipher) {
+    const t = await Bev_moze(c, e.payloadCipher);
+    if (t !== undefined) w.payload = t;
+  }
+  return w;
+}
+// 4. stomb — wszystkie wpisy kosza tej wersji (takze duplikaty z innym patientId) oraz karta bez wersji dla kazdej
+// istniejacej karty tych wpisow (kosz podnosi chwile zapisu karty); naglowek nieczytelny — bez tej karty. Brak wpisu
+// (takze po lokalnym usunieciu wersji): null. Nieczytelna sama lista kosza: EVENT_SOURCE_UNREADABLE. Odczyt kosza
+// (Bkz_czytaj) bierze biezace konto i adapter, wiec sesja jest sprawdzana tuz przed nim i tuz po nim; jego filtr
+// wygasniecia (30/365 dni, Date.now) jest tym samym filtrem co w eksporcie — chwila nie trafia do tresci.
+async function Bev_stomb(snapshotId, dev) {
+  const c = Bev_start(dev);
+  if (!Bev_id(snapshotId)) throw Bev_blad('EVENT_ENVELOPE_INVALID');
+  Bses_pilnuj(c.s);
+  const lista = await Bkz_czytaj().catch(function (x) {
+    PatientClinicalRethrow(x);
+    Bses_pilnuj(c.s);
+    throw Bev_nieczytelne('stomb', snapshotId);
+  });
+  Bses_pilnuj(c.s);
+  const wpisy = (Array.isArray(lista) ? lista : []).filter(function (e) { return e && e.snapshotId === snapshotId; });
+  if (!wpisy.length) return null;
+  const elementy = [];
+  for (const e of wpisy) elementy.push(await Bev_wpisKosza(c, e));
+  const karty = [];
+  const widziane = new Set();
+  for (const e of wpisy) {
+    if (widziane.has(e.patientId)) continue;
+    widziane.add(e.patientId);
+    const karta = await c.a.getPatientForUser(c.u, e.patientId);
+    Bses_pilnuj(c.s);
+    if (!karta) continue;
+    const header = await Bev_moze(c, karta.headerCipher);
+    if (header !== undefined) karty.push(Bev_karta(karta, header, []));
+  }
+  const sekcje = { snapshotTombstones: elementy };
+  if (karty.length) sekcje.patients = karty;
+  const chwila = wpisy.reduce(function (m, e) {
+    const t = Bkz_ostatnie(e);
+    return t && t > m ? t : m;
+  }, '');
+  return Bev_sprawdz(Bev_koperta('stomb', snapshotId, chwila, dev, sekcje, null));
+}
+
+// 5. pnote — notatka pacjenta (bramka odszyfrowania jak w eksporcie; normalizacja jak w eksporcie, z filtrem daty
+// klinicznej ponad rok naprzod w Ct — ten sam filtr co exportSyncPayload, chwila zegara nie trafia do tresci).
+async function Bev_pnote(id, dev) {
+  const c = Bev_start(dev);
+  if (!Bev_id(id)) throw Bev_blad('EVENT_ENVELOPE_INVALID');
+  const r = await c.a.getPatientNoteForUser(c.u, id);
+  Bses_pilnuj(c.s);
+  if (!r) return null;
+  await Bev_odszyfruj(c, r.bodyCipher, 'pnote', id);
+  const n = await Ft(r, { strict: true }).catch(function (x) {
+    PatientClinicalRethrow(x);
+    Bses_pilnuj(c.s);
+    if (x && typeof x.code === 'string' && /^CARE_(LINEAGE|FORMAT)_/.test(x.code)) throw x;
+    throw Bev_nieczytelne('pnote', id);
+  });
+  Bses_pilnuj(c.s);
+  return Bev_sprawdz(Bev_koperta('pnote', id, n.updatedAtISO || n.createdAtISO, dev, { patientNotes: [n] }, null));
+}
+// 6. pnotetomb — nagrobek notatki pacjenta tak, jak lezy w sklepie (rev, deletedWithPatient). Bnp_nagrobek czyta
+// biezace konto, wiec sesja jest sprawdzana tuz przed nim i tuz po nim.
+async function Bev_pnotetomb(id, dev) {
+  const c = Bev_start(dev);
+  if (!Bev_id(id)) throw Bev_blad('EVENT_ENVELOPE_INVALID');
+  Bses_pilnuj(c.s);
+  const r = await Bnp_nagrobek(c.a, id);
+  Bses_pilnuj(c.s);
+  if (!r || !r.deletedAtISO) return null;
+  return Bev_sprawdz(Bev_koperta('pnotetomb', id, r.deletedAtISO, dev, { patientNoteTombstones: [Bev_kopia(r)] }, null));
+}
+// 7. note — notatka biblioteki szablonow (bramka odszyfrowania; bez filtra updatedAtISO starej delty).
+async function Bev_note(id, dev) {
+  const c = Bev_start(dev);
+  if (!Bev_id(id)) throw Bev_blad('EVENT_ENVELOPE_INVALID');
+  const r = await c.a.getNoteForUser(c.u, id);
+  Bses_pilnuj(c.s);
+  if (!r || !r.noteCipher) return null;
+  await Bev_odszyfruj(c, r.noteCipher, 'note', id);
+  const n = await nn(r);
+  Bses_pilnuj(c.s);
+  return Bev_sprawdz(Bev_koperta('note', id, n.updatedAtISO || n.createdAtISO, dev, { notes: [n] }, null));
+}
+// Rekord nagrobka z listy (sklepy bez odczytu po kluczu) albo null.
+async function Bev_zListy(c, metoda, id) {
+  const lista = await c.a[metoda](c.u);
+  Bses_pilnuj(c.s);
+  return (Array.isArray(lista) ? lista : []).find(function (t) { return t && t.id === id; }) || null;
+}
+// 8. notetomb — nagrobek notatki biblioteki tak, jak lezy w sklepie.
+async function Bev_notetomb(id, dev) {
+  const c = Bev_start(dev);
+  if (!Bev_id(id)) throw Bev_blad('EVENT_ENVELOPE_INVALID');
+  const r = await Bev_zListy(c, 'listNoteTombstonesForUser', id);
+  if (!r) return null;
+  return Bev_sprawdz(Bev_koperta('notetomb', id, r.deletedAtISO, dev, { noteTombstones: [Bev_kopia(r)] }, null));
+}
+// 9. plist — lista pacjentow (bramka odszyfrowania, bo dekoder listy daje przy bledzie pusta liste).
+async function Bev_plist(id, dev) {
+  const c = Bev_start(dev);
+  if (!Bev_id(id)) throw Bev_blad('EVENT_ENVELOPE_INVALID');
+  const r = await c.a.getPatientListForUser(c.u, id);
+  Bses_pilnuj(c.s);
+  if (!r) return null;
+  await Bev_odszyfruj(c, r.bodyCipher, 'plist', id);
+  const n = await Re(r);
+  Bses_pilnuj(c.s);
+  return Bev_sprawdz(Bev_koperta('plist', id, n.updatedAtISO || n.createdAtISO, dev, { patientLists: [n] }, null));
+}
+// 10. plisttomb — nagrobek listy tak, jak lezy w sklepie.
+async function Bev_plisttomb(id, dev) {
+  const c = Bev_start(dev);
+  if (!Bev_id(id)) throw Bev_blad('EVENT_ENVELOPE_INVALID');
+  const r = await Bev_zListy(c, 'listPatientListTombstonesForUser', id);
+  if (!r) return null;
+  return Bev_sprawdz(Bev_koperta('plisttomb', id, r.deletedAtISO, dev, { patientListTombstones: [Bev_kopia(r)] }, null));
+}
+// 11. pref — jeden klucz preferencji calym wpisem (mapy wlsched, wllists, advHistoryCollapsed w calosci).
+async function Bev_pref(klucz, dev) {
+  const c = Bev_start(dev);
+  if (!Bev_id(klucz)) throw Bev_blad('EVENT_ENVELOPE_INVALID');
+  const m = await Bev_meta(c);
+  const p = m && Bev_obiekt(m.userPreferences) ? m.userPreferences : null;
+  const w = p && Bev_ma(p, klucz) ? p[klucz] : null;
+  if (!Bev_obiekt(w)) return null;
+  return Bev_sprawdz(Bev_koperta('pref', klucz, typeof w.updatedAtISO === 'string' ? w.updatedAtISO : null, dev,
+    { userPreferences: { [klucz]: Bev_kopia(w) } }, null));
+}
+// 12. pk — klucz dostepu bez opakowan (jak w eksporcie).
+async function Bev_pk(credentialId, dev) {
+  const c = Bev_start(dev);
+  if (!Bev_id(credentialId)) throw Bev_blad('EVENT_ENVELOPE_INVALID');
+  const m = await Bev_meta(c);
+  const w = m && Array.isArray(m.passkeys) ? m.passkeys.find(function (x) { return x && x.credentialId === credentialId; }) : null;
+  if (!w) return null;
+  return Bev_sprawdz(Bev_koperta('pk', credentialId, w.createdAtISO, dev, {
+    passkeys: [{ credentialId: w.credentialId, deviceLabel: w.deviceLabel, createdAtISO: w.createdAtISO, roaming: w.roaming === true }],
+  }, null));
+}
+// 13. pktomb — nagrobek klucza dostepu tak, jak lezy w sklepie.
+async function Bev_pktomb(credentialId, dev) {
+  const c = Bev_start(dev);
+  if (!Bev_id(credentialId)) throw Bev_blad('EVENT_ENVELOPE_INVALID');
+  const m = await Bev_meta(c);
+  const w = m && Array.isArray(m.passkeyTombstones)
+    ? m.passkeyTombstones.find(function (x) { return x && x.credentialId === credentialId; }) : null;
+  if (!w || !w.deletedAtISO) return null;
+  return Bev_sprawdz(Bev_koperta('pktomb', credentialId, w.deletedAtISO, dev, { passkeyTombstones: [Bev_kopia(w)] }, null));
+}
+// 14. cred — poswiadczenie hasla w postaci jak credential w eksporcie, bez polykania bledow odczytu; konto bez chwili
+// zmiany hasla albo z niepelnymi polami nie wysyla nic (null).
+async function Bev_cred(dev) {
+  const c = Bev_start(dev);
+  const m = await Bev_meta(c);
+  if (!m) return null;
+  const kiedy = typeof m.passwordUpdatedAtISO === 'string' && m.passwordUpdatedAtISO ? m.passwordUpdatedAtISO : null;
+  const z = m.encryptedMasterByPassword;
+  if (!kiedy || typeof m.passwordSalt !== 'string' || !m.passwordSalt || !z || typeof z.iv !== 'string' || typeof z.data !== 'string') return null;
+  const iteracje = Gc2(m);
+  if (typeof iteracje !== 'number' || !isFinite(iteracje) || iteracje <= 0) return null;
+  return Bev_sprawdz(Bev_koperta('cred', 'cred', kiedy, dev, {
+    credential: { passwordSalt: m.passwordSalt, kdfIterations: iteracje, encryptedMasterByPassword: { iv: z.iv, data: z.data }, updatedAtISO: kiedy },
+  }, null));
+}
+
+// Builder po rodzaju (dla kolejki etapu 2b): tablica kopert albo null.
+async function Bev_jako(obietnica) {
+  const k = await obietnica;
+  return k ? [k] : null;
+}
+const Bev_BUILDERY = Object.freeze({
+  snap: function (k, dev) { return Bev_jako(Bev_snap(k && k.patientId, k && k.snapshotId, dev)); },
+  pfull: function (k, dev, o) { return Bev_pfull(k && k.patientId, dev, o); },
+  ptomb: function (k, dev) { return Bev_jako(Bev_ptomb(k, dev)); },
+  stomb: function (k, dev) { return Bev_jako(Bev_stomb(k, dev)); },
+  pnote: function (k, dev) { return Bev_jako(Bev_pnote(k, dev)); },
+  pnotetomb: function (k, dev) { return Bev_jako(Bev_pnotetomb(k, dev)); },
+  note: function (k, dev) { return Bev_jako(Bev_note(k, dev)); },
+  notetomb: function (k, dev) { return Bev_jako(Bev_notetomb(k, dev)); },
+  plist: function (k, dev) { return Bev_jako(Bev_plist(k, dev)); },
+  plisttomb: function (k, dev) { return Bev_jako(Bev_plisttomb(k, dev)); },
+  pref: function (k, dev) { return Bev_jako(Bev_pref(k, dev)); },
+  pk: function (k, dev) { return Bev_jako(Bev_pk(k, dev)); },
+  pktomb: function (k, dev) { return Bev_jako(Bev_pktomb(k, dev)); },
+  cred: function (k, dev) { return Bev_jako(Bev_cred(dev)); },
+});
+
+// Szyfrowanie koperty kluczem glownym (jak delty: bez AAD, bez kompresji); env ma dokladnie klucze iv i data, bytes
+// to rozmiar JSON {iv, data} w bajtach UTF-8.
+async function Bev_szyfruj(koperta) {
+  if (!T()) throw Bev_blad('VAULT_LOCKED');
+  Bev_sprawdz(koperta);
+  const s = Bses_opcje(null);
+  const z = await V(koperta).catch(function (x) {
+    Bses_pilnuj(s);
+    throw x;
+  });
+  Bses_pilnuj(s);
+  const env = { iv: z.iv, data: z.data };
+  return { env: env, bytes: Bev_utf8(JSON.stringify(env)) };
+}
+
+// Zastosowanie zaszyfrowanego zdarzenia (albo starej delty — ten sam ksztalt) ze statusem; nigdy wyjatek. To samo
+// scalanie co przy deltach (Le bez opcji); statusy: applied (result: liczniki scalania), unreadable (reason: envelope,
+// format — z albo aad rozne od 0, decrypt, shape; zero zapisow), locked, session-changed, busy (code), apply-error
+// (code; oryginalny wyjatek jako niewyliczalne pole error, do sladu — nie do zapisu). Zaden wynik nie niesie komunikatu
+// bledu ani tresci.
+function Bev_wynik(status) {
+  return { status: status };
+}
+function Bev_poSesji() {
+  return Bev_wynik(T() ? 'session-changed' : 'locked');
+}
+function Bev_kod(x) {
+  if (x && typeof x.code === 'string' && x.code) return x.code;
+  if (x && typeof x.name === 'string' && x.name) return x.name;
+  return null;
+}
+function Bev_bladZastosowania(x) {
+  const w = { status: 'apply-error', code: Bev_kod(x) };
+  Object.defineProperty(w, 'error', { value: x, enumerable: false });
+  return w;
+}
+function Bev_bladOdczytu(x) {
+  return !!x && Bev_BLEDY_ODCZYTU.indexOf(x.name) >= 0;
+}
+async function Bev_zastosuj(env) {
+  if (!T()) return Bev_wynik('locked');
+  if (!Bev_obiekt(env) || !Bev_id(env.iv) || typeof env.data !== 'string') return { status: 'unreadable', reason: 'envelope' };
+  if (env.z !== undefined || (env.aad !== undefined && env.aad !== 0)) return { status: 'unreadable', reason: 'format' };
+  const s = Bses_opcje(null);
+  let tresc;
+  try {
+    tresc = await G(env.iv, env.data);
+  } catch (x) {
+    if (Bses_zmieniona(s)) return Bev_poSesji();
+    if (x && x.code === 'PATIENT_AUTHORITY_UNAVAILABLE') return { status: 'busy', code: x.code };
+    if (Bev_bladOdczytu(x)) return { status: 'unreadable', reason: 'decrypt' };
+    return Bev_bladZastosowania(x);
+  }
+  if (Bses_zmieniona(s)) return Bev_poSesji();
+  if (!Bev_obiekt(tresc)) return { status: 'unreadable', reason: 'shape' };
+  let wynik;
+  try {
+    wynik = await Le(tresc);
+  } catch (x) {
+    if (Bses_zmieniona(s) || (x && x.code === 'SESSION_CHANGED')) return Bev_poSesji();
+    if (x && x.vildaMergeBusy) return { status: 'busy', code: typeof x.code === 'string' && x.code ? x.code : null };
+    return Bev_bladZastosowania(x);
+  }
+  return { status: 'applied', result: wynik };
+}
+
+const Bev_EKSPORT = Object.freeze({
+  kinds: Bev_RODZAJE,
+  buildSnapshotEvent: Bev_snap,
+  buildPatientFullEvents: Bev_pfull,
+  buildPatientTombstoneEvent: Bev_ptomb,
+  buildSnapshotTombstoneEvent: Bev_stomb,
+  buildPatientNoteEvent: Bev_pnote,
+  buildPatientNoteTombstoneEvent: Bev_pnotetomb,
+  buildNoteEvent: Bev_note,
+  buildNoteTombstoneEvent: Bev_notetomb,
+  buildPatientListEvent: Bev_plist,
+  buildPatientListTombstoneEvent: Bev_plisttomb,
+  buildPreferenceEvent: Bev_pref,
+  buildPasskeyEvent: Bev_pk,
+  buildPasskeyTombstoneEvent: Bev_pktomb,
+  buildCredentialEvent: Bev_cred,
+  encryptEvent: Bev_szyfruj,
+  eventBytes: Bev_bajty,
+  applyEncryptedEvent: Bev_zastosuj,
+});
+/* P-DZIENNIK-ZDARZEN: koniec bloku */
 function yr(t,e){const n=t&&t.savedAtISO||"",r=e&&e.savedAtISO||"";if(n>r)return-1;if(n<r)return 1;const o=t&&t.updatedAtISO||"",a=e&&e.updatedAtISO||"";if(o>a)return-1;if(o<a)return 1;const s=t&&typeof t.rev=="number"?t.rev:0,i=e&&typeof e.rev=="number"?e.rev:0;if(s!==i)return i-s;const Bm2=t&&typeof t.seq=="number"&&isFinite(t.seq)?t.seq:null,Bm3=e&&typeof e.seq=="number"&&isFinite(e.seq)?e.seq:null;if(Bm2!==null&&Bm3!==null&&Bm2!==Bm3)return Bm3-Bm2;const c=t&&t.snapshotId||"",l=e&&e.snapshotId||"";return c>l?-1:c<l?1:0}async function ct(t){if(!T())throw new Error("Zaloguj si\u0119, by pobra\u0107 pacjenta.");const e=await I().getPatientForUser(b,t);if(!e)return null;const n=await G(e.headerCipher.iv,e.headerCipher.data),r=await I().listSnapshotsForUser(b,t),o=[];for(let a=0;a<r.length;a+=1){const s=r[a];let i=null;try{i=await G(s.payloadCipher.iv,s.payloadCipher.data)}catch{i=null}o.push(Object.assign({snapshotId:s.snapshotId,savedAtISO:s.savedAtISO,updatedAtISO:s.updatedAtISO||s.savedAtISO||null,rev:typeof s.rev=="number"?s.rev:0,payload:i,pinned:!!(i&&i._pinned)},Bm1(s)))}return Bzu_zapamietaj(e.patientId,o.map(function(Bzu_s){return Bzu_s.snapshotId})),o.sort(yr),{patientId:e.patientId,header:n,snapshots:o,createdAtISO:e.createdAtISO,lastSavedAtISO:e.lastSavedAtISO,snapshotCount:e.snapshotCount||o.length}}async function hr(t){const e=await ct(t);return!e||!e.snapshots.length?null:e.snapshots[0]}async function ro(t,e,n){if(!T())throw new Error("Zaloguj si\u0119, by przywr\xF3ci\u0107 wersj\u0119.");const Bro_s=Bses_opcje(null);if(typeof t!="string"||!t)throw new Error("restoreSnapshotAsNew: brak patientId.");if(typeof e!="string"||!e)throw new Error("restoreSnapshotAsNew: brak snapshotId.");const r=await Bpz_czytaj(t,Bro_s);if(!r)throw new Error("restoreSnapshotAsNew: nie znaleziono pacjenta.");const o=r.snapshots.filter(function(i){return i.snapshotId===e})[0];if(!o||!o.payload)throw new Error("restoreSnapshotAsNew: nie znaleziono wersji lub brak danych.");const a=JSON.parse(JSON.stringify(o.payload));try{a.advanced&&a.advanced.data&&Array.isArray(a.advanced.data.measurements)&&(a.advanced.data.measurements=a.advanced.data.measurements.filter(function(i){return!(i&&i.ghSync===!0)}))}catch(PatientClinicalCaught){PatientClinicalRethrow(PatientClinicalCaught);}"_pinned"in a&&delete a._pinned,a._restoredFrom={snapshotId:e,savedAtISO:o.savedAtISO};const s=await Bpz_zapis(a,{patientId:t,skipAdvancedAntiClobber:!0,dedup:!1,_restore:!0},!1,Bro_s);return{patientId:s.patientId,newSnapshotId:s.snapshotId,restoredFromSnapshotId:e,restoredFromISO:o.savedAtISO,savedAtISO:s.savedAtISO,snapshotCount:s.snapshotCount}}async function Bzw_przypnij(t,e,n){if(!T())throw new Error("Zaloguj si\u0119, by zmieni\u0107 przypi\u0119cie wersji.");if(typeof t!="string"||!t)throw new Error("setSnapshotPinned: brak patientId.");if(typeof e!="string"||!e)throw new Error("setSnapshotPinned: brak snapshotId.");const r=n!==!1,o=await ct(t);if(!o)throw new Error("setSnapshotPinned: nie znaleziono pacjenta.");const a=o.snapshots.filter(function(c){return c.snapshotId===e})[0];if(!a||!a.payload)throw new Error("setSnapshotPinned: nie znaleziono wersji lub brak danych.");if(!!(a.payload&&a.payload._pinned)===r)return{patientId:t,snapshotId:e,pinned:r};const i=JSON.parse(JSON.stringify(a.payload));return r?i._pinned=!0:"_pinned"in i&&delete i._pinned,await Bzw_aktualizujWersje(t,e,i,{preserveSavedAt:!0,Bgw_gwiazdka:!0}),{patientId:t,snapshotId:e,pinned:r}}/* P-RETENCJA-NAGROBKI: retencja z nagrobkiem, pod blokada pacjenta — czytelnie w Bkz_przytnij. */async function wr(t,e){return Bkz_przytnij(t,e)}function oo(t,e,n){if(!n&&typeof e=="number"&&e>=10){try{if(v&&v.localStorage&&v.localStorage.getItem("vildaRetention")==="0")return}catch(PatientClinicalCaught){PatientClinicalRethrow(PatientClinicalCaught);}v&&v.VildaRetention&&typeof v.VildaRetention.computeRetention=="function"&&Promise.resolve().then(function(){return wr(t)}).catch(function(r){try{typeof console<"u"&&console.warn&&console.warn("[vault] retention schedule",r)}catch(PatientClinicalCaught){PatientClinicalRethrow(PatientClinicalCaught);}})}}function mt(t){var e=t&&t.rev;return typeof e=="number"&&isFinite(e)&&e>=0?Math.floor(e):0}async function Bzw_aktualizujWersje(t,e,n,r){const PatientClinicalOperationAccount=b;PatientClinicalGuard(PatientClinicalOperationAccount);if(!T())throw new Error("Zaloguj si\u0119, by zaktualizowa\u0107 pomiar.");if(typeof t!="string"||!t)throw new Error("updateSnapshotPayload: brak patientId.");if(typeof e!="string"||!e)throw new Error("updateSnapshotPayload: brak snapshotId.");if(!n||typeof n!="object")throw new Error("updateSnapshotPayload: brak payloadu.");if(n.user&&typeof n.user=="object"){const h=ut(n.user.dobISO);h?n.user.dobISO=h:"dobISO"in n.user&&delete n.user.dobISO}const o=await I().listSnapshotsForUser(b,t),a=o.find(function(h){return PatientClinicalWriteValue(PatientClinicalOperationAccount,h.snapshotId===e)});if(!a){if(!await I().getPatientForUser(b,t)){const Bzu_e=await Bzu_odmowa(t,[e],null);if(Bzu_e)throw Bzu_e}throw new Error("updateSnapshotPayload: snapshot "+e+" nie istnieje dla pacjenta.")}const s=Nn(n);if(!s.name)throw new Error("updateSnapshotPayload: brak imienia pacjenta w payloadzie.");const l=new Date().toISOString(),y=!!(r&&r.preserveSavedAt),d=y&&a.savedAtISO||l,Bgw_z=await Bgw_poZapisie(n,a,e,!!(r&&r.Bgw_gwiazdka)),Bpp_z=Bgw_z.chwila;/* P-PRZYPIETA-POLKRATA (W3): chwila zmiany (stempel Bpp_chwilaZmiany, po przycieciu tylko przy gwiazdce i wersji nieprzypietej — F-C) i tresc z chwila tresci albo rejestrem gwiazdki (Bgw_poZapisie). */n=Bgw_z.tresc;const i=await V(n);await I().putSnapshotForUser(b,PatientClinicalWriteValue(b,Object.assign({snapshotId:e,patientId:t,savedAtISO:d,rev:mt(a)+1,updatedAtISO:Bpp_z,payloadCipher:i},Bm1(a))));/* P-POZNIEJSZA-POPRAWKA (D-7 wariant 2): chwila zmiany (updatedAtISO, lastSavedAtISO karty) pozniejsza niz poprawiana wersja takze przy zegarze spoznionym (Bpp_chwilaZmiany); savedAtISO bez preserveSavedAt = teraz, jak dotad. */ /* D-3 A (P-NAGLOWEK-NAJNOWSZEJ): naglowek z najnowszej wersji po zapisie, nie z poprawianej (starsza wersja, gwiazdka). */const p=await I().getPatientForUser(b,t),Bng_h=await Bzw_naglowek(o,a,{savedAtISO:d,rev:mt(a)+1,updatedAtISO:Bpp_z,payloadCipher:i},n,p),c=Bng_h.szyfr;p&&await I().putPatientForUser(b,PatientClinicalWriteValue(b,{patientId:t,headerCipher:c,createdAtISO:p.createdAtISO||l,lastSavedAtISO:Bkz_pozniejsza(p.lastSavedAtISO,Bpp_z),snapshotCount:p.snapshotCount||o.length}));const w={patientId:t,snapshotId:e,header:Bng_h.jawny,savedAtISO:d,shortHash:cn(t),isUpdate:!0};/* P-ODTWORZ-WIEK-4: usuniecie biezacego pomiaru z awansem starszej wizyty - jawny znacznik dla formularza (vilda_baseline_pacjenta.js wpisuje wtedy cala wizyte; znacznik czasu po awansie bywa pusty). */r&&r.promoted&&(w.promoted=!0);return PatientClinicalWriteValue(PatientClinicalOperationAccount,(Vn(w),w))}function tn(t){return t?typeof t.ageMonths=="number"&&isFinite(t.ageMonths)?Math.round(t.ageMonths):typeof t.ageYears=="number"&&isFinite(t.ageYears)?Math.round(t.ageYears*12):null:null}function gr(t,e,n){var r=typeof t=="number"&&isFinite(t)?Math.round(t):null;return r+"|"+(typeof e=="number"&&isFinite(e)?e.toFixed(2):"_")+"|"+(typeof n=="number"&&isFinite(n)?n.toFixed(2):"_")}function Me(t){return gr(tn(t),t&&t.height,t&&t.weight)}function mr(t){if(!t)return null;var e=null;if(typeof t.age=="number"&&isFinite(t.age)){var n=typeof t.ageMonths=="number"&&isFinite(t.ageMonths)?t.ageMonths:0;e=Math.round(t.age*12+n)}else typeof t.ageMonths=="number"&&isFinite(t.ageMonths)&&(e=Math.round(t.ageMonths));return e==null?null:gr(e,t.height,t.weight)}function Sr(t){var e=t&&t.advanced&&t.advanced.data;if(e&&Array.isArray(e.measurements)&&e.measurements.length)return e.measurements;var n=t&&t.growthBasic&&t.growthBasic.data;return n&&Array.isArray(n.measurements)&&n.measurements.length?n.measurements:e&&Array.isArray(e.measurements)?e.measurements:n&&Array.isArray(n.measurements)?n.measurements:null}function br(t){var e=[],n=t&&t.advanced&&t.advanced.data;n&&Array.isArray(n.measurements)&&e.push(n.measurements);var r=t&&t.growthBasic&&t.growthBasic.data;return r&&Array.isArray(r.measurements)&&e.push(r.measurements),e}function Ir(t){if(Array.isArray(t))for(var e=0;e<t.length;e+=1){var n=t[e];n&&typeof n=="object"&&!(typeof n.uid=="string"&&n.uid)&&(n.uid="m-"+ne())}}function Or(t,e){if(!Array.isArray(t)||!e)return-1;if(typeof e.uid=="string"&&e.uid){for(var n=0;n<t.length;n+=1)if(t[n]&&t[n].uid===e.uid)return n}if(typeof e.key=="string"&&e.key){for(var r=0;r<t.length;r+=1)if(t[r]&&Me(t[r])===e.key)return r}return-1}function vr(t,e){e!=null&&(t.age=Math.floor(e/12),t.ageMonths=e%12)}function Pr(t){var e=t&&t.advanced&&t.advanced.data,n=t&&t.user;if(!(!e||typeof e!="object"||!n)){var r=null;if(typeof n.age=="number"&&isFinite(n.age)){var o=typeof n.ageMonths=="number"&&isFinite(n.ageMonths)?n.ageMonths:0;r=Math.round(n.age*12+o)}else typeof n.ageMonths=="number"&&isFinite(n.ageMonths)&&(r=Math.round(n.ageMonths));r!=null?e.currentAgeMonths=r:delete e.currentAgeMonths,typeof n.height=="number"&&isFinite(n.height)&&n.height>0?e.currentHeight=n.height:delete e.currentHeight,typeof n.weight=="number"&&isFinite(n.weight)&&n.weight>0?e.currentWeight=n.weight:delete e.currentWeight}}async function Bzw_edytujPomiar(t,e,n){if(!T())throw new Error("Zaloguj si\u0119, by edytowa\u0107 pomiar.");if(typeof t!="string"||!t)throw new Error("updateMeasurementRow: brak patientId.");e=e||{},n=n||{};var r=await ct(t);if(!r||!Array.isArray(r.snapshots)||!r.snapshots.length){if(!r){const Bzu_e=await Bzu_odmowa(t,[],null);if(Bzu_e)throw Bzu_e}throw new Error("updateMeasurementRow: brak pacjenta.")}for(var o=r.snapshots[0],a=o.payload||{},s=br(a),i=mr(a.user),c=typeof n.ageMonths=="number"&&isFinite(n.ageMonths)?Math.round(n.ageMonths):null,l=typeof n.height=="number"&&isFinite(n.height)?n.height:null,y=typeof n.weight=="number"&&isFinite(n.weight)?n.weight:null,d=null,p=0;p<s.length&&!d;p+=1){Ir(s[p]);var w=Or(s[p],e);w>=0&&(d=s[p][w])}var h=!!(i&&e.key===i&&!d);if(!d&&!h)throw new Error("updateMeasurementRow: nie znaleziono wiersza pomiaru.");for(var O=d?Me(d):i,u=d&&typeof d.uid=="string"&&d.uid?d.uid:null,f=h||!!(i&&O===i),m=0;m<s.length;m+=1)for(var E=s[m],_=0;_<E.length;_+=1){var A=E[_];A&&(u&&A.uid===u||Me(A)===O)&&(c!=null&&(A.ageMonths=c,A.ageYears=c/12),l!=null&&(A.height=l),y!=null&&(A.weight=y),typeof n.boneAgeYears=="number"&&isFinite(n.boneAgeYears)&&(A.boneAgeYears=n.boneAgeYears),typeof n.dateISO=="string"&&n.dateISO&&(A.dateISO=n.dateISO))}return f&&(a.user=a.user||{},Bzw_tygodnieKorekty(a.user,c),l!=null&&(a.user.height=l),y!=null&&(a.user.weight=y),c!=null&&vr(a.user,c),typeof n.dateISO=="string"&&n.dateISO&&(a.user.measuredAtISO=n.dateISO)),Pr(a),await Bzw_aktualizujWersje(t,o.snapshotId,a,{preserveSavedAt:!0}),{patientId:t,updated:!0,wasCurrent:f}}/* P-ODTWORZ-WIEK-2 (R0, przeglad adwersaryjny po #589): po usunieciu BIEZACEGO pomiaru w user awansuje najnowszy wiersz historii, ale data pomiaru (measuredAtISO), tygodnie (ageWeeks) i timestampISO zostawaly z USUNIETEJ wizyty. Formularz glowny zapisuje dzis measuredAtISO, wiec awansowana starsza wizyta dostawala falszywa "pewna" date: Karta "+ Nowy pomiar" wpisywala ja do historii, a "Odtworz zapis" liczyl na nia dokladny wiek. Kolejnosc: data wiersza (pisze ja Karta), potem starsza wersja rekordu, w ktorej ten pomiar byl biezacy (jej measuredAtISO, ageWeeks i timestampISO); bez zadnej z nich daty nie zgadujemy - pola znikaja. */function Bzw_dataAwansu(o,A,n){var u=o.user,k=Me(A),S=null,dz=function(x){return typeof x=="string"&&/^\d{4}-\d{2}-\d{2}$/.test(x.trim())?ut(x.trim()):null};var W=n&&Array.isArray(n.snapshots)?n.snapshots:[];for(var i=1;i<W.length&&!S;i+=1){var p=W[i]&&W[i].payload;p&&p.user&&typeof p.user=="object"&&mr(p.user)===k&&(S=p)}var d=dz(A.dateISO),sd=S?dz(S.user.measuredAtISO):null,m=d||sd,zgodna=!!S&&(!d||d===sd);m?u.measuredAtISO=m:delete u.measuredAtISO;zgodna&&S.user.ageWeeks!=null?u.ageWeeks=S.user.ageWeeks:delete u.ageWeeks;zgodna&&typeof S.timestampISO=="string"&&S.timestampISO?o.timestampISO=S.timestampISO:m?o.timestampISO=m+"T12:00:00.000Z":delete o.timestampISO}/* P-ODTWORZ-WIEK-2: korekta WIEKU biezacego pomiaru w Karcie uniewaznia zapisane tygodnie (dotad zostawaly stare i przeslanialy poprawiony wiek). Porownanie z poprzednia liczba miesiecy rekordu - okno Karty podaje ageMonths i dateISO zawsze, takze przy korekcie samej masy (uwaga Codex w #592). Sama data tygodni nie rusza: bez daty urodzenia to jedyny dokladny wiek pomiaru, a z data urodzenia i pewna doba modul daty i tak liczy tygodnie z kalendarza. */function Bzw_tygodnieKorekty(u,c){if(c==null)return;var p=typeof u.age=="number"&&isFinite(u.age)?Math.round(u.age*12+(typeof u.ageMonths=="number"&&isFinite(u.ageMonths)?u.ageMonths:0)):typeof u.ageMonths=="number"&&isFinite(u.ageMonths)?Math.round(u.ageMonths):null;p!==c&&delete u.ageWeeks}async function Bzw_usunPomiar(t,e){if(!T())throw new Error("Zaloguj si\u0119, by usun\u0105\u0107 pomiar.");if(typeof t!="string"||!t)throw new Error("deleteMeasurementRow: brak patientId.");e=e||{};var n=await ct(t);if(!n||!Array.isArray(n.snapshots)||!n.snapshots.length){if(!n){const Bzu_e=await Bzu_odmowa(t,[],null);if(Bzu_e)throw Bzu_e}throw new Error("deleteMeasurementRow: brak pacjenta.")}for(var r=n.snapshots[0],o=r.payload||{},a=br(o),s=mr(o.user),i=null,c=0;c<a.length&&!i;c+=1){Ir(a[c]);var l=Or(a[c],e);l>=0&&(i=a[c][l])}var y=!!(s&&e.key===s&&!i);if(!i&&!y)throw new Error("deleteMeasurementRow: nie znaleziono wiersza pomiaru.");var d=i?Me(i):s,p=i&&typeof i.uid=="string"&&i.uid?i.uid:null,w=y||!!(s&&d===s);if(y){var h=Sr(o);if(!h||!h.length)throw new Error('To jedyny pomiar pacjenta \u2014 nie mo\u017Cna go usun\u0105\u0107. U\u017Cyj \u201EEdytuj", aby poprawi\u0107 warto\u015Bci, albo usu\u0144 ca\u0142ego pacjenta.')}for(var O=0;O<a.length;O+=1)for(var u=a[O],f=u.length-1;f>=0;f-=1){var m=u[f];m&&(p&&m.uid===p||Me(m)===d)&&u.splice(f,1)}var E=Sr(o),_=E?E.length:0;if(w&&_){var A=E.slice().sort(function(N,C){return(tn(C)||0)-(tn(N)||0)})[0];A&&(o.user=o.user||{},typeof A.height=="number"&&(o.user.height=A.height),typeof A.weight=="number"&&(o.user.weight=A.weight),vr(o.user,tn(A)),Bzw_dataAwansu(o,A,n))}return Pr(o),await Bzw_aktualizujWersje(t,r.snapshotId,o,{preserveSavedAt:!0,promoted:!!(w&&_)}),{patientId:t,deleted:!0,wasCurrent:w,remaining:_}}async function Bzw_usunWersje(t,e,Bkz_z){const PatientClinicalOperationAccount=b;PatientClinicalGuard(PatientClinicalOperationAccount);if(!T())throw new Error("Zaloguj si\u0119, by usun\u0105\u0107 pomiar.");if(typeof t!="string"||!t)throw new Error("deleteSnapshot: brak patientId.");if(typeof e!="string"||!e)throw new Error("deleteSnapshot: brak snapshotId.");const n=await I().listSnapshotsForUser(b,t);if(!n.find(function(l){return PatientClinicalWriteValue(PatientClinicalOperationAccount,l.snapshotId===e)}))throw new Error("deleteSnapshot: snapshot "+e+" nie istnieje dla pacjenta.");if(n.length<=1)throw new Error("deleteSnapshot: nie mo\u017Cna usun\u0105\u0107 ostatniego snapshota pacjenta \u2014 u\u017Cyj removePatient.");await I().removeSnapshotForUser(b,PatientClinicalWriteValue(b,e));const o=await I().listSnapshotsForUser(b,t);if(o.length===0){try{await Bpu_usun(t)}catch(CareMvpDeleteError){PatientClinicalRethrow(CareMvpDeleteError);CareMvpRethrowRecordError(CareMvpDeleteError);}return PatientClinicalWriteValue(PatientClinicalOperationAccount,{patientId:t,snapshotId:e,remainingSnapshotCount:0})}o.sort(yr);const a=o[0];let s=null;try{s=await G(a.payloadCipher.iv,a.payloadCipher.data)}catch(PatientClinicalCaught){PatientClinicalRethrow(PatientClinicalCaught);s=null}const i=Bng_zTresci(s,a),c=await I().getPatientForUser(b,t);if(c){const l=i?await V(i):c.headerCipher;await I().putPatientForUser(b,PatientClinicalWriteValue(b,{patientId:t,headerCipher:l,createdAtISO:c.createdAtISO,lastSavedAtISO:Bkz_pozniejsza(c.lastSavedAtISO,a.savedAtISO,Bkz_z),snapshotCount:o.length}))}return PatientClinicalWriteValue(PatientClinicalOperationAccount,(Vn({patientId:t,snapshotId:null,isSnapshotDelete:!0,remainingSnapshotCount:o.length,savedAtISO:a.savedAtISO}),{patientId:t,snapshotId:e,remainingSnapshotCount:o.length}))}/* P-BLOKADA-USUWANIE (zlecenie wlasciciela 2026-10-06, przeglad „co dalej po #518”, punkt 4: A1, A2, A11, A13).
 * removePatient i mergePatients zmienialy rekord pacjenta bez blokady, ktora od P-ZAPISY-DWIE-KARTY biora zapis, kosz,
 * poprawki i scalanie synchronizacji. Kazda z tych operacji to „odczytaj -> zdecyduj -> zapisz” z await-ami:
@@ -7290,4 +7902,4 @@ function Is(detail, signal) {
   const signal = VaultChangeSignal(detail);
   Xr.forEach(function (callback) { try { callback(detail, signal); } catch {} });
   try { Is(detail, signal); } catch {}
-}const $r=[];function Os(t){typeof t=="function"&&$r.push(t)}function vs(t){$r.forEach(function(e){try{e(t)}catch{}})}async function Ps(t,e,PatientClinicalPreferencePublication){try{if(!T()||!b)return null;const o=new Date().toISOString();const PatientClinicalPreferenceOptions=PatientClinicalPreferencePublication||{},PatientClinicalPreferenceAccount=b;return PatientClinicalMetadataValue(PatientClinicalPreferenceOptions,await Bmk_zmien(b,function(n){if(!n)return null;const r=Object.assign({},typeof n.userPreferences=="object"&&n.userPreferences||{});return r[PatientClinicalPreferenceKey(t,PatientClinicalPreferenceOptions,PatientClinicalPreferenceAccount)]={value:String(e),updatedAtISO:o},{...n,userPreferences:r}},PatientClinicalPreferenceOptions))?o:null}catch(PatientClinicalCaught){PatientClinicalRethrow(PatientClinicalCaught);return null}}(function(){try{v.VildaPersistence&&typeof v.VildaPersistence.onPreferenceWrite=="function"&&v.VildaPersistence.onPreferenceWrite(async function(e){const PatientClinicalPreferencePublication={};!e||!e.key||(await Ps(e.key,e.value,PatientClinicalPreferencePublication),PatientClinicalGuardMetadata(PatientClinicalPreferencePublication),vs(e))})}catch(e){}})();const ta=[];function As(t){typeof t=="function"&&ta.push(t)}function Yn(t){ta.forEach(function(e){try{e(t)}catch{}});try{v.VildaSync&&typeof v.VildaSync.syncPush=="function"&&Promise.resolve(v.VildaSync.syncPush()).catch(function(){})}catch(e){}}function ea(t){typeof t=="number"&&t>0&&(Oe=t),Hn(),typeof v.setTimeout=="function"&&(Ye=v.setTimeout(function(){kn("idle")},Oe))}function Hn(){Ye!=null&&typeof v.clearTimeout=="function"&&v.clearTimeout(Ye),Ye=null}function ks(){T()&&ea(Oe)}function Es(t){typeof t=="function"&&$n.push(t)}function Ns(t){typeof t=="function"&&qn.push(t)}async function ln(t){try{const e=await I().getUserMeta(t),n=e&&Array.isArray(e.passkeys)?e.passkeys.length:0;return await I().updateRegistryEntry(t,{passkeyCount:n}),n}catch(e){try{console.warn("[vault] _syncPasskeyCount failed for "+t+":",e&&e.message)}catch{}return-1}}async function Ts(){return L().isPrfSupported()}async function _s(t){const e=L();if(!T()||!B)throw new Error("Zaloguj si\u0119 przed rejestracj\u0105 biometrii.");const n=b,r=window.location.hostname||"localhost",o=t||e.generateDeviceLabel(),a=await I().getUserMeta(n),s=a&&Array.isArray(a.passkeys)?a.passkeys:[],i=s.filter(function(u){return u&&u.encryptedMasterByPasskey&&u.encryptedMasterByPasskey.iv}),c=s.filter(function(u){return u&&!u.encryptedMasterByPasskey});if(i.length===0&&c.length>0){const u=new Error("Masz ju\u017C biometri\u0119 dla tego konta zsynchronizowan\u0105 z innego urz\u0105dzenia (przez iCloud Keychain). Aktywuj j\u0105 na tym urz\u0105dzeniu zamiast rejestrowa\u0107 now\u0105.");throw u.code="PASSKEY_NEEDS_ADOPTION",u.adoptableCredentialIds=c.map(function(f){return f.credentialId}),u}const l=i.map(function(u){return u.credentialId}).filter(Boolean);let y;try{({credentialId:y}=await e.createPasskeyAndGetPrfSecret(n,r,st,o,l))}catch(u){PatientClinicalRethrow(u);if(u&&u.name==="InvalidStateError"){const f=new Error("Na tym urz\u0105dzeniu jest ju\u017C zarejestrowana biometria dla tego konta.");throw f.code="PASSKEY_ALREADY_EXISTS",f}throw u}const{prfSecretBytes:d}=await e.getPasskeyPrfSecret(y,r,null),p=await e.deriveKeyFromPrfSecret(d),w=await e.encryptBytes(p,B);return await Bmk_zmien(n,function(h){const O=Array.isArray(h.passkeys)?h.passkeys.slice():[];return O.push({credentialId:y,deviceLabel:o,createdAtISO:new Date().toISOString(),encryptedMasterByPasskey:w,wrapVersion:2}),{...h,passkeys:O}},{wymagajSesji:!0,limitMs:3e4}),await ln(n),Yn({action:"register",credentialId:y}),{credentialId:y,deviceLabel:o}}async function Ms(t){const e=L();if(!T()||!B)throw new Error("Zaloguj si\u0119 has\u0142em przed aktywacj\u0105 biometrii.");if(typeof t!="string"||!t.length)throw new Error("adoptSyncedPasskey: brak credentialId.");const n=b,r=window.location.hostname||"localhost",o=await I().getUserMeta(n);if(!o||!Array.isArray(o.passkeys))throw new Error("Brak metadanych u\u017Cytkownika.");const a=o.passkeys.findIndex(function(d){return d&&d.credentialId===t});if(a<0){const d=new Error("adoptSyncedPasskey: passkey o tym credentialId nie istnieje w meta.");throw d.code="PASSKEY_NOT_FOUND",d}const s=o.passkeys[a];if(s.encryptedMasterByPasskey&&s.encryptedMasterByPasskey.iv){const d=new Error("Ten klucz biometryczny jest ju\u017C aktywny na tym urz\u0105dzeniu.");throw d.code="PASSKEY_ALREADY_ADOPTED",d}let i;try{({prfSecretBytes:i}=await e.getPasskeyPrfSecret(t,r,null))}catch(d){PatientClinicalRethrow(d);if(d&&d.name==="NotAllowedError"){const p=new Error("Aktywacja biometrii nie powiod\u0142a si\u0119 \u2014 autoryzacja zosta\u0142a anulowana lub nie powiod\u0142a si\u0119.");throw p.code="ADOPT_NOT_ALLOWED",p}throw d}const c=await e.deriveKeyFromPrfSecret(i),l=await e.encryptBytes(c,B);let Bmk_k=null;return await Bmk_zmien(n,function(Bmk_m){const y=Array.isArray(Bmk_m.passkeys)?Bmk_m.passkeys.slice():[],Bmk_i=y.findIndex(function(d){return d&&d.credentialId===t});if(Bmk_i<0)throw Bmk_blad("Ten klucz biometryczny usuni\u0119to w mi\u0119dzyczasie (w innej karcie albo na innym urz\u0105dzeniu). Nic nie zmieniono.","PASSKEY_NOT_FOUND");if(y[Bmk_i].encryptedMasterByPasskey&&y[Bmk_i].encryptedMasterByPasskey.iv)throw Bmk_blad("Ten klucz biometryczny jest ju\u017C aktywny na tym urz\u0105dzeniu.","PASSKEY_ALREADY_ADOPTED");return y[Bmk_i]=Bmk_k=Object.assign({},y[Bmk_i],{encryptedMasterByPasskey:l,wrapVersion:2,adoptedOnDeviceISO:new Date().toISOString()}),Object.assign({},Bmk_m,{passkeys:y})},{wymagajSesji:!0,limitMs:3e4}),{credentialId:t,deviceLabel:Bmk_k.deviceLabel||"(klucz zsynchronizowany)",adoptedOnDeviceISO:Bmk_k.adoptedOnDeviceISO}}async function Us(){if(!T())return[];const t=await I().getUserMeta(b);return!t||!Array.isArray(t.passkeys)?[]:t.passkeys.filter(function(e){return e&&!e.encryptedMasterByPasskey}).map(function(e){return{credentialId:e.credentialId,deviceLabel:e.deviceLabel||"(klucz zsynchronizowany)",createdAtISO:e.createdAtISO}})}function na(t){if(typeof t!="string")return"";const e=t.trim().split(/\s+/).filter(Boolean);let n="";for(let r=0;r<e.length&&n.length<2;r++){const o=e[r].charAt(0);/\p{L}/u.test(o)&&(n+=o)}try{return n.toLocaleUpperCase("pl-PL")}catch{return n.toUpperCase()}}async function Cs(t){const e=L();if(!T()||!B)throw new Error("Zaloguj si\u0119 przed rejestracj\u0105 biometrii.");const n=b,r=typeof window<"u"&&window.location&&window.location.hostname||"localhost",o=t||e.generateDeviceLabel(),a=await I().getUserMeta(n),s=a&&Array.isArray(a.passkeys)?a.passkeys.map(function(A){return A.credentialId}).filter(Boolean):[];let i,c,l;try{({credentialId:i,publicKeyRawB64u:c,prfInputB64u:l}=await e.createRoamingPasskeyAndGetPrfSecret(n,r,st,o,s))}catch(A){PatientClinicalRethrow(A);if(A&&A.name==="InvalidStateError"){const N=new Error("Na tym urz\u0105dzeniu jest ju\u017C zarejestrowana biometria dla tego konta.");throw N.code="PASSKEY_ALREADY_EXISTS",N}throw A}const{prfSecretBytes:y}=await e.getPasskeyPrfSecret(i,r),d=await e.deriveKeyFromPrfSecret(y),p=await e.encryptBytes(d,B),w=na(st);let h=null;w&&(h=await e.encryptBytes(d,new TextEncoder().encode(w)));await Bmk_zmien(n,function(O){const u=Array.isArray(O.passkeys)?O.passkeys.slice():[];return u.push({credentialId:i,deviceLabel:o,createdAtISO:new Date().toISOString(),encryptedMasterByPasskey:p,encryptedInitials:h,publicKeyB64u:c,wrapVersion:2,roaming:!0}),{...O,passkeys:u}},{wymagajSesji:!0,limitMs:3e4}),await ln(n),Yn({action:"register-roaming",credentialId:i});let f;try{f=await Hr()}catch(PatientClinicalCaught){PatientClinicalRethrow(PatientClinicalCaught);const N=new Error("Biometria zapisana lokalnie, ale brak materia\u0142u sync do escrow.");throw N.code="ESCROW_NO_SYNC",N}const m=(typeof window<"u"&&window.VILDA_SYNC_WORKER_URL||"https://vilda-sync.maciej-4b9.workers.dev").replace(/\/$/,""),E={encryptedMasterByPasskey:{iv:e.bytesToBase64url(p.iv),data:e.bytesToBase64url(p.data)},prfSalt:l,hkdfInfo:"wagaiwzrost.pl:wrapping-key:v1",wrapVersion:2,publicKeyB64u:c};h&&(E.encryptedInitials={iv:e.bytesToBase64url(h.iv),data:e.bytesToBase64url(h.data)});let _;try{_=await fetch(m+"/v1/slots/"+f.slotId+"/passkey/"+encodeURIComponent(i),{method:"PUT",headers:{"Content-Type":"application/json",Authorization:"Bearer "+f.authToken},body:JSON.stringify(E)})}catch(PatientClinicalCaught){PatientClinicalRethrow(PatientClinicalCaught);const N=new Error("Biometria zapisana lokalnie, ale nie uda\u0142o si\u0119 wys\u0142a\u0107 danych do chmury (brak sieci).");throw N.code="ESCROW_UPLOAD_FAILED",N}if(!_.ok){const A=new Error("Serwer odrzuci\u0142 zapis koperty biometrii ("+_.status+").");throw A.code="ESCROW_UPLOAD_REJECTED",A}return{credentialId:i,deviceLabel:o,escrowed:!0}}async function Fs(t,e,n){const r=L();if(typeof t!="string"||!t.length)throw new Error("Nieprawid\u0142owy userId.");const o=await I().getUserMeta(t);if(!o||!Array.isArray(o.passkeys)||!o.passkeys.length)throw new Error("Ten u\u017Cytkownik nie ma zarejestrowanej biometrii.");const a=window.location.hostname||"localhost",{credentialId:s,prfSecretBytes:i}=await r.getPasskeyPrfSecret(e||null,a,n||null);if(n&&n.aborted){const w=new Error("AbortError: passkey authentication aborted");throw w.name="AbortError",w}const c=o.passkeys.find(w=>w.credentialId===s);if(!c)throw new Error("Nieznany credentialId \u2014 biometria nie jest zarejestrowana dla tego konta.");if(!c.encryptedMasterByPasskey||!c.encryptedMasterByPasskey.iv){const w=new Error("Ten klucz biometryczny jest zsynchronizowany z innego urz\u0105dzenia, ale nie zosta\u0142 jeszcze aktywowany tutaj. Zaloguj si\u0119 has\u0142em i aktywuj biometri\u0119 na tym urz\u0105dzeniu.");throw w.code="PASSKEY_NOT_LOCAL",w.credentialId=s,w}const l=await r.deriveKeyFromPrfSecret(i);let y;try{y=await r.decryptBytes(l,c.encryptedMasterByPasskey.iv,c.encryptedMasterByPasskey.data)}catch(PatientClinicalCaught){PatientClinicalRethrow(PatientClinicalCaught);const h=c&&typeof c.wrapVersion=="number"?c.wrapVersion:1,O=new Error("Nie uda\u0142o si\u0119 odblokowa\u0107 konta biometri\u0105.");throw O.code="PASSKEY_DECRYPT_FAILED",O.wrapVersion=h,O.diagnostic=h>=2?"envelope-current-prf-mismatch":"envelope-legacy-create-prf",O}const d=await I().getRegistryEntry(t),p=d&&d.label||"U\u017Cytkownik";await Ut(y,t,p),await I().updateRegistryEntry(t,{lastLoginAtISO:new Date().toISOString()})}async function js(t){const e=L(),n=typeof window<"u"&&window.location&&window.location.hostname||"localhost",r=await e.getConditionalPasskeyAssertion(n,t||null);if(!r)return null;if(t&&t.aborted){const d=new Error("AbortError: conditional passkey aborted");throw d.name="AbortError",d}let o;try{o=new TextDecoder().decode(r.userHandleBytes)}catch(PatientClinicalCaught){PatientClinicalRethrow(PatientClinicalCaught);throw new Error("Conditional UI: nie uda\u0142o si\u0119 odkodowa\u0107 userHandle z asercji.")}if(!o||typeof o!="string")throw new Error("Conditional UI: pusty lub niepoprawny userHandle w asercji.");const a=await I().getUserMeta(o);if(!a||!Array.isArray(a.passkeys)||!a.passkeys.length)throw new Error("Konto wybrane przez autofill nie istnieje lub nie ma zarejestrowanej biometrii.");const s=a.passkeys.find(d=>d.credentialId===r.credentialId);if(!s)throw new Error("Wybrany passkey nie pasuje do \u017Cadnego wpisu w lokalnym koncie.");const i=await e.deriveKeyFromPrfSecret(r.prfSecretBytes);let c;try{c=await e.decryptBytes(i,s.encryptedMasterByPasskey.iv,s.encryptedMasterByPasskey.data)}catch(PatientClinicalCaught){PatientClinicalRethrow(PatientClinicalCaught);const p=s&&typeof s.wrapVersion=="number"?s.wrapVersion:1,w=new Error("Nie uda\u0142o si\u0119 odblokowa\u0107 konta biometri\u0105 (conditional UI).");throw w.code="PASSKEY_CONDITIONAL_DECRYPT_FAILED",w.wrapVersion=p,w}const l=await I().getRegistryEntry(o),y=l&&l.label||"U\u017Cytkownik";return await Ut(c,o,y),await I().updateRegistryEntry(o,{lastLoginAtISO:new Date().toISOString()}),{userId:o,label:y}}async function ra(){try{v.VildaSync&&typeof v.VildaSync.syncPull=="function"&&await v.VildaSync.syncPull()}catch(t){}}async function aa(t){const e=L(),n=t&&typeof t=="object"?t:{};let r=!1;try{r=await e.isPrfSupported()}catch{r=!1}if(!r){const w=new Error("Ta przegl\u0105darka nie obs\u0142uguje logowania biometrycznego. U\u017Cyj logowania QR.");throw w.code="EPH_PRF_UNSUPPORTED",w}const o=typeof window<"u"&&window.location&&window.location.hostname||"localhost",a=(typeof window<"u"&&window.VILDA_SYNC_WORKER_URL||"https://vilda-sync.maciej-4b9.workers.dev").replace(/\/$/,"");let s;try{const w=await fetch(a+"/v1/passkey/challenge",{method:"POST",headers:{"Content-Type":"application/json"}});if(!w.ok)throw new Error("challenge http "+w.status);s=(await w.json()).challenge}catch{const h=new Error("Nie uda\u0142o si\u0119 nawi\u0105za\u0107 po\u0142\u0105czenia z serwerem. Sprawd\u017A internet.");throw h.code="EPH_CHALLENGE_FAILED",h}const i=e.base64urlToBytes(s),c=await e.getPasskeyAssertionAndPrf(n.credentialId||null,o,i,n.signal||null);if(n.signal&&n.signal.aborted){const w=new Error("AbortError: passkey authentication aborted");throw w.name="AbortError",w}let l;try{const w=await fetch(a+"/v1/passkey/"+encodeURIComponent(c.credentialId)+"/unlock",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({clientDataJSON:c.clientDataJSONB64u,authenticatorData:c.authenticatorDataB64u,signature:c.signatureB64u})});if(w.status===404){const h=new Error("Ten passkey nie jest skonfigurowany do logowania na obcym komputerze.");throw h.code="EPH_NO_ENVELOPE",h}if(!w.ok){const h=new Error("Serwer odrzuci\u0142 logowanie biometryczne ("+w.status+").");throw h.code="EPH_UNLOCK_REJECTED",h}l=await w.json()}catch(w){if(w&&w.code)throw w;const h=new Error("B\u0142\u0105d sieci przy pobieraniu danych logowania.");throw h.code="EPH_UNLOCK_NETWORK",h}const y=await e.deriveKeyFromPrfSecret(c.prfSecretBytes);let d;try{const w=e.base64urlToBytes(l.encryptedMasterByPasskey.iv),h=e.base64urlToBytes(l.encryptedMasterByPasskey.data);d=await e.decryptBytes(y,w,h)}catch{const h=l&&typeof l.wrapVersion=="number"?l.wrapVersion:1,O=new Error("Nie uda\u0142o si\u0119 odszyfrowa\u0107 danych tym passkey.");O.code="EPH_DECRYPT_FAILED",O.wrapVersion=h,O.diagnostic=h>=2?"envelope-current-prf-mismatch":"envelope-legacy-create-prf";try{typeof console<"u"&&console.warn&&console.warn("[Vilda passkey] EPH_DECRYPT_FAILED: wrapVersion="+h+" diagnostic="+O.diagnostic+(h>=2?' \u2192 koperta AKTUALNA (PRF z get()); sekret PRF z logowania nie pasuje. Prawdopodobna niesp\xF3jno\u015B\u0107 authenticatora (np. Apple Passwords lokalnie vs telefon). Zaloguj si\u0119 przez \u201EU\u017Cyj telefonu".':" \u2192 koperta STARSZA (sprzed poprawki create\u2192get). Zarejestruj passkey ponownie na zaufanym urz\u0105dzeniu, potem zaloguj si\u0119 jeszcze raz."))}catch(u){}throw O}let p="Konto (passkey)";try{if(l.encryptedInitials&&l.encryptedInitials.iv&&l.encryptedInitials.data){const w=await e.decryptBytes(y,e.base64urlToBytes(l.encryptedInitials.iv),e.base64urlToBytes(l.encryptedInitials.data)),h=new TextDecoder().decode(w).trim();h&&(p=h)}}catch(w){}return{masterBytes:d,credentialId:c.credentialId,ephLabel:p}}async function Rs(t){try{v.VildaPersistence&&v.VildaPersistence.purgeEphemeralData&&v.VildaPersistence.purgeEphemeralData()}catch(r){PatientClinicalRethrow(r);}Pe(!0);const e=await aa(t),n="eph:"+e.credentialId.slice(0,32);return await Ut(e.masterBytes,n,e.ephLabel),await ra(),{ok:!0,ephemeral:!0,credentialId:e.credentialId,userId:n}}async function Ds(t,e){if(T())throw new Error("VildaVault.unlockWithPasskeyAndPersist: vault musi by\u0107 zablokowany.");Ie(t,"Has\u0142o");const n=L(),r=e&&typeof e=="object"?e:{},o=await aa(r),a=ve(),s=n.KDF_ITERATIONS,i=n.generateSalt(),c=n.generateSalt(),l=n.generateRecoveryKey(),y=await n.deriveKey(t,i,s),d=await n.encryptBytes(y,o.masterBytes),p=await n.deriveKeyFromRecoveryKey(l,c,s),w=await n.encryptBytes(p,o.masterBytes);let h=typeof r.label=="string"&&r.label.trim().length?r.label.trim():"";h||(h=o.ephLabel||qt);const O=new Date().toISOString(),u={schemaVersion:at,createdAtISO:O,kdfName:n.KDF_NAME,kdfHash:n.KDF_HASH,kdfIterations:s,passwordKdfIterations:s,passwordUpdatedAtISO:null,passwordSalt:n.bytesToBase64(i),recoverySalt:n.bytesToBase64(c),encryptedMasterByPassword:{iv:n.bytesToBase64(d.iv),data:n.bytesToBase64(d.data)},encryptedMasterByRecovery:{iv:n.bytesToBase64(w.iv),data:n.bytesToBase64(w.data)},restoredFromPasskey:!0,needsPasswordReset:!1},f=be(r.storageMode);return await I().putUserMeta(a,u),await I().putRegistryEntry({userId:a,label:h,createdAtISO:O,lastLoginAtISO:O,storageMode:f}),lt=f,await Ut(o.masterBytes,a,h),{userId:a,label:h,recoveryKey:l,storageMode:f}}async function Ls(t,e,n){const r=L();try{v.VildaPersistence&&v.VildaPersistence.purgeEphemeralData&&v.VildaPersistence.purgeEphemeralData()}catch(l){PatientClinicalRethrow(l);}Pe(!0);let o;try{o=await r.importECDHPrivateKey(t)}catch(PatientClinicalCaught){PatientClinicalRethrow(PatientClinicalCaught);const y=new Error("completeQRLoginEphemeral: b\u0142\u0105d klucza prywatnego.");throw y.code="EPH_QR_KEY",y}let a;try{a=await r.decryptFromTransfer(o,e)}catch(PatientClinicalCaught){PatientClinicalRethrow(PatientClinicalCaught);const y=new Error("completeQRLoginEphemeral: b\u0142\u0105d deszyfrowania transferu.");throw y.code="EPH_QR_DECRYPT",y}const s="eph-qr:"+Date.now().toString(36),i=na(n);return await Ut(a,s,i||"Konto (QR)"),await ra(),{ok:!0,ephemeral:!0,userId:s}}async function zs(t){const e=await I().getUserMeta(t);return!e||!Array.isArray(e.passkeys)?[]:e.passkeys.map(n=>({credentialId:n.credentialId,deviceLabel:n.deviceLabel,createdAtISO:n.createdAtISO,roaming:n.roaming===!0,isRemote:!n.encryptedMasterByPasskey}))}async function xs(t,e){if(!await Bmk_zmien(t,function(n){if(!n||!Array.isArray(n.passkeys))return null;const r=n.passkeys.filter(a=>a.credentialId!==e),o=Array.isArray(n.passkeyTombstones)?n.passkeyTombstones.slice():[];return o.some(function(a){return a&&a.credentialId===e})||o.push({credentialId:e,deletedAtISO:new Date().toISOString()}),{...n,passkeys:r,passkeyTombstones:o}},{limitMs:3e4}))return;await ln(t),Yn({action:"remove",credentialId:e})}async function Bs(t){if(!T())throw new Error("VildaVault.exportSyncCode: vault nie jest odblokowany.");if(typeof t!="string"||t.length<Yt)throw new Error("VildaVault.exportSyncCode: nieprawid\u0142owe has\u0142o.");const e=L(),n=await I().getUserMeta(b);if(!n)throw new Error("VildaVault.exportSyncCode: brak metadanych u\u017Cytkownika.");const r=await e.deriveKey(t,n.passwordSalt,Gc2(n));try{await e.decryptBytes(r,n.encryptedMasterByPassword.iv,n.encryptedMasterByPassword.data)}catch{throw new Error("VildaVault.exportSyncCode: nieprawid\u0142owe has\u0142o.")}return e.encryptSyncCodeBundle({dek:B,sis:it||B},t)}async function Ks(t,e,n){if(T())throw new Error("VildaVault.importSyncCode: wyloguj si\u0119 przed odtwarzaniem kodu synchronizacji.");if(typeof e!="string"||e.length<Yt)throw new Error("VildaVault.importSyncCode: has\u0142o musi mie\u0107 minimum "+Yt+" znak\xF3w.");const r=L(),o=n&&typeof n=="object"?n:{};let a,s;try{const E=await r.decryptSyncCodeBundle(t,e);a=E.dek,s=E.sis}catch(E){throw new Error("VildaVault.importSyncCode: "+(E.message||"nieprawid\u0142owy kod lub has\u0142o."))}const i=ve(),c=r.KDF_ITERATIONS,l=r.generateSalt(),y=r.generateSalt(),d=r.generateRecoveryKey(),p=await r.deriveKey(e,l,c),w=await r.deriveKeyFromRecoveryKey(d,y,c),h=await r.encryptBytes(p,a),O=await r.encryptBytes(w,a);let u=typeof o.label=="string"&&o.label.trim().length?o.label.trim():"";if(!u){const E=await Ee();u=qt+(E.length>0?" "+(E.length+1):"")}const f=new Date().toISOString(),m={schemaVersion:at,createdAtISO:f,kdfName:r.KDF_NAME,kdfHash:r.KDF_HASH,kdfIterations:c,passwordKdfIterations:c,passwordUpdatedAtISO:null,passwordSalt:r.bytesToBase64(l),recoverySalt:r.bytesToBase64(y),encryptedMasterByPassword:{iv:r.bytesToBase64(h.iv),data:r.bytesToBase64(h.data)},encryptedMasterByRecovery:{iv:r.bytesToBase64(O.iv),data:r.bytesToBase64(O.data)},restoredFromSyncCode:!0};try{const E=await r.importMasterKeyFromBytes(a),_=await r.encryptBytes(E,s);m.encryptedSisByMaster={iv:r.bytesToBase64(_.iv),data:r.bytesToBase64(_.data)},m.bundleSchemaVersion=1}catch{}return await I().putUserMeta(i,m),await I().putRegistryEntry({userId:i,label:u,createdAtISO:f,lastLoginAtISO:f}),await Ut(a,i,u),s&&Zt(s),{userId:i,label:u,recoveryKey:d}}var Vs="https://vilda-sync.maciej-4b9.workers.dev";function Ys(){var t=typeof window<"u"&&window.VILDA_SYNC_WORKER_URL;return(t||Vs).replace(/\/$/,"")}async function dn(t,e){var n=Ys()+t,r=new AbortController,o=setTimeout(function(){r.abort()},15e3);try{return await fetch(n,Object.assign({signal:r.signal},e))}finally{clearTimeout(o)}}async function Hs(){const t=L();if(!t||typeof t.generateECDHKeypair!="function")throw new Error("VildaVault.initiateQRLogin: VildaCrypto nie obs\u0142uguje ECDH.");const{privateKey:e,publicKeyB64u:n}=await t.generateECDHKeypair();let r;try{r=await dn("/v1/transfer",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({ecdhPublicKeyB64u:n})})}catch(i){throw new Error("VildaVault.initiateQRLogin: b\u0142\u0105d sieci \u2014 "+(i.message||i))}if(!r.ok){const i=await r.json().catch(function(){return{}});throw new Error("VildaVault.initiateQRLogin: serwer "+r.status+" \u2014 "+(i&&i.error&&i.error.message||"nieznany b\u0142\u0105d"))}const o=await r.json(),a=o.transferToken,s=await t.exportECDHPrivateKey(e);return{qrData:"vsc1-qr:"+a,transferToken:a,privateKeyB64u:s,expiresIn:o.expiresIn||120}}async function Ws(t){let e;try{e=await dn("/v1/transfer/"+t,{method:"GET"})}catch{return null}if(!e.ok)return null;const n=await e.json().catch(function(){return null});return n&&n.status==="ready"&&n.encryptedPayload?{encryptedPayload:n.encryptedPayload,label:n.accountLabel||null}:null}async function Zs(t,e,n){if(T())throw new Error("VildaVault.completeQRLogin: vault musi by\u0107 zablokowany przed importem QR.");const r=L();let o;try{o=await r.importECDHPrivateKey(t)}catch(A){throw new Error("VildaVault.completeQRLogin: b\u0142\u0105d odczytu klucza prywatnego \u2014 "+(A.message||A))}let a;try{a=await r.decryptFromTransfer(o,e)}catch(A){throw new Error("VildaVault.completeQRLogin: b\u0142\u0105d deszyfrowania \u2014 "+(A.message||A))}const s=n&&typeof n=="object"?n:{},i=ve(),c=r.KDF_ITERATIONS,l=r.generateSalt(),y=r.generateSalt(),d=r.generateRecoveryKey();let p=null;typeof s.newPassword=="string"&&s.newPassword.length>0&&(Ie(s.newPassword,"Nowe has\u0142o"),p=s.newPassword);let w=null,h=null;if(p)h=await r.deriveKey(p,l,c),w=await r.encryptBytes(h,a);else{const A=r.bytesToBase64url(r.generateSalt());h=await r.deriveKey(A,l,c),w=await r.encryptBytes(h,a)}const O=await r.deriveKeyFromRecoveryKey(d,y,c),u=await r.encryptBytes(O,a);let f=typeof s.label=="string"&&s.label.trim().length?s.label.trim():"";if(!f){const A=await Ee();f=qt+(A.length>0?" "+(A.length+1):"")}const m=new Date().toISOString(),E={schemaVersion:at,createdAtISO:m,kdfName:r.KDF_NAME,kdfHash:r.KDF_HASH,kdfIterations:c,passwordKdfIterations:c,passwordUpdatedAtISO:null,passwordSalt:r.bytesToBase64(l),recoverySalt:r.bytesToBase64(y),encryptedMasterByPassword:{iv:r.bytesToBase64(w.iv),data:r.bytesToBase64(w.data)},encryptedMasterByRecovery:{iv:r.bytesToBase64(u.iv),data:r.bytesToBase64(u.data)},restoredFromQR:!0,needsPasswordReset:!p},_=be(s.storageMode);return await I().putUserMeta(i,E),await I().putRegistryEntry({userId:i,label:f,createdAtISO:m,lastLoginAtISO:m,storageMode:_}),lt=_,await Ut(a,i,f),{userId:i,label:f,recoveryKey:d,needsPasswordReset:!p,storageMode:_}}async function Gs(t,e){if(!T()||!B)throw new Error("VildaVault.approveQRLogin: vault musi by\u0107 odblokowany.");if(typeof e!="string"||e.length<Yt)throw new Error("VildaVault.approveQRLogin: nieprawid\u0142owe has\u0142o.");const n=L(),r=await I().getUserMeta(b);if(!r)throw new Error("VildaVault.approveQRLogin: brak metadanych u\u017Cytkownika.");const o=await n.deriveKey(e,r.passwordSalt,Gc2(r));try{await n.decryptBytes(o,r.encryptedMasterByPassword.iv,r.encryptedMasterByPassword.data)}catch{const d=new Error("VildaVault.approveQRLogin: nieprawid\u0142owe has\u0142o.");throw d.code="BAD_PASSWORD",d}let a;try{a=await dn("/v1/transfer/"+t,{method:"GET"})}catch(y){throw new Error("VildaVault.approveQRLogin: b\u0142\u0105d sieci \u2014 "+(y.message||y))}if(a.status===404)throw new Error("VildaVault.approveQRLogin: kod QR wygas\u0142 lub jest nieprawid\u0142owy.");if(!a.ok)throw new Error("VildaVault.approveQRLogin: b\u0142\u0105d serwera "+a.status);const s=await a.json();if(s.status==="ready")throw new Error("VildaVault.approveQRLogin: ten kod QR zosta\u0142 ju\u017C wykorzystany.");const i=s.ecdhPublicKeyB64u;if(!i)throw new Error("VildaVault.approveQRLogin: serwer nie zwr\xF3ci\u0142 klucza publicznego.");let c;try{c=await n.encryptForTransfer(B,i)}catch(y){throw new Error("VildaVault.approveQRLogin: b\u0142\u0105d szyfrowania \u2014 "+(y.message||y))}let l;try{l=await dn("/v1/transfer/"+t,{method:"PUT",headers:{"Content-Type":"application/json"},body:JSON.stringify(Object.assign({},c,{accountLabel:st||null}))})}catch(y){throw new Error("VildaVault.approveQRLogin: b\u0142\u0105d sieci przy wysy\u0142aniu \u2014 "+(y.message||y))}if(l.status===409)throw new Error("VildaVault.approveQRLogin: ten kod QR zosta\u0142 ju\u017C wykorzystany.");if(!l.ok){const y=await l.json().catch(function(){return{}});throw new Error("VildaVault.approveQRLogin: serwer "+l.status+" \u2014 "+(y&&y.error&&y.error.message||"nieznany b\u0142\u0105d"))}return{ok:!0}}async function pn(t){if(typeof t!="string"||!t.length)return gt;try{const e=await I().getRegistryEntry(t);return be(e&&e.storageMode)}catch{return gt}}async function Js(t,e){if(typeof t!="string"||!t.length)throw new Error("Nieprawid\u0142owy userId.");const n=be(e);if(!await I().getRegistryEntry(t))throw new Error("U\u017Cytkownik nie istnieje.");return await I().updateRegistryEntry(t,{storageMode:n}),b===t&&(lt=n,PatientCheckpointCancelChanged(false)),{userId:t,storageMode:n}}async function Qs(){return b?pn(b):gt}let lt=gt;function Xs(){return lt}function qs(){return lt===Se}const $s={__vildaVault:!0,VERSION:sa,STEP:ia,SCHEMA_VERSION:at,REGISTRY_DB_NAME:Wn,USER_DB_PREFIX:yn,DEFAULT_IDLE_LOCK_MS:Zn,CLOUD_ONLY_IDLE_LOCK_MS:da,MIN_PASSWORD_LENGTH:Yt,PASSWORD_REQUIRED_VARIETY_TYPES:Be,validatePasswordStrength:Ke,generateStrongPassword:fa,setStorageAdapter:te,createInMemoryAdapter:Ze,listUsers:Ee,isUnlocked:T,getCurrentUser:Ma,getStatus:Ua,getLoginThrottleStatus:ma,tryRestoreSession:_a,createUser:Ca,unlockUser:Fa,unlockUserWithRecoveryKey:ja,lock:kn,changePassword:Ra,resetPasswordWhileUnlocked:Da,regenerateRecoveryKey:La,rotateSyncIdentity:CareTplRotateIdentity,removeUser:PatientCheckpointRemoveUser,listPatients:Xe,listExternalPatients:Tn,findSameNamePatients:Ga,migratePatientNamesSplit:Ja,saveExternalPatient:pr,countLegacyExternalNotes:Qa,legacyExternalSummary:Xa,migrateExternalNotesToRegistry:qa,mergeExternalIntoPatient:$a,mergePatients:Bsc0,promoteExternalToBase:to,savePatient:_e,setSaveConflictResolver:Bb8,setPatientIdentityResolver:Bz2,getPatient:ct,getLatestSnapshot:hr,restoreSnapshotAsNew:ro,setSnapshotPinned:ao,pruneSnapshotsForPatient:wr,updateSnapshotPayload:$e,deleteSnapshot:Ar,moveSnapshotToTrash:Bkz_doKosza,listTrashedSnapshots:Bkz_lista,restoreTrashedSnapshot:Bkz_przywroc,updateMeasurementRow:so,deleteMeasurementRow:io,removePatient:_n,getCurrentUserStats:co,exportPatientEnvelope:ts,previewPatientEnvelope:es,importPatientFromEnvelope:ns,exportVaultBackup:rs,restoreVaultBackup:as,importLegacyJsonPatient:fs,looksLikeLegacyPayload:Wr,shortHashOfPatientId:cn,onPatientSaved:ys,onPatientDeleted:hs,onPasskeyChanged:As,onCredentialChanged:Qe1,onPreferenceChanged:Os,listNotes:uo,getNote:lo,saveNote:po,removeNote:fo,onNoteChanged:gs,NOTE_CATEGORIES:kr,sanitizeNoteText:Z,CARE_TEMPLATE_BACKUP_MAX_BYTES:CareTplBackupMax,exportCarePlanTemplateLibrary:CareTplExport,importCarePlanTemplateLibrary:CareTplImport,getVaultBackupScope:CareTplBackupScope,getCarePlanTemplateCapability:CareTplCapability,listCarePlanTemplates:CareTplList,getCarePlanTemplate:CareTplGet,listCarePlanTemplateRevisions:CareTplRevisions,saveCarePlanTemplateRevision:function(t){return CareTplMutate('save',t)},setCarePlanTemplateArchived:function(t){return CareTplMutate('archive',t)},resolveCarePlanTemplateConflict:function(t){return CareTplMutate('resolve',t)},getCarePlanTemplateOperation:CareTplOperation,getCarePlanTemplateDraftFromPlan:CareTplDraftFromPlan,onCarePlanTemplateChanged:CareTplOnChanged,hasCareTemplateLibraryForCurrentUser:CareTplPresent,captureSyncOperationSession:CareTplCaptureNetworkSession,createPatientClinicalCheckpoint:PatientCheckpointCreate,inspectPatientAuthority:PatientClinicalInspect,inspectPatientAuthorityRecovery:PatientClinicalInspectRecovery,selectPatientClinicalRoute:PatientClinicalSelect,assertSyncOperationSession:CareTplAssertNetworkSession,captureCareTemplateSession:CareTplCapture,assertCareTemplateSession:function(t){CareTplAssert(t);return true;},getCareTemplateSyncState:CareTplSyncState,bindCareTemplateEpoch:CareTplBind,prepareCareTemplatePending:CareTplPending,applyCareTemplateEvents:CareTplApply,ackCareTemplateEvents:CareTplAck,mutateCarePlan:CareMvpMutate,listCarePlans:CareMvpList,getCarePlan:CareMvpGet,getCarePlanView:CareMvpGetView,listCarePlanResultCandidates:CareMvpResultCandidates,getCarePlanResultCandidate:CareMvpResultCandidate,getCarePlanResultReference:CareMvpResultReference,getCarePlanStepOmissions:CareMvpStepOmissions,getCarePlanWriteCapability:CareMvpWriteCapability,getCarePlanSyncReview:CareMvpReview,getCarePlanCalendarRelations:CareMvpCalendarRelations,getCarePlanCalendarRelation:CareMvpCalendarRelation,needsCarePlanSyncRepair:CareMvpNeedsSyncRepair,saveReminderOutcome:RemB22SaveOutcome,savePatientNote:ie,savePatientNoteOnce:VildaSavePatientNoteOnce,updateExistingPatientNote:VildaUpdateExistingPatientNote,getPatientNote:Fe,listPatientNotesForPatient:Fn,sanitizeClinicalDateISO:Ct,sanitizeMedication:At,sanitizeLabResult:kt,listMedicationNamesForCurrentUser:Io,listLabTestNamesForCurrentUser:Oo,listAllPatientNotes:ht,removePatientNote:$o,removeExistingPatientNote:VildaRemoveExistingPatientNote,onPatientNoteChanged:ms,PATIENT_NOTE_CATEGORIES:Nr,CLINICAL_NOTE_CATEGORIES:Er,completePatientNote:ko,uncompletePatientNote:No,noShowPatientNote:Eo,snoozePatientNote:To,listPatientNotesDueByDate:_o,listPatientNotesInRange:Mo,listReminderHistory:RemA8History,savePatientList:on,listPatientLists:Rn,getPatientList:sn,deletePatientList:Lo,addPatientToList:Wo,removePatientFromList:Zo,evaluatePatientListRule:De,getPatientListMembers:Vo,previewPatientListRule:Yo,patientListRuleHasUnknownFields:Ro,listPatientListsForPatient:Ho,onPatientListChanged:Do,PATIENT_LIST_GH_PROGRAMS:Dr,PATIENT_LIST_OBESITY_DRUGS:Lr,listProcedureWaitlist:Xo,getWaitlistSchedules:Br,setWaitlistSchedule:Go,getWaitlistLists:xn,addWaitlistList:Jo,removeWaitlistList:Qo,searchPatientNotes:So,EXTERNAL_PATIENT_ID:jt,ACTIVITY_PATIENT_ID:se,listPatientNotesBySeries:bo,listPatientTimelineEvents:qo,_extractSnapshotMeasurements:Bn,listPatientLabSeries:Po,listPatientTreatmentPeriods:Ao,_extractMeasurementHistory:Bn,_generateObservations:Vr,ageMonthsFromForm:Bag,sanitizeDobISO:ut,normalizePatientName:Ne,calcAgeFromDOB:En,resolvePatientAge:Ba,formatDobForDisplay:Ka,parseDobFromDisplay:Va,startIdleTimer:ea,stopIdleTimer:Hn,resetIdleTimer:ks,setIdleConfigProvider:Na,refreshPersistedSession:Ta,onUnlock:Es,onLock:Ns,previewVaultBackupMerge:os,mergeVaultBackup:ss,exportSyncCode:Bs,importSyncCode:Ks,getSyncMaterial:Hr,exportSyncPayload:is,mergeSyncPayload:Le,getSyncStaleness:Gm,buildNoteDelta:cs,buildTombstoneDelta:us,buildNoteTombstoneDelta:ls,buildLibraryNoteDelta:Qb0,buildLibraryNoteTombstoneDelta:Qb1,buildPatientDelta:ds,applyEncryptedDelta:ps,encryptPayloadForCurrentUser:V,decryptPayloadForCurrentUser:G,isPrfSupported:Ts,registerPasskey:_s,registerPasskeyForRoaming:Cs,unlockWithPasskey:Fs,unlockWithPasskeyConditional:js,unlockWithPasskeyEphemeral:Rs,unlockWithPasskeyAndPersist:Ds,completeQRLoginEphemeral:Ls,listPasskeys:zs,removePasskey:xs,adoptSyncedPasskey:Ms,listAdoptablePasskeys:Us,initiateQRLogin:Hs,pollQRLoginStatus:Ws,completeQRLogin:Zs,approveQRLogin:Gs,setEphemeralMode:Pe,isEphemeralMode:ka,setStorageAdapter:te,getStorageMode:pn,setStorageMode:Js,getCurrentStorageMode:Qs,getCurrentStorageModeSync:Xs,isCloudOnlyMode:qs,isCloudOnlyAdapterActive:Pa,canWarmStartCloudOnly:Aa,isPersistentCloudCacheEnabled:Je,STORAGE_MODE_LOCAL:gt,STORAGE_MODE_CLOUD_ONLY:Se};v.VildaVault=$s})(typeof window<"u"?window:typeof globalThis<"u"?globalThis:null);
+}const $r=[];function Os(t){typeof t=="function"&&$r.push(t)}function vs(t){$r.forEach(function(e){try{e(t)}catch{}})}async function Ps(t,e,PatientClinicalPreferencePublication){try{if(!T()||!b)return null;const o=new Date().toISOString();const PatientClinicalPreferenceOptions=PatientClinicalPreferencePublication||{},PatientClinicalPreferenceAccount=b;return PatientClinicalMetadataValue(PatientClinicalPreferenceOptions,await Bmk_zmien(b,function(n){if(!n)return null;const r=Object.assign({},typeof n.userPreferences=="object"&&n.userPreferences||{});return r[PatientClinicalPreferenceKey(t,PatientClinicalPreferenceOptions,PatientClinicalPreferenceAccount)]={value:String(e),updatedAtISO:o},{...n,userPreferences:r}},PatientClinicalPreferenceOptions))?o:null}catch(PatientClinicalCaught){PatientClinicalRethrow(PatientClinicalCaught);return null}}(function(){try{v.VildaPersistence&&typeof v.VildaPersistence.onPreferenceWrite=="function"&&v.VildaPersistence.onPreferenceWrite(async function(e){const PatientClinicalPreferencePublication={};!e||!e.key||(await Ps(e.key,e.value,PatientClinicalPreferencePublication),PatientClinicalGuardMetadata(PatientClinicalPreferencePublication),vs(e))})}catch(e){}})();const ta=[];function As(t){typeof t=="function"&&ta.push(t)}function Yn(t){ta.forEach(function(e){try{e(t)}catch{}});try{v.VildaSync&&typeof v.VildaSync.syncPush=="function"&&Promise.resolve(v.VildaSync.syncPush()).catch(function(){})}catch(e){}}function ea(t){typeof t=="number"&&t>0&&(Oe=t),Hn(),typeof v.setTimeout=="function"&&(Ye=v.setTimeout(function(){kn("idle")},Oe))}function Hn(){Ye!=null&&typeof v.clearTimeout=="function"&&v.clearTimeout(Ye),Ye=null}function ks(){T()&&ea(Oe)}function Es(t){typeof t=="function"&&$n.push(t)}function Ns(t){typeof t=="function"&&qn.push(t)}async function ln(t){try{const e=await I().getUserMeta(t),n=e&&Array.isArray(e.passkeys)?e.passkeys.length:0;return await I().updateRegistryEntry(t,{passkeyCount:n}),n}catch(e){try{console.warn("[vault] _syncPasskeyCount failed for "+t+":",e&&e.message)}catch{}return-1}}async function Ts(){return L().isPrfSupported()}async function _s(t){const e=L();if(!T()||!B)throw new Error("Zaloguj si\u0119 przed rejestracj\u0105 biometrii.");const n=b,r=window.location.hostname||"localhost",o=t||e.generateDeviceLabel(),a=await I().getUserMeta(n),s=a&&Array.isArray(a.passkeys)?a.passkeys:[],i=s.filter(function(u){return u&&u.encryptedMasterByPasskey&&u.encryptedMasterByPasskey.iv}),c=s.filter(function(u){return u&&!u.encryptedMasterByPasskey});if(i.length===0&&c.length>0){const u=new Error("Masz ju\u017C biometri\u0119 dla tego konta zsynchronizowan\u0105 z innego urz\u0105dzenia (przez iCloud Keychain). Aktywuj j\u0105 na tym urz\u0105dzeniu zamiast rejestrowa\u0107 now\u0105.");throw u.code="PASSKEY_NEEDS_ADOPTION",u.adoptableCredentialIds=c.map(function(f){return f.credentialId}),u}const l=i.map(function(u){return u.credentialId}).filter(Boolean);let y;try{({credentialId:y}=await e.createPasskeyAndGetPrfSecret(n,r,st,o,l))}catch(u){PatientClinicalRethrow(u);if(u&&u.name==="InvalidStateError"){const f=new Error("Na tym urz\u0105dzeniu jest ju\u017C zarejestrowana biometria dla tego konta.");throw f.code="PASSKEY_ALREADY_EXISTS",f}throw u}const{prfSecretBytes:d}=await e.getPasskeyPrfSecret(y,r,null),p=await e.deriveKeyFromPrfSecret(d),w=await e.encryptBytes(p,B);return await Bmk_zmien(n,function(h){const O=Array.isArray(h.passkeys)?h.passkeys.slice():[];return O.push({credentialId:y,deviceLabel:o,createdAtISO:new Date().toISOString(),encryptedMasterByPasskey:w,wrapVersion:2}),{...h,passkeys:O}},{wymagajSesji:!0,limitMs:3e4}),await ln(n),Yn({action:"register",credentialId:y}),{credentialId:y,deviceLabel:o}}async function Ms(t){const e=L();if(!T()||!B)throw new Error("Zaloguj si\u0119 has\u0142em przed aktywacj\u0105 biometrii.");if(typeof t!="string"||!t.length)throw new Error("adoptSyncedPasskey: brak credentialId.");const n=b,r=window.location.hostname||"localhost",o=await I().getUserMeta(n);if(!o||!Array.isArray(o.passkeys))throw new Error("Brak metadanych u\u017Cytkownika.");const a=o.passkeys.findIndex(function(d){return d&&d.credentialId===t});if(a<0){const d=new Error("adoptSyncedPasskey: passkey o tym credentialId nie istnieje w meta.");throw d.code="PASSKEY_NOT_FOUND",d}const s=o.passkeys[a];if(s.encryptedMasterByPasskey&&s.encryptedMasterByPasskey.iv){const d=new Error("Ten klucz biometryczny jest ju\u017C aktywny na tym urz\u0105dzeniu.");throw d.code="PASSKEY_ALREADY_ADOPTED",d}let i;try{({prfSecretBytes:i}=await e.getPasskeyPrfSecret(t,r,null))}catch(d){PatientClinicalRethrow(d);if(d&&d.name==="NotAllowedError"){const p=new Error("Aktywacja biometrii nie powiod\u0142a si\u0119 \u2014 autoryzacja zosta\u0142a anulowana lub nie powiod\u0142a si\u0119.");throw p.code="ADOPT_NOT_ALLOWED",p}throw d}const c=await e.deriveKeyFromPrfSecret(i),l=await e.encryptBytes(c,B);let Bmk_k=null;return await Bmk_zmien(n,function(Bmk_m){const y=Array.isArray(Bmk_m.passkeys)?Bmk_m.passkeys.slice():[],Bmk_i=y.findIndex(function(d){return d&&d.credentialId===t});if(Bmk_i<0)throw Bmk_blad("Ten klucz biometryczny usuni\u0119to w mi\u0119dzyczasie (w innej karcie albo na innym urz\u0105dzeniu). Nic nie zmieniono.","PASSKEY_NOT_FOUND");if(y[Bmk_i].encryptedMasterByPasskey&&y[Bmk_i].encryptedMasterByPasskey.iv)throw Bmk_blad("Ten klucz biometryczny jest ju\u017C aktywny na tym urz\u0105dzeniu.","PASSKEY_ALREADY_ADOPTED");return y[Bmk_i]=Bmk_k=Object.assign({},y[Bmk_i],{encryptedMasterByPasskey:l,wrapVersion:2,adoptedOnDeviceISO:new Date().toISOString()}),Object.assign({},Bmk_m,{passkeys:y})},{wymagajSesji:!0,limitMs:3e4}),{credentialId:t,deviceLabel:Bmk_k.deviceLabel||"(klucz zsynchronizowany)",adoptedOnDeviceISO:Bmk_k.adoptedOnDeviceISO}}async function Us(){if(!T())return[];const t=await I().getUserMeta(b);return!t||!Array.isArray(t.passkeys)?[]:t.passkeys.filter(function(e){return e&&!e.encryptedMasterByPasskey}).map(function(e){return{credentialId:e.credentialId,deviceLabel:e.deviceLabel||"(klucz zsynchronizowany)",createdAtISO:e.createdAtISO}})}function na(t){if(typeof t!="string")return"";const e=t.trim().split(/\s+/).filter(Boolean);let n="";for(let r=0;r<e.length&&n.length<2;r++){const o=e[r].charAt(0);/\p{L}/u.test(o)&&(n+=o)}try{return n.toLocaleUpperCase("pl-PL")}catch{return n.toUpperCase()}}async function Cs(t){const e=L();if(!T()||!B)throw new Error("Zaloguj si\u0119 przed rejestracj\u0105 biometrii.");const n=b,r=typeof window<"u"&&window.location&&window.location.hostname||"localhost",o=t||e.generateDeviceLabel(),a=await I().getUserMeta(n),s=a&&Array.isArray(a.passkeys)?a.passkeys.map(function(A){return A.credentialId}).filter(Boolean):[];let i,c,l;try{({credentialId:i,publicKeyRawB64u:c,prfInputB64u:l}=await e.createRoamingPasskeyAndGetPrfSecret(n,r,st,o,s))}catch(A){PatientClinicalRethrow(A);if(A&&A.name==="InvalidStateError"){const N=new Error("Na tym urz\u0105dzeniu jest ju\u017C zarejestrowana biometria dla tego konta.");throw N.code="PASSKEY_ALREADY_EXISTS",N}throw A}const{prfSecretBytes:y}=await e.getPasskeyPrfSecret(i,r),d=await e.deriveKeyFromPrfSecret(y),p=await e.encryptBytes(d,B),w=na(st);let h=null;w&&(h=await e.encryptBytes(d,new TextEncoder().encode(w)));await Bmk_zmien(n,function(O){const u=Array.isArray(O.passkeys)?O.passkeys.slice():[];return u.push({credentialId:i,deviceLabel:o,createdAtISO:new Date().toISOString(),encryptedMasterByPasskey:p,encryptedInitials:h,publicKeyB64u:c,wrapVersion:2,roaming:!0}),{...O,passkeys:u}},{wymagajSesji:!0,limitMs:3e4}),await ln(n),Yn({action:"register-roaming",credentialId:i});let f;try{f=await Hr()}catch(PatientClinicalCaught){PatientClinicalRethrow(PatientClinicalCaught);const N=new Error("Biometria zapisana lokalnie, ale brak materia\u0142u sync do escrow.");throw N.code="ESCROW_NO_SYNC",N}const m=(typeof window<"u"&&window.VILDA_SYNC_WORKER_URL||"https://vilda-sync.maciej-4b9.workers.dev").replace(/\/$/,""),E={encryptedMasterByPasskey:{iv:e.bytesToBase64url(p.iv),data:e.bytesToBase64url(p.data)},prfSalt:l,hkdfInfo:"wagaiwzrost.pl:wrapping-key:v1",wrapVersion:2,publicKeyB64u:c};h&&(E.encryptedInitials={iv:e.bytesToBase64url(h.iv),data:e.bytesToBase64url(h.data)});let _;try{_=await fetch(m+"/v1/slots/"+f.slotId+"/passkey/"+encodeURIComponent(i),{method:"PUT",headers:{"Content-Type":"application/json",Authorization:"Bearer "+f.authToken},body:JSON.stringify(E)})}catch(PatientClinicalCaught){PatientClinicalRethrow(PatientClinicalCaught);const N=new Error("Biometria zapisana lokalnie, ale nie uda\u0142o si\u0119 wys\u0142a\u0107 danych do chmury (brak sieci).");throw N.code="ESCROW_UPLOAD_FAILED",N}if(!_.ok){const A=new Error("Serwer odrzuci\u0142 zapis koperty biometrii ("+_.status+").");throw A.code="ESCROW_UPLOAD_REJECTED",A}return{credentialId:i,deviceLabel:o,escrowed:!0}}async function Fs(t,e,n){const r=L();if(typeof t!="string"||!t.length)throw new Error("Nieprawid\u0142owy userId.");const o=await I().getUserMeta(t);if(!o||!Array.isArray(o.passkeys)||!o.passkeys.length)throw new Error("Ten u\u017Cytkownik nie ma zarejestrowanej biometrii.");const a=window.location.hostname||"localhost",{credentialId:s,prfSecretBytes:i}=await r.getPasskeyPrfSecret(e||null,a,n||null);if(n&&n.aborted){const w=new Error("AbortError: passkey authentication aborted");throw w.name="AbortError",w}const c=o.passkeys.find(w=>w.credentialId===s);if(!c)throw new Error("Nieznany credentialId \u2014 biometria nie jest zarejestrowana dla tego konta.");if(!c.encryptedMasterByPasskey||!c.encryptedMasterByPasskey.iv){const w=new Error("Ten klucz biometryczny jest zsynchronizowany z innego urz\u0105dzenia, ale nie zosta\u0142 jeszcze aktywowany tutaj. Zaloguj si\u0119 has\u0142em i aktywuj biometri\u0119 na tym urz\u0105dzeniu.");throw w.code="PASSKEY_NOT_LOCAL",w.credentialId=s,w}const l=await r.deriveKeyFromPrfSecret(i);let y;try{y=await r.decryptBytes(l,c.encryptedMasterByPasskey.iv,c.encryptedMasterByPasskey.data)}catch(PatientClinicalCaught){PatientClinicalRethrow(PatientClinicalCaught);const h=c&&typeof c.wrapVersion=="number"?c.wrapVersion:1,O=new Error("Nie uda\u0142o si\u0119 odblokowa\u0107 konta biometri\u0105.");throw O.code="PASSKEY_DECRYPT_FAILED",O.wrapVersion=h,O.diagnostic=h>=2?"envelope-current-prf-mismatch":"envelope-legacy-create-prf",O}const d=await I().getRegistryEntry(t),p=d&&d.label||"U\u017Cytkownik";await Ut(y,t,p),await I().updateRegistryEntry(t,{lastLoginAtISO:new Date().toISOString()})}async function js(t){const e=L(),n=typeof window<"u"&&window.location&&window.location.hostname||"localhost",r=await e.getConditionalPasskeyAssertion(n,t||null);if(!r)return null;if(t&&t.aborted){const d=new Error("AbortError: conditional passkey aborted");throw d.name="AbortError",d}let o;try{o=new TextDecoder().decode(r.userHandleBytes)}catch(PatientClinicalCaught){PatientClinicalRethrow(PatientClinicalCaught);throw new Error("Conditional UI: nie uda\u0142o si\u0119 odkodowa\u0107 userHandle z asercji.")}if(!o||typeof o!="string")throw new Error("Conditional UI: pusty lub niepoprawny userHandle w asercji.");const a=await I().getUserMeta(o);if(!a||!Array.isArray(a.passkeys)||!a.passkeys.length)throw new Error("Konto wybrane przez autofill nie istnieje lub nie ma zarejestrowanej biometrii.");const s=a.passkeys.find(d=>d.credentialId===r.credentialId);if(!s)throw new Error("Wybrany passkey nie pasuje do \u017Cadnego wpisu w lokalnym koncie.");const i=await e.deriveKeyFromPrfSecret(r.prfSecretBytes);let c;try{c=await e.decryptBytes(i,s.encryptedMasterByPasskey.iv,s.encryptedMasterByPasskey.data)}catch(PatientClinicalCaught){PatientClinicalRethrow(PatientClinicalCaught);const p=s&&typeof s.wrapVersion=="number"?s.wrapVersion:1,w=new Error("Nie uda\u0142o si\u0119 odblokowa\u0107 konta biometri\u0105 (conditional UI).");throw w.code="PASSKEY_CONDITIONAL_DECRYPT_FAILED",w.wrapVersion=p,w}const l=await I().getRegistryEntry(o),y=l&&l.label||"U\u017Cytkownik";return await Ut(c,o,y),await I().updateRegistryEntry(o,{lastLoginAtISO:new Date().toISOString()}),{userId:o,label:y}}async function ra(){try{v.VildaSync&&typeof v.VildaSync.syncPull=="function"&&await v.VildaSync.syncPull()}catch(t){}}async function aa(t){const e=L(),n=t&&typeof t=="object"?t:{};let r=!1;try{r=await e.isPrfSupported()}catch{r=!1}if(!r){const w=new Error("Ta przegl\u0105darka nie obs\u0142uguje logowania biometrycznego. U\u017Cyj logowania QR.");throw w.code="EPH_PRF_UNSUPPORTED",w}const o=typeof window<"u"&&window.location&&window.location.hostname||"localhost",a=(typeof window<"u"&&window.VILDA_SYNC_WORKER_URL||"https://vilda-sync.maciej-4b9.workers.dev").replace(/\/$/,"");let s;try{const w=await fetch(a+"/v1/passkey/challenge",{method:"POST",headers:{"Content-Type":"application/json"}});if(!w.ok)throw new Error("challenge http "+w.status);s=(await w.json()).challenge}catch{const h=new Error("Nie uda\u0142o si\u0119 nawi\u0105za\u0107 po\u0142\u0105czenia z serwerem. Sprawd\u017A internet.");throw h.code="EPH_CHALLENGE_FAILED",h}const i=e.base64urlToBytes(s),c=await e.getPasskeyAssertionAndPrf(n.credentialId||null,o,i,n.signal||null);if(n.signal&&n.signal.aborted){const w=new Error("AbortError: passkey authentication aborted");throw w.name="AbortError",w}let l;try{const w=await fetch(a+"/v1/passkey/"+encodeURIComponent(c.credentialId)+"/unlock",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({clientDataJSON:c.clientDataJSONB64u,authenticatorData:c.authenticatorDataB64u,signature:c.signatureB64u})});if(w.status===404){const h=new Error("Ten passkey nie jest skonfigurowany do logowania na obcym komputerze.");throw h.code="EPH_NO_ENVELOPE",h}if(!w.ok){const h=new Error("Serwer odrzuci\u0142 logowanie biometryczne ("+w.status+").");throw h.code="EPH_UNLOCK_REJECTED",h}l=await w.json()}catch(w){if(w&&w.code)throw w;const h=new Error("B\u0142\u0105d sieci przy pobieraniu danych logowania.");throw h.code="EPH_UNLOCK_NETWORK",h}const y=await e.deriveKeyFromPrfSecret(c.prfSecretBytes);let d;try{const w=e.base64urlToBytes(l.encryptedMasterByPasskey.iv),h=e.base64urlToBytes(l.encryptedMasterByPasskey.data);d=await e.decryptBytes(y,w,h)}catch{const h=l&&typeof l.wrapVersion=="number"?l.wrapVersion:1,O=new Error("Nie uda\u0142o si\u0119 odszyfrowa\u0107 danych tym passkey.");O.code="EPH_DECRYPT_FAILED",O.wrapVersion=h,O.diagnostic=h>=2?"envelope-current-prf-mismatch":"envelope-legacy-create-prf";try{typeof console<"u"&&console.warn&&console.warn("[Vilda passkey] EPH_DECRYPT_FAILED: wrapVersion="+h+" diagnostic="+O.diagnostic+(h>=2?' \u2192 koperta AKTUALNA (PRF z get()); sekret PRF z logowania nie pasuje. Prawdopodobna niesp\xF3jno\u015B\u0107 authenticatora (np. Apple Passwords lokalnie vs telefon). Zaloguj si\u0119 przez \u201EU\u017Cyj telefonu".':" \u2192 koperta STARSZA (sprzed poprawki create\u2192get). Zarejestruj passkey ponownie na zaufanym urz\u0105dzeniu, potem zaloguj si\u0119 jeszcze raz."))}catch(u){}throw O}let p="Konto (passkey)";try{if(l.encryptedInitials&&l.encryptedInitials.iv&&l.encryptedInitials.data){const w=await e.decryptBytes(y,e.base64urlToBytes(l.encryptedInitials.iv),e.base64urlToBytes(l.encryptedInitials.data)),h=new TextDecoder().decode(w).trim();h&&(p=h)}}catch(w){}return{masterBytes:d,credentialId:c.credentialId,ephLabel:p}}async function Rs(t){try{v.VildaPersistence&&v.VildaPersistence.purgeEphemeralData&&v.VildaPersistence.purgeEphemeralData()}catch(r){PatientClinicalRethrow(r);}Pe(!0);const e=await aa(t),n="eph:"+e.credentialId.slice(0,32);return await Ut(e.masterBytes,n,e.ephLabel),await ra(),{ok:!0,ephemeral:!0,credentialId:e.credentialId,userId:n}}async function Ds(t,e){if(T())throw new Error("VildaVault.unlockWithPasskeyAndPersist: vault musi by\u0107 zablokowany.");Ie(t,"Has\u0142o");const n=L(),r=e&&typeof e=="object"?e:{},o=await aa(r),a=ve(),s=n.KDF_ITERATIONS,i=n.generateSalt(),c=n.generateSalt(),l=n.generateRecoveryKey(),y=await n.deriveKey(t,i,s),d=await n.encryptBytes(y,o.masterBytes),p=await n.deriveKeyFromRecoveryKey(l,c,s),w=await n.encryptBytes(p,o.masterBytes);let h=typeof r.label=="string"&&r.label.trim().length?r.label.trim():"";h||(h=o.ephLabel||qt);const O=new Date().toISOString(),u={schemaVersion:at,createdAtISO:O,kdfName:n.KDF_NAME,kdfHash:n.KDF_HASH,kdfIterations:s,passwordKdfIterations:s,passwordUpdatedAtISO:null,passwordSalt:n.bytesToBase64(i),recoverySalt:n.bytesToBase64(c),encryptedMasterByPassword:{iv:n.bytesToBase64(d.iv),data:n.bytesToBase64(d.data)},encryptedMasterByRecovery:{iv:n.bytesToBase64(w.iv),data:n.bytesToBase64(w.data)},restoredFromPasskey:!0,needsPasswordReset:!1},f=be(r.storageMode);return await I().putUserMeta(a,u),await I().putRegistryEntry({userId:a,label:h,createdAtISO:O,lastLoginAtISO:O,storageMode:f}),lt=f,await Ut(o.masterBytes,a,h),{userId:a,label:h,recoveryKey:l,storageMode:f}}async function Ls(t,e,n){const r=L();try{v.VildaPersistence&&v.VildaPersistence.purgeEphemeralData&&v.VildaPersistence.purgeEphemeralData()}catch(l){PatientClinicalRethrow(l);}Pe(!0);let o;try{o=await r.importECDHPrivateKey(t)}catch(PatientClinicalCaught){PatientClinicalRethrow(PatientClinicalCaught);const y=new Error("completeQRLoginEphemeral: b\u0142\u0105d klucza prywatnego.");throw y.code="EPH_QR_KEY",y}let a;try{a=await r.decryptFromTransfer(o,e)}catch(PatientClinicalCaught){PatientClinicalRethrow(PatientClinicalCaught);const y=new Error("completeQRLoginEphemeral: b\u0142\u0105d deszyfrowania transferu.");throw y.code="EPH_QR_DECRYPT",y}const s="eph-qr:"+Date.now().toString(36),i=na(n);return await Ut(a,s,i||"Konto (QR)"),await ra(),{ok:!0,ephemeral:!0,userId:s}}async function zs(t){const e=await I().getUserMeta(t);return!e||!Array.isArray(e.passkeys)?[]:e.passkeys.map(n=>({credentialId:n.credentialId,deviceLabel:n.deviceLabel,createdAtISO:n.createdAtISO,roaming:n.roaming===!0,isRemote:!n.encryptedMasterByPasskey}))}async function xs(t,e){if(!await Bmk_zmien(t,function(n){if(!n||!Array.isArray(n.passkeys))return null;const r=n.passkeys.filter(a=>a.credentialId!==e),o=Array.isArray(n.passkeyTombstones)?n.passkeyTombstones.slice():[];return o.some(function(a){return a&&a.credentialId===e})||o.push({credentialId:e,deletedAtISO:new Date().toISOString()}),{...n,passkeys:r,passkeyTombstones:o}},{limitMs:3e4}))return;await ln(t),Yn({action:"remove",credentialId:e})}async function Bs(t){if(!T())throw new Error("VildaVault.exportSyncCode: vault nie jest odblokowany.");if(typeof t!="string"||t.length<Yt)throw new Error("VildaVault.exportSyncCode: nieprawid\u0142owe has\u0142o.");const e=L(),n=await I().getUserMeta(b);if(!n)throw new Error("VildaVault.exportSyncCode: brak metadanych u\u017Cytkownika.");const r=await e.deriveKey(t,n.passwordSalt,Gc2(n));try{await e.decryptBytes(r,n.encryptedMasterByPassword.iv,n.encryptedMasterByPassword.data)}catch{throw new Error("VildaVault.exportSyncCode: nieprawid\u0142owe has\u0142o.")}return e.encryptSyncCodeBundle({dek:B,sis:it||B},t)}async function Ks(t,e,n){if(T())throw new Error("VildaVault.importSyncCode: wyloguj si\u0119 przed odtwarzaniem kodu synchronizacji.");if(typeof e!="string"||e.length<Yt)throw new Error("VildaVault.importSyncCode: has\u0142o musi mie\u0107 minimum "+Yt+" znak\xF3w.");const r=L(),o=n&&typeof n=="object"?n:{};let a,s;try{const E=await r.decryptSyncCodeBundle(t,e);a=E.dek,s=E.sis}catch(E){throw new Error("VildaVault.importSyncCode: "+(E.message||"nieprawid\u0142owy kod lub has\u0142o."))}const i=ve(),c=r.KDF_ITERATIONS,l=r.generateSalt(),y=r.generateSalt(),d=r.generateRecoveryKey(),p=await r.deriveKey(e,l,c),w=await r.deriveKeyFromRecoveryKey(d,y,c),h=await r.encryptBytes(p,a),O=await r.encryptBytes(w,a);let u=typeof o.label=="string"&&o.label.trim().length?o.label.trim():"";if(!u){const E=await Ee();u=qt+(E.length>0?" "+(E.length+1):"")}const f=new Date().toISOString(),m={schemaVersion:at,createdAtISO:f,kdfName:r.KDF_NAME,kdfHash:r.KDF_HASH,kdfIterations:c,passwordKdfIterations:c,passwordUpdatedAtISO:null,passwordSalt:r.bytesToBase64(l),recoverySalt:r.bytesToBase64(y),encryptedMasterByPassword:{iv:r.bytesToBase64(h.iv),data:r.bytesToBase64(h.data)},encryptedMasterByRecovery:{iv:r.bytesToBase64(O.iv),data:r.bytesToBase64(O.data)},restoredFromSyncCode:!0};try{const E=await r.importMasterKeyFromBytes(a),_=await r.encryptBytes(E,s);m.encryptedSisByMaster={iv:r.bytesToBase64(_.iv),data:r.bytesToBase64(_.data)},m.bundleSchemaVersion=1}catch{}return await I().putUserMeta(i,m),await I().putRegistryEntry({userId:i,label:u,createdAtISO:f,lastLoginAtISO:f}),await Ut(a,i,u),s&&Zt(s),{userId:i,label:u,recoveryKey:d}}var Vs="https://vilda-sync.maciej-4b9.workers.dev";function Ys(){var t=typeof window<"u"&&window.VILDA_SYNC_WORKER_URL;return(t||Vs).replace(/\/$/,"")}async function dn(t,e){var n=Ys()+t,r=new AbortController,o=setTimeout(function(){r.abort()},15e3);try{return await fetch(n,Object.assign({signal:r.signal},e))}finally{clearTimeout(o)}}async function Hs(){const t=L();if(!t||typeof t.generateECDHKeypair!="function")throw new Error("VildaVault.initiateQRLogin: VildaCrypto nie obs\u0142uguje ECDH.");const{privateKey:e,publicKeyB64u:n}=await t.generateECDHKeypair();let r;try{r=await dn("/v1/transfer",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({ecdhPublicKeyB64u:n})})}catch(i){throw new Error("VildaVault.initiateQRLogin: b\u0142\u0105d sieci \u2014 "+(i.message||i))}if(!r.ok){const i=await r.json().catch(function(){return{}});throw new Error("VildaVault.initiateQRLogin: serwer "+r.status+" \u2014 "+(i&&i.error&&i.error.message||"nieznany b\u0142\u0105d"))}const o=await r.json(),a=o.transferToken,s=await t.exportECDHPrivateKey(e);return{qrData:"vsc1-qr:"+a,transferToken:a,privateKeyB64u:s,expiresIn:o.expiresIn||120}}async function Ws(t){let e;try{e=await dn("/v1/transfer/"+t,{method:"GET"})}catch{return null}if(!e.ok)return null;const n=await e.json().catch(function(){return null});return n&&n.status==="ready"&&n.encryptedPayload?{encryptedPayload:n.encryptedPayload,label:n.accountLabel||null}:null}async function Zs(t,e,n){if(T())throw new Error("VildaVault.completeQRLogin: vault musi by\u0107 zablokowany przed importem QR.");const r=L();let o;try{o=await r.importECDHPrivateKey(t)}catch(A){throw new Error("VildaVault.completeQRLogin: b\u0142\u0105d odczytu klucza prywatnego \u2014 "+(A.message||A))}let a;try{a=await r.decryptFromTransfer(o,e)}catch(A){throw new Error("VildaVault.completeQRLogin: b\u0142\u0105d deszyfrowania \u2014 "+(A.message||A))}const s=n&&typeof n=="object"?n:{},i=ve(),c=r.KDF_ITERATIONS,l=r.generateSalt(),y=r.generateSalt(),d=r.generateRecoveryKey();let p=null;typeof s.newPassword=="string"&&s.newPassword.length>0&&(Ie(s.newPassword,"Nowe has\u0142o"),p=s.newPassword);let w=null,h=null;if(p)h=await r.deriveKey(p,l,c),w=await r.encryptBytes(h,a);else{const A=r.bytesToBase64url(r.generateSalt());h=await r.deriveKey(A,l,c),w=await r.encryptBytes(h,a)}const O=await r.deriveKeyFromRecoveryKey(d,y,c),u=await r.encryptBytes(O,a);let f=typeof s.label=="string"&&s.label.trim().length?s.label.trim():"";if(!f){const A=await Ee();f=qt+(A.length>0?" "+(A.length+1):"")}const m=new Date().toISOString(),E={schemaVersion:at,createdAtISO:m,kdfName:r.KDF_NAME,kdfHash:r.KDF_HASH,kdfIterations:c,passwordKdfIterations:c,passwordUpdatedAtISO:null,passwordSalt:r.bytesToBase64(l),recoverySalt:r.bytesToBase64(y),encryptedMasterByPassword:{iv:r.bytesToBase64(w.iv),data:r.bytesToBase64(w.data)},encryptedMasterByRecovery:{iv:r.bytesToBase64(u.iv),data:r.bytesToBase64(u.data)},restoredFromQR:!0,needsPasswordReset:!p},_=be(s.storageMode);return await I().putUserMeta(i,E),await I().putRegistryEntry({userId:i,label:f,createdAtISO:m,lastLoginAtISO:m,storageMode:_}),lt=_,await Ut(a,i,f),{userId:i,label:f,recoveryKey:d,needsPasswordReset:!p,storageMode:_}}async function Gs(t,e){if(!T()||!B)throw new Error("VildaVault.approveQRLogin: vault musi by\u0107 odblokowany.");if(typeof e!="string"||e.length<Yt)throw new Error("VildaVault.approveQRLogin: nieprawid\u0142owe has\u0142o.");const n=L(),r=await I().getUserMeta(b);if(!r)throw new Error("VildaVault.approveQRLogin: brak metadanych u\u017Cytkownika.");const o=await n.deriveKey(e,r.passwordSalt,Gc2(r));try{await n.decryptBytes(o,r.encryptedMasterByPassword.iv,r.encryptedMasterByPassword.data)}catch{const d=new Error("VildaVault.approveQRLogin: nieprawid\u0142owe has\u0142o.");throw d.code="BAD_PASSWORD",d}let a;try{a=await dn("/v1/transfer/"+t,{method:"GET"})}catch(y){throw new Error("VildaVault.approveQRLogin: b\u0142\u0105d sieci \u2014 "+(y.message||y))}if(a.status===404)throw new Error("VildaVault.approveQRLogin: kod QR wygas\u0142 lub jest nieprawid\u0142owy.");if(!a.ok)throw new Error("VildaVault.approveQRLogin: b\u0142\u0105d serwera "+a.status);const s=await a.json();if(s.status==="ready")throw new Error("VildaVault.approveQRLogin: ten kod QR zosta\u0142 ju\u017C wykorzystany.");const i=s.ecdhPublicKeyB64u;if(!i)throw new Error("VildaVault.approveQRLogin: serwer nie zwr\xF3ci\u0142 klucza publicznego.");let c;try{c=await n.encryptForTransfer(B,i)}catch(y){throw new Error("VildaVault.approveQRLogin: b\u0142\u0105d szyfrowania \u2014 "+(y.message||y))}let l;try{l=await dn("/v1/transfer/"+t,{method:"PUT",headers:{"Content-Type":"application/json"},body:JSON.stringify(Object.assign({},c,{accountLabel:st||null}))})}catch(y){throw new Error("VildaVault.approveQRLogin: b\u0142\u0105d sieci przy wysy\u0142aniu \u2014 "+(y.message||y))}if(l.status===409)throw new Error("VildaVault.approveQRLogin: ten kod QR zosta\u0142 ju\u017C wykorzystany.");if(!l.ok){const y=await l.json().catch(function(){return{}});throw new Error("VildaVault.approveQRLogin: serwer "+l.status+" \u2014 "+(y&&y.error&&y.error.message||"nieznany b\u0142\u0105d"))}return{ok:!0}}async function pn(t){if(typeof t!="string"||!t.length)return gt;try{const e=await I().getRegistryEntry(t);return be(e&&e.storageMode)}catch{return gt}}async function Js(t,e){if(typeof t!="string"||!t.length)throw new Error("Nieprawid\u0142owy userId.");const n=be(e);if(!await I().getRegistryEntry(t))throw new Error("U\u017Cytkownik nie istnieje.");return await I().updateRegistryEntry(t,{storageMode:n}),b===t&&(lt=n,PatientCheckpointCancelChanged(false)),{userId:t,storageMode:n}}async function Qs(){return b?pn(b):gt}let lt=gt;function Xs(){return lt}function qs(){return lt===Se}const $s={__vildaVault:!0,VERSION:sa,STEP:ia,SCHEMA_VERSION:at,REGISTRY_DB_NAME:Wn,USER_DB_PREFIX:yn,DEFAULT_IDLE_LOCK_MS:Zn,CLOUD_ONLY_IDLE_LOCK_MS:da,MIN_PASSWORD_LENGTH:Yt,PASSWORD_REQUIRED_VARIETY_TYPES:Be,validatePasswordStrength:Ke,generateStrongPassword:fa,setStorageAdapter:te,createInMemoryAdapter:Ze,listUsers:Ee,isUnlocked:T,getCurrentUser:Ma,getStatus:Ua,getLoginThrottleStatus:ma,tryRestoreSession:_a,createUser:Ca,unlockUser:Fa,unlockUserWithRecoveryKey:ja,lock:kn,changePassword:Ra,resetPasswordWhileUnlocked:Da,regenerateRecoveryKey:La,rotateSyncIdentity:CareTplRotateIdentity,removeUser:PatientCheckpointRemoveUser,listPatients:Xe,listExternalPatients:Tn,findSameNamePatients:Ga,migratePatientNamesSplit:Ja,saveExternalPatient:pr,countLegacyExternalNotes:Qa,legacyExternalSummary:Xa,migrateExternalNotesToRegistry:qa,mergeExternalIntoPatient:$a,mergePatients:Bsc0,promoteExternalToBase:to,savePatient:_e,setSaveConflictResolver:Bb8,setPatientIdentityResolver:Bz2,getPatient:ct,getLatestSnapshot:hr,restoreSnapshotAsNew:ro,setSnapshotPinned:ao,pruneSnapshotsForPatient:wr,updateSnapshotPayload:$e,deleteSnapshot:Ar,moveSnapshotToTrash:Bkz_doKosza,listTrashedSnapshots:Bkz_lista,restoreTrashedSnapshot:Bkz_przywroc,updateMeasurementRow:so,deleteMeasurementRow:io,removePatient:_n,getCurrentUserStats:co,exportPatientEnvelope:ts,previewPatientEnvelope:es,importPatientFromEnvelope:ns,exportVaultBackup:rs,restoreVaultBackup:as,importLegacyJsonPatient:fs,looksLikeLegacyPayload:Wr,shortHashOfPatientId:cn,onPatientSaved:ys,onPatientDeleted:hs,onPasskeyChanged:As,onCredentialChanged:Qe1,onPreferenceChanged:Os,listNotes:uo,getNote:lo,saveNote:po,removeNote:fo,onNoteChanged:gs,NOTE_CATEGORIES:kr,sanitizeNoteText:Z,CARE_TEMPLATE_BACKUP_MAX_BYTES:CareTplBackupMax,exportCarePlanTemplateLibrary:CareTplExport,importCarePlanTemplateLibrary:CareTplImport,getVaultBackupScope:CareTplBackupScope,getCarePlanTemplateCapability:CareTplCapability,listCarePlanTemplates:CareTplList,getCarePlanTemplate:CareTplGet,listCarePlanTemplateRevisions:CareTplRevisions,saveCarePlanTemplateRevision:function(t){return CareTplMutate('save',t)},setCarePlanTemplateArchived:function(t){return CareTplMutate('archive',t)},resolveCarePlanTemplateConflict:function(t){return CareTplMutate('resolve',t)},getCarePlanTemplateOperation:CareTplOperation,getCarePlanTemplateDraftFromPlan:CareTplDraftFromPlan,onCarePlanTemplateChanged:CareTplOnChanged,hasCareTemplateLibraryForCurrentUser:CareTplPresent,captureSyncOperationSession:CareTplCaptureNetworkSession,createPatientClinicalCheckpoint:PatientCheckpointCreate,inspectPatientAuthority:PatientClinicalInspect,inspectPatientAuthorityRecovery:PatientClinicalInspectRecovery,selectPatientClinicalRoute:PatientClinicalSelect,assertSyncOperationSession:CareTplAssertNetworkSession,captureCareTemplateSession:CareTplCapture,assertCareTemplateSession:function(t){CareTplAssert(t);return true;},getCareTemplateSyncState:CareTplSyncState,bindCareTemplateEpoch:CareTplBind,prepareCareTemplatePending:CareTplPending,applyCareTemplateEvents:CareTplApply,ackCareTemplateEvents:CareTplAck,mutateCarePlan:CareMvpMutate,listCarePlans:CareMvpList,getCarePlan:CareMvpGet,getCarePlanView:CareMvpGetView,listCarePlanResultCandidates:CareMvpResultCandidates,getCarePlanResultCandidate:CareMvpResultCandidate,getCarePlanResultReference:CareMvpResultReference,getCarePlanStepOmissions:CareMvpStepOmissions,getCarePlanWriteCapability:CareMvpWriteCapability,getCarePlanSyncReview:CareMvpReview,getCarePlanCalendarRelations:CareMvpCalendarRelations,getCarePlanCalendarRelation:CareMvpCalendarRelation,needsCarePlanSyncRepair:CareMvpNeedsSyncRepair,saveReminderOutcome:RemB22SaveOutcome,savePatientNote:ie,savePatientNoteOnce:VildaSavePatientNoteOnce,updateExistingPatientNote:VildaUpdateExistingPatientNote,getPatientNote:Fe,listPatientNotesForPatient:Fn,sanitizeClinicalDateISO:Ct,sanitizeMedication:At,sanitizeLabResult:kt,listMedicationNamesForCurrentUser:Io,listLabTestNamesForCurrentUser:Oo,listAllPatientNotes:ht,removePatientNote:$o,removeExistingPatientNote:VildaRemoveExistingPatientNote,onPatientNoteChanged:ms,PATIENT_NOTE_CATEGORIES:Nr,CLINICAL_NOTE_CATEGORIES:Er,completePatientNote:ko,uncompletePatientNote:No,noShowPatientNote:Eo,snoozePatientNote:To,listPatientNotesDueByDate:_o,listPatientNotesInRange:Mo,listReminderHistory:RemA8History,savePatientList:on,listPatientLists:Rn,getPatientList:sn,deletePatientList:Lo,addPatientToList:Wo,removePatientFromList:Zo,evaluatePatientListRule:De,getPatientListMembers:Vo,previewPatientListRule:Yo,patientListRuleHasUnknownFields:Ro,listPatientListsForPatient:Ho,onPatientListChanged:Do,PATIENT_LIST_GH_PROGRAMS:Dr,PATIENT_LIST_OBESITY_DRUGS:Lr,listProcedureWaitlist:Xo,getWaitlistSchedules:Br,setWaitlistSchedule:Go,getWaitlistLists:xn,addWaitlistList:Jo,removeWaitlistList:Qo,searchPatientNotes:So,EXTERNAL_PATIENT_ID:jt,ACTIVITY_PATIENT_ID:se,listPatientNotesBySeries:bo,listPatientTimelineEvents:qo,_extractSnapshotMeasurements:Bn,listPatientLabSeries:Po,listPatientTreatmentPeriods:Ao,_extractMeasurementHistory:Bn,_generateObservations:Vr,ageMonthsFromForm:Bag,sanitizeDobISO:ut,normalizePatientName:Ne,calcAgeFromDOB:En,resolvePatientAge:Ba,formatDobForDisplay:Ka,parseDobFromDisplay:Va,startIdleTimer:ea,stopIdleTimer:Hn,resetIdleTimer:ks,setIdleConfigProvider:Na,refreshPersistedSession:Ta,onUnlock:Es,onLock:Ns,previewVaultBackupMerge:os,mergeVaultBackup:ss,exportSyncCode:Bs,importSyncCode:Ks,getSyncMaterial:Hr,exportSyncPayload:is,mergeSyncPayload:Le,getSyncStaleness:Gm,buildNoteDelta:cs,buildTombstoneDelta:us,buildNoteTombstoneDelta:ls,buildLibraryNoteDelta:Qb0,buildLibraryNoteTombstoneDelta:Qb1,buildPatientDelta:ds,applyEncryptedDelta:ps,encryptPayloadForCurrentUser:V,decryptPayloadForCurrentUser:G,isPrfSupported:Ts,registerPasskey:_s,registerPasskeyForRoaming:Cs,unlockWithPasskey:Fs,unlockWithPasskeyConditional:js,unlockWithPasskeyEphemeral:Rs,unlockWithPasskeyAndPersist:Ds,completeQRLoginEphemeral:Ls,listPasskeys:zs,removePasskey:xs,adoptSyncedPasskey:Ms,listAdoptablePasskeys:Us,initiateQRLogin:Hs,pollQRLoginStatus:Ws,completeQRLogin:Zs,approveQRLogin:Gs,setEphemeralMode:Pe,isEphemeralMode:ka,setStorageAdapter:te,getStorageMode:pn,setStorageMode:Js,getCurrentStorageMode:Qs,getCurrentStorageModeSync:Xs,isCloudOnlyMode:qs,isCloudOnlyAdapterActive:Pa,canWarmStartCloudOnly:Aa,isPersistentCloudCacheEnabled:Je,STORAGE_MODE_LOCAL:gt,STORAGE_MODE_CLOUD_ONLY:Se,_eventLog:Bev_EKSPORT};v.VildaVault=$s})(typeof window<"u"?window:typeof globalThis<"u"?globalThis:null);
