@@ -574,8 +574,8 @@
       // The older calculator flowsheet consumes this adapter directly. Reuse
       // the same pure envelope reader as Badania/Notes, including signed
       // reports whose endpoint must not become an exact chart measurement.
-      const dedicatedRatioCapture = ["Mg_Ca", "PO4_Cr"].includes(sourceFormulaId) ? savedCalculation(note) : null;
-      const dedicatedRatioRecorded = ["Mg_Ca", "PO4_Cr"].includes(sourceFormulaId) ? recordedMeasurement(lab) : null;
+      const dedicatedRatioCapture = ["Mg_Ca", "PO4_Cr", "B_Cr"].includes(sourceFormulaId) ? savedCalculation(note) : null;
+      const dedicatedRatioRecorded = ["Mg_Ca", "PO4_Cr", "B_Cr"].includes(sourceFormulaId) ? recordedMeasurement(lab) : null;
       if (target && (!sourceFormulaId || !target.has(sourceFormulaId))) continue;
       const acr = sourceFormulaId === "ACR" ? savedAcrAssessment(note) : null;
       const pcr = sourceFormulaId === "PCR" ? savedPcrAssessment(note) : null;
@@ -627,7 +627,7 @@
       const unit = (dedicatedRatioCapture?.valid ? dedicatedRatioCapture.unit : ratio?.unit || lab.unit || (entry ? entry.unit : "") || "").trim();
       // Native mg/g and mg/mmol thresholds are deliberately different axes.
       // Never draw a trend through values stored in different native units.
-      const seriesKey = isCacrFormula(sourceFormulaId) ? `${label}\n${unit}\n${cacr?.profileId ? `${cacr.profileId}@${cacr.profileVersion ?? "unknown"}` : "legacy-unprofiled"}` : sourceFormulaId === "KM_Cr" ? `${label}\n${unit}\n${urateCreatinine?.input?.specimen || "legacy-unknown"}` : sourceFormulaId === "TMP_GFR" ? `${label}\n${unit}\n${global.ClcrTmpGfrPersistence?.savedMethod(note, tmpGfr) || "legacy-unknown"}` : sourceFormulaId === "CitCr_spot" ? global.ClcrCitcrPersistence?.seriesKey(label, unit, citcr, note) || `${label}\n${unit}\nlegacy-unknown` : sourceFormulaId === "OxCr_spot" ? global.ClcrOxcrPersistence?.seriesKey(label, unit, oxcr, note) || `${label}\n${unit}\nlegacy-unknown` : ["ACR", "PCR", "CaCr_spot", "Ca_Cr", "Mg_Ca", "PO4_Cr", "UA_mgkg", "Ca_mgkg", "Mg_mgkg", "PO4_mgkg", "Prot_mgkg", "Na_mmol_d", "K_mmol_d"].includes(sourceFormulaId) ? `${label}\n${unit}` : label;
+      const seriesKey = isCacrFormula(sourceFormulaId) ? `${label}\n${unit}\n${cacr?.profileId ? `${cacr.profileId}@${cacr.profileVersion ?? "unknown"}` : "legacy-unprofiled"}` : sourceFormulaId === "KM_Cr" ? `${label}\n${unit}\n${urateCreatinine?.input?.specimen || "legacy-unknown"}` : sourceFormulaId === "TMP_GFR" ? `${label}\n${unit}\n${global.ClcrTmpGfrPersistence?.savedMethod(note, tmpGfr) || "legacy-unknown"}` : sourceFormulaId === "CitCr_spot" ? global.ClcrCitcrPersistence?.seriesKey(label, unit, citcr, note) || `${label}\n${unit}\nlegacy-unknown` : sourceFormulaId === "OxCr_spot" ? global.ClcrOxcrPersistence?.seriesKey(label, unit, oxcr, note) || `${label}\n${unit}\nlegacy-unknown` : ["ACR", "PCR", "CaCr_spot", "Ca_Cr", "Mg_Ca", "PO4_Cr", "B_Cr", "UA_mgkg", "Ca_mgkg", "Mg_mgkg", "PO4_mgkg", "Prot_mgkg", "Na_mmol_d", "K_mmol_d"].includes(sourceFormulaId) ? `${label}\n${unit}` : label;
       const dateISO =
         legacyNormalizeDateISO(note.clinicalDateISO) ||
         (typeof note.clinicalDateISO === "string"
@@ -658,7 +658,7 @@
         typeof note.body === "string" &&
         note.body.indexOf("poza zakresem") >= 0;
       const norm = typeof lab.norm === "string" ? lab.norm.trim() : "";
-      const recordedOutOfRange = (["Mg_Ca", "PO4_Cr"].includes(sourceFormulaId) || sourceFormulaId === "Ca_Cr" && !cacr) && !norm && outOfRange === false ? null : outOfRange;
+      const recordedOutOfRange = (["Mg_Ca", "PO4_Cr", "B_Cr"].includes(sourceFormulaId) || sourceFormulaId === "Ca_Cr" && !cacr) && !norm && outOfRange === false ? null : outOfRange;
       const point = {
         dateISO: dateISO,
         valueNum: valueNum,
@@ -817,11 +817,12 @@
         point.displayValue = String(lab.value || valueNum).trim();
         point.norm = "";
       }
-      if (["Mg_Ca", "PO4_Cr"].includes(sourceFormulaId)) {
+      if (["Mg_Ca", "PO4_Cr", "B_Cr"].includes(sourceFormulaId)) {
         Object.assign(point, { rawValue: dedicatedRatioRecorded.rawValue, valueNum: dedicatedRatioRecorded.valueNum, displayValue: dedicatedRatioRecorded.displayValue, comparator: dedicatedRatioRecorded.comparator });
         if (!norm) Object.assign(point, { assessment: "unassessed", category: null, outOfRange: null, tone: "neutral" });
         applySavedCalculation(point, dedicatedRatioCapture, hasSavedCalculation(note));
         if (dedicatedRatioCapture?.valid && dedicatedRatioCapture.snapshot.assessment.magnesiumCalciumSnapshot) point.magnesiumCalciumAssessment = dedicatedRatioCapture.snapshot.assessment.magnesiumCalciumSnapshot;
+        if (dedicatedRatioCapture?.valid && dedicatedRatioCapture.snapshot.assessment.proteinCreatinineSnapshot) point.proteinCreatinineAssessment = dedicatedRatioCapture.snapshot.assessment.proteinCreatinineSnapshot;
         if (dedicatedRatioCapture?.valid && dedicatedRatioCapture.snapshot.assessment.phosphorusCreatinineSnapshot) point.phosphorusCreatinineAssessment = dedicatedRatioCapture.snapshot.assessment.phosphorusCreatinineSnapshot;
       }
       byLabel.get(seriesKey).points.push(point);
@@ -829,7 +830,7 @@
     const series = Array.from(byLabel.values());
     series.forEach((s) => {
       s.points.sort((a, b) => String(a.dateISO).localeCompare(String(b.dateISO)));
-      if (["ACR", "PCR", "CaCr_spot", "Ca_Cr", "OxCr_spot", "CitCr_spot", "FENa_spot", "FEK_spot", "FECl_spot", "FEHCO3_spot", "AGu_spot", "pH_spot", "UA_mgkg", "Ca_mgkg", "Mg_mgkg", "PO4_mgkg", "Prot_mgkg", "Na_mmol_d", "K_mmol_d", "KM_Cr", "PO4_Cr"].includes(s.sourceFormulaId)) {
+      if (["ACR", "PCR", "CaCr_spot", "Ca_Cr", "OxCr_spot", "CitCr_spot", "FENa_spot", "FEK_spot", "FECl_spot", "FEHCO3_spot", "AGu_spot", "pH_spot", "UA_mgkg", "Ca_mgkg", "Mg_mgkg", "PO4_mgkg", "Prot_mgkg", "Na_mmol_d", "K_mmol_d", "KM_Cr", "PO4_Cr", "B_Cr"].includes(s.sourceFormulaId)) {
         s.norm = s.points[s.points.length - 1]?.norm || "";
         return;
       }
@@ -854,6 +855,11 @@
       const persistence = global.ClcrMagnesiumCalciumPersistence;
       const frozen = persistence?.readSnapshot(JSON.stringify(dp.magnesiumCalciumSnapshot));
       if (!frozen || !persistence.matchesDatapoint(dp, frozen)) throw new Error("Brak kompletnego obliczenia Mg/Ca do bezpiecznego zapisu. Oblicz wynik ponownie.");
+    }
+    if (dp.sourceFormulaId === "B_Cr") {
+      const persistence = global.ClcrProteinCreatininePersistence;
+      const frozen = persistence?.readSnapshot(JSON.stringify(dp.proteinCreatinineSnapshot));
+      if (!frozen || !persistence.matchesDatapoint(dp, frozen)) throw new Error("Brak kompletnego obliczenia B/Cr do bezpiecznego zapisu. Oblicz wynik ponownie.");
     }
     if (dp.sourceFormulaId === "PO4_Cr") {
       const persistence = global.ClcrPhosphorusCreatininePersistence;
@@ -929,7 +935,7 @@
     }
     const labResult = {
       test: dp.label,
-      value: ["Mg_Ca", "PO4_Cr"].includes(dp.sourceFormulaId) ? dp.displayValue : isCacrFormula(dp.sourceFormulaId) && dp.cacrSnapshot
+      value: ["Mg_Ca", "PO4_Cr", "B_Cr"].includes(dp.sourceFormulaId) ? dp.displayValue : isCacrFormula(dp.sourceFormulaId) && dp.cacrSnapshot
         ? dp.displayValue || acrDisplayText(dp.cacrSnapshot) : dp.sourceFormulaId === "PCR" && dp.pcrSnapshot
           ? dp.displayValue || acrDisplayText(dp.pcrSnapshot) : dp.sourceFormulaId === "ACR" && dp.acrSnapshot
             ? dp.displayValue || acrDisplayText(dp.acrSnapshot) : formatValueString(dp.valueNum),
@@ -961,6 +967,7 @@
     if (dp.sourceFormulaId === "PCR" && dp.pcrSnapshot?.comparator) delete labResult.valueNum;
     if (isCacrFormula(dp.sourceFormulaId) && dp.cacrSnapshot?.comparator) delete labResult.valueNum;
     if (dp.sourceFormulaId === "Mg_Ca" && dp.magnesiumCalciumSnapshot?.comparator) delete labResult.valueNum;
+    if (dp.sourceFormulaId === "B_Cr" && dp.proteinCreatinineSnapshot?.comparator) delete labResult.valueNum;
     if (dp.sourceFormulaId === "PO4_Cr" && dp.phosphorusCreatinineSnapshot?.comparator) delete labResult.valueNum;
     // Zakres referencyjny (jeśli silnik go pokazał) — do kolumny „Zakres".
     if (dp.norm) labResult.norm = String(dp.norm).slice(0, 200);
@@ -1001,7 +1008,7 @@
 
   const ASSESSMENT_FIELDS = Object.freeze([
     "acrAssessment", "pcrAssessment", "cacrAssessment", "oxcrAssessment", "citcrAssessment",
-    "fenaAssessment", "fekAssessment", "feclAssessment", "fehco3Assessment", "uagAssessment", "tmpGfrAssessment", "phAssessment", "uaAssessment", "caDzmAssessment", "mgDzmAssessment", "po4DzmAssessment", "proteinDzmAssessment", "sodiumDzmAssessment", "potassiumDzmAssessment", "urateCreatinineAssessment", "magnesiumCalciumAssessment", "phosphorusCreatinineAssessment",
+    "fenaAssessment", "fekAssessment", "feclAssessment", "fehco3Assessment", "uagAssessment", "tmpGfrAssessment", "phAssessment", "uaAssessment", "caDzmAssessment", "mgDzmAssessment", "po4DzmAssessment", "proteinDzmAssessment", "sodiumDzmAssessment", "potassiumDzmAssessment", "urateCreatinineAssessment", "magnesiumCalciumAssessment", "phosphorusCreatinineAssessment", "proteinCreatinineAssessment",
   ]);
   const HELPER_BY_FORMULA = Object.freeze({
     OxCr_spot: "ClcrOxcrPersistence", CitCr_spot: "ClcrCitcrPersistence",
@@ -1179,7 +1186,7 @@
         population: reference?.population || null,
         profileId: reference?.profileId || null, profileVersion: reference?.profileVersion ?? null },
     });
-    if (["AGu_spot", "TMP_GFR", "pH_spot", "UA_mgkg", "Ca_mgkg", "Mg_mgkg", "PO4_mgkg", "Prot_mgkg", "Na_mmol_d", "K_mmol_d", "KM_Cr", "Mg_Ca", "PO4_Cr"].includes(capture.formulaId)) Object.assign(point, {
+    if (["AGu_spot", "TMP_GFR", "pH_spot", "UA_mgkg", "Ca_mgkg", "Mg_mgkg", "PO4_mgkg", "Prot_mgkg", "Na_mmol_d", "K_mmol_d", "KM_Cr", "Mg_Ca", "PO4_Cr", "B_Cr"].includes(capture.formulaId)) Object.assign(point, {
       calculationMethod: capture.calculationMethod || point.calculationMethod,
       comment: text(capture.comment), knownFacts: object(capture.knownFacts),
       contextReferences: Array.isArray(capture.contextReferences) ? capture.contextReferences : [],

@@ -2132,6 +2132,173 @@ function restoreClearedCaDzmContext(event) {
   const priorRestoreCa = restoreClearedCaDzmContext;
   replaceBinding("restoreClearedCaDzmContext", function restorePhosphorusCreatinineAfterCa(event) { priorRestoreCa(event); restoreClearedPhosphorusCreatinine(event); });
 })();
+// B/Cr DZM owns its operands and specimen facts. Only an imported legacy
+// B_Cr session restores the old mass/volume calculation; changing the menu
+// never copies shared operands into the new concentration form.
+(function installProteinCreatinineSessionAdapter() {
+  "use strict";
+  const DEFAULTS = Object.freeze({ BCR_inputMode: "concentration", BCR_protein: "", BCR_proteinUnit: "mg/L",
+    BCR_creatinine: "", BCR_creatinineUnit: "mg/dL", BCR_reportedValue: "", BCR_reportedUnit: "mg/mg",
+    BCR_sameSpecimen: "assumed", BCR_collectionProblem: "", BCR_collectionHours: "", BCR_durationKnown: "" });
+  const SAMPLE_IDS = Object.freeze(["BCR_sameSpecimen", "BCR_collectionProblem", "BCR_collectionHours", "BCR_durationKnown"]);
+  const CONTEXT_IDS = Object.freeze(["age", "ageMonths", "ageDays", "sex", "weight", "height", "newbornContext", ...SAMPLE_IDS]);
+  const originals = new WeakMap();
+  let restoredAliases = {};
+  const object = value => value && typeof value === "object" && !Array.isArray(value);
+  const own = (value, key) => Object.prototype.hasOwnProperty.call(value || {}, key);
+  const absent = value => value == null || typeof value === "string" && !value.trim();
+  const primitive = value => value == null ? "" : ["string", "number", "boolean"].includes(typeof value) ? String(value) : "";
+  const incoming = session => ({ ...(object(session.preservedInputs) ? session.preservedInputs : {}), ...(object(session.inputs) ? session.inputs : {}) });
+  const selected = (session, values) => session.selectedFormula || values.formulaPicker || "";
+  function aliasValues(raw) {
+    let value = raw;
+    if (typeof value === "string") { try { value = JSON.parse(value); } catch { return null; } }
+    if (!object(value) || !Object.keys(value).length || Object.keys(value).some(key => !["U_Prot", "V24", "Ucr"].includes(key))) return null;
+    const result = {};
+    for (const [key, item] of Object.entries(value)) {
+      if (!["string", "number"].includes(typeof item) || typeof item === "number" && !Number.isFinite(item)) return null;
+      const text = primitive(item);
+      if (!text.trim() || text.length > 512) return null;
+      result[key] = text;
+    }
+    return result;
+  }
+  function metadataText(value) {
+    if (typeof value === "string") return value;
+    try { return JSON.stringify(value); } catch { return "[invalid metadata]"; }
+  }
+  function legacyAliasValues(doc = document) {
+    if (doc.getElementById("formulaPicker")?.value !== "B_Cr") return {};
+    const vault = window.__vildaClcrVersionValueVault;
+    const captured = object(vault) && own(vault, "BCR_legacyAliases") ? aliasValues(vault.BCR_legacyAliases) : restoredAliases;
+    return Object.freeze({ ...(captured || {}) });
+  }
+  function setControls(fields) {
+    for (const [id, value] of Object.entries(fields)) {
+      const control = document.getElementById(id);
+      if (control) {
+        if (control.type === "checkbox") control.checked = value === true || value === "true";
+        else control.value = primitive(value);
+      }
+    }
+  }
+  function sourceContexts(session, active) {
+    const belongsToDzm = context => object(context) &&
+      (!["sourceFormula", "sourceFormulaId", "formulaId"].some(key => own(context, key) && context[key] !== "B_Cr")) &&
+      (!own(context, "sampleType") || context.sampleType === "timed");
+    const snapshots = [session.proteinCreatinineSnapshot, session.context?.proteinCreatinineSnapshot, session.sourceContext?.proteinCreatinineSnapshot]
+      .filter(snapshot => object(snapshot) && snapshot.schema === "clcr-protein-creatinine" && snapshot.version === 1 && snapshot.sourceFormula === "B_Cr")
+      .map(snapshot => snapshot.context);
+    const typed = [...snapshots, session.context?.proteinCreatinine,
+      session.sourceContext?.proteinCreatinine].filter(belongsToDzm);
+    return active ? [...typed, session.context, session.sourceContext].filter(belongsToDzm) : typed;
+  }
+  function ownSampleFacts(session, values, active) {
+    const fields = {};
+    const aliases = { BCR_sameSpecimen: ["concentrationSameSpecimen", "sameSpecimen", "sameUrineSample"], BCR_collectionProblem: ["collectionProblem"],
+      BCR_collectionHours: ["collectionHours", "durationHours", "hours"], BCR_durationKnown: ["durationKnown"] };
+    for (const id of SAMPLE_IDS) {
+      // An explicitly supplied blank is evidence of unknown, not permission to
+      // recover an answer from an older preserved context.
+      if (own(values, id)) { fields[id] = primitive(values[id]); continue; }
+      for (const context of sourceContexts(session, active)) {
+        const facts = object(context.knownFacts) ? context.knownFacts : {};
+        const source = [context, facts, object(context.clock) ? context.clock : {}]
+          .find(item => own(item, id) || aliases[id].some(key => own(item, key)));
+        if (!source) continue;
+        const key = own(source, id) ? id : aliases[id].find(key => own(source, key));
+        fields[id] = primitive(source[key]);
+        break;
+      }
+    }
+    return fields;
+  }
+  function normalizeProteinCreatinine(session) {
+    const values = originals.get(session) || incoming(session), active = selected(session, values) === "B_Cr";
+    window.ClcrProteinCreatinineUi?.ensureControls?.(document);
+    const fields = Object.fromEntries(Object.entries(DEFAULTS).map(([id, fallback]) => [id, own(values, id) ? primitive(values[id]) : fallback]));
+    const hasDedicated = Object.keys(values).some(id => id.startsWith("BCR_"));
+    const legacy = active && !hasDedicated && (!absent(values.U_Prot) || !absent(values.V24) || !absent(values.Ucr));
+    if (legacy) {
+      // U_Prot is the whole-collection protein MASS in mg, not a
+      // concentration. Keep all three original operands and their exact text;
+      // deriving a rounded concentration could alter a boundary comparison.
+      fields.BCR_inputMode = "legacy";
+      for (const id of ["U_Prot", "V24", "Ucr"]) fields[id] = own(values, id) ? primitive(values[id]) : "";
+    }
+    Object.assign(fields, ownSampleFacts(session, values, active));
+    const unitAliases = { "g/g": "mg/mg" };
+    const originalUnit = fields.BCR_reportedUnit;
+    fields.BCR_reportedUnit = unitAliases[originalUnit] || originalUnit;
+    if (fields.BCR_inputMode === "legacy") {
+      // Native number inputs discard comma decimals or invalid source text on
+      // assignment. Prepare the historical fields before the shared restorer
+      // writes them, preserving both exact valid values and correctable errors.
+      if (typeof window.ClcrProteinCreatinineUi?.prepareLegacyControls === "function") window.ClcrProteinCreatinineUi.prepareLegacyControls(document);
+      else for (const id of ["U_Prot", "V24", "Ucr"]) {
+        const control = document.getElementById(id);
+        if (control) { control.type = "text"; control.setAttribute?.("inputmode", "decimal"); }
+      }
+    }
+    setControls(fields);
+    const applicable = Object.fromEntries(Object.entries(fields).filter(([id]) => active || own(values, id) || document.getElementById(id)));
+    const next = { ...(object(session.inputs) ? session.inputs : {}), ...applicable };
+    for (const id of CONTEXT_IDS) if (!SAMPLE_IDS.includes(id) && own(values, id)) next[id] = values[id];
+    if (active) session.selectedFormula = "B_Cr";
+    if (own(values, "BCR_reportedUnitOriginal")) next.BCR_reportedUnitOriginal = values.BCR_reportedUnitOriginal;
+    else if (unitAliases[originalUnit]) next.BCR_reportedUnitOriginal = originalUnit;
+    const aliases = legacy ? Object.fromEntries(["U_Prot", "V24", "Ucr"].filter(id => own(values, id) && !absent(values[id])).map(id => [id, primitive(values[id])])) : null;
+    const encodedAliases = aliases && Object.keys(aliases).length ? JSON.stringify(aliases)
+      : own(values, "BCR_legacyAliases") ? metadataText(values.BCR_legacyAliases) : undefined;
+    restoredAliases = aliasValues(encodedAliases) || {};
+    if (encodedAliases !== undefined) next.BCR_legacyAliases = encodedAliases;
+    else delete next.BCR_legacyAliases;
+    // Shared aliases remain unchanged for historical export/undo. No other
+    // calculator's specimen facts or collection clock is read here.
+    if (legacy) for (const id of ["U_Prot", "V24", "Ucr"]) if (own(values, id)) next[id] = values[id];
+    session.inputs = next;
+  }
+  function clearProteinCreatinine() {
+    window.ClcrProteinCreatinineUi?.ensureControls?.(document);
+    setControls(DEFAULTS);
+    restoredAliases = {};
+    const vault = window.__vildaClcrVersionValueVault;
+    if (object(vault)) for (const id of Object.keys(vault)) if (id.startsWith("BCR_")) delete vault[id];
+  }
+  function restoreClearedProteinCreatinine(event) {
+    clearProteinCreatinine();
+    if (event?.clcrClearedFormula !== "B_Cr") return;
+    const saved = event.clcrPreservedProteinCreatinineContext;
+    if (!object(saved)) return;
+    const fields = { ...DEFAULTS, ...Object.fromEntries(CONTEXT_IDS.filter(id => own(saved, id) &&
+      (typeof saved[id] === "string" || typeof saved[id] === "boolean" || typeof saved[id] === "number" && Number.isFinite(saved[id])))
+      .map(id => [id, saved[id]])) };
+    setControls(fields);
+    const vault = object(window.__vildaClcrVersionValueVault) ? window.__vildaClcrVersionValueVault : (window.__vildaClcrVersionValueVault = {});
+    Object.assign(vault, fields);
+    setTimeout(() => { try { window.ClcrUiWorkflow?.refresh?.(); window.clcrUpdate?.(); } catch {} }, 0);
+  }
+  window.ClcrProteinCreatinineSession = Object.freeze({ DEFAULTS, CONTEXT_IDS, legacyAliasValues });
+  window.ClcrProteinCreatinineUi?.ensureControls?.(document);
+  const replaceBinding = (name, implementation) => {
+    if (!Reflect.set(globalThis, name, implementation)) throw new Error("Nie można zainstalować adaptera sesji: " + name);
+  };
+  const priorPrepareUa = prepareUaSession;
+  replaceBinding("prepareUaSession", function prepareProteinCreatinineSession(session) {
+    const prepared = priorPrepareUa(session);
+    if (!object(prepared) || selected(prepared, incoming(prepared)) !== "B_Cr") return prepared;
+    return { ...prepared, selectedFormula: "B_Cr", inputs: { ...(object(prepared.inputs) ? prepared.inputs : {}) },
+      preservedInputs: object(prepared.preservedInputs) ? { ...prepared.preservedInputs } : prepared.preservedInputs };
+  });
+  const priorNormalizeCl24 = normalizeCl24SessionInputs;
+  replaceBinding("normalizeCl24SessionInputs", function captureProteinCreatinineBeforeNormalization(session) { originals.set(session, incoming(session)); priorNormalizeCl24(session); });
+  const priorNormalizeCa = normalizeCaDzmSessionInputs;
+  replaceBinding("normalizeCaDzmSessionInputs", function normalizeProteinCreatinineAfterCa(session) { priorNormalizeCa(session); normalizeProteinCreatinine(session); });
+  const priorClearCa = clearCaDzmInputContext;
+  replaceBinding("clearCaDzmInputContext", function clearProteinCreatinineAfterCa() { priorClearCa(); clearProteinCreatinine(); });
+  const priorRestoreCa = restoreClearedCaDzmContext;
+  replaceBinding("restoreClearedCaDzmContext", function restoreProteinCreatinineAfterCa(event) { priorRestoreCa(event); restoreClearedProteinCreatinine(event); });
+})();
 /* KLIRENS-URATE-CREATININE-SESSION: source tools/patch-klirens-urate-creatinine-session.mjs */
 (function installUrateCreatinineSessionAdapter() {
   "use strict";
