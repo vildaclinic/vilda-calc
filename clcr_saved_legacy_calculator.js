@@ -33,7 +33,12 @@
   const calciumMgDl = (e) => e ? e * 4 : null;
   const magnesiumMgDl = (e) => e ? e / 10 : null;
   const dailyAmount = (e, minutes) => e * (1440 / minutes);
-  const proteinCreatinineRatio = (e, n, volume) => e && n && volume ? e / ((n * volume) / 100) : null;
+  // Legacy mass/volume is explicit; the audited engine validates each operand
+  // and avoids overflow before division. No reference is selected here.
+  function proteinCreatinineRatio(proteinMassMg, creatinineMgDl, volumeMl) {
+    const result = root.VildaClcrProteinCreatinine?.evaluateLegacy?.({ legacyProteinMassMg: proteinMassMg, legacyCreatinineMgDl: creatinineMgDl, legacyVolumeMl: volumeMl }, null);
+    return result?.valid ? result.rawValue : null;
+  }
   const math = Object.freeze({ BSA_DuBois, clCrCG, clCrCGNormalized, excr_mgkg, excr_mmol_d, ratio, K_frac, calciumMgDl, magnesiumMgDl, dailyAmount, proteinCreatinineRatio });
 
   const own = (object, key) => Object.prototype.hasOwnProperty.call(object || {}, key);
@@ -188,6 +193,16 @@
       if (!result.valid) throw new Error(result.message || "Sprawdź dane Mg/Ca.");
       const datapoint = { id: parameterKey, sourceFormulaId: formulaId, label: persistence.LABEL, testKey: "clcr:Mg_Ca" };
       if (!persistence.augmentDatapoint({ getAttribute: () => JSON.stringify(result.snapshot) }, datapoint)) throw new Error("Nie można utrwalić obliczenia Mg/Ca.");
+      return datapoint;
+    }
+    if (formulaId === "B_Cr") {
+      const engine = requiredModule("VildaClcrProteinCreatinine"), persistence = requiredModule("ClcrProteinCreatininePersistence");
+      const policy = requiredModule("VildaClcrProteinCreatinineData").getProfile("BCR_DZM_2026_11");
+      const prepared = own(values, "BCR_inputMode") ? { ...persistence.DEFAULTS, ...values } : persistence.prepareValues(values, context);
+      const result = engine.evaluate(engine.inputFromValues(prepared, { ...context, ageYears: ageOf(values, context), sex: values.sex ?? context.sex ?? null }), policy);
+      if (!result.valid) throw new Error(result.message || "Sprawdź dane B/Cr.");
+      const datapoint = { id: parameterKey, sourceFormulaId: formulaId, label: persistence.LABEL, testKey: "clcr:B_Cr" };
+      if (!persistence.augmentDatapoint({ getAttribute: () => JSON.stringify(result.snapshot) }, datapoint)) throw new Error("Nie można utrwalić obliczenia B/Cr.");
       return datapoint;
     }
     if (formulaId === "PO4_Cr") {

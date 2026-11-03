@@ -193,9 +193,10 @@
       },
       {
         id: "B_Cr",
-        label: "Bia\u0142ko/kreatynina (B/Cr)",
+        label: "Białko/kreatynina — B/Cr (DZM)",
         version: "advanced",
-        requires: ["U_Prot", "Ucr", "V24"],
+        requires: ["BCR_protein", "BCR_proteinUnit", "BCR_creatinine", "BCR_creatinineUnit"],
+        note: "Dwa stężenia z tej samej dobowej zbiórki albo gotowy B/Cr. Znany wiek i płeć służą dobraniu normy; czas i objętość nie są potrzebne.",
       },
       {
         id: "FENa_spot",

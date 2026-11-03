@@ -34,6 +34,7 @@
     if (formulaId === "K_mmol_d" && field.id === "K_volumeUnit") return true;
     if (formulaId === "KM_Cr" && /^URCR_/.test(field.id) && field.id !== "URCR_outputUnit") return true;
     if (formulaId === "Mg_Ca" && /^MGCA_/.test(field.id)) return !["MGCA_sameSpecimen", "MGCA_collectionProblem", "MGCA_collectionHours", "MGCA_durationKnown"].includes(field.id);
+    if (formulaId === "B_Cr" && /^BCR_/.test(field.id)) return !["BCR_sameSpecimen", "BCR_collectionProblem", "BCR_collectionHours", "BCR_durationKnown"].includes(field.id);
     if (formulaId === "PO4_Cr" && /^PICR_/.test(field.id)) return !["PICR_sameSpecimen", "PICR_collectionProblem", "PICR_collectionHours", "PICR_durationKnown"].includes(field.id);
     if (formulaId === "Ca_Cr" && /^CACR_DZM_/.test(field.id)) return !["CACR_DZM_sameSpecimen", "CACR_DZM_collectionProblem", "CACR_DZM_collectionHours", "CACR_DZM_durationKnown", "CACR_DZM_currentPreterm"].includes(field.id);
     if (["age", "ageMonths", "sex"].includes(field.id) || field.id === "ageDays" && formulaId !== "neonatal_egfr" || unitIds.has(field.id)) return false;
@@ -97,7 +98,7 @@
     }
     active = { token, destroy, cancelForFormulaChange(nextFormula) {
       const owner = root.ClcrSavedCalculation?.readSaved(currentNote)?.snapshot?.formulaId || currentRecord?.sourceFormulaId;
-      if (!["Ca_Cr", "CaCr_spot", "Mg_Ca", "PO4_Cr"].includes(owner) || owner === nextFormula) return true;
+      if (!["Ca_Cr", "CaCr_spot", "Mg_Ca", "PO4_Cr", "B_Cr"].includes(owner) || owner === nextFormula) return true;
       // A committed transaction keeps its original ID and material. While a
       // write is in flight, keep its editor alive until the result is known.
       if (pending) return false;
@@ -122,7 +123,7 @@
       const snapshot = description.snapshot;
       const age = snapshot?.capturedContext?.ageYears ?? saved?.context?.ageYears;
       const values = snapshot?.values || {};
-      const historicalSex = snapshot?.formulaId === "PO4_Cr" ? snapshot.capturedContext.sex : values.sex;
+      const historicalSex = ["PO4_Cr", "B_Cr"].includes(snapshot?.formulaId) ? snapshot.capturedContext.sex : values.sex;
       const hasDays = typeof age === "number" && age < 1 && Number(values.age) === 0 && Number(values.ageMonths || 0) === 0 && values.ageDays != null && values.ageDays !== "";
       const context = hasDays ? "Wiek w dniu badania: " + values.ageDays + " dni życia" : age == null ? "Nie zapisano wieku" : "Wiek w dniu badania: " + decimal(age) + " lat";
       const allFields = snapshot?.fields || [];
@@ -176,6 +177,15 @@
             draft.description.fields = root.ClcrMagnesiumCalciumPersistence.editableFields(nextValues);
             renderEditInputFields(nextValues, draft.description.fields);
             host.querySelector(nextValues.MGCA_inputMode === "direct" ? "#editField-MGCA_reportedValue" : "#editField-MGCA_magnesium")?.focus();
+          }
+        }
+        if (draft.description.snapshot.formulaId === "B_Cr") {
+          draft.description.values[control.dataset.clcrEditField] = control.type === "checkbox" ? control.checked : control.value;
+          if (control.dataset.clcrEditField === "BCR_inputMode") {
+            const nextValues = draft.description.values;
+            draft.description.fields = root.ClcrProteinCreatininePersistence.editableFields(nextValues);
+            renderEditInputFields(nextValues, draft.description.fields);
+            host.querySelector(nextValues.BCR_inputMode === "direct" ? "#editField-BCR_reportedValue" : "#editField-BCR_protein")?.focus();
           }
         }
         if (draft.description.snapshot.formulaId === "PO4_Cr") {

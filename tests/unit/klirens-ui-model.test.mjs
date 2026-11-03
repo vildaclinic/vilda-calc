@@ -131,6 +131,14 @@ function clinicalReadinessHarness(formulaId, values) {
       browserGlobal.VildaClcrMagnesiumCalciumData.getProfile('MGCA_DZM_2026_11'),
     );
   }
+  if (formulaId === 'B_Cr') {
+    loadBrowserScript('clcr_protein_creatinine_data.js', browserGlobal);
+    loadBrowserScript('clcr_protein_creatinine.js', browserGlobal);
+    browserGlobal.evaluateClcrProteinCreatinine = () => browserGlobal.VildaClcrProteinCreatinine.evaluate(
+      browserGlobal.VildaClcrProteinCreatinine.readInputFromDocument(browserGlobal.document),
+      browserGlobal.VildaClcrProteinCreatinineData.getProfile('BCR_DZM_2026_11'),
+    );
+  }
   if (formulaId === 'PO4_Cr') {
     loadBrowserScript('clcr_phosphorus_creatinine_data.js', browserGlobal);
     loadBrowserScript('clcr_phosphorus_creatinine.js', browserGlobal);
@@ -154,6 +162,35 @@ function clinicalReadinessHarness(formulaId, values) {
 }
 
 describe('Klirens — centralny model przepływu UI', () => {
+  const bcrValues = { BCR_inputMode: 'concentration', BCR_protein: '300', BCR_proteinUnit: 'mg/L',
+    BCR_creatinine: '100', BCR_creatinineUnit: 'mg/dL', BCR_reportedValue: '', BCR_reportedUnit: 'mg/mg',
+    BCR_sameSpecimen: 'assumed', BCR_collectionProblem: '', BCR_collectionHours: '', BCR_durationKnown: '',
+    age: '10', ageMonths: '0', ageDays: '', sex: 'F' };
+  it.each([
+    [{}, .3, 'normal'],
+    [{ sex: 'M' }, .3, 'high'],
+    [{ age: '6' }, .3, 'unassessed'],
+    [{ sex: '' }, .3, 'unassessed'],
+    [{ BCR_protein: '0' }, 0, 'unassessed'],
+    [{ BCR_protein: '1e-9' }, 1e-12, 'normal'],
+    [{ BCR_inputMode: 'legacy', U_Prot: '450', V24: '1500', Ucr: '100' }, .3, 'normal'],
+    [{ BCR_inputMode: 'direct', BCR_reportedValue: '16.968', BCR_reportedUnit: 'mg/mmol', age: '18', sex: '' }, .15, 'high'],
+  ])('B/Cr readiness uses exact production reader: %j', (patch, value, status) => {
+    const { workflow } = clinicalReadinessHarness('B_Cr', { ...bcrValues, ...patch });
+    expect(workflow.getFormulaReadiness('B_Cr')).toMatchObject({ valueReady: true, status: 'ready', missingFieldIds: [],
+      interpretationMissingFieldIds: [], blockers: [], outcome: { rawValue: value, status, unit: 'mg/mg' } });
+    const expected = patch.BCR_inputMode === 'legacy' ? ['U_Prot', 'Ucr', 'V24']
+      : patch.BCR_inputMode === 'direct' ? ['BCR_reportedValue', 'BCR_reportedUnit']
+      : ['BCR_protein', 'BCR_proteinUnit', 'BCR_creatinine', 'BCR_creatinineUnit'];
+    expect(workflow.getCalculationFieldSpec('B_Cr').requiredFieldIds).toEqual(expected);
+  });
+  it.each([{ BCR_protein: '-300', BCR_creatinine: '-100' }, { BCR_creatinine: '0' },
+    { BCR_protein: '1e-300', BCR_creatinine: '1e100' }, { BCR_sameSpecimen: 'different' },
+    { BCR_inputMode: 'legacy', U_Prot: '-450', Ucr: '-100', V24: '1500' }])('B/Cr invalid input blocks readiness: %j', patch => {
+    const { workflow } = clinicalReadinessHarness('B_Cr', { ...bcrValues, ...patch });
+    expect(workflow.getFormulaReadiness('B_Cr')).toMatchObject({ valueReady: false, status: 'blocked', hasBlockedProtocol: true });
+  });
+
   const phosphorusCreatinineValues = { PICR_inputMode: 'concentration', PICR_phosphorus: '30', PICR_phosphorusUnit: 'mmol/L',
     PICR_creatinine: '20', PICR_creatinineUnit: 'mmol/L', PICR_reportedValue: '', PICR_reportedUnit: 'mg/mg',
     PICR_sameSpecimen: 'assumed', PICR_collectionProblem: '', PICR_collectionHours: '', PICR_durationKnown: '',
@@ -864,13 +901,13 @@ describe('Klirens — centralny model przepływu UI', () => {
     );
 
     expect(html).toContain('clcr_ui_workflow.css?v=19');
-    expect(html).toContain('clcr_ui_workflow.js?v=40');
-    expect(html).toContain('inline_kalkulator_klirens_02.js?v=33');
-    expect(html).toContain('inline_kalkulator_klirens_04.js?v=40');
-    expect(html).toContain('inline_kalkulator_klirens_07.js?v=30');
+    expect(html).toContain('clcr_ui_workflow.js?v=41');
+    expect(html).toContain('inline_kalkulator_klirens_02.js?v=34');
+    expect(html).toContain('inline_kalkulator_klirens_04.js?v=41');
+    expect(html).toContain('inline_kalkulator_klirens_07.js?v=31');
     expect(html).toContain('clcr_result_reference_data.js?v=7');
     expect(html).toContain('clcr_result_presentation.js?v=8');
-    expect(serviceWorker).toContain("const SW_VERSION = '1.1.452'");
+    expect(serviceWorker).toContain("const SW_VERSION = '1.1.453'");
     expect(html).toContain('clcr_calculation_assumptions.js?v=2');
     expect(serviceWorker).toContain("'/clcr_calculation_assumptions.js?v=2'");
     expect(serviceWorker).toContain("'/clcr_clinical_safety.js?v=13'");
@@ -880,6 +917,11 @@ describe('Klirens — centralny model przepływu UI', () => {
     expect(serviceWorker).toContain("'/clcr_ui_workflow.js?v=35'");
     expect(serviceWorker).toContain("'/inline_kalkulator_klirens_02.js?v=28'");
     expect(serviceWorker).toContain("'/inline_kalkulator_klirens_04.js?v=35'");
+    for (const file of ['clcr_protein_creatinine_data.js', 'clcr_protein_creatinine.js',
+      'clcr_protein_creatinine_ui.js', 'clcr_protein_creatinine_ui.css', 'clcr_protein_creatinine_persistence.js']) {
+      expect(html).toContain(`${file}?v=1`);
+      expect(serviceWorker).toContain(`'/${file}?v=1'`);
+    }
     for (const file of ['clcr_potassium_dzm_data.js', 'clcr_potassium_dzm.js',
       'clcr_potassium_dzm_ui.js', 'clcr_potassium_dzm.css', 'clcr_potassium_dzm_persistence.js']) {
       expect(html).toContain(`${file}?v=1`);

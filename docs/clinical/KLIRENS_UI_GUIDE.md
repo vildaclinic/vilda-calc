@@ -325,6 +325,40 @@ przy zmianie trybu, błędzie i długiej liczbie. Badania, Notatki i raport
 odczytują zamrożoną normę oraz ocenę, bez dzisiejszego wieku lub nowego źródła.
 Pełny kontrakt: [PHOSPHORUS_CREATININE.md](PHOSPHORUS_CREATININE.md).
 
+## B/Cr (DZM) — decyzja 03.11.2026
+
+Dla `B_Cr` domyślne **„Oblicz ze stężeń”** ma białko całkowite w moczu
+(mg/L; także mg/dL i g/L) i kreatyninę (mg/dL; także mg/L, mmol/L i µmol/L).
+**„Gotowy wynik B/Cr”** wymaga jednego stosunku mg/mg, mg/g lub mg/mmol.
+Wynik i norma pozostają w **mg/mg**, bez kolejnych pól czasu, objętości,
+masy, wzrostu, BSA lub krwi. Wiek i płeć wykorzystuje się z dostępnego
+kontekstu tylko do oceny. Brak normy nie zmienia gotowości 2/2 lub 1/1.
+
+Jedna karta B pokazuje dzieciom **„Górna granica normy”**, dopisek
+**„Dla wieku i płci”** i `≤` właściwej granicy ARUP; dorosłym **„Zakres wg
+KDIGO”**, `<0,15 mg/mg`. Nie używaj „w zakresie tego laboratorium”:
+aplikacja nie zna wykonawcy badania. Nazwane źródło **„Źródło zakresu
+przyjętego w aplikacji: ARUP”** i pełna tabela są w Szczegółach, z wyróżnieniem
+tylko właściwej komórki wieku i płci. Dorosłe trzy kategorie KDIGO są opisowe,
+bez odznak A1–A3 i bez przedstawiania progu jako zdrowej normy wieku.
+
+ARUP 7–<18 lat ocenia się przez samą górną granicę, włączoną: dodatni
+wynik do niej to **„B/Cr niepodwyższony”**; powyżej **„Podwyższony B/Cr”**,
+bursztynowy. Dolna granica pozostaje w tabeli, bez alarmu „niski B/Cr”.
+Dorosły poniżej 0,15 ma **„Prawidłowy lub łagodnie zwiększony B/Cr”**.
+Liczba i jednostka normy są zawsze neutralne. Pod pediatryczną osią
+pisz **„Górna granica normy: … mg/mg.”**, pasmo **„do granicy”**; nie umieszczaj
+podpisu niepodwyższenia pod wysokim wynikiem. Skala 0–2×granica jest stała
+dla profilu, a techniczne zero nie oznacza dolnej normy.
+
+Brak wieku, wiek <7 lub brak wymaganej płci pozostawia neutralną liczbę
+z krótką przyczyną. To brak przyjętego profilu, nie dowód braku norm
+w literaturze. Zero i nierówności mają neutralną ocenę; mała dodatnia liczba
+nie staje się zerem w historii. Znane sprzeczne próbki/problem zbiórki
+zachowują znaczenie bez nowej ankiety. Stare `U_Prot` pozostaje masą całej
+zbiórki, nigdy nowym stężeniem. Szczegóły polityki i zapisu:
+[PROTEIN_CREATININE.md](PROTEIN_CREATININE.md).
+
 ## Makieta i sprawdzenie przed przekazaniem
 
 Każdą kolejną zmianę wizualną w audycie przedstaw najpierw do akceptacji jako
