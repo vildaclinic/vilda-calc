@@ -320,7 +320,12 @@ describe('Care plan original result previews use the scoped reference API', () =
     // original result must still use only the scoped reference API.
     expect(d.vault.getPatientNote.mock.calls).toEqual([[d.plan.id]]);
     d.vault.getPatientNote.mockClear();
-    d.host.querySelector('[data-record-id="fictional-step-actions-result"]').click(); await settle();
+    expect(d.host.querySelector('[data-record-id="fictional-step-actions-result"]')).toBeNull();
+    const menu = d.host.querySelector('.vcp-menu'); menu.open = true;
+    findButton(menu, 'Wcześniejsze wersje planu').click();
+    const versions = d.host.querySelector('.vcp-history-archive .vcp-sync-versions');
+    expect(versions).not.toBeNull(); versions.open = true; versions.dispatch('toggle');
+    versions.querySelector('[data-record-id="fictional-step-actions-result"]').click(); await settle();
     expect(d.vault.getCarePlanResultReference).toHaveBeenCalledWith({ planId: d.plan.id, stepId: current.id, noteId: original.id });
     expect(d.host.querySelector('.vcp-record-body').textContent).toBe(original.body);
     expect(d.vault.getPatientNote).not.toHaveBeenCalled(); d.controller.destroy();

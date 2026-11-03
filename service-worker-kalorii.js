@@ -19,7 +19,7 @@
  *   bo i tak chcemy zwracać HTML z cache natychmiast.
  */
 
-const SW_VERSION = '1.1.453';
+const SW_VERSION = '1.1.454';
 const CACHE_PREFIX = 'pwa-kalorii';
 const SHELL_CACHE = `${CACHE_PREFIX}-shell-v${SW_VERSION}`;
 const RUNTIME_CACHE = `${CACHE_PREFIX}-runtime`;
@@ -1078,6 +1078,7 @@ const CORE_SHELL_URLS = [
   '/vilda_global_search.js?v=1',
   '/vilda_global_search.js?v=2',
   '/vilda_global_search.js?v=3',
+  '/vilda_global_search.js?v=4',
   '/vilda_global_search_view.js?v=1',
   '/vilda_global_search_view.js?v=2',
   '/vilda_global_search_view.js?v=3',
@@ -1094,6 +1095,7 @@ const CORE_SHELL_URLS = [
   '/vilda_care_plans.css?v=7',
   '/vilda_care_plans.css?v=8',
   '/vilda_care_plans.css?v=9',
+  '/vilda_care_plans.css?v=10',
   '/vilda_care_plan_model.js?v=1',
   // Template editing is loaded on demand; keep its complete bundle available
   // for a first library visit after a genuine offline restart.
@@ -1116,6 +1118,7 @@ const CORE_SHELL_URLS = [
   '/vilda_care_plans.js?v=9',
   '/vilda_care_plans.js?v=10',
   '/vilda_care_plans.js?v=11',
+  '/vilda_care_plans.js?v=12',
     '/vilda_auth_ui.js?v=16',
   '/vilda_auth_ui.js?v=17',
   '/vilda_auth_ui.js?v=18',
@@ -1688,6 +1691,7 @@ const CORE_SHELL_URLS = [
   '/vilda_chrome.js?v=228',
   '/vilda_chrome.js?v=229',
   '/vilda_chrome.js?v=230',
+  '/vilda_chrome.js?v=231',
   '/vilda_realtime.js?v=1',
   '/vilda_realtime.js?v=2',
   '/vilda_realtime.js?v=3',
@@ -2479,6 +2483,7 @@ const OPTIONAL_DOCUMENTS = [
 const OPTIONAL_ASSETS = [
   '/vilda_vault.js?v=246',
   '/vilda_vault.js?v=247',
+  '/vilda_vault.js?v=248',
   '/vilda_auth_ui.js?v=535',
   '/vilda_auth_ui.js?v=536',
   '/vilda_auth_ui.js?v=537',
@@ -2489,6 +2494,7 @@ const OPTIONAL_ASSETS = [
   '/vilda_session_bridge.js?v=151',
   '/vilda_session_bridge.js?v=152',
   '/vilda_session_bridge.js?v=153',
+  '/vilda_session_bridge.js?v=154',
   '/vilda_sync.js?v=48',
   '/vilda_patient_documents.js?v=1',
   '/vilda_patient_documents.css?v=1',

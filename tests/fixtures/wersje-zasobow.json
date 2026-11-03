@@ -1064,12 +1064,12 @@
   "sha256": "99a01a9483720055e31a2b44bb938fad3bf8ae267d9b42750f6b35267e958f34"
  },
  "vilda_care_plans.css": {
-  "v": 9,
-  "sha256": "15e84229fe907dfa3b6cb83b497bcc5be89dd736382a74341d3420dfdcbed216"
+  "v": 10,
+  "sha256": "d7b741eb49a60c7f3bfde60ec82b8014db5be13288dd780de38e5ee8d3384ba4"
  },
  "vilda_care_plans.js": {
-  "v": 11,
-  "sha256": "8d540b81c9790c6321e33495f5b6e8600a44e40b758e7854b82935efe6427331"
+  "v": 12,
+  "sha256": "081b3c223edea8b7df77399cd831b63c6f0f5c192b2835faf0b0afeb0e268a03"
  },
  "vilda_care_template_model.js": {
   "v": 1,
@@ -1140,8 +1140,8 @@
   "sha256": "0aa800a6acebfa56cab1fbbc347afe8b904887e1344e4687803cc686efefeb16"
  },
  "vilda_chrome.js": {
-  "v": 230,
-  "sha256": "0214e3a430f39a4aff7f85c890993f7a90829f725a3b6463a0c67463136e3f07"
+  "v": 231,
+  "sha256": "6495750e34117283b14183e66b16d5cc2bf0bd1c38cc875dca572ec33cc85d30"
  },
  "vilda_clinical_crypto.js": {
   "v": 2,
@@ -1372,8 +1372,8 @@
   "sha256": "315718e5e615cfe4940416a1465b75bf9cb9057d4fb64a2b381342f5970c361c"
  },
  "vilda_global_search.js": {
-  "v": 3,
-  "sha256": "e67bbb0bf9ffe4185d16dec03cb3ac3476eb142561951f8cbe143685646bd56f"
+  "v": 4,
+  "sha256": "c9d99bacfb3d7e41b5fdd0d92a7100a135ecc51be31b2a5262c05407bfb7fb65"
  },
  "vilda_global_search_view.js": {
   "v": 6,
@@ -1800,8 +1800,8 @@
   "sha256": "59dfe0d72f1c56950e8bfa44036bd1d02bf6a6aea16ce6e77a2644921e1e45cf"
  },
  "vilda_session_bridge.js": {
-  "v": 153,
-  "sha256": "73c38cf5cac7c87bf29ae32c7703ec242252d7b5cad1a5bb5be079723773f400"
+  "v": 154,
+  "sha256": "0229e9837b838805bcde6c6c38c82783b9c4dba44b24081e5637f0be6fd82f8c"
  },
  "vilda_sga_catchup.js": {
   "v": 2,
@@ -1892,8 +1892,8 @@
   "sha256": "59ee39776162dde3f0f8beb5d779ae68323128e2d7bd4c4fa21ce897f56f942e"
  },
  "vilda_vault.js": {
-  "v": 247,
-  "sha256": "6059ac6f989dd450ff03e29238f0c625373b07dc8484a27e29a58bc638cc3755"
+  "v": 248,
+  "sha256": "3c661869e66f0893f4389b2c506bdb7941e113c92768b934dcaaa182884e5c49"
  },
  "vilda_vault_protocol.js": {
   "v": 1,
