@@ -107,7 +107,7 @@ Moduły danych, silnika, UI i adaptera zapisu są rozdzielone w `clcr_protein_cr
 
 Zwykły **READ** Badań, Notatek, raportu i historii używa utrwalonej oceny; nie wywołuje dzisiejszego silnika ani norm według dzisiejszego wieku. Stary brak normy nie otrzymuje nowej referencji ARUP/KDIGO, a techniczne `outOfRange:false` nie staje się „W zakresie”. Brak oceny pozostaje `outOfRange:null`. Wiarygodna zachowana pełna wartość pozostaje pełna; precyzji utraconej do zera nie rekonstruuje się.
 
-Dopiero świadome nowe obliczenie albo **EDIT** używa aktualnej zaakceptowanej polityki, zachowując kontekst pomiaru, znaczenie dawnych danych i ID. Edycja i usunięcie dotyczą jednego kanonicznego rekordu; zmiana jednostki nie tworzy kolejnego badania. Seria `clcr:B_Cr` nie łączy się z punktowym PCR. Wynik z nierównością nie jest dokładnym punktem trendu. Zapis wymaga wcześniej zapisanej, wybranej karty pacjenta i powiązania z wizytą. Czytelna Notatka nie zawiera surowego technicznego JSON.
+Nowe obliczenie oraz świadoma edycja dawnego wpisu bez migawki używają aktualnej zaakceptowanej polityki. **EDIT** wpisu z migawką zachowuje zapisaną politykę referencyjną. Każda edycja zachowuje kontekst pomiaru, znaczenie dawnych danych i ID. Edycja i usunięcie dotyczą jednego kanonicznego rekordu; zmiana jednostki nie tworzy kolejnego badania. Seria `clcr:B_Cr` nie łączy się z punktowym PCR. Wynik z nierównością nie jest dokładnym punktem trendu. Zapis wymaga wcześniej zapisanej, wybranej karty pacjenta i powiązania z wizytą. Czytelna Notatka nie zawiera surowego technicznego JSON.
 
 ## Syntetyczny kontrakt regresji
 
