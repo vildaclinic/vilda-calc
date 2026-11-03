@@ -2351,6 +2351,18 @@ html.vilda-phone .chrome-menu-account-copy .chrome-drawer-account-value {
   box-sizing: border-box
 }
 
+/* The compact fieldset has no trailing margin. The comparison wrapper must no
+ * longer cancel that old margin: keep one 1rem gap above the comparison card. */
+.vilda-start-compact #calcForm > #prevSummaryWrap {
+  margin-top: 0
+}
+
+@media(max-width:699px) {
+  .vilda-start-compact #calcForm > #prevSummaryWrap {
+    margin-top: calc(var(--space-1) - var(--space-0-3))
+  }
+}
+
 .vilda-start-compact .start-name-pair {
   margin-top: 0
 }
@@ -2397,12 +2409,12 @@ html.vilda-phone .chrome-menu-account-copy .chrome-drawer-account-value {
   .vilda-start-compact > .desktop-layout {
     flex: 1 0 auto;
     align-items: stretch;
-    padding-top: var(--space-12px);
-    padding-bottom: var(--space-12px)
+    padding-top: var(--space-8px);
+    padding-bottom: var(--space-8px)
   }
   .vilda-start-compact .main-content {
     display: flex;
-    padding: var(--space-12px)
+    padding: var(--space-8px) var(--space-12px)
   }
   .vilda-start-compact .main-content > .container {
     display: flex;

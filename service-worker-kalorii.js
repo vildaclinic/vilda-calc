@@ -2433,6 +2433,7 @@ const OPTIONAL_ASSETS = [
   '/vilda_patient_documents.css?v=1',
   '/vilda_patient_documents.css?v=2',
   '/vilda_summary_layout.js?v=1',
+  '/vilda_summary_layout.js?v=2',
   // Read-only new-measurement preview (Start / DocPro / fullscreen shell).
   '/vilda_centile_live_panel.css?v=1',
   '/vilda_centile_live_panel.css?v=2',
