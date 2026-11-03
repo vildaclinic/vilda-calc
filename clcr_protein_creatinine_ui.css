@@ -455,24 +455,6 @@ html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .bcr-result-ma
   font-variant-numeric: tabular-nums;
 }
 
-.bcr-detail-links {
-  display: grid;
-  gap: var(--space-8px);
-}
-
-html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .bcr-detail-links button {
-  width: 100%;
-  min-width: 0;
-  min-height: 48px;
-  padding: var(--space-8px) var(--space-10px);
-  margin: 0;
-  font-size: 16px;
-  line-height: 1.45;
-  font-weight: 650;
-  text-align: left;
-  white-space: normal
-}
-
 @media (max-width: 700px) {
   html[data-clcr-workflow-ui="1"][data-clcr-bcr-active="1"] {
     --bcr-unit-width: 108px;
