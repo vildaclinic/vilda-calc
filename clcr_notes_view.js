@@ -53,7 +53,7 @@
     const norm = available ? text(point.norm) : "";
     const criterion = available && point.reference?.kind === "recorded-criterion";
     const category = available ? text(point.category) : "";
-    const outOfRange = available && typeof point.outOfRange === "boolean" ? point.outOfRange : null;
+    const outOfRange = available && !(point?.sourceFormulaId === "Mg_Ca" && !norm) && typeof point.outOfRange === "boolean" ? point.outOfRange : null;
     const tone = available && ["success", "normal", "warning", "danger"].includes(point.tone) ? point.tone : "neutral";
     const ratioCategory = ["Ca_Cr", "CaCr_spot"].includes(point?.sourceFormulaId)
       ? ({ below: "Poniżej normy", within: "W zakresie", above: "Powyżej normy" })[category] : "";

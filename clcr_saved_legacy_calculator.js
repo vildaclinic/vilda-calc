@@ -180,6 +180,16 @@
   }
   function recalculate(formulaId, values = {}, parameterKey = formulaId, context = {}) {
     parameterKey = String(parameterKey).replace(/^clcr:/, "");
+    if (formulaId === "Mg_Ca") {
+      const engine = requiredModule("VildaClcrMagnesiumCalcium"), persistence = requiredModule("ClcrMagnesiumCalciumPersistence");
+      const policy = requiredModule("VildaClcrMagnesiumCalciumData").getProfile("MGCA_DZM_2026_11");
+      const prepared = own(values, "MGCA_inputMode") ? { ...persistence.DEFAULTS, ...values } : persistence.prepareValues(values, context);
+      const result = engine.evaluate(engine.inputFromValues(prepared, {}), policy);
+      if (!result.valid) throw new Error(result.message || "Sprawdź dane Mg/Ca.");
+      const datapoint = { id: parameterKey, sourceFormulaId: formulaId, label: persistence.LABEL, testKey: "clcr:Mg_Ca" };
+      if (!persistence.augmentDatapoint({ getAttribute: () => JSON.stringify(result.snapshot) }, datapoint)) throw new Error("Nie można utrwalić obliczenia Mg/Ca.");
+      return datapoint;
+    }
     if (formulaId === "Ca_Cr") {
       const engine = requiredModule("VildaClcrCacr"), persistence = requiredModule("ClcrCacrDzmPersistence");
       const policy = requiredModule("VildaClcrCacrReferenceData").getProfile("ARUP_CACR_DZM_2026_11");
@@ -332,7 +342,7 @@
     const sample = collection(values, context), daily = sample.dailyVolume;
     if (["Mg_mgkg", "Ox_mgkg", "Cit_mgkg", "K_mmol_d", "PO4_mgkg", "Prot_mgkg"].includes(formulaId) && !sample.valid) throw new Error(sample.error);
     const weight = number(values, "weight"), urineCr = number(values, "Ucr");
-    const calcium = calciumMgDl(number(values, "U_Ca")), magnesium = magnesiumMgDl(number(values, "U_Mg"));
+    const calcium = calciumMgDl(number(values, "U_Ca"));
     let value, unit = "mg/mg", digits = 3;
     const analytes = { Ca_mgkg: "U_Ca", Mg_mgkg: "U_Mg", Ox_mgkg: "U_Ox", Cit_mgkg: "U_Cit" };
     if (own(analytes, formulaId)) {
@@ -364,7 +374,6 @@
       return modeled(formulaId,parameterKey,value,"mg/mg",3,values,context,{displayValue:String(value).replace(".",","),datapoint:{assessment:"unassessed",outOfRange:null,norm:"",tone:"neutral"}});
     }
     else if (formulaId === "PO4_Cr") value = ratio(number(values, "U_PO4"), urineCr);
-    else if (formulaId === "Mg_Ca") value = ratio(magnesium, calcium);
     else if (formulaId === "Ca_Cit") value = ratio(calcium, number(values, "U_Cit"));
     else if (formulaId === "B_Cr") value = proteinCreatinineRatio(number(values, "U_Prot"), urineCr, sample.volume);
     else if (formulaId === "K_frac") { value = K_frac(number(values, "U_K"), number(values, "U_Na")); unit = "%"; digits = 1; }

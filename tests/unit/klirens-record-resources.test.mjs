@@ -47,6 +47,9 @@ describe('lazy resources zapisanych obliczeń', () => {
       .toEqual(env.api.manifest.reader.map(([path]) => path.split('?')[0]));
     expect(env.requests.every((request) => request.url.startsWith('https://fictional.invalid/application/'))).toBe(true);
     expect(env.win.VildaClcrAcr).toBeUndefined();
+    expect(typeof env.win.ClcrMagnesiumCalciumPersistence.readSnapshot).toBe('function');
+    expect(env.win.VildaClcrMagnesiumCalcium).toBeUndefined();
+    expect(env.win.VildaClcrMagnesiumCalciumData).toBeUndefined();
     expect(env.win.ClcrClinicalSafety).toBeUndefined();
     expect(env.win.ClcrUiWorkflow).toBeUndefined();
     const count = env.requests.length;
@@ -62,6 +65,8 @@ describe('lazy resources zapisanych obliczeń', () => {
     expect(typeof env.win.ClcrSavedLegacyCalculator.recalculate).toBe('function');
     expect(typeof env.win.VildaClcrFehco3.evaluate).toBe('function');
     expect(typeof env.win.VildaClcrAcr.evaluate).toBe('function');
+    expect(typeof env.win.VildaClcrMagnesiumCalcium.evaluate).toBe('function');
+    expect(typeof env.win.VildaClcrMagnesiumCalciumData.getProfile).toBe('function');
     const scripts = env.requests.filter((request) => request.tag === 'SCRIPT').map((request) => request.filename);
     expect(scripts).toEqual([...env.api.manifest.reader, ...env.api.manifest.editor].map(([path]) => path.split('?')[0]));
     expect(scripts).not.toContain('inline_kalkulator_klirens_04.js');

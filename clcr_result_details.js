@@ -33,6 +33,7 @@
     if (formulaId === "Na_mmol_d" && ["Na_volumeUnit", "Na_reportedUnit", "Na_outputUnit"].includes(field.id)) return true;
     if (formulaId === "K_mmol_d" && field.id === "K_volumeUnit") return true;
     if (formulaId === "KM_Cr" && /^URCR_/.test(field.id) && field.id !== "URCR_outputUnit") return true;
+    if (formulaId === "Mg_Ca" && /^MGCA_/.test(field.id)) return !["MGCA_sameSpecimen", "MGCA_collectionProblem", "MGCA_collectionHours", "MGCA_durationKnown"].includes(field.id);
     if (formulaId === "Ca_Cr" && /^CACR_DZM_/.test(field.id)) return !["CACR_DZM_sameSpecimen", "CACR_DZM_collectionProblem", "CACR_DZM_collectionHours", "CACR_DZM_durationKnown", "CACR_DZM_currentPreterm"].includes(field.id);
     if (["age", "ageMonths", "sex"].includes(field.id) || field.id === "ageDays" && formulaId !== "neonatal_egfr" || unitIds.has(field.id)) return false;
     if (/unit|Assay|Standardization|creatinineState|suspectedAKI|collectionSource|DurationSource|durationNeedsConfirmation/i.test(field.id) || /_entry_mode$/i.test(field.id)) return false;
@@ -95,7 +96,7 @@
     }
     active = { token, destroy, cancelForFormulaChange(nextFormula) {
       const owner = root.ClcrSavedCalculation?.readSaved(currentNote)?.snapshot?.formulaId || currentRecord?.sourceFormulaId;
-      if (!["Ca_Cr", "CaCr_spot"].includes(owner) || owner === nextFormula) return true;
+      if (!["Ca_Cr", "CaCr_spot", "Mg_Ca"].includes(owner) || owner === nextFormula) return true;
       // A committed transaction keeps its original ID and material. While a
       // write is in flight, keep its editor alive until the result is known.
       if (pending) return false;
@@ -163,6 +164,15 @@
             draft.description.fields = root.ClcrCacrDzmPersistence.editableFields(nextValues);
             renderEditInputFields(nextValues, draft.description.fields);
             host.querySelector(nextValues.CACR_DZM_inputMode === "direct" ? "#editField-CACR_DZM_reportedValue" : "#editField-CACR_DZM_calcium")?.focus();
+          }
+        }
+        if (draft.description.snapshot.formulaId === "Mg_Ca") {
+          draft.description.values[control.dataset.clcrEditField] = control.type === "checkbox" ? control.checked : control.value;
+          if (control.dataset.clcrEditField === "MGCA_inputMode") {
+            const nextValues = draft.description.values;
+            draft.description.fields = root.ClcrMagnesiumCalciumPersistence.editableFields(nextValues);
+            renderEditInputFields(nextValues, draft.description.fields);
+            host.querySelector(nextValues.MGCA_inputMode === "direct" ? "#editField-MGCA_reportedValue" : "#editField-MGCA_magnesium")?.focus();
           }
         }
         if (draft.description.snapshot.formulaId === "KM_Cr") {

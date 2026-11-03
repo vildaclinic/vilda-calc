@@ -123,6 +123,14 @@ function clinicalReadinessHarness(formulaId, values) {
       browserGlobal.VildaClcrUagReferenceData.DEFAULT_POLICY,
     );
   }
+  if (formulaId === 'Mg_Ca') {
+    loadBrowserScript('clcr_magnesium_calcium_data.js', browserGlobal);
+    loadBrowserScript('clcr_magnesium_calcium.js', browserGlobal);
+    browserGlobal.evaluateClcrMagnesiumCalcium = () => browserGlobal.VildaClcrMagnesiumCalcium.evaluate(
+      browserGlobal.VildaClcrMagnesiumCalcium.readInputFromDocument(browserGlobal.document),
+      browserGlobal.VildaClcrMagnesiumCalciumData.getProfile('MGCA_DZM_2026_11'),
+    );
+  }
   loadBrowserScript('clcr_ui_workflow.js', browserGlobal);
   const workflow = browserGlobal.ClcrUiWorkflow;
   workflow.state.activeFormulaId = formulaId;
@@ -138,6 +146,67 @@ function clinicalReadinessHarness(formulaId, values) {
 }
 
 describe('Klirens — centralny model przepływu UI', () => {
+  const magnesiumCalciumValues = { MGCA_inputMode: 'concentration', MGCA_magnesium: '20', MGCA_magnesiumUnit: 'mg/L',
+    MGCA_calcium: '2', MGCA_calciumUnit: 'mmol/L', MGCA_reportedValue: '', MGCA_reportedUnit: 'mg/mg',
+    MGCA_sameSpecimen: 'assumed', MGCA_collectionProblem: '', MGCA_collectionHours: '', MGCA_durationKnown: '' };
+
+  it.each(['20', '0'])('Mg/Ca %s liczy bez wieku, krwi, objętości i czasu, a brak normy nie staje się dodatkowym pytaniem', magnesium => {
+    const { workflow } = clinicalReadinessHarness('Mg_Ca', { ...magnesiumCalciumValues, MGCA_magnesium: magnesium });
+    const readiness = workflow.getFormulaReadiness('Mg_Ca');
+    expect(readiness).toMatchObject({ valueReady: true, status: 'ready', missingFieldIds: [],
+      interpretationReady: false, interpretationMissingFieldIds: [], limitations: [], blockers: [] });
+    expect(readiness.outcome).toMatchObject({ status: 'unassessed', outOfRange: null, rawValue: magnesium === '0' ? 0 : 0.24951344877488896 });
+    const spec = workflow.getCalculationFieldSpec('Mg_Ca');
+    expect(spec.requiredFieldIds).toEqual(['MGCA_magnesium', 'MGCA_magnesiumUnit', 'MGCA_calcium', 'MGCA_calciumUnit']);
+    expect(spec.fieldIds).toEqual(expect.arrayContaining(Object.keys(magnesiumCalciumValues)));
+    expect(spec.fieldIds.every(id => id.startsWith('MGCA_'))).toBe(true);
+    expect(spec.fields.some(field => ['MGCA_sameSpecimen', 'MGCA_collectionProblem', 'MGCA_collectionHours', 'MGCA_durationKnown'].includes(field.id))).toBe(false);
+  });
+
+  it.each([{ MGCA_magnesium: '-20', MGCA_calcium: '-2' }, { MGCA_calcium: '0' }, { MGCA_magnesium: 'invalid' },
+    { MGCA_magnesium: '1e-300', MGCA_calcium: '1e100' }, { MGCA_sameSpecimen: 'different' }])('Mg/Ca %j korzysta z blokad rzeczywistego silnika zamiast ilorazu dwóch błędów', patch => {
+    const { workflow } = clinicalReadinessHarness('Mg_Ca', { ...magnesiumCalciumValues, ...patch });
+    expect(workflow.getFormulaReadiness('Mg_Ca')).toMatchObject({ valueReady: false, status: 'blocked', hasBlockedProtocol: true });
+    expect(workflow.hasBlockingValidationError()).toBe(false);
+  });
+
+  it('gotowy Mg/Ca zachowuje operator i niezależność od znanej sprzeczności stężeń', () => {
+    const { workflow } = clinicalReadinessHarness('Mg_Ca', { ...magnesiumCalciumValues, MGCA_inputMode: 'direct',
+      MGCA_reportedValue: '≥0,300000000000000000001', MGCA_reportedUnit: 'mmol/mmol', MGCA_sameSpecimen: 'different' });
+    expect(workflow.getFormulaReadiness('Mg_Ca')).toMatchObject({ valueReady: true, interpretationReady: false,
+      outcome: { comparator: '≥', pointValue: null, unit: 'mmol/mmol', context: { concentrationSameSpecimen: 'different' } } });
+    expect(workflow.getCalculationFieldSpec('Mg_Ca').requiredFieldIds).toEqual(['MGCA_reportedValue', 'MGCA_reportedUnit']);
+  });
+
+  it('kolektor Mg/Ca wymaga poprawnego frozen snapshotu i utrzymuje neutralność w historii oraz byDate', async () => {
+    const { workflow, browserGlobal } = clinicalReadinessHarness('Mg_Ca', magnesiumCalciumValues);
+    loadBrowserScript('clcr_saved_calculation.js', browserGlobal);
+    const outcome = workflow.getFormulaReadiness('Mg_Ca').outcome;
+    const attrs = { 'data-clcr-series': 'Mg_Ca', 'data-clcr-value': String(outcome.rawValue),
+      'data-clcr-display-value': '0.250', 'data-clcr-mgca-snapshot': JSON.stringify(outcome.snapshot),
+      'data-clcr-assumptions': 'Obce założenie', 'data-clcr-reference-record': '{"lower":0,"upper":1}',
+      'data-clcr-assumption-provenance': '{"foreign":true}' };
+    const card = { getAttribute: key => attrs[key] ?? null, getClientRects: () => [{}], classList: { contains: () => false }, querySelector: () => null };
+    const root = { querySelectorAll: () => [card] };
+    const [point] = browserGlobal.ClcrVisitSave.collectActiveDatapoints(root, { formulaId: 'Mg_Ca' });
+    expect(point).toMatchObject({ valueNum: outcome.rawValue, rawValue: outcome.rawValue, assessment: 'unassessed',
+      outOfRange: null, reference: null, referenceAvailable: false, tone: 'neutral', norm: '', magnesiumCalciumSnapshot: outcome.snapshot });
+    expect(point.assumptions).not.toContain('Obce');
+    expect(point).not.toHaveProperty('assumptionProvenance');
+    expect(Object.keys(point.capture.values).every(id => id.startsWith('MGCA_'))).toBe(true);
+    const note = browserGlobal.ClcrSavedResults.buildPatientNotePayload(point, { patientId: 'fictional-mgca-workflow', clinicalDateISO: '2026-11-03' });
+    const saved = browserGlobal.ClcrSavedCalculation.createSnapshot(point, { capture: point.capture });
+    expect(saved).not.toBeNull();
+    note.body += '\n\n' + browserGlobal.ClcrSavedCalculation.serializeSnapshot(saved, note);
+    browserGlobal.VildaVault = { isUnlocked: () => true, listPatientNotesForPatient: async () => [note] };
+    const flow = await browserGlobal.ClcrVisitSave.readPatientFlowsheet('fictional-mgca-workflow');
+    expect(flow.parameters).toHaveLength(1);
+    expect(flow.parameters[0].points[0]).toMatchObject({ outOfRange: null, assessment: 'unassessed', comparator: '' });
+    expect(flow.parameters[0].byDate['2026-11-03']).toMatchObject({ outOfRange: null, assessment: 'unassessed', comparator: '', displayValue: point.displayValue });
+    delete attrs['data-clcr-mgca-snapshot'];
+    expect(browserGlobal.ClcrVisitSave.collectActiveDatapoints(root, { formulaId: 'Mg_Ca' })).toEqual([]);
+  });
+
   it('klirens zmierzony wymaga czterech wartości; kontekst normy i protokół nie są dodatkowymi pytaniami', () => {
     const formula = formulas.find(entry => entry.id === 'cl24');
     expect(new Set(formula.requires)).toEqual(new Set(['Scr', 'ScrUnit', 'Ucr', 'V24', 'Cl24DurationHours']));
@@ -688,13 +757,13 @@ describe('Klirens — centralny model przepływu UI', () => {
     );
 
     expect(html).toContain('clcr_ui_workflow.css?v=19');
-    expect(html).toContain('clcr_ui_workflow.js?v=38');
-    expect(html).toContain('inline_kalkulator_klirens_02.js?v=31');
-    expect(html).toContain('inline_kalkulator_klirens_04.js?v=38');
-    expect(html).toContain('inline_kalkulator_klirens_07.js?v=28');
+    expect(html).toContain('clcr_ui_workflow.js?v=39');
+    expect(html).toContain('inline_kalkulator_klirens_02.js?v=32');
+    expect(html).toContain('inline_kalkulator_klirens_04.js?v=39');
+    expect(html).toContain('inline_kalkulator_klirens_07.js?v=29');
     expect(html).toContain('clcr_result_reference_data.js?v=7');
     expect(html).toContain('clcr_result_presentation.js?v=8');
-    expect(serviceWorker).toContain("const SW_VERSION = '1.1.444'");
+    expect(serviceWorker).toContain("const SW_VERSION = '1.1.445'");
     expect(html).toContain('clcr_calculation_assumptions.js?v=2');
     expect(serviceWorker).toContain("'/clcr_calculation_assumptions.js?v=2'");
     expect(serviceWorker).toContain("'/clcr_clinical_safety.js?v=13'");
