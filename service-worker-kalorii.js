@@ -19,7 +19,7 @@
  *   bo i tak chcemy zwracać HTML z cache natychmiast.
  */
 
-const SW_VERSION = '1.1.454';
+const SW_VERSION = '1.1.455';
 const CACHE_PREFIX = 'pwa-kalorii';
 const SHELL_CACHE = `${CACHE_PREFIX}-shell-v${SW_VERSION}`;
 const RUNTIME_CACHE = `${CACHE_PREFIX}-runtime`;
@@ -1096,6 +1096,7 @@ const CORE_SHELL_URLS = [
   '/vilda_care_plans.css?v=8',
   '/vilda_care_plans.css?v=9',
   '/vilda_care_plans.css?v=10',
+  '/vilda_care_plans.css?v=11',
   '/vilda_care_plan_model.js?v=1',
   // Template editing is loaded on demand; keep its complete bundle available
   // for a first library visit after a genuine offline restart.
@@ -1692,6 +1693,7 @@ const CORE_SHELL_URLS = [
   '/vilda_chrome.js?v=229',
   '/vilda_chrome.js?v=230',
   '/vilda_chrome.js?v=231',
+  '/vilda_chrome.js?v=232',
   '/vilda_realtime.js?v=1',
   '/vilda_realtime.js?v=2',
   '/vilda_realtime.js?v=3',
@@ -2495,6 +2497,7 @@ const OPTIONAL_ASSETS = [
   '/vilda_session_bridge.js?v=152',
   '/vilda_session_bridge.js?v=153',
   '/vilda_session_bridge.js?v=154',
+  '/vilda_session_bridge.js?v=155',
   '/vilda_sync.js?v=48',
   '/vilda_patient_documents.js?v=1',
   '/vilda_patient_documents.css?v=1',

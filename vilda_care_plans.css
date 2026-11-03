@@ -98,6 +98,7 @@ body:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3).
 .vcp .vcp-timeline-entry time { display: block; color: #7a9297; font-size: 10px; margin-bottom: 3px; }
 .vcp .vcp-timeline-entry p { white-space: pre-line; overflow-wrap: anywhere; }
 .vcp .vcp-timeline-entry .vcp-text { font-size: 11px; }
+.vcp .vcp-timeline-entry > .vcp-text + .vcp-text { margin-inline-start: var(--space-16px); }
 .vcp .vcp-note-removal-text { white-space: pre-wrap; overflow-wrap: anywhere; line-height: 1.6; }
 .vcp .vcp-removed-note-label { display: block; font-size: 12px; font-weight: 500; }
 .vcp .vcp-retained-note { margin-top: var(--space-14px); padding-top: var(--space-12px); border-top: var(--border-hairline) solid var(--vcp-line); }
@@ -120,6 +121,24 @@ dialog.vcp.vcp-dialog::backdrop { background: #1a3b4445; backdrop-filter: blur(3
 .vcp .vcp-form-head h2 { font-size: 21px; font-weight: 600; line-height: 1.4; color: var(--vcp-ink); }
 .vcp .vcp-form-patient { font-size: 11px; color: #738f94; margin-bottom: var(--space-6px); line-height: 1.5; }
 .vcp .vcp-icon { display: grid; place-items: center; min-height: 44px; width: 44px; height: 44px; padding: 0; border: 0; background: transparent; font-size: 26px; line-height: 1; flex-shrink: 0; margin: -6px -9px 0 0; }
+/* The privacy control stays outside the protected form; both controls share
+   the dialog as their positioning frame. */
+.vcp.vcp-dialog.vilda-reminders-private-surface .vcp-form-head { padding-inline-end: 126px; }
+.vcp.vcp-dialog.vilda-reminders-private-surface .vcp-form-head > div { min-width: 0; overflow-wrap: anywhere; }
+.vcp.vcp-dialog.vilda-reminders-private-surface .vcp-form-head > .vcp-icon,
+.vcp.vcp-dialog.vilda-reminders-private-surface > .vilda-reminders-dialog-eye {
+  position: absolute;
+  top: var(--vcp-dialog-controls-top, 14px);
+  width: 44px!important;
+  min-width: 44px!important;
+  height: 44px;
+  min-height: 44px;
+  padding: 0;
+  margin: 0;
+}
+.vcp.vcp-dialog.vilda-reminders-private-surface .vcp-form-head > .vcp-icon { right: 14px; }
+.vcp.vcp-dialog.vilda-reminders-private-surface > .vilda-reminders-dialog-eye { right: 66px; }
+.vcp.vcp-dialog.vilda-reminders-private-surface.vcp-dialog-short { --vcp-dialog-controls-top: 6px; }
 .vcp .vcp-form-body { overflow: auto; min-height: 0; padding: 21px 25px; overscroll-behavior: contain; }
 .vcp .vcp-field { display: block; margin: var(--space-16px) 0 0; font-size: 13px; font-weight: 500; color: var(--vcp-ink); text-align: left; }
 .vcp .vcp-field:first-child { margin-top: 0; }
