@@ -20468,6 +20468,411 @@ a lekarz poprawia jedno z miejsc. Wartość dni spoza 0–6 w rekordzie nie jest
 
 **Wersje.** `sga_birth_module.js?v=10→11`; SW 1.1.168 → **1.1.169**.
 
+## Dziennik zdarzeń: koperta, buildery i status zastosowania — uśpione (P-DZIENNIK-ZDARZEN, E2-PR2a, SW 1.1.450, `vilda_vault.js` 247, 2026-11-03)
+
+**Zmiana kliniczna: NIE** — wzory, progi, jednostki, interpretacje, zapis, scalanie, format kopii i synchronizacja bez
+zmian. Wpis opisuje nowy, uśpiony kod etapu 2 synchronizacji przyrostowej: kod produkcyjny go nie woła, na urządzeniu
+nic nie powstaje i nic nie wychodzi do serwera. Wpływ kliniczny dziś: brak. Wpis zawiera też wynik testu A ≡ B, czyli
+zapowiedź tego, co zobaczy lekarz po włączeniu zdarzeń (PR włączający E2-PR6), i listę spraw do akceptacji właściciela.
+
+**Skąd.** Plan `docs/SYNC_PRZYROSTOWA_PLAN.md`, rozdz. 3.1, 3.2, 3.5 i tabela „Podział etapu 2” (wiersz 5a). Decyzje
+właściciela z 2026-10-29 (tylko tryb „Komputer prywatny”, seria uśpionych PR, decyzje 1–10) i z 2026-11-03:
+- **11.1 — przyjęta 2026-11-03** („Tak, idź dalej”): test A ≡ B wymaga zgodności urządzeń po pełnej wysyłce (W4 niżej,
+  gwarancja etapu 2, decyzja 7), a znane różnice zapisuje dokładnie (nowa albo znikająca różnica = czerwony test).
+  Do planu: E2-PR3c obowiązkowy, kolejność zdarzeń przy „Scal pacjentów” do ponownej decyzji w E2-PR3a, nowy E3-PR0
+  („zbieżność zdarzeń bez pełnej wysyłki”) przed etapem 3 (pierwsza pozycja etapu 3, przed jego pozostałymi PR);
+- **11.2 — do akceptacji właściciela:** zdarzenie kosza wizyty (`stomb`) niesie także kartę bez wizyt (wariant
+  rekomendowany, wdrożony w tym PR; niżej, builder 4);
+- **11.3 — do akceptacji właściciela:** podział E2-PR2 na E2-PR2a (ten PR) i E2-PR2b (magazyn kolejki), przyjęty roboczo.
+
+### E2-PR2a
+
+**Co jest (uśpione).** W `vilda_vault.js` jeden czytelny blok `Bev_` między znacznikami `P-DZIENNIK-ZDARZEN: poczatek
+bloku` i `koniec bloku`:
+- **koperta** zdarzenia jednej encji, jej **walidacja** i **miara rozmiaru**;
+- **14 builderów**: każdy czyta jedną encję ze sklepu sejfu i buduje kopertę;
+- **szyfrowanie** koperty (`encryptEvent`);
+- **zastosowanie** zaszyfrowanego zdarzenia ze statusem (`applyEncryptedEvent`).
+
+Dostęp jest tylko przez zamrożony obiekt `VildaVault._eventLog`. Klucze: `kinds`, 14 builderów, `encryptEvent`,
+`eventBytes`, `applyEncryptedEvent` — nic więcej. Kod produkcyjny nie woła żadnej z tych funkcji. Blok nie zakłada
+nasłuchów ani zegarów i nie pisze do sklepu, `userMeta`, `localStorage` ani `sessionStorage`. Nie wysyła powiadomień
+ani żądań. Tryb logowania nie ma znaczenia, bo nic się nie uruchamia. Poza blokiem i jednym kluczem eksportu
+`vilda_vault.js` jest bajt w bajt taki jak przed zmianą. Bez zmian zostają też `applyEncryptedDelta` (`ps`), scalanie
+(`Le`, `Bsl_*`, `Bkz_*`, `Bsw_*`, `Bgw_*`, `Bnp_*`, `Bpk_*`), eksport `exportSyncPayload` (`is`) i dzisiejsze buildery
+delt (`ds`, `us`, `cs`, `ls`, `Qb0`, `Qb1`). Magazyn kolejki `vilda_sync_<userId>`, bramka, identyfikator urządzenia
+i kwarantanna nie powstają w tym PR (E2-PR2b).
+
+**Koperta.** `{ schemaVersion: 2, event: { kind, key, atISO, dev, full }, <jedna sekcja ładunku> }` (przy `stomb`
+także opcjonalna sekcja `patients`, niżej). Sekcja ma dokładnie ten kształt, który ta encja ma w `exportSyncPayload`.
+Dzięki temu odbiorca scala zdarzenie tym samym `Le` co deltę i pełny blob.
+- `kind` to krótki kod z tabeli 3.5 planu (niżej). Długie nazwy są tylko opisem w dokumentacji: `snap` =
+  `snapshot.upsert`, `pfull` = `patient.full`, `ptomb` = `patient.tombstone`, `stomb` = `snapshot.tombstone`. Pozostałe
+  kody (`pnote`, `pnotetomb`, `note`, `notetomb`, `plist`, `plisttomb`, `pref`, `pk`, `pktomb`, `cred`) nie mają długiej
+  nazwy.
+- `key` — identyfikator encji.
+- `atISO` — chwila z rekordu (tabela niżej), nigdy z zegara; brak chwili w rekordzie daje `null`.
+- `dev` — podaje wołający: 8 znaków `[a-km-np-z2-9]` (bez mylących `l`, `o`, `0`, `1`) albo `null`. W tym PR nikt nie
+  tworzy identyfikatora urządzenia (E2-PR2b).
+- `full` — `{ setId, i, n }` tylko w `pfull`, inaczej `null`.
+- Pole `partialSince` jest pominięte (etap 3, decyzja 9).
+
+Walidacja (`EVENT_ENVELOPE_INVALID`, błąd programisty) odrzuca:
+- nieznany rodzaj i zły `dev`, także `undefined`;
+- dodatkowe pola w `event` i dodatkowe klucze najwyższego poziomu (`exportedAtISO`, `lastMergeAtISO`, `userId`,
+  `label`, `partialSince`, sekcje innych rodzajów);
+- więcej niż jedną encję albo encję z innym identyfikatorem niż `key`. Wyjątkiem jest `stomb`: niesie wszystkie wpisy
+  kosza tego samego `snapshotId` i karty bez wersji (niżej);
+- `seq` wersji i `headerUpdatedAtISO` karty.
+
+Klucz `snapshotTombstones` może nieść wyłącznie `stomb`. Sama obecność tego klucza, także z pustą tablicą, włącza
+w `Le` przebieg kosza między kartami.
+
+**Szyfrowanie i rozmiar.** `encryptEvent(koperta)` sprawdza kopertę i szyfruje ją tak jak dzisiejsze delty: kluczem
+głównym konta (`V`), AES-GCM, losowe IV, bez kompresji i bez AAD (decyzja D-9). Wynik to `{ env: { iv, data }, bytes }`.
+`env` ma dokładnie dwa klucze: bez `z` i bez `aad` (pojawią się w etapie 4). `eventBytes(koperta)` liczy rozmiar
+szyfrogramu przed szyfrowaniem: `35 + 4·⌈(długość UTF-8 JSON koperty + 16) / 3⌉` bajtów. Test porównuje wzór
+z rzeczywistym `bytes` po szyfrowaniu. Sejf zablokowany → `VAULT_LOCKED`.
+
+**14 builderów** (wspólne reguły po tabeli):
+
+| # | `kind` (wiersz 3.5) | Builder (`VildaVault._eventLog.…`) | `key` | Sekcja | `null`, gdy | Nieczytelny, gdy | `atISO` |
+|---|---|---|---|---|---|---|---|
+| 1 | `snap` (w. 1 i 6) | `buildSnapshotEvent(patientId, snapshotId, dev)` | `patientId/snapshotId` | `patients`: karta z jedną wersją | brak karty, brak wersji, wersja pod inną kartą | nagłówek albo treść wersji | `updatedAtISO` wersji, bez niej `savedAtISO` |
+| 2 | `pfull` (w. 3) | `buildPatientFullEvents(patientId, dev, { setId })` | `patientId` | `patients`: karta z porcją wersji; **tablica kopert** | brak karty | jak 1 dla którejkolwiek wersji | `lastSavedAtISO` karty |
+| 3 | `ptomb` (w. 4) | `buildPatientTombstoneEvent(patientId, dev)` | `patientId` | `tombstones` | brak nagrobka albo bez `deletedAtISO` | — | `deletedAtISO` |
+| 4 | `stomb` (w. 5) | `buildSnapshotTombstoneEvent(snapshotId, dev)` | `snapshotId` | `snapshotTombstones` (+ `patients`: karta bez wersji) | brak wpisu kosza | tylko lista kosza nieczytelna | najpóźniejsza chwila kosza albo przycięcia wpisów |
+| 5 | `pnote` (w. 7) | `buildPatientNoteEvent(id, dev)` | `id` | `patientNotes` | brak notatki | brak albo zły szyfr treści, błąd odczytu | `updatedAtISO`, `createdAtISO`, `null` |
+| 6 | `pnotetomb` (w. 8) | `buildPatientNoteTombstoneEvent(id, dev)` | `id` | `patientNoteTombstones` | brak albo bez `deletedAtISO` | — | `deletedAtISO` |
+| 7 | `note` (w. 9) | `buildNoteEvent(id, dev)` | `id` | `notes` | brak notatki albo jej szyfru | błąd odczytu, zły kształt szyfru | `updatedAtISO`, `createdAtISO`, `null` |
+| 8 | `notetomb` (w. 10) | `buildNoteTombstoneEvent(id, dev)` | `id` | `noteTombstones` | brak nagrobka | — | `deletedAtISO` albo `null` |
+| 9 | `plist` (w. 11) | `buildPatientListEvent(id, dev)` | `id` | `patientLists` | brak listy | brak albo zły szyfr, błąd odczytu | `updatedAtISO`, `createdAtISO`, `null` |
+| 10 | `plisttomb` (w. 12) | `buildPatientListTombstoneEvent(id, dev)` | `id` | `patientListTombstones` | brak nagrobka | — | `deletedAtISO` albo `null` |
+| 11 | `pref` (w. 13) | `buildPreferenceEvent(klucz, dev)` | klucz preferencji | `userPreferences` (jeden klucz; mapy całym kluczem) | brak wpisu albo wpis nie jest obiektem | — | `updatedAtISO` albo `null` |
+| 12 | `pk` (w. 14) | `buildPasskeyEvent(credentialId, dev)` | `credentialId` | `passkeys` (bez opakowań klucza) | brak wpisu | — | `createdAtISO` albo `null` |
+| 13 | `pktomb` (w. 15) | `buildPasskeyTombstoneEvent(credentialId, dev)` | `credentialId` | `passkeyTombstones` | brak albo bez `deletedAtISO` | — | `deletedAtISO` |
+| 14 | `cred` (w. 16) | `buildCredentialEvent(dev)` | `cred` | `credential` | brak hasła z datą zmiany albo niepełne pola | — | `updatedAtISO` |
+
+Wiersz 2 tabeli 3.5 (`phdr`, nagłówek karty) odpada po D-3 A. Wiersz 6 („Przywróć”) to builder 1 z `rev` + 1 już
+w sklepie. Wiersz 17 (importy) to złożenie w E2-PR3a. Stąd 14 builderów.
+
+Wspólne reguły:
+- **Tylko sklep.** Każdy builder czyta tylko sklep sejfu i zwraca kopertę jawną (szyfruje dopiero `encryptEvent`) albo
+  `null`. Nagrobki pochodzą wyłącznie ze sklepu nagrobków. Brak rekordu daje `null`, nigdy nagrobek z bieżącą chwilą.
+- **Rekord nieczytelny.** Gdy odszyfrowanie zawodzi, builder rzuca `EVENT_SOURCE_UNREADABLE` (z `kind` i `entityKey`), nigdy
+  atrapę treści. Dotyczy to także miejsc, w których eksport połyka błąd (lista, notatka biblioteki): builder sam
+  sprawdza odszyfrowanie przed funkcją eksportu.
+- **Bez zapisów.** Zero zapisów i powiadomień. Te same strażniki kliniczne co eksport (`PatientClinicalGuard`).
+- **Sesja.** Opis ogólny, jak P-SESJA-ZAPISU: builder bierze sesję (konto i klucz) z chwili wejścia. Sejf zablokowany
+  na wejściu daje `VAULT_LOCKED`, a blokada albo zmiana sesji w trakcie — `SESSION_CHANGED`, bez wyniku.
+- **Bez zegara.** Żaden builder ani funkcja, którą woła (domknięcie ponad 150 funkcji, test B7), nie bierze chwili
+  z zegara do treści. Są dwa jawne wyjątki — filtry wygaśnięcia, te same co w `exportSyncPayload`:
+  - `Bkz_czytaj` (lista kosza) używa bieżącej chwili tylko jako granicy filtra `Bkz_czysc`: treść kosza 30 dni,
+    nagrobek wersji 365 dni;
+  - `Ft` w trybie ścisłym (notatka pacjenta) normalizuje datę kliniczną przez `Ct`, który odrzuca datę dalszą niż rok
+    od dziś.
+
+  Chwila zegara nie trafia do koperty. Wynik może zależeć od dnia budowy tak samo jak eksport (test B6, wyjątek `Ct`).
+  Nagrobki kart, notatek, list i kluczy starsze niż 365 dni builder przekazuje tak, jak leżą w sklepie. Eksport je
+  pomija (i kasuje), a odbiorca odfiltruje je przy własnym eksporcie.
+- **Błędy i prywatność.** Błędy bloku niosą `code` i stały komunikat, bez `cause`, bez komunikatu i bez śladu błędu
+  odszyfrowania. Komunikat `SyntaxError` z `JSON.parse` zawiera fragment treści, więc nie jest przekazywany dalej.
+
+Szczegóły rodzajów:
+- **`stomb` (decyzja 11.2, wariant rekomendowany — do akceptacji właściciela).**
+  - Sekcja `snapshotTombstones` ma **wszystkie** wpisy kosza o tym `snapshotId`. Po „Scal pacjentów” może zostać stary
+    wpis pod kartą źródłową.
+  - Każdy wpis jest zbudowany pole w pole jak element kosza w eksporcie. Gdy treść wpisu się nie odszyfrowuje, wpis
+    idzie bez `payload`, jak w eksporcie — bez wyjątku.
+  - Dodatkowo `patients`: karta **bez wizyt** (nagłówek, `createdAtISO`, `lastSavedAtISO`, `snapshotCount`) dla każdej
+    istniejącej karty z tych wpisów. Dzięki temu jedno zdarzenie niesie oba skutki kosza: wpis i podniesioną chwilę
+    ostatniej zmiany karty (D-5).
+  - Karta z nieczytelnym nagłówkiem jest pomijana: `stomb` idzie bez niej, bez wyjątku.
+  - Skutek uboczny: odbiorca, który jeszcze nie ma tej karty, zobaczy ją chwilowo pustą.
+- **`pfull` (porcje).**
+  - Wersje w kolejności eksportu są pakowane zachłannie do porcji.
+  - Rozmiar każdej porcji jest liczony na jej ostatecznej kopercie (z `full` i `snapshotCount`), tak by szyfrogram
+    miał najwyżej 262 144 B.
+  - Wersja sama większa niż limit idzie w osobnej porcji, oznaczonej w niewyliczalnym polu `oversize` wyniku. Stan
+    wiersza `oversize` w kolejce dochodzi w E2-PR2b.
+  - Karta bez wersji daje jedną porcję z pustą listą wersji. `setId` podaje wołający (domyślnie losowy).
+- **`snap` po przypięciu i odpięciu** niesie nową treść gwiazdki i nową chwilę `updatedAtISO` (test B12). To wynik dla
+  E2-PR3a: gwiazdka nie wymaga osobnego zdarzenia.
+- **`ptomb`** to sam nagrobek karty (najpóźniejszy w sklepie), bez doklejania karty celu „Scal pacjentów”, które robi
+  dzisiejsza delta.
+
+**`applyEncryptedEvent(env)` — status zamiast wyjątku.** Wejście ma kształt wiersza `/changes` (`{ iv, data }`). Wyjście
+nigdy nie jest wyjątkiem. Treść scala to samo `Le`, którego używa `applyEncryptedDelta`.
+
+Stan sesji ma pierwszeństwo (opis ogólny, jak P-SESJA-ZAPISU): sejf zablokowany na wejściu albo w trakcie daje
+`locked`, a zmiana sesji w trakcie (wylogowanie, inne konto, ponowne zalogowanie) daje `session-changed`. W obu
+przypadkach zastosowanie kończy się bez dalszych zapisów i bez klasyfikowania błędu jako nieczytelności. Poza tym:
+
+| Warunek | Wynik |
+|---|---|
+| `env` nie jest obiektem, `iv` nie jest niepustym napisem albo `data` nie jest napisem | `unreadable`, `reason: 'envelope'` |
+| jest `z` albo `aad` różne od 0 (format etapu 4) | `unreadable`, `reason: 'format'` (bez odszyfrowania) |
+| odszyfrowanie zawodzi błędem z listy D6 (niżej) | `unreadable`, `reason: 'decrypt'` |
+| treść nie jest obiektem albo jest tablicą | `unreadable`, `reason: 'shape'` (tablicy nie podaje do `Le`, inaczej niż `ps`) |
+| strażnik tożsamości pacjenta przy odszyfrowaniu albo błąd scalania z `vildaMergeBusy` (`MERGE_BUSY`, `PATIENT_AUTHORITY_UNAVAILABLE`, `CLINICAL_PROTOCOL_UNSUPPORTED`, `CARE_FORMAT_*`, `CARE_LINEAGE_*`) | `busy` z `code` |
+| każdy inny błąd odszyfrowania albo scalania | `apply-error` |
+| scalanie się udało | `{ status: 'applied', result }` |
+
+`unreadable` gwarantuje zero zapisów sejfu.
+
+- **Klasyfikacja błędów odczytu (D6).** Stan „nieczytelne przy bieżącym kluczu” (`unreadable`, w E2-PR4 kwarantanna,
+  kursor idzie dalej) dają tylko trzy błędy:
+  - `OperationError` — zły znacznik GCM, inny klucz, za krótkie dane albo IV;
+  - `InvalidCharacterError` — zły base64;
+  - `SyntaxError` — treść nie jest JSON.
+
+  Każdy inny błąd odszyfrowania, np. brak `crypto.subtle` (`Error`) albo `TypeError` środowiska, to `apply-error`:
+  zdarzenie zostaje do ponowienia, kursor stoi (decyzja 6). `vilda_crypto.js` nie zgłasza własnych błędów kształtu
+  szyfrogramu, a kształt `{iv, data}` sprawdza pierwszy wiersz tabeli. Nazwy zmierzono w Node (z `atob`, jak w przeglądarce). Dla
+  przeglądarki wzięto je ze specyfikacji WebCrypto, HTML i ECMAScript, bez pomiaru w przeglądarce (sprawdzi to e2e
+  w PR włączającym).
+- **`apply-error`** to `{ status, code }`. `code` = napisowy `code` wyjątku, a bez niego jego `name`. `DOMException` ma
+  liczbowy `code` (np. 22 przy braku miejsca), więc wtedy idzie nazwa, np. `QuotaExceededError`. Oryginalny wyjątek
+  jest we właściwości niewyliczalnej `error`, do śladu w E2-PR4.
+- **Żaden wynik nie niesie `message`.** `JSON.stringify` wyniku nie zawiera treści klinicznej zdarzenia. `result`
+  może jednak nieść chwile z ładunku nadawcy (niżej).
+- **`applied.result`** to obiekt zwrócony przez `Le`: liczniki i pola o chwilach ładunku nadawcy, jak dziś przy
+  `applyEncryptedDelta`. E2-PR2b utrwala z wyniku tylko status, kod i liczniki — nigdy `error` ani jego komunikatu.
+- **Odpowiedniki w dzisiejszym drenażu** (`Bdz_zastosuj`; podmiana w E2-PR4): `blokada` ↔ `locked`; `busy` ↔ `busy` i `session-changed`;
+  `nieczytelne` ↔ `unreadable`; `blad` ↔ `apply-error`; `zmiana`/`ok` ↔ `applied`.
+- **Scalanie z chmury nie dopisuje do kolejki.** Kolejki jeszcze nie ma. Dwa wyjątki z decyzji 9 to haki E2-PR3b
+  (niżej).
+
+**Zgodność ze starszą aplikacją.** Każda z 14 kopert przechodzi przez `mergeSyncPayload` starszego sejfu (wersja 221,
+fikstura testów) bez wyjątku. Stan jest taki jak po pełnym blobie dla tej encji (B13). Urządzenie bez aktualizacji
+zastosuje więc zdarzenie tak jak deltę. Zachowania starszej aplikacji przy klasach R2 i R3 (niżej) nie mierzono.
+
+**Test A ≡ B — jak sprawdzamy.** Plik `tests/unit/sync-dziennik-wlasnosciowy.test.mjs` uruchamia prawdziwy sejf na
+urządzeniach-bliźniakach jednego fikcyjnego konta (uprząż E2-PR0). Wyjątek: katalog kosza (p. 5) idzie na trzech
+urządzeniach na osobnych fikcyjnych kontach, jak w katalogu, z kopertą jawną (szyfrowanie pokrywa W3).
+- **Program.**
+  - Losowy program mutacji z ziarna, na obu urządzeniach na przemian.
+  - Profil podstawowy: zapis, poprawka, gwiazdka, kosz, „Przywróć”, „Usuń pacjenta”, notatki, listy, hasło.
+  - Profil pełny dokłada retencję, „Scal pacjentów” z koszem, retencję przypiętej wizyty i „Zostaw notatkę”.
+- **Emisja.**
+  - Po każdej mutacji test buduje koperty każdej zmienionej encji („emiter doskonały”).
+  - Scalanie emituje tylko przez dwa haki, które w kodzie dojdą w E2-PR3b:
+    - H1: przegrany nagrobek karty → pełna karta;
+    - H2: ratunek notatki D-21 „zawsze do kolejki”.
+- **Dostawa.**
+  - Kolejka FIFO z powtórkami; każde zdarzenie przez `applyEncryptedEvent`.
+  - Status inny niż `applied` to błąd testu.
+  - Punkt spoczynku to pełne dostawy w obie strony, najwyżej 4 rundy.
+
+Porównanie D(X, Y) idzie encja po encji na eksportach kanonicznych (bez `seq` i `snapshotCount`). Każda różnica ma
+ścieżkę i klasę albo jej brak.
+
+| Warunek | Co porównuje | Rola |
+|---|---|---|
+| W1 | stan żywych urządzeń A i B w punkcie spoczynku | dokładna charakterystyka znanych klas |
+| W2r | wymiana pełnym blobem na świeżych klonach jednej migawki | dokładna charakterystyka; W2r ⊆ W1 |
+| W2s | odbiorca po zdarzeniach wobec odbiorcy po blobie w każdej pełnej dostawie | charakterystyka po kategoriach; „inne” = ∅ |
+| W3 | te same koperty przez `applyEncryptedDelta` i przez `applyEncryptedEvent` | zieleń |
+| W4 | po zdarzeniach wymiana pełnym stanem w obie strony na świeżych klonach (jak przyjęty PUT z ETagiem); dwie pary (PO-A, PO-B), druga runda nic nie zmienia; w programie losowym PO-A w każdym punkcie spoczynku, PO-B tylko w ostatnim punkcie każdego ziarna (ograniczenia, niżej) | zieleń — gwarancja etapu 2 (decyzja 7) |
+| W4p | dla klasy R4n: widok Kosza i „Przywróć” na klonach obu stron (stały `Math.random`) dają ściśle równe eksporty | zieleń — dowód jedynej normalizacji |
+
+Różnica bez klasy, nowa różnica i zniknięcie znanej różnicy w W1 albo W2r czerwienią test. Literały ziaren domyślnych
+`ZNANE_W1` i `ZNANE_W2R` przepisuje dopiero PR naprawy, z uzasadnieniem.
+
+**Wynik A ≡ B (zmierzone na danych fikcyjnych, 2026-11-03).**
+- **Buildery i zastosowanie są zgodne z blobem.**
+  - Każdy z 14 builderów osobno daje u odbiorcy ten sam stan co pełny blob (blok p. 1, 14/14).
+  - W3: 0 niezgodności w 260 pełnych dostawach ziaren domyślnych, w 1200 dostawach 40 ziaren i w 657 dostawach
+    profilu pełnego (20 ziaren).
+  - Żywe urządzenie ≡ jego klon w 185/185 punktach. Różnic nie tworzy więc kod 2a ani uprząż, tylko składanie wielu
+    zdarzeń.
+- **W4 — gwarancja etapu 2.** Zdarzenia, a po nich pełna wymiana, dają ten sam stan na urządzeniach:
+  - ziarna domyślne (8): 37/37 punktów spoczynku;
+  - 40 ziaren profilu podstawowego: 185/185. Jedna normalizacja R4n (ziarno 21, krok 134) potwierdzona „Przywróć” w obu
+    parach (W4p);
+  - profil pełny, 20 ziaren: 90/90. Dwa punkty mają klasę dzisiejszą „notatka pod inną kartą” (raport, niżej);
+  - blok deterministyczny p. 1–4, P1e, katalog kosza p. 5 (28/28 przebiegów) i znane klasy p. 6 (12 scenariuszy).
+
+  W4 jest słabym testem regresji (wymiana pełnym stanem zrówna prawie każdy stan) i nie wykrywa straty symetrycznej.
+  Dlatego literały W1/W2r, P1e, p. 5 i p. 6 są obowiązkowe.
+- **W1/W2r — dokładna charakterystyka.**
+  - Ziarna domyślne: 6 punktów z różnicą (R2 4, R3 2) = `ZNANE_W1` i `ZNANE_W2R`.
+  - 40 ziaren: W1 16 punktów z 185 (R2 4, R3 5, R4a 4, R4n 1, R5 2). W2r 15, te same bez punktu R4n.
+  - Różnic bez klasy: 0. Wymiana samymi blobami z tym samym generatorem i ziarnami: 0 różnic w 189 punktach
+    spoczynku. Program rozchodzi się po pierwszej dostawie, bo wybór kolejnej operacji zależy od stanu (stąd 189,
+    a nie 185 punktów).
+  - Klasy biorą się z dwóch mechanizmów: scalanie liczy rekordy pochodne, ale ich nie emituje, a strumień pokazuje
+    odbiorcy stany pośrednie nadawcy.
+  - Pełna wymiana (W4) leczy 15 z 16 punktów w jednej rundzie; zostaje tylko R4n.
+
+  | Klasa | Skutek ogólny |
+  |---|---|
+  | R2 | inny numer poprawki wersji przy tej samej treści; niewidoczne |
+  | R3 | inny numer nagrobka notatki; niewidoczne, dopóki notatki się nie wskrzesi („Zostaw notatkę”) |
+  | R4a | inny opis lub gwiazdka wpisu Kosza żywej karty; wiersz Kosza ten sam, po „Przywróć” gwiazdka może się różnić |
+  | R4n | inna postać gwiazdki w treści wpisu Kosza; Kosz i „Przywróć” dają to samo, wymiana tego nie uzgadnia (scalanie świadomie nie uzgadnia tej postaci, jak przy samych blobach — D7) |
+  | R5 | wpis Kosza karty usuniętej tylko na jednym urządzeniu; Kosz takich wpisów nie pokazuje |
+
+- **W2s** (odbiorca po zdarzeniach wobec odbiorcy po blobie). „Inne” = 0, kategorie:
+  - 40 ziaren: K1 „karta częściowa do pełnej karty” 65, R2 21, K2 „ratunek D-21” 18, R4a 14, K1k 10, R3 8, R5 8, R4n 1;
+  - ziarna domyślne: K1 34, R2 21, K2 8, K1k 3, R3 1.
+
+  K1k to wpis kosza karty w wyścigu z „Usuń pacjenta”, obecny tylko po stronie bloba. Blob niesie całą listę kosza,
+  więc wpis zdjęty u odbiorcy przez „Przywróć” wraca z blobem nadawcy, który o przywróceniu nie wie.
+- **Kolejność losowa** (nie FIFO, charakterystyka): w 40 ziarnach profilu podstawowego 266 punktów zgodnych,
+  3 niezgodne, bez klasy (ziarna domyślne: 50 zgodnych, 0 niezgodnych). W dwóch niezgodnych chodzi
+  o kolejność notatki i jej nagrobka w jednej partii, w jednym o chwilę ostatniej zmiany karty. To ważne dla
+  „Zwolnij” w kwarantannie (E2-PR2b) i dla przeglądu kolejki `sweepOutbox` (E2-PR3a).
+- **Profil pełny** (20 ziaren, raport, nie czerwień): W1 w 19 punktach. Klasy (punkt może mieć kilka): R5 5, D7 7,
+  R3 2, R4a′ 4, „notatka pod inną kartą” 2, bez klasy 5. Po wymianie (W4) zostaje tylko „notatka pod inną kartą”
+  (2 punkty).
+
+**Zmiany zachowania wobec wymiany samymi blobami — do akceptacji właściciela przed E2-PR6.** Po zdarzeniach i pełnej
+wysyłce wynik jest inny niż przy wymianie samymi blobami, bez utraty danych:
+- **P1e:** po „Scal pacjentów” i równoczesnej poprawce wizyty na innym urządzeniu wizyta zostaje w karcie docelowej,
+  a stara karta nie wraca. Przy samych blobach stara karta wraca z tą wizytą, a karta docelowa jest bez niej;
+- **R4-a:** gwiazdka wpisu Kosza zostaje; przy samych blobach ginie;
+- **R4-a′:** Kosz i „Przywróć” dają poprawioną wartość pomiaru; przy samych blobach poprawka ginie;
+- **katalog kosza `kosz-po-2` (jedna kolejność):** po wymianie żadne z trzech urządzeń nie ma usuniętej karty. Przy
+  samych blobach jedno z nich zostaje z tą kartą, bo same bloby się nie zbiegają;
+- **katalog kosza `Q8-obca-2`:** „ZNANA RÓŻNICA (zdarzenia)”, niżej.
+
+Według sondy „delty dziś” (model protokołu z prawdziwą integracją, buildery delt i `ps`) dzisiejsza aplikacja
+z deltami kończy P1e, R4-a i R4-a′ tak samo jak zdarzenia z pełną wysyłką, o ile delty nadawcy są jeszcze w dzienniku
+serwera, więc te trzy to zmiany wobec świata samych blobów, nie wobec dzisiejszej produkcji (`kosz-po-2`
+i `Q8-obca-2` wobec dzisiejszej aplikacji niezmierzone).
+
+**Klasy dzisiejsze** (występują także przy samych blobach; W4 nie jest w nich gorsze niż same bloby):
+- **E1-katalog.** Znane ograniczenie E1 „obecność”: wpis Kosza nie zdejmuje ostatniej wersji karty. Dotyczy 4 scenariuszy
+  katalogu kosza (`PRZ0-bez`, `E1-popr-C`, `E1-C`, `Q8-obca-2`) w obu kolejnościach, czyli 8 z 28 przebiegów. Po wymianie
+  zostają różnice na tych samych encjach co przy samych blobach.
+- **Notatka pod inną kartą po „Scal pacjentów”.** Znany błąd dzisiejszego scalania, niezależny od dziennika zdarzeń.
+  - Skutek: notatka pacjenta zostaje na dwóch urządzeniach pod różnymi kartami. Na urządzeniu, gdzie wisi pod kartą
+    usuniętą, nie widać jej w żadnej karcie, choć treść jest na obu urządzeniach.
+  - Wymiana tego nie leczy; „Synchronizuj teraz” niczego nie zmienia. Leczy dopiero następna poprawka notatki na
+    urządzeniu, na którym jest widoczna.
+  - To ten sam rozjazd G5 co w D21-9 (wpis P-NOTATKI-ZA-KARTA).
+  - Osobna sprawa: „Scal pacjentów” zapisuje notatki źródła od nowa. Wcześniejsza równoległa edycja tej notatki na
+    innym urządzeniu przegrywa więc jak każda starsza poprawka (późniejsza zmiana wygrywa), także dziś.
+  - Naprawa: osobna poprawka reguły (decyzja 9). Pozycja planu do decyzji właściciela, propozycja E2-PR3c.
+- **D7 i `createdAtISO` notatki.** Opis nagrobka wersji (`rev`, `updatedAtISO`, `zmianaISO`, `koszISO`) i chwila
+  utworzenia notatki po dwóch równoległych wskrzeszeniach zależą od kolejności scaleń także przy samych blobach.
+
+**Znane różnice i straty — z pozycją planu, która je naprawi.** Test zapisuje je literałem, a PR naprawy przepisze
+literał na wynik zgodny.
+- **„ZNANA RÓŻNICA” R2-E3:** po „Scal pacjentów” wizyta chwilowo znika na drugim urządzeniu, do najbliższej pełnej
+  wysyłki. Naprawa: E2-PR3a (kolejność zdarzeń) albo E3-PR0.
+- **„ZNANA RÓŻNICA” R5-E1:** przy trzech urządzeniach wizyta jest w karcie na jednym, a w Koszu na drugim, do pełnej
+  wysyłki; po niej jest w Koszu na wszystkich. Naprawa: E3-PR0.
+- **„ZNANA UTRATA” R3-E1:** po dwóch wskrzeszeniach tej samej notatki na dwóch urządzeniach późniejszy tekst ginie na
+  obu; pełna wysyłka tego nie odwraca. Naprawa: E2-PR3c.
+- **„ZNANA UTRATA” R3-E2:** przy trzech urządzeniach wraca stara, skasowana treść notatki, a późniejszy tekst ginie.
+  Naprawa: E2-PR3c.
+- **„ZNANA UTRATA (zdarzenia)” `npret-pin` i `npret-K`** (katalog kosza, obie kolejności): przypięta wizyta znika na
+  wszystkich urządzeniach po retencji i „Scal pacjentów”.
+  - Przy samych blobach zostaje. W modelu dzisiejszej aplikacji z deltami też zostaje (76 przebiegów, sonda „delty
+    dziś”, uzupełnienie), więc ta strata jest nowa także wobec dzisiejszej produkcji.
+  - Przyczyna [hipoteza]: reguła przeżycia retencji działa tylko w kontekście jednego pełnego scalenia.
+  - Naprawa obowiązkowa: E2-PR3c, przed E2-PR6.
+- **„ZNANA RÓŻNICA (zdarzenia)” `Q8-obca-2`** (obie kolejności): na jednym albo dwóch z trzech urządzeń (zależnie od
+  kolejności) zostaje w karcie inna z dwóch wizyt o tej samej masie (inna data i identyfikator; obie są w Koszu, nic
+  nie ginie). Naprawa: E2-PR3c.
+
+**Wymagania dla następnych PR.**
+- **E2-PR3a.**
+  - Kolejność zdarzeń w kroku: najpierw wersje (także przeniesione pod kartę celu „Scal pacjentów”), potem wpisy kosza,
+    potem nagrobki kart, potem reszta.
+  - Pola karty (`lastSavedAtISO`, `createdAtISO`, nagłówek) zmienione bez nowej wersji: w teście (zasada wyroczni)
+    niesie je `stomb` z kartą, gdy w tym kroku wyszedł `stomb` tej karty; inaczej `snap` najnowszej wersji. Karta bez
+    wersji i bez `stomb` nie ma nośnika; test liczy takie przypadki („brak nośnika”, sygnał dla E2-PR3a).
+  - Do ponownej decyzji: nagrobek karty przed wersjami w „Scal pacjentów”. Zmierzone w sondach analizy: leczy R2-E3;
+    niezmierzone wobec poprawki przeniesionej wersji na odbiorcy.
+  - Do sprawdzenia: emisja nagrobka notatki przy „Usuń pacjenta” (`Bnp_usunZPacjentem`, wiersz 8 tabeli 3.5).
+  - Pomiar `sweepOutbox` wobec rekordów pochodnych scalania.
+- **E2-PR3b.**
+  - Hak H1: przegrany nagrobek karty → pełna karta (`pfull`, `setId` z karty i chwili nagrobka, dedup).
+  - Hak H2 „zawsze do kolejki”: notatka, której nagrobek zniknął w partii i której rekord zmieniło scalanie, idzie do
+    kolejki także wtedy, gdy w tej partii przyszła jej własna koperta. Bez tego notatka zostaje tylko na jednym
+    urządzeniu (test N1, N1b).
+- **E2-PR2b.**
+  - Kwarantanna i dziennik zapisują z wyniku tylko status, kod i liczniki; strażnik źródła obejmuje nowy kod.
+  - Koalescencja kolejki sprawdzona testem A ≡ B (zmiana kolejności potrafi zgubić notatkę).
+  - Kolejność notatki i nagrobka przy „Zwolnij”.
+- **E3-PR0.**
+  - Zbieżność zdarzeń bez pełnej wysyłki: hak echo zmian pochodnych scalania.
+  - Decyzja co do R4n i `createdAtISO`.
+  - Wyrocznia „nie zginęła ostatnia zmiana”. Ta łapie straty symetryczne, których W4 nie widzi.
+  - Jedna pełna wymiana w chwili wyłączenia PUT.
+
+**Ograniczenia.**
+- Gwarancja W4 jest zmierzona w modelu uprzęży (FIFO, dwa urządzenia, trzy w katalogu kosza p. 5 i w części scenariuszy
+  p. 6), bez prawdziwego harmonogramu pełnej wysyłki. Do najbliższej pełnej wysyłki urządzenia mogą się chwilowo różnić
+  (klasy wyżej). Właściciel wie o tym przed swoim testem (plan, wiersz 11 tabeli „Podział etapu 2”).
+- W programie losowym para PO-B liczy się tylko w ostatnim punkcie spoczynku każdego ziarna, PO-A w każdym (limit czasu
+  pliku). W pomiarze z obiema parami w każdym punkcie wynik W4 był ten sam.
+- Nazwy błędów odczytu w przeglądarce są wzięte ze specyfikacji (D6), bez pomiaru w przeglądarce.
+- Nagrobki starsze niż 365 dni builder przekazuje bez filtra (wyżej).
+- Ten PR nie ma magazynu, bramki ani identyfikatora urządzenia. Wiersze `unreadable`, `oversize` i `rejected` bez UI aż
+  do E2-PR5.
+- Testy uśpienia są tekstowe i strukturalne. Wywołanie przez nazwę składaną w czasie działania nie jest wykrywane
+  (zaakceptowane ograniczenie).
+- Plik A ≡ B trwa około 160 s (ziarna domyślne około 71 s na maszynie z pomiaru; cel 45 s z projektu dla ziaren
+  domyślnych przekracza już wariant bez nowych pomiarów, około 68 s; limit `it` 180 s). Cel czasu do decyzji.
+- Test B7 (domknięcie wywołań) korzysta z `acorn` i `eslint-scope` z drzewa zależności `eslint`, bez jawnej zależności
+  w `package.json`. Brak modułu czerwieni test głośno.
+
+**Cofnięcie** = rewert PR. Na urządzeniach nic nie powstaje (bez baz, kluczy i żądań), więc nie ma czego sprzątać.
+
+**Testy.** Nowe pliki (dane wyłącznie fikcyjne, bez PESEL):
+- `tests/unit/sync-zdarzenia-buildery.test.mjs` — 32 przypadki: kształt koperty każdego rodzaju wobec eksportu,
+  `stomb` z kartą i z wieloma wpisami, `null`, rekord nieczytelny, bez zegara (B6 dynamicznie, B7 domknięcie wywołań),
+  rozmiar i porcje `pfull` co do bajta, walidacja, sesja, zgodność ze starszym sejfem (B13), wartownik treści (B14);
+- `tests/unit/sync-zdarzenie-status.test.mjs` — 18 przypadków: statusy, klasyfikacja błędów odczytu, sprawdzenia
+  sesji, prywatność wyniku;
+- `tests/unit/sync-dziennik-uspienie.test.mjs` — 10 przypadków: znaczniki bloku, jedno odwołanie do eksportu,
+  żaden inny plik produktu nie zna nowych nazw, brak zakazanych wywołań, najwyższy poziom bloku tylko z deklaracji,
+  zamrożony eksport z dokładną listą kluczy;
+- `tests/unit/sync-dziennik-wlasnosciowy.test.mjs` — 104 przypadki: test A ≡ B (wyżej) z testami negatywnymi klas,
+  tabeli dozwolonych klas, W4 i W4p;
+- `tests/support/urzadzenie-sync.mjs`: `eksportKanoniczny` z opcjami `pominSeq` i `pominSnapshotCount`, zgodnie wstecz.
+
+Przebiegi `E2_AB_ZIARNA=40` (profil podstawowy) i `E2_AB_ZIARNA=20` (profil pełny) są ręczne, do opisu PR. W CI idą
+ziarna domyślne: 8 w profilu podstawowym i 2 w pełnym.
+
+**Czerwone na bazie** (kopia `origin/audyt` `0bd1380d` z nowymi testami; ten sam wynik powtórzony na `7c4517b7`, bazie tego PR po vildaclinic/vilda-calc#867): 164 testy — 149 czerwonych, 14 zielonych,
+1 pominięty.
+- Czerwone, bo `VildaVault._eventLog` nie istnieje: buildery 32/32, status 18/18, uśpienie 7/10, A ≡ B 92/104.
+- Zielone z natury, bez nowego API:
+  - strażnik „żaden plik produktu nie zna nowych nazw” (2);
+  - samokontrola wzorców;
+  - 11 syntetycznych testów tabel i predykatów klas w pliku A ≡ B.
+- Pominięte na bazie: podsumowanie „zmian zachowania”, które bez wyników katalogu nie ma czego sprawdzić.
+
+**Mutanty** (kopie, jedna zmiana na przebieg). Każdy mutant, który nie jest równoważny, czerwieni co najmniej jeden
+test, poza jednym zaakceptowanym (zaciemnione odwołanie do eksportu, niżej):
+- blok `Bev_`: 69 mutantów — 66 zabitych, 2 równoważne, 1 poza zasięgiem strażnika tekstowego (zaciemnione
+  odwołanie);
+- uprząż testu A ≡ B: 17 mutantów z weryfikacji i 11 z poprawek — wszystkie zabite poza 2 równoważnymi (izolacja nowych
+  pomiarów dziś nie zmienia programu ziaren);
+- wartownik treści B14: 3 mutanty wycieku przez komunikat błędu — zabite.
+
+Istniejące testy, które tną źródło sejfu do `function yr(` (`retencja-nagrobki`, `sync-wlasciciel-wersji`,
+`kosz-usuwanej-karty-sesja`), zostają zielone. Pułapki tekstowe pliku, łatka `tools/patch-vault-existing-note.mjs`
+i liczba deklaracji funkcji poza blokiem są bez zmian.
+
+**Gdzie w kodzie.** `vilda_vault.js`, blok `Bev_`: 612 linii między końcem `Bsl_usunPacjenta` a `function yr(`,
+komentarze bez znaków diakrytycznych, plik +29 554 B.
+- stałe `Bev_RODZAJE`, `Bev_SEKCJE`, `Bev_DEV`, `Bev_MAX_BAJTOW`, `Bev_KOMUNIKATY`, `Bev_BLEDY_ODCZYTU`;
+- koperta i walidacja: `Bev_koperta`, `Bev_sprawdz`; rozmiar: `Bev_bajty`;
+- sesja i odczyt: `Bev_start`, `Bev_odszyfruj`;
+- buildery `Bev_snap` … `Bev_cred` (`Bev_porcje` dla `pfull`, `Bev_wpisKosza` dla `stomb`); mapa `Bev_BUILDERY` dla
+  kolejki z E2-PR2b, dziś nieużywana;
+- `Bev_szyfruj`, `Bev_zastosuj`, `Bev_EKSPORT`.
+
+W eksporcie `$s` jest jeden nowy klucz na końcu: `_eventLog:Bev_EKSPORT`.
+
+**Wersje.** `vilda_vault.js?v=246 → 247`; `vilda_chrome.js?v=226 → 227` i `vilda_session_bridge.js?v=149 → 150` (tylko odnośnik do `vilda_vault.js`); SW 1.1.449 → **1.1.450**.
+
 ## Odpytywanie co 60 s przy żywym połączeniu na żywo i dłuższy odstęp ponownego łączenia (P-SYNC-ODPYTYWANIE-WS, E2-PR1b, SW 1.1.442, `vilda_sync_integration.js` 56, `vilda_realtime.js` 9, `vilda_sync.js` 47, 2026-11-02)
 
 **Zmiana kliniczna: NIE** — wzory, progi, jednostki, interpretacje, scalanie, zapis, format delt i kursor bez zmian.
