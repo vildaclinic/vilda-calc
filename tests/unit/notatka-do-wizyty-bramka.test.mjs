@@ -302,7 +302,7 @@ describe('G19 — wyłączony przycisk nie przekazuje kliknięcia dalej', () => 
     const doc = { activeElement: null, body: { classList: { add() {}, remove() {} } },
       getElementById: (id) => id === source.id ? source : null, querySelector: () => trigger, createElement: () => ({}) };
     const api = new Function('o', 'r', 'B', 'Cm_cancelFocus', 'Cm_focusFirst', 'Cm_listen', 'Cm_background', 'Cm_release', 'Cm_focus', 'setTimeout', 'clearTimeout',
-      `var Cm_drawer=null,M=null,Cm_key=function(){},Cm_guardFocus=Cm_key,Cm_guardPointer=Cm_key,Cm_openMenuPatient=function(){};${mirrorSource}${drawerSource};return {open:nt,close:ee};`)(
+      `var Cm_drawer=null,M=null,O=false,h=null,Cm_key=function(){},Cm_guardFocus=Cm_key,Cm_guardPointer=Cm_key,Cm_openMenuPatient=function(){};${mirrorSource}${drawerSource};return {open:nt,close:ee};`)(
       doc, { matchMedia: () => ({ matches: false }) }, () => {}, () => {}, () => {}, () => {}, () => {}, () => {}, () => {},
       (callback) => { callback(); return 0; }, () => {},
     );

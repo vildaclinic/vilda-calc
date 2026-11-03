@@ -44,7 +44,7 @@ export async function layoutGeometry(page, frame = page) {
       viewport: { width: innerWidth, height: innerHeight },
       header: box('header'), dock: box('#mobileBottomDock'), panel: box('.app-shell-main'), frame: box('iframe.app-pane:not([hidden])'),
       dockHidden: dock?.classList.contains('is-hidden'),
-      headerControls: [...document.querySelectorAll('body > header .chrome-mobile-menu-btn, body > header .chrome-reminders-btn, body > header #vildaPatientChip, body > header .chrome-user-chip.is-logged-in .chip-avatar')].map(el => ({
+      headerControls: [...document.querySelectorAll('body > header .chrome-mobile-menu-btn, body > header #vildaHeaderSearchBtn, body > header .chrome-reminders-btn')].map(el => ({
         width: el.getBoundingClientRect().width, height: el.getBoundingClientRect().height,
       })),
       dockItems: [...document.querySelectorAll('#mobileBottomDock .mobile-bottom-dock__item')].map(el => ({

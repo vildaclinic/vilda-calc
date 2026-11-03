@@ -319,7 +319,12 @@
       observeDay();
       if (!surfaceVisible()) { stale = true; syncVisibility(); return []; }
       dayStale = false; watchDay();
-      if (!activeSearch()) { state.loading = false; pendingRestore = null; render(); return []; }
+      if (!activeSearch()) {
+        // Opening Search with an empty query still carries an explicit focus
+        // request. Keep its existing guard, just as for populated results.
+        var emptyRestore = pendingRestore; state.loading = false; pendingRestore = null;
+        render(emptyRestore && emptyRestore.snapshot, emptyRestore && emptyRestore.guard); return [];
+      }
       if (!pendingRestore) { var remembered = context(); pendingRestore = { snapshot: remembered, guard: focusGuard(remembered.focus) }; }
       var ticket = ++sequence; state.loading = true; state.error = null; render(pendingRestore.snapshot, pendingRestore.guard);
       try {

@@ -738,7 +738,6 @@ html.vilda-phone .chrome-drawer-panel{
 .chrome-drawer-nav a,
 .chrome-drawer-nav button,
 .chrome-drawer-account-action,
-.chrome-drawer-account-label,
 .chrome-drawer-patient-label,
 .chrome-drawer-icon{
   -webkit-user-select:none;
@@ -898,12 +897,6 @@ body.chrome-drawer-open{
   line-height:1.2;
   min-width:0;
   flex:1 1 auto}
-.chrome-drawer-account-label{
-  font-size:.66rem;
-  text-transform:uppercase;
-  letter-spacing:.06em;
-  color:var(--chrome-label-color);
-  font-weight:700}
 .chrome-drawer-account-value{
   font-size:.95rem;
   font-weight:600;

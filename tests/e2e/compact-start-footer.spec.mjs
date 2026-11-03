@@ -60,9 +60,17 @@ async function footerAtBottom(owner) {
 
 async function expectFooterLinksAvailable(owner, host = null) {
   const footer = owner.locator('footer.site-footer');
-  await expect(footer.getByRole('link', { name: 'Polityka prywatności', exact: true })).toBeVisible();
-  await expect(footer.getByRole('link', { name: 'Regulamin', exact: true })).toBeVisible();
-  const readHits = () => footer.locator('a[href]').evaluateAll(links => links.map(link => {
+  await expect(footer.locator('.site-footer__disclaimer')).toHaveCount(0);
+  await expect(footer.locator('.site-footer__col a')).toHaveCount(4);
+  for (const link of await footer.locator('.site-footer__col a').all()) await expect(link).toBeVisible();
+  // The subscription page deliberately uses its existing Vilda PRO destination
+  // instead of Kontakt; all four links must remain usable.
+  for (const name of ['O aplikacji', 'Polityka prywatności', 'Regulamin']) {
+    await expect(footer.getByRole('link', { name, exact: true })).toBeVisible();
+  }
+  const readHits = () => footer.locator('a[href]').evaluateAll(links => links.filter(link => {
+    const r = link.getBoundingClientRect(); return r.width > 0 && r.height > 0;
+  }).map(link => {
     const r = link.getBoundingClientRect(), x = r.x + r.width / 2, y = r.y + r.height / 2;
     return { text: link.textContent.trim(), x, y, width: r.width, height: r.height,
       hit: Boolean(r.width && r.height && link.contains(document.elementFromPoint(x, y))) };
@@ -79,14 +87,15 @@ async function expectFooterLinksAvailable(owner, host = null) {
     }, points);
     expect(obscured, 'stopka ramki pozostaje dostępna także nad dockiem powłoki').toEqual([]);
   }
-  await expectFooterDisclaimerAvailable(owner, host);
+  await expectFooterTextAvailable(owner, host);
 }
 
-async function expectFooterDisclaimerAvailable(owner, host) {
-  // A link hit test misses the noninteractive medical disclaimer. Test every
-  // visible character, including the right edge of a wrapped line under a FAB.
-  const readText = () => owner.locator('.site-footer__disclaimer').evaluate(disclaimer => {
-    const walker = document.createTreeWalker(disclaimer, NodeFilter.SHOW_TEXT), points = [];
+async function expectFooterTextAvailable(owner, host) {
+  // The disclaimer was deliberately removed in the approved footer. Keep the
+  // stronger hit check for every remaining visible character, including wrapped
+  // copyright and attribution below the links and beside the floating controls.
+  const readText = () => owner.locator('.site-footer').evaluate(footer => {
+    const walker = document.createTreeWalker(footer, NodeFilter.SHOW_TEXT), points = [];
     for (let node = walker.nextNode(); node; node = walker.nextNode()) {
       for (let i = 0; i < node.textContent.length; i++) {
         const text = node.textContent[i];
@@ -94,7 +103,7 @@ async function expectFooterDisclaimerAvailable(owner, host) {
         const range = document.createRange(); range.setStart(node, i); range.setEnd(node, i + 1);
         const r = range.getBoundingClientRect(), x = r.x + r.width / 2, y = r.y + r.height / 2;
         if (!r.width || !r.height) continue;
-        points.push({ text, x, y, hit: disclaimer.contains(document.elementFromPoint(x, y)) });
+        points.push({ text, x, y, hit: footer.contains(document.elementFromPoint(x, y)) });
       }
     }
     return { points, remainingScroll: document.documentElement.scrollHeight - innerHeight - scrollY };
@@ -107,7 +116,7 @@ async function expectFooterDisclaimerAvailable(owner, host) {
       return characters.filter(point => document.elementFromPoint(r.x + point.x, r.y + point.y) !== pane).map(point => point.text);
     }, points));
     return { remainingScroll: Math.round(remainingScroll), obscured };
-  }, { message: 'cały tekst disclaimeru przy końcu strony jest czytelny ponad lokalną i zewnętrzną nawigacją' })
+  }, { message: 'cały widoczny tekst stopki przy końcu strony jest czytelny ponad lokalną i zewnętrzną nawigacją' })
     .toEqual({ remainingScroll: 0, obscured: [] });
 }
 

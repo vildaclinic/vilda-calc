@@ -115,6 +115,31 @@ function restoredSnapshot(extra = {}) {
 }
 
 describe('Search UI return snapshots use the production view', () => {
+  it.each([false, true])('an explicit empty query focuses the input without reading the vault; mobile=%s', async mobile => {
+    const e = environment({ mobile });
+    await e.view.request({ query: '', focus: 'query' });
+    expect(e.doc.activeElement).toBe(e.host.querySelector('.vgs-query'));
+    expect(e.service.search).not.toHaveBeenCalled();
+    expect(e.host.querySelectorAll('.vgs-row')).toHaveLength(0);
+    const outside = e.doc.body.appendChild(e.doc.createElement('button')); outside.focus();
+    e.doc.dispatchEvent({ type: 'pointerdown', target: outside });
+    await e.view.refresh();
+    expect(e.doc.activeElement, 'a later empty refresh does not replay the explicit focus request').toBe(outside);
+  });
+
+  it.each([false, true])('revealing an empty request made while hidden does not reclaim focus after an outside click; mobile=%s', async mobile => {
+    const e = environment({ mobile });
+    e.view.setVisible(false);
+    await e.view.request({ query: '', focus: 'query' });
+    const outside = e.doc.body.appendChild(e.doc.createElement('button')); outside.focus();
+    e.doc.dispatchEvent({ type: 'pointerdown', target: outside });
+    outside.remove(); e.doc.activeElement = e.doc.body;
+    e.view.setVisible(true);
+    await e.flush();
+    expect(e.doc.activeElement, 'the invalidated guard cannot focus the newly visible query').toBe(e.doc.body);
+    expect(e.service.search).not.toHaveBeenCalled();
+  });
+
   it('exports a detached versioned scalar snapshot and never transports the clinical search index', async () => {
     const e = environment();
     await selectedBeyondFirstPage(e);

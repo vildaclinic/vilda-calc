@@ -19,7 +19,7 @@
  *   bo i tak chcemy zwracać HTML z cache natychmiast.
  */
 
-const SW_VERSION = '1.1.451';
+const SW_VERSION = '1.1.452';
 const CACHE_PREFIX = 'pwa-kalorii';
 const SHELL_CACHE = `${CACHE_PREFIX}-shell-v${SW_VERSION}`;
 const RUNTIME_CACHE = `${CACHE_PREFIX}-runtime`;
@@ -165,6 +165,7 @@ const CORE_SHELL_URLS = [
   '/style.css?v=92',
   '/style.css?v=93',
   '/style.css?v=94',
+  '/style.css?v=95',
   '/lab_clinical_panels.js?v=141',
   '/lab_clinical_panels.js?v=143',
   // DEFER-P1c: bloki inline wyniesione do plików defer (39 szt.)
@@ -1066,6 +1067,7 @@ const CORE_SHELL_URLS = [
   '/vilda_global_search_view.js?v=3',
   '/vilda_global_search_view.js?v=4',
   '/vilda_global_search_view.js?v=5',
+  '/vilda_global_search_view.js?v=6',
   '/vilda_search_navigation.js?v=1',
   '/vilda_care_plans.css?v=1',
   '/vilda_care_plans.css?v=2',
@@ -1668,6 +1670,7 @@ const CORE_SHELL_URLS = [
   '/vilda_chrome.js?v=226',
   '/vilda_chrome.js?v=227',
   '/vilda_chrome.js?v=228',
+  '/vilda_chrome.js?v=229',
   '/vilda_realtime.js?v=1',
   '/vilda_realtime.js?v=2',
   '/vilda_realtime.js?v=3',
@@ -1875,6 +1878,7 @@ const CORE_SHELL_URLS = [
   '/vilda_chrome.css?v=47',
   '/vilda_chrome.css?v=48',
   '/vilda_chrome.css?v=49',
+  '/vilda_chrome.css?v=50',
   '/vilda_auth_ui.css',
   '/vilda_auth_ui.css?v=9',
   '/vilda_auth_ui.css?v=10',
@@ -2459,10 +2463,12 @@ const OPTIONAL_ASSETS = [
   '/vilda_vault.js?v=247',
   '/vilda_auth_ui.js?v=535',
   '/vilda_auth_ui.js?v=536',
+  '/vilda_auth_ui.js?v=537',
   '/vilda_session_bridge.js?v=148',
   '/vilda_session_bridge.js?v=149',
   '/vilda_session_bridge.js?v=150',
   '/vilda_session_bridge.js?v=151',
+  '/vilda_session_bridge.js?v=152',
   '/vilda_sync.js?v=48',
   '/vilda_patient_documents.js?v=1',
   '/vilda_patient_documents.css?v=1',
@@ -3175,6 +3181,7 @@ const OPTIONAL_ASSETS = [
   '/reposition.js?v=7',
   '/vilda_klawiatura.js?v=1',
   '/vilda_klawiatura.js?v=2',
+  '/vilda_klawiatura.js?v=3',
   '/vilda_patient_report.js?v=10',
   '/vilda_summary_cards.js?v=26',
   '/vitalSigns.js?v=3',

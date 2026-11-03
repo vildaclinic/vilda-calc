@@ -1,8 +1,9 @@
 import { expect, test } from '../support/test-czas.mjs';
+import { openMenuPatient } from '../support/chrome-menu-fixture.mjs';
 
 // P-CHIP-KARTA: wejście w kartę bez wcześniejszego otwierania listy pacjentów.
 // Wpisy i zapis przechodzą przez prawdziwy formularz, a kartę otwiera wyłącznie
-// kliknięcie chipu oraz jego akcji. Dane i konto są wyłącznie fikcyjne.
+// kliknięcie pacjenta w menu. Dane i konto są wyłącznie fikcyjne.
 test.use({ serviceWorkers: 'block' });
 
 const HASLO = 'E2e#ChipKartaPacjenta!26';
@@ -71,14 +72,10 @@ async function wpiszIZapisz(page, dane = PIERWSZY) {
   return id;
 }
 
-async function otworzPrzezChip(page) {
+async function otworzPrzezMenu(page) {
   await sprawdzSzerokosc(page);
-  await page.locator('#vildaPatientChip').click();
-  const akcja = page.locator('[data-vilda-open-card]');
-  await expect(akcja, 'chip udostępnia akcję dla zapisanego pacjenta').toBeVisible();
+  await openMenuPatient(page);
   await sprawdzSzerokosc(page);
-  await akcja.click();
-  await expect(page.locator('.vilda-save-popover')).not.toBeVisible();
 }
 
 async function sprawdzSzerokosc(ctx) {
@@ -92,7 +89,7 @@ async function sprawdzSzerokosc(ctx) {
 
 async function sprawdzKarte(ctx, dane = PIERWSZY) {
   const karta = ctx.locator('.vilda-auth-patient-card');
-  await expect(karta, 'klik z chipu otworzył rzeczywistą kartę pacjenta').toBeVisible();
+  await expect(karta, 'klik z menu otworzył rzeczywistą kartę pacjenta').toBeVisible();
   await expect(karta.locator('.vilda-patient-hero-name')).toHaveText(`${dane.lastName} ${dane.firstName}`);
   await expect(karta.locator('.vilda-patient-stat').filter({ hasText: 'Wzrost' }))
     .toContainText(`${dane.height},0 cm`);
@@ -101,16 +98,16 @@ async function sprawdzKarte(ctx, dane = PIERWSZY) {
   await sprawdzSzerokosc(ctx);
 }
 
-test('index: po wpisaniu i zapisie nowego pacjenta chip otwiera jego kartę bez wizyty na liście', async ({ page }) => {
+test('index: po wpisaniu i zapisie nowego pacjenta menu otwiera jego kartę bez wizyty na liście', async ({ page }) => {
   await otworzKonto(page);
   await wpiszIZapisz(page);
   await expect(page.locator('.vilda-auth-patient-card')).toHaveCount(0);
-  await otworzPrzezChip(page);
+  await otworzPrzezMenu(page);
   await sprawdzKarte(page);
   await expect(page).toHaveURL(/\/index\.html$/);
 });
 
-test('DocPro: chip po zapisie na index i przejściu otwiera kartę bieżącego pacjenta', async ({ page }) => {
+test('DocPro: menu po zapisie na index i przejściu otwiera kartę bieżącego pacjenta', async ({ page }) => {
   await otworzKonto(page);
   const id = await wpiszIZapisz(page);
   await page.goto('/docpro.html', { waitUntil: 'load' });
@@ -118,12 +115,12 @@ test('DocPro: chip po zapisie na index i przejściu otwiera kartę bieżącego p
   await expect.poll(() => page.evaluate(() => window.sessionStorage.getItem('vildaCurrentPatientId')))
     .toBe(id);
   await expect(page.locator('.vilda-auth-patient-card')).toHaveCount(0);
-  await otworzPrzezChip(page);
+  await otworzPrzezMenu(page);
   await sprawdzKarte(page);
   await expect(page).toHaveURL(/\/docpro\.html$/);
 });
 
-test('app.html: działająca ścieżka chipu powłoki nadal otwiera kartę w ramce Start', async ({ page }) => {
+test('app.html: działająca ścieżka menu powłoki nadal otwiera kartę w ramce Start', async ({ page }) => {
   await otworzKonto(page);
   await wpiszIZapisz(page);
   await page.goto('/app.html#/start', { waitUntil: 'load' });
@@ -132,12 +129,12 @@ test('app.html: działająca ścieżka chipu powłoki nadal otwiera kartę w ram
   const start = await uchwyt.contentFrame();
   await gotowyFormularz(start);
   await expect(start.locator('.vilda-auth-patient-card')).toHaveCount(0);
-  await otworzPrzezChip(page);
+  await otworzPrzezMenu(page);
   await sprawdzKarte(start);
   await expect(page).toHaveURL(/\/app\.html#\/start$/);
 });
 
-test('zmiana pacjenta: po wyczyszczeniu i zapisie drugiego chip otwiera drugiego, nie wcześniejszego', async ({ page }) => {
+test('zmiana pacjenta: po wyczyszczeniu i zapisie drugiego menu otwiera drugiego, nie wcześniejszego', async ({ page }) => {
   await otworzKonto(page);
   const pierwszyId = await wpiszIZapisz(page);
   await page.locator('#clearAllDataBtn').click();
@@ -153,12 +150,12 @@ test('zmiana pacjenta: po wyczyszczeniu i zapisie drugiego chip otwiera drugiego
   })).toEqual({ patientId: null, panelOwner: null, restoring: false, ready: true, state: 'hidden' });
   const drugiId = await wpiszIZapisz(page, DRUGI);
   expect(drugiId).not.toBe(pierwszyId);
-  await otworzPrzezChip(page);
+  await otworzPrzezMenu(page);
   await sprawdzKarte(page, DRUGI);
   await expect(page.locator('.vilda-patient-hero-name')).not.toContainText(PIERWSZY.firstName);
 });
 
-test('app.html z DocPro: chip otwiera kartę na Start, a przycisk powrotu przywraca DocPro', async ({ page }) => {
+test('app.html z DocPro: menu otwiera kartę na Start, a przycisk powrotu przywraca DocPro', async ({ page }) => {
   await otworzKonto(page);
   const id = await wpiszIZapisz(page);
   await page.goto('/app.html#/docpro', { waitUntil: 'load' });
@@ -166,7 +163,7 @@ test('app.html z DocPro: chip otwiera kartę na Start, a przycisk powrotu przywr
   const uchwytDocPro = await page.locator('iframe.app-pane[title="DocPro"]').elementHandle();
   const docpro = await uchwytDocPro.contentFrame();
   await gotowyFormularz(docpro);
-  await otworzPrzezChip(page);
+  await otworzPrzezMenu(page);
   await expect(page).toHaveURL(/\/app\.html#\/start$/);
   const uchwytStart = await page.locator('iframe.app-pane[title="Start"]').elementHandle();
   const start = await uchwytStart.contentFrame();
