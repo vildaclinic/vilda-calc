@@ -1098,10 +1098,12 @@ function remB22Open(groups, options) {
   var view = remB22Create(root, true, options || {}); remB22Full = view;
   view.setGroups(groups);
   root.showModal(); i.document.body.classList.add('vilda-reminders-open', 'nav-ui-temporarily-hidden');
+  // Finish background editing before the explicit focus request in this dialog.
+  zamknijPisaniePodArkuszem();
   var initialHeading = root.querySelector('.vb22-head h2');
   if (initialHeading) initialHeading.focus({ preventScroll: true });
   view.request(options || {});
-  zamknijPisaniePodArkuszem(); view.fit();
+  view.fit();
   if (i.requestAnimationFrame) i.requestAnimationFrame(view.fit);
   return root;
 }

@@ -131,20 +131,6 @@
   display: block
 }
 
-.chrome-icon-fallback {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 1.4rem;
-  line-height: 1;
-  font-weight: 400;
-  color: currentColor
-}
-
-.chrome-icon-fallback--small {
-  font-size: .95rem
-}
-
 .chrome-brand {
   display: inline-flex;
   align-items: center;
@@ -772,13 +758,13 @@ body.chrome-drawer-open .chrome-drawer-panel {
   }
 }
 
-/* UI labels do not accept a text caret, including browser caret navigation.
- * Account/patient values remain selectable, and real editors keep selection. */
+/* UI labels do not accept a text caret,
+including browser caret navigation.
+ * Account/patient values remain selectable,
+and real editors keep selection. */
 .chrome-drawer-head,
 .chrome-drawer-section-title,
-.chrome-drawer-nav a,
 .chrome-drawer-nav button,
-.chrome-drawer-account-label,
 .chrome-drawer-icon {
   -webkit-user-select: none;
   user-select: none
@@ -973,14 +959,6 @@ body.chrome-drawer-open {
 .chrome-drawer-account-avatar.is-guest {
   background: #f3eaea;
   color: #b35c5c
-}
-
-.chrome-drawer-account-label {
-  font-size: .66rem;
-  text-transform: uppercase;
-  letter-spacing: .06em;
-  color: var(--chrome-label-color);
-  font-weight: 700
 }
 
 .chrome-drawer-account-value {
@@ -1876,21 +1854,6 @@ html.vilda-phone .chrome-drawer-body {
   background: #f4f9f9
 }
 
-.chrome-menu-actions-caption {
-  display: flex;
-  flex-direction: column;
-  min-height: 34px;
-  margin: 0 3px var(--space-6px);
-  color: #617b80;
-  font-size: .65rem;
-  line-height: 1.5
-}
-
-.chrome-menu-actions-caption strong {
-  color: #4b6d73;
-  font-weight: 600
-}
-
 .chrome-menu-action-buttons {
   display: grid;
   grid-template-columns: repeat(2,minmax(0,1fr));
@@ -2204,7 +2167,7 @@ html.vilda-phone .chrome-menu-footer {
   white-space: nowrap
 }
 
-.chrome-menu-account-copy :is(small,.chrome-drawer-account-label) {
+.chrome-menu-account-copy small {
   color: #617b80;
   font-size: .6rem;
   line-height: 1.5
@@ -2302,11 +2265,6 @@ html.vilda-phone .chrome-menu-account-copy .chrome-drawer-account-value {
     min-height: 58px;
     padding: var(--space-6px) var(--space-10px)
   }
-  html.vilda-phone .chrome-menu-actions-caption {
-    flex: 1 1 auto;
-    min-width: 0;
-    margin-bottom: 0
-  }
   html.vilda-phone .chrome-menu-action-buttons {
     flex: 0 0 300px;
     width: 300px
@@ -2340,14 +2298,6 @@ html.vilda-phone .chrome-menu-account-copy .chrome-drawer-account-value {
 html:not(.vilda-embedded):not(.vilda-shell-embedded) body.has-vilda-chrome:not(.user-hides-nav-arrow)>footer.site-footer .site-footer__inner {
   padding-inline-end: var(--site-footer-arrow-inset)
 }
-/* Embedded panes always hide their own arrow; the host's arrow can still
- * overlay their footer. The shell already reserves the dock below the iframe. */
-html.vilda-embedded body.has-vilda-chrome>footer.site-footer .site-footer__disclaimer,
-html.vilda-shell-embedded body.has-vilda-chrome>footer.site-footer .site-footer__disclaimer,
-html:not(.vilda-embedded):not(.vilda-shell-embedded) body.has-vilda-chrome:not(.user-hides-nav-arrow)>footer.site-footer .site-footer__disclaimer {
-  padding-inline-end: calc(var(--site-footer-arrow-inset) - 20px)
-}
-
 /* A body padding can fall outside the scrollable area on the legacy full-height
  * pages. Reserve the optional dock inside the footer, once, including safe area. */
 html:not(.vilda-embedded):not(.vilda-shell-embedded) body.has-mobile-bottom-dock:has(>footer.site-footer) {
@@ -2366,9 +2316,6 @@ html:not(.vilda-embedded):not(.vilda-shell-embedded) body.has-mobile-bottom-dock
   html:not(.vilda-embedded):not(.vilda-shell-embedded) body.has-vilda-chrome:not(.user-hides-nav-arrow)>footer.site-footer .site-footer__inner {
     padding-inline-end: var(--space-20px)
   }
-  html:not(.vilda-embedded):not(.vilda-shell-embedded) body.has-vilda-chrome:not(.user-hides-nav-arrow)>footer.site-footer .site-footer__disclaimer {
-    padding-inline-end: 0
-  }
 }
 
 /* P-HEADER-MENU: the patient and local-save state belong to the pinned menu.
@@ -2384,15 +2331,15 @@ html:not(.vilda-embedded):not(.vilda-shell-embedded) body.has-mobile-bottom-dock
   position: relative;
   max-width: none;
   width: 100%;
-  padding-inline: 16px;
-  gap: 12px
+  padding-inline: var(--space-16px);
+  gap: var(--space-12px)
 }
 .vilda-header-menu .chrome-mobile-brand-bar {
   display: none!important
 }
 .vilda-header-menu .chrome-chips {
   flex: 0 0 auto;
-  gap: 8px;
+  gap: var(--space-8px);
   margin-left: auto
 }
 .vilda-header-menu .chrome-header-search {
@@ -2405,8 +2352,8 @@ html:not(.vilda-embedded):not(.vilda-shell-embedded) body.has-mobile-bottom-dock
   min-width: 0;
   margin: 0;
   padding: 0;
-  border: 1px solid #cfe1e4;
-  border-radius: 11px;
+  border: var(--border-hairline) solid #cfe1e4;
+  border-radius: var(--radius-11);
   background: #f8fbfb;
   box-shadow: none
 }
@@ -2420,9 +2367,9 @@ html:not(.vilda-embedded):not(.vilda-shell-embedded) body.has-mobile-bottom-dock
   width: 0;
   height: 42px;
   margin: 0;
-  padding: 0 0 0 14px;
+  padding: 0 0 0 var(--space-14px);
   border: 0!important;
-  border-radius: 10px 0 0 10px;
+  border-radius: var(--radius-10) 0 0 var(--radius-10);
   outline: 0!important;
   box-shadow: none!important;
   background: transparent!important;
@@ -2449,7 +2396,7 @@ html:not(.vilda-embedded):not(.vilda-shell-embedded) body.has-mobile-bottom-dock
   margin: 0;
   padding: 0!important;
   border: 0!important;
-  border-radius: 10px!important;
+  border-radius: var(--radius-10)!important;
   box-shadow: none!important;
   background: transparent!important;
   color: var(--primary, #00838d)!important;
@@ -2496,14 +2443,13 @@ html:not(.vilda-embedded):not(.vilda-shell-embedded) body.has-mobile-bottom-dock
   margin: 0
 }
 .vilda-header-menu .chrome-menu-heading,
-.vilda-header-menu .chrome-menu-actions-caption,
 .vilda-header-menu .chrome-drawer-head>strong,
 .vilda-header-menu .chrome-drawer-title {
   display: none
 }
 .vilda-header-menu .chrome-menu-actions {
   display: block;
-  padding: 8px;
+  padding: var(--space-8px);
   background: #f8fbfb
 }
 body.vilda-header-menu .chrome-drawer-head {
@@ -2567,10 +2513,10 @@ body.vilda-header-menu .chrome-drawer-head {
     align-items: center;
     width: auto!important;
     max-width: none!important;
-    padding: 0 12px!important;
+    padding: 0 var(--space-12px)!important;
     flex-basis: auto
   }
-  html:not(.vilda-phone) .vilda-header-menu .chrome-strip:not(.chrome-header-actions-before-search) .chrome-reminders-inner {gap:8px}
+  html:not(.vilda-phone) .vilda-header-menu .chrome-strip:not(.chrome-header-actions-before-search) .chrome-reminders-inner {gap:var(--space-8px)}
   html:not(.vilda-phone) .vilda-header-menu .chrome-strip:not(.chrome-header-actions-before-search) .chrome-reminders-label {
     display:inline;
     font-size:12px;
@@ -2591,7 +2537,7 @@ body.vilda-header-menu .chrome-drawer-head {
   width: 100%;
   height: 30px;
   min-height: 30px;
-  margin: 0 0 8px;
+  margin: 0 0 var(--space-8px);
   padding: 0 9px;
   overflow: hidden;
   border: 0!important;
@@ -2610,7 +2556,7 @@ body.vilda-header-menu .chrome-drawer-head {
   flex: 0 0 7px;
   width: 7px;
   height: 7px;
-  border-radius: 50%;
+  border-radius: var(--radius-circle);
   background: currentColor
 }
 .vilda-header-menu .chrome-menu-save-status[data-save-state=saved] {background:#eaf6ef!important;color:#287a4f!important}
@@ -2625,7 +2571,7 @@ body.vilda-header-menu .chrome-drawer-head {
   justify-content: center;
   gap: 0;
   min-height: 96px;
-  padding: 2px 8px;
+  padding: 2px var(--space-8px);
   background: #f8fbfb
 }
 .vilda-header-menu .chrome-menu-account-row,
@@ -2637,13 +2583,10 @@ body.vilda-header-menu .chrome-drawer-head {
   flex: 0 0 auto
 }
 .vilda-header-menu .chrome-menu-account-tools {
-  border-top: 1px solid #e4eeee
+  border-top: var(--border-hairline) solid #e4eeee
 }
 .vilda-header-menu .chrome-menu-account-row .chrome-menu-account {
   flex: 1 1 auto
-}
-.vilda-header-menu .chrome-menu-account-copy .chrome-drawer-account-label {
-  display: none
 }
 .vilda-header-menu [data-menu-pro] {
   display: inline-flex;
@@ -2652,7 +2595,7 @@ body.vilda-header-menu .chrome-drawer-head {
   flex: 0 0 auto;
   min-width: 44px;
   min-height: 44px;
-  padding: 0 4px;
+  padding: 0 var(--space-4px);
   border: 0!important;
   background: transparent!important;
   box-shadow: none!important;
@@ -2666,7 +2609,7 @@ body.vilda-header-menu .chrome-drawer-head {
   display: flex;
   align-items: center;
   flex: 1 1 auto;
-  gap: 6px;
+  gap: var(--space-6px);
   min-width: 0;
   min-height: 44px;
   padding: 0 2px;

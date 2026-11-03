@@ -933,7 +933,7 @@
  },
  "style.css": {
   "v": 95,
-  "sha256": "b5a50c5a55b2a7604a4ead89e5d6f1f82a266fc4fa0b23eb7792bcd163b431fa"
+  "sha256": "b0713845bf0cee4b87a41a51e7ab32e68c296340e51e34ee262f5d6f516337d9"
  },
  "thyroid_cancer_kids.js": {
   "v": 5,
@@ -1008,8 +1008,8 @@
   "sha256": "ca85ae9e30ff8378c5b897cd5c00c2d174b754ba7e60362fce69cb794b660795"
  },
  "vilda_auth_ui.js": {
-  "v": 536,
-  "sha256": "f5ca3f632992616165e417fcefed753959a95875ad29e91e703c9cfca1240378"
+  "v": 537,
+  "sha256": "113a602c22185ad01019651b8edde79a063d21761a4cf859c37d51eb9e9e20b6"
  },
  "vilda_b64_checklist.js": {
   "v": 2,
@@ -1117,11 +1117,11 @@
  },
  "vilda_chrome.css": {
   "v": 50,
-  "sha256": "d180997c4e272c5365d2bcff889f3898b1b61c8568fa4903038567a75501b279"
+  "sha256": "0aa800a6acebfa56cab1fbbc347afe8b904887e1344e4687803cc686efefeb16"
  },
  "vilda_chrome.js": {
   "v": 227,
-  "sha256": "723f42dab5d35daec58adc85ac245b6d450cf9a6dc6e920a2e6a372de4086c6e"
+  "sha256": "3e3ceef63bba732a3303eabd883dd6c11979ae8ebdcca4f8d5b648917e8b68c4"
  },
  "vilda_clinical_crypto.js": {
   "v": 2,
@@ -1356,8 +1356,8 @@
   "sha256": "e67bbb0bf9ffe4185d16dec03cb3ac3476eb142561951f8cbe143685646bd56f"
  },
  "vilda_global_search_view.js": {
-  "v": 5,
-  "sha256": "c2fae7a0e58f23ad06843b8a85f0cb13a5075fea82a3f37f3c5534494f6fa615"
+  "v": 6,
+  "sha256": "231b1f520d0630a9392366b8f4e81cc8e64c2c64704b2a6f0d16a15db1b43b76"
  },
  "vilda_growth_card_c.js": {
   "v": 27,
@@ -1780,8 +1780,8 @@
   "sha256": "59dfe0d72f1c56950e8bfa44036bd1d02bf6a6aea16ce6e77a2644921e1e45cf"
  },
  "vilda_session_bridge.js": {
-  "v": 149,
-  "sha256": "f6b6b0b0a786e3557cf7a5b25847e4f01f2c228100d2b351eebfe045b4aa9b76"
+  "v": 150,
+  "sha256": "f29101769fe566e1861ecde82e19dbb93581d74eb0aa38ce4cab84ead6aac577"
  },
  "vilda_sga_catchup.js": {
   "v": 2,

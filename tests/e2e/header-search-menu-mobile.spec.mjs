@@ -18,12 +18,15 @@ for (const shell of [false, true]) test(`${shell ? 'shell' : 'standalone'} phone
       const size = await control.boundingBox();
       expect(size.width).toBeGreaterThanOrEqual(44);
       expect(size.height).toBeGreaterThanOrEqual(44);
-      const icon = await control.locator('svg').boundingBox();
-      expect(icon.width).toBe(21);
-      expect(icon.height).toBe(21);
+      // Preserve the icon's layout size; the existing hover transform can scale
+      // its painted bounding box by 1.02 after closing the drawer on a touch UA.
+      await expect(control.locator('svg')).toHaveCSS('width', '21px');
+      await expect(control.locator('svg')).toHaveCSS('height', '21px');
     }
-    const rows = await controls.evaluateAll(nodes => nodes.map(node => Math.round(node.getBoundingClientRect().y)));
-    expect(new Set(rows).size, `${width}px: all header actions share one row`).toBe(1);
+    const centers = await controls.evaluateAll(nodes => nodes.map(node => {
+      const r = node.getBoundingClientRect(); return r.y + r.height / 2;
+    }));
+    expect(Math.max(...centers) - Math.min(...centers), `${width}px: all header actions share one row`).toBeLessThanOrEqual(1);
     for (const selector of ['#vildaHeaderSearchInput', '#vildaPatientChip', '#vildaUserChip', '#vildaProBadge']) {
       await expect(page.locator(selector)).toBeHidden();
     }

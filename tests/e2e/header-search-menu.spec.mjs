@@ -63,7 +63,9 @@ for (const shell of [false, true]) {
       && !document.documentElement.classList.contains('vilda-auth-locked'));
     await expect(input).toHaveValue('');
     await input.press('Enter');
-    await expect(page.locator(`${SEARCH_WORKSPACE} .vgs`).getByRole('searchbox', { name: GLOBAL_QUERY, exact: true })).toHaveValue('');
+    const emptyQuery = page.locator(`${SEARCH_WORKSPACE} .vgs`).getByRole('searchbox', { name: GLOBAL_QUERY, exact: true });
+    await expect(emptyQuery).toHaveValue('');
+    await expect(emptyQuery).toBeFocused();
   });
 }
 
