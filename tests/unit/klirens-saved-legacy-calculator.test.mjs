@@ -38,7 +38,15 @@ describe('Saved Klirens: existing timed-urine production arithmetic', () => {
     expect(result.valueNum).toBeCloseTo(expected, 12);
     expect(result.unit).toBe(unit);
     if (id === 'Ca_Cr') expect(result).toMatchObject({ sourceFormulaId: id, comparator: '', tone: 'success', norm: '0,02–0,24 mg/mg', outOfRange: false, category: 'within' });
+    else if (id === 'PO4_Cr') expect(result).toMatchObject({ sourceFormulaId: id, comparator: '', tone: 'success', norm: '<0,75 mg/mg', outOfRange: false, category: null, assessment: 'within',
+      phosphorusCreatinineSnapshot: { context: { ageYears: 45, sex: 'male' }, input: { phosphorusValue: '10', phosphorusUnit: 'mg P/dL', creatinineValue: '100', creatinineUnit: 'mg/dL' }, reference: { sourceLabel: 'Mayo', high: .75, low: null, upperInclusive: false } } });
     else expect(result).toMatchObject({ sourceFormulaId: id, comparator: '', tone: 'neutral', norm: '', outOfRange: null, category: null });
+  });
+
+  it.each([{ sex: 'F' }, { age: '' }])('explicit P/Cr recalculation keeps the number neutral without an applicable reference: %o', patch => {
+    expect(calculate('PO4_Cr', patch)).toMatchObject({ valueNum: .1, rawValue: .1, unit: 'mg/mg', norm: '',
+      tone: 'neutral', outOfRange: null, category: null, assessment: 'unassessed',
+      phosphorusCreatinineSnapshot: { reference: null, referenceAvailable: false, status: 'unassessed' } });
   });
 
   it('potassium retains the broad concentration quantity with an explicit clock and its selected laboratory reference', () => {
