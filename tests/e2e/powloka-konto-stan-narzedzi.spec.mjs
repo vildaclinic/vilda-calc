@@ -1,6 +1,7 @@
 import { devices, expect, test } from '@playwright/test';
+import { visibleChromeMenu } from '../support/chrome-menu-fixture.mjs';
 
-// A4: konto otwieramy przez rzeczywisty nagłówek, z fikcyjnym lokalnym sejfem.
+// A4: konto otwieramy przez rzeczywiste menu, z fikcyjnym lokalnym sejfem.
 // Pola i wynik HOMA mają pozostać w tym samym dokumencie utrzymywanej ramki.
 // Daty nie są przedmiotem testu; rzeczywisty RAF/IntersectionObserver pozostaje
 // aktywny także podczas pełnej nawigacji klawiaturą między dokumentami.
@@ -70,15 +71,10 @@ async function nawigacja(page, href) {
   await expect(menu).not.toBeVisible();
 }
 
-async function kliknijKonto(ctx, preferred = 'avatar', keyboard = false, noWaitAfter = false) {
-  let control = ctx.locator(preferred === 'name' ? '#vildaUserValue' : '#vildaUserAvatar');
-  // Przy szerokości telefonu nazwa jest celowo ukryta razem z .chip-content.
-  // Klikamy osiągalny avatar; nie odsłaniamy ukrytego nagłówka CSS-em.
-  if (preferred === 'name' && !(await control.isVisible())) {
-    await expect(control).not.toBeVisible();
-    control = ctx.locator('#vildaUserAvatar');
-    keyboard = false;
-  }
+async function kliknijKonto(ctx, keyboard = false, noWaitAfter = false) {
+  const menu = await visibleChromeMenu(ctx);
+  const control = menu.locator('[data-menu-account]');
+  await expect(ctx.locator('#vildaUserChip')).toBeHidden();
   await expect(control).toBeVisible();
   if (keyboard) {
     await control.focus();
@@ -129,7 +125,7 @@ async function sekcjaKonta(ctx) {
 }
 
 function scenariuszeKonta() {
-  test('host avatar → zimne Ustawienia → menu: konto zostaje w powłoce i HOMA zachowuje stan', async ({ page }) => {
+  test('konto w menu → zimne Ustawienia → menu: konto zostaje w powłoce i HOMA zachowuje stan', async ({ page }) => {
     await konto(page);
     const previous = await homa(page);
     let zwolnij;
@@ -140,10 +136,10 @@ function scenariuszeKonta() {
       await bramka;
       await route.continue();
     });
-    const klik = kliknijKonto(page, 'avatar', false, true);
+    const klik = kliknijKonto(page, false, true);
     try {
       await expect.poll(() => odczytSettings,
-        { message: 'odpowiedź dokumentu Ustawień oczekuje, gdy nagłówek wysyła cel konta' }).toBe(true);
+        { message: 'odpowiedź dokumentu Ustawień oczekuje, gdy menu wysyła cel konta' }).toBe(true);
     }
     finally { zwolnij(); }
     await klik;
@@ -153,7 +149,7 @@ function scenariuszeKonta() {
     await zachowanaHoma(page, previous);
   });
 
-  test('host nazwa/Enter → ciepłe Ustawienia: cel konta i Back/Forward zachowują HOMA', async ({ page }) => {
+  test('konto w menu/Enter → ciepłe Ustawienia: cel konta i Back/Forward zachowują HOMA', async ({ page }) => {
     await konto(page);
     const previous = await homa(page);
     await nawigacja(page, 'ustawienia.html');
@@ -166,7 +162,7 @@ function scenariuszeKonta() {
     });
     await nawigacja(page, 'homa-ir.html');
     await zachowanaHoma(page, previous);
-    await kliknijKonto(page, 'name', true);
+    await kliknijKonto(page, true);
     await expect(page).toHaveURL(/\/app\.html#\/ustawienia$/);
     await sekcjaKonta(settings);
     expect(await page.evaluate(() => document.querySelector('iframe.app-pane[title="Ustawienia"]').contentDocument
@@ -191,17 +187,17 @@ function scenariuszeKonta() {
     await zachowanaHoma(page, previous);
   });
 
-  for (const [path, control, keyboard] of [
-    ['/index.html', 'name', false],
-    ['/docpro.html', 'avatar', false],
-    ['/homa-ir.html', 'name', true],
+  for (const [path, keyboard] of [
+    ['/index.html', false],
+    ['/docpro.html', false],
+    ['/homa-ir.html', true],
   ]) {
-    test(`standalone ${path}: nagłówek nadal otwiera samodzielną sekcję konta`, async ({ page }) => {
+    test(`standalone ${path}: menu nadal otwiera samodzielną sekcję konta`, async ({ page }) => {
       await konto(page);
       await page.goto(path, { waitUntil: 'load' });
       await odblokowany(page);
       await cookies(page);
-      await kliknijKonto(page, control, keyboard);
+      await kliknijKonto(page, keyboard);
       await expect(page).toHaveURL(/\/ustawienia\.html#settings-section-account$/);
       await page.waitForLoadState('load');
       await odblokowany(page);

@@ -85,6 +85,19 @@ async function dodajPrzyPomiarze(page) {
   await czekajNaHistorie(page);
   const akcje = page.locator('.vilda-patient-timeline-list').getByRole('button', { name: 'Akcje dla pomiaru', exact: true });
   const menu = page.locator('.vilda-timeline-measure-menu');
+  // The listener must be ready as soon as the real menu exists. Keep all three
+  // DOM clicks in one task so a delayed listener cannot accidentally pass after
+  // Playwright's next action yields to the browser's timer queue.
+  const heading = page.getByRole('heading', { name: 'Karta pacjenta', exact: true });
+  const immediate = await page.evaluate(({ opener, outside }) => {
+    const count = () => document.querySelectorAll('.vilda-timeline-measure-menu').length;
+    opener.click(); const opened = count();
+    opener.click(); const stillOpen = count();
+    outside.click(); const closed = count();
+    return { opened, stillOpen, closed };
+  }, { opener: await akcje.elementHandle(), outside: await heading.elementHandle() });
+  expect(immediate, 'otwarcie jest natychmiast chronione: opener pozostaje dozwolony, klik poza menu je zamyka')
+    .toEqual({ opened: 1, stillOpen: 1, closed: 0 });
   await akcje.click();
   await expect(menu).toBeVisible();
   // Zapis pacjenta uruchamia auto-backup. Jego techniczny klik linku pobrania

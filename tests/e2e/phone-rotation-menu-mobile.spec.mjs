@@ -16,7 +16,7 @@ const COLLAPSED_MENU_CONTROLS = [
   'close', 'saveDataBtnSidebar', 'patientDocumentsBtnSidebar', 'patientsListBtnSidebar',
   'patient-card', 'patient-change', 'terminarz.html', 'notatki.html',
   'index.html', 'docpro.html', 'przelicznik-jednostek.html', 'calculators',
-  'materialy-edukacyjne.html', 'account', 'ustawienia.html', 'logout',
+  'materialy-edukacyjne.html', 'account', 'ustawienia.html', 'logout', 'save-status', 'pro', 'sync',
 ];
 const CALCULATOR_DESTINATIONS = ['homa-ir.html', 'kalkulator-klirens.html', 'steroidy.html'];
 
@@ -227,7 +227,7 @@ async function assertMenu(page, { width, height, left, right, top, bottom, lands
   if (expanded) await expect(calculators).toBeVisible();
   else await expect(calculators).toBeHidden();
   await expect(calculators.locator('a')).toHaveCount(3);
-  await expect(panel.locator('span[data-menu-patient-name]')).toHaveText('Wybierz pacjenta');
+  await expect(panel.locator('[data-menu-patient-name]')).toHaveText('Wybierz pacjenta');
   await expect(panel.locator('.chrome-menu-office [data-drawer-btn="patientsListBtnSidebar"]')).toHaveText('Baza pacjentów');
   await expect(panel.locator('a[href="notatki.html"]')).toHaveText('Notatnik');
   const measure = () => panel.evaluate(panel => {
@@ -238,10 +238,10 @@ async function assertMenu(page, { width, height, left, right, top, bottom, lands
     const identity = item => {
       if (item.matches('.chrome-drawer-close')) return 'close';
       if (item.hasAttribute('data-drawer-btn')) return item.getAttribute('data-drawer-btn');
-      if (item.hasAttribute('href')) return item.getAttribute('href');
-      for (const [attribute, name] of [['data-menu-patient-card', 'patient-card'], ['data-menu-patient-change', 'patient-change'], ['data-menu-account', 'account'], ['data-menu-logout', 'logout']]) {
+      for (const [attribute, name] of [['data-menu-patient-card', 'patient-card'], ['data-menu-patient-change', 'patient-change'], ['data-menu-account', 'account'], ['data-menu-logout', 'logout'], ['data-menu-save-status', 'save-status'], ['data-menu-pro', 'pro'], ['data-menu-sync', 'sync']]) {
         if (item.hasAttribute(attribute)) return name;
       }
+      if (item.hasAttribute('href')) return item.getAttribute('href');
       if (item.matches('.chrome-menu-calculators-toggle')) return 'calculators';
       return `unexpected:${item.tagName}:${item.textContent.trim()}`;
     };
@@ -503,7 +503,9 @@ test('focused shell rotation uses current layout height despite stale visualView
     const panel = document.querySelector('.app-shell-main').getBoundingClientRect();
     return { headerTop: header.top, panelTop: panel.top, panelBottom: panel.bottom, hostScrollY: scrollY };
   });
-  const expected = { headerTop: 59, panelTop: 150, panelBottom: 956, hostScrollY: 0 };
+  // Approved single-row header: 64 px content + 2 px border after the 59 px
+  // native safe area. The old duplicated patient row made this edge 150 px.
+  const expected = { headerTop: 59, panelTop: 125, panelBottom: 956, hostScrollY: 0 };
   await expect.poll(shellGeometry, { message: 'ResizeObserver reconciles late native env() insets even with a focused iframe input' }).toEqual(expected);
   const animationCount = (await motion(page)).length;
   // Frame-based negative check spans the old 200 ms delayed resize correction.

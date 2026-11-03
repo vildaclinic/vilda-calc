@@ -15,6 +15,19 @@ async function dockTab(page, route, title) {
   return frame;
 }
 
+async function expectPhoneHeaderControls(page) {
+  for (const selector of ['.chrome-mobile-menu-btn', '#vildaHeaderSearchBtn', '#vildaRemindersBtn']) {
+    await expect(page.locator(`body > header ${selector}`)).toBeVisible();
+  }
+  // Patient/account state carriers remain mounted for existing save/session
+  // consumers, while their visible controls live in the side menu.
+  for (const id of ['vildaPatientChip', 'vildaUserChip', 'vildaProBadge', 'vildaHeaderSearchInput']) {
+    const control = page.locator(`#${id}`);
+    await expect(control).toHaveCount(1);
+    await expect(control).toBeHidden();
+  }
+}
+
 async function assertLandscapeGeometry(page, frame, width, height) {
   await expectLandscape(page, true);
   await expectLandscape(frame, true);
@@ -33,9 +46,10 @@ async function assertLandscapeGeometry(page, frame, width, height) {
   const { host, content } = await layoutGeometry(page, frame);
   expect(host.viewport).toEqual({ width, height });
   expect(host.dock.width).toBe(552);
-  expect(host.headerControls).toHaveLength(4);
+  await expectPhoneHeaderControls(page);
+  expect(host.headerControls).toHaveLength(3);
   for (const control of host.headerControls) {
-    expect(control.height, 'menu, przypomnienia, pacjent i konto mają cele dotyku 44 px').toBeGreaterThanOrEqual(44);
+    expect(control.height, 'menu, lupa i przypomnienia mają cele dotyku 44 px').toBeGreaterThanOrEqual(44);
     expect(control.width).toBeGreaterThanOrEqual(44);
   }
   expect(host.dockItems).toHaveLength(5);
@@ -81,7 +95,9 @@ test('powłoka: zapisany fikcyjny pacjent, Nowy pomiar, 956/844/1080 px i wszyst
   await expectLandscape(page, false);
   await expectLandscape(start, false);
   const portrait = await layoutGeometry(page, start);
-  expect(portrait.host.header.height).toBe(91);
+  // Approved one-row header: 64 px content plus its existing 2 px border.
+  expect(portrait.host.header.height).toBe(66);
+  await expectPhoneHeaderControls(page);
   expect(portrait.content.info.y).toBeGreaterThan(portrait.content.user.y);
 
   // DocPro is mounted and then hidden BEFORE rotation. It must inherit the host's

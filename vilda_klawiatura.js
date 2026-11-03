@@ -95,11 +95,14 @@
   }
 
   /** O ile przewinąć ramkę (w dół dodatnio), żeby pole [top, bottom] mieściło się w pasie.
-   *  0, gdy pole już się mieści — wtedy nic się nie rusza. Pole poza pasem staje dolną krawędzią
+   *  0, gdy pole i bliski następny wiersz już się mieszczą. Pole poza pasem staje dolną krawędzią
    *  nad zapasem na kolejny wiersz; pole wyższe niż to miejsce staje górną krawędzią przy górze pasa. */
-  function przesuniecie(pole, pas) {
+  function przesuniecie(pole, pas, nastepne) {
     if (!pole || !pas || !(pas.dol > pas.gora)) return 0;
-    if (pole.top >= pas.gora && pole.bottom <= pas.dol) return 0;
+    var bliskiWierszZasloniety = nastepne && nastepne.top >= pole.top
+      && nastepne.bottom > pas.dol && nastepne.bottom > pole.bottom
+      && nastepne.bottom - pole.bottom <= ZAPAS_POD_POLEM;
+    if (pole.top >= pas.gora && pole.bottom <= pas.dol && !bliskiWierszZasloniety) return 0;
     var zapas = Math.min(ZAPAS_POD_POLEM, (pas.dol - pas.gora) / 3);
     var dy = pole.bottom - (pas.dol - zapas);
     if (pole.top - dy < pas.gora) dy = pole.top - pas.gora;
@@ -127,6 +130,7 @@
   var sledzone = null; // { el, vv, p, onResize, onPrzesuniecie, ro, poz, koniecKontroli, kontrole, czasKontroli, t0 }
   var zaplanowane = 0;
   var dziennik = [];
+  var rezerwa = null, wysokoscRezerwy = 0, obserwatorRamki, podpietyVault = null;
 
   function teraz() {
     try { return w.performance && w.performance.now ? w.performance.now() : Date.now(); } catch (e) { return Date.now(); }
@@ -228,8 +232,73 @@
     }
   }
 
+  function maksymalnePrzewiniecie() {
+    var root = d.scrollingElement || d.documentElement;
+    return Math.max(0, (root ? root.scrollHeight : 0) - (w.innerHeight || 0));
+  }
+
+  // Krótka stopka nie może ograniczać odsłonięcia pola i następnego wiersza.
+  // Rezerwa istnieje wyłącznie podczas edycji; nie zmienia formularza ani danych.
+  function zapewnijRezerwe(cel) {
+    if (!sledzone || d.activeElement !== sledzone.el || !aktywny() || !d.body) return false;
+    var brak = Math.ceil(cel - maksymalnePrzewiniecie());
+    if (brak <= 0) return false;
+    if (!rezerwa) {
+      rezerwa = d.createElement('div');
+      rezerwa.id = 'vildaKeyboardScrollReserve';
+      rezerwa.setAttribute('aria-hidden', 'true');
+      rezerwa.style.cssText = 'display:block;width:1px;max-width:100%;margin:0;padding:0;border:0;pointer-events:none;overflow:hidden;overflow-anchor:none;';
+      d.body.appendChild(rezerwa);
+    }
+    wysokoscRezerwy += brak;
+    rezerwa.style.height = wysokoscRezerwy + 'px';
+    rezerwa.style.minHeight = wysokoscRezerwy + 'px';
+    rezerwa.style.flex = '0 0 ' + wysokoscRezerwy + 'px';
+    return true;
+  }
+
+  function usunRezerwe() {
+    if (rezerwa && rezerwa.parentNode) rezerwa.parentNode.removeChild(rezerwa);
+    rezerwa = null;
+    wysokoscRezerwy = 0;
+  }
+
+  function utrzymajRezerwe(s) {
+    if (sledzone !== s || d.activeElement !== s.el || !(s.celPrzewiniecia > 0) || !klawiaturaOtwarta(pomiar())) return;
+    var maks = maksymalnePrzewiniecie();
+    var przyDolnejKrawedzi = Math.abs((w.scrollY || 0) - maks) <= 1;
+    // Wyniki poniżej pola mogą zniknąć asynchronicznie po wpisaniu wieku.
+    // Odtwarzamy tylko pozycję obciętą przez nowy koniec dokumentu, w oknie fokusu.
+    if (zapewnijRezerwe(s.celPrzewiniecia) && przyDolnejKrawedzi && teraz() <= s.koniecKontroli) przewin(s.celPrzewiniecia);
+  }
+
+  function zakonczEdycje() {
+    odepnij();
+    usunRezerwe();
+  }
+
+  function obserwujBlokade() {
+    var vault = w.VildaVault;
+    if (!vault || vault === podpietyVault || typeof vault.onLock !== 'function') return;
+    podpietyVault = vault;
+    vault.onLock(zakonczEdycje);
+  }
+
   function pozycjaWDokumencie(el) {
     return el.getBoundingClientRect().top + (w.scrollY || 0);
+  }
+
+  function nastepnePole(el) {
+    // Po obniżeniu nagłówka waga może już mieścić się nad klawiaturą, choć wzrost
+    // tuż pod nią nadal nie. Nie odsłaniamy odległych sekcji ani innych formularzy.
+    var form = el.form;
+    if (!form) return null;
+    var pola = form.querySelectorAll('input,textarea'), znalezione = false;
+    for (var i = 0; i < pola.length; i += 1) {
+      if (pola[i] === el) { znalezione = true; continue; }
+      if (znalezione && otwieraKlawiature(pola[i]) && pola[i].getClientRects().length && wPrzeplywieDokumentu(pola[i])) return pola[i].getBoundingClientRect();
+    }
+    return null;
   }
 
   // Dziennik diagnostyczny — tylko po włączeniu przez właściciela.
@@ -289,12 +358,17 @@
       o = pomiar();
       if (!o) return 0;
       var r = el.getBoundingClientRect();
-      dy = przesuniecie({ top: r.top, bottom: r.bottom }, pasWidoczny(o));
+      dy = przesuniecie({ top: r.top, bottom: r.bottom }, pasWidoczny(o), nastepnePole(el));
       // Opuszczenie pola zależy od góry pasa. Przy przesuniętej powłoce wyznacza ją offsetTop
       // visualViewport, a tego na iOS 26 nie sprawdzimy — lepiej zostawić pole, niż zepchnąć je
       // pod klawiaturę.
       if (dy < 0 && (tylkoWGore || o.vvGora > 1 || o.powlokaY > 1)) dy = 0;
-      if (dy !== 0) przewin(Math.max(0, (w.scrollY || 0) + dy));
+      if (dy !== 0) {
+        var cel = Math.max(0, (w.scrollY || 0) + dy);
+        if (sledzone && sledzone.el === el) sledzone.celPrzewiniecia = cel;
+        if (dy > 0) zapewnijRezerwe(cel);
+        przewin(cel);
+      }
       if (sledzone && sledzone.el === el) sledzone.poz = pozycjaWDokumencie(el);
     } catch (e) {
       if (typeof w.vildaLogSwallowedCatch === 'function') w.vildaLogSwallowedCatch('vilda_klawiatura.js', e, { feature: 'dopasuj' });
@@ -338,11 +412,14 @@
     var p = powloka();
     if (!p) return;
     var t0 = teraz();
-    var s = { el: el, p: p, vv: p.visualViewport, ro: null, poz: pozycjaWDokumencie(el), t0: t0, koniecKontroli: t0 + OKNO_KONTROLI_MS, kontrole: [], czasKontroli: 0 };
+    var s = { el: el, p: p, vv: p.visualViewport, ro: null, poz: pozycjaWDokumencie(el), t0: t0, koniecKontroli: t0 + OKNO_KONTROLI_MS, kontrole: [], czasKontroli: 0, celPrzewiniecia: w.scrollY || 0, klawiaturaBylaOtwarta: klawiaturaOtwarta(pomiar()) };
     s.onResize = function () {
       zaplanuj(function () {
         if (sledzone !== s || d.activeElement !== el) return;
-        if (klawiaturaOtwarta(pomiar())) dopasuj(el, false, 'resize');
+        var otwarta = klawiaturaOtwarta(pomiar());
+        if (otwarta) { utrzymajRezerwe(s); dopasuj(el, false, 'resize'); }
+        else if (s.klawiaturaBylaOtwarta) { usunRezerwe(); s.celPrzewiniecia = w.scrollY || 0; }
+        s.klawiaturaBylaOtwarta = otwarta;
       });
     };
     s.onPrzesuniecie = function () {
@@ -360,6 +437,7 @@
       s.ro = new w.ResizeObserver(function () {
         if (sledzone !== s || d.activeElement !== el) return;
         if (Math.abs(pozycjaWDokumencie(el) - s.poz) > 1) dopasuj(el, false, 'tresc');
+        else utrzymajRezerwe(s);
       });
       s.ro.observe(d.documentElement);
     }
@@ -376,9 +454,10 @@
   function naFokus(e) {
     var el = e.target;
     if (!otwieraKlawiature(el) || !aktywny() || !wPrzeplywieDokumentu(el)) {
-      odepnij();
+      zakonczEdycje();
       return;
     }
+    obserwujBlokade();
     sledz(el);
     if (klawiaturaOtwarta(pomiar()) || niedawnoDotkniete(el)) dopasuj(el, false, 'fokus');
     else zapiszDiagnostyke('fokus-bez-klawiatury', el, pomiar(), 0);
@@ -386,7 +465,7 @@
 
   function naUtrateFokusu() {
     w.setTimeout(function () {
-      if (sledzone && d.activeElement !== sledzone.el) odepnij();
+      if (sledzone && d.activeElement !== sledzone.el) zakonczEdycje();
     }, 0);
   }
 
@@ -396,7 +475,15 @@
     d.addEventListener('focusin', naFokus, true);
     d.addEventListener('focusout', naUtrateFokusu, true);
     // Słuchacze siedzą na visualViewport i oknie POWŁOKI, więc przy przeładowaniu ramki trzeba je zdjąć.
-    w.addEventListener('pagehide', odepnij);
+    w.addEventListener('pagehide', zakonczEdycje);
+    d.addEventListener('vilda:auth-shown', zakonczEdycje);
+    w.addEventListener('resize', function () { if (!aktywny()) zakonczEdycje(); });
+    obserwujBlokade();
+    // Zmiana trasy powłoki ukrywa iframe bez pagehide.
+    if (w.frameElement && typeof w.MutationObserver === 'function') {
+      obserwatorRamki = new w.MutationObserver(function () { if (w.frameElement.hidden) zakonczEdycje(); });
+      obserwatorRamki.observe(w.frameElement, { attributes: true, attributeFilter: ['hidden'] });
+    }
     // Wysokość bazowa od startu ramki: wtedy klawiatura jest schowana.
     var pStart = powloka();
     if (pStart) zmierzPodstawe(pStart);
