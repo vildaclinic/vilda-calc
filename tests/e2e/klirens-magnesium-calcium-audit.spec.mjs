@@ -88,11 +88,20 @@ async function geometry(page, width) {
       overflow: document.documentElement.scrollWidth - document.documentElement.clientWidth,
       form: box('#clcrForm'), active: box('#clcrActivePanel'), input: box('#mgcaInputCard'), clear: box('#clearBtn'), report: box('#clcrResultReport'),
       inputStep: box('#clcrActivePanel .clcr-step-number'), resultStep: box('#clcrResultTitle .clcr-step-number'),
+      inputMode: document.getElementById('MGCA_inputMode').value,
       controls: [...document.querySelectorAll('#mgcaInputCard input,#mgcaInputCard select,#mgcaInputCard button')]
         .filter(node => node.checkVisibility()).map(node => ({ id: node.id || node.textContent.trim(), kind: node.tagName,
           valueControl: node.tagName !== 'BUTTON' || node.hasAttribute('data-mgca-mode'),
           height: node.getBoundingClientRect().height, font: parseFloat(getComputedStyle(node).fontSize),
           left: node.getBoundingClientRect().left, right: node.getBoundingClientRect().right })),
+      inputPairs: [...document.querySelectorAll('#mgcaInputCard .mgca-value-row')]
+        .filter(row => row.checkVisibility()).map(row => {
+          const input = row.querySelector('input'), unit = row.querySelector('select');
+          const inputRect = input.getBoundingClientRect(), unitRect = unit.getBoundingClientRect();
+          return { inputId: input.id, unitId: unit.id,
+            inputTop: inputRect.top, inputBottom: inputRect.bottom,
+            unitTop: unitRect.top, unitBottom: unitRect.bottom };
+        }),
       mainFont: parseFloat(getComputedStyle(document.querySelector('#mgcaInputCard')).fontSize),
       numbers: [...document.querySelectorAll('#clcrResultReport [data-clcr-series="Mg_Ca"] .clcr-result-value,#clcrResultReport [data-clcr-series="Mg_Ca"] .clcr-result-reference-value')].map(node => {
         const range = document.createRange(); range.selectNodeContents(node);
@@ -117,6 +126,11 @@ async function geometry(page, width) {
     if (control.kind !== 'BUTTON') expect(control.font, control.id).toBeGreaterThanOrEqual(16);
     expect(control.left, control.id).toBeGreaterThanOrEqual(0);
     expect(control.right, control.id).toBeLessThanOrEqual(width + 1);
+  }
+  expect(boxes.inputPairs).toHaveLength(boxes.inputMode === 'direct' ? 1 : 2);
+  for (const pair of boxes.inputPairs) {
+    expect(Math.abs(pair.inputTop - pair.unitTop), `${pair.inputId}/${pair.unitId}: top`).toBeLessThanOrEqual(1);
+    expect(Math.abs(pair.inputBottom - pair.unitBottom), `${pair.inputId}/${pair.unitId}: bottom`).toBeLessThanOrEqual(1);
   }
   for (const number of boxes.numbers) for (const glyph of number.glyphs) {
     expect(glyph.left, number.text).toBeGreaterThanOrEqual(number.left - 0.6);

@@ -103,6 +103,7 @@ html[data-clcr-workflow-ui="1"] #mgcaInputCard .mgca-entry-field {
   gap: var(--space-8px);
   align-self: end;
   min-width: 0;
+  min-height: 0;
   width: 100%;
   margin: 0;
   padding: 0;
