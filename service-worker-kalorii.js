@@ -3176,6 +3176,7 @@ const OPTIONAL_ASSETS = [
   '/reposition.js?v=7',
   '/vilda_klawiatura.js?v=1',
   '/vilda_klawiatura.js?v=2',
+  '/vilda_klawiatura.js?v=3',
   '/vilda_patient_report.js?v=10',
   '/vilda_summary_cards.js?v=26',
   '/vitalSigns.js?v=3',

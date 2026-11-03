@@ -133,6 +133,32 @@ function expectNoBootListeners(h) {
   expect(h.win.listenerCount('pagehide')).toBe(0);
 }
 
+describe('Chrome: kopiowanie nazwy w przycisku menu', () => {
+  for (const kind of ['patient', 'account']) {
+    it(`${kind}: przeciągnięcie zaznacza nazwę, a zwykły i klawiaturowy klik nadal nawigują`, () => {
+      const h = patientMenuEnvironment(); h.state.ready = true;
+      h.win.VildaShell = { navigate: vi.fn(), openPatientCardInStart: vi.fn() };
+      const button = kind === 'patient' ? h.opener : h.panel.appendChild(new h.Element('button'));
+      if (kind === 'account') button.setAttribute('data-menu-account', '');
+      const name = button.appendChild(new h.Element('span')); name.textContent = 'Fikcyjna nazwa do kopiowania';
+      if (kind === 'patient') name.setAttribute('data-menu-patient-name', '');
+      else name.className = 'chrome-drawer-account-value';
+      h.win.getSelection = () => ({ isCollapsed: false, rangeCount: 1, anchorNode: name, focusNode: name });
+      h.api.bindMenu(h.panel);
+      const navigate = kind === 'patient' ? h.win.VildaShell.openPatientCardInStart : h.win.VildaShell.navigate;
+      const down = () => button.dispatchEvent({ type: 'pointerdown', button: 0, target: name, clientX: 10, clientY: 10 });
+      const click = (x, detail = 1) => button.dispatchEvent({ type: 'click', button: 0, target: name, clientX: x, clientY: 10, detail });
+      down(); click(100);
+      expect(navigate, 'wybranie tekstu nie otwiera nowego widoku').not.toHaveBeenCalled();
+      down(); click(11);
+      expect(navigate, 'stare zaznaczenie nie blokuje zwykłego kliknięcia').toHaveBeenCalledOnce();
+      navigate.mockClear();
+      down(); click(100, 0);
+      expect(navigate, 'click generowany klawiaturą działa mimo zachowanego zaznaczenia').toHaveBeenCalledOnce();
+    });
+  }
+});
+
 function headerSearchEnvironment() {
   const h = environment(), state = { userId: 'fictional-search-owner-a', unlocked: true, private: false };
   const lockListeners = [], privacyListeners = [];

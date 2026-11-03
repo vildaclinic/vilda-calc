@@ -1009,7 +1009,7 @@
  },
  "vilda_auth_ui.js": {
   "v": 537,
-  "sha256": "113a602c22185ad01019651b8edde79a063d21761a4cf859c37d51eb9e9e20b6"
+  "sha256": "61bc090953d1f9f6f1b8e8aabc4b41b260ed9875a4276eb18896af6c2d7b1c68"
  },
  "vilda_b64_checklist.js": {
   "v": 2,
@@ -1121,7 +1121,7 @@
  },
  "vilda_chrome.js": {
   "v": 228,
-  "sha256": "4a16689e9f2287e70e4916b37d82f74faeaaf186c31785b5240c6ec42f88f892"
+  "sha256": "7268931209ccc963459aa282d243c1395155cb9d12a203b85746868fd6110ef8"
  },
  "vilda_clinical_crypto.js": {
   "v": 2,
@@ -1440,8 +1440,8 @@
   "sha256": "32d3173ec83c7de4e1530b82c8e46f99211cf241d497c2fc6695424f85b44664"
  },
  "vilda_klawiatura.js": {
-  "v": 2,
-  "sha256": "d3d985e043362cdf3139d42d9344085043fe150259b5964f2f53ae00d6b3ef35"
+  "v": 3,
+  "sha256": "24e51cb5c8858effc865a0b0ba2c928f80df31110b7762521d47f8d154404e27"
  },
  "vilda_kosz_zapisow.js": {
   "v": 5,

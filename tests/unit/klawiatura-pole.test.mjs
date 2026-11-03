@@ -100,6 +100,21 @@ describe('przesuniecie', () => {
     expect(K.przesuniecie({ top: 494, bottom: 537 }, pas)).toBe(537 - (350 - 96));
   });
 
+  it('niższy nagłówek i pan iOS: widoczna waga nadal odsłania bliski wiersz wzrostu', () => {
+    const pasPan = { gora: 83, dol: 551 };
+    const waga = { top: 494, bottom: 537 }, wzrost = { top: 568, bottom: 611 };
+    const dy = K.przesuniecie(waga, pasPan, wzrost);
+    expect(dy).toBeGreaterThan(0);
+    expect(wzrost.bottom - dy).toBeLessThanOrEqual(pasPan.dol);
+    expect(waga.top - dy).toBeGreaterThanOrEqual(pasPan.gora);
+  });
+
+  it('nie przesuwa widocznego pola dla sąsiada w tym samym wierszu lub odległej sekcji', () => {
+    const pole = { top: 285, bottom: 328 };
+    expect(K.przesuniecie(pole, pas, pole)).toBe(0);
+    expect(K.przesuniecie(pole, pas, { top: 494, bottom: 537 })).toBe(0);
+  });
+
   it('wąski pas: zapas to najwyżej trzecia część pasu', () => {
     const waski = { gora: 8, dol: 158 };
     expect(K.przesuniecie({ top: 400, bottom: 440 }, waski)).toBe(440 - (158 - 50));

@@ -78,7 +78,7 @@ test('telefon z wycięciem: powłoka ma dokładnie wysokość ekranu — panel k
   await expect.poll(async () => (await powloka(page)).panelDol, { timeout: 15000 }).toBe(852);
   const g = await powloka(page);
   expect(g.naglowekGora, 'nagłówek pod wcięciem').toBe(59);
-  expect(g.panelGora).toBe(150);
+  expect(g.panelGora).toBe(125);
   expect(g.przewijalna, 'dokument powłoki nie wystaje poza ekran').toBeLessThanOrEqual(0);
 });
 

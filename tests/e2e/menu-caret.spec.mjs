@@ -75,9 +75,9 @@ test('menu chrome is noneditable while real account and patient names remain sel
   const opener = page.locator('[data-vilda-chrome-menu-btn]'); await opener.click();
   const panel = page.locator('.chrome-drawer-panel'); await expect(panel).toBeVisible();
   await expect(panel).toHaveCSS('transform', 'none');
-  await expectStaticChrome(panel.locator('.chrome-drawer-head'));
+  await expectStaticChrome(panel.locator('button[data-vilda-chrome-drawer-close]'));
   await expectStaticChrome(panel.locator('.chrome-drawer-section-title').first());
-  await expect(panel.locator('.chrome-drawer-title')).toHaveText('Menu');
+  await expect(panel.locator('.chrome-drawer-title')).toHaveCount(0);
   expect(await page.evaluate(() => document.designMode)).toBe('off');
   const controls = await panel.locator('.chrome-drawer-nav a,.chrome-drawer-nav button').evaluateAll(nodes =>
     nodes.map(node => ({ editable: node.isContentEditable, select: getComputedStyle(node).userSelect })));

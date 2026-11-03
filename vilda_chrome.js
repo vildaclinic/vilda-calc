@@ -279,12 +279,34 @@ function Cm_refreshMenuActions(){
   Qdm(o.querySelector("[data-vilda-chrome-drawer]"));
   Ch_refreshSaveState();
 }
+// Account/patient names remain copyable. A drag that selected a name must not
+// turn its following pointer click into navigation; keyboard and plain clicks
+// still work even when an earlier selection remains in the document.
+function Cm_menuNameDrag(button,event,origin){
+  if(!origin||!event||!(event.detail>0))return false;
+  var dx=event.clientX-origin.x,dy=event.clientY-origin.y;
+  if(!(dx*dx+dy*dy>=9))return false;
+  try{
+    var name=button.querySelector("[data-menu-patient-name],.chrome-drawer-account-value"),selection=typeof r.getSelection==="function"&&r.getSelection();
+    return !!(name&&selection&&!selection.isCollapsed&&selection.rangeCount&&(name.contains(selection.anchorNode)||name.contains(selection.focusNode)));
+  }catch{return false}
+}
 function Cm_bindMenuControls(root){
   var controls=root.querySelectorAll("[data-menu-patient-card],[data-menu-patient-change],.chrome-menu-calculators-toggle,[data-menu-account],[data-menu-logout],[data-menu-save-status]");
   for(var i=0;i<controls.length;i++)(function(button){
     if(button._vildaMenuBound)return;button._vildaMenuBound=true;
+    var namePointer=null;
+    if(button.hasAttribute("data-menu-patient-card")||button.hasAttribute("data-menu-account")){
+      button.addEventListener("pointerdown",function(event){
+        var name=button.querySelector("[data-menu-patient-name],.chrome-drawer-account-value");
+        namePointer=event.button===0&&name&&name.contains(event.target)?{x:event.clientX,y:event.clientY}:null;
+      });
+      button.addEventListener("pointercancel",function(){namePointer=null});
+    }
     button.addEventListener("click",function(event){
+      var selected=Cm_menuNameDrag(button,event,namePointer);namePointer=null;
       event.preventDefault();
+      if(selected){event.stopPropagation();return}
       if(button.hasAttribute("data-menu-save-status")){event.stopPropagation();Ch_statusAnchor=button;_e();return}
       if(button.hasAttribute("data-menu-patient-card")||button.hasAttribute("data-menu-patient-change")){Cm_openMenuPatient(button.hasAttribute("data-menu-patient-change"),button);return}
       if(button.classList.contains("chrome-menu-calculators-toggle")){
