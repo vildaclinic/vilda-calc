@@ -2432,6 +2432,7 @@ const OPTIONAL_DOCUMENTS = [
 
 const OPTIONAL_ASSETS = [
   '/vilda_vault.js?v=246',
+  '/vilda_auth_ui.js?v=535',
   '/vilda_chrome.js?v=225',
   '/vilda_session_bridge.js?v=148',
   '/vilda_sync.js?v=48',
