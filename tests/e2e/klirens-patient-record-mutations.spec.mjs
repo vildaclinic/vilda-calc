@@ -1,10 +1,11 @@
 import { expect, test } from '../support/test-czas.mjs';
 import { openCalculator, applyAcr, applyU25, saveVisible, memory, configureMemory } from '../support/klirens-patient-record.mjs';
+import { badania, clcrPoint, showClcrResults, showBadaniaView, openClcrDetails } from '../support/badania-klirens.mjs';
 
 test.use({ chwila: '2026-10-25T12:00:00Z' });
-const renal = page => page.locator('.vilda-lab-hist-panel[data-panel="renal"] .vilda-clcr-history');
+const renal = badania;
 const field = (page, id) => page.locator(`[data-clcr-edit-field="${id}"]`);
-const point = (page, id) => renal(page).locator(`.vilda-clcr-point[data-note-id="${id}"]`);
+const point = clcrPoint;
 
 async function storedPoint(page, noteId) {
   const notes = (await memory(page)).notes;
@@ -19,13 +20,13 @@ async function createHistory(page) {
   await applyU25(page, '0.600'); ids.u25 = (await saveVisible(page, '2026-10-20'))[0].id;
   await applyU25(page, '0.515'); ids.u25Other = (await saveVisible(page, '2026-10-25'))[0].id;
   await page.locator('#clcrOpenBadaniaBtn').click();
-  await expect(renal(page).locator('tr[data-note-id]')).toHaveCount(5);
+  await showClcrResults(page, 'table');
+  await expect(renal(page).locator('.vilda-lab-hist-result-row[data-source="clcr"][data-note-id]')).toHaveCount(5);
   return ids;
 }
 
 async function openDetails(page, id, keyboard = false) {
-  if (keyboard) { await point(page, id).focus(); await point(page, id).press('Enter'); }
-  else await point(page, id).click();
+  await openClcrDetails(page, id, { keyboard });
   await expect(page.locator('#detailsDialog')).toBeVisible();
   await expect(page.locator('#calculationDetails')).toHaveAttribute('data-note-id', id);
 }
@@ -75,10 +76,11 @@ test('ACR editing replaces the same note and full assessment, respects historica
   await expect.poll(() => storedPoint(page, ids.acr)).toMatchObject({ valueNum: 13.6, category: null, tone: 'neutral', norm: '' });
   await expect(page.locator('#calculationDetails')).not.toContainText('<30');
   await closeDetails(page);
-  await expect(renal(page).locator(`tr[data-note-id="${ids.acr}"] .vilda-clcr-row-reference`)).toHaveText('Brak zapisanej normy');
-  await expect(point(page, ids.acr)).toHaveClass(/tone-neutral/);
-  const sameGroup = point(page, ids.acr).locator('xpath=ancestor::section[contains(@class,"vilda-clcr-measurement-group")]');
-  await expect(sameGroup.locator('.vilda-clcr-norm-band')).toHaveCount(0);
+  await expect(renal(page).locator(`.vilda-lab-hist-result-row[data-source="clcr"][data-note-id="${ids.acr}"] .vilda-lab-hist-result-norm`)).toHaveText('—');
+  await showBadaniaView(page, 'charts');
+  await expect(point(page, ids.acr)).toHaveAttribute('data-tone', 'neutral');
+  const sameGroup = point(page, ids.acr).locator('xpath=ancestor::article[contains(@class,"vilda-lab-hist-card")]');
+  await expect(sameGroup.locator('.vilda-lab-result-chart-band')).toHaveCount(0);
   await page.evaluate(() => window.VildaAuthUI.hide());
   await page.locator('#clcrOpenHistoryBtn').click();
   await expect(page.locator(`#clcrPatientCard tr[data-note-id="${ids.acr}"] .vilda-clcr-row-reference`)).toHaveText('Brak zapisanej normy');
@@ -136,13 +138,17 @@ test('delete targets one ID, cancel preserves same-day siblings and the last not
   await page.locator('#confirmDeleteMeasurement').focus();
   await page.locator('#confirmDeleteMeasurement').press('Space');
   await expect(page.locator('#detailsDialog')).toBeHidden();
-  await expect(renal(page).locator(`tr[data-note-id="${first.id}"]`)).toHaveCount(0);
+  await expect(renal(page).locator(`.vilda-lab-hist-result-row[data-source="clcr"][data-note-id="${first.id}"]`)).toHaveCount(0);
+  await showBadaniaView(page, 'charts');
   await expect(point(page, first.id)).toHaveCount(0);
+  await expect(point(page, sibling.id)).toHaveCount(1);
   expect((await memory(page)).notes).toEqual([sibling]);
   await openDetails(page, sibling.id);
   await page.locator('#deleteMeasurement').click();
   await page.locator('#confirmDeleteMeasurement').click();
-  await expect(renal(page).locator('tr[data-note-id], .vilda-clcr-point')).toHaveCount(0);
+  await expect(renal(page)).toContainText('Brak zapisanych wyników badań.');
+  await expect(renal(page).locator('.vilda-lab-hist-result-row[data-source="clcr"][data-note-id], .vilda-lab-hist-card[data-source="clcr"] .vilda-lab-result-chart-point')).toHaveCount(0);
+  await expect(renal(page).locator('.vilda-lab-hist-card[data-source="clcr"], .vilda-lab-hist-panel-select')).toHaveCount(0);
   expect((await memory(page)).notes).toHaveLength(0);
   await page.evaluate(() => window.VildaAuthUI.hide());
   await expect(page.locator('#clcrVisitSaveBtn')).toBeEnabled();

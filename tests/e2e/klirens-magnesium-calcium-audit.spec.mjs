@@ -1,3 +1,4 @@
+import { showClcrResults, showBadaniaView, clcrRow, clcrPoints, clcrPoint } from '../support/badania-klirens.mjs';
 import fs from 'node:fs/promises';
 import { expect, test } from '@playwright/test';
 import { czekajNaUstabilizowanyUklad, kliknij } from '../support/uklad-czekanie.mjs';
@@ -307,8 +308,10 @@ test('Mg/Ca: cztery znaki nierówności pozostają granicami raportu, bez dokła
     expect(measurement.outOfRange).toBe(null);
   }
   await page.locator('#clcrOpenBadaniaBtn').click();
-  await expect(page.locator('.vilda-lab-hist-panel[data-panel="renal"] .vilda-clcr-point')).toHaveCount(0);
-  for (const note of saved) await expect(page.locator(`.vilda-lab-hist-panel[data-panel="renal"] tr[data-note-id="${note.id}"]`)).toHaveCount(1);
+  await showClcrResults(page, 'charts');
+  await expect(clcrPoints(page)).toHaveCount(0);
+  await showBadaniaView(page, 'table');
+  for (const note of saved) await expect(clcrRow(page, note.id)).toHaveCount(1);
 });
 
 test('Mg/Ca: własna próbka i zegar nie przejmują faktów Ca/Cr ani starego Mg DZM; gotowy wynik zachowuje odrębną próbkę', async ({ page }) => {
@@ -375,9 +378,10 @@ test('Mg/Ca: dopiero zapisany pacjent umożliwia zapis; mały wynik pozostaje do
   await expect(page.locator(`#clcrPatientCard tr[data-note-id="${standard.id}"]`)).toHaveCount(1);
   await page.locator('#cpcClose').click();
   await page.locator('#clcrOpenBadaniaBtn').click();
-  const points = page.locator('.vilda-lab-hist-panel[data-panel="renal"] .vilda-clcr-point');
+  await showClcrResults(page, 'charts');
+  const points = clcrPoints(page);
   await expect(points).toHaveCount(2);
-  expect(Number(await page.locator(`.vilda-lab-hist-panel[data-panel="renal"] .vilda-clcr-point[data-note-id="${tiny.id}"]`).getAttribute('data-value'))).toBe(model.rawValue);
+  expect(Number(await clcrPoint(page, tiny.id).getAttribute('data-value'))).toBe(model.rawValue);
   await page.locator('button[data-tab="notes"]').click();
   const notes = page.locator('.vilda-clcr-note[data-clcr-note-state="ready"]');
   await expect(notes).toHaveCount(2);

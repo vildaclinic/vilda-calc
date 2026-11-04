@@ -1,3 +1,4 @@
+import { showClcrResults, clcrPoints, clcrPoint } from '../support/badania-klirens.mjs';
 import fs from 'node:fs/promises';
 import { expect, test } from '@playwright/test';
 import { czekajNaUstabilizowanyUklad, kliknij } from '../support/uklad-czekanie.mjs';
@@ -251,8 +252,9 @@ test('K/(K+Na): surowe małe wartości i brak normy w zapisie, historii, Notatka
   for (const note of [tiny, standard]) await expect(page.locator(`#clcrPatientCard tr[data-note-id="${note.id}"]`)).toHaveCount(1);
   await page.locator('#cpcClose').click();
   await page.locator('#clcrOpenBadaniaBtn').click();
-  await expect(page.locator('.vilda-lab-hist-panel[data-panel="renal"] .vilda-clcr-point')).toHaveCount(2);
-  expect(Number(await page.locator(`.vilda-lab-hist-panel[data-panel="renal"] .vilda-clcr-point[data-note-id="${tiny.id}"]`).getAttribute('data-value'))).toBe(model.rawValue);
+  await showClcrResults(page, 'charts');
+  await expect(clcrPoints(page)).toHaveCount(2);
+  expect(Number(await clcrPoint(page, tiny.id).getAttribute('data-value'))).toBe(model.rawValue);
   await page.locator('button[data-tab="notes"]').click();
   const notes = page.locator('.vilda-clcr-note[data-clcr-note-state="ready"]');
   await expect(notes).toHaveCount(2);

@@ -139,10 +139,9 @@ describe('zakładka Badania: widok z zapisanych wyników', () => {
     await widok.refresh();
     expect(vault.odczyty).toBe(1);
   });
-  it('prawdziwy adapter pełnych notatek pokazuje ujemny UAG i wpis tekstowy pominięte przez generic serie', async () => {
+  it('prawdziwy adapter pokazuje ujemny UAG i tekst w prostym wspólnym widoku bez ponownej oceny', async () => {
     const env = srodowisko();
     loadBrowserScript('clcr_saved_results.js', env.win);
-    loadBrowserScript('clcr_saved_results_view.js', env.win);
     const notes = [
       nota('fictional-uag', '2026-10-25', { test: 'Luka anionowa moczu (UAG)', value: '-15', unit: 'mmol/L' }, { category: 'wynik-klirens' }),
       nota('fictional-text', '2026-10-25', { test: 'Albumina/kreatynina — ACR', value: 'nieoznaczalne', unit: 'mg/g' }, { category: 'wynik-klirens' }),
@@ -150,42 +149,60 @@ describe('zakładka Badania: widok z zapisanych wyników', () => {
     const evaluate = vi.spyOn(env.win.LabUnitConverter, 'evaluate');
     otworz(env, sejf({ dane: { notes, series: [], treatment: [] } }));
     await gotowe(env);
-    expect(env.host.querySelectorAll('tr[data-note-id]')).toHaveLength(2);
-    expect(env.host.querySelector('.vilda-clcr-point[data-value="-15"]')).not.toBeNull();
-    expect(env.host.querySelector('.vilda-clcr-value[data-note-id="fictional-text"]').textContent).toContain('nieoznaczalne');
-    expect(env.host.querySelectorAll('.vilda-clcr-assessment').every((node) => node.classList.contains('tone-neutral'))).toBe(true);
-    expect(env.host.querySelectorAll('.vilda-clcr-norm-band')).toHaveLength(0);
+    expect(env.host.querySelectorAll('.vilda-lab-hist-card[data-source="clcr"]')).toHaveLength(2);
+    expect(env.host.querySelector('.vilda-lab-result-chart-point[data-note-id="fictional-uag"][data-value="-15"]')).not.toBeNull();
+    expect(env.host.querySelector('.vilda-lab-hist-latest[data-note-id="fictional-text"]').textContent).toContain('nieoznaczalne');
+    expect(env.host.querySelectorAll('.vilda-lab-hist-value.tone-neutral')).toHaveLength(2);
+    expect(env.host.querySelectorAll('.vilda-lab-result-chart-band')).toHaveLength(0);
+    przycisk(env, 'Tabela').click();
+    expect(env.host.querySelectorAll('.vilda-lab-hist-result-row[data-source="clcr"]')).toHaveLength(2);
+    expect(env.host.querySelector('.vilda-lab-hist-result-row[data-note-id="fictional-uag"]').textContent).toContain('-15');
+    expect(env.host.querySelector('.vilda-lab-hist-result-row[data-note-id="fictional-text"]').textContent).toContain('nieoznaczalne');
+    expect(env.host.querySelectorAll('.vilda-lab-result-chart-point')).toHaveLength(0);
+    expect(env.host.querySelectorAll('.vilda-clcr-history')).toHaveLength(0);
     expect(env.host.querySelector('.vilda-lab-hist-footer').textContent).not.toContain('Wykresy bez pasma norm');
     expect(env.host.querySelector('.vilda-lab-hist-footer').textContent).not.toContain('Różnica:');
     expect(evaluate).not.toHaveBeenCalled();
   });
-  it('dołącza Nerki i mocz, zachowuje wszystkie pomiary i deleguje do szczegółów zamiast edytora lab', async () => {
+  it('Klirens ma wspólne karty i tabelę, osobny filtr oraz zachowuje oryginalny rekord w swoich szczegółach', async () => {
     const env = srodowisko({ pamiec: [[`vilda-lab-hist-view-${PID}`, 'charts']] });
-    loadBrowserScript('clcr_saved_results_view.js', env.win);
     const note = nota('fictional-clcr', '2026-10-25', { test: 'ACR (pełna metoda)', value: '45', valueNum: 45, unit: 'mg/g' }, { category: 'wynik-klirens' });
-    const record = { noteId: note.id, patientId: PID, seriesKey: 'clcr:ACR|mg/g', label: note.labResult.test, method: 'Metoda (bez skrótu)', valueNum: 45, displayValue: '45', unit: 'mg/g', dateISO: note.clinicalDateISO, norm: '<30 mg/g', assessment: 'above', category: 'A2', tone: 'warning', status: 'recorded' };
+    const record = { noteId: note.id, patientId: PID, kind: 'exact', parameterKey: 'clcr:ACR', seriesKey: 'clcr:ACR|mg/g', label: note.labResult.test, method: 'Metoda (bez skrótu)', valueNum: 45, displayValue: '45', unit: 'mg/g', dateISO: note.clinicalDateISO, norm: '<30 mg/g', assessment: 'above', category: 'A2', tone: 'warning', status: 'recorded' };
     const projection = { measurements: [record], series: [{ seriesKey: record.seriesKey }], handledNoteIds: [note.id] };
     const projectPatientNotes = vi.fn(() => projection), details = vi.fn();
-    const d = dane();
-    d.notes.push(note);
+    const d = dane(); d.notes.push(note);
     d.series.push({ testKey: 'fictional-clcr', test: note.labResult.test, points: [punkt(note)] });
     const vault = sejf({ dane: d });
-    const { wywolania } = otworz(env, vault, { clcrSavedResults: { projectPatientNotes }, clcrSavedResultsView: env.win.ClcrSavedResultsView, openClcrResult: details });
+    const { wywolania } = otworz(env, vault, { clcrSavedResults: { projectPatientNotes }, openClcrResult: details });
     await gotowe(env);
-    expect(teksty(env.host, '.vilda-lab-hist-summary')).toEqual(['5 wyników · 3 badania · ostatnie badanie 25.10.26']);
-    expect(teksty(env.host, '.vilda-lab-hist-panel-h')).toEqual(['Nerki i mocz']);
-    expect(env.host.querySelectorAll('.vilda-clcr-point')).toHaveLength(1);
-    expect(env.host.querySelectorAll('tr[data-note-id="fictional-clcr"]')).toHaveLength(1);
-    env.host.querySelector('.vilda-clcr-value').click();
+    expect(teksty(env.host, '.vilda-lab-hist-heading')).toEqual(['Wyniki badań']);
+    expect(env.host.querySelectorAll('.vilda-lab-hist-summary')).toHaveLength(0);
+    expect(env.host.querySelectorAll('.vilda-lab-hist-card')).toHaveLength(3);
+    expect(env.host.querySelectorAll('.vilda-lab-hist-card[data-source="clcr"]')).toHaveLength(1);
+    const renal = env.host.querySelector('.vilda-lab-hist-card[data-parameter-key="clcr:ACR"]');
+    expect(renal.querySelector('.vilda-lab-hist-card-name').textContent).toBe('ACR (pełna metoda)');
+    expect(renal.querySelector('.vilda-lab-hist-series-context').textContent).toContain('Metoda (bez skrótu)');
+    expect(renal.querySelectorAll('.vilda-lab-result-chart-point[data-note-id="fictional-clcr"]')).toHaveLength(1);
+    renal.querySelector('.vilda-lab-hist-latest').click();
     expect(details).toHaveBeenCalledWith(expect.objectContaining({ patientId: PID, noteId: note.id, record, vault }));
+    expect(details.mock.calls[0][0].record).toBe(record);
     expect(wywolania.edytor).toHaveLength(0);
     expect(projectPatientNotes.mock.calls[0][0]).toHaveLength(7);
     const filter = env.host.querySelector('.vilda-lab-hist-panel-select');
     filter.value = 'renal'; filter.dispatch('change');
-    expect(env.host.querySelectorAll('.vilda-lab-hist-card')).toHaveLength(0);
+    expect(env.host.querySelectorAll('.vilda-lab-hist-card[data-source="lab"]')).toHaveLength(0);
+    expect(env.host.querySelectorAll('.vilda-lab-hist-card[data-source="clcr"]')).toHaveLength(1);
     przycisk(env, 'Tabela').click();
-    expect(env.host.querySelectorAll('.vilda-clcr-point')).toHaveLength(0);
-    expect(env.host.querySelectorAll('tr[data-note-id="fictional-clcr"]')).toHaveLength(1);
+    expect(env.host.querySelectorAll('.vilda-lab-result-chart-point')).toHaveLength(0);
+    expect(env.host.querySelectorAll('.vilda-lab-hist-result-row[data-note-id="fictional-clcr"]')).toHaveLength(1);
+    env.host.querySelector('.vilda-lab-hist-result-row[data-note-id="fictional-clcr"]').click();
+    expect(details).toHaveBeenCalledTimes(2);
+    expect(details.mock.calls[1][0].record).toBe(record);
+    filter.value = 'lab'; filter.dispatch('change');
+    expect(env.host.querySelectorAll('.vilda-lab-hist-result-row[data-source="clcr"]')).toHaveLength(0);
+    expect(env.host.querySelectorAll('.vilda-lab-hist-result-row[data-source="lab"]')).toHaveLength(4);
+    filter.value = 'all'; filter.dispatch('change');
+    expect(env.host.querySelectorAll('.vilda-lab-hist-result-row')).toHaveLength(5);
   });
   it('zwarta tabela: daty malejąco, kolor i norma z wpisu; różnica dopiero w szczegółach', async () => {
     const env = srodowisko();
@@ -195,7 +212,9 @@ describe('zakładka Badania: widok z zapisanych wyników', () => {
     d.series[0].points.push(punkt(undated));
     otworz(env, sejf({ dane: d }));
     await gotowe(env);
-    expect(teksty(env.host, '.vilda-lab-hist-summary')).toEqual(['5 wyników · 2 badania · ostatnie badanie 02.06.26']);
+    expect(teksty(env.host, '.vilda-lab-hist-heading')).toEqual(['Wyniki badań']);
+    expect(env.host.querySelectorAll('.vilda-lab-hist-summary')).toHaveLength(0);
+    expect(env.host.querySelectorAll('.vilda-lab-hist-result-row')).toHaveLength(5);
     expect(env.host.querySelectorAll('.vilda-lab-hist-date-group').map((g) => g.getAttribute('data-date-iso'))).toEqual(['2026-06-02', '2026-04-08', '']);
     expect(env.host.querySelectorAll('.vilda-lab-hist-date-heading').at(-1).textContent).toBe('Bez daty badania · data wpisu');
     const tsh = env.host.querySelector('.vilda-lab-hist-result-row[data-note-id="tsh-2"]');
@@ -297,6 +316,52 @@ describe('zakładka Badania: przełączniki i preferencje', () => {
     expect(env.host.querySelectorAll('.vilda-lab-hist-result-row')).toHaveLength(0);
   });
 
+  it('zmiana Tabela/Wykresy i łączenia punktów zachowuje toolbar, fokus i przewinięcie przodków', async () => {
+    const env = srodowisko();
+    const scroll = env.doc.body.appendChild(env.doc.createElement('div'));
+    scroll.appendChild(env.host);
+    scroll.scrollTop = 240; scroll.scrollLeft = 7;
+    env.win.scrollX = 3; env.win.scrollY = 120;
+    env.win.scrollTo = (x, y) => { env.win.scrollX = x; env.win.scrollY = y; };
+    const frames = [];
+    env.win.requestAnimationFrame = callback => { frames.push(callback); };
+    otworz(env, sejf());
+    await gotowe(env);
+    const toolbar = env.host.querySelector('.vilda-lab-hist-toolbar');
+    const selector = env.host.querySelector('.vilda-lab-hist-panel-select');
+    const search = env.host.querySelector('.vilda-lab-hist-search-input');
+    const charts = przycisk(env, 'Wykresy'), table = przycisk(env, 'Tabela');
+    const join = env.host.querySelector('.vilda-lab-hist-join-input');
+    const joinLabel = env.host.querySelector('.vilda-lab-hist-join');
+    expect(join.checked).toBe(true);
+    expect(joinLabel.hidden).toBe(true);
+    const results = env.host.querySelector('.vilda-lab-hist-results');
+    const remove = results.removeChild.bind(results);
+    results.removeChild = child => { scroll.scrollTop = 0; env.win.scrollY = 0; return remove(child); };
+    charts.focus(); charts.click();
+    expect(env.host.querySelector('.vilda-lab-hist-toolbar')).toBe(toolbar);
+    expect(env.host.querySelector('.vilda-lab-hist-panel-select')).toBe(selector);
+    expect(env.host.querySelector('.vilda-lab-hist-search-input')).toBe(search);
+    expect(env.host.querySelector('.vilda-lab-hist-join-input')).toBe(join);
+    expect(env.doc.activeElement).toBe(charts);
+    expect(scroll.scrollTop).toBe(240); expect(scroll.scrollLeft).toBe(7);
+    expect([env.win.scrollX, env.win.scrollY]).toEqual([3, 120]);
+    expect(joinLabel.hidden).toBe(false);
+    expect(env.host.querySelector('.vilda-lab-hist-card[data-series="tsh"]').querySelectorAll('.vilda-lab-result-chart-line')).toHaveLength(1);
+    scroll.scrollTop = 0; env.win.scrollY = 0;
+    frames.splice(0).forEach(callback => callback());
+    expect(scroll.scrollTop).toBe(240); expect(env.win.scrollY).toBe(120);
+    join.focus(); join.checked = false; join.dispatch('change');
+    expect(env.doc.activeElement).toBe(join);
+    expect(env.host.querySelectorAll('.vilda-lab-result-chart-line')).toHaveLength(0);
+    table.focus(); table.click();
+    expect(env.doc.activeElement).toBe(table);
+    expect(joinLabel.hidden).toBe(true);
+    charts.click();
+    expect(join.checked).toBe(false);
+    expect(env.host.querySelectorAll('.vilda-lab-result-chart-line')).toHaveLength(0);
+  });
+
   it('telefon (≤480 px) bez zapisanej preferencji: domyślnie Tabela (decyzja 6.17)', async () => {
     const env = srodowisko({ waski: true });
     otworz(env, sejf());
@@ -313,7 +378,9 @@ describe('zakładka Badania: przełączniki i preferencje', () => {
     otworz(env, sejf({ dane: { series: [...d.series, { testKey: 'prolactin', test: 'Prolaktyna (PRL)', points: [punkt(prolaktyna)] }], notes: [...d.notes, prolaktyna] } }));
     await gotowe(env);
     const selector = env.host.querySelector('.vilda-lab-hist-panel-select');
-    expect(selector.querySelectorAll('option').map((o) => [o.value, o.textContent])).toEqual([['all', 'Wszystkie'], ['thyroid', 'Tarczyca · 2'], ['other', 'Inne · 1']]);
+    expect(selector.querySelectorAll('option').map((o) => [o.value, o.textContent])).toEqual([['all', 'Wszystkie wyniki'], ['lab', 'Wyniki lab.'], ['thyroid', 'Tarczyca'], ['other', 'Inne'], ['renal', 'Klirens']]);
+    expect(selector.querySelector('optgroup').getAttribute('label')).toBe('Wyniki laboratoryjne');
+    expect(env.host.querySelector('.vilda-lab-hist-select-arrow svg').getAttribute('width')).toBe('16');
     selector.value = 'other'; selector.dispatch('change');
     expect(env.host.querySelectorAll('.vilda-lab-hist-result-row').map((r) => r.getAttribute('data-note-id'))).toEqual(['prl-1']);
     const search = env.host.querySelector('.vilda-lab-hist-search-input');
@@ -333,6 +400,7 @@ describe('zakładka Badania: przełączniki i preferencje', () => {
 
 describe('zakładka Badania: akcje', () => {
   it('„+ Dodaj wynik” otwiera edytor z szablonem wyniku i datą badania; zapis odświeża zakładkę i kartę', async () => {
+    vi.useFakeTimers();
     const env = srodowisko();
     const vault = sejf();
     const { wywolania } = otworz(env, vault);
@@ -343,7 +411,8 @@ describe('zakładka Badania: akcje', () => {
     const przed = vault.odczyty;
     wywolania.edytor[0].onSaved();
     expect(wywolania.zmiany).toBe(1);
-    await vi.waitFor(() => expect(vault.odczyty).toBe(przed + 1));
+    await vi.runOnlyPendingTimersAsync();
+    expect(vault.odczyty).toBe(przed + 1);
   });
 
   it('„Wpisz wynik” przy zleceniu dopasowanym do badania: kopia wpisu z nazwą badania z przelicznika', async () => {
@@ -458,7 +527,7 @@ describe('zakładka Badania: stany i odświeżanie', () => {
     const vault = sejf({ dane: { notes, series: [], treatment: [] } });
     const { widok } = otworz(env, vault);
     await gotowe(env);
-    expect(env.host.querySelectorAll('.vilda-clcr-value')).toHaveLength(1);
+    expect(env.host.querySelectorAll('.vilda-lab-hist-latest[data-note-id="fictional-clcr"]')).toHaveLength(1);
     notes.splice(0);
     env.doc.dispatchEvent({ type: 'vilda:clcr-results-changed', detail: { patientId: 'other-fictional' } });
     await new Promise((resolve) => { setTimeout(resolve, 180); });
@@ -484,7 +553,7 @@ describe('zakładka Badania: stany i odświeżanie', () => {
     locked = true; onLock(); release();
     await gotowe(env);
     expect(env.host.querySelectorAll('.vilda-lab-hist-card')).toHaveLength(0);
-    expect(env.host.querySelectorAll('.vilda-clcr-value')).toHaveLength(0);
+    expect(env.host.querySelectorAll('.vilda-lab-hist-card[data-source="clcr"]')).toHaveLength(0);
     expect(env.host.querySelector('.vilda-lab-hist-locked')).not.toBeNull();
   });
 
@@ -762,6 +831,9 @@ describe('zakładka Badania: zakres zapisany przy przypięciu (decyzja 6.3)', ()
     expect(nowa.querySelector('.vilda-lab-hist-flag')).toBeNull();
     expect(teksty(nowa, '.vilda-lab-hist-cell-value.tone-neutral')).toEqual(['5,1']);
     expect(txt(nowa.querySelector('.vilda-lab-hist-result-norm'))).toContain('0,3–4,2 mIU/L');
+    expect(teksty(nowa, '.vilda-lab-hist-reference-note')).toEqual(['Zakres ogólny']);
+    expect(nowa.querySelectorAll('.vilda-lab-hist-warning-mark')).toHaveLength(0);
+    expect(nowa.querySelectorAll('.vilda-lab-hist-result-notice')).toHaveLength(0);
     nowa.click();
     expect(teksty(env.host, '.vilda-lab-hist-status-context')).toEqual(['Zakres ogólny dorosły (domyślnie) · dziewczynka, Tanner II · Mayo Test 8939 — TSH']);
     expect(txt(env.host.querySelector('.vilda-lab-hist-status.is-range-general'))).toContain('zakres ogólny — bez oceny dla dziecka');
@@ -782,6 +854,7 @@ describe('zakładka Badania: zakres zapisany przy przypięciu (decyzja 6.3)', ()
     expect(row.querySelector('.vilda-lab-hist-flag')).toBeNull();
     expect(teksty(row, '.vilda-lab-hist-cell-value.tone-neutral')).toEqual(['5,1']);
     expect(teksty(row, '.vilda-lab-hist-result-norm')).toEqual(['—']);
+    expect(teksty(row, '.vilda-lab-hist-result-notice[data-warning-kind="invalidated"]')).toEqual(['Zakres nieaktualny']);
     row.click();
     expect(teksty(env.host, '.vilda-lab-hist-status.is-range-invalidated.tone-muted .vilda-lab-hist-status-text')).toEqual(['zakres nieaktualny · zmieniono wynik lub datę badania']);
     przycisk(env, 'Wykresy').click();
