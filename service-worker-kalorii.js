@@ -19,7 +19,7 @@
  *   bo i tak chcemy zwracać HTML z cache natychmiast.
  */
 
-const SW_VERSION = '1.1.456';
+const SW_VERSION = '1.1.461';
 const CACHE_PREFIX = 'pwa-kalorii';
 const SHELL_CACHE = `${CACHE_PREFIX}-shell-v${SW_VERSION}`;
 const RUNTIME_CACHE = `${CACHE_PREFIX}-runtime`;
@@ -1089,6 +1089,7 @@ const CORE_SHELL_URLS = [
   '/vilda_reminders.css?v=6',
   '/vilda_reminders.css?v=7',
   '/vilda_reminders.css?v=8',
+  '/vilda_reminders.css?v=9',
   '/vilda_reminders_privacy.js?v=1',
   '/vilda_global_search.css?v=1',
   '/vilda_global_search.css?v=2',
@@ -1113,6 +1114,7 @@ const CORE_SHELL_URLS = [
   '/vilda_care_plans.css?v=8',
   '/vilda_care_plans.css?v=9',
   '/vilda_care_plans.css?v=10',
+  '/vilda_care_plans.css?v=11',
   '/vilda_care_plan_model.js?v=1',
   // Template editing is loaded on demand; keep its complete bundle available
   // for a first library visit after a genuine offline restart.
@@ -1711,6 +1713,11 @@ const CORE_SHELL_URLS = [
   '/vilda_chrome.js?v=231',
   '/vilda_chrome.js?v=232',
   '/vilda_chrome.js?v=233',
+  '/vilda_chrome.js?v=234',
+  '/vilda_chrome.js?v=235',
+  '/vilda_chrome.js?v=236',
+  '/vilda_chrome.js?v=237',
+  '/vilda_chrome.js?v=238',
   '/vilda_realtime.js?v=1',
   '/vilda_realtime.js?v=2',
   '/vilda_realtime.js?v=3',
@@ -1920,6 +1927,8 @@ const CORE_SHELL_URLS = [
   '/vilda_chrome.css?v=49',
   '/vilda_chrome.css?v=50',
   '/vilda_chrome.css?v=51',
+  '/vilda_chrome.css?v=52',
+  '/vilda_chrome.css?v=53',
   '/vilda_auth_ui.css',
   '/vilda_auth_ui.css?v=9',
   '/vilda_auth_ui.css?v=10',
@@ -2501,14 +2510,19 @@ const OPTIONAL_DOCUMENTS = [
 ];
 
 const OPTIONAL_ASSETS = [
+  '/vilda_patients_list.js?v=1',
+  '/vilda_patients_list.css?v=1',
   '/vilda_vault.js?v=246',
   '/vilda_vault.js?v=247',
   '/vilda_vault.js?v=248',
+  '/vilda_vault.js?v=249',
   '/vilda_auth_ui.js?v=535',
   '/vilda_auth_ui.js?v=536',
   '/vilda_auth_ui.js?v=537',
   '/vilda_auth_ui.js?v=538',
   '/vilda_auth_ui.js?v=539',
+  '/vilda_auth_ui.js?v=540',
+  '/vilda_auth_ui.js?v=541',
   '/vilda_session_bridge.js?v=148',
   '/vilda_session_bridge.js?v=149',
   '/vilda_session_bridge.js?v=150',
@@ -2517,6 +2531,10 @@ const OPTIONAL_ASSETS = [
   '/vilda_session_bridge.js?v=153',
   '/vilda_session_bridge.js?v=154',
   '/vilda_session_bridge.js?v=155',
+  '/vilda_session_bridge.js?v=156',
+  '/vilda_session_bridge.js?v=157',
+  '/vilda_session_bridge.js?v=158',
+  '/vilda_session_bridge.js?v=159',
   '/vilda_sync.js?v=48',
   '/vilda_patient_documents.js?v=1',
   '/vilda_patient_documents.css?v=1',
@@ -5045,7 +5063,10 @@ const FRESH_STATIC_ALIAS_PATHS = new Set([
   // Five K/(K+Na) resources keep their own requests. These unchanged static
   // dependencies share only fresh current-install responses between aliases.
   '/vilda_growth_card_c.js', '/vilda_data_import_export.js', '/vilda_advanced_growth.js',
-  '/vilda_estimated_intake.js', '/vilda_pro_access.js'
+  '/vilda_estimated_intake.js', '/vilda_pro_access.js',
+  // The patient database view adds two resources. These unchanged static UI
+  // dependencies share only fresh current-install responses to retain 600 requests.
+  '/vilda_centile_charts.js', '/vilda_dob_age.js'
 ]);
 
 async function fetchAndStorePrecacheUrl(url, { required = false, previousShellCaches = [], freshResponses = null } = {}) {

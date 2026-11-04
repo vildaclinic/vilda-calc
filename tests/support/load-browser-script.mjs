@@ -19,6 +19,8 @@ const repositoryRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url))
 // trajektoria bierze kursy otyłości (kursyOtylosci). Bez niego moduł trajektorii nie pada, tylko cicho
 // wraca do reguły sprzed raty 4 (Zakończenie + przerwa ≥ 3 mies.), więc testy kursów sprawdzałyby starą regułę.
 const ZALEZNOSCI = {
+  // Patient database UI is a declared dependency of every auth entry point.
+  'vilda_auth_ui.js': ['vilda_patients_list.js'],
   // The calculator and main patient history now share the same pure dictionary
   // and frozen-note decoder; emulate their declared browser dependencies.
   'clcr_ui_workflow.js': ['clcr_saved_results.js'],

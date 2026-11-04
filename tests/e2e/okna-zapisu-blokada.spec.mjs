@@ -129,8 +129,9 @@ async function sprawdzPustaListe(page) {
   await page.getByRole('navigation', { name: 'Nawigacja boczna' })
     .getByRole('button', { name: 'Baza pacjentów', exact: true }).click({ timeout: 10_000 });
   const lista = page.locator('.vilda-auth-patients');
-  await expect(lista.locator('.vilda-auth-title', { hasText: 'Pacjenci' })).toBeVisible();
-  await miekko(lista.locator('.pt-count'), 'lista pacjentów drugiego konta').toHaveText('Brak zapisanych pacjentów.');
+  await expect(lista.locator('.vilda-auth-title', { hasText: 'Baza pacjentów' })).toBeVisible();
+  await miekko(lista.locator('.pt-count'), 'lista pacjentów drugiego konta').toHaveText('Wyświetlono: 0');
+  await miekko(lista.locator('.pt-empty'), 'pusty stan drugiego konta').toContainText('Baza jest jeszcze pusta');
   await miekko(lista, 'na liście nie ma karty z formularza').not.toContainText('Testowy Jan');
 }
 

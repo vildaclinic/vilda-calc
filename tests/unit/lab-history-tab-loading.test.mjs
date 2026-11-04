@@ -54,7 +54,7 @@ function environment(missing) {
     // Independent care-plan model/UI readiness is tested in care-plans-loader.test.mjs.
     VildaCarePlanModel: {}, VildaCarePlans: {},
     // Independent search/privacy readiness is covered by the same loader suite.
-    VildaRemindersPrivacy: {}, VildaGlobalSearch: {}, VildaGlobalSearchView: {}, VildaSearchNavigation: {},
+    VildaRemindersPrivacy: {}, VildaGlobalSearch: {}, VildaGlobalSearchView: {}, VildaSearchNavigation: {}, VildaPatientsList: {},
     sessionStorage: { getItem: () => null },
     CustomEvent: class { constructor(type, options) { this.type = type; this.detail = options?.detail; } },
   };

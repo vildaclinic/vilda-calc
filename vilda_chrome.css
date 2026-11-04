@@ -2706,7 +2706,37 @@ html.vilda-form-layout:not(.vilda-embedded) body.has-vilda-chrome>footer.site-fo
   padding-inline: var(--chrome-form-gap)
 }
 html.vilda-form-layout.vilda-form-host-desktop body>footer.site-footer .site-footer__inner {
-  padding-inline: var(--chrome-form-gap) 0
+  padding-inline: var(--chrome-form-gap)
+}
+@media(min-width:992px) {
+  /* Header geometry already lifts the arrow above the footer. The standalone
+   * form therefore needs the same two insets as an embedded desktop form. */
+  html.vilda-form-layout:not(.vilda-phone):not(.vilda-embedded):not(.vilda-shell-embedded) body.has-vilda-chrome>footer.site-footer .site-footer__inner {
+    padding-inline: var(--chrome-form-gap)
+  }
+}
+/* The active pane owns footer content; the host only continues its painted
+ * background through the decorative column. It never captures a click. */
+#vildaDecorFooter {
+  display: none;
+  position: fixed;
+  box-sizing: border-box;
+  left: var(--chrome-footer-rail-left,0px);
+  top: var(--chrome-footer-rail-top,0px);
+  width: var(--chrome-footer-rail-width,0px);
+  height: var(--chrome-footer-rail-height,0px);
+  background-color: var(--chrome-footer-rail-background,transparent);
+  border-top: var(--chrome-footer-rail-border,0px none transparent);
+  pointer-events: none
+}
+@media screen and (min-width:1400px) {
+  #vildaDecorFooter { display: block }
+}
+#vildaDecorFooter[hidden],
+html.vilda-phone #vildaDecorFooter,
+html.vilda-pane-auth-open #vildaDecorFooter,
+html.vilda-auth-locked #vildaDecorFooter {
+  display: none
 }
 /* Keep the first form row stable when results appear below it. Fields retain
  * their natural height; additional rows inside the form keep their own flow.
@@ -2789,6 +2819,9 @@ body.vilda-header-menu .chrome-reminders-btn[data-state=loading] .chrome-reminde
 .vilda-header-menu .chrome-header-search button svg {
   width: 18px;
   height: 18px
+}
+.vilda-header-menu .chrome-header-search button[hidden] {
+  display: none!important
 }
 @media(min-width:992px) {
   html:not(.vilda-phone) .vilda-header-menu .chrome-chips {
