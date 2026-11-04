@@ -292,7 +292,8 @@ describe('P-SW-PRECACHE: instalacja bez historii, kopia z poprzedniej pamięci, 
     '/vilda_diet_plan_ui.js', '/vilda_bmi_journey.js',
     '/vilda_centile_landscape.js', '/vilda_summary_cards.js', '/vilda_professional_module.js',
     '/vilda_gh_therapy_resource_audit.js', '/vilda_patient_report.js',
-    '/vilda_centile_charts.js', '/vilda_dob_age.js'];
+    '/vilda_centile_charts.js', '/vilda_dob_age.js',
+    '/vilda_auth_ui.js', '/sga_birth_module.js', '/docpro_state_persist.js', '/vilda_data_import_export.js'];
   const wspoldzielonePary = ['/style.css', '/vilda_chrome.css', ...dodatkoweWspoldzieloneZasoby];
   const wspoldzieloneZasoby = new Set(['/edu-video-ui.css', ...wspoldzielonePary]);
   const oczekiwanePobraniaSwiezychZasobow = () => {
@@ -358,6 +359,10 @@ describe('P-SW-PRECACHE: instalacja bez historii, kopia z poprzedniej pamięci, 
     // The patient database JS and stylesheet keep independent fresh requests;
     // the two explicit UI alias pairs save the duplicate requests instead.
     for (const plik of ['/vilda_patients_list.js', '/vilda_patients_list.css']) {
+      expect(pobrane.filter(adres => adres.split('?')[0] === plik), plik).toHaveLength(1);
+    }
+    // Each new SGA module remains independently cached, including first use offline.
+    for (const plik of ['/vilda_birth_assessment.js', '/vilda_patient_sga_model.js', '/vilda_patient_sga_ui.js', '/vilda_patient_sga_ui.css']) {
       expect(pobrane.filter(adres => adres.split('?')[0] === plik), plik).toHaveLength(1);
     }
     expect(pobrane.length, `instalacja wysyła ${pobrane.length} żądań`).toBeLessThanOrEqual(600);

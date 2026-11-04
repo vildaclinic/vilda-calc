@@ -19,7 +19,7 @@
  *   bo i tak chcemy zwracać HTML z cache natychmiast.
  */
 
-const SW_VERSION = '1.1.460';
+const SW_VERSION = '1.1.461';
 const CACHE_PREFIX = 'pwa-kalorii';
 const SHELL_CACHE = `${CACHE_PREFIX}-shell-v${SW_VERSION}`;
 const RUNTIME_CACHE = `${CACHE_PREFIX}-runtime`;
@@ -1455,6 +1455,10 @@ const CORE_SHELL_URLS = [
   '/vilda_growth_card_c.js?v=3',
   '/vilda_growth_card_c.js?v=4',
   '/vilda_growth_card_c.js?v=5',
+  '/vilda_birth_assessment.js?v=1',
+  '/vilda_patient_sga_model.js?v=1',
+  '/vilda_patient_sga_ui.js?v=1',
+  '/vilda_patient_sga_ui.css?v=1',
   '/vilda_patient_summary_copy.js?v=1',
   '/vilda_patient_summary_copy.js?v=2',
   '/vilda_patient_summary_copy.js?v=3',
@@ -1700,6 +1704,7 @@ const CORE_SHELL_URLS = [
   '/vilda_chrome.js?v=235',
   '/vilda_chrome.js?v=236',
   '/vilda_chrome.js?v=237',
+  '/vilda_chrome.js?v=238',
   '/vilda_realtime.js?v=1',
   '/vilda_realtime.js?v=2',
   '/vilda_realtime.js?v=3',
@@ -2504,6 +2509,7 @@ const OPTIONAL_ASSETS = [
   '/vilda_auth_ui.js?v=538',
   '/vilda_auth_ui.js?v=539',
   '/vilda_auth_ui.js?v=540',
+  '/vilda_auth_ui.js?v=541',
   '/vilda_session_bridge.js?v=148',
   '/vilda_session_bridge.js?v=149',
   '/vilda_session_bridge.js?v=150',
@@ -2515,6 +2521,7 @@ const OPTIONAL_ASSETS = [
   '/vilda_session_bridge.js?v=156',
   '/vilda_session_bridge.js?v=157',
   '/vilda_session_bridge.js?v=158',
+  '/vilda_session_bridge.js?v=159',
   '/vilda_sync.js?v=48',
   '/vilda_patient_documents.js?v=1',
   '/vilda_patient_documents.css?v=1',
@@ -2841,6 +2848,7 @@ const OPTIONAL_ASSETS = [
   '/sga_birth_module.js?v=10',
   '/sga_birth_module.js?v=11',
   '/sga_birth_module.js?v=12',
+  '/sga_birth_module.js?v=13',
   '/docpro_state_persist.js',
   '/docpro_state_persist.js?v=4',
   '/docpro_state_persist.js?v=5',
@@ -3709,6 +3717,7 @@ const OPTIONAL_ASSETS = [
   '/vilda_patient_summary_copy.js?v=14',
   '/vilda_patient_summary_copy.js?v=15',
   '/vilda_patient_summary_copy.js?v=16',
+  '/vilda_patient_summary_copy.js?v=17',
   '/vilda_epicrisis.js?v=18',
   '/vilda_epicrisis.js?v=19',
   '/vilda_epicrisis.js?v=20',
@@ -5042,7 +5051,10 @@ const FRESH_STATIC_ALIAS_PATHS = new Set([
   '/vilda_gh_therapy_resource_audit.js', '/vilda_patient_report.js',
   // The patient database view adds two resources. These unchanged static UI
   // dependencies share only fresh current-install responses to retain 600 requests.
-  '/vilda_centile_charts.js', '/vilda_dob_age.js'
+  '/vilda_centile_charts.js', '/vilda_dob_age.js',
+  // Four saved-SGA resources keep their own network requests. Reuse only this
+  // installation's fresh responses for the current aliases of their existing hosts.
+  '/vilda_auth_ui.js', '/sga_birth_module.js', '/docpro_state_persist.js', '/vilda_data_import_export.js'
 ]);
 
 async function fetchAndStorePrecacheUrl(url, { required = false, previousShellCaches = [], freshResponses = null } = {}) {
