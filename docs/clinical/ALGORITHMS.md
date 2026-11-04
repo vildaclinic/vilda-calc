@@ -20505,7 +20505,7 @@ a lekarz poprawia jedno z miejsc. Wartość dni spoza 0–6 w rekordzie nie jest
 
 **Wersje.** `sga_birth_module.js?v=10→11`; SW 1.1.168 → **1.1.169**.
 
-## Dziennik zdarzeń: magazyn kolejki, bramka i identyfikator urządzenia — uśpione (P-DZIENNIK-ZDARZEN, E2-PR2b1, SW 1.1.457, `vilda_vault.js` 249, 2026-11-04)
+## Dziennik zdarzeń: magazyn kolejki, bramka i identyfikator urządzenia — uśpione (P-DZIENNIK-ZDARZEN, E2-PR2b1, SW 1.1.458, `vilda_vault.js` 249, 2026-11-04)
 
 **Zmiana kliniczna: NIE** — wzory, progi, jednostki, interpretacje, zapis, scalanie, format kopii i synchronizacja bez
 zmian. Dla użytkownika dziś nic się nie zmienia. Wpis opisuje drugi uśpiony kawałek dziennika zdarzeń (po E2-PR2a):
@@ -20871,9 +20871,9 @@ Eksport → funkcja: `gateOpen` → `Bob_bramka`, `enqueue` → `Bob_dopisz`, `o
 `Bob_niepowodzenie`, `outboxRequeueStale` → `Bob_zLotu`, `outboxDiscard` → `Bob_porzuc`, `deleteDatabase` →
 `Bob_usunBaze`.
 
-**Wersje.** Baza `origin/audyt` `64f9a3a9` (po vildaclinic/vilda-calc#875).
-`vilda_vault.js?v=248 → 249`; `vilda_chrome.js?v=233 → 234` i `vilda_session_bridge.js?v=155 → 156`
-(tylko odnośnik do `vilda_vault.js`); SW 1.1.456 → **1.1.457**.
+**Wersje.** Baza `origin/audyt` `cccaccd0` (po vildaclinic/vilda-calc#877).
+`vilda_vault.js?v=248 → 249`; `vilda_chrome.js?v=234 → 235` i `vilda_session_bridge.js?v=155 → 156`
+(tylko odnośnik do `vilda_vault.js`); SW 1.1.457 → **1.1.458**.
 
 ## Dziennik zdarzeń: koperta, buildery i status zastosowania — uśpione (P-DZIENNIK-ZDARZEN, E2-PR2a, SW 1.1.450, `vilda_vault.js` 247, 2026-11-03)
 
