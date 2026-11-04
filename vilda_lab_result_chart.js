@@ -6,8 +6,10 @@
 (function (root) {
   'use strict';
   var NS = 'http://www.w3.org/2000/svg';
-  var COLORS = { within: '#1D9E75', below: '#d8632a', above: '#b91c1c', neutral: '#087f89' };
+  var COLORS = { within: '#087f5b', below: '#cf222e', above: '#cf222e', neutral: '#79919a' };
   var SAMPLES = ['badanie', 'kontrola'];
+  var MAX_CHART_WIDTH = 4096, MIN_PLOT_WIDTH = 144, WIDTH_GUTTER = 66;
+  var PLOT_HEIGHT = 180, DATE_ROW_HEIGHT = 34;
   var chooserId = 0;
 
   function finite(value) { return typeof value === 'number' && isFinite(value); }
@@ -49,6 +51,21 @@
         unit(norm.unit), norm.label || '', norm.conditional === true];
     }));
   }
+  function explicitSeries(entry) {
+    var record = entry.clcrRecord || entry.record || {};
+    return String(entry.seriesKey || record.seriesKey || '').trim();
+  }
+  function explicitMethod(entry) {
+    var record = entry.clcrRecord || entry.record || {};
+    return String(entry.method || record.method || '').trim();
+  }
+  function comparable(before, after) {
+    // The model owns assay comparison. Do not bypass its saved mismatch, and
+    // never join calculation methods/series merely because labels are alike.
+    if (after.delta && after.delta.reason === 'method_mismatch') return false;
+    return explicitSeries(before) === explicitSeries(after) && explicitMethod(before) === explicitMethod(after)
+      && unit(before.unit) === unit(after.unit);
+  }
 
   function render(doc, view, options) {
     options = options || {};
@@ -58,14 +75,16 @@
     var formatNumber = typeof options.formatNumber === 'function' ? options.formatNumber : defaultNumber;
     var formatDate = typeof options.formatDate === 'function' ? options.formatDate : defaultDate;
     var sourceEntries = Array.isArray(view.entries) ? view.entries : [];
-    var entries = sourceEntries.map(function (entry, order) {
+    var described = sourceEntries.map(function (entry, order) {
       var stamp = day(entry.dateISO), description;
-      if (stamp == null || SAMPLES.indexOf(entry.dateSource) === -1) return null;
       try { description = options.describe(entry); } catch (_) { return null; }
-      if (!description || unit(description.unit) !== displayUnit) return null;
+      if (!description) return null;
       return { entry: entry, order: order, stamp: stamp, description: description,
         norms: usableNorms(description, displayUnit) };
-    }).filter(Boolean).sort(function (a, b) { return a.stamp - b.stamp || a.order - b.order; });
+    }).filter(Boolean);
+    var entries = described.filter(function (item) {
+      return item.stamp != null && SAMPLES.indexOf(item.entry.dateSource) !== -1 && unit(item.description.unit) === displayUnit;
+    }).sort(function (a, b) { return a.stamp - b.stamp || a.order - b.order; });
     var points = (Array.isArray(view.chart.points) ? view.chart.points : []).map(function (point, order) {
       if (!point || !finite(point.v) || day(point.dateISO) == null) return null;
       var saved = entries.filter(function (item) { return item.entry.noteId === point.noteId && item.entry.dateISO === point.dateISO; })[0];
@@ -107,9 +126,36 @@
     var firstStamp = timeline[0].stamp, lastStamp = timeline[timeline.length - 1].stamp;
     var x = function (stamp) { return firstStamp === lastStamp ? 50 : 8 + (stamp - firstStamp) / (lastStamp - firstStamp) * 84; };
     var y = function (value) { return 92 - (value - low) / span * 84; };
+    var pointDates = [];
+    points.forEach(function (point) {
+      if (!pointDates.length || pointDates[pointDates.length - 1].stamp !== point.stamp) pointDates.push({ stamp: point.stamp, date: point.saved.entry.dateISO });
+    });
+    var minGap = null;
+    pointDates.forEach(function (date, index) {
+      if (index) minGap = minGap == null ? date.stamp - pointDates[index - 1].stamp : Math.min(minGap, date.stamp - pointDates[index - 1].stamp);
+    });
+    var requiredPlotWidth = minGap == null ? MIN_PLOT_WIDTH : Math.max(MIN_PLOT_WIDTH, Math.ceil(48 * (lastStamp - firstStamp) / (0.84 * minGap)));
+    var plotWidth = Math.min(MAX_CHART_WIDTH - WIDTH_GUTTER, requiredPlotWidth);
+    var crowded = requiredPlotWidth > plotWidth, lanes = [], axisDates = [];
+    pointDates.forEach(function (date) {
+      var position = x(date.stamp) / 100 * plotWidth, lane = -1;
+      for (var index = 0; index < 2; index++) if (lanes[index] == null || position - lanes[index] >= 48) { lane = index; break; }
+      if (lane === -1) return;
+      lanes[lane] = position;
+      axisDates.push({ stamp: date.stamp, date: date.date, lane: lane });
+    });
+    var dateHeight = axisDates.some(function (date) { return date.lane === 1; }) ? DATE_ROW_HEIGHT * 2 : DATE_ROW_HEIGHT;
 
     var host = node(doc, 'div', 'vilda-lab-result-chart');
-    var area = host.appendChild(node(doc, 'div', 'vilda-lab-result-chart-area'));
+    var scroll = host.appendChild(node(doc, 'div', 'vilda-lab-result-chart-scroll'));
+    attr(scroll, { tabindex: 0, role: 'region', 'aria-label': 'Historia wyników ' + (view.label || view.test || '') });
+    // The outer canvas has no viewBox: its foreignObject and all HTML text
+    // retain CSS-pixel sizes. A CSS min-width of 100% lets it fill a wider card.
+    var layout = scroll.appendChild(node(doc, 'svg', 'vilda-lab-result-chart-layout' + (dateHeight > DATE_ROW_HEIGHT ? ' has-date-lanes' : ''), null, true));
+    attr(layout, { width: plotWidth + WIDTH_GUTTER, height: PLOT_HEIGHT + dateHeight + 25, role: 'group', 'data-plot-width': plotWidth, 'data-crowded': String(crowded) });
+    var body = layout.appendChild(node(doc, 'foreignObject', 'vilda-lab-result-chart-layout-body', null, true));
+    attr(body, { x: 0, y: 0, width: '100%', height: '100%' });
+    var area = body.appendChild(node(doc, 'div', 'vilda-lab-result-chart-area'));
     var ticks = area.appendChild(node(doc, 'div', 'vilda-lab-result-chart-y'));
     ticks.setAttribute('aria-hidden', 'true');
     [high, (high + low) / 2, low].forEach(function (value) {
@@ -143,15 +189,24 @@
         });
       });
     });
+    var guides = svg.appendChild(node(doc, 'g', 'vilda-lab-result-chart-guides', null, true));
+    guides.setAttribute('aria-hidden', 'true');
+    points.forEach(function (point) {
+      attr(guides.appendChild(node(doc, 'line', 'vilda-lab-result-chart-guide', null, true)), { x1: coordinate(x(point.stamp)), x2: coordinate(x(point.stamp)), y1: coordinate(y(point.point.v)), y2: 100, 'data-note-id': point.saved.entry.noteId || '', 'data-date': point.saved.entry.dateISO });
+    });
+    attr(guides.appendChild(node(doc, 'line', 'vilda-lab-result-chart-baseline', null, true)), { x1: 0, x2: 100, y1: 100, y2: 100 });
 
     var gaps = (Array.isArray(view.chart.gaps) ? view.chart.gaps : []).map(function (gap) { return day(gap.dateISO); }).filter(function (stamp) { return stamp != null; });
+    described.forEach(function (item) {
+      if (item.stamp != null && SAMPLES.indexOf(item.entry.dateSource) !== -1 && !points.some(function (point) { return point.saved.entry === item.entry; })) gaps.push(item.stamp);
+    });
     var counts = {};
     points.forEach(function (point) { counts[point.stamp] = (counts[point.stamp] || 0) + 1; });
     var previous = null;
     points.forEach(function (point) {
-      var disconnected = previous && (counts[previous.stamp] > 1 || counts[point.stamp] > 1 || gaps.some(function (gap) { return gap >= previous.stamp && gap <= point.stamp; }));
-      if (previous && !disconnected) {
-        attr(svg.appendChild(node(doc, 'line', 'vilda-lab-result-chart-line', null, true)), { x1: coordinate(x(previous.stamp)), x2: coordinate(x(point.stamp)), y1: coordinate(y(previous.point.v)), y2: coordinate(y(point.point.v)), stroke: COLORS.neutral, 'stroke-width': 2, 'vector-effect': 'non-scaling-stroke' });
+      var disconnected = previous && (counts[previous.stamp] > 1 || counts[point.stamp] > 1 || !comparable(previous.saved.entry, point.saved.entry) || gaps.some(function (gap) { return gap >= previous.stamp && gap <= point.stamp; }));
+      if (options.joinLines !== false && previous && !disconnected) {
+        attr(svg.appendChild(node(doc, 'line', 'vilda-lab-result-chart-line', null, true)), { x1: coordinate(x(previous.stamp)), x2: coordinate(x(point.stamp)), y1: coordinate(y(previous.point.v)), y2: coordinate(y(point.point.v)), stroke: '#087f89', 'stroke-width': 2, 'vector-effect': 'non-scaling-stroke', 'data-from-id': previous.saved.entry.noteId || '', 'data-to-id': point.saved.entry.noteId || '' });
       }
       previous = point;
     });
@@ -191,7 +246,7 @@
       var target = pointLayer.appendChild(node(doc, 'foreignObject', 'vilda-lab-result-chart-target', null, true));
       attr(target, { x: coordinate(x(point.stamp)) + '%', y: coordinate(y(point.point.v)) + '%', width: 44, height: 44, transform: 'translate(-22 -22)' });
       var control = target.appendChild(node(doc, 'button', 'vilda-lab-result-chart-point'));
-      attr(control, { type: 'button', 'data-value': point.point.v, 'data-tone': tone,
+      attr(control, { type: 'button', 'data-value': point.point.v, 'data-tone': tone, 'data-date': entry.dateISO,
         'aria-label': title + '. Otwórz wynik', title: title });
       control.appendChild(node(doc, 'span', 'vilda-lab-result-chart-dot'));
       if (group.length === 1) {
@@ -235,12 +290,40 @@
         control.focus();
       });
     });
-    var dates = area.appendChild(node(doc, 'div', 'vilda-lab-result-chart-x'));
-    dates.setAttribute('aria-hidden', 'true');
-    dates.appendChild(node(doc, 'span', '', formatDate(timeline[0].date)));
-    if (firstStamp !== lastStamp) dates.appendChild(node(doc, 'span', '', formatDate(timeline[timeline.length - 1].date)));
+    var dates = area.appendChild(node(doc, 'svg', 'vilda-lab-result-chart-x' + (dateHeight > DATE_ROW_HEIGHT ? ' has-date-lanes' : ''), null, true));
+    attr(dates, { 'aria-hidden': 'true', width: '100%', height: dateHeight });
+    axisDates.filter(function (date) { return date.lane === 1; }).forEach(function (date) {
+      attr(dates.appendChild(node(doc, 'line', 'vilda-lab-result-chart-date-stem', null, true)), { x1: coordinate(x(date.stamp)) + '%', x2: coordinate(x(date.stamp)) + '%', y1: 0, y2: DATE_ROW_HEIGHT });
+    });
+    axisDates.forEach(function (date) {
+      var target = dates.appendChild(node(doc, 'foreignObject', 'vilda-lab-result-chart-date-target', null, true));
+      attr(target, { x: coordinate(x(date.stamp)) + '%', y: date.lane * DATE_ROW_HEIGHT, width: 44, height: DATE_ROW_HEIGHT, transform: 'translate(-22 0)' });
+      var label = target.appendChild(node(doc, 'time', 'vilda-lab-result-chart-date'));
+      attr(label, { datetime: date.date, 'data-date': date.date });
+      label.appendChild(node(doc, 'span', 'vilda-lab-result-chart-date-day', date.date.slice(8, 10) + '.' + date.date.slice(5, 7)));
+      label.appendChild(node(doc, 'span', 'vilda-lab-result-chart-date-year', date.date.slice(0, 4)));
+    });
+    // A bounded canvas cannot spread an arbitrarily dense cluster. Preserve
+    // every exact note as a separate clickable record below it instead.
+    var plotted = points.map(function (point) { return point.saved.entry; });
+    var fallback = described.filter(function (item) { return crowded || plotted.indexOf(item.entry) === -1; });
+    if (fallback.length) {
+      var records = host.appendChild(node(doc, 'div', 'vilda-lab-result-chart-records'));
+      records.setAttribute('aria-label', 'Zapisane wyniki');
+      fallback.slice().sort(function (a, b) { return (b.stamp == null ? -Infinity : b.stamp) - (a.stamp == null ? -Infinity : a.stamp) || a.order - b.order; }).forEach(function (item) {
+        var row = item.entry;
+        if (!row.noteId) return;
+        var link = records.appendChild(node(doc, 'button', 'vilda-lab-result-chart-record'));
+        var value = row.display || row.raw || '—', when = item.stamp != null ? formatDate(row.dateISO) : 'Bez daty';
+        attr(link, { type: 'button', 'data-note-id': row.noteId, 'data-tone': pointTone({ saved: item }), 'aria-label': (view.label || view.test || '') + ': ' + value + ' · ' + when + '. Otwórz wynik' });
+        link.appendChild(node(doc, 'span', 'vilda-lab-result-chart-record-value', value));
+        var recordedDate = link.appendChild(node(doc, 'time', 'vilda-lab-result-chart-record-date', when));
+        if (item.stamp != null) recordedDate.setAttribute('datetime', row.dateISO);
+        if (typeof options.openNote === 'function') link.addEventListener('click', function () { options.openNote(row.noteId); });
+      });
+    }
     return host;
   }
 
-  root.VildaLabResultChart = Object.freeze({ version: '1.0.0', render: render });
+  root.VildaLabResultChart = Object.freeze({ version: '1.1.0', render: render });
 })(typeof window !== 'undefined' ? window : globalThis);

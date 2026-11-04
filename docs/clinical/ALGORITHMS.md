@@ -1113,6 +1113,49 @@ odniesieniem 0,3 → neutralna linia bez wymyślonej granicy dolnej;
 `<0,1` → zachowany zapis bez punktu; dwa wpisy tego samego dnia → osobne
 normy i dostęp do właściwych notatek. Testy wykonują moduły produkcyjne.
 
+### LAB-HISTORIA — wspólny widok wyników laboratoryjnych i Klirensu (2026-11-04)
+
+**Decyzja właściciela:** zaakceptowana klikalna makieta z selektorem
+„Wszystkie wyniki / Wyniki lab. / Klirens”, pełnymi punktami, prowadnicami
+do dat oraz opcją „Połącz punkty”. Nagłówek „Wyniki badań” ma własny ciemny
+styl, bez podsumowania liczby wyników. Sterowanie pozostaje w tym samym
+miejscu przy przełączaniu tabeli i wykresów; strzałka selektora ma osobny
+odstęp od prawej krawędzi.
+
+**Klasyfikacja:** prezentacja zapisanych danych, bez zmiany norm, progów,
+wzorów, jednostek, dokładności zapisu, silników oceny ani synchronizacji.
+Dotychczasowe koperty ocen i źródła pozostają dostępne w szczegółach.
+Nowa paleta zastępuje wcześniejszy bursztyn poniżej normy: zieleń oznacza
+wynik w zapisanym zakresie, wspólna czerwień odchylenie, a strzałka ↑/↓
+wskazuje jego kierunek. Kolor nie jest oceną całego obrazu klinicznego.
+
+Informacja o orientacyjnym lub ogólnym odniesieniu ma neutralny opis,
+zamiast identycznego wykrzyknika dla wszystkich rodzajów informacji.
+Rzeczywiste zapisane ostrzeżenia kliniczne i nieaktualne oceny pozostają
+jawnymi komunikatami; nie otrzymują uspokajającego zielonego wyróżnienia.
+
+Adapter `VildaLabResultPresentation.clcrSeries` czyta istniejącą projekcję
+`ClcrSavedResults`, zachowując oryginalny wpis, metodę, jednostkę i klucz
+serii. Nie oblicza wyniku ani nie odtwarza normy z samej liczby lub wieku
+dzisiejszego pacjenta. Kryterium diagnostyczne nie staje się pasmem normy.
+Dokładne starsze pomiary bez zapisanej oceny pozostają dostępne i neutralne,
+w tym wartości ujemne UAG i dokładne zero. Edycja oraz usuwanie obliczenia
+nadal otwierają istniejące `ClcrResultDetails`; lokalny podgląd na stronie
+Klirens zachowuje własny kontrakt.
+
+Wspólny wykres łączy dokładne, datowane wyniki tej samej serii i jednostki.
+Nie łączy różnych metod; nierówności, wartości tekstowe i brak dokładnego
+pomiaru przerywają linię. Linia łączy zapisane punkty, nie dodaje pomiarów
+między datami. Każdy zapis zachowuje własne odniesienie, a daty leżą na osi
+rzeczywistego czasu. Gęsta historia przewija się wewnątrz karty, z ograniczoną
+szerokością oraz dostępem do poszczególnych zapisów bez przesuwania punktów.
+
+**Regresje syntetyczne:** odchylenia w obu kierunkach mają wspólną czerwień
+i różne strzałki; orientacyjne LH/FSH pozostają neutralne; zapisane UAG −12
+oraz starszy ujemny pomiar zachowują wartość i położenie; `<18` nie staje się
+dokładnym punktem; ta sama data i różne ID pozostają osobno dostępne.
+Testy wykonują produkcyjne moduły i istniejące adaptery zapisu.
+
 ### P-LAB-WARTOSC-BEZ-JEDNOSTKI — liczba ze starszego wpisu wyniku bez jednostki (SW 1.1.279, `vilda_vault.js` 212, 2026-10-14)
 
 **Wpływ kliniczny: tak.** Zmieniają się liczby w historii wyników dla

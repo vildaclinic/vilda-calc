@@ -21,6 +21,12 @@ const MODULES = [
 ];
 const LAB = ['vilda_lab_history.js', 'vilda_lab_history_tab.css', 'vilda_lab_result_presentation.js', 'vilda_lab_result_chart.js', 'vilda_lab_history_tab.js'];
 const files = (source, key) => [...source.matchAll(new RegExp(`${key}:"([^"?]+)\\?v=\\d+"`, 'g'))].map((m) => m[1]);
+const indexAssets = [...read('index.html').matchAll(/\b(?:src|href)="([^"]+\?v=\d+)"/g)].map((match) => match[1]);
+function assetUrl(file) {
+  const url = indexAssets.find((candidate) => candidate.split('?')[0] === file);
+  if (!url) throw new Error('Production index does not load ' + file);
+  return url;
+}
 
 describe('stosy auth: moduły zakładki Badania', () => {
   const bridgeList = files(bridge.slice(bridge.indexOf('V=['), bridge.indexOf('],c=')), 'src');
@@ -66,7 +72,7 @@ describe('stosy auth: moduły zakładki Badania', () => {
       expect(tab, page).toBeGreaterThan(chart);
     }
     const worker = read('service-worker-kalorii.js');
-    for (const [, file] of MODULES.slice(1, 3)) expect(worker).toContain(`'/${file}?v=1'`);
+    for (const [, file] of MODULES.slice(1, 3)) expect(worker).toContain(`'/${assetUrl(file)}'`);
   });
 });
 
@@ -130,7 +136,7 @@ for (const loader of ['session', 'chrome']) {
       it(`brak ${global}: uzupełnia zależność nawet przy już załadowanej zakładce`, async () => {
         const env = environment([global]);
         await start(env)();
-        expect(env.appended.filter((url) => url.endsWith('.js?v=1'))).toEqual([file + '?v=1']);
+        expect(env.appended.filter((url) => MODULES.some(([, candidate]) => url.split('?')[0] === candidate))).toEqual([assetUrl(file)]);
         expect(typeof env.win[global][method]).toBe('function');
         expect(env.appended.some((url) => url.startsWith('vilda_lab_history_tab.js?'))).toBe(false);
       });

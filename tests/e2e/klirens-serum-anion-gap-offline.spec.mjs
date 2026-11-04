@@ -1,3 +1,4 @@
+import { showClcrResults, clcrPoint } from '../support/badania-klirens.mjs';
 import { createServer } from 'node:http';
 import { createHash } from 'node:crypto';
 import { execFileSync } from 'node:child_process';
@@ -308,7 +309,8 @@ async function lazyStartAndNotes(page, origin, note, resources, loaded) {
   await expect(compact.locator('.clcr-note-value')).toHaveText(edited.labResult.value);
   await expect(compact).toContainText('7–15');
   await compact.getByRole('button', { name: 'Zobacz w Badaniach →', exact: true }).click();
-  const point = page.locator(`.vilda-lab-hist-panel[data-panel="renal"] .vilda-clcr-point[data-note-id="${note.id}"]`);
+  await showClcrResults(page, 'charts');
+  const point = clcrPoint(page, note.id);
   await expect.poll(async () => Number(await point.getAttribute('data-value'))).toBe(edited.labResult.valueNum);
   const lazyResources = resources.filter(resource => /\/(?:clcr_serum_anion_gap(?:_data|_persistence)?\.js|clcr_record_resources\.js|clcr_saved_calculation\.js|clcr_saved_results\.js|clcr_result_details\.js|vilda_auth_ui\.js|vilda_lab_history_tab\.js)\?/.test(resource.url));
   await assertResourceDelivery(page, lazyResources, loaded);

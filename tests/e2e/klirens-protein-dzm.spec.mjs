@@ -1,3 +1,4 @@
+import { showClcrResults, showBadaniaView } from '../support/badania-klirens.mjs';
 import fs from 'node:fs/promises';
 import { expect, test } from '@playwright/test';
 import { czekajNaUstabilizowanyUklad } from '../support/uklad-czekanie.mjs';
@@ -305,13 +306,17 @@ test('Białko DZM: eksporty AI i Word opisują ten sam wynik i normę', async ({
 test('Białko DZM: Start odczytuje i edytuje jeden zamrożony pomiar z ramki Klirens', async ({ page }) => {
   const { calculator, start } = await openShellCalculator(page);
   await restore(calculator); const [note] = await saveVisible(calculator, '2026-10-24');
-  await calculator.locator('#clcrOpenCardBtn').click(); await expect(page).toHaveURL(/app\.html#\/start/);
-  const history = start.locator('.vilda-lab-hist-panel[data-panel="renal"] .vilda-clcr-history');
-  await expect(history.locator(`tr[data-note-id="${note.id}"]`)).toHaveCount(1);
-  await expect(history.locator(`.vilda-clcr-point[data-note-id="${note.id}"]`)).toHaveAttribute('data-value', '300');
-  await history.locator(`.vilda-clcr-value[data-note-id="${note.id}"]`).click(); await start.locator('#editMeasurement').click();
+  await calculator.locator('#clcrOpenCardBtn').click();
+  await showClcrResults(start, 'table'); await expect(page).toHaveURL(/app\.html#\/start/);
+  const history = start.locator('.vilda-lab-hist');
+  await expect(history.locator(`.vilda-lab-hist-result-row[data-source="clcr"][data-note-id="${note.id}"]`)).toHaveCount(1);
+  await showBadaniaView(start, 'charts');
+  await expect(history.locator(`.vilda-lab-hist-card[data-source="clcr"] .vilda-lab-result-chart-point[data-note-id="${note.id}"]`)).toHaveAttribute('data-value', '300');
+  await showBadaniaView(start, 'table');
+  await history.locator(`.vilda-lab-hist-result-row[data-source="clcr"][data-note-id="${note.id}"] .vilda-lab-hist-result-value`).click(); await start.locator('#editMeasurement').click();
   await start.locator('#editField-Prot_concentration').fill('400'); await start.locator('#saveEditedMeasurement').click();
   await expect(start.locator('#editDialog')).toBeHidden(); await start.locator('#detailsDialog').getByRole('button', { name: 'Zamknij', exact: true }).click();
-  await expect(history.locator(`.vilda-clcr-point[data-note-id="${note.id}"]`)).toHaveAttribute('data-value', '600');
+  await showBadaniaView(start, 'charts');
+  await expect(history.locator(`.vilda-lab-hist-card[data-source="clcr"] .vilda-lab-result-chart-point[data-note-id="${note.id}"]`)).toHaveAttribute('data-value', '600');
   expect((await memory(start)).notes).toHaveLength(1); expect((await memory(start)).originalsLocked).toBe(true);
 });

@@ -103,14 +103,14 @@ describe('Zwięzła prezentacja wyłącznie zapisanych norm', () => {
   it('nie koloruje dziecka względem ogólnego zakresu dla dorosłych', () => {
     const range = recordedRange('tsh', '5,1', 'mIU/L', { sex: 'F', age: null, tanner: 2, life_stage: 'pediatric' });
     expect(presentation.describe(exact(5.1, 'mIU/L', { range }), options()))
-      .toMatchObject({ tone: 'neutral', symbol: '', warning: 'Zakres ogólny', norms: [{ low: .3, high: 4.2, conditional: true, eligible: true, tone: 'neutral' }] });
+      .toMatchObject({ tone: 'neutral', symbol: '', warning: 'Zakres ogólny', warningKind: 'reference', norms: [{ low: .3, high: 4.2, conditional: true, eligible: true, tone: 'neutral' }] });
   });
 
   it('nie pokazuje aktualnej normy ze starego, unieważnionego zakresu', () => {
     const range = recordedRange('tsh', '5,1', 'mIU/L');
     range.status = 'invalidated'; range.reasonCodes = ['result_or_clinical_date_changed'];
     expect(presentation.describe(exact(5.1, 'mIU/L', { range }), options()))
-      .toMatchObject({ value: 5.1, tone: 'neutral', normText: '—', norms: [], warning: 'Zakres nieaktualny' });
+      .toMatchObject({ value: 5.1, tone: 'neutral', normText: '—', norms: [], warning: 'Zakres nieaktualny', warningKind: 'invalidated' });
   });
 
   it('nie scala alternatywnych zakresów nieznanego cyklu w jeden przedział ani werdykt', () => {
@@ -120,7 +120,7 @@ describe('Zwięzła prezentacja wyłącznie zapisanych norm', () => {
       treatment: { context: 'unknown', gnrha: 'unknown', sexSteroids: 'unknown' } });
     const result = presentation.describe(exact(2, 'IU/L', { assessment: saved }), options());
     expect(result.norms.length).toBeGreaterThan(1);
-    expect(result).toMatchObject({ tone: 'neutral', symbol: '', warning: 'Różne zakresy odniesienia' });
+    expect(result).toMatchObject({ tone: 'neutral', symbol: '', warning: 'Różne zakresy odniesienia', warningKind: 'reference' });
     expect(result.norms.every(item => item.tone === 'neutral' && item.conditional)).toBe(true);
     expect(result.norms).toHaveLength(4);
     expect(new Set(result.norms.map(item => item.high)).size).toBeGreaterThan(1);
@@ -138,7 +138,7 @@ describe('Zwięzła prezentacja wyłącznie zapisanych norm', () => {
     expect(saved.evaluation.clinical.status).toBe('warning');
     expect(saved.evaluation.biochemical.byStage.status).toBe('within');
     const result = presentation.describe(exact(2, 'IU/L', { assessment: saved }), options());
-    expect(result).toMatchObject({ tone: 'neutral', symbol: '', warning: saved.evaluation.clinical.title,
+    expect(result).toMatchObject({ tone: 'neutral', symbol: '', warning: saved.evaluation.clinical.title, warningKind: 'clinical',
       norms: [{ low: 1.3, high: 9.8, eligible: true, tone: 'neutral' }] });
     expect(result.warning).not.toBe('');
   });
@@ -160,14 +160,30 @@ describe('Zwięzła prezentacja wyłącznie zapisanych norm', () => {
       treatment: { context: 'unknown', gnrha: 'unknown', sexSteroids: 'unknown' },
       puberty: { kind: 'G', stage: 1, appliesToCurrentContext: true, observationProvided: true } });
     expect(presentation.describe(exact(0, 'mIU/mL', { assessment: saved }), options()))
-      .toMatchObject({ value: 0, tone: 'neutral', symbol: '', normText: '≤0,3\u00a0mIU/mL', norms: [{ low: null, high: .3, conditional: true, eligible: true }] });
+      .toMatchObject({ value: 0, tone: 'neutral', symbol: '', normText: '≤0,3\u00a0mIU/mL', warningKind: 'reference', norms: [{ low: null, high: .3, conditional: true, eligible: true }] });
+  });
+
+  it.each([['lh', '0', '≤0,3'], ['fsh', '3.06', '0,5–6']])('odróżnia informację o odniesieniu %s od ostrzeżenia klinicznego', (analyte, value, norm) => {
+    const saved = assessment({ analyte, value, sex: 'F', referenceSelection: 'automatic', reproductiveContext: 'unknown',
+      contextBasis: 'current-patient', birthDateISO: null, sampleDateISO: null,
+      age: { years: 4, months: 0, precision: 'month' }, specimen: 'unknown', measurementKind: 'unknown',
+      assay: { confirmation: 'unknown' }, treatment: { context: 'unknown', gnrha: 'unknown', sexSteroids: 'unknown' },
+      puberty: { kind: 'unspecified', stage: null } });
+    expect(saved.evaluation.clinical.status).not.toBe('warning');
+    expect(presentation.describe(exact(Number(value), 'mIU/mL', { assessment: saved }), options()))
+      .toMatchObject({ tone: 'neutral', symbol: '', warning: 'Odniesienie orientacyjne', warningKind: 'reference', normText: norm + '\u00a0mIU/mL' });
+  });
+
+  it('odróżnia niedostępną ocenę od informacji o źródle odniesienia', () => {
+    expect(presentation.describe(exact(2, 'IU/L', { assessment: { schemaVersion: 999 } }), options()))
+      .toMatchObject({ warning: 'Brak zapisanej oceny', warningKind: 'unavailable', tone: 'neutral', norms: [] });
   });
 
   it('nie stosuje zakresów z unieważnionej oceny ani ręcznej normy jako obejścia', () => {
     const saved = assessment();
     saved.status = 'invalidated'; saved.reasonCodes = ['result_or_clinical_date_changed'];
     expect(presentation.describe(exact(2, 'IU/L', { kind: 'invalidated', assessment: saved, norm: '1–3', normAccepted: true }), options()))
-      .toMatchObject({ value: null, tone: 'neutral', normText: '—', norms: [], warning: 'Ocena nieaktualna' });
+      .toMatchObject({ value: null, tone: 'neutral', normText: '—', norms: [], warning: 'Ocena nieaktualna', warningKind: 'invalidated' });
   });
 
   it('mediana AMH nie staje się normą ani zielonym zakresem', () => {

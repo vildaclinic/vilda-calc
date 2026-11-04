@@ -66,7 +66,10 @@ test('IGF-1 z notatki GH na wykresie z datą kontroli i dopiskiem źródła; wpi
   await expect(t.locator(`.vilda-lab-result-chart-point[data-note-id="${ids.t1}"]`)).toHaveAttribute('data-value', '0.8');
   await expect(t.locator(`.vilda-lab-result-chart-point[data-note-id="${ids.t2}"]`)).toHaveAttribute('data-value', '1.9');
   await expect(badania.locator('.vilda-lab-hist-card[data-series="testosteroncalkowity"]')).toHaveCount(0);
-  await expect(badania.locator('.vilda-lab-hist-summary')).toHaveText('4 wyniki · 2 badania · ostatnie badanie 01.06.26');
+  await expect(badania.locator('.vilda-lab-result-chart-point[data-note-id]')).toHaveCount(4);
+  expect(await badania.locator('.vilda-lab-hist-card').evaluateAll((cards) =>
+    cards.map((card) => card.getAttribute('data-series')).sort()))
+    .toEqual(['igf1', 'testosterone_total']);
 
   await badania.getByRole('button', { name: 'Tabela', exact: true }).click();
   const grupa = badania.locator('.vilda-lab-hist-date-group[data-date-iso="2026-06-01"]');

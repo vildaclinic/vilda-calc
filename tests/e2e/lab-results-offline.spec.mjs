@@ -148,9 +148,9 @@ test('Badania: zapisane wyniki, normy i kolory po zimnym uruchomieniu produkcyjn
     const lab = sekcjaBadan(page);
     await expect(lab.locator('.vilda-lab-hist-result-row')).toHaveCount(15);
     await expect(lab.locator('.vilda-lab-hist-date-group').first()).toHaveAttribute('data-date-iso', '2026-06-02');
-    await expect(result(lab, ids.tsh4).locator('.vilda-lab-hist-cell-value')).toHaveCSS('color', 'rgb(138, 74, 24)');
+    await expect(result(lab, ids.tsh4).locator('.vilda-lab-hist-cell-value')).toHaveCSS('color', 'rgb(207, 34, 46)');
     await expect(result(lab, ids.tsh4).locator('.vilda-lab-hist-result-norm')).toHaveText(/0,27.*4,2.*mIU\/L/);
-    await expect(result(lab, ids.ft44).locator('.vilda-lab-hist-cell-value')).toHaveCSS('color', 'rgb(15, 110, 86)');
+    await expect(result(lab, ids.ft44).locator('.vilda-lab-hist-cell-value')).toHaveCSS('color', 'rgb(8, 127, 91)');
     await expect(result(lab, ids.ft3).locator('.vilda-lab-hist-result-norm')).toHaveText('—');
     await expect(result(lab, ids.lh1)).toContainText('<0,1');
     await expect(lab).not.toContainText('Zapisane oceny');

@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test';
+import { showClcrResults, showBadaniaView } from '../support/badania-klirens.mjs';
 
 async function openOptionalDetails(page, selector) {
   for (const details of await page.locator(selector).locator('xpath=ancestor::details').all()) {
@@ -291,24 +292,26 @@ test('Karta pacjenta otwiera główne Badania, a osobna historia pokazuje te sam
   const open = page.locator('#clcrOpenCardBtn');
   await expect(open).toBeVisible();
   await open.click();
+  await showClcrResults(page, 'table');
 
   await expect(page.locator('.vilda-patient-tab[data-tab="lab"]')).toHaveClass(/active/);
   await expect(page.locator('.vilda-patient-hero-name')).toContainText('Pacjent Testowy');
-  const main = page.locator('.vilda-lab-hist-panel[data-panel="renal"]');
+  const main = page.locator('.vilda-lab-hist');
   await expect(main).toContainText('eGFR — dorośli (kreatynina)');
-  await expect(main.locator('.vilda-clcr-measurement-group')).toHaveCount(1);
-  await expect(main.locator('tr[data-note-id]')).toHaveCount(2);
-  await expect(main.locator('.vilda-clcr-point')).toHaveCount(2);
+  await expect(main.locator('.vilda-lab-hist-result-row[data-source="clcr"][data-note-id]')).toHaveCount(2);
   for (const note of notes) {
-    const row = main.locator(`tr[data-note-id="${note.id}"]`);
+    const row = main.locator(`.vilda-lab-hist-result-row[data-source="clcr"][data-note-id="${note.id}"]`);
     await expect(row).toHaveCount(1);
-    await expect(row.locator('time')).toHaveAttribute('datetime', note.clinicalDateISO);
-    await expect(row.locator('.vilda-clcr-value')).toContainText(note.labResult.value.replace('.', ','));
-    await expect(row.locator('.vilda-clcr-row-reference')).toHaveText(note.labResult.norm || 'Brak zapisanej normy');
-    await expect(main.locator(`.vilda-clcr-point[data-note-id="${note.id}"]`)).toHaveCount(1);
+    await expect(row.locator('xpath=ancestor::*[contains(@class,"vilda-lab-hist-date-group")]')).toHaveAttribute('data-date-iso', note.clinicalDateISO);
+    await expect(row.locator('.vilda-lab-hist-result-value')).toContainText(note.labResult.value.replace('.', ','));
+    await expect(row.locator('.vilda-lab-hist-result-norm')).toHaveText(note.labResult.norm || '—');
   }
   await expect(main).toContainText('01.06.26');
   await expect(main).toContainText('01.08.26');
+  await showBadaniaView(page, 'charts');
+  await expect(main.locator('.vilda-lab-hist-card[data-source="clcr"]')).toHaveCount(1);
+  await expect(main.locator('.vilda-lab-hist-card[data-source="clcr"] .vilda-lab-result-chart-point')).toHaveCount(2);
+  for (const note of notes) await expect(main.locator(`.vilda-lab-hist-card[data-source="clcr"] .vilda-lab-result-chart-point[data-note-id="${note.id}"]`)).toHaveCount(1);
   await expect(page.locator('#clcrPatientCard')).toBeHidden();
 
   // Lokalny podgląd to oddzielna akcja, oparta na tych samych oryginalnych ID.
