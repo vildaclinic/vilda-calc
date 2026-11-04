@@ -32,6 +32,7 @@ const EXPECTED_GROUP_ORDER = [
   'dzm-excr',
   'dzm-ratio',
   'dzm-protein',
+  'urine-index',
   'spot-ratio',
   'spot-fe',
   'spot-other',

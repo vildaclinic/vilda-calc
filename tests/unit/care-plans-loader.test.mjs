@@ -6,6 +6,7 @@ const DEPENDENCIES = [
   'VildaVaultProtocol',
   'VildaClinicalCrypto', 'VildaPatientCheckpointStore', 'VildaPatientCheckpoint',
   'VildaPatientIdentityProtocol', 'VildaPatientIdentityTransport',
+  'VildaBirthAssessment', 'VildaPatientSgaModel', 'VildaPatientSgaUI',
   'VildaCrypto', 'VildaCarePlanModel', 'VildaLabSnapshot', 'VildaLabTestosteroneUnits', 'VildaLabAssessmentUI',
   'VildaHormoneReferenceSnapshot', 'VildaLabRangeSnapshot', 'VildaHormoneReferenceUI',
   'VildaLabHistory', 'VildaLabHistoryTab', 'VildaPubertyAssessment', 'VildaProAccess',
@@ -24,6 +25,7 @@ function environment(careReady = false, missingReminderModule = null) {
   const documentListeners = new Map(), appended = [], existing = [
     { href: 'vilda_auth_ui.css?v=existing' },
     { href: 'vilda_patients_list.css?v=existing' },
+    { href: 'vilda_patient_sga_ui.css?v=existing' },
     { href: 'vilda_lab_assessment_ui.css?v=existing' },
     { href: 'vilda_lab_history_tab.css?v=existing' },
     { href: 'vilda_global_search.css?v=existing' },

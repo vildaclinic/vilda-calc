@@ -487,7 +487,7 @@ function ClcrNotesResources() {
   if (ClcrNotesBootstrapPromise) return ClcrNotesBootstrapPromise;
   ClcrNotesBootstrapPromise = new Promise(function (resolve, reject) {
     var doc = i.document, finished = false, timer = null;
-    var url = new URL("clcr_record_resources.js?v=17", i.location.href);
+    var url = new URL("clcr_record_resources.js?v=18", i.location.href);
     var script = Array.from(doc.querySelectorAll("script[src]")).find(function (node) {
       try { return new URL(node.getAttribute("src"), i.location.href).href === url.href; } catch (_) { return false; }
     });
@@ -732,11 +732,14 @@ function GdSgaResumeRefresh(patientId,onPick,listOptions,tile){
   var state=bn(),owner=remReadOwner(),vault=jt();
   if(!tile||!tile.isConnected||!vault||!vault.isUnlocked()||!Rt||Rt.style.display==="none"||
     !state||state.screen!=="card"||state.patientId!==patientId||state.tab!=="antro")return;
-  var restoreFocus=i.document.activeElement===tile;
+  var restoreFocus=i.document.activeElement===tile,pageScroll={x:i.scrollX||0,y:i.scrollY||0};
+  // The underlying page is locked by auth. Preserve its position independently
+  // of layout/focus scroll resets while the saved patient card is replaced.
   Promise.resolve(se(patientId,onPick,listOptions,{activeTab:"antro",_navRestore:!0,_syncRefresh:!0})).then(function(){
     var current=bn();
     if(!remReadCurrent(owner)||!current||current.screen!=="card"||current.patientId!==patientId||current.tab!=="antro"||
       !Rt||Rt.style.display==="none"||i.document.querySelector('dialog.vilda-patient-sga-dialog[open]'))return;
+    i.scrollTo({left:pageScroll.x,top:pageScroll.y,behavior:"instant"});
     // se already preserves the latest scroll position, including scrolling during
     // its async read. Do not steal focus if another control was used meanwhile.
     if(!restoreFocus||i.document.activeElement!==i.document.body&&i.document.activeElement!==tile)return;

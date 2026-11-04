@@ -34,6 +34,7 @@
     if (formulaId === "K_mmol_d" && field.id === "K_volumeUnit") return true;
     if (formulaId === "KM_Cr" && /^URCR_/.test(field.id) && field.id !== "URCR_outputUnit") return true;
     if (formulaId === "Mg_Ca" && /^MGCA_/.test(field.id)) return !["MGCA_sameSpecimen", "MGCA_collectionProblem", "MGCA_collectionHours", "MGCA_durationKnown"].includes(field.id);
+    if (formulaId === "K_frac") return ["U_K", "U_Na"].includes(field.id);
     if (formulaId === "B_Cr" && /^BCR_/.test(field.id)) return !["BCR_sameSpecimen", "BCR_collectionProblem", "BCR_collectionHours", "BCR_durationKnown"].includes(field.id);
     if (formulaId === "PO4_Cr" && /^PICR_/.test(field.id)) return !["PICR_sameSpecimen", "PICR_collectionProblem", "PICR_collectionHours", "PICR_durationKnown"].includes(field.id);
     if (formulaId === "Ca_Cr" && /^CACR_DZM_/.test(field.id)) return !["CACR_DZM_sameSpecimen", "CACR_DZM_collectionProblem", "CACR_DZM_collectionHours", "CACR_DZM_durationKnown", "CACR_DZM_currentPreterm"].includes(field.id);
@@ -98,7 +99,7 @@
     }
     active = { token, destroy, cancelForFormulaChange(nextFormula) {
       const owner = root.ClcrSavedCalculation?.readSaved(currentNote)?.snapshot?.formulaId || currentRecord?.sourceFormulaId;
-      if (!["Ca_Cr", "CaCr_spot", "Mg_Ca", "PO4_Cr", "B_Cr"].includes(owner) || owner === nextFormula) return true;
+      if (!["Ca_Cr", "CaCr_spot", "Mg_Ca", "PO4_Cr", "B_Cr", "K_frac"].includes(owner) || owner === nextFormula) return true;
       // A committed transaction keeps its original ID and material. While a
       // write is in flight, keep its editor alive until the result is known.
       if (pending) return false;
@@ -132,7 +133,7 @@
       const record = currentRecord;
       $("calculationDetails").dataset.noteId = noteId;
       $("calculationDetails").dataset.recordId = noteId;
-      $("calculationDetails").innerHTML = `<p class="clcr-record-eyebrow">KLIRENS · ${escape(dateLabel(currentNote.clinicalDateISO))}</p><h3>${escape(record.label || record.method)}</h3><p class="clcr-record-value ${escape(record.tone || "neutral")}">${escape(decimal(valueLabel(record)))} <span>${escape(record.unit)}</span></p>${record.boundary ? `<p>Przed zaokrągleniem: ${escape(record.boundary)}</p>` : ""}<dl class="clcr-record-grid"><div><dt>Dane z dnia badania</dt><dd>${escape(context)}${historicalSex ? " · " + (["F", "female"].includes(historicalSex) ? "kobieta" : "mężczyzna") : ""}</dd></div><div><dt>Zapisana ocena</dt><dd>${record.category ? escape(record.category) + " · " : ""}${escape(record.interpretation || record.description || record.assessmentText || "Brak zapisanej oceny")}</dd></div>${inputRows}<div><dt>Norma przy zapisie</dt><dd>${escape(record.norm || "Brak zapisanej normy")}</dd></div><div><dt>Metoda</dt><dd>${escape(record.label || record.method)}</dd></div></dl>${record.comment ? `<p class="clcr-record-context">${escape(record.comment)}</p>` : ""}${record.assumptions ? `<p class="clcr-record-source">${escape(record.assumptions)}</p>` : ""}${record.source?.label ? `<p class="clcr-record-source">${escape(record.source.label)} · interpretacja zachowana z dnia zapisu.</p>` : ""}`;
+      $("calculationDetails").innerHTML = `<p class="clcr-record-eyebrow">KLIRENS · ${escape(dateLabel(currentNote.clinicalDateISO))}</p><h3>${escape(record.label || record.method)}</h3><p class="clcr-record-value ${escape(record.tone || "neutral")}">${escape(decimal(valueLabel(record)))} <span>${escape(record.unit)}</span></p>${record.boundary ? `<p>Przed zaokrągleniem: ${escape(record.boundary)}</p>` : ""}<dl class="clcr-record-grid"><div><dt>Dane z dnia badania</dt><dd>${escape(context)}${historicalSex ? " · " + (["F", "female"].includes(historicalSex) ? "kobieta" : "mężczyzna") : ""}</dd></div><div><dt>Zapisana ocena</dt><dd>${record.category ? escape(record.category) + " · " : ""}${escape(record.interpretation || record.description || record.assessmentText || "Brak zapisanej oceny")}</dd></div>${inputRows}<div><dt>Norma przy zapisie</dt><dd>${escape(record.norm || saved?.snapshot?.assessment?.potassiumIndexSnapshot?.referenceLabel || "Brak zapisanej normy")}</dd></div><div><dt>Metoda</dt><dd>${escape(record.label || record.method)}</dd></div></dl>${record.comment ? `<p class="clcr-record-context">${escape(record.comment)}</p>` : ""}${record.assumptions ? `<p class="clcr-record-source">${escape(record.assumptions)}</p>` : ""}${record.source?.label ? `<p class="clcr-record-source">${escape(record.source.label)} · interpretacja zachowana z dnia zapisu.</p>` : ""}`;
       $("detailActions").hidden = false;
       $("editMeasurement").disabled = !description.editable;
       $("legacyEditNotice").hidden = description.editable;

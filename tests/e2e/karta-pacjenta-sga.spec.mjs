@@ -36,7 +36,7 @@ test('Enter, Escape, przyciski i Wstecz zamykają szczegóły do tej samej karty
   await saveSga(fixture.frame, fixture.ids.a);
   const { owner, card } = await goToSgaCard(page, fixture, 'index');
   const tile = card.locator(SGA_TILE), dialog = owner.locator(SGA_DIALOG);
-  await tile.evaluate(node => node.scrollIntoView({ block: 'center' }));
+  await tile.evaluate(node => node.scrollIntoView({ block: 'center', behavior: 'instant' }));
   await tile.focus();
   const position = await scrollPosition(owner);
   expect(position.some(value => value > 0), 'exercise a genuinely scrolled patient card').toBe(true);
@@ -137,7 +137,7 @@ test('synchronizacja czeka na zamknięcie SGA, a potem odświeża dane z zachowa
   // represents a saved version arriving from another device, not a fake result.
   const card = await openStatusCard(fixture.frame, fixture.ids.a);
   const tile = card.locator(SGA_TILE), dialog = fixture.frame.locator(SGA_DIALOG);
-  await tile.evaluate(node => node.scrollIntoView({ block: 'center' }));
+  await tile.evaluate(node => node.scrollIntoView({ block: 'center', behavior: 'instant' }));
   await tile.focus();
   const position = await scrollPosition(fixture.frame);
   expect(position.some(value => value > 0)).toBe(true);
@@ -148,6 +148,15 @@ test('synchronizacja czeka na zamknięcie SGA, a potem odświeża dane z zachowa
     await expect(tile).toContainText(oldValue);
     await tile.press('Enter');
     await expect(dialog).toBeVisible();
+    await expect.poll(() => scrollPosition(fixture.frame)).toEqual(position);
+    // The top-layer backdrop must not let wheel gestures move the underlying
+    // document/card, even though only the internal card receives the extra lock.
+    await page.mouse.move(20, 20);
+    await page.mouse.wheel(0, 300);
+    await fixture.frame.evaluate(() => new Promise(resolve => {
+      requestAnimationFrame(() => { requestAnimationFrame(resolve); });
+    }));
+    expect(await scrollPosition(fixture.frame)).toEqual(position);
     const contentBefore = await dialog.innerText();
     await fixture.frame.evaluate(async ({ patientId, payload }) => {
       await window.VildaVault.savePatient(payload, { patientId, dedup: false });

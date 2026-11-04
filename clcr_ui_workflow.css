@@ -1136,7 +1136,7 @@ html[data-clcr-workflow-ui="1"][data-clcr-active-module]:not(
     [data-clcr-active-module="timed-urine-panel"]
   ):not([data-clcr-active-module="serum-anion-gap"]):not(
     [data-clcr-active-module="spot-fe-uag"]
-  ):not([data-clcr-active-module="spot-tmp-gfr"]):not(
+  ):not([data-clcr-active-module="spot-potassium-index"]):not([data-clcr-active-module="spot-tmp-gfr"]):not(
     [data-clcr-active-module="stone-profile"]
   )
   #elecCard {

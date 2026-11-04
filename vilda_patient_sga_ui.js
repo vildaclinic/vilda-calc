@@ -166,8 +166,13 @@
       let ended = false;
       let unregisterBack = null, unregisterLock = null, releaseScroll = null, observer = null;
       const savedScroll = typeof opts.captureScroll === 'function' ? opts.captureScroll() : null;
+      // Native dialog focus can move the document even when its scrolling element
+      // is not one of the overflowing ancestors of the patient-card tile.
+      const savedWindowScroll = { left: win.scrollX, top: win.scrollY };
       const scrollHosts = [];
-      for (let node = tile.parentElement; node; node = node.parentElement) {
+      // The shared lockScroll adapter locks the document. Applying overflow to
+      // both html and body would collapse its scroll range to the viewport.
+      for (let node = tile.parentElement; node && node !== doc.body && node !== doc.documentElement; node = node.parentElement) {
         if (node.scrollHeight > node.clientHeight || node.scrollWidth > node.clientWidth) {
           scrollHosts.push({ node, top: node.scrollTop, left: node.scrollLeft, locked: node.classList.contains('vilda-sga-scroll-locked') });
         }
@@ -176,6 +181,7 @@
         if (!visible(tile)) return;
         if (savedScroll && typeof opts.restoreScroll === 'function') opts.restoreScroll(savedScroll);
         scrollHosts.forEach(item => { if (item.node.isConnected) { item.node.scrollTop = item.top; item.node.scrollLeft = item.left; } });
+        win.scrollTo({ left: savedWindowScroll.left, top: savedWindowScroll.top, behavior: 'instant' });
       }
       function finish(restoreFocus) {
         if (ended) return;
@@ -218,7 +224,7 @@
       try {
         if (typeof opts.lockScroll === 'function') releaseScroll = opts.lockScroll(dialog);
         scrollHosts.forEach(item => item.node.classList.add('vilda-sga-scroll-locked'));
-        dialog.showModal(); dismiss.focus({ preventScroll: true });
+        dialog.showModal(); dismiss.focus({ preventScroll: true }); restorePosition();
         if (typeof opts.registerBack === 'function') unregisterBack = opts.registerBack(() => finish(true));
         if (typeof opts.registerLock === 'function') unregisterLock = opts.registerLock(() => finish(false));
         if (ended) return;

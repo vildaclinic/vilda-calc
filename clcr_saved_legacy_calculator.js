@@ -29,7 +29,10 @@
   const excr_mgkg = (e, n, t) => (e && n && t ? (e * n) / (100 * t) : null);
   const excr_mmol_d = (e, n) => (e && n ? (e * n) / 1e3 : null);
   const ratio = (e, n) => (e && n ? e / n : null);
-  const K_frac = (e, n) => (e && n ? (e / (e + n)) * 100 : null);
+  function K_frac(potassiumValue, sodiumValue) {
+    const result = root.VildaClcrPotassiumIndex?.evaluate?.({ potassiumValue, sodiumValue }, null);
+    return result?.valid ? result.rawValue : null;
+  }
   const calciumMgDl = (e) => e ? e * 4 : null;
   const magnesiumMgDl = (e) => e ? e / 10 : null;
   const dailyAmount = (e, minutes) => e * (1440 / minutes);
@@ -193,6 +196,15 @@
       if (!result.valid) throw new Error(result.message || "Sprawdź dane Mg/Ca.");
       const datapoint = { id: parameterKey, sourceFormulaId: formulaId, label: persistence.LABEL, testKey: "clcr:Mg_Ca" };
       if (!persistence.augmentDatapoint({ getAttribute: () => JSON.stringify(result.snapshot) }, datapoint)) throw new Error("Nie można utrwalić obliczenia Mg/Ca.");
+      return datapoint;
+    }
+    if (formulaId === "K_frac") {
+      const engine = requiredModule("VildaClcrPotassiumIndex"), persistence = requiredModule("ClcrPotassiumIndexPersistence");
+      const policy = requiredModule("VildaClcrPotassiumIndexData").getProfile("KFR_2026_11");
+      const result = engine.evaluate(engine.inputFromValues(values, { ...context, formulaId: "K_frac" }), policy);
+      if (!result.valid) throw new Error(result.message || "Sprawdź dane K/(K+Na).");
+      const datapoint = { id: parameterKey, sourceFormulaId: formulaId, label: persistence.LABEL, testKey: "clcr:K_frac" };
+      if (!persistence.augmentDatapoint({ getAttribute: () => JSON.stringify(result.snapshot) }, datapoint)) throw new Error("Nie można utrwalić obliczenia K/(K+Na).");
       return datapoint;
     }
     if (formulaId === "B_Cr") {
@@ -400,7 +412,6 @@
     }
     else if (formulaId === "Ca_Cit") value = ratio(calcium, number(values, "U_Cit"));
     else if (formulaId === "B_Cr") value = proteinCreatinineRatio(number(values, "U_Prot"), urineCr, sample.volume);
-    else if (formulaId === "K_frac") { value = K_frac(number(values, "U_K"), number(values, "U_Na")); unit = "%"; digits = 1; }
     else return null;
     return modeled(formulaId, parameterKey, value, unit, digits, values, context, formulaId === "Prot_mgkg" ? { displayValue: String(value).replace(".", ","), datapoint: { assessment: "unassessed", outOfRange: null, norm: "", tone: "neutral" } } : {});
   }
