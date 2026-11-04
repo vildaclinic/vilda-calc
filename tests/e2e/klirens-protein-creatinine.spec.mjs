@@ -1,4 +1,4 @@
-import { showClcrResults, showBadaniaView, clcrRow, clcrPoints, clcrPoint } from '../support/badania-klirens.mjs';
+import { showClcrResults, showBadaniaView, clcrRow, clcrPoints, clcrPoint, clcrCards, closeClcrDetails } from '../support/badania-klirens.mjs';
 import fs from 'node:fs/promises';
 import { expect, test } from '@playwright/test';
 import { czekajNaUstabilizowanyUklad, kliknij } from '../support/uklad-czekanie.mjs';
@@ -431,6 +431,24 @@ test('B/Cr: cztery znaki nierówności zachowane w zapisie, Badaniach i bez punk
   await page.locator('#clcrOpenBadaniaBtn').click();
   await showClcrResults(page, 'charts');
   await expect(clcrPoints(page)).toHaveCount(0);
+  await expect(clcrCards(page).locator('.vilda-lab-hist-card-chart svg')).toHaveCount(0);
+  const records = clcrCards(page).locator('.vilda-lab-result-chart-record');
+  await expect(records).toHaveCount(4);
+  for (const note of saved) {
+    const measurement = projected.find(item => item.noteId === note.id);
+    const record = records.and(page.locator(`[data-note-id="${note.id}"]`));
+    await expect(record).toHaveCount(1);
+    await expect(record.locator('.vilda-lab-result-chart-record-value')).toHaveText(
+      measurement.displayValue.replace(/\./g, ',') + ' ' + measurement.unit,
+    );
+    await expect(record.locator('time')).toHaveAttribute('datetime', note.clinicalDateISO);
+  }
+  const beforeOpen = await memory(page);
+  await records.and(page.locator(`[data-note-id="${saved[0].id}"]`)).click();
+  await expect(page.locator('#detailsDialog')).toBeVisible();
+  await expect(page.locator('#calculationDetails')).toHaveAttribute('data-note-id', saved[0].id);
+  expect((await memory(page)).notes).toEqual(beforeOpen.notes);
+  await closeClcrDetails(page);
   await showBadaniaView(page, 'table');
   for (const note of saved) await expect(clcrRow(page, note.id)).toHaveCount(1);
 });

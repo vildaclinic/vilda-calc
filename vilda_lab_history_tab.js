@@ -933,7 +933,25 @@
           formatNumber: formatNumber, formatDate: formatDate, joinLines: state.joinLines
         });
         if (chart) host.appendChild(chart);
-        else add(host, 'p', 'vilda-lab-hist-muted vilda-lab-hist-no-chart', 'Brak dokładnych wyników z datą do wykresu.');
+        else {
+          add(host, 'p', 'vilda-lab-hist-muted vilda-lab-hist-no-chart', 'Brak dokładnych wyników z datą do wykresu.');
+          // A series without any plottable point still exposes every saved
+          // observation, including censored/text values and missing dates.
+          var records = add(host, 'div', 'vilda-lab-result-chart-records');
+          view.entries.slice().sort(function (a, b) {
+            if (!a.dateISO || !b.dateISO) return a.dateISO ? -1 : b.dateISO ? 1 : 0;
+            return a.dateISO < b.dateISO ? 1 : a.dateISO > b.dateISO ? -1 : 0;
+          }).forEach(function (entry) {
+            var when = resultDate(entry);
+            var value = entry.display || entry.raw || '—';
+            var link = button(records, 'vilda-lab-result-chart-record', '', function () { selectResult(entry, view); });
+            link.setAttribute('data-note-id', entry.noteId || '');
+            link.setAttribute('aria-label', seriesLabel(view) + ': ' + value + ' · ' + when + '. Otwórz wynik');
+            add(link, 'span', 'vilda-lab-result-chart-record-value', value);
+            var date = add(link, 'time', 'vilda-lab-result-chart-record-date', when);
+            if (entry.dateISO) date.setAttribute('datetime', entry.dateISO);
+          });
+        }
         if (view.chart.skipped > 0) {
           var keys = Object.keys(SKIP_REASON).filter(function (key) { return own(view.chart.skippedByReason, key); });
           var reasons = keys.map(function (key) { return SKIP_REASON[key] + ': ' + view.chart.skippedByReason[key]; });

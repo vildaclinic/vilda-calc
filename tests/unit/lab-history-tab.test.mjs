@@ -204,6 +204,49 @@ describe('zakładka Badania: widok z zapisanych wyników', () => {
     filter.value = 'all'; filter.dispatch('change');
     expect(env.host.querySelectorAll('.vilda-lab-hist-result-row')).toHaveLength(5);
   });
+  it.each([
+    { label: 'dwa wyniki z operatorem', observations: [
+      { id: 'bounded-1', date: '2026-05-01', display: '<30', value: null, comparator: '<' },
+      { id: 'bounded-2', date: '2026-06-01', display: '>60', value: null, comparator: '>' },
+    ] },
+    { label: 'dwa wyniki bez daty', observations: [
+      { id: 'undated-1', date: null, display: '45', value: 45 },
+      { id: 'undated-2', date: null, display: '60', value: 60 },
+    ] },
+  ])('wykres bez punktów: $label pozostają dostępne jako osobne zapisy z właściwymi szczegółami', async ({ observations }) => {
+    const env = srodowisko({ pamiec: [[`vilda-lab-hist-view-${PID}`, 'charts']] });
+    const records = observations.map(item => ({ noteId: item.id, patientId: PID, parameterKey: 'clcr:ACR', seriesKey: 'clcr:ACR|mg/g',
+      label: 'Albumina/kreatynina — ACR', kind: item.comparator ? 'censored' : 'exact', status: 'recorded',
+      dateISO: item.date, displayValue: item.display, valueNum: item.value, comparator: item.comparator || null, unit: 'mg/g' }));
+    const projection = { measurements: records, series: [{ seriesKey: records[0].seriesKey }], handledNoteIds: records.map(item => item.noteId) };
+    const notes = observations.map(item => nota(item.id, item.date, { test: 'Albumina/kreatynina — ACR', value: item.display, unit: 'mg/g' }, { category: 'wynik-klirens' }));
+    const open = vi.fn();
+    const { wywolania } = otworz(env, sejf({ dane: { notes, series: [], treatment: [] } }), {
+      clcrSavedResults: { projectPatientNotes: () => projection }, openClcrResult: open,
+    });
+    await gotowe(env);
+    const card = env.host.querySelector('.vilda-lab-hist-card[data-source="clcr"]');
+    expect(card).not.toBeNull();
+    expect(card.querySelectorAll('svg')).toHaveLength(0);
+    expect(card.querySelectorAll('.vilda-lab-result-chart-point')).toHaveLength(0);
+    expect(card.querySelector('.vilda-lab-hist-no-chart')).not.toBeNull();
+    const links = card.querySelectorAll('.vilda-lab-result-chart-record');
+    expect(links).toHaveLength(2);
+    expect(links.map(link => link.getAttribute('data-note-id')).sort()).toEqual(observations.map(item => item.id).sort());
+    for (const item of observations) {
+      const link = card.querySelector('.vilda-lab-result-chart-record[data-note-id="' + item.id + '"]');
+      expect(txt(link.querySelector('.vilda-lab-result-chart-record-value'))).toBe(item.display + ' mg/g');
+      const when = link.querySelector('.vilda-lab-result-chart-record-date');
+      if (item.date) expect(when.getAttribute('datetime')).toBe(item.date);
+      else { expect(when.getAttribute('datetime')).toBeNull(); expect(when.textContent).toBe('Bez daty badania'); }
+      link.click();
+      expect(open.mock.lastCall[0].noteId).toBe(item.id);
+      expect(open.mock.lastCall[0].record).toBe(records.find(record => record.noteId === item.id));
+    }
+    expect(open).toHaveBeenCalledTimes(2);
+    expect(wywolania.edytor).toHaveLength(0);
+  });
+
   it('zwarta tabela: daty malejąco, kolor i norma z wpisu; różnica dopiero w szczegółach', async () => {
     const env = srodowisko();
     const d = dane();
