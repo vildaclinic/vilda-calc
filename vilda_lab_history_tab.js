@@ -1,10 +1,10 @@
 /* Zakładka „Badania” w karcie pacjenta — widok historii wyników badań (LAB-HISTORIA PR2).
  *
  * Moduł tylko rysuje: dane czyta z sejfu (serie, notatki, okresy leczenia), porównanie układa
- * model VildaLabHistory (vilda_lab_history.js), a wykres rysuje istniejący renderer trendu karty
- * (Nl z vilda_auth_ui.js, eksport window.__vildaLabTrend). Wyniki są pokazane tak, jak je zapisano:
- * bez dzisiejszych norm, bez pasma norm i bez ponownej oceny (LAB_INTERPRETATION_AGENT_GUIDE.md § 7).
- * Strzałka ↑/↓ i pigułka oceny pochodzą wyłącznie z modelu (zapisana norma wpisu albo koperta oceny).
+ * model VildaLabHistory (vilda_lab_history.js). Zwarta tabela grupuje wyniki według daty.
+ * VildaLabResultPresentation odczytuje zapisane normy i oceny, a VildaLabResultChart
+ * rysuje historię z zakresami właściwymi dla poszczególnych zapisów. Bez dzisiejszych
+ * norm i bez ponownej oceny (LAB_INTERPRETATION_AGENT_GUIDE.md § 7).
  *
  * window.VildaLabHistoryTab.render(host, patientId, options) → { refresh, destroy }
  *   options.openEditor({ note, template, anchor, onSaved })  edytor notatki karty (ga); po „Wpisz wynik”
@@ -26,7 +26,6 @@
   var VIEW_KEY = 'vilda-lab-hist-view-';
   var CONVERTER_WAIT_MS = 5000;
   var REFRESH_DELAY_MS = 150;
-  var ENVELOPE_ANALYTES = ['lh', 'fsh', 'inhibin_b'];
   var SKIP_REASON = {
     censored: 'wynik z „<” lub „>”',
     invalidated: 'ocena do ponowienia',
@@ -123,7 +122,8 @@
       var storage = own(options, 'storage') ? options.storage : null;
       if (!storage) { try { storage = win && win.sessionStorage; } catch (_) { storage = null; } }
       var now = typeof options.now === 'function' ? options.now : function () { return new Date(); };
-      var state = { gen: 0, destroyed: false, panel: 'all', view: null, data: null, timer: 0, retried: false, reminders: [], notice: null };
+      var state = { gen: 0, destroyed: false, panel: 'all', query: '', selected: null, view: null, data: null, timer: 0, retried: false, reminders: [], notice: null };
+      var resultsHost = null;
       var renalView = null;
       var initialPending = true;
 
@@ -157,10 +157,7 @@
       function recorded(entry) {
         return finite(entry.recordedValue) ? String(entry.recordedValue).replace('.', ',') + (entry.recordedUnit ? NBSP + entry.recordedUnit : '') : entry.raw;
       }
-      function deltaNumber(delta) {
-        var sign = delta.value > 0 ? '+' : delta.value < 0 ? '−' : '';
-        return sign + formatNumber(Math.abs(delta.value), delta.precision);
-      }
+
 
       var section = node('section', 'vilda-lab-hist');
       section.setAttribute('aria-label', 'Wyniki badań');
@@ -176,7 +173,7 @@
           schedule();
         },
         locked: function () {
-          state.gen++; state.data = null;
+          state.gen++; state.data = null; state.selected = null; state.query = '';
           if (renalView) { renalView.destroy(); renalView = null; }
           message('vilda-lab-hist-locked', 'Sejf jest zablokowany. Odblokuj go, aby zobaczyć wyniki badań.');
         }
@@ -332,10 +329,7 @@
         // Nowy wykres Klirensu mieści krótką serię na telefonie i zawsze ma pod
         // sobą wszystkie pomiary. Dawna reguła zwykłych badań pozostaje niżej.
         if (state.data && !state.data.view.panels.length && state.data.view.clcr && state.data.view.clcr.measurements.length) return 'charts';
-        // Decyzja 6.17: na telefonie domyślnie tabela (wykres 660 px skalowany do 288 px ma nieczytelne etykiety).
-        var narrow = false;
-        try { narrow = !!(win && win.matchMedia && win.matchMedia('(max-width: 480px)').matches); } catch (_) { /* bez matchMedia: szeroki ekran */ }
-        return narrow ? 'table' : 'charts';
+        return 'table';
       }
       function setView(mode) {
         state.view = mode;
@@ -345,8 +339,9 @@
 
       function openNote(noteId) {
         if (!noteId || !vault || typeof vault.getPatientNote !== 'function') return;
+        var gen = state.gen;
         Promise.resolve(vault.getPatientNote(noteId)).then(function (note) {
-          if (note) openEditor({ note: note });
+          if (note && current(gen) && !(typeof vault.isUnlocked === 'function' && !vault.isUnlocked())) openEditor({ note: note });
         }).catch(function () { /* wpis zniknął — odświeżenie pokaże stan sejfu */ });
       }
       function openEditor(request, afterSave) {
@@ -487,19 +482,61 @@
         }
         if (view.panels.length || renal) drawToolbar(view);
         if (view.pending.length) drawPending(view);
-        var mode = viewMode();
-        var panels = view.panels.filter(function (panel) { return state.panel === 'all' || panel.id === state.panel; });
-        panels.forEach(function (panel) {
-          var group = add(section, 'section', 'vilda-lab-hist-panel');
-          group.setAttribute('data-panel', panel.id);
-          add(group, 'h3', 'vilda-lab-hist-panel-h', panel.label);
-          if (mode === 'table') drawTable(group, panel);
-          else drawCharts(group, panel);
-        });
-        if (renal && (state.panel === 'all' || state.panel === 'renal')) drawClcr(view.clcr, mode);
-        // W widoku wykresów leczenie raz, pod wszystkimi panelami; tabela wplata je w swoje wiersze.
-        if (mode !== 'table') drawTreatment(section, panels);
+        resultsHost = add(section, 'div', 'vilda-lab-hist-results');
+        drawResults();
         drawFooter(view);
+      }
+
+      function matchesQuery(value) {
+        function fold(input) {
+          var result = String(input || '').toLowerCase().replace(/ł/g, 'l');
+          try { return result.normalize('NFD').replace(/[\u0300-\u036f]/g, ''); } catch (_) { return result; }
+        }
+        return fold(value).indexOf(fold(state.query).trim()) !== -1;
+      }
+      function drawResults() {
+        if (!resultsHost || !state.data) return;
+        if (renalView) { renalView.destroy(); renalView = null; }
+        clear(resultsHost);
+        var view = state.data.view;
+        if (!view.panels.length && !(view.clcr && view.clcr.measurements.length)) return;
+        var mode = viewMode();
+        var panels = view.panels.filter(function (panel) { return state.panel === 'all' || panel.id === state.panel; }).map(function (panel) {
+          return Object.assign({}, panel, { series: panel.series.filter(function (series) { return matchesQuery(series.label); }) });
+        }).filter(function (panel) { return panel.series.length; });
+        var renal = view.clcr && view.clcr.measurements.length && (state.panel === 'all' || state.panel === 'renal')
+          ? Object.assign({}, view.clcr, { measurements: view.clcr.measurements.filter(function (record) { return matchesQuery(record.label + ' ' + (record.method || '')); }) }) : null;
+        if (!panels.length && !(renal && renal.measurements.length)) {
+          add(resultsHost, 'p', 'vilda-lab-hist-state', 'Brak wyników pasujących do wyszukiwania.');
+          return;
+        }
+        if (panels.length) {
+          var legend = add(resultsHost, 'div', 'vilda-lab-hist-legend');
+          legend.setAttribute('aria-label', 'Kolory zapisanych zakresów');
+          [['within', '● W zakresie'], ['below', '↓ Poniżej'], ['above', '↑ Powyżej']].forEach(function (item) {
+            add(legend, 'span', 'tone-' + item[0], item[1]);
+          });
+          drawSelectedResult(resultsHost);
+          if (mode === 'table') drawDateTable(resultsHost, panels);
+          else {
+            var grid = add(resultsHost, 'div', 'vilda-lab-hist-grid');
+            panels.forEach(function (panel) { panel.series.forEach(function (series) { drawCard(grid, series); }); });
+          }
+          drawTreatment(resultsHost, panels);
+        }
+        if (renal && renal.measurements.length) drawClcr(renal, mode, resultsHost);
+      }
+
+      function describeResult(entry) {
+        var helper = win && win.VildaLabResultPresentation;
+        if (!helper || typeof helper.describe !== 'function') return { norms: [], normText: '—', tone: 'neutral', symbol: '', warning: '' };
+        return helper.describe(entry, {
+          converter: win && win.LabUnitConverter,
+          parseNorm: trend && trend.parseNorm,
+          snapshot: win && win.VildaLabSnapshot,
+          rangeSnapshot: win && win.VildaLabRangeSnapshot,
+          assessmentUI: win && win.VildaLabAssessmentUI
+        });
       }
 
       function drawHeader(view) {
@@ -525,32 +562,44 @@
 
       function drawToolbar(view) {
         var bar = add(section, 'div', 'vilda-lab-hist-toolbar');
-        var chips = add(bar, 'div', 'vilda-lab-hist-chips');
-        chips.setAttribute('role', 'group');
-        chips.setAttribute('aria-label', 'Panel badań');
-        var choices = [{ id: 'all', label: 'Wszystkie · ' + view.summary.analytes }].concat(view.panels.map(function (panel) {
+        var searchBox = add(bar, 'div', 'vilda-lab-hist-search');
+        var search = add(searchBox, 'input', 'vilda-lab-hist-search-input');
+        search.type = 'search';
+        search.placeholder = 'Szukaj badania…';
+        search.value = state.query;
+        search.setAttribute('aria-label', 'Szukaj badania');
+        var reset = button(searchBox, 'vilda-lab-hist-search-clear', '×', function () {
+          search.value = ''; state.query = ''; state.selected = null; reset.hidden = true; drawResults(); if (typeof search.focus === 'function') search.focus();
+        });
+        reset.setAttribute('aria-label', 'Wyczyść wyszukiwanie badań');
+        reset.hidden = !state.query;
+        search.addEventListener('input', function () { state.query = search.value; state.selected = null; reset.hidden = !state.query; drawResults(); });
+        var filter = add(bar, 'select', 'vilda-lab-hist-panel-select');
+        filter.setAttribute('aria-label', 'Panel badań');
+        var choices = [{ id: 'all', label: 'Wszystkie' }].concat(view.panels.map(function (panel) {
           return { id: panel.id, label: panel.label + ' · ' + panel.series.length };
         }));
         if (view.clcr && view.clcr.measurements.length) choices.push({ id: 'renal', label: 'Nerki i mocz · ' + view.clcr.series.length });
         if (!choices.some(function (choice) { return choice.id === state.panel; })) state.panel = 'all';
         choices.forEach(function (choice) {
-          var chip = button(chips, 'vilda-lab-hist-chip', choice.label, function () { state.panel = choice.id; draw(); });
-          chip.setAttribute('aria-pressed', String(state.panel === choice.id));
-          chip.setAttribute('data-panel', choice.id);
+          var option = add(filter, 'option', '', choice.label);
+          option.value = choice.id;
         });
+        filter.value = state.panel;
+        filter.addEventListener('change', function () { state.panel = filter.value; state.selected = null; drawResults(); });
         var segment = add(bar, 'div', 'vilda-lab-hist-segment');
         segment.setAttribute('role', 'group');
         segment.setAttribute('aria-label', 'Widok wyników');
         var mode = viewMode();
-        [['charts', 'Wykresy'], ['table', 'Tabela']].forEach(function (pair) {
+        [['table', 'Tabela'], ['charts', 'Wykresy']].forEach(function (pair) {
           var option = button(segment, 'vilda-lab-hist-segment-btn', pair[1], function () { setView(pair[0]); });
           option.setAttribute('aria-pressed', String(mode === pair[0]));
           option.setAttribute('data-view', pair[0]);
         });
       }
 
-      function drawClcr(projection, mode) {
-        var group = add(section, 'section', 'vilda-lab-hist-panel');
+      function drawClcr(projection, mode, parent) {
+        var group = add(parent || section, 'section', 'vilda-lab-hist-panel');
         group.setAttribute('data-panel', 'renal');
         add(group, 'h3', 'vilda-lab-hist-panel-h', 'Nerki i mocz');
         var host = add(group, 'div');
@@ -667,131 +716,161 @@
         }
         return null;
       }
-      function assessmentsBlock(parent, views) {
-        if (!trend || typeof trend.assessments !== 'function') return;
-        var series = views.filter(function (view) { return ENVELOPE_ANALYTES.indexOf(view.key) !== -1; })
-          .map(function (view) { return rawSeries(view.key); })
-          .filter(function (serie) { return serie && (serie.points || []).some(function (point) { return own(point, 'assessment'); }); });
-        if (!series.length) return;
-        var total = series.reduce(function (sum, serie) {
-          return sum + serie.points.filter(function (point) { return own(point, 'assessment'); }).length;
-        }, 0);
-        // Zawsze rozwinięte, jak dawniej w „Historii”: ostrzeżenia kliniczne zapisanej oceny nie mogą czekać za kliknięciem.
-        var box = add(parent, 'div', 'vilda-lab-hist-assess');
-        add(box, 'p', 'vilda-lab-hist-assess-h', 'Zapisane oceny (' + total + ')');
-        series.forEach(function (serie) {
-          try { trend.assessments(box, serie, openNote); } catch (_) { /* renderer oceny pokazuje własny stan błędu */ }
-        });
-        add(box, 'p', 'vilda-lab-hist-muted', 'Tytuł oceny cytowany dosłownie z zapisu, bez ponownego liczenia.');
+      function selectResult(entry, view) {
+        state.selected = { noteId: entry.noteId, key: view.key };
+        drawResults();
+        var details = resultsHost.querySelector('.vilda-lab-hist-result-details');
+        if (details) {
+          if (typeof details.focus === 'function') details.focus();
+          if (typeof details.scrollIntoView === 'function') details.scrollIntoView({ block: 'nearest' });
+        }
       }
-
-      function drawCharts(group, panel) {
-        var grid = add(group, 'div', 'vilda-lab-hist-grid');
-        panel.series.forEach(function (view) { drawCard(grid, view); });
-        if (panel.series.some(function (view) { return view.methodFootnote; })) {
-          add(group, 'p', 'vilda-lab-hist-muted', 'Różnica liczona z wartości zapisanych; metoda oznaczenia mogła się różnić.');
+      function closeResult() {
+        var noteId = state.selected && state.selected.noteId;
+        state.selected = null;
+        drawResults();
+        var buttons = resultsHost.querySelectorAll('button[data-note-id]');
+        for (var i = 0; i < buttons.length; i++) {
+          if (buttons[i].getAttribute('data-note-id') === noteId && typeof buttons[i].focus === 'function') { buttons[i].focus(); break; }
+        }
+      }
+      function resultDate(entry) {
+        var label = entry.dateISO ? formatDate(entry.dateISO) : 'Bez daty badania';
+        return label + (entry.dateISO && entry.dateSource !== 'badanie' && DATE_SOURCE[entry.dateSource] ? ' · ' + DATE_SOURCE[entry.dateSource] : '');
+      }
+      section.addEventListener('keydown', function (event) {
+        if (event.key === 'Escape' && state.selected) { event.preventDefault(); closeResult(); }
+      });
+      function drawNorms(parent, info, className) {
+        if (!info.norms.length) { add(parent, 'span', className, '—'); return; }
+        info.norms.forEach(function (norm) {
+          add(parent, 'span', className, (info.norms.length > 1 && norm.label ? norm.label + ': ' : '') + norm.text);
+        });
+      }
+      function drawValue(parent, entry, view, info, className) {
+        var line = add(parent, 'span', 'vilda-lab-hist-result-value');
+        var shownUnit = entry.unit || (['censored', 'invalidated', 'unavailable'].indexOf(entry.kind) !== -1 ? entry.recordedUnit : '');
+        var value = add(line, 'span', className + ' tone-' + info.tone, bareValue(entry, shownUnit));
+        if (entry.converted) value.classList.add('is-converted');
+        if (shownUnit) add(line, 'span', 'vilda-lab-hist-result-unit', shownUnit);
+        if (info.symbol) add(line, 'span', 'vilda-lab-hist-flag tone-' + info.tone, info.symbol);
+        if (info.warning) {
+          var warning = add(line, 'span', 'vilda-lab-hist-warning-mark', '!');
+          warning.setAttribute('title', info.warning);
+          warning.setAttribute('aria-label', info.warning);
+        }
+      }
+      function drawSelectedResult(parent) {
+        if (!state.selected) return;
+        var found = null, view = null;
+        state.data.view.panels.forEach(function (panel) { panel.series.forEach(function (series) {
+          if (series.key !== state.selected.key) return;
+          series.entries.forEach(function (entry) { if (entry.noteId === state.selected.noteId) { found = entry; view = series; } });
+        }); });
+        if (!found) { state.selected = null; return; }
+        var info = describeResult(found);
+        var box = add(parent, 'section', 'vilda-lab-hist-result-details');
+        box.setAttribute('data-note-id', found.noteId || '');
+        box.setAttribute('role', 'region');
+        box.setAttribute('aria-label', 'Szczegóły wyniku ' + shortLabel(view.label));
+        box.setAttribute('tabindex', '-1');
+        var top = add(box, 'div', 'vilda-lab-hist-details-head');
+        add(top, 'h3', '', shortLabel(view.label));
+        var close = button(top, 'vilda-lab-hist-details-close', '×', closeResult);
+        close.setAttribute('aria-label', 'Zamknij szczegóły wyniku');
+        add(box, 'p', 'vilda-lab-hist-date', resultDate(found));
+        drawValue(box, found, view, info, 'vilda-lab-hist-detail-value');
+        var norms = add(box, 'div', 'vilda-lab-hist-detail-norms');
+        add(norms, 'span', 'vilda-lab-hist-muted', 'Norma');
+        drawNorms(norms, info, 'vilda-lab-hist-result-norm');
+        if (found.converted) add(box, 'p', 'vilda-lab-hist-muted', 'Zapisano: ' + recorded(found));
+        if (found.source === 'gh-note') add(box, 'p', 'vilda-lab-hist-muted', GH_SOURCE);
+        if (KIND_NOTE[found.kind]) add(box, 'p', 'vilda-lab-hist-muted', KIND_NOTE[found.kind]);
+        var comment = commentText(found.comment);
+        if (comment) add(box, 'p', 'vilda-lab-hist-result-comment', comment);
+        if (found.delta && found.delta.available) add(box, 'p', 'vilda-lab-hist-muted', 'Zmiana: ' + model.formatDelta(found.delta, win && win.LabUnitConverter));
+        if (typeof options.openEditor === 'function' && found.noteId) button(box, 'vilda-lab-hist-link vilda-lab-hist-edit-result', 'Edytuj wpis', function () { openNote(found.noteId); });
+        if (view.entries.length > 1) {
+          var history = add(box, 'details', 'vilda-lab-hist-result-history');
+          add(history, 'summary', '', 'Pozostałe wyniki (' + (view.entries.length - 1) + ')');
+          view.entries.slice().reverse().filter(function (entry) { return entry !== found; }).forEach(function (entry) {
+            var row = button(history, 'vilda-lab-hist-history-entry', '', function () { selectResult(entry, view); });
+            row.setAttribute('data-note-id', entry.noteId || '');
+            add(row, 'span', '', resultDate(entry));
+            var otherInfo = describeResult(entry);
+            var content = add(row, 'span', 'vilda-lab-hist-result-numbers');
+            drawValue(content, entry, view, otherInfo, 'vilda-lab-hist-cell-value');
+            drawNorms(content, otherInfo, 'vilda-lab-hist-result-norm');
+          });
+        }
+        if (found.status || found.assessment || found.norm) {
+          var sources = add(box, 'details', 'vilda-lab-hist-result-sources');
+          add(sources, 'summary', '', 'Szczegóły i źródła');
+          statusLine(sources, found);
+          if (found.norm && !found.normAccepted) add(sources, 'p', 'vilda-lab-hist-muted', 'Norma w oryginalnym wpisie: ' + found.norm);
+          if (found.assessment && trend && typeof trend.assessments === 'function') {
+            var drawn = false;
+            var detailsGen = state.gen;
+            sources.addEventListener('toggle', function () {
+              if (!sources.open || drawn || !current(detailsGen) || !state.data || sources.isConnected === false
+                  || (typeof vault.isUnlocked === 'function' && !vault.isUnlocked())) return;
+              drawn = true;
+              var serie = rawSeries(view.key);
+              if (!serie) return;
+              var copy = Object.assign({}, serie, { points: (serie.points || []).filter(function (point) { return point.noteId === found.noteId; }) });
+              try { trend.assessments(sources, copy, openNote); } catch (_) { add(sources, 'p', '', 'Pełna ocena jest dostępna w zapisanym wpisie.'); }
+            });
+          }
         }
       }
 
-      // Karta badania: informacje po lewej, wykres po prawej; na wąskim ekranie wykres pod informacjami.
-      // Wykres Nl ma układ 660 × 240, więc w kolumnie węższej niż ok. 420 px jego podpisy stają się nieczytelne.
       function drawCard(grid, view) {
         var card = add(grid, 'article', 'vilda-lab-hist-card');
         card.setAttribute('data-series', view.key);
-        var info = add(card, 'div', 'vilda-lab-hist-card-info');
-        var head = add(info, 'p', 'vilda-lab-hist-card-h');
-        add(head, 'span', 'vilda-lab-hist-card-name', shortLabel(view.label));
-        add(head, 'span', 'vilda-lab-hist-muted', (view.unit ? ' ' + view.unit : '') + ' · ×' + view.entries.length);
+        var head = add(card, 'div', 'vilda-lab-hist-card-head');
+        add(head, 'h3', 'vilda-lab-hist-card-name', shortLabel(view.label));
         var shown = view.last || view.entries[view.entries.length - 1];
         if (shown) {
-          var line = add(info, 'p', 'vilda-lab-hist-last');
-          var value = add(line, 'button', 'vilda-lab-hist-value', bareValue(shown, view.unit));
-          value.type = 'button';
-          value.setAttribute('data-note-id', shown.noteId || '');
-          value.setAttribute('title', 'Otwórz wpis' + (shown.converted ? ' · zapisano: ' + recorded(shown) : ''));
-          value.addEventListener('click', function () { openNote(shown.noteId); });
-          if (shown.flag) add(line, 'span', 'vilda-lab-hist-flag', shown.flag);
-          var when = shown.dateISO ? formatDate(shown.dateISO) : 'bez daty';
-          if (shown.dateSource !== 'badanie' && DATE_SOURCE[shown.dateSource]) when += ' (' + DATE_SOURCE[shown.dateSource] + ')';
-          var visit = formatAge(shown.ageMonths);
-          add(line, 'span', 'vilda-lab-hist-date', when + (visit ? ' · wizyta ' + visit : ''));
-          if (shown.source === 'gh-note') add(info, 'p', 'vilda-lab-hist-muted vilda-lab-hist-source', GH_SOURCE);
-          if (shown.converted) add(info, 'p', 'vilda-lab-hist-muted', 'przeliczono z ' + recorded(shown));
-          if (KIND_NOTE[shown.kind]) add(info, 'p', 'vilda-lab-hist-muted', KIND_NOTE[shown.kind]);
-          if (view.lastDateEntries.length > 1) {
-            add(info, 'p', 'vilda-lab-hist-muted', 'Tego dnia także: ' + view.lastDateEntries.filter(function (entry) { return entry !== shown; })
-              .map(function (entry) { return entry.display; }).join(', '));
-          }
-          statusLine(info, shown);
+          var info = describeResult(shown);
+          var latest = button(head, 'vilda-lab-hist-latest', '', function () { selectResult(shown, view); });
+          latest.setAttribute('data-note-id', shown.noteId || '');
+          latest.setAttribute('aria-label', 'Szczegóły wyniku ' + shortLabel(view.label) + ' ' + shown.display);
+          drawValue(latest, shown, view, info, 'vilda-lab-hist-value');
+          add(latest, 'span', 'vilda-lab-hist-date', resultDate(shown));
+          var norms = add(card, 'div', 'vilda-lab-hist-card-norms');
+          add(norms, 'span', 'vilda-lab-hist-muted', 'Norma: ');
+          drawNorms(norms, info, 'vilda-lab-hist-result-norm');
         }
-        if (view.previous) {
-          var previous = view.previous;
-          var parts = ['poprzednio ' + previous.display + ' (' + formatDate(previous.dateISO) + (previous.source === 'gh-note' ? ', ' + GH_SOURCE : '') + ')'];
-          var delta = view.delta;
-          if (delta && delta.available) parts.push('różnica ' + model.formatDelta(delta, win && win.LabUnitConverter));
-          else if (delta && delta.reason === 'method_mismatch') parts.push('różne metody oznaczenia — bez różnicy');
-          add(info, 'p', 'vilda-lab-hist-prev', parts.join(' · '));
-        }
-        view.pending.forEach(function (item) {
-          add(info, 'p', 'vilda-lab-hist-muted', 'oczekuje na wynik' + (item.dueDateISO ? ' · termin ' + formatDate(item.dueDateISO) : ''));
-        });
-        var merged = mergedNote(view.mergedFrom);
-        if (merged) add(info, 'p', 'vilda-lab-hist-muted vilda-lab-hist-merged', merged);
-        // Decyzja 6.23: przelicznik od razu z tym badaniem (tylko badanie znane przelicznikowi);
-        // przycisk w nagłówku zakładki zostaje bez badania.
+        drawChart(add(card, 'div', 'vilda-lab-hist-card-chart'), view);
         if (view.testKey) {
           var href = 'przelicznik-jednostek.html?badanie=' + encodeURIComponent(view.testKey);
-          var check = add(info, 'a', 'vilda-lab-hist-card-check', 'Nowy wynik ' + shortLabel(view.label) + ' w przeliczniku →');
+          var check = add(card, 'a', 'vilda-lab-hist-card-check', 'Nowy wynik ' + shortLabel(view.label) + ' →');
           check.setAttribute('href', href);
           check.addEventListener('click', function (event) { openConverter(event, href); });
         }
-        drawChart(add(card, 'div', 'vilda-lab-hist-card-chart'), view);
-        var comments = view.entries.slice().reverse().map(function (entry) {
-          return { entry: entry, comment: commentText(entry.comment) };
-        }).filter(function (item) { return item.comment; });
-        var envelope = ENVELOPE_ANALYTES.indexOf(view.key) !== -1;
-        if (!comments.length && !envelope) return;
-        var extra = add(card, 'div', 'vilda-lab-hist-card-extra');
-        if (comments.length) {
-          var box = add(extra, 'details', 'vilda-lab-hist-comments');
-          add(box, 'summary', '', 'Komentarze (' + comments.length + ')');
-          var list = add(box, 'ul', '');
-          comments.forEach(function (item) {
-            add(list, 'li', '', (item.entry.dateISO ? formatDate(item.entry.dateISO) + ' — ' : '') + item.comment);
-          });
-        }
-        if (envelope) assessmentsBlock(extra, [view]);
-        if (!extra.firstChild) card.removeChild(extra);
       }
-
       function drawChart(box, view) {
         var host = add(box, 'div', 'vilda-lab-hist-chart');
-        var chart = view.chart;
-        if (!trend || typeof trend.render !== 'function') {
+        var renderer = win && win.VildaLabResultChart;
+        if (!renderer || typeof renderer.render !== 'function') {
           add(host, 'p', 'vilda-lab-hist-muted', 'Wykres niedostępny — odśwież stronę.');
-        } else {
-          var svg = null;
-          // Bez pasma norm i bez dzisiejszej oceny punktów: funkcja norm zwraca null, pasmo wyłączone.
-          // Punkty bez normy wpisu (decyzja 6.22): przy punkcie sama wartość, bez strzałki i bez czerwieni
-          // wyróżnienia z Nl; strzałka wg zapisu zostaje przy wartości obok wykresu i w tabeli.
-          try { svg = trend.render({ test: view.label, testKey: view.key }, withoutPointFlags(chart), openNote, function () { return null; }, false); } catch (_) { /* jak brak wykresu */ }
-          if (svg) {
-            host.appendChild(svg);
-          } else {
-            add(host, 'p', 'vilda-lab-hist-muted vilda-lab-hist-no-chart', 'Za mało dokładnych wyników do wykresu.');
-          }
+          return;
         }
-        if (chart.skipped > 0) {
-          // Stała kolejność powodów (jak w SKIP_REASON), niezależna od chronologii wpisów.
-          var keys = Object.keys(SKIP_REASON).filter(function (key) { return own(chart.skippedByReason, key); })
-            .concat(Object.keys(chart.skippedByReason).filter(function (key) { return !own(SKIP_REASON, key); }));
-          var reasons = keys.map(function (key) { return (SKIP_REASON[key] || key) + ': ' + chart.skippedByReason[key]; });
-          add(box, 'p', 'vilda-lab-hist-foot', 'Poza wykresem: ' + chart.skipped + ' (' + reasons.join(' · ') + ')');
+        var chart = renderer.render(doc, view, {
+          describe: describeResult,
+          openNote: function (noteId) {
+            var entry = view.entries.filter(function (item) { return item.noteId === noteId; })[0];
+            if (entry) selectResult(entry, view);
+          },
+          formatNumber: formatNumber, formatDate: formatDate
+        });
+        if (chart) host.appendChild(chart);
+        else add(host, 'p', 'vilda-lab-hist-muted vilda-lab-hist-no-chart', 'Brak dokładnych wyników z datą do wykresu.');
+        if (view.chart.skipped > 0) {
+          var keys = Object.keys(SKIP_REASON).filter(function (key) { return own(view.chart.skippedByReason, key); });
+          var reasons = keys.map(function (key) { return SKIP_REASON[key] + ': ' + view.chart.skippedByReason[key]; });
+          add(box, 'p', 'vilda-lab-hist-foot', 'Poza wykresem: ' + view.chart.skipped + (reasons.length ? ' (' + reasons.join(' · ') + ')' : ''));
         }
-      }
-      // Kopia danych wykresu z punktami bez normy: model widoku (tabela, ostatni wynik) zostaje nietknięty.
-      function withoutPointFlags(chart) {
-        return Object.assign({}, chart, { points: chart.points.map(function (point) { return Object.assign({}, point, { norm: null }); }) });
       }
 
       // Zdarzenia leczenia od pierwszego wyniku (z datą) pokazanych paneli wzwyż; wcześniejsze nie dotyczą tej historii.
@@ -809,8 +888,8 @@
       function drawTreatment(group, panels) {
         var rows = treatmentFor(panels);
         if (!rows.length) return;
-        var box = add(group, 'div', 'vilda-lab-hist-treatment');
-        add(box, 'p', 'vilda-lab-hist-treatment-h', 'Leczenie w okresie wyników');
+        var box = add(group, 'details', 'vilda-lab-hist-treatment');
+        add(box, 'summary', 'vilda-lab-hist-treatment-h', 'Leczenie w okresie wyników');
         var list = add(box, 'ul', '');
         rows.forEach(function (row) {
           var item = add(list, 'li', '');
@@ -821,96 +900,53 @@
         });
       }
 
-      function drawTable(group, panel) {
-        add(group, 'p', 'vilda-lab-hist-muted', 'Najnowsze u góry. Pod wartością różnica względem wcześniejszego wyniku tego badania z datą badania. Kliknięcie wartości otwiera wpis.');
-        var scroll = add(group, 'div', 'vilda-lab-hist-table-scroll');
-        var table = add(scroll, 'table', 'vilda-lab-hist-table');
-        var headRow = add(add(table, 'thead', ''), 'tr', '');
-        add(headRow, 'th', 'vilda-lab-hist-th-date', 'Data badania').setAttribute('scope', 'col');
-        panel.series.forEach(function (view) {
-          var th = add(headRow, 'th', '', shortLabel(view.label));
-          th.setAttribute('scope', 'col');
-          if (view.unit) add(th, 'span', 'vilda-lab-hist-th-unit', view.unit);
-        });
-        add(headRow, 'th', 'vilda-lab-hist-th-comment', 'Komentarz').setAttribute('scope', 'col');
-        var body = add(table, 'tbody', '');
-        var treatment = treatmentFor([panel]).slice();
-        var marks = { converted: false, other: false, assessed: false, gh: false, range: false };
-        var columns = panel.series.length + 2;
-        panel.rows.forEach(function (row) {
-          // Wiersz leczenia stoi nad wierszem wyników z tą samą lub wcześniejszą datą (tabela malejąco).
-          while (treatment.length && row.dateISO && treatment[0].dateISO >= row.dateISO) treatmentRow(body, treatment.shift(), columns);
-          var tr = add(body, 'tr', SAMPLE_DATES.indexOf(row.dateSource) !== -1 ? '' : 'is-undated');
-          var dateCell = add(tr, 'th', 'vilda-lab-hist-td-date', row.dateISO ? formatDate(row.dateISO) : 'bez daty');
-          dateCell.setAttribute('scope', 'row');
-          if (row.dateSource !== 'badanie' && DATE_SOURCE[row.dateSource]) add(dateCell, 'span', 'vilda-lab-hist-muted', DATE_SOURCE[row.dateSource]);
-          var comments = [];
-          panel.series.forEach(function (view) {
-            var td = add(tr, 'td', 'vilda-lab-hist-td-value');
-            var entries = row.cells[view.key] || [];
-            if (!entries.length) { add(td, 'span', 'vilda-lab-hist-muted', '—'); return; }
-            entries.forEach(function (entry) {
-              tableCell(td, entry, view, marks);
-              var comment = commentText(entry.comment);
-              if (comment && comments.indexOf(comment) === -1) comments.push(comment);
-            });
+      function drawDateTable(parent, panels) {
+        var headings = add(parent, 'div', 'vilda-lab-hist-table-head');
+        add(headings, 'span', '', 'Badanie');
+        add(headings, 'span', '', 'Wynik / Norma');
+        var groups = {}, dates = [];
+        panels.forEach(function (panel) { panel.series.forEach(function (view) {
+          view.entries.forEach(function (entry) {
+            var key = (entry.dateISO || '') + '|' + entry.dateSource;
+            if (!groups[key]) { groups[key] = { dateISO: entry.dateISO, source: entry.dateSource, entries: [] }; dates.push(key); }
+            groups[key].entries.push({ entry: entry, view: view });
           });
-          add(tr, 'td', 'vilda-lab-hist-td-comment', comments.join(' · '));
+        }); });
+        dates.sort(function (a, b) {
+          var left = groups[a].dateISO, right = groups[b].dateISO;
+          if (!left || !right) return left ? -1 : right ? 1 : 0;
+          return left < right ? 1 : left > right ? -1 : 0;
         });
-        treatment.forEach(function (row) { treatmentRow(body, row, columns); });
-        var legend = [];
-        if (marks.converted) legend.push('wartość podkreślona kropkami — przeliczona z innej jednostki (zapis we wpisie)');
-        if (marks.other) legend.push('* — jednostka nierozpoznana albo brak jednostki; wartość jak zapisano, bez różnicy i bez wykresu');
-        if (marks.assessed) legend.push('○ — zapisana ocena (szczegóły niżej, w „Zapisane oceny”)');
-        if (marks.range) legend.push('↑/↓ — poza zakresem zapisanym z wynikiem przy przypięciu albo poza normą wpisaną we wpisie; zakres i źródło w podpowiedzi');
-        if (marks.gh) legend.push('GH — IGF-1 z notatki leczenia GH (pole „IGF-1 (wynik z kontroli)”); bez daty badania data to termin odbytej kontroli');
-        if (legend.length) add(group, 'p', 'vilda-lab-hist-foot', legend.join(' · '));
-        if (panel.id === 'gonadal') assessmentsBlock(group, panel.series);
-      }
-      function tableCell(td, entry, view, marks) {
-        var cell = add(td, 'button', 'vilda-lab-hist-cell');
-        cell.type = 'button';
-        cell.setAttribute('data-note-id', entry.noteId || '');
-        cell.addEventListener('click', function () { openNote(entry.noteId); });
-        var details = [shortLabel(view.label), entry.dateISO ? formatDate(entry.dateISO) : 'bez daty', 'zapisano: ' + (entry.converted ? recorded(entry) : entry.raw || entry.display)];
-        if (entry.source === 'gh-note') details.push(GH_SOURCE);
-        if (entry.norm) details.push('norma z wpisu: ' + entry.norm);
-        if (entry.status && (entry.status.kind === 'range' || entry.status.kind === 'range-general')) {
-          var where = rangeContext(entry.status);
-          details.push((entry.status.flag ? entry.status.flag + ' ' : '') + entry.status.text + (entry.status.bounds ? ' ' + entry.status.bounds : '') + (where ? ' (' + where + ')' : ''));
-          if (entry.status.flag) marks.range = true;
-        } else if (entry.status) details.push(entry.status.text);
-        cell.setAttribute('title', details.join(' · '));
-        var value = add(cell, 'span', 'vilda-lab-hist-cell-value', entry.kind === 'other-unit' || entry.kind === 'text' ? (entry.raw || entry.display) + '*' : bareValue(entry, view.unit));
-        if (entry.converted) { value.classList.add('is-converted'); marks.converted = true; }
-        if (entry.kind === 'other-unit' || entry.kind === 'text') marks.other = true;
-        if (entry.kind === 'invalidated' || entry.kind === 'unavailable') value.classList.add('is-muted');
-        if (entry.flag) add(cell, 'span', 'vilda-lab-hist-flag', ' ' + entry.flag);
-        if (entry.status && entry.status.kind === 'recorded') { add(cell, 'span', 'vilda-lab-hist-mark', ' ○'); marks.assessed = true; }
-        if (entry.source === 'gh-note') { add(cell, 'span', 'vilda-lab-hist-mark vilda-lab-hist-mark-gh', ' GH'); marks.gh = true; }
-        if (entry.delta && entry.delta.available) add(cell, 'span', 'vilda-lab-hist-cell-delta', deltaNumber(entry.delta));
-        else if (entry.delta && entry.delta.reason === 'method_mismatch') add(cell, 'span', 'vilda-lab-hist-cell-delta', 'różne metody');
-      }
-      function treatmentRow(body, row, columns) {
-        var tr = add(body, 'tr', 'vilda-lab-hist-tr-treatment');
-        var th = add(tr, 'th', 'vilda-lab-hist-td-date', formatDate(row.dateISO));
-        th.setAttribute('scope', 'row');
-        var td = add(tr, 'td', '');
-        td.setAttribute('colspan', String(columns - 1));
-        if (row.noteId) button(td, 'vilda-lab-hist-link', treatmentText(row), function () { openNote(row.noteId); }).setAttribute('data-note-id', row.noteId);
-        else add(td, 'span', '', treatmentText(row));
+        dates.forEach(function (key) {
+          var group = groups[key];
+          var box = add(parent, 'section', 'vilda-lab-hist-date-group');
+          box.setAttribute('data-date-iso', group.dateISO || '');
+          var label = group.dateISO ? formatDate(group.dateISO) : 'Bez daty badania';
+          if (group.source !== 'badanie' && DATE_SOURCE[group.source]) label += ' · ' + DATE_SOURCE[group.source];
+          add(box, 'h3', 'vilda-lab-hist-date-heading', label);
+          group.entries.forEach(function (item) {
+            var entry = item.entry, view = item.view, info = describeResult(entry);
+            var row = button(box, 'vilda-lab-hist-result-row vilda-lab-hist-cell', '', function () { selectResult(entry, view); });
+            row.setAttribute('data-note-id', entry.noteId || '');
+            row.setAttribute('data-series', view.key);
+            row.setAttribute('title', view.label + ' · ' + (entry.raw || entry.display) + (entry.converted ? ' · zapisano: ' + recorded(entry) : ''));
+            var name = add(row, 'span', 'vilda-lab-hist-result-name', shortLabel(view.label));
+            if (entry.source === 'gh-note') add(name, 'span', 'vilda-lab-hist-source', 'GH');
+            var numbers = add(row, 'span', 'vilda-lab-hist-result-numbers');
+            drawValue(numbers, entry, view, info, 'vilda-lab-hist-cell-value');
+            drawNorms(numbers, info, 'vilda-lab-hist-result-norm');
+            var arrow = add(row, 'span', 'vilda-lab-hist-result-chevron', '›');
+            arrow.setAttribute('aria-hidden', 'true');
+          });
+        });
       }
 
       function drawFooter(view) {
-        var foot = add(section, 'div', 'vilda-lab-hist-footer');
+        var foot = add(section, 'details', 'vilda-lab-hist-footer');
+        add(foot, 'summary', '', 'O zapisanych wynikach');
         add(foot, 'p', 'vilda-lab-hist-footer-main', 'Wyniki pokazane tak, jak je zapisano. Historia nie jest oceniana dzisiejszymi normami.');
-        var renal = view && view.clcr && view.clcr.measurements.length;
-        if (!renal || view.panels.length) add(foot, 'p', 'vilda-lab-hist-muted', (renal ? 'Pozostałe badania laboratoryjne: ' : '') + 'Strzałka ↑/↓ tylko przy wpisie z zakresem zapisanym z wynikiem przy przypięciu, z normą wpisaną we wpisie albo z zapisaną oceną; norma wpisana we wpisie nie dotyczy wyniku przeliczonego z innej jednostki. Wpisy bez zapisanego zakresu są bez oceny. Zakres ogólny przelicznika u dziecka (brak zakresu dla wieku) — bez strzałki. Wykresy bez pasma norm. Różnica: liczba i dni między dwoma dokładnymi wynikami z datą badania, bez procentu i koloru.');
-        if (renal) add(foot, 'p', 'vilda-lab-hist-muted', 'Obliczenia Klirensu: norma i ocena zachowane z dnia zapisu. Pasmo oznacza wyłącznie wspólną zapisaną normę.');
-        // Decyzje 6.24–6.25: skąd IGF-1 bez daty badania ma datę na wykresie.
-        if (view && view.ghIgf1 && view.ghIgf1.shown > 0) {
-          add(foot, 'p', 'vilda-lab-hist-muted', 'IGF-1 z notatek leczenia GH: data badania, a gdy jej brak — termin odbytej kontroli (tak jak na wykresie „Trend leczenia GH”); bez normy i bez strzałki.');
-        }
+        add(foot, 'p', 'vilda-lab-hist-muted', 'Kolor oznacza położenie względem zapisanego zakresu, nie rozpoznanie. Brak zakresu, porównania orientacyjne i nieaktualne oceny pozostają neutralne. Zakresy na wykresie dotyczą poszczególnych zapisów.');
+        if (view && view.ghIgf1 && view.ghIgf1.shown > 0) add(foot, 'p', 'vilda-lab-hist-muted', 'IGF-1 z notatek leczenia GH: data badania, a gdy jej brak — termin odbytej kontroli; bez normy.');
       }
 
       // showPatientCard(activeTab: 'lab') builds this host off DOM, then mounts
@@ -932,7 +968,7 @@
       };
     }
 
-    return Object.freeze({ version: '1.6.0', render: render, _internal: Object.freeze({ plural: plural, commentText: commentText, shortLabel: shortLabel, mergedNote: mergedNote }) });
+    return Object.freeze({ version: '2.0.0', render: render, _internal: Object.freeze({ plural: plural, commentText: commentText, shortLabel: shortLabel, mergedNote: mergedNote }) });
   }
 
   return createApi();

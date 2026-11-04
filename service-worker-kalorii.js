@@ -19,7 +19,7 @@
  *   bo i tak chcemy zwracać HTML z cache natychmiast.
  */
 
-const SW_VERSION = '1.1.463';
+const SW_VERSION = '1.1.464';
 const CACHE_PREFIX = 'pwa-kalorii';
 const SHELL_CACHE = `${CACHE_PREFIX}-shell-v${SW_VERSION}`;
 const RUNTIME_CACHE = `${CACHE_PREFIX}-runtime`;
@@ -885,10 +885,14 @@ const CORE_SHELL_URLS = [
   '/vilda_lab_history_tab.js?v=23',
   '/vilda_lab_history_tab.js?v=24',
   '/vilda_lab_history_tab.js?v=25',
+  '/vilda_lab_history_tab.js?v=26',
+  '/vilda_lab_result_presentation.js?v=1',
+  '/vilda_lab_result_chart.js?v=1',
   '/vilda_lab_history_tab.css?v=1',
   '/vilda_lab_history_tab.css?v=2',
   '/vilda_lab_history_tab.css?v=3',
   '/vilda_lab_history_tab.css?v=4',
+  '/vilda_lab_history_tab.css?v=5',
   '/vilda_lab_puberty_ui.js?v=1',
   '/vilda_lab_puberty_ui.js?v=2',
   '/vilda_lab_puberty_ui.js?v=3',
@@ -1724,6 +1728,7 @@ const CORE_SHELL_URLS = [
   '/vilda_chrome.js?v=238',
   '/vilda_chrome.js?v=239',
   '/vilda_chrome.js?v=240',
+  '/vilda_chrome.js?v=241',
   '/vilda_realtime.js?v=1',
   '/vilda_realtime.js?v=2',
   '/vilda_realtime.js?v=3',
@@ -2545,6 +2550,7 @@ const OPTIONAL_ASSETS = [
   '/vilda_session_bridge.js?v=159',
   '/vilda_session_bridge.js?v=160',
   '/vilda_session_bridge.js?v=161',
+  '/vilda_session_bridge.js?v=162',
   '/vilda_sync.js?v=48',
   '/vilda_patient_documents.js?v=1',
   '/vilda_patient_documents.css?v=1',
@@ -5081,7 +5087,11 @@ const FRESH_STATIC_ALIAS_PATHS = new Set([
   '/vilda_centile_charts.js', '/vilda_dob_age.js',
   // Four saved-SGA resources keep their own network requests. Reuse only this
   // installation's fresh responses for the current aliases of their existing hosts.
-  '/vilda_auth_ui.js', '/sga_birth_module.js', '/docpro_state_persist.js', '/vilda_khamis_roche.js'
+  '/vilda_auth_ui.js', '/sga_birth_module.js', '/docpro_state_persist.js', '/vilda_khamis_roche.js',
+  // Two compact laboratory readers keep separate fetches. Reuse only fresh
+  // responses between the versioned and unversioned current aliases of these
+  // unchanged static UI dependencies; previous immutable entries never seed them.
+  '/userData.js', '/vitalSigns.js'
 ]);
 
 async function fetchAndStorePrecacheUrl(url, { required = false, previousShellCaches = [], freshResponses = null } = {}) {

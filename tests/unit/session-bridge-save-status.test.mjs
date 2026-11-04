@@ -5,7 +5,7 @@ const DEPENDENCIES = [
   'VildaVaultProtocol',
   'VildaLabSnapshot', 'VildaLabTestosteroneUnits', 'VildaLabAssessmentUI',
   'VildaHormoneReferenceSnapshot', 'VildaLabRangeSnapshot', 'VildaHormoneReferenceUI',
-  'VildaLabHistory', 'VildaLabHistoryTab', 'VildaPubertyAssessment', 'VildaProAccess',
+  'VildaLabHistory', 'VildaLabResultPresentation', 'VildaLabResultChart', 'VildaLabHistoryTab', 'VildaPubertyAssessment', 'VildaProAccess',
 ];
 
 function environment({ host = false, native = false, pendingNative = false, authReady = true } = {}) {
