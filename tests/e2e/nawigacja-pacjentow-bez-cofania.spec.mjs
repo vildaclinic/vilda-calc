@@ -107,7 +107,7 @@ test('pusty sygnał synchronizacji nie odłącza karty pacjenta; rzeczywista zmi
   test.setTimeout(120_000);
   const { start, ids } = await pacjenciWPowloce(page);
   await otworzListe(start);
-  await start.locator('.pt-row', { hasText: NAZWISKO }).click();
+  await start.locator('.pt-row', { hasText: NAZWISKO }).locator('.pt-row-open').click();
   await expect(start.locator('.vilda-patient-hero-name')).toHaveText(`${NAZWISKO} Jan`);
   await start.locator('.vilda-patient-tab[data-tab="notes"]').click();
   await start.evaluate(() => {
@@ -167,7 +167,7 @@ test('odczyt listy rozpoczęty przed otwarciem karty nie może cofnąć użytkow
   });
   await synchronizacja(start);
   await start.waitForFunction(() => window.__navReadStarted);
-  await start.locator('.pt-row', { hasText: NAZWISKO }).click();
+  await start.locator('.pt-row', { hasText: NAZWISKO }).locator('.pt-row-open').click();
   await expect(start.locator('.vilda-patient-hero-name')).toHaveText(`${NAZWISKO} Jan`);
   await start.evaluate(() => window.__navReleaseRead());
   await page.waitForTimeout(1200);

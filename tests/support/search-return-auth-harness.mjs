@@ -83,18 +83,22 @@ export function authReturnEnvironment(script, bindings = {}, source = authProduc
     clearTimeout: id => timers.delete(id),
   };
   win.self = win; win.top = win;
-  const ownerProgram = [authProductionFunction(source, 'remReadOwner'), authProductionFunction(source, 'remReadCurrent')].join('\n');
+  // The real AuthUI close path also releases a retained database view. Keep
+  // that dependency executable here rather than replacing it with a no-op.
+  const dependencyProgram = ['remReadOwner', 'remReadCurrent', 'patientsRememberView']
+    .map(name => authProductionFunction(source, name)).join('\n');
   const context = vm.createContext({
     i: win, jt: () => win.VildaVault, Promise, Date, Event, CustomEvent,
     setTimeout: win.setTimeout, clearTimeout: win.clearTimeout,
     remReadEpoch: 0, remReadVault: null, remB22Full: null,
     remB22Views: new WeakMap(),
+    le: { listView: null },
     remInlineHide: () => { calls.push({ action: 'hide-inline' }); },
     el: () => { calls.push({ action: 'close-auth-surface' }); },
     Ot: (where, error) => { calls.push({ action: 'reported-error', where, message: error?.message }); },
     ...bindings,
   });
-  vm.runInContext(ownerProgram + '\n' + script, context);
+  vm.runInContext(dependencyProgram + '\n' + script, context);
   return {
     context, win, document, vault, state, calls,
     owner: () => context.remReadOwner(),

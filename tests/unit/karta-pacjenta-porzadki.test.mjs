@@ -36,7 +36,7 @@ describe('P1 — nasłuch zmian z zewnątrz', () => {
 
   it('nie przerywa otwartego okna dialogowego', () => {
     expect(kod, 'render pod modalem zabrałby lekarzowi wpisywane dane')
-      .toContain('if(i.document.querySelector(".vilda-auth-overlay-sheet")){xa=null;return}');
+      .toContain('if(i.document.querySelector(".vilda-auth-overlay-sheet")||i.document.querySelector(".vilda-pl-overlay")){xa=null;patientsDeferPickerRefresh();return}');
   });
 });
 
@@ -44,7 +44,7 @@ describe('P4 — pamięć podręczna karty', () => {
   it('porównuje dane przy synchronizacji i unieważnia cache przy odroczonym renderze pod modalem', () => {
     expect({
       odczytPrzedZachowaniemDom: kod.includes('if(GdTlo&&GdOdcisk!==null&&xa&&xa.odcisk===GdOdcisk){GdZakonczOdczyt(GdBilet);return}'),
-      odroczonyRenderKasujeCache: kod.includes('if(i.document.querySelector(".vilda-auth-overlay-sheet")){xa=null;return}'),
+      odroczonyRenderKasujeCache: kod.includes('if(i.document.querySelector(".vilda-auth-overlay-sheet")||i.document.querySelector(".vilda-pl-overlay")){xa=null;patientsDeferPickerRefresh();return}'),
     }, 'dynamiczne regresje sprawdzają także wymianę DOM po rzeczywistej zmianie notatki')
       .toEqual({ odczytPrzedZachowaniemDom: true, odroczonyRenderKasujeCache: true });
   });

@@ -76,7 +76,7 @@ for (const choice of ['new', 'restore']) {
     await expect(calculator.locator('#clcrVisitSaveBtn')).toBeDisabled();
     await calculator.locator('#clcrChoosePatientBtn').click();
     await expect(page).toHaveURL(/\/app\.html#\/start/);
-    await start.locator('.pt-rcard2', { hasText: 'Fikcyjna Pacjentka Nerkowa' }).first().click();
+    await start.locator('.pt-row', { hasText: 'Fikcyjna Pacjentka Nerkowa' }).first().locator('.pt-row-open').click();
     await start.getByRole('button', { name: 'Wczytaj tego pacjenta', exact: true }).click();
     const guard = start.locator('.vug-backdrop');
     await expect(guard).toBeVisible();
@@ -90,7 +90,7 @@ for (const choice of ['new', 'restore']) {
     expect((await memory(calculator)).notes).toHaveLength(0);
 
     await calculator.locator('#clcrChoosePatientBtn').click();
-    await start.locator('.pt-rcard2', { hasText: 'Fikcyjna Pacjentka Nerkowa' }).first().click();
+    await start.locator('.pt-row', { hasText: 'Fikcyjna Pacjentka Nerkowa' }).first().locator('.pt-row-open').click();
     await start.getByRole('button', { name: 'Wczytaj tego pacjenta', exact: true }).click();
     await expect(guard).toBeVisible();
     await guard.locator('.vug-danger').click();
@@ -201,7 +201,7 @@ test('saving PCR does not discard a retained unsaved ACR; the guard clears only 
   expect(await page.locator('#U_Alb').inputValue()).toBe('45');
   expect(await page.evaluate(() => window.ClcrVisitSave.hasUnsavedMeasurement())).toBe(true);
   await page.locator('#clcrChoosePatientBtn').click();
-  await page.locator('.pt-rcard2', { hasText: 'Fikcyjny Drugi Pacjent' }).first().click();
+  await page.locator('.pt-row', { hasText: 'Fikcyjny Drugi Pacjent' }).first().locator('.pt-row-open').click();
   await page.getByRole('button', { name: 'Wczytaj tego pacjenta', exact: true }).click();
   const guard = page.locator('.vug-backdrop');
   await expect(guard).toBeVisible();

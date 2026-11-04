@@ -4,10 +4,12 @@ import vm from 'node:vm';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 
-// Wykonujemy cały rzeczywisty moduł auth_ui. Atrapa zastępuje tylko przeglądarkę
-// i odczyt syntetycznych danych z sejfu; nie odtwarza renderera ani strażników.
+// Wykonujemy rzeczywisty renderer Bazy oraz cały moduł auth_ui. Atrapa zastępuje
+// tylko przeglądarkę i odczyt syntetycznych danych z sejfu; nie odtwarza renderera,
+// nawigacji ani strażników spóźnionych odczytów.
 const korzen = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const kod = fs.readFileSync(path.join(korzen, 'vilda_auth_ui.js'), 'utf8');
+const kodListy = fs.readFileSync(path.join(korzen, 'vilda_patients_list.js'), 'utf8');
 
 function odroczone() {
   let resolve;
@@ -64,6 +66,8 @@ function dokument() {
       zdarzenia(this);
     }
     get firstChild() { return this.children[0] || null; }
+    get type() { return this.attributes.type || ''; }
+    set type(value) { this.attributes.type = String(value); }
     get isConnected() { return this === doc.documentElement || !!this.parentNode?.isConnected; }
     get textContent() { return this._text + this.children.map((x) => x.textContent).join(''); }
     set textContent(v) { this.clear(); this._text = String(v); }
@@ -168,11 +172,12 @@ function uruchom() {
   const rekordy = [pacjent(), pacjent('syntetyczny-b')];
   const lista = { id: 'lista-testowa', name: 'Ngenla testowa', memberIds: ['syntetyczny-a'] };
   stan.lists = [lista];
+  stan.externals = [];
   const vault = {
     isUnlocked: () => true,
     listPatients: async () => structuredClone(rekordy),
-    listExternalPatients: async () => [],
-    getPatient: async (id) => structuredClone(rekordy.find((x) => x.patientId === id)),
+    listExternalPatients: async () => structuredClone(stan.externals),
+    getPatient: async (id) => structuredClone([...rekordy, ...stan.externals].find((x) => x.patientId === id)),
     listPatientTimelineEvents: async () => [],
     listPatientNotesForPatient: async () => structuredClone(stan.notes),
     listPatientLists: async () => structuredClone(stan.lists),
@@ -191,13 +196,21 @@ function uruchom() {
     console: { warn() {}, error: (...args) => bledy.push(args) },
     setTimeout: timer, clearTimeout: (id) => timery.delete(id),
     setInterval: () => 0, clearInterval() {}, requestAnimationFrame: (fn) => timer(fn, 16),
-    matchMedia: () => ({ matches: false, addEventListener() {}, addListener() {} }),
+    matchMedia: (query) => {
+      const min = query.match(/min-width:\s*(\d+)px/);
+      const max = query.match(/max-width:\s*(\d+)px/);
+      return {
+        matches: Boolean(min || max) && (!min || 1000 >= Number(min[1])) && (!max || 1000 <= Number(max[1])),
+        addEventListener() {}, removeEventListener() {}, addListener() {}, removeListener() {},
+      };
+    },
     VildaProAccess: { hasAccess: () => true },
     CustomEvent: class { constructor(type, opts = {}) { this.type = type; Object.assign(this, opts); } },
     innerWidth: 1000, innerHeight: 800, scrollTo() {},
   });
   okno.parent = okno;
   const context = vm.createContext({ window: okno, document: doc, navigator: okno.navigator, console: okno.console, setTimeout: timer, clearTimeout: okno.clearTimeout, setInterval: okno.setInterval, clearInterval: okno.clearInterval });
+  vm.runInContext(kodListy, context, { filename: 'vilda_patients_list.js' });
   vm.runInContext(kod, context, { filename: 'vilda_auth_ui.js' });
   function odswiez() {
     doc.dispatchEvent({ type: 'vilda:sync-merged' });
@@ -206,7 +219,7 @@ function uruchom() {
     timery.delete(wpis[0]); wpis[1].fn();
   }
   function przycisk(text, wezel = doc.body) {
-    const btn = wezel.querySelectorAll('button').find((x) => x.textContent === text);
+    const btn = wezel.querySelectorAll('button').find((x) => (x.getAttribute('aria-label') || x.textContent) === text);
     expect(btn, `przycisk „${text}”`).toBeTruthy();
     return btn;
   }
@@ -335,7 +348,7 @@ describe('Pacjenci: synchronizacja nie zmienia wybranego widoku', () => {
     await ustabilizuj();
     expect(doc.querySelector('.pt-count').textContent).toBe('Lista: Ngenla testowa');
     expect(doc.querySelector('input[type="search"]').value).toBe('syntetyczny');
-    expect(doc.querySelector('.pt-sortpill .sl').textContent).toBe('Z–A');
+    expect(doc.querySelector('.pt-sortpill .sl').textContent).toBe('Alfabetycznie Z–A');
     expect(doc.querySelector('.pt-scroll').scrollTop).toBe(120);
     expect(bledy).toEqual([]);
   });
@@ -474,5 +487,103 @@ describe('Pacjenci: synchronizacja nie zmienia wybranego widoku', () => {
     await render;
     expect(doc.querySelector('.vilda-auth-patient-card') === oczekiwanie).toBe(true);
     expect(doc.querySelector('.vilda-auth-patient-card').textContent).not.toContain('Testowy syntetyczny-a');
+  });
+});
+
+describe('Baza pacjentów: jawny powrót zachowuje miejsce pracy', () => {
+  async function wlasnaLista() {
+    const h = uruchom();
+    h.stan.lists[0].memberIds.push('syntetyczny-b');
+    await h.ui.showPatientsList();
+    await h.ustabilizuj();
+    h.doc.querySelector('.pt-sortpill').click();
+    h.doc.querySelector('.pt-sortopt[data-s="name-desc"]').click();
+    h.przycisk('Listy').click();
+    await h.ustabilizuj();
+    h.doc.querySelector('.pl-tile').click();
+    await h.ustabilizuj();
+    const input = h.doc.querySelector('.pt-search input');
+    input.value = 'syntetyczny';
+    input.dispatchEvent({ type: 'input' });
+    await h.ustabilizuj();
+    h.doc.querySelector('.pt-scroll').scrollTop = 137;
+    return h;
+  }
+
+  function sprawdzKontekstListy(h) {
+    expect(h.doc.querySelector('.vilda-auth-patients')).toBeTruthy();
+    expect(h.przycisk('Listy').classList.contains('on')).toBe(true);
+    expect(h.doc.querySelector('.pt-count').textContent).toBe('Lista: Ngenla testowa');
+    expect(h.doc.querySelector('.pt-search input').value).toBe('syntetyczny');
+    expect(h.doc.querySelector('.pt-sortopt[data-s="name-desc"]').classList.contains('on')).toBe(true);
+    expect(h.doc.querySelector('.pt-scroll').scrollTop).toBe(137);
+    expect(h.doc.querySelectorAll('.pt-scroll .pt-row').map((row) => row.querySelector('.pt-name').textContent))
+      .toEqual(['Testowy syntetyczny-b', 'Testowy syntetyczny-a']);
+    expect(h.bledy).toEqual([]);
+  }
+
+  it('przycisk powrotu z karty bazowej przywraca własną listę, wyszukiwanie, sortowanie i przewinięcie', async () => {
+    const h = await wlasnaLista();
+    sprawdzKontekstListy(h);
+    h.doc.querySelectorAll('.pt-row').find((row) => row.textContent.includes('Testowy syntetyczny-a')).querySelector('.pt-row-open').click();
+    await h.ustabilizuj();
+    expect(h.doc.querySelector('.vilda-auth-patient-card')).toBeTruthy();
+    expect(h.doc.querySelector('.vilda-auth-patients')).toBeNull();
+
+    h.przycisk('← Wróć do listy').click();
+    await h.ustabilizuj();
+
+    expect(h.doc.querySelector('.vilda-auth-patient-card')).toBeNull();
+    sprawdzKontekstListy(h);
+  });
+
+  it('przycisk powrotu z osoby spoza bazy przywraca jej filtr i wpisane wyszukiwanie', async () => {
+    const h = uruchom();
+    h.stan.externals.push({
+      patientId: 'zewnetrzny-fikcyjny',
+      header: { name: 'Fikcyjny Zewnętrzny', sex: 'M', birthYear: 2014 },
+      lastSavedAtISO: '2026-10-01T08:00:00Z',
+    });
+    await h.ui.showPatientsList();
+    await h.ustabilizuj();
+    h.przycisk('Spoza bazy').click();
+    h.doc.querySelector('.pt-sortpill').click();
+    h.doc.querySelector('.pt-sortopt[data-s="name-asc"]').click();
+    const input = h.doc.querySelector('.pt-search input');
+    input.value = 'zewnętrzny';
+    input.dispatchEvent({ type: 'input' });
+    await h.ustabilizuj();
+    h.doc.querySelector('.pt-scroll').scrollTop = 91;
+    expect(h.doc.querySelectorAll('.pt-scroll .pt-row')).toHaveLength(1);
+    h.doc.querySelector('.pt-row .pt-row-open').click();
+    await h.ustabilizuj();
+    expect(h.doc.querySelector('.vilda-auth-patients')).toBeNull();
+    expect(h.doc.body.textContent).toContain('Osoba spoza bazy');
+
+    h.przycisk('← Wróć do listy').click();
+    await h.ustabilizuj();
+
+    expect(h.przycisk('Spoza bazy').classList.contains('on')).toBe(true);
+    expect(h.doc.querySelector('.pt-search input').value).toBe('zewnętrzny');
+    expect(h.doc.querySelector('.pt-sortopt[data-s="name-asc"]').classList.contains('on')).toBe(true);
+    expect(h.doc.querySelector('.pt-scroll').scrollTop).toBe(91);
+    expect(h.doc.querySelectorAll('.pt-scroll .pt-row')).toHaveLength(1);
+    expect(h.doc.querySelector('.pt-name').textContent).toContain('Fikcyjny Zewnętrzny');
+    expect(h.bledy).toEqual([]);
+  });
+
+  it('Anuluj w formularzu dodawania wraca do własnej listy bez resetowania kontekstu', async () => {
+    const h = await wlasnaLista();
+    sprawdzKontekstListy(h);
+    h.doc.querySelector('.pt-add').click();
+    await h.ustabilizuj();
+    expect(h.doc.querySelector('.vilda-edit2')).toBeTruthy();
+    expect(h.doc.querySelector('.vilda-auth-patients')).toBeNull();
+
+    h.przycisk('Anuluj').click();
+    await h.ustabilizuj();
+
+    expect(h.doc.querySelector('.vilda-edit2')).toBeNull();
+    sprawdzKontekstListy(h);
   });
 });
