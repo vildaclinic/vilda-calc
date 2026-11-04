@@ -2,12 +2,12 @@ import { readFileSync } from 'node:fs';
 import { loadBrowserScript } from './load-browser-script.mjs';
 
 // Explicit coverage manifest: every persisted parameter in the production
-// ClcrSavedResults.PARAM_DICTIONARY (45 outputs from 41 source formula IDs).
+// ClcrSavedResults.PARAM_DICTIONARY (46 outputs from 41 source formula IDs).
 // The matching test compares both sets with the live registry, so extending
 // the calculator requires extending this fixture deliberately.
 export const KLIRENS_SEARCH_PARAMETER_KEYS = Object.freeze([
   'egfr', 'ckid_u25', 'egfr_cr_cys', 'ckid_u25_cys', 'ckid_u25_cr_cys', 'neonatal_egfr', 'cg', 'cg_norm', 'cl24', 'sch_idms',
-  'Ca_mgkg', 'UA_mgkg', 'Mg_mgkg', 'PO4_mgkg', 'Ox_mgkg', 'Cit_mgkg', 'Na_mmol_d', 'K_mmol_d',
+  'Ca_mgkg', 'UA_mgkg', 'Mg_mgkg', 'PO4_mgkg', 'Ox_mgkg', 'Ox_total24', 'Cit_mgkg', 'Na_mmol_d', 'K_mmol_d',
   'Ca_Cr', 'KM_Cr', 'PO4_Cr', 'Mg_Ca', 'Ca_Cit', 'B_Cr', 'K_frac', 'AGs',
   'Prot_mg24', 'Prot_g24', 'Prot_bsa', 'CaCr_spot', 'OxCr_spot', 'CitCr_spot', 'ACR', 'PCR',
   'FENa_spot', 'FEK_spot', 'FECl_spot', 'FEHCO3_spot', 'AGu_spot', 'TMP_GFR', 'pH_spot', 'pH24',
@@ -68,6 +68,12 @@ function baselineValues(entry) {
   if (id === 'cl24') return { ...timed, weight: '70', height: '175', V24: '1440' };
   if (id === 'KTV') return { ...dialysis };
   if (entry.id === 'Prot_bsa') return { ...timed, age: '10' };
+  if (entry.id === 'Ox_total24') return { ...timed,
+    OXDZM_inputMode: 'concentration', OXDZM_concentration: '200', OXDZM_concentrationUnit: 'µmol/L',
+    OXDZM_volume: '1500', OXDZM_volumeUnit: 'mL', OXDZM_collectionHours: '24',
+    OXDZM_collectionSource: 'assumed-24h', OXDZM_durationNeedsConfirmation: false,
+    OXDZM_reportingEntity: 'unknown', OXDZM_unitConversions: '',
+  };
   if (id === 'AGs') return { ...timed, S_Na: '140', S_Cl: '105', S_HCO3: '25' };
   if (id === 'pH24') return { ...timed, pH24: '6.1' };
   return { ...timed };
@@ -111,6 +117,16 @@ function proteinProducer(root, entry, values) {
   if (!result.valid) throw new Error(result.error);
   const point = { id: entry.id, sourceFormulaId: entry.sourceFormulaId, testKey: entry.testKey, label: entry.label };
   root.ClcrProteinDzmPersistence.augmentDatapoint({ getAttribute: key => key === 'data-clcr-protein-dzm-snapshot' ? JSON.stringify(result) : null }, point);
+  return point;
+}
+
+function oxalateProducer(root, entry, values) {
+  const result = root.VildaClcrOxDzm.evaluate(root.VildaClcrOxDzm.inputFromValues(values), root.ClcrOxDzmReferenceData.DEFAULT_POLICY);
+  if (!result.valid) throw new Error(result.error);
+  const point = { id: entry.id, sourceFormulaId: entry.sourceFormulaId, testKey: entry.testKey, label: entry.label };
+  if (!root.ClcrOxDzmPersistence.augmentDatapoint({ getAttribute: key => key === 'data-clcr-ox-dzm-snapshot' ? JSON.stringify(result) : null }, point)) {
+    throw new Error('The live oxalate result did not qualify for typed persistence');
+  }
   return point;
 }
 
@@ -162,6 +178,19 @@ function variants(root, patientId) {
   add('KM_Cr', 'typed-reported-above-rounded-upper-bound', { ...urateCreatinine, URCR_inputMode: 'reported', URCR_reportedValue: '0.53000001', URCR_reportedUnit: 'mmol/mmol' }, urateCreatinineProducer);
   add('KM_Cr', 'exact-zero', { ...urateCreatinine, URCR_uricAcid: '0' }, urateCreatinineProducer);
 
+  // Absolute daily oxalate is a distinct output from historical mg/kg/24h.
+  // Preserve the old registry case and exercise the new typed writer with
+  // independent patient/reference, quantity, mass-basis and precision states.
+  add('Ox_total24', 'typed-concentration-child', { age: '10', weight: '30', height: '140' }, oxalateProducer);
+  add('Ox_total24', 'typed-concentration-child-no-bsa', { age: '10', weight: '', height: '' }, oxalateProducer);
+  add('Ox_total24', 'typed-concentration-mass-unknown', { OXDZM_concentration: '20', OXDZM_concentrationUnit: 'mg/L' }, oxalateProducer);
+  add('Ox_total24', 'typed-concentration-mass-ion', { OXDZM_concentration: '20', OXDZM_concentrationUnit: 'mg/L', OXDZM_reportingEntity: 'oxalate_ion' }, oxalateProducer);
+  add('Ox_total24', 'typed-reported-mass-acid', { OXDZM_inputMode: 'reported', OXDZM_reportedValue: '50', OXDZM_reportedUnit: 'mg/24h', OXDZM_reportingEntity: 'oxalic_acid' }, oxalateProducer);
+  add('Ox_total24', 'typed-reported-molar-upper-bound', { OXDZM_inputMode: 'reported', OXDZM_reportedValue: '0.46', OXDZM_reportedUnit: 'mmol/24h' }, oxalateProducer);
+  add('Ox_total24', 'typed-reported-molar-below-rounded-bound', { OXDZM_inputMode: 'reported', OXDZM_reportedValue: '0.45999999999999999999', OXDZM_reportedUnit: 'mmol/24h' }, oxalateProducer);
+  add('Ox_total24', 'typed-reported-molar-no-patient', { age: '', ageMonths: '', weight: '', height: '', OXDZM_inputMode: 'reported', OXDZM_reportedValue: '0.3', OXDZM_reportedUnit: 'mmol/24h' }, oxalateProducer);
+  add('Ox_total24', 'exact-zero', { OXDZM_concentration: '0' }, oxalateProducer);
+
   add('ACR', 'direct-mass-axis-censored', { ACR_entry_mode: 'direct', ACR_reported: '<3', ACR_reported_unit: 'mg/g' });
   add('ACR', 'direct-molar-axis', { ACR_entry_mode: 'direct', ACR_reported: '4.5', ACR_reported_unit: 'mg/mmol' });
   add('PCR', 'direct-mass-axis-censored', { PCR_entry_mode: 'direct', PCR_reported: '<100', PCR_reported_unit: 'mg/g' });
@@ -205,7 +234,7 @@ export function buildKlirensSearchCases(patientId = 'fictional-klirens-all-formu
   const registry = KLIRENS_SEARCH_PARAMETER_KEYS.map(key => {
     const entry = root.ClcrSavedResults.getParam(key);
     if (!entry) throw new Error('Missing production Klirens parameter: ' + key);
-    return persist(root, entry, 'registry', patientId, baselineValues(entry));
+    return persist(root, entry, 'registry', patientId, baselineValues(entry), key === 'Ox_total24' ? oxalateProducer : produce);
   });
   return registry.concat(variants(root, patientId));
 }

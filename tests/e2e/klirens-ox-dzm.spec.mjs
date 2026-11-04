@@ -46,6 +46,27 @@ function sameWidths(before, after) {
   }
 }
 
+test('Ox DZM: odświeżenie pustego formularza nie pokazuje przycisku czyszczenia przed wyborem formuły', async ({ page }) => {
+  await openCalculator(page);
+  await expect(page.locator('#formulaPicker')).toHaveValue('');
+  await expect(page.locator('#clearContainer')).toBeHidden();
+  for (const width of [1440, 390, 320]) {
+    await page.setViewportSize({ width, height: 1000 });
+    for (let refresh = 0; refresh < 3; refresh += 1) {
+      await page.evaluate(() => window.clcrUpdate());
+      await czekajNaUstabilizowanyUklad(page);
+      await expect(page.locator('#clearContainer')).toBeHidden();
+      await expect(page.locator('#clearBtn')).toBeHidden();
+    }
+  }
+  await choose(page, 'Ox_mgkg');
+  await expect(page.locator('#oxDzmInputCard')).toBeVisible();
+  await expect(page.locator('#clearContainer')).toBeVisible();
+  await expect(page.locator('#clearBtn')).toBeVisible();
+  await page.evaluate(() => window.clcrUpdate());
+  await expect(page.locator('#clearBtn')).toBeVisible();
+});
+
 for (const width of [1440, 390, 320]) {
   test(`Ox DZM: dwa pomiary, jeden wynik i stały układ ${width}px`, async ({ page }, testInfo) => {
     const errors = []; page.on('pageerror', error => errors.push(error.message));

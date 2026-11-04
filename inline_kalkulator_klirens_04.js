@@ -3515,7 +3515,11 @@ function update() {
       });
   {
     const i = document.getElementById("clearContainer");
-    i && (i.style.display = "block");
+    // A late session refresh must respect the workflow's empty state too.
+    const workflow = window.ClcrUiWorkflow?.state;
+    if (i) i.style.display = workflow && document.documentElement?.dataset.clcrWorkflowUi === "1"
+      ? workflow.activeFieldIds.size || workflow.legacyBroad ? "" : "none"
+      : "block";
   }
   consolidateClcrEngineOutputs(_e);
   window.ClcrResultPresentation?.bindCategoryControls(document);
