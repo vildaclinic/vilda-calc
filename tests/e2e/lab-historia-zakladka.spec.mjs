@@ -19,9 +19,13 @@ test('Badania: domyślnie wyniki według dat, zapisane normy i kolory bez rozbud
   const badania = sekcjaBadan(page);
   await expect(page.locator('.vilda-patient-tab[data-tab="lab"]')).toHaveClass(/vilda-patient-tab--active/);
 
-  await expect(badania.locator('.vilda-lab-hist-summary')).toHaveText('14 wyników · 5 badań · ostatnie badanie 02.06.26');
+  await expect(badania.getByRole('heading', { name: 'Wyniki badań', exact: true })).toBeVisible();
+  await expect(badania.locator('.vilda-lab-hist-summary')).toHaveCount(0);
   await expect(badania.locator('.vilda-lab-hist-segment-btn[aria-pressed="true"]')).toHaveText('Tabela');
   await expect(badania.locator('.vilda-lab-hist-result-row')).toHaveCount(14);
+  expect(await badania.locator('.vilda-lab-hist-result-row').evaluateAll((rows) =>
+    [...new Set(rows.map((row) => row.getAttribute('data-series')))].sort()))
+    .toEqual(['ft3', 'ft4', 'lh', 'prolactin', 'tsh']);
   expect(await badania.locator('.vilda-lab-hist-date-group').evaluateAll((groups) => groups.map((group) => group.getAttribute('data-date-iso'))))
     .toEqual(['2026-06-02', '2026-04-08', '2026-02-25', '2026-01-14']);
   await expect(badania.locator('.vilda-lab-hist-pending')).toContainText('Oczekujące wyniki (1)');
@@ -32,11 +36,11 @@ test('Badania: domyślnie wyniki według dat, zapisane normy i kolory bez rozbud
   const tsh = wynik(badania, ids.tsh4), ft4 = wynik(badania, ids.ft44);
   await expect(tsh).toContainText('0,12');
   await expect(tsh.locator('.vilda-lab-hist-result-norm')).toHaveText(/0,27.*4,2.*mIU\/L/);
-  await expect(tsh.locator('.vilda-lab-hist-cell-value.tone-below')).toHaveCSS('color', 'rgb(138, 74, 24)');
+  await expect(tsh.locator('.vilda-lab-hist-cell-value.tone-below')).toHaveCSS('color', 'rgb(207, 34, 46)');
   await expect(tsh).toContainText('↓');
   await expect(ft4).toContainText('17,8');
   await expect(ft4.locator('.vilda-lab-hist-result-norm')).toHaveText(/12.*22.*pmol\/L/);
-  await expect(ft4.locator('.vilda-lab-hist-cell-value.tone-within')).toHaveCSS('color', 'rgb(15, 110, 86)');
+  await expect(ft4.locator('.vilda-lab-hist-cell-value.tone-within')).toHaveCSS('color', 'rgb(8, 127, 91)');
   // Brak normy nie staje się prawidłowym wynikiem. Nierozpoznana jednostka i cenzorowanie zachowują zapis.
   await expect(wynik(badania, ids.ft3).locator('.vilda-lab-hist-result-norm')).toHaveText('—');
   await expect(wynik(badania, ids.ft3).locator('.tone-within')).toHaveCount(0);
@@ -52,6 +56,7 @@ test('Badania: domyślnie wyniki według dat, zapisane normy i kolory bez rozbud
   // Filtry i wpisane zapytanie działają w obu widokach; przełączenie nie gubi wyboru.
   const panel = badania.getByRole('combobox', { name: 'Panel badań', exact: true });
   const search = badania.getByRole('searchbox', { name: 'Szukaj badania', exact: true });
+  await expect(panel.locator('option[value="all"]')).toHaveText('Wszystkie wyniki');
   await panel.selectOption('thyroid');
   await expect(badania.locator('.vilda-lab-hist-result-row')).toHaveCount(9);
   await search.fill('fT4');
@@ -127,9 +132,9 @@ test('wyniki tego samego dnia i nakładające się zera zachowują normy, kolory
   const zero = wynik(badania, ids.zero), high = wynik(badania, ids.high);
   await expect(zero.locator('.vilda-lab-hist-cell-value')).toHaveText('0');
   await expect(zero.locator('.vilda-lab-hist-result-norm')).toHaveText(/0,27.*4,2/);
-  await expect(zero.locator('.vilda-lab-hist-cell-value.tone-below')).toHaveCSS('color', 'rgb(138, 74, 24)');
+  await expect(zero.locator('.vilda-lab-hist-cell-value.tone-below')).toHaveCSS('color', 'rgb(207, 34, 46)');
   await expect(high.locator('.vilda-lab-hist-result-norm')).toHaveText(/0,6.*4,5/);
-  await expect(high.locator('.vilda-lab-hist-cell-value.tone-above')).toHaveCSS('color', 'rgb(138, 24, 24)');
+  await expect(high.locator('.vilda-lab-hist-cell-value.tone-above')).toHaveCSS('color', 'rgb(207, 34, 46)');
   await high.click();
   await expect(szczegoly(badania, ids.high)).toContainText(/0,6.*4,5/);
   await page.keyboard.press('Escape');

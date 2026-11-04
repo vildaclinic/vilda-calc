@@ -17,7 +17,7 @@ async function sprawdzUklad(page) {
   await expect(badania.locator('.vilda-lab-hist-card')).toHaveCount(0);
   const tsh = badania.locator(`.vilda-lab-hist-result-row[data-note-id="${ids.tsh4}"]`);
   await expect(tsh.locator('.vilda-lab-hist-result-norm')).toHaveText(/0,27.*4,2.*mIU\/L/);
-  await expect(tsh.locator('.vilda-lab-hist-cell-value.tone-below')).toHaveCSS('color', 'rgb(138, 74, 24)');
+  await expect(tsh.locator('.vilda-lab-hist-cell-value.tone-below')).toHaveCSS('color', 'rgb(207, 34, 46)');
   const zakladki = page.locator('.vilda-patient-tabs > .vilda-patient-tab');
   await expect(zakladki).toHaveCount(6);
   await expect(zakladki.locator('.vilda-patient-tab-lbl')).toHaveCount(6);
@@ -51,7 +51,7 @@ async function sprawdzUklad(page) {
   const tshChart = badania.locator('.vilda-lab-hist-card[data-series="tsh"]');
   await expect(tshChart.locator('svg.vilda-lab-result-chart-svg')).toHaveCount(1);
   await expect(tshChart).toContainText(/0,27.*4,2/);
-  await expect(tshChart.locator('.vilda-lab-hist-value.tone-below')).toHaveCSS('color', 'rgb(138, 74, 24)');
+  await expect(tshChart.locator('.vilda-lab-hist-value.tone-below')).toHaveCSS('color', 'rgb(207, 34, 46)');
   expect(await page.evaluate(() => {
     const strona = document.scrollingElement, karta = document.querySelector('.vilda-auth-root');
     return strona.scrollWidth <= strona.clientWidth + 1 && karta.scrollWidth <= karta.clientWidth + 1;

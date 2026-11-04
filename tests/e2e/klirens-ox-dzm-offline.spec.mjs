@@ -7,6 +7,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { expect, test } from '@playwright/test';
 import { enterGuest, prepareBrowser, installMemoryVault, saveVisible, memory } from '../support/klirens-patient-record.mjs';
+import { showClcrResults, clcrPoint } from '../support/badania-klirens.mjs';
 
 import { restore, expectResult, expectBlocked } from '../support/klirens-ox-dzm-browser.mjs';
 
@@ -14,7 +15,7 @@ test.use({ serviceWorkers: 'allow', actionTimeout: 15_000 });
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const sha256 = bytes => createHash('sha256').update(bytes).digest('hex');
 const versionOf = source => /const SW_VERSION = '([^']+)'/.exec(source)[1];
-const UPDATE_BASE_SHA = '881c82a481744cfa56f7e83fae3e6431f47c0361';
+const UPDATE_BASE_SHA = '948b1d5a455480d968d1e12a7c3fb03ccc768e64';
 // CI's E2E checkout uses fetch-depth: 0; archive the actual production tree.
 const aliasNames = [
   'vilda_food_data.js', 'vilda_growth_reference_data.js', 'vilda_ree_rownania_data.js',
@@ -323,9 +324,10 @@ async function lazyStartAndNotes(page, origin, note, savedModel, resources, load
   await expect(compact.locator('.clcr-note-reference')).toHaveText(expectedReference);
   await expect(compact.locator('.clcr-note-column').nth(1).locator('.clcr-note-unit')).toHaveText(edited.labResult.unit);
   await compact.getByRole('button', { name: 'Zobacz w Badaniach →', exact: true }).click();
-  const point = page.locator(`.vilda-lab-hist-panel[data-panel="renal"] .vilda-clcr-point[data-note-id="${note.id}"]`);
+  await showClcrResults(page, 'charts');
+  const point = clcrPoint(page, note.id);
   await expect.poll(async () => Number(await point.getAttribute('data-value'))).toBe(edited.labResult.valueNum);
-  const lazyResources = resources.filter(resource => /\/(?:clcr_ox_dzm(?:_reference_data|_persistence)?\.js|clcr_record_resources\.js|clcr_saved_calculation\.js|clcr_saved_results\.js|clcr_result_details\.js|vilda_auth_ui\.js|vilda_lab_history_tab\.js)\?/.test(resource.url));
+  const lazyResources = resources.filter(resource => /\/(?:clcr_ox_dzm(?:_reference_data|_persistence)?\.js|clcr_record_resources\.js|clcr_saved_calculation\.js|clcr_saved_results\.js|clcr_result_details\.js|vilda_auth_ui\.js|vilda_lab_history_tab\.js|vilda_lab_result_presentation\.js|vilda_lab_result_chart\.js)\?/.test(resource.url));
   await assertResourceDelivery(page, lazyResources, loaded);
   expect((await memory(page)).originalsLocked).toBe(true);
   return { editedValue: edited.labResult.valueNum, frozenValue: frozen.measurement.valueNum, norm: frozen.measurement.norm, lazyResources };

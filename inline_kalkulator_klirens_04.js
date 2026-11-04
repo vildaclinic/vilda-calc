@@ -1391,7 +1391,7 @@ function update() {
   }
   const rt = o && d,
     dt = [...document.querySelectorAll("#clcrForm input")].some((i) =>
-      (i.type === "hidden" || ["Cl24DurationHours", "UA_collectionHours", "CA_collectionHours", "CA_clinicalMode", "MG_collectionHours", "PO4_collectionHours", "Prot_collectionHours", "Na_collectionHours", "K_collectionHours"].includes(i.id)) ? false : i.type === "checkbox" ? i.checked : (i.value || "").trim() !== "",
+      (i.type === "hidden" || ["Cl24DurationHours", "UA_collectionHours", "CA_collectionHours", "CA_clinicalMode", "MG_collectionHours", "PO4_collectionHours", "Prot_collectionHours", "Na_collectionHours", "K_collectionHours", "OXDZM_collectionHours"].includes(i.id)) ? false : i.type === "checkbox" ? i.checked : (i.value || "").trim() !== "",
     );
   let Ne = !1;
   {
@@ -3515,11 +3515,7 @@ function update() {
       });
   {
     const i = document.getElementById("clearContainer");
-    // A late session refresh must respect the workflow's empty state too.
-    const workflow = window.ClcrUiWorkflow?.state;
-    if (i) i.style.display = workflow && document.documentElement?.dataset.clcrWorkflowUi === "1"
-      ? workflow.activeFieldIds.size || workflow.legacyBroad ? "" : "none"
-      : "block";
+    i && (i.style.display = "block");
   }
   consolidateClcrEngineOutputs(_e);
   window.ClcrResultPresentation?.bindCategoryControls(document);

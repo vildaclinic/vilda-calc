@@ -3,6 +3,7 @@ import { expect, test } from '@playwright/test';
 import { czekajNaUstabilizowanyUklad } from '../support/uklad-czekanie.mjs';
 import { enterGuest, installMemoryVault, memory, saveVisible } from '../support/klirens-patient-record.mjs';
 import { readVisibleSavedHistory } from '../support/klirens-saved-history.mjs';
+import { clcrPoint, clcrPoints, showClcrResults } from '../support/badania-klirens.mjs';
 import { applySession, card, choose, chooseNativeUnit, details, expectBlocked, expectResult, openCalculator, restore } from '../support/klirens-ox-dzm-browser.mjs';
 
 async function geometry(page, width) {
@@ -255,8 +256,14 @@ test('Ox DZM: dokładne wartości i brak normy pozostają zamrożone w Badaniach
   const history = await readVisibleSavedHistory(page, '__oxDzmFictionalNotes');
   expect(history.visible).toBe(true); expect(history.ids).toEqual(history.originalIds);
   await page.locator('#clcrOpenBadaniaBtn').click();
-  await page.getByRole('button', { name: 'Wykresy', exact: true }).click();
-  await expect(page.locator('.vilda-clcr-history .vilda-clcr-point:visible')).toHaveCount(2);
+  await showClcrResults(page, 'charts');
+  await expect(clcrPoints(page)).toHaveCount(2);
+  await expect(clcrPoint(page, first.id)).toBeVisible();
+  await expect(clcrPoint(page, first.id)).toHaveAttribute('data-value', '0.00015');
+  await expect(clcrPoint(page, first.id)).toHaveAttribute('data-tone', 'within');
+  await expect(clcrPoint(page, second.id)).toBeVisible();
+  await expect(clcrPoint(page, second.id)).toHaveAttribute('data-value', '0.3');
+  await expect(clcrPoint(page, second.id)).toHaveAttribute('data-tone', 'neutral');
   expect((await memory(page)).originalsLocked).toBe(true);
 });
 
@@ -265,7 +272,8 @@ test('Ox DZM: edycja i usunięcie dotyczą jednego pomiaru, Notatki pozostają c
   const [first] = await saveVisible(page, '2026-10-24');
   await restore(page, { OXDZM_inputMode: 'reported', OXDZM_reportedValue: '0.4' });
   const [sibling] = await saveVisible(page, '2026-10-25');
-  await page.locator('#clcrOpenBadaniaBtn').click(); await page.locator('button[data-tab="notes"]').click();
+  await page.locator('#clcrOpenBadaniaBtn').click(); await showClcrResults(page, 'table');
+  await page.locator('button[data-tab="notes"]').click();
   const notes = page.locator('.vilda-clcr-note[data-clcr-note-state="ready"]'); await expect(notes).toHaveCount(2);
   for (const key of ['VILDA_CLCR', 'engineVersion', 'exactMain', '[tekst]']) await expect(notes.first()).not.toContainText(key);
   await page.evaluate(note => window.ClcrResultDetails.open({ patientId: note.patientId, noteId: note.id }), first);

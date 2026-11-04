@@ -22,7 +22,7 @@ function fixture(entries, options = {}) {
   const descriptions = options.descriptions || {};
   const describeEntry = vi.fn((row) => descriptions[row.noteId] || { value: row.exactValue, unit: row.unit, tone: 'within', normText: '1–4 mIU/L', norms: [range()], ...options.description });
   const before = JSON.stringify(view);
-  const host = win.VildaLabResultChart.render(doc, view, { describe: describeEntry, openNote });
+  const host = win.VildaLabResultChart.render(doc, view, { describe: describeEntry, openNote, joinLines: options.joinLines });
   expect(JSON.stringify(view)).toBe(before);
   return { host, view, openNote, describeEntry, doc, win };
 }
@@ -64,11 +64,15 @@ describe('saved laboratory history chart', () => {
       const selector = `.vilda-lab-result-chart-point[data-tone="${tone}"] .vilda-lab-result-chart-dot`;
       expect(css).toContain(selector);
       const block = css.slice(css.indexOf(selector) + selector.length).match(/^\s*\{([^}]*)\}/)[1];
-      const color = block.match(/border-color:\s*([^;]+);/)[1].trim();
-      const variable = /^var\(--([\w-]+)\)$/.exec(color);
-      return (variable ? globals.match(new RegExp(`--${variable[1]}:\\s*([^;]+);`))[1].trim() : color).toLowerCase();
+      const resolve = (color) => {
+        const variable = /^var\(--([\w-]+)\)$/.exec(color);
+        return (variable ? globals.match(new RegExp(`--${variable[1]}:\\s*([^;]+);`))[1].trim() : color).toLowerCase();
+      };
+      const color = resolve(block.match(/border-color:\s*([^;]+);/)[1].trim());
+      expect(resolve(block.match(/background:\s*([^;]+);/)[1].trim()), 'filled marker matches its border').toBe(color);
+      return color;
     });
-    expect(colors).toEqual(['#1d9e75', '#d8632a', '#b91c1c']);
+    expect(colors).toEqual(['#087f5b', '#cf222e', '#cf222e']);
     expect(dots.every((dot) => !dot.hasAttribute('style'))).toBe(true);
     expect(host.querySelectorAll('.vilda-lab-result-chart-target').map((target) => [target.getAttribute('width'), target.getAttribute('height')])).toEqual([
       ['44', '44'], ['44', '44'], ['44', '44'], ['44', '44'],
@@ -78,10 +82,14 @@ describe('saved laboratory history chart', () => {
   it('never imputes an inequality limit as a point, and breaks the trend at a censored result', () => {
     const a = entry('before', '2026-01-01', 1), c = entry('after', '2026-01-03', 2);
     const b = entry('censored', '2026-01-02', null, { kind: 'censored', display: '<0,1 mIU/L' });
-    const { host } = fixture([a, b, c], { chart: { gaps: [{ dateISO: b.dateISO, noteId: b.noteId, kind: 'censored' }] } });
+    const { host, openNote } = fixture([a, b, c], { chart: { gaps: [{ dateISO: b.dateISO, noteId: b.noteId, kind: 'censored' }] } });
     expect(host.querySelectorAll('.vilda-lab-result-chart-point')).toHaveLength(2);
     expect(host.querySelectorAll('.vilda-lab-result-chart-line')).toHaveLength(0);
-    expect(host.querySelector('[data-note-id="fictional-censored"]')).toBeNull();
+    expect(host.querySelector('.vilda-lab-result-chart-point[data-note-id="fictional-censored"]')).toBeNull();
+    const saved = host.querySelector('.vilda-lab-result-chart-record[data-note-id="fictional-censored"]');
+    expect(saved.textContent).toContain('<0,1 mIU/L');
+    saved.click();
+    expect(openNote).toHaveBeenCalledExactlyOnceWith('fictional-censored');
   });
 
   it('rejects a stale exact model point when presentation identifies the value as censored or invalidated', () => {
@@ -103,7 +111,7 @@ describe('saved laboratory history chart', () => {
     ]);
     expect(Number(bands[0].getAttribute('width'))).toBe(50);
     expect(Number(bands[1].getAttribute('x'))).toBe(50);
-    const point = host.querySelector('[data-note-id="fictional-old"]');
+    const point = host.querySelector('.vilda-lab-result-chart-point[data-note-id="fictional-old"]');
     expect(point.getAttribute('aria-label')).toContain('1–4 mIU/L');
   });
 
@@ -193,7 +201,7 @@ describe('saved laboratory history chart', () => {
   it('plots negative saved results at their actual height and includes negative bounds', () => {
     const a = entry('negative', '2026-01-01', -15), b = entry('positive', '2026-02-01', 2);
     const { host } = fixture([a, b], { description: { norms: [range(-20, 5)] } });
-    const zero = host.querySelector('[data-note-id="fictional-negative"]');
+    const zero = host.querySelector('.vilda-lab-result-chart-point[data-note-id="fictional-negative"]');
     expect(zero.getAttribute('data-value')).toBe('-15');
     const labels = host.querySelectorAll('.vilda-lab-result-chart-y span').map((label) => Number(label.textContent.replace(',', '.')));
     expect(labels[2]).toBeLessThan(-20);
@@ -206,5 +214,135 @@ describe('saved laboratory history chart', () => {
     expect(host.querySelectorAll('.vilda-lab-result-chart-point')).toHaveLength(1);
     expect(host.querySelector('img')).toBeNull();
     expect(host.querySelector('.vilda-lab-result-chart-point').getAttribute('aria-label')).toContain('<img src=x onerror=bad()>');
+  });
+
+  it('aligns every dated point, its guide and its compact date without changing elapsed-time spacing', () => {
+    const rows = [entry('a', '2026-01-01', 1), entry('b', '2026-01-08', 2), entry('c', '2026-02-01', 3)];
+    const { host } = fixture(rows);
+    expect(host.querySelectorAll('.vilda-lab-result-chart-guide')).toHaveLength(3);
+    expect(host.querySelectorAll('.vilda-lab-result-chart-date')).toHaveLength(3);
+    for (const row of rows) {
+      const point = host.querySelector(`.vilda-lab-result-chart-point[data-note-id="${row.noteId}"]`);
+      const guide = host.querySelector(`.vilda-lab-result-chart-guide[data-note-id="${row.noteId}"]`);
+      const label = host.querySelector(`.vilda-lab-result-chart-date[datetime="${row.dateISO}"]`);
+      expect(guide.getAttribute('x1')).toBe(guide.getAttribute('x2'));
+      expect(point.parentNode.getAttribute('x')).toBe(guide.getAttribute('x1') + '%');
+      expect(label.parentNode.getAttribute('x')).toBe(point.parentNode.getAttribute('x'));
+      expect(guide.getAttribute('y1') + '%').toBe(point.parentNode.getAttribute('y'));
+      expect(guide.getAttribute('y2')).toBe('100');
+      expect(point.getAttribute('aria-label')).toContain(row.dateISO.split('-').reverse().join('.'));
+      expect(label.querySelector('.vilda-lab-result-chart-date-day').textContent).toBe(row.dateISO.slice(8) + '.' + row.dateISO.slice(5, 7));
+      expect(label.querySelector('.vilda-lab-result-chart-date-year').textContent).toBe('2026');
+    }
+    const targets = host.querySelectorAll('.vilda-lab-result-chart-target');
+    const positions = targets.map((target) => Number.parseFloat(target.getAttribute('x')));
+    expect((positions[1] - positions[0]) / (positions[2] - positions[0])).toBeCloseTo(7 / 31, 5);
+    expect(host.querySelector('.vilda-lab-result-chart-layout').hasAttribute('viewBox')).toBe(false);
+    expect(host.querySelector('.vilda-lab-result-chart-x').hasAttribute('viewBox')).toBe(false);
+    expect(host.querySelectorAll('[style]')).toHaveLength(0);
+  });
+
+  it('turns joins off while preserving all points, guides, dates and note links', () => {
+    const rows = [entry('a', '2026-01-01', 1), entry('b', '2026-02-01', 2), entry('c', '2026-03-01', 3)];
+    const on = fixture(rows), off = fixture(rows, { joinLines: false });
+    expect(on.host.querySelectorAll('.vilda-lab-result-chart-line').map((line) => [line.getAttribute('data-from-id'), line.getAttribute('data-to-id')])).toEqual([
+      [rows[0].noteId, rows[1].noteId], [rows[1].noteId, rows[2].noteId],
+    ]);
+    expect(off.host.querySelectorAll('.vilda-lab-result-chart-line')).toHaveLength(0);
+    expect(off.host.querySelectorAll('.vilda-lab-result-chart-guide')).toHaveLength(3);
+    expect(off.host.querySelectorAll('.vilda-lab-result-chart-date')).toHaveLength(3);
+    expect(off.host.querySelectorAll('.vilda-lab-result-chart-target').map((target) => [target.getAttribute('x'), target.getAttribute('y')])).toEqual(
+      on.host.querySelectorAll('.vilda-lab-result-chart-target').map((target) => [target.getAttribute('x'), target.getAttribute('y')]),
+    );
+    off.host.querySelector('.vilda-lab-result-chart-point[data-note-id="fictional-b"]').click();
+    expect(off.openNote).toHaveBeenCalledExactlyOnceWith(rows[1].noteId);
+  });
+
+  it('never joins distinct calculation methods, distinct series or a model-confirmed assay mismatch', () => {
+    const first = { seriesKey: 'fictional-schwartz|mIU/L', method: 'Schwartz' };
+    const second = { seriesKey: 'fictional-ckdepi|mIU/L', method: 'CKD-EPI' };
+    const rows = [
+      entry('a', '2026-01-01', 1, { clcrRecord: first }),
+      entry('b', '2026-02-01', 2, { clcrRecord: first }),
+      entry('c', '2026-03-01', 3, { record: second }),
+      entry('d', '2026-04-01', 4, { record: second, delta: { available: false, reason: 'method_mismatch' } }),
+    ];
+    const { host } = fixture(rows);
+    expect(host.querySelectorAll('.vilda-lab-result-chart-point')).toHaveLength(4);
+    expect(host.querySelectorAll('.vilda-lab-result-chart-line').map((line) => [line.getAttribute('data-from-id'), line.getAttribute('data-to-id')])).toEqual([[rows[0].noteId, rows[1].noteId]]);
+  });
+
+  it('derives gaps from saved unplottable entries and preserves every censored, text or undated note as a link', () => {
+    const rows = [
+      entry('before', '2026-01-01', 1),
+      entry('censored', '2026-01-02', null, { kind: 'censored', display: '<0,1 mIU/L' }),
+      entry('text', '2026-01-03', null, { kind: 'text', display: 'nieoznaczalne' }),
+      entry('undated', null, 2),
+      entry('after', '2026-01-04', 3),
+    ];
+    const { host, openNote } = fixture(rows); // No caller-supplied chart.gaps.
+    expect(host.querySelectorAll('.vilda-lab-result-chart-point')).toHaveLength(2);
+    expect(host.querySelectorAll('.vilda-lab-result-chart-line')).toHaveLength(0);
+    const links = host.querySelectorAll('.vilda-lab-result-chart-record');
+    expect(links.map((link) => link.getAttribute('data-note-id'))).toEqual([rows[2].noteId, rows[1].noteId, rows[3].noteId]);
+    expect(links[2].textContent).toContain('Bez daty');
+    links.forEach((link) => link.click());
+    expect(openNote.mock.calls.map(([noteId]) => noteId)).toEqual([rows[2].noteId, rows[1].noteId, rows[3].noteId]);
+  });
+
+  it('bounds a multi-year canvas with adjacent-day records and retains all exact IDs as separate accessible links', () => {
+    const rows = [entry('a', '2023-01-01', 2), entry('b', '2023-01-02', 2.01), entry('c', '2023-01-03', 2.02), entry('d', '2026-01-01', 3)];
+    const { host, openNote } = fixture(rows);
+    const layout = host.querySelector('.vilda-lab-result-chart-layout');
+    expect(Number(layout.getAttribute('width'))).toBeLessThanOrEqual(4096);
+    expect(layout.getAttribute('data-crowded')).toBe('true');
+    expect(host.querySelectorAll('.vilda-lab-result-chart-point')).toHaveLength(4);
+    expect(host.querySelectorAll('.vilda-lab-result-chart-guide')).toHaveLength(4);
+    const labels = host.querySelectorAll('.vilda-lab-result-chart-date-target');
+    const lanes = new Map();
+    for (const label of labels) {
+      const lane = label.getAttribute('y');
+      const position = Number.parseFloat(label.getAttribute('x')) / 100 * Number(layout.getAttribute('data-plot-width'));
+      if (!lanes.has(lane)) lanes.set(lane, []);
+      const positions = lanes.get(lane);
+      if (positions.length) expect(position - positions.at(-1)).toBeGreaterThanOrEqual(47.99);
+      positions.push(position);
+    }
+    expect(lanes.size).toBeLessThanOrEqual(2);
+    const links = host.querySelectorAll('.vilda-lab-result-chart-record');
+    expect(links).toHaveLength(4);
+    links.forEach((link) => link.click());
+    expect(openNote.mock.calls.map(([noteId]) => noteId)).toEqual(rows.slice().reverse().map((row) => row.noteId));
+    expect(host.querySelectorAll('[style]')).toHaveLength(0);
+  });
+
+  it('does not force a wide canvas for three same-day or evenly spaced results on a narrow card', () => {
+    const same = fixture([entry('a', '2026-01-01', 1), entry('b', '2026-01-01', 2), entry('c', '2026-01-01', 3)]);
+    const spaced = fixture([entry('a', '2026-01-01', 1), entry('b', '2026-01-11', 2), entry('c', '2026-01-21', 3)]);
+    for (const { host } of [same, spaced]) {
+      expect(Number(host.querySelector('.vilda-lab-result-chart-layout').getAttribute('width'))).toBeLessThanOrEqual(210);
+      expect(host.querySelectorAll('.vilda-lab-result-chart-point')).toHaveLength(3);
+      expect(host.querySelectorAll('.vilda-lab-result-chart-guide')).toHaveLength(3);
+      expect(host.querySelectorAll('.vilda-lab-result-chart-target').every((target) => target.getAttribute('width') === '44' && target.getAttribute('height') === '44')).toBe(true);
+    }
+    const width = Number(spaced.host.querySelector('.vilda-lab-result-chart-layout').getAttribute('data-plot-width'));
+    const positions = spaced.host.querySelectorAll('.vilda-lab-result-chart-date-target').map((target) => Number.parseFloat(target.getAttribute('x')) / 100 * width);
+    expect(positions).toHaveLength(3);
+    expect(positions[1] - positions[0]).toBeGreaterThanOrEqual(48);
+    expect(positions[2] - positions[1]).toBeGreaterThanOrEqual(48);
+    expect(same.host.querySelectorAll('.vilda-lab-result-chart-date')).toHaveLength(1);
+  });
+
+  it('keeps negative and zero values at their true heights and guides them to the date baseline rather than to the zero level', () => {
+    const rows = [entry('negative', '2026-01-01', -15), entry('zero', '2026-02-01', 0), entry('positive', '2026-03-01', 2)];
+    const { host } = fixture(rows, { description: { norms: [] } });
+    const guides = host.querySelectorAll('.vilda-lab-result-chart-guide');
+    const heights = guides.map((guide) => Number(guide.getAttribute('y1')));
+    expect(heights[0]).toBeGreaterThan(heights[1]);
+    expect(heights[1]).toBeGreaterThan(heights[2]);
+    expect(guides.every((guide) => guide.getAttribute('y2') === '100')).toBe(true);
+    expect(heights.every((height) => height >= 8 && height <= 92)).toBe(true);
+    expect(guides[1].getAttribute('data-note-id')).toBe(rows[1].noteId);
+    expect(host.querySelector('.vilda-lab-result-chart-point[data-note-id="fictional-zero"]').getAttribute('data-value')).toBe('0');
   });
 });

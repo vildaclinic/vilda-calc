@@ -103,6 +103,7 @@
       saved = snapshot.normalize(entry.assessment);
       if (!saved || saved.status !== 'recorded') {
         result.warning = saved && saved.status === 'invalidated' ? 'Ocena nieaktualna' : 'Brak zapisanej oceny';
+        result.warningKind = saved && saved.status === 'invalidated' ? 'invalidated' : 'unavailable';
         return;
       }
       view = assessmentUI.buildView(saved.evaluation);
@@ -113,7 +114,7 @@
     // clinical assessment warns, e.g. an early pubertal stage. Never turn that
     // combined record into a reassuring green result or green reference band.
     var clinicalWarning = view.clinical && view.clinical.status === 'warning';
-    if (clinicalWarning) result.warning = text(view.clinical.title) || 'Zapisana ocena wymaga uwagi';
+    if (clinicalWarning) { result.warning = text(view.clinical.title) || 'Zapisana ocena wymaga uwagi'; result.warningKind = 'clinical'; }
     var candidates = view.comparisons.filter(function (comparison) { return comparison && comparison.status !== 'unavailable'; });
     var primary = candidates.filter(function (comparison) { return comparison.primary; });
     if (primary.length === 1) candidates = primary;
@@ -150,6 +151,7 @@
     if (!saved || !info) return;
     if (info.status !== 'recorded' && info.status !== 'general') {
       result.warning = info.status === 'invalidated' ? 'Zakres nieaktualny' : '';
+      result.warningKind = info.status === 'invalidated' ? 'invalidated' : '';
       return;
     }
     var display = saved.display;
@@ -157,7 +159,7 @@
     var item = norm(options, { low: display.low, high: display.high, unit: display.unit, target: result.unit,
       key: saved.analyte, label: info.population, conditional: info.status === 'general', tone: info.classification });
     if (item) result.norms.push(item);
-    if (info.status === 'general') result.warning = 'Zakres ogólny';
+    if (info.status === 'general') { result.warning = 'Zakres ogólny'; result.warningKind = 'reference'; }
   }
   function manualNorm(entry, options, result) {
     if (!entry.normAccepted || entry.converted || typeof options.parseNorm !== 'function') return;
@@ -172,20 +174,163 @@
   }
   function describe(entry, options) {
     entry = record(entry) ? entry : {};
+    if (record(entry.clcrRecord)) return describeClcr(entry.clcrRecord);
     options = options || {};
     var result = { value: exactValue(entry), unit: text(entry.unit || entry.recordedUnit), norms: [],
-      tone: 'neutral', symbol: '', normText: '—', warning: '' };
+      tone: 'neutral', symbol: '', normText: '—', warning: '', warningKind: '' };
     if (record(entry.assessment)) assessmentNorms(entry, options, result);
     else if (entry.normAccepted) manualNorm(entry, options, result);
     else if (record(entry.range)) rangeNorm(entry, options, result);
     if (result.norms.length) {
       result.normText = result.norms.map(function (item) { return (result.norms.length > 1 && item.label ? item.label + ': ' : '') + item.text; }).join(' · ');
       if (result.value !== null && result.norms.length === 1) result.tone = result.norms[0].tone;
-      if (!result.warning && result.norms.some(function (item) { return item.conditional; })) result.warning = result.norms.length > 1 ? 'Różne zakresy odniesienia' : 'Odniesienie orientacyjne';
+      if (!result.warning && result.norms.some(function (item) { return item.conditional; })) {
+        result.warning = result.norms.length > 1 ? 'Różne zakresy odniesienia' : 'Odniesienie orientacyjne';
+        result.warningKind = 'reference';
+      }
     }
     if (result.value === null) result.norms.forEach(function (item) { item.tone = 'neutral'; });
     result.symbol = result.tone === 'above' ? '↑' : result.tone === 'below' ? '↓' : '';
     return result;
   }
-  return Object.freeze({ version: '1.0.0', describe: describe });
+  // ClcrSavedResults owns validation and decoding. This adapter receives its
+  // projected records, not raw notes, and never parses a new norm or evaluates
+  // a formula. In particular a criterion/sign/context warning is not a numeric
+  // laboratory range and must not turn into a green band or an up/down arrow.
+  function clcrValue(saved) {
+    // The projection has already decoded the exact recorded number. A legacy
+    // or unreadable assessment does not erase that number; it only stays neutral.
+    return saved.status !== 'invalidated' && !text(saved.comparator) && ['exact', 'legacy'].indexOf(saved.kind) !== -1
+      && finite(saved.valueNum) ? saved.valueNum : null;
+  }
+  function describeClcr(saved) {
+    saved = record(saved) ? saved : {};
+    var result = { value: clcrValue(saved), unit: text(saved.unit), norms: [], tone: 'neutral', symbol: '',
+      normText: '—', warning: '', warningKind: '' };
+    if (saved.status === 'invalidated' || saved.status === 'unavailable') {
+      result.warning = saved.status === 'invalidated' ? 'Ocena nieaktualna po zmianie zapisu' : 'Zapisana ocena niedostępna';
+      result.warningKind = saved.status;
+      return result;
+    }
+    var reference = record(saved.reference) ? saved.reference : null;
+    var criterion = reference && reference.kind === 'recorded-criterion';
+    var bounds = reference && record(reference.bounds) ? reference.bounds : null;
+    var normText = text(saved.norm) || text(reference && reference.text);
+    var numericAssessment = ['within', 'above', 'below'].indexOf(saved.assessment) !== -1;
+    var numericTone = tone(saved.assessment);
+    var clinicalWarning = ['warning', 'danger'].indexOf(saved.tone) !== -1
+      && (!numericAssessment || saved.assessment === 'within' || criterion);
+    if (saved.status === 'recorded' && normText && !criterion) {
+      var low = bounds && finite(bounds.low) ? bounds.low : null;
+      var high = bounds && finite(bounds.high) ? bounds.high : null;
+      var compatible = !text(reference && reference.unit) || unit(reference.unit) === unit(result.unit);
+      var eligible = !!result.unit && compatible && (low !== null || high !== null) && !(low !== null && high !== null && low > high);
+      // Text and all operators stay exactly as the record owner projected them.
+      // Bounds are solely display coordinates in the record's native unit.
+      // A saved direction remains authoritative even if its displayed norm is
+      // approximate and therefore intentionally has no exact plot coordinates.
+      var itemTone = result.value !== null && !!result.unit && compatible && numericAssessment && !clinicalWarning
+        && (numericTone !== 'within' || saved.tone === 'success' || saved.tone === 'normal') ? numericTone : 'neutral';
+      result.norms.push({ text: normText, low: eligible ? low : null, high: eligible ? high : null, unit: result.unit,
+        label: '', conditional: !numericAssessment, eligible: eligible, tone: itemTone });
+      result.normText = normText;
+      result.tone = itemTone;
+    }
+    if (clinicalWarning) {
+      result.warning = text(saved.interpretation) || text(saved.description) || 'Zapisana ocena wymaga uwagi';
+      result.warningKind = 'clinical';
+    } else if (criterion) {
+      result.warning = 'Zapisane kryterium odniesienia' + (normText ? ': ' + normText : '');
+      result.warningKind = 'reference';
+    } else if (saved.status === 'recorded' && saved.sourceFormulaId === 'Ox_mgkg'
+      && ['Ox_total24', 'clcr:Ox_total24'].indexOf(saved.parameterKey) !== -1
+      && saved.assessment === 'unassessed' && saved.tone === 'neutral' && text(saved.interpretation)) {
+      // The frozen Ox result already explains why its reference is limited.
+      // Keep that explanation neutral; never infer it from today's patient.
+      result.warning = text(saved.interpretation);
+      result.warningKind = 'reference';
+    }
+    result.symbol = result.tone === 'above' ? '↑' : result.tone === 'below' ? '↓' : '';
+    return result;
+  }
+  var numericToken = '[+−-]?(?:\\d+(?:[.,]\\d*)?|[.,]\\d+)(?:[eE][+-]?\\d+)?';
+  var numericDisplay = new RegExp('^(?:[<>≤≥]=?|≈)?\\s*' + numericToken + '(?:\\s*[–−-]\\s*' + numericToken + ')?$');
+  function clcrDisplay(saved) {
+    var shown = text(saved.displayValue) || text(saved.rawText)
+      || (finite(saved.valueNum) ? Object.is(saved.valueNum, -0) ? '-0' : String(saved.valueNum) : '—');
+    var suffix = text(saved.unit);
+    if (suffix && (shown.slice(-suffix.length - 1) === ' ' + suffix || shown.slice(-suffix.length - 1) === '\u00a0' + suffix)) shown = shown.slice(0, -suffix.length - 1);
+    return numericDisplay.test(shown) ? shown.replace(/\./g, ',') : shown;
+  }
+  function sampleDate(value) {
+    var parts = /^(\d{4})-(\d{2})-(\d{2})$/.exec(text(value));
+    if (!parts) return '';
+    var date = new Date(value + 'T12:00:00Z');
+    return finite(date.getTime()) && date.getUTCFullYear() === Number(parts[1]) && date.getUTCMonth() + 1 === Number(parts[2])
+      && date.getUTCDate() === Number(parts[3]) ? value : '';
+  }
+  function clcrBasis(saved) {
+    if (text(saved.basisLabel)) return text(saved.basisLabel);
+    var basis = text(saved.basis);
+    if (basis === 'oxalate-amount') return 'Ilość molowa szczawianów';
+    if (basis === 'oxalate-ion') return 'Jon szczawianowy';
+    if (basis === 'oxalic-acid') return 'Kwas szczawiowy bezwodny';
+    if (basis === 'unknown' || basis === 'legacy-unknown') return 'Postać masowa niepodana w zapisie';
+    if (basis === 'ion') return saved.sourceFormulaId === 'OxCr_spot' ? 'Jon szczawianowy'
+      : saved.sourceFormulaId === 'CitCr_spot' ? 'Jon cytrynianowy' : 'Postać jonowa — zgodnie z zapisem';
+    if (basis === 'acid') return saved.sourceFormulaId === 'OxCr_spot' ? 'Kwas szczawiowy bezwodny'
+      : saved.sourceFormulaId === 'CitCr_spot' ? 'Kwas cytrynowy bezwodny' : 'Postać kwasowa — zgodnie z zapisem';
+    return basis;
+  }
+  function clcrSeries(projection) {
+    var groups = [], byKey = Object.create(null), seen = Object.create(null);
+    var measurements = projection && Array.isArray(projection.measurements) ? projection.measurements : [];
+    measurements.forEach(function (saved) {
+      if (!record(saved) || !text(saved.noteId) || seen[saved.noteId]) return;
+      seen[saved.noteId] = true;
+      var reference = record(saved.reference) ? saved.reference : {};
+      var key = 'clcr:' + (text(saved.seriesKey) || JSON.stringify([saved.parameterKey, saved.label, saved.method,
+        saved.unit, saved.basis, reference.profileId, reference.profileVersion]));
+      if (!byKey[key]) {
+        var label = text(saved.displayLabel) || text(saved.label) || 'Zapisane obliczenie';
+        byKey[key] = { key: key, testKey: null, label: label, test: label, unit: text(saved.unit),
+          method: text(saved.method), basis: text(saved.basis), basisLabel: clcrBasis(saved),
+          parameterKey: saved.parameterKey || null, sourceFormulaId: saved.sourceFormulaId || null,
+          clcr: true, entries: [], pending: [], mergedFrom: [], methodFootnote: false };
+        groups.push(byKey[key]);
+      }
+      var value = clcrValue(saved), display = clcrDisplay(saved), date = sampleDate(saved.dateISO);
+      byKey[key].entries.push({ clcrRecord: saved, noteId: saved.noteId, dateISO: date || null,
+        dateSource: date ? 'badanie' : 'unknown', kind: saved.status === 'invalidated' ? 'invalidated'
+          : saved.status === 'unavailable' ? 'unavailable' : text(saved.comparator) || saved.kind === 'censored' ? 'censored'
+            : !finite(saved.valueNum) || saved.kind === 'text' ? 'text' : saved.status === 'recorded' ? 'exact' : 'legacy',
+        recordedValue: finite(saved.valueNum) ? saved.valueNum : null, recordedUnit: text(saved.unit),
+        exactValue: value, value: value, unit: text(saved.unit), raw: display + (text(saved.unit) ? '\u00a0' + saved.unit : ''),
+        display: display + (text(saved.unit) ? '\u00a0' + saved.unit : ''), converted: false, status: null,
+        comment: text(saved.comment), delta: null });
+    });
+    groups.forEach(function (group) {
+      // ES2019 stable sort preserves the projection's order for same-day entries.
+      group.entries.sort(function (a, b) { return a.dateISO === b.dateISO ? 0 : !a.dateISO ? 1 : !b.dateISO ? -1 : a.dateISO < b.dateISO ? -1 : 1; });
+      var dated = group.entries.filter(function (entry) { return !!entry.dateISO; });
+      group.last = dated.length ? dated[dated.length - 1] : null;
+      var earlier = group.last ? dated.filter(function (entry) { return entry.dateISO < group.last.dateISO; }) : [];
+      group.previous = earlier.length ? earlier[earlier.length - 1] : null;
+      group.lastDateEntries = group.last ? dated.filter(function (entry) { return entry.dateISO === group.last.dateISO; }) : [];
+      group.chart = { unit: group.unit, points: [], gaps: [], skipped: 0, skippedByReason: {} };
+      group.entries.forEach(function (entry) {
+        var reason = entry.kind === 'invalidated' ? 'invalidated' : entry.kind === 'censored' ? 'censored'
+          : entry.kind === 'text' ? 'text' : !finite(entry.exactValue) ? 'unavailable' : !entry.dateISO ? 'no_sample_date' : null;
+        if (!reason && finite(entry.exactValue)) group.chart.points.push({ noteId: entry.noteId, dateISO: entry.dateISO, ageMonths: null, v: entry.exactValue, norm: null });
+        else {
+          reason = reason || 'text';
+          group.chart.skipped++;
+          group.chart.skippedByReason[reason] = (group.chart.skippedByReason[reason] || 0) + 1;
+          if (entry.dateISO) group.chart.gaps.push({ dateISO: entry.dateISO, noteId: entry.noteId, kind: reason });
+        }
+      });
+    });
+    return groups;
+  }
+  return Object.freeze({ version: '1.1.0', describe: describe, describeClcr: describeClcr, clcrSeries: clcrSeries });
 });

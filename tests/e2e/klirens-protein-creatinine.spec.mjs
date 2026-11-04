@@ -1,3 +1,4 @@
+import { showClcrResults, showBadaniaView, clcrRow, clcrPoints, clcrPoint, clcrCards, closeClcrDetails } from '../support/badania-klirens.mjs';
 import fs from 'node:fs/promises';
 import { expect, test } from '@playwright/test';
 import { czekajNaUstabilizowanyUklad, kliknij } from '../support/uklad-czekanie.mjs';
@@ -428,8 +429,28 @@ test('B/Cr: cztery znaki nierówności zachowane w zapisie, Badaniach i bez punk
     expect(measurement.outOfRange).toBe(null);
   }
   await page.locator('#clcrOpenBadaniaBtn').click();
-  await expect(page.locator('.vilda-lab-hist-panel[data-panel="renal"] .vilda-clcr-point')).toHaveCount(0);
-  for (const note of saved) await expect(page.locator(`.vilda-lab-hist-panel[data-panel="renal"] tr[data-note-id="${note.id}"]`)).toHaveCount(1);
+  await showClcrResults(page, 'charts');
+  await expect(clcrPoints(page)).toHaveCount(0);
+  await expect(clcrCards(page).locator('.vilda-lab-hist-card-chart svg')).toHaveCount(0);
+  const records = clcrCards(page).locator('.vilda-lab-result-chart-record');
+  await expect(records).toHaveCount(4);
+  for (const note of saved) {
+    const measurement = projected.find(item => item.noteId === note.id);
+    const record = records.and(page.locator(`[data-note-id="${note.id}"]`));
+    await expect(record).toHaveCount(1);
+    await expect(record.locator('.vilda-lab-result-chart-record-value')).toHaveText(
+      measurement.displayValue.replace(/\./g, ',') + ' ' + measurement.unit,
+    );
+    await expect(record.locator('time')).toHaveAttribute('datetime', note.clinicalDateISO);
+  }
+  const beforeOpen = await memory(page);
+  await records.and(page.locator(`[data-note-id="${saved[0].id}"]`)).click();
+  await expect(page.locator('#detailsDialog')).toBeVisible();
+  await expect(page.locator('#calculationDetails')).toHaveAttribute('data-note-id', saved[0].id);
+  expect((await memory(page)).notes).toEqual(beforeOpen.notes);
+  await closeClcrDetails(page);
+  await showBadaniaView(page, 'table');
+  for (const note of saved) await expect(clcrRow(page, note.id)).toHaveCount(1);
 });
 
 test('B/Cr: zapisany pacjent, małe raw i brak normy spójne w Badaniach, Notatkach, historii i wykresie', async ({ page }) => {
@@ -462,8 +483,9 @@ test('B/Cr: zapisany pacjent, małe raw i brak normy spójne w Badaniach, Notatk
   for (const note of [tiny, standard]) await expect(page.locator(`#clcrPatientCard tr[data-note-id="${note.id}"]`)).toHaveCount(1);
   await page.locator('#cpcClose').click();
   await page.locator('#clcrOpenBadaniaBtn').click();
-  await expect(page.locator('.vilda-lab-hist-panel[data-panel="renal"] .vilda-clcr-point')).toHaveCount(2);
-  expect(Number(await page.locator(`.vilda-lab-hist-panel[data-panel="renal"] .vilda-clcr-point[data-note-id="${tiny.id}"]`).getAttribute('data-value'))).toBe(model.rawValue);
+  await showClcrResults(page, 'charts');
+  await expect(clcrPoints(page)).toHaveCount(2);
+  expect(Number(await clcrPoint(page, tiny.id).getAttribute('data-value'))).toBe(model.rawValue);
   await page.locator('button[data-tab="notes"]').click();
   const notes = page.locator('.vilda-clcr-note[data-clcr-note-state="ready"]');
   await expect(notes).toHaveCount(2);

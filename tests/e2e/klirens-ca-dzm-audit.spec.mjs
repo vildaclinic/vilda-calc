@@ -1,3 +1,4 @@
+import { showClcrResults, showBadaniaView } from '../support/badania-klirens.mjs';
 import fs from 'node:fs/promises';
 import { expect, test } from '@playwright/test';
 import { czekajNaUstabilizowanyUklad } from '../support/uklad-czekanie.mjs';
@@ -158,15 +159,20 @@ test('Ca DZM: Badania i Wykresy w głównej karcie zachowują obie liczby i edyc
   await restore(calculator, { CA_inputMode: 'reported', CA_reportedValue: '8', CA_reportedUnit: 'mg/kg/24h', CA_clinicalMode: 'phpt' });
   const [second] = await saveVisible(calculator, '2026-10-25');
   await calculator.locator('#clcrOpenBadaniaBtn').click();
+  await showClcrResults(start, 'table');
   await expect(page).toHaveURL(/app\.html#\/start/);
-  const history = start.locator('.vilda-lab-hist-panel[data-panel="renal"] .vilda-clcr-history');
-  await expect(history.locator('tr[data-note-id]')).toHaveCount(2);
+  const history = start.locator('.vilda-lab-hist');
+  await expect(history.locator('.vilda-lab-hist-result-row[data-source="clcr"][data-note-id]')).toHaveCount(2);
+  for (const note of [first, second]) {
+    await expect(history.locator(`.vilda-lab-hist-result-row[data-source="clcr"][data-note-id="${note.id}"] .vilda-lab-hist-result-norm`)).toHaveText('<4 mg/kg/24 h');
+  }
+  await showBadaniaView(start, 'charts');
   for (const [note, value] of [[first, '3'], [second, '8']]) {
-    await expect(history.locator(`.vilda-clcr-point[data-note-id="${note.id}"]`)).toHaveAttribute('data-value', value);
-    await expect(history.locator(`tr[data-note-id="${note.id}"] .vilda-clcr-row-reference`)).toHaveText('<4 mg/kg/24 h');
+    await expect(history.locator(`.vilda-lab-hist-card[data-source="clcr"] .vilda-lab-result-chart-point[data-note-id="${note.id}"]`)).toHaveAttribute('data-value', value);
   }
   expect(await start.evaluate(() => Boolean(window.VildaClcrCaDzm))).toBe(false);
-  await history.locator(`.vilda-clcr-value[data-note-id="${first.id}"]`).click();
+  await showBadaniaView(start, 'table');
+  await history.locator(`.vilda-lab-hist-result-row[data-source="clcr"][data-note-id="${first.id}"] .vilda-lab-hist-result-value`).click();
   await start.locator('#editMeasurement').click();
   await expect(start.locator('#editField-CA_clinicalMode')).toHaveValue('hypo');
   await start.locator('#editField-CA_reportedValue').fill('4');
@@ -174,7 +180,8 @@ test('Ca DZM: Badania i Wykresy w głównej karcie zachowują obie liczby i edyc
   await start.locator('#saveEditedMeasurement').click();
   await expect(start.locator('#editDialog')).toBeHidden();
   await start.locator('#detailsDialog').getByRole('button', { name: 'Zamknij', exact: true }).click();
-  await expect(history.locator(`.vilda-clcr-point[data-note-id="${first.id}"]`)).toHaveAttribute('data-value', '4');
+  await showBadaniaView(start, 'charts');
+  await expect(history.locator(`.vilda-lab-hist-card[data-source="clcr"] .vilda-lab-result-chart-point[data-note-id="${first.id}"]`)).toHaveAttribute('data-value', '4');
   expect((await memory(start)).notes.find(note => note.id === second.id)).toEqual(second);
   expect((await memory(start)).originalsLocked).toBe(true);
 });

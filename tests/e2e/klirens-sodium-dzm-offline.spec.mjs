@@ -1,3 +1,4 @@
+import { showClcrResults, clcrPoint } from '../support/badania-klirens.mjs';
 import { createServer } from 'node:http';
 import { createHash } from 'node:crypto';
 import { execFileSync } from 'node:child_process';
@@ -225,7 +226,8 @@ async function fictionalSodiumAndNotes(page) {
   const [note] = await saveVisible(page, '2026-10-30');
   expect((await memory(page)).notes).toHaveLength(1);
   expect(note.labResult.valueNum).toBe(150); expect(note.labResult.value).toBe('150');
-  await page.locator('#clcrOpenBadaniaBtn').click(); await expect(page.locator('.vilda-auth-patient-card')).toBeVisible();
+  await page.locator('#clcrOpenBadaniaBtn').click();
+  await showClcrResults(page, 'charts'); await expect(page.locator('.vilda-auth-patient-card')).toBeVisible();
   await page.locator('button[data-tab="notes"]').click();
   const compact = page.locator('.vilda-clcr-note[data-clcr-note-state="ready"]'); await expect(compact).toHaveCount(1);
   await expect(compact.locator('.clcr-note-value')).toHaveText('150'); await expect(compact.locator('.clcr-note-reference')).toHaveText('58–337');
@@ -270,7 +272,8 @@ async function lazyStartAndNotes(page, origin, note, resources, loaded) {
   }, edited);
   expect(saved).toMatchObject({ valueNum: 600, outOfRange: true });
   await compact.getByRole('button', { name: 'Zobacz w Badaniach →', exact: true }).click();
-  await expect(page.locator(`.vilda-lab-hist-panel[data-panel="renal"] .vilda-clcr-point[data-note-id="${note.id}"]`)).toHaveAttribute('data-value', '600');
+  await showClcrResults(page, 'charts');
+  await expect(clcrPoint(page, note.id)).toHaveAttribute('data-value', '600');
   const lazyResources = resources.filter(resource => /\/(?:clcr_sodium_dzm(?:_data|_persistence)?\.js|clcr_record_resources\.js|clcr_saved_calculation\.js|clcr_saved_results\.js|clcr_result_details\.js|vilda_auth_ui\.js|vilda_lab_history_tab\.js)\?/.test(resource.url));
   expect(lazyResources.filter(resource => resource.url.includes('/clcr_sodium_dzm'))).toHaveLength(3);
   await assertResourceDelivery(page, lazyResources, loaded);

@@ -227,6 +227,11 @@ async function nativePick(owner, name, patientId) {
     if (await expand.isVisible()) await expand.click();
   }
   await expect(owner.locator('#restoreStateBtn')).toBeVisible();
+  // A delayed calculator update must not hide the patient's Restore action
+  // merely because no calculation formula has been selected yet.
+  await owner.evaluate(() => window.clcrUpdate());
+  await expect(owner.locator('#restoreStateBtn')).toBeVisible();
+  await expect(owner.locator('#clearBtn')).toBeVisible();
 }
 
 async function reloadStart(page, shell) {

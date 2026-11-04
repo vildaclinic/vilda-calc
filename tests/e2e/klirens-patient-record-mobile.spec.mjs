@@ -1,5 +1,6 @@
 import { expect, test } from '../support/test-czas.mjs';
 import { openCalculator, applyAcr, applyU25, saveVisible, memory, selectPatient } from '../support/klirens-patient-record.mjs';
+import { showClcrResults, showBadaniaView } from '../support/badania-klirens.mjs';
 
 test.use({ chwila: '2026-10-25T12:00:00Z' });
 
@@ -30,14 +31,16 @@ for (const width of [390, 320]) {
       await applyAcr(page, value); notes.push((await saveVisible(page))[0]);
     }
     await page.locator('#clcrOpenBadaniaBtn').click();
-    const history = page.locator('.vilda-lab-hist-panel[data-panel="renal"] .vilda-clcr-history');
-    await expect(history.locator('tr[data-note-id]')).toHaveCount(3);
-    await expect(history.locator('.vilda-clcr-point')).toHaveCount(3);
-    const chartScroll = await history.locator('.vilda-clcr-chart-scroll').evaluate(element => element.scrollWidth - element.clientWidth);
+    await showClcrResults(page, 'table');
+    const history = page.locator('.vilda-lab-hist');
+    await expect(history.locator('.vilda-lab-hist-result-row[data-source="clcr"][data-note-id]')).toHaveCount(3);
+    await showBadaniaView(page, 'charts');
+    await expect(history.locator('.vilda-lab-hist-card[data-source="clcr"] .vilda-lab-result-chart-point')).toHaveCount(3);
+    const chartScroll = await history.locator('.vilda-lab-result-chart-scroll').evaluate(element => element.scrollWidth - element.clientWidth);
     expect(chartScroll, 'three accepted demo points fit the phone without chart panning').toBeLessThanOrEqual(1);
     await expectGeometry(page);
     const middle = notes[1].id;
-    await history.locator(`.vilda-clcr-point[data-note-id="${middle}"]`).tap();
+    await history.locator(`.vilda-lab-hist-card[data-source="clcr"] .vilda-lab-result-chart-point[data-note-id="${middle}"]`).tap();
     await expect(page.locator('#calculationDetails')).toHaveAttribute('data-note-id', middle);
     await page.locator('#editMeasurement').tap();
     await expectGeometry(page, { editor: true });
@@ -54,8 +57,9 @@ for (const width of [390, 320]) {
     expect((await memory(page)).notes).toHaveLength(3);
     await page.locator('#deleteMeasurement').tap();
     await page.locator('#confirmDeleteMeasurement').tap();
-    await expect(history.locator(`tr[data-note-id="${middle}"]`)).toHaveCount(0);
-    await expect(history.locator(`tr[data-note-id="${notes[2].id}"]`)).toHaveCount(1);
+    await showBadaniaView(page, 'table');
+    await expect(history.locator(`.vilda-lab-hist-result-row[data-source="clcr"][data-note-id="${middle}"]`)).toHaveCount(0);
+    await expect(history.locator(`.vilda-lab-hist-result-row[data-source="clcr"][data-note-id="${notes[2].id}"]`)).toHaveCount(1);
     await expectGeometry(page);
     await page.evaluate(() => window.VildaAuthUI.hide());
     await page.locator('#clcrOpenHistoryBtn').tap();
@@ -74,7 +78,8 @@ test('390px: U25 serum fields and historical age/sex keep16px/48px dimensions', 
   await applyU25(page);
   const [note] = await saveVisible(page);
   await page.locator('#clcrOpenBadaniaBtn').tap();
-  await page.locator(`.vilda-clcr-point[data-note-id="${note.id}"]`).tap();
+  await showClcrResults(page, 'charts');
+  await page.locator(`.vilda-lab-hist-card[data-source="clcr"] .vilda-lab-result-chart-point[data-note-id="${note.id}"]`).tap();
   await page.locator('#editMeasurement').tap();
   await page.locator('#changeHistoricalContext').tap();
   const geometry = await expectGeometry(page, { editor: true });

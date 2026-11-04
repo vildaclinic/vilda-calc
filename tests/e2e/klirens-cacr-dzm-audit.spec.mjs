@@ -1,3 +1,4 @@
+import { showClcrResults, clcrPoints } from '../support/badania-klirens.mjs';
 import fs from 'node:fs/promises';
 import { expect, test } from '@playwright/test';
 import { czekajNaUstabilizowanyUklad } from '../support/uklad-czekanie.mjs';
@@ -333,7 +334,8 @@ test('Ca/Cr DZM: Badania, Notatki i historia zachowują źródło i liczbę bez 
   expect(savedSpot).toMatchObject({ valueNum: 300, unit: 'mg/g', outOfRange: true, parameterKey: 'clcr:CaCr_spot' });
   expect(new Set(projected.measurements.map(item => item.parameterKey))).toEqual(new Set(['clcr:Ca_Cr', 'clcr:CaCr_spot']));
   await page.locator('#clcrOpenBadaniaBtn').click();
-  await expect(page.locator('.vilda-lab-hist-panel[data-panel="renal"] .vilda-clcr-point')).toHaveCount(3);
+  await showClcrResults(page, 'charts');
+  await expect(clcrPoints(page)).toHaveCount(3);
   await page.locator('button[data-tab="notes"]').click();
   const notes = page.locator('.vilda-clcr-note[data-clcr-note-state="ready"]');
   await expect(notes).toHaveCount(3);

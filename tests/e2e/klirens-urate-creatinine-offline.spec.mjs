@@ -1,3 +1,4 @@
+import { showClcrResults, clcrPoint } from '../support/badania-klirens.mjs';
 import { createServer } from 'node:http';
 import { createHash } from 'node:crypto';
 import { execFileSync } from 'node:child_process';
@@ -222,7 +223,8 @@ async function fictionalUrateCreatinineAndNotes(page) {
   expect((await memory(page)).notes).toHaveLength(1);
   expect(note.labResult.valueNum).toBeCloseTo(0.6728927487954316, 14);
   expect(note.labResult.value).toBe(model.presentation.valueText);
-  await page.locator('#clcrOpenBadaniaBtn').click(); await expect(page.locator('.vilda-auth-patient-card')).toBeVisible();
+  await page.locator('#clcrOpenBadaniaBtn').click();
+  await showClcrResults(page, 'charts'); await expect(page.locator('.vilda-auth-patient-card')).toBeVisible();
   await page.locator('button[data-tab="notes"]').click();
   const compact = page.locator('.vilda-clcr-note[data-clcr-note-state="ready"]'); await expect(compact).toHaveCount(1);
   await expect(compact.locator('.clcr-note-value')).toHaveText(model.presentation.valueText);
@@ -268,7 +270,8 @@ async function lazyStartAndNotes(page, origin, note, resources, loaded) {
   }, edited);
   expect(saved.valueNum).toBeCloseTo(Number('0.20186782463862947'), 14); expect(saved).toMatchObject({ outOfRange: false, norm: '0,11–0,53 mmol/mmol' });
   await compact.getByRole('button', { name: 'Zobacz w Badaniach →', exact: true }).click();
-  const point = page.locator(`.vilda-lab-hist-panel[data-panel="renal"] .vilda-clcr-point[data-note-id="${note.id}"]`);
+  await showClcrResults(page, 'charts');
+  const point = clcrPoint(page, note.id);
   await expect.poll(async () => Number(await point.getAttribute('data-value'))).toBeCloseTo(Number('0.20186782463862947'), 14);
   const lazyResources = resources.filter(resource => /\/(?:clcr_urate_creatinine(?:_data|_persistence)?\.js|clcr_record_resources\.js|clcr_saved_calculation\.js|clcr_saved_results\.js|clcr_result_details\.js|vilda_auth_ui\.js|vilda_lab_history_tab\.js)\?/.test(resource.url));
   expect(lazyResources.filter(resource => resource.url.includes('/clcr_urate_creatinine'))).toHaveLength(3);

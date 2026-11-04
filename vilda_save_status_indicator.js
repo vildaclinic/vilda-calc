@@ -737,15 +737,16 @@ function normalizeClcrStatusInputs(session){
     ACR_entry_mode:"concentration",PCR_entry_mode:"concentration",
     CaCr_entry_mode:"concentration",OxCr_entry_mode:"concentration",CitCr_entry_mode:"concentration",
     CitCr_reported_basis:"unknown",citrateSpotReportingEntity:"unknown",creatinineState:"unknown",
-    CA_inputMode:"concentration",CA_clinicalMode:"general",MG_inputMode:"concentration",UA_inputMode:"concentration",PO4_inputMode:"concentration",Prot_inputMode:"concentration",Na_inputMode:"concentration",K_inputMode:"concentration"
+    CA_inputMode:"concentration",CA_clinicalMode:"general",MG_inputMode:"concentration",UA_inputMode:"concentration",PO4_inputMode:"concentration",Prot_inputMode:"concentration",Na_inputMode:"concentration",K_inputMode:"concentration",
+    OXDZM_inputMode:"concentration",OXDZM_reportingEntity:"unknown"
   };
   Object.keys(defaults).forEach(function(key){if(inputs[key]===defaults[key])delete inputs[key]});
   // Dedicated DZM forms use hidden text controls. Normalize only their exact
   // false defaults; a true historical-unknown marker remains clinical input.
-  ["PO4_durationNeedsConfirmation","Prot_durationNeedsConfirmation","Na_durationNeedsConfirmation","K_durationNeedsConfirmation"].forEach(function(key){if(inputs[key]==="false")delete inputs[key]});
+  ["PO4_durationNeedsConfirmation","Prot_durationNeedsConfirmation","Na_durationNeedsConfirmation","K_durationNeedsConfirmation","OXDZM_durationNeedsConfirmation"].forEach(function(key){if(inputs[key]==="false")delete inputs[key]});
   [["Cl24DurationHours","Cl24DurationSource"],["CA_collectionHours","CA_collectionSource"],
     ["MG_collectionHours","MG_collectionSource"],["UA_collectionHours","UA_collectionSource"],
-    ["PO4_collectionHours","PO4_collectionSource"],["Prot_collectionHours","Prot_collectionSource"],["Na_collectionHours","Na_collectionSource"],["K_collectionHours","K_collectionSource"]].forEach(function(pair){
+    ["PO4_collectionHours","PO4_collectionSource"],["Prot_collectionHours","Prot_collectionSource"],["Na_collectionHours","Na_collectionSource"],["K_collectionHours","K_collectionSource"],["OXDZM_collectionHours","OXDZM_collectionSource"]].forEach(function(pair){
     var value=inputs[pair[0]],source=inputs[pair[1]],present=value!==null&&value!==undefined&&String(value).trim()!=="";
     // Old fingerprints omitted blank reset hours but retained their assumed
     // source. Match ClcrCollectionDuration's absent/default semantics without

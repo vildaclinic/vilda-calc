@@ -3,9 +3,11 @@ import {
   PATIENT_ID, OTHER_PATIENT_ID, openCalculator, openShellCalculator, applyAcr, applyProtein, saveVisible,
   memory, configureMemory, releaseWrites, selectPatient,
 } from '../support/klirens-patient-record.mjs';
+import { badania, clcrCards, clcrRows, clcrValue, clcrNorm, clcrPoint,
+  showClcrResults, showBadaniaView, openClcrDetails, closeClcrDetails } from '../support/badania-klirens.mjs';
 
 test.use({ chwila: '2026-10-25T12:00:00Z' });
-const renal = scope => scope.locator('.vilda-lab-hist-panel[data-panel="renal"] .vilda-clcr-history');
+const renal = badania;
 
 // Actual production calculator, writer, Start card and shared read renderer.
 // Only encrypted I/O is replaced with an explicit isolated memory facade.
@@ -16,10 +18,11 @@ test('standalone: one canonical save opens main Badania; local history and New m
   expect(note).toMatchObject({ patientId: PATIENT_ID, category: 'wynik-klirens' });
   expect((await memory(page)).notes).toHaveLength(1);
   await page.locator('#clcrOpenBadaniaBtn').click();
+  await showClcrResults(page, 'table');
   await expect(page.locator('.vilda-patient-tab[data-tab="lab"]')).toHaveClass(/active/);
-  await expect(renal(page).locator(`tr[data-note-id="${note.id}"]`)).toHaveCount(1);
-  await expect(renal(page).locator(`.vilda-clcr-value[data-note-id="${note.id}"]`)).toContainText('13,6');
-  await expect(renal(page).locator(`tr[data-note-id="${note.id}"] .vilda-clcr-row-reference`)).toHaveText('<30 mg/g');
+  await expect(renal(page).locator(`.vilda-lab-hist-result-row[data-source="clcr"][data-note-id="${note.id}"]`)).toHaveCount(1);
+  await expect(renal(page).locator(`.vilda-lab-hist-result-row[data-source="clcr"][data-note-id="${note.id}"] .vilda-lab-hist-result-value`)).toContainText('13,6');
+  await expect(renal(page).locator(`.vilda-lab-hist-result-row[data-source="clcr"][data-note-id="${note.id}"] .vilda-lab-hist-result-norm`)).toHaveText('<30 mg/g');
   await expect(renal(page)).not.toContainText(/clcr-saved-calculation|schemaVersion|"rawValue"/);
   // Main card has not been replaced by the former calculator-only overlay.
   await expect(page.locator('#clcrPatientCard')).toBeHidden();
@@ -42,10 +45,12 @@ test('real app iframe: Save → Shell Start/Badania keeps the same patient and s
   await applyAcr(calculator, '45');
   const [note] = await saveVisible(calculator);
   await calculator.locator('#clcrOpenCardBtn').click();
+  await showClcrResults(start, 'table');
   await expect(page).toHaveURL(/\/app\.html#\/start/);
   await expect(start.locator('.vilda-patient-tab[data-tab="lab"]')).toHaveClass(/active/);
-  await expect(renal(start).locator(`tr[data-note-id="${note.id}"]`)).toHaveCount(1);
-  await expect(renal(start).locator(`.vilda-clcr-point[data-note-id="${note.id}"]`)).toHaveAttribute('data-value', '45');
+  await expect(renal(start).locator(`.vilda-lab-hist-result-row[data-source="clcr"][data-note-id="${note.id}"]`)).toHaveCount(1);
+  await showBadaniaView(start, 'charts');
+  await expect(renal(start).locator(`.vilda-lab-hist-card[data-source="clcr"] .vilda-lab-result-chart-point[data-note-id="${note.id}"]`)).toHaveAttribute('data-value', '45');
   const saved = await memory(start);
   expect(saved.notes).toHaveLength(1);
   expect(saved.notes[0].id).toBe(note.id);
@@ -59,13 +64,14 @@ test('real app iframe: Save → Shell Start/Badania keeps the same patient and s
   await expect(calculator.locator('#clcrVisitStatus')).toContainText('Zapisano');
   // Edit in the Start document, then return to the still-live calculator
   // document. Only real BC/storage invalidation can clear its stale Save cache.
-  await renal(start).locator(`.vilda-clcr-value[data-note-id="${note.id}"]`).click();
+  await openClcrDetails(start, note.id);
   await start.locator('#editMeasurement').click();
   await start.locator('[data-clcr-edit-field="U_Alb"]').fill('13.6');
   await start.locator('#saveEditedMeasurement').click();
   await expect(start.locator('#editDialog')).toBeHidden();
   await start.locator('#detailsDialog').getByRole('button', { name: 'Zamknij', exact: true }).click();
-  await expect(renal(start).locator(`.vilda-clcr-value[data-note-id="${note.id}"]`)).toContainText('13,6');
+  await showBadaniaView(start, 'table');
+  await expect(renal(start).locator(`.vilda-lab-hist-result-row[data-source="clcr"][data-note-id="${note.id}"] .vilda-lab-hist-result-value`)).toContainText('13,6');
   await page.evaluate(() => window.VildaShell.navigate('klirens', true));
   await expect(page).toHaveURL(/\/app\.html#\/klirens/);
   await expect(calculator.locator('#U_Alb')).toHaveValue('45');
@@ -78,7 +84,7 @@ test('real app iframe: Save → Shell Start/Badania keeps the same patient and s
   expect((await memory(calculator)).notes.filter(savedNote => savedNote.patientId === OTHER_PATIENT_ID)).toHaveLength(1);
 });
 
-test('all41 formulas/45 legacy outputs remain visible, including signed/bounded/native-axis records and ordinary labs', async ({ page }) => {
+test('all41 formulas/46 outputs remain visible, including old and daily oxalate, signed/bounded/native-axis records and ordinary labs', async ({ page }) => {
   await openCalculator(page);
   await applyAcr(page, '13.6');
   const seeded = await page.evaluate(pid => {
@@ -101,22 +107,35 @@ test('all41 formulas/45 legacy outputs remain visible, including signed/bounded/
     window.__clcrRecordFixture.addSeries({ testKey: 'tsh', test: 'TSH (tyreotropina)', points: [{ noteId: ordinary.id, dateISO: ordinary.clinicalDateISO, valueNum: 4.2, unit: 'mIU/L' }] });
     return { ids: notes.map(note => note.id), outputs: dictionary.map(entry => entry.id), formulas: [...new Set(dictionary.map(entry => entry.sourceFormulaId))] };
   }, PATIENT_ID);
-  expect(seeded.outputs).toHaveLength(45);
+  expect(seeded.outputs).toHaveLength(46);
+  expect(seeded.outputs).toEqual(expect.arrayContaining(['Ox_mgkg', 'Ox_total24']));
   expect(seeded.formulas).toHaveLength(41);
   await page.locator('#clcrOpenCardBtn').click();
-  await page.locator('.vilda-lab-hist').getByRole('button', { name: 'Wykresy', exact: true }).click();
-  await expect(renal(page).locator('tr[data-note-id]')).toHaveCount(seeded.ids.length);
-  const shown = await renal(page).locator('tr[data-note-id]').evaluateAll(nodes => nodes.map(node => node.dataset.noteId));
+  await showClcrResults(page, 'table');
+  await expect(clcrRows(page)).toHaveCount(seeded.ids.length);
+  const shown = await clcrRows(page).evaluateAll(nodes => nodes.map(node => node.dataset.noteId));
   expect(new Set(shown)).toEqual(new Set(seeded.ids));
-  await expect(renal(page).locator('.vilda-clcr-point[data-note-id="fictional-legacy-AGu_spot"]')).toHaveAttribute('data-value', '-15');
-  await expect(renal(page).locator('.vilda-clcr-value[data-note-id="fictional-censored-acr"]')).toContainText('<30');
-  await expect(renal(page).locator('.vilda-clcr-point[data-note-id="fictional-censored-acr"]')).toHaveCount(0);
-  const a = renal(page).locator('.vilda-clcr-point[data-note-id="fictional-same-day-a"] circle');
-  const b = renal(page).locator('.vilda-clcr-point[data-note-id="fictional-same-day-b"] circle');
-  expect(await a.getAttribute('cx')).not.toBe(await b.getAttribute('cx'));
-  await expect(renal(page).locator('path, polyline')).toHaveCount(0);
-  await expect(renal(page)).toContainText('nie mają podanej godziny');
-  await expect(renal(page).locator('tr[data-note-id="fictional-same-day-b"] .vilda-clcr-row-reference')).toHaveText('Brak zapisanej normy');
+  await expect(clcrValue(page, 'fictional-censored-acr')).toContainText('<30');
+  await expect(clcrNorm(page, 'fictional-same-day-b')).toHaveText('—');
+  await showBadaniaView(page, 'charts');
+  await expect(clcrPoint(page, 'fictional-legacy-AGu_spot')).toHaveAttribute('data-value', '-15');
+  await expect(clcrPoint(page, 'fictional-censored-acr')).toHaveCount(0);
+  const acrSeries = clcrCards(page).and(page.locator('[data-parameter-key="clcr:ACR"]'));
+  await expect(acrSeries).toHaveCount(2);
+  expect((await acrSeries.locator('.vilda-lab-hist-result-unit').allTextContents()).sort()).toEqual(['mg/g', 'mg/mmol']);
+  const acr = acrSeries.filter({ hasText: 'mg/g' });
+  const shared = acr.locator('.vilda-lab-result-chart-point[data-count="2"][data-value="45"]');
+  await expect(shared).toHaveCount(1);
+  await expect(shared).toHaveAttribute('data-date', '2026-10-25');
+  // A shared true date/value coordinate replaces ordinal jitter. Both original
+  // note IDs remain individually reachable through the actual chart chooser.
+  for (const id of ['fictional-same-day-a', 'fictional-same-day-b']) {
+    await openClcrDetails(page, id, { chart: true });
+    await expect(page.locator('#calculationDetails')).toHaveAttribute('data-note-id', id);
+    await closeClcrDetails(page);
+  }
+  await expect(acr.locator('.vilda-lab-result-chart-line')).toHaveCount(0);
+  await badania(page).locator('.vilda-lab-hist-panel-select').selectOption('all');
   await expect(page.locator('.vilda-lab-hist-card[data-series="tsh"]')).toBeVisible();
   expect((await memory(page)).notes).toHaveLength(seeded.ids.length + 1);
 });
@@ -189,7 +208,8 @@ test('protein creates one canonical measurement and a failed first write retries
   const finished = await memory(page);
   expect(new Set(finished.notes.map(note => note.id)).size).toBe(1);
   await page.locator('#clcrOpenBadaniaBtn').click();
-  await expect(renal(page).locator('tr[data-note-id]')).toHaveCount(1);
+  await showClcrResults(page, 'table');
+  await expect(renal(page).locator('.vilda-lab-hist-result-row[data-source="clcr"][data-note-id]')).toHaveCount(1);
   const outputs = await page.evaluate(notes => window.ClcrSavedResults.projectPatientNotes(notes).measurements.map(point => point.parameterKey), finished.notes);
   expect(new Set(outputs)).toEqual(new Set(['clcr:Prot_mg24']));
   expect(finished.originalsLocked).toBe(true);

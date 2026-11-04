@@ -1,3 +1,4 @@
+import { showClcrResults, showBadaniaView } from '../support/badania-klirens.mjs';
 import fs from 'node:fs/promises';
 import { expect, test } from '@playwright/test';
 import { czekajNaUstabilizowanyUklad } from '../support/uklad-czekanie.mjs';
@@ -193,7 +194,8 @@ test('KM/Cr: Badania i Notatki odczytują ten sam zamrożony wynik bez bieżące
   expect(projected[1]).toMatchObject({ norm: '', outOfRange: null }); expect(new Set(projected.map(point => point.parameterKey))).toEqual(new Set(['clcr:KM_Cr']));
   await page.evaluate(notes => { window.__urateSyntheticNotes = notes; }, [assessed, unassessed]);
   const history = await readVisibleSavedHistory(page, '__urateSyntheticNotes'); expect(history.visible).toBe(true); expect(history.ids).toEqual(history.originalIds); expect(history.points).toHaveLength(2);
-  await page.locator('#clcrOpenBadaniaBtn').click(); await expect(page.locator('.vilda-lab-hist-panel[data-panel="renal"] .vilda-clcr-point')).toHaveCount(2);
+  await page.locator('#clcrOpenBadaniaBtn').click();
+  await showClcrResults(page, 'charts'); await expect(page.locator('.vilda-lab-hist .vilda-lab-hist-card[data-source="clcr"] .vilda-lab-result-chart-point')).toHaveCount(2);
   await page.locator('button[data-tab="notes"]').click(); const notes = page.locator('.vilda-clcr-note[data-clcr-note-state="ready"]'); await expect(notes).toHaveCount(2);
   for (const hidden of ['VILDA_CLCR','engineVersion','exactMain','[tekst]',REMOVED_RESULT_SENTENCE]) await expect(notes.first()).not.toContainText(hidden);
   expect((await memory(page)).originalsLocked).toBe(true);
@@ -228,11 +230,14 @@ test('KM/Cr: dawny zapis pozostaje w mg/mg, a jego edycja nie wymyśla typu pró
 
 test('KM/Cr: karta Start leniwie odczytuje i edytuje pojedynczy pomiar', async ({ page }) => {
   const {calculator,start}=await openShellCalculator(page);await restore(calculator);await expectResult(calculator,{guest:false});const [note]=await saveVisible(calculator,'2026-11-02');
-  await calculator.locator('#clcrOpenCardBtn').click();await expect(page).toHaveURL(/app\.html#\/start/);
-  const history=start.locator('.vilda-lab-hist-panel[data-panel="renal"] .vilda-clcr-history');await expect(history.locator(`tr[data-note-id="${note.id}"]`)).toHaveCount(1);
-  await history.locator(`.vilda-clcr-value[data-note-id="${note.id}"]`).click();await start.locator('#editMeasurement').click();await start.locator('#editField-URCR_uricAcid').fill('60');await start.locator('#saveEditedMeasurement').click();await expect(start.locator('#editDialog')).toBeHidden();
+  await calculator.locator('#clcrOpenCardBtn').click();
+  await showClcrResults(start, 'table');await expect(page).toHaveURL(/app\.html#\/start/);
+  const history=start.locator('.vilda-lab-hist');await expect(history.locator(`.vilda-lab-hist-result-row[data-source="clcr"][data-note-id="${note.id}"]`)).toHaveCount(1);
+  await showBadaniaView(start, 'table');
+  await history.locator(`.vilda-lab-hist-result-row[data-source="clcr"][data-note-id="${note.id}"] .vilda-lab-hist-result-value`).click();await start.locator('#editMeasurement').click();await start.locator('#editField-URCR_uricAcid').fill('60');await start.locator('#saveEditedMeasurement').click();await expect(start.locator('#editDialog')).toBeHidden();
   await start.locator('#detailsDialog').getByRole('button',{name:'Zamknij',exact:true}).click();
-  await expect.poll(async()=>Number(await history.locator(`.vilda-clcr-point[data-note-id="${note.id}"]`).getAttribute('data-value'))).toBeCloseTo(Number('0.40373564927725894'),14);
+  await showBadaniaView(start, 'charts');
+  await expect.poll(async()=>Number(await history.locator(`.vilda-lab-hist-card[data-source="clcr"] .vilda-lab-result-chart-point[data-note-id="${note.id}"]`).getAttribute('data-value'))).toBeCloseTo(Number('0.40373564927725894'),14);
   expect((await memory(start)).notes).toHaveLength(1);expect((await memory(start)).originalsLocked).toBe(true);
 });
 

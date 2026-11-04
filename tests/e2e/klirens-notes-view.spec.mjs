@@ -1,3 +1,4 @@
+import { showClcrResults } from '../support/badania-klirens.mjs';
 import { expect, test } from '../support/test-czas.mjs';
 import { openCalculator, applyAcr, saveVisible, memory, PATIENT_ID } from '../support/klirens-patient-record.mjs';
 
@@ -23,6 +24,7 @@ async function createNotes(page) {
 }
 async function openNotes(page) {
   await page.locator('#clcrOpenBadaniaBtn').click();
+  await showClcrResults(page, 'table');
   await expect(page.locator('.vilda-auth-patient-card')).toBeVisible();
   await page.locator('button[data-tab="notes"]').click();
 }
@@ -77,8 +79,9 @@ test('Klirens note details edit/delete the same canonical measurement in Notes a
   expect(after.notes).toHaveLength(3); expect(after.updates).toHaveLength(1);
   expect(edited.labResult.valueNum).toBeGreaterThan(ids.calcium.labResult.valueNum);
   await noteCard(page, ids.calcium.id).getByRole('button', { name: 'Zobacz w Badaniach →', exact: true }).click();
-  const renal = page.locator('.vilda-lab-hist-panel[data-panel="renal"]');
-  await expect(renal.locator(`tr[data-note-id="${ids.calcium.id}"]`)).toBeVisible();
+  await showClcrResults(page, 'table');
+  const renal = page.locator('.vilda-lab-hist');
+  await expect(renal.locator(`.vilda-lab-hist-result-row[data-source="clcr"][data-note-id="${ids.calcium.id}"]`)).toBeVisible();
   await expect(renal).toContainText(edited.labResult.value.replace('.', ','));
   await page.locator('button[data-tab="notes"]').click();
   await noteCard(page, ids.calcium.id).getByRole('button', { name: 'Szczegóły obliczenia →', exact: true }).click();
@@ -90,7 +93,8 @@ test('Klirens note details edit/delete the same canonical measurement in Notes a
   await expect(noteCard(page, ids.acr.id)).toBeVisible();
   expect((await memory(page)).notes).toHaveLength(2);
   await page.locator('button[data-tab="lab"]').click();
-  await expect(renal.locator(`tr[data-note-id="${ids.calcium.id}"]`)).toHaveCount(0);
+  await showClcrResults(page, 'table');
+  await expect(renal.locator(`.vilda-lab-hist-result-row[data-source="clcr"][data-note-id="${ids.calcium.id}"]`)).toHaveCount(0);
   expect((await memory(page)).originalsLocked).toBe(true);
 });
 

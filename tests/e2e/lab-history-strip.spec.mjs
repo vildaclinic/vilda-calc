@@ -154,5 +154,10 @@ test('„Badania w karcie →” poza powłoką otwiera kartę pacjenta na zakł
 
   await pasek.locator('.lab-strip-head button.lab-strip-link').click();
   await expect(page.locator('.vilda-patient-tab[data-tab="lab"]')).toHaveClass(/active/);
-  await expect(page.locator('.vilda-lab-hist-summary')).toHaveText('14 wyników · 5 badań · ostatnie badanie 02.06.26');
+  const badania = page.locator('.vilda-lab-hist');
+  await expect(badania.locator('.vilda-lab-hist-result-row')).toHaveCount(14);
+  expect(await badania.locator('.vilda-lab-hist-result-row').evaluateAll((rows) =>
+    [...new Set(rows.map((row) => row.getAttribute('data-series')))].sort()))
+    .toEqual(['ft3', 'ft4', 'lh', 'prolactin', 'tsh']);
+  await expect(badania.locator('.vilda-lab-hist-date-group').first()).toHaveAttribute('data-date-iso', '2026-06-02');
 });
