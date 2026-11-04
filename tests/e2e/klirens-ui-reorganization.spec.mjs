@@ -480,11 +480,30 @@ test('profil kamicy pokazuje tylko pola wybranej formuły', async ({
   await openCalculator(page);
   await selectFromSearch(page, 'szczawiany DZM', 'Ox_mgkg');
 
-  await expect(page.locator('#U_Ox')).toBeVisible();
-  await expect(page.locator('#oxalateReportingEntity')).toBeVisible();
+  await expect(page.locator('#OXDZM_inputMode')).toHaveValue('concentration');
+  await expect(page.locator('#OXDZM_concentration')).toBeVisible();
+  await expect(page.locator('#OXDZM_concentrationUnit')).toHaveValue('µmol/L');
+  await expect(page.locator('#OXDZM_volume')).toBeVisible();
+  await expect(page.locator('#OXDZM_volumeUnit')).toHaveValue('mL');
+  await expect(page.locator('#OXDZM_collectionHours')).toBeVisible();
+  await expect(page.locator('#OXDZM_collectionHours')).toHaveValue('24');
+  await expect(page.locator('#OXDZM_reportedValue')).toBeHidden();
+  await expect(page.locator('#U_Ox')).toBeHidden();
+  await expect(page.locator('#oxalateReportingEntity')).toBeHidden();
   await expect(page.locator('#U_Ca')).toBeHidden();
   await expect(page.locator('#U_Cit')).toBeHidden();
   await expect(page.locator('#pH24')).toBeHidden();
+
+  // Molar units need no mass-form question; mass units reveal a compact editor.
+  const changeMassForm = page.locator('[aria-controls="oxDzmEntityEditor"]');
+  await expect(changeMassForm).toBeHidden();
+  await expect(page.locator('#OXDZM_reportingEntity')).toBeHidden();
+  await page.locator('#OXDZM_concentrationUnit').selectOption('mg/L');
+  await expect(changeMassForm).toBeVisible();
+  await expect(page.locator('#OXDZM_reportingEntity')).toBeHidden();
+  await changeMassForm.click();
+  await expect(page.locator('#OXDZM_reportingEntity')).toBeVisible();
+  await expect(page.locator('#OXDZM_reportingEntity')).toHaveValue('unknown');
 });
 
 test('Ca/Cit ma minimalny formularz i renderuje rzeczywisty wynik', async ({
