@@ -224,16 +224,22 @@ test('prezentuje białko, Pᵢ i lukę anionową w spójnych jednostkach', async
   await expect(protein.locator('.protein-dzm-reference-value')).toHaveText('<150');
   await expect(protein).toHaveAttribute('data-clcr-tone', 'warning');
   await expect(page.locator('#stoneInfo')).toContainText(/34[.,]997\s*mmol\/24\s*h/);
-  await expect(page.locator('#elecInfo')).toContainText(/12[.,]0\s*mmol\/L/);
+  const anionGap = page.locator('#elecInfo .clcr-result-card[data-clcr-series="AGs"]');
+  await expect(anionGap).toHaveCount(1);
+  await expect(anionGap.locator('.clcr-result-value')).toHaveText('12');
+  await expect(anionGap.locator('.clcr-result-unit')).toHaveText('mmol/L');
+  await expect(anionGap.locator('.clcr-result-reference-value')).toHaveText('7–15');
+  await expect(anionGap).toHaveAttribute('data-clcr-value', '12');
   await expect(page.locator('#elecInfo')).not.toContainText('mg/kg');
   await expect(protein).toHaveClass(/out-of-range/);
   await expect(page.locator('#elecInfo .out-of-range')).toHaveCount(1);
 
   await page.locator('#S_K').fill('6');
-  await expect(page.locator('#elecInfo')).toContainText(/12[.,]0\s*mmol\/L/);
+  await expect(anionGap.locator('.clcr-result-value')).toHaveText('12');
+  await expect(anionGap).toHaveAttribute('data-clcr-value', '12');
 
   await page.locator('#S_HCO3').fill('');
-  await expect(page.locator('#elecInfo')).not.toContainText('Luka anionowa surowicy');
+  await expect(anionGap).toHaveCount(0);
   await page.locator('#S_HCO3').fill('24');
 
 });
