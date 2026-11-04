@@ -9,7 +9,7 @@ const DEPENDENCIES = [
   'VildaCrypto', 'VildaCarePlanModel', 'VildaLabSnapshot', 'VildaLabTestosteroneUnits', 'VildaLabAssessmentUI',
   'VildaHormoneReferenceSnapshot', 'VildaLabRangeSnapshot', 'VildaHormoneReferenceUI',
   'VildaLabHistory', 'VildaLabHistoryTab', 'VildaPubertyAssessment', 'VildaProAccess',
-  'VildaRemindersPrivacy', 'VildaGlobalSearch', 'VildaGlobalSearchView', 'VildaSearchNavigation',
+  'VildaRemindersPrivacy', 'VildaGlobalSearch', 'VildaGlobalSearchView', 'VildaSearchNavigation', 'VildaPatientsList',
 ];
 
 const REMINDER_MODULES = [
@@ -23,6 +23,7 @@ const REMINDER_MODULES = [
 function environment(careReady = false, missingReminderModule = null) {
   const documentListeners = new Map(), appended = [], existing = [
     { href: 'vilda_auth_ui.css?v=existing' },
+    { href: 'vilda_patients_list.css?v=existing' },
     { href: 'vilda_lab_assessment_ui.css?v=existing' },
     { href: 'vilda_lab_history_tab.css?v=existing' },
     { href: 'vilda_global_search.css?v=existing' },

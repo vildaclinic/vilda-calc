@@ -291,7 +291,8 @@ describe('P-SW-PRECACHE: instalacja bez historii, kopia z poprzedniej pamięci, 
     '/vilda_macro_practice.js', '/vilda_activity_burn.js', '/vilda_food_summary.js',
     '/vilda_diet_plan_ui.js', '/vilda_bmi_journey.js',
     '/vilda_centile_landscape.js', '/vilda_summary_cards.js', '/vilda_professional_module.js',
-    '/vilda_gh_therapy_resource_audit.js', '/vilda_patient_report.js'];
+    '/vilda_gh_therapy_resource_audit.js', '/vilda_patient_report.js',
+    '/vilda_centile_charts.js', '/vilda_dob_age.js'];
   const wspoldzielonePary = ['/style.css', '/vilda_chrome.css', ...dodatkoweWspoldzieloneZasoby];
   const wspoldzieloneZasoby = new Set(['/edu-video-ui.css', ...wspoldzielonePary]);
   const oczekiwanePobraniaSwiezychZasobow = () => {
@@ -352,6 +353,11 @@ describe('P-SW-PRECACHE: instalacja bez historii, kopia z poprzedniej pamięci, 
     // Each new Ca/Cr DZM asset is still fetched independently. Only the three
     // explicitly listed static UI alias pairs above save duplicate requests.
     for (const plik of ['/clcr_cacr_dzm_ui.js', '/clcr_cacr_dzm_ui.css', '/clcr_cacr_dzm_persistence.js']) {
+      expect(pobrane.filter(adres => adres.split('?')[0] === plik), plik).toHaveLength(1);
+    }
+    // The patient database JS and stylesheet keep independent fresh requests;
+    // the two explicit UI alias pairs save the duplicate requests instead.
+    for (const plik of ['/vilda_patients_list.js', '/vilda_patients_list.css']) {
       expect(pobrane.filter(adres => adres.split('?')[0] === plik), plik).toHaveLength(1);
     }
     expect(pobrane.length, `instalacja wysyła ${pobrane.length} żądań`).toBeLessThanOrEqual(600);
@@ -491,6 +497,33 @@ describe('P-SW-PRECACHE: instalacja bez historii, kopia z poprzedniej pamięci, 
     expect(pobrane).toEqual([sciezka]);
     expect(await (await sluzba.readFromShellCache(new Request(`${POCHODZENIE}${sciezka}`))).text()).toBe(swiezyCss);
     expect(await (await sluzba.readFromShellCache(new Request(`${POCHODZENIE}${wersjonowanyAlias}`))).text()).toBe(wersja === '1.1.104' ? staryCss : swiezyCss);
+  });
+
+  it.each(['/vilda_centile_charts.js', '/vilda_dob_age.js'])('starszy niezmienny alias %s nie zasila nowej wersji ani adresu bez wersji', async sciezka => {
+    const magazyn = pamiec(Infinity, { zuzywajOdpowiedzi: true });
+    const poprzednia = magazyn.otworz('pwa-kalorii-shell-v1.1.104');
+    const biezacyAlias = doInstalacji().find(adres => adres.startsWith(sciezka + '?v='));
+    const numer = Number(biezacyAlias.split('?v=')[1]);
+    expect(numer).toBeGreaterThan(1);
+    const staryAlias = sciezka + '?v=' + (numer - 1);
+    await poprzednia.put(staryAlias, new Response('/* starszy niezmienny wpis */'));
+    const pobrane = [], swieze = new Map();
+    const fetch = async request => {
+      const url = new URL(request.url); pobrane.push(url.pathname + url.search);
+      return new Response('/* świeża bieżąca treść */');
+    };
+    const sluzba = uruchomSW({ caches: magazyn.caches, fetch });
+    const opcje = { previousShellCaches: [poprzednia], freshResponses: swieze };
+    await sluzba.fetchAndStorePrecacheUrl(staryAlias, opcje);
+    expect(swieze.size, 'kopia niezmiennego wpisu nie staje się świeżą odpowiedzią').toBe(0);
+    await sluzba.fetchAndStorePrecacheUrl(biezacyAlias, opcje);
+    await sluzba.fetchAndStorePrecacheUrl(sciezka, opcje);
+    expect(pobrane).toEqual([biezacyAlias]);
+    const cache = magazyn.otworz(sw.SHELL_CACHE);
+    expect(await (await cache.match(staryAlias)).text()).toBe('/* starszy niezmienny wpis */');
+    for (const adres of [biezacyAlias, sciezka]) {
+      expect(await (await cache.match(adres)).text(), adres).toBe('/* świeża bieżąca treść */');
+    }
   });
 
   it.each(wspoldzielonePary.flatMap(sciezka => ['sieć', '503', 'cache.put'].map(awaria => [sciezka, awaria])))('nieudana pierwsza próba %s (%s) nie udostępnia odpowiedzi kolejnemu aliasowi', async (sciezka, awaria) => {

@@ -197,7 +197,7 @@ async function seed(page, { shell, full }) {
 }
 
 async function pickVisibleCard(owner, name, patientId, choice) {
-  await owner.locator('.pt-rcard2').filter({ hasText: name }).first().click();
+  await owner.locator('.pt-row').filter({ hasText: name }).first().locator('.pt-row-open').click();
   await expect.poll(() => owner.evaluate(() => window.VildaSaveStatusIndicator.getCurrentDecision().ready)).toBe(true);
   await owner.getByRole('button', { name: 'Wczytaj tego pacjenta', exact: true }).click();
   await owner.waitForFunction(({ id, withChoice }) => Boolean(document.querySelector('.vug-backdrop'))

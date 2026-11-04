@@ -54,7 +54,7 @@ async function powlokaZKontem(page) {
 /* Lista pacjentów → karta → „Wczytaj tego pacjenta” → „Nowy pomiar” (tak jak lekarz). */
 async function wczytajZListy(page, ctx, nazwa) {
   await page.locator('#patientsListBtnSidebar').click();
-  await ctx.locator('.pt-rcard2', { hasText: nazwa }).first().click();
+  await ctx.locator('.pt-row', { hasText: nazwa }).first().locator('.pt-row-open').click();
   await expect.poll(() => ctx.evaluate(() => window.VildaSaveStatusIndicator.getCurrentDecision().ready)).toBe(true);
   await ctx.getByRole('button', { name: 'Wczytaj tego pacjenta' }).click();
   await ctx.waitForSelector('#vildaLoadChoiceModal', { state: 'visible', timeout: 10000 });

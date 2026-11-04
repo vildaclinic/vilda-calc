@@ -127,9 +127,9 @@ test('save guards: no patient/locked and duplicate clicks; a patient switch duri
   await expect(page.locator('#clcrVisitSaveBtn')).toBeDisabled();
   // Disabled save never turns into navigation, even via a programmatic click.
   await page.locator('#clcrVisitSaveBtn').evaluate(button => button.click());
-  await expect(page.locator('.pt-rcard2')).toHaveCount(0);
+  await expect(page.locator('.pt-row')).toHaveCount(0);
   await page.locator('#clcrChoosePatientBtn').click();
-  await expect(page.locator('.pt-rcard2')).toHaveCount(2);
+  await expect(page.locator('.pt-row')).toHaveCount(2);
   expect((await memory(page)).notes).toHaveLength(0);
   await page.evaluate(() => window.VildaAuthUI.hide());
   await selectPatient(page);

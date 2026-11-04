@@ -124,7 +124,7 @@ test.describe('Duplikaty z bazy — scalanie na życzenie lekarza', () => {
     const alerty = await page.evaluate(() => window.__alerty);
     expect(alerty.some((a) => /Scalono 1 rekord/.test(a))).toBe(true);
     // Po scaleniu lista wraca bez paska duplikatów.
-    await expect(page.locator('.pt-dupbar')).toHaveCount(0);
+    await expect(page.locator('.pt-dupbar')).toBeHidden();
   });
 
   test('„Anuluj" w arkuszu niczego nie zmienia', async ({ page }) => {
@@ -152,7 +152,7 @@ test.describe('Duplikaty z bazy — scalanie na życzenie lekarza', () => {
     // Po ponownym otwarciu listy grupa nadal ukryta, a znacznik „możliwy duplikat" zniknął.
     await page.evaluate(() => window.VildaAuthUI.showPatientsList(() => {}));
     await expect(page.locator('.vilda-patients2')).toBeVisible();
-    await expect(page.locator('.pt-dupbar')).toHaveCount(0);
+    await expect(page.locator('.pt-dupbar')).toBeHidden();
     await expect(page.locator('.pt-row--dup')).toHaveCount(0);
     const klucz = await page.evaluate(() => window.localStorage.getItem('vildaDuplikatyRozneV1'));
     expect(klucz, 'pamięć trzyma tylko identyfikatory').not.toMatch(/Fikcyjna/);

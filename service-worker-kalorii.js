@@ -19,7 +19,7 @@
  *   bo i tak chcemy zwracać HTML z cache natychmiast.
  */
 
-const SW_VERSION = '1.1.458';
+const SW_VERSION = '1.1.459';
 const CACHE_PREFIX = 'pwa-kalorii';
 const SHELL_CACHE = `${CACHE_PREFIX}-shell-v${SW_VERSION}`;
 const RUNTIME_CACHE = `${CACHE_PREFIX}-runtime`;
@@ -1697,6 +1697,7 @@ const CORE_SHELL_URLS = [
   '/vilda_chrome.js?v=233',
   '/vilda_chrome.js?v=234',
   '/vilda_chrome.js?v=235',
+  '/vilda_chrome.js?v=236',
   '/vilda_realtime.js?v=1',
   '/vilda_realtime.js?v=2',
   '/vilda_realtime.js?v=3',
@@ -2488,6 +2489,8 @@ const OPTIONAL_DOCUMENTS = [
 ];
 
 const OPTIONAL_ASSETS = [
+  '/vilda_patients_list.js?v=1',
+  '/vilda_patients_list.css?v=1',
   '/vilda_vault.js?v=246',
   '/vilda_vault.js?v=247',
   '/vilda_vault.js?v=248',
@@ -2496,6 +2499,7 @@ const OPTIONAL_ASSETS = [
   '/vilda_auth_ui.js?v=536',
   '/vilda_auth_ui.js?v=537',
   '/vilda_auth_ui.js?v=538',
+  '/vilda_auth_ui.js?v=539',
   '/vilda_session_bridge.js?v=148',
   '/vilda_session_bridge.js?v=149',
   '/vilda_session_bridge.js?v=150',
@@ -2505,6 +2509,7 @@ const OPTIONAL_ASSETS = [
   '/vilda_session_bridge.js?v=154',
   '/vilda_session_bridge.js?v=155',
   '/vilda_session_bridge.js?v=156',
+  '/vilda_session_bridge.js?v=157',
   '/vilda_sync.js?v=48',
   '/vilda_patient_documents.js?v=1',
   '/vilda_patient_documents.css?v=1',
@@ -5029,7 +5034,10 @@ const FRESH_STATIC_ALIAS_PATHS = new Set([
   // dependencies have both current versioned and unversioned install URLs;
   // share only fresh responses from this installation to keep the 600 budget.
   '/vilda_centile_landscape.js', '/vilda_summary_cards.js', '/vilda_professional_module.js',
-  '/vilda_gh_therapy_resource_audit.js', '/vilda_patient_report.js'
+  '/vilda_gh_therapy_resource_audit.js', '/vilda_patient_report.js',
+  // The patient database view adds two resources. These unchanged static UI
+  // dependencies share only fresh current-install responses to retain 600 requests.
+  '/vilda_centile_charts.js', '/vilda_dob_age.js'
 ]);
 
 async function fetchAndStorePrecacheUrl(url, { required = false, previousShellCaches = [], freshResponses = null } = {}) {
