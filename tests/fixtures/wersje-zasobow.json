@@ -1505,7 +1505,7 @@
  },
  "vilda_lab_history_tab.css": {
   "v": 5,
-  "sha256": "a912198b1efe9ef0b91d284d02446af7abb1f66f36ee98139895900915c1b52f"
+  "sha256": "5fb9cefad75f32946630a53d73be79e6e8c399f7883d89f141b135bdc464b591"
  },
  "vilda_lab_history_tab.js": {
   "v": 26,
@@ -1549,7 +1549,7 @@
  },
  "vilda_lab_result_chart.js": {
   "v": 1,
-  "sha256": "f4e580b759cac6ae10eadf03f183c51262320c268554a7445656871aef33ff43"
+  "sha256": "21ead9b91b74c512b75379862342145d76ff0b993b09520ba856a8282bfdb63b"
  },
  "vilda_lab_result_presentation.js": {
   "v": 1,

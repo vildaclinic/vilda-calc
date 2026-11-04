@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs';
 import { describe, expect, it, vi } from 'vitest';
 import { loadBrowserScript } from '../support/load-browser-script.mjs';
 import { atrapaDokumentu } from '../support/atrapa-dom-lekka.mjs';
@@ -35,7 +36,12 @@ describe('saved laboratory history chart', () => {
     expect(points[0].getAttribute('data-value')).toBe('0');
     expect(points[0].getAttribute('type')).toBe('button');
     expect(points[0].getAttribute('aria-label')).toContain('0 mIU/L');
-    expect(points[0].getAttribute('style')).not.toMatch(/NaN|Infinity/);
+    expect(points[0].parentNode.getAttribute('x')).toBe('50.0000%');
+    expect(points[0].parentNode.getAttribute('y')).toMatch(/^\d+(?:\.\d+)?%$/);
+    expect(points[0].parentNode.getAttribute('width')).toBe('44');
+    expect(points[0].parentNode.getAttribute('height')).toBe('44');
+    expect(points[0].parentNode.getAttribute('transform')).toBe('translate(-22 -22)');
+    expect(host.querySelectorAll('[style]')).toHaveLength(0);
     points[0].click();
     expect(openNote).toHaveBeenCalledExactlyOnceWith('fictional-zero');
     const top = host.querySelectorAll('.vilda-lab-result-chart-y span')[0].textContent;
@@ -44,13 +50,28 @@ describe('saved laboratory history chart', () => {
     expect(host.querySelectorAll('.vilda-lab-result-chart-bound')).toHaveLength(2);
   });
 
-  it('retains app point colors for within/below/above, with a neutral fourth state', () => {
+  it('supplies each saved color state to the shared CSS point palette, including a neutral fourth state', () => {
     const rows = ['within', 'below', 'above', 'neutral'].map((tone, index) => entry(tone, `2026-01-0${index + 1}`, index));
     const descriptions = Object.fromEntries(rows.map((row, index) => [row.noteId, { value: row.value, unit: row.unit, tone: ['within', 'below', 'above', 'neutral'][index], normText: '1–4 mIU/L', norms: [range()] }]));
     const { host } = fixture(rows, { descriptions });
     const dots = host.querySelectorAll('.vilda-lab-result-chart-dot');
-    expect(dots.map((dot) => dot.getAttribute('style'))).toEqual([
-      'border-color:#1D9E75', 'border-color:#d8632a', 'border-color:#b91c1c', 'border-color:#087f89',
+    expect(dots.map((dot) => dot.parentNode.getAttribute('data-tone'))).toEqual(['within', 'below', 'above', 'neutral']);
+    // The actual stylesheet now owns the palette. Resolve its global tokens so
+    // moving geometry out of inline styles retains the original color check.
+    const css = readFileSync(new URL('../../vilda_lab_history_tab.css', import.meta.url), 'utf8');
+    const globals = readFileSync(new URL('../../style.css', import.meta.url), 'utf8');
+    const colors = ['within', 'below', 'above'].map((tone) => {
+      const selector = `.vilda-lab-result-chart-point[data-tone="${tone}"] .vilda-lab-result-chart-dot`;
+      expect(css).toContain(selector);
+      const block = css.slice(css.indexOf(selector) + selector.length).match(/^\s*\{([^}]*)\}/)[1];
+      const color = block.match(/border-color:\s*([^;]+);/)[1].trim();
+      const variable = /^var\(--([\w-]+)\)$/.exec(color);
+      return (variable ? globals.match(new RegExp(`--${variable[1]}:\\s*([^;]+);`))[1].trim() : color).toLowerCase();
+    });
+    expect(colors).toEqual(['#1d9e75', '#d8632a', '#b91c1c']);
+    expect(dots.every((dot) => !dot.hasAttribute('style'))).toBe(true);
+    expect(host.querySelectorAll('.vilda-lab-result-chart-target').map((target) => [target.getAttribute('width'), target.getAttribute('height')])).toEqual([
+      ['44', '44'], ['44', '44'], ['44', '44'], ['44', '44'],
     ]);
   });
 
@@ -141,7 +162,8 @@ describe('saved laboratory history chart', () => {
     const control = points[0], chooser = host.querySelector('.vilda-lab-result-chart-chooser');
     expect(control.getAttribute('data-value')).toBe('2');
     expect(control.getAttribute('data-count')).toBe('2');
-    expect(control.getAttribute('style')).toContain('left:50.0000%');
+    expect(control.parentNode.getAttribute('x')).toBe('50.0000%');
+    expect(control.parentNode.getAttribute('transform')).toBe('translate(-22 -22)');
     expect(control.getAttribute('data-tone')).toBe('neutral');
     expect(control.getAttribute('aria-controls')).toBe(chooser.id);
     expect(control.getAttribute('aria-expanded')).toBe('false');

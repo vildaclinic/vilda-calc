@@ -3,9 +3,9 @@
 .vilda-lab-hist {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: var(--space-16px);
   min-width: 0;
-  margin-bottom: 16px;
+  margin-bottom: var(--space-16px);
   color: var(--text-strong, #263f49);
   font-size: 16px;
   line-height: 1.5;
@@ -42,7 +42,7 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
+  gap: var(--space-12px);
   flex-wrap: wrap;
 }
 
@@ -65,14 +65,14 @@
 
 .vilda-lab-hist-actions {
   display: flex;
-  gap: 8px;
+  gap: var(--space-8px);
   flex-wrap: wrap;
 }
 
 .vilda-lab-hist-toolbar {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: var(--space-10px);
   flex-wrap: wrap;
 }
 
@@ -88,7 +88,7 @@
   height: 44px;
   min-height: 44px;
   margin: 0;
-  border: 1px solid #cadce1;
+  border: var(--border-hairline) solid #cadce1;
   border-radius: 7px;
   background: #fff;
   color: var(--text-strong, #263f49);
@@ -99,7 +99,7 @@
 
 .vilda-lab-hist input.vilda-lab-hist-search-input {
   width: 100%;
-  padding: 8px 44px 8px 12px;
+  padding: var(--space-8px) 44px var(--space-8px) var(--space-12px);
 }
 
 .vilda-lab-hist input.vilda-lab-hist-search-input::-webkit-search-cancel-button {
@@ -108,14 +108,14 @@
 
 .vilda-lab-hist select.vilda-lab-hist-panel-select {
   max-width: 220px;
-  padding: 8px 28px 8px 10px;
+  padding: var(--space-8px) 28px var(--space-8px) var(--space-10px);
 }
 
 .vilda-lab-hist-segment {
   display: inline-flex;
   gap: 2px;
   padding: 3px;
-  border: 1px solid #cadce1;
+  border: var(--border-hairline) solid #cadce1;
   border-radius: 7px;
   background: #f1f6f7;
 }
@@ -136,16 +136,15 @@
   -webkit-backdrop-filter: none!important;
   background: transparent!important;
   border: 0!important;
-  color: inherit;
   text-shadow: none!important;
   transform: none;
   margin: 0;
 }
 
 .vilda-lab-hist button.vilda-lab-hist-segment-btn {
-  padding: 6px 14px;
+  padding: var(--space-6px) var(--space-14px);
   min-height: 36px;
-  border-radius: 4px!important;
+  border-radius: var(--radius-4)!important;
   color: #56717c!important;
   font-size: 14px;
   font-weight: 500;
@@ -183,28 +182,28 @@
 .vilda-lab-hist button:focus-visible,
 .vilda-lab-hist a:focus-visible,
 .vilda-lab-hist summary:focus-visible {
-  outline: 2px solid var(--primary, #087f89);
+  outline: var(--border-emphasis) solid var(--primary, #087f89);
   outline-offset: 2px;
 }
 
 .vilda-lab-hist-results {
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: var(--space-14px);
   min-width: 0;
 }
 
 .vilda-lab-hist-legend {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px 20px;
+  gap: var(--space-8px) var(--space-20px);
   font-size: 14px;
 }
 
 .vilda-lab-hist-table-head {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-  padding: 2px 42px 0 16px;
+  padding: 2px 42px 0 var(--space-16px);
   color: var(--text-muted, #56717c);
   font-size: 14px;
 }
@@ -215,14 +214,14 @@
 
 .vilda-lab-hist-date-group {
   overflow: hidden;
-  border: 1px solid #d5e2e7;
-  border-radius: 8px;
+  border: var(--border-hairline) solid #d5e2e7;
+  border-radius: var(--radius-8);
   background: #fff;
   min-width: 0;
 }
 
 .vilda-lab-hist-date-heading {
-  padding: 10px 16px;
+  padding: var(--space-10px) var(--space-16px);
   background: #f5f8f9;
   font-size: 16px;
   font-weight: 600;
@@ -232,14 +231,14 @@
   display: grid!important;
   grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) 12px;
   align-items: center;
-  gap: 12px;
+  gap: var(--space-12px);
   width: 100%!important;
   max-width: none!important;
   min-height: 76px;
-  padding: 13px 16px;
+  padding: 13px var(--space-16px);
   text-align: left;
   border-radius: 0!important;
-  border-top: 1px solid #dce7eb!important;
+  border-top: var(--border-hairline) solid #dce7eb!important;
   font-size: 16px;
   line-height: 1.5;
 }
@@ -263,7 +262,7 @@
 
 .vilda-lab-hist-result-value {
   display: flex;
-  gap: 4px;
+  gap: var(--space-4px);
   justify-content: flex-end;
   align-items: baseline;
   flex-wrap: wrap;
@@ -306,8 +305,8 @@
 
 .vilda-lab-hist-warning-mark {
   color: #8a4a18;
-  border: 1px solid currentColor;
-  border-radius: 50%;
+  border: var(--border-hairline) solid currentColor;
+  border-radius: var(--radius-circle);
   width: 16px;
   height: 16px;
   text-align: center;
@@ -319,26 +318,26 @@
 .vilda-lab-hist-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 16px;
+  gap: var(--space-16px);
   min-width: 0;
 }
 
 .vilda-lab-hist-card {
-  padding: 16px;
-  border: 1px solid #d5e2e7;
-  border-radius: 8px;
+  padding: var(--space-16px);
+  border: var(--border-hairline) solid #d5e2e7;
+  border-radius: var(--radius-8);
   background: #fff;
   min-width: 0;
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: var(--space-12px);
 }
 
 .vilda-lab-hist-card-head {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
-  gap: 8px;
+  gap: var(--space-8px);
 }
 
 .vilda-lab-hist-card-name {
@@ -359,7 +358,7 @@
 .vilda-lab-hist-card-norms {
   display: flex;
   flex-wrap: wrap;
-  gap: 0 4px;
+  gap: 0 var(--space-4px);
   align-items: baseline;
 }
 
@@ -388,15 +387,27 @@
   color: var(--text-muted, #56717c);
 }
 
+.vilda-lab-result-chart-y span:nth-child(1) {
+  top: 8%;
+}
+
+.vilda-lab-result-chart-y span:nth-child(2) {
+  top: 50%;
+}
+
+.vilda-lab-result-chart-y span:nth-child(3) {
+  top: 92%;
+}
+
 .vilda-lab-result-chart-plot {
   position: relative;
   height: 180px;
   min-width: 0;
-  margin: 14px 8px 0 0;
+  margin: var(--space-14px) var(--space-8px) 0 0;
 }
 
 .vilda-lab-result-chart-y {
-  margin-top: 14px;
+  margin-top: var(--space-14px);
 }
 
 .vilda-lab-result-chart-svg {
@@ -407,15 +418,27 @@
   overflow: visible;
 }
 
-.vilda-lab-hist button.vilda-lab-result-chart-point {
+.vilda-lab-result-chart-point-layer {
   position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+.vilda-lab-result-chart-target {
+  overflow: visible;
+}
+
+.vilda-lab-hist button.vilda-lab-result-chart-point {
+  position: relative;
   width: 44px;
   height: 44px;
   min-width: 44px;
   min-height: 44px;
   padding: 0;
-  transform: translate(-50%, -50%);
-  border-radius: 50%!important;
+  transform: none;
+  border-radius: var(--radius-circle)!important;
   display: grid;
   place-items: center;
 }
@@ -423,17 +446,33 @@
 .vilda-lab-result-chart-dot {
   width: 8px;
   height: 8px;
-  border: 2px solid;
-  border-radius: 50%;
+  border: var(--border-emphasis) solid;
+  border-radius: var(--radius-circle);
   background: #fff;
   box-sizing: border-box;
+}
+
+.vilda-lab-result-chart-point[data-tone="within"] .vilda-lab-result-chart-dot {
+  border-color: #1D9E75;
+}
+
+.vilda-lab-result-chart-point[data-tone="below"] .vilda-lab-result-chart-dot {
+  border-color: #d8632a;
+}
+
+.vilda-lab-result-chart-point[data-tone="above"] .vilda-lab-result-chart-dot {
+  border-color: var(--error);
+}
+
+.vilda-lab-result-chart-point[data-tone="neutral"] .vilda-lab-result-chart-dot {
+  border-color: #087f89;
 }
 
 .vilda-lab-result-chart-count {
   position: absolute;
   top: 1px;
   right: 0;
-  border-radius: 10px;
+  border-radius: var(--radius-10);
   min-width: 18px;
   padding: 0 3px;
   background: #e8f1f3;
@@ -443,9 +482,9 @@
 }
 
 .vilda-lab-result-chart-chooser {
-  margin-top: 12px;
-  padding-top: 10px;
-  border-top: 1px solid #d5e2e7;
+  margin-top: var(--space-12px);
+  padding-top: var(--space-10px);
+  border-top: var(--border-hairline) solid #d5e2e7;
 }
 
 .vilda-lab-result-chart-chooser-title {
@@ -456,14 +495,14 @@
 .vilda-lab-hist button.vilda-lab-result-chart-choice {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
-  gap: 3px 12px;
+  gap: 3px var(--space-12px);
   align-items: center;
   width: 100%;
   min-height: 44px;
   margin: 0;
-  padding: 10px 0;
+  padding: var(--space-10px) 0;
   border: 0!important;
-  border-bottom: 1px solid #dce7eb!important;
+  border-bottom: var(--border-hairline) solid #dce7eb!important;
   border-radius: 0!important;
   box-shadow: none!important;
   background: transparent!important;
@@ -491,21 +530,21 @@
   grid-column: 2;
   display: flex;
   justify-content: space-between;
-  gap: 12px;
-  padding-top: 12px;
+  gap: var(--space-12px);
+  padding-top: var(--space-12px);
   padding-bottom: 2px;
   color: var(--text-muted, #56717c);
   font-size: 14px;
 }
 
 .vilda-lab-hist-result-details {
-  border: 1px solid #b8d2d8;
-  border-radius: 8px;
+  border: var(--border-hairline) solid #b8d2d8;
+  border-radius: var(--radius-8);
   background: #f8fbfc;
-  padding: 16px;
+  padding: var(--space-16px);
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: var(--space-10px);
   min-width: 0;
 }
 
@@ -518,7 +557,7 @@
   min-height: 44px;
   padding: 0;
   font-size: 28px;
-  border-radius: 6px!important;
+  border-radius: var(--radius-6)!important;
 }
 
 .vilda-lab-hist-result-details > .vilda-lab-hist-result-value {
@@ -543,8 +582,8 @@
 
 .vilda-lab-hist-result-history,
 .vilda-lab-hist-result-sources {
-  border-top: 1px solid #d5e2e7;
-  padding-top: 8px;
+  border-top: var(--border-hairline) solid #d5e2e7;
+  padding-top: var(--space-8px);
 }
 
 .vilda-lab-hist summary {
@@ -558,10 +597,10 @@
   align-items: center;
   justify-content: space-between;
   width: 100%;
-  gap: 12px;
-  padding: 10px 0;
+  gap: var(--space-12px);
+  padding: var(--space-10px) 0;
   text-align: left;
-  border-bottom: 1px solid #dce7eb!important;
+  border-bottom: var(--border-hairline) solid #dce7eb!important;
   border-radius: 0!important;
   font-size: 14px;
 }
@@ -569,8 +608,8 @@
 .vilda-lab-hist-status {
   display: flex;
   flex-direction: column;
-  gap: 4px;
-  padding: 8px 0;
+  gap: var(--space-4px);
+  padding: var(--space-8px) 0;
   font-size: 15px;
 }
 
@@ -586,23 +625,23 @@
 }
 
 .vilda-lab-hist-footer p + p {
-  margin-top: 8px;
+  margin-top: var(--space-8px);
 }
 
 .vilda-lab-hist-treatment ul {
-  padding-left: 20px;
-  margin: 6px 0;
+  padding-left: var(--space-20px);
+  margin: var(--space-6px) 0;
 }
 
 .vilda-lab-hist-treatment li > * + * {
-  margin-left: 10px;
+  margin-left: var(--space-10px);
 }
 
 .vilda-lab-hist-pending,
 .vilda-lab-hist-state {
-  border: 1px solid #d5e2e7;
-  border-radius: 8px;
-  padding: 12px 16px;
+  border: var(--border-hairline) solid #d5e2e7;
+  border-radius: var(--radius-8);
+  padding: var(--space-12px) var(--space-16px);
   background: #fff;
 }
 
@@ -610,15 +649,15 @@
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  gap: 8px;
+  gap: var(--space-8px);
 }
 
 .vilda-lab-hist-pending-row {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: var(--space-10px);
   flex-wrap: wrap;
-  padding-top: 10px;
+  padding-top: var(--space-10px);
 }
 
 .vilda-lab-hist-pending-title {
@@ -636,10 +675,10 @@
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 8px 12px;
-  border: 1px solid #cfe8df;
-  border-radius: 8px;
-  padding: 10px 14px;
+  gap: var(--space-8px) var(--space-12px);
+  border: var(--border-hairline) solid #cfe8df;
+  border-radius: var(--radius-8);
+  padding: var(--space-10px) var(--space-14px);
   background: #f2fbf8;
   color: #1f3b38;
   font-size: 14px;
@@ -662,7 +701,7 @@
     grid-template-columns: minmax(0, 1fr);
   }
   .vilda-lab-hist-toolbar {
-    gap: 8px;
+    gap: var(--space-8px);
   }
   .vilda-lab-hist-search {
     flex-basis: calc(60% - 8px);
@@ -683,7 +722,7 @@
 
 @media (max-width: 480px) {
   .vilda-lab-hist {
-    gap: 14px;
+    gap: var(--space-14px);
   }
   .vilda-lab-hist-actions {
     width: 100%;
@@ -694,22 +733,22 @@
     min-height: 44px;
   }
   .vilda-lab-hist-date-heading {
-    padding: 10px 12px;
+    padding: var(--space-10px) var(--space-12px);
   }
   .vilda-lab-hist button.vilda-lab-hist-result-row {
-    padding: 12px;
-    gap: 8px;
+    padding: var(--space-12px);
+    gap: var(--space-8px);
   }
   .vilda-lab-hist-table-head {
-    padding-left: 12px;
+    padding-left: var(--space-12px);
     padding-right: 40px;
   }
   .vilda-lab-hist-legend {
-    gap: 6px 14px;
+    gap: var(--space-6px) var(--space-14px);
   }
   .vilda-lab-hist-result-details,
   .vilda-lab-hist-card {
-    padding: 12px;
+    padding: var(--space-12px);
   }
   .vilda-lab-hist summary {
     min-height: 44px;

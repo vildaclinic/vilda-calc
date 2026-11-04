@@ -13,9 +13,15 @@
   function finite(value) { return typeof value === 'number' && isFinite(value); }
   function unit(value) { return String(value || '').trim().replace(/\s+/g, ' ').replace(/µ/g, 'μ'); }
   function day(iso) {
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(String(iso || ''))) return null;
+    var parts = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(iso || ''));
+    if (!parts) return null;
     var stamp = Date.parse(iso + 'T12:00:00Z');
-    return isFinite(stamp) && new Date(stamp).toISOString().slice(0, 10) === iso ? stamp : null;
+    if (!isFinite(stamp)) return null;
+    // Parse the recorded calendar day in explicit UTC, without formatting a
+    // current/local day or accepting Date.parse's rollover of e.g. 30 February.
+    var parsed = new Date(stamp);
+    return parsed.getUTCFullYear() === Number(parts[1]) && parsed.getUTCMonth() + 1 === Number(parts[2])
+      && parsed.getUTCDate() === Number(parts[3]) ? stamp : null;
   }
   function defaultNumber(value) { return value.toLocaleString('pl-PL', { maximumSignificantDigits: 4 }); }
   function defaultDate(iso) { return iso.split('-').reverse().join('.'); }
@@ -107,7 +113,7 @@
     var ticks = area.appendChild(node(doc, 'div', 'vilda-lab-result-chart-y'));
     ticks.setAttribute('aria-hidden', 'true');
     [high, (high + low) / 2, low].forEach(function (value) {
-      attr(ticks.appendChild(node(doc, 'span', '', formatNumber(value))), { style: 'top:' + coordinate(y(value)) + '%' });
+      ticks.appendChild(node(doc, 'span', '', formatNumber(value)));
     });
     var plot = area.appendChild(node(doc, 'div', 'vilda-lab-result-chart-plot'));
     var svg = plot.appendChild(node(doc, 'svg', 'vilda-lab-result-chart-svg', null, true));
@@ -172,17 +178,22 @@
       }
       groupByPosition[key].push(point);
     });
+    // This unscaled SVG uses percentages for each real coordinate and actual
+    // CSS pixels for each 44 px target. It never scales button text or hit areas
+    // with the data viewBox and needs no generated inline CSS.
+    var pointLayer = plot.appendChild(node(doc, 'svg', 'vilda-lab-result-chart-point-layer', null, true));
+    attr(pointLayer, { width: '100%', height: '100%', role: 'group', 'aria-label': 'Otwórz zapisany wynik' });
     groups.forEach(function (group) {
       var point = group[0], entry = point.saved.entry;
       var tone = pointTone(point);
       if (!group.every(function (item) { return pointTone(item) === tone; })) tone = 'neutral';
       var title = pointTitle(point);
-      var control = plot.appendChild(node(doc, 'button', 'vilda-lab-result-chart-point'));
+      var target = pointLayer.appendChild(node(doc, 'foreignObject', 'vilda-lab-result-chart-target', null, true));
+      attr(target, { x: coordinate(x(point.stamp)) + '%', y: coordinate(y(point.point.v)) + '%', width: 44, height: 44, transform: 'translate(-22 -22)' });
+      var control = target.appendChild(node(doc, 'button', 'vilda-lab-result-chart-point'));
       attr(control, { type: 'button', 'data-value': point.point.v, 'data-tone': tone,
-        'aria-label': title + '. Otwórz wynik', title: title,
-        style: 'left:' + coordinate(x(point.stamp)) + '%;top:' + coordinate(y(point.point.v)) + '%' });
-      var dot = control.appendChild(node(doc, 'span', 'vilda-lab-result-chart-dot'));
-      dot.setAttribute('style', 'border-color:' + COLORS[tone]);
+        'aria-label': title + '. Otwórz wynik', title: title });
+      control.appendChild(node(doc, 'span', 'vilda-lab-result-chart-dot'));
       if (group.length === 1) {
         control.setAttribute('data-note-id', entry.noteId || '');
         if (typeof options.openNote === 'function' && entry.noteId) control.addEventListener('click', function () { options.openNote(entry.noteId); });
