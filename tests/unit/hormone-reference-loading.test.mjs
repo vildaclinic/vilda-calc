@@ -14,6 +14,8 @@ function environment(missing = [], restoredSession = false) {
   const win = { VildaCrypto: {}, VildaLabSnapshot: {}, VildaLabAssessmentUI: {}, VildaVaultProtocol: {}, VildaVault: {},
     VildaClinicalCrypto: {}, VildaPatientCheckpointStore: {}, VildaPatientCheckpoint: {},
     VildaPatientIdentityProtocol: {}, VildaPatientIdentityTransport: {},
+    // SGA readiness has its own missing-dependency cases in patient-sga-loading.test.mjs.
+    VildaBirthAssessment: {}, VildaPatientSgaModel: {}, VildaPatientSgaUI: {},
     VildaAuthUI: {}, VildaProAccess: {}, VildaHormoneReferenceSnapshot: {}, VildaHormoneReferenceUI: {},
     // Decyzja 6.3: zakres zapisany z wynikiem — moduł transportu obok odniesienia AMH.
     VildaLabRangeSnapshot: {},
@@ -30,7 +32,7 @@ function environment(missing = [], restoredSession = false) {
   };
   for (const key of missing) delete win[key];
   const doc = {
-    readyState: 'loading', querySelector: () => null, getElementById: () => null,
+    readyState: 'loading', querySelector: selector => selector.includes('vilda_patient_sga_ui.css') ? { href: 'vilda_patient_sga_ui.css?v=existing' } : null, getElementById: () => null,
     addEventListener(type, fn) { events.set(type, fn); }, dispatchEvent() {},
     createElement(tag) {
       const handlers = new Map();
