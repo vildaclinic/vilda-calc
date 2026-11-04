@@ -71,7 +71,7 @@
 <script defer src="vilda_persistence_adapter.js?v=33"></script>
 <script src="vilda_reminders_privacy.js?v=1"></script>
 <script defer src="vilda_panel_pacjent.js?v=3"></script>
-<script defer src="vilda_session_bridge.js?v=162"></script>
+<script defer src="vilda_session_bridge.js?v=163"></script>
 <script defer src="vilda_init.js?v=4"></script>
 <script defer src="vilda_crypto.js?v=15"></script>
 <script defer src="vilda_retention.js?v=1"></script>
@@ -85,7 +85,7 @@
 <script defer src="vilda_lab_history.js?v=5"></script>
 <script defer src="vilda_lab_result_presentation.js?v=1"></script>
 <script defer src="vilda_lab_result_chart.js?v=1"></script>
-<script defer src="vilda_lab_history_tab.js?v=26"></script>
+<script defer src="vilda_lab_history_tab.js?v=27"></script>
 <script defer src="vilda_care_plan_model.js?v=1"></script>
 <script defer src="vilda_clinical_crypto.js?v=2"></script>
 <script defer src="vilda_patient_checkpoint_store.js?v=1"></script>
@@ -93,7 +93,7 @@
 <script defer src="vilda_vault_protocol.js?v=1"></script>
 <script defer src="vilda_patient_identity_protocol.js?v=1"></script>
 <script defer src="vilda_patient_identity_transport.js?v=1"></script>
-<script defer src="vilda_vault.js?v=250"></script>
+<script defer src="vilda_vault.js?v=251"></script>
 <script defer src="vilda_frame_sync.js?v=2"></script>
 <script defer src="vilda_sync.js?v=48"></script>
 <script defer src="vilda_sync_integration.js?v=56"></script>
@@ -121,7 +121,7 @@
 <script defer src="vilda_global_search_view.js?v=6"></script>
 <script defer src="vilda_search_navigation.js?v=1"></script>
 <script defer src="vilda_patients_list.js?v=1"></script>
-<script defer src="vilda_auth_ui.js?v=542"></script>
+<script defer src="vilda_auth_ui.js?v=543"></script>
 <script defer src="vilda_urodzeniowe_rozbieznosc.js?v=1"></script>
 <script defer src="vilda_cykle_leczenia.js?v=3"></script>
 <script defer src="vilda_version_history_ui.js?v=15"></script>
@@ -205,7 +205,7 @@
      w vilda_deps.js (jspdf@2.5.1 + html2canvas@1.4.1, te same URL-e i SRI co dawniej). -->
     <!-- Biblioteka do generowania plików DOCX. Jeśli z jakiegoś powodu nie zostanie załadowana (np. brak internetu), skrypt wykorzysta prosty fallback HTML/RTF. -->
     <script defer src="https://cdn.jsdelivr.net/npm/docx@7.7.0/build/index.js" integrity="sha384-w/LllGhZ3w+q1yFNKaoeSozJlt4DKDgPzR/QqsYJ/de7QdUKPayy2iETdCFxEscy" crossorigin="anonymous"></script>
-<script defer src="vilda_chrome.js?v=241"></script>
+<script defer src="vilda_chrome.js?v=242"></script>
 <link href="clcr_ui_workflow.css?v=20" rel="stylesheet" />
 <link href="clcr_saved_results_view.css?v=1" rel="stylesheet" />
 <link href="clcr_result_details.css?v=1" rel="stylesheet" />
@@ -217,6 +217,7 @@
 <link href="clcr_phosphorus_creatinine_ui.css?v=1" rel="stylesheet" />
 <link href="clcr_protein_creatinine_ui.css?v=1" rel="stylesheet" />
 <link href="clcr_potassium_index_ui.css?v=1" rel="stylesheet" />
+<link href="clcr_serum_anion_gap_ui.css?v=1" rel="stylesheet" />
 <link href="clcr_oxcr_ui.css?v=1" rel="stylesheet" />
 <link href="clcr_citcr_ui.css?v=1" rel="stylesheet" />
 <link href="clcr_fena_ui.css?v=1" rel="stylesheet" />
@@ -423,6 +424,15 @@
           <label class="advanced-field">HCO₃⁻ (mmol/L):
             <input type="number" id="S_HCO3" step="0.1" />
           </label>
+          <div id="agsAlbuminControls" hidden>
+            <input type="checkbox" id="AGS_albuminEnabled" hidden aria-label="Uwzględnij albuminę" />
+            <label class="advanced-field" for="S_Albumin">Albumina w surowicy:
+              <input type="text" inputmode="decimal" id="S_Albumin" spellcheck="false" />
+            </label>
+            <label class="advanced-field" for="S_Albumin_unit">Jednostka albuminy:
+              <select id="S_Albumin_unit"><option value="g/L">g/L</option><option value="g/dL">g/dL</option></select>
+            </label>
+          </div>
           <!-- Serum phosphate with selectable units (mg/dl or mmol/L).  The unit selector defaults to mg/dl. -->
           <label class="advanced-field">Fosfor nieorganiczny (Pᵢ):
             <input type="number" id="S_PO4" step="0.1" />
@@ -1048,7 +1058,7 @@
     <script defer src="inline_kalkulator_klirens_01.js?v=1"></script>
 
     <script defer src="clcr_collection_duration.js?v=5"></script>
-    <script defer src="clcr_clinical_safety.js?v=13"></script>
+    <script defer src="clcr_clinical_safety.js?v=14"></script>
     <script defer src="clcr_stone_safety.js?v=1"></script>
     <script defer src="clcr_dialysis_safety.js?v=1"></script>
     <script defer src="clcr_extended_egfr.js?v=1"></script>
@@ -1069,18 +1079,22 @@
     <script defer src="clcr_phosphorus_creatinine_data.js?v=1"></script>
     <script defer src="clcr_protein_creatinine_data.js?v=1"></script>
     <script defer src="clcr_potassium_index_data.js?v=1"></script>
+    <script defer src="clcr_serum_anion_gap_data.js?v=1"></script>
     <script defer src="clcr_magnesium_calcium.js?v=1"></script>
     <script defer src="clcr_phosphorus_creatinine.js?v=1"></script>
     <script defer src="clcr_protein_creatinine.js?v=1"></script>
     <script defer src="clcr_potassium_index.js?v=1"></script>
+    <script defer src="clcr_serum_anion_gap.js?v=1"></script>
     <script defer src="clcr_magnesium_calcium_ui.js?v=1"></script>
     <script defer src="clcr_phosphorus_creatinine_ui.js?v=1"></script>
     <script defer src="clcr_protein_creatinine_ui.js?v=1"></script>
     <script defer src="clcr_potassium_index_ui.js?v=1"></script>
+    <script defer src="clcr_serum_anion_gap_ui.js?v=1"></script>
     <script defer src="clcr_magnesium_calcium_persistence.js?v=1"></script>
     <script defer src="clcr_phosphorus_creatinine_persistence.js?v=1"></script>
     <script defer src="clcr_protein_creatinine_persistence.js?v=1"></script>
     <script defer src="clcr_potassium_index_persistence.js?v=1"></script>
+    <script defer src="clcr_serum_anion_gap_persistence.js?v=1"></script>
     <script defer src="clcr_oxcr_reference_data.js?v=1"></script>
     <script defer src="clcr_oxcr.js?v=1"></script>
     <script defer src="clcr_oxcr_ui.js?v=1"></script>
@@ -1147,7 +1161,7 @@
     <script defer src="clcr_measured_clearance_reference_data.js?v=1"></script>
     <script defer src="clcr_measured_clearance_reference.js?v=1"></script>
     <script defer src="clcr_result_presentation.js?v=8"></script>
-    <script defer src="inline_kalkulator_klirens_02.js?v=35"></script>
+    <script defer src="inline_kalkulator_klirens_02.js?v=36"></script>
     <!-- Ujednolicona obsługa wyboru formuły w kalkulatorze klirensu/eGFR. -->
     <script defer src="inline_kalkulator_klirens_03.js?v=1"></script>
 <!-- Sekcja interpretacji AI z opisem i przyciskiem.  Umieszczamy ją w kontenerze
@@ -1193,8 +1207,8 @@
 </footer>
 
 <!-- 5. LOGIKA JS -->
-<script defer src="clcr_saved_legacy_calculator.js?v=17"></script>
-<script defer src="inline_kalkulator_klirens_04.js?v=42"></script>
+<script defer src="clcr_saved_legacy_calculator.js?v=18"></script>
+<script defer src="inline_kalkulator_klirens_04.js?v=43"></script>
 
 <!-- Moduł obsługi kliknięć listy dynamicznych wyników wyszukiwania -->
 <script defer src="inline_kalkulator_klirens_05.js?v=1"></script>
@@ -1792,7 +1806,7 @@ document.addEventListener('DOMContentLoaded', () => {
          wczytywane w tym formularzu. Plik userData.js korzysta z localStorage. -->
         <script src="userData.js?v=7" defer></script>
 <script src="ios26-ui.js?v=47" defer></script>
-<script defer src="inline_kalkulator_klirens_07.js?v=32"></script>
+<script defer src="inline_kalkulator_klirens_07.js?v=33"></script>
 <script defer src="vilda_down_syndrome.js?v=5"></script>
 <script defer src="vilda_anorexia_risk.js?v=4"></script>
 <!-- Tablice siatek zespolu Downa przed app.js: app.js przekazuje je silnikowi BMI (P-DS-1). -->
@@ -2053,10 +2067,10 @@ document.addEventListener('DOMContentLoaded', () => {
 </script>
 <script defer src="inline_kalkulator_klirens_08.js?v=1"></script>
   <script defer src="inline_kalkulator_klirens_09.js?v=1"></script>
-  <script defer src="clcr_saved_calculation.js?v=17"></script>
-  <script defer src="clcr_saved_results.js?v=17"></script>
+  <script defer src="clcr_saved_calculation.js?v=18"></script>
+  <script defer src="clcr_saved_results.js?v=18"></script>
   <script defer src="clcr_saved_results_view.js?v=2"></script>
-  <script defer src="clcr_result_details.js?v=13"></script>
-  <script defer src="clcr_ui_workflow.js?v=42"></script>
+  <script defer src="clcr_result_details.js?v=14"></script>
+  <script defer src="clcr_ui_workflow.js?v=43"></script>
 </body>
 </html>

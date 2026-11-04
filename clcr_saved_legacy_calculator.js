@@ -331,8 +331,13 @@
       };
     }
     if (formulaId === "AGs") {
-      const value = safety.computeAnionGapWithoutPotassium({ sodium: number(values, "S_Na"), chloride: number(values, "S_Cl"), bicarbonate: number(values, "S_HCO3") });
-      return modeled(formulaId, parameterKey, value, "mmol/L", 1, values, context);
+      const engine = requiredModule("VildaClcrSerumAnionGap"), persistence = requiredModule("ClcrSerumAnionGapPersistence");
+      const policy = requiredModule("VildaClcrSerumAnionGapData").getProfile("MAYO_ELPSR_AGS_2026_11");
+      const result = engine.evaluate(engine.inputFromValues(values, context), policy);
+      if (!result.valid || !result.canSave) throw new Error(result.correction?.error || result.message || "Sprawdź dane AG i opcjonalną albuminę.");
+      const datapoint = { id: parameterKey, sourceFormulaId: formulaId, label: persistence.LABEL, testKey: "clcr:AGs" };
+      if (!persistence.augmentDatapoint({ getAttribute: () => JSON.stringify(result.snapshot || engine.toSnapshot(result)) }, datapoint)) throw new Error("Nie można utrwalić obliczenia AG.");
+      return datapoint;
     }
     if (formulaId === "TMP_GFR") {
       const engine = requiredModule("VildaClcrTmpGfr"), policy = requiredModule("VildaClcrTmpGfrReferenceData").DEFAULT_POLICY;

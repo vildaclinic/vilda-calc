@@ -10,6 +10,7 @@
   const isCacrFormula = id => id === "CaCr_spot" || id === "Ca_Cr";
   const PARAM_GROUPS = Object.freeze([
     Object.freeze({ id: "egfr", title: "eGFR i klirensy kreatyniny" }),
+    Object.freeze({ id: "serum", title: "Obliczenia z krwi" }),
     Object.freeze({ id: "dzm-excr", title: "Zbiórka dobowa — wydalania" }),
     Object.freeze({ id: "dzm-ratio", title: "Zbiórka dobowa — wskaźniki" }),
     Object.freeze({ id: "dzm-protein", title: "Zbiórka dobowa — białko" }),
@@ -50,7 +51,7 @@
     { id: "Ca_Cit", group: "dzm-ratio", label: "Wapń/cytryniany (DZM)", unit: "mg/mg" },
     { id: "B_Cr", group: "dzm-ratio", label: "Białko/kreatynina (DZM)", unit: "mg/mg" },
     { id: "K_frac", group: "urine-index", label: "Udział potasu — K/(K+Na)", unit: "%" },
-    { id: "AGs", group: "dzm-ratio", label: "Luka anionowa surowicy (bez K)", unit: "mmol/L" },
+    { id: "AGs", group: "serum", label: "Luka anionowa surowicy (bez K)", unit: "mmol/L" },
     // Białko DZM: jeden nowy pomiar; dawne przeliczenia zachowane jako serie historyczne.
     { id: "Prot_mg24", group: "dzm-protein", label: "Białko całkowite w DZM", unit: "mg/24 h", sourceFormulaId: "Prot_mgkg" },
     { id: "Prot_g24", group: "dzm-protein", label: "Białko w DZM [g/24 h]", unit: "g/24 h", sourceFormulaId: "Prot_mgkg" },
@@ -575,8 +576,8 @@
       // The older calculator flowsheet consumes this adapter directly. Reuse
       // the same pure envelope reader as Badania/Notes, including signed
       // reports whose endpoint must not become an exact chart measurement.
-      const dedicatedRatioCapture = ["Mg_Ca", "PO4_Cr", "B_Cr", "K_frac"].includes(sourceFormulaId) ? savedCalculation(note) : null;
-      const dedicatedRatioRecorded = ["Mg_Ca", "PO4_Cr", "B_Cr", "K_frac"].includes(sourceFormulaId) ? recordedMeasurement(lab) : null;
+      const dedicatedRatioCapture = ["Mg_Ca", "PO4_Cr", "B_Cr", "K_frac", "AGs"].includes(sourceFormulaId) ? savedCalculation(note) : null;
+      const dedicatedRatioRecorded = ["Mg_Ca", "PO4_Cr", "B_Cr", "K_frac", "AGs"].includes(sourceFormulaId) ? recordedMeasurement(lab) : null;
       if (target && (!sourceFormulaId || !target.has(sourceFormulaId))) continue;
       const acr = sourceFormulaId === "ACR" ? savedAcrAssessment(note) : null;
       const pcr = sourceFormulaId === "PCR" ? savedPcrAssessment(note) : null;
@@ -659,7 +660,7 @@
         typeof note.body === "string" &&
         note.body.indexOf("poza zakresem") >= 0;
       const norm = typeof lab.norm === "string" ? lab.norm.trim() : "";
-      const recordedOutOfRange = (["Mg_Ca", "PO4_Cr", "B_Cr", "K_frac"].includes(sourceFormulaId) || sourceFormulaId === "Ca_Cr" && !cacr) && !norm && outOfRange === false ? null : outOfRange;
+      const recordedOutOfRange = (["Mg_Ca", "PO4_Cr", "B_Cr", "K_frac", "AGs"].includes(sourceFormulaId) || sourceFormulaId === "Ca_Cr" && !cacr) && !norm && outOfRange === false ? null : outOfRange;
       const point = {
         dateISO: dateISO,
         valueNum: valueNum,
@@ -818,11 +819,12 @@
         point.displayValue = String(lab.value || valueNum).trim();
         point.norm = "";
       }
-      if (["Mg_Ca", "PO4_Cr", "B_Cr", "K_frac"].includes(sourceFormulaId)) {
+      if (["Mg_Ca", "PO4_Cr", "B_Cr", "K_frac", "AGs"].includes(sourceFormulaId)) {
         Object.assign(point, { rawValue: dedicatedRatioRecorded.rawValue, valueNum: dedicatedRatioRecorded.valueNum, displayValue: dedicatedRatioRecorded.displayValue, comparator: dedicatedRatioRecorded.comparator });
         if (!norm) Object.assign(point, { assessment: "unassessed", category: null, outOfRange: null, tone: "neutral" });
         applySavedCalculation(point, dedicatedRatioCapture, hasSavedCalculation(note));
         if (dedicatedRatioCapture?.valid && dedicatedRatioCapture.snapshot.assessment.magnesiumCalciumSnapshot) point.magnesiumCalciumAssessment = dedicatedRatioCapture.snapshot.assessment.magnesiumCalciumSnapshot;
+        if (dedicatedRatioCapture?.valid && dedicatedRatioCapture.snapshot.assessment.serumAnionGapSnapshot) point.serumAnionGapAssessment = dedicatedRatioCapture.snapshot.assessment.serumAnionGapSnapshot;
         if (dedicatedRatioCapture?.valid && dedicatedRatioCapture.snapshot.assessment.potassiumIndexSnapshot) point.potassiumIndexAssessment = dedicatedRatioCapture.snapshot.assessment.potassiumIndexSnapshot;
         if (dedicatedRatioCapture?.valid && dedicatedRatioCapture.snapshot.assessment.proteinCreatinineSnapshot) point.proteinCreatinineAssessment = dedicatedRatioCapture.snapshot.assessment.proteinCreatinineSnapshot;
         if (dedicatedRatioCapture?.valid && dedicatedRatioCapture.snapshot.assessment.phosphorusCreatinineSnapshot) point.phosphorusCreatinineAssessment = dedicatedRatioCapture.snapshot.assessment.phosphorusCreatinineSnapshot;
@@ -832,7 +834,7 @@
     const series = Array.from(byLabel.values());
     series.forEach((s) => {
       s.points.sort((a, b) => String(a.dateISO).localeCompare(String(b.dateISO)));
-      if (["ACR", "PCR", "CaCr_spot", "Ca_Cr", "OxCr_spot", "CitCr_spot", "FENa_spot", "FEK_spot", "FECl_spot", "FEHCO3_spot", "AGu_spot", "pH_spot", "UA_mgkg", "Ca_mgkg", "Mg_mgkg", "PO4_mgkg", "Prot_mgkg", "Na_mmol_d", "K_mmol_d", "KM_Cr", "PO4_Cr", "B_Cr", "K_frac"].includes(s.sourceFormulaId)) {
+      if (["ACR", "PCR", "CaCr_spot", "Ca_Cr", "OxCr_spot", "CitCr_spot", "FENa_spot", "FEK_spot", "FECl_spot", "FEHCO3_spot", "AGu_spot", "pH_spot", "UA_mgkg", "Ca_mgkg", "Mg_mgkg", "PO4_mgkg", "Prot_mgkg", "Na_mmol_d", "K_mmol_d", "KM_Cr", "PO4_Cr", "B_Cr", "K_frac", "AGs"].includes(s.sourceFormulaId)) {
         s.norm = s.points[s.points.length - 1]?.norm || "";
         return;
       }
@@ -862,6 +864,11 @@
       const persistence = global.ClcrProteinCreatininePersistence;
       const frozen = persistence?.readSnapshot(JSON.stringify(dp.proteinCreatinineSnapshot));
       if (!frozen || !persistence.matchesDatapoint(dp, frozen)) throw new Error("Brak kompletnego obliczenia B/Cr do bezpiecznego zapisu. Oblicz wynik ponownie.");
+    }
+    if (dp.sourceFormulaId === "AGs") {
+      const persistence = global.ClcrSerumAnionGapPersistence;
+      const frozen = persistence?.readSnapshot(JSON.stringify(dp.serumAnionGapSnapshot));
+      if (!frozen || !persistence.matchesDatapoint(dp, frozen)) throw new Error("Brak kompletnego obliczenia AG do bezpiecznego zapisu. Oblicz wynik ponownie.");
     }
     if (dp.sourceFormulaId === "K_frac") {
       const persistence = global.ClcrPotassiumIndexPersistence;
@@ -942,7 +949,7 @@
     }
     const labResult = {
       test: dp.label,
-      value: ["Mg_Ca", "PO4_Cr", "B_Cr", "K_frac"].includes(dp.sourceFormulaId) ? dp.displayValue : isCacrFormula(dp.sourceFormulaId) && dp.cacrSnapshot
+      value: ["Mg_Ca", "PO4_Cr", "B_Cr", "K_frac", "AGs"].includes(dp.sourceFormulaId) ? dp.displayValue : isCacrFormula(dp.sourceFormulaId) && dp.cacrSnapshot
         ? dp.displayValue || acrDisplayText(dp.cacrSnapshot) : dp.sourceFormulaId === "PCR" && dp.pcrSnapshot
           ? dp.displayValue || acrDisplayText(dp.pcrSnapshot) : dp.sourceFormulaId === "ACR" && dp.acrSnapshot
             ? dp.displayValue || acrDisplayText(dp.acrSnapshot) : formatValueString(dp.valueNum),
@@ -984,6 +991,7 @@
       "Kalkulator klirensu · " +
       dp.testKey +
       (dp.outOfRange ? " · wynik poza zakresem" : "") +
+      (dp.sourceFormulaId === "AGs" ? "\n\n" + global.ClcrSerumAnionGapPersistence.referenceNote(dp.serumAnionGapSnapshot) : "") +
       (typeof dp.assumptions === "string" && dp.assumptions.trim() ? "\n\n" + dp.assumptions.trim() : "") +
       (dp.sourceFormulaId === "ACR" && dp.acrSnapshot ? "\n\n" + acrReferenceNote(dp) : "") +
       (dp.sourceFormulaId === "PCR" && dp.pcrSnapshot ? "\n\n" + pcrReferenceNote(dp) : "") +
@@ -1015,7 +1023,7 @@
 
   const ASSESSMENT_FIELDS = Object.freeze([
     "acrAssessment", "pcrAssessment", "cacrAssessment", "oxcrAssessment", "citcrAssessment",
-    "fenaAssessment", "fekAssessment", "feclAssessment", "fehco3Assessment", "uagAssessment", "tmpGfrAssessment", "phAssessment", "uaAssessment", "caDzmAssessment", "mgDzmAssessment", "po4DzmAssessment", "proteinDzmAssessment", "sodiumDzmAssessment", "potassiumDzmAssessment", "urateCreatinineAssessment", "magnesiumCalciumAssessment", "phosphorusCreatinineAssessment", "proteinCreatinineAssessment", "potassiumIndexAssessment",
+    "fenaAssessment", "fekAssessment", "feclAssessment", "fehco3Assessment", "uagAssessment", "tmpGfrAssessment", "phAssessment", "uaAssessment", "caDzmAssessment", "mgDzmAssessment", "po4DzmAssessment", "proteinDzmAssessment", "sodiumDzmAssessment", "potassiumDzmAssessment", "urateCreatinineAssessment", "magnesiumCalciumAssessment", "phosphorusCreatinineAssessment", "proteinCreatinineAssessment", "potassiumIndexAssessment", "serumAnionGapAssessment",
   ]);
   const HELPER_BY_FORMULA = Object.freeze({
     OxCr_spot: "ClcrOxcrPersistence", CitCr_spot: "ClcrCitcrPersistence",
@@ -1193,7 +1201,7 @@
         population: reference?.population || null,
         profileId: reference?.profileId || null, profileVersion: reference?.profileVersion ?? null },
     });
-    if (["AGu_spot", "TMP_GFR", "pH_spot", "UA_mgkg", "Ca_mgkg", "Mg_mgkg", "PO4_mgkg", "Prot_mgkg", "Na_mmol_d", "K_mmol_d", "KM_Cr", "Mg_Ca", "PO4_Cr", "B_Cr", "K_frac"].includes(capture.formulaId)) Object.assign(point, {
+    if (["AGu_spot", "TMP_GFR", "pH_spot", "UA_mgkg", "Ca_mgkg", "Mg_mgkg", "PO4_mgkg", "Prot_mgkg", "Na_mmol_d", "K_mmol_d", "KM_Cr", "Mg_Ca", "PO4_Cr", "B_Cr", "K_frac", "AGs"].includes(capture.formulaId)) Object.assign(point, {
       calculationMethod: capture.calculationMethod || point.calculationMethod,
       comment: text(capture.comment), knownFacts: object(capture.knownFacts),
       contextReferences: Array.isArray(capture.contextReferences) ? capture.contextReferences : [],

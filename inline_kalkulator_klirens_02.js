@@ -228,7 +228,8 @@
       },
       {
         id: "AGs",
-        label: "Luka anionowa surowicy (bez K)",
+        label: "Luka anionowa surowicy — AG bez potasu",
+        note: "Trzy stężenia z tego samego badania krwi. Albumina jest opcjonalna; wiek służy wyłącznie dobraniu normy.",
         version: "advanced",
         requires: [ "S_Na", "S_Cl", "S_HCO3"],
       },

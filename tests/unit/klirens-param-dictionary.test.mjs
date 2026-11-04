@@ -29,6 +29,7 @@ const model = modelGlobal.ClcrUiModel;
 
 const EXPECTED_GROUP_ORDER = [
   'egfr',
+  'serum',
   'dzm-excr',
   'dzm-ratio',
   'dzm-protein',
@@ -147,6 +148,18 @@ describe('Klirens — słownik parametrów karty pacjenta (Faza 0)', () => {
   it('② ACR i PCR raportowane w mg/g', () => {
     expect(byId('ACR').unit).toBe('mg/g');
     expect(byId('PCR').unit).toBe('mg/g');
+  });
+
+  it('AG surowicy ma własną grupę obliczeń z krwi, bez mieszania ze zbiórką moczu', () => {
+    const serum = model.getParamGroups().find(group => group.id === 'serum');
+    expect(serum.title).toBe('Obliczenia z krwi');
+    expect(serum.entries.map(entry => entry.id)).toEqual(['AGs']);
+    expect(byId('AGs')).toMatchObject({
+      sourceFormulaId: 'AGs',
+      label: 'Luka anionowa surowicy (bez K)',
+      unit: 'mmol/L',
+      group: 'serum',
+    });
   });
 
   it('① białko DZM rozbite na trzy serie z jedną formułą-źródłem', () => {

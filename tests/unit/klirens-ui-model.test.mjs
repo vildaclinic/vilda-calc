@@ -131,6 +131,14 @@ function clinicalReadinessHarness(formulaId, values) {
       browserGlobal.VildaClcrMagnesiumCalciumData.getProfile('MGCA_DZM_2026_11'),
     );
   }
+  if (formulaId === 'AGs') {
+    loadBrowserScript('clcr_serum_anion_gap_data.js', browserGlobal);
+    loadBrowserScript('clcr_serum_anion_gap.js', browserGlobal);
+    browserGlobal.evaluateClcrSerumAnionGap = () => browserGlobal.VildaClcrSerumAnionGap.evaluate(
+      browserGlobal.VildaClcrSerumAnionGap.readInputFromDocument(browserGlobal.document),
+      browserGlobal.VildaClcrSerumAnionGapData.getProfile('MAYO_ELPSR_AGS_2026_11'),
+    );
+  }
   if (formulaId === 'K_frac') {
     loadBrowserScript('clcr_potassium_index_data.js', browserGlobal);
     loadBrowserScript('clcr_potassium_index.js', browserGlobal);
@@ -170,6 +178,21 @@ function clinicalReadinessHarness(formulaId, values) {
 }
 
 describe('Klirens — centralny model przepływu UI', () => {
+  it.each([
+    ['140', '104', '24', true, 12], ['140.1', '116', '24.1', true, 0],
+    ['140.04', '116', '24', true, .04], ['139.96', '116', '24', true, -.04],
+    ['0', '0', '0', true, 0], ['140,5', '104', '24', true, 12.5],
+    ['-1', '104', '24', false, null], ['0x8c', '104', '24', false, null],
+    [' ', '104', '24', false, null],
+  ])('AG readiness uses strict actual subtraction without requiring age: %s/%s/%s', (sodium, chloride, bicarbonate, ready, expected) => {
+    const { workflow } = clinicalReadinessHarness('AGs', { S_Na: sodium, S_Cl: chloride, S_HCO3: bicarbonate });
+    const result = workflow.getFormulaReadiness();
+    expect(result.valueReady).toBe(ready);
+    expect(result.interpretationMissingFieldIds).toEqual([]);
+    expect(result.outcome.rawValue).toBe(expected);
+    expect(result.outcome.outOfRange).toBeNull();
+  });
+
   it.each([
     ['60', '20', true, 75], ['0', '20', true, 0], ['60', '0', true, 100],
     ['1,5', '0,5', true, 75], ['0', '0', false, null], ['-1', '-1', false, null],
@@ -925,16 +948,16 @@ describe('Klirens — centralny model przepływu UI', () => {
     );
 
     expect(html).toContain('clcr_ui_workflow.css?v=20');
-    expect(html).toContain('clcr_ui_workflow.js?v=42');
-    expect(html).toContain('inline_kalkulator_klirens_02.js?v=35');
-    expect(html).toContain('inline_kalkulator_klirens_04.js?v=42');
-    expect(html).toContain('inline_kalkulator_klirens_07.js?v=32');
+    expect(html).toContain('clcr_ui_workflow.js?v=43');
+    expect(html).toContain('inline_kalkulator_klirens_02.js?v=36');
+    expect(html).toContain('inline_kalkulator_klirens_04.js?v=43');
+    expect(html).toContain('inline_kalkulator_klirens_07.js?v=33');
     expect(html).toContain('clcr_result_reference_data.js?v=7');
     expect(html).toContain('clcr_result_presentation.js?v=8');
-    expect(serviceWorker).toContain("const SW_VERSION = '1.1.464'");
+    expect(serviceWorker).toContain("const SW_VERSION = '1.1.465'");
     expect(html).toContain('clcr_calculation_assumptions.js?v=2');
     expect(serviceWorker).toContain("'/clcr_calculation_assumptions.js?v=2'");
-    expect(serviceWorker).toContain("'/clcr_clinical_safety.js?v=13'");
+    expect(serviceWorker).toContain("'/clcr_clinical_safety.js?v=14'");
     expect(serviceWorker).toContain("'/clcr_result_reference_data.js?v=7'");
     expect(serviceWorker).toContain("'/clcr_result_presentation.js?v=8'");
     expect(serviceWorker).toContain("'/clcr_ui_workflow.css?v=20'");

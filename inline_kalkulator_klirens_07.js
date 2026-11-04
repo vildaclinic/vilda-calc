@@ -2397,6 +2397,93 @@ function restoreClearedCaDzmContext(event) {
   const priorRestoreCa = restoreClearedCaDzmContext;
   replaceBinding("restoreClearedCaDzmContext", function restoreProteinCreatinineAfterCa(event) { priorRestoreCa(event); restoreClearedProteinCreatinine(event); });
 })();
+// AGs has three shared serum operands and one optional albumin draft. Restore
+// only the incoming session's values; an absent draft is never the last patient's.
+(function installSerumAnionGapSessionAdapter() {
+  "use strict";
+  const DEFAULTS = Object.freeze({ S_Na: "", S_Cl: "", S_HCO3: "", AGS_albuminEnabled: false, S_Albumin: "", S_Albumin_unit: "g/L" });
+  const CONTEXT_IDS = Object.freeze(["age", "ageMonths", "ageDays", "sex", "weight", "height", "newbornContext"]);
+  const AGE_IDS = Object.freeze(["age", "ageMonths", "ageDays"]);
+  const originals = new WeakMap();
+  const object = value => Boolean(value && typeof value === "object" && !Array.isArray(value));
+  const own = (value, key) => Object.prototype.hasOwnProperty.call(value || {}, key);
+  const primitive = value => value == null ? "" : typeof value === "string" || typeof value === "number" && Number.isFinite(value) ? String(value) : "";
+  const incoming = session => ({ ...(object(session.preservedInputs) ? session.preservedInputs : {}), ...(object(session.inputs) ? session.inputs : {}) });
+  const selected = (session, values) => session.selectedFormula || values.formulaPicker || "";
+  function readContext() {
+    const ageContext = window.ClcrClinicalSafety?.readAgeFromDocument?.(document) || null;
+    const ageYears = ageContext?.valid === true && Number.isFinite(ageContext.exactYears) ? ageContext.exactYears : null;
+    return { ageYears, ageContext, ...Object.fromEntries(AGE_IDS.map(id => [id, document.getElementById(id)?.value ?? ""])) };
+  }
+  function setControls(values) {
+    for (const [id, value] of Object.entries(values)) {
+      const control = document.getElementById(id);
+      if (!control) continue;
+      if (control.type === "checkbox") control.checked = value === true;
+      else control.value = primitive(value);
+    }
+  }
+  function normalize(session) {
+    const values = originals.get(session) || incoming(session), active = selected(session, values) === "AGs";
+    const fields = Object.fromEntries(Object.entries(DEFAULTS).map(([id, fallback]) => [id,
+      id === "AGS_albuminEnabled" ? values[id] === true || values[id] === "true" : own(values, id) ? primitive(values[id]) : fallback]));
+    if (active) window.ClcrSerumAnionGapUi?.prepareControls?.(document);
+    // This precedes the version switch. Text preparation must happen before
+    // native number controls can sanitize a captured comma or invalid value.
+    setControls(fields);
+    const next = { ...(object(session.inputs) ? session.inputs : {}) };
+    for (const [id, value] of Object.entries(fields)) if (active || own(values, id) || document.getElementById(id)) next[id] = value;
+    for (const id of CONTEXT_IDS) if (own(values, id)) next[id] = values[id];
+    if (active) {
+      // An explicit restored AG without recorded age has no old-patient norm.
+      // Autosave restoration may subsequently supply the current shared age.
+      for (const id of AGE_IDS) if (!own(values, id)) next[id] = "";
+      session.selectedFormula = "AGs";
+      session.currentVersion = "advanced";
+      next.currentVersion = "advanced";
+      next.formulaPicker = "AGs";
+    }
+    session.inputs = next;
+  }
+  function clear() {
+    setControls(DEFAULTS);
+    const vault = window.__vildaClcrVersionValueVault;
+    if (object(vault)) Object.assign(vault, DEFAULTS);
+  }
+  function restoreAfterClear(event) {
+    clear();
+    if (event?.clcrClearedFormula !== "AGs") return;
+    const saved = event.clcrPreservedSerumAnionGapContext;
+    if (!object(saved)) return;
+    const context = Object.fromEntries(CONTEXT_IDS.filter(id => own(saved, id) &&
+      (typeof saved[id] === "string" || typeof saved[id] === "boolean" || typeof saved[id] === "number" && Number.isFinite(saved[id])))
+      .map(id => [id, saved[id]]));
+    setControls(context);
+    const vault = object(window.__vildaClcrVersionValueVault) ? window.__vildaClcrVersionValueVault : (window.__vildaClcrVersionValueVault = {});
+    Object.assign(vault, context, DEFAULTS);
+    setTimeout(() => { try { window.ClcrUiWorkflow?.refresh?.(); window.clcrUpdate?.(); } catch {} }, 0);
+  }
+  const replace = (name, implementation) => {
+    if (!Reflect.set(globalThis, name, implementation)) throw new Error("Nie można zainstalować adaptera sesji: " + name);
+  };
+  const priorPrepare = prepareUaSession;
+  replace("prepareUaSession", function prepareSerumAnionGapSession(session) {
+    const prepared = priorPrepare(session);
+    if (!object(prepared) || selected(prepared, incoming(prepared)) !== "AGs") return prepared;
+    return { ...prepared, selectedFormula: "AGs", currentVersion: "advanced",
+      inputs: { ...(object(prepared.inputs) ? prepared.inputs : {}) },
+      preservedInputs: object(prepared.preservedInputs) ? { ...prepared.preservedInputs } : prepared.preservedInputs };
+  });
+  const priorNormalize = normalizeCl24SessionInputs;
+  replace("normalizeCl24SessionInputs", function captureSerumAnionGapBeforeNormalization(session) { originals.set(session, incoming(session)); priorNormalize(session); });
+  const priorNormalizeCa = normalizeCaDzmSessionInputs;
+  replace("normalizeCaDzmSessionInputs", function normalizeSerumAnionGapAfterCa(session) { priorNormalizeCa(session); normalize(session); });
+  const priorClearCa = clearCaDzmInputContext;
+  replace("clearCaDzmInputContext", function clearSerumAnionGapAfterCa() { priorClearCa(); clear(); });
+  const priorRestoreCa = restoreClearedCaDzmContext;
+  replace("restoreClearedCaDzmContext", function restoreSerumAnionGapAfterCa(event) { priorRestoreCa(event); restoreAfterClear(event); });
+  window.ClcrSerumAnionGapSession = Object.freeze({ DEFAULTS, CONTEXT_IDS, readContext, clear });
+})();
 /* KLIRENS-URATE-CREATININE-SESSION: source tools/patch-klirens-urate-creatinine-session.mjs */
 (function installUrateCreatinineSessionAdapter() {
   "use strict";

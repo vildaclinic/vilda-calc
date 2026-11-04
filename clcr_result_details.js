@@ -34,6 +34,7 @@
     if (formulaId === "K_mmol_d" && field.id === "K_volumeUnit") return true;
     if (formulaId === "KM_Cr" && /^URCR_/.test(field.id) && field.id !== "URCR_outputUnit") return true;
     if (formulaId === "Mg_Ca" && /^MGCA_/.test(field.id)) return !["MGCA_sameSpecimen", "MGCA_collectionProblem", "MGCA_collectionHours", "MGCA_durationKnown"].includes(field.id);
+    if (formulaId === "AGs") return ["S_Na", "S_Cl", "S_HCO3", "AGS_albuminEnabled", "S_Albumin", "S_Albumin_unit"].includes(field.id);
     if (formulaId === "K_frac") return ["U_K", "U_Na"].includes(field.id);
     if (formulaId === "B_Cr" && /^BCR_/.test(field.id)) return !["BCR_sameSpecimen", "BCR_collectionProblem", "BCR_collectionHours", "BCR_durationKnown"].includes(field.id);
     if (formulaId === "PO4_Cr" && /^PICR_/.test(field.id)) return !["PICR_sameSpecimen", "PICR_collectionProblem", "PICR_collectionHours", "PICR_durationKnown"].includes(field.id);
@@ -99,7 +100,7 @@
     }
     active = { token, destroy, cancelForFormulaChange(nextFormula) {
       const owner = root.ClcrSavedCalculation?.readSaved(currentNote)?.snapshot?.formulaId || currentRecord?.sourceFormulaId;
-      if (!["Ca_Cr", "CaCr_spot", "Mg_Ca", "PO4_Cr", "B_Cr", "K_frac"].includes(owner) || owner === nextFormula) return true;
+      if (!["Ca_Cr", "CaCr_spot", "Mg_Ca", "PO4_Cr", "B_Cr", "K_frac", "AGs"].includes(owner) || owner === nextFormula) return true;
       // A committed transaction keeps its original ID and material. While a
       // write is in flight, keep its editor alive until the result is known.
       if (pending) return false;
