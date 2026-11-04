@@ -133,7 +133,7 @@ async function odpowiedzStraznikowi(ctx, gdzie) {
 /* Lista pacjentów → karta → „Wczytaj tego pacjenta” → wybór wizyty (tak jak lekarz). */
 async function wczytajZListy(page, ctx, nazwa, wybor) {
   await page.locator('#patientsListBtnSidebar').click();
-  await ctx.locator('.pt-rcard2', { hasText: nazwa }).first().click();
+  await ctx.locator('.pt-row', { hasText: nazwa }).first().locator('.pt-row-open').click();
   await expect.poll(() => ctx.evaluate(() => window.VildaSaveStatusIndicator.getCurrentDecision().ready)).toBe(true);
   await ctx.getByRole('button', { name: 'Wczytaj tego pacjenta' }).click();
   await ctx.waitForSelector(`#vildaLoadChoiceModal, ${STRAZNIK}`, { state: 'visible', timeout: 10000 });
