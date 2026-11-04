@@ -20505,6 +20505,376 @@ a lekarz poprawia jedno z miejsc. Wartość dni spoza 0–6 w rekordzie nie jest
 
 **Wersje.** `sga_birth_module.js?v=10→11`; SW 1.1.168 → **1.1.169**.
 
+## Dziennik zdarzeń: magazyn kolejki, bramka i identyfikator urządzenia — uśpione (P-DZIENNIK-ZDARZEN, E2-PR2b1, SW 1.1.457, `vilda_vault.js` 249, 2026-11-04)
+
+**Zmiana kliniczna: NIE** — wzory, progi, jednostki, interpretacje, zapis, scalanie, format kopii i synchronizacja bez
+zmian. Dla użytkownika dziś nic się nie zmienia. Wpis opisuje drugi uśpiony kawałek dziennika zdarzeń (po E2-PR2a):
+trwałą kolejkę zmian na urządzeniu. Po włączeniu (PR włączający E2-PR6) każda zmiana w trybie „Komputer prywatny”
+trafi najpierw do tej kolejki i stąd wyjdzie do chmury jako osobne zdarzenie, także gdy powstała bez połączenia
+z siecią. Dziś kod produkcyjny kolejki nie woła, a jej wewnętrzny wyłącznik (bramka) jest zamknięty, więc na urządzeniu
+nic nie powstaje (ani baza kolejki, ani identyfikator urządzenia w pamięci przeglądarki) i nic nie wychodzi do serwera.
+Wpływ kliniczny dziś: brak. Dalej: E2-PR2b2 dołoży kwarantannę, a E2-PR3a dopisywanie zmian do kolejki i kasowanie jej
+bazy przy „Usuń konto”. Wpis zawiera też wynik testu A ≡ B z łączeniem wpisów kolejki.
+
+**Skąd.** Plan `docs/SYNC_PRZYROSTOWA_PLAN.md`, rozdz. 3.2 i 3.9 oraz tabela „Podział etapu 2” (wiersze 5b1 i 5b2).
+Decyzje właściciela z 2026-10-29: osobna baza kolejki (decyzja 5), etap 2 tylko w trybie „Komputer prywatny”, seria
+uśpionych PR. Decyzje z 2026-11-03, po scaleniu E2-PR2a (vildaclinic/vilda-calc#869):
+- **11.2 — przyjęta:** zdarzenie kosza wizyty (`stomb`) niesie także kartę bez wizyt;
+- **11.3 — przyjęta:** E2-PR2 dzielony na E2-PR2a i E2-PR2b;
+- **cel czasu testu A ≡ B — przyjęty:** ziarna domyślne do około 75 s, cały plik do około 180 s;
+- **korekta szacunku — przyjęta:** etap 2 razem około 26 do 28 dni (zapis sprzed pytania 10.1);
+- **notatka pod inną kartą po „Scal pacjentów”:** naprawa w E2-PR3c;
+- **pytanie 10.1 — przyjęte:** E2-PR2b dzielony na E2-PR2b1 (ten PR) i E2-PR2b2 (kwarantanna i podsumowanie wyniku
+  dla dziennika); etap 2 razem około 31 do 33 dni;
+- **pytanie 10.2 — przyjęte:** identyfikator urządzenia osobny dla każdego konta, kasowany razem z kontem od E2-PR3a.
+
+### E2-PR2b1
+
+**Co jest (uśpione).** W tym samym bloku `P-DZIENNIK-ZDARZEN` w `vilda_vault.js`, za nowym znacznikiem
+`P-DZIENNIK-ZDARZEN: magazyn kolejki`, jest część `Bob_`: magazyn kolejki zmian.
+- **Eksport.** Zamrożony `VildaVault._eventLog` dostaje 11 nowych kluczy (razem 29): `gateOpen`, `enqueue`,
+  `outboxCount`, `outboxList`, `outboxTake`, `outboxAccept`, `outboxReject`, `outboxFail`, `outboxRequeueStale`,
+  `outboxDiscard`, `deleteDatabase`. Kod produkcyjny nie woła żadnej nowej funkcji. Poza sejfem żaden plik produktu nie
+  zna tych nazw. Bez nowego pliku w pamięci offline.
+- **Bramka.** Każda operacja magazynu poza `deleteDatabase` kończy się na bramce, dopóki pole okna `VILDA_EVENT_LOG`
+  nie ma wartości `true`. Brak pola, inna wartość (np. `'true'`, `1`, element strony o tym `id`) albo błąd odczytu —
+  bramka zamknięta. Przy zamkniętej bramce operacja nie dotyka `indexedDB`, `localStorage`, `crypto` ani magazynu
+  sejfu. W produkcji nikt bramki nie otwiera; flagę i warunek `features.events` dołoży E2-PR4. `gateOpen()` tylko czyta
+  bramkę.
+- **Tylko „Komputer prywatny”.** Za bramką operacja wymaga odblokowanego sejfu i trybu „Komputer prywatny”. „Komputer
+  w pracy” i „Zaloguj jednorazowo” dostają odmowę `tryb` bez dotykania IndexedDB. Dopisanie sprawdza tryb także
+  z zapisanego ustawienia konta (wpis rejestru): tryb inny niż prywatny daje `tryb`, a konto spoza rejestru — `konto`,
+  w obu przypadkach bez otwarcia bazy kolejki.
+- **Wyniki.** Każda funkcja magazynu poza `gateOpen` zwraca `{ ok: true, … }` albo `{ ok: false, powod, code? }`
+  i nigdy nie odrzuca obietnicy. Powody: `bramka`, `zablokowany`, `tryb`, `brak-indexeddb`, `argument`, `rodzaj` (nieznany rodzaj), `brak`
+  (builder nie znalazł rekordu), `sesja`, `konto`, `blad` (z kodem, niżej).
+
+**Magazyn.** Osobna baza IndexedDB `vilda_sync_<userId>` w wersji 1 (decyzja 5), a nie nowe sklepy w bazie sejfu.
+Schemat wersji 1 jest w tym PR w całości, żeby E2-PR2b2 nie potrzebował zmiany wersji:
+
+| Sklep | Klucz | Indeksy | Zawartość |
+|---|---|---|---|
+| `meta` | `k` | — | rekord licznika `{ k: 'licznik', v, baza }` (`baza` — losowy identyfikator nadany przy tworzeniu bazy); reszta w rezerwie |
+| `outbox` | `eid` | `byState` (`state`), `byEntity` (`[kind, entityKey]`), `bySeqLocal` (`seqLocal`, unikalny) | kolejka zmian |
+| `quarantine` | `[slotId, seq]` | `bySlot` (`slotId`) | kwarantanna; w tym PR tylko schemat, API w E2-PR2b2 |
+
+- **Otwarcie leniwe.** Baza jest otwierana bez numeru wersji. Odczyt albo zmiana stanu na nieistniejącej bazie
+  przerywa jej tworzenie i nic nie zostawia (wynik pusty: zera, puste listy; po kasowaniu bazy w tym oknie —
+  `SYNC_DB_DELETED`, niżej). Bazę tworzy wyłącznie dopisanie.
+- **Połączenie tylko na czas operacji.** Operacja otwiera bazę, wykonuje jedną transakcję i zamyka połączenie
+  (dopisanie: dwie — odczyt licznika i zapis). W transakcji nie ma oczekiwania na nic poza żądaniami bazy. Wynik daje
+  dopiero zatwierdzenie albo przerwanie transakcji. Blokada sejfu nie kasuje bazy ani wpisów kolejki.
+- **Inna wersja albo inny schemat.** Przy otwarciu sprawdzane są wersja i nazwy sklepów, a przed każdą transakcją
+  klucze i indeksy sklepów, których ona używa (dopisanie — przez odczyt licznika — wszystkich trzech). Bazę w innej
+  wersji albo z innym schematem kolejka zostawia nietkniętą: kod `SYNC_DB_SCHEMA`, bez zmian w bazie. Zmiana wersji
+  z innej karty przeglądarki zamyka nasze połączenie bez przerywania transakcji w toku.
+
+**Kolejka.**
+- **Wpis kolejki** (wiersz sklepu `outbox`) ma dokładnie te pola: `eid` (UUID v4), `createdAtISO`, `seqLocal`, `kind`,
+  `entityKey` (identyfikator encji z koperty), `setId` (losowy identyfikator zestawu porcji `pfull`, dla innych rodzajów
+  `null`), `env` (`{ iv, data }`), `bytes`, `state`, `attempts`, `lastError`, `lastAttemptAtISO`, `inflightAtISO`.
+  Treści jawnej nie ma: kopertę z buildera E2-PR2a dopisanie od razu szyfruje (`encryptEvent`), a wpis nie zależy od
+  późniejszego stanu sejfu. `lastError` i inne kody zapisywane w bazie mają tylko znaki z białej listy.
+- **Dopisanie** `enqueue(kind, klucze, opcje?)`: bramka i wejście, argumenty, wpis rejestru konta, odczyt licznika,
+  identyfikator urządzenia, builder, szyfrowanie każdej koperty, otwarcie do zapisu (tworzy bazę), jedna transakcja
+  zapisu, a po jej zatwierdzeniu zapis identyfikatora urządzenia. Builder bez rekordu daje `brak` bez otwarcia bazy
+  do zapisu. Wynik: `{ ok, eids, stany, zastapione }`.
+
+| Stan | Skąd | Dalej | Znika |
+|---|---|---|---|
+| `pending` (czeka) | dopisanie (szyfrogram ≤ 262 144 B); powrót z „w locie” | `inflight` (pobranie do wysyłki); `oversize` albo `rejected` (odrzucenie) | potwierdzenie; zastąpienie nowszym wpisem tej encji (reguła ogona); jawne porzucenie |
+| `inflight` (w locie) | pobranie do wysyłki (z chwilą `inflightAtISO`) | `pending` (niepowodzenie, powrót po czasie); `oversize` albo `rejected` (odrzucenie) | potwierdzenie; jawne porzucenie |
+| `oversize` (za duży) | dopisanie (szyfrogram > 262 144 B); odrzucenie z kodem `oversize` | — | nowy wpis tej encji z treścią; jawne porzucenie |
+| `unreadable` (źródło nieczytelne) | dopisanie, gdy rekordu w sejfie nie da się odszyfrować (`env: null`, `bytes: 0`) | — | nowy wpis tej encji z treścią; jawne porzucenie |
+| `rejected` (odrzucony) | odrzucenie z innym kodem (kod spoza białej listy zapisany jako `invalid`) | — | nowy wpis tej encji do wysłania; jawne porzucenie |
+
+`oversize`, `unreadable` i `rejected` nie wychodzą do wysyłki; ich widok dochodzi w E2-PR5. Nowy wpis tej encji
+z treścią zastępuje wpisy `oversize` i `unreadable`, a nowy wpis do wysłania także `rejected` — bez warunku ogona (nie
+czekają na wysyłkę), ale tylko te, które powstały przed rozpoczęciem nowego dopisania. Nieczytelny wynik niczego nie
+usuwa, a drugi taki wynik tej samej encji nie dokłada wpisu (`istnial: true`).
+
+**Łączenie wpisów (reguła ogona).** Kilka zmian tej samej encji bez połączenia z siecią może dać jeden wpis
+z najnowszą treścią. Nowy wynik dopisania zastępuje oczekujące (`pending`) wpisy tej encji tylko wtedy, gdy:
+1. powstały przed rozpoczęciem nowego dopisania (`seqLocal` nie większy niż licznik odczytany przed builderem). Wpis
+   dopisany w międzyczasie mógł powstać z nowszego stanu, więc zostaje, a nowy dochodzi za nim;
+2. po najstarszym z nich w kolejce nie czeka do wysłania nic poza nimi: ani wpis innej encji, ani wpis w locie, ani
+   nowszy wpis tej encji. Kolejność wysyłki zostaje więc taka jak bez łączenia;
+3. nowy wynik w całości nadaje się do wysłania (wszystkie nowe wpisy `pending`). Nowa porcja ponad limit rozmiaru nie
+   usuwa wysyłalnego stanu.
+
+Wpis w locie nigdy nie jest zastępowany. Przy `pfull` zastępowany jest tylko cały wcześniejszy zestaw porcji o innym
+`setId`, którego wszystkie porcje czekają i spełniają warunek 1. Różne rodzaje tej samej encji się nie łączą. Gdy baza
+powstała albo została odtworzona po odczycie licznika, dopisanie niczego nie zastępuje. Regułę zapisuje czysta funkcja
+`Bob_plan`; test A ≡ B wycina ją z sejfu i wykonuje (niżej). W pomiarze projektu (test A ≡ B) łączenie bez warunku
+ogona dawało różnice bez klasy albo nową różnicę W2s, a reguła ogona — bez nowej różnicy.
+
+**Pozostałe operacje kolejki.**
+- **`seqLocal`.** Licznik w sklepie `meta`, zapisywany w tej samej transakcji co dopisanie. Nowe wpisy dostają kolejne
+  numery po większym z licznika i ostatniego wpisu; numeracja nie wraca do 1 po opróżnieniu kolejki. Porcje `pfull`
+  idą jedną transakcją, z kolejnymi numerami i wspólnym `setId`. Wpis jest dodawany bez nadpisywania: kolizja
+  przerywa całą transakcję, także usunięcia zastąpionych wpisów.
+- **Pobranie do wysyłki** `outboxTake({ limit, maxBytes, extraBytes })`, jedna transakcja zapisu. Kolejka jest
+  przeglądana po `seqLocal` rosnąco; `oversize`, `unreadable` i `rejected` są pomijane. Pierwszy wpis w locie kończy
+  wybór (`czekaNaWLocie: true`), więc żaden późniejszy wpis nie wyprzedzi wcześniejszego. Dalej idą kolejne wpisy
+  `pending`, dopóki mieszczą się w limicie liczby (domyślnie i najwyżej 200) i rozmiaru ciała żądania
+  `{"events":[{eid, iv, data}, …]}` (domyślnie i najwyżej 1 MiB, z `extraBytes` wołającego). Pierwszy wpis, który się
+  nie mieści, kończy partię (bez przeskoku). Wybrane dostają `inflight` i chwilę `inflightAtISO`.
+- **Potwierdzenie** `outboxAccept(eids)` usuwa wpisy `pending` i `inflight`; to jedyna automatyczna droga usunięcia
+  wysłanego wpisu. Inne stany i nieznane `eid` trafiają do `pominiete`.
+- **Odrzucenie** `outboxReject([{ eid, code }])`: `pending` albo `inflight` → `oversize` (kod `oversize`) albo
+  `rejected`. Nigdy nie usuwa. Zły wpis listy trafia do `pominiete`, a pozostałe wpisy partii są zmieniane, więc
+  partia nie zostaje w locie.
+- **Niepowodzenie** `outboxFail(eids, { code, bezProby })`: `inflight` → `pending`, `attempts` + 1 (przy
+  `bezProby: true`, np. po 429, licznik prób bez zmian).
+- **Powrót „w locie”** `outboxRequeueStale({ olderThanMs })`: wpisy w locie starsze niż limit (domyślnie 60 s),
+  z nieczytelną chwilą albo z chwilą w przyszłości (cofnięty zegar) wracają do `pending`; licznik prób bez zmian.
+- **Jawne porzucenie** `outboxDiscard(eids, { potwierdzone: true })` usuwa wpis w każdym stanie; bez potwierdzenia —
+  `argument`. To decyzja użytkownika (widok w E2-PR5).
+- **Odczyty:** `outboxCount()` (liczba wpisów w każdym stanie) i `outboxList({ state })` (kopie wpisów po `seqLocal`).
+- Listy argumentów mają do 1000 elementów; zły element trafia do `pominiete` i nie psuje całej partii.
+
+**Kwarantanna** (miejsce na zdarzenia z chmury, których to urządzenie nie umie odczytać; plan 3.2). Sklep `quarantine`
+jest w schemacie wersji 1, ale w tym PR nie ma do niego API. API kwarantanny (`quarantinePut`, `quarantineList`,
+`quarantineCount`, `quarantineMinSeq`, `quarantineRelease`) i podsumowanie wyniku dla dziennika (`resultSummary`)
+dochodzą w E2-PR2b2. Wtedy domknie się zdanie wpisu E2-PR2a (niżej), że z wyniku `applyEncryptedEvent` utrwala się
+tylko status, kod i liczniki.
+
+**Identyfikator urządzenia** (pole `dev` koperty, wewnątrz szyfrogramu; serwer go nie widzi). 8 znaków z alfabetu
+`abcdefghijkmnpqrstuvwxyz23456789` (bez mylących `l`, `o`, `0`, `1`; ten sam co w kopercie E2-PR2a). Klucz
+`localStorage` jest osobny dla każdego konta: `vilda-sync-device-v1:<userId>` (pytanie 10.2).
+- Klucz powstaje dopiero po zatwierdzeniu pierwszego dopisania z treścią do kolejki (wpis `pending` albo `oversize`).
+  Do tej chwili losowy kandydat jest tylko w pamięci okna (strony otwartej w przeglądarce). Klucz nie powstaje przy
+  zamkniętej bramce, innym trybie, zablokowanym sejfie, braku IndexedDB, odmowie, przerwanej transakcji ani przy samym
+  wpisie nieczytelnym.
+- Przy dwóch pierwszych dopisaniach naraz w jednym oknie powstaje jeden identyfikator. Zapisany klucz ma pierwszeństwo
+  przed kandydatem. Dwie karty przeglądarki dopisujące pierwszy raz naraz mogą raz dać drugi identyfikator tego samego
+  urządzenia (zostaje zapisany pierwszy); etap 3 ma go tolerować (plan, 3.9).
+- Gdy `localStorage` jest niedostępny, wpis powstaje z `dev: null`.
+- Kasowanie klucza razem z kontem dochodzi w E2-PR3a (pytanie 10.2).
+
+**Kasowanie bazy** `deleteDatabase(userId)` działa bez bramki, bez sprawdzania trybu i bez odblokowanego sejfu
+(sprzątanie po koncie).
+- Od wywołania to okno nie otwiera ani nie tworzy bazy tego konta: każda dalsza operacja kolejki tego konta (także
+  odczyt; poza samym kasowaniem) kończy się kodem `SYNC_DB_DELETED`, aż do przeładowania strony. Kasowanie przerywa
+  także tworzenie bazy, które w tej chwili trwa w tym oknie. To samo po kasowaniu zauważonym z innej karty przeglądarki.
+- Dla nieistniejącej bazy kasowanie nie jest wołane: wynik `brak` (sprawdzenie listą baz, a bez niej próbą otwarcia bez
+  tworzenia). Baza w innej wersji też jest kasowana.
+- Wyniki: `usunieta`; `zablokowana` (inne połączenie trzyma bazę; kasowanie dokończy się samo po jego zamknięciu);
+  `w-toku` po limicie 10 s; błąd — `SYNC_DB_DELETE_FAILED`.
+- W tym PR kasowanie nie jest wpięte w „Usuń konto”, bo kod produkcyjny nie woła nowych funkcji. Wpięcie dochodzi
+  w E2-PR3a.
+
+**Sesja.** Operacje kolejki sprawdzają sesję tak jak zapis karty (P-SESJA-ZAPISU): zmiana sesji w trakcie kończy
+operację bez zapisu.
+
+**Kilka kart przeglądarki.** Kolejka jest spójna przy pracy w kilku kartach przeglądarki, bo każda zmiana kolejki to
+jedna transakcja bazy, a nowy wpis zastępuje starszy tylko wtedy, gdy starszy powstał przed rozpoczęciem nowego
+dopisania. Wspólna koordynacja tworzenia i kasowania bazy między kartami dochodzi w E2-PR3a razem z wpięciem kasowania,
+a jeden nadawca na konto — w E2-PR4.
+
+**Błędy i limity.**
+- **Brak miejsca:** transakcja przerywa się w całości i nic częściowego nie zostaje; kod `SYNC_DB_QUOTA`, także przy
+  tworzeniu bazy. Zdarzenie nie trafia wtedy do kolejki; dołoży je przegląd `sweepOutbox` z E2-PR3a.
+- **Limit 10 s** na otwarcie bazy (`SYNC_DB_TIMEOUT`; spóźnione otwarcie jest zamykane) i na kasowanie (`w-toku`).
+- **Kody bez treści.** Kod błędu bazy powstaje tylko z nazwy błędu (np. `QuotaExceededError` → `SYNC_DB_QUOTA`), nigdy
+  z komunikatu. Nieprzewidziany wyjątek daje swój kod (bez kodu — nazwę wyjątku, np. `TypeError`) tylko wtedy, gdy
+  pasuje do białej listy znaków; inaczej `SYNC_INTERNAL`. Wynik nigdy nie niesie obiektu błędu, komunikatu ani śladu
+  stosu.
+- **Kody:** `SYNC_DB_SCHEMA`, `SYNC_DB_QUOTA`, `SYNC_DB_CONSTRAINT`, `SYNC_DB_CHANGED`, `SYNC_DB_BLOCKED`,
+  `SYNC_DB_TIMEOUT`, `SYNC_DB_OPEN_FAILED`, `SYNC_DB_READ_FAILED`, `SYNC_DB_WRITE_FAILED`, `SYNC_DB_CLOSED`,
+  `SYNC_DB_ABORTED`, `SYNC_DB_INACTIVE`, `SYNC_DB_DELETED`, `SYNC_DB_DELETE_FAILED`, `SYNC_REGISTRY_FAILED`,
+  `SYNC_INTERNAL`. Kody buildera z E2-PR2a idą bez zmian.
+
+**Test A ≡ B z łączeniem wpisów.** Plik `tests/unit/sync-dziennik-wlasnosciowy.test.mjs` (uprząż i klasy we wpisie
+E2-PR2a niżej).
+- **Jak.** Kolejki urządzeń w uprzęży łączą wpisy tak jak magazyn: o zastąpieniu decyduje funkcja `Bob_plan` wycięta
+  z `vilda_vault.js` (`tests/support/model-kolejki.mjs`). Test sprawdza więc kod sejfu, a nie kopię reguły. Ten sam
+  model porównuje się z prawdziwym magazynem na atrapie IndexedDB (`sync-dziennik-magazyn`).
+- **Nowy blok** „koalescencja kolejki (reguła ogona) — profil podstawowy bez W2s”: ziarna 1, 7 i 8, zieleń jak
+  w profilu podstawowym (W4, W4p, punkt spoczynku, W1 i W2r tylko ze znanych klas). Bez W2s i W3 (W3 jest bez zmian
+  od E2-PR2a; warianty łączenia porównano z W2s w pomiarze projektu, wyżej). Bez W2s ziarno jest innym programem niż
+  w profilu podstawowym (inne losowania). W 3 ziarnach 9 zastąpień, bez nowej różnicy.
+- **Blok deterministyczny p. 7.**
+  - 7a: trzy poprawki tej samej wizyty bez połączenia dają jeden wpis z ostatnią treścią.
+  - 7b: ratunek notatki za pełną kartą nie zastępuje starszego wpisu tej notatki, bo za nim czekają wpisy karty.
+    Zastąpienie „w miejscu” starego wpisu postawiłoby notatkę przed kartą.
+  - 7c: klasa R3 z jednego ciągu operacji powstaje tak samo bez łączenia i z łączeniem, więc nie pochodzi z kolejki.
+  - 7d (kwarantanna i „Zwolnij”) dochodzi w E2-PR2b2.
+- **Kontrola wierności.** Przebiegi bez łączenia są bajt w bajt takie jak przed zmianą: ziarna 10/10, p. 5 28/28,
+  p. 6 12/12.
+- **Przebiegi ręczne.** 40 ziaren z łączeniem: 45 z 46 przypadków zielonych. Czerwone jest tylko ziarno 39: punkt
+  klasy R4a′ (znanej z profilu pełnego i p. 6, w profilu podstawowym niedozwolonej). To samo ziarno bez łączenia (też
+  bez W2s) daje ten sam punkt, więc nie jest to skutek łączenia. Profil pełny z łączeniem — zielony.
+- **Czas pliku** (jeden proces).
+  - Pomiar na wolniejszej maszynie: mediana 3 przebiegów 158,3 s (rozrzut 156,5–165,7 s); profil podstawowy (ziarna
+    domyślne) 64,3 s (61,7–66,5 s); nowy blok łączenia 9,7 s; p. 7 2,6 s; przed zmianą 152,6 s.
+  - Cel przyjęty 2026-11-03 (ziarna domyślne do około 75 s, cały plik do około 180 s) jest spełniony. Ziarna łączenia
+    liczą się do celu całego pliku.
+  - Po poprawkach, na maszynie około 2 razy szybszej: mediana 3 przebiegów 78,2 s, a stan sprzed poprawek na tej samej
+    maszynie 78,0 s — bez regresji.
+- **„Zwolnij”** (kolejność notatki i nagrobka przy zwolnieniu wiersza kwarantanny): wynik pomiaru opisze wpis
+  E2-PR2b2; wymagania dla E2-PR4 (ponowna próba w kolejności `seq`, ponowne zastosowanie dalszych zdarzeń) i E2-PR5
+  („Zwolnij” z ostrzeżeniem) są niżej, w „Wymaganiach dla następnych PR”.
+
+**Wymagania dla następnych PR** (te same w planie: wiersze tabeli „Podział etapu 2”, 3.2 „Kwarantanna”, 3.9 i zakres
+E3-PR0).
+- **E2-PR2b2.**
+  - API kwarantanny: klucz `slotId + seq`; wiersz zdarzenia nieczytelnego zapisuje to, co da się zapisać bez
+    odszyfrowania, także zdarzenie w formacie spoza dzisiejszych (`eid`, `iv` i `data` złego typu jako `null`; pole
+    formatu `z` albo `aad` w nieznanej postaci pominięte, a wiersz oznaczony `formatInny`); z wyniku
+    `applyEncryptedEvent` tylko powód; lista po `[slotId, seq]` rosnąco, także dla wszystkich slotów; licznik wszystkich
+    slotów; zwolnienie wskazanych wierszy.
+  - `resultSummary` jako jedyna droga wyniku do dziennika: status, kod i liczniki, nigdy błąd ani jego komunikat;
+    strażnik źródła obejmuje nowy kod.
+  - A ≡ B p. 7d (kwarantanna i „Zwolnij”); porównanie magazynu z prawdziwym Chromium rozszerzone o kwarantannę.
+- **E2-PR3a.**
+  - `deleteDatabase(userId)` wpięte w `removeUser` w obu gałęziach (z `userMeta` i bez), zawsze po
+    `removeRegistryEntry`, przed powiadomieniem `user-removed`; konto oznaczone jako kasowane na początku `removeUser`.
+    Test: druga karta dopisuje w trakcie `removeUser`, a po zakończeniu nie ma `vilda_sync_<userId>`.
+  - W trybie „Zaloguj jednorazowo” kasowanie tylko po liście baz (`databases()`), bez próby otwarcia; bez listy —
+    pominięcie (w tym trybie baza nie powstaje).
+  - Wynik `zablokowana` albo `w-toku` zapisuje znacznik do ponowienia (bez danych konta poza `userId`); start po
+    odblokowaniu dowolnego konta ponawia kasowanie.
+  - Do decyzji w E2-PR3a: sprawdzenie istnienia bazy przy zamkniętej bramce (zmienia zapis bazowy `removeUser` o jedno
+    `databases()`) albo kasowanie tylko przy otwartej bramce i dosprzątanie przy starcie.
+  - Kasowanie klucza `vilda-sync-device-v1:<userId>` razem z kontem, w tym samym miejscu co kasowanie bazy (pytanie
+    10.2).
+  - Wspólna koordynacja tworzenia i kasowania bazy między kartami (Web Lock na konto). Emitery nie czekają na wynik
+    kolejki w ścieżce zapisu. Brak miejsca przy dopisaniu dokłada przegląd `sweepOutbox`.
+  - Zapis bazowy z tego PR zostaje bez zmian poza liczbą odczytów bramki (= liczba emisji) i krokami kasowania
+    w `removeUser`.
+  - Rejestracja i logowanie kluczem dostępu (WebAuthn) oraz hak `VildaPersistence` (poza zapisem bazowym z tego PR):
+    test, że przy zamkniętej bramce kończą się na bramce, bez otwarcia bazy kolejki, szyfrowania zdarzeń i żądań.
+- **E2-PR4.**
+  - Bramka rozszerzona o flagę `vilda-event-log-v1` i `features.events`. Nadawca sprawdza tryb konta także z wpisu
+    rejestru.
+  - Nadawca używa `outboxTake`: przy `czekaNaWLocie` bez własnego żądania w toku woła `outboxRequeueStale`;
+    `flushKeepalive` przy wpisach w locie nie wysyła nic; `outboxReject` partią.
+  - Zmiana trybu na chmurowy (`setStorageMode`): najpierw wysyłka oczekujących wpisów, potem `deleteDatabase`; bez
+    sieci komunikat i ponowienie przy następnym odblokowaniu w trybie prywatnym. Powrót do trybu prywatnego w tym
+    samym oknie po `deleteDatabase`: przeładowanie strony albo zmiana reguły, że po kasowaniu kolejka tego konta
+    w tym oknie kończy się kodem `SYNC_DB_DELETED` (do decyzji w E2-PR4).
+  - Kwarantanna (API z E2-PR2b2): ponowna próba w kolejności `seq`; po udanej — ponowne zastosowanie zdarzeń od jej
+    numeru, a gdy serwer ich już nie ma (`requiresBase`) — pełne pobranie; nieudany zapis do kwarantanny (np.
+    `SYNC_DB_QUOTA`) nie przesuwa kursora ani `appliedUpTo` za ten numer; ponowienie po aktualizacji i licznik obejmują
+    wszystkie sloty; po rotacji tożsamości wiersze starego slotu dostają jedną ponowną próbę, potem są usuwane; slot
+    inny niż bieżący nie wstrzymuje `appliedUpTo`.
+  - Ślady P-SYNC-SLAD wyłącznie z `resultSummary`.
+- **E2-PR5.** „Zwolnij” z ostrzeżeniem, że do najbliższej pełnej wysyłki karta może być niepełna. Widok wpisów
+  `oversize`, `unreadable`, `rejected` i kwarantanny ze wszystkich slotów, także wpisów kart usuniętych i wpisów
+  `unreadable` encji, której nagrobek ma inny rodzaj. Porzucenie z potwierdzeniem.
+- **E2-PR6.** Warunek wejścia: polityka prywatności opisuje bazę `vilda_sync_<userId>` (kasowaną przy „Usuń konto”)
+  i identyfikator urządzenia osobny dla każdego konta w `localStorage` (kasowany przy „Usuń konto”).
+- **Etap 3.** `devices[]` toleruje drugi identyfikator tego samego urządzenia.
+- **E3-PR0.** Pomiar profilu z dłuższą pracą bez połączenia i przegląd reguły łączenia wpisów bez pełnej wysyłki.
+
+**Ograniczenia.**
+- Atrapa IndexedDB jest wzorowana na Chromium; WebKit (Safari oraz każda przeglądarka na iPhonie i iPadzie)
+  niezmierzony. Test porównawczy (scenariusz magazynu) uruchamia kod kolejki w prawdziwym Chromium i porównuje wynik
+  z atrapą.
+- Zerwanie połączenia z bazą przez przeglądarkę: kolejności zdarzeń w Chromium nie zmierzono (brak API do wymuszenia).
+  Kod daje `SYNC_DB_CLOSED` przy obu kolejnościach.
+- Brak miejsca przy tworzeniu bazy w Chromium niezmierzony (brak API) — sprawdzony na atrapie.
+- Kasowanie bazy kolejki przy „Usuń konto” dochodzi w E2-PR3a, przed pierwszym PR, który otwiera bramkę.
+- Wpisy `oversize`, `unreadable` i `rejected` bez widoku do E2-PR5.
+- Obserwacja z projektu: przy dłuższej pracy bez połączenia nowa różnica nagrobka notatki pojawia się także bez
+  łączenia wpisów; pełna wysyłka ją usuwa. Pomiar w E3-PR0.
+
+**Cofnięcie** = rewert PR. Na urządzeniach nic nie powstaje (bez baz, kluczy i żądań), więc nie ma czego sprzątać.
+
+**Testy.** Nowe pliki (dane wyłącznie fikcyjne, bez PESEL):
+- `tests/unit/sync-dziennik-magazyn.test.mjs` — 146 przypadków: schemat i leniwość, wpis kolejki, transakcja (brak
+  miejsca, kolizja, przerwanie w całości), łączenie wpisów (ogon, licznik sprzed buildera, dopisania w toku, zestawy
+  `pfull`, model ≡ magazyn z wyciętą `Bob_plan`), `pfull`, `unreadable`, `oversize`, pobranie do wysyłki (limit,
+  rozmiar, bez przeskoku, jedna transakcja, wpis w locie), zmiany stanu, baza z innej wersji, zmiana wersji i kasowanie
+  z drugiego okna, tryby logowania, limit czasu, sprawdzenia sesji (P-SESJA-ZAPISU), blokada, konto spoza rejestru,
+  identyfikator urządzenia (osobny klucz każdego konta), wartownik treści, praca bez sieci, scalanie nie dopisuje do
+  kolejki, kilka okien, kody błędów, scenariusz magazynu na atrapie;
+- `tests/unit/atrapa-indexeddb.test.mjs` — 14 przypadków: samotest atrapy (scenariusze p1–p34 = literał nagrany
+  w Chromium 141, prawdziwy sejf na atrapie, usterki i wstrzymania, dwa okna, błędy, surowość transakcji);
+- `tests/unit/sync-dziennik-zapis-bazowy.test.mjs` z fiksturą `tests/fixtures/dziennik-zapis-bazowy.json` —
+  12 przypadków (11 i pominięty przypadek nagrania): ten sam scenariusz sejfu w czterech wariantach okna (sejf
+  w pamięci, „Komputer prywatny”, „Komputer w pracy”, „Zaloguj jednorazowo”) daje dokładnie ślady nagrane na bazie
+  `64f9a3a9` (bazy przeglądarki, magazyn, `localStorage`, `sessionStorage`, operacje kryptograficzne, powiadomienia).
+  Pole bramki nie jest czytane ani razu, także przy ładowaniu skryptów. Scenariusz obejmuje operacje, w które E2-PR3a
+  wepnie dopisanie albo kasowanie. Nagranie fikstury (`E2_ZAPIS_BAZOWY=nagraj`) odmawia, gdy trzy przebiegi wariantu
+  się różnią albo gdy pole bramki było czytane, powstała baza kolejki lub klucz urządzenia. Nagranie na sejfie z tego PR
+  daje te same ślady co na bazie. PR, który zmienia ślad sejfu w krokach scenariusza, nagrywa fiksturę ponownie
+  i wymienia w opisie zmienione kroki;
+- `tests/e2e/dziennik-zdarzen-uspienie.spec.mjs` — 4 przypadki: bieżący sejf w prawdziwym Chromium, trzy tryby
+  logowania (także usunięcie konta) i strona z elementem o `id` `VILDA_EVENT_LOG`: zero otwarć i kasowań
+  `vilda_sync_*`, zero kluczy `vilda-sync-device-v1*`, bramka zamknięta;
+- `tests/e2e/atrapa-indexeddb-zgodnosc.spec.mjs` — 2 przypadki: scenariusze p1–p34 w Chromium = literał nagrany
+  w Chromium 141, który odtwarza atrapa; scenariusz magazynu na sejfie z dysku (bramka otwarta tylko na stronie testu)
+  w Chromium = literał nagrany na atrapie;
+- wsparcie: `tests/support/atrapa-indexeddb.mjs` (atrapa IndexedDB wzorowana na Chromium),
+  `tests/support/atrapa-indexeddb-scenariusze.mjs` (scenariusze p1–p34 i literał z Chromium 141),
+  `tests/support/model-kolejki.mjs` (reguła wycinana z sejfu i model magazynu), `tests/support/okno-magazynu.mjs`
+  (okno testowe z sejfem nad atrapą), `tests/support/scenariusz-magazynu.mjs` (scenariusz magazynu i jego literał).
+
+Zmienione: `tests/unit/sync-dziennik-uspienie.test.mjs` (10 → 21 przypadków: bramka dla każdej wartości pola, każda
+chroniona operacja bez odczytu `indexedDB`, `localStorage` i `crypto`, znacznik części magazynu, reguła domknięcia na
+drzewie składni części `Bob_`, eksport 29 kluczy, scenariusz bez bazy i klucza) i
+`tests/unit/sync-dziennik-wlasnosciowy.test.mjs` (104 → 113 przypadków: łączenie wpisów i blok p. 7).
+
+Wynik na stanie końcowym: magazyn 146/146, uśpienie 21/21, samotest atrapy 14/14, zapis bazowy 11 i 1 pominięty
+(fikstura bez zmian), A ≡ B 113/113, e2e 6/6; ESLint bez problemów, składnia poprawna. Atrapa = Chromium 141
+w 33/33 porównywanych przypadkach p1–p34. Skrypt porównania dał 20/20 zgodnych przebiegów bez obciążenia i 20/20 przy
+trzech zajętych rdzeniach (także scenariusz magazynu). Oba nowe pliki e2e są zielone także w odmianie Chromium
+używanej w CI (Chrome Headless Shell, wersja 141). CI ma inną wersję przeglądarki (Chrome Headless Shell 149); pierwszy
+pomiar na niej zrobi e2e w CI. Przy różnicy komunikat testu podaje różniące się klucze z wartościami; atrapę i literał
+poprawia się wtedy po analizie każdego klucza, bez wyłączania testu. Testy, które tną źródło sejfu do `function yr(`, zostają zielone, a pułapki tekstowe pliku są bez zmian.
+
+**Czerwone na bazie** (kopia `origin/audyt` `64f9a3a9` z nowymi testami, 2026-11-04):
+- `sync-dziennik-magazyn`: 146/146 czerwonych (brak API magazynu);
+- `sync-dziennik-uspienie`: 10 czerwonych, 11 zielonych (zielone: przypadki E2-PR2a, samokontrole wzorców i scenariusz
+  bez bazy i klucza, prawdziwy także na bazie);
+- A ≡ B: 7 czerwonych, 106 zielonych (trzy ziarna łączenia z podsumowaniem oraz p. 7a, 7b, 7c; w sejfie bazy nie ma
+  reguły łączenia);
+- e2e: 2 czerwone, 4 zielone. Czerwone: scenariusz magazynu w Chromium i bramka na stronie (brak `gateOpen`). Zielone:
+  trzy scenariusze uśpienia (brak bazy i klucza jest prawdą także na bazie) i literał p1–p34 (atrapa a Chromium);
+- zielone z założenia: samotest atrapy 14/14 (sprawdza atrapę, nie sejf) i zapis bazowy 11 i 1 pominięty (nagrany na
+  bazie).
+
+**Mutanty** (kopie, jedna zmiana na przebieg):
+- atrapa: 17/17 zabitych;
+- sejf, weryfikacja: 110 mutantów, 91 zabitych. Z 19, które przeżyły: 8 nierównoważnych dostało testy i jest teraz
+  zabitych; z 11 uznanych za równoważne 4 po uproszczeniu kodu zniknęły albo dają już czerwony test, a 7 jest
+  równoważnych z uzasadnieniem;
+- po poprawkach, na stanie końcowym: 33 mutanty — 26 zabitych, 7 równoważnych; w tym cofnięcie każdej z 5 poprawek po
+  weryfikacji daje czerwony test (5/5).
+
+**Gdzie w kodzie.** `vilda_vault.js`, blok `P-DZIENNIK-ZDARZEN`: linie 4994–6586 (1593 linie, 73 552 B), komentarze
+bez znaków diakrytycznych; plik +984 / −3 linii, poza blokiem bez zmian.
+- część `Bev_` (z E2-PR2a): 4994–5617; w tym PR zmienione tylko komentarze i 11 kluczy literału `Bev_EKSPORT`
+  (linia 5587); `$s` bez zmian;
+- znacznik wewnętrzny `/* P-DZIENNIK-ZDARZEN: magazyn kolejki */`: linia 5618, dokładnie raz;
+- część `Bob_`: 5619–6585, 967 linii, 43 413 B (szacunek projektu, 560–660 linii, przekroczony około 1,5 raza);
+- stałe: `Bob_BAZA`, `Bob_SKLEPY`, `Bob_SCHEMAT`, `Bob_STANY`, `Bob_KLUCZ_URZADZENIA`, `Bob_LICZNIK`, `Bob_ALFABET`,
+  `Bob_LIMIT_MS` (10 000 ms), `Bob_PARTIA` (200), `Bob_PARTIA_BAJTOW` (1 048 576), `Bob_LOT_MS` (60 000 ms),
+  `Bob_LISTA` (1000), `Bob_KLUCZ` (200), `Bob_KLUCZ_PK` (1400), `Bob_EID` (64), `Bob_UID` (128), `Bob_KOD` (biała
+  lista znaków kodów); zbiory w pamięci `Bob_usuwane` (konta, których bazę kasowano) i `Bob_kandydaci` (kandydaci
+  identyfikatora urządzenia);
+- 54 funkcje `Bob_`:
+
+| Grupa | Funkcje |
+|---|---|
+| wejście | `Bob_bramka`, `Bob_trybPrywatny`, `Bob_idb`, `Bob_odmowa`, `Bob_wejscie`, `Bob_poSesji`, `Bob_teraz`, `Bob_wiek`, `Bob_nazwa`, `Bob_nieprzewidziany`, `Bob_bladZrodla`, `Bob_konto` |
+| identyfikator urządzenia | `Bob_kluczUrzadzenia`, `Bob_urzadzenie`, `Bob_urzadzenieZapisz` |
+| otwarcie i transakcje | `Bob_limit`, `Bob_zamknij`, `Bob_schemat`, `Bob_schematSklepow`, `Bob_utworzSchemat`, `Bob_otwarcie`, `Bob_otworz`, `Bob_kodIDB`, `Bob_tx`, `Bob_naBazie` |
+| dopisanie i łączenie | `Bob_licznik`, `Bob_seq`, `Bob_epoka`, `Bob_napis`, `Bob_argumentyDopisania`, `Bob_kluczEncji`, `Bob_wiersz`, `Bob_plan`, `Bob_pracaDopisania`, `Bob_dopisz` |
+| odczyty, wybór i zmiany stanu | `Bob_zera`, `Bob_licz`, `Bob_lista`, `Bob_calkowita`, `Bob_element`, `Bob_cialo`, `Bob_wez`, `Bob_eidPoprawny`, `Bob_tablica`, `Bob_pracaPoEid`, `Bob_samEid`, `Bob_wynikUsuniecia`, `Bob_przyjmij`, `Bob_porzuc`, `Bob_odrzuc`, `Bob_niepowodzenie`, `Bob_zLotu` |
+| kasowanie bazy | `Bob_istnieje`, `Bob_usunBaze` |
+
+Eksport → funkcja: `gateOpen` → `Bob_bramka`, `enqueue` → `Bob_dopisz`, `outboxCount` → `Bob_licz`, `outboxList` →
+`Bob_lista`, `outboxTake` → `Bob_wez`, `outboxAccept` → `Bob_przyjmij`, `outboxReject` → `Bob_odrzuc`, `outboxFail` →
+`Bob_niepowodzenie`, `outboxRequeueStale` → `Bob_zLotu`, `outboxDiscard` → `Bob_porzuc`, `deleteDatabase` →
+`Bob_usunBaze`.
+
+**Wersje.** Baza `origin/audyt` `64f9a3a9` (po vildaclinic/vilda-calc#875).
+`vilda_vault.js?v=248 → 249`; `vilda_chrome.js?v=233 → 234` i `vilda_session_bridge.js?v=155 → 156`
+(tylko odnośnik do `vilda_vault.js`); SW 1.1.456 → **1.1.457**.
+
 ## Dziennik zdarzeń: koperta, buildery i status zastosowania — uśpione (P-DZIENNIK-ZDARZEN, E2-PR2a, SW 1.1.450, `vilda_vault.js` 247, 2026-11-03)
 
 **Zmiana kliniczna: NIE** — wzory, progi, jednostki, interpretacje, zapis, scalanie, format kopii i synchronizacja bez
@@ -20518,9 +20888,10 @@ właściciela z 2026-10-29 (tylko tryb „Komputer prywatny”, seria uśpionych
   gwarancja etapu 2, decyzja 7), a znane różnice zapisuje dokładnie (nowa albo znikająca różnica = czerwony test).
   Do planu: E2-PR3c obowiązkowy, kolejność zdarzeń przy „Scal pacjentów” do ponownej decyzji w E2-PR3a, nowy E3-PR0
   („zbieżność zdarzeń bez pełnej wysyłki”) przed etapem 3 (pierwsza pozycja etapu 3, przed jego pozostałymi PR);
-- **11.2 — do akceptacji właściciela:** zdarzenie kosza wizyty (`stomb`) niesie także kartę bez wizyt (wariant
-  rekomendowany, wdrożony w tym PR; niżej, builder 4);
-- **11.3 — do akceptacji właściciela:** podział E2-PR2 na E2-PR2a (ten PR) i E2-PR2b (magazyn kolejki), przyjęty roboczo.
+- **11.2 — przyjęta 2026-11-03** (po scaleniu vildaclinic/vilda-calc#869): zdarzenie kosza wizyty (`stomb`) niesie
+  także kartę bez wizyt (wariant rekomendowany, wdrożony w tym PR; niżej, builder 4);
+- **11.3 — przyjęta 2026-11-03** (po scaleniu vildaclinic/vilda-calc#869): podział E2-PR2 na E2-PR2a (ten PR)
+  i E2-PR2b (magazyn kolejki; dalej dzielony na E2-PR2b1, wpis wyżej, i E2-PR2b2).
 
 ### E2-PR2a
 
@@ -20538,7 +20909,8 @@ ani żądań. Tryb logowania nie ma znaczenia, bo nic się nie uruchamia. Poza b
 `vilda_vault.js` jest bajt w bajt taki jak przed zmianą. Bez zmian zostają też `applyEncryptedDelta` (`ps`), scalanie
 (`Le`, `Bsl_*`, `Bkz_*`, `Bsw_*`, `Bgw_*`, `Bnp_*`, `Bpk_*`), eksport `exportSyncPayload` (`is`) i dzisiejsze buildery
 delt (`ds`, `us`, `cs`, `ls`, `Qb0`, `Qb1`). Magazyn kolejki `vilda_sync_<userId>`, bramka, identyfikator urządzenia
-i kwarantanna nie powstają w tym PR (E2-PR2b).
+i kwarantanna nie powstają w tym PR (kolejka, bramka i identyfikator: E2-PR2b1, wpis wyżej; API kwarantanny:
+E2-PR2b2).
 
 **Koperta.** `{ schemaVersion: 2, event: { kind, key, atISO, dev, full }, <jedna sekcja ładunku> }` (przy `stomb`
 także opcjonalna sekcja `patients`, niżej). Sekcja ma dokładnie ten kształt, który ta encja ma w `exportSyncPayload`.
@@ -20550,7 +20922,7 @@ Dzięki temu odbiorca scala zdarzenie tym samym `Le` co deltę i pełny blob.
 - `key` — identyfikator encji.
 - `atISO` — chwila z rekordu (tabela niżej), nigdy z zegara; brak chwili w rekordzie daje `null`.
 - `dev` — podaje wołający: 8 znaków `[a-km-np-z2-9]` (bez mylących `l`, `o`, `0`, `1`) albo `null`. W tym PR nikt nie
-  tworzy identyfikatora urządzenia (E2-PR2b).
+  tworzy identyfikatora urządzenia (E2-PR2b1, wpis wyżej).
 - `full` — `{ setId, i, n }` tylko w `pfull`, inaczej `null`.
 - Pole `partialSince` jest pominięte (etap 3, decyzja 9).
 
@@ -20616,7 +20988,7 @@ Wspólne reguły:
   odszyfrowania. Komunikat `SyntaxError` z `JSON.parse` zawiera fragment treści, więc nie jest przekazywany dalej.
 
 Szczegóły rodzajów:
-- **`stomb` (decyzja 11.2, wariant rekomendowany — do akceptacji właściciela).**
+- **`stomb` (decyzja 11.2, wariant rekomendowany — przyjęta 2026-11-03, po scaleniu vildaclinic/vilda-calc#869).**
   - Sekcja `snapshotTombstones` ma **wszystkie** wpisy kosza o tym `snapshotId`. Po „Scal pacjentów” może zostać stary
     wpis pod kartą źródłową.
   - Każdy wpis jest zbudowany pole w pole jak element kosza w eksporcie. Gdy treść wpisu się nie odszyfrowuje, wpis
@@ -20631,7 +21003,7 @@ Szczegóły rodzajów:
   - Rozmiar każdej porcji jest liczony na jej ostatecznej kopercie (z `full` i `snapshotCount`), tak by szyfrogram
     miał najwyżej 262 144 B.
   - Wersja sama większa niż limit idzie w osobnej porcji, oznaczonej w niewyliczalnym polu `oversize` wyniku. Stan
-    wiersza `oversize` w kolejce dochodzi w E2-PR2b.
+    wiersza `oversize` w kolejce dochodzi w E2-PR2b1 (wpis wyżej).
   - Karta bez wersji daje jedną porcję z pustą listą wersji. `setId` podaje wołający (domyślnie losowy).
 - **`snap` po przypięciu i odpięciu** niesie nową treść gwiazdki i nową chwilę `updatedAtISO` (test B12). To wynik dla
   E2-PR3a: gwiazdka nie wymaga osobnego zdarzenia.
@@ -20674,7 +21046,8 @@ przypadkach zastosowanie kończy się bez dalszych zapisów i bez klasyfikowania
 - **Żaden wynik nie niesie `message`.** `JSON.stringify` wyniku nie zawiera treści klinicznej zdarzenia. `result`
   może jednak nieść chwile z ładunku nadawcy (niżej).
 - **`applied.result`** to obiekt zwrócony przez `Le`: liczniki i pola o chwilach ładunku nadawcy, jak dziś przy
-  `applyEncryptedDelta`. E2-PR2b utrwala z wyniku tylko status, kod i liczniki — nigdy `error` ani jego komunikatu.
+  `applyEncryptedDelta`. E2-PR2b2 (kwarantanna i podsumowanie wyniku) utrwala z wyniku tylko status, kod i liczniki —
+  nigdy `error` ani jego komunikatu.
 - **Odpowiedniki w dzisiejszym drenażu** (`Bdz_zastosuj`; podmiana w E2-PR4): `blokada` ↔ `locked`; `busy` ↔ `busy` i `session-changed`;
   `nieczytelne` ↔ `unreadable`; `blad` ↔ `apply-error`; `zmiana`/`ok` ↔ `applied`.
 - **Scalanie z chmury nie dopisuje do kolejki.** Kolejki jeszcze nie ma. Dwa wyjątki z decyzji 9 to haki E2-PR3b
@@ -20759,7 +21132,7 @@ Różnica bez klasy, nowa różnica i zniknięcie znanej różnicy w W1 albo W2r
 - **Kolejność losowa** (nie FIFO, charakterystyka): w 40 ziarnach profilu podstawowego 266 punktów zgodnych,
   3 niezgodne, bez klasy (ziarna domyślne: 50 zgodnych, 0 niezgodnych). W dwóch niezgodnych chodzi
   o kolejność notatki i jej nagrobka w jednej partii, w jednym o chwilę ostatniej zmiany karty. To ważne dla
-  „Zwolnij” w kwarantannie (E2-PR2b) i dla przeglądu kolejki `sweepOutbox` (E2-PR3a).
+  „Zwolnij” w kwarantannie (E2-PR2b2) i dla przeglądu kolejki `sweepOutbox` (E2-PR3a).
 - **Profil pełny** (20 ziaren, raport, nie czerwień): W1 w 19 punktach. Klasy (punkt może mieć kilka): R5 5, D7 7,
   R3 2, R4a′ 4, „notatka pod inną kartą” 2, bez klasy 5. Po wymianie (W4) zostaje tylko „notatka pod inną kartą”
   (2 punkty).
@@ -20791,7 +21164,8 @@ i `Q8-obca-2` wobec dzisiejszej aplikacji niezmierzone).
   - To ten sam rozjazd G5 co w D21-9 (wpis P-NOTATKI-ZA-KARTA).
   - Osobna sprawa: „Scal pacjentów” zapisuje notatki źródła od nowa. Wcześniejsza równoległa edycja tej notatki na
     innym urządzeniu przegrywa więc jak każda starsza poprawka (późniejsza zmiana wygrywa), także dziś.
-  - Naprawa: osobna poprawka reguły (decyzja 9). Pozycja planu do decyzji właściciela, propozycja E2-PR3c.
+  - Naprawa: osobna poprawka reguły (decyzja 9). Naprawa w E2-PR3c (decyzja właściciela 2026-11-03, po scaleniu
+    vildaclinic/vilda-calc#869).
 - **D7 i `createdAtISO` notatki.** Opis nagrobka wersji (`rev`, `updatedAtISO`, `zmianaISO`, `koszISO`) i chwila
   utworzenia notatki po dwóch równoległych wskrzeszeniach zależą od kolejności scaleń także przy samych blobach.
 
@@ -20831,10 +21205,11 @@ literał na wynik zgodny.
   - Hak H2 „zawsze do kolejki”: notatka, której nagrobek zniknął w partii i której rekord zmieniło scalanie, idzie do
     kolejki także wtedy, gdy w tej partii przyszła jej własna koperta. Bez tego notatka zostaje tylko na jednym
     urządzeniu (test N1, N1b).
-- **E2-PR2b.**
-  - Kwarantanna i dziennik zapisują z wyniku tylko status, kod i liczniki; strażnik źródła obejmuje nowy kod.
-  - Koalescencja kolejki sprawdzona testem A ≡ B (zmiana kolejności potrafi zgubić notatkę).
-  - Kolejność notatki i nagrobka przy „Zwolnij”.
+- **E2-PR2b** (podzielony na E2-PR2b1, wpis wyżej, i E2-PR2b2).
+  - Kwarantanna i dziennik zapisują z wyniku tylko status, kod i liczniki; strażnik źródła obejmuje nowy kod
+    (E2-PR2b2).
+  - Koalescencja kolejki sprawdzona testem A ≡ B (zmiana kolejności potrafi zgubić notatkę; E2-PR2b1, wpis wyżej).
+  - Kolejność notatki i nagrobka przy „Zwolnij” (E2-PR2b2).
 - **E3-PR0.**
   - Zbieżność zdarzeń bez pełnej wysyłki: hak echo zmian pochodnych scalania.
   - Decyzja co do R4n i `createdAtISO`.
@@ -20854,7 +21229,8 @@ literał na wynik zgodny.
 - Testy uśpienia są tekstowe i strukturalne. Wywołanie przez nazwę składaną w czasie działania nie jest wykrywane
   (zaakceptowane ograniczenie).
 - Plik A ≡ B trwa około 160 s (ziarna domyślne około 71 s na maszynie z pomiaru; cel 45 s z projektu dla ziaren
-  domyślnych przekracza już wariant bez nowych pomiarów, około 68 s; limit `it` 180 s). Cel czasu do decyzji.
+  domyślnych przekracza już wariant bez nowych pomiarów, około 68 s; limit `it` 180 s). Cel czasu przyjęty 2026-11-03
+  (po scaleniu vildaclinic/vilda-calc#869): ziarna domyślne do około 75 s, cały plik do około 180 s.
 - Test B7 (domknięcie wywołań) korzysta z `acorn` i `eslint-scope` z drzewa zależności `eslint`, bez jawnej zależności
   w `package.json`. Brak modułu czerwieni test głośno.
 
@@ -20903,7 +21279,7 @@ komentarze bez znaków diakrytycznych, plik +29 554 B.
 - koperta i walidacja: `Bev_koperta`, `Bev_sprawdz`; rozmiar: `Bev_bajty`;
 - sesja i odczyt: `Bev_start`, `Bev_odszyfruj`;
 - buildery `Bev_snap` … `Bev_cred` (`Bev_porcje` dla `pfull`, `Bev_wpisKosza` dla `stomb`); mapa `Bev_BUILDERY` dla
-  kolejki z E2-PR2b, dziś nieużywana;
+  kolejki z E2-PR2b1 (wpis wyżej), w E2-PR2a nieużywana;
 - `Bev_szyfruj`, `Bev_zastosuj`, `Bev_EKSPORT`.
 
 W eksporcie `$s` jest jeden nowy klucz na końcu: `_eventLog:Bev_EKSPORT`.

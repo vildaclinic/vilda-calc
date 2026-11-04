@@ -70,6 +70,14 @@
 // z definicji na syntetycznych parach), tabela DOZWOLONE = tabela 3.6 literałem, D z niepustymi ścieżkami, W4p zawodzi
 // na R4-a i R4-a′, W4 (dwa i trzy urządzenia) czerwone przy nieudanym W4p, przy różnicy niedozwolonej i bez punktu
 // stałego.
+//
+// KOALESCENCJA KOLEJKI (E2-PR2b, reguła ogona). Przy S.koalescencja === 'ogon' kolejka Q_X łączy wpisy jak magazyn
+// kolejki sejfu: o zastąpieniu wpisu decyduje funkcja Bob_plan WYCIĘTA z vilda_vault.js (tests/support/model-kolejki.mjs,
+// ten sam model w M5c magazynu). Wpisy oczekujące = nigdy niedostarczone (indeks ≥ X.wyslane). Bez flagi zachowanie jak
+// w E2-PR2a (kontrola wierności: JSONL ziaren domyślnych, p. 5 i p. 6 bez zmian poza ms). Testy: describe „koalescencja
+// kolejki (reguła ogona)” — profil podstawowy bez W2s, ziarna ZIARNA_KOAL (E2_AB_ZIARNA_KOAL), literał ZNANE_W1_KOAL,
+// suma koalescencji > 0; blok deterministyczny p. 7 (7a poprawki jednej wizyty z rzędu, 7b ratunek notatki za pełną
+// kartą, 7c punkty R3 wariantu „na koniec”); E2_AB_KOAL=ogon — profil pełny z koalescencją (przebieg ręczny).
 // Każdy describe zaczyna od sprawdzenia, że VildaVault._eventLog istnieje (D1).
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { utworzAtrapeWorkera, zegarSterowany } from '../support/atrapa-workera-sync.mjs';
@@ -79,6 +87,7 @@ import { okno } from './sesja-zapisu-uprzaz.mjs';
 import { createHash } from 'node:crypto';
 import { PRZYGOTOWANIA, sztucznyZegar, przesunZegar, zegar } from './s4d7-wspolne.mjs';
 import { SCEN as KATALOG, RUNDY, pelnyStan, widok } from './kosz-po-kluczu-wspolne.mjs';
+import { dopiszDoKolejki } from '../support/model-kolejki.mjs';
 
 // ── Wspólne ──────────────────────────────────────────────────────────────────────────────────────────────────────────
 const START = Date.parse('2026-03-02T08:00:00.000Z');
@@ -463,9 +472,33 @@ async function doKolejki(S, U, k) {
     S.stat.zdarzen += 1;
     return;
   }
+  if (S.koalescencja === 'ogon') { await doKolejkiOgon(S, U, Array.isArray(k) ? k : [k]); return; }
   const { env } = await U.ev.encryptEvent(k);
   U.Q.push(Object.freeze({ kind: k.event.kind, key: k.event.key, atISO: k.event.atISO, env: Object.freeze(env) }));
   S.stat.zdarzen += 1;
+}
+// Kolejka z łączeniem wpisów (S.koalescencja === 'ogon', E2-PR2b): wpisy nigdy niedostarczone (indeks ≥ U.wyslane) są
+// wierszami pending magazynu; o zastąpieniu decyduje wycięta z sejfu Bob_plan (tests/support/model-kolejki.mjs), nowe
+// wpisy na końcu. Porcje jednego zestawu pfull przychodzą razem, jak jedno enqueue. Liczniki: koal — dopisania, które
+// zastąpiły wpis; koalWierszy — zastąpione wpisy; koalPominiete — dopisania z oczekującym wpisem tej encji bez
+// zastąpienia (nie na ogonie). S.kolejkaLog — dopisania [urządzenie, kind, key, porcji, setId] i dostawy [urządzenie,
+// 'dostawa', liczba nowo dostarczonych wpisów] (do JSONL przebiegu, E2_AB_WYNIKI; z niego ciągi przypadku M5c magazynu).
+function zKoalescencja(S) {
+  S.koalescencja = 'ogon';
+  S.kolejkaLog = [];
+  Object.assign(S.stat, { koal: 0, koalWierszy: 0, koalPominiete: 0 });
+  return S;
+}
+async function doKolejkiOgon(S, U, koperty) {
+  const nowe = [];
+  for (const k of koperty) {
+    const { env } = await U.ev.encryptEvent(k);
+    nowe.push(Object.freeze({ kind: k.event.kind, key: k.event.key, atISO: k.event.atISO, env: Object.freeze(env), setId: k.event.full ? k.event.full.setId : null }));
+    S.stat.zdarzen += 1;
+  }
+  S.kolejkaLog.push([U.nazwa, nowe[0].kind, nowe[0].key, nowe.length, nowe[0].setId]);
+  const { usuniete, kandydaci } = dopiszDoKolejki(U.Q, U.wyslane || 0, nowe);
+  if (usuniete) { S.stat.koal += 1; S.stat.koalWierszy += usuniete; } else if (kandydaci) S.stat.koalPominiete += 1;
 }
 // Mutacja lokalna na X z emisją (stan przed = ostatni eksport X; X zmienia się tylko własnymi krokami i dostawami).
 async function mutacja(S, U, opis, fn) {
@@ -506,7 +539,8 @@ async function haki(S, Y, partia, przed, po) {
     if (Y.setIds.has(setId) || !karty.has(e.key)) continue;
     Y.setIds.add(setId);
     const porcje = await Y.ev.buildPatientFullEvents(e.key, null, { setId });
-    for (const k of porcje || []) { await doKolejki(S, Y, k); dodane.push(k); }
+    if (S.koalescencja && porcje && porcje.length) { await doKolejki(S, Y, porcje); dodane.push(...porcje); } // zestaw razem
+    else for (const k of porcje || []) { await doKolejki(S, Y, k); dodane.push(k); }
     S.stat.h1 += 1;
   }
   const a = encje(przed), b = encje(po);
@@ -523,8 +557,10 @@ async function haki(S, Y, partia, przed, po) {
 }
 
 // Dostawa X→Y: FIFO-prefiks od kursora (losowa tylko długość k), powtórka = cofnięcie kursora o r i ponowne
-// zastosowanie sufiksu. W każdym punkcie pełnej dostawy (k = wszystkie oczekujące) charakterystyka W2s i warunek W3.
-async function dostawa(S, X, Y, { k = Infinity, cofnij = 0, haki: zHakami = true, w2s = true } = {}) {
+// zastosowanie sufiksu. W każdym punkcie pełnej dostawy (k = wszystkie oczekujące) charakterystyka W2s i warunek W3
+// (bez nich, gdy świat ma S.w2s === false). X.wyslane — najwyższy indeks Q_X kiedykolwiek dostarczony (granica wpisów
+// oczekujących dla łączenia wpisów).
+async function dostawa(S, X, Y, { k = Infinity, cofnij = 0, haki: zHakami = true, w2s = S.w2s !== false } = {}) {
   const nazwa = X.nazwa + '>' + Y.nazwa;
   const c = Math.max(0, (S.kursor.get(nazwa) || 0) - cofnij);
   const oczekujace = X.Q.slice(c);
@@ -537,6 +573,9 @@ async function dostawa(S, X, Y, { k = Infinity, cofnij = 0, haki: zHakami = true
   const przed = Y.stan;
   await zastosuj(Y, partia);
   S.kursor.set(nazwa, c + partia.length);
+  const wyslane = Math.max(X.wyslane || 0, c + partia.length);
+  if (S.kolejkaLog && wyslane > (X.wyslane || 0)) S.kolejkaLog.push([X.nazwa, 'dostawa', wyslane - (X.wyslane || 0)]);
+  X.wyslane = wyslane;
   const po = await eksport(Y);
   const dodane = zHakami ? await haki(S, Y, partia, przed, po) : [];
   ustawStan(Y, po);
@@ -624,7 +663,7 @@ async function kategorieW2s(Y, X, partia, e1, e2, k1, k2, profil, czytajKosz) {
 }
 
 // Punkt spoczynku: pełne dostawy w obie strony z hakami, aż obie kolejki są dostarczone i haki nic nie dodały (≤ 4 rundy).
-async function spoczynek(S, A, B, { w2s = true } = {}) {
+async function spoczynek(S, A, B, { w2s = S.w2s !== false } = {}) {
   for (let r = 1; r <= 4; r += 1) {
     await dostawa(S, A, B, { w2s });
     await dostawa(S, B, A, { w2s });
@@ -2106,6 +2145,87 @@ describe('A ≡ B, blok deterministyczny p. 6: znane klasy i dalsze ciągi (lite
   });
 });
 
+// ── p. 7: koalescencja kolejki (reguła ogona, E2-PR2b) — literały ────────────────────────────────────────────────────
+// Kolejki z łączeniem wpisów (doKolejkiOgon, wycięta Bob_plan sejfu), bez W2s. p. 7a — poprawki jednej wizyty z rzędu bez
+// połączenia: jeden wpis tej wersji z najnowszą treścią. p. 7b — ratunek notatki za pełną kartą: nowy pnote(n) z haka H2
+// nie zastępuje oczekującego pnote(n), bo za nim stoją snap i pfull karty (wpis zastąpiony „w miejscu” starego trafiłby
+// przed pfull i odbiorca stosowałby notatkę, zanim karta wróci). p. 7c — odtworzenie punktów R3, które w przebiegu 40
+// ziaren pojawiły się tylko przy wariancie „na koniec” (ziarno 10, punkty #51, #106, #124, #125): różnica wynika z ciągu
+// operacji tego programu (B poprawia notatkę n, A ją usuwa, dostawy w obie strony), który bez łączenia wpisów i z regułą
+// ogona daje tę samą klasę R3 (dozwoloną w W1); łączenie wpisów w tych krokach nie zachodzi. Program ziarna z wariantem
+// „na koniec” jest inny, bo długość kolejki zmienia losowania klonu W2s; samo przeniesienie wpisu na koniec tej różnicy
+// nie tworzy.
+async function p7swiat(nr) {
+  ustaw(START);
+  const S = zKoalescencja(swiat(700 + nr));
+  S.w2s = false;
+  const los = rng(0x7007 + nr);
+  vi.spyOn(Math, 'random').mockImplementation(() => (S.losAlt || los)());
+  return S;
+}
+const oczekujaceQ = (S, X, Y) => X.Q.slice(kursor(S, X, Y)).map((e) => [e.kind, e.key]);
+async function trescWpisu(U, e) { return U.v.decryptPayloadForCurrentUser(e.env.iv, e.env.data); }
+describe('A ≡ B, blok deterministyczny p. 7: koalescencja kolejki (reguła ogona)', () => {
+  d1();
+  it('p. 7a poprawki jednej wizyty z rzędu bez połączenia: 3 poprawki → Q_A ma 1 wpis tej wersji z najnowszą treścią; spoczynek, W1 = ∅, W2r, W4', async () => {
+    const S = await p7swiat(1);
+    const u = await p6r4(S); u.S = S;
+    for (const kg of [31.1, 32.2, 33.3]) await popraw(u, u.A, u.v, kg);
+    expect(oczekujaceQ(S, u.A, u.B), 'Q_A').toEqual([['snap', `${u.P}/${u.v}`]]);
+    const tresc = await trescWpisu(u.A, u.A.Q[0]);
+    const wersja = tresc.patients[0].snapshots.find((s) => s.snapshotId === u.v);
+    expect(wersja.payload.user.weight, 'treść wpisu = ostatnia poprawka').toBe(33.3);
+    expect([S.stat.koal, S.stat.koalWierszy, S.stat.koalPominiete], 'koalescencje').toEqual([2, 2, 0]);
+    await spoczynekZgodny(S, u.A, u.B);
+    const masaB = (await u.B.v.getPatient(u.P)).snapshots.find((s) => s.snapshotId === u.v).payload.user.weight;
+    expect(masaB, 'B po spoczynku: ostatnia poprawka').toBe(33.3);
+  }, 120_000);
+
+  it('p. 7b ratunek notatki za pełną kartą: A poprawia notatkę n karty P, B usuwa P, A poprawia wizytę P; po dostawie B→A haki A dokładają pfull(P) i pnote(n) — Q_A [pnote, snap, pfull…, pnote] (oba pnote(n)); spoczynek: notatka n i karta P na obu, W1 = ∅, W2r, W4', async () => {
+    const S = await p7swiat(2);
+    const u = await p6r3(S); u.S = S;
+    const v = u.A.stan.patients.find((p) => p.patientId === u.P).snapshots[0].snapshotId;
+    await p6notatka(u, u.A, 'Fikcyjna poprawka notatki A');
+    await p6usunPacjenta(u, u.B, u.P);
+    await popraw(u, u.A, v, 34.9);
+    expect(oczekujaceQ(S, u.A, u.B), 'Q_A przed dostawą').toEqual([['pnote', u.nId], ['snap', `${u.P}/${v}`]]);
+    expect(u.B.Q.map((e) => e.kind), 'Q_B').toEqual(['ptomb', 'pnotetomb']);
+    krok();
+    const { dodane } = await dostawa(S, u.B, u.A);
+    expect(dodane.map((k) => [k.event.kind, k.event.key]), 'haki A po partii B→A: pfull(P) (jedna porcja), pnote(n)').toEqual([['pfull', u.P], ['pnote', u.nId]]);
+    expect(oczekujaceQ(S, u.A, u.B), 'Q_A po hakach: stary pnote(n) zostaje (nie jest ogonem)')
+      .toEqual([['pnote', u.nId], ['snap', `${u.P}/${v}`], ['pfull', u.P], ['pnote', u.nId]]);
+    expect([S.stat.koal, S.stat.koalPominiete], 'bez zastąpienia; jedno dopisanie z oczekującym wpisem tej encji').toEqual([0, 1]);
+    await spoczynekZgodny(S, u.A, u.B);
+    const stan = async (U) => { const k = kanon(await eksport(U)); return { karty: (k.patients || []).map((p) => p.patientId).sort(), notatki: (k.patientNotes || []).map((n) => [n.id, n.patientId, n.body]), nagrobkiNotatek: (k.patientNoteTombstones || []).length }; };
+    const oczek = { karty: [u.P, u.Q].sort(), notatki: [[u.nId, u.P, 'Fikcyjna poprawka notatki A']], nagrobkiNotatek: 0 };
+    expect({ A: await stan(u.A), B: await stan(u.B) }, 'po spoczynku: karta P i notatka n na obu').toEqual({ A: oczek, B: oczek });
+  }, 120_000);
+
+  it('p. 7c odtworzenie punktów R3 wariantu „na koniec” (ziarno 10 przebiegu 40 ziaren): B poprawia notatkę n, A ją usuwa, dostawy B→A i A→B — ta sama różnica R3 bez łączenia wpisów i z regułą ogona; W4', async () => {
+    const wyniki = {};
+    for (const tryb of ['bez łączenia', 'ogon']) {
+      await sprzatnijUrzadzenia(); vi.restoreAllMocks();
+      const S = await p7swiat(3);
+      if (tryb === 'bez łączenia') { S.koalescencja = null; }
+      const u = await p6r3(S); u.S = S;
+      await p6notatka(u, u.B, 'Fikcyjna poprawka notatki B');
+      await p6usunNotatke(u, u.A);
+      krok(60e3); await dostawa(S, u.B, u.A);
+      krok(60e3); await dostawa(S, u.A, u.B);
+      expect(await spoczynek(S, u.A, u.B), raport(S, 'punkt spoczynku')).not.toBe(null);
+      const d = await w1Klasy(S, u.A, u.B, { tabela: 'podstawowy' });
+      const w = await w4Zgodne(S, u.A, u.B);
+      wyniki[tryb] = { D: d.map((r) => [r.rodzaj, r.klasa, r.dozwolona, r.sciezki]), W4: w.ok, dziennik: S.dziennik.map((l) => l.replace(/^#\d+ [0-9:.]+ /, '')) };
+    }
+    const oczek = {
+      D: [['pnotetomb', 'R3', 'tak', ['rev']]], W4: true,
+      dziennik: ['B: notatka „Fikcyjna poprawka notatki B” → [pnote]', 'A: usuń notatkę → [pnotetomb]', 'dostawa B>A: 1 pełna [pnote]', 'dostawa A>B: 1 pełna [pnotetomb]'],
+    };
+    expect(wyniki, 'literał p. 7c').toEqual({ 'bez łączenia': oczek, ogon: oczek });
+  }, 120_000);
+});
+
 // ── Klasy 3.6 i warunki W4/W4p: testy negatywne (poprawki po weryfikacji: P1, P2, P4, P5, P7) ─────────────────
 // Predykat klasy, który przyjmuje więcej niż definicja 3.6, i tabela DOZWOLONE szersza niż tabela 3.6 schowałyby nową
 // różnicę kliniczną w ziarnach spoza literałów i w punktach już obecnych w ZNANE_W1 (literał porównuje tylko klasy).
@@ -2280,7 +2400,7 @@ const START_ZIAREN = Number(process.env.E2_AB_START) || 1;
 const ZIARNA = Array.from({ length: ILE_ZIAREN }, (_, i) => START_ZIAREN + i);
 const KROKI = Number(process.env.E2_AB_KROKI) || 0;
 // E2_AB_WYNIKI=plik — wynik każdego ziarna (liczniki, różnice, dziennik operacji) dopisywany jako JSONL (pomiar).
-const WYNIKI = { podstawowy: [], pelny: [] };
+const WYNIKI = { podstawowy: [], pelny: [], 'podstawowy:ogon': [], 'pelny:ogon': [] };
 const wybierz = (los, lista) => lista[Math.floor(los() * lista.length)];
 const masa = (los) => 15 + Math.floor(los() * 300) / 10;
 // Mutacje profilu podstawowego (projekt.md 7.4): zapis karty i nowej wersji, poprawka w miejscu (preserveSavedAt),
@@ -2497,10 +2617,14 @@ async function punktSpoczynku(S, A, B, { ostatni = false } = {}) {
   if (klasyW4.length) S.stat.w4Klasy.push({ krok: S.nrKroku, klasy: klasyW4 });
   if (!w.ok) S.stat.w4Bledy.push({ krok: S.nrKroku, ostatnie: S.dziennik.slice(-10), warianty: w.warianty });
 }
-async function przebiegZiarna(ziarno, profil) {
+// Opcje (E2-PR2b): koalescencja 'ogon' — kolejki z łączeniem wpisów (doKolejkiOgon); w2s false — bez W2s i W3 w punktach
+// pełnej dostawy (inny program ziarna: klon W2s w kolejności losowej zużywa losowania).
+async function przebiegZiarna(ziarno, profil, { koalescencja = null, w2s = true } = {}) {
   const t0 = performance.now();
   const S = swiat(ziarno + (profil === 'pelny' ? 100000 : 0));
   S.profil = profil;
+  if (koalescencja) zKoalescencja(S);
+  if (!w2s) S.w2s = false;
   // Cel czasu 3.3 (≤ 45 s dla ziaren domyślnych) przekroczony przy obu parach W4 w każdym punkcie spoczynku (zmierzone
   // 2026-11-03: 75 s, ziarno 5–13 s): para PO-B liczy się tylko w ostatnim punkcie spoczynku ziarna, PO-A zawsze
   // (w 40 ziarnach z obiema parami PO-A i PO-B dały w każdym punkcie ten sam wynik W4).
@@ -2531,9 +2655,9 @@ async function przebiegZiarna(ziarno, profil) {
   }
   S.nrKroku += 1;
   await punktSpoczynku(S, A, B, { ostatni: true });
-  const wynik = { ziarno, profil, mutacji, ms: Math.round(performance.now() - t0), ...S.stat, braki: S.braki, dziennikZostaw: S.dziennik.filter((l) => / zostaw notatkę /.test(l)).length };
-  WYNIKI[profil].push(wynik);
-  if (process.env.E2_AB_WYNIKI) appendFileSync(process.env.E2_AB_WYNIKI, JSON.stringify({ ...wynik, dziennik: S.dziennik }) + '\n');
+  const wynik = { ziarno, profil, ...(koalescencja ? { koalescencja, w2s } : {}), mutacji, ms: Math.round(performance.now() - t0), ...S.stat, braki: S.braki, dziennikZostaw: S.dziennik.filter((l) => / zostaw notatkę /.test(l)).length };
+  WYNIKI[koalescencja ? `${profil}:${koalescencja}` : profil].push(wynik);
+  if (process.env.E2_AB_WYNIKI) appendFileSync(process.env.E2_AB_WYNIKI, JSON.stringify({ ...wynik, dziennik: S.dziennik, ...(S.kolejkaLog ? { kolejka: S.kolejkaLog } : {}) }) + '\n');
   return wynik;
 }
 // Listy literałów (3.6): [ziarno, krok, [klasy]] punktów W1 z niepustym D, [ziarno, krok, strona, [klasy]] punktów W2r.
@@ -2551,6 +2675,7 @@ function suma(lista) {
     s.w4Bledy += w.w4Bledy.length; s.w4pZle += w.w4p.filter((p) => !p.ok).length;
     s.w2sZgodne += w.w2s.zgodne; s.w2sNiezgodne += w.w2s.niezgodne;
     for (const [k, v] of Object.entries(w.w2s.kategorie)) s.kategorie[k] = (s.kategorie[k] || 0) + v;
+    if (w.koalescencja) for (const k of ['koal', 'koalWierszy', 'koalPominiete']) s[k] = (s[k] || 0) + w[k];
     for (const [k, v] of Object.entries(w.w2s.roznice)) s.kategorieRoznic[k] = (s.kategorieRoznic[k] || 0) + v;
     s.losowaZgodne += w.losowa.zgodne; s.losowaNiezgodne += w.losowa.niezgodne; s.brakiNosnika += w.braki.length;
     for (const x of w.losowaLista) s.losowaLista.push(`${w.ziarno}#${x.krok} ${x.klasy.join('+')}`);
@@ -2606,12 +2731,43 @@ describe('A ≡ B, właściwość: profil podstawowy (W3, W4, W4p — zieleń; W
   });
 });
 
+// ── Koalescencja kolejki (reguła ogona, E2-PR2b) — profil podstawowy bez W2s ─────────────────────────────────────────
+// Kolejki Q_X z łączeniem wpisów (doKolejkiOgon: wycięta Bob_plan sejfu, tests/support/model-kolejki.mjs). Bez W2s i W3
+// (nie badają łączenia wpisów; W3 bez zmian od E2-PR2a), więc ziarno to inny program niż w profilu podstawowym.
+// Zieleń jak w profilu podstawowym (W4, W4p, spoczynek ≤ 4 rundy, klasyfikator W1/W2r bez klasy niedozwolonej), W1 dla
+// ziaren domyślnych — literał ZNANE_W1_KOAL, a suma koalescencji > 0 (test nie może być pusty). Ziarna: ZIARNA_KOAL,
+// E2_AB_ZIARNA_KOAL (liczba ziaren od E2_AB_START) nadpisuje; ziarna domyślne liczą się osobno od celu czasu profilu
+// podstawowego (ziarna E2_AB_ZIARNA).
+const DOMYSLNE_ZIARNA_KOAL = [1, 7, 8];
+const ZIARNA_KOAL = process.env.E2_AB_ZIARNA_KOAL
+  ? Array.from({ length: Number(process.env.E2_AB_ZIARNA_KOAL) }, (_, i) => START_ZIAREN + i) : DOMYSLNE_ZIARNA_KOAL;
+const ZNANE_W1_KOAL = [];
+describe('A ≡ B, koalescencja kolejki (reguła ogona) — profil podstawowy bez W2s', () => {
+  d1();
+  for (const z of ZIARNA_KOAL) {
+    it(`ziarno ${z}`, async () => {
+      const w = await przebiegZiarna(z, 'podstawowy', { koalescencja: 'ogon', w2s: false });
+      expect(w.spoczynki, 'co najmniej jeden punkt spoczynku').toBeGreaterThan(0);
+      expect(zielenProfilu(w), opisBledow(w)).toEqual(ZIELEN);
+      if (!KROKI && DOMYSLNE_ZIARNA_KOAL.includes(z)) expect(listaW1(w), `ZNANE_W1_KOAL (ziarno ${z})\n${opisBledow(w)}`).toEqual(ZNANE_W1_KOAL.filter((x) => x[0] === z));
+    }, 180_000);
+  }
+  it('podsumowanie (druk do opisu PR): suma koalescencji > 0', () => {
+    const s = suma(WYNIKI['podstawowy:ogon']);
+    console.log('E2-AB koalescencja', JSON.stringify(s));
+    expect(s.ziaren).toBe(ZIARNA_KOAL.length);
+    expect(s.koal, 'dopisania, które zastąpiły wpis kolejki').toBeGreaterThan(0);
+  });
+});
+
 // ── Profil pełny (charakteryzujący; specyfikacja 2a, 3.3) ──────────────────────────────────────────────────────────
 // Zieleń: brak wyjątków, statusy applied, spoczynek w ≤ 4 rundach, W3 = 0 i W4 jak w profilu podstawowym z klasami
 // dozwolonymi w profilu pełnym (R4n z W4p; createdAtISO-notatki tylko dla notatki z „Zostaw notatkę”, D7 i „notatka pod
 // inną kartą” po „Scal pacjentów” — raport).
 // W1, W2r, W2s: klasy drukowane, różnice bez klasy do raportu jako lista z kluczem encji (nie czerwienią).
-// W CI 2 ziarna (E2_AB_ZIARNA nadpisuje; do raportu 20).
+// W CI 2 ziarna (E2_AB_ZIARNA nadpisuje; do raportu 20). E2_AB_KOAL=ogon (przebieg ręczny) — kolejki z łączeniem wpisów
+// (reguła ogona), W2s jak bez łączenia.
+const KOAL_PELNY = process.env.E2_AB_KOAL === 'ogon' ? 'ogon' : null;
 const ZIARNA_PELNY = Array.from({ length: Number(process.env.E2_AB_ZIARNA) || 2 }, (_, i) => START_ZIAREN + i);
 function raportPelny(lista) {
   const s = suma(lista);
@@ -2626,14 +2782,14 @@ describe('A ≡ B, właściwość: profil pełny (charakterystyka; W3 i W4 z kla
   d1();
   for (const z of ZIARNA_PELNY) {
     it(`ziarno ${z}`, async () => {
-      const w = await przebiegZiarna(z, 'pelny');
+      const w = await przebiegZiarna(z, 'pelny', { koalescencja: KOAL_PELNY });
       expect(w.spoczynki, 'co najmniej jeden punkt spoczynku').toBeGreaterThan(0);
       expect({ W3: w.w3Bledy, W4: w.w4Bledy.map((b) => b.krok), W4p: w.w4p.filter((p) => !p.ok), brakSpoczynku: w.brakSpoczynku }, opisBledow(w))
         .toEqual({ W3: [], W4: [], W4p: [], brakSpoczynku: [] });
     }, 600_000);
   }
   it('podsumowanie profilu pełnego (druk do opisu PR)', () => {
-    const s = raportPelny(WYNIKI.pelny);
+    const s = raportPelny(WYNIKI[KOAL_PELNY ? 'pelny:ogon' : 'pelny']);
     console.log('E2-AB pelny', JSON.stringify(s));
     expect(s.ziaren).toBe(ZIARNA_PELNY.length);
   });
