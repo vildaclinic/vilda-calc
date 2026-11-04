@@ -12,6 +12,9 @@ async function ramka(page, tytul) {
   await expect(iframe).toBeVisible();
   const frame = await (await iframe.elementHandle()).contentFrame();
   if (!frame) throw new Error(`Brak ramki ${tytul}`);
+  // Visibility precedes native iframe load. The shell deliberately delivers
+  // the selected test only after that load, when the panel owns a ready document.
+  await frame.waitForLoadState('load');
   return frame;
 }
 
