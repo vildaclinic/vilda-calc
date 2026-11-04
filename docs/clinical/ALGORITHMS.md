@@ -20571,6 +20571,235 @@ a lekarz poprawia jedno z miejsc. Wartość dni spoza 0–6 w rekordzie nie jest
 
 **Wersje.** `sga_birth_module.js?v=10→11`; SW 1.1.168 → **1.1.169**.
 
+## Dziennik zdarzeń: kwarantanna i podsumowanie wyniku — uśpione (P-DZIENNIK-ZDARZEN, E2-PR2b2, SW 1.1.463, `vilda_vault.js` 250, 2026-11-04)
+
+**Zmiana kliniczna: NIE** — wzory, progi, jednostki, interpretacje, zapis, scalanie, format kopii i synchronizacja bez
+zmian. Dla użytkownika dziś nic się nie zmienia. Wpis opisuje trzeci uśpiony kawałek dziennika zdarzeń (po E2-PR2a
+i E2-PR2b1, wpisy niżej): kwarantannę, czyli miejsce na urządzeniu na zdarzenia z chmury, których ta wersja aplikacji
+nie umie odczytać (np. zapisane przez nowszą wersję), oraz krótkie podsumowanie wyniku zastosowania zdarzenia do śladów
+synchronizacji w dzienniku dostępu (P-SYNC-SLAD): status, powód albo kod i liczniki, bez treści. Kod produkcyjny nowych
+funkcji nie woła, a bramka (wewnętrzny wyłącznik z E2-PR2b1) jest zamknięta, więc na urządzeniu nic nie powstaje i nic
+nie wychodzi do serwera. Wpływ kliniczny dziś: brak. Dalej: E2-PR4 wepnie kwarantannę w pobieranie zmian z chmury (zapis
+zdarzenia nieczytelnego, ponowna próba po aktualizacji), a E2-PR5 doda jej widok z licznikiem i „Zwolnij” (ręczne
+usunięcie zdarzenia z kwarantanny bez zastosowania). Wpis zawiera też wynik testu A ≡ B: po „Zwolnij” karta na tym
+urządzeniu może być niepełna albo może jej brakować do najbliższej pełnej wysyłki, stąd ostrzeżenie przy „Zwolnij”
+w E2-PR5.
+
+**Skąd.** Plan `docs/SYNC_PRZYROSTOWA_PLAN.md`, rozdz. 3.2 („Kwarantanna”, decyzja 6 z 2026-10-29) i wiersz 5b2 tabeli
+„Podział etapu 2”, według odpowiedzi właściciela na pytanie 10.1 (2026-11-03): E2-PR2b w dwóch PR — E2-PR2b1 (kolejka;
+vildaclinic/vilda-calc#878, scalony 2026-11-04) i ten PR.
+
+### E2-PR2b2
+
+**Co jest (uśpione).** W części `Bob_` bloku `P-DZIENNIK-ZDARZEN` w `vilda_vault.js`, obok kolejki z E2-PR2b1:
+- **Eksport.** `VildaVault._eventLog` dostaje 6 nowych kluczy (razem 35): `quarantinePut`, `quarantineList`,
+  `quarantineCount`, `quarantineMinSeq`, `quarantineRelease`, `resultSummary`. Kod produkcyjny nie woła żadnej nowej
+  funkcji, a poza sejfem żaden plik produktu nie zna tych nazw. Bez nowego pliku w pamięci offline.
+- **Bramka i tryb jak w E2-PR2b1** (wpis niżej). Każda operacja kwarantanny kończy się na bramce, dopóki pole okna
+  `VILDA_EVENT_LOG` nie ma wartości `true`, i wtedy nie dotyka `indexedDB`, `localStorage`, `crypto` ani magazynu sejfu.
+  Za bramką wymaga odblokowanego sejfu i trybu „Komputer prywatny”. Zapis do kwarantanny sprawdza tryb także
+  z zapisanego ustawienia konta (wpis rejestru): tryb inny niż prywatny daje `tryb`, a konto spoza rejestru — `konto`,
+  w obu przypadkach bez otwarcia bazy. Wyniki jak w kolejce: `{ ok: true, … }` albo `{ ok: false, powod, code? }`;
+  obietnica nigdy nie jest odrzucana.
+- **Wyjątek: `resultSummary`** to czysta funkcja synchroniczna: tylko przekształca podany wynik. Działa także przy
+  zamkniętej bramce i zablokowanym sejfie, ale nie dotyka magazynów, zegara ani pól okna i nigdy nie rzuca.
+
+**Wiersz kwarantanny** (sklep `quarantine` ze schematu wersji 1 z E2-PR2b1; wersja bazy bez zmian). Wiersz powstaje
+bez odszyfrowania z wiersza `/changes` (`{ seq, eid, payload }`) i wyniku `applyEncryptedEvent` ze statusem
+„nieczytelne” (`unreadable`):
+
+| Pole | Skąd | Zasada |
+|---|---|---|
+| `slotId`, `seq` (klucz) | opcje wołającego, wiersz `/changes` | `slotId` — 64 znaki `0–9a-f`; `seq` — liczba całkowita od 1 do 2^53 − 1; w innej postaci → `argument` |
+| `eid` | wiersz `/changes` | napis do 64 znaków z liter, cyfr, `:`, `_` i `-` (np. UUID albo `r2:123` z importu); inny (brak, liczba, za długi, z odstępem) → `null` |
+| `iv`, `data` | ładunek wiersza `/changes` | napis (także pusty) zapisany bez zmian; inna wartość → `null`; ładunek, który nie jest obiektem → oba `null` |
+| `z`, `aad` (tylko gdy były w ładunku) | ładunek wiersza `/changes` | `z` — napis z białej listy znaków kodów (np. `gzip`, `br`); `aad` — liczba całkowita do ±(2^53 − 1), także ujemna; inna wartość → pole pominięte, a wiersz dostaje `formatInny: true` |
+| `reason` | wynik | powód „nieczytelne”: `envelope`, `format`, `decrypt` albo `shape`; inny → `argument` |
+| `appVersion` | opcje wołającego | `null` albo napis do 32 znaków z liter, cyfr, `.`, `+` i `-`; inny (także brak) → `argument` |
+| `firstSeenAtISO` | zegar przy pierwszym zapisie | bez zmian przy kolejnych zapisach |
+
+- **Czego wiersz nie ma:** tekstu jawnego, statusu wyniku (zawsze „nieczytelne”), `code`, `error`, `message`, `result`
+  ani innych pól wyniku; pól ładunku poza `iv`, `data`, `z`, `aad`; pól wiersza `/changes` poza `seq`, `eid`, `payload`.
+- **Pola ładunku nigdy nie dają `argument`.** Zdarzenie w formacie spoza dzisiejszych (np. z nowym znacznikiem
+  kompresji) trafia do kwarantanny z tym, co da się zapisać. Wynik inny niż „nieczytelne” daje `argument` i do
+  kwarantanny nie trafia: zdarzenie `applied` jest już zastosowane, a przy `busy`, `apply-error`, `locked`
+  i `session-changed` czeka na ponowne zastosowanie (decyzja 6).
+- **Drugi zapis tego samego `[slotId, seq]`** nie dokłada wiersza: zmienia tylko `reason` i `appVersion`
+  (`nowy: false`); treść, pola formatu i `firstSeenAtISO` zostają.
+
+**Operacje.** Pola argumentów (`zmiana`, `wynik`, opcje) są czytane raz; sprawdzenie i zapis biorą te same wartości.
+
+| Operacja | Co robi | Wynik | Bazę tworzy |
+|---|---|---|---|
+| `quarantinePut(zmiana, wynik, { slotId, appVersion })` | argumenty, wpis rejestru konta, otwarcie do zapisu, jedna transakcja: odczyt `[slotId, seq]`, potem zapis nowego wiersza albo zmiana `reason` i `appVersion` | `{ ok, nowy }`; `argument` bez otwarcia bazy i bez odczytu rejestru | tak, jak dopisanie do kolejki (klucza urządzenia nie tworzy) |
+| `quarantineList({ slotId }?)` | kopie wierszy (z szyfrogramem): bez `slotId` — wszystkie sloty po kluczu `[slotId, seq]`; ze `slotId` — ten slot po `seq` rosnąco | `{ ok, wiersze }`; argument, który nie jest obiektem, albo zły `slotId` → `argument`; bazy nie ma → `[]` | nie |
+| `quarantineCount()` | same klucze (bez treści), zliczone po slocie | `{ ok, total, sloty }`; klucz ze slotem spoza wzorca (z innej wersji) tylko w `total`; bazy nie ma → zera | nie |
+| `quarantineMinSeq({ slotId })` | najmniejszy `seq` slotu (do `appliedUpTo` w E2-PR4) | `{ ok, seq }`, bez wierszy albo bazy `seq: null`; zły `slotId` → `argument` | nie |
+| `quarantineRelease(seqs, { slotId })` | usuwa wskazane wiersze tylko tego slotu; pracuje na kopii listy z chwili wywołania; istnienie wiersza sprawdza liczeniem klucza, bez czytania treści | `{ ok, usuniete, pominiete }`; `seq` niepoprawny, powtórzony albo bez wiersza → `pominiete`; lista, która nie jest tablicą albo ma ponad 1000 elementów, albo zły `slotId` → `argument` | nie (bazy nie ma → puste listy) |
+
+**Podsumowanie wyniku `resultSummary(wynik)`** — do śladów P-SYNC-SLAD w E2-PR4. Oddaje tylko status, powód albo kod
+i liczniki, nigdy treści, obiektu błędu ani komunikatu:
+
+| Wynik `applyEncryptedEvent` | Podsumowanie |
+|---|---|
+| `applied` | `{ status, liczniki }` — własne pola `result` o nazwie z samych liter zakończonej na `Count` (do 64 znaków), z wartością całkowitą ≥ 0; bez `credentialUpdated` (prawda/fałsz), `staleDevice` i `clockSkew` (chwile z ładunku nadawcy); bez `result` → `liczniki: {}` |
+| `unreadable` | `{ status, reason }` — powód z listy czterech, inny → `null` |
+| `busy`, `apply-error` | `{ status, code }` — kod z białej listy znaków, inny → `null`; bez obiektu błędu |
+| `locked`, `session-changed` | `{ status }` |
+| inny kształt albo pole, które rzuca przy odczycie | `{ status: 'nieznany' }` |
+
+Każde pole wyniku jest czytane raz, więc sprawdzenie i zwracana wartość pochodzą z tego samego odczytu. 20 liczników
+dzisiejszego wyniku scalania przechodzi. Lista liczników nie jest zamknięta: nowy licznik o nazwie tej postaci przejdzie
+bez zmiany `resultSummary`.
+
+**Zasady wspólne z kolejką** (jak w E2-PR2b1, wpis niżej). Połączenie z bazą tylko na czas operacji, jedna transakcja na
+sklepie `quarantine`. Po kasowaniu bazy tego konta w tym oknie (`deleteDatabase`) każda operacja kwarantanny tego konta
+kończy się kodem `SYNC_DB_DELETED`, bez otwarcia. Przy otwarciu sprawdzane są wersja bazy i nazwy sklepów,
+a w transakcji klucz i indeksy sklepu kwarantanny (operacje kolejki sprawdzają swoje sklepy); bazę w innej wersji,
+z innymi nazwami sklepów albo z innym kluczem lub indeksami sklepu `quarantine` kwarantanna zostawia nietkniętą
+(`SYNC_DB_SCHEMA`). Kody błędów tylko z białej listy — te same co w kolejce, bez nowych. Brak miejsca przerywa zapis
+w całości (`SYNC_DB_QUOTA`). Operacje kolejki i kwarantanny sprawdzają sesję tak jak zapis karty (P-SESJA-ZAPISU):
+zmiana sesji w trakcie kończy operację bez zapisu.
+
+**Test A ≡ B: kwarantanna i „Zwolnij” (p. 7d).** Plik `tests/unit/sync-dziennik-wlasnosciowy.test.mjs`, nowy blok
+deterministyczny p. 7d (uprząż i klasy we wpisie E2-PR2a niżej).
+- **Jak.** Odbiorca dostaje partię zdarzeń nadawcy; część zdarzeń trafia do kwarantanny. Potem jeden z wariantów:
+  **ponowienie** (wiersze kwarantanny po `seq` rosnąco, każdy zastosowany i zwolniony), **zwolnienie** („Zwolnij” bez
+  zastosowania) albo **ponowienie + sufiks** (ponowienie i ponowne zastosowanie dalszych zdarzeń partii, od
+  najmniejszego `seq` w kwarantannie do końca partii). Dla porównania **FIFO** bez kwarantanny. Literał każdego
+  wariantu: różnice odbiorcy wobec nadawcy (D), W4, wiersze kwarantanny, rodzaje zdarzeń drugiej fazy (w kolejności),
+  zwolnione `seq`, liczba wierszy na końcu.
+- **Dwa modele.** (a) Przyczyna kwarantanny: wiersz `/changes` niesie znacznik formatu (`z: 'br'`), którego ta wersja
+  nie zna, więc prawdziwy `applyEncryptedEvent` odbiorcy daje „nieczytelne/format” i niczego nie zmienia. (b) Ponowna
+  próba „po aktualizacji”: w jednej wersji kodu modelowana zastosowaniem `{ iv, data }` z wiersza kwarantanny.
+  Kwarantanną w teście jest prawdziwe API sejfu w osobnym oknie nad atrapą IndexedDB („Komputer prywatny”, osobne
+  fikcyjne konto, bramka otwarta tylko w tym oknie), więc test sprawdza kod tego PR.
+- **Wynik** (literał; W4 zielone w 16 z 16 wariantów):
+
+| Partia nadawcy (w kwarantannie) | FIFO | ponowienie | zwolnienie | ponowienie + sufiks |
+|---|---|---|---|---|
+| „Usuń notatkę” `[pnote, pnotetomb]` (`pnote`) | D = ∅ | D = ∅ | D = ∅ | D = ∅ |
+| „Usuń pacjenta” `[pnote, ptomb, pnotetomb]` (`pnote`) | D = ∅ | D = ∅ | D = ∅ | D = ∅ |
+| N1 `[snap, pfull, pnote]` (`pfull`) | D = ∅ | D = ∅ | D = 1: jedna wizyta karty tylko u nadawcy | D = ∅ |
+| N1 `[snap, pfull, pnote]` (`snap` i `pfull`; `pnote` zastosowane przed kartą) | D = ∅ | D = 2: notatka tylko u nadawcy, jej nagrobek tylko u odbiorcy | D = 6: karta, notatka i obie wizyty tylko u nadawcy; nagrobki karty i notatki tylko u odbiorcy | D = ∅ |
+
+- **Wniosek.** Samo ponowienie (bez ponownego zastosowania dalszych zdarzeń) zostawia różnicę w czwartej partii: oba
+  zdarzenia karty (`snap`, `pfull`) czekały w kwarantannie, a notatkę odbiorca zastosował wcześniej, zanim miał kartę,
+  więc notatka zostaje tylko u nadawcy, a jej nagrobek tylko u odbiorcy. Ponowienie + sufiks daje stan nadawcy we
+  wszystkich partiach — to wymaganie E2-PR4. „Zwolnij” w N1 zostawia tylko u nadawcy jedną wizytę (trzecia partia) albo
+  całą kartę z wizytami i notatką, a u odbiorcy nagrobki karty i notatki (czwarta partia); to charakterystyka, którą
+  wyrównuje pełna wymiana (W4), stąd ostrzeżenie przy „Zwolnij” w E2-PR5.
+- **Czas pliku** (jeden proces, mediana 3 przebiegów): cały plik 100,65 s (rozrzut 98,85–104,21 s), ziarna domyślne
+  40,57 s (39,80–41,96 s), p. 7d 3,94 s (3,70–4,03 s); pomiar z innej serii niż we wpisie E2-PR2b1, więc czasy obu
+  wpisów nie są porównywalne. Cel przyjęty 2026-11-03 (ziarna domyślne do około 75 s, cały plik do około 180 s) jest
+  spełniony.
+- **Kontrola wierności.** Wyniki pozostałych bloków są takie jak przed dodaniem p. 7d (bez pól czasu): ziarna 13/13,
+  p. 5 28/28, p. 6 12/12. Blok stoi po p. 7, przed profilami, i nie zmienia programu ziaren.
+
+**Wymagania dla następnych PR** (dotyczące kwarantanny i podsumowania wyniku zebrane tu w całości; te same w planie:
+3.2 „Kwarantanna” i wiersze tabeli „Podział etapu 2”; pozostałe — we wpisie E2-PR2b1, niżej).
+- **E2-PR3a.** Kasowanie bazy `vilda_sync_<userId>` przy „Usuń konto” (wymagania we wpisie E2-PR2b1) usuwa też wiersze
+  kwarantanny — to ta sama baza.
+- **E2-PR4.**
+  - Zdarzenie nieczytelne z `/changes` trafia do kwarantanny przez `quarantinePut`: `appVersion` wyłącznie
+    z `SW_VERSION`, `eid` i ładunek (także `z`) wyłącznie z wiersza `/changes`.
+  - Wejściem `resultSummary` jest wyłącznie wynik `applyEncryptedEvent`; ślady P-SYNC-SLAD wyłącznie z `resultSummary`.
+  - Nieudany zapis do kwarantanny (np. `SYNC_DB_QUOTA`) nie przesuwa kursora ani `appliedUpTo` za ten numer. Przebieg
+    synchronizacji, który dostał `SYNC_DB_SCHEMA` z dowolnej operacji magazynu, w tym przebiegu nie zapisuje już nic do
+    tej bazy (także do kwarantanny).
+  - Ponowna próba w kolejności `seq` rosnąco; po udanej — ponowne zastosowanie dalszych zdarzeń od jej numeru
+    (ponowienie + sufiks, p. 7d), a gdy serwer ich już nie ma (`requiresBase`) — pełne pobranie.
+  - `appliedUpTo` zatrzymuje się przed najmniejszym `seq` bieżącego slotu (`quarantineMinSeq`); slot inny niż bieżący
+    go nie wstrzymuje. Ponowienie po aktualizacji i licznik obejmują wszystkie sloty. Po rotacji tożsamości wiersze
+    starego slotu dostają jedną ponowną próbę, potem są usuwane (`quarantineRelease` ze starym `slotId`).
+  - Test A ≡ B tych reguł na prawdziwym drenażu; blok p. 7d jako wzorzec.
+- **E2-PR5.** „Zwolnij” (`quarantineRelease`) z ostrzeżeniem, że do najbliższej pełnej wysyłki karta na tym urządzeniu
+  może być niepełna albo może jej brakować (p. 7d, N1). Widok kwarantanny ze wszystkich slotów (`quarantineList` bez
+  `slotId`, `quarantineCount`).
+- **E2-PR6.** Polityka prywatności opisuje bazę `vilda_sync_<userId>` z kolejką i kwarantanną (szyfrogramy zdarzeń, bez
+  tekstu jawnego), kasowaną przy „Usuń konto”.
+
+**Ograniczenia.**
+- Atrapa IndexedDB i WebKit — jak w E2-PR2b1 (wpis niżej); test porównawczy w prawdziwym Chromium obejmuje teraz także
+  kwarantannę.
+- Kasowanie bazy kolejki przy „Usuń konto” dochodzi w E2-PR3a, przed pierwszym PR, który otwiera bramkę.
+- Wpięcie kwarantanny w pobieranie zmian dochodzi w E2-PR4, a jej widok i „Zwolnij” w aplikacji — w E2-PR5.
+
+**Cofnięcie** = rewert PR. Na urządzeniach nic nie powstaje (bez baz, kluczy i żądań), więc nie ma czego sprzątać.
+
+**Testy.** Bez nowych plików; dane wyłącznie fikcyjne, bez PESEL. Zmienione:
+- `tests/unit/sync-dziennik-magazyn.test.mjs` — 146 → 228 przypadków: kwarantanna (zapis i pola ładunku, także format
+  spoza dzisiejszych, drugi zapis, sloty, lista, licznik, minimum, zwolnienie, odczyty bez tworzenia bazy, pola
+  argumentów czytane raz), podsumowanie wyniku (6 statusów prawdziwego `applyEncryptedEvent`, kształty spoza statusów,
+  nazwy liczników, pola czytane raz), wartownik treści (fikcyjny napis z karty nie pojawia się jawnie w wierszach
+  kwarantanny, wynikach operacji ani w `resultSummary`, także w `util.inspect`), operacje kwarantanny w przypadkach
+  schematu, kasowania bazy, trybów logowania, bramki, limitu czasu, sprawdzeń sesji (P-SESJA-ZAPISU), blokady, konta
+  spoza rejestru i kodów błędów; scenariusz magazynu z kwarantanną na atrapie;
+- `tests/unit/sync-dziennik-uspienie.test.mjs` — 21 → 27 przypadków: operacje kwarantanny kończą się na bramce bez
+  odczytu `indexedDB`, `localStorage` i `crypto`; `resultSummary` działa bez bramki i jest czysty (bez magazynów, zegara
+  i pól okna, także na drzewie składni); literał eksportu z 17 parami `klucz: Bob_…`; eksport 35 kluczy; zwykłe użycie
+  aplikacji bez bazy i klucza;
+- `tests/unit/sync-dziennik-wlasnosciowy.test.mjs` — 113 → 118 przypadków: blok p. 7d (sprawdzenie, że
+  `VildaVault._eventLog` istnieje, i 4 partie, każda w 4 wariantach);
+- `tests/support/scenariusz-magazynu.mjs` — scenariusz magazynu kolejki i kwarantanny (zapis wierszy z różnymi polami
+  ładunku w dwóch slotach, drugi zapis, lista, licznik, minimum, zwolnienie, podsumowanie wyniku, kasowanie bazy);
+  literał `SLAD_MAGAZYNU` nagrany ponownie na atrapie, część kolejki bez zmian; `tests/support/okno-magazynu.mjs` —
+  migawka sklepu `quarantine`;
+- `tests/e2e/dziennik-zdarzen-uspienie.spec.mjs` — 4 → 5 przypadków: na stronie z elementem o `id` `VILDA_EVENT_LOG`
+  pięć operacji kwarantanny kończy się na bramce, `resultSummary` daje pełne podsumowanie, bez bazy kolejki i klucza
+  urządzenia;
+- `tests/e2e/atrapa-indexeddb-zgodnosc.spec.mjs` — nowy tytuł testu 2 (scenariusz magazynu kolejki i kwarantanny
+  w Chromium = literał nagrany na atrapie); kod testu bez zmian.
+
+Wynik na stanie końcowym: magazyn 228/228, uśpienie 27/27, A ≡ B 118/118, samotest atrapy 14/14, zapis bazowy 11
+i 1 pominięty (fikstura bez zmian, bo kod produkcyjny nie woła nowych funkcji), e2e 7/7 (uśpienie 5/5, zgodność 2/2);
+ESLint bez problemów, składnia poprawna. Skrypt porównania rozszerzonego scenariusza magazynu w Chromium 141 dał
+na stanie końcowym 20/20 zgodnych przebiegów bez obciążenia i 20/20 przy trzech zajętych rdzeniach. E2e w CI (Chrome
+Headless Shell 149) przeszło w vildaclinic/vilda-calc#878 i na pierwszym commicie tego PR, w tym bez powtórzeń test
+zgodności rozszerzonego scenariusza magazynu i uśpienie 5/5.
+
+**Czerwone na bazie** (kopia `origin/audyt` po scaleniu vildaclinic/vilda-calc#878 z nowymi testami;
+`vilda_vault.js` ten sam co w `e1990fbe`):
+- `sync-dziennik-magazyn`: 83 czerwone, 145 zielonych (czerwone: brak API kwarantanny — 82 nowe przypadki i scenariusz
+  magazynu, który ten PR rozszerza o kwarantannę; pozostałe przypadki E2-PR2b1 zielone);
+- `sync-dziennik-uspienie`: 7 czerwonych, 20 zielonych (brak API kwarantanny i podsumowania, literał eksportu i lista
+  kluczy);
+- A ≡ B: 4 czerwone (4 partie p. 7d), 114 zielonych. Blok p. 7d używa prawdziwego API kwarantanny, więc na bazie
+  jest czerwony; przypadki sprzed tego PR — zielone;
+- e2e (te same strony i scenariusze w Chromium 141, skryptem): nowy przypadek uśpienia i scenariusz magazynu
+  z kwarantanną — czerwone (brak funkcji kwarantanny);
+- zielone z założenia: samotest atrapy 14/14 (sprawdza atrapę, nie sejf) i zapis bazowy 11 i 1 pominięty (nagrany na
+  bazie).
+
+**Mutanty** (kopie, jedna zmiana na przebieg; kod tego PR, atrapa bez zmian):
+- weryfikacja: 130 mutantów, 111 zabitych. Z 19, które przeżyły: 17 nierównoważnych dostało testy i jest teraz
+  zabitych, 2 są równoważne z uzasadnieniem;
+- po poprawkach, na stanie końcowym: 41 mutantów zgodnych z oczekiwaniem — 39 zabitych, 2 równoważne; w tym 9 osobnych
+  cofnięć poprawek kodu po weryfikacji — każde daje czerwony test (9/9);
+- p. 7d: 14 podmian zachowania (9 w sejfie, 5 w modelu drenażu w teście); p. 7d czerwieni 10 z nich, w tym dwie
+  podmiany ponowienia, które rozróżnia dopiero czwarta partia.
+
+**Gdzie w kodzie.** `vilda_vault.js`, blok `P-DZIENNIK-ZDARZEN`: linie 4994–6823 (1830 linii, 84 923 B; było 1593
+linie), komentarze bez znaków diakrytycznych; plik +253 / −16 linii (usunięte linie to wyłącznie komentarze), poza
+blokiem bez zmian.
+- część `Bev_`: 4994–5624; zmienione tylko komentarz nagłówka bloku i 6 kluczy literału `Bev_EKSPORT` (linia 5588,
+  klucze w liniach 5617–5622); `$s` bez zmian;
+- znacznik wewnętrzny `/* P-DZIENNIK-ZDARZEN: magazyn kolejki */`: linia 5625, dokładnie raz; komentarz nagłówka
+  części `Bob_` (5626–5641) opisuje teraz także kwarantannę i podsumowanie wyniku;
+- część `Bob_`: 5626–6822, 1197 linii, 54 555 B (było 967 linii);
+- nowe stałe (5680–5685): `Bob_POWODY_KW` (powody „nieczytelne”), `Bob_SLOT` (wzorzec `slotId`),
+  `Bob_WERSJA_APLIKACJI`, `Bob_EID_ZMIANY` (wzorzec `eid` z `/changes`), `Bob_LICZNIK_WYNIKU` (wzorzec nazwy licznika);
+- nowe funkcje (6555–6773; 64 funkcje `Bob_`, było 54): kwarantanna — `Bob_slotPoprawny`, `Bob_seqPoprawny`,
+  `Bob_argumentyKw`, `Bob_wierszKw`, `Bob_kwDodaj`, `Bob_kwLista`, `Bob_kwLicz`, `Bob_kwMin`, `Bob_kwZwolnij`;
+  podsumowanie wyniku — `Bob_skrot`.
+
+Eksport → funkcja: `quarantinePut` → `Bob_kwDodaj`, `quarantineList` → `Bob_kwLista`, `quarantineCount` →
+`Bob_kwLicz`, `quarantineMinSeq` → `Bob_kwMin`, `quarantineRelease` → `Bob_kwZwolnij`, `resultSummary` → `Bob_skrot`.
+
+**Wersje.** Baza `origin/audyt` `e1990fbe` (po vildaclinic/vilda-calc#881; `vilda_vault.js` bez zmian od scalenia
+vildaclinic/vilda-calc#878). `vilda_vault.js` 249 → 250; `vilda_chrome.js` 239 → 240 i `vilda_session_bridge.js`
+160 → 161 (zmienia się w nich tylko odnośnik do `vilda_vault.js`); SW 1.1.462 → **1.1.463**.
+
 ## Dziennik zdarzeń: magazyn kolejki, bramka i identyfikator urządzenia — uśpione (P-DZIENNIK-ZDARZEN, E2-PR2b1, SW 1.1.458, `vilda_vault.js` 249, 2026-11-04)
 
 **Zmiana kliniczna: NIE** — wzory, progi, jednostki, interpretacje, zapis, scalanie, format kopii i synchronizacja bez
@@ -20579,8 +20808,8 @@ trwałą kolejkę zmian na urządzeniu. Po włączeniu (PR włączający E2-PR6)
 trafi najpierw do tej kolejki i stąd wyjdzie do chmury jako osobne zdarzenie, także gdy powstała bez połączenia
 z siecią. Dziś kod produkcyjny kolejki nie woła, a jej wewnętrzny wyłącznik (bramka) jest zamknięty, więc na urządzeniu
 nic nie powstaje (ani baza kolejki, ani identyfikator urządzenia w pamięci przeglądarki) i nic nie wychodzi do serwera.
-Wpływ kliniczny dziś: brak. Dalej: E2-PR2b2 dołoży kwarantannę, a E2-PR3a dopisywanie zmian do kolejki i kasowanie jej
-bazy przy „Usuń konto”. Wpis zawiera też wynik testu A ≡ B z łączeniem wpisów kolejki.
+Wpływ kliniczny dziś: brak. Dalej: kwarantanna doszła w E2-PR2b2 (wpis wyżej), a E2-PR3a dołoży dopisywanie zmian do
+kolejki i kasowanie jej bazy przy „Usuń konto”. Wpis zawiera też wynik testu A ≡ B z łączeniem wpisów kolejki.
 
 **Skąd.** Plan `docs/SYNC_PRZYROSTOWA_PLAN.md`, rozdz. 3.2 i 3.9 oraz tabela „Podział etapu 2” (wiersze 5b1 i 5b2).
 Decyzje właściciela z 2026-10-29: osobna baza kolejki (decyzja 5), etap 2 tylko w trybie „Komputer prywatny”, seria
@@ -20622,11 +20851,11 @@ Schemat wersji 1 jest w tym PR w całości, żeby E2-PR2b2 nie potrzebował zmia
 |---|---|---|---|
 | `meta` | `k` | — | rekord licznika `{ k: 'licznik', v, baza }` (`baza` — losowy identyfikator nadany przy tworzeniu bazy); reszta w rezerwie |
 | `outbox` | `eid` | `byState` (`state`), `byEntity` (`[kind, entityKey]`), `bySeqLocal` (`seqLocal`, unikalny) | kolejka zmian |
-| `quarantine` | `[slotId, seq]` | `bySlot` (`slotId`) | kwarantanna; w tym PR tylko schemat, API w E2-PR2b2 |
+| `quarantine` | `[slotId, seq]` | `bySlot` (`slotId`) | kwarantanna; w tym PR tylko schemat, API doszło w E2-PR2b2 (wpis wyżej) |
 
 - **Otwarcie leniwe.** Baza jest otwierana bez numeru wersji. Odczyt albo zmiana stanu na nieistniejącej bazie
   przerywa jej tworzenie i nic nie zostawia (wynik pusty: zera, puste listy; po kasowaniu bazy w tym oknie —
-  `SYNC_DB_DELETED`, niżej). Bazę tworzy wyłącznie dopisanie.
+  `SYNC_DB_DELETED`, niżej). Bazę tworzy wyłącznie dopisanie (od E2-PR2b2 także zapis do kwarantanny, wpis wyżej).
 - **Połączenie tylko na czas operacji.** Operacja otwiera bazę, wykonuje jedną transakcję i zamyka połączenie
   (dopisanie: dwie — odczyt licznika i zapis). W transakcji nie ma oczekiwania na nic poza żądaniami bazy. Wynik daje
   dopiero zatwierdzenie albo przerwanie transakcji. Blokada sejfu nie kasuje bazy ani wpisów kolejki.
@@ -20701,9 +20930,9 @@ ogona dawało różnice bez klasy albo nową różnicę W2s, a reguła ogona —
 
 **Kwarantanna** (miejsce na zdarzenia z chmury, których to urządzenie nie umie odczytać; plan 3.2). Sklep `quarantine`
 jest w schemacie wersji 1, ale w tym PR nie ma do niego API. API kwarantanny (`quarantinePut`, `quarantineList`,
-`quarantineCount`, `quarantineMinSeq`, `quarantineRelease`) i podsumowanie wyniku dla dziennika (`resultSummary`)
-dochodzą w E2-PR2b2. Wtedy domknie się zdanie wpisu E2-PR2a (niżej), że z wyniku `applyEncryptedEvent` utrwala się
-tylko status, kod i liczniki.
+`quarantineCount`, `quarantineMinSeq`, `quarantineRelease`) i podsumowanie wyniku dla dziennika (`resultSummary`) doszły
+w E2-PR2b2 (wpis wyżej, także o tym, co z wyniku `applyEncryptedEvent` trafia do kwarantanny, a co do podsumowania
+wyniku).
 
 **Identyfikator urządzenia** (pole `dev` koperty, wewnątrz szyfrogramu; serwer go nie widzi). 8 znaków z alfabetu
 `abcdefghijkmnpqrstuvwxyz23456789` (bez mylących `l`, `o`, `0`, `1`; ten sam co w kopercie E2-PR2a). Klucz
@@ -20765,7 +20994,7 @@ E2-PR2a niżej).
   - 7b: ratunek notatki za pełną kartą nie zastępuje starszego wpisu tej notatki, bo za nim czekają wpisy karty.
     Zastąpienie „w miejscu” starego wpisu postawiłoby notatkę przed kartą.
   - 7c: klasa R3 z jednego ciągu operacji powstaje tak samo bez łączenia i z łączeniem, więc nie pochodzi z kolejki.
-  - 7d (kwarantanna i „Zwolnij”) dochodzi w E2-PR2b2.
+  - 7d (kwarantanna i „Zwolnij”) doszło w E2-PR2b2 (wpis wyżej).
 - **Kontrola wierności.** Przebiegi bez łączenia są bajt w bajt takie jak przed zmianą: ziarna 10/10, p. 5 28/28,
   p. 6 12/12.
 - **Przebiegi ręczne.** 40 ziaren z łączeniem: 45 z 46 przypadków zielonych. Czerwone jest tylko ziarno 39: punkt
@@ -20778,19 +21007,19 @@ E2-PR2a niżej).
     liczą się do celu całego pliku.
   - Po poprawkach, na maszynie około 2 razy szybszej: mediana 3 przebiegów 78,2 s, a stan sprzed poprawek na tej samej
     maszynie 78,0 s — bez regresji.
-- **„Zwolnij”** (kolejność notatki i nagrobka przy zwolnieniu wiersza kwarantanny): wynik pomiaru opisze wpis
-  E2-PR2b2; wymagania dla E2-PR4 (ponowna próba w kolejności `seq`, ponowne zastosowanie dalszych zdarzeń) i E2-PR5
-  („Zwolnij” z ostrzeżeniem) są niżej, w „Wymaganiach dla następnych PR”.
+- **„Zwolnij”** (kolejność notatki i nagrobka przy zwolnieniu wiersza kwarantanny): wynik pomiaru jest we wpisie
+  E2-PR2b2 (wyżej); wymagania dla E2-PR4 (ponowna próba w kolejności `seq`, ponowne zastosowanie dalszych zdarzeń)
+  i E2-PR5 („Zwolnij” z ostrzeżeniem) są niżej, w „Wymaganiach dla następnych PR”.
 
 **Wymagania dla następnych PR** (te same w planie: wiersze tabeli „Podział etapu 2”, 3.2 „Kwarantanna”, 3.9 i zakres
 E3-PR0).
-- **E2-PR2b2.**
+- **E2-PR2b2** — zrobione (wpis wyżej; ślady P-SYNC-SLAD wyłącznie z `resultSummary` to wymaganie E2-PR4, niżej).
   - API kwarantanny: klucz `slotId + seq`; wiersz zdarzenia nieczytelnego zapisuje to, co da się zapisać bez
     odszyfrowania, także zdarzenie w formacie spoza dzisiejszych (`eid`, `iv` i `data` złego typu jako `null`; pole
     formatu `z` albo `aad` w nieznanej postaci pominięte, a wiersz oznaczony `formatInny`); z wyniku
     `applyEncryptedEvent` tylko powód; lista po `[slotId, seq]` rosnąco, także dla wszystkich slotów; licznik wszystkich
     slotów; zwolnienie wskazanych wierszy.
-  - `resultSummary` jako jedyna droga wyniku do dziennika: status, kod i liczniki, nigdy błąd ani jego komunikat;
+  - `resultSummary` jako jedyna droga wyniku do dziennika: status, powód albo kod i liczniki, nigdy błąd ani jego komunikat;
     strażnik źródła obejmuje nowy kod.
   - A ≡ B p. 7d (kwarantanna i „Zwolnij”); porównanie magazynu z prawdziwym Chromium rozszerzone o kwarantannę.
 - **E2-PR3a.**
@@ -20826,7 +21055,8 @@ E3-PR0).
     wszystkie sloty; po rotacji tożsamości wiersze starego slotu dostają jedną ponowną próbę, potem są usuwane; slot
     inny niż bieżący nie wstrzymuje `appliedUpTo`.
   - Ślady P-SYNC-SLAD wyłącznie z `resultSummary`.
-- **E2-PR5.** „Zwolnij” z ostrzeżeniem, że do najbliższej pełnej wysyłki karta może być niepełna. Widok wpisów
+- **E2-PR5.** „Zwolnij” z ostrzeżeniem, że do najbliższej pełnej wysyłki karta może być niepełna (od E2-PR2b2: albo może
+  jej brakować — wpis wyżej). Widok wpisów
   `oversize`, `unreadable`, `rejected` i kwarantanny ze wszystkich slotów, także wpisów kart usuniętych i wpisów
   `unreadable` encji, której nagrobek ma inny rodzaj. Porzucenie z potwierdzeniem.
 - **E2-PR6.** Warunek wejścia: polityka prywatności opisuje bazę `vilda_sync_<userId>` (kasowaną przy „Usuń konto”)
@@ -20886,10 +21116,11 @@ drzewie składni części `Bob_`, eksport 29 kluczy, scenariusz bez bazy i klucz
 Wynik na stanie końcowym: magazyn 146/146, uśpienie 21/21, samotest atrapy 14/14, zapis bazowy 11 i 1 pominięty
 (fikstura bez zmian), A ≡ B 113/113, e2e 6/6; ESLint bez problemów, składnia poprawna. Atrapa = Chromium 141
 w 33/33 porównywanych przypadkach p1–p34. Skrypt porównania dał 20/20 zgodnych przebiegów bez obciążenia i 20/20 przy
-trzech zajętych rdzeniach (także scenariusz magazynu). Oba nowe pliki e2e są zielone także w odmianie Chromium
-używanej w CI (Chrome Headless Shell, wersja 141). CI ma inną wersję przeglądarki (Chrome Headless Shell 149); pierwszy
-pomiar na niej zrobi e2e w CI. Przy różnicy komunikat testu podaje różniące się klucze z wartościami; atrapę i literał
-poprawia się wtedy po analizie każdego klucza, bez wyłączania testu. Testy, które tną źródło sejfu do `function yr(`, zostają zielone, a pułapki tekstowe pliku są bez zmian.
+trzech zajętych rdzeniach (także scenariusz magazynu). Oba nowe pliki e2e są zielone lokalnie także w odmianie Chromium
+używanej w CI (Chrome Headless Shell, wersja 141). E2e w CI vildaclinic/vilda-calc#878 (inna wersja: Chrome Headless
+Shell 149) przeszło, w tym test zgodności scenariusza magazynu. Przy różnicy komunikat testu podaje różniące się klucze
+z wartościami; atrapę i literał poprawia się wtedy po analizie każdego klucza, bez wyłączania testu. Testy, które tną
+źródło sejfu do `function yr(`, zostają zielone, a pułapki tekstowe pliku są bez zmian.
 
 **Czerwone na bazie** (kopia `origin/audyt` `64f9a3a9` z nowymi testami, 2026-11-04):
 - `sync-dziennik-magazyn`: 146/146 czerwonych (brak API magazynu);
@@ -20957,7 +21188,7 @@ właściciela z 2026-10-29 (tylko tryb „Komputer prywatny”, seria uśpionych
 - **11.2 — przyjęta 2026-11-03** (po scaleniu vildaclinic/vilda-calc#869): zdarzenie kosza wizyty (`stomb`) niesie
   także kartę bez wizyt (wariant rekomendowany, wdrożony w tym PR; niżej, builder 4);
 - **11.3 — przyjęta 2026-11-03** (po scaleniu vildaclinic/vilda-calc#869): podział E2-PR2 na E2-PR2a (ten PR)
-  i E2-PR2b (magazyn kolejki; dalej dzielony na E2-PR2b1, wpis wyżej, i E2-PR2b2).
+  i E2-PR2b (magazyn kolejki; dalej dzielony na E2-PR2b1 i E2-PR2b2, wpisy wyżej).
 
 ### E2-PR2a
 
@@ -20976,7 +21207,7 @@ ani żądań. Tryb logowania nie ma znaczenia, bo nic się nie uruchamia. Poza b
 (`Le`, `Bsl_*`, `Bkz_*`, `Bsw_*`, `Bgw_*`, `Bnp_*`, `Bpk_*`), eksport `exportSyncPayload` (`is`) i dzisiejsze buildery
 delt (`ds`, `us`, `cs`, `ls`, `Qb0`, `Qb1`). Magazyn kolejki `vilda_sync_<userId>`, bramka, identyfikator urządzenia
 i kwarantanna nie powstają w tym PR (kolejka, bramka i identyfikator: E2-PR2b1, wpis wyżej; API kwarantanny:
-E2-PR2b2).
+E2-PR2b2, wpis wyżej).
 
 **Koperta.** `{ schemaVersion: 2, event: { kind, key, atISO, dev, full }, <jedna sekcja ładunku> }` (przy `stomb`
 także opcjonalna sekcja `patients`, niżej). Sekcja ma dokładnie ten kształt, który ta encja ma w `exportSyncPayload`.
@@ -21107,13 +21338,14 @@ przypadkach zastosowanie kończy się bez dalszych zapisów i bez klasyfikowania
   przeglądarki wzięto je ze specyfikacji WebCrypto, HTML i ECMAScript, bez pomiaru w przeglądarce (sprawdzi to e2e
   w PR włączającym).
 - **`apply-error`** to `{ status, code }`. `code` = napisowy `code` wyjątku, a bez niego jego `name`. `DOMException` ma
-  liczbowy `code` (np. 22 przy braku miejsca), więc wtedy idzie nazwa, np. `QuotaExceededError`. Oryginalny wyjątek
-  jest we właściwości niewyliczalnej `error`, do śladu w E2-PR4.
+  liczbowy `code` (np. 22 przy braku miejsca), więc wtedy idzie nazwa, np. `QuotaExceededError`. Oryginalny wyjątek jest
+  we właściwości niewyliczalnej `error`; do śladu w E2-PR4 trafia z wyniku tylko `resultSummary`, bez `error` (od
+  E2-PR2b2, wpis wyżej).
 - **Żaden wynik nie niesie `message`.** `JSON.stringify` wyniku nie zawiera treści klinicznej zdarzenia. `result`
   może jednak nieść chwile z ładunku nadawcy (niżej).
 - **`applied.result`** to obiekt zwrócony przez `Le`: liczniki i pola o chwilach ładunku nadawcy, jak dziś przy
-  `applyEncryptedDelta`. E2-PR2b2 (kwarantanna i podsumowanie wyniku) utrwala z wyniku tylko status, kod i liczniki —
-  nigdy `error` ani jego komunikatu.
+  `applyEncryptedDelta`. Od E2-PR2b2 (wpis wyżej) kwarantanna zapisuje z wyniku tylko powód, a `resultSummary` oddaje
+  tylko status, powód albo kod i liczniki — nigdy `error` ani jego komunikatu; ślady P-SYNC-SLAD z niego zapisze E2-PR4.
 - **Odpowiedniki w dzisiejszym drenażu** (`Bdz_zastosuj`; podmiana w E2-PR4): `blokada` ↔ `locked`; `busy` ↔ `busy` i `session-changed`;
   `nieczytelne` ↔ `unreadable`; `blad` ↔ `apply-error`; `zmiana`/`ok` ↔ `applied`.
 - **Scalanie z chmury nie dopisuje do kolejki.** Kolejki jeszcze nie ma. Dwa wyjątki z decyzji 9 to haki E2-PR3b
@@ -21198,7 +21430,7 @@ Różnica bez klasy, nowa różnica i zniknięcie znanej różnicy w W1 albo W2r
 - **Kolejność losowa** (nie FIFO, charakterystyka): w 40 ziarnach profilu podstawowego 266 punktów zgodnych,
   3 niezgodne, bez klasy (ziarna domyślne: 50 zgodnych, 0 niezgodnych). W dwóch niezgodnych chodzi
   o kolejność notatki i jej nagrobka w jednej partii, w jednym o chwilę ostatniej zmiany karty. To ważne dla
-  „Zwolnij” w kwarantannie (E2-PR2b2) i dla przeglądu kolejki `sweepOutbox` (E2-PR3a).
+  „Zwolnij” w kwarantannie (test A ≡ B p. 7d, E2-PR2b2, wpis wyżej) i dla przeglądu kolejki `sweepOutbox` (E2-PR3a).
 - **Profil pełny** (20 ziaren, raport, nie czerwień): W1 w 19 punktach. Klasy (punkt może mieć kilka): R5 5, D7 7,
   R3 2, R4a′ 4, „notatka pod inną kartą” 2, bez klasy 5. Po wymianie (W4) zostaje tylko „notatka pod inną kartą”
   (2 punkty).
@@ -21271,11 +21503,11 @@ literał na wynik zgodny.
   - Hak H2 „zawsze do kolejki”: notatka, której nagrobek zniknął w partii i której rekord zmieniło scalanie, idzie do
     kolejki także wtedy, gdy w tej partii przyszła jej własna koperta. Bez tego notatka zostaje tylko na jednym
     urządzeniu (test N1, N1b).
-- **E2-PR2b** (podzielony na E2-PR2b1, wpis wyżej, i E2-PR2b2).
-  - Kwarantanna i dziennik zapisują z wyniku tylko status, kod i liczniki; strażnik źródła obejmuje nowy kod
-    (E2-PR2b2).
+- **E2-PR2b** (podzielony na E2-PR2b1 i E2-PR2b2, wpisy wyżej).
+  - Z wyniku do kwarantanny tylko powód, a do podsumowania wyniku (`resultSummary`) tylko status, powód albo kod
+    i liczniki; strażnik źródła obejmuje nowy kod (E2-PR2b2; ślady P-SYNC-SLAD z `resultSummary` — E2-PR4).
   - Koalescencja kolejki sprawdzona testem A ≡ B (zmiana kolejności potrafi zgubić notatkę; E2-PR2b1, wpis wyżej).
-  - Kolejność notatki i nagrobka przy „Zwolnij” (E2-PR2b2).
+  - Kolejność notatki i nagrobka przy „Zwolnij” (E2-PR2b2: test A ≡ B p. 7d).
 - **E3-PR0.**
   - Zbieżność zdarzeń bez pełnej wysyłki: hak echo zmian pochodnych scalania.
   - Decyzja co do R4n i `createdAtISO`.

@@ -1,19 +1,24 @@
-// P-DZIENNIK-ZDARZEN (E2-PR2a, E2-PR2b) — strażniki uśpienia bloku dziennika zdarzeń w vilda_vault.js: kod produkcyjny nie
-// woła nowych funkcji (eksport tylko pod VildaVault._eventLog, nikt go nie używa), blok nie ma skutków ubocznych przy
-// ładowaniu, część Bev_ (koperty, buildery, szyfrowanie, zastosowanie) nie zawiera wywołań zapisu, emisji, sieci ani
-// magazynów przeglądarki, a część magazynu kolejki (Bob_, poniżej znacznika magazynu) sięga do okna wyłącznie przez
-// nazwane pola w nazwanych funkcjach i działa tylko za bramką (pole okna VILDA_EVENT_LOG === true). Testy źródła
-// (vilda_vault.js, pliki produktu z git ls-files) i eksportu (prawdziwy sejf w oknie uprzęży, dane wyłącznie fikcyjne).
+// P-DZIENNIK-ZDARZEN (E2-PR2a, E2-PR2b1, E2-PR2b2) — strażniki uśpienia bloku dziennika zdarzeń w vilda_vault.js: kod
+// produkcyjny nie woła nowych funkcji (eksport tylko pod VildaVault._eventLog, nikt go nie używa), blok nie ma skutków
+// ubocznych przy ładowaniu, część Bev_ (koperty, buildery, szyfrowanie, zastosowanie) nie zawiera wywołań zapisu, emisji,
+// sieci ani magazynów przeglądarki, a część magazynu kolejki i kwarantanny (Bob_, poniżej znacznika magazynu) sięga do
+// okna wyłącznie przez nazwane pola w nazwanych funkcjach i działa tylko za bramką (pole okna VILDA_EVENT_LOG === true).
+// Testy źródła (vilda_vault.js, pliki produktu z git ls-files) i eksportu (prawdziwy sejf w oknie uprzęży, dane wyłącznie
+// fikcyjne).
 //
 //   U1    bramka: gateOpen() fałszywe dla każdej wartości pola poza true (także getter rzucający); każda chroniona
-//         operacja magazynu (pętla po kluczach eksportu minus jawna lista niechronionych — nowy klucz bez bramki =
-//         czerwony test) → { ok: false, powod: 'bramka' } bez odczytu window.indexedDB, localStorage i crypto (gettery
-//         liczące) i bez wywołań magazynu sejfu; na adapterze IndexedDB nad atrapą — bez wpisów vilda_sync_* w jej
-//         dzienniku i bez klucza urządzenia; zablokowany sejf przy zamkniętej bramce → bramka.
+//         operacja magazynu — kolejki i kwarantanny (pętla po kluczach eksportu minus jawna lista niechronionych; nowy
+//         klucz bez argumentów albo bez bramki = czerwony test; lista chronionych sprawdzana osobno) → { ok: false,
+//         powod: 'bramka' } bez odczytu window.indexedDB, localStorage i crypto (gettery liczące) i bez wywołań magazynu
+//         sejfu; na adapterze IndexedDB nad atrapą — bez wpisów vilda_sync_* w jej dzienniku i bez klucza urządzenia;
+//         zablokowany sejf przy zamkniętej bramce → bramka. resultSummary (niechronione, czysta funkcja) przy zamkniętej
+//         bramce i zablokowanym sejfie daje pełne podsumowanie synchronicznie, bez odczytu pól okna (także
+//         VILDA_EVENT_LOG), bez zegara i bez wywołań magazynu sejfu.
 //   U2(a) identyfikatory Bev_ i Bob_ leżą między znacznikami bloku (każdy znacznik dokładnie raz), poza blokiem dokładnie
 //         jedno `_eventLog:Bev_EKSPORT`; `_eventLog` dokładnie raz w pliku; zero `._eventLog` i `VildaVault._eventLog`;
 //         blok stoi między Bsl_usunPacjenta a `function yr(`. Znacznik magazynu kolejki dokładnie raz, za literałem
-//         Bev_EKSPORT; w części Bev_ identyfikatory Bob_ wyłącznie w tym literale (11 kluczy magazynu).
+//         Bev_EKSPORT; w części Bev_ identyfikatory Bob_ wyłącznie w tym literale (17 kluczy magazynu kolejki
+//         i kwarantanny).
 //   U2(b) żaden plik produktu poza vilda_vault.js (git ls-files *.js *.mjs *.cjs *.html *.htm bez tests/ i docs/) nie
 //         zawiera `_eventLog`, applyEncryptedEvent, encryptEvent, nazw 14 builderów, nazw API magazynu (gateOpen,
 //         outbox…), VILDA_EVENT_LOG, klucza urządzenia, nazwy bazy kolejki (vilda_sync_ poza vilda_sync_integration.js),
@@ -22,17 +27,23 @@
 //         ładunku, console.), także w komentarzach; część Bob_: własna lista tekstowa i reguła domknięcia na drzewie
 //         składni (acorn + eslint-scope): wolne identyfikatory wyłącznie z listy, pola okna tylko w swoich funkcjach,
 //         Date tylko w funkcjach chwili, zakaz dostępu przez nawias do v, Date, Object, Reflect, liczności wywołań
-//         kasowania, listy baz i rejestru.
+//         kasowania, listy baz i rejestru. Funkcje eksportu kwarantanny i podsumowania wyniku są deklaracjami
+//         najwyższego poziomu części Bob_ (obejmują je obie reguły); podsumowanie wyniku jest czyste: synchroniczne,
+//         a w domknięciu wywołań (funkcje i stałe bloku osiągalne z niej) wolne identyfikatory tylko z listy czystych
+//         (bez okna, stanu logowania, sejfu, rejestru, zegara, losowości) — z samokontrolą.
 //   U2(d) najwyższy poziom bloku (AST): w części Bev_ nazwy ^Bev_, w części Bob_ ^Bob_; wyłącznie deklaracje function /
 //         async function oraz const z literałem, Object.freeze(…) albo new Map() / new Set(); argumenty Object.freeze
 //         tylko z literałów, tablic, obiektów (bez kluczy obliczanych i rozwinięć), identyfikatorów, wyrażeń funkcyjnych
 //         i zagnieżdżonego Object.freeze — bez odczytów przy ładowaniu.
-//   U2(e) eksport _eventLog zamrożony; klucze = dokładnie lista (18 z E2-PR2a i 11 kluczy magazynu kolejki).
-//   U4    krótki scenariusz sejfu na adapterze IndexedDB nad atrapą przy zamkniętej bramce: databases() bez vilda_sync_*,
-//         brak klucza o przedrostku vilda-sync-device-v1.
+//   U2(e) eksport _eventLog zamrożony; klucze = dokładnie lista (35: 18 z E2-PR2a, 11 kluczy magazynu kolejki z E2-PR2b1
+//         i 6 kluczy kwarantanny i podsumowania wyniku z E2-PR2b2).
+//   U4    krótki scenariusz sejfu na adapterze IndexedDB nad atrapą przy zamkniętej bramce (każda istniejąca operacja
+//         magazynu, także kwarantanny): databases() bez vilda_sync_*, brak klucza o przedrostku vilda-sync-device-v1.
 // Każdy przypadek, który tnie blok na części, zaczyna od sprawdzenia, że znacznik magazynu jest dokładnie raz.
-// Czerwone na bazie bez magazynu kolejki: U1, nowe części U2(a), U2(c) i U2(d), U2(e); zielone z natury: U2(b),
-// samokontrole wzorców i reguł, dotychczasowe przypadki U2(a) bez cięcia na części, U4.
+// Czerwone na bazie bez kwarantanny (E2-PR2b1): lista chronionych kluczy U1, U1 kwarantanny i podsumowania wyniku,
+// literał eksportu U2(a) (17 kluczy), nowe części U2(c) (deklaracje i czystość podsumowania wyniku), U2(e) (35 kluczy);
+// zielone z natury: U2(b), samokontrole wzorców i reguł, dotychczasowe U1 (pętla po kluczach obecnych w eksporcie),
+// U2(c) i U2(d) całej części Bob_, U4.
 import fs from 'node:fs';
 import path from 'node:path';
 import { execFileSync } from 'node:child_process';
@@ -51,9 +62,14 @@ const KONIEC = '/* P-DZIENNIK-ZDARZEN: koniec bloku */';
 const BUILDERY = ['buildSnapshotEvent', 'buildPatientFullEvents', 'buildPatientTombstoneEvent', 'buildSnapshotTombstoneEvent',
   'buildPatientNoteEvent', 'buildPatientNoteTombstoneEvent', 'buildNoteEvent', 'buildNoteTombstoneEvent', 'buildPatientListEvent',
   'buildPatientListTombstoneEvent', 'buildPreferenceEvent', 'buildPasskeyEvent', 'buildPasskeyTombstoneEvent', 'buildCredentialEvent'];
-// Klucze magazynu kolejki (E2-PR2b1); kwarantanna i podsumowanie wyniku dochodzą w E2-PR2b2.
+// Klucze magazynu kolejki (E2-PR2b1) oraz kwarantanny i podsumowania wyniku (E2-PR2b2).
+const KLUCZE_KWARANTANNY = ['quarantinePut', 'quarantineList', 'quarantineCount', 'quarantineMinSeq', 'quarantineRelease', 'resultSummary'];
 const KLUCZE_MAGAZYNU = ['gateOpen', 'enqueue', 'outboxCount', 'outboxList', 'outboxTake', 'outboxAccept', 'outboxReject',
-  'outboxFail', 'outboxRequeueStale', 'outboxDiscard', 'deleteDatabase'];
+  'outboxFail', 'outboxRequeueStale', 'outboxDiscard', 'deleteDatabase', ...KLUCZE_KWARANTANNY];
+// Fikcyjne argumenty operacji kwarantanny (slot: 64 znaki hex; wynik o kształcie unreadable z applyEncryptedEvent).
+const SLOT = '1a2b3c4d'.repeat(8);
+const ZMIANA = Object.freeze({ seq: 1, eid: '00000000-0000-4000-8000-000000000001', payload: { iv: 'Rmlrc3lqbmVJVjEy', data: 'AAAA' } });
+const NIECZYTELNY = Object.freeze({ status: 'unreadable', reason: 'decrypt' });
 const KLUCZE_EKSPORTU = ['kinds', ...BUILDERY, 'encryptEvent', 'eventBytes', 'applyEncryptedEvent', ...KLUCZE_MAGAZYNU];
 const RODZAJE = ['snap', 'pfull', 'ptomb', 'stomb', 'pnote', 'pnotetomb', 'note', 'notetomb', 'plist', 'plisttomb', 'pref', 'pk', 'pktomb', 'cred'];
 const ile = (tekst, fragment) => tekst.split(fragment).length - 1;
@@ -101,13 +117,16 @@ beforeAll(() => {
 });
 
 describe('U1: bramka zamknięta — każda chroniona operacja magazynu kończy się na bramce', () => {
-  // Klucze bez bramki: z E2-PR2a (nie dotykają magazynu kolejki) oraz gateOpen i deleteDatabase (sprzątanie po koncie).
-  const NIECHRONIONE = ['kinds', ...BUILDERY, 'encryptEvent', 'eventBytes', 'applyEncryptedEvent', 'gateOpen', 'deleteDatabase'];
+  // Klucze bez bramki: z E2-PR2a (nie dotykają magazynu kolejki), gateOpen i resultSummary (czyste) oraz deleteDatabase
+  // (sprzątanie po koncie).
+  const NIECHRONIONE = ['kinds', ...BUILDERY, 'encryptEvent', 'eventBytes', 'applyEncryptedEvent', 'gateOpen', 'resultSummary', 'deleteDatabase'];
   const EID = '00000000-0000-4000-8000-000000000001';
   const ARGUMENTY = (k) => ({
     enqueue: ['snap', k], outboxCount: [], outboxList: [], outboxTake: [], outboxAccept: [[EID]],
     outboxReject: [[{ eid: EID, code: 'EVENT_REJECTED' }]], outboxFail: [[EID], { code: 'NETWORK' }], outboxRequeueStale: [],
     outboxDiscard: [[EID], { potwierdzone: true }],
+    quarantinePut: [ZMIANA, NIECZYTELNY, { slotId: SLOT, appVersion: '1.1.459' }], quarantineList: [], quarantineCount: [],
+    quarantineMinSeq: [{ slotId: SLOT }], quarantineRelease: [[1], { slotId: SLOT }],
   });
   const POLA = ['indexedDB', 'localStorage', 'crypto'];
   const makrozadania = async (n) => { for (let i = 0; i < n; i += 1) await new Promise((r) => { setImmediate(r); }); };
@@ -136,14 +155,13 @@ describe('U1: bramka zamknięta — każda chroniona operacja magazynu kończy s
     }
     return { w, odrzucona: odrzucona && String(odrzucona.message || odrzucona), odczyty };
   }
-  function chronione(ev) {
-    const lista = Object.keys(ev).filter((k) => !NIECHRONIONE.includes(k));
-    expect(lista.sort(), 'chronione klucze eksportu').toEqual(KLUCZE_MAGAZYNU.filter((k) => !NIECHRONIONE.includes(k)).sort());
-    return lista;
-  }
-  async function kazdaNaBramce(win, ev, k) {
+  // Klucze obecne w eksporcie poza niechronionymi (pełną listę sprawdza osobny przypadek niżej).
+  const chronione = (ev) => Object.keys(ev).filter((k) => !NIECHRONIONE.includes(k));
+  async function kazdaNaBramce(win, ev, k, tylko = null) {
     const arg = ARGUMENTY(k);
-    for (const nazwa of chronione(ev)) {
+    const lista = chronione(ev).filter((n) => !tylko || tylko.includes(n));
+    if (tylko) expect(lista.sort(), 'operacje do sprawdzenia').toEqual([...tylko].sort());
+    for (const nazwa of lista) {
       expect(arg[nazwa], `${nazwa}: nowy klucz eksportu bez argumentów w U1 (dopisać i sprawdzić bramkę)`).toBeTruthy();
       const r = await bezDostepu(win, () => ev[nazwa](...arg[nazwa]));
       expect(r, nazwa).toEqual({ w: { ok: false, powod: 'bramka' }, odrzucona: null, odczyty: { indexedDB: 0, localStorage: 0, crypto: 0 } });
@@ -203,6 +221,105 @@ describe('U1: bramka zamknięta — każda chroniona operacja magazynu kończy s
     o.zablokuj();
     await kazdaNaBramce(o.win, o.ev, { patientId: r.patientId, snapshotId: r.snapshotId });
   });
+
+  it('U1 (E2-PR2b2): chronione klucze eksportu = operacje kolejki i kwarantanny (14), każdy z argumentami w U1; niechronione — klucze E2-PR2a, gateOpen, resultSummary, deleteDatabase', () => {
+    const { win, timery } = okno();
+    okna.push({ timery });
+    const ev = win.VildaVault._eventLog;
+    expect(typeof ev.quarantinePut, 'API kwarantanny (quarantinePut)').toBe('function');
+    const lista = chronione(ev).sort();
+    expect(lista, 'chronione klucze eksportu').toEqual(KLUCZE_MAGAZYNU.filter((k) => !NIECHRONIONE.includes(k)).sort());
+    expect(lista).toHaveLength(14);
+    expect(Object.keys(ARGUMENTY(null)).sort(), 'argumenty U1 dla każdego chronionego klucza').toEqual(lista);
+    expect(Object.keys(ev).filter((k) => NIECHRONIONE.includes(k)).sort()).toEqual([...NIECHRONIONE].sort());
+  });
+
+  it('U1 (kwarantanna): każda operacja kwarantanny → bramka bez odczytu pól okna — sejf na adapterze w pamięci z rejestrem (zero wywołań magazynu) i na adapterze IndexedDB nad atrapą (bez wpisów vilda_sync_*), także przy zablokowanym sejfie', async () => {
+    const KW = KLUCZE_KWARANTANNY.filter((k) => k !== 'resultSummary');
+    const o = okno();
+    okna.push(o);
+    const v = o.win.VildaVault;
+    expect(typeof v._eventLog.quarantinePut, 'API kwarantanny (quarantinePut)').toBe('function');
+    const m = magazynZRejestrem(v.createInMemoryAdapter());
+    v.setStorageAdapter(m.adapter);
+    await v.createUser('Fikcyjne#Bramka!2026aa', { label: 'Fikcyjna Lekarka Bramka', iterations: 1000 });
+    await makrozadania(50);
+    const przed = m.wyw.length;
+    await kazdaNaBramce(o.win, v._eventLog, null, KW);
+    await makrozadania(20);
+    expect(m.wyw.slice(przed), 'wywołania magazynu sejfu').toEqual([]);
+    const o2 = await oknoMagazynu({ konta: 'A', bramka: false });
+    okna.push(o2);
+    await o2.cisza();
+    await kazdaNaBramce(o2.win, o2.ev, null, KW);
+    o2.zablokuj();
+    await kazdaNaBramce(o2.win, o2.ev, null, KW);
+    await o2.cisza();
+    expect(o2.idb.__atrapa.log.filter((w) => typeof w[1] === 'string' && w[1].startsWith('vilda_sync_'))).toEqual([]);
+    expect(o2.win.localStorage.klucze().filter((k) => k.startsWith(PRZEDROSTEK_URZADZENIA))).toEqual([]);
+  });
+
+  // Synchronicznie, na czas jednego wywołania: gettery pól okna (także pola bramki) liczą odczyty i rzucają, zegar (Date:
+  // konstruktor, wywołanie, now) liczy użycia; potem wszystko wraca.
+  function bezDostepuSync(win, wywolanie) {
+    const pola = [...POLA, 'VILDA_EVENT_LOG'];
+    const odczyty = Object.fromEntries(pola.map((k) => [k, 0]));
+    const oryginalne = {};
+    for (const k of pola) {
+      oryginalne[k] = Object.getOwnPropertyDescriptor(win, k);
+      Object.defineProperty(win, k, { get() { odczyty[k] += 1; throw new Error(`odczyt ${k}`); }, configurable: true });
+    }
+    const D = globalThis.Date;
+    let zegar = 0;
+    globalThis.Date = new Proxy(D, {
+      construct(t, a) { zegar += 1; return Reflect.construct(t, a); },
+      apply(t, ten, a) { zegar += 1; return Reflect.apply(t, ten, a); },
+      get(t, k) { if (k === 'now') return () => { zegar += 1; return D.now(); }; return Reflect.get(t, k); },
+    });
+    let s;
+    let blad = null;
+    try { s = wywolanie(); } catch (x) { blad = String(x && x.message); } finally {
+      globalThis.Date = D;
+      for (const k of pola) {
+        if (oryginalne[k]) Object.defineProperty(win, k, oryginalne[k]);
+        else delete win[k];
+      }
+    }
+    return { s, blad, obietnica: !!s && typeof s.then === 'function', zegar, odczyty };
+  }
+  it('U1: resultSummary (bez bramki) przy zamkniętej bramce i przy zablokowanym sejfie — pełne podsumowanie synchronicznie, bez odczytu pól okna (indexedDB, localStorage, crypto, VILDA_EVENT_LOG), bez zegara i bez wywołań magazynu sejfu', async () => {
+    const o = okno();
+    okna.push(o);
+    const v = o.win.VildaVault;
+    expect(typeof v._eventLog.resultSummary, 'API podsumowania wyniku (resultSummary)').toBe('function');
+    const m = magazynZRejestrem(v.createInMemoryAdapter());
+    v.setStorageAdapter(m.adapter);
+    await v.createUser('Fikcyjne#Bramka!2026aa', { label: 'Fikcyjna Lekarka Bramka', iterations: 1000 });
+    await makrozadania(50);
+    const blad = { status: 'apply-error', code: 'QuotaExceededError' };
+    Object.defineProperty(blad, 'error', { value: new Error('Fikcyjny błąd zapisu'), enumerable: false });
+    const PRZYPADKI = [
+      [{ status: 'applied', result: { mergedPatientCount: 1, addedPatientCount: 1, credentialUpdated: false, staleDevice: { warn: false }, clockSkew: null } },
+        { status: 'applied', liczniki: { mergedPatientCount: 1, addedPatientCount: 1 } }],
+      [NIECZYTELNY, { status: 'unreadable', reason: 'decrypt' }],
+      [{ status: 'busy', code: 'MERGE_BUSY' }, { status: 'busy', code: 'MERGE_BUSY' }],
+      [blad, { status: 'apply-error', code: 'QuotaExceededError' }],
+      [{ status: 'locked' }, { status: 'locked' }],
+      [{ status: 'session-changed' }, { status: 'session-changed' }],
+      [null, { status: 'nieznany' }],
+    ];
+    const ZERO = { indexedDB: 0, localStorage: 0, crypto: 0, VILDA_EVENT_LOG: 0 };
+    for (const stan of ['bramka zamknięta', 'sejf zablokowany']) {
+      if (stan === 'sejf zablokowany') v.lock('manual');
+      const przed = m.wyw.length;
+      for (const [w, ocz] of PRZYPADKI) {
+        const r = bezDostepuSync(o.win, () => v._eventLog.resultSummary(w));
+        expect(r, `${stan}: ${JSON.stringify(w)}`).toEqual({ s: ocz, blad: null, obietnica: false, zegar: 0, odczyty: ZERO });
+      }
+      await makrozadania(20);
+      expect(m.wyw.slice(przed), `${stan}: wywołania magazynu sejfu`).toEqual([]);
+    }
+  });
 });
 
 describe('U2(a): identyfikatory Bev_ i Bob_ tylko w bloku; _eventLog dokładnie raz', () => {
@@ -235,7 +352,7 @@ describe('U2(a): identyfikatory Bev_ i Bob_ tylko w bloku; _eventLog dokładnie 
     expect(ZRODLO.slice(0, a).endsWith('}\n'), 'blok zaczyna się od nowej linii po klamrze Bsl_usunPacjenta').toBe(true);
   });
 
-  it('U2(a) (E2-PR2b): znacznik magazynu kolejki dokładnie raz, za literałem Bev_EKSPORT, przed znacznikiem końca; Bob_ w części Bev_ wyłącznie w tym literale (11 kluczy)', () => {
+  it('U2(a) (E2-PR2b): znacznik magazynu kolejki dokładnie raz, za literałem Bev_EKSPORT, przed znacznikiem końca; Bob_ w części Bev_ wyłącznie w tym literale (17 kluczy magazynu kolejki i kwarantanny)', () => {
     znacznikRaz();
     expect(ZNACZNIK_MAGAZYNU.includes('Bob_'), 'tekst znacznika bez Bob_').toBe(false);
     const { a, z, i, bev } = czesci();
@@ -246,7 +363,8 @@ describe('U2(a): identyfikatory Bev_ i Bob_ tylko w bloku; _eventLog dokładnie 
     expect(ZRODLO.slice(lit.koniec, i).trim(), 'między literałem eksportu a znacznikiem magazynu tylko średnik').toBe(';');
     const wBev = [...bev.matchAll(ID_BOB)].map((m) => a + m.index);
     expect(wBev.filter((p) => p < lit.start || p >= lit.koniec), 'Bob_ w części Bev_ poza literałem eksportu').toEqual([]);
-    expect(wBev, 'Bob_ w literale eksportu: 11 kluczy magazynu').toHaveLength(11);
+    expect(KLUCZE_MAGAZYNU).toHaveLength(17);
+    expect(wBev, 'Bob_ w literale eksportu: 17 kluczy magazynu kolejki i kwarantanny').toHaveLength(KLUCZE_MAGAZYNU.length);
     const pary = [...lit.tekst.matchAll(/(\w+)\s*:\s*(Bob_[A-Za-z0-9_$]*)/g)].map((m) => m[1]);
     expect(pary.sort()).toEqual([...KLUCZE_MAGAZYNU].sort());
   });
@@ -444,6 +562,87 @@ describe('U2(c): wywołania zakazane i reguła domknięcia części magazynu', (
     expect(licznosci(analizuj('function Bob_konto(u) { I(); return I().getRegistryEntry(u); }')).join()).toContain('I:');
     expect(licznosci(analizuj('function Bob_inna(i, n) { return i.deleteDatabase(n); }')).join()).toContain('deleteDatabase@Bob_inna');
   });
+
+  // ── E2-PR2b2: funkcje kwarantanny i podsumowania wyniku ──
+  // Nazwa wewnętrzna klucza eksportu z literału Bev_EKSPORT.
+  function wewnetrzna(klucz) {
+    const m = literalEksportu().tekst.match(new RegExp(`\\b${klucz}\\s*:\\s*(B(?:ev|ob)_[A-Za-z0-9_$]*)`));
+    if (!m) throw new Error(`brak klucza ${klucz} w literale Bev_EKSPORT`);
+    return m[1];
+  }
+  // Domknięcie wywołań od funkcji start: przez odwołania do funkcji i stałych najwyższego poziomu kodu (obie części
+  // bloku); wynik — osiągnięte nazwy i wolne identyfikatory (spoza kodu) użyte w domknięciu, z miejscem użycia.
+  function domkniecie(zrodlo, start) {
+    const ast = parse(zrodlo, { ecmaVersion: 'latest', sourceType: 'script', ranges: true });
+    const sm = analyze(ast, { ecmaVersion: 2022, sourceType: 'script' });
+    const gora = new Map();
+    for (const s of ast.body) {
+      if (s.type === 'FunctionDeclaration') gora.set(s.id.name, s);
+      else if (s.type === 'VariableDeclaration') for (const d of s.declarations) if (d.id.type === 'Identifier') gora.set(d.id.name, d);
+    }
+    const referencje = sm.scopes.flatMap((sc) => sc.references);
+    const osiagniete = new Set();
+    const wolne = [];
+    const kolejka = [start];
+    while (kolejka.length) {
+      const nazwa = kolejka.shift();
+      if (osiagniete.has(nazwa)) continue;
+      const wezel = gora.get(nazwa);
+      if (!wezel) throw new Error(`brak deklaracji ${nazwa}`);
+      osiagniete.add(nazwa);
+      for (const r of referencje) {
+        const [p, k] = r.identifier.range;
+        if (p < wezel.range[0] || k > wezel.range[1]) continue;
+        if (!r.resolved) wolne.push([r.identifier.name, nazwa]);
+        else if (r.resolved.scope.type === 'global' && gora.has(r.identifier.name)) kolejka.push(r.identifier.name);
+      }
+    }
+    return { osiagniete, wolne };
+  }
+  // Wolne identyfikatory dozwolone w czystej funkcji (bez okna, stanu logowania, sejfu, rejestru, zegara i losowości).
+  const CZYSTE = new Set(['Object', 'Array', 'Number', 'String', 'Boolean', 'JSON', 'Math', 'RegExp', 'Set', 'Map', 'isFinite', 'undefined', 'NaN', 'Infinity']);
+  const nieczyste = (zrodlo, start) => domkniecie(zrodlo, start).wolne.filter(([n]) => !CZYSTE.has(n)).map(([n, f]) => `${n} w ${f}`);
+
+  it('U2(c) (E2-PR2b2): funkcje eksportu kwarantanny i podsumowania wyniku to deklaracje najwyższego poziomu części Bob_ (obejmuje je lista tekstowa i reguła domknięcia); operacje kwarantanny async, podsumowanie wyniku nie', () => {
+    znacznikRaz();
+    const ast = parse(czesci().bob, { ecmaVersion: 'latest', sourceType: 'script' });
+    const dekl = new Map(ast.body.filter((s) => s.type === 'FunctionDeclaration').map((s) => [s.id.name, s]));
+    for (const k of KLUCZE_KWARANTANNY) {
+      const n = wewnetrzna(k);
+      expect(n.startsWith('Bob_'), `${k} → ${n}`).toBe(true);
+      expect(dekl.has(n), `${k}: deklaracja ${n} w części Bob_`).toBe(true);
+      expect(dekl.get(n).async, `${k}: async`).toBe(k !== 'resultSummary');
+      expect(dekl.get(n).generator, `${k}: bez generatora`).toBe(false);
+    }
+  });
+
+  it('U2(c) (E2-PR2b2): resultSummary jest czysta — w domknięciu wywołań (funkcje i stałe bloku osiągalne z niej) wolne identyfikatory tylko z listy czystych (bez v, b, T, I, ne, Bses_, Date, Promise)', () => {
+    znacznikRaz();
+    const n = wewnetrzna('resultSummary');
+    const { osiagniete } = domkniecie(blok().tekst, n);
+    expect(osiagniete.has(n)).toBe(true);
+    expect(nieczyste(blok().tekst, n)).toEqual([]);
+    expect([...osiagniete].filter((x) => ['Bob_wejscie', 'Bob_bramka', 'Bob_teraz', 'Bob_wiek', 'Bob_konto', 'Bob_otworz', 'Bob_idb'].includes(x)), 'funkcje wejścia, chwili i bazy').toEqual([]);
+  });
+
+  it('samokontrola domknięcia czystości: odwołanie (także przez funkcję pomocniczą albo stałą) do v, Date, I(), b, T, Bses_ albo Promise jest czerwone; czyste funkcje i stałe bloku zielone', () => {
+    const czerwone = [
+      'function Bob_s(w) { return Bob_p(w); } function Bob_p(w) { return v.x; }',
+      'function Bob_s(w) { return { t: Bob_teraz() }; } function Bob_teraz() { return new Date().toISOString(); }',
+      'function Bob_s(w) { return I().getRegistryEntry(b); }',
+      'const Bob_X = Object.freeze([Bob_f]); function Bob_s(w) { return Bob_X[0](w); } function Bob_f() { return Bses_opcje(null); }',
+      'function Bob_s(w) { return Promise.resolve(w); }',
+      'function Bob_s(w) { return Bev_obiekt(w) && T(); } function Bev_obiekt(x) { return !!x; }',
+      'function Bob_s(w) { return Bev_p(w); } function Bev_p(w) { return Bob_q(w); } function Bob_q() { return Date.now(); }',
+    ];
+    for (const kod of czerwone) expect(nieczyste(kod, 'Bob_s').length, kod).toBeGreaterThan(0);
+    const zielone = [
+      "const Bob_KOD = /^[A-Z]+$/; const Bob_P = Object.freeze(['a']); function Bob_s(w) { return Bev_obiekt(w) && Bob_KOD.test(w.code) && Bob_P.indexOf(w.reason) >= 0 ? { status: String(w.status) } : { status: 'nieznany' }; } function Bev_obiekt(x) { return !!x && typeof x === 'object' && !Array.isArray(x); }",
+      'function Bob_s(w) { const l = {}; Object.keys(w).forEach(function (k) { if (/Count$/.test(k) && Number.isSafeInteger(w[k])) l[k] = w[k]; }); return JSON.parse(JSON.stringify(l)); }',
+      'function Bob_s(w) { return Bob_t(w); } function Bob_t(w) { return w; } function Bob_inna() { return v.indexedDB; }',
+    ];
+    for (const kod of zielone) expect(nieczyste(kod, 'Bob_s'), kod).toEqual([]);
+  });
 });
 
 describe('U2(d): najwyższy poziom bloku — tylko deklaracje bez skutków przy ładowaniu', () => {
@@ -513,10 +712,10 @@ describe('U2(d): najwyższy poziom bloku — tylko deklaracje bez skutków przy 
 });
 
 describe('U2(e): eksport _eventLog zamrożony, klucze dokładnie z listy', () => {
-  it('Object.isFrozen, klucze = lista E2-PR2a i 11 kluczy magazynu kolejki (29), kinds zamrożone (14 rodzajów), funkcje', () => {
+  it('Object.isFrozen, klucze = lista E2-PR2a, 11 kluczy magazynu kolejki i 6 kluczy kwarantanny i podsumowania wyniku (35), kinds zamrożone (14 rodzajów), funkcje', () => {
     expect(typeof eksport).toBe('object');
     expect(Object.isFrozen(eksport)).toBe(true);
-    expect(KLUCZE_EKSPORTU).toHaveLength(29);
+    expect(KLUCZE_EKSPORTU).toHaveLength(35);
     expect(Object.keys(eksport).sort()).toEqual([...KLUCZE_EKSPORTU].sort());
     expect(Object.isFrozen(eksport.kinds)).toBe(true);
     expect(eksport.kinds).toEqual(RODZAJE);
@@ -552,6 +751,8 @@ describe('U4: zwykłe użycie sejfu przy zamkniętej bramce nie tworzy bazy kole
       enqueue: ['snap', { patientId: r.patientId, snapshotId: r.snapshotId }], outboxCount: [], outboxList: [], outboxTake: [], outboxAccept: [[EID]],
       outboxReject: [[{ eid: EID, code: 'EVENT_REJECTED' }]], outboxFail: [[EID], { code: 'NETWORK' }], outboxRequeueStale: [],
       outboxDiscard: [[EID], { potwierdzone: true }], gateOpen: [],
+      quarantinePut: [ZMIANA, NIECZYTELNY, { slotId: SLOT, appVersion: '1.1.459' }], quarantineList: [], quarantineCount: [],
+      quarantineMinSeq: [{ slotId: SLOT }], quarantineRelease: [[1], { slotId: SLOT }], resultSummary: [NIECZYTELNY],
     };
     for (const k of Object.keys(arg)) if (typeof o.ev[k] === 'function') await o.ev[k](...arg[k]);
     await o.cisza();

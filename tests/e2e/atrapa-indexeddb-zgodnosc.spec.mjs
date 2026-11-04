@@ -3,10 +3,10 @@
 // próba w nowym kontekście przeglądarki).
 // Test 1 — scenariusze p1–p34 (tests/support/atrapa-indexeddb-scenariusze.mjs) dają w Chromium literał SLAD_CHROMIUM,
 // który atrapa odtwarza w samoteście (tests/unit/atrapa-indexeddb.test.mjs, A1).
-// Test 2 — scenariusz magazynu kolejki (tests/support/scenariusz-magazynu.mjs) na sejfie z dysku (vilda_crypto.js,
-// vilda_retention.js, vilda_vault.js) z bramką dziennika zdarzeń otwartą tylko na tej stronie daje w Chromium literał
-// SLAD_MAGAZYNU nagrany na atrapie (tests/unit/sync-dziennik-magazyn.test.mjs). Drugie okno tej samej strony
-// (window.open) trzyma połączenie z bazą kolejki podczas kasowania.
+// Test 2 — scenariusz magazynu kolejki i kwarantanny (tests/support/scenariusz-magazynu.mjs) na sejfie z dysku
+// (vilda_crypto.js, vilda_retention.js, vilda_vault.js) z bramką dziennika zdarzeń otwartą tylko na tej stronie daje
+// w Chromium literał SLAD_MAGAZYNU nagrany na atrapie (tests/unit/sync-dziennik-magazyn.test.mjs). Drugie okno tej samej
+// strony (window.open) trzyma połączenie z bazą kolejki podczas kasowania.
 // Przy różnicy komunikat asercji i załącznik testu podają wersję przeglądarki i różniące się klucze z wartościami
 // (Chromium i literał). Dane fikcyjne.
 import { expect, test } from '@playwright/test';
@@ -40,7 +40,7 @@ test.describe('Atrapa IndexedDB a prawdziwy Chromium', () => {
     expect(r, `klucze różne od SLAD_CHROMIUM: ${opis}`).toEqual([]);
   });
 
-  test('scenariusz magazynu kolejki w Chromium = literał SLAD_MAGAZYNU z atrapy', async ({ page, browser }, testInfo) => {
+  test('scenariusz magazynu kolejki i kwarantanny w Chromium = literał SLAD_MAGAZYNU z atrapy', async ({ page, browser }, testInfo) => {
     const pliki = Object.fromEntries(SKRYPTY.map((p) => [p, readFileSync(path.join(ROOT, p), 'utf8')]));
     await page.context().route(`${ADRES}**`, (route) => {
       const plik = new URL(route.request().url()).pathname.slice(1);

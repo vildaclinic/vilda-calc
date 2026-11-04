@@ -4,7 +4,8 @@
 // skrypt startowy strony (przed skryptami sejfu) zapisuje nazwy baz z każdego indexedDB.open i indexedDB.deleteDatabase
 // oraz klucze każdego Storage.prototype.setItem. Trzy tryby logowania („Komputer prywatny”, „Komputer w pracy”,
 // „Zaloguj jednorazowo”) oraz strona z elementem o id VILDA_EVENT_LOG (pole okna wskazuje element, a nie wartość true —
-// bramka zostaje zamknięta). Dane wyłącznie fikcyjne.
+// bramka zostaje zamknięta: dopisanie i operacje kwarantanny odmawiają, podsumowanie wyniku zastosowania zdarzenia jako
+// funkcja czysta działa). Dane wyłącznie fikcyjne.
 import { expect, test } from '@playwright/test';
 
 const PAGE = '/__fikcyjny-dziennik-zdarzen-uspienie.html';
@@ -113,6 +114,37 @@ test.describe('Dziennik zdarzeń: magazyn kolejki uśpiony w prawdziwej przeglą
       };
     }, { haslo: HASLO, karta: KARTA });
     expect(w).toEqual({ pole: true, bramka: false, enqueue: { ok: false, powod: 'bramka' } });
+    bezKolejki(await slad(page));
+  });
+
+  test('element o id VILDA_EVENT_LOG na stronie: operacje kwarantanny odmawiają (bramka) bez otwarcia bazy kolejki, podsumowanie wyniku działa', async ({ page }) => {
+    await strona(page, { element: true });
+    const w = await page.evaluate(async ({ haslo }) => {
+      const v = window.VildaVault;
+      const ev = v._eventLog;
+      const brak = ['quarantinePut', 'quarantineList', 'quarantineCount', 'quarantineMinSeq', 'quarantineRelease', 'resultSummary']
+        .filter((k) => typeof ev[k] !== 'function');
+      if (brak.length) return { brak };
+      await v.createUser(haslo, { label: 'Fikcyjna Lekarka Bramka Kwarantanny', iterations: 10000 });
+      const slotId = '1a2b3c4d'.repeat(8);
+      const wynik = { status: 'unreadable', reason: 'decrypt' };
+      return {
+        brak,
+        bramka: ev.gateOpen(),
+        zapis: await ev.quarantinePut({ seq: 1, payload: { iv: 'Rmlrc3lqbmVJVjEy', data: 'AAAA' } }, wynik, { slotId, appVersion: null }),
+        lista: await ev.quarantineList(),
+        listaSlotu: await ev.quarantineList({ slotId }),
+        licznik: await ev.quarantineCount(),
+        minimum: await ev.quarantineMinSeq({ slotId }),
+        zwolnienie: await ev.quarantineRelease([1], { slotId }),
+        podsumowanie: ev.resultSummary(wynik),
+      };
+    }, { haslo: HASLO });
+    const BRAMKA = { ok: false, powod: 'bramka' };
+    expect(w).toEqual({
+      brak: [], bramka: false, zapis: BRAMKA, lista: BRAMKA, listaSlotu: BRAMKA, licznik: BRAMKA, minimum: BRAMKA, zwolnienie: BRAMKA,
+      podsumowanie: { status: 'unreadable', reason: 'decrypt' },
+    });
     bezKolejki(await slad(page));
   });
 });
