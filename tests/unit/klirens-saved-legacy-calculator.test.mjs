@@ -4,6 +4,7 @@ import { loadBrowserScript } from '../support/load-browser-script.mjs';
 const w = {};
 for (const file of [
   'clcr_uag_reference_data.js', 'clcr_uag.js',
+  'clcr_serum_anion_gap_data.js', 'clcr_serum_anion_gap.js', 'clcr_serum_anion_gap_persistence.js',
   'clcr_tmp_gfr_reference_data.js', 'clcr_tmp_gfr.js', 'clcr_tmp_gfr_persistence.js',
   'clcr_ph_reference_data.js', 'clcr_ph.js', 'clcr_ph_persistence.js',
   'clcr_ua_reference_data.js', 'clcr_ua.js', 'clcr_ua_persistence.js',

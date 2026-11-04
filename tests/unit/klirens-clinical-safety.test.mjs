@@ -13,6 +13,8 @@ function loadSafety() {
     'utf8'
   );
   const browserGlobal = {};
+  const agSource = fs.readFileSync(path.join(repositoryRoot, 'clcr_serum_anion_gap.js'), 'utf8');
+  new Function('window', 'globalThis', agSource)(browserGlobal, browserGlobal);
   const uagSource = fs.readFileSync(path.join(repositoryRoot, 'clcr_uag.js'), 'utf8');
   new Function('window', 'globalThis', uagSource)(browserGlobal, browserGlobal);
   const execute = new Function('window', 'globalThis', source);

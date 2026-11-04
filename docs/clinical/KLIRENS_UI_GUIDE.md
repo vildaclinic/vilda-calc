@@ -386,6 +386,50 @@ pozostaje nieznany; historyczne DZM zachowuje swoje pochodzenie podczas
 odczytu i edycji. Formularz, zapis, Badania i Notatki korzystają ze zgodnej
 precyzji i neutralnej oceny. Kontrakt: [POTASSIUM_INDEX.md](POTASSIUM_INDEX.md).
 
+## AG surowicy bez potasu — decyzja 04.11.2026
+
+`AGs` wymaga tylko **sodu, chlorków i wodorowęglanów / CO₂ całkowitego**
+z tego samego pobrania krwi, w mmol/L. Krótka uwaga wyjaśnia równoważność
+mEq/L; nie dodawaj jednostkowych duplikatów. Wiek bierze się z istniejącego
+kontekstu wyłącznie do normy. Bez nowego pytania o wiek, płeć, masę,
+wzrost, AKI, stabilność nerek, IFCC, pH, laboratorium lub analizator.
+Nie dodawaj trybu gotowego AG. W gazometrii chodzi o aktualne HCO₃;
+ograniczenia porównywalności z panelem biochemicznym należą do Szczegółów.
+
+Jedna karta B łączy **„AG bez korekcji”** i **„Norma dla wieku”** w mmol/L.
+Przyjęty profil Mayo obejmuje **od ukończenia 7 lat: 7–15 mmol/L**,
+obie granice włączone, obie płcie. Niski i wysoki wynik są bursztynowe;
+liczba oraz jednostka normy pozostają neutralne. Nie wywodź czerwonej
+pilności z samego AG. Granice osi są nazwane, a pod nią znajduje się
+**„Norma: od 7 do 15 mmol/L.”** Fragment skali −10…40 nie jest granicą
+możliwego wyniku. Notka **„Przyjęty zakres; norma na wydruku może się różnić.”**
+oraz źródło w Szczegółach nie sugerują znajomości laboratorium pacjenta.
+
+Poniżej 7 lat lub bez wieku zachowaj liczbę, neutralną kartę i gotowość
+**3/3**, bez osi normy i pytań do „pełnej interpretacji”. Krótko nazwij
+ograniczenie przyjętego źródła; nie twierdź, że norm nie ma nigdzie.
+Zero i ujemny AG są możliwe; przy dostępnej normie 7–15 są niskie,
+nie automatycznie neutralne. Małe wyniki zachowują znak i nie stają się
+zerem; skrót **≈** nie zmienia klasyfikacji.
+
+Zwinięte **„Uwzględnij albuminę (opcjonalnie)”** ma jedno pole g/L lub g/dL.
+Brak albuminy nie zakłada 40 g/L i nie blokuje AG. Jej uwzględnienie daje
+mniejszy wiersz **„Po uwzględnieniu albuminy” w tej samej karcie**, bez
+drugiego wyniku głównego, osi, automatycznej kategorii lub osobnego badania.
+Przy normie pisz **„Norma powyżej dotyczy AG bez korekcji.”**; bez normy
+**„Przeliczenie do albuminy 40 g/L, bez automatycznej oceny.”**
+Błędna wpisana albumina zachowuje poprawny AG i ma lokalny błąd; wymaga
+poprawy lub usunięcia przed zapisem. Czyszczenie/zmiana pacjenta nie
+przenosi jej do innej osoby. 40 g/L nie jest dolną normą albuminy,
+a przy wartości >40 korekta zmniejsza AG.
+
+Stałe szerokości, wspólny poziom jednostek, równe odstępy i działający
+fokus obowiązują również po rozwinięciu albuminy, zmianie jednostki,
+błędzie lub długim wyniku. Zapis pozostaje jednym pomiarem `AGs` w grupie
+krwi. Badania, Notatki, raport i historia zachowują surowy wynik i ocenę
+z dnia zapisu, bez dzisiejszego wieku lub norm. Kontrakt i źródła:
+[SERUM_ANION_GAP.md](SERUM_ANION_GAP.md).
+
 ## Makieta i sprawdzenie przed przekazaniem
 
 Każdą kolejną zmianę wizualną w audycie przedstaw najpierw do akceptacji jako

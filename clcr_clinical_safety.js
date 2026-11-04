@@ -379,14 +379,13 @@
   }
 
   function computeAnionGapWithoutPotassium(input) {
-    const sodium = toFiniteNumber(input && input.sodium);
-    const chloride = toFiniteNumber(input && input.chloride);
-    const bicarbonate = toFiniteNumber(input && input.bicarbonate);
-    if (sodium === null || chloride === null || bicarbonate === null) {
-      return null;
-    }
-    const value = sodium - chloride - bicarbonate;
-    return Number.isFinite(value) ? value : null;
+    // Share strict decimal validation and exact subtraction with the form and
+    // saved editor. Negative AG is valid; negative concentrations are not.
+    const engine = root?.VildaClcrSerumAnionGap ||
+      (typeof require === "function" ? require("./clcr_serum_anion_gap.js") : null);
+    if (!engine || typeof engine.evaluate !== "function") return null;
+    const result = engine.evaluate({ sodiumValue: input?.sodium, chlorideValue: input?.chloride, bicarbonateValue: input?.bicarbonate });
+    return result.valid === true ? result.rawValue : null;
   }
 
   function computeUrineAnionGap(input) {

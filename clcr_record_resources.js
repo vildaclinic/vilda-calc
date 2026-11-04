@@ -34,15 +34,16 @@
     ["clcr_phosphorus_creatinine_persistence.js?v=1", "ClcrPhosphorusCreatininePersistence"],
     ["clcr_protein_creatinine_persistence.js?v=1", "ClcrProteinCreatininePersistence"],
     ["clcr_potassium_index_persistence.js?v=1", "ClcrPotassiumIndexPersistence"],
+    ["clcr_serum_anion_gap_persistence.js?v=1", "ClcrSerumAnionGapPersistence"],
     // readSaved is pure and needed for the new capture format. Its recalculate
     // method is not called while opening history and resolves engines lazily.
-    ["clcr_saved_calculation.js?v=17", "ClcrSavedCalculation"],
-    ["clcr_saved_results.js?v=17", "ClcrSavedResults"],
+    ["clcr_saved_calculation.js?v=18", "ClcrSavedCalculation"],
+    ["clcr_saved_results.js?v=18", "ClcrSavedResults"],
     ["clcr_saved_results_view.js?v=2", "ClcrSavedResultsView"],
   ];
   const editor = [
     ["clcr_collection_duration.js?v=5", "ClcrCollectionDuration"],
-    ["clcr_clinical_safety.js?v=13", "ClcrClinicalSafety"],
+    ["clcr_clinical_safety.js?v=14", "ClcrClinicalSafety"],
     ["clcr_stone_safety.js?v=1", "ClcrStoneSafety"],
     ["clcr_dialysis_safety.js?v=1", "ClcrDialysisSafety"],
     ["clcr_extended_egfr.js?v=1", "ClcrExtendedEgfr"],
@@ -58,10 +59,12 @@
     ["clcr_phosphorus_creatinine_data.js?v=1", "VildaClcrPhosphorusCreatinineData"],
     ["clcr_protein_creatinine_data.js?v=1", "VildaClcrProteinCreatinineData"],
     ["clcr_potassium_index_data.js?v=1", "VildaClcrPotassiumIndexData"],
+    ["clcr_serum_anion_gap_data.js?v=1", "VildaClcrSerumAnionGapData"],
     ["clcr_magnesium_calcium.js?v=1", "VildaClcrMagnesiumCalcium"],
     ["clcr_phosphorus_creatinine.js?v=1", "VildaClcrPhosphorusCreatinine"],
     ["clcr_protein_creatinine.js?v=1", "VildaClcrProteinCreatinine"],
     ["clcr_potassium_index.js?v=1", "VildaClcrPotassiumIndex"],
+    ["clcr_serum_anion_gap.js?v=1", "VildaClcrSerumAnionGap"],
     ["clcr_oxcr_reference_data.js?v=1", "VildaClcrOxcrReferenceData"],
     ["clcr_oxcr.js?v=1", "VildaClcrOxcr"],
     ["clcr_citcr_reference_data.js?v=1", "VildaClcrCitcrReferenceData"],
@@ -99,8 +102,8 @@
     ["clcr_measured_clearance_reference_data.js?v=1", "ClcrMeasuredClearanceReferenceData"],
     ["clcr_measured_clearance_reference.js?v=1", "ClcrMeasuredClearanceReference"],
     ["clcr_result_presentation.js?v=8", "ClcrResultPresentation"],
-    ["clcr_saved_legacy_calculator.js?v=17", "ClcrSavedLegacyCalculator"],
-    ["clcr_result_details.js?v=13", "ClcrResultDetails"],
+    ["clcr_saved_legacy_calculator.js?v=18", "ClcrSavedLegacyCalculator"],
+    ["clcr_result_details.js?v=14", "ClcrResultDetails"],
   ];
   function load(path, name, style = false) {
     if (name && root[name]) return Promise.resolve();
