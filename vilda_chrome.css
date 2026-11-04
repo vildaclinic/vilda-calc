@@ -2820,6 +2820,9 @@ body.vilda-header-menu .chrome-reminders-btn[data-state=loading] .chrome-reminde
   width: 18px;
   height: 18px
 }
+.vilda-header-menu .chrome-header-search button[hidden] {
+  display: none!important
+}
 @media(min-width:992px) {
   html:not(.vilda-phone) .vilda-header-menu .chrome-chips {
     position: absolute;

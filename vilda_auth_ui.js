@@ -1227,6 +1227,12 @@ function remB22Create(host, full, options) {
   heading.appendChild(make('h2', 'vild-rem-ttl', 'Przypomnienia'));
   heading.firstChild.tabIndex = -1;
   var subtitle = make('div', 'vb22-subtitle'); heading.appendChild(subtitle); header.appendChild(heading);
+  function headerIcon(path) {
+    var icon = make('span', 'vb22-header-icon');
+    icon.setAttribute('aria-hidden', 'true');
+    icon.innerHTML = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" focusable="false"><path d="' + path + '"/></svg>';
+    return icon;
+  }
   var tools = make('div', 'vb22-tools');
   var privacyButton = btn('', 'vb22-icon vb22-privacy-toggle', function () {});
   tools.appendChild(privacyButton);
@@ -1235,6 +1241,7 @@ function remB22Create(host, full, options) {
     if (state.tab === 'plans') { if (!full) remB22Request({ carePlans: true, newCarePlan: true }); else if (careView) careView.create(); return; }
     if (!full) remB22Request({ newReminder: true }); else addReminder();
   });
+  addButton.appendChild(headerIcon('M12 5v14M5 12h14'));
   var addLabel = make('span', 'vb22-create-label', 'Dodaj +'); addButton.appendChild(addLabel);
   actionZone.appendChild(addButton); addButton.setAttribute('aria-label', 'Dodaj przypomnienie');
   function openCareTemplates() {
@@ -1243,7 +1250,9 @@ function remB22Create(host, full, options) {
   }
   var templateButton = btn('Moje szablony', 'vb22-add vb22-template-open', openCareTemplates); templateButton.hidden = true; actionZone.appendChild(templateButton);
   tools.appendChild(actionZone);
-  tools.appendChild(btn(full ? '×' : '⛶', 'vb22-icon vb22-exit', full ? closed : function () { remB22Request({ globalSearch: state.tab === 'search' && searchView ? searchView.getContext() : state.tab === 'history', carePlans: state.tab === 'plans' }); }));
+  var exitButton = btn('', 'vb22-icon vb22-exit', full ? closed : function () { remB22Request({ globalSearch: state.tab === 'search' && searchView ? searchView.getContext() : state.tab === 'history', carePlans: state.tab === 'plans' }); });
+  exitButton.appendChild(headerIcon(full ? 'm6 6 12 12M18 6 6 18' : 'M9 4H4v5M15 4h5v5M20 15v5h-5M9 20H4v-5'));
+  tools.appendChild(exitButton);
   tools.lastChild.setAttribute('aria-label', full ? 'Zamknij Przypomnienia' : 'Powiększ Przypomnienia');
   header.appendChild(tools); root.appendChild(header);
   var tabs = make('nav', 'vb22-tabs'); tabs.setAttribute('aria-label', 'Widok Przypomnień');
@@ -1960,7 +1969,7 @@ function remB22Create(host, full, options) {
 function remB22Styles() {
   if (!i.document || !i.document.head || !i.document.createElement) return;
   if (i.document.querySelector('link[href*="vilda_reminders.css"]')) return;
-  var link = i.document.createElement('link'); link.rel = 'stylesheet'; link.href = 'vilda_reminders.css?v=8'; link.dataset.remindersB22 = 'true'; i.document.head.appendChild(link);
+  var link = i.document.createElement('link'); link.rel = 'stylesheet'; link.href = 'vilda_reminders.css?v=9'; link.dataset.remindersB22 = 'true'; i.document.head.appendChild(link);
 }
 remB22Styles();
 
