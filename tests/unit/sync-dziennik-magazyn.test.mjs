@@ -1,5 +1,5 @@
-// P-DZIENNIK-ZDARZEN (E2-PR2b) — magazyn kolejki vilda_sync_<userId> wersja 1 (VildaVault._eventLog, uśpione: kod
-// produkcyjny go nie woła). Prawdziwy sejf w oknie uprzęży tests/support/okno-magazynu.mjs: adapter IndexedDB sejfu nad
+// P-DZIENNIK-ZDARZEN (E2-PR2b1, E2-PR2b2) — magazyn kolejki i kwarantanny vilda_sync_<userId> wersja 1
+// (VildaVault._eventLog, uśpione: kod produkcyjny go nie woła). Prawdziwy sejf w oknie uprzęży tests/support/okno-magazynu.mjs: adapter IndexedDB sejfu nad
 // atrapą tests/support/atrapa-indexeddb.mjs (tryb „Komputer prywatny”), bramka (pole okna VILDA_EVENT_LOG) otwarta, jeśli
 // przypadek nie mówi inaczej, sztuczny zegar (tylko Date), zadanie w tle sejfu po zalogowaniu odpalane jawnie. Dane
 // WYŁĄCZNIE FIKCYJNE („Testowy Jan…”, „Fikcyjna notatka…”), bez PESEL.
@@ -24,6 +24,15 @@
 //   M7  unreadable, M8 oversize.
 //   M9  outboxTake: limit, maxBytes z extraBytes, rozmiar ciała partii, bez przeskoku; atomowość (M9c), wiersz w locie
 //       kończy wybór (M9d), koszt kursora (M9e). M10 outboxRequeueStale. M11 pozostałe zmiany stanu.
+//   M12 kwarantanna: wynik nieczytelny prawdziwego applyEncryptedEvent → quarantinePut tworzy bazę; wiersz z treścią
+//       wiersza /changes i powodem z wyniku (pusty iv, data nie-napis, przyszłe z i aad zapisane; pola formatu złego
+//       typu pominięte z formatInny); drugi wpis [slotId, seq] aktualizuje tylko appVersion i reason; sloty osobno
+//       (lista, minimum, zwolnienie); argument tylko dla wyniku, slotId, seq i appVersion; odczyty i zwolnienie nie
+//       tworzą bazy; zapis — jedno otwarcie i jedna transakcja, każde pole argumentów czytane raz; zwolnienie sprawdza
+//       istnienie bez treści wiersza. M12b wszystkie sloty (lista bez slotId, licznik z samych kluczy). M13
+//       resultSummary: sześć statusów prawdziwego applyEncryptedEvent, applied tylko z licznikami o nazwie z liter
+//       zakończonej na Count, każde pole wyniku czytane raz, pole rzucające → nieznany; wartownik z metadanych ładunku
+//       i komunikatu błędu nie przechodzi do podsumowania.
 //   M14 baza z innej wersji albo innym schematem (także sklepu quarantine); M15 versionchange w trakcie (kasowanie w
 //       drugim oknie, zmiana wersji w drugim oknie — M15d); M16 deleteDatabase (także w tym dokumencie w trakcie
 //       otwierania bazy przez dopisanie).
@@ -32,11 +41,14 @@
 //   M22 identyfikator urządzenia (osobny klucz localStorage dla każdego konta, M22b).
 //   M23 wartownik treści; M24 przepływ bez sieci (bliźniak); M25 scalanie nie dopisuje; M26 wiele okien.
 //   M27 kody błędów; M28 wyjątek nieprzewidziany; M29 outboxList; M30 negatywy.
+//   Przypadki „(kwarantanna)” przy M14–M21, M23, M27, M28 i M30: te same zasady dla operacji kwarantanny (schemat,
+//       versionchange i kasowanie — także kasowanie w tym dokumencie, tryby, wejście i limit czasu, sprawdzenia sesji
+//       (P-SESJA-ZAPISU), blokada, konto spoza rejestru, wartownik, kody błędów, negatywy).
 //   Scenariusz magazynu (tests/support/scenariusz-magazynu.mjs) na atrapie = literał SLAD_MAGAZYNU; ten sam scenariusz
 //       w Chromium porównuje z nim tests/e2e/atrapa-indexeddb-zgodnosc.spec.mjs. E2_SLAD_MAGAZYNU=plik zapisuje wynik
 //       scenariusza (nagranie literału).
-// Przypadki kwarantanny i podsumowania wyniku dochodzą razem z ich API (E2-PR2b2).
-// Każdy przypadek zaczyna od sprawdzenia, że API magazynu istnieje (czerwony na bazie bez magazynu).
+// Każdy przypadek zaczyna od sprawdzenia, że API magazynu istnieje (czerwony na bazie bez magazynu), a przypadek
+// kwarantanny i podsumowania wyniku — że istnieje API kwarantanny (czerwony na bazie bez kwarantanny).
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { inspect } from 'node:util';
 import { writeFileSync } from 'node:fs';
@@ -55,8 +67,11 @@ const ustaw = (ms) => { teraz = ms; vi.setSystemTime(ms); };
 const krok = (ms = 1000) => ustaw(teraz + ms);
 const iso = (ms = teraz) => new Date(ms).toISOString();
 const makrozadania = async (n) => { for (let i = 0; i < n; i += 1) await new Promise((r) => { setImmediate(r); }); };
+const KLUCZE_KWARANTANNY = ['quarantinePut', 'quarantineList', 'quarantineCount', 'quarantineMinSeq', 'quarantineRelease', 'resultSummary'];
 const KLUCZE_MAGAZYNU = ['gateOpen', 'enqueue', 'outboxCount', 'outboxList', 'outboxTake', 'outboxAccept', 'outboxReject',
-  'outboxFail', 'outboxRequeueStale', 'outboxDiscard', 'deleteDatabase'];
+  'outboxFail', 'outboxRequeueStale', 'outboxDiscard', 'deleteDatabase', ...KLUCZE_KWARANTANNY];
+// Wyniki synchroniczne (bez obietnicy): bramka i podsumowanie wyniku.
+const SYNCHRONICZNE = ['gateOpen', 'resultSummary'];
 const POLA_WIERSZA = ['attempts', 'bytes', 'createdAtISO', 'eid', 'entityKey', 'env', 'inflightAtISO', 'kind', 'lastAttemptAtISO',
   'lastError', 'seqLocal', 'setId', 'state'];
 const POLA_ODMOWY = ['ok', 'powod', 'code'];
@@ -72,6 +87,7 @@ function sprawdzWynik(k, w, { jawny = false } = {}) {
   WYNIKI.push({ k, ok: w && w.ok, code: w && w.code, jawny });
   if (k === 'gateOpen') return;
   if (!w || typeof w !== 'object') throw new Error(`${k}: wynik nie jest obiektem`);
+  if (SYNCHRONICZNE.includes(k) && typeof w.then === 'function') throw new Error(`${k}: wynik nie jest synchroniczny`);
   for (const p of ['message', 'stack', 'cause', 'error']) if (p in w) throw new Error(`${k}: wynik niesie pole ${p}`);
   for (const x of Object.values(w)) if (x instanceof Error) throw new Error(`${k}: wynik niesie obiekt błędu`);
   if (w.ok === false && !Object.keys(w).every((x) => POLA_ODMOWY.includes(x))) throw new Error(`${k}: odmowa z polami spoza ok/powod/code: ${Object.keys(w)}`);
@@ -80,7 +96,7 @@ function sprawdzWynik(k, w, { jawny = false } = {}) {
 function opakuj(ev) {
   const api = {};
   for (const k of KLUCZE_MAGAZYNU) {
-    if (k === 'gateOpen') { api[k] = (...a) => { const w = ev[k](...a); sprawdzWynik(k, w); return w; }; continue; }
+    if (SYNCHRONICZNE.includes(k)) { api[k] = (...a) => { const w = ev[k](...a); sprawdzWynik(k, w); return w; }; continue; }
     api[k] = async (...a) => {
       let w;
       try { w = await ev[k](...a); } catch (x) { throw new Error(`${k}: obietnica odrzucona (${x && x.name})`); }
@@ -213,6 +229,90 @@ async function zepsujNotatke(o, id) {
 const wpisyLogu = (o, z, rodzaj) => o.logKolejki(z).filter((w) => w[0] === rodzaj);
 
 const d1 = () => it('API magazynu kolejki istnieje (VildaVault._eventLog.enqueue)', async () => { await nowe(); });
+
+// ── Kwarantanna i podsumowanie wyniku: dane fikcyjne i pomocnicze ─────────────────────────────────────────────────────
+// Fikcyjne identyfikatory slotów (64 znaki hex małymi literami); w porządku kluczy SLOT_STARY < SLOT < SLOT_INNY.
+const SLOT = '1a2b3c4d'.repeat(8);
+const SLOT_STARY = '0f0e0d0c'.repeat(8);
+const SLOT_INNY = 'ffeeddcc'.repeat(8);
+const WERSJA = '1.1.459';
+const WERSJA2 = '1.1.460';
+// 20 liczników scalania (wynik applied bez credentialUpdated, staleDevice i clockSkew).
+const LICZNIKI_SCALANIA = ['mergedPatientCount', 'addedPatientCount', 'addedSnapshotCount', 'skippedSnapshotCount',
+  'updatedSnapshotCount', 'deletedPatientCount', 'addedPasskeyCount', 'removedPasskeyCount', 'updatedPreferenceCount',
+  'addedNoteCount', 'updatedNoteCount', 'deletedNoteCount', 'addedPatientNoteCount', 'updatedPatientNoteCount',
+  'deletedPatientNoteCount', 'addedPatientListCount', 'updatedPatientListCount', 'deletedPatientListCount',
+  'trashedSnapshotCount', 'prunedSnapshotCount'];
+// Koperta o poprawnym kształcie (iv: base64 12 bajtów), której szyfrogramu nie da się odszyfrować → unreadable/decrypt.
+const SMIECI = Object.freeze({ iv: 'Rmlrc3lqbmVJVjEy', data: 'AAAA' });
+const eidZmiany = (seq) => `00000000-0000-4000-8000-${String(seq).padStart(12, '0')}`;
+// Wiersz /changes: { seq, eid?, payload } (BEZ_EID — bez pola eid).
+const BEZ_EID = Symbol('bez eid');
+function zmiana(seq, payload, eid = eidZmiany(seq)) {
+  const z = { seq, payload };
+  if (eid !== BEZ_EID) z.eid = eid;
+  return z;
+}
+const opcjeKw = (slotId = SLOT, appVersion = WERSJA) => ({ slotId, appVersion });
+const kwarantanna = (o, kto = 'A') => o.kwarantanna(kto);
+const schematBazy = (b) => Object.fromEntries(Object.entries(b.sklepy).map(([n, s]) => [n, { keyPath: s.keyPath, indeksy: s.indeksy }]));
+// Fikcyjny wiersz quarantine (do baz „z innej wersji” tworzonych przez atrapę).
+const wierszKwarantanny = (seq, pola = {}) => ({
+  slotId: SLOT, seq, eid: eidZmiany(seq), iv: SMIECI.iv, data: SMIECI.data, reason: 'decrypt', appVersion: WERSJA,
+  firstSeenAtISO: '2026-03-02T08:00:00.000Z', ...pola,
+});
+// Operacje kwarantanny z poprawnymi argumentami (bez resultSummary — ta nie dotyka magazynu).
+const operacjeKw = (payload, wynik) => [
+  ['quarantinePut', zmiana(1, payload), wynik, opcjeKw()], ['quarantineList'], ['quarantineList', { slotId: SLOT }],
+  ['quarantineCount'], ['quarantineMinSeq', { slotId: SLOT }], ['quarantineRelease', [1], { slotId: SLOT }],
+];
+async function noweKw(opcje) {
+  const o = await nowe(opcje);
+  for (const k of KLUCZE_KWARANTANNY) expect(typeof o.ev[k], `API kwarantanny (VildaVault._eventLog.${k})`).toBe('function');
+  return o;
+}
+const dKw = () => it('API kwarantanny i podsumowania wyniku istnieje (VildaVault._eventLog.quarantinePut … resultSummary)', async () => { await noweKw(); });
+// Koperta prawdziwego zdarzenia (snap fikcyjnej karty) — wzór ładunku wiersza /changes.
+async function koperta(o, i = 1) {
+  const k = await karta(o, i);
+  return (await o.ev.encryptEvent(await o.ev.buildSnapshotEvent(k.patientId, k.snapshotId, null))).env;
+}
+// Wynik prawdziwego applyEncryptedEvent (to nie operacja magazynu — bez opakowania).
+const zastosuj = (o, payload) => o.ev.applyEncryptedEvent(payload);
+async function nieczytelny(o, payload = SMIECI) {
+  const wynik = await zastosuj(o, payload);
+  expect(wynik.status, 'wynik applyEncryptedEvent').toBe('unreadable');
+  return { payload, wynik };
+}
+// Prawdziwe wyniki applyEncryptedEvent we wszystkich sześciu statusach (wzory z sync-zdarzenie-status.test.mjs):
+// applied (własne zdarzenie konta), unreadable (szyfrogram nie do odszyfrowania), busy (nieznany format kliniczny),
+// apply-error (błąd odszyfrowania spoza błędów odczytu), session-changed (ponowne zalogowanie w trakcie odszyfrowania),
+// locked (sejf zablokowany). Na końcu konto A zalogowane.
+async function wynikiStatusow(o, { kod = 'QuotaExceededError', komunikat = 'Fikcyjny brak miejsca', applied } = {}) {
+  const env = await koperta(o);
+  const wyniki = {};
+  const ladunki = { applied: applied || env, unreadable: { iv: env.iv, data: 'AAAA' } };
+  ladunki.busy = await o.v.encryptPayloadForCurrentUser({ format: 'vilda-clinical-vault/v99', schemaVersion: 2, patients: [] });
+  wyniki.applied = await zastosuj(o, ladunki.applied);
+  wyniki.unreadable = await zastosuj(o, ladunki.unreadable);
+  wyniki.busy = await zastosuj(o, ladunki.busy);
+  o.krypto.blad({ metoda: 'decrypt' }, { kod, komunikat });
+  wyniki['apply-error'] = await zastosuj(o, env);
+  await o.cisza();
+  const h = wstrzymajKrypto(o, { metoda: 'decrypt' });
+  const p = zastosuj(o, env);
+  await h.czeka;
+  const s = o.przelaczWTle('A');
+  await s.koniec;
+  h.zwolnij();
+  wyniki['session-changed'] = await p;
+  await o.zaloguj('A');
+  o.zablokuj();
+  wyniki.locked = await zastosuj(o, env);
+  await o.zaloguj('A');
+  for (const [st, w] of Object.entries(wyniki)) expect(w.status, `prawdziwy wynik ${st}`).toBe(st);
+  return { env, wyniki, ladunki };
+}
 
 describe('M1–M3: schemat, leniwość, wiersz kolejki', () => {
   d1();
@@ -1062,6 +1162,393 @@ describe('M9–M11: wybór do wysyłki i zmiany stanu', () => {
   });
 });
 
+describe('M12–M13: kwarantanna i podsumowanie wyniku', () => {
+  dKw();
+  // p2 (schemat jak magazyn), p17 (otwarcie bez wersji)
+  it('M12: wynik unreadable/decrypt prawdziwego applyEncryptedEvent → quarantinePut tworzy bazę v1 (schemat jak przy dopisaniu, licznik v 0); wiersz — dokładnie pola projektu, treść z wiersza /changes, powód z wyniku, chwila zegara; bez klucza urządzenia', async () => {
+    const o = await noweKw();
+    const baza = nazwaBazy(o.A.userId);
+    const { payload, wynik } = await nieczytelny(o);
+    expect(wynik).toEqual({ status: 'unreadable', reason: 'decrypt' });
+    await o.cisza();
+    expect(o.jestBaza()).toBe(false);
+    krok(5000);
+    expect(await o.api.quarantinePut(zmiana(7, payload, 'r2:123'), wynik, opcjeKw())).toEqual({ ok: true, nowy: true });
+    await o.cisza();
+    const b = o.idb.__atrapa.bazy()[baza];
+    expect(b.version).toBe(1);
+    expect(schematBazy(b)).toEqual(SCHEMAT_V1);
+    expect(b.sklepy.meta.wiersze).toEqual([{ k: 'licznik', v: 0, baza: expect.stringMatching(UUID_V4) }]);
+    expect(b.sklepy.outbox.wiersze).toEqual([]);
+    expect(b.sklepy.quarantine.klucze).toEqual([[SLOT, 7]]);
+    expect(b.sklepy.quarantine.wiersze).toStrictEqual([{
+      slotId: SLOT, seq: 7, eid: 'r2:123', iv: payload.iv, data: payload.data, reason: 'decrypt', appVersion: WERSJA, firstSeenAtISO: iso(),
+    }]);
+    expect(o.idb.__atrapa.polaczenia(baza)).toBe(0);
+    expect(kluczeUrzadzen(o), 'kwarantanna nie zapisuje identyfikatora urządzenia').toEqual([]);
+    expect(await o.api.quarantineList()).toEqual({ ok: true, wiersze: b.sklepy.quarantine.wiersze });
+    // baza utworzona przez kwarantannę jest bazą kolejki (ten sam schemat i licznik): dopisanie bez migracji
+    const licznik = b.sklepy.meta.wiersze[0].baza;
+    expect(await o.api.enqueue('snap', await karta(o, 2))).toMatchObject({ ok: true, stany: ['pending'] });
+    expect(o.meta()).toEqual([{ k: 'licznik', v: 1, baza: licznik }]);
+    expect(o.kolejka().map((x) => x.seqLocal)).toEqual([1]);
+    expect(kwarantanna(o)).toEqual(b.sklepy.quarantine.wiersze);
+  });
+
+  it('M12: drugi wpis tego samego [slotId, seq] → nowy false; zmienia się tylko appVersion i reason, firstSeenAtISO i treść (eid, iv, data, pola formatu) bez zmian', async () => {
+    const o = await noweKw();
+    const env = await koperta(o);
+    const p1 = { iv: env.iv, data: 'AAAA' };
+    const w1 = await zastosuj(o, p1);
+    expect(w1).toEqual({ status: 'unreadable', reason: 'decrypt' });
+    expect(await o.api.quarantinePut(zmiana(3, p1), w1, opcjeKw())).toEqual({ ok: true, nowy: true });
+    const pierwszy = iso();
+    krok(60_000);
+    const p2 = { ...env, z: 'br' };
+    const w2 = await zastosuj(o, p2);
+    expect(w2).toEqual({ status: 'unreadable', reason: 'format' });
+    expect(await o.api.quarantinePut(zmiana(3, p2, 'r2:999'), w2, opcjeKw(SLOT, WERSJA2))).toEqual({ ok: true, nowy: false });
+    const wiersz = { slotId: SLOT, seq: 3, eid: eidZmiany(3), iv: env.iv, data: 'AAAA', firstSeenAtISO: pierwszy };
+    expect(kwarantanna(o)).toStrictEqual([{ ...wiersz, reason: 'format', appVersion: WERSJA2 }]);
+    krok();
+    expect(await o.api.quarantinePut(zmiana(3, { iv: '', data: 5 }, BEZ_EID), w1, opcjeKw(SLOT, null))).toEqual({ ok: true, nowy: false });
+    expect(kwarantanna(o)).toStrictEqual([{ ...wiersz, reason: 'decrypt', appVersion: null }]);
+  });
+
+  it('M12: quarantinePut na istniejącej bazie — jedno otwarcie i dokładnie jedna transakcja readwrite na sklepie quarantine (odczyt i zapis wiersza razem), przy pierwszym i ponownym wpisie', async () => {
+    const o = await noweKw();
+    const { payload, wynik } = await nieczytelny(o);
+    expect(await o.api.quarantinePut(zmiana(1, payload), wynik, opcjeKw())).toEqual({ ok: true, nowy: true });
+    await o.cisza();
+    for (const [seq, nowy] of [[1, false], [2, true]]) {
+      const z = o.znacznik();
+      expect(await o.api.quarantinePut(zmiana(seq, payload), wynik, opcjeKw()), `seq ${seq}`).toEqual({ ok: true, nowy });
+      await o.cisza();
+      expect(wpisyLogu(o, z, 'open'), `seq ${seq}: otwarcia`).toHaveLength(1);
+      expect(wpisyLogu(o, z, 'tx').filter((w) => w[4] === 'start').map((w) => [w[2], w[3]]), `seq ${seq}: transakcje`).toEqual([[['quarantine'], 'readwrite']]);
+    }
+  });
+
+  it('M12: każde pole argumentów quarantinePut czytane raz — walidacja i wiersz z tych samych wartości; getter oddający treść przy kolejnym odczycie nie trafia do wiersza ani do klucza', async () => {
+    const o = await noweKw();
+    const { payload, wynik } = await nieczytelny(o);
+    const W = 'Testowy Jan WartownikQX9';
+    const odczyty = {};
+    // Pola zwracają poprawną wartość przy pierwszym odczycie, a treść — przy każdym następnym.
+    const zmienny = (nazwa, pola) => {
+      const w = {};
+      for (const [k, x] of Object.entries(pola)) {
+        const id = `${nazwa}.${k}`;
+        Object.defineProperty(w, k, { enumerable: true, get() { odczyty[id] = (odczyty[id] || 0) + 1; return odczyty[id] === 1 ? x : W; } });
+      }
+      return w;
+    };
+    const ladunek = zmienny('payload', { iv: payload.iv, data: payload.data, z: 'br', aad: 2 });
+    const zm = zmienny('zmiana', { seq: 1, eid: 'r2:1', payload: ladunek });
+    const wy = zmienny('wynik', { status: 'unreadable', reason: wynik.reason });
+    const op = zmienny('opcje', { slotId: SLOT, appVersion: WERSJA });
+    expect(await o.api.quarantinePut(zm, wy, op)).toEqual({ ok: true, nowy: true });
+    await o.cisza();
+    const pola = ['payload.iv', 'payload.data', 'payload.z', 'payload.aad', 'zmiana.seq', 'zmiana.eid', 'zmiana.payload', 'wynik.status', 'wynik.reason', 'opcje.slotId', 'opcje.appVersion'];
+    expect(odczyty).toEqual(Object.fromEntries(pola.map((k) => [k, 1])));
+    expect(kwarantanna(o)).toStrictEqual([{
+      slotId: SLOT, seq: 1, eid: 'r2:1', iv: payload.iv, data: payload.data, z: 'br', aad: 2, reason: wynik.reason, appVersion: WERSJA, firstSeenAtISO: iso(),
+    }]);
+    const baza = o.idb.__atrapa.bazy()[nazwaBazy(o.A.userId)];
+    expect(baza.sklepy.quarantine.klucze).toEqual([[SLOT, 1]]);
+    expect(JSON.stringify(baza)).not.toContain('Wartownik');
+  });
+
+  // p7 (kolejność kluczy tablicowych, zakres slotu), p26 (kursory)
+  it('M12: ten sam seq innego slotu → osobny wiersz; quarantineList i quarantineMinSeq per slot, po seq rosnąco (liczbowo); quarantineRelease tylko w swoim slocie (seq spoza slotu → pominiete)', async () => {
+    const o = await noweKw();
+    const { payload, wynik } = await nieczytelny(o);
+    for (const [slot, seq] of [[SLOT, 5], [SLOT_STARY, 5], [SLOT, 10], [SLOT, 2], [SLOT_STARY, 1]]) {
+      expect(await o.api.quarantinePut(zmiana(seq, payload), wynik, opcjeKw(slot)), `${slot.slice(0, 8)}#${seq}`).toEqual({ ok: true, nowy: true });
+    }
+    const lista = async (slotId) => {
+      const l = await o.api.quarantineList({ slotId });
+      expect(l.ok).toBe(true);
+      return l.wiersze.map((x) => [x.slotId, x.seq]);
+    };
+    expect(await lista(SLOT)).toEqual([[SLOT, 2], [SLOT, 5], [SLOT, 10]]);
+    expect(await lista(SLOT_STARY)).toEqual([[SLOT_STARY, 1], [SLOT_STARY, 5]]);
+    expect(await lista(SLOT_INNY)).toEqual([]);
+    expect(await o.api.quarantineMinSeq({ slotId: SLOT })).toEqual({ ok: true, seq: 2 });
+    expect(await o.api.quarantineMinSeq({ slotId: SLOT_STARY })).toEqual({ ok: true, seq: 1 });
+    expect(await o.api.quarantineMinSeq({ slotId: SLOT_INNY })).toEqual({ ok: true, seq: null });
+    expect(await o.api.quarantineRelease([5, 10], { slotId: SLOT_STARY })).toEqual({ ok: true, usuniete: [5], pominiete: [10] });
+    expect(await lista(SLOT)).toEqual([[SLOT, 2], [SLOT, 5], [SLOT, 10]]);
+    expect(await lista(SLOT_STARY)).toEqual([[SLOT_STARY, 1]]);
+    expect(await o.api.quarantineRelease([2], { slotId: SLOT })).toEqual({ ok: true, usuniete: [2], pominiete: [] });
+    expect(await o.api.quarantineMinSeq({ slotId: SLOT })).toEqual({ ok: true, seq: 5 });
+    expect(o.idb.__atrapa.bazy()[nazwaBazy(o.A.userId)].sklepy.quarantine.klucze).toEqual([[SLOT_STARY, 1], [SLOT, 5], [SLOT, 10]]);
+  });
+
+  it('M12: pola ładunku według zasad zapisu — pusty iv i data nie-napis (envelope), przyszłe z i aad (format) zapisane; z i aad złego typu pominięte z formatInny; z i aad nieobecne, gdy ich nie było; eid spoza wzorca → null', async () => {
+    const o = await noweKw();
+    const env = await koperta(o);
+    const { iv, data } = env;
+    const PRZYPADKI = [
+      // [ładunek wiersza /changes, powód z applyEncryptedEvent, pola treści w wierszu kwarantanny]
+      [{ iv: '', data }, 'envelope', { iv: '', data }],
+      [{ iv, data: 5 }, 'envelope', { iv, data: null }],
+      [{ data }, 'envelope', { iv: null, data }],
+      [{ iv: 7, data: {} }, 'envelope', { iv: null, data: null }],
+      [null, 'envelope', { iv: null, data: null }],
+      [{ iv, data, z: 'br' }, 'format', { iv, data, z: 'br' }],
+      [{ iv, data, aad: 2 }, 'format', { iv, data, aad: 2 }],
+      [{ iv, data, z: 'gzip', aad: 0 }, 'format', { iv, data, z: 'gzip', aad: 0 }],
+      [{ iv, data, z: {} }, 'format', { iv, data, formatInny: true }],
+      [{ iv, data, z: '' }, 'format', { iv, data, formatInny: true }],
+      [{ iv, data, z: 'Testowy Jan' }, 'format', { iv, data, formatInny: true }],
+      [{ iv, data, aad: '1' }, 'format', { iv, data, formatInny: true }],
+      [{ iv, data, aad: 1.5, z: 5 }, 'format', { iv, data, formatInny: true }],
+      [{ iv, data, aad: null, z: 'br' }, 'format', { iv, data, z: 'br', formatInny: true }],
+      [{ iv, data: 'AAAA' }, 'decrypt', { iv, data: 'AAAA' }],
+    ];
+    const EIDY = [['r2:123', 'r2:123'], [eidZmiany(1), eidZmiany(1)], [BEZ_EID, null], [5, null], ['Testowy Jan', null],
+      ['x'.repeat(65), null], ['x'.repeat(64), 'x'.repeat(64)], [null, null]];
+    const oczekiwane = [];
+    for (const [i, [ladunek, reason, tresc]] of PRZYPADKI.entries()) {
+      const seq = i + 1;
+      const wynik = await zastosuj(o, ladunek);
+      expect(wynik, `#${seq} ${JSON.stringify(ladunek)}`.slice(0, 60)).toEqual({ status: 'unreadable', reason });
+      const [eid, eidZapisany] = EIDY[i % EIDY.length];
+      expect(await o.api.quarantinePut(zmiana(seq, ladunek, eid), wynik, opcjeKw()), `#${seq}`).toEqual({ ok: true, nowy: true });
+      oczekiwane.push({ slotId: SLOT, seq, eid: eidZapisany, ...tresc, reason, appVersion: WERSJA, firstSeenAtISO: iso() });
+    }
+    const wiersze = kwarantanna(o);
+    for (const [i, w] of wiersze.entries()) expect(w, `wiersz #${i + 1}`).toStrictEqual(oczekiwane[i]);
+    expect(wiersze).toHaveLength(PRZYPADKI.length);
+    expect((await o.api.quarantineList({ slotId: SLOT })).wiersze).toEqual(wiersze);
+  });
+
+  it('M12: wynik inny niż unreadable z powodem z listy (prawdziwe applied, busy, apply-error, locked, session-changed oraz null, napis, powód spoza listy), slotId nie-hex albo złej długości, seq 0 albo ułamek, appVersion z treścią albo nieobecne, brak zmiany albo opcji → argument; bez otwarcia bazy i bez odczytu rejestru', async () => {
+    const o = await noweKw();
+    const { wyniki } = await wynikiStatusow(o);
+    const { payload, wynik } = await nieczytelny(o);
+    await o.cisza();
+    const z = o.znacznik();
+    const ARG = { ok: false, powod: 'argument' };
+    const dodaj = (zm, w, op) => o.api.quarantinePut(zm, w, op);
+    for (const st of ['applied', 'busy', 'apply-error', 'locked', 'session-changed']) expect(await dodaj(zmiana(1, payload), wyniki[st], opcjeKw()), st).toEqual(ARG);
+    for (const w of [null, undefined, 'unreadable', 5, {}, { status: 'unreadable' }, { status: 'unreadable', reason: 'inny' },
+      { status: 'unreadable', reason: 'Testowy Jan' }, { reason: 'decrypt' }, { status: 'UNREADABLE', reason: 'decrypt' }]) {
+      expect(await dodaj(zmiana(1, payload), w, opcjeKw()), JSON.stringify(w)).toEqual(ARG);
+    }
+    for (const slotId of [SLOT.slice(1), `${SLOT}a`, SLOT.toUpperCase(), 'g'.repeat(64), 5, null, undefined]) {
+      expect(await dodaj(zmiana(1, payload), wynik, { slotId, appVersion: WERSJA }), String(slotId).slice(0, 10)).toEqual(ARG);
+    }
+    for (const seq of [0, -1, 1.5, '1', null, Number.NaN, 2 ** 53, undefined]) expect(await dodaj(zmiana(seq, payload), wynik, opcjeKw()), String(seq)).toEqual(ARG);
+    for (const appVersion of ['Testowy Jan 1.0', '', 'x'.repeat(33), '1.1/459', 5]) expect(await dodaj(zmiana(1, payload), wynik, opcjeKw(SLOT, appVersion)), String(appVersion)).toEqual(ARG);
+    // appVersion nieobecne (wolno tylko napis z wzorca albo null)
+    for (const op of [{ slotId: SLOT }, { slotId: SLOT, appVersion: undefined }]) expect(await dodaj(zmiana(1, payload), wynik, op), JSON.stringify(op)).toEqual(ARG);
+    for (const [zm, op] of [[null, opcjeKw()], ['zmiana', opcjeKw()], [zmiana(1, payload), undefined], [zmiana(1, payload), null], [zmiana(1, payload), 'opcje']]) {
+      expect(await dodaj(zm, wynik, op), `${JSON.stringify(zm)} ${JSON.stringify(op)}`.slice(0, 50)).toEqual(ARG);
+    }
+    await o.cisza();
+    expect(o.jestBaza()).toBe(false);
+    expect(o.logKolejki(z), 'zero otwarć bazy kolejki').toEqual([]);
+    expect(o.idb.__atrapa.log.slice(z.log).filter((w) => w[1] === 'vilda_registry'), 'zero odczytów rejestru').toEqual([]);
+    // tuż przy granicach — poprawne
+    expect(await dodaj(zmiana(2 ** 53 - 1, payload, 'x'.repeat(64)), wynik, opcjeKw(SLOT, 'x'.repeat(32)))).toEqual({ ok: true, nowy: true });
+    expect(kwarantanna(o).map((x) => [x.seq, x.eid.length, x.appVersion.length])).toEqual([[2 ** 53 - 1, 64, 32]]);
+  }, 30_000);
+
+  // p1/p17: próba otwarcia nieistniejącej bazy przerwana w upgrade nie zostawia bazy
+  it('M12: odczyty i quarantineRelease nie tworzą bazy — wynik pusty (open + abort-upgrade, bez deleteDatabase i databases()); na bazie bez wierszy kwarantanny — puste wyniki, zwolnienie → pominiete', async () => {
+    const o = await noweKw();
+    const z = o.znacznik();
+    expect(await o.api.quarantineList()).toEqual({ ok: true, wiersze: [] });
+    expect(await o.api.quarantineList({ slotId: SLOT })).toEqual({ ok: true, wiersze: [] });
+    expect(await o.api.quarantineCount()).toEqual({ ok: true, total: 0, sloty: {} });
+    expect(await o.api.quarantineMinSeq({ slotId: SLOT })).toEqual({ ok: true, seq: null });
+    expect(await o.api.quarantineRelease([1, 2], { slotId: SLOT })).toEqual({ ok: true, usuniete: [], pominiete: [] });
+    await o.cisza();
+    expect(o.jestBaza()).toBe(false);
+    const log = o.logKolejki(z);
+    expect([...new Set(log.map((w) => w[0]))].sort()).toEqual(['abort-upgrade', 'open', 'upgrade']);
+    expect(log.filter((w) => w[0] === 'open')).toHaveLength(5);
+    expect(log.filter((w) => w[0] === 'abort-upgrade')).toHaveLength(5);
+    expect(o.idb.__atrapa.log.slice(z.log).filter((w) => w[0] === 'databases' || w[0] === 'deleteDatabase')).toEqual([]);
+    await o.api.enqueue('snap', await karta(o, 1));
+    expect(await o.api.quarantineList()).toEqual({ ok: true, wiersze: [] });
+    expect(await o.api.quarantineCount()).toEqual({ ok: true, total: 0, sloty: {} });
+    expect(await o.api.quarantineMinSeq({ slotId: SLOT })).toEqual({ ok: true, seq: null });
+    expect(await o.api.quarantineRelease([1, 2], { slotId: SLOT })).toEqual({ ok: true, usuniete: [], pominiete: [1, 2] });
+    expect(o.kolejka()).toHaveLength(1);
+  });
+
+  it('M12: quarantineRelease sprawdza istnienie wiersza bez czytania jego treści (count klucza [slotId, seq]; bez get, getAll i kursora)', async () => {
+    const o = await noweKw();
+    const { payload, wynik } = await nieczytelny(o);
+    for (const seq of [1, 2]) expect(await o.api.quarantinePut(zmiana(seq, payload), wynik, opcjeKw())).toEqual({ ok: true, nowy: true });
+    await o.cisza();
+    const baza = nazwaBazy(o.A.userId);
+    const licz = { get: 0, getAll: 0, openCursor: 0, count: 0 };
+    const haki = Object.keys(licz).map((metoda) => o.idb.__atrapa.hak({ przy: 'success', baza, sklep: 'quarantine', metoda, raz: false }, () => { licz[metoda] += 1; }));
+    expect(await o.api.quarantineRelease([1, 5, 1], { slotId: SLOT })).toEqual({ ok: true, usuniete: [1], pominiete: [5, 1] });
+    for (const h of haki) h.rozbroj();
+    expect(licz).toEqual({ get: 0, getAll: 0, openCursor: 0, count: 2 });
+    expect(kwarantanna(o).map((x) => x.seq)).toEqual([2]);
+  });
+
+  it('M12b: quarantineList() bez slotId → wiersze wszystkich slotów po [slotId, seq], każdy z polem slotId; quarantineCount() → total i sloty; po zwolnieniu wierszy starego slotu znika on z licznika, bieżący nietknięty; wyniki są kopiami', async () => {
+    const o = await noweKw();
+    const { payload, wynik } = await nieczytelny(o);
+    for (const [slot, seq] of [[SLOT, 3], [SLOT_STARY, 4], [SLOT, 1], [SLOT_STARY, 1], [SLOT, 2]]) {
+      expect(await o.api.quarantinePut(zmiana(seq, payload), wynik, opcjeKw(slot))).toEqual({ ok: true, nowy: true });
+    }
+    const l = await o.api.quarantineList();
+    expect(l.wiersze.map((x) => [x.slotId, x.seq])).toEqual([[SLOT_STARY, 1], [SLOT_STARY, 4], [SLOT, 1], [SLOT, 2], [SLOT, 3]]);
+    expect(l.wiersze).toEqual(kwarantanna(o));
+    expect(await o.api.quarantineCount()).toEqual({ ok: true, total: 5, sloty: { [SLOT_STARY]: 2, [SLOT]: 3 } });
+    const biezacy = (await o.api.quarantineList({ slotId: SLOT })).wiersze;
+    expect(biezacy).toEqual(l.wiersze.slice(2));
+    l.wiersze[0].reason = 'shape';
+    l.wiersze[0].data = null;
+    expect((await o.api.quarantineList()).wiersze[0]).toMatchObject({ reason: 'decrypt', data: payload.data });
+    expect(await o.api.quarantineRelease([1, 4], { slotId: SLOT_STARY })).toEqual({ ok: true, usuniete: [1, 4], pominiete: [] });
+    expect(await o.api.quarantineCount()).toEqual({ ok: true, total: 3, sloty: { [SLOT]: 3 } });
+    expect((await o.api.quarantineList()).wiersze).toEqual(biezacy);
+    expect(await o.api.quarantineMinSeq({ slotId: SLOT_STARY })).toEqual({ ok: true, seq: null });
+    expect(await o.api.quarantineMinSeq({ slotId: SLOT })).toEqual({ ok: true, seq: 1 });
+  });
+
+  it('M12b: quarantineCount czyta same klucze sklepu (getAllKeys, bez treści wierszy); wiersz bazy z innej wersji ze slotId spoza wzorca liczony w total, nie w sloty', async () => {
+    const o = await noweKw();
+    bazaKolejki(o.idb, o.A.userId, {
+      wiersze: [], kwarantanna: [wierszKwarantanny(1), wierszKwarantanny(2, { slotId: 'slot-z-innej-wersji' }), wierszKwarantanny(3, { slotId: SLOT_STARY })],
+    });
+    const baza = nazwaBazy(o.A.userId);
+    const licz = { getAll: 0, getAllKeys: 0, get: 0, openCursor: 0, count: 0 };
+    const haki = Object.keys(licz).map((metoda) => o.idb.__atrapa.hak({ przy: 'success', baza, sklep: 'quarantine', metoda, raz: false }, () => { licz[metoda] += 1; }));
+    expect(await o.api.quarantineCount()).toEqual({ ok: true, total: 3, sloty: { [SLOT]: 1, [SLOT_STARY]: 1 } });
+    for (const h of haki) h.rozbroj();
+    expect(licz).toEqual({ getAll: 0, getAllKeys: 1, get: 0, openCursor: 0, count: 0 });
+  });
+
+  it('M13: resultSummary — każdy z 6 statusów prawdziwego applyEncryptedEvent → dokładny kształt; applied tylko z 20 licznikami …Count (bez credentialUpdated, staleDevice, clockSkew); wynik synchroniczny', async () => {
+    const o = await noweKw();
+    const { wyniki } = await wynikiStatusow(o);
+    const skrot = (w) => o.api.resultSummary(w);
+    const a = skrot(wyniki.applied);
+    expect(Object.keys(a).sort()).toEqual(['liczniki', 'status']);
+    expect(a.status).toBe('applied');
+    expect(Object.keys(a.liczniki).sort()).toEqual([...LICZNIKI_SCALANIA].sort());
+    expect(a.liczniki).toStrictEqual(Object.fromEntries(LICZNIKI_SCALANIA.map((k) => [k, wyniki.applied.result[k]])));
+    expect(a.liczniki.mergedPatientCount).toBe(1);
+    expect(skrot(wyniki.unreadable)).toStrictEqual({ status: 'unreadable', reason: 'decrypt' });
+    expect(skrot(wyniki.busy)).toStrictEqual({ status: 'busy', code: 'CLINICAL_PROTOCOL_UNSUPPORTED' });
+    expect(skrot(wyniki['apply-error'])).toStrictEqual({ status: 'apply-error', code: 'QuotaExceededError' });
+    expect(skrot(wyniki.locked)).toStrictEqual({ status: 'locked' });
+    expect(skrot(wyniki['session-changed'])).toStrictEqual({ status: 'session-changed' });
+    for (const [st, w] of Object.entries(wyniki)) {
+      const s = skrot(w);
+      expect(JSON.parse(JSON.stringify(s)), `${st}: zwykłe dane`).toStrictEqual(s);
+      expect(Object.getOwnPropertyNames(s).sort(), `${st}: bez pól niewyliczalnych`).toEqual(Object.keys(s).sort());
+    }
+    // prawdziwy apply-error z kodem spoza wzorca kodów → code null
+    const { wyniki: w2 } = await wynikiStatusow(o, { kod: 'Testowy Jan nie kod' });
+    expect(w2['apply-error'].code).toBe('Testowy Jan nie kod');
+    expect(skrot(w2['apply-error'])).toStrictEqual({ status: 'apply-error', code: null });
+  }, 30_000);
+
+  it('M13: kształty spoza statusów → { status: \'nieznany\' }; liczniki tylko własne, całkowite ≥ 0 o nazwie …Count; reason spoza listy i code spoza wzorca → null; pola dodatkowe pominięte', async () => {
+    const o = await noweKw();
+    const skrot = (w) => o.api.resultSummary(w);
+    for (const w of [null, undefined, 'x', 5, [], {}, { status: 'inny' }, { status: 5 }, { status: 'Applied' }, { status: 'nieznany' }]) {
+      expect(skrot(w), JSON.stringify(w)).toStrictEqual({ status: 'nieznany' });
+    }
+    const result = Object.assign(Object.create({ dziedziczonyCount: 4 }), {
+      aCount: 2, zeroCount: 0, fooCount: -1, barCount: 1.5, napisCount: '3', foo: 3, duzyCount: 2 ** 53, nanCount: Number.NaN,
+      nieskonczonyCount: Number.POSITIVE_INFINITY, obiektCount: { n: 1 }, Count: 7, credentialUpdated: true,
+      staleDevice: { remoteLastMergeAtISO: 'Testowy Jan' }, clockSkew: { otherExportedAtISO: 'Testowy Jan' },
+    });
+    expect(skrot({ status: 'applied', result })).toStrictEqual({ status: 'applied', liczniki: { aCount: 2, zeroCount: 0, Count: 7 } });
+    expect(skrot({ status: 'unreadable', reason: 'Testowy Jan' })).toStrictEqual({ status: 'unreadable', reason: null });
+    expect(skrot({ status: 'unreadable' })).toStrictEqual({ status: 'unreadable', reason: null });
+    for (const reason of ['envelope', 'format', 'decrypt', 'shape']) expect(skrot({ status: 'unreadable', reason, code: 'X' })).toStrictEqual({ status: 'unreadable', reason });
+    for (const status of ['busy', 'apply-error']) {
+      expect(skrot({ status, code: 'MERGE_BUSY', reason: 'decrypt' }), status).toStrictEqual({ status, code: 'MERGE_BUSY' });
+      for (const code of ['Testowy Jan nie kod', 'x'.repeat(65), '', 5, null, undefined]) expect(skrot({ status, code }), `${status} ${code}`).toStrictEqual({ status, code: null });
+    }
+    for (const status of ['locked', 'session-changed']) expect(skrot({ status, code: 'X', reason: 'decrypt', result: { aCount: 1 } })).toStrictEqual({ status });
+  });
+
+  it('M13: nazwa licznika — same litery zakończone dokładnie na „Count” (do 64 znaków); nazwa z „Count” w środku, inną wielkością liter, spacją, cyfrą albo innym znakiem pominięta', async () => {
+    const o = await noweKw();
+    const N64 = `${'a'.repeat(59)}Count`;
+    const result = {
+      addedNoteCount: 1, CountdownMs: 5, discount: 2, recount: 3, addedNoteCountAt: 4, addedNoteCOUNT: 5, 'Testowy Jan Count': 6,
+      a1Count: 7, 'a-bCount': 8, [N64]: 9, [`a${N64}`]: 10, 'Count ': 11,
+    };
+    expect(o.api.resultSummary({ status: 'applied', result })).toStrictEqual({ status: 'applied', liczniki: { addedNoteCount: 1, [N64]: 9 } });
+  });
+
+  it('M13: każde pole wyniku czytane raz — getter oddający treść przy kolejnym odczycie nie przechodzi do podsumowania; pole rzucające przy odczycie → nieznany, bez wyjątku; applied bez obiektu result → liczniki puste', async () => {
+    const o = await noweKw();
+    const skrot = (w) => o.api.resultSummary(w);
+    const W = 'Testowy Jan WartownikQX9';
+    const pelnie = (x) => inspect(x, { depth: 20, showHidden: true, maxStringLength: Infinity, breakLength: Infinity });
+    // Pola zwracają poprawną wartość przy pierwszym odczycie, a treść — przy każdym następnym.
+    const zmienny = (pola) => {
+      const odczyty = {};
+      const w = {};
+      for (const [k, x] of Object.entries(pola)) {
+        Object.defineProperty(w, k, { enumerable: true, get() { odczyty[k] = (odczyty[k] || 0) + 1; return odczyty[k] === 1 ? x : W; } });
+      }
+      return { w, odczyty };
+    };
+    const skroty = [];
+    for (const [pola, oczekiwane] of [
+      [{ status: 'apply-error', code: 'KOD_OK' }, { status: 'apply-error', code: 'KOD_OK' }],
+      [{ status: 'busy', code: 'MERGE_BUSY' }, { status: 'busy', code: 'MERGE_BUSY' }],
+      [{ status: 'unreadable', reason: 'decrypt' }, { status: 'unreadable', reason: 'decrypt' }],
+      [{ status: 'applied', result: { aCount: 1 } }, { status: 'applied', liczniki: { aCount: 1 } }],
+      [{ status: 'session-changed' }, { status: 'session-changed' }],
+    ]) {
+      const { w, odczyty } = zmienny(pola);
+      const s = skrot(w);
+      skroty.push(s);
+      expect(s, JSON.stringify(pola)).toStrictEqual(oczekiwane);
+      expect(odczyty, `${JSON.stringify(pola)}: odczyty pól`).toEqual(Object.fromEntries(Object.keys(pola).map((k) => [k, 1])));
+    }
+    expect(JSON.stringify(skroty)).not.toContain('Wartownik');
+    expect(pelnie(skroty)).not.toContain('Wartownik');
+    const rzuca = () => { throw new Error(W); };
+    for (const [i, w] of [
+      Object.defineProperty({}, 'status', { get: rzuca, enumerable: true }),
+      Object.defineProperty({ status: 'applied' }, 'result', { get: rzuca, enumerable: true }),
+      { status: 'applied', result: Object.defineProperty({}, 'aCount', { get: rzuca, enumerable: true }) },
+      { status: 'applied', result: new Proxy({}, { ownKeys: rzuca }) },
+      Object.defineProperty({ status: 'unreadable' }, 'reason', { get: rzuca, enumerable: true }),
+      Object.defineProperty({ status: 'apply-error' }, 'code', { get: rzuca, enumerable: true }),
+      new Proxy({}, { get: rzuca }),
+    ].entries()) expect(skrot(w), `pole rzucające #${i + 1}`).toStrictEqual({ status: 'nieznany' });
+    for (const result of [undefined, null, 5, 'x', [1]]) expect(skrot({ status: 'applied', result }), String(result)).toStrictEqual({ status: 'applied', liczniki: {} });
+    expect(skrot({ status: 'applied' })).toStrictEqual({ status: 'applied', liczniki: {} });
+  });
+
+  // Ładunek spoza builderów (np. stara delta) niesie metadane nadawcy: exportedAtISO i lastMergeAtISO wracają w wyniku
+  // applied (clockSkew, staleDevice); komunikat błędu odszyfrowania — w niewyliczalnym polu error wyniku apply-error.
+  it('M13: wartownik w exportedAtISO i lastMergeAtISO ładunku (applied) i w komunikacie błędu (apply-error) jest w wyniku applyEncryptedEvent, a w resultSummary go nie ma (JSON.stringify i util.inspect z showHidden)', async () => {
+    const W = 'Wartownik-Testowy-QX7';
+    const WZ = W.slice(0, 9);
+    const o = await noweKw();
+    const applied = await o.v.encryptPayloadForCurrentUser({ schemaVersion: 2, patients: [], exportedAtISO: `2026-03-02 (${W})`, lastMergeAtISO: `2026-03-01 (${W})` });
+    const { wyniki } = await wynikiStatusow(o, { applied, komunikat: `Fikcyjny brak miejsca ${W}` });
+    const pelnie = (x) => inspect(x, { depth: 20, showHidden: true, maxStringLength: Infinity, breakLength: Infinity });
+    expect(JSON.stringify(wyniki.applied), 'kontrola: wartownik w wyniku applied').toContain(WZ);
+    expect(pelnie(wyniki['apply-error']), 'kontrola: wartownik w wyniku apply-error').toContain(WZ);
+    const skroty = Object.values(wyniki).map((w) => o.api.resultSummary(w));
+    expect(skroty.map((s) => s.status)).toEqual(Object.keys(wyniki));
+    expect(JSON.stringify(skroty)).not.toContain(WZ);
+    expect(pelnie(skroty)).not.toContain(WZ);
+  }, 30_000);
+});
+
 describe('M14–M16: baza z innej wersji, versionchange, kasowanie', () => {
   d1();
   const operacje = (k, e) => [
@@ -1374,6 +1861,158 @@ describe('M14–M16: baza z innej wersji, versionchange, kasowanie', () => {
     o3.win.indexedDB = undefined;
     try { expect(await o3.api.deleteDatabase(o3.A.userId)).toEqual({ ok: false, powod: 'brak-indexeddb' }); } finally { o3.win.indexedDB = idb; }
   });
+
+  // ── kwarantanna ──
+  async function kazdaSchematKw(o) {
+    const { payload, wynik } = await nieczytelny(o);
+    for (const [nazwa, ...a] of operacjeKw(payload, wynik)) expect(await o.api[nazwa](...a), nazwa).toEqual(SCHEMAT);
+  }
+  // p18: otwarcie bez wersji bazy v2 daje v2 bez upgrade
+  it('M14 (kwarantanna): baza vilda_sync_<uid> v2 z wierszami kolejki i kwarantanny → każda operacja kwarantanny SYNC_DB_SCHEMA, baza bez zmian', async () => {
+    const o = await noweKw();
+    bazaKolejki(o.idb, o.A.userId, { wiersze: [wierszKolejki(1)], kwarantanna: [wierszKwarantanny(1), wierszKwarantanny(2)], wersja: 2 });
+    const przed = o.idb.__atrapa.bazy()[nazwaBazy(o.A.userId)];
+    expect(przed.sklepy.quarantine.wiersze).toHaveLength(2);
+    await kazdaSchematKw(o);
+    await o.cisza();
+    expect(o.idb.__atrapa.bazy()[nazwaBazy(o.A.userId)]).toEqual(przed);
+  });
+
+  it.each([
+    ['v1 bez sklepu meta', (S) => { const { meta: _m, ...x } = S; return x; }],
+    ['sklep quarantine z keyPath seq', (S) => ({ ...S, quarantine: { keyPath: 'seq', indeksy: { bySlot: { keyPath: 'slotId', unique: false } } } })],
+    ['sklep quarantine bez indeksu bySlot', (S) => ({ ...S, quarantine: { keyPath: ['slotId', 'seq'], indeksy: {} } })],
+    ['indeks bySlot unikalny', (S) => ({ ...S, quarantine: { keyPath: ['slotId', 'seq'], indeksy: { bySlot: { keyPath: 'slotId', unique: true } } } })],
+    ['indeks bySlot po innym polu', (S) => ({ ...S, quarantine: { keyPath: ['slotId', 'seq'], indeksy: { bySlot: { keyPath: 'seq', unique: false } } } })],
+  ])('M14 (kwarantanna): %s → każda operacja kwarantanny SYNC_DB_SCHEMA, baza bez zmian', async (_n, schemat) => {
+    const o = await noweKw();
+    bazaKolejki(o.idb, o.A.userId, { wiersze: [wierszKolejki(1)], kwarantanna: [wierszKwarantanny(1)], schemat: schemat(SCHEMAT_V1) });
+    const przed = o.idb.__atrapa.bazy()[nazwaBazy(o.A.userId)];
+    await kazdaSchematKw(o);
+    await o.cisza();
+    expect(o.idb.__atrapa.bazy()[nazwaBazy(o.A.userId)]).toEqual(przed);
+  });
+
+  // p14 (close przy transakcji w toku → complete), p14b (close w versionchange bez blocked)
+  it('M15a (kwarantanna): kasowanie z drugiego okna przy żądaniu w toku transakcji quarantinePut → zapis ok, połączenie zamknięte, kasowanie usunieta (bez blocked); potem każda operacja kwarantanny → SYNC_DB_DELETED, baza nie powstaje', async () => {
+    const o = await noweKw();
+    const baza = nazwaBazy(o.A.userId);
+    const { payload, wynik } = await nieczytelny(o);
+    expect(await o.api.quarantinePut(zmiana(1, payload), wynik, opcjeKw())).toEqual({ ok: true, nowy: true });
+    const o2 = await drugie(o);
+    await o.cisza();
+    const z = o.znacznik();
+    const h = wstrzymaj(o, { przy: 'success', baza, sklep: 'quarantine', tryb: 'readwrite' });
+    const p = o.api.quarantinePut(zmiana(2, payload), wynik, opcjeKw());
+    await h.czeka;
+    const usun = o2.api.deleteDatabase(o.A.userId);
+    await czekajAz(() => o.idb.__atrapa.log.slice(z.log).some((w) => w[0] === 'versionchange' && w[1] === baza), 'versionchange do pierwszego okna');
+    h.zwolnij();
+    expect(await p).toEqual({ ok: true, nowy: true });
+    expect(await usun).toEqual({ ok: true, wynik: 'usunieta' });
+    expect(wpisyLogu(o, z, 'blocked')).toEqual([]);
+    expect(o.jestBaza()).toBe(false);
+    for (const [nazwa, ...a] of operacjeKw(payload, wynik)) expect(await o.api[nazwa](...a), nazwa).toEqual({ ok: false, powod: 'blad', code: 'SYNC_DB_DELETED' });
+    await o.cisza();
+    expect(o.jestBaza()).toBe(false);
+  });
+
+  // Jak M15c dla dopisania: versionchange w tym miejscu podaje test (połączenie z otwarcia quarantinePut dostaje je tuż
+  // przed pierwszym db.transaction()).
+  it('M15c (kwarantanna): versionchange (wstrzyknięte) między otwarciem bazy przez quarantinePut a utworzeniem transakcji → SYNC_DB_CHANGED, nic nie zapisane', async () => {
+    const o = await noweKw();
+    const baza = nazwaBazy(o.A.userId);
+    const { payload, wynik } = await nieczytelny(o);
+    await o.api.quarantinePut(zmiana(1, payload), wynik, opcjeKw());
+    await o.cisza();
+    const przed = kwarantanna(o);
+    const idb = o.idb;
+    const wiaz = (t, x) => (typeof x === 'function' ? x.bind(t) : x);
+    let otwarcia = 0;
+    let wyslane = false;
+    const zPrzerwa = (db) => new Proxy(db, {
+      get(t, p) {
+        if (p !== 'transaction') return wiaz(t, Reflect.get(t, p, t));
+        return (...a) => {
+          if (!wyslane && typeof t.onversionchange === 'function') {
+            wyslane = true;
+            t.onversionchange({ type: 'versionchange', target: t, oldVersion: 1, newVersion: null });
+          }
+          return t.transaction(...a);
+        };
+      },
+      set(t, p, x) { return Reflect.set(t, p, x, t); },
+    });
+    o.win.indexedDB = {
+      open(n, w) {
+        const r = w === undefined ? idb.open(n) : idb.open(n, w);
+        if (n !== baza) return r;
+        otwarcia += 1;
+        if (otwarcia !== 1) return r;
+        return new Proxy(r, {
+          get(t, p) { const x = Reflect.get(t, p, t); return p === 'result' && x ? zPrzerwa(x) : wiaz(t, x); },
+          set(t, p, x) { return Reflect.set(t, p, x, t); },
+        });
+      },
+      deleteDatabase: (n) => idb.deleteDatabase(n), databases: () => idb.databases(), cmp: (a, b) => idb.cmp(a, b),
+    };
+    let w;
+    try { w = await o.api.quarantinePut(zmiana(2, payload), wynik, opcjeKw()); } finally { o.win.indexedDB = idb; }
+    expect(otwarcia).toBe(1);
+    expect(wyslane, 'versionchange przed utworzeniem transakcji').toBe(true);
+    expect(w).toEqual({ ok: false, powod: 'blad', code: 'SYNC_DB_CHANGED' });
+    await o.cisza();
+    expect(kwarantanna(o)).toEqual(przed);
+    expect(o.idb.__atrapa.polaczenia(baza)).toBe(0);
+  });
+
+  it('M16 (kwarantanna): deleteDatabase w tym dokumencie kasuje bazę z wierszami kwarantanny; potem każda operacja kwarantanny tego konta → SYNC_DB_DELETED bez otwarcia, baza nie powstaje', async () => {
+    const o = await noweKw();
+    const { payload, wynik } = await nieczytelny(o);
+    await o.api.quarantinePut(zmiana(1, payload), wynik, opcjeKw());
+    expect(o.jestBaza()).toBe(true);
+    expect(await o.api.deleteDatabase(o.A.userId)).toEqual({ ok: true, wynik: 'usunieta' });
+    expect(o.jestBaza()).toBe(false);
+    const z = o.znacznik();
+    for (const [nazwa, ...a] of operacjeKw(payload, wynik)) expect(await o.api[nazwa](...a), nazwa).toEqual({ ok: false, powod: 'blad', code: 'SYNC_DB_DELETED' });
+    await o.cisza();
+    expect(o.logKolejki(z)).toEqual([]);
+    expect(o.jestBaza()).toBe(false);
+  });
+
+  // Świeże konto: quarantinePut otwiera bazę dwa razy — próba (bazy nie ma), potem tworzenie.
+  it('M16 (kwarantanna): deleteDatabase w tym dokumencie w trakcie próby otwarcia przez quarantinePut (świeże konto) → brak; quarantinePut SYNC_DB_DELETED bez kolejnego otwarcia, baza nie powstaje', async () => {
+    const o = await noweKw();
+    const baza = nazwaBazy(o.A.userId);
+    const { payload, wynik } = await nieczytelny(o);
+    await o.cisza();
+    const h = wstrzymaj(o, { przy: 'open', baza });
+    const p = o.api.quarantinePut(zmiana(1, payload), wynik, opcjeKw());
+    await h.czeka;
+    expect(await o.api.deleteDatabase(o.A.userId)).toEqual({ ok: true, wynik: 'brak' });
+    const z = o.znacznik();
+    h.zwolnij();
+    expect(await p).toEqual({ ok: false, powod: 'blad', code: 'SYNC_DB_DELETED' });
+    await o.cisza();
+    expect(wpisyLogu(o, z, 'open')).toEqual([]);
+    expect(o.jestBaza()).toBe(false);
+  });
+
+  it('M16 (kwarantanna): deleteDatabase w tym dokumencie, gdy otwarcie tworzące bazę dla quarantinePut czeka w kolejce bazy → brak; SYNC_DB_DELETED, baza nie powstaje', async () => {
+    const o = await noweKw();
+    const baza = nazwaBazy(o.A.userId);
+    const { payload, wynik } = await nieczytelny(o);
+    await o.cisza();
+    const h = drugieOtwarcie(o, baza);
+    const p = o.api.quarantinePut(zmiana(1, payload), wynik, opcjeKw());
+    await h.czeka;
+    expect(await o.api.deleteDatabase(o.A.userId)).toEqual({ ok: true, wynik: 'brak' });
+    h.zwolnij();
+    expect(await p).toEqual({ ok: false, powod: 'blad', code: 'SYNC_DB_DELETED' });
+    await o.cisza();
+    expect(o.jestBaza()).toBe(false);
+    expect(o.idb.__atrapa.bazy()[baza]).toBe(undefined);
+  });
 });
 
 describe('M17–M18: tryby logowania i wejście operacji', () => {
@@ -1555,6 +2194,126 @@ describe('M17–M18: tryby logowania i wejście operacji', () => {
     expect(o.jestBaza()).toBe(false);
     expect(kluczeUrzadzen(o)).toEqual([]);
   });
+
+  // ── kwarantanna ──
+  it.each([
+    ['„Komputer w pracy” (konto cloud-only)', { chmura: ['A'] }],
+    ['„Zaloguj jednorazowo” (setEphemeralMode(true) przed logowaniem)', { jednorazowo: true }],
+    ['sejf na createInMemoryAdapter()', { wPamieci: true }],
+  ])('M17 (kwarantanna): %s → każda operacja kwarantanny tryb, zero odczytów indexedDB, brak bazy', async (_n, tryb) => {
+    const o = await noweKw({ konta: 'A', ...tryb });
+    const { payload, wynik } = await nieczytelny(o);
+    await o.cisza();
+    let odczyty = 0;
+    const idb = o.win.indexedDB;
+    Object.defineProperty(o.win, 'indexedDB', { get() { odczyty += 1; return idb; }, configurable: true });
+    try {
+      for (const [nazwa, ...a] of operacjeKw(payload, wynik)) expect(await o.api[nazwa](...a), nazwa).toEqual({ ok: false, powod: 'tryb' });
+    } finally { Object.defineProperty(o.win, 'indexedDB', { value: idb, writable: true, configurable: true }); }
+    expect(odczyty, 'odczyty window.indexedDB w trakcie operacji').toBe(0);
+    expect(o.idb.__atrapa.log.filter((w) => typeof w[1] === 'string' && w[1].startsWith('vilda_sync_'))).toEqual([]);
+    expect(kluczeUrzadzen(o)).toEqual([]);
+  });
+
+  it('M17 (kwarantanna): setStorageMode(uid, \'cloud-only\') w trakcie otwarcia bazy przez quarantinePut → tryb, połączenie zamknięte, brak wiersza; na koncie bez bazy — baza nie powstaje', async () => {
+    const o = await noweKw();
+    const baza = nazwaBazy(o.A.userId);
+    const { payload, wynik } = await nieczytelny(o);
+    await o.api.quarantinePut(zmiana(1, payload), wynik, opcjeKw());
+    await o.cisza();
+    const h = wstrzymaj(o, { przy: 'open', baza });
+    const p = o.api.quarantinePut(zmiana(2, payload), wynik, opcjeKw());
+    await h.czeka;
+    await o.v.setStorageMode(o.A.userId, 'cloud-only');
+    h.zwolnij();
+    expect(await p).toEqual({ ok: false, powod: 'tryb' });
+    await o.cisza();
+    expect(o.idb.__atrapa.polaczenia(baza)).toBe(0);
+    expect(kwarantanna(o).map((x) => x.seq)).toEqual([1]);
+    const o2 = await noweKw();
+    const baza2 = nazwaBazy(o2.A.userId);
+    await o2.cisza();
+    const h2 = wstrzymaj(o2, { przy: 'open', baza: baza2 });
+    const p2 = o2.api.quarantinePut(zmiana(1, payload), wynik, opcjeKw());
+    await h2.czeka;
+    await o2.v.setStorageMode(o2.A.userId, 'cloud-only');
+    h2.zwolnij();
+    expect(await p2).toEqual({ ok: false, powod: 'tryb' });
+    await o2.cisza();
+    expect(o2.jestBaza()).toBe(false);
+    expect(o2.idb.__atrapa.polaczenia(baza2)).toBe(0);
+  });
+
+  it('M17c (kwarantanna): konto cloud-only, unlockUser zatrzymane na odczycie rejestru → quarantinePut tryb; brak bazy', async () => {
+    const o = await noweKw({ konta: 'A', chmura: ['A'] });
+    const { payload, wynik } = await nieczytelny(o);
+    o.zablokuj();
+    await o.cisza();
+    const okno = await wOknieOdblokowania(o, () => o.v.unlockUser(o.A.userId, o.A.haslo));
+    expect(await o.api.quarantinePut(zmiana(1, payload), wynik, opcjeKw())).toEqual({ ok: false, powod: 'tryb' });
+    okno.zwolnij();
+    await okno.p;
+    await o.cisza();
+    expect(o.jestBaza()).toBe(false);
+  });
+
+  it('M18 (kwarantanna): brak window.indexedDB po odblokowaniu → brak-indexeddb; zablokowany sejf → zablokowany; przy zamkniętej bramce → bramka, także ze złymi argumentami (bramka przed argumentami)', async () => {
+    const o = await noweKw();
+    const { payload, wynik } = await nieczytelny(o);
+    const operacje = operacjeKw(payload, wynik);
+    await o.cisza();
+    const idb = o.win.indexedDB;
+    o.win.indexedDB = undefined;
+    try {
+      for (const [nazwa, ...a] of operacje) expect(await o.api[nazwa](...a), nazwa).toEqual({ ok: false, powod: 'brak-indexeddb' });
+    } finally { o.win.indexedDB = idb; }
+    o.zablokuj();
+    for (const [nazwa, ...a] of operacje) expect(await o.api[nazwa](...a), nazwa).toEqual({ ok: false, powod: 'zablokowany' });
+    o.win.VILDA_EVENT_LOG = false;
+    for (const [nazwa, ...a] of operacje) expect(await o.api[nazwa](...a), nazwa).toEqual({ ok: false, powod: 'bramka' });
+    expect(await o.api.quarantinePut(null, null, null)).toEqual({ ok: false, powod: 'bramka' });
+    expect(await o.api.quarantineList({ slotId: 'x' })).toEqual({ ok: false, powod: 'bramka' });
+    expect(await o.api.quarantineRelease('x', {})).toEqual({ ok: false, powod: 'bramka' });
+    expect(o.jestBaza()).toBe(false);
+  });
+
+  it('M18 (kwarantanna): zamknięta bramka sprawdzana przed odczytem argumentów — quarantineMinSeq bez opcji albo ze złym slotId → bramka; getter slotId (rzucający) w każdej operacji z opcjami nie jest czytany', async () => {
+    const o = await noweKw();
+    o.win.VILDA_EVENT_LOG = false;
+    const BRAMKA = { ok: false, powod: 'bramka' };
+    for (const a of [[], [null], [{ slotId: 'x' }]]) expect(await o.api.quarantineMinSeq(...a), `quarantineMinSeq ${JSON.stringify(a)}`).toEqual(BRAMKA);
+    let odczyty = 0;
+    const opcje = () => Object.defineProperty({}, 'slotId', { enumerable: true, get() { odczyty += 1; throw new TypeError('Fikcyjny błąd Testowy Jan'); } });
+    expect(await o.api.quarantineList(opcje())).toEqual(BRAMKA);
+    expect(await o.api.quarantineMinSeq(opcje())).toEqual(BRAMKA);
+    expect(await o.api.quarantineRelease([1], opcje())).toEqual(BRAMKA);
+    expect(await o.api.quarantinePut(zmiana(1, SMIECI), { status: 'unreadable', reason: 'decrypt' }, opcje())).toEqual(BRAMKA);
+    expect(odczyty, 'odczyty slotId przy zamkniętej bramce').toBe(0);
+    await o.cisza();
+    expect(o.jestBaza()).toBe(false);
+  });
+
+  it('M18b (kwarantanna): wstrzymane otwarcie + limit 10 s → SYNC_DB_TIMEOUT (quarantinePut i quarantineCount); spóźniony sukces zamyka połączenie, wiersze bez zmian', async () => {
+    const o = await noweKw();
+    const baza = nazwaBazy(o.A.userId);
+    const { payload, wynik } = await nieczytelny(o);
+    await o.api.quarantinePut(zmiana(1, payload), wynik, opcjeKw());
+    await o.cisza();
+    for (const [nazwa, operacja] of [['quarantinePut', () => o.api.quarantinePut(zmiana(2, payload), wynik, opcjeKw())], ['quarantineCount', () => o.api.quarantineCount()]]) {
+      const h = wstrzymaj(o, { przy: 'open', baza });
+      const p = operacja();
+      await h.czeka;
+      await o.timery.czekajNa((t) => t.ms === 10000);
+      expect(o.timery.odpal((t) => t.ms === 10000), nazwa).toBe(1);
+      expect(await p, nazwa).toEqual({ ok: false, powod: 'blad', code: 'SYNC_DB_TIMEOUT' });
+      const z = o.znacznik();
+      h.zwolnij();
+      await czekajAz(() => wpisyLogu(o, z, 'success').length > 0, 'spóźniony sukces otwarcia');
+      await o.cisza();
+      expect(o.idb.__atrapa.polaczenia(baza), nazwa).toBe(0);
+    }
+    expect(kwarantanna(o).map((x) => x.seq)).toEqual([1]);
+  });
 });
 
 describe('M19: sprawdzenia sesji (P-SESJA-ZAPISU)', () => {
@@ -1570,9 +2329,9 @@ describe('M19: sprawdzenia sesji (P-SESJA-ZAPISU)', () => {
   const PUNKT_6 = (o) => wstrzymaj(o, { przy: 'commit', baza: nazwaBazy(o.A.userId), tryb: 'readwrite' });
   const WARIANTY = ['B', 'A', 'blokada'];
   const ODMOWA = (wariant) => ({ ok: false, powod: wariant === 'blokada' ? 'zablokowany' : 'sesja' });
-  async function wPunkcie(o, punkt, wariant, operacja) {
+  async function wPunkcie(o, punkt, wariant, operacja, punkty = PUNKTY) {
     await o.cisza();
-    const h = PUNKTY[punkt](o);
+    const h = punkty[punkt](o);
     const p = operacja();
     await h.czeka;
     const s = o.przelaczWTle(wariant);
@@ -1656,6 +2415,57 @@ describe('M19: sprawdzenia sesji (P-SESJA-ZAPISU)', () => {
     expect(stanKolejki(o, 'B')).toEqual([['snap', kSnap(kB), 'pending']]);
     expect(await odszyfruj(o, o.kolejka('B')[0].env)).toMatchObject({ event: { kind: 'snap', key: kSnap(kB) } });
   });
+
+  // ── kwarantanna ──
+  const PUNKTY_KW = {
+    3: PUNKTY[3],
+    '4a': PUNKTY['4a'],
+    '4b': PUNKTY['4b'],
+    5: (o) => wstrzymaj(o, { przy: 'success', baza: nazwaBazy(o.A.userId), sklep: 'quarantine', tryb: 'readwrite' }),
+  };
+  async function zWierszemKw(o) {
+    const { payload, wynik } = await nieczytelny(o);
+    expect(await o.api.quarantinePut(zmiana(1, payload), wynik, opcjeKw())).toEqual({ ok: true, nowy: true });
+    return { payload, wynik, przed: kwarantanna(o) };
+  }
+  it.each(['3', '4a', '5'].flatMap((p) => WARIANTY.map((w) => [p, w])))('M19 (kwarantanna): quarantinePut, przełączenie w punkcie %s × %s → odmowa, bez zapisu', async (punkt, wariant) => {
+    const o = await noweKw({ konta: 'AB' });
+    const { payload, wynik, przed } = await zWierszemKw(o);
+    const { w, z } = await wPunkcie(o, punkt, wariant, () => o.api.quarantinePut(zmiana(2, payload), wynik, opcjeKw()), PUNKTY_KW);
+    expect(w).toEqual(ODMOWA(wariant));
+    expect(kwarantanna(o, 'A')).toEqual(przed);
+    expect(o.jestBaza('B')).toBe(false);
+    expect(o.logKolejki(z).filter((x) => x[0] === 'open')).toEqual([]);
+    expect(o.idb.__atrapa.polaczenia(/^vilda_sync_/)).toBe(0);
+  }, 30_000);
+
+  it.each(['3', '4a', '4b'].flatMap((p) => WARIANTY.map((w) => [p, w])))('M19 (kwarantanna): quarantinePut na koncie bez bazy, przełączenie w punkcie %s × %s → odmowa, baza nie powstaje (konto A ani B)', async (punkt, wariant) => {
+    const o = await noweKw({ konta: 'AB' });
+    const { payload, wynik } = await nieczytelny(o);
+    const { w, z } = await wPunkcie(o, punkt, wariant, () => o.api.quarantinePut(zmiana(1, payload), wynik, opcjeKw()), PUNKTY_KW);
+    expect(w).toEqual(ODMOWA(wariant));
+    expect([o.jestBaza('A'), o.jestBaza('B')]).toEqual([false, false]);
+    expect(o.logKolejki(z).filter((x) => x[0] === 'open')).toEqual([]);
+    expect(o.idb.__atrapa.polaczenia(/^vilda_sync_/)).toBe(0);
+  }, 30_000);
+
+  it.each(['4a', '5'].flatMap((p) => WARIANTY.map((w) => [p, w])))('M19 (kwarantanna): quarantineRelease, przełączenie w punkcie %s × %s → odmowa, wiersze zostają', async (punkt, wariant) => {
+    const o = await noweKw({ konta: 'AB' });
+    const { przed } = await zWierszemKw(o);
+    const { w } = await wPunkcie(o, punkt, wariant, () => o.api.quarantineRelease([1], { slotId: SLOT }), PUNKTY_KW);
+    expect(w).toEqual(ODMOWA(wariant));
+    expect(kwarantanna(o, 'A')).toEqual(przed);
+    expect(o.idb.__atrapa.polaczenia(/^vilda_sync_/)).toBe(0);
+  }, 30_000);
+
+  it.each(['quarantineList', 'quarantineCount', 'quarantineMinSeq'].flatMap((k) => WARIANTY.map((w) => [k, w])))('M19 (kwarantanna): %s, przełączenie w punkcie 4a × %s → odmowa', async (operacja, wariant) => {
+    const o = await noweKw({ konta: 'AB' });
+    await zWierszemKw(o);
+    const a = operacja === 'quarantineMinSeq' ? [{ slotId: SLOT }] : [];
+    const { w } = await wPunkcie(o, '4a', wariant, () => o.api[operacja](...a), PUNKTY_KW);
+    expect(w).toEqual(ODMOWA(wariant));
+    expect(o.idb.__atrapa.polaczenia(/^vilda_sync_/)).toBe(0);
+  }, 30_000);
 });
 
 describe('M20–M21: blokada sejfu i konto spoza rejestru', () => {
@@ -1698,6 +2508,45 @@ describe('M20–M21: blokada sejfu i konto spoza rejestru', () => {
     expect(await o.api.enqueue('snap', await karta(o, 2))).toEqual({ ok: false, powod: 'konto' });
     await o.cisza();
     expect(o.kolejka()).toEqual(wiersze);
+  });
+
+  it('M20 (kwarantanna): lock() nie zmienia kwarantanny (bez kasowania i otwarć), wiersze te same; po odblokowaniu quarantineCount i quarantineList jak przed', async () => {
+    const o = await noweKw();
+    const { payload, wynik } = await nieczytelny(o);
+    for (const [slot, seq] of [[SLOT, 1], [SLOT_STARY, 2]]) await o.api.quarantinePut(zmiana(seq, payload), wynik, opcjeKw(slot));
+    const licznik = await o.api.quarantineCount();
+    expect(licznik).toEqual({ ok: true, total: 2, sloty: { [SLOT]: 1, [SLOT_STARY]: 1 } });
+    const lista = await o.api.quarantineList();
+    await o.cisza();
+    const z = o.znacznik();
+    o.zablokuj();
+    await o.cisza();
+    expect(o.logKolejki(z)).toEqual([]);
+    expect(kwarantanna(o)).toEqual(lista.wiersze);
+    await o.zaloguj('A');
+    expect(await o.api.quarantineCount()).toEqual(licznik);
+    expect(await o.api.quarantineList()).toEqual(lista);
+  });
+
+  it('konto spoza rejestru: zapis kwarantanny — baza nie powstaje', async () => {
+    const o = await noweKw();
+    const { payload, wynik } = await nieczytelny(o);
+    await usunRekord(o.idb, 'vilda_registry', 'users', o.A.userId);
+    expect(await o.api.quarantinePut(zmiana(1, payload), wynik, opcjeKw())).toEqual({ ok: false, powod: 'konto' });
+    await o.cisza();
+    expect(o.jestBaza()).toBe(false);
+  });
+
+  it('konto spoza rejestru: zapis kwarantanny — istniejąca baza bez zmian', async () => {
+    const o = await noweKw();
+    const { payload, wynik } = await nieczytelny(o);
+    await o.api.quarantinePut(zmiana(1, payload), wynik, opcjeKw());
+    const przed = kwarantanna(o);
+    await usunRekord(o.idb, 'vilda_registry', 'users', o.A.userId);
+    expect(await o.api.quarantinePut(zmiana(1, payload), wynik, opcjeKw(SLOT, WERSJA2))).toEqual({ ok: false, powod: 'konto' });
+    expect(await o.api.quarantinePut(zmiana(2, payload), wynik, opcjeKw())).toEqual({ ok: false, powod: 'konto' });
+    await o.cisza();
+    expect(kwarantanna(o)).toEqual(przed);
   });
 });
 
@@ -1940,6 +2789,55 @@ describe('M23–M26: wartownik treści, przepływ bez sieci, scalanie, wiele oki
     expect(new Set(r.map((x) => x.seqLocal)).size).toBe(r.length);
     expect(o.meta()[0].v).toBe(5);
   }, 30_000);
+
+  it('M23 (kwarantanna): fikcyjny wartownik z treści nie wychodzi poza szyfrogram — wiersze quarantine bez data, meta, storage, konsola, wyniki operacji kwarantanny i resultSummary (wyniki wszystkich statusów, nazwa licznika z wartownikiem)', async () => {
+    const W = 'Wartownik-Testowy-QX7';
+    const WZ = W.slice(0, 9);
+    const metody = ['log', 'info', 'warn', 'error', 'debug'];
+    const szpiedzy = metody.map((m) => vi.spyOn(console, m));
+    const o = await noweKw();
+    szpiedzy.push(...metody.map((m) => vi.spyOn(o.win.console, m)));
+    krok(); const r = await o.v.savePatient({ name: `Testowy ${W}`, user: { lastName: W, firstName: 'Jan', sex: 'M', height: 120, weight: 22 } }, { dedup: false });
+    const env = (await o.ev.encryptEvent(await o.ev.buildSnapshotEvent(r.patientId, r.snapshotId, null))).env;
+    const applied = await o.v.encryptPayloadForCurrentUser({ schemaVersion: 2, patients: [], exportedAtISO: `2026-03-02 (${W})`, lastMergeAtISO: `2026-03-01 (${W})` });
+    const { wyniki, ladunki } = await wynikiStatusow(o, { applied, komunikat: `Fikcyjny brak miejsca ${W}` });
+    const pelnie = (x) => inspect(x, { depth: 20, showHidden: true, maxStringLength: Infinity, breakLength: Infinity });
+    expect(pelnie(wyniki), 'kontrola: wartownik w surowych wynikach applyEncryptedEvent').toContain(WZ);
+    const pary = [
+      ...Object.entries(wyniki).map(([st, w]) => [ladunki[st] || env, w]),
+      [{ iv: env.iv, data: 'AAAA' }, null],
+      [await o.v.encryptPayloadForCurrentUser(`Fikcyjna treść ${W}`), null],
+      [{ iv: '', data: env.data }, null],
+      [{ ...env, z: 'br' }, null],
+    ];
+    const zapisy = [];
+    const z = (x) => { zapisy.push(x); return x; };
+    for (const [i, [ladunek, w0]] of pary.entries()) {
+      const w = w0 || await zastosuj(o, ladunek);
+      z(await o.api.quarantinePut(zmiana(i + 1, ladunek), w, opcjeKw()));
+      z(o.api.resultSummary(w));
+    }
+    expect(zapisy.filter((x) => x.ok === true).length, 'zapisane wiersze nieczytelne').toBe(5);
+    // wartownik w nazwie pola wyniku scalania zakończonej na Count
+    z(o.api.resultSummary({ status: 'applied', result: { [`${W}Count`]: 1, [`Testowy ${W} Count`]: 2, mergedPatientCount: 1 } }));
+    z(await o.api.quarantineList());
+    z(await o.api.quarantineList({ slotId: SLOT }));
+    z(await o.api.quarantineCount());
+    z(await o.api.quarantineMinSeq({ slotId: SLOT }));
+    z(await o.api.quarantineRelease([2, 99], { slotId: SLOT }));
+    await o.cisza();
+    const wiersze = kwarantanna(o);
+    expect(new Set(wiersze.map((x) => x.reason))).toEqual(new Set(['decrypt', 'shape', 'envelope', 'format']));
+    expect(JSON.stringify(wiersze.map(({ data: _d, ...x }) => x))).not.toContain(WZ);
+    expect(JSON.stringify(o.meta())).not.toContain(WZ);
+    for (const m of ['localStorage', 'sessionStorage']) {
+      const st = o.win[m];
+      for (const kl of st.klucze()) expect(`${kl} ${st.getItem(kl)}`, m).not.toContain(WZ);
+    }
+    for (const sp of szpiedzy) for (const wyw of sp.mock.calls) expect(wyw.map(pelnie).join(' ')).not.toContain(WZ);
+    expect(JSON.stringify(zapisy)).not.toContain(WZ);
+    expect(pelnie(zapisy)).not.toContain(WZ);
+  }, 60_000);
 });
 
 describe('M27–M30: kody błędów, wyjątek nieprzewidziany, outboxList, negatywy', () => {
@@ -2112,6 +3010,159 @@ describe('M27–M30: kody błędów, wyjątek nieprzewidziany, outboxList, negat
     for (const a of [{ limit: 0 }, { limit: 201 }, { maxBytes: 0 }, { extraBytes: -1 }]) expect(await o.api.outboxTake(a), JSON.stringify(a)).toEqual({ ok: false, powod: 'argument' });
     expect(o.kolejka().map((x) => x.state)).toEqual(['pending', 'inflight', 'pending']);
   });
+
+  // ── kwarantanna ──
+  it('M27 (kwarantanna): open/UnknownError → SYNC_DB_OPEN_FAILED; open/blocked (fałszywe) → SYNC_DB_BLOCKED; put/UnknownError → SYNC_DB_WRITE_FAILED; put/QuotaExceededError → SYNC_DB_QUOTA; commit/AbortError → SYNC_DB_ABORTED; delete/UnknownError w quarantineRelease → SYNC_DB_WRITE_FAILED; wiersze bez zmian', async () => {
+    const o = await noweKw();
+    const baza = nazwaBazy(o.A.userId);
+    const { payload, wynik } = await nieczytelny(o);
+    await o.api.quarantinePut(zmiana(1, payload), wynik, opcjeKw());
+    const dodaj = () => o.api.quarantinePut(zmiana(2, payload), wynik, opcjeKw());
+    o.idb.__atrapa.usterka({ przy: 'open', baza, blad: 'UnknownError' });
+    expect(await dodaj()).toEqual(BLAD('SYNC_DB_OPEN_FAILED'));
+    o.idb.__atrapa.usterka({ przy: 'open', baza, zdarzenie: 'blocked' });
+    expect(await o.api.quarantineCount()).toEqual(BLAD('SYNC_DB_BLOCKED'));
+    await o.cisza();
+    expect(o.idb.__atrapa.polaczenia(baza)).toBe(0);
+    const zapis = async (blad) => {
+      const u = ['put', 'add'].map((przy) => o.idb.__atrapa.usterka({ przy, baza, sklep: 'quarantine', blad }));
+      try { return await dodaj(); } finally { for (const x of u) x.odwolaj(); }
+    };
+    expect(await zapis('UnknownError')).toEqual(BLAD('SYNC_DB_WRITE_FAILED'));
+    expect(await zapis('QuotaExceededError')).toEqual(BLAD('SYNC_DB_QUOTA'));
+    o.idb.__atrapa.usterka({ przy: 'commit', baza, tryb: 'readwrite', blad: 'AbortError' });
+    expect(await dodaj()).toEqual(BLAD('SYNC_DB_ABORTED'));
+    const u = o.idb.__atrapa.usterka({ przy: 'delete', baza, sklep: 'quarantine', blad: 'UnknownError' });
+    expect(await o.api.quarantineRelease([1], { slotId: SLOT })).toEqual(BLAD('SYNC_DB_WRITE_FAILED'));
+    expect(u.uzyta, 'usterka delete użyta').toBe(1);
+    expect(kwarantanna(o).map((x) => x.seq)).toEqual([1]);
+  });
+
+  it('M27 (kwarantanna): błąd odczytu w quarantineList (ze slotem i bez), quarantineCount i quarantineMinSeq → SYNC_DB_READ_FAILED', async () => {
+    const o = await noweKw();
+    const baza = nazwaBazy(o.A.userId);
+    const { payload, wynik } = await nieczytelny(o);
+    await o.api.quarantinePut(zmiana(1, payload), wynik, opcjeKw());
+    const odczyt = (k, ...a) => {
+      const u = ['getAll', 'openCursor', 'get', 'count', 'getAllKeys', 'openKeyCursor'].map((przy) => o.idb.__atrapa.usterka({ przy, baza, sklep: 'quarantine', blad: 'UnknownError' }));
+      return o.api[k](...a).finally(() => { for (const x of u) x.odwolaj(); });
+    };
+    for (const [k, ...a] of [['quarantineList'], ['quarantineList', { slotId: SLOT }], ['quarantineCount'], ['quarantineMinSeq', { slotId: SLOT }]]) {
+      expect(await odczyt(k, ...a), k).toEqual(BLAD('SYNC_DB_READ_FAILED'));
+    }
+    expect(await o.api.quarantineCount()).toEqual({ ok: true, total: 1, sloty: { [SLOT]: 1 } });
+  });
+
+  it('M27 (kwarantanna): zerwanie połączenia w trakcie transakcji quarantinePut (wymusZamkniecie) → SYNC_DB_CLOSED, wiersz nie powstaje', async () => {
+    const o = await noweKw();
+    const baza = nazwaBazy(o.A.userId);
+    const { payload, wynik } = await nieczytelny(o);
+    await o.api.quarantinePut(zmiana(1, payload), wynik, opcjeKw());
+    await o.cisza();
+    const h = wstrzymaj(o, { przy: 'success', baza, sklep: 'quarantine', tryb: 'readwrite' });
+    const p = o.api.quarantinePut(zmiana(2, payload), wynik, opcjeKw());
+    await h.czeka;
+    o.idb.__atrapa.wymusZamkniecie(baza);
+    h.zwolnij();
+    expect(await p).toEqual(BLAD('SYNC_DB_CLOSED'));
+    expect(kwarantanna(o).map((x) => x.seq)).toEqual([1]);
+  });
+
+  it.each([['QuotaExceededError', 'SYNC_DB_QUOTA'], ['UnknownError', 'SYNC_DB_OPEN_FAILED']])('M27 (kwarantanna): %s przy tworzeniu bazy przez quarantinePut (rekord licznika w upgradzie) → %s, baza nie powstaje', async (blad, code) => {
+    const o = await noweKw();
+    const baza = nazwaBazy(o.A.userId);
+    const { payload, wynik } = await nieczytelny(o);
+    await o.cisza();
+    const u = o.idb.__atrapa.usterka({ przy: 'add', baza, sklep: 'meta', tryb: 'versionchange', blad });
+    expect(await o.api.quarantinePut(zmiana(1, payload), wynik, opcjeKw())).toEqual(BLAD(code));
+    expect(u.uzyta, 'usterka w upgradzie użyta').toBe(1);
+    await o.cisza();
+    expect(o.jestBaza()).toBe(false);
+  });
+
+  it('M27/M28 (kwarantanna): getRegistryEntry rzuca (UnknownError z atrapy albo TypeError środowiska) → SYNC_REGISTRY_FAILED; obietnica nie odrzucona, treść błędu nie wycieka, baza nie powstaje', async () => {
+    const o = await noweKw();
+    const { payload, wynik } = await nieczytelny(o);
+    await o.cisza();
+    o.idb.__atrapa.usterka({ przy: 'get', baza: 'vilda_registry', sklep: 'users', blad: 'UnknownError' });
+    const w1 = await o.api.quarantinePut(zmiana(1, payload), wynik, opcjeKw());
+    expect(w1).toEqual(BLAD('SYNC_REGISTRY_FAILED'));
+    const idb = o.win.indexedDB;
+    o.win.indexedDB = {
+      open: (n, w) => { if (n === 'vilda_registry') throw new TypeError('Fikcyjny błąd środowiska Testowy Jan'); return w === undefined ? idb.open(n) : idb.open(n, w); },
+      deleteDatabase: (n) => idb.deleteDatabase(n), databases: () => idb.databases(), cmp: (a, b) => idb.cmp(a, b),
+    };
+    let w2;
+    try { w2 = await o.api.quarantinePut(zmiana(1, payload), wynik, opcjeKw()); } finally { o.win.indexedDB = idb; }
+    expect(w2).toEqual(BLAD('SYNC_REGISTRY_FAILED'));
+    expect(JSON.stringify([w1, w2])).not.toContain('Testowy');
+    expect(inspect([w1, w2], { showHidden: true, depth: 20 })).not.toContain('Testowy');
+    await o.cisza();
+    expect(o.jestBaza()).toBe(false);
+  });
+
+  it('M28 (kwarantanna): wyjątek z pola argumentu z kodem spoza wzorca (getter seq zmiany albo slotId opcji) → SYNC_INTERNAL w quarantinePut, quarantineList, quarantineMinSeq i quarantineRelease; obietnica nie odrzucona, treść nie wycieka, baza nie powstaje', async () => {
+    const o = await noweKw();
+    const { payload, wynik } = await nieczytelny(o);
+    await o.cisza();
+    const blad = () => { throw Object.assign(new Error('Fikcyjny błąd Testowy Jan'), { code: 'Testowy Jan nie kod' }); };
+    const zlaZmiana = Object.defineProperty({ payload }, 'seq', { get: blad, enumerable: true });
+    const zleOpcje = () => Object.defineProperty({}, 'slotId', { get: blad, enumerable: true });
+    const wyniki = [
+      await surowe(o, 'quarantinePut', zlaZmiana, wynik, opcjeKw()),
+      await surowe(o, 'quarantinePut', zmiana(1, payload), wynik, zleOpcje()),
+      await surowe(o, 'quarantineList', zleOpcje()),
+      await surowe(o, 'quarantineMinSeq', zleOpcje()),
+      await surowe(o, 'quarantineRelease', [1], zleOpcje()),
+    ];
+    expect(wyniki).toEqual(wyniki.map(() => BLAD('SYNC_INTERNAL')));
+    expect(JSON.stringify(wyniki)).not.toContain('Testowy');
+    expect(inspect(wyniki, { showHidden: true, depth: 20 })).not.toContain('Testowy');
+    await o.cisza();
+    expect(o.jestBaza()).toBe(false);
+  });
+
+  it('M30 (kwarantanna): slotId 63 i 65 znaków, wielkie litery, nie-hex albo nie-napis → argument; brak opcji ze slotId (quarantineMinSeq, quarantineRelease) → argument; seqs nie-tablica albo ponad 1000 elementów → argument; złe elementy (0, 1,5, −1, napis, null) → pominiete', async () => {
+    const o = await noweKw();
+    const { payload, wynik } = await nieczytelny(o);
+    for (const seq of [1, 2, 3]) await o.api.quarantinePut(zmiana(seq, payload), wynik, opcjeKw());
+    const ARG = { ok: false, powod: 'argument' };
+    for (const slotId of [SLOT.slice(1), `${SLOT}0`, SLOT.toUpperCase(), 'g'.repeat(64), 5]) {
+      const n = String(slotId).slice(0, 10);
+      expect(await o.api.quarantineList({ slotId }), `quarantineList ${n}`).toEqual(ARG);
+      expect(await o.api.quarantineMinSeq({ slotId }), `quarantineMinSeq ${n}`).toEqual(ARG);
+      expect(await o.api.quarantineRelease([1], { slotId }), `quarantineRelease ${n}`).toEqual(ARG);
+    }
+    for (const a of [[], [{}], [null], ['x']]) expect(await o.api.quarantineMinSeq(...a), `quarantineMinSeq ${JSON.stringify(a)}`).toEqual(ARG);
+    for (const op of [undefined, {}, null, 'x']) expect(await o.api.quarantineRelease([1], op), `quarantineRelease ${JSON.stringify(op)}`).toEqual(ARG);
+    expect(await o.api.quarantineRelease('1', { slotId: SLOT })).toEqual(ARG);
+    expect(await o.api.quarantineRelease(null, { slotId: SLOT })).toEqual(ARG);
+    expect(await o.api.quarantineRelease(Array.from({ length: 1001 }, (_, i) => i + 1), { slotId: SLOT })).toEqual(ARG);
+    expect(kwarantanna(o).map((x) => x.seq)).toEqual([1, 2, 3]);
+    expect(await o.api.quarantineRelease([0, 1.5, -1, '2', null, 3], { slotId: SLOT })).toEqual({ ok: true, usuniete: [3], pominiete: [0, 1.5, -1, '2', null] });
+    expect(kwarantanna(o).map((x) => x.seq)).toEqual([1, 2]);
+    expect(await o.api.quarantineRelease(Array.from({ length: 1000 }, (_, i) => i + 1), { slotId: SLOT })).toMatchObject({ ok: true, usuniete: [1, 2] });
+    expect(kwarantanna(o)).toEqual([]);
+  });
+
+  it('M30 (kwarantanna): quarantineList z argumentem nie-obiektem albo slotId null → argument; quarantineRelease bez poprawnego seq (pusta lista, same złe elementy) → ok z pustą listą usuniete, wiersze zostają; zmiana tablicy seqs po wywołaniu nie zmienia wyniku', async () => {
+    const o = await noweKw();
+    const { payload, wynik } = await nieczytelny(o);
+    for (const seq of [1, 2, 3]) await o.api.quarantinePut(zmiana(seq, payload), wynik, opcjeKw());
+    const ARG = { ok: false, powod: 'argument' };
+    for (const a of [null, 'x', 5, true, [SLOT]]) expect(await o.api.quarantineList(a), `quarantineList ${JSON.stringify(a)}`).toEqual(ARG);
+    expect(await o.api.quarantineList({ slotId: null })).toEqual(ARG);
+    expect(await o.api.quarantineRelease([], { slotId: SLOT })).toEqual({ ok: true, usuniete: [], pominiete: [] });
+    expect(await o.api.quarantineRelease([0, 'x', null], { slotId: SLOT })).toEqual({ ok: true, usuniete: [], pominiete: [0, 'x', null] });
+    expect(kwarantanna(o).map((x) => x.seq)).toEqual([1, 2, 3]);
+    // tablica z chwili wywołania: odwrócenie i dopisanie (także ponad limit 1000) w trakcie operacji bez wpływu
+    const seqs = [3, 1];
+    const p = o.api.quarantineRelease(seqs, { slotId: SLOT });
+    seqs.reverse();
+    seqs.push(2, ...Array.from({ length: 1000 }, (_, i) => i + 10));
+    expect(await p).toEqual({ ok: true, usuniete: [3, 1], pominiete: [] });
+    expect(kwarantanna(o).map((x) => x.seq)).toEqual([2]);
+  });
 });
 
 describe('M4c: zbiorczo', () => {
@@ -2131,6 +3182,7 @@ describe('Scenariusz magazynu na atrapie (SLAD_MAGAZYNU)', () => {
     const { win, timery } = okno({ dodatki: { indexedDB: idb } });
     try {
       expect(typeof win.VildaVault._eventLog.enqueue, 'API magazynu kolejki (VildaVault._eventLog.enqueue)').toBe('function');
+      expect(typeof win.VildaVault._eventLog.quarantinePut, 'API kwarantanny (VildaVault._eventLog.quarantinePut)').toBe('function');
       win.VILDA_EVENT_LOG = true;
       const w = await scenariuszMagazynu(win, { drugieOkno: async () => ({ indexedDB: idb, zamknij() {} }), czekaj: async (ms) => { krok(ms); } });
       if (process.env.E2_SLAD_MAGAZYNU) writeFileSync(process.env.E2_SLAD_MAGAZYNU, JSON.stringify(w, null, 1));

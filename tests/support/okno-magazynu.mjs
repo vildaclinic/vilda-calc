@@ -36,6 +36,7 @@
 //   o.spokoj() → Promise — 30 makrozadań bez zmiany śladów i bez crypto.subtle w toku (transakcje atrapy mogą stać
 //       na wstrzymaniu).
 //   o.kolejka(kto = 'A') → wiersze sklepu outbox bazy kolejki konta po seqLocal (migawka atrapy; [] bez bazy),
+//   o.kwarantanna(kto = 'A') → wiersze sklepu quarantine w porządku klucza [slotId, seq] (migawka atrapy; [] bez bazy),
 //   o.meta(kto = 'A') → wiersze sklepu meta, o.jestBaza(kto = 'A') → boolean.
 //   o.znacznik() → { log, krypto, dziennik } (długości śladów); o.logKolejki(z) → wpisy logu atrapy dla baz kolejki
 //       (vilda_sync_*) po znaczniku.
@@ -44,8 +45,8 @@
 //   naAtrapie(idb, baza, sklepy, tryb, praca) → Promise — jedna transakcja na świeżym połączeniu (otwarcie bez wersji),
 //       praca(tx) wysyła żądania synchronicznie; połączenie zamykane po zakończeniu.
 //   czytajRekord(idb, baza, sklep, klucz), zmienRekord(idb, baza, sklep, klucz, fn), usunRekord(idb, baza, sklep, klucz)
-//   bazaKolejki(idb, uid, { wiersze, licznik, wersja, schemat }) — baza kolejki (domyślnie schemat wersji 1 z projektu)
-//       utworzona przez __atrapa.utworz, z gotowymi wierszami outbox i rekordem licznika.
+//   bazaKolejki(idb, uid, { wiersze, licznik, wersja, schemat, kwarantanna }) — baza kolejki (domyślnie schemat wersji 1
+//       z projektu) utworzona przez __atrapa.utworz, z gotowymi wierszami outbox, quarantine i rekordem licznika.
 //   SCHEMAT_V1, wierszKolejki(i, pola) — schemat bazy kolejki wersji 1 i fikcyjny wiersz outbox (env z fikcyjnym iv/data).
 import { vi } from 'vitest';
 import { AtrapaIDBKeyRange, utworzIndexedDB } from './atrapa-indexeddb.mjs';
@@ -140,11 +141,12 @@ export function wierszKolejki(i, pola = {}) {
     ...pola,
   };
 }
-export function bazaKolejki(idb, uid, { wiersze = [], licznik, wersja = 1, schemat = SCHEMAT_V1, meta } = {}) {
+export function bazaKolejki(idb, uid, { wiersze = [], licznik, wersja = 1, schemat = SCHEMAT_V1, meta, kwarantanna = [] } = {}) {
   const max = wiersze.reduce((m, w) => Math.max(m, w.seqLocal || 0), 0);
   const zMeta = schemat.meta ? (meta || [{ k: 'licznik', v: licznik === undefined ? max : licznik, baza: '11111111-1111-4111-8111-111111111111' }]) : undefined;
   const dane = {};
   if (schemat.outbox) dane.outbox = wiersze;
+  if (schemat.quarantine) dane.quarantine = kwarantanna;
   if (zMeta) dane.meta = zMeta;
   idb.__atrapa.utworz(nazwaBazy(uid), wersja, schemat, dane);
 }
@@ -271,6 +273,7 @@ export async function oknoMagazynu(opcje = {}) {
     win, v, ev: v._eventLog, idb, A, B, timery: o0.timery, dziennik: o0.dziennik, krypto,
     kryptoWToku: () => kryptoWToku, kto, sesja, zablokuj, zaloguj, przelacz, przelaczWTle, tlo, cisza, spokoj, znacznik,
     kolejka: (k = 'A') => (migawka(k, 'outbox') || []).slice().sort((x, y) => x.seqLocal - y.seqLocal),
+    kwarantanna: (k = 'A') => (migawka(k, 'quarantine') || []).slice(),
     meta: (k = 'A') => migawka(k, 'meta') || [],
     jestBaza: (k = 'A') => !!idb.__atrapa.bazy()[nazwaBazy(uidKto(k))],
     logKolejki: (z = { log: 0 }) => idb.__atrapa.log.slice(z.log).filter((w) => typeof w[1] === 'string' && w[1].startsWith('vilda_sync_')),

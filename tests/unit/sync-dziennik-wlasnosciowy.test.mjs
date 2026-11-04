@@ -78,6 +78,14 @@
 // kolejki (reguła ogona)” — profil podstawowy bez W2s, ziarna ZIARNA_KOAL (E2_AB_ZIARNA_KOAL), literał ZNANE_W1_KOAL,
 // suma koalescencji > 0; blok deterministyczny p. 7 (7a poprawki jednej wizyty z rzędu, 7b ratunek notatki za pełną
 // kartą, 7c punkty R3 wariantu „na koniec”); E2_AB_KOAL=ogon — profil pełny z koalescencją (przebieg ręczny).
+//
+// KWARANTANNA (E2-PR2b, blok deterministyczny p. 7d; wymaganie E2-PR4). Odbiorca stosuje partię nadawcy, z której jedno
+// albo dwa zdarzenia trafiają do kwarantanny (prawdziwe quarantinePut, quarantineList, quarantineMinSeq, quarantineRelease
+// i quarantineCount sejfu w osobnym oknie nad atrapą IndexedDB — urządzenia uprzęży mają sejf na adapterze w pamięci);
+// warianty FIFO / ponowienie / zwolnienie („Zwolnij”) / ponowienie + sufiks dla partii [pnote, pnotetomb],
+// [pnote, ptomb, pnotetomb] i N1 [snap, pfull, pnote] (w kwarantannie pfull albo snap i pfull); literał: D wobec nadawcy
+// i W4 (zwolnienie w N1 zostawia tylko u nadawcy wizytę albo całą kartę z notatką — charakterystyka, pełna wymiana ją
+// dowozi; przy snap i pfull w kwarantannie samo ponowienie zostawia różnicę notatki, ponowienie + sufiks — nie).
 // Każdy describe zaczyna od sprawdzenia, że VildaVault._eventLog istnieje (D1).
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { utworzAtrapeWorkera, zegarSterowany } from '../support/atrapa-workera-sync.mjs';
@@ -88,6 +96,7 @@ import { createHash } from 'node:crypto';
 import { PRZYGOTOWANIA, sztucznyZegar, przesunZegar, zegar } from './s4d7-wspolne.mjs';
 import { SCEN as KATALOG, RUNDY, pelnyStan, widok } from './kosz-po-kluczu-wspolne.mjs';
 import { dopiszDoKolejki } from '../support/model-kolejki.mjs';
+import { AtrapaIDBKeyRange, utworzIndexedDB } from '../support/atrapa-indexeddb.mjs';
 
 // ── Wspólne ──────────────────────────────────────────────────────────────────────────────────────────────────────────
 const START = Date.parse('2026-03-02T08:00:00.000Z');
@@ -2224,6 +2233,184 @@ describe('A ≡ B, blok deterministyczny p. 7: koalescencja kolejki (reguła ogo
     };
     expect(wyniki, 'literał p. 7c').toEqual({ 'bez łączenia': oczek, ogon: oczek });
   }, 120_000);
+});
+
+// ── p. 7d: kwarantanna i „Zwolnij” (wymaganie E2-PR4) — literały ────────────────────────────────────────────────────
+// Odbiorca (świeży klon B) stosuje partię nadawcy A, z której zdarzenia q trafiają do kwarantanny. Wymagania dla
+// E2-PR4 (drenaż z kwarantanną) i E2-PR5 („Zwolnij”): (1) ponowna próba w kolejności seq rosnąco; (2) po udanej ponownej
+// próbie ponowne zastosowanie zdarzeń od jej seq do kursora (scalanie jest idempotentne); (3) „Zwolnij” usuwa wpis bez
+// zastosowania — do najbliższej pełnej wymiany karta może być niepełna albo może jej brakować. Warianty: FIFO (bez
+// kwarantanny), ponowienie (1), zwolnienie (3), ponowienie + sufiks (1 i 2). Literał każdej partii i wariantu: D(nadawca, odbiorca)
+// z etykietami encji, W4 (zdarzenia, potem pełna wymiana blobem), wiersze kwarantanny przed drugą fazą ([seq, rodzaj
+// zdarzenia, powód, z]), rodzaje zdarzeń drugiej fazy, zwolnione seq i liczba wierszy na końcu. Wymaganie (2) rozróżnia
+// partia N1 z [snap, pfull] w kwarantannie (pnote zastosowane w pierwszej fazie przed kartą): samo ponowienie zostawia
+// różnicę notatki, ponowienie + sufiks — nie. Kolejność ponowień (1) widać w literale tylko w kolejności drugiej fazy
+// i zwolnionych seq; D w tych partiach od niej nie zależy.
+// Magazyn kwarantanny: prawdziwe quarantinePut, quarantineList, quarantineMinSeq, quarantineRelease i quarantineCount
+// sejfu w osobnym oknie (okno() z adapterem IndexedDB sejfu nad atrapą tests/support/atrapa-indexeddb.mjs — tryb
+// „Komputer prywatny”, osobne fikcyjne konto, bramka dziennika zdarzeń otwarta tylko w tym oknie). Urządzenia uprzęży
+// mają sejf na adapterze w pamięci (setStorageAdapter), więc ich własne operacje kwarantanny kończą się odmową 'tryb';
+// wiersz kwarantanny niesie tylko szyfrogram wiersza /changes, slotId odbiorcy i seq, więc konto okna magazynu nie wpływa
+// na wynik. seq = pozycja zdarzenia w kolejce nadawcy (numer w dzienniku serwera).
+// Przyczyna kwarantanny (model nowszej wersji nadawcy): wiersz /changes zdarzenia q niesie znacznik formatu z: 'br',
+// którego ta wersja nie zna — prawdziwy applyEncryptedEvent odbiorcy zwraca unreadable/format i niczego nie zmienia.
+// Ponowna próba po aktualizacji (model nowej wersji, która zna znacznik): applyEncryptedEvent na { iv, data } wiersza
+// z quarantineList (szyfrogram nadawcy jest zwykłą kopertą, bez kompresji), potem quarantineRelease tego seq.
+const P7D_WARIANTY = ['FIFO', 'ponowienie', 'zwolnienie', 'ponowienie + sufiks'];
+const P7D_WERSJA = '1.0.0-fikcyjna';
+async function oknoKwarantanny() {
+  const idb = utworzIndexedDB();
+  vi.stubGlobal('IDBKeyRange', AtrapaIDBKeyRange);
+  const { win, timery } = okno({ dodatki: { indexedDB: idb } });
+  const ev = win.VildaVault._eventLog;
+  const zamknij = async () => {
+    for (let i = 0; i < 10_000 && idb.__atrapa.wToku(); i += 1) await new Promise((r) => { setImmediate(r); });
+    const higiena = [idb.__atrapa.polaczenia(/^vilda_sync_/), idb.__atrapa.wToku()];
+    timery.wyczysc();
+    vi.unstubAllGlobals();
+    return higiena;
+  };
+  if (typeof ev.quarantinePut !== 'function') await zamknij();
+  expect(typeof ev.quarantinePut, 'API kwarantanny (VildaVault._eventLog.quarantinePut)').toBe('function');
+  win.VILDA_EVENT_LOG = true;
+  await win.VildaVault.createUser('Fikcyjne#Haslo!Kwarantanna2026', { label: 'Fikcyjna Lekarka Kwarantanna', iterations: 1000 });
+  return { ev, zamknij };
+}
+// Jeden wariant: świeży klon odbiorcy Y, faza 1 (partia FIFO; zdarzenia o indeksach z `kw` do kwarantanny — poza
+// wariantem FIFO), faza 2 według wariantu, na końcu D wobec nadawcy X i W4.
+async function p7dWariant(S, X, Y, partia, kw, wariant, M, n) {
+  const K = await klon(S, Y, `kw-${P7D_WARIANTY.indexOf(wariant)}`);
+  try {
+    const slotId = K.d.slotId;
+    const c = kursor(S, X, Y);
+    const seqOd = (i) => c + i + 1;
+    const rodzaj = new Map(partia.map((e, i) => [seqOd(i), e.kind]));
+    const druga = [];
+    for (const [i, e] of partia.entries()) {
+      if (wariant === 'FIFO' || !kw.includes(i)) { await zastosuj(K, [e]); continue; }
+      const zmiana = { seq: seqOd(i), eid: `00000000-0000-4000-8000-${String(seqOd(i)).padStart(12, '0')}`, payload: { ...e.env, z: 'br' } };
+      const w = await K.ev.applyEncryptedEvent(zmiana.payload);
+      expect(w, `faza 1, ${e.kind} (seq ${zmiana.seq}): wynik zastosowania`).toEqual({ status: 'unreadable', reason: 'format' });
+      expect(await M.ev.quarantinePut(zmiana, w, { slotId, appVersion: P7D_WERSJA }), 'quarantinePut').toEqual({ ok: true, nowy: true });
+    }
+    const lista = await M.ev.quarantineList({ slotId });
+    expect(lista.ok, 'quarantineList').toBe(true);
+    const wiersze = lista.wiersze;
+    expect(wiersze.map((r) => r.seq), 'lista po seq rosnąco').toEqual(wiersze.map((r) => r.seq).sort((a, b) => a - b));
+    const zwolnij = async (seqs) => {
+      const r = await M.ev.quarantineRelease(seqs, { slotId });
+      expect(r, 'quarantineRelease').toEqual({ ok: true, usuniete: seqs, pominiete: [] });
+      return seqs;
+    };
+    const ponow = async (r) => {
+      const w = await K.ev.applyEncryptedEvent({ iv: r.iv, data: r.data });
+      expect(w && w.status, `ponowna próba seq ${r.seq}`).toBe('applied');
+      druga.push(rodzaj.get(r.seq));
+      return zwolnij([r.seq]);
+    };
+    const zwolnione = [];
+    if (wariant === 'ponowienie') for (const r of wiersze) zwolnione.push(...await ponow(r));
+    if (wariant === 'zwolnienie' && wiersze.length) zwolnione.push(...await zwolnij(wiersze.map((r) => r.seq)));
+    if (wariant === 'ponowienie + sufiks' && wiersze.length) {
+      const { seq: min } = await M.ev.quarantineMinSeq({ slotId });
+      const zKw = new Map(wiersze.map((r) => [r.seq, r]));
+      for (const [i, e] of partia.entries()) {
+        if (seqOd(i) < min) continue;
+        if (zKw.has(seqOd(i))) { zwolnione.push(...await ponow(zKw.get(seqOd(i)))); continue; }
+        await zastosuj(K, [e]);
+        druga.push(e.kind);
+      }
+    }
+    const licznik = await M.ev.quarantineCount();
+    const kK = kanon(await eksport(K));
+    ustawStan(K, await eksport(K));
+    const w = await w4(S, X, K, { tabela: 'W4' });
+    return {
+      D: opisD(D(kanon(X.stan), kK), n, 'A', 'B'), W4: w.ok,
+      kwarantanna: wiersze.map((r) => [r.seq, rodzaj.get(r.seq), r.reason, r.z]), drugaFaza: druga, zwolnione, poKoncu: licznik.total,
+    };
+  } finally { await zamknij(K); }
+}
+async function p7dCzesciowa(usunPacjenta) {
+  const S = swiat(777 + (usunPacjenta ? 1 : 0));
+  const los = rng(0x7070 + (usunPacjenta ? 1 : 0));
+  vi.spyOn(Math, 'random').mockImplementation(() => (S.losAlt || los)());
+  const A = await urzadzenie(S, 'A');
+  krok(); const P = (await A.d.zapiszKarte(1)).patientId;
+  krok(); const R = (await A.d.zapiszKarte(2)).patientId;
+  ustawStan(A, await eksport(A));
+  const B = await urzadzenie(S, 'B', A);
+  krok(60e3); const { wynik: notatka } = await mutacja(S, A, 'notatka', () => A.v.savePatientNote({ patientId: P, title: 'Fikcyjna', body: 'Fikcyjna treść p. 7d', category: 'inne' }));
+  krok(60e3);
+  if (usunPacjenta) await mutacja(S, A, 'usuń pacjenta', () => A.v.removePatient(P));
+  else await mutacja(S, A, 'usuń notatkę', () => A.v.removePatientNote(notatka.id));
+  return { S, X: A, Y: B, n: new Map([[P, 'P'], [R, 'R'], [notatka.id, 'n']]) };
+}
+async function p7dN1() {
+  const S = swiat(650);
+  const los = rng(0x6050);
+  vi.spyOn(Math, 'random').mockImplementation(() => (S.losAlt || los)());
+  const u = await p6r4(S); u.S = S;
+  krok(60e3); const { wynik: notatka } = await mutacja(S, u.B, 'notatka pacjenta', () => u.B.v.savePatientNote({ patientId: u.P, title: 'Fikcyjna notatka', body: 'Fikcyjna treść N1', category: 'inne' }));
+  await p6usunPacjenta(u, u.B, u.P);
+  await popraw(u, u.A, u.v, 34.9);
+  krok();
+  const { dodane } = await dostawa(S, u.B, u.A, { w2s: false });
+  expect(dodane.map((k) => k.event.kind), 'haki A po partii B→A [pnote, ptomb, pnotetomb]').toEqual(['pfull', 'pnote']);
+  u.n.set(notatka.id, 'n');
+  return { S, X: u.A, Y: u.B, n: u.n };
+}
+const P7D_PUSTE = (kw, druga) => ({
+  FIFO: { D: [], W4: true, kwarantanna: [], drugaFaza: [], zwolnione: [], poKoncu: 0 },
+  ponowienie: { D: [], W4: true, kwarantanna: kw, drugaFaza: druga.ponowienie, zwolnione: kw.map((r) => r[0]), poKoncu: 0 },
+  zwolnienie: { D: [], W4: true, kwarantanna: kw, drugaFaza: [], zwolnione: kw.map((r) => r[0]), poKoncu: 0 },
+  'ponowienie + sufiks': { D: [], W4: true, kwarantanna: kw, drugaFaza: druga.sufiks, zwolnione: kw.map((r) => r[0]), poKoncu: 0 },
+});
+const P7D = {
+  '[pnote, pnotetomb] („Usuń notatkę”), pnote w kwarantannie: odbiorca = nadawca we wszystkich wariantach': {
+    swiat: () => p7dCzesciowa(false), wKwarantannie: ['pnote'], partia: ['pnote', 'pnotetomb'],
+    literal: P7D_PUSTE([[1, 'pnote', 'format', 'br']], { ponowienie: ['pnote'], sufiks: ['pnote', 'pnotetomb'] }),
+  },
+  '[pnote, ptomb, pnotetomb] („Usuń pacjenta”), pnote w kwarantannie: odbiorca = nadawca we wszystkich wariantach': {
+    swiat: () => p7dCzesciowa(true), wKwarantannie: ['pnote'], partia: ['pnote', 'ptomb', 'pnotetomb'],
+    literal: P7D_PUSTE([[1, 'pnote', 'format', 'br']], { ponowienie: ['pnote'], sufiks: ['pnote', 'ptomb', 'pnotetomb'] }),
+  },
+  'N1: [snap, pfull, pnote] (haki H1 i H2 nadawcy), pfull w kwarantannie: odbiorca = nadawca poza zwolnieniem; zwolnienie — jedna wizyta karty tylko u nadawcy (charakterystyka; pełna wymiana w W4 ją dowozi)': {
+    swiat: p7dN1, wKwarantannie: ['pfull'], partia: ['snap', 'pfull', 'pnote'],
+    literal: (() => {
+      const l = P7D_PUSTE([[2, 'pfull', 'format', 'br']], { ponowienie: ['pfull'], sufiks: ['pfull', 'pnote'] });
+      l.zwolnienie.D = ['wersja P/w: tylko A'];
+      return l;
+    })(),
+  },
+  'N1: [snap, pfull, pnote], snap i pfull w kwarantannie: ponowienie bez sufiksu zostawia notatkę n tylko u nadawcy i jej nagrobek tylko u odbiorcy, ponowienie + sufiks — odbiorca = nadawca; zwolnienie — karta P z wizytami i notatka tylko u nadawcy (charakterystyka; pełna wymiana w W4 je dowozi)': {
+    swiat: p7dN1, wKwarantannie: ['snap', 'pfull'], partia: ['snap', 'pfull', 'pnote'],
+    literal: (() => {
+      const l = P7D_PUSTE([[1, 'snap', 'format', 'br'], [2, 'pfull', 'format', 'br']], { ponowienie: ['snap', 'pfull'], sufiks: ['snap', 'pfull', 'pnote'] });
+      l.ponowienie.D = ['pnote n: tylko A', 'pnotetomb n: tylko B'];
+      l.zwolnienie.D = ['karta P: tylko A', 'pnote n: tylko A', 'pnotetomb n: tylko B', 'ptomb P: tylko B', 'wersja P/v: tylko A', 'wersja P/w: tylko A'];
+      return l;
+    })(),
+  },
+};
+describe('A ≡ B, blok deterministyczny p. 7d: kwarantanna i „Zwolnij” (wymaganie E2-PR4; magazyn kwarantanny sejfu)', () => {
+  d1();
+  for (const [nazwa, sc] of Object.entries(P7D)) {
+    it(`p. 7d ${nazwa}; warianty FIFO, ponowienie, zwolnienie, ponowienie + sufiks; W4`, async () => {
+      const M = await oknoKwarantanny();
+      try {
+        const { S, X, Y, n } = await sc.swiat();
+        const partia = X.Q.slice(kursor(S, X, Y));
+        expect(partia.map((e) => e.kind), 'partia nadawcy').toEqual(sc.partia);
+        const kw = partia.map((e, i) => (sc.wKwarantannie.includes(e.kind) ? i : -1)).filter((i) => i >= 0);
+        const wynik = {};
+        for (const wariant of P7D_WARIANTY) wynik[wariant] = await p7dWariant(S, X, Y, partia, kw, wariant, M, n);
+        expect(wynik, `literał p. 7d: ${nazwa}`).toEqual(sc.literal);
+      } finally {
+        expect(await M.zamknij(), 'połączenia baz kolejki i transakcje atrapy po przypadku').toEqual([0, 0]);
+      }
+    }, 120_000);
+  }
 });
 
 // ── Klasy 3.6 i warunki W4/W4p: testy negatywne (poprawki po weryfikacji: P1, P2, P4, P5, P7) ─────────────────

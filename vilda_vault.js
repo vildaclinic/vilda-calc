@@ -4999,8 +4999,9 @@ async function Bsl_usunPacjenta(patientId, deletedAtISO, opcje, ctx) {const Pati
  * rozmiar szyfrogramu (Bev_bajty), 14 builderow czytajacych sklep (chwile tylko z rekordow, nigdy z zegara), szyfrowanie
  * kluczem glownym bez AAD i bez kompresji (Bev_szyfruj) oraz zastosowanie zaszyfrowanego zdarzenia ze statusem
  * (Bev_zastosuj). Bledy bloku niosa kod i staly komunikat — nigdy tresci ani komunikatu bledu odszyfrowania.
- * Czesc b (ponizej znacznika magazynu): magazyn kolejki vilda_sync_<userId> (schemat wersji 1, w nim takze sklep
- * kwarantanny), za bramka (pole okna VILDA_EVENT_LOG === true), tylko tryb prywatny; kod produkcyjny jej nie wola.
+ * Czesc b (ponizej znacznika magazynu): magazyn kolejki i kwarantanny vilda_sync_<userId> (schemat wersji 1), za bramka
+ * (pole okna VILDA_EVENT_LOG === true), tylko tryb prywatny, oraz czyste podsumowanie wyniku zastosowania zdarzenia;
+ * kod produkcyjny jej nie wola.
  * Opis: docs/clinical/ALGORITHMS.md, wpis P-DZIENNIK-ZDARZEN. */
 const Bev_RODZAJE = Object.freeze(['snap', 'pfull', 'ptomb', 'stomb', 'pnote', 'pnotetomb', 'note', 'notetomb', 'plist',
   'plisttomb', 'pref', 'pk', 'pktomb', 'cred']);
@@ -5613,23 +5614,31 @@ const Bev_EKSPORT = Object.freeze({
   outboxFail: Bob_niepowodzenie,
   outboxRequeueStale: Bob_zLotu,
   outboxDiscard: Bob_porzuc,
+  quarantinePut: Bob_kwDodaj,
+  quarantineList: Bob_kwLista,
+  quarantineCount: Bob_kwLicz,
+  quarantineMinSeq: Bob_kwMin,
+  quarantineRelease: Bob_kwZwolnij,
+  resultSummary: Bob_skrot,
   deleteDatabase: Bob_usunBaze,
 });
 /* P-DZIENNIK-ZDARZEN: magazyn kolejki */
-/* Magazyn kolejki zdarzen vilda_sync_<userId> wersji 1 (etap 2, czesc b). USPIONE jak czesc a: kod produkcyjny nie
- * wola zadnej funkcji tej czesci (dostep tylko przez Bev_EKSPORT). Kazda operacja poza kasowaniem bazy konczy sie na
- * bramce (pole okna VILDA_EVENT_LOG === true; bez pola zamknieta), potem wymaga odblokowanego sejfu i trybu „Komputer
- * prywatny” (sesja, a przy dopisaniu takze tryb zapisany we wpisie rejestru konta). Sklepy: meta (rekord licznika
- * seqLocal), outbox (kolejka), quarantine (kwarantanna; tu tylko schemat). Baza otwierana leniwie, bez numeru wersji:
- * proba nieistniejacej bazy przerywa upgrade i niczego nie zostawia, baze tworzy wylacznie dopisanie. Jedno polaczenie
- * na transakcje, zamykane po kazdej operacji; w transakcji bez await — kolejne kroki tylko w onsuccess zadan, wynik
- * wylacznie z oncomplete albo onabort; versionchange zamyka polaczenie bez przerywania transakcji w toku. Koalescencja:
- * nowy wiersz pending zastepuje oczekujace wiersze tej encji tylko na ogonie kolejki i tylko wiersze sprzed odczytu
- * epoki tego dopisania (Bob_plan, funkcja czysta). Identyfikator urzadzenia osobny dla kazdego konta, zapisywany
- * dopiero po zatwierdzeniu dopisania z trescia. Operacje kolejki sprawdzaja sesje tak jak zapis karty (P-SESJA-ZAPISU):
- * zmiana sesji w trakcie konczy operacje bez zapisu. Wyniki: { ok: true, … } albo { ok: false, powod, code? } (kody z
- * bialej listy, nigdy tresc ani obiekt bledu); obietnice nie sa odrzucane. Opis: docs/clinical/ALGORITHMS.md (ten sam
- * wpis co czesc a). */
+/* Magazyn kolejki i kwarantanny zdarzen vilda_sync_<userId> wersji 1 (etap 2, czesc b). USPIONE jak czesc a: kod
+ * produkcyjny nie wola zadnej funkcji tej czesci (dostep tylko przez Bev_EKSPORT). Kazda operacja poza kasowaniem bazy
+ * i podsumowaniem wyniku konczy sie na bramce (pole okna VILDA_EVENT_LOG === true; bez pola zamknieta), potem wymaga
+ * odblokowanego sejfu i trybu „Komputer prywatny” (sesja, a przy dopisaniu i zapisie kwarantanny takze tryb zapisany
+ * we wpisie rejestru konta). Sklepy: meta (rekord licznika seqLocal), outbox (kolejka), quarantine (kwarantanna zdarzen
+ * nieczytelnych: klucz [slotId, seq], tresc z wiersza /changes bez tekstu jawnego). Baza otwierana leniwie, bez numeru
+ * wersji: proba nieistniejacej bazy przerywa upgrade i niczego nie zostawia, baze tworzy wylacznie dopisanie albo zapis
+ * kwarantanny. Jedno polaczenie na transakcje, zamykane po kazdej operacji; w transakcji bez await — kolejne kroki
+ * tylko w onsuccess zadan, wynik wylacznie z oncomplete albo onabort; versionchange zamyka polaczenie bez przerywania
+ * transakcji w toku. Koalescencja: nowy wiersz pending zastepuje oczekujace wiersze tej encji tylko na ogonie kolejki
+ * i tylko wiersze sprzed odczytu epoki tego dopisania (Bob_plan, funkcja czysta). Identyfikator urzadzenia osobny dla
+ * kazdego konta, zapisywany dopiero po zatwierdzeniu dopisania z trescia. Operacje kolejki i kwarantanny sprawdzaja
+ * sesje tak jak zapis karty (P-SESJA-ZAPISU): zmiana sesji w trakcie konczy operacje bez zapisu. Wyniki: { ok: true, … }
+ * albo { ok: false, powod, code? } (kody z bialej listy, nigdy tresc ani obiekt bledu); obietnice nie sa odrzucane.
+ * Podsumowanie wyniku zastosowania zdarzenia (Bob_skrot) jest funkcja czysta i synchroniczna: bez bramki, bez pol okna,
+ * sesji i zegara. Opis: docs/clinical/ALGORITHMS.md (ten sam wpis co czesc a). */
 const Bob_BAZA = 'vilda_sync_';
 const Bob_SKLEPY = Object.freeze(['meta', 'outbox', 'quarantine']);
 // Schemat wersji 1: keyPath i indeksy [nazwa, keyPath, unique] kazdego sklepu (tworzenie bazy i sprawdzenie sklepow
@@ -5666,6 +5675,14 @@ const Bob_EID = 64;
 const Bob_UID = 128;
 // Biala lista znakow kodow zapisywanych w bazie i oddawanych w wynikach (lastError, code, setId).
 const Bob_KOD = /^[A-Za-z0-9_.:-]{1,64}$/;
+// Kwarantanna: powody wyniku unreadable zapisywane w wierszu, identyfikator slotu (64 znaki hex, czesc klucza), wersja
+// aplikacji wolajacego i identyfikator zdarzenia z wiersza /changes (inny — null).
+const Bob_POWODY_KW = Object.freeze(['envelope', 'format', 'decrypt', 'shape']);
+const Bob_SLOT = /^[0-9a-f]{64}$/;
+const Bob_WERSJA_APLIKACJI = /^[0-9A-Za-z.+-]{1,32}$/;
+const Bob_EID_ZMIANY = /^[A-Za-z0-9:_-]{1,64}$/;
+// Liczniki wyniku scalania przenoszone do podsumowania: nazwa z samych liter zakonczona na Count (do 64 znakow).
+const Bob_LICZNIK_WYNIKU = /^[A-Za-z]{0,59}Count$/;
 // Konta, ktorych bazy ten dokument skasowal albo widzial kasowanie (versionchange z newVersion null): bez ponownego
 // tworzenia bazy w tym dokumencie (sprawdzane przed otwarciem tworzacym i w jego upgradzie).
 const Bob_usuwane = new Set();
@@ -6533,6 +6550,226 @@ async function Bob_zLotu(opcje) {
   } catch (x) {
     return Bob_nieprzewidziany(x);
   }
+}
+
+// ── Kwarantanna ─────────────────────────────────────────────────────────────────────────────────────────────────────
+function Bob_slotPoprawny(x) {
+  return typeof x === 'string' && Bob_SLOT.test(x);
+}
+function Bob_seqPoprawny(x) {
+  return Number.isSafeInteger(x) && x >= 1;
+}
+// Argumenty quarantinePut: wiersz /changes (obiekt, seq calkowite >= 1), wynik zastosowania (unreadable z powodem
+// z listy), opcje (slotId z wzorca, appVersion z wzorca albo null). Pola ladunku nigdy nie daja argument.
+function Bob_argumentyKw(zmiana, wynik, opcje) {
+  if (!Bev_obiekt(zmiana) || !Bob_seqPoprawny(zmiana.seq)) return 'argument';
+  if (!Bev_obiekt(wynik) || wynik.status !== 'unreadable' || Bob_POWODY_KW.indexOf(wynik.reason) < 0) return 'argument';
+  if (!Bev_obiekt(opcje) || !Bob_slotPoprawny(opcje.slotId)) return 'argument';
+  const a = opcje.appVersion;
+  return a === null || (typeof a === 'string' && Bob_WERSJA_APLIKACJI.test(a)) ? null : 'argument';
+}
+// Wiersz quarantine bez tekstu jawnego: klucz [slotId, seq]; eid z wzorca albo null; iv i data z ladunku wiersza
+// /changes (napis, takze pusty — zapisany, inna wartosc — null); z i aad tylko, gdy byly w ladunku (z — kod z bialej
+// listy znakow, aad — liczba calkowita; inna wartosc — pole pominiete i formatInny: true); powod z wyniku, wersja
+// aplikacji wolajacego, chwila pierwszego wpisu. Bez statusu, kodu i obiektu bledu wyniku.
+function Bob_wierszKw(zmiana, wynik, opcje, teraz) {
+  const p = Bev_obiekt(zmiana.payload) ? zmiana.payload : {};
+  const eid = zmiana.eid;
+  const iv = p.iv;
+  const data = p.data;
+  const w = {
+    slotId: opcje.slotId, seq: zmiana.seq,
+    eid: typeof eid === 'string' && Bob_EID_ZMIANY.test(eid) ? eid : null,
+    iv: typeof iv === 'string' ? iv : null, data: typeof data === 'string' ? data : null,
+  };
+  const z = p.z;
+  const aad = p.aad;
+  let inny = false;
+  if (z !== undefined) {
+    if (typeof z === 'string' && Bob_KOD.test(z)) w.z = z;
+    else inny = true;
+  }
+  if (aad !== undefined) {
+    if (Number.isSafeInteger(aad)) w.aad = aad;
+    else inny = true;
+  }
+  if (inny) w.formatInny = true;
+  w.reason = wynik.reason;
+  w.appVersion = opcje.appVersion;
+  w.firstSeenAtISO = teraz;
+  return w;
+}
+// quarantinePut(zmiana, wynik, { slotId, appVersion }): wejscie, migawka argumentow (kazde pole czytane raz; walidacja
+// i wiersz z tych samych wartosci), argumenty i wiersz (synchronicznie), wpis rejestru konta, otwarcie do zapisu
+// (tworzy baze), jedna transakcja readwrite na sklepie quarantine: brak wiersza [slotId, seq] — zapis nowego
+// (nowy: true); jest — zmiana tylko appVersion i reason, chwila pierwszego wpisu i tresc bez zmian (nowy: false).
+async function Bob_kwDodaj(zmiana, wynik, opcje) {
+  try {
+    const we = Bob_wejscie();
+    if (we) return Bob_odmowa(we);
+    const zm = Bev_obiekt(zmiana) ? { seq: zmiana.seq, eid: zmiana.eid, payload: zmiana.payload } : null;
+    const wy = Bev_obiekt(wynik) ? { status: wynik.status, reason: wynik.reason } : null;
+    const op = Bev_obiekt(opcje) ? { slotId: opcje.slotId, appVersion: opcje.appVersion } : null;
+    const odm = Bob_argumentyKw(zm, wy, op);
+    if (odm) return Bob_odmowa(odm);
+    const nowy = Bob_wierszKw(zm, wy, op, Bob_teraz());
+    const s = Bses_opcje(null);
+    const uid = b;
+    const konto = await Bob_konto(uid, s);
+    if (konto) return konto;
+    const o = await Bob_otworz(uid, true, s);
+    if (!o.ok) return o;
+    if (!o.pol) return Bob_odmowa('blad', 'SYNC_DB_OPEN_FAILED');
+    return await Bob_tx(o.pol, ['quarantine'], 'readwrite', s, function (k) {
+      const st = k.sklep('quarantine');
+      k.req(st.get([nowy.slotId, nowy.seq]), function (x) {
+        const jest = Bev_obiekt(x);
+        k.req(st.put(jest ? Object.assign({}, x, { reason: nowy.reason, appVersion: nowy.appVersion }) : nowy));
+        k.wynik({ nowy: !jest });
+      });
+    });
+  } catch (x) {
+    return Bob_nieprzewidziany(x);
+  }
+}
+// quarantineList({ slotId }?): kopie wierszy po kluczu [slotId, seq] (ze slotId — tylko ten slot, po seq rosnaco,
+// indeks bySlot); bazy nie ma — pusto.
+async function Bob_kwLista(opcje) {
+  try {
+    const we = Bob_wejscie();
+    if (we) return Bob_odmowa(we);
+    const slot = Bev_obiekt(opcje) ? opcje.slotId : undefined;
+    if ((opcje !== undefined && !Bev_obiekt(opcje)) || (slot !== undefined && !Bob_slotPoprawny(slot))) return Bob_odmowa('argument');
+    return await Bob_naBazie(b, Bses_opcje(null), ['quarantine'], 'readonly', { wiersze: [] }, function (k) {
+      const st = k.sklep('quarantine');
+      k.req(slot === undefined ? st.getAll() : st.index('bySlot').getAll(slot), function (x) {
+        k.wynik({ wiersze: Array.isArray(x) ? x : [] });
+      });
+    });
+  } catch (x) {
+    return Bob_nieprzewidziany(x);
+  }
+}
+// quarantineCount(): same klucze sklepu (bez tresci) zliczone po slotId w jednej transakcji readonly; klucz ze slotem
+// spoza wzorca (tej wersji go nie zapisuje) liczony tylko w total. Bazy nie ma — zera.
+async function Bob_kwLicz() {
+  try {
+    const odm = Bob_wejscie();
+    if (odm) return Bob_odmowa(odm);
+    return await Bob_naBazie(b, Bses_opcje(null), ['quarantine'], 'readonly', { total: 0, sloty: {} }, function (k) {
+      k.req(k.sklep('quarantine').getAllKeys(), function (klucze) {
+        const sloty = {};
+        let total = 0;
+        (Array.isArray(klucze) ? klucze : []).forEach(function (kl) {
+          total += 1;
+          const slot = Array.isArray(kl) ? kl[0] : null;
+          if (Bob_slotPoprawny(slot)) sloty[slot] = (sloty[slot] || 0) + 1;
+        });
+        k.wynik({ total: total, sloty: sloty });
+      });
+    });
+  } catch (x) {
+    return Bob_nieprzewidziany(x);
+  }
+}
+// quarantineMinSeq({ slotId }): najmniejszy seq slotu (pierwszy wpis kursora indeksu bySlot) albo null.
+async function Bob_kwMin(opcje) {
+  try {
+    const we = Bob_wejscie();
+    if (we) return Bob_odmowa(we);
+    const slot = Bev_obiekt(opcje) ? opcje.slotId : undefined;
+    if (!Bob_slotPoprawny(slot)) return Bob_odmowa('argument');
+    return await Bob_naBazie(b, Bses_opcje(null), ['quarantine'], 'readonly', { seq: null }, function (k) {
+      k.req(k.sklep('quarantine').index('bySlot').openCursor(slot), function (c) {
+        const w = c ? c.value : null;
+        k.wynik({ seq: w && Number.isSafeInteger(w.seq) ? w.seq : null });
+      });
+    });
+  } catch (x) {
+    return Bob_nieprzewidziany(x);
+  }
+}
+// quarantineRelease(seqs, { slotId }): usuwa wiersze [slotId, seq] tylko tego slotu (lista seq z chwili wywolania);
+// istnienie kazdego poprawnego i niepowtorzonego seq sprawdzane osobnym count klucza (bez tresci wiersza), potem
+// w jednej kontynuacji delete istniejacych. Seq niepoprawny, powtorzony albo bez wiersza w slocie — pominiete. Bazy
+// nie ma — puste listy (baza nie powstaje).
+async function Bob_kwZwolnij(seqs, opcje) {
+  try {
+    const we = Bob_wejscie();
+    if (we) return Bob_odmowa(we);
+    const slot = Bev_obiekt(opcje) ? opcje.slotId : undefined;
+    if (!Bob_tablica(seqs) || !Bob_slotPoprawny(slot)) return Bob_odmowa('argument');
+    const lista = seqs.slice();
+    return await Bob_naBazie(b, Bses_opcje(null), ['quarantine'], 'readwrite', { usuniete: [], pominiete: [] }, function (k) {
+      const st = k.sklep('quarantine');
+      const odczyt = new Map();
+      lista.forEach(function (seq, i) {
+        if (Bob_seqPoprawny(seq) && !odczyt.has(seq)) odczyt.set(seq, { i: i, jest: false });
+      });
+      let ile = odczyt.size;
+      const faza = function () {
+        const usuniete = [];
+        const pominiete = [];
+        lista.forEach(function (seq, i) {
+          const o = Bob_seqPoprawny(seq) ? odczyt.get(seq) : undefined;
+          if (!o || o.i !== i || !o.jest) {
+            pominiete.push(seq);
+            return;
+          }
+          k.req(st.delete([slot, seq]));
+          usuniete.push(seq);
+        });
+        k.wynik({ usuniete: usuniete, pominiete: pominiete });
+      };
+      if (!ile) {
+        faza();
+        return;
+      }
+      odczyt.forEach(function (o, seq) {
+        k.req(st.count([slot, seq]), function (n) {
+          o.jest = n > 0;
+          ile -= 1;
+          if (!ile) faza();
+        });
+      });
+    });
+  } catch (x) {
+    return Bob_nieprzewidziany(x);
+  }
+}
+
+// ── Podsumowanie wyniku zastosowania zdarzenia ──────────────────────────────────────────────────────────────────────
+// resultSummary(wynik): funkcja czysta i synchroniczna (bez bramki, pol okna, sesji i zegara) — tylko pola bez tresci:
+// applied — liczniki (wlasne pola wyniku scalania o nazwie ...Count, liczba calkowita >= 0; bez pol z chwilami
+// ladunku nadawcy); unreadable — powod z listy albo null; busy i apply-error — kod z bialej listy znakow albo null
+// (bez obiektu bledu); locked i session-changed — sam status; inny ksztalt — status nieznany. Kazde pole wyniku
+// czytane raz (sprawdzenie i zwracana wartosc z tego samego odczytu).
+function Bob_skrot(wynik) {
+  try {
+    const st = Bev_obiekt(wynik) ? wynik.status : undefined;
+    if (st === 'applied') {
+      const r0 = wynik.result;
+      const r = Bev_obiekt(r0) ? r0 : {};
+      const liczniki = {};
+      Object.keys(r).forEach(function (k) {
+        const x = r[k];
+        if (Bob_LICZNIK_WYNIKU.test(k) && Number.isSafeInteger(x) && x >= 0) liczniki[k] = x;
+      });
+      return { status: st, liczniki: liczniki };
+    }
+    if (st === 'unreadable') {
+      const p = wynik.reason;
+      return { status: st, reason: Bob_POWODY_KW.indexOf(p) >= 0 ? p : null };
+    }
+    if (st === 'busy' || st === 'apply-error') {
+      const c = wynik.code;
+      return { status: st, code: typeof c === 'string' && Bob_KOD.test(c) ? c : null };
+    }
+    if (st === 'locked' || st === 'session-changed') return { status: st };
+  } catch (x) {
+    // pole wyniku rzucajace przy odczycie — ksztalt nieznany
+  }
+  return { status: 'nieznany' };
 }
 
 // ── Kasowanie bazy ──────────────────────────────────────────────────────────────────────────────────────────────────
