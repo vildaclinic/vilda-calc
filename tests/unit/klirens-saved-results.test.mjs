@@ -50,13 +50,13 @@ function freezeTree(value) {
 }
 
 describe('ClcrSavedResults — complete shared historical read contract', () => {
-  it('maps all 41 active production formulas to exactly 45 saved output identities', () => {
+  it('maps all 41 active production formulas to exactly 46 saved output identities', () => {
     const { api } = reader();
     const active = registry().filter((formula) => formula.id !== 'sch_var');
     expect(active).toHaveLength(41);
-    expect(api.PARAM_DICTIONARY).toHaveLength(45);
-    expect(new Set(api.PARAM_DICTIONARY.map((entry) => entry.id)).size).toBe(45);
-    expect(new Set(api.PARAM_DICTIONARY.map((entry) => entry.testKey)).size).toBe(45);
+    expect(api.PARAM_DICTIONARY).toHaveLength(46);
+    expect(new Set(api.PARAM_DICTIONARY.map((entry) => entry.id)).size).toBe(46);
+    expect(new Set(api.PARAM_DICTIONARY.map((entry) => entry.testKey)).size).toBe(46);
     expect(new Set(api.PARAM_DICTIONARY.map((entry) => entry.sourceFormulaId)))
       .toEqual(new Set(active.map((formula) => formula.id)));
 
@@ -64,12 +64,12 @@ describe('ClcrSavedResults — complete shared historical read contract', () => 
       labResult: { value: String(index + 1), valueNum: index + 1 },
     }));
     const series = api.buildSeriesFromNotes(notes, { allParams: true });
-    expect(series).toHaveLength(45);
+    expect(series).toHaveLength(46);
     expect(new Set(series.map((entry) => entry.id)))
       .toEqual(new Set(api.PARAM_DICTIONARY.map((entry) => entry.id)));
     expect(new Set(points(series).map((point) => point.noteId)))
       .toEqual(new Set(notes.map((entry) => entry.id)));
-    expect(points(series)).toHaveLength(45);
+    expect(points(series)).toHaveLength(46);
   });
 
   it('exposes both stable clcr keys and exact labels without matching by a label slug', () => {
@@ -81,7 +81,7 @@ describe('ClcrSavedResults — complete shared historical read contract', () => 
     }
     expect(api.getParamByLabel('eGFR — dorośli')).toBeNull();
     expect(api.getParam('not-a-saved-formula')).toBeNull();
-    expect(api.getParamGroups().flatMap((group) => group.entries)).toHaveLength(45);
+    expect(api.getParamGroups().flatMap((group) => group.entries)).toHaveLength(46);
   });
 
   it.each([

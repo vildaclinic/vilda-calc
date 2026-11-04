@@ -430,6 +430,55 @@ krwi. Badania, Notatki, raport i historia zachowują surowy wynik i ocenę
 z dnia zapisu, bez dzisiejszego wieku lub norm. Kontrakt i źródła:
 [SERUM_ANION_GAP.md](SERUM_ANION_GAP.md).
 
+## Dobowe wydalanie szczawianów — decyzja 04.11.2026
+
+Formuła `Ox_mgkg` pokazuje teraz główną **ilość na dobę**, a nie
+obowiązkowe mg/kg. Domyślne **„Oblicz ze stężenia”** ma stężenie,
+objętość i rzeczywiście wpisane **24 h**. Alternatywne **„Gotowy wynik
+DZM”** przyjmuje jedną ilość dobową, bez ponownej korekty czasu.
+Masa i wzrost nie blokują samej liczby; u dziecka istniejące dane
+pacjenta służą wyłącznie do normy po przeliczeniu BSA.
+
+Lista stężenia ma cztery unikalne jednostki: **µmol/L, mmol/L, mg/L,
+mg/dL**, domyślnie µmol/L. Przy mg krótki opis **„Postać z wyniku”**
+z opcją **„Zmień”** pozwala wskazać jon, bezwodny kwas szczawiowy
+lub brak informacji. Nie powielaj jednostek w wielokrotnych grupach.
+Jednostki molowe nie wymagają postaci. Przy nieznanej podstawie masowej
+zachowaj dostępne **mg/24 h**, bez zgadywania przeliczenia i normy.
+
+Jedna karta B łączy **wynik pacjenta** i **„Normę dla pacjenta”** w tej
+samej jednostce: mmol/24 h dla wejścia molowego lub mg/24 h dla masowego.
+Norma ERKNet/OxalEurope to **<0,46 mmol/24 h** u dorosłych; u dzieci
+limit całkowity wynosi **0,46 ×BSA/1,73**, z dopiskiem **„Przeliczona
+dla powierzchni ciała”**. Nie nazywaj go „Normą dla wieku”, nie obcinaj
+do granicy dorosłego i nie dodawaj mnożnika niemowlęcego. Bez wieku
+albo potrzebnego BSA pozostaw poprawną liczbę i konkretny powód braku
+porównania, bez kolejnej ankiety.
+
+Norma i jej jednostka pozostają neutralne. Wynik na ścisłej granicy
+ma podpis **„Na górnej granicy”**, zwiększony — bursztynowy kolor.
+Znaczne podwyższenie ma czerwone wyróżnienie i komentarz o ocenie
+przyczyny, bez automatycznej diagnozy PH. U dorosłego między
+**>0,40 a <0,46 mmol/24 h** zachowaj źródłową normę oraz status
+**„Poniżej górnej granicy”**, z krótką bursztynową uwagą o niższym progu
+EAU w ocenie kamicy. Nie twórz drugiego wyniku lub drugiej normy.
+
+Przy formularzu wystarczy **„Porównanie z normą dotyczy kompletnej
+zbiórki 24-godzinnej.”** Znane 12 h, niepełna zbiórka lub eGFR <30
+nie znikają po przełączeniu trybu. Nie dodawaj checkboxów ani pola eGFR.
+Inny czas daje oszacowanie bez normy; gotowa ilość zachowuje liczbę.
+Literalne zero jest dozwolone i przy dostępnej ocenie leży poniżej
+górnej granicy; nie zastępuje `<LOD`. Małe dodatnie wartości muszą
+pozostać widoczne i zapisywane jako dodatnie.
+
+Szczegóły zawierają źródło, konwersje, BSA i pomocniczą ilość
+indeksowaną, bez kolejnego pomiaru. Stałe szerokości, wspólny poziom
+jednostek, symetria, mobile ≥16 px/48 px i odstęp ≥20 px pod czyszczeniem
+obowiązują w każdym trybie oraz stanie błędu. Czyszczenie zostawia
+pacjenta i 24 h, usuwa dane próbki i jej postać. Nowy zapis `Ox_total24`
+nie łączy się z dawnymi `/kg` ani inną podstawą masową; historia zachowuje
+ocenę z dnia zapisu. Pełny kontrakt: [OXALATE_DZM.md](OXALATE_DZM.md).
+
 ## Makieta i sprawdzenie przed przekazaniem
 
 Każdą kolejną zmianę wizualną w audycie przedstaw najpierw do akceptacji jako

@@ -74,7 +74,7 @@ describe('PO4 DZM — complete production session runtime', () => {
       CA_collectionHours: '', CA_collectionSource: 'assumed-24h', UA_collectionHours: '', UA_collectionSource: 'assumed-24h',
       MG_collectionHours: '', MG_collectionSource: 'assumed-24h', PO4_collectionHours: '', PO4_collectionSource: 'assumed-24h',
       Prot_collectionHours: '', Prot_collectionSource: 'assumed-24h', Na_collectionHours: '', Na_collectionSource: 'assumed-24h',
-      K_collectionHours: '', K_collectionSource: 'assumed-24h' };
+      K_collectionHours: '', K_collectionSource: 'assumed-24h', OXDZM_collectionHours: '', OXDZM_collectionSource: 'assumed-24h' };
     const result = runtime({ formulaPicker: 'ckid_u25', ...resetHours, PO4_durationNeedsConfirmation: 'false',
       collectionStartAt: '', collectionEndAt: '', Cl24CollectionProblem: false });
     // The existing capture lazily allocates an empty vault. Seed that same

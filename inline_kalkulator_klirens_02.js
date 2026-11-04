@@ -331,15 +331,10 @@
       },
       {
         id: "Ox_mgkg",
-        label: "Wydalanie szczawianów (DZM; bez automatycznej normy)",
+        label: "Dobowe wydalanie szczawianów",
         version: "pro",
-        requires: [
-          "U_Ox",
-          "oxalateReportingEntity",
-          "V24",
-          "weight",
-          ...timedCollectionDurationFields,
-        ],
+        requires: ["OXDZM_concentration", "OXDZM_concentrationUnit", "OXDZM_volume", "OXDZM_volumeUnit", "OXDZM_collectionHours"],
+        note: "Stężenie i objętość albo gotowy wynik dobowy. Przyjmujemy pełne 24 h; znane dane pacjenta służą dobraniu normy.",
       },
       {
         id: "Cit_mgkg",
@@ -392,7 +387,7 @@
       r = new Set([]),
       timedCollectionIds = new Set([
         "Prot_mgkg", "Na_mmol_d", "K_mmol_d",
-        "Ox_mgkg", "Cit_mgkg", "pH24",
+        "Cit_mgkg", "pH24",
       ]),
       timedCollectionRequirements = ["Cl24DurationHours"];
     l.forEach((t) => {

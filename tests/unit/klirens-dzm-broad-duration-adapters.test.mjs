@@ -40,6 +40,7 @@ describe('Actual generic readiness gate agrees with the shared duration module',
     const w = { ClcrUiWorkflow: { state: { legacyBroad: true } } };
     for (const file of ['clcr_collection_duration.js', 'clcr_extended_egfr.js', 'clcr_saved_legacy_calculator.js',
       'clcr_protein_dzm_data.js', 'clcr_protein_dzm.js',
+      'clcr_ox_dzm_reference_data.js', 'clcr_ox_dzm.js',
       'clcr_potassium_dzm_data.js', 'clcr_potassium_dzm.js']) loadBrowserScript(file, w);
     const values = { age: '45', weight: '60', height: '165', V24: '1440', U_Na: '50', U_K: '20',
       U_PO4: '50', U_Prot: '1000', U_Ox: '5', U_Cit: '5', pH24: '5.5',
@@ -48,15 +49,17 @@ describe('Actual generic readiness gate agrees with the shared duration module',
       ...(knownProblem ? { ui_collectionNoMissedVoids_answer: 'no' } : {}) };
     const doc = { getElementById: id => Object.hasOwn(values, id)
       ? { value: values[id], type: 'text', tagName: id === 'oxalateReportingEntity' ? 'SELECT' : 'INPUT' } : null };
-    return new Function('window', 'document', '$', 'FORMULAS', `${actualFunction('readClcrCollectionDurationMinutes')}\n${actualFunction('evaluateClcrProteinDzm')}\n${actualFunction('evaluateClcrSodiumDzm')}\n${actualFunction('evaluateClcrPotassiumDzm')}\n${actualFunction('canComputeFormula')}\nreturn canComputeFormula(${JSON.stringify(formula)});`)(w, doc, id => doc.getElementById(id), formulas);
+    return new Function('window', 'document', '$', 'FORMULAS', `${actualFunction('readClcrCollectionDurationMinutes')}\n${actualFunction('evaluateClcrProteinDzm')}\n${actualFunction('evaluateClcrOxDzm')}\n${actualFunction('evaluateClcrSodiumDzm')}\n${actualFunction('evaluateClcrPotassiumDzm')}\n${actualFunction('canComputeFormula')}\nreturn canComputeFormula(${JSON.stringify(formula)});`)(w, doc, id => doc.getElementById(id), formulas);
   }
   it.each(timed)('%s accepts blank/default and explicit valid duration, rejects explicit invalid values', formula => {
-    expect(formulas.find(item => item.id === formula).requires).toContain('Cl24DurationHours');
+    expect(formulas.find(item => item.id === formula).requires).toContain(formula === 'Ox_mgkg' ? 'OXDZM_collectionHours' : 'Cl24DurationHours');
     if (formula === 'K_mmol_d') expect(formulas.find(item => item.id === formula).requires).toContain('K_collectionHours');
     if (formula === 'Na_mmol_d') expect(formulas.find(item => item.id === formula).requires).toContain('Na_collectionHours');
     for (const hours of ['', '24', '12']) expect(canCompute(formula, hours), `${formula}/${hours}`).toBe(true);
     for (const hours of ['0', '-1', 'abc']) expect(canCompute(formula, hours), `${formula}/${hours}`).toBe(false);
-    expect(canCompute(formula, '', true)).toBe(false);
+    // Oxalate keeps the collected amount available but removes the reference
+    // when incompleteness is known; the other modules keep their own policy.
+    expect(canCompute(formula, '', true)).toBe(formula === 'Ox_mgkg');
   });
   it('potassium broad adapter preserves historical missing and explicitly invalid clock provenance', () => {
     expect(canCompute('K_mmol_d', '', false, 'historical-missing')).toBe(false);
@@ -67,6 +70,11 @@ describe('Actual generic readiness gate agrees with the shared duration module',
     expect(canCompute('Na_mmol_d', '', false, 'historical-missing')).toBe(false);
     expect(canCompute('Na_mmol_d', '24', false, 'invalid')).toBe(false);
     expect(canCompute('Na_mmol_d', '', false, 'invalid')).toBe(false);
+  });
+  it('oxalate broad adapter preserves historical missing and explicitly invalid clock provenance', () => {
+    expect(canCompute('Ox_mgkg', '', false, 'historical-missing')).toBe(false);
+    expect(canCompute('Ox_mgkg', '24', false, 'invalid')).toBe(false);
+    expect(canCompute('Ox_mgkg', '', false, 'invalid')).toBe(false);
   });
 });
 

@@ -1,0 +1,234 @@
+import { describe, expect, it } from 'vitest';
+import { atrapaDokumentu } from '../support/atrapa-dom-lekka.mjs';
+import { loadBrowserScript } from '../support/load-browser-script.mjs';
+
+const browser = {};
+for (const file of ['clcr_collection_duration.js', 'clcr_extended_egfr.js', 'clcr_ox_dzm_reference_data.js', 'clcr_ox_dzm.js', 'clcr_ox_dzm_ui.js']) loadBrowserScript(file, browser);
+const ui = browser.ClcrOxDzmUi, engine = browser.VildaClcrOxDzm;
+const policy = browser.ClcrOxDzmReferenceData.DEFAULT_POLICY;
+const base = { mode: 'concentration', concentration: '200', concentrationUnit: 'µmol/L', volume: '1500', volumeUnit: 'mL', hours: '24', ageYears: 10, weightKg: '30', heightCm: '140', reportingEntity: 'unknown' };
+const evaluate = patch => engine.evaluate({ ...base, ...patch }, policy);
+const decode = text => text.replace(/&quot;/g, '"').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&#39;/g, "'").replace(/&amp;/g, '&');
+const attribute = (html, name) => decode(html.match(new RegExp(`${name}="([^"]*)"`))?.[1] || '');
+const mainCard = html => html.split('<details')[0].replace(/data-clcr-ox-dzm-snapshot="[^"]*"/g, '');
+
+describe('Ox DZM — one result and frozen clinical presentation', () => {
+  it.each([
+    {},
+    { concentration: '20', concentrationUnit: 'mg/L', reportingEntity: 'oxalic_acid' },
+    { mode: 'reported', reportedValue: '0.6', reportedUnit: 'mmol/24h', ageYears: 40 },
+  ])('uses the calculated daily amount and its reference in the same units: %j', patch => {
+    const model = evaluate(patch), html = ui.renderResult(model), main = mainCard(html);
+    expect(model.valid).toBe(true);
+    expect(main).toContain('data-clcr-series="Ox_total24"');
+    expect(main.match(/class="clcr-result-value"/g)).toHaveLength(1);
+    expect(attribute(html, 'data-clcr-value')).toBe(String(model.presentation.rawValue));
+    expect(attribute(html, 'data-clcr-display-value')).toBe(model.presentation.valueText);
+    expect(attribute(html, 'data-clcr-display-unit')).toBe(model.presentation.unitText);
+    expect(decode(main.replace(/<[^>]*>/g, ''))).toContain(model.presentation.referenceValue);
+    expect(main).toContain(`class="ox-dzm-reference-unit">${model.presentation.unitText}</span>`);
+    expect(main).toContain('Norma dla pacjenta');
+    expect(main).not.toContain('Norma dla wieku');
+    expect(main).not.toMatch(/mg\/kg|mmol\/1,73/);
+    expect(JSON.parse(attribute(html, 'data-clcr-ox-dzm-snapshot'))).toEqual(model);
+    expect(html).not.toContain('<details open');
+    expect(html).toContain(model.notes.clinicalDetails);
+  });
+
+  it.each([
+    { reportedValue: '0.3', expectedTone: 'normal' },
+    { reportedValue: '0.435', expectedTone: 'warning' },
+    { reportedValue: '0.6', expectedTone: 'warning' },
+    { reportedValue: '1.2', expectedTone: 'danger' },
+  ])('preserves the source-defined tone for adult $reportedValue mmol/24 h', ({ reportedValue, expectedTone }) => {
+    const model = evaluate({ mode: 'reported', reportedValue, reportedUnit: 'mmol/24h', ageYears: 40 });
+    const main = mainCard(ui.renderResult(model));
+    expect(model.tone).toBe(expectedTone);
+    expect(main).toContain(`data-clcr-tone="${expectedTone}"`);
+    expect(main).toContain('class="ox-dzm-reference-unit"');
+    if (reportedValue === '0.435') {
+      expect(main).toContain('EAU');
+      expect(model.outOfRange).toBe(false);
+      expect(decode(main)).toContain(model.presentation.referenceValue);
+    }
+  });
+
+  it.each(['0', '0.0000001', '1e-20'])('retains the actual %s result instead of displaying a rounded zero', reportedValue => {
+    const model = evaluate({ mode: 'reported', reportedValue, reportedUnit: 'mmol/24h', ageYears: 40 });
+    expect(model.valid).toBe(true);
+    const html = ui.renderResult(model);
+    expect(attribute(html, 'data-clcr-display-value')).toBe(model.presentation.valueText);
+    expect(JSON.parse(attribute(html, 'data-clcr-ox-dzm-snapshot')).exactMain).toEqual(model.exactMain);
+    if (reportedValue !== '0') expect(model.presentation.valueText).not.toBe('0');
+  });
+
+  it.each([
+    { ageYears: null }, { weightKg: '' }, { heightCm: '' }, { hours: '12' },
+    { concentration: '20', concentrationUnit: 'mg/L', reportingEntity: 'unknown' },
+  ])('keeps the available number without a fabricated reference: %j', patch => {
+    const model = evaluate(patch), main = mainCard(ui.renderResult(model));
+    expect(model.valid).toBe(true);
+    expect(main).toContain('data-clcr-tone="neutral"');
+    expect(main).toContain('data-clcr-reference-comparison="false"');
+    expect(main).toContain('data-clcr-series="Ox_total24"');
+    expect(main).not.toContain('<svg');
+  });
+
+  it.each([{ concentration: '-1' }, { volume: '0' }, { hours: '-1' }])('does not create a collectible result from invalid input: %j', patch => {
+    const html = ui.renderResult(evaluate(patch));
+    expect(html).not.toContain('data-clcr-series=');
+    expect(html).not.toContain('data-clcr-ox-dzm-snapshot=');
+    expect(html).toContain('Sprawdź wpisane dane');
+  });
+
+  it('uses a saved presentation without reading the current engine or patient', () => {
+    const model = evaluate({ concentration: '20', concentrationUnit: 'mg/L', reportingEntity: 'oxalic_acid' });
+    const original = browser.VildaClcrOxDzm;
+    browser.VildaClcrOxDzm = { evaluate() { throw new Error('Frozen results must not recalculate'); }, presentation() { throw new Error('Frozen result must keep its presentation'); } };
+    try { expect(mainCard(ui.renderResult(model))).toContain(`>${model.presentation.valueText}</strong>`); }
+    finally { browser.VildaClcrOxDzm = original; }
+  });
+
+  it('keeps an available reference neutral when known low eGFR prevents automatic classification', () => {
+    const model = evaluate({ ageYears: 40, egfr: 20 });
+    expect(model.referenceAvailable).toBe(true);
+    expect(model.referenceActive).toBe(false);
+    const main = mainCard(ui.renderResult(model));
+    expect(main).toContain('data-clcr-reference-comparison="false"');
+    expect(main).toContain('data-clcr-tone="neutral"');
+    expect(decode(main)).toContain(model.presentation.referenceValue);
+    expect(main).not.toContain('<svg');
+  });
+
+  it('states the missing-reference reason once instead of repeating it beside and below the number', () => {
+    const model = evaluate({ ageYears: null });
+    const main = decode(mainCard(ui.renderResult(model)));
+    expect(main.split(model.interpretation)).toHaveLength(2);
+    expect(main).toContain('Brak normy do porównania');
+  });
+});
+
+function documentFixture() {
+  const doc = atrapaDokumentu(), create = doc.createElement;
+  const enhance = node => {
+    node.dataset = new Proxy({}, { set(_, key, value) { node.setAttribute(`data-${String(key).replace(/[A-Z]/g, letter => `-${letter.toLowerCase()}`)}`, value); return true; }, get(_, key) { return node.getAttribute(`data-${String(key).replace(/[A-Z]/g, letter => `-${letter.toLowerCase()}`)}`); } });
+    node.append = (...nodes) => nodes.forEach(child => node.appendChild(child));
+    node.closest = selector => { for (let current = node; current; current = current.parentNode) if (current.tagName.toLowerCase() === selector) return current; return null; };
+    node.removeEventListener = (type, listener) => node.sluchacze.set(type, (node.sluchacze.get(type) || []).filter(item => item !== listener));
+    node.dispatchEvent = event => { event.target = node; for (let current = node; current; current = event.bubbles ? current.parentNode : null) for (const listener of current.sluchacze.get(event.type) || []) listener(event); };
+    return node;
+  };
+  doc.createElement = tag => enhance(create(tag));
+  doc.createComment = text => { const node = doc.createElement('comment'); node.textContent = text; return node; };
+  enhance(doc.documentElement); enhance(doc.body);
+  doc.defaultView = { ...browser, Event: class Event { constructor(type, options = {}) { this.type = type; this.bubbles = options.bubbles === true; this.isTrusted = false; } } };
+  const form = doc.createElement('form'); form.id = 'clcrForm'; doc.body.append(form);
+  const clear = doc.createElement('div'); clear.id = 'clearContainer'; form.append(clear);
+  ui.ensureControls(doc);
+  return { doc, form };
+}
+function change(doc, id, value, type = 'change') {
+  const field = doc.getElementById(id); field.value = value;
+  const event = { type, target: field, isTrusted: true, bubbles: true };
+  doc.dispatchEvent(event);
+  field.dispatchEvent(event);
+}
+function addPatient(doc, form) {
+  for (const [id, value] of Object.entries({ age: '10', weight: '30', height: '140' })) {
+    const input = doc.createElement('input'); input.id = id; input.value = value; form.append(input);
+  }
+}
+
+describe('Ox DZM — minimal controls and meaningful unit changes', () => {
+  it('registers defaults once, with no new patient or collection-quality questions', () => {
+    const { doc } = documentFixture();
+    expect(ui.ensureControls(doc).map(control => control.id).sort()).toEqual([...engine.FIELD_IDS].sort());
+    expect(doc.getElementById('OXDZM_inputMode').value).toBe('concentration');
+    expect(doc.getElementById('OXDZM_collectionHours').value).toBe('24');
+    expect(doc.getElementById('OXDZM_reportingEntity').value).toBe('unknown');
+    expect(doc.getElementById('OXDZM_concentrationUnit').children.map(option => option.textContent)).toEqual(['µmol/L', 'mmol/L', 'mg/L', 'mg/dL']);
+    doc.getElementById('OXDZM_concentration').value = '200'; ui.ensureControls(doc);
+    expect(doc.body.querySelectorAll('#OXDZM_concentration')).toHaveLength(1);
+    expect(doc.getElementById('OXDZM_concentration').value).toBe('200');
+    for (const id of ['weight', 'height', 'age', 'sex', 'stoneMetabolicContext']) expect(doc.getElementById(id)).toBeNull();
+  });
+
+  it('moves controls reversibly and keeps duration visible when a ready result has known non-24h context', () => {
+    const { doc } = documentFixture();
+    ui.sync(doc, { active: true });
+    expect(doc.getElementById('oxDzmInputCard')).not.toBeNull();
+    expect(doc.getElementById('OXDZM_collectionHours').closest('label').hidden).toBe(false);
+    change(doc, 'OXDZM_inputMode', 'reported');
+    expect(doc.getElementById('oxDzmInputCard').querySelector('.ox-dzm-duration-field').hidden).toBe(true);
+    change(doc, 'OXDZM_collectionHours', '12', 'input');
+    expect(doc.getElementById('oxDzmInputCard').querySelector('.ox-dzm-duration-field').hidden).toBe(false);
+    ui.restore(doc);
+    expect(doc.getElementById('oxDzmInputCard')).toBeNull();
+    expect(doc.getElementById('OXDZM_collectionHours').value).toBe('12');
+    expect(doc.documentElement.hasAttribute('data-clcr-ox-dzm-active')).toBe(false);
+  });
+
+  it('preserves exact molar quantity when actual unit selectors are changed', () => {
+    const { doc, form } = documentFixture(); addPatient(doc, form);
+    doc.getElementById('OXDZM_concentration').value = '306.6666666666666';
+    doc.getElementById('OXDZM_volume').value = '1500';
+    ui.sync(doc, { active: true });
+    const current = () => engine.evaluate(engine.readInputFromDocument(doc), policy);
+    const before = current();
+    for (const unit of ['mmol/L', 'µmol/L']) {
+      change(doc, 'OXDZM_concentrationUnit', unit, 'input');
+      change(doc, 'OXDZM_concentrationUnit', doc.getElementById('OXDZM_concentrationUnit').value);
+      const after = current();
+      expect(after.valid).toBe(true);
+      expect(after.exactMain).toEqual(before.exactMain);
+      expect(after.outOfRange).toBe(before.outOfRange);
+    }
+    expect(doc.getElementById('OXDZM_concentration').value).toBe('306.6666666666666');
+  });
+
+  it('does not relabel an entered unknown mass as moles and offers the missing report information', () => {
+    const { doc } = documentFixture();
+    doc.getElementById('OXDZM_concentrationUnit').value = 'mg/L';
+    doc.getElementById('OXDZM_concentration').value = '20';
+    doc.getElementById('OXDZM_volume').value = '1500';
+    ui.sync(doc, { active: true });
+    change(doc, 'OXDZM_concentrationUnit', 'mmol/L', 'input');
+    expect(doc.getElementById('OXDZM_concentrationUnit').value).toBe('mg/L');
+    expect(doc.getElementById('OXDZM_concentration').value).toBe('20');
+    expect(doc.getElementById('oxDzmEntityEditor').hidden).toBe(false);
+    expect(doc.getElementById('oxDzmUnitMessage').textContent).toContain('wybierz postać');
+    change(doc, 'OXDZM_reportingEntity', 'oxalic_acid');
+    expect(doc.getElementById('OXDZM_concentration').value).toBe('20');
+    expect(doc.getElementById('oxDzmUnitMessage').hidden).toBe(true);
+    change(doc, 'OXDZM_concentrationUnit', 'mmol/L', 'input');
+    expect(doc.getElementById('OXDZM_concentrationUnit').value).toBe('mmol/L');
+    expect(doc.getElementById('OXDZM_concentration').value).not.toBe('20');
+  });
+
+  it('converts mass-only units without requiring the reporting entity', () => {
+    const { doc } = documentFixture();
+    doc.getElementById('OXDZM_concentrationUnit').value = 'mg/L';
+    doc.getElementById('OXDZM_concentration').value = '20';
+    ui.sync(doc, { active: true });
+    change(doc, 'OXDZM_concentrationUnit', 'mg/dL', 'input');
+    expect(doc.getElementById('OXDZM_concentration').value).toBe('2');
+    expect(doc.getElementById('OXDZM_reportingEntity').value).toBe('unknown');
+  });
+
+  it('allows any unit on an empty field and resets report-specific data without changing the patient', () => {
+    const { doc, form } = documentFixture(); addPatient(doc, form); ui.sync(doc, { active: true });
+    change(doc, 'OXDZM_concentrationUnit', 'mg/L', 'input');
+    expect(doc.getElementById('OXDZM_concentrationUnit').value).toBe('mg/L');
+    change(doc, 'OXDZM_concentration', '20', 'input');
+    change(doc, 'OXDZM_reportingEntity', 'oxalic_acid');
+    change(doc, 'OXDZM_collectionHours', '12', 'input');
+    ui.reset(doc);
+    expect(doc.getElementById('OXDZM_concentration').value).toBe('');
+    expect(doc.getElementById('OXDZM_reportingEntity').value).toBe('unknown');
+    expect(doc.getElementById('OXDZM_collectionHours').value).toBe('24');
+    expect(doc.getElementById('OXDZM_collectionSource').value).toBe('assumed-24h');
+    expect(doc.getElementById('OXDZM_unitConversions').value).toBe('');
+    expect(doc.getElementById('weight').value).toBe('30');
+    expect(doc.getElementById('height').value).toBe('140');
+  });
+});
