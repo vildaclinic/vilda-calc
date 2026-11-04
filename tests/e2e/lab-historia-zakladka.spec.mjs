@@ -6,11 +6,12 @@ import { czekajNaHistorie, sekcjaHistorii } from '../support/karta-czekanie.mjs'
 // w osobnym kontekście przeglądarki (tests/support/lab-historia-dane.mjs). Zegar stron: 17.06.2026.
 test.use({ serviceWorkers: 'block' });
 
-const bezTwardejSpacji = (t) => t.replace(/\u00a0/g, ' ');
+const wynik = (badania, id) => badania.locator(`.vilda-lab-hist-result-row[data-note-id="${id}"]`);
+const szczegoly = (badania, id) => badania.locator(`.vilda-lab-hist-result-details[data-note-id="${id}"]`);
 
-test('sześć zakładek z Planami opieki; Badania: podsumowanie, panele, oczekujące, karty z wartościami jak zapisano', async ({ page }) => {
+test('Badania: domyślnie wyniki według dat, zapisane normy i kolory bez rozbudowanych ocen', async ({ page }) => {
   const patientId = await otworzSejf(page);
-  await zapiszHistorie(page, patientId);
+  const ids = await zapiszHistorie(page, patientId);
   await page.evaluate((pid) => window.VildaAuthUI.showPatientCard(pid), patientId);
   await expect(page.locator('.vilda-patient-tabs > .vilda-patient-tab')).toHaveText(['Status', 'Siatki centylowe', 'Notatki', 'Historia', 'Badania', 'Plany opieki']);
   await page.locator('.vilda-patient-tab[data-tab="lab"]').click();
@@ -19,78 +20,157 @@ test('sześć zakładek z Planami opieki; Badania: podsumowanie, panele, oczekuj
   await expect(page.locator('.vilda-patient-tab[data-tab="lab"]')).toHaveClass(/vilda-patient-tab--active/);
 
   await expect(badania.locator('.vilda-lab-hist-summary')).toHaveText('14 wyników · 5 badań · ostatnie badanie 02.06.26');
-  await expect(badania.locator('.vilda-lab-hist-panel-h')).toHaveText(['Tarczyca', 'Oś gonadalna', 'Inne']);
-  await expect(badania.locator('.vilda-lab-hist-segment-btn[aria-pressed="true"]')).toHaveText('Wykresy');
+  await expect(badania.locator('.vilda-lab-hist-segment-btn[aria-pressed="true"]')).toHaveText('Tabela');
+  await expect(badania.locator('.vilda-lab-hist-result-row')).toHaveCount(14);
+  expect(await badania.locator('.vilda-lab-hist-date-group').evaluateAll((groups) => groups.map((group) => group.getAttribute('data-date-iso'))))
+    .toEqual(['2026-06-02', '2026-04-08', '2026-02-25', '2026-01-14']);
   await expect(badania.locator('.vilda-lab-hist-pending')).toContainText('Oczekujące wyniki (1)');
   await expect(badania.locator('.vilda-lab-hist-pending-title')).toHaveText('Kontrola TSH · termin 16.06.26');
   // Zlecenie z minionym terminem jest w liście przypomnień, więc odnośnik do arkusza jest widoczny.
   await expect(badania.locator('button.vilda-lab-hist-link', { hasText: 'Przypomnienia →' })).toBeVisible();
 
-  const tsh = badania.locator('.vilda-lab-hist-card[data-series="tsh"]');
-  await expect(tsh.locator('.vilda-lab-hist-value')).toHaveText('0,12');
-  await expect(tsh.locator('.vilda-lab-hist-flag')).toHaveText('↓');
-  expect(bezTwardejSpacji(await tsh.locator('.vilda-lab-hist-prev').innerText())).toBe('poprzednio 0,05 mIU/L (08.04.26) · różnica +0,07 mIU/L · po 55 dniach');
-  await expect(tsh.locator('svg.vilda-lab-trend-chart')).toHaveCount(1);
-  // Pierwszy TSH zapisany w μIU/mL: punkt przeliczony z obwódką, bez strzałki (jak w dawnym trendzie).
-  await expect(tsh.locator('svg circle[stroke="#26215C"]')).toHaveCount(1);
-  // Decyzja 6.22: przy punktach same wartości, bez strzałek (strzałka wg zapisu zostaje przy wartości obok).
-  // Podpis punktu to sama liczba (ta sama liczba bywa też podziałką osi, gdy jest maksimum serii).
-  await expect(tsh.locator('svg text').filter({ hasText: /^0,12$/ }).first()).toBeVisible();
-  await expect(tsh.locator('svg text', { hasText: /[↓↑]/ })).toHaveCount(0);
-
-  const ft4 = badania.locator('.vilda-lab-hist-card[data-series="ft4"]');
-  await expect(ft4.locator('.vilda-lab-hist-value')).toHaveText('17,8');
-  await expect(ft4.locator('.vilda-lab-hist-flag')).toHaveCount(0);
-  await expect(badania.locator('.vilda-lab-hist-card[data-series="ft3"] .vilda-lab-hist-no-chart')).toHaveText('Za mało dokładnych wyników do wykresu.');
-
-  const lh = badania.locator('.vilda-lab-hist-card[data-series="lh"]');
-  await expect(lh.locator('.vilda-lab-hist-status.is-recorded')).toContainText('oceniono jako: dziewczynka · 12 l 2 m w dniu pobrania · Th3');
-  await expect(lh.locator('.vilda-lab-hist-foot')).toHaveText('Poza wykresem: 1 (wynik z „<” lub „>”: 1)');
-  // Zapisane oceny są rozwinięte od razu (ostrzeżenia kliniczne nie czekają za kliknięciem).
-  await expect(lh.locator('.vilda-lab-hist-assess-h')).toHaveText('Zapisane oceny (3)');
-  await expect(lh.locator('.vilda-lab-assessment-history-row')).toHaveCount(3);
-  await expect(lh.locator('.vilda-lab-assessment-history-row').first()).toBeVisible();
-
-  const prl = badania.locator('.vilda-lab-hist-card[data-series="prolactin"]');
-  await expect(prl).toContainText('jednostka nierozpoznana albo brak jednostki — wynik jak zapisano, bez porównania');
-
-  // Bez pasma dzisiejszych norm i bez czerwieni w zakładce (decyzje 6.1, 6.18).
-  await expect(badania.locator('.vilda-trend-norm-band, .vilda-trend-norm-tag, .vilda-trend-norm-chip')).toHaveCount(0);
-  await expect(badania.locator('[fill="#E24B4A"], [fill="#A32D2D"], [stroke="#efc2c2"]')).toHaveCount(0);
+  const tsh = wynik(badania, ids.tsh4), ft4 = wynik(badania, ids.ft44);
+  await expect(tsh).toContainText('0,12');
+  await expect(tsh.locator('.vilda-lab-hist-result-norm')).toHaveText(/0,27.*4,2.*mIU\/L/);
+  await expect(tsh.locator('.vilda-lab-hist-cell-value.tone-below')).toHaveCSS('color', 'rgb(138, 74, 24)');
+  await expect(tsh).toContainText('↓');
+  await expect(ft4).toContainText('17,8');
+  await expect(ft4.locator('.vilda-lab-hist-result-norm')).toHaveText(/12.*22.*pmol\/L/);
+  await expect(ft4.locator('.vilda-lab-hist-cell-value.tone-within')).toHaveCSS('color', 'rgb(15, 110, 86)');
+  // Brak normy nie staje się prawidłowym wynikiem. Nierozpoznana jednostka i cenzorowanie zachowują zapis.
+  await expect(wynik(badania, ids.ft3).locator('.vilda-lab-hist-result-norm')).toHaveText('—');
+  await expect(wynik(badania, ids.ft3).locator('.tone-within')).toHaveCount(0);
+  await expect(wynik(badania, ids.prl2)).toContainText('250');
+  await expect(wynik(badania, ids.prl2)).toContainText('mU/l');
+  await expect(wynik(badania, ids.prl2).locator('.tone-within')).toHaveCount(0);
+  await expect(wynik(badania, ids.lh1)).toContainText('<0,1');
+  await expect(wynik(badania, ids.lh1).locator('.tone-within')).toHaveCount(0);
+  await expect(badania.locator('.vilda-lab-assessment-history-row, .vilda-lab-hist-comments')).toHaveCount(0);
+  await expect(badania).not.toContainText('Fikcyjny komentarz LH');
+  await expect(badania).not.toContainText('Zapisane oceny');
   await expect(badania.locator('.vilda-lab-hist-footer-main')).toHaveText('Wyniki pokazane tak, jak je zapisano. Historia nie jest oceniana dzisiejszymi normami.');
+  // Filtry i wpisane zapytanie działają w obu widokach; przełączenie nie gubi wyboru.
+  const panel = badania.getByRole('combobox', { name: 'Panel badań', exact: true });
+  const search = badania.getByRole('searchbox', { name: 'Szukaj badania', exact: true });
+  await panel.selectOption('thyroid');
+  await expect(badania.locator('.vilda-lab-hist-result-row')).toHaveCount(9);
+  await search.fill('fT4');
+  await expect(badania.locator('.vilda-lab-hist-result-row')).toHaveCount(4);
+  await badania.locator('.vilda-lab-hist-segment-btn', { hasText: 'Wykresy' }).click();
+  await expect(search).toHaveValue('fT4');
+  await expect(panel).toHaveValue('thyroid');
+  await expect(badania.locator('.vilda-lab-hist-card')).toHaveCount(1);
+  await expect(badania.locator('.vilda-lab-hist-card[data-series="ft4"]')).toBeVisible();
+  await badania.getByRole('button', { name: 'Wyczyść wyszukiwanie badań', exact: true }).click();
+  await expect(search).toHaveValue('');
+  await expect(search).toBeFocused();
+  await expect(panel).toHaveValue('thyroid');
+  await expect(badania.locator('.vilda-lab-hist-card')).toHaveCount(3);
+  await badania.locator('.vilda-lab-hist-segment-btn', { hasText: 'Tabela' }).click();
+  await expect(badania.locator('.vilda-lab-hist-result-row')).toHaveCount(9);
+  await panel.selectOption('all');
+  await expect(badania.locator('.vilda-lab-hist-result-row')).toHaveCount(14);
 });
 
-test('Tabela: wiersze dat malejąco, różnica pod wartością, wiersze leczenia; wybór widoku zostaje po ponownym otwarciu karty', async ({ page }) => {
+test('Wykresy: zapisane normy i punkty właściwych wpisów; wybór widoku zostaje po ponownym otwarciu karty', async ({ page }) => {
   const patientId = await otworzSejf(page);
-  await zapiszHistorie(page, patientId);
+  const ids = await zapiszHistorie(page, patientId);
   await otworzBadania(page, patientId);
   const badania = sekcjaBadan(page);
-  await badania.locator('.vilda-lab-hist-segment-btn', { hasText: 'Tabela' }).click();
-  await expect(badania.locator('.vilda-lab-hist-segment-btn[aria-pressed="true"]')).toHaveText('Tabela');
-  const tarczyca = badania.locator('.vilda-lab-hist-panel[data-panel="thyroid"] table');
-  await expect(tarczyca.locator('thead th')).toHaveText(['Data badania', 'TSHmIU/L', 'fT4pmol/L', 'fT3pmol/L', 'Komentarz']);
-  await expect(tarczyca.locator('tbody th')).toHaveText(['02.06.26', '08.04.26', '08.04.26', '25.02.26', '25.02.26', '14.01.26', '14.01.26']);
-  await expect(tarczyca.locator('tbody tr.vilda-lab-hist-tr-treatment')).toHaveText([/Tiamazol · zmiana dawki · 10 mg/, /Tiamazol · zmiana dawki · 20 mg/, /Tiamazol · włączono · 30 mg/]);
-  const pierwszy = tarczyca.locator('tbody tr').first();
-  await expect(pierwszy.locator('td').nth(0)).toHaveText('0,12 ↓+0,07');
-  await expect(pierwszy.locator('td').last()).toHaveText('kontrola po redukcji do 10 mg');
-  await expect(tarczyca.locator('.vilda-lab-hist-cell-value.is-converted')).toHaveText(['27', '0,01']);
-  await expect(badania.locator('.vilda-lab-hist-panel[data-panel="other"] .vilda-lab-hist-cell-value')).toHaveText(['250 mU/l*', '12']);
-  expect(await page.evaluate((pid) => sessionStorage.getItem(`vilda-lab-hist-view-${pid}`), patientId)).toBe('table');
+  await badania.locator('.vilda-lab-hist-segment-btn', { hasText: 'Wykresy' }).click();
+  await expect(badania.locator('.vilda-lab-hist-segment-btn[aria-pressed="true"]')).toHaveText('Wykresy');
+  const tsh = badania.locator('.vilda-lab-hist-card[data-series="tsh"]');
+  await expect(tsh.locator('svg.vilda-lab-result-chart-svg')).toHaveCount(1);
+  await expect(tsh).toContainText(/0,27.*4,2/);
+  await expect(tsh.locator('.vilda-lab-result-chart-point[data-note-id]')).toHaveCount(4);
+  await expect(tsh.locator(`.vilda-lab-result-chart-point[data-note-id="${ids.tsh4}"]`)).toHaveCount(1);
+  const ft4 = badania.locator('.vilda-lab-hist-card[data-series="ft4"]');
+  await expect(ft4).toContainText(/12.*22/);
+  await expect(ft4.locator('.vilda-lab-result-chart-point[data-note-id]')).toHaveCount(4);
+  // Wynik <0,1 nie jest sztucznym zerem ani dokładnym punktem na wykresie.
+  const lh = badania.locator('.vilda-lab-hist-card[data-series="lh"]');
+  await expect(lh.locator('.vilda-lab-result-chart-point[data-note-id]')).toHaveCount(2);
+  await expect(lh.locator(`.vilda-lab-result-chart-point[data-note-id="${ids.lh1}"]`)).toHaveCount(0);
+  await expect(badania.locator('.vilda-lab-assessment-history-row')).toHaveCount(0);
+  await expect(badania).toContainText('Tiamazol');
+  await expect(badania).toContainText('30 mg');
+  await expect(badania).toContainText('20 mg');
+  await expect(badania).toContainText('10 mg');
+  expect(await page.evaluate((pid) => sessionStorage.getItem(`vilda-lab-hist-view-${pid}`), patientId)).toBe('charts');
 
+  await page.evaluate((pid) => window.VildaAuthUI.showPatientCard(pid, null, null, { activeTab: 'lab' }), patientId);
+  await czekajNaBadania(page);
+  await expect(sekcjaBadan(page).locator('.vilda-lab-hist-segment-btn[aria-pressed="true"]')).toHaveText('Wykresy');
+  await sekcjaBadan(page).locator('.vilda-lab-hist-segment-btn', { hasText: 'Tabela' }).click();
   await page.evaluate((pid) => window.VildaAuthUI.showPatientCard(pid, null, null, { activeTab: 'lab' }), patientId);
   await czekajNaBadania(page);
   await expect(sekcjaBadan(page).locator('.vilda-lab-hist-segment-btn[aria-pressed="true"]')).toHaveText('Tabela');
 });
 
-test('akcje: wartość otwiera wpis, „+ Dodaj wynik” i „Wpisz wynik” otwierają edytor z szablonem wyniku i datą badania', async ({ page }) => {
+test('wyniki tego samego dnia i nakładające się zera zachowują normy, kolory oraz dostęp do każdego wpisu; blokada usuwa podgląd', async ({ page }) => {
+  const patientId = await otworzSejf(page);
+  const ids = await page.evaluate(async (pid) => {
+    const save = (value, norm) => window.VildaVault.savePatientNote({
+      patientId: pid, title: 'Fikcyjny wynik TSH', body: '', category: 'wynik-badania', clinicalDateISO: '2026-06-10',
+      labResult: { test: 'TSH (tyreotropina)', testKey: 'tsh', value: String(value), valueNum: value, unit: 'mIU/L', norm },
+    });
+    return {
+      zero: (await save(0, '0,27–4,2 mIU/L')).id,
+      zeroTwin: (await save(0, '0,6–4,5 mIU/L')).id,
+      high: (await save(6.2, '0,6–4,5 mIU/L')).id,
+    };
+  }, patientId);
+  await otworzBadania(page, patientId);
+  const badania = sekcjaBadan(page);
+  await expect(badania.locator('.vilda-lab-hist-date-group')).toHaveCount(1);
+  await expect(badania.locator('.vilda-lab-hist-result-row')).toHaveCount(3);
+  const zero = wynik(badania, ids.zero), high = wynik(badania, ids.high);
+  await expect(zero.locator('.vilda-lab-hist-cell-value')).toHaveText('0');
+  await expect(zero.locator('.vilda-lab-hist-result-norm')).toHaveText(/0,27.*4,2/);
+  await expect(zero.locator('.vilda-lab-hist-cell-value.tone-below')).toHaveCSS('color', 'rgb(138, 74, 24)');
+  await expect(high.locator('.vilda-lab-hist-result-norm')).toHaveText(/0,6.*4,5/);
+  await expect(high.locator('.vilda-lab-hist-cell-value.tone-above')).toHaveCSS('color', 'rgb(138, 24, 24)');
+  await high.click();
+  await expect(szczegoly(badania, ids.high)).toContainText(/0,6.*4,5/);
+  await page.keyboard.press('Escape');
+  await expect(szczegoly(badania, ids.high)).toHaveCount(0);
+  await badania.locator('.vilda-lab-hist-segment-btn', { hasText: 'Wykresy' }).click();
+  const chart = badania.locator('.vilda-lab-hist-card[data-series="tsh"] .vilda-lab-result-chart');
+  await expect(chart.locator(`.vilda-lab-result-chart-point[data-note-id="${ids.high}"]`)).toHaveCount(1);
+  const shared = chart.locator('.vilda-lab-result-chart-point[data-count="2"]');
+  await expect(shared).toHaveCount(1);
+  await shared.click();
+  const chooser = chart.locator('.vilda-lab-result-chart-chooser');
+  await expect(chooser).toBeVisible();
+  await expect(chooser.locator('.vilda-lab-result-chart-choice')).toHaveCount(2);
+  expect(await chooser.locator('.vilda-lab-result-chart-choice').evaluateAll((choices) => choices.every((choice) => choice.getBoundingClientRect().height >= 44))).toBe(true);
+  await chooser.locator(`.vilda-lab-result-chart-choice[data-note-id="${ids.zero}"]`).click();
+  await expect(szczegoly(badania, ids.zero)).toContainText(/0,27.*4,2/);
+  await expect(szczegoly(badania, ids.high)).toHaveCount(0);
+  await page.keyboard.press('Escape');
+  await shared.click();
+  await expect(chooser).toBeVisible();
+  await chooser.locator(`.vilda-lab-result-chart-choice[data-note-id="${ids.zeroTwin}"]`).click();
+  await expect(szczegoly(badania, ids.zeroTwin)).toContainText(/0,6.*4,5/);
+  await expect(szczegoly(badania, ids.zero)).toHaveCount(0);
+  await page.evaluate(() => window.VildaVault.lock('manual'));
+  await expect(page.locator('.vilda-lab-hist-result-details, .vilda-lab-hist-result-row')).toHaveCount(0);
+});
+
+test('akcje: szczegóły wyniku prowadzą do edycji, „+ Dodaj wynik” i „Wpisz wynik” zachowują formularze i zamknięcie zlecenia', async ({ page }) => {
   const patientId = await otworzSejf(page);
   const ids = await zapiszHistorie(page, patientId);
   await otworzBadania(page, patientId);
   const badania = sekcjaBadan(page);
   const edytor = page.locator('.b3-template-select');
 
-  await badania.locator(`.vilda-lab-hist-card[data-series="tsh"] .vilda-lab-hist-value[data-note-id="${ids.tsh4}"]`).click();
+  await wynik(badania, ids.tsh4).click();
+  const podglad = szczegoly(badania, ids.tsh4);
+  await expect(podglad).toBeVisible();
+  await expect(podglad).toContainText('0,12');
+  await expect(podglad).toContainText(/0,27.*4,2/);
+  await expect(podglad).toContainText('kontrola po redukcji do 10 mg');
+  await podglad.getByRole('button', { name: 'Edytuj wpis', exact: true }).click();
   await expect(edytor).toHaveValue('lab');
   await expect(page.locator('.b3-lab-test')).toHaveValue('TSH (tyreotropina)');
   await page.keyboard.press('Escape');
@@ -114,7 +194,7 @@ test('akcje: wartość otwiera wpis, „+ Dodaj wynik” i „Wpisz wynik” otw
   await page.getByRole('dialog', { name: /Edytuj notatkę/ }).getByRole('button', { name: 'Zapisz zmiany' }).click();
   await expect(edytor).toHaveCount(0);
   await expect(badania.locator('.vilda-lab-hist-pending')).toHaveCount(0);
-  await expect(badania.locator('.vilda-lab-hist-card[data-series="tsh"] .vilda-lab-hist-value')).toHaveText('0,4');
+  await expect(wynik(badania, ids.zlecenie)).toContainText('0,4');
 });
 
 test('Historia bez sekcji „Trend wyników”: odnośnik przełącza na zakładkę Badania', async ({ page }) => {
@@ -129,7 +209,7 @@ test('Historia bez sekcji „Trend wyników”: odnośnik przełącza na zakład
   await link.click();
   await czekajNaBadania(page);
   await expect(page.locator('.vilda-patient-tab[data-tab="lab"]')).toHaveClass(/vilda-patient-tab--active/);
-  await expect(sekcjaBadan(page).locator('.vilda-lab-hist-card[data-series="lh"]')).toBeVisible();
+  await expect(sekcjaBadan(page).locator('.vilda-lab-hist-result-row')).toHaveCount(14);
 });
 
 test('pacjent bez wyników: stan pusty; Historia bez odnośnika', async ({ page }) => {

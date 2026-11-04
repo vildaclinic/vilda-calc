@@ -5,7 +5,7 @@ import { czekajNaBadania, sekcjaBadan } from '../support/karta-czekanie.mjs';
 // współczynnikiem co przelicznik. Konwerter ładuje się leniwie: Start w czasie bezczynności albo przy
 // pierwszym dotknięciu, DocPro dopiero na żądanie karty — wykres ma działać na obu stronach, także gdy
 // konwerter jeszcze się ładuje. Od LAB-HISTORIA PR2 (decyzja 6.12) wykres trendu jest w zakładce „Badania”
-// (ten sam renderer Nl), a „Historia” go nie rysuje.
+// (osobny renderer historii), a „Historia” go nie rysuje.
 // Każdy test zakłada świeży, fikcyjny sejf w osobnym kontekście przeglądarki.
 test.use({ serviceWorkers: 'block' });
 
@@ -55,12 +55,19 @@ for (const path of ['/index.html', '/docpro.html']) {
     await page.evaluate((pid) => window.VildaAuthUI.showPatientCard(pid), patientId);
     await page.locator('.vilda-patient-tab[data-tab="lab"]').click();
     await czekajNaBadania(page);
+    await sekcjaBadan(page).getByRole('button', { name: 'Wykresy', exact: true }).click();
     const card = sekcjaBadan(page).locator('.vilda-lab-hist-card[data-series="ft4"]');
     await expect(card).toBeVisible();
-    await expect(card.locator('.vilda-lab-hist-card-h')).toHaveText(/fT4 pmol\/L · ×3/);
+    await expect(card.locator('.vilda-lab-hist-card-name')).toHaveText('fT4');
+    await expect(card.locator('.vilda-lab-hist-result-unit')).toHaveText('pmol/L');
+    await expect(card.locator('.vilda-lab-result-chart-point')).toHaveCount(3);
     await expect(card.locator('.vilda-lab-hist-foot')).toHaveCount(0);
-    // Punkt przeliczony ma na wykresie obwódkę, jak dotąd; jego wartość to 1,2 × 12,87 = 15,444 pmol/L.
-    await expect(card.locator('svg circle[stroke="#26215C"]')).toHaveCount(1);
-    await expect(card.locator('svg')).toContainText('15,4');
+    // Dokładna przeliczona wartość nie jest zaokrąglana do etykiety i nie zyskuje normy bez zapisu.
+    const points = await card.locator('.vilda-lab-result-chart-point').evaluateAll(nodes => nodes.map(node => ({ value: Number(node.dataset.value), tone: node.dataset.tone })));
+    expect(points[0]).toEqual({ value: 15, tone: 'neutral' });
+    expect(points[1].value).toBeCloseTo(15.444, 12);
+    expect(points[1].tone).toBe('neutral');
+    expect(points[2]).toEqual({ value: 17, tone: 'neutral' });
+    await expect(card.locator('.vilda-lab-result-chart-band')).toHaveCount(0);
   });
 }

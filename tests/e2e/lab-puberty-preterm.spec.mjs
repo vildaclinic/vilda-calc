@@ -1,4 +1,5 @@
 import { expect, test } from '../support/test-czas.mjs';
+import { openSavedAssessment } from '../support/lab-saved-assessment.mjs';
 import { quickSelect as select, quickFill as fill, expectAutomaticReference, closePatientEditor } from '../support/lab-puberty-quick.mjs';
 import { mkdir } from 'node:fs/promises';
 import { join } from 'node:path';
@@ -319,7 +320,7 @@ test('pin and history preserve preterm eligibility and the original comparison a
   expect(series.find((item) => item.testKey === 'lh').points.find((item) => item.noteId === saved.id).assessment.evaluation).toEqual(before.evaluation);
   await page.evaluate((id) => window.VildaAuthUI.showPatientCard(id), patientId);
   await page.locator('.vilda-patient-tab[data-tab="lab"]').click(); // LAB-HISTORIA PR2: zapisane oceny są w zakładce „Badania”
-  const history = page.locator(`.vilda-lab-assessment-history-row[data-note-id="${saved.id}"] .vilda-lab-assessment`);
+  const history = (await openSavedAssessment(page, saved.id)).locator('.vilda-lab-assessment');
   await expect(history).toHaveAttribute('data-assessment-status', 'recorded');
   await expect(history.locator('.vilda-lab-axis')).toHaveCount(1);
   await expect(history.locator('[data-comparison="age"] .vilda-lab-axis')).toHaveAttribute('data-range-upper', '9.2');

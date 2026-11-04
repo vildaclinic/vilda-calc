@@ -301,10 +301,14 @@ test('żeńskie przypięcie zachowuje 60 ng/dL, wiek35 i zapisany zakres po pó�
   await page.waitForFunction(() => window.VildaVault?.isUnlocked() && window.VildaAuthUI);
   await page.evaluate(patientId => window.VildaAuthUI.showPatientCard(patientId), id);
   await page.locator('.vilda-patient-tab[data-tab="lab"]').click();
-  const card = page.locator('.vilda-lab-hist-card[data-series="testosterone_total"]');
-  await expect(card.locator('.vilda-lab-hist-status-context')).toContainText('35 l 0 m w dniu pobrania');
-  await card.locator(`button[data-note-id="${note.id}"]`).click();
-  const historical = page.locator('.vilda-saved-lab-assessment .vilda-lab-assessment');
+  const row = page.locator(`.vilda-lab-hist-result-row[data-note-id="${note.id}"]`);
+  await expect(row).toBeVisible();
+  await row.click();
+  const details = page.locator(`.vilda-lab-hist-result-details[data-note-id="${note.id}"]`);
+  await details.locator('.vilda-lab-hist-result-sources > summary').click();
+  await expect(details.locator('.vilda-lab-hist-status-context')).toContainText('35 l 0 m w dniu pobrania');
+  await details.getByRole('button', { name: 'Edytuj wpis', exact: true }).click();
+  const historical = page.getByRole('dialog', { name: /Edytuj notatkę/ }).locator('.vilda-saved-lab-assessment .vilda-lab-assessment');
   await expect(historical.locator('[data-comparison="age"] .vilda-lab-axis')).toHaveAttribute('data-range-upper', '2.0802');
   expect((await page.evaluate(noteId => window.VildaVault.getPatientNote(noteId), note.id)).labResult.assessment.evaluation).toEqual(original.evaluation);
 });

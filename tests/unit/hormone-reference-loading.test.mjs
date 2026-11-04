@@ -20,7 +20,7 @@ function environment(missing = [], restoredSession = false) {
     // Decyzja 6.3: zakres zapisany z wynikiem — moduł transportu obok odniesienia AMH.
     VildaLabRangeSnapshot: {},
     // LAB-HISTORIA PR2: moduły zakładki „Badania” są w tym samym stosie; tu gotowe (ich ładowanie: lab-history-tab-loading).
-    VildaLabHistory: {}, VildaLabHistoryTab: {}, VildaPubertyAssessment: {}, VildaLabTestosteroneUnits: {},
+    VildaLabHistory: {}, VildaLabResultPresentation: {}, VildaLabResultChart: {}, VildaLabHistoryTab: {}, VildaPubertyAssessment: {}, VildaLabTestosteroneUnits: {},
     // The independent care-plan model and UI are already ready here. Their
     // missing/partial readiness is covered by care-plans-loader.test.mjs.
     VildaCarePlanModel: {}, VildaCarePlans: {},

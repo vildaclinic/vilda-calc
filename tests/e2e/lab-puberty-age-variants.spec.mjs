@@ -1,6 +1,7 @@
 import { mkdir, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { expect, test } from '../support/test-czas.mjs';
+import { openSavedAssessment } from '../support/lab-saved-assessment.mjs';
 import { quickFill, closePatientEditor, expectAutomaticReference } from '../support/lab-puberty-quick.mjs';
 
 // Fictional patients. Age uncertainty and each status come from the production
@@ -173,7 +174,7 @@ test('a pinned age-variant assessment keeps its original values after current ag
   expect(saved.labResult.assessment).toEqual(notes[0].labResult.assessment);
   await page.evaluate((id) => window.VildaAuthUI.showPatientCard(id), patientId);
   await page.locator('.vilda-patient-tab[data-tab="lab"]').click(); // LAB-HISTORIA PR2: zapisane oceny są w zakładce „Badania”
-  const recorded = page.locator(`.vilda-lab-assessment-history-row[data-note-id="${saved.id}"] .vilda-lab-assessment`);
+  const recorded = (await openSavedAssessment(page, saved.id)).locator('.vilda-lab-assessment');
   await expect(recorded).toHaveAttribute('data-assessment-status', 'recorded');
   await expectAgeAxes(recorded, lh18('within', 'above'), 9.7);
 });

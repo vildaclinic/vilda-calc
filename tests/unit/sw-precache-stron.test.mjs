@@ -297,7 +297,8 @@ describe('P-SW-PRECACHE: instalacja bez historii, kopia z poprzedniej pamięci, 
     '/vilda_centile_charts.js', '/vilda_dob_age.js',
     '/vilda_auth_ui.js', '/sga_birth_module.js', '/docpro_state_persist.js', '/vilda_khamis_roche.js',
     '/vilda_food_data.js', '/vilda_growth_reference_data.js', '/vilda_ree_rownania_data.js',
-    '/vilda_estimated_intake_input_model.js', '/lab_units_data.js'];
+    '/vilda_estimated_intake_input_model.js', '/lab_units_data.js',
+    '/userData.js', '/vitalSigns.js'];
   const wspoldzielonePary = ['/style.css', '/vilda_chrome.css', ...dodatkoweWspoldzieloneZasoby];
   const wspoldzieloneZasoby = new Set(['/edu-video-ui.css', ...wspoldzielonePary]);
   const oczekiwanePobraniaSwiezychZasobow = () => {
@@ -375,6 +376,9 @@ describe('P-SW-PRECACHE: instalacja bez historii, kopia z poprzedniej pamięci, 
     // Every serum AG resource keeps its own fresh fetch; only the five explicit
     // unchanged alias pairs above share a current-install response.
     for (const plik of ['/clcr_serum_anion_gap_data.js', '/clcr_serum_anion_gap.js', '/clcr_serum_anion_gap_ui.js', '/clcr_serum_anion_gap_ui.css', '/clcr_serum_anion_gap_persistence.js']) {
+      expect(pobrane.filter(adres => adres.split('?')[0] === plik), plik).toHaveLength(1);
+    }
+    for (const plik of ['/vilda_lab_result_presentation.js', '/vilda_lab_result_chart.js']) {
       expect(pobrane.filter(adres => adres.split('?')[0] === plik), plik).toHaveLength(1);
     }
     expect(pobrane.length, `instalacja wysyła ${pobrane.length} żądań`).toBeLessThanOrEqual(600);

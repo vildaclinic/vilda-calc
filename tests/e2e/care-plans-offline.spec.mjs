@@ -135,6 +135,8 @@ test('care plans cold offline: native plan, narrative result and future step per
     const labEntry = lab.locator(`[data-note-id="${result.id}"]`);
     await expect(labEntry).toBeVisible();
     await labEntry.click();
+    await lab.locator(`.vilda-lab-hist-result-details[data-note-id="${result.id}"]`)
+      .getByRole('button', { name: 'Edytuj wpis', exact: true }).click();
     const editor = page.locator('.vilda-patient-note-editor-overlay');
     await expect(editor.locator('textarea').first()).toHaveValue(result.body);
     await editor.getByRole('button', { name: 'Anuluj', exact: true }).click();

@@ -373,10 +373,14 @@ test('rzeczywiste przypięcie przechowuje 300 ng/dL i historyczną ocenę bez pr
   expect(point.assessment.evaluation).toEqual(original.evaluation);
   await page.evaluate(id => window.VildaAuthUI.showPatientCard(id), patientId);
   await page.locator('.vilda-patient-tab[data-tab="lab"]').click();
-  const card = page.locator('.vilda-lab-hist-card[data-series="testosterone_total"]');
-  await expect(card.locator('.vilda-lab-hist-status-context')).toContainText('19 l 0 m w dniu pobrania');
-  await card.locator(`button[data-note-id="${note.id}"]`).click();
-  const historical = page.locator('.vilda-saved-lab-assessment .vilda-lab-assessment');
+  const row = page.locator(`.vilda-lab-hist-result-row[data-note-id="${note.id}"]`);
+  await expect(row).toBeVisible();
+  await row.click();
+  const details = page.locator(`.vilda-lab-hist-result-details[data-note-id="${note.id}"]`);
+  await details.locator('.vilda-lab-hist-result-sources > summary').click();
+  await expect(details.locator('.vilda-lab-hist-status-context')).toContainText('19 l 0 m w dniu pobrania');
+  await details.getByRole('button', { name: 'Edytuj wpis', exact: true }).click();
+  const historical = page.getByRole('dialog', { name: /Edytuj notatkę/ }).locator('.vilda-saved-lab-assessment .vilda-lab-assessment');
   await expect(historical).toHaveAttribute('data-assessment-status', 'recorded');
   await expect(historical.locator('[data-comparison="age"] .vilda-lab-axis')).toHaveAttribute('data-range-lower', '8.3208');
   expect((await page.evaluate(id => window.VildaVault.getPatientNote(id), note.id)).labResult.assessment.evaluation).toEqual(original.evaluation);

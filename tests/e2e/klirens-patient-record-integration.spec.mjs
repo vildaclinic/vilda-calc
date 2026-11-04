@@ -104,6 +104,7 @@ test('all41 formulas/45 legacy outputs remain visible, including signed/bounded/
   expect(seeded.outputs).toHaveLength(45);
   expect(seeded.formulas).toHaveLength(41);
   await page.locator('#clcrOpenCardBtn').click();
+  await page.locator('.vilda-lab-hist').getByRole('button', { name: 'Wykresy', exact: true }).click();
   await expect(renal(page).locator('tr[data-note-id]')).toHaveCount(seeded.ids.length);
   const shown = await renal(page).locator('tr[data-note-id]').evaluateAll(nodes => nodes.map(node => node.dataset.noteId));
   expect(new Set(shown)).toEqual(new Set(seeded.ids));

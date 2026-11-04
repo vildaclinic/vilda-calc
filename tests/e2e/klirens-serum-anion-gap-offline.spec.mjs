@@ -15,8 +15,9 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..')
 const sha256 = bytes => createHash('sha256').update(bytes).digest('hex');
 const versionOf = source => /const SW_VERSION = '([^']+)'/.exec(source)[1];
 const UPDATE_BASE_SHA = '67bcae009b813652f021e3920b123f0523218ffb';
+const LATEST_UPDATE_BASE_SHA = '55d609471dd8edc82122d4725b773fc3c38d6f0d';
 // CI's E2E checkout uses fetch-depth: 0; archive the actual production tree.
-const aliasNames = ['vilda_food_data.js', 'vilda_growth_reference_data.js', 'vilda_ree_rownania_data.js', 'vilda_estimated_intake_input_model.js', 'lab_units_data.js'];
+const aliasNames = ['vilda_food_data.js', 'vilda_growth_reference_data.js', 'vilda_ree_rownania_data.js', 'vilda_estimated_intake_input_model.js', 'lab_units_data.js', 'userData.js', 'vitalSigns.js'];
 const names = [
   'vilda_patients_list.js', 'vilda_patients_list.css', 'vilda_vault.js', 'vilda_reminders.css', 'vilda_care_plans.css',
   'vilda_chrome.css', 'vilda_chrome.js', 'vilda_shell.css', 'vilda_shell.js', 'vilda_summary_layout.js',
@@ -27,6 +28,7 @@ const names = [
   'vilda_save_status_indicator.js', 'vilda_session_bridge.js',
   'clcr_notes_view.js', 'clcr_notes_view.css', 'clcr_record_resources.js',
   'clcr_clinical_safety.js', 'clcr_ui_workflow.js', 'clcr_ui_workflow.css', 'vilda_auth_ui.js', 'vilda_lab_history_tab.js',
+  'vilda_lab_history_tab.css', 'vilda_lab_history.js', 'vilda_lab_result_presentation.js', 'vilda_lab_result_chart.js',
   'clcr_saved_calculation.js', 'clcr_saved_results.js', 'clcr_result_details.js',
   'clcr_saved_legacy_calculator.js', 'inline_kalkulator_klirens_02.js',
   'inline_kalkulator_klirens_04.js', 'inline_kalkulator_klirens_07.js',
@@ -72,23 +74,23 @@ function startupResourcesFor() {
 
 // The update must use an actual production tree. A fabricated preceding SW
 // header over current bytes cannot detect a missing newly introduced module.
-function productionBaseline() {
+function productionBaseline(baselineSha) {
   const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'vilda-serum-anion-gap-production-base-'));
   try {
-    execFileSync('git', ['cat-file', '-e', `${UPDATE_BASE_SHA}^{tree}`], { cwd: root, stdio: ['ignore', 'pipe', 'pipe'] });
-    const bytes = execFileSync('git', ['archive', '--format=tar', UPDATE_BASE_SHA], { cwd: root, maxBuffer: 128 * 1024 * 1024 });
+    execFileSync('git', ['cat-file', '-e', `${baselineSha}^{tree}`], { cwd: root, stdio: ['ignore', 'pipe', 'pipe'] });
+    const bytes = execFileSync('git', ['archive', '--format=tar', baselineSha], { cwd: root, maxBuffer: 128 * 1024 * 1024 });
     execFileSync('tar', ['-x', '-C', directory], { input: bytes });
     return { directory, cleanup: () => fs.rmSync(directory, { recursive: true, force: true }) };
   } catch (error) {
     fs.rmSync(directory, { recursive: true, force: true });
-    throw new Error(`Brak rzeczywistej produkcyjnej bazy ${UPDATE_BASE_SHA}; pobierz jej historię Git.`, { cause: error });
+    throw new Error(`Brak rzeczywistej produkcyjnej bazy ${baselineSha}; pobierz jej historię Git.`, { cause: error });
   }
 }
 
-async function deploymentServer(upgrade) {
+async function deploymentServer(upgrade, baselineSha) {
   const currentWorker = fs.readFileSync(path.join(root, 'service-worker-kalorii.js'), 'utf8');
   const version = versionOf(currentWorker);
-  const baseline = upgrade ? productionBaseline() : null;
+  const baseline = upgrade ? productionBaseline(baselineSha) : null;
   const previousRoot = baseline?.directory || root;
   const previousWorker = upgrade ? fs.readFileSync(path.join(previousRoot, 'service-worker-kalorii.js'), 'utf8') : currentWorker;
   const previousVersion = versionOf(previousWorker);
@@ -133,7 +135,7 @@ async function deploymentServer(upgrade) {
   });
   await new Promise((resolve, reject) => { server.once('error', reject); server.listen(Number(process.env.VILDA_AGS_PWA_PORT || 0), '127.0.0.1', resolve); });
   return { origin: `http://127.0.0.1:${server.address().port}`, version, previousVersion,
-    baseline: 'archived-unmodified-production-tree', baselineSha: upgrade ? UPDATE_BASE_SHA : null,
+    baseline: 'archived-unmodified-production-tree', baselineSha: upgrade ? baselineSha : null,
     cleanup: () => baseline?.cleanup(),
     precedingResources,
     traffic, currentWorkerHash: sha256(currentWorker), previousWorkerHash: sha256(previousWorker), workerResponses,
@@ -314,11 +316,12 @@ async function lazyStartAndNotes(page, origin, note, resources, loaded) {
   return { editedValue: edited.labResult.valueNum, frozenValue: frozen.valueNum, norm: frozen.norm, lazyResources };
 }
 
-for (const upgrade of [false, true]) {
-  test(`AG surowicy: ${upgrade ? 'pełna aktualizacja 67bcae00' : 'pełna świeża instalacja'} i dwa zimne starty offline`, async ({ playwright, browserName, launchOptions }, testInfo) => {
+for (const baselineSha of [null, UPDATE_BASE_SHA, LATEST_UPDATE_BASE_SHA]) {
+  const upgrade = Boolean(baselineSha);
+  test(`AG surowicy: ${upgrade ? 'pełna aktualizacja ' + baselineSha.slice(0, 8) : 'pełna świeża instalacja'} i dwa zimne starty offline`, async ({ playwright, browserName, launchOptions }, testInfo) => {
     test.setTimeout(180_000);
     const resources = resourcesFor(), startupResources = startupResourcesFor(), aliasResources = aliasResourcesFor();
-    const deployment = await deploymentServer(upgrade);
+    const deployment = await deploymentServer(upgrade, baselineSha);
     const profile = fs.mkdtempSync(path.join(os.tmpdir(), 'vilda-serum-anion-gap-offline-'));
     const launch = () => playwright[browserName].launchPersistentContext(profile, {
       ...launchOptions, serviceWorkers: 'allow', locale: 'pl-PL', timezoneId: 'Europe/Warsaw',

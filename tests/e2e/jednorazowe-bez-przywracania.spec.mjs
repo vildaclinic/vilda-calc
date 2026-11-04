@@ -45,10 +45,13 @@ test('zamknięcie przeglądarki bez wylogowania: po przywróceniu kart sesja jed
     ...lo,
     channel: lo.executablePath ? undefined : 'chromium',
     args: [...(lo.args || []), ...dodatkowe],
+    // Restored tabs start fetching before launchPersistentContext resolves.
+    // Set the external-network deny rule at browser launch: registering a
+    // context route afterward can strand their in-flight deferred scripts.
+    proxy: { server: 'http://127.0.0.1:9', bypass: '127.0.0.1,localhost' },
     locale: 'pl-PL', viewport: { width: 1280, height: 900 }, serviceWorkers: 'block',
   });
   const przygotuj = async (ctx) => {
-    await ctx.route('**/*', (r) => (r.request().url().startsWith(baseURL) ? r.continue() : r.abort()));
     await ctx.addInitScript(() => {
       localStorage.setItem('vilda-terms-accepted-v1', JSON.stringify({ version: 1, acceptedAtISO: new Date().toISOString() }));
     });

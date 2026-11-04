@@ -240,8 +240,18 @@ test('AG surowicy: zapis zachowuje małą wartość, normę z dnia obliczenia i 
   // The just-saved shortcut hides when a new unsaved calculation is loaded.
   // The persistent patient-card action remains the actual user path here.
   await page.locator('#clcrOpenCardBtn').click();
-  await expect(page.locator('.vilda-lab-hist-panel[data-panel="renal"] .vilda-clcr-point')).toHaveCount(2);
-  expect(Number(await page.locator(`.vilda-clcr-point[data-note-id="${note.id}"]`).getAttribute('data-value'))).toBe(-.04);
+  const history = page.locator('.vilda-lab-hist');
+  const renal = history.locator('.vilda-lab-hist-panel[data-panel="renal"]');
+  await history.getByRole('button', { name: 'Tabela', exact: true }).click();
+  await expect(history.getByRole('button', { name: 'Tabela', exact: true })).toHaveAttribute('aria-pressed', 'true');
+  await expect(renal.locator('tr[data-note-id]')).toHaveCount(2);
+  await expect(renal.locator(`.vilda-clcr-value[data-note-id="${note.id}"]`)).toContainText(tiny.display.text);
+  await expect(renal.locator(`tr[data-note-id="${note.id}"] .vilda-clcr-row-reference`)).toHaveText('7–15 mmol/L');
+  await expect(renal.locator(`tr[data-note-id="${childNote.id}"] .vilda-clcr-row-reference`)).toHaveText('Brak zapisanej normy');
+  await history.getByRole('button', { name: 'Wykresy', exact: true }).click();
+  await expect(history.getByRole('button', { name: 'Wykresy', exact: true })).toHaveAttribute('aria-pressed', 'true');
+  await expect(renal.locator('.vilda-clcr-point')).toHaveCount(2);
+  expect(Number(await renal.locator(`.vilda-clcr-point[data-note-id="${note.id}"]`).getAttribute('data-value'))).toBe(-.04);
   expect((await memory(page)).originalsLocked).toBe(true);
 });
 

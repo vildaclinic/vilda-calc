@@ -1,6 +1,7 @@
 import { mkdir, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { expect, test } from '../support/test-czas.mjs';
+import { openSavedAssessment } from '../support/lab-saved-assessment.mjs';
 import { quickFill, quickSelect, closePatientEditor, expectAutomaticReference } from '../support/lab-puberty-quick.mjs';
 
 // Fictional patients. Exercise the production form, engine, axes and saved
@@ -70,7 +71,9 @@ async function expectUpperOnly(host, upper, value) {
   await expect(note).toHaveCount(1);
   await expect(note).toHaveText(UPPER_NOTE);
   await expect(note).toBeVisible();
-  expect(await note.locator('xpath=ancestor::details').count()).toBe(0);
+  // Saved results add an explicitly opened outer details container; the
+  // assessment itself must still keep this limitation outside its own details.
+  expect(await note.locator('xpath=ancestor::details[not(contains(concat(" ", normalize-space(@class), " "), " vilda-lab-hist-result-sources "))]').count()).toBe(0);
   await expect(host.locator('.vilda-lab-severity-summary')).toHaveCount(0);
 }
 
@@ -82,7 +85,7 @@ async function expectG1Concern(host) {
   await expect(clinical).toContainText(ABSENT_TITLE);
   await expect(clinical).toContainText('Leczenie, wcześniejszy początek lub regresja');
   await expect(clinical).toContainText('Nie rozpoznajemy nowego opóźnienia');
-  expect(await clinical.locator('xpath=ancestor::details').count()).toBe(0);
+  expect(await clinical.locator('xpath=ancestor::details[not(contains(concat(" ", normalize-space(@class), " "), " vilda-lab-hist-result-sources "))]').count()).toBe(0);
   await expect(ageComparison(host)).toHaveAttribute('data-status', 'within');
   await expect(ageComparison(host).getByRole('img')).toHaveAttribute('data-patient-value', '2');
 }
@@ -195,7 +198,7 @@ test('pinning and history preserve the original upper-only assessment after the 
   expect(saved.labResult.assessment).toEqual(notes[0].labResult.assessment);
   await page.evaluate((id) => window.VildaAuthUI.showPatientCard(id), patientId);
   await page.locator('.vilda-patient-tab[data-tab="lab"]').click(); // LAB-HISTORIA PR2: zapisane oceny są w zakładce „Badania”
-  const recorded = page.locator(`.vilda-lab-assessment-history-row[data-note-id="${saved.id}"] .vilda-lab-assessment`);
+  const recorded = (await openSavedAssessment(page, saved.id)).locator('.vilda-lab-assessment');
   await expect(recorded).toHaveAttribute('data-assessment-status', 'recorded');
   await expectUpperOnly(recorded, 3.3, 0.1);
 });

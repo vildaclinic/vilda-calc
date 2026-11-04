@@ -1,6 +1,7 @@
 import { mkdir } from 'node:fs/promises';
 import { join } from 'node:path';
 import { expect, test } from '../support/test-czas.mjs';
+import { openSavedAssessment } from '../support/lab-saved-assessment.mjs';
 import { quickSelect, quickFill, closePatientEditor, expectAutomaticReference } from '../support/lab-puberty-quick.mjs';
 
 // Fictional patients only. Exercise the actual converter, clinical engine,
@@ -415,7 +416,7 @@ test('F11 months: real pin and history render the two stored curve comparisons w
   expect(point.plotValue).toBe(144);
   await page.evaluate((id) => window.VildaAuthUI.showPatientCard(id), patientId);
   await page.locator('.vilda-patient-tab[data-tab="lab"]').click(); // LAB-HISTORIA PR2: zapisane oceny są w zakładce „Badania”
-  const recorded = page.locator(`.vilda-lab-assessment-history-row[data-note-id="${note.id}"] .vilda-lab-assessment`);
+  const recorded = (await openSavedAssessment(page, note.id)).locator('.vilda-lab-assessment');
   await expect(recorded).toHaveAttribute('data-assessment-status', 'recorded');
   const rows = await expectCurveAgeVariants(recorded, original.evaluation, ['above', 'above'], 'above');
   for (let i = 0; i < 2; i++) expect(await animation(rows.nth(i).locator('.vilda-lab-axis-marker'))).toMatch(/lab-marker-shake/);
@@ -575,7 +576,7 @@ test('real pin, series and history retain mass units, source ranges and censored
   await page.evaluate((id) => window.VildaAuthUI.showPatientCard(id), patientId);
   await page.locator('.vilda-patient-tab[data-tab="lab"]').click(); // LAB-HISTORIA PR2: zapisane oceny są w zakładce „Badania”
   for (const note of notes) {
-    const recorded = page.locator(`.vilda-lab-assessment-history-row[data-note-id="${note.id}"] .vilda-lab-assessment`);
+    const recorded = (await openSavedAssessment(page, note.id)).locator('.vilda-lab-assessment');
     await expect(recorded).toHaveAttribute('data-assessment-status', 'recorded');
     await expect(recorded.locator('.vilda-lab-axis')).toHaveAttribute('data-range-lower', '34.9');
     await expect(recorded.locator('.vilda-lab-axis')).toHaveAttribute('data-range-upper', '289.2');

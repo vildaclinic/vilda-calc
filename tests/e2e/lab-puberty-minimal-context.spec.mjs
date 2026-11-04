@@ -1,4 +1,5 @@
 import { expect, test } from '../support/test-czas.mjs';
+import { openSavedAssessment } from '../support/lab-saved-assessment.mjs';
 import { quickSelect as select, expectAutomaticReference, closePatientEditor } from '../support/lab-puberty-quick.mjs';
 import { kliknij } from '../support/uklad-czekanie.mjs';
 
@@ -85,7 +86,9 @@ async function expectVisibleConditions(host, { mode = 'automatic-source-referenc
   await expect(note).toBeVisible();
   await expect(note).toContainText(/bazaln/i);
   await expect(note).toContainText(untreatedText);
-  expect(await note.locator('xpath=ancestor::details').count()).toBe(0);
+  // Opening the result's source accordion does not move this notice into
+  // the assessment's own collapsed details.
+  expect(await note.locator('xpath=ancestor::details[not(contains(concat(" ", normalize-space(@class), " "), " vilda-lab-hist-result-sources "))]').count()).toBe(0);
 }
 async function expectConditionalResult(host, { withStage = true } = {}) {
   await expect(comparison(host, 'age')).toHaveAttribute('data-status', 'above');
@@ -184,7 +187,7 @@ async function openTimeline(page, patientId) {
   await page.evaluate((id) => window.VildaAuthUI.showPatientCard(id), patientId);
   await page.locator('.vilda-patient-tab[data-tab="lab"]').click(); // LAB-HISTORIA PR2: zapisane oceny są w zakładce „Badania”
 }
-const historicalAssessment = (page, id) => page.locator(`.vilda-lab-assessment-history-row[data-note-id="${id}"] .vilda-lab-assessment`);
+const historicalAssessment = async (page, id) => (await openSavedAssessment(page, id)).locator('.vilda-lab-assessment');
 
 test('a recorded explicit basal untreated context remains applicable while the new form keeps unknown input', async ({ page }) => {
   await open(page);
@@ -203,7 +206,7 @@ test('a recorded explicit basal untreated context remains applicable while the n
   const reread = await page.evaluate((id) => window.VildaVault.getPatientNote(id), saved.note.id);
   expect(reread.labResult.assessment).toEqual(saved.assessment);
   await openTimeline(page, patientId);
-  const recorded = historicalAssessment(page, saved.note.id);
+  const recorded = await historicalAssessment(page, saved.note.id);
   await expect(recorded).toHaveAttribute('data-assessment-status', 'recorded');
   await expect(conditions(recorded)).toHaveCount(0);
   await expect(comparison(recorded, 'age')).toHaveAttribute('data-status', 'above');
@@ -234,7 +237,7 @@ test('recorded hormonal treatment and stimulation keep catalog comparisons block
   for (const entry of saved) {
     const reread = await page.evaluate((id) => window.VildaVault.getPatientNote(id), entry.note.id);
     expect(reread.labResult.assessment).toEqual(entry.assessment);
-    const recorded = historicalAssessment(page, entry.note.id);
+    const recorded = await historicalAssessment(page, entry.note.id);
     await expect(recorded).toHaveAttribute('data-assessment-status', 'recorded');
     await expect(conditions(recorded)).toHaveCount(0);
     await expect(comparison(recorded, 'age')).toHaveAttribute('data-status', 'unavailable');
@@ -286,7 +289,7 @@ test('a historical sample preserves its data and interview warnings without disp
   const series = await page.evaluate((id) => window.VildaVault.listPatientLabSeries(id), patientId);
   expect(series.find((item) => item.testKey === 'lh').points.find((item) => item.noteId === saved.note.id).assessment).toEqual(saved.assessment);
   await openTimeline(page, patientId);
-  const recorded = historicalAssessment(page, saved.note.id);
+  const recorded = await historicalAssessment(page, saved.note.id);
   await expect(recorded).toHaveAttribute('data-assessment-status', 'recorded');
   await expect(recorded.locator('[data-clinical-code="early_development"]')).toBeVisible();
   await expect(comparison(recorded, 'age')).toHaveAttribute('data-status', 'above');
@@ -341,7 +344,7 @@ test('pin and history preserve the automatic preview and its unknown input after
     .toEqual(before.evaluation.referencePreview);
   await page.evaluate((id) => window.VildaAuthUI.showPatientCard(id), patientId);
   await page.locator('.vilda-patient-tab[data-tab="lab"]').click(); // LAB-HISTORIA PR2: zapisane oceny są w zakładce „Badania”
-  const recorded = page.locator(`.vilda-lab-assessment-history-row[data-note-id="${saved.id}"] .vilda-lab-assessment`);
+  const recorded = (await openSavedAssessment(page, saved.id)).locator('.vilda-lab-assessment');
   await expectConditionalResult(recorded);
 });
 

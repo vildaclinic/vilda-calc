@@ -19,7 +19,7 @@
  *   bo i tak chcemy zwracać HTML z cache natychmiast.
  */
 
-const SW_VERSION = '1.1.464';
+const SW_VERSION = '1.1.465';
 const CACHE_PREFIX = 'pwa-kalorii';
 const SHELL_CACHE = `${CACHE_PREFIX}-shell-v${SW_VERSION}`;
 const RUNTIME_CACHE = `${CACHE_PREFIX}-runtime`;
@@ -901,10 +901,14 @@ const CORE_SHELL_URLS = [
   '/vilda_lab_history_tab.js?v=24',
   '/vilda_lab_history_tab.js?v=25',
   '/vilda_lab_history_tab.js?v=26',
+  '/vilda_lab_history_tab.js?v=27',
+  '/vilda_lab_result_presentation.js?v=1',
+  '/vilda_lab_result_chart.js?v=1',
   '/vilda_lab_history_tab.css?v=1',
   '/vilda_lab_history_tab.css?v=2',
   '/vilda_lab_history_tab.css?v=3',
   '/vilda_lab_history_tab.css?v=4',
+  '/vilda_lab_history_tab.css?v=5',
   '/vilda_lab_puberty_ui.js?v=1',
   '/vilda_lab_puberty_ui.js?v=2',
   '/vilda_lab_puberty_ui.js?v=3',
@@ -1741,6 +1745,7 @@ const CORE_SHELL_URLS = [
   '/vilda_chrome.js?v=239',
   '/vilda_chrome.js?v=240',
   '/vilda_chrome.js?v=241',
+  '/vilda_chrome.js?v=242',
   '/vilda_realtime.js?v=1',
   '/vilda_realtime.js?v=2',
   '/vilda_realtime.js?v=3',
@@ -2565,6 +2570,7 @@ const OPTIONAL_ASSETS = [
   '/vilda_session_bridge.js?v=160',
   '/vilda_session_bridge.js?v=161',
   '/vilda_session_bridge.js?v=162',
+  '/vilda_session_bridge.js?v=163',
   '/vilda_sync.js?v=48',
   '/vilda_patient_documents.js?v=1',
   '/vilda_patient_documents.css?v=1',
@@ -5105,7 +5111,11 @@ const FRESH_STATIC_ALIAS_PATHS = new Set([
   // Five serum AG resources retain separate requests. These unchanged static
   // dependencies reuse only freshly fetched current-install bytes across aliases.
   '/vilda_food_data.js', '/vilda_growth_reference_data.js', '/vilda_ree_rownania_data.js',
-  '/vilda_estimated_intake_input_model.js', '/lab_units_data.js'
+  '/vilda_estimated_intake_input_model.js', '/lab_units_data.js',
+  // Two compact laboratory readers keep separate fetches. Reuse only fresh
+  // responses between the versioned and unversioned current aliases of these
+  // unchanged static UI dependencies; previous immutable entries never seed them.
+  '/userData.js', '/vitalSigns.js'
 ]);
 
 async function fetchAndStorePrecacheUrl(url, { required = false, previousShellCaches = [], freshResponses = null } = {}) {

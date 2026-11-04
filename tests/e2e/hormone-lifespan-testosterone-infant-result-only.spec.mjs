@@ -266,9 +266,10 @@ test('pinning infant TT keeps the independent laboratory assessment frozen and v
   expect(JSON.stringify(saved.labResult.assessment)).not.toMatch(/infant-tt-result-only|male-testosterone-infant-result-only/);
   await page.evaluate(id => window.VildaAuthUI.showPatientCard(id), id);
   await page.locator('.vilda-patient-tab[data-tab="lab"]').click();
-  const history = page.locator('.vilda-lab-hist-card[data-series="testosterone_total"]');
-  await expect(history.locator(`button[data-note-id="${saved.id}"]`)).toBeVisible();
-  await history.locator(`button[data-note-id="${saved.id}"]`).click();
+  const row = page.locator(`.vilda-lab-hist-result-row[data-note-id="${saved.id}"]`);
+  await expect(row).toBeVisible();
+  await row.click();
+  await page.locator('.vilda-lab-hist-result-details').getByRole('button', { name: 'Edytuj wpis', exact: true }).click();
   const historical = page.locator('.vilda-saved-lab-assessment .vilda-lab-assessment');
   await expect(historical).toHaveAttribute('data-assessment-status', 'recorded');
   expect((await page.evaluate(id => window.VildaVault.getPatientNote(id), saved.id)).labResult.assessment).toEqual(saved.labResult.assessment);

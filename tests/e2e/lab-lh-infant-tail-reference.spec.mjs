@@ -1,4 +1,5 @@
 import { expect, test } from '../support/test-czas.mjs';
+import { openSavedAssessment } from '../support/lab-saved-assessment.mjs';
 import { chart, point, sources, start, mainPatient, choose, geometry, expectNumeric,
   expectResultOnly, exactDay, fits, waitPatientReady } from '../support/lh-infant-tail.mjs';
 
@@ -195,7 +196,7 @@ test('switching to a different preterm patient blocks the late point while the f
   expect(preterm).not.toBe(id);
   await page.evaluate(id => window.VildaAuthUI.showPatientCard(id), id);
   await page.locator('.vilda-patient-tab[data-tab="lab"]').click();
-  const history = page.locator(`.vilda-lab-assessment-history-row[data-note-id="${saved.id}"]`);
+  const history = await openSavedAssessment(page, saved.id);
   await expect(history).toBeVisible();
   expect((await page.evaluate(id => window.VildaVault.getPatientNote(id), saved.id)).labResult.assessment)
     .toEqual(saved.labResult.assessment);

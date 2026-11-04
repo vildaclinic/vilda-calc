@@ -110,6 +110,8 @@ test('a plan result stays in Badania and its exact current original can be read 
   const lab = patient.locator('.vilda-patient-lab-section');
   await expect(lab.locator(`[data-note-id="${created.result.id}"]`)).toBeVisible();
   await lab.locator(`[data-note-id="${created.result.id}"]`).click();
+  await lab.locator(`.vilda-lab-hist-result-details[data-note-id="${created.result.id}"]`)
+    .getByRole('button', { name: 'Edytuj wpis', exact: true }).click();
   const editor = page.locator('.vilda-patient-note-editor-overlay');
   await expect(editor).toBeVisible();
   const body = editor.locator('textarea').first();

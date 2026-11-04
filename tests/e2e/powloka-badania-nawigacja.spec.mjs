@@ -12,6 +12,9 @@ async function ramka(page, tytul) {
   await expect(iframe).toBeVisible();
   const frame = await (await iframe.elementHandle()).contentFrame();
   if (!frame) throw new Error(`Brak ramki ${tytul}`);
+  // Visibility precedes native iframe load. The shell deliberately delivers
+  // the selected test only after that load, when the panel owns a ready document.
+  await frame.waitForLoadState('load');
   return frame;
 }
 
@@ -34,8 +37,9 @@ async function powlokaZKarta(page) {
 
 test('karta badania → przelicznik z tym badaniem i pustym polem wyniku; wpisany wynik nie znika po cichu', async ({ page }) => {
   const { patientId, start } = await powlokaZKarta(page);
+  await sekcjaBadan(start).getByRole('button', { name: 'Wykresy', exact: true }).click();
   const tsh = sekcjaBadan(start).locator('.vilda-lab-hist-card[data-series="tsh"] a.vilda-lab-hist-card-check');
-  await expect(tsh).toHaveText('Nowy wynik TSH w przeliczniku →');
+  await expect(tsh).toHaveText('Nowy wynik TSH →');
   await tsh.click();
   await expect(page).toHaveURL(/\/app\.html#\/lab/);
   const lab = await ramka(page, 'Jednostki laboratoryjne');

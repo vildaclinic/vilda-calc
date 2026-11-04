@@ -1065,6 +1065,54 @@ historia mówią to samo).
 przegląd tego wpisu przez właściciela. Zielone testy nie są walidacją
 kliniczną.
 
+### LAB-HISTORIA — zwarta tabela i kolory zapisanych zakresów (2026-11-04)
+
+**Zakres zaakceptowany przez właściciela:** wariant B makiety, wyniki według
+daty, wariant z kolorami, normy w tabeli i na wykresach. Zastępuje wcześniejsze
+decyzje prezentacji: szerokie tabele paneli, wykresy bez zapisanych zakresów
+i stale rozwinięte pełne oceny. Domyślnie tabela; zachowany wybór widoku
+pacjenta ma pierwszeństwo. Wyszukiwanie i filtr panelu działają w obu trybach.
+
+**Klasyfikacja:** zmiana prezentacji zapisanych wyników i ocen, bez nowych
+norm, progów, przeliczeń, rozpoznań lub ponownej oceny. Nie zmienia modelu
+historii, dokumentacji pacjenta, zapisu, synchronizacji ani algorytmów
+przelicznika. Paleta odpowiada dotychczasowej prezentacji przelicznika:
+zieleń w zakresie, bursztyn poniżej, czerwień powyżej. Kolor oznacza położenie
+względem zapisanego zakresu, a nie prawidłowość całego obrazu klinicznego.
+
+`vilda_lab_result_presentation.js` odczytuje zaakceptowaną normę ręczną,
+`range` lub utrwaloną kopertę `assessment`. Korzysta z istniejących
+normalizatorów i `VildaLabAssessmentUI.buildView`; nie wywołuje `evaluate`
+ani nie dobiera norm do bieżącego wieku. Granice przelicza wyłącznie
+istniejącym konwerterem, jeśli jednostki są jednoznacznie rozpoznane.
+Źródła medyczne, populacje i ograniczenia pozostają w zapisie i jego
+szczegółach; żadne dane referencyjne nie są dodawane.
+
+Brak normy, nieaktualna ocena, zakres ogólny u dziecka, odniesienie
+orientacyjne i alternatywne zakresy pozostają neutralne. Zapisane ostrzeżenie
+kliniczne ma pierwszeństwo przed zielonym wyróżnieniem stężenia: wynik
+i referencja pozostają neutralne, a znak przy wyniku prowadzi do szczegółów.
+Nieznana dolna granica pozostaje nieznana; górne odniesienie LH nie staje się
+zielonym przedziałem od zera. Mediana edukacyjna AMH nie jest normą.
+
+`vilda_lab_result_chart.js` rysuje wyłącznie dokładne punkty modelu historii,
+z zakresem właściwym dla danego zapisu. Zmieniające się zakresy mają osobne
+odcinki z datą; odmienne zakresy z jednego dnia nie tworzą wspólnego pasma.
+Wynik `0` pozostaje zerem, a `<…`, `>…`, wpis tekstowy, brak daty badania
+lub nierozpoznana jednostka nie otrzymują sztucznego punktu. Identyczne
+punkty pozwalają wybrać konkretny wpis, bez przesuwania wartości na osi.
+
+Kliknięcie wyniku otwiera zwarty podgląd z normą i możliwością edycji.
+Pełna zapisana ocena jest dostępna w zwiniętych „Szczegółach i źródłach”.
+Nie jest usuwana ani przeliczana. Zlecenia, cofanie wykonania, wyniki GH
+i osobny adapter zapisanych obliczeń Klirensu zachowują dotychczasową obsługę.
+
+**Regresje syntetyczne:** norma TSH 0,27–4,2 z wynikiem 0 → poniżej,
+6,2 → powyżej, 2 → w zakresie; wynik bez normy → neutralny; LH z górnym
+odniesieniem 0,3 → neutralna linia bez wymyślonej granicy dolnej;
+`<0,1` → zachowany zapis bez punktu; dwa wpisy tego samego dnia → osobne
+normy i dostęp do właściwych notatek. Testy wykonują moduły produkcyjne.
+
 ### P-LAB-WARTOSC-BEZ-JEDNOSTKI — liczba ze starszego wpisu wyniku bez jednostki (SW 1.1.279, `vilda_vault.js` 212, 2026-10-14)
 
 **Wpływ kliniczny: tak.** Zmieniają się liczby w historii wyników dla
