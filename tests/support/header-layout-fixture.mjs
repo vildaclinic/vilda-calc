@@ -113,7 +113,7 @@ export async function expectBell(page) {
 }
 
 export async function expectDesktopSearchControl(page) {
-  const search = page.locator('#vildaHeaderSearch'), submit = search.locator('button');
+  const search = page.locator('#vildaHeaderSearch'), submit = search.locator('button[type=submit]');
   await expect(search).toHaveCSS('height', '44px');
   await expect(submit).toHaveCSS('width', '42px');
   await expect(submit).toHaveCSS('height', '42px');

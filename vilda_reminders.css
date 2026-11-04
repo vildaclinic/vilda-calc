@@ -1765,12 +1765,13 @@ html.vilda-phone .vb22 .vb22-outcome-actions .vb22-primary {
   font-size: 13px;
 }
 
-.vb22.vb22--stable .vb22-primary-create::before {
-  content: "+";
+.vb22.vb22--stable .vb22-header-icon,
+.vb22.vb22--stable .vb22-header-icon svg {
   display: block;
-  font-size: 24px;
-  font-weight: 400;
-  line-height: 28px;
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+  pointer-events: none;
 }
 
 .vb22.vb22--stable .vb22-create-label,
@@ -1900,7 +1901,7 @@ html.vilda-phone .vb22 .vb22-outcome-actions .vb22-primary {
   .vb22.vb22--stable.vb22-modal .vb22-primary-create {
     width: 110px!important;
   }
-  .vb22.vb22--stable.vb22-modal .vb22-primary-create::before {
+  .vb22.vb22--stable.vb22-modal .vb22-primary-create .vb22-header-icon {
     display: none;
   }
   .vb22.vb22--stable.vb22-modal .vb22-create-label {
