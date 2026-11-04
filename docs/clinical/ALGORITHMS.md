@@ -9524,6 +9524,52 @@ Rekord pacjenta dostaje sekcję **`birth`**: wiek ciążowy (tygodnie + dni), ma
 - **Bez zmian:** silnik karty SGA, jej normy, `docpro_state_persist.js` (stan interfejsu DocPro zostaje jak był — rekord i UI to dwie różne rzeczy) oraz treść jakiegokolwiek dokumentu. Wersja modułu `vilda_data_import_export.js` 1.10.5 → 1.11.0 (pin w `vilda_smoke_tests.js` podniesiony razem z nią).
 - *Strażnicy:* `tests/unit/dane-urodzeniowe-rekord.test.mjs` (8) — **prawdziwy tekst `Bf1`/`Bf0` wycięty z pliku produkcyjnego** i uruchomiony ze wstrzykniętym oknem: karta z danymi wygrywa, brak karty przenosi, karta pusta przenosi, pusto po obu stronach daje `null` (a nie pusty obiekt udający dane), wyjątek karty nie kasuje, wynik jest kopią; do tego kontrola negatywna `Bf1` (płeć, „0 dni", same spacje, `null`, string). Plus `tests/e2e/dane-urodzeniowe-rekord.spec.mjs` (4) na prawdziwych stronach: pełny obieg wczytaj→zapisz na `index.html` **z kontrolą pozytywną, że karty tam faktycznie nie ma**; odtworzenie pól karty i przewaga ręcznej zmiany na `docpro.html`; kasowanie przez „Wyczyść wszystkie pola"; oraz **wczytanie kolejnego pacjenta bez danych urodzeniowych, które nie może przenieść danych poprzedniego** — najgroźniejszy błąd tej klasy. **Zmierzone czerwone dwukrotnie:** bez funkcji **8 z 8** jednostkowych i **4 z 4** e2e; a przeciwko **naiwnej implementacji, która po prostu czyta kartę** (najbardziej prawdopodobnej pomyłce) — **5 z 8** jednostkowych i **3 z 4** e2e, przy zielonych kontrolach (przewaga karty z danymi, obie kontrole `Bf1`, odtworzenie karty z rekordu — bo tę ścieżkę naiwny wariant zachowywał). Drugi pomiar jest tu istotniejszy: pilnuje reguły, a nie samego istnienia kodu.
 
+### GROWTH-BIRTH-STATUS — zapis wyniku SGA i kafelek Karty pacjenta (2026-11-04)
+
+Zaakceptowana makieta dodaje jeden warunkowy kafelek do obecnego Statusu. Zapisane dane
+`birth` pokazują się bez zmiany pozostałych kafli; szczegóły otwierają osobne okno i wracają
+do tej samej pozycji oraz fokusu. U dorosłego z samymi danymi urodzeniowymi sekcja nazywa
+się „Dane urodzeniowe”. Bez `birth` kafelek nie powstaje.
+
+- **Zapis, nie ponowne datowanie.** Wyraźne „Oblicz SDS” zachowuje w `birth.assessment`
+  wersję struktury, datę obliczenia, wejście, wybrane źródła, dokładne SDS, kategorie,
+  identyfikację norm i uwagi z istniejącego renderera `sga_birth_module.js`. Do sejfu trafia
+  razem z „Zapisz dane”. Automatyczne odtworzenie formularza nie tworzy oceny ani nowej daty.
+  Zmiana wejścia/norm usuwa bieżącą ocenę do następnego jawnego obliczenia. Odczyt karty
+  sprawdza zgodność z wejściem, nie przelicza danych i nie zmienia rekordu.
+- **Starsze rekordy.** Samo `hasComputed` nie dowodzi zapisania wyniku: pomiary bez kompletnej,
+  zgodnej oceny mają bursztynowe „Do oceny”, bez SDS i wymyślonej daty. Konieczne jest
+  obliczenie w DocPro i zapis pacjenta. `perinatal` pozostaje osobnym wywiadem — nie podmieniamy
+  nim wejścia historycznej oceny SGA.
+- **Źródła, populacja i jednostki:** dotychczasowe Niklasson/Albertsson-Wikland 2008
+  ([DOI](https://doi.org/10.1186/1471-2431-8-8), płeć i 24–42 tyg.), INTERGROWTH-21st
+  (Villar i wsp. 2014/2016, 24+0–42+6) oraz tabela Malewski i wsp. (polska populacja
+  1986–1994, 22–43 tyg., tylko masa). Wejście: masa w gramach, długość i obwód głowy
+  w centymetrach, pełne tygodnie i dni ciąży. Snapshot zachowuje także uwagi o zakresie
+  i interpolacji użytej przez istniejący moduł.
+- **Wpływ kliniczny:** nowa prezentacja i trwałe przechowanie istniejącego wyniku; bez
+  zmiany tabel, obliczeń SDS ani granic. Kafelek czyta zapisane `summary` silnika urodzeniowego:
+  czerwone „Tak” przy SGA po masie lub długości, turkusowe „Nie” tylko po pełnej ujemnej
+  ocenie obu pomiarów. Brak pomiaru lub długość niedostępna dla Malewskiego nie oznacza
+  „Nie”. Różne oceny źródeł są bursztynowe i rozpisane osobno. Obwód głowy jest dodatkowym
+  pomiarem, nie kryterium SGA. Zachowany jest próg modułu urodzeniowego **< −2 SDS**;
+  ten PR nie ujednolica go z osobnym modułem catch-up/B.64. Kolor SDS odpowiada istniejącej
+  kategorii karty SGA, nie nowej interpretacji.
+- **Przypadek syntetyczny:** chłopiec, 34+2 tyg., 1650 g / 41 cm / 29 cm → rzeczywisty
+  moduł Niklasson: SDS −3,13 / −3,48 / −2,29, SGA po masie i długości = TAK.
+  Testy obejmują też brak oceny, niepełną ocenę, porównanie norm, zmianę wejścia,
+  odtworzenie bez zmiany daty i przełączenie na innego pacjenta. Kopiowane podsumowanie
+  korzysta z tego samego modelu zapisanej oceny co kafelek.
+- **Strażnicy:** `tests/unit/birth-assessment.test.mjs`,
+  `tests/unit/patient-sga-model.test.mjs`, `tests/e2e/karta-pacjenta-sga.spec.mjs`,
+  `tests/e2e/karta-pacjenta-sga-mobile.spec.mjs` oraz
+  `tests/e2e/karta-pacjenta-sga-offline.spec.mjs`. Scenariusz offline zamyka cały proces
+  przeglądarki i serwer, a potem sprawdza kafelek oraz dokładne bajty zasobów z produkcyjnego SW.
+- **PWA:** cztery nowe zasoby mają własne wpisy precache. Zachowujemy limit 600 żądań
+  instalacji przez współdzielenie wyłącznie świeżych odpowiedzi bieżących aliasów
+  `vilda_auth_ui.js`, `sga_birth_module.js`, `docpro_state_persist.js` i
+  `vilda_khamis_roche.js`; historyczne adresy i klucze cache pozostają zachowane.
+
 ### GROWTH-KOWD-REC — wejście oceny KOWD ginęło z rekordu pacjenta (SW 1.0.866, 2026-09-08, wykryte przy przeglądzie miejsc przechowywania etapu dojrzewania)
 
 **Cicha utrata danych klinicznych.** Cztery pola karty „Zaawansowane obliczenia wzrostowe" — **wiek kostny, objętość jąder, rodzinne opóźnienie dojrzewania i wykluczenia** (choroba przewlekła / zaburzenie endokrynologiczne / zespół genetyczny / leczenie wpływające na wzrastanie) — to komplet wejścia oceny **KOWD** (`advanced_growth_kowd.js`). Jeden cykl „wczytaj pacjenta → zapisz" kasował je wszystkie. Zweryfikowane na uruchomionej stronie, nie z lektury kodu.

@@ -50,6 +50,8 @@ function environment(missing) {
   const win = { VildaCrypto: {}, VildaLabSnapshot: {}, VildaLabAssessmentUI: {}, VildaVaultProtocol: {}, VildaVault: {}, VildaAuthUI: {}, VildaProAccess: {},
     VildaClinicalCrypto: {}, VildaPatientCheckpointStore: {}, VildaPatientCheckpoint: {},
     VildaPatientIdentityProtocol: {}, VildaPatientIdentityTransport: {},
+    // SGA readiness has its own missing-dependency cases in patient-sga-loading.test.mjs.
+    VildaBirthAssessment: {}, VildaPatientSgaModel: {}, VildaPatientSgaUI: {},
     VildaHormoneReferenceSnapshot: {}, VildaHormoneReferenceUI: {}, VildaLabRangeSnapshot: {}, VildaLabHistory: {}, VildaLabHistoryTab: {}, VildaPubertyAssessment: {}, VildaLabTestosteroneUnits: {},
     // Independent care-plan model/UI readiness is tested in care-plans-loader.test.mjs.
     VildaCarePlanModel: {}, VildaCarePlans: {},
@@ -60,7 +62,7 @@ function environment(missing) {
   };
   for (const key of missing) delete win[key];
   const doc = {
-    readyState: 'loading', querySelector: () => null, getElementById: () => null, addEventListener() {}, dispatchEvent() {},
+    readyState: 'loading', querySelector: selector => selector.includes('vilda_patient_sga_ui.css') ? { href: 'vilda_patient_sga_ui.css?v=existing' } : null, getElementById: () => null, addEventListener() {}, dispatchEvent() {},
     createElement(tag) {
       const handlers = new Map();
       return { tagName: tag, addEventListener(type, fn) { handlers.set(type, fn); }, loaded() { handlers.get('load')?.(); } };

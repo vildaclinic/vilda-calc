@@ -96,7 +96,12 @@ test('A9 full desktop search stays fixed while the active and historical lists s
     const frame = route.includes('app.html') ? await shellFrame(page) : page;
     await frame.waitForFunction(() => window.VildaVault?.isUnlocked() && window.VildaAuthUI);
     if (route === '/docpro.html') {
-      const confirmation = page.locator('#professionalConfirmBtn'); if (await confirmation.isVisible()) await confirmation.click();
+      // This fresh fictional account has not confirmed DocPro yet. Its overlay
+      // is opened by a deferred startup task, after AuthUI can already be ready.
+      const confirmation = page.locator('#professionalConfirmBtn');
+      await expect(confirmation).toBeVisible();
+      await confirmation.click();
+      await expect(page.locator('#professionalOverlay')).toBeHidden();
     }
     const workspace = await openFull(page);
     for (const [tab, count] of [['active', created.notes.active.length], ['search', 50]]) {
@@ -108,7 +113,18 @@ test('A9 full desktop search stays fixed while the active and historical lists s
       const list = scope.locator('.vb22-list'), pane = scope.locator('.vb22-list-pane');
       const before = await search.boundingBox();
       await list.hover(); await page.mouse.wheel(0, 1400);
-      await expect.poll(() => list.evaluate(node => node.scrollTop)).toBeGreaterThan(100);
+      // wheel() only dispatches input. Observe the native rendering frames rather
+      // than repeatedly reading DOM from Node; the fixed clock also shims page rAF.
+      // Keep the same scroll requirement and the original five-second deadline.
+      const listHandle = await list.elementHandle();
+      try {
+        const scrolled = await page.waitForFunction(node => node.isConnected && node.scrollTop > 100,
+          listHandle, { polling: 'raf', timeout: 5000 });
+        await scrolled.dispose();
+      } finally {
+        await listHandle.dispose();
+      }
+      expect(await list.evaluate(node => node.scrollTop)).toBeGreaterThan(100);
       const after = await search.boundingBox();
       expect(Math.abs(after.y - before.y), route + ' ' + tab + ': search does not travel with rows').toBeLessThan(1);
       expect(await pane.evaluate(node => node.scrollTop)).toBe(0);
