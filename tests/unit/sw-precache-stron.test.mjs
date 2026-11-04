@@ -292,6 +292,8 @@ describe('P-SW-PRECACHE: instalacja bez historii, kopia z poprzedniej pamięci, 
     '/vilda_diet_plan_ui.js', '/vilda_bmi_journey.js',
     '/vilda_centile_landscape.js', '/vilda_summary_cards.js', '/vilda_professional_module.js',
     '/vilda_gh_therapy_resource_audit.js', '/vilda_patient_report.js',
+    '/vilda_growth_card_c.js', '/vilda_data_import_export.js', '/vilda_advanced_growth.js',
+    '/vilda_estimated_intake.js', '/vilda_pro_access.js',
     '/vilda_centile_charts.js', '/vilda_dob_age.js'];
   const wspoldzielonePary = ['/style.css', '/vilda_chrome.css', ...dodatkoweWspoldzieloneZasoby];
   const wspoldzieloneZasoby = new Set(['/edu-video-ui.css', ...wspoldzielonePary]);
@@ -337,6 +339,9 @@ describe('P-SW-PRECACHE: instalacja bez historii, kopia z poprzedniej pamięci, 
       expect(pobrane.filter(adres => adres.split('?')[0] === plik), plik).toHaveLength(1);
     }
     for (const plik of ['/clcr_protein_creatinine_data.js', '/clcr_protein_creatinine.js', '/clcr_protein_creatinine_ui.js', '/clcr_protein_creatinine_ui.css', '/clcr_protein_creatinine_persistence.js']) {
+      expect(pobrane.filter(adres => adres.split('?')[0] === plik), plik).toHaveLength(1);
+    }
+    for (const plik of ['/clcr_potassium_index_data.js', '/clcr_potassium_index.js', '/clcr_potassium_index_ui.js', '/clcr_potassium_index_ui.css', '/clcr_potassium_index_persistence.js']) {
       expect(pobrane.filter(adres => adres.split('?')[0] === plik), plik).toHaveLength(1);
     }
     for (const plik of ['/clcr_magnesium_calcium_data.js', '/clcr_magnesium_calcium.js', '/clcr_magnesium_calcium_ui.js', '/clcr_magnesium_calcium_ui.css', '/clcr_magnesium_calcium_persistence.js']) {

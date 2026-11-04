@@ -242,8 +242,9 @@
       {
         id: "K_frac",
         label: "K/(K+Na) w moczu (%)",
-        version: "advanced",
+        version: "spot",
         requires: [ "U_K", "U_Na"],
+        note: "Dwa stężenia z tej samej próbki moczu. Zbiórka dobowa nie jest wymagana.",
       },
       {
         id: "ACR",
@@ -437,9 +438,9 @@
       "PO4_Cr",
       "B_Cr",
       "AGs",
-      "K_frac",
     ]),
     "Pr\xF3bka moczu (spot)": new Set([
+      "K_frac",
       "KM_Cr",
       "ACR",
       "PCR",

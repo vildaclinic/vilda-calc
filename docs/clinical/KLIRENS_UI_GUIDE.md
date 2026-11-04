@@ -359,6 +359,33 @@ zachowują znaczenie bez nowej ankiety. Stare `U_Prot` pozostaje masą całej
 zbiórki, nigdy nowym stężeniem. Szczegóły polityki i zapisu:
 [PROTEIN_CREATININE.md](PROTEIN_CREATININE.md).
 
+## K/(K+Na) w moczu — decyzja 03.11.2026
+
+`K_frac` znajduje się w **„Obliczeniach z próbki moczu”**. Dwa pola to
+**potas, następnie sód w moczu**, oba mmol/L, z tej samej próbki.
+Krótka uwaga wyjaśnia równoważność mEq/L oraz to, że **zbiórka dobowa
+nie jest wymagana**. Nie dodawaj trybu raportu, pytań o wiek, płeć,
+czas, objętość, surowicę, chorobę lub leki. Zero pojedynczego stężenia
+jest poprawne przy dodatniej sumie; oba zera mają czytelny błąd.
+
+Jedna neutralna karta B pokazuje **„Wynik pacjenta”** w % i obok
+**„Norma — Brak uniwersalnej normy”**. Komentarz:
+**„Wynik opisuje udział potasu w sumie potasu i sodu w moczu.”**
+Pasek **„Udział w sumie K + Na”** ilustruje skład, bez pasma prawidłowości
+i bez progu 60%. Matematyczne 0–100% nie jest normą. Nie nadawaj klinicznego
+koloru nawet przy 0%, 100% lub >60%; brak oceny ma `outOfRange:null`.
+
+Zastosowanie >60% łącznie z FENa <0,5% u dzieci z zespołem nerczycowym,
+ograniczenia po diuretykach/płynach IV, wzór i źródła należą do zwiniętych
+Szczegółów. Nie twórz z tego automatycznej diagnozy lub kolejnej ankiety.
+Stałe szerokości i wyrównanie dotyczą też błędu i bardzo małych liczb,
+które nie mogą stać się pokazanym lub zapisanym zerem.
+
+Umiejscowienie w menu nie potwierdza pobrania spot. Nieznany materiał
+pozostaje nieznany; historyczne DZM zachowuje swoje pochodzenie podczas
+odczytu i edycji. Formularz, zapis, Badania i Notatki korzystają ze zgodnej
+precyzji i neutralnej oceny. Kontrakt: [POTASSIUM_INDEX.md](POTASSIUM_INDEX.md).
+
 ## Makieta i sprawdzenie przed przekazaniem
 
 Każdą kolejną zmianę wizualną w audycie przedstaw najpierw do akceptacji jako

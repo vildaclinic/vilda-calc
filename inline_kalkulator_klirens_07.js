@@ -2132,6 +2132,104 @@ function restoreClearedCaDzmContext(event) {
   const priorRestoreCa = restoreClearedCaDzmContext;
   replaceBinding("restoreClearedCaDzmContext", function restorePhosphorusCreatinineAfterCa(event) { priorRestoreCa(event); restoreClearedPhosphorusCreatinine(event); });
 })();
+// K/(K+Na) reuses the original two urine operands. The menu location is not
+// evidence of specimen type: only scoped, previously recorded facts are kept.
+(function installPotassiumIndexSessionAdapter() {
+  "use strict";
+  const META = "KFR_context", originals = new WeakMap();
+  const object = value => value && typeof value === "object" && !Array.isArray(value);
+  const own = (value, key) => Object.prototype.hasOwnProperty.call(value || {}, key);
+  const incoming = session => ({ ...(object(session.preservedInputs) ? session.preservedInputs : {}), ...(object(session.inputs) ? session.inputs : {}) });
+  let restoredContext = {};
+  function decode(value) {
+    if (typeof value === "string") { try { value = JSON.parse(value); } catch { return {}; } }
+    if (!object(value)) return {};
+    const source = object(value.potassiumIndex) ? value.potassiumIndex : value;
+    const result = {};
+    for (const key of ["sampleType", "sameSpecimen", "sameUrineSample", "collectionHours", "collectionStartAt", "collectionEndAt", "collectionProblem", "durationKnown"]) {
+      const entry = source[key];
+      if (typeof entry === "string" || typeof entry === "boolean" || typeof entry === "number" && Number.isFinite(entry)) result[key] = entry;
+    }
+    if (object(source.knownFacts)) result.knownFacts = Object.fromEntries(Object.entries(source.knownFacts).filter(([, value]) =>
+      typeof value === "string" || typeof value === "boolean" || value === null));
+    return result;
+  }
+  function readContext() {
+    const vault = window.__vildaClcrVersionValueVault;
+    const context = object(vault) && own(vault, META) ? decode(vault[META]) : decode(restoredContext);
+    return { potassiumIndex: context };
+  }
+  function normalize(session) {
+    const values = originals.get(session) || incoming(session);
+    const active = (session.selectedFormula || values.formulaPicker) === "K_frac";
+    let context = own(values, META) ? decode(values[META]) : {};
+    if (!own(values, META)) {
+      const snapshot = [session.potassiumIndexSnapshot, session.context?.potassiumIndexSnapshot, session.sourceContext?.potassiumIndexSnapshot]
+        .find(value => object(value) && value.schema === "clcr-potassium-index" && value.sourceFormula === "K_frac");
+      const explicit = [session.context?.potassiumIndex, session.sourceContext?.potassiumIndex].find(object);
+      const scoped = [session.context, session.sourceContext].find(value => object(value) &&
+        [value.sourceFormula, value.sourceFormulaId, value.formulaId].includes("K_frac"));
+      context = decode(snapshot?.context || explicit || scoped);
+    }
+    for (const [key, name] of [["KFR_sameSpecimen", "sameSpecimen"], ["KFR_sampleType", "sampleType"]]) {
+      if (own(values, key)) context[name] = values[key];
+    }
+    restoredContext = context;
+    const next = { ...(object(session.inputs) ? session.inputs : {}) };
+    if (Object.keys(context).length || own(values, META)) next[META] = JSON.stringify(context);
+    else delete next[META];
+    if (active) {
+      window.ClcrPotassiumIndexUi?.prepareControls?.(document);
+      for (const id of ["U_K", "U_Na"]) if (own(values, id)) {
+        next[id] = values[id];
+        // The version switch runs before the shared restorer writes controls.
+        // Seed the prepared text control now so an inactive layout cannot
+        // restore type=number and silently erase a recorded decimal comma.
+        const control = document.getElementById(id);
+        if (control) control.value = values[id] == null ? "" : String(values[id]);
+      }
+      // Old sessions selected this calculation under "advanced". Preserve
+      // their specimen facts while making that formula selectable in its new menu.
+      session.currentVersion = "spot";
+      session.selectedFormula = "K_frac";
+      next.currentVersion = "spot";
+      next.formulaPicker = "K_frac";
+    }
+    session.inputs = next;
+  }
+  function clear() {
+    restoredContext = {};
+    const vault = window.__vildaClcrVersionValueVault;
+    if (object(vault)) for (const key of [META, "KFR_sameSpecimen", "KFR_sampleType"]) delete vault[key];
+  }
+  function restoreAfterClear(event) {
+    clear();
+    if (event?.clcrClearedFormula !== "K_frac" || !object(event.clcrPreservedPotassiumIndexContext)) return;
+    restoredContext = decode(event.clcrPreservedPotassiumIndexContext);
+    if (!Object.keys(restoredContext).length) return;
+    const vault = object(window.__vildaClcrVersionValueVault) ? window.__vildaClcrVersionValueVault : (window.__vildaClcrVersionValueVault = {});
+    vault[META] = JSON.stringify(restoredContext);
+  }
+  const replace = (name, implementation) => {
+    if (!Reflect.set(globalThis, name, implementation)) throw new Error("Nie można zainstalować adaptera sesji: " + name);
+  };
+  const priorPrepare = prepareUaSession;
+  replace("prepareUaSession", function preparePotassiumIndexSession(session) {
+    const prepared = priorPrepare(session);
+    if (!object(prepared) || (prepared.selectedFormula || incoming(prepared).formulaPicker) !== "K_frac") return prepared;
+    return { ...prepared, selectedFormula: "K_frac", currentVersion: "spot", inputs: { ...(object(prepared.inputs) ? prepared.inputs : {}) },
+      preservedInputs: object(prepared.preservedInputs) ? { ...prepared.preservedInputs } : prepared.preservedInputs };
+  });
+  const priorNormalize = normalizeCl24SessionInputs;
+  replace("normalizeCl24SessionInputs", function capturePotassiumIndexBeforeNormalization(session) { originals.set(session, incoming(session)); priorNormalize(session); });
+  const priorNormalizeCa = normalizeCaDzmSessionInputs;
+  replace("normalizeCaDzmSessionInputs", function normalizePotassiumIndexAfterCa(session) { priorNormalizeCa(session); normalize(session); });
+  const priorClearCa = clearCaDzmInputContext;
+  replace("clearCaDzmInputContext", function clearPotassiumIndexAfterCa() { priorClearCa(); clear(); });
+  const priorRestoreCa = restoreClearedCaDzmContext;
+  replace("restoreClearedCaDzmContext", function restorePotassiumIndexAfterCa(event) { priorRestoreCa(event); restoreAfterClear(event); });
+  window.ClcrPotassiumIndexSession = Object.freeze({ readContext, clear });
+})();
 // B/Cr DZM owns its operands and specimen facts. Only an imported legacy
 // B_Cr session restores the old mass/volume calculation; changing the menu
 // never copies shared operands into the new concentration form.
