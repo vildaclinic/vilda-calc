@@ -39,30 +39,42 @@ test('IGF-1 z notatki GH na wykresie z datą kontroli i dopiskiem źródła; wpi
   const ids = await zapiszDane(page, patientId);
   await otworzBadania(page, patientId);
   const badania = sekcjaBadan(page);
-  await expect(badania.locator('.vilda-lab-hist-panel-h')).toHaveText(['Oś gonadalna', 'Oś GH–IGF-1']);
-
+  await badania.getByRole('button', { name: 'Wykresy', exact: true }).click();
   const igf = badania.locator('.vilda-lab-hist-card[data-series="igf1"]');
-  await expect(igf.locator('.vilda-lab-hist-value')).toHaveText('280');
-  await expect(igf.locator('.vilda-lab-hist-value')).toHaveAttribute('data-note-id', ids.gh);
-  await expect(igf.locator('.vilda-lab-hist-date')).toHaveText('01.06.26 (data kontroli GH)');
-  await expect(igf.locator('.vilda-lab-hist-source')).toHaveText('z notatki leczenia GH');
-  expect(bezTwardejSpacji(await igf.locator('.vilda-lab-hist-prev').innerText())).toBe('poprzednio 245 ng/mL (04.03.26) · różnica +35 ng/mL · po 89 dniach');
-  // Dwa punkty na wykresie, bez strzałek; treść notatki GH (opis dawki) nie trafia do komentarzy wyniku.
-  await expect(igf.locator('svg.vilda-lab-trend-chart')).toHaveCount(1);
-  await expect(igf.locator('svg text', { hasText: /[↓↑]/ })).toHaveCount(0);
+  await expect(igf.locator('.vilda-lab-hist-value.tone-neutral')).toHaveText('280');
+  await expect(igf.locator('.vilda-lab-hist-latest')).toHaveAttribute('data-note-id', ids.gh);
+  await expect(igf.locator('.vilda-lab-hist-date')).toHaveText('01.06.26 · data kontroli GH');
+  await expect(igf.locator('.vilda-lab-hist-result-norm')).toHaveText('—');
+  // Oba dokładne punkty zachowują ID i neutralny kolor; wpis GH nie staje się normą ani komentarzem.
+  await expect(igf.locator('.vilda-lab-result-chart-point')).toHaveCount(2);
+  await expect(igf.locator('.vilda-lab-result-chart-point[data-tone="neutral"]')).toHaveCount(2);
+  await expect(igf.locator(`.vilda-lab-result-chart-point[data-note-id="${ids.igf}"]`)).toHaveAttribute('data-value', '245');
+  await expect(igf.locator(`.vilda-lab-result-chart-point[data-note-id="${ids.gh}"]`)).toHaveAttribute('data-value', '280');
+  await expect(igf.locator('.vilda-lab-result-chart-band')).toHaveCount(0);
   await expect(igf.locator('.vilda-lab-hist-comments')).toHaveCount(0);
+  await igf.locator('.vilda-lab-hist-latest').click();
+  const details = badania.locator(`.vilda-lab-hist-result-details[data-note-id="${ids.gh}"]`);
+  await expect(details).toContainText('z notatki leczenia GH');
+  expect(bezTwardejSpacji(await details.innerText())).toContain('Zmiana: +35 ng/mL · po 89 dniach');
+  await expect(details).not.toContainText('Dawka: 0,030');
+  await details.locator('.vilda-lab-hist-details-close').click();
+  await badania.locator('.vilda-lab-hist-footer > summary').click();
   await expect(badania.locator('.vilda-lab-hist-footer')).toContainText('IGF-1 z notatek leczenia GH: data badania, a gdy jej brak — termin odbytej kontroli');
 
   const t = badania.locator('.vilda-lab-hist-card[data-series="testosterone_total"]');
-  await expect(t.locator('.vilda-lab-hist-merged')).toHaveText('W tym 1 wpis dopasowany po nazwie badania „Testosteron całkowity”.');
+  await expect(t.locator('.vilda-lab-result-chart-point')).toHaveCount(2);
+  await expect(t.locator(`.vilda-lab-result-chart-point[data-note-id="${ids.t1}"]`)).toHaveAttribute('data-value', '0.8');
+  await expect(t.locator(`.vilda-lab-result-chart-point[data-note-id="${ids.t2}"]`)).toHaveAttribute('data-value', '1.9');
   await expect(badania.locator('.vilda-lab-hist-card[data-series="testosteroncalkowity"]')).toHaveCount(0);
   await expect(badania.locator('.vilda-lab-hist-summary')).toHaveText('4 wyniki · 2 badania · ostatnie badanie 01.06.26');
 
-  await badania.locator('.vilda-lab-hist-segment-btn', { hasText: 'Tabela' }).click();
-  const tabela = badania.locator('.vilda-lab-hist-panel[data-panel="somatotropic"] table.vilda-lab-hist-table');
-  const ghCell = tabela.locator(`button.vilda-lab-hist-cell[data-note-id="${ids.gh}"]`);
-  await expect(ghCell.locator('.vilda-lab-hist-mark-gh')).toHaveText('GH');
-  expect(bezTwardejSpacji(await ghCell.getAttribute('title'))).toBe('IGF-1 · 01.06.26 · zapisano: 280 ng/ml · z notatki leczenia GH');
-  await expect(tabela.locator('tbody tr').first()).not.toHaveClass(/is-undated/);
-  await expect(badania.locator('.vilda-lab-hist-panel[data-panel="somatotropic"] .vilda-lab-hist-foot')).toContainText('GH — IGF-1 z notatki leczenia GH');
+  await badania.getByRole('button', { name: 'Tabela', exact: true }).click();
+  const grupa = badania.locator('.vilda-lab-hist-date-group[data-date-iso="2026-06-01"]');
+  await expect(grupa.locator('.vilda-lab-hist-date-heading')).toHaveText('01.06.26 · data kontroli GH');
+  const ghCell = grupa.locator(`.vilda-lab-hist-result-row[data-note-id="${ids.gh}"]`);
+  await expect(ghCell.locator('.vilda-lab-hist-source')).toHaveText('GH');
+  await expect(ghCell.locator('.vilda-lab-hist-cell-value.tone-neutral')).toHaveText('280');
+  await expect(ghCell.locator('.vilda-lab-hist-result-norm')).toHaveText('—');
+  await expect(badania.locator('.vilda-lab-hist-result-row')).toHaveCount(4);
+  await expect(badania).not.toContainText('Kontrola leczenia hormonem wzrostu / IGF-1.');
 });

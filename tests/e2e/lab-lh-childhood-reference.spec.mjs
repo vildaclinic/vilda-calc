@@ -1,4 +1,5 @@
 import { expect, test } from '../support/test-czas.mjs';
+import { openSavedAssessment } from '../support/lab-saved-assessment.mjs';
 import { czekajNaOdtworzenieSesji } from '../support/sesja-czekanie.mjs';
 import { initializeStorage, setCurrentPatient, loadPatient } from '../support/male-e2-age.mjs';
 import { quickFill, quickSelect, closePatientEditor } from '../support/lab-puberty-quick.mjs';
@@ -308,11 +309,12 @@ test('new saved LH freezes the one-sided policy and interpretation while older M
   await closePatientEditor(page);
   await page.evaluate(id => window.VildaAuthUI.showPatientCard(id), patientId);
   await page.locator('.vilda-patient-tab[data-tab="lab"]').click();
-  const row = id => page.locator(`.vilda-lab-assessment-history-row[data-note-id="${id}"] .vilda-lab-assessment`);
-  await expect(row(current.id).locator('[data-comparison="prepubertal"]')).toHaveAttribute('data-status', 'above');
-  await expect(row(current.id)).toContainText('Możliwa aktywacja osi pokwitania');
-  await expect(row(legacy.note.id).locator('[data-comparison="prepubertal"]')).toHaveCount(0);
-  await expect(row(legacy.note.id).locator('[data-comparison="age"]')).toHaveAttribute('data-status', 'within');
+  const currentAssessment = (await openSavedAssessment(page, current.id)).locator('.vilda-lab-assessment');
+  await expect(currentAssessment.locator('[data-comparison="prepubertal"]')).toHaveAttribute('data-status', 'above');
+  await expect(currentAssessment).toContainText('Możliwa aktywacja osi pokwitania');
+  const previousAssessment = (await openSavedAssessment(page, legacy.note.id)).locator('.vilda-lab-assessment');
+  await expect(previousAssessment.locator('[data-comparison="prepubertal"]')).toHaveCount(0);
+  await expect(previousAssessment.locator('[data-comparison="age"]')).toHaveAttribute('data-status', 'within');
   expect((await page.evaluate(id => window.VildaVault.getPatientNote(id), current.id)).labResult.assessment).toEqual(current.labResult.assessment);
   expect((await page.evaluate(id => window.VildaVault.getPatientNote(id), legacy.note.id)).labResult.assessment).toEqual(legacy.assessment);
 });

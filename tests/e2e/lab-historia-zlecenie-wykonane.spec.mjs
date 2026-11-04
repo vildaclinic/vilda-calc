@@ -28,7 +28,7 @@ test('wpisany wynik zamyka zlecenie i zdejmuje je z przypomnień; „Cofnij” j
   await expect(komunikat).toHaveAttribute('role', 'status');
   await expect(komunikat.locator('.vilda-lab-hist-notice-text')).toHaveText('Wynik zapisany — zlecenie „Kontrola TSH” oznaczone jako wykonane w Przypomnieniach.');
   await expect(badania.locator('.vilda-lab-hist-pending')).toHaveCount(0);
-  await expect(badania.locator('.vilda-lab-hist-card[data-series="tsh"] .vilda-lab-hist-value')).toHaveText('0,4');
+  await expect(badania.locator(`.vilda-lab-hist-result-row[data-note-id="${ids.zlecenie}"] .vilda-lab-hist-cell-value`)).toHaveText('0,4');
   const zamkniete = await zlecenie(page, ids.zlecenie);
   expect(zamkniete.completedAtISO).toBeTruthy();
   expect(zamkniete.noShowAtISO ?? null).toBeNull();
@@ -42,7 +42,7 @@ test('wpisany wynik zamyka zlecenie i zdejmuje je z przypomnień; „Cofnij” j
   expect(przywrocone.completedAtISO ?? null).toBeNull();
   expect(przywrocone.labResult).toMatchObject({ valueNum: 0.4 });
   expect(await doPrzypomnienia(page, ids.zlecenie)).toBe(true);
-  await expect(badania.locator('.vilda-lab-hist-card[data-series="tsh"] .vilda-lab-hist-value')).toHaveText('0,4');
+  await expect(badania.locator(`.vilda-lab-hist-result-row[data-note-id="${ids.zlecenie}"] .vilda-lab-hist-cell-value`)).toHaveText('0,4');
 });
 
 test('zamknięcie edytora bez wpisania wyniku nie zamyka zlecenia', async ({ page }) => {

@@ -1,4 +1,5 @@
 import { expect, test } from '../support/test-czas.mjs';
+import { openSavedAssessment } from '../support/lab-saved-assessment.mjs';
 import { quickSelect as select, quickFill as fill, expectAutomaticReference } from '../support/lab-puberty-quick.mjs';
 
 test.use({ serviceWorkers: 'block' });
@@ -366,7 +367,7 @@ test('a previously saved dated sample retains its historical age and absent stag
   expect(saved.labResult.assessment).toEqual(legacy.assessment);
   await page.evaluate((id) => window.VildaAuthUI.showPatientCard(id), patientId);
   await page.locator('.vilda-patient-tab[data-tab="lab"]').click(); // LAB-HISTORIA PR2: zapisane oceny są w zakładce „Badania”
-  const recorded = page.locator(`.vilda-lab-assessment-history-row[data-note-id="${legacy.note.id}"] .vilda-lab-assessment`);
+  const recorded = (await openSavedAssessment(page, legacy.note.id)).locator('.vilda-lab-assessment');
   await expect(recorded.locator('[data-comparison="age"]')).toHaveAttribute('data-status', 'above');
   await expect(recorded.locator('[data-comparison="stage"]')).toHaveAttribute('data-status', 'unavailable');
 });
@@ -440,12 +441,12 @@ test('new pins omit a manual range while history preserves the profile and range
   expect(historical.labResult.assessment).toEqual(legacy.assessment);
   await page.evaluate((id) => window.VildaAuthUI.showPatientCard(id), patientId);
   await page.locator('.vilda-patient-tab[data-tab="lab"]').click(); // LAB-HISTORIA PR2: zapisane oceny są w zakładce „Badania”
-  const recorded = page.locator(`.vilda-lab-assessment-history-row[data-note-id="${saved.id}"] .vilda-lab-assessment`);
+  const recorded = (await openSavedAssessment(page, saved.id)).locator('.vilda-lab-assessment');
   await expect(recorded.locator('[data-comparison="reported"]')).toHaveCount(0);
   await expect(recorded.locator('[data-comparison="age"]')).toHaveAttribute('data-status', 'within');
   await expect(recorded.locator('[data-comparison="age"]')).toHaveAttribute('data-applicability', 'source-reference');
   expect(saved.labResult.assessment.evaluation.input.measurementKind).toBe('unknown');
-  const oldRecord = page.locator(`.vilda-lab-assessment-history-row[data-note-id="${historical.id}"] .vilda-lab-assessment`);
+  const oldRecord = (await openSavedAssessment(page, historical.id)).locator('.vilda-lab-assessment');
   await expect(oldRecord.locator('[data-comparison="reported"]')).toHaveAttribute('data-status', 'within');
   await expect(oldRecord.locator('[data-comparison="age"]')).toHaveAttribute('data-status', 'within');
   await expect(oldRecord.locator('[data-comparison="age"]')).toHaveAttribute('data-applicability', 'conditional');
@@ -492,7 +493,7 @@ test('historical manual ranges retain limits, invalid input, censored results an
   for (const fixture of fixtures) {
     const reread = await page.evaluate((id) => window.VildaVault.getPatientNote(id), fixture.note.id);
     expect(reread.labResult.assessment).toEqual(fixture.assessment);
-    const recorded = page.locator(`.vilda-lab-assessment-history-row[data-note-id="${fixture.note.id}"] .vilda-lab-assessment`);
+    const recorded = (await openSavedAssessment(page, fixture.note.id)).locator('.vilda-lab-assessment');
     await expect(recorded.locator('[data-comparison="reported"]')).toHaveAttribute('data-status', fixture.scenario.status);
     await expect(recorded.locator('[data-comparison="reported"]')).toContainText(fixture.scenario.range);
     if (fixture.scenario.configured === false) await expect(recorded.locator('[data-comparison="age"]')).toHaveAttribute('data-status', 'unavailable');

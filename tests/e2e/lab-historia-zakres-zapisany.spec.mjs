@@ -47,41 +47,55 @@ test('przypięcie TSH zapisuje zakres przelicznika; pasek i zakładka „Badania
   await chip.click();
   expect(await tekst(pasek.locator('.lab-strip-detail-range'))).toBe('zakres zapisany z wynikiem: 0,5–4,3 mIU/L · powyżej · Młodzież 11–19 lat · dziewczynka, 12 l 3 m · Mayo Test 8939 — TSH');
 
-  // Zakładka „Badania”: pigułka z zapisu; starsze wpisy z normą wpisu bez zmian.
+  // Zwarta tabela pokazuje granice i kolor; pełny zachowany kontekst jest w szczegółach wpisu.
   await otworzBadania(page, patientId);
-  const karta = sekcjaBadan(page).locator('.vilda-lab-hist-card[data-series="tsh"]');
-  await expect(karta.locator('.vilda-lab-hist-last .vilda-lab-hist-flag')).toHaveText('↑');
-  expect(await tekst(karta.locator('.vilda-lab-hist-status.is-range .vilda-lab-hist-status-text'))).toBe('↑ powyżej zapisanego zakresu · 0,5–4,3 mIU/L');
-  await expect(karta.locator('.vilda-lab-hist-status.is-range .vilda-lab-hist-status-context')).toHaveText('Młodzież 11–19 lat · dziewczynka, 12 l 3 m · Mayo Test 8939 — TSH');
+  const badania = sekcjaBadan(page);
+  const row = badania.locator('.vilda-lab-hist-result-row[data-series="tsh"]').first();
+  await expect(row.locator('.vilda-lab-hist-flag')).toHaveText('↑');
+  await expect(row.locator('.vilda-lab-hist-cell-value.tone-above')).toHaveText('5,1');
+  expect(await tekst(row.locator('.vilda-lab-hist-result-norm'))).toContain('0,5–4,3 mIU/L');
+  await row.click();
+  const details = badania.locator('.vilda-lab-hist-result-details');
+  await details.locator('.vilda-lab-hist-result-sources > summary').click();
+  expect(await tekst(details.locator('.vilda-lab-hist-status.is-range .vilda-lab-hist-status-text'))).toBe('↑ powyżej zapisanego zakresu · 0,5–4,3 mIU/L');
+  await expect(details.locator('.vilda-lab-hist-status.is-range .vilda-lab-hist-status-context')).toHaveText('Młodzież 11–19 lat · dziewczynka, 12 l 3 m · Mayo Test 8939 — TSH');
 
-  // Telefon 390 px: pigułka mieści się w karcie, strona bez poziomego przewijania.
+  // Telefon: norma w zwiniętym wierszu mieści się bez poziomego przewijania.
+  await details.locator('.vilda-lab-hist-details-close').click();
   const rozmiar = page.viewportSize();
   await page.setViewportSize({ width: 390, height: 844 });
-  const pigulka = karta.locator('.vilda-lab-hist-status.is-range');
-  await expect(pigulka).toBeVisible();
-  const [boxP, boxK] = [await pigulka.boundingBox(), await karta.boundingBox()];
-  expect(boxP.x).toBeGreaterThanOrEqual(boxK.x);
-  expect(boxP.x + boxP.width).toBeLessThanOrEqual(boxK.x + boxK.width + 0.5);
+  const norm = row.locator('.vilda-lab-hist-result-norm');
+  await expect(norm).toBeVisible();
+  const [boxN, boxR] = [await norm.boundingBox(), await row.boundingBox()];
+  expect(boxN.x).toBeGreaterThanOrEqual(boxR.x);
+  expect(boxN.x + boxN.width).toBeLessThanOrEqual(boxR.x + boxR.width + 0.5);
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
   await page.setViewportSize(rozmiar);
 
-  // Edytor karty: sam komentarz nie rusza zakresu; zmiana wartości — zakres nieaktualny, bez strzałki.
+  // Edytor: sam komentarz zachowuje zakres; zmiana wartości unieważnia dawną ocenę.
   const zakresWpisu = () => page.evaluate(async (pid) => (await window.VildaVault.listPatientNotesForPatient(pid))
     .find((n) => n.labResult && n.labResult.testKey === 'tsh' && n.clinicalDateISO === '2026-06-17').labResult.range, patientId);
   const edytor = page.getByRole('dialog', { name: /Edytuj notatkę/ });
-  await karta.locator('.vilda-lab-hist-value').click();
+  await row.click();
+  await details.getByRole('button', { name: 'Edytuj wpis', exact: true }).click();
   await edytor.locator('textarea').first().fill('= 5,1 mIU/L\nkontrola po zmianie dawki');
   await edytor.getByRole('button', { name: 'Zapisz zmiany' }).click();
   await expect(edytor).toHaveCount(0);
   expect((await zakresWpisu()).status).toBe('recorded');
-  await expect(karta.locator('.vilda-lab-hist-last .vilda-lab-hist-flag')).toHaveText('↑');
-  await karta.locator('.vilda-lab-hist-value').click();
+  await expect(row.locator('.vilda-lab-hist-flag')).toHaveText('↑');
+  await row.click();
+  await details.getByRole('button', { name: 'Edytuj wpis', exact: true }).click();
   await page.locator('.b3-lab-value-row input').first().fill('4,0');
   await edytor.getByRole('button', { name: 'Zapisz zmiany' }).click();
   await expect(edytor).toHaveCount(0);
   expect(await zakresWpisu()).toMatchObject({ status: 'invalidated', reasonCodes: ['result_or_clinical_date_changed'] });
-  await expect(karta.locator('.vilda-lab-hist-status.is-range-invalidated .vilda-lab-hist-status-text')).toHaveText('zakres nieaktualny · zmieniono wynik lub datę badania');
-  await expect(karta.locator('.vilda-lab-hist-last .vilda-lab-hist-flag')).toHaveCount(0);
+  await expect(row.locator('.vilda-lab-hist-cell-value.tone-neutral')).toHaveText('4');
+  await expect(row.locator('.vilda-lab-hist-flag')).toHaveCount(0);
+  await expect(row.locator('.vilda-lab-hist-result-norm')).toHaveText('—');
+  await row.click();
+  await details.locator('.vilda-lab-hist-result-sources > summary').click();
+  await expect(details.locator('.vilda-lab-hist-status.is-range-invalidated .vilda-lab-hist-status-text')).toHaveText('zakres nieaktualny · zmieniono wynik lub datę badania');
+
 });
 
 // Decyzja 6.30 (wariant 3): prolaktyna u fikcyjnej dziewczynki 12 l 3 m — przelicznik nie ma wiersza dla wieku i używa
@@ -112,19 +126,27 @@ test('prolaktyna u dziecka z zakresem ogólnym: okno i historia bez oceny, zapis
   expect(await tekst(pasek.locator('.lab-strip-detail-range'))).toBe('zakres zapisany z wynikiem: 2–29 ng/mL · zakres ogólny — bez oceny dla dziecka · Dorośli, zakres ogólny · dziewczynka, 12 l 3 m · Mayo Test 85670 — Prolaktyna');
 
   await otworzBadania(page, patientId);
-  const karta = sekcjaBadan(page).locator('.vilda-lab-hist-card[data-series="prolactin"]');
-  await expect(karta.locator('.vilda-lab-hist-status.is-range-general.tone-muted .vilda-lab-hist-status-context')).toHaveText('Dorośli, zakres ogólny · dziewczynka, 12 l 3 m · Mayo Test 85670 — Prolaktyna');
-  expect(await tekst(karta.locator('.vilda-lab-hist-status.is-range-general .vilda-lab-hist-status-text'))).toBe('zakres ogólny — bez oceny dla dziecka · 2–29 ng/mL');
-  await expect(karta.locator('.vilda-lab-hist-flag')).toHaveCount(0);
+  const badania = sekcjaBadan(page);
+  const row = badania.locator('.vilda-lab-hist-result-row[data-series="prolactin"]').first();
+  await expect(row.locator('.vilda-lab-hist-cell-value.tone-neutral')).toHaveText('35');
+  await expect(row.locator('.vilda-lab-hist-result-norm')).toContainText('2–29');
+  await expect(row.locator('.vilda-lab-hist-flag')).toHaveCount(0);
+  await row.click();
+  const details = badania.locator('.vilda-lab-hist-result-details');
+  await details.locator('.vilda-lab-hist-result-sources > summary').click();
+  await expect(details.locator('.vilda-lab-hist-status.is-range-general.tone-muted .vilda-lab-hist-status-context')).toHaveText('Dorośli, zakres ogólny · dziewczynka, 12 l 3 m · Mayo Test 85670 — Prolaktyna');
+  expect(await tekst(details.locator('.vilda-lab-hist-status.is-range-general .vilda-lab-hist-status-text'))).toBe('zakres ogólny — bez oceny dla dziecka · 2–29 ng/mL');
+  await details.locator('.vilda-lab-hist-details-close').click();
 
   const rozmiar = page.viewportSize();
   await page.setViewportSize({ width: 390, height: 844 });
-  const pigulka = karta.locator('.vilda-lab-hist-status.is-range-general');
-  await expect(pigulka).toBeVisible();
-  const [boxP, boxK] = [await pigulka.boundingBox(), await karta.boundingBox()];
-  expect(boxP.x + boxP.width).toBeLessThanOrEqual(boxK.x + boxK.width + 0.5);
+  const norm = row.locator('.vilda-lab-hist-result-norm');
+  await expect(norm).toBeVisible();
+  const [boxN, boxR] = [await norm.boundingBox(), await row.boundingBox()];
+  expect(boxN.x + boxN.width).toBeLessThanOrEqual(boxR.x + boxR.width + 0.5);
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
   await page.setViewportSize(rozmiar);
+
 });
 
 test('badanie bez zakresu w przeliczniku i LH z własną oceną: przypięcie bez pola zakresu', async ({ page }) => {

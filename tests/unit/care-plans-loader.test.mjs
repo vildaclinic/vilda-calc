@@ -9,7 +9,7 @@ const DEPENDENCIES = [
   'VildaBirthAssessment', 'VildaPatientSgaModel', 'VildaPatientSgaUI',
   'VildaCrypto', 'VildaCarePlanModel', 'VildaLabSnapshot', 'VildaLabTestosteroneUnits', 'VildaLabAssessmentUI',
   'VildaHormoneReferenceSnapshot', 'VildaLabRangeSnapshot', 'VildaHormoneReferenceUI',
-  'VildaLabHistory', 'VildaLabHistoryTab', 'VildaPubertyAssessment', 'VildaProAccess',
+  'VildaLabHistory', 'VildaLabResultPresentation', 'VildaLabResultChart', 'VildaLabHistoryTab', 'VildaPubertyAssessment', 'VildaProAccess',
   'VildaRemindersPrivacy', 'VildaGlobalSearch', 'VildaGlobalSearchView', 'VildaSearchNavigation', 'VildaPatientsList',
 ];
 

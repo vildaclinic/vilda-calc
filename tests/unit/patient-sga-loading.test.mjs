@@ -17,7 +17,7 @@ const CSS = 'vilda_patient_sga_ui.css';
 const readyGlobals = [
   'VildaCrypto', 'VildaLabSnapshot', 'VildaLabAssessmentUI', 'VildaVaultProtocol', 'VildaVault', 'VildaAuthUI', 'VildaProAccess',
   'VildaClinicalCrypto', 'VildaPatientCheckpointStore', 'VildaPatientCheckpoint', 'VildaPatientIdentityProtocol', 'VildaPatientIdentityTransport',
-  'VildaHormoneReferenceSnapshot', 'VildaHormoneReferenceUI', 'VildaLabRangeSnapshot', 'VildaLabHistory', 'VildaLabHistoryTab',
+  'VildaHormoneReferenceSnapshot', 'VildaHormoneReferenceUI', 'VildaLabRangeSnapshot', 'VildaLabHistory', 'VildaLabResultPresentation', 'VildaLabResultChart', 'VildaLabHistoryTab',
   'VildaPubertyAssessment', 'VildaLabTestosteroneUnits', 'VildaCarePlanModel', 'VildaCarePlans', 'VildaRemindersPrivacy',
   'VildaGlobalSearch', 'VildaGlobalSearchView', 'VildaSearchNavigation', 'VildaPatientsList', 'VildaSaveStatusIndicator'
 ];

@@ -1,4 +1,5 @@
 import { expect, test } from '../support/test-czas.mjs';
+import { openSavedAssessment } from '../support/lab-saved-assessment.mjs';
 import { quickFill, quickSelect, closePatientEditor } from '../support/lab-puberty-quick.mjs';
 
 // Independent, fictional browser/vault contexts only. The D3 block presents
@@ -320,7 +321,7 @@ test('FSH D3 remains a current read-only illustration and is not written into vi
   expect((await page.evaluate(id => window.VildaVault.getPatientNote(id), saved.id)).labResult).toEqual(saved.labResult);
   await page.evaluate(id => window.VildaAuthUI.showPatientCard(id), id);
   await page.locator('.vilda-patient-tab[data-tab="lab"]').click();
-  const recorded = page.locator(`.vilda-lab-assessment-history-row[data-note-id="${saved.id}"] .vilda-lab-assessment`);
+  const recorded = (await openSavedAssessment(page, saved.id)).locator('.vilda-lab-assessment');
   await expect(recorded).toHaveAttribute('data-assessment-status', 'recorded');
   await expect(recorded.locator('.vilda-lab-axis')).toHaveAttribute('data-range-lower', '2.9');
   await expect(recorded.locator('.vilda-lab-axis')).toHaveAttribute('data-range-upper', '14.6');

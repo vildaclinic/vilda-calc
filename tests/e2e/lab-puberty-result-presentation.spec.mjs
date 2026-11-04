@@ -1,4 +1,5 @@
 import { expect, test } from '../support/test-czas.mjs';
+import { openSavedAssessment } from '../support/lab-saved-assessment.mjs';
 import { quickSelect as select, quickFill as fill, expectAutomaticReference, closePatientEditor } from '../support/lab-puberty-quick.mjs';
 import { kliknij } from '../support/uklad-czekanie.mjs';
 
@@ -105,11 +106,11 @@ test('age and stage use aligned axes while only the severe age deviation activat
   await expect(severity(page)).not.toContainText('stadium');
   const clinical = assessment(page).locator('[data-clinical-code="early_development"]');
   await expect(clinical).toBeVisible();
-  expect(await clinical.locator('xpath=ancestor::details').count()).toBe(0);
+  expect(await clinical.locator('xpath=ancestor::details[not(contains(concat(" ", normalize-space(@class), " "), " vilda-lab-hist-result-sources "))]').count()).toBe(0);
   const conditions = assessment(page).locator('[data-reference-conditions="automatic-source-reference"]');
   await expect(conditions).toBeVisible();
   await expect(conditions).toContainText(/bez leczenia hormonalnego/);
-  expect(await conditions.locator('xpath=ancestor::details').count()).toBe(0);
+  expect(await conditions.locator('xpath=ancestor::details[not(contains(concat(" ", normalize-space(@class), " "), " vilda-lab-hist-result-sources "))]').count()).toBe(0);
   await expect(assessment(page).locator(':scope > details')).toHaveCount(1);
   await expect(assessment(page).locator(':scope > details > summary')).toHaveText('Szczegóły i źródła');
   const current = await page.evaluate(() => window.VildaLabPubertyRuntime.getAssessment({ testKey: 'lh', raw: '2', unit: 'IU/L' }));
@@ -151,7 +152,7 @@ test('an early-development warning remains while the hormone result is empty or 
   await prepare(page, { value: '' });
   const warning = assessment(page).locator('[data-clinical-code="early_development"]');
   await expect(warning).toBeVisible();
-  expect(await warning.locator('xpath=ancestor::details').count()).toBe(0);
+  expect(await warning.locator('xpath=ancestor::details[not(contains(concat(" ", normalize-space(@class), " "), " vilda-lab-hist-result-sources "))]').count()).toBe(0);
   await expect(assessment(page).locator('.vilda-lab-axis')).toHaveCount(0);
   await expect(page.locator('#labResultBig')).toHaveText('Wpisz wynik.');
   await page.locator('#labValue').fill('błąd');
@@ -349,7 +350,7 @@ test('a pinned comparison keeps its stored axes after current input changes and 
   expect(await page.evaluate((id) => window.VildaVault.getPatientNote(id), saved.id)).toMatchObject({ labResult: { assessment: saved.labResult.assessment } });
   await page.evaluate((id) => window.VildaAuthUI.showPatientCard(id), patientId);
   await page.locator('.vilda-patient-tab[data-tab="lab"]').click(); // LAB-HISTORIA PR2: zapisane oceny są w zakładce „Badania”
-  const history = page.locator(`.vilda-lab-assessment-history-row[data-note-id="${saved.id}"] .vilda-lab-assessment`);
+  const history = (await openSavedAssessment(page, saved.id)).locator('.vilda-lab-assessment');
   await expect(history).toHaveAttribute('data-assessment-status', 'recorded');
   await expect(history.locator('.vilda-lab-context, .vilda-lab-context-note, dl')).toHaveCount(0);
   await expect(history).not.toContainText('Kontekst użyty w ocenie');
@@ -376,6 +377,7 @@ test('a pinned comparison keeps its stored axes after current input changes and 
   expect(invalidated.labResult.assessment.evaluation).toEqual(saved.labResult.assessment.evaluation);
   await page.evaluate((id) => window.VildaAuthUI.showPatientCard(id), patientId);
   await page.locator('.vilda-patient-tab[data-tab="lab"]').click(); // LAB-HISTORIA PR2: zapisane oceny są w zakładce „Badania”
+  await openSavedAssessment(page, saved.id);
   await expect(history).toHaveAttribute('data-assessment-status', 'invalidated');
   await expect(history).toContainText('Wynik wymaga ponownej oceny');
   await expect(history.locator(':scope > .vilda-lab-severity-summary')).toHaveCount(0);

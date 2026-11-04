@@ -1,6 +1,7 @@
 import { mkdir } from 'node:fs/promises';
 import { join } from 'node:path';
 import { expect, test } from '../support/test-czas.mjs';
+import { openSavedAssessment } from '../support/lab-saved-assessment.mjs';
 import { quickSelect, closePatientEditor, expectAutomaticReference } from '../support/lab-puberty-quick.mjs';
 
 // Synthetic patients; all displayed comparisons come from the production form,
@@ -171,7 +172,7 @@ test('a pinned adult phase, source policy and comparison survive a later phase c
   expect(saved.labResult.assessment).toEqual(notes[0].labResult.assessment);
   await page.evaluate((id) => window.VildaAuthUI.showPatientCard(id), patientId);
   await page.locator('.vilda-patient-tab[data-tab="lab"]').click(); // LAB-HISTORIA PR2: zapisane oceny są w zakładce „Badania”
-  const recorded = page.locator(`.vilda-lab-assessment-history-row[data-note-id="${saved.id}"] .vilda-lab-assessment`);
+  const recorded = (await openSavedAssessment(page, saved.id)).locator('.vilda-lab-assessment');
   await expect(recorded).toHaveAttribute('data-assessment-status', 'recorded');
   await expect(recorded.locator('.vilda-lab-axis')).toHaveCount(1);
   await expect(recorded.locator('.vilda-lab-axis')).toHaveAttribute('data-range-lower', '16');
