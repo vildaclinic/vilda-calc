@@ -1,4 +1,5 @@
 import { expect, test } from '../support/test-czas.mjs';
+import { openSavedAssessment } from '../support/lab-saved-assessment.mjs';
 import { quickSelect as select, quickFill as fill, expectAutomaticReference } from '../support/lab-puberty-quick.mjs';
 
 // PR3: all assessments below originate from the production form and engine.
@@ -254,8 +255,7 @@ test('F7 Th3 LH<LOD pins the reviewed snapshot and history preserves it across l
   await expect(history).toContainText('Fikcyjny starszy wynik LH');
   // LAB-HISTORIA PR2: wpis zostaje na osi czasu Historii, a zapisana ocena jest w zakładce „Badania”.
   await page.locator('.vilda-patient-tab[data-tab="lab"]').click();
-  const lab = page.locator('.vilda-patient-tab-content[data-tab="lab"]');
-  const recorded = lab.locator(`.vilda-lab-assessment-history-row[data-note-id="${saved.id}"] [data-assessment-status="recorded"]`);
+  const recorded = (await openSavedAssessment(page, saved.id)).locator('[data-assessment-status="recorded"]');
   await expect(recorded).toHaveCount(1);
   await expect(recorded).toContainText('<LOD');
   await expect(recorded).toContainText('Th3');

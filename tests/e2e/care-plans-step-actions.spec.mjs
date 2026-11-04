@@ -186,6 +186,8 @@ test('care step links ordinary and another closed plan result by reference, requ
   const patient = frame.locator('.vilda-auth-patient-card');
   await patient.getByRole('button', { name: 'Badania', exact: true }).click();
   await patient.locator(`.vilda-patient-lab-section [data-note-id="${ordinary.id}"]`).click();
+  await patient.locator(`.vilda-lab-hist-result-details[data-note-id="${ordinary.id}"]`)
+    .getByRole('button', { name: 'Edytuj wpis', exact: true }).click();
   const editor = page.locator('.vilda-patient-note-editor-overlay');
   const changedBody = 'Fikcyjny aktualny oryginalny opis po korekcie w Badaniach.\nBez kopii w planie.';
   await editor.locator('textarea').first().fill(changedBody);

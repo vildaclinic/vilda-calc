@@ -1,4 +1,5 @@
 import { expect, test } from '../support/test-czas.mjs';
+import { openSavedAssessment } from '../support/lab-saved-assessment.mjs';
 import { quickSelect as select, quickFill as fill, expectAutomaticReference } from '../support/lab-puberty-quick.mjs';
 
 // Medical-audit regressions use the current form and real historical snapshots.
@@ -105,13 +106,15 @@ async function openTimeline(page, patientId) {
   await page.evaluate((id) => window.VildaAuthUI.showPatientCard(id), patientId);
   await page.locator('.vilda-patient-tab[data-tab="lab"]').click(); // LAB-HISTORIA PR2: zapisane oceny są w zakładce „Badania”
 }
-const historicalAssessment = (page, id) => page.locator(`.vilda-lab-assessment-history-row[data-note-id="${id}"] .vilda-lab-assessment`);
+const historicalAssessment = async (page, id) => (await openSavedAssessment(page, id)).locator('.vilda-lab-assessment');
 
 async function expectVisibleParagraph(container, pattern) {
   const paragraph = container.locator(':scope > p').filter({ hasText: pattern });
   await expect(paragraph).toHaveCount(1);
   await expect(paragraph).toBeVisible();
-  expect(await paragraph.locator('xpath=ancestor::details').count()).toBe(0);
+  // The result's opened source accordion wraps the whole saved assessment;
+  // the clinical paragraph must still remain outside its own nested details.
+  expect(await paragraph.locator('xpath=ancestor::details[not(contains(concat(" ", normalize-space(@class), " "), " vilda-lab-hist-result-sources "))]').count()).toBe(0);
   return paragraph;
 }
 
@@ -180,7 +183,7 @@ test('finished GnRHa stays unknown, active treatment blocks current references a
   const reread = await page.evaluate((id) => window.VildaVault.getPatientNote(id), dated.note.id);
   expect(reread.labResult.assessment).toEqual(dated.assessment);
   await openTimeline(page, patientId);
-  const recorded = historicalAssessment(page, dated.note.id);
+  const recorded = await historicalAssessment(page, dated.note.id);
   await expectWithinRanges(recorded);
   await expect(recorded.locator('[data-comparison="age"]')).toHaveAttribute('data-applicability', 'conditional');
 });
@@ -198,7 +201,7 @@ test('older regression answers retain their clinical meaning after removing the 
   }
   await openTimeline(page, patientId);
   for (const saved of records) {
-    const recorded = historicalAssessment(page, saved.note.id);
+    const recorded = await historicalAssessment(page, saved.note.id);
     const savedClinical = recorded.locator('.vilda-lab-clinical');
     await expectWithinRanges(recorded);
     expect(saved.assessment.evaluation.input.history.regression).toBe(saved.answer);
@@ -262,7 +265,7 @@ test('older CNS symptoms and regression survive current form changes, pinning an
   const point = series.find((item) => item.testKey === 'lh').points.find((item) => item.noteId === legacy.note.id);
   expect(point.assessment.evaluation.clinical).toEqual(before.evaluation.clinical);
   await openTimeline(page, patientId);
-  const recorded = historicalAssessment(page, legacy.note.id);
+  const recorded = await historicalAssessment(page, legacy.note.id);
   await expect(recorded).toHaveAttribute('data-summary-status', 'attention');
   await expectVisibleParagraph(recorded.locator('.vilda-lab-clinical'), /OUN/);
   await expectVisibleParagraph(recorded.locator('.vilda-lab-clinical'), /regresj/i);
@@ -274,7 +277,7 @@ test('recorded early Th2 with CNS symptoms retains specialist advice without aut
   const patientId = await createPatient(page);
   const saved = await recordLegacySample(page, patientId, { sex: 'F', birthDate: '2019-06-17', kind: 'Th', stage: '2', cnsSymptoms: 'yes' }, '0.1');
   await openTimeline(page, patientId);
-  const recorded = historicalAssessment(page, saved.note.id);
+  const recorded = await historicalAssessment(page, saved.note.id);
   const savedClinical = recorded.locator('.vilda-lab-clinical');
   await expectWithinRanges(recorded);
   await expect(recorded).toHaveAttribute('data-summary-status', 'attention');
@@ -302,7 +305,7 @@ test('recorded infant volumes retain their reference limitation and never supply
   const ultrasound = await recordLegacySample(page, patientId, { birthDate: '2026-03-17', kind: 'unspecified', stage: '', testicularVolume: '15', volumeMethod: 'ultrasound' });
   await openTimeline(page, patientId);
   for (const saved of records) {
-    const recorded = historicalAssessment(page, saved.note.id);
+    const recorded = await historicalAssessment(page, saved.note.id);
     const savedClinical = recorded.locator('.vilda-lab-clinical');
     const warning = await expectVisibleParagraph(savedClinical, /objętoś/i);
     await expect(warning).toContainText(`${saved.value} mL`);
@@ -313,7 +316,7 @@ test('recorded infant volumes retain their reference limitation and never supply
     expect(saved.assessment.evaluation.input.puberty.stage).toBeNull();
     expect(saved.assessment.evaluation.clinical.status).toBe('notice');
   }
-  const ultrasoundClinical = historicalAssessment(page, ultrasound.note.id).locator('.vilda-lab-clinical');
+  const ultrasoundClinical = (await historicalAssessment(page, ultrasound.note.id)).locator('.vilda-lab-clinical');
   await expectVisibleParagraph(ultrasoundClinical, /objętoś/i);
   await expect(ultrasoundClinical).toHaveAttribute('data-clinical-code', 'infant_context');
 });
@@ -325,7 +328,7 @@ test.describe('320 px clinical notices', () => {
     const patientId = await createPatient(page);
     const saved = await recordLegacySample(page, patientId, { cnsSymptoms: 'yes', regression: 'yes' });
     await openTimeline(page, patientId);
-    const recorded = historicalAssessment(page, saved.note.id);
+    const recorded = await historicalAssessment(page, saved.note.id);
     await expectWithinRanges(recorded);
     await expect(recorded).toHaveAttribute('data-summary-status', 'attention');
     await expectVisibleParagraph(recorded.locator('.vilda-lab-clinical'), /OUN/);
