@@ -1,0 +1,4657 @@
+{
+ "opis": "Zapis bazowy „bramka wyłączona” (P-DZIENNIK-ZDARZEN, E2-PR2b): ślady scenariusza sejfu w czterech wariantach okna, nagrane na sejfie bez magazynu kolejki; test i opis śladów: tests/unit/sync-dziennik-zapis-bazowy.test.mjs.",
+ "bazaVault": "3c661869e66f0893f4389b2c506bdb7941e113c92768b934dcaaa182884e5c49",
+ "warianty": {
+  "Ze": {
+   "ladowanie": {
+    "indexedDB": [],
+    "localStorage": [],
+    "sessionStorage": [],
+    "krypto": 0,
+    "powiadomienia": {},
+    "magazyn": []
+   },
+   "kroki": [
+    {
+     "krok": "konto",
+     "wynik": {
+      "iterations": 1000
+     },
+     "tlo": 1,
+     "indexedDB": [],
+     "localStorage": [],
+     "sessionStorage": [
+      "set vilda-vault-session-v2"
+     ],
+     "krypto": 8,
+     "powiadomienia": {
+      "onUnlock": 1
+     },
+     "magazyn": [
+      "putUserMeta(<uid>)",
+      "putRegistryEntry(<uid>)",
+      "getUserMeta(<uid>)",
+      "getUserMeta(<uid>)",
+      "putUserMeta(<uid>)",
+      "getUserMeta(<uid>)",
+      "listPatientNotesForUser(<uid>)",
+      "getUserMeta(<uid>)",
+      "putUserMeta(<uid>)"
+     ]
+    },
+    {
+     "krok": "nowa karta",
+     "wynik": {
+      "collision": null,
+      "isNew": true,
+      "przyjeteZBazy": "#0",
+      "scalonoZBazy": 0,
+      "snapshotCount": 1
+     },
+     "tlo": 0,
+     "indexedDB": [],
+     "localStorage": [
+      "set vilda-note-changed-ping-v1"
+     ],
+     "sessionStorage": [],
+     "krypto": 2,
+     "powiadomienia": {
+      "onPatientSaved": 1
+     },
+     "magazyn": [
+      "listPatientsForUser(<uid>)",
+      "getPatientForUser(<uid>)",
+      "putSnapshotForUser(<uid>)",
+      "putPatientForUser(<uid>)",
+      "removeTombstoneForUser(<uid>)"
+     ]
+    },
+    {
+     "krok": "nowa wersja",
+     "wynik": {
+      "collision": null,
+      "isNew": false,
+      "przyjeteZBazy": "#0",
+      "scalonoZBazy": 0,
+      "snapshotCount": 2
+     },
+     "tlo": 0,
+     "indexedDB": [],
+     "localStorage": [
+      "set vilda-note-changed-ping-v1"
+     ],
+     "sessionStorage": [],
+     "krypto": 5,
+     "powiadomienia": {
+      "onPatientSaved": 1
+     },
+     "magazyn": [
+      "listPatientsForUser(<uid>)",
+      "getPatientForUser(<uid>)",
+      "getPatientForUser(<uid>)",
+      "listSnapshotsForUser(<uid>)",
+      "putSnapshotForUser(<uid>)",
+      "getPatientForUser(<uid>)",
+      "putPatientForUser(<uid>)",
+      "removeTombstoneForUser(<uid>)"
+     ]
+    },
+    {
+     "krok": "poprawka w miejscu",
+     "wynik": {
+      "isUpdate": true
+     },
+     "tlo": 0,
+     "indexedDB": [],
+     "localStorage": [
+      "set vilda-note-changed-ping-v1"
+     ],
+     "sessionStorage": [],
+     "krypto": 6,
+     "powiadomienia": {
+      "onPatientSaved": 1
+     },
+     "magazyn": [
+      "getPatientForUser(<uid>)",
+      "listSnapshotsForUser(<uid>)",
+      "listSnapshotsForUser(<uid>)",
+      "getUserMeta(<uid>)",
+      "putSnapshotForUser(<uid>)",
+      "getPatientForUser(<uid>)",
+      "putPatientForUser(<uid>)"
+     ]
+    },
+    {
+     "krok": "gwiazdka",
+     "wynik": {
+      "pinned": true
+     },
+     "tlo": 0,
+     "indexedDB": [],
+     "localStorage": [
+      "set vilda-note-changed-ping-v1"
+     ],
+     "sessionStorage": [],
+     "krypto": 7,
+     "powiadomienia": {
+      "onPatientSaved": 1
+     },
+     "magazyn": [
+      "getPatientForUser(<uid>)",
+      "listSnapshotsForUser(<uid>)",
+      "listSnapshotsForUser(<uid>)",
+      "getUserMeta(<uid>)",
+      "putSnapshotForUser(<uid>)",
+      "getPatientForUser(<uid>)",
+      "putPatientForUser(<uid>)"
+     ]
+    },
+    {
+     "krok": "odpięcie gwiazdki",
+     "wynik": {
+      "pinned": false
+     },
+     "tlo": 0,
+     "indexedDB": [],
+     "localStorage": [
+      "set vilda-note-changed-ping-v1"
+     ],
+     "sessionStorage": [],
+     "krypto": 7,
+     "powiadomienia": {
+      "onPatientSaved": 1
+     },
+     "magazyn": [
+      "getPatientForUser(<uid>)",
+      "listSnapshotsForUser(<uid>)",
+      "listSnapshotsForUser(<uid>)",
+      "getUserMeta(<uid>)",
+      "putSnapshotForUser(<uid>)",
+      "getPatientForUser(<uid>)",
+      "putPatientForUser(<uid>)"
+     ]
+    },
+    {
+     "krok": "kosz",
+     "wynik": {
+      "remainingSnapshotCount": 1,
+      "wasPinned": false
+     },
+     "tlo": 0,
+     "indexedDB": [],
+     "localStorage": [
+      "set vilda-note-changed-ping-v1"
+     ],
+     "sessionStorage": [],
+     "krypto": 3,
+     "powiadomienia": {
+      "onPatientSaved": 1
+     },
+     "magazyn": [
+      "listSnapshotsForUser(<uid>)",
+      "getUserMeta(<uid>)",
+      "getUserMeta(<uid>)",
+      "getUserMeta(<uid>)",
+      "putUserMeta(<uid>)",
+      "listSnapshotShadowKeysForUser(<uid>)",
+      "getUserMeta(<uid>)",
+      "listSnapshotsForUser(<uid>)",
+      "listSnapshotsForUser(<uid>)",
+      "removeSnapshotForUser(<uid>)",
+      "listSnapshotsForUser(<uid>)",
+      "getPatientForUser(<uid>)",
+      "putPatientForUser(<uid>)",
+      "getUserMeta(<uid>)"
+     ]
+    },
+    {
+     "krok": "przywróć z kosza",
+     "wynik": {},
+     "tlo": 0,
+     "indexedDB": [],
+     "localStorage": [
+      "set vilda-note-changed-ping-v1"
+     ],
+     "sessionStorage": [],
+     "krypto": 4,
+     "powiadomienia": {
+      "onPatientSaved": 1
+     },
+     "magazyn": [
+      "getSnapshotForUser(<uid>)",
+      "getUserMeta(<uid>)",
+      "getPatientForUser(<uid>)",
+      "listSnapshotsForUser(<uid>)",
+      "getSnapshotForUser(<uid>)",
+      "putSnapshotForUser(<uid>)",
+      "getPatientForUser(<uid>)",
+      "listSnapshotsForUser(<uid>)",
+      "putPatientForUser(<uid>)",
+      "getUserMeta(<uid>)",
+      "getUserMeta(<uid>)",
+      "putUserMeta(<uid>)"
+     ]
+    },
+    {
+     "krok": "trzecia wersja",
+     "wynik": {
+      "collision": null,
+      "isNew": false,
+      "przyjeteZBazy": "#0",
+      "scalonoZBazy": 0,
+      "snapshotCount": 3
+     },
+     "tlo": 0,
+     "indexedDB": [],
+     "localStorage": [
+      "set vilda-note-changed-ping-v1"
+     ],
+     "sessionStorage": [],
+     "krypto": 6,
+     "powiadomienia": {
+      "onPatientSaved": 1
+     },
+     "magazyn": [
+      "listPatientsForUser(<uid>)",
+      "getPatientForUser(<uid>)",
+      "getPatientForUser(<uid>)",
+      "listSnapshotsForUser(<uid>)",
+      "putSnapshotForUser(<uid>)",
+      "getPatientForUser(<uid>)",
+      "putPatientForUser(<uid>)",
+      "removeTombstoneForUser(<uid>)"
+     ]
+    },
+    {
+     "krok": "usunięcie wersji",
+     "wynik": {
+      "remainingSnapshotCount": 2
+     },
+     "tlo": 0,
+     "indexedDB": [],
+     "localStorage": [
+      "set vilda-note-changed-ping-v1"
+     ],
+     "sessionStorage": [],
+     "krypto": 6,
+     "powiadomienia": {
+      "onPatientSaved": 1
+     },
+     "magazyn": [
+      "getPatientForUser(<uid>)",
+      "listSnapshotsForUser(<uid>)",
+      "listSnapshotsForUser(<uid>)",
+      "removeSnapshotForUser(<uid>)",
+      "listSnapshotsForUser(<uid>)",
+      "getPatientForUser(<uid>)",
+      "putPatientForUser(<uid>)"
+     ]
+    },
+    {
+     "krok": "retencja",
+     "wynik": {
+      "prunedCount": 1,
+      "prunedIds": "#1"
+     },
+     "tlo": 0,
+     "indexedDB": [],
+     "localStorage": [
+      "set vilda-note-changed-ping-v1"
+     ],
+     "sessionStorage": [],
+     "krypto": 5,
+     "powiadomienia": {
+      "onPatientSaved": 1
+     },
+     "magazyn": [
+      "getPatientForUser(<uid>)",
+      "listSnapshotsForUser(<uid>)",
+      "listSnapshotsForUser(<uid>)",
+      "getUserMeta(<uid>)",
+      "getUserMeta(<uid>)",
+      "putUserMeta(<uid>)",
+      "listSnapshotsForUser(<uid>)",
+      "listSnapshotsForUser(<uid>)",
+      "removeSnapshotForUser(<uid>)",
+      "listSnapshotsForUser(<uid>)",
+      "getPatientForUser(<uid>)",
+      "putPatientForUser(<uid>)"
+     ]
+    },
+    {
+     "krok": "notatka pacjenta: dodaj",
+     "wynik": {
+      "isNew": true
+     },
+     "tlo": 0,
+     "indexedDB": [],
+     "localStorage": [
+      "set vilda-note-changed-ping-v1"
+     ],
+     "sessionStorage": [],
+     "krypto": 1,
+     "powiadomienia": {
+      "onPatientNoteChanged": 1
+     },
+     "magazyn": [
+      "listTombstonesForUser(<uid>)",
+      "listPatientNoteTombstonesForUser(<uid>)",
+      "putPatientNoteForUser(<uid>)",
+      "getPatientNoteTombstoneForUser(<uid>)",
+      "removePatientNoteTombstoneForUser(<uid>)"
+     ]
+    },
+    {
+     "krok": "notatka pacjenta: popraw",
+     "wynik": {
+      "isNew": false
+     },
+     "tlo": 0,
+     "indexedDB": [],
+     "localStorage": [
+      "set vilda-note-changed-ping-v1"
+     ],
+     "sessionStorage": [],
+     "krypto": 3,
+     "powiadomienia": {
+      "onPatientNoteChanged": 1
+     },
+     "magazyn": [
+      "getPatientNoteForUser(<uid>)",
+      "listTombstonesForUser(<uid>)",
+      "getPatientNoteForUser(<uid>)",
+      "putPatientNoteForUser(<uid>)",
+      "getPatientNoteTombstoneForUser(<uid>)",
+      "removePatientNoteTombstoneForUser(<uid>)"
+     ]
+    },
+    {
+     "krok": "notatka pacjenta: usuń",
+     "wynik": true,
+     "tlo": 0,
+     "indexedDB": [],
+     "localStorage": [
+      "set vilda-note-changed-ping-v1"
+     ],
+     "sessionStorage": [],
+     "krypto": 2,
+     "powiadomienia": {
+      "onPatientNoteChanged": 1
+     },
+     "magazyn": [
+      "getPatientNoteForUser(<uid>)",
+      "getPatientNoteForUser(<uid>)",
+      "removePatientNoteForUser(<uid>)",
+      "putPatientNoteTombstoneForUser(<uid>)"
+     ]
+    },
+    {
+     "krok": "notatka biblioteki: dodaj",
+     "wynik": {
+      "isNew": true
+     },
+     "tlo": 0,
+     "indexedDB": [],
+     "localStorage": [],
+     "sessionStorage": [],
+     "krypto": 1,
+     "powiadomienia": {
+      "onNoteChanged": 1
+     },
+     "magazyn": [
+      "putNoteForUser(<uid>)",
+      "removeNoteTombstoneForUser(<uid>)"
+     ]
+    },
+    {
+     "krok": "notatka biblioteki: usuń",
+     "wynik": true,
+     "tlo": 0,
+     "indexedDB": [],
+     "localStorage": [],
+     "sessionStorage": [],
+     "krypto": 0,
+     "powiadomienia": {
+      "onNoteChanged": 1
+     },
+     "magazyn": [
+      "getNoteForUser(<uid>)",
+      "removeNoteForUser(<uid>)",
+      "putNoteTombstoneForUser(<uid>)"
+     ]
+    },
+    {
+     "krok": "lista: dodaj",
+     "wynik": {
+      "excludeIds": "#0",
+      "isNew": true,
+      "memberIds": "#1",
+      "pinned": false,
+      "rev": 1,
+      "rule": null
+     },
+     "tlo": 0,
+     "indexedDB": [],
+     "localStorage": [],
+     "sessionStorage": [],
+     "krypto": 1,
+     "powiadomienia": {
+      "onPatientListChanged": 1
+     },
+     "magazyn": [
+      "putPatientListForUser(<uid>)",
+      "removePatientListTombstoneForUser(<uid>)"
+     ]
+    },
+    {
+     "krok": "lista: usuń",
+     "wynik": {},
+     "tlo": 0,
+     "indexedDB": [],
+     "localStorage": [],
+     "sessionStorage": [],
+     "krypto": 0,
+     "powiadomienia": {
+      "onPatientListChanged": 1
+     },
+     "magazyn": [
+      "putPatientListTombstoneForUser(<uid>)",
+      "removePatientListForUser(<uid>)"
+     ]
+    },
+    {
+     "krok": "plan opieki",
+     "wynik": {
+      "resultNoteId": null,
+      "saved": true,
+      "stepId": null
+     },
+     "tlo": 0,
+     "indexedDB": [],
+     "localStorage": [
+      "set vilda-note-changed-ping-v1",
+      "set vilda-note-changed-ping-v1"
+     ],
+     "sessionStorage": [],
+     "krypto": 10,
+     "powiadomienia": {
+      "onPatientNoteChanged": 2
+     },
+     "magazyn": [
+      "getPatientNoteForUser(<uid>)",
+      "getPatientForUser(<uid>)",
+      "getPatientNoteForUser(<uid>)",
+      "listTombstonesForUser(<uid>)",
+      "getPatientNoteForUser(<uid>)",
+      "listPatientNoteTombstonesForUser(<uid>)",
+      "listTombstonesForUser(<uid>)",
+      "getPatientNoteForUser(<uid>)",
+      "listPatientNoteTombstonesForUser(<uid>)",
+      "commitCarePlanForUser(<uid>)"
+     ]
+    },
+    {
+     "krok": "druga karta",
+     "wynik": {
+      "collision": null,
+      "isNew": true,
+      "przyjeteZBazy": "#0",
+      "scalonoZBazy": 0,
+      "snapshotCount": 1
+     },
+     "tlo": 0,
+     "indexedDB": [],
+     "localStorage": [
+      "set vilda-note-changed-ping-v1"
+     ],
+     "sessionStorage": [],
+     "krypto": 3,
+     "powiadomienia": {
+      "onPatientSaved": 1
+     },
+     "magazyn": [
+      "listPatientsForUser(<uid>)",
+      "getPatientForUser(<uid>)",
+      "putSnapshotForUser(<uid>)",
+      "putPatientForUser(<uid>)",
+      "removeTombstoneForUser(<uid>)"
+     ]
+    },
+    {
+     "krok": "scal pacjentów",
+     "wynik": {
+      "listsUpdated": 0,
+      "notesMoved": 0,
+      "pointsAdded": 0,
+      "rowsAdded": 0,
+      "snapshotCount": 3,
+      "snapshotsMoved": 1
+     },
+     "tlo": 0,
+     "indexedDB": [],
+     "localStorage": [
+      "set vilda-note-changed-ping-v1",
+      "set vilda-note-changed-ping-v1"
+     ],
+     "sessionStorage": [],
+     "krypto": 11,
+     "powiadomienia": {
+      "onPatientSaved": 1,
+      "onPatientDeleted": 1
+     },
+     "magazyn": [
+      "getPatientForUser(<uid>)",
+      "listSnapshotsForUser(<uid>)",
+      "getPatientForUser(<uid>)",
+      "listSnapshotsForUser(<uid>)",
+      "listSnapshotsForUser(<uid>)",
+      "putSnapshotForUser(<uid>)",
+      "listSnapshotsForUser(<uid>)",
+      "putSnapshotForUser(<uid>)",
+      "putSnapshotForUser(<uid>)",
+      "listPatientsForUser(<uid>)",
+      "getPatientForUser(<uid>)",
+      "getPatientForUser(<uid>)",
+      "listSnapshotsForUser(<uid>)",
+      "putSnapshotForUser(<uid>)",
+      "getPatientForUser(<uid>)",
+      "putPatientForUser(<uid>)",
+      "removeTombstoneForUser(<uid>)",
+      "listSnapshotsForUser(<uid>)",
+      "getPatientForUser(<uid>)",
+      "putPatientForUser(<uid>)",
+      "listPatientNotesForUser(<uid>)",
+      "listPatientListsForUser(<uid>)",
+      "removePatientForUser(<uid>)",
+      "getUserMeta(<uid>)",
+      "getUserMeta(<uid>)",
+      "listPatientNoteTombstonesForUser(<uid>)",
+      "listPatientNotesForUser(<uid>)",
+      "putTombstoneForUser(<uid>)"
+     ]
+    },
+    {
+     "krok": "trzecia karta",
+     "wynik": {
+      "collision": null,
+      "isNew": true,
+      "przyjeteZBazy": "#0",
+      "scalonoZBazy": 0,
+      "snapshotCount": 1
+     },
+     "tlo": 0,
+     "indexedDB": [],
+     "localStorage": [
+      "set vilda-note-changed-ping-v1"
+     ],
+     "sessionStorage": [],
+     "krypto": 3,
+     "powiadomienia": {
+      "onPatientSaved": 1
+     },
+     "magazyn": [
+      "listPatientsForUser(<uid>)",
+      "getPatientForUser(<uid>)",
+      "putSnapshotForUser(<uid>)",
+      "putPatientForUser(<uid>)",
+      "removeTombstoneForUser(<uid>)"
+     ]
+    },
+    {
+     "krok": "usuń pacjenta",
+     "wynik": true,
+     "tlo": 0,
+     "indexedDB": [],
+     "localStorage": [
+      "set vilda-note-changed-ping-v1"
+     ],
+     "sessionStorage": [],
+     "krypto": 0,
+     "powiadomienia": {
+      "onPatientDeleted": 1
+     },
+     "magazyn": [
+      "removePatientForUser(<uid>)",
+      "getUserMeta(<uid>)",
+      "getUserMeta(<uid>)",
+      "listPatientNoteTombstonesForUser(<uid>)",
+      "listPatientNotesForUser(<uid>)",
+      "putTombstoneForUser(<uid>)"
+     ]
+    },
+    {
+     "krok": "zmiana hasła",
+     "wynik": true,
+     "tlo": 0,
+     "indexedDB": [],
+     "localStorage": [],
+     "sessionStorage": [],
+     "krypto": 9,
+     "powiadomienia": {
+      "onCredentialChanged": 1
+     },
+     "magazyn": [
+      "getUserMeta(<uid>)",
+      "getUserMeta(<uid>)",
+      "putUserMeta(<uid>)"
+     ]
+    },
+    {
+     "krok": "eksport i scalenie własnego eksportu",
+     "wynik": {
+      "addedNoteCount": 0,
+      "addedPasskeyCount": 1,
+      "addedPatientCount": 0,
+      "addedPatientListCount": 0,
+      "addedPatientNoteCount": 0,
+      "addedSnapshotCount": 0,
+      "credentialUpdated": false,
+      "deletedNoteCount": 0,
+      "deletedPatientCount": 0,
+      "deletedPatientListCount": 0,
+      "deletedPatientNoteCount": 0,
+      "mergedPatientCount": 1,
+      "prunedSnapshotCount": 0,
+      "removedPasskeyCount": 0,
+      "skippedSnapshotCount": 3,
+      "trashedSnapshotCount": 0,
+      "updatedNoteCount": 0,
+      "updatedPatientListCount": 0,
+      "updatedPatientNoteCount": 0,
+      "updatedPreferenceCount": 0,
+      "updatedSnapshotCount": 0
+     },
+     "tlo": 0,
+     "indexedDB": [],
+     "localStorage": [],
+     "sessionStorage": [],
+     "krypto": 20,
+     "powiadomienia": {},
+     "magazyn": [
+      "listPatientsForUser(<uid>)",
+      "listSnapshotsForUser(<uid>)",
+      "listTombstonesForUser(<uid>)",
+      "getUserMeta(<uid>)",
+      "getUserMeta(<uid>)",
+      "listNotesForUser(<uid>)",
+      "listNoteTombstonesForUser(<uid>)",
+      "listPatientNotesForUser(<uid>)",
+      "listPatientNoteTombstonesForUser(<uid>)",
+      "listPatientListsForUser(<uid>)",
+      "listPatientListTombstonesForUser(<uid>)",
+      "getUserMeta(<uid>)",
+      "getUserMeta(<uid>)",
+      "getUserMeta(<uid>)",
+      "getUserMeta(<uid>)",
+      "listPatientsForUser(<uid>)",
+      "getUserMeta(<uid>)",
+      "listTombstonesForUser(<uid>)",
+      "getUserMeta(<uid>)",
+      "listTombstonesForUser(<uid>)",
+      "getPatientForUser(<uid>)",
+      "listSnapshotsForUser(<uid>)",
+      "listPatientsForUser(<uid>)",
+      "listTombstonesForUser(<uid>)",
+      "getPatientForUser(<uid>)",
+      "putTombstoneForUser(<uid>)",
+      "listTombstonesForUser(<uid>)",
+      "getPatientForUser(<uid>)",
+      "putTombstoneForUser(<uid>)",
+      "listSnapshotsForUser(<uid>)",
+      "listPatientsForUser(<uid>)",
+      "getUserMeta(<uid>)",
+      "getUserMeta(<uid>)",
+      "getUserMeta(<uid>)",
+      "putUserMeta(<uid>)",
+      "getUserMeta(<uid>)",
+      "updateRegistryEntry(<uid>)",
+      "listNotesForUser(<uid>)",
+      "listNoteTombstonesForUser(<uid>)",
+      "getNoteForUser(<uid>)",
+      "putNoteTombstoneForUser(<uid>)",
+      "listPatientNotesForUser(<uid>)",
+      "listPatientNoteTombstonesForUser(<uid>)",
+      "listTombstonesForUser(<uid>)",
+      "getPatientNoteForUser(<uid>)",
+      "getPatientNoteForUser(<uid>)",
+      "getPatientNoteForUser(<uid>)",
+      "getPatientNoteTombstoneForUser(<uid>)",
+      "putPatientNoteTombstoneForUser(<uid>)",
+      "listPatientListsForUser(<uid>)",
+      "listPatientListTombstonesForUser(<uid>)",
+      "putPatientListTombstoneForUser(<uid>)",
+      "getUserMeta(<uid>)",
+      "getUserMeta(<uid>)",
+      "putUserMeta(<uid>)"
+     ]
+    },
+    {
+     "krok": "delta karty",
+     "wynik": {
+      "addedNoteCount": 0,
+      "addedPasskeyCount": 0,
+      "addedPatientCount": 0,
+      "addedPatientListCount": 0,
+      "addedPatientNoteCount": 0,
+      "addedSnapshotCount": 0,
+      "clockSkew": null,
+      "credentialUpdated": false,
+      "deletedNoteCount": 0,
+      "deletedPatientCount": 0,
+      "deletedPatientListCount": 0,
+      "deletedPatientNoteCount": 0,
+      "mergedPatientCount": 1,
+      "prunedSnapshotCount": 0,
+      "removedPasskeyCount": 0,
+      "skippedSnapshotCount": 3,
+      "trashedSnapshotCount": 0,
+      "updatedNoteCount": 0,
+      "updatedPatientListCount": 0,
+      "updatedPatientNoteCount": 0,
+      "updatedPreferenceCount": 0,
+      "updatedSnapshotCount": 0
+     },
+     "tlo": 0,
+     "indexedDB": [],
+     "localStorage": [],
+     "sessionStorage": [],
+     "krypto": 11,
+     "powiadomienia": {},
+     "magazyn": [
+      "listPatientsForUser(<uid>)",
+      "listSnapshotsForUser(<uid>)",
+      "getUserMeta(<uid>)",
+      "listPatientsForUser(<uid>)",
+      "getUserMeta(<uid>)",
+      "listTombstonesForUser(<uid>)",
+      "getUserMeta(<uid>)",
+      "listTombstonesForUser(<uid>)",
+      "getPatientForUser(<uid>)",
+      "listSnapshotsForUser(<uid>)",
+      "listPatientsForUser(<uid>)",
+      "listTombstonesForUser(<uid>)",
+      "getPatientForUser(<uid>)",
+      "putTombstoneForUser(<uid>)",
+      "listTombstonesForUser(<uid>)",
+      "getPatientForUser(<uid>)",
+      "putTombstoneForUser(<uid>)",
+      "listSnapshotsForUser(<uid>)",
+      "getUserMeta(<uid>)",
+      "getUserMeta(<uid>)",
+      "getUserMeta(<uid>)",
+      "listNotesForUser(<uid>)",
+      "listNoteTombstonesForUser(<uid>)",
+      "getNoteForUser(<uid>)",
+      "putNoteTombstoneForUser(<uid>)",
+      "listPatientNotesForUser(<uid>)",
+      "listPatientNoteTombstonesForUser(<uid>)",
+      "listTombstonesForUser(<uid>)",
+      "getPatientNoteForUser(<uid>)",
+      "getPatientNoteTombstoneForUser(<uid>)",
+      "putPatientNoteTombstoneForUser(<uid>)",
+      "listPatientListsForUser(<uid>)",
+      "listPatientListTombstonesForUser(<uid>)",
+      "putPatientListTombstoneForUser(<uid>)"
+     ]
+    },
+    {
+     "krok": "koperta zdarzenia",
+     "wynik": {
+      "status": "applied"
+     },
+     "tlo": 0,
+     "indexedDB": [],
+     "localStorage": [],
+     "sessionStorage": [],
+     "krypto": 11,
+     "powiadomienia": {},
+     "magazyn": [
+      "getPatientForUser(<uid>)",
+      "listSnapshotsForUser(<uid>)",
+      "getPatientForUser(<uid>)",
+      "getSnapshotForUser(<uid>)",
+      "getUserMeta(<uid>)",
+      "listPatientsForUser(<uid>)",
+      "getUserMeta(<uid>)",
+      "listTombstonesForUser(<uid>)",
+      "getUserMeta(<uid>)",
+      "listTombstonesForUser(<uid>)",
+      "getPatientForUser(<uid>)",
+      "listSnapshotsForUser(<uid>)",
+      "listPatientsForUser(<uid>)",
+      "listTombstonesForUser(<uid>)",
+      "getPatientForUser(<uid>)",
+      "putTombstoneForUser(<uid>)",
+      "listTombstonesForUser(<uid>)",
+      "getPatientForUser(<uid>)",
+      "putTombstoneForUser(<uid>)",
+      "listSnapshotsForUser(<uid>)",
+      "getUserMeta(<uid>)",
+      "getUserMeta(<uid>)",
+      "getUserMeta(<uid>)",
+      "listNotesForUser(<uid>)",
+      "listNoteTombstonesForUser(<uid>)",
+      "getNoteForUser(<uid>)",
+      "putNoteTombstoneForUser(<uid>)",
+      "listPatientNotesForUser(<uid>)",
+      "listPatientNoteTombstonesForUser(<uid>)",
+      "listTombstonesForUser(<uid>)",
+      "getPatientNoteForUser(<uid>)",
+      "getPatientNoteTombstoneForUser(<uid>)",
+      "putPatientNoteTombstoneForUser(<uid>)",
+      "listPatientListsForUser(<uid>)",
+      "listPatientListTombstonesForUser(<uid>)",
+      "putPatientListTombstoneForUser(<uid>)"
+     ]
+    },
+    {
+     "krok": "import karty innego konta",
+     "wynik": {
+      "addedSnapshots": 2,
+      "importedPatientNotes": 1,
+      "isNew": true,
+      "skippedSnapshots": 0,
+      "totalSnapshots": 2
+     },
+     "tlo": 0,
+     "indexedDB": [],
+     "localStorage": [
+      "set vilda-note-changed-ping-v1"
+     ],
+     "sessionStorage": [],
+     "krypto": 13,
+     "powiadomienia": {
+      "onPatientNoteChanged": 1
+     },
+     "magazyn": [
+      "getPatientForUser(<uid>)",
+      "listPatientsForUser(<uid>)",
+      "getPatientForUser(<uid>)",
+      "putSnapshotForUser(<uid>)",
+      "putSnapshotForUser(<uid>)",
+      "getUserMeta(<uid>)",
+      "putPatientForUser(<uid>)",
+      "removeTombstoneForUser(<uid>)",
+      "removePatientNoteTombstoneForUser(<uid>)",
+      "getPatientNoteForUser(<uid>)",
+      "getUserMeta(<uid>)",
+      "listPatientsForUser(<uid>)",
+      "getUserMeta(<uid>)",
+      "listTombstonesForUser(<uid>)",
+      "listTombstonesForUser(<uid>)",
+      "getPatientForUser(<uid>)",
+      "putTombstoneForUser(<uid>)",
+      "listTombstonesForUser(<uid>)",
+      "getPatientForUser(<uid>)",
+      "putTombstoneForUser(<uid>)",
+      "getUserMeta(<uid>)",
+      "listNotesForUser(<uid>)",
+      "listNoteTombstonesForUser(<uid>)",
+      "getNoteForUser(<uid>)",
+      "putNoteTombstoneForUser(<uid>)",
+      "listPatientNotesForUser(<uid>)",
+      "listPatientNoteTombstonesForUser(<uid>)",
+      "listTombstonesForUser(<uid>)",
+      "getPatientNoteForUser(<uid>)",
+      "putPatientNoteForUser(<uid>)",
+      "getPatientNoteForUser(<uid>)",
+      "getPatientNoteTombstoneForUser(<uid>)",
+      "putPatientNoteTombstoneForUser(<uid>)",
+      "listPatientListsForUser(<uid>)",
+      "listPatientListTombstonesForUser(<uid>)",
+      "putPatientListTombstoneForUser(<uid>)"
+     ]
+    },
+    {
+     "krok": "scalenie kopii innego konta",
+     "wynik": {
+      "accountDataMerged": true,
+      "addedNoteCount": 0,
+      "addedPatientCount": 1,
+      "addedPatientListCount": 0,
+      "addedPatientNoteCount": 0,
+      "addedSnapshotCount": 1,
+      "addedWaitlistCount": 0,
+      "addedWaitlistScheduleCount": 0,
+      "deletedNoteCount": 0,
+      "deletedPatientListCount": 0,
+      "deletedPatientNoteCount": 0,
+      "deletedWaitlistCount": 0,
+      "deletedWaitlistScheduleCount": 0,
+      "foreignSnapshotCount": 0,
+      "mergedPatientCount": 0,
+      "skippedDeletedPatientCount": 0,
+      "skippedMergedPatientCount": 0,
+      "skippedPatients": "#0",
+      "skippedSnapshotCount": 2,
+      "updatedNoteCount": 0,
+      "updatedPatientListCount": 0,
+      "updatedPatientNoteCount": 0,
+      "updatedPreferenceCount": 0,
+      "updatedWaitlistCount": 0,
+      "updatedWaitlistScheduleCount": 0
+     },
+     "tlo": 0,
+     "indexedDB": [],
+     "localStorage": [],
+     "sessionStorage": [],
+     "krypto": 9,
+     "powiadomienia": {},
+     "magazyn": [
+      "listPatientsForUser(<uid>)",
+      "listPatientsForUser(<uid>)",
+      "listSnapshotsForUser(<uid>)",
+      "listSnapshotsForUser(<uid>)",
+      "getUserMeta(<uid>)",
+      "listPatientNotesForUser(<uid>)",
+      "listTombstonesForUser(<uid>)",
+      "getPatientForUser(<uid>)",
+      "listSnapshotsForUser(<uid>)",
+      "getPatientForUser(<uid>)",
+      "listTombstonesForUser(<uid>)",
+      "putSnapshotForUser(<uid>)",
+      "putPatientForUser(<uid>)",
+      "getUserMeta(<uid>)",
+      "getUserMeta(<uid>)",
+      "getUserMeta(<uid>)",
+      "listPatientsForUser(<uid>)",
+      "getUserMeta(<uid>)",
+      "listTombstonesForUser(<uid>)",
+      "listTombstonesForUser(<uid>)",
+      "getPatientForUser(<uid>)",
+      "putTombstoneForUser(<uid>)",
+      "listTombstonesForUser(<uid>)",
+      "getPatientForUser(<uid>)",
+      "putTombstoneForUser(<uid>)",
+      "getUserMeta(<uid>)",
+      "listNotesForUser(<uid>)",
+      "listNoteTombstonesForUser(<uid>)",
+      "getNoteForUser(<uid>)",
+      "putNoteTombstoneForUser(<uid>)",
+      "listPatientNotesForUser(<uid>)",
+      "listPatientNoteTombstonesForUser(<uid>)",
+      "listTombstonesForUser(<uid>)",
+      "getPatientNoteForUser(<uid>)",
+      "getPatientNoteTombstoneForUser(<uid>)",
+      "putPatientNoteTombstoneForUser(<uid>)",
+      "listPatientListsForUser(<uid>)",
+      "listPatientListTombstonesForUser(<uid>)",
+      "putPatientListTombstoneForUser(<uid>)",
+      "getUserMeta(<uid>)"
+     ]
+    },
+    {
+     "krok": "import starego formatu",
+     "wynik": {
+      "addedSnapshots": 1,
+      "isNew": true,
+      "skippedSnapshots": 0,
+      "snapshotCount": 1,
+      "totalSnapshots": 1
+     },
+     "tlo": 0,
+     "indexedDB": [],
+     "localStorage": [
+      "set vilda-note-changed-ping-v1"
+     ],
+     "sessionStorage": [],
+     "krypto": 5,
+     "powiadomienia": {
+      "onPatientSaved": 1
+     },
+     "magazyn": [
+      "listPatientsForUser(<uid>)",
+      "getPatientForUser(<uid>)",
+      "putSnapshotForUser(<uid>)",
+      "putPatientForUser(<uid>)",
+      "removeTombstoneForUser(<uid>)"
+     ]
+    },
+    {
+     "krok": "osoba spoza bazy",
+     "wynik": {
+      "collision": null,
+      "isNew": true,
+      "przyjeteZBazy": "#0",
+      "scalonoZBazy": 0,
+      "snapshotCount": 1
+     },
+     "tlo": 0,
+     "indexedDB": [],
+     "localStorage": [
+      "set vilda-note-changed-ping-v1"
+     ],
+     "sessionStorage": [],
+     "krypto": 6,
+     "powiadomienia": {
+      "onPatientSaved": 1
+     },
+     "magazyn": [
+      "listPatientsForUser(<uid>)",
+      "getPatientForUser(<uid>)",
+      "putSnapshotForUser(<uid>)",
+      "putPatientForUser(<uid>)",
+      "removeTombstoneForUser(<uid>)"
+     ]
+    },
+    {
+     "krok": "scal osobę spoza bazy z kartą",
+     "wynik": {
+      "listsUpdated": 0,
+      "notesMoved": 0
+     },
+     "tlo": 0,
+     "indexedDB": [],
+     "localStorage": [
+      "set vilda-note-changed-ping-v1"
+     ],
+     "sessionStorage": [],
+     "krypto": 6,
+     "powiadomienia": {
+      "onPatientDeleted": 1
+     },
+     "magazyn": [
+      "getPatientForUser(<uid>)",
+      "listSnapshotsForUser(<uid>)",
+      "getPatientForUser(<uid>)",
+      "listSnapshotsForUser(<uid>)",
+      "listPatientNotesForUser(<uid>)",
+      "listPatientListsForUser(<uid>)",
+      "removePatientForUser(<uid>)",
+      "getUserMeta(<uid>)",
+      "getUserMeta(<uid>)",
+      "listPatientNoteTombstonesForUser(<uid>)",
+      "listPatientNotesForUser(<uid>)",
+      "putTombstoneForUser(<uid>)"
+     ]
+    },
+    {
+     "krok": "przywróć wersję jako nową",
+     "wynik": {
+      "snapshotCount": 4
+     },
+     "tlo": 0,
+     "indexedDB": [],
+     "localStorage": [
+      "set vilda-note-changed-ping-v1"
+     ],
+     "sessionStorage": [],
+     "krypto": 18,
+     "powiadomienia": {
+      "onPatientSaved": 1
+     },
+     "magazyn": [
+      "getPatientForUser(<uid>)",
+      "listSnapshotsForUser(<uid>)",
+      "getPatientForUser(<uid>)",
+      "listSnapshotsForUser(<uid>)",
+      "listPatientsForUser(<uid>)",
+      "getPatientForUser(<uid>)",
+      "getPatientForUser(<uid>)",
+      "listSnapshotsForUser(<uid>)",
+      "putSnapshotForUser(<uid>)",
+      "getPatientForUser(<uid>)",
+      "putPatientForUser(<uid>)",
+      "removeTombstoneForUser(<uid>)"
+     ]
+    },
+    {
+     "krok": "tryb przechowywania: zmiana",
+     "wynik": {},
+     "tlo": 0,
+     "indexedDB": [],
+     "localStorage": [],
+     "sessionStorage": [],
+     "krypto": 0,
+     "powiadomienia": {},
+     "magazyn": [
+      "getRegistryEntry(<uid>)",
+      "updateRegistryEntry(<uid>)"
+     ]
+    },
+    {
+     "krok": "tryb przechowywania: powrót",
+     "wynik": {},
+     "tlo": 0,
+     "indexedDB": [],
+     "localStorage": [],
+     "sessionStorage": [],
+     "krypto": 0,
+     "powiadomienia": {},
+     "magazyn": [
+      "getRegistryEntry(<uid>)",
+      "updateRegistryEntry(<uid>)"
+     ]
+    },
+    {
+     "krok": "nowa tożsamość synchronizacji",
+     "wynik": {},
+     "tlo": 0,
+     "indexedDB": [
+      "databases"
+     ],
+     "localStorage": [
+      "set vilda-care-template-lifecycle-v1:<uid>",
+      "remove vilda-care-template-lifecycle-v1:<uid>"
+     ],
+     "sessionStorage": [],
+     "krypto": 19,
+     "powiadomienia": {},
+     "magazyn": [
+      "getUserMeta(<uid>)",
+      "getUserMeta(<uid>)",
+      "putUserMeta(<uid>)"
+     ]
+    },
+    {
+     "krok": "usunięcie klucza dostępu",
+     "wynik": "brak",
+     "tlo": 0,
+     "indexedDB": [],
+     "localStorage": [],
+     "sessionStorage": [],
+     "krypto": 0,
+     "powiadomienia": {
+      "onPasskeyChanged": 1
+     },
+     "magazyn": [
+      "getUserMeta(<uid>)",
+      "putUserMeta(<uid>)",
+      "getUserMeta(<uid>)",
+      "updateRegistryEntry(<uid>)"
+     ]
+    },
+    {
+     "krok": "kopia konta",
+     "wynik": null,
+     "tlo": 0,
+     "indexedDB": [],
+     "localStorage": [],
+     "sessionStorage": [],
+     "krypto": 17,
+     "powiadomienia": {},
+     "magazyn": [
+      "getUserMeta(<uid>)",
+      "listPatientsForUser(<uid>)",
+      "listSnapshotsForUser(<uid>)",
+      "listSnapshotsForUser(<uid>)",
+      "listSnapshotsForUser(<uid>)",
+      "listSnapshotsForUser(<uid>)",
+      "listNotesForUser(<uid>)",
+      "listNoteTombstonesForUser(<uid>)",
+      "listPatientNotesForUser(<uid>)",
+      "listPatientNoteTombstonesForUser(<uid>)",
+      "listPatientListsForUser(<uid>)",
+      "listPatientListTombstonesForUser(<uid>)"
+     ]
+    },
+    {
+     "krok": "blokada",
+     "wynik": "brak",
+     "tlo": 0,
+     "indexedDB": [],
+     "localStorage": [],
+     "sessionStorage": [
+      "remove vilda-vault-session-v2"
+     ],
+     "krypto": 0,
+     "powiadomienia": {
+      "onLock": 1
+     },
+     "magazyn": []
+    },
+    {
+     "krok": "odtworzenie konta z kopii",
+     "wynik": {
+      "newRecoveryKey": null,
+      "noteCount": 0,
+      "patientCount": 4,
+      "patientListCount": 0,
+      "patientNoteCount": 3,
+      "preferenceCount": 0,
+      "snapshotCount": 8
+     },
+     "tlo": 1,
+     "indexedDB": [],
+     "localStorage": [
+      "set vilda-note-changed-ping-v1",
+      "set vilda-note-changed-ping-v1",
+      "set vilda-note-changed-ping-v1"
+     ],
+     "sessionStorage": [
+      "set vilda-vault-session-v2"
+     ],
+     "krypto": 25,
+     "powiadomienia": {
+      "onPatientNoteChanged": 3,
+      "onUnlock": 1
+     },
+     "magazyn": [
+      "putUserMeta(<uid2>)",
+      "putRegistryEntry(<uid2>)",
+      "getUserMeta(<uid2>)",
+      "getUserMeta(<uid2>)",
+      "putUserMeta(<uid2>)",
+      "putSnapshotForUser(<uid2>)",
+      "putSnapshotForUser(<uid2>)",
+      "putSnapshotForUser(<uid2>)",
+      "putSnapshotForUser(<uid2>)",
+      "putPatientForUser(<uid2>)",
+      "putSnapshotForUser(<uid2>)",
+      "putSnapshotForUser(<uid2>)",
+      "putPatientForUser(<uid2>)",
+      "putSnapshotForUser(<uid2>)",
+      "putPatientForUser(<uid2>)",
+      "putSnapshotForUser(<uid2>)",
+      "putPatientForUser(<uid2>)",
+      "getUserMeta(<uid2>)",
+      "listPatientsForUser(<uid2>)",
+      "getUserMeta(<uid2>)",
+      "listTombstonesForUser(<uid2>)",
+      "getUserMeta(<uid2>)",
+      "getUserMeta(<uid2>)",
+      "getUserMeta(<uid2>)",
+      "listNotesForUser(<uid2>)",
+      "listNoteTombstonesForUser(<uid2>)",
+      "getNoteForUser(<uid2>)",
+      "putNoteTombstoneForUser(<uid2>)",
+      "listPatientNotesForUser(<uid2>)",
+      "listPatientNoteTombstonesForUser(<uid2>)",
+      "listTombstonesForUser(<uid2>)",
+      "getPatientNoteForUser(<uid2>)",
+      "putPatientNoteForUser(<uid2>)",
+      "getPatientNoteForUser(<uid2>)",
+      "putPatientNoteForUser(<uid2>)",
+      "getPatientNoteForUser(<uid2>)",
+      "putPatientNoteForUser(<uid2>)",
+      "getPatientNoteForUser(<uid2>)",
+      "getPatientNoteTombstoneForUser(<uid2>)",
+      "putPatientNoteTombstoneForUser(<uid2>)",
+      "listPatientListsForUser(<uid2>)",
+      "listPatientListTombstonesForUser(<uid2>)",
+      "putPatientListTombstoneForUser(<uid2>)",
+      "getUserMeta(<uid2>)",
+      "listPatientNotesForUser(<uid2>)",
+      "getUserMeta(<uid2>)",
+      "putUserMeta(<uid2>)"
+     ]
+    },
+    {
+     "krok": "blokada konta z kopii",
+     "wynik": "brak",
+     "tlo": 0,
+     "indexedDB": [],
+     "localStorage": [],
+     "sessionStorage": [
+      "remove vilda-vault-session-v2"
+     ],
+     "krypto": 0,
+     "powiadomienia": {
+      "onLock": 1
+     },
+     "magazyn": []
+    },
+    {
+     "krok": "odblokowanie",
+     "wynik": {
+      "needsPasswordReset": false,
+      "passwordPolicy": null
+     },
+     "tlo": 1,
+     "indexedDB": [],
+     "localStorage": [],
+     "sessionStorage": [
+      "set vilda-vault-session-v2"
+     ],
+     "krypto": 5,
+     "powiadomienia": {
+      "onUnlock": 1
+     },
+     "magazyn": [
+      "getUserMeta(<uid>)",
+      "getRegistryEntry(<uid>)",
+      "getRegistryEntry(<uid>)",
+      "getUserMeta(<uid>)",
+      "updateRegistryEntry(<uid>)",
+      "getUserMeta(<uid>)"
+     ]
+    },
+    {
+     "krok": "usunięcie konta z kopii",
+     "wynik": true,
+     "tlo": 0,
+     "indexedDB": [
+      "abort-upgrade clinical-authority-checkpoints-v1",
+      "databases",
+      "open clinical-authority-checkpoints-v1 null",
+      "upgrade clinical-authority-checkpoints-v1 0 1"
+     ],
+     "localStorage": [
+      "set vilda-care-template-lifecycle-v1:<uid2>",
+      "set vilda-care-template-lifecycle-v1:<uid2>"
+     ],
+     "sessionStorage": [],
+     "krypto": 4,
+     "powiadomienia": {},
+     "magazyn": [
+      "getUserMeta(<uid2>)",
+      "deleteUserDatabase(<uid2>)",
+      "removeRegistryEntry(<uid2>)"
+     ]
+    },
+    {
+     "krok": "usunięcie konta",
+     "wynik": true,
+     "tlo": 0,
+     "indexedDB": [
+      "abort-upgrade clinical-authority-checkpoints-v1",
+      "databases",
+      "open clinical-authority-checkpoints-v1 null",
+      "upgrade clinical-authority-checkpoints-v1 0 1"
+     ],
+     "localStorage": [
+      "set vilda-care-template-lifecycle-v1:<uid>",
+      "set vilda-care-template-lifecycle-v1:<uid>"
+     ],
+     "sessionStorage": [
+      "remove vilda-vault-session-v2"
+     ],
+     "krypto": 1,
+     "powiadomienia": {
+      "onLock": 1
+     },
+     "magazyn": [
+      "getUserMeta(<uid>)",
+      "deleteUserDatabase(<uid>)",
+      "removeRegistryEntry(<uid>)"
+     ]
+    }
+   ],
+   "bazy": [],
+   "kluczUrzadzenia": false,
+   "odczytyBramki": 0
+  },
+  "prywatny": {
+   "ladowanie": {
+    "indexedDB": [],
+    "localStorage": [],
+    "sessionStorage": [],
+    "krypto": 0,
+    "powiadomienia": {}
+   },
+   "kroki": [
+    {
+     "krok": "konto",
+     "wynik": {
+      "iterations": 1000
+     },
+     "tlo": 1,
+     "indexedDB": [
+      "open vilda_registry 1",
+      "open vilda_user_<uid> 5",
+      "success vilda_registry 1",
+      "success vilda_user_<uid> 5",
+      "tx vilda_registry [users] readwrite complete",
+      "tx vilda_registry [users] readwrite start",
+      "tx vilda_user_<uid> [meta] readonly complete ×4",
+      "tx vilda_user_<uid> [meta] readonly start ×4",
+      "tx vilda_user_<uid> [meta] readwrite complete ×3",
+      "tx vilda_user_<uid> [meta] readwrite start ×3",
+      "tx vilda_user_<uid> [patientNotes] readonly complete",
+      "tx vilda_user_<uid> [patientNotes] readonly start",
+      "upgrade vilda_registry 0 1",
+      "upgrade vilda_user_<uid> 0 5"
+     ],
+     "localStorage": [],
+     "sessionStorage": [
+      "set vilda-vault-session-v2"
+     ],
+     "krypto": 8,
+     "powiadomienia": {
+      "onUnlock": 1
+     }
+    },
+    {
+     "krok": "nowa karta",
+     "wynik": {
+      "collision": null,
+      "isNew": true,
+      "przyjeteZBazy": "#0",
+      "scalonoZBazy": 0,
+      "snapshotCount": 1
+     },
+     "tlo": 0,
+     "indexedDB": [
+      "tx vilda_user_<uid> [patients] readonly complete ×2",
+      "tx vilda_user_<uid> [patients] readonly start ×2",
+      "tx vilda_user_<uid> [patients] readwrite complete",
+      "tx vilda_user_<uid> [patients] readwrite start",
+      "tx vilda_user_<uid> [snapshots] readwrite complete",
+      "tx vilda_user_<uid> [snapshots] readwrite start",
+      "tx vilda_user_<uid> [tombstones] readwrite complete",
+      "tx vilda_user_<uid> [tombstones] readwrite start"
+     ],
+     "localStorage": [
+      "set vilda-note-changed-ping-v1"
+     ],
+     "sessionStorage": [],
+     "krypto": 2,
+     "powiadomienia": {
+      "onPatientSaved": 1
+     }
+    },
+    {
+     "krok": "nowa wersja",
+     "wynik": {
+      "collision": null,
+      "isNew": false,
+      "przyjeteZBazy": "#0",
+      "scalonoZBazy": 0,
+      "snapshotCount": 2
+     },
+     "tlo": 0,
+     "indexedDB": [
+      "tx vilda_user_<uid> [patients] readonly complete ×4",
+      "tx vilda_user_<uid> [patients] readonly start ×4",
+      "tx vilda_user_<uid> [patients] readwrite complete",
+      "tx vilda_user_<uid> [patients] readwrite start",
+      "tx vilda_user_<uid> [snapshots] readonly complete",
+      "tx vilda_user_<uid> [snapshots] readonly start",
+      "tx vilda_user_<uid> [snapshots] readwrite complete",
+      "tx vilda_user_<uid> [snapshots] readwrite start",
+      "tx vilda_user_<uid> [tombstones] readwrite complete",
+      "tx vilda_user_<uid> [tombstones] readwrite start"
+     ],
+     "localStorage": [
+      "set vilda-note-changed-ping-v1"
+     ],
+     "sessionStorage": [],
+     "krypto": 5,
+     "powiadomienia": {
+      "onPatientSaved": 1
+     }
+    },
+    {
+     "krok": "poprawka w miejscu",
+     "wynik": {
+      "isUpdate": true
+     },
+     "tlo": 0,
+     "indexedDB": [
+      "tx vilda_user_<uid> [meta] readonly complete",
+      "tx vilda_user_<uid> [meta] readonly start",
+      "tx vilda_user_<uid> [patients] readonly complete ×2",
+      "tx vilda_user_<uid> [patients] readonly start ×2",
+      "tx vilda_user_<uid> [patients] readwrite complete",
+      "tx vilda_user_<uid> [patients] readwrite start",
+      "tx vilda_user_<uid> [snapshots] readonly complete ×2",
+      "tx vilda_user_<uid> [snapshots] readonly start ×2",
+      "tx vilda_user_<uid> [snapshots] readwrite complete",
+      "tx vilda_user_<uid> [snapshots] readwrite start"
+     ],
+     "localStorage": [
+      "set vilda-note-changed-ping-v1"
+     ],
+     "sessionStorage": [],
+     "krypto": 6,
+     "powiadomienia": {
+      "onPatientSaved": 1
+     }
+    },
+    {
+     "krok": "gwiazdka",
+     "wynik": {
+      "pinned": true
+     },
+     "tlo": 0,
+     "indexedDB": [
+      "tx vilda_user_<uid> [meta] readonly complete",
+      "tx vilda_user_<uid> [meta] readonly start",
+      "tx vilda_user_<uid> [patients] readonly complete ×2",
+      "tx vilda_user_<uid> [patients] readonly start ×2",
+      "tx vilda_user_<uid> [patients] readwrite complete",
+      "tx vilda_user_<uid> [patients] readwrite start",
+      "tx vilda_user_<uid> [snapshots] readonly complete ×2",
+      "tx vilda_user_<uid> [snapshots] readonly start ×2",
+      "tx vilda_user_<uid> [snapshots] readwrite complete",
+      "tx vilda_user_<uid> [snapshots] readwrite start"
+     ],
+     "localStorage": [
+      "set vilda-note-changed-ping-v1"
+     ],
+     "sessionStorage": [],
+     "krypto": 7,
+     "powiadomienia": {
+      "onPatientSaved": 1
+     }
+    },
+    {
+     "krok": "odpięcie gwiazdki",
+     "wynik": {
+      "pinned": false
+     },
+     "tlo": 0,
+     "indexedDB": [
+      "tx vilda_user_<uid> [meta] readonly complete",
+      "tx vilda_user_<uid> [meta] readonly start",
+      "tx vilda_user_<uid> [patients] readonly complete ×2",
+      "tx vilda_user_<uid> [patients] readonly start ×2",
+      "tx vilda_user_<uid> [patients] readwrite complete",
+      "tx vilda_user_<uid> [patients] readwrite start",
+      "tx vilda_user_<uid> [snapshots] readonly complete ×2",
+      "tx vilda_user_<uid> [snapshots] readonly start ×2",
+      "tx vilda_user_<uid> [snapshots] readwrite complete",
+      "tx vilda_user_<uid> [snapshots] readwrite start"
+     ],
+     "localStorage": [
+      "set vilda-note-changed-ping-v1"
+     ],
+     "sessionStorage": [],
+     "krypto": 7,
+     "powiadomienia": {
+      "onPatientSaved": 1
+     }
+    },
+    {
+     "krok": "kosz",
+     "wynik": {
+      "remainingSnapshotCount": 1,
+      "wasPinned": false
+     },
+     "tlo": 0,
+     "indexedDB": [
+      "tx vilda_user_<uid> [meta] readonly complete ×6",
+      "tx vilda_user_<uid> [meta] readonly start ×6",
+      "tx vilda_user_<uid> [meta] readwrite complete",
+      "tx vilda_user_<uid> [meta] readwrite start",
+      "tx vilda_user_<uid> [patients] readonly complete",
+      "tx vilda_user_<uid> [patients] readonly start",
+      "tx vilda_user_<uid> [patients] readwrite complete",
+      "tx vilda_user_<uid> [patients] readwrite start",
+      "tx vilda_user_<uid> [snapshots] readonly complete ×4",
+      "tx vilda_user_<uid> [snapshots] readonly start ×4",
+      "tx vilda_user_<uid> [snapshots] readwrite complete",
+      "tx vilda_user_<uid> [snapshots] readwrite start"
+     ],
+     "localStorage": [
+      "set vilda-note-changed-ping-v1"
+     ],
+     "sessionStorage": [],
+     "krypto": 3,
+     "powiadomienia": {
+      "onPatientSaved": 1
+     }
+    },
+    {
+     "krok": "przywróć z kosza",
+     "wynik": {},
+     "tlo": 0,
+     "indexedDB": [
+      "tx vilda_user_<uid> [meta] readonly complete ×3",
+      "tx vilda_user_<uid> [meta] readonly start ×3",
+      "tx vilda_user_<uid> [meta] readwrite complete",
+      "tx vilda_user_<uid> [meta] readwrite start",
+      "tx vilda_user_<uid> [patients] readonly complete ×2",
+      "tx vilda_user_<uid> [patients] readonly start ×2",
+      "tx vilda_user_<uid> [patients] readwrite complete",
+      "tx vilda_user_<uid> [patients] readwrite start",
+      "tx vilda_user_<uid> [snapshots] readonly complete ×4",
+      "tx vilda_user_<uid> [snapshots] readonly start ×4",
+      "tx vilda_user_<uid> [snapshots] readwrite complete",
+      "tx vilda_user_<uid> [snapshots] readwrite start"
+     ],
+     "localStorage": [
+      "set vilda-note-changed-ping-v1"
+     ],
+     "sessionStorage": [],
+     "krypto": 4,
+     "powiadomienia": {
+      "onPatientSaved": 1
+     }
+    },
+    {
+     "krok": "trzecia wersja",
+     "wynik": {
+      "collision": null,
+      "isNew": false,
+      "przyjeteZBazy": "#0",
+      "scalonoZBazy": 0,
+      "snapshotCount": 3
+     },
+     "tlo": 0,
+     "indexedDB": [
+      "tx vilda_user_<uid> [patients] readonly complete ×4",
+      "tx vilda_user_<uid> [patients] readonly start ×4",
+      "tx vilda_user_<uid> [patients] readwrite complete",
+      "tx vilda_user_<uid> [patients] readwrite start",
+      "tx vilda_user_<uid> [snapshots] readonly complete",
+      "tx vilda_user_<uid> [snapshots] readonly start",
+      "tx vilda_user_<uid> [snapshots] readwrite complete",
+      "tx vilda_user_<uid> [snapshots] readwrite start",
+      "tx vilda_user_<uid> [tombstones] readwrite complete",
+      "tx vilda_user_<uid> [tombstones] readwrite start"
+     ],
+     "localStorage": [
+      "set vilda-note-changed-ping-v1"
+     ],
+     "sessionStorage": [],
+     "krypto": 6,
+     "powiadomienia": {
+      "onPatientSaved": 1
+     }
+    },
+    {
+     "krok": "usunięcie wersji",
+     "wynik": {
+      "remainingSnapshotCount": 2
+     },
+     "tlo": 0,
+     "indexedDB": [
+      "tx vilda_user_<uid> [patients] readonly complete ×2",
+      "tx vilda_user_<uid> [patients] readonly start ×2",
+      "tx vilda_user_<uid> [patients] readwrite complete",
+      "tx vilda_user_<uid> [patients] readwrite start",
+      "tx vilda_user_<uid> [snapshots] readonly complete ×3",
+      "tx vilda_user_<uid> [snapshots] readonly start ×3",
+      "tx vilda_user_<uid> [snapshots] readwrite complete",
+      "tx vilda_user_<uid> [snapshots] readwrite start"
+     ],
+     "localStorage": [
+      "set vilda-note-changed-ping-v1"
+     ],
+     "sessionStorage": [],
+     "krypto": 6,
+     "powiadomienia": {
+      "onPatientSaved": 1
+     }
+    },
+    {
+     "krok": "retencja",
+     "wynik": {
+      "prunedCount": 1,
+      "prunedIds": "#1"
+     },
+     "tlo": 0,
+     "indexedDB": [
+      "tx vilda_user_<uid> [meta] readonly complete ×2",
+      "tx vilda_user_<uid> [meta] readonly start ×2",
+      "tx vilda_user_<uid> [meta] readwrite complete",
+      "tx vilda_user_<uid> [meta] readwrite start",
+      "tx vilda_user_<uid> [patients] readonly complete ×2",
+      "tx vilda_user_<uid> [patients] readonly start ×2",
+      "tx vilda_user_<uid> [patients] readwrite complete",
+      "tx vilda_user_<uid> [patients] readwrite start",
+      "tx vilda_user_<uid> [snapshots] readonly complete ×5",
+      "tx vilda_user_<uid> [snapshots] readonly start ×5",
+      "tx vilda_user_<uid> [snapshots] readwrite complete",
+      "tx vilda_user_<uid> [snapshots] readwrite start"
+     ],
+     "localStorage": [
+      "set vilda-note-changed-ping-v1"
+     ],
+     "sessionStorage": [],
+     "krypto": 5,
+     "powiadomienia": {
+      "onPatientSaved": 1
+     }
+    },
+    {
+     "krok": "notatka pacjenta: dodaj",
+     "wynik": {
+      "isNew": true
+     },
+     "tlo": 0,
+     "indexedDB": [
+      "tx vilda_user_<uid> [patientNoteTombstones] readonly complete ×2",
+      "tx vilda_user_<uid> [patientNoteTombstones] readonly start ×2",
+      "tx vilda_user_<uid> [patientNoteTombstones] readwrite complete",
+      "tx vilda_user_<uid> [patientNoteTombstones] readwrite start",
+      "tx vilda_user_<uid> [patientNotes] readwrite complete",
+      "tx vilda_user_<uid> [patientNotes] readwrite start",
+      "tx vilda_user_<uid> [tombstones] readonly complete",
+      "tx vilda_user_<uid> [tombstones] readonly start"
+     ],
+     "localStorage": [
+      "set vilda-note-changed-ping-v1"
+     ],
+     "sessionStorage": [],
+     "krypto": 1,
+     "powiadomienia": {
+      "onPatientNoteChanged": 1
+     }
+    },
+    {
+     "krok": "notatka pacjenta: popraw",
+     "wynik": {
+      "isNew": false
+     },
+     "tlo": 0,
+     "indexedDB": [
+      "tx vilda_user_<uid> [patientNoteTombstones] readonly complete",
+      "tx vilda_user_<uid> [patientNoteTombstones] readonly start",
+      "tx vilda_user_<uid> [patientNoteTombstones] readwrite complete",
+      "tx vilda_user_<uid> [patientNoteTombstones] readwrite start",
+      "tx vilda_user_<uid> [patientNotes] readonly complete ×2",
+      "tx vilda_user_<uid> [patientNotes] readonly start ×2",
+      "tx vilda_user_<uid> [patientNotes] readwrite complete",
+      "tx vilda_user_<uid> [patientNotes] readwrite start",
+      "tx vilda_user_<uid> [tombstones] readonly complete",
+      "tx vilda_user_<uid> [tombstones] readonly start"
+     ],
+     "localStorage": [
+      "set vilda-note-changed-ping-v1"
+     ],
+     "sessionStorage": [],
+     "krypto": 3,
+     "powiadomienia": {
+      "onPatientNoteChanged": 1
+     }
+    },
+    {
+     "krok": "notatka pacjenta: usuń",
+     "wynik": true,
+     "tlo": 0,
+     "indexedDB": [
+      "tx vilda_user_<uid> [patientNoteTombstones] readwrite complete",
+      "tx vilda_user_<uid> [patientNoteTombstones] readwrite start",
+      "tx vilda_user_<uid> [patientNotes] readonly complete ×2",
+      "tx vilda_user_<uid> [patientNotes] readonly start ×2",
+      "tx vilda_user_<uid> [patientNotes] readwrite complete",
+      "tx vilda_user_<uid> [patientNotes] readwrite start"
+     ],
+     "localStorage": [
+      "set vilda-note-changed-ping-v1"
+     ],
+     "sessionStorage": [],
+     "krypto": 2,
+     "powiadomienia": {
+      "onPatientNoteChanged": 1
+     }
+    },
+    {
+     "krok": "notatka biblioteki: dodaj",
+     "wynik": {
+      "isNew": true
+     },
+     "tlo": 0,
+     "indexedDB": [
+      "tx vilda_user_<uid> [noteTombstones] readwrite complete",
+      "tx vilda_user_<uid> [noteTombstones] readwrite start",
+      "tx vilda_user_<uid> [notes] readwrite complete",
+      "tx vilda_user_<uid> [notes] readwrite start"
+     ],
+     "localStorage": [],
+     "sessionStorage": [],
+     "krypto": 1,
+     "powiadomienia": {
+      "onNoteChanged": 1
+     }
+    },
+    {
+     "krok": "notatka biblioteki: usuń",
+     "wynik": true,
+     "tlo": 0,
+     "indexedDB": [
+      "tx vilda_user_<uid> [noteTombstones] readwrite complete",
+      "tx vilda_user_<uid> [noteTombstones] readwrite start",
+      "tx vilda_user_<uid> [notes] readonly complete",
+      "tx vilda_user_<uid> [notes] readonly start",
+      "tx vilda_user_<uid> [notes] readwrite complete",
+      "tx vilda_user_<uid> [notes] readwrite start"
+     ],
+     "localStorage": [],
+     "sessionStorage": [],
+     "krypto": 0,
+     "powiadomienia": {
+      "onNoteChanged": 1
+     }
+    },
+    {
+     "krok": "lista: dodaj",
+     "wynik": {
+      "excludeIds": "#0",
+      "isNew": true,
+      "memberIds": "#1",
+      "pinned": false,
+      "rev": 1,
+      "rule": null
+     },
+     "tlo": 0,
+     "indexedDB": [
+      "tx vilda_user_<uid> [patientListTombstones] readwrite complete",
+      "tx vilda_user_<uid> [patientListTombstones] readwrite start",
+      "tx vilda_user_<uid> [patientLists] readwrite complete",
+      "tx vilda_user_<uid> [patientLists] readwrite start"
+     ],
+     "localStorage": [],
+     "sessionStorage": [],
+     "krypto": 1,
+     "powiadomienia": {
+      "onPatientListChanged": 1
+     }
+    },
+    {
+     "krok": "lista: usuń",
+     "wynik": {},
+     "tlo": 0,
+     "indexedDB": [
+      "tx vilda_user_<uid> [patientListTombstones] readwrite complete",
+      "tx vilda_user_<uid> [patientListTombstones] readwrite start",
+      "tx vilda_user_<uid> [patientLists] readwrite complete",
+      "tx vilda_user_<uid> [patientLists] readwrite start"
+     ],
+     "localStorage": [],
+     "sessionStorage": [],
+     "krypto": 0,
+     "powiadomienia": {
+      "onPatientListChanged": 1
+     }
+    },
+    {
+     "krok": "plan opieki",
+     "wynik": {
+      "resultNoteId": null,
+      "saved": true,
+      "stepId": null
+     },
+     "tlo": 0,
+     "indexedDB": [
+      "tx vilda_user_<uid> [patientNoteTombstones,patientNotes,patients,tombstones] readwrite complete",
+      "tx vilda_user_<uid> [patientNoteTombstones,patientNotes,patients,tombstones] readwrite start",
+      "tx vilda_user_<uid> [patientNoteTombstones] readonly complete ×2",
+      "tx vilda_user_<uid> [patientNoteTombstones] readonly start ×2",
+      "tx vilda_user_<uid> [patientNotes] readonly complete ×4",
+      "tx vilda_user_<uid> [patientNotes] readonly start ×4",
+      "tx vilda_user_<uid> [patients] readonly complete",
+      "tx vilda_user_<uid> [patients] readonly start",
+      "tx vilda_user_<uid> [tombstones] readonly complete ×2",
+      "tx vilda_user_<uid> [tombstones] readonly start ×2"
+     ],
+     "localStorage": [
+      "set vilda-note-changed-ping-v1",
+      "set vilda-note-changed-ping-v1"
+     ],
+     "sessionStorage": [],
+     "krypto": 10,
+     "powiadomienia": {
+      "onPatientNoteChanged": 2
+     }
+    },
+    {
+     "krok": "druga karta",
+     "wynik": {
+      "collision": null,
+      "isNew": true,
+      "przyjeteZBazy": "#0",
+      "scalonoZBazy": 0,
+      "snapshotCount": 1
+     },
+     "tlo": 0,
+     "indexedDB": [
+      "tx vilda_user_<uid> [patients] readonly complete ×2",
+      "tx vilda_user_<uid> [patients] readonly start ×2",
+      "tx vilda_user_<uid> [patients] readwrite complete",
+      "tx vilda_user_<uid> [patients] readwrite start",
+      "tx vilda_user_<uid> [snapshots] readwrite complete",
+      "tx vilda_user_<uid> [snapshots] readwrite start",
+      "tx vilda_user_<uid> [tombstones] readwrite complete",
+      "tx vilda_user_<uid> [tombstones] readwrite start"
+     ],
+     "localStorage": [
+      "set vilda-note-changed-ping-v1"
+     ],
+     "sessionStorage": [],
+     "krypto": 3,
+     "powiadomienia": {
+      "onPatientSaved": 1
+     }
+    },
+    {
+     "krok": "scal pacjentów",
+     "wynik": {
+      "listsUpdated": 0,
+      "notesMoved": 0,
+      "pointsAdded": 0,
+      "rowsAdded": 0,
+      "snapshotCount": 3,
+      "snapshotsMoved": 1
+     },
+     "tlo": 0,
+     "indexedDB": [
+      "tx vilda_user_<uid> [meta] readonly complete ×2",
+      "tx vilda_user_<uid> [meta] readonly start ×2",
+      "tx vilda_user_<uid> [patientLists] readonly complete",
+      "tx vilda_user_<uid> [patientLists] readonly start",
+      "tx vilda_user_<uid> [patientNoteTombstones] readonly complete",
+      "tx vilda_user_<uid> [patientNoteTombstones] readonly start",
+      "tx vilda_user_<uid> [patientNotes] readonly complete ×2",
+      "tx vilda_user_<uid> [patientNotes] readonly start ×2",
+      "tx vilda_user_<uid> [patients,snapshots] readwrite complete",
+      "tx vilda_user_<uid> [patients,snapshots] readwrite start",
+      "tx vilda_user_<uid> [patients] readonly complete ×7",
+      "tx vilda_user_<uid> [patients] readonly start ×7",
+      "tx vilda_user_<uid> [patients] readwrite complete ×2",
+      "tx vilda_user_<uid> [patients] readwrite start ×2",
+      "tx vilda_user_<uid> [snapshots] readonly complete ×6",
+      "tx vilda_user_<uid> [snapshots] readonly start ×6",
+      "tx vilda_user_<uid> [snapshots] readwrite complete ×4",
+      "tx vilda_user_<uid> [snapshots] readwrite start ×4",
+      "tx vilda_user_<uid> [tombstones] readwrite complete ×2",
+      "tx vilda_user_<uid> [tombstones] readwrite start ×2"
+     ],
+     "localStorage": [
+      "set vilda-note-changed-ping-v1",
+      "set vilda-note-changed-ping-v1"
+     ],
+     "sessionStorage": [],
+     "krypto": 11,
+     "powiadomienia": {
+      "onPatientSaved": 1,
+      "onPatientDeleted": 1
+     }
+    },
+    {
+     "krok": "trzecia karta",
+     "wynik": {
+      "collision": null,
+      "isNew": true,
+      "przyjeteZBazy": "#0",
+      "scalonoZBazy": 0,
+      "snapshotCount": 1
+     },
+     "tlo": 0,
+     "indexedDB": [
+      "tx vilda_user_<uid> [patients] readonly complete ×2",
+      "tx vilda_user_<uid> [patients] readonly start ×2",
+      "tx vilda_user_<uid> [patients] readwrite complete",
+      "tx vilda_user_<uid> [patients] readwrite start",
+      "tx vilda_user_<uid> [snapshots] readwrite complete",
+      "tx vilda_user_<uid> [snapshots] readwrite start",
+      "tx vilda_user_<uid> [tombstones] readwrite complete",
+      "tx vilda_user_<uid> [tombstones] readwrite start"
+     ],
+     "localStorage": [
+      "set vilda-note-changed-ping-v1"
+     ],
+     "sessionStorage": [],
+     "krypto": 3,
+     "powiadomienia": {
+      "onPatientSaved": 1
+     }
+    },
+    {
+     "krok": "usuń pacjenta",
+     "wynik": true,
+     "tlo": 0,
+     "indexedDB": [
+      "tx vilda_user_<uid> [meta] readonly complete ×2",
+      "tx vilda_user_<uid> [meta] readonly start ×2",
+      "tx vilda_user_<uid> [patientNoteTombstones] readonly complete",
+      "tx vilda_user_<uid> [patientNoteTombstones] readonly start",
+      "tx vilda_user_<uid> [patientNotes] readonly complete",
+      "tx vilda_user_<uid> [patientNotes] readonly start",
+      "tx vilda_user_<uid> [patients,snapshots] readwrite complete",
+      "tx vilda_user_<uid> [patients,snapshots] readwrite start",
+      "tx vilda_user_<uid> [tombstones] readwrite complete",
+      "tx vilda_user_<uid> [tombstones] readwrite start"
+     ],
+     "localStorage": [
+      "set vilda-note-changed-ping-v1"
+     ],
+     "sessionStorage": [],
+     "krypto": 0,
+     "powiadomienia": {
+      "onPatientDeleted": 1
+     }
+    },
+    {
+     "krok": "zmiana hasła",
+     "wynik": true,
+     "tlo": 0,
+     "indexedDB": [
+      "tx vilda_user_<uid> [meta] readonly complete ×2",
+      "tx vilda_user_<uid> [meta] readonly start ×2",
+      "tx vilda_user_<uid> [meta] readwrite complete",
+      "tx vilda_user_<uid> [meta] readwrite start"
+     ],
+     "localStorage": [],
+     "sessionStorage": [],
+     "krypto": 9,
+     "powiadomienia": {
+      "onCredentialChanged": 1
+     }
+    },
+    {
+     "krok": "eksport i scalenie własnego eksportu",
+     "wynik": {
+      "addedNoteCount": 0,
+      "addedPasskeyCount": 1,
+      "addedPatientCount": 0,
+      "addedPatientListCount": 0,
+      "addedPatientNoteCount": 0,
+      "addedSnapshotCount": 0,
+      "credentialUpdated": false,
+      "deletedNoteCount": 0,
+      "deletedPatientCount": 0,
+      "deletedPatientListCount": 0,
+      "deletedPatientNoteCount": 0,
+      "mergedPatientCount": 1,
+      "prunedSnapshotCount": 0,
+      "removedPasskeyCount": 0,
+      "skippedSnapshotCount": 3,
+      "trashedSnapshotCount": 0,
+      "updatedNoteCount": 0,
+      "updatedPatientListCount": 0,
+      "updatedPatientNoteCount": 0,
+      "updatedPreferenceCount": 0,
+      "updatedSnapshotCount": 0
+     },
+     "tlo": 0,
+     "indexedDB": [
+      "open vilda_registry 1",
+      "success vilda_registry 1",
+      "tx vilda_registry [users] readwrite complete",
+      "tx vilda_registry [users] readwrite start",
+      "tx vilda_user_<uid> [meta] readonly complete ×14",
+      "tx vilda_user_<uid> [meta] readonly start ×14",
+      "tx vilda_user_<uid> [meta] readwrite complete ×2",
+      "tx vilda_user_<uid> [meta] readwrite start ×2",
+      "tx vilda_user_<uid> [noteTombstones] readonly complete ×2",
+      "tx vilda_user_<uid> [noteTombstones] readonly start ×2",
+      "tx vilda_user_<uid> [noteTombstones] readwrite complete",
+      "tx vilda_user_<uid> [noteTombstones] readwrite start",
+      "tx vilda_user_<uid> [notes] readonly complete ×3",
+      "tx vilda_user_<uid> [notes] readonly start ×3",
+      "tx vilda_user_<uid> [patientListTombstones] readonly complete ×2",
+      "tx vilda_user_<uid> [patientListTombstones] readonly start ×2",
+      "tx vilda_user_<uid> [patientListTombstones] readwrite complete",
+      "tx vilda_user_<uid> [patientListTombstones] readwrite start",
+      "tx vilda_user_<uid> [patientLists] readonly complete ×2",
+      "tx vilda_user_<uid> [patientLists] readonly start ×2",
+      "tx vilda_user_<uid> [patientNoteTombstones] readonly complete ×3",
+      "tx vilda_user_<uid> [patientNoteTombstones] readonly start ×3",
+      "tx vilda_user_<uid> [patientNoteTombstones] readwrite complete",
+      "tx vilda_user_<uid> [patientNoteTombstones] readwrite start",
+      "tx vilda_user_<uid> [patientNotes] readonly complete ×5",
+      "tx vilda_user_<uid> [patientNotes] readonly start ×5",
+      "tx vilda_user_<uid> [patients] readonly complete ×7",
+      "tx vilda_user_<uid> [patients] readonly start ×7",
+      "tx vilda_user_<uid> [snapshots] readonly complete ×3",
+      "tx vilda_user_<uid> [snapshots] readonly start ×3",
+      "tx vilda_user_<uid> [tombstones] readonly complete ×6",
+      "tx vilda_user_<uid> [tombstones] readonly start ×6",
+      "tx vilda_user_<uid> [tombstones] readwrite complete ×2",
+      "tx vilda_user_<uid> [tombstones] readwrite start ×2"
+     ],
+     "localStorage": [],
+     "sessionStorage": [],
+     "krypto": 20,
+     "powiadomienia": {}
+    },
+    {
+     "krok": "delta karty",
+     "wynik": {
+      "addedNoteCount": 0,
+      "addedPasskeyCount": 0,
+      "addedPatientCount": 0,
+      "addedPatientListCount": 0,
+      "addedPatientNoteCount": 0,
+      "addedSnapshotCount": 0,
+      "clockSkew": null,
+      "credentialUpdated": false,
+      "deletedNoteCount": 0,
+      "deletedPatientCount": 0,
+      "deletedPatientListCount": 0,
+      "deletedPatientNoteCount": 0,
+      "mergedPatientCount": 1,
+      "prunedSnapshotCount": 0,
+      "removedPasskeyCount": 0,
+      "skippedSnapshotCount": 3,
+      "trashedSnapshotCount": 0,
+      "updatedNoteCount": 0,
+      "updatedPatientListCount": 0,
+      "updatedPatientNoteCount": 0,
+      "updatedPreferenceCount": 0,
+      "updatedSnapshotCount": 0
+     },
+     "tlo": 0,
+     "indexedDB": [
+      "tx vilda_user_<uid> [meta] readonly complete ×6",
+      "tx vilda_user_<uid> [meta] readonly start ×6",
+      "tx vilda_user_<uid> [noteTombstones] readonly complete",
+      "tx vilda_user_<uid> [noteTombstones] readonly start",
+      "tx vilda_user_<uid> [noteTombstones] readwrite complete",
+      "tx vilda_user_<uid> [noteTombstones] readwrite start",
+      "tx vilda_user_<uid> [notes] readonly complete ×2",
+      "tx vilda_user_<uid> [notes] readonly start ×2",
+      "tx vilda_user_<uid> [patientListTombstones] readonly complete",
+      "tx vilda_user_<uid> [patientListTombstones] readonly start",
+      "tx vilda_user_<uid> [patientListTombstones] readwrite complete",
+      "tx vilda_user_<uid> [patientListTombstones] readwrite start",
+      "tx vilda_user_<uid> [patientLists] readonly complete",
+      "tx vilda_user_<uid> [patientLists] readonly start",
+      "tx vilda_user_<uid> [patientNoteTombstones] readonly complete ×2",
+      "tx vilda_user_<uid> [patientNoteTombstones] readonly start ×2",
+      "tx vilda_user_<uid> [patientNoteTombstones] readwrite complete",
+      "tx vilda_user_<uid> [patientNoteTombstones] readwrite start",
+      "tx vilda_user_<uid> [patientNotes] readonly complete ×2",
+      "tx vilda_user_<uid> [patientNotes] readonly start ×2",
+      "tx vilda_user_<uid> [patients] readonly complete ×6",
+      "tx vilda_user_<uid> [patients] readonly start ×6",
+      "tx vilda_user_<uid> [snapshots] readonly complete ×3",
+      "tx vilda_user_<uid> [snapshots] readonly start ×3",
+      "tx vilda_user_<uid> [tombstones] readonly complete ×5",
+      "tx vilda_user_<uid> [tombstones] readonly start ×5",
+      "tx vilda_user_<uid> [tombstones] readwrite complete ×2",
+      "tx vilda_user_<uid> [tombstones] readwrite start ×2"
+     ],
+     "localStorage": [],
+     "sessionStorage": [],
+     "krypto": 11,
+     "powiadomienia": {}
+    },
+    {
+     "krok": "koperta zdarzenia",
+     "wynik": {
+      "status": "applied"
+     },
+     "tlo": 0,
+     "indexedDB": [
+      "tx vilda_user_<uid> [meta] readonly complete ×6",
+      "tx vilda_user_<uid> [meta] readonly start ×6",
+      "tx vilda_user_<uid> [noteTombstones] readonly complete",
+      "tx vilda_user_<uid> [noteTombstones] readonly start",
+      "tx vilda_user_<uid> [noteTombstones] readwrite complete",
+      "tx vilda_user_<uid> [noteTombstones] readwrite start",
+      "tx vilda_user_<uid> [notes] readonly complete ×2",
+      "tx vilda_user_<uid> [notes] readonly start ×2",
+      "tx vilda_user_<uid> [patientListTombstones] readonly complete",
+      "tx vilda_user_<uid> [patientListTombstones] readonly start",
+      "tx vilda_user_<uid> [patientListTombstones] readwrite complete",
+      "tx vilda_user_<uid> [patientListTombstones] readwrite start",
+      "tx vilda_user_<uid> [patientLists] readonly complete",
+      "tx vilda_user_<uid> [patientLists] readonly start",
+      "tx vilda_user_<uid> [patientNoteTombstones] readonly complete ×2",
+      "tx vilda_user_<uid> [patientNoteTombstones] readonly start ×2",
+      "tx vilda_user_<uid> [patientNoteTombstones] readwrite complete",
+      "tx vilda_user_<uid> [patientNoteTombstones] readwrite start",
+      "tx vilda_user_<uid> [patientNotes] readonly complete ×2",
+      "tx vilda_user_<uid> [patientNotes] readonly start ×2",
+      "tx vilda_user_<uid> [patients] readonly complete ×7",
+      "tx vilda_user_<uid> [patients] readonly start ×7",
+      "tx vilda_user_<uid> [snapshots] readonly complete ×4",
+      "tx vilda_user_<uid> [snapshots] readonly start ×4",
+      "tx vilda_user_<uid> [tombstones] readonly complete ×5",
+      "tx vilda_user_<uid> [tombstones] readonly start ×5",
+      "tx vilda_user_<uid> [tombstones] readwrite complete ×2",
+      "tx vilda_user_<uid> [tombstones] readwrite start ×2"
+     ],
+     "localStorage": [],
+     "sessionStorage": [],
+     "krypto": 11,
+     "powiadomienia": {}
+    },
+    {
+     "krok": "import karty innego konta",
+     "wynik": {
+      "addedSnapshots": 2,
+      "importedPatientNotes": 1,
+      "isNew": true,
+      "skippedSnapshots": 0,
+      "totalSnapshots": 2
+     },
+     "tlo": 0,
+     "indexedDB": [
+      "tx vilda_user_<uid> [meta] readonly complete ×4",
+      "tx vilda_user_<uid> [meta] readonly start ×4",
+      "tx vilda_user_<uid> [noteTombstones] readonly complete",
+      "tx vilda_user_<uid> [noteTombstones] readonly start",
+      "tx vilda_user_<uid> [noteTombstones] readwrite complete",
+      "tx vilda_user_<uid> [noteTombstones] readwrite start",
+      "tx vilda_user_<uid> [notes] readonly complete ×2",
+      "tx vilda_user_<uid> [notes] readonly start ×2",
+      "tx vilda_user_<uid> [patientListTombstones] readonly complete",
+      "tx vilda_user_<uid> [patientListTombstones] readonly start",
+      "tx vilda_user_<uid> [patientListTombstones] readwrite complete",
+      "tx vilda_user_<uid> [patientListTombstones] readwrite start",
+      "tx vilda_user_<uid> [patientLists] readonly complete",
+      "tx vilda_user_<uid> [patientLists] readonly start",
+      "tx vilda_user_<uid> [patientNoteTombstones] readonly complete ×2",
+      "tx vilda_user_<uid> [patientNoteTombstones] readonly start ×2",
+      "tx vilda_user_<uid> [patientNoteTombstones] readwrite complete ×2",
+      "tx vilda_user_<uid> [patientNoteTombstones] readwrite start ×2",
+      "tx vilda_user_<uid> [patientNotes] readonly complete ×4",
+      "tx vilda_user_<uid> [patientNotes] readonly start ×4",
+      "tx vilda_user_<uid> [patientNotes] readwrite complete",
+      "tx vilda_user_<uid> [patientNotes] readwrite start",
+      "tx vilda_user_<uid> [patients] readonly complete ×6",
+      "tx vilda_user_<uid> [patients] readonly start ×6",
+      "tx vilda_user_<uid> [patients] readwrite complete",
+      "tx vilda_user_<uid> [patients] readwrite start",
+      "tx vilda_user_<uid> [snapshots] readwrite complete ×2",
+      "tx vilda_user_<uid> [snapshots] readwrite start ×2",
+      "tx vilda_user_<uid> [tombstones] readonly complete ×4",
+      "tx vilda_user_<uid> [tombstones] readonly start ×4",
+      "tx vilda_user_<uid> [tombstones] readwrite complete ×3",
+      "tx vilda_user_<uid> [tombstones] readwrite start ×3"
+     ],
+     "localStorage": [
+      "set vilda-note-changed-ping-v1"
+     ],
+     "sessionStorage": [],
+     "krypto": 13,
+     "powiadomienia": {
+      "onPatientNoteChanged": 1
+     }
+    },
+    {
+     "krok": "scalenie kopii innego konta",
+     "wynik": {
+      "accountDataMerged": true,
+      "addedNoteCount": 0,
+      "addedPatientCount": 1,
+      "addedPatientListCount": 0,
+      "addedPatientNoteCount": 0,
+      "addedSnapshotCount": 1,
+      "addedWaitlistCount": 0,
+      "addedWaitlistScheduleCount": 0,
+      "deletedNoteCount": 0,
+      "deletedPatientListCount": 0,
+      "deletedPatientNoteCount": 0,
+      "deletedWaitlistCount": 0,
+      "deletedWaitlistScheduleCount": 0,
+      "foreignSnapshotCount": 0,
+      "mergedPatientCount": 0,
+      "skippedDeletedPatientCount": 0,
+      "skippedMergedPatientCount": 0,
+      "skippedPatients": "#0",
+      "skippedSnapshotCount": 2,
+      "updatedNoteCount": 0,
+      "updatedPatientListCount": 0,
+      "updatedPatientNoteCount": 0,
+      "updatedPreferenceCount": 0,
+      "updatedWaitlistCount": 0,
+      "updatedWaitlistScheduleCount": 0
+     },
+     "tlo": 0,
+     "indexedDB": [
+      "tx vilda_user_<uid> [meta] readonly complete ×7",
+      "tx vilda_user_<uid> [meta] readonly start ×7",
+      "tx vilda_user_<uid> [noteTombstones] readonly complete",
+      "tx vilda_user_<uid> [noteTombstones] readonly start",
+      "tx vilda_user_<uid> [noteTombstones] readwrite complete",
+      "tx vilda_user_<uid> [noteTombstones] readwrite start",
+      "tx vilda_user_<uid> [notes] readonly complete ×2",
+      "tx vilda_user_<uid> [notes] readonly start ×2",
+      "tx vilda_user_<uid> [patientListTombstones] readonly complete",
+      "tx vilda_user_<uid> [patientListTombstones] readonly start",
+      "tx vilda_user_<uid> [patientListTombstones] readwrite complete",
+      "tx vilda_user_<uid> [patientListTombstones] readwrite start",
+      "tx vilda_user_<uid> [patientLists] readonly complete",
+      "tx vilda_user_<uid> [patientLists] readonly start",
+      "tx vilda_user_<uid> [patientNoteTombstones] readonly complete ×2",
+      "tx vilda_user_<uid> [patientNoteTombstones] readonly start ×2",
+      "tx vilda_user_<uid> [patientNoteTombstones] readwrite complete",
+      "tx vilda_user_<uid> [patientNoteTombstones] readwrite start",
+      "tx vilda_user_<uid> [patientNotes] readonly complete ×3",
+      "tx vilda_user_<uid> [patientNotes] readonly start ×3",
+      "tx vilda_user_<uid> [patients] readonly complete ×7",
+      "tx vilda_user_<uid> [patients] readonly start ×7",
+      "tx vilda_user_<uid> [patients] readwrite complete",
+      "tx vilda_user_<uid> [patients] readwrite start",
+      "tx vilda_user_<uid> [snapshots] readonly complete ×3",
+      "tx vilda_user_<uid> [snapshots] readonly start ×3",
+      "tx vilda_user_<uid> [snapshots] readwrite complete",
+      "tx vilda_user_<uid> [snapshots] readwrite start",
+      "tx vilda_user_<uid> [tombstones] readonly complete ×6",
+      "tx vilda_user_<uid> [tombstones] readonly start ×6",
+      "tx vilda_user_<uid> [tombstones] readwrite complete ×2",
+      "tx vilda_user_<uid> [tombstones] readwrite start ×2"
+     ],
+     "localStorage": [],
+     "sessionStorage": [],
+     "krypto": 9,
+     "powiadomienia": {}
+    },
+    {
+     "krok": "import starego formatu",
+     "wynik": {
+      "addedSnapshots": 1,
+      "isNew": true,
+      "skippedSnapshots": 0,
+      "snapshotCount": 1,
+      "totalSnapshots": 1
+     },
+     "tlo": 0,
+     "indexedDB": [
+      "tx vilda_user_<uid> [patients] readonly complete ×2",
+      "tx vilda_user_<uid> [patients] readonly start ×2",
+      "tx vilda_user_<uid> [patients] readwrite complete",
+      "tx vilda_user_<uid> [patients] readwrite start",
+      "tx vilda_user_<uid> [snapshots] readwrite complete",
+      "tx vilda_user_<uid> [snapshots] readwrite start",
+      "tx vilda_user_<uid> [tombstones] readwrite complete",
+      "tx vilda_user_<uid> [tombstones] readwrite start"
+     ],
+     "localStorage": [
+      "set vilda-note-changed-ping-v1"
+     ],
+     "sessionStorage": [],
+     "krypto": 5,
+     "powiadomienia": {
+      "onPatientSaved": 1
+     }
+    },
+    {
+     "krok": "osoba spoza bazy",
+     "wynik": {
+      "collision": null,
+      "isNew": true,
+      "przyjeteZBazy": "#0",
+      "scalonoZBazy": 0,
+      "snapshotCount": 1
+     },
+     "tlo": 0,
+     "indexedDB": [
+      "tx vilda_user_<uid> [patients] readonly complete ×2",
+      "tx vilda_user_<uid> [patients] readonly start ×2",
+      "tx vilda_user_<uid> [patients] readwrite complete",
+      "tx vilda_user_<uid> [patients] readwrite start",
+      "tx vilda_user_<uid> [snapshots] readwrite complete",
+      "tx vilda_user_<uid> [snapshots] readwrite start",
+      "tx vilda_user_<uid> [tombstones] readwrite complete",
+      "tx vilda_user_<uid> [tombstones] readwrite start"
+     ],
+     "localStorage": [
+      "set vilda-note-changed-ping-v1"
+     ],
+     "sessionStorage": [],
+     "krypto": 6,
+     "powiadomienia": {
+      "onPatientSaved": 1
+     }
+    },
+    {
+     "krok": "scal osobę spoza bazy z kartą",
+     "wynik": {
+      "listsUpdated": 0,
+      "notesMoved": 0
+     },
+     "tlo": 0,
+     "indexedDB": [
+      "tx vilda_user_<uid> [meta] readonly complete ×2",
+      "tx vilda_user_<uid> [meta] readonly start ×2",
+      "tx vilda_user_<uid> [patientLists] readonly complete",
+      "tx vilda_user_<uid> [patientLists] readonly start",
+      "tx vilda_user_<uid> [patientNoteTombstones] readonly complete",
+      "tx vilda_user_<uid> [patientNoteTombstones] readonly start",
+      "tx vilda_user_<uid> [patientNotes] readonly complete ×2",
+      "tx vilda_user_<uid> [patientNotes] readonly start ×2",
+      "tx vilda_user_<uid> [patients,snapshots] readwrite complete",
+      "tx vilda_user_<uid> [patients,snapshots] readwrite start",
+      "tx vilda_user_<uid> [patients] readonly complete ×2",
+      "tx vilda_user_<uid> [patients] readonly start ×2",
+      "tx vilda_user_<uid> [snapshots] readonly complete ×2",
+      "tx vilda_user_<uid> [snapshots] readonly start ×2",
+      "tx vilda_user_<uid> [tombstones] readwrite complete",
+      "tx vilda_user_<uid> [tombstones] readwrite start"
+     ],
+     "localStorage": [
+      "set vilda-note-changed-ping-v1"
+     ],
+     "sessionStorage": [],
+     "krypto": 6,
+     "powiadomienia": {
+      "onPatientDeleted": 1
+     }
+    },
+    {
+     "krok": "przywróć wersję jako nową",
+     "wynik": {
+      "snapshotCount": 4
+     },
+     "tlo": 0,
+     "indexedDB": [
+      "tx vilda_user_<uid> [patients] readonly complete ×6",
+      "tx vilda_user_<uid> [patients] readonly start ×6",
+      "tx vilda_user_<uid> [patients] readwrite complete",
+      "tx vilda_user_<uid> [patients] readwrite start",
+      "tx vilda_user_<uid> [snapshots] readonly complete ×3",
+      "tx vilda_user_<uid> [snapshots] readonly start ×3",
+      "tx vilda_user_<uid> [snapshots] readwrite complete",
+      "tx vilda_user_<uid> [snapshots] readwrite start",
+      "tx vilda_user_<uid> [tombstones] readwrite complete",
+      "tx vilda_user_<uid> [tombstones] readwrite start"
+     ],
+     "localStorage": [
+      "set vilda-note-changed-ping-v1"
+     ],
+     "sessionStorage": [],
+     "krypto": 18,
+     "powiadomienia": {
+      "onPatientSaved": 1
+     }
+    },
+    {
+     "krok": "tryb przechowywania: zmiana",
+     "wynik": {},
+     "tlo": 0,
+     "indexedDB": [
+      "open vilda_registry 1 ×2",
+      "success vilda_registry 1 ×2",
+      "tx vilda_registry [users] readonly complete",
+      "tx vilda_registry [users] readonly start",
+      "tx vilda_registry [users] readwrite complete",
+      "tx vilda_registry [users] readwrite start"
+     ],
+     "localStorage": [],
+     "sessionStorage": [],
+     "krypto": 0,
+     "powiadomienia": {}
+    },
+    {
+     "krok": "tryb przechowywania: powrót",
+     "wynik": {},
+     "tlo": 0,
+     "indexedDB": [
+      "open vilda_registry 1 ×2",
+      "success vilda_registry 1 ×2",
+      "tx vilda_registry [users] readonly complete",
+      "tx vilda_registry [users] readonly start",
+      "tx vilda_registry [users] readwrite complete",
+      "tx vilda_registry [users] readwrite start"
+     ],
+     "localStorage": [],
+     "sessionStorage": [],
+     "krypto": 0,
+     "powiadomienia": {}
+    },
+    {
+     "krok": "nowa tożsamość synchronizacji",
+     "wynik": {},
+     "tlo": 0,
+     "indexedDB": [
+      "databases",
+      "tx vilda_user_<uid> [meta] readonly complete ×2",
+      "tx vilda_user_<uid> [meta] readonly start ×2",
+      "tx vilda_user_<uid> [meta] readwrite complete",
+      "tx vilda_user_<uid> [meta] readwrite start"
+     ],
+     "localStorage": [
+      "set vilda-care-template-lifecycle-v1:<uid>",
+      "remove vilda-care-template-lifecycle-v1:<uid>"
+     ],
+     "sessionStorage": [],
+     "krypto": 19,
+     "powiadomienia": {}
+    },
+    {
+     "krok": "usunięcie klucza dostępu",
+     "wynik": "brak",
+     "tlo": 0,
+     "indexedDB": [
+      "open vilda_registry 1",
+      "success vilda_registry 1",
+      "tx vilda_registry [users] readwrite complete",
+      "tx vilda_registry [users] readwrite start",
+      "tx vilda_user_<uid> [meta] readonly complete ×2",
+      "tx vilda_user_<uid> [meta] readonly start ×2",
+      "tx vilda_user_<uid> [meta] readwrite complete",
+      "tx vilda_user_<uid> [meta] readwrite start"
+     ],
+     "localStorage": [],
+     "sessionStorage": [],
+     "krypto": 0,
+     "powiadomienia": {
+      "onPasskeyChanged": 1
+     }
+    },
+    {
+     "krok": "kopia konta",
+     "wynik": null,
+     "tlo": 0,
+     "indexedDB": [
+      "tx vilda_user_<uid> [meta] readonly complete",
+      "tx vilda_user_<uid> [meta] readonly start",
+      "tx vilda_user_<uid> [noteTombstones] readonly complete",
+      "tx vilda_user_<uid> [noteTombstones] readonly start",
+      "tx vilda_user_<uid> [notes] readonly complete",
+      "tx vilda_user_<uid> [notes] readonly start",
+      "tx vilda_user_<uid> [patientListTombstones] readonly complete",
+      "tx vilda_user_<uid> [patientListTombstones] readonly start",
+      "tx vilda_user_<uid> [patientLists] readonly complete",
+      "tx vilda_user_<uid> [patientLists] readonly start",
+      "tx vilda_user_<uid> [patientNoteTombstones] readonly complete",
+      "tx vilda_user_<uid> [patientNoteTombstones] readonly start",
+      "tx vilda_user_<uid> [patientNotes] readonly complete",
+      "tx vilda_user_<uid> [patientNotes] readonly start",
+      "tx vilda_user_<uid> [patients] readonly complete",
+      "tx vilda_user_<uid> [patients] readonly start",
+      "tx vilda_user_<uid> [snapshots] readonly complete ×4",
+      "tx vilda_user_<uid> [snapshots] readonly start ×4"
+     ],
+     "localStorage": [],
+     "sessionStorage": [],
+     "krypto": 17,
+     "powiadomienia": {}
+    },
+    {
+     "krok": "blokada",
+     "wynik": "brak",
+     "tlo": 0,
+     "indexedDB": [],
+     "localStorage": [],
+     "sessionStorage": [
+      "remove vilda-vault-session-v2"
+     ],
+     "krypto": 0,
+     "powiadomienia": {
+      "onLock": 1
+     }
+    },
+    {
+     "krok": "odtworzenie konta z kopii",
+     "wynik": {
+      "newRecoveryKey": null,
+      "noteCount": 0,
+      "patientCount": 4,
+      "patientListCount": 0,
+      "patientNoteCount": 3,
+      "preferenceCount": 0,
+      "snapshotCount": 8
+     },
+     "tlo": 1,
+     "indexedDB": [
+      "open vilda_registry 1",
+      "open vilda_user_<uid2> 5",
+      "success vilda_registry 1",
+      "success vilda_user_<uid2> 5",
+      "tx vilda_registry [users] readwrite complete",
+      "tx vilda_registry [users] readwrite start",
+      "tx vilda_user_<uid2> [meta] readonly complete ×9",
+      "tx vilda_user_<uid2> [meta] readonly start ×9",
+      "tx vilda_user_<uid2> [meta] readwrite complete ×3",
+      "tx vilda_user_<uid2> [meta] readwrite start ×3",
+      "tx vilda_user_<uid2> [noteTombstones] readonly complete",
+      "tx vilda_user_<uid2> [noteTombstones] readonly start",
+      "tx vilda_user_<uid2> [noteTombstones] readwrite complete",
+      "tx vilda_user_<uid2> [noteTombstones] readwrite start",
+      "tx vilda_user_<uid2> [notes] readonly complete ×2",
+      "tx vilda_user_<uid2> [notes] readonly start ×2",
+      "tx vilda_user_<uid2> [patientListTombstones] readonly complete",
+      "tx vilda_user_<uid2> [patientListTombstones] readonly start",
+      "tx vilda_user_<uid2> [patientListTombstones] readwrite complete",
+      "tx vilda_user_<uid2> [patientListTombstones] readwrite start",
+      "tx vilda_user_<uid2> [patientLists] readonly complete",
+      "tx vilda_user_<uid2> [patientLists] readonly start",
+      "tx vilda_user_<uid2> [patientNoteTombstones] readonly complete ×2",
+      "tx vilda_user_<uid2> [patientNoteTombstones] readonly start ×2",
+      "tx vilda_user_<uid2> [patientNoteTombstones] readwrite complete",
+      "tx vilda_user_<uid2> [patientNoteTombstones] readwrite start",
+      "tx vilda_user_<uid2> [patientNotes] readonly complete ×6",
+      "tx vilda_user_<uid2> [patientNotes] readonly start ×6",
+      "tx vilda_user_<uid2> [patientNotes] readwrite complete ×3",
+      "tx vilda_user_<uid2> [patientNotes] readwrite start ×3",
+      "tx vilda_user_<uid2> [patients] readonly complete",
+      "tx vilda_user_<uid2> [patients] readonly start",
+      "tx vilda_user_<uid2> [patients] readwrite complete ×4",
+      "tx vilda_user_<uid2> [patients] readwrite start ×4",
+      "tx vilda_user_<uid2> [snapshots] readwrite complete ×8",
+      "tx vilda_user_<uid2> [snapshots] readwrite start ×8",
+      "tx vilda_user_<uid2> [tombstones] readonly complete ×2",
+      "tx vilda_user_<uid2> [tombstones] readonly start ×2",
+      "upgrade vilda_user_<uid2> 0 5"
+     ],
+     "localStorage": [
+      "set vilda-note-changed-ping-v1",
+      "set vilda-note-changed-ping-v1",
+      "set vilda-note-changed-ping-v1"
+     ],
+     "sessionStorage": [
+      "set vilda-vault-session-v2"
+     ],
+     "krypto": 25,
+     "powiadomienia": {
+      "onPatientNoteChanged": 3,
+      "onUnlock": 1
+     }
+    },
+    {
+     "krok": "blokada konta z kopii",
+     "wynik": "brak",
+     "tlo": 0,
+     "indexedDB": [],
+     "localStorage": [],
+     "sessionStorage": [
+      "remove vilda-vault-session-v2"
+     ],
+     "krypto": 0,
+     "powiadomienia": {
+      "onLock": 1
+     }
+    },
+    {
+     "krok": "odblokowanie",
+     "wynik": {
+      "needsPasswordReset": false,
+      "passwordPolicy": null
+     },
+     "tlo": 1,
+     "indexedDB": [
+      "open vilda_registry 1 ×3",
+      "success vilda_registry 1 ×3",
+      "tx vilda_registry [users] readonly complete ×2",
+      "tx vilda_registry [users] readonly start ×2",
+      "tx vilda_registry [users] readwrite complete",
+      "tx vilda_registry [users] readwrite start",
+      "tx vilda_user_<uid> [meta] readonly complete ×3",
+      "tx vilda_user_<uid> [meta] readonly start ×3"
+     ],
+     "localStorage": [],
+     "sessionStorage": [
+      "set vilda-vault-session-v2"
+     ],
+     "krypto": 5,
+     "powiadomienia": {
+      "onUnlock": 1
+     }
+    },
+    {
+     "krok": "usunięcie konta z kopii",
+     "wynik": true,
+     "tlo": 0,
+     "indexedDB": [
+      "abort-upgrade clinical-authority-checkpoints-v1",
+      "close vilda_user_<uid2>",
+      "databases",
+      "delete-success vilda_user_<uid2>",
+      "deleteDatabase vilda_user_<uid2>",
+      "open clinical-authority-checkpoints-v1 null",
+      "open vilda_registry 1",
+      "success vilda_registry 1",
+      "tx vilda_registry [users] readwrite complete",
+      "tx vilda_registry [users] readwrite start",
+      "tx vilda_user_<uid2> [meta] readonly complete",
+      "tx vilda_user_<uid2> [meta] readonly start",
+      "upgrade clinical-authority-checkpoints-v1 0 1"
+     ],
+     "localStorage": [
+      "set vilda-care-template-lifecycle-v1:<uid2>",
+      "set vilda-care-template-lifecycle-v1:<uid2>"
+     ],
+     "sessionStorage": [],
+     "krypto": 4,
+     "powiadomienia": {}
+    },
+    {
+     "krok": "usunięcie konta",
+     "wynik": true,
+     "tlo": 0,
+     "indexedDB": [
+      "abort-upgrade clinical-authority-checkpoints-v1",
+      "close vilda_user_<uid>",
+      "databases",
+      "delete-success vilda_user_<uid>",
+      "deleteDatabase vilda_user_<uid>",
+      "open clinical-authority-checkpoints-v1 null",
+      "open vilda_registry 1",
+      "success vilda_registry 1",
+      "tx vilda_registry [users] readwrite complete",
+      "tx vilda_registry [users] readwrite start",
+      "tx vilda_user_<uid> [meta] readonly complete",
+      "tx vilda_user_<uid> [meta] readonly start",
+      "upgrade clinical-authority-checkpoints-v1 0 1"
+     ],
+     "localStorage": [
+      "set vilda-care-template-lifecycle-v1:<uid>",
+      "set vilda-care-template-lifecycle-v1:<uid>"
+     ],
+     "sessionStorage": [
+      "remove vilda-vault-session-v2"
+     ],
+     "krypto": 1,
+     "powiadomienia": {
+      "onLock": 1
+     }
+    }
+   ],
+   "bazy": [
+    "vilda_registry"
+   ],
+   "kluczUrzadzenia": false,
+   "odczytyBramki": 0
+  },
+  "chmura": {
+   "ladowanie": {
+    "indexedDB": [],
+    "localStorage": [],
+    "sessionStorage": [],
+    "krypto": 0,
+    "powiadomienia": {}
+   },
+   "kroki": [
+    {
+     "krok": "konto",
+     "wynik": {
+      "iterations": 1000
+     },
+     "tlo": 1,
+     "indexedDB": [
+      "open vilda_registry 1",
+      "open vilda_user_<uid> 5",
+      "success vilda_registry 1",
+      "success vilda_user_<uid> 5",
+      "tx vilda_registry [users] readwrite complete",
+      "tx vilda_registry [users] readwrite start",
+      "tx vilda_user_<uid> [meta] readonly complete ×4",
+      "tx vilda_user_<uid> [meta] readonly start ×4",
+      "tx vilda_user_<uid> [meta] readwrite complete ×3",
+      "tx vilda_user_<uid> [meta] readwrite start ×3",
+      "upgrade vilda_registry 0 1",
+      "upgrade vilda_user_<uid> 0 5"
+     ],
+     "localStorage": [],
+     "sessionStorage": [
+      "set vilda-cloud-only-session-v1",
+      "set vilda-vault-session-v2"
+     ],
+     "krypto": 8,
+     "powiadomienia": {
+      "onUnlock": 1
+     }
+    },
+    {
+     "krok": "nowa karta",
+     "wynik": {
+      "collision": null,
+      "isNew": true,
+      "przyjeteZBazy": "#0",
+      "scalonoZBazy": 0,
+      "snapshotCount": 1
+     },
+     "tlo": 0,
+     "indexedDB": [],
+     "localStorage": [
+      "set vilda-note-changed-ping-v1"
+     ],
+     "sessionStorage": [
+      "set veph:cloud-only:per-user-v1"
+     ],
+     "krypto": 2,
+     "powiadomienia": {
+      "onPatientSaved": 1
+     }
+    },
+    {
+     "krok": "nowa wersja",
+     "wynik": {
+      "collision": null,
+      "isNew": false,
+      "przyjeteZBazy": "#0",
+      "scalonoZBazy": 0,
+      "snapshotCount": 2
+     },
+     "tlo": 0,
+     "indexedDB": [],
+     "localStorage": [
+      "set vilda-note-changed-ping-v1"
+     ],
+     "sessionStorage": [
+      "set veph:cloud-only:per-user-v1"
+     ],
+     "krypto": 5,
+     "powiadomienia": {
+      "onPatientSaved": 1
+     }
+    },
+    {
+     "krok": "poprawka w miejscu",
+     "wynik": {
+      "isUpdate": true
+     },
+     "tlo": 0,
+     "indexedDB": [
+      "tx vilda_user_<uid> [meta] readonly complete",
+      "tx vilda_user_<uid> [meta] readonly start"
+     ],
+     "localStorage": [
+      "set vilda-note-changed-ping-v1"
+     ],
+     "sessionStorage": [
+      "set veph:cloud-only:per-user-v1"
+     ],
+     "krypto": 6,
+     "powiadomienia": {
+      "onPatientSaved": 1
+     }
+    },
+    {
+     "krok": "gwiazdka",
+     "wynik": {
+      "pinned": true
+     },
+     "tlo": 0,
+     "indexedDB": [
+      "tx vilda_user_<uid> [meta] readonly complete",
+      "tx vilda_user_<uid> [meta] readonly start"
+     ],
+     "localStorage": [
+      "set vilda-note-changed-ping-v1"
+     ],
+     "sessionStorage": [
+      "set veph:cloud-only:per-user-v1"
+     ],
+     "krypto": 7,
+     "powiadomienia": {
+      "onPatientSaved": 1
+     }
+    },
+    {
+     "krok": "odpięcie gwiazdki",
+     "wynik": {
+      "pinned": false
+     },
+     "tlo": 0,
+     "indexedDB": [
+      "tx vilda_user_<uid> [meta] readonly complete",
+      "tx vilda_user_<uid> [meta] readonly start"
+     ],
+     "localStorage": [
+      "set vilda-note-changed-ping-v1"
+     ],
+     "sessionStorage": [
+      "set veph:cloud-only:per-user-v1"
+     ],
+     "krypto": 7,
+     "powiadomienia": {
+      "onPatientSaved": 1
+     }
+    },
+    {
+     "krok": "kosz",
+     "wynik": {
+      "remainingSnapshotCount": 1,
+      "wasPinned": false
+     },
+     "tlo": 0,
+     "indexedDB": [
+      "tx vilda_user_<uid> [meta] readonly complete ×6",
+      "tx vilda_user_<uid> [meta] readonly start ×6",
+      "tx vilda_user_<uid> [meta] readwrite complete",
+      "tx vilda_user_<uid> [meta] readwrite start"
+     ],
+     "localStorage": [
+      "set vilda-note-changed-ping-v1"
+     ],
+     "sessionStorage": [
+      "set veph:cloud-only:per-user-v1"
+     ],
+     "krypto": 3,
+     "powiadomienia": {
+      "onPatientSaved": 1
+     }
+    },
+    {
+     "krok": "przywróć z kosza",
+     "wynik": {},
+     "tlo": 0,
+     "indexedDB": [
+      "tx vilda_user_<uid> [meta] readonly complete ×3",
+      "tx vilda_user_<uid> [meta] readonly start ×3",
+      "tx vilda_user_<uid> [meta] readwrite complete",
+      "tx vilda_user_<uid> [meta] readwrite start"
+     ],
+     "localStorage": [
+      "set vilda-note-changed-ping-v1"
+     ],
+     "sessionStorage": [
+      "set veph:cloud-only:per-user-v1"
+     ],
+     "krypto": 4,
+     "powiadomienia": {
+      "onPatientSaved": 1
+     }
+    },
+    {
+     "krok": "trzecia wersja",
+     "wynik": {
+      "collision": null,
+      "isNew": false,
+      "przyjeteZBazy": "#0",
+      "scalonoZBazy": 0,
+      "snapshotCount": 3
+     },
+     "tlo": 0,
+     "indexedDB": [],
+     "localStorage": [
+      "set vilda-note-changed-ping-v1"
+     ],
+     "sessionStorage": [
+      "set veph:cloud-only:per-user-v1"
+     ],
+     "krypto": 6,
+     "powiadomienia": {
+      "onPatientSaved": 1
+     }
+    },
+    {
+     "krok": "usunięcie wersji",
+     "wynik": {
+      "remainingSnapshotCount": 2
+     },
+     "tlo": 0,
+     "indexedDB": [],
+     "localStorage": [
+      "set vilda-note-changed-ping-v1"
+     ],
+     "sessionStorage": [
+      "set veph:cloud-only:per-user-v1"
+     ],
+     "krypto": 6,
+     "powiadomienia": {
+      "onPatientSaved": 1
+     }
+    },
+    {
+     "krok": "retencja",
+     "wynik": {
+      "prunedCount": 1,
+      "prunedIds": "#1"
+     },
+     "tlo": 0,
+     "indexedDB": [
+      "tx vilda_user_<uid> [meta] readonly complete ×2",
+      "tx vilda_user_<uid> [meta] readonly start ×2",
+      "tx vilda_user_<uid> [meta] readwrite complete",
+      "tx vilda_user_<uid> [meta] readwrite start"
+     ],
+     "localStorage": [
+      "set vilda-note-changed-ping-v1"
+     ],
+     "sessionStorage": [
+      "set veph:cloud-only:per-user-v1"
+     ],
+     "krypto": 5,
+     "powiadomienia": {
+      "onPatientSaved": 1
+     }
+    },
+    {
+     "krok": "notatka pacjenta: dodaj",
+     "wynik": {
+      "isNew": true
+     },
+     "tlo": 0,
+     "indexedDB": [],
+     "localStorage": [
+      "set vilda-note-changed-ping-v1"
+     ],
+     "sessionStorage": [
+      "set veph:cloud-only:per-user-v1"
+     ],
+     "krypto": 1,
+     "powiadomienia": {
+      "onPatientNoteChanged": 1
+     }
+    },
+    {
+     "krok": "notatka pacjenta: popraw",
+     "wynik": {
+      "isNew": false
+     },
+     "tlo": 0,
+     "indexedDB": [],
+     "localStorage": [
+      "set vilda-note-changed-ping-v1"
+     ],
+     "sessionStorage": [
+      "set veph:cloud-only:per-user-v1"
+     ],
+     "krypto": 3,
+     "powiadomienia": {
+      "onPatientNoteChanged": 1
+     }
+    },
+    {
+     "krok": "notatka pacjenta: usuń",
+     "wynik": true,
+     "tlo": 0,
+     "indexedDB": [],
+     "localStorage": [
+      "set vilda-note-changed-ping-v1"
+     ],
+     "sessionStorage": [
+      "set veph:cloud-only:per-user-v1"
+     ],
+     "krypto": 2,
+     "powiadomienia": {
+      "onPatientNoteChanged": 1
+     }
+    },
+    {
+     "krok": "notatka biblioteki: dodaj",
+     "wynik": {
+      "isNew": true
+     },
+     "tlo": 0,
+     "indexedDB": [
+      "tx vilda_user_<uid> [noteTombstones] readwrite complete",
+      "tx vilda_user_<uid> [noteTombstones] readwrite start",
+      "tx vilda_user_<uid> [notes] readwrite complete",
+      "tx vilda_user_<uid> [notes] readwrite start"
+     ],
+     "localStorage": [],
+     "sessionStorage": [],
+     "krypto": 1,
+     "powiadomienia": {
+      "onNoteChanged": 1
+     }
+    },
+    {
+     "krok": "notatka biblioteki: usuń",
+     "wynik": true,
+     "tlo": 0,
+     "indexedDB": [
+      "tx vilda_user_<uid> [noteTombstones] readwrite complete",
+      "tx vilda_user_<uid> [noteTombstones] readwrite start",
+      "tx vilda_user_<uid> [notes] readonly complete",
+      "tx vilda_user_<uid> [notes] readonly start",
+      "tx vilda_user_<uid> [notes] readwrite complete",
+      "tx vilda_user_<uid> [notes] readwrite start"
+     ],
+     "localStorage": [],
+     "sessionStorage": [],
+     "krypto": 0,
+     "powiadomienia": {
+      "onNoteChanged": 1
+     }
+    },
+    {
+     "krok": "lista: dodaj",
+     "wynik": {
+      "excludeIds": "#0",
+      "isNew": true,
+      "memberIds": "#1",
+      "pinned": false,
+      "rev": 1,
+      "rule": null
+     },
+     "tlo": 0,
+     "indexedDB": [],
+     "localStorage": [],
+     "sessionStorage": [
+      "set veph:cloud-only:per-user-v1"
+     ],
+     "krypto": 1,
+     "powiadomienia": {
+      "onPatientListChanged": 1
+     }
+    },
+    {
+     "krok": "lista: usuń",
+     "wynik": {},
+     "tlo": 0,
+     "indexedDB": [],
+     "localStorage": [],
+     "sessionStorage": [
+      "set veph:cloud-only:per-user-v1"
+     ],
+     "krypto": 0,
+     "powiadomienia": {
+      "onPatientListChanged": 1
+     }
+    },
+    {
+     "krok": "plan opieki",
+     "wynik": {
+      "odrzucona": "bez kodu"
+     },
+     "tlo": 0,
+     "indexedDB": [],
+     "localStorage": [],
+     "sessionStorage": [],
+     "krypto": 1,
+     "powiadomienia": {}
+    },
+    {
+     "krok": "druga karta",
+     "wynik": {
+      "collision": null,
+      "isNew": true,
+      "przyjeteZBazy": "#0",
+      "scalonoZBazy": 0,
+      "snapshotCount": 1
+     },
+     "tlo": 0,
+     "indexedDB": [],
+     "localStorage": [
+      "set vilda-note-changed-ping-v1"
+     ],
+     "sessionStorage": [
+      "set veph:cloud-only:per-user-v1"
+     ],
+     "krypto": 3,
+     "powiadomienia": {
+      "onPatientSaved": 1
+     }
+    },
+    {
+     "krok": "scal pacjentów",
+     "wynik": {
+      "listsUpdated": 0,
+      "notesMoved": 0,
+      "pointsAdded": 0,
+      "rowsAdded": 0,
+      "snapshotCount": 3,
+      "snapshotsMoved": 1
+     },
+     "tlo": 0,
+     "indexedDB": [
+      "tx vilda_user_<uid> [meta] readonly complete ×2",
+      "tx vilda_user_<uid> [meta] readonly start ×2"
+     ],
+     "localStorage": [
+      "set vilda-note-changed-ping-v1",
+      "set vilda-note-changed-ping-v1"
+     ],
+     "sessionStorage": [
+      "set veph:cloud-only:per-user-v1"
+     ],
+     "krypto": 11,
+     "powiadomienia": {
+      "onPatientSaved": 1,
+      "onPatientDeleted": 1
+     }
+    },
+    {
+     "krok": "trzecia karta",
+     "wynik": {
+      "collision": null,
+      "isNew": true,
+      "przyjeteZBazy": "#0",
+      "scalonoZBazy": 0,
+      "snapshotCount": 1
+     },
+     "tlo": 0,
+     "indexedDB": [],
+     "localStorage": [
+      "set vilda-note-changed-ping-v1"
+     ],
+     "sessionStorage": [
+      "set veph:cloud-only:per-user-v1"
+     ],
+     "krypto": 3,
+     "powiadomienia": {
+      "onPatientSaved": 1
+     }
+    },
+    {
+     "krok": "usuń pacjenta",
+     "wynik": true,
+     "tlo": 0,
+     "indexedDB": [
+      "tx vilda_user_<uid> [meta] readonly complete ×2",
+      "tx vilda_user_<uid> [meta] readonly start ×2"
+     ],
+     "localStorage": [
+      "set vilda-note-changed-ping-v1"
+     ],
+     "sessionStorage": [
+      "set veph:cloud-only:per-user-v1"
+     ],
+     "krypto": 0,
+     "powiadomienia": {
+      "onPatientDeleted": 1
+     }
+    },
+    {
+     "krok": "zmiana hasła",
+     "wynik": true,
+     "tlo": 0,
+     "indexedDB": [
+      "tx vilda_user_<uid> [meta] readonly complete ×2",
+      "tx vilda_user_<uid> [meta] readonly start ×2",
+      "tx vilda_user_<uid> [meta] readwrite complete",
+      "tx vilda_user_<uid> [meta] readwrite start"
+     ],
+     "localStorage": [],
+     "sessionStorage": [],
+     "krypto": 9,
+     "powiadomienia": {
+      "onCredentialChanged": 1
+     }
+    },
+    {
+     "krok": "eksport i scalenie własnego eksportu",
+     "wynik": {
+      "addedNoteCount": 0,
+      "addedPasskeyCount": 1,
+      "addedPatientCount": 0,
+      "addedPatientListCount": 0,
+      "addedPatientNoteCount": 0,
+      "addedSnapshotCount": 0,
+      "credentialUpdated": false,
+      "deletedNoteCount": 0,
+      "deletedPatientCount": 0,
+      "deletedPatientListCount": 0,
+      "deletedPatientNoteCount": 0,
+      "mergedPatientCount": 1,
+      "prunedSnapshotCount": 0,
+      "removedPasskeyCount": 0,
+      "skippedSnapshotCount": 3,
+      "trashedSnapshotCount": 0,
+      "updatedNoteCount": 0,
+      "updatedPatientListCount": 0,
+      "updatedPatientNoteCount": 0,
+      "updatedPreferenceCount": 0,
+      "updatedSnapshotCount": 0
+     },
+     "tlo": 0,
+     "indexedDB": [
+      "open vilda_registry 1",
+      "success vilda_registry 1",
+      "tx vilda_registry [users] readwrite complete",
+      "tx vilda_registry [users] readwrite start",
+      "tx vilda_user_<uid> [meta] readonly complete ×14",
+      "tx vilda_user_<uid> [meta] readonly start ×14",
+      "tx vilda_user_<uid> [meta] readwrite complete ×2",
+      "tx vilda_user_<uid> [meta] readwrite start ×2",
+      "tx vilda_user_<uid> [noteTombstones] readonly complete ×2",
+      "tx vilda_user_<uid> [noteTombstones] readonly start ×2",
+      "tx vilda_user_<uid> [noteTombstones] readwrite complete",
+      "tx vilda_user_<uid> [noteTombstones] readwrite start",
+      "tx vilda_user_<uid> [notes] readonly complete ×3",
+      "tx vilda_user_<uid> [notes] readonly start ×3"
+     ],
+     "localStorage": [],
+     "sessionStorage": [
+      "set veph:cloud-only:per-user-v1"
+     ],
+     "krypto": 9,
+     "powiadomienia": {}
+    },
+    {
+     "krok": "delta karty",
+     "wynik": {
+      "addedNoteCount": 0,
+      "addedPasskeyCount": 0,
+      "addedPatientCount": 0,
+      "addedPatientListCount": 0,
+      "addedPatientNoteCount": 0,
+      "addedSnapshotCount": 0,
+      "clockSkew": null,
+      "credentialUpdated": false,
+      "deletedNoteCount": 0,
+      "deletedPatientCount": 0,
+      "deletedPatientListCount": 0,
+      "deletedPatientNoteCount": 0,
+      "mergedPatientCount": 1,
+      "prunedSnapshotCount": 0,
+      "removedPasskeyCount": 0,
+      "skippedSnapshotCount": 3,
+      "trashedSnapshotCount": 0,
+      "updatedNoteCount": 0,
+      "updatedPatientListCount": 0,
+      "updatedPatientNoteCount": 0,
+      "updatedPreferenceCount": 0,
+      "updatedSnapshotCount": 0
+     },
+     "tlo": 0,
+     "indexedDB": [
+      "tx vilda_user_<uid> [meta] readonly complete ×6",
+      "tx vilda_user_<uid> [meta] readonly start ×6",
+      "tx vilda_user_<uid> [noteTombstones] readonly complete",
+      "tx vilda_user_<uid> [noteTombstones] readonly start",
+      "tx vilda_user_<uid> [noteTombstones] readwrite complete",
+      "tx vilda_user_<uid> [noteTombstones] readwrite start",
+      "tx vilda_user_<uid> [notes] readonly complete ×2",
+      "tx vilda_user_<uid> [notes] readonly start ×2"
+     ],
+     "localStorage": [],
+     "sessionStorage": [
+      "set veph:cloud-only:per-user-v1"
+     ],
+     "krypto": 11,
+     "powiadomienia": {}
+    },
+    {
+     "krok": "koperta zdarzenia",
+     "wynik": {
+      "status": "applied"
+     },
+     "tlo": 0,
+     "indexedDB": [
+      "tx vilda_user_<uid> [meta] readonly complete ×6",
+      "tx vilda_user_<uid> [meta] readonly start ×6",
+      "tx vilda_user_<uid> [noteTombstones] readonly complete",
+      "tx vilda_user_<uid> [noteTombstones] readonly start",
+      "tx vilda_user_<uid> [noteTombstones] readwrite complete",
+      "tx vilda_user_<uid> [noteTombstones] readwrite start",
+      "tx vilda_user_<uid> [notes] readonly complete ×2",
+      "tx vilda_user_<uid> [notes] readonly start ×2"
+     ],
+     "localStorage": [],
+     "sessionStorage": [
+      "set veph:cloud-only:per-user-v1"
+     ],
+     "krypto": 11,
+     "powiadomienia": {}
+    },
+    {
+     "krok": "import karty innego konta",
+     "wynik": {
+      "addedSnapshots": 2,
+      "importedPatientNotes": 1,
+      "isNew": true,
+      "skippedSnapshots": 0,
+      "totalSnapshots": 2
+     },
+     "tlo": 0,
+     "indexedDB": [
+      "tx vilda_user_<uid> [meta] readonly complete ×4",
+      "tx vilda_user_<uid> [meta] readonly start ×4",
+      "tx vilda_user_<uid> [noteTombstones] readonly complete",
+      "tx vilda_user_<uid> [noteTombstones] readonly start",
+      "tx vilda_user_<uid> [noteTombstones] readwrite complete",
+      "tx vilda_user_<uid> [noteTombstones] readwrite start",
+      "tx vilda_user_<uid> [notes] readonly complete ×2",
+      "tx vilda_user_<uid> [notes] readonly start ×2"
+     ],
+     "localStorage": [
+      "set vilda-note-changed-ping-v1"
+     ],
+     "sessionStorage": [
+      "set veph:cloud-only:per-user-v1"
+     ],
+     "krypto": 13,
+     "powiadomienia": {
+      "onPatientNoteChanged": 1
+     }
+    },
+    {
+     "krok": "scalenie kopii innego konta",
+     "wynik": {
+      "accountDataMerged": true,
+      "addedNoteCount": 0,
+      "addedPatientCount": 1,
+      "addedPatientListCount": 0,
+      "addedPatientNoteCount": 0,
+      "addedSnapshotCount": 1,
+      "addedWaitlistCount": 0,
+      "addedWaitlistScheduleCount": 0,
+      "deletedNoteCount": 0,
+      "deletedPatientListCount": 0,
+      "deletedPatientNoteCount": 0,
+      "deletedWaitlistCount": 0,
+      "deletedWaitlistScheduleCount": 0,
+      "foreignSnapshotCount": 0,
+      "mergedPatientCount": 0,
+      "skippedDeletedPatientCount": 0,
+      "skippedMergedPatientCount": 0,
+      "skippedPatients": "#0",
+      "skippedSnapshotCount": 2,
+      "updatedNoteCount": 0,
+      "updatedPatientListCount": 0,
+      "updatedPatientNoteCount": 0,
+      "updatedPreferenceCount": 0,
+      "updatedWaitlistCount": 0,
+      "updatedWaitlistScheduleCount": 0
+     },
+     "tlo": 0,
+     "indexedDB": [
+      "tx vilda_user_<uid> [meta] readonly complete ×7",
+      "tx vilda_user_<uid> [meta] readonly start ×7",
+      "tx vilda_user_<uid> [noteTombstones] readonly complete",
+      "tx vilda_user_<uid> [noteTombstones] readonly start",
+      "tx vilda_user_<uid> [noteTombstones] readwrite complete",
+      "tx vilda_user_<uid> [noteTombstones] readwrite start",
+      "tx vilda_user_<uid> [notes] readonly complete ×2",
+      "tx vilda_user_<uid> [notes] readonly start ×2"
+     ],
+     "localStorage": [],
+     "sessionStorage": [
+      "set veph:cloud-only:per-user-v1"
+     ],
+     "krypto": 9,
+     "powiadomienia": {}
+    },
+    {
+     "krok": "import starego formatu",
+     "wynik": {
+      "addedSnapshots": 1,
+      "isNew": true,
+      "skippedSnapshots": 0,
+      "snapshotCount": 1,
+      "totalSnapshots": 1
+     },
+     "tlo": 0,
+     "indexedDB": [],
+     "localStorage": [
+      "set vilda-note-changed-ping-v1"
+     ],
+     "sessionStorage": [
+      "set veph:cloud-only:per-user-v1"
+     ],
+     "krypto": 5,
+     "powiadomienia": {
+      "onPatientSaved": 1
+     }
+    },
+    {
+     "krok": "osoba spoza bazy",
+     "wynik": {
+      "collision": null,
+      "isNew": true,
+      "przyjeteZBazy": "#0",
+      "scalonoZBazy": 0,
+      "snapshotCount": 1
+     },
+     "tlo": 0,
+     "indexedDB": [],
+     "localStorage": [
+      "set vilda-note-changed-ping-v1"
+     ],
+     "sessionStorage": [
+      "set veph:cloud-only:per-user-v1"
+     ],
+     "krypto": 6,
+     "powiadomienia": {
+      "onPatientSaved": 1
+     }
+    },
+    {
+     "krok": "scal osobę spoza bazy z kartą",
+     "wynik": {
+      "listsUpdated": 0,
+      "notesMoved": 0
+     },
+     "tlo": 0,
+     "indexedDB": [
+      "tx vilda_user_<uid> [meta] readonly complete ×2",
+      "tx vilda_user_<uid> [meta] readonly start ×2"
+     ],
+     "localStorage": [
+      "set vilda-note-changed-ping-v1"
+     ],
+     "sessionStorage": [
+      "set veph:cloud-only:per-user-v1"
+     ],
+     "krypto": 6,
+     "powiadomienia": {
+      "onPatientDeleted": 1
+     }
+    },
+    {
+     "krok": "przywróć wersję jako nową",
+     "wynik": {
+      "snapshotCount": 4
+     },
+     "tlo": 0,
+     "indexedDB": [],
+     "localStorage": [
+      "set vilda-note-changed-ping-v1"
+     ],
+     "sessionStorage": [
+      "set veph:cloud-only:per-user-v1"
+     ],
+     "krypto": 18,
+     "powiadomienia": {
+      "onPatientSaved": 1
+     }
+    },
+    {
+     "krok": "tryb przechowywania: zmiana",
+     "wynik": {},
+     "tlo": 0,
+     "indexedDB": [
+      "open vilda_registry 1 ×2",
+      "success vilda_registry 1 ×2",
+      "tx vilda_registry [users] readonly complete",
+      "tx vilda_registry [users] readonly start",
+      "tx vilda_registry [users] readwrite complete",
+      "tx vilda_registry [users] readwrite start"
+     ],
+     "localStorage": [],
+     "sessionStorage": [],
+     "krypto": 0,
+     "powiadomienia": {}
+    },
+    {
+     "krok": "tryb przechowywania: powrót",
+     "wynik": {},
+     "tlo": 0,
+     "indexedDB": [
+      "open vilda_registry 1 ×2",
+      "success vilda_registry 1 ×2",
+      "tx vilda_registry [users] readonly complete",
+      "tx vilda_registry [users] readonly start",
+      "tx vilda_registry [users] readwrite complete",
+      "tx vilda_registry [users] readwrite start"
+     ],
+     "localStorage": [],
+     "sessionStorage": [],
+     "krypto": 0,
+     "powiadomienia": {}
+    },
+    {
+     "krok": "nowa tożsamość synchronizacji",
+     "wynik": {},
+     "tlo": 0,
+     "indexedDB": [
+      "databases",
+      "tx vilda_user_<uid> [meta] readonly complete ×2",
+      "tx vilda_user_<uid> [meta] readonly start ×2",
+      "tx vilda_user_<uid> [meta] readwrite complete",
+      "tx vilda_user_<uid> [meta] readwrite start"
+     ],
+     "localStorage": [
+      "set vilda-care-template-lifecycle-v1:<uid>",
+      "remove vilda-care-template-lifecycle-v1:<uid>"
+     ],
+     "sessionStorage": [],
+     "krypto": 19,
+     "powiadomienia": {}
+    },
+    {
+     "krok": "usunięcie klucza dostępu",
+     "wynik": "brak",
+     "tlo": 0,
+     "indexedDB": [
+      "open vilda_registry 1",
+      "success vilda_registry 1",
+      "tx vilda_registry [users] readwrite complete",
+      "tx vilda_registry [users] readwrite start",
+      "tx vilda_user_<uid> [meta] readonly complete ×2",
+      "tx vilda_user_<uid> [meta] readonly start ×2",
+      "tx vilda_user_<uid> [meta] readwrite complete",
+      "tx vilda_user_<uid> [meta] readwrite start"
+     ],
+     "localStorage": [],
+     "sessionStorage": [],
+     "krypto": 0,
+     "powiadomienia": {
+      "onPasskeyChanged": 1
+     }
+    },
+    {
+     "krok": "kopia konta",
+     "wynik": null,
+     "tlo": 0,
+     "indexedDB": [
+      "tx vilda_user_<uid> [meta] readonly complete",
+      "tx vilda_user_<uid> [meta] readonly start",
+      "tx vilda_user_<uid> [noteTombstones] readonly complete",
+      "tx vilda_user_<uid> [noteTombstones] readonly start",
+      "tx vilda_user_<uid> [notes] readonly complete",
+      "tx vilda_user_<uid> [notes] readonly start"
+     ],
+     "localStorage": [],
+     "sessionStorage": [],
+     "krypto": 15,
+     "powiadomienia": {}
+    },
+    {
+     "krok": "blokada",
+     "wynik": "brak",
+     "tlo": 0,
+     "indexedDB": [],
+     "localStorage": [
+      "set vilda-cloud-cache-wipe-pending-v1"
+     ],
+     "sessionStorage": [
+      "remove veph:cloud-only:per-user-v1",
+      "remove vilda-cloud-only-session-v1",
+      "remove vilda-vault-session-v2"
+     ],
+     "krypto": 0,
+     "powiadomienia": {
+      "onLock": 1
+     }
+    },
+    {
+     "krok": "odtworzenie konta z kopii",
+     "wynik": {
+      "newRecoveryKey": null,
+      "noteCount": 0,
+      "patientCount": 4,
+      "patientListCount": 0,
+      "patientNoteCount": 1,
+      "preferenceCount": 0,
+      "snapshotCount": 8
+     },
+     "tlo": 1,
+     "indexedDB": [
+      "open vilda_registry 1",
+      "open vilda_user_<uid2> 5",
+      "success vilda_registry 1",
+      "success vilda_user_<uid2> 5",
+      "tx vilda_registry [users] readwrite complete",
+      "tx vilda_registry [users] readwrite start",
+      "tx vilda_user_<uid2> [meta] readonly complete ×9",
+      "tx vilda_user_<uid2> [meta] readonly start ×9",
+      "tx vilda_user_<uid2> [meta] readwrite complete ×3",
+      "tx vilda_user_<uid2> [meta] readwrite start ×3",
+      "tx vilda_user_<uid2> [noteTombstones] readonly complete",
+      "tx vilda_user_<uid2> [noteTombstones] readonly start",
+      "tx vilda_user_<uid2> [noteTombstones] readwrite complete",
+      "tx vilda_user_<uid2> [noteTombstones] readwrite start",
+      "tx vilda_user_<uid2> [notes] readonly complete ×2",
+      "tx vilda_user_<uid2> [notes] readonly start ×2",
+      "tx vilda_user_<uid2> [patientListTombstones] readonly complete",
+      "tx vilda_user_<uid2> [patientListTombstones] readonly start",
+      "tx vilda_user_<uid2> [patientListTombstones] readwrite complete",
+      "tx vilda_user_<uid2> [patientListTombstones] readwrite start",
+      "tx vilda_user_<uid2> [patientLists] readonly complete",
+      "tx vilda_user_<uid2> [patientLists] readonly start",
+      "tx vilda_user_<uid2> [patientNoteTombstones] readonly complete ×2",
+      "tx vilda_user_<uid2> [patientNoteTombstones] readonly start ×2",
+      "tx vilda_user_<uid2> [patientNoteTombstones] readwrite complete",
+      "tx vilda_user_<uid2> [patientNoteTombstones] readwrite start",
+      "tx vilda_user_<uid2> [patientNotes] readonly complete ×4",
+      "tx vilda_user_<uid2> [patientNotes] readonly start ×4",
+      "tx vilda_user_<uid2> [patientNotes] readwrite complete",
+      "tx vilda_user_<uid2> [patientNotes] readwrite start",
+      "tx vilda_user_<uid2> [patients] readonly complete",
+      "tx vilda_user_<uid2> [patients] readonly start",
+      "tx vilda_user_<uid2> [patients] readwrite complete ×4",
+      "tx vilda_user_<uid2> [patients] readwrite start ×4",
+      "tx vilda_user_<uid2> [snapshots] readwrite complete ×8",
+      "tx vilda_user_<uid2> [snapshots] readwrite start ×8",
+      "tx vilda_user_<uid2> [tombstones] readonly complete ×2",
+      "tx vilda_user_<uid2> [tombstones] readonly start ×2",
+      "upgrade vilda_user_<uid2> 0 5"
+     ],
+     "localStorage": [
+      "set vilda-note-changed-ping-v1"
+     ],
+     "sessionStorage": [
+      "set vilda-vault-session-v2"
+     ],
+     "krypto": 23,
+     "powiadomienia": {
+      "onPatientNoteChanged": 1,
+      "onUnlock": 1
+     }
+    },
+    {
+     "krok": "blokada konta z kopii",
+     "wynik": "brak",
+     "tlo": 0,
+     "indexedDB": [],
+     "localStorage": [],
+     "sessionStorage": [
+      "remove vilda-vault-session-v2"
+     ],
+     "krypto": 0,
+     "powiadomienia": {
+      "onLock": 1
+     }
+    },
+    {
+     "krok": "odblokowanie",
+     "wynik": {
+      "needsPasswordReset": false,
+      "passwordPolicy": null
+     },
+     "tlo": 1,
+     "indexedDB": [
+      "open vilda_registry 1 ×3",
+      "success vilda_registry 1 ×3",
+      "tx vilda_registry [users] readonly complete ×2",
+      "tx vilda_registry [users] readonly start ×2",
+      "tx vilda_registry [users] readwrite complete",
+      "tx vilda_registry [users] readwrite start",
+      "tx vilda_user_<uid> [meta] readonly complete ×3",
+      "tx vilda_user_<uid> [meta] readonly start ×3"
+     ],
+     "localStorage": [],
+     "sessionStorage": [
+      "set vilda-cloud-only-session-v1",
+      "set vilda-vault-session-v2"
+     ],
+     "krypto": 5,
+     "powiadomienia": {
+      "onUnlock": 1
+     }
+    },
+    {
+     "krok": "usunięcie konta z kopii",
+     "wynik": true,
+     "tlo": 0,
+     "indexedDB": [
+      "abort-upgrade clinical-authority-checkpoints-v1",
+      "close vilda_user_<uid2>",
+      "databases",
+      "delete-success vilda_user_<uid2>",
+      "deleteDatabase vilda_user_<uid2>",
+      "open clinical-authority-checkpoints-v1 null",
+      "open vilda_registry 1",
+      "success vilda_registry 1",
+      "tx vilda_registry [users] readwrite complete",
+      "tx vilda_registry [users] readwrite start",
+      "tx vilda_user_<uid2> [meta] readonly complete",
+      "tx vilda_user_<uid2> [meta] readonly start",
+      "upgrade clinical-authority-checkpoints-v1 0 1"
+     ],
+     "localStorage": [
+      "set vilda-care-template-lifecycle-v1:<uid2>",
+      "set vilda-care-template-lifecycle-v1:<uid2>"
+     ],
+     "sessionStorage": [],
+     "krypto": 4,
+     "powiadomienia": {}
+    },
+    {
+     "krok": "usunięcie konta",
+     "wynik": true,
+     "tlo": 0,
+     "indexedDB": [
+      "abort-upgrade clinical-authority-checkpoints-v1",
+      "close vilda_user_<uid>",
+      "databases",
+      "delete-success vilda_user_<uid>",
+      "deleteDatabase vilda_user_<uid>",
+      "open clinical-authority-checkpoints-v1 null",
+      "open vilda_registry 1",
+      "success vilda_registry 1",
+      "tx vilda_registry [users] readwrite complete",
+      "tx vilda_registry [users] readwrite start",
+      "tx vilda_user_<uid> [meta] readonly complete",
+      "tx vilda_user_<uid> [meta] readonly start",
+      "upgrade clinical-authority-checkpoints-v1 0 1"
+     ],
+     "localStorage": [
+      "set vilda-care-template-lifecycle-v1:<uid>",
+      "set vilda-cloud-cache-wipe-pending-v1",
+      "set vilda-care-template-lifecycle-v1:<uid>"
+     ],
+     "sessionStorage": [
+      "remove veph:cloud-only:per-user-v1",
+      "remove vilda-cloud-only-session-v1",
+      "remove vilda-vault-session-v2"
+     ],
+     "krypto": 1,
+     "powiadomienia": {
+      "onLock": 1
+     }
+    }
+   ],
+   "bazy": [
+    "vilda_registry"
+   ],
+   "kluczUrzadzenia": false,
+   "odczytyBramki": 0
+  },
+  "jednorazowo": {
+   "ladowanie": {
+    "indexedDB": [],
+    "localStorage": [],
+    "sessionStorage": [],
+    "krypto": 0,
+    "powiadomienia": {}
+   },
+   "kroki": [
+    {
+     "krok": "konto",
+     "wynik": {
+      "iterations": 1000
+     },
+     "tlo": 1,
+     "indexedDB": [],
+     "localStorage": [],
+     "sessionStorage": [
+      "set veph:vault:adapter-v1",
+      "set vilda-ephemeral-session-v1",
+      "set vilda-vault-session-v2"
+     ],
+     "krypto": 7,
+     "powiadomienia": {
+      "onUnlock": 1
+     }
+    },
+    {
+     "krok": "nowa karta",
+     "wynik": {
+      "collision": null,
+      "isNew": true,
+      "przyjeteZBazy": "#0",
+      "scalonoZBazy": 0,
+      "snapshotCount": 1
+     },
+     "tlo": 0,
+     "indexedDB": [],
+     "localStorage": [
+      "set vilda-note-changed-ping-v1"
+     ],
+     "sessionStorage": [
+      "set veph:vault:adapter-v1"
+     ],
+     "krypto": 2,
+     "powiadomienia": {
+      "onPatientSaved": 1
+     }
+    },
+    {
+     "krok": "nowa wersja",
+     "wynik": {
+      "collision": null,
+      "isNew": false,
+      "przyjeteZBazy": "#0",
+      "scalonoZBazy": 0,
+      "snapshotCount": 2
+     },
+     "tlo": 0,
+     "indexedDB": [],
+     "localStorage": [
+      "set vilda-note-changed-ping-v1"
+     ],
+     "sessionStorage": [
+      "set veph:vault:adapter-v1"
+     ],
+     "krypto": 5,
+     "powiadomienia": {
+      "onPatientSaved": 1
+     }
+    },
+    {
+     "krok": "poprawka w miejscu",
+     "wynik": {
+      "isUpdate": true
+     },
+     "tlo": 0,
+     "indexedDB": [],
+     "localStorage": [
+      "set vilda-note-changed-ping-v1"
+     ],
+     "sessionStorage": [
+      "set veph:vault:adapter-v1"
+     ],
+     "krypto": 6,
+     "powiadomienia": {
+      "onPatientSaved": 1
+     }
+    },
+    {
+     "krok": "gwiazdka",
+     "wynik": {
+      "pinned": true
+     },
+     "tlo": 0,
+     "indexedDB": [],
+     "localStorage": [
+      "set vilda-note-changed-ping-v1"
+     ],
+     "sessionStorage": [
+      "set veph:vault:adapter-v1"
+     ],
+     "krypto": 7,
+     "powiadomienia": {
+      "onPatientSaved": 1
+     }
+    },
+    {
+     "krok": "odpięcie gwiazdki",
+     "wynik": {
+      "pinned": false
+     },
+     "tlo": 0,
+     "indexedDB": [],
+     "localStorage": [
+      "set vilda-note-changed-ping-v1"
+     ],
+     "sessionStorage": [
+      "set veph:vault:adapter-v1"
+     ],
+     "krypto": 7,
+     "powiadomienia": {
+      "onPatientSaved": 1
+     }
+    },
+    {
+     "krok": "kosz",
+     "wynik": {
+      "remainingSnapshotCount": 1,
+      "wasPinned": false
+     },
+     "tlo": 0,
+     "indexedDB": [],
+     "localStorage": [
+      "set vilda-note-changed-ping-v1"
+     ],
+     "sessionStorage": [
+      "set veph:vault:adapter-v1"
+     ],
+     "krypto": 3,
+     "powiadomienia": {
+      "onPatientSaved": 1
+     }
+    },
+    {
+     "krok": "przywróć z kosza",
+     "wynik": {},
+     "tlo": 0,
+     "indexedDB": [],
+     "localStorage": [
+      "set vilda-note-changed-ping-v1"
+     ],
+     "sessionStorage": [
+      "set veph:vault:adapter-v1"
+     ],
+     "krypto": 4,
+     "powiadomienia": {
+      "onPatientSaved": 1
+     }
+    },
+    {
+     "krok": "trzecia wersja",
+     "wynik": {
+      "collision": null,
+      "isNew": false,
+      "przyjeteZBazy": "#0",
+      "scalonoZBazy": 0,
+      "snapshotCount": 3
+     },
+     "tlo": 0,
+     "indexedDB": [],
+     "localStorage": [
+      "set vilda-note-changed-ping-v1"
+     ],
+     "sessionStorage": [
+      "set veph:vault:adapter-v1"
+     ],
+     "krypto": 6,
+     "powiadomienia": {
+      "onPatientSaved": 1
+     }
+    },
+    {
+     "krok": "usunięcie wersji",
+     "wynik": {
+      "remainingSnapshotCount": 2
+     },
+     "tlo": 0,
+     "indexedDB": [],
+     "localStorage": [
+      "set vilda-note-changed-ping-v1"
+     ],
+     "sessionStorage": [
+      "set veph:vault:adapter-v1"
+     ],
+     "krypto": 6,
+     "powiadomienia": {
+      "onPatientSaved": 1
+     }
+    },
+    {
+     "krok": "retencja",
+     "wynik": {
+      "prunedCount": 1,
+      "prunedIds": "#1"
+     },
+     "tlo": 0,
+     "indexedDB": [],
+     "localStorage": [
+      "set vilda-note-changed-ping-v1"
+     ],
+     "sessionStorage": [
+      "set veph:vault:adapter-v1"
+     ],
+     "krypto": 5,
+     "powiadomienia": {
+      "onPatientSaved": 1
+     }
+    },
+    {
+     "krok": "notatka pacjenta: dodaj",
+     "wynik": {
+      "isNew": true
+     },
+     "tlo": 0,
+     "indexedDB": [],
+     "localStorage": [
+      "set vilda-note-changed-ping-v1"
+     ],
+     "sessionStorage": [
+      "set veph:vault:adapter-v1"
+     ],
+     "krypto": 1,
+     "powiadomienia": {
+      "onPatientNoteChanged": 1
+     }
+    },
+    {
+     "krok": "notatka pacjenta: popraw",
+     "wynik": {
+      "isNew": false
+     },
+     "tlo": 0,
+     "indexedDB": [],
+     "localStorage": [
+      "set vilda-note-changed-ping-v1"
+     ],
+     "sessionStorage": [
+      "set veph:vault:adapter-v1"
+     ],
+     "krypto": 3,
+     "powiadomienia": {
+      "onPatientNoteChanged": 1
+     }
+    },
+    {
+     "krok": "notatka pacjenta: usuń",
+     "wynik": true,
+     "tlo": 0,
+     "indexedDB": [],
+     "localStorage": [
+      "set vilda-note-changed-ping-v1"
+     ],
+     "sessionStorage": [
+      "set veph:vault:adapter-v1"
+     ],
+     "krypto": 2,
+     "powiadomienia": {
+      "onPatientNoteChanged": 1
+     }
+    },
+    {
+     "krok": "notatka biblioteki: dodaj",
+     "wynik": {
+      "isNew": true
+     },
+     "tlo": 0,
+     "indexedDB": [],
+     "localStorage": [],
+     "sessionStorage": [
+      "set veph:vault:adapter-v1"
+     ],
+     "krypto": 1,
+     "powiadomienia": {
+      "onNoteChanged": 1
+     }
+    },
+    {
+     "krok": "notatka biblioteki: usuń",
+     "wynik": true,
+     "tlo": 0,
+     "indexedDB": [],
+     "localStorage": [],
+     "sessionStorage": [
+      "set veph:vault:adapter-v1"
+     ],
+     "krypto": 0,
+     "powiadomienia": {
+      "onNoteChanged": 1
+     }
+    },
+    {
+     "krok": "lista: dodaj",
+     "wynik": {
+      "excludeIds": "#0",
+      "isNew": true,
+      "memberIds": "#1",
+      "pinned": false,
+      "rev": 1,
+      "rule": null
+     },
+     "tlo": 0,
+     "indexedDB": [],
+     "localStorage": [],
+     "sessionStorage": [
+      "set veph:vault:adapter-v1"
+     ],
+     "krypto": 1,
+     "powiadomienia": {
+      "onPatientListChanged": 1
+     }
+    },
+    {
+     "krok": "lista: usuń",
+     "wynik": {},
+     "tlo": 0,
+     "indexedDB": [],
+     "localStorage": [],
+     "sessionStorage": [
+      "set veph:vault:adapter-v1"
+     ],
+     "krypto": 0,
+     "powiadomienia": {
+      "onPatientListChanged": 1
+     }
+    },
+    {
+     "krok": "plan opieki",
+     "wynik": {
+      "resultNoteId": null,
+      "saved": true,
+      "stepId": null
+     },
+     "tlo": 0,
+     "indexedDB": [],
+     "localStorage": [
+      "set vilda-note-changed-ping-v1",
+      "set vilda-note-changed-ping-v1"
+     ],
+     "sessionStorage": [
+      "set veph:vault:adapter-v1"
+     ],
+     "krypto": 10,
+     "powiadomienia": {
+      "onPatientNoteChanged": 2
+     }
+    },
+    {
+     "krok": "druga karta",
+     "wynik": {
+      "collision": null,
+      "isNew": true,
+      "przyjeteZBazy": "#0",
+      "scalonoZBazy": 0,
+      "snapshotCount": 1
+     },
+     "tlo": 0,
+     "indexedDB": [],
+     "localStorage": [
+      "set vilda-note-changed-ping-v1"
+     ],
+     "sessionStorage": [
+      "set veph:vault:adapter-v1"
+     ],
+     "krypto": 3,
+     "powiadomienia": {
+      "onPatientSaved": 1
+     }
+    },
+    {
+     "krok": "scal pacjentów",
+     "wynik": {
+      "listsUpdated": 0,
+      "notesMoved": 0,
+      "pointsAdded": 0,
+      "rowsAdded": 0,
+      "snapshotCount": 3,
+      "snapshotsMoved": 1
+     },
+     "tlo": 0,
+     "indexedDB": [],
+     "localStorage": [
+      "set vilda-note-changed-ping-v1",
+      "set vilda-note-changed-ping-v1"
+     ],
+     "sessionStorage": [
+      "set veph:vault:adapter-v1"
+     ],
+     "krypto": 11,
+     "powiadomienia": {
+      "onPatientSaved": 1,
+      "onPatientDeleted": 1
+     }
+    },
+    {
+     "krok": "trzecia karta",
+     "wynik": {
+      "collision": null,
+      "isNew": true,
+      "przyjeteZBazy": "#0",
+      "scalonoZBazy": 0,
+      "snapshotCount": 1
+     },
+     "tlo": 0,
+     "indexedDB": [],
+     "localStorage": [
+      "set vilda-note-changed-ping-v1"
+     ],
+     "sessionStorage": [
+      "set veph:vault:adapter-v1"
+     ],
+     "krypto": 3,
+     "powiadomienia": {
+      "onPatientSaved": 1
+     }
+    },
+    {
+     "krok": "usuń pacjenta",
+     "wynik": true,
+     "tlo": 0,
+     "indexedDB": [],
+     "localStorage": [
+      "set vilda-note-changed-ping-v1"
+     ],
+     "sessionStorage": [
+      "set veph:vault:adapter-v1"
+     ],
+     "krypto": 0,
+     "powiadomienia": {
+      "onPatientDeleted": 1
+     }
+    },
+    {
+     "krok": "zmiana hasła",
+     "wynik": true,
+     "tlo": 0,
+     "indexedDB": [],
+     "localStorage": [],
+     "sessionStorage": [
+      "set veph:vault:adapter-v1"
+     ],
+     "krypto": 9,
+     "powiadomienia": {
+      "onCredentialChanged": 1
+     }
+    },
+    {
+     "krok": "eksport i scalenie własnego eksportu",
+     "wynik": {
+      "addedNoteCount": 0,
+      "addedPasskeyCount": 1,
+      "addedPatientCount": 0,
+      "addedPatientListCount": 0,
+      "addedPatientNoteCount": 0,
+      "addedSnapshotCount": 0,
+      "credentialUpdated": false,
+      "deletedNoteCount": 0,
+      "deletedPatientCount": 0,
+      "deletedPatientListCount": 0,
+      "deletedPatientNoteCount": 0,
+      "mergedPatientCount": 1,
+      "prunedSnapshotCount": 0,
+      "removedPasskeyCount": 0,
+      "skippedSnapshotCount": 3,
+      "trashedSnapshotCount": 0,
+      "updatedNoteCount": 0,
+      "updatedPatientListCount": 0,
+      "updatedPatientNoteCount": 0,
+      "updatedPreferenceCount": 0,
+      "updatedSnapshotCount": 0
+     },
+     "tlo": 0,
+     "indexedDB": [],
+     "localStorage": [],
+     "sessionStorage": [
+      "set veph:vault:adapter-v1"
+     ],
+     "krypto": 20,
+     "powiadomienia": {}
+    },
+    {
+     "krok": "delta karty",
+     "wynik": {
+      "addedNoteCount": 0,
+      "addedPasskeyCount": 0,
+      "addedPatientCount": 0,
+      "addedPatientListCount": 0,
+      "addedPatientNoteCount": 0,
+      "addedSnapshotCount": 0,
+      "clockSkew": null,
+      "credentialUpdated": false,
+      "deletedNoteCount": 0,
+      "deletedPatientCount": 0,
+      "deletedPatientListCount": 0,
+      "deletedPatientNoteCount": 0,
+      "mergedPatientCount": 1,
+      "prunedSnapshotCount": 0,
+      "removedPasskeyCount": 0,
+      "skippedSnapshotCount": 3,
+      "trashedSnapshotCount": 0,
+      "updatedNoteCount": 0,
+      "updatedPatientListCount": 0,
+      "updatedPatientNoteCount": 0,
+      "updatedPreferenceCount": 0,
+      "updatedSnapshotCount": 0
+     },
+     "tlo": 0,
+     "indexedDB": [],
+     "localStorage": [],
+     "sessionStorage": [
+      "set veph:vault:adapter-v1"
+     ],
+     "krypto": 11,
+     "powiadomienia": {}
+    },
+    {
+     "krok": "koperta zdarzenia",
+     "wynik": {
+      "status": "applied"
+     },
+     "tlo": 0,
+     "indexedDB": [],
+     "localStorage": [],
+     "sessionStorage": [
+      "set veph:vault:adapter-v1"
+     ],
+     "krypto": 11,
+     "powiadomienia": {}
+    },
+    {
+     "krok": "import karty innego konta",
+     "wynik": {
+      "addedSnapshots": 2,
+      "importedPatientNotes": 1,
+      "isNew": true,
+      "skippedSnapshots": 0,
+      "totalSnapshots": 2
+     },
+     "tlo": 0,
+     "indexedDB": [],
+     "localStorage": [
+      "set vilda-note-changed-ping-v1"
+     ],
+     "sessionStorage": [
+      "set veph:vault:adapter-v1"
+     ],
+     "krypto": 13,
+     "powiadomienia": {
+      "onPatientNoteChanged": 1
+     }
+    },
+    {
+     "krok": "scalenie kopii innego konta",
+     "wynik": {
+      "accountDataMerged": true,
+      "addedNoteCount": 0,
+      "addedPatientCount": 1,
+      "addedPatientListCount": 0,
+      "addedPatientNoteCount": 0,
+      "addedSnapshotCount": 1,
+      "addedWaitlistCount": 0,
+      "addedWaitlistScheduleCount": 0,
+      "deletedNoteCount": 0,
+      "deletedPatientListCount": 0,
+      "deletedPatientNoteCount": 0,
+      "deletedWaitlistCount": 0,
+      "deletedWaitlistScheduleCount": 0,
+      "foreignSnapshotCount": 0,
+      "mergedPatientCount": 0,
+      "skippedDeletedPatientCount": 0,
+      "skippedMergedPatientCount": 0,
+      "skippedPatients": "#0",
+      "skippedSnapshotCount": 2,
+      "updatedNoteCount": 0,
+      "updatedPatientListCount": 0,
+      "updatedPatientNoteCount": 0,
+      "updatedPreferenceCount": 0,
+      "updatedWaitlistCount": 0,
+      "updatedWaitlistScheduleCount": 0
+     },
+     "tlo": 0,
+     "indexedDB": [],
+     "localStorage": [],
+     "sessionStorage": [
+      "set veph:vault:adapter-v1"
+     ],
+     "krypto": 9,
+     "powiadomienia": {}
+    },
+    {
+     "krok": "import starego formatu",
+     "wynik": {
+      "addedSnapshots": 1,
+      "isNew": true,
+      "skippedSnapshots": 0,
+      "snapshotCount": 1,
+      "totalSnapshots": 1
+     },
+     "tlo": 0,
+     "indexedDB": [],
+     "localStorage": [
+      "set vilda-note-changed-ping-v1"
+     ],
+     "sessionStorage": [
+      "set veph:vault:adapter-v1"
+     ],
+     "krypto": 5,
+     "powiadomienia": {
+      "onPatientSaved": 1
+     }
+    },
+    {
+     "krok": "osoba spoza bazy",
+     "wynik": {
+      "collision": null,
+      "isNew": true,
+      "przyjeteZBazy": "#0",
+      "scalonoZBazy": 0,
+      "snapshotCount": 1
+     },
+     "tlo": 0,
+     "indexedDB": [],
+     "localStorage": [
+      "set vilda-note-changed-ping-v1"
+     ],
+     "sessionStorage": [
+      "set veph:vault:adapter-v1"
+     ],
+     "krypto": 6,
+     "powiadomienia": {
+      "onPatientSaved": 1
+     }
+    },
+    {
+     "krok": "scal osobę spoza bazy z kartą",
+     "wynik": {
+      "listsUpdated": 0,
+      "notesMoved": 0
+     },
+     "tlo": 0,
+     "indexedDB": [],
+     "localStorage": [
+      "set vilda-note-changed-ping-v1"
+     ],
+     "sessionStorage": [
+      "set veph:vault:adapter-v1"
+     ],
+     "krypto": 6,
+     "powiadomienia": {
+      "onPatientDeleted": 1
+     }
+    },
+    {
+     "krok": "przywróć wersję jako nową",
+     "wynik": {
+      "snapshotCount": 4
+     },
+     "tlo": 0,
+     "indexedDB": [],
+     "localStorage": [
+      "set vilda-note-changed-ping-v1"
+     ],
+     "sessionStorage": [
+      "set veph:vault:adapter-v1"
+     ],
+     "krypto": 18,
+     "powiadomienia": {
+      "onPatientSaved": 1
+     }
+    },
+    {
+     "krok": "tryb przechowywania: zmiana",
+     "wynik": {},
+     "tlo": 0,
+     "indexedDB": [],
+     "localStorage": [],
+     "sessionStorage": [
+      "set veph:vault:adapter-v1"
+     ],
+     "krypto": 0,
+     "powiadomienia": {}
+    },
+    {
+     "krok": "tryb przechowywania: powrót",
+     "wynik": {},
+     "tlo": 0,
+     "indexedDB": [],
+     "localStorage": [],
+     "sessionStorage": [
+      "set veph:vault:adapter-v1"
+     ],
+     "krypto": 0,
+     "powiadomienia": {}
+    },
+    {
+     "krok": "nowa tożsamość synchronizacji",
+     "wynik": {},
+     "tlo": 0,
+     "indexedDB": [
+      "databases"
+     ],
+     "localStorage": [
+      "set vilda-care-template-lifecycle-v1:<uid>",
+      "remove vilda-care-template-lifecycle-v1:<uid>"
+     ],
+     "sessionStorage": [
+      "set veph:vault:adapter-v1"
+     ],
+     "krypto": 19,
+     "powiadomienia": {}
+    },
+    {
+     "krok": "usunięcie klucza dostępu",
+     "wynik": "brak",
+     "tlo": 0,
+     "indexedDB": [],
+     "localStorage": [],
+     "sessionStorage": [
+      "set veph:vault:adapter-v1"
+     ],
+     "krypto": 0,
+     "powiadomienia": {
+      "onPasskeyChanged": 1
+     }
+    },
+    {
+     "krok": "kopia konta",
+     "wynik": null,
+     "tlo": 0,
+     "indexedDB": [],
+     "localStorage": [],
+     "sessionStorage": [],
+     "krypto": 17,
+     "powiadomienia": {}
+    },
+    {
+     "krok": "blokada",
+     "wynik": "brak",
+     "tlo": 0,
+     "indexedDB": [],
+     "localStorage": [],
+     "sessionStorage": [
+      "remove vilda-ephemeral-session-v1",
+      "remove vilda-vault-session-v2"
+     ],
+     "krypto": 0,
+     "powiadomienia": {
+      "onLock": 1
+     }
+    },
+    {
+     "krok": "odtworzenie konta z kopii",
+     "wynik": {
+      "newRecoveryKey": null,
+      "noteCount": 0,
+      "patientCount": 4,
+      "patientListCount": 0,
+      "patientNoteCount": 3,
+      "preferenceCount": 0,
+      "snapshotCount": 8
+     },
+     "tlo": 1,
+     "indexedDB": [],
+     "localStorage": [
+      "set vilda-note-changed-ping-v1",
+      "set vilda-note-changed-ping-v1",
+      "set vilda-note-changed-ping-v1"
+     ],
+     "sessionStorage": [
+      "set veph:vault:adapter-v1",
+      "set vilda-ephemeral-session-v1",
+      "set vilda-vault-session-v2"
+     ],
+     "krypto": 24,
+     "powiadomienia": {
+      "onPatientNoteChanged": 3,
+      "onUnlock": 1
+     }
+    },
+    {
+     "krok": "blokada konta z kopii",
+     "wynik": "brak",
+     "tlo": 0,
+     "indexedDB": [],
+     "localStorage": [],
+     "sessionStorage": [
+      "remove vilda-ephemeral-session-v1",
+      "remove vilda-vault-session-v2"
+     ],
+     "krypto": 0,
+     "powiadomienia": {
+      "onLock": 1
+     }
+    },
+    {
+     "krok": "odblokowanie",
+     "wynik": {
+      "needsPasswordReset": false,
+      "passwordPolicy": null
+     },
+     "tlo": 1,
+     "indexedDB": [],
+     "localStorage": [],
+     "sessionStorage": [
+      "set veph:vault:adapter-v1",
+      "set vilda-ephemeral-session-v1",
+      "set vilda-vault-session-v2"
+     ],
+     "krypto": 4,
+     "powiadomienia": {
+      "onUnlock": 1
+     }
+    },
+    {
+     "krok": "usunięcie konta z kopii",
+     "wynik": true,
+     "tlo": 0,
+     "indexedDB": [
+      "abort-upgrade clinical-authority-checkpoints-v1",
+      "databases",
+      "open clinical-authority-checkpoints-v1 null",
+      "upgrade clinical-authority-checkpoints-v1 0 1"
+     ],
+     "localStorage": [
+      "set vilda-care-template-lifecycle-v1:<uid2>",
+      "set vilda-care-template-lifecycle-v1:<uid2>"
+     ],
+     "sessionStorage": [
+      "set veph:vault:adapter-v1"
+     ],
+     "krypto": 4,
+     "powiadomienia": {}
+    },
+    {
+     "krok": "usunięcie konta",
+     "wynik": true,
+     "tlo": 0,
+     "indexedDB": [
+      "abort-upgrade clinical-authority-checkpoints-v1",
+      "databases",
+      "open clinical-authority-checkpoints-v1 null",
+      "upgrade clinical-authority-checkpoints-v1 0 1"
+     ],
+     "localStorage": [
+      "set vilda-care-template-lifecycle-v1:<uid>",
+      "set vilda-care-template-lifecycle-v1:<uid>"
+     ],
+     "sessionStorage": [
+      "remove vilda-ephemeral-session-v1",
+      "remove vilda-vault-session-v2"
+     ],
+     "krypto": 1,
+     "powiadomienia": {
+      "onLock": 1
+     }
+    }
+   ],
+   "bazy": [],
+   "kluczUrzadzenia": false,
+   "odczytyBramki": 0
+  }
+ }
+}

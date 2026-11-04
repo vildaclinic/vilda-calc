@@ -4992,13 +4992,15 @@ async function Bsl_usunPacjenta(patientId, deletedAtISO, opcje, ctx) {const Pati
   }, opcje));
 }
 /* P-DZIENNIK-ZDARZEN: poczatek bloku */
-/* Dziennik zdarzen synchronizacji przyrostowej (etap 2, czesc a). USPIONE: kod produkcyjny nie wola zadnej funkcji tego
+/* Dziennik zdarzen synchronizacji przyrostowej (etap 2). USPIONE: kod produkcyjny nie wola zadnej funkcji tego
  * bloku (dostep tylko przez zamrozony obiekt Bev_EKSPORT w eksporcie sejfu — testy i kolejne etapy); ps, Le i reguly
- * scalania bez zmian; bez magazynu kolejki, bez zapisow i bez powiadomien. Zawartosc: koperta
+ * scalania bez zmian; czesc a (do znacznika magazynu): bez zapisow i bez powiadomien. Zawartosc czesci a: koperta
  * zdarzenia jednej encji (tylko jej sekcja i event = { kind, key, atISO, dev, full }), walidacja koperty (Bev_sprawdz),
  * rozmiar szyfrogramu (Bev_bajty), 14 builderow czytajacych sklep (chwile tylko z rekordow, nigdy z zegara), szyfrowanie
  * kluczem glownym bez AAD i bez kompresji (Bev_szyfruj) oraz zastosowanie zaszyfrowanego zdarzenia ze statusem
  * (Bev_zastosuj). Bledy bloku niosa kod i staly komunikat — nigdy tresci ani komunikatu bledu odszyfrowania.
+ * Czesc b (ponizej znacznika magazynu): magazyn kolejki vilda_sync_<userId> (schemat wersji 1, w nim takze sklep
+ * kwarantanny), za bramka (pole okna VILDA_EVENT_LOG === true), tylko tryb prywatny; kod produkcyjny jej nie wola.
  * Opis: docs/clinical/ALGORITHMS.md, wpis P-DZIENNIK-ZDARZEN. */
 const Bev_RODZAJE = Object.freeze(['snap', 'pfull', 'ptomb', 'stomb', 'pnote', 'pnotetomb', 'note', 'notetomb', 'plist',
   'plisttomb', 'pref', 'pk', 'pktomb', 'cred']);
@@ -5494,7 +5496,7 @@ async function Bev_cred(dev) {
   }, null));
 }
 
-// Builder po rodzaju (dla kolejki etapu 2b): tablica kopert albo null.
+// Builder po rodzaju: tablica kopert albo null; uzywa jej dopisanie do kolejki (czesc b).
 async function Bev_jako(obietnica) {
   const k = await obietnica;
   return k ? [k] : null;
@@ -5601,7 +5603,986 @@ const Bev_EKSPORT = Object.freeze({
   encryptEvent: Bev_szyfruj,
   eventBytes: Bev_bajty,
   applyEncryptedEvent: Bev_zastosuj,
+  gateOpen: Bob_bramka,
+  enqueue: Bob_dopisz,
+  outboxCount: Bob_licz,
+  outboxList: Bob_lista,
+  outboxTake: Bob_wez,
+  outboxAccept: Bob_przyjmij,
+  outboxReject: Bob_odrzuc,
+  outboxFail: Bob_niepowodzenie,
+  outboxRequeueStale: Bob_zLotu,
+  outboxDiscard: Bob_porzuc,
+  deleteDatabase: Bob_usunBaze,
 });
+/* P-DZIENNIK-ZDARZEN: magazyn kolejki */
+/* Magazyn kolejki zdarzen vilda_sync_<userId> wersji 1 (etap 2, czesc b). USPIONE jak czesc a: kod produkcyjny nie
+ * wola zadnej funkcji tej czesci (dostep tylko przez Bev_EKSPORT). Kazda operacja poza kasowaniem bazy konczy sie na
+ * bramce (pole okna VILDA_EVENT_LOG === true; bez pola zamknieta), potem wymaga odblokowanego sejfu i trybu „Komputer
+ * prywatny” (sesja, a przy dopisaniu takze tryb zapisany we wpisie rejestru konta). Sklepy: meta (rekord licznika
+ * seqLocal), outbox (kolejka), quarantine (kwarantanna; tu tylko schemat). Baza otwierana leniwie, bez numeru wersji:
+ * proba nieistniejacej bazy przerywa upgrade i niczego nie zostawia, baze tworzy wylacznie dopisanie. Jedno polaczenie
+ * na transakcje, zamykane po kazdej operacji; w transakcji bez await — kolejne kroki tylko w onsuccess zadan, wynik
+ * wylacznie z oncomplete albo onabort; versionchange zamyka polaczenie bez przerywania transakcji w toku. Koalescencja:
+ * nowy wiersz pending zastepuje oczekujace wiersze tej encji tylko na ogonie kolejki i tylko wiersze sprzed odczytu
+ * epoki tego dopisania (Bob_plan, funkcja czysta). Identyfikator urzadzenia osobny dla kazdego konta, zapisywany
+ * dopiero po zatwierdzeniu dopisania z trescia. Operacje kolejki sprawdzaja sesje tak jak zapis karty (P-SESJA-ZAPISU):
+ * zmiana sesji w trakcie konczy operacje bez zapisu. Wyniki: { ok: true, … } albo { ok: false, powod, code? } (kody z
+ * bialej listy, nigdy tresc ani obiekt bledu); obietnice nie sa odrzucane. Opis: docs/clinical/ALGORITHMS.md (ten sam
+ * wpis co czesc a). */
+const Bob_BAZA = 'vilda_sync_';
+const Bob_SKLEPY = Object.freeze(['meta', 'outbox', 'quarantine']);
+// Schemat wersji 1: keyPath i indeksy [nazwa, keyPath, unique] kazdego sklepu (tworzenie bazy i sprawdzenie sklepow
+// kazdej transakcji przed ich uzyciem).
+const Bob_SCHEMAT = Object.freeze({
+  meta: Object.freeze({ keyPath: 'k', indeksy: Object.freeze([]) }),
+  outbox: Object.freeze({
+    keyPath: 'eid',
+    indeksy: Object.freeze([
+      Object.freeze(['byState', 'state', false]),
+      Object.freeze(['byEntity', Object.freeze(['kind', 'entityKey']), false]),
+      Object.freeze(['bySeqLocal', 'seqLocal', true]),
+    ]),
+  }),
+  quarantine: Object.freeze({
+    keyPath: Object.freeze(['slotId', 'seq']),
+    indeksy: Object.freeze([Object.freeze(['bySlot', 'slotId', false])]),
+  }),
+});
+const Bob_STANY = Object.freeze(['pending', 'inflight', 'oversize', 'unreadable', 'rejected']);
+// Klucz identyfikatora urzadzenia w pamieci przegladarki: przedrostek + ':' + userId (osobny dla kazdego konta).
+const Bob_KLUCZ_URZADZENIA = 'vilda-sync-device-v1';
+const Bob_LICZNIK = 'licznik';
+// 32 znaki bez mylacych (l, o, 0, 1) — ten sam alfabet co Bev_DEV.
+const Bob_ALFABET = 'abcdefghijkmnpqrstuvwxyz23456789';
+const Bob_LIMIT_MS = 10000;
+const Bob_PARTIA = 200;
+const Bob_PARTIA_BAJTOW = 1048576;
+const Bob_LOT_MS = 60000;
+const Bob_LISTA = 1000;
+const Bob_KLUCZ = 200;
+const Bob_KLUCZ_PK = 1400;
+const Bob_EID = 64;
+const Bob_UID = 128;
+// Biala lista znakow kodow zapisywanych w bazie i oddawanych w wynikach (lastError, code, setId).
+const Bob_KOD = /^[A-Za-z0-9_.:-]{1,64}$/;
+// Konta, ktorych bazy ten dokument skasowal albo widzial kasowanie (versionchange z newVersion null): bez ponownego
+// tworzenia bazy w tym dokumencie (sprawdzane przed otwarciem tworzacym i w jego upgradzie).
+const Bob_usuwane = new Set();
+// Kandydat identyfikatora urzadzenia konta do pierwszego zapisu klucza: jeden na konto w dokumencie (dopisania w toku
+// naraz niosa ten sam identyfikator).
+const Bob_kandydaci = new Map();
+
+// ── Wejscie operacji ────────────────────────────────────────────────────────────────────────────────────────────────
+// Bramka: jedyny odczyt pola; brak pola, inna wartosc niz true albo getter rzucajacy — zamknieta.
+function Bob_bramka() {
+  try {
+    return v.VILDA_EVENT_LOG === true;
+  } catch (x) {
+    return false;
+  }
+}
+// Tryb „Komputer prywatny” biezacej sesji (warunek punktu odzyskiwania bez dlugosci kluczy).
+function Bob_trybPrywatny() {
+  return typeof b === 'string' && !!b && !yt && !ee && lt === gt && !!$t && PatientCheckpointNativeAdapters.has($t);
+}
+function Bob_idb() {
+  try {
+    const i = v.indexedDB;
+    return i && typeof i.open === 'function' ? i : null;
+  } catch (x) {
+    return null;
+  }
+}
+function Bob_odmowa(powod, code) {
+  return code ? { ok: false, powod: powod, code: code } : { ok: false, powod: powod };
+}
+function Bob_wejscie() {
+  if (!Bob_bramka()) return 'bramka';
+  if (!T()) return 'zablokowany';
+  if (!Bob_trybPrywatny()) return 'tryb';
+  if (!Bob_idb()) return 'brak-indexeddb';
+  return null;
+}
+function Bob_poSesji(s) {
+  return Bses_zmieniona(s) ? (T() ? 'sesja' : 'zablokowany') : null;
+}
+function Bob_teraz() {
+  return new Date().toISOString();
+}
+// Wiek chwili w ms: NaN przy zlej chwili, ujemny przy chwili w przyszlosci (cofniety zegar).
+function Bob_wiek(iso) {
+  return typeof iso === 'string' ? Date.now() - Date.parse(iso) : Number.NaN;
+}
+function Bob_nazwa(x) {
+  return x && typeof x.name === 'string' ? x.name : '';
+}
+// Kod nieprzewidzianego wyjatku tylko z bialej listy znakow, inaczej SYNC_INTERNAL; nigdy komunikat.
+function Bob_nieprzewidziany(x) {
+  const k = Bev_kod(x);
+  return Bob_odmowa('blad', typeof k === 'string' && Bob_KOD.test(k) ? k : 'SYNC_INTERNAL');
+}
+// Blad buildera albo szyfrowania: zmiana sesji i blokada jako odmowa, inny kod jak nieprzewidziany.
+function Bob_bladZrodla(x, s) {
+  const p = Bob_poSesji(s);
+  if (p) return Bob_odmowa(p);
+  const k = Bev_kod(x);
+  if (k === 'VAULT_LOCKED') return Bob_odmowa('zablokowany');
+  if (k === 'SESSION_CHANGED') return Bob_odmowa(T() ? 'sesja' : 'zablokowany');
+  return Bob_nieprzewidziany(x);
+}
+// Wpis rejestru konta przy kazdym dopisaniu (jedyny odczyt adaptera sejfu w tej czesci): brak wpisu — konto; tryb
+// zapisany we wpisie inny niz prywatny — tryb.
+async function Bob_konto(uid, s) {
+  let wpis;
+  let blad = false;
+  try {
+    wpis = await I().getRegistryEntry(uid);
+  } catch (x) {
+    blad = true;
+  }
+  const p = Bob_poSesji(s);
+  if (p) return Bob_odmowa(p);
+  if (blad) return Bob_odmowa('blad', 'SYNC_REGISTRY_FAILED');
+  if (!Bev_obiekt(wpis)) return Bob_odmowa('konto');
+  if (be(wpis.storageMode) !== gt) return Bob_odmowa('tryb');
+  return null;
+}
+
+// ── Identyfikator urzadzenia ────────────────────────────────────────────────────────────────────────────────────────
+function Bob_kluczUrzadzenia(uid) {
+  return Bob_KLUCZ_URZADZENIA + ':' + uid;
+}
+// Zapisany identyfikator konta albo kandydat w pamieci (bez zapisu; losowany raz na konto w dokumencie); kazdy
+// wyjatek — dev null.
+function Bob_urzadzenie(uid) {
+  try {
+    const zapisany = v.localStorage.getItem(Bob_kluczUrzadzenia(uid));
+    if (typeof zapisany === 'string' && Bev_DEV.test(zapisany)) return { dev: zapisany, nowy: false };
+    if (Bob_kandydaci.has(uid)) return { dev: Bob_kandydaci.get(uid), nowy: true };
+    const bajty = v.crypto.getRandomValues(new Uint8Array(8));
+    let dev = '';
+    for (let i = 0; i < bajty.length; i += 1) dev += Bob_ALFABET[bajty[i] & 31];
+    Bob_kandydaci.set(uid, dev);
+    return { dev: dev, nowy: true };
+  } catch (x) {
+    return { dev: null, nowy: false };
+  }
+}
+// Po zatwierdzeniu dopisania z trescia: kandydat zapisany tylko, gdy klucza nadal nie ma albo jest niepoprawny.
+function Bob_urzadzenieZapisz(uid, kandydat) {
+  try {
+    const klucz = Bob_kluczUrzadzenia(uid);
+    const zapisany = v.localStorage.getItem(klucz);
+    if (typeof zapisany !== 'string' || !Bev_DEV.test(zapisany)) v.localStorage.setItem(klucz, kandydat);
+  } catch (x) {
+    // brak miejsca albo zablokowany magazyn: identyfikator zostaje tylko w zdarzeniach tego dopisania
+  }
+}
+
+// ── Otwarcie i transakcje ───────────────────────────────────────────────────────────────────────────────────────────
+// Wyscig obietnicy z zegarem okna; zegar zdejmowany po rozstrzygnieciu.
+function Bob_limit(obietnica, ms, poLimicie) {
+  return new Promise(function (gotowe) {
+    let koniec = false;
+    const zakoncz = function (w) {
+      if (koniec) return;
+      koniec = true;
+      v.clearTimeout(zegar);
+      gotowe(w);
+    };
+    const zegar = v.setTimeout(function () {
+      zakoncz(poLimicie());
+    }, ms);
+    obietnica.then(zakoncz, function (x) {
+      zakoncz({ odmowa: Bob_nieprzewidziany(x) });
+    });
+  });
+}
+function Bob_zamknij(db) {
+  try {
+    db.close();
+  } catch (x) {
+    // polaczenie juz zamkniete
+  }
+}
+// Wersja 1 i dokladnie trzy sklepy (przy otwarciu).
+function Bob_schemat(db) {
+  const n = db.objectStoreNames;
+  return db.version === 1 && n.length === Bob_SKLEPY.length && Bob_SKLEPY.every(function (s) { return n.contains(s); });
+}
+// keyPath i indeksy sklepow transakcji (przed ich uzyciem).
+function Bob_schematSklepow(tx, sklepy) {
+  return sklepy.every(function (nazwa) {
+    const st = tx.objectStore(nazwa);
+    const d = Bob_SCHEMAT[nazwa];
+    if (JSON.stringify(st.keyPath) !== JSON.stringify(d.keyPath) || st.indexNames.length !== d.indeksy.length) return false;
+    return d.indeksy.every(function (i) {
+      if (!st.indexNames.contains(i[0])) return false;
+      const ix = st.index(i[0]);
+      return JSON.stringify(ix.keyPath) === JSON.stringify(i[1]) && ix.unique === i[2] && !ix.multiEntry;
+    });
+  });
+}
+function Bob_utworzSchemat(db) {
+  Bob_SKLEPY.forEach(function (nazwa) {
+    const d = Bob_SCHEMAT[nazwa];
+    const st = db.createObjectStore(nazwa, { keyPath: d.keyPath });
+    d.indeksy.forEach(function (i) { st.createIndex(i[0], i[1], { unique: i[2] }); });
+    if (nazwa === 'meta') st.add({ k: Bob_LICZNIK, v: 0, baza: ne() });
+  });
+}
+// Jedno zadanie otwarcia bez numeru wersji: proba (bazy nie ma — upgrade przerwany, wynik { brak }) albo tworzenie
+// schematu v1 (tylko przy oldVersion 0 i gdy ten dokument nie kasowal bazy konta; brak miejsca — SYNC_DB_QUOTA). Wynik
+// raz: { pol } | { brak } | { odmowa }; po rozstrzygnieciu (takze po limicie czasu) spozniony sukces zamyka
+// polaczenie, spozniony upgrade jest przerywany. versionchange: zapamietane kasowanie (newVersion null), polaczenie
+// zamkniete bez przerywania transakcji.
+function Bob_otwarcie(idb, nazwa, uid, tworz, s) {
+  let rozstrzygniete = false;
+  const obietnica = new Promise(function (gotowe) {
+    let brak = false;
+    let odmowa = null;
+    const wynik = function (w) {
+      if (rozstrzygniete) return;
+      rozstrzygniete = true;
+      gotowe(w);
+    };
+    let r;
+    try {
+      r = idb.open(nazwa);
+    } catch (x) {
+      wynik({ odmowa: Bob_odmowa('blad', 'SYNC_DB_OPEN_FAILED') });
+      return;
+    }
+    const przerwijUpgrade = function (o) {
+      if (o && !odmowa) odmowa = o;
+      try {
+        r.transaction.abort();
+      } catch (x) {
+        // upgrade juz zakonczony
+      }
+    };
+    r.onupgradeneeded = function (e) {
+      if (rozstrzygniete || !tworz) {
+        brak = !rozstrzygniete && e.oldVersion === 0;
+        przerwijUpgrade(null);
+        return;
+      }
+      const p = Bob_poSesji(s) || (Bob_trybPrywatny() ? null : 'tryb');
+      if (p) {
+        przerwijUpgrade(Bob_odmowa(p));
+        return;
+      }
+      if (Bob_usuwane.has(uid)) {
+        przerwijUpgrade(Bob_odmowa('blad', 'SYNC_DB_DELETED'));
+        return;
+      }
+      if (e.oldVersion !== 0 || r.result.version !== 1) {
+        przerwijUpgrade(Bob_odmowa('blad', 'SYNC_DB_SCHEMA'));
+        return;
+      }
+      const tx = r.transaction;
+      tx.onabort = function () {
+        if (Bob_nazwa(tx.error) === 'QuotaExceededError' && !odmowa) odmowa = Bob_odmowa('blad', 'SYNC_DB_QUOTA');
+      };
+      try {
+        Bob_utworzSchemat(r.result);
+      } catch (x) {
+        przerwijUpgrade(Bob_odmowa('blad', 'SYNC_DB_OPEN_FAILED'));
+      }
+    };
+    r.onblocked = function () {
+      wynik({ odmowa: Bob_odmowa('blad', 'SYNC_DB_BLOCKED') });
+    };
+    r.onerror = function () {
+      if (brak && Bob_nazwa(r.error) === 'AbortError') wynik({ brak: true });
+      else wynik({ odmowa: odmowa || Bob_odmowa('blad', 'SYNC_DB_OPEN_FAILED') });
+    };
+    r.onsuccess = function () {
+      const db = r.result;
+      if (rozstrzygniete) {
+        Bob_zamknij(db);
+        return;
+      }
+      const pol = { db: db, zmiana: false, zerwane: false };
+      db.onversionchange = function (e) {
+        if (uid !== null && e && e.newVersion === null) Bob_usuwane.add(uid);
+        pol.zmiana = true;
+        Bob_zamknij(db);
+      };
+      db.onclose = function () {
+        pol.zerwane = true;
+      };
+      wynik({ pol: pol });
+    };
+  });
+  return Bob_limit(obietnica, Bob_LIMIT_MS, function () {
+    rozstrzygniete = true;
+    return { odmowa: Bob_odmowa('blad', 'SYNC_DB_TIMEOUT') };
+  });
+}
+// Baza kolejki konta: proba, a przy braku bazy i tworz — tworzenie (sprawdzenia jak przy zapisie karty). Wynik: odmowa
+// albo { ok: true, pol } (pol null — bazy nie ma).
+async function Bob_otworz(uid, tworz, s) {
+  if (Bob_usuwane.has(uid)) return Bob_odmowa('blad', 'SYNC_DB_DELETED');
+  const idb = Bob_idb();
+  if (!idb) return Bob_odmowa('brak-indexeddb');
+  const nazwa = Bob_BAZA + uid;
+  let r = await Bob_otwarcie(idb, nazwa, uid, false, s);
+  if (r.brak && tworz) {
+    const p0 = Bob_poSesji(s);
+    if (p0) return Bob_odmowa(p0);
+    if (Bob_usuwane.has(uid)) return Bob_odmowa('blad', 'SYNC_DB_DELETED');
+    if (!Bob_trybPrywatny()) return Bob_odmowa('tryb');
+    r = await Bob_otwarcie(idb, nazwa, uid, true, s);
+  }
+  const p = Bob_poSesji(s);
+  if (r.pol && (p || !Bob_schemat(r.pol.db))) {
+    Bob_zamknij(r.pol.db);
+    return p ? Bob_odmowa(p) : Bob_odmowa('blad', 'SYNC_DB_SCHEMA');
+  }
+  if (p) return Bob_odmowa(p);
+  if (r.odmowa) return r.odmowa;
+  return { ok: true, pol: r.pol || null };
+}
+// Kod bledu IndexedDB wylacznie z nazwy (nigdy komunikat).
+function Bob_kodIDB(x, tryb) {
+  const n = Bob_nazwa(x);
+  if (n === 'QuotaExceededError') return 'SYNC_DB_QUOTA';
+  if (n === 'ConstraintError') return 'SYNC_DB_CONSTRAINT';
+  if (n === 'InvalidStateError') return 'SYNC_DB_CLOSED';
+  if (n === 'TransactionInactiveError') return 'SYNC_DB_INACTIVE';
+  if (n === 'AbortError' || !n) return 'SYNC_DB_ABORTED';
+  return tryb === 'readwrite' ? 'SYNC_DB_WRITE_FAILED' : 'SYNC_DB_READ_FAILED';
+}
+// Jedna transakcja na polaczeniu, bez await w srodku: praca(k) wysyla zadania synchronicznie, kolejne kroki tylko w
+// kontynuacjach k.req. Wynik wylacznie z oncomplete (ok z wartoscia k.wynik) albo z onabort: przyczyna zapamietana
+// (pierwsza wygrywa; AbortError zadania to skutek przerwania, nie przyczyna) albo kod z tx.error; UnknownError bez
+// bledu zadania tej nazwy albo po zdarzeniu close — zerwane polaczenie. Polaczenie zamyka wylacznie Bob_tx: po
+// zakonczeniu transakcji i przy kazdym wyjsciu przed nia.
+function Bob_tx(pol, sklepy, tryb, s, praca) {
+  return new Promise(function (gotowe) {
+    const db = pol.db;
+    let tx;
+    let przyczyna = null;
+    let stop = false;
+    let wynik = null;
+    const przerwij = function (powod, code) {
+      if (!przyczyna) przyczyna = Bob_odmowa(powod, code);
+      stop = true;
+      try {
+        tx.abort();
+      } catch (x) {
+        // transakcja juz sie zatwierdza albo jest zakonczona — wynik da oncomplete
+      }
+    };
+    const odm = Bob_poSesji(s) || (tryb === 'readwrite' && !Bob_trybPrywatny() ? 'tryb' : null);
+    if (odm) {
+      Bob_zamknij(db);
+      gotowe(Bob_odmowa(odm));
+      return;
+    }
+    try {
+      tx = db.transaction(sklepy, tryb);
+    } catch (x) {
+      Bob_zamknij(db);
+      gotowe(Bob_odmowa('blad', Bob_nazwa(x) === 'InvalidStateError' && pol.zmiana ? 'SYNC_DB_CHANGED' : Bob_kodIDB(x, tryb)));
+      return;
+    }
+    tx.oncomplete = function () {
+      Bob_zamknij(db);
+      gotowe(Object.assign({ ok: true }, wynik));
+    };
+    tx.onabort = function () {
+      Bob_zamknij(db);
+      if (przyczyna) {
+        gotowe(przyczyna);
+        return;
+      }
+      const zerwane = pol.zerwane || Bob_nazwa(tx.error) === 'UnknownError';
+      gotowe(Bob_odmowa('blad', zerwane ? 'SYNC_DB_CLOSED' : Bob_kodIDB(tx.error, tryb)));
+    };
+    const k = {
+      sklep: function (n) {
+        return tx.objectStore(n);
+      },
+      req: function (r, dalej) {
+        r.onsuccess = function () {
+          if (stop) return;
+          const p = Bob_poSesji(s);
+          if (p) {
+            przerwij(p);
+            return;
+          }
+          if (!dalej) return;
+          try {
+            dalej(r.result);
+          } catch (x) {
+            przerwij('blad', Bob_nazwa(x) === 'TransactionInactiveError' ? 'SYNC_DB_INACTIVE' : 'SYNC_INTERNAL');
+          }
+        };
+        r.onerror = function () {
+          stop = true;
+          if (!przyczyna && Bob_nazwa(r.error) !== 'AbortError') przyczyna = Bob_odmowa('blad', Bob_kodIDB(r.error, tryb));
+        };
+        return r;
+      },
+      wynik: function (x) {
+        wynik = x;
+      },
+    };
+    try {
+      if (Bob_schematSklepow(tx, sklepy)) praca(k);
+      else przerwij('blad', 'SYNC_DB_SCHEMA');
+    } catch (x) {
+      przerwij('blad', Bob_nazwa(x) === 'TransactionInactiveError' ? 'SYNC_DB_INACTIVE' : 'SYNC_INTERNAL');
+    }
+  });
+}
+// Operacja na istniejacej bazie (bez tworzenia): bazy nie ma — wynik pusty.
+async function Bob_naBazie(uid, s, sklepy, tryb, pusty, praca) {
+  const o = await Bob_otworz(uid, false, s);
+  if (!o.ok) return o;
+  if (!o.pol) return Object.assign({ ok: true }, pusty);
+  return Bob_tx(o.pol, sklepy, tryb, s, praca);
+}
+
+// ── Kolejka: dopisanie i koalescencja ───────────────────────────────────────────────────────────────────────────────
+// Rekord licznika { v, baza } (brak albo zly ksztalt — { v: 0, baza: null }; brak rekordu nie jest bledem schematu).
+function Bob_licznik(L) {
+  return {
+    v: Bev_obiekt(L) && Number.isSafeInteger(L.v) && L.v >= 0 ? L.v : 0,
+    baza: Bev_obiekt(L) && typeof L.baza === 'string' && L.baza ? L.baza : null,
+  };
+}
+function Bob_seq(c) {
+  const w = c ? c.value : null;
+  return w && Number.isSafeInteger(w.seqLocal) && w.seqLocal > 0 ? w.seqLocal : 0;
+}
+// Epoka dopisania: licznik i ostatni seqLocal z osobnej transakcji readonly PRZED builderem (bazy nie ma —
+// { baza: null, n: 0 }; odczyt nie tworzy bazy). Wiersz o seqLocal > n mogl powstac ze stanu nowszego niz zrodlo tego
+// dopisania. Zakres obejmuje tez sklep quarantine: dopisanie sprawdza schemat wszystkich trzech sklepow.
+async function Bob_epoka(uid, s) {
+  const o = await Bob_otworz(uid, false, s);
+  if (!o.ok) return o;
+  if (!o.pol) return { ok: true, baza: null, n: 0 };
+  return Bob_tx(o.pol, ['meta', 'outbox', 'quarantine'], 'readonly', s, function (k) {
+    let L;
+    let maks;
+    let ile = 2;
+    const dalej = function () {
+      ile -= 1;
+      if (ile) return;
+      const l = Bob_licznik(L);
+      k.wynik({ baza: l.baza, n: Math.max(l.v, maks) });
+    };
+    k.req(k.sklep('meta').get(Bob_LICZNIK), function (x) { L = x; dalej(); });
+    k.req(k.sklep('outbox').index('bySeqLocal').openCursor(null, 'prev'), function (c) { maks = Bob_seq(c); dalej(); });
+  });
+}
+function Bob_napis(x, max) {
+  return typeof x === 'string' && x.length > 0 && x.length <= max;
+}
+// Argumenty enqueue: rodzaj z listy (inaczej rodzaj), klucze rodzaju, opcje.setId tylko dla pfull i tylko z bialej
+// listy znakow (setId jest jawny w bazie).
+function Bob_argumentyDopisania(kind, klucze, opcje) {
+  if (typeof kind !== 'string' || Bev_RODZAJE.indexOf(kind) < 0) return 'rodzaj';
+  if (opcje !== undefined && opcje !== null && !Bev_obiekt(opcje)) return 'argument';
+  const setId = Bev_obiekt(opcje) ? opcje.setId : undefined;
+  if (setId !== undefined && (kind !== 'pfull' || typeof setId !== 'string' || !Bob_KOD.test(setId))) return 'argument';
+  if (kind === 'snap') {
+    return Bev_obiekt(klucze) && Bob_napis(klucze.patientId, Bob_KLUCZ) && Bob_napis(klucze.snapshotId, Bob_KLUCZ) ? null : 'argument';
+  }
+  if (kind === 'pfull') return Bev_obiekt(klucze) && Bob_napis(klucze.patientId, Bob_KLUCZ) ? null : 'argument';
+  if (kind === 'cred') return klucze === null || klucze === undefined ? null : 'argument';
+  return Bob_napis(klucze, kind === 'pk' || kind === 'pktomb' ? Bob_KLUCZ_PK : Bob_KLUCZ) ? null : 'argument';
+}
+function Bob_kluczEncji(kind, klucze) {
+  if (kind === 'snap') return klucze.patientId + '/' + klucze.snapshotId;
+  if (kind === 'pfull') return klucze.patientId;
+  if (kind === 'cred') return 'cred';
+  return klucze;
+}
+// Wiersz outbox: dokladnie te pola; tresc (env) niezmienna od dopisania.
+function Bob_wiersz(x, seqLocal, teraz) {
+  return {
+    eid: x.eid, createdAtISO: teraz, seqLocal: seqLocal, kind: x.kind, entityKey: x.entityKey, setId: x.setId, env: x.env,
+    bytes: x.bytes, state: x.state, attempts: 0, lastError: null, lastAttemptAtISO: null, inflightAtISO: null,
+  };
+}
+// Koalescencja (funkcja czysta: tylko parametry, literaly i metody tablic). klucza — wiersze tej encji ([kind,
+// entityKey]); nowe — [{ state, setId }] nowych wierszy (pfull: caly zestaw); e — epoka dopisania (licznik przed
+// builderem); sufiks — wiersze pending/inflight calej kolejki za najstarszym kandydatem. Wynik { usun: [eid], istnial }.
+// Zaden wiersz o seqLocal > e nie jest usuwany (mogl powstac ze stanu nowszego niz to dopisanie). Nowy unreadable
+// niczego nie usuwa (istnial, gdy encja ma juz wiersz unreadable). Nowy wiersz z trescia usuwa unreadable i oversize
+// tej encji (<= e), nowy pending takze rejected; oczekujace pending (<= e; pfull — tylko pelne zestawy o innym setId,
+// wszystkie porcje pending i <= e) tylko wtedy, gdy wszystkie nowe wiersze sa pending (nowy oversize, takze porcja
+// zestawu, nie usuwa pending) i za najstarszym z nich nie stoi zaden inny wiersz do wyslania.
+function Bob_plan(klucza, nowe, e, sufiks) {
+  if (nowe.some(function (n) { return n.state === 'unreadable'; })) {
+    return { usun: [], istnial: klucza.some(function (w) { return w.state === 'unreadable'; }) };
+  }
+  const zTresci = nowe.some(function (n) { return n.state === 'pending'; });
+  const doEpoki = klucza.filter(function (w) { return w.seqLocal <= e; });
+  const usun = doEpoki.filter(function (w) {
+    return w.state === 'unreadable' || w.state === 'oversize' || (zTresci && w.state === 'rejected');
+  }).map(function (w) { return w.eid; });
+  if (!zTresci || !nowe.every(function (n) { return n.state === 'pending'; })) return { usun: usun, istnial: false };
+  const zestaw = nowe[0].setId;
+  const kandydaci = doEpoki.filter(function (w) {
+    if (w.state !== 'pending') return false;
+    if (zestaw === null) return true;
+    if (w.setId === zestaw) return false;
+    return klucza.every(function (x) { return x.setId !== w.setId || (x.state === 'pending' && x.seqLocal <= e); });
+  });
+  if (!kandydaci.length) return { usun: usun, istnial: false };
+  const eidy = kandydaci.map(function (w) { return w.eid; });
+  const m = kandydaci.reduce(function (a, w) { return w.seqLocal < a ? w.seqLocal : a; }, kandydaci[0].seqLocal);
+  const ogon = sufiks.every(function (w) { return w.seqLocal <= m || eidy.indexOf(w.eid) >= 0; });
+  return { usun: ogon ? usun.concat(eidy) : usun, istnial: false };
+}
+// Transakcja dopisania (readwrite na meta i outbox): licznik, ostatni seqLocal i wiersze encji; baza utworzona albo
+// odtworzona po odczycie epoki — bez zastepowania; przy kandydatach do zastapienia sufiks kolejki kursorem od konca
+// (wczesny koniec); potem w jednej kontynuacji delete, add (seqLocal od max(licznik, ostatni) + 1) i licznik.
+function Bob_pracaDopisania(e, nowe, teraz, nowaBaza) {
+  return function (k) {
+    const meta = k.sklep('meta');
+    const out = k.sklep('outbox');
+    const zTresci = nowe.some(function (x) { return x.state === 'pending'; });
+    let L;
+    let maks;
+    let klucza;
+    let ile = 3;
+    const zapisz = function (n, sufiks) {
+      const plan = Bob_plan(klucza, nowe.map(function (x) { return { state: x.state, setId: x.setId }; }), n, sufiks);
+      if (plan.istnial) {
+        k.wynik({ eids: [], stany: [], zastapione: 0, istnial: true });
+        return;
+      }
+      const l = Bob_licznik(L);
+      const nast = Math.max(l.v, maks) + 1;
+      plan.usun.forEach(function (eid) { k.req(out.delete(eid)); });
+      nowe.forEach(function (x, i) { k.req(out.add(Bob_wiersz(x, nast + i, teraz))); });
+      k.req(meta.put({ k: Bob_LICZNIK, v: nast + nowe.length - 1, baza: l.baza !== null ? l.baza : nowaBaza }));
+      k.wynik({
+        eids: nowe.map(function (x) { return x.eid; }), stany: nowe.map(function (x) { return x.state; }),
+        zastapione: plan.usun.length,
+      });
+    };
+    const odczytane = function () {
+      ile -= 1;
+      if (ile) return;
+      const l = Bob_licznik(L);
+      const n = l.baza === null || l.baza !== e.baza ? 0 : e.n;
+      const kandydaci = klucza.filter(function (w) { return w.state === 'pending' && w.seqLocal <= n; });
+      if (!zTresci || !kandydaci.length) {
+        zapisz(n, []);
+        return;
+      }
+      const m0 = kandydaci.reduce(function (a, w) { return w.seqLocal < a ? w.seqLocal : a; }, kandydaci[0].seqLocal);
+      const sufiks = [];
+      k.req(out.index('bySeqLocal').openCursor(null, 'prev'), function (c) {
+        const w = c ? c.value : null;
+        if (!w || !(w.seqLocal > m0)) {
+          zapisz(n, sufiks);
+          return;
+        }
+        if (w.state === 'pending' || w.state === 'inflight') {
+          sufiks.push({ eid: w.eid, seqLocal: w.seqLocal, state: w.state, kind: w.kind, entityKey: w.entityKey, setId: w.setId });
+        }
+        c.continue();
+      });
+    };
+    k.req(meta.get(Bob_LICZNIK), function (x) { L = x; odczytane(); });
+    k.req(out.index('bySeqLocal').openCursor(null, 'prev'), function (c) { maks = Bob_seq(c); odczytane(); });
+    k.req(out.index('byEntity').getAll([nowe[0].kind, nowe[0].entityKey]), function (x) {
+      klucza = Array.isArray(x) ? x : [];
+      odczytane();
+    });
+  };
+}
+// enqueue(kind, klucze, opcje?): wejscie, argumenty, wpis rejestru, epoka, identyfikator urzadzenia (bez zapisu),
+// builder (null — brak, bez otwarcia do zapisu; nieczytelne zrodlo — wiersz unreadable), szyfrowanie kazdej koperty
+// (> limit zdarzenia — oversize), otwarcie do zapisu (tworzy baze), transakcja dopisania; po zatwierdzeniu zapis
+// identyfikatora urzadzenia. Wynik { ok, eids, stany, zastapione } albo { …, istnial: true } albo odmowa.
+async function Bob_dopisz(kind, klucze, opcje) {
+  try {
+    const odm = Bob_wejscie() || Bob_argumentyDopisania(kind, klucze, opcje);
+    if (odm) return Bob_odmowa(odm);
+    const s = Bses_opcje(null);
+    const uid = b;
+    const konto = await Bob_konto(uid, s);
+    if (konto) return konto;
+    const e = await Bob_epoka(uid, s);
+    if (!e.ok) return e;
+    const p0 = Bob_poSesji(s);
+    if (p0) return Bob_odmowa(p0);
+    const urz = Bob_urzadzenie(uid);
+    const setId = Bev_obiekt(opcje) ? opcje.setId : undefined;
+    const zrodlo = kind === 'snap' ? { patientId: klucze.patientId, snapshotId: klucze.snapshotId }
+      : kind === 'pfull' ? { patientId: klucze.patientId } : klucze;
+    let koperty;
+    let nieczytelne = false;
+    try {
+      koperty = await Bev_BUILDERY[kind](zrodlo, urz.dev, setId !== undefined ? { setId: setId } : undefined);
+    } catch (x) {
+      if (Bev_kod(x) !== 'EVENT_SOURCE_UNREADABLE') return Bob_bladZrodla(x, s);
+      nieczytelne = true;
+    }
+    const p = Bob_poSesji(s);
+    if (p) return Bob_odmowa(p);
+    const nowe = [];
+    if (nieczytelne) {
+      nowe.push({ eid: ne(), kind: kind, entityKey: Bob_kluczEncji(kind, klucze), setId: null, env: null, bytes: 0, state: 'unreadable' });
+    } else {
+      if (!Array.isArray(koperty) || !koperty.length) return Bob_odmowa('brak');
+      for (const kop of koperty) {
+        let z;
+        try {
+          z = await Bev_szyfruj(kop);
+        } catch (x) {
+          return Bob_bladZrodla(x, s);
+        }
+        const p2 = Bob_poSesji(s);
+        if (p2) return Bob_odmowa(p2);
+        nowe.push({
+          eid: ne(), kind: kop.event.kind, entityKey: kop.event.key, setId: kop.event.full ? kop.event.full.setId : null,
+          env: z.env, bytes: z.bytes, state: z.bytes > Bev_MAX_BAJTOW ? 'oversize' : 'pending',
+        });
+      }
+    }
+    const nowaBaza = ne();
+    const teraz = Bob_teraz();
+    const o = await Bob_otworz(uid, true, s);
+    if (!o.ok) return o;
+    if (!o.pol) return Bob_odmowa('blad', 'SYNC_DB_OPEN_FAILED');
+    const w = await Bob_tx(o.pol, ['meta', 'outbox'], 'readwrite', s, Bob_pracaDopisania(e, nowe, teraz, nowaBaza));
+    const zTresci = nowe.some(function (x) { return x.state === 'pending' || x.state === 'oversize'; });
+    if (w.ok && !w.istnial && urz.nowy && zTresci) Bob_urzadzenieZapisz(uid, urz.dev);
+    return w;
+  } catch (x) {
+    return Bob_nieprzewidziany(x);
+  }
+}
+
+// ── Kolejka: odczyty, wybor do wysylki i zmiany stanu ───────────────────────────────────────────────────────────────
+function Bob_zera() {
+  return { pending: 0, inflight: 0, oversize: 0, unreadable: 0, rejected: 0, total: 0 };
+}
+// outboxCount(): liczba wierszy w kazdym stanie (byState.count) w jednej transakcji readonly; bazy nie ma — zera.
+async function Bob_licz() {
+  try {
+    const odm = Bob_wejscie();
+    if (odm) return Bob_odmowa(odm);
+    return await Bob_naBazie(b, Bses_opcje(null), ['outbox'], 'readonly', Bob_zera(), function (k) {
+      const ix = k.sklep('outbox').index('byState');
+      const w = Bob_zera();
+      let ile = Bob_STANY.length;
+      Bob_STANY.forEach(function (stan) {
+        k.req(ix.count(stan), function (n) {
+          w[stan] = n;
+          w.total += n;
+          ile -= 1;
+          if (!ile) k.wynik(w);
+        });
+      });
+    });
+  } catch (x) {
+    return Bob_nieprzewidziany(x);
+  }
+}
+// outboxList({ state }?): kopie wierszy po seqLocal rosnaco (kursor bySeqLocal), opcjonalnie jednego stanu.
+async function Bob_lista(opcje) {
+  try {
+    const stan = Bev_obiekt(opcje) ? opcje.state : undefined;
+    const zle = (opcje !== undefined && !Bev_obiekt(opcje)) || (stan !== undefined && Bob_STANY.indexOf(stan) < 0);
+    const odm = Bob_wejscie() || (zle ? 'argument' : null);
+    if (odm) return Bob_odmowa(odm);
+    return await Bob_naBazie(b, Bses_opcje(null), ['outbox'], 'readonly', { wiersze: [] }, function (k) {
+      const wiersze = [];
+      k.req(k.sklep('outbox').index('bySeqLocal').openCursor(), function (c) {
+        if (!c) {
+          k.wynik({ wiersze: wiersze });
+          return;
+        }
+        const w = c.value;
+        if (stan === undefined || w.state === stan) wiersze.push(w);
+        c.continue();
+      });
+    });
+  } catch (x) {
+    return Bob_nieprzewidziany(x);
+  }
+}
+function Bob_calkowita(x, od, doMaks) {
+  return Number.isSafeInteger(x) && x >= od && x <= doMaks;
+}
+// Element ciala partii {"eid","iv","data"} w bajtach UTF-8.
+function Bob_element(w) {
+  return Bev_utf8(JSON.stringify({ eid: w.eid, iv: w.env.iv, data: w.env.data }));
+}
+// Rozmiar ciala partii {"events":[{eid,iv,data},…]} w bajtach UTF-8: 13 B szkieletu, elementy, przecinki i extraBytes
+// wolajacego (pola dodane do ciala, np. token).
+function Bob_cialo(dlugosci, extraBytes) {
+  return 13 + dlugosci.reduce(function (a, d) { return a + d; }, 0) + Math.max(0, dlugosci.length - 1) + extraBytes;
+}
+// outboxTake({ limit, maxBytes, extraBytes }?): jedna transakcja readwrite; kursor bySeqLocal rosnaco z wczesnym
+// koncem; oversize, unreadable i rejected pomijane; pierwszy wiersz inflight konczy wybor (czekaNaWLocie); pending
+// dopoki limit i rozmiar ciala partii pozwalaja — pierwszy niemieszczacy sie konczy (bez przeskoku); wybrane inflight.
+async function Bob_wez(opcje) {
+  try {
+    const o = opcje === undefined ? {} : opcje;
+    const limit = Bev_obiekt(o) && o.limit !== undefined ? o.limit : Bob_PARTIA;
+    const maks = Bev_obiekt(o) && o.maxBytes !== undefined ? o.maxBytes : Bob_PARTIA_BAJTOW;
+    const extra = Bev_obiekt(o) && o.extraBytes !== undefined ? o.extraBytes : 0;
+    const zle = !Bev_obiekt(o) || !Bob_calkowita(limit, 1, Bob_PARTIA) || !Bob_calkowita(maks, 1, Bob_PARTIA_BAJTOW) ||
+      !Bob_calkowita(extra, 0, Number.MAX_SAFE_INTEGER);
+    const odm = Bob_wejscie() || (zle ? 'argument' : null);
+    if (odm) return Bob_odmowa(odm);
+    const teraz = Bob_teraz();
+    const pusty = { wiersze: [], bodyBytes: 0, czekaNaWLocie: false };
+    return await Bob_naBazie(b, Bses_opcje(null), ['outbox'], 'readwrite', pusty, function (k) {
+      const st = k.sklep('outbox');
+      const wybrane = [];
+      const dlugosci = [];
+      let czeka = false;
+      const koniec = function () {
+        wybrane.forEach(function (w) {
+          k.req(st.put(Object.assign({}, w, { state: 'inflight', inflightAtISO: teraz })));
+        });
+        k.wynik({
+          wiersze: wybrane.map(function (w) {
+            return { eid: w.eid, seqLocal: w.seqLocal, kind: w.kind, entityKey: w.entityKey, env: w.env, bytes: w.bytes };
+          }),
+          bodyBytes: wybrane.length ? Bob_cialo(dlugosci, extra) : 0,
+          czekaNaWLocie: czeka,
+        });
+      };
+      k.req(st.index('bySeqLocal').openCursor(), function (c) {
+        if (!c) {
+          koniec();
+          return;
+        }
+        const w = c.value;
+        if (w.state === 'inflight') {
+          czeka = true;
+          koniec();
+          return;
+        }
+        if (w.state !== 'pending') {
+          c.continue();
+          return;
+        }
+        const d = Bob_element(w);
+        if (Bob_cialo(dlugosci.concat([d]), extra) > maks) {
+          koniec();
+          return;
+        }
+        wybrane.push(w);
+        dlugosci.push(d);
+        if (wybrane.length >= limit) koniec();
+        else c.continue();
+      });
+    });
+  } catch (x) {
+    return Bob_nieprzewidziany(x);
+  }
+}
+function Bob_eidPoprawny(x) {
+  return typeof x === 'string' && x.length > 0 && x.length <= Bob_EID;
+}
+function Bob_tablica(x) {
+  return Array.isArray(x) && x.length <= Bob_LISTA;
+}
+// Zmiana wierszy wskazanych po eid: kazdy poprawny i niepowtorzony eid czytany osobnym get, potem w jednej
+// kontynuacji zmiana(wiersz, wpis) → 'usun', nowy wiersz albo null (pominiety); gotowe(k, zmienione wpisy, pominiete eid).
+function Bob_pracaPoEid(wpisy, eidWpisu, zmiana, gotowe) {
+  return function (k) {
+    const st = k.sklep('outbox');
+    const odczyt = new Map();
+    wpisy.forEach(function (w, i) {
+      const eid = eidWpisu(w);
+      if (Bob_eidPoprawny(eid) && !odczyt.has(eid)) odczyt.set(eid, { i: i, wiersz: undefined });
+    });
+    let ile = odczyt.size;
+    const faza = function () {
+      const zmienione = [];
+      const pominiete = [];
+      wpisy.forEach(function (w, i) {
+        const eid = eidWpisu(w);
+        const o = Bob_eidPoprawny(eid) ? odczyt.get(eid) : undefined;
+        const nowy = o && o.i === i && Bev_obiekt(o.wiersz) ? zmiana(o.wiersz, w) : null;
+        if (!nowy) {
+          pominiete.push(eid);
+          return;
+        }
+        k.req(nowy === 'usun' ? st.delete(eid) : st.put(nowy));
+        zmienione.push(w);
+      });
+      gotowe(k, zmienione, pominiete);
+    };
+    if (!ile) {
+      faza();
+      return;
+    }
+    odczyt.forEach(function (o, eid) {
+      k.req(st.get(eid), function (x) {
+        o.wiersz = x;
+        ile -= 1;
+        if (!ile) faza();
+      });
+    });
+  };
+}
+function Bob_samEid(x) {
+  return x;
+}
+function Bob_wynikUsuniecia(k, zmienione, pominiete) {
+  k.wynik({ usuniete: zmienione, pominiete: pominiete });
+}
+// outboxAccept(eids): usuwa wiersze pending/inflight (jedyna automatyczna sciezka usuwania wierszy wyslanych).
+async function Bob_przyjmij(eids) {
+  try {
+    const odm = Bob_wejscie() || (Bob_tablica(eids) ? null : 'argument');
+    if (odm) return Bob_odmowa(odm);
+    const praca = Bob_pracaPoEid(eids, Bob_samEid, function (w) {
+      return w.state === 'pending' || w.state === 'inflight' ? 'usun' : null;
+    }, Bob_wynikUsuniecia);
+    return await Bob_naBazie(b, Bses_opcje(null), ['outbox'], 'readwrite', { usuniete: [], pominiete: [] }, praca);
+  } catch (x) {
+    return Bob_nieprzewidziany(x);
+  }
+}
+// outboxDiscard(eids, { potwierdzone: true }): jawna decyzja uzytkownika — usuwa w kazdym stanie.
+async function Bob_porzuc(eids, opcje) {
+  try {
+    const odm = Bob_wejscie() || (Bob_tablica(eids) && Bev_obiekt(opcje) && opcje.potwierdzone === true ? null : 'argument');
+    if (odm) return Bob_odmowa(odm);
+    const praca = Bob_pracaPoEid(eids, Bob_samEid, function () { return 'usun'; }, Bob_wynikUsuniecia);
+    return await Bob_naBazie(b, Bses_opcje(null), ['outbox'], 'readwrite', { usuniete: [], pominiete: [] }, praca);
+  } catch (x) {
+    return Bob_nieprzewidziany(x);
+  }
+}
+// outboxReject([{ eid, code }]): pending/inflight → oversize (code 'oversize') albo rejected; kod spoza bialej listy
+// zapisany jako 'invalid'; nigdy nie usuwa; zaden wpis nie zostawia partii w locie.
+async function Bob_odrzuc(wpisy) {
+  try {
+    const odm = Bob_wejscie() || (Bob_tablica(wpisy) ? null : 'argument');
+    if (odm) return Bob_odmowa(odm);
+    const teraz = Bob_teraz();
+    const stan = function (w) { return w.code === 'oversize' ? 'oversize' : 'rejected'; };
+    const praca = Bob_pracaPoEid(wpisy, function (w) { return Bev_obiekt(w) ? w.eid : null; }, function (x, w) {
+      if (x.state !== 'pending' && x.state !== 'inflight') return null;
+      const kod = typeof w.code === 'string' && Bob_KOD.test(w.code) ? w.code : 'invalid';
+      return Object.assign({}, x, { state: stan(w), lastError: kod, lastAttemptAtISO: teraz, inflightAtISO: null });
+    }, function (k, zmienione, pominiete) {
+      k.wynik({ zmienione: zmienione.map(function (w) { return { eid: w.eid, stan: stan(w) }; }), pominiete: pominiete });
+    });
+    return await Bob_naBazie(b, Bses_opcje(null), ['outbox'], 'readwrite', { zmienione: [], pominiete: [] }, praca);
+  } catch (x) {
+    return Bob_nieprzewidziany(x);
+  }
+}
+// outboxFail(eids, { code, bezProby }): inflight → pending; attempts + 1 (bez proby — bez zmiany); lastError tylko z
+// bialej listy, inaczej null.
+async function Bob_niepowodzenie(eids, opcje) {
+  try {
+    const o = opcje === undefined ? {} : opcje;
+    const zle = !Bob_tablica(eids) || !Bev_obiekt(o) || (o.bezProby !== undefined && typeof o.bezProby !== 'boolean');
+    const odm = Bob_wejscie() || (zle ? 'argument' : null);
+    if (odm) return Bob_odmowa(odm);
+    const teraz = Bob_teraz();
+    const kod = typeof o.code === 'string' && Bob_KOD.test(o.code) ? o.code : null;
+    const dodaj = o.bezProby === true ? 0 : 1;
+    const praca = Bob_pracaPoEid(eids, Bob_samEid, function (x) {
+      if (x.state !== 'inflight') return null;
+      const proby = Number.isSafeInteger(x.attempts) && x.attempts >= 0 ? x.attempts : 0;
+      return Object.assign({}, x, {
+        state: 'pending', attempts: proby + dodaj, lastError: kod, lastAttemptAtISO: teraz, inflightAtISO: null,
+      });
+    }, function (k, zmienione, pominiete) {
+      k.wynik({ zmienione: zmienione, pominiete: pominiete });
+    });
+    return await Bob_naBazie(b, Bses_opcje(null), ['outbox'], 'readwrite', { zmienione: [], pominiete: [] }, praca);
+  } catch (x) {
+    return Bob_nieprzewidziany(x);
+  }
+}
+// outboxRequeueStale({ olderThanMs }?): inflight starsze niz limit, z nieczytelna chwila albo z chwila w przyszlosci →
+// pending; attempts bez zmian.
+async function Bob_zLotu(opcje) {
+  try {
+    const o = opcje === undefined ? {} : opcje;
+    const limit = Bev_obiekt(o) && o.olderThanMs !== undefined ? o.olderThanMs : Bob_LOT_MS;
+    const odm = Bob_wejscie() || (Bev_obiekt(o) && Bob_calkowita(limit, 0, Number.MAX_SAFE_INTEGER) ? null : 'argument');
+    if (odm) return Bob_odmowa(odm);
+    return await Bob_naBazie(b, Bses_opcje(null), ['outbox'], 'readwrite', { przywrocone: [] }, function (k) {
+      const st = k.sklep('outbox');
+      k.req(st.index('byState').getAll('inflight'), function (lista) {
+        const przywrocone = [];
+        (Array.isArray(lista) ? lista : []).forEach(function (w) {
+          const wiek = Bob_wiek(w.inflightAtISO);
+          if (wiek >= 0 && wiek <= limit) return;
+          k.req(st.put(Object.assign({}, w, { state: 'pending', inflightAtISO: null })));
+          przywrocone.push(w.eid);
+        });
+        k.wynik({ przywrocone: przywrocone });
+      });
+    });
+  } catch (x) {
+    return Bob_nieprzewidziany(x);
+  }
+}
+
+// ── Kasowanie bazy ──────────────────────────────────────────────────────────────────────────────────────────────────
+// Czy baza moze istniec: databases() (pod limitem), a bez niego albo przy bledzie — proba otwarcia (kazdy wynik poza
+// „brak” oznacza, ze baza moze istniec; polaczenie zamykane od razu).
+async function Bob_istnieje(idb, nazwa) {
+  if (typeof idb.databases === 'function') {
+    const lista = await Bob_limit(Promise.resolve().then(function () {
+      return idb.databases();
+    }).then(function (l) {
+      return { l: l };
+    }, function () {
+      return {};
+    }), Bob_LIMIT_MS, function () {
+      return {};
+    });
+    if (Array.isArray(lista.l)) return lista.l.some(function (x) { return !!x && x.name === nazwa; });
+  }
+  const r = await Bob_otwarcie(idb, nazwa, null, false, null);
+  if (r.pol) Bob_zamknij(r.pol.db);
+  return !r.brak;
+}
+// deleteDatabase(userId): bez bramki, trybu i odblokowania (sprzatanie po koncie); od wywolania ten dokument nie tworzy
+// bazy tego konta; bazy nie ma — brak (bez kasowania); blocked konczy obietnice (zadanie dokonczy sie samo).
+async function Bob_usunBaze(userId) {
+  try {
+    if (!Bob_napis(userId, Bob_UID)) return Bob_odmowa('argument');
+    const idb = Bob_idb();
+    if (!idb) return Bob_odmowa('brak-indexeddb');
+    Bob_usuwane.add(userId);
+    const nazwa = Bob_BAZA + userId;
+    if (!(await Bob_istnieje(idb, nazwa))) return { ok: true, wynik: 'brak' };
+    const kasowanie = new Promise(function (gotowe) {
+      let r;
+      try {
+        r = idb.deleteDatabase(nazwa);
+      } catch (x) {
+        gotowe({ odmowa: Bob_odmowa('blad', 'SYNC_DB_DELETE_FAILED') });
+        return;
+      }
+      r.onsuccess = function () { gotowe({ wynik: 'usunieta' }); };
+      r.onblocked = function () { gotowe({ wynik: 'zablokowana' }); };
+      r.onerror = function () { gotowe({ odmowa: Bob_odmowa('blad', 'SYNC_DB_DELETE_FAILED') }); };
+    });
+    const w = await Bob_limit(kasowanie, Bob_LIMIT_MS, function () { return { wynik: 'w-toku' }; });
+    return w.odmowa || { ok: true, wynik: w.wynik };
+  } catch (x) {
+    return Bob_nieprzewidziany(x);
+  }
+}
 /* P-DZIENNIK-ZDARZEN: koniec bloku */
 function yr(t,e){const n=t&&t.savedAtISO||"",r=e&&e.savedAtISO||"";if(n>r)return-1;if(n<r)return 1;const o=t&&t.updatedAtISO||"",a=e&&e.updatedAtISO||"";if(o>a)return-1;if(o<a)return 1;const s=t&&typeof t.rev=="number"?t.rev:0,i=e&&typeof e.rev=="number"?e.rev:0;if(s!==i)return i-s;const Bm2=t&&typeof t.seq=="number"&&isFinite(t.seq)?t.seq:null,Bm3=e&&typeof e.seq=="number"&&isFinite(e.seq)?e.seq:null;if(Bm2!==null&&Bm3!==null&&Bm2!==Bm3)return Bm3-Bm2;const c=t&&t.snapshotId||"",l=e&&e.snapshotId||"";return c>l?-1:c<l?1:0}async function ct(t){if(!T())throw new Error("Zaloguj si\u0119, by pobra\u0107 pacjenta.");const e=await I().getPatientForUser(b,t);if(!e)return null;const n=await G(e.headerCipher.iv,e.headerCipher.data),r=await I().listSnapshotsForUser(b,t),o=[];for(let a=0;a<r.length;a+=1){const s=r[a];let i=null;try{i=await G(s.payloadCipher.iv,s.payloadCipher.data)}catch{i=null}o.push(Object.assign({snapshotId:s.snapshotId,savedAtISO:s.savedAtISO,updatedAtISO:s.updatedAtISO||s.savedAtISO||null,rev:typeof s.rev=="number"?s.rev:0,payload:i,pinned:!!(i&&i._pinned)},Bm1(s)))}return Bzu_zapamietaj(e.patientId,o.map(function(Bzu_s){return Bzu_s.snapshotId})),o.sort(yr),{patientId:e.patientId,header:n,snapshots:o,createdAtISO:e.createdAtISO,lastSavedAtISO:e.lastSavedAtISO,snapshotCount:e.snapshotCount||o.length}}async function hr(t){const e=await ct(t);return!e||!e.snapshots.length?null:e.snapshots[0]}async function ro(t,e,n){if(!T())throw new Error("Zaloguj si\u0119, by przywr\xF3ci\u0107 wersj\u0119.");const Bro_s=Bses_opcje(null);if(typeof t!="string"||!t)throw new Error("restoreSnapshotAsNew: brak patientId.");if(typeof e!="string"||!e)throw new Error("restoreSnapshotAsNew: brak snapshotId.");const r=await Bpz_czytaj(t,Bro_s);if(!r)throw new Error("restoreSnapshotAsNew: nie znaleziono pacjenta.");const o=r.snapshots.filter(function(i){return i.snapshotId===e})[0];if(!o||!o.payload)throw new Error("restoreSnapshotAsNew: nie znaleziono wersji lub brak danych.");const a=JSON.parse(JSON.stringify(o.payload));try{a.advanced&&a.advanced.data&&Array.isArray(a.advanced.data.measurements)&&(a.advanced.data.measurements=a.advanced.data.measurements.filter(function(i){return!(i&&i.ghSync===!0)}))}catch(PatientClinicalCaught){PatientClinicalRethrow(PatientClinicalCaught);}"_pinned"in a&&delete a._pinned,a._restoredFrom={snapshotId:e,savedAtISO:o.savedAtISO};const s=await Bpz_zapis(a,{patientId:t,skipAdvancedAntiClobber:!0,dedup:!1,_restore:!0},!1,Bro_s);return{patientId:s.patientId,newSnapshotId:s.snapshotId,restoredFromSnapshotId:e,restoredFromISO:o.savedAtISO,savedAtISO:s.savedAtISO,snapshotCount:s.snapshotCount}}async function Bzw_przypnij(t,e,n){if(!T())throw new Error("Zaloguj si\u0119, by zmieni\u0107 przypi\u0119cie wersji.");if(typeof t!="string"||!t)throw new Error("setSnapshotPinned: brak patientId.");if(typeof e!="string"||!e)throw new Error("setSnapshotPinned: brak snapshotId.");const r=n!==!1,o=await ct(t);if(!o)throw new Error("setSnapshotPinned: nie znaleziono pacjenta.");const a=o.snapshots.filter(function(c){return c.snapshotId===e})[0];if(!a||!a.payload)throw new Error("setSnapshotPinned: nie znaleziono wersji lub brak danych.");if(!!(a.payload&&a.payload._pinned)===r)return{patientId:t,snapshotId:e,pinned:r};const i=JSON.parse(JSON.stringify(a.payload));return r?i._pinned=!0:"_pinned"in i&&delete i._pinned,await Bzw_aktualizujWersje(t,e,i,{preserveSavedAt:!0,Bgw_gwiazdka:!0}),{patientId:t,snapshotId:e,pinned:r}}/* P-RETENCJA-NAGROBKI: retencja z nagrobkiem, pod blokada pacjenta — czytelnie w Bkz_przytnij. */async function wr(t,e){return Bkz_przytnij(t,e)}function oo(t,e,n){if(!n&&typeof e=="number"&&e>=10){try{if(v&&v.localStorage&&v.localStorage.getItem("vildaRetention")==="0")return}catch(PatientClinicalCaught){PatientClinicalRethrow(PatientClinicalCaught);}v&&v.VildaRetention&&typeof v.VildaRetention.computeRetention=="function"&&Promise.resolve().then(function(){return wr(t)}).catch(function(r){try{typeof console<"u"&&console.warn&&console.warn("[vault] retention schedule",r)}catch(PatientClinicalCaught){PatientClinicalRethrow(PatientClinicalCaught);}})}}function mt(t){var e=t&&t.rev;return typeof e=="number"&&isFinite(e)&&e>=0?Math.floor(e):0}async function Bzw_aktualizujWersje(t,e,n,r){const PatientClinicalOperationAccount=b;PatientClinicalGuard(PatientClinicalOperationAccount);if(!T())throw new Error("Zaloguj si\u0119, by zaktualizowa\u0107 pomiar.");if(typeof t!="string"||!t)throw new Error("updateSnapshotPayload: brak patientId.");if(typeof e!="string"||!e)throw new Error("updateSnapshotPayload: brak snapshotId.");if(!n||typeof n!="object")throw new Error("updateSnapshotPayload: brak payloadu.");if(n.user&&typeof n.user=="object"){const h=ut(n.user.dobISO);h?n.user.dobISO=h:"dobISO"in n.user&&delete n.user.dobISO}const o=await I().listSnapshotsForUser(b,t),a=o.find(function(h){return PatientClinicalWriteValue(PatientClinicalOperationAccount,h.snapshotId===e)});if(!a){if(!await I().getPatientForUser(b,t)){const Bzu_e=await Bzu_odmowa(t,[e],null);if(Bzu_e)throw Bzu_e}throw new Error("updateSnapshotPayload: snapshot "+e+" nie istnieje dla pacjenta.")}const s=Nn(n);if(!s.name)throw new Error("updateSnapshotPayload: brak imienia pacjenta w payloadzie.");const l=new Date().toISOString(),y=!!(r&&r.preserveSavedAt),d=y&&a.savedAtISO||l,Bgw_z=await Bgw_poZapisie(n,a,e,!!(r&&r.Bgw_gwiazdka)),Bpp_z=Bgw_z.chwila;/* P-PRZYPIETA-POLKRATA (W3): chwila zmiany (stempel Bpp_chwilaZmiany, po przycieciu tylko przy gwiazdce i wersji nieprzypietej — F-C) i tresc z chwila tresci albo rejestrem gwiazdki (Bgw_poZapisie). */n=Bgw_z.tresc;const i=await V(n);await I().putSnapshotForUser(b,PatientClinicalWriteValue(b,Object.assign({snapshotId:e,patientId:t,savedAtISO:d,rev:mt(a)+1,updatedAtISO:Bpp_z,payloadCipher:i},Bm1(a))));/* P-POZNIEJSZA-POPRAWKA (D-7 wariant 2): chwila zmiany (updatedAtISO, lastSavedAtISO karty) pozniejsza niz poprawiana wersja takze przy zegarze spoznionym (Bpp_chwilaZmiany); savedAtISO bez preserveSavedAt = teraz, jak dotad. */ /* D-3 A (P-NAGLOWEK-NAJNOWSZEJ): naglowek z najnowszej wersji po zapisie, nie z poprawianej (starsza wersja, gwiazdka). */const p=await I().getPatientForUser(b,t),Bng_h=await Bzw_naglowek(o,a,{savedAtISO:d,rev:mt(a)+1,updatedAtISO:Bpp_z,payloadCipher:i},n,p),c=Bng_h.szyfr;p&&await I().putPatientForUser(b,PatientClinicalWriteValue(b,{patientId:t,headerCipher:c,createdAtISO:p.createdAtISO||l,lastSavedAtISO:Bkz_pozniejsza(p.lastSavedAtISO,Bpp_z),snapshotCount:p.snapshotCount||o.length}));const w={patientId:t,snapshotId:e,header:Bng_h.jawny,savedAtISO:d,shortHash:cn(t),isUpdate:!0};/* P-ODTWORZ-WIEK-4: usuniecie biezacego pomiaru z awansem starszej wizyty - jawny znacznik dla formularza (vilda_baseline_pacjenta.js wpisuje wtedy cala wizyte; znacznik czasu po awansie bywa pusty). */r&&r.promoted&&(w.promoted=!0);return PatientClinicalWriteValue(PatientClinicalOperationAccount,(Vn(w),w))}function tn(t){return t?typeof t.ageMonths=="number"&&isFinite(t.ageMonths)?Math.round(t.ageMonths):typeof t.ageYears=="number"&&isFinite(t.ageYears)?Math.round(t.ageYears*12):null:null}function gr(t,e,n){var r=typeof t=="number"&&isFinite(t)?Math.round(t):null;return r+"|"+(typeof e=="number"&&isFinite(e)?e.toFixed(2):"_")+"|"+(typeof n=="number"&&isFinite(n)?n.toFixed(2):"_")}function Me(t){return gr(tn(t),t&&t.height,t&&t.weight)}function mr(t){if(!t)return null;var e=null;if(typeof t.age=="number"&&isFinite(t.age)){var n=typeof t.ageMonths=="number"&&isFinite(t.ageMonths)?t.ageMonths:0;e=Math.round(t.age*12+n)}else typeof t.ageMonths=="number"&&isFinite(t.ageMonths)&&(e=Math.round(t.ageMonths));return e==null?null:gr(e,t.height,t.weight)}function Sr(t){var e=t&&t.advanced&&t.advanced.data;if(e&&Array.isArray(e.measurements)&&e.measurements.length)return e.measurements;var n=t&&t.growthBasic&&t.growthBasic.data;return n&&Array.isArray(n.measurements)&&n.measurements.length?n.measurements:e&&Array.isArray(e.measurements)?e.measurements:n&&Array.isArray(n.measurements)?n.measurements:null}function br(t){var e=[],n=t&&t.advanced&&t.advanced.data;n&&Array.isArray(n.measurements)&&e.push(n.measurements);var r=t&&t.growthBasic&&t.growthBasic.data;return r&&Array.isArray(r.measurements)&&e.push(r.measurements),e}function Ir(t){if(Array.isArray(t))for(var e=0;e<t.length;e+=1){var n=t[e];n&&typeof n=="object"&&!(typeof n.uid=="string"&&n.uid)&&(n.uid="m-"+ne())}}function Or(t,e){if(!Array.isArray(t)||!e)return-1;if(typeof e.uid=="string"&&e.uid){for(var n=0;n<t.length;n+=1)if(t[n]&&t[n].uid===e.uid)return n}if(typeof e.key=="string"&&e.key){for(var r=0;r<t.length;r+=1)if(t[r]&&Me(t[r])===e.key)return r}return-1}function vr(t,e){e!=null&&(t.age=Math.floor(e/12),t.ageMonths=e%12)}function Pr(t){var e=t&&t.advanced&&t.advanced.data,n=t&&t.user;if(!(!e||typeof e!="object"||!n)){var r=null;if(typeof n.age=="number"&&isFinite(n.age)){var o=typeof n.ageMonths=="number"&&isFinite(n.ageMonths)?n.ageMonths:0;r=Math.round(n.age*12+o)}else typeof n.ageMonths=="number"&&isFinite(n.ageMonths)&&(r=Math.round(n.ageMonths));r!=null?e.currentAgeMonths=r:delete e.currentAgeMonths,typeof n.height=="number"&&isFinite(n.height)&&n.height>0?e.currentHeight=n.height:delete e.currentHeight,typeof n.weight=="number"&&isFinite(n.weight)&&n.weight>0?e.currentWeight=n.weight:delete e.currentWeight}}async function Bzw_edytujPomiar(t,e,n){if(!T())throw new Error("Zaloguj si\u0119, by edytowa\u0107 pomiar.");if(typeof t!="string"||!t)throw new Error("updateMeasurementRow: brak patientId.");e=e||{},n=n||{};var r=await ct(t);if(!r||!Array.isArray(r.snapshots)||!r.snapshots.length){if(!r){const Bzu_e=await Bzu_odmowa(t,[],null);if(Bzu_e)throw Bzu_e}throw new Error("updateMeasurementRow: brak pacjenta.")}for(var o=r.snapshots[0],a=o.payload||{},s=br(a),i=mr(a.user),c=typeof n.ageMonths=="number"&&isFinite(n.ageMonths)?Math.round(n.ageMonths):null,l=typeof n.height=="number"&&isFinite(n.height)?n.height:null,y=typeof n.weight=="number"&&isFinite(n.weight)?n.weight:null,d=null,p=0;p<s.length&&!d;p+=1){Ir(s[p]);var w=Or(s[p],e);w>=0&&(d=s[p][w])}var h=!!(i&&e.key===i&&!d);if(!d&&!h)throw new Error("updateMeasurementRow: nie znaleziono wiersza pomiaru.");for(var O=d?Me(d):i,u=d&&typeof d.uid=="string"&&d.uid?d.uid:null,f=h||!!(i&&O===i),m=0;m<s.length;m+=1)for(var E=s[m],_=0;_<E.length;_+=1){var A=E[_];A&&(u&&A.uid===u||Me(A)===O)&&(c!=null&&(A.ageMonths=c,A.ageYears=c/12),l!=null&&(A.height=l),y!=null&&(A.weight=y),typeof n.boneAgeYears=="number"&&isFinite(n.boneAgeYears)&&(A.boneAgeYears=n.boneAgeYears),typeof n.dateISO=="string"&&n.dateISO&&(A.dateISO=n.dateISO))}return f&&(a.user=a.user||{},Bzw_tygodnieKorekty(a.user,c),l!=null&&(a.user.height=l),y!=null&&(a.user.weight=y),c!=null&&vr(a.user,c),typeof n.dateISO=="string"&&n.dateISO&&(a.user.measuredAtISO=n.dateISO)),Pr(a),await Bzw_aktualizujWersje(t,o.snapshotId,a,{preserveSavedAt:!0}),{patientId:t,updated:!0,wasCurrent:f}}/* P-ODTWORZ-WIEK-2 (R0, przeglad adwersaryjny po #589): po usunieciu BIEZACEGO pomiaru w user awansuje najnowszy wiersz historii, ale data pomiaru (measuredAtISO), tygodnie (ageWeeks) i timestampISO zostawaly z USUNIETEJ wizyty. Formularz glowny zapisuje dzis measuredAtISO, wiec awansowana starsza wizyta dostawala falszywa "pewna" date: Karta "+ Nowy pomiar" wpisywala ja do historii, a "Odtworz zapis" liczyl na nia dokladny wiek. Kolejnosc: data wiersza (pisze ja Karta), potem starsza wersja rekordu, w ktorej ten pomiar byl biezacy (jej measuredAtISO, ageWeeks i timestampISO); bez zadnej z nich daty nie zgadujemy - pola znikaja. */function Bzw_dataAwansu(o,A,n){var u=o.user,k=Me(A),S=null,dz=function(x){return typeof x=="string"&&/^\d{4}-\d{2}-\d{2}$/.test(x.trim())?ut(x.trim()):null};var W=n&&Array.isArray(n.snapshots)?n.snapshots:[];for(var i=1;i<W.length&&!S;i+=1){var p=W[i]&&W[i].payload;p&&p.user&&typeof p.user=="object"&&mr(p.user)===k&&(S=p)}var d=dz(A.dateISO),sd=S?dz(S.user.measuredAtISO):null,m=d||sd,zgodna=!!S&&(!d||d===sd);m?u.measuredAtISO=m:delete u.measuredAtISO;zgodna&&S.user.ageWeeks!=null?u.ageWeeks=S.user.ageWeeks:delete u.ageWeeks;zgodna&&typeof S.timestampISO=="string"&&S.timestampISO?o.timestampISO=S.timestampISO:m?o.timestampISO=m+"T12:00:00.000Z":delete o.timestampISO}/* P-ODTWORZ-WIEK-2: korekta WIEKU biezacego pomiaru w Karcie uniewaznia zapisane tygodnie (dotad zostawaly stare i przeslanialy poprawiony wiek). Porownanie z poprzednia liczba miesiecy rekordu - okno Karty podaje ageMonths i dateISO zawsze, takze przy korekcie samej masy (uwaga Codex w #592). Sama data tygodni nie rusza: bez daty urodzenia to jedyny dokladny wiek pomiaru, a z data urodzenia i pewna doba modul daty i tak liczy tygodnie z kalendarza. */function Bzw_tygodnieKorekty(u,c){if(c==null)return;var p=typeof u.age=="number"&&isFinite(u.age)?Math.round(u.age*12+(typeof u.ageMonths=="number"&&isFinite(u.ageMonths)?u.ageMonths:0)):typeof u.ageMonths=="number"&&isFinite(u.ageMonths)?Math.round(u.ageMonths):null;p!==c&&delete u.ageWeeks}async function Bzw_usunPomiar(t,e){if(!T())throw new Error("Zaloguj si\u0119, by usun\u0105\u0107 pomiar.");if(typeof t!="string"||!t)throw new Error("deleteMeasurementRow: brak patientId.");e=e||{};var n=await ct(t);if(!n||!Array.isArray(n.snapshots)||!n.snapshots.length){if(!n){const Bzu_e=await Bzu_odmowa(t,[],null);if(Bzu_e)throw Bzu_e}throw new Error("deleteMeasurementRow: brak pacjenta.")}for(var r=n.snapshots[0],o=r.payload||{},a=br(o),s=mr(o.user),i=null,c=0;c<a.length&&!i;c+=1){Ir(a[c]);var l=Or(a[c],e);l>=0&&(i=a[c][l])}var y=!!(s&&e.key===s&&!i);if(!i&&!y)throw new Error("deleteMeasurementRow: nie znaleziono wiersza pomiaru.");var d=i?Me(i):s,p=i&&typeof i.uid=="string"&&i.uid?i.uid:null,w=y||!!(s&&d===s);if(y){var h=Sr(o);if(!h||!h.length)throw new Error('To jedyny pomiar pacjenta \u2014 nie mo\u017Cna go usun\u0105\u0107. U\u017Cyj \u201EEdytuj", aby poprawi\u0107 warto\u015Bci, albo usu\u0144 ca\u0142ego pacjenta.')}for(var O=0;O<a.length;O+=1)for(var u=a[O],f=u.length-1;f>=0;f-=1){var m=u[f];m&&(p&&m.uid===p||Me(m)===d)&&u.splice(f,1)}var E=Sr(o),_=E?E.length:0;if(w&&_){var A=E.slice().sort(function(N,C){return(tn(C)||0)-(tn(N)||0)})[0];A&&(o.user=o.user||{},typeof A.height=="number"&&(o.user.height=A.height),typeof A.weight=="number"&&(o.user.weight=A.weight),vr(o.user,tn(A)),Bzw_dataAwansu(o,A,n))}return Pr(o),await Bzw_aktualizujWersje(t,r.snapshotId,o,{preserveSavedAt:!0,promoted:!!(w&&_)}),{patientId:t,deleted:!0,wasCurrent:w,remaining:_}}async function Bzw_usunWersje(t,e,Bkz_z){const PatientClinicalOperationAccount=b;PatientClinicalGuard(PatientClinicalOperationAccount);if(!T())throw new Error("Zaloguj si\u0119, by usun\u0105\u0107 pomiar.");if(typeof t!="string"||!t)throw new Error("deleteSnapshot: brak patientId.");if(typeof e!="string"||!e)throw new Error("deleteSnapshot: brak snapshotId.");const n=await I().listSnapshotsForUser(b,t);if(!n.find(function(l){return PatientClinicalWriteValue(PatientClinicalOperationAccount,l.snapshotId===e)}))throw new Error("deleteSnapshot: snapshot "+e+" nie istnieje dla pacjenta.");if(n.length<=1)throw new Error("deleteSnapshot: nie mo\u017Cna usun\u0105\u0107 ostatniego snapshota pacjenta \u2014 u\u017Cyj removePatient.");await I().removeSnapshotForUser(b,PatientClinicalWriteValue(b,e));const o=await I().listSnapshotsForUser(b,t);if(o.length===0){try{await Bpu_usun(t)}catch(CareMvpDeleteError){PatientClinicalRethrow(CareMvpDeleteError);CareMvpRethrowRecordError(CareMvpDeleteError);}return PatientClinicalWriteValue(PatientClinicalOperationAccount,{patientId:t,snapshotId:e,remainingSnapshotCount:0})}o.sort(yr);const a=o[0];let s=null;try{s=await G(a.payloadCipher.iv,a.payloadCipher.data)}catch(PatientClinicalCaught){PatientClinicalRethrow(PatientClinicalCaught);s=null}const i=Bng_zTresci(s,a),c=await I().getPatientForUser(b,t);if(c){const l=i?await V(i):c.headerCipher;await I().putPatientForUser(b,PatientClinicalWriteValue(b,{patientId:t,headerCipher:l,createdAtISO:c.createdAtISO,lastSavedAtISO:Bkz_pozniejsza(c.lastSavedAtISO,a.savedAtISO,Bkz_z),snapshotCount:o.length}))}return PatientClinicalWriteValue(PatientClinicalOperationAccount,(Vn({patientId:t,snapshotId:null,isSnapshotDelete:!0,remainingSnapshotCount:o.length,savedAtISO:a.savedAtISO}),{patientId:t,snapshotId:e,remainingSnapshotCount:o.length}))}/* P-BLOKADA-USUWANIE (zlecenie wlasciciela 2026-10-06, przeglad „co dalej po #518”, punkt 4: A1, A2, A11, A13).
 * removePatient i mergePatients zmienialy rekord pacjenta bez blokady, ktora od P-ZAPISY-DWIE-KARTY biora zapis, kosz,
