@@ -149,17 +149,11 @@ html[data-clcr-workflow-ui="1"] #agsInputCard [aria-invalid="true"] {
   font-weight: 600;
   box-sizing: border-box;
 }
-.ags-field-hint,
-.ags-assumption {
+.ags-field-hint {
   margin: var(--space-12px) 0 0;
   color: var(--clcr-muted, #607d85);
   font-size: 12px;
   line-height: 1.7;
-}
-.ags-assumption {
-  padding-top: var(--space-16px);
-  margin-top: var(--space-24px);
-  border-top: var(--border-hairline) solid var(--clcr-border-soft, #d9e5e7);
 }
 .ags-readiness {
   display: flex;
@@ -220,13 +214,6 @@ html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .ags-result-ma
   font-size: 12px;
   font-weight: 600;
   line-height: 1.5;
-}
-.ags-value-line {
-  display: flex;
-  align-items: baseline;
-  flex-wrap: wrap;
-  gap: 2px var(--space-6px);
-  min-width: 0;
 }
 html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .ags-result-card .clcr-result-value {
   display: block;
@@ -445,7 +432,7 @@ html[data-clcr-workflow-ui="1"] #agsInputCard .ags-unit-field select {
   height: 52px;
   min-height: 52px;
   margin: 0;
-  padding: 8px;
+  padding: var(--space-8px);
   border: var(--border-hairline) solid var(--clcr-border, #c8dcdf);
   border-radius: var(--radius-12);
   background: var(--clcr-surface-soft, #f7fafb);
@@ -497,7 +484,7 @@ html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .ags-result-ca
 }
 html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .ags-result-reference .clcr-result-reference-value {
   align-self: end;
-  padding: 0 0 8px;
+  padding: 0 0 var(--space-8px);
   color: #24484d !important;
   font-size: 26px !important;
   font-weight: 700;
@@ -506,37 +493,40 @@ html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .ags-result-re
 }
 html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .ags-result-reference.clcr-result-reference--unavailable .clcr-result-reference-value {
   align-self: start;
-  padding-top: 8px;
+  padding-top: var(--space-8px);
   font-size: 16px !important;
   line-height: 1.5;
 }
 html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .ags-result-card :is(.clcr-result-unit, .ags-reference-unit) {
   display: block;
-  margin: 4px 0 0;
+  margin: var(--space-4px) 0 0;
   padding: 0;
   font-size: 15px;
   font-weight: 650;
   line-height: 1.5;
 }
 html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .ags-result-card .ags-reference-unit { color: #24484d !important; }
-.ags-scale { margin-top: 22px; padding-top: 15px; border-top: 1px solid #dbe3dd; color: #36585c; }
-.ags-scale-track { position: relative; height: 10px; margin: 28px 0 8px; border-radius: 10px; background: #dce6e7; }
-.ags-scale-band { position: absolute; top: 0; height: 100%; border-left: 2px solid #547d78; border-right: 2px solid #547d78; background: #aacdc8; }
-.ags-scale-marker { position: absolute; top: -8px; width: 2px; height: 24px; transform: translateX(-50%); background: #3f575c; }
-.ags-scale-marker::before { content: "Wynik"; position: absolute; top: -29px; left: 50%; transform: translateX(-50%); color: #3f575c; font-size: 10px; font-weight: 650; white-space: nowrap; }
-.ags-scale-marker::after { content: "▼"; position: absolute; top: -13px; left: 50%; transform: translateX(-50%); color: #3f575c; font-size: 11px; line-height: 1; }
-.ags-scale-boundary { position: absolute; top: 12px; transform: translateX(-50%); color: #36585c; font-size: 11px; font-weight: 700; line-height: 1.5; }
+.ags-scale { margin-top: 22px; padding-top: 15px; border-top: var(--border-hairline) solid #dbe3dd; color: #36585c; }
+/* SVG attributes position the data; these classes own its presentation. */
+.ags-scale-track { display: block; width: 100%; height: 10px; margin: 28px 0 var(--space-8px); overflow: visible; }
+.ags-scale-background { fill: #dce6e7; }
+.ags-scale-band { fill: #aacdc8; }
+.ags-scale-edge { stroke: #547d78; stroke-width: 2px; }
+.ags-scale-marker { stroke: #3f575c; stroke-width: 2px; }
+.ags-scale-marker-label { fill: #3f575c; text-anchor: middle; font-size: 10px; font-weight: 650; }
+.ags-scale-marker-arrow { fill: #3f575c; text-anchor: middle; font-size: 11px; }
+.ags-scale-boundary { fill: #36585c; text-anchor: middle; font-size: 11px; font-weight: 700; }
 .ags-scale-ends { display: flex; justify-content: space-between; min-height: 21px; color: var(--clcr-muted, #607d85); font-size: 11px; }
-.ags-scale-note { margin: 12px 0 0; color: #36585c; font-size: 12px; line-height: 1.5; }
-.ags-correction-row { margin-top: 19px; padding-top: 15px; border-top: 1px solid #dfded2; }
+.ags-scale-note { margin: var(--space-12px) 0 0; color: #36585c; font-size: 12px; line-height: 1.5; }
+.ags-correction-row { margin-top: 19px; padding-top: 15px; border-top: var(--border-hairline) solid #dfded2; }
 .ags-correction-row p { margin: 0; }
 .ags-correction-title { color: #4d666b; font-size: 12px; font-weight: 600; }
 .ags-correction-row .ags-correction-number { margin-top: 5px; color: #24484d; font-size: 22px; font-weight: 700; line-height: 1.4; overflow-wrap: anywhere; }
 .ags-correction-number > span:last-child { font-size: 14px; font-weight: 600; }
 .ags-correction-row .ags-correction-comment { margin-top: 7px; color: #4d666b; font-size: 12px; line-height: 1.6; }
 .ags-reference-footnote { margin: 15px 0 0; color: var(--clcr-muted, #607d85); font-size: 12px; line-height: 1.55; }
-.ags-reference-table { width: 100%; border-collapse: collapse; margin: 10px 0; font-size: 13px; }
-.ags-reference-table :is(th, td) { padding: 10px 9px; text-align: left; vertical-align: top; border-bottom: 1px solid var(--clcr-border, #c8dcdf); }
+.ags-reference-table { width: 100%; border-collapse: collapse; margin: var(--space-10px) 0; font-size: 13px; }
+.ags-reference-table :is(th, td) { padding: var(--space-10px) 9px; text-align: left; vertical-align: top; border-bottom: var(--border-hairline) solid var(--clcr-border, #c8dcdf); }
 .ags-reference-table th { background: var(--clcr-surface-soft, #f7fafb); color: var(--clcr-heading, #173d46); font-weight: 700; }
 @media (max-width: 700px) {
   html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .ags-result-main { grid-template-rows: auto minmax(55px, auto) auto; gap: 0 var(--space-12px); }
