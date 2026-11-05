@@ -34685,6 +34685,14 @@ w `tests/e2e/odtworzenie-sesji-swieze-wczytanie.spec.mjs`.
 
 Szczegółowy format wpisu i statusy opisuje `docs/clinical/README.md`.
 
+## P-DIET-PENDING-RESTORE — zachowanie planu przed inicjalizacją pola (05.11.2026)
+
+**Zakres: zapis i odtwarzanie danych, bez zmiany reguł dietetycznych.** Kontrola CI ścieżki samodzielny Klirens → nowy pomiar → Start → F5 ujawniła utratę zapisanego `plan.dietLevel`: przy pustych bieżących polach wzrostu i masy selektor diety może jeszcze nie mieć opcji. Przypisanie zapisanej wartości do takiego elementu HTML `select` pozostawia pustą wartość, którą kolektor zapisywał jako `null`. Deterministyczna próba w Chromium z rzeczywistym importerem potwierdziła ten sam problem na bazie `17c6f5ec` i przed poprawką na gałęzi audytu, również bez modułu cytrynianów i wskaźnika stanu zapisu. Zwykłe przejścia przeglądarkowe nie zawsze ujawniają błąd, ponieważ zależy on od kolejności inicjalizacji opcji.
+
+Importer przechowuje w pamięci odtworzoną wartość i jej znacznik ręcznego wyboru wyłącznie do inicjalizacji istniejącego, pustego selektora. Kolektor i zapis sesji zachowują te dane bez dodawania opcji, wybierania diety lub uzupełniania antropometrii. Po pojawieniu się opcji autorytatywna staje się wartość pola, także jawne wyczyszczenie; usunięcie opcji później nie przywraca starej migawki. Obserwator inicjalizacji oraz kontrola jego kolejki przed zwykłym zapisem obejmują także dodanie i usunięcie opcji w jednym zadaniu przeglądarki. Odczyt do wskaźnika zapisu nie konsumuje kolejki ani stanu odtworzenia. Wyczyszczenie, zmiana pacjenta i kolejne wczytanie wygaszają oczekiwanie. Wczytanie bez planu usuwa także znacznik związany z takim nierozstrzygniętym odtworzeniem, zachowując dotychczasowy kontrakt częściowego odtworzenia już zainicjalizowanego formularza.
+
+**Kod i walidacja.** Jedyny zmieniony plik wykonawczy: `vilda_data_import_export.js`; czytelne, odtwarzalne źródło poprawki: `tools/patch-diet-pending-session-restore.mjs`. Testy rzeczywistego importera: `tests/unit/diet-plan-pending-restore.test.mjs`, obejmujące zapis i autosave, odczyt bez skutków ubocznych, autorytet wyboru/wyczyszczenia, zmianę pacjenta oraz granicę callbacku obserwatora. Próba Chromium przed/po potwierdza zachowanie zapisanej wartości przy zerowej liczbie opcji. Oryginalne asercje `tests/e2e/patient-chip-klirens-load-origin.spec.mjs` pozostają bez zmian. Poprawka nie zmienia kryteriów wyboru diety, obliczeń energii ani interpretacji wyników Klirensu.
+
 ## K-DZM — dobowe wydalanie potasu (31.10.2026)
 
 Właściciel zaakceptował [makietę desktop/mobile](https://vilda-k-dzm-20261030.maciej-flader.chatgpt.site) i polecił kodowanie. Implementacja od aktualnego `audyt` `67f0b21b3b3c2a2c32256218d2b620030c6f2940`. Pełne źródła, lokalizatory, populacje, jednostki, ograniczenia i regresje: [POTASSIUM_DZM.md](POTASSIUM_DZM.md). Zmiana kliniczna i funkcjonalna; testy nie nadają statusu walidacji klinicznej.

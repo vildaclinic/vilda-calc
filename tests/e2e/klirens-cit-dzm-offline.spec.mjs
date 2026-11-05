@@ -28,7 +28,7 @@ const names = [
   'vilda_chrome.css', 'vilda_chrome.js', 'vilda_shell.css', 'vilda_shell.js', 'vilda_summary_layout.js',
   'clcr_cit_dzm_reference_data.js', 'clcr_cit_dzm.js', 'clcr_cit_dzm_ui.js',
   'clcr_cit_dzm.css', 'clcr_cit_dzm_persistence.js',
-  'vilda_save_status_indicator.js', 'vilda_session_bridge.js',
+  'vilda_save_status_indicator.js', 'vilda_session_bridge.js', 'vilda_data_import_export.js',
   'clcr_notes_view.js', 'clcr_notes_view.css', 'clcr_record_resources.js',
   'clcr_clinical_safety.js', 'clcr_collection_duration.js', 'clcr_ui_workflow.js', 'clcr_ui_workflow.css', 'vilda_auth_ui.js', 'vilda_lab_history_tab.js',
   'vilda_lab_history_tab.css', 'vilda_lab_history.js', 'vilda_lab_result_presentation.js', 'vilda_lab_result_chart.js',
