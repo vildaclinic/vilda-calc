@@ -223,7 +223,7 @@ test('shell: Zapisz zapisuje aktywny DocPro, Karta i Baza zachowują pacjenta, a
   const list = created.frame.locator('#vilda-auth-ui-root');
   await expect(list.getByText(created.patients.a.name, { exact: true })).toBeVisible();
   await expect(list.getByText(created.patients.b.name, { exact: true })).toBeVisible();
-  await list.getByRole('button', { name: 'Strona główna', exact: true }).click();
+  await list.getByRole('button', { name: 'Wróć do strony głównej', exact: true }).click();
   await expect(list).toBeHidden();
   await menu.locator('a[href="docpro.html"]').click();
   await expect(page).toHaveURL(/#\/docpro$/);

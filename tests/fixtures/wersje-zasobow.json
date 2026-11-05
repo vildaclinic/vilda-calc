@@ -1089,7 +1089,7 @@
  },
  "vilda_auth_ui.js": {
   "v": 545,
-  "sha256": "85908fec1edc897d06e6872d5180087dc6aba529635b5e6462686b28c0b24c1d"
+  "sha256": "3d44017591ad5bf66296bce840ef6a110da396819b062a02a20c712e5642ca7d"
  },
  "vilda_b64_checklist.js": {
   "v": 2,
@@ -1721,7 +1721,7 @@
  },
  "vilda_patients_list.js": {
   "v": 3,
-  "sha256": "6f149ec82f7ea421ae2e444cfffe4494560eaf60609ac32c76c65180a16f92ee"
+  "sha256": "5aa337298dc437cb665273f3f512567c87d4d1e570760804512198af0cf6067b"
  },
  "vilda_perinatal_source.js": {
   "v": 3,

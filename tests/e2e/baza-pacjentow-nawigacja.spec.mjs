@@ -1,5 +1,5 @@
 import { expect, test } from '../support/test-czas.mjs';
-import { createFictionalVault } from '../support/centile-live-fixture.mjs';
+import { createFictionalVault, readyForPatient, shellFrame } from '../support/centile-live-fixture.mjs';
 import { visibleChromeMenu, closeChromeMenu } from '../support/chrome-menu-fixture.mjs';
 import { przygotujBaze, sortuj } from '../support/baza-pacjentow-lista.mjs';
 
@@ -184,18 +184,31 @@ test('Start i ponowne otwarcie zachowują miejsce w Bazie tylko w tej samej odbl
   }))).toEqual(before);
   await database.locator('.pt-home').click();
   const userId = await frame.evaluate(() => window.VildaVault.getCurrentUser().userId);
+  // Manual lock also reaches the shell's vault. Its existing auth handler
+  // navigates through Start and replaces the iframe, so the old frame is not
+  // an unlock target even while its login UI is briefly still visible.
+  const lockNavigation = page.waitForEvent('framenavigated', {
+    predicate: current => current === page.mainFrame(),
+  });
   await frame.evaluate(() => window.VildaVault.lock());
-  await expect(frame.locator('.vilda-auth-root')).toBeVisible();
-  await frame.evaluate(async id => {
-    // This is the same ephemeral fictional account created by the fixture.
-    await window.VildaVault.unlockUser(id, 'E2e#SiatkaNowyPomiar!2026');
-    window.VildaAuthUI.hide();
-  }, userId);
-  await openDatabase(page, frame);
-  await expect(database.locator('.pt-search input')).toHaveValue('');
-  await expect(database.locator('[data-filter="all"]')).toHaveAttribute('aria-pressed', 'true');
-  await expect(database.locator('.pt-row')).toHaveCount(24);
-  expect(await database.locator('.pt-scroll').evaluate(node => node.scrollTop)).toBe(0);
+  await lockNavigation;
+  const currentFrame = await shellFrame(page);
+  expect(frame.isDetached()).toBe(true);
+  await page.waitForFunction(() => window.VildaAuthUI?.isBootReady());
+  expect(await page.evaluate(() => window.VildaVault.isUnlocked())).toBe(false);
+  const login = page.locator('#vilda-auth-ui-root');
+  await expect(login).toBeVisible();
+  await login.getByRole('button', { name: /Fikcyjny sejf testu panelu siatek/ }).click();
+  await login.locator('input[type=password]').fill('E2e#SiatkaNowyPomiar!2026');
+  await login.getByRole('button', { name: 'Zaloguj się', exact: true }).click();
+  await readyForPatient(currentFrame);
+  expect(await currentFrame.evaluate(() => window.VildaVault.getCurrentUser().userId)).toBe(userId);
+  await openDatabase(page, currentFrame);
+  const reopened = currentFrame.locator('.vilda-patient-database');
+  await expect(reopened.locator('.pt-search input')).toHaveValue('');
+  await expect(reopened.locator('[data-filter="all"]')).toHaveAttribute('aria-pressed', 'true');
+  await expect(reopened.locator('.pt-row')).toHaveCount(24);
+  expect(await reopened.locator('.pt-scroll').evaluate(node => node.scrollTop)).toBe(0);
 });
 
 test('desktop: nagłówki formularza pozostają pod Bazą, a pełne Przypomnienia nadal się otwierają', async ({ page }) => {

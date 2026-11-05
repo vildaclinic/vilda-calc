@@ -782,13 +782,15 @@
     }
     function restorePosition() {
       if (restoreScroll == null || !mounted) return;
-      const position = restoreScroll, savedAnchor = restoreAnchor, savedFocus = restoreRowFocus;
+      const position = restoreScroll, savedAnchor = restoreAnchor, savedFocus = restoreRowFocus, sequence = readSequence;
       // A list read has not populated the scroll host yet.
       if (scroll.querySelector('.pt-loading')) return;
       restoreScroll = null; restoreAnchor = null; restoreRowFocus = null;
       const schedule = win.requestAnimationFrame || ((callback) => win.setTimeout(callback, 0));
       schedule(() => {
-        if (!alive()) return;
+        // A newer query, list selection or refresh owns the scroll position.
+        // An older frame must not reset a position chosen after that render.
+        if (!guardedRead(sequence)) return;
         scroll.scrollTop = position;
         if (rowWindow) { rowWindow.restore(savedAnchor); rowWindow.focusPatient(savedFocus); }
         else if (savedFocus) {

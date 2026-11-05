@@ -704,6 +704,14 @@ function patientsGoHome() {
     shell.navigate('start', false);
     return;
   }
+  // Full reminders can open the database in app.html itself, rather than in
+  // a pane. Close that local auth screen before navigating the existing shell.
+  const ownShell = i.VildaShell;
+  if (ownShell && typeof ownShell.navigate === 'function') {
+    $t({ shellNavigation: true });
+    ownShell.navigate('start', false);
+    return;
+  }
   const currentPage = String(i.location.pathname).split('/').pop();
   if (!currentPage || currentPage === 'index.html') { $t(); return; }
   $t({ shellNavigation: true });

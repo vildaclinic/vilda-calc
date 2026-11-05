@@ -196,6 +196,28 @@ test('zaznaczenia do listy pozostają po wyszukiwaniu i zmianie okna wirtualnych
   expect(await page.evaluate(() => window.harness.changed)).toEqual(['fictional-0', 'fictional-869']);
 });
 
+test('opóźniona klatka starego widoku nie zeruje przewinięcia po nowym wyszukiwaniu', async ({ page }) => {
+  await page.addInitScript(() => {
+    const original = window.requestAnimationFrame;
+    const queued = [];
+    window.requestAnimationFrame = callback => { queued.push(callback); return queued.length; };
+    window.releaseQueuedFrames = () => {
+      window.requestAnimationFrame = original;
+      queued.splice(0).forEach(callback => callback(performance.now()));
+    };
+  });
+  await openRenderer(page, { count: 24 });
+  const before = await page.evaluate(() => {
+    const input = document.querySelector('.pt-search input'), scroll = document.querySelector('.pt-scroll');
+    input.value = 'Fikcyjny'; input.dispatchEvent(new Event('input', { bubbles: true }));
+    scroll.scrollTop = 180;
+    return scroll.scrollTop;
+  });
+  expect(before).toBe(180);
+  await page.evaluate(() => window.releaseQueuedFrames());
+  expect(await page.locator('.pt-scroll').evaluate(node => node.scrollTop)).toBe(before);
+});
+
 test('stan początkowego wczytywania zachowuje aktywny powrót', async ({ page }) => {
   await openRenderer(page, { count: 1 });
   await page.evaluate(() => {
