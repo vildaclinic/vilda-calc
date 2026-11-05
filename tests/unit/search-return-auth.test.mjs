@@ -3,7 +3,7 @@ import { setImmediate as settle } from 'node:timers/promises';
 import { powloka } from '../support/powloka-harness.mjs';
 import {
   authDeferred, authProductionFunction, authProductionReturnProgram,
-  authProductionSource, authReturnEnvironment,
+  authProductionSource, authReturnEnvironment, authSurface,
 } from '../support/search-return-auth-harness.mjs';
 
 const source = authProductionSource();
@@ -193,17 +193,24 @@ describe('production AuthUI Search return ticket lifecycle', () => {
 
 describe('production AuthUI hide discards Search return instead of resuming it', () => {
   it.each([undefined, { shellNavigation: true }])('invalidates a target callback after hide(%j)', async options => {
-    const quietHistory = vi.fn();
+    const quietHistory = vi.fn(), destroyLoading = vi.fn();
     const e = environment(program + '\n' + authProductionFunction(source, '$t'), {
       carePatientMount: null, GdAnulujRender: vi.fn(), le: {},
-      Rt: { style: {}, removeAttribute() {} }, xa: null, ee: [], ge: [], Qn: quietHistory,
+      Rt: authSurface(), xa: null, ee: [], ge: [], Qn: quietHistory,
       sn: false, pr: vi.fn(), oe: vi.fn(),
+      patientsLoadingView: { destroy: destroyLoading },
     });
+    e.context.Rt.classList.add('vilda-auth-database');
+    e.document.documentElement.classList.add('vilda-patient-database-open');
     const token = e.context.remSearchCreateReturn(snapshot(), patientId);
     e.context.$t(options);
     expect(await e.context.remSearchResume(token)).toBe(false);
     expect(e.open).not.toHaveBeenCalled();
     expect(quietHistory).toHaveBeenCalledWith(options?.shellNavigation ? { quiet: true } : null);
+    expect(destroyLoading).toHaveBeenCalledOnce();
+    expect(e.context.patientsLoadingView).toBeNull();
+    expect(e.context.Rt.classList.contains('vilda-auth-database')).toBe(false);
+    expect(e.document.documentElement.classList.contains('vilda-patient-database-open')).toBe(false);
   });
 
   it('shell navigation quietly hides both the top workspace and the outgoing iframe', async () => {
@@ -227,7 +234,7 @@ describe('production AuthUI hide discards Search return instead of resuming it',
 
   it('leaving a route cancels a consumed pending Search resume without hiding unrelated top AuthUI', async () => {
     const waiting = authDeferred(), e = productionReopenEnvironment();
-    e.context.Rt = { style: { display: 'block' }, removeAttribute() {} };
+    e.context.Rt = authSurface({ display: 'block' });
     e.vault.listPatientNotesDueByDate.mockImplementationOnce(() => waiting.promise);
     const token = e.context.remSearchCreateReturn(snapshot(), patientId);
     const pending = e.context.remSearchResume(token);
@@ -312,7 +319,7 @@ describe('production AuthUI Back reaches Search at the patient-card boundary', (
     const renderPatient = vi.fn();
     const e = environment(program + '\n' + historyProgram + '\n' + historyListeners, {
       Gd7: vi.fn(), Be: vi.fn(), ze: vi.fn(), se: renderPatient, ln: vi.fn(), fi: vi.fn(),
-      Rt: { style: { display: 'block' }, querySelector: () => ({}), removeAttribute() {} },
+      Rt: authSurface({ display: 'block', card: true }),
     });
     e.win.navigator = { userAgent: 'UnitTest' }; e.win.matchMedia = () => ({ matches: false }); e.win.parent = e.win;
     e.win.history = { state: null, pushState: vi.fn(value => { e.win.history.state = value; }), back: vi.fn() };
@@ -337,7 +344,7 @@ describe('production AuthUI Back reaches Search at the patient-card boundary', (
   it.each([false, true])('establishes the Search history boundary synchronously before an immediate Back (shell=%s)', async shellMode => {
     const e = environment(program + '\n' + historyProgram + '\n' + historyListeners, {
       Gd7: vi.fn(), Be: vi.fn(), ze: vi.fn(), se: vi.fn(), ln: vi.fn(), fi: vi.fn(),
-      Rt: { style: { display: 'block' }, querySelector: () => ({}), removeAttribute() {} },
+      Rt: authSurface({ display: 'block', card: true }),
     });
     let shellCurrent = false, shellBack;
     const shell = { ensureAuthHistory: vi.fn((_win, callback) => { shellCurrent = true; shellBack = callback; return true; }),
@@ -366,7 +373,7 @@ describe('production AuthUI Back reaches Search at the patient-card boundary', (
       + '\n' + authProductionFunction(source, '$a'), {
       xn: 0, ye: true, ba: () => false, ge: [], le: {}, yr: () => false,
       Sn_shellHistory: () => ({ ensureAuthHistory: history }),
-      Rt: { style: { display: 'block' }, querySelector: () => ({}), removeAttribute() {} },
+      Rt: authSurface({ display: 'block', card: true }),
       xa: { patientId, el: { isConnected: true }, restoreTab },
       se: vi.fn(), ln: vi.fn(), Be: vi.fn(), ze: vi.fn(), fi: vi.fn(), $t: vi.fn(),
     });
@@ -415,7 +422,7 @@ function integrationEnvironment() {
     remB22Request: vi.fn(), openCare: vi.fn(), enterDetail: vi.fn(), selectLinked: vi.fn(), ia: vi.fn(),
     Ia: vi.fn(), Sn_shellHistory: () => null, ba: () => false, ye: false,
     carePatientMount: null, GdAnulujRender: vi.fn(), le: {},
-    Rt: { style: {}, removeAttribute() {} }, xa: null, ee: [], ge: [], Qn: vi.fn(),
+    Rt: authSurface(), xa: null, ee: [], ge: [], Qn: vi.fn(),
     sn: false, pr: vi.fn(), oe: vi.fn(),
   });
   e.win.history = { state: null, pushState: vi.fn(), back: vi.fn(), replaceState: vi.fn(value => { e.win.history.state = value; }) };

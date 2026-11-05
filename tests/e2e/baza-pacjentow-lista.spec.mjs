@@ -12,8 +12,8 @@ test('desktop: źródła, wyszukiwanie i katalog Listy działają w jednym widok
   const { frame, database, base, external, members } = await przygotujBaze(page);
   await database.locator('.pt-seg [data-filter="base"]').click();
   await expect(database.locator('.pt-row')).toHaveCount(20);
-  await expect(database.locator(`.pt-row[data-patient-id="${base[0]}"]`)).toContainText('Płeć: K');
-  await expect(database.locator(`.pt-row[data-patient-id="${base[1]}"]`)).toContainText('Płeć: M');
+  await expect(database.locator(`.pt-row[data-patient-id="${base[0]}"]`)).toContainText('Kobieta');
+  await expect(database.locator(`.pt-row[data-patient-id="${base[1]}"]`)).toContainText('Mężczyzna');
   await database.locator('.pt-seg [data-filter="ext"]').click();
   await expect(database.locator('.pt-row')).toHaveCount(4);
   expect(await database.locator('.pt-row').evaluateAll(nodes => nodes.map(node => node.dataset.patientId).sort())).toEqual([...external].sort());

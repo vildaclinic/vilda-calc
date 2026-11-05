@@ -86,6 +86,7 @@
     "vilda_lab_assessment_ui.js": 1,
     "vilda_patient_narrative_ui.js": 3,
     "vilda_patient_report.js": 38,
+    "vilda_patients_list.js": 1,
     "vilda_persist_runtime.js": 4,
     "vilda_postepy_doroslego_ui.js": 7,
     "vilda_professional_module.js": 149,
