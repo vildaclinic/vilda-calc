@@ -8798,6 +8798,120 @@ silnik, edytor, serializery i oba adaptery serii; obejmują READ bez
 silnika, reset/zmianę pacjenta, desktop/mobile oraz offline. Wyniki
 wykonań i końcowy SHA podaje PR, nie niniejszy kontrakt.
 
+#### P-KLIRENS-CIT-DZM-2026-11-05 — ilość dobowa cytrynianów, dolna norma i zachowana historia
+
+Właściciel zaakceptował 05.11.2026
+[makietę przed/po desktop/mobile](https://vilda-citrate-dzm-20261105.maciej-flader.chatgpt.site)
+i polecił implementację. Baza implementacji:
+`17c6f5eca46bd18603f7424d7a1cf66cafc5b034`. Wybór formuły pozostaje
+`Cit_mgkg`, nowy wynik to **`Cit_total24` / `clcr:Cit_total24`**.
+Punktowy Cit/Cr i Ca/Cit pozostają odrębnymi obliczeniami. Pełne źródła,
+populacje, ograniczenia i kontrakty: [CITRATE_DZM.md](CITRATE_DZM.md).
+
+**Wpływ kliniczny:** główną miarą jest ilość na dobę, bez obowiązkowej
+masy do liczby. Dochodzą norma EAU, dziecięce przeliczenie BSA i gotowy
+wynik. Naprawa obejmuje literalne zero, znikanie małych dodatnich ilości
+pod `0,0` oraz przyjmowanie ujemnego stężenia/masy przez edytor, także
+gdy dwa ujemne operandy dają dodatni iloraz. Zwykłe mnożenie stężenia
+przez objętość było poprawne. Domyślne 24 h już działało. Zmiana jest
+kliniczna i funkcjonalna; nie deklaruje niezależnej walidacji klinicznej.
+
+**Minimum:** domyślne „Oblicz ze stężenia” — cytryniany w **mmol/L**
+(także µmol/L, mg/L, mg/dL), objętość mL/L i rzeczywiście wpisane 24 h.
+„Gotowy wynik” przyjmuje jedną ilość mg/24 h lub mmol/24 h.
+`ilość = stężenie na litr ×objętość w L ×24/czas[h]`.
+Gotowa ilość nie jest ponownie mnożona przez objętość lub czas.
+Wiek/płeć i dziecięce masa/wzrost pochodzą z istniejących danych pacjenta
+wyłącznie do normy. Brak tych danych nie blokuje liczby. Znikają pytania
+o kontekst kamicy, wiarygodność i dwie zbiórki, bez potwierdzania tych
+faktów. Dwie kolejne zbiórki zalecane przez EAU §4.1.2 są w Szczegółach.
+
+**Normy jako dane:** `ClcrCitDzmReferenceData.DEFAULT_POLICY`, profil
+**`eau-2026-citrate-dzm-v1`**, wersja 1, znajduje się w
+`clcr_cit_dzm_reference_data.js` i jest argumentem
+`VildaClcrCitDzm.evaluate(input, policy)`. Pełne *EAU Guidelines on
+Urolithiasis 2026*, [rozdział metaboliczny](https://uroweb.org/guidelines/urolithiasis/chapter/metabolic-evaluation-and-recurrence-prevention)
+i [PDF](https://d56bochluxqnz.cloudfront.net/documents/full-guideline/EAU-Guidelines-on-Urolithiasis-2026.pdf),
+odczyt 05.11.2026. Wydanie 2026 jest pełną aktualizacją. Tabela **4.2,
+s. 47**: dorośli mają obniżone wydalanie przy `<1,7 mmol/dobę` u mężczyzn
+i `<1,9` u kobiet, więc norma ma operator **≥**. Tabela **4.4, s. 48**:
+chłopcy **>1,9**, dziewczynki **>1,6 mmol/1,73 m²/24 h**, operator ścisły.
+To dolne odniesienie do oceny kamicy, nie pełny dwustronny zakres,
+potwierdzona metoda próbki pacjenta lub indywidualny cel leczenia.
+
+U dziecka granica całkowita wynosi `próg ×BSA/1,73`, Mosteller
+`BSA=sqrt(kg×cm/3600)`, **bez maksimum dorosłego**. W przyjętej aplikacji
+ocena dziecięca obejmuje **1–<18 lat**, dorosła od 18 lat. EAU nie podaje
+dolnego wieku pediatrycznego: **wyłączenie automatycznej oceny <1 roku
+jest zaakceptowaną ostrożnościową decyzją aplikacji**, nie granicą
+źródłową. Nie tworzy się normy niemowlęcej z innej populacji ani płynnej
+krzywej między profilami. Brak wieku/płci/potrzebnego BSA daje liczbę
+bez normy zastępczej. Równość dziecięcej granicy to bursztynowe
+„Na dolnej granicy”; równość dorosłej jest nieobniżona. Nie ma
+górnego patologicznego progu ani automatycznie czerwonego dużego wyniku.
+
+**Źródła nie są łączone:** Kirejczyk i wsp., *Pediatr Nephrol* 2014,
+[DOI 10.1007/s00467-014-2806-7](https://doi.org/10.1007/s00467-014-2806-7),
+[pełny tekst](https://pmc.ncbi.nlm.nih.gov/articles/PMC4147207/),
+2334 zdrowych dzieci kaukaskich z Białegostoku 2–<18 lat, po równo obu
+płci, enzymatyczne oznaczenie R-Biopharm, podaje przesiewowe
+**180 mg chłopcy /250 mg dziewczynki na 1,73 m²/24 h**. To inne
+odniesienie niż wybrane EAU; nie służy do podmieniania progów lub płci.
+Przeglądy Hoppe/Kemper 2010 tabela 3 i Injeyan 2023 tabela 2 powtarzają
+wartości EAU. Pełnej pierwotnej pracy Hoppe 1997 i erraty nie
+zweryfikowano; nie są samodzielnie sprawdzoną podstawą wdrożenia.
+
+**Masa:** zachowano jon **189,099** i bezwodny kwas cytrynowy
+**192,1235 mg/mmol**, zgodnie z istniejącym Cit/Cr. Molowe dane nie
+wymagają postaci, masowe mają krótki wiersz „Zmień”; niepodana postać
+pozostawia mg/24 h bez zgadniętej konwersji/normy. Instrukcja
+[R-Biopharm 2011-05, s. 1–2](https://slatti.se/files/enzymatiska/Citric%20acid_EN_10139076035_2011-05.pdf)
+wyjaśnia podstawy masy, lecz nie jest normą ani dowodem konwencji próbki.
+Zaokrąglone źródłowe odpowiedniki 365/310 mg nie stają się drugimi
+progami; klasyfikacja korzysta z jednej granicy molowej. Porównanie
+poprzedza formatowanie, bez epsilon; BSA porównuje się bez zaokrąglania
+pierwiastka. Konwersje zachowują pochodzenie, rzeczywista edycja je usuwa.
+
+Jedna karta B łączy ilość z neutralną **„Normą dla pacjenta”** w tej
+samej jednostce; u dziecka „Przeliczona dla powierzchni ciała”.
+Wynik nieobniżony: „Wydalanie nieobniżone”. Niski jest bursztynowy:
+**„Mała ilość cytrynianów osłabia ochronę przed tworzeniem złogów
+wapniowych i może zwiększać ryzyko kamicy.”** Możliwe przyczyny,+w tym kwasica/hipokaliemia, należą do Szczegółów. Nie diagnozuje się
+przyczyny, nie dobiera dawki i nie potwierdza skuteczności leczenia.
+Dokładne zero jest liczbą neutralną, `outOfRange:null`, z uwagą o
+oznaczalności; dostępna norma może pozostać bez klasyfikacji zera.
+Każdy ujemny aktywny operand jest błędem także w edycji. Małe dodatnie
+ilości nie stają się zerem, niereprezentowalne — zerem/nieskończonością.
+
+Notka „Porównanie z normą dotyczy kompletnej zbiórki 24-godzinnej”
+nie potwierdza kompletności. Inny znany dodatni czas daje oszacowanie
+bez normy; gotowa ilość zachowuje liczbę bez normy. Znana niepełna
+zbiórka blokuje wiarygodny wynik i zapis. Fakty nie znikają przy zmianie
+trybu; nieznany czas historyczny nie staje się domyślnym 24 h.
+
+**Historia:** `citDzmSnapshot`, schemat **`clcr-cit-dzm` v1**, zamraża
+wejścia, jednostkę/postać i konwersje, czas/pochodzenie, fakty zbiórki,+wiek/płeć/BSA, wynik/prezentację, granice/operator i źródło/populację/
+wersję polityki oraz ocenę. READ nie wywołuje dzisiejszego silnika.
+Dawny `Cit_mgkg` zachowuje **mg/kg/24 h**, jawne stare `U_Cit` — kwas
+cytrynowy mg/dL; nowe `CITDZM_` nie nadpisują danych Ca/Cit.
+Nowe mg/mmol i różne podstawy masowe oraz dawne `/kg` są osobnymi
+seriami. Jedno obliczenie daje jeden pomiar i czytelną notatkę, bez JSON.
+Edycja legacy zachowuje miarę, bez dodania nowej normy lub migracji.
+
+**Syntetyczne kontrakty produkcyjne:** mężczyzna 40 lat,
+0,85 mmol/L ×2 L →1,7, nieobniżone; kobieta z tym samym wynikiem —
+obniżone względem ≥1,9. Dziewczynka 10 lat, 30 kg/140 cm,
+20 mg/dL kwasu ×1 L →200 mg/24 h, norma >≈191,92332726; 0,8 mmol/24 h
+jest poniżej >≈0,99895810. Chłopiec 17 lat, 70 kg/180 cm, 2 mmol/24 h
+jest poniżej >≈2,05466735, bez obcięcia do dorosłego. Dorosłe
+326,60995 mg kwasu lub 321,4683 mg jonu odpowiadają 1,7 mmol.
+Znane 12 h: 1 mmol/L ×1 L →2 bez normy, gotowe 1,4 pozostaje 1,4
+bez normy. Zero, brak i ujemna liczba są różnymi stanami;
+0,000001 µmol/L ×1 L pozostaje dodatnim 0,000000001 mmol/24 h.
+Regresje obejmują progi/płcie/wiek, jednostki, zapis/edycję/serie,
+READ bez silnika, reset i zmianę pacjenta, desktop/mobile i PWA offline.
+Wykonane kontrole i końcowy SHA raportuje PR, nie ten kontrakt.
+
 #### P-KLIRENS-DZM-CZAS-NOTATKI-WYBOR-2026-10-28 — wspólne24h i prowadzenie formularza
 
 Decyzja właściciela: nowe DZM mają rzeczywiście wpisane domyślne24h; puste pole nie blokuje, jawny dodatni inny czas pozostaje, zero/ujemne/błędny zapis wymagają korekty. To jawne założenie użytkowe, nie ustalony fakt o próbce. Pełna zbiórka jest założeniem bez sześciu potwierdzeń; znane negatywne fakty nadal blokują. `ClcrCollectionDuration` jest wspólne dla cl24 i wydalań Ca/UA/Mg/Pi/białka/Na/K/Ox/Cit. pH nie jest mnożone przez24/czas; ilorazy i luka surowicy nie dostają pytania o czas. [DZM_COLLECTION_DURATION.md](DZM_COLLECTION_DURATION.md) podaje kontrakt i wpływ względem poprzednich bramek dat/protokołu.
