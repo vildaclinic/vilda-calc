@@ -545,7 +545,10 @@
 }
 
 .vilda-lab-hist button.vilda-lab-result-chart-point {
-  position: relative;
+  /* WebKit paints positioned HTML inside a translated SVG foreignObject
+     without that translation, although its DOM bounds are correct. Keep the
+     point and its count in one grid cell, without a positioned HTML layer. */
+  position: static;
   width: 44px;
   height: 44px;
   min-width: 44px;
@@ -558,6 +561,7 @@
 }
 
 .vilda-lab-result-chart-dot {
+  grid-area: 1 / 1;
   width: 10px;
   height: 10px;
   border: var(--border-hairline) solid;
@@ -586,9 +590,10 @@
 }
 
 .vilda-lab-result-chart-count {
-  position: absolute;
-  top: 1px;
-  right: 0;
+  grid-area: 1 / 1;
+  align-self: start;
+  justify-self: end;
+  margin-top: 1px;
   border-radius: var(--radius-10);
   min-width: 18px;
   padding: 0 3px;
