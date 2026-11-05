@@ -103,6 +103,46 @@ describe('Search covers the complete Klirens persisted-output registry', () => {
     expect(root.ClcrNotesView.model(item.note, { patientId: PATIENT })).toMatchObject({ display: '≈0,135', unit: 'mmol/mmol', norm: '', status: 'Bez zapisanej oceny', outOfRange: null, tone: 'neutral' });
   });
 
+  it.each([
+    { variant: 'registry', mode: 'concentration', raw: 0.3, unit: 'mmol/24 h', reference: true, outOfRange: false, basis: 'oxalate-amount' },
+    { variant: 'typed-concentration-child', mode: 'concentration', raw: 0.3, unit: 'mmol/24 h', reference: true, outOfRange: true, basis: 'oxalate-amount' },
+    { variant: 'typed-concentration-child-no-bsa', mode: 'concentration', raw: 0.3, unit: 'mmol/24 h', reference: false, outOfRange: null, basis: 'oxalate-amount' },
+    { variant: 'typed-concentration-mass-unknown', mode: 'concentration', raw: 30, unit: 'mg/24 h', reference: false, outOfRange: null, basis: 'unknown' },
+    { variant: 'typed-concentration-mass-ion', mode: 'concentration', raw: 30, unit: 'mg/24 h', reference: true, outOfRange: false, basis: 'oxalate-ion' },
+    { variant: 'typed-reported-mass-acid', mode: 'reported', raw: 50, unit: 'mg/24 h', reference: true, outOfRange: true, basis: 'oxalic-acid' },
+    { variant: 'typed-reported-molar-upper-bound', mode: 'reported', raw: 0.46, unit: 'mmol/24 h', reference: true, outOfRange: true, basis: 'oxalate-amount' },
+    { variant: 'typed-reported-molar-below-rounded-bound', mode: 'reported', raw: 0.46, unit: 'mmol/24 h', reference: true, outOfRange: false, basis: 'oxalate-amount' },
+    { variant: 'typed-reported-molar-no-patient', mode: 'reported', raw: 0.3, unit: 'mmol/24 h', reference: false, outOfRange: null, basis: 'oxalate-amount' },
+    { variant: 'exact-zero', mode: 'concentration', raw: 0, unit: 'mmol/24 h', reference: true, outOfRange: false, basis: 'oxalate-amount' },
+  ])('Ox DZM $variant: search fixture stores a genuine typed amount and frozen reference', expected => {
+    const item = cases.find(item => item.parameterKey === 'Ox_total24' && item.variant === expected.variant);
+    expect(item).toBeDefined();
+    const saved = root.ClcrSavedCalculation.readSaved(item.note);
+    const snapshot = saved.snapshot.assessment.oxDzmSnapshot;
+    expect(saved.valid).toBe(true);
+    expect(saved.rawValue).toBe(expected.raw);
+    expect(saved.snapshot.parameterKey).toBe('Ox_total24');
+    expect(snapshot).toMatchObject({ valid: true, formulaId: 'Ox_mgkg', outputKey: 'Ox_total24', input: { mode: expected.mode },
+      rawValue: expected.raw, unit: expected.unit, referenceAvailable: expected.reference, outOfRange: expected.outOfRange, reportingBasis: expected.basis });
+    const model = root.ClcrNotesView.model(item.note, { patientId: PATIENT });
+    expect(model).toMatchObject({ unit: expected.unit, display: snapshot.presentation.valueText, outOfRange: expected.outOfRange });
+    expect(model.norm).toBe(expected.reference ? snapshot.presentation.referenceText : '');
+    if (!expected.reference) expect(model.status).toBe('Bez zapisanej oceny');
+  });
+
+  it('retains the old oxalate mg/kg output independently from the absolute daily output', () => {
+    const old = cases.find(item => item.parameterKey === 'Ox_mgkg' && item.variant === 'registry');
+    const current = cases.find(item => item.parameterKey === 'Ox_total24' && item.variant === 'registry');
+    expect(old).toBeDefined(); expect(current).toBeDefined();
+    const saved = root.ClcrSavedCalculation.readSaved(old.note);
+    expect(saved.valid).toBe(true);
+    expect(saved.snapshot.parameterKey).toBe('Ox_mgkg');
+    expect(saved.snapshot.assessment.oxDzmSnapshot).toBeUndefined();
+    expect(old.expected.model.unit).toBe('mg/kg/24 h');
+    expect(current.expected.model.unit).toBe('mmol/24 h');
+    expect(old.note.id).not.toBe(current.note.id);
+  });
+
   it.each(cases)('$key: real persisted output matches Notes in both preview and searchable text', async item => {
     const before = JSON.stringify(item.note);
     expect(root.ClcrSavedCalculation.readSaved(item.note).valid).toBe(true);

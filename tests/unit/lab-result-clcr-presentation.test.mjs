@@ -39,21 +39,99 @@ function recordedCapture(capture) {
   const note = legacy(context.api, 'ckid_u25', 'fictional-recorded', { labResult: { value: '97', valueNum: 97 } });
   return { ...context, projected: projection(context, [note]), forbidden };
 }
+function oxDzmContext() {
+  return environment(['clcr_ox_dzm_reference_data.js', 'clcr_ox_dzm.js',
+    'clcr_ox_dzm_persistence.js', 'clcr_saved_calculation.js']);
+}
+function oxDzmRecord(context, patch = {}, id = 'fictional-ox-daily') {
+  const browser = context.browser;
+  const values = { OXDZM_inputMode: 'reported', OXDZM_reportedValue: '0.3',
+    OXDZM_reportedUnit: 'mmol/24h', OXDZM_collectionHours: '24', age: '40', ...patch };
+  const model = browser.VildaClcrOxDzm.evaluate(browser.VildaClcrOxDzm.inputFromValues(values),
+    browser.ClcrOxDzmReferenceData.DEFAULT_POLICY);
+  expect(model.valid).toBe(true);
+  const point = { ...context.api.getParam('Ox_total24') };
+  expect(browser.ClcrOxDzmPersistence.augmentDatapoint({ getAttribute: () => JSON.stringify(model) }, point)).toBe(true);
+  const note = { ...context.api.buildPatientNotePayload(point, { patientId: PATIENT, clinicalDateISO: DATE }), id, rev: 1 };
+  const capture = { values, fields: Object.keys(values).map(id => ({ id, label: id, type: 'text' })) };
+  const snapshot = browser.ClcrSavedCalculation.createSnapshot(point, { capture, clinicalDateISO: DATE });
+  expect(snapshot).not.toBeNull();
+  note.body += '\n\n' + browser.ClcrSavedCalculation.serializeSnapshot(snapshot, note);
+  return { note, model };
+}
 
 describe('Zwięzłe Badania: projekcja zapisów Klirensu bez ponownego obliczania', () => {
-  it('zachowuje wszystkie 45 historycznych tożsamości wyników i ich dokładne neutralne punkty', () => {
+  it('zachowuje wszystkie 46 tożsamości, w tym osobne dobowe szczawiany, i ich dokładne neutralne punkty', () => {
     const c = environment();
-    expect(c.api.PARAM_DICTIONARY).toHaveLength(45);
+    expect(c.api.PARAM_DICTIONARY).toHaveLength(46);
+    expect(c.api.getParam('Ox_total24')).toMatchObject({ id: 'Ox_total24', sourceFormulaId: 'Ox_mgkg' });
     const notes = c.api.PARAM_DICTIONARY.map((parameter, index) => legacy(c.api, parameter.id, `fictional-all-${index}`,
       { labResult: { value: String(index + 1), valueNum: index + 1 } }));
     const report = projection(c, notes), before = JSON.stringify(report);
     const series = presentation.clcrSeries(report);
-    expect(series).toHaveLength(45);
-    expect(series.flatMap(group => group.entries)).toHaveLength(45);
-    expect(series.flatMap(group => group.chart.points)).toHaveLength(45);
+    expect(series).toHaveLength(46);
+    expect(series.flatMap(group => group.entries)).toHaveLength(46);
+    expect(series.flatMap(group => group.chart.points)).toHaveLength(46);
     expect(series.flatMap(group => group.entries).every(entry => presentation.describe(entry).tone === 'neutral')).toBe(true);
     expect(series.flatMap(group => group.entries).map(entry => entry.noteId).sort()).toEqual(notes.map(note => note.id).sort());
     expect(JSON.stringify(report)).toBe(before);
+  });
+
+  it('nazywa trzy postacie dobowych szczawianów po polsku bez zmiany zapisanych kluczy serii', () => {
+    const c = oxDzmContext();
+    const cases = [
+      [{}, 'oxalate-amount', 'Ilość molowa szczawianów'],
+      [{ OXDZM_reportedValue: '30', OXDZM_reportedUnit: 'mg/24h', OXDZM_reportingEntity: 'oxalate_ion' }, 'oxalate-ion', 'Jon szczawianowy'],
+      [{ OXDZM_reportedValue: '30', OXDZM_reportedUnit: 'mg/24h', OXDZM_reportingEntity: 'oxalic_acid' }, 'oxalic-acid', 'Kwas szczawiowy bezwodny'],
+    ];
+    const notes = cases.map(([patch], index) => oxDzmRecord(c, patch, `fictional-ox-basis-${index}`).note);
+    const report = projection(c, notes), original = JSON.stringify(report);
+    const series = presentation.clcrSeries(report);
+    expect(series).toHaveLength(3);
+    for (const [index, [, basis, basisLabel]] of cases.entries()) {
+      const record = report.measurements.find(item => item.noteId === notes[index].id);
+      const group = series.find(item => item.basis === basis);
+      expect(group).toMatchObject({ key: 'clcr:' + record.seriesKey, basis, basisLabel, parameterKey: 'clcr:Ox_total24' });
+      expect(group.entries[0].clcrRecord).toBe(record);
+      expect(group.chart.points[0].v).toBe(record.valueNum);
+    }
+    expect(JSON.stringify(report)).toBe(original);
+  });
+
+  it.each([
+    ['niskie eGFR', { egfr: '25' }, true],
+    ['zbiórka 12 godzin', { OXDZM_collectionHours: '12', OXDZM_collectionSource: 'hours' }, false],
+    ['niepełna zbiórka', { Cl24CollectionProblem: true }, false],
+    ['historycznie nieznany czas', { OXDZM_collectionHours: '', OXDZM_collectionSource: 'historical-missing', OXDZM_durationNeedsConfirmation: true }, false],
+    ['brak wieku', { age: '' }, false],
+    ['brak BSA dziecka', { age: '10' }, false],
+    ['nieznana postać masowa', { OXDZM_reportedValue: '30', OXDZM_reportedUnit: 'mg/24h' }, false],
+  ])('zachowuje neutralny zapisany komentarz Ox: %s, bez ponownego obliczenia', (_label, patch, hasReference) => {
+    const c = oxDzmContext(), { note, model } = oxDzmRecord(c, patch);
+    const original = JSON.stringify(note);
+    const forbidden = vi.fn(() => { throw new Error('Do not re-evaluate a frozen Ox result'); });
+    c.browser.VildaClcrOxDzm = { evaluate: forbidden, inputFromValues: forbidden };
+    c.browser.ClcrOxDzmReferenceData = { get DEFAULT_POLICY() { return forbidden(); } };
+    const [record] = projection(c, [note]).measurements;
+    expect(record).toMatchObject({ status: 'recorded', tone: 'neutral', assessment: 'unassessed' });
+    expect(model.interpretation).not.toBe('');
+    const result = presentation.describeClcr(record);
+    expect(result).toMatchObject({ value: model.rawValue, tone: 'neutral', symbol: '',
+      warning: model.interpretation, warningKind: 'reference', normText: hasReference ? record.norm : '—' });
+    expect(result.norms).toHaveLength(hasReference ? 1 : 0);
+    if (hasReference) expect(result.norms[0]).toMatchObject({ conditional: true, tone: 'neutral', high: model.reference.upper });
+    expect(presentation.clcrSeries({ measurements: [record] })[0].chart.points[0].v).toBe(model.rawValue);
+    expect(forbidden).not.toHaveBeenCalled();
+    expect(JSON.stringify(note)).toBe(original);
+  });
+
+  it('nie rozszerza komentarzy neutralnych na inne anality ani nie zmienia ostrzeżenia EAU', () => {
+    const c = oxDzmContext(), { note, model } = oxDzmRecord(c, { OXDZM_reportedValue: '0.44' });
+    const [record] = projection(c, [note]).measurements;
+    expect(presentation.describeClcr(record)).toMatchObject({ value: .44, tone: 'neutral', symbol: '',
+      warning: model.interpretation, warningKind: 'clinical', normText: '<0,46 mmol/24 h' });
+    const other = recordedCapture({ tone: 'neutral', assessment: 'unassessed', interpretation: 'Zapisany komentarz innego analitu.' });
+    expect(presentation.describeClcr(other.projected.measurements[0])).toMatchObject({ tone: 'neutral', warning: '', warningKind: '' });
   });
 
   it('ujemny legacy UAG i dokładne zero zachowują liczbę oraz zapis właściciela projekcji', () => {

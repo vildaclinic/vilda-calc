@@ -242,6 +242,13 @@
     } else if (criterion) {
       result.warning = 'Zapisane kryterium odniesienia' + (normText ? ': ' + normText : '');
       result.warningKind = 'reference';
+    } else if (saved.status === 'recorded' && saved.sourceFormulaId === 'Ox_mgkg'
+      && ['Ox_total24', 'clcr:Ox_total24'].indexOf(saved.parameterKey) !== -1
+      && saved.assessment === 'unassessed' && saved.tone === 'neutral' && text(saved.interpretation)) {
+      // The frozen Ox result already explains why its reference is limited.
+      // Keep that explanation neutral; never infer it from today's patient.
+      result.warning = text(saved.interpretation);
+      result.warningKind = 'reference';
     }
     result.symbol = result.tone === 'above' ? '↑' : result.tone === 'below' ? '↓' : '';
     return result;
@@ -265,6 +272,9 @@
   function clcrBasis(saved) {
     if (text(saved.basisLabel)) return text(saved.basisLabel);
     var basis = text(saved.basis);
+    if (basis === 'oxalate-amount') return 'Ilość molowa szczawianów';
+    if (basis === 'oxalate-ion') return 'Jon szczawianowy';
+    if (basis === 'oxalic-acid') return 'Kwas szczawiowy bezwodny';
     if (basis === 'unknown' || basis === 'legacy-unknown') return 'Postać masowa niepodana w zapisie';
     if (basis === 'ion') return saved.sourceFormulaId === 'OxCr_spot' ? 'Jon szczawianowy'
       : saved.sourceFormulaId === 'CitCr_spot' ? 'Jon cytrynianowy' : 'Postać jonowa — zgodnie z zapisem';

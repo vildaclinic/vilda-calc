@@ -27,6 +27,12 @@ const sodiumInputs = {
   Na_collectionHours: '', Na_collectionSource: 'assumed-24h', Na_durationNeedsConfirmation: false,
   Na_reportedValue: '', Na_reportedUnit: 'mmol/24h', Na_outputUnit: 'mmol/24h', Na_unitConversions: '',
 };
+const oxalateInputs = {
+  OXDZM_inputMode: 'concentration', OXDZM_concentration: '50', OXDZM_concentrationUnit: 'mg/L',
+  OXDZM_volume: '1440', OXDZM_volumeUnit: 'mL', OXDZM_collectionHours: '',
+  OXDZM_collectionSource: 'assumed-24h', OXDZM_durationNeedsConfirmation: false,
+  OXDZM_reportedValue: '', OXDZM_reportedUnit: 'mmol/24h', OXDZM_reportingEntity: 'oxalate_ion', OXDZM_unitConversions: '',
+};
 
 function durationControls(formula) {
   return formula === 'PO4_mgkg'
@@ -41,11 +47,24 @@ function durationControls(formula) {
     : formula === 'K_mmol_d'
       ? { field: 'K_collectionHours', source: 'K_collectionSource', panel: '#potassiumDzmInputCard',
           change: '[aria-controls="potassiumDzmDurationEditor"]', summary: '#potassiumDzmInputCard .potassium-dzm-context-row strong' }
+    : formula === 'Ox_mgkg'
+      ? { field: 'OXDZM_collectionHours', source: 'OXDZM_collectionSource', panel: '#oxDzmInputCard',
+          change: null, summary: null }
     : { field: 'Cl24DurationHours', source: 'Cl24DurationSource', panel: '#clcrCommonDuration',
         change: '#clcrCommonDuration .clcr-duration-change', summary: '#clcrCommonDuration strong' };
 }
+async function expectDurationPresentation(page, controls, hours) {
+  if (controls.summary) await expect(page.locator(controls.summary)).toHaveText(hours + ' godz.');
+  else {
+    // The approved Ox form shows its editable clock directly, with a fixed
+    // unit, instead of repeating the duration inside a separate summary.
+    await expect(page.locator('#' + controls.field)).toHaveAccessibleName('Czas zbiórki');
+    await expect(page.locator('#' + controls.field)).toHaveValue(hours);
+    await expect(page.locator(controls.panel + ' .ox-dzm-static-unit')).toHaveText('godz.');
+  }
+}
 async function restore(page, formula, patch = {}) {
-  const version = 'advanced';
+  const version = formula === 'Ox_mgkg' ? 'pro' : 'advanced';
   const dedicated = formula === 'PO4_mgkg' ? {
     PO4_inputMode: 'concentration', PO4_concentration: '50', PO4_concentrationUnit: 'mgP/dL',
     PO4_volume: '1440', PO4_volumeUnit: 'mL', PO4_collectionHours: '', PO4_collectionSource: 'assumed-24h',
@@ -55,7 +74,7 @@ async function restore(page, formula, patch = {}) {
     Prot_volume: '1000', Prot_volumeUnit: 'mL', Prot_collectionHours: '', Prot_collectionSource: 'assumed-24h',
     Prot_reportedValue: '', Prot_reportedUnit: 'mg/24h', Prot_outputUnit: 'mg/24h', Prot_unitConversions: '',
     Prot_durationNeedsConfirmation: false,
-  } : formula === 'Na_mmol_d' ? sodiumInputs : formula === 'K_mmol_d' ? potassiumInputs : {};
+  } : formula === 'Na_mmol_d' ? sodiumInputs : formula === 'K_mmol_d' ? potassiumInputs : formula === 'Ox_mgkg' ? oxalateInputs : {};
   await applySession(page, { version: 2, currentVersion: version, selectedFormula: formula,
     inputs: { ...specimen, currentVersion: version, formulaPicker: formula,
       Cl24DurationHours: '', Cl24DurationSource: 'assumed-24h', ...dedicated, ...patch } }, formula);
@@ -121,10 +140,10 @@ test('DZM session capture after formula reset is stable without changing an edit
   expect(result.restored).toBe(true);
   expect(result.after).toEqual(result.before);
   const expectedFields = ['Cl24DurationHours', 'CA_collectionHours', 'UA_collectionHours',
-    'MG_collectionHours', 'PO4_collectionHours', 'Prot_collectionHours', 'Na_collectionHours', 'K_collectionHours'];
+    'MG_collectionHours', 'PO4_collectionHours', 'Prot_collectionHours', 'Na_collectionHours', 'K_collectionHours', 'OXDZM_collectionHours'];
   expect(result.fields.map(({ field }) => field)).toEqual(expectedFields);
   expect(result.before).toEqual(Object.fromEntries(expectedFields.map(field => [field, field === 'Cl24DurationHours' ? '24' : ''])));
-  expect(Object.values(result.before).filter(value => value === '')).toHaveLength(7);
+  expect(Object.values(result.before).filter(value => value === '')).toHaveLength(8);
   expect(result.replay).toEqual(result.initial);
   expect(result.invalidAfter).toEqual(result.invalidBefore);
   expect(result.historicalAfter).toEqual(result.historicalBefore);
@@ -144,17 +163,25 @@ for (const formula of formulas) test(`Shared DZM: ${formula} defaults, blank, in
   const errors = []; page.on('pageerror', error => errors.push(error.message));
   await openCalculator(page); await restore(page, formula);
   const controls = durationControls(formula);
-  const hours = page.locator('#' + controls.field), source = page.locator('#' + controls.source), summary = page.locator(controls.summary);
+  const hours = page.locator('#' + controls.field), source = page.locator('#' + controls.source);
   await expect(hours).toHaveValue('24');
   await expect(page.locator(controls.panel)).toBeVisible();
-  if (['PO4_mgkg', 'Prot_mgkg', 'Na_mmol_d', 'K_mmol_d'].includes(formula)) {
+  if (['PO4_mgkg', 'Prot_mgkg', 'Na_mmol_d', 'K_mmol_d', 'Ox_mgkg'].includes(formula)) {
     await expect(page.locator('#clcrCommonDuration')).toBeHidden();
-    expect(await page.evaluate(() => window.currentVersion)).toBe('advanced');
-    await expect(page.locator('#version-advanced')).toHaveClass(/selected/);
+    const version = formula === 'Ox_mgkg' ? 'pro' : 'advanced';
+    expect(await page.evaluate(() => window.currentVersion)).toBe(version);
+    await expect(page.locator('#version-' + version)).toHaveClass(/selected/);
   }
   const baseline = await expectReady(page, formula);
   expect(baseline.duration).toMatchObject({ valid: true, hours: 24, source: 'assumed-24h', complete: true });
   expect(baseline.points.every(point => point.captureSource === 'assumed-24h' && point.captureHours === '24')).toBe(true);
+  if (formula === 'Ox_mgkg') {
+    expect(baseline.points).toHaveLength(1);
+    expect(baseline.points[0].value).toBe(72);
+    await expect(page.locator('#clcrResultReport [data-clcr-series="Ox_total24"]')).toHaveCount(1);
+    for (const id of ['U_Ox', 'V24', 'oxalateReportingEntity']) await expect(page.locator('#' + id)).toBeHidden();
+    for (const id of ['OXDZM_concentration', 'OXDZM_volume', 'OXDZM_collectionHours']) await expect(page.locator('#' + id)).toBeVisible();
+  }
   for (const id of ['collectionStartAt', 'collectionEndAt', 'collectionNoMissedVoids']) await expect(page.locator(`#${id}`)).toBeHidden();
   if (formula === 'Prot_mgkg') {
     // Other legacy analytes remain populated. An incomplete active protein
@@ -171,7 +198,7 @@ for (const formula of formulas) test(`Shared DZM: ${formula} defaults, blank, in
     expect((await expectReady(page, formula)).points).toEqual(baseline.points);
   }
 
-  await page.locator(controls.change).click();
+  if (controls.change) await page.locator(controls.change).click();
   await expect(hours).toBeVisible();
   if (formula === 'K_mmol_d') {
     await hours.fill('');
@@ -180,7 +207,7 @@ for (const formula of formulas) test(`Shared DZM: ${formula} defaults, blank, in
     await hours.blur(); await expect(hours).toHaveValue('24');
   }
   await hours.fill('12');
-  await expect(summary).toHaveText('12 godz.');
+  await expectDurationPresentation(page, controls, '12');
   await expect(source).toHaveValue('hours');
   const half = await expectReady(page, formula);
   expect(half.duration).toMatchObject({ valid: true, hours: 12, source: 'hours', assumed: false });
@@ -195,14 +222,14 @@ for (const formula of formulas) test(`Shared DZM: ${formula} defaults, blank, in
     await expect.poll(async () => (await state(page, formula)).ready).toBe(false);
     expect((await state(page, formula)).points).toEqual([]);
     await hours.blur(); await expect(hours).toHaveValue('');
-    await expect(summary).toHaveText('Uzupełnij czas');
+    await expect(page.locator(controls.summary)).toHaveText('Uzupełnij czas');
     await restore(page, formula);
     if (!await hours.isVisible()) await page.locator(controls.change).click();
   } else {
     expect((await expectReady(page, formula)).duration).toMatchObject({ valid: true, hours: 24, source: 'assumed-24h' });
     await hours.blur(); await expect(hours).toHaveValue('24');
   }
-  await expect(summary).toHaveText('24 godz.');
+  await expectDurationPresentation(page, controls, '24');
   await expect(source).toHaveValue('assumed-24h');
   const restored = await expectReady(page, formula);
   expect(restored.duration).toMatchObject({ valid: true, hours: 24, source: 'assumed-24h', assumed: true });

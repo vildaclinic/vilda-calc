@@ -583,7 +583,9 @@ describe('Klirens — centralny model przepływu UI', () => {
     expect(byId('Ca_mgkg')?.requires).toEqual(['CA_concentration', 'CA_concentrationUnit', 'CA_volume', 'CA_volumeUnit', 'CA_collectionHours']);
     expect(byId('Mg_mgkg')?.requires).toEqual(['MG_concentration', 'MG_concentrationUnit', 'MG_volume', 'MG_volumeUnit', 'MG_collectionHours']);
     expect(byId('PO4_mgkg')?.requires).toEqual(['PO4_concentration', 'PO4_concentrationUnit', 'PO4_volume', 'PO4_volumeUnit', 'PO4_collectionHours']);
-    for (const formulaId of ['Prot_mgkg', 'Na_mmol_d', 'K_mmol_d', 'Ox_mgkg', 'Cit_mgkg', 'pH24']) {
+    expect(byId('Ox_mgkg')?.requires).toEqual(['OXDZM_concentration', 'OXDZM_concentrationUnit', 'OXDZM_volume', 'OXDZM_volumeUnit', 'OXDZM_collectionHours']);
+    for (const id of timedProtocol) expect(byId('Ox_mgkg')?.requires).not.toContain(id);
+    for (const formulaId of ['Prot_mgkg', 'Na_mmol_d', 'K_mmol_d', 'Cit_mgkg', 'pH24']) {
       expect(byId(formulaId)?.requires, formulaId).toContain('Cl24DurationHours');
       for (const id of timedProtocol) expect(byId(formulaId)?.requires, formulaId).not.toContain(id);
     }
@@ -948,13 +950,13 @@ describe('Klirens — centralny model przepływu UI', () => {
     );
 
     expect(html).toContain('clcr_ui_workflow.css?v=20');
-    expect(html).toContain('clcr_ui_workflow.js?v=43');
-    expect(html).toContain('inline_kalkulator_klirens_02.js?v=36');
-    expect(html).toContain('inline_kalkulator_klirens_04.js?v=43');
-    expect(html).toContain('inline_kalkulator_klirens_07.js?v=33');
+    expect(html).toContain('clcr_ui_workflow.js?v=44');
+    expect(html).toContain('inline_kalkulator_klirens_02.js?v=37');
+    expect(html).toContain('inline_kalkulator_klirens_04.js?v=44');
+    expect(html).toContain('inline_kalkulator_klirens_07.js?v=34');
     expect(html).toContain('clcr_result_reference_data.js?v=7');
     expect(html).toContain('clcr_result_presentation.js?v=8');
-    expect(serviceWorker).toContain("const SW_VERSION = '1.1.467'");
+    expect(serviceWorker).toContain("const SW_VERSION = '1.1.468'");
     expect(html).toContain('clcr_calculation_assumptions.js?v=2');
     expect(serviceWorker).toContain("'/clcr_calculation_assumptions.js?v=2'");
     expect(serviceWorker).toContain("'/clcr_clinical_safety.js?v=14'");

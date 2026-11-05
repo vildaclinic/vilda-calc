@@ -51,6 +51,20 @@
     const parsed = typeof value === "number" ? value : Number(String(value).trim().replace(",", "."));
     return Number.isFinite(parsed) ? parsed : null;
   }
+  // Historical Ox_mgkg remains a per-kg measure. Its editor must apply the
+  // same nonnegative/positive operand rules as the live calculation.
+  function legacyOxNumber(value) {
+    if (!["string", "number"].includes(typeof value)) return null;
+    const entered = String(value).trim().replace(",", ".");
+    if (!/^[+]?(?:\d+(?:\.\d*)?|\.\d+)(?:e[+-]?\d+)?$/i.test(entered)) return null;
+    const parsed = Number(entered);
+    if (!Number.isFinite(parsed) || parsed === 0 && /[1-9]/.test(entered.split(/e/i)[0])) return null;
+    return parsed;
+  }
+  function legacyOxDisplay(value) {
+    if (value === 0) return "0";
+    return value < 0.1 ? Number(value.toPrecision(3)).toString() : value.toFixed(1);
+  }
   const checked = (values, key) => values[key] === true;
   function requiredModule(name) {
     if (!root[name]) throw new Error("Nie wczytano modułu obliczenia. Odśwież stronę i spróbuj ponownie.");
@@ -387,7 +401,15 @@
     const calcium = calciumMgDl(number(values, "U_Ca"));
     let value, unit = "mg/mg", digits = 3;
     const analytes = { Ca_mgkg: "U_Ca", Mg_mgkg: "U_Mg", Ox_mgkg: "U_Ox", Cit_mgkg: "U_Cit" };
-    if (own(analytes, formulaId)) {
+    if (formulaId === "Ox_mgkg") {
+      const concentration = legacyOxNumber(values.U_Ox), capturedWeight = legacyOxNumber(values.weight);
+      if (concentration === null) throw new Error("Wpisz nieujemne stężenie szczawianów.");
+      if (!(capturedWeight > 0)) throw new Error("Wpisz masę ciała większą od 0 kg.");
+      if (!(daily > 0) || !sample.complete) throw new Error("Sprawdź objętość i kompletność zbiórki moczu.");
+      value = concentration === 0 ? 0 : excr_mgkg(concentration, daily, capturedWeight);
+      if (!Number.isFinite(value) || concentration > 0 && value === 0) throw new Error("Wynik wykracza poza obsługiwany zakres liczbowy.");
+      unit = "mg/kg/24 h"; digits = 1;
+    } else if (own(analytes, formulaId)) {
       const concentration = formulaId === "Ca_mgkg" ? calcium : formulaId === "Mg_mgkg" ? magnesium : number(values, analytes[formulaId]);
       value = excr_mgkg(concentration, daily, weight); unit = "mg/kg/24 h"; digits = 1;
     } else if (formulaId === "PO4_mgkg") {
@@ -418,7 +440,7 @@
     else if (formulaId === "Ca_Cit") value = ratio(calcium, number(values, "U_Cit"));
     else if (formulaId === "B_Cr") value = proteinCreatinineRatio(number(values, "U_Prot"), urineCr, sample.volume);
     else return null;
-    return modeled(formulaId, parameterKey, value, unit, digits, values, context, formulaId === "Prot_mgkg" ? { displayValue: String(value).replace(".", ","), datapoint: { assessment: "unassessed", outOfRange: null, norm: "", tone: "neutral" } } : {});
+    return modeled(formulaId, parameterKey, value, unit, digits, values, context, formulaId === "Ox_mgkg" ? { displayValue: legacyOxDisplay(value) } : formulaId === "Prot_mgkg" ? { displayValue: String(value).replace(".", ","), datapoint: { assessment: "unassessed", outOfRange: null, norm: "", tone: "neutral" } } : {});
   }
   return Object.freeze({ math, recalculate });
 });

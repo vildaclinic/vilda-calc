@@ -133,7 +133,7 @@ async function completeAdultKtv(page, overrides = {}) {
   }
 }
 
-test('dorosły panel kamicy przelicza masę i mmol oraz stosuje profile EAU 2026', async ({ page }) => {
+test('dorosły panel kamicy przelicza masę i mmol oraz stosuje EAU i odrębny profil szczawianów ERKNet', async ({ page }) => {
   await openCalculator(page);
   await setPatient(page, { age: 50, sex: 'F' });
   await completeTimedCollection(page);
@@ -160,12 +160,33 @@ test('dorosły panel kamicy przelicza masę i mmol oraz stosuje profile EAU 2026
   await expect(stone).toContainText(/Magnez\s*w\s*DZM:\s*2[.,]057\s*mmol\/24\s*h/);
   await expect(stone).toContainText('Fosfor nieorganiczny (Pᵢ) w DZM');
   await expect(stone).toContainText('mg P/24 h');
-  await expect(stone).toContainText('mg kwasu szczawiowego/24 h');
+  // Ox DZM ma jeden wynik dobowy z własną normą ERKNet/OxalEurope.
+  // Starsza karta kamicowa nie może go dublować ani stosować progu 0,5 mmol/24 h.
+  const oxalate = page.locator('[data-clcr-series="Ox_total24"]');
+  await expect(oxalate).toHaveCount(1);
+  await expect(page.locator('#elecInfo [data-clcr-series="Ox_total24"]')).toHaveCount(1);
+  await expect(page.locator('.result-box[data-clcr-formula="Ox_mgkg"]')).toHaveCount(1);
+  await expect(stone.locator('[data-clcr-formula="Ox_mgkg"]')).toHaveCount(0);
+  await expect(oxalate.locator('.clcr-result-value')).toHaveText('50');
+  await expect(oxalate.locator('.ox-dzm-result-unit')).toHaveText('mg/24 h');
+  await expect(oxalate.locator('.clcr-result-reference-value')).toHaveText('<41,42');
+  await expect(oxalate).toHaveAttribute('data-clcr-tone', 'warning');
+  const oxalateSnapshot = JSON.parse(await oxalate.getAttribute('data-clcr-ox-dzm-snapshot'));
+  expect(oxalateSnapshot).toMatchObject({
+    valid: true,
+    rawValue: 50,
+    unit: 'mg/24 h',
+    reportingBasis: 'oxalic-acid',
+    status: 'high',
+    outOfRange: true,
+    policy: { id: 'erknet-oxaleurope-2023-oxalate-dzm-v1' },
+    reference: { sourceUpper: 0.46, upperInclusive: false, sourceId: 'ERKNET_OXALEUROPE_2023' }
+  });
+  expect(oxalateSnapshot.reference.upper).toBeCloseTo(41.416054, 8);
   await expect(stone).toContainText('mg kwasu cytrynowego/24 h');
   await expect(stone).toContainText('przekracza 8,0 mmol/24 h');
   await expect(stone).toContainText('poniżej 3,0 mmol/24 h');
   await expect(stone).toContainText('przekracza próg EAU 4,0 mmol/24 h');
-  await expect(stone).toContainText('przekracza 0,5 mmol/24 h');
   await expect(stone).toContainText('poniżej progu EAU 1,9 mmol/24 h');
   await expect(stone).toContainText('ogólnego celu EAU 2,5 L/24 h');
   await expect(stone).toContainText('wzorzec hiperkwasowego moczu');

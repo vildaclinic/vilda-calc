@@ -71,7 +71,7 @@
 <script defer src="vilda_persistence_adapter.js?v=33"></script>
 <script src="vilda_reminders_privacy.js?v=1"></script>
 <script defer src="vilda_panel_pacjent.js?v=3"></script>
-<script defer src="vilda_session_bridge.js?v=165"></script>
+<script defer src="vilda_session_bridge.js?v=166"></script>
 <script defer src="vilda_init.js?v=4"></script>
 <script defer src="vilda_crypto.js?v=15"></script>
 <script defer src="vilda_retention.js?v=1"></script>
@@ -83,9 +83,9 @@
 <script defer src="vilda_hormone_reference_ui.js?v=1"></script>
 <script defer src="vilda_lab_assessment_ui.js?v=19"></script>
 <script defer src="vilda_lab_history.js?v=5"></script>
-<script defer src="vilda_lab_result_presentation.js?v=2"></script>
+<script defer src="vilda_lab_result_presentation.js?v=3"></script>
 <script defer src="vilda_lab_result_chart.js?v=2"></script>
-<script defer src="vilda_lab_history_tab.js?v=28"></script>
+<script defer src="vilda_lab_history_tab.js?v=29"></script>
 <script defer src="vilda_care_plan_model.js?v=1"></script>
 <script defer src="vilda_clinical_crypto.js?v=2"></script>
 <script defer src="vilda_patient_checkpoint_store.js?v=1"></script>
@@ -121,7 +121,7 @@
 <script defer src="vilda_global_search_view.js?v=6"></script>
 <script defer src="vilda_search_navigation.js?v=1"></script>
 <script defer src="vilda_patients_list.js?v=1"></script>
-<script defer src="vilda_auth_ui.js?v=543"></script>
+<script defer src="vilda_auth_ui.js?v=544"></script>
 <script defer src="vilda_urodzeniowe_rozbieznosc.js?v=1"></script>
 <script defer src="vilda_cykle_leczenia.js?v=3"></script>
 <script defer src="vilda_version_history_ui.js?v=15"></script>
@@ -152,7 +152,7 @@
 <script defer src="clcr_sodium_dzm.js?v=1"></script>
 <script defer src="clcr_potassium_dzm.js?v=1"></script>
 <script defer src="clcr_urate_creatinine.js?v=1"></script>
-<script defer src="vilda_save_status_indicator.js?v=42"></script>
+<script defer src="vilda_save_status_indicator.js?v=43"></script>
 <script defer src="vilda_unsaved_guard.js?v=8"></script>
 <script defer src="vilda_khamis_roche.js?v=2"></script>
 <script defer src="vilda_blum_iss.js?v=2"></script>
@@ -205,7 +205,7 @@
      w vilda_deps.js (jspdf@2.5.1 + html2canvas@1.4.1, te same URL-e i SRI co dawniej). -->
     <!-- Biblioteka do generowania plików DOCX. Jeśli z jakiegoś powodu nie zostanie załadowana (np. brak internetu), skrypt wykorzysta prosty fallback HTML/RTF. -->
     <script defer src="https://cdn.jsdelivr.net/npm/docx@7.7.0/build/index.js" integrity="sha384-w/LllGhZ3w+q1yFNKaoeSozJlt4DKDgPzR/QqsYJ/de7QdUKPayy2iETdCFxEscy" crossorigin="anonymous"></script>
-<script defer src="vilda_chrome.js?v=244"></script>
+<script defer src="vilda_chrome.js?v=245"></script>
 <link href="clcr_ui_workflow.css?v=20" rel="stylesheet" />
 <link href="clcr_saved_results_view.css?v=1" rel="stylesheet" />
 <link href="clcr_result_details.css?v=1" rel="stylesheet" />
@@ -232,6 +232,7 @@
 <link href="clcr_mg_dzm_ui.css?v=1" rel="stylesheet" />
 <link href="clcr_po4_dzm_ui.css?v=1" rel="stylesheet" />
 <link href="clcr_protein_dzm.css?v=1" rel="stylesheet" />
+<link href="clcr_ox_dzm.css?v=1" rel="stylesheet" />
 <link href="clcr_sodium_dzm.css?v=1" rel="stylesheet" />
 <link href="clcr_potassium_dzm.css?v=1" rel="stylesheet" />
 <link href="clcr_urate_creatinine.css?v=1" rel="stylesheet" />
@@ -1057,7 +1058,7 @@
     <!-- === Rozszerzony moduł wyboru formuł === -->
     <script defer src="inline_kalkulator_klirens_01.js?v=1"></script>
 
-    <script defer src="clcr_collection_duration.js?v=5"></script>
+    <script defer src="clcr_collection_duration.js?v=6"></script>
     <script defer src="clcr_clinical_safety.js?v=14"></script>
     <script defer src="clcr_stone_safety.js?v=1"></script>
     <script defer src="clcr_dialysis_safety.js?v=1"></script>
@@ -1148,6 +1149,10 @@
     <script defer src="clcr_protein_dzm.js?v=1"></script>
     <script defer src="clcr_protein_dzm_ui.js?v=1"></script>
     <script defer src="clcr_protein_dzm_persistence.js?v=1"></script>
+    <script defer src="clcr_ox_dzm_reference_data.js?v=1"></script>
+    <script defer src="clcr_ox_dzm.js?v=1"></script>
+    <script defer src="clcr_ox_dzm_ui.js?v=1"></script>
+    <script defer src="clcr_ox_dzm_persistence.js?v=1"></script>
     <script defer src="clcr_sodium_dzm_ui.js?v=1"></script>
     <script defer src="clcr_potassium_dzm_ui.js?v=1"></script>
     <script defer src="clcr_urate_creatinine_ui.js?v=1"></script>
@@ -1161,7 +1166,7 @@
     <script defer src="clcr_measured_clearance_reference_data.js?v=1"></script>
     <script defer src="clcr_measured_clearance_reference.js?v=1"></script>
     <script defer src="clcr_result_presentation.js?v=8"></script>
-    <script defer src="inline_kalkulator_klirens_02.js?v=36"></script>
+    <script defer src="inline_kalkulator_klirens_02.js?v=37"></script>
     <!-- Ujednolicona obsługa wyboru formuły w kalkulatorze klirensu/eGFR. -->
     <script defer src="inline_kalkulator_klirens_03.js?v=1"></script>
 <!-- Sekcja interpretacji AI z opisem i przyciskiem.  Umieszczamy ją w kontenerze
@@ -1207,8 +1212,8 @@
 </footer>
 
 <!-- 5. LOGIKA JS -->
-<script defer src="clcr_saved_legacy_calculator.js?v=18"></script>
-<script defer src="inline_kalkulator_klirens_04.js?v=43"></script>
+<script defer src="clcr_saved_legacy_calculator.js?v=19"></script>
+<script defer src="inline_kalkulator_klirens_04.js?v=44"></script>
 
 <!-- Moduł obsługi kliknięć listy dynamicznych wyników wyszukiwania -->
 <script defer src="inline_kalkulator_klirens_05.js?v=1"></script>
@@ -1806,7 +1811,7 @@ document.addEventListener('DOMContentLoaded', () => {
          wczytywane w tym formularzu. Plik userData.js korzysta z localStorage. -->
         <script src="userData.js?v=7" defer></script>
 <script src="ios26-ui.js?v=47" defer></script>
-<script defer src="inline_kalkulator_klirens_07.js?v=33"></script>
+<script defer src="inline_kalkulator_klirens_07.js?v=34"></script>
 <script defer src="vilda_down_syndrome.js?v=5"></script>
 <script defer src="vilda_anorexia_risk.js?v=4"></script>
 <!-- Tablice siatek zespolu Downa przed app.js: app.js przekazuje je silnikowi BMI (P-DS-1). -->
@@ -2067,10 +2072,10 @@ document.addEventListener('DOMContentLoaded', () => {
 </script>
 <script defer src="inline_kalkulator_klirens_08.js?v=1"></script>
   <script defer src="inline_kalkulator_klirens_09.js?v=1"></script>
-  <script defer src="clcr_saved_calculation.js?v=18"></script>
-  <script defer src="clcr_saved_results.js?v=18"></script>
+  <script defer src="clcr_saved_calculation.js?v=19"></script>
+  <script defer src="clcr_saved_results.js?v=19"></script>
   <script defer src="clcr_saved_results_view.js?v=2"></script>
-  <script defer src="clcr_result_details.js?v=14"></script>
-  <script defer src="clcr_ui_workflow.js?v=43"></script>
+  <script defer src="clcr_result_details.js?v=15"></script>
+  <script defer src="clcr_ui_workflow.js?v=44"></script>
 </body>
 </html>

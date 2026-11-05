@@ -100,7 +100,7 @@
     }
     active = { token, destroy, cancelForFormulaChange(nextFormula) {
       const owner = root.ClcrSavedCalculation?.readSaved(currentNote)?.snapshot?.formulaId || currentRecord?.sourceFormulaId;
-      if (!["Ca_Cr", "CaCr_spot", "Mg_Ca", "PO4_Cr", "B_Cr", "K_frac", "AGs"].includes(owner) || owner === nextFormula) return true;
+      if (!["Ca_Cr", "CaCr_spot", "Mg_Ca", "PO4_Cr", "B_Cr", "K_frac", "AGs", "Ox_mgkg"].includes(owner) || owner === nextFormula) return true;
       // A committed transaction keeps its original ID and material. While a
       // write is in flight, keep its editor alive until the result is known.
       if (pending) return false;
@@ -163,6 +163,15 @@
       $("editInputFields").querySelectorAll("[data-clcr-edit-field]").forEach(control => control.addEventListener("input", () => {
         if (!draft) return;
         draft.changedFields.add(control.dataset.clcrEditField);
+        if (draft.description.snapshot.formulaId === "Ox_mgkg" && draft.description.snapshot.assessment.oxDzmSnapshot) {
+          draft.description.values[control.dataset.clcrEditField] = control.type === "checkbox" ? control.checked : control.value;
+          if (control.dataset.clcrEditField === "OXDZM_inputMode") {
+            const nextValues = draft.description.values;
+            draft.description.fields = root.ClcrOxDzmPersistence.editableFields(nextValues);
+            renderEditInputFields(nextValues, draft.description.fields);
+            host.querySelector(nextValues.OXDZM_inputMode === "reported" ? "#editField-OXDZM_reportedValue" : "#editField-OXDZM_concentration")?.focus();
+          }
+        }
         if (draft.description.snapshot.formulaId === "Ca_Cr") {
           draft.description.values[control.dataset.clcrEditField] = control.type === "checkbox" ? control.checked : control.value;
           if (control.dataset.clcrEditField === "CACR_DZM_inputMode") {

@@ -84,7 +84,7 @@ test('real app iframe: Save → Shell Start/Badania keeps the same patient and s
   expect((await memory(calculator)).notes.filter(savedNote => savedNote.patientId === OTHER_PATIENT_ID)).toHaveLength(1);
 });
 
-test('all41 formulas/45 legacy outputs remain visible, including signed/bounded/native-axis records and ordinary labs', async ({ page }) => {
+test('all41 formulas/46 outputs remain visible, including old and daily oxalate, signed/bounded/native-axis records and ordinary labs', async ({ page }) => {
   await openCalculator(page);
   await applyAcr(page, '13.6');
   const seeded = await page.evaluate(pid => {
@@ -107,7 +107,8 @@ test('all41 formulas/45 legacy outputs remain visible, including signed/bounded/
     window.__clcrRecordFixture.addSeries({ testKey: 'tsh', test: 'TSH (tyreotropina)', points: [{ noteId: ordinary.id, dateISO: ordinary.clinicalDateISO, valueNum: 4.2, unit: 'mIU/L' }] });
     return { ids: notes.map(note => note.id), outputs: dictionary.map(entry => entry.id), formulas: [...new Set(dictionary.map(entry => entry.sourceFormulaId))] };
   }, PATIENT_ID);
-  expect(seeded.outputs).toHaveLength(45);
+  expect(seeded.outputs).toHaveLength(46);
+  expect(seeded.outputs).toEqual(expect.arrayContaining(['Ox_mgkg', 'Ox_total24']));
   expect(seeded.formulas).toHaveLength(41);
   await page.locator('#clcrOpenCardBtn').click();
   await showClcrResults(page, 'table');

@@ -60,7 +60,7 @@ describe('Shared DZM numeric duration — new collections versus historical edit
       CA_collectionHours: '', CA_collectionSource: 'assumed-24h', UA_collectionHours: '', UA_collectionSource: 'assumed-24h',
       MG_collectionHours: '', MG_collectionSource: 'assumed-24h', PO4_collectionHours: '', PO4_collectionSource: 'assumed-24h', PO4_durationNeedsConfirmation: 'false',
       Prot_collectionHours: '', Prot_collectionSource: 'assumed-24h', Na_collectionHours: '', Na_collectionSource: 'assumed-24h',
-      K_collectionHours: '', K_collectionSource: 'assumed-24h' };
+      K_collectionHours: '', K_collectionSource: 'assumed-24h', OXDZM_collectionHours: '', OXDZM_collectionSource: 'assumed-24h' };
     const original = structuredClone(values), captured = api.normalizeCapturedInputs(values);
     expect(values).toEqual(original);
     expect(captured).not.toBe(values);

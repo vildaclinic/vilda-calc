@@ -40,6 +40,7 @@
     { id: "Mg_mgkg", group: "dzm-excr", label: "Wydalanie magnezu (DZM)", unit: "mg/kg/24 h" },
     { id: "PO4_mgkg", group: "dzm-excr", label: "Wydalanie fosforanów (Pi, DZM)", unit: "mg P/24 h" },
     { id: "Ox_mgkg", group: "dzm-excr", label: "Wydalanie szczawianów (DZM)", unit: "mg/kg/24 h" },
+    { id: "Ox_total24", group: "dzm-excr", label: "Dobowe wydalanie szczawianów", unit: "mmol/24 h", sourceFormulaId: "Ox_mgkg" },
     { id: "Cit_mgkg", group: "dzm-excr", label: "Wydalanie cytrynianów (DZM)", unit: "mg/kg/24 h" },
     { id: "Na_mmol_d", group: "dzm-excr", label: "Wydalanie sodu (DZM)", unit: "mmol/24 h" },
     { id: "K_mmol_d", group: "dzm-excr", label: "Wydalanie potasu (DZM)", unit: "mmol/24 h" },
@@ -629,7 +630,7 @@
       const unit = (dedicatedRatioCapture?.valid ? dedicatedRatioCapture.unit : ratio?.unit || lab.unit || (entry ? entry.unit : "") || "").trim();
       // Native mg/g and mg/mmol thresholds are deliberately different axes.
       // Never draw a trend through values stored in different native units.
-      const seriesKey = isCacrFormula(sourceFormulaId) ? `${label}\n${unit}\n${cacr?.profileId ? `${cacr.profileId}@${cacr.profileVersion ?? "unknown"}` : "legacy-unprofiled"}` : sourceFormulaId === "KM_Cr" ? `${label}\n${unit}\n${urateCreatinine?.input?.specimen || "legacy-unknown"}` : sourceFormulaId === "TMP_GFR" ? `${label}\n${unit}\n${global.ClcrTmpGfrPersistence?.savedMethod(note, tmpGfr) || "legacy-unknown"}` : sourceFormulaId === "CitCr_spot" ? global.ClcrCitcrPersistence?.seriesKey(label, unit, citcr, note) || `${label}\n${unit}\nlegacy-unknown` : sourceFormulaId === "OxCr_spot" ? global.ClcrOxcrPersistence?.seriesKey(label, unit, oxcr, note) || `${label}\n${unit}\nlegacy-unknown` : ["ACR", "PCR", "CaCr_spot", "Ca_Cr", "Mg_Ca", "PO4_Cr", "B_Cr", "UA_mgkg", "Ca_mgkg", "Mg_mgkg", "PO4_mgkg", "Prot_mgkg", "Na_mmol_d", "K_mmol_d"].includes(sourceFormulaId) ? `${label}\n${unit}` : label;
+      const seriesKey = sourceFormulaId === "Ox_mgkg" ? JSON.stringify([entry?.testKey || label, unit, global.ClcrOxDzmPersistence?.savedBasis(note, unit) || "unknown"]) : isCacrFormula(sourceFormulaId) ? `${label}\n${unit}\n${cacr?.profileId ? `${cacr.profileId}@${cacr.profileVersion ?? "unknown"}` : "legacy-unprofiled"}` : sourceFormulaId === "KM_Cr" ? `${label}\n${unit}\n${urateCreatinine?.input?.specimen || "legacy-unknown"}` : sourceFormulaId === "TMP_GFR" ? `${label}\n${unit}\n${global.ClcrTmpGfrPersistence?.savedMethod(note, tmpGfr) || "legacy-unknown"}` : sourceFormulaId === "CitCr_spot" ? global.ClcrCitcrPersistence?.seriesKey(label, unit, citcr, note) || `${label}\n${unit}\nlegacy-unknown` : sourceFormulaId === "OxCr_spot" ? global.ClcrOxcrPersistence?.seriesKey(label, unit, oxcr, note) || `${label}\n${unit}\nlegacy-unknown` : ["ACR", "PCR", "CaCr_spot", "Ca_Cr", "Mg_Ca", "PO4_Cr", "B_Cr", "UA_mgkg", "Ca_mgkg", "Mg_mgkg", "PO4_mgkg", "Prot_mgkg", "Na_mmol_d", "K_mmol_d"].includes(sourceFormulaId) ? `${label}\n${unit}` : label;
       const dateISO =
         legacyNormalizeDateISO(note.clinicalDateISO) ||
         (typeof note.clinicalDateISO === "string"
@@ -855,6 +856,9 @@
     const opts = options || {};
     if (!dp || !Number.isFinite(dp.valueNum)) throw new TypeError("Brak poprawnego wyniku obliczenia do zapisu.");
     if (typeof opts.patientId !== "string" || !opts.patientId) throw new TypeError("Brak pacjenta wyniku.");
+    const oxTotal = dp.sourceFormulaId === "Ox_mgkg" && ["Ox_total24", "clcr:Ox_total24"].includes(dp.id || dp.testKey);
+    const oxDzmNote = oxTotal ? global.ClcrOxDzmPersistence?.referenceNote(dp) : "";
+    if (oxTotal && !oxDzmNote) throw new Error("Brak kompletnego obliczenia szczawianów do bezpiecznego zapisu. Oblicz wynik ponownie.");
     if (dp.sourceFormulaId === "Mg_Ca") {
       const persistence = global.ClcrMagnesiumCalciumPersistence;
       const frozen = persistence?.readSnapshot(JSON.stringify(dp.magnesiumCalciumSnapshot));
@@ -956,6 +960,7 @@
       valueNum: dp.valueNum,
       unit: dp.unit,
     };
+    if (oxTotal) global.ClcrOxDzmPersistence.applyLabResult(dp, labResult);
     if (dp.sourceFormulaId === "OxCr_spot") global.ClcrOxcrPersistence?.applyLabResult(dp, labResult);
     if (dp.sourceFormulaId === "CitCr_spot") global.ClcrCitcrPersistence?.applyLabResult(dp, labResult);
     if (dp.sourceFormulaId === "FENa_spot") global.ClcrFenaPersistence?.applyLabResult(dp, labResult);
@@ -1009,6 +1014,7 @@
       (caDzmNote ? "\n\n" + caDzmNote : "") +
       (po4DzmNote ? "\n\n" + po4DzmNote : "") +
       (proteinDzmNote ? "\n\n" + proteinDzmNote : "") +
+      (oxDzmNote ? "\n\n" + oxDzmNote : "") +
       (sodiumDzmNote ? "\n\n" + sodiumDzmNote : "") +
       (potassiumDzmNote ? "\n\n" + potassiumDzmNote : "") +
       (urateCreatinineNote ? "\n\n" + urateCreatinineNote : "") +
@@ -1026,7 +1032,7 @@
     "fenaAssessment", "fekAssessment", "feclAssessment", "fehco3Assessment", "uagAssessment", "tmpGfrAssessment", "phAssessment", "uaAssessment", "caDzmAssessment", "mgDzmAssessment", "po4DzmAssessment", "proteinDzmAssessment", "sodiumDzmAssessment", "potassiumDzmAssessment", "urateCreatinineAssessment", "magnesiumCalciumAssessment", "phosphorusCreatinineAssessment", "proteinCreatinineAssessment", "potassiumIndexAssessment", "serumAnionGapAssessment",
   ]);
   const HELPER_BY_FORMULA = Object.freeze({
-    OxCr_spot: "ClcrOxcrPersistence", CitCr_spot: "ClcrCitcrPersistence",
+    Ox_mgkg: "ClcrOxDzmPersistence", OxCr_spot: "ClcrOxcrPersistence", CitCr_spot: "ClcrCitcrPersistence",
     FENa_spot: "ClcrFenaPersistence", FEK_spot: "ClcrFekPersistence",
     FECl_spot: "ClcrFeclPersistence", FEHCO3_spot: "ClcrFehco3Persistence", AGu_spot: "ClcrUagPersistence", TMP_GFR: "ClcrTmpGfrPersistence", pH_spot: "ClcrPhPersistence", UA_mgkg: "ClcrUaPersistence", Ca_mgkg: "ClcrCaDzmPersistence", Mg_mgkg: "ClcrMgDzmPersistence", PO4_mgkg: "ClcrPo4DzmPersistence", Prot_mgkg: "ClcrProteinDzmPersistence", Na_mmol_d: "ClcrSodiumDzmPersistence", K_mmol_d: "ClcrPotassiumDzmPersistence", KM_Cr: "ClcrUrateCreatininePersistence",
   });
@@ -1201,7 +1207,7 @@
         population: reference?.population || null,
         profileId: reference?.profileId || null, profileVersion: reference?.profileVersion ?? null },
     });
-    if (["AGu_spot", "TMP_GFR", "pH_spot", "UA_mgkg", "Ca_mgkg", "Mg_mgkg", "PO4_mgkg", "Prot_mgkg", "Na_mmol_d", "K_mmol_d", "KM_Cr", "Mg_Ca", "PO4_Cr", "B_Cr", "K_frac", "AGs"].includes(capture.formulaId)) Object.assign(point, {
+    if (["Ox_mgkg", "AGu_spot", "TMP_GFR", "pH_spot", "UA_mgkg", "Ca_mgkg", "Mg_mgkg", "PO4_mgkg", "Prot_mgkg", "Na_mmol_d", "K_mmol_d", "KM_Cr", "Mg_Ca", "PO4_Cr", "B_Cr", "K_frac", "AGs"].includes(capture.formulaId)) Object.assign(point, {
       calculationMethod: capture.calculationMethod || point.calculationMethod,
       comment: text(capture.comment), knownFacts: object(capture.knownFacts),
       contextReferences: Array.isArray(capture.contextReferences) ? capture.contextReferences : [],
@@ -1397,7 +1403,7 @@
       const identity = parameterKey || `unknown:${label}`;
       // Every native unit is its own axis. Chemical basis is retained even
       // for legacy unknown-basis records; no current conversion is attempted.
-      const basis = typeof point.basis === "string" ? point.basis : (["OxCr_spot", "CitCr_spot"].includes(entry?.sourceFormulaId) ?
+      const basis = typeof point.basis === "string" ? point.basis : (["OxCr_spot", "CitCr_spot", "Ox_mgkg"].includes(entry?.sourceFormulaId) ?
         global[HELPER_BY_FORMULA[entry.sourceFormulaId]]?.savedBasis?.(note, point.unit) ?? "unknown" : "");
       point.basis = basis;
       // Direct Brodehl and Walton–Bijvoet/Payne are different methods; their
