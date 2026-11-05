@@ -81,7 +81,7 @@
 .vilda-auth-root .vilda-patients2.vilda-patient-database .pt-plus { font-size: 20px; line-height: 1; font-weight: 400; }
 .vilda-auth-root .vilda-patients2.vilda-patient-database .pt-add-short { display: none; }
 .vilda-auth-root .vilda-patients2.vilda-patient-database .pt-toolbar {
-  display: grid; grid-template-columns: minmax(0, 1fr) 230px;
+  display: grid; grid-template-columns: minmax(0, 1fr) var(--decor-sidebar-width);
   grid-template-areas: "search sort" "tabs count";
   align-items: center; gap: var(--space-14px) var(--space-10px); margin-bottom: var(--space-16px);
 }
