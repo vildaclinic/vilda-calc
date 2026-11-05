@@ -2,12 +2,12 @@ import { readFileSync } from 'node:fs';
 import { loadBrowserScript } from './load-browser-script.mjs';
 
 // Explicit coverage manifest: every persisted parameter in the production
-// ClcrSavedResults.PARAM_DICTIONARY (46 outputs from 41 source formula IDs).
+// ClcrSavedResults.PARAM_DICTIONARY (47 outputs from 41 source formula IDs).
 // The matching test compares both sets with the live registry, so extending
 // the calculator requires extending this fixture deliberately.
 export const KLIRENS_SEARCH_PARAMETER_KEYS = Object.freeze([
   'egfr', 'ckid_u25', 'egfr_cr_cys', 'ckid_u25_cys', 'ckid_u25_cr_cys', 'neonatal_egfr', 'cg', 'cg_norm', 'cl24', 'sch_idms',
-  'Ca_mgkg', 'UA_mgkg', 'Mg_mgkg', 'PO4_mgkg', 'Ox_mgkg', 'Ox_total24', 'Cit_mgkg', 'Na_mmol_d', 'K_mmol_d',
+  'Ca_mgkg', 'UA_mgkg', 'Mg_mgkg', 'PO4_mgkg', 'Ox_mgkg', 'Ox_total24', 'Cit_mgkg', 'Cit_total24', 'Na_mmol_d', 'K_mmol_d',
   'Ca_Cr', 'KM_Cr', 'PO4_Cr', 'Mg_Ca', 'Ca_Cit', 'B_Cr', 'K_frac', 'AGs',
   'Prot_mg24', 'Prot_g24', 'Prot_bsa', 'CaCr_spot', 'OxCr_spot', 'CitCr_spot', 'ACR', 'PCR',
   'FENa_spot', 'FEK_spot', 'FECl_spot', 'FEHCO3_spot', 'AGu_spot', 'TMP_GFR', 'pH_spot', 'pH24',
@@ -74,6 +74,12 @@ function baselineValues(entry) {
     OXDZM_collectionSource: 'assumed-24h', OXDZM_durationNeedsConfirmation: false,
     OXDZM_reportingEntity: 'unknown', OXDZM_unitConversions: '',
   };
+  if (entry.id === 'Cit_total24') return { ...timed,
+    CITDZM_inputMode: 'concentration', CITDZM_concentration: '1.2', CITDZM_concentrationUnit: 'mmol/L',
+    CITDZM_volume: '1500', CITDZM_volumeUnit: 'mL', CITDZM_collectionHours: '24',
+    CITDZM_collectionSource: 'assumed-24h', CITDZM_durationNeedsConfirmation: false,
+    CITDZM_reportingEntity: 'unknown', CITDZM_unitConversions: '',
+  };
   if (id === 'AGs') return { ...timed, S_Na: '140', S_Cl: '105', S_HCO3: '25' };
   if (id === 'pH24') return { ...timed, pH24: '6.1' };
   return { ...timed };
@@ -126,6 +132,16 @@ function oxalateProducer(root, entry, values) {
   const point = { id: entry.id, sourceFormulaId: entry.sourceFormulaId, testKey: entry.testKey, label: entry.label };
   if (!root.ClcrOxDzmPersistence.augmentDatapoint({ getAttribute: key => key === 'data-clcr-ox-dzm-snapshot' ? JSON.stringify(result) : null }, point)) {
     throw new Error('The live oxalate result did not qualify for typed persistence');
+  }
+  return point;
+}
+
+function citrateProducer(root, entry, values) {
+  const result = root.VildaClcrCitDzm.evaluate(root.VildaClcrCitDzm.inputFromValues(values), root.ClcrCitDzmReferenceData.DEFAULT_POLICY);
+  if (!result.valid) throw new Error(result.error);
+  const point = { id: entry.id, sourceFormulaId: entry.sourceFormulaId, testKey: entry.testKey, label: entry.label };
+  if (!root.ClcrCitDzmPersistence.augmentDatapoint({ getAttribute: key => key === 'data-clcr-cit-dzm-snapshot' ? JSON.stringify(result) : null }, point)) {
+    throw new Error('The live citrate result did not qualify for typed persistence');
   }
   return point;
 }
@@ -191,6 +207,22 @@ function variants(root, patientId) {
   add('Ox_total24', 'typed-reported-molar-no-patient', { age: '', ageMonths: '', weight: '', height: '', OXDZM_inputMode: 'reported', OXDZM_reportedValue: '0.3', OXDZM_reportedUnit: 'mmol/24h' }, oxalateProducer);
   add('Ox_total24', 'exact-zero', { OXDZM_concentration: '0' }, oxalateProducer);
 
+  // Citrate keeps its own daily identity alongside the historical mg/kg
+  // measurement. Each fixture invokes the live amount, reference and writer.
+  add('Cit_total24', 'typed-concentration-adult-female', { sex: 'F' }, citrateProducer);
+  add('Cit_total24', 'typed-concentration-child', { age: '10', sex: 'F', weight: '30', height: '140' }, citrateProducer);
+  add('Cit_total24', 'typed-concentration-child-no-bsa', { age: '10', weight: '', height: '' }, citrateProducer);
+  add('Cit_total24', 'typed-concentration-infant', { age: '0', ageMonths: '6' }, citrateProducer);
+  add('Cit_total24', 'typed-concentration-mass-unknown', { CITDZM_concentration: '20', CITDZM_concentrationUnit: 'mg/L' }, citrateProducer);
+  add('Cit_total24', 'typed-concentration-mass-ion', { CITDZM_concentration: '400', CITDZM_concentrationUnit: 'mg/L', CITDZM_reportingEntity: 'citrate_ion' }, citrateProducer);
+  add('Cit_total24', 'typed-reported-mass-acid', { CITDZM_inputMode: 'reported', CITDZM_reportedValue: '300', CITDZM_reportedUnit: 'mg/24h', CITDZM_reportingEntity: 'citric_acid' }, citrateProducer);
+  add('Cit_total24', 'typed-reported-molar-lower-bound', { CITDZM_inputMode: 'reported', CITDZM_reportedValue: '1.7', CITDZM_reportedUnit: 'mmol/24h' }, citrateProducer);
+  add('Cit_total24', 'typed-reported-molar-below-rounded-bound', { CITDZM_inputMode: 'reported', CITDZM_reportedValue: '1.69999999999999999999', CITDZM_reportedUnit: 'mmol/24h' }, citrateProducer);
+  add('Cit_total24', 'typed-reported-child-boundary', { age: '10', weight: '100', height: '107.7444', CITDZM_inputMode: 'reported', CITDZM_reportedValue: '1.9', CITDZM_reportedUnit: 'mmol/24h' }, citrateProducer);
+  add('Cit_total24', 'typed-reported-molar-no-patient', { age: '', ageMonths: '', sex: '', weight: '', height: '', CITDZM_inputMode: 'reported', CITDZM_reportedValue: '1.8', CITDZM_reportedUnit: 'mmol/24h' }, citrateProducer);
+  add('Cit_total24', 'typed-reported-unknown-duration', { CITDZM_inputMode: 'reported', CITDZM_reportedValue: '1.8', CITDZM_reportedUnit: 'mmol/24h', CITDZM_collectionHours: '', CITDZM_collectionSource: 'historical-missing', CITDZM_durationNeedsConfirmation: true }, citrateProducer);
+  add('Cit_total24', 'exact-zero', { CITDZM_concentration: '0' }, citrateProducer);
+
   add('ACR', 'direct-mass-axis-censored', { ACR_entry_mode: 'direct', ACR_reported: '<3', ACR_reported_unit: 'mg/g' });
   add('ACR', 'direct-molar-axis', { ACR_entry_mode: 'direct', ACR_reported: '4.5', ACR_reported_unit: 'mg/mmol' });
   add('PCR', 'direct-mass-axis-censored', { PCR_entry_mode: 'direct', PCR_reported: '<100', PCR_reported_unit: 'mg/g' });
@@ -234,7 +266,7 @@ export function buildKlirensSearchCases(patientId = 'fictional-klirens-all-formu
   const registry = KLIRENS_SEARCH_PARAMETER_KEYS.map(key => {
     const entry = root.ClcrSavedResults.getParam(key);
     if (!entry) throw new Error('Missing production Klirens parameter: ' + key);
-    return persist(root, entry, 'registry', patientId, baselineValues(entry), key === 'Ox_total24' ? oxalateProducer : produce);
+    return persist(root, entry, 'registry', patientId, baselineValues(entry), key === 'Cit_total24' ? citrateProducer : key === 'Ox_total24' ? oxalateProducer : produce);
   });
   return registry.concat(variants(root, patientId));
 }

@@ -60,21 +60,129 @@ function oxDzmRecord(context, patch = {}, id = 'fictional-ox-daily') {
   return { note, model };
 }
 
+
+function citDzmContext() {
+  return environment(['clcr_cit_dzm_reference_data.js', 'clcr_cit_dzm.js',
+    'clcr_cit_dzm_persistence.js', 'clcr_saved_calculation.js']);
+}
+function citDzmRecord(context, patch = {}, id = 'fictional-cit-daily') {
+  const browser = context.browser;
+  const values = { CITDZM_inputMode: 'reported', CITDZM_reportedValue: '1.7',
+    CITDZM_reportedUnit: 'mmol/24h', CITDZM_collectionHours: '24', age: '40', sex: 'M', ...patch };
+  const model = browser.VildaClcrCitDzm.evaluate(browser.VildaClcrCitDzm.inputFromValues(values),
+    browser.ClcrCitDzmReferenceData.DEFAULT_POLICY);
+  expect(model.valid).toBe(true);
+  const point = { ...context.api.getParam('Cit_total24') };
+  expect(browser.ClcrCitDzmPersistence.augmentDatapoint({ getAttribute: () => JSON.stringify(model) }, point)).toBe(true);
+  const note = { ...context.api.buildPatientNotePayload(point, { patientId: PATIENT, clinicalDateISO: DATE }), id, rev: 1 };
+  const capture = { values, fields: Object.keys(values).map(id => ({ id, label: id, type: 'text' })) };
+  const snapshot = browser.ClcrSavedCalculation.createSnapshot(point, { capture, clinicalDateISO: DATE });
+  expect(snapshot).not.toBeNull();
+  note.body += '\n\n' + browser.ClcrSavedCalculation.serializeSnapshot(snapshot, note);
+  return { note, model };
+}
+
 describe('Zwięzłe Badania: projekcja zapisów Klirensu bez ponownego obliczania', () => {
-  it('zachowuje wszystkie 46 tożsamości, w tym osobne dobowe szczawiany, i ich dokładne neutralne punkty', () => {
+  it('zachowuje wszystkie 47 tożsamości, w tym osobne dobowe szczawiany i cytryniany, i ich dokładne neutralne punkty', () => {
     const c = environment();
-    expect(c.api.PARAM_DICTIONARY).toHaveLength(46);
+    expect(c.api.PARAM_DICTIONARY).toHaveLength(47);
     expect(c.api.getParam('Ox_total24')).toMatchObject({ id: 'Ox_total24', sourceFormulaId: 'Ox_mgkg' });
+    expect(c.api.getParam('Cit_total24')).toMatchObject({ id: 'Cit_total24', sourceFormulaId: 'Cit_mgkg', unit: 'mmol/24 h' });
+    expect(c.api.getParam('Cit_mgkg')).toMatchObject({ id: 'Cit_mgkg', unit: 'mg/kg/24 h' });
     const notes = c.api.PARAM_DICTIONARY.map((parameter, index) => legacy(c.api, parameter.id, `fictional-all-${index}`,
       { labResult: { value: String(index + 1), valueNum: index + 1 } }));
     const report = projection(c, notes), before = JSON.stringify(report);
     const series = presentation.clcrSeries(report);
-    expect(series).toHaveLength(46);
-    expect(series.flatMap(group => group.entries)).toHaveLength(46);
-    expect(series.flatMap(group => group.chart.points)).toHaveLength(46);
+    expect(series).toHaveLength(47);
+    expect(series.flatMap(group => group.entries)).toHaveLength(47);
+    expect(series.flatMap(group => group.chart.points)).toHaveLength(47);
     expect(series.flatMap(group => group.entries).every(entry => presentation.describe(entry).tone === 'neutral')).toBe(true);
     expect(series.flatMap(group => group.entries).map(entry => entry.noteId).sort()).toEqual(notes.map(note => note.id).sort());
     expect(JSON.stringify(report)).toBe(before);
+  });
+
+  it('nie łączy historycznych cytrynianów mg/kg z nowym typowanym wynikiem dobowym', () => {
+    const c = citDzmContext(), { note } = citDzmRecord(c);
+    const old = legacy(c.api, 'Cit_mgkg', 'fictional-cit-mgkg');
+    const report = projection(c, [old, note]), series = presentation.clcrSeries(report);
+    expect(series).toHaveLength(2);
+    const previous = series.find(item => item.parameterKey === 'clcr:Cit_mgkg');
+    const current = series.find(item => item.parameterKey === 'clcr:Cit_total24');
+    expect(previous).toMatchObject({ unit: 'mg/kg/24 h', sourceFormulaId: 'Cit_mgkg' });
+    expect(current).toMatchObject({ unit: 'mmol/24 h', sourceFormulaId: 'Cit_mgkg', basis: 'citrate-amount' });
+    expect(previous.entries[0]).toMatchObject({ kind: 'legacy', recordedValue: 45, recordedUnit: 'mg/kg/24 h' });
+    expect(current.entries[0]).toMatchObject({ kind: 'exact', recordedValue: 1.7, recordedUnit: 'mmol/24 h' });
+    expect(previous.chart.points.map(point => point.v)).toEqual([45]);
+    expect(current.chart.points.map(point => point.v)).toEqual([1.7]);
+    expect(previous.key).not.toBe(current.key);
+    expect(presentation.describe(previous.entries[0])).toMatchObject({ tone: 'neutral', norms: [], normText: '—' });
+  });
+
+  it('nazywa molowe cytryniany, jon i kwas po polsku oraz zachowuje trzy oddzielne serie', () => {
+    const c = citDzmContext();
+    const cases = [
+      [{}, 'citrate-amount', 'Ilość molowa cytrynianów'],
+      [{ CITDZM_reportedValue: '321.4683', CITDZM_reportedUnit: 'mg/24h', CITDZM_reportingEntity: 'citrate_ion' }, 'citrate-ion', 'Jon cytrynianowy'],
+      [{ CITDZM_reportedValue: '326.60995', CITDZM_reportedUnit: 'mg/24h', CITDZM_reportingEntity: 'citric_acid' }, 'citric-acid', 'Kwas cytrynowy bezwodny'],
+    ];
+    const saved = cases.map(([patch], index) => citDzmRecord(c, patch, `fictional-cit-basis-${index}`));
+    const report = projection(c, saved.map(item => item.note)), original = JSON.stringify(report);
+    const series = presentation.clcrSeries(report);
+    expect(series).toHaveLength(3);
+    for (const [index, [, basis, basisLabel]] of cases.entries()) {
+      const record = report.measurements.find(item => item.noteId === saved[index].note.id);
+      const group = series.find(item => item.basis === basis);
+      expect(group).toMatchObject({ key: 'clcr:' + record.seriesKey, basis, basisLabel, parameterKey: 'clcr:Cit_total24' });
+      expect(group.entries[0].clcrRecord).toBe(record);
+      expect(group.chart.points[0].v).toBe(saved[index].model.rawValue);
+      expect(record.reference.bounds).toMatchObject({ low: saved[index].model.reference.lower, high: null, lowInclusive: true });
+      expect(presentation.describeClcr(record)).toMatchObject({ tone: 'within', symbol: '', norms: [{ low: saved[index].model.reference.lower, high: null }] });
+    }
+    expect(JSON.stringify(report)).toBe(original);
+  });
+
+  it.each([
+    ['poniżej normy', { CITDZM_reportedValue: '1.2' }, 'below', '↓', true],
+    ['dorosły na włączonej granicy', {}, 'within', '', true],
+    ['dziecko na wyłączonej granicy', { age: '10', weight: '100', height: '107.7444', CITDZM_reportedValue: '1.9' }, 'below', '↓', false],
+  ])('odtwarza dolną normę i zamrożoną ocenę Cit: %s', (_label, patch, tone, symbol, inclusive) => {
+    const c = citDzmContext(), { note, model } = citDzmRecord(c, patch), original = JSON.stringify(note);
+    const forbidden = vi.fn(() => { throw new Error('Do not re-evaluate frozen citrate history'); });
+    c.browser.VildaClcrCitDzm = { evaluate: forbidden, inputFromValues: forbidden };
+    c.browser.ClcrCitDzmReferenceData = { get DEFAULT_POLICY() { return forbidden(); } };
+    const [record] = projection(c, [note]).measurements;
+    expect(record).toMatchObject({ status: 'recorded', interpretation: model.interpretation,
+      reference: { bounds: { low: model.reference.lower, high: null, lowInclusive: inclusive } } });
+    expect(presentation.describeClcr(record)).toMatchObject({ value: model.rawValue, tone, symbol,
+      normText: model.presentation.referenceText,
+      norms: [{ low: model.reference.lower, high: null, eligible: true, conditional: false, tone }] });
+    expect(forbidden).not.toHaveBeenCalled();
+    expect(JSON.stringify(note)).toBe(original);
+  });
+
+  it.each([
+    ['zero z zachowaną normą', { CITDZM_reportedValue: '0' }, true],
+    ['zbiórka 12 godzin', { CITDZM_collectionHours: '12', CITDZM_collectionSource: 'hours' }, false],
+    ['historycznie nieznany czas', { CITDZM_collectionHours: '', CITDZM_collectionSource: 'historical-missing', CITDZM_durationNeedsConfirmation: true }, false],
+    ['brak płci', { sex: '' }, false],
+    ['niemowlę', { age: '0', ageMonths: '6', weight: '7', height: '65' }, false],
+    ['nieznana postać masowa', { CITDZM_reportedValue: '400', CITDZM_reportedUnit: 'mg/24h' }, false],
+  ])('zachowuje neutralny zapisany komentarz Cit: %s, bez ponownego obliczenia', (_label, patch, hasReference) => {
+    const c = citDzmContext(), { note, model } = citDzmRecord(c, patch), original = JSON.stringify(note);
+    const forbidden = vi.fn(() => { throw new Error('Do not re-evaluate frozen citrate history'); });
+    c.browser.VildaClcrCitDzm = { evaluate: forbidden, inputFromValues: forbidden };
+    c.browser.ClcrCitDzmReferenceData = { get DEFAULT_POLICY() { return forbidden(); } };
+    const [record] = projection(c, [note]).measurements;
+    expect(record).toMatchObject({ status: 'recorded', tone: 'neutral', assessment: 'unassessed', interpretation: model.interpretation });
+    expect(model.interpretation).not.toBe('');
+    const shown = presentation.describeClcr(record);
+    expect(shown).toMatchObject({ value: model.rawValue, tone: 'neutral', symbol: '',
+      warning: model.interpretation, warningKind: 'reference', normText: hasReference ? model.presentation.referenceText : '—' });
+    expect(shown.norms).toHaveLength(hasReference ? 1 : 0);
+    if (hasReference) expect(shown.norms[0]).toMatchObject({ conditional: true, tone: 'neutral', low: model.reference.lower, high: null });
+    expect(presentation.clcrSeries({ measurements: [record] })[0].chart.points[0].v).toBe(model.rawValue);
+    expect(forbidden).not.toHaveBeenCalled();
+    expect(JSON.stringify(note)).toBe(original);
   });
 
   it('nazywa trzy postacie dobowych szczawianów po polsku bez zmiany zapisanych kluczy serii', () => {

@@ -401,9 +401,9 @@
     const calcium = calciumMgDl(number(values, "U_Ca"));
     let value, unit = "mg/mg", digits = 3;
     const analytes = { Ca_mgkg: "U_Ca", Mg_mgkg: "U_Mg", Ox_mgkg: "U_Ox", Cit_mgkg: "U_Cit" };
-    if (formulaId === "Ox_mgkg") {
-      const concentration = legacyOxNumber(values.U_Ox), capturedWeight = legacyOxNumber(values.weight);
-      if (concentration === null) throw new Error("Wpisz nieujemne stężenie szczawianów.");
+    if (["Ox_mgkg", "Cit_mgkg"].includes(formulaId)) {
+      const concentration = legacyOxNumber(values[formulaId === "Cit_mgkg" ? "U_Cit" : "U_Ox"]), capturedWeight = legacyOxNumber(values.weight);
+      if (concentration === null) throw new Error(formulaId === "Cit_mgkg" ? "Wpisz nieujemne stężenie cytrynianów." : "Wpisz nieujemne stężenie szczawianów.");
       if (!(capturedWeight > 0)) throw new Error("Wpisz masę ciała większą od 0 kg.");
       if (!(daily > 0) || !sample.complete) throw new Error("Sprawdź objętość i kompletność zbiórki moczu.");
       value = concentration === 0 ? 0 : excr_mgkg(concentration, daily, capturedWeight);
@@ -440,7 +440,7 @@
     else if (formulaId === "Ca_Cit") value = ratio(calcium, number(values, "U_Cit"));
     else if (formulaId === "B_Cr") value = proteinCreatinineRatio(number(values, "U_Prot"), urineCr, sample.volume);
     else return null;
-    return modeled(formulaId, parameterKey, value, unit, digits, values, context, formulaId === "Ox_mgkg" ? { displayValue: legacyOxDisplay(value) } : formulaId === "Prot_mgkg" ? { displayValue: String(value).replace(".", ","), datapoint: { assessment: "unassessed", outOfRange: null, norm: "", tone: "neutral" } } : {});
+    return modeled(formulaId, parameterKey, value, unit, digits, values, context, ["Ox_mgkg", "Cit_mgkg"].includes(formulaId) ? { displayValue: legacyOxDisplay(value) } : formulaId === "Prot_mgkg" ? { displayValue: String(value).replace(".", ","), datapoint: { assessment: "unassessed", outOfRange: null, norm: "", tone: "neutral" } } : {});
   }
   return Object.freeze({ math, recalculate });
 });

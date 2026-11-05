@@ -479,6 +479,69 @@ pacjenta i 24 h, usuwa dane próbki i jej postać. Nowy zapis `Ox_total24`
 nie łączy się z dawnymi `/kg` ani inną podstawą masową; historia zachowuje
 ocenę z dnia zapisu. Pełny kontrakt: [OXALATE_DZM.md](OXALATE_DZM.md).
 
+## Dobowe wydalanie cytrynianów — decyzja 05.11.2026
+
+Właściciel zaakceptował
+[makietę przed/po desktop/mobile](https://vilda-citrate-dzm-20261105.maciej-flader.chatgpt.site)
+i implementację. Wybór `Cit_mgkg` prowadzi do **ilości na dobę**.
+Domyślne **„Oblicz ze stężenia”** ma stężenie w **mmol/L**, objętość
+oraz rzeczywiście wpisane **24 h** z opcją zmiany. Alternatywne
+**„Gotowy wynik”** przyjmuje jedną ilość mg/24 h lub mmol/24 h.
+Masa nie blokuje liczby; wiek/płeć i dziecięce masa/wzrost służą
+do normy z istniejącego kontekstu pacjenta.
+
+Lista stężeń ma cztery unikalne jednostki: **µmol/L, mmol/L, mg/L,
+mg/dL**. Przy masie krótki wiersz **„Zmień”** pozwala wskazać jon,
+bezwodny kwas cytrynowy lub niepodaną postać. Nie powielaj jednostek
+w grupach. Molowe jednostki nie wymagają postaci; masowe bez niej
+dają mg/24 h bez zgadniętej konwersji i normy. Przy przejściu
+z moli do masy udostępnij potrzebny wybór, także gdy pole już
+zawiera liczbę. Zmiana jednostki tej samej ilości zachowuje ocenę.
+
+Jedna karta B łączy **wynik pacjenta** i neutralną **„Normę dla
+pacjenta”** w tej samej jednostce. EAU 2026: dorosły mężczyzna
+**≥1,7**, kobieta **≥1,9 mmol/24 h**; dziecko **>1,9 chłopcy**
+i **>1,6 dziewczynki mmol/1,73 m²/24 h**, przeliczone przez
+**BSA/1,73** bez maksimum dorosłego. U dziecka dopisz
+**„Przeliczona dla powierzchni ciała”**. Nie nazywaj jej samą
+„Normą dla wieku” i nie stosuj równolegle zaokrąglonego progu mg.
+Dolna norma EAU dotyczy oceny kamicy; nie jest dwustronnym zakresem
+ani indywidualnym celem leczenia.
+
+Automatyczna norma dziecięca obejmuje **1–<18 lat**, dorosła od
+18 lat. **Brak automatycznej oceny poniżej 1. roku jest przyjętą
+decyzją aplikacji, nie granicą wieku określoną w EAU.** Niemowlę,
+brak wieku/płci lub potrzebnego BSA zachowują liczbę z konkretną
+przyczyną braku porównania, bez nowej ankiety lub normy zastępczej.
+
+Status **„Wydalanie nieobniżone”** nie potwierdza braku kamicy
+lub skuteczności leczenia. Obniżenie jest bursztynowe; dokładna
+równość dziecięcego ścisłego progu to **„Na dolnej granicy”**,
+także bursztynowe. Dorosła równość jest włączona. Norma i jednostka
+pozostają neutralne. Nie dodawaj górnego czerwonego progu.
+Główny komentarz obniżenia: **„Mała ilość cytrynianów osłabia
+ochronę przed tworzeniem złogów wapniowych i może zwiększać
+ryzyko kamicy.”** Możliwe przyczyny i rekomendacja dwóch zbiórek
+należą do Szczegółów, bez dodatkowych checkboxów.
+
+Notka **„Porównanie z normą dotyczy kompletnej zbiórki 24-godzinnej”**
+zastępuje pytania o kontekst/wiarygodność/dwie zbiórki. Znany inny
+czas daje oszacowanie bez normy, gotowa ilość zachowuje liczbę
+bez ponownego skalowania. Znana niepełna zbiórka blokuje wiarygodny
+wynik i zapis; fakty nie znikają po zmianie trybu. Historycznego
+nieznanego czasu nie zastępuje się domyślną dobą.
+
+Literalne zero jest neutralną liczbą z uwagą o oznaczalności,
+nie brakiem danych ani wynikiem `<LOD`. Małe dodatnie ilości
+pozostają dodatnie; ujemne operandy blokują również edytor.
+Stałe szerokości, wyrównanie jednostek, symetria, mobile ≥16 px/48 px
+i odstęp ≥20 px pod czyszczeniem obowiązują we wszystkich stanach.
+Szczegóły nie tworzą drugiego wyniku. Czyszczenie zachowuje pacjenta
+i domyślne 24 h, usuwa próbkę i postać; nowy pacjent nie przejmuje
+poprzedniego pomiaru. Zapis **`Cit_total24`** pozostaje oddzielny
+od dawnych **mg/kg/24 h**, a historia zachowuje normę i ocenę
+z dnia zapisu. Kontrakt: [CITRATE_DZM.md](CITRATE_DZM.md).
+
 ## Makieta i sprawdzenie przed przekazaniem
 
 Każdą kolejną zmianę wizualną w audycie przedstaw najpierw do akceptacji jako

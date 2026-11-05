@@ -338,14 +338,10 @@
       },
       {
         id: "Cit_mgkg",
-        label: "Wydalanie cytrynianów (DZM; bez automatycznej normy)",
+        label: "Dobowe wydalanie cytrynianów",
         version: "pro",
-        requires: [
-          "U_Cit",
-          "V24",
-          "weight",
-          ...timedCollectionDurationFields,
-        ],
+        requires: ["CITDZM_concentration", "CITDZM_concentrationUnit", "CITDZM_volume", "CITDZM_volumeUnit", "CITDZM_collectionHours"],
+        note: "Stężenie i objętość albo gotowy wynik dobowy. Przyjmujemy pełne 24 h; znane dane pacjenta służą dobraniu normy.",
       },
       {
         id: "Ca_Cit",
@@ -387,7 +383,7 @@
       r = new Set([]),
       timedCollectionIds = new Set([
         "Prot_mgkg", "Na_mmol_d", "K_mmol_d",
-        "Cit_mgkg", "pH24",
+        "pH24",
       ]),
       timedCollectionRequirements = ["Cl24DurationHours"];
     l.forEach((t) => {

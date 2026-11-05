@@ -10,7 +10,7 @@ import { createFictionalVault, fixturePreferences, loadPatient, readyForPatient,
 import { czekajNaOdtworzenieSesji } from '../support/sesja-czekanie.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
-const BASE = '6e92f5f41c9f37b044bfd0925030e3f6d135b31b';
+const BASE = 'f21c4c470d180a54f0c2e39cf3cdbfcf01316176';
 const PASSWORD = 'E2e#SiatkaNowyPomiar!2026';
 const PAGES = ['app.html', 'index.html', 'docpro.html', 'terminarz.html'];
 const SCRIPTS = ['vilda_html.js', 'vilda_patient_report.js', 'nutrition_norms.js', 'vilda_update_prep.js',

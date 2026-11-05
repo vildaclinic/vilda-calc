@@ -242,10 +242,10 @@
     } else if (criterion) {
       result.warning = 'Zapisane kryterium odniesienia' + (normText ? ': ' + normText : '');
       result.warningKind = 'reference';
-    } else if (saved.status === 'recorded' && saved.sourceFormulaId === 'Ox_mgkg'
-      && ['Ox_total24', 'clcr:Ox_total24'].indexOf(saved.parameterKey) !== -1
+    } else if (saved.status === 'recorded' && ((saved.sourceFormulaId === 'Ox_mgkg' && ['Ox_total24', 'clcr:Ox_total24'].indexOf(saved.parameterKey) !== -1)
+      || (saved.sourceFormulaId === 'Cit_mgkg' && ['Cit_total24', 'clcr:Cit_total24'].indexOf(saved.parameterKey) !== -1))
       && saved.assessment === 'unassessed' && saved.tone === 'neutral' && text(saved.interpretation)) {
-      // The frozen Ox result already explains why its reference is limited.
+      // The frozen daily result already explains why its reference is limited.
       // Keep that explanation neutral; never infer it from today's patient.
       result.warning = text(saved.interpretation);
       result.warningKind = 'reference';
@@ -272,6 +272,9 @@
   function clcrBasis(saved) {
     if (text(saved.basisLabel)) return text(saved.basisLabel);
     var basis = text(saved.basis);
+    if (basis === 'citrate-amount') return 'Ilość molowa cytrynianów';
+    if (basis === 'citrate-ion') return 'Jon cytrynianowy';
+    if (basis === 'citric-acid') return 'Kwas cytrynowy bezwodny';
     if (basis === 'oxalate-amount') return 'Ilość molowa szczawianów';
     if (basis === 'oxalate-ion') return 'Jon szczawianowy';
     if (basis === 'oxalic-acid') return 'Kwas szczawiowy bezwodny';
