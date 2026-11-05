@@ -14,17 +14,28 @@
 //   przechwycZadaniaWTle() — szpieg globalnego setTimeout: zadanie w tle sejfu po zalogowaniu (goły setTimeout 3 s
 //       z CareMvpBackgroundFormatError) nie startuje samo, tylko czeka na jawne o.tlo(); reszta przechodzi bez zmian.
 //       Wywoływane w beforeEach (vi.restoreAllMocks() w afterEach je zdejmuje).
+//   PRZEDROSTEK_KASOWANIA, kluczKasowania(uid), nazwaBlokady(uid), SKRYPTY_PUNKTU
+//       Znacznik ponowienia kasowania kolejki konta w localStorage (przedrostek + ':' + userId), nazwa blokady Web Locks
+//       bazy kolejki konta i lista skryptów okna z modułami punktu odzyskiwania (jak w zapisie bazowym; bez nich
+//       removeUser rzuca „Moduły punktu odzyskiwania są niedostępne.”).
 //   oknoMagazynu(opcje) → Promise<o>
 //       opcje: idb (atrapa; domyślnie nowa), bramka (true — VILDA_EVENT_LOG = true po załadowaniu), konta ('A' | 'AB';
 //       domyślnie 'AB'), chmura (lista kont z trybem 'cloud-only', np. ['A']), jednorazowo (setEphemeralMode(true)
 //       przed utworzeniem kont), wPamieci (sejf na createInMemoryAdapter()), sesja (sessionStorage innego okna —
 //       odtworzenie sesji po przeładowaniu), istniejace ({ A, B } innego okna: bez tworzenia kont), zaloguj ('A' | 'B' |
-//       null — konto zalogowane na końcu; domyślnie 'A').
-//   drugieOkno(o, opcje) → Promise<o2> — nowe okno na tej samej atrapie z kontami o.A / o.B (bez tworzenia kont).
+//       null — konto zalogowane na końcu; domyślnie 'A'), skrypty (lista plików okna; domyślnie crypto, retention,
+//       vault — SKRYPTY_PUNKTU dokłada moduły punktu odzyskiwania), locks (false — okno bez navigator.locks; obiekt
+//       atrapaLocks — wspólna atrapa Web Locks; domyślnie nowa atrapa okna), localStorage (stan o.lokalny innego okna —
+//       wspólny localStorage; domyślnie nowy), databases (false — window.indexedDB okna bez databases(), ta sama atrapa).
+//   drugieOkno(o, opcje) → Promise<o2> — nowe okno na tej samej atrapie z kontami o.A / o.B (bez tworzenia kont); dzieli
+//       z o atrapę IndexedDB, atrapę Web Locks (o.locks; okno bez navigator.locks daje drugie też bez), localStorage
+//       (o.lokalny) i listę skryptów (o.skrypty), jeśli opcje nie mówią inaczej. sessionStorage, zegary, crypto i
+//       dziennik — własne każdego okna.
 //
 // OKNO o
 //   o.win, o.v (VildaVault), o.ev (VildaVault._eventLog), o.idb, o.A / o.B ({ userId, haslo }), o.timery, o.dziennik
-//   (zapisy localStorage/sessionStorage), o.krypto (atrapaKrypto z uprzęży: log, po, przed, wstrzymaj, blad),
+//   (zapisy localStorage/sessionStorage tego okna, także we wspólnym localStorage), o.locks (atrapa Web Locks albo null),
+//   o.lokalny (stan localStorage do dzielenia), o.skrypty, o.krypto (atrapaKrypto z uprzęży: log, po, przed, wstrzymaj, blad),
 //   o.kryptoWToku() — liczba operacji crypto.subtle w toku, o.kto(uid) → 'A' | 'B' | uid, o.sesja() → 'A' | 'B' | null.
 //   o.zablokuj(powod), o.zaloguj(kto) → Promise (blokada, zalogowanie, zadanie w tle i cisza),
 //   o.przelacz(wariant) → Promise<znacznik> — 'B' (inne konto), 'A' (ponowne zalogowanie A), 'blokada'.
@@ -50,11 +61,16 @@
 //   SCHEMAT_V1, wierszKolejki(i, pola) — schemat bazy kolejki wersji 1 i fikcyjny wiersz outbox (env z fikcyjnym iv/data).
 import { vi } from 'vitest';
 import { AtrapaIDBKeyRange, utworzIndexedDB } from './atrapa-indexeddb.mjs';
-import { atrapaKrypto, HASLO_A, HASLO_B, okno } from '../unit/sesja-zapisu-uprzaz.mjs';
+import { atrapaKrypto, HASLO_A, HASLO_B, SKRYPTY_SEJFU, okno } from '../unit/sesja-zapisu-uprzaz.mjs';
 
 export const ZNACZNIK_MAGAZYNU = '/* P-DZIENNIK-ZDARZEN: magazyn kolejki */';
 export const PRZEDROSTEK_URZADZENIA = 'vilda-sync-device-v1';
 export const kluczUrzadzenia = (uid) => `${PRZEDROSTEK_URZADZENIA}:${uid}`;
+export const PRZEDROSTEK_KASOWANIA = 'vilda-sync-delete-v1';
+export const kluczKasowania = (uid) => `${PRZEDROSTEK_KASOWANIA}:${uid}`;
+export const nazwaBlokady = (uid) => `vilda-sync-db:${uid}`;
+export const SKRYPTY_PUNKTU = Object.freeze(['vilda_crypto.js', 'vilda_retention.js', 'vilda_care_plan_model.js', 'vilda_clinical_crypto.js',
+  'vilda_patient_checkpoint_store.js', 'vilda_patient_checkpoint.js', 'vilda_vault.js']);
 export const nazwaBazy = (uid) => `vilda_sync_${uid}`;
 export const UUID_V4 = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
 export const DEV = /^[a-km-np-z2-9]{8}$/;
@@ -151,6 +167,36 @@ export function bazaKolejki(idb, uid, { wiersze = [], licznik, wersja = 1, schem
   idb.__atrapa.utworz(nazwaBazy(uid), wersja, schemat, dane);
 }
 
+// ── localStorage do dzielenia między oknami ──────────────────────────────────────────────────────────────────────────
+// Stan (wspólny dla okien) i fasada okna o zachowaniu localStorage z okno() uprzęży sesji: zapisy trafiają do dziennika
+// okna, które je wykonało (cel.dziennik ustawiany po załadowaniu skryptów — zapisy przy ładowaniu nie są liczone, jak
+// w okno()).
+const magazynLokalny = () => ({ m: Object.create(null) });
+function fasadaLokalna(stan, ctx) {
+  const { m } = stan;
+  const cel = { dziennik: null };
+  const zapisz = (op, klucz) => {
+    if (cel.dziennik) cel.dziennik.push({ nr: cel.dziennik.length, magazyn: 'localStorage', op, klucz, sesja: ctx.kto(), nrSesji: ctx.nrSesji() });
+  };
+  const obiekt = {
+    getItem: (k) => (k in m ? m[k] : null),
+    setItem: (k, v) => { m[k] = String(v); zapisz('set', String(k)); },
+    removeItem: (k) => { delete m[k]; zapisz('remove', String(k)); },
+    clear: () => { for (const k of Object.keys(m)) delete m[k]; zapisz('clear', null); },
+    key: (i) => Object.keys(m)[i] || null,
+    get length() { return Object.keys(m).length; },
+    klucze: () => Object.keys(m),
+  };
+  return { obiekt, cel };
+}
+// window.indexedDB okna bez databases() (przeglądarka bez listy baz); ta sama atrapa, sterowanie przez o.idb.
+function bezListyBaz(idb) {
+  return new Proxy(idb, {
+    get: (cel, k) => (k === 'databases' ? undefined : Reflect.get(cel, k)),
+    has: (cel, k) => k !== 'databases' && Reflect.has(cel, k),
+  });
+}
+
 // ── Okno ─────────────────────────────────────────────────────────────────────────────────────────────────────────────
 export async function oknoMagazynu(opcje = {}) {
   const idb = opcje.idb || utworzIndexedDB();
@@ -177,9 +223,13 @@ export async function oknoMagazynu(opcje = {}) {
       };
     },
   });
-  const dodatki = { indexedDB: idb };
+  const lokalny = opcje.localStorage || magazynLokalny();
+  const fasada = fasadaLokalna(lokalny, ctx);
+  const dodatki = { indexedDB: opcje.databases === false ? bezListyBaz(idb) : idb, localStorage: fasada.obiekt };
   if (opcje.sesja) dodatki.sessionStorage = opcje.sesja;
-  const o0 = okno({ ctx, krypto: { ...krypto, crypto: { ...krypto.crypto, subtle } }, dodatki });
+  const skrypty = opcje.skrypty || SKRYPTY_SEJFU;
+  const o0 = okno({ ctx, krypto: { ...krypto, crypto: { ...krypto.crypto, subtle } }, dodatki, skrypty, locks: opcje.locks });
+  fasada.cel.dziennik = o0.dziennik;
   const win = o0.win;
   v = win.VildaVault;
   if (opcje.bramka !== false) win.VILDA_EVENT_LOG = true;
@@ -270,7 +320,7 @@ export async function oknoMagazynu(opcje = {}) {
     return b && b.sklepy[sklep] ? b.sklepy[sklep].wiersze : null;
   };
   const o = {
-    win, v, ev: v._eventLog, idb, A, B, timery: o0.timery, dziennik: o0.dziennik, krypto,
+    win, v, ev: v._eventLog, idb, A, B, timery: o0.timery, dziennik: o0.dziennik, krypto, locks: o0.locks, lokalny, skrypty,
     kryptoWToku: () => kryptoWToku, kto, sesja, zablokuj, zaloguj, przelacz, przelaczWTle, tlo, cisza, spokoj, znacznik,
     kolejka: (k = 'A') => (migawka(k, 'outbox') || []).slice().sort((x, y) => x.seqLocal - y.seqLocal),
     kwarantanna: (k = 'A') => (migawka(k, 'quarantine') || []).slice(),
@@ -282,5 +332,7 @@ export async function oknoMagazynu(opcje = {}) {
 }
 
 export function drugieOkno(o, opcje = {}) {
-  return oknoMagazynu({ ...opcje, idb: o.idb, istniejace: { A: o.A, B: o.B } });
+  return oknoMagazynu({
+    skrypty: o.skrypty, locks: o.locks || false, localStorage: o.lokalny, ...opcje, idb: o.idb, istniejace: { A: o.A, B: o.B },
+  });
 }

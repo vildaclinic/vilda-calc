@@ -1,10 +1,13 @@
-// P-DZIENNIK-ZDARZEN (E2-PR2b) — zapis bazowy „bramka wyłączona” (U3).
+// P-DZIENNIK-ZDARZEN (E2-PR2b, E2-PR3a1) — zapis bazowy „bramka wyłączona” (U3).
 //
-// Ten sam deterministyczny scenariusz sejfu w czterech wariantach okna daje dokładnie te ślady, które nagrano w
-// tests/fixtures/dziennik-zapis-bazowy.json na sejfie bez magazynu kolejki (baza 64f9a3a9; sha256 sejfu w polu
-// bazaVault). Test jest zielony na bazie z konstrukcji; jego zadaniem jest przenieść dowód „bramka wyłączona” na E2-PR3a:
-// tam wolno zmienić wyłącznie liczbę odczytów bramki (o liczbę emisji) i, przy wpiętym kasowaniu kolejki, ślady kroków
-// „usunięcie konta…” o kroki tego kasowania (plan, wiersz E2-PR3a) — nic więcej.
+// Ten sam deterministyczny scenariusz sejfu w czterech wariantach okna daje dokładnie te ślady, które zapisano
+// w tests/fixtures/dziennik-zapis-bazowy.json. Fiksturę nagrano na sejfie z magazynem kolejki i kasowaniem kolejki przy
+// usuwaniu konta; pola opis i bazaVault (sha256 sejfu) pochodzą z pierwszego nagrania, na sejfie bez magazynu kolejki.
+// Wobec pierwszego nagrania różni się wyłącznie usuwanie konta poza trybem „Zaloguj jednorazowo”: jedno dodatkowe
+// wywołanie listy baz (sprawdzenie bazy kolejki), czyli „databases ×2” w krokach „usunięcie konta z kopii” i „usunięcie
+// konta” wariantów Ze, prywatny i chmura (6 komórek). Zadaniem testu jest przenieść dowód „bramka wyłączona” przez
+// E2-PR3a: wolno zmienić wyłącznie liczbę odczytów bramki (o liczbę emisji) i ślady kroków „usunięcie konta…” o kroki
+// kasowania kolejki (plan, wiersz E2-PR3a; od E2-PR3a1 — jak wyżej) — nic więcej.
 //
 // WARIANTY (każde okno ma atrapę IndexedDB z tests/support/atrapa-indexeddb.mjs i moduły punktu odzyskiwania)
 //   Ze           sejf na adapterze w pamięci z rejestrem wywołań (magazynZRejestrem);
@@ -39,9 +42,11 @@
 // NAGRANIE fikstury: E2_ZAPIS_BAZOWY=nagraj npx vitest run --maxWorkers=1 tests/unit/sync-dziennik-zapis-bazowy.test.mjs
 // — przy zamkniętej bramce. Tryb nagrania odmawia (nie zapisuje pliku), gdy trzy przebiegi wariantu nie są równe albo
 // gdy w którymkolwiek wariancie pole bramki było czytane, powstała baza vilda_sync_* albo klucz o przedrostku
-// vilda-sync-device-v1. Pierwsze nagranie (E2-PR2b1) zrobiono na sejfie bazy bez magazynu kolejki; sejf z uśpionym
-// magazynem daje te same ślady. PR, który zmienia ślad sejfu w krokach scenariusza, nagrywa fiksturę ponownie i
-// wymienia w opisie zmienione kroki. Dane wyłącznie fikcyjne.
+// vilda-sync-device-v1. Pierwsze nagranie (E2-PR2b1) zrobiono na sejfie bazy bez magazynu kolejki (sejf z uśpionym
+// magazynem daje te same ślady); ponowne (E2-PR3a1) — na sejfie z magazynem kolejki i kasowaniem kolejki przy usuwaniu
+// konta, z polami opis i bazaVault przeniesionymi z pierwszego nagrania (tryb nagrania zapisuje je od nowa). PR, który
+// zmienia ślad sejfu w krokach scenariusza, nagrywa fiksturę ponownie i wymienia w opisie zmienione kroki. Dane
+// wyłącznie fikcyjne.
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { createHash } from 'node:crypto';
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';

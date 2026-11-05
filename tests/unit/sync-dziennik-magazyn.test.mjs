@@ -1,4 +1,4 @@
-// P-DZIENNIK-ZDARZEN (E2-PR2b1, E2-PR2b2) — magazyn kolejki i kwarantanny vilda_sync_<userId> wersja 1
+// P-DZIENNIK-ZDARZEN (E2-PR2b1, E2-PR2b2, E2-PR3a1) — magazyn kolejki i kwarantanny vilda_sync_<userId> wersja 1
 // (VildaVault._eventLog, uśpione: kod produkcyjny go nie woła). Prawdziwy sejf w oknie uprzęży tests/support/okno-magazynu.mjs: adapter IndexedDB sejfu nad
 // atrapą tests/support/atrapa-indexeddb.mjs (tryb „Komputer prywatny”), bramka (pole okna VILDA_EVENT_LOG) otwarta, jeśli
 // przypadek nie mówi inaczej, sztuczny zegar (tylko Date), zadanie w tle sejfu po zalogowaniu odpalane jawnie. Dane
@@ -41,6 +41,16 @@
 //   M22 identyfikator urządzenia (osobny klucz localStorage dla każdego konta, M22b).
 //   M23 wartownik treści; M24 przepływ bez sieci (bliźniak); M25 scalanie nie dopisuje; M26 wiele okien.
 //   M27 kody błędów; M28 wyjątek nieprzewidziany; M29 outboxList; M30 negatywy.
+//   M31 blokada Web Locks vilda-sync-db:<userId> (E2-PR3a1): dopisanie i zapis do kwarantanny biorą po jednej blokadzie
+//       współdzielonej (konto ujęte przed żądaniem; sprawdzenia sesji (P-SESJA-ZAPISU); odczyt rejestru i zapis
+//       identyfikatora urządzenia pod blokadą), pozostałe operacje i przy zamkniętej bramce — żadnej; bez
+//       navigator.locks — bez blokady.
+//   M32 oznaczenie kasowania konta (E2-PR3a1): od początku removeUser każda operacja kolejki i kwarantanny tego konta
+//       w tym oknie kończy się odmową bez otwarcia i tworzenia bazy kolejki (do blokady sejfu zwykle SYNC_DB_DELETED,
+//       potem zablokowany; przypadek: removeUser wstrzymany na kasowaniu bazy sejfu → SYNC_DB_DELETED); po nieudanym
+//       removeUser operacje działają.
+//       Strażniki regresji (zielone także na sejfie bez blokady i oznaczenia): M31 „bez navigator.locks”, M32 „nieudane
+//       removeUser”.
 //   Przypadki „(kwarantanna)” przy M14–M21, M23, M27, M28 i M30: te same zasady dla operacji kwarantanny (schemat,
 //       versionchange i kasowanie — także kasowanie w tym dokumencie, tryby, wejście i limit czasu, sprawdzenia sesji
 //       (P-SESJA-ZAPISU), blokada, konto spoza rejestru, wartownik, kody błędów, negatywy).
@@ -53,10 +63,10 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { inspect } from 'node:util';
 import { writeFileSync } from 'node:fs';
 import {
-  DEV, LIMIT_BAJTOW, PRZEDROSTEK_URZADZENIA, SCHEMAT_V1, UUID_V4, bazaKolejki, czytajRekord, drugieOkno, kluczUrzadzenia,
-  naAtrapie, nazwaBazy, oknoMagazynu, przechwycZadaniaWTle, usunRekord, utf8, wierszKolejki, zmienRekord,
+  DEV, LIMIT_BAJTOW, PRZEDROSTEK_URZADZENIA, SCHEMAT_V1, SKRYPTY_PUNKTU, UUID_V4, bazaKolejki, czytajRekord, drugieOkno, kluczUrzadzenia,
+  naAtrapie, nazwaBazy, nazwaBlokady, oknoMagazynu, przechwycZadaniaWTle, usunRekord, utf8, wierszKolejki, zmienRekord,
 } from '../support/okno-magazynu.mjs';
-import { naglowek, okno } from './sesja-zapisu-uprzaz.mjs';
+import { naglowek, okno, wynik as wynikObietnicy } from './sesja-zapisu-uprzaz.mjs';
 import { modelMagazynu } from '../support/model-kolejki.mjs';
 import { AtrapaIDBKeyRange, utworzIndexedDB } from '../support/atrapa-indexeddb.mjs';
 import { SLAD_MAGAZYNU, scenariuszMagazynu } from '../support/scenariusz-magazynu.mjs';
@@ -3162,6 +3172,141 @@ describe('M27–M30: kody błędów, wyjątek nieprzewidziany, outboxList, negat
     seqs.push(2, ...Array.from({ length: 1000 }, (_, i) => i + 10));
     expect(await p).toEqual({ ok: true, usuniete: [3, 1], pominiete: [] });
     expect(kwarantanna(o).map((x) => x.seq)).toEqual([2]);
+  });
+});
+
+describe('M31–M32 (E2-PR3a1): blokada vilda-sync-db:<userId> w dopisaniu i zapisie do kwarantanny, oznaczenie kasowania konta', () => {
+  const zadaniaBlokad = (o, z = 0) => o.locks.zadania.slice(z).filter((x) => !x.test && /^vilda-sync-db:/.test(x.nazwa)).map((x) => `${x.tryb} ${x.nazwa === nazwaBlokady(o.A.userId) ? '<A>' : x.nazwa}`);
+  // Pierwsze z dwóch: oczekiwane zdarzenie (true) albo koniec operacji, który je wyklucza (false).
+  const ktoreWczesniej = (oczekiwane, koniec) => Promise.race([oczekiwane.then(() => true), koniec.then(() => false, () => false)]);
+
+  it('M31: enqueue i quarantinePut biorą po jednej blokadzie współdzielonej vilda-sync-db:<userId>; odczyty, zmiany stanu, zwolnienie kwarantanny i deleteDatabase — żadnej; przy zamkniętej bramce — żadnej', async () => {
+    const o = await noweKw();
+    const k = await karta(o, 1);
+    const { payload, wynik } = await nieczytelny(o);
+    let z = o.locks.zadania.length;
+    expect((await o.api.enqueue('snap', k)).ok).toBe(true);
+    expect(zadaniaBlokad(o, z), 'enqueue').toEqual(['shared <A>']);
+    z = o.locks.zadania.length;
+    expect((await o.api.quarantinePut(zmiana(1, payload), wynik, opcjeKw())).ok).toBe(true);
+    expect(zadaniaBlokad(o, z), 'quarantinePut').toEqual(['shared <A>']);
+    z = o.locks.zadania.length;
+    const eid = o.kolejka()[0].eid;
+    await o.api.outboxCount();
+    await o.api.outboxList();
+    await o.api.outboxTake();
+    await o.api.outboxRequeueStale();
+    await o.api.outboxFail([eid], { code: 'NETWORK' });
+    await o.api.outboxAccept([eid]);
+    await o.api.quarantineList();
+    await o.api.quarantineCount();
+    await o.api.quarantineMinSeq({ slotId: SLOT });
+    await o.api.quarantineRelease([1], { slotId: SLOT });
+    expect(zadaniaBlokad(o, z), 'odczyty i zmiany stanu').toEqual([]);
+    expect(await o.api.deleteDatabase(o.A.userId)).toEqual({ ok: true, wynik: 'usunieta' });
+    expect(zadaniaBlokad(o, z), 'deleteDatabase z eksportu').toEqual([]);
+    const o2 = await noweKw({ konta: 'A', bramka: false });
+    const z2 = o2.locks.zadania.length;
+    expect(await o2.api.enqueue('snap', await karta(o2, 1))).toEqual({ ok: false, powod: 'bramka' });
+    expect(await o2.api.quarantinePut(zmiana(1, payload), wynik, opcjeKw())).toEqual({ ok: false, powod: 'bramka' });
+    expect(zadaniaBlokad(o2, z2), 'przy zamkniętej bramce').toEqual([]);
+  });
+
+  it('M31: enqueue przy blokadzie wyłącznej trzymanej przez inną kartę czeka bez dostępu do rejestru i bazy kolejki (odczyt rejestru pod blokadą); po zwolnieniu ok', async () => {
+    const o = await nowe();
+    const k = await karta(o, 1);
+    await o.cisza();
+    const trzymana = await o.locks.trzymaj(nazwaBlokady(o.A.userId), { tryb: 'exclusive' });
+    const zLog = o.idb.__atrapa.log.length;
+    const p = o.api.enqueue('snap', k);
+    const czeka = await ktoreWczesniej(o.locks.czekajNaKolejke(nazwaBlokady(o.A.userId)), p);
+    await makrozadania(30);
+    const wpisy = o.idb.__atrapa.log.slice(zLog).filter((w) => typeof w[1] === 'string' && (w[1] === 'vilda_registry' || w[1].startsWith('vilda_sync_')));
+    await trzymana.zwolnij();
+    expect(czeka, 'dopisanie czeka na blokadę').toBe(true);
+    expect(wpisy, 'rejestr i baza kolejki w czasie czekania').toEqual([]);
+    expect((await p).ok).toBe(true);
+  });
+
+  it('M31 (kwarantanna): quarantinePut przy blokadzie wyłącznej trzymanej przez inną kartę czeka bez dostępu do rejestru i bazy kolejki; po zwolnieniu ok', async () => {
+    const o = await noweKw();
+    const { payload, wynik } = await nieczytelny(o);
+    await o.cisza();
+    const trzymana = await o.locks.trzymaj(nazwaBlokady(o.A.userId), { tryb: 'exclusive' });
+    const zLog = o.idb.__atrapa.log.length;
+    const p = o.api.quarantinePut(zmiana(1, payload), wynik, opcjeKw());
+    const czeka = await ktoreWczesniej(o.locks.czekajNaKolejke(nazwaBlokady(o.A.userId)), p);
+    await makrozadania(30);
+    const wpisy = o.idb.__atrapa.log.slice(zLog).filter((w) => typeof w[1] === 'string' && (w[1] === 'vilda_registry' || w[1].startsWith('vilda_sync_')));
+    await trzymana.zwolnij();
+    expect(czeka, 'zapis do kwarantanny czeka na blokadę').toBe(true);
+    expect(wpisy, 'rejestr i baza kolejki w czasie czekania').toEqual([]);
+    expect((await p).ok).toBe(true);
+  });
+
+  it('M31: identyfikator urządzenia zapisany pod blokadą — blokada wyłączna zgłoszona w czasie zatwierdzania pierwszego dopisania widzi już klucz', async () => {
+    const o = await nowe();
+    const k = await karta(o, 1);
+    const klucz = kluczUrzadzenia(o.A.userId);
+    const h = wstrzymaj(o, { przy: 'commit', baza: nazwaBazy(o.A.userId), tryb: 'readwrite' });
+    const p = o.api.enqueue('snap', k);
+    await h.czeka;
+    const widziany = o.locks.request(nazwaBlokady(o.A.userId), { mode: 'exclusive', __test: true }, () => o.win.localStorage.getItem(klucz));
+    h.zwolnij();
+    expect((await p).ok).toBe(true);
+    expect(await widziany, 'klucz urządzenia w chwili uzyskania blokady wyłącznej').toMatch(DEV);
+  });
+
+  it('M31 (strażnik regresji): bez navigator.locks enqueue i quarantinePut działają bez blokady', async () => {
+    const o = await noweKw({ konta: 'A', locks: false });
+    expect(o.win.navigator.locks).toBeUndefined();
+    const { payload, wynik } = await nieczytelny(o);
+    expect((await o.api.enqueue('snap', await karta(o, 1))).ok).toBe(true);
+    expect((await o.api.quarantinePut(zmiana(1, payload), wynik, opcjeKw())).ok).toBe(true);
+    expect(o.kolejka()).toHaveLength(1);
+    expect(o.kwarantanna()).toHaveLength(1);
+  });
+
+  it('M32: removeUser w toku (wstrzymany na kasowaniu bazy sejfu) — każda operacja kolejki i kwarantanny tego konta w tym oknie → SYNC_DB_DELETED bez otwarcia bazy kolejki', async () => {
+    const o = await noweKw({ konta: 'A', skrypty: SKRYPTY_PUNKTU });
+    const k = await karta(o, 1);
+    const { payload, wynik } = await nieczytelny(o);
+    expect((await o.api.enqueue('snap', k)).ok).toBe(true);
+    await o.cisza();
+    const eid = o.kolejka()[0].eid;
+    const USUNIETA = { ok: false, powod: 'blad', code: 'SYNC_DB_DELETED' };
+    const h = wstrzymaj(o, { przy: 'deleteDatabase', baza: bazaKonta(o) });
+    const usun = wynikObietnicy(o.v.removeUser(o.A.userId, o.A.haslo));
+    await h.czeka;
+    const z = o.znacznik();
+    const proby = [
+      ['enqueue', 'snap', k], ['outboxCount'], ['outboxList'], ['outboxTake'], ['outboxRequeueStale'], ['outboxAccept', [eid]],
+      ['outboxFail', [eid], { code: 'NETWORK' }], ['outboxReject', [{ eid, code: 'EVENT_REJECTED' }]], ['outboxDiscard', [eid], { potwierdzone: true }],
+      ['quarantinePut', zmiana(1, payload), wynik, opcjeKw()], ['quarantineList'], ['quarantineCount'], ['quarantineMinSeq', { slotId: SLOT }],
+      ['quarantineRelease', [1], { slotId: SLOT }],
+    ];
+    const wyniki = {};
+    for (const [n, ...a] of proby) {
+      const p = o.api[n](...a);
+      wyniki[n] = await Promise.race([p, new Promise((r) => { setImmediate(() => setImmediate(() => setImmediate(() => r('bez wyniku w 3 makrozadaniach')))); })]);
+      if (typeof wyniki[n] === 'string') { h.zwolnij(); await p; }
+    }
+    h.zwolnij();
+    expect(wyniki).toEqual(Object.fromEntries(proby.map(([n]) => [n, USUNIETA])));
+    expect(wpisyLogu(o, z, 'open'), 'otwarcia bazy kolejki w trakcie removeUser').toEqual([]);
+    expect(await usun).toEqual({ ok: true, w: true });
+  });
+
+  it('M32 (strażnik regresji): nieudane removeUser (błąd kasowania bazy sejfu) cofa oznaczenie — operacje kolejki i kwarantanny tego konta działają', async () => {
+    const o = await noweKw({ konta: 'A', skrypty: SKRYPTY_PUNKTU });
+    const k = await karta(o, 1);
+    const { payload, wynik } = await nieczytelny(o);
+    o.idb.__atrapa.usterka({ przy: 'deleteDatabase', baza: bazaKonta(o), blad: 'UnknownError' });
+    expect((await wynikObietnicy(o.v.removeUser(o.A.userId, o.A.haslo))).ok, 'removeUser przy błędzie kasowania bazy sejfu').toBe(false);
+    await o.cisza();
+    expect((await o.api.enqueue('snap', k)).ok).toBe(true);
+    expect((await o.api.quarantinePut(zmiana(1, payload), wynik, opcjeKw())).ok).toBe(true);
+    expect((await o.api.outboxCount()).total).toBe(1);
   });
 });
 

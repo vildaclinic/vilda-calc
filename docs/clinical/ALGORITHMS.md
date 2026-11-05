@@ -20808,6 +20808,326 @@ a lekarz poprawia jedno z miejsc. Wartość dni spoza 0–6 w rekordzie nie jest
 
 **Wersje.** `sga_birth_module.js?v=10→11`; SW 1.1.168 → **1.1.169**.
 
+## Dziennik zdarzeń: kasowanie kolejki przy „Usuń konto” i koordynacja kart — uśpione (P-DZIENNIK-ZDARZEN, E2-PR3a1, SW 1.1.470, `vilda_vault.js` 252, 2026-11-05)
+
+**Zmiana kliniczna: NIE** — wzory, progi, jednostki, interpretacje, zapis, scalanie, format kopii i synchronizacja bez
+zmian. Dla użytkownika: „Usuń konto” kasuje teraz także lokalną kolejkę zmian tego konta (bazę `vilda_sync_<userId>`
+razem z kwarantanną) i jego identyfikator urządzenia, żeby po włączeniu dziennika (PR włączający E2-PR6) po usuniętym
+koncie nie zostały na urządzeniu jego zaszyfrowane zmiany. Gdy kasowania nie da się od razu dokończyć, aplikacja
+zostawia znacznik ponowienia (sam identyfikator konta, bez danych) i ponawia kasowanie przy następnym odblokowaniu
+(poza trybem „Zaloguj jednorazowo”). Dziś kolejka nie powstaje (bramka, czyli wewnętrzny wyłącznik dziennika
+z E2-PR2b1, jest zamknięta), więc w praktyce przy usuwaniu konta dochodzą tylko niewidoczne kroki (tabela niżej):
+sprawdzenie listy baz przeglądarki (w przeglądarce bez tej listy — kasowanie bazy, której nie ma), krótka blokada konta
+między kartami przeglądarki (Web Locks; to nie blokada sejfu), odczyt dwóch kluczy w pamięci przeglądarki i rzadko
+znacznik ponowienia, a przy odblokowaniu — przegląd nazw kluczy w pamięci przeglądarki. Wynik i komunikaty „Usuń
+konto” są te same. Wpływ kliniczny dziś: brak. Wpis opisuje czwarty kawałek dziennika zdarzeń (po E2-PR2a, E2-PR2b1
+i E2-PR2b2, wpisy niżej), uśpiony poza samym kasowaniem przy „Usuń konto” i jego ponowieniem przy odblokowaniu. Dalej:
+E2-PR3a1b (druga karta przeglądarki z tym samym kontem blokuje się przy „Usuń konto”, a usuwanie kończy się bez
+czekania na nią), E2-PR3a2 (dopisywanie zmian do kolejki w miejscach zapisu), E2-PR3a3 (importy i zgodność prawdziwych
+zdarzeń z modelem testu) i E2-PR3a4 (przegląd kolejki).
+
+**Skąd.** Plan `docs/SYNC_PRZYROSTOWA_PLAN.md`, wiersz 6a tabeli „Podział etapu 2” (do 2026-11-05 wiersz 6, E2-PR3a),
+według odpowiedzi właściciela z 2026-11-04 na pytania 12.1 (E2-PR3a w czterech częściach po kolei; ta jest pierwsza)
+i 12.4 (zachowanie drugiej karty przy „Usuń konto” w osobnym małym PR E2-PR3a1b).
+
+### E2-PR3a1
+
+**Uśpienie.** Kod produkcyjny woła z bloku tylko sprzątanie po koncie, wyłącznie z 6 miejsc poza blokiem („Gdzie w
+kodzie”, niżej): oznaczenie konta, jego cofnięcie i zapamiętanie usunięcia (tylko pamięć okna), kasowanie kolejki konta
+i ponowienie kasowania przy odblokowaniu. Kasowanie działa, jak `deleteDatabase` z E2-PR2b1, bez bramki; przy zamkniętej
+bramce bazy kolejki nie ma, więc kończy się na liście baz (bez listy — na `deleteDatabase` nieistniejącej bazy, bez
+otwarcia), a klucz w pamięci przeglądarki zostawia tylko w rzadkim przypadku: znacznik ponowienia po nieudanym albo
+niedokończonym kasowaniu (tabela „Przy zamkniętej bramce”, niżej); zdejmuje go ponowienie przy następnym odblokowaniu
+poza trybem „Zaloguj jednorazowo”, gdy kasowanie się uda. Dopisanie, zapis do kwarantanny i pozostałe operacje kolejki
+kończą się na bramce jak dotąd; kod produkcyjny ich nie woła. Eksport `VildaVault._eventLog` bez zmian (35 kluczy).
+
+**Sesja.** Operacje kolejki i kwarantanny sprawdzają sesję tak jak zapis karty (P-SESJA-ZAPISU): zmiana sesji w trakcie
+kończy operację bez zapisu.
+
+**„Usuń konto” krok po kroku** (`removeUser`):
+
+| Krok | Konto z bazą sejfu (bieżące albo inne) | Wpis rejestru bez bazy sejfu |
+|---|---|---|
+| 1. Oznaczenie konta jako usuwanego — na samym początku | tak | tak |
+| 2. Kasowanie bazy sejfu | tak | — |
+| 3. Usunięcie wpisu rejestru; od tej chwili konto jest w tym oknie usunięte, do przeładowania | tak | tak |
+| 4. Blokada sejfu (powiadomienie `user-removed`), gdy usuwane konto jest bieżące | tak | — |
+| 5. Kasowanie kolejki konta z kwarantanną, na końcu identyfikator urządzenia konta (niżej) | tak | tak |
+| 6. Wynik `true` | tak | tak |
+
+- Wynik „Usuń konto” bez zmian (`true` albo ten sam wyjątek): kasowanie kolejki go nie zmienia i nigdy nie rzuca.
+- „Usuń konto” kończy się dopiero po kasowaniu kolejki (ekran przeładowuje stronę po wyniku).
+- Przy „Komputer w pracy” kasowanie idzie tak samo jak przy „Komputer prywatny” — sprząta też bazę kolejki z czasu, gdy
+  konto było w trybie prywatnym.
+- Nieudane „Usuń konto” przed usunięciem wpisu rejestru (np. złe hasło albo błąd kasowania bazy sejfu) cofa swoje
+  oznaczenie i kolejka konta działa dalej. Gdy trwają naraz dwa „Usuń konto” tego konta, nieudane cofa tylko swoje.
+- Zmiana wobec planu: blokada sejfu idzie przed kasowaniem kolejki (do 2026-11-05 plan: kasowanie przed powiadomieniem
+  `user-removed`), więc w chwili kasowania kolejki sejf usuwanego konta jest już zablokowany.
+- **W trakcie usuwania.** Od oznaczenia każda operacja kolejki i kwarantanny tego konta w tym oknie kończy się odmową
+  bez otwarcia i tworzenia bazy kolejki (przy otwartej bramce zwykle
+  `{ ok: false, powod: 'blad', code: 'SYNC_DB_DELETED' }`). Buildery zdarzeń przez strzeżony adapter sejfu nie czytają
+  bazy sejfu usuwanego konta (żaden z 14 rodzajów, także odczyt kosza); dopisanie i zapis do kwarantanny czytają tylko
+  wpis rejestru.
+
+**Kasowanie kolejki konta** (`Bob_kasujKonto`, poza trybem „Zaloguj jednorazowo” — o nim niżej). Działa bez bramki
+i bez odblokowanego sejfu (sprzątanie po koncie) i idzie pod blokadą wyłączną konta (niżej). Najpierw lista baz
+przeglądarki (`indexedDB.databases()`, limit 10 s):
+
+| Lista baz | Co dalej | Wynik |
+|---|---|---|
+| baza kolejki konta jest na liście | `deleteDatabase` (limit 10 s) | `usunieta`; `zablokowana` (bazę trzyma inne połączenie, które jej nie zwalnia — np. połączenie bez obsługi zmiany wersji w drugiej karcie przeglądarki; kasowanie dokończy się samo po jego zamknięciu); `w-toku` (limit); błąd `SYNC_DB_DELETE_FAILED` |
+| bazy nie ma na liście | bez kasowania | `brak` |
+| bez listy (przeglądarka bez `databases()`, błąd, limit) | `deleteDatabase` bez sprawdzania istnienia — nie otwiera i nie tworzy bazy | jak w pierwszym wierszu |
+
+Na koniec zawsze usunięcie identyfikatora urządzenia konta (`vilda-sync-device-v1:<userId>`). Wynik
+`{ ok: true, wynik: 'usunieta' | 'brak' | 'zablokowana' | 'w-toku' | 'pominieta' }` albo odmowa.
+
+**Znacznik ponowienia** — klucz `localStorage` `vilda-sync-delete-v1:<userId>` z wartością `"1"`; poza identyfikatorem
+konta w nazwie nie ma w nim danych.
+- **Powstaje** przed kasowaniem albo po nim, gdy: (a) baza kolejki konta jest na liście baz; (b) bez listy baz albo bez
+  blokady (tryb wymuszony) — jest zapisany identyfikator urządzenia konta; (c) po limicie blokady konta — zawsze
+  (blokadę trzyma inna karta, której dopisanie mogło założyć bazę po sprawdzeniu); (d) po kasowaniu zablokowanym, w toku
+  albo nieudanym — zawsze, także bez listy baz i bez śladu (np. błąd `deleteDatabase` w przeglądarce bez `databases()`).
+- **Nigdy** w trybie „Zaloguj jednorazowo” (kasowanie nie startuje) i dla identyfikatora konta tego trybu (`eph:`,
+  `eph-qr:`) także poza nim. Bez dostępnego `localStorage` znacznika nie ma, a kasowanie idzie dalej.
+- **Zdejmowany** w tym samym kasowaniu po `usunieta` albo `brak` (poza trybem wymuszonym) i przy ponowieniu (niżej).
+  W trybie wymuszonym zostaje do następnego odblokowania.
+
+**Ponowienie przy odblokowaniu** (`Bob_poOdblokowaniu`) — przy każdym odblokowaniu sejfu poza trybem „Zaloguj
+jednorazowo” (ostatnia instrukcja powiadomienia o odblokowaniu), bez bramki i bez czekania w odblokowaniu. W trybie
+„Zaloguj jednorazowo” nic (znaczniki czekają na odblokowanie poza nim).
+- Od razu tylko przegląd nazw kluczy `localStorage`; nazwa spoza wzorca identyfikatora (pusta albo dłuższa niż
+  128 znaków) jest pomijana. Bez znaczników — koniec, bez odczytu rejestru.
+- Przy znaczniku jedno zadanie w tle, konta po kolei: wpis rejestru w trybie „Komputer prywatny” — tylko zdjęcie
+  znacznika (kolejka należy do istniejącego konta); wpis w innym trybie albo brak wpisu — kasowanie, a `usunieta` albo
+  `brak` zdejmuje znacznik. Błąd zostawia znacznik do następnego odblokowania, a wynik „pominięte” (konto oznaczone
+  w tym oknie w trybie „Zaloguj jednorazowo”) — do odblokowania po przeładowaniu strony.
+
+**Blokada konta między kartami przeglądarki** (Web Locks, nazwa `vilda-sync-db:<userId>`, nietrwała):
+
+| Operacja | Blokada | Czekanie najwyżej | Po limicie |
+|---|---|---|---|
+| dopisanie (`enqueue`): od odczytu wpisu rejestru do zapisu identyfikatora urządzenia; zapis do kwarantanny (`quarantinePut`): od odczytu wpisu rejestru do końca zapisu wiersza | współdzielona | 20 s | `SYNC_DB_TIMEOUT`, bez wiersza |
+| kasowanie kolejki konta | wyłączna | 10 s | kasowanie bez blokady (tryb wymuszony) i znacznik |
+| operacje, które nie tworzą bazy (odczyty, pobranie do wysyłki i zmiany stanu wpisów, kwarantanna poza zapisem), eksport `deleteDatabase` | bez blokady; operacje od początku „Usuń konto” tego konta kończą się odmową (przy otwartej bramce zwykle `SYNC_DB_DELETED`, wyżej), a eksport `deleteDatabase` — bez zmiany zachowania | — | — |
+
+- Bez `navigator.locks` (np. strona przez `http` poza `localhost`), bez `AbortController` albo przy żądaniu odrzuconym
+  przed przyznaniem z innego powodu — praca bez blokady, a kasowanie w trybie wymuszonym (znacznik przy śladzie zostaje
+  do następnego odblokowania).
+- Druga karta przeglądarki dopisuje w trakcie „Usuń konto”: kasowanie czeka na blokadę, a gdy druga karta zwolni ją
+  w 10 s, po końcu nie ma bazy kolejki ani znacznika — także gdy pierwsze dopisanie drugiej karty zakłada bazę kolejki
+  w trakcie tego czekania; inaczej kasowanie bez blokady i znacznik do następnego odblokowania (tabela wyżej).
+  Dopisanie w drugiej karcie zaczęte już po wejściu kasowania kończy się odmową `konto` (wpisu rejestru już nie ma).
+
+**Tryb „Zaloguj jednorazowo”.** Tryb jest ujmowany przy oznaczeniu, na początku „Usuń konto” (zanim blokada sejfu go
+wyłączy). W tym trybie kasowanie kolejki niczego nie rusza: wynik „pominięte”, bez listy baz, `deleteDatabase`, blokady
+konta, znacznika, odczytów i zapisów `localStorage` i bez usuwania identyfikatora urządzenia — także gdy `removeUser`
+dostaje identyfikator konta trwałego (jego baza kolejki i identyfikator urządzenia zostają, konto zostaje w rejestrze).
+Powód: konto tego trybu nie ma kolejki (dopisanie odmawia `tryb`), a baza kolejki o tym `userId` może należeć tylko do
+konta trwałego. Oznaczenie konta, którego „Usuń konto” w tym oknie minęło już krok wpisu rejestru, ujmuje tryb od nowa:
+kasowanie kolejki w późniejszym „Usuń konto” tego konta idzie według trybu z chwili nowego oznaczenia.
+
+**Przy zamkniętej bramce (dziś w produkcji) — co nowego na urządzeniu:**
+
+| Co | Kiedy | Ile |
+|---|---|---|
+| lista baz `indexedDB.databases()` | „Usuń konto” poza trybem „Zaloguj jednorazowo” | +1 (2 zamiast 1); w trybie „Zaloguj jednorazowo” 1, jak dotąd |
+| żądanie blokady `vilda-sync-db:<userId>`, wyłącznej | „Usuń konto” poza trybem „Zaloguj jednorazowo”, gdy przeglądarka ma Web Locks | 1 |
+| odczyty kluczy `vilda-sync-*` w `localStorage` (znacznik, identyfikator urządzenia) | „Usuń konto” poza trybem „Zaloguj jednorazowo” | 2 (bez `databases()` 3, bez Web Locks 2); w trybie „Zaloguj jednorazowo” 0 |
+| przegląd nazw kluczy `localStorage` | każde odblokowanie i założenie konta poza trybem „Zaloguj jednorazowo” | 1; bez znaczników bez dalszych odczytów i bez odczytu rejestru |
+| `deleteDatabase('vilda_sync_<userId>')` bazy, której nie ma | przeglądarka bez listy baz (brak, błąd, limit) | 1 na „Usuń konto”; bez otwarcia, nic nie powstaje |
+| znacznik `vilda-sync-delete-v1:<userId>` | tylko po nieudanym albo niedokończonym kasowaniu (np. błąd `deleteDatabase` bez listy baz) | zdejmuje go ponowienie przy następnym odblokowaniu poza trybem „Zaloguj jednorazowo”, gdy kasowanie się uda (w tle: odczyt wpisu rejestru, blokada wyłączna, lista baz, zdjęcie znacznika) |
+
+Przy Web Locks dwa równoczesne „Usuń konto” tego konta idą po kolei (blokada punktu odzyskiwania) i limitu blokady
+konta nie dają. Limit blokady konta przy zamkniętej bramce wymaga trwającego ponowienia kasowania tego konta (w tej
+albo innej karcie), czyli wcześniejszego znacznika.
+
+Czego nie ma: 0 baz `vilda_sync_*` (bez otwarć; kasowanie tylko bazy, której nie ma, w przeglądarce bez listy baz),
+0 zapisów i usunięć kluczy `vilda-sync-*` poza znacznikiem z ostatniego wiersza tabeli (identyfikator urządzenia nie
+powstaje ani nie jest usuwany), 0 odczytów pola bramki, szyfrowanie na krok jak dotąd, 0 żądań sieci, 0 błędów strony;
+ślady zapisu bazowego poza 6 komórkami (niżej) równe bazie.
+
+**Zapis bazowy** (`tests/fixtures/dziennik-zapis-bazowy.json`, nagrany ponownie na sejfie tego PR). Jedyna zmiana śladu:
+w usuwaniu konta poza trybem „Zaloguj jednorazowo” jedno dodatkowe wywołanie listy baz (sprawdzenie bazy kolejki), czyli
+6 komórek `indexedDB` „databases” → „databases ×2” w dwóch ostatnich z 44 kroków:
+
+| Wariant okna | „usunięcie konta z kopii” | „usunięcie konta” |
+|---|---|---|
+| sejf w pamięci | `databases ×2` | `databases ×2` |
+| „Komputer prywatny” | `databases ×2` | `databases ×2` |
+| „Komputer w pracy” | `databases ×2` | `databases ×2` |
+| „Zaloguj jednorazowo” | `databases` (jak na bazie) | `databases` (jak na bazie) |
+
+Web Locks i odczyty `localStorage` nie wchodzą do śladu zapisu bazowego (skutki spoza niego — tabela wyżej). Pola opisu
+fikstury (`opis`, `bazaVault`) są takie jak na bazie, a nagranie kontrolne na sejfie z ostatnią zmianą logiki daje te
+same ślady.
+
+**Wymagania dla następnych PR** (z E2-PR3a1 i decyzji 12.1–12.4, zebrane tu w całości; te same w planie: wiersze
+6a′–6d, 7a, 8 i 12 tabeli „Podział etapu 2”).
+- **E2-PR3a1b** (decyzja 12.4). Druga karta przeglądarki z tym kontem przy `versionchange` bazy sejfu blokuje się (ekran
+  logowania) i niczego nie zapisuje ani nie odczytuje; karta zamyka wtedy każde swoje połączenie z tą bazą. „Usuń konto”
+  kończy się bez czekania na zamknięcie drugiej karty i usuwa identyfikator urządzenia także wtedy, gdy druga karta
+  zapisała go tuż przed usunięciem (test dwóch kart bez warunku wstępnego sprawdza też identyfikator urządzenia). Test:
+  po usunięciu konta przy otwartej drugiej karcie na dysku nie zostaje żadna baza tego konta, a test sam nie zamyka
+  połączenia drugiej karty z bazą sejfu. Zmiana widoczna — z wpisem w ALGORITHMS.
+- **E2-PR3a2.**
+  - Wewnętrzne dopisanie `Bob_dopiszZ` budowane nad `Bob_dopiszPod`, z blokadą współdzieloną konta braną przed nim.
+  - Porównanie zapisu bazowego z sejfem bez wstawek (w tej kopii sejfu `Bob_oznacz(…)` zastąpione przez `false`):
+    dozwolona różnica `databases()` +1 w krokach usunięcia konta tylko poza wariantem „Zaloguj jednorazowo”.
+  - E2e uśpienia: `databases()` w kroku usunięcia konta 2/2/1 („Komputer prywatny”/„Komputer w pracy”/„Zaloguj
+    jednorazowo”), blokada wyłączna tylko poza trybem „Zaloguj jednorazowo”.
+  - Literał miejsc poza blokiem rośnie od dzisiejszego `MIEJSCA_POZA_BLOKIEM`.
+  - Łańcuch dopisań może czekać na blokadę konta do 20 s; zapis karty na niego nie czeka (emitery nie czekają na wynik
+    kolejki). Przyjęte w projekcie E2-PR3a.
+- **E2-PR3a3.** Dopisania partii importu idą tym samym dopisaniem pod blokadą konta. W teście A ≡ B „ZNANA RÓŻNICA”
+  R2-E3 z pozycją naprawy E3-PR0 (decyzja 12.2).
+- **E2-PR3a4.** Przegląd sierot `vilda_sync_*` przez to samo kasowanie kolejki konta (blokada wyłączna, znacznik według
+  reguły wyżej), nigdy w trybie „Zaloguj jednorazowo”; odczyty przeglądu przez strzeżony adapter sejfu; wynik
+  `SYNC_DB_TIMEOUT` (limit blokady) ustawia przegląd pilny, `SYNC_DB_DELETED` nie; przegląd na początku odblokowania,
+  a ponowienie kasowania zostaje ostatnią instrukcją odblokowania.
+- **E2-PR3c** (decyzja 12.3). Naprawa utraty poprawki wizyty przy „Scal pacjentów” po zdarzeniach zmianą reguły
+  scalania: osobny PR z wpisem ALGORITHMS i akceptacją właściciela (decyzja 9); w teście A ≡ B od E2-PR3a3 jako „ZNANA
+  UTRATA (zdarzenia)” z pozycją naprawy E2-PR3c.
+- **E2-PR4.**
+  - Kasowanie kolejki konta przy istniejącym wpisie rejestru — ponowienie przy odblokowaniu, kasowanie przy zmianie
+    trybu przechowywania, `removeUser` identyfikatora konta trwałego w trybie „Zaloguj jednorazowo” — nie zostawia tego
+    konta oznaczonego jako usuwane w oknie: po jego zakończeniu kolejka i kwarantanna konta działają bez przeładowania.
+  - Dwa „Usuń konto” tego samego konta w toku w różnych trybach logowania: każde kasowanie kolejki według trybu własnego
+    wywołania (tryb przekazany od oznaczenia do kasowania).
+  - Zastosowanie zdarzenia z serwera (`applyEncryptedEvent`) sprawdza oznaczenie usuwania konta na wejściu i po
+    odszyfrowaniu i wtedy kończy się bez zapisu.
+  - Nadawca nie żąda blokady `vilda-sync-db:<userId>` wyłącznej, trzymając swoją blokadę (albo stała kolejność: blokada
+    nadawcy, potem blokada bazy).
+  - Kasowanie przy zmianie trybu na chmurowy idzie przez to samo kasowanie kolejki konta, z tym samym znacznikiem;
+    ponowienie przy odblokowaniu (tryb z wpisu rejestru) obejmuje ten przypadek.
+  - Ślady P-SYNC-SLAD, także `SYNC_DB_TIMEOUT` z limitu blokady.
+- **E2-PR6.** Polityka prywatności opisuje bazę `vilda_sync_<userId>`, identyfikator urządzenia osobny dla każdego konta
+  (`vilda-sync-device-v1:<userId>`) i znacznik `vilda-sync-delete-v1:<userId>` (tylko identyfikator konta; kasowanie
+  ponawiane przy następnym odblokowaniu poza trybem „Zaloguj jednorazowo”; gdy usunięte konto było ostatnie na
+  urządzeniu, znacznik może zostać do najbliższego logowania albo założenia konta). Wszystkie trzy są kasowane przy
+  „Usuń konto” poza trybem „Zaloguj jednorazowo” (konto tego trybu nie ma kolejki). Innych nowych kluczy `localStorage`
+  ten PR nie wprowadza. Warunek „0 znanych utrat” bez zmian.
+
+**Ograniczenia.**
+- Atrapa IndexedDB i WebKit — jak w E2-PR2b1 (wpis niżej). Web Locks, listę baz i kasowanie nieistniejącej bazy
+  zmierzono tylko w Chromium 141; WebKit (Safari i każda przeglądarka na iPhonie i iPadzie) i Firefox niezmierzone. Dla
+  przeglądarek bez Web Locks albo bez listy baz kod ma osobne ścieżki: kasowanie bez blokady albo bez sprawdzania
+  istnienia bazy; znacznik ponowienia tylko przy śladzie kolejki konta (baza na liście albo zapisany identyfikator
+  urządzenia), po limicie blokady konta i po nieudanym albo niedokończonym kasowaniu.
+- „Usuń konto” przy otwartej drugiej karcie przeglądarki z tym samym kontem czeka, jak dotąd, aż druga karta się
+  zamknie; kasowanie kolejki czeka razem z nim. Zmianę wnosi E2-PR3a1b (decyzja 12.4).
+- Dopisywanie zmian do kolejki dochodzi w E2-PR3a2 i E2-PR3a3, przegląd kolejki — w E2-PR3a4.
+
+**Cofnięcie** = rewert PR. Przy zamkniętej bramce baza kolejki nie powstaje, więc bazy nie trzeba sprzątać. Znacznik
+ponowienia powstaje przy zamkniętej bramce tylko po nieudanym albo niedokończonym kasowaniu; z tym PR zdejmuje go
+udane ponowienie przy odblokowaniu poza trybem „Zaloguj jednorazowo”, a po rewercie taki znacznik zostaje w pamięci
+przeglądarki (sama nazwa z identyfikatorem konta i wartość `"1"`, bez danych); kod sprzed tego PR go nie czyta.
+
+**Testy.** Dane wyłącznie fikcyjne, bez PESEL. Nowe:
+- `tests/unit/sync-dziennik-konto.test.mjs` — 70 przypadków na prawdziwym sejfie nad atrapą IndexedDB; druga karta to
+  drugie okno ze wspólną atrapą Web Locks i wspólnym `localStorage`. To samo okno (34): obie gałęzie „Usuń konto”,
+  „Komputer prywatny” i „Komputer w pracy”, kolejność kroków, nieudane „Usuń konto”, operacje w trakcie usuwania (także
+  dopisanie każdego z 14 rodzajów), lista baz i kasowanie bez listy, dwa konta. Tryb „Zaloguj jednorazowo” (10).
+  Znacznik i ponowienie przy odblokowaniu (13). Druga karta (11): dopisanie w trakcie „Usuń konto”, limity blokady,
+  zapis do kwarantanny, żądanie blokady odrzucone przed przyznaniem. Samotest uprzęży (2).
+- `tests/support/dwie-karty-chromium.mjs` i `tests/e2e/dziennik-zdarzen-dwie-karty.spec.mjs` — 3 przypadki w prawdziwym
+  Chromium (ten sam moduł działa też jako skrypt Node):
+  - druga karta dopisuje w trakcie „Usuń konto”, od stanu z zapisanym już identyfikatorem urządzenia konta (warunek
+    wstępny): kasowanie czeka na blokadę, a po końcu nie ma bazy kolejki, identyfikatora urządzenia ani znacznika;
+  - to samo bez warunku wstępnego: pierwsze dopisanie drugiej karty zakłada bazę kolejki w trakcie czekania kasowania
+    na blokadę, a po końcu nie ma bazy kolejki ani znacznika;
+  - kasowanie zablokowane połączeniem drugiej karty (znacznik znika przy odblokowaniu po dokończeniu kasowania).
+
+Zmienione:
+- `tests/unit/sync-dziennik-magazyn.test.mjs` — 228 → 235 przypadków: blokada współdzielona w dopisaniu i zapisie do
+  kwarantanny (czekanie bez dostępu do rejestru i bazy, praca bez Web Locks), `SYNC_DB_DELETED` w trakcie „Usuń konto”,
+  cofnięcie oznaczenia po nieudanym „Usuń konto”;
+- `tests/unit/sync-dziennik-uspienie.test.mjs` — 27 → 31 przypadków: literał miejsc poza blokiem (funkcja, nazwa, liczba
+  i forma każdego wywołania na drzewie składni, kolejność w usuwaniu konta i odblokowaniu) z samokontrolą, Web Locks
+  tylko w `Bob_blokady` i `Bob_podBlokada`, nowe liczności reguły domknięcia części `Bob_`, zwykłe użycie z usunięciem
+  konta przy zamkniętej bramce z Web Locks i bez;
+- `tests/unit/sync-dziennik-zapis-bazowy.test.mjs` i fikstura — nagranie na sejfie tego PR (6 komórek, wyżej);
+- `tests/e2e/dziennik-zdarzen-uspienie.spec.mjs` — 5 → 6 przypadków: trzy tryby logowania, każdy z usunięciem konta (na
+  krok liczniki listy baz, blokad konta i kluczy `vilda-sync-*`), wariant bez `navigator.locks`, dwa przypadki strony z
+  elementem o `id` `VILDA_EVENT_LOG`;
+- `tests/support/okno-magazynu.mjs` — drugie okno ze wspólnymi Web Locks i `localStorage`, okna bez `navigator.locks`
+  i bez `databases()`, moduły punktu odzyskiwania potrzebne do „Usuń konto”.
+
+Wynik na stanie końcowym: konto 70/70, magazyn 235/235, uśpienie 31/31, zapis bazowy 11 i 1 pominięty, samotest atrapy
+14/14; pliki bez zmian zielone (buildery 32/32, status 18/18, drenaż 154/154, A ≡ B 118/118); e2e 11/11 (uśpienie 6/6,
+dwie karty 3/3, zgodność atrapy 2/2); ESLint bez problemów, składnia poprawna. Skrypt Node scenariuszy dwóch kart
+w Chromium 141.0.7390.37 (każdy przebieg — trzy scenariusze): 20/20 zgodnych przebiegów po kolei, 24/24 przy 4 naraz
+i 48/48 przy 8 naraz z dwoma zajętymi rdzeniami (w dłuższej serii tak samo 144/144). Zgodność atrapy z Chromium
+(`atrapa-indexeddb-zgodnosc`) bez zmiany literałów; blokada współdzielona ich nie zmienia. W Chromium 141 kasowanie
+nieistniejącej bazy kończy się sukcesem i niczego nie tworzy (10/10 przebiegów), także przez „Usuń konto”
+w przeglądarce bez listy baz.
+
+**Czerwone na bazie** (kopia `origin/audyt` `948b1d5a` z testami i wsparciem tego PR, sejf bazy;
+vildaclinic/vilda-calc#887, vildaclinic/vilda-calc#886 i vildaclinic/vilda-calc#889, czyli dzisiejsza baza `0f6c5528`, nie
+zmieniają sejfu ani testów dziennika):
+
+| Plik | Czerwone | Zielone | Pominięte |
+|---|---|---|---|
+| `sync-dziennik-konto` | 54 | 16 | 0 |
+| `sync-dziennik-magazyn` | 5 (blokada współdzielona w dopisaniu i kwarantannie, `SYNC_DB_DELETED` w trakcie „Usuń konto”) | 230 | 0 |
+| `sync-dziennik-uspienie` | 4 (literał miejsc w tekście i na drzewie składni, sprawdzenie usuwania w części `Bev_`, liczności części `Bob_`) | 27 | 0 |
+| `sync-dziennik-zapis-bazowy` | 6 (wariant i powtarzalność × sejf w pamięci, „Komputer prywatny”, „Komputer w pracy” — wyłącznie przez 6 komórek) | 5 | 1 |
+| `atrapa-indexeddb`, `straznik-bramek-testowych` | 0 | 19 | 0 |
+| **razem** | **69** | **297** | **1** |
+
+- E2e na bazie (te same strony w Chromium 141, skryptem): uśpienie — „Komputer prywatny” i „Komputer w pracy” czerwone
+  (lista baz raz, bez blokady), „Zaloguj jednorazowo” i wariant bez `navigator.locks` zielone; dwie karty — wszystkie
+  trzy scenariusze czerwone (na bazie „Usuń konto” nie kasuje kolejki: baza kolejki zostaje, a w scenariuszach, które go
+  odczytują, także identyfikator urządzenia).
+- Zielone na bazie z założenia (strażniki regresji; w magazynie i e2e oznaczone tak w tytule): w pliku konta 16 — tryb
+  „Zaloguj jednorazowo” (5), nieudane „Usuń konto” (3), dwa konta, żądanie blokady odrzucone przed przyznaniem,
+  ponowienie w trybie „Zaloguj jednorazowo” i przy nazwie spoza wzorca, brak zapisów `vilda-sync-*` bez Web Locks przy
+  zamkniętej bramce (2), samotest uprzęży (2); w magazynie 2 (praca bez Web Locks, cofnięcie oznaczenia); w e2e 2
+  (wyżej).
+
+**Mutanty** (kopie, jedna zmiana na przebieg; liczby każdego etapu dotyczą kodu z chwili przebiegu). Mutanty kasowania
+konta i koordynacji kart: 26 z listy specyfikacji — każdy czerwieni wskazany przypadek (najpierw na prototypie testów,
+potem na kodzie); łącznie 105 różnych mutantów na kodzie — 88 zabitych (10 dopiero przypadkami dopisanymi po
+przeglądach), 16 równoważnych, 1 dotyczy dwóch równoczesnych usunięć tego samego konta w różnych trybach logowania
+(wymaganie dla E2-PR4).
+
+**Gdzie w kodzie.** `vilda_vault.js`, blok `P-DZIENNIK-ZDARZEN`: linie 4995–7105 (2111 linii, 99 332 B; było 1830 linii,
+84 923 B), komentarze bez znaków diakrytycznych; plik +338 / −56 linii.
+- część `Bev_`: 4995–5650 (656 linii, 31 738 B; było 631 linii, 30 287 B), bez nowych funkcji; zmienione: nagłówek
+  bloku, `Bev_KOMUNIKATY` (nowy kod `SYNC_DB_DELETED`: „Dziennik zdarzeń: konto jest usuwane.”), `Bev_start`
+  (strzeżony adapter sejfu: przy usuwaniu konta każda metoda najpierw sprawdza oznaczenie; to samo sprawdzenie
+  w kontekście buildera) i `Bev_stomb` (sprawdzenie tuż przed odczytem kosza);
+- znacznik `/* P-DZIENNIK-ZDARZEN: magazyn kolejki */`: linia 5651, dokładnie raz;
+- część `Bob_`: 5651–7105 (1455 linii, 67 594 B, ze znacznikiem końca; liczona tak samo było 1199 linii, 54 636 B);
+  77 funkcji `Bob_` (było 64);
+- nowe stałe: `Bob_KLUCZ_KASOWANIA` (przedrostek znacznika), `Bob_LIMIT_BLOKADY_MS` (20 000 ms — suma limitów
+  trzymania blokady wyłącznej przez kasowanie: lista baz, potem kasowanie, każde do 10 s), mapa `Bob_kasowane` (konta
+  usuwane w tym oknie, z trybem logowania i liczbą „Usuń konto” w toku);
+- zmienione: `Bob_dopisz` i `Bob_kwDodaj` (blokada współdzielona; dotychczasowe ciało dopisania przeniesione do
+  `Bob_dopiszPod`), `Bob_otwarcie` i `Bob_otworz` (oznaczenie usuwania), `Bob_usunBaze` (eksport `deleteDatabase` bez
+  zmiany zachowania i bez blokady, kasowanie przez `Bob_kasujBaze`);
+- 13 nowych funkcji:
+
+| Grupa | Funkcje |
+|---|---|
+| blokada konta | `Bob_blokady` (jedyny dostęp do Web Locks), `Bob_podBlokada` |
+| dopisanie | `Bob_dopiszPod` |
+| usuwanie konta | `Bob_wKasowaniu`, `Bob_oznacz`, `Bob_odznacz`, `Bob_poRejestrze`, `Bob_kasujKonto`, `Bob_kasujBaze` |
+| znacznik i identyfikator urządzenia | `Bob_znacznikZapisz`, `Bob_znacznikUsun`, `Bob_urzadzenieUsun` |
+| ponowienie | `Bob_poOdblokowaniu` |
+
+Poza blokiem 6 wstawek w 3 funkcjach (7 wywołań), wyłącznie dopisane znaki; reszta pliku jak w bazie:
+
+| Funkcja | Wstawka |
+|---|---|
+| `PatientCheckpointRemoveUser` (wejście „Usuń konto”) | `Bob_oznacz(userId)` przed `try`; nowe `catch`: `Bob_odznacz(…)` i ten sam wyjątek dalej |
+| `xa`, gałąź bez metadanych konta | `Bob_poRejestrze(t), await Bob_kasujKonto(t)` po usunięciu wpisu rejestru |
+| `xa`, gałąź z metadanymi konta | `Bob_poRejestrze(t)` po usunięciu wpisu rejestru; `await Bob_kasujKonto(t)` po `kn("user-removed")` |
+| `He` (odblokowanie) | `Bob_poOdblokowaniu()` jako ostatnia instrukcja |
+
+**Wersje.** Baza `origin/audyt` `0f6c5528` (po vildaclinic/vilda-calc#889). `vilda_vault.js` 251 → 252; `vilda_chrome.js`
+246 → 247 i `vilda_session_bridge.js` 167 → 168 (wstrzykują plik z nowym `?v=`); SW 1.1.469 → **1.1.470**.
+
 ## Dziennik zdarzeń: kwarantanna i podsumowanie wyniku — uśpione (P-DZIENNIK-ZDARZEN, E2-PR2b2, SW 1.1.463, `vilda_vault.js` 250, 2026-11-04)
 
 **Zmiana kliniczna: NIE** — wzory, progi, jednostki, interpretacje, zapis, scalanie, format kopii i synchronizacja bez
@@ -20935,8 +21255,8 @@ deterministyczny p. 7d (uprząż i klasy we wpisie E2-PR2a niżej).
 
 **Wymagania dla następnych PR** (dotyczące kwarantanny i podsumowania wyniku zebrane tu w całości; te same w planie:
 3.2 „Kwarantanna” i wiersze tabeli „Podział etapu 2”; pozostałe — we wpisie E2-PR2b1, niżej).
-- **E2-PR3a.** Kasowanie bazy `vilda_sync_<userId>` przy „Usuń konto” (wymagania we wpisie E2-PR2b1) usuwa też wiersze
-  kwarantanny — to ta sama baza.
+- **E2-PR3a** — doszło w E2-PR3a1 (wpis wyżej): kasowanie bazy `vilda_sync_<userId>` przy „Usuń konto” (wymagania we
+  wpisie E2-PR2b1) usuwa też wiersze kwarantanny — to ta sama baza.
 - **E2-PR4.**
   - Zdarzenie nieczytelne z `/changes` trafia do kwarantanny przez `quarantinePut`: `appVersion` wyłącznie
     z `SW_VERSION`, `eid` i ładunek (także `z`) wyłącznie z wiersza `/changes`.
@@ -20959,7 +21279,7 @@ deterministyczny p. 7d (uprząż i klasy we wpisie E2-PR2a niżej).
 **Ograniczenia.**
 - Atrapa IndexedDB i WebKit — jak w E2-PR2b1 (wpis niżej); test porównawczy w prawdziwym Chromium obejmuje teraz także
   kwarantannę.
-- Kasowanie bazy kolejki przy „Usuń konto” dochodzi w E2-PR3a, przed pierwszym PR, który otwiera bramkę.
+- Kasowanie bazy kolejki przy „Usuń konto” doszło w E2-PR3a1 (wpis wyżej).
 - Wpięcie kwarantanny w pobieranie zmian dochodzi w E2-PR4, a jej widok i „Zwolnij” w aplikacji — w E2-PR5.
 
 **Cofnięcie** = rewert PR. Na urządzeniach nic nie powstaje (bez baz, kluczy i żądań), więc nie ma czego sprzątać.
@@ -21045,8 +21365,9 @@ trwałą kolejkę zmian na urządzeniu. Po włączeniu (PR włączający E2-PR6)
 trafi najpierw do tej kolejki i stąd wyjdzie do chmury jako osobne zdarzenie, także gdy powstała bez połączenia
 z siecią. Dziś kod produkcyjny kolejki nie woła, a jej wewnętrzny wyłącznik (bramka) jest zamknięty, więc na urządzeniu
 nic nie powstaje (ani baza kolejki, ani identyfikator urządzenia w pamięci przeglądarki) i nic nie wychodzi do serwera.
-Wpływ kliniczny dziś: brak. Dalej: kwarantanna doszła w E2-PR2b2 (wpis wyżej), a E2-PR3a dołoży dopisywanie zmian do
-kolejki i kasowanie jej bazy przy „Usuń konto”. Wpis zawiera też wynik testu A ≡ B z łączeniem wpisów kolejki.
+Wpływ kliniczny dziś: brak. Dalej: kwarantanna doszła w E2-PR2b2, kasowanie bazy kolejki przy „Usuń konto” —
+w E2-PR3a1 (wpisy wyżej), a dalsze części E2-PR3a dołożą dopisywanie zmian do kolejki. Wpis zawiera też wynik testu
+A ≡ B z łączeniem wpisów kolejki.
 
 **Skąd.** Plan `docs/SYNC_PRZYROSTOWA_PLAN.md`, rozdz. 3.2 i 3.9 oraz tabela „Podział etapu 2” (wiersze 5b1 i 5b2).
 Decyzje właściciela z 2026-10-29: osobna baza kolejki (decyzja 5), etap 2 tylko w trybie „Komputer prywatny”, seria
@@ -21058,7 +21379,8 @@ uśpionych PR. Decyzje z 2026-11-03, po scaleniu E2-PR2a (vildaclinic/vilda-calc
 - **notatka pod inną kartą po „Scal pacjentów”:** naprawa w E2-PR3c;
 - **pytanie 10.1 — przyjęte:** E2-PR2b dzielony na E2-PR2b1 (ten PR) i E2-PR2b2 (kwarantanna i podsumowanie wyniku
   dla dziennika); etap 2 razem około 31 do 33 dni;
-- **pytanie 10.2 — przyjęte:** identyfikator urządzenia osobny dla każdego konta, kasowany razem z kontem od E2-PR3a.
+- **pytanie 10.2 — przyjęte:** identyfikator urządzenia osobny dla każdego konta, kasowany razem z kontem od E2-PR3a
+  (doszło w E2-PR3a1, wpis wyżej).
 
 ### E2-PR2b1
 
@@ -21182,7 +21504,7 @@ wyniku).
   przed kandydatem. Dwie karty przeglądarki dopisujące pierwszy raz naraz mogą raz dać drugi identyfikator tego samego
   urządzenia (zostaje zapisany pierwszy); etap 3 ma go tolerować (plan, 3.9).
 - Gdy `localStorage` jest niedostępny, wpis powstaje z `dev: null`.
-- Kasowanie klucza razem z kontem dochodzi w E2-PR3a (pytanie 10.2).
+- Kasowanie klucza razem z kontem doszło w E2-PR3a1 (pytanie 10.2; wpis wyżej).
 
 **Kasowanie bazy** `deleteDatabase(userId)` działa bez bramki, bez sprawdzania trybu i bez odblokowanego sejfu
 (sprzątanie po koncie).
@@ -21193,16 +21515,16 @@ wyniku).
   tworzenia). Baza w innej wersji też jest kasowana.
 - Wyniki: `usunieta`; `zablokowana` (inne połączenie trzyma bazę; kasowanie dokończy się samo po jego zamknięciu);
   `w-toku` po limicie 10 s; błąd — `SYNC_DB_DELETE_FAILED`.
-- W tym PR kasowanie nie jest wpięte w „Usuń konto”, bo kod produkcyjny nie woła nowych funkcji. Wpięcie dochodzi
-  w E2-PR3a.
+- W tym PR kasowanie nie jest wpięte w „Usuń konto”, bo kod produkcyjny nie woła nowych funkcji. Wpięcie doszło
+  w E2-PR3a1 (wpis wyżej).
 
 **Sesja.** Operacje kolejki sprawdzają sesję tak jak zapis karty (P-SESJA-ZAPISU): zmiana sesji w trakcie kończy
 operację bez zapisu.
 
 **Kilka kart przeglądarki.** Kolejka jest spójna przy pracy w kilku kartach przeglądarki, bo każda zmiana kolejki to
 jedna transakcja bazy, a nowy wpis zastępuje starszy tylko wtedy, gdy starszy powstał przed rozpoczęciem nowego
-dopisania. Wspólna koordynacja tworzenia i kasowania bazy między kartami dochodzi w E2-PR3a razem z wpięciem kasowania,
-a jeden nadawca na konto — w E2-PR4.
+dopisania. Wspólna koordynacja tworzenia i kasowania bazy między kartami doszła w E2-PR3a1 razem z wpięciem
+kasowania (blokada konta, wpis wyżej), a jeden nadawca na konto dochodzi w E2-PR4.
 
 **Błędy i limity.**
 - **Brak miejsca:** transakcja przerywa się w całości i nic częściowego nie zostaje; kod `SYNC_DB_QUOTA`, także przy
@@ -21259,7 +21581,11 @@ E3-PR0).
   - `resultSummary` jako jedyna droga wyniku do dziennika: status, powód albo kod i liczniki, nigdy błąd ani jego komunikat;
     strażnik źródła obejmuje nowy kod.
   - A ≡ B p. 7d (kwarantanna i „Zwolnij”); porównanie magazynu z prawdziwym Chromium rozszerzone o kwarantannę.
-- **E2-PR3a.**
+- **E2-PR3a.** Punkty o „Usuń konto”, kluczu urządzenia i koordynacji kart doszły w E2-PR3a1 (wpis wyżej) z tymi
+  zmianami: blokada sejfu przed kasowaniem kolejki; w trybie „Zaloguj jednorazowo” kasowanie niczego nie rusza;
+  znacznik ponowienia także przy śladzie kolejki, po limicie blokady i po nieudanym kasowaniu; ponowienie poza trybem
+  „Zaloguj jednorazowo”, a przy wpisie rejestru w trybie „Komputer prywatny” tylko zdjęcie znacznika. Punkt „do
+  decyzji” rozstrzygnięty: lista baz także przy zamkniętej bramce. Pozostałe punkty — w dalszych częściach E2-PR3a.
   - `deleteDatabase(userId)` wpięte w `removeUser` w obu gałęziach (z `userMeta` i bez), zawsze po
     `removeRegistryEntry`, przed powiadomieniem `user-removed`; konto oznaczone jako kasowane na początku `removeUser`.
     Test: druga karta dopisuje w trakcie `removeUser`, a po zakończeniu nie ma `vilda_sync_<userId>`.
@@ -21285,7 +21611,8 @@ E3-PR0).
   - Zmiana trybu na chmurowy (`setStorageMode`): najpierw wysyłka oczekujących wpisów, potem `deleteDatabase`; bez
     sieci komunikat i ponowienie przy następnym odblokowaniu w trybie prywatnym. Powrót do trybu prywatnego w tym
     samym oknie po `deleteDatabase`: przeładowanie strony albo zmiana reguły, że po kasowaniu kolejka tego konta
-    w tym oknie kończy się kodem `SYNC_DB_DELETED` (do decyzji w E2-PR4).
+    w tym oknie kończy się kodem `SYNC_DB_DELETED` (do decyzji w E2-PR4). Od E2-PR3a1 (wpis wyżej): kasowanie przez
+    kasowanie kolejki konta, a po nim kolejka konta działa bez przeładowania strony (wymaganie dla E2-PR4).
   - Kwarantanna (API z E2-PR2b2): ponowna próba w kolejności `seq`; po udanej — ponowne zastosowanie zdarzeń od jej
     numeru, a gdy serwer ich już nie ma (`requiresBase`) — pełne pobranie; nieudany zapis do kwarantanny (np.
     `SYNC_DB_QUOTA`) nie przesuwa kursora ani `appliedUpTo` za ten numer; ponowienie po aktualizacji i licznik obejmują
@@ -21308,7 +21635,7 @@ E3-PR0).
 - Zerwanie połączenia z bazą przez przeglądarkę: kolejności zdarzeń w Chromium nie zmierzono (brak API do wymuszenia).
   Kod daje `SYNC_DB_CLOSED` przy obu kolejnościach.
 - Brak miejsca przy tworzeniu bazy w Chromium niezmierzony (brak API) — sprawdzony na atrapie.
-- Kasowanie bazy kolejki przy „Usuń konto” dochodzi w E2-PR3a, przed pierwszym PR, który otwiera bramkę.
+- Kasowanie bazy kolejki przy „Usuń konto” doszło w E2-PR3a1 (wpis wyżej).
 - Wpisy `oversize`, `unreadable` i `rejected` bez widoku do E2-PR5.
 - Obserwacja z projektu: przy dłuższej pracy bez połączenia nowa różnica nagrobka notatki pojawia się także bez
   łączenia wpisów; pełna wysyłka ją usuwa. Pomiar w E3-PR0.
@@ -21330,10 +21657,10 @@ E3-PR0).
   w pamięci, „Komputer prywatny”, „Komputer w pracy”, „Zaloguj jednorazowo”) daje dokładnie ślady nagrane na bazie
   `64f9a3a9` (bazy przeglądarki, magazyn, `localStorage`, `sessionStorage`, operacje kryptograficzne, powiadomienia).
   Pole bramki nie jest czytane ani razu, także przy ładowaniu skryptów. Scenariusz obejmuje operacje, w które E2-PR3a
-  wepnie dopisanie albo kasowanie. Nagranie fikstury (`E2_ZAPIS_BAZOWY=nagraj`) odmawia, gdy trzy przebiegi wariantu
-  się różnią albo gdy pole bramki było czytane, powstała baza kolejki lub klucz urządzenia. Nagranie na sejfie z tego PR
-  daje te same ślady co na bazie. PR, który zmienia ślad sejfu w krokach scenariusza, nagrywa fiksturę ponownie
-  i wymienia w opisie zmienione kroki;
+  wepnie dopisanie albo kasowanie (kasowanie wpięte w E2-PR3a1, wpis wyżej). Nagranie fikstury
+  (`E2_ZAPIS_BAZOWY=nagraj`) odmawia, gdy trzy przebiegi wariantu się różnią albo gdy pole bramki było czytane,
+  powstała baza kolejki lub klucz urządzenia. Nagranie na sejfie z tego PR daje te same ślady co na bazie. PR, który
+  zmienia ślad sejfu w krokach scenariusza, nagrywa fiksturę ponownie i wymienia w opisie zmienione kroki;
 - `tests/e2e/dziennik-zdarzen-uspienie.spec.mjs` — 4 przypadki: bieżący sejf w prawdziwym Chromium, trzy tryby
   logowania (także usunięcie konta) i strona z elementem o `id` `VILDA_EVENT_LOG`: zero otwarć i kasowań
   `vilda_sync_*`, zero kluczy `vilda-sync-device-v1*`, bramka zamknięta;
@@ -21707,7 +22034,8 @@ i `Q8-obca-2` wobec dzisiejszej aplikacji niezmierzone).
 **Znane różnice i straty — z pozycją planu, która je naprawi.** Test zapisuje je literałem, a PR naprawy przepisze
 literał na wynik zgodny.
 - **„ZNANA RÓŻNICA” R2-E3:** po „Scal pacjentów” wizyta chwilowo znika na drugim urządzeniu, do najbliższej pełnej
-  wysyłki. Naprawa: E2-PR3a (kolejność zdarzeń) albo E3-PR0.
+  wysyłki. Naprawa: E3-PR0 (pytanie 12.2, 2026-11-04: zostaje kolejność ogólna „najpierw wizyty”; wcześniej
+  „E2-PR3a (kolejność zdarzeń) albo E3-PR0”).
 - **„ZNANA RÓŻNICA” R5-E1:** przy trzech urządzeniach wizyta jest w karcie na jednym, a w Koszu na drugim, do pełnej
   wysyłki; po niej jest w Koszu na wszystkich. Naprawa: E3-PR0.
 - **„ZNANA UTRATA” R3-E1:** po dwóch wskrzeszeniach tej samej notatki na dwóch urządzeniach późniejszy tekst ginie na
@@ -21731,8 +22059,10 @@ literał na wynik zgodny.
   - Pola karty (`lastSavedAtISO`, `createdAtISO`, nagłówek) zmienione bez nowej wersji: w teście (zasada wyroczni)
     niesie je `stomb` z kartą, gdy w tym kroku wyszedł `stomb` tej karty; inaczej `snap` najnowszej wersji. Karta bez
     wersji i bez `stomb` nie ma nośnika; test liczy takie przypadki („brak nośnika”, sygnał dla E2-PR3a).
-  - Do ponownej decyzji: nagrobek karty przed wersjami w „Scal pacjentów”. Zmierzone w sondach analizy: leczy R2-E3;
-    niezmierzone wobec poprawki przeniesionej wersji na odbiorcy.
+  - Nagrobek karty przed wersjami w „Scal pacjentów” — rozstrzygnięte 2026-11-04 (pytanie 12.2): zostaje kolejność
+    ogólna „najpierw wizyty”, a chwilową różnicę R2-E3 naprawia E3-PR0 (do 2026-11-04 do ponownej decyzji; w pomiarze
+    z analizy tego PR nagrobek przed wersjami leczył R2-E3, a wobec poprawki przeniesionej wersji na odbiorcy był
+    niezmierzony).
   - Do sprawdzenia: emisja nagrobka notatki przy „Usuń pacjenta” (`Bnp_usunZPacjentem`, wiersz 8 tabeli 3.5).
   - Pomiar `sweepOutbox` wobec rekordów pochodnych scalania.
 - **E2-PR3b.**
