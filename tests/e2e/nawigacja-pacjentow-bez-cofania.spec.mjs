@@ -148,11 +148,13 @@ test('odczyt listy rozpoczęty przed otwarciem karty nie może cofnąć użytkow
   await otworzListe(start);
   await start.evaluate(() => {
     const vault = window.VildaVault;
-    const original = vault.listPatients;
+    const original = vault.listPatientDirectory;
     window.__navReadStarted = false;
     window.__navReadReleased = false;
     let pierwszy = true;
-    vault.listPatients = function (...args) {
+    // Delay completion of the database's current public header read. Forward
+    // its session/cancellation options and keep the real encrypted read intact.
+    vault.listPatientDirectory = function (...args) {
       const result = original.apply(this, args);
       if (!pierwszy) return result;
       pierwszy = false;

@@ -1,7 +1,7 @@
 import { expect, test } from '../support/test-czas.mjs';
 
 // Zgłoszenie właściciela 2026-09-04: na stronie głównej serwisu (powłoka app.html) po ścieżce
-// „Pokaż wszystkie" → klik w pozycję → karta pacjenta → „Wróć do listy" → „Strona główna"
+// „Pokaż wszystkie" → klik w pozycję → karta pacjenta → „Wróć do listy" → „Wróć do strony głównej"
 // znikało menu sidebar i wracało dopiero po przeładowaniu strony.
 //
 // MECHANIZM (zmierzony): powłoka trzyma widoczny sidebar w oknie NADRZĘDNYM (app.html), a każdą
@@ -127,17 +127,14 @@ test('powłoka: sidebar wraca po wejściu w kartę pacjenta z pełnoekranowych P
     if (!b) throw new Error('brak przycisku „Wróć do listy"');
     b.click();
   });
-  await page.waitForFunction(() => Array.from(
-    document.querySelectorAll('#vilda-auth-ui-root button'),
-  ).some((x) => /Strona główna/.test(x.textContent)), null, { timeout: 20000 });
+  const database = page.locator('#vilda-auth-ui-root .vilda-patient-database');
+  await expect(database).toBeVisible();
+  await page.evaluate(() => { window.__fictionalDatabaseHomeDocument = 'shell-document-before-home'; });
 
-  // „Strona główna" → wyjście z pełnego ekranu. TU sidebar ma wrócić, bez przeładowania.
-  await page.evaluate(() => {
-    const b = Array.from(document.querySelectorAll('#vilda-auth-ui-root button'))
-      .find((x) => /Strona główna/.test(x.textContent));
-    if (!b) throw new Error('brak przycisku „Strona główna"');
-    b.click();
-  });
+  // „Wróć do strony głównej” kończy widok Bazy. Sidebar wraca bez przeładowania.
+  await database.getByRole('button', { name: 'Wróć do strony głównej', exact: true }).click();
+  await expect(page).toHaveURL(/\/app\.html#\/start$/);
+  expect(await page.evaluate(() => window.__fictionalDatabaseHomeDocument)).toBe('shell-document-before-home');
   await page.waitForFunction(() => {
     const s = document.querySelector('aside.sidebar, aside[data-vilda-chrome-sidebar]');
     return !!(s && s.getClientRects().length);

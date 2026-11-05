@@ -1,6 +1,7 @@
 import fs from 'node:fs';
 import vm from 'node:vm';
 import { parse } from 'espree';
+import { atrapaDokumentu } from './atrapa-dom-lekka.mjs';
 
 const authURL = new URL('../../vilda_auth_ui.js', import.meta.url);
 const productionIndexes = new Map();
@@ -53,6 +54,18 @@ export function authDeferred() {
   return { promise, resolve, reject };
 }
 
+// The auth root is a DOM host, including stateful classes and child selectors.
+// Keep close/geometry cleanup observable without stubbing production helpers.
+export function authSurface({ display = '', card = false } = {}) {
+  const document = atrapaDokumentu(), root = document.createElement('div');
+  root.style = { display };
+  if (card) {
+    const child = document.createElement('div'); child.className = 'vilda-auth-card vilda-auth-patient-card'; root.appendChild(child);
+  }
+  document.body.appendChild(root);
+  return root;
+}
+
 // Only the host surfaces and vault notifications are test doubles. Ownership,
 // return-ticket decisions and navigation callbacks are supplied as exact
 // production declarations in script, not reconstructed by this harness.
@@ -68,6 +81,7 @@ export function authReturnEnvironment(script, bindings = {}, source = authProduc
   };
   const documentEvents = new EventTarget(), windowEvents = new EventTarget();
   const document = {
+    ...atrapaDokumentu(),
     getElementById: () => null,
     querySelector: () => null,
     addEventListener: documentEvents.addEventListener.bind(documentEvents),
@@ -85,13 +99,14 @@ export function authReturnEnvironment(script, bindings = {}, source = authProduc
   win.self = win; win.top = win;
   // The real AuthUI close path also releases a retained database view. Keep
   // that dependency executable here rather than replacing it with a no-op.
-  const dependencyProgram = ['remReadOwner', 'remReadCurrent', 'patientsRememberView']
+  const dependencyProgram = ['remReadOwner', 'remReadCurrent', 'patientsRememberView', 'patientsDatabaseGeometry']
     .map(name => authProductionFunction(source, name)).join('\n');
   const context = vm.createContext({
     i: win, jt: () => win.VildaVault, Promise, Date, Event, CustomEvent,
     setTimeout: win.setTimeout, clearTimeout: win.clearTimeout,
     remReadEpoch: 0, remReadVault: null, remB22Full: null,
     remB22Views: new WeakMap(),
+    patientsLoadingView: null,
     le: { listView: null },
     remInlineHide: () => { calls.push({ action: 'hide-inline' }); },
     el: () => { calls.push({ action: 'close-auth-surface' }); },

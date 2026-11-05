@@ -124,7 +124,15 @@ for (const strona of ['/index.html', '/docpro.html']) {
     const lista = page.locator('.vilda-auth-patients');
     await expect(lista).toBeVisible();
     await expect(page.locator('.vilda-patient-note-editor-overlay')).toHaveCount(0);
-    await lista.getByRole('button', { name: 'Strona główna', exact: true }).click();
+    await lista.getByRole('button', { name: 'Wróć do strony głównej', exact: true }).click();
+    await expect(page).toHaveURL(/\/index\.html(?:[?#]|$)/);
+    await page.waitForLoadState('load');
+    // Returning from the standalone database intentionally opens Start. Keep
+    // the DocPro variant exercising DocPro's own measurement/note integration.
+    if (strona !== '/index.html') await page.goto(strona, { waitUntil: 'load' });
+    await page.waitForFunction(() => window.VildaVault?.isUnlocked() && window.VildaAuthUI?.isBootReady()
+      && window.VildaProAccess && !document.documentElement.classList.contains('vilda-auth-locked'));
+    await expect(page).toHaveURL(new RegExp(strona.replace('.', '\\.') + '(?:[?#]|$)'));
     const patientId = await wczytajPacjenta(page);
     await dodajPrzyPomiarze(page);
     const arkusz = page.locator('.vilda-patient-note-editor-overlay .vilda-pne');

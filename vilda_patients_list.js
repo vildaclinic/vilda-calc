@@ -52,7 +52,13 @@
     let listCache = null;
     let catalogPromise = null;
     let memberCache = null;
-    let busy = false;
+    let listReader = null;
+    const memberPromises = new Map();
+    let busy = Boolean(opts.loading);
+    let rowWindow = null;
+    const rowHeights = new Map(Array.isArray(initial.rowHeights) ? initial.rowHeights : []);
+    let measuredWidth = Number(initial.measuredWidth) || 0;
+    const dateFormatter = new Intl.DateTimeFormat('pl-PL', { day: '2-digit', month: '2-digit', year: 'numeric' });
     let picker = null;
     let pickerBody = null;
     let pickerInput = null;
@@ -62,6 +68,8 @@
     let editorObserver = null;
     let pendingRefresh = false;
     let restoreScroll = Number(initial.scrollTop) || 0;
+    let restoreAnchor = initial.rowAnchor || null;
+    let restoreRowFocus = initial.rowFocus || null;
     let focusTimer = null;
     const media = typeof win.matchMedia === 'function' ? win.matchMedia('(min-width: 992px)') : null;
     let desktop = media ? media.matches : (win.innerWidth || 1024) >= 992;
@@ -123,10 +131,10 @@
     const header = el('div', 'pt-head');
     const titleRow = el('div', 'pt-title-row');
     const titles = el('div', 'pt-titles');
-    const home = textButton('pt-home', 'Strona główna', () => { if (!busy && opts.onHome) opts.onHome(); }, 'back');
+    const home = textButton('pt-home', 'Wróć do strony głównej', () => { if ((!busy || opts.loading) && opts.onHome) opts.onHome(); }, 'back');
     const title = el('h2', 'vilda-auth-title', 'Baza pacjentów');
     const total = el('p', 'pt-total', peopleLabel(patients.length) + ' · ' + patients.filter((p) => !p.__ext).length + ' z bazy · ' + patients.filter((p) => p.__ext).length + ' spoza bazy');
-    titles.appendChild(home); titles.appendChild(title); titles.appendChild(total);
+    header.appendChild(home); titles.appendChild(title); titles.appendChild(total);
     const add = button('pt-add pt-primary', null, () => { if (!busy && opts.onAddPatient) opts.onAddPatient(); });
     add.setAttribute('aria-label', 'Dodaj pacjenta');
     add.appendChild(el('span', 'pt-plus', '+'));
@@ -241,9 +249,10 @@
       search.value = currentSearch(); search.disabled = busy;
       const hint = isCatalog() ? 'Szukaj listy' : state.listId ? 'Szukaj pacjenta na liście' : 'Szukaj po imieniu i nazwisku';
       search.placeholder = isCatalog() ? 'Szukaj listy' : 'Imię lub nazwisko…'; search.setAttribute('aria-label', hint); clearSearch.hidden = !search.value; clearSearch.disabled = busy;
-      home.disabled = busy; add.disabled = busy;
+      home.disabled = busy && !opts.loading; add.disabled = busy;
+      total.hidden = Boolean(opts.loading);
       refreshDuplicates();
-      footer.hidden = isCatalog() || state.filter === 'dup';
+      footer.hidden = Boolean(opts.loading) || isCatalog() || state.filter === 'dup';
       syncBack();
     }
     function refreshDuplicates() {
@@ -267,14 +276,14 @@
     function backToCatalog() {
       if (busy) return;
       savePosition(); state.listId = null; state.filter = 'lists'; state.adding = false; state.selected = {}; memberCache = null;
-      restoreScroll = state.catalogScrollTop;
+      restoreScroll = state.catalogScrollTop; restoreAnchor = null;
       if (desktop) render(); else openPicker();
     }
     function chooseList(id) {
       if (busy) return;
       savePosition(); closePicker(false);
       state.filter = 'lists'; state.listId = id; state.adding = false; state.selected = {}; state.sourceFilter = 'all'; memberCache = null;
-      restoreScroll = 0; render();
+      restoreScroll = 0; restoreAnchor = null; render();
     }
     function syncBack() {
       // Resizing or completing a read must not move this screen above the
@@ -301,26 +310,28 @@
     function errorMessage(host, label, retry) {
       clear(host); empty(host, label, 'Spróbuj ponownie.', 'Ponów', retry);
     }
-    function birthAndSex(patient) {
+    function presentationFor(patient) {
+      const supplied = typeof opts.describePatient === 'function' ? opts.describePatient(patient) || {} : {};
+      if (Object.prototype.hasOwnProperty.call(supplied, 'birth')) return supplied;
       const data = patient.header || {};
-      let year = patient.__ext ? data.birthYear : data.dobISO && String(data.dobISO).slice(0, 4);
-      if (!year || !/^\d{4}$/.test(String(year))) year = null;
-      const values = [year ? 'ur. ' + year : 'rok ur. niepodany'];
-      const sex = data.sex === 'F' ? 'K' : data.sex;
-      if (sex === 'M' || sex === 'K') values.push('Płeć: ' + sex);
-      return values.join(' · ');
+      const iso = /^\d{4}-\d{2}-\d{2}$/.test(data.dobISO || '') ? data.dobISO : '';
+      const year = /^\d{4}$/.test(String(data.birthYear || '')) ? String(data.birthYear) : '';
+      return Object.assign({}, supplied, {
+        birth: iso ? iso.split('-').reverse().join('.') : year || '—',
+        birthHint: iso ? '' : year ? 'tylko rok' : 'nie podano',
+        age: '', sex: data.sex === 'F' || data.sex === 'K' ? 'Kobieta' : data.sex === 'M' ? 'Mężczyzna' : ''
+      });
     }
     function savedDate(value) {
       if (!value) return '—';
       const date = new Date(value);
-      if (!Number.isFinite(date.getTime())) return '—';
-      return date.toLocaleDateString('pl-PL', { day: '2-digit', month: '2-digit', year: 'numeric' });
+      return Number.isFinite(date.getTime()) ? dateFormatter.format(date) : '—';
     }
     function patientRow(patient, list, members) {
       const data = patient.header || {};
       const name = data.name || '(bez nazwiska)';
       // A wrapper and a single primary button avoid nested interactive controls.
-      const presentation = typeof opts.describePatient === 'function' ? opts.describePatient(patient) || {} : {};
+      const presentation = presentationFor(patient);
       const row = el('div', 'pt-row' + (presentation.duplicate === 'base' ? ' pt-row--dup' : presentation.duplicate === 'mixed' ? ' pt-row--softdup' : '')); row.setAttribute('data-patient-id', patient.patientId);
       const open = button('pt-row-open', null, () => {
         if (!busy && opts.onOpenPatient) opts.onOpenPatient(patient);
@@ -329,13 +340,22 @@
       const info = el('span', 'pt-info'); const nameLine = el('span', 'pt-name');
       nameLine.appendChild(el('span', 'pt-person-name', name));
       if (patient.__ext) nameLine.appendChild(el('span', 'pt-badge', 'spoza bazy'));
-      info.appendChild(nameLine); info.appendChild(el('span', 'pt-meta', presentation.metadata || birthAndSex(patient)));
+      info.appendChild(nameLine);
+      const metadata = el('span', 'pt-meta');
+      if (presentation.birth && presentation.birth !== '—') {
+        metadata.appendChild(el('span', 'pt-mobile-birth', (presentation.birthHint === 'tylko rok' ? 'rok ur. ' : 'ur. ') + presentation.birth));
+      }
+      [presentation.age, presentation.sex].filter(Boolean).forEach((value) => metadata.appendChild(el('span', 'pt-demographic', value)));
+      info.appendChild(metadata);
+      const birth = el('span', 'pt-birth', presentation.birth || '—');
+      birth.setAttribute('aria-label', 'Data urodzenia: ' + (presentation.birth && presentation.birth !== '—' ? presentation.birth : 'nie podano'));
+      if (presentation.birthHint) birth.appendChild(el('small', null, presentation.birthHint));
       if (presentation.duplicate) info.appendChild(el('span', 'pt-duplicate-hint', presentation.duplicate === 'base' ? 'Rozróżnij osoby datą urodzenia' : 'Możliwy duplikat — przejrzyj podobne nazwiska'));
       const date = el('span', 'pt-saved'); date.appendChild(el('small', null, 'Ostatni zapis'));
       const time = el('time', null, savedDate(patient.lastSavedAtISO));
       if (patient.lastSavedAtISO) time.setAttribute('datetime', String(patient.lastSavedAtISO));
       date.appendChild(time);
-      open.appendChild(info); open.appendChild(date); open.appendChild(icon('arrow')); row.appendChild(open);
+      open.appendChild(info); open.appendChild(birth); open.appendChild(date); open.appendChild(icon('arrow')); row.appendChild(open);
       if (state.adding) {
         const checkbox = el('input', 'pl-cb'); checkbox.type = 'checkbox'; checkbox.checked = Boolean(state.selected[patient.patientId]);
         checkbox.setAttribute('aria-label', 'Dodaj do listy: ' + name);
@@ -358,9 +378,169 @@
     }
     function patientRows(host, rows, list, members) {
       const surface = el('div', 'pt-results');
-      rows.forEach((patient) => surface.appendChild(patientRow(patient, list, members)));
-      host.appendChild(surface);
+      const columns = el('div', 'pt-columns');
+      columns.setAttribute('aria-hidden', 'true');
+      columns.appendChild(el('span', null, 'Imię i nazwisko'));
+      columns.appendChild(el('span', null, 'Data urodzenia'));
+      columns.appendChild(el('span', null, 'Ostatni zapis'));
+      columns.appendChild(el('span'));
+      // Extra selection/removal actions have their own width; omit headings in
+      // that mode instead of aligning misleading labels over those actions.
+      columns.hidden = Boolean(state.adding || list);
+      surface.appendChild(columns);
+      const body = el('div', 'pt-result-rows');
+      body.setAttribute('role', 'list'); body.setAttribute('aria-label', 'Pacjenci');
+      surface.appendChild(body); host.appendChild(surface);
+      const makeRow = (patient, index) => {
+        const node = patientRow(patient, list, members);
+        node.setAttribute('role', 'listitem');
+        node.setAttribute('aria-posinset', String(index + 1));
+        node.setAttribute('aria-setsize', String(rows.length));
+        return node;
+      };
+      if (rows.length <= 60) rows.forEach((patient, index) => body.appendChild(makeRow(patient, index)));
+      else rowWindow = windowRows(body, rows, makeRow);
       footerCount.textContent = peopleLabel(rows.length) + (list ? ' na wybranej liście' : '');
+    }
+    // Only visible rows and a small overscan exist in the DOM. Unknown heights
+    // are estimates, replaced by measured heights; keep the first visible person
+    // anchored while the estimates settle (also for wrapping names on phones).
+    function windowRows(body, rows, makeRow) {
+      const width = Math.round(scroll.clientWidth);
+      if (measuredWidth !== width) { rowHeights.clear(); measuredWidth = width; }
+      const mode = (state.adding ? 'add:' : state.listId ? 'list:' : 'all:');
+      const key = (index) => mode + rows[index].patientId;
+      let offsets = [], current = new Map(), frame = null, stopped = false;
+      let rangeKey = '', resizeObserver = null;
+      function prefix() {
+        offsets = [0];
+        rows.forEach((patient, index) => offsets.push(offsets[index] + (rowHeights.get(key(index)) || 86)));
+      }
+      function origin() { return body.getBoundingClientRect().top - scroll.getBoundingClientRect().top + scroll.scrollTop; }
+      function indexAt(value) {
+        let left = 0, right = rows.length;
+        while (left < right) { const middle = (left + right) >>> 1; if (offsets[middle + 1] <= value) left = middle + 1; else right = middle; }
+        return Math.min(rows.length - 1, left);
+      }
+      function anchor() {
+        const position = scroll.scrollTop - origin();
+        const index = indexAt(Math.max(0, position));
+        return { patientId: rows[index].patientId, offset: position - offsets[index] };
+      }
+      function measure() {
+        if (stopped || !body.isConnected) return;
+        const top = origin(), index = indexAt(Math.max(0, scroll.scrollTop - top));
+        const delta = scroll.scrollTop - top - offsets[index];
+        let changed = false;
+        current.forEach((node, item) => {
+          const height = node.getBoundingClientRect().height;
+          if (height > 0 && Math.abs((rowHeights.get(key(item)) || 86) - height) > .5) { rowHeights.set(key(item), height); changed = true; }
+        });
+        if (changed) { prefix(); draw(true); scroll.scrollTop = top + offsets[index] + delta; }
+      }
+      function schedule() {
+        if (stopped || frame != null) return;
+        frame = win.requestAnimationFrame(() => { frame = null; draw(); measure(); });
+      }
+      function draw(force, ensureIndex) {
+        if (stopped) return;
+        const top = Math.max(0, scroll.scrollTop - origin());
+        const start = Math.max(0, indexAt(top) - 8);
+        const end = Math.min(rows.length, indexAt(top + Math.max(scroll.clientHeight, 300)) + 9);
+        const active = doc.activeElement;
+        const focusedRow = active && active.closest ? active.closest('.pt-row') : null;
+        const focusedIndex = focusedRow && body.contains(focusedRow) ? Number(focusedRow.dataset.virtualIndex) : -1;
+        const indices = [];
+        for (let index = start; index < end; index += 1) indices.push(index);
+        for (const index of [focusedIndex, ensureIndex]) if (Number.isInteger(index) && index >= 0 && index < rows.length && !indices.includes(index)) indices.push(index);
+        indices.sort((a, b) => a - b);
+        const nextKey = indices.join(',');
+        if (!force && nextKey === rangeKey) return;
+        rangeKey = nextKey;
+        const next = new Map(), fragment = doc.createDocumentFragment();
+        let last = 0;
+        function spacer(height) {
+          if (height <= 0) return;
+          // Runtime geometry: this measured gap preserves the full scroll length
+          // of unmounted rows. Its variable pixel height cannot be a static class.
+          const node = el('div', 'pt-row-spacer'); node.style.height = height + 'px'; node.setAttribute('aria-hidden', 'true'); fragment.appendChild(node);
+        }
+        indices.forEach((index) => {
+          spacer(offsets[index] - offsets[last]);
+          const node = current.get(index) || makeRow(rows[index], index);
+          node.dataset.virtualIndex = String(index);
+          next.set(index, node); fragment.appendChild(node); last = index + 1;
+        });
+        spacer(offsets[rows.length] - offsets[last]);
+        if (resizeObserver) { current.forEach((node, index) => { if (!next.has(index)) resizeObserver.unobserve(node); }); }
+        body.replaceChildren(fragment); current = next;
+        if (resizeObserver) current.forEach((node) => resizeObserver.observe(node));
+        if (active && body.contains(active) && doc.activeElement !== active) active.focus({ preventScroll: true });
+      }
+      function focusRow(index, control) {
+        const target = Math.max(0, Math.min(rows.length - 1, index));
+        scroll.scrollTop = origin() + offsets[target];
+        draw(true, target); measure();
+        const node = current.get(target);
+        if (node) {
+          const controls = node.querySelectorAll('button, input');
+          const focus = controls[Math.min(control || 0, controls.length - 1)];
+          if (focus) focus.focus({ preventScroll: true });
+        }
+        schedule();
+      }
+      function keyboard(event) {
+        const row = event.target.closest && event.target.closest('.pt-row');
+        if (!row || !body.contains(row)) return;
+        const index = Number(row.dataset.virtualIndex), controls = Array.from(row.querySelectorAll('button, input'));
+        const control = controls.indexOf(doc.activeElement);
+        let next = null, nextControl = control;
+        if (event.key === 'Tab') {
+          if (!event.shiftKey && control === controls.length - 1 && index < rows.length - 1) { next = index + 1; nextControl = 0; }
+          if (event.shiftKey && control === 0 && index > 0) { next = index - 1; nextControl = state.adding || state.listId ? 1 : 0; }
+        } else if (event.key === 'ArrowDown') next = index + 1;
+        else if (event.key === 'ArrowUp') next = index - 1;
+        else if (event.key === 'Home') next = 0;
+        else if (event.key === 'End') next = rows.length - 1;
+        else if (event.key === 'PageDown') next = indexAt(offsets[index] + scroll.clientHeight);
+        else if (event.key === 'PageUp') next = indexAt(Math.max(0, offsets[index] - scroll.clientHeight));
+        if (next != null) { event.preventDefault(); focusRow(next, nextControl); }
+      }
+      prefix();
+      if (typeof win.ResizeObserver === 'function') resizeObserver = new win.ResizeObserver(() => schedule());
+      scroll.addEventListener('scroll', schedule, { passive: true });
+      body.addEventListener('keydown', keyboard);
+      draw(); schedule();
+      return {
+        anchor,
+        focusPatient(value) {
+          const index = value ? rows.findIndex((patient) => patient.patientId === value.patientId) : -1;
+          if (index < 0) return;
+          draw(true, index);
+          const node = current.get(index), controls = node && node.querySelectorAll('button, input');
+          const focus = controls && controls[Math.min(Number(value.control) || 0, controls.length - 1)];
+          if (focus) focus.focus({ preventScroll: true });
+        },
+        restore(value) {
+          const index = value ? rows.findIndex((patient) => patient.patientId === value.patientId) : -1;
+          if (Number.isInteger(index) && index >= 0) { scroll.scrollTop = origin() + offsets[index] + (Number(value.offset) || 0); draw(true, index); measure(); }
+          else { draw(); measure(); }
+        },
+        resize() {
+          const nextWidth = Math.round(scroll.clientWidth), previous = anchor();
+          if (measuredWidth !== nextWidth) {
+            rowHeights.clear(); measuredWidth = nextWidth; prefix(); rangeKey = '';
+            const index = rows.findIndex((patient) => patient.patientId === previous.patientId);
+            scroll.scrollTop = origin() + offsets[index] + previous.offset;
+          }
+          schedule();
+        },
+        destroy() {
+          stopped = true; if (frame != null) win.cancelAnimationFrame(frame);
+          if (resizeObserver) resizeObserver.disconnect();
+          scroll.removeEventListener('scroll', schedule); body.removeEventListener('keydown', keyboard);
+        }
+      };
     }
     function renderPatients() {
       const rows = sorted(patients.filter((patient) => sourceMatches(patient, state.filter) && matchesName(patient, state.query)));
@@ -373,10 +553,32 @@
       } else patientRows(scroll, rows);
       footerCount.textContent = peopleLabel(rows.length);
     }
+    function reader() {
+      if (!listReader) listReader = typeof vault.createPatientListReader === 'function' ? vault.createPatientListReader({ isCurrent: alive }) : vault;
+      return listReader;
+    }
+    function invalidateLists() {
+      if (listReader && listReader !== vault && typeof listReader.dispose === 'function') listReader.dispose();
+      listReader = null; listCache = null; catalogPromise = null; memberCache = null; memberPromises.clear();
+    }
+    function getMembers(list) {
+      const id = typeof list === 'string' ? list : list.id;
+      if (!memberPromises.has(id)) {
+        const source = reader();
+        const promise = Promise.resolve().then(() => source.getPatientListMembers(list)).catch((error) => {
+          if (memberPromises.get(id) === promise) memberPromises.delete(id);
+          throw error;
+        });
+        memberPromises.set(id, promise);
+      }
+      return memberPromises.get(id);
+    }
     function getCatalog() {
       if (listCache) return Promise.resolve(listCache);
       if (!catalogPromise) {
-        const pending = Promise.resolve().then(() => vault.listPatientLists()).then((lists) => Promise.all((lists || []).map((list) => Promise.resolve(vault.getPatientListMembers(list)).then((members) => ({ list, members }))))).then((rows) => {
+        const source = reader();
+        const pending = Promise.resolve().then(() => source.listPatientLists()).then((lists) => {
+          const rows = (lists || []).map((list) => ({ list, members: null }));
           if (catalogPromise === pending) {
             if (alive() && mayUseLists()) listCache = rows;
             catalogPromise = null;
@@ -387,13 +589,28 @@
       }
       return catalogPromise;
     }
-    function catalogRows(host, entries) {
+    function countMembers(node, entry, sequence) {
+      function currentCount() { return guardedRead(sequence) && mayUseLists() && node.isConnected && listCache && listCache.includes(entry); }
+      function done(members) {
+        if (!currentCount()) return;
+        entry.members = members;
+        node.textContent = peopleLabel(Number(members.count) || 0);
+        node.removeAttribute('aria-label');
+      }
+      if (entry.members) { done(entry.members); return; }
+      node.textContent = '…'; node.setAttribute('aria-label', 'Liczba osób: wczytywanie');
+      getMembers(entry.list).then(done).catch(() => {
+        if (!currentCount()) return;
+        node.textContent = 'Nie wczytano'; node.setAttribute('aria-label', 'Nie udało się wczytać liczby osób');
+        // Opening this list retains the existing error/retry flow. A failed
+        // count never masquerades as a list with zero members.
+      });
+    }
+    function catalogRows(host, entries, sequence) {
       const query = state.listQuery;
       const filtered = entries.filter(({ list }) => !query || normalize(list.name || '').indexOf(normalize(query)) !== -1);
       if (host === scroll) {
         count.textContent = 'Listy pacjentów: ' + entries.length + (query ? ' · pokazano ' + filtered.length : '');
-        const heading = el('div', 'pl-heading'); heading.appendChild(el('h3', null, 'Moje listy'));
-        heading.appendChild(el('p', null, 'Wybierz listę, aby zobaczyć należących do niej pacjentów.')); host.appendChild(heading);
       }
       if (!filtered.length) {
         empty(host, entries.length ? 'Brak pasujących list' : 'Nie masz jeszcze list', entries.length ? 'Zmień nazwę wpisaną w wyszukiwarkę.' : 'Utwórz listę ręczną lub automatyczną.', entries.length ? 'Wyczyść wyszukiwanie' : '+ Nowa lista', () => {
@@ -403,19 +620,24 @@
         return;
       }
       const grid = el('div', 'pl-grid');
-      filtered.forEach(({ list, members }) => {
+      const counts = [];
+      filtered.forEach((entry) => {
+        const { list } = entry;
         const wrapper = el('div', 'pl-row');
         const tile = button('pl-tile', null, () => chooseList(list.id));
         tile.title = 'Otwórz listę: ' + list.name; tile.setAttribute('data-list-id', list.id);
         tile.appendChild(icon('note'));
         const text = el('span', 'pl-description'); text.appendChild(el('strong', 'pl-tnm', list.name || '(bez nazwy)'));
         text.appendChild(el('small', 'pl-tmt', describeList(list) + (list.description ? ' · ' + list.description : '')));
-        tile.appendChild(text); tile.appendChild(el('span', 'pl-num', peopleLabel(Number(members.count) || 0))); tile.appendChild(icon('arrow'));
+        tile.appendChild(text);
+        const number = el('span', 'pl-num', '…'); tile.appendChild(number);
+        counts.push({ node: number, entry }); tile.appendChild(icon('arrow'));
         wrapper.appendChild(tile);
         const edit = button('pl-edit', 'Edytuj', () => editList(list)); edit.setAttribute('aria-label', 'Edytuj listę: ' + list.name); wrapper.appendChild(edit);
         grid.appendChild(wrapper);
       });
       host.appendChild(grid);
+      counts.forEach(({ node, entry }) => countMembers(node, entry, sequence));
     }
     function renderCatalog(host, sequence) {
       if (!mayUseLists()) { denied(host); if (host === scroll) count.textContent = 'Listy pacjentów'; return; }
@@ -423,12 +645,15 @@
       host.appendChild(el('div', 'pt-loading', 'Ładowanie list…'));
       getCatalog().then((entries) => {
         if (!guardedRead(sequence) || !mayUseLists() || (host !== scroll && host !== pickerBody)) return;
-        clear(host); catalogRows(host, entries); syncControls(); restorePosition();
+        clear(host); catalogRows(host, entries, sequence); syncControls(); restorePosition();
       }).catch(() => { if (guardedRead(sequence)) errorMessage(host, 'Nie udało się wczytać list.', () => render()); });
     }
     function loadMembers(id) {
       if (memberCache && memberCache.list.id === id) return Promise.resolve(memberCache);
-      return Promise.resolve(vault.getPatientList(id)).then((list) => list ? Promise.resolve(vault.getPatientListMembers(list)).then((members) => ({ list, members })) : null);
+      return getCatalog().then((entries) => {
+        const entry = entries.find(({ list }) => list.id === id);
+        return entry ? getMembers(entry.list).then((members) => ({ list: entry.list, members })) : null;
+      });
     }
     function selectedCount() { return Object.keys(state.selected).filter((id) => state.selected[id]).length; }
     function updateAddCount() {
@@ -463,7 +688,7 @@
       loadMembers(id).then((result) => {
         if (!guardedRead(sequence) || state.listId !== id || !mayUseLists()) return;
         if (!result) {
-          state.listId = null; state.adding = false; state.selected = {}; memberCache = null; listCache = null;
+          state.listId = null; state.adding = false; state.selected = {}; invalidateLists();
           if (desktop) render(); else { state.filter = 'all'; render(); openPicker(); }
           return;
         }
@@ -490,14 +715,14 @@
       if (busy || !alive() || !mayUseLists()) return;
       const ids = Object.keys(state.selected).filter((id) => state.selected[id]);
       if (!ids.length) { state.adding = false; render(); return; }
-      busy = true; syncControls();
+      busy = true; syncControls(); invalidateLists();
       try {
         for (const id of ids) {
           if (!alive() || !mayUseLists()) return;
           await vault.addPatientToList(list.id, id);
         }
-        if (alive()) { state.adding = false; state.selected = {}; memberCache = null; listCache = null; restoreScroll = state.listScrollTop; }
-      } catch (error) { listMutationFailure(error); memberCache = null; listCache = null; }
+        if (alive()) { state.adding = false; state.selected = {}; invalidateLists(); restoreScroll = state.listScrollTop; }
+      } catch (error) { listMutationFailure(error); invalidateLists(); }
       finally { busy = false; if (alive()) render(); }
     }
     async function removeMember(list, patient, members) {
@@ -505,18 +730,19 @@
       const viaRule = Boolean(members && members.viaRule && members.viaRule[patient.patientId]);
       const message = 'Zdjąć „' + (patient.header && patient.header.name || '') + '” z listy?' + (viaRule ? '\nLista automatyczna — zapiszemy wykluczenie, aby reguła nie dodała tej osoby ponownie.' : '');
       if (typeof win.confirm !== 'function' || !win.confirm(message)) return;
-      busy = true; syncControls();
-      try { await vault.removePatientFromList(list.id, patient.patientId); if (alive()) { memberCache = null; listCache = null; } }
+      busy = true; syncControls(); invalidateLists();
+      try { await vault.removePatientFromList(list.id, patient.patientId); if (alive()) { invalidateLists(); } }
       catch (error) { listMutationFailure(error); }
       finally { busy = false; if (alive()) render(); }
     }
     function editList(list) {
       if (!alive() || busy || !mayUseLists() || typeof opts.onEditList !== 'function') return;
       const returnPicker = Boolean(picker);
+      invalidateLists();
       closePicker(false, true);
       opts.onEditList(list, { onDone: (result) => {
         if (!alive()) return;
-        listCache = null; catalogPromise = null; memberCache = null;
+        invalidateLists();
         if (list && !result && state.listId === list.id) { state.listId = null; state.adding = false; state.selected = {}; }
         render();
         if (returnPicker && !desktop) openPicker();
@@ -539,7 +765,10 @@
     function render() {
       if (destroyed) return;
       const sequence = ++readSequence;
-      syncControls(); clear(scroll);
+      syncControls();
+      if (rowWindow) { rowWindow.destroy(); rowWindow = null; }
+      clear(scroll);
+      if (opts.loading) { count.textContent = ''; scroll.appendChild(el('div', 'pt-loading', 'Wczytywanie Bazy pacjentów…')); return; }
       if (state.filter === 'dup') {
         count.textContent = 'Podobne nazwiska';
         if (opts.duplicates && typeof opts.duplicates.render === 'function') opts.duplicates.render(scroll);
@@ -553,12 +782,24 @@
     }
     function restorePosition() {
       if (restoreScroll == null || !mounted) return;
-      const position = restoreScroll;
+      const position = restoreScroll, savedAnchor = restoreAnchor, savedFocus = restoreRowFocus, sequence = readSequence;
       // A list read has not populated the scroll host yet.
       if (scroll.querySelector('.pt-loading')) return;
-      restoreScroll = null;
+      restoreScroll = null; restoreAnchor = null; restoreRowFocus = null;
       const schedule = win.requestAnimationFrame || ((callback) => win.setTimeout(callback, 0));
-      schedule(() => { if (alive()) scroll.scrollTop = position; });
+      schedule(() => {
+        // A newer query, list selection or refresh owns the scroll position.
+        // An older frame must not reset a position chosen after that render.
+        if (!guardedRead(sequence)) return;
+        scroll.scrollTop = position;
+        if (rowWindow) { rowWindow.restore(savedAnchor); rowWindow.focusPatient(savedFocus); }
+        else if (savedFocus) {
+          const node = Array.from(scroll.querySelectorAll('.pt-row')).find((row) => row.dataset.patientId === savedFocus.patientId);
+          const controls = node && node.querySelectorAll('button, input');
+          const focus = controls && controls[Math.min(Number(savedFocus.control) || 0, controls.length - 1)];
+          if (focus) focus.focus({ preventScroll: true });
+        }
+      });
     }
     function closePicker(restoreFocus, keepDeferredRefresh) {
       if (!picker) return;
@@ -595,9 +836,9 @@
       if (picker) return;
       pickerReturnFocus = doc.activeElement;
       const overlay = el('div', 'vilda-auth-overlay-sheet vilda-patients-list-picker');
-      overlay.setAttribute('role', 'dialog'); overlay.setAttribute('aria-modal', 'true'); overlay.setAttribute('aria-label', 'Moje listy');
+      overlay.setAttribute('role', 'dialog'); overlay.setAttribute('aria-modal', 'true'); overlay.setAttribute('aria-label', 'Listy');
       const sheet = el('section', 'pt-picker-sheet');
-      const top = el('div', 'pt-picker-head'); top.appendChild(el('h2', null, 'Moje listy'));
+      const top = el('div', 'pt-picker-head'); top.appendChild(el('h2', null, 'Listy'));
       const close = textButton('pt-picker-close', '', () => { closePicker(true); render(); }, 'close'); close.setAttribute('aria-label', 'Zamknij listy'); top.appendChild(close); sheet.appendChild(top);
       pickerInput = el('input', 'pt-picker-search'); pickerInput.type = 'search'; pickerInput.placeholder = 'Szukaj listy'; pickerInput.setAttribute('aria-label', 'Szukaj listy'); pickerInput.value = state.listQuery;
       pickerInput.addEventListener('input', () => { state.listQuery = pickerInput.value; render(); }); sheet.appendChild(pickerInput);
@@ -615,14 +856,17 @@
     }
     function resize() {
       const next = media ? media.matches : (win.innerWidth || 1024) >= 992;
-      if (desktop === next || destroyed || !mounted) return;
-      savePosition(); desktop = next;
+      if (destroyed || !mounted) return;
+      if (desktop === next) { if (rowWindow) rowWindow.resize(); return; }
+      savePosition();
+      restoreScroll = scroll.scrollTop; restoreAnchor = rowWindow ? rowWindow.anchor() : null; restoreRowFocus = focusedPatient();
+      desktop = next;
       if (desktop && picker) { closePicker(false); state.filter = 'lists'; state.listId = null; }
       render();
     }
     function proChanged() {
       if (!alive()) return;
-      listCache = null; catalogPromise = null; memberCache = null;
+      invalidateLists();
       render();
     }
     search.addEventListener('input', () => { if (isCatalog()) state.listQuery = search.value; else state.query = search.value; render(); scroll.scrollTop = 0; });
@@ -630,11 +874,17 @@
       if (event.key === 'Escape' && search.value) { event.stopPropagation(); if (isCatalog()) state.listQuery = ''; else state.query = ''; render(); }
     });
 
+    function focusedPatient() {
+      const active = doc.activeElement, row = active && active.closest ? active.closest('.pt-row') : null;
+      return row && scroll.contains(row) ? { patientId: row.dataset.patientId, control: Array.from(row.querySelectorAll('button, input')).indexOf(active) } : null;
+    }
     function read() {
       if (finalSnapshot) return Object.assign({}, finalSnapshot, { selected: Object.assign({}, finalSnapshot.selected) });
       return Object.assign({}, state, {
         selected: Object.assign({}, state.selected),
         scrollTop: scroll.scrollTop,
+        rowAnchor: rowWindow ? rowWindow.anchor() : null, rowFocus: focusedPatient(),
+        rowHeights: Array.from(rowHeights.entries()), measuredWidth,
         focused: doc.activeElement === search,
         selectionStart: search.selectionStart,
         selectionEnd: search.selectionEnd
@@ -642,8 +892,9 @@
     }
     function destroy() {
       if (destroyed) return;
-      finalSnapshot = read(); destroyed = true; ++readSequence;
+      finalSnapshot = read(); destroyed = true; ++readSequence; invalidateLists();
       closePicker(false); closeSort();
+      if (rowWindow) { rowWindow.destroy(); rowWindow = null; }
       if (unregisterBack) { unregisterBack(); unregisterBack = null; }
       if (observer) observer.disconnect();
       if (editorObserver) editorObserver.disconnect();
@@ -669,7 +920,7 @@
         observer.observe(root.parentNode, { childList: true });
       }
       render();
-      if (desktop && initial.focused !== false) focusTimer = win.setTimeout(() => {
+      if (desktop && initial.focused !== false && !initial.rowFocus) focusTimer = win.setTimeout(() => {
         if (!alive() || picker) return;
         search.focus();
         if (typeof search.setSelectionRange === 'function' && initial.selectionStart != null) {
@@ -677,8 +928,9 @@
         }
       }, 60);
     }
-    syncControls(); renderPatients();
+    syncControls();
     return { root, read, destroy, mount, refreshDuplicates, deferRefresh };
   }
-  win.VildaPatientsList = Object.freeze({ create });
+  function createLoading(options) { return create(Object.assign({}, options, { loading: true, patients: [], initialState: { focused: false } })); }
+  win.VildaPatientsList = Object.freeze({ create, createLoading });
 })(typeof window !== 'undefined' ? window : null);
