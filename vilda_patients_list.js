@@ -240,7 +240,7 @@
       });
       search.value = currentSearch(); search.disabled = busy;
       const hint = isCatalog() ? 'Szukaj listy' : state.listId ? 'Szukaj pacjenta na liście' : 'Szukaj po imieniu i nazwisku';
-      search.placeholder = hint; search.setAttribute('aria-label', hint); clearSearch.hidden = !search.value; clearSearch.disabled = busy;
+      search.placeholder = isCatalog() ? 'Szukaj listy' : 'Imię lub nazwisko…'; search.setAttribute('aria-label', hint); clearSearch.hidden = !search.value; clearSearch.disabled = busy;
       home.disabled = busy; add.disabled = busy;
       refreshDuplicates();
       footer.hidden = isCatalog() || state.filter === 'dup';

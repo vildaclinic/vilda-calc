@@ -20808,7 +20808,7 @@ a lekarz poprawia jedno z miejsc. Wartość dni spoza 0–6 w rekordzie nie jest
 
 **Wersje.** `sga_birth_module.js?v=10→11`; SW 1.1.168 → **1.1.169**.
 
-## Dziennik zdarzeń: kasowanie kolejki przy „Usuń konto” i koordynacja kart — uśpione (P-DZIENNIK-ZDARZEN, E2-PR3a1, SW 1.1.469, `vilda_vault.js` 252, 2026-11-05)
+## Dziennik zdarzeń: kasowanie kolejki przy „Usuń konto” i koordynacja kart — uśpione (P-DZIENNIK-ZDARZEN, E2-PR3a1, SW 1.1.470, `vilda_vault.js` 252, 2026-11-05)
 
 **Zmiana kliniczna: NIE** — wzory, progi, jednostki, interpretacje, zapis, scalanie, format kopii i synchronizacja bez
 zmian. Dla użytkownika: „Usuń konto” kasuje teraz także lokalną kolejkę zmian tego konta (bazę `vilda_sync_<userId>`
@@ -21063,8 +21063,8 @@ nieistniejącej bazy kończy się sukcesem i niczego nie tworzy (10/10 przebieg�
 w przeglądarce bez listy baz.
 
 **Czerwone na bazie** (kopia `origin/audyt` `948b1d5a` z testami i wsparciem tego PR, sejf bazy;
-vildaclinic/vilda-calc#887 i vildaclinic/vilda-calc#886, czyli dzisiejsza baza `01f78891`, nie zmieniają sejfu ani testów
-dziennika):
+vildaclinic/vilda-calc#887, vildaclinic/vilda-calc#886 i vildaclinic/vilda-calc#889, czyli dzisiejsza baza `0f6c5528`, nie
+zmieniają sejfu ani testów dziennika):
 
 | Plik | Czerwone | Zielone | Pominięte |
 |---|---|---|---|
@@ -21125,8 +21125,8 @@ Poza blokiem 6 wstawek w 3 funkcjach (7 wywołań), wyłącznie dopisane znaki; 
 | `xa`, gałąź z metadanymi konta | `Bob_poRejestrze(t)` po usunięciu wpisu rejestru; `await Bob_kasujKonto(t)` po `kn("user-removed")` |
 | `He` (odblokowanie) | `Bob_poOdblokowaniu()` jako ostatnia instrukcja |
 
-**Wersje.** Baza `origin/audyt` `01f78891` (po vildaclinic/vilda-calc#886). `vilda_vault.js` 251 → 252; `vilda_chrome.js`
-245 → 246 i `vilda_session_bridge.js` 166 → 167 (wstrzykują plik z nowym `?v=`); SW 1.1.468 → **1.1.469**.
+**Wersje.** Baza `origin/audyt` `0f6c5528` (po vildaclinic/vilda-calc#889). `vilda_vault.js` 251 → 252; `vilda_chrome.js`
+246 → 247 i `vilda_session_bridge.js` 167 → 168 (wstrzykują plik z nowym `?v=`); SW 1.1.469 → **1.1.470**.
 
 ## Dziennik zdarzeń: kwarantanna i podsumowanie wyniku — uśpione (P-DZIENNIK-ZDARZEN, E2-PR2b2, SW 1.1.463, `vilda_vault.js` 250, 2026-11-04)
 
