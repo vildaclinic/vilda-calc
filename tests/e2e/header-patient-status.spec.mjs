@@ -183,6 +183,65 @@ test('shell: a delayed failure in the hidden Start cannot overwrite active DocPr
   await expect(page.locator('#vildaSaveFeedback')).toBeHidden();
 });
 
+test('guest shell: Save and Documents keep one line inside 44px actions with fallback fonts', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  const blockedFonts = [];
+  await page.route(/^https:\/\/(?:fonts\.googleapis\.com|fonts\.gstatic\.com)\//, route => {
+    blockedFonts.push(route.request().url());
+    return route.abort();
+  });
+  await fixturePreferences(page);
+  await page.goto('/app.html#/start', { waitUntil: 'load' });
+  await page.getByRole('button', { name: 'Korzystaj bez logowania', exact: true }).click();
+  await page.waitForFunction(() => window.VildaGuestMode === true
+    && !document.documentElement.classList.contains('vilda-auth-locked'));
+  const owner = await shellFrame(page);
+  const paneGuest = owner.getByRole('button', { name: 'Korzystaj bez logowania', exact: true });
+  await expect(paneGuest).toBeVisible();
+  await paneGuest.click();
+  await owner.waitForFunction(() => window.VildaGuestMode === true
+    && !document.documentElement.classList.contains('vilda-auth-locked'));
+  await page.evaluate(() => document.fonts.ready);
+  expect(blockedFonts.length, 'external font stylesheets are unavailable in this real guest session').toBeGreaterThan(0);
+
+  const menu = page.locator('aside.sidebar-v2 .sidebar-inner');
+  await expect(menu).toBeVisible();
+  const actions = menu.locator('.chrome-menu-save, .chrome-menu-documents');
+  await expect(actions).toHaveCount(2);
+  const fonts = ['Arial, sans-serif', '"DejaVu Sans", sans-serif', 'system-ui'];
+  for (const width of [1440, 1280]) {
+    await page.setViewportSize({ width, height: 1000 });
+    for (const fontFamily of fonts) await test.step(`${width}px, ${fontFamily}`, async () => {
+      // Only the platform font changes; all dimensions, spacing and wrapping
+      // come from production CSS, including the required 16px font size.
+      await actions.evaluateAll((buttons, family) => {
+        for (const button of buttons) button.style.fontFamily = family;
+      }, fontFamily);
+      for (const action of await actions.all()) {
+        await expect(action).toBeVisible();
+        await expect(action).toHaveCSS('font-size', '16px');
+        const label = action.locator(':scope > span').last();
+        await expect(label).toHaveCSS('font-size', '16px');
+        const geometry = await label.evaluate(node => {
+          const button = node.parentElement.getBoundingClientRect();
+          const range = document.createRange(); range.selectNodeContents(node);
+          const lines = [...range.getClientRects()].map(rect => ({ left: rect.left, right: rect.right, top: rect.top, bottom: rect.bottom }));
+          return { text: node.textContent, height: button.height, font: getComputedStyle(node).fontFamily,
+            button: { left: button.left, right: button.right, top: button.top, bottom: button.bottom }, lines };
+        });
+        expect(geometry.font, 'the rendered label inherits the selected platform font').toContain(fontFamily.split(',')[0].replaceAll('"', ''));
+        expect(geometry.height, `${geometry.text}: the actual action remains 44px tall`).toBe(44);
+        expect(geometry.lines, `${geometry.text} in ${geometry.font}: one rendered text line`).toHaveLength(1);
+        const line = geometry.lines[0];
+        expect(line.left, `${geometry.text}: text starts inside its button`).toBeGreaterThanOrEqual(geometry.button.left - 0.5);
+        expect(line.right, `${geometry.text}: text ends inside its button`).toBeLessThanOrEqual(geometry.button.right + 0.5);
+        expect(line.top, `${geometry.text}: text stays below the top border`).toBeGreaterThanOrEqual(geometry.button.top - 0.5);
+        expect(line.bottom, `${geometry.text}: text stays above the bottom border`).toBeLessThanOrEqual(geometry.button.bottom + 0.5);
+      }
+    });
+  }
+});
+
 test.describe('physical iPhone inline status', () => {
   const phone = devices['iPhone 15 Pro'];
   test.use({ userAgent: phone.userAgent, deviceScaleFactor: phone.deviceScaleFactor,

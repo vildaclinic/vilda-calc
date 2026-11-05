@@ -2942,11 +2942,18 @@ html.vilda-phone body.vilda-header-menu .chrome-header-search {
   font: 600 16px/1.4 Inter,sans-serif
 }
 .vilda-header-menu :is(.sidebar-inner,.chrome-drawer-body) .chrome-menu-action-buttons :is(a,button) {
-  gap: 5px;
+  gap: var(--space-4px);
+  flex-wrap: nowrap;
   padding-inline: var(--space-4px);
   font-size: 16px;
   line-height: 1.4;
-  letter-spacing: -.3px
+  letter-spacing: -.3px;
+  white-space: nowrap
+}
+.vilda-header-menu .chrome-menu-action-buttons :is(a,button)>span:last-child {
+  flex: 0 0 auto;
+  max-width: none;
+  white-space: nowrap
 }
 .vilda-header-menu :is(.chrome-menu-save-status,.chrome-header-save-status)[data-save-state=saved] {
   background: #eaf6ef!important;
