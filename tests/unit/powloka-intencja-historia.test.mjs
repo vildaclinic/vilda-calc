@@ -195,10 +195,22 @@ describe('Powłoka: granice kolejki historii i życia dokumentu', () => {
     h.shell.openPatientCardInStart('fikcyjny-b'); expect(h.shell.peekPatientReturnRoute()).toBe(null);
   });
   it('awaria background prefetch nie anuluje oczekiwania na kartę Start', () => {
-    const h = powloka(); h.load('docpro'); h.shell.openPatientCardInStart('fikcyjny-a'); h.tick(1200);
+    let idle = null;
+    const h = powloka(null, win => {
+      win.requestIdleCallback = vi.fn(callback => { idle = callback; return 1; });
+      win.cancelIdleCallback = vi.fn(() => { idle = null; });
+    });
+    const runIdle = () => { const callback = idle; idle = null; expect(callback).toBeTypeOf('function'); callback({ didTimeout: false, timeRemaining: () => 20 }); };
+    h.load('docpro'); runIdle(); // The production idle preloader creates Start.
+    const f = h.ramki.get('index.html'); let ready = false;
+    f.contentWindow.VildaAuthUI.isBootReady = () => ready;
+    h.load('start'); runIdle(); // Its load permits one background calendar.
     const background = h.ramki.get('terminarz.html'); expect(background).toBeTruthy();
+    h.shell.openPatientCardInStart('fikcyjny-a');
+    expect(f.contentWindow.VildaAuthUI.showPatientCard).not.toHaveBeenCalled();
     background.contentDocument.documentElement.classList.remove('vilda-embedded'); background.dispatchEvent({ type: 'load' });
-    const f = h.load('start'); h.tick(150); expect(f.contentWindow.VildaAuthUI.showPatientCard).toHaveBeenCalledExactlyOnceWith('fikcyjny-a');
+    ready = true; h.tick(150);
+    expect(f.contentWindow.VildaAuthUI.showPatientCard).toHaveBeenCalledExactlyOnceWith('fikcyjny-a');
   });
   it('navigate false zapisuje nowe href w tym samym entry, bez push', () => {
     const h = powloka(); h.shell.navigate('lab', true, 'przelicznik-jednostek.html?wskazanie=obesity_kids'); const f = h.load('lab');

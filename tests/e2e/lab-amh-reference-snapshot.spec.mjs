@@ -146,16 +146,30 @@ async function prepareCalendar(page) {
         Object.defineProperty(window, 'VildaVault', { value: vault, writable: true, configurable: true });
         // The reminder badge also reads overdue notes, without rendering the
         // calendar. Track its range query; the render waits for both queries.
-        const original = vault.listPatientNotesInRange;
-        vault.listPatientNotesInRange = function (...args) {
-          reads.pending += 1;
-          reads.started += 1;
-          const delay = reads.delayNextRange;
-          delete reads.delayNextRange;
-          return Promise.resolve(original.apply(this, args))
-            .then(notes => delay ? delay(notes) : notes)
-            .finally(() => { reads.pending -= 1; });
-        };
+        function instrument(source) {
+          const original = source.listPatientNotesInRange;
+          return Object.freeze({ ...source, listPatientNotesInRange: function (...args) {
+            reads.pending += 1;
+            reads.started += 1;
+            return Promise.resolve(original.apply(source, args))
+              .then(notes => {
+                // A superseded scoped read rejects before delivering data.
+                // Keep the delay armed for the next successful real range.
+                const delay = reads.delayNextRange;
+                delete reads.delayNextRange;
+                return delay ? delay(notes) : notes;
+              })
+              .finally(() => { reads.pending -= 1; });
+          } });
+        }
+        // Calendar refreshes use a scoped reader. Instrument its real range
+        // promise, including the caller's session/cancellation options.
+        const create = vault.createCalendarReader;
+        if (typeof create === 'function') {
+          vault.createCalendarReader = function (...args) { return instrument(create.apply(this, args)); };
+        } else {
+          vault.listPatientNotesInRange = instrument(vault).listPatientNotesInRange;
+        }
       },
     });
     new MutationObserver(records => {

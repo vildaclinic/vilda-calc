@@ -104,7 +104,7 @@
     'vilda_dob_age.js?v=11',
     'vilda_food_summary.js?v=2',
     'vilda_estimated_intake.js?v=3',
-    'vilda_update_prep.js?v=98',
+    'vilda_update_prep.js?v=99',
     'vilda_growth_reference_data.js?v=1',
     'vilda_professional_module.js?v=13',
     'vilda_persist_runtime.js?v=25',
@@ -123,7 +123,7 @@
     'app.js?v=239',
     'vilda_smoke_tests.js?v=77',
     'vilda_diet_recommendations.js?v=70',
-    'nutrition_norms.js?v=49',
+    'nutrition_norms.js?v=50',
     'nutrition_micros.js?v=28'
   ]);
   const MANIFEST = Object.freeze([

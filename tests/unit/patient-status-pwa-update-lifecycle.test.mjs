@@ -98,9 +98,13 @@ function harness({ firstClaim = false, reverseUnload = false, sharedLocal = stor
   const ss = storage(), ls = sharedLocal; ss.setItem('vildaCurrentPatientId', PID);
   const p = powloka(null, host => { host.sessionStorage = ss; host.localStorage = ls; });
   const currentFrame = p.ramki.get(p.shell.routes.docpro.src.split('?')[0]);
-  const current = clinical(currentFrame, ss, ls, CURRENT); p.load('docpro');
-  p.tick(1200); // The real shell prewarms Start while DocPro remains active.
+  // Establish both document owners explicitly before installing their clinical
+  // runtimes. The PWA invariant does not depend on speculative preload timing;
+  // neither empty bootstrap document can flush a clinical draft yet.
+  p.shell.navigate('start');
   const oldFrame = p.ramki.get(p.shell.routes.start.src.split('?')[0]);
+  p.shell.navigate('docpro');
+  const current = clinical(currentFrame, ss, ls, CURRENT); p.load('docpro');
   const old = clinical(oldFrame, ss, ls, OLD); p.load('start');
   expect(currentFrame.hidden).toBe(false); expect(oldFrame.hidden).toBe(true);
   current.commit();
