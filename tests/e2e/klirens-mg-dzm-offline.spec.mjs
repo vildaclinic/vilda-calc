@@ -217,12 +217,14 @@ async function fictionalMgSharedAndNotes(page) {
   await page.evaluate(() => window.VildaAuthUI.hide());
   await expect(page.locator('.vilda-auth-patient-card')).toBeHidden();
 
+  await expect(page.locator('#CITDZM_collectionHours')).toHaveValue('24');
+
   // Restore a genuine legacy citrate session through the production migration.
   // Its mg/dL concentration becomes one absolute daily amount in the dedicated
   // form; body weight must not turn it back into the old mg/kg result.
   const sharedInputs = { currentVersion: 'advanced', formulaPicker: 'Cit_mgkg', age: '45', sex: 'F',
     weight: '60', height: '165', U_Cit: '50', V24: '1440',
-    Cl24DurationHours: '', Cl24DurationSource: 'assumed-24h',
+    Cl24DurationHours: '24', Cl24DurationSource: 'hours',
     collectionStartAt: '', collectionEndAt: '', Cl24CollectionProblem: false,
     collectionStartVoidDiscarded: false, collectionFinalVoidIncluded: false,
     collectionNoMissedVoids: false, collectionNoSpillage: false,
@@ -241,7 +243,7 @@ async function fictionalMgSharedAndNotes(page) {
       }),
       ready: window.canComputeFormula('Cit_mgkg'),
       values: points.map(point => point.valueNum ?? point.rawValue),
-      series: points.map(point => point.seriesKey), units: points.map(point => point.unit),
+      series: points.map(point => point.id), units: points.map(point => point.unit),
       referenceAvailable: points.map(point => point.citDzmSnapshot.referenceAvailable),
       legacyValues: { U_Cit: inputs.U_Cit, V24: inputs.V24 },
     };
@@ -254,13 +256,13 @@ async function fictionalMgSharedAndNotes(page) {
   await expect(page.locator('#CITDZM_reportingEntity')).toHaveValue('citric_acid');
   await expect(page.locator('#CITDZM_collectionHours')).toHaveValue('24');
   await expect.poll(async () => (await readShared()).ready).toBe(true);
-  const default24 = await readShared();
-  expect(default24.duration).toMatchObject({ valid: true, hours: 24, assumed: true });
-  expect(default24.values).toEqual([720]);
-  expect(default24.series).toEqual(['Cit_total24']);
-  expect(default24.units).toEqual(['mg/24 h']);
-  expect(default24.referenceAvailable).toEqual([true]);
-  expect(default24.legacyValues).toEqual({ U_Cit: '50', V24: '1440' });
+  const captured24 = await readShared();
+  expect(captured24.duration).toMatchObject({ valid: true, hours: 24, source: 'captured', assumed: false });
+  expect(captured24.values).toEqual([720]);
+  expect(captured24.series).toEqual(['Cit_total24']);
+  expect(captured24.units).toEqual(['mg/24 h']);
+  expect(captured24.referenceAvailable).toEqual([true]);
+  expect(captured24.legacyValues).toEqual({ U_Cit: '50', V24: '1440' });
   await page.locator('#CITDZM_collectionHours').fill('12');
   await expect(page.locator('#CITDZM_collectionHours')).toHaveValue('12');
   await expect(page.locator('#citDzmInputCard .cit-dzm-static-unit')).toHaveText('godz.');
@@ -269,7 +271,7 @@ async function fictionalMgSharedAndNotes(page) {
   const explicit12 = await readShared();
   expect(explicit12.duration).toMatchObject({ valid: true, hours: 12, assumed: false });
   expect(explicit12.referenceAvailable).toEqual([false]);
-  expect(explicit12.legacyValues).toEqual(default24.legacyValues);
+  expect(explicit12.legacyValues).toEqual(captured24.legacyValues);
   await page.locator('#CITDZM_collectionHours').fill('0');
   await expect.poll(async () => (await readShared()).ready).toBe(false);
   const invalidClock = await readShared();
@@ -279,7 +281,7 @@ async function fictionalMgSharedAndNotes(page) {
   await expect(page.locator('#CITDZM_collectionHours')).toHaveValue('0');
   await expect(page.locator('#clcrResultReport .cit-dzm-result-error')).toBeVisible();
   expect((await memory(page)).originalsLocked).toBe(true);
-  return { samples, shared: { default24, explicit12, invalidClock }, note: {
+  return { samples, shared: { captured24, explicit12, invalidClock }, note: {
     value: note.labResult.value, unit: note.labResult.unit, category: note.category,
   } };
 }
