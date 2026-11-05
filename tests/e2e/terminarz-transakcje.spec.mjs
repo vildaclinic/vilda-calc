@@ -446,15 +446,31 @@ test('Przełóż o … liczy nową datę z rekordu w sejfie, nie z kopii w widok
   // Od tej chwili moduł widzi zamrożoną listę — jego kopia wpisu przestaje nadążać za sejfem.
   await page.evaluate(() => {
     const v = window.VildaVault;
-    ['listPatientNotesInRange', 'listPatientNotesDueByDate'].forEach((nazwa) => {
-      const orig = v[nazwa].bind(v);
-      const cache = new Map();
-      v[nazwa] = async function zamrozony(...args) {
-        const klucz = JSON.stringify(args);
-        if (!cache.has(klucz)) cache.set(klucz, await orig(...args));
-        return cache.get(klucz);
-      };
-    });
+    const methods = ['listPatientNotesInRange', 'listPatientNotesDueByDate'];
+    const caches = new Map(methods.map(name => [name, new Map()]));
+    window.__frozenCalendarReadHits = 0;
+    function freezeReads(source) {
+      const frozen = { ...source };
+      methods.forEach(name => {
+        const original = source[name], cache = caches.get(name);
+        frozen[name] = async function (...args) {
+          const key = JSON.stringify(args);
+          if (!cache.has(key)) cache.set(key, await original.apply(source, args));
+          else window.__frozenCalendarReadHits += 1;
+          return cache.get(key);
+        };
+      });
+      return Object.freeze(frozen);
+    }
+    const create = v.createCalendarReader;
+    if (typeof create === 'function') {
+      // Preserve the reader's lifetime/session arguments while freezing the
+      // UI snapshot across refreshes; getPatientNote remains the real vault API.
+      v.createCalendarReader = function (...args) { return freezeReads(create.apply(this, args)); };
+    } else {
+      const frozen = freezeReads(v);
+      methods.forEach(name => { v[name] = frozen[name]; });
+    }
   });
   // Jedno odświeżenie JESZCZE przed zmianą w tle — od teraz moduł widzi tylko tę migawkę.
   await odswiez(page);
@@ -474,6 +490,7 @@ test('Przełóż o … liczy nową datę z rekordu w sejfie, nie z kopii w widok
       ),
     )
     .toBe(D(3));
+  await expect.poll(() => page.evaluate(() => window.__frozenCalendarReadHits)).toBeGreaterThan(0);
   // Widok nadal pokazuje wpis w starym dniu — dokładnie ta sytuacja, w której klika lekarz.
   expect(
     await page.evaluate(

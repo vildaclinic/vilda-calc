@@ -230,7 +230,9 @@ test('Podsumowanie B: rzeczywiste SDS tempa i prognoza dla 18 lat zmieniają oce
     await expect(prediction).toContainText('konsensus 2 metod i MPH');
     await expect(sds).toHaveAttribute('data-assessment', 'normal');
     await expect(sds.locator('.professional-summary-value')).toContainText('+0,8');
-    expect(await sds.evaluate(el => getComputedStyle(el).backgroundColor)).toBe('rgb(237, 248, 246)');
+    // A source refresh can replace this row after its text/attributes settle.
+    // Check the current row through the locator instead of a detached DOM handle.
+    await expect(sds).toHaveCSS('background-color', 'rgb(237, 248, 246)');
     await expect(prediction).toHaveAttribute('data-tone', 'normal');
     await expect(prediction).toHaveAttribute('data-reference-age-months', '216');
     await expect(prediction.locator('.professional-summary-reference')).toContainText(/centyl.*18 lat/);
