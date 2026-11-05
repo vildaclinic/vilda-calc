@@ -53,6 +53,14 @@ async function expectWideFontResultFits(page) {
   finally { await font.evaluate(node => node.remove()); }
 }
 
+async function expectDetailTableTextFits(page) {
+  const clippedCells = await details(page).evaluate(node => [...node.querySelectorAll('th,td')].filter(cell => {
+    const boundary = cell.getBoundingClientRect(), range = document.createRange(); range.selectNodeContents(cell);
+    return [...range.getClientRects()].some(rect => rect.left < boundary.left - .5 || rect.right > boundary.right + .5);
+  }).map(cell => cell.textContent));
+  expect(clippedCells).toEqual([]);
+}
+
 function sameWidths(before, after) {
   for (const key of ['form', 'input', 'clear', 'report']) {
     expect(Math.abs(before[key].width - after[key].width), key).toBeLessThanOrEqual(0.5);
@@ -87,11 +95,10 @@ for (const width of [1440, 390, 320]) {
     expect(colors.value).not.toBe(colors.reference); expect(colors.reference).toBe(colors.unit);
     sameWidths(initial, await geometry(page, width)); await details(page).locator('summary').click(); sameWidths(initial, await geometry(page, width));
     await expect(details(page).locator('.ca-cit-current-reference[aria-current="true"]')).toHaveText('0,04–0,47');
-    const clippedCells = await details(page).evaluate(node => [...node.querySelectorAll('th,td')].filter(cell => {
-      const boundary = cell.getBoundingClientRect(), range = document.createRange(); range.selectNodeContents(cell);
-      return [...range.getClientRects()].some(rect => rect.left < boundary.left - .5 || rect.right > boundary.right + .5);
-    }).map(cell => cell.textContent));
-    expect(clippedCells).toEqual([]);
+    await expectDetailTableTextFits(page);
+    const headerFont = await page.addStyleTag({ content: '.ca-cit-reference-table thead th { font-family: monospace !important; letter-spacing: 1px !important; }' });
+    try { await expectDetailTableTextFits(page); }
+    finally { await headerFont.evaluate(node => node.remove()); }
     const shot = testInfo.outputPath(`ca-cit-${width}.png`); await page.locator('#clcrWorkspace').screenshot({ path: shot });
     await testInfo.attach(`ca-cit-${width}`, { path: shot, contentType: 'image/png' });
     await page.locator('[data-ca-cit-mode="concentration"]').click(); await page.locator('#CACIT_citrate').fill('0');

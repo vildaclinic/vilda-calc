@@ -255,7 +255,7 @@
   function renderTable(model) {
     const rows = model.referenceTable || model.reference?.table || [];
     if (!rows.length) return "";
-    return `<div class="ca-cit-reference-table-wrap"><table class="clcr-result-category-table ca-cit-reference-table"><caption>Ca/Cit (mg/mg) · zakres P5–P95</caption><thead><tr><th scope="col">Wiek</th><th scope="col">Chłopcy</th><th scope="col">Dziewczynki</th></tr></thead><tbody>${rows.map(row => `<tr><th scope="row">${escape(row.label)}</th>${["M", "F"].map(sex => {
+    return `<div class="ca-cit-reference-table-wrap"><table class="clcr-result-category-table ca-cit-reference-table"><caption>Ca/Cit (mg/mg) · zakres P5–P95</caption><thead><tr><th scope="col">Wiek</th><th scope="col">Chłopcy</th><th scope="col" aria-label="Dziewczynki">Dziew<wbr>czynki</th></tr></thead><tbody>${rows.map(row => `<tr><th scope="row">${escape(row.label)}</th>${["M", "F"].map(sex => {
       const cell = row.bySex?.[sex] || {};
       const active = model.referenceAvailable === true && row.selected === true && row.selectedSex === sex;
       return `<td${active ? ' class="ca-cit-current-reference" aria-current="true"' : ""}>${escape(localNumber(cell.lowerP5))}–${escape(localNumber(cell.upper))}</td>`;
