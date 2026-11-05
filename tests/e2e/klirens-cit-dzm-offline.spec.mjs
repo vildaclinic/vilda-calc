@@ -370,6 +370,8 @@ async function assertPrecedingNoteRemainsSeparate(page, note, newNote) {
     } finally { window.VildaClcrCitDzm = engine; }
   }, { old: note, current: newNote });
   expect(frozen.measurements).toHaveLength(2);
+  expect(frozen.measurements.find(point => point.parameterKey === 'clcr:Cit_mgkg').noteId).toBe(note.id);
+  expect(frozen.measurements.find(point => point.parameterKey === 'clcr:Cit_total24').noteId).toBe(newNote.id);
   expect(frozen.measurements.find(point => point.parameterKey === 'clcr:Cit_mgkg')).toMatchObject({ unit: 'mg/kg/24 h', valueNum: 6.666666666666667, norm: '', outOfRange: null });
   expect(frozen.measurements.find(point => point.parameterKey === 'clcr:Cit_total24')).toMatchObject({ unit: 'mmol/24 h', valueNum: 0.8, outOfRange: true });
   expect(frozen.oldSnapshot).toMatchObject({ valid: true, formulaId: 'Cit_mgkg', rawValue: 6.666666666666667, unit: 'mg/kg/24 h' });
@@ -447,7 +449,10 @@ for (const baselineSha of [null, UPDATE_BASE_SHA]) {
         await offline.page.screenshot({ path: testInfo.outputPath(`offline-patient-results-${index + 1}.png`), fullPage: true });
         await assertResourceDelivery(offline.page, startupResources, offline.loaded);
         const legacy = await assertPrecedingNoteRemainsSeparate(offline.page, deployment.precedingNote, result.note);
-        const clinical = { samples: result.samples, lazy, legacy };
+        // Each cold-start scenario makes a fresh synthetic save with a new UUID.
+        // Verify identities above, retain them in proof, compare clinical data here.
+        const comparableLegacy = legacy ? { ...legacy, measurements: legacy.measurements.map(({ noteId, ...point }) => point) } : null;
+        const clinical = { samples: result.samples, lazy, legacy: comparableLegacy };
         if (preceding) expect(clinical).toEqual(preceding); else preceding = clinical;
         expect(offline.failed).toEqual([]);
         expect(offline.errors).toEqual([]);
