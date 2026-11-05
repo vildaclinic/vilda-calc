@@ -45,6 +45,14 @@ async function expectResultTextFits(page) {
   expect(fit.patient.right).toBeLessThanOrEqual(fit.reference.left + .5);
 }
 
+async function expectWideFontResultFits(page) {
+  // Result and reference must remain separate when an unavailable web font
+  // falls back to wider glyphs, as on the Linux CI browser.
+  const font = await page.addStyleTag({ content: '.ca-cit-result-card .clcr-result-value { font-family: monospace !important; letter-spacing: 1px !important; }' });
+  try { await expectResultTextFits(page); }
+  finally { await font.evaluate(node => node.remove()); }
+}
+
 function sameWidths(before, after) {
   for (const key of ['form', 'input', 'clear', 'report']) {
     expect(Math.abs(before[key].width - after[key].width), key).toBeLessThanOrEqual(0.5);
@@ -61,12 +69,19 @@ for (const width of [1440, 390, 320]) {
     await expect(page.locator('#CACIT_citrateUnit option')).toHaveText(['µmol/L', 'mmol/L', 'mg/L', 'mg/dL']);
     const initial = await geometry(page, width);
     await page.locator('#CACIT_calcium').fill('2'); await page.locator('#CACIT_citrate').fill('40');
-    await expectResult(page); await expectResultTextFits(page); await expect(page.locator('#caCitInputCard')).toContainText('2/2');
+    await expectResult(page); await expectResultTextFits(page); await expectWideFontResultFits(page); await expect(page.locator('#caCitInputCard')).toContainText('2/2');
     await expect(page.locator('#clcrDataCompletion')).toBeHidden(); sameWidths(initial, await geometry(page, width));
     const normalShot = testInfo.outputPath(`ca-cit-normal-${width}.png`); await page.locator('#clcrWorkspace').screenshot({ path: normalShot });
     await testInfo.attach(`ca-cit-normal-${width}`, { path: normalShot, contentType: 'image/png' });
     await page.locator('[data-ca-cit-mode="reported"]').click(); await page.locator('#CACIT_reportedValue').fill('0.6');
     await expectResult(page, { raw: 0.6, outOfRange: true }); await expect(page.locator('#caCitInputCard')).toContainText('1/1');
+    for (const value of ['99999', '>99999', '999999', '0.20039', '0.0000000100195']) {
+      await page.locator('#CACIT_reportedValue').fill(value);
+      const raw = Number(value.replace(/^>/, ''));
+      await expectResult(page, { raw, outOfRange: raw > .47 });
+      await expectResultTextFits(page); await expectWideFontResultFits(page);
+    }
+    await page.locator('#CACIT_reportedValue').fill('0.6'); await expectResult(page, { raw: .6, outOfRange: true });
     const colors = await card(page).evaluate(node => ({ value: getComputedStyle(node.querySelector('.clcr-result-value')).color,
       reference: getComputedStyle(node.querySelector('.ca-cit-reference-value')).color, unit: getComputedStyle(node.querySelector('.ca-cit-reference-unit')).color }));
     expect(colors.value).not.toBe(colors.reference); expect(colors.reference).toBe(colors.unit);

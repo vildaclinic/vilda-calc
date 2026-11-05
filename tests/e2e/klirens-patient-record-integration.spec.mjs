@@ -84,7 +84,7 @@ test('real app iframe: Save → Shell Start/Badania keeps the same patient and s
   expect((await memory(calculator)).notes.filter(savedNote => savedNote.patientId === OTHER_PATIENT_ID)).toHaveLength(1);
 });
 
-test('all41 formulas/47 outputs remain visible, including old and daily oxalate/citrate, signed/bounded/native-axis records and ordinary labs', async ({ page }) => {
+test('all41 formulas/48 outputs remain visible, including old and daily oxalate/citrate, signed/bounded/native-axis records and ordinary labs', async ({ page }) => {
   await openCalculator(page);
   await applyAcr(page, '13.6');
   const seeded = await page.evaluate(pid => {
@@ -115,11 +115,16 @@ test('all41 formulas/47 outputs remain visible, including old and daily oxalate/
       title: 'Fikcyjne TSH', body: 'Fikcyjna kontrola', labResult: { test: 'TSH (tyreotropina)', testKey: 'tsh', value: '4,2', valueNum: 4.2, unit: 'mIU/L' } };
     window.__clcrRecordFixture.seed([...notes, ordinary]);
     window.__clcrRecordFixture.addSeries({ testKey: 'tsh', test: 'TSH (tyreotropina)', points: [{ noteId: ordinary.id, dateISO: ordinary.clinicalDateISO, valueNum: 4.2, unit: 'mIU/L' }] });
-    return { ids: notes.map(note => note.id), outputs: dictionary.map(entry => entry.id), formulas: [...new Set(dictionary.map(entry => entry.sourceFormulaId))] };
+    return { ids: notes.map(note => note.id), outputs: dictionary.map(entry => entry.id), formulas: [...new Set(dictionary.map(entry => entry.sourceFormulaId))],
+      caCitOutputs: dictionary.filter(entry => ['Ca_Cit', 'Ca_Cit_mol'].includes(entry.id)).map(({ id, unit, sourceFormulaId, testKey }) => ({ id, unit, sourceFormulaId, testKey })) };
   }, PATIENT_ID);
-  expect(seeded.outputs).toHaveLength(47);
+  expect(seeded.outputs).toHaveLength(48);
   expect(seeded.outputs).toEqual(expect.arrayContaining(['Ox_mgkg', 'Ox_total24', 'Cit_mgkg', 'Cit_total24']));
   expect(seeded.formulas).toHaveLength(41);
+  expect(seeded.caCitOutputs).toEqual([
+    { id: 'Ca_Cit', unit: 'mg/mg', sourceFormulaId: 'Ca_Cit', testKey: 'clcr:Ca_Cit' },
+    { id: 'Ca_Cit_mol', unit: 'mmol/mmol', sourceFormulaId: 'Ca_Cit', testKey: 'clcr:Ca_Cit_mol' },
+  ]);
   await page.locator('#clcrOpenCardBtn').click();
   await showClcrResults(page, 'table');
   await expect(clcrRows(page)).toHaveCount(seeded.ids.length);
