@@ -218,16 +218,16 @@ test('wyszukanie KT/V otwiera formularz PRO bez widocznego przełącznika', asyn
   );
 });
 
-// Citrate exercises the shared legacy DZM form. Sodium and potassium have
-// dedicated forms whose own fields and clocks have separate E2E coverage.
+// Citrate uses its dedicated amount inputs and clock. Historical collection
+// facts still come from the shared DZM context and must remain authoritative.
 test('DZM przyjmuje 24 h bez ankiety, zapisuje źródło czasu i blokuje jawną negatywną informację', async ({ page }) => {
   await openCalculator(page);
   await selectFromSearch(page, 'Cit_mgkg', 'Cit_mgkg');
-  const hours = page.locator('#Cl24DurationHours');
+  const hours = page.locator('#CITDZM_collectionHours');
   await expect(hours).toHaveValue('24');
-  await expect(hours).toBeHidden();
-  await expect(page.locator('#Cl24DurationSource')).toHaveValue('assumed-24h');
-  await expect(page.locator('#clcrCommonDuration')).toContainText('24 godz.');
+  await expect(hours).toBeVisible();
+  await expect(page.locator('#CITDZM_collectionSource')).toHaveValue('assumed-24h');
+  await expect(page.locator('#citDzmInputCard')).toContainText('Domyślnie 24 godziny');
   await expect(page.locator('#collectionStartAt')).toBeHidden();
   await expect(page.locator('#collectionEndAt')).toBeHidden();
   await expect(page.locator('#clcrDzmQualityGroup')).toBeHidden();
@@ -243,18 +243,17 @@ test('DZM przyjmuje 24 h bez ankiety, zapisuje źródło czasu i blokuje jawną 
   const readiness = await page.evaluate(() => window.getClcrFormulaReadiness('Cit_mgkg'));
   for (const id of ['collectionStartAt', 'collectionEndAt', ...qualityIds]) expect(readiness.missingFieldIds).not.toContain(id);
   await expect(page.locator('#clcrReadiness')).not.toContainText('Jakość czasowej lub dobowej zbiórki moczu');
-  await page.locator('#weight').fill('60');
-  await page.locator('#U_Cit').fill('60');
-  await page.locator('#V24').fill('1000');
+  await expect(page.locator('#weight')).toBeHidden();
+  await page.locator('#CITDZM_concentration').fill('1.2');
+  await page.locator('#CITDZM_volume').fill('1000');
   const capture = () => page.evaluate(() => window.ClcrVisitSave.collectActiveDatapoints(document, { formulaId: 'Cit_mgkg' })
-    .map(point => ({ value: point.rawValue ?? point.valueNum, hours: point.capture?.values?.Cl24DurationHours, source: point.capture?.values?.Cl24DurationSource })));
-  await expect.poll(capture).toEqual([{ value: 10, hours: '24', source: 'assumed-24h' }]);
-  expect(await page.evaluate(() => window.ClcrCollectionDuration.readFromDocument(document))).toMatchObject({ valid: true, complete: true, assumed: true, protocolMode: 'assumed-complete' });
+    .map(point => ({ value: point.rawValue ?? point.valueNum, hours: point.capture?.values?.CITDZM_collectionHours, source: point.capture?.values?.CITDZM_collectionSource })));
+  await expect.poll(capture).toEqual([{ value: 1.2, hours: '24', source: 'assumed-24h' }]);
+  expect(await page.evaluate(() => window.ClcrCollectionDuration.readFromDocument(document, { fieldId: 'CITDZM_collectionHours' }))).toMatchObject({ valid: true, complete: true, assumed: true, protocolMode: 'assumed-complete' });
 
-  await page.locator('#clcrCommonDuration').getByRole('button', { name: 'Zmień', exact: true }).click();
   await hours.fill('12');
-  await expect(page.locator('#Cl24DurationSource')).toHaveValue('hours');
-  await expect.poll(capture).toEqual([{ value: 20, hours: '12', source: 'hours' }]);
+  await expect(page.locator('#CITDZM_collectionSource')).toHaveValue('hours');
+  await expect.poll(capture).toEqual([{ value: 2.4, hours: '12', source: 'hours' }]);
   for (const id of qualityIds) await expect(page.locator('#' + id)).not.toBeChecked();
 
   // Imported negative information stays authoritative even though the new
@@ -269,8 +268,8 @@ test('DZM przyjmuje 24 h bez ankiety, zapisuje źródło czasu i blokuje jawną 
   expect(applied).toBe(true);
   await expect.poll(async () => page.evaluate(() => window.canComputeFormula('Cit_mgkg'))).toBe(false);
   await expect.poll(capture).toEqual([]);
-  expect(await page.evaluate(() => window.ClcrCollectionDuration.readFromDocument(document))).toMatchObject({ complete: false, knownProblems: ['collectionStartVoidDiscarded'] });
-  expect((await page.evaluate(() => window.buildClcrSessionSnapshot())).inputs).toMatchObject({ Cl24DurationHours: '12', Cl24DurationSource: 'hours', ui_collectionStartVoidDiscarded_answer: 'no' });
+  expect(await page.evaluate(() => window.ClcrCollectionDuration.readFromDocument(document, { fieldId: 'CITDZM_collectionHours' }))).toMatchObject({ complete: false, knownProblems: ['collectionStartVoidDiscarded'] });
+  expect((await page.evaluate(() => window.buildClcrSessionSnapshot())).inputs).toMatchObject({ CITDZM_collectionHours: '12', CITDZM_collectionSource: 'hours', ui_collectionStartVoidDiscarded_answer: 'no' });
 });
 
 test('pojedyncza widoczna kolumna DZM zajmuje całą szerokość przy 1600 px', async ({
@@ -283,20 +282,21 @@ test('pojedyncza widoczna kolumna DZM zajmuje całą szerokość przy 1600 px', 
   const columns = page.locator('#clcrForm > .param-row > .param-col');
   await expect(columns).toHaveCount(2);
   await expect(columns.nth(0)).toBeHidden();
-  await expect(columns.nth(1)).toBeVisible();
+  await expect(columns.nth(1)).toBeHidden();
+  await expect(page.locator('#citDzmInputCard')).toBeVisible();
 
   const desktopLayout = await page.evaluate(() => {
-    const row = document.querySelector('#clcrForm > .param-row');
-    const dzm = document.getElementById('dzmSet');
+    const row = document.getElementById('clcrForm');
+    const dzm = document.getElementById('citDzmInputCard');
     const rowRect = row.getBoundingClientRect();
     const dzmRect = dzm.getBoundingClientRect();
     return {
-      visibleColumns: row.dataset.clcrVisibleColumns,
+      visibleColumns: [...row.querySelectorAll('.cit-dzm-input-card')].filter(card => card.checkVisibility()).length,
       leftDifference: Math.abs(rowRect.left - dzmRect.left),
       widthDifference: Math.abs(rowRect.width - dzmRect.width),
     };
   });
-  expect(desktopLayout.visibleColumns).toBe('1');
+  expect(desktopLayout.visibleColumns).toBe(1);
   expect(desktopLayout.leftDifference).toBeLessThanOrEqual(1);
   expect(desktopLayout.widthDifference).toBeLessThanOrEqual(2);
 });
@@ -310,10 +310,11 @@ test('DZM inicjalizuje pełną szerokość bez przewijania przy 320 px', async (
 
   const columns = page.locator('#clcrForm > .param-row > .param-col');
   await expect(columns.nth(0)).toBeHidden();
-  await expect(columns.nth(1)).toBeVisible();
+  await expect(columns.nth(1)).toBeHidden();
+  await expect(page.locator('#citDzmInputCard')).toBeVisible();
   const mobileLayout = await page.evaluate(() => {
-    const row = document.querySelector('#clcrForm > .param-row');
-    const dzm = document.getElementById('dzmSet');
+    const row = document.getElementById('clcrForm');
+    const dzm = document.getElementById('citDzmInputCard');
     const rowRect = row.getBoundingClientRect();
     const dzmRect = dzm.getBoundingClientRect();
     return {
@@ -340,15 +341,17 @@ test('po restore korekta zapisanej odpowiedzi DZM nie wraca do starego vaultu', 
     'collectionNoExtraVoids', 'collectionStorageFollowed',
   ];
   const applied = await page.evaluate(ids => {
-    const inputs = { currentVersion: 'advanced', formulaPicker: 'Cit_mgkg', age: '10', ageMonths: '0', weight: '60', U_Cit: '60', V24: '1000',
-      Cl24DurationHours: '24', Cl24DurationSource: 'captured',
+    const inputs = { currentVersion: 'pro', formulaPicker: 'Cit_mgkg', age: '10', ageMonths: '0', weight: '60',
+      CITDZM_inputMode: 'concentration', CITDZM_concentration: '1.2', CITDZM_concentrationUnit: 'mmol/L',
+      CITDZM_volume: '1000', CITDZM_volumeUnit: 'mL', CITDZM_reportingEntity: 'unknown',
+      CITDZM_collectionHours: '24', CITDZM_collectionSource: 'captured', CITDZM_durationNeedsConfirmation: 'false',
       collectionStartAt: '2026-07-27T08:00', collectionEndAt: '2026-07-28T08:00' };
     ids.forEach((id, index) => {
       const answer = index === 0 ? 'no' : index === 1 ? 'unknown' : 'yes';
       inputs[id] = answer === 'yes';
       inputs['ui_' + id + '_answer'] = answer;
     });
-    return window.applyClcrSessionSnapshot({ version: 2, currentVersion: 'advanced', selectedFormula: 'Cit_mgkg',
+    return window.applyClcrSessionSnapshot({ version: 2, currentVersion: 'pro', selectedFormula: 'Cit_mgkg',
       preserveAcrossVersions: true, preservedInputs: { ...inputs }, inputs },
     { source: 'e2e-dzm-restore', update: true, dispatchEvents: false, preserveAcrossVersions: true });
   }, qualityIds);
@@ -358,8 +361,8 @@ test('po restore korekta zapisanej odpowiedzi DZM nie wraca do starego vaultu', 
   expect(imported.inputs).toMatchObject({ ui_collectionStartVoidDiscarded_answer: 'no', ui_collectionFinalVoidIncluded_answer: 'unknown' });
   await expect(page.locator('#ui_collectionStartVoidDiscarded_answer')).toBeHidden();
   await expect(page.locator('#ui_collectionFinalVoidIncluded_answer')).toBeHidden();
-  await expect(page.locator('#Cl24DurationHours')).toHaveValue('24');
-  await expect(page.locator('#Cl24DurationSource')).toHaveValue('captured');
+  await expect(page.locator('#CITDZM_collectionHours')).toHaveValue('24');
+  await expect(page.locator('#CITDZM_collectionSource')).toHaveValue('captured');
   expect(await page.evaluate(() => window.canComputeFormula('Cit_mgkg'))).toBe(false);
   expect(await page.evaluate(() => window.ClcrVisitSave.collectActiveDatapoints(document, { formulaId: 'Cit_mgkg' }))).toEqual([]);
 
@@ -387,8 +390,8 @@ test('po restore korekta zapisanej odpowiedzi DZM nie wraca do starego vaultu', 
     expect(restored.vault['ui_' + id + '_answer']).toBe('yes');
   }
   expect(restored.points).toHaveLength(1);
-  expect(restored.points[0].rawValue ?? restored.points[0].valueNum).toBe(10);
-  expect(restored.points[0].capture.values).toMatchObject({ Cl24DurationHours: '24', Cl24DurationSource: 'captured', ui_collectionStartVoidDiscarded_answer: 'yes', ui_collectionFinalVoidIncluded_answer: 'yes' });
+  expect(restored.points[0].rawValue ?? restored.points[0].valueNum).toBe(1.2);
+  expect(restored.points[0].capture.values).toMatchObject({ CITDZM_collectionHours: '24', CITDZM_collectionSource: 'captured', ui_collectionStartVoidDiscarded_answer: 'yes', ui_collectionFinalVoidIncluded_answer: 'yes' });
   await expect(page.locator('#clcrDzmQualityGroup')).toBeHidden();
 });
 
@@ -523,11 +526,11 @@ test('Ca/Cit ma minimalny formularz i renderuje rzeczywisty wynik', async ({
 
 test('każdy widoczny przycisk Info ma dostępny i niepusty opis', async ({ page }) => {
   await openCalculator(page);
-  // The simplified collection form has two required inputs and an optional
-  // duration editor. Every visible help button still needs real source text.
-  await selectFromSearch(page, 'Cit_mgkg', 'Cit_mgkg');
+  // Measured clearance retains the shared collection form and its Info help.
+  // Citrate has a dedicated compact form with inline instructions instead.
+  await selectFromSearch(page, 'cl24', 'cl24');
   await page.locator('#clcrCommonDuration').getByRole('button', { name: 'Zmień', exact: true }).click();
-  for (const id of ['U_Cit', 'V24', 'Cl24DurationHours']) {
+  for (const id of ['Ucr', 'V24', 'Cl24DurationHours']) {
     await expect(page.locator('[data-clcr-field-id="' + id + '"] .clcr-info-button')).toBeVisible();
   }
   for (const details of await page.locator('details.clcr-context-details:visible, details.clcr-dzm-quality__details:visible').all()) {

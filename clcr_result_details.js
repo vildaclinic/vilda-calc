@@ -34,6 +34,9 @@
     if (formulaId === "K_mmol_d" && field.id === "K_volumeUnit") return true;
     if (formulaId === "KM_Cr" && /^URCR_/.test(field.id) && field.id !== "URCR_outputUnit") return true;
     if (formulaId === "Mg_Ca" && /^MGCA_/.test(field.id)) return !["MGCA_sameSpecimen", "MGCA_collectionProblem", "MGCA_collectionHours", "MGCA_durationKnown"].includes(field.id);
+    // Corrections must expose the recorded citrate mode, unit and mass basis.
+    // Receipt metadata and historical context remain immutable form internals.
+    if (formulaId === "Cit_mgkg" && field.id.startsWith("CITDZM_")) return ["CITDZM_inputMode", "CITDZM_concentration", "CITDZM_concentrationUnit", "CITDZM_volume", "CITDZM_volumeUnit", "CITDZM_collectionHours", "CITDZM_reportedValue", "CITDZM_reportedUnit", "CITDZM_reportingEntity"].includes(field.id);
     if (formulaId === "AGs") return ["S_Na", "S_Cl", "S_HCO3", "AGS_albuminEnabled", "S_Albumin", "S_Albumin_unit"].includes(field.id);
     if (formulaId === "K_frac") return ["U_K", "U_Na"].includes(field.id);
     if (formulaId === "B_Cr" && /^BCR_/.test(field.id)) return !["BCR_sameSpecimen", "BCR_collectionProblem", "BCR_collectionHours", "BCR_durationKnown"].includes(field.id);
@@ -170,6 +173,15 @@
             draft.description.fields = root.ClcrOxDzmPersistence.editableFields(nextValues);
             renderEditInputFields(nextValues, draft.description.fields);
             host.querySelector(nextValues.OXDZM_inputMode === "reported" ? "#editField-OXDZM_reportedValue" : "#editField-OXDZM_concentration")?.focus();
+          }
+        }
+        if (draft.description.snapshot.formulaId === "Cit_mgkg" && draft.description.snapshot.assessment.citDzmSnapshot) {
+          draft.description.values[control.dataset.clcrEditField] = control.type === "checkbox" ? control.checked : control.value;
+          if (control.dataset.clcrEditField === "CITDZM_inputMode") {
+            const nextValues = draft.description.values;
+            draft.description.fields = root.ClcrCitDzmPersistence.editableFields(nextValues);
+            renderEditInputFields(nextValues, draft.description.fields);
+            host.querySelector(nextValues.CITDZM_inputMode === "reported" ? "#editField-CITDZM_reportedValue" : "#editField-CITDZM_concentration")?.focus();
           }
         }
         if (draft.description.snapshot.formulaId === "Ca_Cr") {

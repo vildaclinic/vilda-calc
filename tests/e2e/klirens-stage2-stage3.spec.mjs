@@ -183,11 +183,40 @@ test('dorosły panel kamicy przelicza masę i mmol oraz stosuje EAU i odrębny p
     reference: { sourceUpper: 0.46, upperInclusive: false, sourceId: 'ERKNET_OXALEUROPE_2023' }
   });
   expect(oxalateSnapshot.reference.upper).toBeCloseTo(41.416054, 8);
-  await expect(stone).toContainText('mg kwasu cytrynowego/24 h');
+  // Cytryniany również mają jeden wynik dobowy, bez duplikatu w starym
+  // panelu. Adapter dawnego U_Cit zachowuje masę kwasu cytrynowego.
+  const citrate = page.locator('[data-clcr-series="Cit_total24"]');
+  await expect(citrate).toHaveCount(1);
+  await expect(page.locator('#elecInfo [data-clcr-series="Cit_total24"]')).toHaveCount(1);
+  await expect(page.locator('.result-box[data-clcr-formula="Cit_mgkg"]')).toHaveCount(1);
+  await expect(stone.locator('[data-clcr-formula="Cit_mgkg"]')).toHaveCount(0);
+  await expect(citrate.locator('.clcr-result-value')).toHaveText('300');
+  await expect(citrate.locator('.cit-dzm-result-unit')).toHaveText('mg/24 h');
+  await expect(citrate.locator('.clcr-result-reference-value')).toHaveText('≥365');
+  await expect(citrate.locator('.cit-dzm-reference-unit')).toHaveText('mg/24 h');
+  await expect(citrate).toHaveAttribute('data-clcr-tone', 'warning');
+  await expect(citrate).toHaveAttribute('data-clcr-assessment', 'outside');
+  const citrateSnapshot = JSON.parse(await citrate.getAttribute('data-clcr-cit-dzm-snapshot'));
+  expect(citrateSnapshot).toMatchObject({
+    valid: true,
+    rawValue: 300,
+    unit: 'mg/24 h',
+    reportingBasis: 'citric-acid',
+    status: 'low',
+    outOfRange: true,
+    referenceAvailable: true,
+    referenceActive: true,
+    policy: { id: 'eau-2026-citrate-dzm-v1' },
+    input: { concentration: '30', concentrationUnit: 'mg/dL', volume: '1000', hours: '24', reportingEntity: 'citric_acid', sex: 'F' },
+    reference: { sourceLower: 1.9, sourceUnit: 'mmol/24 h', lowerInclusive: true, operator: '≥', sourceId: 'EAU_UROLITHIASIS_2026' }
+  });
+  expect(citrateSnapshot.reference.lower).toBeCloseTo(365.03465, 8);
+  expect(citrateSnapshot.dailyMmol).toBeCloseTo(300 / 192.1235, 12);
+  expect(citrateSnapshot.dailyMmol).toBeLessThan(1.9);
   await expect(stone).toContainText('przekracza 8,0 mmol/24 h');
   await expect(stone).toContainText('poniżej 3,0 mmol/24 h');
   await expect(stone).toContainText('przekracza próg EAU 4,0 mmol/24 h');
-  await expect(stone).toContainText('poniżej progu EAU 1,9 mmol/24 h');
+  await expect(citrate).toContainText('Mała ilość cytrynianów osłabia ochronę przed tworzeniem złogów wapniowych');
   await expect(stone).toContainText('ogólnego celu EAU 2,5 L/24 h');
   await expect(stone).toContainText('wzorzec hiperkwasowego moczu');
   await expect(stone).not.toContainText('mg/kg/24 h');

@@ -84,12 +84,22 @@ test('real app iframe: Save → Shell Start/Badania keeps the same patient and s
   expect((await memory(calculator)).notes.filter(savedNote => savedNote.patientId === OTHER_PATIENT_ID)).toHaveLength(1);
 });
 
-test('all41 formulas/46 outputs remain visible, including old and daily oxalate, signed/bounded/native-axis records and ordinary labs', async ({ page }) => {
+test('all41 formulas/47 outputs remain visible, including old and daily oxalate/citrate, signed/bounded/native-axis records and ordinary labs', async ({ page }) => {
   await openCalculator(page);
   await applyAcr(page, '13.6');
   const seeded = await page.evaluate(pid => {
     const dictionary = window.ClcrUiModel.PARAM_DICTIONARY;
     const notes = dictionary.map((entry, index) => {
+      if (entry.id === 'Cit_total24') {
+        const values = { CITDZM_inputMode: 'reported', CITDZM_reportedValue: '1.9', CITDZM_reportedUnit: 'mmol/24h', CITDZM_collectionHours: '24', CITDZM_collectionSource: 'hours', age: '40', sex: 'F' };
+        const result = window.VildaClcrCitDzm.evaluate(window.VildaClcrCitDzm.inputFromValues(values), window.ClcrCitDzmReferenceData.DEFAULT_POLICY);
+        const dp = { id: entry.id, sourceFormulaId: entry.sourceFormulaId, testKey: entry.testKey };
+        if (!window.ClcrCitDzmPersistence.augmentDatapoint({ getAttribute: () => JSON.stringify(result) }, dp)) throw new Error('Fixture requires a complete citrate result');
+        const note = { id: 'fictional-daily-Cit_total24', rev: 1, ...window.ClcrSavedResults.buildPatientNotePayload(dp, { patientId: pid, clinicalDateISO: '2026-10-20' }) };
+        const snapshot = window.ClcrSavedCalculation.createSnapshot(dp, { capture: { values, fields: Object.keys(values).map(id => ({ id, label: id, type: 'text' })) }, clinicalDateISO: note.clinicalDateISO });
+        note.body += '\n\n' + window.ClcrSavedCalculation.serializeSnapshot(snapshot, note);
+        return note;
+      }
       const value = entry.id === 'AGu_spot' ? -15 : /^pH/.test(entry.id) ? 6.5 : entry.unit === 'mL/min/1,73 m²' ? 83 : index + 1;
       return { id: `fictional-legacy-${entry.id}`, patientId: pid, rev: 1, category: 'wynik-klirens',
         clinicalDateISO: '2026-10-20', title: entry.label, body: `Kalkulator klirensu · ${entry.testKey}`,
@@ -107,8 +117,8 @@ test('all41 formulas/46 outputs remain visible, including old and daily oxalate,
     window.__clcrRecordFixture.addSeries({ testKey: 'tsh', test: 'TSH (tyreotropina)', points: [{ noteId: ordinary.id, dateISO: ordinary.clinicalDateISO, valueNum: 4.2, unit: 'mIU/L' }] });
     return { ids: notes.map(note => note.id), outputs: dictionary.map(entry => entry.id), formulas: [...new Set(dictionary.map(entry => entry.sourceFormulaId))] };
   }, PATIENT_ID);
-  expect(seeded.outputs).toHaveLength(46);
-  expect(seeded.outputs).toEqual(expect.arrayContaining(['Ox_mgkg', 'Ox_total24']));
+  expect(seeded.outputs).toHaveLength(47);
+  expect(seeded.outputs).toEqual(expect.arrayContaining(['Ox_mgkg', 'Ox_total24', 'Cit_mgkg', 'Cit_total24']));
   expect(seeded.formulas).toHaveLength(41);
   await page.locator('#clcrOpenCardBtn').click();
   await showClcrResults(page, 'table');
@@ -117,9 +127,19 @@ test('all41 formulas/46 outputs remain visible, including old and daily oxalate,
   expect(new Set(shown)).toEqual(new Set(seeded.ids));
   await expect(clcrValue(page, 'fictional-censored-acr')).toContainText('<30');
   await expect(clcrNorm(page, 'fictional-same-day-b')).toHaveText('—');
+  await expect(clcrValue(page, 'fictional-daily-Cit_total24')).toContainText('1,9');
+  await expect(clcrNorm(page, 'fictional-daily-Cit_total24')).toHaveText('≥1,9 mmol/24 h');
+  await expect(clcrNorm(page, 'fictional-legacy-Cit_mgkg')).toHaveText('—');
   await showBadaniaView(page, 'charts');
   await expect(clcrPoint(page, 'fictional-legacy-AGu_spot')).toHaveAttribute('data-value', '-15');
   await expect(clcrPoint(page, 'fictional-censored-acr')).toHaveCount(0);
+  const citrateDaily = clcrCards(page).and(page.locator('[data-parameter-key="clcr:Cit_total24"]'));
+  const citrateLegacy = clcrCards(page).and(page.locator('[data-parameter-key="clcr:Cit_mgkg"]'));
+  await expect(citrateDaily).toHaveCount(1);
+  await expect(citrateLegacy).toHaveCount(1);
+  await expect(citrateDaily.locator('.vilda-lab-hist-result-unit')).toHaveText('mmol/24 h');
+  await expect(citrateLegacy.locator('.vilda-lab-hist-result-unit')).toHaveText('mg/kg/24 h');
+  await expect(clcrPoint(page, 'fictional-daily-Cit_total24')).toHaveAttribute('data-value', '1.9');
   const acrSeries = clcrCards(page).and(page.locator('[data-parameter-key="clcr:ACR"]'));
   await expect(acrSeries).toHaveCount(2);
   expect((await acrSeries.locator('.vilda-lab-hist-result-unit').allTextContents()).sort()).toEqual(['mg/g', 'mg/mmol']);

@@ -143,6 +143,52 @@ describe('Search covers the complete Klirens persisted-output registry', () => {
     expect(old.note.id).not.toBe(current.note.id);
   });
 
+  it.each([
+    { variant: 'registry', mode: 'concentration', raw: 1.8, unit: 'mmol/24 h', reference: true, outOfRange: false, basis: 'citrate-amount', status: 'within' },
+    { variant: 'typed-concentration-adult-female', mode: 'concentration', raw: 1.8, unit: 'mmol/24 h', reference: true, outOfRange: true, basis: 'citrate-amount', status: 'low' },
+    { variant: 'typed-concentration-child', mode: 'concentration', raw: 1.8, unit: 'mmol/24 h', reference: true, outOfRange: false, basis: 'citrate-amount', status: 'within' },
+    { variant: 'typed-concentration-child-no-bsa', mode: 'concentration', raw: 1.8, unit: 'mmol/24 h', reference: false, outOfRange: null, basis: 'citrate-amount', status: 'unassessed' },
+    { variant: 'typed-concentration-infant', mode: 'concentration', raw: 1.8, unit: 'mmol/24 h', reference: false, outOfRange: null, basis: 'citrate-amount', status: 'unassessed' },
+    { variant: 'typed-concentration-mass-unknown', mode: 'concentration', raw: 30, unit: 'mg/24 h', reference: false, outOfRange: null, basis: 'unknown', status: 'unassessed' },
+    { variant: 'typed-concentration-mass-ion', mode: 'concentration', raw: 600, unit: 'mg/24 h', reference: true, outOfRange: false, basis: 'citrate-ion', status: 'within' },
+    { variant: 'typed-reported-mass-acid', mode: 'reported', raw: 300, unit: 'mg/24 h', reference: true, outOfRange: true, basis: 'citric-acid', status: 'low' },
+    { variant: 'typed-reported-molar-lower-bound', mode: 'reported', raw: 1.7, unit: 'mmol/24 h', reference: true, outOfRange: false, basis: 'citrate-amount', status: 'within' },
+    { variant: 'typed-reported-molar-below-rounded-bound', mode: 'reported', raw: 1.7, unit: 'mmol/24 h', reference: true, outOfRange: true, basis: 'citrate-amount', status: 'low' },
+    { variant: 'typed-reported-child-boundary', mode: 'reported', raw: 1.9, unit: 'mmol/24 h', reference: true, outOfRange: true, basis: 'citrate-amount', status: 'boundary' },
+    { variant: 'typed-reported-molar-no-patient', mode: 'reported', raw: 1.8, unit: 'mmol/24 h', reference: false, outOfRange: null, basis: 'citrate-amount', status: 'unassessed' },
+    { variant: 'typed-reported-unknown-duration', mode: 'reported', raw: 1.8, unit: 'mmol/24 h', reference: false, outOfRange: null, basis: 'citrate-amount', status: 'unassessed' },
+    { variant: 'exact-zero', mode: 'concentration', raw: 0, unit: 'mmol/24 h', reference: true, outOfRange: null, basis: 'citrate-amount', status: 'zero' },
+  ])('Cit DZM $variant: search uses the actual frozen amount and lower-bound policy', expected => {
+    const item = cases.find(item => item.parameterKey === 'Cit_total24' && item.variant === expected.variant);
+    expect(item).toBeDefined();
+    const saved = root.ClcrSavedCalculation.readSaved(item.note), snapshot = saved.snapshot.assessment.citDzmSnapshot;
+    expect(saved.valid).toBe(true);
+    expect(saved).toMatchObject({ rawValue: expected.raw, unit: expected.unit, parameterKey: 'Cit_total24' });
+    expect(snapshot).toMatchObject({ valid: true, formulaId: 'Cit_mgkg', outputKey: 'Cit_total24', input: { mode: expected.mode }, status: expected.status,
+      referenceAvailable: expected.reference, outOfRange: expected.outOfRange, reportingBasis: expected.basis });
+    const model = root.ClcrNotesView.model(item.note, { patientId: PATIENT });
+    expect(model).toMatchObject({ unit: expected.unit, display: snapshot.presentation.valueText, outOfRange: expected.outOfRange, interpretation: snapshot.interpretation });
+    expect(model.norm).toBe(expected.reference ? snapshot.presentation.referenceText : '');
+    if (expected.reference) expect(snapshot.reference).toMatchObject({ kind: 'lower', upper: null, sourceId: 'EAU_UROLITHIASIS_2026' });
+    if (!expected.reference || expected.status === 'zero') expect(model).toMatchObject({ status: 'Bez zapisanej oceny', tone: 'neutral' });
+    if (expected.variant === 'typed-reported-child-boundary') expect(snapshot.reference).toMatchObject({ lower: 1.9, lowerInclusive: false, operator: '>', bsaM2: 1.73 });
+    if (expected.variant === 'typed-reported-molar-lower-bound') expect(snapshot.reference).toMatchObject({ lower: 1.7, lowerInclusive: true, operator: '≥' });
+    if (expected.variant === 'typed-reported-unknown-duration') expect(snapshot.input).toMatchObject({ hours: '', durationSource: 'historical-missing', durationNeedsConfirmation: true });
+  });
+
+  it('keeps the historical citrate mg/kg output separate from the typed daily amount', () => {
+    const old = cases.find(item => item.parameterKey === 'Cit_mgkg' && item.variant === 'registry');
+    const current = cases.find(item => item.parameterKey === 'Cit_total24' && item.variant === 'registry');
+    const saved = root.ClcrSavedCalculation.readSaved(old.note);
+    expect(saved.valid).toBe(true);
+    expect(saved.snapshot.parameterKey).toBe('Cit_mgkg');
+    expect(saved.snapshot.assessment.citDzmSnapshot).toBeUndefined();
+    expect(saved.rawValue).toBe(1.5);
+    expect(old.expected.model).toMatchObject({ unit: 'mg/kg/24 h', norm: '', tone: 'neutral' });
+    expect(current.expected.model.unit).toBe('mmol/24 h');
+    expect(old.note.id).not.toBe(current.note.id);
+  });
+
   it.each(cases)('$key: real persisted output matches Notes in both preview and searchable text', async item => {
     const before = JSON.stringify(item.note);
     expect(root.ClcrSavedCalculation.readSaved(item.note).valid).toBe(true);

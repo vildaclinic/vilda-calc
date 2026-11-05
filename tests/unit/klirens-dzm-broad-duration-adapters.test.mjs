@@ -18,16 +18,17 @@ function actualFunction(name) {
   return source.slice(start, next < 0 ? undefined : next);
 }
 
-function harness(hours, { absent = false } = {}) {
+function harness(hours, { absent = false, inputs = {} } = {}) {
   const w = { ClcrUiWorkflow: { state: { legacyBroad: true } } };
   for (const file of ['clcr_collection_duration.js', 'clcr_extended_egfr.js',
     'clcr_mg_dzm_reference_data.js', 'clcr_mg_dzm.js',
     'clcr_ca_dzm_reference_data.js', 'clcr_ca_dzm.js',
     'clcr_po4_dzm_reference_data.js', 'clcr_po4_dzm.js',
-    'clcr_ua_reference_data.js', 'clcr_ua.js']) loadBrowserScript(file, w);
+    'clcr_ua_reference_data.js', 'clcr_ua.js',
+    'clcr_cit_dzm_reference_data.js', 'clcr_cit_dzm.js']) loadBrowserScript(file, w);
   const values = { age: '45', ageMonths: '0', weight: '60', height: '165', sex: 'F',
-    U_Mg: '100', U_Ca: '2.5', U_UA: '20', U_PO4: '50', V24: '1000',
-    Cl24DurationSource: absent ? 'assumed-24h' : 'hours', ...(!absent ? { Cl24DurationHours: hours } : {}) };
+    U_Mg: '100', U_Ca: '2.5', U_UA: '20', U_PO4: '50', U_Cit: '5', V24: '1000',
+    Cl24DurationSource: absent ? 'assumed-24h' : 'hours', ...(!absent ? { Cl24DurationHours: hours } : {}), ...inputs };
   const doc = { getElementById: id => Object.hasOwn(values, id) ? { value: values[id], type: 'text' } : null };
   const evaluate = name => new Function('window', 'document', '$',
     `${actualFunction('readClcrCollectionDurationMinutes')}\n${actualFunction(name)}\nreturn ${name}();`)(w, doc, id => doc.getElementById(id));
@@ -41,6 +42,7 @@ describe('Actual generic readiness gate agrees with the shared duration module',
     for (const file of ['clcr_collection_duration.js', 'clcr_extended_egfr.js', 'clcr_saved_legacy_calculator.js',
       'clcr_protein_dzm_data.js', 'clcr_protein_dzm.js',
       'clcr_ox_dzm_reference_data.js', 'clcr_ox_dzm.js',
+      'clcr_cit_dzm_reference_data.js', 'clcr_cit_dzm.js',
       'clcr_potassium_dzm_data.js', 'clcr_potassium_dzm.js']) loadBrowserScript(file, w);
     const values = { age: '45', weight: '60', height: '165', V24: '1440', U_Na: '50', U_K: '20',
       U_PO4: '50', U_Prot: '1000', U_Ox: '5', U_Cit: '5', pH24: '5.5',
@@ -49,10 +51,10 @@ describe('Actual generic readiness gate agrees with the shared duration module',
       ...(knownProblem ? { ui_collectionNoMissedVoids_answer: 'no' } : {}) };
     const doc = { getElementById: id => Object.hasOwn(values, id)
       ? { value: values[id], type: 'text', tagName: id === 'oxalateReportingEntity' ? 'SELECT' : 'INPUT' } : null };
-    return new Function('window', 'document', '$', 'FORMULAS', `${actualFunction('readClcrCollectionDurationMinutes')}\n${actualFunction('evaluateClcrProteinDzm')}\n${actualFunction('evaluateClcrOxDzm')}\n${actualFunction('evaluateClcrSodiumDzm')}\n${actualFunction('evaluateClcrPotassiumDzm')}\n${actualFunction('canComputeFormula')}\nreturn canComputeFormula(${JSON.stringify(formula)});`)(w, doc, id => doc.getElementById(id), formulas);
+    return new Function('window', 'document', '$', 'FORMULAS', `${actualFunction('readClcrCollectionDurationMinutes')}\n${actualFunction('evaluateClcrProteinDzm')}\n${actualFunction('evaluateClcrOxDzm')}\n${actualFunction('evaluateClcrCitDzm')}\n${actualFunction('evaluateClcrSodiumDzm')}\n${actualFunction('evaluateClcrPotassiumDzm')}\n${actualFunction('canComputeFormula')}\nreturn canComputeFormula(${JSON.stringify(formula)});`)(w, doc, id => doc.getElementById(id), formulas);
   }
   it.each(timed)('%s accepts blank/default and explicit valid duration, rejects explicit invalid values', formula => {
-    expect(formulas.find(item => item.id === formula).requires).toContain(formula === 'Ox_mgkg' ? 'OXDZM_collectionHours' : 'Cl24DurationHours');
+    expect(formulas.find(item => item.id === formula).requires).toContain(formula === 'Ox_mgkg' ? 'OXDZM_collectionHours' : formula === 'Cit_mgkg' ? 'CITDZM_collectionHours' : 'Cl24DurationHours');
     if (formula === 'K_mmol_d') expect(formulas.find(item => item.id === formula).requires).toContain('K_collectionHours');
     if (formula === 'Na_mmol_d') expect(formulas.find(item => item.id === formula).requires).toContain('Na_collectionHours');
     for (const hours of ['', '24', '12']) expect(canCompute(formula, hours), `${formula}/${hours}`).toBe(true);
@@ -71,11 +73,18 @@ describe('Actual generic readiness gate agrees with the shared duration module',
     expect(canCompute('Na_mmol_d', '24', false, 'invalid')).toBe(false);
     expect(canCompute('Na_mmol_d', '', false, 'invalid')).toBe(false);
   });
-  it('oxalate broad adapter preserves historical missing and explicitly invalid clock provenance', () => {
-    expect(canCompute('Ox_mgkg', '', false, 'historical-missing')).toBe(false);
-    expect(canCompute('Ox_mgkg', '24', false, 'invalid')).toBe(false);
-    expect(canCompute('Ox_mgkg', '', false, 'invalid')).toBe(false);
+  it.each(['Ox_mgkg', 'Cit_mgkg'])('%s broad adapter preserves historical missing and explicitly invalid clock provenance', formula => {
+    expect(canCompute(formula, '', false, 'historical-missing')).toBe(false);
+    expect(canCompute(formula, '24', false, 'invalid')).toBe(false);
+    expect(canCompute(formula, '', false, 'invalid')).toBe(false);
   });
+});
+
+it('legacy citrate adapter preserves the citric-acid amount without dividing it by body weight', () => {
+  const result = harness('24', { inputs: { U_Cit: '5', V24: '1500', weight: '60' } }).evaluate('evaluateClcrCitDzm');
+  expect(result).toMatchObject({ valid: true, rawValue: 75, dailyMg: 75, unit: 'mg/24 h',
+    outputKey: 'Cit_total24', input: { concentrationUnit: 'mg/dL', reportingEntity: 'citric_acid' } });
+  expect(result.dailyMmol).toBeCloseTo(75 / 192.1235, 14);
 });
 
 describe('Actual result cleanup accepts IDs and DOM nodes', () => {
@@ -144,6 +153,7 @@ describe.each([
   ['Ca', 'evaluateClcrCaDzm', 'CA_collectionHours'],
   ['UA', 'evaluateClcrUa', 'UA_collectionHours'],
   ['PO4', 'evaluateClcrPo4Dzm', 'PO4_collectionHours'],
+  ['Cit', 'evaluateClcrCitDzm', 'CITDZM_collectionHours'],
 ])('Actual broad %s adapter retains shared duration validation', (_label, name, field) => {
   it.each(['0', '-1', 'abc'])('rejects explicit invalid common hours %s without assuming 24', hours => {
     const h = harness(hours), result = h.evaluate(name);
