@@ -197,3 +197,50 @@ test('Start i ponowne otwarcie zachowują miejsce w Bazie tylko w tej samej odbl
   await expect(database.locator('.pt-row')).toHaveCount(24);
   expect(await database.locator('.pt-scroll').evaluate(node => node.scrollTop)).toBe(0);
 });
+
+test('desktop: nagłówki formularza pozostają pod Bazą, a pełne Przypomnienia nadal się otwierają', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  await createFictionalVault(page);
+  const inlineHeader = page.locator('#remindersInline .vb22-head');
+  await expect(inlineHeader).toBeVisible();
+  const background = page.locator('body > .desktop-layout > .main-content');
+  const originalIsolation = await background.evaluate(node => getComputedStyle(node).isolation);
+
+  for (const width of [1440, 1920]) {
+    await page.setViewportSize({ width, height: 1000 });
+    await openDatabase(page, page);
+    await expect(page.locator('.pt-row')).toHaveCount(2);
+    await navigationIsAccessible(page, page);
+    // isVisible alone accepts an overlapped element. Check the exact region
+    // where the local reminder heading used to punch through the database.
+    const overlap = await inlineHeader.evaluate(node => {
+      const box = node.getBoundingClientRect();
+      const x = box.left + box.width / 2, y = box.top + box.height / 2;
+      const foreground = document.elementFromPoint(x, y);
+      return { width: box.width, height: box.height, inViewport: y >= 0 && y < innerHeight,
+        databaseOnTop: Boolean(foreground?.closest('.vilda-auth-root.vilda-auth-database')) };
+    });
+    expect(overlap.width).toBeGreaterThan(100);
+    expect(overlap.height).toBeGreaterThan(20);
+    expect(overlap.inViewport).toBe(true);
+    expect(overlap.databaseOnTop, 'osadzony nagłówek nie przebija nad Bazą').toBe(true);
+    await sortuj(page, 'name-desc');
+    await expect(page.locator('.pt-sortopt[data-s="name-desc"]')).toHaveAttribute('aria-checked', 'true');
+
+    await page.locator('#vildaRemindersBtn').click();
+    const full = page.locator('dialog.vb22-modal');
+    await expect(full).toBeVisible();
+    await full.locator('.vb22-tabs [data-tab="search"]').click();
+    await expect(full.locator('.vb22-tabs [data-tab="search"]')).toHaveAttribute('aria-pressed', 'true');
+    await full.locator('.vb22-exit').click();
+    await expect(full).toBeHidden();
+    await expect(page.locator('.vilda-patient-database')).toBeVisible();
+    await page.locator('.pt-home').click();
+    await expect(page.locator('.vilda-patient-database')).toHaveCount(0);
+    await expect.poll(() => background.evaluate(node => getComputedStyle(node).isolation)).toBe(originalIsolation);
+    expect(await inlineHeader.evaluate(node => {
+      const box = node.getBoundingClientRect();
+      return node.contains(document.elementFromPoint(box.left + box.width / 2, box.top + box.height / 2));
+    }), 'po powrocie osadzona karta ponownie jest dostępna').toBe(true);
+  }
+});

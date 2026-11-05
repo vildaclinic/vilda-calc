@@ -32,6 +32,13 @@ html.vilda-patient-database-open:not(.vilda-embedded) #scrollTopBtn {
   pointer-events: none !important;
 }
 
+/* The inactive form contains local headers with the legacy header z-index.
+   Keep them in the background's own stacking context while the database is
+   open. Global chrome stays outside; modal dialogs keep their top layer. */
+html.vilda-patient-database-open:not(.vilda-embedded) body > .desktop-layout > .main-content {
+  isolation: isolate;
+}
+
 .vilda-auth-root[data-busy="1"] .vilda-auth-card {
   pointer-events: none;
   opacity: var(--opacity-slider-tick)
