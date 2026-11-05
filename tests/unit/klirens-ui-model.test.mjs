@@ -625,7 +625,11 @@ describe('Klirens — centralny model przepływu UI', () => {
     const cases = [
       ['ACR', 'ACR'],
       ['eGFR dziecko', 'ckid_u25'],
-      ['wapn', 'CaCr_spot'],
+      // Ca/Cit and Ca/Cr have equal analyte scores; their visible labels
+      // determine the alphabetical tie after naming the audited DZM formula.
+      ['wapn', 'Ca_Cit'],
+      ['Ca/Cit', 'Ca_Cit'],
+      ['wapń cytryniany', 'Ca_Cit'],
       ['wapń kreatynina', 'CaCr_spot'],
       ['calcium creatinine', 'CaCr_spot'],
       ['Ca/Cr DZM', 'Ca_Cr'],

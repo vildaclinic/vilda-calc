@@ -19,6 +19,8 @@ function runtime(initial = {}) {
     let value = allowed.includes(controls[id].value) ? controls[id].value : '';
     Object.defineProperty(controls[id], 'value', { enumerable: true, get: () => value, set: next => { value = allowed.includes(next) ? next : ''; } });
   }
+  // Browser controls are EventTargets; this fixture exercises restore only.
+  Object.values(controls).forEach(control => { control.addEventListener = () => {}; });
   const form = { querySelectorAll: () => Object.values(controls) };
   const context = { window: { currentVersion: 'spot', addEventListener() {} }, document: { getElementById: id => id === 'clcrForm' ? form : controls[id] || null, querySelector: () => null, addEventListener() {} } };
   vm.createContext(context); vm.runInContext(source, context);

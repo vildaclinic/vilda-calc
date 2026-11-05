@@ -10,6 +10,8 @@ function runtime(initial = {}) {
     spotDiureticUse: true, ui_spotDiureticUse_answer: 'yes', spotKnownCKD: true, ui_spotKnownCKD_answer: 'yes',
     suspectedAKI: true, ui_suspectedAKI_answer: 'yes', creatinineState: 'rapidlyChanging', Cl24DurationHours: '', Cl24DurationSource: '', Cl24CollectionProblem: false, ...initial };
   const controls = Object.fromEntries(Object.entries(values).map(([id, value]) => [id, typeof value === 'boolean' ? { id, tagName: 'INPUT', type: 'checkbox', checked: value } : { id, tagName: id.endsWith('_unit') || id === 'creatinineState' ? 'SELECT' : 'INPUT', type: id.endsWith('_unit') || id === 'creatinineState' ? 'select-one' : 'text', value }]));
+  // Browser controls are EventTargets; this fixture exercises restore only.
+  Object.values(controls).forEach(control => { control.addEventListener = () => {}; });
   const form = { querySelectorAll: () => Object.values(controls) };
   const context = { window: { currentVersion: 'spot', addEventListener() {} }, document: { getElementById: id => id === 'clcrForm' ? form : controls[id] || null, querySelector: () => null, addEventListener() {} } };
   vm.createContext(context); vm.runInContext(source, context);

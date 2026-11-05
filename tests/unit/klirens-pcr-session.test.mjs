@@ -14,6 +14,8 @@ const defaults = {
 function migration(initialControls = {}) {
   const controls = Object.fromEntries(Object.entries(initialControls).map(([id, value]) => [id,
     typeof value === 'boolean' ? { type: 'checkbox', checked: value } : { type: 'text', value }]));
+  // Browser controls are EventTargets; this fixture exercises restore only.
+  Object.values(controls).forEach(control => { control.addEventListener = () => {}; });
   const context = { window: {}, document: { getElementById: id => controls[id] || null } };
   vm.createContext(context);
   vm.runInContext(migrationSource, context);
@@ -233,6 +235,8 @@ function sessionRuntime(initial = {}) {
   };
   const controls = Object.fromEntries(Object.entries(values).map(([id, value]) => [id,
     typeof value === 'boolean' ? { id, type: 'checkbox', checked: value } : { id, type: 'text', value }]));
+  // Browser controls are EventTargets; this fixture exercises restore only.
+  Object.values(controls).forEach(control => { control.addEventListener = () => {}; });
   const form = { querySelectorAll: () => Object.values(controls) };
   const context = {
     window: { currentVersion: 'spot', addEventListener() {} },

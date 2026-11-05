@@ -184,6 +184,8 @@ function sessionRuntime() {
     collectionNoExtraVoids: false, collectionStorageFollowed: false,
   }).map(([id, value]) => [id, typeof value === 'boolean'
     ? { id, type: 'checkbox', checked: value } : { id, type: 'text', value }]));
+  // Browser controls are EventTargets; this fixture exercises restore only.
+  Object.values(controls).forEach(control => { control.addEventListener = () => {}; });
   const form = { querySelectorAll: () => Object.values(controls) };
   const context = {
     window: { currentVersion: 'basic', addEventListener() {} },

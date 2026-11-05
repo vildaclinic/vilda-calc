@@ -46,7 +46,7 @@ const byId = id => model.PARAM_DICTIONARY.find(entry => entry.id === id);
 describe('Klirens — słownik parametrów karty pacjenta (Faza 0)', () => {
   it('wystawia kompletny, spójny słownik i grupy w zatwierdzonej kolejności', () => {
     expect(Array.isArray(model.PARAM_DICTIONARY)).toBe(true);
-    expect(model.PARAM_DICTIONARY).toHaveLength(47);
+    expect(model.PARAM_DICTIONARY).toHaveLength(48);
     expect(model.PARAM_GROUPS.map(group => group.id)).toEqual(
       EXPECTED_GROUP_ORDER
     );
@@ -76,6 +76,12 @@ describe('Klirens — słownik parametrów karty pacjenta (Faza 0)', () => {
     expect(model.getParam('Cit_mgkg')).toMatchObject({ unit: 'mg/kg/24 h', sourceFormulaId: 'Cit_mgkg' });
     expect(model.getParam('Cit_total24')).toMatchObject({ unit: 'mmol/24 h', sourceFormulaId: 'Cit_mgkg', label: 'Dobowe wydalanie cytrynianów' });
     expect(model.getParam('Cit_total24').testKey).not.toBe(model.getParam('Cit_mgkg').testKey);
+  });
+
+  it('zachowuje odrębne serie masowego i molowego Ca/Cit z jedną formułą źródłową', () => {
+    expect(model.getParam('Ca_Cit')).toMatchObject({ unit: 'mg/mg', sourceFormulaId: 'Ca_Cit' });
+    expect(model.getParam('Ca_Cit_mol')).toMatchObject({ unit: 'mmol/mmol', sourceFormulaId: 'Ca_Cit' });
+    expect(model.getParam('Ca_Cit_mol').testKey).not.toBe(model.getParam('Ca_Cit').testKey);
   });
 
   it('grupuje pozycje przez getParamGroups() bez gubienia i dublowania serii', () => {
