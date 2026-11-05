@@ -55,7 +55,7 @@
     const category = available ? text(point.category) : "";
     const outOfRange = available && !(["Mg_Ca", "PO4_Cr", "B_Cr", "K_frac"].includes(point?.sourceFormulaId) && !norm) && typeof point.outOfRange === "boolean" ? point.outOfRange : null;
     const tone = available && ["success", "normal", "warning", "danger"].includes(point.tone) ? point.tone : "neutral";
-    const ratioCategory = ["Ca_Cr", "CaCr_spot"].includes(point?.sourceFormulaId)
+    const ratioCategory = point?.sourceFormulaId === "Ca_Cit" ? ({ within: "Nie przekracza górnej granicy", above: "Powyżej górnej granicy" })[category] : ["Ca_Cr", "CaCr_spot"].includes(point?.sourceFormulaId)
       ? ({ below: "Poniżej normy", within: "W zakresie", above: "Powyżej normy" })[category] : "";
     const status = ratioCategory || category || (criterion ? "Ocena kryterium" : outOfRange === true ? "Wynik poza zakresem" : outOfRange === false ? "W zakresie" : "Bez zapisanej oceny");
     const interpretation = available ? text(point.interpretation) : "Zapisana ocena jest niedostępna. Otwórz szczegóły pomiaru.";

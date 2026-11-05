@@ -243,7 +243,8 @@
       result.warning = 'Zapisane kryterium odniesienia' + (normText ? ': ' + normText : '');
       result.warningKind = 'reference';
     } else if (saved.status === 'recorded' && ((saved.sourceFormulaId === 'Ox_mgkg' && ['Ox_total24', 'clcr:Ox_total24'].indexOf(saved.parameterKey) !== -1)
-      || (saved.sourceFormulaId === 'Cit_mgkg' && ['Cit_total24', 'clcr:Cit_total24'].indexOf(saved.parameterKey) !== -1))
+      || (saved.sourceFormulaId === 'Cit_mgkg' && ['Cit_total24', 'clcr:Cit_total24'].indexOf(saved.parameterKey) !== -1)
+      || saved.sourceFormulaId === 'Ca_Cit')
       && saved.assessment === 'unassessed' && saved.tone === 'neutral' && text(saved.interpretation)) {
       // The frozen daily result already explains why its reference is limited.
       // Keep that explanation neutral; never infer it from today's patient.

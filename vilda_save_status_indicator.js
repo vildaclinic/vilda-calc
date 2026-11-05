@@ -730,6 +730,150 @@ function normalizeProteinCreatinineStatusInputs(session){
   if(Object.keys(context).length)values.BCR_contextSemantics=context;
   else delete values.BCR_contextSemantics;
 }
+// Ca/Cit selectors state the units actually entered on the report. Preserve
+// their meaning before the generic Unit-suffix cleanup, especially because
+// mass and molar citrate ratios cannot be converted without a known basis.
+// Everything below operates only on detached save-comparison data.
+function normalizeCalciumCitrateStatusInputs(session){
+  if(!session||typeof session!=="object"||Array.isArray(session))return;
+  var values=session.inputs,preserved=session.preservedInputs;
+  var selected=session.selectedFormula||values&&values.formulaPicker||preserved&&preserved.formulaPicker;
+  if((!values||typeof values!=="object"||Array.isArray(values))&&selected==="Ca_Cit"&&preserved&&typeof preserved==="object"&&!Array.isArray(preserved))values=session.inputs=Object.assign({},preserved);
+  if(!values||typeof values!=="object"||Array.isArray(values))return;
+  if(selected==="Ca_Cit"&&preserved&&typeof preserved==="object"&&!Array.isArray(preserved))values=session.inputs=Object.assign({},preserved,values);
+  var own=function(key){return Object.prototype.hasOwnProperty.call(values,key)};
+  var present=function(value){return value!==null&&value!==undefined&&!(typeof value==="string"&&!value.trim())};
+  var canonicalUnit=function(value){return ({"g/g":"mg/mg","mol/mol":"mmol/mmol","mg/dl":"mg/dL","μmol/L":"µmol/L","umol/L":"µmol/L"})[value]||value};
+  var fields=["CACIT_inputMode","CACIT_calcium","CACIT_calciumUnit","CACIT_citrate","CACIT_citrateUnit","CACIT_reportedValue","CACIT_reportedUnit"];
+  var legacy=selected==="Ca_Cit"&&!Object.keys(values).some(function(key){return key.indexOf("CACIT_")===0})&&(present(values.U_Ca)||present(values.U_Cit));
+  if(legacy){
+    values.CACIT_inputMode="concentration";
+    if(own("U_Ca"))values.CACIT_calcium=values.U_Ca;
+    if(own("U_Cit"))values.CACIT_citrate=values.U_Cit;
+    values.CACIT_calciumUnit="mmol/L";values.CACIT_citrateUnit="mg/dL";
+    ["U_Ca","U_Cit"].forEach(function(key){if(typeof values[key]==="number")values[key]=String(values[key])});
+    values.CACIT_reportingEntity="citric_acid";
+  }
+  var measured=legacy||["CACIT_calcium","CACIT_citrate","CACIT_reportedValue"].some(function(id){return present(values[id])});
+  if(selected==="Ca_Cit"){
+    var belongs=function(value){return value&&typeof value==="object"&&!Array.isArray(value)&&!["sourceFormula","sourceFormulaId","formulaId"].some(function(key){return Object.prototype.hasOwnProperty.call(value,key)&&value[key]!=="Ca_Cit"})};
+    var snapshots=[session.caCitSnapshot,session.context&&session.context.caCitSnapshot,session.sourceContext&&session.sourceContext.caCitSnapshot].map(function(value){return value&&value.snapshot||value}).filter(function(value){return belongs(value)&&value.schema==="clcr-ca-cit"&&value.version===1&&value.sourceFormula==="Ca_Cit"});
+    var contexts=[values].concat(snapshots.reduce(function(all,value){return all.concat(value.context,value.input)},[]),[session.context&&session.context.caCit,session.sourceContext&&session.sourceContext.caCit,session.context,session.sourceContext]).filter(belongs);
+    var aliases={sameSpecimen:["concentrationSameSpecimen","sameSpecimen","sameUrineSample"],collectionProblem:["collectionProblem"],
+      collectionHours:["collectionHours","durationHours","hours"],durationKnown:["durationKnown"],sampleType:["sampleType","specimen"],sampleSource:["sampleSource"],durationSource:["durationSource"]};
+    Object.keys(aliases).forEach(function(key){
+      var id="CACIT_"+key;
+      if(own(id))return;
+      contexts.some(function(context){
+        return [context,context.knownFacts,context.clock].filter(belongs).some(function(source){
+          var sourceKey=Object.prototype.hasOwnProperty.call(source,id)?id:aliases[key].find(function(alias){return Object.prototype.hasOwnProperty.call(source,alias)});
+          if(sourceKey===undefined)return false;
+          var raw=source[sourceKey];values[id]=raw==null?"":["string","number","boolean"].indexOf(typeof raw)!==-1?String(raw):"";return true;
+        });
+      });
+    });
+    var negativeProtocol=["collectionStartVoidDiscarded","collectionFinalVoidIncluded","collectionNoMissedVoids","collectionNoSpillage","collectionNoExtraVoids","collectionStorageFollowed"];
+    if(!own("CACIT_collectionProblem")&&(values.Cl24CollectionProblem===true||values.Cl24CollectionProblem==="true"||negativeProtocol.some(function(id){return values["ui_"+id+"_answer"]==="no"})||contexts.some(function(context){var facts=context.knownFacts;return facts&&typeof facts==="object"&&(facts.Cl24CollectionProblem===true||facts.knownIncomplete===true||negativeProtocol.some(function(id){return facts[id]===false}))})))values.CACIT_collectionProblem="true";
+    if(!own("CACIT_collectionHours")&&present(values.Cl24DurationHours)&&(!present(values.Cl24DurationSource)||["hours","captured","legacy-dates","invalid"].indexOf(values.Cl24DurationSource)!==-1)){
+      values.CACIT_collectionHours=String(values.Cl24DurationHours);values.CACIT_durationKnown="true";values.CACIT_durationSource="captured";
+    }
+    if(measured){
+      if(!own("CACIT_sampleType"))values.CACIT_sampleType="unknown";
+      if(!own("CACIT_sampleSource"))values.CACIT_sampleSource="historical-missing";
+      if(!own("CACIT_collectionHours")&&!own("CACIT_durationKnown"))values.CACIT_durationKnown="false";
+      if(!own("CACIT_collectionHours")&&!own("CACIT_durationSource"))values.CACIT_durationSource="historical-missing";
+    }
+    var contextKeys=["knownFacts","confounders","concentrationSameSpecimen","sameSpecimen","sameUrineSample","reportedSameSpecimen","CACIT_reportedSameSpecimen","collectionProblem",
+      "collectionHours","durationHours","hours","durationKnown","sampleType","specimen","sampleSource","durationSource"];
+    var inputFacts=Object.fromEntries(contextKeys.filter(own).map(function(key){return [key,values[key]]}));
+    var materialContexts=[Object.keys(inputFacts).length?inputFacts:null].concat(snapshots.map(function(value){return value.context}),[session.context,session.sourceContext]).filter(belongs);
+    var carrier=values.CACIT_sourceContext,priorCarrier=carrier;
+    if(typeof carrier==="string")try{carrier=carrier.trim()?JSON.parse(carrier):null}catch{}
+    var sorted=function(value){if(Array.isArray(value))return value.map(sorted);if(value&&typeof value==="object")return Object.fromEntries(Object.keys(value).sort().map(function(key){return [key,sorted(value[key])]}));return value};
+    if(materialContexts.length){
+      var reusable=carrier&&typeof carrier==="object"&&!Array.isArray(carrier)&&carrier.version===1&&Array.isArray(carrier.contexts),seen={};
+      var combined=(reusable?carrier.contexts:[]).concat(materialContexts).filter(function(value){var key=JSON.stringify(sorted(value));if(Object.prototype.hasOwnProperty.call(seen,key))return false;seen[key]=true;return true});
+      carrier=Object.assign({},reusable?carrier:{version:1},{contexts:combined},!reusable&&present(priorCarrier)?{unreadableSourceContext:typeof priorCarrier==="string"?priorCarrier:JSON.stringify(priorCarrier)}:{});
+    }
+    if(carrier&&typeof carrier==="object"&&!Array.isArray(carrier)&&carrier.version===1&&Array.isArray(carrier.contexts)){
+      var fallback=carrier.patientFallback&&typeof carrier.patientFallback==="object"&&!Array.isArray(carrier.patientFallback)?Object.assign({},carrier.patientFallback):{},sourceAge=snapshots[0]&&snapshots[0].context;
+      [["age",["age","ageMonths","ageDays"]],["sex",["sex"]]].forEach(function(item){
+        var group=item[0],ids=item[1],text=function(value){return value==null?"":["string","number","boolean"].indexOf(typeof value)!==-1?String(value):""};
+        if(fallback[group]&&typeof fallback[group]==="object"&&ids.some(function(id){return text(values[id])!==text(fallback[group].fields&&fallback[group].fields[id])}))delete fallback[group];
+        if(fallback[group]||ids.some(own)||!sourceAge||typeof sourceAge!=="object")return;
+        if(group==="age"&&typeof sourceAge.ageYears==="number"&&Number.isFinite(sourceAge.ageYears))fallback.age={fields:Object.fromEntries(ids.map(function(id){return [id,""]})),context:Object.fromEntries(["ageYears","ageYearsRaw","ageExact","agePrecision","ageInterval"].filter(function(key){return Object.prototype.hasOwnProperty.call(sourceAge,key)}).map(function(key){return [key,sourceAge[key]]}))};
+        else if(group==="sex"&&["M","F","male","female"].indexOf(sourceAge.sex)!==-1)fallback.sex={fields:{sex:""},context:{sex:sourceAge.sex}};
+      });
+      if(Object.keys(fallback).length)carrier.patientFallback=fallback;else delete carrier.patientFallback;
+    }
+    if(present(carrier)){
+      // Keep false/null facts inside canonical JSON, before the generic empty
+      // value cleanup, so reading an imported context never erases its meaning.
+      values.CACIT_sourceContext=carrier&&typeof carrier==="object"?JSON.stringify(sorted(carrier)):typeof priorCarrier==="string"?priorCarrier:JSON.stringify(carrier);
+    }
+    if(belongs(session.context))delete session.context;
+    if(belongs(session.sourceContext))delete session.sourceContext;
+    var ownSnapshot=session.caCitSnapshot&&session.caCitSnapshot.snapshot||session.caCitSnapshot;
+    if(snapshots.indexOf(ownSnapshot)!==-1)delete session.caCitSnapshot;
+  }
+  if(own("CACIT_sourceContext")&&present(values.CACIT_sourceContext)){
+    var metadata=values.CACIT_sourceContext;
+    if(typeof metadata==="string")try{metadata=JSON.parse(metadata)}catch{}
+    if(metadata&&typeof metadata==="object"){
+      var sortMetadata=function(value){if(Array.isArray(value))return value.map(sortMetadata);if(value&&typeof value==="object")return Object.fromEntries(Object.keys(value).sort().map(function(key){return [key,sortMetadata(value[key])]}));return value};
+      values.CACIT_sourceContext=JSON.stringify(sortMetadata(metadata));
+    }
+  }
+  if(own("CACIT_legacyAliases")){
+    var legacyAliases=values.CACIT_legacyAliases;
+    if(typeof legacyAliases==="string")try{legacyAliases=JSON.parse(legacyAliases)}catch{}
+    if(legacyAliases&&typeof legacyAliases==="object"&&!Array.isArray(legacyAliases)&&Object.keys(legacyAliases).length&&Object.keys(legacyAliases).every(function(key){
+      return ["U_Ca","U_Cit"].indexOf(key)!==-1&&["string","number"].indexOf(typeof legacyAliases[key])!==-1&&String(legacyAliases[key]).trim()&&
+        String(legacyAliases[key]).length<=512&&(typeof legacyAliases[key]!=="number"||Number.isFinite(legacyAliases[key]));
+    })){
+      delete values.CACIT_legacyAliases;
+      ["U_Ca","U_Cit"].forEach(function(key){if(typeof values[key]==="number")values[key]=String(values[key])});
+    }
+  }
+  var quantities=[["CACIT_calcium","CACIT_calciumUnit","calcium","mmol/L"],
+    ["CACIT_citrate","CACIT_citrateUnit","citrate","mg/dL"],
+    ["CACIT_reportedValue","CACIT_reportedUnit","reportedValue","mg/mg"]];
+  var prior=values.CACIT_unitSemantics,meaning={};
+  if(quantities.some(function(item){return present(values[item[0]])})){
+    if(!own("CACIT_inputMode"))values.CACIT_inputMode="concentration";
+    if(values.CACIT_inputMode==="direct")values.CACIT_inputMode="reported";
+    quantities.forEach(function(item){
+      if(!present(values[item[0]]))return;
+      if(typeof values[item[0]]==="number")values[item[0]]=String(values[item[0]]);
+      meaning[item[2]]=canonicalUnit(own(item[1])?values[item[1]]:prior&&typeof prior==="object"&&Object.prototype.hasOwnProperty.call(prior,item[2])?prior[item[2]]:item[3]);
+    });
+    values.CACIT_unitSemantics=meaning;
+  }else{
+    fields.forEach(function(key){delete values[key]});
+    delete values.CACIT_unitSemantics;
+  }
+  if(own("CACIT_reportedUnitOriginal")&&["g/g","mol/mol"].indexOf(values.CACIT_reportedUnitOriginal)!==-1&&
+    (!present(values.CACIT_reportedValue)||canonicalUnit(values.CACIT_reportedUnitOriginal)===meaning.reportedValue))delete values.CACIT_reportedUnitOriginal;
+  // The new form describes its expected DZM material as an assumption. That
+  // untouched assumption is presentation, whereas confirmed or historical
+  // material provenance remains part of the patient's comparison.
+  if(values.CACIT_sampleType==="timed"&&values.CACIT_sampleSource==="assumed-current"){
+    delete values.CACIT_sampleType;delete values.CACIT_sampleSource;
+  }
+  var context=values.CACIT_contextSemantics&&typeof values.CACIT_contextSemantics==="object"&&!Array.isArray(values.CACIT_contextSemantics)?Object.assign({},values.CACIT_contextSemantics):{};
+  ["sameSpecimen","collectionProblem","collectionHours","durationKnown","sampleType","sampleSource","durationSource"].forEach(function(key){
+    var id="CACIT_"+key;
+    if(!own(id))return;
+    var raw=values[id];delete values[id];delete context[key];
+    if(!present(raw)||key==="sameSpecimen"&&raw==="assumed")return;
+    var text=String(raw);
+    if(key==="sameSpecimen")text=["true","yes","confirmed"].indexOf(text)!==-1?"confirmed":["false","no","different"].indexOf(text)!==-1?"different":text;
+    else if(key==="collectionProblem"||key==="durationKnown")text=["true","yes"].indexOf(text)!==-1?"true":["false","no"].indexOf(text)!==-1?"false":text;
+    context[key]=text;
+  });
+  if(Object.keys(context).length)values.CACIT_contextSemantics=context;
+  else delete values.CACIT_contextSemantics;
+}
 function normalizeClcrStatusInputs(session){
   var inputs=session&&session.inputs;
   if(!inputs||typeof inputs!=="object"||Array.isArray(inputs))return;
@@ -763,7 +907,7 @@ function normalizeClcrStatusInputs(session){
     }
   });
 }
-function Q(){if(typeof n.collectUserData!="function")return null;try{var e=n.collectUserData({source:"save-status-indicator"});return e?(delete e.timestampISO,JSON.stringify(e)):null}catch{return null}}function P(e){if(!e||typeof e!="object")return e;var t;try{t=JSON.parse(JSON.stringify(e))}catch{return e}return delete t.timestampISO,delete t.timestamp,delete t.version,delete t.savedAtISO,t}function X(e){if(!e||typeof e!="object")return e;normalizeSodiumStatusQuantities(e);normalizePotassiumStatusQuantities(e);normalizeUrateCreatinineStatusInputs(e);normalizeCacrDzmStatusInputs(e);normalizeMagnesiumCalciumStatusInputs(e);normalizePhosphorusCreatinineStatusInputs(e);normalizeProteinCreatinineStatusInputs(e);try{["savedAtISO","source","version","legacyVersion","currentVersion","selectedFormula","preserveAcrossVersions","preservedInputs","summary"].forEach(function(t){try{delete e[t]}catch{}}),e.inputs&&typeof e.inputs=="object"&&(["fullName","age","ageMonths","sex","weight","height","formulaSearch","formulaPicker","samePatientMode","currentVersion","version","selectedFormula"].forEach(function(t){try{delete e.inputs[t]}catch{}}),Object.keys(e.inputs).forEach(function(t){if(/unit$/i.test(t))try{delete e.inputs[t]}catch{}}))}catch{}normalizeClcrStatusInputs(e);return e}function b(e){if(!e||typeof e!="object")return e;try{delete e.doctor}catch{}try{delete e.zscore}catch{}try{delete e.bpDataToggle}catch{}try{delete e.bisphos}catch{}return e}function ee(e){try{["advanced","growthBasic"].forEach(function(t){e&&e[t]&&e[t].data&&typeof e[t].data=="object"&&(e[t].data={measurements:e[t].data.measurements})})}catch{}return e}function M(e){if(e!=null){if(Array.isArray(e)){for(var t=[],r=0;r<e.length;r++){var a=M(e[r]);a!==void 0&&t.push(a)}return t.length?t:void 0}if(typeof e=="object"){for(var u=Object.create(null),m=Object.keys(e).sort(),y=0;y<m.length;y++){var T=M(e[m[y]]);T!==void 0&&(u[m[y]]=T)}return Object.keys(u).length?u:void 0}return typeof e=="string"?e.trim()===""?void 0:e:typeof e=="boolean"&&e===!1?void 0:e}}function te(e){try{normalizeStatusInputs(e);normalizeStatusUiDefaults(e);normalizeStatusVaultMetadata(e);normalizeStatusEmptyBoneAge(e);normalizeStatusAutomaticDiet(e);normalizeStatusMeasurementUi(e);e&&e.clcr&&X(e.clcr);e&&e.core&&ee(e.core);var t=M(e);return t===void 0?{}:t}catch{return e}}function ne(){var e=n.VildaPersistence;try{if(e&&typeof e.readClcrSession=="function")return e.readClcrSession()}catch{}return null}function re(){if(typeof n.collectUserData!="function"||typeof n.hasMeaningfulMainSessionData!="function")return!1;try{var e=n.collectUserData({source:"save-status-fullform-check"});return!!(e&&n.hasMeaningfulMainSessionData(e))}catch{return!1}}function C(){if(statusReadOnly)return;if(typeof n.saveMainSessionNow=="function"&&re())try{n.saveMainSessionNow({force:!0})}catch{}}function ie(){var e=n.VildaPersistence;try{if(e&&typeof e.readMainSession=="function"){var t=e.readMainSession();if(t&&typeof t=="object")return P(t)}}catch{}if(typeof n.collectUserData=="function")try{var r=n.collectUserData({source:"save-status-canonical-fallback"});return typeof n.hasMeaningfulMainSessionData=="function"?r&&n.hasMeaningfulMainSessionData(r)?P(r):null:r?P(r):null}catch{}return null}function E(){var e=ie();if(e==null)return null;if(e&&typeof e=="object"&&e.clcr!==void 0)try{delete e.clcr}catch{}b(e);var t=ne(),r=t?X(P(t)):null,a={core:e,clcr:r};a=te(a);try{return JSON.stringify(a)}catch{return null}}var O="vilda-save-ref-v1",L=null;function k(){try{var e=n.sessionStorage;if(!e)return L;var t=e.getItem(O),r=t?JSON.parse(t):null;if(r&&typeof r.fp==="string")try{r.fp=JSON.stringify(te(JSON.parse(r.fp)))}catch{}return r}catch{return L}}function U(e){L=e||null;if(statusReadOnly)return;try{var t=n.sessionStorage;if(!t)return;e?t.setItem(O,JSON.stringify(e)):t.removeItem(O)}catch{}}function I(){U(f?{fp:f,dirty:!!p,savedAtISO:l||null,snapshotCount:d||null,patientName:v||null}:null)}function N(){f=null,p=!1,U(null)}function ae(e){if(!e||typeof n.hasMeaningfulMainSessionData!="function"||!n.hasMeaningfulMainSessionData(e))return!1;var t;try{t=JSON.parse(JSON.stringify(e))}catch{return!0}return delete t.doctor,delete t.zscore,delete t.bpDataToggle,delete t.bisphos,delete t.clcr,delete t.steroid,n.hasMeaningfulMainSessionData(t)}function statusSharedSessionHasPatient(value){
+function Q(){if(typeof n.collectUserData!="function")return null;try{var e=n.collectUserData({source:"save-status-indicator"});return e?(delete e.timestampISO,JSON.stringify(e)):null}catch{return null}}function P(e){if(!e||typeof e!="object")return e;var t;try{t=JSON.parse(JSON.stringify(e))}catch{return e}return delete t.timestampISO,delete t.timestamp,delete t.version,delete t.savedAtISO,t}function X(e){if(!e||typeof e!="object")return e;normalizeSodiumStatusQuantities(e);normalizePotassiumStatusQuantities(e);normalizeUrateCreatinineStatusInputs(e);normalizeCacrDzmStatusInputs(e);normalizeMagnesiumCalciumStatusInputs(e);normalizePhosphorusCreatinineStatusInputs(e);normalizeProteinCreatinineStatusInputs(e);normalizeCalciumCitrateStatusInputs(e);try{["savedAtISO","source","version","legacyVersion","currentVersion","selectedFormula","preserveAcrossVersions","preservedInputs","summary"].forEach(function(t){try{delete e[t]}catch{}}),e.inputs&&typeof e.inputs=="object"&&(["fullName","age","ageMonths","sex","weight","height","formulaSearch","formulaPicker","samePatientMode","currentVersion","version","selectedFormula"].forEach(function(t){try{delete e.inputs[t]}catch{}}),Object.keys(e.inputs).forEach(function(t){if(/unit$/i.test(t))try{delete e.inputs[t]}catch{}}))}catch{}normalizeClcrStatusInputs(e);return e}function b(e){if(!e||typeof e!="object")return e;try{delete e.doctor}catch{}try{delete e.zscore}catch{}try{delete e.bpDataToggle}catch{}try{delete e.bisphos}catch{}return e}function ee(e){try{["advanced","growthBasic"].forEach(function(t){e&&e[t]&&e[t].data&&typeof e[t].data=="object"&&(e[t].data={measurements:e[t].data.measurements})})}catch{}return e}function M(e){if(e!=null){if(Array.isArray(e)){for(var t=[],r=0;r<e.length;r++){var a=M(e[r]);a!==void 0&&t.push(a)}return t.length?t:void 0}if(typeof e=="object"){for(var u=Object.create(null),m=Object.keys(e).sort(),y=0;y<m.length;y++){var T=M(e[m[y]]);T!==void 0&&(u[m[y]]=T)}return Object.keys(u).length?u:void 0}return typeof e=="string"?e.trim()===""?void 0:e:typeof e=="boolean"&&e===!1?void 0:e}}function te(e){try{normalizeStatusInputs(e);normalizeStatusUiDefaults(e);normalizeStatusVaultMetadata(e);normalizeStatusEmptyBoneAge(e);normalizeStatusAutomaticDiet(e);normalizeStatusMeasurementUi(e);e&&e.clcr&&X(e.clcr);e&&e.core&&ee(e.core);var t=M(e);return t===void 0?{}:t}catch{return e}}function ne(){var e=n.VildaPersistence;try{if(e&&typeof e.readClcrSession=="function")return e.readClcrSession()}catch{}return null}function re(){if(typeof n.collectUserData!="function"||typeof n.hasMeaningfulMainSessionData!="function")return!1;try{var e=n.collectUserData({source:"save-status-fullform-check"});return!!(e&&n.hasMeaningfulMainSessionData(e))}catch{return!1}}function C(){if(statusReadOnly)return;if(typeof n.saveMainSessionNow=="function"&&re())try{n.saveMainSessionNow({force:!0})}catch{}}function ie(){var e=n.VildaPersistence;try{if(e&&typeof e.readMainSession=="function"){var t=e.readMainSession();if(t&&typeof t=="object")return P(t)}}catch{}if(typeof n.collectUserData=="function")try{var r=n.collectUserData({source:"save-status-canonical-fallback"});return typeof n.hasMeaningfulMainSessionData=="function"?r&&n.hasMeaningfulMainSessionData(r)?P(r):null:r?P(r):null}catch{}return null}function E(){var e=ie();if(e==null)return null;if(e&&typeof e=="object"&&e.clcr!==void 0)try{delete e.clcr}catch{}b(e);var t=ne(),r=t?X(P(t)):null,a={core:e,clcr:r};a=te(a);try{return JSON.stringify(a)}catch{return null}}var O="vilda-save-ref-v1",L=null;function k(){try{var e=n.sessionStorage;if(!e)return L;var t=e.getItem(O),r=t?JSON.parse(t):null;if(r&&typeof r.fp==="string")try{r.fp=JSON.stringify(te(JSON.parse(r.fp)))}catch{}return r}catch{return L}}function U(e){L=e||null;if(statusReadOnly)return;try{var t=n.sessionStorage;if(!t)return;e?t.setItem(O,JSON.stringify(e)):t.removeItem(O)}catch{}}function I(){U(f?{fp:f,dirty:!!p,savedAtISO:l||null,snapshotCount:d||null,patientName:v||null}:null)}function N(){f=null,p=!1,U(null)}function ae(e){if(!e||typeof n.hasMeaningfulMainSessionData!="function"||!n.hasMeaningfulMainSessionData(e))return!1;var t;try{t=JSON.parse(JSON.stringify(e))}catch{return!0}return delete t.doctor,delete t.zscore,delete t.bpDataToggle,delete t.bisphos,delete t.clcr,delete t.steroid,n.hasMeaningfulMainSessionData(t)}function statusSharedSessionHasPatient(value){
   if(!value||typeof value!=="object")return false;
   var user=value.user||{},name=value.name&&String(value.name).trim();
   return !!(name||user.weight||user.height||user.age!=null&&user.age!=="");
