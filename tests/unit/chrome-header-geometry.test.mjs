@@ -334,10 +334,15 @@ describe('production header geometry', () => {
 });
 
 describe('production header icon markup', () => {
-  it('renders a bounded 18px Search icon in the desktop form and keeps the mobile icon at21px', () => {
+  it('renders one 20px lupa button for both breakpoints without a header draft input', () => {
     const context = vm.createContext({}); vm.runInContext(markup, context);
-    expect(context.Ch_searchMarkup()).toContain('<svg width="18" height="18"');
-    expect(context.Ch_searchIcon()).toContain('<svg width="21" height="21"');
+    const html = context.Ch_searchMarkup();
+    expect(html).toContain('<svg width="20" height="20"');
+    expect(context.Ch_searchIcon()).toContain('<svg width="20" height="20"');
+    expect(html.match(/<button\b/g)).toHaveLength(1);
+    expect(html).toContain('id="vildaHeaderSearchBtn"');
+    expect(html).toContain('type="button"');
+    expect(html).not.toMatch(/<(input|form)\b/);
   });
 
   it.each([null, { count: 3, state: 'overdue' }, { count: 12, state: 'today' }, 'loading'])('renders the same bell and tooltip for cached state %j', cache => {

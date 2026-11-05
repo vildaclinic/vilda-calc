@@ -14,7 +14,7 @@ const TRIGGER = '[data-vilda-chrome-menu-btn]';
 const CLOSE = `${MENU} .chrome-drawer-close`;
 const COLLAPSED_MENU_CONTROLS = [
   'close', 'saveDataBtnSidebar', 'patientDocumentsBtnSidebar', 'patientsListBtnSidebar',
-  'patient-card', 'patient-change', 'terminarz.html', 'notatki.html',
+  'patient-card', 'terminarz.html', 'notatki.html',
   'index.html', 'docpro.html', 'przelicznik-jednostek.html', 'calculators',
   'materialy-edukacyjne.html', 'account', 'ustawienia.html', 'logout', 'save-status', 'pro', 'sync',
 ];
@@ -230,6 +230,7 @@ async function assertMenu(page, { width, height, left, right, top, bottom, lands
   else await expect(calculators).toBeHidden();
   await expect(calculators.locator('a')).toHaveCount(3);
   await expect(panel.locator('[data-menu-patient-name]')).toHaveText('Wybierz pacjenta');
+  await expect(panel.locator('[data-menu-patient-change]')).toHaveCount(0);
   await expect(panel.locator('.chrome-menu-office [data-drawer-btn="patientsListBtnSidebar"]')).toHaveText('Baza pacjentów');
   await expect(panel.locator('a[href="notatki.html"]')).toHaveText('Notatnik');
   const measure = () => panel.evaluate(panel => {
@@ -240,7 +241,7 @@ async function assertMenu(page, { width, height, left, right, top, bottom, lands
     const identity = item => {
       if (item.matches('.chrome-drawer-close')) return 'close';
       if (item.hasAttribute('data-drawer-btn')) return item.getAttribute('data-drawer-btn');
-      for (const [attribute, name] of [['data-menu-patient-card', 'patient-card'], ['data-menu-patient-change', 'patient-change'], ['data-menu-account', 'account'], ['data-menu-logout', 'logout'], ['data-menu-save-status', 'save-status'], ['data-menu-pro', 'pro'], ['data-menu-sync', 'sync']]) {
+      for (const [attribute, name] of [['data-menu-patient-card', 'patient-card'], ['data-menu-account', 'account'], ['data-menu-logout', 'logout'], ['data-menu-save-status', 'save-status'], ['data-menu-pro', 'pro'], ['data-menu-sync', 'sync']]) {
         if (item.hasAttribute(attribute)) return name;
       }
       if (item.hasAttribute('href')) return item.getAttribute('href');

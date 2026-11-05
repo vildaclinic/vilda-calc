@@ -95,6 +95,9 @@ const chromeSource = fs.readFileSync(new URL('../../vilda_chrome.js', import.met
 const binderStart = chromeSource.indexOf('function tt(');
 const binderEnd = chromeSource.indexOf('/* P-CHROME-MENU:', binderStart);
 const menuSource = chromeSource.slice(chromeSource.indexOf('function Cm_menuOwner('), chromeSource.indexOf('function Ke('));
+// The binder refreshes the real save projection as part of menu setup. Keep
+// its closed-popover state and binder guard from the production initializer.
+const chromeState = chromeSource.slice(chromeSource.indexOf('var Y='), chromeSource.indexOf('function g('));
 const menuDependencies = [
   ['function ge(', 'function we('],
   ['function Ee(', 'function Cm_menuItem('],
@@ -102,8 +105,15 @@ const menuDependencies = [
   ['function Ce(', 'function rt('],
   ['function Ae(', 'function dt('],
   ['function Qdm(', 'function et('],
+  ['var de=', 'function ce('],
 ].map(([start, end]) => chromeSource.slice(chromeSource.indexOf(start), chromeSource.indexOf(end, chromeSource.indexOf(start)))).join('\n');
-const bindChrome = new Function('r', 'o', 'var K=false; ' + menuDependencies + menuSource + chromeSource.slice(binderStart, binderEnd) + '; return tt;');
+const bindChrome = new Function('r', 'o', [
+  chromeState,
+  menuDependencies,
+  menuSource,
+  chromeSource.slice(binderStart, binderEnd),
+  'return tt;',
+].join('\n'));
 
 function clickChromeAccount(env) {
   const handlers = {};

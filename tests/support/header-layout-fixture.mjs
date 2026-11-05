@@ -78,18 +78,15 @@ export async function headerLayout(page) {
 export async function expectHeaderAlignment(page) {
   await expect.poll(async () => {
     const g = await headerLayout(page);
-    // An empty DocPro deliberately leaves its right track blank; its real
-    // allocated track still determines where the bell belongs.
-    const second = g.second || g.secondTrack;
-    if (!g.first || !second) return { missingCard: true };
-    const columns = second.x >= g.first.right - 1;
+    if (!g.first || !g.workspace || !g.search || !g.bell) return { missingCard: true };
     return {
-      left: Math.round(Math.abs(g.search.x - g.first.x)),
-      right: Math.round(Math.abs(g.search.right - (columns ? g.first.right : g.workspace.right - 108))),
+      searchWidth: Math.round(g.search.width),
+      gap: Math.round(g.bell.x - g.search.right),
       bell: Math.round(Math.abs(g.bell.right - g.workspace.right)),
+      sameRow: Math.round(Math.abs(g.search.y - g.bell.y)),
     };
-  }, { message: 'Search follows the actual first card; bell ends at the actual workspace edge' })
-    .toEqual({ left: 0, right: 0, bell: 0 });
+  }, { message: 'the two 44px actions sit 8px apart and end at the actual workspace edge' })
+    .toEqual({ searchWidth: 44, gap: 8, bell: 0, sameRow: 0 });
 }
 
 export async function expectBell(page) {
@@ -113,17 +110,19 @@ export async function expectBell(page) {
 }
 
 export async function expectDesktopSearchControl(page) {
-  const search = page.locator('#vildaHeaderSearch'), submit = search.locator('button[type=submit]');
+  const search = page.locator('#vildaHeaderSearch'), submit = search.getByRole('button', { name: 'Szukaj', exact: true });
+  await expect(search).toHaveCSS('width', '44px');
   await expect(search).toHaveCSS('height', '44px');
-  await expect(submit).toHaveCSS('width', '42px');
-  await expect(submit).toHaveCSS('height', '42px');
-  await expect(submit.locator('svg')).toHaveCSS('width', '18px');
-  await expect(submit.locator('svg')).toHaveCSS('height', '18px');
+  await expect(submit).toHaveCSS('width', '44px');
+  await expect(submit).toHaveCSS('height', '44px');
+  await expect(submit.locator('svg')).toHaveCSS('width', '20px');
+  await expect(submit.locator('svg')).toHaveCSS('height', '20px');
+  await expect(search.locator('input')).toHaveCount(0);
   for (const state of ['normal', 'hover', 'focus']) {
     if (state === 'hover') await submit.hover();
     if (state === 'focus') { await page.mouse.move(0, 0); await submit.focus(); }
     await expect.poll(() => submit.evaluate(node => {
-      const button = node.getBoundingClientRect(), form = node.closest('form').getBoundingClientRect();
+      const button = node.getBoundingClientRect(), form = node.closest('#vildaHeaderSearch').getBoundingClientRect();
       const icon = node.querySelector('svg').getBoundingClientRect();
       return button.left >= form.left && button.right <= form.right && button.top >= form.top && button.bottom <= form.bottom
         && icon.left >= button.left && icon.right <= button.right && icon.top >= button.top && icon.bottom <= button.bottom;

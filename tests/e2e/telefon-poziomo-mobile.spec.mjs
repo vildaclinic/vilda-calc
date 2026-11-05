@@ -21,11 +21,12 @@ async function expectPhoneHeaderControls(page) {
   }
   // Patient/account state carriers remain mounted for existing save/session
   // consumers, while their visible controls live in the side menu.
-  for (const id of ['vildaPatientChip', 'vildaUserChip', 'vildaProBadge', 'vildaHeaderSearchInput']) {
+  for (const id of ['vildaPatientChip', 'vildaUserChip', 'vildaProBadge']) {
     const control = page.locator(`#${id}`);
     await expect(control).toHaveCount(1);
     await expect(control).toBeHidden();
   }
+  await expect(page.locator('#vildaHeaderSearchInput')).toHaveCount(0);
 }
 
 async function assertLandscapeGeometry(page, frame, width, height) {

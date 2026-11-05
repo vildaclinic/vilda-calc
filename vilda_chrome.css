@@ -2030,28 +2030,6 @@ html.vilda-phone .chrome-drawer .chrome-menu-action-buttons :disabled {
   color: var(--primary, #00838d)
 }
 
-.chrome-menu-patient .chrome-menu-patient-change {
-  position: absolute;
-  right: 3px;
-  top: 7px;
-  min-width: 44px;
-  width: auto;
-  min-height: 44px;
-  padding: 7px var(--space-6px);
-  margin: 0;
-  border: 0!important;
-  border-radius: var(--radius-8)!important;
-  background: transparent!important;
-  box-shadow: none!important;
-  backdrop-filter: none!important;
-  -webkit-backdrop-filter: none!important;
-  font-family: inherit;
-  font-size: .7rem;
-  color: var(--primary, #00838d)!important;
-  text-decoration: none;
-  cursor: pointer
-}
-
 .chrome-menu-calculators-toggle {
   display: flex;
   align-items: center;
@@ -2098,7 +2076,7 @@ html.vilda-phone .chrome-drawer .chrome-menu-action-buttons :disabled {
   display: none!important
 }
 
-.has-vilda-chrome :is(.sidebar-inner,.chrome-drawer-body) :is(.chrome-menu-calculators-toggle,.chrome-menu-account,.chrome-menu-settings,.chrome-menu-logout,.chrome-menu-patient-open,.chrome-menu-patient-change) {
+.has-vilda-chrome :is(.sidebar-inner,.chrome-drawer-body) :is(.chrome-menu-calculators-toggle,.chrome-menu-account,.chrome-menu-settings,.chrome-menu-logout,.chrome-menu-patient-open) {
   border: 0!important;
   background: transparent!important;
   box-shadow: none!important;
@@ -2222,7 +2200,6 @@ html.vilda-phone .chrome-menu-account-copy .chrome-drawer-account-value {
 .chrome-menu-scroll :is(.sidebar-section-title,.chrome-drawer-section-title),
 .chrome-menu-scroll :is(.sidebar-nav,.chrome-drawer-nav) :is(a,button),
 .chrome-menu-patient-open,
-.chrome-menu-patient-change,
 .chrome-menu-calculators-toggle,
 .chrome-menu-footer :is(a,button) {
   -webkit-user-select: none;
@@ -2500,9 +2477,6 @@ body.vilda-header-menu .chrome-drawer-head {
   font-size: 10px;
   line-height: 16px;
   font-weight: 400
-}
-.vilda-header-menu .chrome-menu-patient .chrome-menu-patient-change {
-  top: 5px
 }
 .vilda-header-menu .chrome-reminders-btn[hidden] {display:none!important}
 .vilda-header-menu .chrome-reminders-btn[data-state=empty] .chrome-reminders-badge {display:none!important}
@@ -2829,5 +2803,199 @@ body.vilda-header-menu .chrome-reminders-btn[data-state=loading] .chrome-reminde
     right: var(--chrome-actions-right,16px);
     gap: var(--space-8px);
     margin: 0
+  }
+}
+
+/* P-HEADER-PATIENT-STATUS: desktop keeps the patient in the pinned menu;
+ * compact layouts expose only the active form's save state. Search and bell
+ * share fixed action slots, including the existing sync-warning reserve. */
+.vilda-header-menu .chrome-strip {
+  padding-inline: var(--space-8px);
+  gap: var(--space-8px)
+}
+.vilda-header-menu .chrome-chips {
+  position: static;
+  left: auto;
+  right: auto;
+  flex: 0 0 auto;
+  margin-left: auto;
+  gap: var(--space-8px)
+}
+.vilda-header-menu .chrome-header-search {
+  position: static;
+  left: auto;
+  right: auto;
+  display: inline-flex;
+  align-items: center;
+  flex: 0 0 44px;
+  width: 44px;
+  min-width: 44px;
+  height: 44px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-10);
+  background: transparent;
+  box-shadow: none
+}
+html.vilda-phone body.vilda-header-menu .chrome-header-search {
+  display: inline-flex!important
+}
+.vilda-header-menu .chrome-header-search .chrome-header-search-btn {
+  display: inline-flex;
+  flex: 0 0 44px;
+  width: 44px;
+  min-width: 44px;
+  max-width: 44px;
+  height: 44px;
+  min-height: 44px;
+  max-height: 44px
+}
+.vilda-header-menu .chrome-header-search .chrome-header-search-btn svg {
+  width: 20px;
+  height: 20px
+}
+.vilda-header-menu .chrome-header-save-status {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-start;
+  flex: 0 1 auto;
+  gap: 7px;
+  min-width: 0;
+  height: 44px;
+  min-height: 44px;
+  max-height: 44px;
+  margin: 0;
+  padding: 7px 9px;
+  border: 0!important;
+  border-radius: var(--radius-8)!important;
+  box-shadow: none!important;
+  backdrop-filter: none!important;
+  -webkit-backdrop-filter: none!important;
+  transform: none!important;
+  font: 600 16px/1.4 Inter,sans-serif;
+  text-align: left;
+  white-space: nowrap;
+  cursor: pointer
+}
+.vilda-header-menu .chrome-header-save-status [data-header-save-icon] {
+  display: inline-flex;
+  flex: 0 0 20px;
+  width: 20px;
+  height: 20px
+}
+.vilda-header-menu .chrome-header-save-status svg {
+  width: 20px;
+  height: 20px
+}
+.vilda-header-menu .chrome-header-save-status [data-header-save-label] {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis
+}
+.vilda-header-menu .chrome-header-save-status[hidden] {
+  display: none!important
+}
+.vilda-header-menu .chrome-menu-patient {
+  min-height: 68px;
+  margin-bottom: var(--space-10px)
+}
+.vilda-header-menu .chrome-menu-patient .chrome-menu-patient-open {
+  align-items: flex-start;
+  width: 100%;
+  min-height: 68px;
+  padding: var(--space-6px) var(--space-8px);
+  gap: var(--space-10px)
+}
+.vilda-header-menu .chrome-menu-patient-copy {
+  gap: 5px
+}
+.vilda-header-menu .chrome-menu-patient-name {
+  max-width: 100%;
+  color: #202a2f;
+  font-size: 18px;
+  line-height: 1.4;
+  font-weight: 600;
+  white-space: normal;
+  overflow: visible;
+  overflow-wrap: anywhere;
+  text-overflow: clip
+}
+.vilda-header-menu .chrome-menu-patient-copy small {
+  color: #405d66;
+  font-size: 16px;
+  line-height: 1.4
+}
+.vilda-header-menu .chrome-menu-patient-open :is(.sidebar-icon,.chrome-drawer-icon) {
+  flex: 0 0 23px;
+  width: 23px;
+  height: 25px
+}
+.vilda-header-menu .chrome-menu-patient-open svg {
+  width: 23px;
+  height: 23px
+}
+.vilda-header-menu .chrome-menu-save-status {
+  height: auto;
+  min-height: 44px;
+  padding: var(--space-8px) var(--space-10px);
+  font: 600 16px/1.4 Inter,sans-serif
+}
+.vilda-header-menu :is(.sidebar-inner,.chrome-drawer-body) .chrome-menu-action-buttons :is(a,button) {
+  gap: 5px;
+  padding-inline: var(--space-4px);
+  font-size: 16px;
+  line-height: 1.4;
+  letter-spacing: -.3px
+}
+.vilda-header-menu :is(.chrome-menu-save-status,.chrome-header-save-status)[data-save-state=saved] {
+  background: #eaf6ef!important;
+  color: #287a4f!important
+}
+.vilda-header-menu :is(.chrome-menu-save-status,.chrome-header-save-status)[data-save-state=dirty] {
+  background: #fff5e2!important;
+  color: #8d580a!important
+}
+.vilda-header-menu :is(.chrome-menu-save-status,.chrome-header-save-status)[data-save-state=new] {
+  background: #f2ecfb!important;
+  color: #7548a6!important
+}
+.vilda-header-menu :is(.chrome-menu-save-status,.chrome-header-save-status)[data-save-state=saving] {
+  background: #eaf4fb!important;
+  color: #276e9c!important
+}
+.vilda-header-menu :is(.chrome-menu-save-status,.chrome-header-save-status)[data-save-state=error] {
+  background: #fbedee!important;
+  color: #b12c40!important
+}
+@media(min-width:992px) {
+  html:not(.vilda-phone) .vilda-header-menu .chrome-strip {
+    padding-inline: var(--space-16px);
+    gap: var(--space-12px)
+  }
+  html:not(.vilda-phone) .vilda-header-menu .chrome-chips {
+    position: absolute;
+    right: var(--chrome-actions-right,16px);
+    left: auto;
+    gap: var(--space-8px);
+    margin: 0
+  }
+  html:not(.vilda-phone) .vilda-header-menu .chrome-header-save-status {
+    display: none!important
+  }
+}
+@media(max-width:360px) {
+  .vilda-header-menu .chrome-strip {
+    padding-inline: var(--space-4px);
+    gap: 2px
+  }
+  .vilda-header-menu .chrome-chips {
+    gap: 0
+  }
+  .vilda-header-menu .chrome-header-save-status {
+    padding-inline: var(--space-6px)
+  }
+  .vilda-header-menu .chrome-header-save-status [data-header-save-icon] {
+    display: none
   }
 }

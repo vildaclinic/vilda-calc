@@ -11,7 +11,7 @@ test.setTimeout(120000);
 for (const shell of [false, true]) test(`${shell ? 'shell' : 'standalone'} phone: one-row header, native Search and return to the lupa`, async ({ page }) => {
   const created = await globalSearchFixture(page, { shell });
   const before = await persistedSearchFingerprint(created.frame, created.ids.a);
-  for (const width of [320, 390, 658, 844]) {
+  for (const width of [320, 390, 658, 844, 860]) {
     await page.setViewportSize({ width, height: 852 });
     await created.frame.evaluate(() => scrollTo({ top: 0, behavior: 'instant' }));
     await expect.poll(async () => {
@@ -27,8 +27,9 @@ for (const shell of [false, true]) test(`${shell ? 'shell' : 'standalone'} phone
       expect(size.height).toBeGreaterThanOrEqual(44);
       // Preserve the icon's layout size; the existing hover transform can scale
       // its painted bounding box by 1.02 after closing the drawer on a touch UA.
-      await expect(control.locator('svg')).toHaveCSS('width', '21px');
-      await expect(control.locator('svg')).toHaveCSS('height', '21px');
+      const iconSize = await control.getAttribute('id') === 'vildaHeaderSearchBtn' ? '20px' : '21px';
+      await expect(control.locator('svg')).toHaveCSS('width', iconSize);
+      await expect(control.locator('svg')).toHaveCSS('height', iconSize);
     }
     const centers = await controls.evaluateAll(nodes => nodes.map(node => {
       const r = node.getBoundingClientRect(); return r.y + r.height / 2;
@@ -42,6 +43,7 @@ for (const shell of [false, true]) test(`${shell ? 'shell' : 'standalone'} phone
     await expect(menu.locator('.chrome-menu-save')).toBeVisible();
     await expect(menu.locator('.chrome-menu-documents')).toBeVisible();
     await expect(menu.locator('[data-menu-patient-card]')).toBeVisible();
+    await expect(menu.locator('[data-menu-patient-change]')).toHaveCount(0);
     await expect(menu.locator('[data-menu-pro]')).toBeVisible();
     await expect(menu.locator('[data-menu-sync]')).toBeVisible();
     const actions = await menu.locator('.chrome-menu-save, .chrome-menu-documents').evaluateAll(nodes => nodes.map(node => {
@@ -60,7 +62,7 @@ for (const shell of [false, true]) test(`${shell ? 'shell' : 'standalone'} phone
   await expectLandscape(created.frame, true);
   await expectBell(page);
   await expect(page.locator('#vildaHeaderSearchBtn')).toHaveCSS('width', '44px');
-  await expect(page.locator('#vildaHeaderSearchBtn svg')).toHaveCSS('width', '21px');
+  await expect(page.locator('#vildaHeaderSearchBtn svg')).toHaveCSS('width', '20px');
   expect(await page.evaluate(() => document.documentElement.scrollWidth - innerWidth)).toBeLessThanOrEqual(1);
   await emulatePhone(page, { width: 390, height: 852, safeArea: { top: 0, right: 0, bottom: 0, left: 0 } });
   await expectLandscape(page, false);

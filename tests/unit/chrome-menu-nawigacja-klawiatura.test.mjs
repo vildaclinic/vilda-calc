@@ -94,9 +94,10 @@ function environment(nativeInert = true) {
   const last = panel.appendChild(new Element('a')); last.setAttribute('href', 'homa-ir.html');
   const tip = vi.fn(), syncButtons = vi.fn();
   const api = new Function('r', 'o', 'Qdm', 'B', 'F', '_e', 'te', 'le',
-    `var K=false,O=false,h=null,M=null;${menuDependencies}${menuSource}${drawerSource}${actionSource}${headerSource}${navigationSource}${overlaySource};return {open:nt,close:ee,bind:tt,bindActions:et,bindMenu:Cm_bindMenuControls,openPatient:Cm_openMenuPatient,navigate:Pt,isOverlayOpen:he,bindHeader:Ch_bindHeader,refreshSearch:Ch_refreshSearch,openSearch:Ch_openSearch};`)(win, doc, syncButtons, () => {}, tip, () => {}, () => {}, () => {});
+    `var K=false,O=false,h=null,M=null;${menuDependencies}${menuSource}${drawerSource}${actionSource}${headerSource}${navigationSource}${overlaySource};return {open:nt,close:ee,bind:tt,bindActions:et,bindMenu:Cm_bindMenuControls,openPatient:Cm_openMenuPatient,navigate:Pt,isOverlayOpen:he,bindHeader:Ch_bindHeader,refreshSearch:Ch_refreshSearch,openSearch:Ch_openSearch,saveSource:Ch_saveSource};`)(win, doc, syncButtons, () => {}, tip, () => {}, () => {}, () => {});
   api.bind(header);
-  return { win, doc, header, trigger, avatar, account, main, input, frame, drawer, panel, close, last, api, tip, observers, Element };
+  return { win, doc, header, trigger, avatar, account, main, input, frame, drawer, panel, close, last, api, tip, observers, Element,
+    backgroundBootListeners: bootListenerCounts({ win, doc }) };
 }
 function key(h, name, shiftKey = false) {
   const ev = { type: 'keydown', key: name, shiftKey, preventDefault: vi.fn(), stopPropagation: vi.fn() };
@@ -127,10 +128,16 @@ function patientMenuEnvironment() {
   return { ...h, state, storage, ui, opener };
 }
 
+function bootListenerCounts(h) {
+  return { boot: h.doc.listenerCount('vilda:auth-boot-settled'),
+    session: h.doc.listenerCount('vilda:session-changed'), pagehide: h.win.listenerCount('pagehide') };
+}
 function expectNoBootListeners(h) {
-  expect(h.doc.listenerCount('vilda:auth-boot-settled')).toBe(0);
-  expect(h.doc.listenerCount('vilda:session-changed')).toBe(0);
-  expect(h.win.listenerCount('pagehide')).toBe(0);
+  // Status projection has permanent lifecycle listeners. Pending navigation
+  // must remove exactly its own listeners and leave that initial set intact.
+  expect(h.doc.listenerCount('vilda:auth-boot-settled')).toBe(h.backgroundBootListeners.boot);
+  expect(h.doc.listenerCount('vilda:session-changed')).toBe(h.backgroundBootListeners.session);
+  expect(h.win.listenerCount('pagehide')).toBe(h.backgroundBootListeners.pagehide);
 }
 
 describe('Chrome: kopiowanie nazwy w przycisku menu', () => {
@@ -172,55 +179,100 @@ function headerSearchEnvironment() {
   h.win.VildaRemindersPrivacy = {
     isHidden: () => state.private, subscribe: listener => { privacyListeners.push(listener); return () => {}; },
   };
-  const form = h.header.appendChild(new h.Element('form')); form.setAttribute('id', 'vildaHeaderSearch');
-  const input = form.appendChild(new h.Element('input')); input.setAttribute('id', 'vildaHeaderSearchInput'); input.value = '';
-  const lupa = h.header.appendChild(new h.Element('button')); lupa.setAttribute('id', 'vildaHeaderSearchBtn');
+  const wrapper = h.header.appendChild(new h.Element('div')); wrapper.setAttribute('id', 'vildaHeaderSearch');
+  const lupa = wrapper.appendChild(new h.Element('button')); lupa.setAttribute('id', 'vildaHeaderSearchBtn');
   h.api.bindHeader();
-  return { ...h, ui, state, form, input, lupa,
-    type(value) { input.value = value; input.dispatchEvent({ type: 'input' }); },
+  h.backgroundBootListeners = bootListenerCounts(h);
+  return { ...h, ui, state, wrapper, lupa,
     privacy(hidden) { state.private = hidden; privacyListeners.forEach(listener => listener()); },
     lock() { state.unlocked = false; lockListeners.forEach(listener => listener()); },
   };
 }
 
-describe('Chrome: rzeczywisty draft Szukaj w nagłówku', () => {
-  it('nie szuka podczas wpisywania; submit przekazuje frazę do natywnego Szukaj, a maska zachowuje ją tylko dla właściciela', async () => {
+describe('Chrome: lupa otwiera istniejące Szukaj', () => {
+  it('otwiera natywne Szukaj z pustym polem, a maska nie przenosi żadnej frazy do nagłówka', async () => {
     const h = headerSearchEnvironment();
-    h.type('Fikcyjny Nowak');
+    expect(h.wrapper.querySelector('input')).toBeNull();
     expect(h.ui.maybeShowReminders).not.toHaveBeenCalled();
-    h.privacy(true); expect(h.input.value).toBe(''); expect(h.input.readOnly).toBe(true);
-    h.privacy(false); expect(h.input.value).toBe('Fikcyjny Nowak'); expect(h.input.readOnly).toBe(false);
-    const submit = { type: 'submit', preventDefault: vi.fn() }; h.form.dispatchEvent(submit);
+    h.privacy(true); expect(h.lupa.getAttribute('data-private')).toBe('true');
+    expect(h.lupa.getAttribute('title')).toContain('widoczność danych');
+    h.privacy(false); expect(h.lupa.getAttribute('data-private')).toBe('false');
+    expect(h.lupa.getAttribute('title')).toBe('Szukaj we wszystkich wpisach');
+    h.lupa.click();
     await vi.waitFor(() => expect(h.ui.maybeShowReminders).toHaveBeenCalledOnce());
-    expect(submit.preventDefault).toHaveBeenCalledOnce();
-    expect(h.ui.maybeShowReminders.mock.calls[0][0]).toMatchObject({ force: true, globalSearch: { query: 'Fikcyjny Nowak', focus: 'query' } });
+    expect(h.ui.maybeShowReminders.mock.calls[0][0]).toMatchObject({ force: true, globalSearch: { query: '', focus: 'query' } });
     h.privacy(true); h.state.userId = 'fictional-search-owner-b'; h.api.refreshSearch(); h.privacy(false);
-    expect(h.input.value).toBe('');
+    await h.api.openSearch(h.lupa);
+    expect(h.ui.maybeShowReminders).toHaveBeenCalledTimes(2);
+    expect(h.ui.maybeShowReminders.mock.calls[1][0].globalSearch.query).toBe('');
   });
 
-  it('odblokowanie tego samego konta nie wskrzesza szkicu sprzed blokady', () => {
-    const h = headerSearchEnvironment(); h.type('Fikcyjna tajna fraza'); h.lock();
-    expect(h.input.value).toBe(''); expect(h.input.readOnly).toBe(true);
+  it('blokada zatrzymuje wyszukiwanie, a odblokowanie tego samego konta otwiera pusty obszar Szukaj', async () => {
+    const h = headerSearchEnvironment(); h.lock();
+    expect(h.lupa.getAttribute('title')).toContain('Zaloguj się');
+    await expect(h.api.openSearch(h.lupa)).resolves.toBe(false);
+    expect(h.ui.maybeShowReminders).not.toHaveBeenCalled();
     h.state.unlocked = true; h.api.refreshSearch();
-    expect(h.input.value).toBe(''); expect(h.input.readOnly).toBe(false);
+    await h.api.openSearch(h.lupa);
+    expect(h.ui.maybeShowReminders).toHaveBeenCalledOnce();
+    expect(h.ui.maybeShowReminders.mock.calls[0][0].globalSearch.query).toBe('');
+    expect(h.wrapper.querySelector('input')).toBeNull();
   });
 
   it.each(['load', 'boot'])('opóźnione %s po blokadzie nie otwiera wyszukiwania innej sesji', async phase => {
-    const h = headerSearchEnvironment(); h.type('Fikcyjna fraza przed blokadą');
+    const h = headerSearchEnvironment();
     let resolveLoad;
     if (phase === 'load') {
       delete h.win.VildaAuthUI;
       h.win.VildaSession.ensureAuthLoaded = vi.fn(() => new Promise(resolve => { resolveLoad = resolve; }));
     } else h.ui.isBootReady = () => false;
-    const pending = h.api.openSearch(h.input);
-    if (phase === 'boot') expect(h.doc.listenerCount('vilda:auth-boot-settled')).toBe(2);
+    const pending = h.api.openSearch(h.lupa);
+    if (phase === 'boot') expect(h.doc.listenerCount('vilda:auth-boot-settled')).toBe(h.backgroundBootListeners.boot + 1);
     h.lock();
     if (resolveLoad) { h.win.VildaAuthUI = h.ui; resolveLoad(); }
     await expect(pending).resolves.toBe(false);
     expect(h.ui.maybeShowReminders).not.toHaveBeenCalled();
-    expect(h.input.value).toBe('');
+    expect(h.wrapper.querySelector('input')).toBeNull();
     // Permanent header listeners remain; the cancelled boot listener does not.
-    expect(h.doc.listenerCount('vilda:auth-boot-settled')).toBe(1);
+    expect(h.doc.listenerCount('vilda:auth-boot-settled')).toBe(h.backgroundBootListeners.boot);
+  });
+});
+
+describe('Chrome: właściciel statusu w powłoce', () => {
+  it('czyta wyłącznie widoczną ramkę, także gdy legacy proxy zachowuje ukrytego właściciela', () => {
+    const h = headerSearchEnvironment();
+    const panes = h.main.appendChild(new h.Element('div')); panes.setAttribute('id', 'appPanes');
+    const child = value => {
+      const doc = { getElementById: () => null };
+      const win = { document: doc, VildaVault: h.win.VildaVault,
+        VildaSaveStatusIndicator: { getState: vi.fn(() => value), isReadyForSharedReference: () => true } };
+      const frame = panes.appendChild(new h.Element('iframe')); frame.contentDocument = doc; frame.contentWindow = win;
+      return { doc, win, frame };
+    };
+    const old = child('error'), current = child('saved'); old.frame.hidden = true;
+    panes.querySelector = selector => selector === 'iframe.app-pane:not([hidden])' ? panes.children.find(frame => !frame.hidden) || null : null;
+    h.win.VildaSaveStatusIndicator = old.win.VildaSaveStatusIndicator;
+    h.win.VildaActiveSaveOwner = old.win;
+    const source = h.api.saveSource();
+    expect(source.win).toBe(current.win);
+    expect(source.api.getState()).toBe('saved');
+    expect(old.win.VildaSaveStatusIndicator.getState).not.toHaveBeenCalled();
+    current.frame.hidden = true;
+    expect(h.api.saveSource(), 'brak aktywnej ramki nie uruchamia fallbacku do starego statusu').toBeNull();
+  });
+
+  it.each(['guest', 'locked', 'account', 'stale'])('odrzuca aktywne źródło po zmianie jego właściciela: %s', condition => {
+    const h = headerSearchEnvironment();
+    h.win.VildaSaveStatusIndicator = { getState: () => 'saved', isReadyForSharedReference: () => true };
+    expect(h.api.saveSource()?.ready).toBe(true);
+    const panes = h.main.appendChild(new h.Element('div')); panes.setAttribute('id', 'appPanes');
+    const doc = { getElementById: () => null };
+    const source = { document: doc, VildaSaveStatusIndicator: h.win.VildaSaveStatusIndicator,
+      VildaVault: { isUnlocked: () => condition !== 'locked', getCurrentUser: () => ({ userId: condition === 'account' ? 'fictional-other-owner' : h.state.userId }) },
+      VildaGuestMode: condition === 'guest', VildaPanelPacjent: { nieaktualny: () => condition === 'stale' } };
+    const frame = panes.appendChild(new h.Element('iframe')); frame.contentWindow = source; frame.contentDocument = doc;
+    panes.querySelector = () => frame;
+    expect(h.api.saveSource()).toBeNull();
   });
 });
 
@@ -255,7 +307,7 @@ describe('Chrome: otwarcie Karty czeka na zakończenie startu AuthUI', () => {
     const pending = h.api.openPatient(false, h.opener);
     expect(h.ui.showPatientCard).not.toHaveBeenCalled();
     expect(h.drawer.hidden).toBe(false);
-    expect(h.doc.listenerCount('vilda:auth-boot-settled')).toBe(1);
+    expect(h.doc.listenerCount('vilda:auth-boot-settled')).toBe(h.backgroundBootListeners.boot + 1);
     h.state.ready = true;
     h.doc.dispatchEvent({ type: 'vilda:auth-boot-settled' });
     expect(await pending).toBe(true);
@@ -276,7 +328,7 @@ describe('Chrome: otwarcie Karty czeka na zakończenie startu AuthUI', () => {
   it.each(['account', 'lock', 'guest', 'patient', 'href', 'api'])('odrzuca późną gotowość po zmianie: %s', async condition => {
     const h = patientMenuEnvironment();
     const pending = h.api.openPatient(false, h.opener);
-    expect(h.doc.listenerCount('vilda:auth-boot-settled')).toBe(1);
+    expect(h.doc.listenerCount('vilda:auth-boot-settled')).toBe(h.backgroundBootListeners.boot + 1);
     if (condition === 'account') h.state.userId = 'fictional-account-b';
     if (condition === 'lock') h.state.unlocked = false;
     if (condition === 'guest') h.win.VildaGuestMode = true;
@@ -322,7 +374,7 @@ describe('Chrome: otwarcie Karty czeka na zakończenie startu AuthUI', () => {
     h.storage.set('vildaCurrentPatientId', 'fictional-patient-b');
     const second = h.api.openPatient(false, h.opener);
     expect(await first).toBe(false);
-    expect(h.doc.listenerCount('vilda:auth-boot-settled')).toBe(1);
+    expect(h.doc.listenerCount('vilda:auth-boot-settled')).toBe(h.backgroundBootListeners.boot + 1);
     h.state.ready = true;
     h.doc.dispatchEvent({ type: 'vilda:auth-boot-settled' });
     expect(await second).toBe(true);
@@ -341,7 +393,7 @@ describe('Chrome: otwarcie Karty czeka na zakończenie startu AuthUI', () => {
     h.win.VildaAuthUI = h.ui;
     loaded();
     await Promise.resolve();
-    expect(h.doc.listenerCount('vilda:auth-boot-settled')).toBe(1);
+    expect(h.doc.listenerCount('vilda:auth-boot-settled')).toBe(h.backgroundBootListeners.boot + 1);
     expect(h.ui.showPatientCard).not.toHaveBeenCalled();
     h.state.ready = true;
     h.doc.dispatchEvent({ type: 'vilda:auth-boot-settled' });
