@@ -1,8 +1,17 @@
-// P-DZIENNIK-ZDARZEN (E2-PR2a, E2-PR2b1, E2-PR2b2) — strażniki uśpienia bloku dziennika zdarzeń w vilda_vault.js: kod
-// produkcyjny nie woła nowych funkcji (eksport tylko pod VildaVault._eventLog, nikt go nie używa), blok nie ma skutków
-// ubocznych przy ładowaniu, część Bev_ (koperty, buildery, szyfrowanie, zastosowanie) nie zawiera wywołań zapisu, emisji,
-// sieci ani magazynów przeglądarki, a część magazynu kolejki i kwarantanny (Bob_, poniżej znacznika magazynu) sięga do
-// okna wyłącznie przez nazwane pola w nazwanych funkcjach i działa tylko za bramką (pole okna VILDA_EVENT_LOG === true).
+// P-DZIENNIK-ZDARZEN (E2-PR2a, E2-PR2b1, E2-PR2b2, E2-PR3a1) — strażniki uśpienia bloku dziennika zdarzeń w vilda_vault.js:
+// kod produkcyjny woła nowe funkcje wyłącznie z listy miejsc (literał MIEJSCA_POZA_BLOKIEM); bez bramki działają
+// sprzątanie po koncie, część Bev_ oraz kasowanie bazy (deleteDatabase) i podsumowanie wyniku (resultSummary) z części
+// Bob_, a reszta kończy się na bramce: bez otwarcia bazy kolejki, szyfrowania i żądań. Sprzątanie po koncie: kasowanie
+// kolejki w removeUser i ponowienie przy odblokowaniu działają przy każdym stanie bramki (w trybie „Zaloguj
+// jednorazowo” nie sięgają do IndexedDB, localStorage ani Web Locks), a przy zamkniętej bramce kończą się na
+// liście baz (databases(); bez listy — na deleteDatabase nieistniejącej bazy, bez otwarcia) i nie zostawiają klucza;
+// znacznik ponowienia zostaje wtedy tylko po nieudanym albo niedokończonym kasowaniu (np. błąd deleteDatabase
+// w przeglądarce bez listy baz; limit blokady konta wymaga trwającego ponowienia, czyli wcześniejszego znacznika)
+// — do udanego ponowienia przy odblokowaniu poza trybem „Zaloguj jednorazowo”. Eksport tylko pod VildaVault._eventLog
+// (nikt go nie używa), blok nie ma skutków ubocznych przy ładowaniu, część Bev_ (koperty, buildery, szyfrowanie,
+// zastosowanie) nie zawiera wywołań zapisu, emisji, sieci ani magazynów przeglądarki, a część magazynu kolejki
+// i kwarantanny (Bob_, poniżej znacznika magazynu) sięga do okna wyłącznie przez nazwane pola w nazwanych funkcjach
+// i poza wymienionymi wyżej działa tylko za bramką (pole okna VILDA_EVENT_LOG === true).
 // Testy źródła (vilda_vault.js, pliki produktu z git ls-files) i eksportu (prawdziwy sejf w oknie uprzęży, dane wyłącznie
 // fikcyjne).
 //
@@ -14,11 +23,16 @@
 //         zablokowany sejf przy zamkniętej bramce → bramka. resultSummary (niechronione, czysta funkcja) przy zamkniętej
 //         bramce i zablokowanym sejfie daje pełne podsumowanie synchronicznie, bez odczytu pól okna (także
 //         VILDA_EVENT_LOG), bez zegara i bez wywołań magazynu sejfu.
-//   U2(a) identyfikatory Bev_ i Bob_ leżą między znacznikami bloku (każdy znacznik dokładnie raz), poza blokiem dokładnie
-//         jedno `_eventLog:Bev_EKSPORT`; `_eventLog` dokładnie raz w pliku; zero `._eventLog` i `VildaVault._eventLog`;
-//         blok stoi między Bsl_usunPacjenta a `function yr(`. Znacznik magazynu kolejki dokładnie raz, za literałem
-//         Bev_EKSPORT; w części Bev_ identyfikatory Bob_ wyłącznie w tym literale (17 kluczy magazynu kolejki
-//         i kwarantanny).
+//   U2(a) identyfikatory Bev_, Bob_ i Bem_ leżą między znacznikami bloku (każdy znacznik dokładnie raz) poza literałem
+//         miejsc: `_eventLog:Bev_EKSPORT` oraz wywołania z MIEJSCA_POZA_BLOKIEM (funkcja otaczająca → nazwa → liczba;
+//         drzewo składni: każde wywołanie instrukcją wyrażeniową albo elementem wyrażenia przecinkowego bez użycia wyniku,
+//         poza wyjątkami form: `await Bob_kasujKonto(t)` w xa, `const PatientCheckpointSyncMark=Bob_oznacz(userId)`
+//         w PatientCheckpointRemoveUser z wynikiem wyłącznie jako argument Bob_odznacz w bloku catch; w xa kolejność
+//         usunięcie wpisu rejestru → Bob_poRejestrze → blokada sejfu → await Bob_kasujKonto; w He Bob_poOdblokowaniu po
+//         go()); `_eventLog` dokładnie raz w pliku; zero `._eventLog` i `VildaVault._eventLog`; blok stoi między
+//         Bsl_usunPacjenta a `function yr(`. Znacznik magazynu kolejki dokładnie raz, za literałem Bev_EKSPORT; w części
+//         Bev_ identyfikatory Bob_ wyłącznie w tym literale (17 kluczy magazynu kolejki i kwarantanny) i jedno
+//         Bob_wKasowaniu w Bev_start (adapter sejfu strzeżony przy kasowaniu konta).
 //   U2(b) żaden plik produktu poza vilda_vault.js (git ls-files *.js *.mjs *.cjs *.html *.htm bez tests/ i docs/) nie
 //         zawiera `_eventLog`, applyEncryptedEvent, encryptEvent, nazw 14 builderów, nazw API magazynu (gateOpen,
 //         outbox…), VILDA_EVENT_LOG, klucza urządzenia, nazwy bazy kolejki (vilda_sync_ poza vilda_sync_integration.js),
@@ -28,7 +42,11 @@
 //         składni (acorn + eslint-scope): wolne identyfikatory wyłącznie z listy, pola okna tylko w swoich funkcjach,
 //         Date tylko w funkcjach chwili, zakaz dostępu przez nawias do v, Date, Object, Reflect, liczności wywołań
 //         kasowania, listy baz i rejestru. Funkcje eksportu kwarantanny i podsumowania wyniku są deklaracjami
-//         najwyższego poziomu części Bob_ (obejmują je obie reguły); podsumowanie wyniku jest czyste: synchroniczne,
+//         najwyższego poziomu części Bob_ (obejmują je obie reguły); navigator tylko w Bob_blokady (lista tekstowa na części
+//         bez tej funkcji), AbortController tylko w Bob_podBlokada, localStorage tylko w funkcjach identyfikatora
+//         urządzenia, znacznika ponowienia, ponowienia i kasowania konta; żądanie blokady tylko w Bob_podBlokada;
+//         liczności kasowania (deleteDatabase w Bob_kasujBaze), listy baz (Bob_istnieje, Bob_kasujKonto) i rejestru
+//         (Bob_konto, Bob_poOdblokowaniu); podsumowanie wyniku jest czyste: synchroniczne,
 //         a w domknięciu wywołań (funkcje i stałe bloku osiągalne z niej) wolne identyfikatory tylko z listy czystych
 //         (bez okna, stanu logowania, sejfu, rejestru, zegara, losowości) — z samokontrolą.
 //   U2(d) najwyższy poziom bloku (AST): w części Bev_ nazwy ^Bev_, w części Bob_ ^Bob_; wyłącznie deklaracje function /
@@ -39,11 +57,13 @@
 //         i 6 kluczy kwarantanny i podsumowania wyniku z E2-PR2b2).
 //   U4    krótki scenariusz sejfu na adapterze IndexedDB nad atrapą przy zamkniętej bramce (każda istniejąca operacja
 //         magazynu, także kwarantanny): databases() bez vilda_sync_*, brak klucza o przedrostku vilda-sync-device-v1.
+//   U4′   zwykłe użycie z usunięciem konta przy zamkniętej bramce (moduły punktu odzyskiwania), z navigator.locks i bez:
+//         0 baz vilda_sync_*, 0 kluczy i 0 zapisów vilda-sync-* w localStorage, 0 odczytów pola bramki.
 // Każdy przypadek, który tnie blok na części, zaczyna od sprawdzenia, że znacznik magazynu jest dokładnie raz.
-// Czerwone na bazie bez kwarantanny (E2-PR2b1): lista chronionych kluczy U1, U1 kwarantanny i podsumowania wyniku,
-// literał eksportu U2(a) (17 kluczy), nowe części U2(c) (deklaracje i czystość podsumowania wyniku), U2(e) (35 kluczy);
-// zielone z natury: U2(b), samokontrole wzorców i reguł, dotychczasowe U1 (pętla po kluczach obecnych w eksporcie),
-// U2(c) i U2(d) całej części Bob_, U4.
+// Czerwone na sejfie bez kasowania konta (E2-PR2b2): literał miejsc poza blokiem U2(a) (tekst i drzewo składni), Bob_wKasowaniu
+// w części Bev_, liczności reguły domknięcia części Bob_ (navigator, AbortController, żądanie blokady, kasowanie, lista
+// baz, rejestr); zielone z natury: U1, U2(b), samokontrole wzorców i reguł, lista tekstowa części Bob_, U2(d), U2(e),
+// U4, U4′.
 import fs from 'node:fs';
 import path from 'node:path';
 import { execFileSync } from 'node:child_process';
@@ -51,8 +71,8 @@ import { fileURLToPath } from 'node:url';
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { parse } from 'acorn';
 import { analyze } from 'eslint-scope';
-import { magazynZRejestrem, naglowek, okno } from './sesja-zapisu-uprzaz.mjs';
-import { PRZEDROSTEK_URZADZENIA, ZNACZNIK_MAGAZYNU, oknoMagazynu, przechwycZadaniaWTle } from '../support/okno-magazynu.mjs';
+import { magazynZRejestrem, naglowek, okno, wytnijFunkcje } from './sesja-zapisu-uprzaz.mjs';
+import { PRZEDROSTEK_URZADZENIA, SKRYPTY_PUNKTU, ZNACZNIK_MAGAZYNU, oknoMagazynu, przechwycZadaniaWTle } from '../support/okno-magazynu.mjs';
 
 const KORZEN = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const SEJF = 'vilda_vault.js';
@@ -73,7 +93,14 @@ const NIECZYTELNY = Object.freeze({ status: 'unreadable', reason: 'decrypt' });
 const KLUCZE_EKSPORTU = ['kinds', ...BUILDERY, 'encryptEvent', 'eventBytes', 'applyEncryptedEvent', ...KLUCZE_MAGAZYNU];
 const RODZAJE = ['snap', 'pfull', 'ptomb', 'stomb', 'pnote', 'pnotetomb', 'note', 'notetomb', 'plist', 'plisttomb', 'pref', 'pk', 'pktomb', 'cred'];
 const ile = (tekst, fragment) => tekst.split(fragment).length - 1;
-const ID_BEV_BOB = /(?<![A-Za-z0-9_$])B(?:ev|ob)_[A-Za-z0-9_$]*/g;
+const ID_BEV_BOB = /(?<![A-Za-z0-9_$])B(?:ev|ob|em)_[A-Za-z0-9_$]*/g;
+// Wywołania części dziennika spoza bloku: funkcja otaczająca → nazwa → liczba (sprzątanie po koncie w removeUser i ponowienie
+// przy odblokowaniu).
+const MIEJSCA_POZA_BLOKIEM = Object.freeze({
+  PatientCheckpointRemoveUser: { Bob_oznacz: 1, Bob_odznacz: 1 },
+  xa: { Bob_poRejestrze: 2, Bob_kasujKonto: 2 },
+  He: { Bob_poOdblokowaniu: 1 },
+});
 const ID_BOB = /(?<![A-Za-z0-9_$])Bob_[A-Za-z0-9_$]*/g;
 
 function blok() {
@@ -104,6 +131,89 @@ function literalEksportu() {
   throw new Error('nie domknięto literału Bev_EKSPORT');
 }
 const znacznikRaz = () => expect(ile(ZRODLO, ZNACZNIK_MAGAZYNU), 'znacznik magazynu kolejki dokładnie raz').toBe(1);
+// Wywołania części dziennika w kodzie spoza bloku (blok zastąpiony spacjami): { miejsca: funkcja → nazwa → liczba, bledy }.
+// Forma domyślna: instrukcja wyrażeniowa albo element wyrażenia przecinkowego, który nie jest ostatni (wynik nieużyty).
+// Wyjątki: `await Bob_kasujKonto(…)` w xa (element wyrażenia przecinkowego, nie ostatni);
+// `const PatientCheckpointSyncMark = Bob_oznacz(…)` w PatientCheckpointRemoveUser, a ta stała wyłącznie jako drugi argument
+// Bob_odznacz w bloku catch. Kolejność: w xa (w każdym wyrażeniu przecinkowym z kasowaniem kolejki) usunięcie wpisu
+// rejestru → Bob_poRejestrze → [blokada sejfu kn] → await Bob_kasujKonto; w He Bob_poOdblokowaniu po go().
+function miejscaPozaBlokiem(zrodlo) {
+  const ast = parse(zrodlo, { ecmaVersion: 'latest', sourceType: 'script' });
+  const rodzic = new Map();
+  const idz = (n, p) => {
+    if (!n || typeof n.type !== 'string') return;
+    rodzic.set(n, p);
+    for (const k of Object.keys(n)) { const x = n[k]; if (Array.isArray(x)) x.forEach((y) => idz(y, n)); else if (x && typeof x.type === 'string') idz(x, n); }
+  };
+  idz(ast, null);
+  const FUNKCJE = ['FunctionDeclaration', 'FunctionExpression', 'ArrowFunctionExpression'];
+  const funkcja = (n) => { let p = rodzic.get(n); while (p && !FUNKCJE.includes(p.type)) p = rodzic.get(p); return p; };
+  const nazwaFunkcji = (f) => (f && f.type === 'FunctionDeclaration' && f.id ? f.id.name : f ? '(funkcja zagnieżdżona)' : '(najwyższy poziom)');
+  const zawiera = (n, test) => {
+    let jest = false;
+    const szukaj = (x) => { if (jest || !x || typeof x.type !== 'string') return; if (test(x)) { jest = true; return; } for (const k of Object.keys(x)) { const y = x[k]; if (Array.isArray(y)) y.forEach(szukaj); else if (y && typeof y.type === 'string') szukaj(y); } };
+    szukaj(n);
+    return jest;
+  };
+  const wywolanie = (x, nazwa) => x.type === 'CallExpression' && x.callee.type === 'Identifier' && x.callee.name === nazwa;
+  const metoda = (x, nazwa) => x.type === 'CallExpression' && x.callee.type === 'MemberExpression' && !x.callee.computed && x.callee.property.name === nazwa;
+  const miejsca = {};
+  const bledy = [];
+  const wezly = [];
+  const zbierz = (n) => { if (!n || typeof n.type !== 'string') return; wezly.push(n); for (const k of Object.keys(n)) { const x = n[k]; if (Array.isArray(x)) x.forEach(zbierz); else if (x && typeof x.type === 'string') zbierz(x); } };
+  zbierz(ast);
+  for (const id of wezly) {
+    if (id.type !== 'Identifier' || !/^B(?:ev|ob|em)_/.test(id.name)) continue;
+    const p = rodzic.get(id);
+    if (p.type === 'MemberExpression' && p.property === id && !p.computed) continue;
+    if (p.type === 'Property' && p.key === id && !p.computed) continue;
+    if (id.name === 'Bev_EKSPORT' && p.type === 'Property' && p.value === id && !p.computed && p.key.name === '_eventLog') continue;
+    const f = funkcja(id);
+    const fn = nazwaFunkcji(f);
+    const gdzie = `${id.name} w ${fn}`;
+    miejsca[fn] = miejsca[fn] || {};
+    miejsca[fn][id.name] = (miejsca[fn][id.name] || 0) + 1;
+    if (!(p.type === 'CallExpression' && p.callee === id)) { bledy.push(`${gdzie}: odwołanie bez wywołania`); continue; }
+    const wyzej = rodzic.get(p);
+    const nieOstatni = (seq, el) => seq && seq.type === 'SequenceExpression' && seq.expressions.indexOf(el) >= 0 && seq.expressions.indexOf(el) < seq.expressions.length - 1;
+    if (id.name === 'Bob_kasujKonto' && fn === 'xa') {
+      if (!(wyzej.type === 'AwaitExpression' && nieOstatni(rodzic.get(wyzej), wyzej))) bledy.push(`${gdzie}: forma inna niż await jako element wyrażenia przecinkowego`);
+      continue;
+    }
+    if (id.name === 'Bob_oznacz' && fn === 'PatientCheckpointRemoveUser') {
+      const dekl = rodzic.get(wyzej);
+      if (!(wyzej.type === 'VariableDeclarator' && wyzej.id.name === 'PatientCheckpointSyncMark' && dekl.kind === 'const')) { bledy.push(`${gdzie}: forma inna niż const PatientCheckpointSyncMark = Bob_oznacz(…)`); continue; }
+      const uzycia = wezly.filter((x) => x.type === 'Identifier' && x.name === 'PatientCheckpointSyncMark' && x !== wyzej.id && funkcja(x) === f);
+      const poprawne = uzycia.filter((x) => { const c = rodzic.get(x); return wywolanie(c, 'Bob_odznacz') && c.arguments[1] === x; });
+      if (uzycia.length !== 1 || poprawne.length !== 1) bledy.push(`${gdzie}: wynik użyty poza jednym argumentem Bob_odznacz (${uzycia.length} użyć)`);
+      continue;
+    }
+    if (!(wyzej.type === 'ExpressionStatement' || nieOstatni(wyzej, p))) { bledy.push(`${gdzie}: wynik użyty (${wyzej.type})`); continue; }
+    if (id.name === 'Bob_odznacz') {
+      let c = rodzic.get(p);
+      while (c && c !== f && c.type !== 'CatchClause') c = rodzic.get(c);
+      if (!c || c.type !== 'CatchClause') bledy.push(`${gdzie}: poza blokiem catch`);
+    }
+  }
+  // Kolejność w xa: każde wyrażenie przecinkowe z Bob_poRejestrze ma kasowanie kolejki po nim i usunięcie wpisu rejestru przed nim.
+  for (const seq of wezly.filter((x) => x.type === 'SequenceExpression' && x.expressions.some((e) => wywolanie(e, 'Bob_poRejestrze')))) {
+    const el = seq.expressions;
+    const i = (test) => el.findIndex((e) => zawiera(e, test));
+    const rej = i((x) => metoda(x, 'removeRegistryEntry'));
+    const po = el.findIndex((e) => wywolanie(e, 'Bob_poRejestrze'));
+    const kas = el.findIndex((e) => e.type === 'AwaitExpression' && wywolanie(e.argument, 'Bob_kasujKonto'));
+    const kn = i((x) => wywolanie(x, 'kn'));
+    if (!(rej >= 0 && rej < po && po < kas)) bledy.push(`xa: kolejność usunięcie wpisu rejestru (${rej}) → Bob_poRejestrze (${po}) → await Bob_kasujKonto (${kas})`);
+    if (kn >= 0 && !(po < kn && kn < kas)) bledy.push(`xa: blokada sejfu (${kn}) nie między Bob_poRejestrze (${po}) a await Bob_kasujKonto (${kas})`);
+  }
+  // He: Bob_poOdblokowaniu po go().
+  for (const he of wezly.filter((x) => x.type === 'FunctionDeclaration' && x.id && x.id.name === 'He')) {
+    const go = wezly.filter((x) => wywolanie(x, 'go') && funkcja(x) === he).map((x) => x.start);
+    const po = wezly.filter((x) => wywolanie(x, 'Bob_poOdblokowaniu') && funkcja(x) === he).map((x) => x.start);
+    if (po.length && !(go.length && po.every((x) => x > Math.max(...go)))) bledy.push('He: Bob_poOdblokowaniu przed go()');
+  }
+  return { miejsca, bledy };
+}
 function plikiProdukcyjne() {
   return execFileSync('git', ['ls-files', '-z', '--', '*.js', '*.mjs', '*.cjs', '*.html', '*.htm'], { cwd: KORZEN, encoding: 'utf8' })
     .split('\0')
@@ -327,15 +437,55 @@ describe('U2(a): identyfikatory Bev_ i Bob_ tylko w bloku; _eventLog dokładnie 
     expect(typeof eksport).toBe('object');
   });
 
-  it('znaczniki bloku dokładnie raz; poza blokiem jedyne Bev_/Bob_ to _eventLog:Bev_EKSPORT', () => {
+  it('znaczniki bloku dokładnie raz; poza blokiem Bev_/Bob_/Bem_ tylko _eventLog:Bev_EKSPORT i wywołania z literału miejsc (tekst, także komentarze)', () => {
     expect(ile(ZRODLO, POCZATEK), 'znacznik początku').toBe(1);
     expect(ile(ZRODLO, KONIEC), 'znacznik końca').toBe(1);
     const { a, z } = blok();
     const poza = ZRODLO.slice(0, a) + ZRODLO.slice(z);
-    const ids = [...poza.matchAll(ID_BEV_BOB)].map((m) => poza.slice(m.index - 10, m.index + m[0].length));
-    expect(ids, 'Bev_/Bob_ poza blokiem').toEqual(['_eventLog:Bev_EKSPORT']);
+    const ids = [...poza.matchAll(ID_BEV_BOB)].map((m) => m[0]);
+    const policz = (lista) => lista.reduce((m, x) => ({ ...m, [x]: (m[x] || 0) + 1 }), {});
+    const oczekiwane = { Bev_EKSPORT: 1 };
+    for (const nazwy of Object.values(MIEJSCA_POZA_BLOKIEM)) for (const [n, k] of Object.entries(nazwy)) oczekiwane[n] = (oczekiwane[n] || 0) + k;
+    expect(policz(ids), 'Bev_/Bob_/Bem_ poza blokiem (nazwa → liczba)').toEqual(oczekiwane);
     expect(ile(poza, '_eventLog:Bev_EKSPORT')).toBe(1);
     expect(ile(ZRODLO, 'STORAGE_MODE_CLOUD_ONLY:Se,_eventLog:Bev_EKSPORT};v.VildaVault=$s'), 'klucz na końcu eksportu').toBe(1);
+  });
+
+  it('U2(a): wywołania z literału miejsc poza blokiem — funkcja otaczająca, liczba i forma (drzewo składni; bez użycia wyniku poza wyjątkami form), kolejność w xa i He', () => {
+    const { a, z } = blok();
+    const poza = ZRODLO.slice(0, a) + ' '.repeat(z - a) + ZRODLO.slice(z);
+    expect(miejscaPozaBlokiem(poza)).toEqual({ miejsca: MIEJSCA_POZA_BLOKIEM, bledy: [] });
+  });
+
+  it('samokontrola literału miejsc: użycie wyniku, await, return, miejsce spoza literału, zła kolejność w xa albo He i wynik oznaczenia poza Bob_odznacz — czerwone; formy z literału zielone', () => {
+    const DOBRE = [
+      'async function PatientCheckpointRemoveUser(userId, password) { const PatientCheckpointSyncMark=Bob_oznacz(userId); try { await f(); } catch (e) { Bob_odznacz(userId, PatientCheckpointSyncMark); throw e; } finally { g(); } }',
+      'async function xa(t,e){ if(!r){ return W(A,(await I().getRegistryEntry(t)&&await I().removeRegistryEntry(W(A,t)),Bob_poRejestrze(t),await Bob_kasujKonto(t),true)); } return W(A,(await I().deleteUserDatabase(W(t,t)),await I().removeRegistryEntry(W(A,t)),Bob_poRejestrze(t),b===t&&kn("user-removed"),await Bob_kasujKonto(t),true)); }',
+      'function He(t){ $n.forEach(function(n){ n(e); }); try{go()}catch(x){r(x);} Bob_poOdblokowaniu(); }',
+    ].join('\n');
+    expect(miejscaPozaBlokiem(DOBRE)).toEqual({ miejsca: MIEJSCA_POZA_BLOKIEM, bledy: [] });
+    const zle = [
+      DOBRE.replace('Bob_poOdblokowaniu();', 'const x = Bob_poOdblokowaniu();'),
+      DOBRE.replace('function He(t){', 'async function He(t){').replace('Bob_poOdblokowaniu();', 'await Bob_poOdblokowaniu();'),
+      DOBRE.replace('Bob_poOdblokowaniu();', 'return Bob_poOdblokowaniu();'),
+      DOBRE.replace('Bob_poOdblokowaniu();', 'Bob_poOdblokowaniu().then(f);'),
+      DOBRE.replace('try{go()}catch(x){r(x);} Bob_poOdblokowaniu();', 'Bob_poOdblokowaniu(); try{go()}catch(x){r(x);}'),
+      DOBRE.replace(',Bob_poRejestrze(t),b===t&&kn("user-removed"),await Bob_kasujKonto(t),true', ',Bob_poRejestrze(t),await Bob_kasujKonto(t),b===t&&kn("user-removed"),true'),
+      DOBRE.replace('await I().deleteUserDatabase(W(t,t)),await I().removeRegistryEntry(W(A,t)),Bob_poRejestrze(t)', 'await I().deleteUserDatabase(W(t,t)),Bob_poRejestrze(t),await I().removeRegistryEntry(W(A,t))'),
+      DOBRE.replace(',Bob_poRejestrze(t),await Bob_kasujKonto(t),true));', ',Bob_poRejestrze(t),Bob_kasujKonto(t),true));'),
+      DOBRE.replace(',Bob_poRejestrze(t),await Bob_kasujKonto(t),true));', ',Bob_poRejestrze(t),true)); await Bob_kasujKonto(t);'),
+      DOBRE.replace('Bob_odznacz(userId, PatientCheckpointSyncMark);', 'Bob_odznacz(userId, PatientCheckpointSyncMark); h(PatientCheckpointSyncMark);'),
+      DOBRE.replace('catch (e) { Bob_odznacz(userId, PatientCheckpointSyncMark); throw e; } finally { g(); }', 'catch (e) { throw e; } finally { g(); } Bob_odznacz(userId, PatientCheckpointSyncMark);'),
+      DOBRE.replace('const PatientCheckpointSyncMark=Bob_oznacz(userId);', 'let PatientCheckpointSyncMark=Bob_oznacz(userId);'),
+      `${DOBRE}\nfunction Inna() { Bob_poRejestrze(u); }`,
+      `${DOBRE}\nfunction ns() { Bem_partia(1); }`,
+      DOBRE.replace('try{go()}catch(x){r(x);} Bob_poOdblokowaniu(); }', 'try{go()}catch(x){r(x);} }').replace('$n.forEach(function(n){ n(e); });', '$n.forEach(function(n){ n(e); Bob_poOdblokowaniu(); });'),
+    ];
+    for (const [i, kod] of zle.entries()) {
+      expect(kod, `wariant ${i} różni się od form z literału`).not.toBe(DOBRE);
+      const w = miejscaPozaBlokiem(kod);
+      expect(w.bledy.length + (JSON.stringify(w.miejsca) === JSON.stringify(MIEJSCA_POZA_BLOKIEM) ? 0 : 1), `wariant ${i}`).toBeGreaterThan(0);
+    }
   });
 
   it('_eventLog dokładnie raz w pliku; zero odwołań przez obiekt (._eventLog, VildaVault._eventLog, [\'_eventLog\'])', () => {
@@ -352,7 +502,7 @@ describe('U2(a): identyfikatory Bev_ i Bob_ tylko w bloku; _eventLog dokładnie 
     expect(ZRODLO.slice(0, a).endsWith('}\n'), 'blok zaczyna się od nowej linii po klamrze Bsl_usunPacjenta').toBe(true);
   });
 
-  it('U2(a) (E2-PR2b): znacznik magazynu kolejki dokładnie raz, za literałem Bev_EKSPORT, przed znacznikiem końca; Bob_ w części Bev_ wyłącznie w tym literale (17 kluczy magazynu kolejki i kwarantanny)', () => {
+  it('U2(a) (E2-PR2b, E2-PR3a1): znacznik magazynu kolejki dokładnie raz, za literałem Bev_EKSPORT, przed znacznikiem końca; Bob_ w części Bev_ wyłącznie w tym literale (17 kluczy magazynu kolejki i kwarantanny) i jedno Bob_wKasowaniu w Bev_start', () => {
     znacznikRaz();
     expect(ZNACZNIK_MAGAZYNU.includes('Bob_'), 'tekst znacznika bez Bob_').toBe(false);
     const { a, z, i, bev } = czesci();
@@ -361,10 +511,13 @@ describe('U2(a): identyfikatory Bev_ i Bob_ tylko w bloku; _eventLog dokładnie 
     expect(lit.koniec, 'znacznik magazynu za literałem Bev_EKSPORT').toBeLessThan(i);
     expect(i).toBeLessThan(z);
     expect(ZRODLO.slice(lit.koniec, i).trim(), 'między literałem eksportu a znacznikiem magazynu tylko średnik').toBe(';');
-    const wBev = [...bev.matchAll(ID_BOB)].map((m) => a + m.index);
-    expect(wBev.filter((p) => p < lit.start || p >= lit.koniec), 'Bob_ w części Bev_ poza literałem eksportu').toEqual([]);
+    const wBev = [...bev.matchAll(ID_BOB)].map((m) => ({ poz: a + m.index, nazwa: m[0] }));
+    const start = ZRODLO.indexOf('function Bev_start(');
+    const poza = wBev.filter((x) => x.poz < lit.start || x.poz >= lit.koniec);
+    const wStart = start >= 0 ? start + wytnijFunkcje(ZRODLO.slice(start), 'Bev_start').length : -1;
+    expect(poza.map((x) => `${x.nazwa}${x.poz > start && x.poz < wStart ? ' w Bev_start' : ''}`), 'Bob_ w części Bev_ poza literałem eksportu').toEqual(['Bob_wKasowaniu w Bev_start']);
     expect(KLUCZE_MAGAZYNU).toHaveLength(17);
-    expect(wBev, 'Bob_ w literale eksportu: 17 kluczy magazynu kolejki i kwarantanny').toHaveLength(KLUCZE_MAGAZYNU.length);
+    expect(wBev.length - poza.length, 'Bob_ w literale eksportu: 17 kluczy magazynu kolejki i kwarantanny').toBe(KLUCZE_MAGAZYNU.length);
     const pary = [...lit.tekst.matchAll(/(\w+)\s*:\s*(Bob_[A-Za-z0-9_$]*)/g)].map((m) => m[1]);
     expect(pary.sort()).toEqual([...KLUCZE_MAGAZYNU].sort());
   });
@@ -443,11 +596,21 @@ describe('U2(c): wywołania zakazane i reguła domknięcia części magazynu', (
       'await c.a.getPatientForUser(c.u, id)', "e['deletedAtISO']", 'deleteDatabase: Bob_usunBaze', 'outboxDiscard: Bob_porzuc']) expect(ZAKAZANE.some((re) => re.test(p)), p).toBe(false);
   });
 
-  it('część Bob_: żaden zakazany wzorzec tekstowy (także w komentarzach)', () => {
+  // Funkcja dostępu do Web Locks (jedyne miejsce z navigator w części Bob_) — lista tekstowa obejmuje resztę części.
+  const bezBlokad = (bob) => {
+    const i = bob.indexOf('function Bob_blokady(');
+    return i < 0 ? bob : bob.slice(0, i) + bob.slice(i + wytnijFunkcje(bob.slice(i), 'Bob_blokady').length);
+  };
+  it('część Bob_: żaden zakazany wzorzec tekstowy (także w komentarzach) poza funkcją Bob_blokady (navigator tylko tam)', () => {
     znacznikRaz();
     const { bob } = czesci();
     expect(bob.trim().length, 'część Bob_ nie jest pusta').toBeGreaterThan(1000);
-    expect(znajdz(ZAKAZANE_BOB, bob)).toEqual([]);
+    expect(znajdz(ZAKAZANE_BOB, bezBlokad(bob))).toEqual([]);
+    const i = bob.indexOf('function Bob_blokady(');
+    if (i >= 0) {
+      const f = wytnijFunkcje(bob.slice(i), 'Bob_blokady');
+      expect(znajdz(ZAKAZANE_BOB, f).filter((x) => !x.startsWith('/navigator/')), 'Bob_blokady: zakazane wzorce poza navigator').toEqual([]);
+    }
   });
   it('samokontrola wzorców części Bob_: lista łapie przykładowe naruszenia, przepuszcza zwykły kod magazynu', () => {
     const proby = ['console.log(1)', 'fetch(u)', 'navigator.locks.request(n, f)', 'document.cookie', 'Vn({})', 'V(k)', 'G (iv, d)', 'Le(t)', 'kn("x")',
@@ -466,8 +629,14 @@ describe('U2(c): wywołania zakazane i reguła domknięcia części magazynu', (
   const WOLNE = new Set(['v', 'T', 'b', 'yt', 'ee', 'lt', 'gt', '$t', 'I', 'ne', 'be', 'Bses_opcje', 'Bses_zmieniona',
     'PatientCheckpointNativeAdapters', 'Object', 'Array', 'JSON', 'Number', 'String', 'Math', 'Promise', 'Uint8Array', 'Error', 'Set',
     'Map', 'Date', 'isFinite', 'undefined']);
-  const POLA_V = { VILDA_EVENT_LOG: ['Bob_bramka'], indexedDB: ['Bob_idb'], localStorage: ['Bob_urzadzenie', 'Bob_urzadzenieZapisz'],
-    crypto: ['Bob_urzadzenie'], setTimeout: ['Bob_limit'], clearTimeout: ['Bob_limit'] };
+  // Pola okna i funkcje, w których wolno ich użyć (napis albo wzorzec nazwy funkcji).
+  const POLA_V = {
+    VILDA_EVENT_LOG: ['Bob_bramka'], indexedDB: ['Bob_idb'], crypto: ['Bob_urzadzenie'],
+    localStorage: ['Bob_urzadzenie', 'Bob_urzadzenieZapisz', 'Bob_urzadzenieUsun', /^Bob_znacznik[A-Za-z]*$/, 'Bob_poOdblokowaniu', 'Bob_kasujKonto'],
+    setTimeout: ['Bob_limit', 'Bob_podBlokada'], clearTimeout: ['Bob_limit', 'Bob_podBlokada'], navigator: ['Bob_blokady'],
+    AbortController: ['Bob_podBlokada'],
+  };
+  const wolnoPole = (pole, gdzie) => POLA_V[pole].some((x) => (x instanceof RegExp ? x.test(gdzie) : x === gdzie));
   const CHWILA = ['Bob_teraz', 'Bob_wiek'];
   function analizuj(zrodlo) {
     const ast = parse(zrodlo, { ecmaVersion: 'latest', sourceType: 'script', ranges: true });
@@ -495,7 +664,7 @@ describe('U2(c): wywołania zakazane i reguła domknięcia części magazynu', (
           continue;
         }
         const pole = p.property.name;
-        if (!POLA_V[pole].includes(gdzie)) naruszenia.push(`v.${pole} w ${gdzie}`);
+        if (!wolnoPole(pole, gdzie)) naruszenia.push(`v.${pole} w ${gdzie}`);
         if (pole === 'crypto') {
           const pp = rodzic.get(p);
           if (!pp || pp.type !== 'MemberExpression' || pp.object !== p || pp.computed || pp.property.name !== 'getRandomValues') naruszenia.push(`v.crypto poza getRandomValues w ${gdzie}`);
@@ -510,7 +679,7 @@ describe('U2(c): wywołania zakazane i reguła domknięcia części magazynu', (
       if (n.type === 'MemberExpression' && n.computed && n.object.type === 'Identifier' && ['v', 'Date', 'Object', 'Reflect'].includes(n.object.name)) {
         naruszenia.push(`dostęp przez nawias do ${n.object.name} w ${wFunkcji(n)}`);
       }
-      if (n.type === 'CallExpression' && n.callee.type === 'MemberExpression' && !n.callee.computed && ['deleteDatabase', 'databases', 'getRegistryEntry'].includes(n.callee.property.name)) {
+      if (n.type === 'CallExpression' && n.callee.type === 'MemberExpression' && !n.callee.computed && ['deleteDatabase', 'databases', 'getRegistryEntry', 'request'].includes(n.callee.property.name)) {
         uzycia.wywolania.push(`${n.callee.property.name}@${wFunkcji(n)}`);
       }
       for (const k of Object.keys(n)) { const x = n[k]; if (Array.isArray(x)) x.forEach(sprawdzWezel); else if (x && typeof x.type === 'string') sprawdzWezel(x); }
@@ -525,16 +694,25 @@ describe('U2(c): wywołania zakazane i reguła domknięcia części magazynu', (
     const p = policz(uzycia.pola);
     const raz = { 'VILDA_EVENT_LOG@Bob_bramka': 1, 'indexedDB@Bob_idb': 1, 'crypto@Bob_urzadzenie': 1, 'setTimeout@Bob_limit': 1, 'clearTimeout@Bob_limit': 1 };
     for (const [k, n] of Object.entries(raz)) if (p[k] !== n) bledy.push(`${k}: ${p[k] || 0} zamiast ${n}`);
-    for (const k of Object.keys(p)) if (!raz[k] && !/^localStorage@Bob_urzadzenie(Zapisz)?$/.test(k)) bledy.push(`pole okna ${k}`);
+    // Co najmniej raz i tylko tam (E2-PR3a1): navigator w Bob_blokady, AbortController w Bob_podBlokada.
+    const conajmniej = ['navigator@Bob_blokady', 'AbortController@Bob_podBlokada'];
+    for (const k of conajmniej) if (!p[k]) bledy.push(`${k}: brak`);
+    // Bez liczności (wolno w swoich funkcjach): localStorage w funkcjach identyfikatora urządzenia, znacznika, ponowienia
+    // i kasowania konta; zegar limitu blokady w Bob_podBlokada.
+    for (const k of Object.keys(p)) if (!raz[k] && !conajmniej.includes(k) && !/^localStorage@/.test(k) && !/^(setTimeout|clearTimeout)@Bob_podBlokada$/.test(k)) bledy.push(`pole okna ${k}`);
     const w = policz(uzycia.wywolania);
-    const wolania = { 'deleteDatabase@Bob_usunBaze': 1, 'databases@Bob_istnieje': 1, 'getRegistryEntry@Bob_konto': 1 };
+    const wolania = {
+      'deleteDatabase@Bob_kasujBaze': 1, 'databases@Bob_istnieje': 1, 'databases@Bob_kasujKonto': 1, 'getRegistryEntry@Bob_konto': 1,
+      'getRegistryEntry@Bob_poOdblokowaniu': 1, 'request@Bob_podBlokada': 1,
+    };
     for (const [k, n] of Object.entries(wolania)) if (w[k] !== n) bledy.push(`${k}: ${w[k] || 0} zamiast ${n}`);
     for (const k of Object.keys(w)) if (!wolania[k]) bledy.push(`wywołanie ${k}`);
-    if (uzycia.I.join() !== 'I()@Bob_konto') bledy.push(`I: ${uzycia.I.join(', ') || 'brak'} zamiast jednego I() w Bob_konto`);
+    const ii = [...uzycia.I].sort().join();
+    if (ii !== 'I()@Bob_konto,I()@Bob_poOdblokowaniu') bledy.push(`I: ${ii || 'brak'} zamiast po jednym I() w Bob_konto i Bob_poOdblokowaniu`);
     return bledy;
   }
 
-  it('część Bob_: reguła domknięcia — wolne identyfikatory z listy, pola okna w swoich funkcjach, Date w funkcjach chwili, bez nawiasu na v/Date/Object/Reflect, liczności', () => {
+  it('część Bob_: reguła domknięcia — wolne identyfikatory z listy, pola okna w swoich funkcjach, Date w funkcjach chwili, bez nawiasu na v/Date/Object/Reflect, liczności (E2-PR3a1: Web Locks, kasowanie konta, ponowienie)', () => {
     znacznikRaz();
     const wynik = analizuj(czesci().bob);
     expect(wynik.naruszenia).toEqual([]);
@@ -558,6 +736,12 @@ describe('U2(c): wywołania zakazane i reguła domknięcia części magazynu', (
       'function Bob_x(o) { return Object.keys(o).map((k) => Bev_utf8(k)); }', 'async function Bob_konto(u) { return I().getRegistryEntry(u); }',
     ];
     for (const p of zielone) expect(analizuj(p).naruszenia, p).toEqual([]);
+    // E2-PR3a1: navigator, AbortController i localStorage tylko w swoich funkcjach.
+    for (const p of ['function Bob_x() { return v.navigator; }', 'function Bob_podBlokada() { return v.navigator.locks; }', 'function Bob_x() { return new v.AbortController(); }',
+      'function Bob_dopisz(u) { v.localStorage.setItem(u, "1"); }', 'function Bob_blokady() { return v.localStorage; }']) expect(analizuj(p).naruszenia.length, p).toBeGreaterThan(0);
+    for (const p of ['function Bob_blokady() { try { return v.navigator.locks; } catch (x) { return null; } }', 'function Bob_podBlokada(f) { const c = new v.AbortController(); v.setTimeout(f, 1); return c; }',
+      'function Bob_znacznikZapisz(u) { v.localStorage.setItem(u, "1"); }', 'function Bob_poOdblokowaniu() { return v.localStorage.length; }']) expect(analizuj(p).naruszenia, p).toEqual([]);
+    expect(licznosci(analizuj('function Bob_x(l) { return l.request("n", f); }')).join()).toContain('wywołanie request@Bob_x');
     // liczności: drugie I() i wywołanie kasowania poza Bob_usunBaze
     expect(licznosci(analizuj('function Bob_konto(u) { I(); return I().getRegistryEntry(u); }')).join()).toContain('I:');
     expect(licznosci(analizuj('function Bob_inna(i, n) { return i.deleteDatabase(n); }')).join()).toContain('deleteDatabase@Bob_inna');
@@ -761,5 +945,30 @@ describe('U4: zwykłe użycie sejfu przy zamkniętej bramce nie tworzy bazy kole
     expect(bazy.length, 'skan widzi bazy sejfu').toBeGreaterThan(0);
     expect(o.win.localStorage.klucze().filter((k) => k.startsWith(PRZEDROSTEK_URZADZENIA))).toEqual([]);
     expect(o.dziennik.filter((x) => String(x.klucz).startsWith(PRZEDROSTEK_URZADZENIA))).toEqual([]);
+  });
+
+  it.each([['z navigator.locks', true], ['bez navigator.locks', false]])('U4′ (%s): zwykłe użycie i usunięcie konta przy zamkniętej bramce (moduły punktu odzyskiwania) — 0 baz vilda_sync_*, 0 kluczy i 0 zapisów vilda-sync-* w localStorage, 0 odczytów pola bramki', async (_, zLocks) => {
+    const o = await oknoMagazynu({ konta: 'AB', bramka: false, skrypty: SKRYPTY_PUNKTU, ...(zLocks ? {} : { locks: false }) });
+    okna.push(o);
+    expect(!!o.win.navigator.locks, 'navigator.locks okna').toBe(zLocks);
+    let odczyty = 0;
+    Object.defineProperty(o.win, 'VILDA_EVENT_LOG', { get() { odczyty += 1; return undefined; }, configurable: true });
+    const v = o.v;
+    const r = await v.savePatient(naglowek(1), { dedup: false });
+    await v.savePatient(naglowek(1, { masa: 23 }), { dedup: false, patientId: r.patientId });
+    await v.savePatientNote({ patientId: r.patientId, title: 'Fikcyjna notatka', body: 'Fikcyjna treść.', category: 'inne' });
+    await v.savePatientList({ name: 'Fikcyjna lista', memberIds: [r.patientId] });
+    await o.zaloguj('B');
+    await o.zaloguj('A');
+    expect(await v.removeUser(o.B.userId, o.B.haslo), 'usunięcie konta niebieżącego').toBe(true);
+    expect(await v.removeUser(o.A.userId, o.A.haslo), 'usunięcie konta bieżącego').toBe(true);
+    await o.cisza();
+    const bazy = (await o.idb.databases()).map((x) => x.name);
+    expect(bazy.filter((n) => n.startsWith('vilda_sync_'))).toEqual([]);
+    expect(bazy, 'skan widzi rejestr kont').toContain('vilda_registry');
+    expect(o.win.localStorage.klucze().filter((k) => k.startsWith('vilda-sync-'))).toEqual([]);
+    expect(o.dziennik.filter((x) => x.magazyn === 'localStorage' && String(x.klucz).startsWith('vilda-sync-'))).toEqual([]);
+    expect(o.idb.__atrapa.log.filter((w) => typeof w[1] === 'string' && w[1].startsWith('vilda_sync_') && w[0] !== 'deleteDatabase')).toEqual([]);
+    expect(odczyty, 'odczyty pola VILDA_EVENT_LOG').toBe(0);
   });
 });
