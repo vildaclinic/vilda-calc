@@ -1156,6 +1156,22 @@ oraz starszy ujemny pomiar zachowują wartość i położenie; `<18` nie staje s
 dokładnym punktem; ta sama data i różne ID pozostają osobno dostępne.
 Testy wykonują produkcyjne moduły i istniejące adaptery zapisu.
 
+### LAB-HISTORIA — położenie punktów w Safari/WebKit (2026-11-05)
+
+**Klasyfikacja: naprawa prezentacji zapisanych wyników.** Bez zmian wartości,
+norm, jednostek, skali, współrzędnych obliczanych przez renderer i dokumentacji.
+
+WebKit rysował pozycjonowany przycisk HTML wewnątrz przesuniętego SVG
+`foreignObject` z pominięciem przesunięcia o połowę celu dotykowego. Punkt
+wyniku był widoczny 22 px w prawo i w dół, mimo poprawnego `getBoundingClientRect()`
+i macierzy SVG. Przycisk ma teraz pozycję statyczną; kropka i licznik pokrywających
+się zapisów współdzielą komórkę CSS Grid. Cel dotykowy pozostaje 44 × 44 px.
+
+Regresje odczytują również piksele zrzutu ekranu: dokładne zero leży na linii zera,
+ujemne UAG zachowuje właściwe położenie, a różne skale i nakładające się wpisy
+zachowują swoje wartości i identyfikatory. Osobny krótki job WebKit sprawdza
+komputer oraz szerokości 390 i 320 px; te same scenariusze należą do zestawu Chromium.
+
 ### P-LAB-WARTOSC-BEZ-JEDNOSTKI — liczba ze starszego wpisu wyniku bez jednostki (SW 1.1.279, `vilda_vault.js` 212, 2026-10-14)
 
 **Wpływ kliniczny: tak.** Zmieniają się liczby w historii wyników dla

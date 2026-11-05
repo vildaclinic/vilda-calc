@@ -151,15 +151,53 @@ jobs:
           path: playwright-report/
           retention-days: 14
 
+  lab_chart_webkit:
+    name: Geometria wykresów — Safari/WebKit
+    runs-on: ubuntu-latest
+    if: github.event_name != 'push'
+    timeout-minutes: 10
+    steps:
+      - name: Pobierz repozytorium
+        uses: actions/checkout@v4
+      - name: Skonfiguruj Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - name: Zainstaluj zależności
+        run: npm ci
+      - name: Zainstaluj WebKit
+        run: |
+          apt_mirror_list=/etc/apt/apt-mirrors.txt
+          if [ -f "$apt_mirror_list" ] &&
+             grep -Eq '^https://archive\.ubuntu\.com/ubuntu/([[:space:]]|$)' "$apt_mirror_list" &&
+             grep -Eq '^https://security\.ubuntu\.com/ubuntu/([[:space:]]|$)' "$apt_mirror_list"; then
+            sudo sed -i -E '\@^http://azure\.archive\.ubuntu\.com/ubuntu/([[:space:]]|$)@d' "$apt_mirror_list"
+          fi
+          npx playwright install --with-deps webkit
+      - name: Sprawdź narysowane punkty i otwieranie zapisów
+        run: npm run test:e2e -- --config playwright.lab-chart-webkit.config.mjs
+      - name: Zachowaj raport geometrii
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report-lab-chart-webkit
+          path: |
+            playwright-report/
+            test-results/
+          retention-days: 14
+
   browser-summary:
     # Jeden status do reguł gałęzi: zielony tylko, gdy wszystkie odłamki są zielone.
     # Na push odłamki są pomijane, więc i ten job jest pomijany (a nie czerwony).
     name: Testy przeglądarkowe i PWA
     runs-on: ubuntu-latest
-    needs: browser
+    needs: [browser, lab_chart_webkit]
     if: always() && github.event_name != 'push'
     steps:
       - name: Sprawdź wyniki odłamków
         run: |
           echo "Wynik odłamków: ${{ needs.browser.result }}"
+          echo "Wynik geometrii Safari/WebKit: ${{ needs.lab_chart_webkit.result }}"
           test "${{ needs.browser.result }}" = "success"
+          test "${{ needs.lab_chart_webkit.result }}" = "success"

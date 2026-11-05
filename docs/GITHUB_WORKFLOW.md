@@ -67,6 +67,14 @@ z `tests/fixtures/czasy-e2e.json`. Skrypt sprawdza listę przez rzeczywiste
 `playwright test --list`; testy jednostkowe pilnują pełnego, rozłącznego pokrycia.
 Wymagany status `Testy przeglądarkowe i PWA` przechodzi dopiero po wszystkich częściach.
 
+Geometria punktów wyników ma dodatkowy, krótki job Safari/WebKit. Instaluje WebKit
+raz i uruchamia wyłącznie trzy scenariusze geometrii z
+`playwright.lab-chart-webkit.config.mjs`: komputer oraz ekrany 390 i 320 px.
+Sprawdzają również piksele zrzutu ekranu, ponieważ WebKit potrafił rysować punkt
+w innym miejscu niż wskazywały jego współrzędne DOM. Wynik tego joba należy do
+wymaganego statusu `Testy przeglądarkowe i PWA`; osiem części Chromium zachowuje
+dotychczasowy zakres i sposób uruchamiania.
+
 Punkt odniesienia: [CI PR #847](https://github.com/vildaclinic/vilda-calc/actions/runs/41332488215),
 head PR `a873c1f2`, testowany merge commit `e11e505a`, 2728 przypadków.
 Na czterech runnerach same testy trwały

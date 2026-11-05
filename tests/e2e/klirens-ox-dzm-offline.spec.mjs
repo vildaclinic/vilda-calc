@@ -15,7 +15,7 @@ test.use({ serviceWorkers: 'allow', actionTimeout: 15_000 });
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const sha256 = bytes => createHash('sha256').update(bytes).digest('hex');
 const versionOf = source => /const SW_VERSION = '([^']+)'/.exec(source)[1];
-const UPDATE_BASE_SHA = '948b1d5a455480d968d1e12a7c3fb03ccc768e64';
+const UPDATE_BASE_SHA = '26a4f34166c66e2139193861f8b5aa01aefbd89d';
 // CI's E2E checkout uses fetch-depth: 0; archive the actual production tree.
 const aliasNames = [
   'vilda_food_data.js', 'vilda_growth_reference_data.js', 'vilda_ree_rownania_data.js',
