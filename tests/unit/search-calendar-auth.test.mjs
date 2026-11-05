@@ -2,7 +2,7 @@ import vm from 'node:vm';
 import { describe, expect, it, vi } from 'vitest';
 import {
   authDeferred, authProductionFunction, authProductionReturnProgram,
-  authProductionSource, authReturnEnvironment,
+  authProductionSource, authReturnEnvironment, authSurface,
 } from '../support/search-return-auth-harness.mjs';
 
 const source = authProductionSource();
@@ -52,7 +52,7 @@ describe('production AuthUI forward calendar transfer', () => {
     const e = environment(), token = e.context.remSearchCreateReturn(snapshot(), patientId);
     const order = [];
     e.bridge.api.prepare.mockImplementationOnce(async value => { order.push('prepare'); expect(e.close).not.toHaveBeenCalled(); return { id: value.id }; });
-    e.context.Rt = { style: {}, removeAttribute() {} };
+    e.context.Rt = authSurface();
     e.context.Qn.mockImplementation(() => order.push('quiet-history'));
     e.close.mockImplementation(() => { order.push('close'); e.context.remB22Full = null; });
     e.win.location.assign.mockImplementation(() => order.push('navigate'));

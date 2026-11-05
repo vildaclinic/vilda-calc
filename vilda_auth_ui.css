@@ -13,6 +13,32 @@
   -moz-osx-font-smoothing: grayscale
 }
 
+/* Only the patient database shares the application's global navigation.
+   Login, unlock and the patient card retain their full-screen auth boundary. */
+html:not(.vilda-embedded) .vilda-auth-root.vilda-auth-database {
+  top: var(--chrome-layout-header-height, var(--chrome-strip-height, 64px));
+  z-index: calc(var(--z-header-chrome, 50) - 1);
+}
+
+.vilda-auth-root.vilda-auth-database .vilda-auth-brand {
+  display: none !important;
+}
+
+/* The database owns its own list scrolling and return action. Keep the page's
+   dock geometry stable while its floating controls are temporarily unavailable. */
+html.vilda-patient-database-open:not(.vilda-embedded) #mobileBottomDock,
+html.vilda-patient-database-open:not(.vilda-embedded) #scrollTopBtn {
+  visibility: hidden !important;
+  pointer-events: none !important;
+}
+
+/* The inactive form contains local headers with the legacy header z-index.
+   Keep them in the background's own stacking context while the database is
+   open. Global chrome stays outside; modal dialogs keep their top layer. */
+html.vilda-patient-database-open:not(.vilda-embedded) body > .desktop-layout > .main-content {
+  isolation: isolate;
+}
+
 .vilda-auth-root[data-busy="1"] .vilda-auth-card {
   pointer-events: none;
   opacity: var(--opacity-slider-tick)

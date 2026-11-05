@@ -1,15 +1,15 @@
 /* Patient database only. The card, list rule editor and other auth screens retain
    their own styles. Specific selectors also resist the legacy editor's injected CSS. */
-.vilda-auth-root:has(.vilda-patient-database) {
+.vilda-auth-root:is(.vilda-auth-database, :has(.vilda-patient-database)) {
   overflow: hidden !important;
   background: var(--pt-canvas, #f5f8f9);
 }
-.vilda-auth-root:has(.vilda-patient-database) > .vilda-auth-overlay {
+.vilda-auth-root:is(.vilda-auth-database, :has(.vilda-patient-database)) > .vilda-auth-overlay {
   height: 100%; min-height: 0; overflow: hidden;
   padding: var(--space-24px) var(--space-20px) var(--space-14px) !important;
   background: var(--pt-canvas, #f5f8f9) !important;
 }
-.vilda-auth-root:has(.vilda-patient-database) .vilda-auth-card {
+.vilda-auth-root:is(.vilda-auth-database, :has(.vilda-patient-database)) .vilda-auth-card {
   height: 100%; min-height: 0; max-width: 1160px;
   background: transparent !important; box-shadow: none !important;
 }
@@ -137,6 +137,19 @@
 .vilda-auth-root .vilda-patients2.vilda-patient-database > .pt-head .pl-new { grid-area: sort; min-height: 46px; height: 46px; }
 .vilda-auth-root .vilda-patients2.vilda-patient-database .pt-scroll { flex: 1 1 auto; min-height: 0; overflow: auto; overflow-x: hidden; padding: 0 2px 3px 0; scrollbar-gutter: stable; overscroll-behavior: contain; }
 .vilda-auth-root .vilda-patients2.vilda-patient-database .pt-results { background: var(--pt-paper, #fff); border: var(--border-hairline) solid var(--pt-line, #dce6e9); border-radius: var(--radius-8); overflow: hidden; }
+/* Shared desktop column geometry keeps dates aligned with the approved table. */
+.vilda-auth-root .vilda-patients2.vilda-patient-database .pt-columns {
+  display: grid; grid-template-columns: minmax(0, 1fr) 185px 160px 15px; gap: 17px;
+  padding: 15px var(--space-20px); font-size: 16px; font-weight: 600;
+  color: var(--pt-ink, #111); background: var(--pt-canvas, #f5f8f9);
+  border-bottom: var(--border-hairline) solid var(--pt-line, #dce6e9);
+}
+.vilda-auth-root .vilda-patients2.vilda-patient-database .pt-birth { display: block; min-width: 0; font-size: 16px; font-weight: 400; color: var(--pt-muted, #475a63); font-variant-numeric: tabular-nums; }
+.vilda-auth-root .vilda-patients2.vilda-patient-database .pt-birth small { display: block; margin-top: 3px; font-size: 15px; }
+.vilda-auth-root .vilda-patients2.vilda-patient-database .pt-mobile-birth { display: none; }
+.vilda-auth-root .vilda-patients2.vilda-patient-database .pt-demographic + .pt-demographic::before { content: '·'; margin-right: 7px; }
+.vilda-auth-root .vilda-patients2.vilda-patient-database .pt-row-spacer { width: 1px; pointer-events: none; }
+.vilda-auth-root .vilda-patients2.vilda-patient-database .pt-scroll { overflow-anchor: none; }
 .vilda-auth-root .vilda-patients2.vilda-patient-database .pt-row {
   display: flex !important; align-items: center; width: 100% !important; height: auto !important;
   padding: 0 !important; margin: 0 !important; border-radius: 0 !important; border: 0 !important;
@@ -146,18 +159,18 @@
 .vilda-auth-root .vilda-patients2.vilda-patient-database .pt-row:last-child { border-bottom: 0 !important; }
 .vilda-auth-root .vilda-patients2.vilda-patient-database .pt-row:hover { background: var(--pt-hover, #f4f9f9) !important; }
 .vilda-auth-root .vilda-patients2.vilda-patient-database .pt-row-open {
-  display: flex; align-items: center; gap: 17px; flex: 1; min-width: 0; min-height: 76px;
+  display: grid; grid-template-columns: minmax(0, 1fr) 185px 160px 15px; align-items: center; gap: 17px; flex: 1; min-width: 0; min-height: 76px;
   padding: var(--space-14px) var(--space-20px) !important; border: 0 !important; background: transparent !important;
   text-align: left; border-radius: 0 !important;
 }
 .vilda-auth-root .vilda-patients2.vilda-patient-database .pt-info { display: block; min-width: 0; flex: 1; }
 .vilda-auth-root .vilda-patients2.vilda-patient-database .pt-name { display: flex; align-items: center; gap: 9px; flex-wrap: wrap; font-size: 16px; font-weight: 600; color: var(--pt-ink, #111); line-height: 1.45; }
 .vilda-auth-root .vilda-patients2.vilda-patient-database .pt-person-name { overflow-wrap: anywhere; }
-.vilda-auth-root .vilda-patients2.vilda-patient-database .pt-meta { display: block; font-size: 15px; font-weight: 400; color: var(--pt-muted, #475a63); margin-top: var(--space-4px); }
+.vilda-auth-root .vilda-patients2.vilda-patient-database .pt-meta { display: flex; flex-wrap: wrap; column-gap: 7px; font-size: 15px; font-weight: 400; color: var(--pt-muted, #475a63); margin-top: var(--space-4px); }
 .vilda-auth-root .vilda-patients2.vilda-patient-database .pt-badge { display: inline-block; background: var(--pt-subtle, #f2f5f6); color: var(--pt-muted, #475a63); border: var(--border-hairline) solid var(--pt-line, #e0e8eb); border-radius: var(--radius-4); font-size: 15px; font-weight: 400; padding: 2px var(--space-6px); white-space: nowrap; text-transform: none; letter-spacing: normal; }
-.vilda-auth-root .vilda-patients2.vilda-patient-database .pt-saved { display: block; min-width: 106px; text-align: right; color: var(--pt-muted, #475a63); font-size: 15px; font-weight: 400; font-variant-numeric: tabular-nums; }
-.vilda-auth-root .vilda-patients2.vilda-patient-database .pt-saved small { display: block; color: var(--pt-muted, #475a63); font-size: 15px; margin-bottom: 3px; text-transform: uppercase; letter-spacing: .035em; }
-.vilda-auth-root .vilda-patients2.vilda-patient-database .pt-row-open > .pt-icon { width: 15px; height: 15px; flex-basis: 15px; color: var(--pt-muted, #475a63); margin-left: 9px; }
+.vilda-auth-root .vilda-patients2.vilda-patient-database .pt-saved { display: block; min-width: 0; text-align: left; color: var(--pt-muted, #475a63); font-size: 15px; font-weight: 400; font-variant-numeric: tabular-nums; }
+.vilda-auth-root .vilda-patients2.vilda-patient-database .pt-saved small { display: none; color: var(--pt-muted, #475a63); font-size: 15px; margin-bottom: 3px; text-transform: uppercase; letter-spacing: .035em; }
+.vilda-auth-root .vilda-patients2.vilda-patient-database .pt-row-open > .pt-icon { width: 15px; height: 15px; flex-basis: 15px; color: var(--pt-muted, #475a63); margin-left: 0; }
 .vilda-auth-root .vilda-patients2.vilda-patient-database .pt-duplicate-hint { display: block; color: var(--pt-warning, #85714b); font-weight: 400; font-size: 15px; margin-top: 3px; }
 .vilda-auth-root .vilda-patients2.vilda-patient-database .pt-list-footer { display: flex; justify-content: space-between; gap: var(--space-14px); padding: var(--space-10px) 2px 0; color: var(--pt-muted, #475a63); font-size: 15px; flex: 0 0 auto; }
 .vilda-auth-root .vilda-patients2.vilda-patient-database .pt-empty { padding: 38px var(--space-20px); text-align: center; color: var(--pt-muted, #475a63); }
@@ -249,18 +262,25 @@
 .vilda-patients-list-picker .pt-loading { padding: 25px 3px; font-size: 15px; color: var(--pt-muted, #475a63); }
 
 @media (min-width: 1400px) {
-  .vilda-auth-root:has(.vilda-patient-database) .vilda-auth-card { max-width: 1260px; }
+  .vilda-auth-root:is(.vilda-auth-database, :has(.vilda-patient-database)) .vilda-auth-card { max-width: 1260px; }
 }
 @media (max-width: 991px) {
-  .vilda-auth-root:has(.vilda-patient-database) > .vilda-auth-overlay { padding: var(--space-20px) var(--space-18px) var(--space-12px) !important; }
+  .vilda-auth-root:is(.vilda-auth-database, :has(.vilda-patient-database)) > .vilda-auth-overlay { padding: var(--space-20px) var(--space-18px) var(--space-12px) !important; }
+  .vilda-auth-root .vilda-patients2.vilda-patient-database .pt-row-open { grid-template-columns: minmax(0, 1fr) 15px; }
+  .vilda-auth-root .vilda-patients2.vilda-patient-database .pt-columns,
+  .vilda-auth-root .vilda-patients2.vilda-patient-database .pt-birth,
+  .vilda-auth-root .vilda-patients2.vilda-patient-database .pt-saved,
+  .vilda-auth-root .vilda-patients2.vilda-patient-database .pt-badge { display: none; }
+  .vilda-auth-root .vilda-patients2.vilda-patient-database .pt-mobile-birth { display: inline; }
+  .vilda-auth-root .vilda-patients2.vilda-patient-database .pt-mobile-birth + .pt-demographic::before { content: '·'; margin-right: 7px; }
   .vilda-auth-root .vilda-patients2.vilda-patient-database .pt-toolbar { grid-template-columns: minmax(0, 1fr) 195px; grid-template-areas: "search sort" "tabs lists" "count count"; }
   .vilda-auth-root .vilda-patients2.vilda-patient-database .pt-lists-trigger { grid-area: lists; justify-self: end; min-height: 46px; min-width: 100px; font-weight: 400 !important; }
   .vilda-auth-root .vilda-patients2.vilda-patient-database .vilda-auth-title { font-size: 26px !important; }
 }
 @media (max-width: 699px) {
-  .vilda-auth-root:has(.vilda-patient-database) > .vilda-auth-overlay { padding: var(--space-18px) var(--space-14px) var(--space-10px) !important; }
+  .vilda-auth-root:is(.vilda-auth-database, :has(.vilda-patient-database)) > .vilda-auth-overlay { padding: var(--space-18px) var(--space-14px) var(--space-10px) !important; }
   .vilda-auth-root .vilda-patients2.vilda-patient-database .pt-title-row { align-items: flex-start; gap: var(--space-10px); margin-bottom: 19px; }
-  .vilda-auth-root .vilda-patients2.vilda-patient-database .pt-home { display: none; }
+  .vilda-auth-root .vilda-patients2.vilda-patient-database .pt-home { display: inline-flex; }
   .vilda-auth-root .vilda-patients2.vilda-patient-database .vilda-auth-title { font-size: 25px !important; letter-spacing: -.5px; margin-bottom: var(--space-6px) !important; }
   .vilda-auth-root .vilda-patients2.vilda-patient-database .pt-total { font-size: 15px; line-height: 1.6; }
   .vilda-auth-root .vilda-patients2.vilda-patient-database .pt-add { margin: 0; min-height: var(--brand-logo-size); padding: 7px var(--space-10px) !important; gap: 5px; font-size: 16px !important; }
@@ -309,7 +329,7 @@
   .vilda-patients-list-picker .pt-picker-actions { padding: var(--space-12px) var(--space-16px); }
 }
 @media (max-width: 360px) {
-  .vilda-auth-root:has(.vilda-patient-database) > .vilda-auth-overlay { padding-left: var(--space-10px) !important; padding-right: var(--space-10px) !important; }
+  .vilda-auth-root:is(.vilda-auth-database, :has(.vilda-patient-database)) > .vilda-auth-overlay { padding-left: var(--space-10px) !important; padding-right: var(--space-10px) !important; }
   .vilda-auth-root .vilda-patients2.vilda-patient-database .vilda-auth-title { font-size: 22px !important; }
   .vilda-auth-root .vilda-patients2.vilda-patient-database .pt-total { font-size: 15px; }
   .vilda-auth-root .vilda-patients2.vilda-patient-database .pt-seg button,
@@ -328,13 +348,13 @@
 }
 
 /* Reuse the application appearance settings without changing other auth views. */
-body.dark-bg-level-1 .vilda-auth-root:has(.vilda-patient-database) {
+body.dark-bg-level-1 .vilda-auth-root:is(.vilda-auth-database, :has(.vilda-patient-database)) {
   --pt-canvas: #f5f5f5;
 }
-body.dark-bg-level-2 .vilda-auth-root:has(.vilda-patient-database) {
+body.dark-bg-level-2 .vilda-auth-root:is(.vilda-auth-database, :has(.vilda-patient-database)) {
   --pt-canvas: #e0e0e0;
 }
-body.liquid-ios26:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3) :is(.vilda-auth-root:has(.vilda-patient-database), .vilda-patients-list-picker) {
+body.liquid-ios26:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3) :is(.vilda-auth-root:is(.vilda-auth-database, :has(.vilda-patient-database)), .vilda-patients-list-picker) {
   --pt-ink: var(--hc-text);
   --pt-muted: var(--hc-muted);
   --pt-line: var(--hc-border);

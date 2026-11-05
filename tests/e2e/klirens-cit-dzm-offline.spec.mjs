@@ -15,7 +15,7 @@ test.use({ serviceWorkers: 'allow', actionTimeout: 15_000 });
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const sha256 = bytes => createHash('sha256').update(bytes).digest('hex');
 const versionOf = source => /const SW_VERSION = '([^']+)'/.exec(source)[1];
-const UPDATE_BASE_SHA = '17c6f5eca46bd18603f7424d7a1cf66cafc5b034';
+const UPDATE_BASE_SHA = '6e92f5f41c9f37b044bfd0925030e3f6d135b31b';
 // CI's E2E checkout uses fetch-depth: 0; archive the actual production tree.
 const aliasNames = [
   'nutrition_norms.js', 'nutrition_micros.js', 'vilda_diet_recommendations.js', 'vilda_anorexia_risk.js', 'advanced_growth_kowd.js',
@@ -30,7 +30,7 @@ const names = [
   'clcr_cit_dzm.css', 'clcr_cit_dzm_persistence.js',
   'vilda_save_status_indicator.js', 'vilda_session_bridge.js', 'vilda_data_import_export.js',
   'clcr_notes_view.js', 'clcr_notes_view.css', 'clcr_record_resources.js',
-  'clcr_clinical_safety.js', 'clcr_collection_duration.js', 'clcr_ui_workflow.js', 'clcr_ui_workflow.css', 'vilda_auth_ui.js', 'vilda_lab_history_tab.js',
+  'clcr_clinical_safety.js', 'clcr_collection_duration.js', 'clcr_ui_workflow.js', 'clcr_ui_workflow.css', 'vilda_auth_ui.js', 'vilda_auth_ui.css', 'vilda_lab_history_tab.js',
   'vilda_lab_history_tab.css', 'vilda_lab_history.js', 'vilda_lab_result_presentation.js', 'vilda_lab_result_chart.js',
   'clcr_saved_calculation.js', 'clcr_saved_results.js', 'clcr_result_details.js',
   'clcr_saved_legacy_calculator.js', 'inline_kalkulator_klirens_02.js',

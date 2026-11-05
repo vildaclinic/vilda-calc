@@ -8,6 +8,10 @@ import { atrybutyStyle, doFixture, inwentarzStyliElementow, korzen, miejscaJs, p
 // klasy w arkuszu strony albo w arkuszu komponentu. Gdy ubywa (styl przeniesiony do klasy), fixture odświeża
 // node tests/scripts/style-elementow.mjs --zapisz. Przeniesienie istniejących miejsc jest decyzją właściciela
 // (większość w zminifikowanym JS i we własnościach, które JS ustawia albo czyta — opis w tests/support/style-elementow.mjs).
+// Wąski wyjątek w zaakceptowanej optymalizacji Bazy pacjentów: jedno miejsce w vilda_patients_list.js
+// ustawia zmierzoną wysokość przerwy po niewyrenderowanych wierszach. To geometria przewijania zależna
+// od liczby i wysokości wierszy w runtime, nie statyczny wygląd możliwy do przeniesienia do klasy.
+// Pozostałe miejsca nadal podlegają temu samemu inwentarzowi i asercjom.
 
 const FIXTURE = path.join(korzen, 'tests/fixtures/style-elementow.json');
 
