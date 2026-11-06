@@ -84,8 +84,8 @@ const patches = [
   {
     "file": "vilda_data_import_export.js",
     "label": "Explicit session clear cancels a deferred startup restore",
-    "before": "function re(e){pendingIncomingMainSessionCarry=null;pendingSynthesizedMainPlanPal=null;pendingNewMeasurementBasicArchive=null;try{$&&",
-    "after": "function re(e){pendingIncomingMainSessionCarry=null;pendingSynthesizedMainPlanPal=null;pendingNewMeasurementBasicArchive=null;cancelPendingMainSessionRestore();try{$&&"
+    "before": "function re(e){pendingIncomingMainSessionCarry=null;pendingSynthesizedMainPlanPal=null;automaticMainSessionPalProof=null;pendingNewMeasurementBasicArchive=null;try{$&&",
+    "after": "function re(e){pendingIncomingMainSessionCarry=null;pendingSynthesizedMainPlanPal=null;automaticMainSessionPalProof=null;pendingNewMeasurementBasicArchive=null;cancelPendingMainSessionRestore();try{$&&"
   },
   {
     "file": "vilda_auth_ui.js",
@@ -128,7 +128,7 @@ const currentCheckVariants = new Map(
   "Explicit session clear cancels a deferred startup restore",
   {
     "file": "vilda_data_import_export.js",
-    "anchor": "function re(e){pendingIncomingMainSessionCarry=null;pendingSynthesizedMainPlanPal=null;pendingNewMeasurementBasicArchive=null;const authCancelled=!!pendingAuthMainSession;cancelPendingMainSessionRestore();try{$&&(clearTimeout($),$=null),ae&&(clearTimeout(ae),ae=null)}catch(t){l(\"vilda_data_import_export:clearMainSessionStorage:timers\",t)}const deferSettlement=arguments[1]===true,cancelled=cancelMainSessionRestoreFinalizer()||authCancelled;let cleared=false;\ntry{\n  if(!ge(e))return false;\n  const adapter=Z();\n  if(adapter&&typeof adapter.clearMainSession===\"function\"){\n    cleared=adapter.clearMainSession()!==false;\n    return cleared;\n  }\n}catch(error){l(\"vilda_data_import_export:clearMainSessionStorage\",error)}\nfinally{\n  // Internal invalid/empty-session cleanup has no active owner to supersede.\n  // Full Clear publishes only after its remaining synchronous cleanup finishes.\n  if(cancelled&&!deferSettlement&&!mainSessionRestoreOwner&&!pendingAuthMainSession)\n    settleInitialMainSessionRestore(cleared,cleared?\"superseded-session-clear\":\"session-clear-failed\");\n}\nreturn false;}\n"
+    "anchor": "function re(e){pendingIncomingMainSessionCarry=null;pendingSynthesizedMainPlanPal=null;automaticMainSessionPalProof=null;pendingNewMeasurementBasicArchive=null;const authCancelled=!!pendingAuthMainSession;cancelPendingMainSessionRestore();try{$&&(clearTimeout($),$=null),ae&&(clearTimeout(ae),ae=null)}catch(t){l(\"vilda_data_import_export:clearMainSessionStorage:timers\",t)}const deferSettlement=arguments[1]===true,cancelled=cancelMainSessionRestoreFinalizer()||authCancelled;let cleared=false;\ntry{\n  if(!ge(e))return false;\n  const adapter=Z();\n  if(adapter&&typeof adapter.clearMainSession===\"function\"){\n    cleared=adapter.clearMainSession()!==false;\n    return cleared;\n  }\n}catch(error){l(\"vilda_data_import_export:clearMainSessionStorage\",error)}\nfinally{\n  // Internal invalid/empty-session cleanup has no active owner to supersede.\n  // Full Clear publishes only after its remaining synchronous cleanup finishes.\n  if(cancelled&&!deferSettlement&&!mainSessionRestoreOwner&&!pendingAuthMainSession)\n    settleInitialMainSessionRestore(cleared,cleared?\"superseded-session-clear\":\"session-clear-failed\");\n}\nreturn false;}\n"
   }
 ],
   [

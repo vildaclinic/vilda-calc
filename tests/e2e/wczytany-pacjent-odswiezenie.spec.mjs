@@ -1,4 +1,5 @@
 import { expect, test } from '../support/test-czas.mjs';
+import { czekajNaOdtworzenieSesji } from '../support/sesja-czekanie.mjs';
 
 // P-ODSWIEZENIE (zgłoszenie właściciela 2026-09-15) — odtworzenie zgłoszonych przebiegów na PRAWDZIWEJ
 // stronie: wczytany pacjent + data urodzenia + odświeżenie strony / przejście na docpro / edycja w
@@ -58,7 +59,17 @@ async function gotowe(page) {
   await page.waitForFunction(() => !document.documentElement.classList.contains('vilda-auth-locked'));
   await page.waitForFunction(() => typeof window.saveUserData === 'function'
     && typeof window.collectUserData === 'function' && Boolean(window.VildaDobAge));
-  await page.waitForTimeout(1200); // kaskady odtwarzania po starcie strony
+  await czekajNaOdtworzenieSesji(page);
+  await czekajNaGotowoscZapisu(page);
+}
+
+async function czekajNaGotowoscZapisu(page) {
+  // Auth and the collector can already exist while the actual session/DOB
+  // restore still owns the form, especially after F5 on a slower computer.
+  await expect.poll(() => page.evaluate(() => window.VildaDataImportExport.getSaveReadiness()), {
+    message: 'zakończone odtwarzanie bieżącego formularza',
+    timeout: 20_000,
+  }).toMatchObject({ ready: true });
 }
 
 function wpisz(page, pola) {
@@ -105,6 +116,7 @@ const pacjenci = (page) => page.evaluate(async () => {
 });
 
 async function zapisz(page) {
+  await czekajNaGotowoscZapisu(page);
   const wynik = await page.evaluate(async () => Boolean(await window.saveUserData()));
   expect(wynik, 'zapis nie może zostać odrzucony jako niekompletny').toBe(true);
   await page.waitForTimeout(600);

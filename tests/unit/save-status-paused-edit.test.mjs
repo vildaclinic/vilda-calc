@@ -49,6 +49,15 @@ function environment({ publish = true } = {}) {
   return {
     win, indicator, form, save,
     session: () => clone(session),
+    commit() {
+      const witness = { patientId: 'fictional-first', snapshotId: 'fictional-paused-save', applySequence: sequence,
+        sourcePatientId: 'fictional-first', payload: clone(form) };
+      win.VildaDataImportExport.captureCurrentUserDataReadOnly = () => clone(form);
+      win.VildaDataImportExport.getCommittedSaveWitness = request => request.patientId === witness.patientId &&
+        request.snapshotId === witness.snapshotId && request.applySequence === sequence ? clone(witness) : null;
+      indicator._onPatientSaved({ patientId: witness.patientId });
+      emit('vilda:patient-loaded', { patientId: witness.patientId, snapshotId: witness.snapshotId, applySequence: sequence, source: 'save' });
+    },
     pause(ms) { win.__vildaPersistPauseUntil = Date.now() + ms; },
     edit(value, { trusted = true, type = 'input' } = {}) {
       form.user.weight = value;
@@ -189,11 +198,13 @@ describe('P-KREATOR-ZAPIS-PAUZA — świadoma edycja po opublikowaniu bazy', () 
     const env = environment();
     env.pause(900);
     env.edit(63);
-    env.indicator._onPatientSaved({ patientId: 'fictional-first', applySequence: 1 });
+    env.commit();
     const reference = env.indicator.getReferenceFingerprint();
-    expect(env.save).toHaveBeenCalledTimes(1);
+    expect(JSON.parse(reference).core.user.weight).toBe(63);
+    expect(env.session().user.weight).toBe(62);
+    expect(env.save).not.toHaveBeenCalled();
     vi.advanceTimersByTime(900);
-    expect(env.save).toHaveBeenCalledTimes(1);
+    expect(env.save).not.toHaveBeenCalled();
     expect(env.indicator.getState()).toBe('saved');
     env.pause(900);
     env.edit(64);

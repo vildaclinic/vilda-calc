@@ -181,7 +181,7 @@
   },
   "vilda_data_import_export.js": {
     "no-useless-assignment": {
-      "count": 4
+      "count": 3
     }
   },
   "vilda_deps.js": {

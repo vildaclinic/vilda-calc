@@ -24,6 +24,12 @@ function environment({ feedback = true, route = '/index.html', patientId = 'fict
     id, value: '', focus: () => focused.push(id), scrollIntoView() {},
   }]));
   let epoch = 0, editRevision = 0, unlocked = true, value = payload();
+  let vaultEpoch = 0, snapshotSequence = 0;
+  const userId = 'fictional-feedback-owner', committedPayloads = new WeakMap();
+  const saveOperation = vi.fn(async data => ({
+    patientId: patientId || 'fictional-created', snapshotCount: 2,
+    savedAtISO: '2026-10-24T12:00:00.000Z', header: { name: data.name }, isNew: !patientId,
+  }));
   const win = {
     document: {
       readyState: 'complete', hidden: false,
@@ -50,10 +56,28 @@ function environment({ feedback = true, route = '/index.html', patientId = 'fict
     Event: class { constructor(type) { this.type = type; } },
     VildaVault: {
       isUnlocked: () => unlocked,
-      savePatient: vi.fn(async () => ({
-        patientId: patientId || 'fictional-created', snapshotId: 'fictional-snapshot', snapshotCount: 2,
-        savedAtISO: '2026-10-24T12:00:00.000Z', header: { name: value.name }, isNew: !patientId,
-      })),
+      getCurrentUser: () => unlocked ? { userId } : null,
+      captureSyncOperationSession: () => Object.freeze({ userId, epoch: vaultEpoch }),
+      assertSyncOperationSession(token) {
+        if (!unlocked || token.userId !== userId || token.epoch !== vaultEpoch)
+          throw Object.assign(new Error('Fikcyjna zmiana sesji konta.'), { code: 'SESSION_CHANGED' });
+      },
+      savePatient: vi.fn(async (data, options) => {
+        const token = win.VildaVault.captureSyncOperationSession();
+        const operation = saveOperation(data, options);
+        // This fake vault serializes its own input after synchronous history
+        // merging, before waiting for durable I/O. Never reread the live form.
+        const json = JSON.stringify(data);
+        const result = { ...await operation, snapshotId: 'fictional-snapshot-' + ++snapshotSequence };
+        committedPayloads.set(result, { json, token, patientId: result.patientId, snapshotId: result.snapshotId });
+        return result;
+      }),
+      getCommittedSavePayload(result) {
+        const committed = committedPayloads.get(result);
+        if (!committed || committed.patientId !== result.patientId || committed.snapshotId !== result.snapshotId) return null;
+        try { win.VildaVault.assertSyncOperationSession(committed.token); } catch { return null; }
+        return JSON.parse(committed.json);
+      },
     },
     VildaStatusBar: { pokaz: message => { fallback.push(message); return true; }, wyczysc() {} },
     VildaSaveStatusIndicator: { notifySaveFailed: vi.fn() },
@@ -83,7 +107,7 @@ function environment({ feedback = true, route = '/index.html', patientId = 'fict
   };
   loadBrowserScript('vilda_data_import_export.js', win);
   return {
-    win, storage, events, messages, fallback, focused,
+    win, storage, events, messages, fallback, focused, saveOperation,
     save: () => win.VildaDataImportExport.saveUserData({ collectUserData: () => value }),
     get payload() { return value; },
     setPayload(next) { value = next; },
@@ -92,7 +116,7 @@ function environment({ feedback = true, route = '/index.html', patientId = 'fict
       if (reason === 'patient') storage.set('vildaCurrentPatientId', 'fictional-second');
       if (reason === 'route') win.location.pathname = '/docpro.html';
       if (reason === 'clear') { epoch++; storage.delete('vildaCurrentPatientId'); }
-      if (reason === 'lock') { epoch++; unlocked = false; }
+      if (reason === 'lock') { epoch++; vaultEpoch++; unlocked = false; }
       if (reason === 'import') win.VildaDataImportExport.applyLoadedData(structuredClone(value), { isSessionRestore: true });
     },
   };
@@ -118,7 +142,7 @@ describe('main save feeds the approved overlay without changing its public retur
 
   it.each(['/index.html', '/docpro.html'])('%s confirms success only after the real save Promise settles', async route => {
     const env = environment({ route }), pending = deferred();
-    env.win.VildaVault.savePatient.mockReturnValue(pending.promise);
+    env.saveOperation.mockReturnValue(pending.promise);
     const result = env.save();
     await Promise.resolve();
     expect(env.messages.some(message => message.success === true)).toBe(false);
@@ -132,7 +156,7 @@ describe('main save feeds the approved overlay without changing its public retur
 
   it('a rejected save still resolves to the payload, keeps the error and permits retry', async () => {
     const env = environment();
-    env.win.VildaVault.savePatient.mockRejectedValueOnce(new Error('Fikcyjna odmowa'));
+    env.saveOperation.mockRejectedValueOnce(new Error('Fikcyjna odmowa'));
     expect(await env.save()).toBe(env.payload);
     expect(env.messages.at(-1)).toMatchObject({ ton: 'blad', tekst: 'Nie udało się zapisać pacjenta: Fikcyjna odmowa' });
     expect(env.messages.at(-1).retry).toBeTypeOf('function');
@@ -155,7 +179,7 @@ describe('main save feeds the approved overlay without changing its public retur
 
   it('a cancelled save is information rather than success or a failed-record error', async () => {
     const env = environment();
-    env.win.VildaVault.savePatient.mockRejectedValueOnce(Object.assign(new Error('Fikcyjne anulowanie'), { vildaSaveAborted: true }));
+    env.saveOperation.mockRejectedValueOnce(Object.assign(new Error('Fikcyjne anulowanie'), { vildaSaveAborted: true }));
     expect(await env.save()).toBe(env.payload);
     expect(env.messages.at(-1)).toMatchObject({ ton: 'info', tekst: 'Zapis anulowany — nic nie zmieniono.' });
     expect(env.messages.some(message => message.success === true)).toBe(false);
@@ -166,7 +190,7 @@ describe('main save feeds the approved overlay without changing its public retur
 describe('pending feedback belongs to the initiating form and operation', () => {
   it('rapid repeated saves share one in-flight operation, then a later deliberate save is allowed', async () => {
     const env = environment(), pending = deferred();
-    env.win.VildaVault.savePatient.mockReturnValueOnce(pending.promise);
+    env.saveOperation.mockReturnValueOnce(pending.promise);
     const first = env.save(), second = env.save();
     expect(second).toBe(first);
     await Promise.resolve();
@@ -182,7 +206,7 @@ describe('pending feedback belongs to the initiating form and operation', () => 
     const env = environment(), pending = deferred();
     const original = { ...payload(), timestampISO: '2026-10-24T12:00:00.000Z' };
     env.setPayload(original);
-    env.win.VildaVault.savePatient.mockReturnValueOnce(pending.promise);
+    env.saveOperation.mockReturnValueOnce(pending.promise);
     const first = env.save();
     env.setPayload({ ...structuredClone(original), timestampISO: '2026-10-24T12:00:01.000Z' });
     const repeated = env.save();
@@ -198,7 +222,7 @@ describe('pending feedback belongs to the initiating form and operation', () => 
     const env = environment(), firstWrite = deferred(), secondWrite = deferred();
     const original = env.payload, changed = structuredClone(original);
     changed.user.height = 137;
-    env.win.VildaVault.savePatient.mockReturnValueOnce(firstWrite.promise).mockReturnValueOnce(secondWrite.promise);
+    env.saveOperation.mockReturnValueOnce(firstWrite.promise).mockReturnValueOnce(secondWrite.promise);
     const first = env.save();
     await Promise.resolve();
     env.setPayload(changed);
@@ -215,7 +239,7 @@ describe('pending feedback belongs to the initiating form and operation', () => 
   it('vault merging cannot mutate the captured duplicate key for an unchanged form', async () => {
     const env = environment(), pending = deferred();
     const originalForm = structuredClone(env.payload);
-    env.win.VildaVault.savePatient.mockImplementationOnce(data => {
+    env.saveOperation.mockImplementationOnce(data => {
       // The real vault adds accepted history to its payload in place, while the
       // form still contains the original working visit until save completes.
       data.growthBasic = { data: { measurements: [{ ageMonths: 96, height: 130, weight: 25 }] } };
@@ -236,7 +260,7 @@ describe('pending feedback belongs to the initiating form and operation', () => 
     const env = environment(), firstWrite = deferred(), secondWrite = deferred(), written = [];
     const original = env.payload, changed = structuredClone(original);
     changed.user.height = 137;
-    env.win.VildaVault.savePatient
+    env.saveOperation
       .mockImplementationOnce(async data => { await firstWrite.promise; written.push(structuredClone(data)); return { patientId: 'fictional-first', snapshotCount: 2 }; })
       .mockImplementationOnce(async data => { await secondWrite.promise; written.push(structuredClone(data)); return { patientId: 'fictional-first', snapshotCount: 3 }; });
     const first = env.save();
@@ -260,7 +284,7 @@ describe('pending feedback belongs to the initiating form and operation', () => 
 
   it('an old save error cannot replace the acknowledgement or error chip after a newer edited save', async () => {
     const env = environment(), firstWrite = deferred();
-    env.win.VildaVault.savePatient.mockReturnValueOnce(firstWrite.promise);
+    env.saveOperation.mockReturnValueOnce(firstWrite.promise);
     const first = env.save();
     await Promise.resolve();
     const changed = structuredClone(env.payload);
@@ -278,7 +302,7 @@ describe('pending feedback belongs to the initiating form and operation', () => 
 
   it.each(['patient', 'route', 'clear', 'lock', 'import'])('a late error after %s cannot replace current feedback or paint its chip red', async reason => {
     const env = environment(), pending = deferred();
-    env.win.VildaVault.savePatient.mockReturnValue(pending.promise);
+    env.saveOperation.mockReturnValue(pending.promise);
     const result = env.save();
     await Promise.resolve();
     env.messages.length = 0;
@@ -292,7 +316,7 @@ describe('pending feedback belongs to the initiating form and operation', () => 
 
   it('a late success after switching patients is consumed without reviving the old status strip', async () => {
     const env = environment(), pending = deferred();
-    env.win.VildaVault.savePatient.mockReturnValue(pending.promise);
+    env.saveOperation.mockReturnValue(pending.promise);
     const result = env.save();
     await Promise.resolve();
     env.messages.length = 0;
@@ -314,7 +338,7 @@ describe('unrelated callers retain the existing fallback behavior', () => {
 
   it('a module loaded outside Start/DocPro does not coalesce other pages’ saves', async () => {
     const env = environment({ route: '/kalkulator-klirens.html' }), pending = deferred();
-    env.win.VildaVault.savePatient.mockReturnValue(pending.promise);
+    env.saveOperation.mockReturnValue(pending.promise);
     const first = env.save(), second = env.save();
     await Promise.resolve();
     expect(env.win.VildaVault.savePatient).toHaveBeenCalledTimes(2);

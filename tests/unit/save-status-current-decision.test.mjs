@@ -7,8 +7,26 @@ const patient = () => ({ version: 1, name: 'Fikcyjny Pacjent Bieżącego Formula
 
 function environment({ loaded = false, initial, guest = false, unlocked = true } = {}) {
   const listeners = {}, windowListeners = {}, storage = new Map(), savedListeners = [];
-  let form = clone(initial || (loaded ? patient() : blank())), session = clone(form), clcr = null, sequence = 1, active = unlocked, stale = false, userId = 'fictional-current-user';
+  const records = new Map();
+  const committedSavePayloads = new WeakMap();
+  let form = clone(initial || (loaded ? patient() : blank())), session = clone(form), clcr = null, sequence = 0, active = unlocked, stale = false, userId = 'fictional-current-user';
+  let vaultEpoch = 1, snapshotSequence = 0, nextSavePatientId = null;
   if (loaded) storage.set('vildaCurrentPatientId', 'fictional-current-patient');
+  if (loaded) records.set('fictional-current-patient', { patientId: 'fictional-current-patient', snapshots: [
+    { snapshotId: 'fictional-loaded-snapshot', payload: clone(form), savedAtISO: '2026-10-30T12:00:00Z' },
+  ] });
+  function commit(value, options = {}) {
+    const patientId = options.patientId || nextSavePatientId || storage.get('vildaCurrentPatientId') || 'fictional-created-by-own-save';
+    const snapshotId = options.snapshotId || `fictional-committed-snapshot-${++snapshotSequence}`;
+    const savedAtISO = new Date().toISOString();
+    const previous = records.get(patientId)?.snapshots || [];
+    records.set(patientId, { patientId, snapshots: [{ snapshotId, payload: clone(value), savedAtISO }, ...previous] });
+    session = clone(value);
+    const result = { patientId, snapshotId, savedAtISO, snapshotCount: previous.length + 1, header: { name: value.name } };
+    committedSavePayloads.set(result, clone(value));
+    savedListeners.forEach(fn => fn(result));
+    return result;
+  }
   const writes = vi.fn(), persist = vi.fn(), collect = vi.fn(() => { throw new Error('Zwykły kolektor może zapisywać Klirens — nie jest odczytem.'); });
   const pure = vi.fn(() => clone(form));
   const win = {
@@ -18,7 +36,18 @@ function environment({ loaded = false, initial, guest = false, unlocked = true }
       addEventListener(type, fn) { (listeners[type] ||= []).push(fn); }, removeEventListener() {}, dispatchEvent(event) { (listeners[event.type] || []).forEach(fn => fn(event)); return true; } },
     sessionStorage: { getItem: key => storage.get(key) ?? null, setItem(key, value) { writes(key, value); storage.set(key, String(value)); }, removeItem(key) { writes(key, null); storage.delete(key); } },
     localStorage: { getItem: () => null, setItem: writes, removeItem: writes },
-    VildaVault: { isUnlocked: () => active, getCurrentUser: () => active ? { userId } : null, onPatientSaved(fn) { savedListeners.push(fn); } },
+    VildaVault: {
+      isUnlocked: () => active, getCurrentUser: () => active ? { userId } : null,
+      captureSyncOperationSession: () => Object.freeze({ userId, epoch: vaultEpoch }),
+      assertSyncOperationSession(token) {
+        if (!active || token.userId !== userId || token.epoch !== vaultEpoch)
+          throw Object.assign(new Error('Fikcyjna zmiana właściciela zapisu.'), { code: 'SESSION_CHANGED' });
+      },
+      onPatientSaved(fn) { savedListeners.push(fn); },
+      savePatient: async value => commit(value),
+      getPatient: vi.fn(async id => clone(records.get(id) || null)),
+      getCommittedSavePayload: result => clone(committedSavePayloads.get(result) || null),
+    },
     CustomEvent: class { constructor(type, options) { this.type = type; this.detail = options?.detail; } },
     VildaPanelPacjent: { nieaktualny: () => stale },
     VildaPersistence: { readMainSession: () => clone(session), readClcrSession: () => clone(clcr), isClearInProgress: () => false },
@@ -30,19 +59,24 @@ function environment({ loaded = false, initial, guest = false, unlocked = true }
   win.VildaDataImportExport.getApplyLoadedDataSequence = () => sequence;
   loadBrowserScript('vilda_save_status_indicator.js', win);
   const api = win.VildaSaveStatusIndicator;
-  if (loaded) { api._onPatientLoaded({ patientId: 'fictional-current-patient', applySequence: 1 }); vi.advanceTimersByTime(150); }
+  win.document.addEventListener('vilda:patient-loaded', event => {
+    if (event.detail.source === 'save') storage.set('vildaCurrentPatientId', event.detail.patientId);
+  });
+  if (loaded) { api._onPatientLoaded({ patientId: 'fictional-current-patient', applySequence: sequence }); vi.advanceTimersByTime(150); }
   writes.mockClear(); persist.mockClear(); collect.mockClear(); pure.mockClear();
-  return { api, win, writes, persist, collect, pure, storage,
+  return { api, win, writes, persist, collect, pure, storage, commit,
     form: () => clone(form), session: () => clone(session), setSession(value) { session = clone(value); }, setClcr(value) { clcr = clone(value); },
     useActualPure(fields) { win.document.getElementById = id => fields.get(id) || null; win.VildaDataImportExport.captureCurrentUserDataReadOnly = actualPure; },
     setForm(value) { form = clone(value); },
     edit() { api._debouncedOnFormChange({ isTrusted: true }); },
     patientId(value) { value == null ? storage.delete('vildaCurrentPatientId') : storage.set('vildaCurrentPatientId', value); },
-    sequence() { sequence++; }, setSequence(value) { sequence = value; }, notifySaved(value) { savedListeners.forEach(fn => fn(value)); }, account() { userId = 'fictional-other-user'; }, stale() { stale = true; },
-    lock() { active = false; api._onLock(); }, unlock() { active = true; api._onUnlock(); },
-    saved(id = 'fictional-current-patient', { announce = false } = {}) {
-      session = clone(form); storage.set('vildaCurrentPatientId', id); api._onPatientSaved({ patientId: id, snapshotCount: 2 });
-      if (announce) api._onPatientLoaded({ patientId: id, applySequence: sequence, source: 'save' });
+    sequence() { sequence++; }, setSequence(value) { sequence = value; }, notifySaved(value) { savedListeners.forEach(fn => fn(value)); }, account() { userId = 'fictional-other-user'; vaultEpoch++; }, stale() { stale = true; },
+    lock() { active = false; vaultEpoch++; api._onLock(); }, unlock() { active = true; api._onUnlock(); },
+    // A positive save fixture uses the real per-call receipt and immutable
+    // snapshot readback. Generic vault notifications deliberately remain bare.
+    async saved(id = 'fictional-current-patient') {
+      nextSavePatientId = id;
+      return win.VildaDataImportExport.saveUserDataWithReceipt({ collectUserData: () => clone(form) });
     },
   };
 }
@@ -89,7 +123,7 @@ describe('current destructive-action save decision is synchronous and read-only'
     for (const [id, value] of Object.entries({ name: patient().name, age: '12', ageMonths: '0', sex: 'M', height: '150', weight: '40', tannerStage: '2', intakePal: '1.8', palFactor: '1.4', dietLevel: 'normal', pubertyOnsetAge: '9' })) put(id, value);
     h.useActualPure(fields); const renal = { version: 2, inputs: { Scr: '1.25' } }; h.setClcr(renal);
     const saved = h.win.VildaDataImportExport.captureCurrentUserDataReadOnly({ base: { ...patient(), clcr: renal, intake: { pal: '1.8', history: [{ ageMonths: 130, height: 140 }], estKcalPerDay: 2000 }, foods: { snacks: [{ key: 'fictional', qty: 1 }], meals: [] }, extension: { preserved: true } } });
-    h.setSession(saved); h.api._onPatientLoaded({ patientId: 'fictional-current-patient', applySequence: 1 }); vi.advanceTimersByTime(150);
+    h.setSession(saved); h.api._onPatientLoaded({ patientId: 'fictional-current-patient', applySequence: h.win.VildaDataImportExport.getApplyLoadedDataSequence() }); vi.advanceTimersByTime(150);
     for (const id of ['intakePal', 'palFactor', 'dietLevel']) fields.delete(id);
     if (page === 'klirens') { fields.delete('tannerStage'); fields.delete('pubertyOnsetAge'); put('clcrForm', ''); h.win.VildaClcrSessionRuntime = { captureCurrentSessionReadOnly: () => clone(renal), saveNow: h.persist }; }
     h.collect.mockClear(); h.persist.mockClear(); h.writes.mockClear(); const previous = h.session();
@@ -98,7 +132,7 @@ describe('current destructive-action save decision is synchronous and read-only'
   });
   it('uses the canonical separate renal session when Start does not own a renal form and its nested draft is null', () => {
     const h = environment({ loaded: true, initial: { ...patient(), clcr: null } }), renal = { version: 2, inputs: { Scr: '1.25' } };
-    h.setClcr(renal); h.api._onPatientLoaded({ patientId: 'fictional-current-patient', applySequence: 1 }); vi.advanceTimersByTime(150); h.writes.mockClear(); h.collect.mockClear(); h.persist.mockClear();
+    h.setClcr(renal); h.api._onPatientLoaded({ patientId: 'fictional-current-patient', applySequence: h.win.VildaDataImportExport.getApplyLoadedDataSequence() }); vi.advanceTimersByTime(150); h.writes.mockClear(); h.collect.mockClear(); h.persist.mockClear();
     const reference = h.api.getReferenceFingerprint(); expect(JSON.parse(reference).clcr.inputs.Scr).toBe('1.25'); expect(h.api.getCurrentDecision()).toMatchObject({ ready: true, state: 'saved' }); expect(h.writes).not.toHaveBeenCalled(); expect(h.collect).not.toHaveBeenCalled(); expect(h.persist).not.toHaveBeenCalled();
   });
   it('protects the actual legacy puberty-only DOM capture immediately without calling the flushing collector', () => {
@@ -107,7 +141,7 @@ describe('current destructive-action save decision is synchronous and read-only'
   });
   it('does not let a cached ERROR hide actual unsaved data or pending SAVE appear ready', () => {
     const h = environment({ loaded: true }), value = patient(); value.user.weight = 44; h.setForm(value); h.api.notifySaveFailed('Fikcyjny błąd zapisu.');
-    expect(h.api.getState()).toBe('error'); expect(h.api.getCurrentDecision()).toMatchObject({ ready: true, state: 'dirty' }); h.api._onSaveClicked(); expect(h.api.getCurrentDecision().ready).toBe(false);
+    expect(h.api.getState()).toBe('error'); expect(h.api.getCurrentDecision()).toMatchObject({ ready: true, state: 'dirty' }); h.api._forceTransition('saving'); expect(h.api.getCurrentDecision().ready).toBe(false);
   });
   it('stops a real pending main-save operation even before the cached header has entered SAVING', () => {
     const h = environment(); h.setForm(patient()); h.win.VildaDataImportExport.isSaveUserDataPending = () => true;
@@ -137,35 +171,42 @@ describe('current destructive-action save decision is synchronous and read-only'
   it.each([{ guest: true }, { unlocked: false }])('retains the established anonymous hidden passthrough (%j)', options => {
     const h = environment(options); h.setForm(patient()); expect(h.api.getCurrentDecision()).toMatchObject({ ready: true, state: 'hidden' }); expect(h.pure).not.toHaveBeenCalled();
   });
-  it('keeps a same-owner failed-save callback current without accepting it as saved or weakening the content fence', () => {
-    const h = environment({ loaded: true }), value = patient(); value.user.weight = 41; h.setForm(value); h.api._forceTransition('dirty'); const decision = h.api.getCurrentDecision(); h.api._onSaveClicked(); h.api.notifySaveFailed('Fikcyjny brak zapisu.');
+  it('keeps a same-owner failed-save callback current without accepting it as saved or weakening the content fence', async () => {
+    const h = environment({ loaded: true }), value = patient(); value.user.weight = 41; h.setForm(value); h.api._forceTransition('dirty'); const decision = h.api.getCurrentDecision();
+    h.win.VildaVault.savePatient=async()=>{throw new Error('Fikcyjny brak zapisu.')};
+    expect((await h.win.VildaDataImportExport.saveUserDataWithReceipt({collectUserData:h.form})).saved).toBe(false);
     expect(h.api.isCurrentDecision(decision.scope)).toBe(false); expect(h.api.isCurrentDecisionOwner(decision.scope)).toBe(true); expect(h.api.isCurrentDecisionAfterSave(decision.scope, { patientId: 'fictional-current-patient' })).toBe(false);
     h.account(); expect(h.api.isCurrentDecisionOwner(decision.scope)).toBe(false);
   });
-  it('accepts its unchanged successful save after indicator generation/reference publication changed', () => {
-    const h = environment({ loaded: true }), value = patient(); value.user.weight = 41; h.setForm(value); const decision = h.api.getCurrentDecision(); h.api._onSaveClicked(); h.saved(undefined, { announce: true });
-    expect(h.api.isCurrentDecision(decision.scope)).toBe(false); expect(h.api.isCurrentDecisionAfterSave(decision.scope, { patientId: 'fictional-current-patient' })).toBe(true);
-    value.user.weight = 42; h.setForm(value); expect(h.api.isCurrentDecisionAfterSave(decision.scope, { patientId: 'fictional-current-patient' })).toBe(false);
+  it('accepts its unchanged successful save after indicator generation/reference publication changed', async () => {
+    const h = environment({ loaded: true }), value = patient(); value.user.weight = 41; h.setForm(value); const decision = h.api.getCurrentDecision(); const receipt = await h.saved();
+    expect(receipt.saved).toBe(true);
+    expect(h.api.isCurrentDecision(decision.scope)).toBe(false); expect(h.api.isCurrentDecisionAfterSave(decision.scope, receipt)).toBe(true);
+    value.user.weight = 42; h.setForm(value); expect(h.api.isCurrentDecisionAfterSave(decision.scope, receipt)).toBe(false);
   });
   it('accepts the actual per-call successful receipt with new PID while its own source-save publication is still queued', async () => {
     const h = environment(); h.setSequence(0); h.setForm(patient());
     h.win.VildaVault.captureSyncOperationSession = () => ({}); h.win.VildaVault.assertSyncOperationSession = () => true;
     h.win.document.addEventListener('vilda:patient-loaded', event => { if (event.detail.source === 'save') h.patientId(event.detail.patientId); });
-    h.win.VildaVault.savePatient = async value => { h.setSession(value); const result = { patientId: 'fictional-real-pipeline-new', snapshotId: 'fictional-real-pipeline-snapshot', header: { name: value.name } }; h.notifySaved(result); return result; };
+    h.win.VildaVault.savePatient = async value => h.commit(value, { patientId: 'fictional-real-pipeline-new', snapshotId: 'fictional-real-pipeline-snapshot' });
     const captured = h.api.getCurrentDecision(); const receipt = await h.win.VildaDataImportExport.saveUserDataWithReceipt({ collectUserData: h.form });
     expect(receipt).toMatchObject({ saved: true, patientId: 'fictional-real-pipeline-new' }); expect(h.api.getCurrentDecision().ready).toBe(false);
+    expect(h.win.VildaVault.getPatient).not.toHaveBeenCalled();
     expect(h.api.isCurrentDecisionAfterSave(captured.scope, receipt)).toBe(true); expect(h.api.isCurrentDecisionOwner(captured.scope)).toBe(false);
   });
-  it('allows only the explicitly confirmed new-patient ID after a successful own save', () => {
-    const h = environment(); h.setForm(patient()); const decision = h.api.getCurrentDecision(); h.saved('fictional-created-by-own-save', { announce: true });
-    expect(h.api.isCurrentDecisionAfterSave(decision.scope, { patientId: 'fictional-unrelated-ack' })).toBe(false); expect(h.api.isCurrentDecisionAfterSave(decision.scope, { patientId: 'fictional-created-by-own-save' })).toBe(true);
-    h.lock(); h.unlock(); expect(h.api.isCurrentDecisionAfterSave(decision.scope, { patientId: 'fictional-created-by-own-save' })).toBe(false);
+  it('allows only the explicitly confirmed new-patient ID after a successful own save', async () => {
+    const h = environment(); h.setForm(patient()); const decision = h.api.getCurrentDecision(); const receipt = await h.saved('fictional-created-by-own-save');
+    expect(receipt.saved).toBe(true);
+    expect(h.api.isCurrentDecisionAfterSave(decision.scope, { ...receipt, patientId: 'fictional-unrelated-ack' })).toBe(false); expect(h.api.isCurrentDecisionAfterSave(decision.scope, receipt)).toBe(true);
+    h.lock(); h.unlock(); expect(h.api.isCurrentDecisionAfterSave(decision.scope, receipt)).toBe(false);
   });
 
   it('does not treat a foreign vault save as proof that an anonymous live draft was saved', () => {
     const h = environment(); h.setForm(patient()); h.setSession(patient());
+    const previous = h.api.getState();
     h.notifySaved({ patientId: 'fictional-unrelated-vault-save', header: { name: 'Fikcyjny obcy pacjent' } });
-    expect(h.storage.has('vildaCurrentPatientId')).toBe(false); expect(h.api.getState()).toBe('saved');
+    // A foreign ACK cannot bless the current DOM or invent a saved baseline.
+    expect(h.storage.has('vildaCurrentPatientId')).toBe(false); expect(h.api.getState()).toBe(previous); expect(h.api.getReferenceFingerprint()).toBeNull();
     expect(h.api.getCurrentDecision()).toMatchObject({ ready: true, state: 'new_patient' });
   });
   it('retains the captured decision through real ordinary puberty anchoring and300/400ms callbacks', () => {
@@ -194,22 +235,22 @@ describe('current destructive-action save decision is synchronous and read-only'
     const carrier=h.win.VildaPubertyAssessmentState;carrier.load({user:{sex:'F'}},{restore:true});expect(carrier.editObservation('Th',3)).toEqual({ok:true});
     h.win.VildaVault.captureSyncOperationSession=()=>({});h.win.VildaVault.assertSyncOperationSession=()=>true;
     h.win.document.addEventListener('vilda:patient-loaded',event=>{if(event.detail.source==='save')h.patientId(event.detail.patientId)});
-    h.win.VildaVault.savePatient=async value=>{h.setSession(value);const result={patientId:'fictional-real-detailed-new',snapshotId:'fictional-detailed-snapshot',header:{name:value.name}};h.notifySaved(result);return result};
+    h.win.VildaVault.savePatient=async value=>h.commit(value,{patientId:'fictional-real-detailed-new',snapshotId:'fictional-detailed-snapshot'});
     const captured=h.api.getCurrentDecision();expect(captured).toMatchObject({ready:true,state:'new_patient'});
     const receipt=await h.win.VildaDataImportExport.saveUserDataWithReceipt();expect(receipt.saved).toBe(true);
     const actual=h.api.isCurrentDecisionAfterSave(captured.scope,receipt);
     expect(actual).toBe(true);
   });
-  it.each(['other-visit','foreign-owner','clinical-edit','unconfirmed-receipt'])('rejects %s while considering the explicit new-patient visit-owner handoff', boundary => {
+  it.each(['other-visit','foreign-owner','clinical-edit','unconfirmed-receipt'])('rejects %s while considering the explicit new-patient visit-owner handoff', async boundary => {
     const h=environment(),value=patient();value.user.pubertyAssessment={version:1,sex:'M',observations:{G:{stage:2,ageMonths:144,source:'clinician-entry'}}};
     value.user.pubertyAssessmentVisit={version:1,visitId:'fictional-own-save-visit',currentAxes:['G'],ownerPatientId:null,reference:{sex:'M',ageMonths:144}};
-    h.setForm(value);const captured=h.api.getCurrentDecision();h.saved('fictional-own-created',{announce:true});
+    h.setForm(value);const captured=h.api.getCurrentDecision();const confirmed=await h.saved('fictional-own-created');expect(confirmed.saved).toBe(true);
     value.user.pubertyAssessmentVisit.ownerPatientId='fictional-own-created';
     if(boundary==='other-visit')value.user.pubertyAssessmentVisit.visitId='fictional-other-visit';
     if(boundary==='foreign-owner')value.user.pubertyAssessmentVisit.ownerPatientId='fictional-foreign-owner';
     if(boundary==='clinical-edit')value.user.pubertyAssessment.observations.G.stage=3;
     h.setForm(value);const before=h.form(),reference=h.api.getReferenceFingerprint();
-    const receipt={saved:boundary!=='unconfirmed-receipt',patientId:'fictional-own-created',snapshotId:'fictional-own-snapshot'};
+    const receipt={...confirmed,saved:boundary!=='unconfirmed-receipt'};
     expect(h.api.isCurrentDecisionAfterSave(captured.scope,receipt)).toBe(false);
     expect(h.form()).toEqual(before);expect(h.api.getReferenceFingerprint()).toBe(reference);
   });

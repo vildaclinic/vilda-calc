@@ -6,7 +6,7 @@
   var d = w.document;
   if (!d || w.VildaPatientDocuments) return;
   var summary = null, summaryOwner = null, revision = 0;
-  var pending = null, active = null, busy = false, lastState = '';
+  var pending = null, pendingRecord = null, active = null, busy = false, lastState = '';
   var watchedVaults = new WeakSet();
   var reportLabels = [
     ['visit', 'Raport po wizycie'],
@@ -118,6 +118,50 @@
     revision += 1;
     close(active, false);
     publish();
+  }
+
+  function captureImportAccount() {
+    try {
+      var vault = w.VildaVault || null, auth = w.VildaAuthUI;
+      var guest = w.VildaGuestMode === true || !!(auth && typeof auth.isGuestMode === 'function' && auth.isGuestMode());
+      if (!vault) return guest ? { vault: null, userId: null, unlocked: false, guest: true, token: null } : null;
+      if (typeof vault.isUnlocked !== 'function' || typeof vault.getCurrentUser !== 'function') return null;
+      var unlocked = vault.isUnlocked(), user = vault.getCurrentUser(), userId = user && user.userId || null, token = null;
+      if (unlocked) {
+        if (guest || !userId || typeof vault.captureSyncOperationSession !== 'function' || typeof vault.assertSyncOperationSession !== 'function') return null;
+        token = vault.captureSyncOperationSession();
+        vault.assertSyncOperationSession(token);
+      } else if (userId) return null;
+      return { vault: vault, userId: userId, unlocked: unlocked, guest: guest, token: token };
+    } catch (_) { return null; }
+  }
+
+  function sameImportAccount(scope) {
+    try {
+      if (!scope || (w.VildaVault || null) !== scope.vault) return false;
+      var vault = scope.vault, auth = w.VildaAuthUI;
+      var guest = w.VildaGuestMode === true || !!(auth && typeof auth.isGuestMode === 'function' && auth.isGuestMode());
+      if (guest !== scope.guest) return false;
+      if (!vault) return guest === true && scope.userId === null && scope.unlocked === false;
+      var user = vault.getCurrentUser();
+      if (vault.isUnlocked() !== scope.unlocked || (user && user.userId || null) !== scope.userId) return false;
+      if (scope.unlocked) vault.assertSyncOperationSession(scope.token);
+      return true;
+    } catch (_) { return false; }
+  }
+
+  function importCompleted(event) {
+    var sequence = event && event.detail && event.detail.applySequence;
+    var record = pendingRecord || active;
+    // applyLoadedData emits this deferred notification after it has installed
+    // the same owner. It must not close documents opened from that completed
+    // operation, including a cold report still loading its native modules.
+    if (record && !record.closed && Number.isSafeInteger(sequence) && sequence > 0
+      && record.owner.sequence === sequence && sameImportAccount(record.importAccount) && current(record)) {
+      publish();
+      return;
+    }
+    invalidate();
   }
 
   function listen(record, target, name, callback, options) {
@@ -323,8 +367,9 @@
     var doc = options.hostDocument || d;
     // Legacy open calls also use the full shell viewport, not the clipped iframe.
     try { if (!options.hostDocument && w.parent !== w && w.parent.VildaShell) doc = w.parent.document; } catch (_) { /* standalone */ }
-    var record = { options: options, owner: owner(), revision: revision, doc: doc, dialog: null, listeners: [], scroll: [], closed: false };
+    var record = { options: options, owner: owner(), importAccount: captureImportAccount(), revision: revision, doc: doc, dialog: null, listeners: [], scroll: [], closed: false };
     listen(record, doc, 'vilda:patient-documents-owner-change', invalidate);
+    pendingRecord = record;
     busy = true;
     publish();
     pending = Promise.resolve().then(async function () {
@@ -352,6 +397,7 @@
       } finally {
         busy = false;
         pending = null;
+        if (pendingRecord === record) pendingRecord = null;
         if (active !== record) close(record, false);
         publish();
       }
@@ -359,7 +405,8 @@
     return pending;
   }
 
-  ['vilda:patient-loaded', 'vilda:json-imported', 'vilda:user-state-cleared', 'vilda:state-restored',
+  d.addEventListener('vilda:json-imported', importCompleted);
+  ['vilda:patient-loaded', 'vilda:user-state-cleared', 'vilda:state-restored',
     'vilda:persist-restored', 'vilda:main-session-restored', 'vilda:zrodlo-pacjenta-zmienione'].forEach(function (name) {
     d.addEventListener(name, invalidate);
   });

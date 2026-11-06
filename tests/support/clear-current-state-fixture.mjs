@@ -286,7 +286,7 @@ async function expectPatientUnchangedAfterNativeAction(page, before) {
   }
 }
 
-export async function proveStaleDebounceWindow(page, requiredOwner) {
+export async function proveStaleDebounceWindow(page, requiredOwner, statusMode = 'stale') {
   // Drain the unrelated production shared autosave; the three main/status
   // callbacks remain delayed. No wall-clock click deadline or sleep is used.
   await page.waitForFunction(() => {
@@ -306,7 +306,16 @@ export async function proveStaleDebounceWindow(page, requiredOwner) {
     age: document.getElementById('age').value, name: document.getElementById('name')?.value || '',
     unlocked: window.VildaVault.isUnlocked(),
   }));
-  expect(evidence.cachedState).toBe('hidden');
+  if (statusMode === 'stale') expect(evidence.cachedState).toBe('hidden');
+  else {
+    expect(statusMode).toBe('current-shell');
+    // The shell may truthfully reconcile its active owner while another pane
+    // finishes loading, independently of these held input/status debounces.
+    // Keep the shell Cancel/Discard scenario and prove the live decision and
+    // lack of a durable save; the standalone scenario still proves stale UI.
+    expect(await page.evaluate(() => window.VildaSaveStatusIndicator.getCurrentDecision())).toMatchObject({ ready: true, state: 'new_patient' });
+    expect(await page.evaluate(async () => (await window.VildaVault.listPatients()).length)).toBe(0);
+  }
   expect(evidence.unlocked).toBe(true);
   expect([evidence.height, evidence.weight, evidence.age, evidence.name]).toEqual(['', '', '', '']);
   expect(evidence.user?.pubertyAssessment).toBeUndefined();

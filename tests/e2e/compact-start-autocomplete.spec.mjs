@@ -20,6 +20,9 @@ for (const width of [390, 1024]) {
       await readyForPatient(page);
       const savedRecord = await page.evaluate(id => window.VildaVault.getPatient(id), fixture.ids.a);
 
+      // A name-only query may intentionally skip the unsaved-data guard. Give
+      // this draft a real clinical edit before asserting that warning below.
+      await page.locator('#height').fill('155');
       const input = page.locator(`#${fieldId}`);
       await input.fill(fieldId === 'lastName' ? 'Fikcyjny' : 'Ant');
       const suggestions = page.locator('.vilda-ac-dd');
@@ -51,9 +54,14 @@ for (const width of [390, 1024]) {
       expect(targetIndex).toBeGreaterThanOrEqual(0);
       for (let index = 0; index <= targetIndex; index++) await input.press('ArrowDown');
       await expect(suggestions.locator('.is-hi .vilda-ac-nm')).toHaveText('Fikcyjny Antoni');
+      await expect.poll(() => page.evaluate(() => {
+        const indicator = window.VildaSaveStatusIndicator;
+        const decision = indicator.getCurrentDecision();
+        return { displayed: indicator.getState(), ready: decision.ready, actual: decision.state };
+      })).toEqual({ displayed: 'new_patient', ready: true, actual: 'new_patient' });
       await input.press('Enter');
       await expect(suggestions).toBeHidden();
-      // Typing the query changes the new patient's identity. Confirm the real
+      // The query and measurement belong to the new draft. Confirm the real
       // unsaved-data guard instead of bypassing it through the loading API.
       const guard = page.getByRole('dialog', { name: 'Zapisać wpisane dane przed wczytaniem?' });
       await expect(guard).toBeVisible();

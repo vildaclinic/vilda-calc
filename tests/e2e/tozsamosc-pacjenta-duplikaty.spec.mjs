@@ -92,6 +92,12 @@ async function wpiszIPotwierdz(page, pola, warunek, opis) {
    Aktualne saveUserData zwraca obietnicę domkniętego zapisu (P-ZAPIS-OBIETNICA).
    Po jej zakończeniu sprawdzamy również oczekiwany skutek w kartotece. */
 async function zapiszPewnie(page, potwierdz) {
+  // The collector can already contain the intended values while the real DOB
+  // restore still owns the form. Save intentionally rejects that partial state.
+  await expect.poll(() => page.evaluate(() => window.VildaDataImportExport.getSaveReadiness()), {
+    message: 'formularz zakończył odtwarzanie przed zapisem',
+    timeout: 20_000,
+  }).toMatchObject({ ready: true });
   const stan = await zebrane(page);
   expect(stan.user.age, 'wiek w kolektorze przed zapisem').not.toBeNull();
   expect(stan.user.weight, 'waga w kolektorze przed zapisem').not.toBeNull();
