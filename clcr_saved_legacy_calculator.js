@@ -172,6 +172,14 @@
     return dp;
   }
   function dialysis(values, parameterKey, context) {
+    if (values.ktvVariant) {
+      const engine = requiredModule("VildaClcrKtv"), persistence = requiredModule("ClcrKtvPersistence");
+      const result = engine.evaluate(engine.inputFromValues(values, context), requiredModule("VildaClcrKtvReferenceData").DEFAULT_POLICY);
+      if (!result.valid) throw new Error(result.error || "Nieprawidłowe dane wybranego wskaźnika dializy.");
+      const datapoint = persistence.fromResult(result);
+      if (!datapoint || datapoint.id !== parameterKey) throw new Error("Wybrany wskaźnik dializy nie odpowiada serii wyniku.");
+      return datapoint;
+    }
     const result = requiredModule("ClcrDialysisSafety").computeDialysisAdequacy({
       ageYears: number(values, "age"), ageMonths: number(values, "ageMonths") || 0,
       modality: values.ktvModality || "", sessionsPerWeek: number(values, "ktvSessionsPerWeek"), pidiDays: values.ktvPidiDays || "",

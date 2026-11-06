@@ -94,7 +94,7 @@ async function fillValidAdultKtv(page, overrides = {}) {
     ...overrides
   };
   await page.locator('#ktvModality').selectOption('IHD');
-  await page.locator('#ktvSessionsPerWeek').fill(String(values.sessions));
+  await page.locator('#ktvSessionsPerWeek').selectOption(String(values.sessions));
   await page.locator('#ktvPidiDays').selectOption(values.pidi);
   await page.locator('#ktvDurationMinutes').fill(String(values.duration));
   await page.locator('#ktvUF').fill(String(values.uf));
