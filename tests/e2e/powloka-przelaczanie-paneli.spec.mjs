@@ -372,10 +372,18 @@ test('DocPro otwarty przy innym pacjencie, na Start „Odtwórz zapis” pacjent
     .toMatchObject({ dob: PELNY.dob, sex: 'F', h: PELNY.h, w: PELNY.w, name: PELNY.name, podsumowanieBMI: true, baza: true, porownanie: false });
   expect(await docpro.evaluate(() => window._vildaCurrentPatientId), 'DocPro przejął pacjenta z sesji karty').toBe(pidB);
 
+  // Gotowe pola nie oznaczają jeszcze zakończonego przywracania. Czekamy
+  // przed celowym cofnięciem zmiennej panelu, aby odtwarzanie go nie naprawiło.
+  await expect.poll(() => docpro.evaluate(() => window.VildaDataImportExport.getSaveReadiness().ready)).toBe(true);
   // Cel zapisu bierze pacjenta z sesji karty także wtedy, gdy zmienna panelu jest nieaktualna (tu cofnięta celowo do A).
   await docpro.evaluate((id) => { window._vildaCurrentPatientId = id; }, pidA);
   const przed = await zapisy(start, { A: pidA, B: pidB });
-  expect(await docpro.evaluate(async () => Boolean(await window.saveUserData()))).toBe(true);
+  const probaZapisu = await docpro.evaluate(async () => {
+    const identyfikatory = [window._vildaCurrentPatientId, window.sessionStorage.getItem('vildaCurrentPatientId')];
+    return { identyfikatory, zapisano: Boolean(await window.saveUserData()) };
+  });
+  expect(probaZapisu.identyfikatory, 'bezpośrednio przed zapisem zmienna panelu nadal wskazuje A, a sesja B').toEqual([pidA, pidB]);
+  expect(probaZapisu.zapisano).toBe(true);
   await expect.poll(() => zapisy(start, { A: pidA, B: pidB }), { message: 'zapis z DocPro w rekordzie B, rekord A nietknięty' })
     .toEqual({ A: przed.A, B: { liczba: przed.B.liczba + 1, nazwisko: 'Probna Alicja' } });
 });
