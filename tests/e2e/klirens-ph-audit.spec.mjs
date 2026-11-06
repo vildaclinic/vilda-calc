@@ -212,7 +212,7 @@ test('pH próbki: norma ogólna nie wymaga wieku i nie zmienia się w zależnoś
   }
 });
 
-test('pH próbki: przełączenie nie przenosi normy ani walidacji do pH dobowej zbiórki', async ({ page }) => {
+test('pH próbki: przełączenie zachowuje odrębne źródła i odczyty pH próbki oraz DZM', async ({ page }) => {
   await openCalculator(page);
   const inputs = { ...base, currentVersion: 'pro', formulaPicker: 'pH24', U_pH: '8.1', pH24: '5.4',
     age: '40', sex: 'F', Cl24DurationHours: '24', Cl24DurationSource: 'hours',
@@ -226,9 +226,13 @@ test('pH próbki: przełączenie nie przenosi normy ani walidacji do pH dobowej 
   const dzm = page.locator('#clcrResultReport .clcr-result-card[data-clcr-series="pH24"]');
   await expect(dzm).toBeVisible();
   const before = await dzm.innerText();
-  await expect(dzm).not.toContainText('Norma ogólna');
+  await expect(dzm).toContainText('Norma ogólna');
+  const dzmAssessment = await dzm.evaluate(node => JSON.parse(node.getAttribute('data-clcr-ph-dzm-snapshot')));
+  expect(dzmAssessment).toMatchObject({ schema: 'clcr-ph-dzm', rawValue: 5.4, status: 'within' });
+  expect(dzmAssessment.reference.sourceIds).toContain('MAYO_UPH24');
   await choose(page, 'pH_spot');
-  await expectResult(page, { raw: 8.1, tone: 'warning', status: 'high' });
+  const spotAssessment = await expectResult(page, { raw: 8.1, tone: 'warning', status: 'high' });
+  expect(spotAssessment.policy.id).not.toBe(dzmAssessment.policy.id);
   await choose(page, 'pH24');
   await expect(page.locator('#phInputCard')).toBeHidden();
   await expect(dzm).toBeVisible();
@@ -236,7 +240,11 @@ test('pH próbki: przełączenie nie przenosi normy ani walidacji do pH dobowej 
   await expect(page.locator('#pH24')).toHaveValue('5.4');
   await expect(page.locator('#U_pH')).toHaveValue('8.1');
   await page.locator('#pH24').fill('10');
-  await expect(page.locator('#pH24')).toHaveClass(/error/);
+  await expect.poll(() => dzm.evaluate(node => {
+    const assessment = JSON.parse(node.getAttribute('data-clcr-ph-dzm-snapshot'));
+    return { raw: assessment.rawValue, status: assessment.status, tone: assessment.tone };
+  })).toEqual({ raw: 10, status: 'high', tone: 'warning' });
+  await expect(page.locator('#pH24')).not.toHaveClass(/error/);
   await choose(page, 'pH_spot');
   await page.locator('#U_pH').fill('10');
   await expectResult(page, { raw: 10, tone: 'warning', status: 'high' });

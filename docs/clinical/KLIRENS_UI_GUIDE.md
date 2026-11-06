@@ -609,3 +609,30 @@ używa nowego silnika. Molarne **`Ca_Cit_mol`** pozostaje osobną serią
 bez konwersji/łączenia z mg/mg. Nowy zapis zachowuje dokładny wynik,
 źródło i ocenę z dnia zapisu, zgodne w Badaniach, Notatkach i raporcie.
 Pełny kontrakt i ograniczenia: [CALCIUM_CITRATE.md](CALCIUM_CITRATE.md).
+
+## pH dobowej zbiórki — decyzja 06.11.2026
+
+Właściciel zaakceptował [makietę przed/po desktop/mobile](https://vilda-ph-dzm-20261106.maciej-flader.chatgpt.site)
+i wdrożenie jednego pola zmierzonego **pH DZM**. Czas, objętość, wiek,
+płeć i antropometria nie są dodatkowymi wymaganiami. Przyjmujemy DZM 24 h;
+pH nie przeliczamy przez czas ani objętość i nie wyznaczamy go jako średniej
+arytmetycznej pomiarów jednorazowych.
+
+Karta B pokazuje **„Norma ogólna: 4,5–8,0”**, z obiema granicami włączonymi,
+według Mayo **UPH24**, właściwego dla DZM, także w katalogu pediatrycznym.
+Nie jest to norma dla wieku lub potwierdzenie laboratorium/metody pacjenta.
+Odchylenia są bursztynowe, liczby normy neutralne. W zakresie ogólnym
+pozostaje krótki komentarz o odczynie: pH 5,2 jest w zakresie, ale kwaśny
+mocz sprzyja krystalizacji kwasu moczowego. Nie dodajemy drugiej karty
+lub sprzecznej kategorii nieprawidłowości.
+
+Przesiewowe progi EAU, preanalityka i monitorowanie alkalizacji znajdują
+się w Szczegółach. Samo pH DZM nie nadaje rozpoznania RTA/ZUM ani oceny
+skuteczności leczenia; alkalizację kontroluje się w świeżych próbkach o
+różnych porach. Znana niezgodność próbki lub konserwacja zmieniająca pH
+zachowuje odczytaną liczbę bez porównania. Nie przenosimy faktów próbki
+jednorazowej do DZM. Techniczna skala wpisu 0–14 nie jest normą moczu.
+
+Zapis zachowuje dokładny odczyt, źródło i ocenę; historia nie otrzymuje
+nowej normy retrospektywnie. pH DZM i próbka jednorazowa pozostają
+oddzielnymi seriami. Źródła i ograniczenia: [audyt pH DZM](KLIRENS_PH_DZM_AUDIT.md).
