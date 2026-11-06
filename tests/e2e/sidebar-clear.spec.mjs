@@ -36,6 +36,74 @@ async function expectStoredIntact(owner, stored) {
   expect(await owner.evaluate(id => window.VildaVault.getPatientNote(id), stored.noteId)).toEqual(stored.note);
 }
 
+async function loadSavedDocProForClear(page, owner, patientId) {
+  // Isolate this saved-Clear scenario from the separate shell Restore-choice
+  // race: shared restore can replace lastLoadedData between pick and Restore.
+  // Keep the actual picked payload for the public restore API. This prepares
+  // a genuinely saved form; it does not fix or claim to test that UI race.
+  const expectedConfirm = { type: 'confirm', message: 'Masz wprowadzone nowe dane, które nie zostały zapisane.\nCzy na pewno chcesz przywrócić zapisany stan?' };
+  const confirmations = [];
+  const confirmRestore = async dialog => {
+    const actual = { type: dialog.type(), message: dialog.message() };
+    confirmations.push(actual);
+    if (actual.type === expectedConfirm.type && actual.message === expectedConfirm.message) await dialog.accept();
+    else { await dialog.dismiss(); expect(actual).toEqual(expectedConfirm); }
+  };
+  page.on('dialog', confirmRestore);
+  let witness, complete = false;
+  try {
+    witness = await owner.evaluateHandle(id => {
+      const api = window.VildaDataImportExport, initial = api.getApplyLoadedDataSequence();
+      if (!Number.isSafeInteger(initial)) throw Error('Missing initial patient-load sequence');
+      let onPick, done;
+      const dispose = () => {
+        document.removeEventListener('vilda:state-restored', restored);
+        if (onPick) document.removeEventListener('vilda:patient-loaded', onPick);
+      };
+      const promise = new Promise(resolve => { done = resolve; });
+      function restored(event) {
+        const detail = event.detail || {}, sequence = api.getApplyLoadedDataSequence();
+        if (detail.source !== 'restoreLoadedState' || sessionStorage.getItem('vildaCurrentPatientId') !== id
+          || !Number.isSafeInteger(sequence) || sequence <= initial
+          || detail.patientId !== undefined && detail.patientId !== id
+          || detail.applySequence !== undefined && detail.applySequence !== sequence) return;
+        dispose(); done({ patientId: id, applySequence: sequence });
+      }
+      document.addEventListener('vilda:state-restored', restored);
+      window.VildaAuthUI.showPatientCard(id, payload => {
+        window.applyLoadedData(payload);
+        // Register after production identity listeners; AuthUI assigns the PID.
+        onPick = event => {
+          if (event.detail?.source !== 'pick' || event.detail.patientId !== id) return;
+          document.removeEventListener('vilda:patient-loaded', onPick);
+          api.restoreLoadedState({ data: payload });
+        };
+        document.addEventListener('vilda:patient-loaded', onPick);
+      }, null);
+      return { promise, dispose };
+    }, patientId);
+    await owner.getByRole('button', { name: 'Wczytaj tego pacjenta', exact: true }).click();
+    const restored = await witness.evaluate(value => value.promise);
+    await expect.poll(() => owner.evaluate(() => {
+      const api = window.VildaDataImportExport, decision = window.VildaSaveStatusIndicator.getCurrentDecision();
+      return { patientId: sessionStorage.getItem('vildaCurrentPatientId'), applySequence: api.getApplyLoadedDataSequence(),
+        ready: decision.ready, state: decision.state,
+        model: Object.fromEntries(['height', 'weight', 'age', 'ageMonths', 'sex', 'name',
+          'pubertyMenarcheAge', 'pubertyGnrhaStatus', 'pubertyCdgp'].map(id => [id, document.getElementById(id).value])) };
+    })).toEqual({ ...restored, ready: true, state: 'saved',
+      model: { height: '150', weight: '40', age: '12', ageMonths: '0', sex: 'F', name: 'Fikcyjna Alicja Menu',
+        pubertyMenarcheAge: '11.5', pubertyGnrhaStatus: 'brak', pubertyCdgp: 'nie' } });
+    expect(confirmations).toEqual([expectedConfirm]);
+    complete = true;
+  } finally {
+    page.off('dialog', confirmRestore);
+    if (witness) {
+      const cleanup = async () => { await witness.evaluate(value => value.dispose()); await witness.dispose(); };
+      if (complete) await cleanup(); else await cleanup().catch(() => {});
+    }
+  }
+}
+
 for (const item of [
   { name: 'desktop Start', path: '/index.html', width: 1440 },
   { name: 'phone shell DocPro', path: '/docpro.html', width: 390, shell: true },
@@ -43,7 +111,12 @@ for (const item of [
 ]) test(`${item.name}: the real menu clear resets the working form and retains the entire saved record and note`, async ({ page, context }) => {
   const { owner } = await openFictionalClearAccount(page, context, item);
   const stored = await storedRecordAndNote(owner);
-  await loadPatient(owner, stored.patientId, 'restore');
+  if (item.shell && item.path === '/docpro.html') {
+    await expect(page.locator('iframe.app-pane[title="DocPro"]')).toBeVisible();
+    await loadSavedDocProForClear(page, owner, stored.patientId);
+    await expect(page).toHaveURL(/\/app\.html#\/docpro$/u);
+  }
+  else await loadPatient(owner, stored.patientId, 'restore');
   await expect(owner.locator('#height')).toHaveValue('150');
   await clearFromMenu(page);
   await expect(owner.getByRole('dialog', { name: CLEAR_DIALOG })).toHaveCount(0);
@@ -51,7 +124,15 @@ for (const item of [
   await expect.poll(() => owner.evaluate(() => sessionStorage.getItem('vildaCurrentPatientId'))).toBeNull();
   await expect.poll(() => owner.evaluate(() => window.VildaSaveStatusIndicator.getState())).toBe('hidden');
   await expectStoredIntact(owner, stored);
-  if (item.shell) await expect(page.locator('[data-vilda-chrome-drawer]')).toBeHidden();
+  if (item.shell) {
+    await expect(page.locator('[data-vilda-chrome-drawer]')).toBeHidden();
+    await expect(page.locator('iframe.app-pane[title="DocPro"]')).toBeVisible();
+    await expect.poll(() => owner.evaluate(() => {
+      const decision = window.VildaSaveStatusIndicator.getCurrentDecision();
+      return { ready: decision.ready, state: decision.state, reference: window.VildaSaveStatusIndicator.getReferenceFingerprint(),
+        panelOwner: window.VildaPanelPacjent.wlasciciel(), stale: window.VildaPanelPacjent.nieaktualny() };
+    })).toEqual({ ready: true, state: 'hidden', reference: null, panelOwner: null, stale: false });
+  }
 });
 
 test('the menu uses current live input before status/autosave, preserving Cancel and explicitly discarding new data', async ({ page, context }) => {

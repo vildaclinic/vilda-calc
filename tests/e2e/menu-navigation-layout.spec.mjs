@@ -61,18 +61,40 @@ async function expandCalculators(menu, keyboard = false) {
 }
 
 async function scrollMenu(menu) {
-  const scroll = menu.locator('.chrome-menu-scroll');
+  // Short drawers deliberately scroll actions and destinations together, with
+  // a sticky account footer. Taller drawers and desktop keep the nav scroller.
+  const common = await menu.evaluate(node => /^(auto|scroll)$/.test(getComputedStyle(node).overflowY)
+    && node.scrollHeight > node.clientHeight + 1);
+  const scroll = common ? menu : menu.locator('.chrome-menu-scroll');
   const structure = await scroll.evaluate(node => ({
     height: node.clientHeight, total: node.scrollHeight,
+    overflow: getComputedStyle(node).overflowY,
     containsActions: Boolean(node.querySelector('.chrome-menu-actions')),
     containsFooter: Boolean(node.querySelector('.chrome-menu-footer')),
+    footerPosition: node.querySelector('.chrome-menu-footer') && getComputedStyle(node.querySelector('.chrome-menu-footer')).position,
   }));
-  expect(structure.containsActions, 'akcje nie należą do przewijanej treści').toBe(false);
-  expect(structure.containsFooter, 'konto nie należy do przewijanej treści').toBe(false);
+  expect(structure.overflow, 'przewijamy rzeczywisty kontener menu').toMatch(/^(auto|scroll)$/);
+  expect(structure.containsActions, 'tylko wspólny scroll obejmuje akcje formularza').toBe(common);
+  expect(structure.containsFooter, 'tylko wspólny scroll obejmuje przypiętą stopkę').toBe(common);
+  if (common) expect(structure.footerPosition, 'konto pozostaje sticky w krótkim oknie').toBe('sticky');
   expect(structure.total, 'warunek próby: menu rzeczywiście wymaga przewinięcia').toBeGreaterThan(structure.height + 1);
   await scroll.evaluate(node => { node.scrollTop = node.scrollHeight; });
   await expect.poll(() => scroll.evaluate(node => node.scrollTop)).toBeGreaterThan(1);
-  return scroll;
+  await expectReachable(menu.locator('a[href="steroidy.html"]'));
+  await expectReachable(menu.locator('a[href="materialy-edukacyjne.html"]'));
+  await expect(menu.locator('.chrome-menu-footer')).toBeInViewport({ ratio: 1 });
+  return { scroll, common };
+}
+
+async function expectReachable(control) {
+  await expect(control).toBeInViewport({ ratio: 1 });
+  const rect = await control.boundingBox();
+  expect(rect.width, 'osiągalna kontrolka zachowuje szerokość celu dotykowego').toBeGreaterThanOrEqual(44);
+  expect(rect.height, 'osiągalna kontrolka zachowuje wysokość celu dotykowego').toBeGreaterThanOrEqual(44);
+  await expect.poll(() => control.evaluate(node => {
+    const rect = node.getBoundingClientRect();
+    return node.contains(document.elementFromPoint(rect.x + rect.width / 2, rect.y + rect.height / 2));
+  }), { message: 'kontrolka jest osiągalna nad przypiętym kontem, bez przykrycia' }).toBe(true);
 }
 
 async function expectNoHorizontalOverflow(page) {
@@ -96,7 +118,8 @@ for (const width of [1024, 1280, 1920]) {
     expect(Math.abs(layout.bottom - layout.viewport), 'menu sięga do dolnej krawędzi okna').toBeLessThanOrEqual(1);
 
     await expandCalculators(menu);
-    const scroll = await scrollMenu(menu);
+    const { scroll, common } = await scrollMenu(menu);
+    expect(common, 'desktop zachowuje osobny scroll nawigacji i przypięte akcje').toBe(false);
     expectPinned(await geometry(menu), baseline);
     await page.evaluate(() => window.scrollTo({ top: document.scrollingElement.scrollHeight, behavior: 'instant' }));
     await expect.poll(() => page.evaluate(() => scrollY)).toBeGreaterThan(100);
@@ -139,7 +162,7 @@ for (const profile of [
       isMobile: phone.isMobile, hasTouch: phone.hasTouch,
     });
 
-    test('drawer: przypięte akcje/konto, accordion z klawiatury i rzeczywiste przejście do kalkulatora', async ({ page }) => {
+    test('drawer: osiągalne akcje, przypięte konto, accordion z klawiatury i rzeczywiste przejście do kalkulatora', async ({ page }) => {
       await prepare(page, { shell: true });
       const trigger = page.locator(TRIGGER);
       await trigger.focus(); await page.keyboard.press('Enter');
@@ -154,7 +177,19 @@ for (const profile of [
       await expect(menu.locator('.chrome-menu-calculators-items')).toBeHidden();
       await toggle.press('Enter');
       await expect(toggle).toHaveAttribute('aria-expanded', 'true');
-      await scrollMenu(menu);
+      const { scroll, common } = await scrollMenu(menu);
+      expect(common, 'wspólny scroll dotyczy wyłącznie niskiego okna, pionowe menu zachowuje przypięte akcje').toBe(profile.height <= 480);
+      const afterScroll = await geometry(menu);
+      if (common) {
+        expectPinned({ footer: afterScroll.footer }, { footer: baseline.footer });
+        await scroll.evaluate(node => { node.scrollTop = 0; });
+        await expect.poll(() => scroll.evaluate(node => node.scrollTop)).toBe(0);
+        for (const selector of ['.chrome-menu-save', '.chrome-menu-documents', '[data-menu-clear]']) {
+          await expectReachable(menu.locator(selector));
+        }
+      }
+      // Returning the common scroll to its top restores the exact original
+      // action geometry too; portrait keeps all of it pinned throughout.
       expectPinned(await geometry(menu), baseline);
       await expect(menu.locator('.chrome-menu-save')).toBeInViewport();
       await expect(menu.locator('.chrome-menu-footer')).toBeInViewport();
