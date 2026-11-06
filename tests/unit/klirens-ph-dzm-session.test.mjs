@@ -197,6 +197,30 @@ describe('pH DZM — actual session runtime retains measured value and collectio
     expect(input(result,'pH24')).toBe('5.5');
     expect(input(result,'PH24_preservative')).toBe('acid');
   });
+  it('does not add pH keys to a session whose calculator never rendered them',()=>{
+    const result=runtime({formulaPicker:'ACR'});
+    delete result.controls.pH24;
+    expect(result.api.applyClcrSessionSnapshot({selectedFormula:'ACR',inputs:{age:'12'}},{update:false,preserveAcrossVersions:true})).toBe(true);
+    const saved=result.api.buildClcrSessionSnapshot();
+    for(const id of ['pH24',...result.api.ClcrPhDzmSession.SAMPLE_IDS]){
+      expect(Object.hasOwn(saved.inputs,id),id).toBe(false);
+      expect(Object.hasOwn(result.api.__vildaClcrVersionValueVault,id),id).toBe(false);
+    }
+  });
+  it('an empty new pH DZM session retains the shared fresh24h default',()=>{
+    const result=restore({selectedFormula:'pH24',inputs:{}},initialDzm);
+    expect(input(result,'pH24')).toBe('');
+    expect(input(result,'Cl24DurationHours')).toBe('24');
+    expect(input(result,'Cl24DurationSource')).toBe('assumed-24h');
+    for(const id of result.api.ClcrPhDzmSession.SAMPLE_IDS)expect(input(result,id)).toBe('');
+  });
+  it('installs synchronously before DOM readiness and restoration calls',()=>{
+    const result=runtime(initialDzm);
+    expect(result.api.ClcrPhDzmSession.CONTEXT_IDS).toContain('PH24_preservative');
+    expect(result.api.applyClcrSessionSnapshot({selectedFormula:'pH24',inputs:{pH24:'6.2',Cl24DurationHours:'24'}},{update:false})).toBe(true);
+    expect(input(result,'pH24')).toBe('6.2');
+    expect(input(result,'PH24_preservative')).toBe('');
+  });
   it('the readable adapter is reproducible and cannot be installed twice',()=>{
     expect(source).toContain(phDzmSessionSource);
     expect(patchPhDzmSessionHooks(source)).toBe(source);

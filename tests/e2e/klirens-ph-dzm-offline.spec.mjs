@@ -100,17 +100,22 @@ function precedingPhDzmNote(tree) {
   const legacy = {};
   for (const name of ['clcr_clinical_safety.js', 'clcr_extended_egfr.js', 'clcr_calculation_assumptions.js',
     'clcr_result_reference_data.js', 'clcr_result_presentation.js', 'clcr_collection_duration.js',
-    'clcr_saved_results.js', 'clcr_saved_legacy_calculator.js', 'clcr_saved_calculation.js']) {
+    'clcr_saved_results.js', 'clcr_ui_workflow.js', 'clcr_saved_legacy_calculator.js', 'clcr_saved_calculation.js']) {
     new Function('window', 'globalThis', fs.readFileSync(path.join(tree, name), 'utf8'))(legacy, legacy);
   }
   const values = { age: '40', pH24: '6.5', Cl24DurationHours: '24', Cl24DurationSource: 'captured' };
   const old = legacy.ClcrSavedLegacyCalculator.recalculate('pH24', values);
-  const dp = { ...old, testKey: 'clcr:pH24', label: old.model.label };
+  // The real legacy collector starts with its registered parameter metadata.
+  // pH has no physical unit, so its dictionary uses the storage placeholder;
+  // bypassing that step creates a note invalid even in the archived reader.
+  const parameter = legacy.ClcrUiModel.getParam('pH24');
+  const dp = { ...old, testKey: parameter.testKey, label: parameter.label, unit: parameter.unit };
   const snapshot = legacy.ClcrSavedCalculation.createSnapshot(dp, { capture: {
     values, ageYears: 40, fields: Object.keys(values).map(id => ({ id, label: id, type: 'text' })),
   }, clinicalDateISO: '2026-11-05' });
   const note = legacy.ClcrSavedResults.buildPatientNotePayload(dp, { patientId: PATIENT_ID, clinicalDateISO: '2026-11-05' });
   note.body += '\n\n' + legacy.ClcrSavedCalculation.serializeSnapshot(snapshot, note);
+  if (legacy.ClcrSavedCalculation.readSaved(note).valid !== true) throw new Error('Archived producer did not create a valid historical pH note');
   return { ...note, id: 'fictional-pre-ph-dzm-audit-note', rev: 1 };
 }
 

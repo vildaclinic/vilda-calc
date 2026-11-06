@@ -3,7 +3,7 @@ import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 export const phDzmSessionSource = String.raw`/* KLIRENS-PH-DZM-SESSION: source tools/patch-klirens-ph-dzm-session.mjs */
-(function installPhDzmSessionAdapter() {
+function installPhDzmSessionAdapter() {
   "use strict";
   const PROTOCOL_IDS = Object.freeze(["collectionStartVoidDiscarded", "collectionFinalVoidIncluded", "collectionNoMissedVoids", "collectionNoSpillage", "collectionNoExtraVoids", "collectionStorageFollowed"]);
   const SAMPLE_IDS = Object.freeze(["PH24_sampleType", "PH24_sampleSource", "PH24_preservative", "PH24_infection"]);
@@ -43,9 +43,13 @@ export const phDzmSessionSource = String.raw`/* KLIRENS-PH-DZM-SESSION: source t
   function normalize(session) {
     const values = originals.get(session) || incoming(session);
     const selected = (session.selectedFormula || values.formulaPicker) === "pH24";
-    const fields = { pH24: own(values, "pH24") && primitive(values.pH24) ? values.pH24 : "" };
+    const fields = {};
     const captured = selected ? capturedContext(session) : {};
-    for (const id of SAMPLE_IDS) fields[id] = own(values, id) && primitive(values[id]) ? values[id] : own(captured, id) ? captured[id] : "";
+    if (selected || own(values, "pH24")) fields.pH24 = own(values, "pH24") && primitive(values.pH24) ? values.pH24 : "";
+    for (const id of SAMPLE_IDS) {
+      if (own(values, id) && primitive(values[id])) fields[id] = values[id];
+      else if (own(captured, id)) fields[id] = captured[id];
+    }
     if (selected) {
       for (const id of CONTEXT_IDS) {
         if (own(values, id) && primitive(values[id])) fields[id] = values[id];
@@ -53,13 +57,15 @@ export const phDzmSessionSource = String.raw`/* KLIRENS-PH-DZM-SESSION: source t
       }
       // A restored report without a recorded collection duration is not a
       // fresh default-24h sample. Keep its number without inventing a fact.
-      if (!own(values, "Cl24DurationHours") && !own(captured, "Cl24DurationHours")) {
+      if (!absent(fields.pH24) && !own(values, "Cl24DurationHours") && !own(captured, "Cl24DurationHours")) {
         fields.Cl24DurationHours = "";
         fields.Cl24DurationSource = "historical-missing";
         fields.durationNeedsConfirmation = true;
-      } else if (!own(values, "Cl24DurationSource") && !own(captured, "Cl24DurationSource")) fields.Cl24DurationSource = absent(fields.Cl24DurationHours) ? "historical-missing" : "captured";
+      } else if ((own(values, "Cl24DurationHours") || own(captured, "Cl24DurationHours")) && !own(values, "Cl24DurationSource") && !own(captured, "Cl24DurationSource")) fields.Cl24DurationSource = absent(fields.Cl24DurationHours) ? "historical-missing" : "captured";
     }
-    controls(fields);
+    // Clear stale controls without adding unrendered pH fields to unrelated
+    // sessions. Only explicitly supplied or selected-calculation keys persist.
+    controls({ pH24: "", ...Object.fromEntries(SAMPLE_IDS.map(id => [id, ""])), ...fields });
     session.inputs = { ...session.inputs, ...fields };
   }
   function clear() {
@@ -89,18 +95,19 @@ export const phDzmSessionSource = String.raw`/* KLIRENS-PH-DZM-SESSION: source t
   replace("clearCaDzmInputContext", function clearPhDzmAfterCa() { priorClear(); clear(); });
   const priorRestore = restoreClearedCaDzmContext;
   replace("restoreClearedCaDzmContext", function restorePhDzmAfterCa(event) { priorRestore(event); restoreClear(event); });
-})();
+}
 `;
 
 export function patchPhDzmSessionHooks(source) {
   const marker = '/* KLIRENS-PH-DZM-SESSION:';
+  const anchor = '(function(){const b="vildaClcrSessionV1";';
+  const hook = anchor + 'installPhDzmSessionAdapter();';
   if (source.includes(marker)) {
-    if (source.split(phDzmSessionSource).length !== 2) throw new Error('pH DZM session source differs from its readable source');
+    if (source.split(phDzmSessionSource).length !== 2 || source.split(hook).length !== 2) throw new Error('pH DZM session source differs from its readable source');
     return source;
   }
-  const anchor = '/* KLIRENS-CA-CIT-SESSION:';
   if (source.split(anchor).length !== 2) throw new Error('Missing or duplicate pH DZM session anchor');
-  return source.replace(anchor, phDzmSessionSource + anchor);
+  return phDzmSessionSource + source.replace(anchor, hook);
 }
 
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
