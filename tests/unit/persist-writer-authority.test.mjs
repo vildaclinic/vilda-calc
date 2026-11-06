@@ -125,6 +125,40 @@ describe('queued shared state retains its document and visit authority', () => {
     expect(h.read()).toEqual(current);
   });
 
+  it.each(['meaningful', 'empty'])('a real main-session collector cannot %s-flush after replacing the visit', kind => {
+    const h = harness();
+    const getSequence = h.win.VildaDataImportExport.getApplyLoadedDataSequence;
+    delete h.win.VildaDataImportExport;
+    new Function('window', 'globalThis', 'document', source('vilda_data_import_export.js'))(h.win, h.win, h.document);
+    h.win.VildaDataImportExport = { ...h.win.VildaDataImportExport, getApplyLoadedDataSequence: getSequence };
+    if (kind === 'empty') {
+      Object.values(h.fields).forEach(field => { field.value = ''; });
+      h.seed({});
+    }
+    const main = { version: 1, name: 'Fikcyjny Pacjent Następnej Wizyty', user: { weight: 50, height: 160 } };
+    let current;
+    // The real collector delegates to clinical module capture hooks. Model a
+    // completed visit replacement inside that callback, without copying the
+    // collector or meaningful-data rules into the fixture.
+    const captureState = vi.fn(() => {
+      h.nextVisit();
+      current = h.seed({ ...h.base, weight: '50' });
+      h.win.VildaPersistence.writeMainSession(main);
+      h.win.sessionStorage.setItem('vildaLoadChoiceV1', 'new');
+      h.win.sessionStorage.setItem('vildaPrevSummaryPid', 'fictional-next-visit');
+      h.win.sessionStorage.setItem('vildaPrevSummaryAnchor', 'fictional-next-anchor');
+      return null;
+    });
+    h.win.vildaSgaBirthPersistApi = { captureState };
+    h.win.vildaPersistFlushNow({ force: true });
+    expect(captureState).toHaveBeenCalledTimes(1);
+    expect(h.read()).toEqual(current);
+    expect(h.win.VildaPersistence.readMainSession()).toEqual(main);
+    expect(h.win.sessionStorage.getItem('vildaLoadChoiceV1')).toBe('new');
+    expect(h.win.sessionStorage.getItem('vildaPrevSummaryPid')).toBe('fictional-next-visit');
+    expect(h.win.sessionStorage.getItem('vildaPrevSummaryAnchor')).toBe('fictional-next-anchor');
+  });
+
   it('an empty hidden restore cannot delete another pane’s draft or visit context', () => {
     const h = harness();
     h.shell.navigate('docpro');

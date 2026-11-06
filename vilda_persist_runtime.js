@@ -135,7 +135,10 @@ function x(e){
     _e(state);re(state);const persisted=state[b];
     st(persisted);_e(state);re(state);
     if(!Pp_writerCurrent(owner))return;
-    if(!ze(state)){Y();te("app:persistence-empty-autosave");return}
+    const meaningful=ze(state);
+    // The collector delegates to modules that can complete another visit.
+    if(!Pp_writerCurrent(owner))return;
+    if(!meaningful){Y();te("app:persistence-empty-autosave");return}
     persisted.updatedAtISO=new Date().toISOString();tt(state,{force:force});
   }catch(error){E("app:persistence","Nie udało się wykonać flushPersistNow",error,{force:force})}
 }
