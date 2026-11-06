@@ -12,6 +12,9 @@ function uruchom(wybor, blad = false) {
   if (wybor != null) store.vildaLoadChoiceV1 = wybor;
   const flush = [];
   const events = [];
+  const account = { userId: 'fikcyjne-konto' };
+  const ticket = Object.freeze({ account: account.userId });
+  const committed = new WeakMap();
   const win = {
     document: {
       getElementById: () => null, querySelectorAll: () => [], querySelector: () => null,
@@ -23,9 +26,15 @@ function uruchom(wybor, blad = false) {
     },
     VildaVault: {
       isUnlocked: () => true,
-      savePatient: async () => {
+      getCurrentUser: () => account,
+      captureSyncOperationSession: () => ticket,
+      assertSyncOperationSession: (scope) => { if (scope !== ticket) throw new Error('Obca sesja testowa'); },
+      getCommittedSavePayload: (result) => committed.has(result) ? structuredClone(committed.get(result)) : null,
+      savePatient: async (value) => {
         if (blad) throw new Error('Fikcyjny błąd zapisu');
-        return { patientId: 'fikcyjny-pacjent', snapshotId: 'fikcyjny-zapis', snapshotCount: 1, isNew: true };
+        const result = { patientId: 'fikcyjny-pacjent', snapshotId: 'fikcyjny-zapis', snapshotCount: 1, isNew: true };
+        committed.set(result, structuredClone(value));
+        return result;
       },
     },
     CustomEvent: class { constructor(type, options) { this.type = type; this.detail = options.detail; } },

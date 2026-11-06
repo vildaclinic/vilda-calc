@@ -51,6 +51,20 @@ async function wpiszIZapisz(page, dane = PIERWSZY) {
     else await pole.fill(String(value));
   }
   await page.locator('#weight').blur();
+  // These cases test card navigation after a completed form. Let the actual
+  // age-dependent PAL producer settle its default before Save; a rapid Save
+  // before that later producer changes the model is a separate save scenario.
+  await page.waitForFunction(() => {
+    if (document.getElementById('palFactor')?.value !== '1.6'
+      || document.getElementById('intakePal')?.value !== '1.6') return false;
+    const current = window.VildaDataImportExport.captureCurrentUserDataReadOnly({
+      base: window.VildaPersistence.readMainSession(),
+    });
+    return current?.plan?.palFactor === 1.6 && current?.intake?.pal === '1.6';
+  });
+  expect(await page.evaluate(() => ({ plan: window.__vildaPlanPalTouched === true,
+    intake: window.__vildaIntakePalTouched === true })), 'the default settled without a manual PAL choice')
+    .toEqual({ plan: false, intake: false });
   await kliknijZapisz(page);
   let id;
   await expect.poll(async () => {

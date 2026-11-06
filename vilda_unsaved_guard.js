@@ -181,7 +181,11 @@ function VildaGuardRunDecision(options, decision) {
       }
       if (!settled()) return;
       if (!VildaGuardDecisionCurrent(decision, request.receipt)) { stale(); return; }
-      finish(proceed);
+      // A caller handing off to the native form can revalidate this same own
+      // receipt while the cached Saved label is still being published. This
+      // opaque RAM proof carries no patient payload and grants no other path.
+      var ownSave = Object.freeze({ indicator: decision.indicator, scope: decision.scope, receipt: request.receipt });
+      finish(function () { proceed(ownSave); });
     }
     var promise;
     try { promise = api.saveUserDataWithReceipt({ showTooltip: typeof f.showTooltip === "function" ? f.showTooltip : null }); }
@@ -251,4 +255,13 @@ function X(e){e=e||{};var t=typeof e.onProceed=="function"?e.onProceed:function(
       try { button.__vugClearBypass = true; button.click(); } catch (_) {}
     } }, decision);
   } catch (_) { /* A failed interception cannot authorize a destructive replay. */ }
-}function D(e){try{/* P-POWLOKA-OBCY (2026-10-06): dokument nieaktualny (inna ramka powloki wczytala innego pacjenta) nie zapisze juz zmian, a powloka przeladowuje go przy pokazaniu - natywne okno "Opuscic strone?" zatrzymaloby panel na "Ladowanie". Rejestr: docs/clinical/ALGORITHMS.md, P-POWLOKA-OBCY. */var Gq5v=f.VildaPanelPacjent;if(Gq5v&&typeof Gq5v.nieaktualny=="function"&&Gq5v.nieaktualny())return}catch{}try{if(k(_()))return e&&typeof e.preventDefault=="function"&&e.preventDefault(),e&&(e.returnValue=""),""}catch{}}var A=!1;function C(){if(!A){var e=p();if(!(!e||typeof e.addEventListener!="function")){A=!0,e.addEventListener("click",T,!0);try{typeof f.addEventListener=="function"&&f.addEventListener("beforeunload",D)}catch{}}}}try{var z=p();z&&typeof z.addEventListener=="function"&&(z.readyState==="loading"?z.addEventListener("DOMContentLoaded",C,{once:!0}):C())}catch{}var W={run:I,confirmSamePatientReload:X,STYLE_ID:j,install:C,_decide:S,_hasPendingKlirens:VildaKlirensGuardHasPending,_hasUnsaved:k,_copy:N,_onClearCaptureClick:T,_onBeforeUnload:D};try{f&&(f.VildaUnsavedGuard=W)}catch{}typeof module<"u"&&module.exports&&(module.exports=W)})(typeof window<"u"?window:typeof globalThis<"u"?globalThis:this);
+}function D(e){try{/* P-POWLOKA-OBCY (2026-10-06): dokument nieaktualny (inna ramka powloki wczytala innego pacjenta) nie zapisze juz zmian, a powloka przeladowuje go przy pokazaniu - natywne okno "Opuscic strone?" zatrzymaloby panel na "Ladowanie". Rejestr: docs/clinical/ALGORITHMS.md, P-POWLOKA-OBCY. */var Gq5v=f.VildaPanelPacjent;if(Gq5v&&typeof Gq5v.nieaktualny=="function"&&Gq5v.nieaktualny())return}catch{}try{
+  var decision=VildaGuardCurrentDecision(),cached=_(),api=f.VildaDataImportExport;
+  var pending=!!(api&&typeof api.isSaveUserDataPending==="function"&&api.isSaveUserDataPending());
+  var unsaved=decision.ready?k(decision.state):k(cached)||cached==="saving"||pending;
+  if(unsaved||VildaKlirensGuardHasPending()){
+    if(e&&typeof e.preventDefault==="function")e.preventDefault();
+    if(e)e.returnValue="";
+    return "";
+  }
+}catch{}}var A=!1;function C(){if(!A){var e=p();if(!(!e||typeof e.addEventListener!="function")){A=!0,e.addEventListener("click",T,!0);try{typeof f.addEventListener=="function"&&f.addEventListener("beforeunload",D)}catch{}}}}try{var z=p();z&&typeof z.addEventListener=="function"&&(z.readyState==="loading"?z.addEventListener("DOMContentLoaded",C,{once:!0}):C())}catch{}var W={run:I,confirmSamePatientReload:X,STYLE_ID:j,install:C,_decide:S,_hasPendingKlirens:VildaKlirensGuardHasPending,_hasUnsaved:k,_copy:N,_onClearCaptureClick:T,_onBeforeUnload:D};try{f&&(f.VildaUnsavedGuard=W)}catch{}typeof module<"u"&&module.exports&&(module.exports=W)})(typeof window<"u"?window:typeof globalThis<"u"?globalThis:this);

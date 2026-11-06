@@ -609,6 +609,30 @@ z DocPro mogło więc zastąpić nowsze pola pełnej sesji starszą kopią wspó
 Jawne wczytanie pacjenta i przywrócenie zapisu nadal rozsyłają dotychczasowy
 sygnał; lokalne zdarzenia zakończenia odtwarzania sesji pozostają aktywne.
 
+Potwierdzenie własnego zapisu i odczyt bieżącego formularza są rozdzielone
+(P-ZAPIS-POTWIERDZONY). Sejf udostępnia odłączoną treść rzeczywiście zatwierdzonej
+wersji przez dowód związany z wynikiem operacji i sesją konta, przechowywany
+wyłącznie w RAM. Importer wiąże go z pacjentem i sekwencją wczytania, a wskaźnik
+ustanawia referencję z tej treści. Ponowny odczyt formularza jedynie porównuje
+stan; nie może potwierdzić edycji powstałej po zatwierdzeniu. Ogólne powiadomienie
+sejfu nie jest takim dowodem. Zapis sprawdza gotowość rzeczywistych producentów
+odtwarzania przed zebraniem danych i przed wywołaniem sejfu; zwykły debounce
+edycji nie blokuje świadomego zapisu. Mechanizm nie odczytuje ponownie całej
+historii pacjenta. Szczegóły i regresje: `docs/clinical/ALGORITHMS.md`.
+
+Po „Zapisz i wyczyść” guard może przekazać wywołującemu potwierdzenie tej samej
+operacji w RAM. Menu ponownie sprawdza je przez wskaźnik, zanim wywoła natywny
+reset. Pozwala to dokończyć zaakceptowaną akcję, gdy zapis już się zakończył,
+a etykieta „Zapisywanie” oczekuje jeszcze na odświeżenie. Trwający zapis,
+zmiana konta, dokumentu, trasy lub formularza nadal blokują reset. Nie ma
+osobnego zezwolenia dla przycisku menu ani pominięcia ostrzeżenia.
+
+Panel Dokumentów rozróżnia nowe wczytanie od opóźnionego powiadomienia kończącego
+operację, z której już go otwarto. To drugie zachowuje okno tylko przy zgodnym
+numerze operacji, właścicielu formularza i sesji konta. Dotyczy także oczekującego
+ładowania modułów raportu. Nowe wczytanie, zmiana właściciela i pozostałe sygnały
+unieważnienia zachowują dotychczasowe zamknięcie panelu.
+
 ### 5. Synchronizacja
 
 Publiczne moduły `vilda_sync.js`, `vilda_sync_integration.js` i `vilda_realtime.js` integrują aplikację z opcjonalną usługą synchronizacji. Szczegóły infrastruktury i kod usługi nie powinny być kopiowane do publicznych zgłoszeń.

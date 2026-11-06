@@ -964,7 +964,7 @@ describe('Klirens — centralny model przepływu UI', () => {
     expect(html).toContain('inline_kalkulator_klirens_07.js?v=37');
     expect(html).toContain('clcr_result_reference_data.js?v=7');
     expect(html).toContain('clcr_result_presentation.js?v=8');
-    expect(serviceWorker).toContain("const SW_VERSION = '1.1.477'");
+    expect(serviceWorker).toContain("const SW_VERSION = '1.1.478'");
     expect(html).toContain('clcr_calculation_assumptions.js?v=2');
     expect(serviceWorker).toContain("'/clcr_calculation_assumptions.js?v=2'");
     expect(serviceWorker).toContain("'/clcr_clinical_safety.js?v=14'");
@@ -991,9 +991,9 @@ describe('Klirens — centralny model przepływu UI', () => {
     }
     expect(html).toContain('clcr_acr_ui.js?v=2');
     expect(serviceWorker).toContain("'/clcr_acr_ui.js?v=2'");
-    expect(html).toContain('vilda_unsaved_guard.js?v=8');
+    expect(html).toContain('vilda_unsaved_guard.js?v=9');
     expect(serviceWorker).toContain("'/vilda_unsaved_guard.js?v=7'");
-    expect(serviceWorker).toContain("'/vilda_unsaved_guard.js?v=8'");
+    expect(serviceWorker).toContain("'/vilda_unsaved_guard.js?v=9'");
     for (const file of [
       'clcr_measured_clearance_reference_data.js', 'clcr_measured_clearance_reference.js',
       'clcr_acr_reference_data.js', 'clcr_acr.js', 'clcr_acr_ui.css',

@@ -16,13 +16,18 @@ import { czekajNaOdtworzenieSesji } from '../support/sesja-czekanie.mjs';
 import { changedResources as resourceInventory, upgradeResourceInventories } from '../support/pwa-changed-resource-inventory.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
-const BASE = '83fa1193';
+const BASE = 'b72dd463';
 const PASSWORD = 'E2e#SiatkaNowyPomiar!2026';
 const PROBE = '/__header-status-offline-probe-';
 const NOTE = 'Fikcyjna sprawa testu nagłówka offline';
 // These legal pages already sit outside the production worker's document
 // promise in BASE. Their version-reference edits still receive source hashes.
 const NON_PRECACHE_DOCUMENTS = ['polityka-prywatnosci.html', 'regulamin.html'];
+// The official version bump also refreshes this diagnostic suite's dependency
+// list. It has no precache entry or HTML script loader in either deployment.
+// Retain its source hash, and verify the offline UI never requests the module.
+const NON_PRECACHE_DIAGNOSTICS = ['vilda_smoke_tests.js'];
+const NON_PRECACHE_RESOURCES = [...NON_PRECACHE_DOCUMENTS, ...NON_PRECACHE_DIAGNOSTICS];
 const execute = promisify(execFile);
 const sha256 = bytes => createHash('sha256').update(bytes).digest('hex');
 const workerSource = tree => fs.readFileSync(path.join(tree, 'service-worker-kalorii.js'), 'utf8');
@@ -31,7 +36,7 @@ const workerVersion = tree => /const SW_VERSION = '([^']+)';/u.exec(workerSource
 test.use({ serviceWorkers: 'allow', reducedMotion: 'reduce' });
 
 function changedResources(tree, names) {
-  return resourceInventory(tree, names, NON_PRECACHE_DOCUMENTS);
+  return resourceInventory(tree, names, NON_PRECACHE_RESOURCES);
 }
 
 async function deployment() {
@@ -46,15 +51,17 @@ async function deployment() {
     const names = changed
       .trim().split('\n').filter(name => !name.includes('/') && /\.(?:html|js|css)$/u.test(name)
         && name !== 'service-worker-kalorii.js');
-    if (!names.includes('vilda_chrome.js') || !names.includes('vilda_chrome.css')) {
-      throw new Error('Expected the reviewed header production changes relative to ' + BASE);
+    const committedSaveSources = ['vilda_data_import_export.js', 'vilda_save_status_indicator.js',
+      'vilda_unsaved_guard.js', 'vilda_vault.js'];
+    if (committedSaveSources.some(name => !names.includes(name))) {
+      throw new Error('Expected all reviewed committed-save production changes relative to ' + BASE);
     }
     const previousVersion = workerVersion(baseline), currentVersion = workerVersion(ROOT);
     if (previousVersion === currentVersion) throw new Error('Run the official resource version bump before this PWA update test');
     const { stdout: added } = await execute('git', ['diff', '--name-only', '--diff-filter=A', BASE, '--'], { cwd: ROOT, encoding: 'utf8' });
     const { oldResources, newResources, introducedResources } = upgradeResourceInventories({
       baselineTree: baseline, currentTree: ROOT, names,
-      addedNames: added.trim().split('\n').filter(Boolean), nonPrecacheDocuments: NON_PRECACHE_DOCUMENTS,
+      addedNames: added.trim().split('\n').filter(Boolean), nonPrecacheDocuments: NON_PRECACHE_RESOURCES,
     });
     expect(oldResources.length + introducedResources.length).toBe(names.length);
     expect(newResources).toHaveLength(names.length);
@@ -67,11 +74,24 @@ async function deployment() {
     const nativeClearSources = ['vilda_data_import_export.js', 'vilda_persistence_adapter.js'].map(name => {
       const previous = sha256(fs.readFileSync(path.join(baseline, name)));
       const current = sha256(fs.readFileSync(path.join(ROOT, name)));
-      expect(current, name + ' retains the baseline native Clear/persistence contract').toBe(previous);
-      return { name, sha256: current };
+      // DIX intentionally changes in this PR. Its native Clear contract is
+      // exercised below with real Dirty/Cancel and Saved/Clear, not inferred
+      // from unrelated whole-file byte equality. The adapter is unchanged.
+      if (name === 'vilda_persistence_adapter.js') expect(current).toBe(previous);
+      return { name, previousSha256: previous, sha256: current, unchanged: current === previous };
     });
-    expect(oldResources.filter(item => !item.precached).map(item => item.url)).toEqual(NON_PRECACHE_DOCUMENTS.map(name => '/' + name));
-    expect(newResources.filter(item => !item.precached).map(item => item.url)).toEqual(NON_PRECACHE_DOCUMENTS.map(name => '/' + name));
+    const changedNonPrecacheResources = names.filter(name => NON_PRECACHE_RESOURCES.includes(name));
+    expect(oldResources.filter(item => !item.precached).map(item => item.url)).toEqual(changedNonPrecacheResources.map(name => '/' + name));
+    expect(newResources.filter(item => !item.precached).map(item => item.url)).toEqual(changedNonPrecacheResources.map(name => '/' + name));
+    for (const tree of [baseline, ROOT]) {
+      for (const name of NON_PRECACHE_DIAGNOSTICS) {
+        expect(workerSource(tree)).not.toContain(name);
+        for (const file of fs.readdirSync(tree).filter(file => file.endsWith('.html'))) {
+          const scripts = [...fs.readFileSync(path.join(tree, file), 'utf8').matchAll(/<script[^>]*\bsrc=["']([^"']+)/giu)];
+          expect(scripts.map(match => match[1]).some(src => path.basename(src.split('?')[0]) === name), file + ' does not load ' + name).toBe(false);
+        }
+      }
+    }
     let promoted = false, stopped = false;
     const types = { '.html': 'text/html', '.js': 'application/javascript', '.json': 'application/json',
       '.css': 'text/css', '.svg': 'image/svg+xml', '.png': 'image/png', '.webp': 'image/webp', '.woff2': 'font/woff2' };
@@ -93,7 +113,7 @@ async function deployment() {
     return {
       origin: `http://127.0.0.1:${server.address().port}`, previousVersion, currentVersion,
       sourceCommit: sourceCommit.trim(),
-      names, oldResources, newResources, introducedResources, nativeClearSources,
+      names, oldResources, newResources, introducedResources, nativeClearSources, changedNonPrecacheResources,
       workerSha256: sha256(workerSource(ROOT)),
       promote() { promoted = true; },
       async stop() {
@@ -228,8 +248,8 @@ async function mainSessionModel(owner) {
 
 async function nativeEmptyMainSession(owner) {
   // Capture the whole real default model before the first patient is loaded.
-  // Native Clear and persistence are byte-identical to the reviewed 83fa1193
-  // baseline; only the snapshot's save timestamp is excluded from comparison.
+  // Native Clear must preserve its complete default-model contract across the
+  // upgrade; only the snapshot's save timestamp is excluded from comparison.
   await owner.locator('#clearAllDataBtn').click();
   await expect.poll(() => mainSessionModel(owner)).toBeNull();
   await expect.poll(() => owner.evaluate(() => window.VildaSaveStatusIndicator.getState())).toBe('hidden');
@@ -287,6 +307,10 @@ async function clearedAtWidths(page, owner, ids, fingerprint, emptyMainSession, 
 
 async function projectedState(page, owner, state) {
   await expect.poll(() => owner.evaluate(() => window.VildaSaveStatusIndicator.getState())).toBe(state);
+  await expect.poll(() => owner.evaluate(() => {
+    const decision = window.VildaSaveStatusIndicator.getCurrentDecision();
+    return { ready: decision.ready, state: decision.state };
+  })).toEqual({ ready: true, state });
   const expected = state === 'new_patient' ? 'new' : state;
   await expect(page.locator('#vildaHeaderSaveStatus')).toHaveAttribute('data-save-state', expected);
   const menu = await visibleChromeMenu(page);
@@ -369,7 +393,8 @@ for (const shell of [true, false]) {
         patientId, title, body: 'Wyłącznie fikcyjny opis organizacyjny testu PWA, bez zaleceń medycznych.', category: 'observation',
       })).id, { patientId: fixture.ids.a, title: NOTE });
       const ids = Object.values(fixture.ids);
-      const fingerprint = await recordFingerprint(installer, ids);
+      let fingerprint = await recordFingerprint(installer, ids);
+      const originalFingerprint = fingerprint;
       const expected = await clinicalView(installer);
       const userId = await installer.evaluate(() => window.VildaVault.getCurrentUser().userId);
       await installer.evaluate(() => { window.vildaPersistFlushNow({ force: true }); window.VildaVault.lock('manual'); });
@@ -453,6 +478,56 @@ for (const shell of [true, false]) {
       await expect.poll(() => clinicalView(owner)).toEqual(expected);
       expect(await recordFingerprint(owner, ids)).toBe(fingerprint);
 
+      // All three modules must be the upgraded, cached production APIs. Save
+      // below is an actual user click while the origin is stopped and offline.
+      expect(await owner.evaluate(() => ({
+        vaultWitness: typeof window.VildaVault.getCommittedSavePayload,
+        committedWitness: typeof window.VildaDataImportExport.getCommittedSaveWitness,
+        readiness: typeof window.VildaDataImportExport.getSaveReadiness,
+      }))).toEqual({ vaultWitness: 'function', committedWitness: 'function', readiness: 'function' });
+      const beforeOfflineSave = await owner.evaluate(async id => ({
+        patient: await window.VildaVault.getPatient(id), notes: await window.VildaVault.listPatientNotesForPatient(id),
+      }), fixture.ids.a);
+      const untouchedPatient = await owner.evaluate(id => window.VildaVault.getPatient(id), fixture.ids.b);
+      await owner.locator('#weight').fill(editedWeight);
+      await projectedState(page, owner, 'dirty');
+      const dirtyReference = await owner.evaluate(() => window.VildaSaveStatusIndicator.getReferenceFingerprint());
+      await owner.locator('#clearAllDataBtn').click();
+      const clearWarning = owner.getByRole('dialog', { name: /^Zapisać (wpisane dane|zmiany) przed wyczyszczeniem\?$/u });
+      await expect(clearWarning).toBeVisible();
+      await clearWarning.getByRole('button', { name: 'Anuluj', exact: true }).click();
+      await expect(clearWarning).toHaveCount(0);
+      await expect(owner.locator('#weight')).toHaveValue(editedWeight);
+      expect(await owner.evaluate(() => window.VildaSaveStatusIndicator.getReferenceFingerprint())).toBe(dirtyReference);
+      expect(await recordFingerprint(owner, ids), 'native Dirty/Cancel preserves every stored record and note').toBe(fingerprint);
+      await owner.evaluate(() => {
+        window.__offlineCommittedSavePublications = [];
+        document.addEventListener('vilda:patient-loaded', event => {
+          if (event.detail?.source === 'save') window.__offlineCommittedSavePublications.push({ ...event.detail });
+        });
+      });
+      const saveMenu = await visibleChromeMenu(page);
+      await saveMenu.locator('#saveDataBtnSidebar,[data-drawer-btn="saveDataBtnSidebar"]').click();
+      await projectedState(page, owner, 'saved');
+      const offlineCommit = await owner.evaluate(async id => {
+        const detail = window.__offlineCommittedSavePublications.at(-1);
+        const witness = window.VildaDataImportExport.getCommittedSaveWitness(detail);
+        const patient = await window.VildaVault.getPatient(id);
+        return { detail, witness, patient, notes: await window.VildaVault.listPatientNotesForPatient(id) };
+      }, fixture.ids.a);
+      expect(offlineCommit.detail).toMatchObject({ source: 'save', patientId: fixture.ids.a, referenceVerified: true });
+      expect(offlineCommit.detail.snapshotId).toBeTruthy();
+      expect(offlineCommit.witness).toMatchObject({ patientId: fixture.ids.a, sourcePatientId: fixture.ids.a,
+        snapshotId: offlineCommit.detail.snapshotId, applySequence: offlineCommit.detail.applySequence });
+      const committedSnapshot = offlineCommit.patient.snapshots.find(snapshot => snapshot.snapshotId === offlineCommit.detail.snapshotId);
+      expect(committedSnapshot.payload.user.weight).toBe(Number(editedWeight));
+      expect(offlineCommit.witness.payload).toEqual(committedSnapshot.payload);
+      expect(offlineCommit.patient.snapshotCount).toBe(beforeOfflineSave.patient.snapshotCount + 1);
+      expect(offlineCommit.notes).toEqual(beforeOfflineSave.notes);
+      expect(await owner.evaluate(id => window.VildaVault.getPatient(id), fixture.ids.b)).toEqual(untouchedPatient);
+      fingerprint = await recordFingerprint(owner, ids);
+      expect(fingerprint, 'one explicit offline Save creates the only intended record change').not.toBe(originalFingerprint);
+
       // The new chrome action must execute the native clear while the working
       // patient is saved, also after a genuine upgrade and cold offline start.
       await page.setViewportSize({ width: shell ? 390 : 1440, height: 1000 });
@@ -479,6 +554,9 @@ for (const shell of [true, false]) {
       }
       expect(errors).toEqual([]);
       expect(failures).toEqual([]);
+      for (const name of NON_PRECACHE_DIAGNOSTICS) {
+        expect([...served.keys()].some(url => url.split('?')[0] === '/' + name), name + ' is not requested by the offline UI').toBe(false);
+      }
       expect(changedResources(ROOT, site.names), 'all reviewed production sources stay unchanged during PWA validation').toEqual(site.newResources);
       expect(sha256(workerSource(ROOT)), 'the production worker stays unchanged during PWA validation').toBe(site.workerSha256);
       const { stdout: finalCommit } = await execute('git', ['rev-parse', 'HEAD'], { cwd: ROOT, encoding: 'utf8' });
@@ -488,14 +566,17 @@ for (const shell of [true, false]) {
         sourceCommit: site.sourceCommit,
         previousVersion: site.previousVersion, currentVersion: site.currentVersion,
         workerSha256: site.workerSha256, unmodifiedProductionUpgrade: true, coldBrowserRestarts: 1, originStopped: true,
-        unchangedFullRecordFingerprint: fingerprint, userId, expectedClinicalView: expected,
+        originalFullRecordFingerprint: originalFingerprint, unchangedFullRecordFingerprintAfterExplicitSave: fingerprint,
+        userId, expectedClinicalView: expected,
         savedAfterRestore: true, dirtyAfterOfflineReload: true, searchPatientReturn: true,
-        preLoginPaneAuth, nativeSidebarClear: true, emptyAfterOfflineReload: true,
+        preLoginPaneAuth, nativeSidebarClear: true, nativeDirtyClearCancel: true, emptyAfterOfflineReload: true,
+        offlineCommittedSave: { patientId: offlineCommit.detail.patientId, snapshotId: offlineCommit.detail.snapshotId,
+          applySequence: offlineCommit.detail.applySequence, referenceVerified: true, exactCommittedPayload: true },
         emptyDefaultMainSession: emptyMainSession,
-        unchangedNativeClearSources: site.nativeClearSources,
+        reviewedNativeClearSources: site.nativeClearSources,
         viewportWidths: [1440, 320, 390, 860], oldResources: site.oldResources, resources: site.newResources,
         introducedResources: site.introducedResources,
-        productionSourceUntampered: true, nonPrecachedDocumentsUnchangedFromBaseline: NON_PRECACHE_DOCUMENTS,
+        productionSourceUntampered: true, nonPrecachedChangedResources: site.changedNonPrecacheResources,
         failedApplicationRequests: failures, pageErrors: errors,
       }, null, 2));
       await info.attach('header-patient-status-cold-offline-proof', { path: proof, contentType: 'application/json' });

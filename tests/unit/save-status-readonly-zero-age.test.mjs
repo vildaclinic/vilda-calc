@@ -7,6 +7,7 @@ const patient = () => ({ version: 1, name: 'Fikcyjny Pacjent Bieżącego Formula
 
 function environment({ loaded = false, initial, guest = false, unlocked = true } = {}) {
   const listeners = {}, windowListeners = {}, storage = new Map(), savedListeners = [];
+  const committed = new Map(), committedPayloads = new WeakMap();
   let form = clone(initial || (loaded ? patient() : blank())), session = clone(form), clcr = null, sequence = 1, active = unlocked, stale = false, userId = 'fictional-current-user';
   if (loaded) storage.set('vildaCurrentPatientId', 'fictional-current-patient');
   const writes = vi.fn(), persist = vi.fn(), collect = vi.fn(() => { throw new Error('Zwykły kolektor może zapisywać Klirens — nie jest odczytem.'); });
@@ -18,7 +19,12 @@ function environment({ loaded = false, initial, guest = false, unlocked = true }
       addEventListener(type, fn) { (listeners[type] ||= []).push(fn); }, removeEventListener() {}, dispatchEvent(event) { (listeners[event.type] || []).forEach(fn => fn(event)); return true; } },
     sessionStorage: { getItem: key => storage.get(key) ?? null, setItem(key, value) { writes(key, value); storage.set(key, String(value)); }, removeItem(key) { writes(key, null); storage.delete(key); } },
     localStorage: { getItem: () => null, setItem: writes, removeItem: writes },
-    VildaVault: { isUnlocked: () => active, getCurrentUser: () => active ? { userId } : null, onPatientSaved(fn) { savedListeners.push(fn); } },
+    VildaVault: { isUnlocked: () => active, getCurrentUser: () => active ? { userId } : null, onPatientSaved(fn) { savedListeners.push(fn); },
+      async getPatient(id) { return clone(committed.get(id) || null); },
+      getCommittedSavePayload(result) {
+        const entry=result&&committedPayloads.get(result);
+        return entry&&active&&entry.userId===userId?clone(entry.payload):null;
+      } },
     CustomEvent: class { constructor(type, options) { this.type = type; this.detail = options?.detail; } },
     VildaPanelPacjent: { nieaktualny: () => stale },
     VildaPersistence: { readMainSession: () => clone(session), readClcrSession: () => clone(clcr), isClearInProgress: () => false },
@@ -39,6 +45,13 @@ function environment({ loaded = false, initial, guest = false, unlocked = true }
     edit() { api._debouncedOnFormChange({ isTrusted: true }); },
     patientId(value) { value == null ? storage.delete('vildaCurrentPatientId') : storage.set('vildaCurrentPatientId', value); },
     sequence() { sequence++; }, setSequence(value) { sequence = value; }, notifySaved(value) { savedListeners.forEach(fn => fn(value)); }, account() { userId = 'fictional-other-user'; }, stale() { stale = true; },
+    commitSnapshot(payload, result) {
+      const previous = committed.get(result.patientId)?.snapshots || [];
+      const snapshot = { snapshotId: result.snapshotId, payload: clone(payload) };
+      committed.set(result.patientId, { patientId: result.patientId, snapshots: [snapshot, ...previous.filter(value => value.snapshotId !== result.snapshotId)] });
+      committedPayloads.set(result, { userId, payload: clone(payload) });
+      savedListeners.forEach(fn => fn(result));
+    },
     lock() { active = false; api._onLock(); }, unlock() { active = true; api._onUnlock(); },
     saved(id = 'fictional-current-patient', { announce = false } = {}) {
       session = clone(form); storage.set('vildaCurrentPatientId', id); api._onPatientSaved({ patientId: id, snapshotCount: 2 });
@@ -133,7 +146,7 @@ describe('readonly owned blank age does not manufacture a newborn after New Meas
     h.useActualPure(fields);h.win.VildaDobAge={readISO:()=>null,readWeeks:()=>null,readMeasuredAtISO:()=>null};
     h.win.VildaVault.captureSyncOperationSession=()=>({});h.win.VildaVault.assertSyncOperationSession=()=>true;
     h.win.document.addEventListener('vilda:patient-loaded',event=>{if(event.detail.source==='save')h.patientId(event.detail.patientId)});
-    let savedPayload;h.win.VildaVault.savePatient=async value=>{savedPayload=clone(value);h.setSession(value);const result={patientId:'fictional-blank-age-own-save',snapshotId:'fictional-blank-age-snapshot',header:{name:value.name}};h.notifySaved(result);return result};
+    let savedPayload;h.win.VildaVault.savePatient=async value=>{savedPayload=clone(value);h.setSession(value);const result={patientId:'fictional-blank-age-own-save',snapshotId:'fictional-blank-age-snapshot',header:{name:value.name}};h.commitSnapshot(savedPayload,result);return result};
     const original=h.api.getCurrentDecision();expect(original).toMatchObject({ready:true,state:'new_patient'});
     const receipt=await h.win.VildaDataImportExport.saveUserDataWithReceipt();
     expect(receipt).toMatchObject({saved:true,patientId:'fictional-blank-age-own-save'});expect(savedPayload.user.age).toBe(0);expect(h.session().user.age).toBe(0);
@@ -151,7 +164,7 @@ function ownSaveFixture({age='',held=false,fail=false}={}){
   h.win.VildaVault.captureSyncOperationSession=()=>({generation});h.win.VildaVault.assertSyncOperationSession=token=>{if(token.generation!==generation)throw Object.assign(new Error('Fikcyjna zmiana sesji'),{code:'SESSION_CHANGED'})};
   h.win.document.addEventListener('vilda:patient-loaded',event=>{if(event.detail.source==='save')h.patientId(event.detail.patientId)});
   let savedPayload;
-  h.win.VildaVault.savePatient=vi.fn(async value=>{savedPayload=clone(value);await pending;if(fail)throw new Error('Fikcyjny blad trwalego zapisu');h.setSession(value);const result={patientId:'fictional-blank-age-own-save',snapshotId:'fictional-blank-age-snapshot',header:{name:value.name}};h.notifySaved(result);return result});
+  h.win.VildaVault.savePatient=vi.fn(async value=>{savedPayload=clone(value);await pending;if(fail)throw new Error('Fikcyjny blad trwalego zapisu');h.setSession(value);const result={patientId:'fictional-blank-age-own-save',snapshotId:'fictional-blank-age-snapshot',header:{name:value.name}};h.commitSnapshot(savedPayload,result);return result});
   return{h,fields,api:h.win.VildaDataImportExport,saved:()=>savedPayload,release:()=>release(),invalidateToken(){generation++},settle(){vi.advanceTimersByTime(150)},save(){return h.win.VildaDataImportExport.saveUserDataWithReceipt()}};
 }
 describe('actual own-save blank-age comparison witness',()=>{
@@ -186,7 +199,11 @@ describe('actual own-save blank-age comparison witness',()=>{
   });
   it('requires the entire committed payload to match the raw reference rather than borrowing only its zero age',async()=>{
     const x=ownSaveFixture();await x.save();x.settle();expect(x.api.getOwnSaveBlankAgeComparison()).not.toBeNull();
-    x.fields.get('weight').value='41';const foreignReference=x.h.session();foreignReference.user.weight=41;x.h.setSession(foreignReference);x.h.api._onPatientSaved({patientId:'fictional-blank-age-own-save'});
+    // A sibling may publish a different confirmed reference into this tab.
+    // An unrelated vault ACK is not authority to manufacture that reference.
+    x.fields.get('weight').value='41';
+    const reference=x.h.api._readPersistedRef(),foreignReference=JSON.parse(reference.fp);foreignReference.core.user.weight=41;
+    x.h.api._writePersistedRef({...reference,fp:JSON.stringify(foreignReference)});x.h.api.reconcileFromSharedReference();
     expect(JSON.parse(x.h.api.getReferenceFingerprint()).core.user).toMatchObject({age:0,weight:41});
     expect(x.h.api.getCurrentDecision()).toMatchObject({ready:true,state:'dirty'});
   });
@@ -209,15 +226,15 @@ async function actualBlankAgePubertySave({sourcePatientId=null,mergeMissingOwner
   h.useActualPure(fields);h.win.crypto=crypto;h.win.VildaAuthUI={isBootReady:()=>true};h.win.VildaDobAge={readISO:()=>null,readWeeks:()=>null,readMeasuredAtISO:()=>null};
   const importer=h.win.VildaDataImportExport;
   h.win.VildaPersistence.getStorage=()=>h.win.sessionStorage;h.win.VildaPersistence.writeMainSession=value=>{h.setSession(value);return true};
-  // The real source-save publisher C() must exercise normal autosave, not a
-  // no-op mock: it publishes the actual current examination's new owner.
+  // Keep the real ordinary autosave for the later carrier handoff. A confirmed
+  // save baseline itself must retain the immutable committed missing owner.
   h.win.collectUserData=importer.collectUserData;h.win.hasMeaningfulMainSessionData=importer.hasMeaningfulMainSessionData;h.win.saveMainSessionNow=importer.saveMainSessionNow;
   importer.restoreMainSessionIfAny();
   loadBrowserScript('vilda_puberty_assessment.js',h.win);loadBrowserScript('vilda_puberty_assessment_state.js',h.win);
   const carrier=h.win.VildaPubertyAssessmentState;carrier.load({user:{sex:'F'}},{restore:true});expect(carrier.editObservation('Th',3)).toEqual({ok:true});
   h.win.VildaVault.captureSyncOperationSession=()=>({});h.win.VildaVault.assertSyncOperationSession=()=>true;
   h.win.document.addEventListener('vilda:patient-loaded',event=>{if(event.detail.source==='save')h.patientId(event.detail.patientId)});
-  let actualCommitted;h.win.VildaVault.savePatient=async value=>{if(mergeMissingOwner)value.user.pubertyAssessmentVisit.ownerPatientId=null;actualCommitted=clone(value);h.setSession(value);const result={patientId:sourcePatientId||'fictional-composed-own-save',snapshotId:'fictional-composed-snapshot',header:{name:value.name}};h.notifySaved(result);return result};
+  let actualCommitted;h.win.VildaVault.savePatient=async value=>{if(mergeMissingOwner)value.user.pubertyAssessmentVisit.ownerPatientId=null;actualCommitted=clone(value);h.setSession(value);const result={patientId:sourcePatientId||'fictional-composed-own-save',snapshotId:'fictional-composed-snapshot',header:{name:value.name}};h.commitSnapshot(actualCommitted,result);return result};
   const captured=h.api.getCurrentDecision();expect(captured).toMatchObject({ready:true,state:'new_patient'});
   const before=importer.captureCurrentUserDataReadOnly({base:h.session()});expect(before.user.age).toBeNull();expect(before.user.pubertyAssessmentVisit.ownerPatientId).toBe(sourcePatientId);
   const receipt=await importer.saveUserDataWithReceipt();expect(receipt.saved).toBe(true);
@@ -230,7 +247,7 @@ describe('blank-age comparison composes with the actual new-patient puberty visi
     const x=await actualBlankAgePubertySave();expect(x.h.api.isCurrentDecisionAfterSave(x.captured.scope,x.receipt)).toBe(true);
     vi.advanceTimersByTime(150);
     const reference=x.h.api.getReferenceFingerprint(),raw=JSON.parse(reference),committed=x.committed();
-    expect(raw.core.user).toMatchObject({age:0,pubertyAssessmentVisit:{ownerPatientId:x.receipt.patientId}});
+    expect(raw.core.user.age).toBe(0);expect(raw.core.user.pubertyAssessmentVisit).not.toHaveProperty('ownerPatientId');
     expect(committed.user.pubertyAssessmentVisit.ownerPatientId).toBeNull();
     expect(x.h.api.getCurrentDecision()).toMatchObject({ready:true,state:'saved'});expect(x.h.api.isCurrentDecisionAfterSave(x.captured.scope,x.receipt)).toBe(true);
     vi.advanceTimersByTime(300);
@@ -258,7 +275,7 @@ describe('blank-age comparison composes with the actual new-patient puberty visi
     const x=await actualBlankAgePubertySave({sourcePatientId:'fictional-existing-composed-patient',mergeMissingOwner:true});vi.advanceTimersByTime(450);
     const witness=x.importer.getOwnSaveBlankAgeComparison(),reference=x.h.api._readPersistedRef(),raw=JSON.parse(reference.fp);
     expect(witness).toMatchObject({patientId:'fictional-existing-composed-patient',sourcePatientId:'fictional-existing-composed-patient',payload:{user:{age:0,pubertyAssessmentVisit:{ownerPatientId:null}}}});
-    expect(raw.core.user.pubertyAssessmentVisit.ownerPatientId).toBe('fictional-existing-composed-patient');
+    expect(raw.core.user.pubertyAssessmentVisit).not.toHaveProperty('ownerPatientId');
     expect(x.h.api.getCurrentDecision()).toMatchObject({ready:true,state:'dirty'});expect(x.h.api.isCurrentDecisionAfterSave(x.captured.scope,x.receipt)).toBe(false);
     expect(x.h.api._readPersistedRef()).toEqual(reference);expect(x.importer.getOwnSaveBlankAgeComparison()).toEqual(witness);
   });

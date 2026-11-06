@@ -54,6 +54,17 @@ function frame(shared, { emptyAtBoot = false, passive = false } = {}) {
     win, indicator, persist, emit,
     emitWindow(type, properties = {}) { (windowListeners[type] || []).forEach(callback => callback({ type, ...properties })); },
     notifySaved(info) { savedListeners.forEach(callback => callback(info)); },
+    commit(info) {
+      const witness = { patientId: info.patientId, snapshotId: 'fictional-committed-' + info.snapshotCount,
+        applySequence: 1, sourcePatientId: shared.storage.get('vildaCurrentPatientId') || null, payload: clone(form) };
+      win.VildaDataImportExport.captureCurrentUserDataReadOnly = () => clone(form);
+      win.VildaDataImportExport.getCommittedSaveWitness = request => request.patientId === witness.patientId &&
+        request.snapshotId === witness.snapshotId && request.applySequence === 1 ? clone(witness) : null;
+      savedListeners.forEach(callback => callback(info));
+      emit('vilda:patient-loaded', { ...info, name: info.header?.name, source: 'save', snapshotId: witness.snapshotId, applySequence: 1 });
+      shared.storage.set('vildaCurrentPatientId', witness.patientId);
+      vi.advanceTimersByTime(150);
+    },
     restore() { readingSession = true; form = clone(shared.session); emit('vilda:persist-restored'); vi.advanceTimersByTime(200); },
     saved(snapshotCount = 1) {
       emit('vilda:patient-loaded', { patientId: PID, applySequence: 1,
@@ -311,7 +322,7 @@ describe('P-CHIP-POWŁOKA — referencja współdzielona między dokumentami', (
     first.saved();
     first.editWeight(42);
     first.compare();
-    first.notifySaved({ patientId: PID, header: { name: shared.session.name },
+    first.commit({ patientId: PID, header: { name: shared.session.name },
       savedAtISO: '2026-10-29T12:00:00.000Z', snapshotCount: 2 });
     expect(first.indicator.getState()).toBe('saved');
     expect(first.indicator.getReferenceFingerprint()).toBe(first.indicator._computeCanonicalFingerprint());
@@ -338,7 +349,7 @@ describe('P-CHIP-POWŁOKA — referencja współdzielona między dokumentami', (
     const shared = tab();
     shared.storage.delete('vildaCurrentPatientId');
     const first = frame(shared);
-    first.notifySaved({ patientId: PID, snapshotCount: 1, header: { name: shared.session.name } });
+    first.commit({ patientId: PID, snapshotCount: 1, header: { name: shared.session.name } });
     expect(first.indicator.getState()).toBe('saved');
     expect(first.indicator.getReferenceFingerprint()).toBe(first.indicator._computeCanonicalFingerprint());
   });

@@ -132,9 +132,14 @@ function bladSesji() {
   return e;
 }
 function sejfAtrapa(blad) {
+  const ticket = Object.freeze({ userId: 'konto-testowe-a' });
   return {
     isUnlocked: () => true,
     getCurrentUser: () => ({ userId: 'konto-testowe-a' }),
+    captureSyncOperationSession: () => ticket,
+    assertSyncOperationSession: (scope) => { if (scope !== ticket) throw bladSesji(); },
+    // All fake operations below reject; none owns a committed payload.
+    getCommittedSavePayload: () => null,
     onLock() {}, onUnlock() {},
     normalizePatientName: (n) => String(n || '').trim().toLowerCase(),
     savePatient: () => Promise.reject(blad()),
