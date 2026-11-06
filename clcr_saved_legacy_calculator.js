@@ -202,6 +202,16 @@
   }
   function recalculate(formulaId, values = {}, parameterKey = formulaId, context = {}) {
     parameterKey = String(parameterKey).replace(/^clcr:/, "");
+    if (formulaId === "Ca_Cit") {
+      const engine = requiredModule("VildaClcrCaCit"), persistence = requiredModule("ClcrCaCitPersistence");
+      const referenceData = requiredModule("ClcrCaCitReferenceData"), policy = referenceData.getProfile(referenceData.DEFAULT_PROFILE_ID);
+      const prepared = own(values, "CACIT_inputMode") ? { ...persistence.DEFAULTS, ...values } : persistence.prepareValues(values, context);
+      const result = engine.evaluate(engine.inputFromValues(prepared, { ...context, ageYears: ageOf(values, context), sex: values.sex ?? context.sex ?? null }), policy);
+      if (!result.valid) throw new Error(result.message || "Sprawdź dane Ca/Cit.");
+      const datapoint = { id: parameterKey, sourceFormulaId: formulaId };
+      if (!persistence.augmentDatapoint({ getAttribute: () => JSON.stringify(result.snapshot) }, datapoint)) throw new Error("Nie można utrwalić obliczenia Ca/Cit.");
+      return datapoint;
+    }
     if (formulaId === "Mg_Ca") {
       const engine = requiredModule("VildaClcrMagnesiumCalcium"), persistence = requiredModule("ClcrMagnesiumCalciumPersistence");
       const policy = requiredModule("VildaClcrMagnesiumCalciumData").getProfile("MGCA_DZM_2026_11");
@@ -437,7 +447,6 @@
       // The dedicated path stores the new typed molar result separately.
       return modeled(formulaId,parameterKey,value,"mg/mg",3,values,context,{displayValue:String(value).replace(".",","),datapoint:{assessment:"unassessed",outOfRange:null,norm:"",tone:"neutral"}});
     }
-    else if (formulaId === "Ca_Cit") value = ratio(calcium, number(values, "U_Cit"));
     else if (formulaId === "B_Cr") value = proteinCreatinineRatio(number(values, "U_Prot"), urineCr, sample.volume);
     else return null;
     return modeled(formulaId, parameterKey, value, unit, digits, values, context, ["Ox_mgkg", "Cit_mgkg"].includes(formulaId) ? { displayValue: legacyOxDisplay(value) } : formulaId === "Prot_mgkg" ? { displayValue: String(value).replace(".", ","), datapoint: { assessment: "unassessed", outOfRange: null, norm: "", tone: "neutral" } } : {});

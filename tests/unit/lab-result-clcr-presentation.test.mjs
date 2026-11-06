@@ -83,9 +83,9 @@ function citDzmRecord(context, patch = {}, id = 'fictional-cit-daily') {
 }
 
 describe('Zwięzłe Badania: projekcja zapisów Klirensu bez ponownego obliczania', () => {
-  it('zachowuje wszystkie 47 tożsamości, w tym osobne dobowe szczawiany i cytryniany, i ich dokładne neutralne punkty', () => {
+  it('zachowuje wszystkie 48 tożsamości, w tym osobne dobowe szczawiany i cytryniany, i ich dokładne neutralne punkty', () => {
     const c = environment();
-    expect(c.api.PARAM_DICTIONARY).toHaveLength(47);
+    expect(c.api.PARAM_DICTIONARY).toHaveLength(48);
     expect(c.api.getParam('Ox_total24')).toMatchObject({ id: 'Ox_total24', sourceFormulaId: 'Ox_mgkg' });
     expect(c.api.getParam('Cit_total24')).toMatchObject({ id: 'Cit_total24', sourceFormulaId: 'Cit_mgkg', unit: 'mmol/24 h' });
     expect(c.api.getParam('Cit_mgkg')).toMatchObject({ id: 'Cit_mgkg', unit: 'mg/kg/24 h' });
@@ -93,9 +93,9 @@ describe('Zwięzłe Badania: projekcja zapisów Klirensu bez ponownego obliczani
       { labResult: { value: String(index + 1), valueNum: index + 1 } }));
     const report = projection(c, notes), before = JSON.stringify(report);
     const series = presentation.clcrSeries(report);
-    expect(series).toHaveLength(47);
-    expect(series.flatMap(group => group.entries)).toHaveLength(47);
-    expect(series.flatMap(group => group.chart.points)).toHaveLength(47);
+    expect(series).toHaveLength(48);
+    expect(series.flatMap(group => group.entries)).toHaveLength(48);
+    expect(series.flatMap(group => group.chart.points)).toHaveLength(48);
     expect(series.flatMap(group => group.entries).every(entry => presentation.describe(entry).tone === 'neutral')).toBe(true);
     expect(series.flatMap(group => group.entries).map(entry => entry.noteId).sort()).toEqual(notes.map(note => note.id).sort());
     expect(JSON.stringify(report)).toBe(before);

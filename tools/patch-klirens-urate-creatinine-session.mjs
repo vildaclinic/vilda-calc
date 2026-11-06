@@ -162,13 +162,18 @@ export const urateCreatinineSessionSource = String.raw`/* KLIRENS-URATE-CREATINI
 
 const marker = '/* KLIRENS-POTASSIUM-DZM-SESSION: source tools/patch-klirens-potassium-dzm-session.mjs */';
 const adapterAnchor = '(function(){const b="vildaClcrSessionV1";';
+// A later additive adapter can remain when rebuilding only this layer. Keep
+// its installed wrapping order rather than moving KM/Cr behind the new layer.
+const laterAdapters = ['/* KLIRENS-CA-CIT-SESSION:', adapterAnchor];
 const captureAnchor = 'try{window.ClcrPotassiumDzmUi?.ensureControls?.(document)}catch{}';
 const capturePatched = captureAnchor + 'try{window.ClcrUrateCreatinineUi?.ensureControls?.(document)}catch{}';
 export function patchUrateCreatinineSessionHooks(source) {
   let result = source;
   if (!result.includes('/* KLIRENS-URATE-CREATININE-SESSION:')) {
     if (result.split(marker).length !== 2 || result.split(adapterAnchor).length !== 2 || result.split(captureAnchor).length !== 2) throw new Error('Ambiguous urate/creatinine session integration anchor');
-    result = result.replace(adapterAnchor, urateCreatinineSessionSource + adapterAnchor).replace(captureAnchor, capturePatched);
+    const insertion = laterAdapters.filter(anchor => result.includes(anchor)).sort((a, b) => result.indexOf(a) - result.indexOf(b))[0];
+    if (result.split(insertion).length !== 2) throw new Error('Ambiguous urate/creatinine session integration anchor');
+    result = result.replace(insertion, urateCreatinineSessionSource + insertion).replace(captureAnchor, capturePatched);
   }
   if (result.split(urateCreatinineSessionSource).length !== 2) throw new Error('Urate/creatinine session source differs from the reproducible patch');
   if (result.split(capturePatched).length !== 2) throw new Error('Missing or duplicate urate/creatinine session capture hook');

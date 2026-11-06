@@ -515,13 +515,17 @@ test('Ca/Cit ma minimalny formularz i renderuje rzeczywisty wynik', async ({
   await openCalculator(page);
   await selectFromSearch(page, 'Ca/Cit', 'Ca_Cit');
 
-  await expect(page.locator('#U_Ca')).toBeVisible();
-  await expect(page.locator('#U_Cit')).toBeVisible();
+  await expect(page.locator('#CACIT_calcium')).toBeVisible();
+  await expect(page.locator('#CACIT_citrate')).toBeVisible();
+  await expect(page.locator('#U_Ca')).toBeHidden();
+  await expect(page.locator('#U_Cit')).toBeHidden();
   await expect(page.locator('#V24')).toBeHidden();
   await expect(page.locator('#collectionStartAt')).toBeHidden();
-  await page.locator('#U_Ca').fill('2');
-  await page.locator('#U_Cit').fill('40');
-  await expect(page.locator('#elecInfo')).toContainText('Wapń/cytryniany');
+  await page.locator('#CACIT_calcium').fill('2');
+  await page.locator('#CACIT_citrate').fill('40');
+  const result = page.locator('#clcrResultReport .ca-cit-result-card');
+  await expect(result).toBeVisible();
+  await expect(result).toHaveAttribute('data-clcr-value', '0.20039');
 });
 
 test('każdy widoczny przycisk Info ma dostępny i niepusty opis', async ({ page }) => {

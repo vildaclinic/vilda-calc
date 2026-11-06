@@ -345,9 +345,10 @@
       },
       {
         id: "Ca_Cit",
-        label: "Stosunek Ca/Cit (mg/mg)",
+        label: "Ca/Cit — wapń/cytryniany (DZM)",
         version: "pro",
-        requires: ["U_Ca", "U_Cit"],
+        requires: ["CACIT_calcium", "CACIT_calciumUnit", "CACIT_citrate", "CACIT_citrateUnit"],
+        note: "Dwa stężenia z tej samej wymieszanej DZM albo jeden gotowy Ca/Cit. Wiek i płeć służą wyłącznie dobraniu dostępnej normy; czas, objętość i masa nie są potrzebne.",
       },
       {
         id: "pH24",

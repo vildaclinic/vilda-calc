@@ -301,7 +301,9 @@ describe('P-SW-PRECACHE: instalacja bez historii, kopia z poprzedniej pamięci, 
     '/userData.js', '/vitalSigns.js',
     '/ds_lms.js', '/reinehr_cdgp_data.js', '/vilda_centile_interpolation.js', '/adult_vitals.js', '/bp_module.js',
     '/nutrition_norms.js', '/nutrition_micros.js', '/vilda_diet_recommendations.js',
-    '/vilda_anorexia_risk.js', '/advanced_growth_kowd.js'];
+    '/vilda_anorexia_risk.js', '/advanced_growth_kowd.js',
+    '/circumference_module.js', '/wfh_module.js', '/respiratory_module.js',
+    '/gh_therapy_segments.js', '/obesity_response_criteria.js'];
   const wspoldzielonePary = ['/style.css', '/vilda_chrome.css', ...dodatkoweWspoldzieloneZasoby];
   const wspoldzieloneZasoby = new Set(['/edu-video-ui.css', ...wspoldzielonePary]);
   const oczekiwanePobraniaSwiezychZasobow = () => {

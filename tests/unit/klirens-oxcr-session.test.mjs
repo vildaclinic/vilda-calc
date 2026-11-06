@@ -14,6 +14,8 @@ function runtime(initial = {}, prefixOnly = false) {
   const controls = Object.fromEntries(Object.entries(values).map(([id, value]) => [id,
     typeof value === 'boolean' ? { id, tagName: 'INPUT', type: 'checkbox', checked: value }
       : { id, tagName: id.endsWith('_unit') || id.endsWith('_mode') || id.includes('Entity') ? 'SELECT' : 'INPUT', type: 'text', value }]));
+  // Browser controls are EventTargets; this fixture exercises restore only.
+  Object.values(controls).forEach(control => { control.addEventListener = () => {}; });
   const form = { querySelectorAll: () => Object.values(controls) };
   const context = { window: { currentVersion: 'spot', addEventListener() {} },
     document: { getElementById: id => id === 'clcrForm' ? form : controls[id] || null, querySelector: () => null, addEventListener() {} } };

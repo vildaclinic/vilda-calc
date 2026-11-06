@@ -12,6 +12,7 @@
   const pending = new Map();
   let readerPromise = null, editorPromise = null, notesPromise = null;
   const reader = [
+    ["clcr_ca_cit_persistence.js?v=1", "ClcrCaCitPersistence"],
     ["clcr_oxcr_persistence.js?v=1", "ClcrOxcrPersistence"],
     ["clcr_citcr_persistence.js?v=1", "ClcrCitcrPersistence"],
     ["clcr_fena_persistence.js?v=1", "ClcrFenaPersistence"],
@@ -39,11 +40,13 @@
     ["clcr_serum_anion_gap_persistence.js?v=1", "ClcrSerumAnionGapPersistence"],
     // readSaved is pure and needed for the new capture format. Its recalculate
     // method is not called while opening history and resolves engines lazily.
-    ["clcr_saved_calculation.js?v=20", "ClcrSavedCalculation"],
-    ["clcr_saved_results.js?v=20", "ClcrSavedResults"],
+    ["clcr_saved_calculation.js?v=21", "ClcrSavedCalculation"],
+    ["clcr_saved_results.js?v=21", "ClcrSavedResults"],
     ["clcr_saved_results_view.js?v=2", "ClcrSavedResultsView"],
   ];
   const editor = [
+    ["clcr_ca_cit_reference_data.js?v=1", "ClcrCaCitReferenceData"],
+    ["clcr_ca_cit.js?v=1", "VildaClcrCaCit"],
     ["clcr_collection_duration.js?v=7", "ClcrCollectionDuration"],
     ["clcr_clinical_safety.js?v=14", "ClcrClinicalSafety"],
     ["clcr_stone_safety.js?v=1", "ClcrStoneSafety"],
@@ -108,8 +111,8 @@
     ["clcr_measured_clearance_reference_data.js?v=1", "ClcrMeasuredClearanceReferenceData"],
     ["clcr_measured_clearance_reference.js?v=1", "ClcrMeasuredClearanceReference"],
     ["clcr_result_presentation.js?v=8", "ClcrResultPresentation"],
-    ["clcr_saved_legacy_calculator.js?v=20", "ClcrSavedLegacyCalculator"],
-    ["clcr_result_details.js?v=16", "ClcrResultDetails"],
+    ["clcr_saved_legacy_calculator.js?v=21", "ClcrSavedLegacyCalculator"],
+    ["clcr_result_details.js?v=17", "ClcrResultDetails"],
   ];
   function load(path, name, style = false) {
     if (name && root[name]) return Promise.resolve();
@@ -170,7 +173,7 @@
     if (!notesPromise) {
       notesPromise = ensureReader().then(() => Promise.all([
         load("clcr_notes_view.css?v=1", null, true),
-        load("clcr_notes_view.js?v=9", "ClcrNotesView"),
+        load("clcr_notes_view.js?v=10", "ClcrNotesView"),
       ])).then(() => root.ClcrNotesView);
       notesPromise.catch(() => { notesPromise = null; });
     }

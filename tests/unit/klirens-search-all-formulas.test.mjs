@@ -189,6 +189,44 @@ describe('Search covers the complete Klirens persisted-output registry', () => {
     expect(old.note.id).not.toBe(current.note.id);
   });
 
+  it.each([
+    ['Ca_Cit', 'registry', 'concentration', 0.500975, 'within', true],
+    ['Ca_Cit', 'typed-concentration-child-high', 'concentration', 1.00195, 'above', true],
+    ['Ca_Cit', 'typed-concentration-adult', 'concentration', 0.500975, 'unassessed', false],
+    ['Ca_Cit', 'typed-concentration-infant', 'concentration', 0.500975, 'unassessed', false],
+    ['Ca_Cit', 'typed-concentration-missing-age', 'concentration', 0.500975, 'unassessed', false],
+    ['Ca_Cit', 'typed-concentration-missing-sex', 'concentration', 0.500975, 'unassessed', false],
+    ['Ca_Cit', 'typed-reported-upper-bound', 'reported', 0.6, 'within', true],
+    ['Ca_Cit', 'typed-reported-above-rounded-bound', 'reported', 0.6, 'above', true],
+    ['Ca_Cit', 'typed-reported-censored', 'reported', 0.6, 'within', true],
+    ['Ca_Cit', 'typed-concentration-tiny', 'concentration', 5.00975e-101, 'within', true],
+    ['Ca_Cit', 'exact-zero', 'concentration', 0, 'unassessed', true],
+    ['Ca_Cit', 'typed-concentration-random', 'concentration', 0.500975, 'unassessed', false],
+    ['Ca_Cit', 'typed-concentration-short', 'concentration', 0.500975, 'unassessed', false],
+    ['Ca_Cit', 'typed-concentration-incomplete', 'concentration', 0.500975, 'unassessed', false],
+    ['Ca_Cit', 'typed-concentration-historical', 'concentration', 0.500975, 'unassessed', false],
+    ['Ca_Cit_mol', 'registry', 'reported', 0.125, 'unassessed', false],
+    ['Ca_Cit_mol', 'typed-concentration-molar', 'concentration', 0.5, 'unassessed', false],
+    ['Ca_Cit_mol', 'typed-reported-molar-censored', 'reported', 0.5, 'unassessed', false],
+  ])('%s %s: search freezes the native dimension, precise ratio and P95 policy', (key, variant, mode, raw, assessment, hasReference) => {
+    const item = cases.find(item => item.parameterKey === key && item.variant === variant);
+    expect(item).toBeDefined();
+    const saved = root.ClcrSavedCalculation.readSaved(item.note), snapshot = saved.snapshot.assessment.caCitSnapshot;
+    const unit = key === 'Ca_Cit_mol' ? 'mmol/mmol' : 'mg/mg';
+    expect(saved).toMatchObject({ valid: true, rawValue: raw, unit, parameterKey: key, assessment });
+    expect(snapshot).toMatchObject({ schema: 'clcr-ca-cit', version: 1, mode, rawValue: raw, unit, referenceAvailable: hasReference });
+    expect(snapshot.referencePolicy.restrictions).toMatchObject({ allowMolarConversion: false, normalizeTo24Hours: false, lowerP5IsAlarm: false });
+    const model = root.ClcrNotesView.model(item.note, { patientId: PATIENT });
+    expect(model).toMatchObject({ unit, display: root.ClcrCaCitPersistence.displayText(snapshot), interpretation: snapshot.comment,
+      tone: assessment === 'above' ? 'warning' : assessment === 'within' ? 'success' : 'neutral', outOfRange: assessment === 'unassessed' ? null : assessment === 'above' });
+    expect(model.norm).toBe(hasReference ? '≤0,6 mg/mg' : '');
+    expect(model.status).toBe(assessment === 'unassessed' ? 'Bez zapisanej oceny' : assessment === 'within' ? 'Nie przekracza górnej granicy' : 'Powyżej górnej granicy');
+    if (hasReference) expect(snapshot.reference).toMatchObject({ upper: 0.6, upperInclusive: true, source: { id: 'KIREJCZYK_2014' }, band: { id: 'kirejczyk-cacit-7-13', sex: 'M' } });
+    if (variant === 'typed-reported-above-rounded-bound') expect(saved.displayValue).toBe('0,600000000000000000001');
+    if (variant === 'typed-concentration-tiny') expect(saved.displayValue).not.toMatch(/^[≈ ]*0(?:[.,]0+)?$/);
+    if (variant === 'typed-concentration-historical') expect(snapshot.context).toMatchObject({ sampleType: 'unknown', sampleSource: 'historical-missing', durationKnown: false });
+  });
+
   it.each(cases)('$key: real persisted output matches Notes in both preview and searchable text', async item => {
     const before = JSON.stringify(item.note);
     expect(root.ClcrSavedCalculation.readSaved(item.note).valid).toBe(true);

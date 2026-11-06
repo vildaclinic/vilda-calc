@@ -8912,6 +8912,83 @@ Regresje obejmują progi/płcie/wiek, jednostki, zapis/edycję/serie,
 READ bez silnika, reset i zmianę pacjenta, desktop/mobile i PWA offline.
 Wykonane kontrole i końcowy SHA raportuje PR, nie ten kontrakt.
 
+#### P-KLIRENS-CA-CIT-2026-11-05 — Ca/Cit, pediatryczne P95 i oddzielna miara molowa
+
+Właściciel zaakceptował [makietę desktop/mobile](https://vilda-ca-cit-20261105.maciej-flader.chatgpt.site)
+i polecił implementację („ok, koduj”). Baza: `9680f1ba`.
+Wybór formuły pozostaje `Ca_Cit`; pełne źródła, populacje, dostęp do
+dokumentów, ograniczenia i kontrakty: [CALCIUM_CITRATE.md](CALCIUM_CITRATE.md).
+Zmiana jest kliniczna i funkcjonalna, bez deklaracji niezależnej walidacji.
+
+Domyślnie dwa stężenia z jednej wymieszanej DZM: **Ca mmol/L,
+cytryniany mg/dL**; alternatywnie jeden gotowy iloraz **mg/mg** albo
+**mmol/mmol**. Nie wymaga się objętości, czasu, antropometrii, kreatyniny
+lub krwi ani checkboxa zbiórki. Wiek/płeć służą wyłącznie normie
+z istniejącego kontekstu. Wspólna objętość i czas skracają się;
+ilorazu nie skaluje się przez `24/czas`. Ca **40,078 mg/mmol** daje
+**4,0078 mg/dL na mmol/L**. Zastąpienie dawnego ×4 zmienia 2/40
+z **0,200 na 0,20039 mg/mg (+0,195%)**, nie tylko formatowanie.
+
+**Norma jako dane:** `ClcrCaCitReferenceData`, profil
+**`KIREJCZYK_CACIT_DZM_2014` v1** w `clcr_ca_cit_reference_data.js`,
+jest argumentem `VildaClcrCaCit.evaluate(input, profile)`.
+Kirejczyk i wsp., Pediatr Nephrol 2014;29:1575–1582,
+[DOI 10.1007/s00467-014-2806-7](https://doi.org/10.1007/s00467-014-2806-7),
+[pełny tekst PMC4147207](https://pmc.ncbi.nlm.nih.gov/articles/PMC4147207/),
+**Methods i tabela 2, s.1579**, odczyt 05.11.2026: 2334 zdrowych białych
+dzieci z Białegostoku, po 1167 każdej płci, jedna DZM, zwyczajowa dieta.
+Górne P95 M/F: **2–<7:0,48/0,42; 7–<13:0,60/0,47;
+13–<18:0,80/0,60 mg/mg**. Główna ocena używa **≤P95** jako jawnej
+konwencji aplikacji; >P95 jest bursztynowe. P5 pozostaje wyłącznie
+w Szczegółach, bez alarmu niskiego Ca/Cit. Nie interpoluje się wieku.
+
+Porównanie jest **orientacyjne w oryginalnych mg/mg**. Źródło podaje
+R-Biopharm bez jednoznacznej podstawy masy cytrynianów. Nie konwertuje
+się cytrynianów mg↔mole ani normy przez 192/189/210. Jednostka natywna
+interpretuje wpis z raportu, nie przelicza cicho pola. Molarne wejście
+daje neutralne **mmol/mmol bez normy masowej**. <2/≥18 lat, brak
+wieku/płci, znany niezgodny profil, spot/inny czas/niepełna zbiórka
+lub historycznie nieznany materiał zachowują liczbę bez normy DZM.
+Znane różne próbki Ca i cytrynianów blokują obliczenie pary stężeń.
+Samodzielnie raportowany iloraz może zachować liczbę, ale znany
+konflikt wyłącza normę; samo przełączenie trybu go nie usuwa.
+Własne jawne metadane poprawnego materiału niezależnego raportu
+mogą przywrócić porównanie, bez nowego pytania w UI.
+Nowe założenie DZM nie potwierdza kompletności ani dawnej próbki.
+
+**Brak normy nie oznacza braku wszystkich publikacji.** Globalne
+0,33 mg/mg nie jest normą: u DeFoor 2017 jest średnią kontroli.
+AFU/CLAFU 2022, tabela 8, podaje odwrotny **Cit/Ca <0,3 mmol/mmol**
+w kolumnie ryzyka stężeń, z pustą komórką DZM; nie staje się normą
+dorosłych. P95 nie rozpoznaje/nie wyklucza kamicy ani nie ustala leczenia.
+
+Każdy ujemny operand jest błędem również w edytorze/zapisie, także
+dwa ujemne dające dodatni iloraz. Live blokował ujemne już wcześniej.
+**Ca=0** lub gotowe zero są neutralne (`outOfRange:null`), **Cit=0**
+blokuje dzielenie. Małe dodatnie wartości nie stają się `0,000`;
+ocena poprzedza zaokrąglenie. Jedna karta B ma neutralną normę
+**„Norma dla wieku” / „Dla wieku i płci”**, bursztynowe podwyższenie
+albo konkretny powód braku oceny. Nie odtworzono duplikatu dawnej karty.
+
+Nowy zapis (`caCitSnapshot`, schemat **`clcr-ca-cit` v1**) zamraża
+wejścia, precyzję, kontekst, źródło/populację/wersję,
+normę z operatorem i ocenę. READ nie przelicza dzisiejszym silnikiem.
+Stary `Ca_Cit` zachowuje dawną liczbę ×4 i brak oceny; dopiero jawne
+przeliczenie używa nowego silnika. Nowy masowy wynik to **`Ca_Cit`**,
+molowy **`Ca_Cit_mol`**, z `sourceFormulaId:'Ca_Cit'`. Serie pozostają
+oddzielne, bez konwersji/łączenia przez zgadniętą masę cytrynianu.
+Jeden pomiar, zgodne Badania/Notatka/raport, zapis tylko do zapisanej
+wybranej karty. Nie migruje się realnych danych.
+
+**Kontrakty rzeczywistego kodu:** 2 mmol/L Ca i 40 mg/dL Cit →0,20039
+mg/mg; 100/400 mg/L →0,25; 2 mmol/L Ca i 500 µmol/L Cit →4 mmol/mmol
+bez normy. Chłopiec5, 0,40 →niepodwyższony względem ≤0,48;
+dziewczynka5, 0,42 →niepodwyższony, 0,4200001 →podwyższony.
+0,0000001 mmol/L Ca i 40 mg/dL Cit →0,0000000100195 mg/mg, nie zero.
+Regresje obejmują granice2/7/13/18, obie płcie, równości P95,
+live/editor/save/read, oddzielne serie, reset/pacjenta, desktop/mobile
+i PWA offline. Wykonane kontrole oraz końcowy SHA raportuje PR.
+
 #### P-KLIRENS-DZM-CZAS-NOTATKI-WYBOR-2026-10-28 — wspólne24h i prowadzenie formularza
 
 Decyzja właściciela: nowe DZM mają rzeczywiście wpisane domyślne24h; puste pole nie blokuje, jawny dodatni inny czas pozostaje, zero/ujemne/błędny zapis wymagają korekty. To jawne założenie użytkowe, nie ustalony fakt o próbce. Pełna zbiórka jest założeniem bez sześciu potwierdzeń; znane negatywne fakty nadal blokują. `ClcrCollectionDuration` jest wspólne dla cl24 i wydalań Ca/UA/Mg/Pi/białka/Na/K/Ox/Cit. pH nie jest mnożone przez24/czas; ilorazy i luka surowicy nie dostają pytania o czas. [DZM_COLLECTION_DURATION.md](DZM_COLLECTION_DURATION.md) podaje kontrakt i wpływ względem poprzednich bramek dat/protokołu.
