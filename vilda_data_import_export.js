@@ -374,14 +374,17 @@ function getOwnSaveBlankAgeComparison(){
   }catch(_){return null}
 }
 function qe(e){
-const entryReadiness=getSaveReadiness(),entryOptions=e&&typeof e=="object"?e:{};
-if(!entryReadiness.ready){O(Bkotw(),saveReadinessMessage(entryReadiness.reason),entryOptions,{ton:"uwaga"});return null}
-const saveBlankAgeStart=saveBlankAgeBasis();
-const saveApplySequence=vildaApplyLoadedDataSequence,t=Object.assign({},e&&typeof e==="object"?e:{});
-const saveReceiptScope=captureSaveReceiptScope(r.VildaVault,saveApplySequence);
-if(!saveReceiptScope||!saveReceiptScopeCurrent(saveReceiptScope)){O(Bkotw(),saveReadinessMessage("owner-unavailable"),t,{ton:"uwaga"});return null}
+const t=Object.assign({},e&&typeof e==="object"?e:{});
+// Readiness refusals use the same explicit-Save feedback as accepted saves.
+// Capturing its UI scope does not collect or mutate patient data.
 try{const feedback=r.VildaSaveFeedback;if(feedback&&typeof feedback.capture==="function")t.__vildaSaveFeedbackScope=feedback.capture()}catch{}
 t.__vildaSaveFeedbackRetry=function(){return qe(e)};
+const entryReadiness=getSaveReadiness();
+if(!entryReadiness.ready){O(Bkotw(),saveReadinessMessage(entryReadiness.reason),t,{ton:entryReadiness.reason==="vault-unavailable"?"blad":"uwaga"});return null}
+const saveBlankAgeStart=saveBlankAgeBasis();
+const saveApplySequence=vildaApplyLoadedDataSequence;
+const saveReceiptScope=captureSaveReceiptScope(r.VildaVault,saveApplySequence);
+if(!saveReceiptScope||!saveReceiptScopeCurrent(saveReceiptScope)){O(Bkotw(),saveReadinessMessage("owner-unavailable"),t,{ton:"uwaga"});return null}
 const a=typeof t.collectUserData=="function"?t.collectUserData():Ee(t),o=Bkotw(),savePayloadKey=BsavePayloadKey(a);
 const collectedReadiness=getSaveReadiness();
 if(!collectedReadiness.ready||saveReceiptScope&&!saveReceiptScopeCurrent(saveReceiptScope)){O(o,saveReadinessMessage(collectedReadiness.reason||"owner-unavailable"),t,{ton:"uwaga"});return null}

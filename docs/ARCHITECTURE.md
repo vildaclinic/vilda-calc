@@ -620,6 +620,13 @@ odtwarzania przed zebraniem danych i przed wywołaniem sejfu; zwykły debounce
 edycji nie blokuje świadomego zapisu. Mechanizm nie odczytuje ponownie całej
 historii pacjenta. Szczegóły i regresje: `docs/clinical/ALGORITHMS.md`.
 
+Po „Zapisz i wyczyść” guard może przekazać wywołującemu potwierdzenie tej samej
+operacji w RAM. Menu ponownie sprawdza je przez wskaźnik, zanim wywoła natywny
+reset. Pozwala to dokończyć zaakceptowaną akcję, gdy zapis już się zakończył,
+a etykieta „Zapisywanie” oczekuje jeszcze na odświeżenie. Trwający zapis,
+zmiana konta, dokumentu, trasy lub formularza nadal blokują reset. Nie ma
+osobnego zezwolenia dla przycisku menu ani pominięcia ostrzeżenia.
+
 ### 5. Synchronizacja
 
 Publiczne moduły `vilda_sync.js`, `vilda_sync_integration.js` i `vilda_realtime.js` integrują aplikację z opcjonalną usługą synchronizacji. Szczegóły infrastruktury i kod usługi nie powinny być kopiowane do publicznych zgłoszeń.

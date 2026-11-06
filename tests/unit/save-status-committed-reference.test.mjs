@@ -98,16 +98,20 @@ function environment() {
 // A new document starts Hidden while sharing the already saved tab reference.
 // Its DOB producer has not yet completed; no load/save event establishes a new
 // baseline merely to make the presentation ready.
-function coldIndicator(h) {
-  const listeners = {}; let dobPending = true;
+function coldIndicator(h, options = {}) {
+  const listeners = {}, windowListeners = {}; let dobPending = options.dobPending ?? true, authReady = options.authReady ?? true;
   const document = { ...h.win.document,
     addEventListener(type, callback) { (listeners[type] ||= []).push(callback); },
     removeEventListener(type, callback) { listeners[type] = (listeners[type] || []).filter(value => value !== callback); },
     dispatchEvent(event) { for (const callback of [...(listeners[event.type] || [])]) callback(event); return true; } };
-  const win = { ...h.win, document, VildaDobAge: { restorePending: () => dobPending } }; win.parent = win;
+  const win = { ...h.win, document, VildaDobAge: { restorePending: () => dobPending },
+    VildaAuthUI: { isBootReady: () => authReady },
+    addEventListener(type, callback) { (windowListeners[type] ||= []).push(callback); } }; win.parent = win;
   loadBrowserScript('vilda_save_status_indicator.js', win);
   return { win, indicator: win.VildaSaveStatusIndicator, setDobPending(value) { dobPending = value; },
-    emit(type) { document.dispatchEvent(new win.CustomEvent(type, { detail: { iso: '2009-07-20' } })); } };
+    setAuthReady(value) { authReady = value; },
+    emit(type) { document.dispatchEvent(new win.CustomEvent(type, { detail: { iso: '2009-07-20' } })); },
+    emitWindow(type) { for (const callback of [...(windowListeners[type] || [])]) callback(new win.CustomEvent(type)); } };
 }
 
 beforeEach(() => { vi.useFakeTimers(); vi.setSystemTime(new Date('2026-11-06T15:00:00Z')); });
@@ -343,5 +347,48 @@ describe('saved presentation resumes when the real DOB readiness producer comple
     cold.win.__vildaPersistRestoring = false; cold.emit('vilda:main-session-restored'); vi.advanceTimersByTime(200);
     expect(cold.indicator.getState()).toBe('saved'); expect(cold.indicator.getReferenceFingerprint()).toBe(reference);
     expect(h.persist).not.toHaveBeenCalled(); expect(h.collect).not.toHaveBeenCalled();
+  });
+});
+
+describe('auth boot completion resumes the restored presentation', () => {
+  it.each(['saved', 'dirty'])('publishes cold %s only after the final auth readiness boundary', state => {
+    const h = environment();
+    if (state === 'dirty') {
+      const changed = h.form(); changed.user.weight++;
+      h.setForm(changed); h.win.saveMainSessionNow(); h.indicator.reconcileFromSharedReference();
+    }
+    const reference = h.indicator.getReferenceFingerprint(), stored = h.session(), raw = [...h.storage];
+    const cold = coldIndicator(h, { authReady: false, dobPending: false });
+    expect(cold.indicator.getState()).toBe('hidden');
+    expect(cold.indicator.getCurrentDecision().ready).toBe(false);
+    // These producers can finish during authentication. Editable pages ignore
+    // session-changed, and their later load handler only paints the cached label.
+    cold.emit('vilda:main-session-restored'); cold.emit('vilda:dob-restored');
+    cold.emit('vilda:auth-state-settled'); cold.emit('vilda:session-changed'); vi.advanceTimersByTime(200);
+    expect(cold.indicator.getState()).toBe('hidden');
+    h.writes.mockClear(); h.persist.mockClear(); h.collect.mockClear(); h.pure.mockClear();
+    cold.setAuthReady(true); cold.emitWindow('load');
+    expect(cold.indicator.getState()).toBe('hidden');
+    expect(cold.indicator.getCurrentDecision()).toMatchObject({ ready: true, state });
+    cold.emit('vilda:auth-boot-settled');
+    expect(cold.indicator.getState()).toBe(state);
+    expect(cold.indicator.getCurrentDecision()).toMatchObject({ ready: true, state });
+    expect(cold.indicator.getReferenceFingerprint()).toBe(reference);
+    expect([...h.storage]).toEqual(raw); expect(h.session()).toEqual(stored);
+    expect(h.writes).not.toHaveBeenCalled(); expect(h.persist).not.toHaveBeenCalled(); expect(h.collect).not.toHaveBeenCalled();
+    expect(h.win.vildaPersistFlushNow).not.toHaveBeenCalled(); expect(h.pure).toHaveBeenCalled();
+  });
+
+  it.each(['auth', 'main', 'dob'])('keeps the %s producer gate authoritative at auth completion', gate => {
+    const h = environment(), reference = h.indicator.getReferenceFingerprint(), stored = h.session(), raw = [...h.storage];
+    const cold = coldIndicator(h, { authReady: false, dobPending: false });
+    if (gate !== 'auth') cold.setAuthReady(true);
+    if (gate === 'main') cold.win.__vildaPersistRestoring = true;
+    if (gate === 'dob') cold.setDobPending(true);
+    h.writes.mockClear(); h.persist.mockClear(); h.collect.mockClear();
+    cold.emit('vilda:auth-boot-settled');
+    expect(cold.indicator.getState()).toBe('hidden'); expect(cold.indicator.getCurrentDecision().ready).toBe(false);
+    expect(cold.indicator.getReferenceFingerprint()).toBe(reference); expect([...h.storage]).toEqual(raw); expect(h.session()).toEqual(stored);
+    expect(h.writes).not.toHaveBeenCalled(); expect(h.persist).not.toHaveBeenCalled(); expect(h.collect).not.toHaveBeenCalled();
   });
 });

@@ -220,6 +220,85 @@ describe('Chrome: Wyczyść działa przez istniejący formularz i rzeczywisty un
     h.button('Odrzuć zmiany i wyczyść').click();
     expect(h.reset).not.toHaveBeenCalled(); expect(h.name.value).toBe('Fikcyjny wpis Clear');
   });
+  it.each(['saved', 'dirty'])('cached Saving does not block the fresh ready %s context after actual save completion', live => {
+    const h = clearMenuEnvironment({ live });
+    h.win.VildaDataImportExport.isSaveUserDataPending = () => false;
+    h.win.VildaSaveStatusIndicator.getState = () => 'saving';
+    const fresh = vi.spyOn(h.win.VildaSaveStatusIndicator, 'getCurrentDecision');
+    h.api.refreshClear(); expect(h.menuClear.disabled).toBe(false);
+    h.menuClear.click();
+    if (live === 'dirty') {
+      expect(h.dialog()).not.toBeNull(); expect(h.reset).not.toHaveBeenCalled();
+      h.button('Odrzuć zmiany i wyczyść').click();
+    }
+    expect(h.reset).toHaveBeenCalledOnce(); expect(fresh).toHaveBeenCalled();
+  });
+  it.each(['saved', 'saving'])('a genuinely pending save blocks Clear even while cached status is %s', cached => {
+    const h = clearMenuEnvironment({ live: 'saved' });
+    h.win.VildaSaveStatusIndicator.getState = () => cached;
+    h.win.VildaDataImportExport.isSaveUserDataPending = () => true;
+    const fresh = vi.spyOn(h.win.VildaSaveStatusIndicator, 'getCurrentDecision');
+    h.api.refreshClear(); expect(h.menuClear.disabled).toBe(true);
+    h.api.clearCurrent(h.menuClear);
+    expect(h.reset).not.toHaveBeenCalled(); expect(fresh).not.toHaveBeenCalled();
+  });
+  it.each(['unready', 'missing-pending-api', 'missing-decision-api', 'throwing-decision'])('cached Saving remains blocked with %s', reason => {
+    const h = clearMenuEnvironment({ live: 'saved' });
+    h.win.VildaSaveStatusIndicator.getState = () => 'saving';
+    h.win.VildaDataImportExport.isSaveUserDataPending = () => false;
+    if (reason === 'unready') h.win.VildaSaveStatusIndicator.getCurrentDecision = () => ({ ready: false, state: 'hidden' });
+    if (reason === 'missing-pending-api') delete h.win.VildaDataImportExport.isSaveUserDataPending;
+    if (reason === 'missing-decision-api') delete h.win.VildaSaveStatusIndicator.getCurrentDecision;
+    if (reason === 'throwing-decision') h.win.VildaSaveStatusIndicator.getCurrentDecision = () => { throw new Error('Fictional unavailable capture'); };
+    h.api.refreshClear(); expect(h.menuClear.disabled).toBe(true); h.api.clearCurrent(h.menuClear);
+    expect(h.reset).not.toHaveBeenCalled(); expect(h.name.value).toBe('Fikcyjny wpis Clear');
+  });
+  it.each(['unchanged', 'account', 'route', 'stale', 'reentrant-pending', 'proof-reentrant-pending'])('Save-and-Clear receipt handoff with %s context is checked before cached Saving repaints', async change => {
+    const h = clearMenuEnvironment({ live: 'dirty' }), indicator = h.win.VildaSaveStatusIndicator;
+    const original = indicator.getCurrentDecision(); let pending = false, cached = 'dirty', live = 'dirty', ready = true, release;
+    indicator.getState = () => cached;
+    indicator.getCurrentDecision = () => ({ ...original, ready, state: live });
+    indicator.isCurrentDecisionAfterSave = vi.fn((scope, receipt) => {
+      const valid = scope === original.scope && !pending && live === 'saved' && receipt.saved === true && receipt.referenceVerified === true;
+      if (change === 'reentrant-pending' && indicator.isCurrentDecisionAfterSave.mock.calls.length === 1) pending = true;
+      if (change === 'proof-reentrant-pending' && indicator.isCurrentDecisionAfterSave.mock.calls.length === 2) pending = true;
+      return valid;
+    });
+    h.win.VildaDataImportExport.isSaveUserDataPending = () => pending;
+    h.win.VildaDataImportExport.saveUserDataWithReceipt = vi.fn(() => {
+      pending = true; cached = 'saving'; return new Promise(resolve => { release = resolve; });
+    });
+    h.menuClear.click(); h.button('Zapisz i wyczyść').click();
+    h.api.refreshClear(); expect(h.menuClear.disabled).toBe(true); expect(h.reset).not.toHaveBeenCalled();
+    pending = false; live = 'saved'; ready = false;
+    if (change === 'account') h.state.userId = 'fictional-other-clear-account';
+    if (change === 'route') h.win.location.href = 'https://fikcyjne.invalid/docpro.html';
+    if (change === 'stale') h.state.stale = true;
+    release({ saved: true, patientId: 'fictional-clear-saved-patient', snapshotId: 'fictional-clear-saved-version', referenceVerified: true });
+    await vi.waitFor(() => expect(indicator.isCurrentDecisionAfterSave).toHaveBeenCalled());
+    expect(cached).toBe('saving'); expect(h.dialog()).toBeNull();
+    if (change === 'unchanged') {
+      expect(h.reset).toHaveBeenCalledOnce(); expect(h.name.value).toBe('');
+      expect(indicator.isCurrentDecisionAfterSave).toHaveBeenCalledTimes(2);
+    } else {
+      expect(h.reset).not.toHaveBeenCalled(); expect(h.name.value).toBe('Fikcyjny wpis Clear');
+    }
+  });
+  it.each(['forged-scope', 'stale-scope', 'foreign-indicator', 'unverified-receipt', 'missing-snapshot', 'pending'])('an optional %s receipt proof cannot turn an unready context into Clear authority', reason => {
+    const h = clearMenuEnvironment({ live: 'saved' }), indicator = h.win.VildaSaveStatusIndicator;
+    let currentScope = indicator.getCurrentDecision().scope;
+    const proof = { indicator, scope: currentScope, receipt: { saved: true, patientId: 'fictional-proof-patient', snapshotId: 'fictional-proof-version', referenceVerified: true } };
+    h.win.VildaDataImportExport.isSaveUserDataPending = () => reason === 'pending';
+    indicator.getState = () => 'saving'; indicator.getCurrentDecision = () => ({ ready: false, state: 'hidden', scope: currentScope });
+    indicator.isCurrentDecisionAfterSave = vi.fn(scope => scope === currentScope);
+    if (reason === 'forged-scope') proof.scope = {};
+    if (reason === 'stale-scope') currentScope = {};
+    if (reason === 'foreign-indicator') proof.indicator = {};
+    if (reason === 'unverified-receipt') proof.receipt.referenceVerified = false;
+    if (reason === 'missing-snapshot') delete proof.receipt.snapshotId;
+    expect(h.api.clearContext(proof)).toBeNull(); expect(h.reset).not.toHaveBeenCalled();
+    expect(h.name.value).toBe('Fikcyjny wpis Clear');
+  });
   it('Klirens zachowuje własny natywny reset zamiast dodawać ogólny dialog', () => {
     const h = clearMenuEnvironment({ clcr: true }); h.menuClear.click();
     expect(h.reset).toHaveBeenCalledOnce(); expect(h.name.value).toBe(''); expect(h.dialog()).toBeNull();

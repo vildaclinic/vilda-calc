@@ -80,15 +80,35 @@ export async function reloadSavedSga(frame, patientId) {
     if (record) window.applyLoadedData(record);
   }), patientId);
   await expect.poll(() => frame.evaluate(() => window.VildaSaveStatusIndicator.getCurrentDecision().ready)).toBe(true);
+  const before = await frame.evaluate(async id => ({
+    record: await window.VildaVault.getPatient(id),
+    decision: window.VildaSaveStatusIndicator.getCurrentDecision(),
+  }), patientId);
+  expect(before.decision.ready).toBe(true);
+  expect(['saved', 'dirty']).toContain(before.decision.state);
   await frame.getByRole('button', { name: 'Wczytaj tego pacjenta' }).click();
-  const confirmation = frame.getByRole('dialog', { name: 'Ten pacjent jest już wczytany' });
-  await expect(confirmation).toBeVisible();
-  await confirmation.getByRole('button', { name: 'Wczytaj ponownie', exact: true }).click();
-  await expect(confirmation).not.toBeVisible();
+  if (before.decision.state === 'dirty') {
+    // Legacy partial DocPro fixtures can carry an automatically mirrored basic
+    // history that the ordinary save collector does not persist. The exact
+    // committed reference now detects that existing producer mismatch. Reload
+    // deliberately discards the working copy through the real guard.
+    const guard = frame.getByRole('dialog', { name: 'Zapisać zmiany przed wczytaniem?', exact: true });
+    await expect(guard).toBeVisible();
+    await expect(guard).toContainText('to ten sam pacjent, który jest już wczytany');
+    await guard.getByRole('button', { name: 'Odrzuć zmiany i wczytaj', exact: true }).click();
+    await expect(guard).toHaveCount(0);
+  } else {
+    const confirmation = frame.getByRole('dialog', { name: 'Ten pacjent jest już wczytany' });
+    await expect(confirmation).toBeVisible();
+    await confirmation.getByRole('button', { name: 'Wczytaj ponownie', exact: true }).click();
+    await expect(confirmation).not.toBeVisible();
+  }
   await expect(frame.locator('#vildaLoadChoiceModal')).toBeVisible();
   await frame.locator('#vildaLcmRestore').click();
   await expect(frame.locator('#vildaLoadChoiceModal')).toHaveCount(0);
   await expect(frame.locator('.vilda-auth-patient-card')).not.toBeVisible();
+  expect(await frame.evaluate(id => window.VildaVault.getPatient(id), patientId),
+    'discard and reload preserve every saved SGA snapshot').toEqual(before.record);
 }
 
 export async function openStatusCard(owner, patientId) {

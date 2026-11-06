@@ -57,6 +57,21 @@ function environment() {
 }
 
 describe('save collection and durable queue require actual producer/owner readiness', () => {
+  it.each(['locked', 'restoring', 'unavailable'])('routes the %s refusal to Save feedback without reading patient data', kind => {
+    const h = environment(), legacy = vi.fn();
+    h.win.VildaStatusBar = { pokaz: legacy };
+    h.feedback.mockReturnValue(true);
+    if (kind === 'locked') h.lock();
+    if (kind === 'restoring') h.win.__vildaPersistRestoring = true;
+    if (kind === 'unavailable') h.win.VildaVault = null;
+    expect(h.api.saveUserData(h.options)).toBeNull();
+    expect(h.feedback).toHaveBeenCalledOnce();
+    expect(h.feedback.mock.calls[0][0]).toMatchObject({ scope: expect.any(Object),
+      ton: kind === 'unavailable' ? 'blad' : 'uwaga' });
+    expect(legacy).not.toHaveBeenCalled();
+    expect(h.collect).not.toHaveBeenCalled(); expect(h.vault.savePatient).not.toHaveBeenCalled();
+  });
+
   it.each([
     ['auth-pending', h => { h.win.VildaAuthUI.isBootReady = () => false; }],
     ['panel-stale', h => { h.win.VildaPanelPacjent.nieaktualny = () => true; }],

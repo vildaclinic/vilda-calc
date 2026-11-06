@@ -135,12 +135,12 @@ for (const item of [
   }
 });
 
-test('the menu uses current live input before status/autosave, preserving Cancel and explicitly discarding new data', async ({ page, context }) => {
-  const { owner } = await openFictionalClearAccount(page, context, { width: 390, shell: true });
+for (const shell of [false, true]) test(`${shell ? 'shell phone' : 'standalone phone'}: the menu uses current live input before autosave, preserving Cancel and explicitly discarding new data`, async ({ page, context }) => {
+  const { owner } = await openFictionalClearAccount(page, context, { width: 390, shell });
   await openPuberty(owner, 'M');
   await owner.evaluate(() => window.__clearDebounceProbe.arm());
   await stage(owner, 'G', 3).click();
-  await proveStaleDebounceWindow(owner, 'puberty300');
+  await proveStaleDebounceWindow(owner, 'puberty300', shell ? 'current-shell' : 'stale');
   const before = await patientState(owner);
   await clearFromMenu(page);
   const dialog = owner.getByRole('dialog', { name: CLEAR_DIALOG });

@@ -79,6 +79,11 @@ async function wpisz(page, p) {
 }
 
 async function zapisz(page) {
+  // Clear and the programmatic bulk fill can still leave the real DOB
+  // restoration queued. Save must run after that producer has settled.
+  await expect.poll(() => page.evaluate(() => window.VildaDataImportExport.getSaveReadiness()), {
+    message: 'zapis po zakończeniu rzeczywistego odtwarzania danych pacjenta',
+  }).toEqual({ ready: true, reason: null });
   const przed = await page.evaluate(async () => (await window.VildaVault.listPatients()).map((x) => x.patientId));
   await page.locator('#saveDataBtnSidebar').click();
   let id = null;

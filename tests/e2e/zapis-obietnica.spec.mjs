@@ -35,8 +35,8 @@ async function otworzZKontem(page) {
     && typeof window.saveUserData === 'function');
 }
 
-function wpisz(page, pola) {
-  return page.evaluate((p) => {
+async function wpisz(page, pola) {
+  await page.evaluate((p) => {
     Object.keys(p).forEach((id) => {
       const e = document.getElementById(id);
       if (!e) throw new Error('brak pola ' + id);
@@ -45,6 +45,12 @@ function wpisz(page, pola) {
       e.dispatchEvent(new Event('change', { bubbles: true }));
     });
   }, pola);
+  // Programmatic bulk input can precede the actual startup/own-save DOB
+  // restore boundary. Establish Save readiness before invoking the operation;
+  // the assertions below still read Vault immediately after await, with no wait.
+  await expect.poll(() => page.evaluate(() => window.VildaDataImportExport.getSaveReadiness()), {
+    message: 'jawny zapis po zakończeniu rzeczywistego odtwarzania formularza',
+  }).toEqual({ ready: true, reason: null });
 }
 
 const KOMPLET = {
@@ -115,11 +121,12 @@ test.describe('saveUserData() pozwala poczekać na zapis', () => {
       page.on('pageerror', (e) => odrzucenia.push(String(e)));
 
       await page.evaluate(() => {
-        const prawdziwy = window.VildaVault;
-        window.VildaVault = {
-          isUnlocked: () => true,
-          listPatients: prawdziwy.listPatients.bind(prawdziwy),
-          savePatient: async () => { throw new Error('sejf odmówił'); },
+        // Keep the real owner, key-session ticket and all public Vault APIs.
+        // This scenario injects only the intended durable-write failure.
+        window.__promiseFailedSaveCalls = 0;
+        window.VildaVault.savePatient = async () => {
+          window.__promiseFailedSaveCalls++;
+          throw new Error('sejf odmówił');
         };
       });
       await wpisz(page, KOMPLET);
@@ -129,6 +136,7 @@ test.describe('saveUserData() pozwala poczekać na zapis', () => {
         return Boolean(w && w.name);
       });
       expect(zwrocone, 'obietnica rozwiązuje się mimo awarii').toBe(true);
+      expect(await page.evaluate(() => window.__promiseFailedSaveCalls), 'próba dociera do zamierzonej awarii zapisu').toBe(1);
       expect(odrzucenia, odrzucenia.join('\n')).toEqual([]);
     });
 });

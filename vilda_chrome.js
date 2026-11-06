@@ -251,7 +251,7 @@ function Cm_clearBlocked(doc,win){
     return false;
   }catch{return true}
 }
-function Cm_clearContext(){
+function Cm_clearContext(ownSave){
   var source=Ch_saveContext();if(!source)return null;
   try{
     var win=source.win,doc=source.doc,clcr=!!doc.getElementById("clcrForm");
@@ -265,12 +265,25 @@ function Cm_clearContext(){
     if(Cm_clearBlocked(o,r)||doc!==o&&Cm_clearBlocked(doc,win))return null;
     if(!clcr&&(!guard||typeof guard.run!=="function"))return null;
     var indicator=win.VildaSaveStatusIndicator;
-    if(indicator&&typeof indicator.getState==="function"&&indicator.getState()==="saving")return null;
+    var saving=data&&typeof data.isSaveUserDataPending==="function"?data.isSaveUserDataPending():null;
+    if(saving===true)return null;
+    if(indicator&&typeof indicator.getState==="function"&&indicator.getState()==="saving"){
+      // The guard can confirm its exact receipt before the cached label paints.
+      // Only a completed real operation and a fresh ready decision explain that
+      // presentation lag; absent APIs and active/unready saves stay blocked.
+      if(saving!==false)return null;
+      var ready=typeof indicator.getCurrentDecision==="function"&&indicator.getCurrentDecision().ready===true;
+      var receipt=ownSave&&ownSave.receipt;
+      var confirmed=!!(ownSave&&ownSave.indicator===indicator&&receipt&&receipt.saved===true&&receipt.referenceVerified===true&&
+        typeof receipt.snapshotId==="string"&&receipt.snapshotId&&typeof indicator.isCurrentDecisionAfterSave==="function"&&
+        indicator.isCurrentDecisionAfterSave(ownSave.scope,receipt)===true);
+      if(!ready&&!confirmed||data.isSaveUserDataPending()!==false)return null;
+    }
     return {win:win,doc:doc,button:button,clcr:clcr,guard:guard,owner:owner,host:host,href:String(win.location.href),hostHref:String(r.location.href)};
   }catch{return null}
 }
-function Cm_sameClearContext(context){
-  var current=Cm_clearContext();if(!context||!current)return false;
+function Cm_sameClearContext(context,ownSave){
+  var current=Cm_clearContext(ownSave);if(!context||!current)return false;
   function same(a,b){return a.vault===b.vault&&a.userId===b.userId&&a.guest===b.guest&&a.unlocked===b.unlocked}
   return context.win===current.win&&context.doc===current.doc&&context.button===current.button&&context.guard===current.guard&&context.href===current.href&&context.hostHref===current.hostHref&&same(context.owner,current.owner)&&same(context.host,current.host);
 }
@@ -289,12 +302,12 @@ function Cm_clearCurrent(opener){
   if(!Cm_sameClearContext(context)){Cm_refreshClear();return false}
   var request={context:context};Cm_clearCurrent.pending=request;Cm_refreshClear();
   var settled=false;
-  function finish(proceed){
+  function finish(proceed,ownSave){
     if(settled)return;settled=true;
     if(Cm_clearCurrent.pending!==request)return;
     // Save-new may legitimately assign a patient ID. The unsaved guard owns
     // that receipt; this check protects the window, route and account instead.
-    var current=Cm_sameClearContext(context);
+    var current=Cm_sameClearContext(context,ownSave);
     Cm_clearCurrent.pending=false;
     try{if(proceed&&current)context.button.click()}finally{Cm_refreshClear()}
     if(!proceed&&current)Cm_focus(Cm_visible(opener)?opener:context.button);
@@ -303,7 +316,7 @@ function Cm_clearCurrent(opener){
     // Klirens intentionally owns its native resetApp(false) policy. Start and
     // DocPro need the explicit guard: synthetic button.click skips its capture.
     if(context.clcr)finish(true);
-    else context.guard.run({reason:"clear",onProceed:function(){finish(true)},onCancel:function(){finish(false)}});
+    else context.guard.run({reason:"clear",onProceed:function(ownSave){finish(true,ownSave)},onCancel:function(){finish(false)}});
   }catch{finish(false)}
   return true;
 }

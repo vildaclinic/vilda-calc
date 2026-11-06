@@ -1,5 +1,6 @@
 import { expect, test } from '../support/test-czas.mjs';
 import { czekajNaUstabilizowanyUklad } from '../support/uklad-czekanie.mjs';
+import { createFictionalVault, shellFrame as nativeShellFrame } from '../support/centile-live-fixture.mjs';
 import {
   PATIENT_ID, OTHER_PATIENT_ID, openCalculator, openShellCalculator, applyAcr, saveVisible,
   memory, configureMemory, releasePatientReads, selectPatient, installMemoryVault,
@@ -131,7 +132,24 @@ test('deleting the selected persisted card after lookup blocks direct save witho
 
 
 test('saving a new patient from the same working form retains the pending ACR and unlocks its own Badania save', async ({ page }) => {
-  const { calculator, start } = await openShellCalculator(page, { select: false });
+  // The note-only facade's guest setup left this pending ACR unpersisted and
+  // committed clcr:null. An isolated synthetic encrypted account exercises the
+  // complete authenticated patient/session handoff instead.
+  const fixture = await createFictionalVault(page, { shell: true });
+  const start = fixture.frame;
+  const existingIds = Object.values(fixture.ids);
+  const before = await start.evaluate(async ids => ({
+    patients: await Promise.all(ids.map(id => window.VildaVault.getPatient(id))),
+    notes: await Promise.all(ids.map(id => window.VildaVault.listPatientNotesForPatient(id))),
+  }), existingIds);
+  await goToCalculator(page);
+  let calculator = await nativeShellFrame(page, 'Kalkulator klirensu');
+  await calculator.waitForFunction(() => document.documentElement.classList.contains('clcr-workflow-ready')
+    && window.ClcrUiWorkflow && window.ClcrVisitSave);
+  await calculator.evaluate(() => window.VildaDataImportExport.whenInitialMainSessionRestoreSettled());
+  await calculator.waitForFunction(() => !window.__vildaPersistRestoring
+    && !window.VildaDobAge?.restorePending?.()
+    && !window.VildaPersistence.isAutosaveSuppressed());
   await calculator.evaluate(() => window.ClcrUiWorkflow.selectFormula('ACR'));
   await calculator.locator('#U_Alb').fill('45');
   await calculator.locator('#U_Alb_unit').selectOption('mg/L');
@@ -145,28 +163,23 @@ test('saving a new patient from the same working form retains the pending ACR an
   await start.locator('#lastName').fill('Fikcyjna');
   await start.locator('#firstName').fill('Pacjentka Nerkowa');
   await start.locator('#age').fill('10');
-  // These belong to saving the main patient form; the separate ACR test proves
-  // they are not required to calculate or classify the urine ratio itself.
+  // Required by the main patient saver, independently of the urine ratio.
   await start.locator('#weight').fill('32');
   await start.locator('#height').fill('140');
-  // The fake account is authenticated, while its original encrypted vault is locked.
   expect(await start.evaluate(() => window.VildaGuestMode)).toBe(false);
-  // Invoke the actual main-form saver. Its production callback, receipt and
-  // patient-loaded event must authorize the calculator; the fixture only stores.
-  await start.evaluate(() => window.saveUserData());
-  await expect.poll(async () => (await memory(start)).patientSaves.length).toBe(1);
-  const [created] = (await memory(start)).patientSaves;
-  expect(created.patientId).not.toBe(PATIENT_ID);
-  expect(created.patientId).not.toBe(OTHER_PATIENT_ID);
+  await start.waitForFunction(() => window.VildaDataImportExport.getSaveReadiness().ready);
+  const created = await start.evaluate(async () => {
+    const payload = await window.saveUserData();
+    return { patientId: sessionStorage.getItem('vildaCurrentPatientId'), payload };
+  });
+  expect(created.payload).toBeTruthy();
+  expect(created.patientId).toBeTruthy();
+  expect(existingIds).not.toContain(created.patientId);
+  // No status-publication wait or extra flush before this immediate navigation.
   await goToCalculator(page);
-  await calculator.waitForFunction(() => Boolean(window.VildaVault && window.ClcrVisitSave) && document.readyState === 'complete');
-  // The real Shell may replace this document after the main form gains its
-  // first saved patient ID. Reattach fictional I/O to that new document only;
-  // its patient ID and clinical session must come from production restoration.
-  if (!await calculator.evaluate(() => Boolean(window.__clcrRecordOriginalVault))) {
-    await installMemoryVault(calculator, { select: false });
-    await calculator.evaluate(() => window.ClcrVisitSave._refresh());
-  }
+  calculator = await nativeShellFrame(page, 'Kalkulator klirensu');
+  await calculator.waitForFunction(() => Boolean(window.VildaVault && window.ClcrVisitSave)
+    && document.readyState === 'complete');
   await expect(calculator.locator('#U_Alb')).toHaveValue('45');
   await expect(calculator.locator('#Ucr_spot')).toHaveValue('100');
   await expect(acr(calculator)).toHaveAttribute('data-clcr-category', 'A2');
@@ -181,12 +194,30 @@ test('saving a new patient from the same working form retains the pending ACR an
       ownSavePatientId: source?.__vildaOstatniWlasnyZapis?.patientId || null };
   });
   await test.info().attach('native-new-patient-save-proof', { body: JSON.stringify(saveProof, null, 2), contentType: 'application/json' });
+  expect(saveProof.ownSavePatientId).toBe(created.patientId);
+  expect(saveProof.state.patientId).toBe(created.patientId);
   await expect(calculator.locator('#clcrVisitSaveBtn')).toBeEnabled();
-  const [note] = await saveVisible(calculator, '2026-10-26');
-  expect(note.patientId).toBe(created.patientId);
-  expect(note.labResult.valueNum).toBe(45);
-  expect((await memory(calculator)).notes).toHaveLength(1);
-  expect((await memory(calculator)).originalsLocked).toBe(true);
+  await calculator.locator('#clcrVisitDate').fill('2026-10-26');
+  await calculator.locator('#clcrVisitSaveBtn').click();
+  await expect(calculator.locator('#clcrVisitStatus')).toContainText('Zapisano');
+  const result = await calculator.evaluate(async ({ id, previousIds }) => ({
+    record: await window.VildaVault.getPatient(id),
+    notes: await window.VildaVault.listPatientNotesForPatient(id),
+    allIds: (await window.VildaVault.listPatients()).map(patient => patient.patientId),
+    patients: await Promise.all(previousIds.map(pid => window.VildaVault.getPatient(pid))),
+    previousNotes: await Promise.all(previousIds.map(pid => window.VildaVault.listPatientNotesForPatient(pid))),
+  }), { id: created.patientId, previousIds: existingIds });
+  expect(result.record.snapshotCount).toBe(1);
+  expect(result.record.snapshots[0].payload.user).toMatchObject({ age: 10, weight: 32, height: 140 });
+  const savedCalculation = result.record.snapshots[0].payload.clcr;
+  expect({ ...savedCalculation?.preservedInputs, ...savedCalculation?.inputs })
+    .toMatchObject({ U_Alb: '45', Ucr_spot: '100' });
+  expect(result.notes).toHaveLength(1);
+  expect(result.notes[0].patientId).toBe(created.patientId);
+  expect(result.notes[0].labResult.valueNum).toBe(45);
+  expect(result.allIds.sort()).toEqual([...existingIds, created.patientId].sort());
+  expect(result.patients).toEqual(before.patients);
+  expect(result.previousNotes).toEqual(before.notes);
 });
 
 

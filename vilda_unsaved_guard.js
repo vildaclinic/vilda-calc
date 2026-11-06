@@ -181,7 +181,11 @@ function VildaGuardRunDecision(options, decision) {
       }
       if (!settled()) return;
       if (!VildaGuardDecisionCurrent(decision, request.receipt)) { stale(); return; }
-      finish(proceed);
+      // A caller handing off to the native form can revalidate this same own
+      // receipt while the cached Saved label is still being published. This
+      // opaque RAM proof carries no patient payload and grants no other path.
+      var ownSave = Object.freeze({ indicator: decision.indicator, scope: decision.scope, receipt: request.receipt });
+      finish(function () { proceed(ownSave); });
     }
     var promise;
     try { promise = api.saveUserDataWithReceipt({ showTooltip: typeof f.showTooltip === "function" ? f.showTooltip : null }); }

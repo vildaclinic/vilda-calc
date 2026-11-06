@@ -42,6 +42,15 @@ async function otworzZKontem(page, rozmiar) {
   await page.waitForFunction(
     () => !document.documentElement.classList.contains('vilda-auth-locked'),
   );
+  await page.waitForFunction(() => window.VildaAuthUI?.isBootReady()
+    && window.VildaDataImportExport?.getSaveReadiness().ready);
+}
+
+async function zapiszGotowyFormularz(page) {
+  // These cases exercise validation/save outcomes after the real startup/DOB
+  // producer. A restored form must not be saved while that producer owns it.
+  await page.waitForFunction(() => window.VildaDataImportExport.getSaveReadiness().ready);
+  await page.evaluate(async () => { await window.saveUserData(); });
 }
 
 /* Wpisanie danych bez masy i wzrostu — zapis ma się nie udać z NAZWANEGO powodu. */
@@ -70,7 +79,7 @@ test.describe('Powiadomienie o wyniku zapisu', () => {
 
     await otworzZKontem(page, DESKTOP);
     await niepelnyFormularz(page);
-    await page.evaluate(() => window.saveUserData());
+    await zapiszGotowyFormularz(page);
     await expect(widoczny(page, 'vildaSaveFeedback'), 'wynik poza przepływem formularza').toBeVisible();
     await expect(widoczny(page, 'vildaSaveFeedback')).toHaveCSS('position', 'fixed');
     await expect(widoczny(page, 'vildaStatusSide'), 'prawa kolumna nie traci miejsca').toBeHidden();
@@ -88,7 +97,7 @@ test.describe('Powiadomienie o wyniku zapisu', () => {
     test.setTimeout(120_000);
     await otworzZKontem(page, DESKTOP);
     await niepelnyFormularz(page);
-    await page.evaluate(() => window.saveUserData());
+    await zapiszGotowyFormularz(page);
 
     const pasek = widoczny(page, 'vildaSaveFeedback');
     await expect(pasek).toBeVisible();
@@ -104,9 +113,11 @@ test.describe('Powiadomienie o wyniku zapisu', () => {
 
   test('błąd NIE GAŚNIE — przyczyna odmowy pozostaje do przeczytania', async ({ page }) => {
     test.setTimeout(120_000);
-    await otworz(page, DESKTOP);
+    // Validation belongs to the unlocked editor; the separate locked-account
+    // case below covers the earlier authentication warning.
+    await otworzZKontem(page, DESKTOP);
     await niepelnyFormularz(page);
-    await page.evaluate(() => window.saveUserData());
+    await zapiszGotowyFormularz(page);
 
     const pasek = widoczny(page, 'vildaSaveFeedback');
     await expect(pasek).toContainText('Nie zapisano');
@@ -143,11 +154,13 @@ test.describe('Powiadomienie o wyniku zapisu', () => {
     test.setTimeout(120_000);
     await otworzZKontem(page, DESKTOP);
 
-    // Podstawiamy sejf, który odmawia — mierzymy ścieżkę awarii w kolektorze, nie sejf.
+    // Only the failing durable call is substituted. Preserve the actual vault,
+    // account and key-session checks so Save reaches that failure legitimately.
     await page.evaluate(() => {
-      window.VildaVault = {
-        isUnlocked: () => true,
-        savePatient: async () => { throw new Error('sejf odmówił'); },
+      window.__pasekStatusuSaveCalls = 0;
+      window.VildaVault.savePatient = async () => {
+        window.__pasekStatusuSaveCalls++;
+        throw new Error('sejf odmówił');
       };
       const ustaw = (id, v) => {
         const e = document.getElementById(id);
@@ -159,7 +172,8 @@ test.describe('Powiadomienie o wyniku zapisu', () => {
       ustaw('lastName', 'Testowa'); ustaw('firstName', 'Zofia');
       ustaw('age', '9'); ustaw('weight', '30'); ustaw('height', '130');
     });
-    await page.evaluate(async () => { await window.saveUserData(); });
+    await zapiszGotowyFormularz(page);
+    expect(await page.evaluate(() => window.__pasekStatusuSaveCalls), 'the real scoped pipeline reaches the injected vault failure').toBe(1);
 
     const pasek = widoczny(page, 'vildaSaveFeedback');
     await expect(pasek).toContainText('Nie udało się zapisać pacjenta');

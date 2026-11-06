@@ -530,7 +530,15 @@ test.describe('„Wyczyść wszystkie pola” zamyka pytanie i komunikat korekty
       .poll(async () => (await readHeader(page, patientId)).header?.firstName || '', { timeout: 15000 })
       .toBe('Testowa');
 
+    const correctedRecord = await page.evaluate(pid => window.VildaVault.getPatient(pid), patientId);
     await page.locator('#clearAllDataBtn').click();
+    // The live split-name fields differ from the measurement reference even
+    // after their metadata-only update. Respect the native fresh guard; this
+    // case tests clearing the correction UI, not normalization of that producer.
+    const guard = page.getByRole('dialog', { name: 'Zapisać zmiany przed wyczyszczeniem?', exact: true });
+    await expect(guard).toBeVisible();
+    await guard.getByRole('button', { name: 'Odrzuć zmiany i wyczyść', exact: true }).click();
+    await expect(guard).toHaveCount(0);
 
     expect(await polaTozsamosci(page)).toEqual({ name: '', lastName: '', firstName: '' });
     await expect(done, 'dotąd komunikat zostawał przy pustym formularzu').toBeHidden();
@@ -538,6 +546,7 @@ test.describe('„Wyczyść wszystkie pola” zamyka pytanie i komunikat korekty
     // Czyszczenie formularza nie cofa wyboru zapisanego w rekordzie.
     const po = await readHeader(page, patientId);
     expect([po.header.lastName, po.header.firstName]).toEqual(['Fikcyjna', 'Testowa']);
+    expect(await page.evaluate(pid => window.VildaVault.getPatient(pid), patientId)).toEqual(correctedRecord);
   });
 
   test('pytanie otwarte: znika po „Wyczyść”, a ponowne wczytanie tego pacjenta pyta od nowa', async ({ page }) => {
@@ -638,6 +647,9 @@ test.describe('„Wyczyść wszystkie pola” zamyka pytanie i komunikat korekty
       document.dispatchEvent(new CustomEvent('vilda:patient-loaded', { detail: { patientId: pid } }));
     }, patientId);
 
+    // The independent name lookup remains held. Let the real status loader
+    // finish its own publication before asking the native guard to Clear.
+    await page.waitForFunction(() => window.VildaSaveStatusIndicator.getCurrentDecision().ready);
     await page.locator('#clearAllDataBtn').click();
     await zwolnijOdczyty(page);
 
