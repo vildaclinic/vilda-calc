@@ -195,12 +195,12 @@ describe('P-POWLOKA-PANELE — sesja główna po wczytaniu nie czeka na zdarzeni
     expect(zapisy).toHaveLength(1);
   });
 
-  it('strażnicy źródła: wymuszony zapis po wczytaniu i odtworzeniu, Pe jak w audyt, powłoka zapisuje przed przełączeniem i odtwarza docelowy panel', () => {
+  it('strażnicy źródła: wymuszony zapis po wczytaniu i odtworzeniu, Pe z zakresem autora, powłoka zapisuje przed przełączeniem i odtwarza docelowy panel', () => {
     const ie = czytaj('vilda_data_import_export.js');
     expect(ie).toContain('P-POWLOKA-PANELE (zgloszenie wlasciciela 2026-09-28)');
     // applyLoadedData: zapis PRZED pingiem vilda:sharedLoadSeq; oba pomijane przy odtwarzaniu istniejącej sesji
     expect(ie).toContain('if(Gp_a(a),a.isSessionRestore!==!0&&tt(),a.isSessionRestore!==!0)try{');
-    expect(ie).toContain('function Gp_a(e){const t=pe(e);if(t&&t.isSessionRestore)return!1;let a=!1;try{a=!!oe(Object.assign({},t,{force:!0}))}');
+    expect(ie).toContain('function Gp_a(e){const t=pe(e),authority=captureMainSessionWriteAuthority();if(!authority||t&&t.isSessionRestore)return!1;let a=!1;try{a=!!oe(Object.assign({},t,{force:!0}),authority)}');
     // wczytanie/odtworzenie kończy okno blokady po czyszczeniu (adapter odmawiał w nim każdego zapisu)
     expect(ie).toContain('function Gp_b(){try{const e=Number(r.__vildaPersistClearUntil||0);if(e>Date.now())return r.__vildaPersistClearUntil=0,!0}');
     expect(ie).toContain('if(!m){Gp_b();try{typeof r.vildaPersistFlushNow=="function"&&r.vildaPersistFlushNow({force:!0})}');
@@ -209,12 +209,12 @@ describe('P-POWLOKA-PANELE — sesja główna po wczytaniu nie czeka na zdarzeni
     // pagehide z force
     expect(ie).toContain('r.addEventListener("pagehide",()=>oe(Object.assign({},t,{force:!0})),{capture:!0})');
     // strażnicy zapisu: odtwarzanie w toku, sesja jeszcze nieodtworzona, pauza tylko dla zwykłego zapisu
-    expect(ie).toContain('function oe(e){const t=pe(e),a=!!(t&&t.force);if(mainSessionPanelIsStale())return!1;if(!ge(t)||Gp_r(t)||Gp_k(t)||!a&&Be(t))return!1;');
+    expect(ie).toContain('function oe(e,scheduledAuthority){const t=pe(e),a=!!(t&&t.force),authority=scheduledAuthority===undefined?captureMainSessionWriteAuthority():scheduledAuthority;if(!mainSessionWriteAuthorityCurrent(authority))return!1;if(!ge(t)||Gp_r(t)||Gp_k(t)||!a&&Be(t))return!1;');
     expect(ie).toContain('function Gp_k(e){if(Ke)return!1;');
     expect(ie).toContain('if(!Re(n))return a?!1:(re(t),!1);');
-    // planowanie zapisu z input/change dokładnie jak w audyt — bez ponawiania w oknie zawieszenia
-    expect(ie).toContain('function Pe(e,t){const a=pe(t);if(!ge(a)||Be(a))return!1;');
-    expect(ie).toContain('return $&&clearTimeout($),$=setTimeout(()=>{$=null,!Be(a)&&oe(a)},300),!0}');
+    // Bez ponawiania w pauzie; dodatkowo kolejka zachowuje zakres autora z chwili input/change.
+    expect(ie).toContain('function Pe(e,t){const a=pe(t),authority=captureMainSessionWriteAuthority();if(!authority||!ge(a)||Be(a))return!1;');
+    expect(ie).toContain('return $&&clearTimeout($),$=setTimeout(()=>{$=null,!Be(a)&&oe(a,authority)},300),!0}');
     expect(ie).not.toContain('Gp_t');
     // finalizacja odtworzenia sesji odświeża kartę podsumowania po zapisie
     const poczatekFinalizacji = ie.indexOf('function Mt(');
@@ -251,7 +251,7 @@ describe('P-POWLOKA-PANELE — sesja główna po wczytaniu nie czeka na zdarzeni
     const pokazPanel = sh.match(/function w\([^)]*\)\{[\s\S]*?(?=function jt\()/)?.[0] || '';
     let poprzedniaOperacja = -1;
     for (const operacja of [
-      't=y(t)', 'var Gp_c=c', 'c&&c!==t&&Gp_f(c)',
+      't=y(t)', 'var Gp_c=c', 'Gp_f(c)', 'l[c].sessionRestoreRequired=true',
       'var e=_(t)', 'l[c].frame.hidden=!0',
       'e.frame.hidden=!1', 'c=t', 'Gp_c!==t&&Gp_p(t,e)',
     ]) {
@@ -262,20 +262,20 @@ describe('P-POWLOKA-PANELE — sesja główna po wczytaniu nie czeka na zdarzeni
     const zapiszPanel = sh.match(/function Gp_f\([^)]*\)\{[\s\S]*?(?=function Gp_u\()/)?.[0] || '';
     expect(zapiszPanel).toContain('e.vildaPersistFlushNow({force:!0})');
     expect(zapiszPanel).toContain('e.vildaSession.saveNow({force:!0})');
-    // panel docelowy: odtworzenie tylko przy zmianie odcisku, odświeżenie podsumowania po dwu klatkach zawsze
-    expect(sh).toContain('var r=Gp_s();if(r!==e.sessionStamp){e.sessionStamp=r;');
+    // Powrót ma znacznik odtworzenia także po samej zmianie ukrytego modelu; odcisk pozostaje dla mini-podsumowania, a wynik odświeża się po dwu klatkach.
+    expect(sh).toContain('var r=Gp_s();if(e.sessionRestoreRequired||r!==e.sessionStamp){e.sessionStamp=r;');
     // P-SPOZYCIE-POWROT: po sesji (i przy każdym pokazaniu) panel kończy od razu zaległy krok odtworzenia stanu,
     // dopiero potem odświeżenie podsumowania po dwu klatkach
-    expect(sh).toMatch(/n\.vildaSession\.restore\(\)\}catch\{\}\}\/\* P-SPOZYCIE-POWROT [^*]*\*\/try\{typeof n\.vildaPersistRestoreFinishNow=="function"&&n\.vildaPersistRestoreFinishNow\(\)\}catch\{\}Gp_u\(n\)\}/);
+    expect(sh).toMatch(/n\.vildaSession\.restore\(\)\}catch\{\}e\.sessionRestoreRequired=false\}\/\* P-SPOZYCIE-POWROT [^*]*\*\/try\{typeof n\.vildaPersistRestoreFinishNow=="function"&&n\.vildaPersistRestoreFinishNow\(\)\}catch\{\}Gp_u\(n\)\}/);
     expect(sh).toContain('function Gp_u(n){try{if(!n||typeof n.requestAnimationFrame!="function")return;n.requestAnimationFrame(function(){n.requestAnimationFrame(function(){try{typeof n.updateProfessionalSummaryCard=="function"&&n.updateProfessionalSummaryCard()}catch{}})})}catch{}}');
     const zaladujRamke = sh.match(/r\.addEventListener\("load",function\(\)\{([\s\S]*?)\}\),r\.src=/)?.[1] || '';
     expect(zaladujRamke).toContain('if(!bt(r)){Tt(t,n);return}');
     const gotowaRamka = zaladujRamke.indexOf('n.loaded=!0');
-    const odciskSesji = zaladujRamke.indexOf('n.sessionStamp=Gp_s()');
+    const odciskSesji = zaladujRamke.indexOf('n.sessionStamp=c===t?Gp_s():null');
     expect(gotowaRamka).toBeGreaterThan(zaladujRamke.indexOf('if(!bt(r)){Tt(t,n);return}'));
     expect(odciskSesji).toBeGreaterThan(gotowaRamka);
     expect(zaladujRamke.indexOf('Sn_deliverTarget()')).toBeGreaterThan(odciskSesji);
-    // odcisk sesji bez pola czasu — inaczej każde przełączenie odtwarzałoby panel od nowa
+    // Odcisk nadal pomija czas zebrania; nie zastępuje dowodu świeżości dokumentu.
     expect(sh).toContain('var n=Object.assign({},r);delete n.timestampISO;');
     // kolejność w panelu docelowym jak przy starcie strony: wspólny stan, potem sesja główna
     expect(sh).toMatch(/vildaPersistRestoreAll\(\)\}catch\{\}try\{n\.vildaSession&&typeof n\.vildaSession\.restore=="function"&&n\.vildaSession\.restore\(\)/);

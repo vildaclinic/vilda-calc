@@ -72,12 +72,23 @@ async function deployment() {
       expect(asset.current.sha256).toBe(sha256(fs.readFileSync(path.join(ROOT, asset.name))));
     }
     const nativeClearSources = ['vilda_data_import_export.js', 'vilda_persistence_adapter.js'].map(name => {
-      const previous = sha256(fs.readFileSync(path.join(baseline, name)));
-      const current = sha256(fs.readFileSync(path.join(ROOT, name)));
-      // DIX intentionally changes in this PR. Its native Clear contract is
-      // exercised below with real Dirty/Cancel and Saved/Clear, not inferred
-      // from unrelated whole-file byte equality. The adapter is unchanged.
-      if (name === 'vilda_persistence_adapter.js') expect(current).toBe(previous);
+      const previousSource = fs.readFileSync(path.join(baseline, name), 'utf8');
+      const currentSource = fs.readFileSync(path.join(ROOT, name), 'utf8');
+      const previous = sha256(previousSource), current = sha256(currentSource);
+      // Both files now change. The adapter's writer-authority check precedes
+      // this unchanged implementation of its native clear APIs. Retain that
+      // source guard and all actual Dirty/Cancel and Saved/Clear cases below;
+      // the complete changed assets are also checked in the real offline cache.
+      if (name === 'vilda_persistence_adapter.js') {
+        const nativeClearTail = source => {
+          const marker = 'function le(e){', start = source.indexOf(marker);
+          if (start < 0 || source.indexOf(marker, start + marker.length) !== -1) {
+            throw new Error('Expected one native clearShared implementation');
+          }
+          return source.slice(start);
+        };
+        expect(nativeClearTail(currentSource)).toBe(nativeClearTail(previousSource));
+      }
       return { name, previousSha256: previous, sha256: current, unchanged: current === previous };
     });
     const changedNonPrecacheResources = names.filter(name => NON_PRECACHE_RESOURCES.includes(name));

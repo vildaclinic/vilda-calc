@@ -47,6 +47,7 @@
   }
 
   var stan = { znany: pacjentKarty(), nieaktualny: false, wlasciciel: null, koncowy: false };
+  var writeGeneration = 0, writeTickets = new WeakSet();
 
   function aktywny() {
     try {
@@ -153,7 +154,8 @@
 
   /* Własne wczytanie albo „Wyczyść” kończy stan nieaktualny także po `utrwal()`: dokument trzyma wtedy to, co sam
      zapisał (np. skok GH dokończony tuż przed przeładowaniem), więc jego zapisy są zgodne z kartą. */
-  function odNowa(id) {
+  function odNowa(id, zachowajZapis) {
+    if (!zachowajZapis) writeGeneration += 1;
     stan.znany = id || null;
     stan.nieaktualny = false;
     stan.wlasciciel = null;
@@ -177,10 +179,80 @@
 
   function wlasneWczytanie(e) {
     var d = e && e.detail;
-    odNowa(d && typeof d.patientId === 'string' && d.patientId ? d.patientId : pacjentKarty());
+    var id = d && typeof d.patientId === 'string' && d.patientId ? d.patientId : pacjentKarty();
+    // A durable own save assigns an ID to the same current visit. Keep its
+    // queued edits; an explicit load, even of the same PID, starts a new scope.
+    var ownSave = !!(d && d.source === 'save' && !stan.nieaktualny &&
+      (stan.znany === id || stan.znany === null && id && tenSamPacjentCoMigawka()));
+    odNowa(id, ownSave);
   }
 
   function wlasneWyczyszczenie() { odNowa(null); }
+
+  function writeShell() {
+    try {
+      var parent = w.parent, shell = parent && parent !== w && parent.VildaShell;
+      return shell && typeof shell.captureSessionWriter === 'function' &&
+        typeof shell.isSessionWriterCurrent === 'function' ? shell : null;
+    } catch (_) { return null; }
+  }
+
+  function applySequence() {
+    var api = w.VildaDataImportExport;
+    return api && typeof api.getApplyLoadedDataSequence === 'function' ? api.getApplyLoadedDataSequence() : null;
+  }
+
+  function accountScope() {
+    var vault = w.VildaVault || null, user = vault && typeof vault.getCurrentUser === 'function' ? vault.getCurrentUser() : null;
+    var unlocked = !!(vault && typeof vault.isUnlocked === 'function' && vault.isUnlocked());
+    var auth = w.VildaAuthUI, guest = !!(auth && typeof auth.isGuestMode === 'function' && auth.isGuestMode());
+    var token = null;
+    if (unlocked && vault && typeof vault.captureSyncOperationSession === 'function' && typeof vault.assertSyncOperationSession === 'function') {
+      token = vault.captureSyncOperationSession();
+      vault.assertSyncOperationSession(token);
+    }
+    return { vault: vault, userId: user && user.userId || null, unlocked: unlocked, guest: guest, token: token };
+  }
+
+  function accountCurrent(scope) {
+    var current = accountScope();
+    if (scope.vault !== current.vault || scope.userId !== current.userId || scope.unlocked !== current.unlocked || scope.guest !== current.guest) return false;
+    if (scope.token !== null) scope.vault.assertSyncOperationSession(scope.token);
+    return true;
+  }
+
+  function canWriteSession() {
+    try {
+      if (ocen()) return false;
+      var shell = writeShell();
+      return !shell || !!shell.captureSessionWriter(w);
+    } catch (_) { return false; }
+  }
+
+  function captureWriteAuthority() {
+    try {
+      if (ocen()) return null;
+      var shell = writeShell(), source = shell && shell.captureSessionWriter(w);
+      if (shell && !source) return null;
+      var ticket = Object.freeze({ shell: shell, source: source, generation: writeGeneration,
+        sequence: applySequence(), patientId: pacjentKarty(), account: accountScope() });
+      writeTickets.add(ticket);
+      return ticket;
+    } catch (_) { return null; }
+  }
+
+  function isWriteAuthorityCurrent(ticket) {
+    try {
+      if (!ticket || !writeTickets.has(ticket) || ocen() || ticket.generation !== writeGeneration ||
+        ticket.sequence !== applySequence() || ticket.shell !== writeShell() || !accountCurrent(ticket.account)) return false;
+      if (ticket.shell && !ticket.shell.isSessionWriterCurrent(ticket.source, w)) return false;
+      var id = pacjentKarty();
+      if (ticket.patientId === id) return true;
+      // Existing null -> PID adoption is valid only for this same visit and
+      // the same identity as the newly saved shared snapshot.
+      return ticket.patientId === null && !!id && stan.znany === id && tenSamPacjentCoMigawka();
+    } catch (_) { return false; }
+  }
 
   try {
     w.document.addEventListener('vilda:patient-loaded', wlasneWczytanie);
@@ -190,6 +262,13 @@
   } catch (_) { /* pomiń */ }
 
   w.VildaPanelPacjent = Object.freeze({
+    // A same-patient restore begins a new visit scope without adopting a PID.
+    invalidateWriteAuthority: function () { writeGeneration += 1; },
+    // Privacy cleanup may inspect ownership during the separate app-update fence.
+    isPatientOwnershipStale: ocenPacjenta,
+    captureWriteAuthority: captureWriteAuthority,
+    isWriteAuthorityCurrent: isWriteAuthorityCurrent,
+    canWriteSession: canWriteSession,
     /* true: w innej ramce tej karty wczytano innego pacjenta, a ten dokument trzyma poprzedniego. */
     nieaktualny: ocen,
     /* identyfikator pacjenta, którego dane trzyma dokument (null: nowy, niezapisany pacjent albo pusty formularz) */

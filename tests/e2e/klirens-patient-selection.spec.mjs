@@ -73,11 +73,18 @@ test('late patient lookup cannot overwrite a newer selected patient or authorize
 for (const choice of ['new', 'restore']) {
   test(`real shell selection: cancel preserves anonymous ACR; explicit discard then ${choice} never attaches it to the chosen patient`, async ({ page }) => {
     const { calculator, start } = await openShellCalculator(page, { select: false });
-    await applyAcr(calculator, '45');
+    // A distinct anonymous age proves that the new patient cannot inherit the
+    // discarded specimen's context merely because both ages allow A1/A2/A3.
+    const anonymousAge = choice === 'new' ? '15' : '10';
+    const originalPatients = await calculator.evaluate(() => [...window.top.__clcrRecordStore.payloads]);
+    await applyAcr(calculator, '45', { age: anonymousAge });
     await expect(calculator.locator('#clcrVisitSaveBtn')).toBeDisabled();
     await calculator.locator('#clcrChoosePatientBtn').click();
     await expect(page).toHaveURL(/\/app\.html#\/start/);
     await start.locator('.pt-row', { hasText: 'Fikcyjna Pacjentka Nerkowa' }).first().locator('.pt-row-open').click();
+    // The native guard deliberately refuses loading during DOB restoration.
+    // Exercise its cancel/discard choices only once the public decision is ready.
+    await start.waitForFunction(() => window.VildaSaveStatusIndicator?.getCurrentDecision?.().ready === true);
     await start.getByRole('button', { name: 'Wczytaj tego pacjenta', exact: true }).click();
     const guard = start.locator('.vug-backdrop');
     await expect(guard).toBeVisible();
@@ -87,34 +94,68 @@ for (const choice of ['new', 'restore']) {
     await goToCalculator(page);
     await expect(calculator.locator('#U_Alb')).toHaveValue('45');
     await expect(calculator.locator('#Ucr_spot')).toHaveValue('100');
+    await expect(calculator.locator('#age')).toHaveValue(anonymousAge);
     await expect(acr(calculator)).toHaveAttribute('data-clcr-category', 'A2');
     expect((await memory(calculator)).notes).toHaveLength(0);
 
     await calculator.locator('#clcrChoosePatientBtn').click();
     await start.locator('.pt-row', { hasText: 'Fikcyjna Pacjentka Nerkowa' }).first().locator('.pt-row-open').click();
+    await start.waitForFunction(() => window.VildaSaveStatusIndicator?.getCurrentDecision?.().ready === true);
     await start.getByRole('button', { name: 'Wczytaj tego pacjenta', exact: true }).click();
     await expect(guard).toBeVisible();
     await guard.locator('.vug-danger').click();
     await expect(start.locator('#vildaLoadChoiceModal')).toBeVisible();
     await start.locator(choice === 'new' ? '#vildaLcmNew' : '#vildaLcmRestore').click();
     await expect(start.locator('#vildaLoadChoiceModal')).toHaveCount(0);
+    if (choice === 'new') {
+      // This fictional saved card has no DOB. A new visit therefore requires
+      // the clinician's current age, rather than the old anonymous age 15.
+      await expect(start.locator('#age')).toHaveValue('');
+      const source = await start.evaluate(() => window.VildaPersistence.readMainSession());
+      expect(source.user.age).toBeNull();
+      expect(source.clcr).toBeNull();
+    }
     await goToCalculator(page);
     await expect(calculator.locator('#U_Alb')).toHaveValue('');
     await expect(calculator.locator('#Ucr_spot')).toHaveValue('');
     expect((await memory(calculator)).notes).toHaveLength(0);
     expect((await memory(calculator)).saves).toHaveLength(0);
     await expect(calculator.locator('#clcrPatientContextName')).toContainText('Fikcyjna Pacjentka Nerkowa');
+    if (choice === 'new') {
+      await expect(calculator.locator('#age')).toHaveValue('');
+      const carry = await calculator.evaluate(() => {
+        const dedicated = window.VildaPersistence.readClcrSession();
+        const nested = window.VildaPersistence.readMainSession()?.clcr;
+        return [dedicated, nested].map(session => ({
+          inputAge: session?.inputs?.age ?? null,
+          preservedAge: session?.preservedInputs?.age ?? null,
+        }));
+      });
+      for (const session of carry) {
+        expect([null, '']).toContain(session.inputAge);
+        expect([null, '']).toContain(session.preservedAge);
+      }
+    } else await expect(calculator.locator('#age')).toHaveValue('10');
     // Once that patient's own new specimen is entered, one Save records it.
     await calculator.evaluate(() => window.ClcrUiWorkflow.selectFormula('ACR'));
     await calculator.locator('#U_Alb').fill('13.6');
     await calculator.locator('#U_Alb_unit').selectOption('mg/L');
     await calculator.locator('#Ucr_spot').fill('100');
     await calculator.locator('#Ucr_spot_unit').selectOption('mg/dl');
+    if (choice === 'new') {
+      await expect(acr(calculator)).toHaveAttribute('data-clcr-value', '13.6');
+      await expect(acr(calculator)).toHaveAttribute('data-clcr-category', '');
+      await expect(acr(calculator)).toContainText('Uzupełnij wiek');
+      await calculator.locator('.acr-patient-age__edit').click();
+      await calculator.locator('#age').fill('10');
+    }
     await expect(acr(calculator)).toHaveAttribute('data-clcr-category', 'A1');
     const [note] = await saveVisible(calculator, '2026-10-26');
     expect(note.patientId).toBe(PATIENT_ID);
     expect(note.labResult.valueNum).toBe(13.6);
     expect((await memory(calculator)).originalsLocked).toBe(true);
+    expect((await memory(calculator)).patientSaves).toEqual([]);
+    expect(await calculator.evaluate(() => [...window.top.__clcrRecordStore.payloads])).toEqual(originalPatients);
   });
 }
 
