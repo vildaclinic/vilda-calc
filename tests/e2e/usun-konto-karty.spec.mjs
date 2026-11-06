@@ -4,11 +4,10 @@
 // app.html#/ustawienia) po własnym „Usuń konto” wpis rejestru znika, ramka Ustawień ładuje się od nowa, trasa zostaje,
 // a powłoka pokazuje „Witamy” z banerem; przy dwóch kontach „Kto się loguje?” z banerem tylko z drugim kontem, pamięć
 // PRO usuniętego konta unieważniona raz, logowanie w toku w trzeciej karcie kończy się komunikatem odmowy w formularzu
-// (bez banera), blokady manual i idle — bez banera. Wyrocznia baz: pełna lista baz przeglądarki; baza dziennika dostępu
-// konta — w zakresie E2-PR3a1c, a dawna baza punktów terapii GH kalkulatora — poza tym testem (opis w module).
-// Konto bez biblioteki szablonów. Scenariusze, literały i własny serwer plików
-// repozytorium (port przydzielany przez system, start w teście, zamknięcie w finally) w
-// tests/support/usun-konto-karty-chromium.mjs. Dane wyłącznie fikcyjne.
+// (bez banera), blokady manual i idle — bez banera. Wyrocznia baz: bazy przeglądarki przed i po „Usuń konto” (opis
+// w module). Konto bez biblioteki szablonów. Scenariusze, literały i własny serwer plików repozytorium (port
+// przydzielany przez system, start w teście, zamknięcie w finally) w tests/support/usun-konto-karty-chromium.mjs. Dane
+// wyłącznie fikcyjne.
 import { expect, test } from '@playwright/test';
 import { SCENARIUSZE_PA, startSerwer } from '../support/usun-konto-karty-chromium.mjs';
 

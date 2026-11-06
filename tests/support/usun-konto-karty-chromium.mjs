@@ -8,14 +8,13 @@
 //   node tests/support/usun-konto-karty-chromium.mjs [ścieżka do chrome] [PA1 PA1′ PA2 PA3]
 //   (kontekst z zablokowanym service workerem, jak projekt desktop-chromium) — wypisuje wyniki i różnice z literałami,
 //   kod wyjścia 1 przy różnicy.
-// Wyrocznia baz: pełna lista baz przeglądarki (indexedDB.databases(), nazwy posortowane, identyfikator konta zamieniony
-// na <uid>) przed i po „Usuń konto”, po ucichnięciu; poza tym testem: baza dziennika dostępu konta (vilda_audit_v1_<uid>)
-// — w zakresie E2-PR3a1c — i dawna baza punktów terapii GH kalkulatora (ghTherapyDB), którą strony zakładają i usuwają
-// niezależnie od konta. Ekran logowania: tytuł .vilda-auth-title, baner .vilda-auth-screen > .vilda-auth-banner (tekst, role,
-// położenie przed tytułem), nazwy kont .vilda-auth-user-name, błąd formularza .vilda-auth-error. Asercje ekranu dopiero
-// po nowym ekranie (stary węzeł .vilda-auth-screen oznaczony przed akcją), bez stałych odczekań. Banery liczone tylko
-// widoczne, we wszystkich ramkach (ukryte ramki paneli rysują własny ekran). Kliknięcia w ekranie logowania przez
-// element.click() w stronie (okno akceptacji regulaminu przechwytuje zdarzenia wskaźnika). Dane wyłącznie fikcyjne.
+// Wyrocznia baz: lista baz przeglądarki (indexedDB.databases(), nazwy posortowane, identyfikator konta zamieniony na
+// <uid>) przed i po „Usuń konto”, po ucichnięciu — bazy sejfu i kolejki konta oraz bazy wspólne stron. Ekran logowania:
+// tytuł .vilda-auth-title, baner .vilda-auth-screen > .vilda-auth-banner (tekst, role, położenie przed tytułem), nazwy
+// kont .vilda-auth-user-name, błąd formularza .vilda-auth-error. Asercje ekranu dopiero po nowym ekranie (stary węzeł
+// .vilda-auth-screen oznaczony przed akcją), bez stałych odczekań. Banery liczone tylko widoczne, we wszystkich ramkach
+// (ukryte ramki paneli rysują własny ekran). Kliknięcia w ekranie logowania przez element.click() w stronie (okno
+// akceptacji regulaminu przechwytuje zdarzenia wskaźnika). Dane wyłącznie fikcyjne.
 //
 // EKSPORTY
 //   startSerwer() → Promise<{ adres, zamknij() }>
@@ -48,9 +47,10 @@ const TYPY = new Map([
 ]);
 export const TEKST_BANERA = 'Konto zostało usunięte z tej przeglądarki.';
 export const TEKST_USUNIETE = 'To konto zostało usunięte z tej przeglądarki.';
-// Bazy wspólne stron aplikacji (bez baz konta i bez ghTherapyDB — opis wyroczni baz wyżej).
+// Bazy wspólne stron aplikacji i bazy konta (sejf, kolejka) — wyrocznia baz bierze z listy przeglądarki tylko te nazwy.
 export const BAZY_WSPOLNE = Object.freeze(['vilda_export_settings', 'vilda_registry']);
-const POZA_TESTEM = Object.freeze(['vilda_audit_v1_<uid>', 'ghTherapyDB']);
+const BAZY_KONTA = Object.freeze(['vilda_sync_<uid>', 'vilda_user_<uid>']);
+const BAZY_WYROCZNI = new Set([...BAZY_KONTA, ...BAZY_WSPOLNE]);
 const HASLO = 'Fikcyjne#UsunKonto!2026uk';
 const HASLO_Y = 'Fikcyjne#DrugieKonto!2026dk';
 const LIMIT_MS = 20_000;
@@ -86,13 +86,13 @@ const zaloguj = (f, uid, haslo = HASLO) => f.evaluate(async ({ uid, haslo }) => 
 const sledzBlokady = (f) => f.evaluate(() => { window.__blokady = []; window.VildaVault.onLock((x) => { window.__blokady.push(x); }); });
 const blokady = (f) => f.evaluate(() => window.__blokady.slice());
 const bazy = (f, uid) => f.evaluate(async (u) => (await indexedDB.databases()).map((d) => d.name.split(u).join('<uid>')).sort(), uid);
-const bezBazPozaTestem = (lista) => lista.filter((n) => !POZA_TESTEM.includes(n));
-// Lista baz po ucichnięciu: strony zakładają bazy wspólne (ustawienia eksportu po odblokowaniu) asynchronicznie, więc
-// czekanie najwyżej LIMIT_MS na listę oczekiwaną, potem ostatni odczyt (pełna lista, bez filtra po koncie).
+const bazyWyroczni = (lista) => lista.filter((n) => BAZY_WYROCZNI.has(n));
+// Lista baz po ucichnięciu: strony zakładają bazy wspólne asynchronicznie, więc czekanie najwyżej LIMIT_MS na listę
+// oczekiwaną, potem ostatni odczyt.
 async function bazyGdy(f, uid, oczekiwane) {
   let lista = [];
   for (const koniec = Date.now() + LIMIT_MS; Date.now() < koniec;) {
-    lista = bezBazPozaTestem(await bazy(f, uid));
+    lista = bazyWyroczni(await bazy(f, uid));
     if (JSON.stringify(lista) === JSON.stringify(oczekiwane)) break;
     await new Promise((ok) => { setTimeout(ok, 100); });
   }
@@ -144,7 +144,7 @@ async function widoczneBanery(strona) {
   return teksty;
 }
 // Klucze sesji i kolejki konta w karcie: klucze localStorage vilda-sync-*:<uid> i klucz sesji w sessionStorage.
-const slady = (f, uid) => f.evaluate((u) => ({
+const klucze = (f, uid) => f.evaluate((u) => ({
   kluczeSync: Object.keys(localStorage).filter((k) => k.startsWith('vilda-sync-') && k.endsWith(`:${u}`)),
   sesja: sessionStorage.getItem('vilda-vault-session-v2'),
 }), uid);
@@ -169,11 +169,11 @@ const ZERO = (x) => x;
 // ── PA1 ──────────────────────────────────────────────────────────────────────────────────────────────────────────────
 const ZABLOKOWANA_Z_BANEREM = (tytul, konta = []) => ({ tytul, banery: [{ tekst: TEKST_BANERA, role: 'status', przedTytulem: true }], konta, bledy: [], odblokowany: false });
 const BEZ_BANERA = (tytul, konta = []) => ({ tytul, banery: [], konta, bledy: [], odblokowany: false });
-const CZYSTE_SLADY = Object.freeze({ kluczeSync: [], sesja: null });
+const CZYSTE_KLUCZE = Object.freeze({ kluczeSync: [], sesja: null });
 export const OCZEKIWANE_PA1 = Object.freeze({
   bazyPrzed: [...BAZY_WSPOLNE, 'vilda_user_<uid>'].sort(),
   b: ZABLOKOWANA_Z_BANEREM('Witamy'), banery: [TEKST_BANERA], a: BEZ_BANERA('Witamy'),
-  bazyPo: [...BAZY_WSPOLNE], sladyA: CZYSTE_SLADY, sladyB: CZYSTE_SLADY,
+  bazyPo: [...BAZY_WSPOLNE], kluczeA: CZYSTE_KLUCZE, kluczeB: CZYSTE_KLUCZE,
 });
 export async function pa1(kontekst, adres) {
   const a = await kontekst.newPage();
@@ -200,7 +200,7 @@ export async function pa1(kontekst, adres) {
   return {
     pomiary: { usunKontoMs: czas },
     bazyPrzed: przed, b: await ekran(b), banery: await widoczneBanery(b), a: await ekran(a),
-    bazyPo: await bazyGdy(b, uid, OCZEKIWANE_PA1.bazyPo), sladyA: await slady(a, uid), sladyB: await slady(b, uid),
+    bazyPo: await bazyGdy(b, uid, OCZEKIWANE_PA1.bazyPo), kluczeA: await klucze(a, uid), kluczeB: await klucze(b, uid),
   };
 }
 

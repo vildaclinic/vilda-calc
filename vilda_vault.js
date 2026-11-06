@@ -586,8 +586,8 @@ async function Bmk_blokada(cb, opcje) {
 }
 
 /* P-CHMURA-OPIS (decyzja wlasciciela 2026-10-26, B): scalanie z chmury tylko w sesji, w ktorej ruszylo.
- *   - operacje na danych konta wymagaja userId (blad NO_USER): adapter IndexedDB (Sa) kazda, takze odczyt (otwarcie
- *     bazy ja zaklada); adapter w pamieci (Ze) kazdy zapis, odczyt bez userId jak dotad pusty;
+ *   - operacje na danych konta wymagaja userId (blad NO_USER): w IndexedDB (Sa) kazda, takze odczyt (baze, ktorej nie
+ *     ma, zaklada tylko zapis metadanych; P-USUN-KONTO-KARTY); w pamieci (Ze) kazdy zapis, odczyt bez userId pusty;
  *   - scalanie (mergeSyncPayload, applyEncryptedDelta) pamieta sesje startu: konto i klucz sesji (kazde odblokowanie
  *     importuje nowy klucz, wiec ponowne zalogowanie to inna sesja). Kazdy krok z zapisem sprawdza ja pod swoja blokada
  *     (pacjenta: Bsl_podBlokada; notatki: Ac; metadanych konta: Bmk_zmien, Bkz_zmienListe), petla list przed zapisem,
@@ -758,7 +758,7 @@ function Buk_instalacja(uid, bajty, powod) {
   }
   throw Buk_blad('ACCOUNT_REMOVED');
 }
-// Lista kont rejestru bez kont usunietych w innym dokumencie (wpis rejestru znika dopiero po kasowaniu bazy).
+// Lista kont rejestru bez kont usunietych w innym dokumencie (ekran logowania drugiej karty czyta ja juz przy blokadzie).
 function Buk_lista(t) {
   return Array.isArray(t) ? t.filter(function (x) { return !(x && Buk_usuniete.has(x.userId)); }) : t;
 }

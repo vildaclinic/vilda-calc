@@ -47,7 +47,7 @@
 //   KA7 dwieKartyPytanieINarzedzia(a, b, { haslo }) / OCZEKIWANE_PYTANIE_I_NARZEDZIA — (1) karta B z otwartym oknem
 //       pytania (confirm bez odpowiedzi): removeUser w karcie A czeka do odpowiedzi, potem kończy, karta B zablokowana;
 //       (2) kasowanie bazy sejfu konta narzędziami przeglądarki (CDP IndexedDB.deleteDatabase): karta B zablokowana
-//       (user-removed-elsewhere) w < 2 s, baza nie wraca na listę.
+//       (user-removed-elsewhere) w < 2 s, baza nie wraca na listę (odczyt listy po ucichnięciu).
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { createRequire } from 'node:module';
@@ -115,8 +115,7 @@ const STAN_BAZY = async (uid) => ({
   znacznik: localStorage.getItem(`vilda-sync-delete-v1:${uid}`),
 });
 const stanBazy = (strona, uid) => strona.evaluate(`(${STAN_BAZY.toString()})(${JSON.stringify(uid)})`);
-// Stan konta w obu kartach po ucichnięciu: dwa kolejne odczyty (w odstępie 100 ms) równe — zapis localStorage jednej karty
-// dochodzi do drugiej asynchronicznie.
+// Stan konta w obu kartach po ucichnięciu: dwa kolejne odczyty (w odstępie 100 ms) równe.
 async function stanObuKart(a, b, uid) {
   let poprzedni = null;
   for (let i = 0; i < 50; i += 1) {
@@ -129,6 +128,18 @@ async function stanObuKart(a, b, uid) {
 }
 // Pełna lista baz przeglądarki (nazwy posortowane, identyfikator konta zamieniony na <uid>).
 const bazyStrony = (strona, uid) => strona.evaluate(async (u) => (await indexedDB.databases()).map((d) => d.name.split(u).join('<uid>')).sort(), uid);
+// Lista baz po ucichnięciu: dwa kolejne odczyty (w odstępie 100 ms) równe; czekanie najwyżej LIMIT_WARUNKU_MS, potem
+// ostatni odczyt.
+async function bazyPoUcichnieciu(strona, uid) {
+  const koniec = Date.now() + LIMIT_WARUNKU_MS;
+  let poprzedni = await bazyStrony(strona, uid);
+  for (;;) {
+    await strona.waitForTimeout(100);
+    const teraz = await bazyStrony(strona, uid);
+    if (JSON.stringify(teraz) === JSON.stringify(poprzedni) || Date.now() >= koniec) return teraz;
+    poprzedni = teraz;
+  }
+}
 const krotko = (x) => (x && x.ok ? { ok: true } : { ok: false, powod: x && x.powod, code: x && x.code });
 // Opis do błędu po limicie: blokady Web Locks pochodzenia (obu kart; przyznane i czekające, odczyt w karcie A), baza
 // kolejki konta na liście baz i znacznik.
@@ -415,7 +426,7 @@ export async function dwieKartyPytanieINarzedzia(a, b, { haslo }) {
   const zablokowana = await b.waitForFunction(() => window.__blokady.length > 0, null, { timeout: LIMIT_WARUNKU_MS, polling: 20 }).then(() => true, () => false);
   const czas = Date.now() - t0;
   await cdp.detach();
-  const bazaNaLiscie = (await bazyStrony(a, uid2)).includes('vilda_user_<uid>');
+  const bazaNaLiscie = (await bazyPoUcichnieciu(a, uid2)).includes('vilda_user_<uid>');
   return { pytanie, narzedzia: { b: await zablokowanaB(b), szybko: zablokowana && czas < SZYBKO_MS, bazaNaLiscie } };
 }
 

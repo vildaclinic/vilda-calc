@@ -21167,8 +21167,8 @@ dla wszystkich instancji adaptera IndexedDB w dokumencie):
   konta, nie nowsza wersja aplikacji: logowanie w toku w karcie, której bazę podniosła nowsza wersja, kończy się sesją,
   a operacje danych — tekstem 3.
 - **Lista kont** (`listUsers`, także liczba kont w `getStatus()`) pomija konta usunięte w innym dokumencie
-  (`Buk_lista`): wpis rejestru znika dopiero po skasowaniu bazy, a ekran logowania drugiej karty czyta listę już przy
-  blokadzie.
+  (`Buk_lista`), więc ekran logowania drugiej karty, który czyta listę już przy blokadzie, nie pokazuje usuniętego
+  konta.
 - **Ekran logowania** (`vilda_auth_ui.js`): blokada z powodem `user-removed-elsewhere` rysuje ekran logowania z banerem
   tekst 1 (`Buk_baner`: `div.vilda-auth-banner`, tylko dla niepustego napisu — wywołanie ekranu startowego bez
   argumentu, z obiektem albo ze zdarzeniem daje ekran bez banera) i unieważnia pamięć dostępu PRO usuniętego konta, jak
@@ -21221,10 +21221,9 @@ sprzątać.
   okno `app.html#/ustawienia`: wpis rejestru usunięty, ramka Ustawień od nowa, trasa zostaje, powłoka „Witamy”
   z banerem), PA3 (dwa konta: „Kto się loguje?” z banerem tylko z drugim kontem, pamięć PRO unieważniona raz; logowanie
   w toku w trzeciej karcie — tekst 2 w formularzu, bez banera; blokady `manual` i `idle` bez banera). Wyrocznia baz:
-  pełna lista baz przeglądarki przed „Usuń konto” i po nim, po ucichnięciu; baza dziennika dostępu konta — w zakresie
-  E2-PR3a1c; dawna baza punktów terapii GH kalkulatora (`ghTherapyDB`), którą strony zakładają i usuwają niezależnie od
-  konta, poza tym testem. Konto bez biblioteki szablonów. Czasy „Usuń konto” w adnotacji testu, poza porównywanym
-  wynikiem.
+  bazy przeglądarki przed „Usuń konto” i po nim, po ucichnięciu — po usunięciu nie ma bazy sejfu ani bazy kolejki
+  konta, bazy wspólne bez zmian. Konto bez biblioteki szablonów. Czasy „Usuń konto” w adnotacji testu, poza
+  porównywanym wynikiem.
 
 Zmienione:
 - `tests/support/dwie-karty-chromium.mjs` i `tests/e2e/dziennik-zdarzen-dwie-karty.spec.mjs` — 3 → 7 przypadków
@@ -21232,7 +21231,8 @@ Zmienione:
   kasowaniu bazy sejfu zablokowana; nowe KA4 (druga karta bez operacji: „Usuń konto” w < 2 s, pełna lista baz po
   usunięciu), KA5 (logowanie w toku: tekst 2, blokada `user-removed`, bez sesji), KA6 (nowsza wersja bazy sejfu: bez
   czekania, tekst 3, także logowanie w nowej karcie), KA7 (okno pytania: „Usuń konto” czeka do odpowiedzi; kasowanie
-  bazy narzędziami przeglądarki: druga karta zablokowana w < 2 s, bazy konta aplikacja nie zakłada od nowa).
+  bazy narzędziami przeglądarki: druga karta zablokowana w < 2 s, bazy konta aplikacja nie zakłada od nowa — lista baz
+  po ucichnięciu).
 - `tests/unit/sync-dziennik-konto.test.mjs` — 70 → 71 przypadków: test nie zamyka już sam połączenia drugiej karty
   z bazą sejfu; K3 i K16 — dopisanie i zapis do kwarantanny drugiej karty kończą się odmową `zablokowany`; K3a → K3e
   (dopisanie drugiej karty po kasowaniu bazy sejfu — `zablokowany` bez czekania na blokadę konta); K6j bez wymuszonego
@@ -21253,8 +21253,9 @@ Wynik na stanie końcowym: sejf drugiej karty 57/57, konto 71/71, uśpienie 31/3
 PA3); ESLint bez problemów, składnia poprawna. Skrypt Node scenariuszy w Chromium 153.0.8010.12: każdy z 11 scenariuszy
 KA i PA 22/22 zgodnych przebiegów (8 po kolei, 12 w trzech seriach po 4 procesy naraz, 2 w serii mieszanej). Trzy pliki
 jednostkowe pod obciążeniem (8 procesów naraz na 4 rdzeniach, 20 serii): 160/160 przebiegów, 25 440 przypadków
-zielonych. „Usuń konto” w karcie A bez okna pytania (KA1–KA5) trwa 6–72 ms; w pełnej aplikacji od kliknięcia do
-przejścia na `index.html` (PA1, PA1′) 34–1186 ms; w aplikacji zainstalowanej wpis rejestru znika po 57–652 ms (PA2).
+zielonych. W przebiegach skryptu „Usuń konto” w karcie A bez okna pytania (KA4, KA5: `removeUser` od wywołania do
+wyniku, po 16 przebiegów z pomiarem) trwa 8–69 ms; w pełnej aplikacji od kliknięcia do przejścia na `index.html` (PA1,
+PA1′) 34–1186 ms; w aplikacji zainstalowanej wpis rejestru znika po 57–652 ms (PA2).
 
 **Czerwone na bazie** (kopia `origin/audyt` `83fa119` z testami i wsparciem tego PR, sejf bazy):
 
@@ -21274,9 +21275,10 @@ przejścia na `index.html` (PA1, PA1′) 34–1186 ms; w aplikacji zainstalowane
 **Mutanty** (kopie, jedna zmiana na przebieg, na kodzie tego PR): 79 — 73 zabite (64 przypadkami jednostkowymi, 9 zmian
 ekranu logowania przypadkami PA w Chromium), 6 równoważnych (bez skutku dla wymagań).
 
-**Gdzie w kodzie.** `vilda_vault.js` +193 / −12 linii; w `vilda_frame_sync.js` i `vilda_auth_ui.js` tylko dopisane znaki
-w liniach zminifikowanych.
-- Blok `P-USUN-KONTO-KARTY` w `vilda_vault.js`: linie 608–764 (157 linii, 7770 B), zaraz za `Bnu_blad` (blok
+**Gdzie w kodzie.** `vilda_vault.js` +195 / −14 linii (w tym dwie linie komentarza bloku P-CHMURA-OPIS: bazę, której
+nie ma, zakłada tylko zapis metadanych); w `vilda_frame_sync.js` i `vilda_auth_ui.js` tylko dopisane znaki w liniach
+zminifikowanych.
+- Blok `P-USUN-KONTO-KARTY` w `vilda_vault.js`: linie 608–764 (157 linii, 7782 B), zaraz za `Bnu_blad` (blok
   P-CHMURA-OPIS), komentarze bez znaków diakrytycznych. Stan: `Buk_usuniete` (konta skasowane przez inny dokument),
   `Buk_nowszaWersja`, `Buk_usuwa` (konta kasowane przez ten dokument), `Buk_KOMUNIKATY`. Funkcje: `Buk_blad`,
   `Buk_odmowa`, `Buk_bladOtwarcia`, `Buk_obce`, `Buk_zmiana`, `Buk_brakBazy`, `Buk_zamknieta`, `Buk_polacz`,
@@ -21467,11 +21469,11 @@ Web Locks i odczyty `localStorage` nie wchodzą do śladu zapisu bazowego (skutk
 fikstury (`opis`, `bazaVault`) są takie jak na bazie, a nagranie kontrolne na sejfie z ostatnią zmianą logiki daje te
 same ślady.
 
-**Wymagania dla następnych PR** (z E2-PR3a1 i decyzji 12.1–12.4, zebrane tu w całości; te same w planie: wiersze
-6a′–6d, 7a, 8 i 12 tabeli „Podział etapu 2”).
+**Wymagania dla następnych PR** (z E2-PR3a1 i decyzji 12.1–12.4, zebrane tu, poza wymaganiami E2-PR3a1c we wpisie
+P-USUN-KONTO-KARTY; te same w planie: wiersze 6a′–6d, 7a, 8 i 12 tabeli „Podział etapu 2”).
 - **E2-PR3a1b** (decyzja 12.4) — wykonane w E2-PR3a1b (wpis wyżej, P-USUN-KONTO-KARTY): druga karta zamyka połączenia
-  z bazą sejfu i blokuje się, „Usuń konto” nie czeka, identyfikator urządzenia nie zostaje; test sprawdza pełną listę
-  baz przeglądarki bez zamykania połączeń przez test; bazę dziennika dostępu konta obejmuje E2-PR3a1c.
+  z bazą sejfu i blokuje się, „Usuń konto” nie czeka, identyfikator urządzenia nie zostaje; testy same nie zamykają
+  połączeń drugiej karty z bazą sejfu przy „Usuń konto”. Dalsze wymagania — E2-PR3a1c (wpis wyżej).
 - **E2-PR3a2.**
   - Wewnętrzne dopisanie `Bob_dopiszZ` budowane nad `Bob_dopiszPod`, z blokadą współdzieloną konta braną przed nim.
   - Porównanie zapisu bazowego z sejfem bez wstawek (w tej kopii sejfu `Bob_oznacz(…)` zastąpione przez `false`):
