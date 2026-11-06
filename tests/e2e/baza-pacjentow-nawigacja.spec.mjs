@@ -257,3 +257,41 @@ test('desktop: nagłówki formularza pozostają pod Bazą, a pełne Przypomnieni
     }), 'po powrocie osadzona karta ponownie jest dostępna').toBe(true);
   }
 });
+
+test('desktop: automatyczna kopia zapasowa nie zamyka sortowania Bazy', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  await createFictionalVault(page);
+  await page.waitForFunction(() => typeof window.VildaFileExport?.tryAutoVaultBackup === 'function');
+  await openDatabase(page, page);
+  const database = page.locator('.vilda-patient-database');
+  await expect(database.locator('.pt-row')).toHaveCount(2);
+  const sort = database.locator('.pt-sortpill');
+  const menu = database.locator('.pt-sortmenu');
+  await sort.click();
+  await expect(sort).toHaveAttribute('aria-expanded', 'true');
+  await expect(menu).toBeVisible();
+
+  // Exercise the real automatic-backup path and its native blob download.
+  // Only the schedule is forced; export, encryption and DOM events stay real.
+  const pendingDownload = page.waitForEvent('download');
+  const backup = await page.evaluate(() => window.VildaFileExport.tryAutoVaultBackup({ force: true }));
+  const download = await pendingDownload;
+  expect(backup.skipped).toBe(false);
+  expect(backup.method).toBe('download');
+  expect(download.suggestedFilename()).toBe(backup.filename);
+  await expect(sort).toHaveAttribute('aria-expanded', 'true');
+  await expect(menu).toBeVisible();
+  await expect(menu.locator('.pt-sortopt').first()).toBeFocused();
+
+  await menu.locator('[data-s="name-desc"]').click();
+  await expect(menu.locator('[data-s="name-desc"]')).toHaveAttribute('aria-checked', 'true');
+  await expect(menu).toBeHidden();
+  await expect(sort).toHaveText('Alfabetycznie Z–A');
+
+  // A real click outside the menu must still dismiss it.
+  await sort.click();
+  await expect(menu).toBeVisible();
+  await database.getByRole('heading', { name: 'Baza pacjentów', exact: true }).click();
+  await expect(menu).toBeHidden();
+  await expect(sort).toHaveAttribute('aria-expanded', 'false');
+});

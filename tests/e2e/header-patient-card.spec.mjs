@@ -42,7 +42,7 @@ async function headerCardGeometry(page) {
       search: box(document.querySelector('#vildaHeaderSearch')),
       bell: box(document.querySelector('#vildaRemindersBtn')),
       brand: box(brand), brandHit: hit(brand),
-      searchHit: hit(document.querySelector('#vildaHeaderSearch input')),
+      searchHit: hit(document.querySelector('#vildaHeaderSearchBtn')),
       bellHit: hit(document.querySelector('#vildaRemindersBtn')),
       overflow: document.documentElement.scrollWidth - innerWidth,
     };
@@ -53,14 +53,15 @@ async function expectPatientHeader(page) {
   await expect.poll(async () => {
     const g = await headerCardGeometry(page);
     return {
-      left: Math.round(g.search.x - Math.max(g.card.x, g.brand.right + 12)),
-      right: Math.round(g.card.right - g.search.right),
+      brandClear: g.search.x >= g.brand.right + 12,
+      searchWidth: Math.round(g.search.width),
+      gap: Math.round(g.bell.x - g.search.right),
       bell: Math.round(g.card.right - g.bell.right),
       sameRow: Math.round(g.bell.y - g.search.y),
       brandHit: g.brandHit, searchHit: g.searchHit, bellHit: g.bellHit,
     };
   }, { message: 'patient header follows the visible card and keeps the real logo, Search and bell usable' })
-    .toEqual({ left: 0, right: 108, bell: 0, sameRow: 0, brandHit: true, searchHit: true, bellHit: true });
+    .toEqual({ brandClear: true, searchWidth: 44, gap: 8, bell: 0, sameRow: 0, brandHit: true, searchHit: true, bellHit: true });
   expect((await headerCardGeometry(page)).overflow).toBeLessThanOrEqual(1);
 }
 
@@ -109,7 +110,8 @@ test.describe('phone patient card', () => {
       await expect(card.locator('.vilda-patient-hero-name')).toHaveText('Fikcyjny Antoni');
     }
     if (shell) {
-      await expect(page.locator('#vildaHeaderSearch')).toBeHidden();
+      await expect(page.locator('#vildaHeaderSearch')).toBeVisible();
+      await expect(page.locator('#vildaHeaderSearch input')).toHaveCount(0);
       for (const selector of ['[data-vilda-chrome-menu-btn]', '#vildaHeaderSearchBtn', '#vildaRemindersBtn']) {
         const control = page.locator(selector);
         await expect(control).toBeVisible();

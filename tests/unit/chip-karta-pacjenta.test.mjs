@@ -10,7 +10,10 @@ if (start < 0 || end < 0) throw new Error('Nie znaleziono produkcyjnego popovera
 const production = source.slice(start, end);
 const menuNavigation = source.slice(source.indexOf('function Cm_menuOwner('), source.indexOf('function Cm_refreshMenuActions('));
 const shellNavigation = source.slice(source.indexOf('function Cm_shell('), source.indexOf('function Cm_cancelFocus('));
-const stateMirror = source.slice(source.indexOf('function Ch_refreshSaveState('), source.indexOf('function Ch_refreshMenuPro('));
+// Keep the complete production save projection and its lifecycle state. The
+// navigation listener calls it when opening the popover, even with no SSI.
+const saveStateGlobals = source.slice(source.indexOf('var Ch_saveDocument='), source.indexOf('function Ch_searchIcon('));
+const stateMirror = source.slice(source.indexOf('function Ch_saveContext('), source.indexOf('function Ch_refreshMenuPro('));
 const attributeHelper = source.slice(source.indexOf('function Ch_attr('), source.indexOf('function Ch_sameOwner('));
 
 function popover(window = {}, initialId = 'fikcyjny-pacjent-A') {
@@ -18,7 +21,12 @@ function popover(window = {}, initialId = 'fikcyjny-pacjent-A') {
   const listeners = new Map();
   const button = { addEventListener: (type, fn) => listeners.set(type, fn), focus: vi.fn() };
   const chip = { setAttribute: vi.fn(), getAttribute: () => null, classList: { contains: () => false } };
-  const document = { getElementById: (id) => id === 'vildaPatientChip' ? chip : null, querySelectorAll: () => [] };
+  const document = {
+    getElementById: (id) => id === 'vildaPatientChip' ? chip : null,
+    querySelectorAll: () => [],
+    addEventListener: vi.fn(),
+    removeEventListener: vi.fn(),
+  };
   const panel = {
     innerHTML: '', hidden: true,
     querySelector: (selector) => selector === '[data-vilda-open-card]' ? button : null,
@@ -27,9 +35,11 @@ function popover(window = {}, initialId = 'fikcyjny-pacjent-A') {
   // The visible menu legend now uses the same guarded patient entry as the
   // patient button. Run that actual production path with an unlocked owner.
   window.VildaVault ||= { isUnlocked: () => true, getCurrentUser: () => ({ userId: 'fictional-popover-owner' }) };
+  window.addEventListener ||= vi.fn();
+  window.removeEventListener ||= vi.fn();
   const close = vi.fn(), tip = vi.fn();
   const open = new Function('r', 'o', 'h', 'at', 'rt', 'Ce', 'te', 'le', 'Cm_closeDrawer', 'F',
-    `var O=false,Ch_statusAnchor=null,Cm_unavailable='Unavailable';${attributeHelper}${stateMirror}${menuNavigation}${shellNavigation}${production};return it;`)(
+    `var O=false,Ch_statusAnchor=null,Cm_unavailable='Unavailable';${saveStateGlobals}${attributeHelper}${stateMirror}${menuNavigation}${shellNavigation}${production};Ch_refreshSaveState();return it;`)(
     window, document, panel, () => {}, () => '<button data-vilda-open-card>Karta Pacjenta</button>',
     () => patientId, close, () => {}, () => {}, tip,
   );

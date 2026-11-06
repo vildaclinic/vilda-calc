@@ -12,7 +12,7 @@ for (const shell of [false, true]) for (const route of LAYOUT_ROUTES.slice(1)) {
     const { owner, ids } = await prepareLayoutRoute(page, shell, route);
     const before = await owner.evaluate(id => window.VildaVault.getPatient(id), ids.a);
     const proof = [];
-    for (const [width, height] of [[320, 852], [390, 852], [658, 1000], [844, 390], [390, 852]]) {
+    for (const [width, height] of [[320, 852], [390, 852], [658, 1000], [860, 1000], [844, 390], [390, 852]]) {
       await emulatePhone(page, { width, height });
       await expectLandscape(page, width > height);
       await expectLandscape(owner, width > height);
@@ -24,8 +24,9 @@ for (const shell of [false, true]) for (const route of LAYOUT_ROUTES.slice(1)) {
         await expect(control).toBeVisible();
         await expect(control).toHaveCSS('width', '44px');
         await expect(control).toHaveCSS('height', '44px');
-        await expect(control.locator('svg')).toHaveCSS('width', '21px');
-        await expect(control.locator('svg')).toHaveCSS('height', '21px');
+        const iconSize = await control.getAttribute('id') === 'vildaHeaderSearchBtn' ? '20px' : '21px';
+        await expect(control.locator('svg')).toHaveCSS('width', iconSize);
+        await expect(control.locator('svg')).toHaveCSS('height', iconSize);
       }
       await expect(page.locator('#vildaHeaderSearchInput')).toBeHidden();
       await expect.poll(async () => {
