@@ -60,9 +60,24 @@ async function saveInputs(owner, { weight, systolic }) {
   await owner.locator('#bpSystolic').fill(String(systolic));
   await owner.locator('#bpDiastolic').fill('74');
   await owner.locator('#bpDiastolic').blur();
-  await owner.evaluate(() => window.saveUserData());
-  await expect.poll(() => owner.evaluate(() => window.VildaSaveStatusIndicator?.getState()))
-    .toBe('saved');
+  await expect.poll(() => owner.evaluate(() => window.VildaDataImportExport.getSaveReadiness().ready))
+    .toBe(true);
+  const receipt = await owner.evaluate(() => window.VildaDataImportExport.saveUserDataWithReceipt());
+  expect(receipt).toMatchObject({ saved: true, referenceVerified: true });
+  // A confirmed vault save precedes the ordinary main-session debounce. This
+  // fixture starts the PWA update from a settled saved visit; immediate
+  // Save→navigation is covered separately without waiting for this publication.
+  await expect.poll(() => owner.evaluate(({ expectedWeight, expectedSystolic }) => {
+    const main = window.VildaPersistence.readMainSession();
+    return {
+      ready: window.VildaDataImportExport.getSaveReadiness().ready,
+      state: window.VildaSaveStatusIndicator.getState(),
+      inputsPublished: main?.bp?.systolic === expectedSystolic && main?.bp?.diastolic === 74
+        && (expectedWeight === undefined || main?.user?.weight === expectedWeight),
+    };
+  }, { expectedWeight: weight, expectedSystolic: systolic })).toEqual({
+    ready: true, state: 'saved', inputsPublished: true,
+  });
 }
 
 async function deployAndUpdate(page, server) {

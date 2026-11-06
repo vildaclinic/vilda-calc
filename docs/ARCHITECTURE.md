@@ -633,6 +633,30 @@ numerze operacji, właścicielu formularza i sesji konta. Dotyczy także oczekuj
 ładowania modułów raportu. Nowe wczytanie, zmiana właściciela i pozostałe sygnały
 unieważnienia zachowują dotychczasowe zamknięcie panelu.
 
+Zapis wspólnego stanu roboczego w powłoce ma jednego aktywnego autora
+(P-SESJA-AKTYWNY-AUTOR). Tożsamość pacjenta nie wystarcza: ukryty panel może
+nadal mieć poprzednią wizytę tej samej osoby. Powłoka potwierdza dokument,
+trasę i generację aktywacji; panel dodaje generację wczytania/czyszczenia
+oraz sesję konta. Kolejki głównej sesji, wspólnego formularza, Klirensu i lustra
+pól zachowują ten zakres z chwili planowania i sprawdzają go przed publikacją.
+Klirens sprawdza go również przed zebraniem pól, które może zmienić jego lokalną
+pamięć wartości; czyszczenie tej pamięci anuluje wcześniejszą kolejkę.
+Adapter odrzuca też bezpośredni zapis roboczy nieaktywnego panelu. Zwykłe
+przełączenie zakładki przeglądarki nie odbiera praw aktywnemu formularzowi.
+
+Przed zmianą strony powłoka nadal zapisuje wychodzący formularz synchronicznie,
+a potem odtwarza stan w docelowym. Przy ponownym wejściu do wcześniej otwartego
+panelu odtwarza go także przy niezmienionym odcisku sesji: ukryty model mógł się
+zmienić lokalnie bez prawa zapisu. Pozostanie na tej samej trasie nie wykonuje
+tego kroku. Powrót nie ożywia wcześniejszych kolejek. Wiadomości lustra niosą jedynie niejawny identyfikator
+dowodu w RAM powłoki; odbiorca sprawdza również jego aktualność. Jawne czyszczenie
+korzysta z dotychczasowego rozgłoszenia resetu i osobnych metod usuwania stanu.
+Pusty odczyt wspólnego formularza nie usuwa istotnej sesji głównej: właściwy
+kolektor rozpoznaje ją, a następny etap odtwarza pełny szkic. Jawny reset ma
+własną ścieżkę usuwania. Kontrakt referencji rzeczywiście zapisanej wersji
+i reguły obliczeń pozostają niezmienione. Strony samodzielne zachowują swoje zapisy; mieszana starsza powłoka
+bez protokołu autora korzysta z dotychczasowej ochrony właściciela pacjenta.
+
 ### 5. Synchronizacja
 
 Publiczne moduły `vilda_sync.js`, `vilda_sync_integration.js` i `vilda_realtime.js` integrują aplikację z opcjonalną usługą synchronizacji. Szczegóły infrastruktury i kod usługi nie powinny być kopiowane do publicznych zgłoszeń.

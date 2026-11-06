@@ -10,9 +10,14 @@ const PAYLOAD = { version: 1, name: 'Fikcyjny Pacjent Bieżącej Sesji',
   user: { age: 13, sex: 'M', height: 158, weight: 46 },
   intake: { pal: '1.8', history: [{ ageMonths: 120, height: 141, weight: 33 }] }, clcr: OLD_RENAL };
 
-function environment({ current = CURRENT_RENAL, unavailable = false, readError = false, intakeDom = false } = {}) {
+function environment(options = {}) {
+  const { unavailable = false, readError = false, intakeDom = false } = options;
+  const current = Object.prototype.hasOwnProperty.call(options, 'current') ? options.current : CURRENT_RENAL;
   let main = clone(PAYLOAD), renal = clone(current);
   const mainWrites = [], renalWrites = [], restored = [];
+  const lifecycle = [];
+  let versionCache = { age: '15', U_Alb: '45', Ucr_spot: '100' };
+  const clearVersionCache = () => { versionCache = {}; lifecycle.push({ type: 'clear-version-cache' }); return true; };
   const values = Object.fromEntries(['name', 'age', 'ageMonths', 'sex', 'height', 'weight']
     .map(id => [id, { id, value: '', style: {}, dataset: {}, addEventListener() {},
       dispatchEvent() {}, classList: { add() {}, remove() {}, contains: () => false } }]));
@@ -33,7 +38,8 @@ function environment({ current = CURRENT_RENAL, unavailable = false, readError =
       querySelector: () => null, querySelectorAll: () => [], addEventListener() {}, dispatchEvent() {},
     },
     VildaPersistence: persistence,
-    VildaClcrSessionRuntime: { restoreFromSession: value => restored.push(clone(value)) },
+    VildaClcrSessionRuntime: { restoreFromSession: value => restored.push(clone(value)), clearVersionValueVault: clearVersionCache },
+    vildaPersistFlushNow: () => lifecycle.push({ type: 'flush', versionCache: clone(versionCache) }),
     sessionStorage: { getItem: key => key === 'vildaCurrentPatientId' ? 'fictional-current-patient' : null,
       setItem() {}, removeItem() {} },
     location: { pathname: intakeDom ? '/index.html' : '/kalkulator-klirens.html' },
@@ -47,7 +53,8 @@ function environment({ current = CURRENT_RENAL, unavailable = false, readError =
   main = null;
   win.VildaDataImportExport.restoreMainSessionIfAny();
   main = clone(PAYLOAD);
-  return { win, api: win.VildaDataImportExport, mainWrites, renalWrites, restored,
+  return { win, api: win.VildaDataImportExport, mainWrites, renalWrites, restored, lifecycle, clearVersionCache,
+    versionCache: () => clone(versionCache),
     renal: () => renal, main: () => main,
     save() {
       // As on a page without the intake table: the ordinary collector leaves
@@ -135,5 +142,46 @@ describe('current Klirens draft remains authoritative over an older nested main 
     h.api.restoreLoadedState({ data: clone(PAYLOAD), anyDataEntered: () => false });
     expect(h.renalWrites).toEqual([OLD_RENAL]);
     expect(h.restored).toEqual([OLD_RENAL]);
+  });
+});
+
+describe('a confirmed empty renal handoff also invalidates the old local formula cache', () => {
+  it('clears the old anonymous context before restore can flush it back into the current session', () => {
+    const h = environment({ current: null });
+    const incoming = { ...clone(PAYLOAD), clcr: null };
+    expect(h.versionCache()).toEqual({ age: '15', U_Alb: '45', Ucr_spot: '100' });
+    expect(h.restore(incoming)).toBe(true);
+    expect(h.lifecycle[0]).toEqual({ type: 'clear-version-cache' });
+    expect(h.lifecycle.filter(event => event.type === 'flush')).not.toHaveLength(0);
+    for (const event of h.lifecycle.filter(item => item.type === 'flush')) expect(event.versionCache).toEqual({});
+    expect(h.versionCache()).toEqual({});
+    expect(h.renal()).toBeNull();
+    expect(h.renalWrites).toEqual([]);
+    expect(incoming).toEqual({ ...PAYLOAD, clcr: null });
+  });
+
+  it.each([
+    ['current pending specimen', { current: CURRENT_RENAL }, { clcr: null }, {}],
+    ['missing legacy clcr section', { current: null }, {}, {}],
+    ['undefined dedicated session', { current: undefined }, { clcr: null }, {}],
+    ['unavailable dedicated reader', { current: null, unavailable: true }, { clcr: null }, {}],
+    ['failed dedicated read', { current: null, readError: true }, { clcr: null }, {}],
+    ['explicit patient load', { current: null }, { clcr: null }, { isSessionRestore: false }],
+  ])('%s does not infer authorization to clear the local formula cache', (_label, options, renalSection, restoreOptions) => {
+    const h = environment(options), incoming = clone(PAYLOAD), before = h.versionCache();
+    delete incoming.clcr;
+    Object.assign(incoming, renalSection);
+    expect(h.restore(incoming, restoreOptions)).toBe(true);
+    expect(h.lifecycle.filter(event => event.type === 'clear-version-cache')).toEqual([]);
+    expect(h.versionCache()).toEqual(before);
+  });
+
+  it('retains the existing global controller fallback on a mixed runtime version', () => {
+    const h = environment({ current: null });
+    delete h.win.VildaClcrSessionRuntime.clearVersionValueVault;
+    h.win.clcrClearVersionValueVault = h.clearVersionCache;
+    expect(h.restore({ ...clone(PAYLOAD), clcr: null })).toBe(true);
+    expect(h.lifecycle[0]).toEqual({ type: 'clear-version-cache' });
+    expect(h.versionCache()).toEqual({});
   });
 });

@@ -19,7 +19,7 @@
  *   bo i tak chcemy zwracać HTML z cache natychmiast.
  */
 
-const SW_VERSION = '1.1.478';
+const SW_VERSION = '1.1.479';
 const CACHE_PREFIX = 'pwa-kalorii';
 const SHELL_CACHE = `${CACHE_PREFIX}-shell-v${SW_VERSION}`;
 const RUNTIME_CACHE = `${CACHE_PREFIX}-runtime`;
@@ -543,6 +543,7 @@ const CORE_SHELL_URLS = [
   '/inline_kalkulator_klirens_07.js?v=35',
   '/inline_kalkulator_klirens_07.js?v=36',
   '/inline_kalkulator_klirens_07.js?v=37',
+  '/inline_kalkulator_klirens_07.js?v=38',
   '/inline_kalkulator_klirens_08.js?v=1',
   '/inline_kalkulator_klirens_09.js?v=1',
   '/clcr_ui_workflow.css?v=1',
@@ -832,9 +833,11 @@ const CORE_SHELL_URLS = [
   '/vilda_persistence_adapter.js?v=31',
   '/vilda_persistence_adapter.js?v=32',
   '/vilda_persistence_adapter.js?v=33',
+  '/vilda_persistence_adapter.js?v=34',
   '/vilda_panel_pacjent.js?v=1',
   '/vilda_panel_pacjent.js?v=2',
   '/vilda_panel_pacjent.js?v=3',
+  '/vilda_panel_pacjent.js?v=4',
   '/vilda_init.js',
   '/vilda_init.js?v=4',
   '/vilda_crypto.js',
@@ -2258,6 +2261,7 @@ const CORE_SHELL_URLS = [
   '/vilda_persist_runtime.js?v=23',
   '/vilda_persist_runtime.js?v=24',
   '/vilda_persist_runtime.js?v=25',
+  '/vilda_persist_runtime.js?v=26',
   '/vilda_summary_cards.js',
   '/vilda_summary_cards.js?v=2',
   '/vilda_summary_cards.js?v=3',
@@ -3180,6 +3184,7 @@ const OPTIONAL_ASSETS = [
   '/vilda_shell.js?v=75',
   '/vilda_shell.js?v=76',
   '/vilda_shell.js?v=77',
+  '/vilda_shell.js?v=78',
   '/vilda_shell.css',
   '/vilda_shell.css?v=1',
   '/vilda_shell.css?v=2',
@@ -3406,6 +3411,7 @@ const OPTIONAL_ASSETS = [
   '/custom-fixes.js?v=76',
   '/custom-fixes.js?v=77',
   '/custom-fixes.js?v=78',
+  '/custom-fixes.js?v=79',
   '/reposition.js?v=7',
   '/vilda_klawiatura.js?v=1',
   '/vilda_klawiatura.js?v=2',
@@ -3742,6 +3748,7 @@ const OPTIONAL_ASSETS = [
   '/vilda_data_import_export.js?v=115',
   '/vilda_data_import_export.js?v=116',
   '/vilda_data_import_export.js?v=117',
+  '/vilda_data_import_export.js?v=118',
   '/vilda_baseline_pacjenta.js?v=1',
   '/vilda_baseline_pacjenta.js?v=2',
   '/vilda_baseline_pacjenta.js?v=3',
