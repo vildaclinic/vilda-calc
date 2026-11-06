@@ -13,15 +13,41 @@ function Pp_canClearLockedIdentity(){
     return Pp_canWrite();
   }catch{return false}
 }
-// The complete main draft is a separate source from shared form aliases.
-// Let the existing importer decide whether it is restorable; an empty alias
-// root is not evidence that this independently meaningful draft was cleared.
+// The complete main draft is separate from shared form aliases. Account and
+// display preferences alone are not a patient draft: restoring those defaults
+// would lock the default sex on a blank form. Classify a detached view only;
+// do not change the payload, save reference or the importer's global predicate.
+function Pp_mainValuePresent(value){
+  if(value==null)return false;
+  if(typeof value==="string")return value.trim()!=="";
+  if(typeof value==="object")return Object.keys(value).length>0;
+  return true; // Preserve explicit zero/false in an unknown clinical extension.
+}
 function Pp_hasRestorableMainSession(){
   try{
     const persistence=A(),importer=window.VildaDataImportExport;
-    return !!(persistence&&typeof persistence.readMainSession==="function"&&
-      importer&&typeof importer.hasMeaningfulMainSessionData==="function"&&
-      importer.hasMeaningfulMainSessionData(persistence.readMainSession()));
+    if(!persistence||typeof persistence.readMainSession!=="function"||
+      !importer||typeof importer.hasMeaningfulMainSessionData!=="function")return false;
+    const original=persistence.readMainSession();
+    if(!original||original.version!==1)return false;
+    const view=Object.assign({},original);
+    delete view.doctor;delete view.zscore;delete view.bpDataToggle;
+    if(importer.hasMeaningfulMainSessionData(view))return true;
+    // The legacy predicate predates these clinical sections. Their absence in
+    // shared aliases must not delete SGA, history, a dated examination or an
+    // annotation. Nonempty unknown top-level extensions are preserved too.
+    const user=view.user||{},advanced=view.advanced||{},plan=view.plan||{};
+    const contexts=[advanced.boneAgeContext,advanced.data&&advanced.data.boneAgeContext];
+    if([view.birth,view.perinatal,view.puberty,view.chartCreator,view.bisphosTherapyPoints,
+      user.dobISO,user.firstName,user.lastName,user.ageWeeks,user.measuredAtISO,user.tannerStage,
+      advanced.name,view.growthBasic&&view.growthBasic.name,plan.customGoalKg].some(Pp_mainValuePresent)||
+      user.age===0||user.age==="0"||plan.dietaWybrana===true||plan.palWybrany===true||
+      contexts.some(context=>context&&(Pp_mainValuePresent(context.current)||Pp_mainValuePresent(context.last))))return true;
+    const known=["version","timestampISO","timestamp","savedAtISO","source","name","user","advanced",
+      "growthBasic","intake","foods","plan","clcr","bp","adultVitals","respiratory","circumference",
+      "bisphos","ghTherapyPoints","obesityTherapyPoints","bisphosTherapyPoints","birth","perinatal",
+      "puberty","chartCreator","steroid"];
+    return Object.keys(view).some(key=>!known.includes(key)&&Pp_mainValuePresent(view[key]));
   }catch{return false}
 }
 function Pp_captureWriter(){

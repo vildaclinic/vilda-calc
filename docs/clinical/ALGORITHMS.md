@@ -13690,6 +13690,12 @@ anonimowe badanie, brak pola w starszym formacie i niedostępny odczyt nie są
 poleceniem takiego usunięcia. Rozbieżności automatycznych producentów
 SGA/PAL/historii pozostają odrębnym etapem naprawy.
 
+Przy pustym stanie wspólnym ochrona sesji dotyczy danych pacjenta. Sam profil
+lekarza lub ustawienie widoku wyników nie uruchamia odtwarzania pustego pacjenta
+i jego blokad pól. Ta lokalna ocena nie zmienia danych ani ogólnego klasyfikatora
+importera; zachowuje także kliniczne sekcje nieuwzględnione przez jego starszą
+wersję, w tym SGA, dane okołoporodowe i jawny wiek noworodka równy zero.
+
 **Regresje.** Testy rzeczywistych modułów sprawdzają każdy zapis sesji,
 nie tylko stan po późniejszej naprawie. Obejmują starszą wizytę tego samego
 pacjenta w nieaktywnej karcie, opóźnione zdarzenia i kolejki, zmianę konta,

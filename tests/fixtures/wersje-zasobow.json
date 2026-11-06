@@ -1789,7 +1789,7 @@
  },
  "vilda_persist_runtime.js": {
   "v": 26,
-  "sha256": "01e9a3ec652a28104a0231707cbaa2ac2ecdf725386c950e50e560ea7109aab6"
+  "sha256": "813ae3fe1a95ba447e7395a5fae7cd7a9224952bc7bd4c3f7a4f06cd32512345"
  },
  "vilda_persistence_adapter.js": {
   "v": 34,

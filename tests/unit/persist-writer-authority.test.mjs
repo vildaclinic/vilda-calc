@@ -203,6 +203,68 @@ describe('queued shared state retains its document and visit authority', () => {
     expect(h.win.VildaPersistence.readMainSession()).toBeNull();
   });
 
+  it.each(['captured-ui', 'doctor', 'bp-ui'])('empty shared restore removes only the %s preference-only main residue', kind => {
+    const h = harness();
+    delete h.win.VildaDataImportExport;
+    new Function('window', 'globalThis', 'document', source('vilda_data_import_export.js'))(h.win, h.win, h.document);
+    // Full synthetic browser snapshot at the first erroneous startup sex lock.
+    const main = JSON.parse(source('tests/fixtures/main-session-docpro-empty-ui.json'));
+    if (kind !== 'captured-ui') main.zscore = { resultsMode: false, dataSource: 'OLAF' };
+    if (kind === 'doctor') main.doctor = { isDoctor: true, pwzNumber: '0000000' };
+    if (kind === 'bp-ui') main.bpDataToggle = true;
+    expect(h.win.VildaDataImportExport.hasMeaningfulMainSessionData(main)).toBe(true);
+    h.win.VildaPersistence.writeMainSession(main);
+    h.win.sessionStorage.removeItem('sharedUserData');
+    h.win.vildaPersistRestoreAll();
+    expect(h.win.VildaPersistence.readMainSession()).toBeNull();
+    expect(h.fields.sex.disabled).toBe(false);
+  });
+
+  it.each([
+    ['SGA birth', { birth: { weeks: '38', weight: '2100', length: '45', hasComputed: true } }],
+    ['perinatal', { perinatal: { gestationalWeeks: 38, birthWeightGrams: 2100 } }],
+    ['puberty', { puberty: { onsetAgeYears: 11 } }],
+    ['chart annotation', { chartCreator: { annotation: 'Fikcyjna adnotacja kliniczna' } }],
+    ['bisphosphonate history', { bisphosTherapyPoints: [{ ageMonths: 120, drug: 'fictional' }] }],
+    ['DOB', { user: { dobISO: '2013-01-02' } }],
+    ['legacy DOB', { dobISO: '2013-01-02' }],
+    ['first name', { user: { firstName: 'Fikcyjna' } }],
+    ['last name', { user: { lastName: 'Przykładowa' } }],
+    ['zero completed weeks', { user: { ageWeeks: 0 } }],
+    ['explicit newborn years', { user: { age: 0 } }],
+    ['legacy explicit newborn years', { user: { age: '0' } }],
+    ['advanced patient name', { advanced: { name: 'Fikcyjna Przykładowa' } }],
+    ['growth patient name', { growthBasic: { name: 'Fikcyjna Przykładowa' } }],
+    ['measurement date', { user: { measuredAtISO: '2026-11-05' } }],
+    ['legacy Tanner', { user: { tannerStage: '2' } }],
+    ['current bone age', { advanced: { boneAgeContext: { version: 1, current: { years: 10, atAgeMonths: 132 }, last: null } } }],
+    ['previous bone age', { advanced: { data: { boneAgeContext: { version: 1, current: null, last: { years: 9, atAgeMonths: 120 } } } } }],
+    ['custom weight goal', { plan: { customGoalKg: 40 } }],
+    ['chosen diet', { plan: { dietLevel: 'balanced', dietaWybrana: true } }],
+    ['chosen PAL', { plan: { palFactor: 1.4, palWybrany: true } }],
+    ['future clinical extension', { fictionalClinicalExtension: { observation: 'Fikcyjna obserwacja' } }],
+    ['future zero observation', { fictionalClinicalExtension: 0 }],
+    ['future negative answer', { fictionalClinicalExtension: false }],
+    ['Clcr only', { clcr: { inputs: { U_Alb: '45', Ucr_spot: '100' } } }],
+    ['ordinary clinical', { user: { weight: 50, height: 160 } }],
+  ])('empty aliases preserve %s independently of preference-only metadata', (_label, extension) => {
+    const h = harness();
+    delete h.win.VildaDataImportExport;
+    new Function('window', 'globalThis', 'document', source('vilda_data_import_export.js'))(h.win, h.win, h.document);
+    const main = { version: 1, name: '', user: {}, ...clone(extension) };
+    h.win.VildaPersistence.writeMainSession(main);
+    h.win.sessionStorage.removeItem('sharedUserData');
+    h.win.vildaPersistRestoreAll();
+    expect(h.win.VildaPersistence.readMainSession()).toEqual(main);
+    // The restoration decision never edits profile sections or the draft.
+    const withPreferences = { ...main, doctor: { isDoctor: true }, zscore: { resultsMode: true }, bpDataToggle: true };
+    h.win.VildaPersistence.writeMainSession(withPreferences);
+    h.win.vildaPersistRestoreAll();
+    expect(h.win.VildaPersistence.readMainSession()).toEqual(withPreferences);
+    h.win.VildaPersistence.clearUserState({ includeSessions: true, includeModuleState: false, source: 'fictional-explicit-clear' });
+    expect(h.win.VildaPersistence.readMainSession()).toBeNull();
+  });
+
   it('an actually empty shared and main session still removes automatic residue', () => {
     const h = harness();
     delete h.win.VildaDataImportExport;

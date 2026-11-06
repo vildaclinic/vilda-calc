@@ -14,6 +14,31 @@ async function observeMainWrites(frame) {
     const nativeSet = Storage.prototype.setItem;
     const clone = value => value == null ? value : JSON.parse(JSON.stringify(value));
     const probe = window.__sessionWriterProbe = { writes: [], armed: false };
+    // A native patient save schedules the owner's 3200ms mirror replay. Its
+    // real change events also queue main/shared persistence and status work.
+    // Observe their completion without holding, flushing or retiming callbacks.
+    const pending = new Set();
+    const setTimer = window.setTimeout.bind(window), clearTimer = window.clearTimeout.bind(window);
+    probe.pendingOwnerWork = () => pending.size;
+    probe.completedOwnerReplays = 0;
+    window.setTimeout = function (callback, delay, ...args) {
+      const stack = new Error().stack || '', ms = Number(delay);
+      const replay = ms === 3200 && /\/custom-fixes\.js(?:\?|:)/.test(stack);
+      const followup = ([120, 250].includes(ms) && /\/vilda_persist_runtime\.js(?:\?|:)/.test(stack))
+        || (ms === 300 && /\/vilda_data_import_export\.js(?:\?|:)/.test(stack))
+        || (ms === 400 && /\/vilda_save_status_indicator\.js(?:\?|:)/.test(stack));
+      if (typeof callback !== 'function' || (!replay && !followup)) return setTimer(callback, delay, ...args);
+      const id = setTimer(function () {
+        try { return callback.apply(this, args); }
+        finally {
+          pending.delete(id);
+          if (replay) probe.completedOwnerReplays++;
+        }
+      }, delay);
+      pending.add(id);
+      return id;
+    };
+    window.clearTimeout = function (id) { pending.delete(id); return clearTimer(id); };
     Storage.prototype.setItem = function (...args) {
       if (!probe.armed || !['vildaMainSessionV1', 'sharedUserData'].includes(String(args[0]))) return nativeSet.apply(this, args);
       const persistence = window.VildaPersistence;
@@ -93,6 +118,8 @@ test(`${driver}: hidden same-patient DocPro cannot replace a newer Start visit o
   await expect.poll(() => start.evaluate(() => window.VildaDataImportExport.getSaveReadiness().ready)).toBe(true);
   await saveByVisibleMenu(page, start);
   await expect.poll(() => start.evaluate(() => window.VildaDataImportExport.isSaveUserDataPending())).toBe(false);
+  await start.waitForFunction(() => window.__sessionWriterProbe.completedOwnerReplays > 0
+    && window.__sessionWriterProbe.pendingOwnerWork() === 0);
   const stored = await start.evaluate(id => window.VildaVault.getPatient(id), fixture.ids.a);
   const before = await readModel(start), hidden = await readModel(docpro);
   await test.info().attach('new-visit-and-hidden-old-visit', { contentType: 'application/json',

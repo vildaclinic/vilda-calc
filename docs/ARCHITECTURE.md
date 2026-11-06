@@ -191,6 +191,26 @@ Granice te są częścią kontraktu regresyjnego. Łączenie ich ponownie zwięk
 
 Nie wolno przenosić pola między pamięcią sesji, pamięcią trwałą i danymi pochodnymi bez analizy cyklu życia, zachowania wielu kart, czyszczenia oraz odtworzenia pacjenta. Samo zachowanie jednego widoku po odświeżeniu nie wystarcza jako test.
 
+Przy odtwarzaniu `vilda_persist_runtime.js` pusty `sharedUserData` nie jest
+poleceniem usunięcia niezależnego klinicznego szkicu `vildaMainSessionV1`.
+`Pp_hasRestorableMainSession()` sprawdza odłączony widok szkicu: samo konto
+lekarza (`doctor`), tryb wyników (`zscore`) i przełącznik widoku ciśnienia
+(`bpDataToggle`) nie ustanawiają pacjenta. Odtworzenie takich ustawień jako
+wizyty blokowałoby domyślną płeć na pustym formularzu. Ta klasyfikacja nie
+modyfikuje danych ani referencji zapisu i nie zmienia globalnego predykatu
+importera ani zasad blokowania tożsamości wczytanego pacjenta.
+
+Poza wejściami rozpoznawanymi przez importer zachowywane są kliniczne sekcje
+SGA/urodzeniowe, okołoporodowe, pokwitania, adnotacje, historia bisfosfonianów,
+data urodzenia, jawny wiek zero lub tygodnie zero, data badania, kontekst wieku
+kostnego i jawne wybory planu. Niepuste nieznane rozszerzenia najwyższego
+poziomu również zachowują szkic, włącznie ze skalarnymi `0` i `false`.
+Domyślne `ageMonths: 0` bez wieku lub innych danych nie wystarcza.
+Nowe domyślne pola UI wymagają osobnej oceny tej granicy; reguła nie jest
+uniwersalnym walidatorem dowolnych zagnieżdżonych rozszerzeń. Jawne „Wyczyść”
+nadal usuwa szkic istniejącą ścieżką adaptera. Regresję ustawień bez pacjenta
+utrwala pełna syntetyczna migawka `main-session-docpro-empty-ui.json`.
+
 Wskaźnik zapisu porównuje kanoniczną projekcję wejść, bez modyfikacji sesji lub
 rekordu pacjenta. `intake.estKcalPerDay` jest wynikiem przeliczenia. Z
 `intake.history` pomijane są wyłącznie zwykłe kopie pomiarów obecnych już w
