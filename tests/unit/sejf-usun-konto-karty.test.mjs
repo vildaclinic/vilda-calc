@@ -160,6 +160,22 @@ function szpiegBajtow(o) {
   vi.spyOn(c, 'importMasterKeyFromBytes').mockImplementation(function (b) { bajty.push(b); return imp.apply(this, arguments); });
   return bajty;
 }
+// Import klucza z bajtów w oknie kończy się dla `liczba` wywołań w jednym zadaniu: każde wywołanie po prawdziwym imporcie
+// czeka, aż skończy się ostatnie (prawdziwy import kończy się w czasie zależnym od obciążenia maszyny).
+function importyRazem(o, liczba) {
+  const c = o.win.VildaCrypto;
+  const imp = c.importMasterKeyFromBytes;
+  let gotowe = 0;
+  let pusc;
+  const brama = new Promise((r) => { pusc = r; });
+  vi.spyOn(c, 'importMasterKeyFromBytes').mockImplementation(async function (...a) {
+    const w = await imp.apply(this, a);
+    gotowe += 1;
+    if (gotowe === liczba) pusc();
+    await brama;
+    return w;
+  });
+}
 const zerowe = (bajty) => bajty.map((b) => b.length > 0 && b.every((x) => x === 0));
 async function wpisRejestru(o, uid, wpis) {
   await naAtrapie(o.idb, REJESTR, ['users'], 'readwrite', (tx) => { tx.objectStore('users').put({ ...wpis, userId: uid }); });
@@ -192,6 +208,9 @@ describe('druga karta z tym samym kontem', () => {
     const o2 = await drugie(o, { zaloguj: null });
     const lB = blokady(o2);
     const odbl = odblokowania(o2);
+    // Oba logowania ustawiają sesję w jednym zadaniu (warunek „blokada dokładnie raz”): obie bramy odszyfrowania
+    // zwalniane razem, a import klucza obu logowań kończy się razem.
+    importyRazem(o2, 2);
     const h1 = wstrzymajKrypto(o2, { metoda: 'decrypt' });
     const p1 = wynik(o2.v.unlockUser(X, o.A.haslo));
     await doczekaj(h1.osiagnieta, 'pierwsze odszyfrowanie w karcie B');
