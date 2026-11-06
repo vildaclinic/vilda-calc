@@ -31,12 +31,23 @@ function uprzaz({ wlasciciel = null, sesja = null, zapis = 'ok', odpowiedz = nul
   let klatkaId = 0, timerId = 0, owner = wlasciciel, migawka = sesja, formularz = null;
   let odblokowany = !czekaNaLogowanie, gotowy = !czekaNaLogowanie;
   const ss = new Map();
-  const sejf = { isUnlocked: () => odblokowany, onUnlock: (cb) => naOdblok.push(cb), onLock() {},
+  const account = { userId: 'fikcyjne-konto' };
+  const ticket = Object.freeze({ userId: account.userId });
+  const committed = new WeakMap();
+  const sejf = {
+    getCurrentUser: () => odblokowany ? account : null,
+    captureSyncOperationSession: () => ticket,
+    assertSyncOperationSession(scope) {
+      if (!odblokowany || scope !== ticket) throw Object.assign(new Error('Obca sesja testowa'), { code: 'SESSION_CHANGED' });
+    },
+    getCommittedSavePayload: (result) => odblokowany && committed.has(result) ? structuredClone(committed.get(result)) : null, isUnlocked: () => odblokowany, onUnlock: (cb) => naOdblok.push(cb), onLock() {},
     savePatient: async (p) => {
       if (zapis !== 'ok') throw new Error('atrapa: zapis nie powiódł się');
       if (odpowiedz) return odpowiedz(p);
-      return { patientId: owner || 'fikcyjny-nowy', snapshotId: 'fikcyjna-wersja-1', isNew: !owner,
+      const result = { patientId: owner || 'fikcyjny-nowy', snapshotId: 'fikcyjna-wersja-1', isNew: !owner,
         savedAtISO: '2026-06-17T13:00:00.000Z', snapshotCount: owner ? 2 : 1, header: { name: p.name } };
+      committed.set(result, structuredClone(p));
+      return result;
     } };
   const win = { ...zdarzenia(), document, VildaVault: sejf, VildaAuthUI: { isBootReady: () => gotowy },
     updateProfessionalSummaryCard() {},
@@ -167,6 +178,10 @@ describe('P-ZAPIS-PRZED-ODTWORZENIEM — zapis pacjenta przed startowym odtworze
     expect(u.api.isMainSessionRestorePending()).toBe(true);
     u.odblokuj();
     expect(u.klatki.size, 'odtworzenie zaplanowane na klatkę, klatka wstrzymana').toBe(1);
+    expect(u.nalozone, 'oczekująca klatka nie rozpoczęła nakładania migawki').toEqual([]);
+    expect(u.api.isMainSessionRestorePending()).toBe(true);
+    expect(u.api.getSaveReadiness(), 'gotowy formularz może zapisem zastąpić niewykonane odtworzenie startowe')
+      .toEqual({ ready: true, reason: null });
     u.wpisz(40, 135);
     expect(await u.zapisz()).toBeTruthy();
     expect(u.api.isMainSessionRestorePending()).toBe(false);

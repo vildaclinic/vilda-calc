@@ -68,7 +68,7 @@ export function patchDietPendingSessionRestore(source) {
   if (source.includes('/* P-DIET-PENDING-RESTORE: source')) return source;
   source = once(source, 'function vildaDietaPoWczytaniu(p){', pendingDietRestoreSource + 'function vildaDietaPoWczytaniu(p){vildaRememberPendingDietRestore(p);');
   source = once(source, 'dietLevel:(f("dietLevel")||{}).value||null,/* P-DIETA-AUDYT2 A1 */dietaWybrana:r.__vildaDietLevelTouched===!0', '...vildaDietPlanForCapture(readOnlyCapture)');
-  source = once(source, 'function Rt(e){ownSaveBlankAgeWitness=null;', 'function Rt(e){vildaClearPendingDietRestore();ownSaveBlankAgeWitness=null;');
+  source = once(source, 'function Rt(e){invalidateSaveScope();saveClearDepth+=1;try{', 'function Rt(e){invalidateSaveScope();saveClearDepth+=1;try{vildaClearPendingDietRestore();');
   source = once(source, 'function sa(e){Bdob0();', 'function sa(e){vildaClearPendingDietRestore();Bdob0();');
   source = once(source, 'if(!e||typeof e!="object")return!1;ownSaveBlankAgeWitness=null;const applySequence=', 'if(!e||typeof e!="object")return!1;vildaResetIncomingDietRestore(e.plan);ownSaveBlankAgeWitness=null;const applySequence=');
   source = once(source, 'rememberIncomingMainSessionCarry(u);/* P-ODTWORZ-WIEK:', 'vildaResetIncomingDietRestore(u.plan);rememberIncomingMainSessionCarry(u);/* P-ODTWORZ-WIEK:');

@@ -609,6 +609,17 @@ z DocPro mogło więc zastąpić nowsze pola pełnej sesji starszą kopią wspó
 Jawne wczytanie pacjenta i przywrócenie zapisu nadal rozsyłają dotychczasowy
 sygnał; lokalne zdarzenia zakończenia odtwarzania sesji pozostają aktywne.
 
+Potwierdzenie własnego zapisu i odczyt bieżącego formularza są rozdzielone
+(P-ZAPIS-POTWIERDZONY). Sejf udostępnia odłączoną treść rzeczywiście zatwierdzonej
+wersji przez dowód związany z wynikiem operacji i sesją konta, przechowywany
+wyłącznie w RAM. Importer wiąże go z pacjentem i sekwencją wczytania, a wskaźnik
+ustanawia referencję z tej treści. Ponowny odczyt formularza jedynie porównuje
+stan; nie może potwierdzić edycji powstałej po zatwierdzeniu. Ogólne powiadomienie
+sejfu nie jest takim dowodem. Zapis sprawdza gotowość rzeczywistych producentów
+odtwarzania przed zebraniem danych i przed wywołaniem sejfu; zwykły debounce
+edycji nie blokuje świadomego zapisu. Mechanizm nie odczytuje ponownie całej
+historii pacjenta. Szczegóły i regresje: `docs/clinical/ALGORITHMS.md`.
+
 ### 5. Synchronizacja
 
 Publiczne moduły `vilda_sync.js`, `vilda_sync_integration.js` i `vilda_realtime.js` integrują aplikację z opcjonalną usługą synchronizacji. Szczegóły infrastruktury i kod usługi nie powinny być kopiowane do publicznych zgłoszeń.

@@ -30,6 +30,8 @@ function environment() {
     hasMeaningfulMainSessionData: value => Boolean(value?.name),
   };
   loadBrowserScript('vilda_data_import_export.js', win);
+  // This event-routing fixture models the owned form without DOM inputs.
+  win.VildaDataImportExport.captureCurrentUserDataReadOnly = () => JSON.parse(JSON.stringify(payload));
   loadBrowserScript('vilda_save_status_indicator.js', win);
   // The indicator is active only after the vault unlock callback (as in the browser after login).
   win.VildaSaveStatusIndicator._onUnlock();

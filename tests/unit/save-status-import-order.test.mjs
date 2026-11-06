@@ -1,11 +1,17 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { loadBrowserScript } from '../support/load-browser-script.mjs';
 
+const clone = value => value == null ? value : JSON.parse(JSON.stringify(value));
+
 // Actual importer + indicator. All records are fictional; no vault authentication.
 function environment() {
   const events = { document: {}, window: {} };
   const storage = new Map();
   const savedListeners = [];
+  const records = new Map();
+  const committedSavePayloads = new WeakMap();
+  const ownerId = 'fictional-import-order-owner';
+  let snapshotSequence = 0;
   let payload = { name: 'Fikcyjna Pierwsza', user: { sex: 'F', age: 8, height: 126, weight: 25 } };
   const on = target => (type, listener) => { (events[target][type] ||= []).push(listener); };
   const emit = (target, type, detail) => {
@@ -32,18 +38,33 @@ function environment() {
     location: { pathname: '/index.html' },
     VildaVault: {
       isUnlocked: () => true,
+      getCurrentUser: () => ({ userId: ownerId }),
+      captureSyncOperationSession: () => Object.freeze({ userId: ownerId }),
+      assertSyncOperationSession(token) {
+        if (token.userId !== ownerId) throw Object.assign(new Error('Fikcyjny obcy zapis.'), { code: 'SESSION_CHANGED' });
+      },
       onPatientSaved: listener => savedListeners.push(listener),
       async savePatient(value) {
-        const saved = { patientId: 'fictional-first', header: { name: value.name }, snapshotCount: 1 };
+        const patientId = 'fictional-first', snapshotId = `fictional-import-snapshot-${++snapshotSequence}`;
+        const savedAtISO = new Date().toISOString();
+        const previous = records.get(patientId)?.snapshots || [];
+        records.set(patientId, { patientId, snapshots: [{ snapshotId, savedAtISO, payload: clone(value) }, ...previous] });
+        const saved = { patientId, snapshotId, savedAtISO, header: { name: value.name }, snapshotCount: previous.length + 1 };
+        committedSavePayloads.set(saved, clone(value));
         savedListeners.forEach(listener => listener(saved));
         return saved;
       },
+      getPatient: vi.fn(async patientId => clone(records.get(patientId) || null)),
+      getCommittedSavePayload: result => clone(committedSavePayloads.get(result) || null),
     },
-    VildaPersistence: { readMainSession: () => payload, isClearInProgress: () => false },
+    VildaPersistence: { readMainSession: () => clone(payload), isClearInProgress: () => false },
     collectUserData: () => payload,
     hasMeaningfulMainSessionData: value => Boolean(value?.name),
   };
   loadBrowserScript('vilda_data_import_export.js', win);
+  // This ordering fixture has a model instead of DOM controls. Display reads
+  // its detached live value; saving still runs the real importer and vault API.
+  win.VildaDataImportExport.captureCurrentUserDataReadOnly = () => clone(payload);
   loadBrowserScript('vilda_save_status_indicator.js', win);
   const imported = [];
   on('document')('vilda:json-imported', event => imported.push(event.detail));
@@ -70,7 +91,7 @@ function environment() {
       storage.delete('vildaCurrentPatientId');
     },
     setPatient(patientId) { storage.set('vildaCurrentPatientId', patientId); },
-    save: () => win.VildaDataImportExport.saveUserData({ collectUserData: () => payload }),
+    save: () => win.VildaDataImportExport.saveUserDataWithReceipt({ collectUserData: () => clone(payload) }),
     emitLoad: detail => emit('document', 'vilda:patient-loaded', detail),
     emitImport: detail => emit('document', 'vilda:json-imported', detail),
   };
@@ -168,7 +189,12 @@ describe('save indicator follows the import operation instead of a 500 ms window
     const env = environment();
     env.apply();
     env.setPatient('fictional-first');
-    await env.save();
+    const receipt = await env.save();
+    expect(receipt).toMatchObject({ saved: true, patientId: 'fictional-first', snapshotId: 'fictional-import-snapshot-1' });
+    expect(env.win.VildaVault.getPatient).not.toHaveBeenCalled();
+    const committed = await env.win.VildaVault.getPatient(receipt.patientId);
+    expect(committed.snapshots[0].snapshotId).toBe(receipt.snapshotId);
+    expect(committed.snapshots[0].payload.name).toBe('Fikcyjna Pierwsza');
     vi.setSystemTime(Date.now() + 2000);
     vi.advanceTimersByTime(300);
     expect(env.indicator.getState()).toBe('saved');

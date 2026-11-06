@@ -18,7 +18,7 @@
 // złożonej (4. parametr) albo zapamiętuje sesję (Bses_opcje) przed wywołaniem rdzenia Bpz_zapisWSesji i zamienia błąd
 // po zmianie sesji na Bpz_przerwany(); w rdzeniu
 // `Bpz_pilnuj(Bpz_s);` stoi tuż przed i tuż po każdym `await I().put…`, zaraz po `await Bz1(…)` z catch, jako pierwsza
-// instrukcja Bpz_sekcja i tuż przed Bzu_zapamietaj (bez await do Vn); wstawek jest dokładnie 11.
+// instrukcja Bpz_sekcja i tuż przed Bcommit_remember → Bzu_zapamietaj (bez await do Vn); wstawek jest dokładnie 11.
 //
 // Prawdziwe vilda_crypto.js, vilda_retention.js i vilda_vault.js na wspólnej uprzęży: konto A zalogowane i konto B
 // zablokowane na jednym magazynie w pamięci z rejestrem wywołań, atrapa Web Locks i crypto.subtle z rejestrem.
@@ -39,7 +39,7 @@
 //   K    kontrole: te same haki bez przełączenia — zapis dochodzi do tego samego punktu i kończy się jak dotąd w A.
 //   S1   strażnik: opakowanie Bpz_zapis (sesja operacji albo sesja przed rdzeniem, rdzeń wołany tylko przez opakowanie,
 //        zamiana błędu).
-//   S2   strażnik: wstawki Bpz_pilnuj(Bpz_s) w rdzeniu (put, Bz1 + catch, Bpz_sekcja, Bzu_zapamietaj, liczba 11).
+//   S2   strażnik: wstawki Bpz_pilnuj(Bpz_s) w rdzeniu (put, Bz1 + catch, Bpz_sekcja, Bcommit_remember → Bzu_zapamietaj, liczba 11).
 //
 // Czerwone na audycie sprzed zmiany (sprawdzone na 2af9de53 i c209fa6b): P0, P1, P4, P7, P8, P10, P11, P12, P13 oraz S1 i S2.
 // Zielone na audycie sprzed zmiany: K (każdy punkt).
@@ -259,7 +259,7 @@ describe('P-SESJA-ZAPISU: strażnik źródła sejfu (vilda_vault.js)', () => {
     expect(blad).toMatch(/Zapis przerwany/);
   });
 
-  it('S2: rdzeń Bpz_zapisWSesji — Bpz_pilnuj(Bpz_s) przy każdym await I().put…, po Bz1 z catch, na początku Bpz_sekcja i przed Bzu_zapamietaj; 11 wstawek', () => {
+  it('S2: rdzeń Bpz_zapisWSesji — Bpz_pilnuj(Bpz_s) przy każdym await I().put…, po Bz1 z catch, na początku Bpz_sekcja i przed Bcommit_remember → Bzu_zapamietaj; 11 wstawek', () => {
     expect(src.includes('async function Bpz_zapisWSesji('), 'rdzeń zapisu Bpz_zapisWSesji w vilda_vault.js').toBe(true);
     const rdzen = wytnijFunkcje(src, 'Bpz_zapisWSesji');
 
@@ -283,10 +283,15 @@ describe('P-SESJA-ZAPISU: strażnik źródła sejfu (vilda_vault.js)', () => {
 
     const pamiec = rdzen.indexOf('Bzu_zapamietaj(');
     expect(pamiec).toBeGreaterThan(-1);
-    expect(przedKomentarzami(rdzen.slice(0, pamiec)).endsWith(PILNUJ), 'Bpz_pilnuj tuż przed Bzu_zapamietaj').toBe(true);
+    const pochodzenie = rdzen.indexOf('Bcommit_remember(');
+    expect(pochodzenie, 'pochodzenie utrwalonej treści przed pamięcią wersji').toBeGreaterThan(-1);
+    expect(pochodzenie).toBeLessThan(pamiec);
+    expect(przedKomentarzami(rdzen.slice(0, pochodzenie)).endsWith(PILNUJ), 'Bpz_pilnuj tuż przed publikacją pochodzenia zapisu').toBe(true);
+    expect(rdzen.slice(pochodzenie, pamiec), 'bezpośrednio po strażniku tylko potwierdzony wynik, jego dokładny JSON i początkowa sesja')
+      .toBe('Bcommit_remember(f,Bk0.Bcommit_json,Bcommit_scope);');
     const vn = rdzen.indexOf('Vn(', pamiec);
     expect(vn, 'powiadomienie Vn po Bzu_zapamietaj').toBeGreaterThan(pamiec);
-    expect(rdzen.slice(pamiec, vn), 'od ostatniego sprawdzenia do Vn bez await').not.toMatch(/\bawait\b/);
+    expect(rdzen.slice(pochodzenie, vn), 'od ostatniego sprawdzenia przez publikację pochodzenia i pamięć wersji do Vn bez await').not.toMatch(/\bawait\b/);
 
     expect(wszystkie(rdzen, /Bpz_pilnuj\(\s*Bpz_s\s*\)\s*;/).length, 'liczba sprawdzeń sesji w rdzeniu').toBe(11);
   });
