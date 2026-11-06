@@ -213,15 +213,15 @@ test('guest shell: Save and Documents keep one line inside 44px actions with fal
     await page.setViewportSize({ width, height: 1000 });
     for (const fontFamily of fonts) await test.step(`${width}px, ${fontFamily}`, async () => {
       // Only the platform font changes; all dimensions, spacing and wrapping
-      // come from production CSS, including the required 16px font size.
+      // come from production CSS, including the accepted 14px menu font size.
       await actions.evaluateAll((buttons, family) => {
         for (const button of buttons) button.style.fontFamily = family;
       }, fontFamily);
       for (const action of await actions.all()) {
         await expect(action).toBeVisible();
-        await expect(action).toHaveCSS('font-size', '16px');
+        await expect(action).toHaveCSS('font-size', '14px');
         const label = action.locator(':scope > span').last();
-        await expect(label).toHaveCSS('font-size', '16px');
+        await expect(label).toHaveCSS('font-size', '14px');
         const geometry = await label.evaluate(node => {
           const button = node.parentElement.getBoundingClientRect();
           const range = document.createRange(); range.selectNodeContents(node);
@@ -240,6 +240,17 @@ test('guest shell: Save and Documents keep one line inside 44px actions with fal
       }
     });
   }
+  // Guest Clear has the same local-only policy as the existing form button;
+  // account-dependent save actions must not make this separate action inert.
+  await owner.locator('#firstName').fill('Fikcyjny gość Wyczyść');
+  await owner.locator('#height').fill('150');
+  const clear = menu.getByRole('button', { name: 'Wyczyść', exact: true });
+  await expect(clear).toBeEnabled();
+  await expect(clear).toHaveCSS('font-size', '14px');
+  await clear.click();
+  await expect(owner.locator('#height')).toHaveValue('');
+  await expect(owner.locator('#firstName')).toHaveValue('');
+  await expect(owner.getByRole('dialog', { name: /^Zapisać (wpisane dane|zmiany) przed wyczyszczeniem\?$/u })).toHaveCount(0);
 });
 
 test.describe('physical iPhone inline status', () => {

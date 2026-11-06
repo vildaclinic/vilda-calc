@@ -167,8 +167,8 @@ test('Podsumowanie B: oddzielone wyniki bez chipów, turkusowa norma i niezmieni
   for (const key of ['bmi', 'cole']) {
     const row = main.locator(`[data-summary-key="${key}"]`);
     await expect(row).toHaveAttribute('data-assessment', 'normal');
-    expect(await row.evaluate(el => getComputedStyle(el).color)).toBe('rgb(0, 109, 115)');
-    expect(await row.evaluate(el => getComputedStyle(el).backgroundColor)).toBe('rgb(237, 248, 246)');
+    await expect(row).toHaveCSS('color', 'rgb(0, 109, 115)');
+    await expect(row).toHaveCSS('background-color', 'rgb(237, 248, 246)');
   }
   for (const key of ['velocity-sds', 'bsa']) {
     await expect(main.locator(`[data-summary-key="${key}"]`)).toHaveAttribute('data-assessment', 'unassessed');

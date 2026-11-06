@@ -132,13 +132,16 @@ describe('Saved Klirens: existing timed-urine production arithmetic', () => {
     expect(result.phSnapshot.policy).toEqual({ id: w.VildaClcrPhReferenceData.DEFAULT_POLICY.id, version: w.VildaClcrPhReferenceData.DEFAULT_POLICY.version });
   });
 
-  it('retains the existing EAU context and collection validation for the separate pH24 calculation', () => {
+  it('uses the approved general DZM interval without grading therapy and retains a number for an unsuitable collection', () => {
     const ph = calculate('pH24', { age: '30', pH24: 7.8, stoneKnownCystinuria: true, stonePhPersistent: true, stoneCollectionPlausibilityReviewed: true, stoneTwoCollectionsConfirmed: true });
-    expect(ph.tone).toBe('success');
-    expect(ph.reference.kind).toBe('stone-target');
-    expect(ph.norm).toContain('7,5');
-    expect(calculate('pH24', { pH24: 6.1, collectionNoSpillage: false }).valueNum).toBe(6.1);
-    expect(() => calculate('pH24', { pH24: 6.1, collectionNoSpillage: false, ui_collectionNoSpillage_answer: 'no' })).toThrow(/błędną/);
+    expect(ph).toMatchObject({ valueNum: 7.8, rawValue: 7.8, tone: 'success', assessment: 'within', category: null, norm: '4,5–8,0' });
+    expect(ph.phDzmSnapshot.reference).toMatchObject({ kind: 'interval', lower: 4.5, upper: 8, sourceIds: ['MAYO_UPH24'] });
+    expect(ph.phDzmSnapshot.restrictions.treatmentEfficacyAssessment).toBe(false);
+    expect(ph.phDzmSnapshot.knownFacts).not.toHaveProperty('stoneKnownCystinuria');
+    expect(calculate('pH24', { pH24: 6.1, collectionNoSpillage: false })).toMatchObject({ valueNum: 6.1, assessment: 'within' });
+    const unsuitable = calculate('pH24', { pH24: 6.1, collectionNoSpillage: false, ui_collectionNoSpillage_answer: 'no' });
+    expect(unsuitable).toMatchObject({ valueNum: 6.1, rawValue: 6.1, norm: '', tone: 'neutral', outOfRange: null, assessment: 'unassessed' });
+    expect(unsuitable.phDzmSnapshot.collection).toMatchObject({ complete: false, knownProblems: ['collectionNoSpillage'] });
   });
 
   it('uses the actual TmP/GFR producer without saving TRP as a second output', () => {

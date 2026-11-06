@@ -8989,6 +8989,81 @@ Regresje obejmują granice2/7/13/18, obie płcie, równości P95,
 live/editor/save/read, oddzielne serie, reset/pacjenta, desktop/mobile
 i PWA offline. Wykonane kontrole oraz końcowy SHA raportuje PR.
 
+#### P-KLIRENS-PH-DZM-2026-11-06 — jedno pH DZM, norma ogólna i spójna historia
+
+Właściciel zaakceptował [makietę przed/po desktop/mobile](https://vilda-ph-dzm-20261106.maciej-flader.chatgpt.site)
+i polecił implementację („ok, koduj to”). Baza: `83fa1193`.
+Zakres `pH24` pozostaje odrębny od `pH_spot`; pełne źródła, populacje,
+ograniczenia i kontrakty: [KLIRENS_PH_DZM_AUDIT.md](KLIRENS_PH_DZM_AUDIT.md).
+To zmiana kliniczna i funkcjonalna, bez deklaracji niezależnej walidacji.
+
+**Jedno wymagane pole:** pH zmierzone w DZM, bez jednostki fizycznej,
+objętości, czasu wpisywanego do wzoru, antropometrii, wieku, płci,
+kreatyniny lub ankiety o leczenie. Świeży formularz zakłada DZM 24 h;
+to opisane założenie, nie ustalony fakt pobrania. pH nie skaluje się
+przez `24/czas` ani nie oblicza jako średniej punktowych pH.
+Znana niezgodna próbka/konserwacja, inny czas lub problem zbiórki
+zachowują znaczenie i wyłączają fizjologiczne porównanie, zachowując
+wyraźnie opisany odczyt liczbowy. Stare nieznane metadane nie stają się
+potwierdzonym protokołem; fakty próbki punktowej nie są faktami DZM.
+
+**Norma jako dane:** `VildaClcrPhDzmReferenceData` w
+`clcr_ph_dzm_reference_data.js`, polityka **`PH_DZM_MAYO_UPH24_2026_11`
+v1**, profil **`MAYO_UPH24`**, jest argumentem
+`VildaClcrPhDzm.evaluate(input, policy)`. **Mayo UPH24 — pH, 24 Hour,
+Urine**, [katalog DZM](https://www.mayocliniclabs.com/test-catalog/overview/606521)
+i [katalog pediatryczny](https://pediatric.testcatalog.org/show/UPH24),
+odczyt 06.11.2026: **4,5–8,0 włącznie**, pH-metr, brak podziału wieku
+i płci. Podpis brzmi **„Norma ogólna”**, nie „Norma dla wieku”.
+Źródło nie potwierdza osobnej walidacji wcześniaczej/neonatalnej ani
+metody lub laboratorium próbki pacjenta. Nie kopiuje się profilu
+przypadkowej próbki `PHU_` jako źródła DZM.
+
+Jedna karta B pokazuje wartość, neutralną liczbowo normę, wyraźne granice
+skali i krótki komentarz. **<4,5 / >8,0** są bursztynowe; równości należą
+do zakresu. Nie dodaje się czerwonego progu pilności. **5,2** jest
+w zakresie ogólnym, a kwaśny odczyn sprzyja krystalizacji kwasu moczowego.
+Zakres ogólny nie wyklucza kamicy, zakażenia ani zaburzeń zakwaszania.
+
+Szczegóły rozdzielają zakres od progów pomocniczych
+[EAU 2026, §4.1.2 i tabela 4.2](https://uroweb.org/guidelines/urolithiasis/chapter/metabolic-evaluation-and-recurrence-prevention):
+**<5,5** — nadmiernie kwaśny mocz w ocenie kamicy dorosłych;
+**DZM >6,2** samo nie rozpoznaje RTA — opisany wzorzec wymaga drugiej
+porannej próbki na czczo **>5,8**, wykluczenia ZUM i kontekstu klinicznego.
+Karta nie nadaje automatycznej kategorii RTA ani skuteczności terapii.
+Alkalizację kontroluje się w świeżych porcjach o różnych porach dnia,
+nie jednym pH wymieszanej DZM. Cele chorobowo swoiste nie są normą
+ogólną lub normą wieku i nie tworzą nowego selektora leczenia.
+
+Pomiar przed zakwaszeniem/alkalizacją porcji, właściwe chłodzenie lub
+dopuszczony konserwant: Williams i wsp., Urolithiasis 2021;49:1–16,
+[DOI 10.1007/s00240-020-01217-3](https://doi.org/10.1007/s00240-020-01217-3),
+pełny tekst wydawcy, Q5–Q6 i Q10. Kwas borowy uniemożliwia prawidłowy
+pomiar pH; nie każdy konserwant jest niezgodny. Mayo w swoim protokole
+odrzuca >8 jako możliwe zanieczyszczenie; aplikacja odczytująca raport
+zaleca weryfikację wyniku/warunków, bez automatycznego rozpoznania ZUM.
+
+**Spójność:** techniczne **0–14 włącznie** obowiązuje w formularzu,
+gotowości, zapisie i edytorze; to nie norma fizjologiczna. Zastępuje
+rozbieżność maksimum 9 live i 14 w edytorze. Surowa liczba pozostaje
+dokładna w `valueNum`; ocena poprzedza formatowanie. Nowy
+`phDzmSnapshot`, schemat **`clcr-ph-dzm` v1**, zamraża wejście,
+materiał/fakty, wynik, źródło/populację/wersję i normę z oceną.
+READ nie przelicza dzisiejszym silnikiem. Stare dane bez wiarygodnej
+oceny pozostają neutralne (`outOfRange:null`); techniczne dawne `false`
+nie potwierdza porównania. Świadoma edycja stosuje aktualne te same
+reguły co live, zachowując znane ograniczenia. Nie migruje się realnych
+danych ani nie łączy historii DZM i próbki punktowej.
+
+**Syntetyczne kontrakty:** brak wieku/masy/objętości +5,2 →5,2,
+`within`, norma 4,5–8,0; dziecko10 lat otrzymuje ten sam ogólny profil.
+4,5 i 8 →`within`; 4,4999 →`low`, dokładny zapis4,4999;
+8,0001 →`high`, dokładny zapis8,0001. 10 jest dopuszczonym technicznie
+odczytem powyżej normy; 0/14 wymagają weryfikacji, a −1/15/nieliczbowe
+wejście są błędem. Znane 12 h lub zakwaszenie +5,2 →5,2 bez normy,
+bez przeliczenia na 24 h. ZUM +8,2 nie otrzymuje komentarza o liczbie
+mieszczącej się w zakresie. Kontrole wykonane dla końcowego SHA raportuje PR.
+
 #### P-KLIRENS-DZM-CZAS-NOTATKI-WYBOR-2026-10-28 — wspólne24h i prowadzenie formularza
 
 Decyzja właściciela: nowe DZM mają rzeczywiście wpisane domyślne24h; puste pole nie blokuje, jawny dodatni inny czas pozostaje, zero/ujemne/błędny zapis wymagają korekty. To jawne założenie użytkowe, nie ustalony fakt o próbce. Pełna zbiórka jest założeniem bez sześciu potwierdzeń; znane negatywne fakty nadal blokują. `ClcrCollectionDuration` jest wspólne dla cl24 i wydalań Ca/UA/Mg/Pi/białka/Na/K/Ox/Cit. pH nie jest mnożone przez24/czas; ilorazy i luka surowicy nie dostają pytania o czas. [DZM_COLLECTION_DURATION.md](DZM_COLLECTION_DURATION.md) podaje kontrakt i wpływ względem poprzednich bramek dat/protokołu.

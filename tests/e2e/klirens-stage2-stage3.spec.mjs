@@ -218,7 +218,13 @@ test('dorosły panel kamicy przelicza masę i mmol oraz stosuje EAU i odrębny p
   await expect(stone).toContainText('przekracza próg EAU 4,0 mmol/24 h');
   await expect(citrate).toContainText('Mała ilość cytrynianów osłabia ochronę przed tworzeniem złogów wapniowych');
   await expect(stone).toContainText('ogólnego celu EAU 2,5 L/24 h');
-  await expect(stone).toContainText('wzorzec hiperkwasowego moczu');
+  const dzmPh = stone.locator('.clcr-result-card[data-clcr-series="pH24"]');
+  await expect(dzmPh).toHaveCount(1);
+  await expect(dzmPh).toHaveAttribute('data-clcr-value', '5.4');
+  await expect(dzmPh).toHaveAttribute('data-clcr-tone', 'normal');
+  await expect(dzmPh).toContainText('4,5–8,0');
+  await expect(dzmPh).toContainText('Kwaśny odczyn sprzyja krystalizacji kwasu moczowego');
+  await expect(stone).not.toContainText('wzorzec hiperkwasowego moczu');
   await expect(stone).not.toContainText('mg/kg/24 h');
 });
 
@@ -407,7 +413,7 @@ test('progi DZM pozostają wstrzymane, gdy bieżąca zbiórka nie trwa dokładni
   await expect(stone).not.toContainText('przekracza 8,0 mmol/24 h');
 });
 
-test('wynik kamicowy nie zaokrągla przez próg i wymaga powtarzalnego profilu pH', async ({ page }) => {
+test('wynik kamicowy zachowuje próg cystyny, a pH DZM dokładny odczyt z własną normą', async ({ page }) => {
   await openCalculator(page);
   await setPatient(page, { age: 50, sex: 'F' });
   await completeTimedCollection(page);
@@ -424,12 +430,17 @@ test('wynik kamicowy nie zaokrągla przez próg i wymaga powtarzalnego profilu p
   const stone = page.locator('#stoneInfo');
   await expect(stone).toContainText(/Cystyna\s*w\s*DZM:\s*>0[.,]125\s*mmol\/24\s*h/);
   await expect(stone).toContainText('przekracza 0,125 mmol/24 h');
-  await expect(stone).toContainText('nie potwierdzono profilu w powtarzanych pomiarach');
+  const dzmPh = stone.locator('.clcr-result-card[data-clcr-series="pH24"]');
+  await expect(dzmPh).toHaveAttribute('data-clcr-value', '5.4999');
+  await expect(dzmPh.locator('.clcr-result-value')).toHaveText('5,4999');
+  await expect(dzmPh).toContainText('Norma ogólna');
+  await expect(dzmPh).toContainText('Kwaśny odczyn sprzyja krystalizacji kwasu moczowego');
   await expect(stone).not.toContainText('wzorzec hiperkwasowego moczu');
+  const before = JSON.parse(await dzmPh.getAttribute('data-clcr-ph-dzm-snapshot'));
 
   await zaznacz(page.locator('#stonePhPersistent'));
-  await expect(stone).toContainText(/pH\s*czasowej\s*zbiórki:\s*<5[.,]50/);
-  await expect(stone).toContainText('wzorzec hiperkwasowego moczu');
+  expect(JSON.parse(await dzmPh.getAttribute('data-clcr-ph-dzm-snapshot'))).toEqual(before);
+  await expect(stone).not.toContainText('wzorzec hiperkwasowego moczu');
 
   await zaznacz(page.locator('#stoneKnownCystinuria'));
   await expect(stone).toContainText(
@@ -438,7 +449,7 @@ test('wynik kamicowy nie zaokrągla przez próg i wymaga powtarzalnego profilu p
   await expect(stone).not.toContainText('przekracza 0,125 mmol/24 h');
 });
 
-test('pH drugiego porannego moczu nie jest zaokrąglane wstecz przez próg dRTA', async ({ page }) => {
+test('pH DZM i drugiego porannego moczu zachowują dokładność oraz odrębne porównania bez automatycznej diagnozy RTA', async ({ page }) => {
   await openCalculator(page);
   await setPatient(page, { age: 50, sex: 'F' });
   await completeTimedCollection(page);
@@ -457,14 +468,21 @@ test('pH drugiego porannego moczu nie jest zaokrąglane wstecz przez próg dRTA'
   await page.locator('#U_pH').fill('5.8004');
 
   const stone = page.locator('#stoneInfo');
-  await expect(stone).toContainText(/pH\s*czasowej\s*zbiórki:\s*>6[.,]20/);
+  const dzmPh = stone.locator('.clcr-result-card[data-clcr-series="pH24"]');
+  await expect(dzmPh).toHaveAttribute('data-clcr-value', '6.2004');
+  await expect(dzmPh.locator('.clcr-result-value')).toHaveText('6,2004');
+  await expect(dzmPh).toHaveAttribute('data-clcr-tone', 'normal');
+  await expect(dzmPh).toContainText('4,5–8,0');
+  const dzmSnapshot = JSON.parse(await dzmPh.getAttribute('data-clcr-ph-dzm-snapshot'));
+  expect(dzmSnapshot.reference.sourceIds).toContain('MAYO_UPH24');
   // The audited single-sample card preserves every entered decimal instead of
   // substituting the former >5.80 boundary label from the separate EAU context.
   const spotPh = stone.locator('.clcr-result-card[data-clcr-series="pH_spot"]');
   await expect(spotPh).toHaveAttribute('data-clcr-value', '5.8004');
   await expect(spotPh).toHaveAttribute('data-clcr-display-value', '5,8004');
   await expect(spotPh.locator('.clcr-result-value')).toHaveText('5,8004');
-  await expect(stone).toContainText('spełniają przesiewowy wzorzec EAU');
+  await expect(stone).not.toContainText('spełniają przesiewowy wzorzec EAU');
+  await expect(page.locator('#clcr-ph-dzm-details')).toContainText('Samo pH DZM >6,2 nie rozpoznaje kwasicy cewkowej');
   const dotSnapshot = JSON.parse(await spotPh.getAttribute('data-clcr-ph-snapshot'));
   expect(dotSnapshot.input.urinePh).toBe('5.8004');
 
@@ -480,21 +498,22 @@ test('pH drugiego porannego moczu nie jest zaokrąglane wstecz przez próg dRTA'
     input: { ...dotSnapshot.input, urinePh: '5,8004' }
   });
   await expect(page.locator('#pH24')).toHaveValue('6.2004');
-  await expect(stone).toContainText(/pH\s*czasowej\s*zbiórki:\s*>6[.,]20/);
-  await expect(stone).toContainText('spełniają przesiewowy wzorzec EAU');
-  // An input rejected by the pH reader must not silently become a qualifying
-  // second-morning pH in another consumer of the same measurement.
+  expect(JSON.parse(await dzmPh.getAttribute('data-clcr-ph-dzm-snapshot'))).toEqual(dzmSnapshot);
+  await expect(stone).not.toContainText('spełniają przesiewowy wzorzec EAU');
+  // An invalid spot value must remove its own card without changing the
+  // independently measured DZM value or manufacturing a qualifying RTA screen.
   for (const invalid of ['0x6', '0b110', '15', '5.8000000000000000004']) {
     await page.locator('#U_pH').fill(invalid);
     await expect(spotPh).toHaveCount(0);
     expect(await page.evaluate(() => window.evaluateClcrPh().valid)).toBe(false);
     await expect(stone).not.toContainText('spełniają przesiewowy wzorzec EAU');
-    await expect(stone).toContainText('potrzebne są także pH drugiego porannego');
+    expect(JSON.parse(await dzmPh.getAttribute('data-clcr-ph-dzm-snapshot'))).toEqual(dzmSnapshot);
     await expect(page.locator('#pH24')).toHaveValue('6.2004');
   }
   await page.locator('#U_pH').fill('5,8004');
   await expect(spotPh).toHaveAttribute('data-clcr-value', '5.8004');
-  await expect(stone).toContainText('spełniają przesiewowy wzorzec EAU');
+  await expect(stone).not.toContainText('spełniają przesiewowy wzorzec EAU');
+  expect(JSON.parse(await dzmPh.getAttribute('data-clcr-ph-dzm-snapshot'))).toEqual(dzmSnapshot);
 });
 
 test('Kt/V pokazuje exact GFAC, eKt/V, URR i warunkową ocenę z aktualnym Kru', async ({ page }) => {

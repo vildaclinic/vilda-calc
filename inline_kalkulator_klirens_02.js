@@ -1,6 +1,5 @@
 (function () {
   const C = { basic: "basic", advanced: "advanced", spot: "spot", pro: "pro" },
-    timedCollectionDurationFields = Object.freeze(["Cl24DurationHours"]),
     ktvSamplingProtocol = Object.freeze([
       "ktvPostMethod",
       "ktvSameSession",
@@ -352,9 +351,10 @@
       },
       {
         id: "pH24",
-        label: "pH dobowej zbi\xF3rki (24\xA0h)",
+        label: "pH dobowej zbiórki moczu",
         version: "pro",
-        requires: ["pH24", ...timedCollectionDurationFields],
+        requires: ["pH24"],
+        note: "Wpisz zmierzone pH z raportu DZM. Przyjmujemy zbiórkę 24-godzinną; wyniku pH nie przeliczamy przez czas ani objętość.",
       },
       {
         id: "KTV",
@@ -384,7 +384,6 @@
       r = new Set([]),
       timedCollectionIds = new Set([
         "Prot_mgkg", "Na_mmol_d", "K_mmol_d",
-        "pH24",
       ]),
       timedCollectionRequirements = ["Cl24DurationHours"];
     l.forEach((t) => {
