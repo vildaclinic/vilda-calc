@@ -275,7 +275,7 @@ describe('druga karta z tym samym kontem', () => {
     const od = poZmianie(o, X);
     expect(kod(await wynik(o2.v.listPatients())).ok, 'listPatients w zablokowanej karcie B').toBe(false);
     expect(kod(await wynik(o2.v.listPasskeys(X)))).toEqual({ ok: false, kod: 'ACCOUNT_REMOVED', komunikat: TEKST_USUNIETE });
-    // Log atrapy nie wskazuje okna: od versionchange A tylko usuwa wpis rejestru i blokuje sejf (bez otwarcia bazy X),
+    // Log atrapy nie wskazuje okna: od versionchange karta A nie otwiera bazy X,
     // więc każde otwarcie bazy X w logu byłoby otwarciem w karcie B.
     expect(wpisyOd(o, od, 'open', BAZA(X)), 'otwarcia bazy X od versionchange').toEqual([]);
     expect(bazy(o)).toEqual([REJESTR]);
