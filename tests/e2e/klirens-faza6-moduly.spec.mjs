@@ -5,16 +5,18 @@ import { expect, test } from '@playwright/test';
 //   • spot ratio            → ACR   (albumina/kreatynina)
 //   • frakcja wydalania     → FENa  (elektrolity)
 //   • dobowa zbiórka (DZM)  → cl24  (klirens kreatyniny 24 h)
-//   • dializa               → Kt/V  (URR + spKt/V — moduł dwuwynikowy)
+//   • dializa               → Kt/V  (URR i spKt/V — dwa osobne wybory i zapisy)
 // Sens: KAŻDY moduł zapisuje standardową patientNote (category "wynik-klirens")
 // tą samą szyną co eGFR. To domyka „twardówkę" — jeden mechanizm zapisu dla
 // wszystkich formuł, więc eksport/import i wspólna oś czasu działają wszędzie.
 // Sejf syntetyczny w kontenerze; niskie iteracje KDF dla szybkości.
 
-async function openGuest(page) {
-  await page.addInitScript(() => {
-    window.__CLCR_TEST_LEGACY_BROAD = true;
-  });
+async function openGuest(page, { legacyBroad = false } = {}) {
+  if (legacyBroad) {
+    await page.addInitScript(() => {
+      window.__CLCR_TEST_LEGACY_BROAD = true;
+    });
+  }
   await page.goto('/kalkulator-klirens.html', { waitUntil: 'domcontentloaded' });
   await page
     .getByRole('button', { name: 'Korzystaj bez logowania', exact: true })
@@ -124,7 +126,7 @@ async function klirensNotes(page, pid) {
 test('Faza 6 (spot): ACR — albumina/kreatynina zapisuje się do karty', async ({
   page,
 }) => {
-  await openGuest(page);
+  await openGuest(page, { legacyBroad: true });
   const pid = await setupPatient(page);
 
   await fillAndCompute(
@@ -155,7 +157,7 @@ test('Faza 6 (spot): ACR — albumina/kreatynina zapisuje się do karty', async 
 test('Faza 6 (elektrolity): FENa — frakcja wydalania sodu zapisuje się do karty', async ({
   page,
 }) => {
-  await openGuest(page);
+  await openGuest(page, { legacyBroad: true });
   const pid = await setupPatient(page);
 
   await fillAndCompute(
@@ -189,7 +191,7 @@ test('Faza 6 (elektrolity): FENa — frakcja wydalania sodu zapisuje się do kar
 test('Faza 6 (DZM): cl24 — klirens kreatyniny z dobowej zbiórki zapisuje się do karty', async ({
   page,
 }) => {
-  await openGuest(page);
+  await openGuest(page, { legacyBroad: true });
   const pid = await setupPatient(page);
 
   await fillAndCompute(
@@ -217,36 +219,37 @@ test('Faza 6 (DZM): cl24 — klirens kreatyniny z dobowej zbiórki zapisuje się
   expect(cl.val).toBe(104);
 });
 
-test('Faza 6 (dializa): Kt/V — URR i spKt/V zapisują się jako dwie pozycje karty', async ({
+test('Faza 6 (dializa): Kt/V — osobno wybrane URR i spKt/V zapisują się do tej samej karty', async ({
   page,
 }) => {
   await openGuest(page);
   const pid = await setupPatient(page);
 
-  await fillAndCompute(
-    page,
-    'KTV',
-    {
-      age: '60',
-      ktvModality: 'IHD',
-      ktvSessionsPerWeek: '3',
-      ktvPidiDays: '2',
-      ktvDurationMinutes: '240',
-      ktvUF: '2',
-      ktvW: '70',
-      ktvUreaAnalyte: 'urea',
-      ktvUreaUnit: 'mg/dL',
-      UreaPre: '150',
-      UreaPost: '45',
-      ktvPostMethod: 'slow_flow_100ml_15s',
-    },
-    ['ktvSameSession', 'ktvPreBeforeDialysis', 'ktvPreNoDilution'],
-  );
+  await page.evaluate(() => window.ClcrUiWorkflow.selectFormula('KTV'));
+  await expect(page.locator('#ktvInputCard')).toBeVisible();
+  const result = page.locator('#clcrResultReport [data-clcr-ktv-snapshot]');
 
-  // moduł dwuwynikowy: osobne serie dla URR i spKt/V
-  await expect(page.locator('[data-clcr-series="KTV_urr"]')).toHaveCount(1);
-  await expect(page.locator('[data-clcr-series="KTV_spktv"]')).toHaveCount(1);
+  // Dwa stężenia wystarczają do URR. Zapis dotyczy wyłącznie wybranego wskaźnika.
+  await page.locator('button[data-clcr-ktv-variant="urr"]').click();
+  await page.locator('#UreaPre').fill('150');
+  await page.locator('#UreaPost').fill('45');
+  await expect(result).toHaveCount(1);
+  await expect(result).toHaveAttribute('data-clcr-series', 'KTV_urr');
   await saveVisit(page);
+  await expect.poll(() => klirensNotes(page, pid)).toHaveLength(1);
+  expect((await klirensNotes(page, pid))[0].tag).toBe('clcr:KTV_urr');
+
+  // Drugi, jawny wybór korzysta z zachowanych stężeń i danych przebiegu sesji.
+  await page.locator('button[data-clcr-ktv-variant="spktv"]').click();
+  await page.locator('#ktvDurationMinutes').fill('240');
+  await page.locator('#ktvUF').fill('2');
+  await page.locator('#ktvW').fill('70');
+  await page.locator('#ktvSessionsPerWeek').selectOption('3');
+  await page.locator('#ktvPidiDays').selectOption('2');
+  await expect(result).toHaveCount(1);
+  await expect(result).toHaveAttribute('data-clcr-series', 'KTV_spktv');
+  await saveVisit(page);
+  await expect.poll(() => klirensNotes(page, pid)).toHaveLength(2);
 
   const notes = await klirensNotes(page, pid);
   const urr = notes.find((n) => n.tag === 'clcr:KTV_urr');
@@ -261,6 +264,14 @@ test('Faza 6 (dializa): Kt/V — URR i spKt/V zapisują się jako dwie pozycje k
   // spKt/V (Daugirdas) ≈ 1,4 — bezwymiarowe
   expect(spktv).toBeTruthy();
   expect(spktv.test).toBe('spKt/V (mocznik, pojedyncza pula)');
+  expect(spktv.unit).toBe('—');
   expect(spktv.val).toBeGreaterThan(1.1);
   expect(spktv.val).toBeLessThan(1.7);
+  expect(notes.every((note) => note.date === '2026-08-01')).toBe(true);
+  const persisted = await page.evaluate(
+    (patientId) => window.VildaVault.listPatientNotesForPatient(patientId),
+    pid,
+  );
+  expect(persisted.filter((note) => note.category === 'wynik-klirens')).toHaveLength(2);
+  expect(persisted.every((note) => note.patientId === pid)).toBe(true);
 });
