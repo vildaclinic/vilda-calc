@@ -153,6 +153,7 @@ function Ch_refreshSaveState(){
     Ch_attr(button,"title",title||labels[state]);
   }
   if(state==="hidden"&&O&&Ch_statusAnchor&&Ch_statusAnchor.hasAttribute("data-header-save-status"))te();
+  Cm_refreshClear();
 }
 function Ch_refreshMenuPro(){
   var source=o.getElementById("vildaProBadge"),owner=Cm_menuOwner(),state=source&&source.getAttribute("data-pro-state");
@@ -215,6 +216,136 @@ function Ch_bindHeader(){
 }
 
 /* P-MENU-NAVIGATION: shared task groups; form actions keep their source IDs. */
+// Clear belongs to the visible, live form, not the shell's legacy save proxy.
+// The drawer masks that form with inert/aria-hidden while open, so this visual
+// check deliberately leaves those drawer-owned attributes to Cm_closeDrawer.
+function Cm_clearDisplayed(node,win){
+  if(!node||node.isConnected===false||node.hidden||node.closest&&node.closest("[hidden]"))return false;
+  try{var style=win.getComputedStyle(node);if(style.display==="none"||style.visibility==="hidden")return false}catch{return false}
+  return !!(node.getClientRects&&node.getClientRects().length);
+}
+function Cm_clearOwner(win){
+  try{
+    var vault=win.VildaVault,ui=win.VildaAuthUI,session=win.VildaSession;
+    var guest=win.VildaGuestMode===true||!!(ui&&typeof ui.isGuestMode==="function"&&ui.isGuestMode());
+    var unlocked=!!(vault&&typeof vault.isUnlocked==="function"&&vault.isUnlocked());
+    if(!guest&&vault&&!unlocked)return null;
+    if(!guest&&ui&&typeof ui.isLoggedIn==="function"&&!ui.isLoggedIn())return null;
+    if(!guest&&session&&typeof session.isLoggedIn==="function"&&!session.isLoggedIn())return null;
+    if(ui&&typeof ui.isBootReady==="function"&&!ui.isBootReady())return null;
+    var user=vault&&typeof vault.getCurrentUser==="function"?vault.getCurrentUser():null;
+    return {vault:vault,userId:user&&user.userId||null,guest:guest,unlocked:unlocked};
+  }catch{return null}
+}
+function Cm_clearBlocked(doc,win){
+  try{
+    if(doc.documentElement.classList.contains("vilda-auth-locked"))return true;
+    var auth=doc.getElementById("vilda-auth-ui-root");
+    if(auth&&Cm_clearDisplayed(auth,win)&&auth.querySelector(".vilda-auth-screen,.vilda-auth-patients,.vilda-auth-patient-card,.vilda-auth-overlay"))return true;
+    var dialogs=doc.querySelectorAll('[aria-modal="true"],[role="dialog"]');
+    for(var index=0;index<dialogs.length;index++){
+      var dialog=dialogs[index];
+      if(dialog.closest&&dialog.closest("[data-vilda-chrome-drawer]"))continue;
+      if(Cm_clearDisplayed(dialog,win))return true;
+    }
+    return false;
+  }catch{return true}
+}
+function Cm_clearContext(){
+  var source=Ch_saveContext();if(!source)return null;
+  try{
+    var win=source.win,doc=source.doc,clcr=!!doc.getElementById("clcrForm");
+    var form=doc.getElementById(clcr?"clcrForm":"calcForm"),button=doc.getElementById(clcr?"clearBtn":"clearAllDataBtn");
+    if(!form||!button||doc.readyState==="loading"||button.disabled||button.getAttribute("aria-disabled")==="true"||button.getAttribute("aria-busy")==="true"||typeof button.click!=="function"||!Cm_clearDisplayed(button,win))return null;
+    var owner=Cm_clearOwner(win),host=Cm_clearOwner(r),panel=win.VildaPanelPacjent,guard=win.VildaUnsavedGuard;
+    if(!owner||!host||owner.userId!==host.userId||owner.guest!==host.guest||owner.unlocked!==host.unlocked)return null;
+    if(win.__vildaPersistRestoring===true||win.__vildaLustroWpis===true||panel&&typeof panel.nieaktualny==="function"&&panel.nieaktualny())return null;
+    var data=win.VildaDataImportExport,dob=win.VildaDobAge;
+    if(data&&typeof data.isMainSessionRestorePending==="function"&&data.isMainSessionRestorePending()||dob&&typeof dob.restorePending==="function"&&dob.restorePending())return null;
+    if(Cm_clearBlocked(o,r)||doc!==o&&Cm_clearBlocked(doc,win))return null;
+    if(!clcr&&(!guard||typeof guard.run!=="function"))return null;
+    var indicator=win.VildaSaveStatusIndicator;
+    if(indicator&&typeof indicator.getState==="function"&&indicator.getState()==="saving")return null;
+    return {win:win,doc:doc,button:button,clcr:clcr,guard:guard,owner:owner,host:host,href:String(win.location.href),hostHref:String(r.location.href)};
+  }catch{return null}
+}
+function Cm_sameClearContext(context){
+  var current=Cm_clearContext();if(!context||!current)return false;
+  function same(a,b){return a.vault===b.vault&&a.userId===b.userId&&a.guest===b.guest&&a.unlocked===b.unlocked}
+  return context.win===current.win&&context.doc===current.doc&&context.button===current.button&&context.guard===current.guard&&context.href===current.href&&context.hostHref===current.hostHref&&same(context.owner,current.owner)&&same(context.host,current.host);
+}
+function Cm_clearPendingCurrent(context){
+  var source=Ch_saveContext();if(!source||source.win!==context.win||source.doc!==context.doc||context.button.isConnected===false)return false;
+  try{
+    var owner=Cm_clearOwner(source.win),host=Cm_clearOwner(r);
+    function same(a,b){return !!(a&&b&&a.vault===b.vault&&a.userId===b.userId&&a.guest===b.guest&&a.unlocked===b.unlocked)}
+    return context.href===String(source.win.location.href)&&context.hostHref===String(r.location.href)&&same(context.owner,owner)&&same(context.host,host);
+  }catch{return false}
+}
+function Cm_clearCurrent(opener){
+  if(Cm_clearCurrent.pending)return false;
+  var context=Cm_clearContext();if(!context){Cm_refreshClear();return false}
+  Cm_closeDrawer({reason:"handoff"});
+  if(!Cm_sameClearContext(context)){Cm_refreshClear();return false}
+  var request={context:context};Cm_clearCurrent.pending=request;Cm_refreshClear();
+  var settled=false;
+  function finish(proceed){
+    if(settled)return;settled=true;
+    if(Cm_clearCurrent.pending!==request)return;
+    // Save-new may legitimately assign a patient ID. The unsaved guard owns
+    // that receipt; this check protects the window, route and account instead.
+    var current=Cm_sameClearContext(context);
+    Cm_clearCurrent.pending=false;
+    try{if(proceed&&current)context.button.click()}finally{Cm_refreshClear()}
+    if(!proceed&&current)Cm_focus(Cm_visible(opener)?opener:context.button);
+  }
+  try{
+    // Klirens intentionally owns its native resetApp(false) policy. Start and
+    // DocPro need the explicit guard: synthetic button.click skips its capture.
+    if(context.clcr)finish(true);
+    else context.guard.run({reason:"clear",onProceed:function(){finish(true)},onCancel:function(){finish(false)}});
+  }catch{finish(false)}
+  return true;
+}
+function Cm_scheduleClear(){
+  if(Cm_scheduleClear.pending)return;Cm_scheduleClear.pending=true;
+  r.setTimeout(function(){Cm_scheduleClear.pending=false;Cm_refreshClear()},0);
+}
+function Cm_bindClear(source){
+  var docs=[o];if(source&&source.doc!==o)docs.push(source.doc);
+  var previous=Cm_bindClear.sources||[],same=previous.length===docs.length&&previous.every(function(item,index){return item.doc===docs[index]&&item.auth===docs[index].getElementById("vilda-auth-ui-root")});
+  if(same)return;
+  previous.forEach(function(item){item.cleanup.forEach(function(remove){remove()})});
+  Cm_bindClear.sources=docs.map(function(doc){
+    var item={doc:doc,auth:doc.getElementById("vilda-auth-ui-root"),cleanup:[]};
+    ["DOMContentLoaded","vilda:auth-loaded","vilda:auth-state-settled","vilda:auth-boot-settled","vilda:session-changed","vilda:guest-mode-changed","vilda:patient-loaded","vilda:persist-restored","vilda:main-session-restored","vilda:dob-restored","vilda:user-state-cleared"].forEach(function(type){
+      doc.addEventListener(type,Cm_scheduleClear);item.cleanup.push(function(){doc.removeEventListener(type,Cm_scheduleClear)});
+    });
+    if(typeof r.MutationObserver==="function"){
+      var observer=new r.MutationObserver(Cm_scheduleClear);
+      if(doc.documentElement)observer.observe(doc.documentElement,{attributes:true,attributeFilter:["class"]});
+      if(doc.body)observer.observe(doc.body,{childList:true});
+      if(item.auth)observer.observe(item.auth,{childList:true,subtree:true,attributes:true,attributeFilter:["hidden","style","class"]});
+      var button=doc.getElementById("clearAllDataBtn")||doc.getElementById("clearBtn");
+      if(button)observer.observe(button,{attributes:true,attributeFilter:["hidden","disabled","aria-disabled","aria-busy"]});
+      item.cleanup.push(function(){observer.disconnect()});
+    }
+    return item;
+  });
+}
+function Cm_refreshClear(){
+  var source=Ch_saveContext();Cm_bindClear(source);
+  var pending=Cm_clearCurrent.pending;
+  if(pending&&!Cm_clearPendingCurrent(pending.context))Cm_clearCurrent.pending=false;
+  var available=!!Cm_clearContext(),busy=!!Cm_clearCurrent.pending;
+  var controls=o.querySelectorAll("[data-menu-clear]");
+  for(var index=0;index<controls.length;index++){
+    var button=controls[index],disabled=!available||busy;
+    if(button.disabled!==disabled)button.disabled=disabled;
+    Ch_attr(button,"aria-disabled",disabled);Ch_attr(button,"aria-busy",busy);
+    Ch_attr(button,"title",available?"Wyczy\u015b\u0107 wszystkie pola bie\u017c\u0105cego formularza":"Wyczy\u015b\u0107 jest dost\u0119pne w aktywnym formularzu pacjenta.");
+  }
+}
 function Cm_menuItem(key){
   for(var group=0;group<b.length;group++)for(var index=0;index<b[group].items.length;index++){
     var item=b[group].items[index];if(item.id===key||item.href===key)return item;
@@ -252,7 +383,7 @@ function Cm_menuActions(mobile){
     var attrs=mobile?'type="button" data-drawer-btn="'+item[0]+'"':'id="'+item[0]+'" href="#" role="button"';
     html+='<'+(mobile?'button':'a')+' '+attrs+' class="'+item[3]+' '+(mobile?'chrome-drawer-btn':'sidebar-link')+'" aria-label="'+item[4]+'" aria-disabled="true"><span class="'+(mobile?'chrome-drawer-icon':'sidebar-icon')+'" data-lucide="'+item[2]+'" aria-hidden="true"></span><span>'+item[1]+'</span></'+(mobile?'button':'a')+'>';
   });
-  return html+'</div></div>';
+  return html+'</div><div class="chrome-menu-clear-row"><button type="button" class="chrome-menu-clear-button" data-menu-clear disabled aria-disabled="true"><span class="'+(mobile?'chrome-drawer-icon':'sidebar-icon')+'" data-lucide="eraser" aria-hidden="true"></span><span>Wyczy\u015b\u0107</span></button></div></div>';
 }
 function Cm_menuFooter(){
   return '<div class="chrome-menu-footer" data-vilda-chrome-drawer-account><div class="chrome-menu-account-row"><button type="button" class="chrome-menu-account" data-menu-account aria-label="Konto"><span class="chrome-menu-avatar chrome-drawer-account-avatar" data-vilda-chrome-drawer-avatar aria-hidden="true">\u2026</span><span class="chrome-menu-account-copy"><span class="chrome-drawer-account-value" data-vilda-chrome-drawer-user-value>\u2026</span></span></button><a href="subskrypcja.html" class="chrome-menu-pro" data-menu-pro hidden aria-label="Subskrypcja PRO">PRO</a></div><div class="chrome-menu-account-tools"><a href="ustawienia.html#settings-section-sync" class="chrome-menu-sync" data-menu-sync><span data-lucide="cloud" aria-hidden="true"></span><span data-menu-sync-label>Synchronizacja</span></a><a class="chrome-menu-settings" href="ustawienia.html" aria-label="Ustawienia" title="Ustawienia"><span data-lucide="settings" aria-hidden="true"></span></a><button type="button" class="chrome-menu-logout" data-menu-logout data-vilda-chrome-drawer-user-action aria-label="Zaloguj si\u0119" title="Zaloguj si\u0119"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" data-vilda-chrome-drawer-action-icon><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"></path><path d="m10 17 5-5-5-5M15 12H3"></path></svg><span data-vilda-chrome-drawer-action-label hidden>Zaloguj si\u0119</span></button></div></div>';
@@ -353,7 +484,7 @@ function Cm_menuNameDrag(button,event,origin){
   }catch{return false}
 }
 function Cm_bindMenuControls(root){
-  var controls=root.querySelectorAll("[data-menu-patient-card],[data-menu-patient-change],.chrome-menu-calculators-toggle,[data-menu-account],[data-menu-logout],[data-menu-save-status]");
+  var controls=root.querySelectorAll("[data-menu-patient-card],[data-menu-patient-change],.chrome-menu-calculators-toggle,[data-menu-account],[data-menu-logout],[data-menu-save-status],[data-menu-clear]");
   for(var i=0;i<controls.length;i++)(function(button){
     if(button._vildaMenuBound)return;button._vildaMenuBound=true;
     var namePointer=null;
@@ -368,6 +499,7 @@ function Cm_bindMenuControls(root){
       var selected=Cm_menuNameDrag(button,event,namePointer);namePointer=null;
       event.preventDefault();
       if(selected){event.stopPropagation();return}
+      if(button.hasAttribute("data-menu-clear")){event.stopPropagation();Cm_clearCurrent(button);return}
       if(button.hasAttribute("data-menu-save-status")){event.stopPropagation();Ch_statusAnchor=button;_e();return}
       if(button.hasAttribute("data-menu-patient-card")||button.hasAttribute("data-menu-patient-change")){Cm_openMenuPatient(button.hasAttribute("data-menu-patient-change"),button);return}
       if(button.classList.contains("chrome-menu-calculators-toggle")){
