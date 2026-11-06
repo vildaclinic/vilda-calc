@@ -3368,6 +3368,8 @@ function update() {
         target.classList.remove("result-box", "out-of-range", "warn-yellow");
         target.classList.add("clcr-result-metric");
         clcrSetTrustedMarkup(target, window.ClcrKtvUi.renderResult(ktvModel), "selected IHD index");
+        // Remove the legacy inline hide: the collector also checks inline visibility.
+        target.style.removeProperty("display");
         target.hidden = false;
         if (detailsOpen && $("clcr-ktv-details")) $("clcr-ktv-details").open = true;
       }
