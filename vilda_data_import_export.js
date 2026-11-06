@@ -840,6 +840,106 @@ function restoreMainSessionClinicalFields(payload){
   [["indication","bisphosIndication"],["drug","bisphosDrug"],["doseNumber","bisphosDoseNumber"]].forEach(function(binding){text("bisphos",binding[0],binding[1])});
   if(own(payload,"bpDataToggle"))ee(f("bpDataToggle"),!!payload.bpDataToggle);
 }
+// Only an unselected, empty basic form can borrow current shared facts. Native
+// control defaults define emptiness; a lab value (including zero), neonatal
+// context, selected formula, recorded result or unknown extension retains its
+// independent specimen context. The BSA line is the form's automatic summary.
+function emptyClcrWorkingForm(renal) {
+  const object = value => value && typeof value === 'object' && !Array.isArray(value);
+  const own = (value, key) => Object.prototype.hasOwnProperty.call(value, key);
+  const blank = value => value == null || value === '';
+  if (!object(renal) || renal.version !== 2 || renal.currentVersion !== 'basic' || !blank(renal.selectedFormula)) return false;
+  const metadata = new Set(['version', 'legacyVersion', 'source', 'savedAtISO', 'currentVersion',
+    'selectedFormula', 'preserveAcrossVersions', 'inputs', 'preservedInputs', 'summary']);
+  if (Object.keys(renal).some(key => !metadata.has(key))) return false;
+  const common = new Set(['name', 'fullName', 'age', 'ageMonths', 'sex', 'weight', 'height']);
+  // These dynamic selects set .value, but their builders do not set
+  // defaultSelected. Values are copied from each UI builder, not a lab rule.
+  const dynamicUnits = { CACR_DZM_calciumUnit: 'mmol/L', MGCA_calciumUnit: 'mmol/L', CACIT_citrateUnit: 'mg/dL' };
+  const duration = r.ClcrCollectionDuration;
+  const hours = new Set(duration?.HOURS_FIELDS || []);
+  const confirmations = new Set([...hours].map(key => key === duration.HOURS_ID
+    ? 'durationNeedsConfirmation' : key.split('_')[0] + '_durationNeedsConfirmation'));
+  for (const group of ['inputs', 'preservedInputs']) {
+    if (!object(renal[group])) return false;
+    const values = renal[group];
+    if (!blank(values.formulaPicker)) return false;
+    for (const [key, value] of Object.entries(values)) {
+      if (common.has(key)) {
+        if (value != null && !['string', 'number'].includes(typeof value)) return false;
+        continue;
+      }
+      if (key === 'currentVersion' && value === 'basic') continue;
+      if (confirmations.has(key) && (value === false || value === 'false')) continue;
+      const control = r.document?.getElementById(key);
+      if (!control) return false;
+      if (hours.has(key) && !blank(value)) {
+        const source = duration.SOURCES[key];
+        const resolved = duration.fromValues(values, {}, { fieldId: key, sourceId: source });
+        if (String(value) !== '24' || values[source] !== 'assumed-24h' || resolved.assumed !== true) return false;
+        continue;
+      }
+      if (control.type === 'checkbox' || control.type === 'radio') {
+        if (value !== control.defaultChecked) return false;
+      } else if (control.tagName === 'SELECT') {
+        const options = Array.from(control.options || []);
+        const initial = own(dynamicUnits, key) ? dynamicUnits[key]
+          : (options.find(option => option.defaultSelected) || options[0])?.value;
+        if (value !== initial || !options.some(option => option.value === value)) return false;
+      } else if (value !== control.defaultValue) return false;
+    }
+  }
+  if (!object(renal.summary)) return false;
+  for (const [key, values] of Object.entries(renal.summary)) {
+    if (!['clcr', 'elec', 'stone', 'ktv'].includes(key) || !Array.isArray(values)) return false;
+    if (key !== 'clcr' && values.length) return false;
+    if (key === 'clcr' && (values.length > 1 || values.some(row => !object(row)
+      || Object.keys(row).some(field => !['text', 'isOut'].includes(field)) || row.isOut !== false
+      || !/^Powierzchnia ciała \(Haycock\) \d+(?:[.,]\d+)?\s*m²$/u.test(row.text)))) return false;
+  }
+  return true;
+}
+
+// The empty form's common controls are a mirror of the same working visit.
+// Do not let an older dedicated carrier undo its newer shared measurement.
+// Independent/anonymous calculators and explicit historical restores keep
+// their own context. This operates on the detached carrier read below.
+function currentPatientClcrWorkingContext(payload,renal){
+  try{
+    if(!emptyClcrWorkingForm(renal))return renal;
+    const patientId=r.sessionStorage&&r.sessionStorage.getItem("vildaCurrentPatientId");
+    const user=payload&&payload.user;
+    if(!patientId||!user||typeof user!=="object")return renal;
+    const name=String(payload.name||payload.fullName||[user.lastName,user.firstName].filter(Boolean).join(" ")).trim();
+    const normalized=value=>String(value==null?"":value).trim().replace(/\s+/g," ").toLowerCase();
+    if(!name)return renal;
+    const own=(object,key)=>Object.prototype.hasOwnProperty.call(object,key);
+    const groups=[renal.inputs,renal.preservedInputs].filter(value=>value&&typeof value==="object"&&!Array.isArray(value));
+    let matchedName=false;
+    for(const values of groups){
+      if(own(values,"samePatientMode")&&![true,"true",1,"1"].includes(values.samePatientMode))return renal;
+      for(const key of ["fullName","name"]){
+        if(!own(values,key))continue;
+        if(!normalized(values[key])||normalized(values[key])!==normalized(name))return renal;
+        matchedName=true;
+      }
+    }
+    if(!matchedName)return renal;
+    const shared={name:name,fullName:name};
+    for(const key of ["age","ageMonths","sex","weight","height"]){
+      if(own(user,key))shared[key]=user[key]==null?"":String(user[key]);
+    }
+    const result=Object.assign({},renal);
+    for(const key of ["inputs","preservedInputs"]){
+      const values=renal[key];
+      if(!values||typeof values!=="object"||Array.isArray(values))continue;
+      const next=Object.assign({},values);
+      for(const field of Object.keys(shared))if(own(next,field))next[field]=shared[field];
+      result[key]=next;
+    }
+    return result;
+  }catch{return renal}
+}
 function currentClcrForSessionRestore(payload,options){
   if(!options||options.isSessionRestore!==true||!payload||typeof payload!=="object"||!payload.clcr||typeof payload.clcr!=="object")return payload;
   try{
@@ -847,7 +947,7 @@ function currentClcrForSessionRestore(payload,options){
     const current=readCurrentClcrCarrier(getter.call(r));
     // A missing dedicated draft still permits the historical main-only form
     // to restore. A present draft, even with only cleared inputs, is newer.
-    if(current.known&&current.value!==null)return Object.assign({},payload,{clcr:current.value});
+    if(current.known&&current.value!==null)return Object.assign({},payload,{clcr:currentPatientClcrWorkingContext(payload,current.value)});
   }catch(error){l("vilda_data_import_export:restore-current-clcr-session",error)}
   return payload;
 }

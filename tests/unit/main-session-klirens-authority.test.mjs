@@ -21,6 +21,7 @@ function environment(options = {}) {
   const values = Object.fromEntries(['name', 'age', 'ageMonths', 'sex', 'height', 'weight']
     .map(id => [id, { id, value: '', style: {}, dataset: {}, addEventListener() {},
       dispatchEvent() {}, classList: { add() {}, remove() {}, contains: () => false } }]));
+  for (const id of ['ageDays', 'U_Alb', 'Ucr_spot']) values[id] = { id, value: '', defaultValue: '', type: 'number', tagName: 'INPUT', style: {}, dataset: {}, dispatchEvent() {} };
   const persistence = {
     getStorage: () => ({}),
     readMainSession: () => clone(main),
@@ -40,7 +41,7 @@ function environment(options = {}) {
     VildaPersistence: persistence,
     VildaClcrSessionRuntime: { restoreFromSession: value => restored.push(clone(value)), clearVersionValueVault: clearVersionCache },
     vildaPersistFlushNow: () => lifecycle.push({ type: 'flush', versionCache: clone(versionCache) }),
-    sessionStorage: { getItem: key => key === 'vildaCurrentPatientId' ? 'fictional-current-patient' : null,
+    sessionStorage: { getItem: key => key === 'vildaCurrentPatientId' ? (Object.prototype.hasOwnProperty.call(options, 'patientId') ? options.patientId : 'fictional-current-patient') : null,
       setItem() {}, removeItem() {} },
     location: { pathname: intakeDom ? '/index.html' : '/kalkulator-klirens.html' },
     setTimeout: () => 0, clearTimeout() {}, addEventListener() {}, dispatchEvent() {},
@@ -183,5 +184,78 @@ describe('a confirmed empty renal handoff also invalidates the old local formula
     expect(h.restore({ ...clone(PAYLOAD), clcr: null })).toBe(true);
     expect(h.lifecycle[0]).toEqual({ type: 'clear-version-cache' });
     expect(h.versionCache()).toEqual({});
+  });
+});
+
+describe('working Klirens restore keeps the current shared patient context', () => {
+  const draft = () => ({ version: 2, currentVersion: 'basic', selectedFormula: '',
+    inputs: { fullName: PAYLOAD.name, age: '13', ageMonths: '0', ageDays: '', sex: 'M', weight: '46', height: '158', U_Alb: '', Ucr_spot: '' },
+    preservedInputs: { fullName: PAYLOAD.name, age: '13', ageMonths: '0', ageDays: '', weight: '46', U_Alb: '' },
+    summary: { clcr: [{ text: 'Powierzchnia ciała (Haycock) 1.42 m²', isOut: false }], elec: [], stone: [], ktv: [] } });
+  const currentMain = () => ({ ...clone(PAYLOAD), user: { ...clone(PAYLOAD.user), ageMonths: 4, weight: 47 } });
+
+  it('reconciles existing shared controls before the renal runtime can restore an older same-patient visit', () => {
+    const renal = draft(), original = clone(renal), incoming = currentMain(), before = clone(incoming);
+    const h = environment({ current: renal });
+    expect(h.restore(incoming)).toBe(true);
+    const expected = clone(original);
+    for (const values of [expected.inputs, expected.preservedInputs]) { values.weight = '47'; values.ageMonths = '4'; }
+    expect(h.restored).toEqual([expected]);
+    expect(h.renalWrites).toEqual([expected]);
+    expect(renal).toEqual(original);
+    expect(incoming).toEqual(before);
+    expect(expected.summary).toEqual(original.summary);
+    expect(expected.inputs.ageDays).toBe('');
+  });
+
+  it('honors explicit cleared and zero current values without filling absent main fields', () => {
+    const renal = draft(), h = environment({ current: renal }), incoming = currentMain();
+    incoming.user.weight = null; incoming.user.ageMonths = 0; delete incoming.user.height;
+    expect(h.restore(incoming)).toBe(true);
+    expect(h.restored[0].inputs).toMatchObject({ weight: '', ageMonths: '0', height: '158', U_Alb: '', Ucr_spot: '' });
+    expect(h.restored[0].preservedInputs.weight).toBe('');
+  });
+
+  it.each([undefined, 1, 3])('leaves the unrecognized renal schema %s unchanged', version => {
+    const renal = draft();
+    if (version === undefined) delete renal.version;
+    else renal.version = version;
+    const before = clone(renal), h = environment({ current: renal });
+    expect(h.restore(currentMain())).toBe(true);
+    expect(h.restored).toEqual([before]);
+    expect(h.renalWrites).toEqual([before]);
+  });
+
+
+  it.each(['selected-formula', 'pending-lab', 'zero-lab', 'neonatal-age', 'frozen-context', 'unknown-input', 'unknown-empty-input', 'recorded-result'])(
+    'does not borrow shared facts into a %s specimen', kind => {
+      const renal = draft();
+      if (kind === 'selected-formula') renal.selectedFormula = 'ACR_spot';
+      if (kind === 'pending-lab') renal.inputs.U_Alb = '45';
+      if (kind === 'zero-lab') renal.inputs.U_Alb = '0';
+      if (kind === 'neonatal-age') renal.inputs.ageDays = '12';
+      if (kind === 'frozen-context') renal.clinicalContext = { age: 10, measuredAtISO: '2023-06-17' };
+      if (kind === 'unknown-input') renal.inputs.futureClinicalContext = 'fictional-unrecognized';
+      if (kind === 'unknown-empty-input') renal.inputs.futureClinicalContext = '';
+      if (kind === 'recorded-result') renal.summary.clcr = [{ text: 'Fikcyjny zapisany wynik', isOut: false }];
+      const before = clone(renal), h = environment({ current: renal });
+      expect(h.restore(currentMain())).toBe(true);
+      expect(h.restored).toEqual([before]);
+      expect(h.renalWrites).toEqual([before]);
+      expect(renal).toEqual(before);
+    });
+
+  it.each(['no-patient', 'anonymous', 'different-patient', 'legacy-independent', 'explicit-load', 'explicit-restore'])(
+  'does not replace %s calculator context', mode => {
+    const renal = draft(), options = {};
+    if (mode === 'no-patient') options.patientId = null;
+    if (mode === 'anonymous') for (const values of [renal.inputs, renal.preservedInputs]) values.fullName = '';
+    if (mode === 'different-patient') for (const values of [renal.inputs, renal.preservedInputs]) values.fullName = 'Fikcyjny Inny Pacjent';
+    if (mode === 'legacy-independent') renal.inputs.samePatientMode = false;
+    const h = environment({ ...options, current: renal }), incoming = { ...currentMain(), clcr: clone(renal) };
+    if (mode === 'explicit-restore') h.api.restoreLoadedState({ data: incoming, anyDataEntered: () => false });
+    else expect(h.restore(incoming, { isSessionRestore: mode !== 'explicit-load' })).toBe(true);
+    expect(h.restored).toEqual([renal]);
+    expect(h.renalWrites).toEqual([renal]);
   });
 });

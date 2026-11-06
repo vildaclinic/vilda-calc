@@ -13696,6 +13696,14 @@ i jego blokad pól. Ta lokalna ocena nie zmienia danych ani ogólnego klasyfikat
 importera; zachowuje także kliniczne sekcje nieuwzględnione przez jego starszą
 wersję, w tym SGA, dane okołoporodowe i jawny wiek noworodka równy zero.
 
+Pusty, podstawowy formularz Klirensu bez wybranej metody pobiera wspólne dane
+bieżącej wizyty przy odtworzeniu sesji znanego pacjenta o zgodnej nazwie.
+Sama automatyczna powierzchnia ciała nie jest niezależnym badaniem. Ocenę
+pustości oparto na domyślnych kontrolkach i publicznym modelu czasu zbiórki;
+wpisany wynik, także zero, wybrana metoda, kontekst próbki lub nieznane pole
+wykluczają tę korektę. Anonimowe obliczenie, jawne przywrócenie zapisu i dane
+historycznych badań pozostają niezmienione.
+
 **Regresje.** Testy rzeczywistych modułów sprawdzają każdy zapis sesji,
 nie tylko stan po późniejszej naprawie. Obejmują starszą wizytę tego samego
 pacjenta w nieaktywnej karcie, opóźnione zdarzenia i kolejki, zmianę konta,
