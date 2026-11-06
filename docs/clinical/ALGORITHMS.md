@@ -20999,6 +20999,236 @@ a lekarz poprawia jedno z miejsc. Wartość dni spoza 0–6 w rekordzie nie jest
 
 **Wersje.** `sga_birth_module.js?v=10→11`; SW 1.1.168 → **1.1.169**.
 
+## Sejf: „Usuń konto” przy drugiej karcie — druga karta wraca do ekranu logowania, usuwanie nie czeka (P-USUN-KONTO-KARTY, E2-PR3a1b, SW SW_DO_UZUPELNIENIA, `vilda_vault.js?v=V_DO_UZUPELNIENIA`, 2026-11-06)
+
+**Zmiana kliniczna: NIE** — wzory, progi, jednostki, interpretacje, zapis, scalanie, format kopii i synchronizacja bez
+zmian. Dla użytkownika: „Usuń konto” nie czeka już na inne karty przeglądarki z tym samym kontem; te karty od razu
+wracają do ekranu logowania z banerem „Konto zostało usunięte z tej przeglądarki.”. Dotąd każda inna karta z tym kontem
+(także powłoka i pozostałe panele aplikacji zainstalowanej, `app.html`) wstrzymywała „Usuń konto”, dopóki była otwarta.
+Wpływ kliniczny: brak — zakres danych kasowanych przez „Usuń konto” się nie zmienia.
+
+**Skąd.** Plan `docs/SYNC_PRZYROSTOWA_PLAN.md`, wiersz 6a′ tabeli „Podział etapu 2”, według odpowiedzi właściciela
+z 2026-11-04 na pytanie 12.4 (zachowanie drugiej karty przy „Usuń konto” w osobnym małym PR) i decyzji z 2026-11-05:
+dwa PR po kolei — ten (druga karta, aplikacja zainstalowana, logowanie w toku, przyszła zmiana wersji bazy sejfu), potem
+E2-PR3a1c (wymagania niżej; plan, wiersz 6a″), z decyzją 12.4 zawężoną do czasu przyjęcia E2-PR3a1c — oraz teksty
+komunikatów dosłownie. Decyzje z 2026-11-06: baner także w aplikacji zainstalowanej po własnym „Usuń konto” (punkt 6
+niżej) i ekran logowania z banerem, gdy usunięcie przyjdzie w ostatnich krokach logowania (punkt 4).
+
+### E2-PR3a1b
+
+**Zachowanie po zmianie** (teksty 1–3 niżej):
+1. Druga karta z tym kontem (`index.html`, inne strony aplikacji, także powłoka `app.html`) od razu zamyka połączenie
+   z bazą sejfu konta, blokuje się i wraca do ekranu logowania: „Witamy” albo — gdy na urządzeniu są inne konta — „Kto
+   się loguje?” bez usuniętego konta, z banerem tekst 1. Od tej chwili nie czyta i nie zapisuje danych tego konta.
+   „Usuń konto” w karcie usuwającej kończy się bez czekania na nią.
+2. Karta usuwająca kończy jak dotąd, bez banera.
+3. Karta z innym kontem — bez zmian; jej połączenie z bazą usuwanego konta, jeśli było, zamyka się. Tryb „Zaloguj
+   jednorazowo” w innej karcie — bez zmian.
+4. Logowanie w toku w innej karcie (hasłem, kluczem odzyskiwania albo kluczem dostępu) kończy się komunikatem tekst 2
+   w formularzu logowania: formularz zostaje, sesja nie jest zapisywana ani ogłaszana, a bazy konta aplikacja nie
+   zakłada od nowa. Gdy usunięcie przyjdzie w ostatnich krokach logowania (odczyt trybu konta, w trybie „Komputer
+   w pracy” czekanie do 2,5 s na pamięć chmury, odczyt ustawień) albo tuż po zalogowaniu (zapis czasu logowania), karta
+   wraca do ekranu logowania z banerem tekst 1, tak jak karta zalogowana (decyzja z 2026-11-06). Odtworzenie sesji po
+   przeładowaniu strony, w którego trakcie konto usunięto, kończy się bez sesji.
+5. Nowsza wersja aplikacji w innej karcie, która podniesie wersję bazy sejfu konta (dziś żadna tego nie robi): starsza
+   karta od razu zwalnia bazę (podniesienie wersji na nią nie czeka), nie blokuje się, a kolejne operacje danych konta
+   w tej karcie — każdego konta — kończą się komunikatem tekst 3; tak samo, gdy otwarcie bazy trafi na wyższą wersję.
+6. W aplikacji zainstalowanej (`app.html`, jedno okno) po własnym „Usuń konto” w Ustawieniach cała aplikacja wraca do
+   ekranu logowania bez usuniętego konta, a ekran „Witamy” powłoki pokazuje baner tekst 1 (decyzja z 2026-11-06).
+   „Usuń konto” nie czeka na powłokę i pozostałe panele; trasa zostaje, a panel Ustawień ładuje się od nowa.
+7. Kasowanie bazy sejfu konta narzędziami przeglądarki działa jak usunięcie w innej karcie: karta z tym kontem blokuje
+   się i wraca do ekranu logowania z banerem, a bazy konta aplikacja nie zakłada od nowa.
+8. Odczyt konta, którego bazy sejfu nie ma, nie zakłada jej — bazę zakłada tylko założenie konta albo odtworzenie konta
+   (z kopii, z innego urządzenia). W karcie usuwającej zapis metadanych konta rozpoczęty przed „Usuń konto” kończy się
+   komunikatem tekst 2, a inne zapisy (np. danych pacjenta) kończą się odmową bez zapisu (tekst 2 albo sprawdzenie
+   sesji, P-SESJA-ZAPISU); baza konta nie powstaje od nowa.
+
+**Teksty** (dosłownie, decyzja z 2026-11-05):
+1. baner: „Konto zostało usunięte z tej przeglądarki.” (`role="status"`, przed tytułem ekranu);
+2. błąd `ACCOUNT_REMOVED`: „To konto zostało usunięte z tej przeglądarki.”;
+3. błąd `APP_UPDATED`: „Aplikację zaktualizowano w innej karcie. Odśwież tę stronę.”
+
+Obiekt błędu niesie kod i stały komunikat, bez danych konta. Czwarty tekst tej decyzji (podpowiedź przy czekaniu)
+należy do E2-PR3a1c.
+
+**Mechanizm** (`vilda_vault.js`, blok `P-USUN-KONTO-KARTY`, prefiks `Buk_`; stan dokumentu tylko w pamięci okna, wspólny
+dla wszystkich instancji adaptera IndexedDB w dokumencie):
+- **`versionchange`.** Każde połączenie adaptera z bazą sejfu konta (`vilda_user_<userId>`) obsługuje `versionchange`
+  (`Buk_zmiana`) w trzech krokach: (1) stan dokumentu — kasowanie obce (`newVersion` puste, a ten dokument kasowania nie
+  zlecił) oznacza konto jako usunięte i sprząta część magazynu kolejki (niżej), a wyższa wersja oznacza nowszą wersję
+  aplikacji; (2) zamknięcie połączenia i wyjęcie go z mapy adaptera — kasowanie albo podniesienie wersji w innym
+  dokumencie na nie nie czeka; (3) kasowanie obce konta bieżącej sesji blokuje sejf z nowym powodem
+  `user-removed-elsewhere`. Słuchacze blokady (ekran logowania) widzą już konto jako usunięte.
+- **Wymuszone zamknięcie** połączenia przez przeglądarkę (zdarzenie `close`; w Chromium tak, bez `versionchange`, kończy
+  się kasowanie bazy narzędziami przeglądarki): wyjęcie połączenia z mapy i próba otwarcia bez tworzenia
+  (`Buk_zamknieta`, każdy upgrade przerwany) — bazy nie ma: jak kasowanie obce; baza w wyższej wersji: jak nowsza wersja
+  aplikacji; baza jest: karta działa dalej (następna operacja otwiera bazę od nowa).
+- **Otwarcie bazy** (`r`; tryb `meta` dla `getUserMeta`, `zaloz` dla `putUserMeta`, pozostałe wywołania w trybie
+  domyślnym): odmowa przed otwarciem i przed odczytem mapy (`Buk_odmowa`) — konto usunięte w innym dokumencie:
+  `ACCOUNT_REMOVED`; nowsza wersja aplikacji: `APP_UPDATED`; zapis metadanych konta, którego bazę kasuje ten dokument:
+  `ACCOUNT_REMOVED`. Upgrade bazy, której nie ma, jest przerywany poza zapisem metadanych (pierwszym krokiem każdego
+  założenia i odtworzenia konta), więc odczyt metadanych daje wtedy „brak metadanych” jak dotąd, a inne operacje —
+  `ACCOUNT_REMOVED`. Ta sama odmowa w `onsuccess`, gdy oznaczenie przyszło w trakcie otwarcia; `VersionError` →
+  `APP_UPDATED` dla całej karty. Przerwane otwarcie bazy konta bieżącej sesji (karta bez połączenia w mapie, do której
+  `versionchange` nie doszło) działa jak kasowanie obce (`Buk_brakBazy`).
+- **Kasowanie w tym dokumencie** (`deleteUserDatabase`): znacznik „ten dokument kasuje konto” przed `deleteDatabase`
+  (`Buk_kasuj`; `versionchange` własnych połączeń tylko je zamyka, bez banera i bez drugiej blokady), cofany przy błędzie
+  tylko przez wywołanie, które go postawiło (`Buk_cofnij`); `onblocked` bez zmian. Nowy eksport
+  `VildaVault.isRemovingCurrentUser()` — prawda, gdy ten dokument kasuje bazę konta bieżącej sesji, od znacznika do
+  blokady `user-removed` w „Usuń konto” (przy usuwaniu innego konta i po błędzie kasowania — fałsz).
+- **`vilda_frame_sync.js`.** Dokument, który sam kasuje konto bieżącej sesji (`isRemovingCurrentUser()`), nie jest
+  przeładowywany, gdy w trakcie znika klucz sesji (`Fs_usuwa`); sejf bez tej funkcji albo z funkcją, która rzuca —
+  przeładowanie jak dotąd.
+- **Instalacja sesji** (`Buk_instalacja` w logowaniu `Ut` i w odtworzeniu sesji `_a`, po ostatnim oczekiwaniu, przed
+  zapisem sesji i powiadomieniem o odblokowaniu): gdy konto usunięto w trakcie w innym dokumencie — bajty klucza
+  wyzerowane, ustawiona już sesja zablokowana (logowanie: powód `user-removed`, przy którym ekran logowania się nie
+  przerysowuje, więc formularz pokazuje tekst 2; odtworzenie sesji: `user-removed-elsewhere`), a gdy sejf zablokowano
+  już wcześniej w trakcie logowania — tryb zapisu jak po blokadzie; wynik: odmowa `ACCOUNT_REMOVED`. Tylko usunięcie
+  konta, nie nowsza wersja aplikacji: logowanie w toku w karcie, której bazę podniosła nowsza wersja, kończy się sesją,
+  a operacje danych — tekstem 3.
+- **Lista kont** (`listUsers`, także liczba kont w `getStatus()`) pomija konta usunięte w innym dokumencie
+  (`Buk_lista`): wpis rejestru znika dopiero po skasowaniu bazy, a ekran logowania drugiej karty czyta listę już przy
+  blokadzie.
+- **Ekran logowania** (`vilda_auth_ui.js`): blokada z powodem `user-removed-elsewhere` rysuje ekran logowania z banerem
+  tekst 1 (`Buk_baner`: `div.vilda-auth-banner`, tylko dla niepustego napisu — wywołanie ekranu startowego bez
+  argumentu, z obiektem albo ze zdarzeniem daje ekran bez banera) i unieważnia pamięć dostępu PRO usuniętego konta, jak
+  `manual` i `user-removed`; blokady `manual` i `idle` — bez banera, jak dotąd.
+- **Magazyn kolejki** (blok `P-DZIENNIK-ZDARZEN`, część `Bob_`): karta, która zapisała identyfikator urządzenia
+  usuwanego konta, usuwa go sama; w trakcie usuwania konta identyfikator nie jest zapisywany. Po kasowaniu obcym
+  dokument nie otwiera i nie tworzy bazy kolejki tego konta (`Bob_poKasowaniuSejfu`). Przy zamkniętej bramce (dziś
+  w produkcji) druga karta przy „Usuń konto” nie zapisuje i nie usuwa kluczy `vilda-sync-*` i nie otwiera bazy kolejki.
+  Operacje kolejki i kwarantanny sprawdzają sesję tak jak zapis karty (P-SESJA-ZAPISU): zmiana sesji w trakcie kończy
+  operację bez zapisu.
+
+**Wymagania dla E2-PR3a1c** (zakres z decyzji z 2026-11-05; te same w planie, wiersz 6a″):
+- Dziennik dostępu konta: baza `vilda_audit_v1_<userId>` objęta „Usuń konto”, także przy drugiej karcie (jej połączenia
+  z tą bazą zamykają się przy `versionchange`, jak przy bazie sejfu); test: pełna lista baz przeglądarki po usunięciu
+  konta = bazy wspólne.
+- Karta odświeżona albo odtworzona po usunięciu konta w innej karcie (przeładowanie, przywrócenie z pamięci
+  przeglądarki, karta wznowiona po zamrożeniu): od razu ekran logowania bez usuniętego konta, z banerem tekst 1.
+- Ekran logowania w kartach bez sesji („Kto się loguje?” albo „Witamy” otwarte w innej karcie): po usunięciu konta
+  lista odświeża się bez usuniętego konta.
+- Podpowiedź, gdy kasowanie bazy sejfu czeka (karta ze starszą wersją aplikacji, okno pytania), tekst 4 dosłownie:
+  „Czekam, aż inne karty z aplikacją zwolnią to konto. Zamknij je albo odpowiedz na pytanie otwarte w innej karcie. Nie
+  zamykaj tej strony.”; w karcie usuwającej ostrzeżenie przy zamykaniu strony (`beforeunload`), dopóki usuwanie trwa.
+- Wymaganie z projektu tego PR (zakres E2-PR3a1c ustala właściciel): ustawienia eksportu kluczowane kontem we wspólnej
+  bazie ustawień eksportu — wpisy usuwanego konta usuwane przy „Usuń konto”.
+- Po przyjęciu E2-PR3a1c decyzja 12.4 wraca do pełnego brzmienia.
+
+**Ograniczenia.**
+- „Usuń konto” czeka, gdy inna karta ma wersję aplikacji sprzed tej zmiany (do jej zamknięcia albo odświeżenia) albo
+  otwarte okno z pytaniem (do odpowiedzi — wtedy tamta karta wraca do ekranu logowania); potem kończy się samo.
+- Karta zamrożona albo wstrzymana w tle (np. na telefonie) może opóźnić „Usuń konto”.
+- Zmierzono w Chromium 153; WebKit (Safari i każda przeglądarka na iPhonie i iPadzie) i Firefox niezmierzone. Testy
+  jednostkowe działają na atrapie IndexedDB wzorowanej na Chromium i nie zależą od kolejności zdarzeń `complete`
+  i `versionchange` przy transakcji w toku (w Chromium bywa różna).
+
+**Cofnięcie** = rewert PR. Stan bloku jest tylko w pamięci okna (bez nowych baz, kluczy i żądań), więc nie ma czego
+sprzątać.
+
+**Testy.** Dane wyłącznie fikcyjne, bez PESEL. Nowe:
+- `tests/unit/sejf-usun-konto-karty.test.mjs` — 57 przypadków (UK1–UK20 z wariantami) na prawdziwym sejfie z modułami
+  punktu odzyskiwania nad atrapą IndexedDB; druga karta to drugie okno na tej samej atrapie. Druga karta zalogowana na
+  usuwane albo na inne konto, niezalogowana na ekranie logowania i ze starszą wersją aplikacji (połączenie bez obsługi
+  `versionchange`); karta usuwająca (`isRemovingCurrentUser`, zapis i odczyt w trakcie własnego kasowania); operacje po
+  usunięciu i zapis w toku (sprawdzenia sesji, P-SESJA-ZAPISU); stan dokumentu przed powiadomieniem o blokadzie; nowsza
+  wersja bazy; lista kont; wymuszone zamknięcie; tryb „Zaloguj jednorazowo” i praca bez Web Locks; „Komputer w pracy”;
+  logowanie i odtworzenie sesji w toku (UK14–UK14i, także ostatnie kroki logowania i zapis czasu logowania); konto bez
+  metadanych i założenie konta; ekran startowy bez banera dla wywołań bez napisu; `vilda_frame_sync.js` (prawdziwy
+  plik); kody i komunikaty błędów; strażniki tekstowe (testy drugiej karty same nie zamykają połączeń z bazą sejfu);
+  identyfikator urządzenia przy osobnym widoku `localStorage` na okno. Wyrocznia baz — pełna lista baz atrapy.
+- `tests/support/usun-konto-karty-chromium.mjs` i `tests/e2e/usun-konto-karty.spec.mjs` — 4 przypadki pełnej aplikacji
+  w prawdziwym Chromium (własny serwer plików repozytorium, port przydzielany przez system; ten sam moduł działa też
+  jako skrypt Node): PA1 (dwie karty: `index.html` i `ustawienia.html`), PA1′ (karta B = `app.html#/start`), PA2 (jedno
+  okno `app.html#/ustawienia`: wpis rejestru usunięty, ramka Ustawień od nowa, trasa zostaje, powłoka „Witamy”
+  z banerem), PA3 (dwa konta: „Kto się loguje?” z banerem tylko z drugim kontem, pamięć PRO unieważniona raz; logowanie
+  w toku w trzeciej karcie — tekst 2 w formularzu, bez banera; blokady `manual` i `idle` bez banera). Wyrocznia baz:
+  pełna lista baz przeglądarki przed „Usuń konto” i po nim, po ucichnięciu; baza dziennika dostępu konta — w zakresie
+  E2-PR3a1c; dawna baza punktów terapii GH kalkulatora (`ghTherapyDB`), którą strony zakładają i usuwają niezależnie od
+  konta, poza tym testem. Konto bez biblioteki szablonów. Czasy „Usuń konto” w adnotacji testu, poza porównywanym
+  wynikiem.
+
+Zmienione:
+- `tests/support/dwie-karty-chromium.mjs` i `tests/e2e/dziennik-zdarzen-dwie-karty.spec.mjs` — 3 → 7 przypadków
+  (KA1–KA7), bez podmiany otwarcia IndexedDB przez test: KA1 i KA2 — stan czytany w obu kartach, druga karta po
+  kasowaniu bazy sejfu zablokowana; nowe KA4 (druga karta bez operacji: „Usuń konto” w < 2 s, pełna lista baz po
+  usunięciu), KA5 (logowanie w toku: tekst 2, blokada `user-removed`, bez sesji), KA6 (nowsza wersja bazy sejfu: bez
+  czekania, tekst 3, także logowanie w nowej karcie), KA7 (okno pytania: „Usuń konto” czeka do odpowiedzi; kasowanie
+  bazy narzędziami przeglądarki: druga karta zablokowana w < 2 s, baza nie wraca).
+- `tests/unit/sync-dziennik-konto.test.mjs` — 70 → 71 przypadków: test nie zamyka już sam połączenia drugiej karty
+  z bazą sejfu; K3 i K16 — dopisanie i zapis do kwarantanny drugiej karty kończą się odmową `zablokowany`; K3a → K3e
+  (dopisanie drugiej karty po kasowaniu bazy sejfu — `zablokowany` bez czekania na blokadę konta); K6j bez wymuszonego
+  zamknięcia; K14 i K14b w jednym oknie (blokadę wyłączną konta trzyma inna karta); samotest osobnego widoku
+  `localStorage`.
+- `tests/unit/sync-dziennik-uspienie.test.mjs` — 31 przypadków: literał miejsc poza blokiem 4 funkcje / 8 wywołań
+  (`Buk_obce: { Bob_poKasowaniuSejfu: 1 }`, tylko w bloku `try`) i wzorce dobre i złe tej formy.
+- `tests/support/okno-magazynu.mjs` — opcje okna `localStorage: 'osobny'` (osobny widok `localStorage` na okno;
+  `o.propaguj()` przenosi zapisy do pozostałych okien i wysyła w nich zdarzenie `storage`) i `zdarzenia: true` (prawdziwy
+  cel zdarzeń okna, `BroadcastChannel` na szynie okien, liczone `location.reload` i `location.replace`); domyślne okno
+  bez zmian.
+- `tests/fixtures/czasy-e2e.json` — wagi odłamków e2e: `usun-konto-karty.spec.mjs` 84,9 s,
+  `dziennik-zdarzen-dwie-karty.spec.mjs` 15,5 s.
+
+Fikstura zapisu bazowego (`tests/fixtures/dziennik-zapis-bazowy.json`) bez zmian.
+
+Wynik na stanie końcowym: sejf drugiej karty 57/57, konto 71/71, uśpienie 31/31; e2e 11/11 (KA1–KA7, PA1, PA1′, PA2,
+PA3); ESLint bez problemów, składnia poprawna. Skrypt Node scenariuszy w Chromium 153.0.8010.12: każdy z 11 scenariuszy
+KA i PA 22/22 zgodnych przebiegów (8 po kolei, 12 w trzech seriach po 4 procesy naraz, 2 w serii mieszanej). Trzy pliki
+jednostkowe pod obciążeniem (8 procesów naraz na 4 rdzeniach, 20 serii): 160/160 przebiegów, 25 440 przypadków
+zielonych. „Usuń konto” w karcie A bez okna pytania (KA1–KA5) trwa 6–72 ms; w pełnej aplikacji od kliknięcia do
+przejścia na `index.html` (PA1, PA1′) 34–1186 ms; w aplikacji zainstalowanej wpis rejestru znika po 57–652 ms (PA2).
+
+**Czerwone na bazie** (kopia `origin/audyt` `83fa119` z testami i wsparciem tego PR, sejf bazy):
+
+| Plik | Czerwone | Zielone |
+|---|---|---|
+| `sejf-usun-konto-karty` | 46 | 11 (strażniki: UK1c, UK9b, UK12, UK15 (4), UK16 (1)–(3), UK17 (1), UK17 (3), UK19 (1)(2)) |
+| `sync-dziennik-konto` | 8 (K3, K3e, K6j — dwa przypadki, K10, K13, K13b, K16) | 63 |
+| `sync-dziennik-uspienie` | 2 (U2(a): identyfikatory poza blokiem w tekście i wywołania z literału miejsc na drzewie składni) | 29 |
+| **razem** | **56** | **103** |
+
+- Powód: usuwanie czeka na połączenie drugiej karty („nie doczekano: …”), brak `isRemovingCurrentUser` albo brak nowego
+  zachowania.
+- E2e na bazie (Chromium 153): KA1, KA2, KA4–KA7 czerwone („Usuń konto” w karcie A bez wyniku w limicie, druga karta bez
+  zamknięcia połączenia, czekanie przy wyższej wersji), KA3 zielony; PA1, PA1′, PA2 i PA3 czerwone (karta usuwająca nie
+  przechodzi na `index.html` w limicie, w PA2 brak nowego ekranu logowania).
+
+**Mutanty** (kopie, jedna zmiana na przebieg, na kodzie tego PR): 79 — 73 zabite (64 przypadkami jednostkowymi, 9 zmian
+ekranu logowania przypadkami PA w Chromium; 6 dopiero przypadkami dopisanymi po ostatnim przeglądzie), 6 równoważnych
+(bez skutku dla wymagań).
+
+**Gdzie w kodzie.** `vilda_vault.js` +193 / −12 linii; w `vilda_frame_sync.js` i `vilda_auth_ui.js` tylko dopisane znaki
+w liniach zminifikowanych.
+- Blok `P-USUN-KONTO-KARTY` w `vilda_vault.js`: linie 608–764 (157 linii, 7770 B), zaraz za `Bnu_blad` (blok
+  P-CHMURA-OPIS), komentarze bez znaków diakrytycznych. Stan: `Buk_usuniete` (konta skasowane przez inny dokument),
+  `Buk_nowszaWersja`, `Buk_usuwa` (konta kasowane przez ten dokument), `Buk_KOMUNIKATY`. Funkcje: `Buk_blad`,
+  `Buk_odmowa`, `Buk_bladOtwarcia`, `Buk_obce`, `Buk_zmiana`, `Buk_brakBazy`, `Buk_zamknieta`, `Buk_polacz`,
+  `Buk_kasuj`, `Buk_cofnij`, `Buk_usuwaBiezace`, `Buk_instalacja`, `Buk_lista`.
+- Wstawki w liniach zminifikowanych `vilda_vault.js` (bez komentarzy, nowe identyfikatory z prefiksem `Buk_`):
+
+| Miejsce | Wstawka |
+|---|---|
+| adapter IndexedDB `Sa`, otwarcie `r(o, Buk_t)` | `Buk_odmowa` przed otwarciem i przed mapą; przerwanie upgrade'u przy `oldVersion` 0 poza trybem `zaloz`; w `onsuccess` ponowna odmowa i `Buk_polacz`; w `onerror` `Buk_brakBazy`, w trybie `meta` wynik pusty, inaczej `ACCOUNT_REMOVED` albo `Buk_bladOtwarcia` |
+| `getUserMeta`, `putUserMeta` | `r(o, "meta")`, `r(o, "zaloz")` |
+| `deleteUserDatabase` | `Buk_kasuj` przed `deleteDatabase`; `Buk_cofnij` przy wyjątku synchronicznym i w `onerror` |
+| `Ut` (logowanie) | `Buk_instalacja(e, t, "user-removed")` po `Qe()`, przed `Ae()` i `He()` |
+| `_a` (odtworzenie sesji) | `Buk_instalacja(e.userId, a, "user-removed-elsewhere")` po `Qe(…)`, przed `QrContinuityRestoreSeed` |
+| `Ee` (`listUsers`) | `Buk_lista(…)` na liście rejestru |
+| eksport `VildaVault` | `isRemovingCurrentUser: Buk_usuwaBiezace` |
+
+- Blok `P-DZIENNIK-ZDARZEN`, część `Bob_`: stała `Bob_zapisane`, w `Bob_urzadzenieZapisz` strażnik `Bob_wKasowaniu`
+  i `Bob_zapisane.add`, nowa funkcja `Bob_poKasowaniuSejfu` (funkcji `Bob_` 77 → 78), dopiski w nagłówku bloku,
+  nagłówku magazynu i komentarzu nad `Bob_usuwane`. Blok: linie 5197–7331 (2135 linii, 100 724 B; było 2111 linii,
+  99 332 B), część `Bob_` 5854–7331 (1478 linii, 68 914 B; było 1455 linii, 67 594 B). Poza blokiem dziennika
+  `Bob_poKasowaniuSejfu` woła tylko `Buk_obce` (w bloku `try`): literał miejsc 4 funkcje / 8 wywołań (było 3 / 7).
+- `vilda_frame_sync.js`: `}else Fs_usuwa()||a()}` i funkcja `Fs_usuwa` (`isRemovingCurrentUser()` w `try`).
+- `vilda_auth_ui.js`, 8 wstawek: powód `user-removed-elsewhere` w unieważnieniu pamięci PRO i w `onLock` (ekran
+  logowania z tekstem 1), parametr banera w `me`, `ar` („Witamy”) i `nr` („Kto się loguje?”), funkcja `Buk_baner`
+  i baner jako pierwszy element obu ekranów.
+
+**Wersje.** Podbicie `?v=` zmienionych plików (i plików, które je wstrzykują) oraz SW skryptem `npm run podbij-wersje`;
+numery w nagłówku wpisu.
+
 ## Dziennik zdarzeń: kasowanie kolejki przy „Usuń konto” i koordynacja kart — uśpione (P-DZIENNIK-ZDARZEN, E2-PR3a1, SW 1.1.470, `vilda_vault.js` 252, 2026-11-05)
 
 **Zmiana kliniczna: NIE** — wzory, progi, jednostki, interpretacje, zapis, scalanie, format kopii i synchronizacja bez
@@ -21014,7 +21244,7 @@ znacznik ponowienia, a przy odblokowaniu — przegląd nazw kluczy w pamięci pr
 konto” są te same. Wpływ kliniczny dziś: brak. Wpis opisuje czwarty kawałek dziennika zdarzeń (po E2-PR2a, E2-PR2b1
 i E2-PR2b2, wpisy niżej), uśpiony poza samym kasowaniem przy „Usuń konto” i jego ponowieniem przy odblokowaniu. Dalej:
 E2-PR3a1b (druga karta przeglądarki z tym samym kontem blokuje się przy „Usuń konto”, a usuwanie kończy się bez
-czekania na nią), E2-PR3a2 (dopisywanie zmian do kolejki w miejscach zapisu), E2-PR3a3 (importy i zgodność prawdziwych
+czekania na nią; wpis wyżej), E2-PR3a2 (dopisywanie zmian do kolejki w miejscach zapisu), E2-PR3a3 (importy i zgodność prawdziwych
 zdarzeń z modelem testu) i E2-PR3a4 (przegląd kolejki).
 
 **Skąd.** Plan `docs/SYNC_PRZYROSTOWA_PLAN.md`, wiersz 6a tabeli „Podział etapu 2” (do 2026-11-05 wiersz 6, E2-PR3a),
@@ -21108,7 +21338,9 @@ jednorazowo” (ostatnia instrukcja powiadomienia o odblokowaniu), bez bramki i 
 - Druga karta przeglądarki dopisuje w trakcie „Usuń konto”: kasowanie czeka na blokadę, a gdy druga karta zwolni ją
   w 10 s, po końcu nie ma bazy kolejki ani znacznika — także gdy pierwsze dopisanie drugiej karty zakłada bazę kolejki
   w trakcie tego czekania; inaczej kasowanie bez blokady i znacznik do następnego odblokowania (tabela wyżej).
-  Dopisanie w drugiej karcie zaczęte już po wejściu kasowania kończy się odmową `konto` (wpisu rejestru już nie ma).
+  Dopisanie w drugiej karcie zaczęte już po wejściu kasowania kończy się odmową `konto` (wpisu rejestru już nie ma);
+  od E2-PR3a1b (wpis wyżej) druga karta z tym kontem jest wtedy już zablokowana i dopisanie kończy się odmową
+  `zablokowany`.
 
 **Tryb „Zaloguj jednorazowo”.** Tryb jest ujmowany przy oznaczeniu, na początku „Usuń konto” (zanim blokada sejfu go
 wyłączy). W tym trybie kasowanie kolejki niczego nie rusza: wynik „pominięte”, bez listy baz, `deleteDatabase`, blokady
@@ -21155,12 +21387,9 @@ same ślady.
 
 **Wymagania dla następnych PR** (z E2-PR3a1 i decyzji 12.1–12.4, zebrane tu w całości; te same w planie: wiersze
 6a′–6d, 7a, 8 i 12 tabeli „Podział etapu 2”).
-- **E2-PR3a1b** (decyzja 12.4). Druga karta przeglądarki z tym kontem przy `versionchange` bazy sejfu blokuje się (ekran
-  logowania) i niczego nie zapisuje ani nie odczytuje; karta zamyka wtedy każde swoje połączenie z tą bazą. „Usuń konto”
-  kończy się bez czekania na zamknięcie drugiej karty i usuwa identyfikator urządzenia także wtedy, gdy druga karta
-  zapisała go tuż przed usunięciem (test dwóch kart bez warunku wstępnego sprawdza też identyfikator urządzenia). Test:
-  po usunięciu konta przy otwartej drugiej karcie na dysku nie zostaje żadna baza tego konta, a test sam nie zamyka
-  połączenia drugiej karty z bazą sejfu. Zmiana widoczna — z wpisem w ALGORITHMS.
+- **E2-PR3a1b** (decyzja 12.4) — wykonane w E2-PR3a1b (wpis wyżej, P-USUN-KONTO-KARTY): druga karta zamyka połączenia
+  z bazą sejfu i blokuje się, „Usuń konto” nie czeka, identyfikator urządzenia nie zostaje; test sprawdza pełną listę
+  baz przeglądarki bez zamykania połączeń przez test; bazę dziennika dostępu konta obejmuje E2-PR3a1c.
 - **E2-PR3a2.**
   - Wewnętrzne dopisanie `Bob_dopiszZ` budowane nad `Bob_dopiszPod`, z blokadą współdzieloną konta braną przed nim.
   - Porównanie zapisu bazowego z sejfem bez wstawek (w tej kopii sejfu `Bob_oznacz(…)` zastąpione przez `false`):
@@ -21205,8 +21434,8 @@ same ślady.
   przeglądarek bez Web Locks albo bez listy baz kod ma osobne ścieżki: kasowanie bez blokady albo bez sprawdzania
   istnienia bazy; znacznik ponowienia tylko przy śladzie kolejki konta (baza na liście albo zapisany identyfikator
   urządzenia), po limicie blokady konta i po nieudanym albo niedokończonym kasowaniu.
-- „Usuń konto” przy otwartej drugiej karcie przeglądarki z tym samym kontem czeka, jak dotąd, aż druga karta się
-  zamknie; kasowanie kolejki czeka razem z nim. Zmianę wnosi E2-PR3a1b (decyzja 12.4).
+- Od E2-PR3a1b „Usuń konto” nie czeka na drugą kartę z aktualną wersją aplikacji (wpis wyżej); czeka nadal na kartę
+  z wersją sprzed E2-PR3a1b albo z otwartym oknem pytania, a kasowanie kolejki czeka wtedy razem z nim.
 - Dopisywanie zmian do kolejki dochodzi w E2-PR3a2 i E2-PR3a3, przegląd kolejki — w E2-PR3a4.
 
 **Cofnięcie** = rewert PR. Przy zamkniętej bramce baza kolejki nie powstaje, więc bazy nie trzeba sprzątać. Znacznik
