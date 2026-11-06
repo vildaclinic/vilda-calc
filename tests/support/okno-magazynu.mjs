@@ -26,17 +26,36 @@
 //       null — konto zalogowane na końcu; domyślnie 'A'), skrypty (lista plików okna; domyślnie crypto, retention,
 //       vault — SKRYPTY_PUNKTU dokłada moduły punktu odzyskiwania), locks (false — okno bez navigator.locks; obiekt
 //       atrapaLocks — wspólna atrapa Web Locks; domyślnie nowa atrapa okna), localStorage (stan o.lokalny innego okna —
-//       wspólny localStorage; domyślnie nowy), databases (false — window.indexedDB okna bez databases(), ta sama atrapa).
+//       wspólny localStorage; domyślnie nowy; 'osobny' — osobny widok localStorage na okno, rozsyłanie zapisów
+//       i zdarzenia storage między oknami: niżej), databases (false — window.indexedDB okna bez databases(), ta sama
+//       atrapa), zdarzenia (true — prawdziwy cel zdarzeń okna: niżej; domyślnie addEventListener i dispatchEvent okna
+//       nic nie robią).
 //   drugieOkno(o, opcje) → Promise<o2> — nowe okno na tej samej atrapie z kontami o.A / o.B (bez tworzenia kont); dzieli
 //       z o atrapę IndexedDB, atrapę Web Locks (o.locks; okno bez navigator.locks daje drugie też bez), localStorage
-//       (o.lokalny) i listę skryptów (o.skrypty), jeśli opcje nie mówią inaczej. sessionStorage, zegary, crypto i
-//       dziennik — własne każdego okna.
+//       (o.lokalny), listę skryptów (o.skrypty) i rodzinę okien (szyna BroadcastChannel, rozsyłanie zapisów localStorage),
+//       jeśli opcje nie mówią inaczej. sessionStorage, zegary, crypto i dziennik — własne każdego okna.
+//       drugieOkno(o, { localStorage: 'osobny' }) dołącza do rodziny o (o też z localStorage: 'osobny').
+//
+// OPCJA localStorage: 'osobny' (włącza też zdarzenia: true)
+//   Każde okno ma własny widok localStorage: kopię widoku okna, z którego powstało (pierwsze okno — pusty), z chwili
+//   utworzenia. Zapisy okna (setItem, removeItem, clear) trafiają do jego widoku, do jego dziennika i do kolejki
+//   rozsyłania; o.propaguj() → Promise przenosi zapisy tego okna z kolejki do widoków pozostałych okien rodziny, które
+//   były w niej w chwili zapisu (w kolejności zapisu, bez wpisów w ich dziennikach), i wysyła w nich zdarzenie storage
+//   (key, oldValue, newValue — wartości z chwili zapisu; po clear() key null); obietnica rozstrzyga się po wysłaniu.
+//
+// OPCJA zdarzenia: true
+//   addEventListener, removeEventListener i dispatchEvent okna na prawdziwym EventTarget; BroadcastChannel okna na
+//   szynie rodziny (postMessage dochodzi jako zdarzenie message — onmessage i słuchacze — do pozostałych kanałów
+//   o tej samej nazwie w oknach rodziny, także kanałów utworzonych przez test przez new o.win.BroadcastChannel(nazwa),
+//   po jednym makrozadaniu, z kopią danych); location.reload() i location.replace(adres) okna tylko liczone
+//   (o.przeladowania() → liczba reload, o.zamiany → adresy replace).
 //
 // OKNO o
 //   o.win, o.v (VildaVault), o.ev (VildaVault._eventLog), o.idb, o.A / o.B ({ userId, haslo }), o.timery, o.dziennik
 //   (zapisy localStorage/sessionStorage tego okna, także we wspólnym localStorage), o.locks (atrapa Web Locks albo null),
 //   o.lokalny (stan localStorage do dzielenia), o.skrypty, o.krypto (atrapaKrypto z uprzęży: log, po, przed, wstrzymaj, blad),
 //   o.kryptoWToku() — liczba operacji crypto.subtle w toku, o.kto(uid) → 'A' | 'B' | uid, o.sesja() → 'A' | 'B' | null.
+//   o.propaguj() → Promise (tylko localStorage: 'osobny'), o.przeladowania() → liczba, o.zamiany (tylko zdarzenia: true).
 //   o.zablokuj(powod), o.zaloguj(kto) → Promise (blokada, zalogowanie, zadanie w tle i cisza),
 //   o.przelacz(wariant) → Promise<znacznik> — 'B' (inne konto), 'A' (ponowne zalogowanie A), 'blokada'.
 //   o.przelaczWTle(wariant) → { sesja, koniec } — blokada od razu, zalogowanie bez czekania: `sesja` rozstrzyga się,
@@ -189,6 +208,66 @@ function fasadaLokalna(stan, ctx) {
   };
   return { obiekt, cel };
 }
+// Rodzina okien: szyna BroadcastChannel i okna z osobnym widokiem localStorage (cele rozsyłania zapisów).
+const nowaRodzina = () => ({ kanaly: new Set(), widoki: new Set() });
+// Klasa BroadcastChannel okna na szynie rodziny: wiadomość dochodzi do pozostałych otwartych kanałów o tej samej nazwie
+// po jednym makrozadaniu (onmessage, potem słuchacze), z kopią danych.
+function klasaKanalu(rodzina) {
+  return class BroadcastChannel extends EventTarget {
+    constructor(nazwa) {
+      super();
+      this.name = String(nazwa);
+      this.onmessage = null;
+      this.zamkniety = false;
+      rodzina.kanaly.add(this);
+    }
+    postMessage(dane) {
+      if (this.zamkniety) throw new DOMException('Kanał jest zamknięty.', 'InvalidStateError');
+      const kopia = structuredClone(dane);
+      for (const k of rodzina.kanaly) {
+        if (k === this || k.name !== this.name) continue;
+        setImmediate(() => {
+          if (k.zamkniety) return;
+          const e = new MessageEvent('message', { data: kopia });
+          if (typeof k.onmessage === 'function') k.onmessage(e);
+          k.dispatchEvent(e);
+        });
+      }
+    }
+    close() { this.zamkniety = true; rodzina.kanaly.delete(this); }
+  };
+}
+// Osobny widok localStorage okna w rodzinie: zapisy do widoku i do kolejki rozsyłania (cele — pozostałe okna rodziny
+// z chwili zapisu); propaguj() przenosi je do widoków celów i wysyła w nich zdarzenie storage.
+function widokOsobny(rodzina, stan, ctx, wyslij) {
+  const czlonek = { stan, wyslij };
+  const kolejka = [];
+  const fasada = fasadaLokalna(stan, ctx);
+  const { obiekt } = fasada;
+  const zapisz = (klucz, stara, nowa) => { kolejka.push({ klucz, stara, nowa, cele: [...rodzina.widoki].filter((c) => c !== czlonek) }); };
+  const setItem = obiekt.setItem;
+  const removeItem = obiekt.removeItem;
+  const clear = obiekt.clear;
+  obiekt.setItem = (k, v) => { const stara = obiekt.getItem(k); setItem(k, v); zapisz(String(k), stara, String(v)); };
+  obiekt.removeItem = (k) => { const stara = obiekt.getItem(k); removeItem(k); zapisz(String(k), stara, null); };
+  obiekt.clear = () => { clear(); zapisz(null, null, null); };
+  rodzina.widoki.add(czlonek);
+  async function propaguj() {
+    const wpisy = kolejka.splice(0);
+    const zdarzenia = [];
+    for (const w of wpisy) {
+      for (const c of w.cele) {
+        if (w.klucz === null) for (const k of Object.keys(c.stan.m)) delete c.stan.m[k];
+        else if (w.nowa === null) delete c.stan.m[w.klucz];
+        else c.stan.m[w.klucz] = w.nowa;
+        zdarzenia.push([c, w]);
+      }
+    }
+    await new Promise((r) => { setImmediate(r); });
+    for (const [c, w] of zdarzenia) c.wyslij({ key: w.klucz, oldValue: w.stara, newValue: w.nowa });
+  }
+  return { fasada, propaguj };
+}
 // window.indexedDB okna bez databases() (przeglądarka bez listy baz); ta sama atrapa, sterowanie przez o.idb.
 function bezListyBaz(idb) {
   return new Proxy(idb, {
@@ -223,10 +302,46 @@ export async function oknoMagazynu(opcje = {}) {
       };
     },
   });
-  const lokalny = opcje.localStorage || magazynLokalny();
-  const fasada = fasadaLokalna(lokalny, ctx);
+  const rodzina = opcje.rodzina || nowaRodzina();
+  const osobny = opcje.localStorage === 'osobny';
+  const zdarzenia = osobny || opcje.zdarzenia === true;
+  const cel = zdarzenia ? new EventTarget() : null;
+  let lokalny;
+  let fasada;
+  let propaguj = null;
+  if (osobny) {
+    const zrodlo = opcje.widokZrodla;
+    if (opcje.rodzina && !(zrodlo && [...rodzina.widoki].some((c) => c.stan === zrodlo))) {
+      throw new Error("localStorage: 'osobny' — okno, z którego powstaje drugie, ma wspólny localStorage (utwórz je z localStorage: 'osobny')");
+    }
+    lokalny = { m: Object.assign(Object.create(null), zrodlo ? zrodlo.m : {}) };
+    const wyslij = (pola) => {
+      const e = new Event('storage');
+      for (const [k, w] of Object.entries(pola)) Object.defineProperty(e, k, { value: w, enumerable: true });
+      cel.dispatchEvent(e);
+    };
+    const w = widokOsobny(rodzina, lokalny, ctx, wyslij);
+    fasada = w.fasada;
+    propaguj = w.propaguj;
+  } else {
+    lokalny = opcje.localStorage || magazynLokalny();
+    fasada = fasadaLokalna(lokalny, ctx);
+  }
   const dodatki = { indexedDB: opcje.databases === false ? bezListyBaz(idb) : idb, localStorage: fasada.obiekt };
   if (opcje.sesja) dodatki.sessionStorage = opcje.sesja;
+  let przeladowania = 0;
+  const zamiany = [];
+  if (zdarzenia) {
+    dodatki.addEventListener = cel.addEventListener.bind(cel);
+    dodatki.removeEventListener = cel.removeEventListener.bind(cel);
+    dodatki.dispatchEvent = cel.dispatchEvent.bind(cel);
+    dodatki.BroadcastChannel = klasaKanalu(rodzina);
+    dodatki.location = {
+      hostname: 'localhost', origin: 'http://localhost', pathname: '/index.html', href: 'http://localhost/index.html',
+      reload: () => { przeladowania += 1; },
+      replace: (adres) => { zamiany.push(String(adres)); },
+    };
+  }
   const skrypty = opcje.skrypty || SKRYPTY_SEJFU;
   const o0 = okno({ ctx, krypto: { ...krypto, crypto: { ...krypto.crypto, subtle } }, dodatki, skrypty, locks: opcje.locks });
   fasada.cel.dziennik = o0.dziennik;
@@ -320,7 +435,12 @@ export async function oknoMagazynu(opcje = {}) {
     return b && b.sklepy[sklep] ? b.sklepy[sklep].wiersze : null;
   };
   const o = {
-    win, v, ev: v._eventLog, idb, A, B, timery: o0.timery, dziennik: o0.dziennik, krypto, locks: o0.locks, lokalny, skrypty,
+    win, v, ev: v._eventLog, idb, A, B, timery: o0.timery, dziennik: o0.dziennik, krypto, locks: o0.locks, lokalny, skrypty, rodzina,
+    przeladowania: () => przeladowania, zamiany,
+    propaguj: () => {
+      if (!propaguj) throw new Error("propaguj(): okno bez localStorage: 'osobny'");
+      return propaguj();
+    },
     kryptoWToku: () => kryptoWToku, kto, sesja, zablokuj, zaloguj, przelacz, przelaczWTle, tlo, cisza, spokoj, znacznik,
     kolejka: (k = 'A') => (migawka(k, 'outbox') || []).slice().sort((x, y) => x.seqLocal - y.seqLocal),
     kwarantanna: (k = 'A') => (migawka(k, 'quarantine') || []).slice(),
@@ -334,5 +454,6 @@ export async function oknoMagazynu(opcje = {}) {
 export function drugieOkno(o, opcje = {}) {
   return oknoMagazynu({
     skrypty: o.skrypty, locks: o.locks || false, localStorage: o.lokalny, ...opcje, idb: o.idb, istniejace: { A: o.A, B: o.B },
+    rodzina: o.rodzina, widokZrodla: o.lokalny,
   });
 }
