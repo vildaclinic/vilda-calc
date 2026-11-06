@@ -234,6 +234,10 @@ async function nativeEmptyMainSession(owner) {
   await owner.waitForFunction(() => !window.VildaPersistence.isAutosaveSuppressed()
     && !window.VildaDataImportExport.isMainSessionAutosavePaused()
     && !window.__vildaPersistRestoring && !window.VildaDobAge?.restorePending?.());
+  // Clear's quarantine deliberately hides the live examination context from
+  // the growth cache. Recalculate the real empty form after that boundary,
+  // exactly as a later resize does, before capturing its full default model.
+  await owner.evaluate(() => { window.calculateGrowthAdvanced(); });
   // PRO results mode is a retained view preference, so native autosave may
   // legitimately create this empty default snapshot after Clear's quarantine.
   expect(await owner.evaluate(() => window.VildaDataImportExport.saveMainSessionNow({ force: true }))).toBe(true);
