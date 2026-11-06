@@ -209,7 +209,16 @@
     root.appendChild(footer);
 
     function closeSort() { sortMenu.hidden = true; sortButton.setAttribute('aria-expanded', 'false'); }
+    function backgroundDownloadClick(event) {
+      const target = event && event.target;
+      // Automatic backups use a synthetic blob download; they do not represent
+      // the user choosing another part of the interface.
+      return Boolean(event && event.isTrusted === false && target && target.nodeType === 1
+        && target.tagName === 'A' && target.hasAttribute('download')
+        && (target.getAttribute('href') || '').startsWith('blob:'));
+    }
     function outsideSort(event) {
+      if (backgroundDownloadClick(event)) return;
       if (!sortWrap.contains(event.target)) closeSort();
     }
     function keyboardSort(event) {
