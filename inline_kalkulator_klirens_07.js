@@ -1,3 +1,97 @@
+/* KLIRENS-PH-DZM-SESSION: source tools/patch-klirens-ph-dzm-session.mjs */
+function installPhDzmSessionAdapter() {
+  "use strict";
+  const PROTOCOL_IDS = Object.freeze(["collectionStartVoidDiscarded", "collectionFinalVoidIncluded", "collectionNoMissedVoids", "collectionNoSpillage", "collectionNoExtraVoids", "collectionStorageFollowed"]);
+  const SAMPLE_IDS = Object.freeze(["PH24_sampleType", "PH24_sampleSource", "PH24_preservative", "PH24_infection"]);
+  const CONTEXT_IDS = Object.freeze(["age", "ageMonths", "ageDays", "sex", "weight", "height", "Cl24DurationHours", "Cl24DurationSource", "durationNeedsConfirmation", "Cl24CollectionProblem", ...SAMPLE_IDS, ...PROTOCOL_IDS.flatMap(id => [id, "ui_" + id + "_answer"])]);
+  const originals = new WeakMap();
+  const object = value => Boolean(value && typeof value === "object" && !Array.isArray(value));
+  const own = (value, key) => Object.prototype.hasOwnProperty.call(value || {}, key);
+  const primitive = value => typeof value === "string" || typeof value === "boolean" || typeof value === "number" && Number.isFinite(value);
+  const absent = value => value == null || typeof value === "string" && !value.trim();
+  const incoming = session => ({ ...(object(session?.preservedInputs) ? session.preservedInputs : {}), ...(object(session?.inputs) ? session.inputs : {}) });
+  function controls(fields) {
+    for (const [id, value] of Object.entries(fields)) {
+      const control = document.getElementById(id);
+      if (control) { if (control.type === "checkbox") control.checked = value === true; else control.value = value == null ? "" : String(value); }
+    }
+  }
+  function prepare(session) {
+    if (!object(session)) return session;
+    const values = incoming(session), formula = session.selectedFormula || values.formulaPicker;
+    if (formula !== "pH24") return session;
+    return { ...session, selectedFormula: "pH24", inputs: object(session.inputs) ? { ...session.inputs } : {}, preservedInputs: object(session.preservedInputs) ? { ...session.preservedInputs } : session.preservedInputs };
+  }
+  function capturedContext(session) {
+    const contexts = [session.context, session.sourceContext, session.collection, session.phDzmSnapshot, session.context?.phDzmSnapshot, session.sourceContext?.phDzmSnapshot, session.context?.assessment?.phDzmSnapshot, session.sourceContext?.assessment?.phDzmSnapshot].filter(object);
+    const fields = {};
+    for (const source of contexts) {
+      const context = object(source.input) ? source.input : source;
+      const facts = object(context.knownFacts) ? context.knownFacts : {};
+      for (const id of CONTEXT_IDS) if (!own(fields, id) && own(facts, id) && primitive(facts[id])) fields[id] = facts[id];
+      for (const [id, key] of [["Cl24DurationHours", "collectionHours"], ["Cl24DurationSource", "durationSource"], ["durationNeedsConfirmation", "durationNeedsConfirmation"], ["Cl24CollectionProblem", "collectionProblem"], ["PH24_sampleType", "sampleType"], ["PH24_sampleSource", "sampleSource"], ["PH24_preservative", "preservative"], ["PH24_infection", "infection"]]) {
+        if (!own(fields, id) && own(context, key) && primitive(context[key])) fields[id] = context[key];
+      }
+      if (!own(fields, "Cl24DurationHours") && object(source.collection) && primitive(source.collection.hours)) fields.Cl24DurationHours = source.collection.hours;
+    }
+    return fields;
+  }
+  function normalize(session) {
+    const values = originals.get(session) || incoming(session);
+    const selected = (session.selectedFormula || values.formulaPicker) === "pH24";
+    const fields = {};
+    const captured = selected ? capturedContext(session) : {};
+    if (selected || own(values, "pH24")) fields.pH24 = own(values, "pH24") && primitive(values.pH24) ? values.pH24 : "";
+    for (const id of SAMPLE_IDS) {
+      if (own(values, id) && primitive(values[id])) fields[id] = values[id];
+      else if (own(captured, id)) fields[id] = captured[id];
+    }
+    if (selected) {
+      for (const id of CONTEXT_IDS) {
+        if (own(values, id) && primitive(values[id])) fields[id] = values[id];
+        else if (own(captured, id)) fields[id] = captured[id];
+      }
+      // A restored report without a recorded collection duration is not a
+      // fresh default-24h sample. Keep its number without inventing a fact.
+      if (!absent(fields.pH24) && !own(values, "Cl24DurationHours") && !own(captured, "Cl24DurationHours")) {
+        fields.Cl24DurationHours = "";
+        fields.Cl24DurationSource = "historical-missing";
+        fields.durationNeedsConfirmation = true;
+      } else if ((own(values, "Cl24DurationHours") || own(captured, "Cl24DurationHours")) && !own(values, "Cl24DurationSource") && !own(captured, "Cl24DurationSource")) fields.Cl24DurationSource = absent(fields.Cl24DurationHours) ? "historical-missing" : "captured";
+    }
+    // Clear stale controls without adding unrendered pH fields to unrelated
+    // sessions. Only explicitly supplied or selected-calculation keys persist.
+    controls({ pH24: "", ...Object.fromEntries(SAMPLE_IDS.map(id => [id, ""])), ...fields });
+    session.inputs = { ...session.inputs, ...fields };
+  }
+  function clear() {
+    controls({ pH24: "", ...Object.fromEntries(SAMPLE_IDS.map(id => [id, ""])) });
+    const vault = window.__vildaClcrVersionValueVault;
+    if (object(vault)) for (const id of ["pH24", ...SAMPLE_IDS]) delete vault[id];
+  }
+  function restoreClear(event) {
+    clear();
+    if (event?.clcrClearedFormula !== "pH24" || !object(event.clcrPreservedPhDzmContext)) return;
+    const saved = event.clcrPreservedPhDzmContext;
+    const fields = { ...Object.fromEntries(CONTEXT_IDS.filter(id => own(saved, id) && primitive(saved[id])).map(id => [id, saved[id]])), pH24: "" };
+    controls(fields);
+    const vault = object(window.__vildaClcrVersionValueVault) ? window.__vildaClcrVersionValueVault : (window.__vildaClcrVersionValueVault = {});
+    Object.assign(vault, fields);
+    setTimeout(() => { try { window.ClcrUiWorkflow?.refresh?.(); window.clcrUpdate?.(); } catch {} }, 0);
+  }
+  window.ClcrPhDzmSession = Object.freeze({ CONTEXT_IDS, SAMPLE_IDS, clear });
+  const replace = (name, implementation) => { if (!Reflect.set(globalThis, name, implementation)) throw new Error("Nie można zainstalować adaptera sesji: " + name); };
+  const priorPrepare = preparePhSession;
+  replace("preparePhSession", function preparePhDzmBeforePh(session) { return priorPrepare(prepare(session)); });
+  const priorDuration = normalizeCl24SessionInputs;
+  replace("normalizeCl24SessionInputs", function capturePhDzmBeforeDuration(session) { originals.set(session, incoming(session)); priorDuration(session); });
+  const priorNormalize = normalizeCaDzmSessionInputs;
+  replace("normalizeCaDzmSessionInputs", function normalizePhDzmAfterCa(session) { priorNormalize(session); normalize(session); });
+  const priorClear = clearCaDzmInputContext;
+  replace("clearCaDzmInputContext", function clearPhDzmAfterCa() { priorClear(); clear(); });
+  const priorRestore = restoreClearedCaDzmContext;
+  replace("restoreClearedCaDzmContext", function restorePhDzmAfterCa(event) { priorRestore(event); restoreClear(event); });
+}
 // Addytywna migracja metadanych dorosłego CKD-EPI cr-cys. Jawne nowe false
 // wygrywa ze starymi faktami. Nie zmieniamy niezależnych metod ani stabilności.
 function normalizeCrCysConfirmation(session) {
@@ -3242,7 +3336,7 @@ function restoreClearedCaDzmContext(event) {
   const priorRestore = restoreClearedCaDzmContext;
   replace("restoreClearedCaDzmContext", function restoreCaCitAfterCa(event) { priorRestore(event); restoreClearedCaCit(event); });
 })();
-(function(){const b="vildaClcrSessionV1";function y(){try{if(typeof window<"u"&&window.VildaPersistence)return window.VildaPersistence}catch{}return null}function z(){try{const e=y();return e&&typeof e.isAutosaveSuppressed=="function"&&e.isAutosaveSuppressed()?!0:typeof window>"u"?!1:!!window.__vildaPersistRestoring||Number(window.__vildaPersistPauseUntil||0)>Date.now()}catch{return!1}}function h(){try{window.ClcrUaUi?.ensureControls?.(document)}catch{}const e=document.getElementById("clcrForm");try{window.ClcrMgDzmUi?.ensureControls?.(document)}catch{}try{window.ClcrPo4DzmUi?.ensureControls?.(document)}catch{}try{window.ClcrProteinDzmUi?.ensureControls?.(document)}catch{}try{window.ClcrSodiumDzmUi?.ensureControls?.(document)}catch{}try{window.ClcrPotassiumDzmUi?.ensureControls?.(document)}catch{}try{window.ClcrUrateCreatinineUi?.ensureControls?.(document)}catch{}try{window.ClcrCacrDzmUi?.ensureControls?.(document)}catch{}try{window.ClcrMagnesiumCalciumUi?.ensureControls?.(document)}catch{}try{window.ClcrPhosphorusCreatinineUi?.ensureControls?.(document)}catch{}try{window.ClcrOxDzmUi?.ensureControls?.(document)}catch{}try{window.ClcrCitDzmUi?.ensureControls?.(document)}catch{}try{window.ClcrCaCitUi?.ensureControls?.(document)}catch{}if(!e)return[];try{return Array.from(e.querySelectorAll("input, select, textarea"))}catch{return Array.from(e.elements||[])}}function _(e){if(!e||e.dataset&&e.dataset.clcrDerivedControl==="true")return"";const t=String(e.type||"").toLowerCase();return t==="button"||t==="submit"||t==="reset"||t==="file"?"":e.id||e.name||""}function j(){try{const e=document.querySelector(".version-option.selected[data-version]");if(e&&e.dataset&&e.dataset.version)return String(e.dataset.version)}catch{}try{if(typeof window<"u"&&window.currentVersion)return String(window.currentVersion)}catch{}return""}function k(e){if(!e)return null;const t=String(e.type||"").toLowerCase();return t==="checkbox"?!!e.checked:t==="radio"?e.checked?e.value:void 0:e.value==null?"":String(e.value)}function v(e,t){if(!e)return;const r=String(e.type||"").toLowerCase();r==="checkbox"?e.checked=!!t:r==="radio"?e.checked=String(e.value)===String(t)||t===!0:e.value=t==null?"":String(t)}function V(e,t){return!!e&&Object.prototype.hasOwnProperty.call(e,t)}function F(e){return e==null||typeof e=="string"&&e.trim()===""}function p(){try{return typeof window>"u"?{}:((!window.__vildaClcrVersionValueVault||typeof window.__vildaClcrVersionValueVault!="object")&&(window.__vildaClcrVersionValueVault={}),window.__vildaClcrVersionValueVault)}catch{return{}}}function q(){try{const e=p();return Object.keys(e).length>0}catch{return!1}}function C(){try{return!!(window.__vildaClcrPreserveVersionValues||q())}catch{return!1}}function P(e){try{let t=e;const r=document;for(;t&&t!==r;){if(t.style&&t.style.display==="none"||t.hidden)return!1;t=t.parentElement||t.parentNode}}catch{}return!0}function H(e,t){const r=t&&typeof t=="object"?t:{},n=e&&typeof e=="object"?e:{};try{typeof window<"u"&&(window.__vildaClcrVersionValueVault={})}catch{}const o=p();Object.keys(n).forEach(i=>{!i||i==="currentVersion"||(o[i]=n[i])});try{window.__vildaClcrPreserveVersionValues=r.preserve!==!1}catch{}return o}function S(){try{typeof window<"u"&&(window.__vildaClcrVersionValueVault={},window.__vildaClcrPreserveVersionValues=!1)}catch{}return!0}function g(e){const t=e&&typeof e=="object"?e:{};try{if(!t.force&&window.__vildaPersistRestoring)return null}catch{}if(!t.force&&!C())return null;const r=p();h().forEach(n=>{const o=_(n);if(!o||o==="currentVersion")return;const i=k(n);if(i===void 0)return;const u=P(n),c=F(i);!u&&c&&V(r,o)||!u&&c&&!V(r,o)||(r[o]=i)});try{window.__vildaClcrPreserveVersionValues=!0}catch{}return r}function N(e){const t=e&&typeof e=="object"?e:{};if(!C())return!1;const r=p();let n=!1;return h().forEach(o=>{const i=_(o);!i||!V(r,i)||t.visibleOnly!==!1&&!P(o)||(v(o,r[i]),n=!0)}),n}function J(e){!e||typeof e.dispatchEvent!="function"||["input","change"].forEach(t=>{try{e.dispatchEvent(new Event(t,{bubbles:!0}))}catch{}})}function m(e){const t=document.getElementById(e);if(!t||!t.children)return[];const r=[];return Array.from(t.children).forEach(n=>{const o=(n.textContent||"").trim().replace(/\u00A0/g," ");if(!o)return;const i=n.classList.contains("out-of-range")||n.classList.contains("warn-orange")||n.classList.contains("warn-yellow");r.push({text:o,isOut:i})}),r}function I(){if(!document.getElementById("clcrForm"))return null;const t=j(),r=(document.getElementById("formulaPicker")||{}).value||"";if(C())try{g({reason:"build-snapshot"})}catch{}const n=p(),o={version:2,legacyVersion:1,source:"kalkulator-klirens.html",savedAtISO:new Date().toISOString(),currentVersion:t,selectedFormula:r,preserveAcrossVersions:!!C(),preservedInputs:Object.assign({},n),inputs:{},summary:{clcr:m("clcrInfo"),elec:m("elecInfo"),stone:m("stoneInfo"),ktv:[].concat(m("ktvResult")).concat(m("ektvResult"))}};return Object.keys(n||{}).forEach(i=>{!i||i==="currentVersion"||(o.inputs[i]=n[i])}),h().forEach(i=>{const u=_(i);if(!u)return;const c=k(i);if(c===void 0)return;const d=P(i),w=F(c);(d||!w||!V(o.inputs,u))&&(o.inputs[u]=c)}),o.inputs.currentVersion=t,o.inputs.formulaPicker=r,o.inputs=window.ClcrCollectionDuration?.normalizeCapturedInputs?.(o.inputs)||o.inputs,o}
+(function(){const b="vildaClcrSessionV1";installPhDzmSessionAdapter();function y(){try{if(typeof window<"u"&&window.VildaPersistence)return window.VildaPersistence}catch{}return null}function z(){try{const e=y();return e&&typeof e.isAutosaveSuppressed=="function"&&e.isAutosaveSuppressed()?!0:typeof window>"u"?!1:!!window.__vildaPersistRestoring||Number(window.__vildaPersistPauseUntil||0)>Date.now()}catch{return!1}}function h(){try{window.ClcrUaUi?.ensureControls?.(document)}catch{}const e=document.getElementById("clcrForm");try{window.ClcrMgDzmUi?.ensureControls?.(document)}catch{}try{window.ClcrPo4DzmUi?.ensureControls?.(document)}catch{}try{window.ClcrProteinDzmUi?.ensureControls?.(document)}catch{}try{window.ClcrSodiumDzmUi?.ensureControls?.(document)}catch{}try{window.ClcrPotassiumDzmUi?.ensureControls?.(document)}catch{}try{window.ClcrUrateCreatinineUi?.ensureControls?.(document)}catch{}try{window.ClcrCacrDzmUi?.ensureControls?.(document)}catch{}try{window.ClcrMagnesiumCalciumUi?.ensureControls?.(document)}catch{}try{window.ClcrPhosphorusCreatinineUi?.ensureControls?.(document)}catch{}try{window.ClcrOxDzmUi?.ensureControls?.(document)}catch{}try{window.ClcrCitDzmUi?.ensureControls?.(document)}catch{}try{window.ClcrCaCitUi?.ensureControls?.(document)}catch{}if(!e)return[];try{return Array.from(e.querySelectorAll("input, select, textarea"))}catch{return Array.from(e.elements||[])}}function _(e){if(!e||e.dataset&&e.dataset.clcrDerivedControl==="true")return"";const t=String(e.type||"").toLowerCase();return t==="button"||t==="submit"||t==="reset"||t==="file"?"":e.id||e.name||""}function j(){try{const e=document.querySelector(".version-option.selected[data-version]");if(e&&e.dataset&&e.dataset.version)return String(e.dataset.version)}catch{}try{if(typeof window<"u"&&window.currentVersion)return String(window.currentVersion)}catch{}return""}function k(e){if(!e)return null;const t=String(e.type||"").toLowerCase();return t==="checkbox"?!!e.checked:t==="radio"?e.checked?e.value:void 0:e.value==null?"":String(e.value)}function v(e,t){if(!e)return;const r=String(e.type||"").toLowerCase();r==="checkbox"?e.checked=!!t:r==="radio"?e.checked=String(e.value)===String(t)||t===!0:e.value=t==null?"":String(t)}function V(e,t){return!!e&&Object.prototype.hasOwnProperty.call(e,t)}function F(e){return e==null||typeof e=="string"&&e.trim()===""}function p(){try{return typeof window>"u"?{}:((!window.__vildaClcrVersionValueVault||typeof window.__vildaClcrVersionValueVault!="object")&&(window.__vildaClcrVersionValueVault={}),window.__vildaClcrVersionValueVault)}catch{return{}}}function q(){try{const e=p();return Object.keys(e).length>0}catch{return!1}}function C(){try{return!!(window.__vildaClcrPreserveVersionValues||q())}catch{return!1}}function P(e){try{let t=e;const r=document;for(;t&&t!==r;){if(t.style&&t.style.display==="none"||t.hidden)return!1;t=t.parentElement||t.parentNode}}catch{}return!0}function H(e,t){const r=t&&typeof t=="object"?t:{},n=e&&typeof e=="object"?e:{};try{typeof window<"u"&&(window.__vildaClcrVersionValueVault={})}catch{}const o=p();Object.keys(n).forEach(i=>{!i||i==="currentVersion"||(o[i]=n[i])});try{window.__vildaClcrPreserveVersionValues=r.preserve!==!1}catch{}return o}function S(){try{typeof window<"u"&&(window.__vildaClcrVersionValueVault={},window.__vildaClcrPreserveVersionValues=!1)}catch{}return!0}function g(e){const t=e&&typeof e=="object"?e:{};try{if(!t.force&&window.__vildaPersistRestoring)return null}catch{}if(!t.force&&!C())return null;const r=p();h().forEach(n=>{const o=_(n);if(!o||o==="currentVersion")return;const i=k(n);if(i===void 0)return;const u=P(n),c=F(i);!u&&c&&V(r,o)||!u&&c&&!V(r,o)||(r[o]=i)});try{window.__vildaClcrPreserveVersionValues=!0}catch{}return r}function N(e){const t=e&&typeof e=="object"?e:{};if(!C())return!1;const r=p();let n=!1;return h().forEach(o=>{const i=_(o);!i||!V(r,i)||t.visibleOnly!==!1&&!P(o)||(v(o,r[i]),n=!0)}),n}function J(e){!e||typeof e.dispatchEvent!="function"||["input","change"].forEach(t=>{try{e.dispatchEvent(new Event(t,{bubbles:!0}))}catch{}})}function m(e){const t=document.getElementById(e);if(!t||!t.children)return[];const r=[];return Array.from(t.children).forEach(n=>{const o=(n.textContent||"").trim().replace(/\u00A0/g," ");if(!o)return;const i=n.classList.contains("out-of-range")||n.classList.contains("warn-orange")||n.classList.contains("warn-yellow");r.push({text:o,isOut:i})}),r}function I(){if(!document.getElementById("clcrForm"))return null;const t=j(),r=(document.getElementById("formulaPicker")||{}).value||"";if(C())try{g({reason:"build-snapshot"})}catch{}const n=p(),o={version:2,legacyVersion:1,source:"kalkulator-klirens.html",savedAtISO:new Date().toISOString(),currentVersion:t,selectedFormula:r,preserveAcrossVersions:!!C(),preservedInputs:Object.assign({},n),inputs:{},summary:{clcr:m("clcrInfo"),elec:m("elecInfo"),stone:m("stoneInfo"),ktv:[].concat(m("ktvResult")).concat(m("ektvResult"))}};return Object.keys(n||{}).forEach(i=>{!i||i==="currentVersion"||(o.inputs[i]=n[i])}),h().forEach(i=>{const u=_(i);if(!u)return;const c=k(i);if(c===void 0)return;const d=P(i),w=F(c);(d||!w||!V(o.inputs,u))&&(o.inputs[u]=c)}),o.inputs.currentVersion=t,o.inputs.formulaPicker=r,o.inputs=window.ClcrCollectionDuration?.normalizeCapturedInputs?.(o.inputs)||o.inputs,o}
 // Action-boundary capture reads existing controls and a detached vault copy.
 // Unlike the ordinary save builder it never mounts controls, initializes the
 // version vault, persists a session or changes the preservation/restoring flags.

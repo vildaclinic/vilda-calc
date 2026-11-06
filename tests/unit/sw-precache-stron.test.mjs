@@ -303,7 +303,9 @@ describe('P-SW-PRECACHE: instalacja bez historii, kopia z poprzedniej pamięci, 
     '/nutrition_norms.js', '/nutrition_micros.js', '/vilda_diet_recommendations.js',
     '/vilda_anorexia_risk.js', '/advanced_growth_kowd.js',
     '/circumference_module.js', '/wfh_module.js', '/respiratory_module.js',
-    '/gh_therapy_segments.js', '/obesity_response_criteria.js'];
+    '/gh_therapy_segments.js', '/obesity_response_criteria.js',
+    '/vilda_down_syndrome.js', '/flu_therapy.js', '/bisphos_therapy.js',
+    '/bisphos_therapy_monitor.js', '/lab_unit_converter.js'];
   const wspoldzielonePary = ['/style.css', '/vilda_chrome.css', ...dodatkoweWspoldzieloneZasoby];
   const wspoldzieloneZasoby = new Set(['/edu-video-ui.css', ...wspoldzielonePary]);
   const oczekiwanePobraniaSwiezychZasobow = () => {
@@ -526,7 +528,11 @@ describe('P-SW-PRECACHE: instalacja bez historii, kopia z poprzedniej pamięci, 
     };
     const sluzba = uruchomSW({ caches: magazyn.caches, fetch });
     await sluzba.installShell();
-    expect(pobrane).toEqual([sciezka]);
+    // Unsafe pre-1.1.66 caches are ignored completely. The first current
+    // alias in installation order must be freshly fetched; that can be the
+    // versioned URL when it precedes the bare path in the production list.
+    const pierwszySwiezy = wersja === '1.1.104' ? sciezka : doInstalacji().find(adres => adres.split('?')[0] === sciezka);
+    expect(pobrane).toEqual([pierwszySwiezy]);
     expect(await (await sluzba.readFromShellCache(new Request(`${POCHODZENIE}${sciezka}`))).text()).toBe(swiezyCss);
     expect(await (await sluzba.readFromShellCache(new Request(`${POCHODZENIE}${wersjonowanyAlias}`))).text()).toBe(wersja === '1.1.104' ? staryCss : swiezyCss);
   });

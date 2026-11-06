@@ -22,6 +22,7 @@
     ["clcr_uag_persistence.js?v=1", "ClcrUagPersistence"],
     ["clcr_tmp_gfr_persistence.js?v=1", "ClcrTmpGfrPersistence"],
     ["clcr_ph_persistence.js?v=1", "ClcrPhPersistence"],
+    ["clcr_ph_dzm_persistence.js?v=1", "ClcrPhDzmPersistence"],
     ["clcr_ua_persistence.js?v=1", "ClcrUaPersistence"],
     ["clcr_ca_dzm_persistence.js?v=1", "ClcrCaDzmPersistence"],
     ["clcr_mg_dzm_persistence.js?v=1", "ClcrMgDzmPersistence"],
@@ -40,8 +41,8 @@
     ["clcr_serum_anion_gap_persistence.js?v=1", "ClcrSerumAnionGapPersistence"],
     // readSaved is pure and needed for the new capture format. Its recalculate
     // method is not called while opening history and resolves engines lazily.
-    ["clcr_saved_calculation.js?v=21", "ClcrSavedCalculation"],
-    ["clcr_saved_results.js?v=21", "ClcrSavedResults"],
+    ["clcr_saved_calculation.js?v=22", "ClcrSavedCalculation"],
+    ["clcr_saved_results.js?v=22", "ClcrSavedResults"],
     ["clcr_saved_results_view.js?v=2", "ClcrSavedResultsView"],
   ];
   const editor = [
@@ -108,10 +109,12 @@
     ["clcr_urate_creatinine.js?v=1", "VildaClcrUrateCreatinine"],
     ["clcr_ph_reference_data.js?v=1", "VildaClcrPhReferenceData"],
     ["clcr_ph.js?v=1", "VildaClcrPh"],
+    ["clcr_ph_dzm_reference_data.js?v=1", "VildaClcrPhDzmReferenceData"],
+    ["clcr_ph_dzm.js?v=1", "VildaClcrPhDzm"],
     ["clcr_measured_clearance_reference_data.js?v=1", "ClcrMeasuredClearanceReferenceData"],
     ["clcr_measured_clearance_reference.js?v=1", "ClcrMeasuredClearanceReference"],
     ["clcr_result_presentation.js?v=8", "ClcrResultPresentation"],
-    ["clcr_saved_legacy_calculator.js?v=21", "ClcrSavedLegacyCalculator"],
+    ["clcr_saved_legacy_calculator.js?v=22", "ClcrSavedLegacyCalculator"],
     ["clcr_result_details.js?v=17", "ClcrResultDetails"],
   ];
   function load(path, name, style = false) {

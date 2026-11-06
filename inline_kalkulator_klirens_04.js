@@ -268,7 +268,7 @@ const maxValues = {
     Ca_spot: 30,
     U_Cys: 2e3,
     U_pH: 14,
-    pH24: 9,
+    pH24: 14,
     S_PTH: 2e3,
     S_VitD: 200,
     ktvSessionsPerWeek: 7,
@@ -665,7 +665,7 @@ function validateField(e) {
 function validateClcrAgeContext(e) {
   // Cit/Cr reference bands use completed years; zero years needs no extra
   // months or days to select the source's birth–<3-years interval.
-  if (["CitCr_spot", "FENa_spot", "FEK_spot", "FECl_spot", "FEHCO3_spot", "AGu_spot", "TMP_GFR", "pH_spot", "UA_mgkg", "Ca_mgkg", "Mg_mgkg", "PO4_mgkg", "Prot_mgkg", "Ox_mgkg", "Na_mmol_d", "K_mmol_d", "KM_Cr", "Ca_Cr", "Mg_Ca", "PO4_Cr", "B_Cr", "K_frac", "AGs"].includes($("formulaPicker")?.value)) return;
+  if (["CitCr_spot", "FENa_spot", "FEK_spot", "FECl_spot", "FEHCO3_spot", "AGu_spot", "TMP_GFR", "pH_spot", "pH24", "UA_mgkg", "Ca_mgkg", "Mg_mgkg", "PO4_mgkg", "Prot_mgkg", "Ox_mgkg", "Na_mmol_d", "K_mmol_d", "KM_Cr", "Ca_Cr", "Mg_Ca", "PO4_Cr", "B_Cr", "K_frac", "AGs"].includes($("formulaPicker")?.value)) return;
   const n = document.getElementById("age"),
     t = document.getElementById("ageMonths");
   if (!n || (n.value || "").trim() === "") return;
@@ -698,6 +698,7 @@ function canComputeFormula(e) {
   if (e === "FEHCO3_spot") return evaluateClcrFehco3().valid === true;
   if (e === "AGu_spot") return evaluateClcrUag().valid === true;
   if (e === "TMP_GFR") return evaluateClcrTmpGfr().valid === true;
+  if (e === "pH24") return evaluateClcrPhDzm().valid === true;
   if (e === "pH_spot") return evaluateClcrPh().valid === true;
   if (e === "Ca_mgkg") return evaluateClcrCaDzm().valid === true;
   if (e === "Mg_mgkg") return evaluateClcrMgDzm().valid === true;
@@ -1138,6 +1139,12 @@ function evaluateClcrUa() {
   return engine.evaluate(input, window.ClcrUaReferenceData?.DEFAULT_POLICY);
 }
 
+function evaluateClcrPhDzm() {
+  const engine = window.VildaClcrPhDzm;
+  return engine?.evaluate(engine.readInputFromDocument(document), window.VildaClcrPhDzmReferenceData?.DEFAULT_POLICY)
+    || { valid: false, errorCode: "PH_DZM_UNAVAILABLE", error: "Nie można ocenić pH DZM. Odśwież aplikację." };
+}
+
 function evaluateClcrPh() {
   const engine = window.VildaClcrPh;
   return engine?.evaluate(engine.readInputFromDocument(document), window.VildaClcrPhReferenceData?.DEFAULT_POLICY)
@@ -1205,14 +1212,14 @@ function packClcrSupplementaryMarkup(markup, formulaId) {
   clcrSetTrustedMarkup(staging, markup, "clcr-result-presentation-staging");
   const nodes = [...staging.children];
   const primary = nodes.find((node) => node.classList.contains("clcr-result-card") && node.dataset.clcrFormula === formulaId);
-  if (!primary && ["CitCr_spot", "FENa_spot", "FEK_spot", "FECl_spot", "FEHCO3_spot", "AGu_spot", "TMP_GFR", "pH_spot", "UA_mgkg", "Ca_mgkg", "Mg_mgkg", "PO4_mgkg", "Prot_mgkg", "Ox_mgkg", "Na_mmol_d", "K_mmol_d", "KM_Cr", "Ca_Cr", "Mg_Ca", "PO4_Cr", "B_Cr", "K_frac", "AGs"].includes(formulaId)) {
+  if (!primary && ["CitCr_spot", "FENa_spot", "FEK_spot", "FECl_spot", "FEHCO3_spot", "AGu_spot", "TMP_GFR", "pH_spot", "pH24", "UA_mgkg", "Ca_mgkg", "Mg_mgkg", "PO4_mgkg", "Prot_mgkg", "Ox_mgkg", "Na_mmol_d", "K_mmol_d", "KM_Cr", "Ca_Cr", "Mg_Ca", "PO4_Cr", "B_Cr", "K_frac", "AGs"].includes(formulaId)) {
     const pending = nodes.filter((node) => node.dataset.clcrFormula === formulaId && node.matches(".cacr-result-empty, .cacr-result-error, .mgca-result-empty, .mgca-result-error, .bcr-result-empty, .bcr-result-error, .kfr-result-empty, .kfr-result-error, .ags-result-empty, .ags-result-error, .picr-result-empty, .picr-result-error, .citcr-result-empty, .citcr-result-error, .fena-result-empty, .fena-result-error, .fek-result-empty, .fek-result-error, .fecl-result-empty, .fecl-result-error, .fehco3-result-empty, .fehco3-result-error, .uag-result-empty, .uag-result-error, .tmp-gfr-result-empty, .tmp-gfr-result-error, .ph-result-empty, .ph-result-error, .ua-result-empty, .ua-result-error, .ca-dzm-result-empty, .ca-dzm-result-error, .mg-dzm-result-empty, .mg-dzm-result-error, .po4-dzm-result-empty, .po4-dzm-result-error, .protein-dzm-result-empty, .protein-dzm-result-error, .ox-dzm-result-empty, .ox-dzm-result-error, .sodium-dzm-result-empty, .sodium-dzm-result-error, .potassium-dzm-result-empty, .potassium-dzm-result-error, .urate-creatinine-result-empty, .urate-creatinine-result-error"));
     if (pending.length) return pending.map((node) => node.outerHTML).join("");
   }
   if (!primary) return markup;
   const details = nodes.find((node) => node.classList.contains("clcr-result-details") && node.dataset.clcrFormula === formulaId);
   if (!details) return markup;
-  if (["OxCr_spot", "CitCr_spot", "FENa_spot", "FEK_spot", "FECl_spot", "FEHCO3_spot", "AGu_spot", "TMP_GFR", "pH_spot", "UA_mgkg", "Ca_mgkg", "Mg_mgkg", "PO4_mgkg", "Prot_mgkg", "Ox_mgkg", "Na_mmol_d", "K_mmol_d", "KM_Cr", "Ca_Cr", "Mg_Ca", "PO4_Cr", "B_Cr", "K_frac", "AGs"].includes(formulaId)) {
+  if (["OxCr_spot", "CitCr_spot", "FENa_spot", "FEK_spot", "FECl_spot", "FEHCO3_spot", "AGu_spot", "TMP_GFR", "pH_spot", "pH24", "UA_mgkg", "Ca_mgkg", "Mg_mgkg", "PO4_mgkg", "Prot_mgkg", "Ox_mgkg", "Na_mmol_d", "K_mmol_d", "KM_Cr", "Ca_Cr", "Mg_Ca", "PO4_Cr", "B_Cr", "K_frac", "AGs"].includes(formulaId)) {
     // This card already carries its complete source and specimen context.
     // Unrelated stone-panel EAU notes must not label a Fimlab/NHS reference.
     nodes.filter((node) => node !== primary && node !== details &&
@@ -1383,6 +1390,7 @@ function update() {
     fehco3Evaluation = evaluateClcrFehco3(),
     uagEvaluation = evaluateClcrUag(),
     phEvaluation = evaluateClcrPh(),
+    phDzmEvaluation = evaluateClcrPhDzm(),
     uaEvaluation = evaluateClcrUa(),
     caDzmEvaluation = evaluateClcrCaDzm(),
     mgDzmEvaluation = evaluateClcrMgDzm(),
@@ -3223,37 +3231,24 @@ function update() {
         "25-OH-D w surowicy",
         `${qt.toFixed(1)} ng/mL \u2014 wartość kontekstowa bez automatycznego zakresu laboratoryjnego`,
       );
-    isFiniteNum(we) &&
-      collectionDurationMinutes &&
-      urineCollectionProtocolComplete &&
-      appendStoneValue(
-        "pH czasowej zbiórki",
-        formatStoneThresholdSafe(we, 2, adultStone && adultStone.ph), "", "pH24", we,
-        { interpretation: adultStone && adultStone.ph },
-      );
-    if (
-      isFiniteNum(we) &&
-      (!collectionDurationMinutes || !urineCollectionProtocolComplete)
-    ) {
-      appendStoneValue(
-        "pH dobowej zbiórki \u2014 interpretacja wstrzymana",
-        "Sprawdź czas zbiórki i zgłoszony problem jej kompletności.",
-        "warn-yellow",
-      );
+    if (window.ClcrPhDzmUi && (phDzmEvaluation.valid || _e === "pH24")) {
+      he += window.ClcrPhDzmUi.renderResult(phDzmEvaluation);
+    } else if (_e === "pH24") {
+      he += '<div class="ph-dzm-result-error" data-clcr-formula="pH24"><strong>Nie można wyświetlić pH DZM</strong><p>Odśwież aplikację, aby wczytać moduł wyniku pH DZM.</p></div>';
     }
 
     const timedStoneRequested =
       Object.values(stoneDzm).some(Boolean) ||
       stoneFieldProvided("pH24") ||
       (stoneClinicalContext && collectionDailyVolume !== null);
-    if (timedStoneRequested && !stoneClinicalContext) {
+    if (_e !== "pH24" && timedStoneRequested && !stoneClinicalContext) {
       appendStoneValue(
         "Interpretacja progami EAU wstrzymana",
         "Potwierdź, że zbiórka służy swoistej ocenie metabolicznej lub profilaktyce nawrotów kamicy. Wartości liczbowe pozostają widoczne bez automatycznego celu i bez kategorii.",
         "warn-yellow",
       );
     } else if (
-      timedStoneRequested &&
+      _e !== "pH24" && timedStoneRequested &&
       stoneClinicalContext &&
       !stoneCollectionInterpretationReady
     ) {
@@ -3286,7 +3281,6 @@ function update() {
         ["Fosfor nieorganiczny (P\u1D62)", adultStone.inorganicPhosphorus, "PO4_mgkg"],
         ["Cystyna", adultStone.cystine, "stone-cystine"],
         ["Cel objętości moczu", adultStone.urineVolume, "stone-volume"],
-        ["Profil pH", adultStone.ph, "pH24"],
       ].filter(([, , formulaId]) => (formulaId !== "Ox_mgkg" || !oxDzmEvaluation.valid) && (formulaId !== "Cit_mgkg" || !citDzmEvaluation.valid)).forEach(([label, interpretation, formulaId]) =>
         appendStoneInterpretation(label, interpretation, formulaId),
       );
@@ -3314,20 +3308,21 @@ function update() {
         );
       }
     }
-    if (stoneVersionActive && !o) {
+    if (_e !== "pH24" && stoneVersionActive && !o) {
       appendStoneValue(
         "Interpretacja kamicy wstrzymana",
         "Podaj pełny wiek pacjenta, aby dobrać oddzielną ścieżkę pediatryczną albo dorosłą.",
         "warn-yellow",
       );
     }
-    if (he) {
+    if (he && _e !== "pH24") {
       appendStoneValue(
         "Źródło progów",
         "EAU Guidelines on Urolithiasis 2026; progi są stosowane wyłącznie do zgodnej populacji, jednostki i rodzaju próbki.",
       );
     }
   }
+  const phDzmDetailsOpen = _e === "pH24" && $("clcr-ph-dzm-details")?.open === true;
   const phDetailsOpen = _e === "pH_spot" && $("clcr-ph-details")?.open === true;
   let be = "";
   {
@@ -3347,6 +3342,7 @@ function update() {
           (l.style.display = "block"));
       } else (clcrClearElement(i), (l.style.display = "none"));
   }
+  if (phDzmDetailsOpen && $("clcr-ph-dzm-details")) $("clcr-ph-dzm-details").open = true;
   if (phDetailsOpen && $("clcr-ph-details")) $("clcr-ph-details").open = true;
   const it = document.getElementById("ktvFields"),
     Ve = document.getElementById("ktvToggle");
@@ -4404,6 +4400,14 @@ clearBtn &&
     if (event.clcrClearedFormula === "UA_mgkg") {
       const vault = window.__vildaClcrVersionValueVault;
       event.clcrPreservedUaContext = Object.fromEntries((window.ClcrUaSession?.CONTEXT_IDS || []).flatMap(id => {
+        const control = $(id);
+        if (control) return [[id, control.type === "checkbox" ? control.checked : control.value]];
+        return vault && Object.hasOwn(vault, id) ? [[id, vault[id]]] : [];
+      }));
+    }
+    if (event.clcrClearedFormula === "pH24") {
+      const vault = window.__vildaClcrVersionValueVault;
+      event.clcrPreservedPhDzmContext = Object.fromEntries((window.ClcrPhDzmSession?.CONTEXT_IDS || []).flatMap(id => {
         const control = $(id);
         if (control) return [[id, control.type === "checkbox" ? control.checked : control.value]];
         return vault && Object.hasOwn(vault, id) ? [[id, vault[id]]] : [];

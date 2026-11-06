@@ -13,6 +13,7 @@ import { GLOBAL_QUERY, SEARCH_WORKSPACE, queryGlobal, resultFor } from '../suppo
 import { expectBell, expectDesktopSearchControl } from '../support/header-layout-fixture.mjs';
 import { RETURN_TO_SEARCH } from '../support/search-return-browser-fixture.mjs';
 import { czekajNaOdtworzenieSesji } from '../support/sesja-czekanie.mjs';
+import { changedResources as resourceInventory, upgradeResourceInventories } from '../support/pwa-changed-resource-inventory.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const BASE = '83fa1193';
@@ -30,18 +31,7 @@ const workerVersion = tree => /const SW_VERSION = '([^']+)';/u.exec(workerSource
 test.use({ serviceWorkers: 'allow', reducedMotion: 'reduce' });
 
 function changedResources(tree, names) {
-  const source = workerSource(tree);
-  return names.map(name => {
-    const references = [...source.matchAll(/['"]([^'"\s]+\.(?:js|css|html)(?:\?v=\d+)?)['"]/gu)]
-      .map(match => match[1]).filter(url => url.split('?')[0] === '/' + name);
-    // The production worker keeps historical URLs append-only. Verify the
-    // current (highest numeric) key, rather than a historical alias of it.
-    references.sort((left, right) => Number(new URL(left, 'http://fixture').searchParams.get('v') || 0)
-      - Number(new URL(right, 'http://fixture').searchParams.get('v') || 0));
-    const cachedUrl = references.at(-1);
-    if (!cachedUrl && !NON_PRECACHE_DOCUMENTS.includes(name)) throw new Error('Changed production asset is missing from precache: ' + name);
-    return { url: cachedUrl || '/' + name, sha256: sha256(fs.readFileSync(path.join(tree, name))), precached: Boolean(cachedUrl) };
-  });
+  return resourceInventory(tree, names, NON_PRECACHE_DOCUMENTS);
 }
 
 async function deployment() {
@@ -61,7 +51,19 @@ async function deployment() {
     }
     const previousVersion = workerVersion(baseline), currentVersion = workerVersion(ROOT);
     if (previousVersion === currentVersion) throw new Error('Run the official resource version bump before this PWA update test');
-    const oldResources = changedResources(baseline, names), newResources = changedResources(ROOT, names);
+    const { stdout: added } = await execute('git', ['diff', '--name-only', '--diff-filter=A', BASE, '--'], { cwd: ROOT, encoding: 'utf8' });
+    const { oldResources, newResources, introducedResources } = upgradeResourceInventories({
+      baselineTree: baseline, currentTree: ROOT, names,
+      addedNames: added.trim().split('\n').filter(Boolean), nonPrecacheDocuments: NON_PRECACHE_DOCUMENTS,
+    });
+    expect(oldResources.length + introducedResources.length).toBe(names.length);
+    expect(newResources).toHaveLength(names.length);
+    for (const asset of introducedResources) {
+      expect(asset.existedInBaseline).toBe(false);
+      expect(asset.gitAdded).toBe(true);
+      expect(asset.current.precached).toBe(true);
+      expect(asset.current.sha256).toBe(sha256(fs.readFileSync(path.join(ROOT, asset.name))));
+    }
     const nativeClearSources = ['vilda_data_import_export.js', 'vilda_persistence_adapter.js'].map(name => {
       const previous = sha256(fs.readFileSync(path.join(baseline, name)));
       const current = sha256(fs.readFileSync(path.join(ROOT, name)));
@@ -91,7 +93,7 @@ async function deployment() {
     return {
       origin: `http://127.0.0.1:${server.address().port}`, previousVersion, currentVersion,
       sourceCommit: sourceCommit.trim(),
-      names, oldResources, newResources, nativeClearSources,
+      names, oldResources, newResources, introducedResources, nativeClearSources,
       workerSha256: sha256(workerSource(ROOT)),
       promote() { promoted = true; },
       async stop() {
@@ -492,6 +494,7 @@ for (const shell of [true, false]) {
         emptyDefaultMainSession: emptyMainSession,
         unchangedNativeClearSources: site.nativeClearSources,
         viewportWidths: [1440, 320, 390, 860], oldResources: site.oldResources, resources: site.newResources,
+        introducedResources: site.introducedResources,
         productionSourceUntampered: true, nonPrecachedDocumentsUnchangedFromBaseline: NON_PRECACHE_DOCUMENTS,
         failedApplicationRequests: failures, pageErrors: errors,
       }, null, 2));

@@ -74,7 +74,7 @@ async function expectDurationPresentation(page, controls, hours) {
   }
 }
 async function restore(page, formula, patch = {}) {
-  const version = ['Ox_mgkg', 'Cit_mgkg'].includes(formula) ? 'pro' : 'advanced';
+  const version = ['Ox_mgkg', 'Cit_mgkg', 'pH24'].includes(formula) ? 'pro' : 'advanced';
   const dedicated = formula === 'PO4_mgkg' ? {
     PO4_inputMode: 'concentration', PO4_concentration: '50', PO4_concentrationUnit: 'mgP/dL',
     PO4_volume: '1440', PO4_volumeUnit: 'mL', PO4_collectionHours: '', PO4_collectionSource: 'assumed-24h',
@@ -172,6 +172,50 @@ test('DZM session capture after formula reset is stable without changing an edit
 for (const formula of formulas) test(`Shared DZM: ${formula} defaults, blank, invalid and clear`, async ({ page }) => {
   const errors = []; page.on('pageerror', error => errors.push(error.message));
   await openCalculator(page); await restore(page, formula);
+  if (formula === 'pH24') {
+    // pH is measured rather than excreted. Preserve the duration scenarios,
+    // but inspect their effect on DZM reference eligibility without inventing
+    // a mandatory clock field or rescaling the entered pH.
+    const card = page.locator('#clcrResultReport .clcr-result-card[data-clcr-series="pH24"]');
+    const assertPh = async ({ hours = 24, reference = true, source } = {}) => {
+      await expect(card).toBeVisible();
+      const snapshot = await card.evaluate(node => JSON.parse(node.getAttribute('data-clcr-ph-dzm-snapshot')));
+      expect(snapshot).toMatchObject({ valid: true, rawValue: 5.5, referenceActive: reference,
+        status: reference ? 'within' : 'unassessed', outOfRange: reference ? false : null,
+        collection: { hours, ...(source ? { source } : {}) } });
+      expect(await page.evaluate(() => window.canComputeFormula('pH24'))).toBe(true);
+      const points = await page.evaluate(() => window.ClcrVisitSave.collectActiveDatapoints(document, { formulaId: 'pH24' }));
+      expect(points).toHaveLength(1); expect(points[0].rawValue).toBe(5.5); expect(points[0].valueNum).toBe(5.5);
+      await expect(page.locator('#phDzmRequiredCount')).toHaveText('1/1');
+      await expect(page.locator('#Cl24DurationHours')).toBeHidden();
+      await expect(page.locator('#clcrCommonDuration')).toBeHidden();
+      return snapshot;
+    };
+    await assertPh({ source: 'assumed-24h' });
+    await restore(page, formula, { Cl24DurationHours: '', Cl24DurationSource: 'assumed-24h' });
+    await assertPh({ source: 'assumed-24h' });
+    await restore(page, formula, { Cl24DurationHours: '24', Cl24DurationSource: 'hours' });
+    await assertPh({ source: 'hours' });
+    await restore(page, formula, { Cl24DurationHours: '12', Cl24DurationSource: 'hours' });
+    await assertPh({ hours: 12, reference: false, source: 'hours' });
+    await expect(page.locator('#clcrActivePanel')).toContainText(/12\s*godz/);
+    for (const invalid of ['0', 'abc']) {
+      await restore(page, formula, { Cl24DurationHours: invalid, Cl24DurationSource: 'hours' });
+      await assertPh({ hours: null, reference: false, source: 'invalid' });
+    }
+    await restore(page, formula, { Cl24DurationHours: '', Cl24DurationSource: 'historical-missing', durationNeedsConfirmation: true });
+    await assertPh({ hours: null, reference: false, source: 'historical-missing' });
+    await restore(page, formula, { Cl24DurationHours: '12', Cl24DurationSource: 'hours' });
+    await assertPh({ hours: 12, reference: false, source: 'hours' });
+    await page.locator('#clearBtn').click(); await page.waitForFunction(() => window.clcrIsResetting !== true);
+    await expect(page.locator('#pH24')).toHaveValue('');
+    await page.locator('#pH24').fill('5.5');
+    // Clearing a measured value cannot erase a known12h collection and
+    // silently replace it with an eligible24h sample.
+    await assertPh({ hours: 12, reference: false, source: 'hours' });
+    await restore(page, formula); await assertPh({ source: 'assumed-24h' });
+    expect(errors).toEqual([]); return;
+  }
   const controls = durationControls(formula);
   const hours = page.locator('#' + controls.field), source = page.locator('#' + controls.source);
   await expect(hours).toHaveValue('24');
@@ -230,7 +274,7 @@ for (const formula of formulas) test(`Shared DZM: ${formula} defaults, blank, in
   expect(half.duration).toMatchObject({ valid: true, hours: 12, source: 'hours', assumed: false });
   expect(half.points.every(point => point.captureSource === 'hours' && point.captureHours === '12')).toBe(true);
   expect(half.points).toHaveLength(baseline.points.length);
-  half.points.forEach((point, index) => expect(point.value).toBeCloseTo(baseline.points[index].value * (formula === 'pH24' ? 1 : 2), 10));
+  half.points.forEach((point, index) => expect(point.value).toBeCloseTo(baseline.points[index].value * 2, 10));
 
   await hours.fill('');
   if (formula === 'K_mmol_d') {

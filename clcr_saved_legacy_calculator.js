@@ -390,20 +390,14 @@
       return datapoint;
     }
     if (formulaId === "pH24") {
-      const value = number(values, formulaId === "pH24" ? "pH24" : "U_pH");
-      if (!(value > 0 && value <= 14)) throw new Error("Podaj prawidłowe pH.");
-      const sample = collection(values, context);
-      if (!sample.valid) throw new Error(sample.error);
-      if (!sample.complete) throw new Error("Zgłoszono niepełną lub błędną zbiórkę moczu.");
-      let interpreted = null;
-      if (formulaId === "pH24" && age !== null && age >= 18 && (checked(values, "stoneKnownCystinuria") || checked(values, "stoneMetabolicEvaluationContext")) && sample.complete && Math.abs(sample.minutes - 1440) <= 0.5 && checked(values, "stoneCollectionPlausibilityReviewed") && checked(values, "stoneTwoCollectionsConfirmed")) {
-        interpreted = requiredModule("ClcrStoneSafety").interpretAdultDzmPh({ ph: value, treatmentContext: checked(values, "stoneKnownCystinuria") ? "cystinuria" : null, persistentAbnormalPh: checked(values, "stonePhPersistent") });
-      }
-      const presentation = interpreted?.ok && interpreted.status !== "contextOnly" ? {
-        tone: ["attention", "high", "low", "belowGoal", "aboveGoal"].includes(interpreted.status) ? "warning" : interpreted.status === "urgentAttention" ? "danger" : "success",
-        label: interpreted.status === "goalMet" ? "Cel osiągnięty" : interpreted.status === "belowGoal" ? "Poniżej celu" : interpreted.status === "aboveGoal" ? "Powyżej celu" : "Wynik wymaga oceny w kontekście klinicznym", reasons: [interpreted.message],
-      } : { label: "pH moczu", tone: "neutral", reasons: interpreted?.message ? [interpreted.message] : [] };
-      return modeled(formulaId, parameterKey, value, "", 2, values, context, { presentation, referenceContext: { stone: interpreted } });
+      const engine = requiredModule("VildaClcrPhDzm"), persistence = requiredModule("ClcrPhDzmPersistence");
+      const policy = requiredModule("VildaClcrPhDzmReferenceData").DEFAULT_POLICY;
+      const result = engine.evaluate(engine.inputFromValues(values, context), policy);
+      if (!result.valid) throw new Error(result.error || "Podaj prawidłowe pH DZM.");
+      const datapoint = { id: parameterKey, sourceFormulaId: formulaId, label: persistence.LABEL, testKey: "clcr:pH24" };
+      persistence.augmentDatapoint({ getAttribute: () => JSON.stringify(result) }, datapoint);
+      if (!persistence.matchesDatapoint(datapoint, result)) throw new Error("Nie można utrwalić obliczenia pH DZM.");
+      return datapoint;
     }
     const sample = collection(values, context), daily = sample.dailyVolume;
     if (["Mg_mgkg", "Ox_mgkg", "Cit_mgkg", "K_mmol_d", "PO4_mgkg", "Prot_mgkg"].includes(formulaId) && !sample.valid) throw new Error(sample.error);
