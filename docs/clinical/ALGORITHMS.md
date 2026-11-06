@@ -21092,7 +21092,7 @@ a lekarz poprawia jedno z miejsc. Wartość dni spoza 0–6 w rekordzie nie jest
 
 **Wersje.** `sga_birth_module.js?v=10→11`; SW 1.1.168 → **1.1.169**.
 
-## Sejf: „Usuń konto” przy drugiej karcie — druga karta wraca do ekranu logowania, usuwanie nie czeka (P-USUN-KONTO-KARTY, E2-PR3a1b, SW 1.1.478, `vilda_vault.js` 255, 2026-11-06)
+## Sejf: „Usuń konto” przy drugiej karcie — druga karta wraca do ekranu logowania, usuwanie nie czeka (P-USUN-KONTO-KARTY, E2-PR3a1b, SW 1.1.479, `vilda_vault.js` 256, 2026-11-06)
 
 **Zmiana kliniczna: NIE** — wzory, progi, jednostki, interpretacje, zapis, scalanie, format kopii i synchronizacja bez
 zmian. Dla użytkownika: „Usuń konto” nie czeka już na inne karty przeglądarki z tym samym kontem; te karty od razu
@@ -21298,7 +21298,7 @@ ekranu logowania przypadkami PA w Chromium), 6 równoważnych (bez skutku dla wy
 **Gdzie w kodzie.** `vilda_vault.js` +195 / −14 linii (w tym dwie linie komentarza bloku P-CHMURA-OPIS: bazę, której
 nie ma, zakłada tylko zapis metadanych); w `vilda_frame_sync.js` i `vilda_auth_ui.js` tylko dopisane znaki w liniach
 zminifikowanych.
-- Blok `P-USUN-KONTO-KARTY` w `vilda_vault.js`: linie 608–764 (157 linii, 7782 B), zaraz za `Bnu_blad` (blok
+- Blok `P-USUN-KONTO-KARTY` w `vilda_vault.js`: linie 631–787 (157 linii, 7782 B), zaraz za `Bnu_blad` (blok
   P-CHMURA-OPIS), komentarze bez znaków diakrytycznych. Stan: `Buk_usuniete` (konta skasowane przez inny dokument),
   `Buk_nowszaWersja`, `Buk_usuwa` (konta kasowane przez ten dokument), `Buk_KOMUNIKATY`. Funkcje: `Buk_blad`,
   `Buk_odmowa`, `Buk_bladOtwarcia`, `Buk_obce`, `Buk_zmiana`, `Buk_brakBazy`, `Buk_zamknieta`, `Buk_polacz`,
@@ -21317,18 +21317,17 @@ zminifikowanych.
 
 - Blok `P-DZIENNIK-ZDARZEN`, część `Bob_`: stała `Bob_zapisane`, w `Bob_urzadzenieZapisz` strażnik `Bob_wKasowaniu`
   i `Bob_zapisane.add`, nowa funkcja `Bob_poKasowaniuSejfu` (funkcji `Bob_` 77 → 78), dopiski w nagłówku bloku,
-  nagłówku magazynu i komentarzu nad `Bob_usuwane`. Blok: linie 5197–7331 (2135 linii, 100 724 B; było 2111 linii,
-  99 332 B), część `Bob_` 5854–7331 (1478 linii, 68 914 B; było 1455 linii, 67 594 B). Poza blokiem dziennika
+  nagłówku magazynu i komentarzu nad `Bob_usuwane`. Blok: linie 5220–7354 (2135 linii, 100 724 B; było 2111 linii,
+  99 332 B), część `Bob_` 5877–7354 (1478 linii, 68 914 B; było 1455 linii, 67 594 B). Poza blokiem dziennika
   `Bob_poKasowaniuSejfu` woła tylko `Buk_obce` (w bloku `try`): literał miejsc 4 funkcje / 8 wywołań (było 3 / 7).
 - `vilda_frame_sync.js`: `}else Fs_usuwa()||a()}` i funkcja `Fs_usuwa` (`isRemovingCurrentUser()` w `try`).
 - `vilda_auth_ui.js`, 8 wstawek: powód `user-removed-elsewhere` w unieważnieniu pamięci PRO i w `onLock` (ekran
   logowania z tekstem 1), parametr banera w `me`, `ar` („Witamy”) i `nr` („Kto się loguje?”), funkcja `Buk_baner`
   i baner jako pierwszy element obu ekranów.
 
-**Wersje.** Baza `origin/audyt` `b72dd463` (po vildaclinic/vilda-calc#897; `vilda_vault.js` bez zmian od `83fa119`).
-`vilda_vault.js` 254 → 255, `vilda_auth_ui.js` 548 → 549 i `vilda_frame_sync.js` 2 → 3 (zmieniona treść);
-`vilda_chrome.js` 254 → 255 i `vilda_session_bridge.js` 174 → 175 (wstrzykują plik z nowym `?v=`); SW 1.1.477 →
-**1.1.478**.
+**Wersje.** Baza `origin/audyt` `6649e7bd` (po vildaclinic/vilda-calc#898). `vilda_vault.js` 255 → 256,
+`vilda_auth_ui.js` 548 → 549 i `vilda_frame_sync.js` 2 → 3 (zmieniona treść); `vilda_chrome.js` 255 → 256
+i `vilda_session_bridge.js` 175 → 176 (wstrzykują plik z nowym `?v=`); SW 1.1.478 → **1.1.479**.
 
 ## Dziennik zdarzeń: kasowanie kolejki przy „Usuń konto” i koordynacja kart — uśpione (P-DZIENNIK-ZDARZEN, E2-PR3a1, SW 1.1.470, `vilda_vault.js` 252, 2026-11-05)
 
