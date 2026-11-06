@@ -19,10 +19,9 @@ html[data-clcr-ktv-ui="1"] .ktv-input-card { min-width: 0; padding: var(--space-
 html[data-clcr-ktv-ui="1"] .ktv-scope { margin: 0; font-size: 13px; }
 html[data-clcr-ktv-ui="1"] .ktv-age-context { width: fit-content; max-width: 100%; margin: var(--space-12px) 0 var(--space-20px); padding: var(--space-6px) var(--space-10px); border: var(--border-hairline) solid #c4e1e3; border-radius: var(--radius-12); color: var(--clcr-primary-dark); background: var(--clcr-surface-tint); font-size: 12px; line-height: 1.5; }
 html[data-clcr-ktv-ui="1"] .ktv-variant-tabs { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--space-4px); padding: var(--space-4px); border: var(--border-hairline) solid var(--clcr-border); border-radius: var(--radius-12); background: var(--clcr-surface-soft); }
-html[data-clcr-ktv-ui="1"] .ktv-variant-tabs button { display: grid; min-width: 0; min-height: 64px; align-content: center; justify-content: center; gap: 3px; margin: 0; padding: var(--space-8px) var(--space-4px); border: 0; border-radius: var(--radius-8); color: var(--clcr-muted); background: transparent; box-shadow: none; font: 400 12px/1.35 Inter, system-ui, sans-serif; }
+html[data-clcr-ktv-ui="1"] .ktv-variant-tabs button { display: grid; min-width: 0; min-height: 64px; align-content: center; justify-content: center; gap: 3px; margin: 0; padding: var(--space-8px) var(--space-4px); font: 400 12px/1.35 Inter, system-ui, sans-serif; }
 html[data-clcr-ktv-ui="1"] .ktv-variant-tabs strong { font-size: 16px; }
 html[data-clcr-ktv-ui="1"] .ktv-variant-tabs span { font-size: 10px; }
-html[data-clcr-ktv-ui="1"] .ktv-variant-tabs button[aria-pressed="true"] { color: #fff; background: var(--clcr-primary); }
 html[data-clcr-workflow-ui="1"][data-clcr-ktv-ui="1"] #clcrForm .ktv-variant-tabs button[data-clcr-ktv-variant] { color: var(--clcr-muted) !important; background: transparent !important; border: 0 !important; box-shadow: none !important; }
 html[data-clcr-workflow-ui="1"][data-clcr-ktv-ui="1"] #clcrForm .ktv-variant-tabs button[data-clcr-ktv-variant][aria-pressed="true"] { color: #fff !important; background: var(--clcr-primary) !important; }
 html[data-clcr-workflow-ui="1"][data-clcr-ktv-ui="1"] #clcrForm .ktv-variant-tabs button :is(strong, span) { color: inherit !important; }
@@ -134,3 +133,7 @@ html[data-clcr-ktv-ui="1"] .ktv-source-locator { margin: var(--space-4px) 0 0; c
 html[data-clcr-workflow-ui="1"][data-clcr-ktv-ui="1"] #clcrResultRail #clcrResultReport .ktv-proposal-card .clcr-result-value[data-dense="true"] { white-space: normal; overflow-wrap: anywhere; }
 html[data-clcr-ktv-ui="1"] .ktv-result-percent { color: inherit !important; }
 html[data-clcr-ktv-ui="1"] .clcr-result-value[data-dense="true"] .ktv-result-percent { display: block; margin-left: 0; font-size: 14px; }
+
+/* The selected module owns one visible result container, including placeholders. */
+html[data-clcr-ktv-ui="1"] #ktvResult { display: block !important; }
+html[data-clcr-ktv-ui="1"] :is(#ktvValidation, #ektvResult, #urrResult, #ktvInterpretation) { display: none !important; }

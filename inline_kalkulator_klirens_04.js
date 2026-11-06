@@ -3358,7 +3358,7 @@ function update() {
     if (mt === "pro" && Ve.checked && $("formulaPicker")?.value === "KTV" && !window.__CLCR_TEST_LEGACY_BROAD && window.ClcrKtvUi && typeof window.evaluateClcrKtv === "function") {
       ["ktvValidation", "ektvResult", "urrResult", "ktvInterpretation"].forEach(id => {
         const node = $(id);
-        if (node) { node.style.display = "none"; node.hidden = true; node.removeAttribute("data-clcr-series"); }
+        if (node) { node.hidden = true; node.removeAttribute("data-clcr-series"); }
       });
       const ktvModel = window.evaluateClcrKtv();
       const target = $("ktvResult");
@@ -3368,7 +3368,6 @@ function update() {
         target.classList.remove("result-box", "out-of-range", "warn-yellow");
         target.classList.add("clcr-result-metric");
         clcrSetTrustedMarkup(target, window.ClcrKtvUi.renderResult(ktvModel), "selected IHD index");
-        target.style.display = "block";
         target.hidden = false;
         if (detailsOpen && $("clcr-ktv-details")) $("clcr-ktv-details").open = true;
       }

@@ -47,8 +47,10 @@ function aliasResourcesFor() {
   return aliasNames.flatMap(name => {
     const candidates = [...new Set(urls.filter(url => url.split('?')[0] === '/' + name))];
     const versioned = candidates.filter(url => /\?v=\d+$/.test(url)).sort((a, b) => Number(b.split('?v=')[1]) - Number(a.split('?v=')[1]));
-    if (!versioned.length || !candidates.includes('/' + name)) throw new Error(`Brak dwóch aktualnych kluczy aliasu ${name}`);
-    const matches = ['/' + name, versioned[0]];
+    // The real installer keeps every nonnumeric version (the seven edu CSS
+    // aliases), plus the bare URL and highest numeric version of each path.
+    const matches = candidates.filter(url => url === '/' + name || !/\?v=\d+$/.test(url) || url === versioned[0]);
+    if (matches.length < 2 || !candidates.includes('/' + name)) throw new Error(`Brak aktualnych kluczy aliasu ${name}`);
     return matches.map(url => ({ url, sha256: sha256(fs.readFileSync(path.join(root, name))) }));
   });
 }
