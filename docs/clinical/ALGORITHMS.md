@@ -21074,7 +21074,7 @@ a lekarz poprawia jedno z miejsc. Wartość dni spoza 0–6 w rekordzie nie jest
 
 **Wersje.** `sga_birth_module.js?v=10→11`; SW 1.1.168 → **1.1.169**.
 
-## Sejf: „Usuń konto” przy drugiej karcie — druga karta wraca do ekranu logowania, usuwanie nie czeka (P-USUN-KONTO-KARTY, E2-PR3a1b, SW SW_DO_UZUPELNIENIA, `vilda_vault.js` V_DO_UZUPELNIENIA, 2026-11-06)
+## Sejf: „Usuń konto” przy drugiej karcie — druga karta wraca do ekranu logowania, usuwanie nie czeka (P-USUN-KONTO-KARTY, E2-PR3a1b, SW 1.1.478, `vilda_vault.js` 255, 2026-11-06)
 
 **Zmiana kliniczna: NIE** — wzory, progi, jednostki, interpretacje, zapis, scalanie, format kopii i synchronizacja bez
 zmian. Dla użytkownika: „Usuń konto” nie czeka już na inne karty przeglądarki z tym samym kontem; te karty od razu
@@ -21303,9 +21303,10 @@ w liniach zminifikowanych.
   logowania z tekstem 1), parametr banera w `me`, `ar` („Witamy”) i `nr` („Kto się loguje?”), funkcja `Buk_baner`
   i baner jako pierwszy element obu ekranów.
 
-**Wersje.** Podbicie skryptem `npm run podbij-wersje`; numery SW i `vilda_vault.js` w nagłówku wpisu. Nowe `?v=` mają
-też `vilda_auth_ui.js` i `vilda_frame_sync.js` (zmieniona treść) oraz `vilda_chrome.js` i `vilda_session_bridge.js`
-(wstrzykują pliki z nowym `?v=`).
+**Wersje.** Baza `origin/audyt` `b72dd463` (po vildaclinic/vilda-calc#897; `vilda_vault.js` bez zmian od `83fa119`).
+`vilda_vault.js` 254 → 255, `vilda_auth_ui.js` 548 → 549 i `vilda_frame_sync.js` 2 → 3 (zmieniona treść);
+`vilda_chrome.js` 254 → 255 i `vilda_session_bridge.js` 174 → 175 (wstrzykują plik z nowym `?v=`); SW 1.1.477 →
+**1.1.478**.
 
 ## Dziennik zdarzeń: kasowanie kolejki przy „Usuń konto” i koordynacja kart — uśpione (P-DZIENNIK-ZDARZEN, E2-PR3a1, SW 1.1.470, `vilda_vault.js` 252, 2026-11-05)
 
