@@ -1148,8 +1148,8 @@
   "sha256": "f2a4254214dee9ee37cc2dea6a60494721afc99443f58cd12f55c22c34505572"
  },
  "vilda_auth_ui.js": {
-  "v": 548,
-  "sha256": "80b6b20da122b3bae92e2713e4164ac6e693398b813d52de63a2fc60f80a031e"
+  "v": 549,
+  "sha256": "9bed1341a8c9de11d1233470c00a5075bea45ba18fb9904157c300ef3d561ac5"
  },
  "vilda_b64_checklist.js": {
   "v": 2,
@@ -1264,8 +1264,8 @@
   "sha256": "126f6cf35d3a2b33e72ac26e1c0fe214b9b900f1e5a916fafbb9bb1e3eff16ea"
  },
  "vilda_chrome.js": {
-  "v": 255,
-  "sha256": "426bb501b39227913803055a1342c2755b00a56543470435812bd982012a9a50"
+  "v": 256,
+  "sha256": "04b3b9023d588db0df7cc0b7548eb31c681aff5a04a7a95a5937175c26f57f94"
  },
  "vilda_clinical_crypto.js": {
   "v": 2,
@@ -1424,8 +1424,8 @@
   "sha256": "6cee63ab224518b3e5ab3ddaf58427f25d37d98be2e477834ab44e9b5a122a52"
  },
  "vilda_frame_sync.js": {
-  "v": 2,
-  "sha256": "c944a5eadc91aa3a4e4628edb8b693d06633527b9cb4a7380f39ae61a64ad14e"
+  "v": 3,
+  "sha256": "90b65d43c648347c57d48bde382add0f578a546ce33f01730b32df69a80613c9"
  },
  "vilda_fsh_d3.js": {
   "v": 1,
@@ -1952,8 +1952,8 @@
   "sha256": "59dfe0d72f1c56950e8bfa44036bd1d02bf6a6aea16ce6e77a2644921e1e45cf"
  },
  "vilda_session_bridge.js": {
-  "v": 175,
-  "sha256": "1150d688456e43985f72bf56e00b129f0677937f0790f84c0e8fae8b04b4f547"
+  "v": 176,
+  "sha256": "d437b8edd8fe500827a743602a37bd8369946d94b89087e79e4594c9bf0d7cf6"
  },
  "vilda_sga_catchup.js": {
   "v": 2,
@@ -2044,8 +2044,8 @@
   "sha256": "59ee39776162dde3f0f8beb5d779ae68323128e2d7bd4c4fa21ce897f56f942e"
  },
  "vilda_vault.js": {
-  "v": 255,
-  "sha256": "e5b4f2f9f9da52f197daa415915f3efedf4c772334bf2ce4ef096b91b3bb1b3b"
+  "v": 256,
+  "sha256": "30164e9e75c200bbbe58d31ff7b4a1dc15ca64176a5afe9d64419df7d2fbfc1a"
  },
  "vilda_vault_protocol.js": {
   "v": 1,

@@ -39,7 +39,9 @@
 //            i znacznika zaraz po removeUser.
 //   K1c      tryb „Komputer w pracy”: z bazą kolejki z czasu trybu prywatnego; bez bazy (jedna blokada wyłączna).
 //   K2       gałąź bez metadanych konta: kasowanie bazy kolejki, bez blokady sejfu.
-//   K3, K3a  druga karta dopisuje w trakcie removeUser (kasujący czeka na blokadę); dopisanie po wejściu kasującego → konto.
+//   K3, K3e  druga karta dopisuje w trakcie removeUser (kasujący czeka na blokadę; karta B po kasowaniu bazy sejfu jest
+//            zablokowana — dopisanie kończy się odmową zablokowany, P-USUN-KONTO-KARTY); dopisanie drugiej karty po
+//            kasowaniu bazy sejfu → zablokowany bez czekania na blokadę.
 //   K3b, K3c bez Web Locks: znacznik po removeUser (baza kolejki; sam identyfikator urządzenia), ponowienie przy
 //            odblokowaniu innego konta.
 //   K3d      żądanie blokady odrzucone przed przyznaniem — dopisanie bez blokady.
@@ -65,13 +67,17 @@
 //            zablokowany.
 //   K12      dopisanie wstrzymane na otwarciu tworzącym bazę — tworzenie przerwane.
 //   K13–K16  limity blokady (kasujący 10 s — także przy pierwszym dopisaniu drugiej karty; dopisujący i zapis do
-//            kwarantanny 20 s), sprawdzenia sesji (P-SESJA-ZAPISU) dopisania i zapisu do kwarantanny, zapis do
-//            kwarantanny w drugiej karcie.
+//            kwarantanny 20 s, blokadę wyłączną konta trzyma inna karta), sprawdzenia sesji (P-SESJA-ZAPISU) dopisania
+//            i zapisu do kwarantanny, zapis do kwarantanny w drugiej karcie.
 //   K17      bez Web Locks i przy zamkniętej bramce (także tryb jednorazowy): żadnego zapisu vilda-sync-* w localStorage.
 //   K18, K18b bez listy baz przy zamkniętej bramce: jedno deleteDatabase bez otwarcia, bez znacznika; błąd kasowania —
 //            znacznik do następnego odblokowania.
 //   Samotest uprzęży: wspólne Web Locks i localStorage drugiego okna, okno bez navigator.locks, okno bez databases(),
-//   moduły punktu odzyskiwania.
+//   moduły punktu odzyskiwania; osobny widok localStorage na okno (localStorage: 'osobny'): karta A nie odczytuje zapisu
+//   karty B przed propaguj(), odczytuje go po, zdarzenie storage w karcie A.
+// Druga karta z tym samym kontem zamyka połączenie z bazą sejfu przy kasowaniu (P-USUN-KONTO-KARTY), więc przypadki
+// drugiej karty nie zamykają go same; na sejfie sprzed tej zmiany (E2-PR3a1) czerwone są K3, K3e, K10, K13, K13b, K16
+// i K6j (dwa przypadki ponownego removeUser poza trybem jednorazowym): usuwanie czeka na połączenie drugiej karty.
 // Na sejfie bez kasowania kolejki (E2-PR2b2) czerwone są przypadki sprawdzające kasowanie, blokadę, oznaczenie
 // i ponowienie; zielone z natury (strażniki): K3d, K6j (pięć przypadków), K7 (trzy przypadki), K8, K9c, K9d, K17 (dwa
 // przypadki) i samotest uprzęży (dwa przypadki).
@@ -180,12 +186,6 @@ async function odpalOstatni(o, ms) {
   await doczekaj(o.timery.czekajNa((t) => t.ms === ms), `zegar ${ms} ms w oknie`);
   const id = Math.max(...o.timery.oczekujace().filter((t) => t.ms === ms).map((t) => t.id));
   expect(o.timery.odpal((t) => t.id === id), `odpalony zegar ${ms} ms`).toBe(1);
-}
-// Druga karta z tym samym kontem trzyma połączenie z bazą sejfu (adapter sejfu nie zamyka go przy versionchange):
-// kasowanie bazy sejfu w karcie A czeka na blocked, a test zamyka połączenie karty B jawnie.
-async function zwolnijBazeSejfuDrugiejKarty(o, uid) {
-  await doczekaj(czekajNa(() => o.idb.__atrapa.log.some((w) => w[0] === 'blocked' && w[1] === BAZA_SEJFU(uid)), 'blocked'), `blocked kasowania ${BAZA_SEJFU('<uid>')}`);
-  o.idb.__atrapa.wymusZamkniecie(BAZA_SEJFU(uid));
 }
 async function wpisRejestru(o, uid, wpis) {
   await naAtrapie(o.idb, 'vilda_registry', ['users'], 'readwrite', (tx) => { tx.objectStore('users').put({ ...wpis, userId: uid }); });
@@ -662,7 +662,6 @@ describe('tryb „Zaloguj jednorazowo” (K6j)', () => {
     expect(stanKonta(o, uidB), 'konto B po removeUser w trybie jednorazowym').toEqual({ bazaKolejki: true, kluczUrzadzenia: kluczB, znacznik: null });
     o.zablokuj();
     expect(o.v.isEphemeralMode(), 'tryb jednorazowy po blokadzie').toBe(false);
-    o.idb.__atrapa.wymusZamkniecie(BAZA_SEJFU(uidB));
     await o.zaloguj(kto);
     expect(o.sesja(), 'zalogowane konto').toBe(kto);
     const z = o.znacznik();
@@ -919,7 +918,7 @@ describe('znacznik ponowienia i ponowienie przy odblokowaniu', () => {
 });
 
 describe('druga karta z tym samym kontem (blokada vilda-sync-db:<userId>)', () => {
-  it('K3: karta B dopisuje (szyfrowanie wstrzymane), karta A wykonuje removeUser i czeka na blokadę — removeUser true; brak bazy, klucza i znacznika; dopisanie B ok (wiersz zniknął z bazą)', async () => {
+  it('K3: karta B dopisuje (szyfrowanie wstrzymane), karta A wykonuje removeUser i czeka na blokadę — removeUser true; brak bazy, klucza i znacznika; karta B zablokowana, dopisanie B → zablokowany', async () => {
     const o = await nowe();
     const uid = o.A.userId;
     const k = await karta(o);
@@ -929,7 +928,6 @@ describe('druga karta z tym samym kontem (blokada vilda-sync-db:<userId>)', () =
     const pB = o2.ev.enqueue('snap', k);
     await doczekaj(h.osiagnieta, 'szyfrowanie dopisania w karcie B');
     const pA = usun(o);
-    await zwolnijBazeSejfuDrugiejKarty(o, uid);
     const czeka = await doczekaj(ktoreWczesniej(o.locks.czekajNaKolejke(nazwaBlokady(uid)), pA), 'karta A w kolejce blokady albo koniec removeUser');
     h.zwolnij();
     const [wA, wB] = await Promise.all([doczekaj(pA, 'wynik removeUser'), doczekaj(pB, 'wynik dopisania B')]);
@@ -938,10 +936,11 @@ describe('druga karta z tym samym kontem (blokada vilda-sync-db:<userId>)', () =
     expect(stanKonta(o, uid), 'po removeUser przy dopisaniu w drugiej karcie').toEqual(CZYSTO);
     expect(czeka, 'karta A czekała na blokadę wyłączną vilda-sync-db, którą trzymało dopisanie B').toBe(true);
     expect(wA).toEqual({ ok: true, w: true });
-    expect(wB.ok, JSON.stringify(wB)).toBe(true);
+    expect(wB).toEqual({ ok: false, powod: 'zablokowany' });
+    expect(o2.v.isUnlocked(), 'karta B po kasowaniu bazy sejfu').toBe(false);
   }, 30_000);
 
-  it('K3a: karta B zaczyna dopisanie, gdy A trzyma blokadę wyłączną (kasowanie wstrzymane) — B czeka, potem konto; brak bazy', async () => {
+  it('K3e: karta B zaczyna dopisanie, gdy A trzyma blokadę wyłączną (kasowanie kolejki wstrzymane) — karta B jest już zablokowana: dopisanie → zablokowany bez czekania na blokadę i bez otwarcia bazy kolejki; brak bazy', async () => {
     const o = await nowe();
     const uid = o.A.userId;
     const k = await karta(o);
@@ -949,13 +948,14 @@ describe('druga karta z tym samym kontem (blokada vilda-sync-db:<userId>)', () =
     const o2 = await drugie(o);
     const h = wstrzymaj(o, { przy: 'deleteDatabase', baza: nazwaBazy(uid) });
     const pA = usun(o);
-    await zwolnijBazeSejfuDrugiejKarty(o, uid);
     expect(await doczekaj(ktoreWczesniej(h.czeka, pA), 'kasowanie bazy kolejki albo koniec removeUser'), 'removeUser kasuje bazę kolejki').toBe(true);
-    const pB = o2.ev.enqueue('snap', k);
-    expect(await doczekaj(ktoreWczesniej(o.locks.czekajNaKolejke(nazwaBlokady(uid)), pB), 'dopisanie B w kolejce blokady'), 'dopisanie B czeka na blokadę').toBe(true);
+    const z = o.znacznik();
+    const zl = o.locks.zadania.length;
+    expect(await doczekaj(o2.ev.enqueue('snap', k), 'wynik dopisania B')).toEqual({ ok: false, powod: 'zablokowany' });
+    expect(blokadyKonta(o, zl), 'żądania blokady konta karty B').toEqual([]);
+    expect(ileWLogu(o, z, ['open', nazwaBazy(uid)]), 'otwarcia bazy kolejki').toBe(0);
     h.zwolnij();
     expect(await doczekaj(pA, 'wynik removeUser')).toEqual({ ok: true, w: true });
-    expect(await doczekaj(pB, 'wynik dopisania B')).toEqual({ ok: false, powod: 'konto' });
     await o.cisza();
     await o2.cisza();
     expect(stanKonta(o, uid)).toEqual(CZYSTO);
@@ -971,7 +971,6 @@ describe('druga karta z tym samym kontem (blokada vilda-sync-db:<userId>)', () =
     const pB = o2.ev.enqueue('snap', k);
     await doczekaj(h.czeka, 'zatwierdzenie dopisania B');
     const pA = usun(o);
-    await zwolnijBazeSejfuDrugiejKarty(o, uid);
     const czeka = await doczekaj(ktoreWczesniej(o.locks.czekajNaKolejke(nazwaBlokady(uid)), pA), 'karta A w kolejce blokady albo koniec removeUser');
     h.zwolnij();
     const [wA, wB] = await Promise.all([doczekaj(pA, 'wynik removeUser'), doczekaj(pB, 'wynik dopisania B')]);
@@ -993,7 +992,6 @@ describe('druga karta z tym samym kontem (blokada vilda-sync-db:<userId>)', () =
     const pB = o2.ev.enqueue('snap', k);
     await doczekaj(h.osiagnieta, 'szyfrowanie dopisania w karcie B');
     const pA = usun(o);
-    await zwolnijBazeSejfuDrugiejKarty(o, uid);
     expect(await doczekaj(ktoreWczesniej(o.locks.czekajNaKolejke(nazwaBlokady(uid)), pA), 'karta A w kolejce blokady albo koniec removeUser'), 'karta A czeka na blokadę wyłączną').toBe(true);
     await odpalOstatni(o, 10000);
     expect(await doczekaj(pA, 'wynik removeUser po limicie blokady')).toEqual({ ok: true, w: true });
@@ -1017,7 +1015,6 @@ describe('druga karta z tym samym kontem (blokada vilda-sync-db:<userId>)', () =
     const pB = o2.ev.enqueue('snap', k);
     await doczekaj(h.osiagnieta, 'szyfrowanie dopisania w karcie B');
     const pA = usun(o);
-    await zwolnijBazeSejfuDrugiejKarty(o, uid);
     expect(await doczekaj(ktoreWczesniej(o.locks.czekajNaKolejke(nazwaBlokady(uid)), pA), 'karta A w kolejce blokady albo koniec removeUser'), 'karta A czeka na blokadę wyłączną').toBe(true);
     await odpalOstatni(o, 10000);
     expect(await doczekaj(pA, 'wynik removeUser po limicie blokady')).toEqual({ ok: true, w: true });
@@ -1030,45 +1027,34 @@ describe('druga karta z tym samym kontem (blokada vilda-sync-db:<userId>)', () =
     expect(stanKonta(o, uid), 'po zwolnieniu B i odblokowaniu konta B').toEqual(CZYSTO);
   }, 30_000);
 
-  it('K14: A trzyma blokadę wyłączną (kasowanie wstrzymane), B enqueue, limit 20 s dopisującego — SYNC_DB_TIMEOUT, bez nowego wiersza', async () => {
+  it('K14: blokadę wyłączną konta trzyma inna karta, enqueue czeka, limit 20 s dopisującego — SYNC_DB_TIMEOUT, bez nowego wiersza', async () => {
     const o = await nowe();
     const uid = o.A.userId;
     const k = await karta(o);
     await dopisz(o, k);
     const wiersze = o.kolejka();
-    const o2 = await drugie(o);
-    const h = wstrzymaj(o, { przy: 'deleteDatabase', baza: nazwaBazy(uid) });
-    const pA = usun(o);
-    await zwolnijBazeSejfuDrugiejKarty(o, uid);
-    expect(await doczekaj(ktoreWczesniej(h.czeka, pA), 'kasowanie bazy kolejki albo koniec removeUser'), 'removeUser kasuje bazę kolejki').toBe(true);
-    const pB = o2.ev.enqueue('snap', k);
-    expect(await doczekaj(ktoreWczesniej(o.locks.czekajNaKolejke(nazwaBlokady(uid)), pB), 'dopisanie B w kolejce blokady'), 'dopisanie B czeka na blokadę').toBe(true);
-    await odpalOstatni(o2, 20000);
-    expect(await doczekaj(pB, 'wynik dopisania B po limicie')).toEqual({ ok: false, powod: 'blad', code: 'SYNC_DB_TIMEOUT' });
+    const trzymana = await o.locks.trzymaj(nazwaBlokady(uid), { tryb: 'exclusive' });
+    UCHWYTY.push({ zwolnij: () => { trzymana.zwolnij(); } });
+    const p = o.ev.enqueue('snap', k);
+    expect(await doczekaj(ktoreWczesniej(o.locks.czekajNaKolejke(nazwaBlokady(uid)), p), 'dopisanie w kolejce blokady'), 'dopisanie czeka na blokadę').toBe(true);
+    await odpalOstatni(o, 20000);
+    expect(await doczekaj(p, 'wynik dopisania po limicie')).toEqual({ ok: false, powod: 'blad', code: 'SYNC_DB_TIMEOUT' });
     expect(o.kolejka(), 'bez nowego wiersza').toEqual(wiersze);
-    h.zwolnij();
-    expect(await doczekaj(pA, 'wynik removeUser')).toEqual({ ok: true, w: true });
-    await o.cisza();
-    expect(stanKonta(o, uid)).toEqual(CZYSTO);
+    await trzymana.zwolnij();
   }, 30_000);
 
-  it('K14b: A trzyma blokadę wyłączną (kasowanie wstrzymane), B quarantinePut, limit 20 s — SYNC_DB_TIMEOUT', async () => {
+  it('K14b: blokadę wyłączną konta trzyma inna karta, quarantinePut czeka, limit 20 s — SYNC_DB_TIMEOUT, bez wiersza kwarantanny', async () => {
     const o = await nowe();
     const uid = o.A.userId;
     await dopisz(o, await karta(o));
-    const o2 = await drugie(o);
-    const h = wstrzymaj(o, { przy: 'deleteDatabase', baza: nazwaBazy(uid) });
-    const pA = usun(o);
-    await zwolnijBazeSejfuDrugiejKarty(o, uid);
-    expect(await doczekaj(ktoreWczesniej(h.czeka, pA), 'kasowanie bazy kolejki albo koniec removeUser'), 'removeUser kasuje bazę kolejki').toBe(true);
-    const pB = o2.ev.quarantinePut(ZMIANA, NIECZYTELNY, KW);
-    expect(await doczekaj(ktoreWczesniej(o.locks.czekajNaKolejke(nazwaBlokady(uid)), pB), 'zapis do kwarantanny w kolejce blokady'), 'zapis do kwarantanny czeka na blokadę').toBe(true);
-    await odpalOstatni(o2, 20000);
-    expect(await doczekaj(pB, 'wynik quarantinePut po limicie')).toEqual({ ok: false, powod: 'blad', code: 'SYNC_DB_TIMEOUT' });
-    h.zwolnij();
-    expect(await doczekaj(pA, 'wynik removeUser')).toEqual({ ok: true, w: true });
-    await o.cisza();
-    expect(stanKonta(o, uid)).toEqual(CZYSTO);
+    const trzymana = await o.locks.trzymaj(nazwaBlokady(uid), { tryb: 'exclusive' });
+    UCHWYTY.push({ zwolnij: () => { trzymana.zwolnij(); } });
+    const p = o.ev.quarantinePut(ZMIANA, NIECZYTELNY, KW);
+    expect(await doczekaj(ktoreWczesniej(o.locks.czekajNaKolejke(nazwaBlokady(uid)), p), 'zapis do kwarantanny w kolejce blokady'), 'zapis do kwarantanny czeka na blokadę').toBe(true);
+    await odpalOstatni(o, 20000);
+    expect(await doczekaj(p, 'wynik quarantinePut po limicie')).toEqual({ ok: false, powod: 'blad', code: 'SYNC_DB_TIMEOUT' });
+    expect(o.kwarantanna(), 'bez wiersza kwarantanny').toEqual([]);
+    await trzymana.zwolnij();
   }, 30_000);
 
   it('K15: dopisanie czeka na blokadę, w tym czasie przełączenie konta — sprawdzenia sesji (P-SESJA-ZAPISU): po zwolnieniu odmowa sesja, bez zapisu', async () => {
@@ -1104,7 +1090,7 @@ describe('druga karta z tym samym kontem (blokada vilda-sync-db:<userId>)', () =
     expect({ A: o.kwarantanna('A'), B: o.kwarantanna('B'), bazaA: o.jestBaza('A'), bazaB: o.jestBaza('B') }).toEqual({ A: [], B: [], bazaA: false, bazaB: false });
   }, 30_000);
 
-  it('K16: jak K3, ale B zapisuje do kwarantanny (wstrzymane na otwarciu bazy kolejki) — po removeUser brak bazy', async () => {
+  it('K16: jak K3, ale B zapisuje do kwarantanny (wstrzymane na otwarciu bazy kolejki) — po removeUser brak bazy; zapis B → zablokowany', async () => {
     const o = await nowe();
     const uid = o.A.userId;
     const o2 = await drugie(o);
@@ -1112,7 +1098,6 @@ describe('druga karta z tym samym kontem (blokada vilda-sync-db:<userId>)', () =
     const pB = o2.ev.quarantinePut(ZMIANA, NIECZYTELNY, KW);
     await doczekaj(h.czeka, 'otwarcie bazy kolejki w zapisie do kwarantanny B');
     const pA = usun(o);
-    await zwolnijBazeSejfuDrugiejKarty(o, uid);
     const czeka = await doczekaj(ktoreWczesniej(o.locks.czekajNaKolejke(nazwaBlokady(uid)), pA), 'karta A w kolejce blokady albo koniec removeUser');
     h.zwolnij();
     const [wA, wB] = await Promise.all([doczekaj(pA, 'wynik removeUser'), doczekaj(pB, 'wynik quarantinePut B')]);
@@ -1120,7 +1105,7 @@ describe('druga karta z tym samym kontem (blokada vilda-sync-db:<userId>)', () =
     await o2.cisza();
     expect(stanKonta(o, uid), 'po removeUser przy zapisie do kwarantanny w drugiej karcie').toEqual(CZYSTO);
     expect(czeka, 'kasowanie czekało na blokadę zapisu do kwarantanny').toBe(true);
-    expect({ a: wA, b: wB.ok }).toEqual({ a: { ok: true, w: true }, b: true });
+    expect({ a: wA, b: wB }).toEqual({ a: { ok: true, w: true }, b: { ok: false, powod: 'zablokowany' } });
   }, 30_000);
 
   it('K3d: żądanie blokady konta odrzucone przed przyznaniem z innego powodu niż limit — dopisanie bez blokady (jak bez Web Locks) kończy się ok', async () => {
@@ -1183,5 +1168,31 @@ describe('samotest uprzęży okna magazynu (drugie okno, Web Locks, localStorage
     expect(PRZEDROSTEK_URZADZENIA).toBe('vilda-sync-device-v1');
     expect(kluczKasowania('u1')).toBe('vilda-sync-delete-v1:u1');
     expect(nazwaBlokady('u1')).toBe('vilda-sync-db:u1');
+  }, 30_000);
+
+  it("osobny widok localStorage na okno (localStorage: 'osobny'): karta A nie odczytuje zapisu karty B przed propaguj(), odczytuje go po; zdarzenie storage w karcie A; zapis tylko w dzienniku karty B", async () => {
+    const o = await nowe({ bramka: false, localStorage: 'osobny' });
+    const o2 = await drugie(o, { bramka: false, localStorage: 'osobny' });
+    expect(o2.lokalny).not.toBe(o.lokalny);
+    expect(o2.rodzina).toBe(o.rodzina);
+    const zdarzenia = [];
+    o.win.addEventListener('storage', (e) => { if (e.key === 'fikcyjny-klucz-testu') zdarzenia.push([e.key, e.oldValue, e.newValue]); });
+    const z1 = o.dziennik.length;
+    o2.win.localStorage.setItem('fikcyjny-klucz-testu', 'x');
+    expect(o2.win.localStorage.getItem('fikcyjny-klucz-testu')).toBe('x');
+    expect(o.win.localStorage.getItem('fikcyjny-klucz-testu'), 'karta A przed propaguj()').toBe(null);
+    await o.propaguj();
+    expect(o.win.localStorage.getItem('fikcyjny-klucz-testu'), 'propaguj() karty A nie przenosi zapisów karty B').toBe(null);
+    expect(zdarzenia).toEqual([]);
+    await o2.propaguj();
+    expect(o.win.localStorage.getItem('fikcyjny-klucz-testu'), 'karta A po propaguj() karty B').toBe('x');
+    expect(zdarzenia).toEqual([['fikcyjny-klucz-testu', null, 'x']]);
+    o2.win.localStorage.removeItem('fikcyjny-klucz-testu');
+    await o2.propaguj();
+    expect(o.win.localStorage.getItem('fikcyjny-klucz-testu')).toBe(null);
+    expect(zdarzenia).toEqual([['fikcyjny-klucz-testu', null, 'x'], ['fikcyjny-klucz-testu', 'x', null]]);
+    expect(o.dziennik.slice(z1).filter((x) => x.klucz === 'fikcyjny-klucz-testu'), 'dziennik karty A').toEqual([]);
+    await expect(oknoMagazynu({ konta: 'A', bramka: false }).then((o3) => { OKNA.push(o3); return drugieOkno(o3, { bramka: false, localStorage: 'osobny' }); }))
+      .rejects.toThrow(/wspólny localStorage/);
   }, 30_000);
 });

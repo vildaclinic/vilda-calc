@@ -1,4 +1,5 @@
-// P-DZIENNIK-ZDARZEN (E2-PR2a, E2-PR2b1, E2-PR2b2, E2-PR3a1) — strażniki uśpienia bloku dziennika zdarzeń w vilda_vault.js:
+// P-DZIENNIK-ZDARZEN (E2-PR2a, E2-PR2b1, E2-PR2b2, E2-PR3a1, E2-PR3a1b) — strażniki uśpienia bloku dziennika zdarzeń
+// w vilda_vault.js:
 // kod produkcyjny woła nowe funkcje wyłącznie z listy miejsc (literał MIEJSCA_POZA_BLOKIEM); bez bramki działają
 // sprzątanie po koncie, część Bev_ oraz kasowanie bazy (deleteDatabase) i podsumowanie wyniku (resultSummary) z części
 // Bob_, a reszta kończy się na bramce: bez otwarcia bazy kolejki, szyfrowania i żądań. Sprzątanie po koncie: kasowanie
@@ -25,7 +26,8 @@
 //         VILDA_EVENT_LOG), bez zegara i bez wywołań magazynu sejfu.
 //   U2(a) identyfikatory Bev_, Bob_ i Bem_ leżą między znacznikami bloku (każdy znacznik dokładnie raz) poza literałem
 //         miejsc: `_eventLog:Bev_EKSPORT` oraz wywołania z MIEJSCA_POZA_BLOKIEM (funkcja otaczająca → nazwa → liczba;
-//         drzewo składni: każde wywołanie instrukcją wyrażeniową albo elementem wyrażenia przecinkowego bez użycia wyniku,
+//         drzewo składni: każde wywołanie instrukcją wyrażeniową albo elementem wyrażenia przecinkowego bez użycia wyniku;
+//         Bob_poKasowaniuSejfu wyłącznie w Buk_obce bloku P-USUN-KONTO-KARTY, w bloku try,
 //         poza wyjątkami form: `await Bob_kasujKonto(t)` w xa, `const PatientCheckpointSyncMark=Bob_oznacz(userId)`
 //         w PatientCheckpointRemoveUser z wynikiem wyłącznie jako argument Bob_odznacz w bloku catch; w xa kolejność
 //         usunięcie wpisu rejestru → Bob_poRejestrze → blokada sejfu → await Bob_kasujKonto; w He Bob_poOdblokowaniu po
@@ -98,6 +100,7 @@ const ID_BEV_BOB = /(?<![A-Za-z0-9_$])B(?:ev|ob|em)_[A-Za-z0-9_$]*/g;
 // przy odblokowaniu).
 const MIEJSCA_POZA_BLOKIEM = Object.freeze({
   PatientCheckpointRemoveUser: { Bob_oznacz: 1, Bob_odznacz: 1 },
+  Buk_obce: { Bob_poKasowaniuSejfu: 1 },
   xa: { Bob_poRejestrze: 2, Bob_kasujKonto: 2 },
   He: { Bob_poOdblokowaniu: 1 },
 });
@@ -193,6 +196,12 @@ function miejscaPozaBlokiem(zrodlo) {
       let c = rodzic.get(p);
       while (c && c !== f && c.type !== 'CatchClause') c = rodzic.get(c);
       if (!c || c.type !== 'CatchClause') bledy.push(`${gdzie}: poza blokiem catch`);
+    }
+    if (id.name === 'Bob_poKasowaniuSejfu') {
+      let c = wyzej;
+      let w = rodzic.get(c);
+      while (w && w !== f && !(w.type === 'TryStatement' && w.block === c)) { c = w; w = rodzic.get(w); }
+      if (!w || w === f) bledy.push(`${gdzie}: poza blokiem try`);
     }
   }
   // Kolejność w xa: każde wyrażenie przecinkowe z Bob_poRejestrze ma kasowanie kolejki po nim i usunięcie wpisu rejestru przed nim.
@@ -462,6 +471,7 @@ describe('U2(a): identyfikatory Bev_ i Bob_ tylko w bloku; _eventLog dokładnie 
       'async function PatientCheckpointRemoveUser(userId, password) { const PatientCheckpointSyncMark=Bob_oznacz(userId); try { await f(); } catch (e) { Bob_odznacz(userId, PatientCheckpointSyncMark); throw e; } finally { g(); } }',
       'async function xa(t,e){ if(!r){ return W(A,(await I().getRegistryEntry(t)&&await I().removeRegistryEntry(W(A,t)),Bob_poRejestrze(t),await Bob_kasujKonto(t),true)); } return W(A,(await I().deleteUserDatabase(W(t,t)),await I().removeRegistryEntry(W(A,t)),Bob_poRejestrze(t),b===t&&kn("user-removed"),await Bob_kasujKonto(t),true)); }',
       'function He(t){ $n.forEach(function(n){ n(e); }); try{go()}catch(x){r(x);} Bob_poOdblokowaniu(); }',
+      'function Buk_obce(uid) { try { Buk_usuniete.add(uid); Bob_poKasowaniuSejfu(uid); } catch (x) { g(); } }',
     ].join('\n');
     expect(miejscaPozaBlokiem(DOBRE)).toEqual({ miejsca: MIEJSCA_POZA_BLOKIEM, bledy: [] });
     const zle = [
@@ -480,6 +490,11 @@ describe('U2(a): identyfikatory Bev_ i Bob_ tylko w bloku; _eventLog dokładnie 
       `${DOBRE}\nfunction Inna() { Bob_poRejestrze(u); }`,
       `${DOBRE}\nfunction ns() { Bem_partia(1); }`,
       DOBRE.replace('try{go()}catch(x){r(x);} Bob_poOdblokowaniu(); }', 'try{go()}catch(x){r(x);} }').replace('$n.forEach(function(n){ n(e); });', '$n.forEach(function(n){ n(e); Bob_poOdblokowaniu(); });'),
+      DOBRE.replace('try { Buk_usuniete.add(uid); Bob_poKasowaniuSejfu(uid); } catch (x) { g(); }', 'Buk_usuniete.add(uid); Bob_poKasowaniuSejfu(uid);'),
+      DOBRE.replace('Bob_poKasowaniuSejfu(uid); } catch (x) { g(); }', '} catch (x) { Bob_poKasowaniuSejfu(uid); }'),
+      DOBRE.replace('Bob_poKasowaniuSejfu(uid);', 'const x = Bob_poKasowaniuSejfu(uid);'),
+      DOBRE.replace('function Buk_obce(uid) {', 'function Buk_zmiana(uid) {'),
+      DOBRE.replace('try { Buk_usuniete.add(uid); Bob_poKasowaniuSejfu(uid); }', 'try { Buk_usuniete.add(uid); [1].forEach(function () { Bob_poKasowaniuSejfu(uid); }); }'),
     ];
     for (const [i, kod] of zle.entries()) {
       expect(kod, `wariant ${i} różni się od form z literału`).not.toBe(DOBRE);
