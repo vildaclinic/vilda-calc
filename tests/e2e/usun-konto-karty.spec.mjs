@@ -12,7 +12,7 @@ import { expect, test } from '@playwright/test';
 import { SCENARIUSZE_PA, startSerwer } from '../support/usun-konto-karty-chromium.mjs';
 
 const OPISY = {
-  PA1: 'dwie karty index.html i ustawienia.html — karta B „Witamy” z banerem, zablokowana; karta usuwająca „Witamy” bez banera; na liście baz tylko bazy wspólne',
+  PA1: 'dwie karty index.html i ustawienia.html — karta B „Witamy” z banerem, zablokowana; karta usuwająca „Witamy” bez banera; po „Usuń konto” bez bazy sejfu i bazy kolejki konta',
   'PA1′': 'karta B = app.html#/start — powłoka „Witamy” z banerem, trasa zostaje',
   PA2: 'jedno okno app.html#/ustawienia — wpis rejestru usunięty, ramka Ustawień od nowa (_r=), trasa zostaje, powłoka „Witamy” z banerem',
   PA3: 'dwa konta, logowanie w toku w trzeciej karcie — „Kto się loguje?” z banerem i drugim kontem, pamięć PRO raz, formularz z komunikatem odmowy; manual i idle bez banera',

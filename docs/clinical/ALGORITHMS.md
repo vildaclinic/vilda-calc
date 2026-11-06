@@ -21221,9 +21221,9 @@ sprzątać.
   okno `app.html#/ustawienia`: wpis rejestru usunięty, ramka Ustawień od nowa, trasa zostaje, powłoka „Witamy”
   z banerem), PA3 (dwa konta: „Kto się loguje?” z banerem tylko z drugim kontem, pamięć PRO unieważniona raz; logowanie
   w toku w trzeciej karcie — tekst 2 w formularzu, bez banera; blokady `manual` i `idle` bez banera). Wyrocznia baz:
-  bazy przeglądarki przed „Usuń konto” i po nim, po ucichnięciu — po usunięciu nie ma bazy sejfu ani bazy kolejki
-  konta, bazy wspólne bez zmian. Konto bez biblioteki szablonów. Czasy „Usuń konto” w adnotacji testu, poza
-  porównywanym wynikiem.
+  bazy przeglądarki przed „Usuń konto” i po nim (dwa kolejne odczyty listy baz w odstępie 100 ms równe oczekiwanym) —
+  po usunięciu nie ma bazy sejfu ani bazy kolejki konta, bazy wspólne bez zmian. Konto bez biblioteki szablonów. Czasy
+  „Usuń konto” w adnotacji testu, poza porównywanym wynikiem.
 
 Zmienione:
 - `tests/support/dwie-karty-chromium.mjs` i `tests/e2e/dziennik-zdarzen-dwie-karty.spec.mjs` — 3 → 7 przypadków
@@ -21250,12 +21250,14 @@ Zmienione:
 Fikstura zapisu bazowego (`tests/fixtures/dziennik-zapis-bazowy.json`) bez zmian.
 
 Wynik na stanie końcowym: sejf drugiej karty 57/57, konto 71/71, uśpienie 31/31; e2e 11/11 (KA1–KA7, PA1, PA1′, PA2,
-PA3); ESLint bez problemów, składnia poprawna. Skrypt Node scenariuszy w Chromium 153.0.8010.12: każdy z 11 scenariuszy
-KA i PA 22/22 zgodnych przebiegów (8 po kolei, 12 w trzech seriach po 4 procesy naraz, 2 w serii mieszanej). Trzy pliki
-jednostkowe pod obciążeniem (8 procesów naraz na 4 rdzeniach, 20 serii): 160/160 przebiegów, 25 440 przypadków
-zielonych. W przebiegach skryptu „Usuń konto” w karcie A bez okna pytania (KA4, KA5: `removeUser` od wywołania do
-wyniku, po 16 przebiegów z pomiarem) trwa 8–69 ms; w pełnej aplikacji od kliknięcia do przejścia na `index.html` (PA1,
-PA1′) 34–1186 ms; w aplikacji zainstalowanej wpis rejestru znika po 57–652 ms (PA2).
+PA3); ESLint bez problemów, składnia poprawna. Skrypt Node scenariuszy w Chromium 153.0.8010.12 (przed ostatnią zmianą
+wyroczni baz PA i odczytu listy baz w KA7): każdy z 11 scenariuszy KA i PA 22/22 zgodnych przebiegów (8 po kolei, 12
+w trzech seriach po 4 procesy naraz, 2 w serii mieszanej); po tej zmianie e2e wszystkich 11 przypadków 66/66 (dwa
+przebiegi po 3 powtórzenia). Trzy pliki jednostkowe pod obciążeniem (8 procesów naraz na 4 rdzeniach, 20 serii):
+160/160 przebiegów, 25 440 przypadków zielonych. W przebiegach skryptu „Usuń konto” w karcie A bez okna pytania (KA4,
+KA5: `removeUser` od wywołania do wyniku, pomiar dodatkowy w 16 z 22 przebiegów) trwa 8–69 ms; w pełnej aplikacji od
+kliknięcia do przejścia na `index.html` (PA1, PA1′) 34–1186 ms; w aplikacji zainstalowanej wpis rejestru znika po
+57–652 ms (PA2).
 
 **Czerwone na bazie** (kopia `origin/audyt` `83fa119` z testami i wsparciem tego PR, sejf bazy):
 
@@ -21470,10 +21472,10 @@ fikstury (`opis`, `bazaVault`) są takie jak na bazie, a nagranie kontrolne na s
 same ślady.
 
 **Wymagania dla następnych PR** (z E2-PR3a1 i decyzji 12.1–12.4, zebrane tu, poza wymaganiami E2-PR3a1c we wpisie
-P-USUN-KONTO-KARTY; te same w planie: wiersze 6a′–6d, 7a, 8 i 12 tabeli „Podział etapu 2”).
+P-USUN-KONTO-KARTY; te same w planie: wiersze 6a′, 6b–6d, 7a, 8 i 12 tabeli „Podział etapu 2”).
 - **E2-PR3a1b** (decyzja 12.4) — wykonane w E2-PR3a1b (wpis wyżej, P-USUN-KONTO-KARTY): druga karta zamyka połączenia
-  z bazą sejfu i blokuje się, „Usuń konto” nie czeka, identyfikator urządzenia nie zostaje; testy same nie zamykają
-  połączeń drugiej karty z bazą sejfu przy „Usuń konto”. Dalsze wymagania — E2-PR3a1c (wpis wyżej).
+  z bazą sejfu i blokuje się, „Usuń konto” nie czeka, identyfikator urządzenia nie zostaje; testy nie zamykają za drugą
+  kartę jej połączeń z bazą sejfu, żeby „Usuń konto” się skończyło. Dalsze wymagania — E2-PR3a1c (wpis wyżej).
 - **E2-PR3a2.**
   - Wewnętrzne dopisanie `Bob_dopiszZ` budowane nad `Bob_dopiszPod`, z blokadą współdzieloną konta braną przed nim.
   - Porównanie zapisu bazowego z sejfem bez wstawek (w tej kopii sejfu `Bob_oznacz(…)` zastąpione przez `false`):

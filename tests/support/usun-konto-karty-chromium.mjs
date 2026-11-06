@@ -9,7 +9,8 @@
 //   (kontekst z zablokowanym service workerem, jak projekt desktop-chromium) — wypisuje wyniki i różnice z literałami,
 //   kod wyjścia 1 przy różnicy.
 // Wyrocznia baz: lista baz przeglądarki (indexedDB.databases(), nazwy posortowane, identyfikator konta zamieniony na
-// <uid>) przed i po „Usuń konto”, po ucichnięciu — bazy sejfu i kolejki konta oraz bazy wspólne stron. Ekran logowania:
+// <uid>) przed i po „Usuń konto”, z niej bazy sejfu i kolejki konta oraz bazy wspólne stron; wynik po dwóch kolejnych
+// odczytach (w odstępie 100 ms) równych liście oczekiwanej, a bez nich po LIMIT_MS. Ekran logowania:
 // tytuł .vilda-auth-title, baner .vilda-auth-screen > .vilda-auth-banner (tekst, role, położenie przed tytułem), nazwy
 // kont .vilda-auth-user-name, błąd formularza .vilda-auth-error. Asercje ekranu dopiero po nowym ekranie (stary węzeł
 // .vilda-auth-screen oznaczony przed akcją), bez stałych odczekań. Banery liczone tylko widoczne, we wszystkich ramkach
@@ -87,16 +88,18 @@ const sledzBlokady = (f) => f.evaluate(() => { window.__blokady = []; window.Vil
 const blokady = (f) => f.evaluate(() => window.__blokady.slice());
 const bazy = (f, uid) => f.evaluate(async (u) => (await indexedDB.databases()).map((d) => d.name.split(u).join('<uid>')).sort(), uid);
 const bazyWyroczni = (lista) => lista.filter((n) => BAZY_WYROCZNI.has(n));
-// Lista baz po ucichnięciu: strony zakładają bazy wspólne asynchronicznie, więc czekanie najwyżej LIMIT_MS na listę
-// oczekiwaną, potem ostatni odczyt.
+// Lista baz do porównania: strony zakładają bazy wspólne asynchronicznie, więc odczyty co 100 ms do dwóch kolejnych
+// równych liście oczekiwanej; po LIMIT_MS koniec na pierwszym odczycie innym niż oczekiwana.
 async function bazyGdy(f, uid, oczekiwane) {
-  let lista = [];
-  for (const koniec = Date.now() + LIMIT_MS; Date.now() < koniec;) {
-    lista = bazyWyroczni(await bazy(f, uid));
-    if (JSON.stringify(lista) === JSON.stringify(oczekiwane)) break;
+  const cel = JSON.stringify(oczekiwane);
+  const koniec = Date.now() + LIMIT_MS;
+  let zgodne = 0;
+  for (;;) {
+    const lista = bazyWyroczni(await bazy(f, uid));
+    zgodne = JSON.stringify(lista) === cel ? zgodne + 1 : 0;
+    if (zgodne === 2 || (zgodne === 0 && Date.now() >= koniec)) return lista;
     await new Promise((ok) => { setTimeout(ok, 100); });
   }
-  return lista;
 }
 // Karta zalogowana na konto, które jeszcze nie ma ekranu Ustawień po założeniu: przeładowanie i odtworzenie sesji.
 async function przeladujZalogowana(strona) {
