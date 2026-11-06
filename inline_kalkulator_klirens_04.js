@@ -441,6 +441,13 @@ function validateField(e) {
     if (o) o.textContent = invalid ? outcome.error || outcome.message || "Sprawdź wpisane dane." : "";
     return !invalid;
   }
+  if ($("formulaPicker")?.value === "Ca_Cit" && n.startsWith("CACIT_")) {
+    const outcome = evaluateClcrCaCit(), invalid = outcome.invalidIds?.includes(n) === true;
+    e.classList.toggle("error", invalid);
+    e.setAttribute("aria-invalid", String(invalid));
+    if (o) o.textContent = invalid ? outcome.error || outcome.message || "Sprawdź wpisane dane." : "";
+    return !invalid;
+  }
   if ($("formulaPicker")?.value === "Cit_mgkg" && n.startsWith("CITDZM_")) {
     const outcome = evaluateClcrCitDzm(), invalid = outcome.invalidIds?.includes(n) === true;
     e.classList.toggle("error", invalid);
@@ -700,6 +707,7 @@ function canComputeFormula(e) {
   if (e === "Na_mmol_d") return evaluateClcrSodiumDzm().valid === true;
   if (e === "Prot_mgkg") return evaluateClcrProteinDzm().valid === true;
   if (e === "Ox_mgkg") return evaluateClcrOxDzm().valid === true;
+  if (e === "Ca_Cit") return evaluateClcrCaCit().valid === true;
   if (e === "Cit_mgkg") return evaluateClcrCitDzm().valid === true;
   if (e === "UA_mgkg") return evaluateClcrUa().valid === true;
   if (
@@ -972,6 +980,29 @@ function evaluateClcrOxDzm() {
     input = engine.inputFromValues(values);
   }
   return engine.evaluate(input, window.ClcrOxDzmReferenceData?.DEFAULT_POLICY);
+}
+
+function evaluateClcrCaCit() {
+  const engine = window.VildaClcrCaCit;
+  if (!engine) return { valid: false, canSave: false, errorCode: "CACIT_UNAVAILABLE", error: "Nie można obliczyć Ca/Cit. Odśwież aplikację." };
+  const restoredContext = window.ClcrCaCitSession?.readContext?.() || {};
+  let input = engine.readInputFromDocument(document, restoredContext);
+  if (window.ClcrUiWorkflow?.state.legacyBroad) {
+    // Read the legacy broad form's own concentrations; never reuse dormant
+    // dedicated values or infer a historical specimen from its menu sector.
+    const vault = window.__vildaClcrVersionValueVault || {};
+    const values = Object.fromEntries(engine.CONTEXT_FIELD_IDS.flatMap(id => {
+      const control = $(id);
+      return control ? [[id, control.type === "checkbox" ? control.checked : control.value]] : Object.hasOwn(vault, id) ? [[id, vault[id]]] : [];
+    }));
+    Object.assign(values, {
+      CACIT_inputMode: "concentration", CACIT_calcium: $("U_Ca")?.value || "", CACIT_calciumUnit: "mmol/L",
+      CACIT_citrate: $("U_Cit")?.value || "", CACIT_citrateUnit: "mg/dL",
+      CACIT_sampleType: "unknown", CACIT_sampleSource: "legacy-broad",
+    });
+    input = engine.inputFromValues(values, { ...restoredContext, ...input });
+  }
+  return engine.evaluate(input, window.ClcrCaCitReferenceData?.getProfile?.(window.ClcrCaCitReferenceData.DEFAULT_PROFILE_ID));
 }
 
 function evaluateClcrCitDzm() {
@@ -1359,6 +1390,7 @@ function update() {
     proteinDzmEvaluation = evaluateClcrProteinDzm(),
     oxDzmEvaluation = evaluateClcrOxDzm(),
     citDzmEvaluation = evaluateClcrCitDzm(),
+    caCitEvaluation = evaluateClcrCaCit(),
     sodiumDzmEvaluation = evaluateClcrSodiumDzm(),
     potassiumDzmEvaluation = evaluateClcrPotassiumDzm(),
     urateCreatinineEvaluation = evaluateClcrUrateCreatinine();
@@ -2537,7 +2569,6 @@ function update() {
           : null,
     cystineMg24 = cystineDzm ? cystineDzm.totalMg24h : null,
     cystineMmol24 = cystineDzm ? cystineDzm.totalMmol24h : null,
-    yt = ratio(pe, Fe),
     wt = ratio(ft, c),
     ht = ratio(pt, c),
     Te = excr_mgkg(pe, collectionDailyVolume, ie),
@@ -2674,14 +2705,12 @@ function update() {
       ? window.ClcrUaUi.renderResult(uaEvaluation)
       : '<div class="ua-result-error" data-clcr-formula="UA_mgkg"><strong>Nie można wyświetlić wyniku</strong><p>Odśwież aplikację, aby wczytać moduł kwasu moczowego.</p></div>';
   }
-  (
-    /* Calcium is rendered by its dedicated exact engine above. */
-    /* Oxalate is rendered by its dedicated daily-amount engine above. */
-    /* Citrate is rendered by its dedicated daily-amount engine above. */
-    /* KM/Cr is rendered by its dedicated exact engine above. */
-    /* Mg/Ca is rendered by its dedicated exact engine above. */
-    /* Pᵢ/Cr is rendered by its dedicated exact engine above. */
-    y("Wapń/cytryniany", yt, "mg/mg", "Ca_Cit", "Ca_Cit"));
+  // Ca/Cit has its own exact engine, interpretation and saved snapshot.
+  if (_e === "Ca_Cit" || window.ClcrUiWorkflow?.state.legacyBroad && caCitEvaluation.valid) {
+    ve += window.ClcrCaCitUi
+      ? window.ClcrCaCitUi.renderResult(caCitEvaluation)
+      : '<div class="ca-cit-result-error" data-clcr-formula="Ca_Cit"><strong>Nie można wyświetlić wyniku</strong><p>Odśwież aplikację, aby wczytać moduł Ca/Cit.</p></div>';
+  }
   const spotFeFormulaIds = new Set([
       "FENa_spot",
       "FEK_spot",
@@ -2777,6 +2806,7 @@ function update() {
   const proteinDzmDetailsOpen = _e === "Prot_mgkg" && $("clcr-protein-dzm-details")?.open === true;
   const oxDzmDetailsOpen = _e === "Ox_mgkg" && $("clcr-ox-dzm-details")?.open === true;
   const citDzmDetailsOpen = _e === "Cit_mgkg" && $("clcr-cit-dzm-details")?.open === true;
+  const caCitDetailsOpen = _e === "Ca_Cit" && $("clcr-ca-cit-details")?.open === true;
   const sodiumDzmDetailsOpen = _e === "Na_mmol_d" && $("clcr-sodium-dzm-details")?.open === true;
   const cacrDzmDetailsOpen = _e === "Ca_Cr" && $("clcr-cacr-dzm-details")?.open === true;
   const proteinCreatinineDetailsOpen = _e === "B_Cr" && $("clcr-protein-creatinine-details")?.open === true;
@@ -2798,6 +2828,7 @@ function update() {
   if (proteinDzmDetailsOpen && $("clcr-protein-dzm-details")) $("clcr-protein-dzm-details").open = true;
   if (oxDzmDetailsOpen && $("clcr-ox-dzm-details")) $("clcr-ox-dzm-details").open = true;
   if (citDzmDetailsOpen && $("clcr-cit-dzm-details")) $("clcr-cit-dzm-details").open = true;
+  if (caCitDetailsOpen && $("clcr-ca-cit-details")) $("clcr-ca-cit-details").open = true;
   if (sodiumDzmDetailsOpen && $("clcr-sodium-dzm-details")) $("clcr-sodium-dzm-details").open = true;
   if (cacrDzmDetailsOpen && $("clcr-cacr-dzm-details")) $("clcr-cacr-dzm-details").open = true;
   if (proteinCreatinineDetailsOpen && $("clcr-protein-creatinine-details")) $("clcr-protein-creatinine-details").open = true;
@@ -2812,7 +2843,7 @@ function update() {
   if (tmpGfrDetailsOpen && $("clcr-tmp-gfr-details")) $("clcr-tmp-gfr-details").open = true;
   let he = "";
   const stoneEngine = window.ClcrStoneSafety,
-    stoneVersionActive = _e !== "Cit_mgkg" && (
+    stoneVersionActive = !["Cit_mgkg", "Ca_Cit"].includes(_e) && (
       (window.currentVersion || "basic") === "pro" ||
       (window.currentVersion || "basic") === "spot" ||
       (window.currentVersion || "basic") === "advanced"),
@@ -4325,6 +4356,14 @@ clearBtn &&
     if (event.clcrClearedFormula === "Ox_mgkg") {
       const vault = window.__vildaClcrVersionValueVault;
       event.clcrPreservedOxDzmContext = Object.fromEntries((window.ClcrOxDzmSession?.CONTEXT_IDS || []).flatMap(id => {
+        const control = $(id);
+        if (control) return [[id, control.type === "checkbox" ? control.checked : control.value]];
+        return vault && Object.hasOwn(vault, id) ? [[id, vault[id]]] : [];
+      }));
+    }
+    if (event.clcrClearedFormula === "Ca_Cit") {
+      const vault = window.__vildaClcrVersionValueVault;
+      event.clcrPreservedCaCitContext = Object.fromEntries((window.ClcrCaCitSession?.CONTEXT_IDS || []).flatMap(id => {
         const control = $(id);
         if (control) return [[id, control.type === "checkbox" ? control.checked : control.value]];
         return vault && Object.hasOwn(vault, id) ? [[id, vault[id]]] : [];

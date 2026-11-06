@@ -554,3 +554,58 @@ Po implementacji sprawdź prawdziwy formularz na desktopie oraz przy szerokości
 nie tylko pojedynczy poprawny wynik. Sprawdź klawiaturę, fokus, czytelność
 etykiet, brak przewijania w bok, odstęp pod czyszczeniem i sekcję zapisu.
 Reguły wyglądu nie zastępują źródeł ani testów reguł klinicznych.
+
+## Ca/Cit — decyzja 05.11.2026
+
+Właściciel zaakceptował
+[makietę przed/po desktop/mobile](https://vilda-ca-cit-20261105.maciej-flader.chatgpt.site)
+i implementację. Dla `Ca_Cit` domyślne **„Oblicz ze stężeń”** ma
+wapń, następnie cytryniany z tej samej wymieszanej DZM, domyślnie
+**mmol/L** i **mg/dL**. **„Gotowy wynik Ca/Cit”** ma jeden iloraz
+**mg/mg** albo **mmol/mmol**. Nie dodawaj objętości, czasu, masy,
+wzrostu, krwi ani checkboxów. Wiek/płeć wykorzystuje się wyłącznie
+do normy z istniejącego kontekstu; brak normy nie blokuje gotowości
+**2/2** lub **1/1**.
+
+Lista cytrynianów ma cztery unikalne jednostki **µmol/L, mmol/L,
+mg/L, mg/dL**, bez selektora postaci masowej. Jednostka interpretuje
+liczbę z raportu, nie przelicza cicho wpisu. Wejście masowe daje
+**mg/mg**, molowe **mmol/mmol**. Nie przeliczaj masy cytrynianów
+ani tabeli norm na mole: źródło2014 nie określa jednoznacznie
+podstawy masowej.
+
+Jedna karta B łączy **„Wynik pacjenta”** i **„Normę dla wieku”**,
+z dopiskiem **„Dla wieku i płci”**. Dla mg/mg przyjęto orientacyjne
+górne P95 zdrowej kohorty Kirejczyk2014: M/F **2–<7:0,48/0,42;
+7–<13:0,60/0,47; 13–<18:0,80/0,60**. **≤P95** jest niepodwyższone,
+>P95 bursztynowe. Liczba i jednostka normy pozostają neutralne.
+P5 jest tylko w tabeli Szczegółów, bez alarmu niskiego ilorazu.
+Niepodwyższenie nie wyklucza kamicy, a przekroczenie jej nie rozpoznaje.
+
+Wynik molowy, <2 lub ≥18 lat, brak wieku/płci lub znany niezgodny
+profil zachowują neutralną liczbę i konkretny powód braku porównania.
+Znane spot, inny czas, niepełna zbiórka lub historycznie nieznany
+materiał nie otrzymują normy DZM; ilorazu nie skaluje się czasem.
+Znane różne próbki Ca i cytrynianów blokują obliczenie pary stężeń,
+bez kasowania wejść. Gotowy iloraz może pozostać liczbą, ale konflikt
+wyłącza normę i nie znika po zmianie trybu. Dopiero własne jawne
+metadane poprawnego materiału niezależnego raportu mogą przywrócić
+porównanie; nie dodawaj pytania w UI.
+Opisane założenie nowej wspólnej DZM nie potwierdza
+kompletności lub dawnych faktów. Nie zastępuj luk progiem0,33 lub
+normą dorosłych i nie dodawaj pytań do „pełnej interpretacji”.
+
+Dokładne zero Ca/gotowego ilorazu jest liczbą neutralną z uwagą
+o raporcie i oznaczalności; zero cytrynianów jest błędem mianownika.
+Mały dodatni wynik nie staje się zerem, **≈** i pełna wartość
+w Szczegółach nie zmieniają oceny. Ujemne operandy blokują także
+edycję i zapis. Stałe szerokości, wyrównane jednostki, symetria,
+mobile ≥16 px/48 px i odstęp ≥20 px pod czyszczeniem obowiązują
+we wszystkich trybach i stanach. Szczegóły nie tworzą drugiej karty.
+
+Stary masowy `Ca_Cit` zachowuje liczbę z dawnego ×4 i brak oceny
+przy odczycie; nowe ×4,0078 jest zmianą liczbową. Jawne przeliczenie
+używa nowego silnika. Molarne **`Ca_Cit_mol`** pozostaje osobną serią
+bez konwersji/łączenia z mg/mg. Nowy zapis zachowuje dokładny wynik,
+źródło i ocenę z dnia zapisu, zgodne w Badaniach, Notatkach i raporcie.
+Pełny kontrakt i ograniczenia: [CALCIUM_CITRATE.md](CALCIUM_CITRATE.md).

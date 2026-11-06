@@ -33,6 +33,7 @@
     if (formulaId === "Na_mmol_d" && ["Na_volumeUnit", "Na_reportedUnit", "Na_outputUnit"].includes(field.id)) return true;
     if (formulaId === "K_mmol_d" && field.id === "K_volumeUnit") return true;
     if (formulaId === "KM_Cr" && /^URCR_/.test(field.id) && field.id !== "URCR_outputUnit") return true;
+    if (formulaId === "Ca_Cit" && field.id.startsWith("CACIT_")) return Object.hasOwn(root.ClcrCaCitPersistence?.FIELD_MAP || {}, field.id);
     if (formulaId === "Mg_Ca" && /^MGCA_/.test(field.id)) return !["MGCA_sameSpecimen", "MGCA_collectionProblem", "MGCA_collectionHours", "MGCA_durationKnown"].includes(field.id);
     // Corrections must expose the recorded citrate mode, unit and mass basis.
     // Receipt metadata and historical context remain immutable form internals.
@@ -135,9 +136,10 @@
       const fields = allFields.filter(field => editableInput(field, snapshot.formulaId, new Set()) || /Assay|Standardization/i.test(field.id) && values[field.id] !== "" && values[field.id] !== false);
       const inputRows = fields.map(field => `<div><dt>${escape(field.label)}</dt><dd>${escape(fieldText(field, values))}${field.unitFieldId ? " " + escape(unitText(field, values, allFields)) : ""}</dd></div>`).join("");
       const record = currentRecord;
+      const categoryText = record.sourceFormulaId === "Ca_Cit" ? ({ within: "Nie przekracza górnej granicy", above: "Powyżej górnej granicy" })[record.category] || "" : record.category;
       $("calculationDetails").dataset.noteId = noteId;
       $("calculationDetails").dataset.recordId = noteId;
-      $("calculationDetails").innerHTML = `<p class="clcr-record-eyebrow">KLIRENS · ${escape(dateLabel(currentNote.clinicalDateISO))}</p><h3>${escape(record.label || record.method)}</h3><p class="clcr-record-value ${escape(record.tone || "neutral")}">${escape(decimal(valueLabel(record)))} <span>${escape(record.unit)}</span></p>${record.boundary ? `<p>Przed zaokrągleniem: ${escape(record.boundary)}</p>` : ""}<dl class="clcr-record-grid"><div><dt>Dane z dnia badania</dt><dd>${escape(context)}${historicalSex ? " · " + (["F", "female"].includes(historicalSex) ? "kobieta" : "mężczyzna") : ""}</dd></div><div><dt>Zapisana ocena</dt><dd>${record.category ? escape(record.category) + " · " : ""}${escape(record.interpretation || record.description || record.assessmentText || "Brak zapisanej oceny")}</dd></div>${inputRows}<div><dt>Norma przy zapisie</dt><dd>${escape(record.norm || saved?.snapshot?.assessment?.potassiumIndexSnapshot?.referenceLabel || "Brak zapisanej normy")}</dd></div><div><dt>Metoda</dt><dd>${escape(record.label || record.method)}</dd></div></dl>${record.comment ? `<p class="clcr-record-context">${escape(record.comment)}</p>` : ""}${record.assumptions ? `<p class="clcr-record-source">${escape(record.assumptions)}</p>` : ""}${record.source?.label ? `<p class="clcr-record-source">${escape(record.source.label)} · interpretacja zachowana z dnia zapisu.</p>` : ""}`;
+      $("calculationDetails").innerHTML = `<p class="clcr-record-eyebrow">KLIRENS · ${escape(dateLabel(currentNote.clinicalDateISO))}</p><h3>${escape(record.label || record.method)}</h3><p class="clcr-record-value ${escape(record.tone || "neutral")}">${escape(decimal(valueLabel(record)))} <span>${escape(record.unit)}</span></p>${record.boundary ? `<p>Przed zaokrągleniem: ${escape(record.boundary)}</p>` : ""}<dl class="clcr-record-grid"><div><dt>Dane z dnia badania</dt><dd>${escape(context)}${historicalSex ? " · " + (["F", "female"].includes(historicalSex) ? "kobieta" : "mężczyzna") : ""}</dd></div><div><dt>Zapisana ocena</dt><dd>${categoryText ? escape(categoryText) + " · " : ""}${escape(record.interpretation || record.description || record.assessmentText || "Brak zapisanej oceny")}</dd></div>${inputRows}<div><dt>Norma przy zapisie</dt><dd>${escape(record.norm || saved?.snapshot?.assessment?.potassiumIndexSnapshot?.referenceLabel || "Brak zapisanej normy")}</dd></div><div><dt>Metoda</dt><dd>${escape(record.label || record.method)}</dd></div></dl>${record.comment ? `<p class="clcr-record-context">${escape(record.comment)}</p>` : ""}${record.assumptions ? `<p class="clcr-record-source">${escape(record.assumptions)}</p>` : ""}${record.source?.label ? `<p class="clcr-record-source">${escape(record.source.label)} · interpretacja zachowana z dnia zapisu.</p>` : ""}`;
       $("detailActions").hidden = false;
       $("editMeasurement").disabled = !description.editable;
       $("legacyEditNotice").hidden = description.editable;
@@ -173,6 +175,15 @@
             draft.description.fields = root.ClcrOxDzmPersistence.editableFields(nextValues);
             renderEditInputFields(nextValues, draft.description.fields);
             host.querySelector(nextValues.OXDZM_inputMode === "reported" ? "#editField-OXDZM_reportedValue" : "#editField-OXDZM_concentration")?.focus();
+          }
+        }
+        if (draft.description.snapshot.formulaId === "Ca_Cit") {
+          draft.description.values[control.dataset.clcrEditField] = control.type === "checkbox" ? control.checked : control.value;
+          if (control.dataset.clcrEditField === "CACIT_inputMode") {
+            const nextValues = draft.description.values;
+            draft.description.fields = root.ClcrCaCitPersistence.editableFields(nextValues);
+            renderEditInputFields(nextValues, draft.description.fields);
+            host.querySelector(nextValues.CACIT_inputMode === "reported" ? "#editField-CACIT_reportedValue" : "#editField-CACIT_calcium")?.focus();
           }
         }
         if (draft.description.snapshot.formulaId === "Cit_mgkg" && draft.description.snapshot.assessment.citDzmSnapshot) {

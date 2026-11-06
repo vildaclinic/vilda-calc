@@ -19,7 +19,7 @@
  *   bo i tak chcemy zwracać HTML z cache natychmiast.
  */
 
-const SW_VERSION = '1.1.474';
+const SW_VERSION = '1.1.475';
 const CACHE_PREFIX = 'pwa-kalorii';
 const SHELL_CACHE = `${CACHE_PREFIX}-shell-v${SW_VERSION}`;
 const RUNTIME_CACHE = `${CACHE_PREFIX}-runtime`;
@@ -369,6 +369,11 @@ const CORE_SHELL_URLS = [
   '/clcr_cit_dzm_persistence.js?v=1',
   '/clcr_ox_dzm.css?v=1',
   '/clcr_cit_dzm.css?v=1',
+  '/clcr_ca_cit_reference_data.js?v=1',
+  '/clcr_ca_cit.js?v=1',
+  '/clcr_ca_cit_ui.js?v=1',
+  '/clcr_ca_cit_persistence.js?v=1',
+  '/clcr_ca_cit.css?v=1',
   '/clcr_sodium_dzm_data.js?v=1',
   '/clcr_sodium_dzm.js?v=1',
   '/clcr_sodium_dzm_ui.js?v=1',
@@ -393,6 +398,7 @@ const CORE_SHELL_URLS = [
   '/clcr_notes_view.js?v=7',
   '/clcr_notes_view.js?v=8',
   '/clcr_notes_view.js?v=9',
+  '/clcr_notes_view.js?v=10',
   '/clcr_notes_view.css?v=1',
   '/clcr_result_reference_data.js?v=1',
   '/clcr_result_reference_data.js?v=2',
@@ -445,6 +451,7 @@ const CORE_SHELL_URLS = [
   '/inline_kalkulator_klirens_02.js?v=36',
   '/inline_kalkulator_klirens_02.js?v=37',
   '/inline_kalkulator_klirens_02.js?v=38',
+  '/inline_kalkulator_klirens_02.js?v=39',
   '/inline_kalkulator_klirens_03.js?v=1',
   '/inline_kalkulator_klirens_04.js?v=1',
   '/inline_kalkulator_klirens_04.js?v=4',
@@ -489,6 +496,7 @@ const CORE_SHELL_URLS = [
   '/inline_kalkulator_klirens_04.js?v=43',
   '/inline_kalkulator_klirens_04.js?v=44',
   '/inline_kalkulator_klirens_04.js?v=45',
+  '/inline_kalkulator_klirens_04.js?v=46',
   '/inline_kalkulator_klirens_05.js?v=1',
   '/inline_kalkulator_klirens_06.js?v=1',
   '/inline_kalkulator_klirens_07.js?v=1',
@@ -526,6 +534,7 @@ const CORE_SHELL_URLS = [
   '/inline_kalkulator_klirens_07.js?v=33',
   '/inline_kalkulator_klirens_07.js?v=34',
   '/inline_kalkulator_klirens_07.js?v=35',
+  '/inline_kalkulator_klirens_07.js?v=36',
   '/inline_kalkulator_klirens_08.js?v=1',
   '/inline_kalkulator_klirens_09.js?v=1',
   '/clcr_ui_workflow.css?v=1',
@@ -593,6 +602,7 @@ const CORE_SHELL_URLS = [
   '/clcr_ui_workflow.js?v=43',
   '/clcr_ui_workflow.js?v=44',
   '/clcr_ui_workflow.js?v=45',
+  '/clcr_ui_workflow.js?v=46',
   '/clcr_record_resources.js?v=1',
   '/clcr_record_resources.js?v=2',
   '/clcr_record_resources.js?v=3',
@@ -614,6 +624,7 @@ const CORE_SHELL_URLS = [
   '/clcr_record_resources.js?v=19',
   '/clcr_record_resources.js?v=20',
   '/clcr_record_resources.js?v=21',
+  '/clcr_record_resources.js?v=22',
   '/clcr_saved_calculation.js?v=1',
   '/clcr_saved_calculation.js?v=2',
   '/clcr_saved_calculation.js?v=3',
@@ -634,6 +645,7 @@ const CORE_SHELL_URLS = [
   '/clcr_saved_calculation.js?v=18',
   '/clcr_saved_calculation.js?v=19',
   '/clcr_saved_calculation.js?v=20',
+  '/clcr_saved_calculation.js?v=21',
   '/clcr_saved_legacy_calculator.js?v=1',
   '/clcr_saved_legacy_calculator.js?v=2',
   '/clcr_saved_legacy_calculator.js?v=3',
@@ -654,6 +666,7 @@ const CORE_SHELL_URLS = [
   '/clcr_saved_legacy_calculator.js?v=18',
   '/clcr_saved_legacy_calculator.js?v=19',
   '/clcr_saved_legacy_calculator.js?v=20',
+  '/clcr_saved_legacy_calculator.js?v=21',
   '/clcr_saved_results.js?v=1',
   '/clcr_saved_results.js?v=2',
   '/clcr_saved_results.js?v=3',
@@ -674,6 +687,7 @@ const CORE_SHELL_URLS = [
   '/clcr_saved_results.js?v=18',
   '/clcr_saved_results.js?v=19',
   '/clcr_saved_results.js?v=20',
+  '/clcr_saved_results.js?v=21',
   '/clcr_saved_results_view.js?v=1',
   '/clcr_saved_results_view.js?v=2',
   '/clcr_saved_results_view.css?v=1',
@@ -693,6 +707,7 @@ const CORE_SHELL_URLS = [
   '/clcr_result_details.js?v=14',
   '/clcr_result_details.js?v=15',
   '/clcr_result_details.js?v=16',
+  '/clcr_result_details.js?v=17',
   '/clcr_result_details.css?v=1',
   '/inline_notatki_00.js?v=2',
   '/inline_notatki_00.js?v=3',
@@ -935,10 +950,12 @@ const CORE_SHELL_URLS = [
   '/vilda_lab_history_tab.js?v=28',
   '/vilda_lab_history_tab.js?v=29',
   '/vilda_lab_history_tab.js?v=30',
+  '/vilda_lab_history_tab.js?v=31',
   '/vilda_lab_result_presentation.js?v=1',
   '/vilda_lab_result_presentation.js?v=2',
   '/vilda_lab_result_presentation.js?v=3',
   '/vilda_lab_result_presentation.js?v=4',
+  '/vilda_lab_result_presentation.js?v=5',
   '/vilda_lab_result_chart.js?v=1',
   '/vilda_lab_result_chart.js?v=2',
   '/vilda_lab_history_tab.css?v=1',
@@ -1794,6 +1811,7 @@ const CORE_SHELL_URLS = [
   '/vilda_chrome.js?v=249',
   '/vilda_chrome.js?v=250',
   '/vilda_chrome.js?v=251',
+  '/vilda_chrome.js?v=252',
   '/vilda_realtime.js?v=1',
   '/vilda_realtime.js?v=2',
   '/vilda_realtime.js?v=3',
@@ -2323,6 +2341,7 @@ const CORE_SHELL_URLS = [
   '/vilda_save_status_indicator.js?v=42',
   '/vilda_save_status_indicator.js?v=43',
   '/vilda_save_status_indicator.js?v=44',
+  '/vilda_save_status_indicator.js?v=45',
   '/vilda_unsaved_guard.js?v=1',
   '/vilda_unsaved_guard.js?v=2',
   '/vilda_unsaved_guard.js?v=3',
@@ -2619,6 +2638,7 @@ const OPTIONAL_ASSETS = [
   '/vilda_auth_ui.js?v=544',
   '/vilda_auth_ui.js?v=545',
   '/vilda_auth_ui.js?v=546',
+  '/vilda_auth_ui.js?v=547',
   '/vilda_session_bridge.js?v=148',
   '/vilda_session_bridge.js?v=149',
   '/vilda_session_bridge.js?v=150',
@@ -2643,6 +2663,7 @@ const OPTIONAL_ASSETS = [
   '/vilda_session_bridge.js?v=169',
   '/vilda_session_bridge.js?v=170',
   '/vilda_session_bridge.js?v=171',
+  '/vilda_session_bridge.js?v=172',
   '/vilda_sync.js?v=48',
   '/vilda_patient_documents.js?v=1',
   '/vilda_patient_documents.css?v=1',
@@ -5201,7 +5222,11 @@ const FRESH_STATIC_ALIAS_PATHS = new Set([
   // files have current versioned/unversioned aliases; share only fresh bytes
   // from this installation, never copied immutable historical responses.
   '/nutrition_norms.js', '/nutrition_micros.js', '/vilda_diet_recommendations.js',
-  '/vilda_anorexia_risk.js', '/advanced_growth_kowd.js'
+  '/vilda_anorexia_risk.js', '/advanced_growth_kowd.js',
+  // Five Ca/Cit resources retain independent fetches. Only this install's
+  // fresh responses may serve both current aliases of unchanged static files.
+  '/circumference_module.js', '/wfh_module.js', '/respiratory_module.js',
+  '/gh_therapy_segments.js', '/obesity_response_criteria.js'
 ]);
 
 async function fetchAndStorePrecacheUrl(url, { required = false, previousShellCaches = [], freshResponses = null } = {}) {

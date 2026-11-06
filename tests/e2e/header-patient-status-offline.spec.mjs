@@ -15,7 +15,7 @@ import { RETURN_TO_SEARCH } from '../support/search-return-browser-fixture.mjs';
 import { czekajNaOdtworzenieSesji } from '../support/sesja-czekanie.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
-const BASE = '9680f1ba';
+const BASE = 'a00749c2';
 const PASSWORD = 'E2e#SiatkaNowyPomiar!2026';
 const PROBE = '/__header-status-offline-probe-';
 const NOTE = 'Fikcyjna sprawa testu nagłówka offline';

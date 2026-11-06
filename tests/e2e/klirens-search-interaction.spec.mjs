@@ -52,10 +52,16 @@ for (const width of [1440, 390, 320]) {
     await expect(input).toHaveAttribute('aria-activedescendant', 'clcr-search-option-0');
     await input.press('ArrowDown');
     await expect(input).toHaveAttribute('aria-activedescendant', 'clcr-search-option-1');
+    const selectedOption = page.locator('#clcr-search-option-1');
+    await expect(selectedOption).toBeVisible();
+    const selectedFormulaId = await selectedOption.getAttribute('data-formula-id');
+    const inputCards = { CaCr_spot: '#cacrInputCard', Ca_mgkg: '#caDzmInputCard', Ca_Cit: '#caCitInputCard' };
+    expect(inputCards).toHaveProperty(selectedFormulaId);
     await input.press('Enter');
     await expect(list).toBeHidden();
-    await expect.poll(() => page.evaluate(() => window.ClcrUiWorkflow.state.activeFormulaId)).toBe('Ca_mgkg');
-    await expect(page.locator('#caDzmInputCard')).toHaveCount(1);
+    await expect.poll(() => page.evaluate(() => window.ClcrUiWorkflow.state.activeFormulaId)).toBe(selectedFormulaId);
+    await expect(page.locator('#formulaPicker')).toHaveValue(selectedFormulaId);
+    await expect(page.locator(inputCards[selectedFormulaId])).toBeVisible();
     expect(await page.evaluate(() => window.VildaVault.isUnlocked())).toBe(false);
     expect(errors).toEqual([]);
   });

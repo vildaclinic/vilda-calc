@@ -86,14 +86,22 @@ async function assertNoAdditionalClinicalEditors(search) {
   return state.loadedBefore;
 }
 
-for (const width of [1440, 390]) {
-  test(`all Klirens saved parameters and real DocPro scheduler notes stay canonical and read-only at ${width}px`, async ({ page }, testInfo) => {
+// Keep every note in the same encrypted workspace, including all Ca/Cit
+// variants. Split only the mobile inspection loop: precise CDP coverage plus
+// the larger note set exceeded the existing whole-test budget in CI.
+const scenarios = [{ width: 1440, part: 0, parts: 1 }, { width: 390, part: 0, parts: 2 }, { width: 390, part: 1, parts: 2 }];
+for (const { width, part, parts } of scenarios) {
+  test(`all Klirens saved parameters and real DocPro scheduler notes stay canonical and read-only at ${width}px${parts > 1 ? ` · część ${part + 1}/${parts}` : ''}`, async ({ page }, testInfo) => {
     await page.setViewportSize({ width, height: 1000 });
     await page.clock.setFixedTime(new Date('2026-10-29T10:00:00+01:00'));
     const created = await createFictionalVault(page, { shell: width === 390 });
     const klirens = buildKlirensSearchCases(created.ids.a);
     expect([...new Set(klirens.map(entry => entry.parameterKey))].sort()).toEqual([...KLIRENS_SEARCH_PARAMETER_KEYS].sort());
     const cases = [...klirens, ...await buildDocProSchedulerCases(created.ids.a)];
+    const inspections = Array.from({ length: parts }, (_, index) => cases.filter((entry, position) => position % parts === index));
+    const inspectedKeys = inspections.flat().map(entry => entry.key);
+    expect(inspectedKeys.slice().sort()).toEqual(cases.map(entry => entry.key).sort());
+    expect(new Set(inspectedKeys).size).toBe(cases.length);
     const saved = await created.frame.evaluate(async entries => {
       const result = [];
       for (const { key, notePayload } of entries) {
@@ -141,7 +149,7 @@ for (const width of [1440, 390]) {
     while (await more.count()) await more.click();
     for (const entry of saved) await expect(resultFor(search, 'note', entry.id), entry.key).toHaveCount(1);
     const evidence = [];
-    for (const entry of cases) {
+    for (const entry of inspections[part]) {
       const stored = saved.find(item => item.key === entry.key);
       await resultFor(search, 'note', stored.id).click();
       const body = search.locator('.vgs-detail .vb22-body');
@@ -185,6 +193,7 @@ for (const width of [1440, 390]) {
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true);
     await testInfo.attach('module-search-presentation-coverage', { contentType: 'application/json', body: Buffer.from(JSON.stringify({
       width, shell: width === 390, klirensParameters: new Set(klirens.map(entry => entry.parameterKey)).size,
+      partition: { index: part, total: parts, allCaseKeys: cases.map(entry => entry.key) },
       sourceFormulas: new Set(klirens.map(entry => entry.formulaId)).size, cases: evidence,
       preloadedEditors, editorRequests, calculationCalls,
     }, null, 2)) });

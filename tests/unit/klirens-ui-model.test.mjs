@@ -625,7 +625,11 @@ describe('Klirens — centralny model przepływu UI', () => {
     const cases = [
       ['ACR', 'ACR'],
       ['eGFR dziecko', 'ckid_u25'],
-      ['wapn', 'CaCr_spot'],
+      // Ca/Cit and Ca/Cr have equal analyte scores; their visible labels
+      // determine the alphabetical tie after naming the audited DZM formula.
+      ['wapn', 'Ca_Cit'],
+      ['Ca/Cit', 'Ca_Cit'],
+      ['wapń cytryniany', 'Ca_Cit'],
       ['wapń kreatynina', 'CaCr_spot'],
       ['calcium creatinine', 'CaCr_spot'],
       ['Ca/Cr DZM', 'Ca_Cr'],
@@ -953,13 +957,13 @@ describe('Klirens — centralny model przepływu UI', () => {
     );
 
     expect(html).toContain('clcr_ui_workflow.css?v=20');
-    expect(html).toContain('clcr_ui_workflow.js?v=45');
-    expect(html).toContain('inline_kalkulator_klirens_02.js?v=38');
-    expect(html).toContain('inline_kalkulator_klirens_04.js?v=45');
-    expect(html).toContain('inline_kalkulator_klirens_07.js?v=35');
+    expect(html).toContain('clcr_ui_workflow.js?v=46');
+    expect(html).toContain('inline_kalkulator_klirens_02.js?v=39');
+    expect(html).toContain('inline_kalkulator_klirens_04.js?v=46');
+    expect(html).toContain('inline_kalkulator_klirens_07.js?v=36');
     expect(html).toContain('clcr_result_reference_data.js?v=7');
     expect(html).toContain('clcr_result_presentation.js?v=8');
-    expect(serviceWorker).toContain("const SW_VERSION = '1.1.474'");
+    expect(serviceWorker).toContain("const SW_VERSION = '1.1.475'");
     expect(html).toContain('clcr_calculation_assumptions.js?v=2');
     expect(serviceWorker).toContain("'/clcr_calculation_assumptions.js?v=2'");
     expect(serviceWorker).toContain("'/clcr_clinical_safety.js?v=14'");

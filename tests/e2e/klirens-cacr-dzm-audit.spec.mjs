@@ -268,7 +268,7 @@ test('Ca/Cr DZM: własne pola i znany materiał nie przejmują zegara ani inform
   await openCalculator(page);
   const positions = await page.evaluate(() => window.FORMULAS.filter(item => ['Ca_Cr', 'CaCr_spot'].includes(item.id)).map(item => ({ id: item.id, label: item.label })));
   expect(positions).toEqual([{ id: 'Ca_Cr', label: 'Ca/Cr — DZM' }, { id: 'CaCr_spot', label: 'Ca/Cr — próbka jednorazowa' }]);
-  await page.locator('#formulaSearch').fill('wapn');
+  await page.locator('#formulaSearch').fill('wapń kreatynina');
   await expect(page.locator('#formulaLive')).toBeVisible();
   await expect(page.locator('#formulaLive .clcr-search-result').first()).toHaveAttribute('data-formula-id', 'CaCr_spot');
   await page.locator('#formulaLive .clcr-search-result[data-formula-id="CaCr_spot"]').click();
