@@ -15,6 +15,9 @@ const shellNavigation = source.slice(source.indexOf('function Cm_shell('), sourc
 const saveStateGlobals = source.slice(source.indexOf('var Ch_saveDocument='), source.indexOf('function Ch_searchIcon('));
 const stateMirror = source.slice(source.indexOf('function Ch_saveContext('), source.indexOf('function Ch_refreshMenuPro('));
 const attributeHelper = source.slice(source.indexOf('function Ch_attr('), source.indexOf('function Ch_sameOwner('));
+// The save projection also refreshes Clear availability. Include that real
+// projection and its context checks; this navigation fixture has no form.
+const clearProjection = source.slice(source.indexOf('function Cm_clearDisplayed('), source.indexOf('function Cm_menuItem('));
 
 function popover(window = {}, initialId = 'fikcyjny-pacjent-A') {
   let patientId = initialId;
@@ -39,7 +42,7 @@ function popover(window = {}, initialId = 'fikcyjny-pacjent-A') {
   window.removeEventListener ||= vi.fn();
   const close = vi.fn(), tip = vi.fn();
   const open = new Function('r', 'o', 'h', 'at', 'rt', 'Ce', 'te', 'le', 'Cm_closeDrawer', 'F',
-    `var O=false,Ch_statusAnchor=null,Cm_unavailable='Unavailable';${saveStateGlobals}${attributeHelper}${stateMirror}${menuNavigation}${shellNavigation}${production};Ch_refreshSaveState();return it;`)(
+    `var O=false,Ch_statusAnchor=null,Cm_unavailable='Unavailable';${saveStateGlobals}${attributeHelper}${clearProjection}${stateMirror}${menuNavigation}${shellNavigation}${production};Ch_refreshSaveState();return it;`)(
     window, document, panel, () => {}, () => '<button data-vilda-open-card>Karta Pacjenta</button>',
     () => patientId, close, () => {}, () => {}, tip,
   );

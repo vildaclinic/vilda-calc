@@ -96,9 +96,9 @@ test('desktop and ultrawide: the lupa and bell follow the right card; save and c
   await expect(menu.locator('[data-menu-pro]')).toBeVisible();
   await expect(menu.locator('[data-menu-sync]')).toBeVisible();
   await expect(menu.locator('[data-menu-patient-change]')).toHaveCount(0);
-  await expect(menu.locator('[data-menu-patient-name]')).toHaveCSS('font-size', '18px');
-  await expect(menu.locator('.chrome-menu-patient-copy small')).toHaveCSS('font-size', '16px');
-  await expect(status).toHaveCSS('font-size', '16px');
+  await expect(menu.locator('[data-menu-patient-name]')).toHaveCSS('font-size', '16px');
+  await expect(menu.locator('.chrome-menu-patient-copy small')).toHaveCSS('font-size', '14px');
+  await expect(status).toHaveCSS('font-size', '14px');
   for (const id of ['vildaPatientChip', 'vildaUserChip', 'vildaProBadge']) {
     await expect(page.locator(`#${id}`), `${id} remains a hidden compatibility carrier`).toBeHidden();
   }

@@ -13,7 +13,7 @@ const PANEL = `${MENU} .chrome-drawer-panel`;
 const TRIGGER = '[data-vilda-chrome-menu-btn]';
 const CLOSE = `${MENU} .chrome-drawer-close`;
 const COLLAPSED_MENU_CONTROLS = [
-  'close', 'saveDataBtnSidebar', 'patientDocumentsBtnSidebar', 'patientsListBtnSidebar',
+  'close', 'saveDataBtnSidebar', 'patientDocumentsBtnSidebar', 'clear', 'patientsListBtnSidebar',
   'patient-card', 'terminarz.html', 'notatki.html',
   'index.html', 'docpro.html', 'przelicznik-jednostek.html', 'calculators',
   'materialy-edukacyjne.html', 'account', 'ustawienia.html', 'logout', 'save-status', 'pro', 'sync',
@@ -222,6 +222,10 @@ async function assertMenu(page, { width, height, left, right, top, bottom, lands
   // These are final safe-area geometry checks. Entry keyframes are covered
   // separately; their fractional tail must not be sampled as the final edge.
   await expect(panel).toHaveCSS('transform', 'none');
+  // The previous disabled-action explanation can leave the desktop test pointer
+  // hovering Save. Measure the row after its native hover transition settles.
+  await page.mouse.move(0, 0);
+  await expect(panel.locator('.chrome-menu-save')).toHaveCSS('transform', 'none');
   const calculators = panel.locator('.chrome-menu-calculators-items');
   await expect(toggle).toHaveAttribute('aria-expanded', String(expanded));
   await expect(toggle).toHaveAttribute('aria-controls', 'chrome-drawer-calculators');
@@ -231,6 +235,7 @@ async function assertMenu(page, { width, height, left, right, top, bottom, lands
   await expect(calculators.locator('a')).toHaveCount(3);
   await expect(panel.locator('[data-menu-patient-name]')).toHaveText('Wybierz pacjenta');
   await expect(panel.locator('[data-menu-patient-change]')).toHaveCount(0);
+  await expect(panel.locator('[data-menu-clear]')).toHaveCount(1);
   await expect(panel.locator('.chrome-menu-office [data-drawer-btn="patientsListBtnSidebar"]')).toHaveText('Baza pacjentów');
   await expect(panel.locator('a[href="notatki.html"]')).toHaveText('Notatnik');
   const measure = () => panel.evaluate(panel => {
@@ -241,7 +246,7 @@ async function assertMenu(page, { width, height, left, right, top, bottom, lands
     const identity = item => {
       if (item.matches('.chrome-drawer-close')) return 'close';
       if (item.hasAttribute('data-drawer-btn')) return item.getAttribute('data-drawer-btn');
-      for (const [attribute, name] of [['data-menu-patient-card', 'patient-card'], ['data-menu-account', 'account'], ['data-menu-logout', 'logout'], ['data-menu-save-status', 'save-status'], ['data-menu-pro', 'pro'], ['data-menu-sync', 'sync']]) {
+      for (const [attribute, name] of [['data-menu-clear', 'clear'], ['data-menu-patient-card', 'patient-card'], ['data-menu-account', 'account'], ['data-menu-logout', 'logout'], ['data-menu-save-status', 'save-status'], ['data-menu-pro', 'pro'], ['data-menu-sync', 'sync']]) {
         if (item.hasAttribute(attribute)) return name;
       }
       if (item.hasAttribute('href')) return item.getAttribute('href');
@@ -250,13 +255,17 @@ async function assertMenu(page, { width, height, left, right, top, bottom, lands
     };
     const pinned = Object.fromEntries(Object.entries({
       close: '.chrome-drawer-close', actions: '.chrome-menu-actions',
-      save: '.chrome-menu-save', documents: '.chrome-menu-documents', footer: '.chrome-menu-footer',
+      save: '.chrome-menu-save', documents: '.chrome-menu-documents', clear: '[data-menu-clear]', footer: '.chrome-menu-footer',
       account: '[data-menu-account]', settings: '.chrome-menu-settings', logout: '[data-menu-logout]',
     }).map(([name, selector]) => [name, box(panel.querySelector(selector))]));
-    const scroll = panel.querySelector('.chrome-menu-scroll');
+    const destinations = panel.querySelector('.chrome-menu-scroll'), body = panel.querySelector('.chrome-drawer-body');
+    const commonScroll = /^(auto|scroll)$/.test(getComputedStyle(body).overflowY)
+      && body.scrollHeight > body.clientHeight + 1;
+    const scroll = commonScroll ? body : destinations;
     return { panel: box(panel), close: box(panel.querySelector('.chrome-drawer-close')),
       sections: sections.map(box), sectionNames: sections.map(section => section.querySelector('.chrome-drawer-section-title').textContent.trim()),
-      targets: targets.map(box), controls: targets.map(identity).sort(), pinned, scroll: box(scroll),
+      targets: targets.map(box), controls: targets.map(identity).sort(), pinned, scroll: box(scroll), destinations: box(destinations), commonScroll,
+      footerPosition: getComputedStyle(panel.querySelector('.chrome-menu-footer')).position,
       actionsScroll: scroll.contains(panel.querySelector('.chrome-menu-actions')),
       footerScroll: scroll.contains(panel.querySelector('.chrome-menu-footer')),
       overflow: panel.scrollWidth - panel.clientWidth };
@@ -281,10 +290,15 @@ async function assertMenu(page, { width, height, left, right, top, bottom, lands
   expect(geometry.close.bottom).toBeLessThanOrEqual(height - bottom - 8);
   assertControls(geometry, expanded);
   expect(geometry.sectionNames).toEqual(['Gabinet', 'Narzędzia kliniczne']);
-  expect(geometry.actionsScroll, 'form actions stay outside the scrolling destinations').toBe(false);
-  expect(geometry.footerScroll, 'account and settings stay outside the scrolling destinations').toBe(false);
-  expect(geometry.pinned.actions.bottom).toBeLessThanOrEqual(geometry.scroll.y + 1);
-  expect(geometry.scroll.bottom).toBeLessThanOrEqual(geometry.pinned.footer.y + 1);
+  expect(geometry.commonScroll, 'only short windows share the action and destination scroll').toBe(height <= 480);
+  expect(geometry.actionsScroll, 'only the common short-window scroll includes form actions').toBe(geometry.commonScroll);
+  expect(geometry.footerScroll, 'only the common short-window scroll contains the sticky account').toBe(geometry.commonScroll);
+  expect(geometry.pinned.actions.bottom).toBeLessThanOrEqual(geometry.destinations.y + 1);
+  if (geometry.commonScroll) expect(geometry.footerPosition).toBe('sticky');
+  else expect(geometry.scroll.bottom).toBeLessThanOrEqual(geometry.pinned.footer.y + 1);
+  expect(geometry.pinned.clear.y, 'Clear has its own row below Save and Documents').toBeGreaterThanOrEqual(Math.max(geometry.pinned.save.bottom, geometry.pinned.documents.bottom));
+  expect(geometry.pinned.clear.x).toBeCloseTo(geometry.pinned.save.x, 0);
+  expect(geometry.pinned.clear.right).toBeCloseTo(geometry.pinned.documents.right, 0);
   if (landscape) {
     expect(geometry.sections[1].x).toBeGreaterThan(geometry.sections[0].right - 1);
     expect(geometry.sections[1].y).toBe(geometry.sections[0].y);
@@ -298,7 +312,7 @@ async function assertMenu(page, { width, height, left, right, top, bottom, lands
   }
   await expect(toggle).toHaveAttribute('aria-expanded', 'true');
   await expect(calculators).toBeVisible();
-  const scroll = panel.locator('.chrome-menu-scroll');
+  const scroll = panel.locator(geometry.commonScroll ? '.chrome-drawer-body' : '.chrome-menu-scroll');
   await scroll.evaluate(node => { node.scrollTop = 0; });
   const beforeScroll = await measure();
   assertControls(beforeScroll, true);
@@ -306,13 +320,38 @@ async function assertMenu(page, { width, height, left, right, top, bottom, lands
   expect(scrollSize.total, 'the expanded complete menu requires a real scroll').toBeGreaterThan(scrollSize.height + 1);
   await scroll.evaluate(node => { node.scrollTop = node.scrollHeight; });
   await expect.poll(() => scroll.evaluate(node => node.scrollTop)).toBeGreaterThan(1);
-  await expect(panel.locator('a[href="materialy-edukacyjne.html"]')).toBeInViewport();
+  for (const selector of ['a[href="steroidy.html"]', 'a[href="materialy-edukacyjne.html"]']) {
+    const control = panel.locator(selector);
+    await expect(control).toBeInViewport({ ratio: 1 });
+    await expect.poll(() => control.evaluate(node => {
+      const rect = node.getBoundingClientRect();
+      return node.contains(document.elementFromPoint(rect.x + rect.width / 2, rect.y + rect.height / 2));
+    }), { message: 'the final calculator and destination remain reachable above the sticky footer' }).toBe(true);
+  }
   const afterScroll = await measure();
   assertControls(afterScroll, true);
   for (const [name, rect] of Object.entries(beforeScroll.pinned)) {
+    if (geometry.commonScroll && ['actions', 'save', 'documents', 'clear'].includes(name)) continue;
     expect(afterScroll.pinned[name], `${name} stays in place when the complete menu is scrolled`).toEqual(rect);
     expect(rect.y).toBeGreaterThanOrEqual(beforeScroll.panel.y);
     expect(rect.bottom).toBeLessThanOrEqual(beforeScroll.panel.bottom);
+  }
+  await expect(panel.locator('.chrome-menu-footer')).toBeInViewport({ ratio: 1 });
+  if (geometry.commonScroll) {
+    await scroll.evaluate(node => { node.scrollTop = 0; });
+    await expect.poll(() => scroll.evaluate(node => node.scrollTop)).toBe(0);
+    const returned = await measure();
+    for (const [name, rect] of Object.entries(beforeScroll.pinned)) {
+      expect(returned.pinned[name], `${name} returns to its original geometry at the top of the common scroll`).toEqual(rect);
+    }
+    for (const selector of ['.chrome-menu-save', '.chrome-menu-documents', '[data-menu-clear]']) {
+      const control = panel.locator(selector);
+      await expect(control).toBeInViewport({ ratio: 1 });
+      await expect.poll(() => control.evaluate(node => {
+        const rect = node.getBoundingClientRect();
+        return node.contains(document.elementFromPoint(rect.x + rect.width / 2, rect.y + rect.height / 2));
+      }), { message: 'each form action remains reachable after returning to the top' }).toBe(true);
+    }
   }
   await page.locator(CLOSE).focus();
 }
