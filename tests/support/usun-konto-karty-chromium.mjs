@@ -143,7 +143,7 @@ async function widoczneBanery(strona) {
   }
   return teksty;
 }
-// Ślady sesji i kolejki konta w karcie: klucze localStorage vilda-sync-*:<uid> i klucz sesji w sessionStorage.
+// Klucze sesji i kolejki konta w karcie: klucze localStorage vilda-sync-*:<uid> i klucz sesji w sessionStorage.
 const slady = (f, uid) => f.evaluate((u) => ({
   kluczeSync: Object.keys(localStorage).filter((k) => k.startsWith('vilda-sync-') && k.endsWith(`:${u}`)),
   sesja: sessionStorage.getItem('vilda-vault-session-v2'),

@@ -17,17 +17,23 @@
 //   - Logowanie w toku w karcie B (hasło, klucz odzyskiwania) kończy się odmową ACCOUNT_REMOVED z tekstem „To konto
 //     zostało usunięte z tej przeglądarki.”, bez zapisu sesji i powiadomienia o odblokowaniu, z wyzerowanymi bajtami
 //     klucza; blokada user-removed (formularz logowania zostaje). Usunięcie po ustawieniu sesji (ostatnie kroki
-//     logowania) — jak karta zalogowana (user-removed-elsewhere); tryb zapisu po odmowie jak po blokadzie. Odtworzenie
-//     sesji po przeładowaniu — false, blokada user-removed-elsewhere.
+//     logowania: odczyt trybu konta, czekanie na pamięć chmury, odczyt ustawień) — odmowa ACCOUNT_REMOVED, blokada jak
+//     w karcie zalogowanej (user-removed-elsewhere); usunięcie w trakcie zapisu czasu logowania w rejestrze — logowanie
+//     kończy się sesją, potem ta sama blokada; tryb zapisu po odmowie jak po blokadzie. Odtworzenie sesji po
+//     przeładowaniu — false, blokada user-removed-elsewhere.
 //   - Nowsza wersja bazy sejfu w innej karcie: karta zamyka połączenie (podniesienie wersji nie czeka), kolejne
-//     operacje danych konta — APP_UPDATED z tekstem „Aplikację zaktualizowano w innej karcie. Odśwież tę stronę.”;
-//     VersionError przy otwarciu → APP_UPDATED; logowanie w takiej karcie kończy się sesją (bez blokady).
+//     operacje danych konta w tej karcie (każdego konta, także z otwartym połączeniem) — APP_UPDATED z tekstem
+//     „Aplikację zaktualizowano w innej karcie. Odśwież tę stronę.”; VersionError przy otwarciu albo przy próbie
+//     otwarcia po wymuszonym zamknięciu → APP_UPDATED dla całej karty; logowanie w takiej karcie kończy się sesją (bez
+//     blokady).
 //   - Wymuszone zamknięcie połączenia przez przeglądarkę: bazy nie ma — jak usunięcie w innej karcie; baza jest — karta
 //     działa dalej. Karta zalogowana bez połączenia z bazą (np. po wymuszonym zamknięciu) po usunięciu konta w innej
 //     karcie — blokada przy pierwszej operacji danych konta.
 //   - Karta usuwająca: isRemovingCurrentUser() prawdziwe od kasowania bazy sejfu konta bieżącej sesji do blokady
 //     (fałsz przy usuwaniu innego konta i po błędzie kasowania); zapis metadanych rozpoczęty przed „Usuń konto” kończy
-//     się odmową ACCOUNT_REMOVED, a odczyt metadanych w trakcie własnego kasowania — brakiem metadanych, bez bazy konta.
+//     się odmową ACCOUNT_REMOVED, inny zapis (dane pacjenta) — odmową bez zapisu (ACCOUNT_REMOVED albo sprawdzenia sesji
+//     (P-SESJA-ZAPISU)), a odczyt metadanych w trakcie własnego kasowania i po nim (także po otwarciu bazy w toku
+//     w trakcie kasowania) — brakiem metadanych, bez bazy konta.
 //   - Odczyt konta bez metadanych nie zakłada bazy sejfu konta; zakłada ją założenie konta.
 //   - Karta ze starszą wersją aplikacji (połączenie bez obsługi versionchange): „Usuń konto” czeka, aż ją zamkniesz.
 //   - Tryb „Zaloguj jednorazowo” w drugiej karcie (inne konto) — bez zmian.
@@ -41,25 +47,25 @@
 // PRZYPADKI (UK1–UK20)
 //   UK1, UK1b, UK1c  druga karta zalogowana na X; dwa równoczesne logowania w toku; połączenie bez obsługi versionchange.
 //   UK2      druga karta zalogowana na Y (wcześniej na X).
-//   UK3 (1)–(3)  karta usuwająca: isRemovingCurrentUser, osierocone połączenie po trybie jednorazowym, zapis i odczyt
-//            metadanych w trakcie własnego kasowania.
+//   UK3 (1)–(5)  karta usuwająca: isRemovingCurrentUser, osierocone połączenie po trybie jednorazowym, zapis i odczyt
+//            metadanych w trakcie własnego kasowania, otwarcie bazy w toku, zapis danych pacjenta.
 //   UK4, UK4b  operacje danych konta po usunięciu; zapis w toku — sprawdzenia sesji (P-SESJA-ZAPISU).
 //   UK5, UK6  karta B niezalogowana na ekranie logowania X; stan dokumentu przed powiadomieniem o blokadzie.
-//   UK7, UK7b, UK7c  nowsza wersja bazy: odmowy, otwarcie w toku, logowanie w toku.
+//   UK7, UK7b, UK7c, UK7d  nowsza wersja bazy: odmowy, otwarcie w toku, logowanie w toku, połączenie z bazą innego konta.
 //   UK8      bramka zamknięta: karta B bez zapisów vilda-sync-* i bez baz kolejki.
 //   UK9, UK9b, UK9c  lista kont (getStatus, listUsers) w obsłudze blokady i w karcie usuwającej.
 //   UK10, UK10b, UK10c  isRemovingCurrentUser: konto niebieżące, błąd kasowania, drugie removeUser, wyjątek synchroniczny.
-//   UK11 (1)–(3)  wymuszone zamknięcie: baza usunięta, baza jest, karta bez połączenia.
+//   UK11 (1)–(4)  wymuszone zamknięcie: baza usunięta, baza jest, karta bez połączenia, baza w wyższej wersji.
 //   UK12, UK12c (a)(b)  tryb „Zaloguj jednorazowo” w karcie B; removeUser w obu kartach (bez Web Locks).
 //   UK13     tryb „Komputer w pracy”.
-//   UK14, UK14b, UK14c, UK14e, UK14f, UK14g  logowanie i odtworzenie sesji w toku.
+//   UK14, UK14b, UK14c, UK14e–UK14i  logowanie i odtworzenie sesji w toku.
 //   UK15 (1)–(4)  konto bez metadanych (jak gałąź KT K2); założenie konta.
 //   UK16 (1)–(3)  ekran startowy bez banera dla wywołań bez napisu.
 //   UK17 (1)–(4)  vilda_frame_sync.js (prawdziwy plik) w oknie z celem zdarzeń i szyną BroadcastChannel.
-//   UK18     kody i komunikaty błędów.
+//   UK18, UK18b  kody i komunikaty błędów; VersionError jednego konta a operacje innego konta.
 //   UK19 (1)(2)  strażniki tekstowe: testy drugiej karty nie zamykają połączeń z bazą sejfu same.
 //   UK20, UK20b  identyfikator urządzenia przy usunięciu konta (osobny widok localStorage na okno).
-// Na sejfie sprzed tej zmiany (E2-PR3a1) czerwonych jest 39 z 50 przypadków — wszystkie poza strażnikami UK1c, UK9b,
+// Na sejfie sprzed tej zmiany (E2-PR3a1) czerwonych jest 46 z 57 przypadków — wszystkie poza strażnikami UK1c, UK9b,
 // UK12, UK15 (4), UK16 (1)–(3), UK17 (1), UK17 (3) i UK19 (1)(2): usuwanie czeka na połączenie drugiej karty („nie
 // doczekano: …”), brak isRemovingCurrentUser albo brak nowego zachowania.
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -409,6 +415,52 @@ describe('karta usuwająca', () => {
     expect({ wk, lWChwili, l3, bazy: bazy(o3) }).toEqual({ wk: { ok: true, w: [] }, lWChwili: [], l3: ['user-removed'], bazy: [REJESTR] });
   }, 30_000);
 
+  it('UK3 (4): otwarcie bazy X w toku, gdy removeUser(X) w tym samym oknie zaczyna kasowanie (połączenia z bazą X brak po wymuszonym zamknięciu) — po końcu listPasskeys(X) → [] (brak metadanych, bez błędu zamkniętego połączenia), blokada tylko user-removed', async () => {
+    const o = await nowe();
+    const X = o.A.userId;
+    const lA = blokady(o);
+    // removeUser(X) wstrzymany na liście baz przy sprawdzeniu biblioteki szablonów (ostatni krok przed kasowaniem bazy
+    // sejfu; odczyt metadanych konta już był).
+    const hL = wstrzymaj(o, { przy: 'databases' });
+    const pA = usun(o);
+    await doczekaj(hL.czeka, 'lista baz w removeUser');
+    // Wymuszone zamknięcie przy istniejącej bazie: połączenie wyjęte z mapy, próba otwarcia — baza jest, bez blokady.
+    o.idb.__atrapa.wymusZamkniecie(BAZA(X));
+    await o.spokoj();
+    expect(o.idb.__atrapa.polaczenia(BAZA(X)), 'połączenia z bazą X po wymuszonym zamknięciu').toBe(0);
+    // Operacja danych konta otwiera bazę X; otwarcie stoi w kolejce bazy.
+    const hO = wstrzymaj(o, { przy: 'open', baza: BAZA(X) });
+    const pL = wynik(o.v.listPatients());
+    await doczekaj(hO.czeka, 'otwarcie bazy X w oknie');
+    const z = log(o).length;
+    hL.zwolnij();
+    await czekajNa(() => wpisyOd(o, z, 'deleteDatabase', BAZA(X)).length > 0, `kasowanie ${BAZA('<X>')}`);
+    hO.zwolnij();
+    expect(await doczekaj(pA, 'removeUser w oknie')).toEqual({ ok: true, w: true });
+    await doczekaj(pL, 'listPatients w oknie');
+    await o.cisza();
+    expect({ lA, bazy: bazy(o) }).toEqual({ lA: ['user-removed'], bazy: [REJESTR] });
+    expect(await wynik(o.v.listPasskeys(X))).toEqual({ ok: true, w: [] });
+  }, 30_000);
+
+  it('UK3 (5): zapis danych pacjenta rozpoczęty przed removeUser (savePatient, odczyt sklepu patients wstrzymany) — odmowa bez zapisu (ACCOUNT_REMOVED albo sprawdzenia sesji (P-SESJA-ZAPISU)), bazy konta brak, blokada tylko user-removed', async () => {
+    const o = await nowe();
+    const X = o.A.userId;
+    const lA = blokady(o);
+    const h = wstrzymaj(o, { przy: 'success', baza: BAZA(X), sklep: 'patients' });
+    const pS = wynik(o.v.savePatient(naglowek(4), { dedup: false }));
+    await doczekaj(h.czeka, 'odczyt sklepu patients w zapisie');
+    const z = log(o).length;
+    const pA = usun(o);
+    await czekajNa(() => wpisyOd(o, z, 'deleteDatabase', BAZA(X)).length > 0, `kasowanie ${BAZA('<X>')}`);
+    h.zwolnij();
+    expect(await doczekaj(pA, 'removeUser')).toEqual({ ok: true, w: true });
+    const wS = await doczekaj(pS, 'savePatient');
+    await o.cisza();
+    expect({ odmowa: !wS.ok && ['ACCOUNT_REMOVED', 'SESSION_CHANGED'].includes(wS.kod), lA, bazy: bazy(o) })
+      .toEqual({ odmowa: true, lA: ['user-removed'], bazy: [REJESTR] });
+  }, 30_000);
+
   it('UK9b: konta X i Y, removeUser(X) wstrzymany na kasowaniu bazy sejfu — w trakcie listUsers() = [X, Y], getStatus().userCount = 2 (lista pomija tylko konta usunięte w innym dokumencie)', async () => {
     const o = await nowe({ konta: 'AB' });
     const h = wstrzymaj(o, { przy: 'deleteDatabase', baza: BAZA(o.A.userId) });
@@ -554,7 +606,9 @@ describe('logowanie i odtworzenie sesji w toku', () => {
     const pC = wynik(o3.v.tryRestoreSession());
     await doczekaj(h.osiagnieta, 'import klucza w oknie C');
     const pA = usun(o);
-    await czekajNa(() => jestZmiana(o, X), `versionchange ${BAZA('<X>')}`);
+    // versionchange dociera do kart B i C w kolejnych zadaniach: zwolnienie importu klucza w C dopiero, gdy C zamknęła
+    // połączenie z bazą X (usunięcie przed ustawieniem sesji — blokadę daje odmowa odtworzenia, nie obsługa versionchange).
+    await czekajNa(() => o.idb.__atrapa.polaczenia(BAZA(X)) === 0, `versionchange ${BAZA('<X>')} w kartach B i C`);
     h.zwolnij();
     const wC = await doczekaj(pC, 'odtworzenie sesji w oknie C');
     expect(await doczekaj(pA, 'removeUser w karcie A')).toEqual({ ok: true, w: true });
@@ -604,6 +658,52 @@ describe('logowanie i odtworzenie sesji w toku', () => {
     expect({ lB, odblokowana: o2.v.isUnlocked(), tryb: o2.v.getCurrentStorageModeSync(), hybryda: o2.v.isCloudOnlyAdapterActive(), znacznik: o2.win.sessionStorage.getItem(SESJA_CHMURY) })
       .toEqual({ lB: ['user-removed-elsewhere'], odblokowana: false, tryb: 'local', hybryda: false, znacznik: null });
   }, 30_000);
+
+  it('UK14h: B — unlockUser(X) wstrzymany na odczycie metadanych po ustawieniu sesji (odczyt ustawień, ostatni krok logowania), A usuwa X — ACCOUNT_REMOVED (tekst), blokada user-removed-elsewhere raz, bez odblokowania i sesji, tryb local', async () => {
+    const o = await nowe();
+    const X = o.A.userId;
+    const o2 = await drugie(o, { zaloguj: null });
+    const lB = blokady(o2);
+    const odbl = odblokowania(o2);
+    const h1 = wstrzymajKrypto(o2, { metoda: 'decrypt' });
+    const pB = wynik(o2.v.unlockUser(X, o.A.haslo));
+    await doczekaj(h1.osiagnieta, 'odszyfrowanie w karcie B');
+    const h2 = wstrzymaj(o2, { przy: 'success', baza: BAZA(X), sklep: 'meta', metoda: 'get' });
+    h1.zwolnij();
+    await doczekaj(h2.czeka, 'odczyt metadanych po ustawieniu sesji w karcie B');
+    const biezace = o2.v.getCurrentUser();
+    expect(biezace && biezace.userId, 'sesja karty B już ustawiona').toBe(X);
+    const pA = usun(o);
+    await czekajNa(() => lB.length > 0, 'blokada karty B');
+    h2.zwolnij();
+    const wB = await doczekaj(pB, 'logowanie w karcie B');
+    expect(await doczekaj(pA, 'removeUser w karcie A')).toEqual({ ok: true, w: true });
+    await o.cisza();
+    await o2.cisza();
+    expect(kod(wB)).toEqual({ ok: false, kod: 'ACCOUNT_REMOVED', komunikat: TEKST_USUNIETE });
+    expect({ lB, odbl, odblokowana: o2.v.isUnlocked(), sesja: o2.win.sessionStorage.getItem(SESJA), tryb: o2.v.getCurrentStorageModeSync() })
+      .toEqual({ lB: ['user-removed-elsewhere'], odbl: [], odblokowana: false, sesja: null, tryb: 'local' });
+  }, 30_000);
+
+  it('UK14i: B — unlockUser(X) wstrzymany na zapisie czasu logowania w rejestrze (sesja zapisana, powiadomienie o odblokowaniu już było), A usuwa X — logowanie kończy się sesją, potem blokada user-removed-elsewhere jak w karcie zalogowanej; bez sesji, bazy konta brak', async () => {
+    const o = await nowe();
+    const X = o.A.userId;
+    const o2 = await drugie(o, { zaloguj: null });
+    const lB = blokady(o2);
+    const odbl = odblokowania(o2);
+    const h = wstrzymaj(o2, { przy: 'success', baza: REJESTR, sklep: 'users', metoda: 'put' });
+    const pB = wynik(o2.v.unlockUser(X, o.A.haslo));
+    await doczekaj(h.czeka, 'zapis czasu logowania w rejestrze karty B');
+    const pA = usun(o);
+    await czekajNa(() => lB.length > 0, 'blokada karty B');
+    h.zwolnij();
+    const wB = await doczekaj(pB, 'logowanie w karcie B');
+    expect(await doczekaj(pA, 'removeUser w karcie A')).toEqual({ ok: true, w: true });
+    await o.cisza();
+    await o2.cisza();
+    expect({ wB: kod(wB), lB, odbl, odblokowana: o2.v.isUnlocked(), sesja: o2.win.sessionStorage.getItem(SESJA), bazy: bazy(o) })
+      .toEqual({ wB: { ok: true }, lB: ['user-removed-elsewhere'], odbl: ['login'], odblokowana: false, sesja: null, bazy: [REJESTR] });
+  }, 30_000);
 });
 
 describe('nowsza wersja bazy sejfu w innej karcie', () => {
@@ -648,6 +748,17 @@ describe('nowsza wersja bazy sejfu w innej karcie', () => {
     await o2.tlo();
     expect({ odblokowana: o2.v.isUnlocked(), lB }).toEqual({ odblokowana: true, lB: [] });
     expect(kod(await wynik(o2.v.listPatients()))).toEqual({ ok: false, kod: 'APP_UPDATED', komunikat: TEKST_WERSJA });
+  }, 30_000);
+
+  it('UK7d: B z otwartym połączeniem z bazą Y (lista kluczy dostępu Y odczytana), baza X w wersji 6 — kolejne listPasskeys(Y) → APP_UPDATED (cała karta, także konto z połączeniem)', async () => {
+    const { o, o2, X } = await dwieKarty({ konta: 'AB' });
+    const Y = o.B.userId;
+    // Połączenie karty B z bazą Y jest otwarte po odczycie (podniesienie wersji bazy X go nie dotyczy).
+    expect(kod(await wynik(o2.v.listPasskeys(Y)))).toEqual({ ok: true });
+    expect(o.idb.__atrapa.polaczenia(BAZA(Y)), 'połączenia z bazą Y przed podniesieniem wersji bazy X').toBeGreaterThan(0);
+    expect(await doczekaj(otworzWersje(o.idb, BAZA(X), 6), 'otwarcie bazy X w wersji 6')).toBe('ok');
+    await o2.cisza();
+    expect(kod(await wynik(o2.v.listPasskeys(Y)))).toEqual({ ok: false, kod: 'APP_UPDATED', komunikat: TEKST_WERSJA });
   }, 30_000);
 });
 
@@ -720,6 +831,24 @@ describe('wymuszone zamknięcie połączenia przez przeglądarkę', () => {
     await o2.cisza();
     expect({ lB, odblokowana: o2.v.isUnlocked() }).toEqual({ lB: ['user-removed-elsewhere'], odblokowana: false });
     expect(kod(w)).toEqual({ ok: false, kod: 'ACCOUNT_REMOVED', komunikat: TEKST_USUNIETE });
+  }, 30_000);
+
+  it('UK11 (4): wymuszone zamknięcie połączenia z bazą X, gdy inny dokument podnosi jej wersję (próba otwarcia: VersionError) — bez blokady; listPasskeys(Y) (połączenie z bazą Y otwarte) → APP_UPDATED', async () => {
+    const o = await nowe({ konta: 'AB' });
+    const X = o.A.userId;
+    const Y = o.B.userId;
+    const lA = blokady(o);
+    expect(kod(await wynik(o.v.listPasskeys(Y)))).toEqual({ ok: true });
+    // W jednym zadaniu: zerwanie połączeń z bazą X i otwarcie jej w wersji 6 przez inny dokument (próba otwarcia staje
+    // w kolejce bazy za podniesieniem wersji).
+    const wersja = new Promise((ok) => {
+      o.idb.__atrapa.wymusZamkniecie(BAZA(X));
+      ok(otworzWersje(o.idb, BAZA(X), 6));
+    });
+    expect(await doczekaj(wersja, 'otwarcie bazy X w wersji 6')).toBe('ok');
+    await o.cisza();
+    expect(lA).toEqual([]);
+    expect(kod(await wynik(o.v.listPasskeys(Y)))).toEqual({ ok: false, kod: 'APP_UPDATED', komunikat: TEKST_WERSJA });
   }, 30_000);
 });
 
@@ -972,6 +1101,17 @@ describe('błędy ACCOUNT_REMOVED i APP_UPDATED', () => {
     const w2 = await wynik(o4.v.unlockUser(X, o3.A.haslo));
     expect({ kod: w2.kod, komunikat: w2.komunikat }).toEqual({ kod: 'ACCOUNT_REMOVED', komunikat: TEKST_USUNIETE });
     expect(wlasneKlucze(w2.e)).toEqual(['code', 'message', 'stack']);
+  }, 30_000);
+
+  it('UK18b: VersionError przy otwarciu bazy sejfu jednego konta (inna wersja aplikacji) — kolejne operacje danych innego konta w tej karcie też APP_UPDATED (listPasskeys, unlockUser)', async () => {
+    const o = await nowe({ zaloguj: null });
+    o.idb.__atrapa.utworz(BAZA(BEZ_KONTA), 6, { meta: { keyPath: 'k', indeksy: {} } }, { meta: [] });
+    await wpisRejestru(o, BEZ_KONTA, { label: 'Fikcyjne konto nowszej wersji', createdAtISO: '2026-03-02T08:00:00.000Z', storageMode: 'local', passkeyCount: 0 });
+    const zmiana = { ok: false, kod: 'APP_UPDATED', komunikat: TEKST_WERSJA };
+    expect(kod(await wynik(o.v.unlockUser(BEZ_KONTA, 'Fikcyjne#Dowolne!2026xx')))).toEqual(zmiana);
+    expect(kod(await wynik(o.v.listPasskeys(o.A.userId))), 'listPasskeys innego konta').toEqual(zmiana);
+    expect(kod(await wynik(o.v.unlockUser(o.A.userId, o.A.haslo))), 'unlockUser innego konta').toEqual(zmiana);
+    expect(o.v.isUnlocked()).toBe(false);
   }, 30_000);
 });
 
