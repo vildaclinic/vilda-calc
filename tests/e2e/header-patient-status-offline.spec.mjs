@@ -15,7 +15,7 @@ import { RETURN_TO_SEARCH } from '../support/search-return-browser-fixture.mjs';
 import { czekajNaOdtworzenieSesji } from '../support/sesja-czekanie.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
-const BASE = 'a00749c2';
+const BASE = '83fa1193';
 const PASSWORD = 'E2e#SiatkaNowyPomiar!2026';
 const PROBE = '/__header-status-offline-probe-';
 const NOTE = 'Fikcyjna sprawa testu nagłówka offline';
@@ -52,6 +52,7 @@ async function deployment() {
     await execute('tar', ['-x', '-f', archive, '-C', baseline]);
     fs.rmSync(archive);
     const { stdout: changed } = await execute('git', ['diff', '--name-only', BASE, '--'], { cwd: ROOT, encoding: 'utf8' });
+    const { stdout: sourceCommit } = await execute('git', ['rev-parse', 'HEAD'], { cwd: ROOT, encoding: 'utf8' });
     const names = changed
       .trim().split('\n').filter(name => !name.includes('/') && /\.(?:html|js|css)$/u.test(name)
         && name !== 'service-worker-kalorii.js');
@@ -61,6 +62,12 @@ async function deployment() {
     const previousVersion = workerVersion(baseline), currentVersion = workerVersion(ROOT);
     if (previousVersion === currentVersion) throw new Error('Run the official resource version bump before this PWA update test');
     const oldResources = changedResources(baseline, names), newResources = changedResources(ROOT, names);
+    const nativeClearSources = ['vilda_data_import_export.js', 'vilda_persistence_adapter.js'].map(name => {
+      const previous = sha256(fs.readFileSync(path.join(baseline, name)));
+      const current = sha256(fs.readFileSync(path.join(ROOT, name)));
+      expect(current, name + ' retains the baseline native Clear/persistence contract').toBe(previous);
+      return { name, sha256: current };
+    });
     expect(oldResources.filter(item => !item.precached).map(item => item.url)).toEqual(NON_PRECACHE_DOCUMENTS.map(name => '/' + name));
     expect(newResources.filter(item => !item.precached).map(item => item.url)).toEqual(NON_PRECACHE_DOCUMENTS.map(name => '/' + name));
     let promoted = false, stopped = false;
@@ -83,7 +90,8 @@ async function deployment() {
     await new Promise((resolve, reject) => { server.once('error', reject); server.listen(0, '127.0.0.1', resolve); });
     return {
       origin: `http://127.0.0.1:${server.address().port}`, previousVersion, currentVersion,
-      names, oldResources, newResources,
+      sourceCommit: sourceCommit.trim(),
+      names, oldResources, newResources, nativeClearSources,
       workerSha256: sha256(workerSource(ROOT)),
       promote() { promoted = true; },
       async stop() {
@@ -165,6 +173,116 @@ async function settled(owner) {
     && !window.VildaDataImportExport?.isMainSessionRestorePending?.());
 }
 
+async function bootstrapCreatedPaneAuth(page) {
+  // The shell may already have created hidden clinical panes while its own
+  // login was booting. Finish their real, public auth loader before login's
+  // auth-changed broadcast; an incomplete loader otherwise legitimately
+  // reloads its frame and aborts an in-flight script. Never filter that abort
+  // from the strict application-request collector below.
+  const ready = new Set(), titles = [];
+  for (;;) {
+    let added = false;
+    for (const element of await page.locator('#appPanes > iframe.app-pane').elementHandles()) {
+      const frame = await element.contentFrame();
+      if (!frame) throw new Error('A created production pane has no browsing context');
+      if (ready.has(frame)) continue;
+      added = true;
+      await frame.waitForLoadState('load');
+      await frame.waitForFunction(() => typeof window.VildaSession?.ensureAuthLoaded === 'function');
+      await frame.evaluate(() => window.VildaSession.ensureAuthLoaded());
+      await frame.waitForFunction(() => window.VildaVault && window.VildaAuthUI?.isBootReady());
+      expect(await frame.evaluate(() => window.VildaVault.isUnlocked()), 'preloaded pane remains locked before login').toBe(false);
+      titles.push(await element.getAttribute('title'));
+      ready.add(frame);
+    }
+    // Include panes actually created during the asynchronous boot above, but
+    // do not force optional speculative panes to be created for this test.
+    if (!added) return titles;
+  }
+}
+
+async function clearedState(owner) {
+  return owner.evaluate(() => {
+    const decision = window.VildaSaveStatusIndicator.getCurrentDecision();
+    return {
+      fields: Object.fromEntries(['name', 'age', 'ageMonths', 'weight', 'height', 'bpSystolic', 'bpDiastolic']
+        .map(id => [id, document.getElementById(id)?.value])),
+      patientId: sessionStorage.getItem('vildaCurrentPatientId'),
+      reference: window.VildaSaveStatusIndicator.getReferenceFingerprint(),
+      loaded: window.lastLoadedData ?? null,
+      panelOwner: window.VildaPanelPacjent.wlasciciel(),
+      panelStale: window.VildaPanelPacjent.nieaktualny(),
+      decision: { ready: decision.ready, state: decision.state },
+    };
+  });
+}
+
+async function mainSessionModel(owner) {
+  return owner.evaluate(() => {
+    const session = window.VildaPersistence.readMainSession();
+    return session === null ? null : Object.fromEntries(Object.entries(session).filter(([key]) => key !== 'timestampISO'));
+  });
+}
+
+async function nativeEmptyMainSession(owner) {
+  // Capture the whole real default model before the first patient is loaded.
+  // Native Clear and persistence are byte-identical to the reviewed 83fa1193
+  // baseline; only the snapshot's save timestamp is excluded from comparison.
+  await owner.locator('#clearAllDataBtn').click();
+  await expect.poll(() => mainSessionModel(owner)).toBeNull();
+  await expect.poll(() => owner.evaluate(() => window.VildaSaveStatusIndicator.getState())).toBe('hidden');
+  await owner.waitForFunction(() => !window.VildaPersistence.isAutosaveSuppressed()
+    && !window.VildaDataImportExport.isMainSessionAutosavePaused()
+    && !window.__vildaPersistRestoring && !window.VildaDobAge?.restorePending?.());
+  // Clear's quarantine deliberately hides the live examination context from
+  // the growth cache. Recalculate the real empty form after that boundary,
+  // exactly as a later resize does, before capturing its full default model.
+  await owner.evaluate(() => { window.calculateGrowthAdvanced(); });
+  // PRO results mode is a retained view preference, so native autosave may
+  // legitimately create this empty default snapshot after Clear's quarantine.
+  expect(await owner.evaluate(() => window.VildaDataImportExport.saveMainSessionNow({ force: true }))).toBe(true);
+  const model = await mainSessionModel(owner);
+  expect(model.name).toBe('');
+  expect(model.user).toEqual({ age: null, ageMonths: 0, sex: 'M', weight: null, height: null,
+    waist: null, hip: null, tannerStage: null });
+  return model;
+}
+
+async function expectCleared(page, owner, ids, fingerprint, emptyMainSession) {
+  await expect.poll(() => clearedState(owner)).toEqual({
+    fields: { name: '', age: '', ageMonths: '', weight: '', height: '', bpSystolic: '', bpDiastolic: '' },
+    patientId: null, reference: null, loaded: null, panelOwner: null, panelStale: false,
+    decision: { ready: true, state: 'hidden' },
+  });
+  const session = await mainSessionModel(owner);
+  if (emptyMainSession === undefined) expect(session, 'native Clear immediately removes the main session').toBeNull();
+  else if (session !== null) expect(session, 'later autosave contains exactly the native empty default model').toEqual(emptyMainSession);
+  await expect(page.locator('#vildaHeaderSaveStatus')).toBeHidden();
+  await expect(page.locator('#vildaHeaderSaveStatus')).toHaveAttribute('data-save-state', 'hidden');
+  const menu = await visibleChromeMenu(page);
+  await expect(menu.locator('[data-menu-save-status]')).toHaveAttribute('data-save-state', 'hidden');
+  await expect(menu.locator('[data-menu-save-status]')).toHaveText('Brak danych');
+  await closeChromeMenu(page);
+  expect(await recordFingerprint(owner, ids), 'Clear preserves every stored patient and note byte').toBe(fingerprint);
+}
+
+async function clearedAtWidths(page, owner, ids, fingerprint, emptyMainSession, info, mode) {
+  for (const width of [1440, 320, 390, 860]) {
+    await page.setViewportSize({ width, height: 1000 });
+    await owner.evaluate(() => scrollTo({ top: 0, behavior: 'instant' }));
+    await expectDesktopSearchControl(page);
+    await expectBell(page);
+    await expectCleared(page, owner, ids, fingerprint, emptyMainSession);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth - innerWidth), `${width}px cleared host`).toBeLessThanOrEqual(1);
+    expect(await owner.evaluate(() => document.documentElement.scrollWidth - innerWidth), `${width}px cleared patient pane`).toBeLessThanOrEqual(1);
+    if (width === 1440 || width === 390) {
+      const screenshot = info.outputPath(`${mode}-cold-offline-cleared-${width}.png`);
+      await page.screenshot({ path: screenshot, scale: 'css' });
+      await info.attach(`${mode}-cold-offline-cleared-${width}`, { path: screenshot, contentType: 'image/png' });
+    }
+  }
+}
+
 async function projectedState(page, owner, state) {
   await expect.poll(() => owner.evaluate(() => window.VildaSaveStatusIndicator.getState())).toBe(state);
   const expected = state === 'new_patient' ? 'new' : state;
@@ -190,9 +308,9 @@ async function headerAtWidths(page, owner, state, info, mode) {
     } else {
       await expect(status).toBeHidden();
       const menu = await visibleChromeMenu(page);
-      await expect(menu.locator('[data-menu-patient-name]')).toHaveCSS('font-size', '18px');
-      await expect(menu.locator('.chrome-menu-patient-copy small')).toHaveCSS('font-size', '16px');
-      await expect(menu.locator('[data-menu-save-status]')).toHaveCSS('font-size', '16px');
+      await expect(menu.locator('[data-menu-patient-name]')).toHaveCSS('font-size', '16px');
+      await expect(menu.locator('.chrome-menu-patient-copy small')).toHaveCSS('font-size', '14px');
+      await expect(menu.locator('[data-menu-save-status]')).toHaveCSS('font-size', '14px');
     }
     expect(await page.evaluate(() => document.documentElement.scrollWidth - innerWidth), `${width}px host`).toBeLessThanOrEqual(1);
     expect(await owner.evaluate(() => document.documentElement.scrollWidth - innerWidth), `${width}px patient pane`).toBeLessThanOrEqual(1);
@@ -240,6 +358,7 @@ for (const shell of [true, false]) {
       expect(await activate(installer)).toBe('activated');
       await cached(installer, site.previousVersion, site.oldResources);
       const fixture = await createFictionalVault(installer);
+      const emptyMainSession = await nativeEmptyMainSession(installer);
       await loadPatient(installer, fixture.ids.a, 'restore', { clear: true });
       await settled(installer);
       await expect(installer.locator('#currentSummaryContent .professional-summary-main')).toBeVisible();
@@ -280,6 +399,7 @@ for (const shell of [true, false]) {
       await page.goto(shell ? '/app.html#/start' : '/index.html', { waitUntil: 'load' });
       await page.waitForFunction(() => window.VildaVault && window.VildaAuthUI?.isBootReady());
       expect(await page.evaluate(() => window.VildaVault.isUnlocked())).toBe(false);
+      const preLoginPaneAuth = shell ? await bootstrapCreatedPaneAuth(page) : [];
       const login = page.locator('#vilda-auth-ui-root');
       await login.getByRole('button', { name: /Fikcyjny sejf testu panelu siatek/ }).click();
       await login.locator('input[type=password]').fill(PASSWORD);
@@ -331,6 +451,21 @@ for (const shell of [true, false]) {
       await expect.poll(() => clinicalView(owner)).toEqual(expected);
       expect(await recordFingerprint(owner, ids)).toBe(fingerprint);
 
+      // The new chrome action must execute the native clear while the working
+      // patient is saved, also after a genuine upgrade and cold offline start.
+      await page.setViewportSize({ width: shell ? 390 : 1440, height: 1000 });
+      const menu = await visibleChromeMenu(page), clear = menu.locator('[data-menu-clear]');
+      await expect(clear).toHaveText('Wyczyść');
+      await expect(clear).toBeEnabled();
+      await clear.click();
+      await expect(owner.locator('.vug-backdrop')).toHaveCount(0);
+      await expectCleared(page, owner, ids, fingerprint);
+      await clearedAtWidths(page, owner, ids, fingerprint, emptyMainSession, info, shell ? 'shell' : 'standalone');
+      await page.reload({ waitUntil: 'load' });
+      owner = shell ? await shellFrame(page) : page;
+      await settled(owner);
+      await expectCleared(page, owner, ids, fingerprint, emptyMainSession);
+
       for (const asset of site.newResources.filter(item => item.precached)) {
         const response = await page.evaluate(async url => {
           const result = await fetch(url);
@@ -344,12 +479,18 @@ for (const shell of [true, false]) {
       expect(failures).toEqual([]);
       expect(changedResources(ROOT, site.names), 'all reviewed production sources stay unchanged during PWA validation').toEqual(site.newResources);
       expect(sha256(workerSource(ROOT)), 'the production worker stays unchanged during PWA validation').toBe(site.workerSha256);
+      const { stdout: finalCommit } = await execute('git', ['rev-parse', 'HEAD'], { cwd: ROOT, encoding: 'utf8' });
+      expect(finalCommit.trim(), 'the reviewed commit stays unchanged during PWA validation').toBe(site.sourceCommit);
       const proof = info.outputPath('header-patient-status-cold-offline-proof.json');
       fs.writeFileSync(proof, JSON.stringify({ base: BASE, mode: shell ? 'shell' : 'standalone',
+        sourceCommit: site.sourceCommit,
         previousVersion: site.previousVersion, currentVersion: site.currentVersion,
         workerSha256: site.workerSha256, unmodifiedProductionUpgrade: true, coldBrowserRestarts: 1, originStopped: true,
         unchangedFullRecordFingerprint: fingerprint, userId, expectedClinicalView: expected,
         savedAfterRestore: true, dirtyAfterOfflineReload: true, searchPatientReturn: true,
+        preLoginPaneAuth, nativeSidebarClear: true, emptyAfterOfflineReload: true,
+        emptyDefaultMainSession: emptyMainSession,
+        unchangedNativeClearSources: site.nativeClearSources,
         viewportWidths: [1440, 320, 390, 860], oldResources: site.oldResources, resources: site.newResources,
         productionSourceUntampered: true, nonPrecachedDocumentsUnchangedFromBaseline: NON_PRECACHE_DOCUMENTS,
         failedApplicationRequests: failures, pageErrors: errors,

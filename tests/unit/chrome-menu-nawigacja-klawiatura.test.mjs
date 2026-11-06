@@ -3,6 +3,7 @@ import vm from 'node:vm';
 import { describe, expect, it, vi } from 'vitest';
 
 const source = fs.readFileSync(new URL('../../vilda_chrome.js', import.meta.url), 'utf8');
+const unsavedGuardSource = fs.readFileSync(new URL('../../vilda_unsaved_guard.js', import.meta.url), 'utf8');
 const marker = source.indexOf('/* P-CHROME-MENU:');
 const drawerStart = marker >= 0 ? marker : source.indexOf('function nt(');
 const drawerSource = source.slice(drawerStart, source.indexOf('var de=', drawerStart));
@@ -94,7 +95,7 @@ function environment(nativeInert = true) {
   const last = panel.appendChild(new Element('a')); last.setAttribute('href', 'homa-ir.html');
   const tip = vi.fn(), syncButtons = vi.fn();
   const api = new Function('r', 'o', 'Qdm', 'B', 'F', '_e', 'te', 'le',
-    `var K=false,O=false,h=null,M=null;${menuDependencies}${menuSource}${drawerSource}${actionSource}${headerSource}${navigationSource}${overlaySource};return {open:nt,close:ee,bind:tt,bindActions:et,bindMenu:Cm_bindMenuControls,openPatient:Cm_openMenuPatient,navigate:Pt,isOverlayOpen:he,bindHeader:Ch_bindHeader,refreshSearch:Ch_refreshSearch,openSearch:Ch_openSearch,saveSource:Ch_saveSource};`)(win, doc, syncButtons, () => {}, tip, () => {}, () => {}, () => {});
+    `var K=false,O=false,h=null,M=null;${menuDependencies}${menuSource}${drawerSource}${actionSource}${headerSource}${navigationSource}${overlaySource};return {open:nt,close:ee,bind:tt,bindActions:et,bindMenu:Cm_bindMenuControls,openPatient:Cm_openMenuPatient,navigate:Pt,isOverlayOpen:he,bindHeader:Ch_bindHeader,refreshSearch:Ch_refreshSearch,openSearch:Ch_openSearch,saveSource:Ch_saveSource,clearContext:Cm_clearContext,clearCurrent:Cm_clearCurrent,refreshClear:Cm_refreshClear};`)(win, doc, syncButtons, () => {}, tip, () => {}, () => {}, () => {});
   api.bind(header);
   return { win, doc, header, trigger, avatar, account, main, input, frame, drawer, panel, close, last, api, tip, observers, Element,
     backgroundBootListeners: bootListenerCounts({ win, doc }) };
@@ -139,6 +140,91 @@ function expectNoBootListeners(h) {
   expect(h.doc.listenerCount('vilda:session-changed')).toBe(h.backgroundBootListeners.session);
   expect(h.win.listenerCount('pagehide')).toBe(h.backgroundBootListeners.pagehide);
 }
+
+function clearMenuEnvironment({ live = 'dirty', clcr = false } = {}) {
+  const h = environment(), scope = {}, state = { ready: true, unlocked: true, userId: 'fictional-clear-owner', pending: false, stale: false };
+  h.doc.readyState = 'complete';
+  h.doc.head = h.doc.documentElement.appendChild(new h.Element('head'));
+  h.doc.createTextNode = value => { const text = new h.Element('span'); text.textContent = value; return text; };
+  const form = h.main.appendChild(new h.Element('form')); form.setAttribute('id', clcr ? 'clcrForm' : 'calcForm');
+  const name = form.appendChild(new h.Element('input')); name.setAttribute('id', 'firstName'); name.value = 'Fikcyjny wpis Clear';
+  const native = form.appendChild(new h.Element('button')); native.setAttribute('id', clcr ? 'clearBtn' : 'clearAllDataBtn');
+  const reset = vi.fn(() => { name.value = ''; }); native.addEventListener('click', reset);
+  const menuClear = h.panel.appendChild(new h.Element('button')); menuClear.setAttribute('data-menu-clear', '');
+  h.win.VildaVault = { isUnlocked: () => state.unlocked, getCurrentUser: () => ({ userId: state.userId }) };
+  h.win.VildaSession = { isLoggedIn: () => state.unlocked };
+  h.win.VildaAuthUI = { isBootReady: () => state.ready };
+  h.win.VildaPanelPacjent = { nieaktualny: () => state.stale };
+  h.win.VildaDataImportExport = { isMainSessionRestorePending: () => state.pending };
+  h.win.VildaSaveStatusIndicator = { getState: () => live,
+    getCurrentDecision: () => ({ ready: true, state: live, scope }),
+    isCurrentDecision: value => value === scope,
+    isCurrentDecisionOwner: value => value === scope };
+  vm.runInNewContext(unsavedGuardSource, { window: h.win, document: h.doc, console, setTimeout, clearTimeout });
+  h.api.bindMenu(h.panel);
+  const dialog = () => h.doc.querySelector('[role="dialog"][aria-label]');
+  const button = text => h.doc.querySelectorAll('button').find(item => item.textContent === text);
+  return { ...h, state, name, native, reset, menuClear, dialog, button };
+}
+
+describe('Chrome: Wyczyść działa przez istniejący formularz i rzeczywisty unsaved guard', () => {
+  it.each(['saved', 'hidden'])('nie tworzy zmian ani dodatkowego dialogu dla bieżącego stanu %s', live => {
+    const h = clearMenuEnvironment({ live }); h.menuClear.click();
+    expect(h.reset).toHaveBeenCalledOnce(); expect(h.name.value).toBe(''); expect(h.dialog()).toBeNull();
+  });
+  it.each([
+    ['dirty', 'Zapisać zmiany przed wyczyszczeniem?', 'Odrzuć zmiany i wyczyść'],
+    ['new_patient', 'Zapisać wpisane dane przed wyczyszczeniem?', 'Odrzuć dane i wyczyść'],
+  ])('chroni %s mimo syntetycznego replay: Cancel zachowuje, dopiero Discard czyści', (live, title, discard) => {
+    const h = clearMenuEnvironment({ live }); h.menuClear.click();
+    expect(h.dialog()?.getAttribute('aria-label')).toBe(title);
+    expect(h.reset).not.toHaveBeenCalled(); expect(h.name.value).toBe('Fikcyjny wpis Clear');
+    h.button('Anuluj').click();
+    expect(h.dialog()).toBeNull(); expect(h.name.value).toBe('Fikcyjny wpis Clear');
+    h.menuClear.click(); h.button(discard).click();
+    expect(h.reset).toHaveBeenCalledOnce(); expect(h.name.value).toBe('');
+  });
+  it('powtórzony klik podczas decyzji nie tworzy drugiego dialogu ani dodatkowego resetu', () => {
+    const h = clearMenuEnvironment(); h.menuClear.click();
+    const dialog = h.dialog();
+    expect(dialog).not.toBeNull(); expect(h.menuClear.disabled).toBe(true);
+    h.menuClear.click();
+    expect(h.dialog()).toBe(dialog); expect(h.reset).not.toHaveBeenCalled();
+    h.button('Anuluj').click(); expect(h.menuClear.disabled).toBe(false);
+    h.menuClear.click(); h.button('Odrzuć zmiany i wyczyść').click();
+    expect(h.reset).toHaveBeenCalledOnce();
+  });
+  it.each(['boot', 'restore', 'stale', 'locked', 'nativeHidden'])('nie czyści przed gotowością lub po utracie źródła: %s', reason => {
+    const h = clearMenuEnvironment({ live: 'saved' });
+    if (reason === 'boot') h.state.ready = false;
+    if (reason === 'restore') h.state.pending = true;
+    if (reason === 'stale') h.state.stale = true;
+    if (reason === 'locked') h.state.unlocked = false;
+    if (reason === 'nativeHidden') h.native.hidden = true;
+    h.api.refreshClear();
+    expect(h.menuClear.disabled).toBe(true); expect(h.menuClear.getAttribute('aria-disabled')).toBe('true');
+    h.api.clearCurrent(h.menuClear);
+    expect(h.reset).not.toHaveBeenCalled(); expect(h.name.value).toBe('Fikcyjny wpis Clear');
+  });
+  it.each(['account', 'route', 'document'])('spóźniony Discard nie czyści formularza po zmianie: %s', change => {
+    const h = clearMenuEnvironment(); h.menuClear.click();
+    expect(h.dialog()).not.toBeNull();
+    if (change === 'account') h.state.userId = 'fictional-new-owner';
+    if (change === 'route') h.win.location.href = 'https://fikcyjne.invalid/notatki.html';
+    if (change === 'document') {
+      const other = clearMenuEnvironment({ live: 'saved' });
+      const panes = h.main.appendChild(new h.Element('div')); panes.setAttribute('id', 'appPanes');
+      const frame = panes.appendChild(new h.Element('iframe')); frame.contentWindow = other.win; frame.contentDocument = other.doc;
+      panes.querySelector = () => frame;
+    }
+    h.button('Odrzuć zmiany i wyczyść').click();
+    expect(h.reset).not.toHaveBeenCalled(); expect(h.name.value).toBe('Fikcyjny wpis Clear');
+  });
+  it('Klirens zachowuje własny natywny reset zamiast dodawać ogólny dialog', () => {
+    const h = clearMenuEnvironment({ clcr: true }); h.menuClear.click();
+    expect(h.reset).toHaveBeenCalledOnce(); expect(h.name.value).toBe(''); expect(h.dialog()).toBeNull();
+  });
+});
 
 describe('Chrome: kopiowanie nazwy w przycisku menu', () => {
   for (const kind of ['patient', 'account']) {
@@ -527,9 +613,15 @@ describe('Chrome: menu posiada focus oraz odtwarza tło', () => {
     h.api.close(h.drawer); h.doc.activeElement = h.frame; next.dispatchEvent({ type: 'focusin', target: {} }); expect(h.doc.activeElement).toBe(h.frame);
   });
   it('snapshotuje nowe tło i przywraca także odłączony element', () => {
-    const h = environment(false); h.trigger.click(); const node = h.doc.body.appendChild(new h.Element('button')); node.setAttribute('tabindex', '4');
-    h.observers.forEach((observer) => observer.callback()); expect(node.getAttribute('tabindex')).toBe('-1'); expect(node.getAttribute('aria-hidden')).toBe('true');
-    h.doc.body.removeChild(node); h.api.close(h.drawer); expect(node.getAttribute('tabindex')).toBe('4'); expect(node.hasAttribute('aria-hidden')).toBe(false); expect(h.observers.every((observer) => observer.disconnected)).toBe(true);
+    const h = environment(false), backgroundObservers = new Set(h.observers);
+    h.trigger.click();
+    // Clear availability also observes the live document. Only observers
+    // installed by opening this drawer belong to its transient inert scope.
+    const drawerObservers = h.observers.filter(observer => !backgroundObservers.has(observer));
+    expect(drawerObservers.length).toBeGreaterThan(0);
+    const node = h.doc.body.appendChild(new h.Element('button')); node.setAttribute('tabindex', '4');
+    drawerObservers.forEach((observer) => observer.callback()); expect(node.getAttribute('tabindex')).toBe('-1'); expect(node.getAttribute('aria-hidden')).toBe('true');
+    h.doc.body.removeChild(node); h.api.close(h.drawer); expect(node.getAttribute('tabindex')).toBe('4'); expect(node.hasAttribute('aria-hidden')).toBe(false); expect(drawerObservers.every((observer) => observer.disconnected)).toBe(true);
   });
   it.each([true, false])('przeniesiony wrapper i input do menu odzyskują wcześniejsze atrybuty; nativeInert=%s', (native) => {
     const h = environment(native); h.main.setAttribute('aria-hidden', 'false'); h.main.style.setProperty('pointer-events', 'auto', 'important'); h.trigger.click();
