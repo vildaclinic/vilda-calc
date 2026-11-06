@@ -627,6 +627,12 @@ a etykieta „Zapisywanie” oczekuje jeszcze na odświeżenie. Trwający zapis,
 zmiana konta, dokumentu, trasy lub formularza nadal blokują reset. Nie ma
 osobnego zezwolenia dla przycisku menu ani pominięcia ostrzeżenia.
 
+Panel Dokumentów rozróżnia nowe wczytanie od opóźnionego powiadomienia kończącego
+operację, z której już go otwarto. To drugie zachowuje okno tylko przy zgodnym
+numerze operacji, właścicielu formularza i sesji konta. Dotyczy także oczekującego
+ładowania modułów raportu. Nowe wczytanie, zmiana właściciela i pozostałe sygnały
+unieważnienia zachowują dotychczasowe zamknięcie panelu.
+
 ### 5. Synchronizacja
 
 Publiczne moduły `vilda_sync.js`, `vilda_sync_integration.js` i `vilda_realtime.js` integrują aplikację z opcjonalną usługą synchronizacji. Szczegóły infrastruktury i kod usługi nie powinny być kopiowane do publicznych zgłoszeń.

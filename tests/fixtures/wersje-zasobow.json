@@ -1736,8 +1736,8 @@
   "sha256": "585daa31f5ad25bbdffbee7c23e34b01a8062961d33fdeee7dc8898c85cd9cc8"
  },
  "vilda_patient_documents.js": {
-  "v": 1,
-  "sha256": "95da5e840e376c4e6d47ee92d79192a1f22b05781db6d3ec953430b2ab0e86d6"
+  "v": 2,
+  "sha256": "9f0c7453bf7751bef432ac2c3d1f17993552d9d71b7c5fe8c50eaac0b27d46fb"
  },
  "vilda_patient_identity_protocol.js": {
   "v": 1,

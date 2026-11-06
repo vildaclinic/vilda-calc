@@ -2692,6 +2692,7 @@ const OPTIONAL_ASSETS = [
   '/vilda_session_bridge.js?v=175',
   '/vilda_sync.js?v=48',
   '/vilda_patient_documents.js?v=1',
+  '/vilda_patient_documents.js?v=2',
   '/vilda_patient_documents.css?v=1',
   '/vilda_patient_documents.css?v=2',
   '/vilda_summary_layout.js?v=1',
