@@ -131,6 +131,21 @@ function Ch_bindSaveSource(context){
     Ch_saveObserver.observe(chip,{attributes:true,attributeFilter:["class","title"]});
   }
 }
+function Cm_navigationPresentation(){
+  try{var shell=r.VildaShell;return shell&&typeof shell.getSidebarPresentation==="function"?shell.getSidebarPresentation():null}catch{return null}
+}
+function Cm_paintPreparation(button,value){
+  if(!button)return;
+  if(value===null||value===undefined){button.removeAttribute("data-menu-preparing");button.removeAttribute("data-menu-was-enabled");return}
+  Ch_attr(button,"data-menu-preparing","true");Ch_attr(button,"data-menu-was-enabled",!!value);
+}
+function Cm_refreshNavigationActions(){
+  var view=Cm_navigationPresentation();
+  [["saveDataBtnSidebar","save"],["patientDocumentsBtnSidebar","documents"]].forEach(function(pair){
+    var buttons=o.querySelectorAll('#'+pair[0]+',[data-drawer-btn="'+pair[0]+'"]');
+    for(var index=0;index<buttons.length;index++)Cm_paintPreparation(buttons[index],view?view[pair[1]]:null);
+  });
+}
 function Ch_refreshSaveState(){
   var context=Ch_saveContext(),source=Ch_saveSource(context),previous=Ch_saveDocument,state="hidden",title="";
   Ch_bindSaveSource(context);
@@ -139,6 +154,8 @@ function Ch_refreshSaveState(){
     var value=source.api.getState();if(["saved","dirty","new_patient","saving","error"].indexOf(value)!==-1)state=value==="new_patient"?"new":value;
     title=typeof source.api._buildTitleAttr==="function"?source.api._buildTitleAttr(value):source.chip&&source.chip.getAttribute("title")||"";
   }catch{}
+  var presentation=Cm_navigationPresentation();
+  if(state==="hidden"&&presentation&&presentation.state){state=presentation.state==="new_patient"?"new":presentation.state;title=presentation.title}
   var labels={saved:"Zapisano",dirty:"Niezapisane zmiany",new:"Nowy pacjent",saving:"Zapisywanie\u2026",error:"B\u0142\u0105d zapisu",hidden:"Brak danych"};
   var controls=o.querySelectorAll("[data-menu-save-status]");
   for(var index=0;index<controls.length;index++){
@@ -350,13 +367,15 @@ function Cm_refreshClear(){
   var source=Ch_saveContext();Cm_bindClear(source);
   var pending=Cm_clearCurrent.pending;
   if(pending&&!Cm_clearPendingCurrent(pending.context))Cm_clearCurrent.pending=false;
-  var available=!!Cm_clearContext(),busy=!!Cm_clearCurrent.pending;
+  var available=!!Cm_clearContext(),busy=!!Cm_clearCurrent.pending,presentation=Cm_navigationPresentation();
   var controls=o.querySelectorAll("[data-menu-clear]");
   for(var index=0;index<controls.length;index++){
     var button=controls[index],disabled=!available||busy;
+    var preparing=!!(presentation&&presentation.clear!==null);
+    Cm_paintPreparation(button,presentation?presentation.clear:null);
     if(button.disabled!==disabled)button.disabled=disabled;
-    Ch_attr(button,"aria-disabled",disabled);Ch_attr(button,"aria-busy",busy);
-    Ch_attr(button,"title",available?"Wyczy\u015b\u0107 wszystkie pola bie\u017c\u0105cego formularza":"Wyczy\u015b\u0107 jest dost\u0119pne w aktywnym formularzu pacjenta.");
+    Ch_attr(button,"aria-disabled",disabled);Ch_attr(button,"aria-busy",busy||preparing);
+    Ch_attr(button,"title",preparing?"Trwa wczytywanie formularza\u2026":available?"Wyczy\u015b\u0107 wszystkie pola bie\u017c\u0105cego formularza":"Wyczy\u015b\u0107 jest dost\u0119pne w aktywnym formularzu pacjenta.");
   }
 }
 function Cm_menuItem(key){
@@ -483,6 +502,7 @@ async function Cm_openMenuPatient(change,opener){
 function Cm_refreshMenuActions(){
   Qdm(o.querySelector("[data-vilda-chrome-drawer]"));
   Ch_refreshSaveState();
+  Cm_refreshNavigationActions();
 }
 // Account/patient names remain copyable. A drag that selected a name must not
 // turn its following pointer click into navigation; keyboard and plain clicks
@@ -874,7 +894,7 @@ function Cm_documentsState(){
 function Cm_documentsRefresh(){
   var button=o.getElementById("patientDocumentsBtnSidebar");
   if(!button)return;
-  if(button._cfBound){Qdm(o.querySelector("[data-vilda-chrome-drawer]"));return}
+  if(button._cfBound){Qdm(o.querySelector("[data-vilda-chrome-drawer]"));Cm_refreshNavigationActions();return}
   var state=Cm_documentsState(),disabled=!!(state.disabled||state.busy);
   if(disabled)button.setAttribute("aria-disabled","true");else button.removeAttribute("aria-disabled");
   if(state.busy)button.setAttribute("aria-busy","true");else button.removeAttribute("aria-busy");

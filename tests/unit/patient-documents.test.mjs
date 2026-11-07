@@ -29,6 +29,38 @@ function setup({ lazy = false, frame = null } = {}) {
 const ready = { shouldShow: true, proMode: true, isDocPro: false };
 
 describe('Dokumenty pacjenta — native readiness and operation ownership', () => {
+  it('separates transient readiness from actual unavailable content without changing getState shape', () => {
+    const { api, w } = setup();
+    expect(api.getReadinessPhase()).toBe('preparing');
+    expect(Object.keys(api.getState()).sort()).toEqual(['busy', 'disabled', 'reason']);
+    api.setSummaryState(ready);
+    expect(api.getReadinessPhase()).toBe('ready');
+    w.VildaDataImportExport.getApplyLoadedDataSequence = () => 2;
+    expect(api.getReadinessPhase()).toBe('preparing');
+    expect(api.getState().disabled).toBe(true);
+    api.setSummaryState({ ...ready, shouldShow: false });
+    expect(api.getReadinessPhase()).toBe('unavailable');
+    w.professionalMode = false;
+    expect(api.getReadinessPhase()).toBe('unavailable');
+  });
+
+  it('publishes preparing-to-unavailable even when public disabled text is identical', () => {
+    const { api, w, d } = setup();
+    const phases = [];
+    d.addEventListener('vilda:patient-documents-state', () => phases.push(api.getReadinessPhase()));
+    api.setSummaryState(ready);
+    w.__vildaPersistRestoring = true;
+    api.setSummaryState(ready);
+    w.__vildaPersistRestoring = false;
+    d.dispatchEvent(new Event('vilda:main-session-restored'));
+    expect(api.getReadinessPhase()).toBe('preparing');
+    expect(phases.at(-1)).toBe('preparing');
+    const before = api.getState();
+    api.setSummaryState({ ...ready, shouldShow: false });
+    expect(api.getState()).toEqual(before);
+    expect(phases.at(-1)).toBe('unavailable');
+  });
+
   it('requires the native summary gate and keeps the existing PRO gate', () => {
     const { api, w } = setup();
     expect(api.getState().disabled).toBe(true);

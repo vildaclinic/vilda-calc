@@ -1951,6 +1951,25 @@ html.vilda-phone .chrome-drawer .chrome-menu-clear-button:is([aria-disabled=true
   color: inherit
 }
 
+/* During a scoped same-visit handoff the controls remain truly disabled.
+   Only their previous palette stays in place until the new native owner is
+   ready; real unavailability continues to use the normal disabled palette. */
+.vilda-header-menu .chrome-menu-actions .chrome-menu-action-buttons .chrome-menu-save[data-menu-preparing=true][data-menu-was-enabled=true] {
+  background: var(--chrome-active-bg)!important;
+  border-color: transparent!important;
+  color: #fff!important
+}
+.vilda-header-menu .chrome-menu-actions :is(.chrome-menu-documents,.chrome-menu-clear-button)[data-menu-preparing=true][data-menu-was-enabled=true] {
+  background: #fff!important;
+  border-color: #bfd6d9!important;
+  color: var(--text, #333)!important
+}
+.vilda-header-menu .chrome-menu-actions :is(.chrome-menu-documents,.chrome-menu-clear-button)[data-menu-preparing=true][data-menu-was-enabled=true] svg {
+  color: var(--primary, #00838d)
+}
+.vilda-header-menu .chrome-menu-actions [data-menu-preparing=true] {
+  cursor: progress
+}
 .chrome-menu-actions [aria-busy=true] {
   cursor: progress
 }
