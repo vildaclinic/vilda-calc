@@ -9,7 +9,7 @@ function documentHarness({ shared = { main: null }, route = 'index', values = {}
   const fields = new Map(), events = [], storage = new Map();
   const initial = { name: '', age: '', ageMonths: '', ageWeeks: '', sex: 'M', height: '', weight: '', ...values };
   for (const [id, value] of Object.entries(initial)) fields.set(id, {
-    id, value: String(value), tagName: 'INPUT', type: 'text', checked: false, style: {}, dataset: {},
+    id, value: String(value), tagName: 'INPUT', type: 'text', checked: false, disabled: false, style: {}, dataset: {},
     addEventListener() {}, removeEventListener() {}, setAttribute() {}, removeAttribute() {},
     dispatchEvent(event) { events.push({ id, type: event.type, value: this.value }); return true; },
     classList: { add() {}, remove() {}, toggle() {}, contains: () => false },
@@ -134,9 +134,9 @@ describe('blank Start and DocPro session round trips', () => {
     }
   });
 
-  it('retains doctor preferences without turning their persisted session into a newborn on repeated navigation', () => {
+  it.each(['M', 'F'])('retains doctor preferences and editable sex %s without turning the session into a newborn', sex => {
     const shared = { main: null };
-    const start = documentHarness({ shared, doctor: true });
+    const start = documentHarness({ shared, doctor: true, values: { sex } });
     expect(start.restore()).toBe(false);
     expect(start.saveSession()).toBe(true);
     for (let cycle = 0; cycle < 3; cycle++) {
@@ -144,6 +144,8 @@ describe('blank Start and DocPro session round trips', () => {
         const h = documentHarness({ shared, route });
         expect(h.restore(), `${route}, cycle ${cycle}`).toBe(true);
         expect(h.fields.get('isDoctor').checked).toBe(true);
+        expect(h.fields.get('sex').value, `${route}, cycle ${cycle}`).toBe(sex);
+        expect(h.fields.get('sex').disabled, `${route}, cycle ${cycle}`).toBe(false);
         for (const id of ['age', 'ageMonths', 'ageWeeks']) expect(h.fields.get(id).value, `${route}/${id}`).toBe('');
         expect(h.collect().user).toMatchObject({ age: null, ageMonths: null });
         expect(h.saveSession()).toBe(true);
@@ -168,6 +170,55 @@ describe('blank Start and DocPro session round trips', () => {
     expect(next.restore()).toBe(true);
     expect(next.collect().user).toEqual(expected);
     expect(shared.main.user).toEqual(expected);
+  });
+});
+
+describe('session restoration does not own an anonymous form identity lock', () => {
+  const preferences = () => ({ version: 1, name: '',
+    user: { age: null, ageMonths: null, sex: 'F', height: null, weight: null },
+    doctor: { isDoctor: true } });
+
+  it.each(['index', 'docpro'])('restores an anonymous preference-only %s session without locking sex', route => {
+    const h = documentHarness({ route }), payload = preferences(), before = clone(payload);
+    expect(h.apply(payload, { isSessionRestore: true })).toBe(true);
+    expect(h.fields.get('sex').value).toBe('F');
+    expect(h.fields.get('sex').disabled).toBe(false);
+    expect(payload).toEqual(before);
+  });
+
+  it.each([
+    ['newborn', { age: 0, ageMonths: 0, height: 50, weight: 3.2 }],
+    ['measured child', { age: 12, ageMonths: 4, height: 150, weight: 40 }],
+  ])('keeps an unnamed unsaved %s editable while preserving the entered measurements', (_label, user) => {
+    const h = documentHarness(), payload = preferences();
+    Object.assign(payload.user, user);
+    expect(h.apply(payload, { isSessionRestore: true })).toBe(true);
+    expect(h.fields.get('sex').value).toBe('F');
+    expect(h.fields.get('sex').disabled).toBe(false);
+    expect(h.collect().user).toMatchObject({ ...user, sex: 'F' });
+  });
+
+  it('does not release an existing lock owned by another module', () => {
+    const h = documentHarness();
+    h.fields.get('sex').disabled = true;
+    expect(h.apply(preferences(), { isSessionRestore: true })).toBe(true);
+    expect(h.fields.get('sex').disabled).toBe(true);
+  });
+
+  it.each(['name', 'user-names', 'selected-patient'])('preserves the %s patient identity lock during session restore', identity => {
+    const h = documentHarness(), payload = preferences();
+    if (identity === 'name') payload.name = 'Fikcyjna Alicja Z Kartoteki';
+    if (identity === 'user-names') Object.assign(payload.user, { firstName: 'Fikcyjna', lastName: 'Alicja Z Kartoteki' });
+    if (identity === 'selected-patient') h.storage.set('vildaCurrentPatientId', 'fictional-selected-patient');
+    expect(h.apply(payload, { isSessionRestore: true })).toBe(true);
+    expect(h.fields.get('sex').value).toBe('F');
+    expect(h.fields.get('sex').disabled).toBe(true);
+  });
+
+  it('preserves the existing lock when an anonymous record is explicitly imported', () => {
+    const h = documentHarness();
+    expect(h.apply(preferences())).toBe(true);
+    expect(h.fields.get('sex').disabled).toBe(true);
   });
 });
 

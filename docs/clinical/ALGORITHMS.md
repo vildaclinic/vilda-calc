@@ -35069,6 +35069,25 @@ wieku oraz zapis fikcyjnego noworodka z kontrolą niezmienności całego rekordu
 Wpływ kliniczny ogranicza się do usunięcia niepodanego wieku z wejść; nie zmieniamy
 obliczeń dla rzeczywiście podanych danych.
 
+### Edytowalna płeć pustego formularza po DocPro (P-PUSTA-PLEC, 2026-11-07)
+
+Importer nakładał `sex.disabled = true` przy każdym odtworzeniu sesji
+z `user.sex`, również gdy był to pusty formularz z domyślną płcią i preferencjami.
+Po Start → DocPro → Start pole „Płeć” stawało się niedostępne mimo braku
+wczytanego pacjenta.
+
+Odtworzenie anonimowego, nienazwanego formularza przywraca wartość płci bez
+nakładania tej blokady. Jawny import oraz sesja z nazwą lub identyfikatorem
+pacjenta zachowują dotychczasową ochronę tożsamości. Nie zdejmujemy blokady
+ustanowionej przez inny moduł. Wartości M/F, wiek, pomiary, wzory, normy
+i zapisane rekordy pozostają bez zmian; zachowana jest poprawka P-PUSTY-WIEK.
+
+Testy wykonują rzeczywisty kolektor i importer oraz natywną nawigację:
+trzy powroty i F5 przy 1440 i 390 px, nienazwany roboczy pomiar z płcią F
+oraz zapis noworodka z kontrolą blokady i niezmienności całego rekordu.
+Obserwacja aktualizacji sesji utworzonej na poprzedniej wersji potwierdza
+edytowalne pole po przeładowaniu i następnym powrocie z DocPro.
+
 ## Świeżo wczytany pacjent wygrywa ze startowym odtworzeniem sesji (P-SWIEZE-WCZYTANIE, SW 1.1.165, 2026-10-05)
 
 **Zmiana kliniczna: NIE** — żaden wzór, próg, jednostka, dawka ani interpretacja. Zmienia się kolejność dwóch kroków przy starcie strony: odtworzenia sesji karty i wczytania pacjenta. Zlecenie właściciela 2026-10-05.
