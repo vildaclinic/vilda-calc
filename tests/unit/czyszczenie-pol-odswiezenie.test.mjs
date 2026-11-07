@@ -180,8 +180,8 @@ describe('P-GH-TOZSAMOSC rata 2 — po wyczyszczeniu flagi zawieszenia opadają 
     // ścieżka wczytania: import punktów GH ma pierwszeństwo przed parowaniem
     expect(src).toContain('x("suspend-pairing-until-gh-import",Ggh_a,["applyLoadedData"])');
     expect(src).not.toContain('x("ensure-advanced-intake-pairing",r.vildaEnsureAdvancedIntakePairing,[])');
-    expect(src).toContain('Ggh_b("ghReimport")};');
-    expect(src).toContain('m||ghReimport(a)||Ggh_b("applyLoadedData:no-reimport")');
+    expect(src).toContain('Ggh_b("ghReimport",restoreOwner)};');
+    expect(src).toContain('m||ghReimport(a,growthRestoreOwner)||Ggh_b("applyLoadedData:no-reimport",growthRestoreOwner)');
   });
 });
 

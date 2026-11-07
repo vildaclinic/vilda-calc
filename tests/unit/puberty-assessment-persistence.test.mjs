@@ -402,6 +402,14 @@ describe('typed puberty — patient and vault boundaries', () => {
 
   it('the real autocomplete loader completes applyLoadedData and its identity event in the handoff window', async () => {
     const env = environment();
+    const accountSession = {};
+    Object.assign(env.win.VildaVault, {
+      getCurrentUser: () => ({ userId: 'fictional-puberty-load-owner' }),
+      captureSyncOperationSession: () => accountSession,
+      assertSyncOperationSession: token => { if (token !== accountSession) throw new Error('Fictional stale account session'); },
+    });
+    const panel = fs.readFileSync(new URL('../../vilda_panel_pacjent.js', import.meta.url), 'utf8');
+    new Function('window', 'globalThis', panel)(env.win, env.win);
     env.win.VildaVault.getPatient = async () => ({ snapshots: [{ payload: payload(), savedAtISO: '2025-02-03' }] });
     env.win.applyLoadedData = (value) => env.api.applyLoadedData(value, options);
     // The production identity listener in custom-fixes updates sessionStorage
@@ -412,8 +420,9 @@ describe('typed puberty — patient and vault boundaries', () => {
       return dispatch(event);
     };
     const auth = fs.readFileSync(new URL('../../vilda_auth_ui.js', import.meta.url), 'utf8');
+    const helpers = auth.slice(auth.indexOf('function patientLoadCapture('), auth.indexOf('var ws=', auth.indexOf('function patientLoadCapture(')));
     const source = auth.slice(auth.indexOf('function ks('), auth.indexOf('function Bz0(', auth.indexOf('function ks(')));
-    const load = new Function('i', 'jt', 'bo', 'wo', `${source};return ks;`)(env.win, () => env.win.VildaVault, () => false, () => {});
+    const load = new Function('i', 'jt', 'bo', 'wo', `${helpers}\n${source};return ks;`)(env.win, () => env.win.VildaVault, () => false, () => {});
     load('synthetic-b', 'Fikcyjny Test Pokwitania');
     await Promise.resolve(); await Promise.resolve();
     expect(env.state.capture().patientId).toBe('synthetic-b');

@@ -5,6 +5,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const root=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'../..');
 const exporterSource=fs.readFileSync(path.join(root,'vilda_data_import_export.js'),'utf8');
+const panelSource=fs.readFileSync(path.join(root,'vilda_panel_pacjent.js'),'utf8');
 const consumerSource=fs.readFileSync(path.join(root,'gh_therapy_monitor.js'),'utf8');
 const clone=value=>value==null?value:JSON.parse(JSON.stringify(value));
 const X={version:1,name:'Fikcyjny Start',user:{age:8,ageMonths:0,sex:'M',height:126,weight:25}};
@@ -34,10 +35,12 @@ function environment({session=X,sourcePatient=ID_X,initialPid=null}={}){
  getPatient:vi.fn(async id=>({patientId:id,snapshotCount:1,snapshots:[{savedAtISO:'2026-10-31T12:00:00Z',payload:clone(Y)}]})),savePatient:vi.fn(async()=>({patientId:ID_X,snapshotId:'fictional-snapshot'}))};
  win.VildaVault=vault;win.VildaAuthUI={isBootReady:()=>authReady};
  const persistence={getStorage:()=>ss,readMainSession:vi.fn(()=>clone(current)),writeMainSession:vi.fn(value=>{current=clone(value);return true}),clearMainSession:vi.fn(()=>{current=null;return true}),readClcrSession:()=>null};win.VildaPersistence=persistence;
+ new Function('window','globalThis',panelSource)(win,win);
  new Function('window','globalThis',exporterSource)(win,win);const api=win.VildaDataImportExport;
+ doc.addEventListener('vilda:patient-loaded',event=>{const id=event&&event.detail&&event.detail.patientId;if(id){win._vildaCurrentPatientId=id;ss.setItem('vildaCurrentPatientId',id)}});
  const initialApply=vi.fn(()=>{win._vildaCurrentPatientId=sourcePatient;return true});
  const options={persistence,collectUserData:()=>clone(current||X),anyDataEntered:()=>false,applyLoadedData:initialApply,vildaAppOnReady:(_name,fn)=>appReady.push(fn)};
- const applied=vi.fn(()=>true),highlight=vi.fn();win.applyLoadedData=applied;
+ const applied=vi.fn(value=>api.applyLoadedData(value)),highlight=vi.fn();win.applyLoadedData=applied;
  const start=consumerSource.indexOf('// A GH navigation intent waits for the FIRST restore'),end=consumerSource.indexOf('function X(){',start);
  if(start<0||end<0)throw new Error('Actual consumer source missing');
  const N=new Function('window','document','pe','setTimeout',consumerSource.slice(start,end)+';return N;')(win,doc,highlight,setTimeout);
@@ -85,7 +88,21 @@ describe('actual GH N handles one intent before its first guard',()=>{
  it('invalid Save removal without callbacks cannot strand the next intent',async()=>{const h=environment({initialPid:ID_X});await h.finishBoot();h.guardMode('hold');h.intent();await h.N();const old=h.calls[0];h.removeModal();await flush();h.guardMode('cancel');h.intent();await h.N();expect(h.calls).toHaveLength(2);old.onProceed();expect(h.applied).not.toHaveBeenCalled()});
  it('uses the existing 60s only before the first guard',async()=>{const h=environment();h.intent();const p=h.N();vi.advanceTimersByTime(60001);await h.finishBoot();await p;expect(h.calls).toHaveLength(0);expect(h.vault.getPatient).not.toHaveBeenCalled()});
  it('keeps a valid shown guard usable after that initial TTL',async()=>{const h=environment({initialPid:ID_X});await h.finishBoot();h.guardMode('hold');h.intent();await h.N();vi.advanceTimersByTime(61000);h.removeModal();h.calls[0].onProceed();expect(h.applied).toHaveBeenCalledTimes(1);expect(h.win._vildaCurrentPatientId).toBe(ID_Y)});
- it('leaves a guard-authorized own-save PID handoff to that guard',async()=>{const h=environment({sourcePatient:null});await h.finishBoot();h.guardMode('hold');h.intent();await h.N();h.ss.setItem('vildaCurrentPatientId','fictional-own-new-patient');h.win._vildaCurrentPatientId='fictional-own-new-patient';h.removeModal();h.calls[0].onProceed();expect(h.applied).toHaveBeenCalledTimes(1);expect(h.win._vildaCurrentPatientId).toBe(ID_Y)});
+ it('leaves a verified guard-authorized own-save PID handoff to that guard',async()=>{
+  const h=environment({sourcePatient:null});await h.finishBoot();
+  const name=events({value:X.name,style:{},dataset:{}});h.doc.getElementById=id=>id==='name'?name:null;
+  h.guardMode('hold');h.intent();await h.N();
+  const result={patientId:'fictional-own-new-patient',snapshotId:'fictional-own-new-version',snapshotCount:1};
+  h.vault.savePatient.mockResolvedValue(result);h.vault.getCommittedSavePayload=value=>value===result?clone(X):null;
+  const receipt=await h.api.saveUserDataWithReceipt({collectUserData:()=>clone(X)});
+  expect(receipt).toMatchObject({saved:true,referenceVerified:true});expect(h.ss.getItem('vildaCurrentPatientId')).toBe(result.patientId);
+  h.removeModal();h.calls[0].onProceed();expect(h.applied).toHaveBeenCalledTimes(1);expect(h.win._vildaCurrentPatientId).toBe(ID_Y);
+ });
+ it('refuses an unproved PID switch while the same guard is open',async()=>{
+  const h=environment({sourcePatient:null});await h.finishBoot();h.guardMode('hold');h.intent();await h.N();
+  h.ss.setItem('vildaCurrentPatientId','fictional-unproved-patient');h.win._vildaCurrentPatientId='fictional-unproved-patient';
+  h.removeModal();h.calls[0].onProceed();expect(h.applied).not.toHaveBeenCalled();expect(h.win._vildaCurrentPatientId).toBe('fictional-unproved-patient');
+ });
  it('rejects a late onProceed after the actual session ticket changed',async()=>{const h=environment({initialPid:ID_X});await h.finishBoot();h.guardMode('hold');h.intent();await h.N();h.lock();h.removeModal();h.calls[0].onProceed();expect(h.applied).not.toHaveBeenCalled()});
  it('fails closed when the guard module is absent',async()=>{const h=environment({initialPid:ID_X});await h.finishBoot();delete h.win.VildaUnsavedGuard;h.intent();await h.N();expect(h.applied).not.toHaveBeenCalled();expect(h.ss.getItem('vilda:gh-jump')).toBeNull()});
 });

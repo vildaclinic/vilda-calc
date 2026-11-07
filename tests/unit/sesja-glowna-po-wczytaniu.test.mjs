@@ -198,9 +198,10 @@ describe('P-POWLOKA-PANELE — sesja główna po wczytaniu nie czeka na zdarzeni
   it('strażnicy źródła: wymuszony zapis po wczytaniu i odtworzeniu, Pe z zakresem autora, powłoka zapisuje przed przełączeniem i odtwarza docelowy panel', () => {
     const ie = czytaj('vilda_data_import_export.js');
     expect(ie).toContain('P-POWLOKA-PANELE (zgloszenie wlasciciela 2026-09-28)');
-    // applyLoadedData: zapis PRZED pingiem vilda:sharedLoadSeq; oba pomijane przy odtwarzaniu istniejącej sesji
+    // applyLoadedData wywołuje zapis przed pingiem vilda:sharedLoadSeq; operacja ze znanym celem
+    // czeka na zakończenie własnego apply/publikacji PID. Przy odtwarzaniu sesji zapis jest pomijany.
     expect(ie).toContain('if(Gp_a(a),a.isSessionRestore!==!0&&tt(),a.isSessionRestore!==!0)try{');
-    expect(ie).toContain('function Gp_a(e){const t=pe(e),authority=captureMainSessionWriteAuthority();if(!authority||t&&t.isSessionRestore)return!1;let a=!1;try{a=!!oe(Object.assign({},t,{force:!0}),authority)}');
+    expect(ie).toContain('function Gp_a(e,acceptedOperation){const t=pe(e),load=acceptedOperation||activeAcceptedPatientLoad;\nif(load&&!load.nativeApplied){load.writeOptions=t;return!1}\nconst authority=captureMainSessionWriteAuthority();if(!authority||t&&t.isSessionRestore)return!1;let a=!1;try{a=!!oe(Object.assign({},t,{force:!0}),authority,ACCEPTED_LOAD_MAIN_WRITE,load)}');
     // wczytanie/odtworzenie kończy okno blokady po czyszczeniu (adapter odmawiał w nim każdego zapisu)
     expect(ie).toContain('function Gp_b(){try{const e=Number(r.__vildaPersistClearUntil||0);if(e>Date.now())return r.__vildaPersistClearUntil=0,!0}');
     expect(ie).toContain('if(!m){Gp_b();try{typeof r.vildaPersistFlushNow=="function"&&r.vildaPersistFlushNow({force:!0})}');
@@ -209,7 +210,7 @@ describe('P-POWLOKA-PANELE — sesja główna po wczytaniu nie czeka na zdarzeni
     // pagehide z force
     expect(ie).toContain('r.addEventListener("pagehide",()=>oe(Object.assign({},t,{force:!0})),{capture:!0})');
     // strażnicy zapisu: odtwarzanie w toku, sesja jeszcze nieodtworzona, pauza tylko dla zwykłego zapisu
-    expect(ie).toContain('function oe(e,scheduledAuthority){const t=pe(e),a=!!(t&&t.force),authority=scheduledAuthority===undefined?captureMainSessionWriteAuthority():scheduledAuthority;if(!mainSessionWriteAuthorityCurrent(authority))return!1;if(!ge(t)||Gp_r(t)||Gp_k(t)||!a&&Be(t))return!1;');
+    expect(ie).toContain('function oe(e,scheduledAuthority,origin,acceptedOperation){if(pendingAcceptedPatientLoad&&acceptedOperation!==pendingAcceptedPatientLoad)return!1;const t=pe(e),a=!!(t&&t.force),authority=scheduledAuthority===undefined?captureMainSessionWriteAuthority():scheduledAuthority;if(!mainSessionWriteAuthorityCurrent(authority))return!1;if(!ge(t)||Gp_r(t)||Gp_k(t)||!a&&Be(t))return!1;');
     expect(ie).toContain('function Gp_k(e){if(Ke)return!1;');
     expect(ie).toContain('if(!Re(n))return a?!1:(re(t),!1);');
     // Bez ponawiania w pauzie; dodatkowo kolejka zachowuje zakres autora z chwili input/change.
