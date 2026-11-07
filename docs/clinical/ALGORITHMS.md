@@ -13755,6 +13755,14 @@ inicjalizacji uwierzytelnienia, także jeśli sejf jest już otwarty, lecz trwa
 jeszcze ustanawianie klucza. Dowód powstaje po tej granicy; nie odnawiamy
 nieaktualnego potwierdzenia na podstawie zgodnego PID.
 
+Pierwszy natywny zapis może nadać PID, zanim odroczony zapis formularza
+zastąpi wcześniejszy pusty szkic. Kontynuację tej samej wizyty potwierdza
+wynik rzeczywiście zakończonego zapisu, związany z jego pierwotną operacją,
+a nie zgodność nazwiska z tym szkicem. Następny zwykły zapis sesji podczas
+nawigacji może dzięki temu przekazać aktualne pomiary. Samo zdarzenie
+`source: save`, zgodny PID lub późniejszy odczyt rekordu nie odnawiają
+nieaktualnego uprawnienia. Referencja zapisu pozostaje niezmieniona.
+
 Jawne odtworzenie sesji podczas nawigacji wykonuje rzeczywiste zastosowanie
 potwierdzonego szkicu także wtedy, gdy docelowy panel zdążył już odtworzyć
 wspólne pola anonimowego formularza. Przed zastosowaniem sprawdzane są

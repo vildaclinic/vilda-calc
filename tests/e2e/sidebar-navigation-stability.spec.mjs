@@ -162,8 +162,9 @@ async function waitForActualOwner(page, title) {
 
 async function savedMenuFixture(page) {
   const fixture = await createFictionalVault(page, { shell: true });
-  // Acknowledge the real professional gate before the measured cold shell
-  // navigation. The subsequent full document load removes all warm iframes.
+  // Acknowledge the real professional gate, then return through the native
+  // Start hash route. This same-document navigation retains the shell; any
+  // destination refresh is performed by the shell's ordinary lifecycle.
   await navigateMenu(page, 'docpro.html');
   const docpro = await shellFrame(page, 'DocPro');
   await readyForPatient(docpro);
@@ -510,7 +511,8 @@ test('a real in-flight Save retains its status through native navigation and rea
   await observeRealSave(start, { holdAfterCommit: true });
   const session = await context.newCDPSession(page);
   await session.send('Emulation.setCPUThrottlingRate', { rate: 4 });
-  let samples, clickEvidence;
+  let samples, clickEvidence, primaryError;
+  const secondaryErrors = [];
   try {
     await start.locator('#weight').fill('47');
     await start.locator('#weight').blur();
@@ -560,12 +562,36 @@ test('a real in-flight Save retains its status through native navigation and rea
     expect(committedReference).not.toBe(fixture.savedReference);
     expect(await reference(docpro)).toBe(committedReference);
     expect(await start.evaluate(() => window.VildaSaveStatusIndicator.getCurrentDecision().state)).toBe('saved');
+  } catch (error) {
+    primaryError = error;
   } finally {
-    await start.evaluate(() => window.__committedReferenceProbe.release()).catch(() => {});
-    if (!samples) samples = await page.evaluate(() => window.__sidebarPaintProbe.stop()).catch(() => null);
-    if (!clickEvidence) clickEvidence = await page.evaluate(() => window.__nativeSaveNavigation).catch(() => null);
-    await session.send('Emulation.setCPUThrottlingRate', { rate: 1 });
-    await session.detach();
-    await testInfo.attach('native-pending-save', { contentType: 'application/json', body: JSON.stringify({ clickEvidence, samples }, null, 2) });
+    if (!page.isClosed()) {
+      try { await start.evaluate(() => window.__committedReferenceProbe.release()); }
+      catch (error) { secondaryErrors.push({ stage: 'release receipt', error }); }
+      if (!samples) {
+        try { samples = await page.evaluate(() => window.__sidebarPaintProbe.stop()); }
+        catch (error) { secondaryErrors.push({ stage: 'read paint evidence', error }); }
+      }
+      if (!clickEvidence) {
+        try { clickEvidence = await page.evaluate(() => window.__nativeSaveNavigation); }
+        catch (error) { secondaryErrors.push({ stage: 'read click evidence', error }); }
+      }
+    }
+    // Attach whatever was captured before CDP cleanup, which may encounter a
+    // browser already closed by the original test timeout.
+    try {
+      await testInfo.attach('native-pending-save', { contentType: 'application/json', body: JSON.stringify({
+        clickEvidence, samples, primaryError: primaryError?.message,
+        secondaryErrors: secondaryErrors.map(({ stage, error }) => ({ stage, message: error.message })),
+      }, null, 2) });
+    } catch (error) { secondaryErrors.push({ stage: 'attach evidence', error }); }
+    if (!page.isClosed()) {
+      try {
+        await session.send('Emulation.setCPUThrottlingRate', { rate: 1 });
+        await session.detach();
+      } catch (error) { secondaryErrors.push({ stage: 'restore CDP', error }); }
+    }
   }
+  if (primaryError) throw primaryError;
+  if (secondaryErrors.length) throw secondaryErrors[0].error;
 });

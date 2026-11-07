@@ -47,7 +47,7 @@
   }
 
   var stan = { znany: pacjentKarty(), nieaktualny: false, wlasciciel: null, koncowy: false };
-  var writeGeneration = 0, writeTickets = new WeakSet(), acceptedLoads = new WeakMap();
+  var writeGeneration = 0, writeTickets = new WeakSet(), acceptedLoads = new WeakMap(), ownSaveContinuation = null;
 
   function aktywny() {
     try {
@@ -155,7 +155,7 @@
   /* Własne wczytanie albo „Wyczyść” kończy stan nieaktualny także po `utrwal()`: dokument trzyma wtedy to, co sam
      zapisał (np. skok GH dokończony tuż przed przeładowaniem), więc jego zapisy są zgodne z kartą. */
   function odNowa(id, zachowajZapis) {
-    if (!zachowajZapis) writeGeneration += 1;
+    if (!zachowajZapis) { writeGeneration += 1; ownSaveContinuation = null; }
     stan.znany = id || null;
     stan.nieaktualny = false;
     stan.wlasciciel = null;
@@ -253,7 +253,31 @@
       if (ticket.patientId === id) return true;
       // Existing null -> PID adoption is valid only for this same visit and
       // the same identity as the newly saved shared snapshot.
-      return ticket.patientId === null && !!id && stan.znany === id && tenSamPacjentCoMigawka();
+      return ticket.patientId === null && !!id && stan.znany === id &&
+        (tenSamPacjentCoMigawka() || !!(ownSaveContinuation && ownSaveContinuation.generation === ticket.generation && ownSaveContinuation.patientId === id));
+    } catch (_) { return false; }
+  }
+
+  // DIX calls this only after verifying the actual native Save receipt, before
+  // the existing patient-loaded publication. A blank earlier draft cannot
+  // identify the newly saved patient; the original opaque writer can.
+  function completeOwnSaveAuthority(ticket, result) {
+    try {
+      var patientId = result && result.patientId, vault = ticket && ticket.account && ticket.account.vault;
+      function current() {
+        if (!patientId || typeof patientId !== 'string' || !ticket || !writeTickets.has(ticket) || ticket.patientId !== null ||
+            ticket.generation !== writeGeneration || ticket.sequence !== applySequence() ||
+            ticket.shell !== writeShell() || !accountCurrent(ticket.account) || stan.nieaktualny || stan.koncowy ||
+            (stan.znany !== null && stan.znany !== patientId)) return false;
+        var currentId = pacjentKarty();
+        return (currentId === null || currentId === patientId) &&
+          (!ticket.shell || ticket.shell.isSessionWriterCurrent(ticket.source, w));
+      }
+      if (!current() || !vault || typeof vault.getCommittedSavePayload !== 'function' ||
+          !vault.getCommittedSavePayload(result) || !current()) return false;
+      ownSaveContinuation = { generation: writeGeneration, patientId: patientId };
+      odNowa(patientId, true);
+      return true;
     } catch (_) { return false; }
   }
 
@@ -369,6 +393,7 @@
     publishAcceptedLoadAuthority: publishAcceptedLoadAuthority,
     completeAcceptedLoadAuthority: completeAcceptedLoadAuthority,
     completeOwnFailedSaveReset: completeOwnFailedSaveReset,
+    completeOwnSaveAuthority: completeOwnSaveAuthority,
     captureWriteAuthority: captureWriteAuthority,
     isWriteAuthorityCurrent: isWriteAuthorityCurrent,
     isWriteAuthorityCurrentAfterSessionApply: isWriteAuthorityCurrentAfterSessionApply,

@@ -499,6 +499,16 @@ function nativeMainCarryFenceCurrent(fence,scope,adapter){
     return unchanged&&Z()===adapter&&saveReceiptScopeCurrent(scope)&&(!fence.witness||nativeSaveCarryCurrent(fence.witness,scope,adapter));
   }catch(_){return false}
 }
+function continueNativeWriterAfterOwnSave(scope,result,authority,fence){
+  try{
+    const committed=committedSaveWitness,panel=authority&&authority.panel;
+    if(!scope||scope.patientId!==null||!committed||committed.scope!==scope||
+      committed.patientId!==result.patientId||committed.snapshotId!==result.snapshotId||
+      !authority.scoped||!panel||typeof panel.completeOwnSaveAuthority!=="function"||
+      !mainSessionWriteAuthorityCurrent(authority)||!nativeMainCarryFenceCurrent(fence,scope,fence.adapter))return false;
+    return panel.completeOwnSaveAuthority(authority.ticket,result);
+  }catch(_){return false}
+}
 function adoptNativeSaveCarryAfterOwnSave(scope,result){
   const witness=nativeSaveCarryWitness;
   try{
@@ -633,8 +643,8 @@ const saveReceiptScope=captureSaveReceiptScope(r.VildaVault,saveApplySequence);
 if(!saveReceiptScope||!saveReceiptScopeCurrent(saveReceiptScope)){O(Bkotw(),saveReadinessMessage("owner-unavailable"),t,{ton:"uwaga"});return null}
 const saveWriterAuthority=captureMainSessionWriteAuthority(),captureSequence=nativeUserDataCaptureSequence;
 const a=typeof t.collectUserData=="function"?t.collectUserData():Ee(t),collectedSequence=nativeUserDataCaptureSequence;
-const o=Bkotw(),nativeSequence=nativeUserDataCaptures.get(a)||0,nativeSave=nativeSequence>captureSequence&&nativeSequence<=collectedSequence;
-if(nativeSave&&(!mainSessionWriteAuthorityCurrent(saveWriterAuthority)||!prepareNativeSaveCarry(a,saveReceiptScope))){
+const o=Bkotw(),nativeSequence=nativeUserDataCaptures.get(a)||0,nativeSave=nativeSequence>captureSequence&&nativeSequence<=collectedSequence,nativeSaveCarryFence={};
+if(nativeSave&&(!mainSessionWriteAuthorityCurrent(saveWriterAuthority)||!prepareNativeSaveCarry(a,saveReceiptScope,nativeSaveCarryFence))){
   O(o,"Nie można potwierdzić wszystkich danych tej wizyty. Wczytaj pacjenta ponownie przed zapisem.",t,{ton:"uwaga"});return null;
 }
 const savePayloadKey=BsavePayloadKey(a);
@@ -664,6 +674,7 @@ if(s&&s.patientId&&saveReceiptScopeCurrent(saveReceiptScope,s)){
   if(operationSequence<latestCommittedSaveSequence)return;
   latestCommittedSaveSequence=operationSequence;
   saveReceipt.referenceVerified=!!rememberCommittedSave(saveReceiptScope,s,operationSequence);
+  if(nativeSave&&saveReceipt.referenceVerified)continueNativeWriterAfterOwnSave(saveReceiptScope,s,saveWriterAuthority,nativeSaveCarryFence);
 }
 Bzu_odm=null;
 // Kontrola koncowa. Wiersze, ktore lekarz przyjal z bazy, trafily do rekordu, ale nie

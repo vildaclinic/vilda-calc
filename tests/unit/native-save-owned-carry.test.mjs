@@ -15,7 +15,7 @@ const record = () => ({ version: 1, name: 'Fikcyjny Pacjent Zachowania Danych',
 // Actual native collector, accepted load, main-session ownership merge, opaque
 // panel authority and explicit Save. Only DOM/storage/Vault I/O are synthetic;
 // the durable boundary records precisely the payload supplied to savePatient.
-function environment(source = record(), { patientId = PID, panel = true, load = true, shell = false } = {}) {
+function environment(source = record(), { patientId = PID, panel = true, load = true, shell = false, publishPatientOnSave = true } = {}) {
   let main = null, docproUi = null, owner = 'fictional-native-carry-owner', generation = 1, sequence = 0;
   const committed = new WeakMap(), snapshots = [], fields = new Map(), storage = new Map(), listeners = [];
   if (patientId) storage.set('vildaCurrentPatientId', patientId);
@@ -45,7 +45,7 @@ function environment(source = record(), { patientId = PID, panel = true, load = 
     savePatient: vi.fn(async (payload, options = {}) => {
       const result = { patientId: options.patientId || storage.get('vildaCurrentPatientId') || PID, snapshotId: `fictional-native-snapshot-${++sequence}`, snapshotCount: sequence };
       snapshots.push(clone(payload)); committed.set(result, clone(payload));
-      storage.set('vildaCurrentPatientId', result.patientId); return result;
+      if (publishPatientOnSave) storage.set('vildaCurrentPatientId', result.patientId); return result;
     }),
   };
   const host = shell ? powloka(null, host => { host.sessionStorage = { getItem: key => storage.get(key) ?? null }; }) : null;
@@ -548,6 +548,104 @@ describe('immediate native Save uses only the exact accepted main-session restor
     expect(h.snapshots()[0]).toMatchObject({ zscore: { resultsMode: false }, plan: { palFactor: 1.8,
       acceptedMetadata: { fictional: 'original accepted source' } } });
     expect(h.writes).not.toHaveBeenCalled(); expect(h.main()).toEqual(h.source);
+  });
+
+  async function blankAnonymousStart() {
+    const source = record(); source.name = ''; source.user = { sex: 'M', age: null, ageMonths: null, height: null, weight: null };
+    source.foreignClinical = { fictional: { unknown: [null, false, 7] } };
+    const h = environment(source, { patientId: null, load: false, shell: true, publishPatientOnSave: false });
+    h.fields.set('intakePal', h.field('intakePal', '1.8'));
+    h.replaceMain(source);
+    h.api.restoreMainSessionIfAny({ ...h.options, applyLoadedData(value, options) {
+      return h.api.applyLoadedData(value, { ...h.options, ...options });
+    } });
+    await vi.advanceTimersByTimeAsync(0);
+    h.win.document.addEventListener('vilda:patient-loaded', event => {
+      if (event.detail.source === 'save') h.storage.set('vildaCurrentPatientId', event.detail.patientId);
+    });
+    for (const [id, value] of Object.entries({ name: 'Fikcyjny Nowy Pacjent', age: 13, ageMonths: 0, height: 158, weight: 46 })) h.fields.get(id).value = String(value);
+    return { ...h, source };
+  }
+
+  it('continues the verified first Save from a blank anonymous carrier before the navigation writer runs', async () => {
+    const h = await blankAnonymousStart(), source = h.source;
+    const mainBefore = h.main(), receipt = await h.save();
+    expect(receipt).toMatchObject({ saved: true, referenceVerified: true, patientId: PID });
+    const committedBefore = h.api.getCommittedSaveWitness({ patientId: PID, snapshotId: receipt.snapshotId,
+      applySequence: h.api.getApplyLoadedDataSequence() });
+    expect(committedBefore.payload.user).toMatchObject({ age: 13, ageMonths: 0, height: 158, weight: 46 });
+    expect(h.main()).toEqual(mainBefore);
+    expect(h.write()).toBe(true);
+    expect(h.main().user).toMatchObject({ age: 13, ageMonths: 0, height: 158, weight: 46 });
+    expect(h.main().foreignClinical).toEqual(source.foreignClinical);
+    expect(h.main().growthBasic).toEqual(committedBefore.payload.growthBasic);
+    expect(h.api.getCommittedSaveWitness({ patientId: PID, snapshotId: receipt.snapshotId,
+      applySequence: h.api.getApplyLoadedDataSequence() })).toEqual(committedBefore);
+    h.fields.get('height').value = '159';
+    expect((await h.save()).saved).toBe(true);
+    expect(h.snapshots()[1].user.height).toBe(159);
+  });
+
+  it.each(['account', 'key', 'visit', 'apply', 'activation', 'carrier', 'adapter'])('cannot continue the first native Save after %s changes during its real commit', async cause => {
+    const h = await blankAnonymousStart(), ticket = h.win.VildaPanelPacjent.captureWriteAuthority();
+    const commit = h.vault.savePatient.getMockImplementation();
+    h.vault.savePatient.mockImplementation(async (payload, options) => {
+      const result = await commit(payload, options);
+      if (cause === 'account') h.changeAccount();
+      if (cause === 'key') h.rotateSession();
+      if (cause === 'visit') h.win.VildaPanelPacjent.invalidateWriteAuthority();
+      if (cause === 'apply') h.api.applyLoadedData({ ...record(), name: 'Fikcyjny Nowszy Pacjent' }, h.options);
+      if (cause === 'activation') { h.host.shell.navigate('start'); h.host.shell.navigate('docpro'); }
+      if (cause === 'carrier') { const next = h.main(); next.foreignClinical = { fictional: 'replaced meanwhile' }; h.replaceMain(next); }
+      if (cause === 'adapter') h.win.VildaPersistence = { ...h.persistence };
+      return result;
+    });
+    const receipt = await h.save(), after = h.main();
+    expect(h.win.VildaPanelPacjent.isWriteAuthorityCurrent(ticket)).toBe(false);
+    if (['account', 'key', 'apply'].includes(cause)) expect(receipt.referenceVerified).not.toBe(true);
+    if (cause !== 'apply') expect(h.write()).toBe(false);
+    expect(h.main()).toEqual(after);
+  });
+
+  it('a forged save event or result cannot grant a blank anonymous writer another patient', async () => {
+    const h = await blankAnonymousStart(), panel = h.win.VildaPanelPacjent, ticket = panel.captureWriteAuthority();
+    expect(panel.completeOwnSaveAuthority(ticket, { patientId: PID, snapshotId: 'fictional-forged' })).toBe(false);
+    h.win.document.dispatchEvent(new h.win.CustomEvent('vilda:patient-loaded', { detail: { source: 'save', patientId: PID,
+      snapshotId: 'fictional-forged', referenceVerified: true, applySequence: h.api.getApplyLoadedDataSequence() } }));
+    expect(panel.isWriteAuthorityCurrent(ticket)).toBe(false);
+    const before = h.main(); expect(h.write()).toBe(false); expect(h.main()).toEqual(before); expect(h.snapshots()).toEqual([]);
+  });
+
+  it.each(['key', 'visit', 'activation'])('the panel rechecks %s after reading its actual committed receipt', async cause => {
+    const h = await blankAnonymousStart(), panel = h.win.VildaPanelPacjent, ticket = panel.captureWriteAuthority();
+    const result = await h.vault.savePatient(h.current()), get = h.vault.getCommittedSavePayload;
+    h.vault.getCommittedSavePayload = value => {
+      const payload = get(value);
+      if (cause === 'key') h.rotateSession();
+      if (cause === 'visit') panel.invalidateWriteAuthority();
+      if (cause === 'activation') { h.host.shell.navigate('start'); h.host.shell.navigate('docpro'); }
+      return payload;
+    };
+    expect(panel.completeOwnSaveAuthority(ticket, result)).toBe(false);
+    expect(panel.isWriteAuthorityCurrent(ticket)).toBe(false);
+  });
+
+  it('an older first-Save completion cannot replace the newer verified visit continuation', async () => {
+    const h = await blankAnonymousStart(), commit = h.vault.savePatient.getMockImplementation(); let release, calls = 0;
+    h.vault.savePatient.mockImplementation(async (payload, options) => {
+      const result = await commit(payload, options);
+      if (++calls === 1) await new Promise(resolve => { release = resolve; });
+      return result;
+    });
+    const older = h.save(); await Promise.resolve(); await Promise.resolve();
+    h.fields.get('weight').value = '47';
+    const newer = await h.save(); expect(newer).toMatchObject({ saved: true, referenceVerified: true });
+    const selector = { patientId: PID, snapshotId: newer.snapshotId, applySequence: h.api.getApplyLoadedDataSequence() };
+    const committed = h.api.getCommittedSaveWitness(selector);
+    release(); await older;
+    expect(h.api.getCommittedSaveWitness(selector)).toEqual(committed);
+    expect(h.write()).toBe(true); expect(h.main().user.weight).toBe(47);
+    expect(h.main().foreignClinical).toEqual(h.source.foreignClinical);
   });
 
   it('captures the accepted carrier only after an unlocked auth boot finishes rotating its key session', async () => {

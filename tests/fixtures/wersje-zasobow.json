@@ -1289,7 +1289,7 @@
  },
  "vilda_data_import_export.js": {
   "v": 121,
-  "sha256": "4a2509d8e5ee00a116231a2670a07dda7a7933011aeaf10a1fbb03b184917779"
+  "sha256": "2a56a30f6cf54532e7be618152cca56017f0f25e47e528585cd9ca2d035eadcc"
  },
  "vilda_data_safety_explainer.js": {
   "v": 5,
@@ -1721,7 +1721,7 @@
  },
  "vilda_panel_pacjent.js": {
   "v": 5,
-  "sha256": "f8c411760fddab3c64aac76b6f92e374d26a731f77025d277b45275b8ab8b1ac"
+  "sha256": "703c0fed15df985a3fd0716af17b5abb15527f82f080c1cbb2926ce4118e1f9f"
  },
  "vilda_patient_checkpoint.js": {
   "v": 1,
