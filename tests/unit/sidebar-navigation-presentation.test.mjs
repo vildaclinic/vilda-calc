@@ -32,11 +32,12 @@ function fixture() {
   const document = { querySelector: () => clear };
   function pane(route, loaded = true) {
     const auth = account(), save = button(), scope = {};
-    const state = { ready: true, decision: 'saved', cached: 'saved', documents: 'ready', decisionCurrent: true, stale: false };
+    const state = { ready: true, decision: 'saved', cached: 'saved', reference: 'fictional-reference-46', documents: 'ready', decisionCurrent: true, stale: false };
     const doc = events({ getElementById: id => id === 'saveDataBtnSidebar' ? save : null });
     const api = { getCurrentDecision: vi.fn(() => ({ ready: state.ready, state: state.decision, scope })),
       isCurrentDecisionOwner: value => value === scope && state.decisionCurrent,
       isReadyForSharedReference: () => state.ready, getState: vi.fn(() => state.cached),
+      getReferenceFingerprint: () => state.reference,
       _buildTitleAttr: value => value + ': synthetic saved metadata' };
     const documents = { getState: () => ({ disabled: state.documents !== 'ready', busy: state.documents === 'busy' }),
       getReadinessPhase: () => state.documents };
@@ -74,12 +75,13 @@ describe('sidebar presentation: actual production handoff, without action author
   });
   it.each(['saved', 'error'])('captures actual pending Saving with an unready live decision and follows native %s', outcome => {
     const h = fixture(), source = h.panes.start;
+    let pending = true;
     source.state.ready = false; source.state.decision = 'hidden'; source.state.cached = 'saving';
-    source.win.VildaDataImportExport = { isSaveUserDataPending: vi.fn(() => true) };
+    source.win.VildaDataImportExport = { isSaveUserDataPending: vi.fn(() => pending) };
     h.panes.docpro.state.ready = false; h.navigate('docpro');
     expect(h.view().state).toBe('saving');
-    expect(source.win.VildaDataImportExport.isSaveUserDataPending).toHaveBeenCalledOnce();
-    source.state.ready = true; source.state.cached = outcome;
+    expect(source.win.VildaDataImportExport.isSaveUserDataPending).toHaveBeenCalledTimes(2);
+    pending = false; source.state.ready = true; source.state.cached = outcome;
     h.ctx.Sp_sourceStatus(source.doc);
     expect(h.view().state).toBe(outcome);
     expect(source.api.getCurrentDecision).toHaveBeenCalledOnce();
@@ -91,6 +93,101 @@ describe('sidebar presentation: actual production handoff, without action author
     if (proof === 'not-current') source.win.VildaDataImportExport = { isSaveUserDataPending: () => false };
     h.panes.docpro.state.ready = false; h.navigate('docpro');
     expect(h.view()).toBeNull();
+  });
+
+  it('retains a proven source Saving when the ready target still compares against the old reference', () => {
+    const h = fixture(), source = h.panes.start, target = h.panes.docpro;
+    source.state.ready = false; source.state.cached = 'saving';
+    source.win.VildaDataImportExport = { isSaveUserDataPending: () => true };
+    target.state.cached = target.state.decision = 'dirty';
+    h.navigate('docpro'); source.state.ready = true;
+    expect(h.view()).toMatchObject({ state: 'saving', save: null, documents: null, clear: null });
+    expect(source.api.getCurrentDecision).toHaveBeenCalledOnce();
+    expect(target.api.getCurrentDecision).not.toHaveBeenCalled();
+    expect(source.save.click).not.toHaveBeenCalled(); expect(target.save.click).not.toHaveBeenCalled();
+  });
+
+  it('waits for native publication and exact reference adoption, then exposes genuine target Dirty', () => {
+    const h = fixture(), source = h.panes.start, target = h.panes.docpro;
+    let pending = true;
+    source.state.ready = false; source.state.cached = 'saving';
+    source.win.VildaDataImportExport = { isSaveUserDataPending: () => pending };
+    target.state.cached = target.state.decision = 'dirty';
+    h.navigate('docpro');
+    pending = false; source.state.reference = 'fictional-reference-47';
+    expect(h.view().state).toBe('saving');
+    source.state.ready = true; source.state.cached = 'saved'; h.ctx.Sp_sourceStatus(source.doc);
+    expect(h.view()).toMatchObject({ state: 'saving', title: 'saving: synthetic saved metadata' });
+    target.state.reference = source.state.reference;
+    expect(h.view().state).toBeNull();
+    expect(target.state.cached).toBe('dirty');
+    expect(source.api.getCurrentDecision).toHaveBeenCalledOnce();
+    expect(source.state.reference).toBe('fictional-reference-47');
+  });
+
+  it('keeps the original pending operation through a ready intermediate route', () => {
+    const h = fixture(), source = h.panes.start;
+    source.state.ready = false; source.state.cached = 'saving';
+    source.win.VildaDataImportExport = { isSaveUserDataPending: () => true };
+    h.panes.docpro.state.cached = h.panes.docpro.state.decision = 'dirty';
+    h.navigate('docpro'); h.navigate('lab');
+    expect(h.view().state).toBe('saving');
+    h.navigate('klirens'); expect(h.view().state).toBe('saving');
+    expect(source.api.getCurrentDecision).toHaveBeenCalledOnce();
+  });
+
+  it('keeps reference adoption pending when the Save completes on a passive route', () => {
+    const h = fixture(), source = h.panes.start, target = h.panes.docpro;
+    let pending = true;
+    source.state.ready = false; source.state.cached = 'saving';
+    source.win.VildaDataImportExport = { isSaveUserDataPending: () => pending };
+    h.navigate('lab'); expect(h.view().state).toBe('saving');
+    pending = false; source.state.ready = true; source.state.cached = 'saved';
+    source.state.reference = 'fictional-reference-47'; h.ctx.Sp_sourceStatus(source.doc);
+    expect(h.view().state).toBe('saved');
+    h.navigate('docpro');
+    expect(h.view()).toMatchObject({ state: 'saving', title: 'saving: synthetic saved metadata' });
+    target.state.reference = source.state.reference; target.state.cached = 'dirty';
+    expect(h.view().state).toBeNull();
+  });
+
+  it.each(['input', 'change'])('a trusted target %s immediately retires a still-pending source Save', type => {
+    const h = fixture(), source = h.panes.start;
+    source.state.ready = false; source.state.cached = 'saving';
+    source.win.VildaDataImportExport = { isSaveUserDataPending: () => true };
+    h.navigate('docpro'); expect(h.view().state).toBe('saving');
+    h.panes.docpro.doc.dispatch(type, {}, true);
+    expect(h.view()).toBeNull();
+  });
+
+  it('preserves native Error, then permanently gives status to a verified new target Save', () => {
+    const h = fixture(), source = h.panes.start, target = h.panes.docpro;
+    let sourcePending = true, targetPending = false;
+    source.state.ready = false; source.state.cached = 'saving';
+    source.win.VildaDataImportExport = { isSaveUserDataPending: () => sourcePending };
+    target.win.VildaDataImportExport = { isSaveUserDataPending: () => targetPending };
+    h.navigate('docpro');
+    sourcePending = false; source.state.ready = true; source.state.cached = 'error'; h.ctx.Sp_sourceStatus(source.doc);
+    expect(h.view()).toMatchObject({ state: 'error', save: null, documents: null, clear: null });
+    targetPending = true; target.state.ready = false; target.state.cached = 'saving';
+    expect(h.view().state).toBeNull();
+    targetPending = false;
+    expect(h.view().state).toBeNull();
+    source.state.cached = 'saved'; h.ctx.Sp_sourceStatus(source.doc);
+    source.state.cached = 'error'; h.ctx.Sp_sourceStatus(source.doc);
+    expect(h.view().state).toBeNull();
+    target.state.ready = true; target.state.cached = 'dirty';
+    expect(h.view().state).toBeNull();
+  });
+
+  it('releases a cancelled source Save to the target without waiting for Saved', () => {
+    const h = fixture(), source = h.panes.start;
+    let pending = true;
+    source.state.ready = false; source.state.cached = 'saving';
+    source.win.VildaDataImportExport = { isSaveUserDataPending: () => pending };
+    h.navigate('docpro'); expect(h.view().state).toBe('saving');
+    pending = false; source.state.ready = true; source.state.cached = 'dirty'; h.ctx.Sp_sourceStatus(source.doc);
+    expect(h.view().state).toBeNull();
   });
 
   it('keeps a visible native Error, although the live comparison reports unsaved data', () => {

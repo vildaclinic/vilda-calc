@@ -521,10 +521,10 @@ describe('immediate native Save uses only the exact accepted main-session restor
   beforeEach(() => { vi.useFakeTimers(); vi.setSystemTime(new Date('2026-11-07T12:00:00Z')); });
   afterEach(() => { vi.clearAllTimers(); vi.useRealTimers(); });
 
-  function restored({ insideApply, beforeRead, prepare, failed = false, shell = false } = {}) {
+  function restored({ insideApply, beforeRead, prepare, failed = false, shell = false, patientId = PID } = {}) {
     const source = record(); source.plan.acceptedMetadata = { fictional: 'original accepted source' };
     source.zscore = { resultsMode: true };
-    const h = environment(source, { load: false, shell }); h.win.location.pathname = '/index.html';
+    const h = environment(source, { load: false, shell, patientId }); h.win.location.pathname = '/index.html';
     h.fields.set('resultsModeToggle', { ...h.field('resultsModeToggle'), checked: true });
     if (prepare) prepare(h, source);
     h.replaceMain(source);
@@ -538,6 +538,24 @@ describe('immediate native Save uses only the exact accepted main-session restor
     h.api.restoreMainSessionIfAny(options);
     return { ...h, source, writes };
   }
+
+  it('keeps a shared-only cold form unready until the existing full main snapshot is actually restored', async () => {
+    const source = record(), h = environment(source, { load: false });
+    h.replaceMain(source); h.setFields();
+    expect(h.api.getApplyLoadedDataSequence()).toBe(0);
+    expect(h.api.getSaveReadiness()).toEqual({ ready: false, reason: 'main-session-restore-pending' });
+    expect((await h.save()).saved).toBe(false);
+    expect(h.vault.savePatient).not.toHaveBeenCalled(); expect(h.main()).toEqual(source);
+    expect(h.api.restoreMainSessionIfAny({ ...h.options,
+      applyLoadedData(value, options) { return h.api.applyLoadedData(value, { ...h.options, ...options }); },
+    })).toBe(true);
+    await vi.advanceTimersByTimeAsync(0);
+    expect(h.api.getSaveReadiness()).toEqual({ ready: true, reason: null });
+    expect((await h.save()).saved).toBe(true);
+    expect(h.snapshots()[0].plan).toEqual({ ...source.plan, dietLevel: null, dietaWybrana: false });
+    expect(h.snapshots()[0].intake).toEqual(source.intake);
+    expect(h.snapshots()[0].growthBasic.data).toEqual(source.growthBasic.data);
+  });
 
   it('saves a real owned mode edit immediately after accepted restore without waiting for or forcing autosave', async () => {
     const h = restored(); await vi.advanceTimersByTimeAsync(0);
@@ -648,9 +666,9 @@ describe('immediate native Save uses only the exact accepted main-session restor
     expect(h.main().foreignClinical).toEqual(h.source.foreignClinical);
   });
 
-  it('captures the accepted carrier only after an unlocked auth boot finishes rotating its key session', async () => {
+  it.each([PID, null])('captures the accepted carrier only after an unlocked auth boot finishes rotating its key session (PID=%s)', async patientId => {
     let ready = false;
-    const h = restored({ prepare(value) {
+    const h = restored({ patientId, prepare(value) {
       value.win.VildaAuthUI.isBootReady = () => ready;
       value.win.requestAnimationFrame = callback => setTimeout(callback, 0);
       value.win.cancelAnimationFrame = clearTimeout;
@@ -664,6 +682,31 @@ describe('immediate native Save uses only the exact accepted main-session restor
     h.fields.get('weight').value = '47';
     expect((await h.save()).saved).toBe(true);
     expect(h.snapshots()[0]).toMatchObject({ user: { weight: 47 }, plan: { palFactor: 1.8 } });
+    expect(h.writes).not.toHaveBeenCalled();
+  });
+
+  it('waits for the real non-guest boot to unlock an anonymous owner before accepting its carrier', async () => {
+    let ready = false, unlocked = false;
+    const h = restored({ patientId: null, prepare(value) {
+      const currentUser = value.vault.getCurrentUser;
+      value.vault.isUnlocked = () => unlocked;
+      value.vault.getCurrentUser = () => unlocked ? currentUser() : null;
+      value.win.VildaAuthUI.isBootReady = () => ready;
+      value.win.VildaAuthUI.isGuestMode = () => false;
+      value.win.requestAnimationFrame = callback => setTimeout(callback, 0);
+      value.win.cancelAnimationFrame = clearTimeout;
+    } });
+    expect(h.api.isMainSessionRestorePending()).toBe(true);
+    expect(h.api.getApplyLoadedDataSequence()).toBe(0);
+    expect(h.writes).not.toHaveBeenCalled();
+    h.rotateSession(); unlocked = true; ready = true;
+    h.win.document.dispatchEvent({ type: 'vilda:auth-boot-settled' });
+    await vi.advanceTimersByTimeAsync(5);
+    expect(h.api.getSaveReadiness()).toEqual({ ready: true, reason: null });
+    h.fields.get('weight').value = '47';
+    expect((await h.save()).saved).toBe(true);
+    expect(h.snapshots()[0]).toMatchObject({ user: { weight: 47 }, plan: { palFactor: 1.8 } });
+    expect(h.snapshots()[0].intake.history).toEqual(h.source.intake.history);
     expect(h.writes).not.toHaveBeenCalled();
   });
 

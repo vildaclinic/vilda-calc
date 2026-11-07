@@ -160,7 +160,7 @@ async function waitForActualOwner(page, title) {
   return frame;
 }
 
-async function savedMenuFixture(page) {
+async function savedMenuFixture(page, { coldDestination = false } = {}) {
   const fixture = await createFictionalVault(page, { shell: true });
   // Acknowledge the real professional gate, then return through the native
   // Start hash route. This same-document navigation retains the shell; any
@@ -171,6 +171,9 @@ async function savedMenuFixture(page) {
   const confirmation = docpro.locator('#professionalConfirmBtn');
   if (await confirmation.isVisible()) await confirmation.click();
   await page.goto('/app.html#/start', { waitUntil: 'load' });
+  // Only the held-network cases require a fresh destination. A real full
+  // reload removes the acknowledged DocPro frame before entering patient data.
+  if (coldDestination) await page.reload({ waitUntil: 'load' });
   const start = await shellFrame(page);
   await readyForPatient(start);
   for (const [id, value] of Object.entries({ lastName: 'Fikcyjny', firstName: 'Stabilny Panel',
@@ -228,13 +231,14 @@ function presentationChanges(before, samples, mobile) {
 
 for (const profile of [{ name: 'desktop normal', width: 1440, cpu: 1 },
   { name: 'desktop slow CPU', width: 1440, cpu: 4 }, { name: 'mobile slow CPU', width: 390, cpu: 4 }]) {
-  // Keep cold + warm form transitions together; tools use a separate real
-  // fixture so CPU throttling does not accumulate eight routes into one budget.
+  // Keep the repeated native form transitions together. Each tool roundtrip
+  // owns a fresh fixture: on CI, combining both tools exhausted the unchanged
+  // 150 s budget after completed steps, before the final return to Start.
   for (const journey of [
     { name: 'cold and warm forms', routes: [['docpro.html', 'DocPro'], ['index.html', 'Start'],
       ['docpro.html', 'DocPro'], ['index.html', 'Start']] },
-    { name: 'clinical and passive tools', routes: [['kalkulator-klirens.html', 'Kalkulator klirensu'],
-      ['index.html', 'Start'], ['przelicznik-jednostek.html', 'Jednostki laboratoryjne'], ['index.html', 'Start']] },
+    { name: 'clinical tool roundtrip', routes: [['kalkulator-klirens.html', 'Kalkulator klirensu'], ['index.html', 'Start']] },
+    { name: 'passive tool roundtrip', routes: [['przelicznik-jednostek.html', 'Jednostki laboratoryjne'], ['index.html', 'Start']] },
   ]) {
   test(`${profile.name}, ${journey.name}: same-patient navigation preserves the painted sidebar presentation`, async ({ page, context }, testInfo) => {
     await page.setViewportSize({ width: profile.width, height: 1000 });
@@ -377,7 +381,7 @@ for (const width of [1440, 390]) {
   test(`${width}px: real pointer clicks during a cold network wait never invoke the old form`, async ({ page }, testInfo) => {
     await page.setViewportSize({ width, height: 1000 });
     await installPaintProbe(page);
-    const fixture = await savedMenuFixture(page);
+    const fixture = await savedMenuFixture(page, { coldDestination: true });
     let release;
     const gate = new Promise(resolve => { release = resolve; });
     let held = false;
@@ -391,6 +395,7 @@ for (const width of [1440, 390]) {
     try {
       const start = fixture.frame;
       const beforeActions = await start.evaluate(() => [...window.__sidebarNativeActions]);
+      await expect(page.locator('iframe.app-pane[title="DocPro"]')).toHaveCount(0);
       await navigateMenu(page, 'docpro.html');
       await expect.poll(() => held).toBe(true);
       const menu = await visibleChromeMenu(page);
@@ -504,6 +509,13 @@ test('a real in-flight Save retains its status through native navigation and rea
   await page.setViewportSize({ width: 1440, height: 1000 });
   await installPaintProbe(page);
   const fixture = await savedMenuFixture(page), start = fixture.frame;
+  // Exercise a genuinely retained same-patient destination. Its indicator can
+  // become ready while the source is still awaiting the actual Save receipt.
+  await navigateMenu(page, 'docpro.html');
+  await waitForActualOwner(page, 'DocPro');
+  const warmDocument = await page.evaluate(() => window.__sidebarPaintProbe.current().owner.document);
+  await navigateMenu(page, 'index.html');
+  await waitForActualOwner(page, 'Start');
   // Unmodified native two-click feasibility is recorded separately. For this
   // repeatable regression, hold only delivery of the original receipt AFTER
   // its real encrypted commit; never change readiness, Save results, or data.
@@ -546,6 +558,9 @@ test('a real in-flight Save retains its status through native navigation and rea
     expect(clickEvidence[0]).toMatchObject({ trusted: true, pending: true, state: 'saving' });
     const afterClick = { frames: samples.frames.filter(frame => frame.at >= clickEvidence[0].at) };
     expect(afterClick.frames.length).toBeGreaterThan(0);
+    const targetFrames = afterClick.frames.filter(frame => frame.owner?.title === 'DocPro');
+    expect(targetFrames.length).toBeGreaterThan(0);
+    expect(targetFrames.every(frame => frame.owner.document === warmDocument)).toBe(true);
     expect(visibleEmptyFrames(afterClick, false)).toEqual([]);
     expect(afterClick.frames.every(frame => ['saving', 'saved'].includes(frame.controls['desktop:status'].state))).toBe(true);
     await expect(docpro.locator('#weight')).toHaveValue('47');

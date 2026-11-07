@@ -30,7 +30,8 @@ function harness() {
     rows[source].push(row); return row;
   }
   const win = {
-    document: { getElementById: id => elements.get(id) || null },
+    document: { getElementById: id => elements.get(id) || null,
+      querySelectorAll: selector => selector === '#intakeMeasurements .measure-row-intake' ? rows.intake : [] },
     sessionStorage: { getItem: () => scope.patient }, VildaVault: vault,
     VildaDataImportExport: { getApplyLoadedDataSequence: () => scope.apply },
     _refreshAdvIntakeRowUi: vi.fn(),
@@ -38,12 +39,14 @@ function harness() {
   };
   win.window = win; win.globalThis = win;
   const context = vm.createContext(win);
+  vm.runInContext(zrodlo('vilda_estimated_intake.js'), context);
   vm.runInContext('let vildaGrowthHistoryRestoreState=null;', context);
   for (const name of ['vildaReadIntakeUserResetBasis', 'vildaSameIntakeUserResetBasis',
     'vildaReadGrowthHistoryOwner', 'vildaCurrentGrowthHistoryRestore',
     'vildaBeginGrowthHistoryRestore', 'vildaCommitGrowthHistoryRestore', 'vildaShouldPreserveRestoredGrowthSync',
     'vildaAdoptGrowthHistoryAcceptedLoadScope',
-    'vildaCopyVerifiedSaveReceipt', 'vildaAdoptGrowthHistorySaveScope', 'vildaHandleGrowthHistorySaved', '_pairAdvancedAndIntakeRowsByOrder']) {
+    'vildaCopyVerifiedSaveReceipt', 'vildaAdoptGrowthHistorySaveScope', 'vildaHandleGrowthHistorySaved',
+    '_intkRows', '_intakeRowHasAnyData', '_rowHasAnyData', '_ensureAtLeastOneIntakeHistoryRow', '_pairAdvancedAndIntakeRowsByOrder']) {
     vm.runInContext(funkcjaZ(appSrc, name), context, { filename: `app.js:${name}` });
   }
   // Real basic-growth synchronization entry points. The table writers are
@@ -145,6 +148,52 @@ describe('accepted restoration is not a cross-history edit', () => {
     h.win._pairAdvancedAndIntakeRowsByOrder(); h.win.K();
     expect(h.rows.intake).toEqual([]); expect(h.rows.basic).toEqual([]);
     expect(h.win.Ae).not.toHaveBeenCalled();
+  });
+
+  it.each(['loading', 'committed'])('restores only the blank intake editor without clinical or pairing effects (%s)', phase => {
+    const h = harness(); h.rows.intake.length = 0;
+    const current = h.add('intake', ['9', '0', '135', '40'], { locked: 'true' });
+    const token = h.begin(); if (phase === 'committed') h.commit(token);
+    h.win.intakeHistory = [{ ageMonths: 108, ageYears: 9, height: 135, weight: 40 }];
+    h.win.advancedGrowthData = { measurements: [{ ageMonths: 120, height: 141, weight: 33 }] };
+    h.win.basicGrowthData = { measurements: [{ ageMonths: 102, height: 131.7, weight: 29.1 }] };
+    const model = () => JSON.stringify({ intake: h.win.intakeHistory, advanced: h.win.advancedGrowthData, basic: h.win.basicGrowthData });
+    const before = model(), readRows = () => h.win.VildaEstimatedIntake.readIntakeRows({ document: h.win.document });
+    const measured = readRows();
+    expect(measured).toHaveLength(1);
+    h.win._pairAdvancedAndIntakeRowsByOrder(); h.win._pairAdvancedAndIntakeRowsByOrder();
+    expect(h.rows.intake).toHaveLength(2); expect(h.rows.intake[0]).toBe(current);
+    expect(h.rows.intake[1].inputs.map(input => input.value)).toEqual(['', '', '', '']);
+    expect(h.rows.intake[1].dataset).toEqual({});
+    expect(h.win.intakeAddRow).toHaveBeenCalledExactlyOnceWith();
+    expect(readRows()).toEqual(measured); expect(model()).toBe(before);
+    expect(h.rows.advanced).toEqual([h.originalAdvanced]); expect(h.rows.basic).toEqual([h.originalBasic]);
+    expect(h.win._pairAdvancedAndIntakeRowsByOrderUntracked).not.toHaveBeenCalled();
+    expect(h.win.calculateGrowthAdvanced).not.toHaveBeenCalled(); expect(h.win.debouncedIntakeCalc).not.toHaveBeenCalled();
+  });
+
+  it.each(['empty-current', 'unlocked', 'stale-key', 'missing-container'])(
+    'does not create an editor without a current owned measurement: %s', boundary => {
+      const h = harness(); h.rows.intake.length = 0;
+      h.add('intake', boundary === 'empty-current' ? ['', '', '', ''] : ['9', '0', '135', '40'],
+        boundary === 'unlocked' ? {} : { locked: 'true' });
+      const token = h.begin(); h.commit(token);
+      if (boundary === 'stale-key') h.scope.generation += 1;
+      if (boundary === 'missing-container') h.elements.delete('intakeMeasurements');
+      h.win._pairAdvancedAndIntakeRowsByOrder();
+      expect(h.rows.intake).toHaveLength(1); expect(h.win.intakeAddRow).not.toHaveBeenCalled();
+      expect(h.win._pairAdvancedAndIntakeRowsByOrderUntracked).not.toHaveBeenCalled();
+    },
+  );
+
+  it('keeps explicit numeric zero distinct from an empty current editor', () => {
+    const h = harness(); h.rows.intake.length = 0;
+    h.add('intake', ['0', '', '', ''], { locked: 'true' });
+    const token = h.begin(); h.commit(token); h.win._pairAdvancedAndIntakeRowsByOrder();
+    expect(h.rows.intake).toHaveLength(2);
+    expect(h.rows.intake[0].inputs.map(input => input.value)).toEqual(['0', '', '', '']);
+    expect(h.rows.intake[1].inputs.map(input => input.value)).toEqual(['', '', '', '']);
+    expect(h.win.VildaEstimatedIntake.readIntakeRows({ document: h.win.document })).toEqual([]);
   });
 
   it('retains legacy derivation when the target history was absent', () => {

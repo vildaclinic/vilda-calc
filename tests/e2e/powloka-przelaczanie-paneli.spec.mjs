@@ -414,3 +414,75 @@ test('DocPro otwarty przy innym pacjencie, na Start „Nowy pomiar” pacjentki 
   await expect.poll(() => poprzednio(docpro), { timeout: 8000, message: 'DocPro: poprzedni pomiar B (149,2 cm), nie A (120/121 cm)' }).toEqual(naStart);
   expect(await docpro.evaluate(() => window._vildaCurrentPatientId)).toBe(pidB);
 });
+
+// The native restore may finish while an unrelated image still delays iframe load.
+// Its same-document writer must survive that one expected lifecycle transition.
+test('Zapis odtworzonej pacjentki B pozostaje dostępny po load tego samego dokumentu DocPro', async ({ page }) => {
+  let barrierTarget = null, heldRoute, heldResolve;
+  const held = new Promise(resolve => { heldResolve = resolve; });
+  const finish = route => route.fulfill({status:200,contentType:'image/png',body:Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jI5kAAAAASUVORK5CYII=','base64')});
+  await page.route('**/__native_owner_load_barrier.png?*', async route => {
+    if (new URL(route.request().url()).searchParams.get('patient') === barrierTarget) { heldRoute = route; heldResolve(); }
+    else await finish(route);
+  });
+  await page.addInitScript(() => {
+    if (!location.pathname.endsWith('/docpro.html')) return;
+    document.addEventListener('DOMContentLoaded', () => {
+      const image = document.createElement('img'); image.hidden = true;
+      image.src='/__native_owner_load_barrier.png?patient='+encodeURIComponent(sessionStorage.getItem('vildaCurrentPatientId')||'');
+      document.body.appendChild(image);
+    }, {once:true});
+  });
+
+  test.setTimeout(180_000);
+  const start = await otworzPowloke(page);
+  const { pidA, pidB, docpro } = await docProPrzyA(page, start);
+  barrierTarget=pidB;
+
+  await wczytajZKarty(page, start, pidB, 'odtworz');
+  await expect.poll(() => stan(start).then((s) => s.h)).toBe('149.2');
+  const PELNY = await pelny(start);
+  await page.waitForTimeout(3500);
+  await page.evaluate(() => window.VildaShell.navigate('docpro'));
+  await expect.poll(() => stan(docpro), { timeout: 8000, message: 'DocPro: formularz B, podsumowanie z BMI, bez karty porównania' })
+    .toMatchObject({ dob: PELNY.dob, sex: 'F', h: PELNY.h, w: PELNY.w, name: PELNY.name, podsumowanieBMI: true, baza: true, porownanie: false });
+  expect(await docpro.evaluate(() => window._vildaCurrentPatientId), 'DocPro przejął pacjenta z sesji karty').toBe(pidB);
+
+  // Podczas asynchronicznych odczytów z sejfu panel może ponownie odtwarzać
+  // dane. Kończymy je przed sprawdzeniem gotowości i cofnięciem identyfikatora.
+  await held;
+  await docpro.waitForFunction(() => window.VildaDataImportExport.getSaveReadiness().ready);
+  const beforeLoad = await docpro.evaluate(() => {
+    window.__nativeOriginalDoc = document;
+    window.__nativeOriginalTicket = window.VildaPanelPacjent.captureWriteAuthority();
+    return { readyState:document.readyState, authority:window.VildaPanelPacjent.isWriteAuthorityCurrent(window.__nativeOriginalTicket), sequence:window.VildaDataImportExport.getApplyLoadedDataSequence() };
+  });
+  await finish(heldRoute);
+  await docpro.waitForLoadState('load');
+  const afterLoad = await docpro.evaluate(() => ({sameDocument:window.__nativeOriginalDoc===document, readyState:document.readyState, authority:window.VildaPanelPacjent.isWriteAuthorityCurrent(window.__nativeOriginalTicket), sequence:window.VildaDataImportExport.getApplyLoadedDataSequence()}));
+  expect(beforeLoad).toMatchObject({readyState:'interactive',authority:true});
+  expect(afterLoad).toEqual({sameDocument:true,readyState:'complete',authority:true,sequence:beforeLoad.sequence});
+  const przed = await zapisy(start, { A: pidA, B: pidB });
+  const probaZapisu = await docpro.evaluate(id => new Promise((resolve, reject) => {
+    const deadline = performance.now() + 5000;
+    function zapiszGdyGotowe() {
+      try {
+        if (!window.VildaDataImportExport.getSaveReadiness().ready) {
+          if (performance.now() >= deadline) return reject(new Error('DocPro nie zakończył przywracania przed próbą zapisu'));
+          requestAnimationFrame(zapiszGdyGotowe);
+          return;
+        }
+        // Gotowość, celowo nieaktualny identyfikator A i natywny zapis są
+        // w jednym przebiegu JS. Zapis wykonujemy raz; odmowy nie ponawiamy.
+        window._vildaCurrentPatientId = id;
+        const identyfikatory = [window._vildaCurrentPatientId, window.sessionStorage.getItem('vildaCurrentPatientId')];
+        Promise.resolve(window.saveUserData()).then(result => resolve({ identyfikatory, zapisano: Boolean(result) }), reject);
+      } catch (error) { reject(error); }
+    }
+    zapiszGdyGotowe();
+  }), pidA);
+  expect(probaZapisu.identyfikatory, 'bezpośrednio przed zapisem zmienna panelu nadal wskazuje A, a sesja B').toEqual([pidA, pidB]);
+  expect(probaZapisu.zapisano).toBe(true);
+  await expect.poll(() => zapisy(start, { A: pidA, B: pidB }), { message: 'zapis z DocPro w rekordzie B, rekord A nietknięty' })
+    .toEqual({ A: przed.A, B: { liczba: przed.B.liczba + 1, nazwisko: 'Probna Alicja' } });
+});

@@ -13,7 +13,7 @@
  },
  "app.js": {
   "v": 240,
-  "sha256": "9a07786feda77fd9289d97a341c9d05387c07c707ca48106a12ed0aa4df194e8"
+  "sha256": "7e15e20c3478cb9830bd5df7764e0e73c9f935963a1e76582b258011bcaac875"
  },
  "bisphos_therapy.js": {
   "v": 8,
@@ -1265,7 +1265,7 @@
  },
  "vilda_chrome.js": {
   "v": 258,
-  "sha256": "dbdb2ea2555b2d241ec59fd3c3b82f8e2274032d4b8851159189b93f0bfd8667"
+  "sha256": "600d942511691b87b3e2367f9d1fb9a96323ce1c1b04b26f78add71111aecb4e"
  },
  "vilda_clinical_crypto.js": {
   "v": 2,
@@ -1289,7 +1289,7 @@
  },
  "vilda_data_import_export.js": {
   "v": 121,
-  "sha256": "2a56a30f6cf54532e7be618152cca56017f0f25e47e528585cd9ca2d035eadcc"
+  "sha256": "c6a2256550e83dd325d24949401849c4774a1e33a07383fdf116122b4fbd467a"
  },
  "vilda_data_safety_explainer.js": {
   "v": 5,
@@ -1964,8 +1964,8 @@
   "sha256": "00f2e04280461fa7e11dd0fe213e18fb28b0f3556d62322c9be5d7a1cfafba98"
  },
  "vilda_shell.js": {
-  "v": 79,
-  "sha256": "7f76d7ae985c88d207f1e1e7e8d7f28bb9e5751afdcebf64e313d696efaa9922"
+  "v": 80,
+  "sha256": "14dc1df08dc5c6657eae9cfffabefd8e162feaa2b27a9ef0cb85169234f56a55"
  },
  "vilda_spojnosc_zapisow.js": {
   "v": 3,

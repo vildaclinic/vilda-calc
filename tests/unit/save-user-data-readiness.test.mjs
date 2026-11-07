@@ -131,6 +131,32 @@ describe('save collection and durable queue require actual producer/owner readin
     expect(h.collect).toHaveBeenCalledOnce(); expect(h.vault.savePatient).toHaveBeenCalledOnce();
   });
 
+  it('covers app-ready and both startup frames when a main snapshot is waiting', async () => {
+    const h = environment(), frames = [], ready = [], apply = vi.fn(() => true);
+    h.win.requestAnimationFrame = callback => { frames.push(callback); return frames.length; };
+    h.win.cancelAnimationFrame = () => {};
+    h.win.VildaPersistence = { getStorage: () => ({}), readMainSession: () => patient() };
+    h.api.initMainSessionPersistence({ ...h.options, applyLoadedData: apply,
+      vildaAppOnReady: (_name, callback) => ready.push(callback) });
+    for (const phase of ['app-ready', 'first-frame', 'second-frame']) {
+      expect(h.api.getSaveReadiness(), phase).toEqual({ ready: false, reason: 'main-session-restore-pending' });
+      expect(h.api.isMainSessionRestorePending(), phase).toBe(true);
+      expect(h.api.isMainSessionAutosavePaused(), phase).toBe(true);
+      expect(h.collect).not.toHaveBeenCalled(); expect(h.vault.savePatient).not.toHaveBeenCalled();
+      if (phase === 'app-ready') ready.shift()();
+      else frames.shift()();
+    }
+    expect(apply).toHaveBeenCalledOnce();
+  });
+
+  it.each([null, undefined])('does not delay a fresh form with no existing main snapshot (%s)', async main => {
+    const h = environment();
+    h.win.VildaPersistence = { getStorage: () => ({}), readMainSession: () => main };
+    h.api.initMainSessionPersistence(h.options);
+    expect(h.api.getSaveReadiness()).toEqual({ ready: true, reason: null });
+    expect(await h.api.saveUserDataWithReceipt(h.options)).toMatchObject({ saved: true, referenceVerified: true });
+  });
+
   it('allows newer edits after auth settles to supersede an older startup restore before its queued RAF', async () => {
     const h = environment(), frames = new Map(), apply = vi.fn(); let nextFrame = 0;
     let main = { ...patient(), user: { ...patient().user, weight: 38, height: 133 } };

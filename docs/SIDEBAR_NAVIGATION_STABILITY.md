@@ -6,6 +6,22 @@ Przejście między formularzami nie oznacza braku danych pacjenta. Powłoka zapa
 
 Trwający zapis celowo zwraca niegotową decyzję porównania. Etykieta „Zapisywanie…” może wtedy przejść przez nawigację wyłącznie, gdy natywny SSI ją publikuje, a `DIX.isSaveUserDataPending()` potwierdza operację nadal należącą do bieżącego zakresu źródła. Nie nadaje to decyzji `ready=true` i nie odblokowuje żadnego przycisku. Bez tego potwierdzenia sama stara etykieta nie wystarcza.
 
+Po takim przejściu gotowy formularz docelowy może jeszcze porównywać dane ze
+starą referencją, podczas gdy oryginalny zapis trwa. Wskaźnik zachowuje wtedy
+„Zapisywanie…”, także po zakończeniu zapisu źródłowego, aż formularz docelowy
+przyjmie tę samą potwierdzoną referencję. Odczyty jej istniejącego odcisku są
+chwilowe; mechanizm nie przechowuje danych pacjenta ani nie zapisuje referencji.
+Zgodność referencji kończy podtrzymanie i odsłania rzeczywisty stan docelowy,
+również „Niezapisane zmiany”. Nie jest wymagane osiągnięcie stanu „Zapisano”.
+Strona bez formularza może pokazać potwierdzony wynik operacji źródłowej;
+powrót do formularza nadal sprawdza przyjęcie referencji. Nowy zapis docelowy
+kończy przejęcie wyniku starszej operacji, także jej późniejszego błędu.
+
+Chrome uwzględnia tę sprawdzoną prezentację również nad gotowym formularzem.
+Stan bez aktywnej prezentacji wraca bezpośrednio do natywnego wskaźnika.
+Podtrzymanie dotyczy etykiety i jej opisu; rzeczywista dostępność przycisków
+oraz ostrzeżenie przed czyszczeniem nadal wynikają z danych formularza.
+
 Przechowywane są wyłącznie stan prezentacji i tożsamości potrzebne do jego sprawdzenia. Nie jest to uprawnienie do zapisu, czyszczenia lub wygenerowania dokumentu. Dotychczasowe `disabled`, `aria-disabled`, kontrolery natywne, kontrola aktywnej ramki i strażnik niezapisanych zmian pozostają źródłem dostępności działań. Atrybuty `data-menu-preparing` i `data-menu-was-enabled` sterują wyłącznie prezentacją.
 
 „Wyczyść” jest natywnym przyciskiem, więc globalny styl `button:disabled`

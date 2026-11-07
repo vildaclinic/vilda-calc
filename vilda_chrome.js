@@ -155,7 +155,7 @@ function Ch_refreshSaveState(){
     title=typeof source.api._buildTitleAttr==="function"?source.api._buildTitleAttr(value):source.chip&&source.chip.getAttribute("title")||"";
   }catch{}
   var presentation=Cm_navigationPresentation();
-  if(state==="hidden"&&presentation&&presentation.state){state=presentation.state==="new_patient"?"new":presentation.state;title=presentation.title}
+  if(presentation&&presentation.state){state=presentation.state==="new_patient"?"new":presentation.state;title=presentation.title}
   var labels={saved:"Zapisano",dirty:"Niezapisane zmiany",new:"Nowy pacjent",saving:"Zapisywanie\u2026",error:"B\u0142\u0105d zapisu",hidden:"Brak danych"};
   var controls=o.querySelectorAll("[data-menu-save-status]");
   for(var index=0;index<controls.length;index++){

@@ -160,6 +160,34 @@ describe('Saved main session waits for the owner authentication boot to finish',
     expect(h.unlockListeners).toHaveLength(0);
   });
 
+  it.each(['missing', 'empty'])('does not defer an anonymous legacy vault without a known account (%s)', kind => {
+    const h = harness({ patientId: null, locked: false });
+    if (kind === 'empty') h.win.VildaVault.getCurrentUser = () => null;
+    h.start(); expect(pending(h)).toBe(false); expect(h.applied).toHaveLength(1);
+    expect(h.unlockListeners).toHaveLength(0);
+  });
+
+  it.each([true, false])('retains immediate restoration for an explicit anonymous guest during boot (locked=%s)', locked => {
+    const h = harness({ patientId: null, locked }); h.win.VildaAuthUI.isGuestMode = () => true;
+    h.win.VildaVault.getCurrentUser = () => ({ userId: 'fictional-account-not-used-in-guest-mode' });
+    h.start(); expect(pending(h)).toBe(false); expect(h.applied).toHaveLength(1);
+  });
+
+  it.each(['settled', 'new-patient'])('the real non-guest bootstrap wait with no current owner ends safely (%s)', outcome => {
+    const h = harness({ patientId: null }); h.win.VildaAuthUI.isGuestMode = () => false;
+    h.start(); expect(pending(h)).toBe(true); expect(h.applied).toEqual([]);
+    if (outcome === 'new-patient') h.owner('fictional-new-selection');
+    h.settle(); h.frame(); h.tick();
+    expect(pending(h)).toBe(false); expect(h.applied).toHaveLength(outcome === 'settled' ? 1 : 0);
+    clean(h);
+  });
+
+  it('keeps the known-patient gate independent of the new anonymous-account query', () => {
+    const h = harness();
+    h.win.VildaVault.getCurrentUser = () => { throw new Error('This locked legacy getter must not be called'); };
+    h.start(); expect(pending(h)).toBe(true); expect(h.applied).toEqual([]);
+  });
+
   it('keeps an already unlocked owner pending until authentication finishes its key activation', () => {
     const h = harness({ locked: false }); h.start();
     expect(pending(h)).toBe(true); expect(h.applied).toEqual([]);

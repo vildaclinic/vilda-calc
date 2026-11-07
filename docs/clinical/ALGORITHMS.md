@@ -13754,6 +13754,20 @@ Przy starcie zapisanej sesji pacjenta odczyt czeka na rzeczywiste zakończenie
 inicjalizacji uwierzytelnienia, także jeśli sejf jest już otwarty, lecz trwa
 jeszcze ustanawianie klucza. Dowód powstaje po tej granicy; nie odnawiamy
 nieaktualnego potwierdzenia na podstawie zgodnego PID.
+Ta sama granica obejmuje anonimowy szkic przed nadaniem pierwszego PID:
+zarówno już odblokowane konto, jak i rzeczywisty start AuthUI, który jeszcze
+ustala konto i nie jest w trybie gościa. Odczyt po rozstrzygnięciu tego startu
+wiąże dane z końcowym kluczem. Jawny tryb gościa i starszy adapter bez tej
+informacji zachowują dotychczasową ścieżkę; samo oczekiwanie nie nadaje prawa
+do zapisu ani nie odnawia wcześniejszego potwierdzenia.
+
+Gotowość uwzględnia także już zaplanowane odtworzenie istniejącej sesji,
+zanim wykona się jego pierwszy callback. Samo wspólne uzupełnienie pól nie
+potwierdza jeszcze odtworzenia danych niewidocznych w częściowym formularzu.
+Świeży formularz bez sesji nie dostaje tej blokady. Jawny kompletny zapis
+zachowuje wcześniejszą możliwość zakończenia starego, jeszcze nierozpoczętego
+odtwarzania; nadal przechodzi wszystkie kontrole aktywnego odtwarzania,
+konta, właściciela i przenoszonych danych. Gotowość nie zastępuje tych kontroli.
 
 Pierwszy natywny zapis może nadać PID, zanim odroczony zapis formularza
 zastąpi wcześniejszy pusty szkic. Kontynuację tej samej wizyty potwierdza
@@ -13762,6 +13776,13 @@ a nie zgodność nazwiska z tym szkicem. Następny zwykły zapis sesji podczas
 nawigacji może dzięki temu przekazać aktualne pomiary. Samo zdarzenie
 `source: save`, zgodny PID lub późniejszy odczyt rekordu nie odnawiają
 nieaktualnego uprawnienia. Referencja zapisu pozostaje niezmieniona.
+
+Zakończenie ładowania tej samej ramki nie rozpoczyna nowej wizyty. Jeżeli
+formularz i odtwarzanie były gotowe przed zdarzeniem `load`, potwierdzenie
+zapisu sesji nadal dotyczy dokładnie tego samego dokumentu i aktywacji.
+Generacja potwierdzenia uwzględnia kończące się ładowanie. Rzeczywista
+wymiana dokumentu, ponowne żądanie przeładowania, zmiana aktywnej ramki,
+konta lub klucza nadal odrzucają starsze potwierdzenia.
 
 Jawne odtworzenie sesji podczas nawigacji wykonuje rzeczywiste zastosowanie
 potwierdzonego szkicu także wtedy, gdy docelowy panel zdążył już odtworzyć
@@ -13869,6 +13890,13 @@ dotychczasowe wyprowadzenie brakującej historii pozostaje dostępne.
 Nie dodajemy identyfikatorów do zapisanych pomiarów ani migracji rekordów.
 Opóźniony finalizator poprzedniego wczytania nie może zwolnić ochrony bieżącej
 wizyty.
+
+Po odtworzeniu karta spożycia zachowuje pusty wiersz edycji obok istniejącego,
+wypełnionego wiersza bieżącego pomiaru. Jest to wyłącznie odtworzenie pól
+interfejsu: wszystkie cztery wartości są puste, wiersz nie dostaje identyfikatora
+powiązania, a kolektor nie dodaje go do historii klinicznej. Nie uruchamia to
+obliczeń ani kopiowania między historiami. Brak bieżącego pomiaru lub
+nieaktualny właściciel odtwarzania nie tworzą takiego wiersza.
 
 **Istniejąca tożsamość GH.** Ochrona niezależnie odtworzonych historii nie
 zmienia wcześniejszego kontraktu P-GH-TOZSAMOSC. Istniejące lustro punktu

@@ -100,13 +100,14 @@ const paruj = (env) => env.win.pairAdvancedIntakeRowsByOrder(opcje(env));
 const odtworzNiezalezne = (env, { state = { loading: false }, options = {} } = {}) => new Function(
   'vildaShouldPreserveRestoredGrowthSync', 'vildaCurrentGrowthHistoryRestore', '_callAdvIntakeHelper',
   '_getAdvIntakePairingOptions', '_refreshAdvIntakeRowUi', '_pairAdvancedAndIntakeRowsByOrderUntracked',
+  '_intkRows',
   `return (${funkcjaZ(czytaj('app.js'), '_pairAdvancedAndIntakeRowsByOrder')})();`,
 )(() => true, () => state, (name, args, fallback) => {
   const fn = env.win.VildaAdvancedGrowth[name];
   return typeof fn === 'function' ? fn(...args) : fallback();
 }, () => ({ ...opcje(env), ...options }), () => {}, () => {
   throw new Error('Niezależnych historii nie wolno parować po kolejności');
-});
+}, () => env.intC.children);
 
 const opisAdv = (r) => ({ y: r._inputs['.adv-age-years'].value, m: r._inputs['.adv-age-months'].value, h: r._inputs['.adv-height'].value, w: r._inputs['.adv-weight'].value, gh: r.getAttribute('data-gh-sync') === 'true', id: r.getAttribute('data-gh-id') || '' });
 const opisInt = (r) => ({ y: r._inputs['.intake-ageY'].value, m: r._inputs['.intake-ageM'].value, h: r._inputs['.intake-ht'].value, w: r._inputs['.intake-wt'].value, gh: r.getAttribute('data-gh-sync') === 'true', id: r.getAttribute('data-gh-id') || '' });
