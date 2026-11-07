@@ -58,18 +58,26 @@
       && a.source === b.source && a.route === b.route);
   }
 
+  function readiness() {
+    var reason = '', phase = 'ready', current;
+    if (!handlesPage()) { reason = 'Dokumenty pacjenta są dostępne na stronie głównej i DocPro.'; phase = 'unavailable'; }
+    else if (!professional()) { reason = 'Dokumenty pacjenta są dostępne w trybie PRO lub DocPro.'; phase = 'unavailable'; }
+    else if (!(current = owner())) { reason = 'Poczekaj na wczytanie danych pacjenta.'; phase = 'preparing'; }
+    else if (!summary && !(w.VildaPatientReportLoader && typeof w.VildaPatientReportLoader.ensure === 'function')) { reason = 'Przygotowywanie dokumentów pacjenta…'; phase = 'preparing'; }
+    else if (summary && !sameOwner(summaryOwner, current)) { reason = 'Uzupełnij dane, aby przygotować dokumenty pacjenta.'; phase = 'preparing'; }
+    else if (summary && !summary.shouldShow) { reason = 'Uzupełnij dane, aby przygotować dokumenty pacjenta.'; phase = 'unavailable'; }
+    return { disabled: !!reason || busy, reason: busy ? 'Przygotowywanie dokumentów pacjenta…' : reason, busy: busy, phase: busy ? 'busy' : phase };
+  }
+
   function getState() {
-    var reason = '';
-    if (!handlesPage()) reason = 'Dokumenty pacjenta są dostępne na stronie głównej i DocPro.';
-    else if (!professional()) reason = 'Dokumenty pacjenta są dostępne w trybie PRO lub DocPro.';
-    else if (!owner()) reason = 'Poczekaj na wczytanie danych pacjenta.';
-    else if (!summary && !(w.VildaPatientReportLoader && typeof w.VildaPatientReportLoader.ensure === 'function')) reason = 'Przygotowywanie dokumentów pacjenta…';
-    else if (summary && (!sameOwner(summaryOwner, owner()) || !summary.shouldShow)) reason = 'Uzupełnij dane, aby przygotować dokumenty pacjenta.';
-    return { disabled: !!reason || busy, reason: busy ? 'Przygotowywanie dokumentów pacjenta…' : reason, busy: busy };
+    var state = readiness();
+    return { disabled: state.disabled, reason: state.reason, busy: state.busy };
   }
 
   function publish() {
-    var state = getState(), signature = JSON.stringify(state);
+    // A stale summary and a ready empty summary can have the same public
+    // disabled reason. Their presentation phases must still notify the shell.
+    var value = readiness(), state = { disabled: value.disabled, reason: value.reason, busy: value.busy }, signature = JSON.stringify(value);
     if (signature === lastState) return;
     lastState = signature;
     d.dispatchEvent(new w.CustomEvent('vilda:patient-documents-state', { detail: state }));
@@ -432,7 +440,7 @@
       }).observe(w.frameElement, { attributes: true, attributeFilter: ['hidden', 'aria-hidden'] });
     }
   } catch (_) { /* standalone */ }
-  w.VildaPatientDocuments = Object.freeze({ handlesPage: handlesPage, getState: getState, open: open,
+  w.VildaPatientDocuments = Object.freeze({ handlesPage: handlesPage, getState: getState, getReadinessPhase: function () { return readiness().phase; }, open: open,
     close: function () { close(active); }, setSummaryState: setSummaryState });
   publish();
 })(window);
