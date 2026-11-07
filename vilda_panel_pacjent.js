@@ -257,6 +257,21 @@
     } catch (_) { return false; }
   }
 
+  // The native rejected Save removes only its own deleted PID. Continue that
+  // exact current visit as unassigned, without adopting the merge destination
+  // or making any old writer ticket valid for it.
+  function completeOwnFailedSaveReset(ticket, patientId) {
+    try {
+      if (!patientId || !ticket || !writeTickets.has(ticket) || ticket.patientId !== patientId ||
+          ticket.generation !== writeGeneration || ticket.sequence !== applySequence() ||
+          ticket.shell !== writeShell() || !accountCurrent(ticket.account) ||
+          pacjentKarty() !== null || stan.znany !== patientId || stan.nieaktualny || stan.koncowy) return false;
+      if (ticket.shell && !ticket.shell.isSessionWriterCurrent(ticket.source, w)) return false;
+      odNowa(null);
+      return true;
+    } catch (_) { return false; }
+  }
+
   // DIX's accepted main-session restore advances its own apply sequence once.
   // Validate that continuation without relaxing ordinary writer tickets or
   // adopting a PID: every other opaque owner/activation fence stays intact.
@@ -353,6 +368,7 @@
     isAcceptedLoadAuthorityApplied: isAcceptedLoadAuthorityApplied,
     publishAcceptedLoadAuthority: publishAcceptedLoadAuthority,
     completeAcceptedLoadAuthority: completeAcceptedLoadAuthority,
+    completeOwnFailedSaveReset: completeOwnFailedSaveReset,
     captureWriteAuthority: captureWriteAuthority,
     isWriteAuthorityCurrent: isWriteAuthorityCurrent,
     isWriteAuthorityCurrentAfterSessionApply: isWriteAuthorityCurrentAfterSessionApply,

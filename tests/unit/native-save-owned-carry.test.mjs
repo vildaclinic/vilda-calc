@@ -38,11 +38,12 @@ function environment(source = record(), { patientId = PID, panel = true, load = 
   };
   const vault = {
     isUnlocked: () => true, getCurrentUser: () => ({ userId: owner }),
+    normalizePatientName: name => String(name || '').trim().toLowerCase(),
     captureSyncOperationSession: () => Object.freeze({ owner, generation }),
     assertSyncOperationSession(token) { if (token.owner !== owner || token.generation !== generation) throw new Error('Fictional account change'); return true; },
     getCommittedSavePayload: result => clone(committed.get(result)),
-    savePatient: vi.fn(async payload => {
-      const result = { patientId: storage.get('vildaCurrentPatientId') || PID, snapshotId: `fictional-native-snapshot-${++sequence}`, snapshotCount: sequence };
+    savePatient: vi.fn(async (payload, options = {}) => {
+      const result = { patientId: options.patientId || storage.get('vildaCurrentPatientId') || PID, snapshotId: `fictional-native-snapshot-${++sequence}`, snapshotCount: sequence };
       snapshots.push(clone(payload)); committed.set(result, clone(payload));
       storage.set('vildaCurrentPatientId', result.patientId); return result;
     }),
@@ -142,6 +143,71 @@ describe('native Save preserves authorized unmounted fields without changing the
     h.fields.delete('palFactor'); h.fields.delete('intakePal'); h.fields.get('height').value = '162';
     expect((await h.save()).saved).toBe(true);
     expect(h.snapshots()[0]).toMatchObject({ plan: { palFactor: 1.7 }, intake: { pal: '1.7' }, user: { height: 162 } });
+  });
+
+  it.each([true, false])('continues only the actual rejected native Save cleanup before its next attempt (merged=%s)', async merged => {
+    const h = environment(), before = h.main(), originalTicket = h.win.VildaPanelPacjent.captureWriteAuthority();
+    const target = 'fictional-native-merge-target';
+    const rejection = Object.assign(new Error('Fictional deleted record'), { code: 'PATIENT_DELETED',
+      patientId: PID, mergedIntoPatientId: merged ? target : null, mergedIntoSameIdentity: merged });
+    h.vault.savePatient.mockRejectedValueOnce(rejection);
+    expect((await h.save()).saved).toBe(false);
+    expect(h.vault.savePatient.mock.calls[0][1].patientId).toBe(PID);
+    expect(h.storage.get('vildaCurrentPatientId')).toBeUndefined();
+    expect(h.win.VildaPanelPacjent.isWriteAuthorityCurrent(originalTicket)).toBe(false);
+    expect(h.snapshots()).toEqual([]); expect(h.main()).toEqual(before);
+    h.fields.get('height').value = '162';
+    const result = await h.save(); expect(result.saved).toBe(true);
+    const options = h.vault.savePatient.mock.calls[1][1];
+    if (merged) expect(options).toMatchObject({ patientId: target, dolaczPoScaleniu: PID });
+    else expect(options).not.toHaveProperty('patientId');
+    expect(h.snapshots()[0]).toMatchObject({ user: { height: 162 }, plan: { palFactor: 1.8 }, intake: { pal: '1.8' } });
+    expect(h.main()).toEqual(before);
+  });
+
+  it.each(['account', 'key', 'adapter', 'carrier', 'visit', 'clear'])('cannot continue a rejected native Save after %s changed', async cause => {
+    const h = environment();
+    h.vault.savePatient.mockImplementationOnce(async () => {
+      if (cause === 'account') h.changeAccount();
+      if (cause === 'key') h.rotateSession();
+      if (cause === 'adapter') h.win.VildaPersistence = { ...h.persistence };
+      if (cause === 'carrier') { const changed = h.main(); changed.plan.palFactor = 2; h.replaceMain(changed); }
+      if (cause === 'visit') h.win.VildaPanelPacjent.invalidateWriteAuthority();
+      if (cause === 'clear') { const old = h.main(); h.api.clearMainSessionStorage(); h.replaceMain(old); }
+      throw Object.assign(new Error('Fictional deleted record'), { code: 'PATIENT_DELETED', patientId: PID,
+        mergedIntoPatientId: 'fictional-target', mergedIntoSameIdentity: true });
+    });
+    expect((await h.save()).saved).toBe(false);
+    expect((await h.save()).saved).toBe(false);
+    expect(h.vault.savePatient).toHaveBeenCalledTimes(1); expect(h.snapshots()).toEqual([]);
+  });
+
+  it.each(['account', 'key', 'adapter', 'visit', 'clear'])('rejects reentrant %s during its own failed-Save PID cleanup', async cause => {
+    const h = environment(), remove = h.win.sessionStorage.removeItem;
+    h.win.sessionStorage.removeItem = key => {
+      remove(key);
+      if (key !== 'vildaCurrentPatientId') return;
+      if (cause === 'account') h.changeAccount();
+      if (cause === 'key') h.rotateSession();
+      if (cause === 'adapter') h.win.VildaPersistence = { ...h.persistence };
+      if (cause === 'visit') h.win.VildaPanelPacjent.invalidateWriteAuthority();
+      if (cause === 'clear') { const old = h.main(); h.api.clearMainSessionStorage(); h.replaceMain(old); }
+    };
+    h.vault.savePatient.mockRejectedValueOnce(Object.assign(new Error('Fictional deleted record'), { code: 'PATIENT_DELETED',
+      patientId: PID, mergedIntoPatientId: 'fictional-target', mergedIntoSameIdentity: true }));
+    expect((await h.save()).saved).toBe(false); expect((await h.save()).saved).toBe(false);
+    expect(h.vault.savePatient).toHaveBeenCalledTimes(1); expect(h.snapshots()).toEqual([]);
+  });
+
+  it('a new accepted visit after a rejected Save cannot inherit the abandoned retry carry', async () => {
+    const h = environment();
+    h.vault.savePatient.mockRejectedValueOnce(Object.assign(new Error('Fictional deletion'), { code: 'PATIENT_DELETED', patientId: PID }));
+    expect((await h.save()).saved).toBe(false);
+    const next = record(); next.name = 'Fikcyjny Inny Pacjent'; next.plan.palFactor = 1.6; next.intake.pal = '1.6';
+    h.api.applyLoadedData(next, h.options); h.setFields();
+    expect((await h.save()).saved).toBe(true);
+    expect(h.snapshots()[0]).toMatchObject({ plan: { palFactor: 1.6 }, intake: { pal: '1.6' } });
+    expect(h.vault.savePatient.mock.calls[1][1]).not.toHaveProperty('dolaczPoScaleniu');
   });
 
   it('preserves standalone compatibility without a panel module', async () => {
@@ -484,6 +550,96 @@ describe('immediate native Save uses only the exact accepted main-session restor
     expect(h.writes).not.toHaveBeenCalled(); expect(h.main()).toEqual(h.source);
   });
 
+  it('captures the accepted carrier only after an unlocked auth boot finishes rotating its key session', async () => {
+    let ready = false;
+    const h = restored({ prepare(value) {
+      value.win.VildaAuthUI.isBootReady = () => ready;
+      value.win.requestAnimationFrame = callback => setTimeout(callback, 0);
+      value.win.cancelAnimationFrame = clearTimeout;
+    } });
+    expect(h.api.isMainSessionRestorePending()).toBe(true);
+    expect(h.api.getApplyLoadedDataSequence()).toBe(0);
+    h.rotateSession(); ready = true;
+    h.win.document.dispatchEvent({ type: 'vilda:auth-boot-settled' });
+    await vi.advanceTimersByTimeAsync(5);
+    expect(h.api.getSaveReadiness()).toEqual({ ready: true, reason: null });
+    h.fields.get('weight').value = '47';
+    expect((await h.save()).saved).toBe(true);
+    expect(h.snapshots()[0]).toMatchObject({ user: { weight: 47 }, plan: { palFactor: 1.8 } });
+    expect(h.writes).not.toHaveBeenCalled();
+  });
+
+  it.each(['explicit', 'startup', 'key-during-read', 'edit-during-read', 'key-in-form-check', 'edit-in-form-check', 'changed-carrier-in-form-check'])('anonymous incoming draft is natively applied only by a current explicit restore (%s)', async cause => {
+    const source = record(), h = environment(source, { patientId: null, load: false });
+    h.setFields(); h.fields.get('weight').value = '47';
+    h.replaceMain(source);
+    const options = { ...h.options, applyLoadedData: (value, flags) => h.api.applyLoadedData(value, { ...h.options, ...flags }) };
+    if (cause.endsWith('in-form-check')) options.anyDataEntered = () => {
+      if (cause === 'key-in-form-check') h.rotateSession();
+      if (cause === 'edit-in-form-check') h.fields.get('weight').value = '49';
+      if (cause === 'changed-carrier-in-form-check') { const next = clone(source); next.plan.palFactor = 2; h.replaceMain(next); }
+      return true;
+    };
+    h.api.initMainSessionPersistence(options);
+    const originalRead = h.persistence.readMainSession.getMockImplementation();
+    if (cause === 'key-during-read' || cause === 'edit-during-read') h.persistence.readMainSession.mockImplementationOnce(() => {
+      const value = originalRead();
+      if (cause === 'key-during-read') h.rotateSession();
+      else h.fields.get('weight').value = '49';
+      return value;
+    });
+    const restored = cause === 'startup' ? h.api.restoreMainSessionIfAny(options) : h.win.vildaSession.restore();
+    expect(restored).toBe(cause === 'explicit');
+    await vi.advanceTimersByTimeAsync(5);
+    if (cause === 'explicit') {
+      expect(h.fields.get('weight').value).toBe('46');
+      expect((await h.save()).saved).toBe(true);
+      expect(h.snapshots()[0]).toMatchObject({ plan: { palFactor: 1.8 }, user: { weight: 46 } });
+    } else {
+      expect(h.fields.get('weight').value).toBe(cause === 'edit-during-read' || cause === 'edit-in-form-check' ? '49' : '47');
+      expect(h.api.getApplyLoadedDataSequence()).toBe(0);
+      expect((await h.save()).saved).toBe(false); expect(h.snapshots()).toEqual([]);
+    }
+  });
+
+  it.each([
+    { lastName: 'Fikcyjny Bez Pomiaru' },
+    { lastName: 'Fikcyjny Bez Pomiaru', firstName: '' },
+    { firstName: 'Fikcyjna Anna Maria', lastName: '' },
+    {},
+  ])('session restore keeps explicit name parts %j and only absent parts use the canonical parser', async parts => {
+    const source = record(); source.name = 'Fikcyjny Bez Pomiaru'; Object.assign(source.user, parts);
+    if (Object.keys(parts).length) source.name = [parts.lastName, parts.firstName].filter(Boolean).join(' ');
+    const h = environment(source, { patientId: null, load: false });
+    h.fields.set('firstName', h.field('firstName')); h.fields.set('lastName', h.field('lastName'));
+    let canonical = '';
+    Object.defineProperty(h.fields.get('name'), 'value', { get: () => canonical, set(value) {
+      canonical = String(value); const words = canonical.split(' ');
+      h.fields.get('lastName').value = words.shift() || ''; h.fields.get('firstName').value = words.join(' ');
+    } });
+    expect(h.api.applyLoadedData(source, { ...h.options, isSessionRestore: true })).toBe(true);
+    const explicit = Object.keys(parts).length > 0;
+    expect(h.fields.get('lastName').value).toBe(explicit ? parts.lastName || '' : 'Fikcyjny');
+    expect(h.fields.get('firstName').value).toBe(explicit ? parts.firstName || '' : 'Bez Pomiaru');
+    // A subsequent real field edit remains authoritative, with no source alias.
+    h.fields.get('lastName').value = 'Fikcyjny Nowy Człon';
+    expect(h.api.collectUserData().user.lastName).toBe('Fikcyjny Nowy Człon');
+  });
+
+  it('a genuine edited full name is not replaced by older inconsistent carried split parts', () => {
+    const source = record(); source.name = 'Fikcyjny Zmieniony'; source.user.lastName = 'Fikcyjny Dawny'; source.user.firstName = '';
+    const h = environment(source, { patientId: null, load: false });
+    h.fields.set('firstName', h.field('firstName', '')); h.fields.set('lastName', h.field('lastName', ''));
+    let canonical = '';
+    Object.defineProperty(h.fields.get('name'), 'value', { get: () => canonical, set(value) {
+      canonical = String(value); const words = canonical.split(' ');
+      h.fields.get('lastName').value = words.shift() || ''; h.fields.get('firstName').value = words.join(' ');
+    } });
+    expect(h.api.applyLoadedData(source, { ...h.options, isSessionRestore: true })).toBe(true);
+    expect(h.fields.get('name').value).toBe('Fikcyjny Zmieniony');
+    expect(h.fields.get('lastName').value).toBe('Fikcyjny'); expect(h.fields.get('firstName').value).toBe('Zmieniony');
+  });
+
   it.each(['before-read-account', 'inside-apply-account', 'inside-apply-key', 'inside-apply-activation', 'inside-apply-panel', 'inside-apply-guest', 'before-finalizer-panel', 'before-finalizer-account', 'changed-carrier', 'failed-apply', 'canceled-restore'])('refuses unproved carry after %s without a durable write', async cause => {
     const h = restored({
       shell: cause === 'inside-apply-activation', failed: cause === 'failed-apply',
@@ -719,6 +875,49 @@ describe('accepted explicit patient load retains its exact caller-owned source t
     expect(h.snapshots()[0].bisphos).toEqual(chosen());
     expect(h.api.isAcceptedPatientLoadCurrent(token)).toBe(false);
   });
+  it.each(['current', 'key-during-publication', 'next-visit'])('continues only its own history owner after accepted PID publication (%s)', async cause => {
+    const h = setup(), historyToken = Object.freeze({}); let finish;
+    h.win.vildaBeginGrowthHistoryRestore = vi.fn(() => historyToken);
+    h.win.vildaCommitGrowthHistoryRestore = vi.fn(token => token === historyToken);
+    h.win.vildaAdoptGrowthHistoryAcceptedLoadScope = vi.fn((token, target) => token === historyToken
+      && h.storage.get('vildaCurrentPatientId') === target);
+    h.options.importTherapyPointsToAdvancedGrowth = () => new Promise(resolve => { finish = resolve; });
+    const token = h.api.captureAcceptedPatientLoad({ patientId: 'fictional-explicit-target' });
+    const accepted = run(h, token, { publish(detail) {
+      publish(h, detail);
+      if (cause === 'key-during-publication') h.rotateSession();
+    } });
+    expect(accepted).toBe(cause !== 'key-during-publication');
+    if (cause === 'key-during-publication') expect(h.win.vildaAdoptGrowthHistoryAcceptedLoadScope).not.toHaveBeenCalled();
+    else expect(h.win.vildaAdoptGrowthHistoryAcceptedLoadScope).toHaveBeenCalledExactlyOnceWith(historyToken, 'fictional-explicit-target');
+    if (cause === 'next-visit') h.win.VildaPanelPacjent.invalidateWriteAuthority();
+    finish(); await Promise.resolve(); await Promise.resolve();
+    if (cause === 'current') expect(h.win.vildaCommitGrowthHistoryRestore).toHaveBeenCalledWith(historyToken);
+    else expect(h.win.vildaCommitGrowthHistoryRestore).not.toHaveBeenCalled();
+  });
+
+  it.each(['current', 'key-during-preview'])('correlates accepted Klirens preview without replacing mounted fields (%s)', async cause => {
+    const h = setup(); h.fields.set('clcrForm', h.field('clcrForm'));
+    h.payload.clcr = { version: 2, inputs: { Scr: '0.4', ScrUnit: 'mg/dl' } };
+    h.fields.get('weight').value = '22'; h.fields.get('height').value = '118';
+    const token = h.api.captureAcceptedPatientLoad({ patientId: 'fictional-explicit-target' });
+    const accepted = run(h, token, { apply(value) {
+      const result = h.api.applyLoadedData(value, h.options);
+      if (cause === 'key-during-preview') h.rotateSession();
+      return result;
+    } });
+    expect(accepted).toBe(cause === 'current');
+    expect(h.fields.get('weight').value).toBe('22'); expect(h.fields.get('height').value).toBe('118');
+    if (cause === 'current') {
+      expect(h.storage.get('vildaCurrentPatientId')).toBe('fictional-explicit-target');
+      expect(h.api.getSaveReadiness().ready).toBe(true);
+      expect(h.main()).toMatchObject({ user: { weight: 22, height: 118 }, bisphos: chosen() });
+    } else {
+      expect(h.storage.get('vildaCurrentPatientId')).toBe(PID);
+      expect(h.vault.savePatient).not.toHaveBeenCalled();
+    }
+  });
+
   it('accepted load preserves explicit complete custom collector semantics and releases pending readiness', async () => {
     const h = setup(), token = h.api.captureAcceptedPatientLoad({ patientId: 'fictional-explicit-target' });
     const custom = record(); custom.name = h.payload.name; custom.clcr = null;

@@ -4327,6 +4327,7 @@ const OPTIONAL_ASSETS = [
   '/vilda_advanced_growth.js?v=79',
   '/vilda_advanced_growth.js?v=80',
   '/vilda_advanced_growth.js?v=81',
+  '/vilda_advanced_growth.js?v=82',
   '/vilda_adv_history_collapse.js?v=1',
   '/vilda_adv_history_collapse.js?v=2',
   '/vilda_spojnosc_zapisow.js?v=1',

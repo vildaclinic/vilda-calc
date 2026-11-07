@@ -42,6 +42,7 @@ function harness() {
   for (const name of ['vildaReadIntakeUserResetBasis', 'vildaSameIntakeUserResetBasis',
     'vildaReadGrowthHistoryOwner', 'vildaCurrentGrowthHistoryRestore',
     'vildaBeginGrowthHistoryRestore', 'vildaCommitGrowthHistoryRestore', 'vildaShouldPreserveRestoredGrowthSync',
+    'vildaAdoptGrowthHistoryAcceptedLoadScope',
     'vildaCopyVerifiedSaveReceipt', 'vildaAdoptGrowthHistorySaveScope', 'vildaHandleGrowthHistorySaved', '_pairAdvancedAndIntakeRowsByOrder']) {
     vm.runInContext(funkcjaZ(appSrc, name), context, { filename: `app.js:${name}` });
   }
@@ -65,6 +66,7 @@ function harness() {
     _runWithAdvIntakeSyncSuspended: callback => callback(), _isAdvIntakeSyncSuspended: () => false,
     _callAdvIntakeHelper: (_name, _args, fallback) => fallback(),
     _getAdvIntakeHelperOptions: () => ({}), _getAdvIntakeRowOperationOptions: options => options,
+    _getAdvIntakePairingOptions: () => ({}),
     _getAdvIntakeHandlerOptions: () => ({}), _getRawInputValue: input => String(input?.value || ''),
     _isProtectedAdvancedHistoryRow: () => false, _isProtectedIntakeHistoryRow: () => false,
     _syncAdvancedGrowthMeasurementsFromDom() {}, _notifyAdvIntakeHistoryMutated() {},
@@ -86,6 +88,44 @@ function harness() {
 }
 
 describe('accepted restoration is not a cross-history edit', () => {
+  it.each(['loading', 'committed'])('continues only the original accepted-load token across its own PID publication (%s)', phase => {
+    const h = harness(); h.scope.patient = null;
+    const token = h.begin();
+    if (phase === 'committed') expect(h.commit(token)).toBe(true);
+    const original = h.win.vildaCurrentGrowthHistoryRestore();
+    const originalProof = original.owner.sessionToken;
+    h.scope.patient = 'accepted-native-target';
+    expect(h.win.vildaCurrentGrowthHistoryRestore()).toBeNull();
+    expect(h.win.vildaAdoptGrowthHistoryAcceptedLoadScope(token, h.scope.patient)).toBe(true);
+    const continued = h.win.vildaCurrentGrowthHistoryRestore();
+    expect(continued).toBe(original);
+    expect(continued.owner.sessionToken).toBe(originalProof);
+    expect(continued.loading).toBe(phase === 'loading');
+    expect(continued.token).toBe(token);
+    expect(h.rows.advanced).toEqual([h.originalAdvanced]);
+    expect(h.rows.basic).toEqual([h.originalBasic]);
+    expect(h.rows.intake).toEqual([h.originalIntake]);
+    expect(h.commit(token)).toBe(true);
+  });
+
+  it.each(['wrong-token', 'wrong-patient', 'key', 'lock', 'apply', 'account', 'vault', 'new-operation', 'clear'])(
+    'rejects accepted-load continuation after %s without accepting a stale scope', boundary => {
+      const h = harness(), token = h.begin(), original = h.win.vildaCurrentGrowthHistoryRestore();
+      h.scope.patient = 'accepted-native-target';
+      if (boundary === 'key') h.scope.generation += 1;
+      if (boundary === 'lock') h.win.VildaVault.isUnlocked = () => false;
+      if (boundary === 'apply') h.scope.apply += 1;
+      if (boundary === 'account') h.scope.owner = 'other-fictional-owner';
+      if (boundary === 'vault') h.win.VildaVault = { ...h.win.VildaVault };
+      if (boundary === 'new-operation') h.begin();
+      if (boundary === 'clear') h.win.vildaBeginGrowthHistoryRestore(null);
+      expect(h.win.vildaAdoptGrowthHistoryAcceptedLoadScope(boundary === 'wrong-token' ? {} : token,
+        boundary === 'wrong-patient' ? 'wrong-target' : h.scope.patient)).toBe(false);
+      expect(original.owner.patientId).toBe('fictional-patient');
+      expect(original.loading).toBe(true);
+    },
+  );
+
   it('blocks passive copying before hydration completes and after the accepted baseline is committed', () => {
     const h = harness(), token = h.begin();
     for (const phase of ['loading', 'committed']) {

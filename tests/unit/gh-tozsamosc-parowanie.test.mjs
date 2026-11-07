@@ -3,6 +3,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 import { loadBrowserScript } from '../support/load-browser-script.mjs';
+import { funkcjaZ } from '../support/silnik-bmi.mjs';
 
 // P-GH-TOZSAMOSC rata 2 (decyzja właściciela 2026-09-28, opcja (a) w dwóch ratach).
 //
@@ -96,6 +97,16 @@ const opcje = (env) => ({
   addIntakeRow: () => { env.intC.appendChild(pustyIntake()); },
 });
 const paruj = (env) => env.win.pairAdvancedIntakeRowsByOrder(opcje(env));
+const odtworzNiezalezne = (env, { state = { loading: false }, options = {} } = {}) => new Function(
+  'vildaShouldPreserveRestoredGrowthSync', 'vildaCurrentGrowthHistoryRestore', '_callAdvIntakeHelper',
+  '_getAdvIntakePairingOptions', '_refreshAdvIntakeRowUi', '_pairAdvancedAndIntakeRowsByOrderUntracked',
+  `return (${funkcjaZ(czytaj('app.js'), '_pairAdvancedAndIntakeRowsByOrder')})();`,
+)(() => true, () => state, (name, args, fallback) => {
+  const fn = env.win.VildaAdvancedGrowth[name];
+  return typeof fn === 'function' ? fn(...args) : fallback();
+}, () => ({ ...opcje(env), ...options }), () => {}, () => {
+  throw new Error('Niezależnych historii nie wolno parować po kolejności');
+});
 
 const opisAdv = (r) => ({ y: r._inputs['.adv-age-years'].value, m: r._inputs['.adv-age-months'].value, h: r._inputs['.adv-height'].value, w: r._inputs['.adv-weight'].value, gh: r.getAttribute('data-gh-sync') === 'true', id: r.getAttribute('data-gh-id') || '' });
 const opisInt = (r) => ({ y: r._inputs['.intake-ageY'].value, m: r._inputs['.intake-ageM'].value, h: r._inputs['.intake-ht'].value, w: r._inputs['.intake-wt'].value, gh: r.getAttribute('data-gh-sync') === 'true', id: r.getAttribute('data-gh-id') || '' });
@@ -223,5 +234,68 @@ describe('P-GH-TOZSAMOSC rata 2 — parowanie zaawansowane↔spożycie zna tożs
     expect(persist).toContain('ghId:String(typeof s.getAttribute=="function"&&s.getAttribute("data-gh-id")||"").trim()');
     expect(persist).toContain('ghId:typeof d.ghId=="string"?d.ghId.trim():""');
     expect(persist).toContain('g.setAttribute("data-gh-id",c.ghId.trim()),g.setAttribute("data-gh-sync","true")');
+  });
+});
+
+describe('niezależne odtworzone historie zachowują istniejący kontrakt tożsamości GH', () => {
+  it('rzeczywista bramka app odtwarza znacznik GH bez kopiowania lub łączenia pozostałych pomiarów', () => {
+    const env = zaladuj(srodowisko());
+    const manualAdvanced = RECZNY(), point = PUNKT();
+    const legacyMirror = intake(13, 1, 139.9, 45), independent = intake(9, 6, 121, 29);
+    env.advC.appendChild(manualAdvanced); env.advC.appendChild(point);
+    env.intC.appendChild(legacyMirror); env.intC.appendChild(independent);
+    const advancedBefore = tabelaAdv(env), independentBefore = opisInt(independent);
+    expect(odtworzNiezalezne(env)).toMatchObject({ paired: false, skipped: true });
+    expect(opisInt(legacyMirror)).toEqual(O_LUSTRO_INT);
+    expect(tabelaAdv(env)).toEqual(advancedBefore);
+    expect(opisInt(independent)).toEqual(independentBefore);
+    expect(env.advC.children).toEqual([manualAdvanced, point]);
+    expect(env.intC.children).toEqual([legacyMirror, independent]);
+    expect([...env.advC.children, ...env.intC.children].map(sync)).toEqual(['', '', '', '']);
+  });
+
+  it('nie nadaje zwykłym równym pomiarom tożsamości, nie wyrównuje liczby wierszy ani nie dopisuje pomiarów', () => {
+    const env = zaladuj(srodowisko());
+    env.advC.appendChild(RECZNY()); env.advC.appendChild(PUNKT());
+    env.advC.appendChild(adv(8, 0, 120, 25));
+    env.intC.appendChild(intake(11, 0, 123.9, 35));
+    const before = { advanced: tabelaAdv(env), intake: tabelaInt(env) };
+    odtworzNiezalezne(env);
+    expect({ advanced: tabelaAdv(env), intake: tabelaInt(env) }).toEqual(before);
+    expect([...env.advC.children, ...env.intC.children].map(sync)).toEqual(['', '', '', '']);
+  });
+
+  it('usuwa wyłącznie już oznaczone osierocone lustro GH, nie tworząc pomiaru ręcznego', () => {
+    const env = zaladuj(srodowisko());
+    const manual = intake(11, 0, 123.9, 35);
+    env.advC.appendChild(RECZNY()); env.intC.appendChild(manual);
+    env.intC.appendChild(intake(13, 1, 139.9, 45, { 'data-gh-sync': 'true', 'data-gh-id': 'removed-point' }));
+    const advancedBefore = tabelaAdv(env);
+    expect(odtworzNiezalezne(env)).toMatchObject({ mutated: true });
+    expect(tabelaAdv(env)).toEqual(advancedBefore); expect(env.intC.children).toEqual([manual]);
+  });
+
+  it.each([
+    ['odtwarzanie w toku', { state: { loading: true } }],
+    ['nieaktualny właściciel', { state: null }],
+    ['zawieszone parowanie', { options: { isSuspended: () => true } }],
+    ['brak kontenerów', { options: { document: { getElementById: () => null } } }],
+  ])('%s nie oznacza lustra ani nie usuwa osieroconych danych', (_name, settings) => {
+    const env = zaladuj(srodowisko()); env.advC.appendChild(PUNKT());
+    env.intC.appendChild(intake(13, 1, 139.9, 45));
+    env.intC.appendChild(intake(12, 0, 132, 38, { 'data-gh-sync': 'true', 'data-gh-id': 'orphan' }));
+    const before = { advanced: tabelaAdv(env), intake: tabelaInt(env) };
+    odtworzNiezalezne(env, settings);
+    expect({ advanced: tabelaAdv(env), intake: tabelaInt(env) }).toEqual(before);
+  });
+
+  it('odrębna tożsamość GH pozostaje chroniona: zgodny pomiar o innym id nie jest przejmowany', () => {
+    const env = zaladuj(srodowisko());
+    env.advC.appendChild(PUNKT());
+    env.advC.appendChild(adv(13, 1, 139.9, 45, { 'data-gh-sync': 'true', 'data-gh-id': 'gh-2' }));
+    env.intC.appendChild(intake(13, 1, 139.9, 45, { 'data-gh-sync': 'true', 'data-gh-id': 'gh-2' }));
+    odtworzNiezalezne(env);
+    expect(env.intC.children).toHaveLength(1);
+    expect(env.intC.children[0].getAttribute('data-gh-id')).toBe('gh-2');
   });
 });

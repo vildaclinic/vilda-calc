@@ -1,5 +1,6 @@
 import { expect, test } from '../support/test-czas.mjs';
 import { czekajNaOdtworzenieSesji } from '../support/sesja-czekanie.mjs';
+import { loadPatient } from '../support/centile-live-fixture.mjs';
 
 // Every patient is fictional. The expected 15 pmol/L is the published
 // Harrell–Davis P50 of the whole B1 group, never a fitted exact-age median.
@@ -76,16 +77,11 @@ async function prepareMainPatient(page, width = 1440, age = 2, months = 0) {
     const user = { name: 'Fikcyjna Pacjentka E2 Th1', lastName: 'Fikcyjna', firstName: 'Pacjentka E2 Th1',
       sex: 'F', age, ageMonths: months, weight: 12, height: 90 };
     const saved = await window.VildaVault.savePatient({ name: user.name, user, puberty: {} }, { dedup: false });
-    const record = await window.VildaVault.getPatient(saved.patientId);
-    window.applyLoadedData(record.snapshots[0].payload);
-    document.dispatchEvent(new CustomEvent('vilda:patient-loaded', { detail: {
-      patientId: saved.patientId, savedAtISO: record.snapshots[0].savedAtISO, snapshotCount: 1, source: 'pick',
-    } }));
     return saved.patientId;
   }, { age, months });
-  await expect(page.locator('#vildaLcmNew')).toBeVisible();
-  await page.locator('#vildaLcmNew').click();
-  await expect(page.locator('#vildaLoadChoiceModal')).toHaveCount(0);
+  // Exercise the same patient-card operation and native New choice as the UI,
+  // including its original read scope and correlated identity publication.
+  await loadPatient(page, id, 'new');
   await settledMain(page);
   for (const [key, value] of Object.entries({ age, ageMonths: months, weight: 12, height: 90 })) {
     await page.locator(`#${key}`).fill(String(value));

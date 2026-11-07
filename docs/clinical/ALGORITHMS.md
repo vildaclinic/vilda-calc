@@ -13750,6 +13750,40 @@ starszego szkicu. Widoczny formularz nadal odpowiada za swoje edycje, puste
 pola i puste listy. Dotychczasowe jawne, kompletne kolektory zachowują API.
 Nie generujemy pomiarów ani nie wykonujemy dodatkowych obliczeń w „Zapisz”.
 
+Przy starcie zapisanej sesji pacjenta odczyt czeka na rzeczywiste zakończenie
+inicjalizacji uwierzytelnienia, także jeśli sejf jest już otwarty, lecz trwa
+jeszcze ustanawianie klucza. Dowód powstaje po tej granicy; nie odnawiamy
+nieaktualnego potwierdzenia na podstawie zgodnego PID.
+
+Jawne odtworzenie sesji podczas nawigacji wykonuje rzeczywiste zastosowanie
+potwierdzonego szkicu także wtedy, gdy docelowy panel zdążył już odtworzyć
+wspólne pola anonimowego formularza. Przed zastosowaniem sprawdzane są
+oryginalny dowód sprzed odczytu, niezmieniona treść źródła i bieżące pola.
+Zmiana pola, konta lub operacji w trakcie odczytu albo callbacku przerywa
+odtworzenie. Automatyczny start nadal zachowuje ochronę lokalnie wypełnionego
+formularza; sam stan „kept-form” nie staje się dowodem własności.
+
+Wybór pacjenta w trybie podglądu zapisanych danych Klirensu kończy tę samą
+potwierdzoną operację wczytania i publikuje jej PID. Podgląd nadal nie wykonuje
+kroków pełnego odtworzenia pól klinicznych; „Odtwórz zapis” zachowuje osobny
+wybór użytkownika. Jest to przywrócenie istniejącego kontraktu wyboru karty,
+bez zmiany jednostek, wyniku Klirensu i zasad ponowienia zapisu po scaleniu.
+
+Sesja z jawnym imieniem lub nazwiskiem zachowuje ten podział również przy
+wieloczłonowym nazwisku i pustym drugim polu. Po ustawieniu nazwy zbiorczej
+odtwarzane są oba pola, bez dopisywania imienia przez parser pierwszego słowa.
+Gdy obu części brakuje, pozostaje dotychczasowy parser; gdy przenoszone części
+nie zgadzają się z rzeczywiście zmienioną nazwą zbiorczą, nie nadpisują edycji.
+Ta zgodność nazw dotyczy wyłącznie prezentacji pól i nie zastępuje potwierdzenia
+tożsamości, sesji ani operacji wczytania.
+
+Odmowa własnego zapisu do usuniętej lub scalonej karty może wyzerować jej PID.
+Tylko ta konkretna odmowa, z oryginalnym aktualnym potwierdzeniem operacji,
+pozwala kontynuować bieżący formularz jako nieprzypisany. Stary bilet zapisu
+zostaje unieważniony. Kolejne świadome kliknięcie używa istniejącego mechanizmu
+karty docelowej i zachowuje bieżące edycje; dowolne zdarzenie lub sama zgodna
+nazwa nie uprawniają do przejęcia danych.
+
 Przy normalizacji odtwarzanego zapisu lub przyjęciu nowszego stanu Klirensu
 niezmieniona treść odczytanego szkicu jest osobnym warunkiem własności.
 Przenoszone wartości pochodzą z ładunku rzeczywiście przyjętego przez importer,
@@ -13783,6 +13817,14 @@ związana z sesją klucza sejfu oraz bieżącym pacjentem i wczytaniem. Przypisa
 PID przy pierwszym własnym zapisie wymaga zweryfikowanego potwierdzenia tej
 operacji; zwykłe powiadomienie nie ustanawia nowej podstawy. Rzeczywista edycja
 zachowuje dotychczasowe unieważnienie wyniku.
+
+Pasywne zdarzenie pól głównego formularza nie tworzy pomiaru w zamkniętej,
+pustej karcie spożycia. Zapobiega to dopisaniu bieżącego wiersza przez
+powtórzony `change` przy opuszczaniu pola, gdy nie było edycji wymagającej
+resetu. Istniejące dane, także częściowy wpis i jawne zero, nadal otrzymują
+aktualny pomiar. Otwarcie karty, dodawanie historii i odtwarzanie korzystają
+z dotychczasowego aktualizatora bez tego ograniczenia. Nie zmienia się próg
+Cole ani reguła automatycznego rozwijania karty.
 
 Brak bieżącego wzrostu lub masy nie może zastąpić pierwszego archiwalnego
 pomiaru pustymi polami. `null` nie jest liczbą zero; jawne numeryczne zero nadal
@@ -13819,6 +13861,22 @@ dotychczasowe wyprowadzenie brakującej historii pozostaje dostępne.
 Nie dodajemy identyfikatorów do zapisanych pomiarów ani migracji rekordów.
 Opóźniony finalizator poprzedniego wczytania nie może zwolnić ochrony bieżącej
 wizyty.
+
+**Istniejąca tożsamość GH.** Ochrona niezależnie odtworzonych historii nie
+zmienia wcześniejszego kontraktu P-GH-TOZSAMOSC. Istniejące lustro punktu
+terapii odzyskuje `data-gh-id` / `data-gh-sync`, a oznaczone lustro bez punktu
+źródłowego jest usuwane. Wydzielony blok rozpoznawania GH ma dokładnie te same
+reguły i tolerancję co wcześniej. Ta ścieżka nie kopiuje pól pomiarowych,
+nie dodaje wierszy ani nie paruje pozostałych historii; działa po zakończeniu
+odtworzenia w aktualnym zakresie pacjenta i sesji.
+
+Natywne wczytanie z Karty pacjenta może opublikować docelowy PID przed końcem
+asynchronicznego importu GH. Kontynuacja zachowuje oryginalny token operacji
+i dowód sesji klucza; dopuszcza wyłącznie własną, potwierdzoną publikację PID
+przez nadal aktualne wczytanie. Dowolne zdarzenie `patient-loaded` tego nie
+potwierdza. Kontynuacja nie zmienia referencji zapisu ani fazy odtwarzania.
+Inny token, pacjent, sejf, klucz, konto, sekwencja apply lub nowsze wczytanie
+wykluczają przyjęcie spóźnionego finalizatora.
 
 **Kolejność PAL i wpływ na wynik.** Przed synchronizacją PAL karty spożycia
 wykonywany jest istniejący dobór automatycznego PAL planu dla aktualnych,

@@ -81,7 +81,7 @@ const clean = h => {
   expect(h.win.count('pageshow')).toBe(0);
 };
 
-describe('Saved main session waits only for an unfinished locked-owner auth boot', () => {
+describe('Saved main session waits for the owner authentication boot to finish', () => {
   it('session application is quiet while an explicit patient load and restore still notify other panels', () => {
     const h = harness({ locked: false, bootReady: true });
     expect(h.api.applyLoadedData(h.original, { isSessionRestore: true })).toBe(true);
@@ -128,7 +128,7 @@ describe('Saved main session waits only for an unfinished locked-owner auth boot
       detail: event.detail, pending: pending(h), restoring: h.win.__vildaPersistRestoring,
       writes: h.writes.length, summaries: h.summaries(),
     }));
-    h.start(); h.unlock(); h.frame();
+    h.start(); h.unlock(); h.settle(); h.frame();
     expect(completions).toEqual([]);
     h.frame();
     expect(completions).toEqual([]);
@@ -152,12 +152,21 @@ describe('Saved main session waits only for an unfinished locked-owner auth boot
   });
 
   it.each([
-    { patientId: null }, { locked: false }, { bootReady: true }, { auth: false },
+    { patientId: null }, { bootReady: true }, { auth: false },
   ])('retains the original immediate path outside the narrow gate: %j', options => {
     const h = harness(options); h.start();
     expect(pending(h)).toBe(false);
     expect(h.applied).toHaveLength(1);
     expect(h.unlockListeners).toHaveLength(0);
+  });
+
+  it('keeps an already unlocked owner pending until authentication finishes its key activation', () => {
+    const h = harness({ locked: false }); h.start();
+    expect(pending(h)).toBe(true); expect(h.applied).toEqual([]);
+    h.unlock(); h.frame();
+    expect(pending(h)).toBe(true); expect(h.applied).toEqual([]);
+    h.settle(); h.frame();
+    expect(pending(h)).toBe(false); expect(h.applied).toHaveLength(1); clean(h);
   });
 
   it('preserves the legacy restore attempt after a failed boot settles with the same owner', () => {
