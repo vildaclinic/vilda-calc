@@ -35042,6 +35042,33 @@ formularze w powłoce `app.html`: pierwszy własny zapis, odtworzenie po edycji 
 i cyklu GH, przełączanie ramek, F5 i kontrola prawidłowego wyboru „Nowy pomiar”.
 Dane testowe są wyłącznie fikcyjne.
 
+### Pusty wiek przy przejściu Start → DocPro → Start (P-PUSTY-WIEK, 2026-11-07)
+
+Korekta funkcjonalna zapisu i odtwarzania danych wejściowych, bez zmiany wzorów,
+norm, jednostek ani progów wieku. Kolektor `collectUserData` w
+`vilda_data_import_export.js` dopisywał `ageMonths: 0`, nawet gdy oba pola wieku
+były puste. Po odtworzeniu i kolejnym zebraniu formularza powstawało także
+`age: 0`, co uruchamiało prawidłową dla jawnego zera prezentację wieku w tygodniach.
+
+- Dwa puste pola dają teraz `age: null, ageMonths: null` w sesji i zapisie/eksporcie.
+  „Nowy pomiar” bez daty urodzenia wymaga podania bieżącego wieku; brak wieku nie
+  może zostać zastąpiony automatycznym zerem, aby umożliwić zapis.
+- Jawne zero pozostaje wartością: `0 lat` bez miesięcy daje `0/0`, same `0 miesięcy`
+  także `0/0`; same `6 miesięcy` dają `0/6`, a `10 lat` bez miesięcy — `10/0`.
+  Data urodzenia i jawny wiek w tygodniach zachowują dotychczasowy kontrakt.
+- Odtworzenie samych ustawień widoku bez wybranego ani nazwanego pacjenta nie
+  pokazuje komunikatu „Ten pacjent nie ma jeszcze pomiaru”. Rzeczywiste wczytanie
+  rekordu oraz odtworzenie kontekstu nazwanego/wybranego pacjenta zachowują komunikat.
+- Nie przepisujemy istniejących rekordów ani starych zer: nie można bezpiecznie
+  odróżnić zera dopisanego przez dawny kolektor od świadomie podanego wieku noworodka.
+
+Regresje wykonują rzeczywisty kolektor i importer (`main-session-blank-age-roundtrip`)
+oraz natywną nawigację powłoki (`empty-patient-navigation`): pusty formularz na
+desktopie i ekranie 390 px, trzy powroty przez DocPro i F5, zachowanie nazwiska bez
+wieku oraz zapis fikcyjnego noworodka z kontrolą niezmienności całego rekordu sejfu.
+Wpływ kliniczny ogranicza się do usunięcia niepodanego wieku z wejść; nie zmieniamy
+obliczeń dla rzeczywiście podanych danych.
+
 ## Świeżo wczytany pacjent wygrywa ze startowym odtworzeniem sesji (P-SWIEZE-WCZYTANIE, SW 1.1.165, 2026-10-05)
 
 **Zmiana kliniczna: NIE** — żaden wzór, próg, jednostka, dawka ani interpretacja. Zmienia się kolejność dwóch kroków przy starcie strony: odtworzenia sesji karty i wczytania pacjenta. Zlecenie właściciela 2026-10-05.

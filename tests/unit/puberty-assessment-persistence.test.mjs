@@ -487,16 +487,19 @@ describe('typed puberty — conscious independent edits and visit intent', () =>
       .toMatchObject({ stage: 3, current: true, ageMonths: 144 });
   });
 
-  it('blank years with the default zero months is an unknown visit age, not a newborn', () => {
+  it('blank years and months remain an unknown visit age in both collector and assessment', () => {
     const env = environment({ patientId: null }); env.fields.get('sex').value = 'M';
-    // The collector fills blank months with 0 (`ageMonths: h ?? 0`); the live form field is empty.
+    // P-PUSTY-WIEK: the collector must preserve the unknown age of the live form.
     env.fields.get('age').value = ''; env.fields.get('ageMonths').value = '';
     expect(env.state.visitContext().ageMonths).toBeNull();
     env.state.editObservation('G', 2);
     const user = env.api.collectUserData().user;
-    expect(user.age).toBeNull(); expect(user.ageMonths).toBe(0);
+    expect(user.age).toBeNull(); expect(user.ageMonths).toBeNull();
     expect(user.pubertyAssessmentVisit.reference.ageMonths).toBeNull();
     expect(user.pubertyAssessment.observations.G.ageMonths).toBeNull();
+    env.fields.get('age').value = '0'; env.fields.get('ageMonths').value = '0';
+    expect(env.state.visitContext().ageMonths).toBe(0);
+    expect(env.api.collectUserData().user).toMatchObject({ age: 0, ageMonths: 0 });
     env.fields.get('age').value = '0'; env.fields.get('ageMonths').value = '6';
     expect(env.state.visitContext().ageMonths).toBe(6);
   });

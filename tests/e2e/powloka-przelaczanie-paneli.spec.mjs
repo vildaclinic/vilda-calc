@@ -372,16 +372,27 @@ test('DocPro otwarty przy innym pacjencie, na Start „Odtwórz zapis” pacjent
     .toMatchObject({ dob: PELNY.dob, sex: 'F', h: PELNY.h, w: PELNY.w, name: PELNY.name, podsumowanieBMI: true, baza: true, porownanie: false });
   expect(await docpro.evaluate(() => window._vildaCurrentPatientId), 'DocPro przejął pacjenta z sesji karty').toBe(pidB);
 
-  // Gotowe pola nie oznaczają jeszcze zakończonego przywracania. Czekamy
-  // przed celowym cofnięciem zmiennej panelu, aby odtwarzanie go nie naprawiło.
-  await expect.poll(() => docpro.evaluate(() => window.VildaDataImportExport.getSaveReadiness().ready)).toBe(true);
-  // Cel zapisu bierze pacjenta z sesji karty także wtedy, gdy zmienna panelu jest nieaktualna (tu cofnięta celowo do A).
-  await docpro.evaluate((id) => { window._vildaCurrentPatientId = id; }, pidA);
+  // Podczas asynchronicznych odczytów z sejfu panel może ponownie odtwarzać
+  // dane. Kończymy je przed sprawdzeniem gotowości i cofnięciem identyfikatora.
   const przed = await zapisy(start, { A: pidA, B: pidB });
-  const probaZapisu = await docpro.evaluate(async () => {
-    const identyfikatory = [window._vildaCurrentPatientId, window.sessionStorage.getItem('vildaCurrentPatientId')];
-    return { identyfikatory, zapisano: Boolean(await window.saveUserData()) };
-  });
+  const probaZapisu = await docpro.evaluate(id => new Promise((resolve, reject) => {
+    const deadline = performance.now() + 5000;
+    function zapiszGdyGotowe() {
+      try {
+        if (!window.VildaDataImportExport.getSaveReadiness().ready) {
+          if (performance.now() >= deadline) return reject(new Error('DocPro nie zakończył przywracania przed próbą zapisu'));
+          requestAnimationFrame(zapiszGdyGotowe);
+          return;
+        }
+        // Gotowość, celowo nieaktualny identyfikator A i natywny zapis są
+        // w jednym przebiegu JS. Zapis wykonujemy raz; odmowy nie ponawiamy.
+        window._vildaCurrentPatientId = id;
+        const identyfikatory = [window._vildaCurrentPatientId, window.sessionStorage.getItem('vildaCurrentPatientId')];
+        Promise.resolve(window.saveUserData()).then(result => resolve({ identyfikatory, zapisano: Boolean(result) }), reject);
+      } catch (error) { reject(error); }
+    }
+    zapiszGdyGotowe();
+  }), pidA);
   expect(probaZapisu.identyfikatory, 'bezpośrednio przed zapisem zmienna panelu nadal wskazuje A, a sesja B').toEqual([pidA, pidB]);
   expect(probaZapisu.zapisano).toBe(true);
   await expect.poll(() => zapisy(start, { A: pidA, B: pidB }), { message: 'zapis z DocPro w rekordzie B, rekord A nietknięty' })
