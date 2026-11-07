@@ -305,7 +305,9 @@ describe('P-SW-PRECACHE: instalacja bez historii, kopia z poprzedniej pamięci, 
     '/circumference_module.js', '/wfh_module.js', '/respiratory_module.js',
     '/gh_therapy_segments.js', '/obesity_response_criteria.js',
     '/vilda_down_syndrome.js', '/flu_therapy.js', '/bisphos_therapy.js',
-    '/bisphos_therapy_monitor.js', '/lab_unit_converter.js'];
+    '/bisphos_therapy_monitor.js', '/lab_unit_converter.js',
+    '/antibiotic_therapy.js', '/gh_igf_therapy.js', '/gh_therapy_monitor.js',
+    '/hypertension_therapy.js', '/thyroid_cancer_kids.js'];
   const wspoldzielonePary = ['/style.css', '/vilda_chrome.css', ...dodatkoweWspoldzieloneZasoby];
   const wspoldzieloneZasoby = new Set(['/edu-video-ui.css', ...wspoldzielonePary]);
   const oczekiwanePobraniaSwiezychZasobow = () => {

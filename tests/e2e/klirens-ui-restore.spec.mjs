@@ -119,7 +119,7 @@ test('opóźnione odtworzenie eGFR → ACR synchronizuje aktywną ścieżkę i p
   await expect(page.locator('#Scr')).toBeHidden();
 });
 
-test('opóźnione odtworzenie ACR → KT/V synchronizuje PRO i protokół dializy', async ({
+test('opóźnione odtworzenie ACR → KT/V synchronizuje PRO, jeden wynik i zapisane fakty dializy', async ({
   page,
 }) => {
   await openCalculator(page);
@@ -164,15 +164,27 @@ test('opóźnione odtworzenie ACR → KT/V synchronizuje PRO i protokół dializ
     version: 'pro',
   });
   await expect(page.locator('#version-pro')).toHaveClass(/selected/);
-  await expect(page.locator('#ktvCard')).toBeVisible();
-  await expect(page.locator('#ktvFields')).toBeVisible();
+  await expect(page.locator('#ktvInputCard')).toBeVisible();
+  await expect(page.locator('#ktvCard')).toBeHidden();
+  await expect(page.locator('#ktvVariant')).toHaveValue('spktv');
+  await expect(page.locator('#ktvRequiredCount')).toHaveText('7/7');
   await expect(page.locator('#ktvModality')).toHaveValue('IHD');
+  await expect(page.locator('#ktvModality')).toBeHidden();
   await expect(page.locator('#UreaPre')).toHaveValue('120');
   await expect(page.locator('#UreaPost')).toHaveValue('36');
-  await expect(page.locator('#ui_ktvSameSession_answer')).toHaveValue('yes');
-  await expect(page.locator('#ui_ktvPreBeforeDialysis_answer')).toHaveValue(
-    'yes'
-  );
-  await expect(page.locator('#ui_ktvPreNoDilution_answer')).toHaveValue('yes');
+  for (const id of ['ktvSameSession', 'ktvPreBeforeDialysis', 'ktvPreNoDilution']) {
+    await expect(page.locator('#' + id)).toBeChecked();
+    await expect(page.locator(`#ui_${id}_answer`)).toBeHidden();
+  }
+  const result = page.locator('#clcrResultReport .clcr-result-card[data-clcr-series="KTV_spktv"]');
+  await expect(result).toBeVisible(); await expect(page.locator('#clcrResultReport .clcr-result-card:visible')).toHaveCount(1);
+  const restored = JSON.parse(await result.getAttribute('data-clcr-ktv-snapshot'));
+  expect(restored.rawValue).toBeCloseTo(1.4010540127569946, 12);
+  expect(restored.input.knownFacts).toMatchObject({ ktvModality: 'IHD', ktvSameSession: true,
+    ktvPreBeforeDialysis: true, ktvPreNoDilution: true, ktvPostMethod: 'slow_flow_100ml_15s' });
+  const capturedFacts = await page.evaluate(() => JSON.parse(window.buildClcrSessionSnapshot().inputs.ktvKnownFacts || '{}'));
+  expect(capturedFacts).toMatchObject({ ktvSameSession: true, ktvPreBeforeDialysis: true,
+    ktvPreNoDilution: true, ktvPostMethod: 'slow_flow_100ml_15s' });
+  expect(restored.referenceActive).toBe(false);
   await expect(page.locator('#U_Alb')).toBeHidden();
 });

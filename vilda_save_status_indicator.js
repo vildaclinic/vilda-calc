@@ -952,6 +952,7 @@ function normalizeClcrStatusInputs(session){
   var inputs=session&&session.inputs;
   if(!inputs||typeof inputs!=="object"||Array.isArray(inputs))return;
   var defaults={
+    ktvVariant:"spktv",
     ACR_entry_mode:"concentration",PCR_entry_mode:"concentration",
     CaCr_entry_mode:"concentration",OxCr_entry_mode:"concentration",CitCr_entry_mode:"concentration",
     CitCr_reported_basis:"unknown",citrateSpotReportingEntity:"unknown",creatinineState:"unknown",

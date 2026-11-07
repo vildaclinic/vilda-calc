@@ -610,14 +610,12 @@ describe('Klirens — centralny model przepływu UI', () => {
     ]);
     expect(byId('OxCr_spot')?.requires).not.toContain('spotSameSpecimen');
     expect(byId('OxCr_spot')?.requires).not.toContain('oxalateSpotReportingEntity');
-    expect(byId('KTV')?.requires).toEqual(
-      expect.arrayContaining([
-        'ktvPostMethod',
-        'ktvSameSession',
-        'ktvPreBeforeDialysis',
-        'ktvPreNoDilution',
-      ])
-    );
+    // The selected default is spKt/V: sampling is an explicit assumption,
+    // while known contradictory facts remain available to its own evaluator.
+    expect(byId('KTV')?.requires).toEqual([
+      'UreaPre', 'UreaPost', 'ktvDurationMinutes', 'ktvUF', 'ktvW',
+      'ktvSessionsPerWeek', 'ktvPidiDays',
+    ]);
   });
 
   it('normalizuje polskie znaki i odnajduje formuły po nazwie, skrócie i analicie', () => {
@@ -958,13 +956,13 @@ describe('Klirens — centralny model przepływu UI', () => {
     );
 
     expect(html).toContain('clcr_ui_workflow.css?v=20');
-    expect(html).toContain('clcr_ui_workflow.js?v=47');
-    expect(html).toContain('inline_kalkulator_klirens_02.js?v=40');
-    expect(html).toContain('inline_kalkulator_klirens_04.js?v=47');
-    expect(html).toContain('inline_kalkulator_klirens_07.js?v=38');
+    expect(html).toContain('clcr_ui_workflow.js?v=48');
+    expect(html).toContain('inline_kalkulator_klirens_02.js?v=41');
+    expect(html).toContain('inline_kalkulator_klirens_04.js?v=48');
+    expect(html).toContain('inline_kalkulator_klirens_07.js?v=39');
     expect(html).toContain('clcr_result_reference_data.js?v=7');
     expect(html).toContain('clcr_result_presentation.js?v=8');
-    expect(serviceWorker).toContain("const SW_VERSION = '1.1.480'");
+    expect(serviceWorker).toContain("const SW_VERSION = '1.1.481'");
     expect(html).toContain('clcr_calculation_assumptions.js?v=2');
     expect(serviceWorker).toContain("'/clcr_calculation_assumptions.js?v=2'");
     expect(serviceWorker).toContain("'/clcr_clinical_safety.js?v=14'");

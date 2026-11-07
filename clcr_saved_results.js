@@ -594,6 +594,8 @@
       const fek = sourceFormulaId === "FEK_spot" ? global.ClcrFekPersistence?.savedAssessment(note) : null;
       const legacyFek = sourceFormulaId === "FEK_spot" && !fek ? global.ClcrFekPersistence?.legacyPoint(note) : null;
       const tmpGfr = sourceFormulaId === "TMP_GFR" ? global.ClcrTmpGfrPersistence?.savedAssessment(note) : null;
+      const ktv = sourceFormulaId === "KTV" ? global.ClcrKtvPersistence?.savedAssessment(note) : null;
+      const legacyKtv = sourceFormulaId === "KTV" && !ktv ? global.ClcrKtvPersistence?.legacyPoint(note) : null;
       const phPersistence = sourceFormulaId === "pH24" ? global.ClcrPhDzmPersistence : global.ClcrPhPersistence;
       const ph = ["pH_spot", "pH24"].includes(sourceFormulaId) ? phPersistence?.savedAssessment(note) : null;
       const legacyPh = ["pH_spot", "pH24"].includes(sourceFormulaId) && !ph ? phPersistence?.legacyPoint(note) : null;
@@ -737,6 +739,9 @@
         category: null, outOfRange: ph.outOfRange, norm: ph.norm, [sourceFormulaId === "pH24" ? "phDzmAssessment" : "phAssessment"]: ph,
       });
       if (legacyPh) Object.assign(point, legacyPh);
+      if (ktv) Object.assign(point, { valueNum: ktv.rawValue, rawValue: ktv.rawValue, displayValue: ktv.displayValue, unit: ktv.unit || "—", comparator: "", assessment: global.ClcrKtvPersistence.assessment(ktv), category: null, outOfRange: ktv.outOfRange, norm: ktv.norm, ktvAssessment: ktv });
+      if (legacyKtv) Object.assign(point, legacyKtv);
+      if (sourceFormulaId === "KTV") applySavedCalculation(point, savedCalculation(note), hasSavedCalculation(note));
       if (po4Dzm) Object.assign(point, {
         valueNum: global.ClcrPo4DzmPersistence.valueNum(po4Dzm), displayValue: po4Dzm.displayValue, unit: global.ClcrPo4DzmPersistence.unitText(po4Dzm),
         comparator: "", assessment: global.ClcrPo4DzmPersistence.assessment(po4Dzm),
@@ -839,7 +844,7 @@
     const series = Array.from(byLabel.values());
     series.forEach((s) => {
       s.points.sort((a, b) => String(a.dateISO).localeCompare(String(b.dateISO)));
-      if (["Ca_Cit", "ACR", "PCR", "CaCr_spot", "Ca_Cr", "OxCr_spot", "CitCr_spot", "FENa_spot", "FEK_spot", "FECl_spot", "FEHCO3_spot", "AGu_spot", "pH_spot", "pH24", "UA_mgkg", "Ca_mgkg", "Mg_mgkg", "PO4_mgkg", "Prot_mgkg", "Na_mmol_d", "K_mmol_d", "KM_Cr", "PO4_Cr", "B_Cr", "K_frac", "AGs"].includes(s.sourceFormulaId)) {
+      if (["KTV", "Ca_Cit", "ACR", "PCR", "CaCr_spot", "Ca_Cr", "OxCr_spot", "CitCr_spot", "FENa_spot", "FEK_spot", "FECl_spot", "FEHCO3_spot", "AGu_spot", "pH_spot", "pH24", "UA_mgkg", "Ca_mgkg", "Mg_mgkg", "PO4_mgkg", "Prot_mgkg", "Na_mmol_d", "K_mmol_d", "KM_Cr", "PO4_Cr", "B_Cr", "K_frac", "AGs"].includes(s.sourceFormulaId)) {
         s.norm = s.points[s.points.length - 1]?.norm || "";
         return;
       }
@@ -944,6 +949,8 @@
     if (dp.sourceFormulaId === "UA_mgkg" && (!uaNote || dp.valueNum < 0 || dp.valueNum !== dp.uaSnapshot?.rawValue || dp.rawValue !== dp.uaSnapshot?.rawValue || dp.unit !== dp.uaSnapshot?.unit || String(dp.displayValue) !== global.ClcrUaPersistence.displayText(dp.uaSnapshot) || String(dp.norm || "") !== global.ClcrUaPersistence.normText(dp.uaSnapshot) || dp.outOfRange !== dp.uaSnapshot?.outOfRange)) {
       throw new Error("Brak kompletnej oceny wydalania kwasu moczowego do bezpiecznego zapisu. Oblicz wynik ponownie.");
     }
+    const ktvNote = dp.sourceFormulaId === "KTV" ? global.ClcrKtvPersistence?.referenceNote(dp) : "";
+    if (dp.sourceFormulaId === "KTV" && (!ktvNote || !global.ClcrKtvPersistence?.matchesDatapoint(dp, dp.ktvSnapshot) || dp.ktvSnapshot.input.evaluationDate !== String(opts.clinicalDateISO || "").slice(0, 10))) throw new Error("Brak zgodnej oceny dawki dializy z dnia badania. Sprawdź wybrany wynik ponownie.");
     const phNote = dp.sourceFormulaId === "pH_spot" ? global.ClcrPhPersistence?.referenceNote(dp) : "";
     const phDzmNote = dp.sourceFormulaId === "pH24" ? global.ClcrPhDzmPersistence?.referenceNote(dp) : "";
     if (dp.sourceFormulaId === "pH24" && (!phDzmNote || global.ClcrPhDzmPersistence?.matchesDatapoint?.(dp, dp.phDzmSnapshot) !== true)) {
@@ -988,6 +995,7 @@
     if (dp.sourceFormulaId === "FEHCO3_spot") global.ClcrFehco3Persistence?.applyLabResult(dp, labResult);
     if (dp.sourceFormulaId === "AGu_spot") global.ClcrUagPersistence?.applyLabResult(dp, labResult);
     if (dp.sourceFormulaId === "TMP_GFR") global.ClcrTmpGfrPersistence?.applyLabResult(dp, labResult);
+    if (dp.sourceFormulaId === "KTV") global.ClcrKtvPersistence?.applyLabResult(dp, labResult);
     if (dp.sourceFormulaId === "pH_spot") global.ClcrPhPersistence?.applyLabResult(dp, labResult);
     if (dp.sourceFormulaId === "pH24") global.ClcrPhDzmPersistence?.applyLabResult(dp, labResult);
     if (dp.sourceFormulaId === "UA_mgkg") global.ClcrUaPersistence?.applyLabResult(dp, labResult);
@@ -1031,6 +1039,7 @@
       (tmpGfrNote ? "\n\n" + tmpGfrNote : "") +
       (phNote ? "\n\n" + phNote : "") +
       (phDzmNote ? "\n\n" + phDzmNote : "") +
+      (ktvNote ? "\n\n" + ktvNote : "") +
       (uaNote ? "\n\n" + uaNote : "") +
       (caDzmNote ? "\n\n" + caDzmNote : "") +
       (po4DzmNote ? "\n\n" + po4DzmNote : "") +
@@ -1051,11 +1060,11 @@
   }
 
   const ASSESSMENT_FIELDS = Object.freeze([
-    "caCitAssessment", "acrAssessment", "pcrAssessment", "cacrAssessment", "oxcrAssessment", "citcrAssessment",
+    "ktvAssessment", "caCitAssessment", "acrAssessment", "pcrAssessment", "cacrAssessment", "oxcrAssessment", "citcrAssessment",
     "fenaAssessment", "fekAssessment", "feclAssessment", "fehco3Assessment", "uagAssessment", "tmpGfrAssessment", "phAssessment", "phDzmAssessment", "uaAssessment", "caDzmAssessment", "mgDzmAssessment", "po4DzmAssessment", "proteinDzmAssessment", "sodiumDzmAssessment", "potassiumDzmAssessment", "urateCreatinineAssessment", "magnesiumCalciumAssessment", "phosphorusCreatinineAssessment", "proteinCreatinineAssessment", "potassiumIndexAssessment", "serumAnionGapAssessment",
   ]);
   const HELPER_BY_FORMULA = Object.freeze({
-    Ca_Cit: "ClcrCaCitPersistence", Cit_mgkg: "ClcrCitDzmPersistence", Ox_mgkg: "ClcrOxDzmPersistence", OxCr_spot: "ClcrOxcrPersistence", CitCr_spot: "ClcrCitcrPersistence",
+    KTV: "ClcrKtvPersistence", Ca_Cit: "ClcrCaCitPersistence", Cit_mgkg: "ClcrCitDzmPersistence", Ox_mgkg: "ClcrOxDzmPersistence", OxCr_spot: "ClcrOxcrPersistence", CitCr_spot: "ClcrCitcrPersistence",
     FENa_spot: "ClcrFenaPersistence", FEK_spot: "ClcrFekPersistence",
     FECl_spot: "ClcrFeclPersistence", FEHCO3_spot: "ClcrFehco3Persistence", AGu_spot: "ClcrUagPersistence", TMP_GFR: "ClcrTmpGfrPersistence", pH_spot: "ClcrPhPersistence", pH24: "ClcrPhDzmPersistence", UA_mgkg: "ClcrUaPersistence", Ca_mgkg: "ClcrCaDzmPersistence", Mg_mgkg: "ClcrMgDzmPersistence", PO4_mgkg: "ClcrPo4DzmPersistence", Prot_mgkg: "ClcrProteinDzmPersistence", Na_mmol_d: "ClcrSodiumDzmPersistence", K_mmol_d: "ClcrPotassiumDzmPersistence", KM_Cr: "ClcrUrateCreatininePersistence",
   });
@@ -1222,15 +1231,17 @@
       outOfRange: typeof capture.outOfRange === "boolean" ? capture.outOfRange : assessment === "unassessed" ? null : assessment !== "within",
       tone: ["success", "warning", "danger", "neutral"].includes(capture.tone) ? capture.tone : "neutral",
       boundary: text(capture.boundary),
+      ...(capture.formulaId === "KTV" ? { statusText: text(capture.statusText) } : {}),
       interpretation: text(capture.interpretation) || text(capture.statusText) || ({
         within: "W zapisanym zakresie", below: "Poniżej zapisanego zakresu", above: "Powyżej zapisanego zakresu",
       })[assessment] || "Brak zapisanej oceny",
       reference: { text: norm, bounds: reference?.bounds || referenceBounds(norm, text(capture.unit) || point.unit),
         kind: reference?.kind || (norm ? "recorded-range" : "none"), source,
         population: reference?.population || null,
-        profileId: reference?.profileId || null, profileVersion: reference?.profileVersion ?? null },
+        profileId: reference?.profileId || null, profileVersion: reference?.profileVersion ?? null,
+        ...(capture.formulaId === "KTV" && reference ? { label: reference.label, minimum: reference.minimum, target: reference.target } : {}) },
     });
-    if (["Ca_Cit", "Ox_mgkg", "AGu_spot", "TMP_GFR", "pH_spot", "pH24", "UA_mgkg", "Ca_mgkg", "Mg_mgkg", "PO4_mgkg", "Prot_mgkg", "Na_mmol_d", "K_mmol_d", "KM_Cr", "Mg_Ca", "PO4_Cr", "B_Cr", "K_frac", "AGs"].includes(capture.formulaId)) Object.assign(point, {
+    if (["KTV", "Ca_Cit", "Ox_mgkg", "AGu_spot", "TMP_GFR", "pH_spot", "pH24", "UA_mgkg", "Ca_mgkg", "Mg_mgkg", "PO4_mgkg", "Prot_mgkg", "Na_mmol_d", "K_mmol_d", "KM_Cr", "Mg_Ca", "PO4_Cr", "B_Cr", "K_frac", "AGs"].includes(capture.formulaId)) Object.assign(point, {
       calculationMethod: capture.calculationMethod || point.calculationMethod,
       comment: text(capture.comment), knownFacts: object(capture.knownFacts),
       contextReferences: Array.isArray(capture.contextReferences) ? capture.contextReferences : [],
@@ -1310,6 +1321,15 @@
     if (entry?.sourceFormulaId === "TMP_GFR") {
       point.calculationMethod = !isStale && frozen?.method || "legacy-unknown";
       if (!frozen) Object.assign(point, { assessment: "unassessed", outOfRange: null, tone: "neutral" });
+    }
+    if (entry?.sourceFormulaId === "KTV" && frozen && !isStale) {
+      const sources = (frozen.reference?.sourceIds || []).map(id => frozen.sources?.find(item => item.id === id)).filter(Boolean);
+      point.source = sources.length === 1 ? sources[0] : sources.length ? { ids: sources.map(item => item.id), label: sources.map(item => item.label).join(" · "), sources } : null;
+      point.statusText = text(frozen.statusText);
+      point.context = { ...frozen.input, ageYears: frozen.age?.known ? frozen.age.years : null };
+      point.knownFacts = object(frozen.input?.knownFacts);
+      point.contextReferences = frozen.sources || [];
+      point.calculationMethod = frozen.variant;
     }
     if (["pH_spot", "pH24"].includes(entry?.sourceFormulaId) && frozen && !isStale) {
       const sources = (frozen.reference?.sourceIds || []).map(id => frozen.sources?.find(item => item.id === id)).filter(Boolean);
@@ -1396,6 +1416,7 @@
       source: point.source, population: isStale ? null : frozen?.population || metadata.population || null,
       profileId: isStale ? null : frozen?.profileId || frozen?.policy?.id || metadata.source?.profileId || null,
       profileVersion: isStale ? null : frozen?.profileVersion ?? frozen?.policy?.version ?? metadata.source?.profileVersion ?? null };
+    if (entry?.sourceFormulaId === "KTV" && frozen && !isStale) Object.assign(point.reference, { profileId: frozen.reference?.profileId || frozen.policy?.id || null, population: frozen.reference?.population || null, label: frozen.reference?.label || "", minimum: frozen.reference?.minimum, target: frozen.reference?.target });
     // The capture owner validates a newer full record against this note. It
     // may enrich this projection, but reading it must never call recalculate.
     return applySavedCalculation(point, savedCalculation(note), hasSavedCalculation(note));

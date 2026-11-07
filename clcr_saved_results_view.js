@@ -141,7 +141,7 @@
       var tableNode = add(wrap, 'table', 'vilda-clcr-measurements');
       add(tableNode, 'caption', 'vilda-clcr-sr-only', 'Wszystkie pomiary: ' + group.label);
       var head = add(add(tableNode, 'thead'), 'tr');
-      ['Data badania', 'Wynik', 'Zapisana norma', 'Zapisana ocena', 'Szczegóły'].forEach(function (label) { add(head, 'th', '', label).setAttribute('scope', 'col'); });
+      ['Data badania', 'Wynik', group.records[0]?.sourceFormulaId === 'KTV' ? 'Zapisany cel / minimum' : 'Zapisana norma', 'Zapisana ocena', 'Szczegóły'].forEach(function (label) { add(head, 'th', '', label).setAttribute('scope', 'col'); });
       var body = add(tableNode, 'tbody');
       group.records.forEach(function (record) {
         var row = add(body, 'tr');
@@ -154,8 +154,8 @@
         if (record.unit) add(value, 'span', 'vilda-clcr-unit', ' ' + record.unit);
         var note = text(record.boundaryNote) || text(record.precisionNote) || (text(record.boundary) ? 'Przed zaokrągleniem: ' + decimal(record.boundary) : '');
         if (note) add(result, 'span', 'vilda-clcr-rounding-note', note);
-        var norm = add(row, 'td'); norm.setAttribute('data-label', 'Zapisana norma');
-        add(norm, 'span', 'vilda-clcr-row-reference', text(record.norm) || text(record.reference && record.reference.text) || 'Brak zapisanej normy');
+        var norm = add(row, 'td'); norm.setAttribute('data-label', record.sourceFormulaId === 'KTV' ? 'Zapisany cel / minimum' : 'Zapisana norma');
+        add(norm, 'span', 'vilda-clcr-row-reference', text(record.norm) || text(record.reference && record.reference.text) || (record.sourceFormulaId === 'KTV' ? 'Brak zapisanego celu' : 'Brak zapisanej normy'));
         var status = add(row, 'td'); status.setAttribute('data-label', 'Zapisana ocena'); assessment(status, record);
         detailsButton(add(row, 'td', 'vilda-clcr-row-details'), record, 'vilda-clcr-details', 'Szczegóły →');
       });
@@ -192,7 +192,7 @@
         var x = g.x(index);
         if (finite(record.valueNum) && !record.comparator) {
           var point = svgNode(svg, 'g', { class: 'vilda-clcr-point tone-' + tone(record), 'data-note-id': record.noteId, 'data-value': record.valueNum, role: 'button', tabindex: '0', 'aria-label': dateLabel(record.dateISO) + ', ' + displayValue(record) + ' ' + group.unit + ', ' + assessmentText(record) + '. Szczegóły obliczenia' });
-          svgNode(point, 'title', {}, dateLabel(record.dateISO) + ' · ' + displayValue(record) + ' ' + group.unit + ' · ' + assessmentText(record) + ' · norma przy zapisie: ' + (record.norm || 'brak zapisanej normy'));
+          svgNode(point, 'title', {}, dateLabel(record.dateISO) + ' · ' + displayValue(record) + ' ' + group.unit + ' · ' + assessmentText(record) + (record.sourceFormulaId === 'KTV' ? ' · cel / minimum przy zapisie: ' : ' · norma przy zapisie: ') + (record.norm || (record.sourceFormulaId === 'KTV' ? 'brak zapisanego celu' : 'brak zapisanej normy')));
           svgNode(point, 'rect', { x: x - 22, y: g.y(record.valueNum) - 22, width: 44, height: 44, fill: 'transparent' });
           svgNode(point, 'circle', { class: 'vilda-clcr-point-dot', cx: x, cy: g.y(record.valueNum), r: 6 });
           svgNode(point, 'text', { class: 'vilda-clcr-point-label', x: x, y: g.y(record.valueNum) - 13, 'text-anchor': 'middle' }, displayValue(record));
@@ -209,7 +209,8 @@
       if (sameDay) add(parent, 'p', 'vilda-clcr-chart-note', 'Pomiary z tą samą datą nie mają podanej godziny pobrania.');
       if (numeric.length < group.records.length) add(parent, 'p', 'vilda-clcr-chart-note', 'Wyniki z „<” lub „>” i wpisy tekstowe są w tabeli; nie są punktami na wykresie.');
       var legend = add(parent, 'div', 'vilda-clcr-chart-legend');
-      [['success', 'W normie przy zapisie'], ['warning', 'Poza normą przy zapisie'], ['danger', 'Znacznie poza normą przy zapisie'], ['neutral', 'Bez zapisanej oceny']].forEach(function (item) {
+      var dialysis = group.records[0]?.sourceFormulaId === 'KTV';
+      (dialysis ? [['success', 'Spełnia zapisane zalecenie'], ['warning', 'Poniżej celu'], ['danger', 'Poniżej minimum'], ['neutral', 'Bez zapisanej oceny']] : [['success', 'W normie przy zapisie'], ['warning', 'Poza normą przy zapisie'], ['danger', 'Znacznie poza normą przy zapisie'], ['neutral', 'Bez zapisanej oceny']]).forEach(function (item) {
         if (!group.records.some(function (record) { return tone(record) === item[0]; })) return;
         var label = add(legend, 'span'); add(label, 'i', 'tone-' + item[0]); add(label, 'span', '', item[1]);
       });
@@ -230,8 +231,8 @@
         if (subtitle) add(titles, 'p', 'vilda-clcr-group-subtitle', subtitle);
         add(header, 'span', 'vilda-clcr-source-badge', 'Klirens');
         var reference = uniformReference(group.records), norm = add(card, 'p', 'vilda-clcr-group-reference');
-        if (reference) { norm.classList.add('has-common-reference'); add(norm, 'span', '', 'Norma przy zapisie'); add(norm, 'strong', '', reference.text); }
-        else add(norm, 'span', '', 'Normy i oceny przy poszczególnych wynikach');
+        if (reference) { norm.classList.add('has-common-reference'); add(norm, 'span', '', group.records[0]?.sourceFormulaId === 'KTV' ? reference.target === null ? 'Minimum przy zapisie' : typeof reference.target === 'number' ? 'Cel przy zapisie' : 'Odniesienie przy zapisie' : 'Norma przy zapisie'); add(norm, 'strong', '', reference.text); }
+        else add(norm, 'span', '', group.records[0]?.sourceFormulaId === 'KTV' ? 'Cele i oceny przy poszczególnych wynikach' : 'Normy i oceny przy poszczególnych wynikach');
         if (view === 'charts') chart(card, group, reference);
         add(card, 'p', 'vilda-clcr-all-label', 'Wszystkie pomiary');
         table(card, group);

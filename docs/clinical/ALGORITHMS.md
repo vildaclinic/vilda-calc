@@ -9064,6 +9064,106 @@ wejście są błędem. Znane 12 h lub zakwaszenie +5,2 →5,2 bez normy,
 bez przeliczenia na 24 h. ZUM +8,2 nie otrzymuje komentarza o liczbie
 mieszczącej się w zakresie. Kontrole wykonane dla końcowego SHA raportuje PR.
 
+#### P-KLIRENS-KTV-2026-11-06 — jeden wariant dawki IHD, właściwy cel i zamrożona historia
+
+Właściciel zaakceptował [makietę desktop/mobile](https://vilda-ktv-audyt-20261106.maciej-flader.chatgpt.site)
+i polecił wdrożenie. Baza: `03c2ad99`. Pełne źródła, populacje,
+ograniczenia i kontrakty: [KLIRENS_KTV_AUDIT.md](KLIRENS_KTV_AUDIT.md).
+Poniższy wpis zastępuje wcześniejsze opisy pytań, trzech równoległych
+zapisów KTV, celu eKt/V i pediatrycznych bramek dla tego modułu;
+nie przepisuje historycznych danych. To zmiana kliniczna i funkcjonalna,
+bez deklaracji niezależnej walidacji medycznej.
+
+**Przewlekła IHD, dawka jednej sesji:** trzy równe przyciski wybierają
+spKt/V / eKt/V / URR, z jednym wynikiem w stałym miejscu. spKt/V ma
+7 pól: stężenie przed/po, czas, UF netto, masa po HD, częstość i PIDI;
+eKt/V dodaje dostęp AV/CVC, URR wymaga tylko 2 stężeń. Wiek jest
+wykorzystywany z kontekstu, nie blokuje samego ilorazu. Nie wymaga się
+analitu/jednostki, IHD z jednoopcyjnej listy, checkboxów pobrania, Kru,
+daty Kru lub regularności leczenia. Oba stężenia muszą dotyczyć tego
+samego oznaczenia i jednostki; wspólny mnożnik skraca się w R.
+Nie podstawia się ogólnej masy jako masy po HD ani nie zgaduje 3×/PIDI 2.
+
+**Równania i dane:** `VildaClcrKtv.evaluate(input, policy)` otrzymuje
+`VildaClcrKtvReferenceData.DEFAULT_POLICY` z
+`clcr_ktv_reference_data.js`, politykę **`KTV_SESSION_2026_11` v1**.
+Źródłowe 12 komórek GFAC z Daugirdas 2013, tabela 1
+([DOI 10.1093/ndt/gfs115](https://doi.org/10.1093/ndt/gfs115),
+[pełny tekst](https://pmc.ncbi.nlm.nih.gov/articles/PMC3765020/)),
+pozostaje bez zmiany, także **7×/tydz., PIDI 2 →0,0175**.
+PIDI liczy się od rozpoczęcia poprzedniego do rozpoczęcia obecnego
+zabiegu. eKt/V = spKt/V×T/(T+C), T w min, C=35 dla AV i 22 dla CVC:
+**przybliżenie Tattersalla**, para 35/22 z UK 2019 Appendix A, s. 66,
+nie Daugirdas 1995. URR =100×(1−post/pre), niezależnie od danych
+potrzebnych tylko modelowi spKt/V.
+
+**Porównanie, nie norma wieku:** dorosły IHD 3×/tydz. ma spKt/V
+minimum ≥1,2 / cel ≥1,4 (KDOQI 2015 §3); eKt/V odrębne minimum ≥1,2
+(UK 2019 §2.2). Historyczne URR 65/70% z KDOQI 2006 §4 dotyczy znanego
+dorosłego 3×/tydz. i dodatniego czasu <300 min; brak/błędny opcjonalny
+czas nie blokuje procentu, ale wyłącza cel. Nie dolicza się udziału
+nerek i nie obniża celu, bez stwierdzenia `Kru=0`. Wynik nie ocenia
+całości dawki tygodniowej; inne schematy nie otrzymują celu 3×/tydz.
+Minimum dokładnie 1,2/65% jest osiągnięte: „Minimum osiągnięte · poniżej
+celu”, bez „powyżej minimum”. Klasyfikacja używa raw, a prezentacja
+nie przekracza progu przez zaokrąglenie, np. `<1,20` / `<1,40`.
+
+Dziecko **2–<18 lat, 3×/tydz., PIDI 2/GFAC 0,008** ma minimum spKt/V
+≥1,2 (KDOQI 2006 §8), bez automatycznego celu 1,4. Dla innego GFAC —
+liczba bez automatycznej oceny; nie wykazano osobnej walidacji całej
+macierzy pediatrycznej. Znane dziecko nie otrzymuje dorosłej korekcji
+eKt/V 35/22. Granica **<2 lat** dla spKt/V/eKt/V jest lokalnym zakresem
+narzędzia, nie zakazem klinicznego pomiaru. URR pozostaje dostępny
+w każdym wieku bez przenoszenia dorosłych kategorii na dziecko.
+Nieznany wiek nie oznacza dorosłego; eKt/V ma jawny opis modelu
+dorosłych bez celu. FHN Daily dopuszczało ≥13 lat, nie opisuje się
+więc GFAC 2013 jako bezwzględnie wyłącznie dorosłej walidacji.
+
+**Znane fakty:** opis prawidłowego pobrania i wspólnej sesji zastępuje
+ankietę, nie nadpisuje znanych różnych próbek/analitów/jednostek,
+niezgodnej modalności lub błędnego pobrania. Próbka po wyrównaniu
+30–60 min nie jest korygowana ponownie. Jawna odpowiedź „nie” pozostaje
+faktem; niezaznaczony dawny checkbox bez odpowiedzi nie jest taką
+deklaracją. Dla sp/e wymagane jest 0<R<1 i dodatni argument logarytmu.
+Lokalne guardy **URR>88%**, **czas>300 min i URR>82%** oraz
+**5–7×/tydz. z czasem>300 min** wstrzymują sp/e i kierują do
+dokładniejszego modelu, zachowując osobny URR. To konserwatywne
+ograniczenia przybliżenia, nie normy ani definicja dializy nocnej.
+
+**Spójność:** `ktvSnapshot`, schemat **`clcr-ktv` v1**, zamraża
+wariant, raw, prezentację, wejścia/fakty, datę kliniczną, wiek pomiaru,
+profil/źródło/populację/wersję oraz ocenę. `ClcrKtvPersistence` czyta
+typowany wynik zamiast CSS. `valueNum` nie jest zaokrąglane,
+`outOfRange` to true/false/null, zgodnie z oceną. Nowy zapis obejmuje
+**tylko wybraną** istniejącą serię `KTV_spktv`, `KTV_ektv` (`—`) albo
+`KTV_urr` (`%`). READ nie wywołuje dzisiejszego silnika; legacy nie
+otrzymuje nowego celu. Świadoma edycja używa własnej serii i daty
+badania z właściwym wiekiem; brak DOB nie upoważnia do odliczania lat
+od dzisiejszego wieku. Badania, Notatka, wykres i raport są zgodne.
+Nie migruje się realnych danych ani nie scala historii trzech miar.
+
+**Kontrakty:** dorosły 120→36, 240 min, UF 2 L, W 70 kg, 3×/PIDI 2 →
+sp 1,4010540127569946; e AV 1,2227380474970133 / e CVC 1,2834082559606057;
+URR 70%. Raw sp 1,39999 pozostaje 1,39999 i poniżej celu także w serii.
+20→9 z tymi samymi danymi → sp 0,941559560743095/URR 55%, czerwony
+i `outOfRange:true`. Sam URR 120→36 bez wieku/czasu/schematu → 70%,
+neutralny. Dziecko 2/17 lat w standardowym schemacie → minimum 1,2;
+poniżej 2 lat URR nadal dostępny. Odczyt nie przelicza celu po zmianie
+profilu/wieku. Testy makiety nie zastępują produkcyjnych regresji;
+wykonane kontrole końcowego SHA raportuje PR.
+
+Źródła: [KDOQI 2015](https://doi.org/10.1053/j.ajkd.2015.07.015);
+[UK 2019, pełny PDF](https://ukkidney.org/sites/default/files/FINAL-HD-Guideline.pdf),
+§§2.2/2.4 i Appendix A; KDOQI 2006
+[§3](https://kidneyfoundation.cachefly.net/professionals/KDOQI/guideline_upHD_PD_VA/hd_guide3.htm),
+[§4](https://kidneyfoundation.cachefly.net/professionals/KDOQI/guideline_upHD_PD_VA/hd_guide4.htm),
+[§8](https://kidneyfoundation.cachefly.net/professionals/KDOQI/guideline_upHD_PD_VA/hd_guide8.htm);
+[Tattersall 1996](https://doi.org/10.1038/ki.1996.534).
+Goldstein 1999 ([DOI](https://doi.org/10.1016/S0272-6386(99)70189-7)):
+zweryfikowano abstrakt/metadane, bez pełnego tekstu; nie stanowi
+walidacji wszystkich niemowląt lub późniejszej macierzy GFAC.
+Data odczytu źródeł: 06.11.2026.
+
 #### P-KLIRENS-DZM-CZAS-NOTATKI-WYBOR-2026-10-28 — wspólne24h i prowadzenie formularza
 
 Decyzja właściciela: nowe DZM mają rzeczywiście wpisane domyślne24h; puste pole nie blokuje, jawny dodatni inny czas pozostaje, zero/ujemne/błędny zapis wymagają korekty. To jawne założenie użytkowe, nie ustalony fakt o próbce. Pełna zbiórka jest założeniem bez sześciu potwierdzeń; znane negatywne fakty nadal blokują. `ClcrCollectionDuration` jest wspólne dla cl24 i wydalań Ca/UA/Mg/Pi/białka/Na/K/Ox/Cit. pH nie jest mnożone przez24/czas; ilorazy i luka surowicy nie dostają pytania o czas. [DZM_COLLECTION_DURATION.md](DZM_COLLECTION_DURATION.md) podaje kontrakt i wpływ względem poprzednich bramek dat/protokołu.
@@ -9087,7 +9187,7 @@ Lista formuł ma równe odstępy, zamyka się po kliknięciu poza nią, Escape, 
 | Kamica, Ca/Cr, Ox/Cr i Cit/Cr w próbce moczu | EAU Urolithiasis 2026 rozdziela dorosłe mmol/24 h od pediatrycznej interpretacji wapnia w mmol/kg/24 h. `CaCr_spot` po P-KLIRENS-CACR stosuje osobny dwustronny profil Mayo CACR3 od 1 miesiąca do dokładnego wieku 83 lat. `OxCr_spot` po P-KLIRENS-OXCR stosuje Fimlab P95 od 1 miesiąca do dokładnie 17 lat i osobny Newcastle 2–83 µmol/mmol dla >17 lat, z jawną podstawą masową przy konwersji. `CitCr_spot` po P-KLIRENS-CITCR stosuje PathWest: >300 µmol/mmol od urodzenia do <3 lat i >100 od 3 do <18 lat, bez górnej granicy; od ≥18 lat osobny Newcastle: mężczyźni 40–330, kobiety 110–550 µmol/mmol. Pozostałe nieobjęte osobnym audytem pediatryczne anality pozostają liczbowe. Dobowe wydalanie szczawianów opisuje osobny wiersz poniżej. Progi DZM wymagają dokładnie 24-godzinnej bieżącej zbiórki i właściwego kontekstu. | Nazwane zakresy laboratoryjne są orientacyjne, nie potwierdzają metody pacjenta i nie rozpoznają samodzielnie hiperkalciurii, PH lub kamicy. W Ox/Cr zmiana źródła po 17 latach nie jest fizjologiczną krzywą; brak wieku, nieobjęta populacja lub nieznana podstawa masowa nie otrzymują zastępczej normy. W Cit/Cr zmiana źródła w wieku 18 lat również nie jest krzywą; brak płci dorosłego nie tworzy wspólnego przedziału. Nie miesza się progów tych profili z EAU ani z DZM. EAU zaleca dwie kolejne zbiórki w swoistej ocenie metabolicznej. |
 | Dobowe wydalanie szczawianów | `Ox_mgkg` po P-KLIRENS-OX-DZM daje nowy `Ox_total24`, mmol/24 h albo mg/24 h. ERKNet/OxalEurope 2023: dorośli <0,46 mmol/24 h; dzieci <0,46 mmol/1,73 m²/24 h, z normą całkowitą przeliczoną przez BSA/1,73 bez maksimum dorosłego. Masa nie blokuje samej ilości. | Jedna norma publikacyjna, bez mieszania z niższym progiem EAU >0,40 u dorosłych; przedział do <0,46 ma osobną uwagę kamicową. Nieznana postać mg, brak potrzebnego wieku/BSA, znana niepełna zbiórka lub inny czas nie otrzymują zastępczej normy. Znane eGFR <30 ogranicza ocenę. Historia rozdziela dawne /kg, nowe ilości dobowe i podstawy masowe. |
 | pH pojedynczej próbki moczu | `pH_spot` po P-KLIRENS-PH-SPOT wymaga wyłącznie zmierzonego pH, bez jednostki. Ogólne, orientacyjne odniesienie Mayo PHU_ wynosi 4,5–8,0 włącznie, bez doboru według wieku/płci. Techniczne wejście 0–14 ma wspólną walidację formularza i edytora. | Wynik poza normą jest bursztynowy; odczyn sam nie rozpoznaje ani nie wyklucza choroby. Labcorp 5–7 dla noworodków pozostaje jawną uwagą, bez przełączania profilu lub wymyślonej definicji wieku. Cele terapii EAU są osobne od normy. Dawne zapisy pozostają nieocenione; aktualna historia nie przelicza ich nowym źródłem. |
-| Hemodializa | Moduł dotyczy wyłącznie pojedynczej sesji IHD. spKt/Vurea Daugirdasa II używa źródłowych par GFAC dla 2–7 sesji/tydz. i rzeczywistego PIDI; URR i eKt/V są liczone z niezaokrąglonych danych, z uwzględnieniem dostępu AV/CVC, protokołu próbek i aktualności Kru. | Moduł jest niedostępny przed 2. rokiem życia, a w wieku 2–17 lat wymaga protokołu slow-flow. Dla 5–7 sesji/tydz. sesja >300 min jest blokowana i wymaga formalnego modelowania mocznika. Pary GFAC 2–7 pochodzą z symulacji, a walidację FHN opisano dla schematów 3, 4 i 6×/tydz. Progi 1,2/1,4 są stosowane tylko w opisanym profilu dorosłej IHD 3×/tydz.; poza nim oraz w pediatrii wynik techniczny nie otrzymuje dorosłej kategorii adekwatności. |
+| Hemodializa | Po [P-KLIRENS-KTV-2026-11-06](#p-klirens-ktv-2026-11-06--jeden-wariant-dawki-ihd-właściwy-cel-i-zamrożona-historia): przewlekła IHD, jeden wariant i wynik. spKt/V wymaga 7 pól, eKt/V 8 z dostępem, URR tylko 2 stężeń. Zachowano 12 źródłowych GFAC i PIDI start-to-start. Dorosły 3×/tydz.: sp minimum 1,2/cel 1,4; e odrębne minimum 1,2 UK 2019; historyczne URR 65/70% przy znanym czasie <5 h. Nie wymaga się Kru ani ankiety pobrania; nie dolicza się udziału nerek. | 2–<18 lat, 3×/PIDI 2: minimum sp 1,2, bez celu 1,4; inny GFAC bez automatycznego minimum. Dorosła korekcja e 35/22 nie obejmuje znanego dziecka. Lokalne <2 lat blokuje sp/e, lecz nie sam URR. Guardy wysokiego URR i długich schematów ograniczają model, nie są normą. Brak wieku/celu daje neutralność; znane sprzeczności pozostają. Tylko wybrana seria zachowuje raw i zamrożoną ocenę. [Pełny kontrakt i źródła](KLIRENS_KTV_AUDIT.md). |
 
 EKFC pozostaje wyłączone za bramką lokalnej walidacji. Historyczny Schwartz z dobieranym współczynnikiem (k) jest wyłączony z rutynowego użycia.
 

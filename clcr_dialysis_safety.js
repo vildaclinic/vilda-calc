@@ -18,7 +18,7 @@
     spKtV:
       "Daugirdas et al. Nephrol Dial Transplant. 2013;28:2156–2160. doi:10.1093/ndt/gfs115",
     eKtV:
-      "Daugirdas. Adv Ren Replace Ther. 1995;2:295–304. doi:10.1016/S1073-4449(12)80028-8",
+      "Tattersall estimate, constants 35/22 min: Renal Association Haemodialysis Guideline 2019, Appendix 1/A. doi:10.1186/s12882-019-1527-3",
     targets:
       "KDOQI Clinical Practice Guideline for Hemodialysis Adequacy: 2015 update; KDOQI 2006 HD adequacy guideline 4",
     sampling: "KDOQI 2006 HD adequacy guideline 3",

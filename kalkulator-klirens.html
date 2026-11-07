@@ -71,7 +71,7 @@
 <script defer src="vilda_persistence_adapter.js?v=34"></script>
 <script src="vilda_reminders_privacy.js?v=1"></script>
 <script defer src="vilda_panel_pacjent.js?v=4"></script>
-<script defer src="vilda_session_bridge.js?v=176"></script>
+<script defer src="vilda_session_bridge.js?v=177"></script>
 <script defer src="vilda_init.js?v=4"></script>
 <script defer src="vilda_crypto.js?v=15"></script>
 <script defer src="vilda_retention.js?v=1"></script>
@@ -85,7 +85,7 @@
 <script defer src="vilda_lab_history.js?v=5"></script>
 <script defer src="vilda_lab_result_presentation.js?v=5"></script>
 <script defer src="vilda_lab_result_chart.js?v=2"></script>
-<script defer src="vilda_lab_history_tab.js?v=32"></script>
+<script defer src="vilda_lab_history_tab.js?v=33"></script>
 <script defer src="vilda_care_plan_model.js?v=1"></script>
 <script defer src="vilda_clinical_crypto.js?v=2"></script>
 <script defer src="vilda_patient_checkpoint_store.js?v=1"></script>
@@ -93,7 +93,7 @@
 <script defer src="vilda_vault_protocol.js?v=1"></script>
 <script defer src="vilda_patient_identity_protocol.js?v=1"></script>
 <script defer src="vilda_patient_identity_transport.js?v=1"></script>
-<script defer src="vilda_vault.js?v=256"></script>
+<script defer src="vilda_vault.js?v=257"></script>
 <script defer src="vilda_frame_sync.js?v=3"></script>
 <script defer src="vilda_sync.js?v=48"></script>
 <script defer src="vilda_sync_integration.js?v=56"></script>
@@ -121,7 +121,7 @@
 <script defer src="vilda_global_search_view.js?v=6"></script>
 <script defer src="vilda_search_navigation.js?v=1"></script>
 <script defer src="vilda_patients_list.js?v=4"></script>
-<script defer src="vilda_auth_ui.js?v=549"></script>
+<script defer src="vilda_auth_ui.js?v=550"></script>
 <script defer src="vilda_urodzeniowe_rozbieznosc.js?v=1"></script>
 <script defer src="vilda_cykle_leczenia.js?v=3"></script>
 <script defer src="vilda_version_history_ui.js?v=15"></script>
@@ -152,7 +152,7 @@
 <script defer src="clcr_sodium_dzm.js?v=1"></script>
 <script defer src="clcr_potassium_dzm.js?v=1"></script>
 <script defer src="clcr_urate_creatinine.js?v=1"></script>
-<script defer src="vilda_save_status_indicator.js?v=46"></script>
+<script defer src="vilda_save_status_indicator.js?v=47"></script>
 <script defer src="vilda_unsaved_guard.js?v=9"></script>
 <script defer src="vilda_khamis_roche.js?v=2"></script>
 <script defer src="vilda_blum_iss.js?v=2"></script>
@@ -205,7 +205,7 @@
      w vilda_deps.js (jspdf@2.5.1 + html2canvas@1.4.1, te same URL-e i SRI co dawniej). -->
     <!-- Biblioteka do generowania plików DOCX. Jeśli z jakiegoś powodu nie zostanie załadowana (np. brak internetu), skrypt wykorzysta prosty fallback HTML/RTF. -->
     <script defer src="https://cdn.jsdelivr.net/npm/docx@7.7.0/build/index.js" integrity="sha384-w/LllGhZ3w+q1yFNKaoeSozJlt4DKDgPzR/QqsYJ/de7QdUKPayy2iETdCFxEscy" crossorigin="anonymous"></script>
-<script defer src="vilda_chrome.js?v=256"></script>
+<script defer src="vilda_chrome.js?v=257"></script>
 <link href="clcr_ui_workflow.css?v=20" rel="stylesheet" />
 <link href="clcr_saved_results_view.css?v=1" rel="stylesheet" />
 <link href="clcr_result_details.css?v=1" rel="stylesheet" />
@@ -228,6 +228,7 @@
 <link href="clcr_tmp_gfr_ui.css?v=1" rel="stylesheet" />
 <link href="clcr_ph_ui.css?v=1" rel="stylesheet" />
 <link href="clcr_ph_dzm_ui.css?v=1" rel="stylesheet" />
+<link href="clcr_ktv_ui.css?v=1" rel="stylesheet" />
 <link href="clcr_ua_ui.css?v=1" rel="stylesheet" />
 <link href="clcr_ca_dzm_ui.css?v=1" rel="stylesheet" />
 <link href="clcr_mg_dzm_ui.css?v=1" rel="stylesheet" />
@@ -920,6 +921,7 @@
 
       <!-- Pola KT/V – usunięto klasę .ktv-grid, aby Info button był w tej samej linii co pole -->
       <div id="ktvFields" style="display:none;margin-top:8px;">
+          <input type="hidden" id="ktvVariant" value="spktv">
           <label>Metoda leczenia nerkozastępczego:
             <select id="ktvModality">
               <option value="">— wybierz —</option>
@@ -927,7 +929,15 @@
             </select>
           </label>
           <label>Liczba planowych sesji IHD na tydzień:
-            <input type="number" id="ktvSessionsPerWeek" min="2" max="7" step="1" data-max="7">
+            <select id="ktvSessionsPerWeek">
+              <option value="">— wybierz —</option>
+              <option value="2">2 zabiegi/tydz.</option>
+              <option value="3">3 zabiegi/tydz.</option>
+              <option value="4">4 zabiegi/tydz.</option>
+              <option value="5">5 zabiegów/tydz.</option>
+              <option value="6">6 zabiegów/tydz.</option>
+              <option value="7">7 zabiegów/tydz.</option>
+            </select>
           </label>
           <label>Rzeczywisty odstęp przed badaną sesją (PIDI):
             <select id="ktvPidiDays">
@@ -940,13 +950,13 @@
             </select>
           </label>
           <label>Czas dializy (min):
-            <input type="number" id="ktvDurationMinutes" min="1" max="480" step="1" data-max="480">
+            <input type="text" inputmode="decimal" id="ktvDurationMinutes">
           </label>
           <label>Ultrafiltracja netto (UF, L):
-            <input type="number" id="ktvUF" min="0" max="10" step="0.1" data-max="10">
+            <input type="text" inputmode="decimal" id="ktvUF">
           </label>
           <label>Masa ciała po dializie (kg):
-            <input type="number" id="ktvW" min="0.1" max="300" step="0.1" data-max="300">
+            <input type="text" inputmode="decimal" id="ktvW">
           </label>
           <label>Analit:
             <select id="ktvUreaAnalyte">
@@ -963,10 +973,10 @@
             </select>
           </label>
           <label>Stężenie przed dializą:
-            <input type="number" id="UreaPre" min="0.1" max="400" step="1" data-max="400">
+            <input type="text" inputmode="decimal" id="UreaPre">
           </label>
           <label>Stężenie po dializie:
-            <input type="number" id="UreaPost" min="0.1" max="400" step="1" data-max="400">
+            <input type="text" inputmode="decimal" id="UreaPost">
           </label>
           <label>Typ dostępu naczyniowego:
             <select id="ktvAccessType">
@@ -1064,7 +1074,7 @@
     <script defer src="clcr_collection_duration.js?v=7"></script>
     <script defer src="clcr_clinical_safety.js?v=14"></script>
     <script defer src="clcr_stone_safety.js?v=1"></script>
-    <script defer src="clcr_dialysis_safety.js?v=1"></script>
+    <script defer src="clcr_dialysis_safety.js?v=2"></script>
     <script defer src="clcr_extended_egfr.js?v=1"></script>
     <script defer src="clcr_calculation_assumptions.js?v=2"></script>
     <script defer src="clcr_result_reference_data.js?v=7"></script>
@@ -1178,10 +1188,14 @@
     <script defer src="clcr_ph_dzm.js?v=1"></script>
     <script defer src="clcr_ph_dzm_ui.js?v=1"></script>
     <script defer src="clcr_ph_dzm_persistence.js?v=1"></script>
+    <script defer src="clcr_ktv_reference_data.js?v=1"></script>
+    <script defer src="clcr_ktv.js?v=1"></script>
+    <script defer src="clcr_ktv_persistence.js?v=1"></script>
+    <script defer src="clcr_ktv_ui.js?v=1"></script>
     <script defer src="clcr_measured_clearance_reference_data.js?v=1"></script>
     <script defer src="clcr_measured_clearance_reference.js?v=1"></script>
     <script defer src="clcr_result_presentation.js?v=8"></script>
-    <script defer src="inline_kalkulator_klirens_02.js?v=40"></script>
+    <script defer src="inline_kalkulator_klirens_02.js?v=41"></script>
     <!-- Ujednolicona obsługa wyboru formuły w kalkulatorze klirensu/eGFR. -->
     <script defer src="inline_kalkulator_klirens_03.js?v=1"></script>
 <!-- Sekcja interpretacji AI z opisem i przyciskiem.  Umieszczamy ją w kontenerze
@@ -1227,8 +1241,8 @@
 </footer>
 
 <!-- 5. LOGIKA JS -->
-<script defer src="clcr_saved_legacy_calculator.js?v=22"></script>
-<script defer src="inline_kalkulator_klirens_04.js?v=47"></script>
+<script defer src="clcr_saved_legacy_calculator.js?v=23"></script>
+<script defer src="inline_kalkulator_klirens_04.js?v=48"></script>
 
 <!-- Moduł obsługi kliknięć listy dynamicznych wyników wyszukiwania -->
 <script defer src="inline_kalkulator_klirens_05.js?v=1"></script>
@@ -1826,7 +1840,7 @@ document.addEventListener('DOMContentLoaded', () => {
          wczytywane w tym formularzu. Plik userData.js korzysta z localStorage. -->
         <script src="userData.js?v=7" defer></script>
 <script src="ios26-ui.js?v=47" defer></script>
-<script defer src="inline_kalkulator_klirens_07.js?v=38"></script>
+<script defer src="inline_kalkulator_klirens_07.js?v=39"></script>
 <script defer src="vilda_down_syndrome.js?v=5"></script>
 <script defer src="vilda_anorexia_risk.js?v=4"></script>
 <!-- Tablice siatek zespolu Downa przed app.js: app.js przekazuje je silnikowi BMI (P-DS-1). -->
@@ -2087,10 +2101,10 @@ document.addEventListener('DOMContentLoaded', () => {
 </script>
 <script defer src="inline_kalkulator_klirens_08.js?v=1"></script>
   <script defer src="inline_kalkulator_klirens_09.js?v=1"></script>
-  <script defer src="clcr_saved_calculation.js?v=22"></script>
-  <script defer src="clcr_saved_results.js?v=22"></script>
-  <script defer src="clcr_saved_results_view.js?v=2"></script>
-  <script defer src="clcr_result_details.js?v=17"></script>
-  <script defer src="clcr_ui_workflow.js?v=47"></script>
+  <script defer src="clcr_saved_calculation.js?v=23"></script>
+  <script defer src="clcr_saved_results.js?v=23"></script>
+  <script defer src="clcr_saved_results_view.js?v=3"></script>
+  <script defer src="clcr_result_details.js?v=18"></script>
+  <script defer src="clcr_ui_workflow.js?v=48"></script>
 </body>
 </html>
