@@ -35051,6 +35051,8 @@ były puste. Po odtworzeniu i kolejnym zebraniu formularza powstawało także
 `age: 0`, co uruchamiało prawidłową dla jawnego zera prezentację wieku w tygodniach.
 
 - Dwa puste pola dają teraz `age: null, ageMonths: null` w sesji i zapisie/eksporcie.
+  „Nowy pomiar” bez daty urodzenia wymaga podania bieżącego wieku; brak wieku nie
+  może zostać zastąpiony automatycznym zerem, aby umożliwić zapis.
 - Jawne zero pozostaje wartością: `0 lat` bez miesięcy daje `0/0`, same `0 miesięcy`
   także `0/0`; same `6 miesięcy` dają `0/6`, a `10 lat` bez miesięcy — `10/0`.
   Data urodzenia i jawny wiek w tygodniach zachowują dotychczasowy kontrakt.

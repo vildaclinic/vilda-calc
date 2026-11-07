@@ -258,9 +258,9 @@ async function mainSessionModel(owner) {
 }
 
 async function nativeEmptyMainSession(owner) {
-  // Capture the whole real default model before the first patient is loaded.
-  // Native Clear must preserve its complete default-model contract across the
-  // upgrade; only the snapshot's save timestamp is excluded from comparison.
+  // Capture the whole real baseline model before the first patient is loaded.
+  // This old build encodes missing months as zero. The upgrade callsite states
+  // the one intended change for a new Clear; all other fields remain exact.
   await owner.locator('#clearAllDataBtn').click();
   await expect.poll(() => mainSessionModel(owner)).toBeNull();
   await expect.poll(() => owner.evaluate(() => window.VildaSaveStatusIndicator.getState())).toBe('hidden');
@@ -395,7 +395,12 @@ for (const shell of [true, false]) {
       expect(await activate(installer)).toBe('activated');
       await cached(installer, site.previousVersion, site.oldResources);
       const fixture = await createFictionalVault(installer);
-      const emptyMainSession = await nativeEmptyMainSession(installer);
+      const baselineEmptyMainSession = await nativeEmptyMainSession(installer);
+      // A NEW native Clear after upgrading leaves both age fields unknown.
+      // This is not migration of the baseline session or an explicit zero age:
+      // only the old collector's synthesized months zero changes to null.
+      const emptyMainSession = { ...baselineEmptyMainSession,
+        user: { ...baselineEmptyMainSession.user, ageMonths: null } };
       await loadPatient(installer, fixture.ids.a, 'restore', { clear: true });
       await settled(installer);
       await expect(installer.locator('#currentSummaryContent .professional-summary-main')).toBeVisible();
