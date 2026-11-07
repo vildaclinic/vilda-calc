@@ -464,6 +464,10 @@ async function zgodneCentylePoPrzyjeciuDob(page, pomiar) {
   expect([wynik.age, wynik.ageMonths]).toEqual(['16', '11']);
   expect(await page.evaluate(() => { const u = window.collectUserData().user; return [u.dobISO, u.age, u.ageMonths, u.measuredAtISO]; }))
     .toEqual(['2009-07-20', 16, 11, '2026-07-19']);
+  // Przyjęcie DOB i publikacja stanu zapisu kończą się osobno. Czekamy na
+  // gotową decyzję; poniższa asercja nadal wykrywa niepoprawny stan „dirty”.
+  await expect.poll(() => page.evaluate(() => window.VildaSaveStatusIndicator.getCurrentDecision().ready)).toBe(true);
+  await expect.poll(() => stanZapisu(page)).not.toBe('hidden');
   expect(await stanZapisu(page), 'przyjęcie kontekstu DOB nie jest edycją pomiaru').toBe('saved');
 }
 
@@ -896,6 +900,9 @@ test('P-ODTWORZ-WIEK-4: powłoka — poprawka w Karcie na Start, DocPro nieodwie
   expect(await start.evaluate(() => [document.getElementById('height').value, document.getElementById('age').value, document.getElementById('ageMonths').value]),
     'dotąd po F5: 172.5 i 16/11 („Wiek na dzień dzisiejszej wizyty")').toEqual(['172.5', '16', '10']);
   expect(await start.evaluate(() => document.getElementById('dobNote').textContent)).toContain('Pomiar z 17-06-2026');
+  // Pola mogą być już odtworzone, gdy końcowy etap przywracania nadal trwa.
+  // Zapis uruchamiamy po tej samej publicznej bramce, której używa aplikacja.
+  await expect.poll(() => start.evaluate(() => window.VildaDataImportExport.getSaveReadiness().ready)).toBe(true);
   expect(await start.evaluate(async () => Boolean(await window.saveUserData()))).toBe(true);
   await page.waitForTimeout(1500);
   expect(await start.evaluate(async (id) => { const u = (await window.VildaVault.getPatient(id)).snapshots[0].payload.user; return [u.height, u.age, u.ageMonths, u.measuredAtISO]; }, pid),

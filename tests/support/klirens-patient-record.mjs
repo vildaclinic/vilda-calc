@@ -82,7 +82,7 @@ export async function installMemoryVault(scope, { patientId = PATIENT_ID, select
       }]]);
       host.__clcrRecordStore = {
         notes: new Map(), tombstones: new Set(), payloads, series: [], windows: new Set(), originalVaults: new Set(), observerErrors: [],
-        unlocked: true, userId: 'fictional-klirens-account', sequence: 0, saves: [], updates: [], deletes: [], noteReads: [],
+        unlocked: true, userId: 'fictional-klirens-account', sessionGeneration: 0, sequence: 0, saves: [], updates: [], deletes: [], noteReads: [],
         patientReads: [], patientSaves: [], holdPatientReads: false, pendingPatientReads: [], failPatientReads: false,
         failBefore: [], failAfter: [], hold: false, pending: [], rejectUpdate: null, rejectDelete: null,
       };
@@ -153,12 +153,30 @@ export async function installMemoryVault(scope, { patientId = PATIENT_ID, select
       if (store.failAfter.includes(attempt)) throw new Error(`Fictional transport failure after write ${attempt}`);
       return { id: note.id, isNew: !previous, updatedAtISO: note.updatedAtISO, ...(once ? { saved: true, reused: false } : {}) };
     };
+    // Match the real vault's opaque operation-session capability. The patient
+    // picker captures it before showing the native unsaved-data confirmation;
+    // an unlocked flag alone must not authorize a delayed load after relogin.
+    const operationSessions = new WeakMap();
     window.VildaVault = {
       __clcrMemoryLifecycle: true,
       onUnlock: listener => { if (typeof listener === 'function') window.__clcrVaultLifecycleListeners.onUnlock.push(listener); },
       onLock: listener => { if (typeof listener === 'function') window.__clcrVaultLifecycleListeners.onLock.push(listener); },
       isUnlocked: () => store.unlocked,
       getCurrentUser: () => ({ userId: store.userId }),
+      captureSyncOperationSession: () => {
+        ensureUnlocked();
+        const token = Object.freeze({});
+        operationSessions.set(token, { vault: window.VildaVault, userId: store.userId, generation: store.sessionGeneration });
+        return token;
+      },
+      assertSyncOperationSession: token => {
+        ensureUnlocked();
+        const captured = operationSessions.get(token);
+        if (!captured || captured.vault !== window.VildaVault || captured.userId !== store.userId || captured.generation !== store.sessionGeneration) {
+          throw new Error('Fictional operation session changed');
+        }
+        return true;
+      },
       getPatient: async id => {
         ensureUnlocked(); store.patientReads.push(id);
         // Capture the response before deliberately holding I/O, so the test can
@@ -241,7 +259,11 @@ export async function installMemoryVault(scope, { patientId = PATIENT_ID, select
         deletes: clone(store.deletes), noteReads: [...store.noteReads], patientReads: [...store.patientReads],
         patientSaves: clone(store.patientSaves), pendingPatientReads: store.pendingPatientReads.length, tombstones: [...store.tombstones], pending: store.pending.length,
         unlocked: store.unlocked, observerErrors: [...store.observerErrors], originalsLocked: [...store.originalVaults].every(originalVault => !originalVault.isUnlocked()) }),
-      configure: options => Object.assign(store, options),
+      configure: options => {
+        if (Object.hasOwn(options, 'unlocked') && options.unlocked !== store.unlocked ||
+            Object.hasOwn(options, 'userId') && options.userId !== store.userId) store.sessionGeneration++;
+        Object.assign(store, options);
+      },
       release: () => { store.hold = false; for (const resolve of store.pending.splice(0)) resolve(); },
       releasePatientReads: () => { store.holdPatientReads = false; for (const resolve of store.pendingPatientReads.splice(0)) resolve(); },
       removePatient: id => { store.payloads.delete(id); },

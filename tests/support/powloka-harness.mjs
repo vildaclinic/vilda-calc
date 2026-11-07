@@ -9,6 +9,7 @@ const kod = fs.readFileSync(new URL('../../vilda_shell.js', import.meta.url), 'u
 export function nasluchy(obiekt) {
   const mapa = new Map();
   obiekt.addEventListener = (typ, fn) => { if (!mapa.has(typ)) mapa.set(typ, []); mapa.get(typ).push(fn); };
+  obiekt.removeEventListener = (typ, fn) => { if (mapa.has(typ)) mapa.set(typ, mapa.get(typ).filter(listener => listener !== fn)); };
   obiekt.dispatchEvent = (event) => { for (const fn of mapa.get(event.type) || []) fn(event); return true; };
   return obiekt;
 }

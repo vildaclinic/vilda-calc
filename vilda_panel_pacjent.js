@@ -47,6 +47,7 @@
   }
 
   var stan = { znany: pacjentKarty(), nieaktualny: false, wlasciciel: null, koncowy: false };
+  var writeGeneration = 0, writeTickets = new WeakSet(), acceptedLoads = new WeakMap(), ownSaveContinuation = null;
 
   function aktywny() {
     try {
@@ -153,7 +154,8 @@
 
   /* Własne wczytanie albo „Wyczyść” kończy stan nieaktualny także po `utrwal()`: dokument trzyma wtedy to, co sam
      zapisał (np. skok GH dokończony tuż przed przeładowaniem), więc jego zapisy są zgodne z kartą. */
-  function odNowa(id) {
+  function odNowa(id, zachowajZapis) {
+    if (!zachowajZapis) { writeGeneration += 1; ownSaveContinuation = null; }
     stan.znany = id || null;
     stan.nieaktualny = false;
     stan.wlasciciel = null;
@@ -177,10 +179,199 @@
 
   function wlasneWczytanie(e) {
     var d = e && e.detail;
-    odNowa(d && typeof d.patientId === 'string' && d.patientId ? d.patientId : pacjentKarty());
+    var id = d && typeof d.patientId === 'string' && d.patientId ? d.patientId : pacjentKarty();
+    // A durable own save assigns an ID to the same current visit. Keep its
+    // queued edits; an explicit load, even of the same PID, starts a new scope.
+    var ownSave = !!(d && d.source === 'save' && !stan.nieaktualny &&
+      (stan.znany === id || stan.znany === null && id && tenSamPacjentCoMigawka()));
+    var load = d && acceptedLoads.get(d.acceptedLoadAuthority);
+    var completesLoad = !!(load && load.phase === 'publishing' && id === load.targetId && acceptedLoadCurrent(load, true));
+    odNowa(id, ownSave);
+    if (completesLoad) { load.generation = writeGeneration; load.phase = 'published'; }
   }
 
   function wlasneWyczyszczenie() { odNowa(null); }
+
+  function writeShell() {
+    try {
+      var parent = w.parent, shell = parent && parent !== w && parent.VildaShell;
+      return shell && typeof shell.captureSessionWriter === 'function' &&
+        typeof shell.isSessionWriterCurrent === 'function' ? shell : null;
+    } catch (_) { return null; }
+  }
+
+  function applySequence() {
+    var api = w.VildaDataImportExport;
+    return api && typeof api.getApplyLoadedDataSequence === 'function' ? api.getApplyLoadedDataSequence() : null;
+  }
+
+  function accountScope() {
+    var vault = w.VildaVault || null, user = vault && typeof vault.getCurrentUser === 'function' ? vault.getCurrentUser() : null;
+    var unlocked = !!(vault && typeof vault.isUnlocked === 'function' && vault.isUnlocked());
+    var auth = w.VildaAuthUI, guest = !!(auth && typeof auth.isGuestMode === 'function' && auth.isGuestMode());
+    var token = null;
+    if (unlocked && vault && typeof vault.captureSyncOperationSession === 'function' && typeof vault.assertSyncOperationSession === 'function') {
+      token = vault.captureSyncOperationSession();
+      vault.assertSyncOperationSession(token);
+    }
+    return { vault: vault, userId: user && user.userId || null, unlocked: unlocked, guest: guest, token: token };
+  }
+
+  function accountCurrent(scope) {
+    var current = accountScope();
+    if (scope.vault !== current.vault || scope.userId !== current.userId || scope.unlocked !== current.unlocked || scope.guest !== current.guest) return false;
+    if (scope.token !== null) scope.vault.assertSyncOperationSession(scope.token);
+    return true;
+  }
+
+  function canWriteSession() {
+    try {
+      if (ocen()) return false;
+      var shell = writeShell();
+      return !shell || !!shell.captureSessionWriter(w);
+    } catch (_) { return false; }
+  }
+
+  function captureWriteAuthority() {
+    try {
+      if (ocen()) return null;
+      var shell = writeShell(), source = shell && shell.captureSessionWriter(w);
+      if (shell && !source) return null;
+      var ticket = Object.freeze({ shell: shell, source: source, generation: writeGeneration,
+        sequence: applySequence(), patientId: pacjentKarty(), account: accountScope() });
+      writeTickets.add(ticket);
+      return ticket;
+    } catch (_) { return null; }
+  }
+
+  function isWriteAuthorityCurrent(ticket) {
+    try {
+      if (!ticket || !writeTickets.has(ticket) || ocen() || ticket.generation !== writeGeneration ||
+        ticket.sequence !== applySequence() || ticket.shell !== writeShell() || !accountCurrent(ticket.account)) return false;
+      if (ticket.shell && !ticket.shell.isSessionWriterCurrent(ticket.source, w)) return false;
+      var id = pacjentKarty();
+      if (ticket.patientId === id) return true;
+      // Existing null -> PID adoption is valid only for this same visit and
+      // the same identity as the newly saved shared snapshot.
+      return ticket.patientId === null && !!id && stan.znany === id &&
+        (tenSamPacjentCoMigawka() || !!(ownSaveContinuation && ownSaveContinuation.generation === ticket.generation && ownSaveContinuation.patientId === id));
+    } catch (_) { return false; }
+  }
+
+  // DIX calls this only after verifying the actual native Save receipt, before
+  // the existing patient-loaded publication. A blank earlier draft cannot
+  // identify the newly saved patient; the original opaque writer can.
+  function completeOwnSaveAuthority(ticket, result) {
+    try {
+      var patientId = result && result.patientId, vault = ticket && ticket.account && ticket.account.vault;
+      function current() {
+        if (!patientId || typeof patientId !== 'string' || !ticket || !writeTickets.has(ticket) || ticket.patientId !== null ||
+            ticket.generation !== writeGeneration || ticket.sequence !== applySequence() ||
+            ticket.shell !== writeShell() || !accountCurrent(ticket.account) || stan.nieaktualny || stan.koncowy ||
+            (stan.znany !== null && stan.znany !== patientId)) return false;
+        var currentId = pacjentKarty();
+        return (currentId === null || currentId === patientId) &&
+          (!ticket.shell || ticket.shell.isSessionWriterCurrent(ticket.source, w));
+      }
+      if (!current() || !vault || typeof vault.getCommittedSavePayload !== 'function' ||
+          !vault.getCommittedSavePayload(result) || !current()) return false;
+      ownSaveContinuation = { generation: writeGeneration, patientId: patientId };
+      odNowa(patientId, true);
+      return true;
+    } catch (_) { return false; }
+  }
+
+  // The native rejected Save removes only its own deleted PID. Continue that
+  // exact current visit as unassigned, without adopting the merge destination
+  // or making any old writer ticket valid for it.
+  function completeOwnFailedSaveReset(ticket, patientId) {
+    try {
+      if (!patientId || !ticket || !writeTickets.has(ticket) || ticket.patientId !== patientId ||
+          ticket.generation !== writeGeneration || ticket.sequence !== applySequence() ||
+          ticket.shell !== writeShell() || !accountCurrent(ticket.account) ||
+          pacjentKarty() !== null || stan.znany !== patientId || stan.nieaktualny || stan.koncowy) return false;
+      if (ticket.shell && !ticket.shell.isSessionWriterCurrent(ticket.source, w)) return false;
+      odNowa(null);
+      return true;
+    } catch (_) { return false; }
+  }
+
+  // DIX's accepted main-session restore advances its own apply sequence once.
+  // Validate that continuation without relaxing ordinary writer tickets or
+  // adopting a PID: every other opaque owner/activation fence stays intact.
+  function isWriteAuthorityCurrentAfterSessionApply(ticket) {
+    try {
+      if (!ticket || !writeTickets.has(ticket) || ocen() || ticket.generation !== writeGeneration ||
+        !Number.isInteger(ticket.sequence) || applySequence() !== ticket.sequence + 1 ||
+        ticket.shell !== writeShell() || !accountCurrent(ticket.account)) return false;
+      if (ticket.shell && !ticket.shell.isSessionWriterCurrent(ticket.source, w)) return false;
+      return ticket.patientId === pacjentKarty();
+    } catch (_) { return false; }
+  }
+
+  // An explicit accepted load has a known destination before its asynchronous
+  // read/confirmation. Its own reset and native publication are the only
+  // permitted transitions; ordinary writer tickets remain unchanged.
+  function acceptedLoadCurrent(load, publishing) {
+    try {
+      if (!load || load.document !== w.document || load.shell !== writeShell() ||
+          load.generation !== writeGeneration || load.sequence !== applySequence() || !accountCurrent(load.account)) return false;
+      if (load.shell && !load.shell.isSessionWriterCurrent(load.activation, w)) return false;
+      var id = pacjentKarty();
+      return load.phase === 'published' ? id === load.targetId : id === load.sourceId || !!publishing && id === load.targetId;
+    } catch (_) { return false; }
+  }
+  function captureAcceptedLoadAuthority(patientId, advance) {
+    try {
+      if (typeof patientId !== 'string' || !patientId) return null;
+      var account = accountScope(), shell = writeShell(), activation = shell && shell.captureSessionWriter(w);
+      if (!account.unlocked || account.guest || !account.userId || !account.token || shell && !activation) return null;
+      var ticket = Object.freeze({});
+      acceptedLoads.set(ticket, { document: w.document, account: account, shell: shell, activation: activation,
+        sourceId: pacjentKarty(), targetId: patientId, generation: writeGeneration, sequence: applySequence(),
+        advance: advance === 0 ? 0 : 1, phase: 'captured' });
+      return ticket;
+    } catch (_) { return null; }
+  }
+  function isAcceptedLoadAuthorityCurrent(ticket) {
+    var load = acceptedLoads.get(ticket);
+    return !!(load && load.phase === 'captured' && acceptedLoadCurrent(load, false));
+  }
+  function adoptAcceptedLoadOwnSave(ticket, result) {
+    var load = acceptedLoads.get(ticket);
+    try {
+      if (!load || load.phase !== 'captured' || !result || !result.patientId ||
+          load.sourceId !== null && load.sourceId !== result.patientId || pacjentKarty() !== result.patientId) return false;
+      var vault = load.account.vault;
+      if (!vault || typeof vault.getCommittedSavePayload !== 'function' || !vault.getCommittedSavePayload(result)) return false;
+      var previous = load.sourceId; load.sourceId = result.patientId;
+      if (!acceptedLoadCurrent(load, false)) { load.sourceId = previous; return false; }
+      return true;
+    } catch (_) { return false; }
+  }
+  function beginAcceptedLoadAuthority(ticket) {
+    var load = acceptedLoads.get(ticket);
+    if (!load || load.phase !== 'captured') return false;
+    // Only this exact native apply is allowed to advance its sequence.
+    var original = load.sequence; load.sequence += load.advance;
+    if (!acceptedLoadCurrent(load, false)) { load.sequence = original; return false; }
+    odNowa(pacjentKarty()); load.generation = writeGeneration; load.phase = 'applied';
+    return true;
+  }
+  function isAcceptedLoadAuthorityApplied(ticket) {
+    var load = acceptedLoads.get(ticket);
+    return !!(load && (load.phase === 'applied' || load.phase === 'published') && acceptedLoadCurrent(load, false));
+  }
+  function publishAcceptedLoadAuthority(ticket) {
+    var load = acceptedLoads.get(ticket);
+    if (!load || load.phase !== 'applied' || !acceptedLoadCurrent(load, false)) return false;
+    load.phase = 'publishing'; return true;
+  }
+  function completeAcceptedLoadAuthority(ticket, withoutEvent) {
+    var load = acceptedLoads.get(ticket);
+    if (!load || !(load.phase === 'published' || withoutEvent && load.phase === 'applied' && load.sourceId === load.targetId)) return false;
+    return acceptedLoadCurrent(load, false) && pacjentKarty() === load.targetId;
+  }
 
   try {
     w.document.addEventListener('vilda:patient-loaded', wlasneWczytanie);
@@ -190,6 +381,23 @@
   } catch (_) { /* pomiń */ }
 
   w.VildaPanelPacjent = Object.freeze({
+    // A same-patient restore begins a new visit scope without adopting a PID.
+    invalidateWriteAuthority: function () { writeGeneration += 1; },
+    // Privacy cleanup may inspect ownership during the separate app-update fence.
+    isPatientOwnershipStale: ocenPacjenta,
+    captureAcceptedLoadAuthority: captureAcceptedLoadAuthority,
+    isAcceptedLoadAuthorityCurrent: isAcceptedLoadAuthorityCurrent,
+    adoptAcceptedLoadOwnSave: adoptAcceptedLoadOwnSave,
+    beginAcceptedLoadAuthority: beginAcceptedLoadAuthority,
+    isAcceptedLoadAuthorityApplied: isAcceptedLoadAuthorityApplied,
+    publishAcceptedLoadAuthority: publishAcceptedLoadAuthority,
+    completeAcceptedLoadAuthority: completeAcceptedLoadAuthority,
+    completeOwnFailedSaveReset: completeOwnFailedSaveReset,
+    completeOwnSaveAuthority: completeOwnSaveAuthority,
+    captureWriteAuthority: captureWriteAuthority,
+    isWriteAuthorityCurrent: isWriteAuthorityCurrent,
+    isWriteAuthorityCurrentAfterSessionApply: isWriteAuthorityCurrentAfterSessionApply,
+    canWriteSession: canWriteSession,
     /* true: w innej ramce tej karty wczytano innego pacjenta, a ten dokument trzyma poprzedniego. */
     nieaktualny: ocen,
     /* identyfikator pacjenta, którego dane trzyma dokument (null: nowy, niezapisany pacjent albo pusty formularz) */

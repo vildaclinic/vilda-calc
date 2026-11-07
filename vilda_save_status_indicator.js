@@ -35,6 +35,8 @@ function decisionReady(owner,afterSave){
   if(statusPublicationScope&&!(afterSave&&statusPublicationScope.kind==="save"&&
     statusPublicationScope.patientId===owner.patientId&&statusPublicationScope.sequence===owner.applySequence))return false;
   var auth=n.VildaAuthUI,api=n.VildaDataImportExport,dob=n.VildaDobAge,panel=n.VildaPanelPacjent;
+  var intake=typeof n.vildaGetIntakeRestoreReadiness==="function"?n.vildaGetIntakeRestoreReadiness():null;
+  if(intake&&(intake.pending===true||intake.failed===true))return false;
   return !(auth&&typeof auth.isBootReady==="function"&&!auth.isBootReady())&&
     !(api&&typeof api.isSaveUserDataPending==="function"&&api.isSaveUserDataPending())&&
     !(api&&typeof api.isMainSessionRestorePending==="function"&&api.isMainSessionRestorePending())&&
@@ -1099,6 +1101,9 @@ function F(){
   // Samo odtworzenie nigdy nie usuwa wspólnej referencji.
   try{scheduleSharedStatusReconcile()}catch{}
 }),n.document.addEventListener("vilda:main-session-restored",function(){
+  try{scheduleSharedStatusReconcile()}catch{}
+}),n.document.addEventListener("vilda:intake-restore-readiness",function(){
+  // The native restore calculation completed or failed; only re-read status.
   try{scheduleSharedStatusReconcile()}catch{}
 }),n.document.addEventListener("vilda:dob-restored",function(){
   // DOB announces only after its final restore counter reaches zero. Resume

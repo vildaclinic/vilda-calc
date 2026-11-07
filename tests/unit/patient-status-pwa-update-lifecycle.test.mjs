@@ -245,13 +245,15 @@ describe('PWA update has one real shell owner before any iframe unload', () => {
 });
 
 describe('ordinary whole-shell F5 preserves the active owner at the host pagehide boundary', () => {
-  it.each([false, true])('repairs the actual late hidden beforeunload before child pagehide (dirty=%s)', dirty => {
+  it.each([false, true])('rejects late hidden beforeunload before the host and child pagehide boundaries (dirty=%s)', dirty => {
     const h = harness(); if (dirty) h.current.input('weight', 49);
     h.win.dispatchEvent({ type: 'beforeunload' });
     h.current.win.dispatchEvent({ type: 'beforeunload' });
     h.old.win.dispatchEvent({ type: 'beforeunload' });
     expect(h.shell.isAppUpdateReloadPending()).toBe(false);
-    expect(h.shared()._vildaPersist.globals.loadedComparisonData).toEqual(OLD);
+    // The inactive document must never publish its older visit, even in the
+    // interval before the host's final flush and unload quarantine.
+    expect(h.shared()._vildaPersist.globals.loadedComparisonData).toEqual(CURRENT);
     h.win.dispatchEvent({ type: 'pagehide', persisted: false });
     const main = h.main(), shared = h.shared();
     h.current.win.dispatchEvent({ type: 'pagehide' });

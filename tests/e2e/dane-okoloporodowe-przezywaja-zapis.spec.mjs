@@ -60,11 +60,17 @@ function zapiszJakKarta(page, payload) {
 }
 
 async function wczytaj(page, pid) {
-  await page.evaluate(async (id) => {
+  expect(await page.evaluate(async (id) => {
+    const api = window.VildaDataImportExport;
+    const load = api.captureAcceptedPatientLoad({ patientId: id });
+    if (!load) return false;
     const x = await window.VildaVault.getPatient(id);
-    window.applyLoadedData(x.snapshots[0].payload);
-    document.dispatchEvent(new CustomEvent('vilda:patient-loaded', { detail: { patientId: id } }));
-  }, pid);
+    return api.runAcceptedPatientLoad(load, x.snapshots[0].payload, {
+      apply: (payload) => window.applyLoadedData(payload),
+      publish: (operationDetail) => document.dispatchEvent(new CustomEvent('vilda:patient-loaded',
+        { detail: { patientId: id, ...operationDetail } })),
+    });
+  }, pid), 'przyjęte wczytanie pacjenta').toBe(true);
   // Wczytanie przestawia pola formularza ASYNCHRONICZNIE, kaskadą z opóźnieniami (zachowanie
   // sprzed tej zmiany). Wartości wpisane zaraz potem bywały kasowane tuż po wpisaniu i zapis
   // nie dochodził do skutku — stąd migotanie pierwszej wersji tego testu. Czekamy więc, aż

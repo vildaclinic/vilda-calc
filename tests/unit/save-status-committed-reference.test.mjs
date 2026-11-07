@@ -117,6 +117,54 @@ function coldIndicator(h, options = {}) {
 beforeEach(() => { vi.useFakeTimers(); vi.setSystemTime(new Date('2026-11-06T15:00:00Z')); });
 afterEach(() => { vi.clearAllTimers(); vi.useRealTimers(); });
 
+describe('native intake restore readiness notifications', () => {
+  it.each([false, true])('refreshes intake restore completion without rewriting reference or session (edited=%s)', edited => {
+    const h = environment(); let pending = true;
+    h.win.vildaGetIntakeRestoreReadiness = () => ({ pending, failed: false });
+    const cold = coldIndicator(h, { dobPending: false });
+    expect(h.data.getSaveReadiness()).toEqual({ ready: false, reason: 'intake-restore-pending' });
+    expect(cold.indicator.getState()).toBe('hidden');
+    expect(cold.indicator.getCurrentDecision().ready).toBe(false);
+    const reference = h.storage.get('vilda-save-ref-v1'), session = h.session();
+    if (edited) { const form = h.form(); form.user.weight++; h.setForm(form); }
+    pending = false;
+    cold.emit('vilda:intake-restore-readiness');
+    vi.advanceTimersByTime(250);
+    expect(h.data.getSaveReadiness()).toEqual({ ready: true, reason: null });
+    expect(cold.indicator.getState()).toBe(edited ? 'dirty' : 'saved');
+    expect(cold.indicator.getCurrentDecision()).toMatchObject({ ready: true, state: edited ? 'dirty' : 'saved' });
+    expect(JSON.parse(h.storage.get('vilda-save-ref-v1'))).toEqual({ ...JSON.parse(reference), dirty: edited });
+    expect(cold.indicator.getReferenceFingerprint()).toBe(JSON.parse(reference).fp);
+    expect(h.session()).toEqual(session);
+    expect(h.persist).not.toHaveBeenCalled(); expect(h.collect).not.toHaveBeenCalled();
+    expect(h.vault.savePatient).not.toHaveBeenCalled(); expect(h.win.vildaPersistFlushNow).not.toHaveBeenCalled();
+  });
+
+  it.each(['failed', 'throws'])('keeps %s intake restoration unready after its notification without clinical writes', kind => {
+    const h = environment(); let failed = true;
+    h.win.vildaGetIntakeRestoreReadiness = () => {
+      if (kind === 'throws' && failed) throw new Error('Fikcyjny błąd producenta');
+      return { pending: false, failed };
+    };
+    const cold = coldIndicator(h, { dobPending: false }), reference = h.storage.get('vilda-save-ref-v1');
+    const session = h.session();
+    cold.emit('vilda:intake-restore-readiness'); vi.advanceTimersByTime(250);
+    expect(h.data.getSaveReadiness()).toEqual({ ready: false, reason: 'intake-restore-failed' });
+    expect(cold.indicator.getCurrentDecision().ready).toBe(false);
+    expect(cold.indicator.getState()).toBe('hidden');
+    expect(h.storage.get('vilda-save-ref-v1')).toBe(reference);
+    failed = false;
+    cold.emit('vilda:intake-restore-readiness'); vi.advanceTimersByTime(250);
+    expect(cold.indicator.getState()).toBe('saved');
+    expect(h.data.getSaveReadiness()).toEqual({ ready: true, reason: null });
+    expect(h.storage.get('vilda-save-ref-v1')).toBe(reference);
+    expect(h.session()).toEqual(session);
+    expect(h.persist).not.toHaveBeenCalled(); expect(h.collect).not.toHaveBeenCalled();
+    expect(h.vault.savePatient).not.toHaveBeenCalled();
+  });
+
+});
+
 describe('proven automatic PAL defaults are comparison-only', () => {
   it.each(['proven-default', 'different-committed-payload', 'later-clinical-edit'])(
     '%s preserves the raw committed reference and does not hide a clinical edit', async scenario => {

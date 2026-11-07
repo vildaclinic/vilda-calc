@@ -37,29 +37,22 @@ async function expectStoredIntact(owner, stored) {
 }
 
 async function loadSavedDocProForClear(page, owner, patientId) {
-  // Isolate this saved-Clear scenario from the separate shell Restore-choice
-  // race: shared restore can replace lastLoadedData between pick and Restore.
-  // Keep the actual picked payload for the public restore API. This prepares
-  // a genuinely saved form; it does not fix or claim to test that UI race.
-  const expectedConfirm = { type: 'confirm', message: 'Masz wprowadzone nowe dane, które nie zostały zapisane.\nCzy na pewno chcesz przywrócić zapisany stan?' };
-  const confirmations = [];
-  const confirmRestore = async dialog => {
-    const actual = { type: dialog.type(), message: dialog.message() };
-    confirmations.push(actual);
-    if (actual.type === expectedConfirm.type && actual.message === expectedConfirm.message) await dialog.accept();
-    else { await dialog.dismiss(); expect(actual).toEqual(expectedConfirm); }
+  // Use the same patient-card -> load-choice -> Restore action as the doctor.
+  // A nested restore inside the pick publication runs before the accepted
+  // operation completes and is deliberately refused by the production guard.
+  const dialogs = [];
+  const unexpectedDialog = async dialog => {
+    dialogs.push({ type: dialog.type(), message: dialog.message() });
+    await dialog.dismiss();
   };
-  page.on('dialog', confirmRestore);
+  page.on('dialog', unexpectedDialog);
   let witness, complete = false;
   try {
     witness = await owner.evaluateHandle(id => {
       const api = window.VildaDataImportExport, initial = api.getApplyLoadedDataSequence();
       if (!Number.isSafeInteger(initial)) throw Error('Missing initial patient-load sequence');
-      let onPick, done;
-      const dispose = () => {
-        document.removeEventListener('vilda:state-restored', restored);
-        if (onPick) document.removeEventListener('vilda:patient-loaded', onPick);
-      };
+      let done;
+      const dispose = () => document.removeEventListener('vilda:state-restored', restored);
       const promise = new Promise(resolve => { done = resolve; });
       function restored(event) {
         const detail = event.detail || {}, sequence = api.getApplyLoadedDataSequence();
@@ -70,19 +63,9 @@ async function loadSavedDocProForClear(page, owner, patientId) {
         dispose(); done({ patientId: id, applySequence: sequence });
       }
       document.addEventListener('vilda:state-restored', restored);
-      window.VildaAuthUI.showPatientCard(id, payload => {
-        window.applyLoadedData(payload);
-        // Register after production identity listeners; AuthUI assigns the PID.
-        onPick = event => {
-          if (event.detail?.source !== 'pick' || event.detail.patientId !== id) return;
-          document.removeEventListener('vilda:patient-loaded', onPick);
-          api.restoreLoadedState({ data: payload });
-        };
-        document.addEventListener('vilda:patient-loaded', onPick);
-      }, null);
       return { promise, dispose };
     }, patientId);
-    await owner.getByRole('button', { name: 'Wczytaj tego pacjenta', exact: true }).click();
+    await loadPatient(owner, patientId, 'restore');
     const restored = await witness.evaluate(value => value.promise);
     await expect.poll(() => owner.evaluate(() => {
       const api = window.VildaDataImportExport, decision = window.VildaSaveStatusIndicator.getCurrentDecision();
@@ -93,10 +76,11 @@ async function loadSavedDocProForClear(page, owner, patientId) {
     })).toEqual({ ...restored, ready: true, state: 'saved',
       model: { height: '150', weight: '40', age: '12', ageMonths: '0', sex: 'F', name: 'Fikcyjna Alicja Menu',
         pubertyMenarcheAge: '11.5', pubertyGnrhaStatus: 'brak', pubertyCdgp: 'nie' } });
-    expect(confirmations).toEqual([expectedConfirm]);
+    // Choosing Restore in the native modal is the confirmation itself.
+    expect(dialogs).toEqual([]);
     complete = true;
   } finally {
-    page.off('dialog', confirmRestore);
+    page.off('dialog', unexpectedDialog);
     if (witness) {
       const cleanup = async () => { await witness.evaluate(value => value.dispose()); await witness.dispose(); };
       if (complete) await cleanup(); else await cleanup().catch(() => {});

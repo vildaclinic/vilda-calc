@@ -13,7 +13,7 @@ const HISTORY = [
 const clone = value => JSON.parse(JSON.stringify(value));
 
 function harness({ intakeDom = true } = {}) {
-  const rows = [], timers = [], elements = new Map();
+  const rows = [], rowOptions = [], timers = [], elements = new Map();
   function element(id, value = '') {
     const node = {
       id, value, dataset: {}, style: {}, disabled: false,
@@ -50,7 +50,7 @@ function harness({ intakeDom = true } = {}) {
     CustomEvent: class { constructor(type, options) { this.type = type; this.detail = options?.detail; } },
     hasCompleteIntakeCurrentBasics: () => true,
     _getUserBasics: () => ({ ...CURRENT }),
-    intakeAddRow: row => rows.push(clone(row || {})),
+    intakeAddRow: (row, options) => { rowOptions.push(options); return rows.push(clone(row || {})); },
     intakeHistory: [{ ...STALE }],
   };
   for (const file of ['vilda_estimated_intake_runtime.js', 'vilda_data_import_export.js']) {
@@ -83,13 +83,25 @@ function harness({ intakeDom = true } = {}) {
     expect(intermediateCalculations).toBe(1);
     return rows;
   }
-  return { win, api, rows, restore };
+  return { win, api, rows, rowOptions, restore };
 }
 
 describe('Main-session intake history remains authoritative during restoration', () => {
   it.each([null, []])('explicit %j cannot harvest an older shared current measurement', history => {
     const h = harness();
     expect(h.restore({ pal: '1.4', history })).toEqual([CURRENT]);
+  });
+
+  it('marks only the actual current row, never restored independent archive rows', () => {
+    const h = harness(); h.restore({ history: clone(HISTORY) });
+    expect(h.rowOptions).toEqual([{ current: true }, undefined, undefined]);
+  });
+
+  it('marks the deliberate partial-current placeholder when no archive is present', () => {
+    const h = harness(); h.win.hasCompleteIntakeCurrentBasics = () => false;
+    h.win.getUserBasics = () => ({ ageMonths: null, height: 158, weight: 46 });
+    h.api.rehydrateIntakeFromState('1.4', { history: [] });
+    expect(h.rowOptions).toEqual([{ current: true }]);
   });
 
   it('preserves a nonempty saved history despite an intervening calculation', () => {

@@ -339,8 +339,12 @@ async function N(){
       if(!await ghJumpWaitForGuard(claim)||!ghJumpCurrent(claim,false)){ghJumpCancel(claim);return}
       const r=window._vildaCurrentPatientId||null;
       if(n.patientId&&r!==n.patientId&&typeof claim.vault.getPatient==="function"&&typeof window.applyLoadedData==="function"){
+        const loadApi=window.VildaDataImportExport;
+        const scopedLoad=!!(loadApi&&typeof loadApi.captureAcceptedPatientLoad==="function");
+        const acceptedLoad=scopedLoad?loadApi.captureAcceptedPatientLoad({patientId:n.patientId}):null;
+        if(scopedLoad&&!acceptedLoad){ghJumpCancel(claim);return}
         const i=await claim.vault.getPatient(n.patientId),a=i&&i.snapshots&&i.snapshots[0];
-        if(!ghJumpCurrent(claim,false)){ghJumpCancel(claim);return}
+        if(!ghJumpCurrent(claim,false)||scopedLoad&&!loadApi.isAcceptedPatientLoadCurrent(acceptedLoad)){ghJumpCancel(claim);return}
         // Another user dialog may have opened during I/O. This intent has not
         // had a guard decision yet; wait for that dialog, then fetch afresh.
         if(ghJumpOpenGuard())continue;
@@ -348,7 +352,8 @@ async function N(){
           const o=function(){
             if(!ghJumpCurrent(claim,true)){ghJumpFinish(claim);return}
             try{
-try{window.applyLoadedData(a.payload)}catch{}try{window._vildaCurrentPatientId=n.patientId}catch{}/* P-NOTATKI-1 (G27, 2026-09-18): skok do punktu GH innego pacjenta ustawial tylko zmienna okna — sessionStorage zostawal przy poprzednim, wiec chip „Otworz karte", bramka notatki i inne strony w tej samej karcie pracowaly na dwoch roznych pacjentach. */try{window.sessionStorage.setItem("vildaCurrentPatientId",n.patientId)}catch{}/* P-NOTATKI-3 (G27b, odlozone z raty 1): skok wczytywal pacjenta do formularza, ale NIC o tym
+const apply=function(){return window.applyLoadedData(a.payload)};
+const publish=function(operationDetail){try{window._vildaCurrentPatientId=n.patientId}catch{}/* P-NOTATKI-1 (G27, 2026-09-18): skok do punktu GH innego pacjenta ustawial tylko zmienna okna — sessionStorage zostawal przy poprzednim, wiec chip „Otworz karte", bramka notatki i inne strony w tej samej karcie pracowaly na dwoch roznych pacjentach. */try{window.sessionStorage.setItem("vildaCurrentPatientId",n.patientId)}catch{}/* P-NOTATKI-3 (G27b, odlozone z raty 1): skok wczytywal pacjenta do formularza, ale NIC o tym
    nie mowil. Zdarzenia vilda:patient-loaded slucha 24 rejestracji w 21 plikach, z czego 19 jest
    aktywnych na docpro - m.in. cache sekcji okoloporodowej, zespolu Downa i pokwitania, korekta
    nazwiska, data urodzenia i wskaznik zapisu. Bez sygnalu zostawaly przy POPRZEDNIM dziecku,
@@ -360,7 +365,10 @@ try{window.applyLoadedData(a.payload)}catch{}try{window._vildaCurrentPatientId=n
    Rozgloszenie MUSI byc synchroniczne: setTimeout zepsulby okno wyciszenia vilda:json-imported
    we wskazniku zapisu. UWAGA: przycisk "Odtworz zapisany stan" zostaje po skoku widoczny -
    modal chowal go sam przy otwarciu, a tu modalu nie ma. To jest zamierzone: droga reczna
-   zostaje otwarta. */try{typeof window.CustomEvent=="function"&&document.dispatchEvent(new window.CustomEvent("vilda:patient-loaded",{detail:{patientId:n.patientId,savedAtISO:a&&a.savedAtISO||null,snapshotCount:i&&(i.snapshotCount||i.snapshots&&i.snapshots.length)||null,name:a&&a.payload&&a.payload.name||null,source:"pick",skipLoadChoice:!0}}))}catch{}try{window.VildaChrome&&typeof window.VildaChrome.refreshPatientChip=="function"&&window.VildaChrome.refreshPatientChip()}catch{}setTimeout(function(){try{typeof window.refreshGHTherapyMonitor=="function"&&window.refreshGHTherapyMonitor()}catch{}pe(n.ghPointId)},450)
+   zostaje otwarta. */try{typeof window.CustomEvent=="function"&&document.dispatchEvent(new window.CustomEvent("vilda:patient-loaded",{detail:{patientId:n.patientId,savedAtISO:a&&a.savedAtISO||null,snapshotCount:i&&(i.snapshotCount||i.snapshots&&i.snapshots.length)||null,name:a&&a.payload&&a.payload.name||null,source:"pick",skipLoadChoice:!0,...operationDetail}}))}catch{}};
+if(scopedLoad){if(!loadApi.runAcceptedPatientLoad(acceptedLoad,a.payload,{apply:apply,publish:publish}))return}
+else{try{apply()}catch{}publish({})}
+try{window.VildaChrome&&typeof window.VildaChrome.refreshPatientChip=="function"&&window.VildaChrome.refreshPatientChip()}catch{}setTimeout(function(){try{typeof window.refreshGHTherapyMonitor=="function"&&window.refreshGHTherapyMonitor()}catch{}pe(n.ghPointId)},450)
             }finally{ghJumpFinish(claim)}
           },d=window.VildaUnsavedGuard;
           claim.phase="attempt";
