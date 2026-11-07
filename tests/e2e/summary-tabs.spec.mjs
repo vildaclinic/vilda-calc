@@ -203,16 +203,17 @@ test('Podsumowanie B: oddzielone wyniki bez chipów, turkusowa norma i niezmieni
   await expect(page.locator(`${CARD} .professional-summary-extra-body`)).toBeVisible();
 });
 
-test('Podsumowanie B: rzeczywiste SDS tempa i prognoza dla 18 lat zmieniają ocenę razem ze źródłem i pacjentem', async ({ page }) => {
-  await open(page, 'docpro');
+for (const route of ['index', 'docpro']) {
+test(`${route}: Podsumowanie B: rzeczywiste SDS tempa i prognoza dla 18 lat zmieniają ocenę razem ze źródłem i pacjentem`, async ({ page }) => {
+  await open(page, route);
   await saved(page, patient({ height: 135, weight: 24, history: [
     { ageMonths: 108, height: 113, weight: 19 },
     { ageMonths: 120, height: 120, weight: 20.5 },
     { ageMonths: 133, height: 127.5, weight: 22 },
   ] }));
   // The real advanced form supplies bone age; no generated result or reference
-  // model is substituted. Without optional BP/RWT tables, this real DocPro flow
-  // selects the available KR/Blum consensus and retains its native interval.
+  // model is substituted. Both pages must use BP/RWT alongside KR/Blum, with
+  // the same current consensus and native interval for the same inputs.
   await page.evaluate(() => {
     const field = document.getElementById('advBoneAge');
     field.value = '11';
@@ -227,13 +228,13 @@ test('Podsumowanie B: rzeczywiste SDS tempa i prognoza dla 18 lat zmieniają oce
   for (const source of ['PALCZEWSKA', 'OLAF', 'PALCZEWSKA']) {
     await chooseSource(page, source);
     await expect(prediction).toHaveAttribute('data-reference-source', source);
-    await expect(prediction).toContainText('konsensus 2 metod i MPH');
+    await expect(prediction).toContainText('konsensus 4 metod i MPH');
     await expect(sds).toHaveAttribute('data-assessment', 'normal');
     await expect(sds.locator('.professional-summary-value')).toContainText('+0,8');
     // A source refresh can replace this row after its text/attributes settle.
     // Check the current row through the locator instead of a detached DOM handle.
     await expect(sds).toHaveCSS('background-color', 'rgb(237, 248, 246)');
-    await expect(prediction).toHaveAttribute('data-tone', 'normal');
+    await expect(prediction).toHaveAttribute('data-tone', 'warn');
     await expect(prediction).toHaveAttribute('data-reference-age-months', '216');
     await expect(prediction.locator('.professional-summary-reference')).toContainText(/centyl.*18 lat/);
     const native = await page.evaluate(() => {
@@ -244,12 +245,22 @@ test('Podsumowanie B: rzeczywiste SDS tempa i prognoza dla 18 lat zmieniają oce
       if (!chosen) throw new Error('Displayed prognosis must match one typed native result');
       const stats = window.getCentilePercentileStatsForSource(chosen.cm, assessment.sex, 216, 'HT', assessment.source,
         { population: assessment.population || 'OGOLNA' });
-      return { source: assessment.source, sex: assessment.sex, rawSds: assessment.velocity.sds, cm: chosen.cm, percentile: stats.percentile };
+      const growth = window.advancedGrowthData, consensus = growth.finalHeightPrediction;
+      return { source: assessment.source, sex: assessment.sex, rawSds: assessment.velocity.sds,
+        cm: chosen.cm, percentile: stats.percentile, consensusCm: consensus.cm,
+        methodCount: consensus.methodCount, methods: consensus.methods.map(method => method.key).sort(),
+        available: Object.fromEntries(['bayleyPinneau', 'rwt', 'khamis', 'blum'].map(method => [method, growth[method]?.available === true])) };
     });
     expect(native.source).toBe(source);
     expect(native.sex).toBe('F');
     expect(native.rawSds).toBeCloseTo(0.8260551293926642, 5);
-    expect(native.cm).toBeCloseTo(161.57824841359923, 1);
+    // Native Start and DocPro agree; the small source difference comes from
+    // the existing reference-dependent consensus, not a display override.
+    expect(native.cm).toBeCloseTo(source === 'PALCZEWSKA' ? 156.17690858628117 : 156.17044746319655, 6);
+    expect(native.cm).toBe(native.consensusCm);
+    expect(native.methodCount).toBe(4);
+    expect(native.methods).toEqual(['blum', 'bp', 'khamis', 'rwt']);
+    expect(native.available).toEqual({ bayleyPinneau: true, rwt: true, khamis: true, blum: true });
     expect(Number(await prediction.getAttribute('data-reference-percentile'))).toBeCloseTo(native.percentile, 6);
     referenceCentiles.push(native.percentile);
     await expect(page.locator(`${CARD} .professional-summary-chip`)).toHaveCount(0);
@@ -276,6 +287,7 @@ test('Podsumowanie B: rzeczywiste SDS tempa i prognoza dla 18 lat zmieniają oce
   await expect(prediction.locator('.professional-summary-value')).toContainText(/Khamis[-–]Roche/);
   await expect(prediction).toHaveAttribute('data-assessment', 'normal');
 });
+}
 
 for (const source of ['OLAF', 'PALCZEWSKA']) {
   test(`${source}: odtworzona historia ma własne kolory i gradienty także po powiększeniu`, async ({ page }) => {
