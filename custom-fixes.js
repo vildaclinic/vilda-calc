@@ -23,6 +23,7 @@ if(!d)try{
     else if(intakeReady&&intakeReady.pending===true)d="Trwa przywracanie danych pacjenta. Poczekaj chwilę i zapisz ponownie.";
   }
 }catch{d="Nie można potwierdzić gotowości formularza do zapisu."}
+if(h)h.disabled=!!d;
 if(h&&(d?(h.setAttribute("disabled",""),h.setAttribute("aria-disabled","true"),h.setAttribute("data-tip",d)):(h.removeAttribute("disabled"),h.removeAttribute("aria-disabled"),h.removeAttribute("data-tip"))),u){var n=(function(Gq5d){/* P-POWLOKA-OBCY: dokument nieaktualny celuje w pacjenta, ktorego dane trzyma */try{var Gq5v=window.VildaPanelPacjent;return Gq5v&&typeof Gq5v.cel=="function"?Gq5v.cel(Gq5d):Gq5d}catch{return Gq5d}})((function(){try{return window.sessionStorage&&window.sessionStorage.getItem("vildaCurrentPatientId")||null}catch{return null}})()||window._vildaCurrentPatientId/* P-POWLOKA-ID: sesja karty przed zmienna panelu */),c=document.getElementById("age"),z=document.getElementById("ageMonths"),H=document.getElementById("height"),T=document.getElementById("weight"),D=!!(c&&c.value||z&&z.value),$=!!(H&&parseFloat(H.value)>0||T&&parseFloat(T.value)>0),oe=w&&!!n&&D&&$;/* P-NOTATKI-2 (G20, decyzja wlasciciela D11): podpowiedz wylaczonego przycisku mowi, czego brakuje,
    i pochodzi z jednego zrodla (VildaSession.TOOLTIPS.visitNote). Do SW 1.0.985 bramka nigdy nie
    ustawiala data-tip, wiec na kazdej stronie — takze bez formularza — wisial jeden staly tekst. */

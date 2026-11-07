@@ -713,7 +713,7 @@
  },
  "custom-fixes.js": {
   "v": 80,
-  "sha256": "60d221bba9610a8fe7626f4fd5c1a6692fa0cf59f31a29722faf6f29e3157419"
+  "sha256": "64154cdd48fbf30f12ceed520b7b86afdbd1e518d2f747a71fa64af0338744a9"
  },
  "docpro_state_persist.js": {
   "v": 10,
@@ -1736,8 +1736,8 @@
   "sha256": "585daa31f5ad25bbdffbee7c23e34b01a8062961d33fdeee7dc8898c85cd9cc8"
  },
  "vilda_patient_documents.js": {
-  "v": 3,
-  "sha256": "0a7d60964bfd443da87a5d20a435a3847472b7171f0650c4cb0ff30008706b45"
+  "v": 4,
+  "sha256": "41837318409c50b95afe6322a94763d065bd096ccdcf68c1992f967ebd35930c"
  },
  "vilda_patient_identity_protocol.js": {
   "v": 1,

@@ -2712,6 +2712,7 @@ const OPTIONAL_ASSETS = [
   '/vilda_patient_documents.js?v=1',
   '/vilda_patient_documents.js?v=2',
   '/vilda_patient_documents.js?v=3',
+  '/vilda_patient_documents.js?v=4',
   '/vilda_patient_documents.css?v=1',
   '/vilda_patient_documents.css?v=2',
   '/vilda_summary_layout.js?v=1',

@@ -19,18 +19,25 @@ function events() {
     dispatchEvent(event) { for (const callback of listeners.get(event.type) || []) callback(event); return true; },
   };
 }
-function environment({ legacy = false, loggedIn = true, professional = false, values = {} } = {}) {
+function environment({ legacy = false, loggedIn = true, professional = false, values = {}, buttonTag = 'BUTTON' } = {}) {
   const fields = new Map(); let state = { pending: false, failed: false };
-  function field(id, value = '') {
+  function field(id, value = '', tagName = 'INPUT') {
     const attrs = new Map();
-    return { ...events(), id, value, disabled: false, style: {}, dataset: {},
-      setAttribute(name, value) { attrs.set(name, String(value)); if (name === 'disabled') this.disabled = true; },
-      removeAttribute(name) { attrs.delete(name); if (name === 'disabled') this.disabled = false; },
+    const node = { ...events(), id, value, tagName, style: {}, dataset: {},
+      setAttribute(name, value) { attrs.set(name, String(value)); },
+      removeAttribute(name) { attrs.delete(name); },
       getAttribute: name => attrs.get(name) ?? null, hasAttribute: name => attrs.has(name),
     };
+    // HTML buttons reflect disabled into their attribute; an anchor's legacy
+    // JS property is an independent expando and survives removeAttribute().
+    if (tagName !== 'A') Object.defineProperty(node, 'disabled', {
+      get: () => attrs.has('disabled'),
+      set: value => { if (value) attrs.set('disabled', ''); else attrs.delete('disabled'); },
+    });
+    return node;
   }
   for (const [id, value] of Object.entries({ name: 'Fikcyjny Stan Przycisku', age: '13', ageMonths: '0', height: '158', weight: '46', ...values })) fields.set(id, field(id, value));
-  const button = field('saveDataBtnSidebar'); fields.set(button.id, button);
+  const button = field('saveDataBtnSidebar', '', buttonTag); fields.set(button.id, button);
   const document = { ...events(), readyState: 'loading', getElementById: id => fields.get(id) || null,
     querySelector: () => null, querySelectorAll: () => [], getElementsByName: () => [], body: { appendChild() {} } };
   const win = { ...events(), document, location: { pathname: '/index.html' }, professionalMode: professional,
@@ -56,6 +63,25 @@ function environment({ legacy = false, loggedIn = true, professional = false, va
 }
 
 describe('actual native Save button reflects producer readiness', () => {
+  it.each(['pending', 'failed'])('clears the anchor property left by the DIX writer after %s completes', kind => {
+    const h = environment({ buttonTag: 'A' });
+    h.setState({ pending: kind === 'pending', failed: kind === 'failed' });
+    expect(h.win.VildaDataImportExport.updateSaveBtnVisibility()).toBe(false);
+    h.emit();
+    expect(h.button.disabled).toBe(true); expect(h.button.hasAttribute('disabled')).toBe(true);
+    expect(h.button.getAttribute('aria-disabled')).toBe('true');
+    expect(h.button.getAttribute('data-tip')).toMatch(kind === 'failed' ? /Nie udało się/ : /Trwa przywracanie/);
+    h.setState({ pending: false, failed: false }); h.emit();
+    expect(h.button.hasAttribute('disabled')).toBe(false);
+    expect(h.button.getAttribute('aria-disabled')).toBeNull();
+    expect(h.button.getAttribute('data-tip')).toBeNull();
+    expect(h.button.disabled).toBe(false);
+    expect(h.win.VildaDataImportExport.updateSaveBtnVisibility()).toBe(true);
+    h.emit(); expect(h.button.disabled).toBe(false);
+    expect(h.win.collectUserData).not.toHaveBeenCalled(); expect(h.win.calcEstimatedIntake).not.toHaveBeenCalled();
+    expect(h.win.vildaPersistFlushNow).not.toHaveBeenCalled(); expect(h.win.VildaVault.savePatient).not.toHaveBeenCalled();
+  });
+
   it.each(['pending', 'failed'])('keeps both button writers disabled during %s and refreshes after completion', kind => {
     const h = environment(); expect(h.button.disabled).toBe(false);
     h.setState({ pending: kind === 'pending', failed: kind === 'failed' }); h.emit();
@@ -83,11 +109,11 @@ describe('actual native Save button reflects producer readiness', () => {
     expect(h.win.VildaDataImportExport.updateSaveBtnVisibility()).toBe(false); expect(h.button.disabled).toBe(true);
   });
 
-  it.each([false, true])('preserves required fields and auth in standard/PRO mode (%s)', professional => {
-    const full = environment({ professional }); expect(full.button.disabled).toBe(false);
-    const empty = environment({ professional, values: { weight: '' } }); expect(empty.button.disabled).toBe(true);
+  it.each([false, true].flatMap(professional => ['BUTTON', 'A'].map(buttonTag => [professional, buttonTag])))('preserves required fields and auth in standard/PRO mode (%s) on %s', (professional, buttonTag) => {
+    const full = environment({ professional, buttonTag }); expect(full.button.disabled).toBe(false);
+    const empty = environment({ professional, buttonTag, values: { weight: '' } }); expect(empty.button.disabled).toBe(true);
     empty.emit(); expect(empty.button.disabled).toBe(true); expect(empty.button.getAttribute('data-tip')).toContain('Uzupełnij');
-    const guest = environment({ professional, loggedIn: false }); expect(guest.button.disabled).toBe(true);
+    const guest = environment({ professional, buttonTag, loggedIn: false }); expect(guest.button.disabled).toBe(true);
     guest.emit(); expect(guest.button.disabled).toBe(true); expect(guest.button.getAttribute('data-tip')).toContain('Zaloguj');
   });
 

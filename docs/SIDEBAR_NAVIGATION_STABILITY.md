@@ -30,6 +30,15 @@ Oba natywne kontrolery „Zapisz dane” odczytują ten sam stan oczekiwania lub
 błędu odtworzenia spożycia, więc jeden nie włącza przycisku wyłączonego przez
 drugi. Zakończenie istniejącego obliczenia odświeża dostępność; samo kliknięcie
 zapisu nadal przechodzi pełne kontrole konta, wizyty i gotowości danych.
+Kontroler aktualizuje zgodnie atrybuty oraz właściwość `disabled`. W przypadku
+linku stylowanego jako przycisk usunięcie samego atrybutu nie usuwa właściwości
+ustawionej przez drugi kontroler; pozostawienie jej zmieniało kolor przy następnym
+przejściu, mimo że bieżące dane były już gotowe.
+Jeśli podsumowanie dokumentów powstało jeszcze podczas odtwarzania, jego
+dostępność odzyskuje dopiero świeży odczyt i render bieżących wyników po
+zakończeniu odtwarzania. Odświeżenie jest związane z kontem, kluczem, pacjentem,
+wersją wczytania i widocznym dokumentem; nie przypisuje starego podsumowania
+do nowego pacjenta i nie uruchamia zapisu ani obliczenia formularza.
 
 Przechowywane są wyłącznie stan prezentacji i tożsamości potrzebne do jego sprawdzenia. Nie jest to uprawnienie do zapisu, czyszczenia lub wygenerowania dokumentu. Dotychczasowe `disabled`, `aria-disabled`, kontrolery natywne, kontrola aktywnej ramki i strażnik niezapisanych zmian pozostają źródłem dostępności działań. Atrybuty `data-menu-preparing` i `data-menu-was-enabled` sterują wyłącznie prezentacją.
 
