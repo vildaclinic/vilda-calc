@@ -6,7 +6,15 @@ Przejście między formularzami nie oznacza braku danych pacjenta. Powłoka zapa
 
 Trwający zapis celowo zwraca niegotową decyzję porównania. Etykieta „Zapisywanie…” może wtedy przejść przez nawigację wyłącznie, gdy natywny SSI ją publikuje, a `DIX.isSaveUserDataPending()` potwierdza operację nadal należącą do bieżącego zakresu źródła. Nie nadaje to decyzji `ready=true` i nie odblokowuje żadnego przycisku. Bez tego potwierdzenia sama stara etykieta nie wystarcza.
 
-Przechowywane są wyłącznie stan prezentacji i tożsamości potrzebne do jego sprawdzenia. Nie jest to uprawnienie do zapisu, czyszczenia lub wygenerowania dokumentu. Dotychczasowe `disabled`, `aria-disabled`, kontrolery natywne, kontrola aktywnej ramki i strażnik niezapisanych zmian pozostają źródłem dostępności działań. Atrybuty `data-menu-preparing` i `data-menu-was-enabled` sterują tylko kolorami.
+Przechowywane są wyłącznie stan prezentacji i tożsamości potrzebne do jego sprawdzenia. Nie jest to uprawnienie do zapisu, czyszczenia lub wygenerowania dokumentu. Dotychczasowe `disabled`, `aria-disabled`, kontrolery natywne, kontrola aktywnej ramki i strażnik niezapisanych zmian pozostają źródłem dostępności działań. Atrybuty `data-menu-preparing` i `data-menu-was-enabled` sterują wyłącznie prezentacją.
+
+„Wyczyść” jest natywnym przyciskiem, więc globalny styl `button:disabled`
+zmniejsza również jego krycie do 45%. Podczas potwierdzonego przejścia, gdy
+przycisk był wcześniej dostępny, zachowane są zarówno kolory, jak i pełne
+krycie. Sam przycisk nadal pozostaje zablokowany do gotowości formularza.
+Zwykły stan niedostępny poza tym przejściem zachowuje dotychczasowy wygląd.
+Testy porównują również przezroczystość; sama zgodność wartości `color`
+i `background` nie dowodzi niezmienności faktycznego wyglądu.
 
 Prezentacja jest ważna wyłącznie w obrębie tej samej sesji klucza Vaulta, konta, pacjenta, wizyty i żądania nawigacji. Sprawdzane są rzeczywiste dokumenty źródłowy i docelowy, ich ramki oraz zapisany znacznik jawnego wczytania `vilda:sharedLoadSeq`. Jawne wczytanie, Nowa wizyta, Odtwórz, import, Wyczyść i rzeczywista edycja unieważniają poprzednią prezentację. Wylogowanie, tryb gościa, wymiana klucza, zmiana pacjenta lub przeładowanie docelowej ramki również kończą jej ważność.
 
