@@ -50,6 +50,15 @@ Zwykły stan niedostępny poza tym przejściem zachowuje dotychczasowy wygląd.
 Testy porównują również przezroczystość; sama zgodność wartości `color`
 i `background` nie dowodzi niezmienności faktycznego wyglądu.
 
+Gotowy, pusty formularz również może udostępniać „Wyczyść”. Jego świeża,
+potwierdzona decyzja `hidden` zachowuje podczas przejścia wyłącznie wygląd tego
+przycisku. Nie przenosi stanu zapisu ani prezentacji „Zapisz dane” i „Dokumentów”.
+Obowiązują te same kontrole konta, klucza, dokumentu i operacji wczytania co
+dla pacjenta; sam brak identyfikatora nie dowodzi pustego formularza.
+Gotowość celu kończy podtrzymanie. Rzeczywista edycja, czyszczenie, zmiana
+pacjenta lub konta oraz publikacja niepustego stanu źródła je unieważniają.
+Natywna blokada „Wyczyść” podczas odtwarzania pozostaje aktywna.
+
 Prezentacja jest ważna wyłącznie w obrębie tej samej sesji klucza Vaulta, konta, pacjenta, wizyty i żądania nawigacji. Sprawdzane są rzeczywiste dokumenty źródłowy i docelowy, ich ramki oraz zapisany znacznik jawnego wczytania `vilda:sharedLoadSeq`. Jawne wczytanie, Nowa wizyta, Odtwórz, import, Wyczyść i rzeczywista edycja unieważniają poprzednią prezentację. Wylogowanie, tryb gościa, wymiana klucza, zmiana pacjenta lub przeładowanie docelowej ramki również kończą jej ważność.
 
 Zwykłe `persist-restored`, `main-session-restored` i `dob-restored` oznaczają odtwarzanie tej samej sesji. Nie są samodzielnie nową wizytą. Liczniki `applyLoadedData` poszczególnych ramek nie są ze sobą porównywane.

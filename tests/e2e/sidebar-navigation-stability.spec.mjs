@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { createFictionalVault, readyForPatient, shellFrame } from '../support/centile-live-fixture.mjs';
+import { createFictionalVault, fixturePreferences, readyForPatient, shellFrame } from '../support/centile-live-fixture.mjs';
 import { visibleChromeMenu } from '../support/chrome-menu-fixture.mjs';
 import { observeRealSave, lastCommit, reference } from '../support/save-commit-reference-fixture.mjs';
 
@@ -147,6 +147,22 @@ async function navigateMenu(page, href) {
   await link.click();
 }
 
+async function waitForInitialMenuPaint(menu) {
+  // The baseline must describe the opened menu, not a frame from its opening
+  // animation or an earlier hover transition. Never settle animations during
+  // the navigation being measured, or modify their playback.
+  await menu.evaluate(async node => {
+    const surface = node.closest('.chrome-drawer-panel, aside.sidebar-v2') || node;
+    for (;;) {
+      const animations = surface.getAnimations({ subtree: true }).filter(animation =>
+        animation.effect?.getComputedTiming().iterations !== Infinity
+        && (animation.pending || animation.playState === 'running'));
+      if (!animations.length) return;
+      await Promise.allSettled(animations.map(animation => animation.finished));
+    }
+  });
+}
+
 async function waitForActualOwner(page, title) {
   const frame = await shellFrame(page, title);
   await frame.waitForFunction(() => window.VildaAuthUI?.isBootReady()
@@ -256,6 +272,7 @@ for (const profile of [{ name: 'desktop normal', width: 1440, cpu: 1 },
             await expect(initialMenu.locator(selector)).not.toHaveAttribute('aria-disabled', 'true');
           }
         }
+        await waitForInitialMenuPaint(initialMenu);
         const label = (await page.evaluate(() => location.hash)) + ' → ' + title;
         const before = await page.evaluate(label => window.__sidebarPaintProbe.start(label), label);
         await navigateMenu(page, href);
@@ -610,3 +627,164 @@ test('a real in-flight Save retains its status through native navigation and rea
   if (primaryError) throw primaryError;
   if (secondaryErrors.length) throw secondaryErrors[0].error;
 });
+
+// A blank form has no patient status to retain, but Clear is still available.
+// Prepare the synthetic account and acknowledge DocPro before observing warm
+// transitions; a real PRO gate is allowed to disable its unavailable form.
+async function emptyMenuFixture(page, context, { coldDestination = false } = {}) {
+  await fixturePreferences(page);
+  await context.route(/https?:\/\/[^/]+\.workers\.dev(?:\/|$)/u, route => route.fulfill({
+    status: 404, headers: { 'access-control-allow-origin': '*' }, body: '{}',
+  }));
+  await context.routeWebSocket(/wss?:\/\/[^/]+\.workers\.dev(?:\/|$)/u, socket => socket.close());
+  await page.goto('/app.html#/start', { waitUntil: 'load' });
+  let start = await shellFrame(page, 'Start');
+  await start.waitForFunction(() => typeof window.VildaVault?.createUser === 'function');
+  await start.evaluate(() => window.VildaVault.createUser('Fikcyjny#PustyPanel26!', {
+    label: 'Fikcyjny lekarz', iterations: 10000,
+  }));
+  await page.reload({ waitUntil: 'load' });
+  await waitForActualOwner(page, 'Start');
+  await navigateMenu(page, 'docpro.html');
+  const docpro = await shellFrame(page, 'DocPro');
+  await readyForPatient(docpro);
+  const confirmation = docpro.locator('#professionalConfirmBtn');
+  if (await confirmation.isVisible()) await confirmation.click();
+  await expect(docpro.locator('#calcForm')).toBeVisible();
+  await expect(docpro.locator('#professionalOverlay')).toBeHidden();
+  await navigateMenu(page, 'index.html');
+  await waitForActualOwner(page, 'Start');
+  if (coldDestination) await page.reload({ waitUntil: 'load' });
+  start = await waitForActualOwner(page, 'Start');
+  await expectEmptyOwner(start);
+  await expect(page.locator('aside.sidebar-v2 [data-menu-clear]')).toBeEnabled();
+  return start;
+}
+
+async function expectEmptyOwner(frame) {
+  const state = await frame.evaluate(async () => ({
+    fields: Object.fromEntries(['lastName', 'firstName', 'age', 'ageMonths', 'height', 'weight']
+      .map(id => [id, document.getElementById(id)?.value])),
+    patientId: sessionStorage.getItem('vildaCurrentPatientId'),
+    decision: window.VildaSaveStatusIndicator.getCurrentDecision(),
+    patients: await window.VildaVault.listPatients(),
+  }));
+  expect(state.fields).toEqual({ lastName: '', firstName: '', age: '', ageMonths: '', height: '', weight: '' });
+  expect(state.patientId).toBeNull();
+  expect(state.decision).toMatchObject({ ready: true, state: 'hidden' });
+  expect(state.patients).toEqual([]);
+  await expect(frame.locator('#sex')).toBeEnabled();
+}
+
+function emptyClearPalette(control) {
+  return Object.fromEntries(['text', 'color', 'background', 'image', 'border', 'iconColor', 'opacity', 'filter',
+    'boxShadow', 'textFill'].map(key => [key, control[key]]));
+}
+
+for (const width of [1440, 390]) {
+  test(`${width}px: empty form keeps Clear paint through warm Start–DocPro navigation at CPU4`, async ({ page, context }, testInfo) => {
+    await page.setViewportSize({ width, height: 1000 });
+    const cdp = await context.newCDPSession(page);
+    await cdp.send('Emulation.setCPUThrottlingRate', { rate: 4 });
+    await installPaintProbe(page);
+    await emptyMenuFixture(page, context);
+    const key = width < 992 ? 'drawer:clear' : 'desktop:clear', transitions = [];
+    for (const [title, href] of [['DocPro', 'docpro.html'], ['Start', 'index.html'],
+      ['DocPro', 'docpro.html'], ['Start', 'index.html']]) {
+      const menu = await visibleChromeMenu(page);
+      await expect(menu.locator('[data-menu-clear]')).toBeEnabled();
+      await page.mouse.move(width - 4, 4);
+      await waitForInitialMenuPaint(menu);
+      const before = await page.evaluate(label => window.__sidebarPaintProbe.start(label), `empty → ${title}`);
+      await menu.locator(`a[href="${href}"]`).click();
+      const owner = await waitForActualOwner(page, title);
+      await expect(owner.locator('#calcForm')).toBeVisible();
+      await expect(owner.locator('#proGateBanner')).toBeHidden();
+      await expect(owner.locator('#professionalOverlay')).toBeHidden();
+      await expect(page.locator('aside.sidebar-v2 [data-menu-clear]')).toBeEnabled();
+      await expect(page.locator('aside.sidebar-v2 [data-menu-clear]')).toHaveCSS('opacity', '1');
+      await expect(page.locator('aside.sidebar-v2 [data-menu-clear]')).toHaveCSS('background-color', 'rgb(255, 255, 255)');
+      await expectEmptyOwner(owner);
+      const samples = await page.evaluate(() => window.__sidebarPaintProbe.stop());
+      const readyMenu = await visibleChromeMenu(page);
+      await expect(readyMenu.locator('[data-menu-clear]')).toBeEnabled();
+      await page.mouse.move(width - 4, 4);
+      const final = await page.evaluate(() => window.__sidebarPaintProbe.current());
+      transitions.push({ title, before, ...samples, final });
+    }
+    await testInfo.attach('empty-clear-painted-frames', { contentType: 'application/json', body: JSON.stringify(transitions) });
+    for (const transition of transitions) {
+      const before = transition.before.controls[key];
+      expect(before.visible).toBe(true);
+      expect(before.disabled).toBe(false);
+      const visible = transition.frames.filter(frame => frame.controls[key]?.visible);
+      expect(visible.length).toBeGreaterThan(0);
+      if (width >= 992) expect(visible.length).toBe(transition.frames.length);
+      for (const frame of visible) expect(emptyClearPalette(frame.controls[key]), `${transition.title}, frame ${frame.frame}`)
+        .toEqual(emptyClearPalette(before));
+      expect(emptyClearPalette(transition.final.controls[key])).toEqual(emptyClearPalette(before));
+      expect(transition.final.controls[key].disabled).toBe(false);
+    }
+  });
+
+  test(`${width}px: empty Clear keeps its paint but rejects a real click during a cold request`, async ({ page, context }, testInfo) => {
+    await page.setViewportSize({ width, height: 1000 });
+    await installPaintProbe(page);
+    const start = await emptyMenuFixture(page, context, { coldDestination: true });
+    const menuBefore = await visibleChromeMenu(page);
+    await expect(menuBefore.locator('[data-menu-clear]')).toBeEnabled();
+    await page.mouse.move(width - 4, 4);
+    await waitForInitialMenuPaint(menuBefore);
+    const before = await page.evaluate(() => window.__sidebarPaintProbe.current());
+    const originalActions = await start.evaluate(() => [...window.__sidebarNativeActions]);
+    let release, held = false;
+    const gate = new Promise(resolve => { release = resolve; });
+    const pattern = /\/docpro\.html(?:\?|$)/u;
+    await page.route(pattern, async route => {
+      const response = await route.fetch();
+      held = true;
+      await gate;
+      await route.fulfill({ response });
+    });
+    try {
+      await expect(page.locator('iframe.app-pane[title="DocPro"]')).toHaveCount(0);
+      await navigateMenu(page, 'docpro.html');
+      await expect.poll(() => held).toBe(true);
+      const menu = await visibleChromeMenu(page), clear = menu.locator('[data-menu-clear]');
+      if (width < 992) await expect(page.locator('.chrome-drawer-panel')).toHaveCSS('transform', 'none');
+      await expect(clear).toBeDisabled();
+      await expect(clear).toHaveAttribute('aria-disabled', 'true');
+      await expect(clear).toHaveAttribute('data-menu-preparing', 'true');
+      await expect(clear).toHaveCSS('opacity', '1');
+      await expect(menu.locator('.chrome-menu-save')).toHaveAttribute('aria-disabled', 'true');
+      await expect(menu.locator('.chrome-menu-documents')).toHaveAttribute('aria-disabled', 'true');
+      await page.evaluate(() => window.__sidebarPaintProbe.start('empty cold pending click'));
+      const box = await clear.boundingBox();
+      expect(box).not.toBeNull();
+      expect(await clear.evaluate(node => {
+        const rect = node.getBoundingClientRect();
+        return node.contains(document.elementFromPoint(rect.x + rect.width / 2, rect.y + rect.height / 2));
+      })).toBe(true);
+      await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2);
+      await page.mouse.move(width - 4, 4);
+      expect(await start.evaluate(() => window.__sidebarNativeActions)).toEqual(originalActions);
+      await expectEmptyOwner(start);
+      const samples = await page.evaluate(() => window.__sidebarPaintProbe.stop());
+      await testInfo.attach('empty-cold-click', { contentType: 'application/json', body: JSON.stringify({ before, ...samples }) });
+      const key = width < 992 ? 'drawer:clear' : 'desktop:clear';
+      expect(samples.frames.length).toBeGreaterThan(0);
+      for (const frame of samples.frames) {
+        expect(frame.controls[key].visible).toBe(true);
+        expect(frame.controls[key].nativeDisabled).toBe(true);
+        expect(emptyClearPalette(frame.controls[key])).toEqual(emptyClearPalette(before.controls[key]));
+      }
+      // Once the cold document arrives its real PRO gate may disable Clear.
+      // Only the actual pending interval above promises retained presentation.
+      release();
+      await waitForActualOwner(page, 'DocPro');
+    } finally {
+      release();
+      await page.unroute(pattern);
+    }
+  });
+}

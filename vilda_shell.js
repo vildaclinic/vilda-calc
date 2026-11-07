@@ -521,6 +521,8 @@ function Sp_sourceStatus(doc){
   var view=Sp_current();if(!view||view.source.doc!==doc)return;
   try{
     var api=view.source.win.VildaSaveStatusIndicator,state=api&&api.getState();
+    // An empty form lends only Clear's appearance, never a later patient status.
+    if(view.clearOnly){if(state!=="hidden")Sp_invalidate();return}
     var settled=!!(api&&typeof api.isReadyForSharedReference==="function"&&api.isReadyForSharedReference());
     if(view.confirmedSave&&!settled&&state!=="saving"&&state!=="error")return;
     if(state===view.nativeState&&!(view.confirmedSave&&settled))return;
@@ -608,15 +610,18 @@ function Sp_begin(route){
       var continuingSave=Sp_saveHandoff(previous,win,api);
       settled=!!(decision&&decision.ready)&&!continuingSave;
       var readyDecision=settled&&typeof api.isCurrentDecisionOwner==="function"&&api.isCurrentDecisionOwner(decision.scope)&&
-        ["saved","dirty","new_patient"].indexOf(decision.state)!==-1;
+        ["saved","dirty","new_patient","hidden"].indexOf(decision.state)!==-1;
       if(!continuingSave&&host&&account&&host.userId===account.userId&&sequence!==null&&(readyDecision||pendingSave)&&
         boundary===Sp_boundary&&sequence===Sp_loadSequence()&&win.document===doc&&!Gp5_obcy(win)){
-        var documents=win.VildaPatientDocuments,state=documents&&typeof documents.getState==="function"&&documents.getState();
+        // A verified empty form still has a native Clear action. Preserve only
+        // its paint across restore; Save, Documents and status stay native.
+        var clearOnly=readyDecision&&decision.state==="hidden";
+        var documents=!clearOnly&&win.VildaPatientDocuments,state=documents&&typeof documents.getState==="function"&&documents.getState();
         var visibleState=pendingSave?"saving":nativeState==="error"?"error":decision.state;
         next={source:{route:c,frame:frame,win:win,doc:doc},host:host,account:account,patient:Ss_patientId(),
-          boundary:boundary,loadSequence:sequence,state:visibleState,nativeState:nativeState,savingHandoff:!!pendingSave,
-          title:typeof api._buildTitleAttr==="function"?api._buildTitleAttr(visibleState):"",
-          save:Sp_enabled(doc.getElementById("saveDataBtnSidebar")),documents:!!(state&&!state.disabled&&!state.busy),
+          boundary:boundary,loadSequence:sequence,state:visibleState,nativeState:nativeState,savingHandoff:!!pendingSave,clearOnly:clearOnly,
+          title:!clearOnly&&typeof api._buildTitleAttr==="function"?api._buildTitleAttr(visibleState):"",
+          save:!clearOnly&&Sp_enabled(doc.getElementById("saveDataBtnSidebar")),documents:!!(state&&!state.disabled&&!state.busy),
           clear:Sp_enabled(o.querySelector('[data-menu-clear]'))};
       }
     }
@@ -638,7 +643,7 @@ function Sp_presentation(){
     ready=!!(entry&&entry.loaded&&!entry.stale&&frame&&!frame.hidden&&frame.contentDocument===win.document&&!Gp5_obcy(win)&&
       api&&typeof api.isReadyForSharedReference==="function"&&api.isReadyForSharedReference());
     var documents=win&&win.VildaPatientDocuments;
-    documentsPending=form&&(!ready||!documents||typeof documents.getReadinessPhase==="function"&&documents.getReadinessPhase()==="preparing");
+    documentsPending=!view.clearOnly&&form&&(!ready||!documents||typeof documents.getReadinessPhase==="function"&&documents.getReadinessPhase()==="preparing");
     savingHandoff=Sp_saveHandoff(view,win,api);
     if(clinical&&savingHandoff&&state==="saved"){
       // Source Saved cannot acknowledge a clinical target that has not yet
@@ -648,6 +653,7 @@ function Sp_presentation(){
       if(sourceApi&&typeof sourceApi._buildTitleAttr==="function")title=sourceApi._buildTitleAttr(state);
     }
   }catch{}
+  if(view.clearOnly)return clinical&&!ready?{state:null,title:"",save:null,documents:null,clear:view.clear}:null;
   return {state:!view.statusRetired&&(!clinical||!ready||savingHandoff)?state:null,title:title,
     save:form&&!ready?view.save:null,documents:documentsPending?view.documents:null,clear:clinical&&!ready?view.clear:null};
 }
