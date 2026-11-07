@@ -6,7 +6,49 @@ Przejście między formularzami nie oznacza braku danych pacjenta. Powłoka zapa
 
 Trwający zapis celowo zwraca niegotową decyzję porównania. Etykieta „Zapisywanie…” może wtedy przejść przez nawigację wyłącznie, gdy natywny SSI ją publikuje, a `DIX.isSaveUserDataPending()` potwierdza operację nadal należącą do bieżącego zakresu źródła. Nie nadaje to decyzji `ready=true` i nie odblokowuje żadnego przycisku. Bez tego potwierdzenia sama stara etykieta nie wystarcza.
 
-Przechowywane są wyłącznie stan prezentacji i tożsamości potrzebne do jego sprawdzenia. Nie jest to uprawnienie do zapisu, czyszczenia lub wygenerowania dokumentu. Dotychczasowe `disabled`, `aria-disabled`, kontrolery natywne, kontrola aktywnej ramki i strażnik niezapisanych zmian pozostają źródłem dostępności działań. Atrybuty `data-menu-preparing` i `data-menu-was-enabled` sterują tylko kolorami.
+Po takim przejściu gotowy formularz docelowy może jeszcze porównywać dane ze
+starą referencją, podczas gdy oryginalny zapis trwa. Wskaźnik zachowuje wtedy
+„Zapisywanie…”, także po zakończeniu zapisu źródłowego, aż formularz docelowy
+przyjmie tę samą potwierdzoną referencję. Odczyty jej istniejącego odcisku są
+chwilowe; mechanizm nie przechowuje danych pacjenta ani nie zapisuje referencji.
+Zgodność referencji kończy podtrzymanie i odsłania rzeczywisty stan docelowy,
+również „Niezapisane zmiany”. Nie jest wymagane osiągnięcie stanu „Zapisano”.
+Strona bez formularza może pokazać potwierdzony wynik operacji źródłowej;
+powrót do formularza nadal sprawdza przyjęcie referencji. Nowy zapis docelowy
+kończy przejęcie wyniku starszej operacji, także jej późniejszego błędu.
+
+Chrome uwzględnia tę sprawdzoną prezentację również nad gotowym formularzem.
+Stan bez aktywnej prezentacji wraca bezpośrednio do natywnego wskaźnika.
+Podtrzymanie dotyczy etykiety i jej opisu; rzeczywista dostępność przycisków
+oraz ostrzeżenie przed czyszczeniem nadal wynikają z danych formularza.
+
+Zakończenie odroczonego obliczenia należącego do odtwarzania publikuje osobny
+sygnał gotowości. Wskaźnik odczytuje ponownie własny stan, a Chrome i powłoka
+odświeżają prezentację. Ten sygnał nie oznacza wczytania pacjenta, nie
+ustanawia referencji i nie uruchamia obliczeń klinicznych.
+Oba natywne kontrolery „Zapisz dane” odczytują ten sam stan oczekiwania lub
+błędu odtworzenia spożycia, więc jeden nie włącza przycisku wyłączonego przez
+drugi. Zakończenie istniejącego obliczenia odświeża dostępność; samo kliknięcie
+zapisu nadal przechodzi pełne kontrole konta, wizyty i gotowości danych.
+Kontroler aktualizuje zgodnie atrybuty oraz właściwość `disabled`. W przypadku
+linku stylowanego jako przycisk usunięcie samego atrybutu nie usuwa właściwości
+ustawionej przez drugi kontroler; pozostawienie jej zmieniało kolor przy następnym
+przejściu, mimo że bieżące dane były już gotowe.
+Jeśli podsumowanie dokumentów powstało jeszcze podczas odtwarzania, jego
+dostępność odzyskuje dopiero świeży odczyt i render bieżących wyników po
+zakończeniu odtwarzania. Odświeżenie jest związane z kontem, kluczem, pacjentem,
+wersją wczytania i widocznym dokumentem; nie przypisuje starego podsumowania
+do nowego pacjenta i nie uruchamia zapisu ani obliczenia formularza.
+
+Przechowywane są wyłącznie stan prezentacji i tożsamości potrzebne do jego sprawdzenia. Nie jest to uprawnienie do zapisu, czyszczenia lub wygenerowania dokumentu. Dotychczasowe `disabled`, `aria-disabled`, kontrolery natywne, kontrola aktywnej ramki i strażnik niezapisanych zmian pozostają źródłem dostępności działań. Atrybuty `data-menu-preparing` i `data-menu-was-enabled` sterują wyłącznie prezentacją.
+
+„Wyczyść” jest natywnym przyciskiem, więc globalny styl `button:disabled`
+zmniejsza również jego krycie do 45%. Podczas potwierdzonego przejścia, gdy
+przycisk był wcześniej dostępny, zachowane są zarówno kolory, jak i pełne
+krycie. Sam przycisk nadal pozostaje zablokowany do gotowości formularza.
+Zwykły stan niedostępny poza tym przejściem zachowuje dotychczasowy wygląd.
+Testy porównują również przezroczystość; sama zgodność wartości `color`
+i `background` nie dowodzi niezmienności faktycznego wyglądu.
 
 Prezentacja jest ważna wyłącznie w obrębie tej samej sesji klucza Vaulta, konta, pacjenta, wizyty i żądania nawigacji. Sprawdzane są rzeczywiste dokumenty źródłowy i docelowy, ich ramki oraz zapisany znacznik jawnego wczytania `vilda:sharedLoadSeq`. Jawne wczytanie, Nowa wizyta, Odtwórz, import, Wyczyść i rzeczywista edycja unieważniają poprzednią prezentację. Wylogowanie, tryb gościa, wymiana klucza, zmiana pacjenta lub przeładowanie docelowej ramki również kończą jej ważność.
 

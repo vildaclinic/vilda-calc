@@ -99,6 +99,50 @@ beforeEach(() => { vi.useFakeTimers(); vi.setSystemTime(new Date('2026-11-06T12:
 afterEach(() => { vi.clearAllTimers(); vi.useRealTimers(); vi.restoreAllMocks(); });
 
 describe('only the current clinical document can publish the shared main session', () => {
+  it('keeps the actual new document writer through its first iframe load', async () => {
+    const h = harness(), ticket = h.current.win.VildaPanelPacjent.captureWriteAuthority();
+    const document = h.current.frame.contentDocument;
+    expect(h.current.win.VildaPanelPacjent.isWriteAuthorityCurrent(ticket)).toBe(true);
+    expect(h.current.schedule()).toBe(true);
+    h.load('start');
+    expect(h.current.frame.contentDocument).toBe(document);
+    expect(h.current.win.VildaPanelPacjent.isWriteAuthorityCurrent(ticket)).toBe(true);
+    await vi.advanceTimersByTimeAsync(300);
+    expect(h.writes).toHaveLength(1); expect(h.main()).toEqual(CURRENT); h.assertReference();
+  });
+
+  it('a real reload fences the old document and confirms only its replacement first load', () => {
+    const h = harness(), oldDocument = h.current.frame.contentDocument;
+    const oldTicket = h.shell.captureSessionWriter(h.current.win);
+    h.shell.reload('start');
+    expect(h.shell.isSessionWriterCurrent(oldTicket, h.current.win)).toBe(false);
+    expect(h.shell.captureSessionWriter(h.current.win)).toBeNull();
+    const nextDocument = Object.assign({}, oldDocument);
+    h.current.frame.contentDocument = nextDocument; h.current.win.document = nextDocument;
+    const nextTicket = h.shell.captureSessionWriter(h.current.win);
+    expect(nextTicket).not.toBeNull(); h.load('start');
+    expect(h.shell.isSessionWriterCurrent(nextTicket, h.current.win)).toBe(true);
+    expect(h.shell.isSessionWriterCurrent(oldTicket, h.current.win)).toBe(false);
+    h.load('start');
+    expect(h.shell.isSessionWriterCurrent(nextTicket, h.current.win)).toBe(false);
+  });
+
+  it.each(['document', 'about:blank', 'route', 'account', 'key', 'visit'])('initial load cannot continue a writer after %s changes', async cause => {
+    const h = harness(), ticket = h.current.win.VildaPanelPacjent.captureWriteAuthority();
+    h.current.schedule();
+    if (cause === 'document') { const next = Object.assign({}, h.current.frame.contentDocument); h.current.frame.contentDocument = next; h.current.win.document = next; }
+    if (cause === 'about:blank') h.current.win.location.pathname = 'blank';
+    if (cause === 'route') { h.shell.navigate('docpro'); h.shell.navigate('start'); }
+    if (cause === 'account') h.current.switchAccount();
+    if (cause === 'key') h.current.rotateSession();
+    if (cause === 'visit') h.current.win.VildaPanelPacjent.invalidateWriteAuthority();
+    const writesBeforeLoad = clone(h.writes); // Navigation may legitimately flush its active document.
+    h.load('start');
+    expect(h.current.win.VildaPanelPacjent.isWriteAuthorityCurrent(ticket)).toBe(false);
+    await vi.advanceTimersByTimeAsync(300);
+    expect(h.writes).toEqual(writesBeforeLoad); h.assertReference();
+  });
+
   it.each([false, true])('same patient does not authorize an old hidden visit, force=%s', force => {
     const h = harness(), before = h.main();
     expect(h.shell.getCurrentRoute()).toBe('start');

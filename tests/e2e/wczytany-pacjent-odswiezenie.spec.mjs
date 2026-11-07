@@ -122,16 +122,21 @@ async function zapisz(page) {
   await page.waitForTimeout(600);
 }
 
-/* Wczytanie tak, jak robi to zakładka Pacjenci: applyLoadedData + zdarzenie z identyfikatorem. */
+/* Protokół zakładki Pacjenci: zamiar przed odczytem, przyjęte applyLoadedData i powiązane zdarzenie. */
 async function wczytaj(page, patientId) {
-  await page.evaluate(async (pid) => {
+  expect(await page.evaluate(async (pid) => {
+    const api = window.VildaDataImportExport;
+    const load = api.captureAcceptedPatientLoad({ patientId: pid });
+    if (!load) return false;
     const p = await window.VildaVault.getPatient(pid);
     const snap = p.snapshots[0];
-    window.applyLoadedData(snap.payload);
-    document.dispatchEvent(new CustomEvent('vilda:patient-loaded', {
-      detail: { patientId: pid, savedAtISO: snap.savedAtISO || null, snapshotCount: p.snapshotCount || 1, source: 'pick' },
-    }));
-  }, patientId);
+    return api.runAcceptedPatientLoad(load, snap.payload, {
+      apply: (payload) => window.applyLoadedData(payload),
+      publish: (operationDetail) => document.dispatchEvent(new CustomEvent('vilda:patient-loaded', {
+        detail: { patientId: pid, savedAtISO: snap.savedAtISO || null, snapshotCount: p.snapshotCount || 1, source: 'pick', ...operationDetail },
+      })),
+    });
+  }, patientId), 'przyjęte wczytanie pacjenta').toBe(true);
   await page.waitForFunction((pid) => window._vildaCurrentPatientId === pid, patientId);
   await page.waitForTimeout(1500); // kaskada zerowania pól wizyty
 }

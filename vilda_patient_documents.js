@@ -6,6 +6,7 @@
   var d = w.document;
   if (!d || w.VildaPatientDocuments) return;
   var summary = null, summaryOwner = null, revision = 0;
+  var queuedSummaryRefresh = null, activeSummaryRefresh = null;
   var pending = null, pendingRecord = null, active = null, busy = false, lastState = '';
   var watchedVaults = new WeakSet();
   var reportLabels = [
@@ -84,6 +85,7 @@
   }
 
   function setSummaryState(value) {
+    if (activeSummaryRefresh && !summaryRefreshCurrent(activeSummaryRefresh)) return;
     summary = { shouldShow: !!(value && value.shouldShow && (value.isDocPro || value.proMode)) };
     summaryOwner = owner(true);
     publish();
@@ -156,6 +158,44 @@
       if (scope.unlocked) vault.assertSyncOperationSession(scope.token);
       return true;
     } catch (_) { return false; }
+  }
+
+  function intakeSummarySettled() {
+    var state = typeof w.vildaGetIntakeRestoreReadiness === 'function' && w.vildaGetIntakeRestoreReadiness();
+    return !!(state && state.pending === false && state.failed === false);
+  }
+
+  function summaryRefreshCurrent(record) {
+    try {
+      return w.document === d && record.revision === revision && professional()
+        && w.updateProfessionalSummaryCard === record.render && intakeSummarySettled()
+        && sameImportAccount(record.account) && sameOwner(record.owner, owner());
+    } catch (_) { return false; }
+  }
+
+  function refreshSummaryAfterIntake() {
+    if (activeSummaryRefresh) return;
+    publish();
+    try {
+      var currentOwner = owner(), render = w.updateProfessionalSummaryCard;
+      if (!intakeSummarySettled() || !professional() || !currentOwner || !summary
+        || sameOwner(summaryOwner, currentOwner) || typeof render !== 'function') return;
+      if (queuedSummaryRefresh && summaryRefreshCurrent(queuedSummaryRefresh)) return;
+      var record = { owner: currentOwner, render: render, revision: revision, account: captureImportAccount() };
+      if (!record.account || !summaryRefreshCurrent(record)) return;
+      queuedSummaryRefresh = record;
+      // The native summary may have rendered while intake was still pending.
+      // Read and render current results after completion; never rebind its old
+      // availability flag. Let a synchronous Clear/load retire this request.
+      Promise.resolve().then(function () {
+        if (queuedSummaryRefresh !== record) return;
+        queuedSummaryRefresh = null;
+        if (!summaryRefreshCurrent(record) || !summary || sameOwner(summaryOwner, record.owner)) return;
+        activeSummaryRefresh = record;
+        try { record.render.call(w); }
+        finally { activeSummaryRefresh = null; publish(); }
+      }).catch(function () { /* A failed render must not make old content ready. */ });
+    } catch (_) { /* Readiness is unavailable; keep the existing summary fenced. */ }
   }
 
   function importCompleted(event) {
@@ -422,6 +462,7 @@
     if (event.target && event.target.closest && event.target.closest('#calcForm')) invalidate();
   });
   d.addEventListener('vilda:professional-summary-updated', publish);
+  d.addEventListener('vilda:intake-restore-readiness', refreshSummaryAfterIntake);
   d.addEventListener('vildaResultsModeChanged', function () {
     if (active && !current(active)) invalidate(); else publish();
   });

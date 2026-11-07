@@ -2,6 +2,7 @@ import { mkdir, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { expect, test } from '../support/test-czas.mjs';
 import { kliknij } from '../support/uklad-czekanie.mjs';
+import { loadPatient } from '../support/centile-live-fixture.mjs';
 
 // Real form, fictional saved identities and their explicitly supplied gestation.
 // Do not inject neonatal cache, replace the age adapter or infer term birth.
@@ -59,16 +60,11 @@ async function mainPatient(page, { sex = 'F', days = 120, months = 3, ga = 40 } 
       sex, age: 0, ageMonths: months, weight: 5.5, height: 60 };
     const saved = await window.VildaVault.savePatient({ name: user.name, user, puberty: {},
       perinatal: { gestationalWeeks: ga, gestationalDays: 0 } }, { dedup: false });
-    const record = await window.VildaVault.getPatient(saved.patientId);
-    window.applyLoadedData(record.snapshots[0].payload);
-    document.dispatchEvent(new CustomEvent('vilda:patient-loaded', { detail: {
-      patientId: saved.patientId, savedAtISO: record.snapshots[0].savedAtISO, snapshotCount: 1, source: 'pick',
-    } }));
     return saved.patientId;
   }, { sex, months, ga });
-  await expect(page.locator('#vildaLcmNew')).toBeVisible();
-  await page.locator('#vildaLcmNew').click();
-  await expect(page.locator('#vildaLoadChoiceModal')).toHaveCount(0);
+  // The actual patient-card caller owns the read/apply/publication operation;
+  // a synthetic patient-loaded broadcast is not a completed native load.
+  await loadPatient(page, id, 'new');
   if (days !== null) {
     const birth = await page.evaluate(days => {
       const now = new Date(), date = new Date(now.getFullYear(), now.getMonth(), now.getDate() - days);

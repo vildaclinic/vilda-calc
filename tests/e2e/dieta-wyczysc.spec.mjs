@@ -195,7 +195,7 @@ test.describe('P-DIETA-WYCZYSC — powłoka app.html', () => {
     await page.waitForTimeout(2000);
 
     // A: dziewczynka z otyłością, zapisana z dietą intensywną wybraną przez lekarza; „Odtwórz zapis” w Start,
-    // tak jak lista pacjentów (applyLoadedData + 'vilda:patient-loaded'). Ramki DocPro i klirensu biorą
+    // tak jak lista pacjentów (przyjęte applyLoadedData + powiązane 'vilda:patient-loaded'). Ramki DocPro i klirensu biorą
     // potem rekord bieżącego pacjenta z sejfu.
     const idA = await start.evaluate(async (p) => {
       const w = await window.VildaVault.savePatient({
@@ -205,14 +205,19 @@ test.describe('P-DIETA-WYCZYSC — powłoka app.html', () => {
       }, { dedup: false });
       return w.patientId;
     }, ZAPIS_WYBOR);
-    await start.evaluate(async (pid) => {
+    expect(await start.evaluate(async (pid) => {
+      const api = window.VildaDataImportExport;
+      const load = api.captureAcceptedPatientLoad({ patientId: pid });
+      if (!load) return false;
       const p = await window.VildaVault.getPatient(pid);
       const snap = p.snapshots[0];
-      window.applyLoadedData(snap.payload);
-      document.dispatchEvent(new CustomEvent('vilda:patient-loaded', {
-        detail: { patientId: pid, savedAtISO: snap.savedAtISO || null, snapshotCount: p.snapshotCount || 1, source: 'pick' },
-      }));
-    }, idA);
+      return api.runAcceptedPatientLoad(load, snap.payload, {
+        apply: (payload) => window.applyLoadedData(payload),
+        publish: (operationDetail) => document.dispatchEvent(new CustomEvent('vilda:patient-loaded', {
+          detail: { patientId: pid, savedAtISO: snap.savedAtISO || null, snapshotCount: p.snapshotCount || 1, source: 'pick', ...operationDetail },
+        })),
+      });
+    }, idA), 'przyjęte wczytanie pacjentki A').toBe(true);
     await expect(start.locator('#vildaLcmRestore')).toBeVisible({ timeout: 15000 });
     await start.locator('#vildaLcmRestore').click();
     await page.waitForTimeout(5000);

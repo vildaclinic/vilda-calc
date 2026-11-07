@@ -168,6 +168,60 @@ function clearMenuEnvironment({ live = 'dirty', clcr = false } = {}) {
 }
 
 describe('Chrome: a stable pending palette grants no action authority', () => {
+  it('intake readiness repaints the native state without reconciliation or clinical reads', async () => {
+    const h = clearMenuEnvironment({ live: 'dirty' });
+    h.state.pending = true;
+    h.win.VildaSaveStatusIndicator.isReadyForSharedReference = () => !h.state.pending;
+    h.win.VildaSaveStatusIndicator.reconcileFromSharedReference = vi.fn();
+    h.win.VildaSaveStatusIndicator._forceTransition = vi.fn();
+    h.win.collectUserData = vi.fn(); h.win.calcEstimatedIntake = vi.fn();
+    const status = h.main.appendChild(new h.Element('button')); status.setAttribute('data-menu-save-status', '');
+    const label = status.appendChild(new h.Element('span')); label.setAttribute('data-menu-save-label', '');
+    h.api.bindMenu(h.main);
+    expect(status.getAttribute('data-save-state')).toBe('hidden');
+    expect(h.menuClear.disabled).toBe(true);
+    h.state.pending = false;
+    h.doc.dispatchEvent({ type: 'vilda:intake-restore-readiness' });
+    await Promise.resolve();
+    expect(status.getAttribute('data-save-state')).toBe('dirty');
+    expect(label.textContent).toBe('Niezapisane zmiany');
+    expect(h.menuClear.disabled).toBe(false);
+    expect(h.win.VildaSaveStatusIndicator.reconcileFromSharedReference).not.toHaveBeenCalled();
+    expect(h.win.VildaSaveStatusIndicator._forceTransition).not.toHaveBeenCalled();
+    expect(h.win.collectUserData).not.toHaveBeenCalled();
+    expect(h.win.calcEstimatedIntake).not.toHaveBeenCalled();
+    expect(h.reset).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ['saving', 'Zapisywanie…'],
+    ['error', 'Błąd zapisu'],
+  ])('honors scoped %s over ready native Dirty while Clear still uses the real unsaved guard', (state, text) => {
+    const h = clearMenuEnvironment({ live: 'dirty' });
+    h.win.VildaSaveStatusIndicator.isReadyForSharedReference = () => true;
+    let presentation = { state, title: 'Fikcyjny natywny ' + state, save: null, documents: null, clear: null };
+    h.win.VildaShell = { getSidebarPresentation: () => presentation };
+    const status = h.main.appendChild(new h.Element('button')); status.setAttribute('data-menu-save-status', '');
+    const label = status.appendChild(new h.Element('span')); label.setAttribute('data-menu-save-label', '');
+    h.api.bindMenu(h.main);
+    expect(status.getAttribute('data-save-state')).toBe(state);
+    expect(label.textContent).toBe(text);
+    expect(status.getAttribute('title')).toBe(presentation.title);
+    expect(h.menuClear.disabled).toBe(false);
+    expect(h.menuClear.hasAttribute('data-menu-preparing')).toBe(false);
+    h.menuClear.click();
+    expect(h.dialog()?.getAttribute('aria-label')).toBe('Zapisać zmiany przed wyczyszczeniem?');
+    expect(h.reset).not.toHaveBeenCalled();
+    h.button('Anuluj').click();
+    expect(h.name.value).toBe('Fikcyjny wpis Clear');
+    presentation = { ...presentation, state: null };
+    h.api.bindMenu(h.main);
+    expect(status.getAttribute('data-save-state')).toBe('dirty');
+    expect(label.textContent).toBe('Niezapisane zmiany');
+    expect(h.menuClear.disabled).toBe(false);
+    expect(h.reset).not.toHaveBeenCalled();
+  });
+
   it('retains all four projections while Save, Documents and Clear remain disabled', () => {
     const h = clearMenuEnvironment({ live: 'saved' });
     h.state.pending = true;

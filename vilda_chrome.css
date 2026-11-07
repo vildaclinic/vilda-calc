@@ -1967,6 +1967,11 @@ html.vilda-phone .chrome-drawer .chrome-menu-clear-button:is([aria-disabled=true
 .vilda-header-menu .chrome-menu-actions :is(.chrome-menu-documents,.chrome-menu-clear-button)[data-menu-preparing=true][data-menu-was-enabled=true] svg {
   color: var(--primary, #00838d)
 }
+.vilda-header-menu .chrome-menu-actions .chrome-menu-clear-button[data-menu-preparing=true][data-menu-was-enabled=true] {
+  /* Clear is a native button: keep its presentation while it remains disabled
+     for the scoped handoff, without inheriting the global disabled opacity. */
+  opacity: 1
+}
 .vilda-header-menu .chrome-menu-actions [data-menu-preparing=true] {
   cursor: progress
 }

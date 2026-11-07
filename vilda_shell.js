@@ -221,7 +221,7 @@ function Sw_source(win,identityCleanup){
     // old document which has just been fenced for reload.
     var expected=new a.URL(d[c].src,a.location.href).pathname;
     if(source.location&&typeof source.location.pathname==="string"&&source.location.pathname!==expected)return null;
-    return {route:c,entry:entry,frame:frame,win:source,doc:doc,generation:entry.navigationGeneration,epoch:Sw_epoch};
+    return {route:c,entry:entry,frame:frame,win:source,doc:doc,generation:entry.navigationGeneration+(entry.loaded?0:1),epoch:Sw_epoch};
   }catch{return null}
 }
 // Locked-account pagehide cleanup removes only identity aliases. It remains
@@ -343,6 +343,7 @@ function Ss_bind(){
       }
       var refresh=function(){Ss_refresh(true)},clear=function(){Ss_invalidate()};
       ["vilda:patient-loaded","vilda:persist-restored","vilda:main-session-restored","vilda:auth-boot-settled","vilda:dob-restored"].forEach(function(type){listen(doc,type,refresh)});
+      listen(doc,"vilda:intake-restore-readiness",function(){Ss_refresh(false)});
       listen(win,"vilda:user-state-cleared",clear);listen(doc,"vilda:user-state-cleared",clear);
       var chip=doc.getElementById("vildaPatientChip");
       if(chip&&typeof a.MutationObserver==="function"){
@@ -570,6 +571,27 @@ function Sp_bind(entry){
 }
 
 function Sp_enabled(button){return !!(button&&!button.disabled&&!button.hasAttribute("disabled")&&button.getAttribute("aria-disabled")!=="true")}
+function Sp_saveHandoff(view,win,api){
+  if(!view||!view.savingHandoff)return false;
+  try{
+    var source=view.source.win,sourceApi=source.VildaSaveStatusIndicator,sourceData=source.VildaDataImportExport,data=win&&win.VildaDataImportExport;
+    // A new operation in the actual destination owns its native status.
+    if(win!==source&&data&&typeof data.isSaveUserDataPending==="function"&&data.isSaveUserDataPending()){
+      view.savingHandoff=false;view.statusRetired=true;return false;
+    }
+    var state=sourceApi&&sourceApi.getState();
+    if(sourceData&&typeof sourceData.isSaveUserDataPending==="function"&&sourceData.isSaveUserDataPending()||
+      state==="saving"||state==="error"||view.confirmedSave)return true;
+    if(sourceApi&&typeof sourceApi.isReadyForSharedReference==="function"&&!sourceApi.isReadyForSharedReference())return true;
+    // Target readiness alone can still compare the edited form with the old
+    // pre-save reference. Wait only for adoption of the source's exact ref;
+    // then expose the target's actual state, including a genuine Dirty result.
+    // These getters are compared transiently; the view retains no patient data.
+    if(sourceApi&&typeof sourceApi.getReferenceFingerprint==="function"&&
+      (!api||typeof api.getReferenceFingerprint!=="function"||sourceApi.getReferenceFingerprint()!==api.getReferenceFingerprint()))return true;
+  }catch{}
+  view.savingHandoff=false;return false;
+}
 function Sp_begin(route){
   var previous=Sp_current(),next=null,settled=false,entry=l[c],frame=entry&&entry.frame;
   try{
@@ -583,15 +605,16 @@ function Sp_begin(route){
       // DIX proves that this operation still belongs to this exact source;
       // capturing its Saving label never grants access to any native action.
       var pendingSave=nativeState==="saving"&&data&&typeof data.isSaveUserDataPending==="function"&&data.isSaveUserDataPending()===true;
-      settled=!!(decision&&decision.ready);
+      var continuingSave=Sp_saveHandoff(previous,win,api);
+      settled=!!(decision&&decision.ready)&&!continuingSave;
       var readyDecision=settled&&typeof api.isCurrentDecisionOwner==="function"&&api.isCurrentDecisionOwner(decision.scope)&&
         ["saved","dirty","new_patient"].indexOf(decision.state)!==-1;
-      if(host&&account&&host.userId===account.userId&&sequence!==null&&(readyDecision||pendingSave)&&
+      if(!continuingSave&&host&&account&&host.userId===account.userId&&sequence!==null&&(readyDecision||pendingSave)&&
         boundary===Sp_boundary&&sequence===Sp_loadSequence()&&win.document===doc&&!Gp5_obcy(win)){
         var documents=win.VildaPatientDocuments,state=documents&&typeof documents.getState==="function"&&documents.getState();
         var visibleState=pendingSave?"saving":nativeState==="error"?"error":decision.state;
         next={source:{route:c,frame:frame,win:win,doc:doc},host:host,account:account,patient:Ss_patientId(),
-          boundary:boundary,loadSequence:sequence,state:visibleState,nativeState:nativeState,
+          boundary:boundary,loadSequence:sequence,state:visibleState,nativeState:nativeState,savingHandoff:!!pendingSave,
           title:typeof api._buildTitleAttr==="function"?api._buildTitleAttr(visibleState):"",
           save:Sp_enabled(doc.getElementById("saveDataBtnSidebar")),documents:!!(state&&!state.disabled&&!state.busy),
           clear:Sp_enabled(o.querySelector('[data-menu-clear]'))};
@@ -609,15 +632,23 @@ function Sp_target(entry){
 function Sp_presentation(){
   var entry=l[c];if(entry)Sp_bind(entry);
   var view=Sp_current();if(!view)return null;
-  var clinical=c==="start"||c==="docpro"||c==="klirens",form=c==="start"||c==="docpro",ready=false,documentsPending=false;
+  var clinical=c==="start"||c==="docpro"||c==="klirens",form=c==="start"||c==="docpro",ready=false,documentsPending=false,savingHandoff=false,state=view.state,title=view.title;
   try{
     var frame=entry&&entry.frame,win=frame&&frame.contentWindow,api=win&&win.VildaSaveStatusIndicator;
     ready=!!(entry&&entry.loaded&&!entry.stale&&frame&&!frame.hidden&&frame.contentDocument===win.document&&!Gp5_obcy(win)&&
       api&&typeof api.isReadyForSharedReference==="function"&&api.isReadyForSharedReference());
     var documents=win&&win.VildaPatientDocuments;
     documentsPending=form&&(!ready||!documents||typeof documents.getReadinessPhase==="function"&&documents.getReadinessPhase()==="preparing");
+    savingHandoff=Sp_saveHandoff(view,win,api);
+    if(clinical&&savingHandoff&&state==="saved"){
+      // Source Saved cannot acknowledge a clinical target that has not yet
+      // adopted that reference. Passive routes may display the source outcome.
+      state="saving";title="";
+      var sourceApi=view.source.win.VildaSaveStatusIndicator;
+      if(sourceApi&&typeof sourceApi._buildTitleAttr==="function")title=sourceApi._buildTitleAttr(state);
+    }
   }catch{}
-  return {state:!clinical||!ready?view.state:null,title:view.title,
+  return {state:!view.statusRetired&&(!clinical||!ready||savingHandoff)?state:null,title:title,
     save:form&&!ready?view.save:null,documents:documentsPending?view.documents:null,clear:clinical&&!ready?view.clear:null};
 }
 /* Menu actions follow the visible, ready form. Never retain an enabled Save

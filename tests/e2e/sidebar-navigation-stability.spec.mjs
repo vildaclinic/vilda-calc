@@ -70,15 +70,28 @@ async function installPaintProbe(page) {
       const origin = bounds(root);
       let visible = rect.width > 0 && rect.height > 0 && rect.x + rect.width > 0
         && rect.y + rect.height > 0 && rect.x < innerWidth && rect.y < innerHeight;
+      let ancestorOpacity = 1;
+      const ancestorPaint = [];
       for (let parent = node; parent; parent = parent.parentElement) {
         const css = getComputedStyle(parent);
+        if (parent !== node) {
+          ancestorOpacity *= Number(css.opacity);
+          ancestorPaint.push({ tag: parent.tagName, id: parent.id, classes: parent.className,
+            opacity: css.opacity, filter: css.filter });
+        }
         if (parent.hidden || css.display === 'none' || css.visibility === 'hidden' || Number(css.opacity) === 0) visible = false;
       }
       return { visible, hidden: node.hidden, text: node.textContent.trim().replace(/\s+/g, ' '),
         state: node.getAttribute('data-save-state'), disabled: node.disabled === true || node.getAttribute('aria-disabled') === 'true',
         busy: node.getAttribute('aria-busy'), preparing: node.getAttribute('data-menu-preparing'),
         color: style.color, background: style.backgroundColor, image: style.backgroundImage,
-        border: style.borderColor, opacity: style.opacity,
+        border: style.borderColor, opacity: style.opacity, ancestorOpacity,
+        effectiveOpacity: Number(style.opacity) * ancestorOpacity, ancestorPaint,
+        filter: style.filter, boxShadow: style.boxShadow, textFill: style.webkitTextFillColor,
+        transitionProperty: style.transitionProperty, transitionDuration: style.transitionDuration,
+        transitionDelay: style.transitionDelay, transitionTimingFunction: style.transitionTimingFunction,
+        pointerEvents: style.pointerEvents, nativeDisabled: node.disabled === true,
+        hitTest: node.contains(document.elementFromPoint(rect.x + rect.width / 2, rect.y + rect.height / 2)),
         iconColor: node.querySelector('svg') ? getComputedStyle(node.querySelector('svg')).color : null,
         box: { x: rect.x - origin.x, y: rect.y - origin.y, width: rect.width, height: rect.height } };
     }
@@ -147,16 +160,20 @@ async function waitForActualOwner(page, title) {
   return frame;
 }
 
-async function savedMenuFixture(page) {
+async function savedMenuFixture(page, { coldDestination = false } = {}) {
   const fixture = await createFictionalVault(page, { shell: true });
-  // Acknowledge the real professional gate before the measured cold shell
-  // navigation. The subsequent full document load removes all warm iframes.
+  // Acknowledge the real professional gate, then return through the native
+  // Start hash route. This same-document navigation retains the shell; any
+  // destination refresh is performed by the shell's ordinary lifecycle.
   await navigateMenu(page, 'docpro.html');
   const docpro = await shellFrame(page, 'DocPro');
   await readyForPatient(docpro);
   const confirmation = docpro.locator('#professionalConfirmBtn');
   if (await confirmation.isVisible()) await confirmation.click();
   await page.goto('/app.html#/start', { waitUntil: 'load' });
+  // Only the held-network cases require a fresh destination. A real full
+  // reload removes the acknowledged DocPro frame before entering patient data.
+  if (coldDestination) await page.reload({ waitUntil: 'load' });
   const start = await shellFrame(page);
   await readyForPatient(start);
   for (const [id, value] of Object.entries({ lastName: 'Fikcyjny', firstName: 'Stabilny Panel',
@@ -185,7 +202,9 @@ function visibleEmptyFrames(samples, mobile) {
 function presentationChanges(before, samples, mobile) {
   const changes = [];
   const prefix = mobile ? 'drawer:' : 'desktop:';
-  const palette = node => Object.fromEntries(['text', 'color', 'background', 'image', 'border', 'iconColor']
+  const palette = node => Object.fromEntries(['text', 'color', 'background', 'image', 'border', 'iconColor', 'opacity', 'filter', 'boxShadow',
+      'textFill', 'transitionProperty', 'transitionDuration', 'transitionDelay', 'transitionTimingFunction',
+      ...(!mobile ? ['ancestorOpacity', 'effectiveOpacity'] : [])]
     .map(key => [key, node[key]]));
   for (const key of ['save', 'documents', 'clear', 'status'].map(name => prefix + name)) {
     const initial = before.controls[key];
@@ -212,17 +231,25 @@ function presentationChanges(before, samples, mobile) {
 
 for (const profile of [{ name: 'desktop normal', width: 1440, cpu: 1 },
   { name: 'desktop slow CPU', width: 1440, cpu: 4 }, { name: 'mobile slow CPU', width: 390, cpu: 4 }]) {
-  test(`${profile.name}: same-patient navigation preserves the painted sidebar presentation`, async ({ page, context }, testInfo) => {
+  // Keep the repeated native form transitions together. Each tool roundtrip
+  // owns a fresh fixture: on CI, combining both tools exhausted the unchanged
+  // 150 s budget after completed steps, before the final return to Start.
+  for (const journey of [
+    { name: 'cold and warm forms', routes: [['docpro.html', 'DocPro'], ['index.html', 'Start'],
+      ['docpro.html', 'DocPro'], ['index.html', 'Start']] },
+    { name: 'clinical tool roundtrip', routes: [['kalkulator-klirens.html', 'Kalkulator klirensu'], ['index.html', 'Start']] },
+    { name: 'passive tool roundtrip', routes: [['przelicznik-jednostek.html', 'Jednostki laboratoryjne'], ['index.html', 'Start']] },
+  ]) {
+  test(`${profile.name}, ${journey.name}: same-patient navigation preserves the painted sidebar presentation`, async ({ page, context }, testInfo) => {
     await page.setViewportSize({ width: profile.width, height: 1000 });
     await installPaintProbe(page);
     const fixture = await savedMenuFixture(page);
     const session = await context.newCDPSession(page);
     await session.send('Emulation.setCPUThrottlingRate', { rate: profile.cpu });
     const transitions = [], failures = [];
+    let primaryError, observationError, cleanupError, attachmentError;
     try {
-      for (const [href, title] of [['docpro.html', 'DocPro'], ['index.html', 'Start'],
-        ['docpro.html', 'DocPro'], ['index.html', 'Start'], ['kalkulator-klirens.html', 'Kalkulator klirensu'],
-        ['index.html', 'Start'], ['przelicznik-jednostek.html', 'Jednostki laboratoryjne'], ['index.html', 'Start']]) {
+      for (const [href, title] of journey.routes) {
         const initialMenu = await visibleChromeMenu(page);
         if (/#\/(start|docpro)$/.test(await page.evaluate(() => location.hash))) {
           for (const selector of ['.chrome-menu-save', '.chrome-menu-documents', '[data-menu-clear]']) {
@@ -268,16 +295,44 @@ for (const profile of [{ name: 'desktop normal', width: 1440, cpu: 1 },
       expect(await start.evaluate(ids => Promise.all(ids.map(id => window.VildaVault.getPatient(id))), fixture.recordIds)).toEqual(fixture.savedRecords);
       expect(await reference(start)).toBe(fixture.savedReference);
       expect(failures, 'RAF-visible false Brak danych/hidden status during same-patient form navigation').toEqual([]);
+    } catch (error) {
+      primaryError = error;
     } finally {
-      const unfinished = await page.evaluate(() => window.__sidebarPaintProbe.running
-        ? window.__sidebarPaintProbe.stop() : null).catch(() => null);
-      if (unfinished) transitions.push({ incomplete: true, ...unfinished });
-      await session.send('Emulation.setCPUThrottlingRate', { rate: 1 });
-      await session.detach();
-      await testInfo.attach('sidebar-painted-frames', { contentType: 'application/json',
-        body: JSON.stringify({ profile, transitions, failures }, null, 2) });
+      if (!page.isClosed()) {
+        try {
+          const unfinished = await page.evaluate(() => window.__sidebarPaintProbe.running
+            ? window.__sidebarPaintProbe.stop() : null);
+          if (unfinished) transitions.push({ incomplete: true, ...unfinished });
+        } catch (error) { observationError = error; }
+      }
+      // Completed samples are already in Node memory. Preserve them even when
+      // a test timeout has closed the page before CDP cleanup can execute.
+      try {
+        await testInfo.attach('sidebar-painted-frames', { contentType: 'application/json',
+          body: JSON.stringify({ profile, journey: journey.name, transitions, failures,
+            observationError: observationError?.message }, null, 2) });
+      } catch (error) {
+        attachmentError = error;
+        testInfo.annotations.push({ type: 'attachment-error', description: error.message });
+      }
+      if (!page.isClosed()) {
+        try {
+          await session.send('Emulation.setCPUThrottlingRate', { rate: 1 });
+          await session.detach();
+        } catch (error) {
+          cleanupError = error;
+          testInfo.annotations.push({ type: 'cleanup-error', description: error.message });
+        }
+      }
+    }
+    if (primaryError) throw primaryError;
+    if (attachmentError) throw attachmentError;
+    if (!page.isClosed()) {
+      if (observationError) throw observationError;
+      if (cleanupError) throw cleanupError;
     }
   });
+  }
 }
 
 async function expectOriginalRecords(owner, fixture) {
@@ -326,7 +381,7 @@ for (const width of [1440, 390]) {
   test(`${width}px: real pointer clicks during a cold network wait never invoke the old form`, async ({ page }, testInfo) => {
     await page.setViewportSize({ width, height: 1000 });
     await installPaintProbe(page);
-    const fixture = await savedMenuFixture(page);
+    const fixture = await savedMenuFixture(page, { coldDestination: true });
     let release;
     const gate = new Promise(resolve => { release = resolve; });
     let held = false;
@@ -340,16 +395,23 @@ for (const width of [1440, 390]) {
     try {
       const start = fixture.frame;
       const beforeActions = await start.evaluate(() => [...window.__sidebarNativeActions]);
+      await expect(page.locator('iframe.app-pane[title="DocPro"]')).toHaveCount(0);
       await navigateMenu(page, 'docpro.html');
       await expect.poll(() => held).toBe(true);
       const menu = await visibleChromeMenu(page);
       if (width < 992) await expect(page.locator('.chrome-drawer-panel')).toHaveCSS('transform', 'none');
       const controls = ['.chrome-menu-save', '.chrome-menu-documents', '[data-menu-clear]'];
       for (const selector of controls) await expect(menu.locator(selector)).toHaveAttribute('aria-disabled', 'true');
+      await expect(menu.locator('[data-menu-clear]')).toBeDisabled();
+      await expect(menu.locator('[data-menu-clear]')).toHaveCSS('opacity', '1');
       await page.evaluate(() => window.__sidebarPaintProbe.start('network-pending real pointer clicks'));
       for (const selector of controls) {
         const box = await menu.locator(selector).boundingBox();
         expect(box).not.toBeNull();
+        expect(await menu.locator(selector).evaluate(node => {
+          const rect = node.getBoundingClientRect();
+          return node.contains(document.elementFromPoint(rect.x + rect.width / 2, rect.y + rect.height / 2));
+        }), 'the real pointer reaches the intended pending control').toBe(true);
         // locator.click would auto-wait for enabled and would not exercise the
         // pending handler. A real pointer clicks the currently painted target.
         await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2);
@@ -447,6 +509,13 @@ test('a real in-flight Save retains its status through native navigation and rea
   await page.setViewportSize({ width: 1440, height: 1000 });
   await installPaintProbe(page);
   const fixture = await savedMenuFixture(page), start = fixture.frame;
+  // Exercise a genuinely retained same-patient destination. Its indicator can
+  // become ready while the source is still awaiting the actual Save receipt.
+  await navigateMenu(page, 'docpro.html');
+  await waitForActualOwner(page, 'DocPro');
+  const warmDocument = await page.evaluate(() => window.__sidebarPaintProbe.current().owner.document);
+  await navigateMenu(page, 'index.html');
+  await waitForActualOwner(page, 'Start');
   // Unmodified native two-click feasibility is recorded separately. For this
   // repeatable regression, hold only delivery of the original receipt AFTER
   // its real encrypted commit; never change readiness, Save results, or data.
@@ -454,7 +523,8 @@ test('a real in-flight Save retains its status through native navigation and rea
   await observeRealSave(start, { holdAfterCommit: true });
   const session = await context.newCDPSession(page);
   await session.send('Emulation.setCPUThrottlingRate', { rate: 4 });
-  let samples, clickEvidence;
+  let samples, clickEvidence, primaryError;
+  const secondaryErrors = [];
   try {
     await start.locator('#weight').fill('47');
     await start.locator('#weight').blur();
@@ -488,6 +558,9 @@ test('a real in-flight Save retains its status through native navigation and rea
     expect(clickEvidence[0]).toMatchObject({ trusted: true, pending: true, state: 'saving' });
     const afterClick = { frames: samples.frames.filter(frame => frame.at >= clickEvidence[0].at) };
     expect(afterClick.frames.length).toBeGreaterThan(0);
+    const targetFrames = afterClick.frames.filter(frame => frame.owner?.title === 'DocPro');
+    expect(targetFrames.length).toBeGreaterThan(0);
+    expect(targetFrames.every(frame => frame.owner.document === warmDocument)).toBe(true);
     expect(visibleEmptyFrames(afterClick, false)).toEqual([]);
     expect(afterClick.frames.every(frame => ['saving', 'saved'].includes(frame.controls['desktop:status'].state))).toBe(true);
     await expect(docpro.locator('#weight')).toHaveValue('47');
@@ -504,12 +577,36 @@ test('a real in-flight Save retains its status through native navigation and rea
     expect(committedReference).not.toBe(fixture.savedReference);
     expect(await reference(docpro)).toBe(committedReference);
     expect(await start.evaluate(() => window.VildaSaveStatusIndicator.getCurrentDecision().state)).toBe('saved');
+  } catch (error) {
+    primaryError = error;
   } finally {
-    await start.evaluate(() => window.__committedReferenceProbe.release()).catch(() => {});
-    if (!samples) samples = await page.evaluate(() => window.__sidebarPaintProbe.stop()).catch(() => null);
-    if (!clickEvidence) clickEvidence = await page.evaluate(() => window.__nativeSaveNavigation).catch(() => null);
-    await session.send('Emulation.setCPUThrottlingRate', { rate: 1 });
-    await session.detach();
-    await testInfo.attach('native-pending-save', { contentType: 'application/json', body: JSON.stringify({ clickEvidence, samples }, null, 2) });
+    if (!page.isClosed()) {
+      try { await start.evaluate(() => window.__committedReferenceProbe.release()); }
+      catch (error) { secondaryErrors.push({ stage: 'release receipt', error }); }
+      if (!samples) {
+        try { samples = await page.evaluate(() => window.__sidebarPaintProbe.stop()); }
+        catch (error) { secondaryErrors.push({ stage: 'read paint evidence', error }); }
+      }
+      if (!clickEvidence) {
+        try { clickEvidence = await page.evaluate(() => window.__nativeSaveNavigation); }
+        catch (error) { secondaryErrors.push({ stage: 'read click evidence', error }); }
+      }
+    }
+    // Attach whatever was captured before CDP cleanup, which may encounter a
+    // browser already closed by the original test timeout.
+    try {
+      await testInfo.attach('native-pending-save', { contentType: 'application/json', body: JSON.stringify({
+        clickEvidence, samples, primaryError: primaryError?.message,
+        secondaryErrors: secondaryErrors.map(({ stage, error }) => ({ stage, message: error.message })),
+      }, null, 2) });
+    } catch (error) { secondaryErrors.push({ stage: 'attach evidence', error }); }
+    if (!page.isClosed()) {
+      try {
+        await session.send('Emulation.setCPUThrottlingRate', { rate: 1 });
+        await session.detach();
+      } catch (error) { secondaryErrors.push({ stage: 'restore CDP', error }); }
+    }
   }
+  if (primaryError) throw primaryError;
+  if (secondaryErrors.length) throw secondaryErrors[0].error;
 });
