@@ -192,6 +192,26 @@ Granice te są częścią kontraktu regresyjnego. Łączenie ich ponownie zwięk
 
 Nie wolno przenosić pola między pamięcią sesji, pamięcią trwałą i danymi pochodnymi bez analizy cyklu życia, zachowania wielu kart, czyszczenia oraz odtworzenia pacjenta. Samo zachowanie jednego widoku po odświeżeniu nie wystarcza jako test.
 
+Przy odtwarzaniu `vilda_persist_runtime.js` pusty `sharedUserData` nie jest
+poleceniem usunięcia niezależnego klinicznego szkicu `vildaMainSessionV1`.
+`Pp_hasRestorableMainSession()` sprawdza odłączony widok szkicu: samo konto
+lekarza (`doctor`), tryb wyników (`zscore`) i przełącznik widoku ciśnienia
+(`bpDataToggle`) nie ustanawiają pacjenta. Odtworzenie takich ustawień jako
+wizyty blokowałoby domyślną płeć na pustym formularzu. Ta klasyfikacja nie
+modyfikuje danych ani referencji zapisu i nie zmienia globalnego predykatu
+importera ani zasad blokowania tożsamości wczytanego pacjenta.
+
+Poza wejściami rozpoznawanymi przez importer zachowywane są kliniczne sekcje
+SGA/urodzeniowe, okołoporodowe, pokwitania, adnotacje, historia bisfosfonianów,
+data urodzenia, jawny wiek zero lub tygodnie zero, data badania, kontekst wieku
+kostnego i jawne wybory planu. Niepuste nieznane rozszerzenia najwyższego
+poziomu również zachowują szkic, włącznie ze skalarnymi `0` i `false`.
+Domyślne `ageMonths: 0` bez wieku lub innych danych nie wystarcza.
+Nowe domyślne pola UI wymagają osobnej oceny tej granicy; reguła nie jest
+uniwersalnym walidatorem dowolnych zagnieżdżonych rozszerzeń. Jawne „Wyczyść”
+nadal usuwa szkic istniejącą ścieżką adaptera. Regresję ustawień bez pacjenta
+utrwala pełna syntetyczna migawka `main-session-docpro-empty-ui.json`.
+
 Wskaźnik zapisu porównuje kanoniczną projekcję wejść, bez modyfikacji sesji lub
 rekordu pacjenta. `intake.estKcalPerDay` jest wynikiem przeliczenia. Z
 `intake.history` pomijane są wyłącznie zwykłe kopie pomiarów obecnych już w
@@ -633,6 +653,30 @@ operację, z której już go otwarto. To drugie zachowuje okno tylko przy zgodny
 numerze operacji, właścicielu formularza i sesji konta. Dotyczy także oczekującego
 ładowania modułów raportu. Nowe wczytanie, zmiana właściciela i pozostałe sygnały
 unieważnienia zachowują dotychczasowe zamknięcie panelu.
+
+Zapis wspólnego stanu roboczego w powłoce ma jednego aktywnego autora
+(P-SESJA-AKTYWNY-AUTOR). Tożsamość pacjenta nie wystarcza: ukryty panel może
+nadal mieć poprzednią wizytę tej samej osoby. Powłoka potwierdza dokument,
+trasę i generację aktywacji; panel dodaje generację wczytania/czyszczenia
+oraz sesję konta. Kolejki głównej sesji, wspólnego formularza, Klirensu i lustra
+pól zachowują ten zakres z chwili planowania i sprawdzają go przed publikacją.
+Klirens sprawdza go również przed zebraniem pól, które może zmienić jego lokalną
+pamięć wartości; czyszczenie tej pamięci anuluje wcześniejszą kolejkę.
+Adapter odrzuca też bezpośredni zapis roboczy nieaktywnego panelu. Zwykłe
+przełączenie zakładki przeglądarki nie odbiera praw aktywnemu formularzowi.
+
+Przed zmianą strony powłoka nadal zapisuje wychodzący formularz synchronicznie,
+a potem odtwarza stan w docelowym. Przy ponownym wejściu do wcześniej otwartego
+panelu odtwarza go także przy niezmienionym odcisku sesji: ukryty model mógł się
+zmienić lokalnie bez prawa zapisu. Pozostanie na tej samej trasie nie wykonuje
+tego kroku. Powrót nie ożywia wcześniejszych kolejek. Wiadomości lustra niosą jedynie niejawny identyfikator
+dowodu w RAM powłoki; odbiorca sprawdza również jego aktualność. Jawne czyszczenie
+korzysta z dotychczasowego rozgłoszenia resetu i osobnych metod usuwania stanu.
+Pusty odczyt wspólnego formularza nie usuwa istotnej sesji głównej: właściwy
+kolektor rozpoznaje ją, a następny etap odtwarza pełny szkic. Jawny reset ma
+własną ścieżkę usuwania. Kontrakt referencji rzeczywiście zapisanej wersji
+i reguły obliczeń pozostają niezmienione. Strony samodzielne zachowują swoje zapisy; mieszana starsza powłoka
+bez protokołu autora korzysta z dotychczasowej ochrony właściciela pacjenta.
 
 ### 5. Synchronizacja
 

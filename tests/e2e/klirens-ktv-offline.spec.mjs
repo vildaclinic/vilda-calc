@@ -16,7 +16,7 @@ test.use({ serviceWorkers: 'allow', actionTimeout: 15_000 });
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const sha256 = bytes => createHash('sha256').update(bytes).digest('hex');
 const versionOf = source => /const SW_VERSION = '([^']+)'/.exec(source)[1];
-const UPDATE_BASE_SHA = '03c2ad99829d4965e04aa3fdf06fc609f950b0a9';
+const UPDATE_BASE_SHA = '4f8f51daa9a3516ab187c956d03724b8d0c872fd';
 const NON_PRECACHE_RESOURCES = ['polityka-prywatnosci.html', 'regulamin.html', 'vilda_smoke_tests.js'];
 // CI's E2E checkout uses fetch-depth: 0; archive the actual production tree.
 const aliasNames = (() => {

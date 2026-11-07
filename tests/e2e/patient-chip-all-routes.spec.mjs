@@ -81,6 +81,14 @@ async function savedSnapshot(owner, id) {
 
 async function baseline(page, owner, id) {
   await saveThroughUi(page, owner);
+  // The vault commit precedes ordinary draft publication. Capture the route
+  // baseline only when the live form and published draft match that commit.
+  await expect.poll(() => owner.evaluate(() => ({
+    ready: window.VildaDataImportExport.getSaveReadiness().ready,
+    live: window.VildaSaveStatusIndicator.getCurrentDecision().state,
+    published: window.VildaSaveStatusIndicator._computeCanonicalFingerprint()
+      === window.VildaSaveStatusIndicator.getReferenceFingerprint(),
+  }))).toEqual({ ready: true, live: 'saved', published: true });
   return { id, clinical: await clinicalState(owner), vault: await savedSnapshot(owner, id),
     reference: await owner.evaluate(() => window.VildaSaveStatusIndicator.getReferenceFingerprint()),
     color: await page.locator('#vildaPatientChip').evaluate(async element => {

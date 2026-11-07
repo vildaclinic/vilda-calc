@@ -145,8 +145,9 @@ describe('P-SPOZYCIE-POWROT — końcowy krok odtworzenia stanu na żądanie pow
     const pokaz = sh.match(/function Gp_p\([^)]*\)\{[\s\S]*?(?=function It\()/)?.[0] || '';
     const kolejnosc = ['n.vildaPersistRestoreAll()', 'n.vildaSession.restore()', 'n.vildaPersistRestoreFinishNow()', 'Gp_u(n)'].map((x) => pokaz.indexOf(x));
     expect(kolejnosc.every((x, i) => x > (i ? kolejnosc[i - 1] : -1)), `kolejność w Gp_p: ${kolejnosc}`).toBe(true);
-    // poza warunkiem zmiany odcisku sesji: zaległy krok po odświeżeniu w tle też kończy się przed pierwszą klatką
-    expect(pokaz).toMatch(/n\.vildaSession\.restore\(\)\}catch\{\}\}\/\*[^*]*\*\/try\{typeof n\.vildaPersistRestoreFinishNow=="function"/);
+    // Po zamknięciu warunku odtworzenia (wraz z wyzerowaniem znacznika powrotu):
+    // zaległy krok z tła też musi skończyć się przed pierwszą klatką.
+    expect(pokaz).toMatch(/n\.vildaSession\.restore\(\)\}catch\{\}e\.sessionRestoreRequired=false\}\/\*[^*]*\*\/try\{typeof n\.vildaPersistRestoreFinishNow=="function"/);
     const tlo = sh.match(/function It\(\)\{[\s\S]*?(?=function et\()/)?.[0] || '';
     expect(tlo).toContain('r.vildaPersistRestoreAll()');
     expect(tlo).not.toContain('vildaPersistRestoreFinishNow');

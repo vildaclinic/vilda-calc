@@ -13753,6 +13753,65 @@ Migotanie jest **starsze** od obu zmian, a numer kolejny wersji je złagodził. 
 
 **Zakres i regresje.** Zmienia się wyłącznie śledzenie rzeczywistej edycji po ustaleniu referencji. Bez zmiany pomiarów, norm, centyli, formatu pacjenta i zapisu do sejfu. `tests/unit/save-status-paused-edit.test.mjs` rozdziela formularz od zapisanej migawki sesji i sprawdza starą migawkę przy zwykłej edycji, koniec/przedłużenie pauzy oraz unieważnienie kontekstu przed aktualizacją sesji. `tests/e2e/odtworzenie-wiek-pomiaru.spec.mjs` zawiera dodatkowy scenariusz: zapisany pacjent → pauza → ta sama masa (nadal zapisano) → pauza → nowa masa (niezapisane zmiany).
 
+### P-SESJA-AKTYWNY-AUTOR — ukryty panel nie zastępuje bieżącej wizyty, 2026-11-06
+
+**Przyczyna.** Syntetyczny przypadek „Nowy pomiar” ujawnił zapis ze starszej,
+ukrytej karty DocPro do sesji aktualnie otwartej Strony głównej. PID i konto
+były takie same, lecz wiek, data wizyty i historia pomiarów były starsze.
+Opóźnione zdarzenia lustra pól oraz `visibilitychange` mogły uruchomić zapis.
+Późniejszy zapis aktywnego formularza przywracał dane, ale nie cofał skutków
+chwilowego nadpisania ani wszystkich wskazań UI. Nie jest to dowód, że każda
+zmiana statusu po przełączeniu zakładki ma tę samą przyczynę.
+
+**Reguła.** Tylko aktualny dokument aktywnego panelu publikuje wspólny stan
+roboczy. Dowód w RAM obejmuje aktywację panelu, dokument, wczytanie/czyszczenie
+i sesję konta. Zaplanowany zapis i opóźnione kopiowanie pól muszą zachować
+aktualny dowód również przy wykonaniu. Zmiana strony A → B → A nie wznawia
+starej kolejki A. Klirens sprawdza autora przed zebraniem pól i przed zapisem,
+a czyszczenie jego pamięci wartości anuluje opóźnioną kolejkę. Odebrane
+wiadomości lustra są ponownie sprawdzane w powłoce.
+Widoczność zakładki przeglądarki i fokus nie są kryterium — bieżący formularz
+nadal może zabezpieczyć swoją sesję przy opuszczeniu zakładki.
+
+**Granice.** Powłoka zapisuje bieżący panel przed przekazaniem sterowania,
+więc szybka nawigacja nadal przenosi ostatnie edycje. Ponowne wejście do
+załadowanego panelu odtwarza aktualną sesję również przy niezmienionym odcisku
+w pamięci: zablokowany zapis nie dowodzi, że jego ukryty model pozostał bez
+zmian. Mechanizm odtwarza sesję roboczą przy powrocie bez przeładowania strony.
+Powiązane moduły nadal wywołują API sejfu; liczba tych wywołań nie określa
+liczby operacji magazynu danych. Jawny reset zachowuje
+osobny kanał usuwania danych we wszystkich panelach. Nie zmieniamy formatu
+rekordów, referencji potwierdzonego zapisu, wzorów, progów, jednostek ani
+interpretacji klinicznych. Nie usuwamy różnic z porównania stanu, aby uzyskać
+etykietę „Zapisano”. Gdy aktualna sesja jawnie niesie `clcr:null`, a osobny
+szkic Klirensu również został usunięty, odtwarzanie usuwa lokalną pamięć wartości
+wersji kalkulatora przed jakimkolwiek zebraniem pól. Zapobiega to przywróceniu
+wieku z odrzuconego anonimowego obliczenia. Obecny szkic, w tym oczekujące
+anonimowe badanie, brak pola w starszym formacie i niedostępny odczyt nie są
+poleceniem takiego usunięcia. Rozbieżności automatycznych producentów
+SGA/PAL/historii pozostają odrębnym etapem naprawy.
+
+Przy pustym stanie wspólnym ochrona sesji dotyczy danych pacjenta. Sam profil
+lekarza lub ustawienie widoku wyników nie uruchamia odtwarzania pustego pacjenta
+i jego blokad pól. Ta lokalna ocena nie zmienia danych ani ogólnego klasyfikatora
+importera; zachowuje także kliniczne sekcje nieuwzględnione przez jego starszą
+wersję, w tym SGA, dane okołoporodowe i jawny wiek noworodka równy zero.
+
+Pusty, podstawowy formularz Klirensu bez wybranej metody pobiera wspólne dane
+bieżącej wizyty przy odtworzeniu sesji znanego pacjenta o zgodnej nazwie.
+Sama automatyczna powierzchnia ciała nie jest niezależnym badaniem. Ocenę
+pustości oparto na domyślnych kontrolkach i publicznym modelu czasu zbiórki;
+wpisany wynik, także zero, wybrana metoda, kontekst próbki lub nieznane pole
+wykluczają tę korektę. Anonimowe obliczenie, jawne przywrócenie zapisu i dane
+historycznych badań pozostają niezmienione.
+
+**Regresje.** Testy rzeczywistych modułów sprawdzają każdy zapis sesji,
+nie tylko stan po późniejszej naprawie. Obejmują starszą wizytę tego samego
+pacjenta w nieaktywnej karcie, opóźnione zdarzenia i kolejki, zmianę konta,
+przeładowanie dokumentu, zapis przy schowaniu zakładki, bieżące edycje
+oraz jawne czyszczenie. Test przeglądarkowy używa fikcyjnego sejfu i natywnego
+wyboru „Nowy pomiar”; kontroluje także niezmienność zapisanego rekordu i notatki.
+
 ### P-ZAPIS-POTWIERDZONY — referencja potwierdzonej treści i gotowość formularza, 2026-11-06
 
 **Problem.** Powiadomienie sejfu oraz późniejsze `patient-loaded(source:save)` ustanawiały referencję przez ponowne zebranie bieżącego formularza. Automatyczna zmiana po zatwierdzeniu wersji mogła więc otrzymać stan „Zapisano”, choć zapis zawierał inną treść. Potwierdzono to na fikcyjnym SGA: wersja zachowała obliczony wynik, a późniejszy formularz miał uzupełnione pole i unieważniony wynik. Osobny rzeczywisty Save podczas odtwarzania formularza mógł utworzyć dodatkową wersję mimo niegotowości wejść.
