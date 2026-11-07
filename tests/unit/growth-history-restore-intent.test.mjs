@@ -35,6 +35,7 @@ function harness() {
     sessionStorage: { getItem: () => scope.patient }, VildaVault: vault,
     VildaDataImportExport: { getApplyLoadedDataSequence: () => scope.apply },
     _refreshAdvIntakeRowUi: vi.fn(),
+    vildaCancelIntakeRestoreCalculation: vi.fn(),
     _pairAdvancedAndIntakeRowsByOrderUntracked: vi.fn(() => ({ paired: true, mutated: true })),
   };
   win.window = win; win.globalThis = win;

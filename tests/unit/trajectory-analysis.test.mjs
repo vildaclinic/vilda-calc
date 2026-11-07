@@ -1085,6 +1085,75 @@ describe('panel trajektorii w karcie zaawansowanej (buildCardPanelHtml, hybryda)
   });
 });
 
+describe('zapamiętywanie zwinięcia pomiędzy panelami', () => {
+  function panes(initialOpen) {
+    const store = new Map([['vildaTrajectoryPanelCollapsed', initialOpen ? '0' : '1']]);
+    const writes = [];
+    function pane(name) {
+      const { VildaTrajectoryAnalysis: api } = loadModule({
+        localStorage: {
+          getItem: key => store.get(key) ?? null,
+          setItem(key, value) { writes.push({ pane: name, key, value }); store.set(key, value); },
+        },
+      });
+      let toggle;
+      const main = { open: initialOpen, addEventListener(type, listener) { if (type === 'toggle') toggle = listener; } };
+      const scope = { querySelector: selector => selector === '.vtap-main' ? main : null };
+      expect(api.wirePanelToggle(scope)).toBe(true);
+      return { main, emit: () => toggle(), bindAgain: () => api.wirePanelToggle(scope) };
+    }
+    return { a: pane('active'), b: pane('background'), writes, stored: () => store.get('vildaTrajectoryPanelCollapsed') };
+  }
+
+  it.each([true, false])('początkowy toggle panelu open=%s nie nadpisuje późniejszego wyboru w drugim panelu', initialOpen => {
+    const { a, b, writes, stored } = panes(initialOpen);
+    a.main.open = !initialOpen;
+    a.emit();
+    const choice = initialOpen ? '1' : '0';
+    expect(stored()).toBe(choice);
+    b.emit(); // Początkowe zdarzenie pochodzi z już wyrenderowanego atrybutu open.
+    expect(stored()).toBe(choice);
+    expect(writes).toEqual([{ pane: 'active', key: 'vildaTrajectoryPanelCollapsed', value: choice }]);
+  });
+
+  it.each([true, false])('scalone początkowe zdarzenie i zmiana open=%s zapisują końcowy zmieniony stan', initialOpen => {
+    const { a, writes, stored } = panes(initialOpen);
+    a.main.open = !initialOpen;
+    a.emit(); // Przeglądarka dostarcza jeden toggle po zmianie, zamiast obu zdarzeń.
+    expect(stored()).toBe(initialOpen ? '1' : '0');
+    expect(writes).toHaveLength(1);
+  });
+
+  it.each([true, false])('scalone przełączenia wracające do open=%s nie publikują niezmienionego stanu', initialOpen => {
+    const { a, b, writes, stored } = panes(initialOpen);
+    b.main.open = !initialOpen;
+    b.emit();
+    a.main.open = !initialOpen;
+    a.main.open = initialOpen;
+    a.emit();
+    expect(stored()).toBe(initialOpen ? '1' : '0');
+    expect(writes).toHaveLength(1);
+    expect(writes[0].pane).toBe('background');
+  });
+
+  it('zachowuje zamknięcie i ponowne otwarcie, pomijając duplikaty i ponowne wiązanie', () => {
+    const { a, writes, stored } = panes(true);
+    a.emit();
+    expect(writes).toHaveLength(0);
+    expect(a.bindAgain()).toBe(false);
+    a.main.open = false;
+    a.emit();
+    a.emit();
+    expect(stored()).toBe('1');
+    expect(writes.map(write => write.value)).toEqual(['1']);
+    a.main.open = true;
+    a.emit();
+    a.emit();
+    expect(stored()).toBe('0');
+    expect(writes.map(write => write.value)).toEqual(['1', '0']);
+  });
+});
+
 describe('assessVelocityValue — ocena gotowej wartości tempa tą samą hierarchią norm', () => {
   function makeVta() {
     // P-TEMPO etap 5: pomocnicze funkcje tempa z app.js nie istnieja — silnik laduje loadTrajectory().

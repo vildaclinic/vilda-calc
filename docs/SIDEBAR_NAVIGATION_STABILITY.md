@@ -22,6 +22,15 @@ Stan bez aktywnej prezentacji wraca bezpośrednio do natywnego wskaźnika.
 Podtrzymanie dotyczy etykiety i jej opisu; rzeczywista dostępność przycisków
 oraz ostrzeżenie przed czyszczeniem nadal wynikają z danych formularza.
 
+Zakończenie odroczonego obliczenia należącego do odtwarzania publikuje osobny
+sygnał gotowości. Wskaźnik odczytuje ponownie własny stan, a Chrome i powłoka
+odświeżają prezentację. Ten sygnał nie oznacza wczytania pacjenta, nie
+ustanawia referencji i nie uruchamia obliczeń klinicznych.
+Oba natywne kontrolery „Zapisz dane” odczytują ten sam stan oczekiwania lub
+błędu odtworzenia spożycia, więc jeden nie włącza przycisku wyłączonego przez
+drugi. Zakończenie istniejącego obliczenia odświeża dostępność; samo kliknięcie
+zapisu nadal przechodzi pełne kontrole konta, wizyty i gotowości danych.
+
 Przechowywane są wyłącznie stan prezentacji i tożsamości potrzebne do jego sprawdzenia. Nie jest to uprawnienie do zapisu, czyszczenia lub wygenerowania dokumentu. Dotychczasowe `disabled`, `aria-disabled`, kontrolery natywne, kontrola aktywnej ramki i strażnik niezapisanych zmian pozostają źródłem dostępności działań. Atrybuty `data-menu-preparing` i `data-menu-was-enabled` sterują wyłącznie prezentacją.
 
 „Wyczyść” jest natywnym przyciskiem, więc globalny styl `button:disabled`

@@ -42,6 +42,8 @@ function harness() {
     VildaDataImportExport: { getApplyLoadedDataSequence: () => scope.sequence },
     vildaAppClearHtml: el => { el.html = ''; },
     clearIntakeResultsAlertState: vi.fn(),
+    vildaCancelIntakeRestoreCalculation: vi.fn(),
+    vildaIntakeRestoreCalculationCommitted: vi.fn(),
     vildaLogSwallowedCatch: vi.fn(),
     buildEstimatedIntakeCalcInputModel: () => ({ rows: clone(HISTORY) }),
     buildEstimatedIntakeLastObservedModel: () => ({}),

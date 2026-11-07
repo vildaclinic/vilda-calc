@@ -30,6 +30,8 @@ async function ready(page) {
     && typeof window.collectUserData === 'function'
     && !document.documentElement.classList.contains('vilda-auth-locked'));
   await czekajNaOdtworzenieSesji(page);
+  // Initialization + two frames can precede the actual restore finalizer.
+  await page.waitForFunction(() => window.VildaDataImportExport?.getSaveReadiness?.().ready === true);
 }
 
 async function loadPatient(page, id, choice) {

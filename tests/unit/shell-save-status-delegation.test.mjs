@@ -156,6 +156,27 @@ describe('shell delegates save status to a ready patient owner', () => {
     expect(h.start.api.reconcileFromSharedReference).not.toHaveBeenCalled();
   });
 
+  it('intake readiness selects the published owner without reconciliation or clinical reads', () => {
+    const h = harness(); h.ctx.c = 'docpro'; h.docpro.state.ready = false;
+    h.refresh(); expect(h.ctx.Dt()).toBe(h.start.api);
+    for (const pane of [h.start, h.docpro, h.klirens]) {
+      pane.api.reconcileFromSharedReference.mockClear();
+      pane.win.collectUserData = vi.fn(); pane.win.calcEstimatedIntake = vi.fn();
+    }
+    h.docpro.doc.dispatchEvent({ type: 'vilda:intake-restore-readiness' });
+    expect(h.ctx.Dt()).toBe(h.start.api);
+    h.docpro.state.ready = true; h.docpro.state.value = 'dirty';
+    h.docpro.doc.dispatchEvent({ type: 'vilda:intake-restore-readiness' });
+    expect(h.ctx.Dt()).toBe(h.docpro.api);
+    expect(h.hostChip.className).toContain('vilda-save-state--dirty');
+    for (const pane of [h.start, h.docpro, h.klirens]) {
+      expect(pane.api.reconcileFromSharedReference).not.toHaveBeenCalled();
+      expect(pane.api._forceTransition).not.toHaveBeenCalled();
+      expect(pane.win.collectUserData).not.toHaveBeenCalled();
+      expect(pane.win.calcEstimatedIntake).not.toHaveBeenCalled();
+    }
+  });
+
   it.each(['saving', 'error', 'new_patient'])('preserves the owner lifecycle state %s', state => {
     const h = harness(); h.start.state.value = state; h.refresh();
     h.ctx.c = 'notatki'; h.refresh();

@@ -343,6 +343,7 @@ function Ss_bind(){
       }
       var refresh=function(){Ss_refresh(true)},clear=function(){Ss_invalidate()};
       ["vilda:patient-loaded","vilda:persist-restored","vilda:main-session-restored","vilda:auth-boot-settled","vilda:dob-restored"].forEach(function(type){listen(doc,type,refresh)});
+      listen(doc,"vilda:intake-restore-readiness",function(){Ss_refresh(false)});
       listen(win,"vilda:user-state-cleared",clear);listen(doc,"vilda:user-state-cleared",clear);
       var chip=doc.getElementById("vildaPatientChip");
       if(chip&&typeof a.MutationObserver==="function"){

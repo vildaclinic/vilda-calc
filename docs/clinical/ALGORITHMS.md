@@ -13769,6 +13769,26 @@ zachowuje wcześniejszą możliwość zakończenia starego, jeszcze nierozpoczę
 odtwarzania; nadal przechodzi wszystkie kontrole aktywnego odtwarzania,
 konta, właściciela i przenoszonych danych. Gotowość nie zastępuje tych kontroli.
 
+Odtworzenie wspólnych pól może także zlecić istniejące odroczone obliczenie
+spożycia. Gotowość zapisu obejmuje zakończenie tego konkretnego zadania,
+a nie tylko zamontowanie jego wierszy. Wykryty przypadek: anonimowy formularz
+13 lat, 158 cm, 46 kg oraz wpis zaawansowany 10 lat, 141 cm, 33 kg. Po F5
+oba wiersze były już w formularzu spożycia, lecz przez krótkie okno model
+zawierał tylko bieżący pomiar i brak wyniku. Zapis w tym oknie mógł utrwalić
+ten wcześniejszy stan. Zakończenie już zaplanowanego obliczenia pozwala
+zapisać pełny bieżący model; „Zapisz” nie uruchamia dodatkowego przeliczenia.
+Znacznik gotowości jest związany z odtwarzaniem i zadaniem, nie nadaje
+uprawnień do danych i nie zmienia referencji. Zwykłe wpisywanie poza
+odtwarzaniem zachowuje dotychczasowe zachowanie. Błąd obliczenia nie oznacza
+gotowości do zapisu; kolejne udane obliczenie lub reset kończą ten stan.
+
+Przeniesiony zamiar wczytania z innej strony czeka na zakończenie początkowego
+odtwarzania przed pobraniem danych wybranego pacjenta. Dopiero wtedy powstaje
+nowe potwierdzenie tej konkretnej operacji. Zapobiega to unieważnieniu
+jawnego wyboru przez kończące się w tle zastosowanie starszej migawki.
+Zmiana konta, klucza, dokumentu, wizyty lub nowsza czynność użytkownika
+nadal anuluje wcześniejszą operację; anulowany zamiar nie wraca po F5.
+
 Pierwszy natywny zapis może nadać PID, zanim odroczony zapis formularza
 zastąpi wcześniejszy pusty szkic. Kontynuację tej samej wizyty potwierdza
 wynik rzeczywiście zakończonego zapisu, związany z jego pierwotną operacją,

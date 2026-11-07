@@ -80,6 +80,9 @@ describe('save collection and durable queue require actual producer/owner readin
     ['dob-restore-pending', h => { h.win.VildaDobAge.restorePending = () => true; }],
     ['docpro-restore-pending', h => { h.win.VildaDocproStatePersistence.isRestoring = () => true; }],
     ['docpro-restore-pending', h => { h.win.VildaDocproStatePersistence.isReady = () => false; }],
+    ['intake-restore-pending', h => { h.win.vildaGetIntakeRestoreReadiness = () => ({ pending: true, failed: false }); }],
+    ['intake-restore-failed', h => { h.win.vildaGetIntakeRestoreReadiness = () => ({ pending: false, failed: true }); }],
+    ['intake-restore-failed', h => { h.win.vildaGetIntakeRestoreReadiness = () => { throw new Error('Fikcyjny błąd producenta'); }; }],
     ['owner-unavailable', h => { h.vault.getCurrentUser = () => null; }],
     ['owner-unavailable', h => { delete h.vault.getCurrentUser; }],
     ['owner-unavailable', h => { delete h.vault.captureSyncOperationSession; }],
@@ -129,6 +132,45 @@ describe('save collection and durable queue require actual producer/owner readin
     const receipt = await h.api.saveUserDataWithReceipt(h.options);
     expect(receipt).toMatchObject({ saved: true, referenceVerified: true });
     expect(h.collect).toHaveBeenCalledOnce(); expect(h.vault.savePatient).toHaveBeenCalledOnce();
+  });
+
+  it('keeps startup pending until the actual native intake producer commits, without calculating in Save', async () => {
+    const h = environment(); let pending = true;
+    h.win.vildaGetIntakeRestoreReadiness = () => ({ pending, failed: false });
+    h.win.calcIntake = vi.fn();
+    expect(h.api.isMainSessionRestorePending()).toBe(true);
+    expect(await h.api.saveUserDataWithReceipt(h.options)).toMatchObject({ saved: false });
+    expect(h.collect).not.toHaveBeenCalled(); expect(h.vault.savePatient).not.toHaveBeenCalled();
+    pending = false;
+    expect(h.api.isMainSessionRestorePending()).toBe(false);
+    expect(await h.api.saveUserDataWithReceipt(h.options)).toMatchObject({ saved: true, referenceVerified: true });
+    expect(h.collect).toHaveBeenCalledOnce(); expect(h.vault.savePatient).toHaveBeenCalledOnce();
+    expect(h.win.calcIntake).not.toHaveBeenCalled();
+  });
+
+  it.each(['collection', 'queue'])('rechecks a native intake restore starting during %s', async phase => {
+    const h = environment(); let pending = false;
+    h.win.vildaGetIntakeRestoreReadiness = () => ({ pending, failed: false });
+    if (phase === 'collection') h.collect.mockImplementation(() => { pending = true; return patient(); });
+    const operation = h.api.saveUserDataWithReceipt(h.options);
+    if (phase === 'queue') pending = true;
+    expect(await operation).toMatchObject({ saved: false });
+    expect(h.collect).toHaveBeenCalledOnce(); expect(h.vault.savePatient).not.toHaveBeenCalled();
+  });
+
+  it('does not promote a failed restore calculation to Saved before the producer reports recovery', async () => {
+    const h = environment(); let failed = true;
+    h.feedback.mockReturnValue(true);
+    h.win.vildaGetIntakeRestoreReadiness = () => ({ pending: false, failed });
+    expect(h.api.isMainSessionRestorePending()).toBe(false);
+    expect(h.api.getSaveReadiness()).toEqual({ ready: false, reason: 'intake-restore-failed' });
+    expect(await h.api.saveUserDataWithReceipt(h.options)).toMatchObject({ saved: false });
+    expect(h.feedback).toHaveBeenCalledWith(expect.objectContaining({
+      tekst: 'Nie udało się odtworzyć obliczeń do zapisu. Sprawdź dane formularza.',
+    }));
+    expect(h.collect).not.toHaveBeenCalled(); expect(h.vault.savePatient).not.toHaveBeenCalled();
+    failed = false;
+    expect(await h.api.saveUserDataWithReceipt(h.options)).toMatchObject({ saved: true, referenceVerified: true });
   });
 
   it('covers app-ready and both startup frames when a main snapshot is waiting', async () => {
