@@ -235,7 +235,8 @@ test('nowa wizyta bez badania: jeden marker i niezmienione źródło BA po zapis
   await gotowaStrona(page);
   await expect(page.locator('#height')).toHaveValue('142');
   await expect(page.locator('#advBoneAge')).toHaveValue('');
-  ostatnieBadanie(await stan(page));
+  const startPoF5 = await stan(page);
+  ostatnieBadanie(startPoF5);
   await otworzKarteWzrostu(page);
   await expect(page.locator('#advBoneAgeLastInfo')).toBeVisible();
   await sprawdzSzerokosc(page);
@@ -246,10 +247,14 @@ test('nowa wizyta bez badania: jeden marker i niezmienione źródło BA po zapis
   await expect(page.locator('#height')).toHaveValue('142');
   await expect(page.locator('#advBoneAge')).toHaveValue('');
   const docpro = await stan(page);
-  // DocPro nie ładuje tabel BP: zachowujemy tę istniejącą dostępność metody,
-  // sprawdzając rzeczywisty model wejścia z wcześniejszym BA oraz przyczynę braku wyniku.
-  ostatnieBadanie(docpro, 123, false);
-  expect(docpro.predictionReason).toBe('missing-dataset');
+  // Obie strony korzystają z tego samego wcześniejszego badania i tabel BP.
+  // Prognoza nie może wpisać historycznego BA jako nowego badania tej wizyty.
+  ostatnieBadanie(docpro);
+  expect(docpro.predictionReason).toBeNull();
+  expect(docpro.predictedAdultHeightCm).toBe(startPoF5.predictedAdultHeightCm);
+  expect(docpro.context).toEqual(startPoF5.context);
+  expect(docpro.measurements).toEqual(startPoF5.measurements);
+  await expect(page.locator('#advBoneAge')).toHaveValue('');
   // DocPro utrzymuje tę kartę jako ukrytą projekcję wspólnego stanu pacjenta.
   await expect(page.locator('#advBoneAgeLastInfo')).toContainText('10 lat 3 mies.');
   await sprawdzSzerokosc(page);
