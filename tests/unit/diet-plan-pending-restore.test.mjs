@@ -205,8 +205,8 @@ describe('pending diet integration patch', () => {
     const before = source.replace(pendingDietRestoreSource, '')
       .replace('function vildaDietaPoWczytaniu(p){vildaRememberPendingDietRestore(p);', 'function vildaDietaPoWczytaniu(p){')
       .replace('...vildaDietPlanForCapture(readOnlyCapture)', 'dietLevel:(f("dietLevel")||{}).value||null,/* P-DIETA-AUDYT2 A1 */dietaWybrana:r.__vildaDietLevelTouched===!0')
-      .replace('function Rt(e){invalidateSaveScope();saveClearDepth+=1;try{vildaClearPendingDietRestore();', 'function Rt(e){invalidateSaveScope();saveClearDepth+=1;try{')
-      .replace('function sa(e){vildaClearPendingDietRestore();Bdob0();', 'function sa(e){Bdob0();')
+      .replace('function Rt(e){invalidateSaveScope();saveClearDepth+=1;try{beginGrowthHistoryRestore(null);vildaClearPendingDietRestore();', 'function Rt(e){invalidateSaveScope();saveClearDepth+=1;try{beginGrowthHistoryRestore(null);')
+      .replace('function sa(e){clearIncomingSgaUiState(e);vildaClearPendingDietRestore();Bdob0();', 'function sa(e){clearIncomingSgaUiState(e);Bdob0();')
       .replace('if(!e||typeof e!="object")return!1;vildaResetIncomingDietRestore(e.plan);ownSaveBlankAgeWitness=null;const applySequence=', 'if(!e||typeof e!="object")return!1;ownSaveBlankAgeWitness=null;const applySequence=')
       .replace('vildaResetIncomingDietRestore(u.plan);rememberIncomingMainSessionCarry(u);/* P-ODTWORZ-WIEK:', 'rememberIncomingMainSessionCarry(u);/* P-ODTWORZ-WIEK:');
     expect(patchDietPendingSessionRestore(before)).toBe(source);

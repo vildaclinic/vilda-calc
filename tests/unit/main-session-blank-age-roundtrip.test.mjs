@@ -40,6 +40,11 @@ function documentHarness({ shared = { main: null }, route = 'index', values = {}
       savePatient },
     VildaPersistence: { getStorage: () => ({}), readMainSession: () => clone(shared.main),
       writeMainSession(value) { shared.main = clone(value); return true; },
+      updateShared(mutator) {
+        const current = clone(shared.fields || {});
+        shared.fields = clone(mutator(current, current._vildaPersist) || current);
+        return clone(shared.fields);
+      },
       clearMainSession() { shared.main = null; return true; },
       readClcrSession: () => null, readModuleJSON: (_key, fallback) => fallback },
     VildaDobAge: { readISO: () => currentDob, readWeeks: () => currentWeeks, readMeasuredAtISO: () => null,
@@ -49,7 +54,7 @@ function documentHarness({ shared = { main: null }, route = 'index', values = {}
   win.window = win; win.self = win; win.parent = win; win.top = win;
   loadBrowserScript('vilda_data_import_export.js', win);
   const api = win.VildaDataImportExport;
-  const options = { syncSharedUserDataFromLoadedData() {},
+  const options = { syncSharedUserDataFromLoadedData(data, name, restoreOptions) { return api.syncSharedUserDataFromLoadedData(data, name, restoreOptions); },
     rehydrateAdvancedFromState() {}, rehydrateIntakeFromState() {},
     applyLoadedData(data, restoreOptions) { return api.applyLoadedData(data, { ...options, ...restoreOptions }); } };
   return { api, win, fields, events, shared, storage, savePatient, committed,
@@ -252,6 +257,33 @@ describe('native importer only describes a missing previous measurement in a pat
     expect(h.apply(preferences(), { showLoadDataMessage })).toBe(true);
     expect(showLoadDataMessage).toHaveBeenCalledOnce();
     expect(showLoadDataMessage).toHaveBeenCalledWith({ noMeasurement: true });
+  });
+});
+
+describe('shared sex-lock producer respects the same identity boundary as the visible field', () => {
+  const preference = sex => ({ version: 1, name: '', user: { sex, age: null, ageMonths: null, height: null, weight: null }, doctor: { isDoctor: true } });
+  it.each(['M', 'F'])('does not manufacture a persistent lock from anonymous %s preferences across actual main restores', sex => {
+    const shared = { main: preference(sex) };
+    for (const route of ['docpro', 'index', 'docpro']) {
+      const h = documentHarness({ shared, route }); expect(h.restore()).toBe(true);
+      expect(h.fields.get('sex').value).toBe(sex); expect(h.fields.get('sex').disabled).toBe(false);
+      expect(shared.fields.sex).toBe(sex); expect(shared.fields._vildaPersist.byId.sex).toBe(sex);
+      expect(shared.fields.sexLocked).not.toBe(true);
+    }
+  });
+  it.each(['explicit-import', 'name', 'user-names', 'selected-patient'])('retains shared identity locking for %s', identity => {
+    const h = documentHarness(), payload = preference('F');
+    if (identity === 'name') payload.name = 'Fikcyjna Alicja';
+    if (identity === 'user-names') Object.assign(payload.user, { firstName: 'Fikcyjna', lastName: 'Alicja' });
+    if (identity === 'selected-patient') h.storage.set('vildaCurrentPatientId', 'fictional-selected');
+    expect(h.apply(payload, { isSessionRestore: identity !== 'explicit-import' })).toBe(true);
+    expect(h.fields.get('sex').disabled).toBe(true); expect(h.shared.fields.sexLocked).toBe(true);
+    expect(h.shared.fields.sex).toBe('F');
+  });
+  it('does not remove a previously explicit anonymous import lock during session restoration', () => {
+    const shared = { main: preference('F'), fields: { sex: 'F', sexLocked: true } };
+    const h = documentHarness({ shared }); expect(h.restore()).toBe(true);
+    expect(shared.fields.sexLocked).toBe(true); expect(shared.fields.sex).toBe('F');
   });
 });
 

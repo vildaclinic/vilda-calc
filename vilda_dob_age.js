@@ -938,6 +938,10 @@
      Wpisu ręcznego to nie dotyczy: tam lekarz naprawdę edytuje formularz i flaga ma się
      ustawić. Obejmujemy wyłącznie ścieżkę po zdarzeniu wczytania rekordu. */
   function bezZnaczaniaEdycji(robota) {
+    // Only this synchronous record/session replay owns the suspension. A manual
+    // DOB edit still invalidates intake through the ordinary input handlers.
+    var mialIntakeGuard = Object.prototype.hasOwnProperty.call(w, '__vildaSuspendIntakeUserReset');
+    var intakeGuardPrzed = w.__vildaSuspendIntakeUserReset;
     var flagaPrzed;
     var mialFlage = false;
     try {
@@ -958,8 +962,11 @@
     }
 
     try {
+      w.__vildaSuspendIntakeUserReset = true;
       robota();
     } finally {
+      if (mialIntakeGuard) w.__vildaSuspendIntakeUserReset = intakeGuardPrzed;
+      else delete w.__vildaSuspendIntakeUserReset;
       if (mialFlage) {
         try {
           w.hasUserModifiedAfterLoad = flagaPrzed;

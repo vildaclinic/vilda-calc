@@ -13712,6 +13712,143 @@ przeładowanie dokumentu, zapis przy schowaniu zakładki, bieżące edycje
 oraz jawne czyszczenie. Test przeglądarkowy używa fikcyjnego sejfu i natywnego
 wyboru „Nowy pomiar”; kontroluje także niezmienność zapisanego rekordu i notatki.
 
+### P-STAN-PRODUCENCI — SGA, PAL i historie pomiarów a stan zapisu, 2026-11-07
+
+Korekta funkcjonalna producentów danych, kolejny etap po P-ZAPIS-POTWIERDZONY
+i ochronie zapisów sesji ze starszych paneli. Automatyczne zdarzenie z tymi samymi
+danymi nie jest edycją pacjenta. Nie zmieniamy referencji potwierdzonego zapisu
+ani reguł porównania, aby ukryć rzeczywistą różnicę.
+
+**SGA.** Powtórzone `input/change` zachowuje kompletną utrwaloną ocenę, wybrane
+źródła i pierwotny `computedAtISO`, gdy wejścia się nie zmieniły. Prawdziwa edycja
+unieważnia tę ocenę; aktualny podgląd wyniku jest osobnym stanem. Automatyczne
+uzupełnianie z danych okołoporodowych nie dopisuje parametrów pod obliczoną oceną.
+Obsługiwany historyczny zapis z pustym polem dni zachowuje dosłowne `days: ''`.
+
+Jawne wyczyszczenie SGA oraz usunięcie wcześniej podanej wartości mają osobną
+intencję w istniejącym stanie UI DocPro (`moduleStates.sgaBirthUi`). Nie dodajemy
+jej do klinicznej sekcji `birth`, wersji pacjenta ani referencji zapisu.
+Odtwarzanie UI oraz odpowiedzi odroczonych odczytów sprawdzają konto, pacjenta
+i aktualność operacji. Własny zapis i odświeżenie bieżącej wizyty zachowują
+intencję czyszczenia. Zaakceptowane nowe wczytanie lub przywrócenie zapisu ją
+kończy, także przy tym samym PID w zachowanej ramce DocPro. Usuwana jest wtedy
+wyłącznie stara kopia SGA i jej intencja z UI; pozostałe karty zachowują swój
+stan. Natywne „Przywróć zapis” odtwarza rzeczywistą sekcję `birth`, także `null`.
+Anulowanie przywrócenia nie zmienia formularza.
+
+**Częściowe formularze.** Natywny zapis z DocPro korzysta dla niewidocznych tam
+pól z tego samego modelu własności co odczyt stanu. Źródłem przenoszonych danych
+jest dokładna treść ostatniego udanego zapisu bieżącej sesji roboczej albo
+dokładny, zaakceptowany odczyt podczas jej odtwarzania. Dowód obejmuje konto,
+sesję klucza, pacjenta, konkretną operację i aktywny dokument. Przy odtwarzaniu
+jest wiązany przed odczytem i przenoszony tylko przez własny krok wczytania;
+nie ustanawiamy go ponownie z dowolnego stanu po zakończeniu odtwarzania.
+Gotowy formularz nie musi czekać na odroczony automatyczny zapis sesji, aby
+umożliwić świadome „Zapisz dane”. Brak aktualnego dowodu
+powoduje odmowę zapisu wymagającego tych danych, a nie odczyt przypadkowego
+starszego szkicu. Widoczny formularz nadal odpowiada za swoje edycje, puste
+pola i puste listy. Dotychczasowe jawne, kompletne kolektory zachowują API.
+Nie generujemy pomiarów ani nie wykonujemy dodatkowych obliczeń w „Zapisz”.
+
+Przy normalizacji odtwarzanego zapisu lub przyjęciu nowszego stanu Klirensu
+niezmieniona treść odczytanego szkicu jest osobnym warunkiem własności.
+Przenoszone wartości pochodzą z ładunku rzeczywiście przyjętego przez importer,
+a aktualne, jawne wyczyszczenie danych Klirensu nadal ma pierwszeństwo.
+
+Na stronie głównej ten sam model własności chroni ustawienia kart DocPro,
+których kontrolek ta strona nie zawiera. Zapis sesji nie może zastąpić ich
+wartościami `null`. Regresja przechodzi przez rzeczywisty zapis trzech wybranych
+ustawień kalkulatora bisfosfonianów, nawigację i ponowny zapis; dotyczy wyborów
+kalkulatora, bez dodawania zdarzenia wykonanej terapii.
+
+Jawne wczytanie ma osobne potwierdzenie operacji. Przed oczekiwaniem na odczyt
+lub zgodę użytkownika zostaje powiązane z kontem, sesją klucza, dokumentem,
+żądaniem oraz docelowym PID. Potwierdzenie obejmuje rzeczywiście przyjęty
+ładunek i publikację tożsamości tej samej operacji. Pozwala zachować pola
+DocPro również w pierwszym zapisie po „Nowym pomiarze” i „Przywróć zapis”.
+Sama zgodna nazwa, aktualny PID ani dowolne zdarzenie wczytania nie zastępują
+tego potwierdzenia. Przejście A → B → A sprawdza różne ustawienia obu pacjentów,
+każdy udany zapis sesji po publikacji PID oraz niezmienność wcześniejszych wersji.
+
+Wywołania z historii wersji i skoku do terapii GH zachowują tę samą granicę
+operacji. Historia wersji sprawdza ją także przed trwałym przywróceniem wersji.
+Przekazywany przy nawigacji identyfikator pacjenta pozostaje lokalizatorem;
+docelowy dokument pobiera dane na nowo z bieżącego sejfu i sprawdza własną
+operację przed ich zastosowaniem. Anulowanie, zmiana konta lub nowsze żądanie
+nie pozwalają starszemu odczytowi ustanowić nowego stanu formularza.
+
+**Historie i ponowienie zdarzeń.** Powtórzenie niezmienionych wejść karty
+spożycia nie resetuje obliczonego wyniku i historii. Zapamiętana podstawa jest
+związana z sesją klucza sejfu oraz bieżącym pacjentem i wczytaniem. Przypisanie
+PID przy pierwszym własnym zapisie wymaga zweryfikowanego potwierdzenia tej
+operacji; zwykłe powiadomienie nie ustanawia nowej podstawy. Rzeczywista edycja
+zachowuje dotychczasowe unieważnienie wyniku.
+
+Brak bieżącego wzrostu lub masy nie może zastąpić pierwszego archiwalnego
+pomiaru pustymi polami. `null` nie jest liczbą zero; jawne numeryczne zero nadal
+zachowuje swój kontrakt. Późniejsze uzupełnienie wieku z DOB aktualizuje
+rzeczywisty bieżący wiersz albo tworzy go osobno; nie przejmuje wiersza archiwum
+na podstawie pozycji czy podobieństwa wartości. Podstawowa historia jest
+odtwarzana z danych zaakceptowanego wczytania przed powiadomieniem kalkulatorów,
+które mogłyby odczytać jeszcze pustą tabelę.
+
+Zdarzenia wieku wysyłane podczas przyjęcia zapisanej daty urodzenia zachowują
+historię spożycia. Istniejący blok odtwarzania `bezZnaczaniaEdycji` w module DOB
+wstrzymuje reset tej historii wyłącznie na czas własnego synchronicznego
+wywołania i przywraca poprzednią flagę również po błędzie lub zagnieżdżonym
+odtworzeniu. Ręczna edycja DOB pozostaje poza tym blokiem i nadal unieważnia
+wynik spożycia. Regresja obejmuje zapis z samym DOB, osobny pomiar archiwalny,
+zapis do sejfu, F5 oraz rzeczywistą zmianę daty przez użytkownika.
+
+Podstawowa historia zachowuje również obsługiwane metadane `uid`, `dateISO`
+oraz dodatni liczbowy `boneAgeYears`. Są związane z konkretnym wierszem DOM,
+dlatego edycja, sortowanie i usunięcie wiersza nie przenoszą ich na inny pomiar.
+Nowy wiersz nie dziedziczy metadanych po poprzednim. Regresja używa dwóch
+pomiarów o tym samym wieku, ale odrębnych identyfikatorach i datach, oraz
+rzeczywistego zapisu i ponownego uruchomienia formularza.
+
+**Zmiana zachowania synchronizacji historii:** osobno zapisane historie
+zachowują własność swoich wierszy. Edycja, dodanie lub wyczyszczenie historii
+podstawowej nie zastępuje całej historii zaawansowanej i odwrotnie. Nie
+odtwarzamy rzekomego powiązania archiwalnych wierszy z samego wieku, pozycji
+ani równych wartości. Zachowane są rzeczywiste pary nowych wierszy tworzone
+przez przyciski dodawania historii zaawansowanej i spożycia w bieżącym
+dokumencie; powiązanie wymaga tych konkretnych elementów i bieżącej wizyty.
+Obecna pusta lista różni się od sekcji nieobecnej w starszym formacie;
+dotychczasowe wyprowadzenie brakującej historii pozostaje dostępne.
+Nie dodajemy identyfikatorów do zapisanych pomiarów ani migracji rekordów.
+Opóźniony finalizator poprzedniego wczytania nie może zwolnić ochrony bieżącej
+wizyty.
+
+**Kolejność PAL i wpływ na wynik.** Przed synchronizacją PAL karty spożycia
+wykonywany jest istniejący dobór automatycznego PAL planu dla aktualnych,
+kompletnych danych. Następnie działa zwykłe obliczenie. Ręczny wybór, także
+równy wartości domyślnej, zachowuje pierwszeństwo. Przypadek syntetyczny:
+chłopiec, 123 miesiące, 141 cm, 34 kg; poprzedni pomiar 111 miesięcy, 133 cm,
+30 kg. W bazie `a0665089` szybki zapis mógł utrwalić PAL 1,4 i 1767 kcal/d,
+po czym odroczony producent bez edycji zmieniał je na PAL 1,6 i 2007 kcal/d.
+Po poprawce pierwsze obliczenie, zapis i późniejszy widok mają PAL 1,6 oraz
+2007 kcal/d i te same dwa pomiary. To korekta kolejności przygotowania wejść,
+która może zmienić przedwcześnie pokazywany lub zapisywany wynik na dotychczasowy
+wynik ustabilizowanego interfejsu. Wzory, współczynniki, normy, jednostki,
+progi i zasady doboru PAL oraz silniki SGA pozostają bez zmian.
+
+Podstawą jest istniejący `vildaUpdatePrepResolvePlanPalValue` i aktualne reguły
+opisane w ENERGY-PAL-TABELA oraz P-DIETA-STAB; ich treść pozostaje identyczna.
+Zmiana przenosi przygotowanie kontrolek przed obliczenie spożycia.
+
+Regresje wykonują rzeczywiste kontrolery i kolektory. Testy przeglądarkowe
+`patient-producer-consistency` i `automatic-pal-producer-order` używają
+fikcyjnego zaszyfrowanego sejfu, natywnego zapisu i potwierdzonej wersji;
+sprawdzają także późniejszą prawdziwą edycję oraz niezmienność innych rekordów.
+Puste pola wieku nadal podlegają P-PUSTY-WIEK z #901. Warunek blokowania płci
+z #902 obowiązuje również producenta wspólnego bufora formularza: automatyczne
+odtworzenie pustego, anonimowego formularza nie ustanawia `sexLocked` tylko
+dlatego, że selektor ma domyślną wartość. Zapisana tożsamość i jawne wczytanie
+zachowują dotychczasowy kontrakt blokady. Regresja obejmuje także drugie i trzecie
+wejście do zachowanej ramki DocPro, która odczytuje wspólny bufor.
+Miganie przycisków menu podczas nawigacji pozostaje następnym etapem.
+
 ### P-ZAPIS-POTWIERDZONY — referencja potwierdzonej treści i gotowość formularza, 2026-11-06
 
 **Problem.** Powiadomienie sejfu oraz późniejsze `patient-loaded(source:save)` ustanawiały referencję przez ponowne zebranie bieżącego formularza. Automatyczna zmiana po zatwierdzeniu wersji mogła więc otrzymać stan „Zapisano”, choć zapis zawierał inną treść. Potwierdzono to na fikcyjnym SGA: wersja zachowała obliczony wynik, a późniejszy formularz miał uzupełnione pole i unieważniony wynik. Osobny rzeczywisty Save podczas odtwarzania formularza mógł utworzyć dodatkową wersję mimo niegotowości wejść.
