@@ -51,11 +51,14 @@ for (const viewport of [{ width: 1440, height: 1000 }, { width: 390, height: 844
     await page.setViewportSize(viewport);
     let start = await emptyAccount(page, context);
     await unknownAge(start);
+    await expect(start.locator('#sex')).toBeEnabled();
     for (let round = 0; round < 3; round++) {
       const docpro = await visit(page, 'docpro', 'DocPro');
       await unknownAge(docpro);
+      await expect(docpro.locator('#sex')).toBeEnabled();
       start = await visit(page, 'start', 'Start');
       await unknownAge(start);
+      await expect(start.locator('#sex')).toBeEnabled();
       await expect(start.locator('#loadDataMessage')).toBeHidden();
       expect(await start.evaluate(() => sessionStorage.getItem('vildaCurrentPatientId'))).toBeNull();
       expect(await start.evaluate(() => window.VildaSaveStatusIndicator.getCurrentDecision().state)).toBe('hidden');
@@ -64,10 +67,42 @@ for (const viewport of [{ width: 1440, height: 1000 }, { width: 390, height: 844
     start = await shellFrame(page, 'Start');
     await ready(start);
     await unknownAge(start);
+    await expect(start.locator('#sex')).toBeEnabled();
     await expect(start.locator('#loadDataMessage')).toBeHidden();
     expect(await start.evaluate(() => window.VildaVault.listPatients())).toEqual([]);
   });
 }
+
+test('płeć pozostaje edytowalna w nienazwanym roboczym pomiarze po nawigacji i F5', async ({ page, context }) => {
+  let start = await emptyAccount(page, context);
+  for (const [id, value] of Object.entries({ age: '12', ageMonths: '3', height: '150', weight: '40' })) {
+    await start.locator(`#${id}`).fill(value);
+  }
+  await start.locator('#sex').selectOption('F');
+  for (let round = 0; round < 2; round++) {
+    const docpro = await visit(page, 'docpro', 'DocPro');
+    await expect(docpro.locator('#sex')).toBeEnabled();
+    await expect(docpro.locator('#sex')).toHaveValue('F');
+    start = await visit(page, 'start', 'Start');
+    await expect(start.locator('#sex')).toBeEnabled();
+    await expect(start.locator('#sex')).toHaveValue('F');
+    for (const [id, value] of Object.entries({ age: '12', ageMonths: '3', height: '150', weight: '40' })) {
+      await expect(start.locator(`#${id}`)).toHaveValue(value);
+    }
+  }
+  await page.reload({ waitUntil: 'load' });
+  start = await shellFrame(page, 'Start');
+  await ready(start);
+  await expect(start.locator('#sex')).toBeEnabled();
+  await expect(start.locator('#sex')).toHaveValue('F');
+  await start.locator('#sex').selectOption('M');
+  await expect(start.locator('#sex')).toHaveValue('M');
+  for (const [id, value] of Object.entries({ age: '12', ageMonths: '3', height: '150', weight: '40' })) {
+    await expect(start.locator(`#${id}`)).toHaveValue(value);
+  }
+  expect(await start.evaluate(() => sessionStorage.getItem('vildaCurrentPatientId'))).toBeNull();
+  expect(await start.evaluate(() => window.VildaVault.listPatients())).toEqual([]);
+});
 
 test('samo nazwisko zachowuje nieznany wiek po przejściu przez DocPro', async ({ page, context }) => {
   let start = await emptyAccount(page, context);
@@ -97,6 +132,7 @@ test('jawny wiek noworodka 0 lat i 0 miesięcy pozostaje po zapisie, przejściac
     await expect(docpro.locator('#age')).toHaveValue('0');
     await expect(docpro.locator('#ageMonths')).toHaveValue('0');
     start = await visit(page, 'start', 'Start');
+    await expect(start.locator('#sex')).toBeDisabled();
     await expect(start.locator('#age')).toHaveValue('0');
     await expect(start.locator('#ageMonths')).toHaveValue('0');
     await expect(start.locator('#ageWeeksRow')).toBeVisible();
@@ -104,6 +140,7 @@ test('jawny wiek noworodka 0 lat i 0 miesięcy pozostaje po zapisie, przejściac
   await page.reload({ waitUntil: 'load' });
   start = await shellFrame(page, 'Start');
   await ready(start);
+  await expect(start.locator('#sex')).toBeDisabled();
   await expect(start.locator('#age')).toHaveValue('0');
   await expect(start.locator('#ageMonths')).toHaveValue('0');
   await expect(start.locator('#height')).toHaveValue('50');
