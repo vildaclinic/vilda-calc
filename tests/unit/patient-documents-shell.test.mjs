@@ -6,6 +6,7 @@ const shell = fs.readFileSync(new URL('../../vilda_shell.js', import.meta.url), 
 const chrome = fs.readFileSync(new URL('../../vilda_chrome.js', import.meta.url), 'utf8');
 const shellBlock = shell.slice(shell.indexOf('/* P-DOKUMENTY-PACJENTA:'), shell.indexOf('function ft(){'));
 const chromeBlock = chrome.slice(chrome.indexOf('/* P-DOKUMENTY-PACJENTA:'), chrome.indexOf('function Bt(){'));
+const presentationBlock = chrome.slice(chrome.indexOf('function Cm_navigationPresentation('), chrome.indexOf('function Ch_refreshSaveState('));
 const drawerBlock = chrome.slice(chrome.indexOf('function et('), chrome.indexOf('function tt('));
 const docsId = 'patientDocumentsBtnSidebar';
 
@@ -152,9 +153,10 @@ describe('Dokumenty pacjenta: menu standalone i przekazanie z szuflady', () => {
   it('korzysta ze stanu modułu, otwiera z właściwym openerem i nie dubluje mostu powłoki', () => {
     const h = environment(), drawer = {};
     h.doc.querySelector = () => drawer;
+    h.doc.querySelectorAll = () => Object.values(h.buttons);
     const syncDrawer = vi.fn();
     const ctx = vm.createContext({ r: { VildaPatientDocuments: h.start.api }, o: h.doc, ge: () => 'index.html', Qdm: syncDrawer, F: h.tip, Promise });
-    vm.runInContext(chromeBlock, ctx); ctx.Cm_documentsBind();
+    vm.runInContext(presentationBlock + chromeBlock, ctx); ctx.Cm_documentsBind();
     h.buttons[docsId].click(); expect(h.start.api.open).toHaveBeenCalledWith({ opener: h.buttons[docsId] });
     h.start.api.getState.mockReturnValue({ disabled: true, reason: 'Brak pomiaru' });
     h.doc.dispatchEvent({ type: 'vilda:patient-documents-state' });

@@ -167,6 +167,37 @@ function clearMenuEnvironment({ live = 'dirty', clcr = false } = {}) {
   return { ...h, state, name, native, reset, menuClear, dialog, button };
 }
 
+describe('Chrome: a stable pending palette grants no action authority', () => {
+  it('retains all four projections while Save, Documents and Clear remain disabled', () => {
+    const h = clearMenuEnvironment({ live: 'saved' });
+    h.state.pending = true;
+    h.win.VildaSaveStatusIndicator.isReadyForSharedReference = () => false;
+    let presentation = { state: 'dirty', title: 'Niezapisane zmiany', save: true, documents: true, clear: true };
+    h.win.VildaShell = { getSidebarPresentation: () => presentation };
+    const save = h.main.appendChild(new h.Element('a')); save.setAttribute('id', 'saveDataBtnSidebar'); save.setAttribute('aria-disabled', 'true');
+    const documents = h.main.appendChild(new h.Element('a')); documents.setAttribute('id', 'patientDocumentsBtnSidebar'); documents.setAttribute('aria-disabled', 'true');
+    const status = h.main.appendChild(new h.Element('button')); status.setAttribute('data-menu-save-status', '');
+    const label = status.appendChild(new h.Element('span')); label.setAttribute('data-menu-save-label', '');
+    h.api.bindMenu(h.main);
+    expect(status.getAttribute('data-save-state')).toBe('dirty');
+    expect(label.textContent).toBe('Niezapisane zmiany');
+    for (const action of [save, documents, h.menuClear]) {
+      expect(action.getAttribute('aria-disabled')).toBe('true');
+      expect(action.getAttribute('data-menu-preparing')).toBe('true');
+      expect(action.getAttribute('data-menu-was-enabled')).toBe('true');
+    }
+    expect(h.menuClear.disabled).toBe(true);
+    expect(h.menuClear.getAttribute('aria-busy')).toBe('true');
+    expect(h.menuClear.getAttribute('title')).toBe('Trwa wczytywanie formularza…');
+    expect(h.api.clearCurrent(h.menuClear)).toBe(false);
+    expect(h.reset).not.toHaveBeenCalled();
+    presentation = null;
+    h.api.bindMenu(h.main);
+    for (const action of [save, documents, h.menuClear]) expect(action.hasAttribute('data-menu-preparing')).toBe(false);
+    expect(status.getAttribute('data-save-state')).toBe('hidden');
+  });
+});
+
 describe('Chrome: Wyczyść działa przez istniejący formularz i rzeczywisty unsaved guard', () => {
   it.each(['saved', 'hidden'])('nie tworzy zmian ani dodatkowego dialogu dla bieżącego stanu %s', live => {
     const h = clearMenuEnvironment({ live }); h.menuClear.click();
