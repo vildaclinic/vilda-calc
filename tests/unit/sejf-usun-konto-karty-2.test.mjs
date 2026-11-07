@@ -17,7 +17,9 @@
 //   - Moduł dziennika trzyma jedno połączenie na dokument, zamykane przy versionchange, close i blokadzie sejfu; bazę
 //     dziennika zakłada tylko logowanie (niezależnie od tego, co strona czyta z dziennika przy logowaniu); bez bazy
 //     dziennik jest pusty („✓ spójny (0)”); po usunięciu konta nie ma bazy jego dziennika także wtedy, gdy logowanie
-//     w innej karcie zbiegło się z usunięciem.
+//     w innej karcie zbiegło się z usunięciem. Pustą bazę założoną przy logowaniu, którego sesja skończyła się w trakcie
+//     zakładania, moduł kasuje tylko wtedy, gdy konta nie ma już na liście kont tej karty (dziennik innej karty
+//     zalogowanej na to konto działa dalej).
 //   - „Usuń konto” usuwa też ustawienia kopii zapasowej tego konta (folder, auto-kopia, ostatnia kopia), także gdy inna
 //     karta właśnie je zapisuje; ustawienia innych kont bez zmian; kasowanie tych wpisów trwa najwyżej 2 s.
 //   - Karta odświeżona albo odtworzona (przeładowanie, pamięć przeglądarki, wznowienie) po usunięciu konta w innej karcie:
@@ -44,7 +46,8 @@
 // PRZYPADKI (UK21–UK50)
 //   UK21 (1)(2)  dziennik usuwany razem z kontem: jedna karta, dwie karty.
 //   UK22, UK23 (a)–(d)  jedno połączenie dziennika na dokument; blokada, versionchange, close, ponowne zalogowanie.
-//   UK24, UK24b, UK24c, UK24d  bazę dziennika zakłada tylko logowanie; logowanie w innej karcie w trakcie usuwania.
+//   UK24, UK24b, UK24c, UK24d (z wariantem)  bazę dziennika zakłada tylko logowanie; logowanie w innej karcie
+//                w trakcie usuwania; wylogowanie w trakcie zakładania, gdy inna karta loguje to samo konto.
 //   UK25, UK26 (a)–(c)  karta ze starszą wersją trzyma dziennik; znacznik ponowienia przy logowaniu.
 //   UK27 (1)(2), UK28  kolejność kasowania dziennika; tryb „Zaloguj jednorazowo”.
 //   UK29 (a)–(e)  ustawienia kopii konta.
@@ -56,9 +59,10 @@
 //   UK49 (a)–(j)  przerwane usuwanie kończy się przy liście kont.
 //   UK50  zapis sesji innego konta przy „Usuń konto”.
 //   UK16 w sejf-usun-konto-karty.test.mjs bez zmian.
-// Na kodzie sprzed tej zmiany (E2-PR3a1b) czerwonych jest 61 z 92 przypadków — wszystkie poza strażnikami UK23 (c),
-// UK24b, UK26 (c), UK27 (1), UK28, UK29 (b) (oba warianty), UK31b (wariant), UK32 (a) (trzy warianty) i (b)–(e),
-// UK33 (4), UK34, UK36 (wariant) (trzy warianty), UK39 (a)–(c), UK49 (b)–(e), (h), (j) i UK50 (wariant) (oba warianty):
+// Na kodzie sprzed tej zmiany (E2-PR3a1b) czerwonych jest 61 z 93 przypadków — wszystkie poza strażnikami UK23 (c),
+// UK24b, UK24d (wariant), UK26 (c), UK27 (1), UK28, UK29 (b) (oba warianty), UK31b (wariant), UK32 (a) (trzy
+// warianty) i (b)–(e), UK33 (4), UK34, UK36 (wariant) (trzy warianty), UK39 (a)–(c), UK49 (b)–(e), (h), (j)
+// i UK50 (wariant) (oba warianty):
 // brak nowego zachowania („nie doczekano: …” albo inny wynik) albo brak funkcji (TypeError, brak wycinka
 // w vilda_auth_ui.js).
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -420,6 +424,38 @@ describe('dziennik dostępu konta przy „Usuń konto”', () => {
     expect(rodzaje(o, z, DZIENNIK(X)).filter((r) => ['success', 'close', 'deleteDatabase', 'delete-success', 'tx'].includes(r)), 'zdarzenia bazy dziennika od zwolnienia')
       .toEqual(['success', 'close', 'deleteDatabase', 'delete-success']);
     expect(bazy(o), 'po usunięciu konta bazy dziennika nie ma').not.toContain(DZIENNIK(X));
+  }, 30_000);
+
+  it('UK24d (wariant): bazy dziennika nie ma; karta B zakłada ją przy logowaniu X (wstrzymane na zatwierdzaniu), w tym czasie karta C loguje X, a B się wylogowuje — konto jest na liście kont, więc baza dziennika X jest, a karta C zapisuje w niej zdarzenia', async () => {
+    const o = await nowe({ skrypty: SKRYPTY_DZIENNIKA });
+    const X = o.A.userId;
+    const o2 = await drugie(o, { zaloguj: null });
+    await o.cisza();
+    await kasujBaze(o.idb, DZIENNIK(X));
+    o.zablokuj('manual');
+    await o.spokoj();
+    await o.cisza();
+    const h = wstrzymaj(o, { przy: 'commit', baza: DZIENNIK(X), tryb: 'versionchange' });
+    const p = o2.przelaczWTle('A');
+    await doczekaj(p.sesja, 'logowanie X w karcie B');
+    await doczekaj(h.czeka, 'zatwierdzanie zakładania bazy dziennika w karcie B');
+    const pc = o.przelaczWTle('A');
+    await doczekaj(pc.sesja, 'logowanie X w karcie C');
+    await o.spokoj();
+    o2.zablokuj('manual');
+    await o2.spokoj();
+    const z = log(o).length;
+    h.zwolnij();
+    await czekajNa(() => rodzaje(o, z, DZIENNIK(X)).includes('success'), 'koniec zakładania bazy dziennika w karcie B');
+    await o2.cisza();
+    await o.cisza();
+    await o.win.VildaAuditLog.log('patient.view', { patientId: 'fikcyjny-pacjent-1' });
+    await o.cisza();
+    await o2.cisza();
+    const wpisyC = (await o.win.VildaAuditLog.list()).map((x) => x.action);
+    expect({ kasowanie: rodzaje(o, z, DZIENNIK(X)).includes('deleteDatabase'), bazaJest: bazy(o).includes(DZIENNIK(X)) }, 'baza dziennika konta, które jest na liście kont')
+      .toEqual({ kasowanie: false, bazaJest: true });
+    expect({ odblokowanaC: o.v.isUnlocked(), wpisyC }, 'karta C zalogowana na X zapisuje zdarzenia w dzienniku').toEqual({ odblokowanaC: true, wpisyC: ['patient.view', 'unlock'] });
   }, 30_000);
 
   it('UK25: połączenie z bazą dziennika bez obsługi versionchange (karta ze starszą wersją aplikacji) — „Usuń konto” kończy bez czekania na dziennik; kasowanie dziennika czeka (blocked) ze znacznikiem ponowienia "1"; po zamknięciu połączenia baza znika, znacznik zdjęty', async () => {

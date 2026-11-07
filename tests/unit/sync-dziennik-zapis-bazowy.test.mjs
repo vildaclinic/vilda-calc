@@ -1,13 +1,16 @@
-// P-DZIENNIK-ZDARZEN (E2-PR2b, E2-PR3a1) — zapis bazowy „bramka wyłączona” (U3).
+// P-DZIENNIK-ZDARZEN (E2-PR2b, E2-PR3a1, E2-PR3a1c) — zapis bazowy „bramka wyłączona” (U3).
 //
 // Ten sam deterministyczny scenariusz sejfu w czterech wariantach okna daje dokładnie te ślady, które zapisano
-// w tests/fixtures/dziennik-zapis-bazowy.json. Fiksturę nagrano na sejfie z magazynem kolejki i kasowaniem kolejki przy
-// usuwaniu konta; pola opis i bazaVault (sha256 sejfu) pochodzą z pierwszego nagrania, na sejfie bez magazynu kolejki.
-// Wobec pierwszego nagrania różni się wyłącznie usuwanie konta poza trybem „Zaloguj jednorazowo”: jedno dodatkowe
-// wywołanie listy baz (sprawdzenie bazy kolejki), czyli „databases ×2” w krokach „usunięcie konta z kopii” i „usunięcie
-// konta” wariantów Ze, prywatny i chmura (6 komórek). Zadaniem testu jest przenieść dowód „bramka wyłączona” przez
-// E2-PR3a: wolno zmienić wyłącznie liczbę odczytów bramki (o liczbę emisji) i ślady kroków „usunięcie konta…” o kroki
-// kasowania kolejki (plan, wiersz E2-PR3a; od E2-PR3a1 — jak wyżej) — nic więcej.
+// w tests/fixtures/dziennik-zapis-bazowy.json. Fiksturę nagrano na sejfie z magazynem kolejki, który przy usuwaniu
+// konta kasuje kolejkę, dziennik dostępu i ustawienia kopii zapasowej konta; pola opis i bazaVault (sha256 sejfu)
+// pochodzą z pierwszego nagrania, na sejfie bez magazynu kolejki. Wobec pierwszego nagrania różni się wyłącznie
+// usuwanie konta poza trybem „Zaloguj jednorazowo”: dwa dodatkowe wywołania listy baz — od E2-PR3a1 sprawdzenie bazy
+// kolejki, od E2-PR3a1c sprawdzenie bazy dziennika dostępu konta i bazy ustawień eksportu (jedno wywołanie) — czyli
+// „databases ×3” w krokach „usunięcie konta z kopii” i „usunięcie konta” wariantów Ze, prywatny i chmura (6 komórek;
+// nagranie E2-PR3a1c zmieniło w nich tylko „databases ×2” na „databases ×3”). Zadaniem testu jest przenieść dowód
+// „bramka wyłączona” przez E2-PR3a: wolno zmienić wyłącznie liczbę odczytów bramki (o liczbę emisji) i ślady kroków
+// „usunięcie konta…” o kroki kasowania kolejki (plan, wiersz E2-PR3a; od E2-PR3a1 i E2-PR3a1c — jak wyżej) — nic
+// więcej.
 //
 // WARIANTY (każde okno ma atrapę IndexedDB z tests/support/atrapa-indexeddb.mjs i moduły punktu odzyskiwania)
 //   Ze           sejf na adapterze w pamięci z rejestrem wywołań (magazynZRejestrem);
@@ -44,9 +47,10 @@
 // gdy w którymkolwiek wariancie pole bramki było czytane, powstała baza vilda_sync_* albo klucz o przedrostku
 // vilda-sync-device-v1. Pierwsze nagranie (E2-PR2b1) zrobiono na sejfie bazy bez magazynu kolejki (sejf z uśpionym
 // magazynem daje te same ślady); ponowne (E2-PR3a1) — na sejfie z magazynem kolejki i kasowaniem kolejki przy usuwaniu
-// konta, z polami opis i bazaVault przeniesionymi z pierwszego nagrania (tryb nagrania zapisuje je od nowa). PR, który
-// zmienia ślad sejfu w krokach scenariusza, nagrywa fiksturę ponownie i wymienia w opisie zmienione kroki. Dane
-// wyłącznie fikcyjne.
+// konta, z polami opis i bazaVault przeniesionymi z pierwszego nagrania (tryb nagrania zapisuje je od nowa); kolejne
+// (E2-PR3a1c) — na sejfie, który przy usuwaniu konta kasuje też dziennik dostępu i ustawienia kopii konta, z tymi
+// samymi przeniesionymi polami opis i bazaVault. PR, który zmienia ślad sejfu w krokach scenariusza, nagrywa fiksturę
+// ponownie i wymienia w opisie zmienione kroki. Dane wyłącznie fikcyjne.
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { createHash } from 'node:crypto';
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
