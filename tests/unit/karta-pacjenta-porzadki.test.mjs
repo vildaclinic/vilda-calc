@@ -89,7 +89,8 @@ describe('drobne', () => {
     // a niezależną notatkę wskazuje wyłącznie w bieżącej karcie i sesji.
     expect(kod, 'Historia przekazuje dokładny identyfikator do wspólnej nawigacji')
       .toContain('se(a,r,o,{activeTab:"notes",focusNoteId:f.noteId})');
-    expect(kod).toContain('CareModule.resolveNoteDestination(GdNotatki,CareFocused,t)');
+    expect(kod).toContain('CareModule.resolveNoteDestination(GdNotatki,CareFocused,t,{plans:CareFocusPlans})');
+    expect(kod).toContain('CareFocusPlans=await o.listCarePlans({patientId:t})');
     expect(kod).toContain('CareFocusNote(CareFocusId,Eo,CareReadOwner)');
     expect(kod).toContain('if(!card.isConnected||!remReadCurrent(owner))return');
     expect(kod).toContain('else Gd5(f.title||"Wpis",f.description||"")');

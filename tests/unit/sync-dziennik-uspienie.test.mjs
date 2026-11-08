@@ -457,7 +457,8 @@ describe('U2(a): identyfikatory Bev_ i Bob_ tylko w bloku; _eventLog dokładnie 
     for (const nazwy of Object.values(MIEJSCA_POZA_BLOKIEM)) for (const [n, k] of Object.entries(nazwy)) oczekiwane[n] = (oczekiwane[n] || 0) + k;
     expect(policz(ids), 'Bev_/Bob_/Bem_ poza blokiem (nazwa → liczba)').toEqual(oczekiwane);
     expect(ile(poza, '_eventLog:Bev_EKSPORT')).toBe(1);
-    expect(ile(ZRODLO, 'STORAGE_MODE_CLOUD_ONLY:Se,_eventLog:Bev_EKSPORT};v.VildaVault=$s'), 'klucz na końcu eksportu').toBe(1);
+    expect(ile(ZRODLO, 'STORAGE_MODE_CLOUD_ONLY:Se,_eventLog:Bev_EKSPORT};'), 'klucz na końcu eksportu').toBe(1);
+    expect(Object.keys(eksport).sort()).toEqual([...KLUCZE_EKSPORTU].sort());
   });
 
   it('U2(a): wywołania z literału miejsc poza blokiem — funkcja otaczająca, liczba i forma (drzewo składni; bez użycia wyniku poza wyjątkami form), kolejność w xa i He', () => {

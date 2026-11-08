@@ -159,7 +159,7 @@ describe('Dokumenty pacjenta: menu standalone i przekazanie z szuflady', () => {
     h.doc.querySelectorAll = () => Object.values(h.buttons);
     const syncDrawer = vi.fn();
     const ctx = vm.createContext({ r: { VildaPatientDocuments: h.start.api }, o: h.doc, ge: () => 'index.html',
-      Ch_startupChecked: false, Ch_startupView: null, Qdm: syncDrawer, F: h.tip, Promise });
+      Ch_startupChecked: false, Ch_startupView: null, Qdm: syncDrawer, Ch_refreshSaveState: vi.fn(), F: h.tip, Promise });
     vm.runInContext(patientIdBlock + presentationBlock + chromeBlock, ctx); ctx.Cm_documentsBind();
     h.buttons[docsId].click(); expect(h.start.api.open).toHaveBeenCalledWith({ opener: h.buttons[docsId] });
     h.start.api.getState.mockReturnValue({ disabled: true, reason: 'Brak pomiaru' });

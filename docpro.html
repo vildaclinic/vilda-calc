@@ -136,7 +136,7 @@
 <link href="style.css?v=96" rel="stylesheet" />
 <link href="ios26-v2.css?v=26" rel="stylesheet" />
 <link href="sidebar.css" rel="stylesheet" />
-<link href="vilda_chrome.css?v=58" rel="stylesheet">
+<link href="vilda_chrome.css?v=59" rel="stylesheet">
 <link href="vilda_auth_ui.css?v=82" rel="stylesheet" />
 <link href="vilda_patient_sga_ui.css?v=1" rel="stylesheet">
 <link href="vilda_patients_list.css?v=3" rel="stylesheet">
@@ -184,7 +184,7 @@
 <script defer src="vilda_persistence_adapter.js?v=34"></script>
 <script src="vilda_reminders_privacy.js?v=1"></script>
 <script defer src="vilda_panel_pacjent.js?v=5"></script>
-<script defer src="vilda_session_bridge.js?v=178"></script>
+<script defer src="vilda_session_bridge.js?v=179"></script>
 <script defer src="vilda_init.js?v=4"></script>
 <script defer src="vilda_crypto.js?v=15"></script>
 <script defer src="vilda_retention.js?v=1"></script>
@@ -200,17 +200,17 @@
 <script defer src="vilda_lab_result_presentation.js?v=5"></script>
 <script defer src="vilda_lab_result_chart.js?v=2"></script>
 <script defer src="vilda_lab_history_tab.js?v=32"></script>
-<script defer src="vilda_care_plan_model.js?v=1"></script>
+<script defer src="vilda_care_plan_model.js?v=2"></script>
 <script defer src="vilda_clinical_crypto.js?v=2"></script>
 <script defer src="vilda_patient_checkpoint_store.js?v=1"></script>
 <script defer src="vilda_patient_checkpoint.js?v=1"></script>
 <script defer src="vilda_vault_protocol.js?v=1"></script>
 <script defer src="vilda_patient_identity_protocol.js?v=1"></script>
 <script defer src="vilda_patient_identity_transport.js?v=1"></script>
-<script defer src="vilda_vault.js?v=257"></script>
+<script defer src="vilda_vault.js?v=258"></script>
 <script defer src="vilda_frame_sync.js?v=3"></script>
-<script defer src="vilda_sync.js?v=48"></script>
-<script defer src="vilda_sync_integration.js?v=56"></script>
+<script defer src="vilda_sync.js?v=49"></script>
+<script defer src="vilda_sync_integration.js?v=57"></script>
 <script defer src="vilda_realtime.js?v=9"></script>
 <script defer src="vilda_nowe_urzadzenie.js?v=2"></script>
 <script defer src="qrcode.min.js?v=1"></script>
@@ -235,15 +235,15 @@
 <script defer src="vilda_postepy_doroslego_ui.js?v=8"></script>
 <script defer src="vilda_postepy_doroslego_wydruk.js?v=6"></script>
 <script defer src="vilda_werdykt.js?v=7"></script>
-<link rel="stylesheet" href="vilda_care_plans.css?v=11">
-<script defer src="vilda_care_plans.js?v=12"></script>
+<link rel="stylesheet" href="vilda_care_plans.css?v=12">
+<script defer src="vilda_care_plans.js?v=13"></script>
 <link rel="stylesheet" href="vilda_reminders.css?v=9" data-reminders-b22="true">
 <link rel="stylesheet" href="vilda_global_search.css?v=2">
-<script defer src="vilda_global_search.js?v=4"></script>
+<script defer src="vilda_global_search.js?v=5"></script>
 <script defer src="vilda_global_search_view.js?v=6"></script>
 <script defer src="vilda_search_navigation.js?v=1"></script>
 <script defer src="vilda_patients_list.js?v=4"></script>
-<script defer src="vilda_auth_ui.js?v=551"></script>
+<script defer src="vilda_auth_ui.js?v=552"></script>
 <script defer src="vilda_urodzeniowe_rozbieznosc.js?v=1"></script>
 <script defer src="vilda_name_fix.js?v=6"></script>
 <script defer src="vilda_version_history_ui.js?v=16"></script>
@@ -253,7 +253,7 @@
 <script defer src="vilda_crypto_strength_explainer.js?v=6"></script>
 <script defer src="vilda_pro_access.js?v=11"></script>
 <script defer src="vilda_pro_ui.js?v=3"></script>
-<script defer src="vilda_file_export.js?v=9"></script>
+<script defer src="vilda_file_export.js?v=10"></script>
 <script defer src="vilda_deps.js?v=98"></script>
 <script defer src="vilda_update_hooks.js?v=7"></script>
 <script defer src="vilda_centile_chart_header.js?v=1"></script>
@@ -412,7 +412,7 @@
            user data fields into two columns on larger screens and hide the
            standard results section that is not relevant to the professional
            module. -->
-<script defer src="vilda_chrome.js?v=261"></script>
+<script defer src="vilda_chrome.js?v=262"></script>
 <link href="vilda_lab_assessment_ui.css?v=13" rel="stylesheet">
 <link href="vilda_lab_history_tab.css?v=7" rel="stylesheet">
   <link rel="stylesheet" href="vilda_centile_live_panel.css?v=7">
@@ -541,9 +541,9 @@
            (P-PANEL-ZWINIETY, decyzja właściciela 2026-09-16: formularz główny identyczny). -->
       <div class="vild-age-row">
         <label class="vild-age-years">Wiek (lata):
-          <input type="number" id="age" min="0" max="130" oninput="debouncedUpdate()" required></label>
+          <input type="number" id="age" min="0" max="130" oninput="if (typeof debouncedUpdate === 'function') debouncedUpdate()" required></label>
         <label>Wiek (miesiące):
-          <input type="number" id="ageMonths" min="0" max="11" step="1" oninput="debouncedUpdate()"></label>
+          <input type="number" id="ageMonths" min="0" max="11" step="1" oninput="if (typeof debouncedUpdate === 'function') debouncedUpdate()"></label>
       </div>
       <!-- DOB-AGE-2 (decyzja właściciela 2026-09-13): wiek w ukończonych tygodniach.
            Wiersz pokazuje się TYLKO poniżej 3. miesiąca życia, bo wyżej miesiąc jest
@@ -558,7 +558,7 @@
         <div id="ageWeeksError" class="vild-dob-error" role="alert" hidden></div>
       </div>
       <label>Płeć:
-        <select id="sex" onchange="debouncedUpdate()">
+        <select id="sex" onchange="if (typeof debouncedUpdate === 'function') debouncedUpdate()">
           <option value="M">Mężczyzna</option>
           <option value="F">Kobieta</option>
         </select></label>
@@ -596,7 +596,7 @@
            dotąd robiła to w karcie zaawansowanej (updateAdvancedGrowthSexSpecificFields). -->
       <div id="testicularVolumeWrap">
         <label>Objętość jąder <span style="font-weight:400;opacity:0.65;">(chłopcy; pomiar dodatkowy, nie zastępuje oceny G)</span>:
-          <select id="advTesticularVolume" onchange="debouncedUpdate()">
+          <select id="advTesticularVolume" onchange="if (typeof debouncedUpdate === 'function') debouncedUpdate()">
             <option value="">Wybierz</option>
             <option value="lt4">&lt;4 ml</option>
             <option value="4to6">4–6 ml</option>
@@ -606,25 +606,25 @@
       </div>
       <div id="pubertyExtraWrap">
         <label>Wiek startu pokwitania (lata) <span style="font-weight:400;opacity:0.65;">(według wywiadu i badania)</span>:
-          <input type="number" id="pubertyOnsetAge" min="2" max="20" step="0.1" inputmode="decimal" oninput="debouncedUpdate()"></label>
+          <input type="number" id="pubertyOnsetAge" min="2" max="20" step="0.1" inputmode="decimal" oninput="if (typeof debouncedUpdate === 'function') debouncedUpdate()"></label>
         <label>Wiek menarche (lata) <span style="font-weight:400;opacity:0.65;">(dziewczęta)</span>:
-          <input type="number" id="pubertyMenarcheAge" min="2" max="20" step="0.1" inputmode="decimal" oninput="debouncedUpdate()"></label>
+          <input type="number" id="pubertyMenarcheAge" min="2" max="20" step="0.1" inputmode="decimal" oninput="if (typeof debouncedUpdate === 'function') debouncedUpdate()"></label>
         <!-- GROWTH-PRED-TW2B: wzrost w chwili pierwszej miesiączki — fakt trwały (sekcja `puberty`
              rekordu, pole heightAtMenarcheCm). Zasila pseudometodę „wzrost przy menarche / 0,955"
              w konsensusie prognozy wzrostu ostatecznego (Singleton 1975, Cho 2026). -->
         <label>Wzrost przy menarche (cm) <span style="font-weight:400;opacity:0.65;">(dziewczęta; wzrost w chwili pierwszej miesiączki — do prognozy wzrostu ostatecznego)</span>:
-          <input type="number" id="pubertyMenarcheHeight" min="80" max="200" step="0.1" inputmode="decimal" oninput="debouncedUpdate()"></label>
+          <input type="number" id="pubertyMenarcheHeight" min="80" max="200" step="0.1" inputmode="decimal" oninput="if (typeof debouncedUpdate === 'function') debouncedUpdate()"></label>
         <!-- GROWTH-PRED-TW2C: wiek kostny (GP) z RTG wykonanego przy menarche — fakt trwały (sekcja `puberty`,
              pole boneAgeAtMenarcheYears). Korekta Cho 2026 w pseudometodzie „wzrost przy menarche / 0,955":
              +3,1 cm na rok wieku kostnego poniżej 13 lat; bez pola korekta tylko z bieżącego RTG przy
              menarche ≤ 12 mies. temu. -->
         <label>Wiek kostny przy menarche (lata) <span style="font-weight:400;opacity:0.65;">(dziewczęta; z RTG wykonanego w okolicy pierwszej miesiączki — korekta prognozy wzrostu ostatecznego)</span>:
-          <input type="number" id="pubertyMenarcheBoneAge" min="2" max="20" step="0.1" inputmode="decimal" oninput="debouncedUpdate()"></label>
+          <input type="number" id="pubertyMenarcheBoneAge" min="2" max="20" step="0.1" inputmode="decimal" oninput="if (typeof debouncedUpdate === 'function') debouncedUpdate()"></label>
         <!-- GROWTH-PRED-PUB1: leczenie GnRHa — fakt trwały (sekcja `puberty`: gnrhaStatus, gnrhaStartAgeYears,
              gnrhaStopAgeYears). W trakcie leczenia tempo pokwitania nie jest oceniane, a prognoza rezydualnego
              wzrostu jest nierzetelna (Lazar 2007). -->
         <label>Leczenie analogiem GnRH <span style="font-weight:400;opacity:0.65;">(hamowanie pokwitania)</span>:
-          <select id="pubertyGnrhaStatus" onchange="debouncedUpdate()">
+          <select id="pubertyGnrhaStatus" onchange="if (typeof debouncedUpdate === 'function') debouncedUpdate()">
             <option value="">— nie pytano —</option>
             <option value="brak">nie leczono</option>
             <option value="w-trakcie">w trakcie leczenia</option>
@@ -632,12 +632,12 @@
           </select></label>
         <div id="pubertyGnrhaAgesWrap" style="display:none;">
           <label>Wiek rozpoczęcia GnRHa (lata):
-            <input type="number" id="pubertyGnrhaStartAge" min="2" max="20" step="0.1" inputmode="decimal" oninput="debouncedUpdate()"></label>
+            <input type="number" id="pubertyGnrhaStartAge" min="2" max="20" step="0.1" inputmode="decimal" oninput="if (typeof debouncedUpdate === 'function') debouncedUpdate()"></label>
           <label>Wiek zakończenia GnRHa (lata) <span style="font-weight:400;opacity:0.65;">(gdy zakończone)</span>:
-            <input type="number" id="pubertyGnrhaStopAge" min="2" max="20" step="0.1" inputmode="decimal" oninput="debouncedUpdate()"></label>
+            <input type="number" id="pubertyGnrhaStopAge" min="2" max="20" step="0.1" inputmode="decimal" oninput="if (typeof debouncedUpdate === 'function') debouncedUpdate()"></label>
         </div>
         <label>Czy uważasz tego pacjenta za KOWD? <span style="font-weight:400;opacity:0.65;">(konstytucjonalne opóźnienie wzrastania i dojrzewania)</span>:
-          <select id="pubertyCdgp" onchange="debouncedUpdate()">
+          <select id="pubertyCdgp" onchange="if (typeof debouncedUpdate === 'function') debouncedUpdate()">
             <option value="">— nie pytano —</option>
             <option value="tak">tak</option>
             <option value="nie">nie</option>
@@ -650,10 +650,10 @@
       <script defer src="inline_index_02.js?v=14"></script>
       <label>Waga (kg):
         <!-- Dostosowujemy zakres do niemowląt: mniejsza waga i możliwość wpisywania wartości z dokładnością do 0.1 kg -->
-        <input type="number" id="weight" min="2" max="300" step="0.1" oninput="debouncedUpdate()" required></label>
+        <input type="number" id="weight" min="2" max="300" step="0.1" oninput="if (typeof debouncedUpdate === 'function') debouncedUpdate()" required></label>
       <label>Wzrost (cm):
         <!-- Dostosowujemy zakres do niemowląt: niższy wzrost i możliwość wpisywania wartości z dokładnością do 0.1 cm -->
-        <input type="number" id="height" min="45" max="250" step="0.1" oninput="debouncedUpdate()" required></label>
+        <input type="number" id="height" min="45" max="250" step="0.1" oninput="if (typeof debouncedUpdate === 'function') debouncedUpdate()" required></label>
         <!-- Komunikat informujący o wczytaniu danych. Jest domyślnie ukryty, a pojawia się dopiero po
              prawidłowym wczytaniu pliku JSON. Umieszczamy go tuż pod polem wzrostu,
              zgodnie z wymaganiami użytkownika, aby znajdował się pomiędzy polem wzrost
@@ -2848,10 +2848,10 @@
         Sugerujemy ocenę <strong>WHR</strong>, aby sprawdzić rozmieszczenie tkanki tłuszczowej.</div>
       <div class="flex" style="gap:0.75rem;margin-top:0.5rem;">
         <label style="flex:1 1 160px;">Obwód talii (cm):
-          <input type="number" id="waistCm" min="30" max="200" step="0.1" oninput="debouncedUpdate()">
+          <input type="number" id="waistCm" min="30" max="200" step="0.1" oninput="if (typeof debouncedUpdate === 'function') debouncedUpdate()">
         </label>
         <label style="flex:1 1 160px;">Obwód bioder (cm):
-          <input type="number" id="hipCm" min="30" max="200" step="0.1" oninput="debouncedUpdate()">
+          <input type="number" id="hipCm" min="30" max="200" step="0.1" oninput="if (typeof debouncedUpdate === 'function') debouncedUpdate()">
         </label>
       </div>
     
@@ -3027,7 +3027,7 @@
 <script defer src="vilda_persist_runtime.js?v=27"></script>
 <script defer src="vilda_schowek.js?v=5"></script>
 <script defer src="vilda_raport_naglowek.js?v=10"></script>
-<script defer src="vilda_summary_cards.js?v=63"></script>
+<script defer src="vilda_summary_cards.js?v=64"></script>
 <script defer src="vilda_professional_summary_rules.js?v=1"></script>
 <script defer src="vilda_professional_summary.js?v=2"></script>
 <script defer src="vilda_ree_rownania_data.js?v=3"></script>
@@ -3036,7 +3036,7 @@
 <script defer src="vilda_estimated_intake_runtime.js?v=1"></script>
 <script defer src="vilda_estimated_intake_input_model.js?v=1"></script>
 <script defer src="vilda_estimated_intake_dom_mount.js?v=1"></script>
-<script src="app.js?v=240" defer></script>
+<script src="app.js?v=241" defer></script>
 <script src="vilda_diet_recommendations.js?v=70" defer></script>
 <script src="vilda_patient_report.js?v=50" defer></script>
 <!-- po app.js -->
@@ -3201,7 +3201,7 @@
        przełączaniu trybu wyników na wąskich ekranach.
        Plik custom-fixes.js implementuje te funkcje poprzez
        obserwację DOM i modyfikację scrollIntoView. -->
-  <script defer src="vilda_tab_guard.js?v=5"></script><script src="custom-fixes.js?v=81" defer></script>
+  <script defer src="vilda_tab_guard.js?v=5"></script><script src="custom-fixes.js?v=82" defer></script>
   <script src="docpro_state_persist.js?v=10" defer></script>
 
     <!-- Overlay for Z‑score batch conversion loading animation.  When the user starts

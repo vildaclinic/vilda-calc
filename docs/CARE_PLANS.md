@@ -85,13 +85,13 @@ Odzyskanie wymaga nienaruszonej struktury w chmurze lub na drugim urządzeniu. N
 
 ## Podstawa etapów — odczyt bez migracji
 
-`vilda_care_plan_model.js` jest czystym, wersjonowanym kodekiem i projekcją danych. Nie odczytuje zegara, DOM, magazynu ani sieci. Jest ładowany przed sejfem na stronach z kontem oraz przez oba loadery i precache. Dotychczasowy interfejs pacjenta nadal używa API i zapisu V1. Osobna [biblioteka własnych szablonów i kreator](CARE_PLAN_TEMPLATES.md) przechowuje ogólne definicje konta; nie uruchamia zapisu planów pacjenta w V2.
+`vilda_care_plan_model.js` jest czystym, wersjonowanym kodekiem i projekcją danych. Nie odczytuje zegara, DOM, magazynu ani sieci. Jest ładowany przed sejfem na stronach z kontem oraz przez oba loadery i precache. Dotychczasowe plany nadal używają zapisu V1. Osobna [biblioteka własnych szablonów i kreator](CARE_PLAN_TEMPLATES.md) przechowuje ogólne definicje konta. Sam odczyt biblioteki nie uruchamia zapisu V2; [użycie szablonu u pacjenta](CARE_TEMPLATE_APPLICATION.md) ma odrębny, chroniony zapis.
 
 Nowe API `VildaVault.getCarePlanView(planId, {todayLocalDateISO?})` odczytuje zaszyfrowany oryginał i tworzy odłączony widok. Sprawdza konto, sesję i adapter po operacjach asynchronicznych. Dzień przekazany do projekcji służy tylko etykietom przypomnień. Odczyt nie zmienia kontekstu, szyfrogramu, rewizji, historii, stanu zapisu pacjenta ani kolejki synchronizacji. Przy znacznikach usunięcia wykorzystuje istniejące reguły wyboru żywego rekordu i retencji; sam nie wykonuje odzyskania, przeniesienia ani czyszczenia danych.
 
 V1 otrzymuje wyłącznie wirtualną grupę „Dotychczasowy plan”, z kluczem widoku zamiast zapisanego identyfikatora etapu. Zachowuje oryginalne identyfikatory, równoległe kroki, bezwzględne daty i godziny, odnośniki oraz historię. Dawne `done` nie tworzy nowego faktu wykonania, otrzymania wyniku ani decyzji. Zapisane pochodzenie pozostaje widoczne jako zastane dane; brakujące pochodzenie pozostaje nieznane. Nazwy podobnych kroków nie są podstawą ich łączenia. Normalizacja i zobowiązania SHA V1 pozostają bez zmian.
 
-Uśpiony odczyt V2 rozdziela:
+Model V2 rozdziela:
 
 - sterowanie etapem `planned` / `active` / `reviewed` od faktów `performance` / `resultReceipt` / `decision`;
 - faktyczny dzień zdarzenia od technicznego czasu jego zapisania;
@@ -106,7 +106,7 @@ Każdy nowy widok jest `readOnly: true`, `provenanceVerified: false`. Walidacja 
 
 Nieobsługiwany `careContext` jest jawnie rozpoznawany. Nowy odczyt udostępnia bezpieczny widok tylko do odczytu; starsze ścieżki zapisu i transportu zgłaszają `CARE_FORMAT_UNSUPPORTED`, zamiast usuwać nieznane pola albo zwracać pozornie pustą dokumentację. Preflight sprawdza całą paczkę wejściową przed jej zapisem. Istniejący rekord jest sprawdzany podczas już potrzebnego odczytu, przed jego zmianą, usunięciem albo odnowieniem; kolejność i koszt zwykłych odczytów V1 pozostają zachowane. Operacje złożone zachowują dotychczasową wieloetapowość: po błędzie dotyczącym istniejącego rekordu wcześniejsze legalne zmiany innych rekordów mogą pozostać zapisane, a chroniony rekord pozostaje zachowany. Zatrzymany transport zachowuje kursor i pokazuje błąd przez istniejącą diagnostykę. Migracja w tle zatrzymana na takim rekordzie zachowuje jego szyfrogram, pozostawia flagę ukończenia nieustawioną i zapisuje komunikat diagnostyczny; wcześniejsze prawidłowe kroki migracji mogą być już wykonane.
 
-To zabezpieczenie rekordów nie jest jeszcze globalną blokadą starszych klientów. Przed aktywacją V2 konieczny jest osobno sprawdzony most zgodności: ochrona lokalnego formatu i otwartych kart, pełny bootstrap tożsamości, chroniona przestrzeń synchronizacji z trwałą polityką i epoką, kontrola importu oraz rzeczywiste testy dawnych klientów i dozwolonych wersji serwera. Tryby chmurowy i jednorazowy wymagają także dowodu bezpieczeństwa ich cache i czyszczenia sesji. Ten etap nie podnosi wersji IndexedDB, nie zmienia kopert plików, nie migruje kont i nie wdraża serwera.
+Samo zabezpieczenie rekordów nie blokuje globalnie starszych klientów. Funkcja użycia szablonu dodaje odrębny zapis, ochronę otwartych kart, bootstrap tożsamości, chronioną przestrzeń synchronizacji i kontrolę importu. Oryginalne dane pozostają zachowane; zmiany pochodzące ze starego klienta wymagają uzgodnienia. Tryby chmurowy i jednorazowy nie otrzymują zapisu etapów. Uruchomienie zaplecza i przygotowanie konta są jawne; samo wczytanie aplikacji ich nie wykonuje.
 
 ## Walidacja
 
@@ -122,4 +122,4 @@ MVP nie obejmuje automatycznych szablonów diagnostycznych, wymagań zależnych 
 
 ## Przygotowanie zastosowania szablonu — etap 6a
 
-[Kontrakt chronionej domeny pacjentów](PATIENT_AUTHORITY.md) określa wybór formatu, granice tożsamości i warunki bezpiecznego zastosowania szablonu. Zapis planów V2 i zastosowanie szablonu do pacjenta pozostają wyłączone w tej części. Nie ma migracji danych ani inicjalizacji zaplecza przy odczycie.
+[Kontrakt chronionej domeny pacjentów](PATIENT_AUTHORITY.md) określa wybór formatu, granice tożsamości i warunki bezpiecznego zastosowania szablonu. Dotychczasowy zapis V1 nie uzyskuje prawa zapisu V2. Osobna [funkcja użycia szablonu u pacjenta](CARE_TEMPLATE_APPLICATION.md) korzysta z chronionego zapisu po jego jawnym przygotowaniu. Nie ma migracji danych ani inicjalizacji zaplecza przy odczycie.

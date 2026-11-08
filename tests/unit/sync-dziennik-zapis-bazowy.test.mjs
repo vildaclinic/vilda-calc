@@ -12,6 +12,14 @@
 // „usunięcie konta…” o kroki kasowania kolejki (plan, wiersz E2-PR3a; od E2-PR3a1 i E2-PR3a1c — jak wyżej) — nic
 // więcej.
 //
+// Pełny zapis planów z etapami dodaje świeży odczyt databases() przed ścieżką V1.
+// Chroni to przed starym cache braku markera w drugiej karcie, także po błędzie
+// localStorage. Po integracji #905 usuwanie konta ma databases ×4: trzy
+// odczyty obecnej bazy i jeden świeży odczyt znacznika chronionego zapisu.
+// Nagranie wszystkich wariantów potwierdza zmianę tylko sześciu tych komórek.
+// Zmieniono wyłącznie krotności databases; żadnych nowych otwarć baz,
+// zapisów, kryptografii, powiadomień ani wyników operacji. Pierwotny hash bazy zachowano.
+//
 // WARIANTY (każde okno ma atrapę IndexedDB z tests/support/atrapa-indexeddb.mjs i moduły punktu odzyskiwania)
 //   Ze           sejf na adapterze w pamięci z rejestrem wywołań (magazynZRejestrem);
 //   prywatny     „Komputer prywatny”: adapter IndexedDB sejfu nad atrapą;

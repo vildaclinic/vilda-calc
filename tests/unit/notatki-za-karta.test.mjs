@@ -895,6 +895,7 @@ function atrapaIndexedDB() {
     };
   }
   return {
+    async databases() { return [...bazy.keys()].map(name => ({ name })); },
     open(nazwa) {
       const r = {};
       queueMicrotask(() => {

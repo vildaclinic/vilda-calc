@@ -10,6 +10,21 @@ import { canonicalSelector, splitTopLevel } from '../../design-system/lib/css.mj
 export const korzen = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const FAKTY = path.join(korzen, 'tests/fixtures/skorka-fakty.json');
 
+// Lazy dialogs also live in the current immutable module release. Read only
+// the active manifest: obsolete retained releases must not make dead CSS look
+// reachable. Explicit fixture file lists keep their existing isolated scope.
+function biezaceModulyDom() {
+  const manifestPath = path.join(korzen, 'runtime/clinical-workspace-v1/manifest.json');
+  if (!fs.existsSync(manifestPath)) return [];
+  const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
+  const prefix = 'runtime/clinical-workspace-v1/' + manifest.moduleTreeSHA256.slice(0, 12) + '/client/';
+  return manifest.files.map(entry => {
+    if (typeof entry.path !== 'string' || !entry.path.startsWith(prefix) || entry.path.includes('..') || !entry.path.endsWith('.mjs'))
+      throw new Error('Nieprawidłowa ścieżka aktywnego modułu DOM.');
+    return entry.path;
+  });
+}
+
 /** Fakty o DOM z fixture (tests/fixtures/skorka-fakty.json) albo null, gdy pliku nie ma. */
 export function faktyDom() {
   return fs.existsSync(FAKTY) ? JSON.parse(fs.readFileSync(FAKTY, 'utf8')) : null;
@@ -144,7 +159,7 @@ export function rozlaczne(a, b, wiedza = null) {
  * Zwraca { klasy: Map nazwa → { tagi: Set, wolna }, idy: Map nazwa → { tagi: Set, wolna } }.
  */
 export function wiedzaDom(czytaj = (p) => fs.readFileSync(path.join(korzen, p), 'utf8'), pliki = null, fakty = faktyDom()) {
-  const lista = pliki || fs.readdirSync(korzen).filter((f) => (f.endsWith('.html') || f.endsWith('.js')) && !f.startsWith('service-worker')).sort();
+  const lista = pliki || [...fs.readdirSync(korzen).filter((f) => (f.endsWith('.html') || f.endsWith('.js')) && !f.startsWith('service-worker')), ...biezaceModulyDom()].sort();
   const klasy = new Map();
   const idy = new Map();
   const slady = new Map(); // nazwa → [fragment kodu z zapisem, którego odbiorcy nie dało się ustalić]
@@ -230,13 +245,13 @@ export function wiedzaDom(czytaj = (p) => fs.readFileSync(path.join(korzen, p), 
     if (slady.get(nazwa).length < 6) slady.get(nazwa).push(`${plik}: …${tekst.slice(Math.max(0, poz - 140), poz + 60).replace(/\s+/g, ' ')}…`);
   };
   for (const { plik, tekst } of teksty) {
-    if (!plik.endsWith('.js') && !/<script\b/.test(tekst)) continue;
+    if (!/\.m?js$/.test(plik) && !/<script\b/.test(tekst)) continue;
     for (const m of tekst.matchAll(/([\w$]+)\.id\s*=\s*["'`]([\w-]+)["'`]/g)) zapisz(idy, m[2], tagiReceivera(tekst, m.index, m[1]), plik, tekst, m.index);
     for (const m of tekst.matchAll(/([\w$]+)\.setAttribute\(\s*["']id["']\s*,\s*["'`]([\w-]+)["'`]/g)) zapisz(idy, m[2], tagiReceivera(tekst, m.index, m[1]), plik, tekst, m.index);
     for (const m of tekst.matchAll(/\bid\s*:\s*["'`]([\w-]+)["'`]/g)) { const tag = tagFabryki(tekst, m.index); if (tag) zapisz(idy, m[1], new Set([tag]), plik, tekst, m.index); }
   }
   for (const { plik, tekst } of teksty) {
-    if (!plik.endsWith('.js') && !/<script\b/.test(tekst)) continue;
+    if (!/\.m?js$/.test(plik) && !/<script\b/.test(tekst)) continue;
     for (const m of tekst.matchAll(/([\w$]+)\.className\s*\+?=\s*(["'`][^"'`;]*["'`])/g)) { const tagi = tagiReceivera(tekst, m.index, m[1]); for (const n of literaly(m[2])) zapisz(klasy, n, tagi, plik, tekst, m.index); }
     for (const m of tekst.matchAll(/([\w$]+)\.classList\.(?:add|toggle|replace)\(([^)]*)\)/g)) { const tagi = tagiReceivera(tekst, m.index, m[1]); for (const n of literaly(m[2])) zapisz(klasy, n, tagi, plik, tekst, m.index); }
     for (const m of tekst.matchAll(/([\w$]+)\.setAttribute\(\s*["']class["']\s*,\s*(["'`][^"'`]*["'`])/g)) { const tagi = tagiReceivera(tekst, m.index, m[1]); for (const n of literaly(m[2])) zapisz(klasy, n, tagi, plik, tekst, m.index); }

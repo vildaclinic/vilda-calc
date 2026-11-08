@@ -8,7 +8,14 @@ import { expect, test } from '@playwright/test';
 // poza konsensusem („Wzrost dla wieku kostnego", Wu 2023). Dane FIKCYJNE.
 
 async function otworz(page) {
+  await page.addInitScript(() => localStorage.setItem('vilda-terms-accepted-v1', JSON.stringify({ version: 1, acceptedAtISO: new Date().toISOString() })));
   await page.goto('/index.html', { waitUntil: 'load' });
+  await page.waitForFunction(() => window.VildaAuthUI?.isBootReady?.());
+  const guest = page.getByRole('button', { name: 'Korzystaj bez logowania', exact: true });
+  if (await guest.isVisible()) await guest.click();
+  await page.waitForFunction(() => !window.__vildaPersistRestoring
+    && !window.VildaPersistence?.isClearInProgress?.()
+    && !window.VildaPanelPacjent?.nieaktualny?.());
   await page.waitForFunction(() => typeof window.calculateGrowthAdvanced === 'function'
     && Boolean(window.VildaPubertyProfile) && Boolean(window.VildaPubertalStatus));
 }

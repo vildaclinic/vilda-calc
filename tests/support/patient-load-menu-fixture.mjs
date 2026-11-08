@@ -33,7 +33,13 @@ export async function installPatientLoadMenuProbe(page) {
       // across frames. Every control keeps the same visibility/style checks.
       const styles = new Map();
       const styleFor = node => {
-        if (!styles.has(node)) styles.set(node, getComputedStyle(node));
+        if (!styles.has(node)) {
+          const css = getComputedStyle(node);
+          // Cache property values, not the live CSSStyleDeclaration, so the
+          // same ancestor isn't re-measured for each control within a paint.
+          styles.set(node, Object.fromEntries(['display', 'visibility', 'opacity', 'color', 'backgroundColor', 'backgroundImage']
+            .map(key => [key, css[key]])));
+        }
         return styles.get(node);
       };
       const controls = {};

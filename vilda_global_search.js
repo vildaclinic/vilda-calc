@@ -155,6 +155,30 @@
     if (note.careContext && note.careContext.state === 'waiting' || note.category === 'wynik-badania' && note.dueDateISO) return ['waiting', 'Oczekuję na wynik'];
     return ['open', note.dueDateISO ? 'Do wykonania' : 'Otwarte'];
   }
+  // Search is a projection only. Preserve the original staged record as the
+  // navigation source; never pass this display DTO to a plan writer.
+  function searchablePlan(plan) {
+    if (!plan || !plan.careContext || plan.careContext.version !== 2) return plan;
+    var model = win.VildaCarePlanModel;
+    if (!model || typeof model.decodeCarePlanRecord !== 'function' || typeof model.projectCarePlan !== 'function') return null;
+    var decoded = model.decodeCarePlanRecord(plan);
+    if (decoded.kind !== 'v2') return null;
+    var view = model.projectCarePlan(decoded), context = plan.careContext;
+    if (!Array.isArray(view.stages)) return null;
+    var stageSteps = [];
+    view.stages.forEach(function (stage) {
+      stage.steps.forEach(function (step) {
+        stageSteps.push({ id: step.id, title: step.title, kind: stage.title,
+          description: step.instruction, state: { resolved: 'done', omitted: 'cancelled', waiting: 'waiting' }[step.progress] || 'pending',
+          reminderDateISO: context.status === 'active' && stage.controlState === 'active'
+            && !['resolved', 'omitted'].includes(step.progress) && step.reminderSchedule ? step.reminderSchedule.dateISO : null,
+          eventDateISO: null });
+      });
+    });
+    return { title: plan.title, status: context.status, goal: context.goal, steps: stageSteps,
+      log: context.log, closedAtISO: context.closedAtISO, closeReason: context.closeReason,
+      closeText: context.closeText, needsDecision: !!(view.nextAction && ['reviewStage', 'resolveConflict', 'reviewChangedStage'].includes(view.nextAction.type)) };
+  }
   function planStatus(plan) {
     if (plan.status === 'closed') return ['completed', 'Zamknięty'];
     if (plan.needsDecision) return ['open', 'Do ustalenia'];
@@ -218,6 +242,10 @@
     });
     (plans || []).forEach(function (plan) {
       if (!plan || !plan.id || !names.has(plan.patientId)) return;
+      var originalPlan = plan;
+      var projection = searchablePlan(plan);
+      if (!projection) return;
+      plan = Object.assign({}, plan, projection);
       var status = planStatus(plan), steps = Array.isArray(plan.steps) ? plan.steps : [], dates = [];
       var stepText = steps.map(function (step) {
         var state = { pending: 'Do wykonania', waiting: 'Oczekuję na wynik', done: 'Zakończony', cancelled: 'Niewykonany' }[step.state] || '';
@@ -235,7 +263,7 @@
         dueDateISO: null, eventDateISO: firstEvent && firstEvent.eventDateISO || null,
         reminderDateISO: firstReminder && firstReminder.reminderDateISO || plan.decisionDueDateISO || null,
         clinicalDateISO: null, completedAtISO: plan.closedAtISO || null, noShowAtISO: null,
-        status: status[0], statusLabel: status[1], isExternal: externalIds.has(plan.patientId), canOpenPatient: true, dates: dates, source: plan });
+        status: status[0], statusLabel: status[1], isExternal: externalIds.has(plan.patientId), canOpenPatient: true, dates: dates, source: originalPlan });
     });
     rows.sort(function (left, right) {
       if (left.kind === 'patient' && right.kind !== 'patient') return -1;

@@ -466,8 +466,10 @@ async function dodanieDoBazy(d) {
   return { pid: zew.patientId, uruchom: () => d.v.promoteExternalToBase(zew.patientId, { dobISO: '2016-03-12', height: '121' }) };
 }
 const OPERACJE_KARTY = {
-  restoreSnapshotAsNew: { przygotuj: przywrocenie, odszyfrowania: 3, stos: /as restoreSnapshotAsNew/ },
-  promoteExternalToBase: { przygotuj: dodanieDoBazy, odszyfrowania: 2, stos: /as promoteExternalToBase/ },
+  // The reviewed workspace dispatcher adds a frame; V8 can now omit the API
+  // alias while retaining the exact original native function name.
+  restoreSnapshotAsNew: { przygotuj: przywrocenie, odszyfrowania: 3, stos: /(?:as restoreSnapshotAsNew|\bro \()/ },
+  promoteExternalToBase: { przygotuj: dodanieDoBazy, odszyfrowania: 2, stos: /(?:as promoteExternalToBase|\bto \()/ },
 };
 // Punkty przełączenia w odczycie karty przed wewnętrznym zapisem i (R4) w samym wewnętrznym zapisie. `sierotaWA`:
 // wersja zapisana przed przełączeniem zostaje w A (ograniczenie 2) — bez sprawdzenia „A bez zmian”.

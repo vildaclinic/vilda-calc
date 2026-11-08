@@ -19,7 +19,7 @@
  *   bo i tak chcemy zwracać HTML z cache natychmiast.
  */
 
-const SW_VERSION = '1.1.489';
+const SW_VERSION = '1.1.490';
 const CACHE_PREFIX = 'pwa-kalorii';
 const SHELL_CACHE = `${CACHE_PREFIX}-shell-v${SW_VERSION}`;
 const RUNTIME_CACHE = `${CACHE_PREFIX}-runtime`;
@@ -757,6 +757,7 @@ const CORE_SHELL_URLS = [
   '/inline_ustawienia_04.js?v=16',
   '/inline_ustawienia_04.js?v=17',
   '/inline_ustawienia_04.js?v=18',
+  '/inline_ustawienia_04.js?v=19',
   '/jsQR.min.js?v=1',
   '/jszip.min.js?v=1',
   '/pdfmake.min.js?v=1',
@@ -1193,6 +1194,7 @@ const CORE_SHELL_URLS = [
   '/vilda_global_search.js?v=2',
   '/vilda_global_search.js?v=3',
   '/vilda_global_search.js?v=4',
+  '/vilda_global_search.js?v=5',
   '/vilda_global_search_view.js?v=1',
   '/vilda_global_search_view.js?v=2',
   '/vilda_global_search_view.js?v=3',
@@ -1211,17 +1213,74 @@ const CORE_SHELL_URLS = [
   '/vilda_care_plans.css?v=9',
   '/vilda_care_plans.css?v=10',
   '/vilda_care_plans.css?v=11',
+  '/vilda_care_plans.css?v=12',
   '/vilda_care_plan_model.js?v=1',
+  '/vilda_care_plan_model.js?v=2',
+  // BEGIN CLINICAL WORKSPACE PRECACHE V1
+  '/vilda_care_plan_mutation.js?v=1',
+  '/runtime/clinical-workspace-v1/37562593af68/client/account-owner/format.mjs',
+  '/runtime/clinical-workspace-v1/37562593af68/client/account-owner/index.mjs',
+  '/runtime/clinical-workspace-v1/37562593af68/client/account-owner/journal.mjs',
+  '/runtime/clinical-workspace-v1/37562593af68/client/account-owner/protocol.mjs',
+  '/runtime/clinical-workspace-v1/37562593af68/client/account-root-registration/format.mjs',
+  '/runtime/clinical-workspace-v1/37562593af68/client/account-root-registration/index.mjs',
+  '/runtime/clinical-workspace-v1/37562593af68/client/account-root-registration/journal.mjs',
+  '/runtime/clinical-workspace-v1/37562593af68/client/account-root-registration/protocol.mjs',
+  '/runtime/clinical-workspace-v1/37562593af68/client/account-root/codec.mjs',
+  '/runtime/clinical-workspace-v1/37562593af68/client/account-root/crypto.mjs',
+  '/runtime/clinical-workspace-v1/37562593af68/client/account-root/index.mjs',
+  '/runtime/clinical-workspace-v1/37562593af68/client/account-root/journal.mjs',
+  '/runtime/clinical-workspace-v1/37562593af68/client/patient-clinical-snapshot/crypto.mjs',
+  '/runtime/clinical-workspace-v1/37562593af68/client/patient-clinical-snapshot/format.mjs',
+  '/runtime/clinical-workspace-v1/37562593af68/client/patient-clinical-workspace-native/adapter.mjs',
+  '/runtime/clinical-workspace-v1/37562593af68/client/patient-clinical-workspace-native/capture.mjs',
+  '/runtime/clinical-workspace-v1/37562593af68/client/patient-clinical-workspace-native/conflict-dialog.mjs',
+  '/runtime/clinical-workspace-v1/37562593af68/client/patient-clinical-workspace-native/conflict-service.mjs',
+  '/runtime/clinical-workspace-v1/37562593af68/client/patient-clinical-workspace-native/index.mjs',
+  '/runtime/clinical-workspace-v1/37562593af68/client/patient-clinical-workspace-native/legacy-guard.mjs',
+  '/runtime/clinical-workspace-v1/37562593af68/client/patient-clinical-workspace-native/marker-store.mjs',
+  '/runtime/clinical-workspace-v1/37562593af68/client/patient-clinical-workspace-native/onboarding.mjs',
+  '/runtime/clinical-workspace-v1/37562593af68/client/patient-clinical-workspace-native/plan-service.mjs',
+  '/runtime/clinical-workspace-v1/37562593af68/client/patient-clinical-workspace-native/runtime.mjs',
+  '/runtime/clinical-workspace-v1/37562593af68/client/patient-clinical-workspace-native/setup-dialog.mjs',
+  '/runtime/clinical-workspace-v1/37562593af68/client/patient-clinical-workspace-recovery/context.mjs',
+  '/runtime/clinical-workspace-v1/37562593af68/client/patient-clinical-workspace-recovery/dialog.mjs',
+  '/runtime/clinical-workspace-v1/37562593af68/client/patient-clinical-workspace-recovery/index.mjs',
+  '/runtime/clinical-workspace-v1/37562593af68/client/patient-clinical-workspace-recovery/material.mjs',
+  '/runtime/clinical-workspace-v1/37562593af68/client/patient-clinical-workspace-recovery/package.mjs',
+  '/runtime/clinical-workspace-v1/37562593af68/client/patient-clinical-workspace-recovery/provider.mjs',
+  '/runtime/clinical-workspace-v1/37562593af68/client/patient-clinical-workspace-source/bootstrap.mjs',
+  '/runtime/clinical-workspace-v1/37562593af68/client/patient-clinical-workspace-source/codec.mjs',
+  '/runtime/clinical-workspace-v1/37562593af68/client/patient-clinical-workspace-source/common.mjs',
+  '/runtime/clinical-workspace-v1/37562593af68/client/patient-clinical-workspace-source/index.mjs',
+  '/runtime/clinical-workspace-v1/37562593af68/client/patient-clinical-workspace/authority.mjs',
+  '/runtime/clinical-workspace-v1/37562593af68/client/patient-clinical-workspace/common.mjs',
+  '/runtime/clinical-workspace-v1/37562593af68/client/patient-clinical-workspace/context.mjs',
+  '/runtime/clinical-workspace-v1/37562593af68/client/patient-clinical-workspace/crypto.mjs',
+  '/runtime/clinical-workspace-v1/37562593af68/client/patient-clinical-workspace/index.mjs',
+  '/runtime/clinical-workspace-v1/37562593af68/client/patient-clinical-workspace/journal.mjs',
+  '/runtime/clinical-workspace-v1/37562593af68/client/patient-clinical-workspace/protocol.mjs',
+  '/runtime/clinical-workspace-v1/37562593af68/client/patient-clinical-workspace/store.mjs',
+  '/runtime/clinical-workspace-v1/37562593af68/client/patient-clinical-workspace/wire.mjs',
+  '/runtime/clinical-workspace-v1/37562593af68/client/patient-identity-enrollment/crypto.mjs',
+  '/runtime/clinical-workspace-v1/37562593af68/client/patient-identity-enrollment/format.mjs',
+  '/runtime/clinical-workspace-v1/37562593af68/client/patient-identity-enrollment/index.mjs',
+  '/runtime/clinical-workspace-v1/37562593af68/client/patient-identity-enrollment/journal.mjs',
+  '/runtime/clinical-workspace-v1/37562593af68/client/patient-identity-enrollment/protocol.mjs',
+  // END CLINICAL WORKSPACE PRECACHE V1
   // Template editing is loaded on demand; keep its complete bundle available
   // for a first library visit after a genuine offline restart.
   '/vilda_care_template_model.js?v=1',
+  '/vilda_care_template_model.js?v=2',
   '/vilda_care_template_store.js?v=1',
   '/vilda_care_template_store.js?v=2',
   '/vilda_care_templates.css?v=1',
   '/vilda_care_templates.css?v=2',
+  '/vilda_care_templates.css?v=3',
   '/vilda_care_templates.js?v=1',
   '/vilda_care_templates.js?v=2',
   '/vilda_care_templates.js?v=3',
+  '/vilda_care_templates.js?v=4',
   '/vilda_care_plans.js?v=1',
   '/vilda_care_plans.js?v=2',
   '/vilda_care_plans.js?v=3',
@@ -1234,6 +1293,7 @@ const CORE_SHELL_URLS = [
   '/vilda_care_plans.js?v=10',
   '/vilda_care_plans.js?v=11',
   '/vilda_care_plans.js?v=12',
+  '/vilda_care_plans.js?v=13',
     '/vilda_auth_ui.js?v=16',
   '/vilda_auth_ui.js?v=17',
   '/vilda_auth_ui.js?v=18',
@@ -1843,6 +1903,7 @@ const CORE_SHELL_URLS = [
   '/vilda_chrome.js?v=259',
   '/vilda_chrome.js?v=260',
   '/vilda_chrome.js?v=261',
+  '/vilda_chrome.js?v=262',
   '/vilda_realtime.js?v=1',
   '/vilda_realtime.js?v=2',
   '/vilda_realtime.js?v=3',
@@ -2060,6 +2121,7 @@ const CORE_SHELL_URLS = [
   '/vilda_chrome.css?v=56',
   '/vilda_chrome.css?v=57',
   '/vilda_chrome.css?v=58',
+  '/vilda_chrome.css?v=59',
   '/vilda_auth_ui.css',
   '/vilda_auth_ui.css?v=9',
   '/vilda_auth_ui.css?v=10',
@@ -2134,6 +2196,7 @@ const CORE_SHELL_URLS = [
   '/vilda_file_export.js?v=7',
   '/vilda_file_export.js?v=8',
   '/vilda_file_export.js?v=9',
+  '/vilda_file_export.js?v=10',
   '/vilda_deps.js',
   '/vilda_deps.js?v=87',
   '/vilda_deps.js?v=89',
@@ -2671,6 +2734,7 @@ const OPTIONAL_ASSETS = [
   '/vilda_vault.js?v=255',
   '/vilda_vault.js?v=256',
   '/vilda_vault.js?v=257',
+  '/vilda_vault.js?v=258',
   '/vilda_auth_ui.js?v=535',
   '/vilda_auth_ui.js?v=536',
   '/vilda_auth_ui.js?v=537',
@@ -2688,6 +2752,7 @@ const OPTIONAL_ASSETS = [
   '/vilda_auth_ui.js?v=549',
   '/vilda_auth_ui.js?v=550',
   '/vilda_auth_ui.js?v=551',
+  '/vilda_auth_ui.js?v=552',
   '/vilda_session_bridge.js?v=148',
   '/vilda_session_bridge.js?v=149',
   '/vilda_session_bridge.js?v=150',
@@ -2719,7 +2784,9 @@ const OPTIONAL_ASSETS = [
   '/vilda_session_bridge.js?v=176',
   '/vilda_session_bridge.js?v=177',
   '/vilda_session_bridge.js?v=178',
+  '/vilda_session_bridge.js?v=179',
   '/vilda_sync.js?v=48',
+  '/vilda_sync.js?v=49',
   '/vilda_patient_documents.js?v=1',
   '/vilda_patient_documents.js?v=2',
   '/vilda_patient_documents.js?v=3',
@@ -3449,6 +3516,7 @@ const OPTIONAL_ASSETS = [
   '/custom-fixes.js?v=79',
   '/custom-fixes.js?v=80',
   '/custom-fixes.js?v=81',
+  '/custom-fixes.js?v=82',
   '/reposition.js?v=7',
   '/vilda_klawiatura.js?v=1',
   '/vilda_klawiatura.js?v=2',
@@ -3923,6 +3991,7 @@ const OPTIONAL_ASSETS = [
   '/vilda_summary_cards.js?v=61',
   '/vilda_summary_cards.js?v=62',
   '/vilda_summary_cards.js?v=63',
+  '/vilda_summary_cards.js?v=64',
   '/vilda_schowek.js?v=1',
   '/vilda_schowek.js?v=2',
   '/vilda_schowek.js?v=3',
@@ -4335,6 +4404,7 @@ const OPTIONAL_ASSETS = [
   '/app.js?v=238',
   '/app.js?v=239',
   '/app.js?v=240',
+  '/app.js?v=241',
   '/vilda_advanced_growth.js?v=63',
   '/vilda_advanced_growth.js?v=64',
   '/vilda_advanced_growth.js?v=65',
@@ -4431,6 +4501,7 @@ const OPTIONAL_ASSETS = [
   '/vilda_sync_integration.js?v=54',
   '/vilda_sync_integration.js?v=55',
   '/vilda_sync_integration.js?v=56',
+  '/vilda_sync_integration.js?v=57',
   '/vilda_nowe_urzadzenie.js?v=1',
   '/vilda_nowe_urzadzenie.js?v=2',
   '/vilda_session_bridge.js?v=3',
@@ -5242,6 +5313,211 @@ async function openReusablePreviousShellCaches() {
 // Static hosting serves the same file for these explicit current query aliases.
 // Only a response freshly fetched during this installation may seed another alias;
 // an exact immutable entry copied from a previous cache never seeds this map.
+// BEGIN CLINICAL WORKSPACE PACK CONFIG
+const CLINICAL_WORKSPACE_PRECACHE_PACK = Object.freeze({
+  "url": "/runtime/clinical-workspace-v1/37562593af68/precache-558d0ebd1a24.json",
+  "sha256": "558d0ebd1a24fc7555c19ecdd8f0ad755ff830070e9fe700d0b74c14a62775a4",
+  "files": [
+    {
+      "url": "/runtime/clinical-workspace-v1/37562593af68/client/account-owner/format.mjs",
+      "sha256": "954d9bf17b6c220920a458381837db743176ecf1fcd0af0ea6f40bed52ddb1f7"
+    },
+    {
+      "url": "/runtime/clinical-workspace-v1/37562593af68/client/account-owner/index.mjs",
+      "sha256": "38f755ff8713f0af1868ae5ba1d9744aa9ff4da270272e0b5443ee2f74904820"
+    },
+    {
+      "url": "/runtime/clinical-workspace-v1/37562593af68/client/account-owner/journal.mjs",
+      "sha256": "8b2361d639b2cafb11c3a5cefa524eb023f03e172cd0d69462ee69e721835694"
+    },
+    {
+      "url": "/runtime/clinical-workspace-v1/37562593af68/client/account-owner/protocol.mjs",
+      "sha256": "537f701448368f1a4a5aeed84e1cf761edfd935f306477b6af33ae5222abe5d6"
+    },
+    {
+      "url": "/runtime/clinical-workspace-v1/37562593af68/client/account-root-registration/format.mjs",
+      "sha256": "fc03b0f64b05b5dbf30d42e3275f1bde427ca58ec52904194ded700ac6f756af"
+    },
+    {
+      "url": "/runtime/clinical-workspace-v1/37562593af68/client/account-root-registration/index.mjs",
+      "sha256": "cce922bdd34962bea36d93e52e1ca079ccf1fad6ae9b397961bf280c49f5cbd3"
+    },
+    {
+      "url": "/runtime/clinical-workspace-v1/37562593af68/client/account-root-registration/journal.mjs",
+      "sha256": "005c8f07f0806a12fcace69b858f674c6bd08deb6a9e17720a352dd3ff94f563"
+    },
+    {
+      "url": "/runtime/clinical-workspace-v1/37562593af68/client/account-root-registration/protocol.mjs",
+      "sha256": "2b8a41b2918ccdfd3a342d8db2a667ba39fbe25a1f350904c87f999ec44f0182"
+    },
+    {
+      "url": "/runtime/clinical-workspace-v1/37562593af68/client/account-root/codec.mjs",
+      "sha256": "15b396505672f7b54ef6811503110076c7795e2499e9ea75ba663f0a13605e85"
+    },
+    {
+      "url": "/runtime/clinical-workspace-v1/37562593af68/client/account-root/crypto.mjs",
+      "sha256": "5b72ecf4222288baac2ac2e55270ad25455a25973b27980e9e4e86122e952081"
+    },
+    {
+      "url": "/runtime/clinical-workspace-v1/37562593af68/client/account-root/index.mjs",
+      "sha256": "dbd0f34a1559e887549ead1bfa0008059836317306ee3d5595254b51ca203df8"
+    },
+    {
+      "url": "/runtime/clinical-workspace-v1/37562593af68/client/account-root/journal.mjs",
+      "sha256": "8f2588b2d88bc2d58088dde76bb6c68982f9fd3d88c7dc78fcdc3a6f000bcee1"
+    },
+    {
+      "url": "/runtime/clinical-workspace-v1/37562593af68/client/patient-clinical-snapshot/crypto.mjs",
+      "sha256": "c250afae9ddff70f4cafe1b3df102e51b1adb45538bfaf0fe1454d03e3b8b876"
+    },
+    {
+      "url": "/runtime/clinical-workspace-v1/37562593af68/client/patient-clinical-snapshot/format.mjs",
+      "sha256": "99d39a7c7c6b5f3586600ba0dafe1e0ab00392987095621e545f440660b088d9"
+    },
+    {
+      "url": "/runtime/clinical-workspace-v1/37562593af68/client/patient-clinical-workspace-native/adapter.mjs",
+      "sha256": "30bda14da8decfcbdacc77c08316a118f03d34dedf03d584e02bb4f0cbc4d3da"
+    },
+    {
+      "url": "/runtime/clinical-workspace-v1/37562593af68/client/patient-clinical-workspace-native/capture.mjs",
+      "sha256": "a1806863a3b993c3f0cd969c780130de97c0a72bc49349e3aa46800a0119eb23"
+    },
+    {
+      "url": "/runtime/clinical-workspace-v1/37562593af68/client/patient-clinical-workspace-native/conflict-dialog.mjs",
+      "sha256": "ad2c07bfb190a97c5edbe035d419ac93fe048f76dd30f7eb179aa9807980f448"
+    },
+    {
+      "url": "/runtime/clinical-workspace-v1/37562593af68/client/patient-clinical-workspace-native/conflict-service.mjs",
+      "sha256": "8f76bbc9960c5efb2f70ed4b5814f736e43b811df665f8d06624969b54c63326"
+    },
+    {
+      "url": "/runtime/clinical-workspace-v1/37562593af68/client/patient-clinical-workspace-native/index.mjs",
+      "sha256": "f53f52740d1761defbfcdd909aec946625dc781bcbbd831ec65fc567c8202022"
+    },
+    {
+      "url": "/runtime/clinical-workspace-v1/37562593af68/client/patient-clinical-workspace-native/legacy-guard.mjs",
+      "sha256": "2e0ebd83e349afe997d36eef0dcc6e99d85352962c04df52996526eecf0a5019"
+    },
+    {
+      "url": "/runtime/clinical-workspace-v1/37562593af68/client/patient-clinical-workspace-native/marker-store.mjs",
+      "sha256": "807b2e611bfeaec223f123eacecab411aaca1b16c13e12571ff26ded1c5cf510"
+    },
+    {
+      "url": "/runtime/clinical-workspace-v1/37562593af68/client/patient-clinical-workspace-native/onboarding.mjs",
+      "sha256": "eb365fd399956231d0eda4cfee600b871502b6abcfb19311a8e4efb9afa4a5b1"
+    },
+    {
+      "url": "/runtime/clinical-workspace-v1/37562593af68/client/patient-clinical-workspace-native/plan-service.mjs",
+      "sha256": "44c9c52b0af02b9316ff75c9ac07ff527f10649e57ab6c51da6c6e832e465ae9"
+    },
+    {
+      "url": "/runtime/clinical-workspace-v1/37562593af68/client/patient-clinical-workspace-native/runtime.mjs",
+      "sha256": "bf5f8a6879830bb8b87c446d13c796701399cd1205c8d9016b479360bbd4c8b5"
+    },
+    {
+      "url": "/runtime/clinical-workspace-v1/37562593af68/client/patient-clinical-workspace-native/setup-dialog.mjs",
+      "sha256": "bb3ff82ffa3caa3db99782efedb77fd7c0c3803af5f21d6bdc43e9d46f1bbf61"
+    },
+    {
+      "url": "/runtime/clinical-workspace-v1/37562593af68/client/patient-clinical-workspace-recovery/context.mjs",
+      "sha256": "8df9a6b170de196ed75efdd7e9170e9b1a0b18f7a2ac1ffabbcda4088a2f8d33"
+    },
+    {
+      "url": "/runtime/clinical-workspace-v1/37562593af68/client/patient-clinical-workspace-recovery/dialog.mjs",
+      "sha256": "7ea504245293cc79d7017e08fabf06e34e146bc329c3016fb4541feb86545b9c"
+    },
+    {
+      "url": "/runtime/clinical-workspace-v1/37562593af68/client/patient-clinical-workspace-recovery/index.mjs",
+      "sha256": "2317ac6f06fb75fd8cfd4e647ecf347176dcd902959b49904db30ff26a583fad"
+    },
+    {
+      "url": "/runtime/clinical-workspace-v1/37562593af68/client/patient-clinical-workspace-recovery/material.mjs",
+      "sha256": "f23e39b77cd71076c4a7e69760c4d7fbe3e0d747f5e308f7418b9d949bf30be4"
+    },
+    {
+      "url": "/runtime/clinical-workspace-v1/37562593af68/client/patient-clinical-workspace-recovery/package.mjs",
+      "sha256": "62745b56352395769c08e17a77dad70f254ca870cddc54bd0476838eadd55ae2"
+    },
+    {
+      "url": "/runtime/clinical-workspace-v1/37562593af68/client/patient-clinical-workspace-recovery/provider.mjs",
+      "sha256": "298639a5093c526c8ee61e169350ff02a0bb9f53cddf9f68cf6f0269ef19e830"
+    },
+    {
+      "url": "/runtime/clinical-workspace-v1/37562593af68/client/patient-clinical-workspace-source/bootstrap.mjs",
+      "sha256": "7b1d79cb012417e8fca95385e6113dec49bfd4fdf81db044b7afb564e25c2d7c"
+    },
+    {
+      "url": "/runtime/clinical-workspace-v1/37562593af68/client/patient-clinical-workspace-source/codec.mjs",
+      "sha256": "55175661e0212d0b54c0b67175728b55fb28eebac669b6f473de8e0b903d04e4"
+    },
+    {
+      "url": "/runtime/clinical-workspace-v1/37562593af68/client/patient-clinical-workspace-source/common.mjs",
+      "sha256": "5cfe328bd3547f9b8ebadcbc122bf98413b4e3665362f8171b3f486be036e990"
+    },
+    {
+      "url": "/runtime/clinical-workspace-v1/37562593af68/client/patient-clinical-workspace-source/index.mjs",
+      "sha256": "4d0447050ab2a9bb5f290af8b871a2d14fd16eddc3b79c49c372a57ecf1eb213"
+    },
+    {
+      "url": "/runtime/clinical-workspace-v1/37562593af68/client/patient-clinical-workspace/authority.mjs",
+      "sha256": "31b31ef4215d8f44047cccfa0c173b7d9a5aa47c4544e63b6dcae21b4ddc7245"
+    },
+    {
+      "url": "/runtime/clinical-workspace-v1/37562593af68/client/patient-clinical-workspace/common.mjs",
+      "sha256": "bd992a80068e1a77786c350e5d26d19a3db5861309ca14903059fc84cd8f5d94"
+    },
+    {
+      "url": "/runtime/clinical-workspace-v1/37562593af68/client/patient-clinical-workspace/context.mjs",
+      "sha256": "5a850c82481890e59f9974291ef90db1f361f3789cf96aaa4942458ebb2e21d4"
+    },
+    {
+      "url": "/runtime/clinical-workspace-v1/37562593af68/client/patient-clinical-workspace/crypto.mjs",
+      "sha256": "9b000cfda2bca7a6d0f0e98c95215346474dc20f6049ad3f817269ef54bad41d"
+    },
+    {
+      "url": "/runtime/clinical-workspace-v1/37562593af68/client/patient-clinical-workspace/index.mjs",
+      "sha256": "9d5f0e60a019787b4b353cb63668fd3a68d9266589d4703daac6d870cd9bf1e8"
+    },
+    {
+      "url": "/runtime/clinical-workspace-v1/37562593af68/client/patient-clinical-workspace/journal.mjs",
+      "sha256": "fde3c97979e3ec676f8344604b4730e60e087fbaab8ef4abd1bf281bc734fd4f"
+    },
+    {
+      "url": "/runtime/clinical-workspace-v1/37562593af68/client/patient-clinical-workspace/protocol.mjs",
+      "sha256": "0ff7d02abfbf1fd45dcf914f18c7dc37d671450b2fe5c94d1b1fda1c59d0b7dc"
+    },
+    {
+      "url": "/runtime/clinical-workspace-v1/37562593af68/client/patient-clinical-workspace/store.mjs",
+      "sha256": "f7479294cc39d38afc57f9598097353ee0cf56e8d8ed37c703d9e59329d993ca"
+    },
+    {
+      "url": "/runtime/clinical-workspace-v1/37562593af68/client/patient-clinical-workspace/wire.mjs",
+      "sha256": "bdd9a34577aeaff9f42961130ba5184656a6ef14e29eb9cc6bd033c6e2b54443"
+    },
+    {
+      "url": "/runtime/clinical-workspace-v1/37562593af68/client/patient-identity-enrollment/crypto.mjs",
+      "sha256": "68229d844e977a0d680ba706bcf9a4b4e2554cc4868fd826b9871854e3beca73"
+    },
+    {
+      "url": "/runtime/clinical-workspace-v1/37562593af68/client/patient-identity-enrollment/format.mjs",
+      "sha256": "2bd94a8937c409d1f0e8e61ebcb84115a7b934c9f951a91061fa53d98f27a5eb"
+    },
+    {
+      "url": "/runtime/clinical-workspace-v1/37562593af68/client/patient-identity-enrollment/index.mjs",
+      "sha256": "e2e3c2294c6efefc28a59074d622d80fd4fad7adbdfc97856596e0fbaeafacc4"
+    },
+    {
+      "url": "/runtime/clinical-workspace-v1/37562593af68/client/patient-identity-enrollment/journal.mjs",
+      "sha256": "9b0a7025b0e2f5cf4ab5d3c8c385b26352b1859b8da5fa1ecaee70382886f4aa"
+    },
+    {
+      "url": "/runtime/clinical-workspace-v1/37562593af68/client/patient-identity-enrollment/protocol.mjs",
+      "sha256": "ed4b1c7f8fa5e2a45430ee33490dcecb895753111a39d09dee9aa36dc965b368"
+    }
+  ]
+});
+// END CLINICAL WORKSPACE PACK CONFIG
+
 const FRESH_STATIC_ALIAS_PATHS = new Set([
   '/edu-video-ui.css', '/style.css', '/vilda_chrome.css',
   '/vilda_auth_ui.css', '/ios26-v2.css', '/vilda_shell.css', '/vilda_vault.js', '/vilda_chrome.js',
@@ -5314,15 +5590,82 @@ const FRESH_STATIC_ALIAS_PATHS = new Set([
   // files share only this installation's fresh bytes across current aliases;
   // immutable responses inherited from an older cache never seed this reuse.
   '/vilda_down_syndrome.js', '/flu_therapy.js', '/bisphos_therapy.js',
-  '/bisphos_therapy_monitor.js', '/lab_unit_converter.js'
+  '/bisphos_therapy_monitor.js', '/lab_unit_converter.js',
+  // The immutable workspace pack and mutation model retain their own requests.
+  // These current static aliases share only freshly fetched install responses.
+  '/app.js', '/custom-fixes.js'
 ]);
 
-async function fetchAndStorePrecacheUrl(url, { required = false, previousShellCaches = [], freshResponses = null } = {}) {
+// The pack is only an installation transport: original module URLs and exact
+// UTF-8 bodies remain the cache entries. Authenticate the whole archive and
+// every member before allowing even the first module to reach Cache Storage.
+function createClinicalWorkspacePrecacheState(config = CLINICAL_WORKSPACE_PRECACHE_PACK) {
+  const expected = new Map(config.files.map(file => [file.url, file.sha256]));
+  if (!expected.size || expected.size !== config.files.length
+    || !/^[a-f0-9]{64}$/.test(config.sha256)
+    || config.files.some(file => !INSTALL_CORE_URLS.includes(file.url)
+      || !/^\/runtime\/clinical-workspace-v1\/[a-f0-9]{12}\/(?:[A-Za-z0-9_-]+\/)*[A-Za-z0-9_-]+\.mjs$/.test(file.url)
+      || !/^[a-f0-9]{64}$/.test(file.sha256))) {
+    throw new Error('Invalid clinical workspace precache configuration');
+  }
+  const digest = async bytes => Array.from(new Uint8Array(await self.crypto.subtle.digest('SHA-256', bytes)))
+    .map(byte => byte.toString(16).padStart(2, '0')).join('');
+  const exactKeys = (value, keys) => value !== null && typeof value === 'object' && !Array.isArray(value)
+    && Object.keys(value).length === keys.length && keys.every(key => Object.hasOwn(value, key));
+  let verifiedFiles;
+  const load = async () => {
+    const response = await fetch(new Request(scopeHref(config.url), { cache: 'reload', redirect: 'error' }));
+    if (response.status !== 200 || response.type === 'opaque' || response.redirected) {
+      throw new Error('Clinical workspace precache pack unavailable');
+    }
+    const bytes = await response.arrayBuffer();
+    if (await digest(bytes) !== config.sha256) throw new Error('Clinical workspace precache pack digest mismatch');
+    const pack = JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(bytes));
+    if (!exactKeys(pack, ['schemaVersion', 'files']) || pack.schemaVersion !== 1
+      || !Array.isArray(pack.files) || pack.files.length !== expected.size) {
+      throw new Error('Invalid clinical workspace precache pack');
+    }
+    const files = await Promise.all(pack.files.map(async (file, index) => {
+      const pinned = config.files[index];
+      if (!exactKeys(file, ['path', 'sha256', 'source']) || file.path !== pinned.url.slice(1)
+        || file.sha256 !== pinned.sha256 || typeof file.source !== 'string') {
+        throw new Error('Unexpected clinical workspace precache member');
+      }
+      const source = new TextEncoder().encode(file.source);
+      if (await digest(source) !== pinned.sha256) throw new Error('Clinical workspace module digest mismatch');
+      return [pinned.url, source];
+    }));
+    return new Map(files);
+  };
+  return {
+    has: url => expected.has(url),
+    async responseFor(url) {
+      if (!expected.has(url)) throw new Error('Unknown clinical workspace module');
+      // This promise belongs to one install, including failure. A retry starts
+      // a fresh install and fetch; no failed pack falls back to unchecked files.
+      if (!verifiedFiles) verifiedFiles = load();
+      const source = (await verifiedFiles).get(url);
+      return new Response(source, { status: 200, headers: {
+        'Content-Type': 'text/javascript; charset=utf-8',
+        'Content-Length': String(source.byteLength),
+        'X-Content-Type-Options': 'nosniff',
+      } });
+    },
+  };
+}
+
+async function fetchAndStorePrecacheUrl(url, { required = false, previousShellCaches = [], freshResponses = null, clinicalWorkspacePack = null } = {}) {
   const cache = await caches.open(SHELL_CACHE);
   const pathname = getPathname(url);
   const cacheKey = DOCUMENT_PATHS.has(pathname)
     ? normalizeNavigationPath(pathname)
     : getShellCacheKeyFromStaticUrl(url);
+
+  if (clinicalWorkspacePack?.has(url)) {
+    if (!cacheKey) throw new Error(`Missing clinical workspace precache key: ${url}`);
+    await cache.put(cacheKey, await clinicalWorkspacePack.responseFor(url));
+    return;
+  }
 
   // P-SW-PRECACHE: niezmienny wpis ?v= z poprzedniej pamięci powłoki — kopia zamiast pobrania. Aktualizacja pobiera
   // wtedy tylko pliki z nowym ?v=, dokumenty i adresy bez ?v=.
@@ -5370,11 +5713,12 @@ async function installShell() {
   await pruneHistoryInPreviousShellCaches();
   const previousShellCaches = await openReusablePreviousShellCaches();
   const freshResponses = new Map();
+  const clinicalWorkspacePack = createClinicalWorkspacePrecacheState();
 
   // Najpierw minimalny shell – jeśli to się nie uda, nowa wersja SW nie powinna wejść.
   // P-SW-PRECACHE: tylko wpisy bieżące rdzenia (INSTALL_CORE_URLS).
   for (const url of INSTALL_CORE_URLS) {
-    await fetchAndStorePrecacheUrl(url, { required: true, previousShellCaches, freshResponses });
+    await fetchAndStorePrecacheUrl(url, { required: true, previousShellCaches, freshResponses, clinicalWorkspacePack });
   }
 
   // Następnie dodatkowe strony i zasoby pobieramy spokojnie, jeden po drugim,
@@ -5382,7 +5726,7 @@ async function installShell() {
   // P-SW-DOCPRO: najpierw dokumenty i wersje bieżące (patrz orderOptionalPrecacheUrls); P-SW-PRECACHE: bez historii.
   for (const url of INSTALL_OPTIONAL_URLS) {
     try {
-      await fetchAndStorePrecacheUrl(url, { required: false, previousShellCaches, freshResponses });
+      await fetchAndStorePrecacheUrl(url, { required: false, previousShellCaches, freshResponses, clinicalWorkspacePack });
     } catch (_) {
     void _;
   }

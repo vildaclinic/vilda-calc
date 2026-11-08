@@ -7,7 +7,14 @@ import { expect, test } from '@playwright/test';
 const ZOLTY = 'rgb(178, 106, 0)';
 
 async function otworz(page, strona) {
+  await page.addInitScript(() => localStorage.setItem('vilda-terms-accepted-v1', JSON.stringify({ version: 1, acceptedAtISO: new Date().toISOString() })));
   await page.goto(`/${strona || 'index.html'}`, { waitUntil: 'load' });
+  await page.waitForFunction(() => window.VildaAuthUI?.isBootReady?.());
+  const guest = page.getByRole('button', { name: 'Korzystaj bez logowania', exact: true });
+  if (await guest.isVisible()) await guest.click();
+  await page.waitForFunction(() => !window.__vildaPersistRestoring
+    && !window.VildaPersistence?.isClearInProgress?.()
+    && !window.VildaPanelPacjent?.nieaktualny?.());
   await page.waitForFunction(() => typeof window.update === 'function' && typeof window.patientReportBuildModel === 'function'
     && !!window.VildaRaportNaglowek && !!window.VildaTrajectoryAnalysis && window.VildaTrajectoryAnalysis.version >= '27');
 }

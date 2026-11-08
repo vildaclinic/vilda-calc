@@ -12,7 +12,7 @@ Reguła przypomnienia to brak terminu albo liczba dni, tygodni lub miesięcy od 
 
 Podgląd pokazuje wszystkie nazwy, instrukcje, kryteria zakończenia, reguły przypomnień i domyślne dołączenie. Zapis nowej wersji nie zmienia wcześniejszych wersji. Archiwizacja zachowuje treść i historię; przywrócenie do aktywnej biblioteki jest osobną czynnością. Utworzenie kopii nadaje nowe identyfikatory szablonu, etapów i kroków.
 
-Zastosowanie szablonu do pacjenta, dopasowanie jego kopii i zapis etapowego planu pozostają kolejnym etapem wdrożenia. Dotychczasowe ręczne plany nadal używają V1; zapis pacjentów w V2 pozostaje wyłączony.
+Zastosowanie szablonu do pacjenta, dopasowanie jego niezależnej kopii i zapis etapów opisuje [Użycie szablonu w planie pacjenta](CARE_TEMPLATE_APPLICATION.md). Wymaga ono zgodnego zaplecza i jawnego przygotowania chronionego zapisu. Dotychczasowe ręczne plany nadal używają V1; ich dawny zapis nie otrzymuje uprawnień do modyfikowania V2.
 
 ## Kopia układu planu pacjenta
 
@@ -74,4 +74,4 @@ Wyniki końcowych przebiegów i ograniczenia wdrożenia są wpisywane do PR. Tes
 
 ## Przygotowanie zastosowania szablonu — etap 6a
 
-[Kontrakt chronionej domeny pacjentów](PATIENT_AUTHORITY.md) określa wybór formatu, granice tożsamości i warunki bezpiecznego zastosowania szablonu. Zapis planów V2 i zastosowanie szablonu do pacjenta pozostają wyłączone w tej części. Nie ma migracji danych ani inicjalizacji zaplecza przy odczycie.
+[Kontrakt chronionej domeny pacjentów](PATIENT_AUTHORITY.md) określa wybór formatu, granice tożsamości i warunki bezpiecznego zastosowania szablonu. Dotychczasowy zapis V1 nie uzyskuje prawa zapisu V2. Osobna [funkcja użycia szablonu u pacjenta](CARE_TEMPLATE_APPLICATION.md) korzysta z chronionego zapisu po jego jawnym przygotowaniu. Nie ma migracji danych ani inicjalizacji zaplecza przy odczycie.

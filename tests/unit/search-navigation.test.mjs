@@ -242,12 +242,15 @@ describe('production encrypted Search UI handoff', () => {
   });
 
   it.each(['encrypt', 'decrypt'])('pagehide cancels pending %s without erasing an approved ciphertext', async operation => {
-    const e = await fixture(), waiting = deferred();
+    const e = await fixture(), waiting = deferred(), cryptoFinished = deferred();
     if (operation === 'decrypt') await e.api.prepare(ticket());
     const method = operation === 'encrypt' ? 'encryptPayloadForCurrentUser' : 'decryptPayloadForCurrentUser';
     const original = e.vault[method];
-    e.vault[method] = async (...args) => { const value = await original(...args); await waiting.promise; return value; };
+    e.vault[method] = async (...args) => { const value = await original(...args); cryptoFinished.resolve(); await waiting.promise; return value; };
     const pending = operation === 'encrypt' ? e.api.prepare(ticket()).catch(error => error) : e.api.read(ticket().id, { consume: true });
+    // Exercise the handoff's completion fence after real cryptography, rather
+    // than racing the vault's separate asynchronous operation-entry fence.
+    await cryptoFinished.promise;
     e.win.dispatchEvent(new Event('pagehide')); waiting.resolve();
     if (operation === 'encrypt') { expect(await pending).toMatchObject({ code: 'SEARCH_NAVIGATION_SESSION_CHANGED' }); expect(e.store.getItem(KEY)).toBeNull(); }
     else { expect(await pending).toBeNull(); expect(e.store.getItem(KEY)).not.toBeNull(); }

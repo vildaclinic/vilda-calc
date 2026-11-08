@@ -39,6 +39,25 @@ function review(value, index = 0) {
 function view(value, options = { todayLocalDateISO: '2026-10-31' }) { const model = api(); return model.projectCarePlan(model.decodeCarePlanRecord(record(value)), options); }
 
 describe('care-plan module stays pure and cannot grant a format-2 write capability', () => {
+  it('exposes the exact detached stage review basis without granting authority or including another stage', () => {
+    const model = api(), value = activate(context());
+    value.facts.push(fact('resultReceipt'), fact('decision', { id: 'fact-other', stepId: 'step-b', operationId: 'other-stage-fact' }));
+    value.associations.push(association('document'));
+    value.steps[0].reminderSchedule = { dateISO: '2026-11-02', time: '10:00', origin: 'manual', overrideOperationId: 'manual-reminder' };
+    const serialized = JSON.stringify(value), basis = model.getStageReviewBasis(freeze(value), 'stage-a');
+    expect(basis).toEqual(['activation-0', 'manual-reminder', 'operation-association-document', 'operation-resultReceipt', 'stage-definition-a', 'step-definition-a']);
+    const reviewed = clone(value);
+    reviewed.stages[0].control.state = 'reviewed';
+    reviewed.stages[0].control.review = { ...audit('review-explicit'), reviewBasis: basis };
+    expect(view(reviewed).stages[0]).toMatchObject({ controlState: 'reviewed', reviewStale: false });
+    expect(JSON.stringify(value)).toBe(serialized);
+    basis.push('caller-edit');
+    expect(model.getStageReviewBasis(value, 'stage-a')).not.toContain('caller-edit');
+    expect(() => model.getStageReviewBasis(value, 'missing')).toThrow('CARE_MODEL_STAGE_MISSING');
+    expect(() => model.getStageReviewBasis({ ...clone(value), unexpected: true }, 'stage-a')).toThrow('CARE_MODEL_CONTEXT_INVALID');
+    expect(model.getWriteCapability().available).toBe(false);
+  });
+
   it('registers without reading DOM, storage, timers, network or a clock', () => {
     const win = {};
     for (const key of ['document', 'localStorage', 'sessionStorage', 'indexedDB', 'fetch', 'setTimeout', 'Date', 'crypto']) {

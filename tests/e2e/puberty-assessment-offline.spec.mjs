@@ -7,6 +7,14 @@ import { fileURLToPath } from 'node:url';
 import { expect, test } from '@playwright/test';
 import { czekajNaOdtworzenieSesji } from '../support/sesja-czekanie.mjs';
 
+async function enterAnonymousWorkspace(page) {
+  if (!await page.evaluate(() => Boolean(window.VildaAuthUI))) return;
+  await page.waitForFunction(() => window.VildaAuthUI.isBootReady());
+  const guest = page.getByRole('button', { name: 'Korzystaj bez logowania', exact: true });
+  if (await guest.isVisible()) await guest.click();
+  await page.waitForFunction(() => !window.__vildaPersistRestoring && !window.VildaPersistence?.isClearInProgress?.());
+}
+
 test.use({ serviceWorkers: 'allow' });
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const pages = ['index.html', 'docpro.html', 'kalkulator-klirens.html', 'przelicznik-jednostek.html'];
@@ -145,6 +153,7 @@ test('typed puberty contract survives production PWA install and cold offline re
       };
       page.on('response', responseListener);
       await page.goto(`${server.origin}/${documentName}`, { waitUntil: 'load' });
+      await enterAnonymousWorkspace(page);
       await page.waitForFunction(() => Boolean(window.VildaPubertyAssessment && window.VildaPubertySource));
       expect(await noNetwork(), `${documentName}: origin remains unavailable`).toBe(true);
       await assertOfflineResources(page, resources, loaded);
@@ -229,6 +238,7 @@ test('anonymous girl with DOB retains exact puberty JSON after a cold offline st
       }
     });
     await page.goto(`${server.origin}/index.html`, { waitUntil: 'load' });
+    await enterAnonymousWorkspace(page);
     await czekajNaOdtworzenieSesji(page);
     await assertOfflineResources(page, resources, loaded);
     await expect(page.locator('#name'), 'a fresh profile has no inherited patient name').toHaveValue('');

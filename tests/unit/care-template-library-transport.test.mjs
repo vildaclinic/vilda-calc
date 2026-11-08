@@ -131,18 +131,36 @@ async function device(options = {}) {
 afterEach(() => { vi.clearAllTimers(); vi.useRealTimers(); vi.unstubAllGlobals(); vi.restoreAllMocks(); });
 
 describe('care-template protected transport in the existing sync cycle', () => {
-  it('returns the exact legacy promise and performs no template reads before opt-in', () => {
+  it('keeps exact legacy promises for an older vault bundle without a protected route API', () => {
     const sentinels = [Promise.resolve('pull'), Promise.resolve('push'), Promise.resolve('full')];
-    const win = { VildaVault: {} };
+    const win = { VildaVault: {}, __promises: sentinels };
     const source = fs.readFileSync(new URL('../../vilda_sync.js', import.meta.url), 'utf8');
-    // Test-only closure boundary: the production exported wrappers must forward
-    // the exact promise, rather than wrapping/replacing a legacy result/error.
     const boundary = 'Y=function(){return o.__promises[0]};ht=function(){return o.__promises[1]};Ht=function(){return o.__promises[2]};';
-    win.__promises = sentinels;
     new Function('window', source.replace('o.VildaSync={', boundary + 'o.VildaSync={'))(win);
     expect(win.VildaSync.syncPull()).toBe(sentinels[0]);
     expect(win.VildaSync.syncPush()).toBe(sentinels[1]);
     expect(win.VildaSync.syncFull()).toBe(sentinels[2]);
+    expect(win.VildaSync.getTemplateLibrarySyncStatus()).toEqual({ state: 'inactive' });
+  });
+
+  it('preserves exact legacy results and errors after route selection without template reads before opt-in', async () => {
+    const values = [{ action: 'fictional-pull' }, { action: 'fictional-push' }, { action: 'fictional-full' }];
+    const route = vi.fn(async () => ({ mode: 'legacy' })), capture = vi.fn();
+    const win = { VildaVault: { isUnlocked: () => true, getCurrentUser: () => ({ userId: 'fictional-route-owner' }),
+      preparePatientClinicalRoute: route, captureCareTemplateSession: capture } };
+    const source = fs.readFileSync(new URL('../../vilda_sync.js', import.meta.url), 'utf8');
+    // The actual async route selector must finish before legacy transport. The
+    // selector wraps promises, while exact legacy result/error identity remains.
+    const boundary = 'Y=function(){return o.__promises[0]};ht=function(){return o.__promises[1]};Ht=function(){return o.__promises[2]};';
+    win.__promises = values.map(value => Promise.resolve(value));
+    new Function('window', source.replace('o.VildaSync={', boundary + 'o.VildaSync={'))(win);
+    expect(await win.VildaSync.syncPull()).toBe(values[0]);
+    expect(await win.VildaSync.syncPush()).toBe(values[1]);
+    expect(await win.VildaSync.syncFull()).toBe(values[2]);
+    const legacyError = Object.assign(new Error('Fictional original transport error'), { code: 'FICTIONAL_LEGACY_ERROR' });
+    win.__promises[0] = Promise.reject(legacyError);
+    await expect(win.VildaSync.syncPull()).rejects.toBe(legacyError);
+    expect(route).toHaveBeenCalledTimes(4); expect(capture).not.toHaveBeenCalled();
     expect(win.VildaSync.getTemplateLibrarySyncStatus()).toEqual({ state: 'inactive' });
   });
 
@@ -742,7 +760,7 @@ describe('read-only protected authority for explicit account lifecycle guards', 
 describe('authority probe with the real encrypted vault and lazy library backend', () => {
   it('derives the actual selected authority without opening or reading its isolated IndexedDB', async () => {
     const open = vi.fn(() => { throw new Error('The read-only authority probe must not open a data DB'); });
-    const win = { crypto, TextEncoder, TextDecoder, btoa, atob, indexedDB: { open },
+    const win = { crypto, TextEncoder, TextDecoder, btoa, atob, indexedDB: { open, databases: async () => [] },
       localStorage: storage(), sessionStorage: storage(), self: null, top: null,
       setTimeout, clearTimeout, setInterval, clearInterval,
       document: { dispatchEvent() {} }, VildaSyncIntegration: { isSyncEnabled: () => false } };
@@ -914,7 +932,7 @@ describe('deletion guard completion and exact legacy compatibility', () => {
 
   it('uses the real read-only vault fence without loading the library SDK or opening its data DB', async () => {
     const open = vi.fn(() => { throw new Error('Explicit deletion must not open a template data DB'); });
-    const win = { crypto, TextEncoder, TextDecoder, btoa, atob, indexedDB: { open },
+    const win = { crypto, TextEncoder, TextDecoder, btoa, atob, indexedDB: { open, databases: async () => [] },
       localStorage: storage(), sessionStorage: storage(), self: null, top: null,
       setTimeout, clearTimeout, setInterval, clearInterval, document: { dispatchEvent() {} } };
     win.self = win; win.top = win;

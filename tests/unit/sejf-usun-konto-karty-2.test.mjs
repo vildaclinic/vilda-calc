@@ -511,7 +511,7 @@ describe('dziennik dostępu konta przy „Usuń konto”', () => {
     expect(wpisyOd(o, z, 'deleteDatabase', DZIENNIK(Y)), 'kasowania bazy dziennika Y').toEqual([]);
   }, 30_000);
 
-  it('UK26 (c): logowanie w trybie „Zaloguj jednorazowo” przy znaczniku ponowienia — bez operacji na bazach vilda_audit_v1_* i na kluczach vilda-audit-delete-v1:*, bez listy baz; znacznik bez zmian', async () => {
+  it('UK26 (c): logowanie w trybie „Zaloguj jednorazowo” przy znaczniku ponowienia — bez operacji na bazach vilda_audit_v1_* i na kluczach vilda-audit-delete-v1:*, bez listy baz na potrzeby dziennika; znacznik bez zmian', async () => {
     const o = await nowe({ zaloguj: null });
     o.idb.__atrapa.utworz(DZIENNIK(BEZ_KONTA), 1, SCHEMAT_DZIENNIKA, { entries: [wierszDziennika(1)] });
     o.win.localStorage.setItem(ZNACZNIK_DZIENNIKA(BEZ_KONTA), '1');
@@ -525,7 +525,8 @@ describe('dziennik dostępu konta przy „Usuń konto”', () => {
     expect(o.v.isEphemeralMode(), 'tryb jednorazowy').toBe(true);
     expect(odczytane, 'odczyty znaczników ponowienia').toEqual([]);
     expect({ databases: wpisyOd(o, z.log, 'databases').length, open: wpisyOd(o, z.log, 'open', /^vilda_audit_v1_/).length, deleteDatabase: wpisyOd(o, z.log, 'deleteDatabase', /^vilda_audit_v1_/).length })
-      .toEqual({ databases: 0, open: 0, deleteDatabase: 0 });
+      // Two native workspace marker probes accompany ephemeral account creation; neither touches the audit domain.
+      .toEqual({ databases: 2, open: 0, deleteDatabase: 0 });
     expect(o.dziennik.slice(z.dziennik).filter((x) => String(x.klucz).startsWith(PRZEDROSTEK_ZNACZNIKA_DZIENNIKA)), 'zapisy znaczników ponowienia').toEqual([]);
     expect(o.win.localStorage.getItem(ZNACZNIK_DZIENNIKA(BEZ_KONTA))).toBe('1');
   }, 30_000);
@@ -560,13 +561,14 @@ describe('dziennik dostępu konta przy „Usuń konto”', () => {
       .toEqual({ poUsunieciuWpisu: true, poBlokadzie: true });
   }, 30_000);
 
-  it('UK28: „Usuń konto” w trybie „Zaloguj jednorazowo” — jedna lista baz (jak K6j w sync-dziennik-konto.test.mjs), bez otwarć i kasowań vilda_audit_v1_*, bez zapisów vilda-audit-delete-v1:*', async () => {
+  it('UK28: „Usuń konto” w trybie „Zaloguj jednorazowo” — lista baz usuwania konta i kontrola znacznika chronionego zapisu, bez otwarć i kasowań vilda_audit_v1_*, bez zapisów vilda-audit-delete-v1:*', async () => {
     const o = await nowe({ jednorazowo: true });
     const z = o.znacznik();
     expect(await usun(o)).toEqual(OK);
     await o.cisza();
     expect({ databases: wpisyOd(o, z.log, 'databases').length, open: wpisyOd(o, z.log, 'open', /^vilda_audit_v1_/).length, deleteDatabase: wpisyOd(o, z.log, 'deleteDatabase', /^vilda_audit_v1_/).length })
-      .toEqual({ databases: 1, open: 0, deleteDatabase: 0 });
+      // One additional fresh workspace marker probe protects account removal.
+      .toEqual({ databases: 2, open: 0, deleteDatabase: 0 });
     expect(o.dziennik.slice(z.dziennik).filter((x) => String(x.klucz).startsWith(PRZEDROSTEK_ZNACZNIKA_DZIENNIKA)), 'zapisy znaczników ponowienia').toEqual([]);
   }, 30_000);
 });
@@ -1529,6 +1531,23 @@ describe('przerwane usuwanie kończy się przy liście kont', () => {
       .toEqual({ zX: true, wpis: true, zapisy: 0, cykl: true });
   }, 30_000);
 
+  it('protected workspace marker prevents background completion from deleting a retained account', async () => {
+    const o = await nowe({ zaloguj: null });
+    const X = await przerwane(o);
+    const marker = { accountId: X, revision: 1, sealed: { iv: 'FICTIONAL', data: 'FICTIONAL' } };
+    o.idb.__atrapa.utworz('vilda-clinical-workspace-native-v1', 1,
+      { accounts: { keyPath: 'accountId' } }, { accounts: [marker] });
+    const o3 = await drugie(o, { zaloguj: null });
+    const z = log(o).length;
+    await o3.v.listUsers();
+    await o3.cisza();
+    expect(await czytajRekord(o.idb, REJESTR, 'users', X)).toBeTruthy();
+    expect(await czytajRekord(o.idb, 'vilda-clinical-workspace-native-v1', 'accounts', X)).toEqual(marker);
+    expect(zapisyRejestru(o, z)).toEqual([]);
+    expect(stanCyklu(o3, X)).toBe('removing');
+    await expect(o3.v.removeUser(X, '')).rejects.toMatchObject({ code: 'CLINICAL_NATIVE_LIFECYCLE_REQUIRED' });
+  }, 30_000);
+
   it('UK49 (k): karta usuwająca czyta listę kont w trakcie czekającego kasowania, a lista baz przeglądarki przychodzi już po skasowaniu bazy sejfu X — usuwanie kończy tylko karta usuwająca: jedno usunięcie konta (znacznik cyklu konta zapisany na początku i na końcu), jedno kasowanie bazy kolejki X i jedna zmiana rejestru', async () => {
     const o = await nowe({ konta: 'AB' });
     const X = o.A.userId;
@@ -1604,14 +1623,14 @@ function startBezSesji(w, status) {
 }
 
 describe('start ekranu logowania bez sesji (vilda_auth_ui.js, Ei)', () => {
-  it('UK51 (a): getStatus() wstrzymany — reset stanu aplikacji (qa „show-startup”) od razu po tryRestoreSession() false; „Witamy” z banerem dopiero po odczycie stanu', async () => {
+  it('UK51 (a): getStatus() wstrzymany — bez resetu stanu aplikacji po tryRestoreSession() false; „Witamy” z banerem dopiero po odczycie stanu', async () => {
     const w = ekranLogowania();
     let stan;
     const s = startBezSesji(w, () => new Promise((r) => { stan = r; }));
     const boot = s.boot();
     s.przywroc(false);
     await chwila();
-    expect({ qa: w.wywolania.qa, ekrany: w.ekrany.length }, 'przed odczytem stanu sejfu').toEqual({ qa: ['show-startup'], ekrany: 0 });
+    expect({ qa: w.wywolania.qa, ekrany: w.ekrany.length }, 'przed odczytem stanu sejfu').toEqual({ qa: [], ekrany: 0 });
     stan({ state: 'no-users', userCount: 0, currentUser: null, lockReason: 'user-removed-elsewhere' });
     await boot;
     expect(w.ekrany.map(w.opis)).toEqual([{ klasa: 'vilda-auth-startup', banery: [TEKST_BANERA], konta: [] }]);
@@ -1624,7 +1643,7 @@ describe('start ekranu logowania bez sesji (vilda_auth_ui.js, Ei)', () => {
       const boot = s.boot();
       s.przywroc(false);
       await boot;
-      expect({ qa: w.wywolania.qa, ekrany: w.ekrany.map(w.opis) }).toEqual({ qa: ['show-startup'], ekrany: [{ klasa: 'vilda-auth-startup', banery: [], konta: [] }] });
+      expect({ qa: w.wywolania.qa, ekrany: w.ekrany.map(w.opis) }).toEqual({ qa: [], ekrany: [{ klasa: 'vilda-auth-startup', banery: [], konta: [] }] });
     }
   });
 

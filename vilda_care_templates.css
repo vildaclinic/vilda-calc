@@ -48,6 +48,24 @@ dialog.vct-dialog::backdrop { background: #1a3b4445; backdrop-filter: blur(3px);
 .vct .vct-footer { display: flex; align-items: center; justify-content: space-between; gap: var(--space-12px); padding: var(--space-12px) var(--space-24px); border-top: var(--border-hairline) solid var(--vcp-line); background: #fff; flex-shrink: 0; }
 .vct .vct-footer > .vcp-help { margin: 0; }
 .vct .vct-footer-actions { display: flex; align-items: center; justify-content: flex-end; gap: var(--space-10px); flex-wrap: wrap; }
+/* Applying a template edits a patient copy. Its controls stay readable on phones. */
+.vct.vcp .vct-apply-button { min-height: 44px; }
+.vct.vcp.vct-application-mode { font-size: 16px; }
+.vct.vcp.vct-application-mode button { min-height: 44px!important; font-size: 16px!important; }
+.vct.vct-application-mode input:not([type="checkbox"]):not([type="radio"]),
+.vct.vct-application-mode select, .vct.vct-application-mode textarea { min-height: 44px; font-size: 16px; }
+.vct .vct-application-pane > h2 { font-size: 20px; }
+.vct.vct-application-mode .vcp-field > span, .vct.vct-application-mode .vcp-check { font-size: 16px; }
+.vct.vct-application-mode .vcp-help { font-size: 14px; }
+.vct .vct-application-patient { margin: var(--space-16px) 0; padding: var(--space-14px); background: var(--vcp-soft); border-radius: var(--radius-9); }
+.vct .vct-application-patient h3 { font-size: 17px; font-weight: 600; overflow-wrap: anywhere; }
+.vct .vct-application-patients { display: grid; gap: var(--space-8px); }
+.vct .vct-application-patients .vcp-patient-option { display: flex; flex-direction: column; align-items: flex-start; text-align: left; gap: var(--space-4px); min-width: 0; overflow-wrap: anywhere; }
+.vct .vct-application-patients .vcp-patient-option[aria-pressed="true"] { background: var(--vcp-soft)!important; border-color: var(--vcp-teal)!important; }
+.vct .vct-application-step .vcp-check { min-height: 44px; align-items: center; }
+.vct .vct-application-stage > .vcp-field { margin-top: 0; }
+.vct .vct-application-pane .vcp-field-pair { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: var(--space-12px); }
+.vct.vct-application-mode .vct-footer > .vcp-help { max-width: none; }
 @media (max-width: 700px) {
   dialog.vct-dialog { width: calc(100vw - 12px); max-width: calc(100vw - 12px); height: calc(100dvh - 16px); max-height: calc(100dvh - 16px); border-radius: var(--radius-10); }
   .vct .vct-header, .vct .vct-library-tools, .vct .vct-library-list, .vct .vct-scroll-pane, .vct .vct-editor-main { padding: var(--space-14px) var(--space-16px); }
@@ -69,6 +87,10 @@ dialog.vct-dialog::backdrop { background: #1a3b4445; backdrop-filter: blur(3px);
   .vct .vct-footer > .vcp-help { max-width: 110px; font-size: 10px; }
   .vct .vct-footer-actions { gap: var(--space-8px); }
   .vct .vct-footer-actions button { min-height: 44px; font-size: 12px; }
+  .vct.vct-application-mode .vct-footer { flex-wrap: wrap; align-items: center; }
+  .vct.vct-application-mode .vct-footer > .vcp-help { flex-basis: 100%; font-size: 14px; }
+  .vct.vct-application-mode .vct-footer-actions { width: 100%; justify-content: space-between; }
+  .vct .vct-application-pane .vcp-field-pair { grid-template-columns: minmax(0, 1fr); }
 }
 @media (max-height: 500px) and (max-width: 1000px) and (orientation: landscape) {
   dialog.vct-dialog { width: calc(100vw - 16px); max-width: calc(100vw - 16px); height: calc(100dvh - 8px); max-height: calc(100dvh - 8px); }

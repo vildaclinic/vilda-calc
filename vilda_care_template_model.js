@@ -271,6 +271,100 @@
     definition.steps = definition.steps.map(step => Object.assign({}, step, { id: options.stepIds[step.id], stageId: options.stageIds[step.stageId] }));
     return { ok: true, definition, requiresNameReview: false, issues: [] };
   }
+  // A provider DTO is input data, not a write capability. This operation builds
+  // only an editable RAM draft; a future writer must re-read the guarded source
+  // and compare its current revision/base token before accepting any save.
+  function applicationFields(value, allowed, required) {
+    if (!object(value)) return null;
+    const prototype = Object.getPrototypeOf(value);
+    if (prototype !== null && Object.getPrototypeOf(prototype) !== null) return null;
+    const result = Object.create(null);
+    for (const key of Reflect.ownKeys(value)) {
+      const field = Object.getOwnPropertyDescriptor(value, key);
+      if (typeof key !== 'string' || !allowed.includes(key) || !field.enumerable || !own(field, 'value')) return null;
+      result[key] = field.value;
+    }
+    return required.every(key => own(result, key)) ? result : null;
+  }
+  function applicationArray(value, maximum) {
+    if (!Array.isArray(value)) return null;
+    const length = Object.getOwnPropertyDescriptor(value, 'length');
+    if (!length || !own(length, 'value') || length.value > maximum) return null;
+    const keys = Reflect.ownKeys(value);
+    if (keys.length !== length.value + 1) return null;
+    const result = [];
+    for (let index = 0; index < length.value; index++) {
+      const field = Object.getOwnPropertyDescriptor(value, String(index));
+      if (!field || !field.enumerable || !own(field, 'value')) return null;
+      result.push(field.value);
+    }
+    return result;
+  }
+  function applicationFailure(code, path) {
+    const issues = []; add(issues, code, path || []);
+    return { ok: false, provenanceVerified: false, patientWriterAvailable: false, issues };
+  }
+  function freezeApplicationSource(value) {
+    if (value && typeof value === 'object') { Object.values(value).forEach(freezeApplicationSource); Object.freeze(value); }
+    return value;
+  }
+  function prepareApplicationDraft(templateView, options) {
+    try {
+      // Inspect the DTO envelope without reading arbitrary accessors or copying
+      // the entire revision history. Only the selected immutable content is
+      // retained. These are the fields exposed by CareTplGet/CareTplDTO.
+      const viewFields = ['templateId', 'status', 'baseToken', 'headRevisionId', 'revisionId', 'revisionNumber',
+        'title', 'definition', 'stageCount', 'stepCount', 'conflicts', 'revisions'];
+      const view = applicationFields(templateView, viewFields.concat(['syncState', 'readOnly']), viewFields);
+      if (!view || !id(view.templateId) || !digest(view.baseToken) || !id(view.revisionId)
+          || view.revisionId !== view.headRevisionId || !Number.isSafeInteger(view.revisionNumber) || view.revisionNumber < 1)
+        return applicationFailure('CARE_TEMPLATE_APPLICATION_SOURCE_INVALID', ['source']);
+      if (view.status !== 'active' || view.conflicts !== null || own(view, 'readOnly') && view.readOnly !== false)
+        return applicationFailure('CARE_TEMPLATE_APPLICATION_SOURCE_UNAVAILABLE', ['source']);
+      const revisions = applicationArray(view.revisions, LIMITS.maxRevisions);
+      if (!revisions || !revisions.length) return applicationFailure('CARE_TEMPLATE_APPLICATION_SOURCE_INVALID', ['source', 'revisions']);
+      const revisionFields = ['id', 'parentRevisionId', 'operationId', 'recordedAtISO', 'definition', 'contentDigest', 'revisionNumber'];
+      const revisionIds = new Set(); let revision = null;
+      for (const entry of revisions) {
+        const item = applicationFields(entry, revisionFields, revisionFields);
+        if (!item || !id(item.id) || revisionIds.has(item.id)) return applicationFailure('CARE_TEMPLATE_APPLICATION_SOURCE_INVALID', ['source', 'revisions']);
+        revisionIds.add(item.id);
+        if (item.id === view.revisionId) revision = item;
+      }
+      if (!revision || revision.revisionNumber !== view.revisionNumber || !digest(revision.contentDigest)
+          || !validateOperationId(revision.operationId) || !instant(revision.recordedAtISO)
+          || revision.parentRevisionId !== null && !id(revision.parentRevisionId))
+        return applicationFailure('CARE_TEMPLATE_APPLICATION_SOURCE_INVALID', ['source', 'revisionId']);
+      const definition = detached(view.definition), revisionDefinition = detached(revision.definition);
+      const validated = canonicalDefinition(definition);
+      if (!validated.ok) return { ok: false, provenanceVerified: false, patientWriterAvailable: false, issues: validated.issues };
+      if (!equal(definition, revisionDefinition) || !equal(definition, validated.definition)
+          || view.title !== definition.name || view.stageCount !== definition.stages.length || view.stepCount !== definition.steps.length)
+        return applicationFailure('CARE_TEMPLATE_APPLICATION_SOURCE_MISMATCH', ['source', 'definition']);
+      const selection = applicationFields(options, ['selectedStepIds', 'stageIds', 'stepIds'], ['selectedStepIds', 'stageIds', 'stepIds']);
+      if (!selection) return applicationFailure('CARE_TEMPLATE_APPLICATION_OPTIONS_INVALID', ['options']);
+      const selectedIds = applicationArray(selection.selectedStepIds, LIMITS.maxSteps);
+      if (!selectedIds || !selectedIds.length) return applicationFailure('CARE_TEMPLATE_APPLICATION_SELECTION_REQUIRED', ['selectedStepIds']);
+      const steps = new Map(definition.steps.map(step => [step.id, step])), selected = new Set();
+      for (const stepId of selectedIds) {
+        if (!id(stepId) || !steps.has(stepId) || selected.has(stepId)) return applicationFailure('CARE_TEMPLATE_APPLICATION_SELECTION_INVALID', ['selectedStepIds']);
+        selected.add(stepId);
+      }
+      const subset = detached(definition), stages = new Map(subset.stages.map(stage => [stage.id, stage]));
+      subset.stageOrder = subset.stageOrder.filter(stageId => stages.get(stageId).stepIds.some(stepId => selected.has(stepId)));
+      subset.stages = subset.stageOrder.map(stageId => ({ ...stages.get(stageId), stepIds: stages.get(stageId).stepIds.filter(stepId => selected.has(stepId)) }));
+      subset.steps = subset.stages.flatMap(stage => stage.stepIds.map(stepId => detached(steps.get(stepId))));
+      const maps = detached({ stageIds: selection.stageIds, stepIds: selection.stepIds });
+      const duplicated = duplicateDefinition(subset, maps);
+      if (!duplicated.ok) return { ok: false, provenanceVerified: false, patientWriterAvailable: false, issues: duplicated.issues };
+      const sourceIds = new Set([view.templateId, view.revisionId].concat(definition.stageOrder, definition.steps.map(step => step.id)));
+      if (duplicated.definition.stageOrder.concat(duplicated.definition.steps.map(step => step.id)).some(nextId => sourceIds.has(nextId)))
+        return applicationFailure('CARE_TEMPLATE_ID_MAP_INVALID', ['options']);
+      const source = freezeApplicationSource({ templateId: view.templateId, revisionId: view.revisionId,
+        revisionNumber: view.revisionNumber, baseToken: view.baseToken, definition });
+      return { ok: true, source, definition: duplicated.definition, provenanceVerified: false, patientWriterAvailable: false, issues: [] };
+    } catch { return applicationFailure('CARE_TEMPLATE_APPLICATION_SOURCE_INVALID', ['source']); }
+  }
   function copyPatientStructureDraft(source, options) {
     let plan;
     try { plan = detached(source); } catch (error) { return draftFailure(error.message); }
@@ -657,7 +751,7 @@
 
   root.VildaCareTemplateModel = Object.freeze({ VERSION, OP_ID_PATTERN, validateOperationId, LIMITS, TASK_KINDS, OUTCOMES,
     validateDraft, validateDefinition, canonicalDefinition, sameDefinition,
-    createDefinitionDraft, duplicateDefinition, copyPatientStructureDraft, reviewTextKey,
+    createDefinitionDraft, duplicateDefinition, prepareApplicationDraft, copyPatientStructureDraft, reviewTextKey,
     decodeTemplateRecord, verifyTemplateRecord, getTemplateView, operationOutcome,
     prepareTemplateOperation, applyTemplateEvent, mergeTemplateRecords });
 })(typeof window !== 'undefined' ? window : globalThis);

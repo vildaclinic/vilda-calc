@@ -107,7 +107,7 @@ describe('G27b — bramka modalu „Co chcesz zrobić?" jest wąska', () => {
     expect(FIXES).toContain('if(n&&n.detail&&n.detail.skipLoadChoice===!0)return;');
   });
 
-  it('zwykłe wczytanie pacjenta dostaje modal jak dotąd', () => {
+  it.each([true, false])('zwykłe wczytanie pacjenta dostaje modal (potwierdzone przyjęcie=%s)', accepted => {
     // Wykonujemy rzeczywisty nasłuch; atrapy wyznaczają tylko granicę modalu
     // i prezentacji, bez odtwarzania reguły skipLoadChoice w teście.
     const start = FIXES.indexOf('document.addEventListener("vilda:patient-loaded",function(n){/* P-ODTWORZ-NAWIGACJA:');
@@ -116,7 +116,7 @@ describe('G27b — bramka modalu „Co chcesz zrobić?" jest wąska', () => {
     expect(end).toBeGreaterThan(start);
     let listener;
     const captured = [], scheduled = [], shown = [], finished = [];
-    const ticket = Object.freeze({});
+    const ticket = accepted ? Object.freeze({}) : null;
     const window = {
       sessionStorage: { removeItem() {} },
       VildaDataImportExport: { capturePatientLoadChoicePresentation(detail) {
@@ -131,7 +131,7 @@ describe('G27b — bramka modalu „Co chcesz zrobić?" jest wąska', () => {
     new Function('window', 'document', 'setTimeout', 'M', 'j', 'finishLoadChoicePresentation', FIXES.slice(start, end))(
       window, document,
       (callback, delay) => { scheduled.push({ callback, delay }); },
-      (...args) => shown.push(args),
+      (...args) => { expect(captured).toEqual([args[0]]); shown.push(args); },
       () => { throw new Error('Zwykły wybór nie odtwarza historycznej wersji'); },
       value => finished.push(value),
     );
@@ -143,10 +143,17 @@ describe('G27b — bramka modalu „Co chcesz zrobić?" jest wąska', () => {
     listener({ detail });
     expect(captured).toHaveLength(1);
     expect(captured[0]).toBe(detail);
-    expect(scheduled).toHaveLength(1);
-    expect(scheduled[0].delay).toBe(0);
-    expect(shown).toEqual([]);
-    scheduled[0].callback();
+    if (accepted) {
+      // Exact accepted native publication mounts before the task returns.
+      expect(scheduled).toHaveLength(0);
+      expect(scheduled).toEqual([]);
+    } else {
+      // Unscoped historical events keep their original deferred behavior.
+      expect(scheduled).toHaveLength(1);
+      expect(scheduled[0].delay).toBe(0);
+      expect(shown).toEqual([]);
+      scheduled[0].callback();
+    }
     expect(shown).toHaveLength(1);
     expect(shown[0][0]).toBe(detail);
     expect(shown[0][1]).toBe(ticket);

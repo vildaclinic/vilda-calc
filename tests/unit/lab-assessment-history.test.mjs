@@ -87,11 +87,13 @@ function setup() {
     getCurrentUser: vi.fn(() => ({ userId: 'fictional-assessment-account' })),
     getPatient: vi.fn(async () => ({ snapshots: [{ payload: { user: { sex: 'F', age: 17 } } }] })),
     listPatientNotesForPatient: vi.fn(async () => []),
+    listCarePlans: vi.fn(async () => []),
     listPatientLabSeries: vi.fn(async () => []),
   };
   const source = [
     // Use the real ownership guard used by the production Notes reader.
     between(auth, 'var remReadEpoch =', 'function remInlineState('),
+    between(auth, 'function CareNoteDestination(', 'function CareLegacyReminderPlan('),
     between(auth, 'function Lh3HasAssessment(', 'async function Xo('),
     between(auth, 'async function Xo(', '// Rata D (P6)'),
     between(auth, 'function $r(', 'var Ta='),
