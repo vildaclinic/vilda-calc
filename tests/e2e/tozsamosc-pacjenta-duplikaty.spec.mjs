@@ -244,6 +244,13 @@ test.describe('Dopisanie daty urodzenia nie tworzy drugiego pacjenta', () => {
     // Closing the native chooser precedes the load operation's final settled signal.
     // Destructive actions must wait for the real decision boundary, not bypass it.
     await expect.poll(() => page.evaluate(() => window.VildaSaveStatusIndicator.getCurrentDecision().ready)).toBe(true);
+    // An untouched New visit can legitimately clear without a warning. Make
+    // this an explicit unsaved visit so the guard's expected branch is fixed.
+    await page.locator('#height').fill('105');
+    await page.locator('#weight').fill('18');
+    await page.locator('#weight').blur();
+    await expect.poll(() => page.evaluate(() => window.VildaSaveStatusIndicator.getCurrentDecision()))
+      .toMatchObject({ ready: true, state: 'dirty' });
     await page.locator('#clearAllDataBtn').click();
     const warning = page.getByRole('dialog', { name: 'Zapisać zmiany przed wyczyszczeniem?', exact: true });
     await expect(warning).toBeVisible();
