@@ -20,6 +20,13 @@
 // Zmieniono wyłącznie krotności databases; żadnych nowych otwarć baz,
 // zapisów, kryptografii, powiadomień ani wyników operacji. Pierwotny hash bazy zachowano.
 //
+// Plany z etapami w sejfie V1 sprawdzają dokumentację przed scaleniem/importem:
+// jeden zbiorczy odczyt patientNotes (readonly) i odszyfrowanie istniejących
+// kandydatów do zmiany/usunięcia wykrywają osierocone odnośniki i chronią historię
+// planu. Fikstura uwzględnia wyłącznie te dodatkowe odczyty i operacje kryptografii
+// w krokach scalania, importu i odtwarzania. Zapisy, wyniki, powiadomienia oraz
+// localStorage/sessionStorage pozostają identyczne; pierwotny opis i hash zachowano.
+//
 // WARIANTY (każde okno ma atrapę IndexedDB z tests/support/atrapa-indexeddb.mjs i moduły punktu odzyskiwania)
 //   Ze           sejf na adapterze w pamięci z rejestrem wywołań (magazynZRejestrem);
 //   prywatny     „Komputer prywatny”: adapter IndexedDB sejfu nad atrapą;

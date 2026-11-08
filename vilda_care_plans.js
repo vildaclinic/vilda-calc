@@ -31,7 +31,7 @@
     if (options && options.ui === false) return templateCorePromise;
     if (!templateUiPromise) templateUiPromise = templateCorePromise.then(function () { return Promise.all([
       templateAsset('vilda_care_templates.css?v=3', null, true),
-      templateAsset('vilda_care_templates.js?v=4', function () { return !!win.VildaCareTemplates; })
+      templateAsset('vilda_care_templates.js?v=5', function () { return !!win.VildaCareTemplates; })
     ]); }).catch(function (error) { templateUiPromise = null; throw error; });
     return templateUiPromise;
   }
@@ -219,17 +219,23 @@
     return plans;
   }
   function stagedNoteReferences(plan, note) {
-    var context = plan.context, link = note.careContext && note.careContext.version === 2 ? note.careContext : null;
+    var link = note.careContext && note.careContext.version === 2 ? note.careContext : null;
     if (link && link.role === 'plan') return plan.record.id === note.id;
     if (link && (link.planId !== plan.record.id || !['note', 'result', 'decision', 'calendar'].includes(link.role))) return false;
-    function placement(stepId, stageId) {
-      if (!link) return true;
-      return (link.stepId || null) === (stepId || null) && (link.stageId || null) === (stageId || null);
-    }
-    function stepPlacement(stepId) { var step = context.steps.find(function (entry) { return entry.id === stepId; }); return !!step && placement(step.id, step.stageId); }
-    return context.facts.some(function (fact) { return fact.evidence.noteId === note.id && stepPlacement(fact.stepId); })
-      || context.associations.some(function (association) { return association.noteId === note.id && stepPlacement(association.stepId); })
-      || context.log.some(function (entry) { return entry && Array.isArray(entry.documentIds) && entry.documentIds.includes(note.id) && placement(entry.stepId, entry.stageId); });
+    var versions = [plan.record].concat((Array.isArray(plan.record.nativeConflicts) ? plan.record.nativeConflicts : []).map(function (state) { return state && state.record; }));
+    return versions.some(function (record) {
+      if (!record || record.id !== plan.record.id || record.patientId !== plan.record.patientId || !staged(record)) return false;
+      var view = stagedView(record); if (!view || view.kind !== 'v2') return false;
+      var context = record.careContext;
+      function placement(stepId, stageId) {
+        if (!link) return true;
+        return (link.stepId || null) === (stepId || null) && (link.stageId || null) === (stageId || null);
+      }
+      function stepPlacement(stepId) { var step = context.steps.find(function (entry) { return entry.id === stepId; }); return !!step && placement(step.id, step.stageId); }
+      return context.facts.some(function (fact) { return fact.evidence.noteId === note.id && stepPlacement(fact.stepId); })
+        || context.associations.some(function (association) { return association.noteId === note.id && stepPlacement(association.stepId); })
+        || context.log.some(function (entry) { return entry && Array.isArray(entry.documentIds) && entry.documentIds.includes(note.id) && placement(entry.stepId, entry.stageId); });
+    });
   }
   function planReferences(plan, note) {
     var context = plan.context;
@@ -588,14 +594,23 @@
         if (staged(plan)) {
           var freshPlan = await vault.getCarePlan(planId);
           if (!current() || ticket !== recordSequence || state.selected !== planId || recordNoteId !== noteId) return;
-          var stagedContext = freshPlan && freshPlan.patientId === patientId && freshPlan.id === planId && staged(freshPlan) && freshPlan.careContext;
-          var referenced = stagedContext && (stagedContext.facts.some(function (fact) { return fact.evidence.noteId === noteId; })
-            || stagedContext.associations.some(function (association) { return association.noteId === noteId; })
-            || stagedContext.log.some(function (entry) { return entry.documentIds.includes(noteId); }));
+          var retainedPlans = freshPlan && freshPlan.patientId === patientId && freshPlan.id === planId && staged(freshPlan)
+            ? [freshPlan].concat((freshPlan.nativeConflicts || []).map(function (version) { return version && version.record; })) : [];
+          var referenced = false, capturedRevisions = [];
+          retainedPlans.forEach(function (version) {
+            if (!version || version.id !== planId || version.patientId !== patientId || !staged(version)) return;
+            var projected = stagedView(version), context = version.careContext;
+            if (!projected || projected.kind !== 'v2') return;
+            context.facts.forEach(function (fact) { if (fact.evidence.noteId === noteId) { referenced = true; capturedRevisions.push(fact.evidence.sourceRecordRevAtCapture); } });
+            context.associations.forEach(function (association) { if (association.noteId === noteId) { referenced = true; capturedRevisions.push(association.sourceRecordRevAtCapture); } });
+            if (context.log.some(function (entry) { return entry.documentIds.includes(noteId); })) referenced = true;
+          });
           if (!referenced) throw new Error('Ten dokument nie jest już powiązany z planem. Wróć do planu i odśwież widok.');
           var stagedOriginal = await vault.getPatientNote(noteId);
           if (!current() || ticket !== recordSequence || state.selected !== planId || recordNoteId !== noteId) return;
           if (!stagedOriginal || stagedOriginal.id !== noteId || stagedOriginal.patientId !== patientId) throw new Error('Dokument jest niedostępny. Sprawdź dokumentację pacjenta.');
+          if (capturedRevisions.some(function (revision) { return revision !== stagedOriginal.rev; }))
+            throw new Error('Dokument został zmieniony po powiązaniu z planem. Plan zachowuje odwołanie do wcześniejszej wersji, ale nie przechowuje jej treści. Bieżąca treść nie jest wyświetlana jako potwierdzenie tamtego wpisu. Sprawdź aktualną dokumentację w Karcie pacjenta.');
           record = stagedOriginal; renderDetail();
           if (!refreshing) { var stagedHeading = detail.querySelector('.vcp-record h2'); if (stagedHeading) stagedHeading.focus({ preventScroll: true }); }
           return;
@@ -873,24 +888,65 @@
         historyEntry(timeline, entry, true, false, plan.id);
       }); history.appendChild(timeline); detail.appendChild(history); detail.scrollTop = scroll;
     }
+    function stagedNativeConflict(plan) {
+      return !!(plan && (plan.syncNeedsReview === true || Array.isArray(plan.nativeConflicts) && plan.nativeConflicts.length));
+    }
     function stagedWritable(plan) {
       var view = stagedView(plan);
-      return !!(current() && state.stagedCapability && state.stagedCapability.available === true && typeof vault.mutateStagedCarePlan === 'function'
+      return !!(current() && !stagedNativeConflict(plan) && state.stagedCapability && state.stagedCapability.available === true && typeof vault.mutateStagedCarePlan === 'function'
         && view && view.kind === 'v2' && (!view.nextAction || !['resolveConflict', 'reviewChangedStage'].includes(view.nextAction.type)));
     }
+    function renderStagedNativeVersions(parent, plan) {
+      if (!Array.isArray(plan.nativeConflicts) || !plan.nativeConflicts.length) {
+        help(parent, 'Nie można wyświetlić wszystkich zachowanych wersji. Odśwież listę planów, aby ponowić odczyt.'); return;
+      }
+      var versions = [plan].concat(plan.nativeConflicts.map(function (state) { return state && state.record; }));
+      var section = node('section', 'vcp-native-conflicts');
+      section.setAttribute('aria-label', 'Zachowane wersje planu');
+      section.appendChild(node('h3', '', 'Zachowane wersje · ' + versions.length));
+      versions.forEach(function (version, index) {
+        var retained = node('details', 'vcp-history vcp-native-conflict-version');
+        var branch = index ? plan.nativeConflicts[index - 1] : null;
+        var operations = branch && branch.operations, last = Array.isArray(operations) && operations[operations.length - 1];
+        var stateKey = plan.id + ':native-conflict:' + (index ? last && last.id || index : 'primary');
+        retained.open = syncVersionState.get(stateKey) === true;
+        var samePlan = version && version.id === plan.id && version.patientId === plan.patientId && staged(version), rendered = false;
+        retained.appendChild(node('summary', '', 'Wersja ' + (index + 1) + (samePlan && typeof version.title === 'string' ? ' · ' + version.title : '')));
+        function renderVersion() {
+          if (rendered || !retained.open) return;
+          rendered = true;
+          var content = node('section', 'vcp-native-conflict-content');
+          if (!samePlan) help(content, 'Nie można bezpiecznie odczytać tej wersji. Odśwież aplikację; zachowany zapis pozostaje dostępny.');
+          else renderStagedPlan(version, { target: content, readOnly: true });
+          retained.appendChild(content);
+        }
+        retained.addEventListener('toggle', function () {
+          if (!current()) return;
+          syncVersionState.delete(stateKey); syncVersionState.set(stateKey, retained.open);
+          if (syncVersionState.size > 128) syncVersionState.delete(syncVersionState.keys().next().value);
+          renderVersion();
+        });
+        renderVersion(); section.appendChild(retained);
+      });
+      parent.appendChild(section);
+    }
     function stagedOutcomeLabel(kind) { return { performance: 'Wykonanie', resultReceipt: 'Otrzymanie wyniku', decision: 'Decyzja' }[kind] || kind; }
-    function renderStagedPlan(plan) {
+    function renderStagedPlan(plan, presentation) {
+      var target = presentation && presentation.target || detail, readOnly = !!(presentation && presentation.readOnly);
       var view = stagedView(plan), context = plan.careContext;
       var top = node('div', 'vcp-detail-top');
-      top.appendChild(options.openPatient ? button(name(plan) + ' ↗', 'vcp-patient-link', function () { openPatient(plan); }) : node('h3', 'vcp-patient', name(plan))); detail.appendChild(top);
-      detail.appendChild(node('h2', 'vcp-title', plan.title)); if (context.goal) detail.appendChild(node('p', 'vcp-goal', context.goal));
-      if (!view || view.kind !== 'v2') { notice(detail, 'Nie można bezpiecznie odczytać wszystkich danych tego planu. Odśwież aplikację przed dalszą pracą.', true); return; }
-      var writable = stagedWritable(plan), strip = node('div', 'vcp-plan-strip'); strip.appendChild(planBadge(plan)); strip.appendChild(node('span', '', doneSteps(plan).length + ' z ' + steps(plan).length + ' kroków rozstrzygniętych')); detail.appendChild(strip);
-      if (!writable) notice(detail, state.stagedCapability && !state.stagedCapability.available && state.stagedCapability.message || 'Zmiany tego planu są teraz niedostępne. Odśwież widok i sprawdź zachowane wpisy.', true);
+      top.appendChild(options.openPatient ? button(name(plan) + ' ↗', 'vcp-patient-link', function () { openPatient(plan); }) : node('h3', 'vcp-patient', name(plan))); target.appendChild(top);
+      target.appendChild(node('h2', 'vcp-title', plan.title)); if (context.goal) target.appendChild(node('p', 'vcp-goal', context.goal));
+      if (!view || view.kind !== 'v2') { notice(target, 'Nie można bezpiecznie odczytać wszystkich danych tego planu. Odśwież aplikację przed dalszą pracą.', true); return; }
+      var writable = !readOnly && stagedWritable(plan), strip = node('div', 'vcp-plan-strip'); strip.appendChild(planBadge(plan)); strip.appendChild(node('span', '', doneSteps(plan).length + ' z ' + steps(plan).length + ' kroków rozstrzygniętych')); target.appendChild(strip);
+      if (!readOnly && stagedNativeConflict(plan)) {
+        notice(target, 'Konflikt synchronizacji. Ten plan jest dostępny tylko do odczytu. Przejrzyj zachowane wersje poniżej; zmiany planu są wstrzymane.', true);
+        renderStagedNativeVersions(target, plan);
+      } else if (!readOnly && !writable) notice(target, state.stagedCapability && !state.stagedCapability.available && state.stagedCapability.message || 'Zmiany tego planu są teraz niedostępne. Odśwież widok i sprawdź zachowane wpisy.', true);
       if (closed(plan)) {
         var closeEntry = context.log.filter(function (entry) { return entry.action === 'closePlan'; }).pop();
-        notice(detail, 'Plan zamknięty · ' + date(closeEntry && closeEntry.effectiveDateISO || context.closedAtISO) + '\n' + [context.closeReason, context.closeText].filter(Boolean).join('\n'));
-      } else if (view.nextAction && view.nextAction.type === 'decidePlan') notice(detail, 'Wszystkie etapy zostały przejrzane. Plan pozostaje otwarty do osobnej decyzji o jego zakończeniu.');
+        notice(target, 'Plan zamknięty · ' + date(closeEntry && closeEntry.effectiveDateISO || context.closedAtISO) + '\n' + [context.closeReason, context.closeText].filter(Boolean).join('\n'));
+      } else if (view.nextAction && view.nextAction.type === 'decidePlan') notice(target, 'Wszystkie etapy zostały przejrzane. Plan pozostaje otwarty do osobnej decyzji o jego zakończeniu.');
       view.stages.forEach(function (stage, index) {
         var section = node('section', 'vcp-stage'); section.dataset.stageId = stage.id;
         var head = node('div', 'vcp-section-heading'); head.appendChild(node('h3', '', (index + 1) + '. ' + stage.title));
@@ -934,16 +990,16 @@
             if (stage.controlState === 'active' && !['resolved', 'omitted'].includes(step.progress)) actions.appendChild(button('Zmień przypomnienie', 'vcp-subtle', function () { stagedReminder(plan, step); }));
           }
           content.appendChild(actions); item.appendChild(content); section.appendChild(item);
-        }); detail.appendChild(section);
+        }); target.appendChild(section);
       });
       var bottom = node('div', 'vcp-detail-bottom');
       if (options.openPatient) bottom.appendChild(button('Otwórz w Karcie pacjenta ↗', 'vcp-outline', function () { openPatient(plan); }));
-      if (writable) bottom.appendChild(button(closed(plan) ? 'Wznów plan' : 'Zamknij plan', 'vcp-outline', function () { stagedReasonAction(plan, closed(plan) ? 'reopenPlan' : 'closePlan'); })); detail.appendChild(bottom);
+      if (writable) bottom.appendChild(button(closed(plan) ? 'Wznów plan' : 'Zamknij plan', 'vcp-outline', function () { stagedReasonAction(plan, closed(plan) ? 'reopenPlan' : 'closePlan'); })); target.appendChild(bottom);
       var history = node('details', 'vcp-history'); history.appendChild(node('summary', '', 'Przebieg planu · ' + historyCount(context.log.length)));
       context.log.slice().reverse().forEach(function (entry) {
         var row = node('div', 'vcp-timeline-entry'); row.appendChild(node('time', '', date(entry.effectiveDateISO || entry.recordedLocalDateISO))); row.appendChild(node('p', '', entry.text));
         entry.documentIds.forEach(function (id) { row.appendChild(recordLink('Otwórz dokument', id, entry.stepId)); }); history.appendChild(row);
-      }); detail.appendChild(history);
+      }); target.appendChild(history);
     }
     function stepNode(plan, step, index) {
       var item = node('article', 'vcp-step'); item.dataset.stepId = step.id;

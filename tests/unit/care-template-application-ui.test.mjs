@@ -64,13 +64,17 @@ async function review(d) {
 }
 
 describe('Applying a care template through its guarded provider', () => {
-  it('prepares the protected workspace explicitly and rechecks its real capability', async () => {
+  it('never offers or starts account preparation when an older provider advertises it', async () => {
     const capability = { available: false, canPrepare: true, message: 'Przygotuj miejsce zapisu planów.' };
     const prepareWorkspace = vi.fn(async () => { capability.available = true; return { available: true }; });
     const d = fixture({ capability, serviceOverrides: { prepareWorkspace } }); await settle();
-    expect(button(d.host, 'Użyj u pacjenta: Fikcyjny wniosek').disabled).toBe(true); button(d.host, 'Przygotuj plany z etapami').click(); await settle();
-    expect(prepareWorkspace).toHaveBeenCalledTimes(1); expect(d.application.getCapability.mock.calls.length).toBeGreaterThan(1);
-    expect(button(d.host, 'Użyj u pacjenta: Fikcyjny wniosek').disabled).toBe(false); expect(d.application.commit).not.toHaveBeenCalled(); d.controller.destroy();
+    const use = button(d.host, 'Użyj u pacjenta: Fikcyjny wniosek');
+    expect(use.disabled).toBe(true); use.click(); await settle();
+    expect(button(d.host, 'Przygotuj plany z etapami')).toBeUndefined();
+    expect(d.host.textContent).not.toContain(capability.message);
+    expect(d.host.textContent).toContain('Odśwież aplikację i spróbuj ponownie.');
+    expect(prepareWorkspace).not.toHaveBeenCalled(); expect(d.application.prepare).not.toHaveBeenCalled();
+    expect(d.application.commit).not.toHaveBeenCalled(); d.controller.destroy();
   });
 
   it('shows the explicit unavailable reason and never calls a missing writer', async () => {

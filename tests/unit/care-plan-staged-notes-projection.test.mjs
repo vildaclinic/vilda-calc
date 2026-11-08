@@ -23,6 +23,16 @@ describe('Native care-plan documents stay visible and route through their exact 
     expect(actual.resolveNoteDestination([note], note, patientId, { plans: [parent] })).toEqual({ kind: 'care', planId: parent.id, noteId: note.id, role: 'result', formatVersion: 2, readOnly: true, relatedPlans: [{ planId: parent.id, title: parent.title }] });
     expect(JSON.stringify([parent, note])).toBe(original);
   });
+  it('routes an original referenced only by a retained alternate version to its readonly parent', () => {
+    const parent = plan(), alternative = structuredClone(parent), note = evidence(alternative, false), actual = api();
+    parent.nativeConflicts = [{ record: alternative }]; parent.syncNeedsReview = true;
+    const original = JSON.stringify([parent, note]);
+    expect(actual.resolveNoteDestination([note], note, patientId, { plans: [parent] })).toMatchObject({ kind: 'care', planId: parent.id, noteId: note.id, formatVersion: 2, readOnly: true });
+    expect(actual.projectPatientNotes([note], patientId, { plans: [parent] })).toEqual([note]);
+    expect(JSON.stringify([parent, note])).toBe(original);
+    alternative.patientId = 'fictional-other-patient';
+    expect(actual.resolveNoteDestination([note], note, patientId, { plans: [parent] })).toEqual({ kind: 'notes', noteId: note.id });
+  });
   it('protects original documents with no careContext by the reverse captured reference', () => {
     const parent = plan(), note = evidence(parent, false), actual = api();
     expect(actual.resolveNoteDestination([note], note, patientId, { plans: [parent] })).toMatchObject({ kind: 'care', planId: parent.id, noteId: note.id, role: 'document', formatVersion: 2, readOnly: true });

@@ -16,7 +16,17 @@ const EXPECTED_HOOKS = [
   ['function PatientClinicalSelectionFor(account) {\n', 'function PatientClinicalSelectionFor(account) {\n  const workspace = PatientWorkspaceSelection(account); if (workspace) return workspace;\n'],
   ["if (route.mode === 'legacy') return;", "if (route.mode === 'legacy' || route.mode === 'protected-workspace') return;"],
   ['return Object.assign(CareMvpTransportContext(e),RemB22Context(e.reminderContext)', 'return Object.assign(PatientWorkspaceReadContext(e,t),RemB22Context(e.reminderContext)'],
-  [';v.VildaVault=$s}', ';PatientWorkspaceInstall($s);v.VildaVault=$s}']
+  [';v.VildaVault=$s}', ';PatientWorkspaceInstall($s);v.VildaVault=$s}'],
+  ["CareMvpExistingContext=CareMvpContext(g&&g.careContext)", "CareMvpExistingContext=PatientPortableContext(g&&g.careContext)"],
+  ["CareMvpHasContext?CareMvpContext(t.careContext):CareMvpExistingContext", "CareMvpHasContext?PatientPortableContext(t.careContext):CareMvpExistingContext"],
+  ["CareMvpMergedContext=CareMvpContext(z&&z.careContext)", "CareMvpMergedContext=PatientPortableContext(z&&z.careContext)"],
+  ["Object.prototype.hasOwnProperty.call(g,\"careContext\")?CareMvpContext(g.careContext):CareMvpMergedContext", "Object.prototype.hasOwnProperty.call(g,\"careContext\")?PatientPortableContext(g.careContext):CareMvpMergedContext"],
+  ["return Object.assign(PatientWorkspaceReadContext(e,t),RemB22Context(e.reminderContext)", "if(PatientPortableMarked(e&&e.careContext))await PatientPortableModules();return Object.assign(PatientWorkspaceReadContext(e,t),RemB22Context(e.reminderContext)"],
+  ["const context = CareMvpContext(plain && plain.careContext);\n    if (!context || context.role !== 'plan') return true;", "if (PatientPortableMarked(plain && plain.careContext)) await PatientPortableModules();\n    const context = PatientPortableContext(plain && plain.careContext);\n    if (!context || context.role !== 'plan') return true;"],
+  [";CareMvpPreflightPayload(s);", ";if(PatientPortablePayload(s))await PatientPortableModules();CareMvpPreflightPayload(s);"],
+  [";CareMvpPreflightPayload(p);", ";if(PatientPortablePayload(p))await PatientPortableModules();CareMvpPreflightPayload(p);"],
+  [";CareMvpPreflightPayload(a);", ";if(PatientPortablePayload(a))await PatientPortableModules();CareMvpPreflightPayload(a);"],
+  [";CareMvpPreflightPayload(t);", ";if(PatientPortablePayload(t))await PatientPortableModules();CareMvpPreflightPayload(t);"],
 ];
 function fail(message) { throw new Error('Clinical workspace boundary: ' + message); }
 function reverseOnce(text, before, after) {
@@ -35,7 +45,7 @@ export function reduceClinicalWorkspaceVault(source, repository = ROOT) {
   // The builder writes exactly one separator newline after the readable file.
   if (!fragment.endsWith('\n') || digest(fragment.slice(0, -1)) !== manifest.fragmentSHA256) fail('native fragment changed');
   let reduced = source.slice(0, start) + source.slice(end + END.length);
-  for (let index = 0; index < EXPECTED_HOOKS.length; index++) {
+  for (const index of EXPECTED_HOOKS.map((_, index) => index).reverse()) {
     const [before, after] = EXPECTED_HOOKS[index], hook = manifest.nativeHooks[index];
     if (hook.before !== before || hook.after !== after || hook.beforeSHA256 !== digest(before) || hook.afterSHA256 !== digest(after)) fail('native hook definition changed');
     reduced = reverseOnce(reduced, before, after);
@@ -53,11 +63,25 @@ export function verifyClinicalWorkspaceModules(repository = ROOT) {
     return { name: entry.path.slice(prefix.length), sha256: entry.sha256 };
   }).sort((left, right) => left.name.localeCompare(right.name));
   if (digest(JSON.stringify(files)) !== manifest.moduleTreeSHA256) fail('runtime module tree changed');
+  const historical = manifest.historicalFiles || [], seen = new Set(manifest.files.map(entry => entry.path)), trees = new Map();
+  if (!Array.isArray(historical)) fail('invalid historical module list');
+  for (const entry of historical) {
+    if (!entry || !/^runtime\/clinical-workspace-v1\/[a-f0-9]{12}\/client\/(?:[A-Za-z0-9_-]+\/)*[A-Za-z0-9_-]+\.mjs$/.test(entry.path)
+      || entry.path.startsWith(prefix) || seen.has(entry.path) || !/^[a-f0-9]{64}$/.test(entry.sha256)) fail('historical resource path or digest');
+    seen.add(entry.path);
+    if (digest(readFileSync(resolve(repository, entry.path))) !== entry.sha256) fail('historical module changed: ' + entry.path);
+    const tree = entry.path.split('/')[2], members = trees.get(tree) || [];
+    members.push({ name: entry.path.slice(entry.path.indexOf('/client/') + 1), sha256: entry.sha256 }); trees.set(tree, members);
+  }
+  for (const [tree, members] of trees) {
+    members.sort((left, right) => left.name.localeCompare(right.name));
+    if (digest(JSON.stringify(members)).slice(0, 12) !== tree) fail('historical module tree changed: ' + tree);
+  }
   const pack = manifest.precachePack;
   if (!pack || pack.path !== prefix + 'precache-' + pack.sha256.slice(0, 12) + '.json') fail('precache archive path');
   const packed = readFileSync(resolve(repository, pack.path));
   if (packed.byteLength !== pack.byteLength || digest(packed) !== pack.sha256) fail('precache archive changed');
-  const expected = JSON.stringify({ schemaVersion: 1, files: manifest.files.map(entry => ({
+  const expected = JSON.stringify({ schemaVersion: 1, files: manifest.files.concat(historical).map(entry => ({
     path: entry.path, sha256: entry.sha256, source: readFileSync(resolve(repository, entry.path), 'utf8')
   })) }) + '\n';
   if (packed.toString('utf8') !== expected) fail('precache archive differs from original module bytes');
@@ -69,12 +93,13 @@ export function verifyClinicalWorkspacePrecache(repository = ROOT) {
   const vault = readFileSync(resolve(repository, 'vilda_vault.js'), 'utf8');
   const mutation = /['"](vilda_care_plan_mutation\.js\?v=\d+)['"]/.exec(vault)?.[1];
   if (!mutation) fail('missing mutation model resource');
-  for (const path of [...manifest.files.map(entry => entry.path), mutation]) {
+  const allFiles = manifest.files.concat(manifest.historicalFiles || []);
+  for (const path of [...allFiles.map(entry => entry.path), mutation]) {
     if (!worker.includes("'/" + path + "'")) fail('resource is absent from production precache: ' + path);
   }
   const config = /const CLINICAL_WORKSPACE_PRECACHE_PACK = Object\.freeze\((\{[\s\S]*?\})\);/.exec(worker)?.[1];
   const expected = { url: '/' + manifest.precachePack.path, sha256: manifest.precachePack.sha256,
-    files: manifest.files.map(entry => ({ url: '/' + entry.path, sha256: entry.sha256 })) };
+    files: allFiles.map(entry => ({ url: '/' + entry.path, sha256: entry.sha256 })) };
   if (!config || JSON.stringify(JSON.parse(config)) !== JSON.stringify(expected)) fail('precache archive configuration differs from release');
 }
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {

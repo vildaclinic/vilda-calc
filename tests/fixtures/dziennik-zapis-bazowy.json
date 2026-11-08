@@ -713,7 +713,7 @@
      ],
      "localStorage": [],
      "sessionStorage": [],
-     "krypto": 20,
+     "krypto": 23,
      "powiadomienia": {},
      "magazyn": [
       "listPatientsForUser(<uid>)",
@@ -730,6 +730,7 @@
       "getUserMeta(<uid>)",
       "getUserMeta(<uid>)",
       "getUserMeta(<uid>)",
+      "listPatientNotesForUser(<uid>)",
       "getUserMeta(<uid>)",
       "listPatientsForUser(<uid>)",
       "getUserMeta(<uid>)",
@@ -805,11 +806,12 @@
      ],
      "localStorage": [],
      "sessionStorage": [],
-     "krypto": 11,
+     "krypto": 12,
      "powiadomienia": {},
      "magazyn": [
       "listPatientsForUser(<uid>)",
       "listSnapshotsForUser(<uid>)",
+      "listPatientNotesForUser(<uid>)",
       "getUserMeta(<uid>)",
       "listPatientsForUser(<uid>)",
       "getUserMeta(<uid>)",
@@ -855,13 +857,14 @@
      ],
      "localStorage": [],
      "sessionStorage": [],
-     "krypto": 11,
+     "krypto": 12,
      "powiadomienia": {},
      "magazyn": [
       "getPatientForUser(<uid>)",
       "listSnapshotsForUser(<uid>)",
       "getPatientForUser(<uid>)",
       "getSnapshotForUser(<uid>)",
+      "listPatientNotesForUser(<uid>)",
       "getUserMeta(<uid>)",
       "listPatientsForUser(<uid>)",
       "getUserMeta(<uid>)",
@@ -913,7 +916,7 @@
       "set vilda-note-changed-ping-v1"
      ],
      "sessionStorage": [],
-     "krypto": 13,
+     "krypto": 14,
      "powiadomienia": {
       "onPatientNoteChanged": 1
      },
@@ -928,6 +931,7 @@
       "removeTombstoneForUser(<uid>)",
       "removePatientNoteTombstoneForUser(<uid>)",
       "getPatientNoteForUser(<uid>)",
+      "listPatientNotesForUser(<uid>)",
       "getUserMeta(<uid>)",
       "listPatientsForUser(<uid>)",
       "getUserMeta(<uid>)",
@@ -991,7 +995,7 @@
      ],
      "localStorage": [],
      "sessionStorage": [],
-     "krypto": 9,
+     "krypto": 10,
      "powiadomienia": {},
      "magazyn": [
       "listPatientsForUser(<uid>)",
@@ -1009,6 +1013,7 @@
       "putPatientForUser(<uid>)",
       "getUserMeta(<uid>)",
       "getUserMeta(<uid>)",
+      "listPatientNotesForUser(<uid>)",
       "getUserMeta(<uid>)",
       "listPatientsForUser(<uid>)",
       "getUserMeta(<uid>)",
@@ -1316,6 +1321,7 @@
       "putPatientForUser(<uid2>)",
       "putSnapshotForUser(<uid2>)",
       "putPatientForUser(<uid2>)",
+      "listPatientNotesForUser(<uid2>)",
       "getUserMeta(<uid2>)",
       "listPatientsForUser(<uid2>)",
       "getUserMeta(<uid2>)",
@@ -2170,8 +2176,8 @@
       "tx vilda_user_<uid> [patientNoteTombstones] readonly start ×3",
       "tx vilda_user_<uid> [patientNoteTombstones] readwrite complete",
       "tx vilda_user_<uid> [patientNoteTombstones] readwrite start",
-      "tx vilda_user_<uid> [patientNotes] readonly complete ×5",
-      "tx vilda_user_<uid> [patientNotes] readonly start ×5",
+      "tx vilda_user_<uid> [patientNotes] readonly complete ×6",
+      "tx vilda_user_<uid> [patientNotes] readonly start ×6",
       "tx vilda_user_<uid> [patients] readonly complete ×7",
       "tx vilda_user_<uid> [patients] readonly start ×7",
       "tx vilda_user_<uid> [snapshots] readonly complete ×3",
@@ -2183,7 +2189,7 @@
      ],
      "localStorage": [],
      "sessionStorage": [],
-     "krypto": 20,
+     "krypto": 23,
      "powiadomienia": {}
     },
     {
@@ -2233,8 +2239,8 @@
       "tx vilda_user_<uid> [patientNoteTombstones] readonly start ×2",
       "tx vilda_user_<uid> [patientNoteTombstones] readwrite complete",
       "tx vilda_user_<uid> [patientNoteTombstones] readwrite start",
-      "tx vilda_user_<uid> [patientNotes] readonly complete ×2",
-      "tx vilda_user_<uid> [patientNotes] readonly start ×2",
+      "tx vilda_user_<uid> [patientNotes] readonly complete ×3",
+      "tx vilda_user_<uid> [patientNotes] readonly start ×3",
       "tx vilda_user_<uid> [patients] readonly complete ×6",
       "tx vilda_user_<uid> [patients] readonly start ×6",
       "tx vilda_user_<uid> [snapshots] readonly complete ×3",
@@ -2246,7 +2252,7 @@
      ],
      "localStorage": [],
      "sessionStorage": [],
-     "krypto": 11,
+     "krypto": 12,
      "powiadomienia": {}
     },
     {
@@ -2275,8 +2281,8 @@
       "tx vilda_user_<uid> [patientNoteTombstones] readonly start ×2",
       "tx vilda_user_<uid> [patientNoteTombstones] readwrite complete",
       "tx vilda_user_<uid> [patientNoteTombstones] readwrite start",
-      "tx vilda_user_<uid> [patientNotes] readonly complete ×2",
-      "tx vilda_user_<uid> [patientNotes] readonly start ×2",
+      "tx vilda_user_<uid> [patientNotes] readonly complete ×3",
+      "tx vilda_user_<uid> [patientNotes] readonly start ×3",
       "tx vilda_user_<uid> [patients] readonly complete ×7",
       "tx vilda_user_<uid> [patients] readonly start ×7",
       "tx vilda_user_<uid> [snapshots] readonly complete ×4",
@@ -2288,7 +2294,7 @@
      ],
      "localStorage": [],
      "sessionStorage": [],
-     "krypto": 11,
+     "krypto": 12,
      "powiadomienia": {}
     },
     {
@@ -2321,8 +2327,8 @@
       "tx vilda_user_<uid> [patientNoteTombstones] readonly start ×2",
       "tx vilda_user_<uid> [patientNoteTombstones] readwrite complete ×2",
       "tx vilda_user_<uid> [patientNoteTombstones] readwrite start ×2",
-      "tx vilda_user_<uid> [patientNotes] readonly complete ×4",
-      "tx vilda_user_<uid> [patientNotes] readonly start ×4",
+      "tx vilda_user_<uid> [patientNotes] readonly complete ×5",
+      "tx vilda_user_<uid> [patientNotes] readonly start ×5",
       "tx vilda_user_<uid> [patientNotes] readwrite complete",
       "tx vilda_user_<uid> [patientNotes] readwrite start",
       "tx vilda_user_<uid> [patients] readonly complete ×6",
@@ -2340,7 +2346,7 @@
       "set vilda-note-changed-ping-v1"
      ],
      "sessionStorage": [],
-     "krypto": 13,
+     "krypto": 14,
      "powiadomienia": {
       "onPatientNoteChanged": 1
      }
@@ -2395,8 +2401,8 @@
       "tx vilda_user_<uid> [patientNoteTombstones] readonly start ×2",
       "tx vilda_user_<uid> [patientNoteTombstones] readwrite complete",
       "tx vilda_user_<uid> [patientNoteTombstones] readwrite start",
-      "tx vilda_user_<uid> [patientNotes] readonly complete ×3",
-      "tx vilda_user_<uid> [patientNotes] readonly start ×3",
+      "tx vilda_user_<uid> [patientNotes] readonly complete ×4",
+      "tx vilda_user_<uid> [patientNotes] readonly start ×4",
       "tx vilda_user_<uid> [patients] readonly complete ×7",
       "tx vilda_user_<uid> [patients] readonly start ×7",
       "tx vilda_user_<uid> [patients] readwrite complete",
@@ -2412,7 +2418,7 @@
      ],
      "localStorage": [],
      "sessionStorage": [],
-     "krypto": 9,
+     "krypto": 10,
      "powiadomienia": {}
     },
     {
@@ -2698,8 +2704,8 @@
       "tx vilda_user_<uid2> [patientNoteTombstones] readonly start ×2",
       "tx vilda_user_<uid2> [patientNoteTombstones] readwrite complete",
       "tx vilda_user_<uid2> [patientNoteTombstones] readwrite start",
-      "tx vilda_user_<uid2> [patientNotes] readonly complete ×6",
-      "tx vilda_user_<uid2> [patientNotes] readonly start ×6",
+      "tx vilda_user_<uid2> [patientNotes] readonly complete ×7",
+      "tx vilda_user_<uid2> [patientNotes] readonly start ×7",
       "tx vilda_user_<uid2> [patientNotes] readwrite complete ×3",
       "tx vilda_user_<uid2> [patientNotes] readwrite start ×3",
       "tx vilda_user_<uid2> [patients] readonly complete",
@@ -3809,8 +3815,8 @@
       "tx vilda_user_<uid2> [patientNoteTombstones] readonly start ×2",
       "tx vilda_user_<uid2> [patientNoteTombstones] readwrite complete",
       "tx vilda_user_<uid2> [patientNoteTombstones] readwrite start",
-      "tx vilda_user_<uid2> [patientNotes] readonly complete ×4",
-      "tx vilda_user_<uid2> [patientNotes] readonly start ×4",
+      "tx vilda_user_<uid2> [patientNotes] readonly complete ×5",
+      "tx vilda_user_<uid2> [patientNotes] readonly start ×5",
       "tx vilda_user_<uid2> [patientNotes] readwrite complete",
       "tx vilda_user_<uid2> [patientNotes] readwrite start",
       "tx vilda_user_<uid2> [patients] readonly complete",
@@ -4480,7 +4486,7 @@
      "sessionStorage": [
       "set veph:vault:adapter-v1"
      ],
-     "krypto": 20,
+     "krypto": 23,
      "powiadomienia": {}
     },
     {
@@ -4517,7 +4523,7 @@
      "sessionStorage": [
       "set veph:vault:adapter-v1"
      ],
-     "krypto": 11,
+     "krypto": 12,
      "powiadomienia": {}
     },
     {
@@ -4533,7 +4539,7 @@
      "sessionStorage": [
       "set veph:vault:adapter-v1"
      ],
-     "krypto": 11,
+     "krypto": 12,
      "powiadomienia": {}
     },
     {
@@ -4555,7 +4561,7 @@
      "sessionStorage": [
       "set veph:vault:adapter-v1"
      ],
-     "krypto": 13,
+     "krypto": 14,
      "powiadomienia": {
       "onPatientNoteChanged": 1
      }
@@ -4597,7 +4603,7 @@
      "sessionStorage": [
       "set veph:vault:adapter-v1"
      ],
-     "krypto": 9,
+     "krypto": 10,
      "powiadomienia": {}
     },
     {

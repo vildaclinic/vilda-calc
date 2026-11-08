@@ -14,29 +14,33 @@ Wykonanie czynności, otrzymanie wyniku i decyzja to odrębne rodzaje informacji
 
 ## Zapis i dokumentacja
 
-Plan, jego dokumentacja i przypomnienia są zatwierdzane jako jedna operacja. Utrata odpowiedzi nie powoduje utworzenia drugiej kopii przy ponowieniu tej samej operacji. Stan oczekującej synchronizacji jest odróżniony od potwierdzonego zapisu na serwerze. Konflikt dwóch urządzeń wymaga uzgodnienia; nie jest rozstrzygany na podstawie ostatniej daty.
+Plan, jego dokumentacja i przypomnienia są zatwierdzane jako jedna operacja. Utrata odpowiedzi nie powoduje utworzenia drugiej kopii przy ponowieniu tej samej operacji. Potwierdzenie tej operacji oznacza trwały zapis lokalny; przesłanie danych pokazuje dotychczasowy ogólny stan synchronizacji konta. Zwykły plan nie ma osobnego potwierdzenia serwerowego. Konflikt dwóch urządzeń wymaga uzgodnienia; nie jest rozstrzygany na podstawie ostatniej daty.
 
 Nowe plany są widoczne w Planach opieki i wyszukiwaniu. Dokumentacja pozostaje dostępna w Notatkach; odnośnik prowadzi do odpowiedniego planu. Nieczytelne lub osierocone powiązanie nie ukrywa wpisu. Ogólny edytor notatek nie może ominąć zasad zapisu faktu należącego do planu.
 
-## Uruchomienie i zgodność
+Powiązanie z wcześniej istniejącą notatką zapisuje identyfikator i wersję źródła, bez archiwizowania jego treści z chwili powiązania. Jeśli później zmieni się wersja notatki, widok dowodu wyjaśnia rozbieżność i nie przedstawia bieżącej treści jako historycznego potwierdzenia. Fakt i historia planu pozostają zachowane, a bieżąca notatka jest dostępna w dokumentacji pacjenta.
 
-Etapy korzystają z osobnego chronionego zapisu całej dokumentacji pacjentów. Przygotowanie odbywa się jawnie, wraz z kopią bezpieczeństwa i kodem odzyskiwania. Sam odczyt biblioteki nie uruchamia migracji. Dotychczasowe plany pozostają w swoim formacie; nie są automatycznie zamieniane na plany z etapami.
+## Zapis bez przygotowywania konta
 
-Wdrożenie frontendu wymaga zgodnej wersji usługi synchronizacji. Nowe funkcje usługi mają domyślnie wyłączone flagi. Scalenie samego frontendu nie stanowi wdrożenia ani włączenia tej usługi. Do przygotowania chronionego zapisu potrzebny jest prywatny lokalny tryb konta i przeglądarka obsługująca wymagane mechanizmy trwałego zapisu. Brak możliwości przygotowania ma być przedstawiony jako niedostępność, bez pozornego utworzenia planu.
+Zwykłe konto korzysta z dotychczasowego sejfu, synchronizacji i kopii `.wiw`. Użycie szablonu nie przygotowuje ani nie przełącza całej dokumentacji i nie wymaga nowej usługi serwerowej. Automatyczne kopie zachowują dotychczasową konfigurację i dostępność.
 
-W Ustawieniach, w sekcji Kopie, dostępna jest pełna kopia dokumentacji pacjentów i jej odtworzenie na pustym koncie. Obejmuje ona oczekujące zmiany i zachowane rozbieżne wersje. Biblioteka własnych szablonów ma oddzielny eksport. Odtworzenie nie nadpisuje istniejącej dokumentacji innego konta. Uzgadnianie rozbieżnych wersji jest osobną, jawną czynnością poprzedzoną kopią obu wersji.
+Pełny stan konkretnego planu — źródłowy szablon, etapy, fakty, identyfikatory dokumentów i historia operacji — znajduje się w wersjonowanym rozszerzeniu jego zaszyfrowanej notatki. Plan i powiązane dokumenty są zapisywane przez istniejącą transakcję IndexedDB, ze sprawdzeniem wersji oraz zależności odczytu. Potwierdzenie zapisu następuje po `transaction.oncomplete`. Synchronizacja i odtwarzanie kopii przenoszą cały stan, a nie tylko jego widok.
 
-Po włączeniu chronionego zapisu dotychczasowa automatyczna kopia `.wiw` jest niedostępna; ustawienia pokazują ten stan i prowadzą do ręcznej pełnej kopii. Nie wolno traktować wcześniejszego folderu automatycznych kopii jako zabezpieczenia nowych planów. Łączenie lub usuwanie pacjenta z planem etapowym jest obecnie blokowane z wyjaśnieniem.
+Nieuruchomione i zakończone kroki nie tworzą fikcyjnych wykonań. Nieaktywne wygenerowane przypomnienie pozostaje zaszyfrowaną projekcją techniczną, ukrytą na listach użytkownika; jego ponowne uruchomienie nie odtwarza rzeczywiście usuniętego dokumentu.
 
-Jeśli starsza wersja aplikacji zmieni pozostawioną bazę lokalną, dalszy zapis, synchronizacja i pełny eksport są wstrzymywane. Obie bazy pozostają zachowane. Aplikacja nie uzgadnia takiej rozbieżności automatycznie i nie przedstawia kopii nowego zapisu jako obejmującej późniejsze zmiany ze starej bazy.
+Przypomnienia, Terminarz i wyszukiwanie odczytują aktywną pracę z pełnego stanu planu. Opóźnione przesłanie wygenerowanego wpisu nie może przywrócić rozwiązanego kroku ani cofnąć jego terminu. Ten odczyt nie zapisuje zastępczych dokumentów ani fikcyjnych wykonań. Destrukcyjne zmiany synchronizacji dotyczące planu, jego pacjenta lub dokumentacji są sprawdzane przed rozpoczęciem zapisu ładunku.
 
-Pojemność chronionego zapisu jest ograniczona: źródło do 128 MiB, zachowane szyfrogramy i metadane do 512 MiB oraz do 4096 operacji. Niezmienione fragmenty danych są współdzielone między wersjami. Historia nie jest usuwana automatycznie, a osiągnięcie limitu zatrzymuje kolejne zapisy zamiast przycinać dokumentację. Oczekujące zmiany nie otrzymują wtedy statusu zsynchronizowanych.
+Zmiany stanowiące ścisłą kontynuację tej samej historii synchronizują się zwykłą drogą. Przy rozbieżnych historiach zachowane są kompletne wersje oraz ich dokumentacja. Widok planu pokazuje obie kopie i blokuje edycję niejednoznacznego planu. Nie skleja automatycznie faktów klinicznych ani nie uznaje późniejszej daty za rozstrzygnięcie. Ten wariant nie udostępnia jeszcze semantycznego uzgadniania rozbieżnych historii; kopie pozostają dostępne w planie i backupie.
+
+Ogólny edytor, wykonanie przypomnienia i usuwanie wpisu nie mogą ominąć kontroli dokumentacji powiązanej z planem. Łączenie lub usuwanie karty zawierającej plan etapowy pozostaje blokowane do czasu zaprojektowania jawnego przeniesienia całej historii i powiązań. Zwykłe karty bez takich planów zachowują dotychczasowe zachowanie.
+
+Konta, które wcześniej rzeczywiście uruchomiły chroniony zapis całej dokumentacji, nadal używają jego własnego odczytu, synchronizacji i odzyskiwania. Ta poprawka nie przenosi ich danych z powrotem. Częściowo przygotowany, lecz nieuruchomiony zapis pozostaje nienaruszony i nie blokuje zwykłego przypisywania szablonu. Interfejs szablonów nie oferuje przygotowywania konta; zgodność ze starszymi klientami odzyskiwania jest oddzielona od normalnego przebiegu.
 
 ## Źródła i dowody
 
 Modele i interfejs znajdują się w czytelnych plikach `vilda_care_template_model.js`, `vilda_care_plan_mutation.js`, `vilda_care_templates.js` i `vilda_care_plans.js`. Źródła zapisu, odzyskiwania i synchronizacji są utrzymywane w prywatnym `vilda-source/client/patient-clinical-workspace*`.
 
-`tools/build-clinical-workspace-runtime.mjs` w repozytorium źródeł składa przypięty artefakt sejfu z czytelnym modułem integracji. `runtime/clinical-workspace-v1/manifest.json` zawiera skróty kompletu modułów oraz sejfu przed i po integracji. Publiczny `tools/check_clinical_workspace_boundary.mjs` sprawdza odwrócenie dokładnych zmian do bieżącej wersji bazowej, bajt w bajt. Nie nadaje nowych uprawnień staremu zapisowi V2 ani nie zmienia wcześniejszych zabezpieczeń formatu.
+`tools/build-clinical-workspace-runtime.mjs` w repozytorium źródeł składa przypięty artefakt sejfu z czytelnym modułem integracji. `runtime/clinical-workspace-v1/manifest.json` zawiera skróty kompletu modułów oraz sejfu przed i po integracji. Publiczny `tools/check_clinical_workspace_boundary.mjs` sprawdza odwrócenie dokładnych zmian do bieżącej wersji bazowej, bajt w bajt. Rozpoznaje wyłącznie kompletny, oznaczony format przenośny. Nie traktuje dawnych odnośników V2 bez pełnego stanu ani przyszłych wersji jako zwykłych planów.
 
 Integracja sejfu jest przypięta do bazowego commita `c8d8442e26ac870fc5764408be8e81976eddde3b` (#905). Odczyt listy kont zachowuje dotychczasową semantykę podczas równoczesnego usuwania konta. Dokończenie przerwanego usuwania korzysta z tej samej kontroli chronionego zapisu co jawne usunięcie; nie omija ochrony zachowanej dokumentacji.
 

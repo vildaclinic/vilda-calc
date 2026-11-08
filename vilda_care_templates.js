@@ -42,21 +42,15 @@
     function canSave() { return !!(state.capability && state.capability.canSave === true); }
     function applicationService() { var service = options.application; return service && ['getCapability', 'listPatients', 'prepare', 'commit', 'getOutcome'].every(function (name) { return typeof service[name] === 'function'; }) ? service : null; }
     function canApply() { return !!(applicationService() && state.applicationCapability && state.applicationCapability.available === true); }
-    function applicationUnavailable() { return state.applicationCapability && state.applicationCapability.message || 'Nie można teraz utworzyć planu z szablonu. Odśwież bibliotekę, aby sprawdzić dostępność.'; }
+    function applicationUnavailable() {
+      var capability = state.applicationCapability;
+      // An older provider may still offer account-wide preparation. Applying a
+      // template never starts that procedure; ask for the current application.
+      if (capability && capability.canPrepare === true) return 'Nie można teraz utworzyć planu z szablonu. Odśwież aplikację i spróbuj ponownie.';
+      return capability && capability.message || 'Nie można teraz utworzyć planu z szablonu. Odśwież bibliotekę, aby sprawdzić dostępność.';
+    }
     function applicationAvailability(parent) {
       help(parent, applicationUnavailable());
-      var service = applicationService();
-      if (!state.applicationCapability || !state.applicationCapability.canPrepare || !service || typeof service.prepareWorkspace !== 'function') return;
-      var prepare = button('Przygotuj plany z etapami', 'vcp-outline', async function () {
-        if (!current() || state.busy) return;
-        state.busy = true; prepare.disabled = true;
-        try {
-          await service.prepareWorkspace();
-          if (!current()) return;
-          state.applicationCapability = await service.getCapability();
-        } catch (error) { if (current()) fail(error); }
-        finally { if (current()) { state.busy = false; render(); } }
-      }); prepare.disabled = state.busy; parent.appendChild(prepare);
     }
     function fail(error) { state.error = error && error.message || 'Nie udało się odczytać biblioteki. Spróbuj ponownie.'; }
     function heading(parent, text, level) { var element = node(level || 'h2', '', text); parent.appendChild(element); return element; }
