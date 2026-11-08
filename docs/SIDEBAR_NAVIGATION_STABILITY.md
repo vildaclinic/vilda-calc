@@ -63,6 +63,22 @@ Prezentacja jest ważna wyłącznie w obrębie tej samej sesji klucza Vaulta, ko
 
 Zwykłe `persist-restored`, `main-session-restored` i `dob-restored` oznaczają odtwarzanie tej samej sesji. Nie są samodzielnie nową wizytą. Liczniki `applyLoadedData` poszczególnych ramek nie są ze sobą porównywane.
 
+Jawne wczytanie ma osobną, neutralną prezentację „Wczytywanie…”. DIX rozpoczyna
+ją dopiero przy rzeczywistym zastosowaniu zaakceptowanej operacji. Obejmuje ona
+oczekiwanie na wybór „Nowy pomiar” lub „Odtwórz zapis” oraz istniejące odroczenie
+odtworzenia. Nie korzysta z poprzedniego „Zapisano”. Opaque ticket wyboru nie
+nadaje uprawnień; wiąże jedynie prezentację z konkretnym wczytaniem i jego
+dotychczasowymi granicami konta, klucza, dokumentu, pacjenta i sekwencji.
+Gotowa, świeża decyzja SSI zgodna z opublikowanym stanem kończy tę prezentację.
+Nie ma minimalnego czasu jej wyświetlania. Zakończona prezentacja nie odżywa
+przy późniejszym przeliczeniu lub edycji. Nieudane wczytanie, zmiana kontekstu
+i rzeczywista edycja wycofują ją; zamknięcie wyboru pozostawia natywny domyślny nowy pomiar.
+Wskaźnik w nagłówku telefonu pozostaje wtedy widoczny. Trzy przyciski mają
+jedną neutralną paletę, a ich faktyczne blokady pozostają natywne. Po zakończeniu
+każdy wraca do własnej dostępności: nowy pomiar nadal wymaga uzupełnienia danych
+do zapisu. Zwykłe odświeżenie gotowości aktualizuje razem wskaźnik i wygląd
+przycisków; nie wymaga ponownego zdarzenia zakończenia wczytania.
+
 Automatyczne zastąpienie nieaktualnej, wcześniej przygotowanej ramki jest osobnym, wąskim etapem istniejącego `Gp5_przeladuj`. Powłoka oczekuje wyłącznie jego konkretnego zwiększenia generacji i nowego dokumentu. Wycofany dokument nie jest źródłem konta ani uprawnienia. Ręczne `B`/Reload i dowolna inna podmiana dokumentu nie korzystają z tego wyjątku. Zwykłe powiadomienie startowe `guest:false` sprawdza bieżące granice sesji; wejście w tryb gościa nadal unieważnia prezentację. Klucz nowej ramki jest wiązany dopiero po opublikowaniu `AuthUI.isBootReady()`: jego ustanawianie podczas startu nie jest zmianą konta. Obce konto lub jawny tryb gościa są odrzucane także przed końcem startu, a wymiana już związanego klucza zawsze kończy prezentację.
 
 Obserwacja stanu źródłowego SSI odczytuje wyłącznie jego opublikowaną etykietę i gotowość. Reaguje na zmianę samego stanu, a nie na zmianę tytułu, dzięki czemu opóźniona stara etykieta „Zapisano” nie zastępuje świeżo ustalonego „Niezapisane zmiany”. Potwierdzony własny zapis tej samej osoby jest sprawdzany istniejącą migawką DIX; prezentacja czeka na rzeczywistą publikację SSI. Nie odczytuje wtedy formularza ukrytej ramki. Widoczny błąd zapisu zachowuje własną etykietę, także gdy porównanie danych opisuje te dane jako niezapisane.
