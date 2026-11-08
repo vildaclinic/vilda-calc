@@ -62,6 +62,49 @@ function fixture() {
 }
 
 describe('sidebar presentation: actual production handoff, without action authority', () => {
+  it('retains only Clear presentation from a verified empty form until the destination is ready', () => {
+    const h = fixture(), source = h.panes.start, target = h.panes.docpro;
+    h.setPatient(null);
+    source.state.decision = source.state.cached = 'hidden';
+    source.save.disabled = true; source.state.documents = 'unavailable';
+    target.state.ready = false; h.navigate('docpro');
+    expect(h.view()).toMatchObject({ state: null, save: null, documents: null, clear: true });
+    expect(source.api.getCurrentDecision).toHaveBeenCalledOnce();
+    h.view(); h.ctx.Sp_sourceStatus(source.doc);
+    expect(h.view()).toMatchObject({ state: null, save: null, documents: null, clear: true });
+    expect(source.api.getCurrentDecision).toHaveBeenCalledOnce();
+    target.state.ready = true;
+    expect(h.view()).toBeNull();
+    expect(h.clear.click).not.toHaveBeenCalled();
+    for (const pane of Object.values(h.panes)) expect(pane.save.click).not.toHaveBeenCalled();
+  });
+  it.each(['unready', 'stale-scope'])('does not retain an unverified empty-form presentation: %s', reason => {
+    const h = fixture(), source = h.panes.start;
+    h.setPatient(null); source.state.decision = source.state.cached = 'hidden';
+    if (reason === 'unready') source.state.ready = false;
+    else source.state.decisionCurrent = false;
+    h.panes.docpro.state.ready = false; h.navigate('docpro');
+    expect(h.view()).toBeNull();
+  });
+  it.each(['saved', 'dirty', 'new_patient', 'error'])('retires empty-form presentation when its source publishes %s', state => {
+    const h = fixture(), source = h.panes.start;
+    h.setPatient(null); source.state.decision = source.state.cached = 'hidden';
+    h.panes.docpro.state.ready = false; h.navigate('docpro');
+    expect(h.view()).toMatchObject({ state: null, clear: true });
+    source.state.cached = state; h.ctx.Sp_sourceStatus(source.doc);
+    expect(h.view()).toBeNull();
+  });
+  it.each(['edit', 'clear', 'patient', 'account-key'])('retires empty-form presentation at the actual %s boundary', boundary => {
+    const h = fixture(), source = h.panes.start;
+    h.setPatient(null); source.state.decision = source.state.cached = 'hidden';
+    h.panes.docpro.state.ready = false; h.navigate('docpro');
+    expect(h.view()).toMatchObject({ state: null, clear: true });
+    if (boundary === 'edit') h.panes.docpro.doc.dispatch('input', {}, true);
+    if (boundary === 'clear') h.panes.docpro.doc.dispatch('vilda:user-state-cleared');
+    if (boundary === 'patient') h.setPatient('fictional-patient-b');
+    if (boundary === 'account-key') h.hostAccount.state.key++;
+    expect(h.view()).toBeNull();
+  });
   it('uses a fresh readonly decision rather than the debounced Saved label', () => {
     const h = fixture(); h.panes.start.state.decision = 'dirty'; h.panes.docpro.state.ready = false;
     h.navigate('docpro');
