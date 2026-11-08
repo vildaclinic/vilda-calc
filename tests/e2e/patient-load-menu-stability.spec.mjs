@@ -5,7 +5,26 @@ import {
   openPatientLoadChoice, choosePatientLoadMode, createPatientLoadMenuFixture,
 } from '../support/patient-load-menu-fixture.mjs';
 
-test.use({ serviceWorkers: 'block', reducedMotion: 'no-preference' });
+test.use({ serviceWorkers: 'block', reducedMotion: 'no-preference',
+  // DOM serialization before each traced action materially perturbs CPU4.
+  // Keep actions/screenshots/sources and the full per-paint JSON oracle. This
+  // option also disables trace HAR; failed requests are attached separately.
+  trace: { mode: 'retain-on-failure', snapshots: false, screenshots: true, sources: true } });
+
+const networkProblems = new WeakMap();
+test.beforeEach(({ page }) => {
+  const problems = [];
+  networkProblems.set(page, problems);
+  page.on('requestfailed', request => problems.push({ url: request.url(),
+    method: request.method(), failure: request.failure()?.errorText }));
+  page.on('response', response => {
+    if (response.status() >= 400) problems.push({ url: response.url(), status: response.status() });
+  });
+});
+test.afterEach(async ({ page }, testInfo) => {
+  await testInfo.attach('network-problems', { contentType: 'application/json',
+    body: JSON.stringify(networkProblems.get(page) || []) });
+});
 
 function expectLoading(control, { visible = true } = {}) {
   expect(control).not.toBeNull();
@@ -67,6 +86,10 @@ for (const width of [1440, 390]) {
         await choosePatientLoadMode(owner, choice);
         await waitForSavedPaint(page, width);
         await waitForPatientLoadReady(owner, fixture.ids.b);
+        samples = await page.evaluate(() => window.__patientLoadMenuProbe.stop());
+        // The entire measured load has reached real Saved under CPU4. Drawer
+        // reopening, record decryption and assertions are verification work.
+        await cdp.send('Emulation.setCPUThrottlingRate', { rate: 1 });
         const menu = await visibleChromeMenu(page);
         await expect(menu.locator('[data-menu-save-status]')).toHaveAttribute('data-save-state', 'saved');
         await expect(menu.locator('[data-menu-clear]')).toBeEnabled();
@@ -74,7 +97,6 @@ for (const width of [1440, 390]) {
         if (choice === 'restore') await expect(menu.locator('.chrome-menu-save')).not.toHaveAttribute('aria-disabled', 'true');
         else await expect(menu.locator('.chrome-menu-save')).toHaveAttribute('aria-disabled', 'true');
         after = await capturePatientLoadState(owner);
-        samples = await page.evaluate(() => window.__patientLoadMenuProbe.stop());
         expect(after.patientId).toBe(fixture.ids.b);
         expect(after.fields).toMatchObject({ lastName: 'Fikcyjny', firstName: 'Beata', sex: 'F',
           height: choice === 'restore' ? '150' : '', weight: choice === 'restore' ? '41' : '' });
