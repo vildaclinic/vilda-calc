@@ -6183,8 +6183,24 @@ body.js-loading .main-content {
 }
 
 /* P-REGULAMIN-BRAMKA: bramka regulaminu (vilda_terms_gate.js) jest spod tej reguły wyjęta, żeby pokazała się przed ekranem logowania, a nie dopiero po odblokowaniu sejfu nad krokiem 3 kreatora konta. */
-html.vilda-auth-locked body>*:not(#vilda-auth-ui-root):not(.vilda-logout-overlay):not(.vds-overlay):not(.vcs-overlay):not(#vilda-terms-gate) {
+html.vilda-auth-locked body>*:not(#vilda-auth-ui-root):not(.vilda-logout-overlay):not(.vds-overlay):not(.vcs-overlay):not(#vilda-terms-gate):not(#appShellRemoveWait) {
   visibility: hidden!important
+}
+
+/* P-USUN-KONTO-KARTY (E2-PR3a1c): pasek czekania na usunięcie konta w aplikacji zainstalowanej (#appShellRemoveWait, app.html) jest spod reguły blokady wyjęty i stoi nad ekranem logowania powłoki. Kolory z .vilda-auth-banner (vilda_auth_ui.css); pusty pasek nie ma wypełnienia ani ramki, więc nic nie zasłania, a obszar na żywo jest w drzewie dostępności od wczytania. */
+#appShellRemoveWait {
+  position: fixed;
+  top: calc(env(safe-area-inset-top, 0px) + 12px);
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: calc(var(--z-auth-root) + 1);
+  max-width: min(92vw, 560px);
+  margin: 0
+}
+
+#appShellRemoveWait:empty {
+  padding: 0;
+  border: 0
 }
 
 .table-scroll,

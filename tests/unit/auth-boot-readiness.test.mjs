@@ -19,9 +19,11 @@ function harness({ guest = false, dependencies = true, initialize = () => {} } =
   const events = [];
   const win = { document: { dispatchEvent: event => { event.bootReady = api.isBootReady(); events.push(event); } },
     CustomEvent: class { constructor(type, options) { this.type = type; this.detail = options.detail; } } };
-  const api = new Function('i', 'jt', 'Ya', 'Xi', 'Aa', '$t', 'Io', 'me', 'ma', 'Ot',
+  // Bkr_sluchaj i Bkr_banerStartu (P-USUN-KONTO-KARTY, E2-PR3a1c) leżą poza wycinkiem; ich zachowanie sprawdza
+  // sejf-usun-konto-karty-2.test.mjs (UK37, UK40).
+  const api = new Function('i', 'jt', 'Ya', 'Xi', 'Aa', '$t', 'Io', 'me', 'ma', 'Ot', 'Bkr_sluchaj', 'Bkr_banerStartu',
     `let Ni=false;${code};return {boot:Ei,isBootReady:isAuthBootReady};`)(
-    win, () => vault, () => dependencies, initialize, mode, hide, () => guest, show, () => {}, () => {},
+    win, () => vault, () => dependencies, initialize, mode, hide, () => guest, show, () => {}, () => {}, () => {}, () => undefined,
   );
   return { api, restore, startup, vault, hide, mode, show, events };
 }
