@@ -261,7 +261,6 @@ for (const profile of [{ name: 'desktop normal', width: 1440, cpu: 1 },
     await installPaintProbe(page);
     const fixture = await savedMenuFixture(page);
     const session = await context.newCDPSession(page);
-    await session.send('Emulation.setCPUThrottlingRate', { rate: profile.cpu });
     const transitions = [], failures = [];
     let primaryError, observationError, cleanupError, attachmentError;
     try {
@@ -274,10 +273,15 @@ for (const profile of [{ name: 'desktop normal', width: 1440, cpu: 1 },
         }
         await waitForInitialMenuPaint(initialMenu);
         const label = (await page.evaluate(() => location.hash)) + ' → ' + title;
+        // Throttle the complete measured transition, including real readiness
+        // and every RAF sample. Prepare the next baseline and inspect stored
+        // evidence at normal speed, outside the observation interval.
+        await session.send('Emulation.setCPUThrottlingRate', { rate: profile.cpu });
         const before = await page.evaluate(label => window.__sidebarPaintProbe.start(label), label);
         await navigateMenu(page, href);
         const owner = await waitForActualOwner(page, title);
         const samples = await page.evaluate(() => window.__sidebarPaintProbe.stop());
+        await session.send('Emulation.setCPUThrottlingRate', { rate: 1 });
         const finalDecision = await owner.evaluate(() => window.VildaSaveStatusIndicator?.getCurrentDecision?.() || null);
         transitions.push({ before, ...samples, finalDecision });
         if (['Start', 'DocPro'].includes(title)) {

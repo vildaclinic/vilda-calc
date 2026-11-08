@@ -119,12 +119,12 @@ function Ch_bindSaveSource(context){
   if(!context)return;
   function listen(target,type){
     var refresh=function(){
-      Promise.resolve().then(Ch_refreshSaveState);
+      Promise.resolve().then(type==="vilda:patient-load-presentation"?Cm_refreshMenuActions:Ch_refreshSaveState);
       clearTimeout(Ch_saveRefreshTimer);Ch_saveRefreshTimer=setTimeout(Ch_refreshSaveState,220);
     };
     target.addEventListener(type,refresh);Ch_saveCleanup.push(function(){target.removeEventListener(type,refresh)});
   }
-  ["vilda:patient-loaded","vilda:persist-restored","vilda:main-session-restored","vilda:intake-restore-readiness","vilda:state-restored","vilda:json-imported","vilda:load-choice-applied","vilda:auth-loaded","vilda:auth-state-settled","vilda:auth-boot-settled","vilda:session-changed","vilda:guest-mode-changed","vilda:dob-restored","vilda:user-state-cleared"].forEach(function(type){listen(doc,type)});
+  ["vilda:patient-load-presentation","vilda:patient-loaded","vilda:persist-restored","vilda:main-session-restored","vilda:intake-restore-readiness","vilda:state-restored","vilda:json-imported","vilda:load-choice-applied","vilda:auth-loaded","vilda:auth-state-settled","vilda:auth-boot-settled","vilda:session-changed","vilda:guest-mode-changed","vilda:dob-restored","vilda:user-state-cleared"].forEach(function(type){listen(doc,type)});
   listen(context.win,"vilda:user-state-cleared");
   if(chip&&typeof r.MutationObserver==="function"){
     Ch_saveObserver=new r.MutationObserver(Ch_refreshSaveState);
@@ -132,18 +132,31 @@ function Ch_bindSaveSource(context){
   }
 }
 function Cm_navigationPresentation(){
+  // A new patient never borrows the previous patient's Saved label. The
+  // native loader alone can attest this short, presentation-only phase.
+  try{
+    var context=Ch_saveContext(),owner=Cm_menuOwner(),win=context&&context.win;
+    var vault=win&&win.VildaVault,user=vault&&typeof vault.getCurrentUser==="function"&&vault.getCurrentUser();
+    var data=win&&win.VildaDataImportExport;
+    if(owner&&context.doc===win.document&&win.VildaGuestMode!==true&&vault&&vault.isUnlocked()&&
+      user&&user.userId===owner.userId&&data&&typeof data.getPatientLoadPresentation==="function"){
+      var loading=data.getPatientLoadPresentation();
+      if(loading&&loading.state==="loading")return {state:"loading",title:"Trwa wczytywanie danych pacjenta",loading:true,save:null,documents:null,clear:null};
+    }
+  }catch{}
   try{var shell=r.VildaShell;return shell&&typeof shell.getSidebarPresentation==="function"?shell.getSidebarPresentation():null}catch{return null}
 }
-function Cm_paintPreparation(button,value){
+function Cm_paintPreparation(button,value,loading){
   if(!button)return;
+  if(loading)Ch_attr(button,"data-menu-load-pending","true");else button.removeAttribute("data-menu-load-pending");
   if(value===null||value===undefined){button.removeAttribute("data-menu-preparing");button.removeAttribute("data-menu-was-enabled");return}
   Ch_attr(button,"data-menu-preparing","true");Ch_attr(button,"data-menu-was-enabled",!!value);
 }
-function Cm_refreshNavigationActions(){
-  var view=Cm_navigationPresentation();
+function Cm_refreshNavigationActions(presentation){
+  var view=arguments.length?presentation:Cm_navigationPresentation();
   [["saveDataBtnSidebar","save"],["patientDocumentsBtnSidebar","documents"]].forEach(function(pair){
     var buttons=o.querySelectorAll('#'+pair[0]+',[data-drawer-btn="'+pair[0]+'"]');
-    for(var index=0;index<buttons.length;index++)Cm_paintPreparation(buttons[index],view?view[pair[1]]:null);
+    for(var index=0;index<buttons.length;index++)Cm_paintPreparation(buttons[index],view?view[pair[1]]:null,view&&view.loading);
   });
 }
 function Ch_refreshSaveState(){
@@ -156,7 +169,7 @@ function Ch_refreshSaveState(){
   }catch{}
   var presentation=Cm_navigationPresentation();
   if(presentation&&presentation.state){state=presentation.state==="new_patient"?"new":presentation.state;title=presentation.title}
-  var labels={saved:"Zapisano",dirty:"Niezapisane zmiany",new:"Nowy pacjent",saving:"Zapisywanie\u2026",error:"B\u0142\u0105d zapisu",hidden:"Brak danych"};
+  var labels={saved:"Zapisano",dirty:"Niezapisane zmiany",new:"Nowy pacjent",saving:"Zapisywanie\u2026",loading:"Wczytywanie\u2026",error:"B\u0142\u0105d zapisu",hidden:"Brak danych"};
   var controls=o.querySelectorAll("[data-menu-save-status]");
   for(var index=0;index<controls.length;index++){
     var button=controls[index],header=button.hasAttribute("data-header-save-status"),label=button.querySelector("[data-menu-save-label]"),text=header&&state==="dirty"?"Niezapisane":labels[state];
@@ -167,9 +180,12 @@ function Ch_refreshSaveState(){
       if(icon&&icon.getAttribute("data-save-icon")!==state){icon.innerHTML=definition?'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'+definition.icon+'</svg>':"";Ch_attr(icon,"data-save-icon",state)}
     }
     Ch_attr(button,"data-save-state",state);Ch_attr(button,"aria-expanded",!!O&&button===Ch_statusAnchor);
+    Ch_attr(button,"aria-busy",state==="loading");Ch_attr(button,"aria-disabled",state==="loading");
     Ch_attr(button,"title",title||labels[state]);
   }
+  Cm_refreshNavigationActions(presentation);
   if(state==="hidden"&&O&&Ch_statusAnchor&&Ch_statusAnchor.hasAttribute("data-header-save-status"))te();
+  if(state==="loading"&&O)te();
   Cm_refreshClear();
 }
 function Ch_refreshMenuPro(){
@@ -371,8 +387,8 @@ function Cm_refreshClear(){
   var controls=o.querySelectorAll("[data-menu-clear]");
   for(var index=0;index<controls.length;index++){
     var button=controls[index],disabled=!available||busy;
-    var preparing=!!(presentation&&presentation.clear!==null);
-    Cm_paintPreparation(button,presentation?presentation.clear:null);
+    var preparing=!!(presentation&&(presentation.loading||presentation.clear!==null));
+    Cm_paintPreparation(button,presentation?presentation.clear:null,presentation&&presentation.loading);
     if(button.disabled!==disabled)button.disabled=disabled;
     Ch_attr(button,"aria-disabled",disabled);Ch_attr(button,"aria-busy",busy||preparing);
     Ch_attr(button,"title",preparing?"Trwa wczytywanie formularza\u2026":available?"Wyczy\u015b\u0107 wszystkie pola bie\u017c\u0105cego formularza":"Wyczy\u015b\u0107 jest dost\u0119pne w aktywnym formularzu pacjenta.");
@@ -502,7 +518,6 @@ async function Cm_openMenuPatient(change,opener){
 function Cm_refreshMenuActions(){
   Qdm(o.querySelector("[data-vilda-chrome-drawer]"));
   Ch_refreshSaveState();
-  Cm_refreshNavigationActions();
 }
 // Account/patient names remain copyable. A drag that selected a name must not
 // turn its following pointer click into navigation; keyboard and plain clicks
@@ -782,7 +797,7 @@ function ee(element,options){
   if(state&&reason==="dismiss"&&state.trigger&&state.trigger.isConnected)Cm_focus(state.trigger);
   return opened;
 }
-var de={saved:{c1:"#15803d",c2:"#22c55e",name:"Zapisano",desc:"bie\u017c\u0105cy formularz jest zgodny z zapisanym pomiarem",heroBg:"linear-gradient(135deg, rgba(34,197,94,0.14), rgba(21,128,61,0.05))",icon:'<polyline points="20 6 9 17 4 12"/>'},dirty:{c1:"#b45309",c2:"#f59e0b",name:"Niezapisane zmiany",desc:'kliknij \u201EZapisz dane", aby zapisa\u0107 snapshot',heroBg:"linear-gradient(135deg, rgba(245,158,11,0.16), rgba(180,83,9,0.05))",icon:'<path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/>'},new_patient:{c1:"#6d28d9",c2:"#a855f7",name:"Nowy pacjent",desc:"brak snapshotu \u2014 zapisz, aby utworzy\u0107 kart\u0119",heroBg:"linear-gradient(135deg, rgba(168,85,247,0.16), rgba(109,40,217,0.05))",icon:'<path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><line x1="20" y1="8" x2="20" y2="14"/><line x1="23" y1="11" x2="17" y2="11"/>'},saving:{c1:"#1d4ed8",c2:"#3b82f6",name:"Zapisywanie\u2026",desc:"trwa zapis snapshotu do vault",heroBg:"linear-gradient(135deg, rgba(59,130,246,0.16), rgba(29,78,216,0.05))",icon:'<path d="M21 12a9 9 0 1 1-6.219-8.56"/>'},error:{c1:"#b91c1c",c2:"#ef4444",name:"B\u0142\u0105d zapisu",desc:'spr\xF3buj ponownie \u2014 kliknij \u201EZapisz dane"',heroBg:"linear-gradient(135deg, rgba(239,68,68,0.16), rgba(185,28,28,0.05))",icon:'<circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>'},hidden:{c1:"#5f7274",c2:"#9eb8bb",name:"Brak danych pacjenta",desc:"wpisz dane pacjenta, aby rozpocz\u0105\u0107",heroBg:"linear-gradient(135deg, rgba(158,184,187,0.18), rgba(95,114,116,0.05))",icon:'<circle cx="12" cy="8" r="5"/><path d="M20 21a8 8 0 0 0-16 0"/>'}},Le=["saved","dirty","new_patient","saving","error"],h=null,O=!1;function ce(e){return String(e??"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;")}function Ce(){try{return r.sessionStorage&&r.sessionStorage.getItem("vildaCurrentPatientId")||null}catch{return null}}function rt(){var source=Ch_saveSource(),e=source&&source.ready?source.api:null,t=e&&typeof e.getState=="function"?e.getState():"hidden";de[t]||(t="hidden");var a=de[t],n=a.desc;if(e&&t==="saved"){var s=typeof e.getLastSavedAtISO=="function"?e.getLastSavedAtISO():null,i=typeof e.getLastSnapshotCount=="function"?e.getLastSnapshotCount():null,d=[];i&&d.push("Snapshot #"+i),s&&typeof e._relativeTime=="function"&&d.push(e._relativeTime(s)),n=d.length?d.join(" \xB7 "):"Formularz jest zgodny z zapisanym pomiarem"}for(var c='<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'+a.icon+"</svg>",u='<div class="vsp-hero" style="background:'+a.heroBg+'"><span class="vsp-hero-ic" style="background:linear-gradient(135deg,'+a.c1+","+a.c2+')">'+c+'</span><span class="vsp-hero-txt"><span class="vsp-hero-title" style="color:'+a.c1+'">'+ce(a.name)+'</span><span class="vsp-hero-sub">'+ce(n)+"</span></span></div>",l='<div class="vsp-legend-head">Pozosta\u0142e stany</div><div class="vsp-legend">',v=0;v<Le.length;v++){var p=Le[v];if(p!==t){var y=de[p];l+='<div class="vsp-row"><span class="vsp-dot" style="background:linear-gradient(135deg,'+y.c1+","+y.c2+')"></span><span class="vsp-name">'+ce(y.name)+"</span></div>"}}l+="</div>";var w=Ce(),x=w?'<button type="button" class="vsp-action" data-vilda-open-card><span class="vsp-action-ic"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="2"/><path d="M13 9h4M13 13h4M7 16h10"/></svg></span><span class="vsp-action-txt"><span class="vsp-action-title">Otw\xF3rz Kart\u0119 pacjenta</span><span class="vsp-action-sub">wczytany pacjent</span></span><span class="vsp-action-go" aria-hidden="true">\u203A</span></button>':"";return x+u+l}function at(){
+var de={loading:{c1:"#6b7c82",c2:"#6b7c82",name:"Wczytywanie\u2026",desc:"trwa wczytywanie danych pacjenta",heroBg:"#edf1f2",icon:'<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>'},saved:{c1:"#15803d",c2:"#22c55e",name:"Zapisano",desc:"bie\u017c\u0105cy formularz jest zgodny z zapisanym pomiarem",heroBg:"linear-gradient(135deg, rgba(34,197,94,0.14), rgba(21,128,61,0.05))",icon:'<polyline points="20 6 9 17 4 12"/>'},dirty:{c1:"#b45309",c2:"#f59e0b",name:"Niezapisane zmiany",desc:'kliknij \u201EZapisz dane", aby zapisa\u0107 snapshot',heroBg:"linear-gradient(135deg, rgba(245,158,11,0.16), rgba(180,83,9,0.05))",icon:'<path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/>'},new_patient:{c1:"#6d28d9",c2:"#a855f7",name:"Nowy pacjent",desc:"brak snapshotu \u2014 zapisz, aby utworzy\u0107 kart\u0119",heroBg:"linear-gradient(135deg, rgba(168,85,247,0.16), rgba(109,40,217,0.05))",icon:'<path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><line x1="20" y1="8" x2="20" y2="14"/><line x1="23" y1="11" x2="17" y2="11"/>'},saving:{c1:"#1d4ed8",c2:"#3b82f6",name:"Zapisywanie\u2026",desc:"trwa zapis snapshotu do vault",heroBg:"linear-gradient(135deg, rgba(59,130,246,0.16), rgba(29,78,216,0.05))",icon:'<path d="M21 12a9 9 0 1 1-6.219-8.56"/>'},error:{c1:"#b91c1c",c2:"#ef4444",name:"B\u0142\u0105d zapisu",desc:'spr\xF3buj ponownie \u2014 kliknij \u201EZapisz dane"',heroBg:"linear-gradient(135deg, rgba(239,68,68,0.16), rgba(185,28,28,0.05))",icon:'<circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>'},hidden:{c1:"#5f7274",c2:"#9eb8bb",name:"Brak danych pacjenta",desc:"wpisz dane pacjenta, aby rozpocz\u0105\u0107",heroBg:"linear-gradient(135deg, rgba(158,184,187,0.18), rgba(95,114,116,0.05))",icon:'<circle cx="12" cy="8" r="5"/><path d="M20 21a8 8 0 0 0-16 0"/>'}},Le=["saved","dirty","new_patient","saving","error"],h=null,O=!1;function ce(e){return String(e??"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;")}function Ce(){try{return r.sessionStorage&&r.sessionStorage.getItem("vildaCurrentPatientId")||null}catch{return null}}function rt(){var source=Ch_saveSource(),e=source&&source.ready?source.api:null,t=e&&typeof e.getState=="function"?e.getState():"hidden";de[t]||(t="hidden");var a=de[t],n=a.desc;if(e&&t==="saved"){var s=typeof e.getLastSavedAtISO=="function"?e.getLastSavedAtISO():null,i=typeof e.getLastSnapshotCount=="function"?e.getLastSnapshotCount():null,d=[];i&&d.push("Snapshot #"+i),s&&typeof e._relativeTime=="function"&&d.push(e._relativeTime(s)),n=d.length?d.join(" \xB7 "):"Formularz jest zgodny z zapisanym pomiarem"}for(var c='<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'+a.icon+"</svg>",u='<div class="vsp-hero" style="background:'+a.heroBg+'"><span class="vsp-hero-ic" style="background:linear-gradient(135deg,'+a.c1+","+a.c2+')">'+c+'</span><span class="vsp-hero-txt"><span class="vsp-hero-title" style="color:'+a.c1+'">'+ce(a.name)+'</span><span class="vsp-hero-sub">'+ce(n)+"</span></span></div>",l='<div class="vsp-legend-head">Pozosta\u0142e stany</div><div class="vsp-legend">',v=0;v<Le.length;v++){var p=Le[v];if(p!==t){var y=de[p];l+='<div class="vsp-row"><span class="vsp-dot" style="background:linear-gradient(135deg,'+y.c1+","+y.c2+')"></span><span class="vsp-name">'+ce(y.name)+"</span></div>"}}l+="</div>";var w=Ce(),x=w?'<button type="button" class="vsp-action" data-vilda-open-card><span class="vsp-action-ic"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="2"/><path d="M13 9h4M13 13h4M7 16h10"/></svg></span><span class="vsp-action-txt"><span class="vsp-action-title">Otw\xF3rz Kart\u0119 pacjenta</span><span class="vsp-action-sub">wczytany pacjent</span></span><span class="vsp-action-go" aria-hidden="true">\u203A</span></button>':"";return x+u+l}function at(){
   if(!h){h=o.createElement("div");h.className="vilda-save-popover";h.setAttribute("role","dialog");h.setAttribute("aria-label","Status zapisu danych pacjenta");h.tabIndex=-1;h.hidden=true}
   var panel=Ch_statusAnchor&&Ch_statusAnchor.closest(".chrome-drawer-panel"),parent=panel||o.body;
   if(h.parentNode!==parent)parent.appendChild(h);
@@ -802,7 +817,7 @@ var de={saved:{c1:"#15803d",c2:"#22c55e",name:"Zapisano",desc:"bie\u017c\u0105cy
 }function te(){
   if(!h)return;h.classList.remove("is-visible");O=false;var carrier=o.getElementById("vildaPatientChip");if(carrier)carrier.setAttribute("aria-expanded","false");Ch_refreshSaveState();
   setTimeout(function(){if(h&&!O)h.hidden=true},180);
-}function _e(){O?te():it()}function _(){var e=o.getElementById("vildaUserChip");if(e){var t=o.getElementById("vildaUserValue"),a=o.getElementById("vildaUserAvatar"),n=o.getElementById("vildaUserAction");if(!(!t||!a||!n)){var s=r.VildaVault,i=r.VildaGuestMode===!0,d=s&&typeof s.getCurrentUser=="function"?s.getCurrentUser():null;if(!d&&!i&&!D&&$()){var c=!0;try{var u=r.VildaSession;u&&typeof u.hasSessionKey=="function"&&(c=!!u.hasSessionKey())}catch{}if(c){Ge();return}}(d||i)&&(D=!0),e.classList.remove("is-loading");var l;d&&!i?(e.classList.remove("is-guest"),e.classList.add("is-logged-in"),l=d.label||"U\u017Cytkownik",Q({accountLabel:l}),t.textContent=l,a.textContent=J(l),t.setAttribute("role","link"),t.setAttribute("tabindex","0"),t.setAttribute("title","Przejd\u017A do ustawie\u0144 konta"),a.removeAttribute("aria-hidden"),a.setAttribute("role","link"),a.setAttribute("tabindex","0"),a.setAttribute("aria-label",t.getAttribute("title")),n.title="Wyloguj si\u0119",n.setAttribute("aria-label","Wyloguj si\u0119"),n.innerHTML='<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>'):(e.classList.remove("is-logged-in"),e.classList.add("is-guest"),oe(),t.textContent=i?"Tryb go\u015Bcia":"Niezalogowany",t.removeAttribute("role"),t.removeAttribute("tabindex"),t.removeAttribute("title"),a.setAttribute("aria-hidden","true"),a.removeAttribute("role"),a.removeAttribute("tabindex"),a.removeAttribute("aria-label"),a.innerHTML='<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="5"></circle><path d="M20 21a8 8 0 0 0-16 0"></path></svg>',n.title="Zaloguj si\u0119",n.setAttribute("aria-label","Zaloguj si\u0119"),n.innerHTML='<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"></path><polyline points="10 17 15 12 10 7"></polyline><line x1="15" y1="12" x2="3" y2="12"></line></svg>'),B(e),st(d,i,l);var v=!!(d&&!i);ot(v)}}}function ot(e){try{r.sessionStorage&&r.sessionStorage.setItem(be,e?"1":"0")}catch{}for(var t=o.querySelectorAll('[data-auth-only="true"]'),a=0;a<t.length;a++){var n=t[a];n.style.display=e?"":"none"}}function st(user,guest,label){
+}function _e(){var presentation=Cm_navigationPresentation();if(presentation&&presentation.loading)return;O?te():it()}function _(){var e=o.getElementById("vildaUserChip");if(e){var t=o.getElementById("vildaUserValue"),a=o.getElementById("vildaUserAvatar"),n=o.getElementById("vildaUserAction");if(!(!t||!a||!n)){var s=r.VildaVault,i=r.VildaGuestMode===!0,d=s&&typeof s.getCurrentUser=="function"?s.getCurrentUser():null;if(!d&&!i&&!D&&$()){var c=!0;try{var u=r.VildaSession;u&&typeof u.hasSessionKey=="function"&&(c=!!u.hasSessionKey())}catch{}if(c){Ge();return}}(d||i)&&(D=!0),e.classList.remove("is-loading");var l;d&&!i?(e.classList.remove("is-guest"),e.classList.add("is-logged-in"),l=d.label||"U\u017Cytkownik",Q({accountLabel:l}),t.textContent=l,a.textContent=J(l),t.setAttribute("role","link"),t.setAttribute("tabindex","0"),t.setAttribute("title","Przejd\u017A do ustawie\u0144 konta"),a.removeAttribute("aria-hidden"),a.setAttribute("role","link"),a.setAttribute("tabindex","0"),a.setAttribute("aria-label",t.getAttribute("title")),n.title="Wyloguj si\u0119",n.setAttribute("aria-label","Wyloguj si\u0119"),n.innerHTML='<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>'):(e.classList.remove("is-logged-in"),e.classList.add("is-guest"),oe(),t.textContent=i?"Tryb go\u015Bcia":"Niezalogowany",t.removeAttribute("role"),t.removeAttribute("tabindex"),t.removeAttribute("title"),a.setAttribute("aria-hidden","true"),a.removeAttribute("role"),a.removeAttribute("tabindex"),a.removeAttribute("aria-label"),a.innerHTML='<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="5"></circle><path d="M20 21a8 8 0 0 0-16 0"></path></svg>',n.title="Zaloguj si\u0119",n.setAttribute("aria-label","Zaloguj si\u0119"),n.innerHTML='<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"></path><polyline points="10 17 15 12 10 7"></polyline><line x1="15" y1="12" x2="3" y2="12"></line></svg>'),B(e),st(d,i,l);var v=!!(d&&!i);ot(v)}}}function ot(e){try{r.sessionStorage&&r.sessionStorage.setItem(be,e?"1":"0")}catch{}for(var t=o.querySelectorAll('[data-auth-only="true"]'),a=0;a<t.length;a++){var n=t[a];n.style.display=e?"":"none"}}function st(user,guest,label){
   var footers=o.querySelectorAll('.chrome-menu-footer');
   for(var index=0;index<footers.length;index++){
     var footer=footers[index],avatar=footer.querySelector('[data-vilda-chrome-drawer-avatar]'),value=footer.querySelector('[data-vilda-chrome-drawer-user-value]'),icon=footer.querySelector('[data-vilda-chrome-drawer-action-icon]'),action=footer.querySelector('[data-menu-logout]'),account=footer.querySelector('[data-menu-account]'),actionLabel=footer.querySelector('[data-vilda-chrome-drawer-action-label]');

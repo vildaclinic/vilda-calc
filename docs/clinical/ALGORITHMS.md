@@ -21420,7 +21420,7 @@ a lekarz poprawia jedno z miejsc. Wartość dni spoza 0–6 w rekordzie nie jest
 
 **Wersje.** `sga_birth_module.js?v=10→11`; SW 1.1.168 → **1.1.169**.
 
-## Sejf: „Usuń konto” a inne karty — dziennik dostępu, ustawienia kopii, karta odświeżona, lista kont, podpowiedź przy czekaniu i dokończenie przerwanego usuwania (P-USUN-KONTO-KARTY, E2-PR3a1c, SW 1.1.487, `vilda_vault.js` 257, 2026-11-08)
+## Sejf: „Usuń konto” a inne karty — dziennik dostępu, ustawienia kopii, karta odświeżona, lista kont, podpowiedź przy czekaniu i dokończenie przerwanego usuwania (P-USUN-KONTO-KARTY, E2-PR3a1c, SW 1.1.488, `vilda_vault.js` 257, 2026-11-08)
 
 **Zmiana kliniczna: NIE** — wzory, progi, jednostki, interpretacje, zapis danych pacjentów, scalanie, format kopii
 i synchronizacja bez zmian. Dla użytkownika: „Usuń konto” usuwa też dziennik dostępu i ustawienia kopii zapasowej tego
@@ -21745,10 +21745,10 @@ to konto” w `Ne`; `vilda_audit_log.js` — otwarcie bazy oraz wynik `verify()`
   (wyjątek `:not(#appShellRemoveWait)` w regule blokady) i 6190–6204 (komentarz, reguły `#appShellRemoveWait`
   i `#appShellRemoveWait:empty`).
 
-**Wersje.** Baza `origin/audyt` `c40cb8ef` (po vildaclinic/vilda-calc#907). `vilda_vault.js` 256 → 257,
+**Wersje.** Baza `origin/audyt` `6000f270` (po vildaclinic/vilda-calc#908). `vilda_vault.js` 256 → 257,
 `vilda_auth_ui.js` 550 → 551, `vilda_audit_log.js` 1 → 2, `vilda_file_export.js` 8 → 9, `vilda_shell.js` 81 → 82,
-`inline_ustawienia_04.js` 17 → 18 i `style.css` 95 → 96 (zmieniona treść); `vilda_chrome.js` 258 → 259
-i `vilda_session_bridge.js` 177 → 178 (wstrzykują plik z nowym `?v=`); SW 1.1.486 → **1.1.487**.
+`inline_ustawienia_04.js` 17 → 18 i `style.css` 95 → 96 (zmieniona treść); `vilda_chrome.js` 259 → 260
+i `vilda_session_bridge.js` 177 → 178 (wstrzykują plik z nowym `?v=`); SW 1.1.487 → **1.1.488**.
 
 ## Sejf: „Usuń konto” przy drugiej karcie — druga karta wraca do ekranu logowania, usuwanie nie czeka (P-USUN-KONTO-KARTY, E2-PR3a1b, SW 1.1.479, `vilda_vault.js` 256, 2026-11-06)
 

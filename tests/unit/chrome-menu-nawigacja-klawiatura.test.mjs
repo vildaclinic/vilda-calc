@@ -95,7 +95,7 @@ function environment(nativeInert = true) {
   const last = panel.appendChild(new Element('a')); last.setAttribute('href', 'homa-ir.html');
   const tip = vi.fn(), syncButtons = vi.fn();
   const api = new Function('r', 'o', 'Qdm', 'B', 'F', '_e', 'te', 'le',
-    `var K=false,O=false,h=null,M=null;${menuDependencies}${menuSource}${drawerSource}${actionSource}${headerSource}${navigationSource}${overlaySource};return {open:nt,close:ee,bind:tt,bindActions:et,bindMenu:Cm_bindMenuControls,openPatient:Cm_openMenuPatient,navigate:Pt,isOverlayOpen:he,bindHeader:Ch_bindHeader,refreshSearch:Ch_refreshSearch,openSearch:Ch_openSearch,saveSource:Ch_saveSource,clearContext:Cm_clearContext,clearCurrent:Cm_clearCurrent,refreshClear:Cm_refreshClear};`)(win, doc, syncButtons, () => {}, tip, () => {}, () => {}, () => {});
+    `var K=false,O=false,h=null,M=null,de={};${menuDependencies}${menuSource}${drawerSource}${actionSource}${headerSource}${navigationSource}${overlaySource};return {open:nt,close:ee,bind:tt,bindActions:et,bindMenu:Cm_bindMenuControls,openPatient:Cm_openMenuPatient,navigate:Pt,isOverlayOpen:he,bindHeader:Ch_bindHeader,refreshSearch:Ch_refreshSearch,openSearch:Ch_openSearch,saveSource:Ch_saveSource,clearContext:Cm_clearContext,clearCurrent:Cm_clearCurrent,refreshClear:Cm_refreshClear};`)(win, doc, syncButtons, () => {}, tip, () => {}, () => {}, () => {});
   api.bind(header);
   return { win, doc, header, trigger, avatar, account, main, input, frame, drawer, panel, close, last, api, tip, observers, Element,
     backgroundBootListeners: bootListenerCounts({ win, doc }) };
@@ -168,6 +168,85 @@ function clearMenuEnvironment({ live = 'dirty', clcr = false } = {}) {
 }
 
 describe('Chrome: a stable pending palette grants no action authority', () => {
+  it('shows one owned load phase in the menu and header without lending the old Saved state or enabling actions', async () => {
+    const h = clearMenuEnvironment({ live: 'saved' });
+    h.state.pending = true;
+    h.win.VildaSaveStatusIndicator.isReadyForSharedReference = () => !h.state.pending;
+    h.win.VildaShell = { getSidebarPresentation: () => ({ state: 'saved', title: 'Old patient', save: true, documents: true, clear: true }) };
+    let loading = { state: 'loading' };
+    h.win.VildaDataImportExport.getPatientLoadPresentation = vi.fn(() => loading);
+    h.win.collectUserData = vi.fn(); h.win.calcEstimatedIntake = vi.fn();
+    const save = h.main.appendChild(new h.Element('a')); save.setAttribute('id', 'saveDataBtnSidebar'); save.setAttribute('aria-disabled', 'true');
+    const documents = h.main.appendChild(new h.Element('a')); documents.setAttribute('id', 'patientDocumentsBtnSidebar'); documents.setAttribute('aria-disabled', 'true');
+    const statuses = [false, true].map(header => {
+      const status = h.main.appendChild(new h.Element('button')); status.setAttribute('data-menu-save-status', '');
+      if (header) status.setAttribute('data-header-save-status', '');
+      const label = status.appendChild(new h.Element('span')); label.setAttribute('data-menu-save-label', '');
+      return { status, label };
+    });
+    h.api.bindMenu(h.main);
+    for (const { status, label } of statuses) {
+      expect(status.getAttribute('data-save-state')).toBe('loading');
+      expect(label.textContent).toBe('Wczytywanie…');
+      expect(status.hidden).toBe(false);
+      expect(status.getAttribute('aria-busy')).toBe('true');
+      expect(status.getAttribute('aria-disabled')).toBe('true');
+    }
+    for (const action of [save, documents, h.menuClear]) {
+      expect(action.getAttribute('data-menu-load-pending')).toBe('true');
+      expect(action.getAttribute('aria-disabled')).toBe('true');
+      expect(action.hasAttribute('data-menu-preparing')).toBe(false);
+    }
+    expect(h.api.clearCurrent(h.menuClear)).toBe(false);
+    expect(h.reset).not.toHaveBeenCalled();
+    loading = null; h.state.pending = false;
+    h.win.VildaShell.getSidebarPresentation = () => null;
+    h.win.VildaSaveStatusIndicator.getState = () => 'dirty';
+    // Final readiness can arrive without another load-lifecycle event. All
+    // paints must settle with this ordinary status-only refresh as well.
+    h.doc.dispatchEvent({ type: 'vilda:intake-restore-readiness' });
+    await Promise.resolve();
+    for (const { status, label } of statuses) {
+      expect(status.getAttribute('data-save-state')).toBe('dirty');
+      expect(label.textContent).toBe(status.hasAttribute('data-header-save-status') ? 'Niezapisane' : 'Niezapisane zmiany');
+      expect(status.getAttribute('aria-busy')).toBe('false');
+    }
+    for (const action of [save, documents, h.menuClear]) expect(action.hasAttribute('data-menu-load-pending')).toBe(false);
+    expect(save.getAttribute('aria-disabled')).toBe('true');
+    expect(documents.getAttribute('aria-disabled')).toBe('true');
+    expect(h.menuClear.disabled).toBe(false);
+    expect(h.win.collectUserData).not.toHaveBeenCalled();
+    expect(h.win.calcEstimatedIntake).not.toHaveBeenCalled();
+    expect(h.reset).not.toHaveBeenCalled();
+  });
+
+  it.each(['absent', 'locked', 'guest', 'throws'])('does not invent a load phase from an unready form: %s', reason => {
+    const h = clearMenuEnvironment({ live: 'saved' });
+    h.state.pending = true;
+    h.win.VildaSaveStatusIndicator.isReadyForSharedReference = () => false;
+    const getter = vi.fn(() => { if (reason === 'throws') throw Error('Synthetic unavailable loader'); return { state: 'loading' }; });
+    if (reason !== 'absent') h.win.VildaDataImportExport.getPatientLoadPresentation = getter;
+    if (reason === 'locked') h.state.unlocked = false;
+    if (reason === 'guest') h.win.VildaGuestMode = true;
+    const status = h.main.appendChild(new h.Element('button')); status.setAttribute('data-menu-save-status', '');
+    status.setAttribute('data-header-save-status', '');
+    h.api.bindMenu(h.main);
+    expect(status.getAttribute('data-save-state')).toBe('hidden');
+    expect(status.hidden).toBe(true);
+    expect(h.menuClear.hasAttribute('data-menu-load-pending')).toBe(false);
+    if (reason !== 'throws') expect(getter).not.toHaveBeenCalled();
+  });
+
+  it('does not open stale saved details during an owned load', () => {
+    const start = source.indexOf('function _e(){'), end = source.indexOf('function _(){', start);
+    const close = vi.fn(), open = vi.fn();
+    let presentation = { loading: true };
+    const toggle = new Function('Cm_navigationPresentation', 'te', 'it', 'O', source.slice(start, end) + ';return _e;')(
+      () => presentation, close, open, false);
+    toggle(); expect(close).not.toHaveBeenCalled(); expect(open).not.toHaveBeenCalled();
+    presentation = null; toggle(); expect(open).toHaveBeenCalledOnce();
+  });
+
   it('intake readiness repaints the native state without reconciliation or clinical reads', async () => {
     const h = clearMenuEnvironment({ live: 'dirty' });
     h.state.pending = true;
