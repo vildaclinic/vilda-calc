@@ -32,6 +32,8 @@
 //     i po odświeżeniu karty z banerem w trakcie czekającego usuwania (jeśli usunięcie się nie uda, następne odświeżenie
 //     pokazuje konto). Bez banera — jak dotąd: wylogowanie, bezczynność, błąd hasła, zwykłe wygaśnięcie, „Usuń konto”
 //     w tej karcie, logowanie w toku.
+//   - Start strony nie czeka na odczyt wpisu rejestru (wygasły zapis sesji, znacznik karty): tryRestoreSession() kończy
+//     się jak dotąd, na odczyt czekają lista kont i stan sejfu.
 //   - Sejf ogłasza usunięcie konta innym dokumentom (BroadcastChannel vilda-konta, jeden obiekt na dokument, komunikat
 //     bez danych konta) po udanym usunięciu wpisu rejestru; „Kto się loguje?” i „Witamy” w kartach bez sesji odświeżają
 //     listę bez usuniętego konta, z banerem; formularz logowania innego konta i pozostałe ekrany bez zmian.
@@ -47,7 +49,7 @@
 //     czekania: zapis sesji karty zdejmowany tylko, gdy należy do usuwanego konta.
 //   - Tryb „Zaloguj jednorazowo”: bez kasowania dziennika, znaczników, ponowień i dokończenia.
 //
-// PRZYPADKI (UK21–UK52)
+// PRZYPADKI (UK21–UK53)
 //   UK21 (1)(2)  dziennik usuwany razem z kontem: jedna karta, dwie karty.
 //   UK22, UK23 (a)–(d)  jedno połączenie dziennika na dokument; blokada, versionchange, close, ponowne zalogowanie.
 //   UK24, UK24b, UK24c, UK24d (z wariantem)  bazę dziennika zakłada tylko logowanie; logowanie w innej karcie
@@ -65,11 +67,12 @@
 //   UK50  zapis sesji innego konta przy „Usuń konto”.
 //   UK51 (a)–(c)  start ekranu logowania bez sesji (wycinek cyklu startu vilda_auth_ui.js).
 //   UK52 (a)–(d)  dziennik dostępu po przywróceniu sesji (moduł dziennika wczytany, gdy sejf jest już odblokowany).
+//   UK53 (a)(b)  start strony bez czekania na odczyt wpisu rejestru: wygasły zapis sesji, znacznik karty.
 //   UK16 w sejf-usun-konto-karty.test.mjs bez zmian.
-// Na kodzie sprzed tej zmiany (E2-PR3a1b) czerwonych jest 68 z 102 przypadków — wszystkie poza strażnikami UK23 (c),
+// Na kodzie sprzed tej zmiany (E2-PR3a1b) czerwonych jest 69 z 104 przypadków — wszystkie poza strażnikami UK23 (c),
 // UK24b, UK24d (wariant), UK26 (c), UK27 (1), UK28, UK29 (b) (oba warianty), UK31b (wariant), UK32 (a) (trzy
 // warianty) i (b)–(e), UK33 (4), UK34, UK36 (wariant) (trzy warianty), UK39 (a)–(c), UK49 (b)–(e), (h), (j), (k),
-// UK50 (wariant) (oba warianty) i UK52 (b):
+// UK50 (wariant) (oba warianty), UK52 (b) i UK53 (a):
 // brak nowego zachowania („nie doczekano: …” albo inny wynik) albo brak funkcji (TypeError, brak wycinka
 // w vilda_auth_ui.js).
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -1717,5 +1720,50 @@ describe('dziennik dostępu po przywróceniu sesji', () => {
     await doczekaj(potem(o3, zapis, o), 'drugie odblokowanie');
     await o3.tlo();
     expect({ odblokowany: o3.v.isUnlocked(), wpisy: (await o3.win.VildaAuditLog.list()).map((x) => x.action) }).toEqual({ odblokowany: true, wpisy: ['unlock', 'unlock'] });
+  }, 30_000);
+});
+
+// ── Start strony z wygasłym zapisem sesji albo ze znacznikiem karty: tryRestoreSession() kończy się bez czekania na
+// odczyt wpisu rejestru konta (jak dotąd); na ten odczyt czekają lista kont i stan sejfu.
+describe('start strony bez czekania na odczyt wpisu rejestru', () => {
+  // Karta wczytana od nowa z podanym sessionStorage, odczyt wpisu rejestru wstrzymany na sukcesie; tryRestoreSession()
+  // musi się rozstrzygnąć przed zwolnieniem odczytu.
+  async function startPrzyWstrzymanymOdczycie(o, sesja) {
+    const o3 = await drugie(o, { zaloguj: null, sesja });
+    await o.cisza();
+    await o3.cisza();
+    const h = wstrzymaj(o3, { przy: 'success', baza: REJESTR, metoda: 'get' });
+    const start = {};
+    wynik(o3.v.tryRestoreSession()).then((w) => { start.w = w; });
+    await czekajNa(() => 'w' in start, 'tryRestoreSession() przy wstrzymanym odczycie wpisu rejestru');
+    return { o3, h, start: start.w };
+  }
+
+  it('UK53 (a): wygasły zapis sesji konta, które istnieje — tryRestoreSession() false przy wstrzymanym odczycie wpisu rejestru, klucz sesji zdjęty; po zwolnieniu bez banera i bez znacznika karty, konto na liście', async () => {
+    const o = await nowe();
+    const X = o.A.userId;
+    const sesja = kopiaSesji(o, { wygasla: true });
+    const { o3, h, start } = await startPrzyWstrzymanymOdczycie(o, sesja);
+    const klucz = sesja.getItem(SESJA);
+    h.zwolnij();
+    const s = await doczekaj(o3.v.getStatus(), 'stan sejfu po zwolnieniu odczytu');
+    expect({ start, klucz, powod: s.lockReason, lista: id(await o3.v.listUsers()), znacznik: sesja.getItem(ZNACZNIK_KARTY) })
+      .toEqual({ start: { ok: true, w: false }, klucz: null, powod: null, lista: [X], znacznik: null });
+  }, 30_000);
+
+  it('UK53 (b): znacznik karty konta bez wpisu rejestru, bez zapisu sesji — tryRestoreSession() false przy wstrzymanym odczycie wpisu rejestru; stan sejfu i lista kont czekają na ten odczyt; po zwolnieniu powód user-removed-elsewhere, lista bez tego konta, znacznik bez zmian', async () => {
+    const o = await nowe({ zaloguj: null });
+    const X = o.A.userId;
+    const sesja = magazynSesji({ [ZNACZNIK_KARTY]: JSON.stringify({ v: 1, userId: BEZ_KONTA }) });
+    const { o3, h, start } = await startPrzyWstrzymanymOdczycie(o, sesja);
+    const gotowe = [];
+    const pStan = o3.v.getStatus().then((s) => { gotowe.push('stan sejfu'); return s; });
+    const pLista = o3.v.listUsers().then((l) => { gotowe.push('lista kont'); return l; });
+    for (let i = 0; i < 20; i += 1) await makrozadanie();
+    const przedZwolnieniem = gotowe.slice();
+    h.zwolnij();
+    const [s, l] = await doczekaj(Promise.all([pStan, pLista]), 'stan sejfu i lista kont po zwolnieniu odczytu');
+    expect({ start, przedZwolnieniem, powod: s.lockReason, lista: id(l), znacznik: znacznikKarty(sesja) })
+      .toEqual({ start: { ok: true, w: false }, przedZwolnieniem: [], powod: 'user-removed-elsewhere', lista: [X], znacznik: { v: 1, userId: BEZ_KONTA } });
   }, 30_000);
 });

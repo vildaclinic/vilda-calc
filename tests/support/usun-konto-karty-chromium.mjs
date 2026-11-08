@@ -8,7 +8,8 @@
 // tests/e2e/usun-konto-karty-2.spec.mjs, tests/e2e/usun-konto-karty-pamiec.spec.mjs oraz uruchomienie z wiersza poleceń:
 //   node tests/support/usun-konto-karty-chromium.mjs [ścieżka do chrome] [PA1 PA1′ … PA14 (c)]
 //   (kontekst z zablokowanym service workerem, jak projekt desktop-chromium; scenariusze PA14 w osobnej przeglądarce
-//   z włączoną pamięcią stron i serwerem z nagłówkiem Cache-Control: max-age=600) — wypisuje wyniki i różnice
+//   z włączoną pamięcią stron i serwerem z nagłówkiem Cache-Control: max-age=600; bez ścieżki do chrome — pełny
+//   Chromium, channel: 'chromium', bo powłoka bez okna nie ma pamięci stron) — wypisuje wyniki i różnice
 //   z literałami, kod wyjścia 1 przy różnicy.
 //
 // Wyrocznia baz: pełna lista baz przeglądarki (indexedDB.databases(), nazwy posortowane, identyfikator konta zamieniony
@@ -30,11 +31,12 @@
 //   - obsługę okien przeglądarki według typu: confirm i alert — akceptacja (albo trzymanie okna do decyzji scenariusza,
 //     opcja trzymaj); beforeunload — zapis na liście typów karty i odpowiedź ustawiona przez krok scenariusza
 //     (domyślnie dismiss — strona zostaje); lista typów wszystkich okien karty jest częścią wyniku tam, gdzie scenariusz
-//     sprawdza brak okna beforeunload;
+//     sprawdza brak okna beforeunload; błędy strony (pageerror) na liście okna.bledy;
 //   - rejestrator (skrypt inicjujący w każdym dokumencie i ramce karty): każdy dodany ekran logowania (tytuł, nazwy kont,
 //     teksty banerów) w window.__ekrany dokumentu; każda zmiana tekstu podpowiedzi #removeUserWaitHint (Ustawienia)
 //     i paska #appShellRemoveWait (powłoka) oraz każde zdarzenie pageshow (persisted) w sessionStorage karty (klucze
-//     __testPodpowiedzi, __testPageshow), więc zapis przeżywa przejście karty na inną stronę. Po odświeżeniu albo
+//     __testPodpowiedzi, __testPageshow), więc zapis przeżywa przejście karty na inną stronę; każde zdarzenie
+//     vilda:user-state-cleared dokumentu (źródło z detail.source) w window.__czyszczenia dokumentu. Po odświeżeniu albo
 //     powrocie każdy zapisany ekran logowania nowego dokumentu jest w wyniku (bez powtórzeń) — „od razu” znaczy: bez
 //     chwilowego ekranu z usuniętym kontem.
 // Przeładowanie strony z aktywnym pytaniem przed opuszczeniem: location.reload() wywołane w stronie (zegar 0 ms) i czekanie
@@ -128,6 +130,10 @@ function rejestrator() {
     } catch { /* bez sessionStorage — bez zapisu */ }
   };
   window.__ekrany = [];
+  window.__czyszczenia = [];
+  window.addEventListener('vilda:user-state-cleared', (z) => {
+    window.__czyszczenia.push(z && z.detail && z.detail.source ? String(z.detail.source) : null);
+  });
   const teksty = new Map();
   const opisz = (e) => {
     const t = e.querySelector('.vilda-auth-title');
@@ -155,11 +161,13 @@ function rejestrator() {
   window.addEventListener('pageshow', (z) => { dopisz('__testPageshow', z.persisted); });
 }
 // Nowa karta z rejestratorem i obsługą okien. okna.typy — typy wszystkich okien karty; okna.beforeunload — odpowiedź
-// na następne okno beforeunload ('dismiss' albo 'accept'); okna.trzymane — okna pytania zatrzymane (opcja trzymaj).
+// na następne okno beforeunload ('dismiss' albo 'accept'); okna.trzymane — okna pytania zatrzymane (opcja trzymaj);
+// okna.bledy — komunikaty błędów strony (pageerror) karty.
 async function karta(kontekst, { trzymaj = false } = {}) {
   const strona = await kontekst.newPage();
   await strona.addInitScript(rejestrator);
-  const okna = { typy: [], beforeunload: 'dismiss', trzymane: [] };
+  const okna = { typy: [], beforeunload: 'dismiss', trzymane: [], bledy: [] };
+  strona.on('pageerror', (e) => { okna.bledy.push(String(e && e.message)); });
   strona.on('dialog', (d) => {
     okna.typy.push(d.type());
     if (d.type() === 'beforeunload') { (okna.beforeunload === 'accept' ? d.accept() : d.dismiss()).catch(ZERO); return; }
@@ -270,6 +278,14 @@ async function odswiez(strona) {
   await strona.reload({ waitUntil: 'load' });
   await czekajNaStart(strona);
 }
+// Odświeżenie i start nowego dokumentu: zdarzenia vilda:user-state-cleared tego dokumentu (źródła) i błędy strony od
+// odświeżenia — start bez czyszczenia stanu i bez błędów: { czyszczenia: [], bledy: [] }.
+async function odswiezIStart(strona, okna) {
+  const od = okna.bledy.length;
+  await odswiez(strona);
+  return { czyszczenia: await strona.evaluate(() => window.__czyszczenia || []), bledy: okna.bledy.slice(od) };
+}
+const START_BEZ_CZYSZCZENIA = Object.freeze({ czyszczenia: [], bledy: [] });
 // Ekran logowania dokumentu: tytuł, banery (tekst, role, przed tytułem), nazwy kont, widoczny błąd formularza, sejf.
 const ekran = (f) => f.evaluate(() => {
   const root = document.getElementById('vilda-auth-ui-root');
@@ -722,10 +738,11 @@ async function poStarcie(b, uid) {
   return { ekrany: bezPowtorzen(await ekranyOd(b)), ekran: await ekran(b), znacznik: await znacznikKarty(b, uid) };
 }
 
-// PA4 — B index.html zalogowana na X, A usuwa X; po banerze odświeżenie B (dwa konta: dwa odświeżenia).
+// PA4 — B index.html zalogowana na X, A usuwa X; po banerze odświeżenie B (dwa konta: dwa odświeżenia); start po
+// odświeżeniu bez czyszczenia stanu i bez błędów strony.
 async function pa4Wariant(kontekst, adres, zDrugimKontem) {
   const { a, uid } = await ustawieniaZKontem(kontekst, adres, { zDrugimKontem });
-  const { strona: b } = await karta(kontekst);
+  const { strona: b, okna: oknaB } = await karta(kontekst);
   await otworz(b, adres, 'index.html');
   await zaloguj(b, uid);
   await oznaczEkran(b);
@@ -733,17 +750,18 @@ async function pa4Wariant(kontekst, adres, zDrugimKontem) {
   await czekajNaNowyEkran(b);
   const wynik = { naZywo: await ekran(b), poOdswiezeniu: [] };
   for (let i = 0; i < (zDrugimKontem ? 2 : 1); i += 1) {
-    await odswiez(b);
-    wynik.poOdswiezeniu.push(await poStarcie(b, uid));
+    const start = await odswiezIStart(b, oknaB);
+    wynik.poOdswiezeniu.push({ ...(await poStarcie(b, uid)), start });
   }
   return wynik;
 }
 const PO_STARCIE_Z_BANEREM = (tytul, konta = []) => ({ ekrany: [ZAPIS_Z_BANEREM(tytul, konta)], ekran: ZABLOKOWANA_Z_BANEREM(tytul, konta), znacznik: ZNACZNIK });
+const PO_ODSWIEZENIU_Z_BANEREM = (tytul, konta = []) => ({ ...PO_STARCIE_Z_BANEREM(tytul, konta), start: START_BEZ_CZYSZCZENIA });
 export const OCZEKIWANE_PA4 = Object.freeze({
-  jednoKonto: { naZywo: ZABLOKOWANA_Z_BANEREM('Witamy'), poOdswiezeniu: [PO_STARCIE_Z_BANEREM('Witamy')] },
+  jednoKonto: { naZywo: ZABLOKOWANA_Z_BANEREM('Witamy'), poOdswiezeniu: [PO_ODSWIEZENIU_Z_BANEREM('Witamy')] },
   dwaKonta: {
     naZywo: ZABLOKOWANA_Z_BANEREM('Kto się loguje?', [KONTO_Y]),
-    poOdswiezeniu: [PO_STARCIE_Z_BANEREM('Kto się loguje?', [KONTO_Y]), PO_STARCIE_Z_BANEREM('Kto się loguje?', [KONTO_Y])],
+    poOdswiezeniu: [PO_ODSWIEZENIU_Z_BANEREM('Kto się loguje?', [KONTO_Y]), PO_ODSWIEZENIU_Z_BANEREM('Kto się loguje?', [KONTO_Y])],
   },
 });
 export async function pa4(kontekst, adres) {
@@ -802,23 +820,25 @@ export async function pa6(kontekst, adres) {
 }
 
 // PA7 — bez banera po odświeżeniu: blokada manual, blokada z bezczynności, wygasły zapis sesji istniejącego konta,
-// własne „Usuń konto” w zwykłej karcie Ustawień (potem odświeżenie index.html).
+// własne „Usuń konto” w zwykłej karcie Ustawień (potem odświeżenie index.html); każdy start po odświeżeniu bez czyszczenia
+// stanu i bez błędów strony.
 const tytulyIBanery = (ekrany) => bezPowtorzen(ekrany.map(({ tytul, banery }) => ({ tytul, banery })));
 const BEZ_BANERA_PO_STARCIE = Object.freeze([{ tytul: 'Kto się loguje?', banery: [] }]);
 export const OCZEKIWANE_PA7 = Object.freeze({
   manual: BEZ_BANERA_PO_STARCIE, idle: BEZ_BANERA_PO_STARCIE, wygaslyZapis: BEZ_BANERA_PO_STARCIE, wlasneUsuniecie: BEZ_BANERA_PO_STARCIE,
+  start: { manual: START_BEZ_CZYSZCZENIA, idle: START_BEZ_CZYSZCZENIA, wygaslyZapis: START_BEZ_CZYSZCZENIA, wlasneUsuniecie: START_BEZ_CZYSZCZENIA },
 });
 export async function pa7(kontekst, adres) {
-  const { a, uidY } = await ustawieniaZKontem(kontekst, adres, { zDrugimKontem: true });
-  const { strona: b } = await karta(kontekst);
+  const { a, okna: oknaA, uidY } = await ustawieniaZKontem(kontekst, adres, { zDrugimKontem: true });
+  const { strona: b, okna: oknaB } = await karta(kontekst);
   await otworz(b, adres, 'index.html');
-  const wynik = {};
+  const wynik = { start: {} };
   for (const powod of ['manual', 'idle']) {
     await zaloguj(b, uidY, HASLO_Y);
     await oznaczEkran(b);
     await b.evaluate((x) => { window.VildaVault.lock(x); }, powod);
     await czekajNaNowyEkran(b);
-    await odswiez(b);
+    wynik.start[powod] = await odswiezIStart(b, oknaB);
     wynik[powod] = tytulyIBanery(await ekranyOd(b));
   }
   await zaloguj(b, uidY, HASLO_Y);
@@ -826,11 +846,11 @@ export async function pa7(kontekst, adres) {
     const z = JSON.parse(sessionStorage.getItem(k));
     sessionStorage.setItem(k, JSON.stringify({ ...z, expiresAtISO: new Date(Date.now() - 60_000).toISOString() }));
   }, KLUCZ_SESJI);
-  await odswiez(b);
+  wynik.start.wygaslyZapis = await odswiezIStart(b, oknaB);
   wynik.wygaslyZapis = tytulyIBanery(await ekranyOd(b));
   await usunIPrzejdz(a);
   await czekajNaNowyEkran(a);
-  await odswiez(a);
+  wynik.start.wlasneUsuniecie = await odswiezIStart(a, oknaA);
   wynik.wlasneUsuniecie = tytulyIBanery(await ekranyOd(a));
   return wynik;
 }
@@ -1238,12 +1258,12 @@ async function glowna() {
   const wybrane = process.argv.slice(3);
   const wyniki = {};
   let rozne = 0;
-  for (const [lista, opcjeSerwera, opcjeUruchomienia] of [
-    [[...SCENARIUSZE_PA, ...SCENARIUSZE_PA_2], {}, {}],
-    [SCENARIUSZE_PA_PAMIEC, SERWER_PAMIECI, ARGUMENTY_PAMIECI],
+  for (const [lista, opcjeSerwera, opcjeUruchomienia, bezSciezki] of [
+    [[...SCENARIUSZE_PA, ...SCENARIUSZE_PA_2], {}, {}, {}],
+    [SCENARIUSZE_PA_PAMIEC, SERWER_PAMIECI, ARGUMENTY_PAMIECI, { channel: 'chromium' }],
   ]) {
     if (wybrane.length && !lista.some(([n]) => wybrane.includes(n))) continue;
-    const przegladarka = await chromium.launch({ ...(executablePath ? { executablePath } : {}), ...opcjeUruchomienia });
+    const przegladarka = await chromium.launch({ ...(executablePath ? { executablePath } : bezSciezki), ...opcjeUruchomienia });
     const serwer = await startSerwer(KORZEN, opcjeSerwera);
     wyniki.przegladarka = przegladarka.version();
     try {

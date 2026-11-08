@@ -5,12 +5,13 @@
 // zalogowana na to konto wraca do ekranu logowania bez tego konta z banerem „Konto zostało usunięte z tej przeglądarki.”
 // i znacznikiem karty, a karta bez sesji — do listy kont bez usuniętego konta; zdarzenie pageshow, baner karty bez sesji
 // i powody pominięcia pamięci stron — pomiary. Scenariusze, literały i własny serwer plików repozytorium w
-// tests/support/usun-konto-karty-chromium.mjs. Dane wyłącznie fikcyjne.
+// tests/support/usun-konto-karty-chromium.mjs. Pełny Chromium (channel: 'chromium') także w CI, bo powłoka bez okna
+// (Chrome Headless Shell, domyślna w trybie bez okna) nie ma pamięci stron. Dane wyłącznie fikcyjne.
 import { expect, test } from '@playwright/test';
 import konfiguracja from '../../playwright.config.mjs';
 import { ARGUMENTY_PAMIECI, SCENARIUSZE_PA_PAMIEC, SERWER_PAMIECI, startSerwer } from '../support/usun-konto-karty-chromium.mjs';
 
-test.use({ launchOptions: { ...(konfiguracja.use?.launchOptions || {}), ...ARGUMENTY_PAMIECI } });
+test.use({ channel: 'chromium', launchOptions: { ...(konfiguracja.use?.launchOptions || {}), ...ARGUMENTY_PAMIECI } });
 
 const OPISY = {
   'PA14 (a)': 'kontrola — karta zalogowana wraca z innej strony z pamięci stron',
