@@ -3060,3 +3060,6 @@ html.vilda-phone body.vilda-header-menu .chrome-header-search {
     display: none
   }
 }
+
+/* Pending local changes and a retained workspace conflict are distinct from a completed sync. */
+.vilda-header-menu [data-menu-sync][data-sync-state=conflict] {color:#a66a12!important}

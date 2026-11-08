@@ -32,13 +32,32 @@
     var state = { view: 'library', items: [], loaded: false, catalogReadable: false, loading: false, query: '', archived: false, capability: null,
       busy: false, error: null, feedback: '', selected: null, revisions: [], draft: null, dirty: false, wizardStep: 1,
       stageId: null, stepId: null, templateId: null, baseToken: null, operationId: null, privacyRequired: false,
-      reviewedText: null, stale: false, pending: null, uncertain: false, confirmation: null, issues: [], importData: null, limitedToLocal: false, syncInfo: '' };
+      reviewedText: null, stale: false, pending: null, uncertain: false, confirmation: null, issues: [], importData: null, limitedToLocal: false, syncInfo: '',
+      applicationCapability: null, application: null };
     function current() { var user = vault.getCurrentUser && vault.getCurrentUser(); return !destroyed && host.isConnected && vault.isUnlocked() && user && user.userId === ownerId && (!options.isCurrent || options.isCurrent()); }
     function node(tag, className, text) { var element = doc.createElement(tag); if (className) element.className = className; if (text != null) element.textContent = text; return element; }
     function clear(element) { while (element.firstChild) element.removeChild(element.firstChild); }
     function button(text, className, fn, label) { var element = node('button', className, text); element.type = 'button'; if (label) element.setAttribute('aria-label', label); if (fn) element.addEventListener('click', function () { if (current() && !state.busy && !element.disabled) fn(); }); return element; }
     function busy(value) { state.busy = value; root.setAttribute('aria-busy', String(value)); if (options.onBusy) options.onBusy(value, true); }
     function canSave() { return !!(state.capability && state.capability.canSave === true); }
+    function applicationService() { var service = options.application; return service && ['getCapability', 'listPatients', 'prepare', 'commit', 'getOutcome'].every(function (name) { return typeof service[name] === 'function'; }) ? service : null; }
+    function canApply() { return !!(applicationService() && state.applicationCapability && state.applicationCapability.available === true); }
+    function applicationUnavailable() { return state.applicationCapability && state.applicationCapability.message || 'Nie można teraz utworzyć planu z szablonu. Odśwież bibliotekę, aby sprawdzić dostępność.'; }
+    function applicationAvailability(parent) {
+      help(parent, applicationUnavailable());
+      var service = applicationService();
+      if (!state.applicationCapability || !state.applicationCapability.canPrepare || !service || typeof service.prepareWorkspace !== 'function') return;
+      var prepare = button('Przygotuj plany z etapami', 'vcp-outline', async function () {
+        if (!current() || state.busy) return;
+        state.busy = true; prepare.disabled = true;
+        try {
+          await service.prepareWorkspace();
+          if (!current()) return;
+          state.applicationCapability = await service.getCapability();
+        } catch (error) { if (current()) fail(error); }
+        finally { if (current()) { state.busy = false; render(); } }
+      }); prepare.disabled = state.busy; parent.appendChild(prepare);
+    }
     function fail(error) { state.error = error && error.message || 'Nie udało się odczytać biblioteki. Spróbuj ponownie.'; }
     function heading(parent, text, level) { var element = node(level || 'h2', '', text); parent.appendChild(element); return element; }
     function help(parent, text) { parent.appendChild(node('p', 'vcp-help', text)); }
@@ -110,11 +129,13 @@
     }
     function render() {
       if (!current()) return;
+      root.classList.toggle('vct-application-mode', state.view === 'application');
       var focusedSearch = root.contains(doc.activeElement) && doc.activeElement.getAttribute('aria-label') === 'Szukaj własnego szablonu';
       var caret = focusedSearch && typeof doc.activeElement.selectionStart === 'number' ? doc.activeElement.selectionStart : null;
       fields.clear(); clear(workspace); clear(footer); closeButton.disabled = state.busy;
       renderFeedback();
       if (state.confirmation) renderConfirmation();
+      else if (state.view === 'application') renderApplication();
       else if (state.view === 'wizard') renderWizard();
       else if (state.view === 'detail') renderDetail();
       else if (state.view === 'history') renderHistory();
@@ -140,12 +161,14 @@
           help(text, item.status === 'conflict' ? 'Wymaga przeglądu zmian' : !['active', 'archived'].includes(item.status) ? 'Nie można odczytać tej wersji szablonu.' : structureCount(item.stageCount, item.stepCount) + ' · Wersja ' + item.revisionNumber);
           if (item.syncState && item.syncState.pending) help(text, 'Oczekuje na synchronizację');
           var actions = node('div', 'vct-row-actions'); actions.appendChild(button(item.status === 'conflict' ? 'Przejrzyj zmiany' : 'Podgląd', 'vcp-outline', function () { readTemplate(item.templateId); }));
+          if (item.status === 'active') actions.insertBefore(applicationButton(item, false), actions.firstChild);
           if (canChangeAvailability(item)) actions.appendChild(availabilityButton(item));
           row.appendChild(text); row.appendChild(actions); cards.appendChild(row);
         });
       }
       search.addEventListener('input', function () { state.query = search.value; draw(); }); draw();
       var capability = capabilityText(); if (capability) help(workspace, capability);
+      if (state.loaded && !canApply() && state.items.some(function (item) { return item.status === 'active'; })) applicationAvailability(workspace);
     }
     function preview(parent, definition, editLinks) {
       if (!model.validateDefinition(definition).valid) { parent.appendChild(node('p', 'vcp-empty', 'Nie można odczytać tej definicji szablonu.')); return; }
@@ -168,11 +191,13 @@
       if (!selected || !selected.definition) { workspace.appendChild(node('p', 'vcp-empty', 'Nie można odczytać tej wersji szablonu.')); return; }
       var content = node('div', 'vct-scroll-pane'); preview(content, selected.definition, false); workspace.appendChild(content);
       var actions = node('div', 'vct-detail-actions');
+      if (!state.historical && selected.status === 'active') actions.appendChild(applicationButton(selected, true));
       if (!state.historical) { var edit = button('Edytuj', 'vcp-outline', function () { abandonThen(function () { beginEdit(selected); }); }); edit.disabled = !canSave() || selected.status !== 'active'; actions.appendChild(edit); }
       var duplicate = button('Utwórz kopię', 'vcp-outline', function () { abandonThen(function () { beginDuplicate(selected.definition); }); }); duplicate.disabled = !canSave(); actions.appendChild(duplicate);
       actions.appendChild(button('Wersje', 'vcp-text', function () { readRevisions(selected.templateId); }));
       if (!state.historical && canChangeAvailability(selected)) actions.appendChild(availabilityButton(selected));
       workspace.appendChild(actions);
+      if (!state.historical && selected.status === 'active' && !canApply()) applicationAvailability(workspace);
     }
     function renderHistory() {
       headerTitle.textContent = 'Wersje szablonu'; workspace.appendChild(button('← Moje szablony', 'vcp-text', function () { state.view = 'library'; render(); }));
@@ -183,6 +208,7 @@
     }
     async function refresh() {
       if (!current() || state.busy) return;
+      if (state.application) { state.stale = true; return; }
       if (state.confirmation) { state.stale = true; return; }
       var ticket = ++sequence; state.loading = true; state.catalogReadable = false; state.error = null; if (!state.loaded) render();
       try {
@@ -202,11 +228,237 @@
         }
         if (!current() || ticket !== sequence) return;
         if (syncError && !local) throw syncError;
-        var values = await Promise.all([vault.getCarePlanTemplateCapability(), vault.listCarePlanTemplates({ archived: 'all' })]);
+        var service = applicationService();
+        var values = await Promise.all([vault.getCarePlanTemplateCapability(), vault.listCarePlanTemplates({ archived: 'all' }), service ? Promise.resolve().then(function () { return service.getCapability(); }).catch(function () { return { available: false }; }) : null]);
         if (!current() || ticket !== sequence) return;
-        state.capability = values[0]; if (!Array.isArray(values[1])) throw new Error('Nie można odczytać listy szablonów.'); state.items = values[1]; state.loaded = true; state.catalogReadable = !!(values[0] && values[0].readable === true && ['private-local', 'remote-ack'].includes(values[0].persistence)); state.stale = false; if (syncError) fail(syncError);
+        state.capability = values[0]; state.applicationCapability = values[2]; if (!Array.isArray(values[1])) throw new Error('Nie można odczytać listy szablonów.'); state.items = values[1]; state.loaded = true; state.catalogReadable = !!(values[0] && values[0].readable === true && ['private-local', 'remote-ack'].includes(values[0].persistence)); state.stale = false; if (syncError) fail(syncError);
       } catch (error) { if (current() && ticket === sequence) fail(error); }
       finally { if (current() && ticket === sequence) { state.loading = false; if (state.view !== 'wizard') render(); else { renderFeedback(); renderFooter(); } } }
+    }
+    function navigationContext() {
+      var pane = workspace.querySelector(state.view === 'library' ? '.vct-library-list' : '.vct-scroll-pane');
+      var focused = doc.activeElement, focusTemplateId = focused && focused.getAttribute && focused.getAttribute('data-template-use');
+      return { view: state.view === 'detail' ? 'detail' : 'library', query: state.query, archived: state.archived,
+        templateId: state.selected && state.selected.templateId || null,
+        revisionId: state.historical && state.selected ? state.selected.revisionId || null : null,
+        scrollTop: pane ? pane.scrollTop : 0, focusTemplateId: focusTemplateId || null };
+    }
+    function restoreNavigationPosition(context) {
+      if (!current()) return;
+      var pane = workspace.querySelector(state.view === 'library' ? '.vct-library-list' : '.vct-scroll-pane');
+      if (pane) pane.scrollTop = Math.max(0, Number(context && context.scrollTop) || 0);
+      var target = context && context.focusTemplateId && Array.from(workspace.querySelectorAll('[data-template-use]')).find(function (item) { return item.getAttribute('data-template-use') === context.focusTemplateId; });
+      (target || headerTitle).focus({ preventScroll: true });
+    }
+    async function restoreNavigation(context) {
+      if (!current() || state.busy || state.application) return;
+      context = context || {}; state.query = typeof context.query === 'string' ? context.query : ''; state.archived = context.archived === true;
+      if (context.view === 'detail' && typeof context.templateId === 'string') await readTemplate(context.templateId, context.revisionId || null);
+      else { state.view = 'library'; render(); }
+      restoreNavigationPosition(context);
+    }
+    function applicationButton(template, detail) {
+      var label = 'Użyj u pacjenta', item = button(label, 'vcp-primary vct-apply-button', function () {
+        abandonThen(function () { beginApplication(template); });
+      }, detail ? label : label + ': ' + (template.title || template.definition && template.definition.name || 'Szablon'));
+      item.setAttribute('data-template-use', template.templateId); item.disabled = state.busy || !!state.pending || !canApply();
+      if (!canApply()) item.title = applicationUnavailable(); return item;
+    }
+    function applicationCurrent(application, ticket) { return current() && state.application === application && (ticket === undefined || ticket === sequence); }
+    function applicationName(patient) {
+      var header = patient && patient.header || {};
+      return header.name || [header.lastName, header.firstName].filter(Boolean).join(' ') || patient && patient.name || 'Pacjent';
+    }
+    function applicationIdentity(patient, patients) {
+      var header = patient && patient.header || {}, birth = header.dobISO, parts = typeof birth === 'string' ? birth.split('-').map(Number) : [], parsed = new Date(birth + 'T12:00:00Z');
+      var validBirth = /^\d{4}-\d{2}-\d{2}$/.test(birth || '') && !isNaN(parsed.getTime()) && parsed.getUTCFullYear() === parts[0] && parsed.getUTCMonth() + 1 === parts[1] && parsed.getUTCDate() === parts[2];
+      var text = validBirth ? 'ur. ' + birth.split('-').reverse().join('.') : 'Brak daty urodzenia';
+      if (!validBirth || patients.some(function (other) { return other.patientId !== patient.patientId && key(applicationName(other)) === key(applicationName(patient)) && (other.header || {}).dobISO === birth; })) text += ' · ID wpisu: ' + patient.patientId;
+      return text;
+    }
+    async function beginApplication(template) {
+      if (!current() || state.busy || state.pending || !canApply() || !template || template.status !== 'active' || template.readOnly) return;
+      var service = applicationService(), back = navigationContext(), ticket = ++sequence;
+      var application = { source: null, expectedRevisionId: template.headRevisionId, templateId: template.templateId, patients: [], patient: null,
+        phase: 'patient', query: '', definition: null, token: null, selectedSteps: new Set(), dirty: false, pending: null, returnContext: back, scrollTop: 0 };
+      state.draft = null; state.dirty = false; state.application = application; state.view = 'application'; state.error = null; state.feedback = ''; busy(true); render();
+      try {
+        var values = await Promise.all([service.getCapability(), vault.getCarePlanTemplate(template.templateId), service.listPatients()]);
+        if (!applicationCurrent(application, ticket)) return;
+        state.applicationCapability = values[0];
+        if (!canApply()) throw new Error(applicationUnavailable());
+        var source = values[1];
+        if (!source || source.status !== 'active' || source.readOnly || !source.headRevisionId || source.headRevisionId !== application.expectedRevisionId) throw new Error('Szablon zmienił się lub wymaga przeglądu. Wróć do biblioteki i sprawdź jego bieżącą wersję.');
+        var sourceValidation = model.validateDefinition(source.definition);
+        if (!sourceValidation.valid) throw new Error(sourceValidation.issues.some(function (issue) { return issue.code === 'CARE_TEMPLATE_OUTCOME_REQUIRED'; }) ? 'Szablon nie określa, co kończy każdy krok. Wróć do jego podglądu, wybierz „Edytuj” i uzupełnij „Co kończy ten krok?”.' : 'Szablon wymaga uzupełnienia. Wróć do jego podglądu, wybierz „Edytuj” i sprawdź wszystkie kroki.');
+        if (!Array.isArray(values[2])) throw new Error('Nie udało się odczytać listy pacjentów. Wróć do szablonu i spróbuj ponownie.');
+        application.source = source; application.patients = values[2].filter(function (patient) { return patient && typeof patient.patientId === 'string' && patient.patientId; });
+        if (options.patientId) {
+          application.patient = application.patients.find(function (patient) { return patient.patientId === options.patientId; }) || null;
+          if (!application.patient) throw new Error('Pacjent z otwartej Karty jest niedostępny. Wróć do Karty pacjenta i sprawdź jego dane.');
+        } else if (options.initialPatientId) application.patient = application.patients.find(function (patient) { return patient.patientId === options.initialPatientId; }) || null;
+      } catch (error) { if (applicationCurrent(application, ticket)) fail(error); }
+      finally { if (applicationCurrent(application, ticket)) { busy(false); render(); headerTitle.focus({ preventScroll: true }); } }
+      if (applicationCurrent(application, ticket) && application.source && application.patient && options.patientId && !state.error) await prepareApplication();
+    }
+    function applicationEdited(application) { if (!applicationCurrent(application) || application.pending) return false; application.dirty = true; state.error = null; renderFeedback(); renderFooter(); return true; }
+    function applicationField(parent, label, type, value, update) {
+      var application = state.application;
+      var input = field(parent, label, type, value, function (value) { if (!applicationCurrent(application) || application.pending) return; update(value); applicationEdited(application); }, null, false);
+      input.disabled = state.busy || !!application.pending; return input;
+    }
+    function applicationSelect(parent, label, values, value, update) {
+      var input = applicationField(parent, label, 'select', '', update);
+      values.forEach(function (entry) { var option = node('option', '', entry.label); option.value = entry.value; input.appendChild(option); }); input.value = value; return input;
+    }
+    function renderApplication() {
+      var application = state.application; if (!application) return;
+      headerTitle.textContent = 'Plan ze szablonu'; root.classList.add('vct-application-mode');
+      var back = button('← Szablon', 'vcp-text', requestApplicationBack); back.disabled = state.busy || !!application.pending; workspace.appendChild(back);
+      var pane = node('div', 'vct-scroll-pane vct-application-pane'); workspace.appendChild(pane);
+      if (!application.source) { help(pane, state.busy ? 'Wczytywanie szablonu i pacjentów…' : 'Wróć do biblioteki, aby ponownie wybrać szablon.'); return; }
+      heading(pane, application.source.definition.name);
+      help(pane, 'Wersja ' + application.source.revisionNumber + ' · Powstanie niezależny plan pacjenta. Zmiany w tym planie nie zmienią szablonu.');
+      if (application.phase === 'patient') { renderApplicationPatients(pane, application); return; }
+      var identity = node('section', 'vct-application-patient'); heading(identity, applicationName(application.patient), 'h3'); help(identity, applicationIdentity(application.patient, application.patients)); pane.appendChild(identity);
+      if (!options.patientId) { var changePatient = button('Zmień pacjenta', 'vcp-text', function () { if (!application.pending) { application.phase = 'patient'; render(); } }); changePatient.disabled = state.busy || !!application.pending; identity.appendChild(changePatient); }
+      var draft = application.definition;
+      applicationField(pane, 'Nazwa planu', 'text', draft.name, function (value) { draft.name = value; }).maxLength = model.LIMITS.maxNameUnits;
+      applicationField(pane, 'Cel i ustalenia (opcjonalnie)', 'textarea', draft.purpose, function (value) { draft.purpose = value; }).maxLength = model.LIMITS.maxPurposeUnits;
+      help(pane, 'Wybierz kroki do planu i dopasuj ich treść. Etap bez wybranych kroków nie zostanie dodany. Po zapisaniu planu samodzielnie uruchomisz pierwszy etap.');
+      orderedStages(draft).forEach(function (stage) {
+        var section = node('section', 'vct-stage-preview vct-application-stage'); section.dataset.templateStageId = stage.id;
+        applicationField(section, 'Nazwa etapu', 'text', stage.title, function (value) { stage.title = value; }).maxLength = model.LIMITS.maxNameUnits;
+        stepsFor(draft, stage).forEach(function (step) {
+          var row = node('article', 'vct-preview-step vct-application-step'); row.dataset.templateStepId = step.id;
+          var include = check(row, 'Dołącz krok: ' + step.title, application.selectedSteps.has(step.id), function (selected) {
+            if (!applicationCurrent(application) || application.pending) return;
+            if (selected) application.selectedSteps.add(step.id); else application.selectedSteps.delete(step.id);
+            application.scrollTop = pane.scrollTop; applicationEdited(application); render();
+          }); include.disabled = state.busy || !!application.pending;
+          if (application.selectedSteps.has(step.id)) {
+            applicationField(row, 'Nazwa kroku', 'text', step.title, function (value) { step.title = value; }).maxLength = model.LIMITS.maxNameUnits;
+            applicationField(row, 'Instrukcja (opcjonalnie)', 'textarea', step.instruction, function (value) { step.instruction = value; }).maxLength = model.LIMITS.maxInstructionUnits;
+            var outcome = applicationSelect(row, 'Co kończy ten krok?', [{ value: '', label: 'Wybierz sposób zakończenia' }].concat(model.OUTCOMES), step.requiredOutcome || '', function (value) { step.requiredOutcome = value || null; syncOutcome(); });
+            var outcomeHelp = node('p', 'vcp-help vct-field-error', 'Wybierz, co kończy ten krok: wykonanie, otrzymanie wyniku albo zapisanie decyzji.'); row.appendChild(outcomeHelp);
+            function syncOutcome() { var missing = !model.OUTCOMES.some(function (entry) { return entry.value === step.requiredOutcome; }); outcome.setAttribute('aria-invalid', String(missing)); outcomeHelp.hidden = !missing; } syncOutcome();
+            applicationSelect(row, 'Przypomnienie', [{ value: 'none', label: 'Bez terminu' }, { value: 'stage-offset', label: 'Od uruchomienia etapu' }], step.reminderRule.kind, function (value) {
+              step.reminderRule = value === 'none' ? { kind: 'none' } : { kind: 'stage-offset', amount: null, unit: 'day' }; application.scrollTop = pane.scrollTop; render();
+            });
+            if (step.reminderRule.kind === 'stage-offset') {
+              var timingFields = node('div', 'vcp-field-pair'); row.appendChild(timingFields);
+              var amount = applicationField(timingFields, 'Liczba jednostek czasu', 'number', step.reminderRule.amount, function (value) { step.reminderRule.amount = value.trim() === '' ? null : Number(value); }); amount.min = '0'; amount.max = '1200'; amount.step = '1';
+              applicationSelect(timingFields, 'Jednostka czasu', [{ value: 'day', label: 'dni' }, { value: 'week', label: 'tygodni' }, { value: 'month', label: 'miesięcy' }], step.reminderRule.unit, function (value) { step.reminderRule.unit = value; });
+            }
+          }
+          section.appendChild(row);
+        }); pane.appendChild(section);
+      });
+      pane.scrollTop = application.scrollTop;
+    }
+    function renderApplicationPatients(pane, application) {
+      heading(pane, 'Wybierz pacjenta', 'h3');
+      var search = field(pane, 'Szukaj pacjenta', 'search', application.query, function (value) { application.query = value; draw(); }, null, false); search.placeholder = 'Nazwisko lub imię…'; search.autocomplete = 'off';
+      var results = node('div', 'vcp-patient-results vct-application-patients'), status = node('p', 'vcp-help'); status.setAttribute('role', 'status'); pane.appendChild(status); pane.appendChild(results);
+      function choose(patient) {
+        if (state.busy || application.pending) return;
+        function accept() {
+          if (!applicationCurrent(application)) return;
+          if (!application.patient || application.patient.patientId !== patient.patientId) { application.definition = null; application.token = null; application.selectedSteps.clear(); application.dirty = false; }
+          application.patient = patient; state.error = null; draw(); renderFooter();
+        }
+        if (application.patient && application.patient.patientId !== patient.patientId && application.dirty) ask('Zmienić pacjenta?', 'Dopasowanie planu dla poprzednio wybranej osoby zostanie odrzucone.', function () { accept(); render(); });
+        else accept();
+      }
+      function draw() {
+        clear(results); var query = key(application.query), matches = application.patients.filter(function (patient) { return !query || key(applicationName(patient)).includes(query); });
+        matches.slice(0, 20).forEach(function (patient) {
+          var item = button('', 'vcp-patient-option', function () { choose(patient); }); item.dataset.patientId = patient.patientId; item.setAttribute('aria-pressed', String(application.patient && application.patient.patientId === patient.patientId));
+          var identity = applicationIdentity(patient, application.patients); item.setAttribute('aria-label', applicationName(patient) + ' · ' + identity);
+          item.appendChild(node('span', 'vcp-patient', applicationName(patient))); item.appendChild(node('span', 'vcp-help', identity)); item.disabled = state.busy || !!application.pending; results.appendChild(item);
+        });
+        status.textContent = application.patient ? 'Wybrany pacjent: ' + applicationName(application.patient) + ' · ' + applicationIdentity(application.patient, application.patients) : matches.length > 20 ? 'Pokazano 20 osób. Wpisz więcej znaków, aby zawęzić listę.' : matches.length ? 'Wybierz pacjenta z listy.' : 'Brak pasujących pacjentów.';
+      }
+      search.disabled = state.busy || !!application.pending; draw();
+    }
+    async function prepareApplication() {
+      var application = state.application, service = applicationService();
+      if (!application || !application.patient || !application.source || !service || state.busy || application.pending) return;
+      if (application.definition && application.token) { application.phase = 'review'; render(); return; }
+      var ticket = ++sequence; busy(true); state.error = null; render();
+      try {
+        var prepared = await service.prepare({ patientId: application.patient.patientId, templateId: application.templateId, revisionId: application.expectedRevisionId });
+        if (!applicationCurrent(application, ticket)) return;
+        if (!prepared || !prepared.token || !model.validateDefinition(prepared.definition).valid) throw new Error('Nie udało się przygotować planu. Wróć do szablonu i spróbuj ponownie.');
+        application.token = prepared.token; application.definition = clone(prepared.definition); application.selectedSteps = new Set(application.definition.steps.filter(function (step) { return step.includedByDefault; }).map(function (step) { return step.id; })); application.phase = 'review';
+      } catch (error) { if (applicationCurrent(application, ticket)) fail(error); }
+      finally { if (applicationCurrent(application, ticket)) { busy(false); render(); headerTitle.focus({ preventScroll: true }); } }
+    }
+    function applicationDefinition(application) {
+      var definition = clone(application.definition);
+      definition.steps = definition.steps.filter(function (step) { return application.selectedSteps.has(step.id); });
+      if (!definition.steps.length) { fail(new Error('Wybierz co najmniej jeden krok do planu.')); return null; }
+      if (definition.steps.some(function (step) { return !model.OUTCOMES.some(function (entry) { return entry.value === step.requiredOutcome; }); })) { fail(new Error('W każdym wybranym kroku uzupełnij „Co kończy ten krok?”.')); return null; }
+      definition.stages.forEach(function (stage) { stage.stepIds = stage.stepIds.filter(function (stepId) { return application.selectedSteps.has(stepId); }); });
+      definition.stages = definition.stages.filter(function (stage) { return stage.stepIds.length; });
+      definition.stageOrder = definition.stageOrder.filter(function (stageId) { return definition.stages.some(function (stage) { return stage.id === stageId; }); });
+      var canonical = model.canonicalDefinition(definition);
+      if (!canonical.ok) { fail(new Error('Sprawdź nazwy, instrukcje, kryteria zakończenia i przypomnienia wybranych kroków.')); return null; }
+      return canonical.definition;
+    }
+    function freezeApplicationDefinition(value) {
+      if (value && typeof value === 'object') { Object.keys(value).forEach(function (key) { freezeApplicationDefinition(value[key]); }); Object.freeze(value); }
+      return value;
+    }
+    function applicationSaved(application, result) {
+      if (!result || result.saved !== true || typeof result.planId !== 'string' || !result.planId || result.patientId !== application.patient.patientId) return false;
+      application.pending = null; state.error = null; state.feedback = 'Utworzono plan pacjenta. Możesz uruchomić pierwszy etap.';
+      var returnContext = clone(application.returnContext); state.application = null; root.classList.remove('vct-application-mode'); state.view = 'library'; busy(false); render();
+      if (typeof options.onApplied === 'function') options.onApplied(result, { returnContext: returnContext }); return true;
+    }
+    async function commitApplication(retry) {
+      var application = state.application, service = applicationService();
+      if (!application || !service || state.busy || application.phase !== 'review') return;
+      if (application.pending && !retry) return;
+      if (!retry) {
+        var definition = applicationDefinition(application); if (!definition) { renderFeedback(); return; }
+        application.pending = Object.freeze({ operationId: id(), token: application.token, patientId: application.patient.patientId,
+          templateId: application.templateId, revisionId: application.expectedRevisionId, definition: freezeApplicationDefinition(definition) });
+      }
+      var request = application.pending; if (!request) return;
+      var ticket = ++sequence; busy(true); state.error = null; render();
+      try {
+        var result = await service.commit(request);
+        if (!applicationCurrent(application, ticket)) return;
+        if (applicationSaved(application, result)) return;
+        if (result && result.saved === false && result.outcome !== 'unknown' && (result.conflict || result.reason)) {
+          application.pending = null; fail(new Error(result.conflict ? 'Dane zmieniły się przed zapisem. Twoje dopasowanie pozostało w formularzu. Wróć do szablonu i sprawdź jego bieżącą wersję.' : 'Nie utworzono planu. Twoje dopasowanie pozostało w formularzu. Sprawdź dostępność pacjenta i spróbuj ponownie.'));
+        } else fail(new Error('Nie można jeszcze potwierdzić utworzenia planu. Sprawdź wynik albo ponów tę samą próbę.'));
+      } catch (error) {
+        if (applicationCurrent(application, ticket)) {
+          var message = error && typeof error.userMessage === 'string' ? error.userMessage + ' ' : '';
+          if (error && error.outcome === 'not-saved') { application.pending = null; fail(new Error(message + 'Plan nie został utworzony. Zachowano wprowadzone dopasowanie.')); }
+          else fail(new Error(message + 'Nie można jeszcze potwierdzić utworzenia planu. Sprawdź wynik zapisu. Zachowano tę samą próbę.'));
+        }
+      }
+      finally { if (applicationCurrent(application, ticket)) { busy(false); render(); } }
+    }
+    async function checkApplicationOutcome() {
+      var application = state.application, service = applicationService(); if (!application || !application.pending || !service || state.busy) return;
+      var request = application.pending, ticket = ++sequence; busy(true); state.error = null; render();
+      try {
+        var outcome = await service.getOutcome({ operationId: request.operationId, token: request.token, patientId: request.patientId });
+        if (!applicationCurrent(application, ticket) || application.pending !== request) return;
+        if (outcome && outcome.state === 'saved' && applicationSaved(application, Object.assign({}, outcome, { saved: true }))) return;
+        if (outcome && outcome.state === 'not-saved') { application.pending = null; state.feedback = 'Potwierdzono, że plan nie został utworzony. Możesz poprawić formularz i ponowić zapis.'; }
+        else state.feedback = 'Wynik utworzenia planu nie jest jeszcze potwierdzony. Zachowano tę samą próbę zapisu.';
+      } catch (error) { if (applicationCurrent(application, ticket)) fail(new Error((error && typeof error.userMessage === 'string' ? error.userMessage + ' ' : '') + 'Nie udało się sprawdzić wyniku. Zachowano tę samą próbę zapisu.')); }
+      finally { if (applicationCurrent(application, ticket)) { busy(false); render(); } }
+    }
+    function requestApplicationBack() {
+      var application = state.application; if (!application || state.busy || application.pending) return;
+      function back() { var context = application.returnContext; state.application = null; state.error = null; state.feedback = ''; root.classList.remove('vct-application-mode'); restoreNavigation(context); }
+      if (application.dirty) ask('Odrzucić dopasowanie planu?', 'Szablon pozostanie bez zmian. Wpisane dopasowanie dla pacjenta zostanie odrzucone.', back); else back();
     }
     async function readTemplate(templateId, revisionId) {
       if (!current() || state.busy) return; var ticket = ++sequence; busy(true); state.error = null;
@@ -505,7 +757,19 @@
       if (!current()) return; clear(footer); if (state.confirmation) return;
       var status = node('p', 'vcp-help'); status.textContent = state.view === 'wizard' && state.draft ? structureCount(state.draft.stages.length, state.draft.steps.length) + (state.dirty ? ' · Zmiany niezapisane' : '') : capabilityText(); footer.appendChild(status);
       var actions = node('div', 'vct-footer-actions');
-      if (state.pending) {
+      if (state.application) {
+        var application = state.application;
+        status.textContent = application.phase === 'review' ? counted(application.selectedSteps.size, 'wybrany krok', 'wybrane kroki', 'wybranych kroków') : 'Wybierz osobę, dla której powstanie plan.';
+        if (application.pending) {
+          actions.appendChild(button('Sprawdź wynik', 'vcp-outline', checkApplicationOutcome));
+          actions.appendChild(button('Ponów tę samą próbę', 'vcp-primary', function () { commitApplication(true); }));
+        } else {
+          actions.appendChild(button('Anuluj', 'vcp-outline', requestApplicationBack));
+          var nextApplication = button(application.phase === 'patient' ? 'Dalej' : 'Utwórz plan', 'vcp-primary', function () { if (application.phase === 'patient') prepareApplication(); else commitApplication(false); });
+          var missingOutcome = application.definition && application.definition.steps.some(function (step) { return application.selectedSteps.has(step.id) && !model.OUTCOMES.some(function (entry) { return entry.value === step.requiredOutcome; }); });
+          nextApplication.disabled = state.busy || !canApply() || !application.patient || !application.source || application.phase === 'review' && (!application.selectedSteps.size || missingOutcome); actions.appendChild(nextApplication);
+        }
+      } else if (state.pending) {
         actions.appendChild(button('Sprawdź wynik zapisu', 'vcp-outline', checkOutcome)); actions.appendChild(button('Ponów zapis', 'vcp-primary', function () { mutate(null, null, true); }));
       } else if (state.view === 'wizard') {
         if (state.blockedConflict) {
@@ -533,23 +797,26 @@
     function requestClose() {
       if (state.busy) return;
       if (state.confirmation) { cancelConfirmation(); return; }
-      if (state.draft && state.dirty || state.pending) ask('Zamknąć bibliotekę?', state.pending ? 'Nie potwierdzono jeszcze wyniku zapisu. Wpisana treść zostanie zamknięta; możesz najpierw sprawdzić wynik.' : 'Niezapisane zmiany w szkicu zostaną odrzucone.', destroy);
+      var application = state.application;
+      if (application && (application.pending || application.dirty)) ask('Zamknąć bibliotekę?', application.pending ? 'Nie potwierdzono jeszcze utworzenia planu. Możesz pozostać i sprawdzić wynik tej samej próby.' : 'Niezapisane dopasowanie planu pacjenta zostanie odrzucone. Szablon pozostanie bez zmian.', destroy);
+      else if (state.draft && state.dirty || state.pending) ask('Zamknąć bibliotekę?', state.pending ? 'Nie potwierdzono jeszcze wyniku zapisu. Wpisana treść zostanie zamknięta; możesz najpierw sprawdzić wynik.' : 'Niezapisane zmiany w szkicu zostaną odrzucone.', destroy);
       else destroy();
     }
-    function changed() { if (!current()) return; if (state.view === 'wizard' || state.confirmation || state.busy || state.pending) { state.stale = true; return; } if (timer) win.clearTimeout(timer); timer = win.setTimeout(function () { timer = null; refresh(); }, 80); }
+    function changed() { if (!current()) return; if (state.application || state.view === 'wizard' || state.confirmation || state.busy || state.pending) { state.stale = true; return; } if (timer) win.clearTimeout(timer); timer = win.setTimeout(function () { timer = null; refresh(); }, 80); }
     function destroy() {
       if (destroyed) return; destroyed = true; sequence += 1; if (timer) win.clearTimeout(timer); if (lifecycle) lifecycle.disconnect();
       unsubscribe.forEach(function (fn) { if (typeof fn === 'function') fn(); }); doc.removeEventListener('vilda:sync-merged', changed);
       objectURLs.forEach(function (url) { if (win.URL) win.URL.revokeObjectURL(url); }); objectURLs.clear();
-      state.draft = null; state.pending = null; state.importData = null; state.items = []; state.selected = null; state.revisions = []; state.reviewedText = null; fields.clear(); root.remove();
+      state.draft = null; state.pending = null; state.application = null; state.applicationCapability = null; state.importData = null; state.items = []; state.selected = null; state.revisions = []; state.reviewedText = null; fields.clear(); root.remove();
       if (options.onBusy) options.onBusy(false, false); if (options.onClose) options.onClose();
     }
     unsubscribe.push(observe(vault, changed, destroy)); doc.addEventListener('vilda:sync-merged', changed);
     if (typeof win.MutationObserver === 'function') { lifecycle = new win.MutationObserver(function () { if (!current()) destroy(); }); lifecycle.observe(doc.body, { childList: true, subtree: true }); }
     var controller = { refresh: refresh, destroy: destroy, requestClose: requestClose, create: function () { abandonThen(beginNew); }, copyFromPlan: copyFromPlan, open: readTemplate, exportLibrary: exportLibrary, importLibrary: importLibrary,
-      isEditing: function () { return !!state.draft || state.busy; }, getContext: function () { return { view: state.view, templateId: state.templateId, wizardStep: state.wizardStep }; } };
+      isEditing: function () { return !!state.draft || !!state.application || state.busy; }, getNavigationContext: navigationContext, restoreNavigationContext: restoreNavigation,
+      getContext: function () { return { view: state.view, templateId: state.templateId, wizardStep: state.wizardStep }; } };
     if (options.onBusy) options.onBusy(false, true); render();
-    Promise.resolve(refresh()).then(function () { if (current() && options.sourcePlanId) return copyFromPlan(options.sourcePlanId); }); return controller;
+    Promise.resolve(refresh()).then(function () { if (!current()) return; if (options.sourcePlanId) return copyFromPlan(options.sourcePlanId); if (options.navigationContext) return restoreNavigation(options.navigationContext); }); return controller;
   }
   function open(options) {
     options = options || {}; var doc = win.document, origin = doc.activeElement, dialog = doc.createElement('dialog'); dialog.className = 'vcp vct-dialog';

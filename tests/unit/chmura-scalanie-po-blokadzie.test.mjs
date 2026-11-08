@@ -714,7 +714,7 @@ describe('P-CHMURA-OPIS: zmiana sesji po usunięciu wersji nie gubi nowszej tre�
   it('„Zaloguj jednorazowo”: blokada po usunięciu wersji — lista kosza w magazynie sesji, bez bazy IndexedDB', async () => {
     const otwarte = [];
     const locks = atrapaLocks();
-    const win = okno({ locks, indexedDB: { open(n) { otwarte.push(n); return {}; }, deleteDatabase() { return {}; } } });
+    const win = okno({ locks, indexedDB: { async databases() { return []; }, open(n) { otwarte.push(n); return {}; }, deleteDatabase() { return {}; } } });
     const sejf = win.VildaVault;
     sejf.setEphemeralMode(true);
     const konto = await sejf.createUser(HASLO, { label: 'Fikcyjna Lekarka', iterations: 1000 });

@@ -180,6 +180,8 @@ function uruchom() {
     getPatient: async (id) => structuredClone([...rekordy, ...stan.externals].find((x) => x.patientId === id)),
     listPatientTimelineEvents: async () => [],
     listPatientNotesForPatient: async () => structuredClone(stan.notes),
+    getPatientNote: async (id) => structuredClone(stan.notes.find(note => note.id === id) || null),
+    listCarePlans: async () => [],
     listPatientLists: async () => structuredClone(stan.lists),
     getPatientList: async (id) => structuredClone(stan.lists.find((x) => x.id === id) || null),
     getPatientListMembers: async (list) => ({ count: list.memberIds.length, memberIds: [...list.memberIds], viaRule: {}, patients: structuredClone(rekordy.filter((x) => list.memberIds.includes(x.patientId))) }),
@@ -231,8 +233,8 @@ function uruchom() {
       await mikroZadania();
     }
   }
-  function otworzEdytor() {
-    okno.VildaAuthUI.showPatientNoteEditor({ patientId: 'syntetyczny-a', note: structuredClone(stan.notes[0]) });
+  async function otworzEdytor() {
+    await okno.VildaAuthUI.showPatientNoteEditor({ patientId: 'syntetyczny-a', note: structuredClone(stan.notes[0]) });
     const edytor = doc.querySelector('.vilda-patient-note-editor-overlay');
     expect(edytor, 'rzeczywisty edytor notatki został otwarty przez API').toBeTruthy();
     const pole = edytor.querySelector('textarea');
@@ -413,7 +415,7 @@ describe('Pacjenci: synchronizacja nie zmienia wybranego widoku', () => {
     const wolny = odroczone();
     vault.listPatients = () => wolny.promise;
     odswiez();
-    const { edytor, pole } = otworzEdytor();
+    const { edytor, pole } = await otworzEdytor();
     wolny.resolve([pacjent()]);
     await ustabilizuj();
     expect(doc.querySelector('.vilda-patient-note-editor-overlay') === edytor).toBe(true);
@@ -436,7 +438,7 @@ describe('Pacjenci: synchronizacja nie zmienia wybranego widoku', () => {
     const wolny = odroczone();
     vault.getPatient = () => wolny.promise;
     odswiez();
-    const { edytor, pole } = otworzEdytor();
+    const { edytor, pole } = await otworzEdytor();
     const zmieniony = pacjent();
     zmieniony.snapshots[0].payload.name = 'Zmieniona syntetyczna nazwa';
     wolny.resolve(zmieniony);

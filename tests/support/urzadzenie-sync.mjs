@@ -284,7 +284,7 @@ function dokumentZOsia(zapisz) {
 // still runs the real guard and real status publisher rather than a bypass.
 const WYSLIJ_DELTE = (win) => {
   const source = zrodlo('vilda_sync_integration.js');
-  const functions = ['v', 'PatientClinicalRouteFailure', 'PatientClinicalLegacyAllowed', 'Bsb_wyslij']
+  const functions = ['s', 'v', 'WorkspaceIntegrationProtected', 'PatientClinicalRouteFailure', 'PatientClinicalLegacyAllowed', 'Bsb_wyslij']
     .map(name => wytnijFunkcje(source, name)).join('\n');
   return new Function('n', functions + ';return Bsb_wyslij')(win);
 };

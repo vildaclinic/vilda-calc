@@ -272,6 +272,13 @@
     context.associations.filter(association => ids.has(association.stepId)).forEach(association => { operations.push(association.operationId); });
     return Array.from(new Set(operations.filter(Boolean))).sort();
   }
+  function getStageReviewBasis(context, stageId) {
+    const detached = copy(context), checked = validateContext(detached);
+    if (!checked.valid) throw new Error('CARE_MODEL_CONTEXT_INVALID');
+    const stage = detached.stages.find(item => item.id === stageId);
+    if (!stage) throw new Error('CARE_MODEL_STAGE_MISSING');
+    return reviewBasis(detached, stage);
+  }
   function sameSet(left, right) {
     const a = left.slice().sort(), b = right.slice().sort();
     return a.length === b.length && a.every((value, index) => value === b[index]);
@@ -366,5 +373,5 @@
   }
 
   root.VildaCarePlanModel = Object.freeze({ VERSION: 1, decodeCarePlanRecord, validateCarePlanV2, projectLegacyStage, projectCarePlan,
-    calculateStageReminderDate, canonicalizeV2Component, getWriteCapability: function () { return WRITE_CAPABILITY; } });
+    calculateStageReminderDate, canonicalizeV2Component, getStageReviewBasis, getWriteCapability: function () { return WRITE_CAPABILITY; } });
 })(typeof window !== 'undefined' ? window : typeof globalThis !== 'undefined' ? globalThis : null);

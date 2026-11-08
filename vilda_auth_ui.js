@@ -552,10 +552,10 @@ function ClcrNotesCard(note, patientId, vault, onChanged) {
   load();
   return host;
 }
-function Jo(t){if(t&&t.category==="wynik-klirens")return ClcrNotesTitle(t);try{var a=t&&t.labResult;if(a&&(a.test||a.value||typeof a.valueNum=="number")){var n=a.test||"Wynik badania",r="";if(Lh3HasAssessment(a)||HrHasReference(a))return n+": "+Lh3ResultText(a);return typeof a.valueNum=="number"&&isFinite(a.valueNum)?r=String(a.valueNum).replace(".",",")+(a.unit?" "+a.unit:""):a.value&&(r=String(a.value)),n+(r?": "+r:"")}var o=t&&t.medication;if(o&&o.action){var l=o.name||"";if(o.action==="start")return"W\u0142\u0105czono "+l;if(o.action==="change")return"Zmieniono dawk\u0119: "+l;if(o.action==="stop")return"Zako\u0144czono leczenie: "+l}}catch{}return null}async function Xo(t,a,n,options){const r=jt(),CareNotesOwner=remReadOwner(),CareNotesSequence=t._careNotesSequence=(t._careNotesSequence||0)+1;if(oe(t),!r||typeof r.listPatientNotesForPatient!="function"){t.appendChild(e("p",{class:"vilda-patient-empty-msg",text:"Notatki nie s\u0105 dost\u0119pne."}));return}const o=e("div",{class:"vilda-patient-notes-header",style:"display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:14px;"}),l=e("div",null,[e("p",{class:"vilda-patient-section-h",text:"Notatki",style:"margin:0;"})]),d=e("button",{class:"vilda-auth-btn vilda-auth-btn-small",type:"button",style:"background:#00838d !important; color:#fff !important; border-color:#00838d !important; width:auto !important; padding:6px 14px !important; font-weight:600; flex:0 0 auto !important;",text:"+ Dodaj notatk\u0119",onclick:function(S){S&&typeof S.preventDefault=="function"&&S.preventDefault();try{ga({patientId:a,note:null,onSaved:function(){typeof n=="function"&&n()}})}catch(D){Ot("showPatientNoteEditor[add]",D);try{i.alert("Nie uda\u0142o si\u0119 otworzy\u0107 edytora notatki: "+(D&&D.message?D.message:D))}catch{}}}});o.appendChild(l),o.appendChild(d),t.appendChild(o);let c=[];try{c=await r.listPatientNotesForPatient(a)}catch(S){Ot("listPatientNotesForPatient",S)}if(!t.isConnected||!remReadCurrent(CareNotesOwner)||CareNotesSequence!==t._careNotesSequence)return;
+function Jo(t){if(t&&t.category==="wynik-klirens")return ClcrNotesTitle(t);try{var a=t&&t.labResult;if(a&&(a.test||a.value||typeof a.valueNum=="number")){var n=a.test||"Wynik badania",r="";if(Lh3HasAssessment(a)||HrHasReference(a))return n+": "+Lh3ResultText(a);return typeof a.valueNum=="number"&&isFinite(a.valueNum)?r=String(a.valueNum).replace(".",",")+(a.unit?" "+a.unit:""):a.value&&(r=String(a.value)),n+(r?": "+r:"")}var o=t&&t.medication;if(o&&o.action){var l=o.name||"";if(o.action==="start")return"W\u0142\u0105czono "+l;if(o.action==="change")return"Zmieniono dawk\u0119: "+l;if(o.action==="stop")return"Zako\u0144czono leczenie: "+l}}catch{}return null}async function Xo(t,a,n,options){const r=jt(),CareNotesOwner=remReadOwner(),CareNotesSequence=t._careNotesSequence=(t._careNotesSequence||0)+1;if(oe(t),!r||typeof r.listPatientNotesForPatient!="function"){t.appendChild(e("p",{class:"vilda-patient-empty-msg",text:"Notatki nie s\u0105 dost\u0119pne."}));return}const o=e("div",{class:"vilda-patient-notes-header",style:"display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:14px;"}),l=e("div",null,[e("p",{class:"vilda-patient-section-h",text:"Notatki",style:"margin:0;"})]),d=e("button",{class:"vilda-auth-btn vilda-auth-btn-small",type:"button",style:"background:#00838d !important; color:#fff !important; border-color:#00838d !important; width:auto !important; padding:6px 14px !important; font-weight:600; flex:0 0 auto !important;",text:"+ Dodaj notatk\u0119",onclick:function(S){S&&typeof S.preventDefault=="function"&&S.preventDefault();try{ga({patientId:a,note:null,onSaved:function(){typeof n=="function"&&n()}})}catch(D){Ot("showPatientNoteEditor[add]",D);try{i.alert("Nie uda\u0142o si\u0119 otworzy\u0107 edytora notatki: "+(D&&D.message?D.message:D))}catch{}}}});o.appendChild(l),o.appendChild(d),t.appendChild(o);let c=[],CareNotesPlans=[],CareNotesParentsReady=true;try{var CareNotesReads=await Promise.allSettled([r.listPatientNotesForPatient(a),typeof r.listCarePlans==="function"?r.listCarePlans({patientId:a}):Promise.resolve([])]);if(CareNotesReads[0].status==="fulfilled")c=CareNotesReads[0].value;else Ot("listPatientNotesForPatient",CareNotesReads[0].reason);if(CareNotesReads[1].status==="fulfilled")CareNotesPlans=CareNotesReads[1].value;else{CareNotesParentsReady=false;Ot("listPatientCarePlans",CareNotesReads[1].reason)}}catch(S){CareNotesParentsReady=false;Ot("listPatientNotesForPatient",S)}if(!t.isConnected||!remReadCurrent(CareNotesOwner)||CareNotesSequence!==t._careNotesSequence)return;
 // Notes are a projection only: keep the full list for Badania, Terminarz and sync.
-if(i.VildaCarePlans&&typeof i.VildaCarePlans.projectPatientNotes==="function")c=i.VildaCarePlans.projectPatientNotes(c,a);
-if(c=(c||[]).filter(function(S){return!(S&&S.ghPointId)||!!(options&&options.focusNoteId===S.id)}),!c.length){t.appendChild(e("p",{class:"vilda-patient-empty-msg",text:'Brak notatek dla tego pacjenta. Kliknij \u201E+ Dodaj notatk\u0119\u201D, aby zapisa\u0107 pierwsz\u0105 obserwacj\u0119, plan leczenia lub przypomnienie o kontroli.'}));return}function s(S){return S.linkedAgeMonths==null&&!S.clinicalDateISO}var p=c.filter(s).sort(function(S,D){var M=S.updatedAtISO||"",b=D.updatedAtISO||"";return M>b?-1:M<b?1:0}),u=c.filter(function(S){return!s(S)}).sort(function(S,D){var M=S.clinicalDateISO||S.updatedAtISO||"",b=D.clinicalDateISO||D.updatedAtISO||"";return M>b?-1:M<b?1:0});function h(S){if(S&&S.category==="wynik-klirens")return ClcrNotesCard(S,a,r,n);const D=Me[S.category]||Me.observation,M=gn(S.dueDateISO),b=e("div",{class:"vilda-patient-note-card","data-note-id":S.id||"",style:"background:#fff;border:0.5px solid #d7e9ec;border-radius:12px;padding:12px 14px;display:flex;flex-direction:column;gap:8px;"}),z=e("div",{style:"display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;"}),I=e("div",{style:"display:flex;align-items:center;gap:6px;flex-wrap:wrap;"});if(I.appendChild(e("span",{text:D.label,style:"display:inline-block;padding:2px 8px;font-size:0.72rem;font-weight:600;color:"+D.color+";background:"+D.bg+";border-radius:999px;"})),M){var R,T;M.status==="overdue"?(R="#FCEBEB",T="#A32D2D"):M.status==="soon"?(R="#FAEEDA",T="#854F0B"):(R="#E1F5EE",T="#0F6E56"),I.appendChild(e("span",{text:(M.status==="overdue"?"Zaleg\u0142y termin: ":"Termin: ")+M.label,style:"display:inline-block;padding:2px 8px;font-size:0.72rem;font-weight:600;color:"+T+";background:"+R+";border-radius:999px;"}))}const C=e("div",{style:"display:flex;gap:4px;flex:0 0 auto;"}),N=e("button",{type:"button",class:"vilda-auth-btn vilda-auth-btn-small",style:"background:transparent !important;color:#5b6672 !important;border:0.5px solid #d7e9ec !important;width:auto !important;min-width:0 !important;padding:4px 10px !important;font-size:0.78rem !important;flex:0 0 auto !important;",text:"Edytuj",onclick:function(){ga({patientId:a,note:S,onSaved:function(){typeof n=="function"&&n()}})}}),Z=e("button",{type:"button",class:"vilda-auth-btn vilda-auth-btn-small",style:"background:#fef2f3 !important;color:#b00020 !important;border:0.5px solid #f5b3bb !important;width:auto !important;min-width:0 !important;padding:4px 10px !important;font-size:0.78rem !important;flex:0 0 auto !important;",text:"Usu\u0144",onclick:async function(){var ut=(S.title||S.body||"").slice(0,60);if(i.confirm("Usun\u0105\u0107 notatk\u0119 \u201E"+ut+'\u201D? Akcja propaguje si\u0119 na inne urz\u0105dzenia.'))try{await r.removePatientNote(S.id);try{i.VildaAuditLog&&i.VildaAuditLog.log("note.delete",{noteId:S.id,patientId:S.patientId||null})}catch{}typeof n=="function"&&n()}catch(wt){i.alert("Nie uda\u0142o si\u0119 usun\u0105\u0107 notatki: "+(wt&&wt.message?wt.message:wt))}}});S.ghPointId||(C.appendChild(N),C.appendChild(Z)),z.appendChild(I),z.appendChild(C),b.appendChild(z);S.ghPointId&&b.appendChild(e("p",{class:"vilda-patient-section-h",text:"Wpis kontrolny z DocPro"}));var H=Jo(S)||S.title;H&&b.appendChild(e("div",{text:H,style:"font-weight:600;font-size:0.95rem;color:#0f2b33;"})),S.body&&b.appendChild(e("div",{text:S.body,style:"font-size:0.88rem;color:#374151;line-height:1.5;white-space:pre-wrap;word-wrap:break-word;"}));Lh3SavedAssessment(b,S.labResult);HrSavedReference(b,S.labResult);const V=S.updatedAtISO?"Zapisano: "+na(S.updatedAtISO):"";return V&&b.appendChild(e("div",{text:V,style:"font-size:0.74rem;color:#9aa8aa;"})),b}function v(S,D,M){var b=e("div",{class:"vilda-patient-notes-subheader",style:"display:flex;align-items:center;gap:8px;margin:6px 0 10px;"});if(S){var z=e("span",{style:"display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;color:#5b6672;flex:0 0 auto;"});z.innerHTML=S,b.appendChild(z)}return b.appendChild(e("span",{text:D,style:"font-size:0.78rem;font-weight:600;color:#5b6672;text-transform:uppercase;letter-spacing:0.05em;"})),b.appendChild(e("span",{text:String(M),style:"display:inline-flex;align-items:center;justify-content:center;min-width:22px;height:18px;padding:0 6px;background:#e8eff1;color:#5b6672;font-size:0.7rem;font-weight:600;border-radius:999px;"})),b}var m='<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 20l1.3 -3.9a9 8 0 1 1 3.4 2.9l-4.7 1"/><path d="M12 12l0 .01"/><path d="M8 12l0 .01"/><path d="M16 12l0 .01"/></svg>',y='<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 4h-1a2 2 0 0 0 -2 2v3.5h0a5.5 5.5 0 0 0 11 0v-3.5a2 2 0 0 0 -2 -2h-1"/><path d="M8 15a6 6 0 1 0 12 0v-3"/><circle cx="20" cy="10" r="2"/></svg>',x=e("div",{class:"vilda-patient-notes-scroll",style:"max-height:min(calc(100vh - 320px), 720px);min-height:280px;overflow-y:auto;overflow-x:hidden;padding-right:4px;-webkit-overflow-scrolling:touch;scrollbar-gutter:stable;"});if(p.length>0){var k=e("div",{class:"vilda-patient-notes-general-section",style:"background:#f5fafb;border:0.5px solid #e0eef0;border-radius:12px;padding:10px 12px 12px;margin-bottom:14px;"});k.appendChild(v(m,"Notatki og\xF3lne",p.length));var w=e("div",{style:"display:flex;flex-direction:column;gap:8px;"});p.forEach(function(S){w.appendChild(h(S))}),k.appendChild(w),x.appendChild(k)}if(u.length>0){var W=e("div",{class:"vilda-patient-notes-clinical-section"});W.appendChild(v(y,"Notatki kliniczne",u.length));var F=e("div",{class:"vilda-patient-notes-list",style:"display:flex;flex-direction:column;gap:10px;"});u.forEach(function(S){F.appendChild(h(S))}),W.appendChild(F),x.appendChild(W)}t.appendChild(x)}
+if(i.VildaCarePlans&&typeof i.VildaCarePlans.projectPatientNotes==="function")c=i.VildaCarePlans.projectPatientNotes(c,a,{plans:CareNotesPlans});
+if(c=(c||[]).filter(function(S){return!(S&&S.ghPointId)||!!(options&&options.focusNoteId===S.id)}),!c.length){t.appendChild(e("p",{class:"vilda-patient-empty-msg",text:'Brak notatek dla tego pacjenta. Kliknij \u201E+ Dodaj notatk\u0119\u201D, aby zapisa\u0107 pierwsz\u0105 obserwacj\u0119, plan leczenia lub przypomnienie o kontroli.'}));return}function s(S){return S.linkedAgeMonths==null&&!S.clinicalDateISO}var p=c.filter(s).sort(function(S,D){var M=S.updatedAtISO||"",b=D.updatedAtISO||"";return M>b?-1:M<b?1:0}),u=c.filter(function(S){return!s(S)}).sort(function(S,D){var M=S.clinicalDateISO||S.updatedAtISO||"",b=D.clinicalDateISO||D.updatedAtISO||"";return M>b?-1:M<b?1:0});function h(S){var CareNoteAccess=CareNotesParentsReady?CareNoteDestination(S,a,CareNotesPlans,c):{kind:"notes",noteId:S.id,readOnly:true,unavailable:true};if(S&&S.category==="wynik-klirens"&&!CareNoteAccess.readOnly)return ClcrNotesCard(S,a,r,n);const D=Me[S.category]||Me.observation,M=gn(S.dueDateISO),b=e("div",{class:"vilda-patient-note-card","data-note-id":S.id||"",style:"background:#fff;border:0.5px solid #d7e9ec;border-radius:12px;padding:12px 14px;display:flex;flex-direction:column;gap:8px;"}),z=e("div",{style:"display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;"}),I=e("div",{style:"display:flex;align-items:center;gap:6px;flex-wrap:wrap;"});if(I.appendChild(e("span",{text:D.label,style:"display:inline-block;padding:2px 8px;font-size:0.72rem;font-weight:600;color:"+D.color+";background:"+D.bg+";border-radius:999px;"})),M){var R,T;M.status==="overdue"?(R="#FCEBEB",T="#A32D2D"):M.status==="soon"?(R="#FAEEDA",T="#854F0B"):(R="#E1F5EE",T="#0F6E56"),I.appendChild(e("span",{text:(M.status==="overdue"?"Zaleg\u0142y termin: ":"Termin: ")+M.label,style:"display:inline-block;padding:2px 8px;font-size:0.72rem;font-weight:600;color:"+T+";background:"+R+";border-radius:999px;"}))}const C=e("div",{style:"display:flex;gap:4px;flex:0 0 auto;"}),N=e("button",{type:"button",class:"vilda-auth-btn vilda-auth-btn-small",style:"background:transparent !important;color:#5b6672 !important;border:0.5px solid #d7e9ec !important;width:auto !important;min-width:0 !important;padding:4px 10px !important;font-size:0.78rem !important;flex:0 0 auto !important;",text:"Edytuj",onclick:function(){ga({patientId:a,note:S,onSaved:function(){typeof n=="function"&&n()}})}}),Z=e("button",{type:"button",class:"vilda-auth-btn vilda-auth-btn-small",style:"background:#fef2f3 !important;color:#b00020 !important;border:0.5px solid #f5b3bb !important;width:auto !important;min-width:0 !important;padding:4px 10px !important;font-size:0.78rem !important;flex:0 0 auto !important;",text:"Usu\u0144",onclick:function(){return CareDeleteCheckedNote(S,a,n,function(){return t.isConnected&&remReadCurrent(CareNotesOwner)&&CareNotesSequence===t._careNotesSequence})}});S.ghPointId||(CareNoteAccess.readOnly?(CareNoteAccess.kind==="care"&&CareNoteAccess.planId?C.appendChild(e("button",{type:"button",class:"vilda-auth-btn vilda-auth-btn-small",text:"Otwórz plan",onclick:function(){if(t.isConnected&&remReadCurrent(CareNotesOwner))se(a,null,null,{activeTab:"care",carePlanId:CareNoteAccess.planId,careNoteId:CareNoteAccess.noteId||null})}})):C.appendChild(e("span",{text:"Tylko do odczytu"}))):(C.appendChild(N),C.appendChild(Z))),z.appendChild(I),z.appendChild(C),b.appendChild(z);S.ghPointId&&b.appendChild(e("p",{class:"vilda-patient-section-h",text:"Wpis kontrolny z DocPro"}));var H=Jo(S)||S.title;H&&b.appendChild(e("div",{text:H,style:"font-weight:600;font-size:0.95rem;color:#0f2b33;"})),S.body&&b.appendChild(e("div",{text:S.body,style:"font-size:0.88rem;color:#374151;line-height:1.5;white-space:pre-wrap;word-wrap:break-word;"}));Lh3SavedAssessment(b,S.labResult);HrSavedReference(b,S.labResult);const V=S.updatedAtISO?"Zapisano: "+na(S.updatedAtISO):"";return V&&b.appendChild(e("div",{text:V,style:"font-size:0.74rem;color:#9aa8aa;"})),b}function v(S,D,M){var b=e("div",{class:"vilda-patient-notes-subheader",style:"display:flex;align-items:center;gap:8px;margin:6px 0 10px;"});if(S){var z=e("span",{style:"display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;color:#5b6672;flex:0 0 auto;"});z.innerHTML=S,b.appendChild(z)}return b.appendChild(e("span",{text:D,style:"font-size:0.78rem;font-weight:600;color:#5b6672;text-transform:uppercase;letter-spacing:0.05em;"})),b.appendChild(e("span",{text:String(M),style:"display:inline-flex;align-items:center;justify-content:center;min-width:22px;height:18px;padding:0 6px;background:#e8eff1;color:#5b6672;font-size:0.7rem;font-weight:600;border-radius:999px;"})),b}var m='<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 20l1.3 -3.9a9 8 0 1 1 3.4 2.9l-4.7 1"/><path d="M12 12l0 .01"/><path d="M8 12l0 .01"/><path d="M16 12l0 .01"/></svg>',y='<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 4h-1a2 2 0 0 0 -2 2v3.5h0a5.5 5.5 0 0 0 11 0v-3.5a2 2 0 0 0 -2 -2h-1"/><path d="M8 15a6 6 0 1 0 12 0v-3"/><circle cx="20" cy="10" r="2"/></svg>',x=e("div",{class:"vilda-patient-notes-scroll",style:"max-height:min(calc(100vh - 320px), 720px);min-height:280px;overflow-y:auto;overflow-x:hidden;padding-right:4px;-webkit-overflow-scrolling:touch;scrollbar-gutter:stable;"});if(p.length>0){var k=e("div",{class:"vilda-patient-notes-general-section",style:"background:#f5fafb;border:0.5px solid #e0eef0;border-radius:12px;padding:10px 12px 12px;margin-bottom:14px;"});k.appendChild(v(m,"Notatki og\xF3lne",p.length));var w=e("div",{style:"display:flex;flex-direction:column;gap:8px;"});p.forEach(function(S){w.appendChild(h(S))}),k.appendChild(w),x.appendChild(k)}if(u.length>0){var W=e("div",{class:"vilda-patient-notes-clinical-section"});W.appendChild(v(y,"Notatki kliniczne",u.length));var F=e("div",{class:"vilda-patient-notes-list",style:"display:flex;flex-direction:column;gap:10px;"});u.forEach(function(S){F.appendChild(h(S))}),W.appendChild(F),x.appendChild(W)}t.appendChild(x)}
 // Rata D (P6): edytor wklejal err.message prosto na ekran, wiec lekarz widzial nazwy funkcji:
 // "savePatientNote: notatka nie istnieje...". Scinamy techniczny prefiks (identyfikator + dwukropek)
 // i podnosimy pierwsza litere. Komunikaty bez prefiksu zostaja nietkniete.
@@ -583,7 +583,117 @@ function CareFocusNote(noteId,card,owner){
   }
   highlight();
 }
-function ga(t){if(t&&t.note&&t.note.category==="wynik-klirens"){ClcrOpenNoteResult(t.note,t.patientId||t.note.patientId,jt(),t.onSaved,i.document.activeElement).catch(function(){try{i.alert("Nie udało się otworzyć szczegółów pomiaru. Spróbuj ponownie.")}catch{}});return}const a=jt();if(!a||typeof a.savePatientNote!="function"){try{i.alert("Notatki pacjenta s\u0105 niedost\u0119pne. Spr\xF3buj od\u015Bwie\u017Cy\u0107 stron\u0119 (Ctrl+Shift+R) \u2014 mo\u017Ce by\u0107 stary cache.")}catch{}return}const n=!!(t&&t.note&&t.note.id),r=t&&t.note||{};/* P-NOTATKI-3 (G21, D12): otwarcie kolejnego edytora zastepuje poprzednia nakladke - jesli byl
+// A staged fact captures an exact original document revision. Notes and old
+// editors may read that document, but must not silently rewrite its evidence.
+function CareNoteDestination(note, patientId, plans, notes) {
+  var module = i.VildaCarePlans, result = null;
+  if (module && typeof module.resolveNoteDestination === "function")
+    result = module.resolveNoteDestination(notes || [note], note, patientId, { plans: plans || [] });
+  if (result && result.readOnly === true) return result;
+  if (note && note.careContext && note.careContext.version !== 1)
+    return { kind: "notes", noteId: note.id, readOnly: true, unavailable: true };
+  return result || { kind: "notes", noteId: note && note.id };
+}
+function CareLegacyReminderPlan(plan) {
+  var context = plan && (plan.careContext || plan);
+  if (!context || context.status !== "active" || !Array.isArray(context.steps) || !Array.isArray(context.log)) return false;
+  if (plan.careContext || context.version !== undefined || context.role !== undefined)
+    return context.version === 1 && context.role === "plan";
+  // Existing CareMvpView deliberately removes version/role from its V1 DTO.
+  // Preserve that concrete flat shape without admitting a staged/unknown DTO.
+  return !context.stages && !context.stageOrder && !context.formatVersion && !context.rawContext;
+}
+async function CareReadNoteAccess(note, patientId, isCurrent) {
+  var vault = jt(), owner = remReadOwner();
+  function current() { return remReadCurrent(owner) && (!isCurrent || isCurrent()); }
+  if (!note || !note.id || !patientId || !vault || typeof vault.getPatientNote !== "function" || !current()) return null;
+  var values = await Promise.all([vault.getPatientNote(note.id),
+    typeof vault.listCarePlans === "function" ? vault.listCarePlans({ patientId: patientId }) : Promise.resolve([])]);
+  if (!current()) return null;
+  var fresh = values[0];
+  if (!fresh || fresh.id !== note.id || fresh.patientId !== patientId) return null;
+  return { note: fresh, destination: CareNoteDestination(fresh, patientId, values[1]), owner: owner };
+}
+async function CareDeleteCheckedNote(note, patientId, onChanged, isCurrent) {
+  var owner = remReadOwner();
+  try {
+    var access = await CareReadNoteAccess(note, patientId, isCurrent);
+    if (!access) return false;
+    if (access.destination.readOnly) return CareShowReadOnlyNote(access.note, access.destination);
+    var vault = jt(), title = (access.note.title || access.note.body || "").slice(0, 60);
+    if (!i.confirm("Usunąć notatkę „" + title + "”? Akcja propaguje się na inne urządzenia.")) return false;
+    if (!remReadCurrent(access.owner) || isCurrent && !isCurrent()) return false;
+    await vault.removePatientNote(access.note.id);
+    if (!remReadCurrent(access.owner) || isCurrent && !isCurrent()) return false;
+    try { if (i.VildaAuditLog) i.VildaAuditLog.log("note.delete", { noteId: access.note.id, patientId: patientId }); } catch {}
+    if (typeof onChanged === "function") onChanged(); return true;
+  } catch (error) {
+    if (remReadCurrent(owner) && (!isCurrent || isCurrent())) { Ot("delete patient document access", error); Gd5("Nie usunięto wpisu", "Nie udało się potwierdzić możliwości usunięcia dokumentu. Spróbuj ponownie."); }
+    return false;
+  }
+}
+function CareShowReadOnlyNote(note, destination, options) {
+  options = options || {};
+  var owner = remReadOwner(), vault = jt(), overlay = null, stopped = false, stopLock = null, observer = null;
+  var previousFocus = i.document.activeElement;
+  function close(notify) {
+    if (stopped) return; stopped = true;
+    if (overlay) { overlay.textContent = ""; overlay.remove(); }
+    if (observer) observer.disconnect();
+    if (typeof stopLock === "function") stopLock();
+    if (!remReadCurrent(owner)) return;
+    if (previousFocus && previousFocus.isConnected && typeof previousFocus.focus === "function") previousFocus.focus();
+    if (notify && typeof options.onCancel === "function") options.onCancel();
+  }
+  var content = [e("h3", { class: "vilda-auth-sheet-title", text: note.title || "Dokument planu opieki" }),
+    e("p", { class: "vilda-auth-sheet-body", text: destination.unavailable
+      ? "Dokument pozostaje dostępny do odczytu. Nie udało się potwierdzić jego powiązania z planem."
+      : "Dokument jest częścią historii planu opieki i pozostaje dostępny do odczytu." })];
+  if (note.body) content.push(e("p", { class: "vilda-auth-sheet-body", style: "white-space:pre-wrap;overflow-wrap:anywhere;", text: note.body }));
+  var actions = e("div", { class: "vilda-auth-sheet-actions" });
+  if (destination.kind === "care" && destination.planId) actions.appendChild(e("button", {
+    class: "vilda-auth-btn", type: "button", text: "Otwórz plan", onclick: function () {
+      if (!remReadCurrent(owner)) { close(false); return; }
+      close(false);
+      if (typeof options.openPlan === "function") options.openPlan(destination);
+      else se(note.patientId, null, null, { activeTab: "care", carePlanId: destination.planId, careNoteId: destination.noteId || null });
+    } }));
+  var dismiss = e("button", { class: "vilda-auth-btn", type: "button", text: "Zamknij", onclick: function () { close(true); } });
+  actions.appendChild(dismiss); content.push(actions);
+  var sheet = e("div", { class: "vilda-auth-sheet vilda-auth-sheet-info vilda-pne", role: "dialog", "aria-modal": "true", "aria-label": "Dokument planu opieki" }, content);
+  overlay = e("div", { class: "vilda-auth-overlay vilda-auth-overlay-sheet vilda-patient-note-editor-overlay" }, [sheet]);
+  i.document.body.appendChild(overlay);
+  if (vault && typeof vault.onLock === "function") stopLock = vault.onLock(function () { close(false); });
+  if (typeof i.MutationObserver === "function") {
+    observer = new i.MutationObserver(function () { if (!overlay.isConnected) close(false); });
+    observer.observe(i.document.body, { childList: true, subtree: true });
+  }
+  sheet.addEventListener("keydown", function (event) {
+    if (event.key === "Escape") { event.preventDefault(); close(true); }
+    if (event.key === "Tab") {
+      var buttons = sheet.querySelectorAll("button"), first = buttons[0], last = buttons[buttons.length - 1];
+      if (event.shiftKey && i.document.activeElement === first) { event.preventDefault(); last.focus(); }
+      else if (!event.shiftKey && i.document.activeElement === last) { event.preventDefault(); first.focus(); }
+    }
+  });
+  dismiss.focus(); return true;
+}
+var CareEditorSequence = 0;
+function ga(options) {
+  var sequence = ++CareEditorSequence, owner = remReadOwner();
+  if (!options || !options.note || !options.note.id) return CareOpenLegacyNoteEditor(options);
+  var anchor = i.document.activeElement, card = anchor && typeof anchor.closest === "function" ? anchor.closest(".vilda-auth-patient-card") : null;
+  function current() { return sequence === CareEditorSequence && remReadCurrent(owner) && (!card || card.isConnected) && (!options.isCurrent || options.isCurrent()); }
+  return CareReadNoteAccess(options.note, options.patientId || options.note.patientId, current).then(function (access) {
+    if (!access || !current()) { if (current() && typeof options.onCancel === "function") options.onCancel(); return false; }
+    if (access.destination.readOnly) return CareShowReadOnlyNote(access.note, access.destination, options);
+    CareOpenLegacyNoteEditor(Object.assign({}, options, { note: access.note })); return true;
+  }).catch(function (error) {
+    if (current()) { Ot("open patient document access", error); if (typeof options.onCancel === "function") options.onCancel(); Gd5("Nie udało się otworzyć wpisu", "Nie udało się sprawdzić powiązań dokumentu. Spróbuj ponownie."); }
+    return false;
+  });
+}
+function CareOpenLegacyNoteEditor(t){if(t&&t.note&&t.note.category==="wynik-klirens"){ClcrOpenNoteResult(t.note,t.patientId||t.note.patientId,jt(),t.onSaved,i.document.activeElement).catch(function(){try{i.alert("Nie udało się otworzyć szczegółów pomiaru. Spróbuj ponownie.")}catch{}});return}const a=jt();if(!a||typeof a.savePatientNote!="function"){try{i.alert("Notatki pacjenta s\u0105 niedost\u0119pne. Spr\xF3buj od\u015Bwie\u017Cy\u0107 stron\u0119 (Ctrl+Shift+R) \u2014 mo\u017Ce by\u0107 stary cache.")}catch{}return}const n=!!(t&&t.note&&t.note.id),r=t&&t.note||{};/* P-NOTATKI-3 (G21, D12): otwarcie kolejnego edytora zastepuje poprzednia nakladke - jesli byl
    w niej niezapisany tekst, pytamy i przy odmowie w ogole nie otwieramy nowego arkusza.
    Pierwsze otwarcie nie moze zastac brudnej nakladki, wiec wczesny return nie omija niczego,
    co musi sie wydarzyc raz na okno (rejestracja onLock stoi nizej i wykona sie przy nastepnym). */
@@ -1573,13 +1683,13 @@ function remB22Create(host, full, options) {
             var planId=note.careContext&&note.careContext.planId,navigationOwner=remReadOwner();
             if (navigation) {
               close();
-              ga({ patientId: note.patientId, note: note, onSaved: function () { remSearchResume(navigation.token); }, onCancel: function () { remSearchResume(navigation.token); } });
+              await ga({ patientId: note.patientId, note: note, onSaved: function () { remSearchResume(navigation.token); }, onCancel: function () { remSearchResume(navigation.token); } });
               transferred = true;
               CareProtectNativeEditor(privacy); return true;
             }
             function returned(){if(remReadCurrent(navigationOwner))remB22Request({carePlans:true,planId:planId,careRecordId:note.id})}
             close();if(!remReadCurrent(navigationOwner))return false;
-            ga({patientId:note.patientId,note:note,onSaved:returned,onCancel:returned});CareProtectNativeEditor(privacy);
+            await ga({patientId:note.patientId,note:note,onSaved:returned,onCancel:returned});CareProtectNativeEditor(privacy);
           } catch (error) {
             if (fromSearch && !careSearchNavigationCurrent(navigation)) return false;
             throw error;
@@ -1600,7 +1710,7 @@ function remB22Create(host, full, options) {
             if (!note || note.id!==noteId) return false;
             if (navigation) {
               remSearchCurrentReturn(navigation.token).patientId = note.patientId; close();
-              ga({ patientId: note.patientId, note: note, onSaved: function () { remSearchResume(navigation.token); }, onCancel: function () { remSearchResume(navigation.token); } });
+              await ga({ patientId: note.patientId, note: note, onSaved: function () { remSearchResume(navigation.token); }, onCancel: function () { remSearchResume(navigation.token); } });
               transferred = true;
               return true;
             }
@@ -1982,7 +2092,7 @@ function remB22Create(host, full, options) {
       try {
         var plans = await vault.listCarePlans({ patientId: patientId });
         if (!pickerAlive() || ticket !== careChoicesTicket || !selectedPatient || selectedPatient.patientId !== patientId) return;
-        careChoices = (plans || []).filter(function (plan) { return plan.status !== 'closed'; });
+        careChoices = (plans || []).filter(CareLegacyReminderPlan);
         careChoices.forEach(function (plan) { var option = make('option', '', plan.title); option.value = plan.id; careChoice.appendChild(option); }); careChoiceLabel.hidden = !careChoices.length;
       } catch (error) { if (pickerAlive() && ticket === careChoicesTicket) { report(new Error('Nie udało się wczytać planów pacjenta. Spróbuj ponownie przed powiązaniem przypomnienia.'), careChoiceFeedback); careChoiceFeedback.appendChild(textButton('Wczytaj plany ponownie', function () { loadCareChoices(patientId); })); } }
       finally { if (ticket === careChoicesTicket) { careChoicesLoading = false; updatePatientSave(); } }
@@ -2341,7 +2451,10 @@ if(r&&r.focusNoteId&&Array.isArray(GdNotatki)){
   var CareFocused=GdNotatki.find(function(note){return note&&note.id===r.focusNoteId&&note.patientId===t});
   var CareModule=i.VildaCarePlans;
   if(CareFocused&&CareModule&&typeof CareModule.resolveNoteDestination==="function"){
-    CareFocus=CareModule.resolveNoteDestination(GdNotatki,CareFocused,t);
+    var CareFocusPlans=[];
+    try{if(typeof o.listCarePlans==="function")CareFocusPlans=await o.listCarePlans({patientId:t})}catch(CareFocusError){Ot("resolve patient care document",CareFocusError)}
+    if(!GdMoznaWyswietlic(GdBilet)||!remReadCurrent(CareReadOwner)||SearchReturnToken&&!remSearchCurrentReturn(SearchReturnToken))return;
+    CareFocus=CareModule.resolveNoteDestination(GdNotatki,CareFocused,t,{plans:CareFocusPlans});
     r=Object.assign({},r,{activeTab:CareFocus.kind==="notes"?"notes":"care",carePlanId:CareFocus.planId||null,careNoteId:CareFocus.kind==="care"?CareFocus.noteId:null});
   }
 }
@@ -2511,7 +2624,7 @@ function CarePatientRender(){
     openRecordDetails:async function(record,onChanged,isCurrentRecord){
       var note=await o.getPatientNote(record.id);
       if(!remReadCurrent(CarePatientOwner)||!CarePatientHost.isConnected||!isCurrentRecord()||!note||note.id!==record.id||note.patientId!==t||!note.careContext||note.careContext.planId!==record.careContext.planId)return;
-      ga({patientId:t,note:note,onSaved:function(){if(!remReadCurrent(CarePatientOwner)||!CarePatientHost.isConnected)return;ue=false;Ae=false;GdLabOnce=false;if(CarePatientView)CarePatientView.refresh()}});
+      await ga({patientId:t,note:note,isCurrent:function(){return remReadCurrent(CarePatientOwner)&&CarePatientHost.isConnected&&isCurrentRecord()},onSaved:function(){if(!remReadCurrent(CarePatientOwner)||!CarePatientHost.isConnected)return;ue=false;Ae=false;GdLabOnce=false;if(CarePatientView)CarePatientView.refresh()}});
     },
     openCalendar:async function(noteId){var note=await o.getPatientNote(noteId);if(!remReadCurrent(CarePatientOwner)||!CarePatientHost.isConnected||!note||note.id!==noteId||note.patientId!==t)return;ga({patientId:t,note:note,onSaved:function(){if(CarePatientView)CarePatientView.refresh()}})},
     onChange:function(){ue=false;Ae=false;GdLabOnce=false}

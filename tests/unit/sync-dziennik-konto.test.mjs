@@ -587,7 +587,7 @@ describe('tryb „Zaloguj jednorazowo” (K6j)', () => {
     expect(o.idb.__atrapa.bazy()[nazwaBazy(TRWALE)]).toEqual(przed);
   }, 30_000);
 
-  it('K6j: z listą baz — w removeUser jedno wywołanie databases() (sprawdzenie biblioteki szablonów, bez listy przy kasowaniu kolejki), 0 otwarć i kasowań vilda_sync_*, 0 zapisów vilda-sync-*, baza konta trwałego nietknięta', async () => {
+  it('K6j: z listą baz — w removeUser dwa wywołania databases() (marker dokumentacji i biblioteka szablonów, bez listy przy kasowaniu kolejki), 0 otwarć i kasowań vilda_sync_*, 0 zapisów vilda-sync-*, baza konta trwałego nietknięta', async () => {
     const o = await nowe({ jednorazowo: true });
     bazaKolejki(o.idb, TRWALE, { wiersze: [wierszKolejki(1)] });
     const przed = o.idb.__atrapa.bazy()[nazwaBazy(TRWALE)];
@@ -597,7 +597,7 @@ describe('tryb „Zaloguj jednorazowo” (K6j)', () => {
     await o.cisza();
     expect(blokadyKonta(o, zl), 'żądania blokady konta').toEqual([]);
     expect({ databases: ileWLogu(o, z, ['databases']), open: ileWLogu(o, z, ['open', /^vilda_sync_/]), deleteDatabase: ileWLogu(o, z, ['deleteDatabase', /^vilda_sync_/]) })
-      .toEqual({ databases: 1, open: 0, deleteDatabase: 0 });
+      .toEqual({ databases: 2, open: 0, deleteDatabase: 0 });
     expect(zapisySync(o)).toEqual([]);
     expect(o.idb.__atrapa.bazy()[nazwaBazy(TRWALE)]).toEqual(przed);
   }, 30_000);
@@ -635,7 +635,7 @@ describe('tryb „Zaloguj jednorazowo” (K6j)', () => {
     expect(stanKonta(o, uidB), 'konto B po removeUser').toEqual({ bazaKolejki: true, kluczUrzadzenia: kluczB, znacznik: null });
     expect(o.idb.__atrapa.bazy()[nazwaBazy(uidB)], 'baza kolejki B').toEqual(przed);
     expect({ databases: ileWLogu(o, z, ['databases']), open: ileWLogu(o, z, ['open', /^vilda_sync_/]), deleteDatabase: ileWLogu(o, z, ['deleteDatabase', /^vilda_sync_/]) })
-      .toEqual({ databases: 1, open: 0, deleteDatabase: 0 });
+      .toEqual({ databases: 2, open: 0, deleteDatabase: 0 });
     expect(blokadyKonta(o, zl), 'żądania blokady konta').toEqual([]);
     expect(zapisySyncOd(o, z), 'zapisy i usunięcia vilda-sync-* w localStorage').toEqual([]);
     expect(await czytajRekord(o.idb, 'vilda_registry', 'users', uidB), 'wpis rejestru konta B').toBeTruthy();
@@ -697,7 +697,7 @@ describe('tryb „Zaloguj jednorazowo” (K6j)', () => {
     odczyty.mockRestore();
     expect(odczytaneSync, 'odczyty vilda-sync-* w localStorage w removeUser').toEqual([]);
     expect({ databases: ileWLogu(o, z, ['databases']), open: ileWLogu(o, z, ['open', /^vilda_sync_/]), deleteDatabase: ileWLogu(o, z, ['deleteDatabase', /^vilda_sync_/]) })
-      .toEqual({ databases: 1, open: 0, deleteDatabase: 0 });
+      .toEqual({ databases: 2, open: 0, deleteDatabase: 0 });
     expect(blokadyKonta(o, zl), 'żądania blokady konta').toEqual([]);
     expect(zapisySyncOd(o, z), 'zapisy i usunięcia vilda-sync-* w localStorage').toEqual([]);
   }, 30_000);

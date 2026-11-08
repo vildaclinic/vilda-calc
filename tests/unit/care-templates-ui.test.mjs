@@ -451,7 +451,7 @@ describe('Care-template assets load only on explicit use', () => {
   it('coalesces model/store loading and adds UI/CSS only when requested', async () => {
     const d = loader(); expect(d.requests).toHaveLength(0);
     const first = d.api.ensureTemplateLibrary({ ui: false }), second = d.api.ensureTemplateLibrary({ ui: false }); expect(first).toBe(second);
-    expect(d.requests.map(element => element.src || element.href)).toEqual(['vilda_care_template_model.js?v=1']);
+    expect(d.requests.map(element => element.src || element.href)).toEqual(['vilda_care_template_model.js?v=2']);
     d.win.VildaCareTemplateModel = {}; d.requests[0].onload(); await settle();
     expect(d.requests[1].src).toBe('vilda_care_template_store.js?v=2'); d.win.VildaCareTemplateStore = {}; d.requests[1].onload(); await first;
     const ui = d.api.ensureTemplateLibrary(); await settle(); expect(d.requests).toHaveLength(4);
@@ -460,7 +460,7 @@ describe('Care-template assets load only on explicit use', () => {
   });
   it('allows a real retry after a failed asset without changing existing startup readiness', async () => {
     const d = loader(), failed = d.api.ensureTemplateLibrary({ ui: false }); d.requests[0].onerror(); await expect(failed).rejects.toThrow('Nie udało się wczytać');
-    const retried = d.api.ensureTemplateLibrary({ ui: false }); expect(d.requests[1].src).toBe('vilda_care_template_model.js?v=1');
+    const retried = d.api.ensureTemplateLibrary({ ui: false }); expect(d.requests[1].src).toBe('vilda_care_template_model.js?v=2');
     d.win.VildaCareTemplateModel = {}; d.requests[1].onload(); await settle(); d.win.VildaCareTemplateStore = {}; d.requests[2].onload(); await retried;
   });
   it('does not open a late library dialog after a lock and unlock of the same account', async () => {
@@ -482,9 +482,11 @@ describe('Settings template-library entry lifecycle', () => {
       onLock: fn => listeners.lock.push(fn), onUnlock: fn => listeners.unlock.push(fn) };
     const open = vi.fn(), win = { document: doc, VildaVault: vault, VildaCarePlans: { openTemplates: open } };
     const source = readFileSync(new URL('../../inline_ustawienia_04.js', import.meta.url), 'utf8');
-    const start = source.lastIndexOf('\n(function (win) {');
+    const entry = source.indexOf("getElementById('openCareTemplateLibraryBtn')");
+    const start = source.lastIndexOf('\n(function (win) {', entry), end = source.indexOf('\n})(window);', entry);
     expect(start).toBeGreaterThan(0);
-    new Function('window', source.slice(start))(win);
+    expect(entry).toBeGreaterThan(start); expect(end).toBeGreaterThan(entry);
+    new Function('window', source.slice(start, end + '\n})(window);'.length))(win);
     return { button, status, open,
       lock() { unlocked = false; listeners.lock.forEach(fn => fn()); },
       unlock(nextUserId = userId) { userId = nextUserId; unlocked = true; listeners.unlock.forEach(fn => fn()); } };
