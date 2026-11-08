@@ -135,7 +135,10 @@ describe('actual native visit chooser presentation lifecycle', () => {
   });
 
   it('finishes New only after exact loaded-payload archiving, age update and the existing choice event', () => {
-    const h = environment(); h.open(); h.click('vildaLcmNew');
+    const h = environment(); h.open();
+    h.restore.style.display = 'inline-block'; // a late replay while the choice is open
+    h.click('vildaLcmNew');
+    expect(h.restore.style.display).toBe('none');
     expect(h.api._ensureCurrentMeasurementInHistory).toHaveBeenCalledExactlyOnceWith(h.payload);
     expect(h.win.advancedGrowthData.measurements).toEqual([h.row]);
     expect(h.win.basicGrowthData.measurements).toEqual([h.row]);
