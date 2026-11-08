@@ -152,6 +152,24 @@ for (const width of [1440, 390, 320]) {
     await testInfo.attach(`potassium-dzm-${width}`, { path: screenshot, contentType: 'image/png' });
     await page.locator('#K_reportedValue').fill('-1'); await expectBlocked(page);
     sameWidths(initial, await geometry(page, width));
+    expect(errors).toEqual([]); expect(failures).toEqual([]);
+  });
+
+  test(`Potas DZM: geometria różnych fontów i czyszczenie ${width}px`, async ({ page }) => {
+    const errors = [], failures = [];
+    page.on('pageerror', error => errors.push(error.message));
+    page.on('requestfailed', request => { if (new URL(request.url()).origin === new URL(page.url()).origin) failures.push(request.url()); });
+    await openCalculator(page, width);
+    await restore(page, { K_concentration: '', K_volume: '' });
+    await expectBlocked(page);
+    const initial = await geometry(page, width);
+    // Preserve the original pre-loop state, including the opened source details.
+    // Each test keeps the same 60 s budget and all value/geometry assertions.
+    await restore(page, { age: '', sex: '', K_inputMode: 'reported', K_reportedValue: '150' });
+    await expectResult(page, { status: 'unassessed', tone: 'neutral', reference: false });
+    await details(page).locator('summary').click(); await expect(details(page)).toContainText('Labcorp');
+    await page.locator('#K_reportedValue').fill('-1'); await expectBlocked(page);
+    sameWidths(initial, await geometry(page, width));
     for (const family of ['Arial, sans-serif', '"DejaVu Sans", sans-serif', '"Liberation Sans", sans-serif', 'cursive']) {
       await page.addStyleTag({ content: `.potassium-dzm-proposal-card :is(.clcr-result-value,.potassium-dzm-reference-value) { font-family: ${family} !important; }` });
       await restore(page, { K_inputMode: 'reported', K_reportedValue: '150' });
