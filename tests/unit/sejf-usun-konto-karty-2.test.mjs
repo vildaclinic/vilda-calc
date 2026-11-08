@@ -19,7 +19,10 @@
 //     dziennik jest pusty („✓ spójny (0)”); po usunięciu konta nie ma bazy jego dziennika także wtedy, gdy logowanie
 //     w innej karcie zbiegło się z usunięciem. Pustą bazę założoną przy logowaniu, którego sesja skończyła się w trakcie
 //     zakładania, moduł kasuje tylko wtedy, gdy konta nie ma już na liście kont tej karty (dziennik innej karty
-//     zalogowanej na to konto działa dalej).
+//     zalogowanej na to konto działa dalej). Dziennik działa przez całą sesję także po przywróceniu sesji: moduł
+//     wczytany, gdy sejf jest już odblokowany, zapisuje wpis odblokowania tej sesji (jeden, także gdy powiadomienie
+//     o odblokowaniu przychodzi po wczytaniu modułu); bazę dziennika zakłada wtedy tylko ten wpis, z tymi samymi warunkami
+//     co przy logowaniu.
 //   - „Usuń konto” usuwa też ustawienia kopii zapasowej tego konta (folder, auto-kopia, ostatnia kopia), także gdy inna
 //     karta właśnie je zapisuje; ustawienia innych kont bez zmian; kasowanie tych wpisów trwa najwyżej 2 s.
 //   - Karta odświeżona albo odtworzona (przeładowanie, pamięć przeglądarki, wznowienie) po usunięciu konta w innej karcie:
@@ -43,7 +46,7 @@
 //     czekania: zapis sesji karty zdejmowany tylko, gdy należy do usuwanego konta.
 //   - Tryb „Zaloguj jednorazowo”: bez kasowania dziennika, znaczników, ponowień i dokończenia.
 //
-// PRZYPADKI (UK21–UK50)
+// PRZYPADKI (UK21–UK52)
 //   UK21 (1)(2)  dziennik usuwany razem z kontem: jedna karta, dwie karty.
 //   UK22, UK23 (a)–(d)  jedno połączenie dziennika na dokument; blokada, versionchange, close, ponowne zalogowanie.
 //   UK24, UK24b, UK24c, UK24d (z wariantem)  bazę dziennika zakłada tylko logowanie; logowanie w innej karcie
@@ -58,11 +61,13 @@
 //   UK42–UK47  czekanie kasowania bazy sejfu; UK48 (a)–(c)  strażniki tekstowe Ustawień i powłoki.
 //   UK49 (a)–(j)  przerwane usuwanie kończy się przy liście kont.
 //   UK50  zapis sesji innego konta przy „Usuń konto”.
+//   UK51 (a)–(c)  start ekranu logowania bez sesji (wycinek cyklu startu vilda_auth_ui.js).
+//   UK52 (a)–(d)  dziennik dostępu po przywróceniu sesji (moduł dziennika wczytany, gdy sejf jest już odblokowany).
 //   UK16 w sejf-usun-konto-karty.test.mjs bez zmian.
-// Na kodzie sprzed tej zmiany (E2-PR3a1b) czerwonych jest 61 z 93 przypadków — wszystkie poza strażnikami UK23 (c),
+// Na kodzie sprzed tej zmiany (E2-PR3a1b) czerwonych jest 68 z 101 przypadków — wszystkie poza strażnikami UK23 (c),
 // UK24b, UK24d (wariant), UK26 (c), UK27 (1), UK28, UK29 (b) (oba warianty), UK31b (wariant), UK32 (a) (trzy
-// warianty) i (b)–(e), UK33 (4), UK34, UK36 (wariant) (trzy warianty), UK39 (a)–(c), UK49 (b)–(e), (h), (j)
-// i UK50 (wariant) (oba warianty):
+// warianty) i (b)–(e), UK33 (4), UK34, UK36 (wariant) (trzy warianty), UK39 (a)–(c), UK49 (b)–(e), (h), (j),
+// UK50 (wariant) (oba warianty) i UK52 (b):
 // brak nowego zachowania („nie doczekano: …” albo inny wynik) albo brak funkcji (TypeError, brak wycinka
 // w vilda_auth_ui.js).
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -70,6 +75,7 @@ import {
   SKRYPTY_PUNKTU, bazaKolejki, czytajRekord, drugieOkno, naAtrapie, nazwaBazy, oknoMagazynu, przechwycZadaniaWTle, wierszKolejki,
 } from '../support/okno-magazynu.mjs';
 import { atrapaDokumentu } from '../support/atrapa-dom-lekka.mjs';
+import { loadBrowserScript } from '../support/load-browser-script.mjs';
 import { wynik, wytnijFunkcje, zrodlo } from './sesja-zapisu-uprzaz.mjs';
 
 const BAZA = (uid) => `vilda_user_${uid}`;
@@ -1608,4 +1614,81 @@ describe('start ekranu logowania bez sesji (vilda_auth_ui.js, Ei)', () => {
       { klasa: 'vilda-auth-startup', banery: [], konta: [] },
     ]);
   });
+});
+
+// ── Dziennik dostępu po przywróceniu sesji: moduł dziennika wczytany, gdy sejf jest już odblokowany (na stronach
+// vilda_audit_log.js jest wczytywany po vilda_auth_ui.js, który przywraca sesję) — wpis odblokowania tej sesji zapisany
+// przy wczytaniu modułu, jeden; to on zakłada bazę dziennika, z tymi samymi warunkami co przy logowaniu.
+describe('dziennik dostępu po przywróceniu sesji', () => {
+  it('UK52 (a): karta przeładowana zaraz po założeniu konta (bazy dziennika nie ma), moduł dziennika wczytany po przywróceniu sesji — wpis odblokowania zakłada bazę dziennika, zdarzenia sesji zapisane (✓ spójny (2))', async () => {
+    const o = await nowe();
+    const X = o.A.userId;
+    const o3 = await drugie(o, { zaloguj: null, sesja: kopiaSesji(o) });
+    expect(await wynik(o3.v.tryRestoreSession())).toEqual({ ok: true, w: true });
+    await o3.tlo();
+    expect(bazy(o3), 'baza dziennika przed wczytaniem modułu').not.toContain(DZIENNIK(X));
+    loadBrowserScript('vilda_audit_log.js', o3.win);
+    const d = o3.win.VildaAuditLog;
+    await d.log('patient.view', { patientId: 'fikcyjny-pacjent-1' });
+    await o3.cisza();
+    expect({ bazaJest: bazy(o3).includes(DZIENNIK(X)), wpisy: (await d.list()).map((x) => x.action), spojnosc: await d.verify() })
+      .toEqual({ bazaJest: true, wpisy: ['patient.view', 'unlock'], spojnosc: { ok: true, count: 2, brokenAt: null } });
+  }, 30_000);
+
+  it('UK52 (b): moduł dziennika wczytany w trakcie przywracania sesji (sejf już odblokowany, powiadomienie o odblokowaniu po wczytaniu modułu) — jeden wpis odblokowania', async () => {
+    const o = await nowe();
+    const X = o.A.userId;
+    const o3 = await drugie(o, { zaloguj: null, sesja: kopiaSesji(o) });
+    const h = wstrzymaj(o3, { przy: 'success', baza: REJESTR, metoda: 'get' });
+    const p = wynik(o3.v.tryRestoreSession());
+    await doczekaj(h.czeka, 'odczyt wpisu rejestru przy przywracaniu sesji');
+    expect(o3.v.isUnlocked(), 'sejf odblokowany przed powiadomieniem o odblokowaniu').toBe(true);
+    const powiadomienia = [];
+    o3.v.onUnlock((e) => { powiadomienia.push(e.trigger); });
+    loadBrowserScript('vilda_audit_log.js', o3.win);
+    await o3.spokoj();
+    h.zwolnij();
+    expect(await doczekaj(p, 'tryRestoreSession()')).toEqual({ ok: true, w: true });
+    await o3.tlo();
+    const wpisy = (await o3.win.VildaAuditLog.list()).map((x) => x.action);
+    expect({ powiadomienia, wpisy, bazaJest: bazy(o3).includes(DZIENNIK(X)) }).toEqual({ powiadomienia: ['restore'], wpisy: ['unlock'], bazaJest: true });
+  }, 30_000);
+
+  it('UK52 (c): bazy dziennika nie ma; w karcie B po przywróceniu sesji X moduł dziennika wczytany, otwarcie przy wpisie odblokowania wstrzymane; A usuwa X (B zablokowana) — po zwolnieniu zakładanie przerwane (abort-upgrade, bez success); po usunięciu konta bazy dziennika nie ma', async () => {
+    const o = await nowe();
+    const X = o.A.userId;
+    const o3 = await drugie(o, { zaloguj: null, sesja: kopiaSesji(o) });
+    expect(await wynik(o3.v.tryRestoreSession())).toEqual({ ok: true, w: true });
+    await o3.tlo();
+    const h = wstrzymaj(o, { przy: 'open', baza: DZIENNIK(X) });
+    loadBrowserScript('vilda_audit_log.js', o3.win);
+    await doczekaj(h.czeka, 'otwarcie bazy dziennika przy wpisie odblokowania w karcie B');
+    const lB = blokady(o3);
+    expect(await doczekaj(usun(o), 'removeUser w karcie A')).toEqual(OK);
+    await czekajNa(() => lB.length > 0, 'blokada karty B');
+    const z = log(o).length;
+    h.zwolnij();
+    await czekajNa(() => rodzaje(o, z, DZIENNIK(X)).some((r) => r === 'abort-upgrade' || r === 'success'), 'koniec otwarcia bazy dziennika w karcie B');
+    await o.cisza();
+    await o3.cisza();
+    const r = rodzaje(o, z, DZIENNIK(X));
+    expect({ przerwane: r.includes('abort-upgrade'), success: r.includes('success') }, 'zdarzenia bazy dziennika od zwolnienia').toEqual({ przerwane: true, success: false });
+    expect(bazy(o), 'po usunięciu konta bazy dziennika nie ma').not.toContain(DZIENNIK(X));
+  }, 30_000);
+
+  it.each([
+    ['blokada i ponowne przywrócenie sesji w tym dokumencie', async (o3, zapis) => { o3.zablokuj('manual'); await o3.spokoj(); o3.win.sessionStorage.setItem(SESJA, zapis); return o3.v.tryRestoreSession(); }],
+    ['ponowne zalogowanie tego konta bez blokady', (o3, _zapis, o) => o3.v.unlockUser(o.A.userId, o.A.haslo)],
+  ])('UK52 (d): moduł dziennika wczytany po przywróceniu sesji, potem %s — kolejny wpis odblokowania', async (_n, potem) => {
+    const o = await nowe();
+    const o3 = await drugie(o, { zaloguj: null, sesja: kopiaSesji(o) });
+    const zapis = o3.win.sessionStorage.getItem(SESJA);
+    expect(await wynik(o3.v.tryRestoreSession())).toEqual({ ok: true, w: true });
+    await o3.tlo();
+    loadBrowserScript('vilda_audit_log.js', o3.win);
+    await o3.cisza();
+    await doczekaj(potem(o3, zapis, o), 'drugie odblokowanie');
+    await o3.tlo();
+    expect({ odblokowany: o3.v.isUnlocked(), wpisy: (await o3.win.VildaAuditLog.list()).map((x) => x.action) }).toEqual({ odblokowany: true, wpisy: ['unlock', 'unlock'] });
+  }, 30_000);
 });

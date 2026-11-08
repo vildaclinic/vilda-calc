@@ -60,6 +60,9 @@
 //       C — formularz hasła zostaje z komunikatem odmowy, bez banera; potem w B blokady manual i idle — bez banera;
 //       ustawienia kopii zapasowej (interwał auto-kopii, folder) usunięte tylko dla X.
 //   SCENARIUSZE_PA — [[nazwa, scenariusz, OCZEKIWANE], …] dla PA1–PA3.
+//   dziennikPoPrzywroceniu(kontekst, adres) / OCZEKIWANE_DZIENNIK_PO_PRZYWROCENIU — dziennik dostępu po przywróceniu
+//       sesji: baza dziennika skasowana, przeładowanie z modułem dziennika wczytanym, gdy sejf jest już odblokowany —
+//       baza dziennika jest, jeden wpis odblokowania, zdarzenie sesji zapisane, dziennik spójny.
 //   SCENARIUSZE_PA_2 — PA4–PA13 i PA10b (opisy przy scenariuszach niżej i w tests/e2e/usun-konto-karty-2.spec.mjs).
 //   SCENARIUSZE_PA_PAMIEC — PA14 (a)–(c): pamięć stron Chromium włączona (opisy w tests/e2e/usun-konto-karty-pamiec.spec.mjs).
 //   Wynik scenariusza ma też pole pomiary (czasy w ms: „Usuń konto” od kliknięcia do początku przejścia na index.html,
@@ -655,6 +658,48 @@ export const SCENARIUSZE_PA = Object.freeze([
   ['PA2', pa2, OCZEKIWANE_PA2],
   ['PA3', pa3, OCZEKIWANE_PA3],
 ]);
+
+// ── Dziennik dostępu po przywróceniu sesji ───────────────────────────────────────────────────────────────────────────
+// Konto założone w Ustawieniach, baza dziennika dostępu skasowana (jak narzędziami przeglądarki), przeładowanie; odpowiedź
+// na vilda_audit_log.js wstrzymana do końca startu ekranu logowania z przywróconą sesją (moduł dziennika wczytany, gdy
+// sejf jest już odblokowany). Potem zdarzenie sesji. Wynik: baza dziennika jest, dokładnie jeden wpis odblokowania
+// i zdarzenie sesji, dziennik spójny.
+const DZIENNIK = (uid) => `vilda_audit_v1_${uid}`;
+const SKRYPT_DZIENNIKA = /\/vilda_audit_log\.js(\?|$)/;
+export const OCZEKIWANE_DZIENNIK_PO_PRZYWROCENIU = Object.freeze({
+  bazaPrzedPrzeladowaniem: false, odblokowanyPrzedModulem: true, baza: true, odblokowania: 1, zdarzenie: true, spojny: true,
+});
+export async function dziennikPoPrzywroceniu(kontekst, adres) {
+  const { strona: a } = await karta(kontekst);
+  await otworz(a, adres, 'ustawienia.html');
+  const uid = await zalozKonto(a, KONTO_X);
+  await a.evaluate((n) => new Promise((ok) => { const q = indexedDB.deleteDatabase(n); q.onsuccess = () => ok(); q.onerror = () => ok(); }), DZIENNIK(uid));
+  const bazaPrzedPrzeladowaniem = (await bazy(a, uid)).includes('vilda_audit_v1_<uid>');
+  let odblokowanyPrzedModulem = null;
+  await a.route(SKRYPT_DZIENNIKA, async (zadanie) => {
+    try {
+      odblokowanyPrzedModulem = Boolean(await czekajAz(a, () => Boolean(window.VildaAuthUI && window.VildaAuthUI.isBootReady()
+        && window.VildaVault && window.VildaVault.isUnlocked())));
+    } catch {
+      odblokowanyPrzedModulem = false;
+    }
+    await zadanie.continue();
+  });
+  await a.reload({ waitUntil: 'load' });
+  await a.waitForFunction(() => Boolean(window.VildaAuditLog && window.VildaVault && window.VildaVault.isUnlocked()), null, { timeout: LIMIT_MS });
+  await a.unroute(SKRYPT_DZIENNIKA);
+  const stan = await a.evaluate(async (n) => {
+    await window.VildaAuditLog.log('patient.view', { patientId: 'fikcyjny-pacjent-1' });
+    const wpisy = (await window.VildaAuditLog.list()).map((x) => x.action);
+    const spojnosc = await window.VildaAuditLog.verify();
+    return { baza: (await indexedDB.databases()).some((d) => d.name === n), wpisy, spojnosc };
+  }, DZIENNIK(uid));
+  return {
+    bazaPrzedPrzeladowaniem, odblokowanyPrzedModulem, baza: stan.baza, odblokowania: stan.wpisy.filter((x) => x === 'unlock').length,
+    zdarzenie: stan.wpisy.includes('patient.view'), spojny: stan.spojnosc.ok === true && stan.spojnosc.count === stan.wpisy.length,
+    pomiary: { wpisy: stan.wpisy, spojnosc: stan.spojnosc },
+  };
+}
 
 // ── PA4–PA13: karta odświeżona albo odtworzona, lista kont w kartach bez sesji, czekanie kasowania ─────────────────
 // Karta A (Ustawienia) z kontem X (i Y — dwaKonta), zalogowana na X, gotowa do „Usuń konto”.

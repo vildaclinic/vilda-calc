@@ -6,12 +6,14 @@
 // podpowiedzi czekania; przy dwóch kontach „Kto się loguje?” z banerem tylko z drugim kontem, pamięć PRO usuniętego
 // konta unieważniona raz, logowanie w toku w trzeciej karcie kończy się komunikatem odmowy w formularzu (bez banera),
 // blokady manual i idle — bez banera, ustawienia kopii zapasowej usuniętego konta usunięte, drugiego konta bez zmian.
+// Dziennik dostępu działa przez całą sesję także po przywróceniu sesji: po przeładowaniu z modułem dziennika wczytanym,
+// gdy sejf jest już odblokowany (bazy dziennika nie ma), wpis odblokowania zakłada bazę i zdarzenia sesji są zapisane.
 // Wyrocznia baz: pełna lista baz przeglądarki po „Usuń konto” — tylko bazy wspólne, żadna baza wspólna sprzed usunięcia
 // nie znika (opis w module). Konto bez biblioteki szablonów. Scenariusze, literały i własny serwer plików repozytorium
 // (port przydzielany przez system, start w teście, zamknięcie w finally) w tests/support/usun-konto-karty-chromium.mjs.
 // Dane wyłącznie fikcyjne.
 import { expect, test } from '@playwright/test';
-import { SCENARIUSZE_PA, startSerwer } from '../support/usun-konto-karty-chromium.mjs';
+import { OCZEKIWANE_DZIENNIK_PO_PRZYWROCENIU, SCENARIUSZE_PA, dziennikPoPrzywroceniu, startSerwer } from '../support/usun-konto-karty-chromium.mjs';
 
 const OPISY = {
   PA1: 'dwie karty index.html i ustawienia.html — karta B „Witamy” z banerem, zablokowana; karta usuwająca „Witamy” bez banera i bez pytania przed opuszczeniem strony; pełna lista baz po usunięciu konta — tylko bazy wspólne',
@@ -34,4 +36,16 @@ test.describe('Sejf: „Usuń konto” przy drugiej karcie i w aplikacji zainsta
       }
     });
   }
+
+  test('dziennik dostępu po przywróceniu sesji: bazy dziennika nie ma, moduł dziennika wczytany, gdy sejf jest już odblokowany — wpis odblokowania zakłada bazę, jeden wpis odblokowania, zdarzenie sesji zapisane, dziennik spójny', async ({ context }) => {
+    test.setTimeout(60_000);
+    const serwer = await startSerwer();
+    try {
+      const { pomiary, ...wynik } = await dziennikPoPrzywroceniu(context, serwer.adres);
+      test.info().annotations.push({ type: 'pomiary', description: JSON.stringify(pomiary) });
+      expect(wynik).toEqual(OCZEKIWANE_DZIENNIK_PO_PRZYWROCENIU);
+    } finally {
+      await serwer.zamknij();
+    }
+  });
 });
