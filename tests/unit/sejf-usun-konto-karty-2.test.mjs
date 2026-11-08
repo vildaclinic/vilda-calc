@@ -1623,14 +1623,14 @@ function startBezSesji(w, status) {
 }
 
 describe('start ekranu logowania bez sesji (vilda_auth_ui.js, Ei)', () => {
-  it('UK51 (a): getStatus() wstrzymany — reset stanu aplikacji (qa „show-startup”) od razu po tryRestoreSession() false; „Witamy” z banerem dopiero po odczycie stanu', async () => {
+  it('UK51 (a): getStatus() wstrzymany — bez resetu stanu aplikacji po tryRestoreSession() false; „Witamy” z banerem dopiero po odczycie stanu', async () => {
     const w = ekranLogowania();
     let stan;
     const s = startBezSesji(w, () => new Promise((r) => { stan = r; }));
     const boot = s.boot();
     s.przywroc(false);
     await chwila();
-    expect({ qa: w.wywolania.qa, ekrany: w.ekrany.length }, 'przed odczytem stanu sejfu').toEqual({ qa: ['show-startup'], ekrany: 0 });
+    expect({ qa: w.wywolania.qa, ekrany: w.ekrany.length }, 'przed odczytem stanu sejfu').toEqual({ qa: [], ekrany: 0 });
     stan({ state: 'no-users', userCount: 0, currentUser: null, lockReason: 'user-removed-elsewhere' });
     await boot;
     expect(w.ekrany.map(w.opis)).toEqual([{ klasa: 'vilda-auth-startup', banery: [TEKST_BANERA], konta: [] }]);
@@ -1643,7 +1643,7 @@ describe('start ekranu logowania bez sesji (vilda_auth_ui.js, Ei)', () => {
       const boot = s.boot();
       s.przywroc(false);
       await boot;
-      expect({ qa: w.wywolania.qa, ekrany: w.ekrany.map(w.opis) }).toEqual({ qa: ['show-startup'], ekrany: [{ klasa: 'vilda-auth-startup', banery: [], konta: [] }] });
+      expect({ qa: w.wywolania.qa, ekrany: w.ekrany.map(w.opis) }).toEqual({ qa: [], ekrany: [{ klasa: 'vilda-auth-startup', banery: [], konta: [] }] });
     }
   });
 

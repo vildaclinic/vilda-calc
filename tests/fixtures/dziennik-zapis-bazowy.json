@@ -1396,7 +1396,7 @@
      "tlo": 0,
      "indexedDB": [
       "abort-upgrade clinical-authority-checkpoints-v1",
-      "databases ×3",
+      "databases ×4",
       "open clinical-authority-checkpoints-v1 null",
       "upgrade clinical-authority-checkpoints-v1 0 1"
      ],
@@ -1419,7 +1419,7 @@
      "tlo": 0,
      "indexedDB": [
       "abort-upgrade clinical-authority-checkpoints-v1",
-      "databases ×3",
+      "databases ×4",
       "open clinical-authority-checkpoints-v1 null",
       "upgrade clinical-authority-checkpoints-v1 0 1"
      ],
@@ -2774,7 +2774,7 @@
      "indexedDB": [
       "abort-upgrade clinical-authority-checkpoints-v1",
       "close vilda_user_<uid2>",
-      "databases ×3",
+      "databases ×4",
       "delete-success vilda_user_<uid2>",
       "deleteDatabase vilda_user_<uid2>",
       "open clinical-authority-checkpoints-v1 null",
@@ -2801,7 +2801,7 @@
      "indexedDB": [
       "abort-upgrade clinical-authority-checkpoints-v1",
       "close vilda_user_<uid>",
-      "databases ×3",
+      "databases ×4",
       "delete-success vilda_user_<uid>",
       "deleteDatabase vilda_user_<uid>",
       "open clinical-authority-checkpoints-v1 null",
@@ -3884,7 +3884,7 @@
      "indexedDB": [
       "abort-upgrade clinical-authority-checkpoints-v1",
       "close vilda_user_<uid2>",
-      "databases ×3",
+      "databases ×4",
       "delete-success vilda_user_<uid2>",
       "deleteDatabase vilda_user_<uid2>",
       "open clinical-authority-checkpoints-v1 null",
@@ -3911,7 +3911,7 @@
      "indexedDB": [
       "abort-upgrade clinical-authority-checkpoints-v1",
       "close vilda_user_<uid>",
-      "databases ×3",
+      "databases ×4",
       "delete-success vilda_user_<uid>",
       "deleteDatabase vilda_user_<uid>",
       "open clinical-authority-checkpoints-v1 null",

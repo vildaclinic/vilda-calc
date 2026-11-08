@@ -1,4 +1,5 @@
 import fs from 'node:fs';
+import { wytnijFunkcje } from './sesja-zapisu-uprzaz.mjs';
 import { describe, expect, it, vi } from 'vitest';
 
 // Prawdziwy boot i getter; atrapy dotyczą tylko DOM i asynchronicznych zależności.
@@ -62,6 +63,7 @@ describe('AuthUI: gotowość po całym pierwszym boot', () => {
     const h = harness(); const first = h.api.boot();
     h.restore.resolve(false); await Promise.resolve();
     expect(h.show).toHaveBeenCalledOnce();
+    expect(h.show.mock.calls[0][1]).toEqual({ skipReset: true });
     expect(h.api.isBootReady()).toBe(false);
     h.startup.resolve(); await first;
     expect(h.api.isBootReady()).toBe(true);
@@ -100,5 +102,20 @@ describe('AuthUI: gotowość po całym pierwszym boot', () => {
     expect(broken.api.isBootReady()).toBe(true);
     expect(broken.events).toMatchObject([{ type: 'vilda:auth-boot-settled', bootReady: true }]);
     expect(broken.vault.tryRestoreSession).not.toHaveBeenCalled();
+  });
+});
+
+describe('AuthUI: initial startup is observational', () => {
+  for (const initial of [true, false]) it(initial ? 'initial startup preserves state with cleanup already loaded' : 'explicit return to startup still clears state', async () => {
+    const clear = vi.fn(), list = vi.fn(async () => []), empty = vi.fn();
+    const show = new Function('Ji', 'pn', 'jt', 'qa', 'fn', 'No', 'ar', 'nr', 'Ot', 'ma',
+      wytnijFunkcje(source, 'me') + ';return me;')(
+      () => {}, () => {}, () => ({ listUsers: list }), clear, () => {}, () => {}, empty, () => {}, () => {}, () => {},
+    );
+    await show('FICTIONAL-BANNER', initial ? { skipReset: true } : undefined);
+    expect(list).toHaveBeenCalledOnce();
+    expect(empty).toHaveBeenCalledExactlyOnceWith('FICTIONAL-BANNER');
+    if (initial) expect(clear).not.toHaveBeenCalled();
+    else expect(clear).toHaveBeenCalledExactlyOnceWith('show-startup');
   });
 });

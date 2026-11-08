@@ -40,6 +40,8 @@ Modele i interfejs znajdują się w czytelnych plikach `vilda_care_template_mode
 
 Integracja sejfu jest przypięta do bazowego commita `c8d8442e26ac870fc5764408be8e81976eddde3b` (#905). Odczyt listy kont zachowuje dotychczasową semantykę podczas równoczesnego usuwania konta. Dokończenie przerwanego usuwania korzysta z tej samej kontroli chronionego zapisu co jawne usunięcie; nie omija ochrony zachowanej dokumentacji.
 
+Pierwsze pokazanie logowania po odświeżeniu nie czyści stanu formularza. Jawny powrót do logowania oraz blokada już otwartej sesji zachowują dotychczasowe czyszczenie. To rozróżnienie nie zależy od kolejności ładowania modułów.
+
 Instalacja offline pobiera moduły w jednym archiwum transportowym i sprawdza jego skrót oraz każdy moduł przed zapisem w pamięci. Moduły zachowują oryginalne adresy i treść. Limit liczby pobrań instalacji pozostaje bez zmian.
 
 Testy obejmują modele etapów, UI i nawigację, rzeczywiste transakcje IndexedDB, lokalny silnik usługi oraz przeglądarkowy przebieg na fikcyjnych kontach. Dokładny zestaw wyników i SHA wydania zapisuje opis PR. Obliczenia, normy i interpretacje kliniczne nie są zmieniane przez tę funkcję.
