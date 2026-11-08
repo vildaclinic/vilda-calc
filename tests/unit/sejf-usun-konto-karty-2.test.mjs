@@ -41,7 +41,8 @@
 //     przed zamknięciem albo przeładowaniem strony tylko na czas usuwania; w aplikacji zainstalowanej pasek
 //     #appShellRemoveWait (role="status", pusty od wczytania).
 //   - Usuwanie przerwane zamknięciem albo odświeżeniem strony kończy się przy następnym wyświetleniu listy kont (konto
-//     znika z listy od razu); nieudana próba — przy następnej karcie.
+//     znika z listy od razu); nieudana próba — przy następnej karcie. Usuwania, które trwa w tym dokumencie, lista kont
+//     nie powtarza (konto usuwane jeden raz).
 //   - W aplikacji zainstalowanej „Usuń konto” nie wylogowuje innego konta, które ktoś zalogował w tym oknie w trakcie
 //     czekania: zapis sesji karty zdejmowany tylko, gdy należy do usuwanego konta.
 //   - Tryb „Zaloguj jednorazowo”: bez kasowania dziennika, znaczników, ponowień i dokończenia.
@@ -59,14 +60,15 @@
 //   UK38, UK39  ogłoszenie usunięcia konta.
 //   UK40, UK41  odświeżenie listy kont w kartach bez sesji (wycinek vilda_auth_ui.js).
 //   UK42–UK47  czekanie kasowania bazy sejfu; UK48 (a)–(c)  strażniki tekstowe Ustawień i powłoki.
-//   UK49 (a)–(j)  przerwane usuwanie kończy się przy liście kont.
+//   UK49 (a)–(k)  przerwane usuwanie kończy się przy liście kont (usuwanie konta w tym dokumencie kończy tylko ten
+//                dokument).
 //   UK50  zapis sesji innego konta przy „Usuń konto”.
 //   UK51 (a)–(c)  start ekranu logowania bez sesji (wycinek cyklu startu vilda_auth_ui.js).
 //   UK52 (a)–(d)  dziennik dostępu po przywróceniu sesji (moduł dziennika wczytany, gdy sejf jest już odblokowany).
 //   UK16 w sejf-usun-konto-karty.test.mjs bez zmian.
-// Na kodzie sprzed tej zmiany (E2-PR3a1b) czerwonych jest 68 z 101 przypadków — wszystkie poza strażnikami UK23 (c),
+// Na kodzie sprzed tej zmiany (E2-PR3a1b) czerwonych jest 68 z 102 przypadków — wszystkie poza strażnikami UK23 (c),
 // UK24b, UK24d (wariant), UK26 (c), UK27 (1), UK28, UK29 (b) (oba warianty), UK31b (wariant), UK32 (a) (trzy
-// warianty) i (b)–(e), UK33 (4), UK34, UK36 (wariant) (trzy warianty), UK39 (a)–(c), UK49 (b)–(e), (h), (j),
+// warianty) i (b)–(e), UK33 (4), UK34, UK36 (wariant) (trzy warianty), UK39 (a)–(c), UK49 (b)–(e), (h), (j), (k),
 // UK50 (wariant) (oba warianty) i UK52 (b):
 // brak nowego zachowania („nie doczekano: …” albo inny wynik) albo brak funkcji (TypeError, brak wycinka
 // w vilda_auth_ui.js).
@@ -1522,6 +1524,31 @@ describe('przerwane usuwanie kończy się przy liście kont', () => {
     await o3.cisza();
     expect({ zX: lista.includes(X), wpis: !!(await czytajRekord(o.idb, REJESTR, 'users', X)), zapisy: zapisyRejestru(o, z).length, cykl: o.win.localStorage.getItem(CYKL(X)) === stary })
       .toEqual({ zX: true, wpis: true, zapisy: 0, cykl: true });
+  }, 30_000);
+
+  it('UK49 (k): karta usuwająca czyta listę kont w trakcie czekającego kasowania, a lista baz przeglądarki przychodzi już po skasowaniu bazy sejfu X — usuwanie kończy tylko karta usuwająca: jedno usunięcie konta (znacznik cyklu konta zapisany na początku i na końcu), jedno kasowanie bazy kolejki X i jedna zmiana rejestru', async () => {
+    const o = await nowe({ konta: 'AB' });
+    const X = o.A.userId;
+    bazaKolejki(o.idb, X, { wiersze: [wierszKolejki(1)] });
+    const obce = await otworzSurowo(o.idb, BAZA(X));
+    const z = log(o).length;
+    const zd = o.dziennik.length;
+    const p = usun(o);
+    await czekajNa(() => wpisyOd(o, z, 'blocked', BAZA(X)).length > 0, `blocked kasowania ${BAZA('<X>')}`);
+    // Pierwsza lista baz przeglądarki od tej chwili (lista kont albo dalsze kroki usuwania) odpowiada dopiero po
+    // skasowaniu bazy sejfu X.
+    const h = wstrzymaj(o, { przy: 'databases' });
+    const lista = o.v.listUsers();
+    await o.spokoj();
+    obce.close();
+    await czekajNa(() => wpisyOd(o, z, 'delete-success', BAZA(X)).length > 0, `skasowanie ${BAZA('<X>')}`);
+    h.zwolnij();
+    expect(await doczekaj(p, 'removeUser w karcie usuwającej')).toEqual(OK);
+    await doczekaj(lista, 'lista kont w karcie usuwającej');
+    await o.cisza();
+    const zapisyCyklu = o.dziennik.slice(zd).filter((w) => w.magazyn === 'localStorage' && w.klucz === CYKL(X)).map((w) => w.op);
+    expect({ cykl: stanCyklu(o, X), zapisyCyklu, kasowanieKolejki: wpisyOd(o, z, 'deleteDatabase', nazwaBazy(X)).length, zmianyRejestru: zapisyRejestru(o, z).length })
+      .toEqual({ cykl: 'removed', zapisyCyklu: ['set', 'set'], kasowanieKolejki: 1, zmianyRejestru: 1 });
   }, 30_000);
 });
 
