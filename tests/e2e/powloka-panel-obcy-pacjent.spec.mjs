@@ -464,9 +464,19 @@ test.describe('panel powłoki z innym pacjentem', () => {
 
     await page.locator('a.sidebar-link[href="index.html"]').click();
     const s = await ramka(page, 'Start');
-    await s.evaluate(async () => { await window.saveUserData(); });
+    // Sama obecność API nie oznacza końca odtwarzania po powrocie do Start.
+    // Klikamy rzeczywisty przycisk dopiero, gdy aplikacja zezwoli na zapis.
+    const zapisz = page.locator('aside.sidebar-v2 #saveDataBtnSidebar');
+    await expect(zapisz).not.toHaveAttribute('aria-disabled', 'true');
+    await expect(zapisz).toBeEnabled();
+    await zapisz.click();
     await expect.poll(() => s.evaluate(() => window.sessionStorage.getItem('vildaCurrentPatientId')), { timeout: 20000 }).not.toBeNull();
     const id = await s.evaluate(() => window.sessionStorage.getItem('vildaCurrentPatientId'));
+    const zapis = await s.evaluate(pid => window.VildaVault.getPatient(pid), id);
+    expect(zapis.snapshotCount).toBe(1);
+    expect(zapis.snapshots[0].payload.user).toMatchObject({
+      firstName: 'Nowy', lastName: 'Fikcyjny-Nowy', sex: 'M', age: 7, ageMonths: 0, weight: 23, height: 121,
+    });
     await page.waitForTimeout(1500);
 
     await page.evaluate(() => window.VildaShell.navigate('docpro'));

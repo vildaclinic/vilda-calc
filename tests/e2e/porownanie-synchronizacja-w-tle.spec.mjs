@@ -100,11 +100,14 @@ async function pacjentZPorownaniem(page) {
   });
   await wpisz(page, { lastName: 'Probny', firstName: 'Jan', dobInput: dob, sex: 'M', weight: '38', height: '133' });
   await expect(page.locator('#bmiResult .result-number')).toHaveText(/\d/, { timeout: 15000 });
+  // Widoczny wynik BMI może poprzedzać zakończenie odtwarzania sesji.
+  await page.waitForFunction(() => window.VildaDataImportExport?.getSaveReadiness?.().ready === true);
   expect(await page.evaluate(async () => Boolean(await window.saveUserData())), 'pierwszy zapis').toBe(true);
   const pid = await page.evaluate(async () => (await window.VildaVault.listPatients()).map((p) => p.patientId)[0]);
   await expect.poll(() => liczbaMigawek(page, pid), { timeout: 15000 }).toBe(1);
   await wpisz(page, { weight: '40', height: '135' });
   await expect(page.locator('#bmiResult .result-number')).toHaveText('21,9', { timeout: 15000 });
+  await page.waitForFunction(() => window.VildaDataImportExport?.getSaveReadiness?.().ready === true);
   expect(await page.evaluate(async () => Boolean(await window.saveUserData())), 'drugi zapis').toBe(true);
   await expect.poll(() => liczbaMigawek(page, pid), { timeout: 15000 }).toBe(2);
 
