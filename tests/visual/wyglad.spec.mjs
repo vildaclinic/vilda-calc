@@ -45,6 +45,10 @@ const DOMYSLNE_PREFERENCJE = Object.freeze({ darkBgLevel: '0', glassLevel: '0', 
 
 /** Klika „Korzystaj bez logowania", jeśli bramka logowania jest na wierzchu. */
 async function trybGoscia(page) {
+  // Top-level pages must finish authentication before deciding the guest
+  // button is absent. The shell owns its separate frame startup lifecycle.
+  await page.waitForFunction(() => location.pathname.endsWith('/app.html')
+    || window.VildaAuthUI?.isBootReady?.());
   const przycisk = page.getByRole('button', { name: 'Korzystaj bez logowania', exact: true });
   if ((await przycisk.count()) && (await przycisk.first().isVisible())) {
     await przycisk.first().click();
@@ -52,8 +56,8 @@ async function trybGoscia(page) {
   }
 }
 
-async function otworz(page, strona, tryb) {
-  await page.route(/.*/, (route) => (new URL(route.request().url()).host === '127.0.0.1:4173' ? route.continue() : route.abort()));
+async function otworz(page, strona, tryb, baseURL) {
+  await page.route(/.*/, (route) => (new URL(route.request().url()).origin === new URL(baseURL).origin ? route.continue() : route.abort()));
   await page.addInitScript(() => {
     try {
       window.localStorage.setItem('vilda-terms-accepted-v1', JSON.stringify({ version: 1, acceptedAtISO: new Date().toISOString() }));
@@ -135,8 +139,8 @@ async function kadrCalejStrony(page, szerokosc) {
 
 for (const strona of STRONY) {
   for (const [id, tryb] of Object.entries(TRYBY)) {
-    test(`${strona.nazwa} w trybie ${tryb.opis}`, async ({ page }, info) => {
-      await otworz(page, strona, tryb);
+    test(`${strona.nazwa} w trybie ${tryb.opis}`, async ({ page, baseURL }, info) => {
+      await otworz(page, strona, tryb, baseURL);
       if (strona.dane) await daneSyntetyczne(page);
       await page.evaluate(() => document.fonts.ready);
       // dławiki odświeżania (odznaki, pasek statusu) kończą pracę w ułamku sekundy
