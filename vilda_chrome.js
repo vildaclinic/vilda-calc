@@ -274,7 +274,7 @@ function Ch_refreshSaveState(){
   Cm_refreshNavigationActions(presentation);
   if(state==="hidden"&&O&&Ch_statusAnchor&&Ch_statusAnchor.hasAttribute("data-header-save-status"))te();
   if(state==="loading"&&O)te();
-  Cm_refreshClear();
+  Cm_refreshClear(presentation);
 }
 function Ch_refreshMenuPro(){
   var source=o.getElementById("vildaProBadge"),owner=Cm_menuOwner(),state=source&&source.getAttribute("data-pro-state");
@@ -469,13 +469,16 @@ function Cm_bindClear(source){
   });
 }
 function Cm_refreshClear(){
+  // External refreshes enter the common renderer; its explicit snapshot calls
+  // this function's render-only branch, so status/actions cannot diverge.
+  if(!arguments.length){Ch_refreshSaveState();return}
   var source=Ch_saveContext();Cm_bindClear(source);
   var pending=Cm_clearCurrent.pending;
   if(pending&&!Cm_clearPendingCurrent(pending.context))Cm_clearCurrent.pending=false;
-  var available=!!Cm_clearContext(),busy=!!Cm_clearCurrent.pending,presentation=Cm_navigationPresentation();
+  var available=!!Cm_clearContext(),busy=!!Cm_clearCurrent.pending,presentation=arguments[0];
   var controls=o.querySelectorAll("[data-menu-clear]");
   for(var index=0;index<controls.length;index++){
-    var button=controls[index],disabled=!available||busy;
+    var button=controls[index],disabled=!available||busy||!!(presentation&&presentation.loading);
     var preparing=!!(presentation&&(presentation.loading||presentation.clear!==null));
     Cm_paintPreparation(button,presentation?presentation.clear:null,presentation&&presentation.loading);
     if(button.disabled!==disabled)button.disabled=disabled;
@@ -998,7 +1001,7 @@ function Cm_documentsState(){
 function Cm_documentsRefresh(){
   var button=o.getElementById("patientDocumentsBtnSidebar");
   if(!button)return;
-  if(button._cfBound){Qdm(o.querySelector("[data-vilda-chrome-drawer]"));Cm_refreshNavigationActions();return}
+  if(button._cfBound){Qdm(o.querySelector("[data-vilda-chrome-drawer]"));Ch_refreshSaveState();return}
   var state=Cm_documentsState(),disabled=!!(state.disabled||state.busy);
   if(disabled)button.setAttribute("aria-disabled","true");else button.removeAttribute("aria-disabled");
   if(state.busy)button.setAttribute("aria-busy","true");else button.removeAttribute("aria-busy");
