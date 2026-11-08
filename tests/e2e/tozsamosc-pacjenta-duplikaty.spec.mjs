@@ -241,7 +241,13 @@ test.describe('Dopisanie daty urodzenia nie tworzy drugiego pacjenta', () => {
     await expect(page.locator('#lastName')).toHaveValue(NAZWISKO);
     await expect(page.locator('#lastName')).toHaveJSProperty('readOnly', true);
     await expect(page.locator('#firstName')).toHaveJSProperty('readOnly', true);
+    // Closing the native chooser precedes the load operation's final settled signal.
+    // Destructive actions must wait for the real decision boundary, not bypass it.
+    await expect.poll(() => page.evaluate(() => window.VildaSaveStatusIndicator.getCurrentDecision().ready)).toBe(true);
     await page.locator('#clearAllDataBtn').click();
+    const warning = page.getByRole('dialog', { name: 'Zapisać zmiany przed wyczyszczeniem?', exact: true });
+    await expect(warning).toBeVisible();
+    await warning.getByRole('button', { name: 'Odrzuć zmiany i wyczyść', exact: true }).click();
     await expect(page.locator('#lastName')).toHaveValue('');
     await expect(page.locator('#firstName')).toHaveValue('');
     await expect(page.locator('#lastName')).toBeEditable();

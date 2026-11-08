@@ -3991,6 +3991,7 @@ const OPTIONAL_ASSETS = [
   '/vilda_summary_cards.js?v=61',
   '/vilda_summary_cards.js?v=62',
   '/vilda_summary_cards.js?v=63',
+  '/vilda_summary_cards.js?v=64',
   '/vilda_schowek.js?v=1',
   '/vilda_schowek.js?v=2',
   '/vilda_schowek.js?v=3',
