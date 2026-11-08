@@ -27,7 +27,8 @@ const korzen = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..
 const ZRODLO_SW = fs.readFileSync(path.join(korzen, 'service-worker-kalorii.js'), 'utf8');
 const MANIFEST_WORKSPACE = JSON.parse(fs.readFileSync(path.join(korzen, 'runtime/clinical-workspace-v1/manifest.json'), 'utf8'));
 const PAKIET_WORKSPACE = '/' + MANIFEST_WORKSPACE.precachePack.path;
-const MODULY_WORKSPACE = new Set(MANIFEST_WORKSPACE.files.map(file => '/' + file.path));
+const HISTORYCZNE_MODULY_WORKSPACE = MANIFEST_WORKSPACE.historicalFiles || [];
+const MODULY_WORKSPACE = new Set(MANIFEST_WORKSPACE.files.concat(HISTORYCZNE_MODULY_WORKSPACE).map(file => '/' + file.path));
 const POCHODZENIE = 'https://vilda.test';
 // Dowolna wartość ?v=, nie tylko liczba: edu-video-ui.css jest ładowany jako ?v=20261001v4 i ?v=20261001v7,
 // a SW traktuje jako niezmienny każdy adres z parametrem v (isImmutableVersionedRequest).
@@ -344,7 +345,9 @@ describe('P-SW-PRECACHE: instalacja bez historii, kopia z poprzedniej pamięci, 
     expect(pobrane.filter(historyczny), 'żaden adres historyczny nie jest pobierany').toEqual([]);
     expect(pobrane.filter(adres => adres === PAKIET_WORKSPACE)).toHaveLength(1);
     expect(pobrane.filter(adres => MODULY_WORKSPACE.has(adres))).toEqual([]);
-    expect(MODULY_WORKSPACE.size).toBe(49);
+    expect(MANIFEST_WORKSPACE.files).toHaveLength(51);
+    expect(HISTORYCZNE_MODULY_WORKSPACE).toHaveLength(49);
+    expect(MODULY_WORKSPACE.size).toBe(100);
     // Budżet: dziś ok. 390 adresów i 24 MB. Chromium przerywa zdarzenie install po 5 minutach — przy 8 Mb/s i 80 ms
     // opóźnienia na żądanie 24 MB zajęło 64 s, a 474 MB (historia) nie mieściło się nawet przy 20 Mb/s.
     const bajty = pobrane.reduce((suma, adres) => suma + (rozmiarPliku(adres) || 0), 0);

@@ -62,6 +62,69 @@ describe('V2 staged care-plan UI uses its protected writer', () => {
     const d = fixture({ capability: { available: false, message: 'Fikcyjna niedostępność.' } }); await settle();
     expect(d.host.textContent).toContain('Fikcyjna niedostępność.'); expect(button(d.host, 'Uruchom pierwszy etap')).toBeUndefined(); expect(button(d.host, 'Zapisz wykonanie')).toBeUndefined(); d.controller.destroy();
   });
+  it('retains both complete portable versions in a readonly conflict view without choosing a winner', async () => {
+    const d = fixture({ edit: plan => {
+      active(plan); receipt(plan);
+      plan.careContext.log.push({ ...audit('fictional-first-log'), action: 'recordFact', stageId: 'stage-a', stepId: 'step-a', documentIds: ['fictional-document'], text: 'Fikcyjny przebieg pierwszej wersji.' });
+      const alternative = structuredClone(plan);
+      alternative.title = 'Fikcyjna druga wersja planu'; alternative.careContext.stages[0].title = 'Fikcyjny zachowany drugi etap';
+      alternative.careContext.steps[0].title = 'Fikcyjny zachowany drugi krok';
+      alternative.careContext.facts[0].kind = 'performance';
+      alternative.careContext.log[0].text = 'Fikcyjny odrębny przebieg drugiej wersji.';
+      plan.nativeConflicts = [{ record: alternative, operations: [{ id: 'fictional-alternate-operation' }] }];
+    } }); await settle();
+    const original = JSON.stringify(d.plan), versions = d.host.querySelectorAll('.vcp-native-conflict-version');
+    expect(d.host.textContent).toContain('Konflikt synchronizacji. Ten plan jest dostępny tylko do odczytu.');
+    expect(versions).toHaveLength(2); expect(versions.every(version => version.open === false)).toBe(true);
+    versions.forEach(version => { version.open = true; version.dispatch('toggle'); });
+    expect(versions[0].textContent).toContain('Fikcyjny plan etapowy');
+    expect(versions[0].textContent).toContain('Fikcyjny przebieg pierwszej wersji.');
+    expect(versions[0].textContent).toContain('Otrzymanie wyniku: 03.02.2001');
+    expect(versions[1].textContent).toContain('Fikcyjna druga wersja planu');
+    expect(versions[1].textContent).toContain('Fikcyjny zachowany drugi etap');
+    expect(versions[1].textContent).toContain('Fikcyjny zachowany drugi krok');
+    expect(versions[1].textContent).toContain('Wykonanie: 03.02.2001');
+    expect(versions[1].textContent).toContain('Fikcyjny odrębny przebieg drugiej wersji.');
+    for (const label of ['Uruchom pierwszy etap', 'Potwierdź przegląd etapu', 'Zapisz wykonanie', 'Zapisz otrzymanie wyniku', 'Zapisz decyzję', 'Pomiń krok', 'Zmień przypomnienie', 'Zamknij plan', 'Przygotuj plany z etapami']) expect(button(d.host, label)).toBeUndefined();
+    expect(d.vault.mutateStagedCarePlan).not.toHaveBeenCalled(); expect(d.vault.mutateCarePlan).not.toHaveBeenCalled();
+    expect(JSON.stringify(d.plan)).toBe(original); d.controller.destroy();
+  });
+  it('opens evidence retained only in an alternative version and restores its expanded place on return', async () => {
+    const original = { id: 'fictional-document', patientId: 'fictional-staged-patient', rev: 0, category: 'observation', title: 'Fikcyjny zachowany dokument', body: 'Fikcyjny oryginał z drugiej wersji.' };
+    const d = fixture({ edit: plan => {
+      const alternative = structuredClone(plan); active(alternative); receipt(alternative);
+      plan.nativeConflicts = [{ record: alternative, operations: [{ id: 'fictional-alternate-operation' }] }]; plan.syncNeedsReview = true;
+    }, overrides: { getPatientNote: vi.fn(async () => structuredClone(original)) } }); await settle();
+    const alternative = d.host.querySelectorAll('.vcp-native-conflict-version')[1];
+    alternative.open = true; alternative.dispatch('toggle'); button(alternative, 'Otwórz dokument').click(); await settle();
+    expect(d.host.textContent).toContain(original.body); expect(d.vault.getPatientNote).toHaveBeenCalledWith(original.id);
+    expect(d.host.querySelector('.vcp-record')).toBeTruthy();
+    button(d.host, '← Wróć do planu').click();
+    expect(d.host.querySelectorAll('.vcp-native-conflict-version')[1].open).toBe(true);
+    expect(d.vault.mutateStagedCarePlan).not.toHaveBeenCalled(); d.controller.destroy();
+  });
+  it.each(['fact', 'association'])('does not present a changed ordinary document as its captured %s version', async relation => {
+    const changed = { id: 'fictional-document', patientId: 'fictional-staged-patient', rev: 1, category: 'observation', title: 'Fikcyjny zmieniony dokument', body: 'Fikcyjna późniejsza treść z drugiego urządzenia.' };
+    const d = fixture({ edit: plan => {
+      if (relation === 'fact') receipt(plan);
+      else plan.careContext.associations.push({ id: 'fictional-association', stepId: 'step-a', kind: 'document', noteId: changed.id,
+        sourceRecordRevAtCapture: 0, operationId: 'fictional-association-operation', recordedAtISO: clinicalDay + 'T12:00:00.000Z' });
+    }, overrides: { getPatientNote: vi.fn(async () => structuredClone(changed)) } }); await settle();
+    const before = JSON.stringify(d.plan); button(d.host, relation === 'fact' ? 'Otwórz dokument' : 'Otwórz wpis').click(); await settle();
+    expect(d.host.textContent).toContain('Dokument został zmieniony po powiązaniu z planem.');
+    expect(d.host.textContent).toContain('nie przechowuje jej treści');
+    expect(d.host.textContent).not.toContain(changed.body);
+    expect(d.host.querySelector('.vcp-record-body')).toBeNull();
+    expect(d.vault.getPatientNote).toHaveBeenCalledWith(changed.id);
+    expect(d.vault.mutateStagedCarePlan).not.toHaveBeenCalled(); expect(JSON.stringify(d.plan)).toBe(before); d.controller.destroy();
+  });
+  it('blocks writes when a portable review marker arrives without its readable alternatives', async () => {
+    const d = fixture({ edit: plan => { plan.syncNeedsReview = true; plan.nativeConflicts = []; } }); await settle();
+    expect(d.host.textContent).toContain('Nie można wyświetlić wszystkich zachowanych wersji.');
+    expect(button(d.host, 'Uruchom pierwszy etap')).toBeUndefined();
+    expect(button(d.host, 'Zamknij plan')).toBeUndefined(); expect(d.vault.mutateStagedCarePlan).not.toHaveBeenCalled(); d.controller.destroy();
+  });
+
   it.each(['', '2026-02-31', '2999-01-01'])('requires a valid explicit activation date (%s)', async date => {
     const d = fixture(); await settle(); button(d.host, 'Uruchom pierwszy etap').click(); const form = formOf(d);
     expect(field(form, 'Data uruchomienia etapu').value).toBe(''); field(form, 'Data uruchomienia etapu').value = date; form.dispatch('submit'); await settle();

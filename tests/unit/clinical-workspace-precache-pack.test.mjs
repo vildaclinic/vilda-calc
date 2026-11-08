@@ -9,7 +9,11 @@ const SW_SOURCE = fs.readFileSync(path.join(ROOT, 'service-worker-kalorii.js'), 
 const MANIFEST = JSON.parse(fs.readFileSync(path.join(ROOT, 'runtime/clinical-workspace-v1/manifest.json'), 'utf8'));
 const PACK_BYTES = fs.readFileSync(path.join(ROOT, MANIFEST.precachePack.path));
 const PACK_URL = '/' + MANIFEST.precachePack.path;
-const MODULE_URLS = MANIFEST.files.map(file => '/' + file.path);
+const HISTORICAL_FILES = MANIFEST.historicalFiles || [];
+const PACK_FILES = MANIFEST.files.concat(HISTORICAL_FILES);
+// The source list remains append-only: historical addresses precede the new graph.
+const MODULE_FILES = HISTORICAL_FILES.concat(MANIFEST.files);
+const MODULE_URLS = MODULE_FILES.map(file => '/' + file.path);
 const MODULES = new Set(MODULE_URLS);
 const digest = bytes => createHash('sha256').update(bytes).digest('hex');
 
@@ -76,11 +80,14 @@ describe('clinical workspace immutable precache transport', () => {
     const { sw } = worker();
     expect(sw.CLINICAL_WORKSPACE_PRECACHE_PACK).toEqual({
       url: PACK_URL, sha256: MANIFEST.precachePack.sha256,
-      files: MANIFEST.files.map(file => ({ url: '/' + file.path, sha256: file.sha256 })),
+      files: PACK_FILES.map(file => ({ url: '/' + file.path, sha256: file.sha256 })),
     });
     expect(digest(PACK_BYTES)).toBe(MANIFEST.precachePack.sha256);
     expect(PACK_BYTES.length).toBe(MANIFEST.precachePack.byteLength);
-    expect(MODULE_URLS).toHaveLength(49);
+    expect(MANIFEST.files).toHaveLength(51);
+    expect(HISTORICAL_FILES).toHaveLength(49);
+    expect(MODULE_URLS).toHaveLength(100);
+    expect(HISTORICAL_FILES.every(file => file.path.startsWith('runtime/clinical-workspace-v1/37562593af68/'))).toBe(true);
     for (const url of MODULE_URLS) expect(sw.INSTALL_CORE_URLS).toContain(url);
     expect(sw.INSTALL_CORE_URLS).not.toContain(PACK_URL);
   });
@@ -96,7 +103,7 @@ describe('clinical workspace immutable precache transport', () => {
     expect(writes.filter(url => MODULES.has(url))).toEqual(MODULE_URLS);
     const cache = await caches.open(sw.SHELL_CACHE);
     expect(await cache.match(PACK_URL)).toBeUndefined();
-    for (const file of MANIFEST.files) {
+    for (const file of MODULE_FILES) {
       const response = await sw.readFromShellCache(new Request('https://vilda.test' + scope + file.path));
       const original = fs.readFileSync(path.join(ROOT, file.path));
       expect(response, file.path).toBeDefined();
@@ -114,7 +121,7 @@ describe('clinical workspace immutable precache transport', () => {
     await installEvent();
     expect(requests.filter(request => request.url.endsWith(PACK_URL))).toHaveLength(2);
     const cached = await sw.readFromShellCache(new Request('https://vilda.test' + MODULE_URLS[0]));
-    expect(Buffer.from(await cached.arrayBuffer())).toEqual(fs.readFileSync(path.join(ROOT, MANIFEST.files[0].path)));
+    expect(Buffer.from(await cached.arrayBuffer())).toEqual(fs.readFileSync(path.join(ROOT, MODULE_FILES[0].path)));
   });
 
   it.each(['network', '503', 'truncated', 'changed bytes', 'redirected'])('rejects install.waitUntil before the first module write on %s', async failure => {
