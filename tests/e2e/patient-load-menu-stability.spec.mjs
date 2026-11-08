@@ -25,6 +25,18 @@ function expectNeutralPending(control) {
   // Presentation must not replace the native disabled/guard contract.
 }
 
+async function waitForSavedPaint(page, width) {
+  const selector = width < 992 ? '#vildaHeaderSaveStatus'
+    : 'aside.sidebar-v2 .sidebar-inner [data-menu-save-status]';
+  // Observe the real UI first: the test must not retire Loading by polling a
+  // native presentation getter before the application has painted Saved.
+  await page.waitForFunction(target => {
+    const status = document.querySelector(target);
+    return status && !status.hidden && status.getClientRects().length > 0
+      && status.getAttribute('data-save-state') === 'saved';
+  }, selector, { polling: 100 });
+}
+
 for (const width of [1440, 390]) {
   for (const choice of ['restore', 'new']) {
     test(`${width}px: native ${choice} patient selection keeps one truthful loading presentation`, async ({ page, context }, testInfo) => {
@@ -34,12 +46,12 @@ for (const width of [1440, 390]) {
       // both entry routes then use the same native patient-card load owner.
       const fixture = await createPatientLoadMenuFixture(page, { entry: width < 992 ? 'docpro' : 'start' });
       const cdp = await context.newCDPSession(page);
-      await cdp.send('Emulation.setCPUThrottlingRate', { rate: 4 });
       const statusKey = width < 992 ? 'header:status' : 'desktop:status';
       const prefix = width < 992 ? 'drawer:' : 'desktop:';
       let primaryError, samples, owner, after;
       try {
-        owner = await openPatientLoadChoice(page, 'Fikcyjny Beata', { observe: true });
+        owner = await openPatientLoadChoice(page, 'Fikcyjny Beata', { observe: true,
+          beforeLoad: () => cdp.send('Emulation.setCPUThrottlingRate', { rate: 4 }) });
         await expect(page).toHaveURL(/#\/start$/u);
         // The first accepted load already changed the selected patient. Waiting
         // for the user's choice must not briefly advertise Saved or no data.
@@ -53,6 +65,7 @@ for (const width of [1440, 390]) {
         expect(chooserPaint.controls[prefix + 'save'].ariaDisabled).toBe('true');
         expect(chooserPaint.controls[prefix + 'clear'].nativeDisabled).toBe(true);
         await choosePatientLoadMode(owner, choice);
+        await waitForSavedPaint(page, width);
         await waitForPatientLoadReady(owner, fixture.ids.b);
         const menu = await visibleChromeMenu(page);
         await expect(menu.locator('[data-menu-save-status]')).toHaveAttribute('data-save-state', 'saved');
@@ -73,8 +86,9 @@ for (const width of [1440, 390]) {
         }
         expect(await owner.evaluate(ids => Promise.all(ids.map(id => window.VildaVault.getPatient(id))), fixture.recordIds))
           .toEqual(fixture.records);
-        const begin = samples.events.find(event => event.type === 'vilda:patient-load-presentation'
-          && event.presentation?.state === 'loading');
+        // A is already settled before observation. The first native lifecycle
+        // event therefore marks the accepted B load; recording it reads no API.
+        const begin = samples.events.find(event => event.type === 'vilda:patient-load-presentation');
         expect(begin, 'the real accepted-load boundary was observed').toBeTruthy();
         const click = samples.events.find(event => event.type === 'click'
           && event.target === (choice === 'new' ? 'vildaLcmNew' : 'vildaLcmRestore'));
@@ -92,7 +106,6 @@ for (const width of [1440, 390]) {
             expect(frame.owner.patientId).toBe(fixture.ids.b);
             expect(frame.owner.indicatorReady).toBe(true);
             expect(frame.owner.cachedState).toBe('saved');
-            expect(frame.owner.presentation).toBeNull();
             reachedSaved = true;
           } else {
             expect(reachedSaved, 'loading must not restart after the final Saved paint').toBe(false);
@@ -106,6 +119,12 @@ for (const width of [1440, 390]) {
         }
         expect(loadingFrames).toBeGreaterThan(0);
         expect(reachedSaved).toBe(true);
+        const savedTransitions = samples.savedTransitions.filter(transition => transition.at >= begin.at);
+        expect(savedTransitions).toHaveLength(1);
+        expect(savedTransitions[0].at).toBeGreaterThanOrEqual(click.at);
+        expect(savedTransitions[0].patientId).toBe(fixture.ids.b);
+        expect(savedTransitions[0].decision).toMatchObject({ ready: true, state: 'saved' });
+        expect(savedTransitions[0].presentation).toBeNull();
       } catch (error) {
         primaryError = error;
       } finally {
@@ -134,6 +153,7 @@ test('Escape ends the native choice, and a real edit still warns before Clear', 
   // selected with the native default New measurement state.
   await owner.locator('#vildaLcmNew').press('Escape');
   await expect(owner.locator('#vildaLoadChoiceModal')).toHaveCount(0);
+  await waitForSavedPaint(page, 1440);
   await waitForPatientLoadReady(owner, fixture.ids.b);
   const menu = await visibleChromeMenu(page);
   await expect(menu.locator('[data-menu-save-status]')).toHaveAttribute('data-save-state', 'saved');

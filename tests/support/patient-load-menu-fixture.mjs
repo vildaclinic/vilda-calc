@@ -7,14 +7,14 @@ import { visibleChromeMenu } from './chrome-menu-fixture.mjs';
 export async function installPatientLoadMenuProbe(page) {
   await page.addInitScript(() => {
     if (window !== window.top) return;
-    const probe = window.__patientLoadMenuProbe = { running: false, frames: [], events: [] };
-    function control(node) {
+    const probe = window.__patientLoadMenuProbe = { running: false, frames: [], events: [], savedTransitions: [] };
+    function control(node, styleFor) {
       if (!node) return null;
-      const rect = node.getBoundingClientRect(), css = getComputedStyle(node);
+      const rect = node.getBoundingClientRect(), css = styleFor(node);
       let visible = rect.width > 0 && rect.height > 0 && rect.right > 0 && rect.bottom > 0
         && rect.left < innerWidth && rect.top < innerHeight;
       for (let parent = node; parent; parent = parent.parentElement) {
-        const style = getComputedStyle(parent);
+        const style = styleFor(parent);
         if (parent.hidden || style.display === 'none' || style.visibility === 'hidden'
           || Number(style.opacity) === 0) visible = false;
       }
@@ -29,37 +29,64 @@ export async function installPatientLoadMenuProbe(page) {
     }
     probe.read = () => {
       const iframe = document.querySelector('iframe.app-pane:not([hidden])'), owner = iframe?.contentWindow;
+      // Shared ancestors are read once within this paint sample, never cached
+      // across frames. Every control keeps the same visibility/style checks.
+      const styles = new Map();
+      const styleFor = node => {
+        if (!styles.has(node)) styles.set(node, getComputedStyle(node));
+        return styles.get(node);
+      };
       const controls = {};
       for (const [prefix, selector] of [['desktop', 'aside.sidebar-v2 .sidebar-inner'], ['drawer', '.chrome-drawer-body']]) {
         const menu = document.querySelector(selector);
         for (const [key, target] of [['save', '.chrome-menu-save'], ['documents', '.chrome-menu-documents'],
           ['clear', '[data-menu-clear]'], ['status', '[data-menu-save-status]']]) {
-          controls[`${prefix}:${key}`] = control(menu?.querySelector(target));
+          controls[`${prefix}:${key}`] = control(menu?.querySelector(target), styleFor);
         }
       }
-      controls['header:status'] = control(document.getElementById('vildaHeaderSaveStatus'));
+      controls['header:status'] = control(document.getElementById('vildaHeaderSaveStatus'), styleFor);
       return {
         at: performance.now(), route: location.hash, controls,
         viewportWidth: innerWidth, scrollWidth: document.documentElement.scrollWidth,
         owner: owner ? {
           patientId: owner.sessionStorage.getItem('vildaCurrentPatientId'),
-          presentation: owner.VildaDataImportExport?.getPatientLoadPresentation?.() ?? null,
           cachedState: owner.VildaSaveStatusIndicator?.getState?.(),
           indicatorReady: owner.VildaSaveStatusIndicator?.isReadyForSharedReference?.(),
-          mainPending: owner.VildaDataImportExport?.isMainSessionRestorePending?.(),
-          saveReady: owner.VildaDataImportExport?.getSaveReadiness?.().ready,
         } : null,
       };
     };
-    probe.start = () => { probe.frames = []; probe.events = []; probe.running = true; return probe.read(); };
+    let previousPaintState;
+    const recordSavedTransition = sample => {
+      const status = sample.controls[innerWidth < 992 ? 'header:status' : 'desktop:status'];
+      if (status?.state === 'saved' && previousPaintState !== 'saved') {
+        const owner = document.querySelector('iframe.app-pane:not([hidden])')?.contentWindow;
+        // The actual UI must reach Saved first. A fresh decision verifies that
+        // transition; the per-paint observer never drives presentation retirement.
+        probe.savedTransitions.push({ at: sample.at, patientId: sample.owner?.patientId,
+          decision: owner?.VildaSaveStatusIndicator?.getCurrentDecision?.(),
+          presentation: owner?.VildaDataImportExport?.getPatientLoadPresentation?.() ?? null });
+      }
+      previousPaintState = status?.state;
+    };
+    probe.start = () => {
+      probe.frames = []; probe.events = []; probe.savedTransitions = [];
+      previousPaintState = undefined; probe.running = true;
+      return probe.read();
+    };
     probe.stop = () => {
       probe.running = false;
-      const result = { frames: probe.frames, events: probe.events, final: probe.read() };
+      const final = probe.read();
+      recordSavedTransition(final);
+      const result = { frames: probe.frames, events: probe.events, savedTransitions: probe.savedTransitions, final };
       probe.detach?.(); probe.detach = null;
       return result;
     };
     function frame() {
-      if (probe.running) probe.frames.push(probe.read());
+      if (probe.running) {
+        const sample = probe.read();
+        probe.frames.push(sample);
+        recordSavedTransition(sample);
+      }
       requestAnimationFrame(frame);
     }
     requestAnimationFrame(frame);
@@ -83,16 +110,19 @@ export async function waitForPatientLoadReady(owner, patientId) {
     && !window.VildaDataImportExport.isMainSessionRestorePending()
     && !window.__vildaPersistRestoring && !window.__vildaLustroWpis
     && window.VildaSaveStatusIndicator.getCurrentDecision().ready
-    && window.VildaDataImportExport.getPatientLoadPresentation() === null, patientId);
+    && window.VildaDataImportExport.getPatientLoadPresentation() === null, patientId, { polling: 100 });
 }
 
-export async function openPatientLoadChoice(page, name, { observe = false } = {}) {
+export async function openPatientLoadChoice(page, name, { observe = false, beforeLoad } = {}) {
   const menu = await visibleChromeMenu(page);
   await menu.getByRole('button', { name: 'Baza pacjentów', exact: true }).click();
   const owner = await shellFrame(page, 'Start');
   await expect(owner.locator('.vilda-patient-database')).toBeVisible();
   await owner.locator('.pt-row', { hasText: name }).locator('.pt-row-open').click();
   await expect.poll(() => owner.evaluate(() => window.VildaSaveStatusIndicator.getCurrentDecision().ready)).toBe(true);
+  // CPU throttling belongs to the measured native Load/chooser operation, not
+  // to unrelated database/card preparation that precedes the observation.
+  await beforeLoad?.();
   if (observe) {
     await owner.evaluate(() => {
       const probe = window.top.__patientLoadMenuProbe;
@@ -104,7 +134,6 @@ export async function openPatientLoadChoice(page, name, { observe = false } = {}
         probe.events.push({
           at: window.top.performance.now(), type: event.type, trusted: event.isTrusted,
           target: mode?.id || null,
-          presentation: window.VildaDataImportExport.getPatientLoadPresentation(),
           patientId: sessionStorage.getItem('vildaCurrentPatientId'),
         });
       };
