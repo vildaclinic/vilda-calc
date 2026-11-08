@@ -40,7 +40,7 @@ Modele i interfejs znajdują się w czytelnych plikach `vilda_care_template_mode
 
 Integracja sejfu jest przypięta do bazowego commita `c8d8442e26ac870fc5764408be8e81976eddde3b` (#905). Odczyt listy kont zachowuje dotychczasową semantykę podczas równoczesnego usuwania konta. Dokończenie przerwanego usuwania korzysta z tej samej kontroli chronionego zapisu co jawne usunięcie; nie omija ochrony zachowanej dokumentacji.
 
-Pierwsze pokazanie logowania po odświeżeniu nie czyści stanu formularza. Jawny powrót do logowania oraz blokada już otwartej sesji zachowują dotychczasowe czyszczenie. To rozróżnienie nie zależy od kolejności ładowania modułów.
+Pierwsze pokazanie logowania bez danych pacjenta nie uruchamia zbędnego czyszczenia formularza. Nieudane odtworzenie sesji chmurowej lub zachowanych danych pacjenta, jawny powrót do logowania oraz blokada już otwartej sesji zachowują czyszczenie. Potrzeba czyszczenia jest sprawdzana przed odtworzeniem, również wtedy, gdy odtworzenie usuwa wygasły klucz i znacznik trybu chmurowego.
 
 Instalacja offline pobiera moduły w jednym archiwum transportowym i sprawdza jego skrót oraz każdy moduł przed zapisem w pamięci. Moduły zachowują oryginalne adresy i treść. Limit liczby pobrań instalacji pozostaje bez zmian.
 
