@@ -1546,3 +1546,66 @@ describe('zapis sesji innego konta przy „Usuń konto”', () => {
     expect(o.win.sessionStorage.getItem(SESJA), 'zapis sesji po usunięciu').toBe(null);
   }, 30_000);
 });
+
+// ── Start ekranu logowania bez sesji: wycinek cyklu startu Ei (jak auth-boot-readiness.test.mjs) z prawdziwym ekranem
+// startowym me z wycinka ekranLogowania. Reset stanu aplikacji (qa „show-startup” na początku me) idzie od razu po
+// tryRestoreSession(), w tej samej chwili co przed banerem startu; odczyt getStatus() nie opóźnia go (na index.html
+// opóźnienie przenosiło czyszczenie danych za wczytanie vilda_data_import_export.js — ok. 2,5 s blokady zapisów).
+function startBezSesji(w, status) {
+  const src = zrodlo('vilda_auth_ui.js');
+  const od = src.indexOf('var authBootReady=false;');
+  const doUo = src.indexOf('function uo(', od);
+  if (od < 0 || doUo < 0) throw new Error('vilda_auth_ui.js: brak cyklu startu ekranu logowania');
+  let przywroc;
+  const przywracanie = new Promise((r) => { przywroc = r; });
+  const sejfStartu = { onLock() {}, onUnlock() {}, tryRestoreSession: () => przywracanie, getStatus: status };
+  const okno = { document: { dispatchEvent() {} }, CustomEvent: class { constructor(t, o) { this.type = t; this.detail = o && o.detail; } } };
+  const nic = () => {};
+  const api = new Function('i', 'jt', 'Ya', 'Xi', 'Aa', '$t', 'Io', 'me', 'ma', 'Ot', 'Bkr_sluchaj', 'Bkr_banerStartu',
+    `let Ni=false;${src.slice(od, doUo)};return {boot:Ei};`)(
+    okno, () => sejfStartu, () => true, nic, nic, nic, () => false, w.me, nic, nic, nic, w.Bkr_banerStartu,
+  );
+  return { boot: api.boot, przywroc };
+}
+
+describe('start ekranu logowania bez sesji (vilda_auth_ui.js, Ei)', () => {
+  it('UK51 (a): getStatus() wstrzymany — reset stanu aplikacji (qa „show-startup”) od razu po tryRestoreSession() false; „Witamy” z banerem dopiero po odczycie stanu', async () => {
+    const w = ekranLogowania();
+    let stan;
+    const s = startBezSesji(w, () => new Promise((r) => { stan = r; }));
+    const boot = s.boot();
+    s.przywroc(false);
+    await chwila();
+    expect({ qa: w.wywolania.qa, ekrany: w.ekrany.length }, 'przed odczytem stanu sejfu').toEqual({ qa: ['show-startup'], ekrany: 0 });
+    stan({ state: 'no-users', userCount: 0, currentUser: null, lockReason: 'user-removed-elsewhere' });
+    await boot;
+    expect(w.ekrany.map(w.opis)).toEqual([{ klasa: 'vilda-auth-startup', banery: [TEKST_BANERA], konta: [] }]);
+  });
+
+  it('UK51 (b): getStatus() odrzucony albo rzuca — „Witamy” bez banera, start kończy się bez błędu', async () => {
+    for (const status of [() => Promise.reject(new Error('Fikcyjny błąd odczytu stanu')), () => { throw new Error('Fikcyjny błąd'); }]) {
+      const w = ekranLogowania();
+      const s = startBezSesji(w, status);
+      const boot = s.boot();
+      s.przywroc(false);
+      await boot;
+      expect({ qa: w.wywolania.qa, ekrany: w.ekrany.map(w.opis) }).toEqual({ qa: ['show-startup'], ekrany: [{ klasa: 'vilda-auth-startup', banery: [], konta: [] }] });
+    }
+  });
+
+  it('UK51 (c): me() z napisem (blokada) rysuje jak dotąd; z obietnicą napisu — reset stanu od razu, rysowanie po jej rozstrzygnięciu', async () => {
+    const w = ekranLogowania();
+    await w.me(TEKST_BANERA);
+    let baner;
+    const p = w.me(new Promise((r) => { baner = r; }));
+    expect(w.wywolania.qa).toEqual(['show-startup', 'show-startup']);
+    await chwila();
+    expect(w.ekrany.length).toBe(1);
+    baner(undefined);
+    await p;
+    expect(w.ekrany.map(w.opis)).toEqual([
+      { klasa: 'vilda-auth-startup', banery: [TEKST_BANERA], konta: [] },
+      { klasa: 'vilda-auth-startup', banery: [], konta: [] },
+    ]);
+  });
+});
