@@ -14,6 +14,7 @@ function harness({ patientId = 'fictional-a', locked = true, bootReady = false, 
       removeEventListener(type, callback) { listeners.get(type)?.delete(callback); },
       dispatchEvent(event) { [...(listeners.get(event.type) || [])].forEach(callback => callback(event)); return true; },
       count(type) { return listeners.get(type)?.size || 0; },
+      callbacks(type) { return [...(listeners.get(type) || [])]; },
     };
   };
   const document = { ...events(), readyState: 'complete',
@@ -51,6 +52,12 @@ function harness({ patientId = 'fictional-a', locked = true, bootReady = false, 
   };
   new Function('window', 'globalThis', 'setTimeout', 'clearTimeout',
     fs.readFileSync('vilda_data_import_export.js', 'utf8'))(win, win, win.setTimeout, win.clearTimeout);
+  // Presentation subscribes once for the document lifetime, before any restore
+  // operation. Cleanup must preserve these exact callbacks, not just their count.
+  const initialClearListeners = {
+    document: document.callbacks('vilda:user-state-cleared'),
+    window: win.callbacks('vilda:user-state-cleared'),
+  };
   const api = win.VildaDataImportExport;
   api.initMainSessionPersistence({
     vildaAppOnReady: (_name, callback) => ready.push(callback),
@@ -64,7 +71,7 @@ function harness({ patientId = 'fictional-a', locked = true, bootReady = false, 
   const tick = () => {
     const callbacks = [...timers.values()]; timers.clear(); callbacks.forEach(callback => callback());
   };
-  return { win, api, applied, writes, sharedSignals, original, frames, timers, unlockListeners, lockListeners, frame, tick,
+  return { win, api, applied, writes, sharedSignals, original, frames, timers, unlockListeners, lockListeners, frame, tick, initialClearListeners,
     summaries: () => summaries, session: () => session, replaceSession: value => { session = value; }, owner: value => { owner = value; },
     start: () => { ready.forEach(callback => callback()); frame(); frame(); },
     unlock: () => { unlocked = true; unlockListeners.forEach(callback => callback({ trigger: 'restore' })); },
@@ -77,11 +84,42 @@ const pending = h => h.api.isMainSessionRestorePending();
 const clean = h => {
   expect(h.win.document.count('vilda:auth-boot-settled')).toBe(0);
   expect(h.win.document.count('vilda:patient-loaded')).toBe(0);
-  expect(h.win.document.count('vilda:user-state-cleared')).toBe(0);
+  expect(h.win.document.callbacks('vilda:user-state-cleared')).toEqual(h.initialClearListeners.document);
+  expect(h.win.callbacks('vilda:user-state-cleared')).toEqual(h.initialClearListeners.window);
   expect(h.win.count('pageshow')).toBe(0);
 };
 
 describe('Saved main session waits for the owner authentication boot to finish', () => {
+  it('removes each cancelled/resumed operation callback while preserving the original presentation listeners', () => {
+    const h = harness();
+    expect(h.initialClearListeners.document).toHaveLength(1);
+    expect(h.initialClearListeners.window).toHaveLength(1);
+    const pendingCallbacks = () => {
+      const result = {};
+      for (const [name, target] of [['document', h.win.document], ['window', h.win]]) {
+        const callbacks = target.callbacks('vilda:user-state-cleared');
+        expect(callbacks).toEqual(expect.arrayContaining(h.initialClearListeners[name]));
+        result[name] = callbacks.filter(callback => !h.initialClearListeners[name].includes(callback));
+        expect(result[name]).toHaveLength(1);
+      }
+      expect(h.win.document.count('vilda:auth-boot-settled')).toBe(1);
+      expect(h.win.document.count('vilda:patient-loaded')).toBe(1);
+      expect(h.win.count('pageshow')).toBe(1);
+      return result;
+    };
+    h.start(); const first = pendingCallbacks();
+    h.win.document.dispatchEvent({ type: 'vilda:user-state-cleared' });
+    expect(pending(h)).toBe(false); clean(h);
+    expect(h.win.vildaSession.restore()).toBe(false);
+    const second = pendingCallbacks();
+    expect(second.document[0]).not.toBe(first.document[0]);
+    expect(second.window[0]).not.toBe(first.window[0]);
+    h.unlock(); h.settle(); h.frame();
+    expect(h.applied).toHaveLength(1); clean(h);
+    h.unlock(); h.settle(); h.frame();
+    expect(h.applied).toHaveLength(1); clean(h);
+  });
+
   it('session application is quiet while an explicit patient load and restore still notify other panels', () => {
     const h = harness({ locked: false, bootReady: true });
     expect(h.api.applyLoadedData(h.original, { isSessionRestore: true })).toBe(true);

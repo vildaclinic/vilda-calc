@@ -1160,3 +1160,193 @@ describe('accepted explicit patient load retains its exact caller-owned source t
     expect(h.main()).toEqual(before); expect(h.writes).not.toHaveBeenCalled();
   });
 });
+
+// Presentation exercises the same native accepted apply and real panel tickets
+// as the carry tests above. The indicator is a controlled publication boundary;
+// its comparison callback must not run while the operation/choice is pending.
+describe('native patient-load menu presentation', () => {
+  function setup({ shell = false, choose = true, beforeIdentity = null, afterIdentity = null } = {}) {
+    const h = environment(record(), { shell });
+    let ready = false, state = 'saved', decisionState = 'saved', ticket = null;
+    const decision = vi.fn(() => ({ ready, state: decisionState }));
+    h.win.VildaSaveStatusIndicator = { isReadyForSharedReference: () => ready,
+      getState: () => state, getCurrentDecision: decision };
+    const notifications = [];
+    h.win.document.addEventListener('vilda:patient-load-presentation', event => notifications.push(event));
+    if (beforeIdentity) h.win.document.addEventListener('vilda:patient-loaded', () => beforeIdentity(h));
+    h.win.document.addEventListener('vilda:patient-loaded', event => {
+      h.storage.set('vildaCurrentPatientId', event.detail.patientId);
+      if (choose) ticket = h.api.capturePatientLoadChoicePresentation(event.detail);
+      if (afterIdentity) afterIdentity(h);
+    });
+    const target = 'fictional-presentation-target', payload = record(); payload.name = 'Fikcyjny Nowy Cel';
+    const apply = () => {
+      const intent = h.api.captureAcceptedPatientLoad({ patientId: target });
+      return h.api.runAcceptedPatientLoad(intent, payload, {
+        apply: value => h.api.applyLoadedData(value, h.options),
+        publish: detail => h.win.document.dispatchEvent(new h.win.CustomEvent('vilda:patient-loaded', {
+          detail: { ...detail, patientId: target, source: 'pick' },
+        })),
+      });
+    };
+    return { ...h, apply, decision, notifications, ticket: () => ticket, view: () => h.api.getPatientLoadPresentation(),
+      finish: () => h.api.finishPatientLoadChoicePresentation(ticket),
+      ready(value, published = state, current = published) { ready = value; state = published; decisionState = current; },
+    };
+  }
+
+  it('does not invent load ownership from unready state, captured intent or a forged event', () => {
+    const h = setup();
+    expect(h.view()).toBeNull();
+    h.api.captureAcceptedPatientLoad({ patientId: 'fictional-next' });
+    expect(h.api.capturePatientLoadChoicePresentation({ patientId: 'fictional-next', acceptedLoadAuthority: {} })).toBeNull();
+    expect(h.view()).toBeNull(); expect(h.decision).not.toHaveBeenCalled();
+  });
+
+  it('holds one neutral presentation through choice and releases once without changing model/reference', () => {
+    const h = setup(); expect(h.apply()).toBe(true); expect(h.ticket()).not.toBeNull();
+    const main = h.main(), fields = [...h.fields.values()].map(field => field.value), storage = [...h.storage];
+    const writes = vi.spyOn(h.persistence, 'writeMainSession');
+    h.ready(true);
+    for (let i = 0; i < 20; i++) expect(h.view()).toEqual({ state: 'loading' });
+    expect(h.decision).not.toHaveBeenCalled(); h.finish(); expect(h.view()).toBeNull();
+    expect(h.decision).toHaveBeenCalledTimes(1);
+    h.ready(false); h.finish(); expect(h.view()).toBeNull();
+    expect(h.decision).toHaveBeenCalledTimes(1); expect(writes).not.toHaveBeenCalled();
+    expect(h.main()).toEqual(main); expect([...h.fields.values()].map(field => field.value)).toEqual(fields);
+    expect([...h.storage]).toEqual(storage); expect(h.vault.savePatient).not.toHaveBeenCalled();
+    expect(h.notifications.length).toBeGreaterThan(0);
+    expect(h.notifications.every(event => event.detail === undefined)).toBe(true);
+  });
+
+  it('survives the actual panel→Documents refresh→PID setter→chooser publication order', () => {
+    const observed = [];
+    const h = setup({ beforeIdentity(value) {
+      // The real panel has consumed this event already, but custom-fixes has
+      // not published the target PID. Documents synchronously refreshes Chrome.
+      expect(value.storage.get('vildaCurrentPatientId')).toBe(PID);
+      observed.push(value.api.getPatientLoadPresentation());
+    } });
+    expect(h.apply()).toBe(true); expect(observed).toEqual([null]);
+    expect(h.ticket()).not.toBeNull(); h.ready(true);
+    expect(h.view()).toEqual({ state: 'loading' }); expect(h.decision).not.toHaveBeenCalled();
+    h.finish(); expect(h.view()).toBeNull();
+  });
+
+  it.each(['key', 'foreign-pid', 'publication-error'])('still retires after %s inside the exact publication boundary', cause => {
+    const h = setup({ beforeIdentity(value) {
+      expect(value.api.getPatientLoadPresentation()).toBeNull();
+      if (cause === 'key') value.rotateSession();
+    }, afterIdentity(value) {
+      if (cause === 'foreign-pid') value.storage.set('vildaCurrentPatientId', 'fictional-foreign-published');
+      if (cause === 'publication-error') throw new Error('fictional publication listener failure');
+    } });
+    expect(h.apply()).toBe(false); expect(h.view()).toBeNull();
+    h.finish(); h.ready(false); expect(h.view()).toBeNull();
+    expect(h.vault.savePatient).not.toHaveBeenCalled();
+  });
+
+  it('waits for real publication and does not release cached Saved over fresh Dirty', () => {
+    const h = setup(); expect(h.apply()).toBe(true); h.finish();
+    for (let i = 0; i < 20; i++) expect(h.view()).toEqual({ state: 'loading' });
+    expect(h.decision).not.toHaveBeenCalled();
+    h.ready(true, 'saved', 'dirty'); expect(h.view()).toEqual({ state: 'loading' });
+    h.ready(true, 'dirty'); expect(h.view()).toBeNull();
+  });
+
+  it('covers the existing queued restore-button callback and completes its exact local native restore', () => {
+    const h = setup(); expect(h.apply()).toBe(true);
+    const handlers = {}, button = h.field('restoreStateBtn');
+    button.addEventListener = (type, callback) => { handlers[type] = callback; };
+    h.fields.set('restoreStateBtn', button); h.api.initRestoreStateButton();
+    const queued = []; h.win.setTimeout = callback => { queued.push(callback); return queued.length; };
+    h.win.__vildaLoadInFlightUntil = Date.now() + 1000; h.ready(true);
+    const sequence = h.api.getApplyLoadedDataSequence();
+    h.api.runPatientLoadChoiceRestorePresentation(h.ticket(), () => handlers.click({ preventDefault() {} }));
+    expect(queued).toHaveLength(1); expect(h.view()).toEqual({ state: 'loading' });
+    expect(h.decision).not.toHaveBeenCalled();
+    h.win.__vildaLoadInFlightUntil = 0; h.ready(false); queued.shift()();
+    expect(h.api.getApplyLoadedDataSequence()).toBe(sequence);
+    expect(h.fields.get('weight').value).toBe('46'); expect(h.view()).toEqual({ state: 'loading' });
+    h.ready(true); expect(h.view()).toBeNull();
+    h.ready(false); h.finish(); expect(h.view()).toBeNull();
+  });
+
+  it.each(['account', 'key', 'patient', 'apply', 'intent', 'document', 'adapter', 'panel', 'guest', 'lock', 'edit', 'clear', 'activation'])(
+    'retires permanently on %s without reading the form or trusting an old choice', cause => {
+      const h = setup({ shell: cause === 'activation' }); expect(h.apply()).toBe(true);
+      if (cause === 'account') h.changeAccount();
+      if (cause === 'key') h.rotateSession();
+      if (cause === 'patient') h.storage.set('vildaCurrentPatientId', 'fictional-other-patient');
+      if (cause === 'apply') h.api.applyLoadedData(record(), h.options);
+      if (cause === 'intent') h.api.captureAcceptedPatientLoad({ patientId: 'fictional-next' });
+      if (cause === 'document') h.win.document = { ...h.win.document };
+      if (cause === 'adapter') h.win.VildaPersistence = { ...h.persistence };
+      if (cause === 'panel') h.win.VildaPanelPacjent.invalidateWriteAuthority();
+      if (cause === 'guest') h.win.VildaAuthUI.isGuestMode = () => true;
+      if (cause === 'lock') h.vault.isUnlocked = () => false;
+      if (cause === 'edit') h.win.document.dispatchEvent({ type: 'input', isTrusted: true });
+      if (cause === 'clear') h.win.document.dispatchEvent({ type: 'vilda:user-state-cleared' });
+      if (cause === 'activation') { h.host.shell.navigate('start'); h.host.shell.navigate('docpro'); }
+      expect(h.view()).toBeNull(); h.finish(); h.ready(false); expect(h.view()).toBeNull();
+      expect(h.decision).not.toHaveBeenCalled();
+    },
+  );
+
+  it('a synthetic input does not cancel native hydration, while a real edit exposes Dirty', () => {
+    const h = setup(); expect(h.apply()).toBe(true);
+    h.win.document.dispatchEvent({ type: 'input', isTrusted: false }); expect(h.view()).toEqual({ state: 'loading' });
+    h.win.document.dispatchEvent({ type: 'change', isTrusted: true }); h.ready(true, 'dirty');
+    expect(h.view()).toBeNull(); h.finish(); expect(h.view()).toBeNull();
+  });
+
+  it('failed native publication retires loading and cannot be rearmed by a later status', () => {
+    const h = setup(), token = h.api.captureAcceptedPatientLoad({ patientId: 'fictional-refused' });
+    expect(h.api.runAcceptedPatientLoad(token, record(), {
+      apply: value => h.api.applyLoadedData(value, h.options), publish() { throw new Error('fictional publication failure'); },
+    })).toBe(false);
+    expect(h.view()).toBeNull(); h.ready(false); expect(h.view()).toBeNull();
+  });
+
+  it.each(['error', 'saving'])('published %s retires the completed presentation', state => {
+    const h = setup(); expect(h.apply()).toBe(true); h.finish(); h.ready(true, state, 'saved');
+    expect(h.view()).toBeNull(); h.ready(false); expect(h.view()).toBeNull();
+  });
+
+  it('a stale choice wrapper keeps native callback semantics but cannot revive its old presentation', () => {
+    const h = setup(); expect(h.apply()).toBe(true); h.finish(); h.ready(true); expect(h.view()).toBeNull();
+    const callback = vi.fn(() => 17); h.ready(false);
+    expect(h.api.runPatientLoadChoiceRestorePresentation(h.ticket(), callback)).toBe(17);
+    expect(callback).toHaveBeenCalledOnce(); expect(h.view()).toBeNull();
+  });
+
+  it('consumes a New/dismiss ticket even while publication is still pending', () => {
+    const h = setup(); expect(h.apply()).toBe(true); h.finish();
+    const callback = vi.fn(); h.api.runPatientLoadChoiceRestorePresentation(h.ticket(), callback);
+    h.ready(true); expect(h.view()).toBeNull(); expect(callback).toHaveBeenCalledOnce();
+  });
+
+  it('a missing native restore handler cannot leave queued loading forever', () => {
+    const h = setup(); expect(h.apply()).toBe(true);
+    h.api.runPatientLoadChoiceRestorePresentation(h.ticket(), () => {});
+    expect(h.view()).toBeNull(); h.ready(false); expect(h.view()).toBeNull();
+  });
+
+  it.each(['failed', 'throwing'])('a %s intake restoration retires loading without changing native readiness', cause => {
+    const h = setup(); expect(h.apply()).toBe(true);
+    h.win.vildaGetIntakeRestoreReadiness = () => {
+      if (cause === 'throwing') throw new Error('fictional readiness failure');
+      return { pending: false, failed: true };
+    };
+    expect(h.view()).toBeNull(); expect(h.decision).not.toHaveBeenCalled();
+    expect(h.api.getSaveReadiness()).toMatchObject({ ready: false, reason: 'intake-restore-failed' });
+  });
+
+  it('keeps legacy callbacks intact and retires a thrown restore callback', () => {
+    const h = setup(); expect(h.apply()).toBe(true);
+    expect(() => h.api.runPatientLoadChoiceRestorePresentation(h.ticket(), () => {
+      throw new Error('fictional native callback failure');
+    })).toThrow('fictional native callback failure');
+    expect(h.view()).toBeNull();
+  });
+});

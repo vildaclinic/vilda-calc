@@ -19,7 +19,7 @@
  *   bo i tak chcemy zwracać HTML z cache natychmiast.
  */
 
-const SW_VERSION = '1.1.486';
+const SW_VERSION = '1.1.487';
 const CACHE_PREFIX = 'pwa-kalorii';
 const SHELL_CACHE = `${CACHE_PREFIX}-shell-v${SW_VERSION}`;
 const RUNTIME_CACHE = `${CACHE_PREFIX}-runtime`;
@@ -1837,6 +1837,7 @@ const CORE_SHELL_URLS = [
   '/vilda_chrome.js?v=256',
   '/vilda_chrome.js?v=257',
   '/vilda_chrome.js?v=258',
+  '/vilda_chrome.js?v=259',
   '/vilda_realtime.js?v=1',
   '/vilda_realtime.js?v=2',
   '/vilda_realtime.js?v=3',
@@ -2053,6 +2054,7 @@ const CORE_SHELL_URLS = [
   '/vilda_chrome.css?v=55',
   '/vilda_chrome.css?v=56',
   '/vilda_chrome.css?v=57',
+  '/vilda_chrome.css?v=58',
   '/vilda_auth_ui.css',
   '/vilda_auth_ui.css?v=9',
   '/vilda_auth_ui.css?v=10',
@@ -3436,6 +3438,7 @@ const OPTIONAL_ASSETS = [
   '/custom-fixes.js?v=78',
   '/custom-fixes.js?v=79',
   '/custom-fixes.js?v=80',
+  '/custom-fixes.js?v=81',
   '/reposition.js?v=7',
   '/vilda_klawiatura.js?v=1',
   '/vilda_klawiatura.js?v=2',
@@ -3777,6 +3780,7 @@ const OPTIONAL_ASSETS = [
   '/vilda_data_import_export.js?v=119',
   '/vilda_data_import_export.js?v=120',
   '/vilda_data_import_export.js?v=121',
+  '/vilda_data_import_export.js?v=122',
   '/vilda_baseline_pacjenta.js?v=1',
   '/vilda_baseline_pacjenta.js?v=2',
   '/vilda_baseline_pacjenta.js?v=3',

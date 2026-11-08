@@ -1975,6 +1975,19 @@ html.vilda-phone .chrome-drawer .chrome-menu-clear-button:is([aria-disabled=true
 .vilda-header-menu .chrome-menu-actions [data-menu-preparing=true] {
   cursor: progress
 }
+/* One neutral phase covers the accepted load and its New/Restore choice.
+   This affects paint only; native disabled states and action guards remain. */
+body.vilda-header-menu .chrome-menu-actions :is(.chrome-menu-save,.chrome-menu-documents,.chrome-menu-clear-button)[data-menu-load-pending=true] {
+  background: #e6eeee!important;
+  border-color: #d5e0e0!important;
+  color: #71888b!important;
+  opacity: 1;
+  filter: none;
+  cursor: progress
+}
+body.vilda-header-menu .chrome-menu-actions [data-menu-load-pending=true] svg {
+  color: inherit
+}
 .chrome-menu-actions [aria-busy=true] {
   cursor: progress
 }
@@ -3009,6 +3022,12 @@ html.vilda-phone body.vilda-header-menu .chrome-header-search {
 .vilda-header-menu :is(.chrome-menu-save-status,.chrome-header-save-status)[data-save-state=error] {
   background: #fbeded!important;
   color: #a83943!important
+}
+.vilda-header-menu :is(.chrome-menu-save-status,.chrome-header-save-status)[data-save-state=loading] {
+  background: #edf1f2!important;
+  color: #6b7c82!important;
+  opacity: 1;
+  cursor: progress
 }
 @media(min-width:992px) {
   html:not(.vilda-phone) .vilda-header-menu .chrome-strip {
