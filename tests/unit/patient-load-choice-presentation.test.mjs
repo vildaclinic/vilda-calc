@@ -111,18 +111,17 @@ function environment({ controls = true, visible = true, presentation = true, tic
   function load(value = detail) { document.dispatchEvent(new CustomEvent('vilda:patient-loaded', { detail: value })); }
   return { win, document, store, ticket, api, capture, finish, runRestore, payload, row, restore, restored,
     originalConfirm, order, choices, detail, timers, load,
-    open() { load(); expect(timers).toHaveLength(1); timers.shift()(); return document.getElementById('vildaLoadChoiceModal'); },
+    open() { load(); const deferred = !dix || !presentation || !ticketAccepted; expect(timers).toHaveLength(deferred ? 1 : 0); if(deferred)timers.shift()(); return document.getElementById('vildaLoadChoiceModal'); },
     click(id) { const control = document.getElementById(id); expect(control, `missing production control ${id}`).not.toBeNull(); control.click(); },
   };
 }
 
 describe('actual native visit chooser presentation lifecycle', () => {
-  it('captures the exact native detail synchronously before the queued chooser opens', () => {
+  it('mounts the exact accepted native choice in the publication task before queued background work', () => {
     const h = environment(); h.load();
     expect(h.capture).toHaveBeenCalledExactlyOnceWith(h.detail);
-    expect(h.document.getElementById('vildaLoadChoiceModal')).toBeNull();
-    expect(h.timers).toHaveLength(1); expect(h.finish).not.toHaveBeenCalled();
-    h.timers.shift()();
+    expect(h.timers).toHaveLength(0); expect(h.finish).not.toHaveBeenCalled();
+    expect(h.api._ensureCurrentMeasurementInHistory).not.toHaveBeenCalled();
     expect(h.document.getElementById('vildaLoadChoiceModal')).not.toBeNull();
     expect(h.finish).not.toHaveBeenCalled();
     expect(h.store.get('vildaCurrentPatientId')).toBe(PATIENT);
