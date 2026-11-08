@@ -541,9 +541,9 @@
            (P-PANEL-ZWINIETY, decyzja właściciela 2026-09-16: formularz główny identyczny). -->
       <div class="vild-age-row">
         <label class="vild-age-years">Wiek (lata):
-          <input type="number" id="age" min="0" max="130" oninput="debouncedUpdate()" required></label>
+          <input type="number" id="age" min="0" max="130" oninput="if (typeof debouncedUpdate === 'function') debouncedUpdate()" required></label>
         <label>Wiek (miesiące):
-          <input type="number" id="ageMonths" min="0" max="11" step="1" oninput="debouncedUpdate()"></label>
+          <input type="number" id="ageMonths" min="0" max="11" step="1" oninput="if (typeof debouncedUpdate === 'function') debouncedUpdate()"></label>
       </div>
       <!-- DOB-AGE-2 (decyzja właściciela 2026-09-13): wiek w ukończonych tygodniach.
            Wiersz pokazuje się TYLKO poniżej 3. miesiąca życia, bo wyżej miesiąc jest
@@ -558,7 +558,7 @@
         <div id="ageWeeksError" class="vild-dob-error" role="alert" hidden></div>
       </div>
       <label>Płeć:
-        <select id="sex" onchange="debouncedUpdate()">
+        <select id="sex" onchange="if (typeof debouncedUpdate === 'function') debouncedUpdate()">
           <option value="M">Mężczyzna</option>
           <option value="F">Kobieta</option>
         </select></label>
@@ -596,7 +596,7 @@
            dotąd robiła to w karcie zaawansowanej (updateAdvancedGrowthSexSpecificFields). -->
       <div id="testicularVolumeWrap">
         <label>Objętość jąder <span style="font-weight:400;opacity:0.65;">(chłopcy; pomiar dodatkowy, nie zastępuje oceny G)</span>:
-          <select id="advTesticularVolume" onchange="debouncedUpdate()">
+          <select id="advTesticularVolume" onchange="if (typeof debouncedUpdate === 'function') debouncedUpdate()">
             <option value="">Wybierz</option>
             <option value="lt4">&lt;4 ml</option>
             <option value="4to6">4–6 ml</option>
@@ -606,25 +606,25 @@
       </div>
       <div id="pubertyExtraWrap">
         <label>Wiek startu pokwitania (lata) <span style="font-weight:400;opacity:0.65;">(według wywiadu i badania)</span>:
-          <input type="number" id="pubertyOnsetAge" min="2" max="20" step="0.1" inputmode="decimal" oninput="debouncedUpdate()"></label>
+          <input type="number" id="pubertyOnsetAge" min="2" max="20" step="0.1" inputmode="decimal" oninput="if (typeof debouncedUpdate === 'function') debouncedUpdate()"></label>
         <label>Wiek menarche (lata) <span style="font-weight:400;opacity:0.65;">(dziewczęta)</span>:
-          <input type="number" id="pubertyMenarcheAge" min="2" max="20" step="0.1" inputmode="decimal" oninput="debouncedUpdate()"></label>
+          <input type="number" id="pubertyMenarcheAge" min="2" max="20" step="0.1" inputmode="decimal" oninput="if (typeof debouncedUpdate === 'function') debouncedUpdate()"></label>
         <!-- GROWTH-PRED-TW2B: wzrost w chwili pierwszej miesiączki — fakt trwały (sekcja `puberty`
              rekordu, pole heightAtMenarcheCm). Zasila pseudometodę „wzrost przy menarche / 0,955"
              w konsensusie prognozy wzrostu ostatecznego (Singleton 1975, Cho 2026). -->
         <label>Wzrost przy menarche (cm) <span style="font-weight:400;opacity:0.65;">(dziewczęta; wzrost w chwili pierwszej miesiączki — do prognozy wzrostu ostatecznego)</span>:
-          <input type="number" id="pubertyMenarcheHeight" min="80" max="200" step="0.1" inputmode="decimal" oninput="debouncedUpdate()"></label>
+          <input type="number" id="pubertyMenarcheHeight" min="80" max="200" step="0.1" inputmode="decimal" oninput="if (typeof debouncedUpdate === 'function') debouncedUpdate()"></label>
         <!-- GROWTH-PRED-TW2C: wiek kostny (GP) z RTG wykonanego przy menarche — fakt trwały (sekcja `puberty`,
              pole boneAgeAtMenarcheYears). Korekta Cho 2026 w pseudometodzie „wzrost przy menarche / 0,955":
              +3,1 cm na rok wieku kostnego poniżej 13 lat; bez pola korekta tylko z bieżącego RTG przy
              menarche ≤ 12 mies. temu. -->
         <label>Wiek kostny przy menarche (lata) <span style="font-weight:400;opacity:0.65;">(dziewczęta; z RTG wykonanego w okolicy pierwszej miesiączki — korekta prognozy wzrostu ostatecznego)</span>:
-          <input type="number" id="pubertyMenarcheBoneAge" min="2" max="20" step="0.1" inputmode="decimal" oninput="debouncedUpdate()"></label>
+          <input type="number" id="pubertyMenarcheBoneAge" min="2" max="20" step="0.1" inputmode="decimal" oninput="if (typeof debouncedUpdate === 'function') debouncedUpdate()"></label>
         <!-- GROWTH-PRED-PUB1: leczenie GnRHa — fakt trwały (sekcja `puberty`: gnrhaStatus, gnrhaStartAgeYears,
              gnrhaStopAgeYears). W trakcie leczenia tempo pokwitania nie jest oceniane, a prognoza rezydualnego
              wzrostu jest nierzetelna (Lazar 2007). -->
         <label>Leczenie analogiem GnRH <span style="font-weight:400;opacity:0.65;">(hamowanie pokwitania)</span>:
-          <select id="pubertyGnrhaStatus" onchange="debouncedUpdate()">
+          <select id="pubertyGnrhaStatus" onchange="if (typeof debouncedUpdate === 'function') debouncedUpdate()">
             <option value="">— nie pytano —</option>
             <option value="brak">nie leczono</option>
             <option value="w-trakcie">w trakcie leczenia</option>
@@ -632,12 +632,12 @@
           </select></label>
         <div id="pubertyGnrhaAgesWrap" style="display:none;">
           <label>Wiek rozpoczęcia GnRHa (lata):
-            <input type="number" id="pubertyGnrhaStartAge" min="2" max="20" step="0.1" inputmode="decimal" oninput="debouncedUpdate()"></label>
+            <input type="number" id="pubertyGnrhaStartAge" min="2" max="20" step="0.1" inputmode="decimal" oninput="if (typeof debouncedUpdate === 'function') debouncedUpdate()"></label>
           <label>Wiek zakończenia GnRHa (lata) <span style="font-weight:400;opacity:0.65;">(gdy zakończone)</span>:
-            <input type="number" id="pubertyGnrhaStopAge" min="2" max="20" step="0.1" inputmode="decimal" oninput="debouncedUpdate()"></label>
+            <input type="number" id="pubertyGnrhaStopAge" min="2" max="20" step="0.1" inputmode="decimal" oninput="if (typeof debouncedUpdate === 'function') debouncedUpdate()"></label>
         </div>
         <label>Czy uważasz tego pacjenta za KOWD? <span style="font-weight:400;opacity:0.65;">(konstytucjonalne opóźnienie wzrastania i dojrzewania)</span>:
-          <select id="pubertyCdgp" onchange="debouncedUpdate()">
+          <select id="pubertyCdgp" onchange="if (typeof debouncedUpdate === 'function') debouncedUpdate()">
             <option value="">— nie pytano —</option>
             <option value="tak">tak</option>
             <option value="nie">nie</option>
@@ -650,10 +650,10 @@
       <script defer src="inline_index_02.js?v=14"></script>
       <label>Waga (kg):
         <!-- Dostosowujemy zakres do niemowląt: mniejsza waga i możliwość wpisywania wartości z dokładnością do 0.1 kg -->
-        <input type="number" id="weight" min="2" max="300" step="0.1" oninput="debouncedUpdate()" required></label>
+        <input type="number" id="weight" min="2" max="300" step="0.1" oninput="if (typeof debouncedUpdate === 'function') debouncedUpdate()" required></label>
       <label>Wzrost (cm):
         <!-- Dostosowujemy zakres do niemowląt: niższy wzrost i możliwość wpisywania wartości z dokładnością do 0.1 cm -->
-        <input type="number" id="height" min="45" max="250" step="0.1" oninput="debouncedUpdate()" required></label>
+        <input type="number" id="height" min="45" max="250" step="0.1" oninput="if (typeof debouncedUpdate === 'function') debouncedUpdate()" required></label>
         <!-- Komunikat informujący o wczytaniu danych. Jest domyślnie ukryty, a pojawia się dopiero po
              prawidłowym wczytaniu pliku JSON. Umieszczamy go tuż pod polem wzrostu,
              zgodnie z wymaganiami użytkownika, aby znajdował się pomiędzy polem wzrost
@@ -2848,10 +2848,10 @@
         Sugerujemy ocenę <strong>WHR</strong>, aby sprawdzić rozmieszczenie tkanki tłuszczowej.</div>
       <div class="flex" style="gap:0.75rem;margin-top:0.5rem;">
         <label style="flex:1 1 160px;">Obwód talii (cm):
-          <input type="number" id="waistCm" min="30" max="200" step="0.1" oninput="debouncedUpdate()">
+          <input type="number" id="waistCm" min="30" max="200" step="0.1" oninput="if (typeof debouncedUpdate === 'function') debouncedUpdate()">
         </label>
         <label style="flex:1 1 160px;">Obwód bioder (cm):
-          <input type="number" id="hipCm" min="30" max="200" step="0.1" oninput="debouncedUpdate()">
+          <input type="number" id="hipCm" min="30" max="200" step="0.1" oninput="if (typeof debouncedUpdate === 'function') debouncedUpdate()">
         </label>
       </div>
     

@@ -36,9 +36,10 @@ const ENCRYPT = {
   chmura: [3, 2, 2, 1, 2, 1, 1, 1, 2, 2, 2, 0, 1, 0, 0, 0],
   jednorazowo: [2, 2, 2, 1, 2, 1, 1, 1, 2, 2, 2, 0, 1, 0, 0, 0],
 };
+// Każdy chroniony zapis sprawdza rzeczywisty marker routingu; tworzenie karty także odczytuje listę.
 // IDBFactory.prototype.databases na krok: w kroku usunięcia konta sprawdzenie biblioteki szablonów i — poza trybem
 // jednorazowym — lista baz przy kasowaniu kolejki.
-const DATABASES = Object.fromEntries(TRYBY.map((t) => [t, KROKI.map((k) => (k === 'usunięcie konta' ? (t === 'jednorazowo' ? 1 : 2) : 0))]));
+const DATABASES = Object.fromEntries(TRYBY.map((t) => [t, KROKI.map((k) => (k === 'usunięcie konta' ? (t === 'jednorazowo' ? 2 : 3) : k === 'karta' ? 2 : ['wersja', 'kosz', 'przywróć', 'notatka', 'szablon', 'lista', 'druga karta', 'scal pacjentów', 'trzecia karta', 'usuń pacjenta'].includes(k) ? 1 : 0))]));
 // LockManager.prototype.request z nazwą vilda-sync*: tylko w kroku usunięcia konta, wyłączna, poza trybem jednorazowym.
 const BLOKADY = Object.fromEntries(TRYBY.map((t) => [t, KROKI.map((k) => (k === 'usunięcie konta' && t !== 'jednorazowo' ? ['exclusive'] : []))]));
 const KARTA = { name: 'Testowy Jan', user: { lastName: 'Testowy', firstName: 'Jan', sex: 'M', height: 120, weight: 22, dobISO: '2016-03-12' } };

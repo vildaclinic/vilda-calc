@@ -34,13 +34,17 @@ const licznikiZmiennych = new Map();
 let pobraniaWersjonowane = [];
 
 function createE2eServiceWorker(source, wersja) {
+  // The production pack guard requires every authenticated module in CORE.
+  // Keep that exact block while trimming unrelated shell assets for these tests.
+  const clinicalWorkspace = source.match(/  \/\/ BEGIN CLINICAL WORKSPACE PRECACHE V1[\s\S]*?  \/\/ END CLINICAL WORKSPACE PRECACHE V1/);
+  if (!clinicalWorkspace) throw new Error('Test service worker requires the complete clinical workspace precache block.');
   const zWersja = wersja && /^[0-9A-Za-z.-]{1,32}$/.test(wersja)
     ? source.replace(/const SW_VERSION = '[^']*';/, `const SW_VERSION = '${wersja}';`)
     : source;
   return zWersja
     .replace(
       /const CORE_SHELL_URLS = \[[\s\S]*?\n\];/,
-      "const CORE_SHELL_URLS = [ROOT_DOCUMENT, '/manifest.json', '/style.css'];"
+      "const CORE_SHELL_URLS = [\n  ROOT_DOCUMENT,\n  '/manifest.json',\n  '/style.css',\n" + clinicalWorkspace[0] + '\n];'
     )
     .replace(
       /const OPTIONAL_DOCUMENTS = \[[\s\S]*?\n\];/,
