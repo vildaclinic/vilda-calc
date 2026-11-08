@@ -113,11 +113,15 @@ describe('P-CHMURA-OPIS: przywrócona karta z nieważnym kluczem sesji', () => {
     expect(jawne(B)).toEqual([]);
   });
 
-  it('tryb zwykły bez konta w magazynie: bez zmian — zdjęty tylko klucz sesji', async () => {
+  // P-USUN-KONTO-KARTY (E2-PR3a1c): karta, której konta nie ma w magazynie, zapamiętuje w sessionStorage znacznik karty
+  // (tylko identyfikator konta) — ekran logowania pokazuje wtedy baner „Konto zostało usunięte z tej przeglądarki.”.
+  it('tryb zwykły bez konta w magazynie: zdjęty klucz sesji, dochodzi znacznik karty z identyfikatorem konta', async () => {
     const { B, kopia, odtworzona } = await przywroconaKarta({ chmurowy: false, poTerminie: false, bezKonta: true });
     expect(odtworzona).toBe(false);
-    const oczekiwane = Object.keys(kopia).filter((k) => k !== 'vilda-vault-session-v2').sort();
+    const oczekiwane = [...Object.keys(kopia).filter((k) => k !== 'vilda-vault-session-v2'), 'vilda-vault-removed-v1'].sort();
     expect(B.sessionStorage.klucze().sort()).toEqual(oczekiwane);
+    const { userId } = JSON.parse(kopia['vilda-vault-session-v2']);
+    expect(JSON.parse(B.sessionStorage.getItem('vilda-vault-removed-v1')), 'znacznik karty').toEqual({ v: 1, userId });
   });
 
   it('tryb zwykły po terminie: bez zmian — zdjęty tylko klucz sesji', async () => {

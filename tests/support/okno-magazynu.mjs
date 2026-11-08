@@ -29,7 +29,8 @@
 //       wspólny localStorage; domyślnie nowy; 'osobny' — osobny widok localStorage na okno, rozsyłanie zapisów
 //       i zdarzenia storage między oknami: niżej), databases (false — window.indexedDB okna bez databases(), ta sama
 //       atrapa), zdarzenia (true — prawdziwy cel zdarzeń okna: niżej; domyślnie addEventListener i dispatchEvent okna
-//       nic nie robią).
+//       nic nie robią), pola (obiekt — pola okna ustawione przed załadowaniem skryptów, ostatnie: nadpisują pola
+//       uprzęży o tej samej nazwie; drugieOkno ich nie dziedziczy).
 //   drugieOkno(o, opcje) → Promise<o2> — nowe okno na tej samej atrapie z kontami o.A / o.B (bez tworzenia kont); dzieli
 //       z o atrapę IndexedDB, atrapę Web Locks (o.locks; okno bez navigator.locks daje drugie też bez), localStorage
 //       (o.lokalny), listę skryptów (o.skrypty) i rodzinę okien (szyna BroadcastChannel, rozsyłanie zapisów localStorage),
@@ -342,6 +343,7 @@ export async function oknoMagazynu(opcje = {}) {
       replace: (adres) => { zamiany.push(String(adres)); },
     };
   }
+  if (opcje.pola) Object.assign(dodatki, opcje.pola);
   const skrypty = opcje.skrypty || SKRYPTY_SEJFU;
   const o0 = okno({ ctx, krypto: { ...krypto, crypto: { ...krypto.crypto, subtle } }, dodatki, skrypty, locks: opcje.locks });
   fasada.cel.dziennik = o0.dziennik;

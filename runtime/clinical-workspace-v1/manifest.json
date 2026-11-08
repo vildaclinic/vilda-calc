@@ -1,12 +1,18 @@
 {
   "namespace": "vilda-clinical-workspace-runtime",
   "version": 1,
-  "baseVaultSHA256": "30164e9e75c200bbbe58d31ff7b4a1dc15ca64176a5afe9d64419df7d2fbfc1a",
-  "sourceFragmentSHA256": "2abd2e187bca6b3a91291f6705bc36b4d1015752d06fc5f77d60cc78272f12fc",
-  "fragmentSHA256": "f43aaa52a0d309402782ba8e9538d82ed90ff4ee78a87e0996f856b7bda2cfd9",
+  "baseVaultSHA256": "efc11c97a5c8e0e7ffadaae9dd8e828a9344264ad4e9517c8abb47aca683c603",
+  "sourceFragmentSHA256": "e8ccf8b3dad42d531e2266e572fa98a499b37291bb1579bd91cbd54865bface8",
+  "fragmentSHA256": "8e9c0020385fe968f8471d0f05befc4ba56ea6b09a3afd5dc48b75aa1ef291e5",
   "moduleTreeSHA256": "37562593af68f18bfe2e5c68f7bfe4eb29d687700aa375be26554ae892741442",
-  "integratedVaultSHA256": "945c92ab994cbb9121d8d9a0565d5e8b1bb464476bdbd5996e79a0cc6e92e8f6",
+  "integratedVaultSHA256": "c03a46ec37c6a1627d852c460107d870e80185193befe7b2bfb04d2c384ef1ed",
   "nativeHooks": [
+    {
+      "before": "return PatientCheckpointRemoveUser(uid, '');",
+      "after": "return $s.removeUser(uid, '');",
+      "beforeSHA256": "29071975e367fb8d6ba5e0ea8e52d9ce9a4152cdee59901b74ca54d51fb2455f",
+      "afterSHA256": "d29b9759ce7b128f9e7c7ce894286026202259125445efcc30f1f57b3b67ef31"
+    },
     {
       "before": "function I(){return $t||",
       "after": "function I(){const PatientWorkspaceSelectedAdapter=PatientWorkspaceAdapter();if(PatientWorkspaceSelectedAdapter)return PatientWorkspaceSelectedAdapter;return $t||",

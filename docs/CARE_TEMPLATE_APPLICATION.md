@@ -38,6 +38,8 @@ Modele i interfejs znajdują się w czytelnych plikach `vilda_care_template_mode
 
 `tools/build-clinical-workspace-runtime.mjs` w repozytorium źródeł składa przypięty artefakt sejfu z czytelnym modułem integracji. `runtime/clinical-workspace-v1/manifest.json` zawiera skróty kompletu modułów oraz sejfu przed i po integracji. Publiczny `tools/check_clinical_workspace_boundary.mjs` sprawdza odwrócenie dokładnych zmian do bieżącej wersji bazowej, bajt w bajt. Nie nadaje nowych uprawnień staremu zapisowi V2 ani nie zmienia wcześniejszych zabezpieczeń formatu.
 
+Integracja sejfu jest przypięta do bazowego commita `c8d8442e26ac870fc5764408be8e81976eddde3b` (#905). Odczyt listy kont zachowuje dotychczasową semantykę podczas równoczesnego usuwania konta. Dokończenie przerwanego usuwania korzysta z tej samej kontroli chronionego zapisu co jawne usunięcie; nie omija ochrony zachowanej dokumentacji.
+
 Instalacja offline pobiera moduły w jednym archiwum transportowym i sprawdza jego skrót oraz każdy moduł przed zapisem w pamięci. Moduły zachowują oryginalne adresy i treść. Limit liczby pobrań instalacji pozostaje bez zmian.
 
 Testy obejmują modele etapów, UI i nawigację, rzeczywiste transakcje IndexedDB, lokalny silnik usługi oraz przeglądarkowy przebieg na fikcyjnych kontach. Dokładny zestaw wyników i SHA wydania zapisuje opis PR. Obliczenia, normy i interpretacje kliniczne nie są zmieniane przez tę funkcję.

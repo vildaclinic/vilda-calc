@@ -1,10 +1,12 @@
-// P-DZIENNIK-ZDARZEN (E2-PR2b, E2-PR3a1) — kolejka zmian jest uśpiona: zwykła praca z sejfem w prawdziwej przeglądarce
+// P-DZIENNIK-ZDARZEN (E2-PR2b, E2-PR3a1, E2-PR3a1c) — kolejka zmian jest uśpiona: zwykła praca z sejfem w prawdziwej przeglądarce
 // przy zamkniętej bramce nie otwiera i nie tworzy bazy kolejki (vilda_sync_<userId>), nie szyfruje zdarzeń, nie zapisuje
 // ani nie usuwa kluczy vilda-sync-* w localStorage (identyfikator urządzenia, znacznik ponowienia kasowania) i nie wysyła
 // żądań. Jedyny skutek E2-PR3a1 przy zamkniętej bramce to sprzątanie po koncie poza trybem „Zaloguj jednorazowo”:
 // w removeUser jedna lista baz (databases()) więcej (bez listy baz — deleteDatabase nieistniejącej bazy kolejki, bez
 // otwarcia), blokada Web Locks vilda-sync-db:<userId> (wyłączna) i odczyty localStorage (znacznik ponowienia
 // i identyfikator urządzenia konta), a przy założeniu konta i odblokowaniu — przegląd kluczy localStorage (ponowienie).
+// Od E2-PR3a1c (P-USUN-KONTO-KARTY) w removeUser poza trybem „Zaloguj jednorazowo” jeszcze jedna lista baz (sprawdzenie
+// bazy dziennika dostępu konta i bazy ustawień eksportu).
 // W trybie „Zaloguj jednorazowo” sprzątanie po koncie nie sięga do IndexedDB, localStorage ani Web Locks: ślad jak na
 // sejfie bez kasowania kolejki.
 // Bieżący vilda_vault.js na stronie-uprzęży z serwera testów; skrypt startowy strony (przed skryptami sejfu) liczy na
@@ -16,8 +18,8 @@
 // bez navigator.locks (strażnik regresji jak wyżej) oraz strona z elementem o id VILDA_EVENT_LOG (pole okna wskazuje
 // element, a nie wartość true — bramka zostaje zamknięta: dopisanie i operacje kwarantanny odmawiają, podsumowanie
 // wyniku zastosowania zdarzenia jako funkcja czysta działa). Literały kroków (ENCRYPT, DATABASES) zmierzone w Chromium
-// na sejfie bez kasowania kolejki; DATABASES w kroku usunięcia konta = pomiar + 1 poza trybem „Zaloguj jednorazowo”
-// (w nim = pomiar). Dane wyłącznie fikcyjne.
+// na sejfie bez kasowania kolejki; DATABASES w kroku usunięcia konta = pomiar + 2 poza trybem „Zaloguj jednorazowo”
+// (kasowanie kolejki i sprzątanie po koncie z E2-PR3a1c; w nim = pomiar). Dane wyłącznie fikcyjne.
 import { expect, test } from '@playwright/test';
 
 const PAGE = '/__fikcyjny-dziennik-zdarzen-uspienie.html';
@@ -39,7 +41,8 @@ const ENCRYPT = {
 // Każdy chroniony zapis sprawdza rzeczywisty marker routingu; tworzenie karty także odczytuje listę.
 // IDBFactory.prototype.databases na krok: w kroku usunięcia konta sprawdzenie biblioteki szablonów i — poza trybem
 // jednorazowym — lista baz przy kasowaniu kolejki.
-const DATABASES = Object.fromEntries(TRYBY.map((t) => [t, KROKI.map((k) => (k === 'usunięcie konta' ? (t === 'jednorazowo' ? 2 : 3) : k === 'karta' ? 2 : ['wersja', 'kosz', 'przywróć', 'notatka', 'szablon', 'lista', 'druga karta', 'scal pacjentów', 'trzecia karta', 'usuń pacjenta'].includes(k) ? 1 : 0))]));
+const DATABASES = Object.fromEntries(TRYBY.map((t) => [t, KROKI.map((k) => (k === 'usunięcie konta' ? (t === 'jednorazowo' ? 2 : 4) : k === 'karta' ? 2 : ['wersja', 'kosz', 'przywróć', 'notatka', 'szablon', 'lista', 'druga karta', 'scal pacjentów', 'trzecia karta', 'usuń pacjenta'].includes(k) ? 1 : 0))]));
+
 // LockManager.prototype.request z nazwą vilda-sync*: tylko w kroku usunięcia konta, wyłączna, poza trybem jednorazowym.
 const BLOKADY = Object.fromEntries(TRYBY.map((t) => [t, KROKI.map((k) => (k === 'usunięcie konta' && t !== 'jednorazowo' ? ['exclusive'] : []))]));
 const KARTA = { name: 'Testowy Jan', user: { lastName: 'Testowy', firstName: 'Jan', sex: 'M', height: 120, weight: 22, dobISO: '2016-03-12' } };

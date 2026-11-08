@@ -6,11 +6,12 @@ import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
-const BASE = '30164e9e75c200bbbe58d31ff7b4a1dc15ca64176a5afe9d64419df7d2fbfc1a';
+const BASE = 'efc11c97a5c8e0e7ffadaae9dd8e828a9344264ad4e9517c8abb47aca683c603';
 const START = '/* BEGIN VILDA CLINICAL WORKSPACE NATIVE V1 */\n';
 const END = '/* END VILDA CLINICAL WORKSPACE NATIVE V1 */\n';
 const digest = value => createHash('sha256').update(value).digest('hex');
 const EXPECTED_HOOKS = [
+  ["return PatientCheckpointRemoveUser(uid, '');", "return $s.removeUser(uid, '');"],
   ['function I(){return $t||', 'function I(){const PatientWorkspaceSelectedAdapter=PatientWorkspaceAdapter();if(PatientWorkspaceSelectedAdapter)return PatientWorkspaceSelectedAdapter;return $t||'],
   ['function PatientClinicalSelectionFor(account) {\n', 'function PatientClinicalSelectionFor(account) {\n  const workspace = PatientWorkspaceSelection(account); if (workspace) return workspace;\n'],
   ["if (route.mode === 'legacy') return;", "if (route.mode === 'legacy' || route.mode === 'protected-workspace') return;"],
