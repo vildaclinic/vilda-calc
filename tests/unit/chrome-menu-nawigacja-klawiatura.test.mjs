@@ -35,7 +35,7 @@ function events(target) {
   };
   return target;
 }
-function environment(nativeInert = true) {
+function environment(nativeInert = true, beforeBind) {
   const observers = [];
   let doc;
   class Element {
@@ -96,6 +96,7 @@ function environment(nativeInert = true) {
   const tip = vi.fn(), syncButtons = vi.fn();
   const api = new Function('r', 'o', 'Qdm', 'B', 'F', '_e', 'te', 'le',
     `var K=false,O=false,h=null,M=null,de={};${menuDependencies}${menuSource}${drawerSource}${actionSource}${headerSource}${navigationSource}${overlaySource};return {open:nt,close:ee,bind:tt,bindActions:et,bindMenu:Cm_bindMenuControls,openPatient:Cm_openMenuPatient,navigate:Pt,isOverlayOpen:he,bindHeader:Ch_bindHeader,refreshSearch:Ch_refreshSearch,openSearch:Ch_openSearch,saveSource:Ch_saveSource,clearContext:Cm_clearContext,clearCurrent:Cm_clearCurrent,refreshClear:Cm_refreshClear};`)(win, doc, syncButtons, () => {}, tip, () => {}, () => {}, () => {});
+  if (beforeBind) beforeBind({ win, doc, main, header, Element });
   api.bind(header);
   return { win, doc, header, trigger, avatar, account, main, input, frame, drawer, panel, close, last, api, tip, observers, Element,
     backgroundBootListeners: bootListenerCounts({ win, doc }) };
@@ -166,6 +167,171 @@ function clearMenuEnvironment({ live = 'dirty', clcr = false } = {}) {
   const button = text => h.doc.querySelectorAll('button').find(item => item.textContent === text);
   return { ...h, state, name, native, reset, menuClear, dialog, button };
 }
+
+function startupMenuEnvironment({ patient = 'fictional-refresh-patient', key = true, page = 'index.html', hash = '' } = {}) {
+  const state = { patient, key, boot: false, unlocked: false, user: 'fictional-refresh-account',
+    token: 0, outcome: null, ready: false, cached: 'hidden', decision: 'saved', intakeFailed: false };
+  const locks = [], statuses = [], token = {}, decision = vi.fn(() => ({ ready: state.ready, state: state.decision }));
+  const h = environment(true, ({ win, doc, main, Element }) => {
+    Object.assign(win.location, { pathname: '/' + page, hash, href: 'https://fikcyjne.invalid/' + page + hash });
+    if (page === 'app.html') main.appendChild(new Element('div')).setAttribute('id', 'appPanes');
+    win.sessionStorage = { getItem: name => name === 'vildaCurrentPatientId' ? state.patient : null };
+    win.VildaSession = { hasSessionKey: () => state.key, isLoggedIn: () => state.unlocked };
+    win.VildaAuthUI = { isBootReady: () => state.boot };
+    win.VildaVault = {
+      isUnlocked: () => state.unlocked, getCurrentUser: () => state.unlocked ? { userId: state.user } : null,
+      captureSyncOperationSession: () => token,
+      assertSyncOperationSession: current => { if (current !== token || state.token !== 0) throw new Error('Fictional owner changed'); },
+      onLock: callback => locks.push(callback), onUnlock() {},
+    };
+    win.VildaDataImportExport = { getInitialMainSessionRestoreState: () => state.outcome,
+      getPatientLoadPresentation: () => null, isMainSessionRestorePending: () => state.outcome === null };
+    win.VildaSaveStatusIndicator = { getState: () => state.cached, getCurrentDecision: decision,
+      isReadyForSharedReference: () => state.ready, _buildTitleAttr: value => value };
+    win.vildaGetIntakeRestoreReadiness = () => ({ pending: false, failed: state.intakeFailed });
+    win.collectUserData = vi.fn(); win.calcEstimatedIntake = vi.fn();
+    for (const header of [false, true]) {
+      const button = main.appendChild(new Element('button')); button.setAttribute('data-menu-save-status', '');
+      if (header) button.setAttribute('data-header-save-status', '');
+      const label = button.appendChild(new Element('span')); label.setAttribute('data-menu-save-label', '');
+      statuses.push({ button, label });
+    }
+    doc.readyState = 'loading';
+  });
+  const paint = () => h.api.bindHeader();
+  const finish = (value = 'saved') => {
+    Object.assign(state, { boot: true, unlocked: true, ready: true, outcome: { ready: true, reason: 'restored' }, cached: value, decision: value });
+    h.doc.readyState = 'complete'; paint();
+  };
+  return { ...h, state, statuses, locks, decision, paint, finish };
+}
+
+describe('Chrome: the first document restores its selected patient without an empty-state flash', () => {
+  it('keeps Loading through the shell default Start normalization, but not a different route', () => {
+    const h = startupMenuEnvironment({ page: 'app.html' });
+    expect(h.statuses[0].button.getAttribute('data-save-state')).toBe('loading');
+    h.win.location.hash = '#/start'; h.win.location.href += '#/start'; h.paint();
+    expect(h.statuses[0].button.getAttribute('data-save-state')).toBe('loading');
+    h.win.location.hash = '#/docpro'; h.win.location.href = 'https://fikcyjne.invalid/app.html#/docpro'; h.paint();
+    expect(h.statuses[1].button.hidden).toBe(true);
+  });
+  function mountFirstFrame(h) {
+    const doc = events({ readyState: 'loading', getElementById: () => null });
+    const win = events({ document: doc, location: { pathname: '/index.html' } });
+    const panes = h.doc.getElementById('appPanes');
+    const frame = panes.appendChild(new h.Element('iframe'));
+    frame.contentWindow = win; frame.contentDocument = doc;
+    panes.querySelector = () => frame;
+    return { win, doc, frame };
+  }
+  it('covers the first clinical document before its deferred Session script, then adopts its actual state', () => {
+    const h = startupMenuEnvironment({ page: 'app.html', hash: '#/start' });
+    const child = mountFirstFrame(h);
+    h.state.boot = true; h.state.unlocked = true; h.paint();
+    expect(h.statuses[0].button.getAttribute('data-save-state')).toBe('loading');
+    for (const key of ['VildaSession', 'VildaVault', 'VildaAuthUI', 'VildaSaveStatusIndicator', 'VildaDataImportExport']) child.win[key] = h.win[key];
+    child.doc.readyState = 'complete'; h.finish('dirty');
+    expect(h.statuses[0].button.getAttribute('data-save-state')).toBe('dirty');
+  });
+  it.each(['replacement', 'missing-bridge', 'missing-loader'])('retires an initial frame on %s', boundary => {
+    const h = startupMenuEnvironment({ page: 'app.html', hash: '#/start' });
+    const child = mountFirstFrame(h);
+    h.state.boot = true; h.state.unlocked = true; h.paint();
+    expect(h.statuses[0].button.getAttribute('data-save-state')).toBe('loading');
+    if (boundary === 'replacement') {
+      const other = events({ readyState: 'loading', getElementById: () => null });
+      child.win.document = other; child.frame.contentDocument = other;
+    } else {
+      child.doc.readyState = 'complete';
+      if (boundary === 'missing-loader') for (const key of ['VildaSession', 'VildaVault', 'VildaAuthUI']) child.win[key] = h.win[key];
+    }
+    h.paint(); expect(h.statuses[1].button.hidden).toBe(true);
+  });
+  it('does not resurrect Loading when failed bootstrap is followed by a later login', () => {
+    const h = startupMenuEnvironment(); h.state.boot = true; h.paint();
+    expect(h.statuses[1].button.hidden).toBe(true);
+    h.state.unlocked = true; h.paint(); expect(h.statuses[1].button.hidden).toBe(true);
+  });
+  it('ends bootstrap when authentication code is unavailable after the document loads', () => {
+    const h = startupMenuEnvironment(); h.api.bindHeader();
+    delete h.win.VildaAuthUI; h.doc.readyState = 'complete';
+    h.win.dispatchEvent({ type: 'load' });
+    expect(h.statuses[1].button.hidden).toBe(true);
+  });
+  it.each(['saved', 'dirty'])('shows neutral bootstrap, then the actual %s outcome without reading clinical data', final => {
+    const h = startupMenuEnvironment();
+    for (const { button, label } of h.statuses) {
+      expect(button.getAttribute('data-save-state')).toBe('loading');
+      expect(button.getAttribute('aria-busy')).toBe('true'); expect(button.hidden).toBe(false);
+      expect(label.textContent).toBe('Wczytywanie…');
+    }
+    expect(h.decision).not.toHaveBeenCalled();
+    h.state.boot = true; h.state.unlocked = true; h.paint();
+    expect(h.decision).not.toHaveBeenCalled();
+    h.finish(final);
+    for (const { button } of h.statuses) expect(button.getAttribute('data-save-state')).toBe(final);
+    expect(h.win.collectUserData).not.toHaveBeenCalled(); expect(h.win.calcEstimatedIntake).not.toHaveBeenCalled();
+    h.state.ready = false; h.state.cached = 'hidden'; h.paint();
+    expect(h.statuses[0].button.getAttribute('data-save-state')).toBe('hidden');
+  });
+  it.each([{ patient: null }, { key: false }])('does not invent patient status for %j', options => {
+    const h = startupMenuEnvironment(options);
+    expect(h.statuses[0].button.getAttribute('data-save-state')).toBe('hidden');
+    expect(h.statuses[1].button.hidden).toBe(true);
+    h.state.patient = 'fictional-later-patient'; h.state.key = true; h.paint();
+    expect(h.statuses[1].button.hidden).toBe(true);
+  });
+  it.each([
+    { ready: true, reason: 'empty' }, { ready: true, reason: 'superseded-empty' },
+    { ready: false, reason: 'restore-failed' }, { ready: false, reason: 'unsupported-session' },
+    { ready: false, reason: 'missing-reader' }, { ready: false, reason: 'apply-refused' },
+  ])('ends bootstrap on the native terminal outcome %j', outcome => {
+    const h = startupMenuEnvironment(); h.state.outcome = outcome; h.paint();
+    expect(h.statuses[0].button.getAttribute('data-save-state')).toBe('hidden');
+    h.state.outcome = null; h.paint();
+    expect(h.statuses[1].button.hidden).toBe(true);
+  });
+  it.each(['input', 'change', 'vilda:user-state-cleared', 'vilda:patient-loaded', 'vilda:json-imported', 'vilda:state-restored'])('retires on %s without rearming', type => {
+    const h = startupMenuEnvironment(); h.doc.dispatchEvent({ type, isTrusted: true }); h.paint();
+    expect(h.statuses[1].button.hidden).toBe(true);
+    h.paint(); expect(h.statuses[1].button.hidden).toBe(true);
+  });
+  it('ignores native replayed input/change and guest:false readiness signals', () => {
+    const h = startupMenuEnvironment();
+    for (const type of ['input', 'change']) h.doc.dispatchEvent({ type, isTrusted: false });
+    h.doc.dispatchEvent({ type: 'vilda:guest-mode-changed', detail: { guest: false } }); h.paint();
+    expect(h.statuses[0].button.getAttribute('data-save-state')).toBe('loading');
+  });
+  it.each(['patient', 'account', 'key', 'guest', 'lock', 'pagehide', 'failed-intake'])('retires on %s and cannot resume the older startup', boundary => {
+    const h = startupMenuEnvironment(); h.state.boot = true; h.state.unlocked = true; h.paint();
+    if (boundary === 'patient') h.state.patient = 'fictional-other-patient';
+    if (boundary === 'account') h.state.user = 'fictional-other-account';
+    if (boundary === 'key') h.state.token += 1;
+    if (boundary === 'guest') h.win.VildaGuestMode = true;
+    if (boundary === 'lock') { h.state.unlocked = false; h.locks.forEach(fn => fn()); }
+    if (boundary === 'pagehide') h.win.dispatchEvent({ type: 'pagehide' });
+    if (boundary === 'failed-intake') h.state.intakeFailed = true;
+    h.paint(); expect(h.statuses[1].button.hidden).toBe(true);
+    Object.assign(h.state, { patient: 'fictional-refresh-patient', user: 'fictional-refresh-account', token: 0, unlocked: true, intakeFailed: false });
+    h.win.VildaGuestMode = false; h.paint(); expect(h.statuses[1].button.hidden).toBe(true);
+  });
+  it.each(['saving', 'error'])('does not replace the live %s state with Loading', value => {
+    const h = startupMenuEnvironment(); h.state.cached = value; h.paint();
+    expect(h.statuses[0].button.getAttribute('data-save-state')).toBe(value);
+    expect(h.statuses[0].button.getAttribute('aria-busy')).toBe('false');
+    h.paint(); expect(h.statuses[0].button.getAttribute('data-save-state')).toBe(value);
+    Object.assign(h.state, { boot: true, unlocked: true, ready: true }); h.paint();
+    expect(h.statuses[0].button.getAttribute('data-save-state')).toBe(value);
+    h.state.ready = false; h.state.cached = 'hidden'; h.paint();
+    expect(h.statuses[1].button.hidden).toBe(true);
+  });
+  it('waits for the published state to match the fresh decision', () => {
+    const h = startupMenuEnvironment();
+    Object.assign(h.state, { boot: true, unlocked: true, outcome: { ready: true, reason: 'restored' }, ready: true, cached: 'saved', decision: 'dirty' });
+    h.paint(); expect(h.statuses[0].button.getAttribute('data-save-state')).toBe('loading');
+    h.state.cached = 'dirty'; h.paint(); expect(h.statuses[0].button.getAttribute('data-save-state')).toBe('dirty');
+  });
+});
 
 describe('Chrome: a stable pending palette grants no action authority', () => {
   it('shows one owned load phase in the menu and header without lending the old Saved state or enabling actions', async () => {

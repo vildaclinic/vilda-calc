@@ -4,6 +4,7 @@
 var Ch_statusAnchor=null,Ch_searchDraft="",Ch_searchOwner=null,Ch_searchSequence=0,Ch_searchPending=false,Ch_searchReturn=null;
 var Ch_privacyApi=null,Ch_privacyUnsubscribe=null,Ch_syncStatus="idle",Ch_bound=false,Ch_vaults=[];
 var Ch_saveDocument=null,Ch_saveChip=null,Ch_saveObserver=null,Ch_saveCleanup=[],Ch_saveRefreshTimer=null;
+var Ch_startupChecked=false,Ch_startupView=null;
 function Ch_searchIcon(size){size=size===18?18:20;return '<svg width="'+size+'" height="'+size+'" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="10.8" cy="10.8" r="6.8"/><path d="m16 16 4.8 4.8"/></svg>'}
 function Ch_searchMarkup(){return '<div id="vildaHeaderSearch" class="chrome-header-search"><button type="button" id="vildaHeaderSearchBtn" class="chrome-header-search-btn" aria-label="Szukaj" aria-haspopup="dialog">'+Ch_searchIcon()+'</button></div>'}
 function Ch_saveMarkup(){return '<button type="button" id="vildaHeaderSaveStatus" class="chrome-header-save-status" data-header-save-status data-menu-save-status data-save-state="hidden" aria-haspopup="dialog" aria-expanded="false" aria-hidden="true" hidden><span class="chrome-menu-save-dot" data-header-save-icon aria-hidden="true"></span><span data-menu-save-label data-header-save-label aria-live="polite"></span></button>'}
@@ -118,18 +119,104 @@ function Ch_bindSaveSource(context){
   Ch_saveCleanup.forEach(function(remove){remove()});Ch_saveCleanup=[];Ch_saveDocument=doc;Ch_saveChip=chip;
   if(!context)return;
   function listen(target,type){
-    var refresh=function(){
+    var refresh=function(event){
+      Ch_startupBoundary(event);
       Promise.resolve().then(type==="vilda:patient-load-presentation"?Cm_refreshMenuActions:Ch_refreshSaveState);
       clearTimeout(Ch_saveRefreshTimer);Ch_saveRefreshTimer=setTimeout(Ch_refreshSaveState,220);
     };
     target.addEventListener(type,refresh);Ch_saveCleanup.push(function(){target.removeEventListener(type,refresh)});
   }
-  ["vilda:patient-load-presentation","vilda:patient-loaded","vilda:persist-restored","vilda:main-session-restored","vilda:intake-restore-readiness","vilda:state-restored","vilda:json-imported","vilda:load-choice-applied","vilda:auth-loaded","vilda:auth-state-settled","vilda:auth-boot-settled","vilda:session-changed","vilda:guest-mode-changed","vilda:dob-restored","vilda:user-state-cleared"].forEach(function(type){listen(doc,type)});
+  ["vilda:patient-load-presentation","vilda:patient-loaded","vilda:persist-restored","vilda:main-session-restored","vilda:initial-main-session-restore-settled","vilda:intake-restore-readiness","vilda:state-restored","vilda:json-imported","vilda:load-choice-applied","vilda:auth-loaded","vilda:auth-state-settled","vilda:auth-boot-settled","vilda:session-changed","vilda:guest-mode-changed","vilda:dob-restored","vilda:user-state-cleared"].forEach(function(type){listen(doc,type)});
   listen(context.win,"vilda:user-state-cleared");
+  ["input","change"].forEach(function(type){doc.addEventListener(type,Ch_startupBoundary,true);Ch_saveCleanup.push(function(){doc.removeEventListener(type,Ch_startupBoundary,true)})});
   if(chip&&typeof r.MutationObserver==="function"){
     Ch_saveObserver=new r.MutationObserver(Ch_refreshSaveState);
     Ch_saveObserver.observe(chip,{attributes:true,attributeFilter:["class","title"]});
   }
+}
+/* A fresh document has not yet established whether its selected patient's
+   session is Saved or Dirty. The bootstrap label is RAM-only and acknowledges
+   neither data nor authentication: a session key merely permits an attempt.
+   The native initial restore and current indicator decide its final outcome. */
+function Ch_retireStartup(){Ch_startupChecked=true;Ch_startupView=null}
+function Ch_startupHref(){
+  var href=String(r.location&&r.location.href||"");
+  // The shell selects Start with replaceState after Chrome mounts. This one
+  // default-route normalization is still the same initial document.
+  return ge()==="app.html"&&!String(r.location&&r.location.hash||"")?href.replace(/#$/,"")+"#/start":href;
+}
+function Ch_startupBoundary(event){
+  if(!Ch_startupView||!event)return;
+  if((event.type==="input"||event.type==="change")&&!event.isTrusted)return;
+  if(event.type==="vilda:guest-mode-changed"&&event.detail&&event.detail.guest===false)return;
+  if(["input","change","vilda:patient-loaded","vilda:state-restored","vilda:json-imported","vilda:load-choice-applied","vilda:user-state-cleared","vilda:guest-mode-changed"].indexOf(event.type)!==-1)Ch_retireStartup();
+}
+function Ch_startupOwner(win,view,key){
+  var vault=win.VildaVault,auth=win.VildaAuthUI,session=win.VildaSession,account=view[key];
+  if(key==="account"&&!session&&!account&&win.document.readyState!=="complete")return win.VildaGuestMode!==true;
+  if(win.VildaGuestMode===true||auth&&typeof auth.isGuestMode==="function"&&auth.isGuestMode()||
+    !session||typeof session.hasSessionKey!=="function"||!session.hasSessionKey())return false;
+  if((!auth||typeof auth.isBootReady!=="function")&&win.document.readyState==="complete")return false;
+  if(account){
+    if(vault!==account.vault||auth!==account.auth||session!==account.session||!vault.isUnlocked())return false;
+    vault.assertSyncOperationSession(account.token);
+    return (vault.getCurrentUser()||{}).userId===account.userId;
+  }
+  if(key==="account"&&vault&&!view.sourceVault){
+    view.sourceVault=vault;
+    if(typeof vault.onLock==="function")vault.onLock(function(){if(Ch_startupView===view){Ch_retireStartup();Ch_refreshSaveState()}});
+  }
+  if(auth&&typeof auth.isBootReady==="function"&&auth.isBootReady()){
+    if(!vault||!vault.isUnlocked()||typeof vault.getCurrentUser!=="function"||
+      typeof vault.captureSyncOperationSession!=="function"||typeof vault.assertSyncOperationSession!=="function")return false;
+    var user=vault.getCurrentUser(),token=vault.captureSyncOperationSession();
+    if(!user||!user.userId||!token)return false;
+    vault.assertSyncOperationSession(token);
+    view[key]={vault:vault,auth:auth,session:session,userId:user.userId,token:token};
+  }
+  return true;
+}
+function Ch_startupPresentation(){
+  try{
+    if(!Ch_startupChecked){
+      Ch_startupChecked=true;
+      var page=ge(),route=String(r.location&&r.location.hash||"");
+      var clinical=page==="index.html"||page==="docpro.html"||page==="kalkulator-klirens.html"||page==="app.html"&&(!route||/^#\/(start|docpro|klirens)$/.test(route));
+      var session=r.VildaSession,patient=Ce();
+      if(clinical&&patient&&session&&typeof session.hasSessionKey==="function"&&session.hasSessionKey())
+        Ch_startupView={patient:patient,href:Ch_startupHref(),source:null,host:null,account:null};
+    }
+    var view=Ch_startupView;if(!view)return null;
+    if(Ce()!==view.patient||Ch_startupHref()!==view.href||!Ch_startupOwner(r,view,"host")){Ch_retireStartup();return null}
+    var context=Ch_saveContext(),win=context&&context.win,doc=context&&context.doc;
+    // The shell creates its first iframe after Chrome mounts. An about:blank
+    // document is not its clinical owner and cannot become the pinned source.
+    if(context&&win&&doc&&win.document===doc&&(!o.getElementById("appPanes")||win.location&&/\/(index|docpro|kalkulator-klirens)\.html$/.test(win.location.pathname))){
+      if(!view.source)view.source={win:win,doc:doc};
+      if(view.source.win!==win||view.source.doc!==doc||!Ch_startupOwner(win,view,"account")||
+        view.host&&view.account&&view.host.userId!==view.account.userId){Ch_retireStartup();return null}
+      var panel=win.VildaPanelPacjent;
+      if(panel&&typeof panel.nieaktualny==="function"&&panel.nieaktualny()){Ch_retireStartup();return null}
+      var api=win.VildaSaveStatusIndicator,data=win.VildaDataImportExport,cached=api&&api.getState();
+      if(cached==="saving"||cached==="error"){
+        // Do not turn an actual save/error back into Hidden on the next paint
+        // while the normal status source still waits for its readiness gate.
+        if(view.host&&view.account&&typeof api.isReadyForSharedReference==="function"&&api.isReadyForSharedReference())Ch_retireStartup();
+        return {state:cached,title:typeof api._buildTitleAttr==="function"?api._buildTitleAttr(cached):"",save:null,documents:null,clear:null};
+      }
+      var intake=typeof win.vildaGetIntakeRestoreReadiness==="function"?win.vildaGetIntakeRestoreReadiness():null;
+      if(intake&&intake.failed===true){Ch_retireStartup();return null}
+      var outcome=data&&typeof data.getInitialMainSessionRestoreState==="function"?data.getInitialMainSessionRestoreState():null;
+      if(outcome&&(!outcome.ready||/(^|-)empty$/.test(outcome.reason))){Ch_retireStartup();return null}
+      if(outcome&&outcome.ready&&view.host&&view.account&&api&&typeof api.getCurrentDecision==="function"&&
+        typeof api.isReadyForSharedReference==="function"&&api.isReadyForSharedReference()){
+        var decision=api.getCurrentDecision();
+        if(decision&&decision.ready&&decision.state===cached){Ch_retireStartup();return null}
+      }
+      if(doc.readyState==="complete"&&(!data||typeof data.getInitialMainSessionRestoreState!=="function")){Ch_retireStartup();return null}
+    }else if(view.source){Ch_retireStartup();return null}
+    return {state:"loading",title:"Trwa przywracanie sesji pacjenta",loading:true,save:null,documents:null,clear:null};
+  }catch{Ch_retireStartup();return null}
 }
 function Cm_navigationPresentation(){
   // A new patient never borrows the previous patient's Saved label. The
@@ -141,9 +228,10 @@ function Cm_navigationPresentation(){
     if(owner&&context.doc===win.document&&win.VildaGuestMode!==true&&vault&&vault.isUnlocked()&&
       user&&user.userId===owner.userId&&data&&typeof data.getPatientLoadPresentation==="function"){
       var loading=data.getPatientLoadPresentation();
-      if(loading&&loading.state==="loading")return {state:"loading",title:"Trwa wczytywanie danych pacjenta",loading:true,save:null,documents:null,clear:null};
+      if(loading&&loading.state==="loading"){Ch_retireStartup();return {state:"loading",title:"Trwa wczytywanie danych pacjenta",loading:true,save:null,documents:null,clear:null}}
     }
   }catch{}
+  var startup=Ch_startupPresentation();if(startup)return startup;
   try{var shell=r.VildaShell;return shell&&typeof shell.getSidebarPresentation==="function"?shell.getSidebarPresentation():null}catch{return null}
 }
 function Cm_paintPreparation(button,value,loading){
@@ -212,7 +300,7 @@ function Ch_refreshSync(){
 }
 function Ch_bindVault(){
   var vault=r.VildaVault;if(!vault||Ch_vaults.indexOf(vault)!==-1)return;Ch_vaults.push(vault);
-  if(typeof vault.onLock==="function")vault.onLock(function(){Ch_resetSearch();Ch_refreshHeader()});
+  if(typeof vault.onLock==="function")vault.onLock(function(){Ch_retireStartup();Ch_resetSearch();Ch_refreshHeader()});
   if(typeof vault.onUnlock==="function")vault.onUnlock(Ch_refreshHeader);
 }
 function Ch_refreshHeader(){Ch_bindVault();Ch_bindPrivacy();Ch_refreshSearch();Ch_refreshSaveState();Ch_refreshMenuPro();Ch_refreshSync()}
@@ -241,10 +329,11 @@ function Ch_bindHeader(){
     }).observe(o.body,{childList:true});
   }
   ["vilda:auth-loaded","vilda:auth-state-settled","vilda:auth-boot-settled","vilda:session-changed","vilda:guest-mode-changed"].forEach(function(name){o.addEventListener(name,Ch_refreshHeader)});
-  o.addEventListener("vilda:user-state-cleared",function(){Ch_resetSearch();Ch_refreshHeader()});
+  o.addEventListener("vilda:user-state-cleared",function(){Ch_retireStartup();Ch_resetSearch();Ch_refreshHeader()});
   o.addEventListener("vilda:sync-status-changed",function(event){Ch_syncStatus=event&&event.detail&&event.detail.state||"idle";Promise.resolve().then(Ch_refreshSync)});
   o.addEventListener("vilda:sync-stale-device",function(){Promise.resolve().then(Ch_refreshSync)});
-  r.addEventListener("online",Ch_refreshSync);r.addEventListener("offline",Ch_refreshSync);r.addEventListener("pagehide",Ch_resetSearch);
+  r.addEventListener("load",Ch_refreshSaveState,{once:true});
+  r.addEventListener("online",Ch_refreshSync);r.addEventListener("offline",Ch_refreshSync);r.addEventListener("pagehide",function(){Ch_retireStartup();Ch_resetSearch()});
   Ch_refreshHeader();
 }
 

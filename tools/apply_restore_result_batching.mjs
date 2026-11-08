@@ -149,7 +149,7 @@ const currentCheckVariants = new Map(
     "Expose only pending restoration readiness for strict live-chart ownership gating",
     {
       "file": "vilda_data_import_export.js",
-      "anchor": "restoreMainSessionIfAny:Fe,isMainSessionRestorePending:function(){return pendingAuthMainSession!==null||initialMainSessionRestoreQueued()||intakeRestoreReadiness().pending},whenInitialMainSessionRestoreSettled:whenInitialMainSessionRestoreSettled,hasMeaningfulMainSessionData:Re"
+      "anchor": "restoreMainSessionIfAny:Fe,isMainSessionRestorePending:function(){return pendingAuthMainSession!==null||initialMainSessionRestoreQueued()||intakeRestoreReadiness().pending},whenInitialMainSessionRestoreSettled:whenInitialMainSessionRestoreSettled,getInitialMainSessionRestoreState:getInitialMainSessionRestoreState,hasMeaningfulMainSessionData:Re"
     }
   ],
   [

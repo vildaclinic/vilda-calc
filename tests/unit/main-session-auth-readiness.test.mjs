@@ -319,3 +319,102 @@ describe('Saved main session waits for the owner authentication boot to finish',
     clean(h);
   });
 });
+
+describe('read-only initial restore outcome for the startup indicator', () => {
+  const eventName = 'vilda:initial-main-session-restore-settled';
+  const observe = h => {
+    const seen = [];
+    h.win.document.addEventListener(eventName, event => seen.push({
+      outcome: h.api.getInitialMainSessionRestoreState(), detail: event.detail,
+      restoring: h.win.__vildaPersistRestoring === true,
+      pending: h.api.isMainSessionRestorePending(), writes: h.writes.length,
+    }));
+    return seen;
+  };
+
+  it('does not read or write the session and publishes the settled native result after all restore flags', async () => {
+    const h = harness(), seen = observe(h);
+    const originalReader = h.win.VildaPersistence.readMainSession;
+    let reads = 0;
+    h.win.VildaPersistence.readMainSession = () => { reads += 1; return originalReader(); };
+    const waiting = h.api.whenInitialMainSessionRestoreSettled();
+    for (let attempt = 0; attempt < 5; attempt++) expect(h.api.getInitialMainSessionRestoreState()).toBeNull();
+    expect(reads).toBe(0); expect(h.writes).toEqual([]);
+    h.start();
+    expect(h.api.getInitialMainSessionRestoreState()).toBeNull(); expect(seen).toEqual([]);
+    h.unlock(); h.settle(); h.frame();
+    expect(h.api.getInitialMainSessionRestoreState()).toBeNull(); expect(seen).toEqual([]);
+    h.frame(); h.tick();
+    const result = h.api.getInitialMainSessionRestoreState(), settledReads = reads;
+    expect(result).toEqual({ ready: true, reason: 'restored' });
+    expect(Object.isFrozen(result)).toBe(true);
+    expect(seen).toEqual([{ outcome: result, detail: undefined, restoring: false, pending: false, writes: 1 }]);
+    expect(seen[0].outcome).toBe(result);
+    expect(await waiting).toEqual({ ...result, waited: true });
+    expect(await h.api.whenInitialMainSessionRestoreSettled()).toEqual({ ...result, waited: false });
+    for (let attempt = 0; attempt < 5; attempt++) expect(h.api.getInitialMainSessionRestoreState()).toBe(result);
+    expect(reads).toBe(settledReads); expect(h.writes).toHaveLength(1);
+    h.settle(); h.frame(); h.tick(); expect(seen).toHaveLength(1);
+  });
+
+  it.each([
+    { title: 'missing session', value: null, ready: true, reason: 'empty' },
+    { title: 'only view defaults', value: { version: 1, user: { sex: 'M' } }, ready: true, reason: 'empty' },
+    { title: 'unsupported session', value: { version: 999, name: 'Fikcyjny rekord' }, ready: false, reason: 'unsupported-session' },
+  ])('settles $title instead of leaving the startup presentation pending', async ({ value, ready, reason }) => {
+    const h = harness({ locked: false, bootReady: true }), seen = observe(h);
+    h.replaceSession(value); h.start();
+    expect(h.api.getInitialMainSessionRestoreState()).toEqual({ ready, reason });
+    expect(seen).toHaveLength(1);
+    expect(seen[0]).toMatchObject({ outcome: { ready, reason }, restoring: false, pending: false, writes: 0 });
+    expect(h.applied).toEqual([]); expect(h.writes).toEqual([]);
+    expect(await h.api.whenInitialMainSessionRestoreSettled()).toEqual({ ready, reason, waited: false });
+  });
+
+  it.each(['storage-unavailable', 'missing-reader', 'apply-refused', 'restore-failed'])('exposes the native %s failure without changing its outcome', async reason => {
+    const h = harness({ locked: false, bootReady: true }), seen = observe(h), before = h.session();
+    if (reason === 'storage-unavailable') h.win.VildaPersistence.getStorage = () => null;
+    if (reason === 'missing-reader') delete h.win.VildaPersistence.readMainSession;
+    const options = reason === 'apply-refused' ? { applyLoadedData: () => false }
+      : reason === 'restore-failed' ? { applyLoadedData: () => { throw new Error('Fikcyjny błąd odtwarzania'); } } : {};
+    h.api.restoreMainSessionIfAny(options); h.frame(); h.tick();
+    expect(h.api.getInitialMainSessionRestoreState()).toEqual({ ready: false, reason });
+    expect(seen).toHaveLength(1); expect(seen[0].restoring).toBe(false);
+    expect(await h.api.whenInitialMainSessionRestoreSettled()).toEqual({ ready: false, reason, waited: false });
+    // Finalization of the native refused apply still performs its existing
+    // guarded autosave; observing the result must not add another one.
+    const writes = h.writes.length;
+    for (let attempt = 0; attempt < 3; attempt++) h.api.getInitialMainSessionRestoreState();
+    expect(h.writes).toHaveLength(writes);
+    if (reason !== 'apply-refused') expect(h.session()).toBe(before);
+  });
+
+  it('announces explicit successful recovery without replaying the already settled promise', async () => {
+    const h = harness({ locked: false, bootReady: true }), seen = observe(h);
+    const waiting = h.api.whenInitialMainSessionRestoreSettled();
+    h.api.restoreMainSessionIfAny({ applyLoadedData: () => false }); h.frame(); h.tick();
+    const failure = h.api.getInitialMainSessionRestoreState();
+    expect(failure).toEqual({ ready: false, reason: 'apply-refused' });
+    expect(await waiting).toEqual({ ...failure, waited: true });
+    expect(h.api.applyLoadedData(h.original, { source: 'fictional-recovery' })).toBe(true);
+    const recovery = h.api.getInitialMainSessionRestoreState();
+    expect(recovery).toEqual({ ready: true, reason: 'superseded-load' });
+    expect(Object.isFrozen(recovery)).toBe(true); expect(recovery).not.toBe(failure);
+    expect(seen.map(item => item.outcome)).toEqual([failure, recovery]);
+    expect(await waiting).toEqual({ ...failure, waited: true });
+    expect(await h.api.whenInitialMainSessionRestoreSettled()).toEqual({ ...recovery, waited: false });
+    h.api.applyLoadedData(h.original, { source: 'fictional-next-load' });
+    expect(seen).toHaveLength(2);
+  });
+
+  it('settles a pending authentication restore when the real session-clear operation supersedes it', () => {
+    const h = harness(), seen = observe(h); h.start();
+    expect(h.api.getInitialMainSessionRestoreState()).toBeNull();
+    h.win.vildaSession.clear();
+    expect(h.api.getInitialMainSessionRestoreState()).toEqual({ ready: true, reason: 'superseded-session-clear' });
+    expect(seen).toHaveLength(1); expect(seen[0].pending).toBe(false);
+    expect(h.session()).toBeNull(); expect(h.applied).toEqual([]); expect(h.writes).toEqual([]);
+    h.unlock(); h.settle(); h.frame(); h.tick();
+    expect(seen).toHaveLength(1); expect(h.applied).toEqual([]);
+  });
+});

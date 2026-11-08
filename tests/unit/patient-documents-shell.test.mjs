@@ -6,7 +6,10 @@ const shell = fs.readFileSync(new URL('../../vilda_shell.js', import.meta.url), 
 const chrome = fs.readFileSync(new URL('../../vilda_chrome.js', import.meta.url), 'utf8');
 const shellBlock = shell.slice(shell.indexOf('/* P-DOKUMENTY-PACJENTA:'), shell.indexOf('function ft(){'));
 const chromeBlock = chrome.slice(chrome.indexOf('/* P-DOKUMENTY-PACJENTA:'), chrome.indexOf('function Bt(){'));
-const presentationBlock = chrome.slice(chrome.indexOf('function Cm_navigationPresentation('), chrome.indexOf('function Ch_refreshSaveState('));
+// Include the actual startup helpers used by the menu projection, including
+// the patient selector; the isolated documents fixture starts without a PID.
+const presentationBlock = chrome.slice(chrome.indexOf('function Ch_retireStartup('), chrome.indexOf('function Ch_refreshSaveState('));
+const patientIdBlock = chrome.slice(chrome.indexOf('function Ce(){'), chrome.indexOf('function rt(){'));
 const drawerBlock = chrome.slice(chrome.indexOf('function et('), chrome.indexOf('function tt('));
 const docsId = 'patientDocumentsBtnSidebar';
 
@@ -155,8 +158,9 @@ describe('Dokumenty pacjenta: menu standalone i przekazanie z szuflady', () => {
     h.doc.querySelector = () => drawer;
     h.doc.querySelectorAll = () => Object.values(h.buttons);
     const syncDrawer = vi.fn();
-    const ctx = vm.createContext({ r: { VildaPatientDocuments: h.start.api }, o: h.doc, ge: () => 'index.html', Qdm: syncDrawer, F: h.tip, Promise });
-    vm.runInContext(presentationBlock + chromeBlock, ctx); ctx.Cm_documentsBind();
+    const ctx = vm.createContext({ r: { VildaPatientDocuments: h.start.api }, o: h.doc, ge: () => 'index.html',
+      Ch_startupChecked: false, Ch_startupView: null, Qdm: syncDrawer, F: h.tip, Promise });
+    vm.runInContext(patientIdBlock + presentationBlock + chromeBlock, ctx); ctx.Cm_documentsBind();
     h.buttons[docsId].click(); expect(h.start.api.open).toHaveBeenCalledWith({ opener: h.buttons[docsId] });
     h.start.api.getState.mockReturnValue({ disabled: true, reason: 'Brak pomiaru' });
     h.doc.dispatchEvent({ type: 'vilda:patient-documents-state' });
