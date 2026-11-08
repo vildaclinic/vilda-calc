@@ -1585,8 +1585,7 @@ describe('zapis sesji innego konta przy „Usuń konto”', () => {
 
 // ── Start ekranu logowania bez sesji: wycinek cyklu startu Ei (jak auth-boot-readiness.test.mjs) z prawdziwym ekranem
 // startowym me z wycinka ekranLogowania. Reset stanu aplikacji (qa „show-startup” na początku me) idzie od razu po
-// tryRestoreSession(), w tej samej chwili co przed banerem startu; odczyt getStatus() nie opóźnia go (na index.html
-// opóźnienie przenosiło czyszczenie danych za wczytanie vilda_data_import_export.js — ok. 2,5 s blokady zapisów).
+// tryRestoreSession(), w tej samej chwili co przed banerem startu; odczyt getStatus() go nie opóźnia.
 function startBezSesji(w, status) {
   const src = zrodlo('vilda_auth_ui.js');
   const od = src.indexOf('var authBootReady=false;');

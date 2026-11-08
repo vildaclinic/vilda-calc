@@ -8,11 +8,11 @@
 // podpowiedź po 1 s), pod przyciskiem „Usuń to konto” jest podpowiedź „Czekam, aż inne karty z aplikacją zwolnią to
 // konto. …” (role="status"), przycisk jest wyłączony, przeglądarka pyta przed zamknięciem albo przeładowaniem strony, a w
 // aplikacji zainstalowanej pasek z tym tekstem jest na wierzchu nad ekranem logowania; po błędzie usuwania podpowiedź
-// znika i strona zamyka się bez pytania; usuwanie przerwane zamknięciem strony kończy się przy liście kont w następnej
-// karcie. Wyrocznia baz: pełna lista baz przeglądarki po „Usuń konto” — tylko bazy wspólne (opis w module). Konto bez
-// biblioteki szablonów. Scenariusze, literały, rejestrator ekranów logowania, obsługa okien przeglądarki według typu i
-// własny serwer plików repozytorium (port przydzielany przez system, start w teście, zamknięcie w finally) w
-// tests/support/usun-konto-karty-chromium.mjs. Dane wyłącznie fikcyjne.
+// znika, a przeglądarka już nie pyta przed zamknięciem strony; usuwanie przerwane zamknięciem strony kończy się przy
+// liście kont w następnej karcie. Wyrocznia baz: pełna lista baz przeglądarki po „Usuń konto” — tylko bazy wspólne
+// (opis w module). Konto bez biblioteki szablonów. Scenariusze, literały, rejestrator ekranów logowania, obsługa okien
+// przeglądarki według typu i własny serwer plików repozytorium (port przydzielany przez system, start w teście,
+// zamknięcie w finally) w tests/support/usun-konto-karty-chromium.mjs. Dane wyłącznie fikcyjne.
 import { expect, test } from '@playwright/test';
 import { SCENARIUSZE_PA_2, startSerwer } from '../support/usun-konto-karty-chromium.mjs';
 
@@ -24,7 +24,7 @@ const OPISY = {
   PA8: 'karta bez sesji na „Kto się loguje?” odświeża listę bez usuniętego konta z banerem; formularz hasła innego konta bez zmian (wartość, fokus); karta zalogowana na usuwane konto rysuje ekran logowania raz',
   PA9: 'jedyne konto usunięte — karta bez sesji „Witamy” z banerem; powłoka bez sesji — lista bez usuniętego konta, jeden widoczny baner',
   PA10: 'kasowanie bazy sejfu czeka na kartę ze starszą wersją — podpowiedź czekania, przycisk wyłączony, pytanie przy zamknięciu i przeładowaniu strony; po zwolnieniu index.html bez pytania; pełna lista baz po usunięciu konta — tylko bazy wspólne',
-  PA10b: 'błąd usuwania w trakcie czekania — komunikat błędu, podpowiedź pusta, przycisk włączony, strona zamyka się bez pytania',
+  PA10b: 'błąd usuwania w trakcie czekania — komunikat błędu, podpowiedź pusta, przycisk włączony, zamknięcie strony bez pytania przeglądarki',
   PA11: 'okno pytania w innej karcie — podpowiedź czekania po 1 s; po odpowiedzi usuwanie kończy się, druga karta „Witamy” z banerem',
   PA12: 'aplikacja zainstalowana, kasowanie czeka — pasek czekania na wierzchu nad „Witamy” z banerem, pytanie przy zamknięciu okna; po zwolnieniu pasek pusty; przeładowanie ramki Ustawień w trakcie czyści pasek',
   PA13: 'strona usuwająca zamknięta w trakcie czekania — przerwane usuwanie kończy się przy liście kont w następnej karcie (lista bez konta od razu); pełna lista baz po usunięciu konta — tylko bazy wspólne',

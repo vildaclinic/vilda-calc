@@ -1,7 +1,7 @@
 // P-DZIENNIK-ZDARZEN (E2-PR2b, E2-PR3a1, E2-PR3a1c) — zapis bazowy „bramka wyłączona” (U3).
 //
 // Ten sam deterministyczny scenariusz sejfu w czterech wariantach okna daje dokładnie te ślady, które zapisano
-// w tests/fixtures/dziennik-zapis-bazowy.json. Fiksturę nagrano na sejfie z magazynem kolejki, który przy usuwaniu
+// w tests/fixtures/dziennik-zapis-bazowy.json. Fiksturę nagrano na sejfie, który ma magazyn kolejki i przy usuwaniu
 // konta kasuje kolejkę, dziennik dostępu i ustawienia kopii zapasowej konta; pola opis i bazaVault (sha256 sejfu)
 // pochodzą z pierwszego nagrania, na sejfie bez magazynu kolejki. Wobec pierwszego nagrania różni się wyłącznie
 // usuwanie konta poza trybem „Zaloguj jednorazowo”: dwa dodatkowe wywołania listy baz — od E2-PR3a1 sprawdzenie bazy
