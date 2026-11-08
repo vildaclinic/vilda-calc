@@ -79,6 +79,31 @@ każdy wraca do własnej dostępności: nowy pomiar nadal wymaga uzupełnienia d
 do zapisu. Zwykłe odświeżenie gotowości aktualizuje razem wskaźnik i wygląd
 przycisków; nie wymaga ponownego zdarzenia zakończenia wczytania.
 
+Odświeżenie strony (F5) zaczyna nowy dokument, więc nie ma poprzedniej
+prezentacji w RAM. Startowa prezentacja Chrome pokazuje neutralne
+„Wczytywanie…” tylko dla wybranego pacjenta i istniejącej sesji przeglądarki.
+Obecność sesji oznacza oczekiwanie na jej sprawdzenie, a nie potwierdzenie
+zapisania danych. Po uruchomieniu źródła sprawdzane są jego rzeczywisty
+wynik odtworzenia, konto, klucz, dokument i decyzja SSI. Wskaźnik przechodzi
+bezpośrednio do aktualnego stanu, również „Niezapisane zmiany”. Pusty start
+bez pacjenta nie otrzymuje tej prezentacji ani wskaźnika w nagłówku telefonu.
+
+DIX udostępnia istniejący, niezmienny wynik startowego odtwarzania przez
+`getInitialMainSessionRestoreState()` i powiadamia UI zdarzeniem
+`vilda:initial-main-session-restore-settled` po jego ustaleniu. Odczyt nie
+rozpoczyna odtwarzania ani nie pobiera danych. Pusty lub nieudany wynik
+kończy oczekiwanie; edycja, czyszczenie, jawne wczytanie i zmiana kontekstu
+unieważniają startową prezentację. Zakończona prezentacja nie odżywa.
+Nie ma dodatkowego opóźnienia, a faktyczna gotowość działań nadal wynika
+z ich natywnych kontrolerów.
+
+Test F5 obserwuje każdą malowaną klatkę przy spowolnieniu CPU, od pierwszego
+pojawienia się kontrolki. Sprawdza oba końcowe stany, pusty formularz,
+desktop i telefon, pełne rekordy w bazie, referencję zapisu i ostrzeżenie
+przed czyszczeniem niezapisanych zmian. Test centyli po F5 oczekuje na
+rzeczywiste zakończenie odtwarzania przed dotychczasową asercją „Zapisano”;
+sam poprawny wynik centylowy może pojawić się wcześniej.
+
 Automatyczne zastąpienie nieaktualnej, wcześniej przygotowanej ramki jest osobnym, wąskim etapem istniejącego `Gp5_przeladuj`. Powłoka oczekuje wyłącznie jego konkretnego zwiększenia generacji i nowego dokumentu. Wycofany dokument nie jest źródłem konta ani uprawnienia. Ręczne `B`/Reload i dowolna inna podmiana dokumentu nie korzystają z tego wyjątku. Zwykłe powiadomienie startowe `guest:false` sprawdza bieżące granice sesji; wejście w tryb gościa nadal unieważnia prezentację. Klucz nowej ramki jest wiązany dopiero po opublikowaniu `AuthUI.isBootReady()`: jego ustanawianie podczas startu nie jest zmianą konta. Obce konto lub jawny tryb gościa są odrzucane także przed końcem startu, a wymiana już związanego klucza zawsze kończy prezentację.
 
 Obserwacja stanu źródłowego SSI odczytuje wyłącznie jego opublikowaną etykietę i gotowość. Reaguje na zmianę samego stanu, a nie na zmianę tytułu, dzięki czemu opóźniona stara etykieta „Zapisano” nie zastępuje świeżo ustalonego „Niezapisane zmiany”. Potwierdzony własny zapis tej samej osoby jest sprawdzany istniejącą migawką DIX; prezentacja czeka na rzeczywistą publikację SSI. Nie odczytuje wtedy formularza ukrytej ramki. Widoczny błąd zapisu zachowuje własną etykietę, także gdy porównanie danych opisuje te dane jako niezapisane.
