@@ -21455,7 +21455,7 @@ przełączenie konta albo ponowne zalogowanie przed dopisaniem albo w jego trakc
 |---|---|---|
 | zapis karty i nowej wizyty, „przywróć wersję jako nową”, osoba spoza bazy, import starego formatu | `snap` | hak `onPatientSaved` (`Vn`) |
 | poprawka wizyty, gwiazdka, odpięcie, edycja i usunięcie pomiaru | `snap` | hak `onPatientSaved` (`Vn`) |
-| „Przywróć” z kosza | `snap` | hak `onPatientSaved`; gdy wizyta jest już w karcie — emisja bezpośrednia tylko przy zapisanym nagłówku karty |
+| „Przywróć” z kosza | `snap` | hak `onPatientSaved`; gdy wizyta jest już w karcie — emisja bezpośrednia wersji przywracanej (zdjęcie wpisu kosza niesie zdarzenie wersji; do 2026-11-09 ten wiersz podawał błędnie „tylko przy zapisanym nagłówku karty”) |
 | wizyty przeniesione pod kartę celu w „Scal pacjentów” | `snap` | emisja bezpośrednia w pętli przenoszenia |
 | wizyty przepisane po imporcie wpisu z kosza | `snap` | emisja bezpośrednia w `Bkz_poImporcie` |
 | „Kosz” | `stomb` | emisja bezpośrednia po zapisie wpisu kosza i usunięciu wizyty |
@@ -21482,7 +21482,7 @@ synchronizacji ma emisję albo regułę „świadomie lokalne” (test pokrycia)
 (`password-changed-remotely`); porządki pól notatek (`mo`) i rozdzielenie nazwisk (`Ja`) — ta sama treść, liczone na
 każdym urządzeniu; przenumerowanie `seq` i licznik wizyt (lokalne); zdjęcie nagrobka przy zapisie (niesie je zdarzenie
 encji); opakowania kluczy, materiał synchronizacji, rejestr i tryb; cienie wersji; importy `ns`, `ss`, `as` (poza
-`Bkz_poImporcie`) — E2-PR3a3.
+`Bkz_poImporcie`) — od E2-PR3a3 partią (wpis wyżej).
 
 **Kolejność w kroku.** „Wersje, także przeniesione pod kartę celu „Scal pacjentów”, potem wpisy kosza, potem nagrobki
 kart, potem reszta” (notatki pacjenta, ich nagrobki, notatki biblioteki, ich nagrobki, listy, ich nagrobki,
@@ -21571,8 +21571,8 @@ odczytów bramki; dwa przypadki strony z elementem o `id` `VILDA_EVENT_LOG` ziel
 **Mutanty.** 47 mutantów kodu emisji, uprzęży i kontroli granicy (brak emisji w każdym emiterze i miejscu zapisu, złe mapowanie akcji, brak kroku, sortowanie, powtórzenia, zagnieżdżenie, bramka nie pierwsza, czekanie na emisję, sesja ujęta przy dopisaniu, dopisanie bez blokady konta, limit 10 s, jeden łańcuch dla kont, brak warunku trybu, `emissionsSettled` od razu, lista metod uprzęży, nieprzeliczone skróty): 45 zabitych, 2 równoważne — emisja z retencji także dla wersji, której usunięcie się nie udało (builder nie znajduje jej nagrobka, bez wiersza), oraz emisja bez sprawdzenia sesji (dopisanie sprawdza sesję po uzyskaniu blokady konta, bez wiersza).
 
 **Wymagania dla następnych PR.**
-- **E2-PR3a3.** Partie importu (`ns`, `ss`, `as`) przez ten sam łańcuch dopisań i `Bob_dopiszZ`, z krokiem wokół
-  importu. Model A ≡ B: nośnik pól karty — dowolny `snap` tej karty w kroku (prawdziwy emiter w „Przywróć”, gdy wizyta
+- **E2-PR3a3** — wykonane w E2-PR3a3 (wpis wyżej). Partie importu (`ns`, `ss`, `as`) przez ten sam łańcuch dopisań i
+  `Bob_dopiszZ`, z krokiem wokół importu. Model A ≡ B: nośnik pól karty — dowolny `snap` tej karty w kroku (prawdziwy emiter w „Przywróć”, gdy wizyta
   jest już w karcie, wysyła `snap` wersji przywracanej).
 - **E2-PR3a4.** Przegląd kolejki dokłada zmiany bez wiersza (wyżej), w tym nagrobek klucza dostępu usuniętego przy
   zablokowanym sejfie.
@@ -22338,15 +22338,16 @@ P-USUN-KONTO-KARTY; te same w planie: wiersze 6a′, 6b–6d, 7a, 8 i 12 tabeli 
   - Literał miejsc poza blokiem rośnie od dzisiejszego `MIEJSCA_POZA_BLOKIEM`.
   - Łańcuch dopisań może czekać na blokadę konta do 20 s; zapis karty na niego nie czeka (emitery nie czekają na wynik
     kolejki). Przyjęte w projekcie E2-PR3a.
-- **E2-PR3a3.** Dopisania partii importu idą tym samym dopisaniem pod blokadą konta. W teście A ≡ B „ZNANA RÓŻNICA”
-  R2-E3 z pozycją naprawy E3-PR0 (decyzja 12.2).
+- **E2-PR3a3** — wykonane w E2-PR3a3 (wpis P-DZIENNIK-ZDARZEN, E2-PR3a3, wyżej). Dopisania partii importu idą tym samym
+  dopisaniem pod blokadą konta. W teście A ≡ B „ZNANA RÓŻNICA” R2-E3 z pozycją naprawy E3-PR0 (decyzja 12.2).
 - **E2-PR3a4.** Przegląd sierot `vilda_sync_*` przez to samo kasowanie kolejki konta (blokada wyłączna, znacznik według
   reguły wyżej), nigdy w trybie „Zaloguj jednorazowo”; odczyty przeglądu przez strzeżony adapter sejfu; wynik
   `SYNC_DB_TIMEOUT` (limit blokady) ustawia przegląd pilny, `SYNC_DB_DELETED` nie; przegląd na początku odblokowania,
   a ponowienie kasowania zostaje ostatnią instrukcją odblokowania.
 - **E2-PR3c** (decyzja 12.3). Naprawa utraty poprawki wizyty przy „Scal pacjentów” po zdarzeniach zmianą reguły
   scalania: osobny PR z wpisem ALGORITHMS i akceptacją właściciela (decyzja 9); w teście A ≡ B od E2-PR3a3 jako „ZNANA
-  UTRATA (zdarzenia)” z pozycją naprawy E2-PR3c.
+  UTRATA (zdarzenia)” z pozycją naprawy E2-PR3c (wpisane w E2-PR3a3). Od 2026-11-09 (decyzja właściciela) w E2-PR3c
+  także analiza i naprawa różnicy opisu wpisu Kosza po wymianie pełnych kopii (wpis E2-PR3a3).
 - **E2-PR4.**
   - Kasowanie kolejki konta przy istniejącym wpisie rejestru — ponowienie przy odblokowaniu, kasowanie przy zmianie
     trybu przechowywania, `removeUser` identyfikatora konta trwałego w trybie „Zaloguj jednorazowo” — nie zostawia tego
@@ -23397,7 +23398,10 @@ i `Q8-obca-2` wobec dzisiejszej aplikacji niezmierzone).
 literał na wynik zgodny.
 - **„ZNANA RÓŻNICA” R2-E3:** po „Scal pacjentów” wizyta chwilowo znika na drugim urządzeniu, do najbliższej pełnej
   wysyłki. Naprawa: E3-PR0 (pytanie 12.2, 2026-11-04: zostaje kolejność ogólna „najpierw wizyty”; wcześniej
-  „E2-PR3a (kolejność zdarzeń) albo E3-PR0”).
+  „E2-PR3a (kolejność zdarzeń) albo E3-PR0”; od E2-PR3a3 w teście „ZNANA RÓŻNICA (naprawa: E3-PR0)”).
+- **„ZNANA UTRATA (zdarzenia)” K6** (od E2-PR3a3 w teście): poprawka wizyty z drugiego urządzenia sprzed „Scal
+  pacjentów” na pierwszym ginie po zdarzeniach i pełnej wymianie; same pełne kopie ją zachowują. Naprawa: E2-PR3c
+  (pytanie 12.3).
 - **„ZNANA RÓŻNICA” R5-E1:** przy trzech urządzeniach wizyta jest w karcie na jednym, a w Koszu na drugim, do pełnej
   wysyłki; po niej jest w Koszu na wszystkich. Naprawa: E3-PR0.
 - **„ZNANA UTRATA” R3-E1:** po dwóch wskrzeszeniach tej samej notatki na dwóch urządzeniach późniejszy tekst ginie na
