@@ -467,7 +467,7 @@ export const METODY_DANYCH = Object.freeze([
   'savePatientList', 'deletePatientList', 'addPatientToList', 'removePatientFromList', 'setWaitlistSchedule',
   'addWaitlistList', 'removeWaitlistList', 'changePassword', 'resetPasswordWhileUnlocked', 'registerPasskey',
   'registerPasskeyForRoaming', 'removePasskey', 'mutateCarePlan', 'saveReminderOutcome', 'migrateExternalNotesToRegistry',
-  'importLegacyJsonPatient',
+  'importLegacyJsonPatient', 'importPatientFromEnvelope', 'mergeVaultBackup',
 ]);
 // Widok VildaVault, w którym metody z METODY_DANYCH działają przy zamkniętej bramce (pole okna na czas wywołania
 // false, potem przywrócone: ten sam deskryptor albo brak pola); pozostałe pola bez zmian.

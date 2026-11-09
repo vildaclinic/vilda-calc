@@ -2633,9 +2633,9 @@ async function Bkz_przywroc(patientId, snapshotId) {const PatientClinicalOperati
         pilnuj();
         // Naglowek karty nadrabia zmiane wersji, gdy poprzednie „Przywroc” przerwano po zapisie wersji (bez zapisu,
         // gdy juz zgodny — jak zwykle po pierwszym przywroceniu); potem dopiero wpis kosza znika.
-        const naglowekKarty = await Bkz_przebudujNaglowek(karta, zmianaObecnej, Bses_o);
+        await Bkz_przebudujNaglowek(karta, zmianaObecnej, Bses_o);
         await Bkz_zmienListe([], [{ snapshotId: snapshotId, doISO: Bkz_ostatnie(e) }], Bses_o);
-        if (naglowekKarty) Bem_zmiana('snap', { patientId: karta, snapshotId: snapshotId }, Bses_o);
+        Bem_zmiana('snap', { patientId: karta, snapshotId: snapshotId }, Bses_o);
         return PatientClinicalWriteValue(PatientClinicalOperationAccount,{ patientId: karta, snapshotId: snapshotId, alreadyInCard: true });
       }
     }
