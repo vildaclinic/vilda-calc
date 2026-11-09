@@ -105,6 +105,24 @@ function finishFirst(f) {
 }
 
 describe('pure staged care plan mutation transactions', () => {
+  it('retains publication rights in the source and the saved creation draft without blocking patient adjustments', async () => {
+    const input = definition(); input.contentVersion = 2;
+    input.publication = { id: 'fictional-publication', version: '1.0', authors: ['Fikcyjny autor'], contributors: [],
+      sources: [{ title: 'Fikcyjne źródło', url: 'https://example.org/source', version: '2026' }],
+      license: { id: 'custom', url: '', text: 'Fikcyjne warunki udostępniania.', allowRedistribution: true, allowAdaptation: true },
+      attribution: 'Fikcyjne autorstwo deklarowane przez autora pliku.', changes: '', origin: null };
+    const f = await fixture({ definition: input, edit: cmd => { cmd.draft.definition.steps[0].instruction = 'Fikcyjne ustalenie dla konkretnego pacjenta.'; } });
+    expect(f.state.source.definition.publication).toEqual(input.publication);
+    const creation = JSON.parse(f.state.operations[0].intentCanonical);
+    expect(creation.draft.definition.publication).toEqual(input.publication);
+    expect(f.state.record.careContext.steps[0].instruction).toBe('Fikcyjne ustalenie dla konkretnego pacjenta.');
+    const altered = clone(f.command); altered.operationId = 'fictional-new-operation';
+    altered.draft.definition.publication.authors = ['Fikcyjne inne autorstwo'];
+    expect(f.api.prepareTransaction(null, altered, clock)).toMatchObject({ ok: false, code: 'CARE_PLAN_SOURCE_INVALID' });
+    delete altered.draft.definition.publication; altered.draft.definition.contentVersion = 1;
+    expect(f.api.prepareTransaction(null, altered, clock)).toMatchObject({ ok: false, code: 'CARE_PLAN_SOURCE_INVALID' });
+  });
+
   it('copies a real template revision into detached stages without starting work or granting write authority', async () => {
     const f = await fixture({ edit: cmd => { cmd.draft.definition.name = 'Fikcyjna zmieniona nazwa'; cmd.draft.definition.steps[0].instruction = 'Fikcyjna zmiana przed zapisem.'; } });
     expect(f.state.format).toBe('vilda-care-plan-state/v1');

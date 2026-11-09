@@ -25,13 +25,20 @@
     });
   }
   function ensureTemplateLibrary(options) {
-    if (!templateCorePromise) templateCorePromise = templateAsset('vilda_care_template_model.js?v=2', function () { return !!win.VildaCareTemplateModel; })
+    if (!templateCorePromise) templateCorePromise = templateAsset('vilda_care_template_model.js?v=3', function () { return !!win.VildaCareTemplateModel; })
       .then(function () { return templateAsset('vilda_care_template_store.js?v=2', function () { return !!win.VildaCareTemplateStore; }); })
       .catch(function (error) { templateCorePromise = null; throw error; });
     if (options && options.ui === false) return templateCorePromise;
-    if (!templateUiPromise) templateUiPromise = templateCorePromise.then(function () { return Promise.all([
-      templateAsset('vilda_care_templates.css?v=3', null, true),
-      templateAsset('vilda_care_templates.js?v=5', function () { return !!win.VildaCareTemplates; })
+    if (!templateUiPromise) templateUiPromise = templateCorePromise
+      .then(function () {
+        // A live vault session may still hold the earlier model instance. Do
+        // not replace that reader underneath its encrypted library context.
+        if (win.VildaCareTemplateModel.CONTENT_VERSION !== 2) throw new Error('Aby używać importu i eksportu szablonów, odśwież aplikację. Zaktualizuj ją także na pozostałych urządzeniach.');
+      })
+      .then(function () { return templateAsset('vilda_care_template_transfer.js?v=1', function () { return !!win.VildaCareTemplateTransfer; }); })
+      .then(function () { return Promise.all([
+      templateAsset('vilda_care_templates.css?v=4', null, true),
+      templateAsset('vilda_care_templates.js?v=6', function () { return !!win.VildaCareTemplates; })
     ]); }).catch(function (error) { templateUiPromise = null; throw error; });
     return templateUiPromise;
   }

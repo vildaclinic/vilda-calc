@@ -10937,15 +10937,15 @@ function PatientWorkspaceSelection(account) {
 async function PatientWorkspaceModules() {
   if (!PatientWorkspaceScriptURL) throw PatientWorkspaceError('UNSUPPORTED');
   if (!PatientWorkspaceModule) {
-    PatientWorkspaceModule = import(new v.URL('runtime/clinical-workspace-v1/4002da88b355/client/patient-clinical-workspace-native/index.mjs', PatientWorkspaceScriptURL).href)
+    PatientWorkspaceModule = import(new v.URL('runtime/clinical-workspace-v1/e410c8725541/client/patient-clinical-workspace-native/index.mjs', PatientWorkspaceScriptURL).href)
       .catch(function (error) { PatientWorkspaceModule = null; throw error; });
   }
   return PatientWorkspaceModule;
 }
 async function PatientWorkspaceModels() {
   if (!PatientWorkspaceScriptURL) throw PatientWorkspaceError('UNSUPPORTED');
-  if (!v.VildaCareTemplateModel) await import(new v.URL('vilda_care_template_model.js?v=2', PatientWorkspaceScriptURL).href);
-  if (!v.VildaCarePlanMutation) await import(new v.URL('vilda_care_plan_mutation.js?v=1', PatientWorkspaceScriptURL).href);
+  if (!v.VildaCareTemplateModel) await import(new v.URL('vilda_care_template_model.js?v=3', PatientWorkspaceScriptURL).href);
+  if (!v.VildaCarePlanMutation) await import(new v.URL('vilda_care_plan_mutation.js?v=2', PatientWorkspaceScriptURL).href);
   if (!v.VildaCarePlanModel || !v.VildaCareTemplateModel || !v.VildaCarePlanMutation) throw PatientWorkspaceError('UNSUPPORTED');
 }
 function PatientWorkspaceLock(account, mode, action) {
@@ -11449,7 +11449,37 @@ function PatientWorkspaceInstall(api) {
   // eslint-disable-next-line no-func-assign
   CareTplAck = libraryWriter(CareTplAck); CareTplImport = libraryWriter(CareTplImport, true); CareTplBind = libraryWriter(CareTplBind);
   api.applyCareTemplateEvents = CareTplApply; api.ackCareTemplateEvents = CareTplAck;
-  api.importCarePlanTemplateLibrary = CareTplImport; api.bindCareTemplateEpoch = CareTplBind;
+  api.bindCareTemplateEpoch = CareTplBind;
+  // Standalone transfers use one reviewed definition, never the account-bound
+  // raw library. Retain the private reader for historical compatibility, but
+  // do not expose a whole-library transfer through the public vault API.
+  delete api.exportCarePlanTemplateLibrary;
+  delete api.importCarePlanTemplateLibrary;
+  api.getCarePlanTemplateCapability = async function () {
+    var capability = await original.getCarePlanTemplateCapability();
+    var contentVersion = CareTplCurrent && CareTplCurrent.model && CareTplCurrent.model.CONTENT_VERSION || 1;
+    // A library context owns the model captured when its encrypted store was
+    // opened. A later script cannot silently swap that model underneath it.
+    if (capability.readable === true && contentVersion < 2) return Object.assign({}, capability, {
+      readable: false, canSave: false, persistence: 'unsupported', reasonCode: 'CARE_TEMPLATE_READER_UPDATE_REQUIRED', maxContentVersion: contentVersion,
+      message: 'Odśwież aplikację, aby obsługiwać szablony z informacjami o autorstwie i licencji. Zachowane dane nie zostały zmienione.'
+    });
+    return Object.assign({}, capability, { maxContentVersion: contentVersion });
+  };
+  api.getVaultBackupScope = async function () {
+    var scope = await original.getVaultBackupScope();
+    var result = Object.assign({}, scope, {
+      includesCareTemplateLibrary: false,
+      message: 'Kopia .wiw nie zawiera biblioteki szablonów. Wybrane szablony możesz zapisać osobno przez „Eksportuj szablon”. Pojedynczy plik nie obejmuje historii biblioteki.'
+    });
+    delete result.libraryExportAPI;
+    return result;
+  };
+  // The retention guard still protects the complete library and its history.
+  // Do not direct the user to the withdrawn account-bound library exporter.
+  // eslint-disable-next-line no-func-assign
+  CareTplRetentionError = function () { return CareTplError('CARE_TEMPLATE_LIBRARY_RETAINED',
+    'Ta wersja nie usuwa konta z zachowaną biblioteką szablonów. Klucz i konto pozostały zapisane. Eksport pojedynczego szablonu nie obejmuje historii biblioteki; usunięcie wymaga osobnej obsługi pełnej kopii.'); };
   function deferred(fn) {
     return function () {
       var args = arguments, receiver = this, active = PatientWorkspaceActive;

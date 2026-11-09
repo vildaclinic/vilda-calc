@@ -199,7 +199,7 @@ describe('V2 staged care-plan UI uses its protected writer', () => {
   it('offers exact Pusty plan / Szablon labels and hands the real provider and patient context to the library', async () => {
     const d = fixture({ capability: { available: false, canPrepare: true }, mount: { patientId: 'fictional-staged-patient' } }); await settle();
     expect(button(d.host, 'Uruchom pierwszy etap')).toBeUndefined();
-    d.win.VildaCareTemplateModel = {}; d.win.VildaCareTemplateStore = {}; const destroy = vi.fn();
+    d.win.VildaCareTemplateModel = { CONTENT_VERSION: 2 }; d.win.VildaCareTemplateStore = {}; d.win.VildaCareTemplateTransfer = {}; const destroy = vi.fn();
     d.win.VildaCareTemplates = { open: vi.fn(() => ({ destroy })) };
     d.controller.create(); const form = formOf(d); expect(button(form, 'Pusty plan')).toBeTruthy(); expect(button(form, 'Szablon')).toBeTruthy();
     button(form, 'Szablon').click(); await settle(); d.doc.body.querySelectorAll('link').forEach(link => { if (link.onload) link.onload(); }); await settle();

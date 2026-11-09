@@ -238,3 +238,25 @@ dialog.vct-reminders-dialog.vct-reminders-compact .vct-footer-actions button {
   padding: var(--space-6px) var(--space-8px);
   font-size: 12px;
 }
+
+/* A portable file is reviewed before any library write or download. */
+.vct.vcp.vct-transfer-mode { font-size: 16px; }
+.vct.vcp.vct-transfer-mode button { min-height: 44px!important; font-size: 16px!important; }
+.vct.vct-transfer-mode .vcp-field > span,
+.vct.vct-transfer-mode .vcp-check { font-size: 16px; }
+.vct.vct-transfer-mode input:not([type="checkbox"]):not([type="radio"]),
+.vct.vct-transfer-mode select,
+.vct.vct-transfer-mode textarea { min-height: 44px; font-size: 16px; }
+.vct.vct-transfer-mode .vcp-help { font-size: 14px; }
+.vct .vct-publication { padding: var(--space-16px); margin: var(--space-16px) 0; border: var(--border-hairline) solid var(--vcp-line); border-radius: var(--radius-9); background: var(--vcp-soft); overflow-wrap: anywhere; }
+.vct .vct-publication h3 { font-size: 16px; font-weight: 500; }
+.vct .vct-publication .vcp-description { white-space: pre-wrap; }
+.vct .vct-transfer-pane > .vcp-check { min-height: 44px; align-items: center; }
+@media (max-width: 700px) {
+  .vct.vct-transfer-mode .vct-footer { flex-wrap: wrap; align-items: center; }
+  .vct.vct-transfer-mode .vct-footer > .vcp-help { flex-basis: 100%; max-width: none; font-size: 14px; }
+  .vct.vct-transfer-mode .vct-footer-actions { width: 100%; justify-content: space-between; }
+  .vct .vct-adaptation .vcp-field > span,
+  .vct .vct-adaptation input,
+  .vct .vct-adaptation textarea { font-size: 16px; }
+}

@@ -12,6 +12,12 @@ Zmiana dodaje użycie własnego szablonu w `Przypomnienia → Plany opieki → M
 
 Wykonanie czynności, otrzymanie wyniku i decyzja to odrębne rodzaje informacji. Aplikacja nie uznaje wykonanego badania za otrzymany wynik. Fakty, ich daty oraz powiązania z dokumentacją są zachowane razem z planem. Zamknięcie lub pominięcie pracy nie tworzy fikcyjnego wykonania.
 
+## Szablon przekazany przez innego lekarza
+
+[Import pojedynczego szablonu](CARE_TEMPLATE_TRANSFER.md) tworzy niezależną kopię w „Moich szablonach”. Po sprawdzeniu treści można zastosować ją u pacjenta tą samą drogą co własny szablon. Informacje o autorstwie, źródłach, warunkach udostępniania i pochodzeniu opracowania pozostają zachowane w zapisanej wersji i jej kopii w planie. Import nie zmienia istniejących planów ani dokumentacji pacjenta; późniejsza zmiana szablonu również nie aktualizuje tych planów automatycznie.
+
+Kopia `.wiw` przenosi stan planu zapisanego w dokumentacji pacjenta, lecz **obecnie nie jest kopią oddzielnej biblioteki szablonów**. Dodanie całej biblioteki do przyszłej `.wiw` jest zapisanym zadaniem [P-WIW-TEMPLATE-LIBRARY](TEMPLATE_LIBRARY_BACKUP_PLAN.md), poza zakresem transferu pojedynczego szablonu.
+
 ## Zapis i dokumentacja
 
 Plan, jego dokumentacja i przypomnienia są zatwierdzane jako jedna operacja. Utrata odpowiedzi nie powoduje utworzenia drugiej kopii przy ponowieniu tej samej operacji. Potwierdzenie tej operacji oznacza trwały zapis lokalny; przesłanie danych pokazuje dotychczasowy ogólny stan synchronizacji konta. Zwykły plan nie ma osobnego potwierdzenia serwerowego. Konflikt dwóch urządzeń wymaga uzgodnienia; nie jest rozstrzygany na podstawie ostatniej daty.
